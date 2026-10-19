@@ -39,6 +39,39 @@ class T(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("入口不存在", r.stderr)
 
+    def test_exec_json_only(self):
+        d = Path(self.tmp, "p", ".aos"); d.mkdir(parents=True)
+        (d / "exec.json").write_text('{"argv": ["sh", "-c", "echo $1:$AOS_WS; exit 5", "sh"]}')
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        r = run(EXEC, str(d.parent), str(ws), "x")
+        self.assertEqual(r.returncode, 5, r.stderr)
+        self.assertEqual(r.stdout.strip(), f"x:{ws.resolve()}")
+
+    def test_exec_json_custom_entry_name(self):
+        d = Path(self.tmp, "p"); d.mkdir()
+        (d / "main.json").write_text('{"argv": ["echo", "hi"]}')
+        r = run(EXEC, str(d), self.tmp, env={"AOS_ENTRY": "main"})
+        self.assertEqual((r.returncode, r.stdout), (0, "hi\n"))
+
+    def test_small_shell_wrapper_form_1(self):
+        d = prog(self.tmp, "p", "exec aos-inst .aos/exec.json \"$@\"\n")
+        Path(d, ".aos", "exec.json").write_text('{"argv": ["echo", "a"]}')
+        # 小殼 .aos/exec 是可執行檔，優先於同名 .json；殼裡明指 exec.json 所以還是跑得起來
+        r = run(EXEC, d, self.tmp, "b")
+        self.assertEqual((r.returncode, r.stdout), (0, "a b\n"))
+
+    def test_neither_entry_nor_json(self):
+        d = Path(self.tmp, "p"); d.mkdir()
+        r = run(EXEC, str(d), self.tmp)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("exec.json", r.stderr)
+
+    def test_executable_preferred_over_json(self):
+        d = prog(self.tmp, "p", "echo exe\n")
+        Path(d, ".aos", "exec.json").write_text('{"argv": ["echo", "json"]}')
+        r = run(EXEC, d, self.tmp)
+        self.assertEqual(r.stdout, "exe\n")
+
     def test_not_executable(self):
         d = prog(self.tmp, "p", "echo hi\n", mode=0o644)
         r = run(EXEC, d, self.tmp)

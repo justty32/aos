@@ -8,9 +8,9 @@
 
 ## 一、aos 保證的（不是慣例，是底）
 
-- **P-01** aos 只訂三個環境變數：`AOS_ENTRY`＝入口在資料夾裡的相對位置，預設 `.aos/exec`，**必須是可執行檔**；`AOS_WS`＝工作區（使用者的檔與成品在哪）；`AOS_STACK`＝執行中狀態放哪，預設 `$AOS_WS/.aos/`。（§ 1、§ 2、§ 3；N-55）
+- **P-01** aos 只訂三個環境變數：`AOS_ENTRY`＝入口在資料夾裡的相對位置，預設 `.aos/exec`，**是可執行檔，或旁邊的 `$AOS_ENTRY.json` 單子**（兩個都在用可執行檔；P-28 (B)）；`AOS_WS`＝工作區（使用者的檔與成品在哪）；`AOS_STACK`＝執行中狀態放哪，預設 `$AOS_WS/.aos/`。（§ 1、§ 2、§ 3；N-55）
 - **P-02** `aos-exec DIR [WS [args...]]`＝「在 WS 這個工作區，執行 DIR 這個程式」。WS 省略＝`-`；`-`＝沿用現有 `$AOS_WS`，沒設才用 `.`。慣例用法：`cd workspace && aos-exec ../agent-bob`。（§ 4、§ 5）
-- **P-03** aos-exec 只做五件事：把 WS 轉絕對路徑設成 `AOS_WS`；`AOS_STACK` 沒設就設預設值、建資料夾；把自己的 `bin/` 加進 PATH（入口才找得到 `aos-loop`、`aos-exec`）；`cd DIR`；`exec` 入口，多的 args 與 stdin 原樣交給它。**起跑時 cwd＝DIR**；之後程式愛 cd 去哪、「這次要做啥」怎麼收，都是它自己的事。（§ 1、§ 4）
+- **P-03** aos-exec 只做五件事：把 WS 轉絕對路徑設成 `AOS_WS`；`AOS_STACK` 沒設就設預設值、建資料夾；把自己的 `bin/` 加進 PATH（入口才找得到 `aos-loop`、`aos-exec`）；`cd DIR`；`exec` 入口（可執行檔，或沒有它時交給 aos-inst 跑 `$AOS_ENTRY.json`），多的 args 與 stdin 原樣交給它。**起跑時 cwd＝DIR**；之後程式愛 cd 去哪、「這次要做啥」怎麼收，都是它自己的事。（§ 1、§ 4）
 - **P-04** DIR 或 WS 不存在、入口缺或不可執行：aos-exec 非 0 結束、stderr 一行原因。（N-43、N-29 精神；aos 自己的錯一律退 1）
 
 ## 二、佈局（每檔一句）
@@ -73,7 +73,7 @@ workspace/                 ＝$AOS_WS，使用者的（§ 2）
 ## 八、shell 版與 inst 版
 
 - **P-27** 標準範本＝shell 版，就是 agent-bob 現在的樣子（第二節）。（拍板點 1；§ 7「想要簡單直接，那就上 shell 指令」）
-- **P-28** inst 單子（`{"argv", "cwd", "stdin", "stdout", "timeout_ms", …}`，key 表與跟 proto8 不同的兩處見 [README 的 `bin/aos-inst`](README.md)）是可選的升級，四種用法都行、可以在同一個 agent 裡混用：(1) `.aos/exec` 是 shebang 小殼、讀旁邊的 `exec.json`；(2) loop／fsm 的設定裡直接內嵌單子；(A) `.aos/exec` 第一行 `#!/usr/bin/env aos-inst`、後面接 JSON（**已做**，`bin/aos-inst`）；(B) aos-exec 認 `.aos/exec.json`，入口＝可執行檔或單子。（§ 7「1 跟 2 都要」「接法 3 感覺也是 OK 的」「AB 都可以」；(1)(2)(B) 還沒做）
+- **P-28** inst 單子（`{"argv", "cwd", "stdin", "stdout", "timeout_ms", …}`，key 表與跟 proto8 不同的兩處見 [README 的 `bin/aos-inst`](README.md)）是可選的升級，四種用法都行、可以在同一個 agent 裡混用：(1) `.aos/exec` 是 shebang 小殼、讀旁邊的 `exec.json`；(2) loop／fsm 的設定裡直接內嵌單子；(A) `.aos/exec` 第一行 `#!/usr/bin/env aos-inst`、後面接 JSON（**已做**，`bin/aos-inst`）；(B) aos-exec 認 `.aos/exec.json`，入口＝可執行檔或單子（**已做**；(1) 小殼＝`#!/bin/sh`＋`exec aos-inst .aos/exec.json "$@"`，也已有測試）。（§ 7「1 跟 2 都要」「接法 3 感覺也是 OK 的」「AB 都可以」；只剩 (2) 還沒做）
 - **P-29** 範本先給 (A)：只換一格的入口檔、佈局跟 shell 版一模一樣，學一次就夠；資料夾開始太多時改用 (2)，一份 `fsm.json` 看完整張表與每格單子。(1) 與 (B) 是 (A) 的等價寫法，不另給範本。（拍板點 1 agent-bob 是標準、佈局不變最省；§ 7「單子是資料這塊……在不希望資料夾佈局太複雜的時候很好用」。這是原討論稿拍板點 5 的答案）
 - **P-30** 用 inst 換到的是四樣：argv 是陣列、不靠 sh 拼字串；`timeout_ms` 逾時收尾、不留孫程式；結果是結構化的（結束碼、訊號、有沒有逾時、毫秒）；單子是資料、可內嵌進別的 JSON。「不走 sh 更快」實測不成立：單獨起一個 aos-inst（Python）比一層 sh 慢 5～6 倍，agent-bob 一圈殼的開銷對一輪 LLM 不到千分之二；省得到的只有 loop／fsm 在行程內直接 `run()` 那種。（§ 7 使用者「都還好。主要是單子是資料這塊……結果是結構化的這塊也很舒服」；10-19 在 WSL 實量的結論）
 - **P-31** 單子要指到 stack 或工作區底下的檔，寫 `{"$env": "AOS_STACK", "path": "plan"}`：意思是「那個環境變數指的資料夾底下的 `plan`」，照 `os.path.join` 接（`AOS_STACK` 結尾有 `/`、`AOS_WS` 沒有，兩種都對；`path` 寫絕對路徑就是絕對路徑）。不帶 `path` 就是整個變數值。**只有 `$env`，沒有 `$ref`**（單子本來就能內嵌，不必拆檔）；變數沒設＝aos-inst 自己的錯、退 1。不用字串內插（`"$AOS_STACK/plan"`）：那是把規則埋進字串的暗規則。（本稿定；PLAN 第一節決定 3；C-48／C-55 值長成物件、同層加屬性；C-56 寫什麼就做什麼；N-45 `$env` 是正式機制）
@@ -114,7 +114,7 @@ stack 裡的檔名與格式；腦的接頭怎麼寫；工具裡面怎麼做；�
 
 ## 十、程式還沒照這份改的地方（之後另派）
 
-- inst 還剩三種沒做：aos-exec 認 `exec.json`（B）、小殼 (1)、aos-loop／aos-fsm 內嵌單子 (2)；aos-fsm 的 state 檔落在 `$AOS_STACK`（P-28、P-29）。
+- inst 還剩一種沒做：aos-loop／aos-fsm 內嵌單子 (2)；aos-fsm 的 state 檔落在 `$AOS_STACK`（P-28、P-29）。
 - `tools/` 還沒有任何工具（P-25）。
 
 ## 十一、要使用者決定的
