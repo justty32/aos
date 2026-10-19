@@ -156,6 +156,17 @@ class T(unittest.TestCase):
             self.assertNotEqual(r.returncode, 0, sub)
             self.assertIn("沒設定 AOS_STACK", r.stderr, sub)
 
+    def test_bob_entry_direct_exec_no_enoexec(self):
+        # 入口帶 shebang：不經 sh、直接 exec 也跑得起來（P-05）
+        ws = workspace(self.tmp, "ws", "hello")
+        stack = Path(self.tmp, "stack")
+        stack.mkdir()
+        env = {"AOS_WS": str(ws), "AOS_STACK": str(stack),
+               "PATH": str(ROOT / "bin") + os.pathsep + os.environ["PATH"]}
+        r = run(str(Path(BOB) / ".aos" / "exec"), env=env, cwd=BOB)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue((ws / "done" / "q.txt").exists())
+
     def test_loop_failure_code(self):
         prog(self.tmp, "agent/bad", "exit 7\n")
         agent = prog(self.tmp, "agent", "aos-loop loop.json\n")

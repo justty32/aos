@@ -81,3 +81,5 @@ agent 不用重猜的事。always-on 鐵律在 [AGENTS.md](../../../AGENTS.md)�
 看 inst-exec 第三版時，對「agent 當工具用 `sh -c 'aos loop; cat ret.json'`」的回覆：「G這塊應該不用sh吧，就argv[0]用aos-loop就好？拜託，少用sh(把這個記下來)。」
 
 所以：**inst 的 `argv[0]` 直接寫要跑的程式**（`aos loop`、`aos fsm`、指令名），不用 `sh -c` 串東西。要重導、要換資料夾、要接結果，先找 inst 現成的 key（`stdin`／`stdout`／`cwd`）或資料夾慣例（stack：定義掛成 `.aos`、這次的話與結果放在 stack 裡，交給門房 `aos exec stack 定義` 去跑；使用者的工作區由 `AOS_WS` 給，見 [NORMS 定義與工作區](../../../proto8/NORMS/10-基礎設施-定義與工作區.md)）；真的只有 sh 能做的，提案時標出來讓他看。（例子 10-16 依新設計更新、10-16 夜 frame 改名、同夜再改名 stack）
+
+2026-10-19 proto8-2：使用者「少用sh這塊……假如我們想要跨平台的話...啊這個先不管，先只考慮在linux上」——proto8-2 的入口與格可以是 shell 檔；不用 `sh -c` 拼字串的精神照舊。

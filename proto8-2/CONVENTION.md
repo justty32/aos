@@ -1,6 +1,6 @@
 # aos agent 慣例（proto8-2，2026-10-19 結論版）
 
-← [proto8-2](README.md)｜原話與拍板：[thinking/ideas](thinking/2026-10-19-ideas.md)｜跟 proto8 原則相撞、要使用者決定的：[CONFLICTS.md](CONFLICTS.md)｜proto8 原則：[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)
+← [proto8-2](README.md)｜原話與拍板：[thinking/ideas](thinking/2026-10-19-ideas.md)｜跟 proto8 原則相撞、使用者已全部裁定：[CONFLICTS.md](CONFLICTS.md)｜proto8 原則：[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)
 
 **aos 本身只保證三個環境變數和一支 `aos-exec`**（使用者 § 4）。其餘全是慣例：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**agent-bob 現在的樣子就是標準，stack 裡面自由**（拍板點 1）。
 
@@ -44,7 +44,7 @@ workspace/                 ＝$AOS_WS，使用者的（§ 2）
 
 ## 四、題目與答案
 
-- **P-11** 題目＝`$AOS_WS/inbox/<題名>`，純文字、一題一檔；答案＝`$AOS_WS/out/<題名>`，跟題目同名；做完把題目搬到 `$AOS_WS/done/<題名>`。**結果＝工作區內容，沒有別的結果通道。**（拍板點 2；C-65 工作區只放交辦的東西與成果；C-34 求值＝空間狀態的變化）
+- **P-11** 題目＝`$AOS_WS/inbox/<題名>`，純文字、一題一檔；答案＝`$AOS_WS/out/<題名>`，跟題目同名；做完把題目搬到 `$AOS_WS/done/<題名>`。**結果＝工作區內容，沒有別的結果通道。**（拍板點 2；C-65 工作區只放交辦的東西與成果；C-34 求值＝空間狀態的變化。這是 agent-bob 的做法；「agent 之間傳題目走 inbox」當共同形狀，inbox 先不管〔使用者 10-19〕，不當規則）
 - **P-12** 一次做一題：取 inbox 裡檔名排序最前面的那個，題名寫進 `$AOS_STACK/current`。（原型現狀；拍板點 1）
 - **P-13** 需要附檔時升級成資料夾：`inbox/<題名>/` 裡題文叫 `prompt`、其餘檔是附檔；答案 `out/<題名>/` 也是資料夾、主答案叫 `answer`。一個 agent 認哪種形狀寫在它自己的說明；agent-bob 只認一題一檔。（拍板點 2「需要附檔再升級成資料夾」；檔名本稿定，照 C-54 小寫單數）
 - **P-14** agent 只動 `inbox/`、`out/`、`done/` 與 `$AOS_STACK`，工作區其他東西不碰。`done/` 只進不出，清理是人的事。（C-65 工作區保持乾淨；C-56 不為清理加機制）
@@ -58,7 +58,7 @@ workspace/                 ＝$AOS_WS，使用者的（§ 2）
 
 ## 六、停與錯
 
-- **P-19** 結束碼三種：`0`＝這圈好了、下一圈；`10`＝正常停（idle 看 inbox 空了）；其他非 0＝失敗。loop 收到 10 以 0 結束；收到其他非 0 以那個碼結束；跑滿 `max` 以 0 結束並在 stderr 提一句。（拍板點 1；原型現狀。跟 C-63「結束碼只是參考」相撞，見 [CONFLICTS 4](CONFLICTS.md)）
+- **P-19** 結束碼三種：`0`＝這圈好了、下一圈；`10`＝正常停（idle 看 inbox 空了）；其他非 0＝失敗。loop 收到 10 以 0 結束；收到其他非 0 以那個碼結束；跑滿 `max` 以 0 結束並在 stderr 提一句。（拍板點 1；原型現狀。與 C-63 相撞，使用者 10-19 定：照用，見 [CONFLICTS 4](CONFLICTS.md)）
 - **P-20** 任一格失敗＝整個 agent 停下來等人：fsm 不換狀態、loop 以那個碼結束；人修好後再 `aos-exec` 一次，從 `$AOS_STACK/state` 接著做同一格、同一題。不自動重試、不數連錯。（拍板點 3；N-53 腦出錯那拍 phase 不動；N-38）
 - **P-21** 誰的錯誰自己講：格的錯寫在格自己的 stderr；fsm 什麼都不轉述；loop 只說「第幾圈、誰、結束碼幾」。（C-53；N-43 每層只說自己）
 - **P-22** 逾時：shell 版沒人管——某格卡住（模型沒載入、網路不通）loop 只會等，也殺不到孫程式。要逾時就把那格換成 inst 版、寫 `timeout_ms`（P-29）。（N-41「靠那張 inst 的 timeout_ms 守」；inst 討論的結論）
@@ -113,7 +113,6 @@ stack 裡的檔名與格式；腦的接頭怎麼寫；工具裡面怎麼做；�
 
 ## 十、程式還沒照這份改的地方（之後另派）
 
-- agent-bob 的 `.aos/exec` 沒有 `#!/bin/sh` 那行（P-05）。
 - aos-exec 自己的錯退 2；N-43 說 aos 的程式說自己的錯退 1（P-04）。
 - inst 四種用法一個都沒做：aos-inst 跳過 `#!` 行、aos-exec 認 `exec.json`、aos-loop／aos-fsm 內嵌單子、aos-fsm 的 state 窗落在 `$AOS_STACK`（P-28、P-29）。
 - `tools/` 還沒有任何工具（P-25）。
@@ -121,4 +120,4 @@ stack 裡的檔名與格式；腦的接頭怎麼寫；工具裡面怎麼做；�
 
 ## 十一、要使用者決定的
 
-→ [CONFLICTS.md](CONFLICTS.md)：六條跟 proto8 原則相撞的，每條附背景、後果、AI 建議。
+已全部裁定（使用者 10-19），見 [CONFLICTS.md](CONFLICTS.md)。
