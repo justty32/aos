@@ -14,7 +14,7 @@ def run(*args, env=None, **kw):
     return subprocess.run(args, capture_output=True, text=True, env=e, **kw)
 
 
-def prog(parent, name, body, mode=0o755, entry=".aos/exec"):
+def prog(parent, name, body, mode=0o755, entry="_exec"):
     d = Path(parent) / name
     (d / entry).parent.mkdir(parents=True, exist_ok=True)
     (d / entry).write_text("#!/bin/sh\n" + body)
@@ -42,10 +42,10 @@ class T(unittest.TestCase):
         self.assertIn("入口不存在", r.stderr)
 
     def test_exec_json_only(self):
-        d = Path(self.tmp, "p", ".aos"); d.mkdir(parents=True)
-        (d / "exec.json").write_text('{"argv": ["sh", "-c", "echo $1:$AOS_WS; exit 5", "sh"]}')
+        d = Path(self.tmp, "p"); d.mkdir(parents=True)
+        (d / "_exec.json").write_text('{"argv": ["sh", "-c", "echo $1:$AOS_WS; exit 5", "sh"]}')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, str(d.parent), str(ws), "x")
+        r = run(EXEC, str(d), str(ws), "x")
         self.assertEqual(r.returncode, 5, r.stderr)
         self.assertEqual(r.stdout.strip(), f"x:{ws.resolve()}")
 
@@ -56,9 +56,9 @@ class T(unittest.TestCase):
         self.assertEqual((r.returncode, r.stdout), (0, "hi\n"))
 
     def test_small_shell_wrapper_form_1(self):
-        d = prog(self.tmp, "p", "exec aos-inst .aos/exec.json \"$@\"\n")
-        Path(d, ".aos", "exec.json").write_text('{"argv": ["echo", "a"]}')
-        # 小殼 .aos/exec 是可執行檔，優先於同名 .json；殼裡明指 exec.json 所以還是跑得起來
+        d = prog(self.tmp, "p", "exec aos-inst _exec.json \"$@\"\n")
+        Path(d, "_exec.json").write_text('{"argv": ["echo", "a"]}')
+        # 小殼 _exec 是可執行檔，優先於同名 .json；殼裡明指 _exec.json 所以還是跑得起來
         r = run(EXEC, d, self.tmp, "b")
         self.assertEqual((r.returncode, r.stdout), (0, "a b\n"))
 
@@ -70,7 +70,7 @@ class T(unittest.TestCase):
 
     def test_executable_preferred_over_json(self):
         d = prog(self.tmp, "p", "echo exe\n")
-        Path(d, ".aos", "exec.json").write_text('{"argv": ["echo", "json"]}')
+        Path(d, "_exec.json").write_text('{"argv": ["echo", "json"]}')
         r = run(EXEC, d, self.tmp)
         self.assertEqual(r.stdout, "exe\n")
 
@@ -188,7 +188,7 @@ class T(unittest.TestCase):
 
     def test_bob_requires_stack(self):
         ws = workspace(self.tmp, "ws", "hello")
-        r = run(str(Path(BOB) / "act/.aos/exec"), env={"AOS_WS": str(ws)})
+        r = run(str(Path(BOB) / "act/_exec"), env={"AOS_WS": str(ws)})
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("沒設定 AOS_STACK", r.stderr)
         # fsm 本身沒設 AOS_STACK 也退 1
@@ -213,7 +213,7 @@ class T(unittest.TestCase):
         stack.mkdir()
         env = {"AOS_WS": str(ws), "AOS_STACK": str(stack),
                "PATH": str(ROOT / "bin") + os.pathsep + os.environ["PATH"]}
-        r = run(str(Path(BOB) / ".aos" / "exec"), env=env, cwd=BOB)
+        r = run(str(Path(BOB) / "_exec"), env=env, cwd=BOB)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue((ws / "done" / "q.txt").exists())
 
@@ -288,10 +288,10 @@ class T(unittest.TestCase):
             self.assertEqual(list(Path(ANN).rglob(n)), [], n)   # 定義資料夾乾淨
 
     def test_ann_has_no_cell_folders(self):
-        execs = sorted(str(p.relative_to(ANN)) for p in Path(ANN).rglob("exec") if p.parent.name == ".aos")
-        self.assertEqual(execs, [".aos/exec"])
+        execs = sorted(str(p.relative_to(ANN)) for p in Path(ANN).rglob("_exec"))
+        self.assertEqual(execs, ["_exec"])
         self.assertEqual(sorted(p.name for p in Path(ANN).iterdir()),
-                         [".aos", "act.py", "brain.py", "fsm.json", "idle.py", "loop.json"])
+                         ["_exec", "act.py", "brain.py", "fsm.json", "idle.py", "loop.json"])
 
     def test_stamp_tool_alone(self):
         stamp = str(Path(CATHY) / "act" / "tools" / "stamp")

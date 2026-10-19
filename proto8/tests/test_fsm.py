@@ -24,10 +24,10 @@ class T(unittest.TestCase):
         self.stack.mkdir()
 
     def cell(self, name, body):
-        d = self.tmp / name / ".aos"
-        d.mkdir(parents=True)
-        (d / "exec").write_text("#!/bin/sh\n" + body)
-        (d / "exec").chmod(0o755)
+        d = self.tmp / name
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "_exec").write_text("#!/bin/sh\n" + body)
+        (d / "_exec").chmod(0o755)
 
     def table(self, states, start="a"):
         p = self.tmp / "fsm.json"

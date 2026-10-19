@@ -10,7 +10,7 @@ sh proto8/demo/run.sh      # 在 WSL／Linux 跑
 
 ## agent-bob（混合範本，叫 cathy、cathy 叫 stamp：四層）
 
-入口 `.aos/exec`＝`exec aos-loop loop.json`；`loop.json` 內嵌單子 `{"run": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}`；`fsm.json` 一份看完整張表：idle／act 是子資料夾 `idle/`、`act/`（shell），think 是內嵌單子（`python3 brain.py`、stdout 導到 `$AOS_STACK/plan`、逾時 120 秒）。idle 在 inbox 空時回 10 讓 loop 停。`brain.py` 挑 inbox 第一題、題名寫 `current`、答案印到 stdout。
+入口 `_exec`（預設 `$AOS_ENTRY`；10-19 晚改，原 `.aos/exec`）＝`exec aos-loop loop.json`；`loop.json` 內嵌單子 `{"run": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}`；`fsm.json` 一份看完整張表：idle／act 是子資料夾 `idle/`、`act/`（shell），think 是內嵌單子（`python3 brain.py`、stdout 導到 `$AOS_STACK/plan`、逾時 120 秒）。idle 在 inbox 空時回 10 讓 loop 停。`brain.py` 挑 inbox 第一題、題名寫 `current`、答案印到 stdout。
 
 act 把 plan 當題目交給 `act/tools/cathy/`（另一隻完整 agent，同一套範本；P-32、P-33）：在她的小格 `$AOS_STACK/cathy/` 裡備 `ws/inbox/<題名>`、`AOS_STACK=$sub aos-exec tools/cathy "$sub/ws"`、從 `$sub/ws/out/<題名>` 拿答案寫進 `$AOS_WS/out/`、題目搬 `done/`；cathy 失敗（非 0）bob 的 act 說「cathy 失敗」並退 1。cathy 的 act 再經 `act/tools/cathy/act/tools/stamp`（工具，自己的 stack 在 `$AOS_STACK/stamp/`，前面加一行 UTC 時間戳、`runs` 計次）寫她的 out。一次跑完是四層：bob 的 loop／fsm → act → cathy 的 loop／fsm → 她的 act → stamp；`aos-exec proto8/demo/agent-bob/act/tools/cathy <工作區>` 也能單獨跑 cathy。
 
@@ -18,7 +18,7 @@ stack 樹＝呼叫樹：`.aos/{state,current,plan,trace.jsonl}`、`.aos/cathy/{�
 
 ## agent-ann（全內嵌對照）
 
-跟 bob 做同一件事（一題一答），零子資料夾：入口 `aos-loop loop.json`，`loop.json` 內嵌 `aos-fsm fsm.json`，`fsm.json` 三格全是單子，各指一支小腳本——`idle.py`（inbox 空退 10）、`brain.py`（同 bob 的那份，複製）、`act.py`（plan 寫 out、題目搬 done）。資料夾裡只有 `.aos/exec`、`loop.json`、`fsm.json` 和三支 `.py`。適合「格全是一行、不叫工具」的小 agent；要叫工具、要用 sh 搬檔，就回到 bob 的混合寫法。
+跟 bob 做同一件事（一題一答），零子資料夾：入口 `aos-loop loop.json`，`loop.json` 內嵌 `aos-fsm fsm.json`，`fsm.json` 三格全是單子，各指一支小腳本——`idle.py`（inbox 空退 10）、`brain.py`（同 bob 的那份，複製）、`act.py`（plan 寫 out、題目搬 done）。資料夾裡只有 `_exec`、`loop.json`、`fsm.json` 和三支 `.py`。適合「格全是一行、不叫工具」的小 agent；要叫工具、要用 sh 搬檔，就回到 bob 的混合寫法。
 
 ## 測試
 

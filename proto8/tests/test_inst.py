@@ -120,8 +120,8 @@ class T(unittest.TestCase):
         self.assertEqual(r.stdout.strip(), str(ws))
 
     def test_entry_form_A_via_aos_exec(self):
-        d = self.tmp / "prog"; (d / ".aos").mkdir(parents=True)
-        entry = d / ".aos" / "exec"
+        d = self.tmp / "prog"; d.mkdir(parents=True)
+        entry = d / "_exec"
         entry.write_text('#!/usr/bin/env aos-inst\n' + json.dumps(
             {"argv": ["sh", "-c", 'pwd; echo "$1"; exit 4', "sh"],
              "stdout": {"$env": "AOS_STACK", "path": "plan"}}))
@@ -136,12 +136,12 @@ class T(unittest.TestCase):
 
     def test_timeout_kills_grandchildren(self):
         nl = chr(10)
-        inner = self.tmp / "inner" / ".aos"; inner.mkdir(parents=True)
-        (inner / "exec").write_text("#!/bin/sh" + nl + 'echo $$ > "$AOS_STACK/pid"' + nl + "exec sleep 30" + nl)
-        (inner / "exec").chmod(0o755)
-        outer = self.tmp / "outer" / ".aos"; outer.mkdir(parents=True)
-        (outer / "exec").write_text("#!/bin/sh" + nl + "aos-exec %s" % (self.tmp / "inner") + nl)
-        (outer / "exec").chmod(0o755)
+        inner = self.tmp / "inner"; inner.mkdir(parents=True)
+        (inner / "_exec").write_text("#!/bin/sh" + nl + 'echo $$ > "$AOS_STACK/pid"' + nl + "exec sleep 30" + nl)
+        (inner / "_exec").chmod(0o755)
+        outer = self.tmp / "outer"; outer.mkdir(parents=True)
+        (outer / "_exec").write_text("#!/bin/sh" + nl + "aos-exec %s" % (self.tmp / "inner") + nl)
+        (outer / "_exec").chmod(0o755)
         ws = self.tmp / "ws"; ws.mkdir()
         old = os.environ.copy()
         os.environ["PATH"] = str(BIN) + os.pathsep + os.environ["PATH"]

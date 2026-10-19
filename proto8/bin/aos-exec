@@ -1,7 +1,7 @@
 #!/bin/sh
 # aos-exec DIR [WS [args...]] — 執行 DIR 這個程式（DIR 的入口 $AOS_ENTRY）。DIR、WS 相對路徑照呼叫當下的 cwd。
 # WS 省略＝-；- 是沿用 $AOS_WS，沒設才用 .（呼叫當下的 cwd）；給別的路徑就用那個。
-# 入口 = $AOS_ENTRY（預設 .aos/exec）；沒有它但有 $AOS_ENTRY.json 就 aos-inst 它。
+# 入口 = $AOS_ENTRY（預設 _exec；10-19 晚改，原 .aos/exec）；沒有它但有 $AOS_ENTRY.json 就 aos-inst 它。
 # AOS_STACK 沒設就用 $AOS_WS/.aos/（自動建立），設了就沿用；巢狀子程式共用同一個。
 die() { echo "aos-exec: $*" >&2; exit 1; }
 [ $# -ge 1 ] || die "usage: aos-exec DIR [WS [args...]]"
@@ -9,7 +9,7 @@ dir=$1; ws=${2:--}; shift; [ $# -eq 0 ] || shift
 [ "$ws" != "-" ] || ws=${AOS_WS:-.}
 [ -d "$ws" ] || die "工作區不存在：$ws"
 [ -d "$dir" ] || die "程式資料夾不存在：$dir"
-entry=${AOS_ENTRY:-.aos/exec}
+entry=${AOS_ENTRY:-_exec}
 # 入口：可執行檔優先；沒有就找旁邊的 $entry.json 單子（交給 aos-inst）
 if [ -e "$dir/$entry" ]; then
   [ -x "$dir/$entry" ] || die "入口不可執行（要 chmod +x）：$dir/$entry"

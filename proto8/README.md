@@ -8,7 +8,7 @@
 
 ## 現況（2026-10-19 併入 proto8-2 後）
 
-使用者 10-19 定：**資料夾＝程式**，入口 `$AOS_ENTRY`（預設 `.aos/exec`，必須是可執行檔），aos 只訂三個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`）和一支 `aos-exec DIR [WS]`；巢狀由程式自己訂子 stack；這次要做啥隨意。10-16 那套（stdin 是正規入口、`.aos` 捷徑、門房、結束碼只是參考…）作廢，原話與裁定在 [thinking/2026-10-19-ideas.md](thinking/2026-10-19-ideas.md)（使用者：「那是帶著鐐銬跳舞跳得很棒，終究不如我們現在直接把鐐銬拿掉」）。程式照這個做完：agent-bob 叫 cathy 叫 stamp 四層、agent-ann 全內嵌對照，測試 65 個。
+使用者 10-19 定：**資料夾＝程式**，入口 `$AOS_ENTRY`（預設 `_exec`，必須是可執行檔；10-19 晚改，原 `.aos/exec`，[ideas § 13](thinking/2026-10-19-ideas.md)），aos 只訂三個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`）和一支 `aos-exec DIR [WS]`；巢狀由程式自己訂子 stack；這次要做啥隨意。10-16 那套（stdin 是正規入口、`.aos` 捷徑、門房、結束碼只是參考…）作廢，原話與裁定在 [thinking/2026-10-19-ideas.md](thinking/2026-10-19-ideas.md)（使用者：「那是帶著鐐銬跳舞跳得很棒，終究不如我們現在直接把鐐銬拿掉」）。程式照這個做完：agent-bob 叫 cathy 叫 stamp 四層、agent-ann 全內嵌對照，測試 65 個。
 
 **舊 lib 已刪進 git 歷史**（inst、loop、daemon、fsm、agent 格庫、兩種 kernel、tasks、tick；27 支模組＋說明＋169 個測試＋六組 demo＋舊 `bin/aos`）：要找回用 `git show aa2fec1f:proto8/lib/README.md`（aa2fec1f 是刪除前最後一個有它的 commit）。daemon、kernel、tasks、tick、腦的工具呼叫現在**沒有實作**，概念與規範留著、標「現無實作」，等照新做法重寫（[NORMS 待定](NORMS/08-待定.md)）。
 
