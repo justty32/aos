@@ -20,7 +20,10 @@
 sh proto8-2/demo/run.sh                       # 建暫時工作區、放一題、跑 agent-bob、印工作區內容
 python3 -m unittest discover -s proto8-2/tests
 proto8-2/bin/aos-exec <工作區> proto8-2/demo/agent-bob    # 自己跑
+cd workspace && aos-exec . ../agent-bob             # 慣例用法（使用者 10-19）
 ```
+
+**aos 只訂環境變數**（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`），入口拿到之後「這次要做啥」怎麼收、怎麼用是入口自己的事（使用者 10-19，[ideas § 4](thinking/2026-10-19-ideas.md)）；aos-exec 只是把多的 args／stdin 原樣交給它。慣例上入口是 shell 檔（`aos-loop loop.json`）；之後看要不要接 proto8 的 inst json（不走 sh、更快）。
 
 - `bin/aos-exec WS DIR [args...]`：WS 轉絕對路徑設成 `AOS_WS`；`AOS_STACK` 沒設就用 `$AOS_WS/.aos/`（轉絕對路徑、不存在就建），有設就沿用，都 export 給子程式；`cd DIR`、exec 入口；args／stdin 原樣透傳；把自己的 `bin/` 放進 PATH，所以入口裡直接寫 `aos-loop`、`aos-exec`。入口缺／不可執行、工作區或 DIR 不存在 → 結束碼 2 並印原因。
 - `bin/aos-loop loop.json`（Python 純標準庫）：`{"run": 子資料夾, "max": 最多幾圈}`，每圈 `aos-exec - <run>`。子程式結束碼 0＝下一圈、**10＝要求停（loop 以 0 結束）**、其他非 0＝失敗（loop 以原碼結束）；跑滿 max 圈也以 0 結束（stderr 提醒）。
