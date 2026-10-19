@@ -1,6 +1,6 @@
 # proto8-2 併進 proto8：怎麼併（2026-10-19，fable 規劃）
 
-← [proto8-2](README.md)｜慣例：[CONVENTION.md](../proto8/CONVENTION.md)｜裁定：[CONFLICTS.md](CONFLICTS.md)｜原話：[ideas § 11](../proto8/thinking/2026-10-19-ideas.md)｜proto8：[README](../proto8/README.md)、[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)
+← [proto8-2](README.md)｜慣例：[CONVENTION.md](../proto8/CONVENTION.md)｜裁定：CONFLICTS.md｜原話：[ideas § 11](../proto8/thinking/2026-10-19-ideas.md)｜proto8：[README](../proto8/README.md)、[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)
 
 使用者 10-19：「然後proto8-2應該可以轉正到proto8了」→ 選 (b)：「b。這是個大工程，現行規範也要跟著改」。先例是 10-15 深夜 proto8-1 併進 proto8/lib（commit a0c7214d：程式 `git mv` 進 lib、測試進 lib/tests、demo 搬進 demo/、規範改寫、原資料夾刪）。這份只規劃、一個檔都還沒搬；每條後面括號是依據（P-xx＝CONVENTION、CONFLICTS 幾、§ 幾＝ideas 原話、C-xx／N-xx＝proto8）。
 

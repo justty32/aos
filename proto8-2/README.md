@@ -1,12 +1,12 @@
 # proto8-2 — 從 proto8 長出來的第二輪
 
-← [proto8](../proto8/README.md)｜原話 → [thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)｜慣例 → [CONVENTION.md](../proto8/CONVENTION.md)｜要使用者決定的 → [CONFLICTS.md](CONFLICTS.md)
+← [proto8](../proto8/README.md)｜原話 → [thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)｜慣例 → [CONVENTION.md](../proto8/CONVENTION.md)｜要使用者決定的 → CONFLICTS.md
 
 **2026-10-19 開。** 使用者原話：「我這邊想開proto8-2，我有些新想法。」
 
 ## 與 proto8 的關係
 
-從 proto8 長出來。proto8 的[概念](../proto8/CONCEPTS.md)與[規範](../proto8/NORMS.md)照舊有效；跟今天決定相撞的六條列在 [CONFLICTS.md](CONFLICTS.md)，等使用者裁定。proto8-2 放新想法。
+從 proto8 長出來。proto8 的[概念](../proto8/CONCEPTS.md)與[規範](../proto8/NORMS.md)照舊有效；跟今天決定相撞的六條列在 CONFLICTS.md，等使用者裁定。proto8-2 放新想法。
 
 ## 現況
 
@@ -39,4 +39,4 @@ cd workspace && aos-exec ../agent-bob             # 慣例用法（WS 省略＝-
 - `AOS_STACK`（**使用者已定**）：預設 `$AOS_WS/.aos/`，是被叫的那個程式自己的 stack。**它的子程式的 stack 由它自己訂**（使用者 10-19 定；例如給 `$AOS_STACK/think`、`$AOS_STACK/act`），aos 不管巢狀。demo 的 agent-bob 選擇讓 fsm／think／act 共用同一個。
 - 工作區變數名 `AOS_WS`（**使用者已定**，10-19：一度改 `AOS_WD`，AI 提醒 WD 容易被當成 cwd 後定回 `AOS_WS`，與 proto8 N-55 同名；也考慮過 `AOS_TARGET`，但 TARGET 在 proto8 指程式那一邊）。
 - `aos-exec DIR [WS]`：WS 省略＝`-`；`-`＝沿用 `$AOS_WS`，沒設才用 `.`（使用者 10-19 定）。
-- 入口用 shell 檔；loop 的停止碼 10、`loop.json` 欄位（`run`／`max`）隨拍板點 1 (b)「agent-bob 現在的形狀就是標準」成為慣例（停止碼 10 跟 C-63 相撞，見 [CONFLICTS 4](CONFLICTS.md)）。
+- 入口用 shell 檔；loop 的停止碼 10、`loop.json` 欄位（`run`／`max`）隨拍板點 1 (b)「agent-bob 現在的形狀就是標準」成為慣例（停止碼 10 跟 C-63 相撞，見 CONFLICTS 4）。

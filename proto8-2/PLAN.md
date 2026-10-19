@@ -1,6 +1,6 @@
 # proto8-2 實作計畫：把 CONVENTION 第十節做掉（2026-10-19，fable 規劃）
 
-← [proto8-2](README.md)｜慣例：[CONVENTION.md](../proto8/CONVENTION.md)（第十節＝要做的四項）｜原話：[thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)｜衝突裁定：[CONFLICTS.md](CONFLICTS.md)
+← [proto8-2](README.md)｜慣例：[CONVENTION.md](../proto8/CONVENTION.md)（第十節＝要做的四項）｜原話：[thinking/ideas](../proto8/thinking/2026-10-19-ideas.md)｜衝突裁定：CONFLICTS.md
 
 四項：(1) inst 四種用法；(2) `tools/` 一個範例工具；(3) aos-exec 自己的錯退 1；(4) 單子指到 `$AOS_STACK` 底下的檔。這份只規劃、不寫程式；每條後面括號是依據（§ 幾＝ideas 原話段號、P-xx＝CONVENTION、C-xx／N-xx＝proto8）。proto8 本身一個字都不動。
 
@@ -195,7 +195,7 @@
 
 ### 五、要使用者決定的
 
-一條衝突（N-52 ↔ P-36）與一個方向問題（agent 當工具時題目怎麼交）寫在 [CONFLICTS.md](CONFLICTS.md) 第 7 條與「方向問題」；都附了預設做法，使用者沒反對就照預設做、不卡步驟。另外兩處是 fable 自己定、列出讓他知道：
+一條衝突（N-52 ↔ P-36）與一個方向問題（agent 當工具時題目怎麼交）寫在 CONFLICTS.md 第 7 條與「方向問題」；都附了預設做法，使用者沒反對就照預設做、不卡步驟。另外兩處是 fable 自己定、列出讓他知道：
 
 1. cathy 放在 bob 的 `act/tools/` 底下，不是獨立的 `demo/agent-cathy/`（上面決定 2）。要獨立一份給多個 agent 共用，Linux 上在 `tools/` 放捷徑即可（P-33），demo 不示範。
 2. ann 留下來當全內嵌對照、不刪（§ 八要有「零子資料夾」那一端的實物；三支 `.py` 的維護成本很低）。
