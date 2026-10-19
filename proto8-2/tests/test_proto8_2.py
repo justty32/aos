@@ -7,7 +7,7 @@ BOB = str(ROOT / "demo" / "agent-bob")
 
 
 def run(*args, env=None, **kw):
-    e = {k: v for k, v in os.environ.items() if k not in ("AOS_WD", "AOS_ENTRY", "AOS_STACK")}
+    e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY", "AOS_STACK")}
     e.update(env or {})
     return subprocess.run(args, capture_output=True, text=True, env=e, **kw)
 
@@ -46,13 +46,13 @@ class T(unittest.TestCase):
         self.assertIn("不可執行", r.stderr)
 
     def test_dash_reuses_aos_ws(self):
-        d = prog(self.tmp, "p", 'echo "$AOS_WD"\n')
+        d = prog(self.tmp, "p", 'echo "$AOS_WS"\n')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, "-", d, env={"AOS_WD": str(ws)})
+        r = run(EXEC, "-", d, env={"AOS_WS": str(ws)})
         self.assertEqual(r.stdout.strip(), str(ws))
         r = run(EXEC, "-", d)
         self.assertEqual(r.returncode, 2)
-        self.assertIn("AOS_WD", r.stderr)
+        self.assertIn("AOS_WS", r.stderr)
 
     def test_args_stdin_cwd_and_custom_entry(self):
         d = prog(self.tmp, "p", 'pwd; echo "$@"; cat\n', entry="main.sh")
@@ -61,7 +61,7 @@ class T(unittest.TestCase):
         self.assertTrue(r.stdout.startswith(d + "\na b\nfrom stdin"))
 
     def test_nested_same_workspace(self):
-        inner = prog(self.tmp, "outer/inner", 'echo "$AOS_WD" > "$AOS_WD/seen"\n')
+        inner = prog(self.tmp, "outer/inner", 'echo "$AOS_WS" > "$AOS_WS/seen"\n')
         outer = prog(self.tmp, "outer", f'aos-exec - {inner}\n')
         ws = Path(self.tmp, "ws"); ws.mkdir()
         r = run(EXEC, str(ws), outer)
@@ -120,7 +120,7 @@ class T(unittest.TestCase):
     def test_bob_requires_stack(self):
         ws = workspace(self.tmp, "ws", "hello")
         for sub in ("fsm", "fsm/think", "fsm/act"):
-            r = run(str(Path(BOB) / sub / ".aos/exec"), env={"AOS_WD": str(ws)})
+            r = run(str(Path(BOB) / sub / ".aos/exec"), env={"AOS_WS": str(ws)})
             self.assertNotEqual(r.returncode, 0, sub)
             self.assertIn("沒設定 AOS_STACK", r.stderr, sub)
 
