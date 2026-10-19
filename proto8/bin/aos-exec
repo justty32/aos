@@ -1,31 +1,175 @@
-#!/bin/sh
-# aos-exec DIR [WS [args...]] — 執行 DIR 這個程式（DIR 的入口 $AOS_ENTRY）。DIR、WS 相對路徑照呼叫當下的 cwd。
-# WS 省略＝-；- 是沿用 $AOS_WS，沒設才用 .（呼叫當下的 cwd）；給別的路徑就用那個。
-# 入口 = $AOS_ENTRY（預設 _exec；10-19 晚改，原 .aos/exec）；沒有它但有 $AOS_ENTRY.json 就 aos-inst 它。
-# AOS_STACK 沒設就用 $AOS_WS/.aos/（自動建立），設了就沿用；巢狀子程式共用同一個。
-die() { echo "aos-exec: $*" >&2; exit 1; }
-[ $# -ge 1 ] || die "usage: aos-exec DIR [WS [args...]]"
-dir=$1; ws=${2:--}; shift; [ $# -eq 0 ] || shift
-[ "$ws" != "-" ] || ws=${AOS_WS:-.}
-[ -d "$ws" ] || die "工作區不存在：$ws"
-[ -d "$dir" ] || die "程式資料夾不存在：$dir"
-entry=${AOS_ENTRY:-_exec}
-# 入口：可執行檔優先；沒有就找旁邊的 $entry.json 單子（交給 aos-inst）
-if [ -e "$dir/$entry" ]; then
-  [ -x "$dir/$entry" ] || die "入口不可執行（要 chmod +x）：$dir/$entry"
-  inst=
-elif [ -e "$dir/$entry.json" ]; then
-  inst=aos-inst
-else
-  die "入口不存在：$dir/$entry（也沒有 $entry.json）"
-fi
-AOS_WS=$(cd "$ws" && pwd) || exit 1
-bin=$(cd "$(dirname "$0")" && pwd)
-case ":$PATH:" in *":$bin:"*) ;; *) PATH=$bin:$PATH ;; esac
-AOS_STACK=${AOS_STACK:-$AOS_WS/.aos/}
-mkdir -p "$AOS_STACK" || exit 1
-AOS_STACK=$(cd "$AOS_STACK" && pwd)/
-export AOS_WS AOS_STACK PATH
-cd "$dir" || exit 1
-if [ -n "$inst" ]; then exec aos-inst "./$entry.json" "$@"; fi
-exec "./$entry" "$@"
+#!/usr/bin/env python3
+"""aos-exec XXX [WS [args...]] — 在 WS 這個工作區執行 XXX 這個程式（N-57～N-62）。純標準庫。
+
+XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd。WS 省略／`-`／空＝沿用 $AOS_WS，沒設用 .。
+找入口（N-61）：資料夾 → XXX/$AOS_ENTRY（預設 _exec），沒有再找 XXX/$AOS_ENTRY.json；不在、basename 沒有 `.`
+→ 補找 XXX.json。解開捷徑後：有 +x＝可執行檔（exec，不讀內容）；沒 +x 當 JSON 讀（第一行 #! 跳過、照 #/ 取值）：
+全字串陣列＝argv（exec，不退回 sh）、有 argv 的物件＝inst 單子（行程內 aos_inst.run，以子程式的碼結束）、
+沒 argv 的物件＝取 [$AOS_ENTRY] 再判一次（只往下一層）、字串＝路徑轉向（從寫著它的檔所在的資料夾算，繞圈＝入口壞）。
+開跑前 export AOS_WS、AOS_STACK（沒設＝$AOS_WS/.aos/，建好）、AOS_CF（實際的檔）、AOS_CD（它的資料夾），
+自己的 bin/ 放進 PATH（已在就不疊），cd 到 AOS_CD。args 接在入口後面，stdin 原樣給入口。
+自己的錯退 1，stderr 一行「aos-exec: 原因」（N-60）。
+"""
+import json
+import os
+import signal
+import sys
+
+BIN = os.path.dirname(os.path.realpath(__file__))
+
+
+class Fail(Exception):
+    """aos-exec 自己的錯（N-60）。"""
+
+
+def die(msg):
+    print("aos-exec: %s" % msg, file=sys.stderr)
+    sys.exit(1)
+
+
+def entry_name():
+    return os.environ.get("AOS_ENTRY") or "_exec"
+
+
+def pointer(doc, ptr, where):
+    """RFC 6901：ptr 是 `/a/b`（`~1`＝`/`、`~0`＝`~`）。指不到＝入口不存在。"""
+    for tok in ptr[1:].split("/"):
+        tok = tok.replace("~1", "/").replace("~0", "~")
+        if isinstance(doc, dict) and tok in doc:
+            doc = doc[tok]
+        elif isinstance(doc, list) and tok.isdigit() and (tok == "0" or not tok.startswith("0")) \
+                and int(tok) < len(doc):
+            doc = doc[int(tok)]
+        else:
+            raise Fail("入口不存在：%s#%s 指不到" % (where, ptr))
+    return doc
+
+
+def locate(spec, base):
+    """XXX → (實際的檔, 指標或 None)。base＝相對路徑的起點。"""
+    path, hashed, ptr = spec.partition("#")
+    if hashed and not ptr.startswith("/"):
+        raise Fail("入口壞：%s 的 # 後面要接 /" % spec)
+    ptr = ptr if hashed else None
+    p = os.path.join(base, path)
+    name = entry_name()
+    if os.path.isdir(p):
+        if ptr is not None:
+            raise Fail("入口壞：資料夾不能帶 #/：%s" % spec)
+        f = os.path.join(p, name)
+        if not os.path.lexists(f):
+            f = os.path.join(p, name + ".json")
+        if not os.path.isfile(f):
+            raise Fail("入口不存在：%s（也沒有 %s.json，或它是資料夾）" % (os.path.join(p, name), name))
+    elif os.path.isfile(p):
+        f = p
+    elif not os.path.lexists(p) and "." not in os.path.basename(path) and os.path.isfile(p + ".json"):
+        f = p + ".json"
+    else:
+        raise Fail("入口不存在：%s" % spec)
+    return os.path.realpath(f), ptr
+
+
+def find(spec, base, seen=()):
+    """回 (種類, 值, 實際的檔)。種類：exe（值＝None）、argv（字串陣列）、inst（單子 dict）。"""
+    f, ptr = locate(spec, base)
+    if os.access(f, os.X_OK):
+        if ptr is not None:
+            raise Fail("入口壞：可執行檔不能帶 #/：%s" % spec)
+        return "exe", None, f
+    where = (f, ptr or "")
+    if where in seen:
+        chain = [a + b for a, b in seen + (where,)]
+        raise Fail("入口壞：字串轉向繞圈：%s" % " → ".join(chain))
+    seen = seen + (where,)
+    try:
+        with open(f, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError as e:
+        raise Fail("入口讀不到：%s（%s）" % (f, e.strerror))
+    if text.startswith("#!"):
+        text = text.partition("\n")[2]
+    try:
+        doc = json.loads(text)
+    except ValueError:
+        raise Fail("入口壞：沒有 +x、也不是 JSON：%s" % f)
+    if ptr is not None:
+        doc = pointer(doc, ptr, f)
+    if isinstance(doc, dict) and "argv" not in doc:
+        if entry_name() not in doc:
+            raise Fail("入口壞：%s 不是單子、也沒有 %s" % (f, entry_name()))
+        doc = doc[entry_name()]
+        if isinstance(doc, dict) and "argv" not in doc:
+            raise Fail("入口壞：%s 的 %s 不是單子、argv 陣列或路徑" % (f, entry_name()))
+    if isinstance(doc, str):
+        return find(doc, os.path.dirname(f), seen)
+    if isinstance(doc, dict):
+        return "inst", doc, f
+    if isinstance(doc, list) and doc and all(isinstance(a, str) for a in doc):
+        return "argv", doc, f
+    raise Fail("入口壞：%s 不是單子、argv 陣列或路徑" % f)
+
+
+def execv(prog, argv):
+    try:
+        os.execv(prog, argv)
+    except OSError as e:
+        return e
+
+
+def launch(kind, val, f, args):
+    """cd 已做完。exe／argv＝exec（不留行程）；inst＝行程內跑、以子程式的碼結束。"""
+    if kind == "inst":
+        import aos_inst
+        try:
+            return aos_inst.run(val, args)["code"]
+        except aos_inst.InstError as e:
+            raise Fail("單子跑不起來：%s" % e)
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)      # Python 預設忽略 SIGPIPE，exec 會繼承；還原
+    if kind == "exe":
+        err = execv(f, [f] + args)
+        raise Fail("起不來：%s（%s）" % (f, err.strerror))
+    argv = val + args
+    if "/" in argv[0]:
+        err = execv(argv[0], argv)
+    else:   # 自己照 PATH 找、一段段 execv：+x 沒 #! 的檔不偷偷改用 sh 跑（少用 sh）
+        last = first = None    # 同 execvp：找不到換下一段；別的錯（沒 +x、沒 #!）記第一個、也換下一段
+        for d in os.environ["PATH"].split(":"):
+            last = execv(os.path.join(d, argv[0]), argv)
+            if first is None and not isinstance(last, (FileNotFoundError, NotADirectoryError)):
+                first = last
+        err = first or last
+    raise Fail("起不來：%s（%s）" % (argv[0], err.strerror))
+
+
+def main(argv):
+    if not argv:
+        die("usage: aos-exec XXX [WS [args...]]")
+    spec, ws, args = argv[0], (argv[1] if len(argv) > 1 else "-"), argv[2:]
+    if ws in ("-", ""):
+        ws = os.environ.get("AOS_WS") or "."
+    if not os.path.isdir(ws):
+        die("工作區不存在：%s" % ws)
+    try:
+        kind, val, f = find(spec, os.getcwd())
+        ws = os.path.abspath(ws)
+        stack = os.environ.get("AOS_STACK") or os.path.join(ws, ".aos")
+        try:
+            os.makedirs(stack, exist_ok=True)
+        except OSError as e:
+            raise Fail("建不了 AOS_STACK：%s（%s）" % (stack, e.strerror))
+        path = os.environ.get("PATH") or "/bin:/usr/bin"
+        if BIN not in path.split(":"):
+            path = BIN + ":" + path
+        cd = os.path.dirname(f)
+        os.environ.update(AOS_WS=ws, AOS_STACK=os.path.join(os.path.abspath(stack), ""),
+                          AOS_CF=f, AOS_CD=cd, PATH=path)
+        os.chdir(cd)
+        return launch(kind, val, f, args)
+    except Fail as e:
+        die(e)
+
+
+if __name__ == "__main__":
+    sys.path.insert(0, BIN)
+    sys.exit(main(sys.argv[1:]))

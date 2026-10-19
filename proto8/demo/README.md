@@ -22,6 +22,6 @@ stack 樹＝呼叫樹：`.aos/{state,current,plan,trace.jsonl}`、`.aos/cathy/{�
 
 ## 測試
 
-`python3 -m unittest discover -s proto8/tests`：`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與 cathy／stamp 巢狀）、`test_inst.py`（aos-inst）、`test_fsm.py`（aos-fsm）。
+`python3 -m unittest discover -s proto8/tests`：`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與 cathy／stamp 巢狀）、`test_exec_rules.py`（aos-exec 的新規則：找入口、`#/`、四種入口、`AOS_CF`／`AOS_CD`）、`test_inst.py`（aos-inst）、`test_fsm.py`（aos-fsm）。
 
 舊的 demo（daemon、fsm、paint、kernels、tasks、tick、once、`aos-demo`）10-19 進 git 歷史，見 git aa2fec1f（刪除前的最後一個樣子）。

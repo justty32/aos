@@ -75,10 +75,11 @@ class T(unittest.TestCase):
         self.assertEqual(r.stdout, "exe\n")
 
     def test_not_executable(self):
+        # § 14 之後沒 +x 不再是錯、改當 JSON 讀；sh 腳本不是 JSON＝入口壞（N-60、N-61）
         d = prog(self.tmp, "p", "echo hi\n", mode=0o644)
         r = run(EXEC, d, self.tmp)
         self.assertEqual(r.returncode, 1)
-        self.assertIn("不可執行", r.stderr)
+        self.assertIn("入口壞", r.stderr)
 
     def test_ws_omitted_without_aos_ws_uses_cwd(self):
         d = prog(self.tmp, "p", 'echo "$AOS_WS"\n')
