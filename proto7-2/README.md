@@ -2,7 +2,7 @@
 
 ← [proto7](../proto7/README.md)｜要合的：[核心 spec](../proto7/spec/core.md)（條號 S-）｜上一次試做：[proto7-1](../proto7-1/README.md)
 
-**proto7-1 之後的第二次試做：照使用者 10-04 的建議（[user-advice](../proto7/user-advice.md)）重做 daemon 與 tick。10-04 照 spec 做完基礎設施（Python 3.11+ 純標準庫）；kernel／agent 這次不做。**（10-04 當時的打算；kernel 任務包後來在 10-09 做了，見下面「一句話看改了什麼」。）
+**proto7-1 之後的第二次試做：照使用者 10-04 的建議（[user-advice](notes/changes-from-7-1.md)）重做 daemon 與 tick。10-04 照 spec 做完基礎設施（Python 3.11+ 純標準庫）；kernel／agent 這次不做。**（10-04 當時的打算；kernel 任務包後來在 10-09 做了，見下面「一句話看改了什麼」。）
 
 ## 入口
 

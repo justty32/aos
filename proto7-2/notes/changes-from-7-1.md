@@ -1,6 +1,6 @@
 # proto7-1 → proto7-2 對照
 
-← [proto7-2](../README.md)｜[spec 草稿](../spec.md)｜使用者建議：[user-advice](../../proto7/user-advice.md)
+← [proto7-2](../README.md)｜[spec 草稿](../spec.md)｜使用者建議：user-advice（沒有 commit，內容轉述在本檔下表）
 
 每一列是一個改動：proto7-1 怎麼做 → proto7-2 怎麼做 → 為什麼。N-／K- 編號指 [proto7-1 需求清單](../../proto7-1/notes/infra-needs.md) 與 [生命週期決定](../../proto7-1/notes/decisions/2026-10-03-lifecycle-invariants.md)。最後一節是**要你決定的 W 清單**。
 
