@@ -2,7 +2,7 @@
 # aos-exec DIR [WS [args...]] — 執行 DIR 這個程式（DIR 的入口 $AOS_ENTRY）。DIR、WS 相對路徑照呼叫當下的 cwd。
 # WS 省略＝-；- 是沿用 $AOS_WS，沒設才用 .（呼叫當下的 cwd）；給別的路徑就用那個。
 # AOS_STACK 沒設就用 $AOS_WS/.aos/（自動建立），設了就沿用；巢狀子程式共用同一個。
-die() { echo "aos-exec: $*" >&2; exit 2; }
+die() { echo "aos-exec: $*" >&2; exit 1; }
 [ $# -ge 1 ] || die "usage: aos-exec DIR [WS [args...]]"
 dir=$1; ws=${2:--}; shift; [ $# -eq 0 ] || shift
 [ "$ws" != "-" ] || ws=${AOS_WS:-.}
@@ -11,10 +11,10 @@ dir=$1; ws=${2:--}; shift; [ $# -eq 0 ] || shift
 entry=${AOS_ENTRY:-.aos/exec}
 [ -e "$dir/$entry" ] || die "入口不存在：$dir/$entry"
 [ -x "$dir/$entry" ] || die "入口不可執行（要 chmod +x）：$dir/$entry"
-AOS_WS=$(cd "$ws" && pwd) || exit 2
+AOS_WS=$(cd "$ws" && pwd) || exit 1
 PATH=$(cd "$(dirname "$0")" && pwd):$PATH
 AOS_STACK=${AOS_STACK:-$AOS_WS/.aos/}
-mkdir -p "$AOS_STACK" || exit 2
+mkdir -p "$AOS_STACK" || exit 1
 AOS_STACK=$(cd "$AOS_STACK" && pwd)/
 export AOS_WS AOS_STACK PATH
 cd "$dir" && exec "./$entry" "$@"

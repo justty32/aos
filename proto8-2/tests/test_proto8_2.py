@@ -36,13 +36,13 @@ class T(unittest.TestCase):
     def test_missing_entry(self):
         d = Path(self.tmp, "p"); d.mkdir()
         r = run(EXEC, str(d), self.tmp)
-        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.returncode, 1)
         self.assertIn("入口不存在", r.stderr)
 
     def test_not_executable(self):
         d = prog(self.tmp, "p", "echo hi\n", mode=0o644)
         r = run(EXEC, d, self.tmp)
-        self.assertEqual(r.returncode, 2)
+        self.assertEqual(r.returncode, 1)
         self.assertIn("不可執行", r.stderr)
 
     def test_ws_omitted_without_aos_ws_uses_cwd(self):

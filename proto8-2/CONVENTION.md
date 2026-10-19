@@ -11,7 +11,7 @@
 - **P-01** aos 只訂三個環境變數：`AOS_ENTRY`＝入口在資料夾裡的相對位置，預設 `.aos/exec`，**必須是可執行檔**；`AOS_WS`＝工作區（使用者的檔與成品在哪）；`AOS_STACK`＝執行中狀態放哪，預設 `$AOS_WS/.aos/`。（§ 1、§ 2、§ 3；N-55）
 - **P-02** `aos-exec DIR [WS [args...]]`＝「在 WS 這個工作區，執行 DIR 這個程式」。WS 省略＝`-`；`-`＝沿用現有 `$AOS_WS`，沒設才用 `.`。慣例用法：`cd workspace && aos-exec ../agent-bob`。（§ 4、§ 5）
 - **P-03** aos-exec 只做五件事：把 WS 轉絕對路徑設成 `AOS_WS`；`AOS_STACK` 沒設就設預設值、建資料夾；把自己的 `bin/` 加進 PATH（入口才找得到 `aos-loop`、`aos-exec`）；`cd DIR`；`exec` 入口，多的 args 與 stdin 原樣交給它。**起跑時 cwd＝DIR**；之後程式愛 cd 去哪、「這次要做啥」怎麼收，都是它自己的事。（§ 1、§ 4）
-- **P-04** DIR 或 WS 不存在、入口缺或不可執行：aos-exec 非 0 結束、stderr 一行原因。（N-43、N-29 精神；現為結束碼 2，見第十節）
+- **P-04** DIR 或 WS 不存在、入口缺或不可執行：aos-exec 非 0 結束、stderr 一行原因。（N-43、N-29 精神；aos 自己的錯一律退 1）
 
 ## 二、佈局（每檔一句）
 
@@ -113,7 +113,6 @@ stack 裡的檔名與格式；腦的接頭怎麼寫；工具裡面怎麼做；�
 
 ## 十、程式還沒照這份改的地方（之後另派）
 
-- aos-exec 自己的錯退 2；N-43 說 aos 的程式說自己的錯退 1（P-04）。
 - inst 四種用法一個都沒做：aos-inst 跳過 `#!` 行、aos-exec 認 `exec.json`、aos-loop／aos-fsm 內嵌單子、aos-fsm 的 state 窗落在 `$AOS_STACK`（P-28、P-29）。
 - `tools/` 還沒有任何工具（P-25）。
 - inst 單子裡要指到 `$AOS_STACK` 底下的檔，`$env` 只能取整個變數值、沒有拼接寫法（N-45）；接的時候要定。
