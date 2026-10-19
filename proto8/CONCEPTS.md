@@ -11,7 +11,7 @@
 
 | 分檔 | 主題 | 條號 |
 |---|---|---|
-| [01-設計理念.md](CONCEPTS/01-設計理念.md) | 設計理念 | C-01～C-04、C-07、C-24、C-43、C-45、C-48、C-51～C-56、C-64、C-68～C-70（**C-56 KISS＝最高原則，也是最後原則**；C-52／C-53 兩條總原則；C-54 命名；旁邊的 [abbr.json](CONCEPTS/abbr.json)＝aos 認可縮寫表；C-55 布局成長；C-64 用檔案為了借 Linux 權限；C-68～C-70 資料夾＝程式、aos 只訂環境變數、巢狀由程式自己訂子 stack） |
+| [01-設計理念.md](CONCEPTS/01-設計理念.md) | 設計理念 | C-01～C-04、C-07、C-24、C-43、C-45、C-48、C-51～C-56、C-64、C-68～C-72（**C-56 KISS＝最高原則，也是最後原則**；C-52／C-53 兩條總原則；C-54 命名；旁邊的 [abbr.json](CONCEPTS/abbr.json)＝aos 認可縮寫表；C-55 布局成長；C-64 用檔案為了借 Linux 權限；C-68～C-70 資料夾＝程式、aos 只訂環境變數、巢狀由程式自己訂子 stack；C-71 資料夾的比喻用 table；C-72 JSON＝埋在檔案裡的 table、入口尋址方式同樣適用） |
 | [02-設計理念-時空.md](CONCEPTS/02-設計理念-時空.md) | 設計理念／時空 | C-05、C-06、C-16、C-17、C-26、C-27、C-30～C-33、C-35、C-37、C-44 |
 | [03-基礎設施.md](CONCEPTS/03-基礎設施.md) | 基礎設施：inst、loop 與 daemon、組合子（tasks、fsm）、資料夾程式、工作區與 stack（10-19） | C-08、C-18、C-25、C-34、C-36、C-39、C-41、C-42b、C-49、C-65～C-67 |
 | [04-kernel.md](CONCEPTS/04-kernel.md) | kernel | C-09～C-15、C-28、C-29、C-38、C-47 |
@@ -66,6 +66,8 @@
 | C-64 | [設計理念](CONCEPTS/01-設計理念.md)（用檔案為了借 Linux 讀寫權限，例 kernel 當某 daemon ctl 的唯一寫者） |
 | C-65～C-67 | [基礎設施](CONCEPTS/03-基礎設施.md)（stack 與工作區：兩個東西、工作區保持乾淨；影響外部＝指標＝`AOS_WS`；stack 放哪由呼叫方自由決定；10-19 改成環境變數） |
 | C-68～C-70 | [設計理念](CONCEPTS/01-設計理念.md)（10-19 新：資料夾＝程式、入口 `AOS_ENTRY`；aos 只訂環境變數；巢狀由程式自己訂子 stack） |
+| C-71 | [設計理念](CONCEPTS/01-設計理念.md)（10-19 晚：資料夾的比喻用 lua 的 table、不用 lisp 的 list；本質是用 index＋巢狀分資料、只是 index 格式不同；入口之外的東西就是其他元素） |
+| C-72 | [設計理念](CONCEPTS/01-設計理念.md)（10-19 晚：JSON＝埋在檔案裡的 table＝單檔的微型檔案系統，入口尋址方式同樣適用，例 `js[".aos"]["inst"]`；現無實作） |
 
 > **10-16 KISS 重審五件拍板**（[稿末尾](thinking/2026-10-16-kiss-recheck.md#使用者拍板10-16)）：C-62 新增（agent 就是一台狀態機）；C-36 註 N-10 刪、C-25 註 agent 一次走一拍。規範面見 [NORMS.md](NORMS.md)（N-53、N-54）。
 >
