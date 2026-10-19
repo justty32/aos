@@ -35,42 +35,74 @@ class T(unittest.TestCase):
 
     def test_missing_entry(self):
         d = Path(self.tmp, "p"); d.mkdir()
-        r = run(EXEC, self.tmp, str(d))
+        r = run(EXEC, str(d), self.tmp)
         self.assertEqual(r.returncode, 2)
         self.assertIn("入口不存在", r.stderr)
 
     def test_not_executable(self):
         d = prog(self.tmp, "p", "echo hi\n", mode=0o644)
-        r = run(EXEC, self.tmp, d)
+        r = run(EXEC, d, self.tmp)
         self.assertEqual(r.returncode, 2)
         self.assertIn("不可執行", r.stderr)
 
-    def test_dash_reuses_aos_ws(self):
+    def test_ws_omitted_without_aos_ws_uses_cwd(self):
         d = prog(self.tmp, "p", 'echo "$AOS_WS"\n')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, "-", d, env={"AOS_WS": str(ws)})
-        self.assertEqual(r.stdout.strip(), str(ws))
-        r = run(EXEC, "-", d)
-        self.assertEqual(r.returncode, 2)
-        self.assertIn("AOS_WS", r.stderr)
+        other = Path(self.tmp, "other"); other.mkdir()
+        r = run(EXEC, d, cwd=str(ws))
+        self.assertEqual(r.stdout.strip(), str(ws.resolve()))
+
+    def test_ws_omitted_or_dash_reuses_aos_ws(self):
+        d = prog(self.tmp, "p", 'echo "$AOS_WS"\n')
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        other = Path(self.tmp, "other"); other.mkdir()
+        for extra in ((), ("-",)):
+            r = run(EXEC, d, *extra, cwd=str(other), env={"AOS_WS": str(ws)})
+            self.assertEqual(r.stdout.strip(), str(ws))
+
+    def test_dash_with_args_passthrough(self):
+        d = prog(self.tmp, "p", 'echo "$AOS_WS:$1"\n')
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        r = run(EXEC, d, "-", "x", cwd=str(ws))
+        self.assertEqual(r.stdout.strip(), f"{ws.resolve()}:x")
+
+    def test_ws_given_is_used_and_relative_to_cwd(self):
+        d = prog(self.tmp, "p", 'echo "$AOS_WS"\n')
+        ws = Path(self.tmp, "ws"); ws.mkdir()
+        r = run(EXEC, d, str(ws), cwd=self.tmp)
+        self.assertEqual(r.stdout.strip(), str(ws.resolve()))
+        r = run(EXEC, "p", "ws", cwd=self.tmp)
+        self.assertEqual(r.stdout.strip(), str(ws.resolve()))
+
+    def test_cd_into_workspace_then_relative_agent(self):
+        ws = workspace(self.tmp, "ws", "hello")
+        agent_link = Path(self.tmp, "agent-bob"); agent_link.symlink_to(BOB)
+        r = run(EXEC, "../agent-bob", cwd=str(ws))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("hello", (ws / "out" / "q.txt").read_text())
+
+    def test_args_after_ws_passthrough(self):
+        d = prog(self.tmp, "p", 'echo "$#:$1:$2"\n')
+        r = run(EXEC, d, self.tmp, "x", "y")
+        self.assertEqual(r.stdout.strip(), "2:x:y")
 
     def test_args_stdin_cwd_and_custom_entry(self):
         d = prog(self.tmp, "p", 'pwd; echo "$@"; cat\n', entry="main.sh")
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, str(ws), d, "a", "b", input="from stdin", env={"AOS_ENTRY": "main.sh"})
+        r = run(EXEC, d, str(ws), "a", "b", input="from stdin", env={"AOS_ENTRY": "main.sh"})
         self.assertTrue(r.stdout.startswith(d + "\na b\nfrom stdin"))
 
     def test_nested_same_workspace(self):
         inner = prog(self.tmp, "outer/inner", 'echo "$AOS_WS" > "$AOS_WS/seen"\n')
-        outer = prog(self.tmp, "outer", f'aos-exec - {inner}\n')
+        outer = prog(self.tmp, "outer", f'aos-exec {inner}\n')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, str(ws), outer)
+        r = run(EXEC, outer, str(ws))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((ws / "seen").read_text().strip(), str(ws))
 
     def test_demo_flow(self):
         ws = workspace(self.tmp, "ws", "hello")
-        r = run(EXEC, str(ws), BOB)
+        r = run(EXEC, BOB, str(ws))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((ws / ".aos" / "trace.log").read_text().split(), ["idle", "think", "act", "idle"])
         self.assertIn("hello", (ws / "out" / "q.txt").read_text())
@@ -80,7 +112,7 @@ class T(unittest.TestCase):
     def test_two_workspaces_concurrently(self):
         a, b = workspace(self.tmp, "a", "AAA"), workspace(self.tmp, "b", "BBB")
         rs = {}
-        ths = [threading.Thread(target=lambda w=w: rs.update({w: run(EXEC, str(w), BOB)})) for w in (a, b)]
+        ths = [threading.Thread(target=lambda w=w: rs.update({w: run(EXEC, BOB, str(w))})) for w in (a, b)]
         [t.start() for t in ths]; [t.join() for t in ths]
         for w, tag in ((a, "AAA"), (b, "BBB")):
             self.assertEqual(rs[w].returncode, 0, rs[w].stderr)
@@ -94,24 +126,24 @@ class T(unittest.TestCase):
     def test_stack_default_and_override(self):
         d = prog(self.tmp, "p", 'echo "$AOS_STACK"\n')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, str(ws), d)
+        r = run(EXEC, d, str(ws))
         self.assertEqual(r.stdout.strip(), str(ws) + "/.aos/")
         self.assertTrue((ws / ".aos").is_dir())
         mine = Path(self.tmp, "mystack")
-        r = run(EXEC, str(ws), d, env={"AOS_STACK": str(mine)})
+        r = run(EXEC, d, str(ws), env={"AOS_STACK": str(mine)})
         self.assertEqual(r.stdout.strip(), str(mine) + "/")
         self.assertTrue(mine.is_dir())
 
     def test_nested_shares_stack(self):
         inner = prog(self.tmp, "outer/inner", 'echo "$AOS_STACK" > "$AOS_STACK/seen"\n')
-        outer = prog(self.tmp, "outer", f'aos-exec - {inner}\n')
+        outer = prog(self.tmp, "outer", f'aos-exec {inner}\n')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        self.assertEqual(run(EXEC, str(ws), outer).returncode, 0)
+        self.assertEqual(run(EXEC, outer, str(ws)).returncode, 0)
         self.assertEqual((ws / ".aos" / "seen").read_text().strip(), str(ws) + "/.aos/")
 
     def test_bob_state_in_stack_not_ws_or_def(self):
         ws = workspace(self.tmp, "ws", "hello")
-        self.assertEqual(run(EXEC, str(ws), BOB).returncode, 0)
+        self.assertEqual(run(EXEC, BOB, str(ws)).returncode, 0)
         for n in ("state", "trace.log", "plan", "current"):
             self.assertTrue((ws / ".aos" / n).exists(), n)
             self.assertFalse((ws / n).exists(), n)
@@ -129,7 +161,7 @@ class T(unittest.TestCase):
         agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
         Path(agent, "loop.json").write_text('{"run": "bad", "max": 3}')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        self.assertEqual(run(EXEC, str(ws), agent).returncode, 7)
+        self.assertEqual(run(EXEC, agent, str(ws)).returncode, 7)
 
 
 if __name__ == "__main__":

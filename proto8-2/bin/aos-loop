@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""aos-loop LOOP.json — 每圈 `aos-exec - <run>`。loop.json: {"run": "子資料夾", "max": 圈數}
+"""aos-loop LOOP.json — 每圈 `aos-exec <run>`。loop.json: {"run": "子資料夾", "max": 圈數}
 子程式結束碼：0 繼續下一圈；10 要求停（loop 以 0 結束）；其他非 0 失敗（loop 原碼結束）。跑滿 max 圈：結束碼 0。"""
 import json, subprocess, sys
 STOP = 10
 cfg = json.load(open(sys.argv[1]))
 for i in range(int(cfg.get("max", 10))):
-    rc = subprocess.call(["aos-exec", "-", cfg["run"]])
+    rc = subprocess.call(["aos-exec", cfg["run"]])
     if rc == STOP:
         sys.exit(0)
     if rc:
