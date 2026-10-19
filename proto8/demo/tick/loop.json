@@ -1,5 +1,0 @@
-{
-  "inst": {"$ref": "tick/inst.json"},
-  "times": 5,
-  "interval_ms": 1000
-}

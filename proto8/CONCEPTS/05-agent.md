@@ -1,4 +1,4 @@
-← [回入口 CONCEPTS.md](../CONCEPTS.md)｜主題：**agent**｜概念：本檔｜規範：10-16 起 agent 的入口與工具在 [NORMS 定義與工作區](../NORMS/10-基礎設施-定義與工作區.md)（N-49、N-50，草稿）；agent 是用 fsm 組出來的（一個定義資料夾，C-50），fsm 的概念與規範在基礎設施——[CONCEPTS § fsm](03-基礎設施.md#fsm)、[NORMS 組合子 § fsm](../NORMS/07-基礎設施-組合子.md#fsm)｜實作：思考介面與工具＝inst（實作慣例，還不是規範）在 [lib agent.md](../lib/agent.md)（現成格庫 `aos_agent_lib.py`；10-15 收工後的布局：定義資料夾＋stack、agent 當工具＝`sh -c` 三步；**10-16 新設計（C-46、C-50 改字、C-58、C-61；10-16 夜 stack 與工作區分開 C-65～C-67）程式還沒改**）；fsm 基礎實作在 [lib fsm.md](../lib/fsm.md)，同步版 demo 在 [demo/fsm](../demo/fsm/README.md)
+← [回入口 CONCEPTS.md](../CONCEPTS.md)｜主題：**agent**｜概念：本檔｜規範：10-16 起 agent 的入口與工具在 [NORMS 定義與工作區](../NORMS/10-基礎設施-定義與工作區.md)（N-49、N-50，草稿）；agent 是用 fsm 組出來的（一個定義資料夾，C-50），fsm 的概念與規範在基礎設施——[CONCEPTS § fsm](03-基礎設施.md#fsm)、[NORMS 組合子 § fsm](../NORMS/07-基礎設施-組合子.md#fsm)｜實作：思考介面與工具＝inst（實作慣例，還不是規範）在 lib agent.md（已刪，見 git 歷史 aa2fec1f）（現成格庫 `aos_agent_lib.py`；10-15 收工後的布局：定義資料夾＋stack、agent 當工具＝`sh -c` 三步；**10-16 新設計（C-46、C-50 改字、C-58、C-61；10-16 夜 stack 與工作區分開 C-65～C-67）程式還沒改**）；fsm 基礎實作在 lib fsm.md，同步版 demo 在 demo/fsm
 
 # agent
 

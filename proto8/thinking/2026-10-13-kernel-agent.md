@@ -1,6 +1,6 @@
 # 2026-10-13 kernel 不是一層：能管任務的 inst 就是 kernel；agent 可以基於 loop 或 daemon
 
-← [討論紀錄](README.md)｜程式現況：[proto8/lib](../lib/README.md)｜概念：[CONCEPTS](../CONCEPTS.md)｜前一份：[JSON 路徑](2026-10-13-json-path.md)
+← [討論紀錄](README.md)｜程式現況：proto8/lib（已刪，見 git 歷史 aa2fec1f）｜概念：[CONCEPTS](../CONCEPTS.md)｜前一份：[JSON 路徑](2026-10-13-json-path.md)
 
 > 10-13 晚（家機），語音輸入。
 

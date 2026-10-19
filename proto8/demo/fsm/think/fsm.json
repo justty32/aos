@@ -1,9 +1,0 @@
-{
-  "start": "ask",
-  "state": "fsm/think_state.json",
-  "end": ["tool", "idle", "halted"],
-  "states": {
-    "ask": {"val": "ask.json", "next": "review"},
-    "review": "review.json"
-  }
-}

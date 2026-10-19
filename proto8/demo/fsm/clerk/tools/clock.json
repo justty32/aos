@@ -1,8 +1,0 @@
-{
-  "argv": ["aos-demo", "fsm/clerk/tools/clock.py"],
-  "timeout_ms": 5000,
-  "_tool": {
-    "description": "查現在的時間（本機時鐘，HH:MM:SS）。",
-    "parameters": {"type": "object", "properties": {}}
-  }
-}

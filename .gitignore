@@ -4,7 +4,6 @@ vcpkg_installed/
 bin/
 # proto8 的薄入口腳本（不是建置產物）要進版控
 !proto8/bin/
-!proto8/demo/bin/
 .cache/
 compile_commands.json
 CMakeUserPresets.json

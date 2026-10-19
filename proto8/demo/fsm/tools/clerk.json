@@ -1,9 +1,0 @@
-{
-  "argv": ["aos-demo", "sh", "-c",
-           "printf '{\"parent\": \"%s\"}' \"$AOS_DEMO/fsm/clerk\" > frame.json && aos loop \"$AOS_DEMO/fsm/clerk/loop.json\" >/dev/null; cat ret.json"],
-  "timeout_ms": 120000,
-  "_tool": {
-    "description": "問報時員（另一個 agent）。把問題原樣交給它，它會查時間、回一句話。",
-    "parameters": {"type": "object", "properties": {"question": {"type": "string", "description": "要問報時員的話"}}, "required": ["question"]}
-  }
-}

@@ -1,1 +1,0 @@
-{"argv": ["aos", "brain", "openai", "--base-url", "http://localhost:1234/v1", "--model", "qwen/qwen3-1.7b"], "timeout_ms": 180000}

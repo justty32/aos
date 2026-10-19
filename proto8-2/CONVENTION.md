@@ -74,7 +74,7 @@ stack 樹就是呼叫樹：`.aos/cathy/stamp/` 一眼看出「bob 叫了 cathy�
 
 ## 七、腦與工具
 
-- **P-23** 腦＝OpenAI 相容的 chat completions 端點，由環境變數 `AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY` 指定；`AOS_BRAIN_URL` 沒設＝假腦（demo 預設）。只取回覆的 `content`（有工具時加 `tool_calls`），模型想的內容不收、不存。這台電腦不跑本機模型。（原型現狀；[lib agent.md](../proto8/lib/agent.md) 使用者 10-15「維持 openai 格式」「模型想的內容丟掉」；§ 6；變數名照 C-54 全大寫底線）
+- **P-23** 腦＝OpenAI 相容的 chat completions 端點，由環境變數 `AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY` 指定；`AOS_BRAIN_URL` 沒設＝假腦（demo 預設）。只取回覆的 `content`（有工具時加 `tool_calls`），模型想的內容不收、不存。這台電腦不跑本機模型。（原型現狀；lib agent.md（已刪，見 git 歷史 aa2fec1f） 使用者 10-15「維持 openai 格式」「模型想的內容丟掉」；§ 6；變數名照 C-54 全大寫底線）
 - **P-24** 想跟做分開：think 問腦、只把「要做什麼」寫進 `$AOS_STACK/plan`；act 照 plan 動手、不問腦。能寫死的步驟（搬檔、寫檔）放在 act 這種程式格，不交給模型。（C-22 能寫死的節點換成程式；C-25）
 - **P-25** 工具＝`tools/<名>/` 子資料夾程式，**放在叫它的那一格的資料夾裡**（`act/tools/cathy/`），格裡寫 `aos-exec tools/<名>`：地址是從自己 cwd 起算的相對路徑、永遠零個 `..`、不靠 PATH；`AOS_WS` 自然傳下去（要換工作區見 P-32）；工具要不要碰工作區、怎麼碰，是工具自己的事、風險設計者自管；工具裡是不是另一個 agent，呼叫者不知道也不管。stack 照 P-17。細節與理由見 P-33。（C-61 不用 PATH、地址在自己資料夾裡；N-55；C-66；C-52）
 - **P-26** 工具的參數怎麼進（args、stdin、或 stack 裡的檔）由工具自己的說明定；aos-exec 保證 args 與 stdin 原樣送到。（§ 4）

@@ -1,4 +1,0 @@
-{
-  "argv": ["aos", "tick", "clock"],
-  "cwd": {"$env": "DEMO_OUT"}
-}

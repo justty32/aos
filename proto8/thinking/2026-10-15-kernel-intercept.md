@@ -1,6 +1,6 @@
 # 2026-10-15 kernel 截流：agent 只管叫、貴的呼叫先排隊
 
-← [討論紀錄](README.md)｜概念：[CONCEPTS kernel](../CONCEPTS/04-kernel.md)、[agent](../CONCEPTS/05-agent.md)｜前情：[10-13 kernel／agent](2026-10-13-kernel-agent.md)、[`_metainfo`](2026-10-13-json-path/02-metainfo.md)｜程式：[lib agent.md](../lib/agent.md)、`aos_agent_call.py`（agent 當函數叫 agent，未進 git）｜續：[LLM kernel 優先級](2026-10-15-llm-kernel.md)
+← [討論紀錄](README.md)｜概念：[CONCEPTS kernel](../CONCEPTS/04-kernel.md)、[agent](../CONCEPTS/05-agent.md)｜前情：[10-13 kernel／agent](2026-10-13-kernel-agent.md)、[`_metainfo`](2026-10-13-json-path/02-metainfo.md)｜程式：lib agent.md（已刪，見 git 歷史 aa2fec1f）、`aos_agent_call.py`（agent 當函數叫 agent，未進 git）｜續：[LLM kernel 優先級](2026-10-15-llm-kernel.md)
 
 ## 原文（10-15，照記）
 

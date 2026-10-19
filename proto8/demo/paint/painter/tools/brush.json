@@ -1,9 +1,0 @@
-{
-  "argv": ["aos-demo", "sh", "-c",
-           "printf '{\"parent\": \"%s\"}' \"$AOS_DEMO/paint/brush\" > frame.json && aos loop \"$AOS_DEMO/paint/brush/loop.json\" >/dev/null; cat ret.json"],
-  "timeout_ms": 500000,
-  "_tool": {
-    "description": "叫畫筆（另一個 agent）幫你備好顏料。把要畫的東西講給它，它會查調色盤、回一句「備好了哪些顏色」。",
-    "parameters": {"type": "object", "properties": {"question": {"type": "string", "description": "要畫什麼、要它備什麼"}}, "required": ["question"]}
-  }
-}

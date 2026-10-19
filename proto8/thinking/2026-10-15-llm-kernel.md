@@ -39,7 +39,7 @@
 
 ## 動工自定點
 
-10-15 做了基礎實作（[lib kernel.md](../lib/kernel_llm.md)），自己定的、等使用者看：
+10-15 做了基礎實作（lib kernel.md（已刪，見 git 歷史 aa2fec1f）），自己定的、等使用者看：
 
 - 名字：閘門 `aos_gate.py`、身體 `aos_gate_kernel.py`；信箱 `tmp/ new/ cur/ reply/`。
 - `wait_ms` 只算排隊（信還在 new/），被拿走後等它跑完；沒寫＝不限。

@@ -1,9 +1,0 @@
-{
-  "argv": [
-    "aos",
-    "par",
-    "pipeline/report",
-    "pipeline/notify"
-  ],
-  "stderr_inherit": true
-}

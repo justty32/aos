@@ -1,6 +1,6 @@
 # proto8 規範
 
-← [proto8](README.md)｜概念層：[CONCEPTS.md](CONCEPTS.md)｜語法糖：[lib/](lib/README.md)
+← [proto8](README.md)｜概念層：[CONCEPTS.md](CONCEPTS.md)｜語法糖：lib/（已刪，見 git 歷史 aa2fec1f）
 
 **比起實作，更重要的是規範**（C-45）。三層：
 
@@ -22,11 +22,11 @@
 | 設計理念 | 沒有專屬的條（C-56 KISS 是最高原則，也是最後原則——先滿足需求與其他原則，最後回頭清掉多餘的，給的值照字面用、不藏暗規則；C-52 巢狀只管自己這一層、C-53 錯誤只處理自己的，各條都照它；C-54 命名＋[縮寫表](CONCEPTS/abbr.json)） | [CONCEPTS 設計理念](CONCEPTS/01-設計理念.md) | — |
 | 設計理念／時空 | [02-設計理念-時空.md](NORMS/02-設計理念-時空.md)：N-01～N-03 | [CONCEPTS 時空](CONCEPTS/02-設計理念-時空.md) | lib `aos tick` |
 | 總則（跨主題） | [01-總則.md](NORMS/01-總則.md)：N-05 先寫暫存再改名、N-12 stdio、N-18 實作分級、N-29 stderr 形狀、N-35 `檔#/位置`、N-43 結束碼、N-52 收到 SIGTERM＝優雅收工（10-16） | 出自 C-07、C-45、C-53 | lib `aos_cli` |
-| 基礎設施／inst | [03-基礎設施-inst.md](NORMS/03-基礎設施-inst.md) | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md) | [lib inst](lib/inst.md) |
-| 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md)（10-16：N-10 刪、N-54 daemon 子項寫在 ctl、N-28 表窗併進 state 窗＋`adopt`） | 同上 | [lib loop](lib/loop.md)、[daemon](lib/daemon.md) |
-| 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md) | 同上 | [lib ctl_state](lib/ctl_state.md) |
+| 基礎設施／inst | [03-基礎設施-inst.md](NORMS/03-基礎設施-inst.md) | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md) | lib inst（已刪，見 git 歷史 aa2fec1f） |
+| 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md)（10-16：N-10 刪、N-54 daemon 子項寫在 ctl、N-28 表窗併進 state 窗＋`adopt`） | 同上 | lib loop（已刪，見 git 歷史 aa2fec1f）、daemon |
+| 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md) | 同上 | lib ctl_state（已刪，見 git 歷史 aa2fec1f） |
 | 基礎設施／命令列、指示詞與路徑 | [06-基礎設施-命令列與指示詞.md](NORMS/06-基礎設施-命令列與指示詞.md)：N-21～N-23 命令列（10-16 起歸語法糖，N-46）、N-45 設計不靠 `$ref`、`$env` 可當正式機制（10-16 夜改） | 同上 | lib `aos_cli` |
-| 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md) | 同上 | tasks（`aos seq|par|if`）在 lib；fsm 在 [lib fsm.md](lib/fsm.md)（基礎實作） |
+| 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md) | 同上 | tasks（`aos seq|par|if`）在 lib；fsm 在 lib fsm.md（已刪，見 git 歷史 aa2fec1f）（基礎實作） |
 | kernel | [09-kernel.md](NORMS/09-kernel.md)：N-42 兩種兩支（10-16 使用者「不併」；打包 N-03 在時空） | [CONCEPTS kernel](CONCEPTS/04-kernel.md) | — |
 | 基礎設施／定義與工作區（食譜與廚房，10-16） | [10-基礎設施-定義與工作區.md](NORMS/10-基礎設施-定義與工作區.md)：N-46 stdin 正規、argv 是糖；N-47 `aos exec 工作區 定義`；N-48 `.aos` 捷徑、互指 `.aos/x`；N-49 agent stdin＝定義、話放 stack；N-50 工具＝定義資料夾、不用 PATH、參數兩層；N-51 shebang stub；N-53 aos 的 agent 被外面的 loop 一拍一拍驅動、定義不含 loop、連錯不數；N-55 工作區位置＝`AOS_WS`；N-56 一般工具入口寫 `"cwd": {"$env": "AOS_WS"}`、agent 工具站自己的 stack（10-16 夜；N-47～N-51 的 cwd 改叫 stack） | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md#定義與工作區食譜與廚房10-16)（C-57、C-59、C-60、C-65～C-67）、C-62（agent＝狀態機） | **還沒有**（程式待改） |
 | agent | 沒有專屬的分檔；10-16 起入口與工具、怎麼被驅動在定義與工作區（N-49、N-50、N-53）；其餘用 fsm 組出來 | [CONCEPTS agent](CONCEPTS/05-agent.md) | — |
@@ -78,7 +78,7 @@
 - **N-14～N-17** 窗的族譜：來自 [thinking 10-14 JSON 入口](thinking/2026-10-14-json-entry.md) §1p、[IPC 研究頁](https://claude.ai/artifact/7QcbQjrK2h7U9LPcApwpvH)；N-13 只有 state／ctl 兩扇窗，這批把它擴成一族。
 - **N-18～N-20** 實作分級、loop／daemon 的窗必填、巢狀重跑：來自 [thinking 10-14 §31](thinking/2026-10-14-json-entry/12-七題回覆.md)。
 - **N-21～N-28** 命令列與參數、daemon.json 放 inst：D-1～D-6 是使用者 10-14 下午拍板的（[thinking 04](thinking/2026-10-14-json-entry/04-argv與七題.md) §4.1；D-1 後來放寬，[05](thinking/2026-10-14-json-entry/05-aos-llm-agent題.md) Q10），10-14 夜重做 inst／loop／daemon 時照 [13 §38](thinking/2026-10-14-json-entry/13-動工前拍板.md) 落成條文。N-28 是候選 g，使用者 10-14 夜末拍板。全部是**草稿**。
-- **N-29～N-34** 動工細則（原待定 h）：10-14 夜重做 inst／loop／daemon 時，代理人遇到規範沒寫清楚的地方，照 N-18 挑最簡單的先做、記成待定 h1～h16；**使用者 10-14 深夜拍板「全照建議」**（[thinking 14](thinking/2026-10-14-json-entry/14-h拍板.md)）。跨程式的約定落成這幾條；只跟 daemon 實作有關的（h10～h14）寫在 [lib daemon.md](lib/daemon.md) 當實作說明；h9 補進 N-28；h1、h2 補進 N-21、N-22。全部是**草稿**。
+- **N-29～N-34** 動工細則（原待定 h）：10-14 夜重做 inst／loop／daemon 時，代理人遇到規範沒寫清楚的地方，照 N-18 挑最簡單的先做、記成待定 h1～h16；**使用者 10-14 深夜拍板「全照建議」**（[thinking 14](thinking/2026-10-14-json-entry/14-h拍板.md)）。跨程式的約定落成這幾條；只跟 daemon 實作有關的（h10～h14）寫在 lib daemon.md（已刪，見 git 歷史 aa2fec1f） 當實作說明；h9 補進 N-28；h1、h2 補進 N-21、N-22。全部是**草稿**。
 - **N-35～N-41** 路徑寫法、aos-fsm：10-15 早使用者定：「`檔#/位置` 可以列進」「aos-fsm 可以寫入規範」。內容取自已拍板的討論（[thinking 10-13 json-path](thinking/2026-10-13-json-path.md)、[thinking 10-14 06～10、12](thinking/2026-10-14-json-entry/06-fsm.md)）；全部是**草稿**。只是 aos-fsm 程式寫法的（方法表 lib、預設表資料夾、不做繼承、一份 JSON 樹為主）不進規範，留在 thinking 與之後的 lib 說明。10-15 同日再定：fsm 第一拍、error 格、`step`、結束碼、窗與心跳（補進 N-36、N-38、N-39，[thinking 10-15](thinking/2026-10-15-topics.md)），N-35、N-37、N-40、N-41 照原意修字。
 - **10-15 收工後意見 1～7**（[thinking 意見 1～4](thinking/2026-10-15-opinions-1-4.md)、[意見 5～7](thinking/2026-10-15-opinions-5-7.md)，使用者拍板「剩下都按照推薦」「都AOS_DIRNAME」「開始改吧」）：fsm 瘦身成只管「狀態→inst」（N-36～N-40 改寫：不碰格的 stdin、不存 data、出錯 phase 不動往外報、state 窗只剩 phase、不開 ctl／lock、`end` 四種情形、內層不繼承外層設定），N-19 拿掉 fsm 的 ctl，N-27 補工具的 `args.json`，N-35 補 `AOS_DIRNAME`。資料夾⇄JSON 互通只當工具與思考方式、不進規範（C-51）。同日再定：結束碼只定 0／非 0（新增 N-43，N-30、N-38、待定「argv[0] 程式的規矩」跟著簡化；格出錯 fsm 退非 0）、fsm 不擋遞迴（N-39）。
 - **10-15 晚兩條總原則的盤點**（[thinking 原則](thinking/2026-10-15-principles.md)，使用者「都同意。」「都按照推薦。」）：N-08 ctl 壞檔改記 state 窗 `last_warning`；N-29 stderr 不放警告、`InputExtra` 改成入口錯；N-43 補「每層只說自己（loop／daemon 只退 0／1）」與 Unix 式例外（述詞、閘門透明、`stderr_inherit`）；N-34 寫明述詞例外；N-26 寫明 `stderr_inherit` 是使用者自選（N-26 整條 10-15 深夜 KISS 批次 1 刪過，10-16 使用者翻案還原）。
