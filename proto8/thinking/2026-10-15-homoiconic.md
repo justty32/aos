@@ -13,26 +13,17 @@
 - inst 的「寫路徑或整張內嵌」跟 C-48 的「值是純值或物件」是同一件事，是 aos 的同像性（程式長得跟資料一樣）。路徑可以共用是第一個好處；其他用法交 AI 想。
 - JSON schema 跟著變重要：class、interface 這類東西都能用 schema 描述。（驗證仍照先前「有需要再用 json schema 去限制」，[LLM kernel](2026-10-15-llm-kernel.md)）
 
-## 結論（AI 整理，待使用者確認）
+## 結論（10-20 使用者確認：留性質與 schema 的角色）
 
-**性質一句話**：凡是要放一張 inst 的地方（loop 的 `inst`、daemon 的 `children`、fsm 的格、閘門的 `target`、agent 的 `brain`／`tools`、kernel 的判官），都可以寫**名字**（路徑、資料夾、`檔#/位置`）或**整張貼進去**（物件）；貼進去的那張自己也可以是組合子（fsm／loop／daemon／gate），它的零件又是名字或整張。所以一棵 aos 程式樹就是一份 JSON 資料——跟 Lisp 的 `3`／`(+ 1 2)`、`(daemon (fsm b c))` 一樣，程式＝資料。現況已經做到：aos_inst／fsm／daemon／gate／agent 都收兩種（N-25、N-36、daemon.md、gate、agent.md），內嵌格的 id＝外層 id 接 `#/states/<名>`（aos_methods.cell）。
+**性質一句話**：凡是要放一張 inst 的地方（loop 的 `inst`、daemon 的 `children`、fsm 的格、閘門的 `target`、agent 的 `brain`／`tools`、kernel 的判官），都可以寫**名字**（路徑、資料夾、`檔#/位置`）或**整張貼進去**（物件）；貼進去的那張自己也可以是組合子（fsm／loop／daemon／gate），它的零件又是名字或整張。所以一棵 aos 程式樹就是一份 JSON 資料——跟 Lisp 的 `3`／`(+ 1 2)`、`(daemon (fsm b c))` 一樣，程式＝資料。現況已經做到：aos_inst／fsm／daemon／gate／agent 都收兩種（N-25、N-36、daemon.md、gate、agent.md），內嵌格的 id＝外層 id 接 `#/states/<名>`（aos_methods.cell）。（10-20 註：loop 放身體的 key 10-19 晚改叫 `run`〔[ideas § 22](2026-10-19-ideas.md)〕；閘門、gate 是舊說法——閘門與 kernel 的舊程式連同 aos_methods 等 lib 10-19 整套刪〔git 歷史 aa2fec1f〕，kernel 現無實作〔N-42〕；`檔#/位置` 現行寫法見 N-62。）
 
-**可利用的地方**（按「收益／成本」排，前面最划算）：
-
-1. **攤平／收攏工具**：一棵樹可以存成一份 JSON，也可以存成資料夾（每格一檔）；兩者等價，一支小工具就能互轉（10-14 拍板已說「需要時攤成資料夾」）。給人看用一份、要各自落 state／work 用資料夾。
-2. **把 inst 當資料傳而不跑它＝quote**：閘門已經在做（把 target 整張連 `_metainfo` 塞進信，kernel 之後才跑）；判官拿到的 queue、agent 的工具說明 `_tool`，都是「看一張 inst 但不跑」。規則定一句：放在 `inst`／`target`／格的位置才是要跑的，放在別的 key（信的內容、stdin）就是資料。
-3. **樹走一遍就能彙總 `_metainfo`**（C-22、C-13、kernel 截流）：kernel 不用問人，照樹往下走、把葉子的 `resource`／確定性收上來；名字＝去讀那檔，物件＝直接看。一棵樹的「可預測度」就是葉子的函數。
-4. **巨集＝吃一棵樹、吐一棵樹的小程式**：retry、timeout、race、foreach 這些組合子（10-lisp §25）不必都做成執行期功能，有些可以是「改寫樹」：`retry 3` 就是把那格包成一個小 fsm（跑→失敗回同格→數到 3 進 error）。做成 inst，給人也給 agent 用。
-5. **agent 改自己的樹＝自我改進**（C-42、10-13 kernel/agent）：agent.json 既是資料又是程式，agent 用工具改它（換腦、加工具、改 next）就是改自己；一步一落檔、改壞靠 git 回頭。同像性讓「改程式」退化成「改 JSON」，小模型也做得到。
-6. **內容雜湊當身分**：內嵌的那張沒有路徑，就拿整張的雜湊當 id——相同的樹就是同一個東西，可以快取結果（確定性高的葉子）、去重排隊的信。
-7. **印樹／比對／重播**：同一支 tree printer 可以把任何一棵樹畫成 `(daemon (fsm b c))` 這種一行 S 式；兩棵樹 diff 就是 JSON diff；重播＝把當時的樹連 stdin 一起存起來再跑一次。
-8. **綁定＝填幾個 key**（bob／frame）：agent 的 bob/ 是函數、frame 是這次的綁定；同像性下「部分套用」就是拿一棵樹、填進幾個 key（state 窗位置、cwd、stdin）吐出另一棵樹，跟上面的巨集是同一招。
+（AI 列的 8 個可利用處 10-20 使用者決定刪；已落成決定的見下方「決定」段，舊版見 git 歷史）
 
 **JSON schema 的角色**：schema 就是「這份 JSON 長什麼樣」的說明書，所以它能當**型別**用——C++ class 的欄位＝`properties`，Go interface 的方法集合＝「stdin 收什麼、stdout 吐什麼」各一份 schema。schema 本身也是 JSON，所以也同像：可以放進 inst、`$ref` 拆檔、被 agent 讀與改。
 
 - (a) 已經有：工具的 `_tool.parameters` 就是 schema（OpenAI tool 參數），腦直接拿它決定怎麼叫。
-- (b) **簽名**：一格、一個 agent、閘門、判官的 stdin／stdout 形狀各附一份 schema，就是 C-42「工具＝標頭檔」的落實；判官回話的形狀（run／defer／reject）現在只寫在文件，寫成 schema 就能驗。
-- (c) **interface＝一份 schema**：凡 stdin／stdout 符合同一份 schema 的 inst 可以互換——「換腦只改一個 TARGET」的道理就在這（腦的介面＝chat completions 那塊的 schema）。
+- (b) **簽名**：一格、一個 agent、閘門、判官的 stdin／stdout 形狀各附一份 schema，就是 C-42「工具＝標頭檔」的落實；判官回話的形狀（run／defer／reject）現在只寫在文件，寫成 schema 就能驗。（10-20 註：`defer` 已被 KISS 1.8 刪，判官只回 `{run, reject}`，見 [KISS 彙整](2026-10-15-kiss/README.md)。）
+- (c) **interface＝一份 schema**：凡 stdin／stdout 符合同一份 schema 的 inst 可以互換——「換腦只改一個 TARGET」的道理就在這（腦的介面＝chat completions 那塊的 schema）。（10-20 註：TARGET 是舊說法，10-15 [第三版](2026-10-15-inst-exec-v3.md)、[第四版](2026-10-15-inst-exec-v4.md)拿掉。）
 - (d) 值的雙形在 schema 裡就是 `oneOf: [純值, 物件]`，`priority`、fsm 的格都能這樣寫。
 - (e) 驗證選用：基礎實作不驗（只處理認得的 key，C-48）；標準實作或某張 inst 想驗再開。
 
