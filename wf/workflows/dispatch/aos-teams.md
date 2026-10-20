@@ -10,6 +10,7 @@
 - **頂層（早期是 Fable，10-09 起多為 Opus）只當調度者**，不親自做內容，只親手做最難的那件。使用者 2026-08-30 說「頂層不要做太多事」，**09-24 再講更嚴**「你不要自己做事，盡量交給 agent」。頂層在主 repo 親手做的**只剩 `git merge --ff-only`＋`git push`**；重跑驗證、解 rebase 衝突、改 SESSION-LOG／WAIT_USER、清 backlog、報告存檔全派出去。收線＝讀隊長附的證據逐條對，不重跑；真要獨立驗證就派一條便宜的線去跑。想「順手」做小事時先問：能不能一句話交給別人？這條不看頂層跑哪顆模型，頂層是 Opus 也一樣。
 - **碰程式碼：Opus 隊長＋codex 工人**（10-09 起）：寫碼與寫測試派 `gpt-6.1-sol`（核心難件用 astra high），審查 `gpt-6-astra` read-only high，跑驗證 `gpt-6-luna`；隊長 Opus 寫任務書、審 diff、commit。Claude 端碰程式碼**仍不派 Sonnet**（09-30 他說「不要 sonnet」「就 opus」），**Sonnet 只做純文字小事**。09-30～10-08 codex 只剩 astra 時碰程式碼一律 Opus。
 - **要思考的交 Fable**（使用者 10-13）：規劃、研究、概念整理派 `model="fable"`，其餘事情盡量派 agent 做；10-14 規劃 aos-llm／agent 照此做。
+- **2026-10-20 現行分工**：普通工作 opus、簡單工作 sonnet、高難度思考＆規劃 fable（盡量少用），以 [common/user「子 agent 模型」](../common/user.md) 為準；與本段舊條目衝突時以那裡為準。
 - 一個團隊＝一個 **Opus 隊長**，隊長可以自己再派 Opus／Sonnet 下去；人數沒有上限（09-05 起）。隊長寫任務書、審 diff、跑測試、commit。
 - **codex 可用 slug（10-09 家機實測 9 個都可用，codex-cli 0.161.0）**：`gpt-6.1-sol`（coding 主力）、`gpt-6-astra`、`gpt-6-sol`、`gpt-6-luna`、`gpt-5.6-sol`／`-terra`／`-luna`、`gpt-reserve`、`gpt-5.5`。級別暫定見 [team-model](../team-model.md)，試水溫結果見 [probe](../team-model/probe-2026-10-09.json)。slug 寫錯（如 `gpt-sol-6.1`、裸 `gpt-sol`）會回「not supported」；他點名的型號先試，不行再問。codex **不 commit**。
 - 開隊前**先把打算怎麼做講給他聽**，等他回應或糾正再派；他可能在手機上、回得慢，問題與選項照發、附預設建議。
