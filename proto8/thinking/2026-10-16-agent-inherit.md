@@ -2,13 +2,9 @@
 
 ← [討論紀錄](README.md)｜前情：[inst-exec 第四版](2026-10-15-inst-exec-v4.md)（本稿改掉它「工具一律走 frame：args.json 進、ret.json 出」那段）、[意見 1～4](2026-10-15-opinions-1-4.md)（agent＝fsm＋inst、binding 用 json＋資料夾）、[topics/04 agent 當函數](2026-10-15-topics/04-agent當函數.md)、[同像性](2026-10-15-homoiconic.md)、[10-14 fsm 原話](2026-10-14-json-entry/06-fsm.md)（「像 C++ class 的繼承、函數可以被覆蓋」）｜概念：[C-46、C-50](../CONCEPTS/05-agent.md)、[C-34、C-36、C-49](../CONCEPTS/03-基礎設施.md)、[C-48、C-52、C-55、C-56](../CONCEPTS/01-設計理念.md)｜規範：[N-12、N-43](../NORMS/01-總則.md)、[N-27](../NORMS/03-基礎設施-inst.md)、[N-28、N-44](../NORMS/04-基礎設施-loop與daemon.md)、[N-36～N-40](../NORMS/07-基礎設施-組合子.md)、[N-45](../NORMS/06-基礎設施-命令列與指示詞.md)｜現況程式：lib agent.md（已刪，見 git 歷史 aa2fec1f）、frame.md、fsm.md、loop.md
 
-> **這是 AI（Fable）的提案稿，還沒拍板。** 只有第一節是使用者的話；其餘都是提案，等使用者點頭才改概念、規範、程式。
+> **決定在 [§ 四](#四使用者決定10-16)。**
 >
-> 注意：[KISS 彙整](2026-10-15-kiss/README.md)裡「都照推薦」那句，使用者 10-16 說是當時懶得想才說的、要重看；所以本稿**不把彙整當已定前提**，碰到時會標出來。第四版「工具一律走 frame（args.json 進、ret.json 出）」使用者 10-16 否定了（見第一節第 2 段）。
->
-> **10-16 晚補**：使用者看完第二節後說他想的 Lua 繼承其實是「一手接一手的轉手鏈」（原話在 [§ 二之二](#二之二兩條路並排轉手鏈shebang-式vs-加-keylua-式10-16-晚補ai-提案)），並新定一條原則「寫什麼就做什麼、不埋暗規則」。二之二把兩條路並排比較，第二節 2.4（內建預設表）、2.5（沒寫 stdin 就餵整份）兩段照新原則**撤回**，拍板點已更新。
->
-> **10-20 清理**：照 [user.md](../../wf/workflows/common/user.md#討論紀錄只留原文決定結論2026-10-12-夜改) 只留原話、決定、結論。AI 的分析、比較、被推翻的方案已刪（舊版在 git 歷史：`git show 0b7758b7:proto8/thinking/2026-10-16-agent-inherit.md`）：「三分鐘看懂」只留（五）（使用者說它「算定了」）；第二節整節刪；二之二、二之三只留原話；拍板點與第五～八節濃縮成結論與「沒拍板」清單。本稿這套做法 10-19 已整套作廢（見 [proto8 README](../README.md)）。
+> **10-20 清理**：照 [user.md](../../wf/workflows/common/user.md#討論紀錄只留原文決定結論2026-10-12-夜改) 只留原話、決定、結論；AI 的分析、比較、被推翻的方案與 10-19 作廢後沒人等答案的「沒拍板」清單都已刪。「三分鐘看懂」只留（五）（使用者說它「算定了」）；第二節整節刪；二之二、二之三只留原話。本稿這套做法 10-19 已整套作廢（見 [proto8 README](../README.md)）。舊版看 git 歷史：清理前的全文 `git show 0b7758b7:proto8/thinking/2026-10-16-agent-inherit.md`，之後每次刪了什麼 `git log -p -- proto8/thinking/2026-10-16-agent-inherit.md`。
 
 ## 三分鐘看懂（五）：/ws 保持乾淨——一般工具站在工作區、agent 工具站在自己的 frame（10-16 夜重想）
 
