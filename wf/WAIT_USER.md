@@ -13,6 +13,6 @@
 
 ## 待使用者項
 
-- （無）
+- **proto8 tidy 第二輪剩 7 條待裁定**（10-20；總表第 11～17 條：llm-kernel「留一段只給 high」、判官換大模型、naming 未決、json-entry 括號、agent-inherit 提案行與斷指向、kiss 不撿回、months 補列）→ [02-待使用者裁定](workflows/tidy/reports/2026-10-20-proto8-tidy/02-第二輪/02-待使用者裁定.md)
 
 > 2026-10-12 使用者清帳：「舊帳可以清掉」「proto6 已經是老黃曆了，不管」——A 區 71 題、B 區 proto6 帳號真 root 驗收、C 區「先不決定」各項全部結案不再追。原 `wait-user/` 分類檔已封存（見 common/archive 索引），編號不回收。

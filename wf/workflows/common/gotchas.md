@@ -93,3 +93,15 @@
 
 - **`\b` 邊界在 `-Iinst/include` 這種字串上不成立**：`inst` 前面是 `I`（word 字元），
   所以 `\binst/` 匹配不到。批次替換路徑之後，`grep` 一次確認沒有漏網的。
+
+## 公司 Windows 這台
+
+- **git bash 的 `python3` 是 Microsoft Store 假捷徑**：`command -v python3` 找得到、一執行就失敗，
+  `wf-lint.sh` 裡靠 python 的檢查（BIGLIST、錨點）因此**默默沒跑**、照樣印 `biglist=0`。
+  跑 python、wf-lint、unittest 一律走 WSL：`wsl -e bash -lc 'cd /mnt/c/code/mine/simple_tools/aos && …'`
+  （2026-10-20 撞到，見 [session log 10-20](../../session_logs/2026-10/2026-10-20.md)）。
+- **Windows 檔案系統不分大小寫**：`wf/WORKFLOWS/` 跟 `wf/workflows/` 會疊成同一個資料夾，
+  git 卻當兩條路徑，檔案就被記到錯的大小寫底下（10-20 有 5 個檔這樣，bf0076cd 修回）。
+  `git add` 一律寫 `git -c core.ignorecase=false add <正確路徑>`，commit 前用
+  `git -c core.ignorecase=false status --short` 看路徑大小寫對不對；新資料夾別取只差大小寫的名字
+  （[STRUCTURE](../../STRUCTURE.md) 規定改用 `<名>-parts/`）。
