@@ -43,7 +43,7 @@
 
 ## 三、要使用者拍板的點（每點一句＋推薦＋理由＋後果；10-16 晚更新，含 WD）
 
-10-16 晚～夜陸續攤的 24 點。已定的決定寫在[第四節](#四使用者決定10-16)，這裡只補它沒寫到的細節；沒拍板的留題目與當時的推薦（10-16 進了 NORMS 待定，10-19 整套作廢時清掉）。理由與後果拿掉；第 5、7、8、15、20 點被後來的決定推翻，刪。
+10-16 晚～夜陸續攤的 24 點。已定的決定寫在[第四節](#四使用者決定10-16)，這裡只補它沒寫到的細節。沒拍板的 10-16 進了 NORMS 待定，10-19 整套作廢時清掉，10-20 這裡也刪了（舊版見 git 歷史）。理由與後果拿掉；第 5、7、8、15、20 點被後來的決定推翻，刪。
 
 **已定的細節**（決定本身見第四節）
 
@@ -56,21 +56,6 @@
 - 21. frame 與工作區分開：站在 frame 跑，執行時的東西都在 frame；規範的「工作區（cwd）」改叫 frame（同夜再改名 stack，見第四節）。
 - 22. 「預設站哪」只靠工具自己入口那一行：一般工具的 inst.json 寫 `"cwd": "ws"`（範本給；後來改成 `"cwd": {"$env": "AOS_WS"}`，見第四節），agent 的入口不寫＝站自己的 frame；能不能寫＝/ws 的 Linux 權限；門房、inst 的「沒寫 cwd＝叫的人站的地方」不偷改。使用者「默認 ws 是工具的 cwd」「brush 默認自己的 frame」「風險設計者自管」。站在 ws 的工具只能是 argv 程式＋stdin 那種（第八節 3）。
 - 24. frame 指到哪是呼叫方的自由，寫成概念條（第八節 3b）。
-
-**沒拍板的**（題目＋當時的推薦）
-
-- 1. 定義長什麼樣：甲 轉手鏈（cd 進 bob/、七個檔一手接一手）／乙 加 key（一份 JSON 加 `brain`／`tools`／`system` 三個 agent 級 key）／丙 合起來（agent.json＝一張 fsm、每格 stdin 寫在裡面、`aos agent` 只當邊界）。推薦丙。
-- 2. 表一定寫、每格 stdin 一定寫；程式不藏預設表、不替格補 stdin（lib 放一份範本 agent.json 給人抄或 `$ref`）。推薦是。
-- 3. binding＝另一份 JSON；拿掉「資料夾放同名檔蓋過定義」與 parent 鏈；資料夾只放狀態（history、窗、work）。推薦拿掉。
-- 6、13. `aos exec WD TARGET` 不默認 cd 進定義資料夾，WD 必填（不設預設 `.`）。推薦必填。
-- 9. 格庫瘦身：intake／done／route 消失，think 自己回 next，`aos agent fsm` 刪。推薦是。（連錯計數：第四節已定 agent 不數。）
-- 10. 輸入的形狀：stdin 一份 JSON＝user 訊息的內容（字串照放、物件照 JSON 文字放），不收整則訊息物件；空 stdin＝沒新話、接著跑。推薦是。
-- 11. 定義裡的相對路徑一律從 WD 算（照 aos-inst 現行規矩；要指自己旁邊的檔＝絕對路徑、內嵌、或 `$ref` 載入時攤平）。推薦是。
-- 12. inst 自己的 `cwd` 從 WD 往下算（不是 WD 蓋過、不是報錯）。推薦是。
-- 18 的其餘：N-35 改成「檔＝所在資料夾、資料夾＝自己、掛到 WD/.aos」；刪 `AOS_DIRNAME`、exec 的 `檔#/位置`、`aos agent TARGET` 入口。推薦是（第六節 5）。
-- 21 的其餘：`work/<n>` 改成 frame 裡的 `calls/<n>`；frame 的位置由叫的人指定（`aos init FRAME 定義 工作區`）。推薦是。
-- 22 的其餘：每個小格都放 `ws → ../../ws`（工具格一律同一個動作、不問對方是誰）。推薦是。
-- 23. 參數與回答都不經門房旗標：工具格把 arguments 放成小格的 `prompt.json`＋照 N-27 餵 stdin；回答靠定義入口最後一步 `say`（入口＝`seq(run: loop 拍 agent.json, say)`，agent.json 不含 loop，N-53）；門房只剩掛與跑；「agent 當工具誰包 loop」＝入口包。推薦是（第八節 3）。
 
 ## 四、使用者決定（10-16）
 
@@ -155,17 +140,6 @@ $ cat history.json                           # […, {"role": "assistant", "cont
 - 跑起來：tool 格在 `work/3/` 跑 `{"argv": ["brush"], "stdin": <arguments>}` → 核心照 PATH 找到 stub、看到 `#!`，變成 `aos exec . /agents/bin/brush` → `aos exec`：TARGET 是檔＝解開捷徑、所在資料夾 `/agents/brush/.aos` 就是食譜；WD `.`＝`work/3/`，沒有 `.aos` 就掛上（算出來的絕對路徑），灌 `.aos/inst.json`。brush 自己的鍋碗（prompt.json、history.json、fsm/state.json、work/1/）都在 `work/3/`。
 - 參數分兩層（10-16 夜，使用者「感覺 OK，就先這樣」）：tool 格照 N-27 把 arguments 當 stdin 餵給 stub 跑起來的門房 `aos exec`；裡面那層 `aos agent -` 的 stdin 仍只放食譜（第四節）；intake 格的 stdin 是 `prompt.json`。對 `date` 這種一般工具沒有門房，stdin 就是參數。當時由 stub 上的 `--say` 旗標把 stdin 放進廚房、跑完印回答——`--say` 後來不要了（第七節 3 的註）。
 - 鬆掉的條件：exec 會往 WD 寫一條捷徑；exec 解開 TARGET 的 symlink；shebang 要 `env -S`（GNU coreutils 8.30 起）；exec 的 stdout 讓食譜的話透出來（碼透明轉交）。
-
-### 3. 其他邊緣（一句一條）
-
-（以下都沒拍板，10-16 進了待定。）
-
-- **一個廚房一份食譜**：是，`.aos` 只有一條；想在同一處跑兩份就開兩個廚房（子資料夾）。exec 遇到 `.aos` 已存在且指別處＝`RecipeConflict`，不覆蓋。
-- **捷徑相對還是絕對**：`aos init WD TARGET` 照人打的字寫（打相對就相對，廚房和食譜一起搬不壞）；exec 從 PATH stub 算出來的寫絕對（stub 本來就是絕對找到的）。
-- **捷徑斷了**：`.aos` 指到不存在的地方＝exec 入口錯 `RecipeMissing`（stderr 一份 N-29、退 1；C-53 的「入口檢查」）；跑到一半食譜被搬走＝那一格自己報讀不到，照 N-38。
-- **在食譜自己的資料夾裡跑**：`cd /agents/bob && aos exec . .aos`——`.aos` 本來就在，不用掛。這就是使用者最初「cd 到 bob/」的那個預設。
-- **init 要不要建 WD**：`aos init` 建（mkdir＋掛）；`aos exec` 要求 WD 已存在（tool 格、daemon 本來就會先開資料夾）。
-- **`AOS_DIRNAME`**：食譜裡寫死 `.aos`，這個環境變數沒用了→刪（見 5）。
 
 ### 4. 推廣：不是 agent 的東西怎麼用同一招
 
@@ -267,12 +241,9 @@ frame 放哪由叫的人決定，被叫的 agent 不知道也不必知道（C-52
 
 | 怎麼指 | 效果 | 邊緣 |
 |---|---|---|
-| **frame＝ws**（叫 brush 時小格就做成指向工作區的捷徑，或人直接 `aos init /ws /agents/bob/.aos /ws`） | agent 直接在使用者的資料夾裡跑，history、狀態留在那裡，像「就地辦公」 | `.aos`、`ws`、`prompt.json`、`history.json`、`fsm/`、`loop/`、`calls/` 全落進 /ws——ws 不再乾淨；跟使用者同名的檔會撞（例使用者自己有 `history.json`）。frame 裡那條 `ws` 要不要有：**要**，掛成 `ws → .`（指回自己），這樣它底下工具的 `../../ws` 照樣接得上，規則不變。這些都是呼叫方自己的選擇與風險 |
+| **frame＝ws**（叫 brush 時小格就做成指向工作區的捷徑） | agent 直接在使用者的資料夾裡跑，history、狀態留在那裡，像「就地辦公」 | `.aos`、`ws`、`prompt.json`、`history.json`、`fsm/`、`loop/`、`calls/` 全落進 /ws——ws 不再乾淨；跟使用者同名的檔會撞（例使用者自己有 `history.json`）。這些都是呼叫方自己的選擇與風險 |
 | **兩個 agent 共用一個 frame** | 共享 history＝共享記憶、接力辦同一件事 | 兩個同時跑會互寫 history、fsm 狀態撞窗（N-39 不防護）；一個跑完換另一個才安全。`.aos` 只能指一份定義，兩個 agent 定義不同就得其中一個不經門房、或各自小格 |
 | **frame 放 tmpfs／暫存目錄** | 用完即丟、不留痕跡 | 當機就沒了（想復原的別放這） |
 | **frame 長期保留** | 下次指同一個 frame＝接著聊 | `calls/` 會一直堆，要自己清 |
 | **frame 放在別人唯讀能看的地方**（C-64：擁有者可寫、群組只讀） | 旁人（人、kernel、另一個 agent）隨時能審視它的 history 與狀態，而改不了 | 看的人要遵守「只讀」是權限保證的，不是規矩保證的 |
-| **frame 的 `ws` 指到唯讀的資料夾** | agent 只能看不能改那個工作區 | 工具寫檔會失敗、agent 要自己處理那個錯（C-53） |
-| **frame 的 `ws` 指到另一個 agent 的 frame** | 讓 A 去整理 B 的 history（審視、摘要） | 這就是「上層伸手進下層」，刻意用才做；B 同時在跑就會互寫 |
-
 一句話：**定義不動、規則不動，只換捷徑的指向**——這就是「資料夾＝空間、捷徑＝指標」帶來的自由（C-30、C-59）。
