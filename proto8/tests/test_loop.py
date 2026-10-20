@@ -88,5 +88,108 @@ class T(unittest.TestCase):
         self.assertEqual((ok, p.returncode, err), (True, 129, ""))
 
 
+class Windows(T):
+    """loop.json 的選填 key：interval_ms、ctl、state（N-06～N-09、N-17、N-32、N-33；rewrite-order ④）。"""
+
+    def stack(self):
+        s = self.t / "stack"
+        s.mkdir(exist_ok=True)
+        return s
+
+    def run_loop(self, cfg, env=None, timeout=20):
+        self.loop(cfg)
+        return subprocess.run([LOOP, "loop.json"], cwd=str(self.t), env=env_of(env), capture_output=True,
+                              text=True, timeout=timeout)
+
+    def count(self):
+        return {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"']}
+
+    def test_state_written_with_heartbeat(self):
+        s = self.stack()
+        r = self.run_loop({"run": self.count(), "max": 3, "state": "state.json"}, {"AOS_STACK": str(s)})
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        st = json.loads((s / "state.json").read_text())
+        self.assertEqual((st["kind"], st["state"], st["lap"], st["code"], st["max"], st["ctl_seq"]),
+                         ("state", "done", 3, 0, 3, None))
+        self.assertIsInstance(st["pid"], int)
+        for k in ("started", "boot_id", "beat"):
+            self.assertIn(k, st)
+        self.assertFalse((s / ".state.json").exists())
+
+    def test_no_windows_no_files(self):
+        s = self.stack()
+        r = self.run_loop({"run": self.count(), "max": 2}, {"AOS_STACK": str(s)})
+        self.assertEqual((r.returncode, sorted(p.name for p in s.iterdir())), (0, ["laps"]))
+
+    def test_window_without_stack_is_own_error(self):
+        r = self.run_loop({"run": self.count(), "max": 1, "ctl": "ctl.json"})
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stderr.startswith("aos-loop: ") and "AOS_STACK" in r.stderr, r.stderr)
+
+    def test_bad_interval_is_own_error(self):
+        r = self.run_loop({"run": self.count(), "interval_ms": -1})
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stderr.startswith("aos-loop: "), r.stderr)
+
+    def test_interval_spaces_laps(self):
+        s = self.stack()
+        t0 = time.monotonic()
+        r = self.run_loop({"run": self.count(), "max": 3, "interval_ms": 300}, {"AOS_STACK": str(s)})
+        self.assertEqual(r.returncode, 0)
+        self.assertGreaterEqual(time.monotonic() - t0, 0.6)
+        self.assertEqual(len((s / "laps").read_text().split()), 3)
+
+    def test_ctl_stop_and_seq(self):
+        s = self.stack()
+        (s / "ctl.json").write_text(json.dumps({"stop": True, "seq": 7}))
+        r = self.run_loop({"run": self.count(), "max": 3, "ctl": "ctl.json", "state": "state.json"},
+                          {"AOS_STACK": str(s)})
+        st = json.loads((s / "state.json").read_text())
+        self.assertEqual((r.returncode, r.stderr, st["state"], st["lap"], st["ctl_seq"], (s / "laps").exists()),
+                         (0, "", "stopped", 0, 7, False))
+
+    def test_ctl_max_overrides(self):
+        s = self.stack()
+        (s / "ctl.json").write_text(json.dumps({"max": 1}))
+        r = self.run_loop({"run": self.count(), "max": 5, "ctl": "ctl.json"}, {"AOS_STACK": str(s)})
+        self.assertEqual((r.returncode, len((s / "laps").read_text().split())), (0, 1))
+
+    def test_bad_ctl_kept_last_good_and_warned(self):
+        s = self.stack()
+        (s / "ctl.json").write_text(json.dumps({"max": "two"}))
+        r = self.run_loop({"run": self.count(), "max": 2, "ctl": "ctl.json", "state": "state.json"},
+                          {"AOS_STACK": str(s)})
+        st = json.loads((s / "state.json").read_text())
+        self.assertEqual((r.returncode, r.stderr, len((s / "laps").read_text().split())), (0, "", 2))
+        self.assertIn("max", st["last_warning"])
+
+    def test_ctl_pause_then_resume(self):
+        s = self.stack()
+        (s / "ctl.json").write_text(json.dumps({"paused": True}))
+        self.loop({"run": self.count(), "max": 2, "ctl": "ctl.json", "state": "state.json"})
+        p = self.start({"AOS_STACK": str(s)})
+        ok = wait_file(s / "state.json")
+        time.sleep(0.5)
+        paused = json.loads((s / "state.json").read_text())["state"]
+        self.assertFalse((s / "laps").exists())
+        (s / "ctl.json").write_text(json.dumps({"paused": False}))
+        out, err = p.communicate(timeout=20)
+        self.assertEqual((ok, paused, p.returncode, err, len((s / "laps").read_text().split())),
+                         (True, "paused", 0, "", 2))
+
+    def test_signal_while_waiting(self):
+        # 拍與拍之間（睡 interval）收到 SIGTERM：不起下一拍、直接 143，state 寫 stopped
+        s = self.stack()
+        self.loop({"run": self.count(), "max": 5, "interval_ms": 5000, "state": "state.json"})
+        p = self.start({"AOS_STACK": str(s)})
+        ok = wait_file(s / "laps")
+        time.sleep(0.2)
+        p.send_signal(signal.SIGTERM)
+        out, err = p.communicate(timeout=20)
+        st = json.loads((s / "state.json").read_text())
+        self.assertEqual((ok, p.returncode, err, st["state"], st["code"], len((s / "laps").read_text().split())),
+                         (True, 143, "", "stopped", 143, 1))
+
+
 if __name__ == "__main__":
     unittest.main()

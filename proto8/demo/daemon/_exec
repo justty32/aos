@@ -1,0 +1,2 @@
+#!/bin/sh
+exec aos-daemon daemon.json
