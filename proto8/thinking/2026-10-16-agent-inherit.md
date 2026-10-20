@@ -4,7 +4,7 @@
 
 > **決定在 [§ 四](#四使用者決定10-16)。**
 >
-> **10-20 清理**：照 [user.md](../../wf/workflows/common/user.md#討論紀錄只留原文決定結論2026-10-12-夜改) 只留原話、決定、結論；AI 的分析、比較、被推翻的方案與 10-19 作廢後沒人等答案的「沒拍板」清單都已刪。「三分鐘看懂」只留（五）（使用者說它「算定了」）；第二節整節刪；二之二、二之三只留原話。本稿這套做法 10-19 已整套作廢（見 [proto8 README](../README.md)）。舊版看 git 歷史：清理前的全文 `git show 0b7758b7:proto8/thinking/2026-10-16-agent-inherit.md`，之後每次刪了什麼 `git log -p -- proto8/thinking/2026-10-16-agent-inherit.md`。
+> **10-20 清理**：照 [user.md](../../wf/workflows/common/user/03-討論紀錄與規劃.md#討論紀錄只留原文決定結論2026-10-12-夜改) 只留原話、決定、結論；AI 的分析、比較、被推翻的方案與 10-19 作廢後沒人等答案的「沒拍板」清單都已刪。「三分鐘看懂」只留（五）（使用者說它「算定了」）；第二節整節刪；二之二、二之三只留原話。本稿這套做法 10-19 已整套作廢（見 [proto8 README](../README.md)）。舊版看 git 歷史：清理前的全文 `git show 0b7758b7:proto8/thinking/2026-10-16-agent-inherit.md`，之後每次刪了什麼 `git log -p -- proto8/thinking/2026-10-16-agent-inherit.md`。
 
 ## 三分鐘看懂（五）：/ws 保持乾淨——一般工具站在工作區、agent 工具站在自己的 frame（10-16 夜重想）
 
