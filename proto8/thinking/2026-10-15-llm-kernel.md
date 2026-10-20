@@ -1,6 +1,6 @@
 # 2026-10-15 LLM kernel：請求自己填優先級
 
-← [討論紀錄](README.md)｜前情：[kernel 截流](2026-10-15-kernel-intercept.md)（閘門／信箱草案、六題未決）｜規範：[N-42](../NORMS/09-kernel.md)、[N-16 信箱](../NORMS/05-基礎設施-窗.md)｜概念：[C-47、C-11、C-13](../CONCEPTS/04-kernel.md)｜[`_metainfo`](2026-10-13-json-path/02-metainfo.md)
+← [討論紀錄](README.md)｜前情：[kernel 截流](2026-10-15-kernel-intercept.md)（閘門／信箱草案、六題照建議預設定案）｜規範：[N-42](../NORMS/09-kernel.md)、[N-16 信箱](../NORMS/05-基礎設施-窗.md)｜概念：[C-47、C-11、C-13](../CONCEPTS/04-kernel.md)｜[`_metainfo`](2026-10-13-json-path/02-metainfo.md)
 
 ## 原文（10-15，照記）
 
