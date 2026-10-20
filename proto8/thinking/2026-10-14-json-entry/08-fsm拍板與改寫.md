@@ -2,12 +2,12 @@
 
 ← [JSON 入口](../2026-10-14-json-entry.md)｜上一份：[07-fsm樹與一拍](07-fsm樹與一拍.md)｜下一份：[09-daemon套fsm](09-daemon套fsm.md)
 
-## 13. 十題拍板（使用者；★＝沒選 AI 推薦）
+## 13. 十題拍板（使用者）
 
 1. 本體抽成通用 aos-fsm；agent＝fsm＋預設表資料夾，aos_agent.py 不存在。〔註：10-15 的 `aos_agent_lib.py` 是現成格的庫、不是 agent 本體。〕
-2. ★ 方法表只用明寫：`states` 一定寫在 agent.json，不靠慣例檔名 `inst-<state>.json`；查不到＝錯（走第 5 題）。
-3. ★ 不做繼承：沒有 extends、沒有搜尋路徑；每個 agent 寫整張表，想沿用就一格一格寫範本路徑或 `$ref`；範本資料夾不是父類。
-4. ★ 下一狀態：「inst 回傳和結束碼都可以。aos fsm 用 inst 回傳」→ 兩種概念上都正當；aos-fsm 採 stdout 最後一份的 `next`。（10-14 晚改：沒吐＝看表上靜態 next，表也沒有才留原狀態，見 [10](10-lisp組合子.md)。）
+2. 方法表只用明寫：`states` 一定寫在 agent.json，不靠慣例檔名 `inst-<state>.json`；查不到＝錯（走第 5 題）。
+3. 不做繼承：沒有 extends、沒有搜尋路徑；每個 agent 寫整張表，想沿用就一格一格寫範本路徑或 `$ref`；範本資料夾不是父類。
+4. 下一狀態：「inst 回傳和結束碼都可以。aos fsm 用 inst 回傳」→ 兩種概念上都正當；aos-fsm 採 stdout 最後一份的 `next`。（10-14 晚改：沒吐＝看表上靜態 next，表也沒有才留原狀態，見 [10](10-lisp組合子.md)。）
 5. 出錯：有 `error` 格就跳去（帶原狀態與錯），沒有就留原狀態＋`last_error`；沒 ret（被殺一半）重進同狀態、標 `prev.interrupted`。
 6. 現在狀態記在 state 窗（phase＋data）。state 窗**必填**，缺 key 或 `null` 報錯不執行（10-14 夜使用者定，比照 N-19，見 [13](13-動工前拍板.md)；原「沒開＝每拍從 `start` 起」作廢）。
 7. think 同步／非同步：規範只說走到 think 就跑那格 inst，阻塞等回覆或丟請求下一拍再看**兩種都合規**；換一格即可；都不自己 setsid／fork。**基礎實作先做阻塞版**（10-14 夜改，見 [12](12-七題回覆.md)；原「預設非同步」的說法作廢）。這解掉 aos-llm／agent 規劃頁的 Q1。

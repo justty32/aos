@@ -14,7 +14,7 @@
 | [05-aos-llm-agent題](2026-10-14-json-entry/05-aos-llm-agent題.md) | 7. N-13 提醒拿掉（推翻縫二）、D-1 放寬；8. 其餘 13 題拍板；9. Q1（已由 06～08 解） |
 | [06-fsm](2026-10-14-json-entry/06-fsm.md) | 10. 使用者原話（aos-agent＝查表分派、vtable／interface、可嵌套、一格可指資料夾）；11. aos-fsm 架構：agent＝通用 fsm＋方法表，每格＝aos-inst TARGET，think 同步／非同步可互換 |
 | [07-fsm樹與一拍](2026-10-14-json-entry/07-fsm樹與一拍.md) | 12. 資料夾樹、一拍流程、巢狀 fsm 接法、巢狀三題拍板 |
-| [08-fsm拍板與改寫](2026-10-14-json-entry/08-fsm拍板與改寫.md) | 13. 十題拍板（2、3、4、7 非推薦）；14. 已定事項改寫清單；15. 風險；16. 新增未決 |
+| [08-fsm拍板與改寫](2026-10-14-json-entry/08-fsm拍板與改寫.md) | 13. 十題拍板；14. 已定事項改寫清單；15. 風險；16. 新增未決 |
 | [09-daemon套fsm](2026-10-14-json-entry/09-daemon套fsm.md) | 17～21 daemon 借 fsm 紀律：五題拍板（六態、接回孤兒、child_exit 策略格）、風險、save 與 table 窗合一未決 |
 | [10-lisp組合子](2026-10-14-json-entry/10-lisp組合子.md) | 22～25 Lisp／組合子視角：fexpr、tagbody 類比、表上靜態 next、JSON 樹為主、一拍一步、接受重跑、組合子按需表 |
 | [11-下班前待辦](2026-10-14-json-entry/11-下班前待辦.md) | 26～30 下班前：憑感覺選題的背景、三份網頁、建議重看 7 題、重寫頁發現的未對齊 a～f、下一步（已結，見 12） |

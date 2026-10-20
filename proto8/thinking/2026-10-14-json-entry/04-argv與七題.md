@@ -35,7 +35,7 @@
 - **第 1 題 inst 的 stdout**：一份結果 JSON `{code, signal, timed_out, pid, ms, exit_file}`。
 - **第 2 題 loop 的 stdout**：每回合一份 `{run, code, ms}`＋總結 `{end, runs, skipped, last_code}`（daemon 同形）。
 - **第 4 題 id**：設定 JSON 加選填 key `id`；daemon 起 loop 時填原 loop.json 的 realpath#/位置，手打沒給＝null；因鏡射自動有 `--id`。
-- **第 5 題 stdin 多份 JSON**：只看第一份，其餘在 stderr 警告。（使用者沒選 AI 推薦的「報錯不跑」；10-14 夜補：這是實作的選擇，規範 N-12 不動，實作想嚴格直接報錯不跑也可以，見 [12](12-七題回覆.md)。）
+- **第 5 題 stdin 多份 JSON**：只看第一份，其餘在 stderr 警告。（10-14 夜補：這是實作的選擇，規範 N-12 不動，實作想嚴格直接報錯不跑也可以，見 [12](12-七題回覆.md)。）
 - **第 6 題 daemon 底下 loop 的門**：落 `work_dir/N/ret.json`、`err.json`。`times` 為 null 時會一直長，記為未決。
 - **第 8 題 共用檔**：抽一個（如 `aos_cli.py`），連 argv 一起：TARGET／`-`／旗標合成設定＋三扇門 JSON 串流；當符合 N-12 程式的範本。
 - **第 9 題縫一**：改 N-11 一個定義：「設定檔」＝程式啟動時合成、只讀一次的那份設定，不管來自檔、stdin 還是 argv 旗標；其餘不動。
