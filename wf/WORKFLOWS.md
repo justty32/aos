@@ -64,13 +64,13 @@
 
 ### multi-agent flavor
 
-multi-agent flavor 的派發表在 [WORKFLOWS/01-multi-agent-flavor.md](WORKFLOWS/01-multi-agent-flavor.md)（2026-10-13 tidy：本檔超過 8 KB，整段逐字下放）。
+multi-agent flavor 的派發表在 [WORKFLOWS-parts/01-multi-agent-flavor.md](WORKFLOWS-parts/01-multi-agent-flavor.md)（2026-10-13 tidy：本檔超過 8 KB，整段逐字下放）。
 
 **都不符 → 看 [INDEX.md](INDEX.md)**（repo 頂層結構地圖）。新開工作流 → 複製 [workflows/TEMPLATE.workflow.md](workflows/TEMPLATE.workflow.md) 從單檔長起，並在上表加一列；不要預先建空檔。
 
 ## 工作流的統一形式（規範）
 
-檔名規範、入口檔段落、資料夾型／單檔型的規範在 [WORKFLOWS/02-統一形式.md](WORKFLOWS/02-統一形式.md)（2026-10-13 tidy：本檔超過 8 KB，整段逐字下放）。
+檔名規範、入口檔段落、資料夾型／單檔型的規範在 [WORKFLOWS-parts/02-統一形式.md](WORKFLOWS-parts/02-統一形式.md)（2026-10-13 tidy：本檔超過 8 KB，整段逐字下放）。
 
 ## 跨工作流的活狀態（只列 open，完成即刪）
 
