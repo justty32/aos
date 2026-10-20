@@ -12,8 +12,8 @@
 
 ## 最新進度
 
-- **§ 14～§ 24 兩版都已落實**；open：daemon 照新做法重寫（ideas § 25），fable 計畫在 [proto8/impls/aos-daemon/PLAN-2026-10-19.md](../proto8/impls/aos-daemon/PLAN-2026-10-19.md)，待使用者對三個衝突（子 loop 結束不自動重起、children 寫成 {名字: loop 設定}、心跳只在拍外跳）與 rewrite-order 第 5 題兩條舊帳（刪「argv[0] 不自己 setsid」、保留 ctl seq 回音）說「照預設」再分四步做。
-- **待照新做法重寫（10-19 併入後）**：daemon、兩種 kernel、tasks（seq／par／if）、tick、腦的工具呼叫（`tool_calls`）現無實作（舊版在 git aa2fec1f）；概念與規範留著、標「現無實作」；等使用者說要哪個。細節 [NORMS 待定](../proto8/NORMS/08-待定.md)、[session log 10-19 併入](session_logs/2026-10/2026-10-19.md)。fable 排的重寫順序與五題在 [rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)；使用者 10-19「這些都是實作細節，之後再說沒關係。我還在高空飛。」→ 擱著，他回到實作前不主動提。
+- **daemon 照新做法重寫（ideas § 25）**：使用者 10-20 對計畫五點「照預設」；`proto8/bin` 版已做完、已推（aos-daemon＋aos-loop 長出 interval_ms／ctl／state、demo/daemon，測試 124）。open：**impls 的 aos-daemon** 還沒重寫——impls 與計畫 `proto8/impls/aos-daemon/PLAN-2026-10-19.md` 只在家中那台（未追蹤），回家時照 bin 版對齊、再對一次計畫的四步；10-20 的自定點在 [ideas § 25](../proto8/thinking/2026-10-19-ideas.md) 與 bin README。
+- **待照新做法重寫（10-19 併入後）**：兩種 kernel、tasks（seq／par／if）、tick、腦的工具呼叫（`tool_calls`）現無實作（舊版在 git aa2fec1f）；概念與規範留著、標「現無實作」；等使用者說要哪個。細節 [NORMS 待定](../proto8/NORMS/08-待定.md)、[session log 10-19 併入](session_logs/2026-10/2026-10-19.md)。fable 排的重寫順序與五題在 [rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)；使用者 10-19「這些都是實作細節，之後再說沒關係。我還在高空飛。」→ 擱著，他回到實作前不主動提。
 - **KISS 批次 1「純刪」已做完、已推**（10-15 深夜，使用者「C-50 選 a，其他都按照推薦」、PLAN「刪掉」）：彙整總表 1.1～1.18 與 6.10 全做（四個 commit cb20249a、fa6629ee、7d833687、a0c7214d），C-50 改成「一張 inst 是正本」、PLAN 刪、proto8-1 併進 proto8/lib；lib 測試 173→169、ctest 全綠。自定點 8 條在 [10-15 § KISS 批次 1](session_logs/2026-10/2026-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)（最要看的：`aos-demo` 的 AOS_DEMO 留到批次 2）。~~下一步批次 2～6~~ **暫停**（10-16 使用者撤回「都照推薦」，見上一條）。
 - **compact 後自動讀回**：`.claude/settings.json` SessionStart(compact) hook → [wf/tools/compact_reload.sh](tools/compact_reload.sh)，交接寫 [HANDOFF](HANDOFF.md)（10-15 深夜）。
 - **意見 1～7 程式兩批都做完**（＋格沒輸出、同 frame 續聊、第二批 6 個自定點都已拍板並照做，N-44 新增）；真腦已用本機 LiteLLM 實跑（畫家 demo 見 [paint-live](../proto8/thinking/2026-10-15-paint-live.md)；LM Studio 未跑）→ [10-15 § 拍板](session_logs/2026-10/2026-10-15.md#第二批自定點的拍板10-15使用者派去處理吧都按照推薦45-用主控的推薦)。
