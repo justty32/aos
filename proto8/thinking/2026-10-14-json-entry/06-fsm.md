@@ -21,7 +21,7 @@
 - **aos-fsm**（`aos_fsm.py`）是通用程式：讀一份 JSON（`start`＋`states` 表＋窗），每拍查表、呼叫一格、換狀態。**aos_agent.py 不存在**；agent＝aos-fsm＋一個預設表資料夾（範本：幾張 inst、幾支方法程式）。〔註：10-15 的 `aos_agent_lib.py`（原名 aos_agent.py）是現成格的庫、不是 agent 本體，與此不衝突；見 [10-15 §6](../2026-10-15-topics/02-agent工具與試146.md#6-agent-格庫改名設定走-stdin)。〕
 - 表＝vtable：`states` 一定明寫在 agent.json。**每格的值＝一個 aos-inst TARGET**：`.json` 檔、資料夾（先找 `<資料夾>/.aos/inst.json`、再 `<資料夾>/inst.json`）、可接 `#/位置`；fsm 不另訂找法，直接用 aos-inst 的 `find()`／`load()`。也收一張內嵌 inst 單子（含 `$ref` 解出來的）。不靠慣例檔名、不做繼承（沒有 extends、沒有搜尋路徑）；想沿用範本就一格一格寫範本的路徑或 `$ref`。預設表資料夾只是可被引用的範本，不是父類。
 - **一格可以是一個資料夾＝一個子物件**（使用者定）：`"thinking": "think/"`，think/ 裡有自己的 inst.json；若是巢狀 fsm，think/ 裡就是子 fsm 的設定、子表、子 state 窗。
-- **aos-fsm 可以巢狀**（使用者定，像階層式狀態機）：某格的 inst 本身是另一個 aos-fsm，例：外層 `thinking` → think/inst.json 的 argv 是 `aos_fsm.py`，內層表 `ask → waiting → …`。接法見 [07 §12.3](07-fsm樹與一拍.md)（AI 建議、待確認）。
+- **aos-fsm 可以巢狀**（使用者定，像階層式狀態機）：某格的 inst 本身是另一個 aos-fsm，例：外層 `thinking` → think/inst.json 的 argv 是 `aos_fsm.py`，內層表 `ask → waiting → …`。接法見 [07 §12.3](07-fsm樹與一拍.md)（三題已定，見 §12.4）。
 - 呼叫一格＝工具呼叫同一機制：fsm 寫 `work/N-args.json`（`{"state","step","prev","cfg"}`，cfg＝agent.json 合成後整份）〔註：10-15 基礎實作先只給前三格，同日使用者選乙補回 `cfg`，見 [10-15 §6](../2026-10-15-topics/02-agent工具與試146.md#6-agent-格庫改名設定走-stdin)。〕，把那張 inst 蓋上 stdin／stdout／stderr／exit（D-4 `run(dict)`），跑完取 stdout 最後一份（N-12）。
 - 下一狀態：inst 回傳與結束碼概念上都正當；aos-fsm 採 stdout 最後一份的 `next`，沒吐＝看表上靜態 next，表也沒有才留原狀態（10-14 晚改，見 [10](10-lisp組合子.md)）。`data` 由 fsm 存進 state 窗、下一拍當 `prev` 給下一格。
 - 出錯：方法 exit≠0、或查不到那格＝錯：表有 `error` 格就跳去（args 帶原狀態與錯），沒有就留原狀態＋`last_error`；上一拍沒留 ret（被殺一半）＝重進同狀態、`prev.interrupted: true`，由方法自己決定。
