@@ -12,14 +12,14 @@
 
 **10-19 下班前～晚再定**（[ideas § 14～§ 21](thinking/2026-10-19-ideas.md)）：入口放寬成四種（可執行檔、inst 單子、argv 陣列、`js[$AOS_ENTRY]` 的值——單子、陣列或字串路徑；C-73）、`aos-exec XXX`（XXX 可為資料夾、檔、`檔#/指標`，找不到補 `XXX.json`；N-58、N-61）、環境變數加 `AOS_CF`／`AOS_CD` 成五個（N-57）、`#/` 尋址（N-62）；impls 只提供 `aos-exec` 一支命令列（§ 23 之後也有 aos-loop、aos-fsm）、inst 是 C lib、JSON 不進 C 庫（§ 20）；`+x` 但沒 `#!` 的檔——入口兩種與單子的 `argv[0]`——三處一致改用 `/bin/sh` 跑（§ 21「不擋」、§ 22「乙」）。**兩版實作都做完了**：`proto8/impls/aos-exec`（使用者假日寫的 C++ 參考實作，git 未追蹤；45 組測試）與 `proto8/bin`（Python；aos-exec 10-19 晚從 sh 改寫成 Python，使用者 § 21「舊版一起改」；測試 93 個，§ 24 補 loop／fsm 轉訊號與 PATH 原樣後 100 個）。兩版仍不同的只有：impls 有 aos-exec、aos-loop、aos-fsm 三支命令列（§ 23）、沒有 aos-inst、單子交給 C lib；bin 版另保留 aos-inst 命令列、單子在行程內呼叫 `aos_inst.run()`；錯誤一行 impls 帶代號、bin 不帶（[NORMS/10](NORMS/10-基礎設施-定義與工作區.md) 開頭）。
 
-**舊 lib 已刪進 git 歷史**（inst、loop、daemon、fsm、agent 格庫、兩種 kernel、tasks、tick；27 支模組＋說明＋169 個測試＋六組 demo＋舊 `bin/aos`）：要找回用 `git show aa2fec1f:proto8/lib/README.md`（aa2fec1f 是刪除前最後一個有它的 commit）。daemon、kernel、tasks、tick、腦的工具呼叫現在**沒有實作**，概念與規範留著、標「現無實作」，等照新做法重寫（[NORMS 待定](NORMS/08-待定.md)）。
+**舊 lib 已刪進 git 歷史**（inst、loop、daemon、fsm、agent 格庫、兩種 kernel、tasks、tick；27 支模組＋說明＋169 個測試＋六組 demo＋舊 `bin/aos`）：要找回用 `git show aa2fec1f:proto8/lib/README.md`（aa2fec1f 是刪除前最後一個有它的 commit）。kernel、tasks、tick、腦的工具呼叫現在**沒有實作**（daemon 10-20 已照新做法重寫，`bin/aos-daemon`），概念與規範留著、標「現無實作」，等照新做法重寫（[NORMS 待定](NORMS/08-待定.md)）。
 
 ## 入口
 
 - **[CONCEPTS.md](CONCEPTS.md)**：概念——aos 怎麼看世界（C-01～C-73）。
 - **[NORMS.md](NORMS.md)**：規範——從概念推出來、大家都要守的（比實作重要，C-45）；程式符合規範但不強制。10-19 新的底在 [NORMS/10](NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62：五個環境變數、`aos-exec XXX`、找入口、`#/` 尋址）。
 - **[CONVENTION.md](CONVENTION.md)**：aos agent 慣例（P-05～P-40）——我們自己人寫 agent 時照抄的標準形狀，不要求別人守。
-- **[bin/](bin/README.md)**：aos-exec、aos-inst、aos-loop、aos-fsm（10-19 從 proto8-2 併進來；Python，10-19 晚照 § 14～§ 21 改完）。`proto8/impls/`：使用者假日的 C／C++ 參考實作（git 未追蹤），提供 aos-exec、aos-loop、aos-fsm 三支命令列、已照 § 14～§ 24 做，只剩 aos-daemon 待重寫。
+- **[bin/](bin/README.md)**：aos-exec、aos-inst、aos-loop、aos-fsm、aos-daemon（aos-daemon 10-20；其餘 10-19 從 proto8-2 併進來；Python，10-19 晚照 § 14～§ 21 改完）。`proto8/impls/`：使用者假日的 C／C++ 參考實作（git 未追蹤），提供 aos-exec、aos-loop、aos-fsm 三支命令列、已照 § 14～§ 24 做，只剩 aos-daemon 待重寫。
 - **[demo/](demo/README.md)**：`sh proto8/demo/run.sh`，agent-bob 與 agent-ann 各跑一遍。
 - **tests/**：`python3 -m unittest discover -s proto8/tests`。
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。

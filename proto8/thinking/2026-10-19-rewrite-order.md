@@ -52,6 +52,8 @@ daemon 的規範 N-28 說 daemon.json 是 loop.json 的嚴格超集、同名 key
 
 「argv[0] 程式不自己 setsid」跟 P-36「單子起的程式自成行程群組」不衝突：P-36 的群組是叫的人（aos-inst）給的，N-41 已經寫了「格自己不 setsid」。建議結案、刪那條。「ctl `seq`／state `ctl_seq` 回音」：daemon 重寫照 N-14、N-33 寫就有，不另決定。kernel 的三條待定（公告、`_metainfo` 通用寫法、錯誤路徑評估）第一版都用不到，不擋。
 
+→ **已定（10-20，[ideas § 25](2026-10-19-ideas.md)）**：使用者「照預設」＝setsid 那條結案刪掉、ctl seq 回音保留；daemon 已在 `proto8/bin` 重寫。
+
 ## 順序（一行）
 
 tick → 腦的工具呼叫 → tasks → daemon → LLM kernel → 通用 kernel。前兩塊只靠現有的 bin、各自幾十行、各有能跑的 demo，使用者最快能試；tasks 跟 daemon 共用「整群收」那段程式；兩種 kernel 要 daemon 把 agent 和 kernel 同時跑起來才有東西看，所以最後。

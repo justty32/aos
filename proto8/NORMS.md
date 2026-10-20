@@ -9,7 +9,7 @@
 | 概念 | aos 怎麼看世界（例：時空＝tick-tock＋資料夾；資料夾＝程式） | [CONCEPTS.md](CONCEPTS.md) |
 | 規範 | 從概念推出來、大家都要守的 | 本檔（條文按主題放在 NORMS/ 分檔） |
 | 慣例 | 我們自己人寫 aos agent 時照抄的標準形狀（P-05～P-40），**不要求別人守** | [CONVENTION.md](CONVENTION.md) |
-| 程式 | 符合規範的實作與範例，**不要求一定用** | [proto8/bin](bin/README.md)（aos-exec、aos-inst、aos-loop、aos-fsm；Python，10-19 晚照 § 14～§ 21 改完）、[proto8/demo](demo/README.md)（agent-bob、agent-ann）；`proto8/impls/`（使用者假日的 C／C++ 參考實作，git 未追蹤：提供 `aos-exec`、`aos-loop`、`aos-fsm` 三支命令列，已照 § 14～§ 24 做，inst 是 C lib，只剩 aos-daemon 待重寫）；舊的 lib 10-19 進 git 歷史 |
+| 程式 | 符合規範的實作與範例，**不要求一定用** | [proto8/bin](bin/README.md)（aos-exec、aos-inst、aos-loop、aos-fsm、aos-daemon；Python，10-19 晚照 § 14～§ 21 改完，aos-daemon 10-20）、[proto8/demo](demo/README.md)（agent-bob、agent-ann、daemon）；`proto8/impls/`（使用者假日的 C／C++ 參考實作，git 未追蹤：提供 `aos-exec`、`aos-loop`、`aos-fsm` 三支命令列，已照 § 14～§ 24 做，inst 是 C lib，只剩 aos-daemon 待重寫）；舊的 lib 10-19 進 git 歷史 |
 
 本檔（含分檔）只收使用者親口定下的規範（條號 N-）；AI 提的、還沒定的放在最後「待定」，不算數。**10-19 併入 proto8-2**：10-16 那套（stdin 是正規入口、`.aos` 捷徑、門房、結束碼只是參考…）作廢，條號只留在下面的條號表；daemon、kernel、tasks、窗的條文留著、標「現無實作」。**10-19 下班前～晚**（[ideas § 14～§ 21](thinking/2026-10-19-ideas.md)）：入口放寬成四種、`aos-exec XXX`、五個環境變數、`#/` 尋址（N-57～N-60 改、新增 N-61、N-62）；兩版實作（impls 的 C++、bin 的 Python）都已照做，仍不同的三處（impls 沒有 aos-inst 命令列、錯誤一行有沒有代號、`$ref` 只有 impls 有）在 [NORMS/10](NORMS/10-基礎設施-定義與工作區.md) 開頭。**10-19 晚規範總覽四題**（[ideas § 22](thinking/2026-10-19-ideas.md)）：daemon／窗的 key 改用現行 loop.json 的 `run`／`max`（N-06、N-07、N-11、N-28）、設定只認設定檔（N-11）、指示詞保留 `$ref`（N-45）；「+x 沒 `#!`」的檔三處一致改用 `/bin/sh` 跑（使用者「乙」，N-59 第 5 件、N-60）。
 
@@ -24,7 +24,7 @@
 | 設計理念／時空 | [02-設計理念-時空.md](NORMS/02-設計理念-時空.md)：N-01～N-03 | [CONCEPTS 時空](CONCEPTS/02-設計理念-時空.md) | 現無實作（舊 `aos tick`） |
 | 總則（跨主題） | [01-總則.md](NORMS/01-總則.md)：N-05 先寫暫存再改名、N-18 實作分級、N-43 結束碼（0／10／其他非 0，10-19 改） | 出自 C-07、C-45、C-53 | [bin](bin/README.md) |
 | 基礎設施／inst | [03-基礎設施-inst.md](NORMS/03-基礎設施-inst.md)：N-04、N-25、N-27、N-30（10-19 改成新 aos-inst；impls 線沒有 aos-inst 命令列、inst 是 C lib，§ 20） | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md) | [aos-inst](bin/README.md)（bin 版）；impls：aos-exec 行程內跑 |
-| 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md)：N-10（10-16 刪，條號留作錨點）、N-28、N-54 | 同上 | loop＝[aos-loop](bin/README.md)；daemon 現無實作 |
+| 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md)：N-10（10-16 刪，條號留作錨點）、N-28、N-54 | 同上 | loop＝[aos-loop](bin/README.md)；daemon＝[aos-daemon](bin/README.md)（10-20，bin 版） |
 | 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md)：N-06～N-09、N-11、N-13～N-17、N-32、N-33（現無實作；agent 這層只剩 N-13：內部狀態外顯成 `$AOS_STACK` 裡的檔；節奏 key 10-19 晚改用 `max`、設定只認設定檔） | 同上 | 現無實作 |
 | 基礎設施／指示詞 | [06-基礎設施-命令列與指示詞.md](NORMS/06-基礎設施-命令列與指示詞.md)：N-45 指示詞 `$env`（含 `path`）與 `$ref`（10-19 晚改；`$ref` 目前只有 impls 有） | 同上 | [aos-inst](bin/README.md)（bin 版，只有 `$env`）；impls：aos-exec＋aos-directive 庫 |
 | 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md)：N-20、N-34（tasks，現無實作）、N-36、N-38、N-39、N-41（fsm，10-19 改） | 同上 | fsm＝[aos-fsm](bin/README.md)；tasks 現無實作 |
