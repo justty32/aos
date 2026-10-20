@@ -49,7 +49,7 @@ def main():
         sys.exit(128 + aos_beat.take())
     at = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     try:
-        res = aos_beat.run(val)
+        res = aos_beat.run(val, os.path.dirname(os.path.realpath(sys.argv[1])))   # $ref 從 fsm.json 所在的資料夾算
     except aos_inst.InstError as e:
         die(f"狀態 {state}：{e}")
     with open(os.path.join(stack, "trace.jsonl"), "a", encoding="utf-8") as f:

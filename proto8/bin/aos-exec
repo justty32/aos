@@ -4,7 +4,8 @@
 XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd。WS 省略／`-`／空＝沿用 $AOS_WS，沒設用 .。
 找入口（N-61）：資料夾 → XXX/$AOS_ENTRY（預設 _exec），沒有再找 XXX/$AOS_ENTRY.json；不在、basename 沒有 `.`
 → 補找 XXX.json。解開捷徑後：有 +x＝可執行檔（exec，不讀內容；沒 #! 改用 /bin/sh 跑）；沒 +x 當 JSON 讀（第一行 #! 跳過、照 #/ 取值）：
-全字串陣列＝argv（exec，同 execvp：沒 #! 改用 /bin/sh 跑）、有 argv 的物件＝inst 單子（行程內 aos_inst.run，以子程式的碼結束）、
+非空陣列＝argv（元素可放 $env／$ref，開跑前解、解完要全是字串，10-20 ideas D2、D8；exec，同 execvp：沒 #! 改用 /bin/sh 跑；
+argv[0] 帶 / 又 exec 不了＝前面插 aos-exec、照 PATH 找，D3）、有 argv 的物件＝inst 單子（行程內 aos_inst.run，以子程式的碼結束）、
 沒 argv 的物件＝取 [$AOS_ENTRY] 再判一次（只往下一層）、字串＝路徑轉向（從寫著它的檔所在的資料夾算，繞圈＝入口壞）。
 開跑前 export AOS_WS、AOS_STACK（沒設＝$AOS_WS/.aos/，建好）、AOS_CF（實際的檔）、AOS_CD（它的資料夾），
 cd 到 AOS_CD；PATH 不動、原樣傳下去（ideas § 24；入口裡要叫 aos-exec、aos-loop… 由呼叫者事先放進 PATH）。args 接在入口後面，stdin 原樣給入口。
@@ -106,7 +107,7 @@ def find(spec, base, seen=()):
         return find(doc, os.path.dirname(f), seen)
     if isinstance(doc, dict):
         return "inst", doc, f
-    if isinstance(doc, list) and doc and all(isinstance(a, str) for a in doc):
+    if isinstance(doc, list) and doc:   # 元素可以是字串或指示詞（10-20 ideas D2、D8），開跑前才解
         return "argv", doc, f
     raise Fail("入口壞：%s 不是單子、argv 陣列或路徑" % f)
 
@@ -132,11 +133,19 @@ def launch(kind, val, f, args):
             return aos_inst.run(val, args)["code"]
         except aos_inst.InstError as e:
             raise Fail("單子跑不起來：%s" % e)
+    if kind == "argv":   # 指示詞在五個環境變數設好之後解；$ref 從入口檔所在的資料夾（＝cwd）算
+        import aos_inst
+        try:
+            val = aos_inst.resolve(val, os.getcwd())
+        except aos_inst.InstError as e:
+            raise Fail("入口壞：argv 陣列的指示詞解不開：%s" % e)
+        if not all(isinstance(a, str) for a in val):
+            raise Fail("入口壞：argv 陣列解完要全是字串：%s" % json.dumps(val, ensure_ascii=False))
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)      # Python 預設忽略 SIGPIPE，exec 會繼承；還原
     if kind == "exe":
         err = execv(f, [f] + args)
         raise Fail("起不來：%s（%s）" % (f, err.strerror))
-    argv = val + args
+    argv = aos_inst.argv0(val + args, ".")   # 帶 / 又 exec 不了＝前面插 aos-exec（D3、D5）
     if "/" in argv[0]:
         err = execv(argv[0], argv)
     else:   # 同 execvp：照 PATH 一段段 execv；找不到換下一段，別的錯（沒 +x…）記第一個、也換下一段

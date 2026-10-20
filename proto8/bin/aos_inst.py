@@ -13,8 +13,14 @@
     grace_ms        SIGTERM 後等幾毫秒還沒結束就 SIGKILL（非負整數；沒寫＝2000；0＝直接 SIGKILL）
 相對路徑：cwd 從呼叫者的 cwd 算；stdin／stdout／stderr 從解出來的 cwd 算。
 
-單子裡任何位置的 {"$env": 名} 換成那個環境變數的值；{"$env": 名, "path": 子路徑} 換成
-os.path.join(值, 子路徑)。變數沒設＝單子的錯。只有 $env，沒有 $ref。
+指示詞（N-45）：單子裡任何位置的 {"$env": 名} 換成那個環境變數的值；{"$env": 名, "path": 子路徑} 換成
+os.path.join(值, 子路徑)。變數沒設＝單子的錯。{"$ref": "檔"} 換成那份 JSON 檔的整份內容（第一行 #! 跳過）；
+{"$ref": "檔#/a"} 或 {"$ref": "檔", "at": "/a"} 換成檔內那個位置的值（JSON pointer；兩個都寫＝at 接在 #/ 後面，
+10-20 ideas D1、D7）；換進來的值接著解。相對檔名從寫著這個 $ref 的檔所在的資料夾算（ref_base；被 $ref 進來的檔
+解開捷徑再算）。物件有 $ref 就只看 $ref 與 at，其餘 key 忽略，但不認得的 $xxx＝錯；繞圈、讀不到、不是 JSON、
+指不到、# 後不是 /、at 不是空字串也不是 / 開頭＝單子的錯。指標取的是檔的原文（不穿過裡面的 $ref）。
+argv[0] 帶 / 又 exec 不了（不是 +x 的一般檔：資料夾、沒 +x 的檔、不在，或帶 #/）＝前面插 aos-exec、照 PATH 找
+（10-20 ideas D3、D5：["tools/stamp", "a"]＝["aos-exec", "tools/stamp", "a"]，a 是 WS）。
 
 結束碼：命令列退出碼＝子程式的碼（透明轉交；被訊號停掉＝128＋訊號號碼）。aos-inst 自己的錯
 （單子壞、程式找不到、$env 沒設）退 1，stderr 一行「aos-inst: 原因」。
@@ -37,7 +43,7 @@ import sys
 import threading
 import time
 
-__all__ = ["InstError", "load", "main", "parse", "run"]
+__all__ = ["InstError", "argv0", "load", "main", "parse", "resolve", "run"]
 
 _KEYS_BOOL = ("stdout_append", "stderr_append")
 _FORWARDED = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
@@ -47,31 +53,88 @@ class InstError(Exception):
     """aos-inst 自己的錯：單子壞、程式找不到、$env 沒設…"""
 
 
-def _env(x):
-    """把 x 裡所有 {"$env": 名[, "path": 子路徑]} 換成字串。"""
+def _pointer(doc, ptr, where):
+    """RFC 6901：ptr 是空字串（整份）或 `/a/b`（`~1`＝`/`、`~0`＝`~`）。"""
+    if ptr == "":
+        return doc
+    for tok in ptr[1:].split("/"):
+        tok = tok.replace("~1", "/").replace("~0", "~")
+        if isinstance(doc, dict) and tok in doc:
+            doc = doc[tok]
+        elif isinstance(doc, list) and tok.isdigit() and (tok == "0" or not tok.startswith("0")) \
+                and int(tok) < len(doc):
+            doc = doc[int(tok)]
+        else:
+            raise InstError("$ref 指不到：%s#%s" % (where, ptr))
+    return doc
+
+
+def _ref(x, base, chain):
+    """{"$ref": "檔[#/指標]"[, "at": 指標]} → 那個位置的值（接著解完）。"""
+    bad = [k for k in x if k.startswith("$") and k not in ("$ref", "$env")]
+    if bad:
+        raise InstError("不認得的指示詞 %s：%r" % (bad[0], x))
+    ref, at = x["$ref"], x.get("at")
+    if not isinstance(ref, str) or not ref:
+        raise InstError("$ref 要是非空字串：%r" % (x,))
+    if not (at is None or isinstance(at, str) and (at == "" or at.startswith("/"))):
+        raise InstError("at 要是空字串或 / 開頭的 JSON pointer：%r" % (x,))
+    path, hashed, ptr = ref.partition("#")
+    if hashed and not ptr.startswith("/"):
+        raise InstError("$ref 的 # 後面要接 /：%s" % ref)
+    if not path:
+        raise InstError("$ref 要寫檔名：%s" % ref)
+    ptr += at or ""                     # D7：at 接在 #/ 後面
+    f = os.path.realpath(os.path.join(base, path))
+    if (f, ptr) in chain:
+        raise InstError("$ref 繞圈：%s" % " → ".join(a + ("#" + b if b else "") for a, b in chain + ((f, ptr),)))
+    return _resolve(_pointer(load(f, "$ref "), ptr, f), os.path.dirname(f), chain + ((f, ptr),))
+
+
+def _resolve(x, base, chain=()):
+    """把 x 裡所有指示詞換掉：{"$ref": …[, "at": …]}、{"$env": 名[, "path": 子路徑]}。"""
     if isinstance(x, list):
-        return [_env(v) for v in x]
-    if isinstance(x, dict):
-        if "$env" not in x:
-            return {k: _env(v) for k, v in x.items()}
-        name, path = x["$env"], x.get("path")
-        extra = set(x) - {"$env", "path"}
-        if not isinstance(name, str) or extra or not (path is None or isinstance(path, str)):
-            raise InstError('$env 只能是 {"$env": 變數名} 或 {"$env": 變數名, "path": 子路徑}：%r' % (x,))
-        if name not in os.environ:
-            raise InstError("環境變數 %s 沒設定" % name)
-        return os.environ[name] if path is None else os.path.join(os.environ[name], path)
-    return x
+        return [_resolve(v, base, chain) for v in x]
+    if not isinstance(x, dict):
+        return x
+    if "$ref" in x:
+        return _ref(x, base, chain)
+    if "$env" not in x:
+        return {k: _resolve(v, base, chain) for k, v in x.items()}
+    name, path = x["$env"], x.get("path")
+    extra = set(x) - {"$env", "path"}
+    if not isinstance(name, str) or extra or not (path is None or isinstance(path, str)):
+        raise InstError('$env 只能是 {"$env": 變數名} 或 {"$env": 變數名, "path": 子路徑}：%r' % (x,))
+    if name not in os.environ:
+        raise InstError("環境變數 %s 沒設定" % name)
+    return os.environ[name] if path is None else os.path.join(os.environ[name], path)
+
+
+def resolve(x, ref_base=None):
+    """解指示詞（N-45）。ref_base＝$ref 相對檔名的起點（寫著它的檔所在的資料夾；沒給＝cwd）。丟 InstError。"""
+    return _resolve(x, os.path.abspath(ref_base or os.getcwd()))
+
+
+def argv0(argv, cwd):
+    """argv[0] 帶 / 又 exec 不了（不是 +x 的一般檔，或帶 #/）→ 前面插 aos-exec（10-20 ideas D3）；其他原樣。"""
+    a = argv[0]
+    if "/" not in a:
+        return argv
+    p = os.path.join(cwd, a)
+    if "#/" in a or not (os.path.isfile(p) and os.access(p, os.X_OK)):
+        return ["aos-exec"] + argv
+    return argv
 
 
 def _int(v):
     return isinstance(v, int) and not isinstance(v, bool)
 
 
-def parse(doc, base=None, args=()):
-    """解 $env、驗認得的 key，回欄位都填好的 dict（None＝沒寫＝接呼叫者的）。args 接在 argv 後面。"""
+def parse(doc, base=None, args=(), ref_base=None):
+    """解指示詞、驗認得的 key，回欄位都填好的 dict（None＝沒寫＝接呼叫者的）。args 接在 argv 後面。
+    base＝cwd 的起點（呼叫者的 cwd）；ref_base＝$ref 的起點（寫著單子的檔所在的資料夾；沒給＝base）。"""
     base = os.path.abspath(base or os.getcwd())
-    doc = _env(doc)
+    doc = resolve(doc, ref_base or base)
     if not isinstance(doc, dict):
         raise InstError("單子要是 JSON 物件，不是 %s" % type(doc).__name__)
     argv = doc.get("argv")
@@ -105,27 +168,31 @@ def parse(doc, base=None, args=()):
     return inst
 
 
-def load(path):
-    """讀單子檔：第一行是 `#!` 就丟掉，剩下 json.loads。"""
+def load(path, what=""):
+    """讀單子檔（或 $ref 的檔）：第一行是 `#!` 就丟掉，剩下 json.loads。"""
     try:
         with open(path, encoding="utf-8") as f:
             text = f.read()
     except OSError as e:
-        raise InstError("讀不到 %s：%s" % (path, e))
+        raise InstError("%s讀不到 %s：%s" % (what, path, e))
     if text.startswith("#!"):
         text = text.partition("\n")[2]
     try:
         return json.loads(text)
     except ValueError as e:
-        raise InstError("%s 不是 JSON：%s" % (path, e))
+        raise InstError("%s%s 不是 JSON：%s" % (what, path, e))
 
 
-def run(x, args=()):
+def run(x, args=(), ref_base=None):
     """跑一次：x＝單子檔路徑，或單子 dict（基準＝呼叫者的 cwd）。回結果 dict；單子有問題、起不來丟 InstError。
+    $ref 的起點：x 是檔＝它（解開捷徑）所在的資料夾；x 是 dict＝ref_base（寫著它的檔所在的資料夾），沒給＝cwd。
     在主執行緒呼叫時，跑的期間 SIGINT／SIGTERM／SIGHUP 不打斷呼叫者，轉給子程式；
     轉過去之後再等 grace_ms，還沒結束就 SIGKILL。"""
-    doc = load(x) if isinstance(x, str) else x
-    return _run(parse(doc, os.getcwd(), args))
+    if isinstance(x, str):
+        doc, ref_base = load(x), os.path.dirname(os.path.realpath(x))
+    else:
+        doc = x
+    return _run(parse(doc, os.getcwd(), args, ref_base))
 
 
 def _run(inst):
@@ -182,6 +249,7 @@ def _start(inst):
         def popen(argv):
             return subprocess.Popen(argv, cwd=inst["cwd"], env=env, stdin=stdin, stdout=stdout, stderr=stderr,
                                     start_new_session=True)
+        inst["argv"] = argv0(inst["argv"], inst["cwd"])   # 帶 / 又 exec 不了＝交給 PATH 上的 aos-exec（D3）
         try:
             try:
                 return popen(inst["argv"])

@@ -3,7 +3,7 @@
     import aos_beat
     aos_beat.block()        程式一開始呼叫：之後 SIGINT／SIGTERM／SIGHUP 不打死這支程式，記下來
     aos_beat.take()         拍與拍之間：有記下的訊號就回第一個（沒有＝0）
-    aos_beat.run(x)         跑一拍，回 {"code", "signal", "timed_out", "ms", "received"}
+    aos_beat.run(x, ref_base)  跑一拍，回 {"code", "signal", "timed_out", "ms", "received"}（ref_base＝單子裡 $ref 的起點）
 
 x 是字串＝子行程 `aos-exec <x>`（照 PATH 找；跟呼叫者同一個行程群組，同 subprocess.call）；跑的期間收到的三個訊號
 os.kill 給那個子行程（不另設 SIGKILL 期限）。x 是物件＝inst 單子，行程內 aos_inst.run()（它轉給整群、grace 後 SIGKILL）。
@@ -45,10 +45,10 @@ def take():
     return _got[0] if _got else 0
 
 
-def run(x):
+def run(x, ref_base=None):
     # 收到任何一個訊號，呼叫者這拍收完就結束，所以 _got 在第一拍之前是空的、之後也只會有這一拍收到的
     if not isinstance(x, str):
-        res = aos_inst.run(x)   # 跑的期間換上它自己的轉送（收到的放在 res["received"]），回來換回 _on_signal
+        res = aos_inst.run(x, ref_base=ref_base)   # 跑的期間換上它自己的轉送（收到的放在 res["received"]），回來換回 _on_signal
         out = {k: res[k] for k in ("code", "signal", "timed_out", "ms")}
         out["received"] = res["received"] or (_got[0] if _got else None)
         return out

@@ -56,6 +56,7 @@ class Loop:
         if run is None and self.need_run or run is not None and not isinstance(run, (str, dict)):
             raise ConfigError('run 要是子資料夾或單子（{"run": …, "max": 圈數}）')
         self.run = run
+        self.ref_base = os.path.dirname(os.path.realpath(path))   # 單子裡 $ref 的起點（N-45）
         self.max = cfg.get("max", self.max_default)
         if not (self.max is None and "max" not in cfg or _nat(self.max)):
             raise ConfigError("max 要是非負整數")
@@ -143,7 +144,7 @@ class Loop:
             self.write("running")
             if self.run is not None:
                 try:
-                    b = aos_beat.run(self.run)
+                    b = aos_beat.run(self.run, self.ref_base)
                 except aos_inst.InstError as e:
                     self.say(str(e))
                     return self.end(1, "done")
