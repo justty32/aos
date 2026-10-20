@@ -15,8 +15,8 @@
 ## 2026-10-20（公司 Windows session）
 
 1. **授權**：使用者「照舊，這個 session 內可以隨意 push」→ 每個 commit 後直接 `git push origin main`。分工照 [user.md 子 agent 模型](workflows/common/user.md) 10-20 版：普通工作 opus、簡單與雜活 sonnet、高難度思考與規劃 fable（盡量少用）；頂層只跟使用者交流；派出去的 agent（雜活除外）要先通讀 wf/ 規矩。公司這台：python／wf-lint 走 WSL（`wsl -e bash -lc 'cd /mnt/c/code/mine/simple_tools/aos && …'`），`git add` 加 `-c core.ignorecase=false`（[gotchas](workflows/common/gotchas.md)）。
-2. **正在討論的設計**：指示詞與 argv 第一個元素已拍板 D1～D8（[ideas 10-20](../proto8/thinking/2026-10-20-ideas.md)），bin 版已做；daemon 重寫五點「照預設」，bin 版已做（[ideas § 25](../proto8/thinking/2026-10-19-ideas.md)）。兩者的 impls（C／C++）版待回家那台對齊（impls 不在公司這台）。tidy 第二輪剩 7 條待裁定（[WAIT_USER](WAIT_USER.md)）。
-3. **當天動到的條目**：N-17、N-28、N-33、N-54（daemon，10-20 註）；N-45、N-58、N-59、N-61、N-62（指示詞／argv）；proto8 的 CONVENTION／NORMS／CONCEPTS 拆成分檔、thinking 清掉 AI 分析段。沒有還在跑的子 agent。細節 → [session log 10-20](session_logs/2026-10/2026-10-20.md)。
+2. **正在討論的設計**：指示詞與 argv 第一個元素已拍板 D1～D8（[ideas 10-20](../proto8/thinking/2026-10-20-ideas.md)），bin 版已做；晚上指示詞改版也做完推上（同檔 § 8 D9～D15：`path` 改 `$path`、加 `$prefix`、寫法寬容，真的解不開仍報錯＝環境變數沒設、檔讀不到、指不到、繞圈），`$fmt` 未決（§ 9）。daemon 重寫五點「照預設」，bin 版已做（[ideas § 25](../proto8/thinking/2026-10-19-ideas.md)）。兩者的 impls（C／C++）版待回家那台對齊（impls 不在公司這台），指示詞那邊要多對齊 `$path`／`$prefix`／寬容規則。agent 自定的邊界、`$prefix` 與 C-56 的張力已報給使用者，他回「好，沒事了」→ 留在原處不追。tidy 第二輪剩 7 條待裁定（[WAIT_USER](WAIT_USER.md)）。
+3. **當天動到的條目**：N-17、N-28、N-33、N-54（daemon，10-20 註）；N-45、N-58、N-59、N-61、N-62（指示詞／argv，N-45、P-31 隨改版同步）；proto8 的 CONVENTION／NORMS／CONCEPTS 拆成分檔、thinking 清掉 AI 分析段。aos-fsm 盤點：bin 版完整、14 組測試（Windows 直接跑會 WinError 193，要走 WSL）、impls 待回家對齊。沒有還在跑的子 agent。細節 → [session log 10-20](session_logs/2026-10/2026-10-20.md)。
 
 ## 2026-10-19 晚（家中 Manjaro 新 session）
 
