@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- **impls（C／C++）待對齊 10-20 的 bin 版**：daemon 重寫（[ideas § 25](../proto8/thinking/2026-10-19-ideas.md)，計畫 `proto8/impls/aos-daemon/PLAN-2026-10-19.md`）與指示詞／argv 拍板（[ideas 10-20 D1～D8](../proto8/thinking/2026-10-20-ideas.md)）；bin 版、條文已做完已推（測試 141），impls 只在家中 Manjaro（未追蹤），回家照 [bin README](../proto8/bin/README.md) 10-20 兩段對齊 → [10-20](session_logs/2026-10/2026-10-20.md)。
+- **impls（C／C++）待對齊 10-20 的 bin 版**：daemon 重寫（[ideas § 25](../proto8/thinking/2026-10-19-ideas.md)，計畫 `proto8/impls/aos-daemon/PLAN-2026-10-19.md`）與指示詞／argv 拍板（[ideas 10-20 D1～D8](../proto8/thinking/2026-10-20-ideas.md)），以及指示詞改版 `$path`／`$prefix`／寫法寬容（同檔 D9～D15；對齊前 demo 在 impls 版跑不動）；bin 版、條文已做完已推（測試 141），impls 只在家中 Manjaro（未追蹤），回家照 [bin README](../proto8/bin/README.md) 10-20 兩段對齊 → [10-20](session_logs/2026-10/2026-10-20.md)。
 - **待照新做法重寫**：兩種 kernel、tasks、tick、`tool_calls` 現無實作（舊版 git aa2fec1f），使用者「之後再說」→ 他回到實作前不主動提；[rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)、[NORMS 待定](../proto8/NORMS/08-待定.md)。
 - **KISS 批次 2～6 暫停**（批次 1 已做完；10-16 使用者撤回「都照推薦」）→ [10-15 § KISS 批次 1](session_logs/2026-10/2026-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)。
 - **10-15 等使用者看**：各 thinking 的「動工自定點」（[llm-kernel](../proto8/thinking/2026-10-15-llm-kernel.md#動工自定點)、[general-kernel](../proto8/thinking/2026-10-15-general-kernel.md#動工自定點)、[json-families](../proto8/thinking/2026-10-15-json-families.md)、[topics/04](../proto8/thinking/2026-10-15-topics/04-agent當函數.md)、[judge-live2](../proto8/thinking/2026-10-15-judge-live2.md)）；open 候選：對話太長、agent 收信、標準實作、規範草稿定稿 → [10-15](session_logs/2026-10/2026-10-15.md)。

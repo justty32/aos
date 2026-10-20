@@ -95,7 +95,7 @@ class T(unittest.TestCase):
 
     def test_object_cell_exit_code_and_env_resolved(self):
         self.table({"a": {"val": {"argv": ["sh", "-c", "echo hi; exit 4"],
-                                  "stdout": {"$env": "AOS_STACK", "path": "out.txt"}}, "next": "a"}})
+                                  "stdout": {"$env": "AOS_STACK", "$path": "out.txt"}}, "next": "a"}})
         self.assertEqual(self.beat().returncode, 4)
         self.assertEqual((self.stack / "out.txt").read_text(), "hi\n")
         self.assertFalse((self.stack / "state").exists())

@@ -79,14 +79,9 @@ class T(unittest.TestCase):
         self.assertEqual(r[:2], (0, "deep\n"), r[2])
 
     def test_ref_errors(self):
+        # 真的解不開（讀不到、指不到、繞圈）＝錯；寫法不合的見 test_directive_lenient.py（10-20 D12～D15）
         for doc in ({"argv": ["echo", {"$ref": "sub/nope.json"}]},
-                    {"argv": ["echo", {"$ref": "sub/data.json#/zz"}]},
-                    {"argv": ["echo", {"$ref": "sub/data.json#a"}]},
-                    {"argv": ["echo", {"$ref": "sub/data.json", "at": "a"}]},
-                    {"argv": ["echo", {"$ref": "sub/data.json", "at": 3}]},
-                    {"argv": ["echo", {"$ref": "#/msg"}]},
-                    {"argv": ["echo", {"$ref": ""}]},
-                    {"argv": ["echo", {"$ref": "sub/data.json#/msg", "$nope": 1}]}):
+                    {"argv": ["echo", {"$ref": "sub/data.json#/zz"}]}):
             self.err(self.entry(doc), "單子跑不起來")
         put(self.t / "q" / "loop1.json", {"x": {"$ref": "loop2.json"}})
         put(self.t / "q" / "loop2.json", {"$ref": "loop1.json#/x"})
@@ -105,7 +100,7 @@ class T(unittest.TestCase):
     # ───── D2、D8：argv 陣列放指示詞 ─────
 
     def test_d2_argv_array_env(self):
-        r = self.entry(["sh", "-c", 'echo "$1"', "sh", {"$env": "AOS_CD", "path": "x"}])
+        r = self.entry(["sh", "-c", 'echo "$1"', "sh", {"$env": "AOS_CD", "$path": "x"}])
         self.assertEqual(r[:2], (0, "%s/x\n" % (self.t / "q")), r[2])
         r = self.entry({"_exec": ["echo", {"$env": "AOS_WS"}]})
         self.assertEqual(r[:2], (0, "%s\n" % self.ws), r[2])
@@ -189,7 +184,7 @@ class T(unittest.TestCase):
         q = self.t / "q"
         stack = self.t / "st"; stack.mkdir()
         loop = put(q / "loop.json", {"run": {"argv": ["tools/stamp", "-", "L"], "cwd": str(q),
-                                             "stdout": {"$env": "AOS_STACK", "path": "out"},
+                                             "stdout": {"$env": "AOS_STACK", "$path": "out"},
                                              "envs": {"MSG": {"$ref": "sub/data.json#/msg"}}}, "max": 1})
         r = run("aos-loop", loop, cwd=self.t, env={"AOS_WS": str(self.ws), "AOS_STACK": str(stack)})
         self.assertEqual(r[0], 0, r[2])
@@ -197,13 +192,13 @@ class T(unittest.TestCase):
         # fsm：$ref 從 fsm.json 所在的資料夾算（cwd 在別處）
         fsm = put(q / "fsm.json", {"start": "a", "states": {"a": {
             "val": {"argv": [{"$ref": "sub/data.json", "at": "/a/b/0"}, {"$ref": "sub/data.json#/msg"}],
-                    "stdout": {"$env": "AOS_STACK", "path": "fout"}}, "next": "a"}}})
+                    "stdout": {"$env": "AOS_STACK", "$path": "fout"}}, "next": "a"}}})
         r = run("aos-fsm", fsm, cwd=self.t, env={"AOS_STACK": str(stack)})
         self.assertEqual(r[0], 0, r[2])
         self.assertEqual((stack / "fout").read_text(), "hi\n")
         fsm2 = put(q / "fsm2.json", {"start": "a", "states": {"a": {
             "val": {"argv": ["tools/cfg.json#/t/u"], "cwd": str(q),
-                    "stdout": {"$env": "AOS_STACK", "path": "fout2"}}, "next": "a"}}})
+                    "stdout": {"$env": "AOS_STACK", "$path": "fout2"}}, "next": "a"}}})
         r = run("aos-fsm", fsm2, cwd=self.t, env={"AOS_STACK": str(stack)})
         self.assertEqual(((stack / "fout2").read_text(), r[0]), ("ptr\n", 0), r[2])
 

@@ -262,7 +262,7 @@ class T(unittest.TestCase):
                          (0, "1:%s\n" % Path(self.t).resolve()))
 
     def test_inst_env_directive(self):
-        self.json_entry({"argv": ["echo", "s"], "stdout": {"$env": "AOS_STACK", "path": "out"}})
+        self.json_entry({"argv": ["echo", "s"], "stdout": {"$env": "AOS_STACK", "$path": "out"}})
         self.assertEqual(Path(self.t, ".aos", "out").read_text(), "s\n")
         q = Path(self.t, "q").resolve()
         self.assertEqual(self.json_entry({"argv": ["echo", {"$env": "AOS_CD"}, {"$env": "AOS_CF"}]})[:2],

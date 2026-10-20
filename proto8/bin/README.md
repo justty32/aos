@@ -12,6 +12,8 @@
 
 > **10-20 指示詞與 argv（10-20 使用者，見 [ideas](../thinking/2026-10-20-ideas.md) D1～D8；條文 N-45、N-61）**：`aos_inst.py` 補上 `$ref`（上面 10-19 夜那句「單子沒有 `$ref`」10-20 改），還能取檔內位置——`{"$ref": "x.json#/a/b"}` 或 `{"$ref": "x.json", "at": "/a/b"}`，兩個都寫＝`at` 接在 `#/` 後面；aos-exec 的 argv 陣列入口元素可以放 `$env`／`$ref`；argv[0] 帶 `/` 又 exec 不了（資料夾、沒 `+x` 的檔、不在、帶 `#/`）＝前面插 `aos-exec`、照 PATH 找（入口 argv 陣列、單子、loop／fsm 內嵌單子都一樣），所以 `["tools/stamp", "a"]`＝`aos-exec tools/stamp a`、a 是 WS。**bin 版已做、impls 待做**（impls 只有整份檔的 `$ref`；這台沒有 impls，待使用者回家那台照這版對齊）。測試在 `tests/test_directive_argv.py`。
 
+> **10-20 晚 指示詞改版（10-20 使用者，見 [ideas](../thinking/2026-10-20-ideas.md) D9～D15；條文 N-45）**：`$env` 的 `path` 改名 `$path`（舊的 `path` 不再有作用），加 `$prefix`（接在結果前面，先接 `$path` 再加），`$env`、`$ref` 都能帶，換出來不是字串就靜默不作用。錯分兩類：環境變數沒設、`$ref` 檔讀不到／不是 JSON、指不到、繞圈照舊是錯；寫法（格式）寬容——不認得的 `$xxx`（含 `$fmt`）與其餘 key 不管，`$path`／`$prefix`／`at` 型別不對當沒寫，`$ref`／`$env` 的值不是非空字串、`#` 後不是 `/`、只有 `#/…`＝整個物件原封不動留著（在 argv 裡就照 argv 規則算壞）。demo 的 JSON 已改寫 `$path`。**bin 版已做、impls 待對齊**（對齊前 demo 在 impls 版跑不動）。測試在 `tests/test_directive_lenient.py`。
+
 ```
 sh proto8/demo/run.sh                                  # 建暫時工作區、放一題、跑 agent-bob、agent-ann，再用 aos-daemon 同時管兩隻；印工作區與 stack 樹
 python3 -m unittest discover -s proto8/tests

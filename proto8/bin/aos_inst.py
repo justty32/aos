@@ -13,17 +13,21 @@
     grace_ms        SIGTERM 後等幾毫秒還沒結束就 SIGKILL（非負整數；沒寫＝2000；0＝直接 SIGKILL）
 相對路徑：cwd 從呼叫者的 cwd 算；stdin／stdout／stderr 從解出來的 cwd 算。
 
-指示詞（N-45）：單子裡任何位置的 {"$env": 名} 換成那個環境變數的值；{"$env": 名, "path": 子路徑} 換成
-os.path.join(值, 子路徑)。變數沒設＝單子的錯。{"$ref": "檔"} 換成那份 JSON 檔的整份內容（第一行 #! 跳過）；
-{"$ref": "檔#/a"} 或 {"$ref": "檔", "at": "/a"} 換成檔內那個位置的值（JSON pointer；兩個都寫＝at 接在 #/ 後面，
-10-20 ideas D1、D7）；換進來的值接著解。相對檔名從寫著這個 $ref 的檔所在的資料夾算（ref_base；被 $ref 進來的檔
-解開捷徑再算）。物件有 $ref 就只看 $ref 與 at，其餘 key 忽略，但不認得的 $xxx＝錯；繞圈、讀不到、不是 JSON、
-指不到、# 後不是 /、at 不是空字串也不是 / 開頭＝單子的錯。指標取的是檔的原文（不穿過裡面的 $ref）。
+指示詞（N-45）：單子裡任何位置的 {"$env": 名} 換成那個環境變數的值。{"$ref": "檔"} 換成那份 JSON 檔的整份內容
+（第一行 #! 跳過）；{"$ref": "檔#/a"} 或 {"$ref": "檔", "at": "/a"} 換成檔內那個位置的值（JSON pointer；兩個都寫＝
+at 接在 #/ 後面，10-20 ideas D1、D7）；換進來的值接著解。相對檔名從寫著這個 $ref 的檔所在的資料夾算（ref_base；
+被 $ref 進來的檔解開捷徑再算）。指標取的是檔的原文（不穿過裡面的 $ref）。
+換出來是字串時：有 "$path" 就 os.path.join(值, $path)，再在前面加 "$prefix"（10-20 ideas D9～D11；舊的 "path" key
+不再有作用）；換出來不是字串，$path／$prefix 靜默不作用。
+錯分兩類（10-20 ideas D12～D15）：真的解不開——變數沒設、$ref 檔讀不到（含不是 JSON）、指不到、繞圈——＝單子的錯；
+寫法（格式）寬容——物件有 $ref 就只看 $ref（$env 不管），其餘 key、不認得的 $xxx 都不管；$path／$prefix／at 不是
+字串（at 也不是空字串或 / 開頭）＝當沒寫；$ref／$env 的值不是字串或空字串、# 後不是 /、只有 #/… 沒檔名＝換不了，
+整個物件原封不動留著。
 argv[0] 帶 / 又 exec 不了（不是 +x 的一般檔：資料夾、沒 +x 的檔、不在，或帶 #/）＝前面插 aos-exec、照 PATH 找
 （10-20 ideas D3、D5：["tools/stamp", "a"]＝["aos-exec", "tools/stamp", "a"]，a 是 WS）。
 
 結束碼：命令列退出碼＝子程式的碼（透明轉交；被訊號停掉＝128＋訊號號碼）。aos-inst 自己的錯
-（單子壞、程式找不到、$env 沒設）退 1，stderr 一行「aos-inst: 原因」。
+（單子壞、程式找不到、$env 沒設、$ref 解不開）退 1，stderr 一行「aos-inst: 原因」。
 run() 回 {"code", "signal", "timed_out", "pid", "ms", "received"}（received＝跑的期間收到、轉給子程式的第一個
 SIGINT／SIGTERM／SIGHUP，沒有＝None；給 aos-loop／aos-fsm「收完這拍再以 128＋N 結束」用）；子程式回幾號、被逾時收掉都算正常跑完，
 單子有問題或起不來丟 InstError。
@@ -69,21 +73,19 @@ def _pointer(doc, ptr, where):
     return doc
 
 
+_KEEP = object()   # 格式不合（B 類）：整個指示詞物件原封不動留著
+
+
 def _ref(x, base, chain):
-    """{"$ref": "檔[#/指標]"[, "at": 指標]} → 那個位置的值（接著解完）。"""
-    bad = [k for k in x if k.startswith("$") and k not in ("$ref", "$env")]
-    if bad:
-        raise InstError("不認得的指示詞 %s：%r" % (bad[0], x))
+    """{"$ref": "檔[#/指標]"[, "at": 指標]} → 那個位置的值（接著解完）；寫法不合回 _KEEP。"""
     ref, at = x["$ref"], x.get("at")
-    if not isinstance(ref, str) or not ref:
-        raise InstError("$ref 要是非空字串：%r" % (x,))
-    if not (at is None or isinstance(at, str) and (at == "" or at.startswith("/"))):
-        raise InstError("at 要是空字串或 / 開頭的 JSON pointer：%r" % (x,))
+    if not isinstance(ref, str):
+        return _KEEP
+    if not (isinstance(at, str) and (at == "" or at.startswith("/"))):
+        at = None                       # at 寫法不合＝當沒寫
     path, hashed, ptr = ref.partition("#")
-    if hashed and not ptr.startswith("/"):
-        raise InstError("$ref 的 # 後面要接 /：%s" % ref)
-    if not path:
-        raise InstError("$ref 要寫檔名：%s" % ref)
+    if not path or hashed and not ptr.startswith("/"):
+        return _KEEP                    # 空字串、只有 #/…、# 後不是 /
     ptr += at or ""                     # D7：at 接在 #/ 後面
     f = os.path.realpath(os.path.join(base, path))
     if (f, ptr) in chain:
@@ -91,23 +93,38 @@ def _ref(x, base, chain):
     return _resolve(_pointer(load(f, "$ref "), ptr, f), os.path.dirname(f), chain + ((f, ptr),))
 
 
+def _env(x):
+    """{"$env": 名} → 那個環境變數的值；名不是非空字串回 _KEEP；沒設＝錯。"""
+    name = x["$env"]
+    if not isinstance(name, str) or not name:
+        return _KEEP
+    if name not in os.environ:
+        raise InstError("環境變數 %s 沒設定" % name)
+    return os.environ[name]
+
+
 def _resolve(x, base, chain=()):
-    """把 x 裡所有指示詞換掉：{"$ref": …[, "at": …]}、{"$env": 名[, "path": 子路徑]}。"""
+    """把 x 裡所有指示詞換掉（N-45，10-20 改）：有 $ref／$env 的物件整個換成值，物件裡其餘 key 不管；
+    換出來是字串時再照 $path 接路徑、前面加 $prefix（兩欄不是字串＝當沒寫）。"""
     if isinstance(x, list):
         return [_resolve(v, base, chain) for v in x]
     if not isinstance(x, dict):
         return x
-    if "$ref" in x:
-        return _ref(x, base, chain)
-    if "$env" not in x:
+    if "$ref" in x:                     # 同時有 $env 只看 $ref
+        v = _ref(x, base, chain)
+    elif "$env" in x:
+        v = _env(x)
+    else:
         return {k: _resolve(v, base, chain) for k, v in x.items()}
-    name, path = x["$env"], x.get("path")
-    extra = set(x) - {"$env", "path"}
-    if not isinstance(name, str) or extra or not (path is None or isinstance(path, str)):
-        raise InstError('$env 只能是 {"$env": 變數名} 或 {"$env": 變數名, "path": 子路徑}：%r' % (x,))
-    if name not in os.environ:
-        raise InstError("環境變數 %s 沒設定" % name)
-    return os.environ[name] if path is None else os.path.join(os.environ[name], path)
+    if v is _KEEP:
+        return x
+    if isinstance(v, str):              # 換出來不是字串＝$path／$prefix 靜默不作用
+        sub, pre = x.get("$path"), x.get("$prefix")
+        if isinstance(sub, str):
+            v = os.path.join(v, sub)
+        if isinstance(pre, str):
+            v = pre + v
+    return v
 
 
 def resolve(x, ref_base=None):

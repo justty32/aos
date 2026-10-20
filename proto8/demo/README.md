@@ -22,7 +22,7 @@ stack 樹＝呼叫樹：`.aos/{state,current,plan,trace.jsonl}`、`.aos/cathy/{�
 
 ## daemon（一個 daemon 同時管 bob、ann，10-20）
 
-`daemon/_exec`＝`exec aos-daemon daemon.json`；`daemon.json` 是 `{"max": 10, "interval_ms": 200, "ctl", "state", "children": {"bob": …, "ann": …}}`，每個子項是一份 loop 設定：`{"run": {"argv": ["aos-exec", "../agent-bob", {"$env": "AOS_WS", "path": "bob"}]}, "max": 1}`（ann 同樣）——子 loop 跑一次那隻 agent，工作區是 `$AOS_WS/bob`、`$AOS_WS/ann`。`run.sh` 最後一段建暫時工作區、在 `bob/inbox/`、`ann/inbox/` 各放一題、`aos-exec` daemon：它拍 10 拍（約 2 秒）就結束、結束前收掉子項。stack 樹：`.aos/state.json`（daemon 的 state，`children` 表）、`.aos/bob/`、`.aos/ann/`（各子項的小格：daemon 寫的 `loop.json`、子 loop 的 `state.json`、`stderr`，以及那隻 agent 自己的 `state`、`trace.jsonl`…——agent 的 stack 就是小格，因為 `AOS_STACK` 已經有值、aos-exec 沿用）。子 loop 結束後不重起，所以表上兩項最後都是 `exited`、`code` 0。
+`daemon/_exec`＝`exec aos-daemon daemon.json`；`daemon.json` 是 `{"max": 10, "interval_ms": 200, "ctl", "state", "children": {"bob": …, "ann": …}}`，每個子項是一份 loop 設定：`{"run": {"argv": ["aos-exec", "../agent-bob", {"$env": "AOS_WS", "$path": "bob"}]}, "max": 1}`（ann 同樣）——子 loop 跑一次那隻 agent，工作區是 `$AOS_WS/bob`、`$AOS_WS/ann`。`run.sh` 最後一段建暫時工作區、在 `bob/inbox/`、`ann/inbox/` 各放一題、`aos-exec` daemon：它拍 10 拍（約 2 秒）就結束、結束前收掉子項。stack 樹：`.aos/state.json`（daemon 的 state，`children` 表）、`.aos/bob/`、`.aos/ann/`（各子項的小格：daemon 寫的 `loop.json`、子 loop 的 `state.json`、`stderr`，以及那隻 agent 自己的 `state`、`trace.jsonl`…——agent 的 stack 就是小格，因為 `AOS_STACK` 已經有值、aos-exec 沿用）。子 loop 結束後不重起，所以表上兩項最後都是 `exited`、`code` 0。
 
 ## 測試
 

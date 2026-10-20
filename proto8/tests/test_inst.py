@@ -111,8 +111,8 @@ class T(unittest.TestCase):
         stack, ws = self.tmp / "stack", self.tmp / "ws"
         stack.mkdir(); ws.mkdir()
         doc = {"argv": ["echo", "x"],
-               "stdout": {"$env": "AOS_STACK", "path": "plan"},
-               "stderr": {"$env": "AOS_WS", "path": "err"}}
+               "stdout": {"$env": "AOS_STACK", "$path": "plan"},
+               "stderr": {"$env": "AOS_WS", "$path": "err"}}
         r = run(INST, self.single(doc), env={"AOS_STACK": str(stack) + "/", "AOS_WS": str(ws)})
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((stack / "plan").read_text(), "x\n")
@@ -126,7 +126,7 @@ class T(unittest.TestCase):
         entry = d / "_exec"
         entry.write_text('#!/usr/bin/env aos-inst\n' + json.dumps(
             {"argv": ["sh", "-c", 'pwd; echo "$1"; exit 4', "sh"],
-             "stdout": {"$env": "AOS_STACK", "path": "plan"}}))
+             "stdout": {"$env": "AOS_STACK", "$path": "plan"}}))
         entry.chmod(0o755)
         ws = self.tmp / "ws"; ws.mkdir()
         r = run(EXEC, str(d), str(ws), "arg1")
