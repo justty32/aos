@@ -12,7 +12,6 @@
 
 ## 最新進度
 
-- **proto8 文件裡「impls 待對齊」的狀態註記待改**：impls 10-21 已對齊 bin 版（demo 兩條線一樣），但 NORMS.md、NORMS/06、08 待定、10，CONVENTION/05，bin/README 10-20 三段，ideas 10-20 § 6、§ 9 還寫待做 → [10-21](session_logs/2026-10/2026-10-21.md)。
 - **待照新做法重寫**：兩種 kernel、tasks、tick、`tool_calls` 現無實作（舊版 git aa2fec1f），使用者「之後再說」→ 他回到實作前不主動提；[rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)、[NORMS 待定](../proto8/NORMS/08-待定.md)。
 - **KISS 批次 2～6 暫停**（批次 1 已做完；10-16 使用者撤回「都照推薦」）→ [10-15 § KISS 批次 1](session_logs/2026-10/2026-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)。
 - **10-15 等使用者看**：各 thinking 的「動工自定點」（[llm-kernel](../proto8/thinking/2026-10-15-llm-kernel.md#動工自定點)、[general-kernel](../proto8/thinking/2026-10-15-general-kernel.md#動工自定點)、[json-families](../proto8/thinking/2026-10-15-json-families.md)、[topics/04](../proto8/thinking/2026-10-15-topics/04-agent當函數.md)、[judge-live2](../proto8/thinking/2026-10-15-judge-live2.md)）；open 候選：對話太長、agent 收信、標準實作、規範草稿定稿 → [10-15](session_logs/2026-10/2026-10-15.md)。
