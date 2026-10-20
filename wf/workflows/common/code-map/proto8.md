@@ -8,8 +8,8 @@
 
 逐支說明在 [proto8/bin/README.md](../../../../proto8/bin/README.md)。
 
-- `aos-exec`（Python，10-19 晚從 sh 改寫，照 ideas § 14～§ 20、對齊 impls/aos-exec）：`aos-exec XXX [WS [args...]]`——XXX 是資料夾／檔／`檔#/指標`、補找 `.json`；入口四種（`+x` 可執行檔 exec、argv 陣列 exec——兩者遇 +x 沒 `#!`（ENOEXEC）都同 execvp 改用 `/bin/sh` 跑（ideas § 22）、inst 單子行程內 `aos_inst.run()`、`js[$AOS_ENTRY]` 字串轉向含繞圈偵測）；export `AOS_WS`／`AOS_STACK`／`AOS_CF`／`AOS_CD`、cd 到入口檔所在的資料夾（PATH 不動，ideas § 24）；自己的錯退 1、一行 `aos-exec: 原因`。
-- `aos-inst`＋`aos_inst.py`：讀一張單子（JSON，第一行 `#!` 丟掉）跑一次子程式；子程式自成行程群組、逾時與轉來的訊號打整群；單子裡 `{"$env": 名, "path": …}` 換成環境變數底下的路徑；`argv[0]` 是 +x 沒 `#!` 的檔就改用 `/bin/sh` 跑（同 execvp）；行程內用 `aos_inst.run()`（aos-exec 直接用、aos-loop／aos-fsm 經 `aos_beat`；結果多一個 `received`＝轉給子程式的第一個訊號；aos-inst 命令列留著，aos-exec 不再叫它）。
+- `aos-exec`（Python，10-19 晚從 sh 改寫，照 ideas § 14～§ 20、對齊 impls/aos-exec）：`aos-exec XXX [WS [args...]]`——XXX 是資料夾／檔／`檔#/指標`、補找 `.json`；入口四種（`+x` 可執行檔 exec、argv 陣列 exec——兩者遇 +x 沒 `#!`（ENOEXEC）都同 execvp 改用 `/bin/sh` 跑（ideas § 22）；10-20 起 argv 陣列元素可放 `$env`／`$ref`（開跑前用 `aos_inst.resolve` 解）、argv[0] 帶 `/` 又 exec 不了＝前面插 `aos-exec`（`aos_inst.argv0`）、inst 單子行程內 `aos_inst.run()`、`js[$AOS_ENTRY]` 字串轉向含繞圈偵測）；export `AOS_WS`／`AOS_STACK`／`AOS_CF`／`AOS_CD`、cd 到入口檔所在的資料夾（PATH 不動，ideas § 24）；自己的錯退 1、一行 `aos-exec: 原因`。
+- `aos-inst`＋`aos_inst.py`：讀一張單子（JSON，第一行 `#!` 丟掉）跑一次子程式；子程式自成行程群組、逾時與轉來的訊號打整群；單子裡 `{"$env": 名, "path": …}` 換成環境變數底下的路徑、`{"$ref": "檔[#/指標]", "at": …}` 換成那份檔（或檔內位置）的值（10-20，`resolve(x, ref_base)`；`run(x, args, ref_base)`）；argv[0] 帶 `/` 又 exec 不了（資料夾、沒 +x、不在、帶 `#/`）改跑 PATH 上的 `aos-exec`（10-20，`argv0`）；`argv[0]` 是 +x 沒 `#!` 的檔就改用 `/bin/sh` 跑（同 execvp）；行程內用 `aos_inst.run()`（aos-exec 直接用、aos-loop／aos-fsm 經 `aos_beat`；結果多一個 `received`＝轉給子程式的第一個訊號；aos-inst 命令列留著，aos-exec 不再叫它）。
 - `aos_beat.py`（§ 24）：aos-loop、aos-fsm 共用的「跑一拍」——接住 SIGINT／SIGTERM／SIGHUP（`block`／`take`），`run` 字串＝子行程 `aos-exec`、轉訊號給它，單子＝`aos_inst.run()`；回碼、訊號、逾時、毫秒、`received`。
 - `aos-loop`＋`aos_loop.py`（10-20 拆成骨架＋薄命令列，aos-daemon 共用）：`loop.json` 的 `{"run", "max"}`，選填 `interval_ms`（拍間至少隔幾毫秒）、`ctl`、`state`（窗的檔名，在 `$AOS_STACK` 底下）；每圈 `aos-exec` 子資料夾或跑一張單子，子程式退 10 就停（loop 以 0 結束）、其他非 0 原碼結束；收到訊號轉給那拍、收完 128＋N；state 只在拍與拍之間寫（心跳）。
 - `aos_window.py`（10-20）：ctl／state 窗——`Ctl.read()`（paused／stop／max／interval_ms／seq＋程式多認的 key，壞的不採用、留上一份、記 `last_warning`）、`write()`（先寫 `.` 暫存再改名）、`beat()`（pid／started／boot_id／beat 心跳欄位）、`started(pid)`。
@@ -24,9 +24,9 @@
 - `agent-ann/`（全內嵌對照）：零子資料夾，`fsm.json` 三格全是單子，各指 `idle.py`／`brain.py`／`act.py`。
 - `daemon/`（10-20）：`_exec`＝`exec aos-daemon daemon.json`；一個 daemon 同時管 bob、ann 兩個子 loop（工作區 `$AOS_WS/bob`、`$AOS_WS/ann`，stack 在 daemon 的小格裡）。
 
-### `proto8/tests/`（124 個）
+### `proto8/tests/`（141 個）
 
-`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與巢狀、N-05／N-43 的寫法）、`test_exec_rules.py`（aos-exec 的 § 14～§ 20 新規則，28 個，移植自 impls/aos-exec 的 test_cli.py）、`test_inst.py`（aos-inst）、`test_fsm.py`（aos-fsm，含訊號與 PATH 原樣）、`test_loop.py`（直接叫 aos-loop：訊號、PATH 原樣，§ 24；interval_ms、ctl、state 窗）、`test_daemon.py`（aos-daemon：children、ctl 增減、不重起、收工、接回）；`python3 -m unittest discover -s proto8/tests`，在 WSL／Linux 跑。
+`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與巢狀、N-05／N-43 的寫法）、`test_exec_rules.py`（aos-exec 的 § 14～§ 20 新規則，28 個，移植自 impls/aos-exec 的 test_cli.py）、`test_inst.py`（aos-inst）、`test_fsm.py`（aos-fsm，含訊號與 PATH 原樣）、`test_loop.py`（直接叫 aos-loop：訊號、PATH 原樣，§ 24；interval_ms、ctl、state 窗）、`test_daemon.py`（aos-daemon：children、ctl 增減、不重起、收工、接回）、`test_directive_argv.py`（10-20 ideas D1～D8：`$ref` 的 `#/` 與 `at`、argv 陣列放指示詞、argv[0] 交給 aos-exec，17 個）；`python3 -m unittest discover -s proto8/tests`，在 WSL／Linux 跑。
 
 ### 舊 lib（10-16 那套，已刪）
 
