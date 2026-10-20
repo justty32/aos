@@ -6,7 +6,7 @@
 
 > **10-19 晚照下班前的新規則改完**（使用者 § 21「舊版一起改」；[ideas § 14～§ 20](../thinking/2026-10-19-ideas.md)；條文 [N-57～N-62](../NORMS/10-基礎設施-定義與工作區.md)、C-73、P-40）：`aos-exec` 從 sh 改寫成 Python，行為對齊 `proto8/impls/aos-exec`（C++ 參考實作）——入口四種、`aos-exec XXX`（XXX 可為資料夾、檔、`檔#/指標`、補找 `XXX.json`）、五個環境變數、字串轉向與繞圈偵測、cd 到入口檔所在的資料夾。跟 impls 版不同的只有：錯誤一行沒有代號（N-60 兩種都合）；inst 單子在行程內交給 `aos_inst.run()`（Python），不是 C lib。`aos-inst` 命令列留著（`#!/usr/bin/env aos-inst` 與小殼 `exec aos-inst _exec.json` 兩種寫法只在這版能用），但 aos-exec 不再依賴它。
 
-> **10-19 夜（[ideas § 24](../thinking/2026-10-19-ideas.md)）**：`aos-loop`、`aos-fsm` 跟 impls 版一樣擋 SIGINT／SIGTERM／SIGHUP、轉給正在跑的那拍／那格、收完再以 128＋N 結束（共用新的 `aos_beat.py`）；aos 的程式（兩版的 aos-exec、aos-loop、aos-fsm）**都不動 PATH**，原樣傳下去，要叫的指令由呼叫端放進 PATH（`demo/run.sh`、測試都這樣做）。所以兩版 loop／fsm 的差異只剩：錯誤一行沒有代號；字串 run／格是叫 PATH 上的 `aos-exec` 子程序（impls 是子行程裡走 aos-exec 的公開 API）；單子沒有 `$ref`；fsm 的 `trace.jsonl`／`.state` 寫不了是 traceback（impls 是 `WriteFailed` 一行）。
+> **10-19 夜（[ideas § 24](../thinking/2026-10-19-ideas.md)）**：`aos-loop`、`aos-fsm` 跟 impls 版一樣擋 SIGINT／SIGTERM／SIGHUP、轉給正在跑的那拍／那格、收完再以 128＋N 結束（共用新的 `aos_beat.py`）；aos 的程式（兩版的 aos-exec、aos-loop、aos-fsm）**都不動 PATH**，原樣傳下去，要叫的指令由呼叫端放進 PATH（`demo/run.sh`、測試都這樣做）。所以兩版 loop／fsm 的差異只剩：錯誤一行沒有代號；字串 run／格是叫 PATH 上的 `aos-exec` 子程序（impls 是子行程裡走 aos-exec 的公開 API）；單子的 `$ref`（10-20 起 bin 版也有，含 `#/`、`at`；impls 待對齊）；fsm 的 `trace.jsonl`／`.state` 寫不了是 traceback（impls 是 `WriteFailed` 一行）。
 
 > **10-20（[ideas § 25](../thinking/2026-10-19-ideas.md)；使用者「照預設」）**：`aos-daemon` 照新做法重寫（這版）；`aos-loop` 長出選填的 `interval_ms`、`ctl`、`state`，骨架拆成 `aos_loop.py`（daemon 共用）、窗在 `aos_window.py`。**`proto8/impls/` 的 aos-daemon 還沒重寫**：impls 只在使用者家裡那台（git 未追蹤），10-20 在公司這台沒有那份，只做了這版；兩版的差異暫時是「impls 沒有 daemon、它的 aos-loop 沒有 interval_ms／ctl／state」。
 

@@ -4,7 +4,7 @@
 
 2026-10-11 開。起因：使用者看完 proto7-2 之後說「整個都不對，太繁複」，又回頭看了八月到十月的沿革，結論是**做得太快**——像遙控飛機，兩次操作之間已經飛了好長一段。方向其實一直在他手上，只是目標一直在變；這兩個月的程式當探針有價值，但不是成品。
 
-**程式**：現在在 [bin/](bin/README.md)（aos-exec、aos-inst、aos-loop、aos-fsm；10-19 從 proto8-2 併進來）與 [demo/](demo/README.md)（agent-bob、agent-ann）。圖解版兩頁（舊，10-16 以前的想法）：概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm （HTML 源在 scratchpad/pages/proto8-concepts.html、proto8-impl.html）。**現在以 [CONCEPTS.md](CONCEPTS.md) 為準**（概念層：名詞、規則 C-01～C-73，作廢的號只留在表上；只收使用者說過的）。實作上的想法在 [restart §3g](thinking/2026-10-11-restart.md)（10-11 晚口述：inst→loop→daemon→tick-tock→kernel→agent→閉環）。
+**程式**：現在在 [bin/](bin/README.md)（aos-exec、aos-inst、aos-loop、aos-fsm；10-19 從 proto8-2 併進來）與 [demo/](demo/README.md)（agent-bob、agent-ann）。圖解版兩頁（2026-10-20 已更新到現況）：概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm （HTML 源在 scratchpad/pages/proto8-concepts.html、proto8-impl.html）。**現在以 [CONCEPTS.md](CONCEPTS.md) 為準**（概念層：名詞、規則 C-01～C-73，作廢的號只留在表上；只收使用者說過的）。實作上的想法在 [restart §3g](thinking/2026-10-11-restart.md)（10-11 晚口述：inst→loop→daemon→tick-tock→kernel→agent→閉環）。
 
 ## 現況（2026-10-19 併入 proto8-2 後）
 
