@@ -44,6 +44,7 @@
 **補決（動工後，使用者『照它做的寫進規範』）**：
 - state 窗加 `running`：起格前寫 true、跑完改 false；下一拍讀到 true＝上一拍被殺一半（N-38、N-39）；另記 `ctl_seq` 回音。
 - 格收到的 stdin＝`{"state","step","prev"}`〔註：10-15 稍後加 `cfg`，見 §6〕；`prev` 三形狀：平常＝上一格 `data`；被殺一半＝`{"interrupted": true, "data": …}`；進 error 格＝`{"state","error","data"}`（N-37）。
+- 後續：格的 stdin 改成 fsm 設定本身＋`fsm_state`，`prev` 三形狀作廢（被殺一半＝`fsm_state.running`；進 error 格＝`phase` error＋`last_error`＋`error_from`），見 [json-families § 動工](../2026-10-15-json-families.md#動工10-15使用者都照建議)。
 
 **未決**：標準實作的 fsm 要不要每拍記時間（列進待定）。
 
