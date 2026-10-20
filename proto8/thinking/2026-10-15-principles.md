@@ -28,7 +28,7 @@
   - **1** 每層只退 0／非 0 說自己，下層的碼只放 stdout／stderr 的 JSON，不沿用下層的結束碼。做法：loop、daemon 只退 0／1（設定錯、窗缺原本 125、最後一次 aos_inst 出錯原本沿用它的 127 等，全改 1；stderr 一份自己的錯誤，代號照 `last_error` 的）；被訊號停掉 128＋N 照留（Unix 傳統，原盤點 N-43 第 7 條已判「合」）。寫進 N-43。fsm、閘門、inst、proto8-1 tasks 不在這次範圍（見下「新的待定」）。
   - **3** kernel2 判官錯濃縮成一條「判官這拍沒給合法答案＝這拍用規則」，連錯計數交給判官格自己，拿掉「等人歸零」。做法：`aos_kernel.py` 拿掉 `max_fails` 設定與 state 窗的 `judge_fails`、stdout 的 `fails`／`on_rules`；`judge_error` 留著（只記原因，答對清掉）；補位（backfill）不是錯誤路徑，照留。demo kernel2 第 2 段改成「每次都退回規則」。
   - **8** think 連錯時自己寫好要交的錯，done 格不讀 think 的 `work/think-fails.json`。做法：think 第 halt_after 次自己寫 cwd 的 `ret.json`＝`{"error"}`、回 `next: halted`；`halted` 從各表的 `states` 拿掉、只留在 `end`（N-40：next 不在表裡、在 end 裡＝fsm 結束），不經 done；done 只寫 `{"reply": 最後一句}`。demo 六張表（fsm、clerk、boss、judge、painter、brush）一起改。
-  - **9** halted 時 loop 退 0 維持：照 C-52，loop 只說自己這一層（它照設計拍完、正常結束），agent 的錯在 `ret.json`；lib agent 寫明「看 ret.json」。
+  - **9** halted 時 loop 退 0 維持：照 C-52，loop 只說自己這一層（它照設計拍完、正常結束），agent 的錯在 `ret.json`；lib agent 寫明「看 ret.json」。照第 8 條改完後查證：halted 那拍 think 自己寫 `ret.json` 的錯、退 0、不寫 stderr，fsm 結束、loop 的 `stop_on_end` 停、退 0、stderr 空——符合「正常退出」的定義。
 - 「正常退出」的定義寫進 N-43：照設計、文檔走正常那條路、是預料到的狀況；簡化判準＝不在 stderr 噴東西。反向不成立：退非 0 時錯誤可以寫到別處（文件說好的地方）。
 - 「納入 kernel 評估」記成待定（[NORMS 待定 【kernel】](../NORMS/08-待定.md)）。
 - 「正常退出」盤點 S1～S5 照推薦（「都按照推薦。」），10-15 晚照做完：
@@ -62,10 +62,10 @@
 - **KISS 納進最高原則**＝新條 **C-56**，放在設計理念「最高原則」段、C-52／C-53 之上；接 proto7 設計原則第 9 條。C-52 加嚴：想看子層要另有機制、沒機制就不碰；上層不該知道下層是什麼。C-53 補一句：下層的錯不轉述。
 - **2 不留**：daemon `add` 不再替子 loop 驗 inst（`_check_inst` 與包 inst.json 時的 `aos_inst.parse` 都拿掉），也不再用 loop 的 `check_config` 驗子項的 loop key、不填預設——daemon 收子項只看它自己需要的：是物件、沒 `inst` 有 `argv` 就包成跑一次、`ctl`／`state` 沒寫就放 `work_dir/N/`；設定原樣灌給子 loop，寫錯了子 loop 自己退 1、錯在 `err.json`，daemon 只看到它結束。N-28、lib daemon.md 改寫；測試 `test_add_checks_inst_up_front` 改成 `test_add_does_not_check_inside`。
 - **4 切乾淨**：fsm 不讀格的 stderr（`aos_methods.run_cell` 的 `cell_error`、`_stderr_error`、「沒寫 stderr 的格改接暫存檔撿錯」全拿掉；stderr 照那張 inst 自己的，沒寫＝/dev/null）。格的結果＝N-12／N-36 的最小那份：**結束碼＋stdout 最後一份 JSON**；fsm 那行的 `error.msg` 只寫「格 X 結束碼 N」。想看格的錯＝在那張 inst 寫 `stderr` 檔（N-26 本來就有的機制）、去讀那個檔。N-38、lib fsm.md 改寫。
-- **5 fsm 就是它那一層**：拿掉 N-40「巢狀格不宜寫表上靜態 next」。矛盾的來源是：內層沒結束時它自己那行沒有 `next`，外層照 N-37 會去走表上靜態 next，所以外層得知道那格是 fsm。最簡單的解法：**N-37 多一種值 `next: null`＝留原狀態**（格說「我還沒完」，表上有靜態 next 也不走），fsm 沒結束的拍自己那行就帶 `next: null`；結束那拍照舊交出那格的結果。這樣外層不必知道那格是什麼，表上要不要寫靜態 next隨意。程式本來就把 `null` 當留原狀態，只是沒寫進規範、fsm 那行沒吐；現在兩邊都補上。測試 `test_nested` 改成外層寫了靜態 next 也不會被帶走、新增 `test_next_null_stays`。
+- **5 fsm 就是它那一層**：拿掉 N-40「巢狀格不宜寫表上靜態 next」；**N-37 多一種值 `next: null`＝留原狀態**（格說「我還沒完」，表上有靜態 next 也不走），fsm 沒結束的拍自己那行就帶 `next: null`；結束那拍照舊交出那格的結果。這樣外層不必知道那格是什麼，表上要不要寫靜態 next隨意。程式本來就把 `null` 當留原狀態，只是沒寫進規範、fsm 那行沒吐；現在兩邊都補上。測試 `test_nested` 改成外層寫了靜態 next 也不會被帶走、新增 `test_next_null_stays`。
 - **6 徹底切割**：agent 只看到自己的工具清單（名字、`_tool` 的說明與參數），工具裡面是不是另一個 agent、它的 frame 放哪、綁什麼腦，agent 這層不知道、不傳、不繼承。lib 程式本來就沒有「agent 知道工具是 agent」的機制（`chain()` 只看自己的 frame.json；tool 格只是在 `work/<n>/` 跑一張 inst），殘留的是**說法**：`aos_agent_lib.py`、agent.md 把 `work/<n>/` 叫「工具呼叫的 frame」——改成「工具的工作資料夾」，把它當 frame 是那張工具 inst 自己的事。C-46 補一段、frame.md「當工具」「換腦只換那一層」改寫。**留給 inst-exec 稿**：工具叫 agent 的寫法（`sh -c` 三步還是 aos-exec）由那邊定，這裡只定「agent 這層不知道」。
 - 同一原則往下再套一層（C-52「同一個原則在每一層重複」）：**think 也不讀腦的 stderr**——`BrainFailed` 只寫「腦 X 結束碼 N」（原本把腦 stderr 的 `HttpError: …` 接進來）。要看 proxy 回的原話＝在 `brain.json` 寫 `"stderr": "…"`。
-- 盤點時查到的殘留，都已清：NORMS N-28／N-37／N-38／N-40、CONCEPTS C-46／C-52／C-53、lib `aos_methods.py`／`aos_fsm.py`／`aos_agent_lib.py`／`aos_daemon_table.py`／`aos_daemon.py`、lib 說明 fsm.md／daemon.md／agent.md／agent_lib.md／frame.md／README.md、demo fsm README（tool 格「跑第一個」是舊說法，順手改）、測試 test_fsm／test_daemon／test_agent／test_agent_frame、wf conventions 與 code map。demo 的 JSON 與 `paint/run.py` 沒動（`bind_brain()` 改寫的是工具 inst，是呼叫方的事，不是 agent 這層）。
+- 盤點時查到的殘留（NORMS、CONCEPTS、lib 程式與說明、demo fsm README、測試、wf conventions 與 code map）都已清。demo 的 JSON 與 `paint/run.py` 沒動（`bind_brain()` 改寫的是工具 inst，是呼叫方的事，不是 agent 這層）。
 
 - 使用者同晚另定「少用 sh」「設計一律假設沒有指示詞」（條文由另一位加進 NORMS）：這次改的程式與規範都沒用到 `sh -c`、也不靠 `$ref` 才成立；唯一碰到 sh 的是**既有的** demo 工具 inst（`tools/clerk.json`、`tools/brush.json` 的 `sh -c` 三步叫另一個 agent）——沒動，怎麼改法留給 [inst-exec 稿](2026-10-15-inst-exec.md)（工具叫 agent 的呼叫機制）。測試裡用 sh 當假格子是測試自己的事。
 
@@ -80,17 +80,12 @@
 
 - proto8 lib 測試 172 → 173 個全過；ctest 全綠；fsm、kernels/llm、kernels/general、paint demo 假腦實跑正常；wf-lint 不變。
 
-## 未決：跟兩條原則不完全合的地方（AI 盤點，附推薦，等使用者看）
+## 盤點其餘兩條（已處理）
 
-（第 1、3、8、9 條已定、已做，移到上面「決定」；第 2、4、5、6 條 10-15 深夜使用者拍板跟推薦相反、已照做，見上面「10-15 深夜使用者拍板」。）
+第 1、3、8、9 條見上面「決定」；第 2、4、5、6 條見上面「10-15 深夜使用者拍板」。
 
-7. **`ask_judge.py` 寫死 `parent`**（[LiteLLM 實跑](2026-10-15-litellm-live.md) 問題 2）：一層寫死另一層的位置。推薦：照 boss 靠 frame 綁定。（10-15 已改成收定義資料夾當引數。）
-10. **文件小矛盾**：NORMS 總則檔頭寫「之後可能併」，已對齊「維持分開」（本次修）。lib `ctl-state.md` 的 fsm 列、`directives.md` 的 exit 檔說法另一個 agent 同晚已照 N-39、N-30 修好。
-
-## 「正常退出」（N-43）盤點的查證（已照 S1～S5 處理完，留紀錄）
-
-- 退非 0、沒寫 stderr、錯誤在文件說好的地方：fsm 格出錯（退 1，錯在這拍 stdout 行的 `error`，N-38）——合；收到訊號 128＋N（loop、閘門、tasks）——Unix 傳統，合；loop／daemon 最後一次 aos_inst 出錯——照第 1 條改成退 1＋stderr 一份自己的錯。
-- **halted（第 9 條）查證**（照第 8 條改完後重看）：think 第 3 次連錯時自己寫 `ret.json` 的錯、回 `{"next": "halted"}`、退 0、不寫 stderr；halted 只在 `end`＝fsm 結束那拍、退 0；loop 的 `stop_on_end` 看到就停、退 0、stderr 空——**符合新定義**。前兩次連錯：think 退 1＋stderr（合）、fsm 退 1、錯在 stdout 行（合）、loop 只記 `last_code`、不寫 stderr。
+7. **`ask_judge.py` 寫死 `parent`**：照 [LiteLLM 實跑 § 拍板](2026-10-15-litellm-live.md#拍板10-15) 第 2 條（使用者「都按照推薦」）改成收定義資料夾當引數。
+10. **文件小矛盾**：NORMS 總則檔頭寫「之後可能併」，已對齊「維持分開」；lib `ctl-state.md` 的 fsm 列、`directives.md` 的 exit 檔說法已照 N-39、N-30 修好。
 
 ## 新的待定（這次做的時候發現）
 
