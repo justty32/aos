@@ -20,3 +20,5 @@
 - `engine_args`：list＝接在腦的 argv 後，dict＝蓋過腦 inst 的 key。`tools` 給了整份取代、`tools_append` 再加。
 - `ask` 的錯誤寫在 stdout（`{"error", "msg"}`、退 1），父 agent 的 tool 訊息才看得到；frame 預設放 `$AOS_WORK`（tool 格給工具的環境變數）。
 - 父 agent 的 tool 格 `timeout_ms` 改 150 秒（要蓋過 clerk 的 120 秒）；`loop.json` 的 20 秒假腦夠，真腦要加大。
+
+（10-20 註：`aos_agent_call.py` 與 `aos_agent_lib.py ask` 同日稍晚已退場——[意見 1～4](../2026-10-15-opinions-1-4.md)「aos_agent_call.py 退場」，`ask` 搶號建資料夾併進 tool 格；上面講的 frame 後來改名 stack〔[agent-inherit § 四](../2026-10-16-agent-inherit.md#四使用者決定10-16)〕。lib 程式 10-19 已整套刪，見 git 歷史 aa2fec1f。）

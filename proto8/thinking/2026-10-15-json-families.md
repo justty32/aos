@@ -32,6 +32,6 @@
 - 內層不繼承 fsm 自己的 key（`start`、`states`、`end`、`state`、`ctl`、`lock`、`max_steps`、`max_fails`）與 `fsm_state`：繼承外層 lock 會撞鎖、state 會撞窗。
 - 內層只在 stdin 是**一般檔**時讀它當預設（fsm 跑格時就是）；終端機、pipe、/dev/null 不讀，不會卡住。這是 N-21「給 TARGET 就不讀 stdin」對內層 fsm 的例外，已寫進 N-40。
 - fsm 每拍那行：沒起成格（查不到格、MaxSteps）時 N-30 欄位是 null；`error` 改成 `{"code", "msg"}`，state 窗的 `last_error` 照舊是「代號: 白話」字串。
-- tool 訊息的錯誤代號：`UnknownTool`、`BadArguments`，inst 起不來照 aos_inst 原代號（`Skipped` 被 [litellm 拍板 3](2026-10-15-litellm-live.md#拍板10-15) 拿掉、`Interrupted` 被 KISS 1.7 刪）。
+- tool 訊息的錯誤代號：`UnknownTool`、`BadArguments`，inst 起不來照 aos_inst 原代號（`Skipped` 被 [litellm 拍板 3](2026-10-15-litellm-live.md#拍板10-15) 拿掉、`Interrupted` 被 KISS 1.7 刪）。（10-20 註：後來改名 `ToolUnknown`、`ArgumentsBad`，[命名盤點](2026-10-15-naming/盤點.md) P7 主詞在前；現行新程式的錯只有 stderr 一行、沒有代號，CONVENTION P-21。）
 - 旁檔放 `reply/`、兩邊都從回信路徑推（`.json` → `.stdin`／`.stdout`／`.stderr`）；閘門被殺在 kernel 拿走之後，旁檔留在 `reply/`（同以前的回信）。kernel 只在記憶體裡的信填 `stdout`／`stderr`，不回寫 `cur/` 的檔。
 - LLM kernel 的 state 拿掉 `kind`；log 與 stdout 摘要的 `tick` 也改 `runs`。
