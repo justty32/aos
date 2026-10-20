@@ -76,6 +76,8 @@
 - fsm 出錯那拍（phase 不動、退 1）那行也帶 `next: null`——它確實沒結束；外層靠結束碼非 0 知道格出錯。
 - `next: null` 只在規範層定義成「留原狀態」，fsm 的 `NextBad` 照舊只擋非字串非 null。
 
+（10-20 註：這四條碰的舊 lib daemon／fsm 程式 10-19 已整套刪，見 git 歷史 aa2fec1f；daemon 現無實作，照「資料夾＝程式」重寫時再對。）
+
 ### 驗證
 
 - proto8 lib 測試 172 → 173 個全過；ctest 全綠；fsm、kernels/llm、kernels/general、paint demo 假腦實跑正常；wf-lint 不變。
@@ -89,4 +91,4 @@
 
 ## 新的待定（這次做的時候發現）
 
-A～C 已定（見「決定」）。daemon 收到訊號照舊退 0（照設計的收工路）——若使用者要連 daemon 也一律 1，改一行加測試即可。
+A～C 已定（見「決定」）。daemon 收到訊號照舊退 0（照設計的收工路）——若使用者要連 daemon 也一律 1，改一行加測試即可。（10-20 註：後來 10-16 定的 N-52「SIGTERM＝優雅收工、退 0」已在 10-19 作廢，依 CONVENTION P-36：收到 SIGTERM 先收好子程式、寫好狀態再結束，但結束碼非 0，loop／fsm 以 128＋N 結束；daemon 現無實作，重寫時照 P-36。）
