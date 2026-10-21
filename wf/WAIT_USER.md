@@ -13,6 +13,6 @@
 
 ## 待使用者項
 
-- 10-21 使用者不在時照 fable 計畫代定了 loop／daemon／fsm 的細節，等他回來翻案確認；另有留給他的方向題 → [plan § 1.1、§ 1.2](../proto8/thinking/2026-10-21-plan.md)、代定清單在 [session log 10-21](session_logs/2026-10/2026-10-21.md)（10-21 傍晚使用者回來，`--cfg` 與命令列 XXX 那幾條已照他的意思改掉，見 [ideas 10-21 § 9](../proto8/thinking/2026-10-21-ideas.md#9-設定檔是唯一的位置參數path-改字串拼接10-21-傍晚)；其餘代定仍等他看；10-21 晚使用者暫離時照第 4 段做了 aos-tick，代定 8 條見 [session log 10-21 aos-tick 那節](session_logs/2026-10/2026-10-21.md#使用者不在時代定aos-tick計畫第-4-段10-21-晚)）
+- 還沒確認的：tasks、腦的 tool_calls、兩種 kernel 三個方向題 → [plan § 1.2](../proto8/thinking/2026-10-21-plan.md)；10-21 晚 aos-tick 的 8 條代定 → [session log 10-21 aos-tick 那節](session_logs/2026-10/2026-10-21.md#使用者不在時代定aos-tick計畫第-4-段10-21-晚)（10-21 下午 loop／daemon／fsm 那 11 條使用者已確認）
 
 > 2026-10-12 使用者清帳：「舊帳可以清掉」「proto6 已經是老黃曆了，不管」——A 區 71 題、B 區 proto6 帳號真 root 驗收、C 區「先不決定」各項全部結案不再追。原 `wait-user/` 分類檔已封存（見 common/archive 索引），編號不回收。
