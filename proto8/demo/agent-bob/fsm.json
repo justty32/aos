@@ -1,8 +1,10 @@
-{"start": "idle",
+{"_exec": ["aos-fsm", "--cfg", "fsm.json"],
+ "start": "idle",
  "states": {
    "idle":  {"val": "idle", "next": "think"},
-   "think": {"val": {"argv": ["python3", "brain.py"],
-                     "stdout": {"$env": "AOS_STACK", "$path": "plan"},
-                     "timeout_ms": 120000},
+   "think": {"val": "fsm.json#/states/think/body",
+             "body": {"argv": ["python3", "brain.py"],
+                      "stdout": {"$env": "AOS_STACK", "$path": "plan"},
+                      "timeout_ms": 120000},
              "next": "act"},
    "act":   {"val": "act", "next": "idle"}}}

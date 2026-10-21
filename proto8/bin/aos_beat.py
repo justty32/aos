@@ -3,13 +3,15 @@
     import aos_beat
     aos_beat.block()        程式一開始呼叫：之後 SIGINT／SIGTERM／SIGHUP 不打死這支程式，記下來
     aos_beat.take()         拍與拍之間：有記下的訊號就回第一個（沒有＝0）
-    aos_beat.run(x, ref_base, args)  跑一拍，回 {"code", "signal", "timed_out", "ms", "received"}（ref_base＝單子裡 $ref 的起點）
+    aos_beat.run(x, args)   跑一拍，回 {"code", "signal", "ms", "received"}
 
-x 是字串＝子行程 `aos-exec -- <x> args...`（照 PATH 找；`--` 讓 - 開頭的目標不被當旗標，10-21 plan L10；
-args 只有字串那條路用；跟呼叫者同一個行程群組，同 subprocess.call）；跑的期間收到的三個訊號
-os.kill 給那個子行程（不另設 SIGKILL 期限）。x 是物件＝inst 單子，行程內 aos_inst.run()（它轉給整群、grace 後 SIGKILL）——10-21 起只剩 aos-fsm 用（loop 的 run 只收字串）。
+x 只收字串（aos-exec 的目標；10-21 plan L11、F2）：子行程 `aos-exec -- <x> args...`（照 PATH 找；`--` 讓 - 開頭的目標
+不被當旗標，L10；跟呼叫者同一個行程群組，同 subprocess.call）；跑的期間收到的三個訊號 os.kill 給那個子行程
+（不另設 SIGKILL 期限）。要內嵌單子就讓目標指到它（`loop.json#/body`、`fsm.json#/states/<名>/body`），
+由 aos-exec 在它自己的行程裡跑、當監工（逾時與轉來的訊號打整群，N-59 第 5 件）。拍看不到格裡有沒有逾時（C-52）：
+被逾時收掉的拍就是 code 128＋15、signal 15（或 SIGKILL 的 137／9）。
 received＝跑的期間收到、轉給那拍的第一個訊號（沒有＝None）；呼叫者收完這拍要以 128＋它結束（CONVENTION P-36
-「先收好自己起的子程式、寫好狀態再結束，結束碼非 0」）。單子壞丟 aos_inst.InstError。
+「先收好自己起的子程式、寫好狀態再結束，結束碼非 0」）。起不了 aos-exec 丟 StartError。
 對齊 impls 的 aos-loop（aos/loop.hpp 的 block_signals／take_signal／run_beat，ideas § 24）。
 """
 import os
@@ -17,12 +19,14 @@ import signal
 import subprocess
 import time
 
-import aos_inst
-
 _SIGNALS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
-_got = []          # 拍外（或字串那拍期間）收到的，依序
-_child = [None]    # 字串那拍正在跑的子行程
+_got = []          # 拍外（或那拍期間）收到的，依序
+_child = [None]    # 那拍正在跑的子行程
 _pending = []      # 子行程還沒記進 _child 時收到的，起來後補轉
+
+
+class StartError(Exception):
+    """起不了子程式（aos-exec、daemon 的子 loop）；呼叫者印一行、退 1。"""
 
 
 def _on_signal(signum, frame):
@@ -46,19 +50,14 @@ def take():
     return _got[0] if _got else 0
 
 
-def run(x, ref_base=None, args=()):
+def run(x, args=()):
     # 收到任何一個訊號，呼叫者這拍收完就結束，所以 _got 在第一拍之前是空的、之後也只會有這一拍收到的
-    if not isinstance(x, str):
-        res = aos_inst.run(x, ref_base=ref_base)   # 跑的期間換上它自己的轉送（收到的放在 res["received"]），回來換回 _on_signal
-        out = {k: res[k] for k in ("code", "signal", "timed_out", "ms")}
-        out["received"] = res["received"] or (_got[0] if _got else None)
-        return out
     t0 = time.monotonic()
     try:
         _child[0] = p = subprocess.Popen(["aos-exec", "--", x] + list(args))
     except OSError as e:
         _child[0] = None
-        raise aos_inst.InstError("起不了 aos-exec：%s" % e)
+        raise StartError("起不了 aos-exec：%s" % e)
     while _pending:   # 子行程記進 _child 之前收到的，補轉
         try:
             os.kill(p.pid, _pending.pop(0))
@@ -66,5 +65,5 @@ def run(x, ref_base=None, args=()):
             pass
     rc = p.wait()     # 訊號處理完 wait 自己會接著等（PEP 475）
     _child[0] = None
-    return {"code": rc if rc >= 0 else 128 - rc, "signal": -rc if rc < 0 else None, "timed_out": False,
+    return {"code": rc if rc >= 0 else 128 - rc, "signal": -rc if rc < 0 else None,
             "ms": round((time.monotonic() - t0) * 1000), "received": _got[0] if _got else None}

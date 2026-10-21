@@ -30,7 +30,6 @@ import re
 
 import aos_beat
 import aos_flags
-import aos_inst
 import aos_window
 
 STOP = 10
@@ -152,7 +151,7 @@ class Loop:
             mx, iv = c.get("max", self.max), c.get("interval_ms", self.interval)
             try:
                 self.tend(c)
-            except aos_inst.InstError as e:
+            except aos_beat.StartError as e:
                 self.say(str(e))
                 return self.end(1, "stopped")
             if c.get("stop"):
@@ -169,7 +168,7 @@ class Loop:
             if self.run is not None:
                 try:
                     b = aos_beat.run(self.run, args=self.args)
-                except aos_inst.InstError as e:
+                except aos_beat.StartError as e:
                     self.say(str(e))
                     return self.end(1, "done")
                 if b["received"]:

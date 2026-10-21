@@ -195,19 +195,28 @@ class T(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("沒設定 AOS_STACK", r.stderr)
         # fsm 本身沒設 AOS_STACK 也退 1
-        r = run(str(ROOT / "bin" / "aos-fsm"), "fsm.json", env={"AOS_WS": str(ws)},
+        r = run(str(ROOT / "bin" / "aos-fsm"), "--cfg", "fsm.json", env={"AOS_WS": str(ws)},
                 cwd=BOB)
         self.assertEqual(r.returncode, 1)
         self.assertIn("沒設定 AOS_STACK", r.stderr)
 
     def test_bob_think_is_embedded_inst(self):
-        cfg = json.loads((Path(BOB) / "fsm.json").read_text())
-        think = cfg["states"]["think"]["val"]
-        self.assertIsInstance(think, dict)
-        self.assertEqual(think["argv"][0], "python3")
-        self.assertEqual(cfg["states"]["idle"]["val"], "idle")   # 資料夾格
-        self.assertEqual(cfg["states"]["act"]["val"], "act")
-        self.assertFalse((Path(BOB) / "fsm").exists())
+        # 10-21 plan F2、F6：think 的單子放在同一格的 body、val 指到它；fsm.json 帶 _exec、loop 每拍 aos-exec fsm.json
+        for d in (BOB, CATHY):
+            cfg = json.loads((Path(d) / "fsm.json").read_text())
+            think = cfg["states"]["think"]
+            self.assertEqual(think["val"], "fsm.json#/states/think/body", d)
+            self.assertEqual(think["body"]["argv"][0], "python3", d)
+            self.assertEqual(cfg["states"]["idle"]["val"], "idle", d)   # 資料夾格
+            self.assertEqual(cfg["states"]["act"]["val"], "act", d)
+            self.assertEqual(cfg["_exec"], ["aos-fsm", "--cfg", "fsm.json"], d)
+            self.assertEqual(json.loads((Path(d) / "loop.json").read_text()), {"run": "fsm.json", "max": 20}, d)
+            self.assertFalse((Path(d) / "fsm").exists(), d)
+        ann = json.loads((Path(ANN) / "fsm.json").read_text())
+        for name, cell in ann["states"].items():
+            self.assertEqual(cell["val"], "fsm.json#/states/%s/body" % name)
+        self.assertEqual(json.loads((Path(ANN) / "loop.json").read_text())["body"]["argv"],
+                         ["aos-fsm", "--cfg", "fsm.json"])
 
     def test_bob_entry_direct_exec_no_enoexec(self):
         # 入口帶 shebang：不經 sh、直接 exec 也跑得起來（P-05）
@@ -362,9 +371,10 @@ class T(unittest.TestCase):
 
     def test_sub_agent_stop_code_not_leaking(self):
         outer = prog(self.tmp, "outer", "exec aos-loop --cfg loop.json\n")
-        Path(outer, "loop.json").write_text('{"run": "loop.json#/body", "body": {"argv": ["aos-fsm", "fsm.json"]}, "max": 2}')
+        Path(outer, "loop.json").write_text('{"run": "loop.json#/body", "body": {"argv": ["aos-fsm", "--cfg", "fsm.json"]}, "max": 2}')
         Path(outer, "fsm.json").write_text(json.dumps({"start": "s", "states": {
-            "s": {"val": "sub", "next": "t"}, "t": {"val": {"argv": ["true"]}, "next": "s"}}}))
+            "s": {"val": "sub", "next": "t"},
+            "t": {"val": "fsm.json#/states/t/body", "body": {"argv": ["true"]}, "next": "s"}}}))
         prog(outer, "sub", "exec aos-loop --cfg loop.json\n")
         Path(outer, "sub", "loop.json").write_text('{"run": "idle", "max": 5}')
         prog(Path(outer, "sub"), "idle", "exit 10\n")

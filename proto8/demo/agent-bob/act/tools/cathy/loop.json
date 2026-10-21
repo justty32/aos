@@ -1,1 +1,1 @@
-{"run": "loop.json#/body", "body": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}
+{"run": "fsm.json", "max": 20}

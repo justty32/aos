@@ -1,10 +1,10 @@
-← [回入口 NORMS.md](../NORMS.md)｜主題：**基礎設施／loop、daemon**｜概念：[CONCEPTS 基礎設施 § loop 與 daemon](../CONCEPTS/03-基礎設施.md#loop-與-daemon)｜規範：本檔｜實作：loop＝[aos-loop](../bin/README.md)；daemon＝[aos-daemon](../bin/README.md)（10-20 照新做法重寫，`proto8/bin` 版；impls 版還沒有）
+← [回入口 NORMS.md](../NORMS.md)｜主題：**基礎設施／loop、daemon**｜概念：[CONCEPTS 基礎設施 § loop 與 daemon](../CONCEPTS/03-基礎設施.md#loop-與-daemon)｜規範：本檔｜實作：loop＝[aos-loop](../bin/README.md)；daemon＝[aos-daemon](../bin/README.md)（10-20 照新做法重寫，`proto8/bin` 版；impls 10-21 對齊）
 
 同主題：[inst](03-基礎設施-inst.md)｜loop 與 daemon｜[窗](05-基礎設施-窗.md)｜[命令列與指示詞](06-基礎設施-命令列與指示詞.md)｜[組合子](07-基礎設施-組合子.md)｜[資料夾程式與執行](10-基礎設施-定義與工作區.md)
 
 # 基礎設施／loop、daemon
 
-> 10-19：loop 現行做法是 `aos-loop loop.json`（`{"run", "max"}`，子程式退 10 就停，P-06、P-19；10-21 下午起寫成 `aos-loop --cfg loop.json`、也收旗標與 XXX，N-11）。**key 名以現行 loop.json 為準**（10-19 晚使用者定：「那就用到最新的吧」，[ideas § 22](../thinking/2026-10-19-ideas.md)）：身體叫 `run`、跑幾圈叫 `max`，daemon 與窗的條文（N-06、N-07、N-11、N-28）都改用這兩個字；`interval_ms`、`ctl`、`state` 這些 daemon 才有的選填 key，日後當 loop 的選填 key 長出來（[rewrite-order ④](../thinking/2026-10-19-rewrite-order.md)），未實作。下面 daemon 的條文（管一群 loop 的程式）**現無實作**，舊版在 git 歷史 aa2fec1f；照「資料夾＝程式」重寫時再對。**10-20**：daemon 照新做法重寫完（`proto8/bin/aos-daemon`，使用者對計畫的五點說「照預設」，[ideas § 25](../thinking/2026-10-19-ideas.md)），`interval_ms`、`ctl`、`state` 也已長成 aos-loop 的選填 key；跟下面條文不同的地方寫在 N-28 末的「10-20 落實」。state／ctl 窗在[窗](05-基礎設施-窗.md)。
+> 10-19：loop 現行做法是 `aos-loop loop.json`（`{"run", "max"}`，子程式退 10 就停，P-06、P-19；10-21 下午起寫成 `aos-loop --cfg loop.json`、也收旗標與 XXX，N-11）。**key 名以現行 loop.json 為準**（10-19 晚使用者定：「那就用到最新的吧」，[ideas § 22](../thinking/2026-10-19-ideas.md)）：身體叫 `run`、跑幾圈叫 `max`，daemon 與窗的條文（N-06、N-07、N-11、N-28）都改用這兩個字；`interval_ms`、`ctl`、`state` 這些 daemon 才有的選填 key，日後當 loop 的選填 key 長出來（[rewrite-order ④](../thinking/2026-10-19-rewrite-order.md)）——10-20 已長出來，見下。下面 daemon 的條文（管一群 loop 的程式）10-19 時沒有實作（舊版在 git 歷史 aa2fec1f），說好照「資料夾＝程式」重寫時再對；**現在 N-28、N-54 都有實作**（`proto8/bin/aos-daemon`；10-21 收旗標、D7，見 N-28、N-54 末的落實段）。**10-20**：daemon 照新做法重寫完（`proto8/bin/aos-daemon`，使用者對計畫的五點說「照預設」，[ideas § 25](../thinking/2026-10-19-ideas.md)），`interval_ms`、`ctl`、`state` 也已長成 aos-loop 的選填 key；跟下面條文不同的地方寫在 N-28 末的「10-20 落實」。state／ctl 窗在[窗](05-基礎設施-窗.md)。
 
 ## daemon
 

@@ -17,7 +17,7 @@
 aos-loop、aos-exec 由呼叫者放進 PATH。"""
 import json, os, signal, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-import aos_inst, aos_loop, aos_window
+import aos_beat, aos_loop, aos_window
 
 GRACE = 10.0   # 收子 loop：SIGTERM 後等幾秒才 SIGKILL（P-36 daemon 的 grace 慣例 10000 毫秒）
 
@@ -116,7 +116,7 @@ class Daemon(aos_loop.Loop):
                                      env=dict(os.environ, AOS_STACK=cell + "/"), stdin=subprocess.DEVNULL,
                                      stdout=subprocess.DEVNULL, stderr=err, start_new_session=True)
         except OSError as e:
-            raise aos_inst.InstError("起不了子項 %s：%s" % (name, e))
+            raise aos_beat.StartError("起不了子項 %s：%s" % (name, e))
         return Child(p.pid, aos_window.started(p.pid), p)
 
     def stop(self, names):

@@ -196,17 +196,20 @@ class T(unittest.TestCase):
         r = run("aos-loop", "--cfg", loop, cwd=self.t, env={"AOS_WS": str(self.ws), "AOS_STACK": str(stack)})
         self.assertEqual(r[0], 0, r[2])
         self.assertTrue((stack / "out").read_text().endswith("arg=L\n"))
-        # fsm：$ref 從 fsm.json 所在的資料夾算（cwd 在別處）
+        # fsm（10-21 plan F2）：格的內嵌單子寫 檔#/states/<名>/body；val 的相對路徑照 cwd 算，
+        # 單子裡的 $ref 由 aos-exec 從 fsm.json 所在的資料夾算（cwd 在別處）
         fsm = put(q / "fsm.json", {"start": "a", "states": {"a": {
-            "val": {"argv": [{"$ref": "sub/data.json", "at": "/a/b/0"}, {"$ref": "sub/data.json#/msg"}],
-                    "stdout": {"$env": "AOS_STACK", "$path": "fout"}}, "next": "a"}}})
-        r = run("aos-fsm", fsm, cwd=self.t, env={"AOS_STACK": str(stack)})
+            "val": "q/fsm.json#/states/a/body",
+            "body": {"argv": [{"$ref": "sub/data.json", "at": "/a/b/0"}, {"$ref": "sub/data.json#/msg"}],
+                     "stdout": {"$env": "AOS_STACK", "$path": "fout"}}, "next": "a"}}})
+        r = run("aos-fsm", "--cfg", fsm, cwd=self.t, env={"AOS_STACK": str(stack)})
         self.assertEqual(r[0], 0, r[2])
         self.assertEqual((stack / "fout").read_text(), "hi\n")
         fsm2 = put(q / "fsm2.json", {"start": "a", "states": {"a": {
-            "val": {"argv": ["tools/cfg.json#/t/u"], "cwd": str(q),
-                    "stdout": {"$env": "AOS_STACK", "$path": "fout2"}}, "next": "a"}}})
-        r = run("aos-fsm", fsm2, cwd=self.t, env={"AOS_STACK": str(stack)})
+            "val": "q/fsm2.json#/states/a/body",
+            "body": {"argv": ["tools/cfg.json#/t/u"], "cwd": str(q),
+                     "stdout": {"$env": "AOS_STACK", "$path": "fout2"}}, "next": "a"}}})
+        r = run("aos-fsm", "--cfg", fsm2, cwd=self.t, env={"AOS_STACK": str(stack)})
         self.assertEqual(((stack / "fout2").read_text(), r[0]), ("ptr\n", 0), r[2])
 
 
