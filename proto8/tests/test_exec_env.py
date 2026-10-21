@@ -252,6 +252,121 @@ class T(unittest.TestCase):
         put(tool / ".env", "B=child\n")
         self.assertEqual(run("--ws", self.t, str(q))[:2], (0, "parent|child|z\n"))
 
+    # ---- 10-21 晚 審後補（ideas 10-21 § 7）----
+
+    def test_entry_middle_dir_loop(self):
+        # 多段 $AOS_ENTRY 中間走回走過的資料夾也算繞圈（原本外層 .env 會讀兩次）
+        d = Path(self.t, "p")
+        put(d / "sub" / "run", "#!/bin/sh\necho ran\n", 0o755)
+        rc, out, err, stderr = run("--ws", self.t, str(d), env={"AOS_ENTRY": "sub/../sub/run"})
+        self.assertEqual((rc, out, err), (1, "", "入口壞"))
+        self.assertIn("資料夾繞圈", stderr)
+        self.assertEqual(run("--ws", self.t, str(d), env={"AOS_ENTRY": "./sub/./run"})[:2], (0, "ran\n"))
+
+    def test_entry_empty_segments(self):
+        # 尾巴的 /、連著的 // 不算一段：_exec/＝_exec，資料夾只走進去一次、.env 只讀一次
+        d = Path(self.t, "p")
+        put(d / "_exec" / ".env", "C=${C}x\n")
+        put(d / "_exec" / "_exec", '#!/bin/sh\necho "$C"\n', 0o755)
+        for entry in ("_exec/", "_exec//", "_exec"):
+            self.assertEqual(run("--ws", self.t, str(d), env={"AOS_ENTRY": entry, "C": ""})[:2], (0, "x\n"), entry)
+        self.assertEqual(run("--ws", self.t, str(d), env={"AOS_ENTRY": "/"})[2], "入口壞")   # 全是 /＝.
+
+    def test_env_aos_vars_literal(self):
+        # .env 設的 AOS_* 照字面：AOS_WS 不存在／相對也照傳、不轉絕對；AOS_STACK 不建
+        d = prog(self.t, "p", 'echo "$AOS_WS|$AOS_STACK|$([ -e st ] && echo made || echo none)"\n')
+        put(Path(d, ".env"), "AOS_WS=nope/rel\nAOS_STACK=st/\n")
+        self.assertEqual(run("--ws", "-", d, cwd=self.t)[:2], (0, "nope/rel|st/|none\n"))
+        self.assertFalse(Path(d, "st").exists())
+        self.assertTrue(Path(self.t, ".aos").is_dir())   # 讀 .env 之前算好的那個照樣建
+
+    def test_env_bom_is_bad(self):
+        # 現行：BOM 不去掉，第一行的名字開頭多了 U+FEFF＝名字不合＝.env 壞 第 1 行
+        d = prog(self.t, "p", "echo ran\n")
+        Path(d, ".env").write_bytes("\ufeffA=1\n".encode("utf-8"))
+        rc, out, err, stderr = run("--ws", self.t, d)
+        self.assertEqual((rc, out, err), (1, "", ".env 壞"))
+        self.assertIn("第 1 行", stderr)
+
+    def test_env_broken_symlink(self):
+        d = prog(self.t, "p", "echo ran\n")
+        os.symlink("nowhere", Path(d, ".env"))
+        self.assertEqual(run("--ws", self.t, d)[:3:2], (1, ".env 讀不到"))
+
+    def test_entry_symlink_elsewhere_env_not_read(self):
+        # 入口檔是指到別的資料夾的捷徑：cd 過去、AOS_CD＝那邊，但那邊的 .env 不讀（ideas § 5.3 第 3 點）
+        x = Path(self.t, "x")
+        put(x / "run", '#!/bin/sh\necho "${A-unset}|$B|$AOS_CD|$(pwd -P)"\n', 0o755)
+        put(x / ".env", "A=x\n")
+        d = Path(self.t, "p")
+        put(d / ".env", "B=p\n")
+        os.symlink("../x/run", d / "_exec")
+        rx = x.resolve()
+        self.assertEqual(run("--ws", self.t, str(d))[:2], (0, "unset|p|%s|%s\n" % (rx, rx)))
+
+    def test_pointer_object_env_key(self):
+        q = Path(self.t, "q")
+        put(q / "cfg.json", {"a": {".env": {"A": "1"}, "_exec": ["sh", "-c", 'echo "$A|$AOS_CO"']}})
+        self.assertEqual(run("--ws", self.t, str(q / "cfg.json") + "#/a")[:2], (0, "1|/a/_exec\n"))
+
+    def test_flag_ws_beats_env_two_levels_down(self):
+        a, b = Path(self.t, "a"), Path(self.t, "b")
+        a.mkdir(); b.mkdir()
+        d = Path(self.t, "p")
+        put(d / ".env", "AOS_WS=%s\n" % b)
+        put(d / "_exec" / ".env", "AOS_WS=%s\n" % b)
+        put(d / "_exec" / "_exec" / ".env", "AOS_WS=%s\n" % b)
+        put(d / "_exec" / "_exec" / "_exec", '#!/bin/sh\necho "$AOS_WS"\n', 0o755)
+        self.assertEqual(run("--ws", str(a), str(d))[1], "%s\n" % a.resolve())
+        self.assertEqual(run(str(d))[1], "%s\n" % b)
+
+    def test_real_dir_entry_is_dotenv(self):
+        # 真資料夾：走進去那一刻 AOS_ENTRY 是 .env＝那份 .env 是入口、不讀成環境（ideas § 6.3 第 3 點）
+        d = Path(self.t, "p")
+        put(d / ".env", ["sh", "-c", 'echo "dot|$AOS_CF"'])
+        self.assertEqual(run("--ws", self.t, str(d), env={"AOS_ENTRY": ".env"})[:2],
+                         (0, "dot|%s/.env\n" % d.resolve()))
+
+    def test_same_dir_redirect_rereads_env(self):
+        # 現行（使用者「全照建議」(a)）：同資料夾的字串轉向＝全新一跳，同一份 .env 再讀一次（PATH 會疊兩次）
+        q = Path(self.t, "q")
+        put(q / ".env", "C=${C}x\n")
+        put(q / "_exec.json", '"b.json"')
+        put(q / "b.json", ["sh", "-c", 'echo "$C"'])
+        self.assertEqual(run("--ws", self.t, str(q), env={"C": ""})[:2], (0, "xx\n"))
+
+    def test_only_last_env_counts_for_cf_cd_co(self):
+        # 自己設了就不蓋，只看最後讀的那一份（使用者「全照建議」(a)）
+        show = ["sh", "-c", 'echo "[$AOS_CO]"']
+        q = Path(self.t, "q")
+        put(q / "x.json", {"_exec": {".env": {"AOS_CO": "outer"}, "_exec": {".env": {"Z": "1"}, "_exec": show}}})
+        self.assertEqual(run("--ws", self.t, str(q / "x.json"))[1], "[/_exec/_exec/_exec]\n")
+        put(q / "y.json", {"_exec": {".env": {"AOS_CO": "outer"}, "_exec": {"_exec": show}}})   # 內層沒 .env key
+        self.assertEqual(run("--ws", self.t, str(q / "y.json"))[1], "[outer]\n")
+        # 資料夾的 .env 設 AOS_CF／AOS_CD，之後物件的 .env key（最後讀的）沒設＝照實際的檔
+        put(q / ".env", "AOS_CF=cf\nAOS_CD=cd\n")
+        put(q / "z.json", {".env": {"Z": "1"}, "_exec": ["sh", "-c", 'echo "$AOS_CF|$AOS_CD"']})
+        rq = q.resolve()
+        self.assertEqual(run("--ws", self.t, str(q / "z.json"))[1], "%s/z.json|%s\n" % (rq, rq))
+        put(q / "w.json", {"_exec": ["sh", "-c", 'echo "$AOS_CF|$AOS_CD"']})   # 沒 .env key＝資料夾那份是最後的
+        self.assertEqual(run("--ws", self.t, str(q / "w.json"))[1], "cf|cd\n")
+
+    def test_json_env_key_directive_sees_outer_only(self):
+        # 現行（使用者「全照建議」(a)）：.env key 裡的指示詞只看進入物件前的環境；同物件互相引用用 ${}
+        q = Path(self.t, "q")
+        put(q / "x.json", {".env": {"A": "in", "B": {"$env": "A"}, "C": "${A}"},
+                           "_exec": ["sh", "-c", 'echo "$A|$B|$C"']})
+        self.assertEqual(run("--ws", self.t, str(q / "x.json"), env={"A": "out"})[1], "in|out|in\n")
+
+    def test_env_sees_own_aos_ws_before_flag(self):
+        # 現行（使用者「風險要自己承擔，建議.env不要碰這個」）：讀 .env 的過程中看到的是 .env 自己設的值，
+        # 旗標等整份讀完才蓋回
+        a, b = Path(self.t, "a"), Path(self.t, "b")
+        a.mkdir(); b.mkdir()
+        d = prog(self.t, "p", 'echo "$AOS_WS|$Y"\n')
+        put(Path(d, ".env"), "AOS_WS=%s\nY=${AOS_WS}\n" % b)
+        self.assertEqual(run("--ws", str(a), d)[1], "%s|%s\n" % (a.resolve(), b))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -105,3 +105,9 @@
   `git add` 一律寫 `git -c core.ignorecase=false add <正確路徑>`，commit 前用
   `git -c core.ignorecase=false status --short` 看路徑大小寫對不對；新資料夾別取只差大小寫的名字
   （[STRUCTURE](../../STRUCTURE.md) 規定改用 `<名>-parts/`）。
+- **`git status` 把中文檔名印成加引號的跳脫字串，照抄去 `git add` 會漏檔**：預設 `core.quotepath=true`，
+  中文路徑印成 `"proto8/NORMS/10-\345\237\272…"`，拿這份清單去 add 對不上（10-21 一輪漏了 12 份沒 commit）。
+  看清單用 `git -c core.quotepath=false status --short`；add 用
+  `git -c core.quotepath=false -c core.ignorecase=false add -- <檔>`，或 `git add -u -- proto8 wf`
+  （只加已追蹤的修改；未追蹤的 `proto8/impls/` 本來就不會被加）。**add 完再看一次 `git status --short`，
+  確認沒有剩下前面是空格的 ` M`**（＝改了沒 add）。

@@ -6,7 +6,7 @@
 旗標蓋過對應的環境變數。不認得的旗標、旗標缺值、沒有 XXX＝usage 錯。
 XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd；不在、basename 沒有 `.` → 補找 XXX.json。
 一跳（hop；10-21 ideas § 4～§ 6）：export AOS_WS、AOS_STACK（沒設＝$AOS_WS/.aos/，建好）→ 走進資料夾或檔所在的資料夾
-（AOS_CD＝它、AOS_CF＝它或那個檔、AOS_CO＝空；cd；讀那裡的 .env；旗標蓋回；旗標 ＞ .env ＞ 原本的環境變數 ＞ 預設）→
+（AOS_CD＝它、AOS_CF＝它或那個檔、AOS_CO＝空；cd；讀那裡的 .env；旗標蓋回；旗標 ＞ .env ＞ 原本的環境變數 ＞ 預設；.env 設的 AOS_* 照字面，不驗、不建）→
 照「當下的」$AOS_ENTRY（預設 _exec）挑入口：資料夾 → $AOS_ENTRY 一段段走、沿路資料夾都走進去，挑到資料夾就再走進去、
 一路往下，挑到檔（或補 .json）為止。解開捷徑後：有 +x＝可執行檔（exec，不讀內容；沒 #! 改用 /bin/sh 跑）；沒 +x 當 JSON 讀
 （第一行 #! 跳過、照 #/ 取值）：非空陣列＝argv（元素可放 $env／$ref，開跑前解、解完要全是字串，10-20 ideas D2、D8；exec，
@@ -75,7 +75,7 @@ def locate(spec, base):
 
 
 def find(f, ptr, seen, layer):
-    """實際的檔＋指標 → (種類, 值, 入口在檔裡的指標, JSON .env key 設過的名字)。
+    """實際的檔＋指標 → (種類, 值, 入口在檔裡的指標, 最後讀的那份 JSON .env key 設過的名字；一份都沒讀＝None)。
     種類：exe（值＝None）、argv（陣列）、inst（單子 dict）、redir（值＝轉向的路徑）。
     沒 argv 的物件＝資料夾（10-21 ideas § 6）：進去那一刻 $AOS_ENTRY 若是 `.env`＝照做、把 `.env` 那格當入口、不當環境設定；
     否則先套它的 `.env` key、旗標蓋回（layer），再照當下的 $AOS_ENTRY 取那格，又是沒 argv 的物件就一路往下
@@ -84,7 +84,7 @@ def find(f, ptr, seen, layer):
     if os.access(f, os.X_OK):
         if ptr is not None:
             raise Fail("入口壞：可執行檔不能帶 #/：%s" % spec)
-        return "exe", None, "", set()
+        return "exe", None, "", None
     where = (f, ptr or "")
     if where in seen:
         chain = [a + b for a, b in seen + [where]]
@@ -101,13 +101,13 @@ def find(f, ptr, seen, layer):
         doc = json.loads(text)
     except ValueError:
         raise Fail("入口壞：沒有 +x、也不是 JSON：%s" % f)
-    at, names = ptr or "", set()
+    at, names = ptr or "", None
     if ptr is not None:
         doc = pointer(doc, ptr, f)
     while isinstance(doc, dict) and "argv" not in doc:
         here = "%s#%s" % (f, at) if at else f
         if entry_name() != ".env" and ".env" in doc:
-            names |= json_env(doc[".env"], here, os.path.dirname(f))
+            names = json_env(doc[".env"], here, os.path.dirname(f))   # 只留最後讀的那一份（10-21 ideas § 7）
             layer()
         name = entry_name()
         if name not in doc:
@@ -143,7 +143,7 @@ def launch(kind, val, f, args):
             return aos_inst.run(val, args)["code"]
         except aos_inst.InstError as e:
             raise Fail("單子跑不起來：%s" % e)
-    if kind == "argv":   # 指示詞在五個環境變數設好之後解；$ref 從入口檔所在的資料夾（＝cwd）算
+    if kind == "argv":   # 指示詞在六個 AOS_* 設好、.env 讀完之後解；$ref 從入口檔所在的資料夾（＝cwd）算
         import aos_inst
         try:
             val = aos_inst.resolve(val, os.getcwd())
@@ -282,8 +282,8 @@ def hop(spec, base, opts, seen):
     """一次 aos-exec（N-59；10-21 ideas § 4～§ 6）：定工作區 → 找 XXX → export AOS_WS、AOS_STACK → 走進資料夾
     （AOS_CD／AOS_CF＝它、AOS_CO＝空、cd、讀那裡的 .env、旗標蓋回）→ 照當下的 $AOS_ENTRY 挑入口。
     資料夾：$AOS_ENTRY 一段段走，沿路每個資料夾都走進去（由外到內）；最後一段又是資料夾＝走進去、照當下的 $AOS_ENTRY 再挑，
-    一路往下（走回走過的資料夾＝入口壞）。走進資料夾那一刻 $AOS_ENTRY 是 `.env`＝那份 .env 是入口、不讀成環境。
-    挑到檔後 AOS_CF＝檔、AOS_CD＝它的資料夾、AOS_CO＝入口在檔裡的指標；剛讀的那份 .env（或 JSON 的 .env key）自己設了就不蓋。
+    一路往下（走回走過的資料夾＝入口壞，多段路徑中間經過的也算；空的段不算一段，`_exec/`＝`_exec`，10-21 ideas § 7）。走進資料夾那一刻 $AOS_ENTRY 是 `.env`＝那份 .env 是入口、不讀成環境。
+    挑到檔後 AOS_CF＝檔、AOS_CD＝它的資料夾、AOS_CO＝入口在檔裡的指標；最後讀的那一份 .env（或 JSON 的 .env key）自己設了就不蓋。
     回 (種類, 值, 實際的檔)。"""
     ws = opts.get("ws", "-")   # 旗標蓋過 $AOS_WS；沒給／-／空才沿用
     flag_ws = ws not in ("-", "")
@@ -317,12 +317,15 @@ def hop(spec, base, opts, seen):
         names, visited = enter(d, d), {d}
         while f is None:
             name = entry_name()
-            parts = name.split("/")
+            parts = [x for x in name.split("/") if x] or ["."]   # 空的段不算（尾巴的 /、//）；全是 /＝.
             for part in parts[:-1]:   # 多段的 $AOS_ENTRY（例 sub/run）：沿路的資料夾都走進去（由外到內）
                 nxt = os.path.realpath(os.path.join(d, part))
                 if not os.path.isdir(nxt):
                     raise Fail("入口不存在：%s（%s 不是資料夾）" % (os.path.join(d, name), os.path.join(d, part)))
-                if nxt != d:
+                if nxt != d:   # . 不算走進新資料夾；走回走過的（例 sub/../sub/run）＝繞圈
+                    if nxt in visited:
+                        raise Fail("入口壞：資料夾繞圈：%s" % nxt)
+                    visited.add(nxt)
                     d, names = nxt, enter(nxt, nxt)
             last = os.path.join(d, parts[-1])
             if os.path.isdir(last):   # 挑到資料夾＝走進去，照當下的 $AOS_ENTRY 再挑
@@ -344,8 +347,10 @@ def hop(spec, base, opts, seen):
             if "AOS_CD" not in names:
                 os.environ["AOS_CD"] = os.path.dirname(f)
     kind, val, at, more = find(f, ptr, seen, layer)
-    if "AOS_CO" not in names | more:
-        os.environ["AOS_CO"] = at
+    last = names if more is None else more   # 只看最後讀的那一份（檔或 JSON .env key）自己設了沒（10-21 ideas § 7）
+    for k, v in (("AOS_CF", f), ("AOS_CD", os.path.dirname(f)), ("AOS_CO", at)):
+        if k not in last:
+            os.environ[k] = v
     return kind, val, f
 
 

@@ -157,7 +157,7 @@ class T(unittest.TestCase):
         d = prog(self.t, "p", "echo $$\n")
         put(Path(self.t, "q", "_exec.json"), ["sh", "-c", "echo $$"])
         for path in (d, str(Path(self.t, "q"))):
-            p = subprocess.Popen([EXEC, path, self.t], stdout=subprocess.PIPE, text=True, env=env_of())
+            p = subprocess.Popen([EXEC, "--ws", self.t, path], stdout=subprocess.PIPE, text=True, env=env_of())
             self.assertEqual(p.communicate()[0].strip(), str(p.pid), path)
 
     def test_exec_restores_sigpipe(self):
@@ -253,10 +253,11 @@ class T(unittest.TestCase):
         for path in (BIN_DIR + ":/usr/bin:/bin", "/usr/bin:/bin"):
             self.assertEqual(run("--ws", self.t, d, env={"PATH": path})[1].strip(), path)
 
-    def test_entry_is_dir(self):
-        Path(self.t, "p", "_exec").mkdir(parents=True)
+    def test_entry_dir_beats_json(self):
+        # 10-21 晚起 $AOS_ENTRY 指到資料夾＝走進去（N-61、ideas 10-21 J3），所以同名資料夾贏過旁邊的 .json
+        prog(Path(self.t, "p"), "_exec", "echo dir\n")
         put(Path(self.t, "p", "_exec.json"), ["echo", "no"])
-        self.assertEqual(run("--ws", self.t, str(Path(self.t, "p")))[:3:2], (1, "入口不存在"))
+        self.assertEqual(run("--ws", self.t, str(Path(self.t, "p")))[:2], (0, "dir\n"))
 
     # ───── C. inst 單子（行程內 aos_inst.run，以子程式的碼結束）─────
 
@@ -268,7 +269,7 @@ class T(unittest.TestCase):
 
     def test_inst_stays_as_supervisor(self):
         put(Path(self.t, "q", "_exec.json"), {"argv": ["sh", "-c", "echo $$"]})
-        p = subprocess.Popen([EXEC, str(Path(self.t, "q")), self.t], stdout=subprocess.PIPE, text=True, env=env_of())
+        p = subprocess.Popen([EXEC, "--ws", self.t, str(Path(self.t, "q"))], stdout=subprocess.PIPE, text=True, env=env_of())
         out = p.communicate()[0].strip()
         self.assertEqual((p.returncode, out != str(p.pid), out.isdigit()), (0, True, True))
 
@@ -321,7 +322,7 @@ class T(unittest.TestCase):
 
     def start(self, doc):
         put(Path(self.t, "q", "_exec.json"), doc)
-        return subprocess.Popen([EXEC, str(Path(self.t, "q")), self.t], stdout=subprocess.PIPE, text=True,
+        return subprocess.Popen([EXEC, "--ws", self.t, str(Path(self.t, "q"))], stdout=subprocess.PIPE, text=True,
                                 env=env_of())
 
     def wait_file(self, path):
