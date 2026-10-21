@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- **open**：10-21 晚教學發現 4 點（fsm 檔頭過時等）、s6／runit 對照提議 → [10-21](session_logs/2026-10/2026-10-21.md)
+- **open**：10-21 晚教學發現 4 點（fsm 檔頭過時等）維持原樣；s6／runit 對照（aos 跟 s6、runit 的 chain loading、envdir、服務監管對照；使用者 10-21 晚同意列為之後要做的事，原話「關於s6/runit的對照，納進之後要做的事情中吧」）是待辦、尚未開工 → [10-21](session_logs/2026-10/2026-10-21.md)
 - **待照新做法重寫**：loop／daemon／fsm、tick 已照 10-21 計畫改寫（[plan](../proto8/thinking/2026-10-21-plan.md)；tick 是第 4 段，commit b6713265，代定見 [session log 10-21](session_logs/2026-10/2026-10-21.md#使用者不在時代定aos-tick計畫第-4-段10-21-晚)）；還沒做的：tasks、腦的工具呼叫（`tool_calls`）、兩種 kernel——三項都是方向題，留給使用者（plan § 1.2）；[rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)、[NORMS 待定](../proto8/NORMS/08-待定.md)。
 - **KISS 批次 2～6 暫停**（批次 1 已做完；10-16 使用者撤回「都照推薦」）→ [10-15 § KISS 批次 1](session_logs/2026-10/2026-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)。
 - **10-15 剩的兩個候選題**（只有標題、沒展開過）：對話太長、規範草稿定稿（NORMS 多數條文還標草稿）（原第三題「標準實作」10-21 晚使用者定了說法，見 [N-18](../proto8/NORMS/01-總則.md)）→ [10-15](session_logs/2026-10/2026-10-15.md)。其餘 10-15 動工自定點與總原則四條已隨 10-19 刪舊程式作廢或併入現行規範（10-21 清點，使用者同意清掉）。
