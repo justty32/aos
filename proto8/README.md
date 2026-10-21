@@ -4,7 +4,7 @@
 
 2026-10-11 開。起因：使用者看完 proto7-2 之後說「整個都不對，太繁複」，又回頭看了八月到十月的沿革，結論是**做得太快**——像遙控飛機，兩次操作之間已經飛了好長一段。方向其實一直在他手上，只是目標一直在變；這兩個月的程式當探針有價值，但不是成品。
 
-**程式**：現在在 [bin/](bin/README.md)（aos-exec、aos-inst、aos-loop、aos-fsm；10-19 從 proto8-2 併進來）與 [demo/](demo/README.md)（agent-bob、agent-ann）。圖解版兩頁（2026-10-20 已更新到現況）：概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm （HTML 源在 scratchpad/pages/proto8-concepts.html、proto8-impl.html）。**現在以 [CONCEPTS.md](CONCEPTS.md) 為準**（概念層：名詞、規則 C-01～C-73，作廢的號只留在表上；只收使用者說過的）。實作上的想法在 [restart §3g](thinking/2026-10-11-restart.md)（10-11 晚口述：inst→loop→daemon→tick-tock→kernel→agent→閉環）。
+**程式**：現在在 [bin/](bin/README.md)（aos-exec、aos-inst、aos-loop、aos-fsm；10-19 從 proto8-2 併進來；aos-daemon 10-20、aos-tick 10-21 晚）與 [demo/](demo/README.md)（agent-bob、agent-ann；daemon、tick）。圖解版兩頁（2026-10-20 已更新到現況）：概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm （HTML 源在 scratchpad/pages/proto8-concepts.html、proto8-impl.html）。**現在以 [CONCEPTS.md](CONCEPTS.md) 為準**（概念層：名詞、規則 C-01～C-73，作廢的號只留在表上；只收使用者說過的）。實作上的想法在 [restart §3g](thinking/2026-10-11-restart.md)（10-11 晚口述：inst→loop→daemon→tick-tock→kernel→agent→閉環）。
 
 ## 現況（2026-10-19 併入 proto8-2 後）
 
@@ -12,7 +12,7 @@
 
 **10-19 下班前～晚再定**（[ideas § 14～§ 21](thinking/2026-10-19-ideas.md)）：入口放寬成四種（可執行檔、inst 單子、argv 陣列、`js[$AOS_ENTRY]` 的值——單子、陣列或字串路徑；C-73）、`aos-exec XXX`（XXX 可為資料夾、檔、`檔#/指標`，找不到補 `XXX.json`；N-58、N-61）、環境變數加 `AOS_CF`／`AOS_CD` 成五個（N-57）、`#/` 尋址（N-62）；impls 只提供 `aos-exec` 一支命令列（§ 23 之後也有 aos-loop、aos-fsm，10-21 加 aos-daemon）、inst 是 C lib、JSON 不進 C 庫（§ 20）；`+x` 但沒 `#!` 的檔——入口兩種與單子的 `argv[0]`——三處一致改用 `/bin/sh` 跑（§ 21「不擋」、§ 22「乙」）。**兩版實作都做完了**：`proto8/impls/aos-exec`（使用者假日寫的 C++ 參考實作，git 未追蹤；45 組測試）與 `proto8/bin`（Python；aos-exec 10-19 晚從 sh 改寫成 Python，使用者 § 21「舊版一起改」；測試 93 個，§ 24 補 loop／fsm 轉訊號與 PATH 原樣後 100 個）。兩版仍不同的只有：impls 有 aos-exec、aos-loop、aos-fsm 三支命令列（§ 23；10-21 加 aos-daemon 成四支）、沒有 aos-inst、單子交給 C lib；bin 版另保留 aos-inst 命令列、單子在行程內呼叫 `aos_inst.run()`；錯誤一行 impls 帶代號、bin 不帶（[NORMS/10](NORMS/10-基礎設施-定義與工作區.md) 開頭）。
 
-**舊 lib 已刪進 git 歷史**（inst、loop、daemon、fsm、agent 格庫、兩種 kernel、tasks、tick；27 支模組＋說明＋169 個測試＋六組 demo＋舊 `bin/aos`）：要找回用 `git show aa2fec1f:proto8/lib/README.md`（aa2fec1f 是刪除前最後一個有它的 commit）。kernel、tasks、tick、腦的工具呼叫現在**沒有實作**（daemon 10-20 已照新做法重寫，`bin/aos-daemon`），概念與規範留著、標「現無實作」，等照新做法重寫（[NORMS 待定](NORMS/08-待定.md)）。
+**舊 lib 已刪進 git 歷史**（inst、loop、daemon、fsm、agent 格庫、兩種 kernel、tasks、tick；27 支模組＋說明＋169 個測試＋六組 demo＋舊 `bin/aos`）：要找回用 `git show aa2fec1f:proto8/lib/README.md`（aa2fec1f 是刪除前最後一個有它的 commit）。kernel、tasks、tick、腦的工具呼叫現在**沒有實作**（daemon 10-20 已照新做法重寫，`bin/aos-daemon`；tick 10-21 晚也重寫了，`bin/aos-tick`），概念與規範留著、標「現無實作」，等照新做法重寫（[NORMS 待定](NORMS/08-待定.md)）。
 
 ## 入口
 

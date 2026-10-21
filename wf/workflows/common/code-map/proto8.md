@@ -16,6 +16,7 @@
 - `aos_window.py`（10-20）：ctl／state 窗——`Ctl.read()`（paused／stop／max／interval_ms／seq＋程式多認的 key，壞的不採用、留上一份、記 `last_warning`）、`write()`（先寫 `.` 暫存再改名）、`beat()`（pid／started／boot_id／beat 心跳欄位）、`started(pid)`。
 - `aos-daemon`（`aos_loop.Loop` 的子類別）：daemon.json＝loop.json 超集，加 `children`、`adopt`；每個子項的小格 `$AOS_STACK/<名字>/` 裡寫 loop.json（`run` 轉絕對、蓋上 `_exec`），經 `aos-exec -- 小格/loop.json#/_exec` 起子 loop（10-21 傍晚）；ctl 的 `children` 增減表；子 loop 結束不重起；結束前收掉所有子項（D7）；收到訊號 128＋N；重起時接回活著的子項。
 - `aos-fsm`：`aos-fsm fsm.json`（10-21 傍晚：設定檔是唯一的位置參數、可寫 `檔#/指標`）；一拍只跑一格，`$AOS_STACK/state`（純文字一行）接著上一拍，`val`＝aos-exec 的目標或 `[目標, 參數...]`，每拍在 `trace.jsonl` 記一行；格的碼 0 才換狀態；收到訊號轉給那格、trace 與 state 照寫、再 128＋N。
+- `aos-tick`（10-21 晚，計畫第 4 段）：`aos-tick FILE`＝時鐘往前走一格，讀 n 寫 n＋1（沒檔＝0，先寫 `.名字` 再改名）；唯一的位置參數、旗標表是空的；錯退 1 一行、檔不動。
 
 ### `proto8/demo/`
 
@@ -24,10 +25,11 @@
 - `agent-bob/`（混合範本）：`_exec`＝`exec aos-loop loop.json`、`loop.json`＝`{"run": "fsm.json", "max": 20}`；`fsm.json` 帶 `_exec`（本身是 aos-exec 入口，10-21）、idle／act 是子資料夾、think 是那格 `body` 裡的單子；`act/tools/cathy/` 是另一隻完整 agent（同一套範本），她的 `act/tools/stamp/` 是最底層的工具——一次跑完四層巢狀。
 - `agent-ann/`（全內嵌對照）：零子資料夾，`_exec`＝`exec aos-exec loop.json`（loop.json 帶 `_exec`），`fsm.json` 三格全是 `body` 裡的單子，各指 `idle.py`／`brain.py`／`act.py`。
 - `daemon/`（10-20）：`_exec`＝`exec aos-daemon daemon.json`、子項 `run`＝`daemon.json#/children/<名字>/body`（10-21）；一個 daemon 同時管 bob、ann 兩個子 loop（工作區 `$AOS_WS/bob`、`$AOS_WS/ann`，stack 在 daemon 的小格裡）。
+- `tick/`（10-21 晚）：`_exec`＝`exec aos-loop loop.json`、`loop.json` 拍 5 次 `loop.json#/body`（`aos-tick $AOS_STACK/tick`），跑完時鐘檔是 5。
 
-### `proto8/tests/`（213 個）
+### `proto8/tests/`
 
-`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與巢狀、N-05／N-43 的寫法）、`test_exec_rules.py`（aos-exec 的 § 14～§ 20 新規則，33 個，移植自 impls/aos-exec 的 test_cli.py）、`test_inst.py`（aos-inst）、`test_fsm.py`（aos-fsm，含訊號與 PATH 原樣；10-21 body 格、物件 val＝錯；傍晚設定檔是唯一的位置參數、val 陣列，19 個）、`test_loop.py`（直接叫 aos-loop：訊號、PATH 原樣，§ 24；interval_ms、ctl、state 窗；`Cli` 10 個：旗標蓋設定檔、run 陣列、`檔#/指標`、沒 max 不限、run 物件＝錯、`-` 開頭目標、usage 錯、`aos-exec loop.json` 與大 JSON 經 `_exec`）、`test_daemon.py`（aos-daemon：children、ctl 增減、不重起、收工、接回；10-21 加旗標、run 陣列、字串子項、D7、經 aos-exec 起子 loop）、`test_directive_argv.py`（10-20 ideas D1～D8：`$ref` 的 `#/` 與 `at`、argv 陣列放指示詞、argv[0] 交給 aos-exec，17 個）、`test_directive_lenient.py`（10-20 D9～D15；10-21 傍晚 `$path` 字串拼接、`$ref` 指到資料夾＝錯）、`test_exec_env.py`（10-21 `.env`：設值、`${}` 與 PATH、優先順序、轉向兩層、錯誤不印值，12 個；10-21 晚加 10 個：`.env` 設 `AOS_ENTRY`、資料夾與 JSON 物件一路往下、沿路 `.env` 都讀、JSON `.env` key、`AOS_ENTRY` 是 `.env`、`AOS_CO`、`--ws` 仍最優先；10-21 晚審後再加 13 個（中間段繞圈、空的段、只看最後一份 `.env` 三個是行為改變，其餘釘住現行行為，見 ideas 10-21 § 7），共 35 個）；`python3 -m unittest discover -s proto8/tests`，在 WSL／Linux 跑。
+逐字下放到 [proto8/02-tests](proto8/02-tests.md)（2026-10-21 晚，本檔超過 8 KB）：每個測試檔涵蓋什麼、幾個；共 223 個，`python3 -m unittest discover -s proto8/tests`。
 
 ### `proto8/impls/` 與舊 lib
 

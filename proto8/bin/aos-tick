@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""aos-tick [旗標] FILE — 時鐘往前走一格（CONCEPTS C-44、NORMS N-01；規格 10-12「做吧」，計畫 10-21 第 4 段）。
+FILE 裡是回合數（十進位＋換行）：讀出 n、寫回 n＋1 就結束，退 0；FILE 不在＝0，所以第一次寫 1。
+寫進 n＋1 就代表第 n 回合結束、第 n＋1 回合開始（tock 不另外做）；mtime＝這回合從什麼時候開始。
+先寫同資料夾的 `.名字` 再改名蓋過去，讀的人不會讀到半份（N-05）；不 fsync。stdout 不吐東西。
+命令列：唯一的位置參數就是 FILE（必給、只能一個；相對路徑從 cwd 算；照字面用，`#` 不是指標——它是時鐘檔，不是設定檔）；
+目前沒有旗標（旗標表是空的，規則同 aos-exec，aos_flags；`--` 結束旗標，FILE 可以 `-` 開頭）。
+節奏、停、只走 N 回合交給拍它的 loop（`max`、`interval_ms`、ctl 的 paused），見 demo/tick。
+自己的錯（usage、時鐘檔讀不到、內容不是回合數、寫不了）退 1，stderr 一行 `aos-tick: 原因`，FILE 不動。
+同一個 FILE 同時有兩個人在 tick 不管（同一個 loop 的拍本來就不重疊）。"""
+import os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import aos_flags
+
+USAGE = "aos-tick FILE"
+FLAGS = {}   # 目前沒有旗標；以後加旗標就在這裡加一列
+
+
+def die(msg):
+    print(f"aos-tick: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+def main():
+    try:
+        opts, rest = aos_flags.parse(sys.argv[1:], FLAGS)
+    except aos_flags.Error as e:
+        die(f"usage: {USAGE}（{e}）")
+    if len(rest) != 1:
+        die(f"usage: {USAGE}（%s）" % ("沒有時鐘檔" if not rest else f"時鐘檔只能一個，多給了 {rest[1]}"))
+    path = rest[0]
+    try:
+        with open(path, "rb") as f:
+            raw = f.read()
+    except FileNotFoundError:
+        raw = b"0\n"
+    except OSError as e:
+        die(f"時鐘檔讀不到：{path}（{e.strerror or e}）")
+    if not re.fullmatch(rb"[0-9]+\n?", raw):
+        die(f"時鐘檔壞：{path}（內容不是回合數）")
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write("%d\n" % (int(raw) + 1))
+        os.replace(tmp, path)
+    except OSError as e:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        die(f"時鐘檔寫不了：{path}（{e.strerror or e}）")
+    sys.exit(0)
+
+
+main()

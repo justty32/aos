@@ -6,7 +6,7 @@
 sh proto8/demo/run.sh      # 在 WSL／Linux 跑
 ```
 
-`run.sh` 各建一個暫時工作區、放一題 `inbox/q1.txt`、`cd` 進去跑 agent-bob 與 agent-ann（慣例用法 `aos-exec <agent資料夾>`），最後再跑一次 daemon（見下），印工作區內容（`out/`、`done/`）與整棵 stack 樹（每檔印內容），最後把暫時資料夾刪掉，repo 裡不留東西。**PATH 由 `run.sh` 自己放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），agent 裡寫的 `aos-loop`、`aos-fsm`、`aos-exec` 要呼叫端事先把 `proto8/bin` 放進 PATH——`run.sh` 開頭就這麼做；自己手動跑也一樣（`PATH=$PWD/proto8/bin:$PATH aos-exec --ws <工作區> proto8/demo/agent-bob`）。預設假腦；`AOS_BRAIN_URL`（OpenAI 相容 base URL，另可設 `AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY`）指到遠端才用真腦。**這台電腦不要跑本機模型**（10-19 LM Studio 讓整台 Windows 當機，使用者定「放棄跑本機模型」，[ideas § 6](../thinking/2026-10-19-ideas.md)）。
+`run.sh` 各建一個暫時工作區、放一題 `inbox/q1.txt`、`cd` 進去跑 agent-bob 與 agent-ann（慣例用法 `aos-exec <agent資料夾>`），再跑一次 daemon、最後跑一次 tick（見下），印工作區內容（`out/`、`done/`）與整棵 stack 樹（每檔印內容），最後把暫時資料夾刪掉，repo 裡不留東西。**PATH 由 `run.sh` 自己放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），agent 裡寫的 `aos-loop`、`aos-fsm`、`aos-exec` 要呼叫端事先把 `proto8/bin` 放進 PATH——`run.sh` 開頭就這麼做；自己手動跑也一樣（`PATH=$PWD/proto8/bin:$PATH aos-exec --ws <工作區> proto8/demo/agent-bob`）。預設假腦；`AOS_BRAIN_URL`（OpenAI 相容 base URL，另可設 `AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY`）指到遠端才用真腦。**這台電腦不要跑本機模型**（10-19 LM Studio 讓整台 Windows 當機，使用者定「放棄跑本機模型」，[ideas § 6](../thinking/2026-10-19-ideas.md)）。
 
 ## agent-bob（混合範本，叫 cathy、cathy 叫 stamp：四層）
 
@@ -24,8 +24,12 @@ stack 樹＝呼叫樹：`.aos/{state,current,plan,trace.jsonl}`、`.aos/cathy/{�
 
 `daemon/_exec`＝`exec aos-daemon daemon.json`；`daemon.json` 是 `{"max": 10, "interval_ms": 200, "ctl", "state", "children": {"bob": …, "ann": …}}`，每個子項是一份 loop 設定：`{"run": "daemon.json#/children/bob/body", "max": 1, "body": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}}`（ann 同樣；10-21 起子項的 `run` 是 aos-exec 的目標，內嵌單子放在那個子項自己的 `body`，路徑從 daemon 的 cwd＝`demo/daemon/` 算——10-21 傍晚起子 loop 經 aos-exec 起、cwd 是小格，daemon 寫小格時把 `run` 轉成絕對路徑，所以照樣指得到）——子 loop 跑一次那隻 agent，工作區是 `$AOS_WS/bob`、`$AOS_WS/ann`。`run.sh` 最後一段建暫時工作區、在 `bob/inbox/`、`ann/inbox/` 各放一題、`aos-exec` daemon：它拍 10 拍（約 2 秒）就結束、結束前收掉子項。stack 樹：`.aos/state.json`（daemon 的 state，`children` 表）、`.aos/bob/`、`.aos/ann/`（各子項的小格：daemon 寫的 `loop.json`（`run` 已轉絕對、帶 `_exec`）、子 loop 的 `state.json`、`stderr`，以及那隻 agent 自己的 `state`、`trace.jsonl`…——agent 的 stack 就是小格，因為 `AOS_STACK` 已經有值、aos-exec 沿用）。子 loop 結束後不重起，所以表上兩項最後都是 `exited`、`code` 0。
 
+## tick（時鐘，10-21 晚）
+
+`tick/_exec`＝`exec aos-loop loop.json`；`loop.json`＝`{"run": "loop.json#/body", "body": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tick"}]}, "max": 5}`——loop 拍 5 次，每拍 `aos-exec -- loop.json#/body`，那張單子跑 `aos-tick $AOS_STACK/tick`，所以跑完工作區的 `.aos/tick` 是 `5`（C-44：tick-tock 就是一個時鐘；N-01 大家抬頭讀這個檔）。節奏、停交給 loop：要隔多久走一格就在 loop.json 加 `interval_ms`，要能暫停就加 `ctl`、寫 `{"paused": true}`。程式見 [bin/README 的 aos-tick](../bin/README.md)。
+
 ## 測試
 
-`python3 -m unittest discover -s proto8/tests`：`test_loop.py`（直接叫 aos-loop：訊號、PATH、`interval_ms`／`ctl`／`state` 窗、命令列（10-21 傍晚：設定檔是唯一的位置參數、`run` 陣列、`檔#/指標`））、`test_daemon.py`（aos-daemon）、`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與 cathy／stamp 巢狀）、`test_exec_rules.py`（aos-exec 的新規則：命令列旗標（10-21）、找入口、`#/`、四種入口、`AOS_CF`／`AOS_CD`）、`test_inst.py`（aos-inst）、`test_fsm.py`（aos-fsm）。
+`python3 -m unittest discover -s proto8/tests`：`test_loop.py`（直接叫 aos-loop：訊號、PATH、`interval_ms`／`ctl`／`state` 窗、命令列（10-21 傍晚：設定檔是唯一的位置參數、`run` 陣列、`檔#/指標`））、`test_daemon.py`（aos-daemon）、`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與 cathy／stamp 巢狀）、`test_exec_rules.py`（aos-exec 的新規則：命令列旗標（10-21）、找入口、`#/`、四種入口、`AOS_CF`／`AOS_CD`）、`test_inst.py`（aos-inst）、`test_fsm.py`（aos-fsm）、`test_tick.py`（aos-tick 與 demo/tick）。
 
-舊的 demo（daemon、fsm、paint、kernels、tasks、tick、once、`aos-demo`）10-19 進 git 歷史（daemon 10-20 照新做法重做，見上），見 git aa2fec1f（刪除前的最後一個樣子）。
+舊的 demo（daemon、fsm、paint、kernels、tasks、tick、once、`aos-demo`）10-19 進 git 歷史（daemon 10-20、tick 10-21 晚照新做法重做，見上），見 git aa2fec1f（刪除前的最後一個樣子）。
