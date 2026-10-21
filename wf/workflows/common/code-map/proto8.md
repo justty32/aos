@@ -14,7 +14,7 @@
 - `aos_flags.py`（10-21 下午）：旗標解析 `parse(argv, 旗標表)`，aos-exec、aos-loop、aos-daemon 共用。
 - `aos-loop`＋`aos_loop.py`（10-20 拆成骨架＋薄命令列，aos-daemon 共用）：10-21 下午命令列改成 `aos-loop [--cfg loop.json] [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [XXX [args...]]`（`cli()` 的旗標表 `FLAGS`，旗標 ＞ 設定檔 ＞ 預設、XXX 蓋 `run`、args 每拍接上；`Loop(opts, rest)`）；`loop.json` 的 `{"run", "max"}`（`run` 只收 aos-exec 的目標，內嵌單子走 `loop.json#/body`；`max` 沒寫＝不限），選填 `interval_ms`（拍間至少隔幾毫秒）、`ctl`、`state`（窗的檔名，在 `$AOS_STACK` 底下）；每圈 `aos-exec -- <run> args...`，子程式退 10 就停（loop 以 0 結束）、其他非 0 原碼結束；收到訊號轉給那拍、收完 128＋N；state 只在拍與拍之間寫（心跳）。
 - `aos_window.py`（10-20）：ctl／state 窗——`Ctl.read()`（paused／stop／max／interval_ms／seq＋程式多認的 key，壞的不採用、留上一份、記 `last_warning`）、`write()`（先寫 `.` 暫存再改名）、`beat()`（pid／started／boot_id／beat 心跳欄位）、`started(pid)`。
-- `aos-daemon`（10-20，`aos_loop.Loop` 的子類別）：daemon.json＝loop.json 超集，加 `children`（`{名字: loop 設定}`）、`adopt`；每個子項的小格 `$AOS_STACK/<名字>/`，在裡面寫 loop.json、起 `aos-loop --cfg 小格/loop.json`（10-21；命令列同 aos-loop、共用 `cli()`）；ctl 的 `children` 增減表；子 loop 結束不重起；結束前收掉所有子項；收到訊號 128＋N；重起時照 state 接回活著的子項。
+- `aos-daemon`（10-20，`aos_loop.Loop` 的子類別）：daemon.json＝loop.json 超集，加 `children`（`{名字: loop 設定}`）、`adopt`；每個子項的小格 `$AOS_STACK/<名字>/`，在裡面寫 loop.json、起 `aos-loop --cfg 小格/loop.json`（10-21；命令列同 aos-loop、共用 `cli()`）；ctl 的 `children` 增減表；子 loop 結束不重起；結束前收掉所有子項（含剛結束的，D7）；收到訊號 128＋N；重起時照 state 接回活著的子項。
 - `aos-fsm`：一拍只跑一格，`$AOS_STACK/state`（純文字一行）接著上一拍，每拍在 `trace.jsonl` 記一行；格的碼 0 才換狀態；收到訊號轉給那格、trace 與 state 照寫、再 128＋N。
 
 ### `proto8/demo/`
@@ -25,9 +25,9 @@
 - `agent-ann/`（全內嵌對照）：零子資料夾，`fsm.json` 三格全是單子，各指 `idle.py`／`brain.py`／`act.py`。
 - `daemon/`（10-20）：`_exec`＝`exec aos-daemon --cfg daemon.json`、子項 `run`＝`daemon.json#/children/<名字>/body`（10-21）；一個 daemon 同時管 bob、ann 兩個子 loop（工作區 `$AOS_WS/bob`、`$AOS_WS/ann`，stack 在 daemon 的小格裡）。
 
-### `proto8/tests/`（200 個）
+### `proto8/tests/`（204 個）
 
-`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與巢狀、N-05／N-43 的寫法）、`test_exec_rules.py`（aos-exec 的 § 14～§ 20 新規則，33 個，移植自 impls/aos-exec 的 test_cli.py）、`test_inst.py`（aos-inst）、`test_fsm.py`（aos-fsm，含訊號與 PATH 原樣）、`test_loop.py`（直接叫 aos-loop：訊號、PATH 原樣，§ 24；interval_ms、ctl、state 窗；10-21 下午 `Cli` 9 個：旗標蓋設定檔、XXX 蓋 run 與 args、沒 max 不限、run 物件＝錯、`-` 開頭目標、usage 錯、`aos-exec loop.json` 經 `_exec`）、`test_daemon.py`（aos-daemon：children、ctl 增減、不重起、收工、接回）、`test_directive_argv.py`（10-20 ideas D1～D8：`$ref` 的 `#/` 與 `at`、argv 陣列放指示詞、argv[0] 交給 aos-exec，17 個）、`test_directive_lenient.py`（10-20 D9～D15）、`test_exec_env.py`（10-21 `.env`：設值、`${}` 與 PATH、優先順序、轉向兩層、錯誤不印值，12 個；10-21 晚加 10 個：`.env` 設 `AOS_ENTRY`、資料夾與 JSON 物件一路往下、沿路 `.env` 都讀、JSON `.env` key、`AOS_ENTRY` 是 `.env`、`AOS_CO`、`--ws` 仍最優先；10-21 晚審後再加 13 個（中間段繞圈、空的段、只看最後一份 `.env` 三個是行為改變，其餘釘住現行行為，見 ideas 10-21 § 7），共 35 個）；`python3 -m unittest discover -s proto8/tests`，在 WSL／Linux 跑。
+`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與巢狀、N-05／N-43 的寫法）、`test_exec_rules.py`（aos-exec 的 § 14～§ 20 新規則，33 個，移植自 impls/aos-exec 的 test_cli.py）、`test_inst.py`（aos-inst）、`test_fsm.py`（aos-fsm，含訊號與 PATH 原樣）、`test_loop.py`（直接叫 aos-loop：訊號、PATH 原樣，§ 24；interval_ms、ctl、state 窗；10-21 下午 `Cli` 9 個：旗標蓋設定檔、XXX 蓋 run 與 args、沒 max 不限、run 物件＝錯、`-` 開頭目標、usage 錯、`aos-exec loop.json` 經 `_exec`）、`test_daemon.py`（aos-daemon：children、ctl 增減、不重起、收工、接回；10-21 加旗標、XXX、字串子項、D7）、`test_directive_argv.py`（10-20 ideas D1～D8：`$ref` 的 `#/` 與 `at`、argv 陣列放指示詞、argv[0] 交給 aos-exec，17 個）、`test_directive_lenient.py`（10-20 D9～D15）、`test_exec_env.py`（10-21 `.env`：設值、`${}` 與 PATH、優先順序、轉向兩層、錯誤不印值，12 個；10-21 晚加 10 個：`.env` 設 `AOS_ENTRY`、資料夾與 JSON 物件一路往下、沿路 `.env` 都讀、JSON `.env` key、`AOS_ENTRY` 是 `.env`、`AOS_CO`、`--ws` 仍最優先；10-21 晚審後再加 13 個（中間段繞圈、空的段、只看最後一份 `.env` 三個是行為改變，其餘釘住現行行為，見 ideas 10-21 § 7），共 35 個）；`python3 -m unittest discover -s proto8/tests`，在 WSL／Linux 跑。
 
 ### `proto8/impls/` 與舊 lib
 

@@ -70,9 +70,10 @@ class T(unittest.TestCase):
     def cfg(self, doc):
         (self.t / "daemon.json").write_text(json.dumps(doc))
 
-    def run_d(self, doc, timeout=30, env=None):
-        self.cfg(doc)
-        return subprocess.run([DAEMON, "--cfg", "daemon.json"], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)} if env is None else env),
+    def run_d(self, doc, timeout=30, env=None, argv=("--cfg", "daemon.json")):
+        if doc is not None:
+            self.cfg(doc)
+        return subprocess.run([DAEMON, *argv], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)} if env is None else env),
                               capture_output=True, text=True, timeout=timeout)
 
     def start(self, doc=None):
@@ -176,6 +177,53 @@ class T(unittest.TestCase):
         self.assertEqual((p.returncode, err, st["state"], st["code"]), (143, "", "stopped", 143))
         self.assertEqual([alive(r["pid"]) for r in k.values()], [False, False])
         self.assertEqual({r["phase"] for r in st["children"].values()}, {"exited"})
+
+    # ---- 10-21 計畫第 2 段：命令列（D1，共用 aos_loop.cli）、字串子項（D2）、收工時剛死的子項（D7）
+
+    def test_flags_override_cfg(self):
+        # --max／--interval-ms 蓋過 daemon.json（旗標 ＞ 設定檔）；state 回報實際生效的值
+        r = self.run_d({"run": "daemon.json#/body", "body": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"']},
+                        "max": 100, "interval_ms": 5000, "state": "state.json"},
+                       argv=("--cfg", "daemon.json", "--max", "3", "--interval-ms", "0"))
+        st = self.state()
+        self.assertEqual((r.returncode, r.stderr, len((self.s / "laps").read_text().split())), (0, "", 3))
+        self.assertEqual((st["max"], st["interval_ms"], st["state"]), (3, 0, "done"))
+
+    def test_xxx_is_own_run(self):
+        # XXX＝daemon 自己的 run，args 每拍接上；有 --cfg 時 XXX 蓋過 daemon.json 的 run
+        job = self.t / "job"
+        job.mkdir()
+        (job / "_exec").write_text('#!/bin/sh\necho "$@" >> "$AOS_STACK/laps"\n')
+        (job / "_exec").chmod(0o755)
+        self.cfg({"run": "nope", "interval_ms": 0})
+        for argv in (("--max", "2", "--interval-ms", "0", "job", "a", "b"),
+                     ("--cfg", "daemon.json", "--max", "2", "job", "a", "b")):
+            (self.s / "laps").unlink(missing_ok=True)
+            r = self.run_d(None, argv=argv)
+            self.assertEqual((r.returncode, r.stderr, (self.s / "laps").read_text()), (0, "", "a b\na b\n"), argv)
+
+    def test_string_child_is_exec_target(self):
+        # 字串子項＝aos-exec 的目標（不限資料夾，這裡指進 daemon.json），包成 {"run": 它}
+        p = self.start({"state": "state.json", "max": 10, "interval_ms": 100,
+                        "children": {"s": "daemon.json#/kids/s"},
+                        "kids": {"s": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/starts"; exit 10']}}})
+        out, err = p.communicate(timeout=30)
+        k = self.kids()
+        self.assertEqual((p.returncode, err, k["s"]["phase"], k["s"]["code"]), (0, "", "exited", 0))
+        self.assertEqual(json.loads((self.s / "s" / "loop.json").read_text()),
+                         {"run": "daemon.json#/kids/s", "ctl": "ctl.json", "state": "state.json"})
+        self.assertEqual(len((self.s / "s" / "starts").read_text().split()), 1)
+
+    def test_child_dead_at_finish_marked_exited(self):
+        # D7：最後一圈的 tend 之後才結束的子項，收工後的最後一份 state 也要是 exited、記 code（不留 running）
+        p = self.start({"state": "state.json", "run": "daemon.json#/body",
+                        "body": {"argv": ["sh", "-c", "sleep 2; exit 10"]},
+                        "children": {"q": "daemon.json#/kids/q"},
+                        "kids": {"q": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/starts"; exit 10']}}})
+        out, err = p.communicate(timeout=30)
+        q = self.kids()["q"]
+        self.assertEqual((p.returncode, err, len((self.s / "q" / "starts").read_text().split())), (0, "", 1))
+        self.assertEqual((q["phase"], q["code"], q["signal"]), ("exited", 0, None))
 
     def test_adopt_after_crash(self):
         doc = {"state": "state.json", "ctl": "ctl.json", "children": {"a": self.long()}}
