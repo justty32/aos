@@ -87,15 +87,15 @@ class T(unittest.TestCase):
         ws = self.t / "ws"; ws.mkdir()
         q = self.t / "q"
         put(q / "_exec.json", ["echo", {"$env": "AOS_WS", "$path": "a.txt", "$prefix": "--file="}])
-        rc, out, err = run("aos-exec", q, ws)
+        rc, out, err = run("aos-exec", "--ws", ws, q)
         self.assertEqual((rc, out), (0, "--file=%s/a.txt\n" % ws), err)
         # 寫法不合＝物件原封不動 → argv 陣列解完不是字串＝入口壞（aos-exec 的規則，不是指示詞的錯）
         put(q / "_exec.json", ["echo", {"$env": 3}])
-        rc, _, err = run("aos-exec", q, ws)
+        rc, _, err = run("aos-exec", "--ws", ws, q)
         self.assertEqual(rc, 1)
         self.assertTrue(err.startswith("aos-exec: 入口壞"), err)
         put(q / "_exec.json", {"argv": ["echo", {"$env": "AOS_WS", "$fmt": "%s", "$prefix": "w="}]})
-        rc, out, err = run("aos-exec", q, ws)
+        rc, out, err = run("aos-exec", "--ws", ws, q)
         self.assertEqual((rc, out), (0, "w=%s\n" % ws), err)
 
 

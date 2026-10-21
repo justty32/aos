@@ -44,7 +44,7 @@ class T(unittest.TestCase):
 
     def entry(self, doc, *args, **kw):
         put(self.t / "q" / "_exec.json", doc)
-        return run("aos-exec", self.t / "q", self.ws, *args, **kw)
+        return run("aos-exec", "--ws", self.ws, self.t / "q", *args, **kw)
 
     def err(self, r, head):
         rc, _, stderr = r
@@ -142,18 +142,23 @@ class T(unittest.TestCase):
         r = self.entry(["tools/x.sh"])          # +x 檔照舊直接 exec：AOS_CF 還是外層的入口
         self.assertEqual(r[:2], (0, "x cf=%s\n" % (self.t / "q" / "_exec.json")), r[2])
 
-    def test_d5_second_element_is_ws(self):
+    def test_d5_second_element_is_arg(self):
+        # 10-21 起 aos-exec 的工作區只由 --ws 給：["tools/stamp", "a"] 的 a 是 args，不再是 WS
         self.tools()
         other = self.t / "other"; other.mkdir()
-        r = self.entry(["tools/stamp", str(other)])
-        self.assertIn("ws=%s " % other, r[1], r[2])
-        self.assertTrue(r[1].endswith("arg=\n"), r[1])
-        r = self.entry(["tools/stamp", "-", "a"])
+        r = self.entry(["tools/stamp", "a"])
         self.assertIn("ws=%s " % self.ws, r[1], r[2])
         self.assertTrue(r[1].endswith("arg=a\n"), r[1])
-        # args 接在後面：["tools/stamp"] + 呼叫時的 args → 第一個仍是 WS
-        r = self.entry(["tools/stamp"], str(other))
+        r = self.entry(["tools/stamp", str(other)])          # 舊寫法的 WS 位置＝普通的 args
+        self.assertIn("ws=%s " % self.ws, r[1], r[2])
+        self.assertTrue(r[1].endswith("arg=%s\n" % other), r[1])
+        # 要換工作區：argv 裡自己寫 aos-exec --ws
+        r = self.entry(["aos-exec", "--ws", str(other), "tools/stamp", "b"])
         self.assertIn("ws=%s " % other, r[1], r[2])
+        self.assertTrue(r[1].endswith("arg=b\n"), r[1])
+        # args 接在後面：["tools/stamp"] + 呼叫時的 args → 原樣接上
+        r = self.entry(["tools/stamp"], "c")
+        self.assertTrue(r[1].endswith("arg=c\n"), r[1])
 
     def test_d4_no_slash_is_path_only(self):
         self.tools()
@@ -170,7 +175,7 @@ class T(unittest.TestCase):
     def test_d3_inst(self):
         self.tools()
         stamp = self.t / "q" / "tools" / "stamp" / "_exec"
-        r = self.entry({"argv": ["tools/stamp", "-", "a"]})          # aos-exec 的單子入口
+        r = self.entry({"argv": ["tools/stamp", "a"]})          # aos-exec 的單子入口
         self.assertEqual(r[:2], (0, "stamp ws=%s cf=%s arg=a\n" % (self.ws, stamp)), r[2])
         s = put(self.t / "q" / "s.json", {"argv": ["./tools/cfg.json#/t/u"], "cwd": str(self.t / "q")})
         self.assertEqual(run("aos-inst", s)[:2], (0, "ptr\n"))         # aos-inst 命令列
@@ -183,7 +188,7 @@ class T(unittest.TestCase):
         self.tools()
         q = self.t / "q"
         stack = self.t / "st"; stack.mkdir()
-        loop = put(q / "loop.json", {"run": {"argv": ["tools/stamp", "-", "L"], "cwd": str(q),
+        loop = put(q / "loop.json", {"run": {"argv": ["tools/stamp", "L"], "cwd": str(q),
                                              "stdout": {"$env": "AOS_STACK", "$path": "out"},
                                              "envs": {"MSG": {"$ref": "sub/data.json#/msg"}}}, "max": 1})
         r = run("aos-loop", loop, cwd=self.t, env={"AOS_WS": str(self.ws), "AOS_STACK": str(stack)})

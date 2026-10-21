@@ -39,7 +39,7 @@ class T(unittest.TestCase):
 
     def test_missing_entry(self):
         d = Path(self.tmp, "p"); d.mkdir()
-        r = run(EXEC, str(d), self.tmp)
+        r = run(EXEC, "--ws", self.tmp, str(d))
         self.assertEqual(r.returncode, 1)
         self.assertIn("入口不存在", r.stderr)
 
@@ -47,39 +47,39 @@ class T(unittest.TestCase):
         d = Path(self.tmp, "p"); d.mkdir(parents=True)
         (d / "_exec.json").write_text('{"argv": ["sh", "-c", "echo $1:$AOS_WS; exit 5", "sh"]}')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, str(d), str(ws), "x")
+        r = run(EXEC, "--ws", str(ws), str(d), "x")
         self.assertEqual(r.returncode, 5, r.stderr)
         self.assertEqual(r.stdout.strip(), f"x:{ws.resolve()}")
 
     def test_exec_json_custom_entry_name(self):
         d = Path(self.tmp, "p"); d.mkdir()
         (d / "main.json").write_text('{"argv": ["echo", "hi"]}')
-        r = run(EXEC, str(d), self.tmp, env={"AOS_ENTRY": "main"})
+        r = run(EXEC, "--ws", self.tmp, str(d), env={"AOS_ENTRY": "main"})
         self.assertEqual((r.returncode, r.stdout), (0, "hi\n"))
 
     def test_small_shell_wrapper_form_1(self):
         d = prog(self.tmp, "p", "exec aos-inst _exec.json \"$@\"\n")
         Path(d, "_exec.json").write_text('{"argv": ["echo", "a"]}')
         # 小殼 _exec 是可執行檔，優先於同名 .json；殼裡明指 _exec.json 所以還是跑得起來
-        r = run(EXEC, d, self.tmp, "b")
+        r = run(EXEC, "--ws", self.tmp, d, "b")
         self.assertEqual((r.returncode, r.stdout), (0, "a b\n"))
 
     def test_neither_entry_nor_json(self):
         d = Path(self.tmp, "p"); d.mkdir()
-        r = run(EXEC, str(d), self.tmp)
+        r = run(EXEC, "--ws", self.tmp, str(d))
         self.assertEqual(r.returncode, 1)
         self.assertIn("exec.json", r.stderr)
 
     def test_executable_preferred_over_json(self):
         d = prog(self.tmp, "p", "echo exe\n")
         Path(d, "_exec.json").write_text('{"argv": ["echo", "json"]}')
-        r = run(EXEC, d, self.tmp)
+        r = run(EXEC, "--ws", self.tmp, d)
         self.assertEqual(r.stdout, "exe\n")
 
     def test_not_executable(self):
         # § 14 之後沒 +x 不再是錯、改當 JSON 讀；sh 腳本不是 JSON＝入口壞（N-60、N-61）
         d = prog(self.tmp, "p", "echo hi\n", mode=0o644)
-        r = run(EXEC, d, self.tmp)
+        r = run(EXEC, "--ws", self.tmp, d)
         self.assertEqual(r.returncode, 1)
         self.assertIn("入口壞", r.stderr)
 
@@ -94,22 +94,22 @@ class T(unittest.TestCase):
         d = prog(self.tmp, "p", 'echo "$AOS_WS"\n')
         ws = Path(self.tmp, "ws"); ws.mkdir()
         other = Path(self.tmp, "other"); other.mkdir()
-        for extra in ((), ("-",)):
-            r = run(EXEC, d, *extra, cwd=str(other), env={"AOS_WS": str(ws)})
+        for extra in ((), ("--ws", "-"), ("--ws=",)):
+            r = run(EXEC, *extra, d, cwd=str(other), env={"AOS_WS": str(ws)})
             self.assertEqual(r.stdout.strip(), str(ws))
 
     def test_dash_with_args_passthrough(self):
         d = prog(self.tmp, "p", 'echo "$AOS_WS:$1"\n')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, d, "-", "x", cwd=str(ws))
+        r = run(EXEC, "--ws", "-", d, "x", cwd=str(ws))
         self.assertEqual(r.stdout.strip(), f"{ws.resolve()}:x")
 
     def test_ws_given_is_used_and_relative_to_cwd(self):
         d = prog(self.tmp, "p", 'echo "$AOS_WS"\n')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, d, str(ws), cwd=self.tmp)
+        r = run(EXEC, "--ws", str(ws), d, cwd=self.tmp)
         self.assertEqual(r.stdout.strip(), str(ws.resolve()))
-        r = run(EXEC, "p", "ws", cwd=self.tmp)
+        r = run(EXEC, "--ws=ws", "p", cwd=self.tmp)
         self.assertEqual(r.stdout.strip(), str(ws.resolve()))
 
     def test_cd_into_workspace_then_relative_agent(self):
@@ -121,26 +121,26 @@ class T(unittest.TestCase):
 
     def test_args_after_ws_passthrough(self):
         d = prog(self.tmp, "p", 'echo "$#:$1:$2"\n')
-        r = run(EXEC, d, self.tmp, "x", "y")
+        r = run(EXEC, "--ws", self.tmp, d, "x", "y")
         self.assertEqual(r.stdout.strip(), "2:x:y")
 
     def test_args_stdin_cwd_and_custom_entry(self):
         d = prog(self.tmp, "p", 'pwd; echo "$@"; cat\n', entry="main.sh")
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, d, str(ws), "a", "b", input="from stdin", env={"AOS_ENTRY": "main.sh"})
+        r = run(EXEC, "--ws", str(ws), d, "a", "b", input="from stdin", env={"AOS_ENTRY": "main.sh"})
         self.assertTrue(r.stdout.startswith(d + "\na b\nfrom stdin"))
 
     def test_nested_same_workspace(self):
         inner = prog(self.tmp, "outer/inner", 'echo "$AOS_WS" > "$AOS_WS/seen"\n')
         outer = prog(self.tmp, "outer", f'aos-exec {inner}\n')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, outer, str(ws))
+        r = run(EXEC, "--ws", str(ws), outer)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((ws / "seen").read_text().strip(), str(ws))
 
     def test_demo_flow(self):
         ws = workspace(self.tmp, "ws", "hello")
-        r = run(EXEC, BOB, str(ws))
+        r = run(EXEC, "--ws", str(ws), BOB)
         self.assertEqual(r.returncode, 0, r.stderr)
         tr = [json.loads(l) for l in (ws / ".aos" / "trace.jsonl").read_text().splitlines()]
         self.assertEqual([(t["state"], t["code"]) for t in tr],
@@ -152,7 +152,7 @@ class T(unittest.TestCase):
     def test_two_workspaces_concurrently(self):
         a, b = workspace(self.tmp, "a", "AAA"), workspace(self.tmp, "b", "BBB")
         rs = {}
-        ths = [threading.Thread(target=lambda w=w: rs.update({w: run(EXEC, BOB, str(w))})) for w in (a, b)]
+        ths = [threading.Thread(target=lambda w=w: rs.update({w: run(EXEC, "--ws", str(w), BOB)})) for w in (a, b)]
         [t.start() for t in ths]; [t.join() for t in ths]
         for w, tag in ((a, "AAA"), (b, "BBB")):
             self.assertEqual(rs[w].returncode, 0, rs[w].stderr)
@@ -166,11 +166,11 @@ class T(unittest.TestCase):
     def test_stack_default_and_override(self):
         d = prog(self.tmp, "p", 'echo "$AOS_STACK"\n')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, d, str(ws))
+        r = run(EXEC, "--ws", str(ws), d)
         self.assertEqual(r.stdout.strip(), str(ws) + "/.aos/")
         self.assertTrue((ws / ".aos").is_dir())
         mine = Path(self.tmp, "mystack")
-        r = run(EXEC, d, str(ws), env={"AOS_STACK": str(mine)})
+        r = run(EXEC, "--ws", str(ws), d, env={"AOS_STACK": str(mine)})
         self.assertEqual(r.stdout.strip(), str(mine) + "/")
         self.assertTrue(mine.is_dir())
 
@@ -178,12 +178,12 @@ class T(unittest.TestCase):
         inner = prog(self.tmp, "outer/inner", 'echo "$AOS_STACK" > "$AOS_STACK/seen"\n')
         outer = prog(self.tmp, "outer", f'aos-exec {inner}\n')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        self.assertEqual(run(EXEC, outer, str(ws)).returncode, 0)
+        self.assertEqual(run(EXEC, "--ws", str(ws), outer).returncode, 0)
         self.assertEqual((ws / ".aos" / "seen").read_text().strip(), str(ws) + "/.aos/")
 
     def test_bob_state_in_stack_not_ws_or_def(self):
         ws = workspace(self.tmp, "ws", "hello")
-        self.assertEqual(run(EXEC, BOB, str(ws)).returncode, 0)
+        self.assertEqual(run(EXEC, "--ws", str(ws), BOB).returncode, 0)
         for n in ("state", "trace.jsonl", "plan", "current"):
             self.assertTrue((ws / ".aos" / n).exists(), n)
             self.assertFalse((ws / n).exists(), n)
@@ -225,14 +225,14 @@ class T(unittest.TestCase):
         agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
         Path(agent, "loop.json").write_text('{"run": "bad", "max": 3}')
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        self.assertEqual(run(EXEC, agent, str(ws)).returncode, 7)
+        self.assertEqual(run(EXEC, "--ws", str(ws), agent).returncode, 7)
 
     def test_loop_embedded_inst_runs_each_lap(self):
         agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
         Path(agent, "loop.json").write_text(json.dumps(
             {"run": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/n"']}, "max": 3}))
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, agent, str(ws))
+        r = run(EXEC, "--ws", str(ws), agent)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((ws / ".aos" / "n").read_text().split(), ["x", "x", "x"])
 
@@ -241,7 +241,7 @@ class T(unittest.TestCase):
         agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
         Path(agent, "loop.json").write_text(json.dumps({"run": {"argv": ["true"]}, "max": 2}))
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, agent, str(ws))
+        r = run(EXEC, "--ws", str(ws), agent)
         self.assertEqual((r.returncode, r.stderr), (0, ""))
 
     def test_brain_writes_current_by_rename(self):
@@ -263,7 +263,7 @@ class T(unittest.TestCase):
             Path(agent, "loop.json").write_text(json.dumps(
                 {"run": {"argv": ["sh", "-c", f"exit {code}"]}, "max": 3}))
             ws = Path(self.tmp, f"ws{code}"); ws.mkdir()
-            self.assertEqual(run(EXEC, agent, str(ws)).returncode, want)
+            self.assertEqual(run(EXEC, "--ws", str(ws), agent).returncode, want)
 
     def test_loop_own_errors_exit_1_one_line(self):
         agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
@@ -271,14 +271,14 @@ class T(unittest.TestCase):
         for text in (None, "{nope", '{"max": 2}', '{"run": {"argv": ["no-such-cmd-xyz"]}}'):
             if text is not None:
                 Path(agent, "loop.json").write_text(text)
-            r = run(EXEC, agent, str(ws))
+            r = run(EXEC, "--ws", str(ws), agent)
             self.assertEqual(r.returncode, 1, text)
             self.assertEqual(len(r.stderr.strip().splitlines()), 1, text)
             self.assertTrue(r.stderr.startswith("aos-loop: "), text)
 
     def test_demo_flow_ann(self):
         ws = workspace(self.tmp, "ws", "hello")
-        r = run(EXEC, ANN, str(ws))
+        r = run(EXEC, "--ws", str(ws), ANN)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("hello", (ws / "out" / "q.txt").read_text())
         self.assertTrue((ws / "done" / "q.txt").exists())
@@ -300,7 +300,7 @@ class T(unittest.TestCase):
         stamp = str(Path(CATHY) / "act" / "tools" / "stamp")
         ws = Path(self.tmp, "ws"); ws.mkdir()
         for n in ("1", "2"):
-            r = run(EXEC, stamp, str(ws), input="body text\n")
+            r = run(EXEC, "--ws", str(ws), stamp, input="body text\n")
             self.assertEqual(r.returncode, 0, r.stderr)
             lines = r.stdout.split("\n")
             self.assertTrue(lines[0].startswith("# "), r.stdout)
@@ -309,7 +309,7 @@ class T(unittest.TestCase):
 
     def test_nested_three_levels(self):
         ws = workspace(self.tmp, "ws", "hello")
-        r = run(EXEC, BOB, str(ws))
+        r = run(EXEC, "--ws", str(ws), BOB)
         self.assertEqual(r.returncode, 0, r.stderr)
         out = (ws / "out" / "q.txt").read_text().split("\n")
         self.assertTrue(out[0].startswith("# "))
@@ -327,7 +327,7 @@ class T(unittest.TestCase):
 
     def test_cathy_does_not_touch_bob_ws(self):
         ws = workspace(self.tmp, "ws", "hello")
-        self.assertEqual(run(EXEC, BOB, str(ws)).returncode, 0)
+        self.assertEqual(run(EXEC, "--ws", str(ws), BOB).returncode, 0)
         self.assertEqual(list((ws / "inbox").iterdir()), [])
         self.assertTrue((ws / "done" / "q.txt").exists())
         self.assertEqual([p.name for p in (ws / "out").iterdir()], ["q.txt"])
@@ -339,7 +339,7 @@ class T(unittest.TestCase):
         ws = Path(self.tmp, "ws"); (ws / "inbox").mkdir(parents=True)
         (ws / "inbox" / "q1.txt").write_text("AAA")
         (ws / "inbox" / "q2.txt").write_text("BBB")
-        r = run(EXEC, BOB, str(ws))
+        r = run(EXEC, "--ws", str(ws), BOB)
         self.assertEqual(r.returncode, 0, r.stderr)
         a, b = (ws / "out" / "q1.txt").read_text(), (ws / "out" / "q2.txt").read_text()
         self.assertIn("AAA", a); self.assertNotIn("BBB", a)
@@ -353,7 +353,7 @@ class T(unittest.TestCase):
 
     def test_cathy_standalone(self):
         ws = workspace(self.tmp, "ws", "hello")
-        r = run(EXEC, CATHY, str(ws))
+        r = run(EXEC, "--ws", str(ws), CATHY)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("hello", (ws / "out" / "q.txt").read_text())
         self.assertTrue((ws / "done" / "q.txt").exists())
@@ -368,7 +368,7 @@ class T(unittest.TestCase):
         Path(outer, "sub", "loop.json").write_text('{"run": "idle", "max": 5}')
         prog(Path(outer, "sub"), "idle", "exit 10\n")
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        r = run(EXEC, outer, str(ws))
+        r = run(EXEC, "--ws", str(ws), outer)
         self.assertEqual(r.returncode, 0, r.stderr)
         tr = [json.loads(l) for l in (ws / ".aos" / "trace.jsonl").read_text().splitlines()]
         self.assertEqual([(t["state"], t["code"]) for t in tr], [("s", 0), ("t", 0)])   # 外層沒被誤停
@@ -378,7 +378,7 @@ class T(unittest.TestCase):
         ws = workspace(self.tmp, "ws", "hello")
         (ws / ".aos" / "cathy").mkdir(parents=True)
         (ws / ".aos" / "cathy" / "state").write_text("act\n")      # 停在半路、沒有 current
-        r = run(EXEC, BOB, str(ws))
+        r = run(EXEC, "--ws", str(ws), BOB)
         self.assertEqual(r.returncode, 1)
         self.assertEqual((ws / ".aos" / "state").read_text(), "act\n")
         self.assertIn("cathy 失敗", r.stderr)

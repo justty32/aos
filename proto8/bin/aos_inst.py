@@ -24,7 +24,7 @@ at 接在 #/ 後面，10-20 ideas D1、D7）；換進來的值接著解。相對
 字串（at 也不是空字串或 / 開頭）＝當沒寫；$ref／$env 的值不是字串或空字串、# 後不是 /、只有 #/… 沒檔名＝換不了，
 整個物件原封不動留著。
 argv[0] 帶 / 又 exec 不了（不是 +x 的一般檔：資料夾、沒 +x 的檔、不在，或帶 #/）＝前面插 aos-exec、照 PATH 找
-（10-20 ideas D3、D5：["tools/stamp", "a"]＝["aos-exec", "tools/stamp", "a"]，a 是 WS）。
+（10-20 ideas D3、D5：["tools/stamp", "a"]＝["aos-exec", "tools/stamp", "a"]；10-21 起 a 是 args，工作區只由 --ws 給）。
 
 結束碼：命令列退出碼＝子程式的碼（透明轉交；被訊號停掉＝128＋訊號號碼）。aos-inst 自己的錯
 （單子壞、程式找不到、$env 沒設、$ref 解不開）退 1，stderr 一行「aos-inst: 原因」。

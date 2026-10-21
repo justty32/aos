@@ -12,7 +12,7 @@ sh proto8/demo/run.sh      # 在 WSL／Linux 跑
 
 入口 `_exec`（預設 `$AOS_ENTRY`；10-19 晚改，原 `.aos/exec`）＝`exec aos-loop loop.json`；`loop.json` 內嵌單子 `{"run": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}`；`fsm.json` 一份看完整張表：idle／act 是子資料夾 `idle/`、`act/`（shell），think 是內嵌單子（`python3 brain.py`、stdout 導到 `$AOS_STACK/plan`、逾時 120 秒）。idle 在 inbox 空時回 10 讓 loop 停。`brain.py` 挑 inbox 第一題、題名寫 `current`、答案印到 stdout。
 
-act 把 plan 當題目交給 `act/tools/cathy/`（另一隻完整 agent，同一套範本；P-32、P-33）：在她的小格 `$AOS_STACK/cathy/` 裡備 `ws/inbox/<題名>`、`AOS_STACK=$sub aos-exec tools/cathy "$sub/ws"`、從 `$sub/ws/out/<題名>` 拿答案寫進 `$AOS_WS/out/`、題目搬 `done/`；cathy 失敗（非 0）bob 的 act 說「cathy 失敗」並退 1。cathy 的 act 再經 `act/tools/cathy/act/tools/stamp`（工具，自己的 stack 在 `$AOS_STACK/stamp/`，前面加一行 UTC 時間戳、`runs` 計次）寫她的 out。一次跑完是四層：bob 的 loop／fsm → act → cathy 的 loop／fsm → 她的 act → stamp；`aos-exec proto8/demo/agent-bob/act/tools/cathy <工作區>` 也能單獨跑 cathy。
+act 把 plan 當題目交給 `act/tools/cathy/`（另一隻完整 agent，同一套範本；P-32、P-33）：在她的小格 `$AOS_STACK/cathy/` 裡備 `ws/inbox/<題名>`、`AOS_STACK=$sub aos-exec --ws "$sub/ws" tools/cathy`、從 `$sub/ws/out/<題名>` 拿答案寫進 `$AOS_WS/out/`、題目搬 `done/`；cathy 失敗（非 0）bob 的 act 說「cathy 失敗」並退 1。cathy 的 act 再經 `act/tools/cathy/act/tools/stamp`（工具，自己的 stack 在 `$AOS_STACK/stamp/`，前面加一行 UTC 時間戳、`runs` 計次）寫她的 out。一次跑完是四層：bob 的 loop／fsm → act → cathy 的 loop／fsm → 她的 act → stamp；`aos-exec proto8/demo/agent-bob/act/tools/cathy <工作區>` 也能單獨跑 cathy。
 
 stack 樹＝呼叫樹：`.aos/{state,current,plan,trace.jsonl}`、`.aos/cathy/{…,ws/,stamp/runs}`（P-38）。
 
@@ -22,10 +22,10 @@ stack 樹＝呼叫樹：`.aos/{state,current,plan,trace.jsonl}`、`.aos/cathy/{�
 
 ## daemon（一個 daemon 同時管 bob、ann，10-20）
 
-`daemon/_exec`＝`exec aos-daemon daemon.json`；`daemon.json` 是 `{"max": 10, "interval_ms": 200, "ctl", "state", "children": {"bob": …, "ann": …}}`，每個子項是一份 loop 設定：`{"run": {"argv": ["aos-exec", "../agent-bob", {"$env": "AOS_WS", "$path": "bob"}]}, "max": 1}`（ann 同樣）——子 loop 跑一次那隻 agent，工作區是 `$AOS_WS/bob`、`$AOS_WS/ann`。`run.sh` 最後一段建暫時工作區、在 `bob/inbox/`、`ann/inbox/` 各放一題、`aos-exec` daemon：它拍 10 拍（約 2 秒）就結束、結束前收掉子項。stack 樹：`.aos/state.json`（daemon 的 state，`children` 表）、`.aos/bob/`、`.aos/ann/`（各子項的小格：daemon 寫的 `loop.json`、子 loop 的 `state.json`、`stderr`，以及那隻 agent 自己的 `state`、`trace.jsonl`…——agent 的 stack 就是小格，因為 `AOS_STACK` 已經有值、aos-exec 沿用）。子 loop 結束後不重起，所以表上兩項最後都是 `exited`、`code` 0。
+`daemon/_exec`＝`exec aos-daemon daemon.json`；`daemon.json` 是 `{"max": 10, "interval_ms": 200, "ctl", "state", "children": {"bob": …, "ann": …}}`，每個子項是一份 loop 設定：`{"run": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}, "max": 1}`（ann 同樣）——子 loop 跑一次那隻 agent，工作區是 `$AOS_WS/bob`、`$AOS_WS/ann`。`run.sh` 最後一段建暫時工作區、在 `bob/inbox/`、`ann/inbox/` 各放一題、`aos-exec` daemon：它拍 10 拍（約 2 秒）就結束、結束前收掉子項。stack 樹：`.aos/state.json`（daemon 的 state，`children` 表）、`.aos/bob/`、`.aos/ann/`（各子項的小格：daemon 寫的 `loop.json`、子 loop 的 `state.json`、`stderr`，以及那隻 agent 自己的 `state`、`trace.jsonl`…——agent 的 stack 就是小格，因為 `AOS_STACK` 已經有值、aos-exec 沿用）。子 loop 結束後不重起，所以表上兩項最後都是 `exited`、`code` 0。
 
 ## 測試
 
-`python3 -m unittest discover -s proto8/tests`：`test_loop.py`（直接叫 aos-loop：訊號、PATH、`interval_ms`／`ctl`／`state` 窗）、`test_daemon.py`（aos-daemon）、`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與 cathy／stamp 巢狀）、`test_exec_rules.py`（aos-exec 的新規則：找入口、`#/`、四種入口、`AOS_CF`／`AOS_CD`）、`test_inst.py`（aos-inst）、`test_fsm.py`（aos-fsm）。
+`python3 -m unittest discover -s proto8/tests`：`test_loop.py`（直接叫 aos-loop：訊號、PATH、`interval_ms`／`ctl`／`state` 窗）、`test_daemon.py`（aos-daemon）、`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與 cathy／stamp 巢狀）、`test_exec_rules.py`（aos-exec 的新規則：命令列旗標（10-21）、找入口、`#/`、四種入口、`AOS_CF`／`AOS_CD`）、`test_inst.py`（aos-inst）、`test_fsm.py`（aos-fsm）。
 
 舊的 demo（daemon、fsm、paint、kernels、tasks、tick、once、`aos-demo`）10-19 進 git 歷史（daemon 10-20 照新做法重做，見上），見 git aa2fec1f（刪除前的最後一個樣子）。

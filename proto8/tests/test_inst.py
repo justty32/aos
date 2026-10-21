@@ -129,7 +129,7 @@ class T(unittest.TestCase):
              "stdout": {"$env": "AOS_STACK", "$path": "plan"}}))
         entry.chmod(0o755)
         ws = self.tmp / "ws"; ws.mkdir()
-        r = run(EXEC, str(d), str(ws), "arg1")
+        r = run(EXEC, "--ws", str(ws), str(d), "arg1")
         self.assertEqual(r.returncode, 4, r.stderr)
         lines = (ws / ".aos" / "plan").read_text().split("\n")
         self.assertEqual(lines[0], str(d))
@@ -149,7 +149,7 @@ class T(unittest.TestCase):
         os.environ["PATH"] = str(BIN) + os.pathsep + os.environ["PATH"]
         os.environ.pop("AOS_STACK", None); os.environ.pop("AOS_WS", None)
         try:
-            res = aos_inst.run({"argv": ["aos-exec", str(self.tmp / "outer"), str(ws)],
+            res = aos_inst.run({"argv": ["aos-exec", "--ws", str(ws), str(self.tmp / "outer")],
                                 "timeout_ms": 300, "grace_ms": 200})
         finally:
             os.environ.clear(); os.environ.update(old)

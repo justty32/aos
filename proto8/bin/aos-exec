@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""aos-exec XXX [WS [args...]] — 在 WS 這個工作區執行 XXX 這個程式（N-57～N-62）。純標準庫。
+"""aos-exec [旗標...] XXX [args...] — 在工作區執行 XXX 這個程式（N-57～N-62）。純標準庫。
 
-XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd。WS 省略／`-`／空＝沿用 $AOS_WS，沒設用 .。
+命令列（10-21 ideas）：XXX 前面是 aos-exec 自己的旗標（表在 FLAGS），第一個不是旗標的參數就是 XXX，之後原樣傳給入口；
+`--` 結束旗標（XXX 可以 - 開頭）。目前只有 `--ws WS`（或 `--ws=WS`）：工作區；沒給、`-`、空＝沿用 $AOS_WS，沒設用 .。
+旗標蓋過對應的環境變數。不認得的旗標、旗標缺值、沒有 XXX＝usage 錯。
+XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd。
 找入口（N-61）：資料夾 → XXX/$AOS_ENTRY（預設 _exec），沒有再找 XXX/$AOS_ENTRY.json；不在、basename 沒有 `.`
 → 補找 XXX.json。解開捷徑後：有 +x＝可執行檔（exec，不讀內容；沒 #! 改用 /bin/sh 跑）；沒 +x 當 JSON 讀（第一行 #! 跳過、照 #/ 取值）：
 非空陣列＝argv（元素可放 $env／$ref，開跑前解、解完要全是字串，10-20 ideas D2、D8；exec，同 execvp：沒 #! 改用 /bin/sh 跑；
@@ -158,10 +161,39 @@ def launch(kind, val, f, args):
     raise Fail("起不來：%s（%s）" % (argv[0], err.strerror))
 
 
+USAGE = "aos-exec [--ws WS] XXX [args...]"
+# 旗標表：旗標名 → 存進 opts 的名字。都帶一個值（`--x V` 或 `--x=V`），重複給＝最後一個算。以後加旗標就在這裡加一列。
+FLAGS = {"--ws": "ws"}
+
+
+def parse(argv):
+    """[旗標...] XXX [args...] → (opts, XXX, args)。第一個不是旗標的參數（不以 - 開頭，或就是 -）就是 XXX。"""
+    opts, i = {}, 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--":
+            i += 1
+            break
+        if not a.startswith("-") or a == "-":
+            break
+        name, eq, val = a.partition("=")
+        if name not in FLAGS:
+            die("usage: %s（不認得的旗標 %s）" % (USAGE, name))
+        if not eq:
+            i += 1
+            if i == len(argv):
+                die("usage: %s（%s 缺值）" % (USAGE, name))
+            val = argv[i]
+        opts[FLAGS[name]] = val
+        i += 1
+    if i == len(argv):
+        die("usage: %s（沒有 XXX）" % USAGE)
+    return opts, argv[i], argv[i + 1:]
+
+
 def main(argv):
-    if not argv:
-        die("usage: aos-exec XXX [WS [args...]]")
-    spec, ws, args = argv[0], (argv[1] if len(argv) > 1 else "-"), argv[2:]
+    opts, spec, args = parse(argv)
+    ws = opts.get("ws", "-")   # 旗標蓋過 $AOS_WS；沒給／-／空才沿用
     if ws in ("-", ""):
         ws = os.environ.get("AOS_WS") or "."
     if not os.path.isdir(ws):
