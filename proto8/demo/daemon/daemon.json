@@ -1,5 +1,7 @@
 {"max": 10, "interval_ms": 200, "ctl": "ctl.json", "state": "state.json",
  "children": {
-  "bob": {"run": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}, "max": 1},
-  "ann": {"run": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "ann"}, "../agent-ann"]}, "max": 1}
+  "bob": {"run": "daemon.json#/children/bob/body", "max": 1,
+          "body": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}},
+  "ann": {"run": "daemon.json#/children/ann/body", "max": 1,
+          "body": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "ann"}, "../agent-ann"]}}
  }}

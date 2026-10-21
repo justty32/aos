@@ -45,6 +45,10 @@ class T(unittest.TestCase):
         self.t = Path(self._t.name)
         self.s = self.t / "stack"
         self.s.mkdir()
+        lg = self.t / "long"   # 長壽的子項：字串目標 "long"（子 loop 的 cwd＝daemon 的 cwd＝self.t）
+        lg.mkdir()
+        (lg / "_exec").write_text("#!/bin/sh\n" + LONG + "\n")
+        (lg / "_exec").chmod(0o755)
         self.procs = []
         self.addCleanup(self._t.cleanup)
         self.addCleanup(self.reap)
@@ -68,13 +72,13 @@ class T(unittest.TestCase):
 
     def run_d(self, doc, timeout=30, env=None):
         self.cfg(doc)
-        return subprocess.run([DAEMON, "daemon.json"], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)} if env is None else env),
+        return subprocess.run([DAEMON, "--cfg", "daemon.json"], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)} if env is None else env),
                               capture_output=True, text=True, timeout=timeout)
 
     def start(self, doc=None):
         if doc is not None:
             self.cfg(doc)
-        p = subprocess.Popen([DAEMON, "daemon.json"], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)}),
+        p = subprocess.Popen([DAEMON, "--cfg", "daemon.json"], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)}),
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         self.procs.append(p)
         return p
@@ -91,11 +95,12 @@ class T(unittest.TestCase):
         os.replace(tmp, self.s / "ctl.json")
 
     def long(self, mx=1):
-        return {"run": {"argv": ["sh", "-c", LONG]}, "max": mx}
+        return {"run": "long", "max": mx}
 
     def test_loop_json_runs_as_is(self):
         # 合法的 loop.json 直接丟給 daemon 也能跑（N-28）
-        r = self.run_d({"run": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"']}, "max": 3, "interval_ms": 0})
+        r = self.run_d({"run": "daemon.json#/body", "body": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"']},
+                        "max": 3, "interval_ms": 0})
         self.assertEqual((r.returncode, r.stderr, len((self.s / "laps").read_text().split())), (0, "", 3))
 
     def test_needs_stack(self):
@@ -131,8 +136,8 @@ class T(unittest.TestCase):
 
     def test_exited_child_not_restarted(self):
         p = self.start({"state": "state.json", "max": 15, "interval_ms": 100,
-                        "children": {"once": {"run": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/starts"']},
-                                              "max": 1}}})
+                        "children": {"once": {"run": "daemon.json#/children/once/body", "max": 1,   # D4：內嵌單子
+                                              "body": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/starts"']}}}})
         out, err = p.communicate(timeout=30)
         k = self.kids()
         self.assertEqual((p.returncode, err, k["once"]["phase"], k["once"]["code"]), (0, "", "exited", 0))
@@ -140,11 +145,15 @@ class T(unittest.TestCase):
 
     def test_failing_child_stderr_in_cell(self):
         p = self.start({"state": "state.json", "max": 10, "interval_ms": 100,
-                        "children": {"bad": {"run": {"argv": ["sh", "-c", "exit 3"]}}}})
+                        "children": {"bad": {"run": "daemon.json#/children/bad/body",
+                                             "body": {"argv": ["sh", "-c", "exit 3"]}},
+                                     "obj": {"run": {"argv": ["true"]}}}})   # run 是物件＝子 loop 自己的錯（10-21）
         out, err = p.communicate(timeout=30)
         k = self.kids()
-        self.assertEqual((p.returncode, err, k["bad"]["phase"], k["bad"]["code"]), (0, "", "exited", 3))
+        self.assertEqual((p.returncode, err, k["bad"]["phase"], k["bad"]["code"], k["obj"]["phase"], k["obj"]["code"]),
+                         (0, "", "exited", 3, "exited", 1))
         self.assertIn("aos-loop: ", (self.s / "bad" / "stderr").read_text())
+        self.assertIn("loop.json#/body", (self.s / "obj" / "stderr").read_text())
 
     def test_ctl_children_add_and_remove(self):
         p = self.start({"state": "state.json", "ctl": "ctl.json", "children": {"a": self.long()}})

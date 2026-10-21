@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """aos-exec [旗標...] XXX [args...] — 在工作區執行 XXX 這個程式（N-57～N-62）。純標準庫。
 
-命令列（10-21 ideas）：XXX 前面是 aos-exec 自己的旗標（表在 FLAGS），第一個不是旗標的參數就是 XXX，之後原樣傳給入口；
+命令列（10-21 ideas）：XXX 前面是 aos-exec 自己的旗標（表在 FLAGS，解析在 aos_flags.py），第一個不是旗標的參數就是 XXX，之後原樣傳給入口；
 `--` 結束旗標（XXX 可以 - 開頭）。目前只有 `--ws WS`（或 `--ws=WS`）：工作區；沒給、`-`、空＝沿用 $AOS_WS，沒設用 .。
 旗標蓋過對應的環境變數。不認得的旗標、旗標缺值、沒有 XXX＝usage 錯。
 XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd；不在、basename 沒有 `.` → 補找 XXX.json。
@@ -174,28 +174,15 @@ FLAGS = {"--ws": "ws"}
 
 
 def parse(argv):
-    """[旗標...] XXX [args...] → (opts, XXX, args)。第一個不是旗標的參數（不以 - 開頭，或就是 -）就是 XXX。"""
-    opts, i = {}, 0
-    while i < len(argv):
-        a = argv[i]
-        if a == "--":
-            i += 1
-            break
-        if not a.startswith("-") or a == "-":
-            break
-        name, eq, val = a.partition("=")
-        if name not in FLAGS:
-            die("usage: %s（不認得的旗標 %s）" % (USAGE, name))
-        if not eq:
-            i += 1
-            if i == len(argv):
-                die("usage: %s（%s 缺值）" % (USAGE, name))
-            val = argv[i]
-        opts[FLAGS[name]] = val
-        i += 1
-    if i == len(argv):
+    """[旗標...] XXX [args...] → (opts, XXX, args)。解析規則在 aos_flags（aos-loop、aos-daemon 共用，10-21 plan L1）。"""
+    import aos_flags
+    try:
+        opts, rest = aos_flags.parse(argv, FLAGS)
+    except aos_flags.Error as e:
+        die("usage: %s（%s）" % (USAGE, e))
+    if not rest:
         die("usage: %s（沒有 XXX）" % USAGE)
-    return opts, argv[i], argv[i + 1:]
+    return opts, rest[0], rest[1:]
 
 
 

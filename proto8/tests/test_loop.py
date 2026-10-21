@@ -1,4 +1,4 @@
-"""aos-loop 直接叫（不經 aos-exec）的案例：PATH 原樣、訊號轉給那拍（ideas § 24）。
+"""aos-loop 直接叫（不經 aos-exec）的案例：PATH 原樣、訊號轉給那拍（ideas § 24）、命令列旗標（10-21 plan § 2）。
 訊號案例移植自 proto8/impls/aos-loop/tests/test_cli.py 的 C 段；其他 aos-loop 案例在 test_exec.py（經 agent 叫）。"""
 import json, os, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
@@ -25,7 +25,7 @@ def wait_file(path, secs=10):
     return False
 
 
-class T(unittest.TestCase):
+class Base(unittest.TestCase):
     def setUp(self):
         self._t = tempfile.TemporaryDirectory()
         self.t = Path(self._t.name)
@@ -41,15 +41,17 @@ class T(unittest.TestCase):
         (self.t / "loop.json").write_text(json.dumps(cfg))
 
     def start(self, env=None):
-        return subprocess.Popen([LOOP, "loop.json"], cwd=str(self.t), env=env_of(env), stdout=subprocess.PIPE,
+        return subprocess.Popen([LOOP, "--cfg", "loop.json"], cwd=str(self.t), env=env_of(env), stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, text=True)
 
+
+class T(Base):
     def test_string_run_path_as_is(self):
         # ideas § 24：字串 run 那拍看到的 PATH 跟 loop 收到的一樣（不加任何 bin）
         self.prog("cell", 'echo "$PATH" > "$AOS_STACK/path"\n')
         self.loop({"run": "cell", "max": 1})
         path = str(BIN) + ":/usr/bin:/bin"
-        r = subprocess.run([LOOP, "loop.json"], cwd=str(self.t), env=env_of({"PATH": path}), capture_output=True,
+        r = subprocess.run([LOOP, "--cfg", "loop.json"], cwd=str(self.t), env=env_of({"PATH": path}), capture_output=True,
                            text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((self.t / ".aos" / "path").read_text().strip(), path)
@@ -69,8 +71,10 @@ class T(unittest.TestCase):
     def test_sigint_forwarded_to_inst_lap(self):
         s = self.t / "stack"
         s.mkdir()
-        self.loop({"run": {"argv": ["sh", "-c", 'trap \'echo got > "$AOS_STACK/got"; exit 0\' INT; '
-                                    'touch "$AOS_STACK/up"; while :; do sleep 0.05; done']}, "max": 5})
+        # 內嵌單子寫 loop.json#/body（10-21）：那拍是 aos-exec 行程內跑單子，loop 轉給 aos-exec、它再轉給整群
+        self.loop({"run": "loop.json#/body", "max": 5,
+                   "body": {"argv": ["sh", "-c", 'trap \'echo got > "$AOS_STACK/got"; exit 0\' INT; '
+                                     'touch "$AOS_STACK/up"; while :; do sleep 0.05; done']}})
         p = self.start({"AOS_STACK": str(s)})
         ok = wait_file(s / "up")
         p.send_signal(signal.SIGINT)
@@ -96,13 +100,17 @@ class Windows(T):
         s.mkdir(exist_ok=True)
         return s
 
+    def loop(self, cfg):
+        # count() 指到 loop.json 裡的 body：每拍數一下（10-21 起 run 只收字串，內嵌單子走 loop.json#/body）
+        super().loop(dict({"body": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"']}}, **cfg))
+
     def run_loop(self, cfg, env=None, timeout=20):
         self.loop(cfg)
-        return subprocess.run([LOOP, "loop.json"], cwd=str(self.t), env=env_of(env), capture_output=True,
+        return subprocess.run([LOOP, "--cfg", "loop.json"], cwd=str(self.t), env=env_of(env), capture_output=True,
                               text=True, timeout=timeout)
 
     def count(self):
-        return {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"']}
+        return "loop.json#/body"
 
     def test_state_written_with_heartbeat(self):
         s = self.stack()
@@ -189,6 +197,109 @@ class Windows(T):
         st = json.loads((s / "state.json").read_text())
         self.assertEqual((ok, p.returncode, err, st["state"], st["code"], len((s / "laps").read_text().split())),
                          (True, 143, "", "stopped", 143, 1))
+
+
+class Cli(Base):
+    """命令列（10-21 plan § 2、L2～L12）：`aos-loop [--cfg] [--max] [--interval-ms] [--ctl] [--state] [XXX [args...]]`。"""
+
+    def stack(self):
+        s = self.t / "stack"
+        s.mkdir(exist_ok=True)
+        return s
+
+    def laps(self, s):
+        return (s / "laps").read_text().splitlines() if (s / "laps").exists() else []
+
+    def loop_cli(self, *argv, env=None, timeout=30):
+        return subprocess.run([LOOP, *argv], cwd=str(self.t), env=env_of(env), capture_output=True, text=True,
+                              timeout=timeout)
+
+    def mark(self, name):
+        # 每拍在 laps 記一行「名字 args...」
+        self.prog(name, 'echo "%s $*" >> "$AOS_STACK/laps"\n' % name)
+
+    def test_flags_override_cfg(self):
+        s = self.stack()
+        self.mark("a")
+        self.loop({"run": "a", "max": 5, "interval_ms": 0})
+        t0 = time.monotonic()
+        r = self.loop_cli("--cfg", "loop.json", "--max", "2", "--interval-ms=300", env={"AOS_STACK": str(s)})
+        self.assertEqual((r.returncode, r.stderr, len(self.laps(s))), (0, "", 2))
+        self.assertGreaterEqual(time.monotonic() - t0, 0.3)
+
+    def test_flag_windows(self):
+        s = self.stack()
+        self.mark("a")
+        (s / "c.json").write_text(json.dumps({"stop": True, "seq": 3}))
+        self.loop({"run": "a", "max": 2})
+        r = self.loop_cli("--cfg", "loop.json", "--ctl", "c.json", "--state=st.json", env={"AOS_STACK": str(s)})
+        st = json.loads((s / "st.json").read_text())
+        self.assertEqual((r.returncode, r.stderr, st["state"], st["ctl_seq"], self.laps(s)), (0, "", "stopped", 3, []))
+
+    def test_xxx_overrides_run_and_args_each_lap(self):
+        s = self.stack()
+        self.mark("a")
+        self.mark("b")
+        self.loop({"run": "a", "max": 2})
+        r = self.loop_cli("--cfg", "loop.json", "b", "x", "--max", "y", env={"AOS_STACK": str(s)})
+        self.assertEqual((r.returncode, r.stderr, self.laps(s)), (0, "", ["b x --max y"] * 2))
+
+    def test_xxx_without_cfg(self):
+        s = self.stack()
+        self.mark("b")
+        r = self.loop_cli("--max", "3", "b", env={"AOS_STACK": str(s)})
+        self.assertEqual((r.returncode, r.stderr, self.laps(s)), (0, "", ["b "] * 3))
+
+    def test_no_max_is_unlimited(self):
+        # L8：沒寫 max、沒給 --max＝不限（原本 10）；這裡靠第 12 拍退 10 收工
+        self.prog("c", 'echo x >> "$AOS_STACK/laps"; [ "$(wc -l < "$AOS_STACK/laps")" -ge 12 ] && exit 10; exit 0\n')
+        for i, argv in enumerate((("--cfg", "loop.json"), ("c",))):
+            s = self.t / ("stack%d" % i)
+            s.mkdir()
+            self.loop({"run": "c"})
+            r = self.loop_cli(*argv, env={"AOS_STACK": str(s)})
+            self.assertEqual((r.returncode, r.stderr, len(self.laps(s))), (0, "", 12), argv)
+
+    def test_run_object_is_own_error(self):
+        s = self.stack()
+        self.loop({"run": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"']}, "max": 1})
+        r = self.loop_cli("--cfg", "loop.json", env={"AOS_STACK": str(s)})
+        self.assertEqual((r.returncode, len(r.stderr.splitlines()), self.laps(s)), (1, 1, []))
+        self.assertTrue(r.stderr.startswith("aos-loop: ") and "loop.json#/body" in r.stderr, r.stderr)
+
+    def test_dash_target_not_flag(self):
+        # L10：loop 叫 aos-exec 時寫 `aos-exec -- 目標`，- 開頭的目標不會被 aos-exec 當旗標
+        s = self.stack()
+        self.mark("-p")
+        self.loop({"run": "-p", "max": 1})
+        r1 = self.loop_cli("--cfg", "loop.json", env={"AOS_STACK": str(s)})
+        r2 = self.loop_cli("--max", "1", "--", "-p", "z", env={"AOS_STACK": str(s)})
+        self.assertEqual((r1.returncode, r1.stderr, r2.returncode, r2.stderr, self.laps(s)),
+                         (0, "", 0, "", ["-p ", "-p z"]))
+
+    def test_usage_and_own_errors(self):
+        self.mark("a")
+        self.loop({"max": 1})
+        for argv in ((), ("--max=abc", "a"), ("--max", "-1", "a"), ("--interval-ms", "1.5", "a"), ("--max",),
+                     ("--bogus", "1", "a"), ("--cfg", "nope.json"), ("--cfg", "loop.json")):
+            r = self.loop_cli(*argv)
+            self.assertEqual((r.returncode, len(r.stderr.splitlines())), (1, 1), (argv, r.stderr))
+            self.assertTrue(r.stderr.startswith("aos-loop: "), (argv, r.stderr))
+        self.assertIn("沒有東西可跑", self.loop_cli("--cfg", "loop.json").stderr)
+        self.assertIn("usage", self.loop_cli().stderr)
+
+    def test_aos_exec_loop_json_via_exec_key(self):
+        # L12：loop.json 帶 _exec，`aos-exec loop.json` 就把 loop 跑起來（沒 argv 的物件當資料夾、取 _exec；cwd＝它的資料夾）
+        d = self.t / "agent"
+        d.mkdir()
+        (d / "loop.json").write_text(json.dumps({
+            "_exec": ["aos-loop", "--cfg", "loop.json"], "run": "loop.json#/body", "max": 2,
+            "body": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"']}}))
+        ws = self.t / "ws"
+        ws.mkdir()
+        r = subprocess.run([str(BIN / "aos-exec"), "--ws", str(ws), str(d / "loop.json")], cwd=str(self.t),
+                           env=env_of(), capture_output=True, text=True, timeout=30)
+        self.assertEqual((r.returncode, r.stderr, len(self.laps(ws / ".aos"))), (0, "", 2))
 
 
 if __name__ == "__main__":

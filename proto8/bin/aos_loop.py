@@ -1,14 +1,19 @@
 """aos_loop：反覆跑的程式的骨架（aos-loop、aos-daemon 共用；daemon.json 是 loop.json 的超集，N-28）。純標準庫。
 
     import aos_loop
-    sys.exit(aos_loop.Loop(設定檔路徑).main())
+    sys.exit(aos_loop.cli(aos_loop.Loop, sys.argv))
 
-設定檔（loop.json）的 key：
-    run           每拍跑的身體：字串＝子資料夾（`aos-exec` 它）、物件＝一張單子（行程內 aos_inst.run()）；loop 必填
-    max           最多幾拍（非負整數；loop 沒寫＝10）
+命令列（10-21 plan § 2）：`程式 [--cfg 設定檔] [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [XXX [args...]]`，
+旗標放 XXX 前面、規則同 aos-exec（aos_flags）。起跑時 旗標 ＞ 設定檔 ＞ 預設；命令列 XXX 蓋過設定檔的 run，
+XXX 後的 args 每拍原樣接在目標後面。沒 --cfg 也沒 XXX＝usage 錯。
+
+設定檔（loop.json）的 key（旗標名＝key 名底線換連字號）：
+    run           每拍跑的目標：字串＝aos-exec 的目標（每拍 `aos-exec -- <run> args...`；相對路徑照 cwd，loop 不轉）；
+                  只收字串，要內嵌單子寫 "loop.json#/body"（單子放在 body）；loop 必填（或命令列給 XXX）
+    max           最多幾拍（非負整數；沒寫＝不限）
     interval_ms   一拍結束到下一拍開始至少隔幾毫秒（非負整數；loop 沒寫＝0）
     ctl, state    兩扇窗的檔名，在 $AOS_STACK 底下（N-09、N-13）；沒寫＝不開、不提醒；寫了卻沒設 AOS_STACK＝退 1
-其他 key 忽略。
+其他 key 忽略（body、_exec…）。跑的途中 ctl 蓋過上面這些（每圈讀一次、後到先贏）。
 
 每圈：看有沒有收到訊號 → 讀 ctl（N-06～N-08；能蓋 max、interval_ms，認 paused、stop、seq）→ tend()（子類別的事）
 → stop 就結束、拍滿 max 就結束 → paused 或還沒到下一拍的時間就睡一下（最多 1 秒，期間每 50 毫秒看一次訊號）、回頭再看
@@ -21,7 +26,10 @@ import os
 import sys
 import time
 
+import re
+
 import aos_beat
+import aos_flags
 import aos_inst
 import aos_window
 
@@ -38,25 +46,41 @@ def _nat(v):
 
 class Loop:
     prog = "aos-loop"
-    max_default = 10          # None＝不限
+    max_default = None        # None＝不限（10-21 plan L8，原 10）
     interval_default = 0
     need_run = True
     ctl_extra = {}            # ctl 多認的 key：{key: 驗證函數（回錯誤字串或 None）}
 
-    def __init__(self, path):
-        try:
-            with open(path, encoding="utf-8") as f:
-                cfg = json.load(f)
-        except (OSError, ValueError) as e:
-            raise ConfigError("讀不到或不是 JSON：%s（%s）" % (path, e))
-        if not isinstance(cfg, dict):
-            raise ConfigError("設定檔要是 JSON 物件")
-        self.cfg = cfg
-        run = cfg.get("run")
-        if run is None and self.need_run or run is not None and not isinstance(run, (str, dict)):
-            raise ConfigError('run 要是子資料夾或單子（{"run": …, "max": 圈數}）')
+    def __init__(self, opts, rest):
+        """opts＝命令列旗標（aos_flags 解出來的字串），rest＝[XXX, args...]（可能是空的）。"""
+        path = opts.get("cfg")
+        cfg = {}
+        if path is not None:
+            try:
+                with open(path, encoding="utf-8") as f:
+                    cfg = json.load(f)
+            except (OSError, ValueError) as e:
+                raise ConfigError("讀不到或不是 JSON：%s（%s）" % (path, e))
+            if not isinstance(cfg, dict):
+                raise ConfigError("設定檔要是 JSON 物件")
+        self.cfg = cfg = dict(cfg)
+        for k in ("max", "interval_ms"):      # 旗標 ＞ 設定檔 ＞ 預設（L5）
+            if k in opts:
+                if not re.fullmatch(r"[0-9]+", opts[k]):
+                    raise ConfigError("--%s 要是非負整數" % k.replace("_", "-"))
+                cfg[k] = int(opts[k])
+        for k in ("ctl", "state"):
+            if k in opts:
+                cfg[k] = opts[k]
+        run = rest[0] if rest else cfg.get("run")
+        self.args = rest[1:]
+        if isinstance(run, dict):
+            raise ConfigError("run 要是 aos-exec 的目標（字串）；要內嵌單子寫 loop.json#/body")
+        if run is not None and not isinstance(run, str):
+            raise ConfigError("run 要是 aos-exec 的目標（字串）")
+        if run is None and self.need_run:
+            raise ConfigError("沒有東西可跑（設定檔沒有 run，命令列也沒給 XXX）")
         self.run = run
-        self.ref_base = os.path.dirname(os.path.realpath(path))   # 單子裡 $ref 的起點（N-45）
         self.max = cfg.get("max", self.max_default)
         if not (self.max is None and "max" not in cfg or _nat(self.max)):
             raise ConfigError("max 要是非負整數")
@@ -144,7 +168,7 @@ class Loop:
             self.write("running")
             if self.run is not None:
                 try:
-                    b = aos_beat.run(self.run, self.ref_base)
+                    b = aos_beat.run(self.run, args=self.args)
                 except aos_inst.InstError as e:
                     self.say(str(e))
                     return self.end(1, "done")
@@ -153,20 +177,29 @@ class Loop:
                 if b["code"] == STOP:
                     return self.end(0, "done")
                 if b["code"]:
-                    name = self.run if isinstance(self.run, str) else " ".join(map(str, self.run.get("argv", ["?"])))
-                    self.say("第 %d 圈 %s 失敗，結束碼 %d" % (self.lap, name, b["code"]))
+                    self.say("第 %d 圈 %s 失敗，結束碼 %d" % (self.lap, self.run, b["code"]))
                     return self.end(b["code"], "done")
             next_at = time.monotonic() + iv / 1000
 
 
+# 旗標表（aos_flags）：旗標名＝設定檔的 key 名底線換連字號（C-54）
+FLAGS = {"--cfg": "cfg", "--max": "max", "--interval-ms": "interval_ms", "--ctl": "ctl", "--state": "state"}
+
+
 def cli(cls, argv):
-    """命令列：`程式 設定檔`。"""
+    """命令列：`程式 [--cfg 設定檔] [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [XXX [args...]]`。"""
     aos_beat.block()
-    if len(argv) < 2:
-        print("%s: usage: %s 設定檔.json" % (cls.prog, cls.prog), file=sys.stderr)
+    usage = "%s [--cfg 設定檔.json] [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [XXX [args...]]" % cls.prog
+    try:
+        opts, rest = aos_flags.parse(argv[1:], FLAGS)
+    except aos_flags.Error as e:
+        print("%s: usage: %s（%s）" % (cls.prog, usage, e), file=sys.stderr)
+        return 1
+    if "cfg" not in opts and not rest:
+        print("%s: usage: %s（沒有 --cfg 也沒有 XXX）" % (cls.prog, usage), file=sys.stderr)
         return 1
     try:
-        me = cls(argv[1])
+        me = cls(opts, rest)
     except ConfigError as e:
         print("%s: %s" % (cls.prog, e), file=sys.stderr)
         return 1

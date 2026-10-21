@@ -188,10 +188,12 @@ class T(unittest.TestCase):
         self.tools()
         q = self.t / "q"
         stack = self.t / "st"; stack.mkdir()
-        loop = put(q / "loop.json", {"run": {"argv": ["tools/stamp", "L"], "cwd": str(q),
-                                             "stdout": {"$env": "AOS_STACK", "$path": "out"},
-                                             "envs": {"MSG": {"$ref": "sub/data.json#/msg"}}}, "max": 1})
-        r = run("aos-loop", loop, cwd=self.t, env={"AOS_WS": str(self.ws), "AOS_STACK": str(stack)})
+        # 10-21：loop 的內嵌單子寫 檔#/body；run 的相對路徑照 cwd 算（L4），單子裡的 $ref 由 aos-exec 從 loop.json 的資料夾算
+        loop = put(q / "loop.json", {"run": "q/loop.json#/body", "max": 1,
+                                     "body": {"argv": ["tools/stamp", "L"], "cwd": str(q),
+                                              "stdout": {"$env": "AOS_STACK", "$path": "out"},
+                                              "envs": {"MSG": {"$ref": "sub/data.json#/msg"}}}})
+        r = run("aos-loop", "--cfg", loop, cwd=self.t, env={"AOS_WS": str(self.ws), "AOS_STACK": str(stack)})
         self.assertEqual(r[0], 0, r[2])
         self.assertTrue((stack / "out").read_text().endswith("arg=L\n"))
         # fsm：$ref 從 fsm.json 所在的資料夾算（cwd 在別處）

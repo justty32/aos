@@ -111,3 +111,4 @@
   `git -c core.quotepath=false -c core.ignorecase=false add -- <檔>`，或 `git add -u -- proto8 wf`
   （只加已追蹤的修改；未追蹤的 `proto8/impls/` 本來就不會被加）。**add 完再看一次 `git status --short`，
   確認沒有剩下前面是空格的 ` M`**（＝改了沒 add）。
+- **WSL 看 `/mnt/c` 底下的檔全是 `+x`**（沒開 metadata）：aos-exec 會把 repo 裡的 JSON 入口（`loop.json#/body`）當可執行檔，報 `入口壞：可執行檔不能帶 #/`（10-21 撞到）。跑 proto8 測試與 demo 前，先把 `proto8/` 複製到 WSL 自己的檔案系統、全部 `chmod 644`，再照 `git ls-files -s` 的 `100755` 補 `+x`。
