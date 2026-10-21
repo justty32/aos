@@ -11,12 +11,13 @@ XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd�
 argv[0] 帶 / 又 exec 不了＝前面插 aos-exec、照 PATH 找，D3）、有 argv 的物件＝inst 單子（行程內 aos_inst.run，以子程式的碼結束）、
 沒 argv 的物件＝取 [$AOS_ENTRY] 再判一次（只往下一層）、字串＝路徑轉向（從寫著它的檔所在的資料夾算，繞圈＝入口壞）。
 開跑前 export AOS_WS、AOS_STACK（沒設＝$AOS_WS/.aos/，建好）、AOS_CF（實際的檔）、AOS_CD（它的資料夾），
-cd 到 AOS_CD；PATH 不動、原樣傳下去（ideas § 24；入口裡要叫 aos-exec、aos-loop… 由呼叫者事先放進 PATH）。args 接在入口後面，stdin 原樣給入口。
+cd 到 AOS_CD、讀那裡的 .env（10-21 ideas § 4；旗標 ＞ .env ＞ 原本的環境變數 ＞ 預設；字串轉向＝全新的一次、旗標不帶、每跳讀自己的 .env）；PATH 不動、原樣傳下去（ideas § 24；入口裡要叫 aos-exec、aos-loop… 由呼叫者事先放進 PATH）。args 接在入口後面，stdin 原樣給入口。
 自己的錯退 1，stderr 一行「aos-exec: 原因」（N-60）。
 """
 import errno
 import json
 import os
+import re
 import signal
 import sys
 
@@ -75,8 +76,9 @@ def locate(spec, base):
     return os.path.realpath(f), ptr
 
 
-def find(spec, base, seen=()):
-    """回 (種類, 值, 實際的檔)。種類：exe（值＝None）、argv（字串陣列）、inst（單子 dict）。"""
+def find(spec, base, seen):
+    """回 (種類, 值, 實際的檔)。種類：exe（值＝None）、argv（陣列）、inst（單子 dict）、redir（值＝轉向的路徑）。
+    seen＝這條轉向鏈走過的 (檔, 指標)，就地加上這一個；走回去＝繞圈。"""
     f, ptr = locate(spec, base)
     if os.access(f, os.X_OK):
         if ptr is not None:
@@ -84,9 +86,9 @@ def find(spec, base, seen=()):
         return "exe", None, f
     where = (f, ptr or "")
     if where in seen:
-        chain = [a + b for a, b in seen + (where,)]
+        chain = [a + b for a, b in seen + [where]]
         raise Fail("入口壞：字串轉向繞圈：%s" % " → ".join(chain))
-    seen = seen + (where,)
+    seen.append(where)
     try:
         with open(f, encoding="utf-8") as fh:
             text = fh.read()
@@ -106,8 +108,8 @@ def find(spec, base, seen=()):
         doc = doc[entry_name()]
         if isinstance(doc, dict) and "argv" not in doc:
             raise Fail("入口壞：%s 的 %s 不是單子、argv 陣列或路徑" % (f, entry_name()))
-    if isinstance(doc, str):
-        return find(doc, os.path.dirname(f), seen)
+    if isinstance(doc, str):   # 字串轉向＝交給下一層、全新的一次 aos-exec（main 的迴圈做；10-21 .env）
+        return "redir", doc, f
     if isinstance(doc, dict):
         return "inst", doc, f
     if isinstance(doc, list) and doc:   # 元素可以是字串或指示詞（10-20 ideas D2、D8），開跑前才解
@@ -191,26 +193,93 @@ def parse(argv):
     return opts, argv[i], argv[i + 1:]
 
 
-def main(argv):
-    opts, spec, args = parse(argv)
+NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
+REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+
+def load_env(d):
+    """讀 d/.env、逐行套進 os.environ（10-21 ideas § 4）。沒有＝什麼都不做。
+    一行 `名字=值`：去行尾 \r、去前導空白後空的或 # 開頭跳過；= 只切第一個；值照字面、只展開 ${名字}（逐行，後面看得到前面設的）；
+    孤零零的 $ 原樣留。錯（讀不到、格式不合、${名字} 沒設）只印檔名和行號，絕不印值。"""
+    p = os.path.join(d, ".env")
+    if not os.path.lexists(p):
+        return
+    try:
+        with open(p, encoding="utf-8", newline="") as fh:
+            lines = fh.read().split("\n")
+    except OSError as e:
+        raise Fail(".env 讀不到：%s（%s）" % (p, e.strerror))
+    except ValueError:
+        raise Fail(".env 壞：%s 不是 UTF-8" % p)
+    for n, line in enumerate(lines, 1):
+        def bad(why):
+            raise Fail(".env 壞：%s 第 %d 行（%s）" % (p, n, why))
+        line = line.lstrip()
+        if line.endswith("\r"):
+            line = line[:-1]
+        if not line or line.startswith("#"):
+            continue
+        name, eq, val = line.partition("=")
+        if not eq:
+            bad("沒有 =")
+        if not NAME.match(name):
+            bad("名字要是英數字和底線、不以數字開頭")
+        out, i = [], 0
+        while True:
+            j = val.find("${", i)
+            if j < 0:
+                out.append(val[i:])
+                break
+            m = REF.match(val, j)
+            if not m:
+                bad("${ 後面要接 名字}")
+            if m.group(1) not in os.environ:
+                bad("${…} 引用的環境變數沒設")
+            out += [val[i:j], os.environ[m.group(1)]]
+            i = m.end()
+        val = "".join(out)
+        if "\0" in val:
+            bad("值不能有 NUL")
+        os.environ[name] = val
+
+
+def hop(spec, base, opts, seen):
+    """一次 aos-exec（N-59）：定工作區 → 找入口 → 設 AOS_* → cd 到 AOS_CD → 讀那裡的 .env → 旗標再蓋回去
+    （旗標 ＞ .env ＞ 原本的環境變數 ＞ 預設）。回 find 的 (種類, 值, 實際的檔)。"""
     ws = opts.get("ws", "-")   # 旗標蓋過 $AOS_WS；沒給／-／空才沿用
-    if ws in ("-", ""):
+    flag_ws = ws not in ("-", "")
+    if not flag_ws:
         ws = os.environ.get("AOS_WS") or "."
     if not os.path.isdir(ws):
-        die("工作區不存在：%s" % ws)
+        raise Fail("工作區不存在：%s" % ws)
+    kind, val, f = find(spec, base, seen)
+    ws = os.path.abspath(ws)
+    stack = os.environ.get("AOS_STACK") or os.path.join(ws, ".aos")
     try:
-        kind, val, f = find(spec, os.getcwd())
-        ws = os.path.abspath(ws)
-        stack = os.environ.get("AOS_STACK") or os.path.join(ws, ".aos")
-        try:
-            os.makedirs(stack, exist_ok=True)
-        except OSError as e:
-            raise Fail("建不了 AOS_STACK：%s（%s）" % (stack, e.strerror))
-        cd = os.path.dirname(f)
-        os.environ.update(AOS_WS=ws, AOS_STACK=os.path.join(os.path.abspath(stack), ""),
-                          AOS_CF=f, AOS_CD=cd)
-        os.chdir(cd)
-        return launch(kind, val, f, args)
+        os.makedirs(stack, exist_ok=True)
+    except OSError as e:
+        raise Fail("建不了 AOS_STACK：%s（%s）" % (stack, e.strerror))
+    cd = os.path.dirname(f)
+    os.environ.update(AOS_WS=ws, AOS_STACK=os.path.join(os.path.abspath(stack), ""),
+                      AOS_CF=f, AOS_CD=cd)
+    os.chdir(cd)
+    load_env(cd)   # .env 什麼都能設（含 AOS_*），不限制；已經 cd 過，改 AOS_CD 不會再 cd
+    if flag_ws:
+        os.environ["AOS_WS"] = ws
+    return kind, val, f
+
+
+def main(argv):
+    opts, spec, args = parse(argv)
+    base, seen = os.getcwd(), []
+    try:
+        while True:
+            kind, val, f = hop(spec, base, opts, seen)
+            if kind != "redir":
+                return launch(kind, val, f, args)
+            # 字串轉向＝交給下一層、全新的一次 aos-exec（C-52）：旗標不帶過去、args 原樣接過去，
+            # 下一層自己定工作區、cd、讀它那裡的 .env（疊在這層設好的環境上）。繞圈偵測沿用同一條鏈。
+            spec, base, opts = val, os.path.dirname(f), {}
     except Fail as e:
         die(e)
 
