@@ -70,7 +70,7 @@ class T(unittest.TestCase):
     def cfg(self, doc):
         (self.t / "daemon.json").write_text(json.dumps(doc))
 
-    def run_d(self, doc, timeout=30, env=None, argv=("--cfg", "daemon.json")):
+    def run_d(self, doc, timeout=30, env=None, argv=("daemon.json",)):
         if doc is not None:
             self.cfg(doc)
         return subprocess.run([DAEMON, *argv], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)} if env is None else env),
@@ -79,7 +79,7 @@ class T(unittest.TestCase):
     def start(self, doc=None):
         if doc is not None:
             self.cfg(doc)
-        p = subprocess.Popen([DAEMON, "--cfg", "daemon.json"], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)}),
+        p = subprocess.Popen([DAEMON, "daemon.json"], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)}),
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         self.procs.append(p)
         return p
@@ -110,7 +110,7 @@ class T(unittest.TestCase):
         self.assertTrue(r.stderr.startswith("aos-daemon: ") and "AOS_STACK" in r.stderr, r.stderr)
 
     def test_bad_children_is_own_error(self):
-        for bad in ([1], {"a/b": "x"}, {"a": 3}):
+        for bad in ([1], {"a/b": "x"}, {"a": 3}, {"a#b": "x"}, {".a": "x"}):
             r = self.run_d({"children": bad, "max": 1})
             self.assertEqual(r.returncode, 1, bad)
             self.assertTrue(r.stderr.startswith("aos-daemon: "), r.stderr)
@@ -125,7 +125,9 @@ class T(unittest.TestCase):
         self.assertTrue(k)
         self.assertEqual({n: r["phase"] for n, r in k.items()}, {"a": "running", "b": "running"})
         a = json.loads((self.s / "a" / "loop.json").read_text())
-        self.assertEqual(a, {"run": "sub", "ctl": "ctl.json", "state": "state.json"})
+        # 10-21 傍晚：相對的 run 照 daemon 的 cwd 轉成絕對、蓋上 _exec，子 loop 經 aos-exec 起
+        self.assertEqual(a, {"run": os.path.join(os.path.realpath(self.t), "sub"), "ctl": "ctl.json", "state": "state.json",
+                             "_exec": ["aos-loop", {"$env": "AOS_CF"}]})
         self.assertTrue(until(lambda: json.loads((self.s / "b" / "state.json").read_text())["state"] == "running"))
         pids = [r["pid"] for r in k.values()]
         self.ctl({"stop": True, "seq": 1})
@@ -184,23 +186,39 @@ class T(unittest.TestCase):
         # --max／--interval-ms 蓋過 daemon.json（旗標 ＞ 設定檔）；state 回報實際生效的值
         r = self.run_d({"run": "daemon.json#/body", "body": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"']},
                         "max": 100, "interval_ms": 5000, "state": "state.json"},
-                       argv=("--cfg", "daemon.json", "--max", "3", "--interval-ms", "0"))
+                       argv=("--max", "3", "--interval-ms", "0", "daemon.json"))
         st = self.state()
         self.assertEqual((r.returncode, r.stderr, len((self.s / "laps").read_text().split())), (0, "", 3))
         self.assertEqual((st["max"], st["interval_ms"], st["state"]), (3, 0, "done"))
 
-    def test_xxx_is_own_run(self):
-        # XXX＝daemon 自己的 run，args 每拍接上；有 --cfg 時 XXX 蓋過 daemon.json 的 run
+    def test_run_array_and_cfg_rules(self):
+        # 10-21 傍晚：唯一的位置參數＝設定檔；run 可以是 [目標, 參數...]，參數每拍接上；設定檔可寫 檔#/指標
         job = self.t / "job"
         job.mkdir()
         (job / "_exec").write_text('#!/bin/sh\necho "$@" >> "$AOS_STACK/laps"\n')
         (job / "_exec").chmod(0o755)
-        self.cfg({"run": "nope", "interval_ms": 0})
-        for argv in (("--max", "2", "--interval-ms", "0", "job", "a", "b"),
-                     ("--cfg", "daemon.json", "--max", "2", "job", "a", "b")):
+        self.cfg({"run": ["job", "a", "b"], "interval_ms": 0, "max": 2, "sub": {"run": ["job", "c"], "max": 1}})
+        for argv, want in ((("daemon.json",), "a b\na b\n"), (("daemon.json#/sub",), "c\n")):
             (self.s / "laps").unlink(missing_ok=True)
             r = self.run_d(None, argv=argv)
-            self.assertEqual((r.returncode, r.stderr, (self.s / "laps").read_text()), (0, "", "a b\na b\n"), argv)
+            self.assertEqual((r.returncode, r.stderr, (self.s / "laps").read_text()), (0, "", want), argv)
+        for argv in ((), ("daemon.json", "job"), ("--cfg", "daemon.json")):
+            r = self.run_d(None, argv=argv)
+            self.assertEqual((r.returncode, r.stderr.startswith("aos-daemon: usage: ")), (1, True), (argv, r.stderr))
+
+    def test_child_started_through_aos_exec(self):
+        # 使用者 10-21 傍晚「5.要」：子 loop 經 aos-exec 起（aos-exec 設好 AOS_CF／AOS_CD 再 exec 成 aos-loop，pid 不變）
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "children": {"a": ["long"]}})
+        k = until(lambda: (self.s / "a" / "starts").exists() and self.kids())
+        env = dict(x.split("=", 1) for x in Path("/proc/%d/environ" % k["a"]["pid"]).read_text().split("\0") if "=" in x)
+        cell = os.path.realpath(self.s / "a")
+        self.assertEqual((env.get("AOS_CF"), env.get("AOS_CD"), env.get("AOS_CO")),
+                         (os.path.join(cell, "loop.json"), cell, "/_exec"))
+        self.assertEqual(json.loads((self.s / "a" / "loop.json").read_text())["run"],
+                         [os.path.join(os.path.realpath(self.t), "long")])
+        self.ctl({"stop": True})
+        p.communicate(timeout=30)
+        self.assertEqual(p.returncode, 0)
 
     def test_string_child_is_exec_target(self):
         # 字串子項＝aos-exec 的目標（不限資料夾，這裡指進 daemon.json），包成 {"run": 它}
@@ -211,7 +229,8 @@ class T(unittest.TestCase):
         k = self.kids()
         self.assertEqual((p.returncode, err, k["s"]["phase"], k["s"]["code"]), (0, "", "exited", 0))
         self.assertEqual(json.loads((self.s / "s" / "loop.json").read_text()),
-                         {"run": "daemon.json#/kids/s", "ctl": "ctl.json", "state": "state.json"})
+                         {"run": os.path.join(os.path.realpath(self.t), "daemon.json#/kids/s"), "ctl": "ctl.json",
+                          "state": "state.json", "_exec": ["aos-loop", {"$env": "AOS_CF"}]})
         self.assertEqual(len((self.s / "s" / "starts").read_text().split()), 1)
 
     def test_child_dead_at_finish_marked_exited(self):

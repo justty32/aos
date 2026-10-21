@@ -17,8 +17,8 @@
 （第一行 #! 跳過）；{"$ref": "檔#/a"} 或 {"$ref": "檔", "at": "/a"} 換成檔內那個位置的值（JSON pointer；兩個都寫＝
 at 接在 #/ 後面，10-20 ideas D1、D7）；換進來的值接著解。相對檔名從寫著這個 $ref 的檔所在的資料夾算（ref_base；
 被 $ref 進來的檔解開捷徑再算）。指標取的是檔的原文（不穿過裡面的 $ref）。
-換出來是字串時：有 "$path" 就 os.path.join(值, $path)，再在前面加 "$prefix"（10-20 ideas D9～D11；舊的 "path" key
-不再有作用）；換出來不是字串，$path／$prefix 靜默不作用。
+換出來是字串時：有 "$path" 就接上去（字串拼接：`#` 開頭直接接，其他中間剛好一個 /，寫絕對路徑也是接上去；
+10-21 傍晚 ideas § 9，原 os.path.join），再在前面加 "$prefix"（10-20 ideas D9～D11；舊的 "path" key 不再有作用）；換出來不是字串，$path／$prefix 靜默不作用。
 錯分兩類（10-20 ideas D12～D15）：真的解不開——變數沒設、$ref 檔讀不到（含不是 JSON）、指不到、繞圈——＝單子的錯；
 寫法（格式）寬容——物件有 $ref 就只看 $ref（$env 不管），其餘 key、不認得的 $xxx 都不管；$path／$prefix／at 不是
 字串（at 也不是空字串或 / 開頭）＝當沒寫；$ref／$env 的值不是字串或空字串、# 後不是 /、只有 #/… 沒檔名＝換不了，
@@ -103,9 +103,19 @@ def _env(x):
     return os.environ[name]
 
 
+def join(v, sub):
+    """$path 的字串拼接（10-21 傍晚 ideas § 9，原 os.path.join）：sub 以 # 開頭＝直接接在後面（`x.json` + `#/a`）；
+    空字串＝不接；其他＝去掉 v 結尾的 /、去掉 sub 開頭的 /，中間剛好一個 /（寫絕對路徑不再整個取代）。"""
+    if not sub:
+        return v
+    if sub.startswith("#"):
+        return v + sub
+    return v.rstrip("/") + "/" + sub.lstrip("/")
+
+
 def _resolve(x, base, chain=()):
     """把 x 裡所有指示詞換掉（N-45，10-20 改）：有 $ref／$env 的物件整個換成值，物件裡其餘 key 不管；
-    換出來是字串時再照 $path 接路徑、前面加 $prefix（兩欄不是字串＝當沒寫）。"""
+    換出來是字串時再照 $path 接上去（join）、前面加 $prefix（兩欄不是字串＝當沒寫）。"""
     if isinstance(x, list):
         return [_resolve(v, base, chain) for v in x]
     if not isinstance(x, dict):
@@ -121,7 +131,7 @@ def _resolve(x, base, chain=()):
     if isinstance(v, str):              # 換出來不是字串＝$path／$prefix 靜默不作用
         sub, pre = x.get("$path"), x.get("$prefix")
         if isinstance(sub, str):
-            v = os.path.join(v, sub)
+            v = join(v, sub)
         if isinstance(pre, str):
             v = pre + v
     return v

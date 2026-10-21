@@ -39,7 +39,7 @@ class T(unittest.TestCase):
         return {"val": "fsm.json#/states/%s/body" % name, "body": inst, "next": nxt}
 
     def beat(self, fsm=None, **kw):
-        return run(FSM, "--cfg", fsm or str(self.tmp / "fsm.json"), stack=self.stack, cwd=str(self.tmp), **kw)
+        return run(FSM, fsm or str(self.tmp / "fsm.json"), stack=self.stack, cwd=str(self.tmp), **kw)
 
     def state(self):
         return (self.stack / "state").read_text()
@@ -117,25 +117,45 @@ class T(unittest.TestCase):
         self.assertFalse((self.stack / "ran").exists())
         self.assertFalse((self.stack / "trace.jsonl").exists())
 
-    def test_cfg_flag_only(self):
-        # F1：aos-fsm [--cfg fsm.json]；--cfg=檔 也行；位置參數、沒 --cfg、不認得的旗標＝usage 錯
+    def test_cfg_is_only_positional(self):
+        # 10-21 傍晚 ideas § 9：aos-fsm [旗標] 設定檔（原 --cfg 拿掉）；可寫 檔#/指標；沒給、多給、--cfg、不認得的旗標＝usage 錯
         self.cell("a", "exit 0\n")
         f = self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "a", "next": "a"}})
-        r = run(FSM, "--cfg=" + f, stack=self.stack, cwd=str(self.tmp))
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.state(), "b\n")
-        for argv in ([f], [], ["--cfg"], ["--cfg", f, "extra"], ["--max", "1", "--cfg", f]):
+        r = run(FSM, "--", f, stack=self.stack, cwd=str(self.tmp))
+        self.assertEqual((r.returncode, r.stderr, self.state()), (0, "", "b\n"))
+        (self.tmp / "big.json").write_text(json.dumps({"fsms": {"x": {"start": "a", "states": {
+            "a": {"val": "a", "next": "c"}, "c": {"val": "a", "next": "a"}}}}}))
+        (self.stack / "state").unlink()
+        r = run(FSM, str(self.tmp / "big.json") + "#/fsms/x", stack=self.stack, cwd=str(self.tmp))
+        self.assertEqual((r.returncode, r.stderr, self.state()), (0, "", "c\n"))
+        for argv in ([], ["--cfg", f], ["--cfg=" + f], [f, "extra"], ["--max", "1", f]):
             r = run(FSM, *argv, stack=self.stack, cwd=str(self.tmp))
             self.assertEqual(r.returncode, 1, argv)
             self.assertEqual(len(r.stderr.strip().splitlines()), 1, argv)
             self.assertTrue(r.stderr.startswith("aos-fsm: usage: "), (argv, r.stderr))
-        self.assertEqual(self.state(), "b\n")   # usage 錯不跑格
+        for argv in ([f + "#/nope"], [f + "#x"], [f + "#/start"]):
+            r = run(FSM, *argv, stack=self.stack, cwd=str(self.tmp))
+            self.assertEqual((r.returncode, len(r.stderr.strip().splitlines())), (1, 1), argv)
+            self.assertTrue(r.stderr.startswith("aos-fsm: ") and "usage" not in r.stderr, (argv, r.stderr))
+        self.assertEqual(self.state(), "c\n")   # 錯就不跑格
+
+    def test_val_array_args(self):
+        # val＝[目標, 參數...]（比照 loop 的 run）：每拍 aos-exec -- 目標 參數...；元素不是字串、空陣列＝表壞
+        self.cell("a", 'echo "$@" > "$AOS_STACK/args"\n')
+        self.table({"a": {"val": ["a", "x", "--y"], "next": "a"}})
+        r = self.beat()
+        self.assertEqual((r.returncode, r.stderr, (self.stack / "args").read_text()), (0, "", "x --y\n"))
+        for bad in ([], ["a", 1], 3):
+            self.table({"a": {"val": bad, "next": "a"}})
+            r = self.beat()
+            self.assertEqual((r.returncode, len(r.stderr.strip().splitlines())), (1, 1), bad)
+            self.assertTrue(r.stderr.startswith("aos-fsm: "), r.stderr)
 
     def test_fsm_json_as_exec_entry(self):
         # F6：fsm.json 帶 _exec，`aos-exec fsm.json` 就是一拍；cwd＝fsm.json 的資料夾，表裡的 _exec、body 都被 fsm 忽略
         self.cell("a", 'touch "$AOS_STACK/ran"\n')   # 從 elsewhere 叫也找得到 a＝fsm 的 cwd 是 fsm.json 的資料夾
         f = self.table({"a": {"val": "a", "next": "b"}, "b": self.body("b", {"argv": ["sh", "-c", "exit 10"]})},
-                       _exec=["aos-fsm", "--cfg", "fsm.json"])
+                       _exec=["aos-fsm", {"$env": "AOS_CF"}])
         other = self.tmp / "elsewhere"; other.mkdir()
         e = {"AOS_WS": str(self.tmp)}
         self.assertEqual(run(str(BIN / "aos-exec"), f, stack=self.stack, cwd=str(other), env=e).returncode, 0)
@@ -158,7 +178,7 @@ class T(unittest.TestCase):
 
     def test_requires_stack(self):
         self.table({"a": {"val": "a", "next": "a"}})
-        r = run(FSM, "--cfg", str(self.tmp / "fsm.json"), cwd=str(self.tmp))
+        r = run(FSM, str(self.tmp / "fsm.json"), cwd=str(self.tmp))
         self.assertEqual(r.returncode, 1)
         self.assertIn("沒設定 AOS_STACK", r.stderr)
 
@@ -215,7 +235,7 @@ class T(unittest.TestCase):
         e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY", "AOS_STACK")}
         e["PATH"] = str(BIN) + os.pathsep + e["PATH"]
         e["AOS_STACK"] = str(self.stack)
-        return subprocess.Popen([FSM, "--cfg", str(self.tmp / "fsm.json")], cwd=str(self.tmp), env=e,
+        return subprocess.Popen([FSM, str(self.tmp / "fsm.json")], cwd=str(self.tmp), env=e,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 
     def wait_file(self, path, secs=10):

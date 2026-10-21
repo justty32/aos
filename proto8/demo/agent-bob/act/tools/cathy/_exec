@@ -1,2 +1,2 @@
 #!/bin/sh
-exec aos-loop --cfg loop.json
+exec aos-loop loop.json

@@ -1,4 +1,4 @@
-"""aos_flags：命令列旗標解析（aos-exec、aos-loop、aos-daemon 共用；10-21 plan L1）。純標準庫。
+"""aos_flags：命令列旗標解析（aos-exec、aos-loop、aos-daemon、aos-fsm 共用；10-21 plan L1）、設定檔讀取與 run／val 的寫法（10-21 傍晚）。純標準庫。
 
     import aos_flags
     opts, rest = aos_flags.parse(argv, {"--ws": "ws"})   # 錯丟 aos_flags.Error(原因)
@@ -33,3 +33,38 @@ def parse(argv, flags):
         opts[flags[name]] = val
         i += 1
     return opts, argv[i:]
+
+
+def load_cfg(spec):
+    """讀設定檔（aos-loop、aos-daemon、aos-fsm 的唯一位置參數；10-21 傍晚 ideas § 9）：`檔` 或 `檔#/指標`。
+    第一個 # 就切、# 後面要是 /（同 aos-exec 的入口路徑，N-62）；指標照 JSON pointer（~1＝/、~0＝~）。
+    回那個位置的值（不驗是不是物件，呼叫者自己驗）。讀不到、不是 JSON、# 後不是 /、指不到＝Error。"""
+    import json
+    path, hashed, ptr = spec.partition("#")
+    if hashed and not ptr.startswith("/"):
+        raise Error("設定檔 %s 的 # 後面要接 /" % spec)
+    try:
+        with open(path, encoding="utf-8") as f:
+            doc = json.load(f)
+    except (OSError, ValueError) as e:
+        raise Error("讀不到或不是 JSON：%s（%s）" % (path, e))
+    for tok in ptr[1:].split("/") if hashed else ():
+        tok = tok.replace("~1", "/").replace("~0", "~")
+        if isinstance(doc, dict) and tok in doc:
+            doc = doc[tok]
+        elif isinstance(doc, list) and tok.isdigit() and (tok == "0" or not tok.startswith("0")) \
+                and int(tok) < len(doc):
+            doc = doc[int(tok)]
+        else:
+            raise Error("設定檔指不到：%s" % spec)
+    return doc
+
+
+def target(v, what):
+    """run／val（10-21 傍晚 ideas § 9）：字串＝aos-exec 的目標；陣列＝[目標, 參數...]（元素都要是字串、不能是空的）。
+    回 (目標, [參數...])；寫法不對丟 Error。"""
+    if isinstance(v, str):
+        return v, []
+    if isinstance(v, list) and v and all(isinstance(a, str) for a in v):
+        return v[0], v[1:]
+    raise Error("%s 要是 aos-exec 的目標（字串）或 [目標, 參數...]（非空字串陣列）" % what)

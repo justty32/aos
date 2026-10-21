@@ -1,2 +1,2 @@
 #!/bin/sh
-exec aos-daemon --cfg daemon.json
+exec aos-daemon daemon.json

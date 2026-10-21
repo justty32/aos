@@ -195,7 +195,7 @@ class T(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("沒設定 AOS_STACK", r.stderr)
         # fsm 本身沒設 AOS_STACK 也退 1
-        r = run(str(ROOT / "bin" / "aos-fsm"), "--cfg", "fsm.json", env={"AOS_WS": str(ws)},
+        r = run(str(ROOT / "bin" / "aos-fsm"), "fsm.json", env={"AOS_WS": str(ws)},
                 cwd=BOB)
         self.assertEqual(r.returncode, 1)
         self.assertIn("沒設定 AOS_STACK", r.stderr)
@@ -209,14 +209,17 @@ class T(unittest.TestCase):
             self.assertEqual(think["body"]["argv"][0], "python3", d)
             self.assertEqual(cfg["states"]["idle"]["val"], "idle", d)   # 資料夾格
             self.assertEqual(cfg["states"]["act"]["val"], "act", d)
-            self.assertEqual(cfg["_exec"], ["aos-fsm", "--cfg", "fsm.json"], d)
+            self.assertEqual(cfg["_exec"], ["aos-fsm", {"$env": "AOS_CF"}], d)   # 10-21 傍晚：設定檔是唯一的位置參數
+            self.assertEqual((Path(d) / "_exec").read_text().splitlines()[-1], "exec aos-loop loop.json", d)
             self.assertEqual(json.loads((Path(d) / "loop.json").read_text()), {"run": "fsm.json", "max": 20}, d)
             self.assertFalse((Path(d) / "fsm").exists(), d)
         ann = json.loads((Path(ANN) / "fsm.json").read_text())
         for name, cell in ann["states"].items():
             self.assertEqual(cell["val"], "fsm.json#/states/%s/body" % name)
-        self.assertEqual(json.loads((Path(ANN) / "loop.json").read_text())["body"]["argv"],
-                         ["aos-fsm", "--cfg", "fsm.json"])
+        loop = json.loads((Path(ANN) / "loop.json").read_text())
+        self.assertEqual((loop["body"]["argv"], loop["_exec"]), (["aos-fsm", "fsm.json"], ["aos-loop", {"$env": "AOS_CF"}]))
+        # ann 的入口經 aos-exec loop.json 跑起 loop（10-21 傍晚：「aos-exec loop.json」的寫法）
+        self.assertEqual((Path(ANN) / "_exec").read_text().splitlines()[-1], "exec aos-exec loop.json")
 
     def test_bob_entry_direct_exec_no_enoexec(self):
         # 入口帶 shebang：不經 sh、直接 exec 也跑得起來（P-05）
@@ -231,13 +234,13 @@ class T(unittest.TestCase):
 
     def test_loop_failure_code(self):
         prog(self.tmp, "agent/bad", "exit 7\n")
-        agent = prog(self.tmp, "agent", "aos-loop --cfg loop.json\n")
+        agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
         Path(agent, "loop.json").write_text('{"run": "bad", "max": 3}')
         ws = Path(self.tmp, "ws"); ws.mkdir()
         self.assertEqual(run(EXEC, "--ws", str(ws), agent).returncode, 7)
 
     def test_loop_embedded_inst_runs_each_lap(self):
-        agent = prog(self.tmp, "agent", "aos-loop --cfg loop.json\n")
+        agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
         Path(agent, "loop.json").write_text(json.dumps(
             {"run": "loop.json#/body", "body": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/n"']}, "max": 3}))
         ws = Path(self.tmp, "ws"); ws.mkdir()
@@ -247,7 +250,7 @@ class T(unittest.TestCase):
 
     def test_loop_reaching_max_exits_0_with_empty_stderr(self):
         # N-43：正常退出不寫 stderr（要知道有沒有跑滿看 trace.jsonl 行數）
-        agent = prog(self.tmp, "agent", "aos-loop --cfg loop.json\n")
+        agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
         Path(agent, "loop.json").write_text(json.dumps({"run": "loop.json#/body", "body": {"argv": ["true"]}, "max": 2}))
         ws = Path(self.tmp, "ws"); ws.mkdir()
         r = run(EXEC, "--ws", str(ws), agent)
@@ -268,14 +271,14 @@ class T(unittest.TestCase):
 
     def test_loop_embedded_inst_stop_and_failure_codes(self):
         for code, want in ((10, 0), (7, 7)):
-            agent = prog(self.tmp, f"agent{code}", "aos-loop --cfg loop.json\n")
+            agent = prog(self.tmp, f"agent{code}", "aos-loop loop.json\n")
             Path(agent, "loop.json").write_text(json.dumps(
                 {"run": "loop.json#/body", "body": {"argv": ["sh", "-c", f"exit {code}"]}, "max": 3}))
             ws = Path(self.tmp, f"ws{code}"); ws.mkdir()
             self.assertEqual(run(EXEC, "--ws", str(ws), agent).returncode, want)
 
     def test_loop_own_errors_exit_1_one_line(self):
-        agent = prog(self.tmp, "agent", "aos-loop --cfg loop.json\n")
+        agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
         ws = Path(self.tmp, "ws"); ws.mkdir()
         # 10-21：run 是物件（舊的內嵌單子）＝loop 自己的錯；沒 run＝沒東西可跑
         for text in (None, "{nope", '{"max": 2}', '{"run": {"argv": ["true"]}}', '{"run": 3}'):
@@ -370,12 +373,12 @@ class T(unittest.TestCase):
         self.assertEqual((ws / ".aos" / "stamp" / "runs").read_text().strip(), "1")
 
     def test_sub_agent_stop_code_not_leaking(self):
-        outer = prog(self.tmp, "outer", "exec aos-loop --cfg loop.json\n")
-        Path(outer, "loop.json").write_text('{"run": "loop.json#/body", "body": {"argv": ["aos-fsm", "--cfg", "fsm.json"]}, "max": 2}')
+        outer = prog(self.tmp, "outer", "exec aos-loop loop.json\n")
+        Path(outer, "loop.json").write_text('{"run": "loop.json#/body", "body": {"argv": ["aos-fsm", "fsm.json"]}, "max": 2}')
         Path(outer, "fsm.json").write_text(json.dumps({"start": "s", "states": {
             "s": {"val": "sub", "next": "t"},
             "t": {"val": "fsm.json#/states/t/body", "body": {"argv": ["true"]}, "next": "s"}}}))
-        prog(outer, "sub", "exec aos-loop --cfg loop.json\n")
+        prog(outer, "sub", "exec aos-loop loop.json\n")
         Path(outer, "sub", "loop.json").write_text('{"run": "idle", "max": 5}')
         prog(Path(outer, "sub"), "idle", "exit 10\n")
         ws = Path(self.tmp, "ws"); ws.mkdir()

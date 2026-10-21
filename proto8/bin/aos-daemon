@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""aos-daemon [--cfg daemon.json] [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [XXX [args...]]
-— 管一群長壽的子 loop（C-36、N-28）。命令列同 aos-loop（共用 aos_loop.cli；XXX＝daemon 自己的 run）。daemon.json＝loop.json 的超集：
+"""aos-daemon [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] daemon.json
+— 管一群長壽的子 loop（C-36、N-28）。命令列同 aos-loop（共用 aos_loop.cli；唯一的位置參數＝設定檔，可寫 `檔#/指標`；10-21 傍晚 ideas § 9）。
+daemon.json＝loop.json 的超集：
     run, max, interval_ms, ctl, state   同 aos-loop（同名同義，N-28）；但 run 選填（純監工不需要）、interval_ms 沒寫＝200
-    children   {名字: loop 設定}：字串＝aos-exec 的目標（包成 {"run": 它}）、物件＝一份 loop.json 的內容（不驗，原樣交給子 loop；
-               要內嵌單子寫 {"run": "daemon.json#/children/<名字>/body", "body": 單子}，相對路徑從 daemon 的 cwd 算）
+    children   {名字: loop 設定}：字串或陣列＝aos-exec 的目標（包成 {"run": 它}）、物件＝一份 loop.json 的內容（不驗，交給子 loop；
+               要內嵌單子寫 {"run": "daemon.json#/children/<名字>/body", "body": 單子}）。子項 run 的相對路徑從 daemon 的 cwd 算：
+               daemon 寫小格時把它（陣列就是第一個元素）轉成絕對路徑，其他不動
     adopt      布林，沒寫＝true：起來時讀自己上次的 state，把還活著的子 loop（pid＋啟動時間對得上）接回、不重起（N-17、N-28）
-需要 $AOS_STACK（沒設＝退 1）。每個子項的小格是 $AOS_STACK/<名字>/（P-17）：daemon 把子項的 loop 設定補上
-"ctl": "ctl.json"、"state": "state.json"（沒寫才補）寫成小格裡的 loop.json，以 AOS_STACK=小格 起 `aos-loop --cfg 小格/loop.json`
-（cwd＝daemon 的 cwd；自成一個行程群組）。子 loop 的 stdout 丟掉、stderr 附加到小格的 stderr（N-28 方案 B）。
+需要 $AOS_STACK（沒設＝退 1）。每個子項的小格是 $AOS_STACK/<名字>/（P-17；名字不能帶 /、#、不能 . 開頭）：daemon 把子項的 loop 設定補上
+"ctl": "ctl.json"、"state": "state.json"（沒寫才補）與 "_exec": ["aos-loop", {"$env": "AOS_CF"}]（一律蓋上）寫成小格裡的 loop.json，
+以 AOS_STACK=小格 起 `aos-exec -- 小格/loop.json#/_exec`（經 aos-exec，使用者 10-21 傍晚「5.要」；指到 _exec 不受 $AOS_ENTRY 影響；
+aos-exec cd 進小格、exec 成 aos-loop，pid 不變；自成一個行程群組）。子 loop 的 stdout 丟掉、stderr 附加到小格的 stderr（N-28 方案 B）。
 每圈（拍與拍之間）：讀 ctl（多認 children＝我要表上有誰，N-54）→ 收掉表上多出來的（SIGTERM，等 10 秒，再 SIGKILL 整群）、
 看誰結束了（phase exited，記 code／signal）、起表上少掉的 → 跑 run（有寫才跑）→ 寫 state（children 表在裡面）。
 子 loop 結束後不自動重起（使用者 10-20「照預設」）；要再起：從 children 拿掉再放回，或重起 daemon。
@@ -26,10 +29,10 @@ def check_children(v):
     if not isinstance(v, dict):
         return "children 要是 {名字: loop 設定}"
     for name, c in v.items():
-        if not name or name in (".", "..") or "/" in name or name.startswith("."):
+        if not name or "/" in name or "#" in name or name.startswith("."):   # # 會被 aos-exec 當成指標的開頭
             return "children 的名字 %r 不能當資料夾名" % name
-        if not isinstance(c, (str, dict)):
-            return "children[%s] 要是子資料夾或 loop 設定" % name
+        if not isinstance(c, (str, list, dict)):
+            return "children[%s] 要是 aos-exec 的目標或 loop 設定" % name
     return None
 
 
@@ -105,14 +108,20 @@ class Daemon(aos_loop.Loop):
 
     def spawn(self, name, spec):
         cell = os.path.join(self.stack, name)
-        cfg = {"run": spec} if isinstance(spec, str) else dict(spec)
+        cfg = dict(spec) if isinstance(spec, dict) else {"run": spec}
+        run = cfg.get("run")   # 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗）
+        if isinstance(run, str):
+            cfg["run"] = os.path.join(self.cwd, run)
+        elif isinstance(run, list) and run and isinstance(run[0], str):
+            cfg["run"] = [os.path.join(self.cwd, run[0])] + run[1:]
         cfg.setdefault("ctl", "ctl.json")
         cfg.setdefault("state", "state.json")
+        cfg["_exec"] = ["aos-loop", {"$env": "AOS_CF"}]
         try:
             os.makedirs(cell, exist_ok=True)
             aos_window.write(os.path.join(cell, "loop.json"), cfg)
             with open(os.path.join(cell, "stderr"), "ab") as err:
-                p = subprocess.Popen(["aos-loop", "--cfg", os.path.join(cell, "loop.json")], cwd=self.cwd,
+                p = subprocess.Popen(["aos-exec", "--", os.path.join(cell, "loop.json") + "#/_exec"], cwd=self.cwd,
                                      env=dict(os.environ, AOS_STACK=cell + "/"), stdin=subprocess.DEVNULL,
                                      stdout=subprocess.DEVNULL, stderr=err, start_new_session=True)
         except OSError as e:

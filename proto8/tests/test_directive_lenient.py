@@ -29,8 +29,25 @@ class T(unittest.TestCase):
         self.assertEqual(self.r({"$env": "AOS_WS", "$path": "a.txt"}), "/ws/a.txt")
         self.assertEqual(self.r({"$env": "AOS_WS", "$path": "a.txt", "$prefix": "--file="}), "--file=/ws/a.txt")
         self.assertEqual(self.r({"$env": "AOS_WS", "$prefix": "-C"}), "-C/ws")
-        self.assertEqual(self.r({"$env": "AOS_WS", "$path": "/abs"}), "/abs")
+        self.assertEqual(self.r({"$env": "AOS_WS", "$path": "/abs"}), "/ws/abs")   # 10-21 傍晚：絕對路徑也是接上去
         self.assertEqual(self.r({"$env": "AOS_WS", "$path": None, "$prefix": None}), "/ws")
+
+    def test_path_is_string_concat(self):
+        # 10-21 傍晚 ideas § 9：$path＝字串拼接——# 開頭直接接；其他中間剛好一個 /；空字串＝不接
+        os.environ["AOS_CF"] = "/x/big.json"
+        self.assertEqual(self.r({"$env": "AOS_CF", "$path": "#/loops/a"}), "/x/big.json#/loops/a")
+        self.assertEqual(self.r({"$env": "AOS_CF", "$path": "#/loops/a", "$prefix": "--cfg="}),
+                         "--cfg=/x/big.json#/loops/a")
+        self.assertEqual(self.r({"$env": "AOS_CF", "$path": "#"}), "/x/big.json#")
+        for sub in ("a.txt", "/a.txt", "//a.txt"):
+            self.assertEqual(self.r({"$env": "AOS_WS", "$path": sub}), "/ws/a.txt", sub)
+        os.environ["AOS_WS"] = "/ws//"
+        self.assertEqual(self.r({"$env": "AOS_WS", "$path": "/a/b/"}), "/ws/a/b/")
+        self.assertEqual(self.r({"$env": "AOS_WS", "$path": ""}), "/ws//")
+        os.environ["AOS_WS"] = ""
+        self.assertEqual(self.r({"$env": "AOS_WS", "$path": "a"}), "/a")
+        os.environ["AOS_WS"] = "/"
+        self.assertEqual(self.r({"$env": "AOS_WS", "$path": "a"}), "/a")
 
     def test_ref_string_path_prefix(self):
         self.assertEqual(self.r({"$ref": "d.json#/s", "$path": "x", "$prefix": "--f="}), "--f=/base/x")
@@ -80,6 +97,15 @@ class T(unittest.TestCase):
             with self.assertRaises(aos_inst.InstError) as c:
                 self.r(x)
             self.assertIn(msg, str(c.exception))
+
+    def test_ref_to_folder_is_error(self):
+        # 10-21 傍晚 ideas § 9：$ref 指到資料夾＝讀不到、算錯（不走進去找入口、不把資料夾組成物件；使用者「維持報錯」）
+        (self.t / "dir").mkdir()
+        put(self.t / "dir" / "_exec.json", {"k": 1})
+        for x in ({"$ref": "dir"}, {"$ref": "dir#/k"}, {"$ref": "dir", "at": "/k"}):
+            with self.assertRaises(aos_inst.InstError) as c:
+                self.r(x)
+            self.assertIn("讀不到", str(c.exception))
 
     # ───── 命令列：argv 陣列與單子 ─────
 

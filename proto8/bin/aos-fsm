@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""aos-fsm --cfg FSM.json — fsm 一拍只跑一格（10-21 plan § 4）。
-命令列只有 `--cfg 檔`（或 `--cfg=檔`；規則同 aos-exec，aos_flags）：沒給、多給位置參數、不認得的旗標＝usage 錯（F1）。
+"""aos-fsm FSM.json — fsm 一拍只跑一格（10-21 plan § 4；命令列 10-21 傍晚 ideas § 9 改）。
+命令列 `aos-fsm [旗標] 設定檔`：唯一的位置參數＝設定檔（必給、只能一個；可寫 `檔#/指標`＝那份檔裡那個位置的物件）；
+目前沒有旗標（旗標表是空的，規則同 aos-exec，aos_flags；`--` 結束旗標）。沒給、多給、不認得的旗標＝usage 錯（原 `--cfg` 拿掉）。
 FSM.json: {"start": "idle", "states": {"idle": {"val": "idle", "next": "think"},
                                          "think": {"val": "fsm.json#/states/think/body", "body": {"argv": [...], ...}, "next": "act"}, ...}}
-val 只收字串＝aos-exec 的目標（每拍 `aos-exec -- <val>`，相對路徑從 cwd 算，fsm 不轉；F2）；要內嵌單子就寫
+val＝字串（aos-exec 的目標，每拍 `aos-exec -- <val>`）或陣列 [目標, 參數...]（每拍 `aos-exec -- 目標 參數...`，元素都要是字串；
+比照 loop 的 run，10-21 傍晚）；相對路徑從 cwd 算，fsm 不轉（F2）；要內嵌單子就寫
 `fsm.json#/states/<名>/body`、單子放在同一格的 body，由 aos-exec 在它自己的行程裡跑（逾時與訊號打整群，N-59）。
-val 是物件＝表壞。表裡其他 key（body、_exec…）忽略（C-48），所以 fsm.json 可以帶 `"_exec": ["aos-fsm", "--cfg", "fsm.json"]`
+val 是物件或別的＝表壞。表裡其他 key（body、_exec…）忽略（C-48），所以 fsm.json 可以帶 `"_exec": ["aos-fsm", {"$env": "AOS_CF"}]`
 當 aos-exec 的入口（F6）。
 讀 $AOS_STACK/state（純文字一行狀態名；沒有＝start，格式與 shell 版相同；寫的時候先寫 .state 再改名，N-05）；查格；跑格。
 每拍在 $AOS_STACK/trace.jsonl 追加一行 {"at","state","code","signal","ms"}（at＝這拍開始的 UTC 時間；沒有 timed_out：
@@ -19,7 +21,8 @@ import datetime, json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_beat, aos_flags
 
-USAGE = "aos-fsm --cfg fsm.json"
+USAGE = "aos-fsm fsm.json"
+FLAGS = {}   # 目前沒有旗標；以後加旗標就在這裡加一列
 
 
 def die(msg):
@@ -30,21 +33,19 @@ def die(msg):
 def main():
     aos_beat.block()
     try:
-        opts, rest = aos_flags.parse(sys.argv[1:], {"--cfg": "cfg"})
+        opts, rest = aos_flags.parse(sys.argv[1:], FLAGS)
     except aos_flags.Error as e:
         die(f"usage: {USAGE}（{e}）")
-    if rest:
-        die(f"usage: {USAGE}（不收位置參數：{rest[0]}）")
-    path = opts.get("cfg")
-    if path is None:
-        die(f"usage: {USAGE}（沒有 --cfg）")
+    if len(rest) != 1:
+        die(f"usage: {USAGE}（%s）" % ("沒有設定檔" if not rest else f"設定檔只能一個，多給了 {rest[1]}"))
+    path = rest[0]
     stack = os.environ.get("AOS_STACK")
     if not stack:
         die("沒設定 AOS_STACK")
     try:
-        cfg = json.load(open(path, encoding="utf-8"))
-    except (OSError, ValueError) as e:
-        die(f"讀不到或不是 JSON：{path}（{e}）")
+        cfg = aos_flags.load_cfg(path)
+    except aos_flags.Error as e:
+        die(str(e))
     states = cfg.get("states") if isinstance(cfg, dict) else None
     if not isinstance(states, dict) or not isinstance(cfg.get("start"), str):
         die('fsm.json 要是 {"start": 狀態名, "states": {名: {"val", "next"}}}')
@@ -57,13 +58,17 @@ def main():
     if not (isinstance(cell, dict) and "val" in cell and isinstance(cell.get("next"), str)):
         die(f"查不到狀態 {state}（或它不是 {{\"val\", \"next\"}}）")
     val = cell["val"]
-    if not isinstance(val, str):
-        die(f"狀態 {state} 的 val 要是 aos-exec 的目標（字串）；要內嵌單子寫 {path}#/states/{state}/body")
+    if isinstance(val, dict):
+        die(f"狀態 {state} 的 val 要是 aos-exec 的目標（字串或字串陣列）；要內嵌單子寫 fsm.json#/states/{state}/body")
+    try:
+        val, args = aos_flags.target(val, f"狀態 {state} 的 val")
+    except aos_flags.Error as e:
+        die(str(e))
     if aos_beat.take():
         sys.exit(128 + aos_beat.take())
     at = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
     try:
-        res = aos_beat.run(val)
+        res = aos_beat.run(val, args)
     except aos_beat.StartError as e:
         die(f"狀態 {state}：{e}")
     with open(os.path.join(stack, "trace.jsonl"), "a", encoding="utf-8") as f:

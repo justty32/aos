@@ -193,7 +193,7 @@ class T(unittest.TestCase):
                                      "body": {"argv": ["tools/stamp", "L"], "cwd": str(q),
                                               "stdout": {"$env": "AOS_STACK", "$path": "out"},
                                               "envs": {"MSG": {"$ref": "sub/data.json#/msg"}}}})
-        r = run("aos-loop", "--cfg", loop, cwd=self.t, env={"AOS_WS": str(self.ws), "AOS_STACK": str(stack)})
+        r = run("aos-loop", loop, cwd=self.t, env={"AOS_WS": str(self.ws), "AOS_STACK": str(stack)})
         self.assertEqual(r[0], 0, r[2])
         self.assertTrue((stack / "out").read_text().endswith("arg=L\n"))
         # fsm（10-21 plan F2）：格的內嵌單子寫 檔#/states/<名>/body；val 的相對路徑照 cwd 算，
@@ -202,14 +202,14 @@ class T(unittest.TestCase):
             "val": "q/fsm.json#/states/a/body",
             "body": {"argv": [{"$ref": "sub/data.json", "at": "/a/b/0"}, {"$ref": "sub/data.json#/msg"}],
                      "stdout": {"$env": "AOS_STACK", "$path": "fout"}}, "next": "a"}}})
-        r = run("aos-fsm", "--cfg", fsm, cwd=self.t, env={"AOS_STACK": str(stack)})
+        r = run("aos-fsm", fsm, cwd=self.t, env={"AOS_STACK": str(stack)})
         self.assertEqual(r[0], 0, r[2])
         self.assertEqual((stack / "fout").read_text(), "hi\n")
         fsm2 = put(q / "fsm2.json", {"start": "a", "states": {"a": {
             "val": "q/fsm2.json#/states/a/body",
             "body": {"argv": ["tools/cfg.json#/t/u"], "cwd": str(q),
                      "stdout": {"$env": "AOS_STACK", "$path": "fout2"}}, "next": "a"}}})
-        r = run("aos-fsm", "--cfg", fsm2, cwd=self.t, env={"AOS_STACK": str(stack)})
+        r = run("aos-fsm", fsm2, cwd=self.t, env={"AOS_STACK": str(stack)})
         self.assertEqual(((stack / "fout2").read_text(), r[0]), ("ptr\n", 0), r[2])
 
 
