@@ -2,7 +2,7 @@
 
 ← [proto8](README.md)｜原話與拍板：[thinking/ideas](thinking/2026-10-19-ideas.md)｜跟 proto8 原則相撞的七條，使用者已全部裁定：[ideas § 9](thinking/2026-10-19-ideas.md)｜proto8 原則：[CONCEPTS](CONCEPTS.md)、[NORMS](NORMS.md)｜程式：[bin](bin/README.md)、[demo](demo/README.md)
 
-**aos 本身只保證環境變數（原三個，10-19 下班前加 `AOS_CF`、`AOS_CD` 成五個，§ 19）和一支 `aos-exec`**（使用者 § 4；已升成規範 [N-57～N-62](NORMS/10-基礎設施-定義與工作區.md)）。其餘全是慣例：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**agent-bob 現在的樣子就是標準，stack 裡面自由**（拍板點 1）。
+**aos 本身只保證環境變數（原三個，10-19 下班前加 `AOS_CF`、`AOS_CD` 成五個，§ 19；10-21 晚加 `AOS_CO` 成六個）和一支 `aos-exec`**（使用者 § 4；已升成規範 [N-57～N-62](NORMS/10-基礎設施-定義與工作區.md)）。其餘全是慣例：我們自己人寫 agent 時照抄的標準形狀，照抄的人不用想、看別人的 agent 一眼就懂（C-54）。**agent-bob 現在的樣子就是標準，stack 裡面自由**（拍板點 1）。
 
 每條後面括號是依據：§ 幾＝[ideas](thinking/2026-10-19-ideas.md) 裡使用者原話的段號；拍板點 1～3＝ideas § 8；C-xx／N-xx＝proto8 的概念與規範；引不到的、這份自己定的，標「本稿定」。**10-19 第二輪**（§ 10）：範本改成混合寫法（第二、三、八節改寫）、巢狀層層疊疊的規則（第十二節 P-32～P-39）。**10-19 下班前～晚**（§ 14～§ 21）：入口放寬成四種、`aos-exec XXX`、五個環境變數、`#/` 尋址、impls 只提供 aos-exec 一支命令列（§ 23 之後 impls 也有 aos-loop、aos-fsm）——P-05、P-26、P-28～P-31、P-33、P-36、P-39 加註，新增 P-40（JSON 入口怎麼寫）；§ 21「舊版一起改」之後 `proto8/bin` 也跟上了，第十節改記兩版仍不同的地方。
 

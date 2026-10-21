@@ -169,7 +169,9 @@ class T(unittest.TestCase):
     def test_json_kinds(self):
         self.assertEqual(self.json_entry({"run": "x", "max": 3})[:3:2], (1, "入口壞"))   # loop 設定不是入口
         self.assertEqual(self.json_entry({"_exec": ["sh", "-c", "echo hi"]})[:2], (0, "hi\n"))
-        self.assertEqual(self.json_entry({"_exec": {"_exec": ["true"]}})[:3:2], (1, "入口壞"))  # 只往下一層
+        # 10-21 晚起沒 argv 的物件＝資料夾、一路往下（原「只往下一層」，ideas 10-21 § 6）
+        self.assertEqual(self.json_entry({"_exec": {"_exec": ["echo", "deep"]}})[:2], (0, "deep\n"))
+        self.assertEqual(self.json_entry({"_exec": {"other": ["true"]}})[:3:2], (1, "入口壞"))
         for bad in ({"_exec": 3}, 3, [], ["echo", 1], None):
             self.assertEqual(self.json_entry(bad)[:3:2], (1, "入口壞"), bad)
         put(Path(self.t, "r", "main.json"), {"main": ["echo", "m"], "_exec": ["echo", "no"]})

@@ -4,15 +4,17 @@
 命令列（10-21 ideas）：XXX 前面是 aos-exec 自己的旗標（表在 FLAGS），第一個不是旗標的參數就是 XXX，之後原樣傳給入口；
 `--` 結束旗標（XXX 可以 - 開頭）。目前只有 `--ws WS`（或 `--ws=WS`）：工作區；沒給、`-`、空＝沿用 $AOS_WS，沒設用 .。
 旗標蓋過對應的環境變數。不認得的旗標、旗標缺值、沒有 XXX＝usage 錯。
-XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd。
-找入口（N-61）：資料夾 → XXX/$AOS_ENTRY（預設 _exec），沒有再找 XXX/$AOS_ENTRY.json；不在、basename 沒有 `.`
-→ 補找 XXX.json。解開捷徑後：有 +x＝可執行檔（exec，不讀內容；沒 #! 改用 /bin/sh 跑）；沒 +x 當 JSON 讀（第一行 #! 跳過、照 #/ 取值）：
-非空陣列＝argv（元素可放 $env／$ref，開跑前解、解完要全是字串，10-20 ideas D2、D8；exec，同 execvp：沒 #! 改用 /bin/sh 跑；
-argv[0] 帶 / 又 exec 不了＝前面插 aos-exec、照 PATH 找，D3）、有 argv 的物件＝inst 單子（行程內 aos_inst.run，以子程式的碼結束）、
-沒 argv 的物件＝取 [$AOS_ENTRY] 再判一次（只往下一層）、字串＝路徑轉向（從寫著它的檔所在的資料夾算，繞圈＝入口壞）。
-開跑前 export AOS_WS、AOS_STACK（沒設＝$AOS_WS/.aos/，建好）、AOS_CF（實際的檔）、AOS_CD（它的資料夾），
-cd 到 AOS_CD、讀那裡的 .env（10-21 ideas § 4；旗標 ＞ .env ＞ 原本的環境變數 ＞ 預設；字串轉向＝全新的一次、旗標不帶、每跳讀自己的 .env）；PATH 不動、原樣傳下去（ideas § 24；入口裡要叫 aos-exec、aos-loop… 由呼叫者事先放進 PATH）。args 接在入口後面，stdin 原樣給入口。
-自己的錯退 1，stderr 一行「aos-exec: 原因」（N-60）。
+XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd；不在、basename 沒有 `.` → 補找 XXX.json。
+一跳（hop；10-21 ideas § 4～§ 6）：export AOS_WS、AOS_STACK（沒設＝$AOS_WS/.aos/，建好）→ 走進資料夾或檔所在的資料夾
+（AOS_CD＝它、AOS_CF＝它或那個檔、AOS_CO＝空；cd；讀那裡的 .env；旗標蓋回；旗標 ＞ .env ＞ 原本的環境變數 ＞ 預設）→
+照「當下的」$AOS_ENTRY（預設 _exec）挑入口：資料夾 → $AOS_ENTRY 一段段走、沿路資料夾都走進去，挑到資料夾就再走進去、
+一路往下，挑到檔（或補 .json）為止。解開捷徑後：有 +x＝可執行檔（exec，不讀內容；沒 #! 改用 /bin/sh 跑）；沒 +x 當 JSON 讀
+（第一行 #! 跳過、照 #/ 取值）：非空陣列＝argv（元素可放 $env／$ref，開跑前解、解完要全是字串，10-20 ideas D2、D8；exec，
+同 execvp：沒 #! 改用 /bin/sh 跑；argv[0] 帶 / 又 exec 不了＝前面插 aos-exec、照 PATH 找，D3）、有 argv 的物件＝inst 單子
+（行程內 aos_inst.run，以子程式的碼結束）、沒 argv 的物件＝當資料夾：套它的 `.env` key、旗標蓋回、取 [$AOS_ENTRY]，一路往下、
+字串＝路徑轉向（全新的一跳；從寫著它的檔所在的資料夾算，繞圈＝入口壞）。AOS_CF＝實際的檔，AOS_CO＝入口在檔裡的 JSON 指標
+（不帶 #，不是 JSON 或整份檔＝空）。PATH 不動、原樣傳下去（ideas § 24；入口裡要叫 aos-exec、aos-loop… 由呼叫者事先放進 PATH）。
+args 接在入口後面，stdin 原樣給入口。自己的錯退 1，stderr 一行「aos-exec: 原因」（N-60）。
 """
 import errno
 import json
@@ -52,38 +54,37 @@ def pointer(doc, ptr, where):
 
 
 def locate(spec, base):
-    """XXX → (實際的檔, 指標或 None)。base＝相對路徑的起點。"""
+    """XXX → (資料夾或 None, 實際的檔或 None, 指標或 None)。base＝相對路徑的起點。
+    XXX 是資料夾時只回資料夾（實際的資料夾），入口檔等走進去、讀完那裡的 .env 才照 $AOS_ENTRY 挑（10-21 ideas § 5、§ 6）。"""
     path, hashed, ptr = spec.partition("#")
     if hashed and not ptr.startswith("/"):
         raise Fail("入口壞：%s 的 # 後面要接 /" % spec)
     ptr = ptr if hashed else None
     p = os.path.join(base, path)
-    name = entry_name()
     if os.path.isdir(p):
         if ptr is not None:
             raise Fail("入口壞：資料夾不能帶 #/：%s" % spec)
-        f = os.path.join(p, name)
-        if not os.path.lexists(f):
-            f = os.path.join(p, name + ".json")
-        if not os.path.isfile(f):
-            raise Fail("入口不存在：%s（也沒有 %s.json，或它是資料夾）" % (os.path.join(p, name), name))
-    elif os.path.isfile(p):
+        return os.path.realpath(p), None, None
+    if os.path.isfile(p):
         f = p
     elif not os.path.lexists(p) and "." not in os.path.basename(path) and os.path.isfile(p + ".json"):
         f = p + ".json"
     else:
         raise Fail("入口不存在：%s" % spec)
-    return os.path.realpath(f), ptr
+    return None, os.path.realpath(f), ptr
 
 
-def find(spec, base, seen):
-    """回 (種類, 值, 實際的檔)。種類：exe（值＝None）、argv（陣列）、inst（單子 dict）、redir（值＝轉向的路徑）。
-    seen＝這條轉向鏈走過的 (檔, 指標)，就地加上這一個；走回去＝繞圈。"""
-    f, ptr = locate(spec, base)
+def find(f, ptr, seen, layer):
+    """實際的檔＋指標 → (種類, 值, 入口在檔裡的指標, JSON .env key 設過的名字)。
+    種類：exe（值＝None）、argv（陣列）、inst（單子 dict）、redir（值＝轉向的路徑）。
+    沒 argv 的物件＝資料夾（10-21 ideas § 6）：進去那一刻 $AOS_ENTRY 若是 `.env`＝照做、把 `.env` 那格當入口、不當環境設定；
+    否則先套它的 `.env` key、旗標蓋回（layer），再照當下的 $AOS_ENTRY 取那格，又是沒 argv 的物件就一路往下
+    （挑的時候不解 $ref，走的是 JSON 那棵樹、不會無限）。seen＝這條轉向鏈走過的 (檔, 指標)，就地加上這一個；走回去＝繞圈。"""
+    spec = f + ("#" + ptr if ptr is not None else "")
     if os.access(f, os.X_OK):
         if ptr is not None:
             raise Fail("入口壞：可執行檔不能帶 #/：%s" % spec)
-        return "exe", None, f
+        return "exe", None, "", set()
     where = (f, ptr or "")
     if where in seen:
         chain = [a + b for a, b in seen + [where]]
@@ -100,20 +101,24 @@ def find(spec, base, seen):
         doc = json.loads(text)
     except ValueError:
         raise Fail("入口壞：沒有 +x、也不是 JSON：%s" % f)
+    at, names = ptr or "", set()
     if ptr is not None:
         doc = pointer(doc, ptr, f)
-    if isinstance(doc, dict) and "argv" not in doc:
-        if entry_name() not in doc:
-            raise Fail("入口壞：%s 不是單子、也沒有 %s" % (f, entry_name()))
-        doc = doc[entry_name()]
-        if isinstance(doc, dict) and "argv" not in doc:
-            raise Fail("入口壞：%s 的 %s 不是單子、argv 陣列或路徑" % (f, entry_name()))
+    while isinstance(doc, dict) and "argv" not in doc:
+        here = "%s#%s" % (f, at) if at else f
+        if entry_name() != ".env" and ".env" in doc:
+            names |= json_env(doc[".env"], here, os.path.dirname(f))
+            layer()
+        name = entry_name()
+        if name not in doc:
+            raise Fail("入口壞：%s 不是單子、也沒有 %s" % (here, name))
+        doc, at = doc[name], at + "/" + name.replace("~", "~0").replace("/", "~1")
     if isinstance(doc, str):   # 字串轉向＝交給下一層、全新的一次 aos-exec（main 的迴圈做；10-21 .env）
-        return "redir", doc, f
+        return "redir", doc, at, names
     if isinstance(doc, dict):
-        return "inst", doc, f
+        return "inst", doc, at, names
     if isinstance(doc, list) and doc:   # 元素可以是字串或指示詞（10-20 ideas D2、D8），開跑前才解
-        return "argv", doc, f
+        return "argv", doc, at, names
     raise Fail("入口壞：%s 不是單子、argv 陣列或路徑" % f)
 
 
@@ -193,17 +198,41 @@ def parse(argv):
     return opts, argv[i], argv[i + 1:]
 
 
+
 NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
 REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
 
 
+def set_env(name, val, bad):
+    """一個 `名字=值` 套進 os.environ：名字要合規則；值只展開 ${名字}（沒設＝錯），孤零零的 $ 原樣留。錯呼叫 bad(原因)。"""
+    if not NAME.match(name):
+        bad("名字要是英數字和底線、不以數字開頭")
+    out, i = [], 0
+    while True:
+        j = val.find("${", i)
+        if j < 0:
+            out.append(val[i:])
+            break
+        m = REF.match(val, j)
+        if not m:
+            bad("${ 後面要接 名字}")
+        if m.group(1) not in os.environ:
+            bad("${…} 引用的環境變數沒設")
+        out += [val[i:j], os.environ[m.group(1)]]
+        i = m.end()
+    val = "".join(out)
+    if "\0" in val:
+        bad("值不能有 NUL")
+    os.environ[name] = val
+
+
 def load_env(d):
-    """讀 d/.env、逐行套進 os.environ（10-21 ideas § 4）。沒有＝什麼都不做。
+    """讀 d/.env、逐行套進 os.environ（10-21 ideas § 4）。沒有＝什麼都不做。回 .env 設過的名字。
     一行 `名字=值`：去行尾 \r、去前導空白後空的或 # 開頭跳過；= 只切第一個；值照字面、只展開 ${名字}（逐行，後面看得到前面設的）；
     孤零零的 $ 原樣留。錯（讀不到、格式不合、${名字} 沒設）只印檔名和行號，絕不印值。"""
-    p = os.path.join(d, ".env")
+    p, names = os.path.join(d, ".env"), set()
     if not os.path.lexists(p):
-        return
+        return names
     try:
         with open(p, encoding="utf-8", newline="") as fh:
             lines = fh.read().split("\n")
@@ -222,50 +251,101 @@ def load_env(d):
         name, eq, val = line.partition("=")
         if not eq:
             bad("沒有 =")
-        if not NAME.match(name):
-            bad("名字要是英數字和底線、不以數字開頭")
-        out, i = [], 0
-        while True:
-            j = val.find("${", i)
-            if j < 0:
-                out.append(val[i:])
-                break
-            m = REF.match(val, j)
-            if not m:
-                bad("${ 後面要接 名字}")
-            if m.group(1) not in os.environ:
-                bad("${…} 引用的環境變數沒設")
-            out += [val[i:j], os.environ[m.group(1)]]
-            i = m.end()
-        val = "".join(out)
-        if "\0" in val:
-            bad("值不能有 NUL")
-        os.environ[name] = val
+        set_env(name, val, bad)
+        names.add(name)
+    return names
+
+
+def json_env(env, where, ref_base):
+    """沒 argv 的 JSON 物件裡的 `.env` key（10-21 ideas § 6）：{"名字": 值}，照順序套。值可以放指示詞（$env、$ref…，
+    同單子那套；$ref 從那份檔的資料夾算），解完不是字串的那一項靜默跳過；字串照 .env 檔的規則（名字、${名字}）。
+    `.env` 解完不是物件＝整個跳過。指示詞解不開、名字不合、${名字} 沒設＝.env 壞，只印位置、不印名字和值。回設過的名字。"""
+    import aos_inst
+
+    def bad(why):
+        raise Fail(".env 壞：%s 的 .env（%s）" % (where, why))
+    try:
+        env = aos_inst.resolve(env, ref_base)
+    except aos_inst.InstError:
+        bad("指示詞解不開")
+    names = set()
+    if not isinstance(env, dict):
+        return names
+    for name, val in env.items():
+        if isinstance(val, str):
+            set_env(name, val, bad)
+            names.add(name)
+    return names
 
 
 def hop(spec, base, opts, seen):
-    """一次 aos-exec（N-59）：定工作區 → 找入口 → 設 AOS_* → cd 到 AOS_CD → 讀那裡的 .env → 旗標再蓋回去
-    （旗標 ＞ .env ＞ 原本的環境變數 ＞ 預設）。回 find 的 (種類, 值, 實際的檔)。"""
+    """一次 aos-exec（N-59；10-21 ideas § 4～§ 6）：定工作區 → 找 XXX → export AOS_WS、AOS_STACK → 走進資料夾
+    （AOS_CD／AOS_CF＝它、AOS_CO＝空、cd、讀那裡的 .env、旗標蓋回）→ 照當下的 $AOS_ENTRY 挑入口。
+    資料夾：$AOS_ENTRY 一段段走，沿路每個資料夾都走進去（由外到內）；最後一段又是資料夾＝走進去、照當下的 $AOS_ENTRY 再挑，
+    一路往下（走回走過的資料夾＝入口壞）。走進資料夾那一刻 $AOS_ENTRY 是 `.env`＝那份 .env 是入口、不讀成環境。
+    挑到檔後 AOS_CF＝檔、AOS_CD＝它的資料夾、AOS_CO＝入口在檔裡的指標；剛讀的那份 .env（或 JSON 的 .env key）自己設了就不蓋。
+    回 (種類, 值, 實際的檔)。"""
     ws = opts.get("ws", "-")   # 旗標蓋過 $AOS_WS；沒給／-／空才沿用
     flag_ws = ws not in ("-", "")
     if not flag_ws:
         ws = os.environ.get("AOS_WS") or "."
     if not os.path.isdir(ws):
         raise Fail("工作區不存在：%s" % ws)
-    kind, val, f = find(spec, base, seen)
+    d, f, ptr = locate(spec, base)
     ws = os.path.abspath(ws)
     stack = os.environ.get("AOS_STACK") or os.path.join(ws, ".aos")
     try:
         os.makedirs(stack, exist_ok=True)
     except OSError as e:
         raise Fail("建不了 AOS_STACK：%s（%s）" % (stack, e.strerror))
-    cd = os.path.dirname(f)
-    os.environ.update(AOS_WS=ws, AOS_STACK=os.path.join(os.path.abspath(stack), ""),
-                      AOS_CF=f, AOS_CD=cd)
-    os.chdir(cd)
-    load_env(cd)   # .env 什麼都能設（含 AOS_*），不限制；已經 cd 過，改 AOS_CD 不會再 cd
-    if flag_ws:
-        os.environ["AOS_WS"] = ws
+    os.environ.update(AOS_WS=ws, AOS_STACK=os.path.join(os.path.abspath(stack), ""))
+
+    def layer():   # 每讀完一份 .env（檔或 JSON 的 .env key）旗標蓋回去
+        if flag_ws:
+            os.environ["AOS_WS"] = ws
+
+    def enter(x, cf):   # 走進一層：設 AOS_CF／AOS_CD／AOS_CO、cd、讀 .env（什麼都能設、含 AOS_*；已經 cd 過，改 AOS_CD 不會再 cd）
+        os.environ.update(AOS_CF=cf, AOS_CD=x, AOS_CO="")
+        os.chdir(x)
+        names = load_env(x) if entry_name() != ".env" else set()
+        layer()
+        return names
+
+    if d is None:
+        names = enter(os.path.dirname(f), f)
+    else:
+        names, visited = enter(d, d), {d}
+        while f is None:
+            name = entry_name()
+            parts = name.split("/")
+            for part in parts[:-1]:   # 多段的 $AOS_ENTRY（例 sub/run）：沿路的資料夾都走進去（由外到內）
+                nxt = os.path.realpath(os.path.join(d, part))
+                if not os.path.isdir(nxt):
+                    raise Fail("入口不存在：%s（%s 不是資料夾）" % (os.path.join(d, name), os.path.join(d, part)))
+                if nxt != d:
+                    d, names = nxt, enter(nxt, nxt)
+            last = os.path.join(d, parts[-1])
+            if os.path.isdir(last):   # 挑到資料夾＝走進去，照當下的 $AOS_ENTRY 再挑
+                nxt = os.path.realpath(last)
+                if nxt in visited:
+                    raise Fail("入口壞：資料夾繞圈：%s" % nxt)
+                visited.add(nxt)
+                d, names = nxt, enter(nxt, nxt)
+                continue
+            if not os.path.lexists(last):
+                last += ".json"
+            if not os.path.isfile(last):
+                raise Fail("入口不存在：%s（也沒有 %s.json）" % (os.path.join(d, parts[-1]), parts[-1]))
+            f = os.path.realpath(last)
+        if "AOS_CF" not in names:
+            os.environ["AOS_CF"] = f
+        if os.path.dirname(f) != d:   # 入口檔是指到別處的捷徑：cd 到實際的資料夾，那邊的 .env 不讀
+            os.chdir(os.path.dirname(f))
+            if "AOS_CD" not in names:
+                os.environ["AOS_CD"] = os.path.dirname(f)
+    kind, val, at, more = find(f, ptr, seen, layer)
+    if "AOS_CO" not in names | more:
+        os.environ["AOS_CO"] = at
     return kind, val, f
 
 
