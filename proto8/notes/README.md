@@ -10,3 +10,4 @@
 |---|---|
 | [s6-runit.md](s6-runit.md) | aos（proto8）跟 s6、runit 的對照：chain loading、envdir 與 `.env`、服務監管、重啟、readiness、日誌、狀態檔、控制、訊號（2026-10-22） |
 | [aos-exec-s6-runit.md](aos-exec-s6-runit.md) | aos-exec 能直接呼叫、或借形狀的 s6、runit 工具（fable 10-22 寫） |
+| [dotenv-格式比較.md](dotenv-格式比較.md) | aos `.env` 要不要補拿掉變數、多行、引號：各家（docker、systemd、dotenv、envdir…）怎麼做、三項工作量、替代做法與最小可行建議（opus 10-22 寫） |
