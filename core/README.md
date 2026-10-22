@@ -1,5 +1,7 @@
 # core/ — 核心小專案
 
+> 10-22 註：`core/` 是舊一代 C++ 版的「必要模組」資料夾（拿掉它 aos 就不成立），資料夾名不動；跟 proto8 分層（[C-74](../proto8/CONCEPTS/01-設計理念.md#分層10-22-使用者定)）裡的「核心」（aos-exec）、kernel 都無關。
+
 aos 的基本組成部分。這裡的小專案都很通用，`aos <name>` 子命令與 `aos::<name>`
 函式庫成對出現，而且一定會被建置。
 
@@ -17,6 +19,6 @@ aos 的基本組成部分。這裡的小專案都很通用，`aos <name>` 子命
 **放這裡還是放 [`../modules/`](../modules/)**：拿掉它 aos 就不再是 aos → `core/`；
 拿掉它 aos 仍然成立 → `modules/`。
 
-`common/`、`app/`、`cmake/` 都不是小專案，它們是**基礎設施**。
+`common/`、`app/`、`cmake/` 都不是小專案，它們是**基礎設施**（＝建置與共用程式碼的目錄；跟 proto8 CONCEPTS／NORMS 的「基礎設施」主題無關，10-22 註）。
 
 新增小專案照 [`docs/subprojects.md`](../docs/subprojects.md)；`llm/` 是參考範本。
