@@ -224,14 +224,15 @@ def set_env(name, val, bad, keep, expand=True):
 
 def env_value(rest, bad):
     """`=` 後面那段 → (值, 要不要展開 ${})。基礎子集（10-22 ideas，計畫 B2～B8）：收下的寫法給的值同 python-dotenv，
-    各家給的值不一樣的寫法＝錯。"""
-    v = rest.lstrip(" \t")
+    各家給的值不一樣的寫法＝錯。值的頭尾、`#` 前面的空白照 python-dotenv 認 Unicode 空白（str.isspace，含全形空白；
+    10-22 使用者「按照python-dotenv把它當空白去掉」）；行首的前導空白另照 C++ 只認 ASCII（load_env）。"""
+    v = rest.lstrip()
     if v[:1] in ("'", '"'):   # 引號只剝一對：不跳脫、不跨行；單引號照字面，雙引號展開 ${}
         q = v[0]
         j = v.find(q, 1)
         if j < 0:
             bad("引號沒收尾（不支援多行）")
-        inner, tail = v[1:j], v[j + 1:].lstrip(" \t")
+        inner, tail = v[1:j], v[j + 1:].lstrip()
         if "\\" in inner:
             bad("引號裡不能有 \（不支援跳脫）")
         if q == "'" and "${" in inner:
@@ -241,10 +242,10 @@ def env_value(rest, bad):
         return inner, q == '"'
     if v.startswith("#") and v != rest:
         bad("= 後面空白再接 #（要空值寫 X=，要 # 開頭的值加引號）")
-    m = re.search(r"[ \t]#", v)   # 沒引號：第一個「空格／tab＋#」起是註解；a#b、#fff 照字面
+    m = re.search(r"\s#", v)   # 沒引號：第一個「空白＋#」起是註解；a#b、#fff 照字面（同 python-dotenv，10-22 使用者更正）
     if m:
         v = v[:m.start()]
-    return v.rstrip(" \t"), True
+    return v.rstrip(), True
 
 
 def load_env(d, override):
