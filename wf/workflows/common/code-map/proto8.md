@@ -15,7 +15,7 @@
 - `aos-loop`＋`aos_loop.py`（骨架＋薄命令列，aos-daemon 共用）：`aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] loop.json`（10-21 傍晚：設定檔是唯一的位置參數、可寫 `檔#/指標`；旗標 ＞ 設定檔 ＞ 預設）；`run`＝aos-exec 的目標或 `[目標, 參數...]`、`max` 沒寫＝不限，選填 `interval_ms`、`ctl`、`state`；每圈 `aos-exec -- <run> 參數...`，退 10 就停、其他非 0 原碼結束；收到訊號轉給那拍、收完 128＋N；state 只在拍與拍之間寫。
 - `aos_window.py`（10-20）：ctl／state 窗——`Ctl.read()`（paused／stop／max／interval_ms／seq＋程式多認的 key，壞的不採用、留上一份、記 `last_warning`）、`write()`（先寫 `.` 暫存再改名）、`beat()`（pid／started／boot_id／beat 心跳欄位）、`started(pid)`。
 - `aos-daemon`（`aos_loop.Loop` 的子類別）：daemon.json＝loop.json 超集，加 `children`、`adopt`；每個子項的小格 `$AOS_STACK/<名字>/` 裡寫 loop.json（`run` 轉絕對、蓋上 `_exec`），經 `aos-exec -- 小格/loop.json#/_exec` 起子 loop（10-21 傍晚）；ctl 的 `children` 增減表；子項名字跟 daemon 自己的 ctl／state（在 `$AOS_STACK` 底下的路徑第一段）撞名就擋（起來時退 1、ctl 裡整份不採用，10-22）；子 loop 結束不重起；結束前收掉所有子項（D7）；收到訊號 128＋N；重起時接回活著的子項。
-- `aos-fsm`：`aos-fsm [旗標] fsm.json`（旗標表是空的；10-22 USAGE 補 `[旗標]`；10-21 傍晚：設定檔是唯一的位置參數、可寫 `檔#/指標`）；一拍只跑一格，`$AOS_STACK/state`（純文字一行）接著上一拍，`val`＝aos-exec 的目標或 `[目標, 參數...]`，每拍在 `trace.jsonl` 記一行；格的碼 0 才換狀態；收到訊號轉給那格、trace 與 state 照寫、再 128＋N。
+- `aos-fsm`：`aos-fsm [旗標] fsm.json`（旗標表是空的；10-22 USAGE 補 `[旗標]`；10-21 傍晚：設定檔是唯一的位置參數、可寫 `檔#/指標`）；一拍只跑一格，`$AOS_STACK/state`（純文字一行）接著上一拍，`val`＝aos-exec 的目標或 `[目標, 參數...]`，每拍在 `trace.jsonl` 記一行；格的碼 0 才換狀態；收到訊號轉給那格、trace 與 state 照寫、再 128＋N；10-22：開跑時 `check()` 查整張表、state 在但讀不了退 1。
 - `aos-tick`（10-21 晚，計畫第 4 段）：`aos-tick [旗標] FILE`＝時鐘往前走一格，讀 n 寫 n＋1（沒檔＝0，先寫 `.名字` 再改名）；唯一的位置參數、旗標表是空的；錯退 1 一行、檔不動。
 
 ### `proto8/demo/`
@@ -29,7 +29,7 @@
 
 ### `proto8/tests/`
 
-逐字下放到 [proto8/02-tests](proto8/02-tests.md)（2026-10-21 晚，本檔超過 8 KB）：每個測試檔涵蓋什麼、幾個；共 237 個，`python3 -m unittest discover -s proto8/tests`。
+逐字下放到 [proto8/02-tests](proto8/02-tests.md)（2026-10-21 晚，本檔超過 8 KB）：每個測試檔涵蓋什麼、幾個；共 243 個（10-22），`python3 -m unittest discover -s proto8/tests`。
 
 ### `proto8/impls/` 與舊 lib
 

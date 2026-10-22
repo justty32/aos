@@ -9,7 +9,9 @@ x 只收字串（aos-exec 的目標；10-21 plan L11、F2）：子行程 `aos-ex
 不被當旗標，L10；跟呼叫者同一個行程群組，同 subprocess.call）；跑的期間收到的三個訊號 os.kill 給那個子行程
 （不另設 SIGKILL 期限）。要內嵌單子就讓目標指到它（`loop.json#/body`、`fsm.json#/states/<名>/body`），
 由 aos-exec 在它自己的行程裡跑、當監工（逾時與轉來的訊號打整群，N-59 第 5 件）。拍看不到格裡有沒有逾時（C-52）：
-被逾時收掉的拍就是 code 128＋15、signal 15（或 SIGKILL 的 137／9）。
+被逾時收掉的拍就是 code 128＋15（或補 SIGKILL 的 137）、signal None——拍是 aos-exec 子行程，它收掉單子後
+以子程式的碼正常結束，不是自己被訊號殺掉；signal 只在拍的那個行程（aos-exec，或它 exec 成的程式）本身被訊號殺掉時
+有值（10-22 實測更正，原寫 signal 15／9）。
 received＝跑的期間收到、轉給那拍的第一個訊號（沒有＝None）；呼叫者收完這拍要以 128＋它結束（CONVENTION P-36
 「先收好自己起的子程式、寫好狀態再結束，結束碼非 0」）。起不了 aos-exec 丟 StartError。
 對齊 impls 的 aos-loop（aos/loop.hpp 的 block_signals／take_signal／run_beat，ideas § 24）。

@@ -9,7 +9,12 @@ val＝字串（aos-exec 的目標，每拍 `aos-exec -- <val>`）或陣列 [目�
 `fsm.json#/states/<名>/body`、單子放在同一格的 body，由 aos-exec 在它自己的行程裡跑（逾時與訊號打整群，N-59）。
 val 是物件或別的＝表壞。表裡其他 key（body、_exec…）忽略（C-48），所以 fsm.json 可以帶 `"_exec": ["aos-fsm", {"$env": "AOS_CF"}]`
 當 aos-exec 的入口（F6）。
-讀 $AOS_STACK/state（純文字一行狀態名；沒有＝start，格式與 shell 版相同；寫的時候先寫 .state 再改名，N-05）；查格；跑格。
+開跑時（讀表後、跑格前）先查整張表（10-22）：start 要在表上；每一格要是 {"val", "next"}、val 合法、next 要是表上的狀態名、
+不能是空字串、頭尾不能有空白、不能有換行——哪一格不合都＝表壞、不跑格（原本只查這拍那一格：next 不在表上要到下一拍才擋，
+next 是空字串則下一拍靜靜回 start）。
+讀 $AOS_STACK/state（純文字一行狀態名、去頭尾空白；沒有檔或內容是空的＝start，格式與 shell 版相同；10-22 起在但讀不了
+〔沒權限、是資料夾、不是 UTF-8…〕＝自己的錯，原本沒權限、是資料夾當沒有檔、從 start 起，不是 UTF-8 吐 traceback；
+裡面的狀態不在表上＝自己的錯；寫的時候先寫 .state 再改名，N-05）；查格；跑格。
 每拍在 $AOS_STACK/trace.jsonl 追加一行 {"at","state","code","signal","ms"}（at＝這拍開始的 UTC 時間；沒有 timed_out：
 fsm 看不到格裡有沒有逾時，C-52；被逾時收掉的格是 code 143（128＋15）、signal null——
 格是 aos-exec 子行程，它收掉單子後以子程式的碼正常結束，不是自己被訊號殺掉；F4；10-22 實測更正，原寫 signal 15）。
@@ -17,7 +22,7 @@ fsm 看不到格裡有沒有逾時，C-52；被逾時收掉的格是 code 143（
 只看格的結束碼，不讀格的 stdout、不轉述格的 stderr。PATH 不動。
 收到 SIGINT／SIGTERM／SIGHUP：轉給那格（那個 aos-exec 子行程），等格結束，trace 與 state 照常寫完，
 再以 128＋N 結束；跑格之前就收到＝不跑、直接 128＋N（P-36；對齊 impls 的 aos-fsm，ideas § 24）。自己的錯（usage、沒設 AOS_STACK、
-表壞、查不到格、起不了 aos-exec）退 1，stderr 一行 `aos-fsm: 原因`。"""
+表壞、state 讀不了、查不到格、起不了 aos-exec）退 1，stderr 一行 `aos-fsm: 原因`。"""
 import datetime, json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_beat, aos_flags
@@ -29,6 +34,31 @@ FLAGS = {}   # 目前沒有旗標；以後加旗標就在這裡加一列
 def die(msg):
     print(f"aos-fsm: {msg}", file=sys.stderr)
     sys.exit(1)
+
+
+def check(start, states):
+    """10-22：開跑時（讀表後、跑格前）查整張表，回 {狀態名: (目標, [參數...])}；哪裡不合＝表壞、die。
+    start 要在表上；每一格要是 {"val", "next"}、val 要是 aos-exec 的目標（字串或字串陣列）、
+    next 要是表上的狀態名、不能是空字串、頭尾不能有空白、不能有換行（state 檔是純文字一行、讀回來會去頭尾空白，
+    寫進去要讀得回同一個名字）。"""
+    if start not in states:
+        die(f"start 的 {start} 不在表上")
+    targets = {}
+    for name, cell in states.items():
+        if not (isinstance(cell, dict) and "val" in cell and isinstance(cell.get("next"), str)):
+            die(f"狀態 {name} 要是 {{\"val\", \"next\"}}（next 是狀態名字串）")
+        nxt = cell["next"]
+        if not nxt or nxt != nxt.strip() or "\n" in nxt:
+            die(f"狀態 {name} 的 next {json.dumps(nxt, ensure_ascii=False)} 不能是空字串、頭尾不能有空白、不能有換行")
+        if nxt not in states:
+            die(f"狀態 {name} 的 next {nxt} 不在表上")
+        if isinstance(cell["val"], dict):
+            die(f"狀態 {name} 的 val 要是 aos-exec 的目標（字串或字串陣列）；要內嵌單子寫 fsm.json#/states/{name}/body")
+        try:
+            targets[name] = aos_flags.target(cell["val"], f"狀態 {name} 的 val")
+        except aos_flags.Error as e:
+            die(str(e))
+    return targets
 
 
 def main():
@@ -50,21 +80,21 @@ def main():
     states = cfg.get("states") if isinstance(cfg, dict) else None
     if not isinstance(states, dict) or not isinstance(cfg.get("start"), str):
         die('fsm.json 要是 {"start": 狀態名, "states": {名: {"val", "next"}}}')
+    targets = check(cfg["start"], states)   # 10-22：開跑時查整張表，哪一格壞都不跑
     sfile = os.path.join(stack, "state")
     try:
-        state = open(sfile, encoding="utf-8").read().strip() or cfg["start"]
-    except OSError:
+        with open(sfile, encoding="utf-8") as f:
+            state = f.read().strip() or cfg["start"]
+    except FileNotFoundError:   # 沒有檔＝從 start 起
         state = cfg["start"]
-    cell = states.get(state)
-    if not (isinstance(cell, dict) and "val" in cell and isinstance(cell.get("next"), str)):
-        die(f"查不到狀態 {state}（或它不是 {{\"val\", \"next\"}}）")
-    val = cell["val"]
-    if isinstance(val, dict):
-        die(f"狀態 {state} 的 val 要是 aos-exec 的目標（字串或字串陣列）；要內嵌單子寫 fsm.json#/states/{state}/body")
-    try:
-        val, args = aos_flags.target(val, f"狀態 {state} 的 val")
-    except aos_flags.Error as e:
-        die(str(e))
+    except UnicodeDecodeError:   # 10-22：在但讀不了＝自己的錯
+        die(f"讀不了 {sfile}：不是 UTF-8")
+    except OSError as e:
+        die(f"讀不了 {sfile}：{e.strerror or e}")
+    if state not in states:
+        die(f"查不到狀態 {state}（{sfile} 裡的狀態不在表上）")
+    cell = states[state]
+    val, args = targets[state]
     if aos_beat.take():
         sys.exit(128 + aos_beat.take())
     at = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")

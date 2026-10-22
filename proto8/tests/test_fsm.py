@@ -193,6 +193,66 @@ class T(unittest.TestCase):
             self.assertEqual(len(r.stderr.strip().splitlines()), 1, str(f))
             self.assertTrue(r.stderr.startswith("aos-fsm: "), str(f))
 
+    def assert_own_error_no_beat(self, r, what):
+        self.assertEqual(r.returncode, 1, (what, r.stderr))
+        self.assertEqual(len(r.stderr.strip().splitlines()), 1, (what, r.stderr))
+        self.assertTrue(r.stderr.startswith("aos-fsm: "), (what, r.stderr))
+        self.assertNotIn("Traceback", r.stderr, what)
+        self.assertFalse((self.stack / "ran").exists(), what)   # 不跑格
+        self.assertFalse((self.stack / "trace.jsonl").exists(), what)
+
+    def test_state_exists_but_unreadable_is_own_error(self):
+        # 10-22 a：state 在但讀不了（是資料夾、不是 UTF-8、沒權限）＝自己的錯，退 1、一行、不跑格（原本前兩種當沒有檔從 start 跑、
+        # 不是 UTF-8 吐 traceback）；沒有檔照舊＝start
+        self.cell("a", 'touch "$AOS_STACK/ran"\n')
+        self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "a", "next": "a"}})
+        sf = self.stack / "state"
+        sf.mkdir()
+        self.assert_own_error_no_beat(self.beat(), "是資料夾")
+        sf.rmdir()
+        sf.write_bytes(b"\xff\xfe\n")
+        self.assert_own_error_no_beat(self.beat(), "不是 UTF-8")
+        self.assertEqual(sf.read_bytes(), b"\xff\xfe\n")
+        if os.geteuid() != 0:   # root 讀得到沒權限的檔
+            sf.write_text("b\n"); sf.chmod(0)
+            try:
+                self.assert_own_error_no_beat(self.beat(), "沒權限")
+            finally:
+                sf.chmod(0o644)
+        sf.unlink()
+        r = self.beat()
+        self.assertEqual((r.returncode, r.stderr, self.state()), (0, "", "b\n"))   # 沒有檔＝start
+
+    def test_whole_table_checked_before_beat(self):
+        # 10-22 b、c：開跑時查整張表——start 不在表上、任何一格的 next 不在表上或是空字串（或頭尾有空白、不是字串）、
+        # 任何一格的 val 壞，都＝表壞、退 1、不跑格（原本只查這拍那一格：next 不在表上要到下一拍才擋、空字串下一拍靜靜回 start）
+        self.cell("a", 'touch "$AOS_STACK/ran"\n')
+        good = {"val": "a", "next": "a"}
+        for what, start, states in (
+                ("start 不在表上", "zz", {"a": good}),
+                ("next 不在表上", "a", {"a": {"val": "a", "next": "nope"}}),
+                ("別格 next 不在表上", "a", {"a": good, "b": {"val": "a", "next": "nope"}}),
+                ("next 空字串", "a", {"a": {"val": "a", "next": ""}}),
+                ("別格 next 空字串", "a", {"a": good, "b": {"val": "a", "next": ""}}),
+                ("next 頭尾空白", "a", {"a": {"val": "a", "next": " a"}, " a": good}),
+                ("next 有換行", "a", {"a": {"val": "a", "next": "x\ny"}, "x\ny": good}),
+                ("next 不是字串", "a", {"a": good, "b": {"val": "a", "next": 3}}),
+                ("別格沒 next", "a", {"a": good, "b": {"val": "a"}}),
+                ("別格不是物件", "a", {"a": good, "b": "a"}),
+                ("別格 val 是物件", "a", {"a": good, "b": {"val": {"argv": ["true"]}, "next": "a"}}),
+                ("別格 val 空陣列", "a", {"a": good, "b": {"val": [], "next": "a"}})):
+            self.table(states, start=start)
+            self.assert_own_error_no_beat(self.beat(), what)
+
+    def test_state_value_not_in_table_is_own_error(self):
+        # state 檔裡的狀態不在表上：照舊是自己的錯、退 1、不跑格（10-22 寫清楚）
+        self.cell("a", 'touch "$AOS_STACK/ran"\n')
+        self.table({"a": {"val": "a", "next": "a"}})
+        (self.stack / "state").write_text("zzz\n")
+        r = self.beat()
+        self.assert_own_error_no_beat(r, "state 不在表上")
+        self.assertIn("zzz", r.stderr)
+
     def test_broken_cell_is_aos_exec_error_passed_up(self):
         # 格指到跑不起來的東西：那是 aos-exec 的錯（它退 1、自己說），fsm 只把碼往上傳、不轉述（C-52）
         self.table({"a": self.body("a", {"argv": ["no-such-cmd-xyz"]})})
