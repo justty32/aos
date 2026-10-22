@@ -7,7 +7,9 @@ daemon.json＝loop.json 的超集：
                要內嵌單子寫 {"run": "daemon.json#/children/<名字>/body", "body": 單子}）。子項 run 的相對路徑從 daemon 的 cwd 算：
                daemon 寫小格時把它（陣列就是第一個元素）轉成絕對路徑，其他不動
     adopt      布林，沒寫＝true：起來時讀自己上次的 state，把還活著的子 loop（pid＋啟動時間對得上）接回、不重起（N-17、N-28）
-需要 $AOS_STACK（沒設＝退 1）。每個子項的小格是 $AOS_STACK/<名字>/（P-17；名字不能帶 /、#、不能 . 開頭）：daemon 把子項的 loop 設定補上
+需要 $AOS_STACK（沒設＝退 1）。每個子項的小格是 $AOS_STACK/<名字>/（P-17；名字不能帶 /、#、不能 . 開頭，也不能跟 daemon 自己的
+ctl、state 撞名——檔在 $AOS_STACK 底下時，路徑的第一段就是會撞的名字，例如 "state.json"、"w/ctl.json" 的 "w"；使用者 10-22；
+起來時撞＝退 1，ctl 改 children 撞＝那份 ctl 不採用）：daemon 把子項的 loop 設定補上
 "ctl": "ctl.json"、"state": "state.json"（沒寫才補）與 "_exec": ["aos-loop", {"$env": "AOS_CF"}]（一律蓋上）寫成小格裡的 loop.json，
 以 AOS_STACK=小格 起 `aos-exec -- 小格/loop.json#/_exec`（經 aos-exec，使用者 10-21 傍晚「5.要」；指到 _exec 不受 $AOS_ENTRY 影響；
 aos-exec cd 進小格、exec 成 aos-loop，pid 不變；自成一個行程群組）。子 loop 的 stdout 丟掉、stderr 附加到小格的 stderr（N-28 方案 B）。
@@ -25,12 +27,27 @@ import aos_beat, aos_loop, aos_window
 GRACE = 10.0   # 收子 loop：SIGTERM 後等幾秒才 SIGKILL（P-36 daemon 的 grace 慣例 10000 毫秒）
 
 
-def check_children(v):
+def taken_names(stack, paths):
+    """ctl、state 落在 $AOS_STACK 底下的，取相對路徑的第一段（小格 $AOS_STACK/<名字>/ 會跟它撞）；落在外面的不算。"""
+    base, out = os.path.normpath(stack), set()
+    for p in paths:
+        if p is None:
+            continue
+        rel = os.path.relpath(os.path.normpath(p), base)
+        if rel not in (".", "..") and not rel.startswith(".." + os.sep):
+            out.add(rel.split(os.sep)[0])
+    return out
+
+
+def check_children(v, taken=()):
+    """taken＝daemon 自己在 $AOS_STACK 底下用掉的名字（taken_names）。"""
     if not isinstance(v, dict):
         return "children 要是 {名字: loop 設定}"
     for name, c in v.items():
         if not name or "/" in name or "#" in name or name.startswith("."):   # # 會被 aos-exec 當成指標的開頭
             return "children 的名字 %r 不能當資料夾名" % name
+        if name in taken:
+            return "children 的名字 %r 跟 daemon 自己的 ctl／state 撞名" % name
         if not isinstance(c, (str, list, dict)):
             return "children[%s] 要是 aos-exec 的目標或 loop 設定" % name
     return None
@@ -67,9 +84,11 @@ class Daemon(aos_loop.Loop):
         if not self.stack:
             raise aos_loop.ConfigError("沒設定 AOS_STACK")
         self.children = self.cfg.get("children", {})
-        bad = check_children(self.children)
+        taken = taken_names(self.stack, (self.ctl.path, self.state_path))
+        bad = check_children(self.children, taken)
         if bad:
             raise aos_loop.ConfigError(bad)
+        self.ctl.extra = {"children": lambda v: check_children(v, taken)}   # ctl 改 children 撞名＝整份不採用（N-08）
         adopt = self.cfg.get("adopt", True)
         if not isinstance(adopt, bool):
             raise aos_loop.ConfigError("adopt 要是 true／false")
