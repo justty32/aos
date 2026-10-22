@@ -104,7 +104,7 @@ class T(unittest.TestCase):
                      ("--",), ("--ws", self.t, "--")):
             rc, out, err, stderr = run(*argv)
             self.assertEqual((rc, out, len(stderr.splitlines())), (1, "", 1), argv)
-            self.assertTrue(stderr.startswith("aos-exec: usage: aos-exec [--ws WS] XXX [args...]"), stderr)
+            self.assertTrue(stderr.startswith("aos-exec: usage: aos-exec [--ws WS] [--dotenv-override] XXX [args...]"), stderr)
         self.assertIn("--nope", run("--nope", d)[3])
 
     def test_json_argv_entries(self):

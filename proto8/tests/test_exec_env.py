@@ -1,6 +1,8 @@
 """aos-exec 讀 AOS_CD 裡的 .env（10-21 ideas § 4；N-59、N-58、N-60）。
-步驟：cd 到 AOS_CD → 設好 AOS_* → 讀 .env → 解指示詞 → 解語法糖 → 開跑；優先順序 旗標 ＞ .env ＞ 原本的環境變數 ＞ 預設；
-字串轉向＝交給下一層、全新的一次 aos-exec（旗標不帶、args 照接、下一層讀它自己的 .env）。"""
+步驟：cd 到 AOS_CD → 設好 AOS_* → 讀 .env → 解指示詞 → 解語法糖 → 開跑；優先順序（10-22 改）沒 --dotenv-override＝
+旗標 ＞ 原本的環境變數 ＞ .env ＞ 預設，有＝旗標 ＞ .env ＞ 原本的 ＞ 預設；
+字串轉向＝交給下一層、全新的一次 aos-exec（旗標不帶、args 照接、下一層讀它自己的 .env）。
+10-22 的格式基礎子集與 --dotenv-override 管到哪，在 test_exec_dotenv.py。"""
 import os, tempfile, unittest
 from pathlib import Path
 
@@ -15,8 +17,8 @@ class T(unittest.TestCase):
 
     def test_basic_lines(self):
         d = prog(self.t, "p", 'printf "%s|%s|%s|%s|%s|%s\\n" "$A" "$B" "$C" "$D" "${E-unset}" "$F"\n')
-        put(Path(d, ".env"), "# 註解\n\n   # 縮排的註解\nA=1\r\n  B=x=y\nC=$HOME 不是展開 $\nD=\nF=a  # 不是註解\nA=2\n")
-        self.assertEqual(run("--ws", self.t, d)[:2], (0, "2|x=y|$HOME 不是展開 $||unset|a  # 不是註解\n"))
+        put(Path(d, ".env"), "# 註解\n\n   # 縮排的註解\nA=1\r\n  B=x=y\nC=$HOME 不是展開 $\nD=\nF=a  # 10-22 起是註解\nA=2\n")
+        self.assertEqual(run("--ws", self.t, d)[:2], (0, "2|x=y|$HOME 不是展開 $||unset|a\n"))
 
     def test_no_env_file(self):
         d = prog(self.t, "p", 'echo "${A-unset}"\n')
@@ -24,11 +26,13 @@ class T(unittest.TestCase):
 
     def test_expand_in_order_and_path(self):
         # .env 設的 PATH 讓 argv 陣列的 argv[0] 找得到 bin/ 裡的程式；${AOS_CD} 是 aos-exec 剛算好的值
+        # 10-22：PATH 一定已有，要加 --dotenv-override 才蓋得到；沒加整行跳過（X、Y 照設）
         q = Path(self.t, "q")
         put(q / "bin" / "hello", "#!/bin/sh\necho \"hello $X $Y\"\n", 0o755)
         put(q / ".env", "PATH=${AOS_CD}/bin:${PATH}\nX=1\nY=${X}2${X}\n")
         put(q / "_exec.json", ["hello"])
-        self.assertEqual(run("--ws", self.t, str(q))[:2], (0, "hello 1 121\n"))
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q))[:2], (0, "hello 1 121\n"))
+        self.assertEqual(run("--ws", self.t, str(q))[2], "起不來")
         # 沒有 .env 時同一個入口找不到 hello
         os.remove(q / ".env")
         self.assertEqual(run("--ws", self.t, str(q))[2], "起不來")
@@ -40,7 +44,9 @@ class T(unittest.TestCase):
             x.mkdir()
         put(Path(d, ".env"), "AOS_WS=%s\n" % b)
         self.assertEqual(run("--ws", str(a), d, env={"AOS_WS": str(c)})[1], "%s\n" % a.resolve())   # 旗標贏
-        self.assertEqual(run(d, env={"AOS_WS": str(c)})[1], "%s\n" % b)                            # .env 贏外面
+        self.assertEqual(run(d, env={"AOS_WS": str(c)})[1], "%s\n" % c)                            # 10-22：外面贏 .env
+        self.assertEqual(run("--dotenv-override", d, env={"AOS_WS": str(c)})[1], "%s\n" % b)       # 加旗標＝.env 贏外面
+        self.assertEqual(run("--dotenv-override", "--ws", str(a), d)[1], "%s\n" % a.resolve())     # 旗標還是最優先
         os.remove(Path(d, ".env"))
         self.assertEqual(run(d, env={"AOS_WS": str(c)})[1], "%s\n" % c)                            # 外面贏預設
 
@@ -50,7 +56,10 @@ class T(unittest.TestCase):
         d = prog(self.t, "p", 'echo "$AOS_CF|$AOS_CD|$AOS_STACK|$AOS_ENTRY|$(pwd -P)"\n', entry="other")
         put(Path(d, ".env"), "AOS_CF=cf\nAOS_CD=/nowhere\nAOS_STACK=st/\nAOS_ENTRY=other\n")
         real = str(Path(d).resolve())
-        self.assertEqual(run("--ws", self.t, d)[:2], (0, "cf|/nowhere|st/|other|%s\n" % real))
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, d)[:2], (0, "cf|/nowhere|st/|other|%s\n" % real))
+        # 10-22 不加旗標：AOS_CF／AOS_CD／AOS_STACK 讀 .env 前已設＝跳過；AOS_ENTRY aos-exec 不 export、外面沒設＝設得了
+        st = str(Path(self.t, ".aos").resolve()) + "/"
+        self.assertEqual(run("--ws", self.t, d)[:2], (0, "%s/other|%s|%s|other|%s\n" % (real, real, st, real)))
 
     # ---- 10-21 晚：AOS_ENTRY 的順序（ideas 10-21 § 5）：cd 進去、讀 .env，再照 $AOS_ENTRY 挑入口 ----
 
@@ -75,8 +84,10 @@ class T(unittest.TestCase):
         self.assertEqual(run("--ws", self.t, str(q / "cfg.json"))[:2], (0, "alt\n"))
         self.assertEqual(run("--ws", self.t, str(q / "cfg"))[:2], (0, "alt\n"))            # 補 .json
         self.assertEqual(run("--ws", self.t, str(q / "cfg.json") + "#/in")[:2], (0, "in-alt\n"))   # 檔#/指標
-        # 外面設的 AOS_ENTRY 被 .env 蓋掉
-        self.assertEqual(run("--ws", self.t, str(q / "cfg.json"), env={"AOS_ENTRY": "_exec"})[:2], (0, "alt\n"))
+        # 外面設的 AOS_ENTRY：10-22 起外面贏；加 --dotenv-override 才被 .env 蓋掉
+        self.assertEqual(run("--ws", self.t, str(q / "cfg.json"), env={"AOS_ENTRY": "_exec"})[:2], (0, "default\n"))
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q / "cfg.json"), env={"AOS_ENTRY": "_exec"})[:2],
+                         (0, "alt\n"))
 
     def test_entry_in_subdir_reads_env_along_the_way(self):
         # AOS_ENTRY＝sub/run：沿路的資料夾（p、p/sub）的 .env 由外到內都讀（ideas 10-21 § 6 的 a）；AOS_CF／AOS_CD／cwd＝實際的檔
@@ -85,7 +96,10 @@ class T(unittest.TestCase):
         put(d / "sub" / "run", '#!/bin/sh\necho "$A|$B|$AOS_CF|$AOS_CD|$(pwd -P)|$AOS_CO"\n', 0o755)
         put(d / "sub" / ".env", "B=sub-${A}\n")
         rs = (d / "sub").resolve()
-        self.assertEqual(run("--ws", self.t, str(d))[:2], (0, "top|sub-top|%s/run|%s|%s|\n" % (rs, rs, rs)))
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(d))[:2],
+                         (0, "top|sub-top|%s/run|%s|%s|\n" % (rs, rs, rs)))
+        # 10-22 不加旗標：外層（先讀的）贏，sub 的 B 跳過
+        self.assertEqual(run("--ws", self.t, str(d))[:2], (0, "top|top|%s/run|%s|%s|\n" % (rs, rs, rs)))
 
     def test_dir_picks_dir_all_the_way_down(self):
         # 挑到的是資料夾＝走進去、讀它的 .env、照當下的 AOS_ENTRY 再挑，一路往下
@@ -107,8 +121,10 @@ class T(unittest.TestCase):
                                     "R": {"$ref": "v.json#/k"}},
                            "_exec": ["sh", "-c", 'echo "$A|$B|${N-unset}|$M|$R"']})
         put(q / "v.json", {"k": "ref-val"})
-        # 真資料夾的 .env 先、物件的 .env key 後（後讀的贏）；值可放指示詞，解完不是字串的靜默跳過
-        self.assertEqual(run("--ws", self.t, str(q / "x.json"))[:2], (0, "file|obj-file|unset|env:file|ref-val\n"))
+        # 真資料夾的 .env 先、物件的 .env key 後（加旗標＝後讀的贏；10-22 不加＝先讀的贏）；值可放指示詞，解完不是字串的靜默跳過
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q / "x.json"))[:2],
+                         (0, "file|obj-file|unset|env:file|ref-val\n"))
+        self.assertEqual(run("--ws", self.t, str(q / "x.json"))[:2], (0, "file|file|unset|env:file|ref-val\n"))
         # .env key 設 AOS_ENTRY 改變挑哪格
         put(q / "y.json", {".env": {"AOS_ENTRY": "alt"}, "_exec": ["echo", "default"], "alt": ["echo", "alt"]})
         self.assertEqual(run("--ws", self.t, str(q / "y.json"))[:2], (0, "alt\n"))
@@ -155,11 +171,13 @@ class T(unittest.TestCase):
         self.assertEqual(run("--ws", self.t, str(q / "e.json"), env={"AOS_ENTRY": "we~ird/k"})[1], "[/we~0ird~1k]\n")
         prog(self.t, "p", 'echo "[$AOS_CO]"\n')                        # 不是 JSON＝空，外面的值被覆寫
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "p")), env={"AOS_CO": "/old"})[1], "[]\n")
-        put(q / ".env", "AOS_CO=from-env\n")                            # .env 設了就不蓋
-        self.assertEqual(run("--ws", self.t, str(q / "b.json"))[1], "[from-env]\n")
+        put(q / ".env", "AOS_CO=from-env\n")                            # .env 設了就不蓋（10-22：要加旗標才設得了）
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q / "b.json"))[1], "[from-env]\n")
+        self.assertEqual(run("--ws", self.t, str(q / "b.json"))[1], "[/_exec]\n")
         os.remove(q / ".env")
         put(q / "f.json", {".env": {"AOS_CO": "obj"}, "_exec": show})   # JSON .env key 設了也不蓋
-        self.assertEqual(run("--ws", self.t, str(q / "f.json"))[1], "[obj]\n")
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q / "f.json"))[1], "[obj]\n")
+        self.assertEqual(run("--ws", self.t, str(q / "f.json"))[1], "[/_exec]\n")
         # 字串轉向＝全新的一跳，AOS_CO 照下一跳算
         put(q / "g.json", {"_exec": "b.json"})
         self.assertEqual(run("--ws", self.t, str(q / "g.json"))[1], "[/_exec]\n")
@@ -169,13 +187,14 @@ class T(unittest.TestCase):
         a.mkdir(); b.mkdir()
         q = Path(self.t, "q")
         put(q / "x.json", {".env": {"AOS_WS": str(b)}, "_exec": ["sh", "-c", 'echo "$AOS_WS"']})
-        self.assertEqual(run("--ws", str(a), str(q / "x.json"))[1], "%s\n" % a.resolve())
-        self.assertEqual(run(str(q / "x.json"))[1], "%s\n" % b)
+        self.assertEqual(run("--dotenv-override", "--ws", str(a), str(q / "x.json"))[1], "%s\n" % a.resolve())
+        self.assertEqual(run("--dotenv-override", str(q / "x.json"))[1], "%s\n" % b)
+        self.assertEqual(run(str(q / "x.json"), env={"AOS_WS": str(a)})[1], "%s\n" % a.resolve())   # 10-22 不加＝原有的贏
         # 資料夾一路往下時每層 .env 讀完旗標都蓋回
         d = Path(self.t, "p")
         put(d / "_exec" / ".env", "AOS_WS=%s\n" % b)
         put(d / "_exec" / "_exec", '#!/bin/sh\necho "$AOS_WS"\n', 0o755)
-        self.assertEqual(run("--ws", str(a), str(d))[1], "%s\n" % a.resolve())
+        self.assertEqual(run("--dotenv-override", "--ws", str(a), str(d))[1], "%s\n" % a.resolve())
 
     def test_flag_ws_beats_env_with_entry(self):
         a, b = Path(self.t, "a"), Path(self.t, "b")
@@ -183,11 +202,14 @@ class T(unittest.TestCase):
         d = prog(self.t, "p", "echo default\n")
         put(Path(d, "main"), '#!/bin/sh\necho "main|$AOS_WS"\n', 0o755)
         put(Path(d, ".env"), "AOS_WS=%s\nAOS_ENTRY=main\n" % b)
-        self.assertEqual(run("--ws", str(a), d)[:2], (0, "main|%s\n" % a.resolve()))
-        self.assertEqual(run(d)[:2], (0, "main|%s\n" % b))
+        self.assertEqual(run("--dotenv-override", "--ws", str(a), d)[:2], (0, "main|%s\n" % a.resolve()))
+        self.assertEqual(run("--dotenv-override", d)[:2], (0, "main|%s\n" % b))
+        # 10-22 不加＝AOS_WS 跳過、AOS_ENTRY 照設
+        self.assertEqual(run(d, env={"AOS_WS": str(a)})[:2], (0, "main|%s\n" % a.resolve()))
 
     def test_redirect_two_layers(self):
-        # r 的入口是字串轉向到 t：兩層 .env 都讀、後讀的贏；--ws 只在第一層有效（轉向＝全新一次、旗標不帶）；args 照接
+        # r 的入口是字串轉向到 t：兩層 .env 都讀；--ws 只在第一層有效（轉向＝全新一次、旗標不帶）；args 照接
+        # 10-22：不加旗標＝先讀的贏（t 的 B 跳過）；--dotenv-override 也只管第一層，t 那層照樣不蓋
         a, b, c = (Path(self.t, n) for n in "abc")
         for x in (a, b, c):
             x.mkdir()
@@ -196,10 +218,14 @@ class T(unittest.TestCase):
         put(r / ".env", "A=r\nB=r\nAOS_WS=%s\n" % c)
         t = Path(prog(self.t, "t", 'echo "$A|$B|$C|$AOS_WS|$*"\n'))
         put(t / ".env", "B=t\nC=${A}+t\n")
-        self.assertEqual(run("--ws", str(a), str(r), "x", "y")[:2], (0, "r|t|r+t|%s|x y\n" % a.resolve()))
-        # 第二層的 .env 設 AOS_WS：沒有旗標可以蓋它，它贏（旗標不帶過去）
+        self.assertEqual(run("--ws", str(a), str(r), "x", "y")[:2], (0, "r|r|r+t|%s|x y\n" % a.resolve()))
+        self.assertEqual(run("--dotenv-override", "--ws", str(a), str(r), "x", "y")[:2],
+                         (0, "r|r|r+t|%s|x y\n" % a.resolve()))
+        # 第二層的 .env 設 AOS_WS：AOS_WS 一定已有，第二層沒旗標＝跳過（10-22；原本它贏）
         put(t / ".env", "AOS_WS=%s\n" % b)
-        self.assertEqual(run("--ws", str(a), str(r))[1], "r|r||%s|\n" % b)
+        self.assertEqual(run("--ws", str(a), str(r))[1], "r|r||%s|\n" % a.resolve())
+        # 第一層 r 的 .env 設 AOS_WS：加 --dotenv-override、不給 --ws 才看得到它
+        self.assertEqual(run("--dotenv-override", str(r))[1], "r|r||%s|\n" % c)
 
     def test_unset_reference_is_error(self):
         d = prog(self.t, "p", "echo ran\n")
@@ -245,11 +271,15 @@ class T(unittest.TestCase):
 
     def test_inserted_aos_exec_inherits_and_reads_own(self):
         # argv[0] 帶 / 又 exec 不了＝插 aos-exec：子程式繼承含 .env 的環境，並讀它自己那裡的 .env
+        # 10-22：插進去的 aos-exec 是新的一跳、沒旗標＝不蓋（B 照 parent）；要蓋自己寫 aos-exec --dotenv-override
         q = Path(self.t, "q")
         put(q / ".env", "A=parent\nB=parent\n")
         put(q / "_exec.json", ["tools/t", "z"])
         tool = Path(prog(q / "tools", "t", 'echo "$A|$B|$*"\n'))
         put(tool / ".env", "B=child\n")
+        self.assertEqual(run("--ws", self.t, str(q))[:2], (0, "parent|parent|z\n"))
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q))[:2], (0, "parent|parent|z\n"))   # 旗標不往下傳
+        put(q / "_exec.json", ["aos-exec", "--dotenv-override", "tools/t", "z"])
         self.assertEqual(run("--ws", self.t, str(q))[:2], (0, "parent|child|z\n"))
 
     # ---- 10-21 晚 審後補（ideas 10-21 § 7）----
@@ -269,14 +299,15 @@ class T(unittest.TestCase):
         put(d / "_exec" / ".env", "C=${C}x\n")
         put(d / "_exec" / "_exec", '#!/bin/sh\necho "$C"\n', 0o755)
         for entry in ("_exec/", "_exec//", "_exec"):
-            self.assertEqual(run("--ws", self.t, str(d), env={"AOS_ENTRY": entry, "C": ""})[:2], (0, "x\n"), entry)
+            self.assertEqual(run("--dotenv-override", "--ws", self.t, str(d), env={"AOS_ENTRY": entry, "C": ""})[:2],
+                             (0, "x\n"), entry)
         self.assertEqual(run("--ws", self.t, str(d), env={"AOS_ENTRY": "/"})[2], "入口壞")   # 全是 /＝.
 
     def test_env_aos_vars_literal(self):
         # .env 設的 AOS_* 照字面：AOS_WS 不存在／相對也照傳、不轉絕對；AOS_STACK 不建
         d = prog(self.t, "p", 'echo "$AOS_WS|$AOS_STACK|$([ -e st ] && echo made || echo none)"\n')
         put(Path(d, ".env"), "AOS_WS=nope/rel\nAOS_STACK=st/\n")
-        self.assertEqual(run("--ws", "-", d, cwd=self.t)[:2], (0, "nope/rel|st/|none\n"))
+        self.assertEqual(run("--dotenv-override", "--ws", "-", d, cwd=self.t)[:2], (0, "nope/rel|st/|none\n"))
         self.assertFalse(Path(d, "st").exists())
         self.assertTrue(Path(self.t, ".aos").is_dir())   # 讀 .env 之前算好的那個照樣建
 
@@ -317,8 +348,9 @@ class T(unittest.TestCase):
         put(d / "_exec" / ".env", "AOS_WS=%s\n" % b)
         put(d / "_exec" / "_exec" / ".env", "AOS_WS=%s\n" % b)
         put(d / "_exec" / "_exec" / "_exec", '#!/bin/sh\necho "$AOS_WS"\n', 0o755)
-        self.assertEqual(run("--ws", str(a), str(d))[1], "%s\n" % a.resolve())
-        self.assertEqual(run(str(d))[1], "%s\n" % b)
+        self.assertEqual(run("--dotenv-override", "--ws", str(a), str(d))[1], "%s\n" % a.resolve())
+        self.assertEqual(run("--dotenv-override", str(d))[1], "%s\n" % b)
+        self.assertEqual(run(str(d), env={"AOS_WS": str(a)})[1], "%s\n" % a.resolve())   # 10-22 不加＝三層都跳過
 
     def test_real_dir_entry_is_dotenv(self):
         # 真資料夾：走進去那一刻 AOS_ENTRY 是 .env＝那份 .env 是入口、不讀成環境（ideas § 6.3 第 3 點）
@@ -328,55 +360,65 @@ class T(unittest.TestCase):
                          (0, "dot|%s/.env\n" % d.resolve()))
 
     def test_same_dir_redirect_rereads_env(self):
-        # 現行（使用者「全照建議」(a)）：同資料夾的字串轉向＝全新一跳，同一份 .env 再讀一次（PATH 會疊兩次）
+        # 同資料夾的字串轉向＝全新一跳，同一份 .env 再讀一次（使用者「全照建議」(a)）。10-22 起預設不蓋，重讀不會疊；
+        # 第一跳加 --dotenv-override 只蓋一次（轉向那跳不吃旗標），原本的 xx 變 x
         q = Path(self.t, "q")
         put(q / ".env", "C=${C}x\n")
         put(q / "_exec.json", '"b.json"')
         put(q / "b.json", ["sh", "-c", 'echo "$C"'])
-        self.assertEqual(run("--ws", self.t, str(q), env={"C": ""})[:2], (0, "xx\n"))
+        self.assertEqual(run("--ws", self.t, str(q), env={"C": ""})[:2], (0, "\n"))
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q), env={"C": ""})[:2], (0, "x\n"))
 
     def test_loop_beat_rereads_same_env_twice_not_growing(self):
         # 10-22 教學發現的 PATH 疊兩份，原因：aos-exec 起 loop 時讀了一次 .env（loop 繼承），每拍的 aos-exec 走進同一個
         # 資料夾又讀一次——每拍都從 loop 自己的環境出發，所以固定兩份、不會一拍比一拍多（不是 loop 把上一拍的環境傳下去）。
-        # 照 N-59 第 4 件「同一份 .env 會再讀一次」接受；這裡把現行行為釘住。
+        # 照 N-59 第 4 件「同一份 .env 會再讀一次」接受。10-22 改預設不蓋之後：不加旗標＝每拍都跳過（空）；
+        # 最外層加 --dotenv-override＝只有起 loop 那跳蓋（x），每拍的 aos-exec 不吃旗標
         q = Path(self.t, "q")
         put(q / ".env", "C=${C}x\n")
         put(q / "loop.json", {"_exec": ["aos-loop", {"$env": "AOS_CF"}], "run": "b.json", "max": 3})
         put(q / "b.json", ["sh", "-c", 'echo "$C" >> "$AOS_WS/seen"'])
         self.assertEqual(run("--ws", self.t, str(q / "loop.json"), env={"C": ""})[0], 0)
-        self.assertEqual(Path(self.t, "seen").read_text(), "xx\nxx\nxx\n")
+        self.assertEqual(Path(self.t, "seen").read_text(), "\n\n\n")
+        os.remove(Path(self.t, "seen"))
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q / "loop.json"), env={"C": ""})[0], 0)
+        self.assertEqual(Path(self.t, "seen").read_text(), "x\nx\nx\n")
 
     def test_only_last_env_counts_for_cf_cd_co(self):
-        # 自己設了就不蓋，只看最後讀的那一份（使用者「全照建議」(a)）
+        # 自己設了就不蓋，只看最後讀的那一份（使用者「全照建議」(a)）；10-22 起 AOS_CF／AOS_CD／AOS_CO 讀 .env 前已設，
+        # 要加 --dotenv-override 才設得了
         show = ["sh", "-c", 'echo "[$AOS_CO]"']
         q = Path(self.t, "q")
         put(q / "x.json", {"_exec": {".env": {"AOS_CO": "outer"}, "_exec": {".env": {"Z": "1"}, "_exec": show}}})
-        self.assertEqual(run("--ws", self.t, str(q / "x.json"))[1], "[/_exec/_exec/_exec]\n")
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q / "x.json"))[1], "[/_exec/_exec/_exec]\n")
         put(q / "y.json", {"_exec": {".env": {"AOS_CO": "outer"}, "_exec": {"_exec": show}}})   # 內層沒 .env key
-        self.assertEqual(run("--ws", self.t, str(q / "y.json"))[1], "[outer]\n")
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q / "y.json"))[1], "[outer]\n")
+        self.assertEqual(run("--ws", self.t, str(q / "y.json"))[1], "[/_exec/_exec/_exec]\n")
         # 資料夾的 .env 設 AOS_CF／AOS_CD，之後物件的 .env key（最後讀的）沒設＝照實際的檔
         put(q / ".env", "AOS_CF=cf\nAOS_CD=cd\n")
         put(q / "z.json", {".env": {"Z": "1"}, "_exec": ["sh", "-c", 'echo "$AOS_CF|$AOS_CD"']})
         rq = q.resolve()
-        self.assertEqual(run("--ws", self.t, str(q / "z.json"))[1], "%s/z.json|%s\n" % (rq, rq))
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q / "z.json"))[1], "%s/z.json|%s\n" % (rq, rq))
         put(q / "w.json", {"_exec": ["sh", "-c", 'echo "$AOS_CF|$AOS_CD"']})   # 沒 .env key＝資料夾那份是最後的
-        self.assertEqual(run("--ws", self.t, str(q / "w.json"))[1], "cf|cd\n")
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q / "w.json"))[1], "cf|cd\n")
 
     def test_json_env_key_directive_sees_outer_only(self):
         # 現行（使用者「全照建議」(a)）：.env key 裡的指示詞只看進入物件前的環境；同物件互相引用用 ${}
         q = Path(self.t, "q")
         put(q / "x.json", {".env": {"A": "in", "B": {"$env": "A"}, "C": "${A}"},
                            "_exec": ["sh", "-c", 'echo "$A|$B|$C"']})
-        self.assertEqual(run("--ws", self.t, str(q / "x.json"), env={"A": "out"})[1], "in|out|in\n")
+        self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q / "x.json"), env={"A": "out"})[1], "in|out|in\n")
+        self.assertEqual(run("--ws", self.t, str(q / "x.json"), env={"A": "out"})[1], "out|out|out\n")   # 10-22 不加＝A 跳過
 
     def test_env_sees_own_aos_ws_before_flag(self):
         # 現行（使用者「風險要自己承擔，建議.env不要碰這個」）：讀 .env 的過程中看到的是 .env 自己設的值，
-        # 旗標等整份讀完才蓋回
+        # 旗標等整份讀完才蓋回（10-22：AOS_WS 讀 .env 前已設，加 --dotenv-override 才有這個情形）
         a, b = Path(self.t, "a"), Path(self.t, "b")
         a.mkdir(); b.mkdir()
         d = prog(self.t, "p", 'echo "$AOS_WS|$Y"\n')
         put(Path(d, ".env"), "AOS_WS=%s\nY=${AOS_WS}\n" % b)
-        self.assertEqual(run("--ws", str(a), d)[1], "%s|%s\n" % (a.resolve(), b))
+        self.assertEqual(run("--dotenv-override", "--ws", str(a), d)[1], "%s|%s\n" % (a.resolve(), b))
+        self.assertEqual(run("--ws", str(a), d)[1], "%s|%s\n" % (a.resolve(), a.resolve()))
 
     def test_leading_whitespace_ascii_only(self):
         # 10-22 使用者要 Python 照 C++ 的寬鬆：去前導空白只認 ASCII 空白（空格、tab、\v、\f）；全形空白等不算，
