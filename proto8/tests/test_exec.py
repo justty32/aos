@@ -58,7 +58,7 @@ class T(unittest.TestCase):
         self.assertEqual((r.returncode, r.stdout), (0, "hi\n"))
 
     def test_small_shell_wrapper_form_1(self):
-        d = prog(self.tmp, "p", "exec aos-inst _exec.json \"$@\"\n")
+        d = prog(self.tmp, "p", "exec aos-exec _exec.json \"$@\"\n")   # 10-22 起沒有 aos-inst，小殼改叫 aos-exec
         Path(d, "_exec.json").write_text('{"argv": ["echo", "a"]}')
         # 小殼 _exec 是可執行檔，優先於同名 .json；殼裡明指 _exec.json 所以還是跑得起來
         r = run(EXEC, "--ws", self.tmp, d, "b")

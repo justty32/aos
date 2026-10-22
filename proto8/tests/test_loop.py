@@ -256,6 +256,15 @@ class Cli(Base):
         self.assertEqual((r.returncode, r.stderr, r2.returncode, r2.stderr, self.laps(s)),
                          (0, "", 0, "", ["b 1"] * 3 + ["b "]))
 
+    def test_cfg_shebang_line_skipped(self):
+        # 10-22 使用者要 Python 照 C++ 的寬鬆：設定檔第一行 #! 跳過（原本算「不是 JSON」）；檔#/指標也一樣
+        s = self.stack()
+        self.mark("a")
+        (self.t / "loop.json").write_text("#!/usr/bin/env aos-loop\n" + json.dumps({"run": "a", "max": 2, "in": {"run": "a", "max": 1}}))
+        r = self.loop_cli("loop.json", env={"AOS_STACK": str(s)})
+        r2 = self.loop_cli("loop.json#/in", env={"AOS_STACK": str(s)})
+        self.assertEqual((r.returncode, r.stderr, r2.returncode, r2.stderr, len(self.laps(s))), (0, "", 0, "", 3))
+
     def test_no_max_is_unlimited(self):
         # L8：沒寫 max、沒給 --max＝不限（原本 10）；這裡靠第 12 拍退 10 收工
         s = self.stack()

@@ -38,6 +38,7 @@ def parse(argv, flags):
 def load_cfg(spec):
     """讀設定檔（aos-loop、aos-daemon、aos-fsm 的唯一位置參數；10-21 傍晚 ideas § 9）：`檔` 或 `檔#/指標`。
     第一個 # 就切、# 後面要是 /（同 aos-exec 的入口路徑，N-62）；指標照 JSON pointer（~1＝/、~0＝~）。
+    第一行是 `#!` 就跳過（10-22 使用者要 Python 照 C++ 版的寬鬆，原本報錯）。
     回那個位置的值（不驗是不是物件，呼叫者自己驗）。讀不到、不是 JSON、# 後不是 /、指不到＝Error。"""
     import json
     path, hashed, ptr = spec.partition("#")
@@ -45,7 +46,10 @@ def load_cfg(spec):
         raise Error("設定檔 %s 的 # 後面要接 /" % spec)
     try:
         with open(path, encoding="utf-8") as f:
-            doc = json.load(f)
+            text = f.read()
+        if text.startswith("#!"):
+            text = text.partition("\n")[2]
+        doc = json.loads(text)
     except (OSError, ValueError) as e:
         raise Error("讀不到或不是 JSON：%s（%s）" % (path, e))
     for tok in ptr[1:].split("/") if hashed else ():

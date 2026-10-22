@@ -215,7 +215,7 @@ def set_env(name, val, bad):
 
 def load_env(d):
     """讀 d/.env、逐行套進 os.environ（10-21 ideas § 4）。沒有＝什麼都不做。回 .env 設過的名字。
-    一行 `名字=值`：去行尾 \r、去前導空白後空的或 # 開頭跳過；= 只切第一個；值照字面、只展開 ${名字}（逐行，後面看得到前面設的）；
+    一行 `名字=值`：去行尾 \r、去前導空白（只認 ASCII 空白，同 C++ 版，10-22）後空的或 # 開頭跳過；= 只切第一個；值照字面、只展開 ${名字}（逐行，後面看得到前面設的）；
     孤零零的 $ 原樣留。錯（讀不到、格式不合、${名字} 沒設）只印檔名和行號，絕不印值。"""
     p, names = os.path.join(d, ".env"), set()
     if not os.path.lexists(p):
@@ -230,7 +230,7 @@ def load_env(d):
     for n, line in enumerate(lines, 1):
         def bad(why):
             raise Fail(".env 壞：%s 第 %d 行（%s）" % (p, n, why))
-        line = line.lstrip()
+        line = line.lstrip(" \t\n\v\f\r")   # 只認 ASCII 空白（同 C++ isspace；10-22 使用者要 Python 照 C++ 的寬鬆）
         if line.endswith("\r"):
             line = line[:-1]
         if not line or line.startswith("#"):

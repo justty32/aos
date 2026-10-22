@@ -65,11 +65,17 @@ class T(unittest.TestCase):
     def test_d1_ref_whole_file_and_nested_relative(self):
         # 被 $ref 進來的檔裡的 $ref 從那個檔所在的資料夾算
         put(self.t / "q" / "sub" / "outer.json", {"argv": ["echo", {"$ref": "data.json#/msg"}]})
-        r = run("aos-inst", put(self.t / "q" / "s.json", {"argv": ["sh", "-c", "exit 0"],
+        # 原本 aos-inst 命令列（10-22 刪了，跟 C++ 版一樣是庫）：改經 aos-exec 跑同一張單子
+        r = run("aos-exec", "--ws", self.ws, put(self.t / "q" / "s.json", {"argv": ["sh", "-c", "exit 0"],
                                                             "stdin": {"$ref": "sub/outer.json", "at": "/argv/0"}}))
         self.assertEqual(r[0], 1)   # stdin "echo" 這個檔不在，證明 at 取到 "echo"
         self.assertIn("echo", r[2])
-        r = run("aos-inst", put(self.t / "q" / "w.json", {"$ref": "sub/outer.json"}))
+        # 整張單子就是一個 $ref：aos-exec 挑入口時不解 $ref（沒 argv 的物件＝資料夾，同 C++ 版），所以改用庫驗；
+        # 經 aos-exec 要寫成有 argv 的單子，或直接跑 outer.json 本身
+        w = put(self.t / "q" / "w.json", {"$ref": "sub/outer.json"})
+        res = aos_inst.parse(aos_inst.load(str(w)), ref_base=str(w.parent))
+        self.assertEqual(res["argv"], ["echo", "hi"])
+        r = run("aos-exec", "--ws", self.ws, self.t / "q" / "sub" / "outer.json")
         self.assertEqual(r[:2], (0, "hi\n"), r[2])
 
     def test_d7_hash_then_at(self):
@@ -178,7 +184,7 @@ class T(unittest.TestCase):
         r = self.entry({"argv": ["tools/stamp", "a"]})          # aos-exec 的單子入口
         self.assertEqual(r[:2], (0, "stamp ws=%s cf=%s arg=a\n" % (self.ws, stamp)), r[2])
         s = put(self.t / "q" / "s.json", {"argv": ["./tools/cfg.json#/t/u"], "cwd": str(self.t / "q")})
-        self.assertEqual(run("aos-inst", s)[:2], (0, "ptr\n"))         # aos-inst 命令列
+        self.assertEqual(run("aos-exec", "--ws", self.ws, s)[:2], (0, "ptr\n"))   # 單子檔經 aos-exec（原 aos-inst 命令列）
         res = aos_inst.parse({"argv": ["tools/stamp"]})
         self.assertEqual(aos_inst.argv0(res["argv"], str(self.t / "q")), ["aos-exec", "tools/stamp"])
         self.assertEqual(aos_inst.argv0(["tools/x.sh"], str(self.t / "q")), ["tools/x.sh"])

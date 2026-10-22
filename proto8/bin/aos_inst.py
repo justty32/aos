@@ -1,7 +1,9 @@
-"""aos-inst：讀一張單子（JSON）、跑一次子程式。純標準庫，不 import 別的。
+"""aos_inst：讀一張單子（JSON）、跑一次子程式的庫。純標準庫，不 import 別的。
 
-    aos-inst FILE [args...]        FILE 第一行是 `#!` 就丟掉那一行，剩下當 JSON；args 接在 argv 後面
-    import aos_inst; aos_inst.run(dict 或 FILE)    行程內跑，回結果 dict（aos-loop／aos-fsm 用）
+    import aos_inst; aos_inst.run(dict 或 FILE[, args])    行程內跑，回結果 dict（aos-exec 跑 inst 單子入口時用）
+    FILE 第一行是 `#!` 就丟掉那一行，剩下當 JSON；args 接在 argv 後面。
+10-22 使用者「aos-inst指令可以刪掉了，跟C++版一樣做成lib就好」：aos-inst 命令列刪了（C++ 版 inst 也是 lib），
+單子一律經 aos-exec 跑（沒 +x 的入口檔、`檔#/指標`、loop／fsm 的 `…#/body`）。
 
 單子認得的 key（其他一律忽略）：
     argv            非空字串陣列（必填）
@@ -26,8 +28,8 @@ at 接在 #/ 後面，10-20 ideas D1、D7）；換進來的值接著解。相對
 argv[0] 帶 / 又 exec 不了（不是 +x 的一般檔：資料夾、沒 +x 的檔、不在，或帶 #/）＝前面插 aos-exec、照 PATH 找
 （10-20 ideas D3、D5：["tools/stamp", "a"]＝["aos-exec", "tools/stamp", "a"]；10-21 起 a 是 args，工作區只由 --ws 給）。
 
-結束碼：命令列退出碼＝子程式的碼（透明轉交；被訊號停掉＝128＋訊號號碼）。aos-inst 自己的錯
-（單子壞、程式找不到、$env 沒設、$ref 解不開）退 1，stderr 一行「aos-inst: 原因」。
+單子的錯（單子壞、程式找不到、$env 沒設、$ref 解不開）丟 InstError；aos-exec 接住、退 1，
+stderr 一行「aos-exec: 單子跑不起來：原因」。子程式的碼由 aos-exec 透明轉交（被訊號停掉＝128＋訊號號碼）。
 run() 回 {"code", "signal", "timed_out", "pid", "ms", "received"}（received＝跑的期間收到、轉給子程式的第一個
 SIGINT／SIGTERM／SIGHUP，沒有＝None；給 aos-loop／aos-fsm「收完這拍再以 128＋N 結束」用）；子程式回幾號、被逾時收掉都算正常跑完，
 單子有問題或起不來丟 InstError。
@@ -43,18 +45,17 @@ import os
 import shutil
 import signal
 import subprocess
-import sys
 import threading
 import time
 
-__all__ = ["InstError", "argv0", "load", "main", "parse", "resolve", "run"]
+__all__ = ["InstError", "argv0", "load", "parse", "resolve", "run"]
 
 _KEYS_BOOL = ("stdout_append", "stderr_append")
 _FORWARDED = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
 
 class InstError(Exception):
-    """aos-inst 自己的錯：單子壞、程式找不到、$env 沒設…"""
+    """單子的錯：單子壞、程式找不到、$env 沒設…"""
 
 
 def _pointer(doc, ptr, where):
@@ -349,19 +350,3 @@ def _stream(inst, k, opened):
         f = open(path, "ab" if inst[k + "_append"] else "wb")
     opened.append(f)
     return f
-
-
-def main(argv=None):
-    args = sys.argv[1:] if argv is None else argv
-    if not args:
-        print("aos-inst: usage: aos-inst FILE [args...]", file=sys.stderr)
-        return 1
-    try:
-        return run(args[0], args[1:])["code"]
-    except InstError as e:
-        print("aos-inst: %s" % e, file=sys.stderr)
-        return 1
-
-
-if __name__ == "__main__":
-    sys.exit(main())

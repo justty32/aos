@@ -274,7 +274,7 @@ class T(unittest.TestCase):
         self.assertEqual((p.returncode, out != str(p.pid), out.isdigit()), (0, True, True))
 
     def test_inst_shebang_not_x(self):
-        put(Path(self.t, "p", "_exec"), '#!/usr/bin/env aos-inst\n{"argv": ["echo", "sb"]}\n')
+        put(Path(self.t, "p", "_exec"), '#!/usr/bin/env 隨便\n{"argv": ["echo", "sb"]}\n')   # 沒 +x：第一行 #! 跳過
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "p")), "x")[:2], (0, "sb x\n"))
 
     def test_inst_args_pointer_key(self):

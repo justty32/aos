@@ -378,6 +378,17 @@ class T(unittest.TestCase):
         put(Path(d, ".env"), "AOS_WS=%s\nY=${AOS_WS}\n" % b)
         self.assertEqual(run("--ws", str(a), d)[1], "%s|%s\n" % (a.resolve(), b))
 
+    def test_leading_whitespace_ascii_only(self):
+        # 10-22 使用者要 Python 照 C++ 的寬鬆：去前導空白只認 ASCII 空白（空格、tab、\v、\f）；全形空白等不算，
+        # 留在名字裡＝名字不合＝.env 壞
+        d = prog(self.t, "p", 'echo "$A|$B"\n')
+        put(Path(d, ".env"), " \t\v\fA=1\n\t# 註解\nB=2\n")
+        self.assertEqual(run("--ws", self.t, d)[:2], (0, "1|2\n"))
+        for ws in ("\u3000", "\u00a0", "\x1c"):
+            put(Path(d, ".env"), ws + "A=1\n")
+            r = run("--ws", self.t, d)
+            self.assertEqual((r[0], r[2]), (1, ".env 壞"), repr(ws))
+
 
 if __name__ == "__main__":
     unittest.main()
