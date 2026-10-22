@@ -19,7 +19,7 @@
    "abbr": "inst",
    "full": "instruction",
    "meaning": "一筆要跑的指令（argv＋怎麼跑）",
-   "example": "inst 單子（{\"argv\", …}，P-28）、aos-inst（bin 版）、impls 的 inst C lib"
+   "example": "inst 單子（{\"argv\", …}，P-28）、aos_inst 庫（bin 版；aos-inst 命令列 10-22 刪）、impls 的 inst C lib"
   },
   {
    "abbr": "fsm",
