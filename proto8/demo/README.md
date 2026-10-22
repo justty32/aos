@@ -18,7 +18,7 @@ stack 樹＝呼叫樹：`.aos/{state,current,plan,trace.jsonl}`、`.aos/cathy/{�
 
 ## agent-ann（全內嵌對照）
 
-跟 bob 做同一件事（一題一答），零子資料夾：入口 `_exec`＝`exec aos-exec loop.json`，`loop.json` 是 `{"_exec": ["aos-loop", {"$env": "AOS_CF"}], "run": "loop.json#/body", "body": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}`——loop.json 自己帶 `_exec`，`aos-exec loop.json` 就把 loop 跑起來（10-21 傍晚；跟 bob 的 `exec aos-loop loop.json`、`"run": "fsm.json"` 對照，兩種都行），`fsm.json` 三格全是單子（`"val": "fsm.json#/states/<名>/body"`、單子放 `body`），各指一支小腳本——`idle.py`（inbox 空退 10）、`brain.py`（同 bob 的那份，複製）、`act.py`（plan 寫 out、題目搬 done）。資料夾裡只有 `_exec`、`loop.json`、`fsm.json` 和三支 `.py`。適合「格全是一行、不叫工具」的小 agent；要叫工具、要用 sh 搬檔，就回到 bob 的混合寫法。
+跟 bob 做同一件事（一題一答），零子資料夾：入口 `_exec`＝`exec aos-exec loop.json`，`loop.json` 是 `{"_exec": ["aos-loop", {"$env": "AOS_CF"}], "run": "loop.json#/body", "body": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}`——loop.json 自己帶 `_exec`，`aos-exec loop.json` 就把 loop 跑起來（10-21 傍晚；跟 bob 的 `exec aos-loop loop.json`、`"run": "fsm.json"` 對照，兩種都行），`fsm.json` 三格全是單子（`"val": "fsm.json#/states/<名>/body"`、單子放 `body`），各指一支小腳本——`idle.py`（inbox 空退 10）、`brain.py`（同 bob 的那份，複製）、`act.py`（plan 寫 out、題目搬 done）。資料夾裡只有 `_exec`、`loop.json`、`fsm.json`、三支 `.py`，和一份 `.env` 範例（10-22，全是註解、不設任何東西：示範 `PATH=${AOS_CD}/bin:${PATH}` 怎麼寫，並提醒 aos-exec agent-ann、入口的 `aos-exec loop.json`、loop 每拍、fsm 每格四層都走進這個資料夾、各讀一次，所以接舊值的 PATH 在格裡會有四份——每拍一樣多、不會累加，照 N-59 第 4 件接受）。適合「格全是一行、不叫工具」的小 agent；要叫工具、要用 sh 搬檔，就回到 bob 的混合寫法。
 
 ## daemon（一個 daemon 同時管 bob、ann，10-20）
 

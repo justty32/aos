@@ -55,7 +55,7 @@ class T(unittest.TestCase):
             self.clock.write_text(bad, encoding="utf-8", newline="")
             r = self.tick("clock")
             self.one_line_err(r, "時鐘檔壞：")
-            self.assertEqual(self.clock.read_text(encoding="utf-8", newline=""), bad)
+            self.assertEqual(self.clock.read_bytes().decode("utf-8"), bad)   # read_text 的 newline 要 3.13，這台 3.12（10-22）
         self.assertEqual(os.listdir(self.tmp), ["clock"])
 
     def test_read_failed(self):
@@ -79,7 +79,7 @@ class T(unittest.TestCase):
 
     def test_usage(self):
         for args in [(), ("a", "b"), ("--cfg", "x", "a"), ("--x=1", "a")]:
-            self.one_line_err(self.tick(*args), "usage: aos-tick FILE（")
+            self.one_line_err(self.tick(*args), "usage: aos-tick [旗標] FILE（")
         self.assertEqual(os.listdir(self.tmp), [])
 
     def test_double_dash_and_hash_literal(self):

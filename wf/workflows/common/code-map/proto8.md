@@ -15,15 +15,15 @@
 - `aos-loop`＋`aos_loop.py`（骨架＋薄命令列，aos-daemon 共用）：`aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] loop.json`（10-21 傍晚：設定檔是唯一的位置參數、可寫 `檔#/指標`；旗標 ＞ 設定檔 ＞ 預設）；`run`＝aos-exec 的目標或 `[目標, 參數...]`、`max` 沒寫＝不限，選填 `interval_ms`、`ctl`、`state`；每圈 `aos-exec -- <run> 參數...`，退 10 就停、其他非 0 原碼結束；收到訊號轉給那拍、收完 128＋N；state 只在拍與拍之間寫。
 - `aos_window.py`（10-20）：ctl／state 窗——`Ctl.read()`（paused／stop／max／interval_ms／seq＋程式多認的 key，壞的不採用、留上一份、記 `last_warning`）、`write()`（先寫 `.` 暫存再改名）、`beat()`（pid／started／boot_id／beat 心跳欄位）、`started(pid)`。
 - `aos-daemon`（`aos_loop.Loop` 的子類別）：daemon.json＝loop.json 超集，加 `children`、`adopt`；每個子項的小格 `$AOS_STACK/<名字>/` 裡寫 loop.json（`run` 轉絕對、蓋上 `_exec`），經 `aos-exec -- 小格/loop.json#/_exec` 起子 loop（10-21 傍晚）；ctl 的 `children` 增減表；子 loop 結束不重起；結束前收掉所有子項（D7）；收到訊號 128＋N；重起時接回活著的子項。
-- `aos-fsm`：`aos-fsm fsm.json`（10-21 傍晚：設定檔是唯一的位置參數、可寫 `檔#/指標`）；一拍只跑一格，`$AOS_STACK/state`（純文字一行）接著上一拍，`val`＝aos-exec 的目標或 `[目標, 參數...]`，每拍在 `trace.jsonl` 記一行；格的碼 0 才換狀態；收到訊號轉給那格、trace 與 state 照寫、再 128＋N。
-- `aos-tick`（10-21 晚，計畫第 4 段）：`aos-tick FILE`＝時鐘往前走一格，讀 n 寫 n＋1（沒檔＝0，先寫 `.名字` 再改名）；唯一的位置參數、旗標表是空的；錯退 1 一行、檔不動。
+- `aos-fsm`：`aos-fsm [旗標] fsm.json`（旗標表是空的；10-22 USAGE 補 `[旗標]`；10-21 傍晚：設定檔是唯一的位置參數、可寫 `檔#/指標`）；一拍只跑一格，`$AOS_STACK/state`（純文字一行）接著上一拍，`val`＝aos-exec 的目標或 `[目標, 參數...]`，每拍在 `trace.jsonl` 記一行；格的碼 0 才換狀態；收到訊號轉給那格、trace 與 state 照寫、再 128＋N。
+- `aos-tick`（10-21 晚，計畫第 4 段）：`aos-tick [旗標] FILE`＝時鐘往前走一格，讀 n 寫 n＋1（沒檔＝0，先寫 `.名字` 再改名）；唯一的位置參數、旗標表是空的；錯退 1 一行、檔不動。
 
 ### `proto8/demo/`
 
 說明在 [proto8/demo/README.md](../../../../proto8/demo/README.md)；`run.sh` 各建暫時工作區跑一遍並印整棵 stack 樹。
 
 - `agent-bob/`（混合範本）：`_exec`＝`exec aos-loop loop.json`、`loop.json`＝`{"run": "fsm.json", "max": 20}`；`fsm.json` 帶 `_exec`（本身是 aos-exec 入口，10-21）、idle／act 是子資料夾、think 是那格 `body` 裡的單子；`act/tools/cathy/` 是另一隻完整 agent（同一套範本），她的 `act/tools/stamp/` 是最底層的工具——一次跑完四層巢狀。
-- `agent-ann/`（全內嵌對照）：零子資料夾，`_exec`＝`exec aos-exec loop.json`（loop.json 帶 `_exec`），`fsm.json` 三格全是 `body` 裡的單子，各指 `idle.py`／`brain.py`／`act.py`。
+- `agent-ann/`（全內嵌對照）：零子資料夾，`_exec`＝`exec aos-exec loop.json`（loop.json 帶 `_exec`），`fsm.json` 三格全是 `body` 裡的單子，各指 `idle.py`／`brain.py`／`act.py`。`.env`（10-22）是 demo 唯一的 `.env` 範例，全是註解（`PATH=${AOS_CD}/bin:${PATH}` 的寫法與「四層各讀一次、PATH 疊四份」的提醒），不設任何東西。
 - `daemon/`（10-20）：`_exec`＝`exec aos-daemon daemon.json`、子項 `run`＝`daemon.json#/children/<名字>/body`（10-21）；一個 daemon 同時管 bob、ann 兩個子 loop（工作區 `$AOS_WS/bob`、`$AOS_WS/ann`，stack 在 daemon 的小格裡）。
 - `tick/`（10-21 晚）：`_exec`＝`exec aos-loop loop.json`、`loop.json` 拍 5 次 `loop.json#/body`（`aos-tick $AOS_STACK/tick`），跑完時鐘檔是 5。
 

@@ -12,7 +12,7 @@ import os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
-USAGE = "aos-tick FILE"
+USAGE = "aos-tick [旗標] FILE"   # 旗標表是空的也寫 [旗標]，跟 aos-loop、aos-fsm 同一個寫法（10-22）
 FLAGS = {}   # 目前沒有旗標；以後加旗標就在這裡加一列
 
 

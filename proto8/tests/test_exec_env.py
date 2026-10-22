@@ -335,6 +335,17 @@ class T(unittest.TestCase):
         put(q / "b.json", ["sh", "-c", 'echo "$C"'])
         self.assertEqual(run("--ws", self.t, str(q), env={"C": ""})[:2], (0, "xx\n"))
 
+    def test_loop_beat_rereads_same_env_twice_not_growing(self):
+        # 10-22 教學發現的 PATH 疊兩份，原因：aos-exec 起 loop 時讀了一次 .env（loop 繼承），每拍的 aos-exec 走進同一個
+        # 資料夾又讀一次——每拍都從 loop 自己的環境出發，所以固定兩份、不會一拍比一拍多（不是 loop 把上一拍的環境傳下去）。
+        # 照 N-59 第 4 件「同一份 .env 會再讀一次」接受；這裡把現行行為釘住。
+        q = Path(self.t, "q")
+        put(q / ".env", "C=${C}x\n")
+        put(q / "loop.json", {"_exec": ["aos-loop", {"$env": "AOS_CF"}], "run": "b.json", "max": 3})
+        put(q / "b.json", ["sh", "-c", 'echo "$C" >> "$AOS_WS/seen"'])
+        self.assertEqual(run("--ws", self.t, str(q / "loop.json"), env={"C": ""})[0], 0)
+        self.assertEqual(Path(self.t, "seen").read_text(), "xx\nxx\nxx\n")
+
     def test_only_last_env_counts_for_cf_cd_co(self):
         # 自己設了就不蓋，只看最後讀的那一份（使用者「全照建議」(a)）
         show = ["sh", "-c", 'echo "[$AOS_CO]"']

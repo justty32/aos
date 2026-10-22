@@ -96,6 +96,7 @@ class T(unittest.TestCase):
         t = self.trace()[0]
         self.assertNotIn("timed_out", t)
         self.assertEqual(t["code"], 143)
+        self.assertIsNone(t["signal"])   # 格（aos-exec）自己以 143 結束，不是被訊號殺掉（10-22 檔頭更正）
         self.assertLess(t["ms"], 5000)
         self.assertFalse((self.stack / "state").exists())
 
@@ -132,7 +133,7 @@ class T(unittest.TestCase):
             r = run(FSM, *argv, stack=self.stack, cwd=str(self.tmp))
             self.assertEqual(r.returncode, 1, argv)
             self.assertEqual(len(r.stderr.strip().splitlines()), 1, argv)
-            self.assertTrue(r.stderr.startswith("aos-fsm: usage: "), (argv, r.stderr))
+            self.assertTrue(r.stderr.startswith("aos-fsm: usage: aos-fsm [旗標] 設定檔.json（"), (argv, r.stderr))   # 10-22 USAGE 補 [旗標]
         for argv in ([f + "#/nope"], [f + "#x"], [f + "#/start"]):
             r = run(FSM, *argv, stack=self.stack, cwd=str(self.tmp))
             self.assertEqual((r.returncode, len(r.stderr.strip().splitlines())), (1, 1), argv)

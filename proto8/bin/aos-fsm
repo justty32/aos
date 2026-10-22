@@ -11,7 +11,8 @@ val 是物件或別的＝表壞。表裡其他 key（body、_exec…）忽略（
 當 aos-exec 的入口（F6）。
 讀 $AOS_STACK/state（純文字一行狀態名；沒有＝start，格式與 shell 版相同；寫的時候先寫 .state 再改名，N-05）；查格；跑格。
 每拍在 $AOS_STACK/trace.jsonl 追加一行 {"at","state","code","signal","ms"}（at＝這拍開始的 UTC 時間；沒有 timed_out：
-fsm 看不到格裡有沒有逾時，C-52，被逾時收掉的格是 code 128＋15、signal 15；F4）。
+fsm 看不到格裡有沒有逾時，C-52；被逾時收掉的格是 code 143（128＋15）、signal null——
+格是 aos-exec 子行程，它收掉單子後以子程式的碼正常結束，不是自己被訊號殺掉；F4；10-22 實測更正，原寫 signal 15）。
 結束碼 0 才把 next 寫進 state；以那格的碼退出（10 與其他非 0 原樣往上，狀態都不動）。
 只看格的結束碼，不讀格的 stdout、不轉述格的 stderr。PATH 不動。
 收到 SIGINT／SIGTERM／SIGHUP：轉給那格（那個 aos-exec 子行程），等格結束，trace 與 state 照常寫完，
@@ -21,7 +22,7 @@ import datetime, json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_beat, aos_flags
 
-USAGE = "aos-fsm fsm.json"
+USAGE = "aos-fsm [旗標] 設定檔.json"   # 旗標表是空的也寫 [旗標]，跟 aos-loop、aos-tick 同一個寫法（10-22）
 FLAGS = {}   # 目前沒有旗標；以後加旗標就在這裡加一列
 
 

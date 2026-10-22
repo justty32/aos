@@ -307,7 +307,10 @@ class T(unittest.TestCase):
         execs = sorted(str(p.relative_to(ANN)) for p in Path(ANN).rglob("_exec"))
         self.assertEqual(execs, ["_exec"])
         self.assertEqual(sorted(p.name for p in Path(ANN).iterdir()),
-                         ["_exec", "act.py", "brain.py", "fsm.json", "idle.py", "loop.json"])
+                         [".env", "_exec", "act.py", "brain.py", "fsm.json", "idle.py", "loop.json"])
+        # 10-22 加的 .env 是範例、全是註解，不設任何東西
+        lines = Path(ANN, ".env").read_text(encoding="utf-8").splitlines()
+        self.assertTrue(lines and all(l.startswith("#") for l in lines), lines)
 
     def test_stamp_tool_alone(self):
         stamp = str(Path(CATHY) / "act" / "tools" / "stamp")
