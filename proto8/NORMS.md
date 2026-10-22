@@ -24,8 +24,8 @@
 | 設計理念／時空 | [02-設計理念-時空.md](NORMS/02-設計理念-時空.md)：N-01～N-03 | [CONCEPTS 時空](CONCEPTS/02-設計理念-時空.md) | 時鐘＝[aos-tick](bin/README.md)（10-21 晚，bin 版；舊 `aos tick` 在 git 歷史）；打包（N-03）現無實作 |
 | 總則（跨主題） | [01-總則.md](NORMS/01-總則.md)：N-05 先寫暫存再改名、N-18 實作分級、N-43 結束碼（0／10／其他非 0，10-19 改） | 出自 C-07、C-45、C-53 | [bin](bin/README.md) |
 | 基礎設施／inst | [03-基礎設施-inst.md](NORMS/03-基礎設施-inst.md)：N-04、N-25、N-27、N-30（10-19 改成新 aos-inst；impls 線沒有 aos-inst 命令列、inst 是 C lib，§ 20；10-22 bin 版也刪了 aos-inst 命令列） | [CONCEPTS 基礎設施](CONCEPTS/03-基礎設施.md) | [aos_inst 庫](bin/README.md)（bin 版）；兩版都是 aos-exec 行程內跑 |
-| 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md)：N-10（10-16 刪，條號留作錨點）、N-28、N-54 | 同上 | loop＝[aos-loop](bin/README.md)；daemon＝[aos-daemon](bin/README.md)（10-20，bin 版） |
-| 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md)：N-06～N-09、N-11、N-13～N-17、N-32、N-33（現無實作；agent 這層只剩 N-13：內部狀態外顯成 `$AOS_STACK` 裡的檔；節奏 key 10-19 晚改用 `max`、設定只認設定檔） | 同上 | 現無實作 |
+| 基礎設施／loop、daemon | [04-基礎設施-loop與daemon.md](NORMS/04-基礎設施-loop與daemon.md)：N-10（10-16 刪，條號留作錨點）、N-28、N-54（10-22 定稿；loop 不管、使用者自行承擔的四件寫在分檔開頭） | 同上 | loop＝[aos-loop](bin/README.md)；daemon＝[aos-daemon](bin/README.md)（10-20，bin 版） |
+| 基礎設施／窗 | [05-基礎設施-窗.md](NORMS/05-基礎設施-窗.md)：N-06～N-09、N-11、N-13～N-17、N-32、N-33（原註「現無實作」，10-20 起 ctl／state 已做；agent 這層只剩 N-13：內部狀態外顯成 `$AOS_STACK` 裡的檔；節奏 key 10-19 晚改用 `max`、設定只認設定檔；N-13、N-17、N-32、N-33 10-22 定稿，總則 N-14、鎖 N-15、信箱 N-16 仍草稿） | 同上 | ctl／state＝`bin/aos_window.py`（aos-loop、aos-daemon 用，10-20；原寫「現無實作」）；鎖、信箱等其他窗現無實作 |
 | 基礎設施／指示詞 | [06-基礎設施-命令列與指示詞.md](NORMS/06-基礎設施-命令列與指示詞.md)：N-45 指示詞 `$env` 與 `$ref`（10-19 晚改；10-20 起 bin 版也有 `$ref`，含 `#/` 與 `at`；10-20 晚 `path` 改名 `$path`、加 `$prefix`、寫法寬容；impls 10-21 已對齊） | 同上 | [aos_inst 庫](bin/README.md)（bin 版，`$env` 與 `$ref`）；impls：aos-exec＋aos-directive 庫 |
 | 基礎設施／組合子（tasks、fsm；stdlib 地位） | [07-基礎設施-組合子.md](NORMS/07-基礎設施-組合子.md)：N-20、N-34（tasks，現無實作）、N-36、N-38、N-39、N-41（fsm，10-19 改） | 同上 | fsm＝[aos-fsm](bin/README.md)；tasks 現無實作 |
 | kernel | [09-kernel.md](NORMS/09-kernel.md)：N-42 兩種兩支（10-16 使用者「不併」；打包 N-03 在時空） | [CONCEPTS kernel](CONCEPTS/04-kernel.md) | 現無實作 |
