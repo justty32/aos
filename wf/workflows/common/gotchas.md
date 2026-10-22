@@ -112,3 +112,6 @@
   （只加已追蹤的修改；未追蹤的 `proto8/impls/` 本來就不會被加）。**add 完再看一次 `git status --short`，
   確認沒有剩下前面是空格的 ` M`**（＝改了沒 add）。
 - **WSL 看 `/mnt/c` 底下的檔全是 `+x`**（沒開 metadata）：aos-exec 會把 repo 裡的 JSON 入口（`loop.json#/body`）當可執行檔，報 `入口壞：可執行檔不能帶 #/`（10-21 撞到）。跑 proto8 測試與 demo 前，先把 `proto8/` 複製到 WSL 自己的檔案系統、全部 `chmod 644`，再照 `git ls-files -s` 的 `100755` 補 `+x`。
+- **在 `/mnt/c` 上跑 proto8 tests 有約 12 個假失敗**（10-22）：`/mnt/c` 底下所有檔都被當可執行（同上一條）。先把 repo 複製到 WSL 自己的檔案系統（如 `~/tmp`）再跑。
+- **Git Bash 跑 `wsl git -C /mnt/c/...` 會被 MSYS 路徑轉換改寫成 `C:/Program Files/Git/mnt/...` 而失敗**（10-22）：改用 PowerShell 跑，或加 `MSYS_NO_PATHCONV=1`。WSL 的 git 用 https 推會卡在等帳密，改加 `-c 'url.git@github.com:.insteadOf=https://github.com/'` 走 SSH。
+- **多 agent 同時在同一工作樹時，不要用 `git pull --rebase --autostash`**（10-22 發生過）：它可能停在半截 rebase，把別人的未提交改動收進 autostash（有 agent 的改動一度消失）。只 `add` 自己的檔。

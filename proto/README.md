@@ -8,7 +8,7 @@ python3 proto/aos.py <子命令> …
 
 需要 Python 3.11+，純標準庫，不用裝任何東西。
 
-地上的程式（跟工具白名單）要叫 `aos` 的話，用 [`proto/bin/aos`](bin/aos)——那是一支殼，
+地上的程式（跟工具白名單）要叫 `aos` 的話，用 `proto/bin/aos`（已刪）——那是一支殼，
 `exec python3 proto/aos.py "$@"` 而已。把 `proto/bin` 放進那塊地 `.aos/config.json` 的
 `path` 白名單，程式裡就能直接寫 `aos deliver …`。
 
