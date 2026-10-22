@@ -46,7 +46,7 @@
    在 [aos_agent_listen.py:56](../../lib/aos_agent_listen.py)、`aos_agent_status.py:194`、`aos_agent_say.py:41`、`aos_kernel_check.py:91`。例如從 repo 執行 `listen --target /abs/bob`，警告仍叫人打裸 `aos-agent continue`／`status`；check 的環境警告只印裸 `aos-kernel halt`。應帶回原本的 `--target`，並對路徑做 shell quoting。否則照抄會失敗，或碰到另一個家。README 第 117 行的裸 continue 也有同樣問題。
 
 7. **README 升級步驟要求舊版執行新版才有的指令。**  
-   在 [README.md:118](../../README.md)。寫「先 halt，換版後再重開」，但 `8172a68` 沒有 halt。換版前應使用舊版 `aos-kernel stop K`、`aos-daemon stop --home D`，換版後才用 boot／halt。這段照抄會退用法錯；現有測試沒有驗升級流程。
+   在 [README.md:118](../../README.md)。寫「先 halt，換版後再重開」，但 `f6e245a` 沒有 halt。換版前應使用舊版 `aos-kernel stop K`、`aos-daemon stop --home D`，換版後才用 boot／halt。這段照抄會退用法錯；現有測試沒有驗升級流程。
 
 8. **部分等待條件測試沒有真的走到待驗分支。**  
    在 [test_agent_daily_edges.py:59](../../lib/test/test_agent_daily_edges.py) 與第 84 行。測試列出 batch、intake、未消費輸入、TEXT 不符、H0 前的 user 等反例，但家未登記，全部先走 `unregistered` 退 101；即使拿掉那些完成條件，測試仍可能通過。應先建立登記，再確認確實因目標條件未滿而等待／逾時。其他 r3 測試確實有驗成功回話、暫態壞檔與連敗早退，問題是這組反例覆蓋失效。

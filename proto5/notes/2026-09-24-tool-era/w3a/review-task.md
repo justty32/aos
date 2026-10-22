@@ -10,7 +10,7 @@ aos proto5 的兩個功能＋今天的一個翻案：
    今天翻案（使用者拍板）：**預設開、預設不用人批**，每個成員可以在名冊上各自設「能不能生、能生哪些、要不要人批」。
    相關改動：`proto5/lib/aos_team_format.py`（`_spawn_cfg`、`_member_spawn`、`builtin_templates`、`spawn_policy`、`member_may`、`may_send`）、
    `proto5/lib/aos_team.py`（`member_context`）、`proto5/lib/aos_agent_init.py`（`_spawn_tool`、`team_config`）、`proto5/spec/team/roster.md`。
-   看 `git diff 60e4b81..HEAD -- proto5/lib proto5/tools proto5/spec` 就是今天的改動。
+   看 `git diff 4d73809..HEAD -- proto5/lib proto5/tools proto5/spec` 就是今天的改動。
 2. **T-toolsmith（工人造工具）**：`proto5/lib/aos_team_toolsmith.py`、`proto5/tools/task/tool_draft`、規格 `proto5/spec/team/toolsmith.md`。這條沒改，還是要人批。
 3. 測試：`proto5/lib/test/test_team_spawn.py`、`proto5/lib/test/test_team_toolsmith.py`。
 

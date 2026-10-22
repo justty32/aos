@@ -1,6 +1,6 @@
 # astra-8 共同規則（每條子線任務書都附這段）
 
-你是 aos 專案 proto7-2 第八輪全日回歸（astra-8）的一條審查子線。受測 repo＝本 worktree（`/home/lorkhan/repo/simple_tools/aos-wt/R2`，分支 loop13/R2，HEAD cd544440＝main）。日期 2026-10-09。今天 main 進了約 348 個 commit（`git log --oneline cbc67a3d^..HEAD`，`git diff cbc67a3d^ HEAD -- <路徑>` 看今天改了什麼）：loop7 核心四線、brain 多回合、跨信記憶、llmcall 真傳輸、kernel 包、mail 白話化、up 一鍵入口、統一錯誤路徑、metrics 吸收 usage、diag 吸收 llmdiag。
+你是 aos 專案 proto7-2 第八輪全日回歸（astra-8）的一條審查子線。受測 repo＝本 worktree（`/home/lorkhan/repo/simple_tools/aos-wt/R2`，分支 loop13/R2，HEAD ee794f73＝main）。日期 2026-10-09。今天 main 進了約 348 個 commit（`git log --oneline 59583b4f^..HEAD`，`git diff 59583b4f^ HEAD -- <路徑>` 看今天改了什麼）：loop7 核心四線、brain 多回合、跨信記憶、llmcall 真傳輸、kernel 包、mail 白話化、up 一鍵入口、統一錯誤路徑、metrics 吸收 usage、diag 吸收 llmdiag。
 
 **沙箱是唯讀**：你不能寫任何檔、不能跑會寫檔的測試。你可以讀檔、grep、`git log/diff/show`、跑**不寫檔**的指令（例如 `PYTHONDONTWRITEBYTECODE=1 python3 proto7-2/modules/up/aos7-up --help`）。不呼叫任何 LLM／網路。
 

@@ -2,7 +2,7 @@
 
 **blueprint-loop7 §7 第 3～6 組驗收大致通過：C8-01／C8-02 中斷重現各 3／3 都已收乾淨（修前 3／3 漏收），K-04 壓力 10／10，budget↔step unknown 交接、過期 intent 三型、加權成本、舊 50 案與獨立核帳都沒有退化；T8-01～08 拿掉注入後 8／8 轉紅。兩條驗收只算「部分」：R8-29 拿不到真的同號 pgid，改用模擬；R8-14 遇到實體寫入失敗時走到另一條保守分支（停在 unknown，不多跑）。新發現 5 條（A9-01～05）：2 B 低、1 G 低、1 X 低、1 M；沒有高嚴重度。** 全套一次 458／458 綠，step 450 回合、adapt 320 回合長跑都正常。
 
-受測 HEAD：`ad1dfa25`（loop7 八條線全進）。之後 main 只多了 I 隊的整合 `461c1f61`／`c7ca3bc8`，只改文件（README、INDEX、problems、契約卡、code map），lib 與測試不變，所以本報告的結論也適用於目前的 main。依[組件契約](../component-contracts.md)、spec、各包 README／spec 分類；[代定清單](../decisions-2026-10-09.md)列的已知限制不當新發現。工人是 4 條 `gpt-6-astra` high（[分工](2026-10-09-astra-7-infra-evidence/handoff.md)），跑在 main 的 worktree 複本；沒有改程式、測試、文件，測試與長跑都包在 systemd scope 裡。隊長親自重跑了 A9-01（3／3 重現），並核對各線原始 JSON。
+受測 HEAD：`59ce8767`（loop7 八條線全進）。之後 main 只多了 I 隊的整合 `01632293`／`e5eedc4f`，只改文件（README、INDEX、problems、契約卡、code map），lib 與測試不變，所以本報告的結論也適用於目前的 main。依[組件契約](../component-contracts.md)、spec、各包 README／spec 分類；[代定清單](../decisions-2026-10-09.md)列的已知限制不當新發現。工人是 4 條 `gpt-6-astra` high（[分工](2026-10-09-astra-7-infra-evidence/handoff.md)），跑在 main 的 worktree 複本；沒有改程式、測試、文件，測試與長跑都包在 systemd scope 裡。隊長親自重跑了 A9-01（3／3 重現），並核對各線原始 JSON。
 
 ## 測試與長跑
 
@@ -63,7 +63,7 @@ T8-01～08 **8／8 通過**：在 /tmp 的測試副本拿掉注入後都紅，�
 
 ### 文件項
 
-spec §2.3（:62）、§2.6（:97）、§4.3（:170）、§5.5（:244）、§6（:252）、契約卡 2.1 都有對應句子。problems.md 的 A8-05～A8-11、C8-01～03 在受測 HEAD `ad1dfa25` 還沒有，I 隊在 `461c1f61` 補上了（loop7 節 A8-05～08、A8-10、A8-11、C8-01～03；A8-09 在上一節）。[docs-edges.json](2026-10-09-astra-7-infra-evidence/group5/docs-edges.json)。
+spec §2.3（:62）、§2.6（:97）、§4.3（:170）、§5.5（:244）、§6（:252）、契約卡 2.1 都有對應句子。problems.md 的 A8-05～A8-11、C8-01～03 在受測 HEAD `59ce8767` 還沒有，I 隊在 `01632293` 補上了（loop7 節 A8-05～08、A8-10、A8-11、C8-01～03；A8-09 在上一節）。[docs-edges.json](2026-10-09-astra-7-infra-evidence/group5/docs-edges.json)。
 
 ## 新發現
 
@@ -81,7 +81,7 @@ spec §2.3（:62）、§2.6（:97）、§4.3（:170）、§5.5（:244）、§6�
 - [docs-edges.json](2026-10-09-astra-7-infra-evidence/group5/docs-edges.json) 的 `history-upgrade`。
 
 **A9-03〔B／指示詞解析，低，舊問題〕超長陣列索引（≥4301 位數字）讓 `aos-exec` 漏出 ValueError，回 rc 1＋traceback，而不是 125＋具名錯誤。**
-- 原因是 Python 整數字串的 4300 位上限；4300 位時正常回 DirectiveError。`510dd134` 就已如此，不是 loop7 引入的。
+- 原因是 Python 整數字串的 4300 位上限；4300 位時正常回 DirectiveError。`9c54febf` 就已如此，不是 loop7 引入的。
 - 契約：proto6 inst spec :37／:47、proto5 ref spec :48（`aos_inst.py:3` 引用）。
 - 影響：只影響錯誤碼和錯誤格式，不會起子任務。
 - 修法一行：轉 int 前先檢查長度，或把 ValueError 轉成 ReferencePointerInvalid。

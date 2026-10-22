@@ -4,7 +4,7 @@
 
 **STATUS：DONE**
 **worktree**：`/home/lorkhan/repo/simple_tools/aos/.claude/worktrees/agent-aabf401d3cc5aa3f1`
-**分支**：`worktree-agent-aabf401d3cc5aa3f1`（已 rebase 到隊 C 收線後的 main `14fe7fe`）
+**分支**：`worktree-agent-aabf401d3cc5aa3f1`（已 rebase 到隊 C 收線後的 main `088b332`）
 **日期**：2026-08-30
 
 ## 一句話
@@ -114,7 +114,7 @@ engine=pi 時 `step` 這條 inst 仍然成立，**但 pi 的工具動作不是 i
 
 ## rebase 到隊 C 之後（收線）
 
-rebase 到 `14fe7fe` 有 4 個衝突：`CMakeLists.txt`（`PRIVATE_DEPS` 併成
+rebase 到 `088b332` 有 4 個衝突：`CMakeLists.txt`（`PRIVATE_DEPS` 併成
 `aos::exec aos::llm aos::loop`）、`internal.hpp`（隊 C 拿掉 `deliver_self`，我留
 `step_pi`）、`run.cpp`（隊 C 的 folder／name 可省 ＋ 我的 `--engine/--provider/--model`）、
 `code-map.md`（文字併排）。`step.cpp`、`init.cpp`、`README.md`、`agent.hpp`、

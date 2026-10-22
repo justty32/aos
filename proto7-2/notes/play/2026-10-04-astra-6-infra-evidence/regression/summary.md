@@ -14,7 +14,7 @@
 | §4.4(a)／(b) | after-birth、before-once-delete 真 SIGKILL 仍最多一次；一般及同回合重播都在報結束下一個 tock 才刪槽 | [core/results.json](core/results.json) |
 | F47 核心／模組 | 同回合重播補通知；跨回合不補；history gap、once_retry 漏取樣／pending 符合契約 | [core/results.json](core/results.json) |
 | F47 step | 4 次 EIO 漏通知、槽已清仍接原 request／attempt，a／b 各一次；漏 3 回合通知後耐性不重設 | [step/f47-step.json](step/f47-step.json) |
-| 核心行數／歷史 | 單跑 test_budget rc 0；9 支 aos7 核心 2757／2123；lib 全 18 檔 SHA256 與 daf8d5cf 相同，之後 git history／diff 皆空 | [core-budget.log](core-budget.log)、[core-lines.json](core-lines.json)、[core-history.json](core-history.json) |
+| 核心行數／歷史 | 單跑 test_budget rc 0；9 支 aos7 核心 2757／2123；lib 全 18 檔 SHA256 與 fd8fd147 相同，之後 git history／diff 皆空 | [core-budget.log](core-budget.log)、[core-lines.json](core-lines.json)、[core-history.json](core-history.json) |
 
 共核心 17 案、step 8 案、F47 step 2 案。SIGKILL／漏通知後保守停住列 X；刻意刪 frame.pc 列 M，不是 bug。原探針部分情境主要記錄觀察，本輪另於 [summarize.py](summarize.py) 對 entered wait、延遲 intent、預設最多重送一次、active close 拒收補做結果斷言。
 
@@ -22,7 +22,7 @@
 
 adapt 的 28 案在三次全套皆通過（84 次）；包含 20／200 ms、200／20 ms、50／50 ms、pause／SIGKILL／重建、300 回合檔數與 `test_daemon_kill9_restart`。完整逐案結果見 [results.json](results.json)。三次通過只是本輪沒有觀察到 flaky，不是保證任何負載都穩定。
 
-版本紀錄只有 d3738e04 初次加入整份 adapt 測試，現有測試註解和 repo 證據未指出「放寬前」斷言，不能確認使用者提及的確切歷史變更。現行 `test_daemon_kill9_restart` 用 `regs[0].my_round >= before.my_round`，允許觀察之間多走回合；仍查不 reset、不 void、since 不變、最後接到更新來源回合。此項是候選對照，不冒稱已定位原放寬案。
+版本紀錄只有 aaad7c1a 初次加入整份 adapt 測試，現有測試註解和 repo 證據未指出「放寬前」斷言，不能確認使用者提及的確切歷史變更。現行 `test_daemon_kill9_restart` 用 `regs[0].my_round >= before.my_round`，允許觀察之間多走回合；仍查不 reset、不 void、since 不變、最後接到更新來源回合。此項是候選對照，不冒稱已定位原放寬案。
 
 ## step 450 已關回合長跑
 

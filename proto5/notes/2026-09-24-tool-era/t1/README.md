@@ -8,7 +8,7 @@
 
 ## 做了什麼
 
-1. **共用格式**（先合進 main 的 f74cc06）：`spec/team/` 九份規範＋`examples/` 九份範例，`python3 lib/aos_team_format.py 檔…` 驗得過。
+1. **共用格式**（先合進 main 的 c3d7c54）：`spec/team/` 九份規範＋`examples/` 九份範例，`python3 lib/aos_team_format.py 檔…` 驗得過。
 2. **`aos-team`**：
    - `init`：照名冊生家；重跑只補新成員，崩了會補完。
    - `start`／`stop`：替每個成員登記／撤銷，郵差、心跳有模組就一起。
@@ -37,7 +37,7 @@
 
 ## plan.md 的七條驗收：全過
 
-1. 共用格式先合：f74cc06。
+1. 共用格式先合：c3d7c54。
 2. init 生三個成員，`aos-agent check` 各自沒有 bad，input 是資料夾。
 3. start／stop／ls。
 4. 命中 tool 規則時，不寫任何成員的 input；命中兩條或有否定詞就落穿。
@@ -64,7 +64,7 @@ hello.txt： 你好，歡迎來到這個專案！        領隊：ls、find、re
 
 ## 數字
 
-- **全測**：main（a5d557c）1593 → **1640 全綠**。
+- **全測**：main（b5bd0fc）1593 → **1640 全綠**。
   - 這一隊的測試共 75 條，5 個檔：`test_team_format`、`test_team_init`、`test_team_route`、`test_team_task_cli`、`test_team_review_fix`。
   - 其中 28 條已在 main。
 - **穩定**：這 75 條連跑 10 次，**10/10**，含整合測試。

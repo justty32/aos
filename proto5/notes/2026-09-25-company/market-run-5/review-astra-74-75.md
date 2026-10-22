@@ -2,25 +2,25 @@
 
 # astra 唯讀審查：第 74、75 題（成功率、審查係數）
 
-2026-09-25 晚｜模型 gpt-6-astra（codex CLI，`--sandbox read-only`）｜範圍 `97a2590b..09b57cb6`（7 個 commit：市場排名公式加成功率與審查係數、新子模組 `lib/aos_market_review.py`、`aos_market_grant.rank()`／`aos_market_score` 改動、`test/test_market_review.py`、規格／工作流／文件同步、rescore-74-75）｜指令 `codex exec -m gpt-6-astra --sandbox read-only -C <repo> --color never -o <out> "<prompt>" < /dev/null`，耗時 332 秒｜審查者沒改任何檔；下面的驗證由調度者（Fable）在主 repo 用唯讀 python 重跑一次。
+2026-09-25 晚｜模型 gpt-6-astra（codex CLI，`--sandbox read-only`）｜範圍 `7db1ba9a..dbde597f`（7 個 commit：市場排名公式加成功率與審查係數、新子模組 `lib/aos_market_review.py`、`aos_market_grant.rank()`／`aos_market_score` 改動、`test/test_market_review.py`、規格／工作流／文件同步、rescore-74-75）｜指令 `codex exec -m gpt-6-astra --sandbox read-only -C <repo> --color never -o <out> "<prompt>" < /dev/null`，耗時 332 秒｜審查者沒改任何檔；下面的驗證由調度者（Fable）在主 repo 用唯讀 python 重跑一次。
 
 ## 驗證摘要（調度者自己跑過）
 
 | # | 必修 | 驗證 | 說明 | 處理 |
 |---|---|---|---|---|
-| 1 | `aos_market_score.py:236` 兩張董事單時間重疊 → 共用同一張製造單，審查係數算錯 | **已驗證成立**（astra 的重現腳本跑出 `[3, 3]`，應為 `[1, 3]`） | 另查真實資料 `~/tmp/company-market-5/` 五家：董事每張單都在上一張結案後才下，**沒有重疊**，所以 rescore-74-75 的數字不受影響；但董事一次下多張（並行）就會對錯單。 | 處理：commit `6bdd8c12`（製造總機單一對一配給董事的單，配不到記 None＋說明；測試 `test_overlapping_*`、`test_resent_order_same_ask_uses_last`、`test_timed_out_ask_does_not_take_later_order`） |
-| 2 | `aos_market_review.py:18` 審查紀錄亂序 → 二次過算成一次過 | **已驗證成立**（腳本跑出 `1`，應為 `2`）；**實務上機率低** | 寫入端 `aos_team_task_machine.py:135` 是照時間 append，正常流程不會亂序；只有手改單子檔才會。不能直接改看 `attempt`（機械驗收沒過也會加 attempt）。 | 處理：commit `21dde530`（照每筆 `at` 排再數，缺時間照原順序；測試 `test_review_records_out_of_order_sorted_by_time`） |
-| 3 | `aos_market_grant.py:101、109` 秒數＝0 被當「沒秒數」→ 最快那家快＝0 | **已驗證成立**（a 0 秒、b 1 秒 → b 快 100、a 快 0；撥款 b 2917 萬、a 2083 萬）；**本次改動之前就有** | 真跑裡董事下單到結案同一秒幾乎不會發生，但經理人 `--seconds 0` 手給就會踩到。 | 處理：commit `c0ec20f4`（`is None` 判斷、0 秒＝快 100；測試 `test_zero_seconds_is_fastest`） |
+| 1 | `aos_market_score.py:236` 兩張董事單時間重疊 → 共用同一張製造單，審查係數算錯 | **已驗證成立**（astra 的重現腳本跑出 `[3, 3]`，應為 `[1, 3]`） | 另查真實資料 `~/tmp/company-market-5/` 五家：董事每張單都在上一張結案後才下，**沒有重疊**，所以 rescore-74-75 的數字不受影響；但董事一次下多張（並行）就會對錯單。 | 處理：commit `a6d5042d`（製造總機單一對一配給董事的單，配不到記 None＋說明；測試 `test_overlapping_*`、`test_resent_order_same_ask_uses_last`、`test_timed_out_ask_does_not_take_later_order`） |
+| 2 | `aos_market_review.py:18` 審查紀錄亂序 → 二次過算成一次過 | **已驗證成立**（腳本跑出 `1`，應為 `2`）；**實務上機率低** | 寫入端 `aos_team_task_machine.py:135` 是照時間 append，正常流程不會亂序；只有手改單子檔才會。不能直接改看 `attempt`（機械驗收沒過也會加 attempt）。 | 處理：commit `70c539ac`（照每筆 `at` 排再數，缺時間照原順序；測試 `test_review_records_out_of_order_sorted_by_time`） |
+| 3 | `aos_market_grant.py:101、109` 秒數＝0 被當「沒秒數」→ 最快那家快＝0 | **已驗證成立**（a 0 秒、b 1 秒 → b 快 100、a 快 0；撥款 b 2917 萬、a 2083 萬）；**本次改動之前就有** | 真跑裡董事下單到結案同一秒幾乎不會發生，但經理人 `--seconds 0` 手給就會踩到。 | 處理：commit `2e545a36`（`is None` 判斷、0 秒＝快 100；測試 `test_zero_seconds_is_fastest`） |
 
 建議第 4 條（rescore 文字兩處數量錯）也查過：表格顯示第 2 輪 c2 是 1/3、不是 2/3；c3、c4 三輪各成 6 張、合計 12 張，不是「八張」——**成立**。
 
-建議五條：處理：commit `470f5a04`（1 規格與 `lib/docs/company.md` 寫明改 `review_factors` 要重新 `score`；2 選「程式對齊規格」：`rank` 看 `review_rounds` 裡的 None，那列寫「成功的 N 張裡有 k 張審查係數當 1.0」，不動檔案結構；3 讀 `market.json` 時檢查 `review_factors`，次數比清單長用最後一個；4 rescore 兩處改對、market.md「沒做的」改成五家已跑；5 測試 `test_config_review_factors_whole_path`、`test_bad_review_factors_clear_error`、`test_rank_warns_partial_missing_review`）。修完用複製的 `~/tmp/company-market-5/` 重跑三輪成績板與排名／撥款：11 列數字、名次、撥款全部不變（真實資料沒有重疊單）。
+建議五條：處理：commit `ba76b29e`（1 規格與 `lib/docs/company.md` 寫明改 `review_factors` 要重新 `score`；2 選「程式對齊規格」：`rank` 看 `review_rounds` 裡的 None，那列寫「成功的 N 張裡有 k 張審查係數當 1.0」，不動檔案結構；3 讀 `market.json` 時檢查 `review_factors`，次數比清單長用最後一個；4 rescore 兩處改對、market.md「沒做的」改成五家已跑；5 測試 `test_config_review_factors_whole_path`、`test_bad_review_factors_clear_error`、`test_rank_warns_partial_missing_review`）。修完用複製的 `~/tmp/company-market-5/` 重跑三輪成績板與排名／撥款：11 列數字、名次、撥款全部不變（真實資料沒有重疊單）。
 
 ---
 
 ## astra 原文
 
-（連結原本是絕對路徑加行號，收進版控時改成相對路徑；行號留在連結文字裡，指的是審查當時 `09b57cb6` 的行號。）
+（連結原本是絕對路徑加行號，收進版控時改成相對路徑；行號留在連結文字裡，指的是審查當時 `dbde597f` 的行號。）
 
 ## 1. 必修
 

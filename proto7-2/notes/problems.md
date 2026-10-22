@@ -8,7 +8,7 @@
 
 ## 要使用者決定（0 條）
 
-原有的 P2-01、P2-02 兩條：10-04 使用者說「隨意，真的糾結就做選項」，頂層定案，astra-2 修補（commit 79e67233）已實作，語意如下。
+原有的 P2-01、P2-02 兩條：10-04 使用者說「隨意，真的糾結就做選項」，頂層定案，astra-2 修補（commit 12a02745）已實作，語意如下。
 
 ### P2-01 固定 interval 時 `wake` 沒有作用 → 已定 (b)、已實作
 
@@ -86,7 +86,7 @@
 
 ## astra 第一輪（A2）的處理
 
-依 [astra 第一輪報告](play/2026-10-04-astra-1-infra.md) 與 astra 加註解時讀出的 14 處疑點（commit b749d5eb）。三件核心工作（未知一路保留、回合與槽的身分證據、控制意圖重播只生效一次）做成固定回歸矩陣：`tests/test_matrix*.py`（維度與判定見各檔檔頭）。P2-01、P2-02 當時仍待使用者決定，語意沒動（後來的處理見上面 P2-01、P2-02）。
+依 [astra 第一輪報告](play/2026-10-04-astra-1-infra.md) 與 astra 加註解時讀出的 14 處疑點（commit 496211bd）。三件核心工作（未知一路保留、回合與槽的身分證據、控制意圖重播只生效一次）做成固定回歸矩陣：`tests/test_matrix*.py`（維度與判定見各檔檔頭）。P2-01、P2-02 當時仍待使用者決定，語意沒動（後來的處理見上面 P2-01、P2-02）。
 
 | 編號 | 處理 | 做法（spec 對應處標 A2-） |
 |---|---|---|
@@ -104,7 +104,7 @@
 | A2-12 history 通知早於總結提交 | 已修 | tock 先提交 last-round.json（整份讀回確認）才寫 tock.json；中途被殺時重播照總結的 alive 補寫。§9 另補「最後一回合、起來之前的回合記不到」的限制 |
 | A2-13 CLI 固定檔名沒含 owner | 已修 | `aos7-ctl` 帶 `--owner` 時檔名 `<by>.<op>.<node>@<owner>.json` |
 
-讀碼疑點（b749d5eb 的 14 處）：
+讀碼疑點（496211bd 的 14 處）：
 
 | 位置（加註解時的行號） | 處理 |
 |---|---|
@@ -125,7 +125,7 @@
 
 ## astra 第二輪（A3）的處理
 
-依 [astra 第二輪報告](play/2026-10-04-astra-2-infra.md)。修補在 commit 537ef674（A3-02、03、09、命中紀錄）與 79e67233（其餘、P2-01、P2-02、until_round）。報告第四節的人工停點表改寫成 spec 第 12 節（給操作者的停止範圍、證據、恢復步驟），並補上報告指出的缺口（N 從哪裡核實、刪 birth＝重新授權執行、uncertain 非空不等於要人工、恢復前先保存證據並 pause）。
+依 [astra 第二輪報告](play/2026-10-04-astra-2-infra.md)。修補在 commit be5a3f53（A3-02、03、09、命中紀錄）與 12a02745（其餘、P2-01、P2-02、until_round）。報告第四節的人工停點表改寫成 spec 第 12 節（給操作者的停止範圍、證據、恢復步驟），並補上報告指出的缺口（N 從哪裡核實、刪 birth＝重新授權執行、uncertain 非空不等於要人工、恢復前先保存證據並 pause）。
 
 | 編號 | 處理 | 做法（spec 對應處標 A3-） |
 |---|---|---|
@@ -141,11 +141,11 @@
 | 讀碼：`kill_node` 掃描不完整時沒打記著的群組 | 已修 | 照 spec 2.6 照樣打記著的群組，事件 ok:false；environ 讀不到權限又在記著群組裡＝不完整 |
 | 矩陣盲點（healthy 12 案有 9 案注入命中 0 次） | 已修 | 測試鉤子加 `AOS7_TEST_FAULT_HITS` 命中紀錄（P2-15），每個注入案例斷言命中 ≥1。補了 EACCES 孤兒、restart 完成證據跨 run、FIFO 生命週期檔、id 碰撞等組合——見 [tests/core/test_matrix_a3.py](../tests/core/test_matrix_a3.py) |
 
-- **until_round**（使用者 10-04，不是 astra 的題）：tasks.json 項目可選非負整數，回合數大於它就不再起新 run，跟 `from_round` 對稱；已在跑的不殺；once 已起過的照 launch 標記刪項，沒起成又過期的留著不起（commit 060dca8b）。用途：分配者掛了，使用權照樣到期。spec 4.1。
+- **until_round**（使用者 10-04，不是 astra 的題）：tasks.json 項目可選非負整數，回合數大於它就不再起新 run，跟 `from_round` 對稱；已在跑的不殺；once 已起過的照 launch 標記刪項，沒起成又過期的留著不起（commit 3ed501a5）。用途：分配者掛了，使用權照樣到期。spec 4.1。
 
 ## astra 第三輪（A4）與 loop4 的處理
 
-依 [astra 第三輪報告](play/2026-10-04-astra-3-infra.md)、[loop4 藍圖](blueprint-loop4.md)。核心 commit daf8d5cf、step 包 39681eec、control／audit 62e8c46b、契約卡見 play README 該列。核心 2791→2757 總行、2151→2123 實際程式。
+依 [astra 第三輪報告](play/2026-10-04-astra-3-infra.md)、[loop4 藍圖](blueprint-loop4.md)。核心 commit fd8fd147、step 包 c4e92134、control／audit 97874ed5、契約卡見 play README 該列。核心 2791→2757 總行、2151→2123 實際程式。
 
 | 編號 | 歸屬／類 | 處理 |
 |---|---|---|
@@ -168,8 +168,8 @@
 
 | 編號 | 歸屬／類 | 處理 |
 |---|---|---|
-| A5-01（＝G3）父 kill 後子空間原任務不被收 | subd 包／B | subd 起 argv 前寫包自有紀錄 `subd-life.json`；重開時（紀錄非 `stopped`、含缺）持 `daemon.lock`，以子根路徑前綴＋環境身分收前代 launcher／runner／任務並重掃，乾淨才放行，掃不完不起新代。核心 §5.4 不保證重開必收前代，原 README 說法撤回。8c2145c4；同壓力探針 10／10（[evidence](play/2026-10-04-loop5-subd-evidence/stress/results.json)） |
-| account 草稿 5 條意見 | budget 包（原名 account）／設計 | 收進 budget v1 契約卡與 spec：失敗不等於未支用、三種操作鍵、帳活過 step close、不可再分、半開效期與 completed_tock。025d2bfe。另記 5 個契約缺口在 budget spec（取消需可查詢後端、時鐘重建只靠規則、儲存只增不清、holder 合作式綁定、step 自動重送只一次） |
+| A5-01（＝G3）父 kill 後子空間原任務不被收 | subd 包／B | subd 起 argv 前寫包自有紀錄 `subd-life.json`；重開時（紀錄非 `stopped`、含缺）持 `daemon.lock`，以子根路徑前綴＋環境身分收前代 launcher／runner／任務並重掃，乾淨才放行，掃不完不起新代。核心 §5.4 不保證重開必收前代，原 README 說法撤回。a11843e4；同壓力探針 10／10（[evidence](play/2026-10-04-loop5-subd-evidence/stress/results.json)） |
+| account 草稿 5 條意見 | budget 包（原名 account）／設計 | 收進 budget v1 契約卡與 spec：失敗不等於未支用、三種操作鍵、帳活過 step close、不可再分、半開效期與 completed_tock。5e021125。另記 5 個契約缺口在 budget spec（取消需可查詢後端、時鐘重建只靠規則、儲存只增不清、holder 合作式綁定、step 自動重送只一次） |
 
 ## astra 第五輪（A6）與 loop6 的處理
 
@@ -177,11 +177,11 @@
 
 | 編號 | 歸屬／類 | 處理 |
 |---|---|---|
-| A6-01 合法 stop 記錄提交中斷後重開錯收 | subd 包／B | 「允許的 stop 已完成」改以核心停止事實判定：status `stopped` ＋ `ctl-done/` 成功 stop 回條且時間 ≥ 本代 since（父 kill 不留回條）；重開時成立就補完提交、不回收。95426b17；[驗收](play/2026-10-04-loop6-subd-evidence/summary.md) |
-| A6-02 budget 後端讀取故障回 1 | budget 包／B | 入口回非終局 unknown；call／cancel／settle 共同故障邊界 rc 3、一行 JSON。bd9dcc10；[驗收](play/2026-10-04-loop6-budget-evidence/summary.md) |
-| budget 五缺口 | budget 包／G | spec §9 已知界線五條、§10 保存與退役；`clock_hw` 每次推高；孤兒回條掃（3 回合寬限）；退役拒收新 K；step run 步 `max_resends`（預設 1）。bd9dcc10 |
+| A6-01 合法 stop 記錄提交中斷後重開錯收 | subd 包／B | 「允許的 stop 已完成」改以核心停止事實判定：status `stopped` ＋ `ctl-done/` 成功 stop 回條且時間 ≥ 本代 since（父 kill 不留回條）；重開時成立就補完提交、不回收。997a2f53；[驗收](play/2026-10-04-loop6-subd-evidence/summary.md) |
+| A6-02 budget 後端讀取故障回 1 | budget 包／B | 入口回非終局 unknown；call／cancel／settle 共同故障邊界 rc 3、一行 JSON。94a451f6；[驗收](play/2026-10-04-loop6-budget-evidence/summary.md) |
+| budget 五缺口 | budget 包／G | spec §9 已知界線五條、§10 保存與退役；`clock_hw` 每次推高；孤兒回條掃（3 回合寬限）；退役拒收新 K；step run 步 `max_resends`（預設 1）。94a451f6 |
 | A7-01 adapt scale 平手取偶數 | adapt 包／B（低） | `round_half_up`（Decimal ROUND_HALF_UP，平手遠離零）；spec §2 寫明；單元測試 0.5／1.5／2.5／4.5／-2.5。藍圖 §3.3 門檻例子勘誤（801 true、800 null、799 false）；subd README 補牆鐘不倒退前置（astra-6） |
-| adapt 第一版 | 新任務包 | 最新值轉接（d3738e04）；自報缺口：換鏈只能偵測不能切換、任務端無法注入測試故障、時鐘函式跟 budget 重複（待搬進工具包） |
+| adapt 第一版 | 新任務包 | 最新值轉接（aaad7c1a）；自報缺口：換鏈只能偵測不能切換、任務端無法注入測試故障、時鐘函式跟 budget 重複（待搬進工具包） |
 
 ## astra 第七輪（A8）adapt 數值回歸的處理（10-05）
 
@@ -218,15 +218,15 @@
 
 | 編號 | 歸屬／類 | 處理 |
 |---|---|---|
-| A8-05（＝R8-03）登記持久化失敗後重送仍回成功、磁碟沒修好 | daemon／B | register／unregister 先寫候選 nodes.json，成功才換記憶體；失敗回條 `ok: false`、登記不變、可重送（spec §2.3）。K2 7ac33100；測試 `test_daemon.TestDaemonDurableRecovery` |
-| A8-06（＝R8-01）runner 已起、任務還沒 Popen 時 kill 回成功 | task／G→定 D1 | runner 還在、沒有同 run 的 pid.json／exit.json＝回 `ok: false`／`unknown`、請求留著下次再做；已掃到相符任務照殺（spec §6）。K1 915f53e6、235172da；daemon 逐槽收回 unknown 算未確認乾淨（K2 35f21912）。測試 `test_ctl` k1 系列 |
-| A8-07（＝R8-08）動態加掛連結已建、birth 未提交，中斷後不能冪等恢復 | mount／B | 建連結撞 EEXIST 且指向同處＝已建；讀不到連結＝不知道、請求留著；birth 失敗紀錄不算已掛（R8-09）。K4 f6aa2a8d；測試 `test_mount_dyn` |
-| A8-08（＝R8-15／R8-16）budget 共同 unknown 邊界漏兩條路徑 | budget／B | payload 讀不到、已結算重播時入口回條讀不到都退 3（不補欄、不寫 `--out`）；退出碼表 0／1／2／3 三處統一。B d8b5f267 |
-| A8-10 budget 的 rc 3 被 step 當一般失敗 | step＋budget／G | step run 步選項 `unknown_codes`（預設空）：列出的退出碼走 `on_unknown` 同 request 重送；重送額度記 request 層 `resends`（R8-14），過期 intent 也走 `on_unknown`（R8-13）；fakeapi 示範表開 `[3]`；文件分清兩種 unknown。(c) 不做（見代定清單）。S 135314e2、B 937001bf |
-| A8-11（＋R8-20）巨大整數 interval 讓設定驗證拋例外、node 不開回合 | timeline／B | `read_config` 先型別、再範圍（≤ 一年）、最後 isfinite，整段不丟例外；壞值用預設並記錯。K3 9c9cfa5f；測試 `test_errors.TestTimelineConfig`（proto7-1 案例搬回） |
-| C8-01（＝R8-03 同族）取消登記後 daemon 被殺，回收義務遺失 | daemon／B | 回收意圖先寫 nodes.json `reaping`（`{id: {since, why}}`），確認乾淨且清除寫成功才拿掉；重開續收（spec §2.6）。K2 7ac33100；測試 `test_unregister_crash_before_kill_resumes` 等 |
-| C8-02（＝R8-02）node 替換後中斷回收，新舊任務同活 | daemon／B | 在 `reaping` 的 node 不開時間線；收不乾淨保留 missing、約每秒重試；舊時間線結束後再掃一次才算乾淨（K2 0b68b3a0）。磁碟不記 pgid，重開只靠身分掃描 |
-| C8-03 任務包槽外暫存檔沒人回收 | 核心＋各包／G | 原則寫進 spec §5.5：核心只清自己的資料夾，槽外由寫的人跑 `sweep_tmp`；step 直譯器啟動清工作資料夾與 results、budget 帳任務起時清 `gateway/`；adapt 份已做（`9d8767da`，`Adapter.init()` 啟動時清 `in/`）；三包都處理完 |
+| A8-05（＝R8-03）登記持久化失敗後重送仍回成功、磁碟沒修好 | daemon／B | register／unregister 先寫候選 nodes.json，成功才換記憶體；失敗回條 `ok: false`、登記不變、可重送（spec §2.3）。K2 cca59c6b；測試 `test_daemon.TestDaemonDurableRecovery` |
+| A8-06（＝R8-01）runner 已起、任務還沒 Popen 時 kill 回成功 | task／G→定 D1 | runner 還在、沒有同 run 的 pid.json／exit.json＝回 `ok: false`／`unknown`、請求留著下次再做；已掃到相符任務照殺（spec §6）。K1 bb2a0475、5be59b27；daemon 逐槽收回 unknown 算未確認乾淨（K2 2398d78d）。測試 `test_ctl` k1 系列 |
+| A8-07（＝R8-08）動態加掛連結已建、birth 未提交，中斷後不能冪等恢復 | mount／B | 建連結撞 EEXIST 且指向同處＝已建；讀不到連結＝不知道、請求留著；birth 失敗紀錄不算已掛（R8-09）。K4 ab5a409a；測試 `test_mount_dyn` |
+| A8-08（＝R8-15／R8-16）budget 共同 unknown 邊界漏兩條路徑 | budget／B | payload 讀不到、已結算重播時入口回條讀不到都退 3（不補欄、不寫 `--out`）；退出碼表 0／1／2／3 三處統一。B 784faf7e |
+| A8-10 budget 的 rc 3 被 step 當一般失敗 | step＋budget／G | step run 步選項 `unknown_codes`（預設空）：列出的退出碼走 `on_unknown` 同 request 重送；重送額度記 request 層 `resends`（R8-14），過期 intent 也走 `on_unknown`（R8-13）；fakeapi 示範表開 `[3]`；文件分清兩種 unknown。(c) 不做（見代定清單）。S e82c2e6e、B 6f125b2a |
+| A8-11（＋R8-20）巨大整數 interval 讓設定驗證拋例外、node 不開回合 | timeline／B | `read_config` 先型別、再範圍（≤ 一年）、最後 isfinite，整段不丟例外；壞值用預設並記錯。K3 66136696；測試 `test_errors.TestTimelineConfig`（proto7-1 案例搬回） |
+| C8-01（＝R8-03 同族）取消登記後 daemon 被殺，回收義務遺失 | daemon／B | 回收意圖先寫 nodes.json `reaping`（`{id: {since, why}}`），確認乾淨且清除寫成功才拿掉；重開續收（spec §2.6）。K2 cca59c6b；測試 `test_unregister_crash_before_kill_resumes` 等 |
+| C8-02（＝R8-02）node 替換後中斷回收，新舊任務同活 | daemon／B | 在 `reaping` 的 node 不開時間線；收不乾淨保留 missing、約每秒重試；舊時間線結束後再掃一次才算乾淨（K2 fa3a2425）。磁碟不記 pgid，重開只靠身分掃描 |
+| C8-03 任務包槽外暫存檔沒人回收 | 核心＋各包／G | 原則寫進 spec §5.5：核心只清自己的資料夾，槽外由寫的人跑 `sweep_tmp`；step 直譯器啟動清工作資料夾與 results、budget 帳任務起時清 `gateway/`；adapt 份已做（`fa28bf09`，`Adapter.init()` 啟動時清 `in/`）；三包都處理完 |
 | L3-1 `test_diag.test_unsure_listed` 上午連紅九次 | 測試流程／非 bug | 不是負載：T 隊驗證變異時兩次 sed 讓檔案大小不變、與還原 `cp` 落在同一秒，`__pycache__` 舊的變異版（runner 規則指到不存在的 pid＋`check()`）照用到檔案再被改動為止；照同樣步驟可 100% 重現（同一句 `Lists differ: [] != [('k', 1)]`），`touch` 一下就好。測試不改；變異驗證要用 `python3 -B` 或還原後 `touch` |
 | L3-2 subd `test_allow_stop_writes_stopped_and_parent_does_not_restart` 負載下 out.log 空 | 測試假設／非 bug | 父 keep 每回合再起被擋的包裝程式，每次先清槽（out.log 刪掉）再由包裝程式重寫；看到 `ended` code 1 後只讀一次，晚了就落在空窗（探針 3 秒內約 19% 讀到空）。改成等 out.log 出現說明（檔案證據） |
 
@@ -250,11 +250,11 @@
 
 | 線 | 處理 |
 |---|---|
-| E1 保存端＋取樣 | append／ack／recover、obs／must 輪替與取樣（`54da92fb`） |
-| E2 發布＋讀者 | 合作來源逐件發布、留存窗口去重、游標讀取與缺口回報（`8efedc44`、`0f10e115`） |
+| E1 保存端＋取樣 | append／ack／recover、obs／must 輪替與取樣（`4dcf6d1f`） |
+| E2 發布＋讀者 | 合作來源逐件發布、留存窗口去重、游標讀取與缺口回報（`8eae1219`、`f25e4e17`） |
 | E3 整合 | [README](../modules/events/README.md)、`aos7-events read／pub` 子命令、真 daemon 300 回合長跑（數字見包 README「長跑」） |
 
-| V2 限制小修（第三段） | E1 列的兩條已知限制修掉：`--status` 去重鍵存 state.json `status_last`，重起不重記同一事件；截半行前先把 torn 與 `torn_cut` 同存 state、截後清標記，計數不再少 1（`fcf44fe4`、`eb78ea82`）。測試 `test_events_store` 的 `test_status_dedup_across_restarts`、`test_torn_and_tmp` |
+| V2 限制小修（第三段） | E1 列的兩條已知限制修掉：`--status` 去重鍵存 state.json `status_last`，重起不重記同一事件；截半行前先把 torn 與 `torn_cut` 同存 state、截後清標記，計數不再少 1（`400623ec`、`d8ab9532`）。測試 `test_events_store` 的 `test_status_dedup_across_restarts`、`test_torn_and_tmp` |
 
 已知限制（不修）：見 [events README「已知限制」](../modules/events/ADVANCED.md#已知限制)。
 
@@ -264,9 +264,9 @@
 
 | 線 | 處理 |
 |---|---|
-| B2 budget 部分結算 | settle 收 0≤used≤預留，差額退回；usage 缺＝pending、預留不退；used>預留時結算預留額並記 overrun、不偽裝成功、**不自動停新預留**；cancel 遇別的入口的非終局紀錄回 unknown（`f8d71660`）。測試 `packs/budget/tests/test_budget_partial.py` |
-| G1 llmcall 閘道 | 新包 [packs/llmcall/](../packs/llmcall/README.md)：固定 call ID＋請求雜湊、預留→intent→假傳輸→存回覆與 usage→結算→回條；intent 後不明＝unknown 不重送；遲到回覆只能人手 `adopt`；退出碼 4＝內容已交付但帳未清（`712ea526`）。測試 `packs/llmcall/tests/test_llmcall.py`（F-01～F-04） |
-| V1 作者收單 | author 經事件必讀通道收需求（`send`／`intake`），回條是**收單回條**、寫成後才 ack；收單只登記不自動發布（`57a59b00`）。測試 `packs/author/tests/test_author_events.py` |
+| B2 budget 部分結算 | settle 收 0≤used≤預留，差額退回；usage 缺＝pending、預留不退；used>預留時結算預留額並記 overrun、不偽裝成功、**不自動停新預留**；cancel 遇別的入口的非終局紀錄回 unknown（`8586c2ed`）。測試 `packs/budget/tests/test_budget_partial.py` |
+| G1 llmcall 閘道 | 新包 [packs/llmcall/](../packs/llmcall/README.md)：固定 call ID＋請求雜湊、預留→intent→假傳輸→存回覆與 usage→結算→回條；intent 後不明＝unknown 不重送；遲到回覆只能人手 `adopt`；退出碼 4＝內容已交付但帳未清（`4a3052d7`）。測試 `packs/llmcall/tests/test_llmcall.py`（F-01～F-04） |
+| V1 作者收單 | author 經事件必讀通道收需求（`send`／`intake`），回條是**收單回條**、寫成後才 ack；收單只登記不自動發布（`f2898c90`）。測試 `packs/author/tests/test_author_events.py` |
 
 已知限制：budget `cancel` 在 intent 寫入前取消時，取消紀錄缺 gateway／call_id 等欄（llmcall 會補預設值仍可用），要改 budget，留下一輪。
 

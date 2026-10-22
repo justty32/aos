@@ -9,7 +9,7 @@ def link(n):return '['+n+']('+str(E/n)+')'
 suite=get('suite.json')[0];s=get('step.json');a=get('adapt.json');c=get('core-lines.json');audit=get('snapshot-audit.json');cleanup=get('cleanup.json')
 assert all([suite['pass'],s['pass'],a['pass'],c['pass'],audit['pass'],cleanup['pass']])
 lines=[
-'astra-7／longrun（2026-10-09，HEAD `ad1dfa25`）：本線驗收全部通過，無新發現、無未做項目。',
+'astra-7／longrun（2026-10-09，HEAD `59ce8767`）：本線驗收全部通過，無新發現、無未做項目。',
 '',
 '- 通過｜全套一次：458 項、0 failure／error／skip，rc 0；unittest 244.845 秒、外部計時 245.035 秒。兩個已知偶紅案例本次皆綠，未觸發補跑。證據：'+link('suite.json')+'、'+link('suite.log')+'；重跑：'+link('probe_suite.py')+'。',
 '- 通過｜step：真 daemon 跑完並關閉 r1～r450，88.486 秒；150／150 個完成工作快照正確，兩步 attempt 均為 1，halt／error=0。證據：'+link('step.json')+'、'+link('step-snapshots.tar.gz')+'；重跑：'+link('probe_longrun.py')+' 的 `step`。',
@@ -20,12 +20,12 @@ lines=[
 '- 通過｜持久狀態：`nodes.json` 無 `reaping` 鍵；450 回合倒數完 `paused.json={"paused":{"a":["qa"]},"steps":{}}`，狀態為 paused。`.aosd/` r10～r450 共 441 次觀測的固定檔名均為同 8 個；暫態 tmp 未累積。證據：'+link('step.json')+'、'+link('step-snapshots.tar.gz')+'。',
 '- 通過｜清理／寫入邊界：四個自建 `/tmp/astra7-longrun-*` 根已移除，無本線殘留程序，既有 tracked 檔無修改，證據單檔均低於 300 KiB。證據：'+link('ps-before.txt')+'、'+link('ps-final.txt')+'、'+link('cleanup.json')+'；重驗：'+link('probe_cleanup.py')+'。',
 '',
-'各 lib 檔相對 `510dd134` 的行數變化如下；`aos7_*` 才計入核心總額。完整 `git diff --stat` 為 10 檔、268 insertions／71 deletions。',
+'各 lib 檔相對 `9c54febf` 的行數變化如下；`aos7_*` 才計入核心總額。完整 `git diff --stat` 為 10 檔、268 insertions／71 deletions。',
 '',
 '| lib 檔 | 總行：前→後 | 總行差 | 程式行差 |',
 '|---|---:|---:|---:|']
 for row in c['rows']:
-    before=row['baseline_510dd134'];after=row['head'];d=row['delta']
+    before=row['baseline_9c54febf'];after=row['head'];d=row['delta']
     lines.append('| `'+pathlib.Path(row['file']).name+'` | '+str(before['total'])+'→'+str(after['total'])+' | '+format(d['total'],'+d')+' | '+format(d['code'],'+d')+' |')
 lines += ['', '重跑都從 repo 根執行 `python3 <上述探針路徑>`；長跑加 `step` 或 `adapt`。各腳本會自動套用 `TasksMax=800`／`RuntimeMaxSec=1800` 的 systemd scope，依「全套→step→adapt」循序執行。快照重驗另驗過 6 個故意改壞資料的反例，全部拒絕。', '', '新發現：無，未新增 B／G／M／X 編號。已知限制未重報；本次普通長跑未注入產品故障，JSON 已標記注入為 none。']
 (E/'summary.md').write_text('\n'.join(lines)+'\n')

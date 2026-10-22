@@ -4,7 +4,7 @@
 
 ## 審什麼
 
-`git diff f30ebd7^ fdc93d6 -- proto5/lib ':!proto5/lib/test'` 這批程式改動（先 `git show --stat f30ebd7 fdc93d6` 看清單）。
+`git diff 84e8f30^ a95404f -- proto5/lib ':!proto5/lib/test'` 這批程式改動（先 `git show --stat 84e8f30 a95404f` 看清單）。
 背景說明在 `proto5/notes/2026-09-24-tick-gap/README.md` §3、§5；規範在 `proto5/spec/kernel/tick.md`、`echo.md`、`syscall.md`、`ledger.md`、`health.md`、`proto5/spec/cpu/notify.md`、`lifecycle.md`、`proto5/spec/aos-agent/tick.md`。
 
 重點（依序）：

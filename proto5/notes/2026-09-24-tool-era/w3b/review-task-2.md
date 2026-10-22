@@ -8,12 +8,12 @@
 
 兩段改動，以前的審查已修的不用重提：
 
-1. **第一輪必修的修法**：`git diff f141b01 162cc59 -- proto5/lib`（第一輪的問題 M1～M9、S1～S3、S5 與修法摘要在 `proto5/notes/2026-09-24-tool-era/w3b/README.md` §9，原回報 `review-astra.md`）。看的是：**修法有沒有真的堵住原問題、有沒有修出新洞**。重點四項：
+1. **第一輪必修的修法**：`git diff dd89a39 f4b44d1 -- proto5/lib`（第一輪的問題 M1～M9、S1～S3、S5 與修法摘要在 `proto5/notes/2026-09-24-tool-era/w3b/README.md` §9，原回報 `review-astra.md`）。看的是：**修法有沒有真的堵住原問題、有沒有修出新洞**。重點四項：
    - wrap-cli（`lib/aos_agent_tools_wrapcli.py`）：M1 值不能變成旗標、M7 nargs／append／多個可變位置參數、M8 跑 `CMD --help` 的上限與環境、M9 `--spec` 欄位驗證、S1 控制字元、S5 套用指令的 quoting。
    - wrap-py 補描述（`lib/aos_agent_tools_dev.py` 的 `describe_with_llm`／`check_describe`／`apply_describe`）。
    - compact 濃縮（`lib/aos_agent_compact.py` 的 `make_summarizer`／`check_summary`／`compose`／`keywords`）：M6 使用者原話機械保留、數字完整比對；S2 用量記帳。
    - crystal（`lib/aos_team_crystal.py`）：M2 不准蓋 routes.json、M3 整份例句全過、M4 次數從歷史算、M5 內建反例、S3 舊 log 配信可信度。
-2. **09-25 收尾（S4）**：`git diff 60e4b81 3195d6b`。
+2. **09-25 收尾（S4）**：`git diff 4d73809 3195d6b`。
    - `lib/aos_llm_ask.py` 的 `parse_json`：前後多字、``` 圍欄（大小寫、沒收尾）容忍；只收物件或陣列；純量、重複 key、NaN／Infinity＝`BadModelOutput`；重複 key 與 NaN 整份不收、不往裡找。
    - `lib/aos_agent_compact.py` 的 `_clean`：一個圍欄＋圍欄外 ≤ 80 字、各 ≤ 1 行＝只取圍欄裡的；沒收尾去第一行；其他原樣。
    - 新測試：`test_llm_ask.py` 的 `ParseJsonGuardTest`、`test_agent_tools_wrapcli.py` 的 `BrokenReplyTests`、`test_team_crystal.py` 的三條、`test_compact_summarize.py` 兩條 `_clean`。

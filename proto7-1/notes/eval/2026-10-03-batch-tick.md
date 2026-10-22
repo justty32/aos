@@ -2,7 +2,7 @@
 
 ← [proto7-1 README](../../README.md)｜要對照的：[核心 spec](../../../proto7/spec/core.md)（S-）、[分層筆記](../../../proto7/notes/2026-10-03-aos-layering.md)（「第 N 行」指這份）｜背景數字：[astra-4 第一節](../play/2026-10-03-astra-4-infra.md)、[infra-needs N-41](../infra-needs.md)｜證據：[2026-10-03-batch-tick-evidence/](2026-10-03-batch-tick-evidence/)
 
-**這份是給使用者判斷用的評估，不是要說服誰。** 評估隊在 scratchpad 複製 proto7-1（commit b9633fec），做了一個最簡單的批次原型、一支極小的 C tick／tock，跟原版比。沒有改 repo 裡的程式，也沒有 commit。
+**這份是給使用者判斷用的評估，不是要說服誰。** 評估隊在 scratchpad 複製 proto7-1（commit 8019777f），做了一個最簡單的批次原型、一支極小的 C tick／tock，跟原版比。沒有改 repo 裡的程式，也沒有 commit。
 
 ## 結論（一段話）
 

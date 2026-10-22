@@ -2,7 +2,7 @@
 
 ← [play](../README.md)｜[astra-4 A5-01](../2026-10-04-astra-4-infra.md)｜[loop5 藍圖](../../blueprint-loop5.md)
 
-修補 commit 8c2145c4（只動 `modules/subd/`，核心零改動）。探針 `stress/run_stress.py` 是 astra-4 原檔逐位元組複製。
+修補 commit a11843e4（只動 `modules/subd/`，核心零改動）。探針 `stress/run_stress.py` 是 astra-4 原檔逐位元組複製。
 
 | 項目 | 結果 |
 |---|---|

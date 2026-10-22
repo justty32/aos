@@ -2,7 +2,7 @@
 
 範圍：`proto6/` 底下、`proto6/src/` 以外。沒碰 `proto6/src/`、`wf/`、`AGENTS.md`、其他 proto*。搬移清單在旁邊的 `moves.tsv`（`舊路徑<TAB>新路徑`，198 列：封存 20 列，拆檔 178 列，拆檔是一對多，原路徑留著當入口）。
 
-分支：`worktree-agent-ac24c4ed256c6e7ff`，基準 `785eb05`。
+分支：`worktree-agent-ac24c4ed256c6e7ff`，基準 `1384527`。
 
 ## 一、封存
 
@@ -50,8 +50,8 @@ $ find proto6 -name '*.md' -not -path '*/archive/*' -not -path 'proto6/src/*' -s
 85（前）→ 36（後）
 $ python3 proto6/spec/check_ids.py | tail -1
 引用 6480 個，定義 265 個，找不到 0 個，重號 5 個，只剩索引列 0 個，預留未寫 1 個
-（基準 785eb05 也是重號 5 個（P-204／205／206／211／212，暫緩區與現行各一）、預留未寫 1 個，沒有新增）
-$ git diff 785eb05 HEAD --name-status -M | 種類統計
+（基準 1384527 也是重號 5 個（P-204／205／206／211／212，暫緩區與現行各一）、預留未寫 1 個，沒有新增）
+$ git diff 1384527 HEAD --name-status -M | 種類統計
 178 A（分檔）、97 M（入口與改連結）、20 R（封存，全是 rename）、0 D
 ```
 

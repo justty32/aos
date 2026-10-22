@@ -2,7 +2,7 @@
 
 **loop4 的 A4-01～08 修補通過；全套三次各 280 項全綠，step 450 回合檔數沒有持續成長。但本輪不能判整體驗收通過：G3 壓力探針 10／10 都留下原有子任務，下一個子 daemon 超過兩回合仍未收掉，列為唯一新發現 A5-01〔B〕。** F47 的漏通知後果符合 history、step、once_retry 各自契約；沒有因此新增 B／G。A4-09 仍是按契約處理的 X，A4-10 仍是 M，不列 bug。
 
-受測 HEAD：`b8568cdbf8122b1aaa11b9e67c49228e0e145d2c`，在指定 `8fc0e774` 之後。依[核心契約卡](../component-contracts.md)、各包 README 與[原則 9、10](../../../proto7/notes/principles.md)判定。本次只測 `proto7-2`，沒有呼叫任何 LLM；沿用舊探針時複製到本輪 evidence，沒有改舊 evidence、既有程式／測試／文件，沒有 commit／push，也沒有刪除或清空 scratchpad。
+受測 HEAD：`812cf731b651e781718b451bc790e9c904b6c159`，在指定 `916e3134` 之後。依[核心契約卡](../component-contracts.md)、各包 README 與[原則 9、10](../../../proto7/notes/principles.md)判定。本次只測 `proto7-2`，沒有呼叫任何 LLM；沿用舊探針時複製到本輪 evidence，沒有改舊 evidence、既有程式／測試／文件，沒有 commit／push，也沒有刪除或清空 scratchpad。
 
 ## 測試結果
 

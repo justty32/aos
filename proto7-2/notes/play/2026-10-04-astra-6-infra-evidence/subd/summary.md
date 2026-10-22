@@ -1,6 +1,6 @@
 # astra-6：subd 驗收
 
-HEAD `04c5d28866cdeacbb71e8bde43000f0e14a0c149`。A6-01 修補通過；正式 G3 壓力 10／10，全數與全套測試重疊。新增邊界沒有 B／G 候選。牆鐘倒退確實會讓控制檔 stop 不符 `allowed_stop`，重開後收掉原任務；此為 loop6 已自報的時間假設界線，以下保留具體現象，沒有當成已受保護。
+HEAD `f78ee2341a204b8908125923296ab2f26906d11e`。A6-01 修補通過；正式 G3 壓力 10／10，全數與全套測試重疊。新增邊界沒有 B／G 候選。牆鐘倒退確實會讓控制檔 stop 不符 `allowed_stop`，重開後收掉原任務；此為 loop6 已自報的時間假設界線，以下保留具體現象，沒有當成已受保護。
 
 | 驗收 | 結果 | 證據 |
 |---|---|---|
@@ -21,7 +21,7 @@ G3 保留第一次預跑 [preliminary/stress-parallel.json](preliminary/stress-p
 
 直接 TERM 的語意符合 [核心 daemon 契約](../../../../notes/component-contracts.md)及 subd README：SIGTERM 是核心 stop＋kill，不看守門檔；subd 要有本代控制檔 stop 成功回條才算被允許外部 stop。因此即使 `--allow-stop`，直接 TERM 也不留下永久擋重開標記。這是 loop6 自報的刻意語意變化。
 
-`since` 查歷史：初版 `8c6f08b8` 尚無 subd-life；A5 `8c2145c4` 首度寫 running life 時已含 since。現有 Git 歷史未找到「包自己寫出 running、但無 since」的版本。本輪以測試根中刪除此欄的合成模型觀察防守分支，違反「subd-life.json 只有 subd 寫」，依原則 9／10 記 M，不列 bug，也不宣稱驗證了真實舊版遷移。
+`since` 查歷史：初版 `62286c74` 尚無 subd-life；A5 `a11843e4` 首度寫 running life 時已含 since。現有 Git 歷史未找到「包自己寫出 running、但無 since」的版本。本輪以測試根中刪除此欄的合成模型觀察防守分支，違反「subd-life.json 只有 subd 寫」，依原則 9／10 記 M，不列 bug，也不宣稱驗證了真實舊版遷移。
 
 倒鐘試驗只對測試程序的 `datetime.now()` 加 offset，未改主機時鐘或內部生命週期檔。實際控制檔 stop 成功、status stopped=true、原任務仍活；但回條時間比 running.since 早一小時，wrapper 留 running、不留 stopped.json，重開按「非 allowed_stop」回收原任務。subd README「規則」明定 `result.at >= since`，沒有承諾倒鐘容錯；[loop6 自報](../../2026-10-04-loop6-subd-evidence/summary.md)明說「時間比較用 now() 牆鐘字串（原則 9，不另防）」。所以分類 **X：環境時鐘假設失效／已知界線**，本輪不新增 B／G。README 契約卡目前沒有明寫「正常牆鐘」前置；建議把上述倒鐘後果寫進界線，讓使用者看得出合法控制檔 stop 也可能不符這個時間判定。這是揭露既有界線，不以「理論上能更穩」要求新增保護。
 

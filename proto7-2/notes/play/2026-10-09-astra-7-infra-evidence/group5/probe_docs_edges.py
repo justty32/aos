@@ -19,9 +19,9 @@ def documents():
     return {'injection':'none: tracked text inventory at pinned HEAD','assertion':'report existence, not invent missing entries','head':head,'rows':rows}
 
 def actual_history_upgrade():
-    oldsource=subprocess.check_output(['git','show','510dd134:proto7-2/modules/history.py'],cwd=REPO,text=True)
+    oldsource=subprocess.check_output(['git','show','9c54febf:proto7-2/modules/history.py'],cwd=REPO,text=True)
     # Execute exact historical producer, no repository writes; __file__ preserves import layout.
-    ns={'__name__':'history_before_loop7','__file__':str(TOP/'modules/history.py')};exec(compile(oldsource,'git:510dd134/history.py','exec'),ns)
+    ns={'__name__':'history_before_loop7','__file__':str(TOP/'modules/history.py')};exec(compile(oldsource,'git:9c54febf/history.py','exec'),ns)
     out=h.root/'history';me={'root':str(h.root),'node_id':'observer'};st={}
     write(h.root/'a+b/.aos/last-round.json',{'round':1,'ended':[{'run':'plus-only#1','code':0}]})
     args=SimpleNamespace(src=['a+b'],out=str(out),max_lines=0,status=False)
@@ -33,7 +33,7 @@ def actual_history_upgrade():
     after={p.name:[json.loads(x) for x in p.read_text().splitlines()] for p in out.glob('*.jsonl')}
     mixed=[x['ended'][0]['run'] for x in after['a+b.jsonl']]
     assert mixed==['plus-only#1','slash-only#1'] and after['a%2Bb.jsonl'][0]['round']==2
-    return {'injection':{'old_commit':'510dd134','old_source_sha256':hashlib.sha256(oldsource.encode()).hexdigest(),'old_src':['a+b'],'new_src':args.src},'assertion':'reproduce legacy ambiguity using actual old and new product writers','before':before,'after':after,'state':st,'finding':'NEW-group5-1','acceptance_pass':False,'classification':'G','known_decision_extension':'M 舊檔名不變：同 node 分檔，另加 a/b 後還會混來源；不是新編碼自身碰撞'}
+    return {'injection':{'old_commit':'9c54febf','old_source_sha256':hashlib.sha256(oldsource.encode()).hexdigest(),'old_src':['a+b'],'new_src':args.src},'assertion':'reproduce legacy ambiguity using actual old and new product writers','before':before,'after':after,'state':st,'finding':'NEW-group5-1','acceptance_pass':False,'classification':'G','known_decision_extension':'M 舊檔名不變：同 node 分檔，另加 a/b 後還會混來源；不是新編碼自身碰撞'}
 
 def giant_pointer():
     ctx=Context(Document(None,{'array':[0]}));records=[]

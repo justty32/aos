@@ -9,7 +9,7 @@ rows={p.name:test_budget.count(p) for p in sorted((TOP/'lib').glob('aos7_*.py'))
 p=subprocess.run([sys.executable,'proto7-2/tests/core/test_budget.py','-v'],capture_output=True,text=True,env={**os.environ,'PYTHONDONTWRITEBYTECODE':'1'})
 (OUT/'core-budget.log').write_text(p.stdout+p.stderr)
 def git(*args):return subprocess.run(['git',*args],capture_output=True,text=True,check=True).stdout
-base=git('rev-parse','daf8d5cf').strip()
+base=git('rev-parse','fd8fd147').strip()
 comparison={'base':base,'base_description':git('show','-s','--format=%s',base).strip(),'head':git('rev-parse','HEAD').strip(),'history_since_base':git('log','--format=%H %s',base+'..HEAD','--','proto7-2/lib/'),'committed_diff':git('diff',base,'HEAD','--','proto7-2/lib/'),'worktree_diff':git('diff','HEAD','--','proto7-2/lib/'),'core_budget_rc':p.returncode,'files':{}}
 for path in sorted((TOP/'lib').glob('*')):
  if path.is_file():

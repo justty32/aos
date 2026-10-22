@@ -22,7 +22,7 @@
    "severity": "中",
    "source": "[play7 A8-01](reviews/2026-10-05/play7.md#a8-01badapt中decimal-精度不足合法來源使任務反覆退出留下舊-ok)",
    "also_hit": "",
-   "note": "97191272 小修引入的回歸（play7 §3）"
+   "note": "357632a6 小修引入的回歸（play7 §3）"
   },
   {
    "id": "A8-02",
@@ -32,7 +32,7 @@
    "severity": "中",
    "source": "[play7 A8-02](reviews/2026-10-05/play7.md#a8-02badapt中取整後強轉-float合法整數失真且突破誤差界)",
    "also_hit": "",
-   "note": "97191272 小修引入的回歸（play7 §3）"
+   "note": "357632a6 小修引入的回歸（play7 §3）"
   },
   {
    "id": "A8-03",

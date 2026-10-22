@@ -30,7 +30,7 @@ astra 唯讀審查：任務書 [review-memory-task.md](2026-09-24-tool-era/revie
 
 ## 1.5 測試數字
 
-新增 **103 條**：`test_agent_memory.py` 64 條、`test_agent_notes.py` 39 條。第二輪 rebase 到 main `325a602` 後全部 **69 檔 1999 條全綠**（main 是 69 檔 1991 條）。
+新增 **103 條**：`test_agent_memory.py` 64 條、`test_agent_notes.py` 39 條。第二輪 rebase 到 main `709476d` 後全部 **69 檔 1999 條全綠**（main 是 69 檔 1991 條）。
 
 ## 2. 驗收 8 條
 
@@ -162,7 +162,7 @@ usage：壓縮前最後一問 prompt 3171 token → 壓縮後第一問 1966 toke
   - `aos-agent notes ls｜show KEY`｜看 `note` 工具寫的長期筆記
   - `aos-agent init --template NAME`｜照模板生家（第 1 隊）
 - 規範表：spec/agent 那列補「事件紀錄 events.md、記憶壓縮 compact.md」；spec/aos-agent 那列補「cli-memory.md（context／compact／events／history／notes）」。
-- `lib/README.md`：模組表加 `aos_agent_events.py`、`aos_agent_context.py`、`aos_agent_compact.py`、`aos_agent_notes.py`；測試表加 `test_agent_memory.py`（64 條）、`test_agent_notes.py`（39 條）；總數 **69 檔 1999 條**（rebase 到 325a602 後）。
+- `lib/README.md`：模組表加 `aos_agent_events.py`、`aos_agent_context.py`、`aos_agent_compact.py`、`aos_agent_notes.py`；測試表加 `test_agent_memory.py`（64 條）、`test_agent_notes.py`（39 條）；總數 **69 檔 1999 條**（rebase 到 709476d 後）。
 - `tools/README.md`：工具包加 `notes/`（`note`：add／find／get／rm，`wf-table/1`；關牢時要掛 `notes`）。
 - `notes/README.md`：加這份報告與 `2026-09-24-tool-era/review-memory-{task,astra}.md`。
 
@@ -207,4 +207,4 @@ usage：壓縮前最後一問 prompt 3171 token → 壓縮後第一問 1966 toke
 | 第一輪（只剩一行、沒有那句；另一個情境，10 次） | — | **4/10**（答 21、2000、21、200） | 6/10 | —（那個情境芒果沒被封） |
 
 結論：「看不到了」那句把亂編從 4/10 壓到 0；8 KB 摘要再把被封存的事實留住（芒果 1/5→5/5）。行數題模型仍保守答不記得——摘要寫的是「讀了 40 行」，它分不出是不是全檔。
-全部測試：rebase 到 main `325a602` 後見 §1.5。
+全部測試：rebase 到 main `709476d` 後見 §1.5。

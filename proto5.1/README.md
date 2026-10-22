@@ -1,6 +1,6 @@
 # proto5.1 — 拿 proto5 的規範去「先做做看」的實驗場
 
-← [INDEX](../wf/INDEX.md)｜母本 [proto5](../proto5/README.md)（規範與程式都從那裡複製過來，2026-09-22 `ace797e`）
+← [INDEX](../wf/INDEX.md)｜母本 [proto5](../proto5/README.md)（規範與程式都從那裡複製過來，2026-09-22 `bcb654b`）
 
 proto5 那邊 2026-09-22 做了四份調查，冒出 23 題要使用者拍板（[proto5/notes-brief/README.md](../proto5/notes-brief/README.md)）。
 使用者說：決策太多，不如開一個 proto5.1，**照 Claude 的建議先實作看看**，實作時撞到的實際問題與經驗

@@ -1,4 +1,4 @@
-← [回入口 NORMS.md](../NORMS.md)｜主題：**kernel**｜概念：[CONCEPTS kernel](../CONCEPTS/04-kernel.md)（C-47 定義；C-09～C-15、C-28、C-29、C-38）｜規範：本檔（打包 N-03 在[時空](02-設計理念-時空.md)；`_metainfo` 在[待定](08-待定.md)）｜實作：現無實作（舊的兩支在 git 歷史 aa2fec1f，10-19 刪；照「資料夾＝程式」重寫時再對；規劃見 [thinking 通用 kernel](../thinking/2026-10-15-general-kernel.md)）
+← [回入口 NORMS.md](../NORMS.md)｜主題：**kernel**｜概念：[CONCEPTS kernel](../CONCEPTS/04-kernel.md)（C-47 定義；C-09～C-15、C-28、C-29、C-38）｜規範：本檔（打包 N-03 在[時空](02-設計理念-時空.md)；`_metainfo` 在[待定](08-待定.md)）｜實作：現無實作（舊的兩支在 git 歷史 5546be29，10-19 刪；照「資料夾＝程式」重寫時再對；規劃見 [thinking 通用 kernel](../thinking/2026-10-15-general-kernel.md)）
 
 # kernel 規範
 

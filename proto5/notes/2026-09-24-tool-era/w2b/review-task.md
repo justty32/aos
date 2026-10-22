@@ -4,7 +4,7 @@
 
 你是唯讀審查者。**不要改任何檔、不要跑模型、不要開 daemon／kernel、不要碰 LM Studio／`lms`／localhost:1234／ollama。** 可以讀檔、跑單元測試（`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test -p 'test_team_wall.py'`，另外 `test_team_escape.py`、`test_notes_recall_context.py`、`test_team_route.py`、`test_team_verify.py`；這台有 bwrap）。繁體中文、白話。
 
-**只審這次的改動**：`git diff eacfcc2 HEAD -- proto5 wf/workflows/common/code-map.md`。第一波與 access-impl 的審查已修，不用重提。
+**只審這次的改動**：`git diff 7c4f1ea HEAD -- proto5 wf/workflows/common/code-map.md`。第一波與 access-impl 的審查已修，不用重提。
 
 ## 背景
 

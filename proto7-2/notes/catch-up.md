@@ -237,7 +237,7 @@ astra 第六輪驗收過（363 全綠），只有一條低嚴重度（adapt 取�
 11. **B** W11 常駐任務掛了要不要自動重啟、「失敗」怎麼算？→ 之後再定，先給 `enabled` 開關。→ 這題還開著，之後會回來問你。
 12. **C** W12 `timeline.json` 變成可有可無，可以嗎？→ 可以。→ 不用在意。
 
-**實作時冒出來的**（[problems.md](problems.md)，commit b524c8da）：
+**實作時冒出來的**（[problems.md](problems.md)，commit 87fe14fe）：
 
 13. **C** 固定節拍時「喚醒」定成「提前結束這回合」（P2-01）。
 14. **C** 一次性任務被砍在「寫了 birth、還沒記到程序」之間，報成走失但其實沒跑過：加選項「補跑一次」（P2-02，後來移成 once 保證包）。
@@ -264,7 +264,7 @@ astra 第六輪驗收過（363 全綠），只有一條低嚴重度（adapt 取�
 29. **B** step 包的設計：結果檔放槽外、「不知道」不自動重送（除非那一步宣告可重做且開了重送，上限預設 1 次）、等待用本地回合數、工作進行中改步驟表就停（[packs/step/README.md](../packs/step/README.md)）。
 30. **B** loop5：回收上一代由子 daemon 包做，核心不動；budget 第一版範圍——單 node、一份不可再分的使用權、一種整數資源、示範是假 API 受理次數（[blueprint-loop5.md](blueprint-loop5.md)、[packs/budget/README.md](../packs/budget/README.md)）。
 31. **B** loop6：子 daemon 合法停止改成統一的持久判定；budget 讀寫不到一律回「不知道」、不自動退款；adapt 第一版範圍——只有選欄、縮放、門檻三種固定步驟，不分辨來源是暫停、慢、還是死了，不做事件，不接 LLM（[blueprint-loop6.md](blueprint-loop6.md)、[packs/adapt/README.md](../packs/adapt/README.md)）。
-32. **C** adapt 取整改「四捨五入、平手遠離零」（97191272）。
+32. **C** adapt 取整改「四捨五入、平手遠離零」（357632a6）。
 33. **C** loop7 第一批 adapt 數值取捨：spec 沒寫到的一律「寧可說不知道，不發布錯的成功」——浮點表示誤差算進誤差界、超出範圍就是不知道、數字照 JSON 文字的十進位值算（[problems.md](problems.md#astra-第七輪a8adapt-數值回歸的處理10-05)）。
 34. **C** loop7 第一批子 daemon：回條寫失敗但本代有控制錯誤紀錄＝不知道是不是那件停止，照合法停止處理、不回收（[problems.md](problems.md#10-05-審查a8mcr8的處理)）。
 35. **B** 10-05 下午先修 adapt 回歸與子 daemon 誤收這兩組，其餘等你答 D1～D10（[SESSION-LOG](../../wf/SESSION-LOG.md)）。這是順序上的代定，不是方向。

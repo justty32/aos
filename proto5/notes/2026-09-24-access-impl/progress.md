@@ -12,12 +12,12 @@
 | C | 教程 04b／README／tools README | Sonnet | 完成；C2 修正後對回 |
 | D | 真跑（LiteLLM deepseek-chat）→ `real-run.md` | Opus | 完成，兩輪都過 |
 | E | astra 審查＋必修 | codex＋Opus | 必修 8／8 修完；複跑發現 2 條也修 |
-| F | 報告 [README.md](README.md)、rebase 到 main ce8f25c | 隊長＋Sonnet | 完成，全測 1470 OK |
+| F | 報告 [README.md](README.md)、rebase 到 main f1a3810 | 隊長＋Sonnet | 完成，全測 1470 OK |
 
 隊長煙霧測試記下的待修（跟 astra 必修一起修）：`tools add base` 在有 access 檔時仍印「改 config.json 的 root」會誤導；`info.json` 被 CLI 改寫成一行，文字編輯器不好改（改成縮排 2）。
 | F | 報告 | — | 未開始 |
 
-基準：main 651ea4b。
+基準：main 53e7083。
 
 ## 定案（兩隊共同遵守；跟 H 隊 contract 不同的地方標「隊長定」）
 

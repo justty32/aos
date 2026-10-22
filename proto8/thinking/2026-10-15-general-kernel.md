@@ -1,6 +1,6 @@
 # 2026-10-15 通用 kernel：判官是一個 agent，閘門照舊
 
-← [討論紀錄](README.md)｜前情：[kernel 截流](2026-10-15-kernel-intercept.md)、[LLM kernel](2026-10-15-llm-kernel.md)｜規範：[N-42](../NORMS/09-kernel.md)、[N-16 信箱](../NORMS/05-基礎設施-窗.md)、[N-28](../NORMS/04-基礎設施-loop與daemon.md)、[N-20](../NORMS/07-基礎設施-組合子.md)｜概念：[C-47、C-11、C-15、C-29](../CONCEPTS/04-kernel.md)、[C-46](../CONCEPTS/05-agent.md)｜程式：lib kernel.md（已刪，見 git 歷史 aa2fec1f）、lib agent.md
+← [討論紀錄](README.md)｜前情：[kernel 截流](2026-10-15-kernel-intercept.md)、[LLM kernel](2026-10-15-llm-kernel.md)｜規範：[N-42](../NORMS/09-kernel.md)、[N-16 信箱](../NORMS/05-基礎設施-窗.md)、[N-28](../NORMS/04-基礎設施-loop與daemon.md)、[N-20](../NORMS/07-基礎設施-組合子.md)｜概念：[C-47、C-11、C-15、C-29](../CONCEPTS/04-kernel.md)、[C-46](../CONCEPTS/05-agent.md)｜程式：lib kernel.md（已刪，見 git 歷史 5546be29）、lib agent.md
 
 ## 原文（10-15，照記）
 
@@ -40,7 +40,7 @@
 
 ## 動工自定點
 
-10-15 做了基礎實作（lib kernel2.md（已刪，見 git 歷史 aa2fec1f）、demo `run.py kernel2`），自己定的、等使用者看：
+10-15 做了基礎實作（lib kernel2.md（已刪，見 git 歷史 5546be29）、demo `run.py kernel2`），自己定的、等使用者看：
 
 - **一拍＝一段忙碌期**：一拍裡一封一條執行緒、各自一支子程式，誰跑完就放格、馬上再決定；沒有在跑的才結束這拍。這樣 human 格等人時，llm／cpu 照樣排得動；子程式都在 loop 起的那個行程群組裡，收工整群收、不漏。代價：一拍可能很長，`waited_runs` 在一拍裡不長（另給 `waited_ms`）。
 - **判官的輸入輸出**（使用者 10-15 拍板；**10-15 再改**，使用者「剩下都隨意」）：stdin＝state 窗的子集 `queue`／`running`／`slots`／`budget`（同一份物件、不是新格式，C-48），兩種判官都這樣（[實跑](2026-10-15-judge-live.md)）；stdout 見上，同一個 id 出現兩次＝形狀不對。

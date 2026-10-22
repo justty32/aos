@@ -1,4 +1,4 @@
-core3 完成，受測 HEAD `ad1dfa25`。主要回收驗收通過；R8-29 使用明示的模擬替代真實同號重用。新增 1 項低嚴重度 B，僅記錄未修。
+core3 完成，受測 HEAD `59ce8767`。主要回收驗收通過；R8-29 使用明示的模擬替代真實同號重用。新增 1 項低嚴重度 B，僅記錄未修。
 
 - **通過｜R8-01**：Popen 前暫停／放行各 3 次；先回 `ok:false / unknown` 並留請求，放行後成功收掉同 PID＋starttime 任務。[r801.py](r801.py)；原始結果 `r801-{1..3}.json`。
 - **通過｜R8-03 前半**：register、unregister 的 nodes.json 寫入 EIO 均有命中記錄；失敗不改登記，重送及重起後 status 與磁碟一致。[r803.py](r803.py)、[r803.json](r803.json)。

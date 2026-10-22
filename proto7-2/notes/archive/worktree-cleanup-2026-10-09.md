@@ -12,7 +12,7 @@
 
 - `worktree`：相對 `simple_tools/` 的位置；空＝這條分支沒有 worktree。
 - `branch`：分支名。
-- `in_main`：`git merge-base --is-ancestor <分支> main` 的結果（yes／no），在 main `fd4d1e34`（MC 已 ff 進 main）上判。
+- `in_main`：`git merge-base --is-ancestor <分支> main` 的結果（yes／no），在 main `95ab7199`（MC 已 ff 進 main）上判。
 - `ahead_of_main`：`git rev-list --count main..<分支>`，main 沒有的 commit 數。
 - `untracked`：worktree 裡未追蹤的東西（都是隊伍當時的任務書／報告暫存夾）；有的話 `cmd` 帶 `--force`。
 - `action`：建議動作。

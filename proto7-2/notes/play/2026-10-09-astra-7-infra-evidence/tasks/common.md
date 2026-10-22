@@ -1,6 +1,6 @@
 # astra-7 QA 共同規則（每條子線任務書都附這段）
 
-你是 aos 專案 proto7-2 第七輪回歸（astra-7）的一條 QA 子線。受測 repo＝本 worktree（`/home/lorkhan/repo/simple_tools/aos-wt/R`，detached HEAD ad1dfa25，loop7 八條線全進）。日期 2026-10-09，家機 Manjaro 16 核。
+你是 aos 專案 proto7-2 第七輪回歸（astra-7）的一條 QA 子線。受測 repo＝本 worktree（`/home/lorkhan/repo/simple_tools/aos-wt/R`，detached HEAD 59ce8767，loop7 八條線全進）。日期 2026-10-09，家機 Manjaro 16 核。
 
 **禁止**：修改任何既有 tracked 檔（程式、測試、文件）；git commit／push／checkout／stash；呼叫任何 LLM；刪除或清空他人目錄；殺不是你自己起的程序（另一隊同時在別的目錄跑全套測試，`/tmp/aos72-test-*` 不是你的就別碰）。
 **唯一可寫**：`proto7-2/notes/play/2026-10-09-astra-7-infra-evidence/<你的線>/` 與你自己的 `/tmp/astra7-<你的線>-*`。
@@ -18,7 +18,7 @@
 
 **分類**：新發現編號由隊長統一，你先用 `NEW-<線>-n` 暫編，分 B（組件 bug：違反 spec／契約卡／README 明文）／G（契約缺口：沒寫清楚導致合理使用出事）／M（誤用，不算 bug）／X（外部故障、環境界線，正常處理）。每條要有：契約條文出處（檔:行或節）、最小重現、影響、嚴重度（高／中／低）、建議修法一行。**只記不修**。
 **已知限制不要當新發現**：先讀 `proto7-2/notes/decisions-2026-10-09.md` 的「已知限制」與各隊代定（例如 K2：N-06 回合已關 steps 未存之間當機會多跑一回合、daemon 停機時 node 被換掉偵測不到；M：once_retry R8-26 窗口、node id 太長；K1：任務環境改白名單 AOS7_AUDIT／AOS7_SUBROOT 不傳；S：R8-22 縮窗代價）。若你實測發現已知限制的實際後果比文件寫的嚴重，可記，但標明「已知限制的延伸」。
-**背景**：`proto7-2/notes/blueprint-loop7.md`（§1～§4 設計、§7 驗收）、`proto7-2/notes/blueprint-loop7-items.json`（每條 root_cause／test 欄）、`proto7-2/spec.md`、`proto7-2/notes/component-contracts.md`、各包 README／spec、`git log --oneline 510dd134..HEAD`。上一輪格式參考 `proto7-2/notes/play/2026-10-04-astra-6-infra.md` 與其 evidence。
+**背景**：`proto7-2/notes/blueprint-loop7.md`（§1～§4 設計、§7 驗收）、`proto7-2/notes/blueprint-loop7-items.json`（每條 root_cause／test 欄）、`proto7-2/spec.md`、`proto7-2/notes/component-contracts.md`、各包 README／spec、`git log --oneline 9c54febf..HEAD`。上一輪格式參考 `proto7-2/notes/play/2026-10-04-astra-6-infra.md` 與其 evidence。
 
 時間：目標 2.5 小時內交。做不完的項目在 summary.md 明說「未做＋原因」，不湊。
 最後的回覆（-o 檔）＝summary.md 的內容。

@@ -2,7 +2,7 @@
 
 [本日報告索引](README.md)｜[藍圖 loop7](../../blueprint-loop7.md)
 
-**結論：三項都是 (a)＋(b)——測試對 `/bin/sh` 行為與「aos7-run 起得比恢復回合快」的假設在這台機器不成立；產品判定全部照 spec 5.4 走對了，與 R8-01／K-04／D1 無關，也不是最近的 commit 造成（10-04 的 97191272 上一樣紅）。已改測試、核心零改動。**
+**結論：三項都是 (a)＋(b)——測試對 `/bin/sh` 行為與「aos7-run 起得比恢復回合快」的假設在這台機器不成立；產品判定全部照 spec 5.4 走對了，與 R8-01／K-04／D1 無關，也不是最近的 commit 造成（10-04 的 357632a6 上一樣紅）。已改測試、核心零改動。**
 
 環境：Linux 6.6.114.1 WSL2、Ubuntu 24.04.4、Python 3.12.3、8 核；`/bin/sh -> dash 0.5.12-6ubuntu5`。
 
@@ -21,7 +21,7 @@
 ## 證據（摘要）
 
 - 單跑紅：`nice -n 5 python3 proto7-2/tests/run_all.py -k test_old_run_leftover_not_taken_as_new_run` → `[549852, 549853] != [549852]`；`-k TestLaunchCrash` → 18 項 2 紅（就是題述兩項）。
-- 不是近期 commit：`git archive 97191272 proto7-2` 解到 scratchpad 單跑，同樣紅（TestLaunchCrash 該次 3 紅，多一項 keep_runner_before_pid）；`git log 97191272..HEAD` 對 `_matrix.py`、兩個測試檔、`aos7_run／task／proc／tick／tock.py` 沒有任何 commit。
+- 不是近期 commit：`git archive 357632a6 proto7-2` 解到 scratchpad 單跑，同樣紅（TestLaunchCrash 該次 3 紅，多一項 keep_runner_before_pid）；`git log 357632a6..HEAD` 對 `_matrix.py`、兩個測試檔、`aos7_run／task／proc／tick／tock.py` 沒有任何 commit。
 - dash 不 exec：`dash -c 'sleep 3'`、`dash -c 'true; sleep 3'`、`dash -c 'if …; fi; sleep 3'` 主程序都還是 dash、底下有 sleep 子程序；`bash -c` 五種寫法主程序都變成 sleep。
 - 雙開誤報的兩個 pid：`550945 sh -c echo 1 >> …; touch …; sleep 0.2`（AOS7_RUN=1）與 `550947 sleep 0.2`（父＝550945、AOS7_RUN=1）——同一個 run 的父子，不是兩次起動。
 - once_after_popen 的回合總結：5 回合全是 `alive: ["o#1"]`，errors 依序「剛起」×2、「疑似 lost…但這個 run 的 aos7-run 還在，當活」×3；測試結束瞬間 `env_procs(runners=True)` 只有 aos7-run 一個 python；1.5 秒後 `ran=['1']`、程序 `[]`。

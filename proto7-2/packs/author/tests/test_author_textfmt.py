@@ -21,7 +21,7 @@ USAGE = PACK / 'examples/aos-tool-usage'
 REQUEST = USAGE / 'request.json'
 AUTHOR = PACK / 'bin/aos7-author'
 GATES = PACK / 'bin/aos7-gates'
-REF = '3c18d378064e39b9fdcc8f4b14be2aa9a47b1fe7'
+REF = '3c916272d614b040e7d85eddabc106f9b7220a58'
 MODEL = 'test/model'
 
 

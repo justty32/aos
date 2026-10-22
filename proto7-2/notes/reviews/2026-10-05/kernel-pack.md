@@ -6,7 +6,7 @@ kernel 任務包可以不改 daemon／tick／tock 核心就成立；最小第一
 
 本報告依據 `/home/guanyu/projs/aos` 的工作目錄內容，審查時 HEAD 為：
 
-`6daebe2ef8227021745def649f4e3d86a3a8038c`
+`058df3988cbef0ec6a9db288e3edd5827e67ddb0`
 
 已閱讀指定筆記、核心契約與實作、三個現有任務包，以及 proto7-1 的 kernel 與相關探針；由主線加五條平行審查線交叉檢查。
 

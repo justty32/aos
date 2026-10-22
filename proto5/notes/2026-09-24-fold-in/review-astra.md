@@ -1,4 +1,4 @@
-整體合併保留了合併前 proto5 的 agent CLI、工具、權限功能，以及 `kernel_checks／finish`、舊 `check --agent` 用法錯訊息、`stderr_hint` fallback、health broken 退 1；proto5-2 的逐池 daemon 檢查、envs.json、三池 count 0 警告、agent 專屬 llm 池檢查與 `ls --pool` 的 NotFound 也在。拆檔核心經 AST 對照，未發現非預期邏輯變更；未找到刪除名稱的殘留呼叫、失效 patch 或 import 循環。仍有下列 **3 項必修、1 項建議**。本次以 `ef29b7c`（合併前共同祖先）至 `46f28d8` 為主，避免把 main 後續新增功能誤判為被覆蓋；工作樹另有教程與模板修改。全程未修改檔案，僅做靜態比對、`python -B` 匯入與記憶體測例，未重跑會建立檔案的完整測試。
+整體合併保留了合併前 proto5 的 agent CLI、工具、權限功能，以及 `kernel_checks／finish`、舊 `check --agent` 用法錯訊息、`stderr_hint` fallback、health broken 退 1；proto5-2 的逐池 daemon 檢查、envs.json、三池 count 0 警告、agent 專屬 llm 池檢查與 `ls --pool` 的 NotFound 也在。拆檔核心經 AST 對照，未發現非預期邏輯變更；未找到刪除名稱的殘留呼叫、失效 patch 或 import 循環。仍有下列 **3 項必修、1 項建議**。本次以 `c5180bf`（合併前共同祖先）至 `46f28d8` 為主，避免把 main 後續新增功能誤判為被覆蓋；工作樹另有教程與模板修改。全程未修改檔案，僅做靜態比對、`python -B` 匯入與記憶體測例，未重跑會建立檔案的完整測試。
 
 1. **P1｜必修：多 daemon 時，LLM 檢查使用錯誤 daemon 的環境**
 

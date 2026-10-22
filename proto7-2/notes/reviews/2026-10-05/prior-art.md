@@ -7,7 +7,7 @@ proto7-2 已具備小型監督器與狀態調和迴圈的骨架；最值得借�
 審查日期：2026-10-05。開始及結束時，repo HEAD 都是：
 
 ```text
-6daebe2ef8227021745def649f4e3d86a3a8038c
+058df3988cbef0ec6a9db288e3edd5827e67ddb0
 ```
 
 先讀了 `AGENTS.md`、三軸狀態、工作流入口，以及指定的 `proto7-2/README.md`、`spec.md`、`modules/README.md`、`notes/problems.md`、`notes/play/README.md`，再定點核對核心與相關模組原始碼。另由六條平行審查線分別比較各系統、核驗保證邊界，最後做交叉檢查。

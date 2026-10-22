@@ -4,7 +4,7 @@
 
 ## 42. 使用者拍板（經協調 agent 轉達，使用者兩題都說「隨你」）
 
-1. **【拍板】ret／err 無限增長＝方案 B。** 基礎實作：daemon 起子 loop 時 stdout 接 `/dev/null`，結果一律從 state 窗讀；stderr 照舊 append 到 `work_dir/N/err.json`，只在出錯時長，`ret.json` 不再有。標準實作才做：stdout／stderr 選填路徑＋上限輪替、不帶 `load` 重起時清掉 table 沒列到的舊格子。落點：[NORMS 待定](../../NORMS/08-待定.md)該條結案、lib daemon.md（已刪，見 git 歷史 aa2fec1f）、`aos_daemon_table._spawn()`。
+1. **【拍板】ret／err 無限增長＝方案 B。** 基礎實作：daemon 起子 loop 時 stdout 接 `/dev/null`，結果一律從 state 窗讀；stderr 照舊 append 到 `work_dir/N/err.json`，只在出錯時長，`ret.json` 不再有。標準實作才做：stdout／stderr 選填路徑＋上限輪替、不帶 `load` 重起時清掉 table 沒列到的舊格子。落點：[NORMS 待定](../../NORMS/08-待定.md)該條結案、lib daemon.md（已刪，見 git 歷史 5546be29）、`aos_daemon_table._spawn()`。
 2. **【拍板】被殺時 stdout 最後一份只寫一半＝半份不算。** 讀的人只認完整、能解析的 JSON；解析不了就忽略；因此找不到結果＝沒有結果。落成 [N-12](../../NORMS/01-總則.md) 附註。
 
 ## 43. 結論

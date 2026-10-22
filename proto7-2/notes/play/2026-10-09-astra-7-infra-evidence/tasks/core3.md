@@ -11,4 +11,4 @@
 6. R8-29：node 級回收打記著的 pgid 前做身分重驗——用真程序做「pgid 被不相干程序佔用」情境（例如記錄 pgid 後讓原群組死光、再起一個 setsid 程序且盡可能讓它拿到同號；拿不到同號就改用 mock 層級，照 items json 的做法，並明說是 mock）：不得 killpg 外人。
 7. 順手：kill／回收相關作者測試 `tests/core/test_ctl.py`、`test_daemon.py` 各單跑一次當對照（不算驗收）。
 
-另外自由挖：K1／K2 改動（`git diff 510dd134..HEAD -- proto7-2/lib/aos7_task.py proto7-2/lib/aos7_proc.py proto7-2/lib/aos7_run.py proto7-2/lib/aos7_daemon.py`）可能新引入的邊角，例如 reaping 鍵在 nodes.json 半寫／壞型別時、重複 unregister／re-register 同 id 撞 reaping、daemon 連續被殺兩次、stop --kill 時有 reaping 項。每個邊角至少一案，分類照共同規則。
+另外自由挖：K1／K2 改動（`git diff 9c54febf..HEAD -- proto7-2/lib/aos7_task.py proto7-2/lib/aos7_proc.py proto7-2/lib/aos7_run.py proto7-2/lib/aos7_daemon.py`）可能新引入的邊角，例如 reaping 鍵在 nodes.json 半寫／壞型別時、重複 unregister／re-register 同 id 撞 reaping、daemon 連續被殺兩次、stop --kill 時有 reaping 項。每個邊角至少一案，分類照共同規則。

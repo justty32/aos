@@ -8,7 +8,7 @@
 
 ## 方法與判定範圍
 
-依據：[核心 spec](../../../proto7/spec/core.md)、[細部 spec](../../spec.md)、[infra-needs](../infra-needs.md)、[上一輪報告](2026-10-03-astra-7-infra.md)。這份副本沒有 `.git`、`wf/`、根 `CMakeLists.txt`；無法獨立核對 `b3bd7f44` 的 ancestry，也不宣稱跑過 CMake。以實際原始碼與[來源雜湊](2026-10-03-astra-8-infra-evidence/baseline.json)為準，Python 3.14.7／Linux。
+依據：[核心 spec](../../../proto7/spec/core.md)、[細部 spec](../../spec.md)、[infra-needs](../infra-needs.md)、[上一輪報告](2026-10-03-astra-7-infra.md)。這份副本沒有 `.git`、`wf/`、根 `CMakeLists.txt`；無法獨立核對 `d3acff08` 的 ancestry，也不宣稱跑過 CMake。以實際原始碼與[來源雜湊](2026-10-03-astra-8-infra-evidence/baseline.json)為準，Python 3.14.7／Linux。
 
 「已修」限定本表的失敗條件；「部分」表示原案通過，但同一保證仍有失敗入口。故障掛鉤只固定操作順序或指定 I/O 回傳，不修改產品檔；不是自然發生率。PID 重用用「活 PID＋不同 starttime」建構，**未宣稱真正等到核心重用 PID**。本輪沒有重跑十分鐘長跑、斷電或 fsync 耐久性測試，重點是新增交接點與組合故障。
 

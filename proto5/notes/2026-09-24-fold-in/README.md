@@ -6,7 +6,7 @@
 
 ## 怎麼合的
 
-proto5-2 第 1 段是把 proto5 整份複製過去（分岔點 `c81a98b`），所以用三方合併：base＝分岔點的 `proto5/lib`，一邊是 proto5 現在的、一邊是 proto5-2 現在的。只有一邊改過的檔直接取那邊；兩邊都改過的只有 3 支程式（`aos_kernel_check.py`、`aos_kernel_cli.py`、`aos_agent_init.py`）和 7 個測試檔，手解。
+proto5-2 第 1 段是把 proto5 整份複製過去（分岔點 `15dd4e7`），所以用三方合併：base＝分岔點的 `proto5/lib`，一邊是 proto5 現在的、一邊是 proto5-2 現在的。只有一邊改過的檔直接取那邊；兩邊都改過的只有 3 支程式（`aos_kernel_check.py`、`aos_kernel_cli.py`、`aos_agent_init.py`）和 7 個測試檔，手解。
 
 | 來自 proto5-2（池式，以它為準） | 保留 proto5（agent 線，以它為準） |
 |---|---|

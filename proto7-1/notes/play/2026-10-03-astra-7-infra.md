@@ -6,7 +6,7 @@
 
 全程只操作這份副本及本輪建立的 `/tmp/astra7-*`；沒有呼叫 LLM，沒有啟動 LM Studio、ollama 或 lms，沒有改產品程式、其他文件、commit 或 push。namespace／ledger 僅使用探針內固定結果的本機模擬服務。F-11 的 agent 測試只有無信、無 goal 的 idle 通知計數。
 
-這份副本沒有 `.git`、`wf/` 或 CMake 根建置環境；因此不能驗證 `94ad4168`、`5a3d97fb` 的版本祖先關係，也沒有宣稱跑過 CMake。依實際來源與 SHA-256 驗證：[來源及範圍](2026-10-03-astra-7-infra-evidence/verification.json)。依據：[核心 S- 規格](../../../proto7/spec/core.md)、[細部規格](../../spec.md)、[infra-needs](../infra-needs.md)、[上一輪報告](2026-10-03-astra-6-infra.md)。[重跑入口與量測說明](2026-10-03-astra-7-infra-evidence/README.md)。
+這份副本沒有 `.git`、`wf/` 或 CMake 根建置環境；因此不能驗證 `daaffba1`、`d147ff65` 的版本祖先關係，也沒有宣稱跑過 CMake。依實際來源與 SHA-256 驗證：[來源及範圍](2026-10-03-astra-7-infra-evidence/verification.json)。依據：[核心 S- 規格](../../../proto7/spec/core.md)、[細部規格](../../spec.md)、[infra-needs](../infra-needs.md)、[上一輪報告](2026-10-03-astra-6-infra.md)。[重跑入口與量測說明](2026-10-03-astra-7-infra-evidence/README.md)。
 
 ## 一、回歸判定
 

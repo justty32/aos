@@ -2,9 +2,9 @@
 
 ← [proto7-2](../README.md)｜[spec](../spec.md)｜[核心 spec](../../proto7/spec/core.md)｜[設計原則](../../proto7/notes/principles.md)
 
-**這是一份調查紀錄，不是決定。** 對象是 proto7-2（commit 6ed9a7a7 的 spec 與程式）；kernel、agent 在 proto7-2 還沒做，那兩層拿 proto7-1 的實作當參考，看它們接到 proto7-2 的介面上會怎樣。只記不修。
+**這是一份調查紀錄，不是決定。** 對象是 proto7-2（commit 5384509d 的 spec 與程式）；kernel、agent 在 proto7-2 還沒做，那兩層拿 proto7-1 的實作當參考，看它們接到 proto7-2 的介面上會怎樣。只記不修。
 
-> 2026-10-10 註：調查之後，kernel 任務包已在 10-09 做成 [packs/kernel/](../packs/kernel/README.md)；本文與分檔裡「proto7-2 還沒有 kernel」說的是 6ed9a7a7 當時。
+> 2026-10-10 註：調查之後，kernel 任務包已在 10-09 做成 [packs/kernel/](../packs/kernel/README.md)；本文與分檔裡「proto7-2 還沒有 kernel」說的是 5384509d 當時。
 
 ## 摘要
 

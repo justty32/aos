@@ -8,8 +8,8 @@
 proto7-1 是照 `proto7/spec/core.md` 做的試做：daemon → tick/tock → kernel → agent。使用者把 kernel/agent 當探針，**關注的是 daemon/tick 這層基礎設施**。細部規格 `proto7-1/spec.md`，需求清單 `proto7-1/notes/infra-needs.md`。
 
 你上一輪（第五輪）的報告：`proto7-1/notes/play/2026-10-03-astra-5-infra.md`，證據與重現腳本在 `proto7-1/notes/play/2026-10-03-astra-5-infra-evidence/`。之後：
-- commit `ddda65a9` 宣稱修好 F-01～F-11 與新增 N-55（測試 `proto7-1/tests/test_astra5.py`、`tests/_proc.py`）。修法摘要：F-01 stop 時最後掃一次 /proc 收 AOS7_NODE 屬本 daemon 的程序；F-02 `aos7_fs.task_read` 搬走後重定位、找不到算 unknown；F-03 只有 ENOENT/ENOTDIR 算消失，其他 OSError 記 scan-error；F-04 `.aos/action.owner.json`，舊世代且 starttime 相符才 SIGKILL；F-05 tock 已有同回合總結就只補收尾、標 replayed，timeout 殺 tock 後 daemon 立刻再 tock；F-06 逐項錯誤邊界、interval 先範圍檢查；F-07 先寫回條再刪請求；F-08 掃描跳過祖先 tasks.json／spawn 宣告的 subroot；F-09 tick/tock 用 node 目錄 fd（/proc/self/fd/N）讀寫；F-10 主迴圈每圈最多 200 件或 50 ms 控制檔；F-11 測試先收程序再刪空間。
-- 使用者裁定 Q5、Q6（commit `6261a304`）：子 daemon 歸起它的 node，`allow_stop` 欄位、`<subroot>/.aosd/owner.json`、允許時 stop 寫 `stopped.json`、父 tick 見到就不起；restart 加 `"reload": true` 照 tasks.json 同名項目重起，找不到整個不執行。見 spec.md 第 2、4、6 節。
+- commit `ff22fe72` 宣稱修好 F-01～F-11 與新增 N-55（測試 `proto7-1/tests/test_astra5.py`、`tests/_proc.py`）。修法摘要：F-01 stop 時最後掃一次 /proc 收 AOS7_NODE 屬本 daemon 的程序；F-02 `aos7_fs.task_read` 搬走後重定位、找不到算 unknown；F-03 只有 ENOENT/ENOTDIR 算消失，其他 OSError 記 scan-error；F-04 `.aos/action.owner.json`，舊世代且 starttime 相符才 SIGKILL；F-05 tock 已有同回合總結就只補收尾、標 replayed，timeout 殺 tock 後 daemon 立刻再 tock；F-06 逐項錯誤邊界、interval 先範圍檢查；F-07 先寫回條再刪請求；F-08 掃描跳過祖先 tasks.json／spawn 宣告的 subroot；F-09 tick/tock 用 node 目錄 fd（/proc/self/fd/N）讀寫；F-10 主迴圈每圈最多 200 件或 50 ms 控制檔；F-11 測試先收程序再刪空間。
+- 使用者裁定 Q5、Q6（commit `c2526248`）：子 daemon 歸起它的 node，`allow_stop` 欄位、`<subroot>/.aosd/owner.json`、允許時 stop 寫 `stopped.json`、父 tick 見到就不起；restart 加 `"reload": true` 照 tasks.json 同名項目重起，找不到整個不執行。見 spec.md 第 2、4、6 節。
 
 ## 要做
 1. **回歸**：F-01～F-11 逐條用你上一輪的重現（必要時調整掛鉤點，例如 F-09 改走 fd 後舊掛鉤不觸發）判定：已修／部分／未修，附證據。也看第五輪回歸表裡「部分」的 I-01、I-03、I-04、I-06、I-11 現況。

@@ -4,7 +4,7 @@
 
 你是唯讀審查者。**不要改任何檔、不要跑模型、不要開 daemon／kernel、不要碰 LM Studio／ollama。** 可以讀檔、跑單元測試（`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test -p 'test_team_*.py'`；`test_team_post_live.py` 開真 daemon，可略過）。繁體中文、白話。
 
-**只審這次的改動**：`git diff c56044d HEAD -- proto5`（兩個 commit）。第一輪審查見 [review-post-astra.md](review-post-astra.md)，那些已修，不用重提。
+**只審這次的改動**：`git diff 1b7c6a8 HEAD -- proto5`（兩個 commit）。第一輪審查見 [review-post-astra.md](review-post-astra.md)，那些已修，不用重提。
 
 ## 使用者的五題裁決（要照這個做）
 

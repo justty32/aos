@@ -2,7 +2,7 @@
 
 **A5-01 修補驗收通過；三次全套各 322 項全綠，450 已關回合長跑檔數沒有持續成長。但 loop5 尚不能整體判過：本輪確認兩個 B——A6-01 是 subd 的合法 stop 記錄中斷後錯收任務；A6-02 是 budget 後端讀取故障時，把未知誤報成退出碼 1。獨立核帳未發現重複扣款、重複效果或守恆破壞。** 沒有新增 G；誤用 M 不列 bug。
 
-受測 HEAD：`392a1d645eceec98c41678ab2b685959e7ab0522`，在指定 `db387812` 之後。依[核心契約卡](../component-contracts.md)、各包 README 與[原則 9、10](../../../proto7/notes/principles.md)分類。只新增本報告及指定 evidence，未改既有程式、測試、文件；沒有 commit／push、沒有使用 LLM，也沒有刪除或清空 scratchpad。
+受測 HEAD：`af69c13c59314de68186757e01e9b200acd1b0aa`，在指定 `ea5495dc` 之後。依[核心契約卡](../component-contracts.md)、各包 README 與[原則 9、10](../../../proto7/notes/principles.md)分類。只新增本報告及指定 evidence，未改既有程式、測試、文件；沒有 commit／push、沒有使用 LLM，也沒有刪除或清空 scratchpad。
 
 **測試結果**
 
@@ -77,7 +77,7 @@
 
 **budget「五個自列缺口」評估**
 
-來源有落差：受測 HEAD 與建包 commit `025d2bfe` 的 spec 都只有 §1～§8、84 行，**沒有題目所稱末尾五項自認缺口**。已提出來源詢問，收尾前未取得另一份清單，因此不能宣稱完成那份清單的逐條評估。下面改以確實存在的 [astra-4 五項草稿意見](2026-10-04-astra-4-infra.md)逐條對照，明確不是冒充所指清單。[來源查核](2026-10-04-astra-5-infra-evidence/budget-integration/contract-source.json)。
+來源有落差：受測 HEAD 與建包 commit `5e021125` 的 spec 都只有 §1～§8、84 行，**沒有題目所稱末尾五項自認缺口**。已提出來源詢問，收尾前未取得另一份清單，因此不能宣稱完成那份清單的逐條評估。下面改以確實存在的 [astra-4 五項草稿意見](2026-10-04-astra-4-infra.md)逐條對照，明確不是冒充所指清單。[來源查核](2026-10-04-astra-5-infra-evidence/budget-integration/contract-source.json)。
 
 | 可追溯的五項舊意見 | 現版評估 | v1／後續 |
 |---|---|---|

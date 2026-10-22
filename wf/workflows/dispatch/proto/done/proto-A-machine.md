@@ -58,11 +58,11 @@
 
 ## 收線（調度者 2026-08-30）
 
-調度者獨立重跑：ctest 7/7 綠；3×`sleep 1` 並行 1022 ms；自我投遞第二回合執行到；`state.json` 有 pid／status。commit `fecbdac`、`2e2b49c`。證據見 [reports/A.md](../reports/A.md)。
+調度者獨立重跑：ctest 7/7 綠；3×`sleep 1` 並行 1022 ms；自我投遞第二回合執行到；`state.json` 有 pid／status。commit `724478e`、`73fd823`。證據見 [reports/A.md](../reports/A.md)。
 
 ## 隊長裁決
 
-**完成於 2026-08-30，STATUS `DONE`，commit `fecbdac`。逐條證據與完整裁決列表見 [reports/A.md](../reports/A.md)。**
+**完成於 2026-08-30，STATUS `DONE`，commit `724478e`。逐條證據與完整裁決列表見 [reports/A.md](../reports/A.md)。**
 
 1. **`exec` 抓 stdout/stderr 用 `mkstemp` 暫存檔，不用 pipe**——一次 fork 一整批時 pipe 緩衝會互相卡死，避開它就不必寫 poll 迴圈。
 2. **`exec` 做成兩階段 `start_all()` / `wait_all()`**，`Running` 是欄位攤開的普通 struct——上層要在「已 fork、還沒等完」時拿到 pid 寫 `state.json`（驗收 5）。

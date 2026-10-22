@@ -27,10 +27,10 @@ def hundred():
 
 def old_pointer():
     import aos_directives as cur
-    source=subprocess.check_output(['git','show','510dd134:proto7-2/lib/aos_directives.py'],text=True,cwd=REPO)
-    ns={'__name__':'old_directives','__file__':str(TOP/'lib/aos_directives.py')};exec(compile(source,'git:510dd134/aos_directives.py','exec'),ns)
+    source=subprocess.check_output(['git','show','9c54febf:proto7-2/lib/aos_directives.py'],text=True,cwd=REPO)
+    ns={'__name__':'old_directives','__file__':str(TOP/'lib/aos_directives.py')};exec(compile(source,'git:9c54febf/aos_directives.py','exec'),ns)
     records=[]
-    for label,resolve in [('510dd134',ns['resolve']),('ad1dfa25',cur.resolve)]:
+    for label,resolve in [('9c54febf',ns['resolve']),('59ce8767',cur.resolve)]:
         try:resolve({'$ref':'#/a/'+'9'*4301},cur.Context(cur.Document(None,{'a':[0]})),['v']);r={'class':'accepted'}
         except Exception as e:r={'class':type(e).__name__,'code':getattr(e,'code',None),'message':str(e)}
         records.append({'version':label,'actual':r})

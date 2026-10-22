@@ -1,4 +1,4 @@
-本輪已確認 11 項缺陷或契約缺口；`97191272` 修正了原本的平手取整，但引入兩項回歸，而三次全套測試尚未完成，不能宣告回歸通過。
+本輪已確認 11 項缺陷或契約缺口；`357632a6` 修正了原本的平手取整，但引入兩項回歸，而三次全套測試尚未完成，不能宣告回歸通過。
 
 # proto7-2 第七輪對抗式回歸（astra-7）
 
@@ -6,7 +6,7 @@
 
 ## 1. 範圍與證據位置
 
-- 受測來源 HEAD：`6daebe2ef8227021745def649f4e3d86a3a8038c`，包含小修 `97191272`。
+- 受測來源 HEAD：`058df3988cbef0ec6a9db288e3edd5827e67ddb0`，包含小修 `357632a6`。
 - 環境：Python **3.12.3**、Linux／WSL2、8 個 CPU。
 - 工作目錄：
 
@@ -49,7 +49,7 @@ python3 proto7-2/tests/run_all.py -v
 
 **尚未完成上述 12 案的單獨重跑，因此不能把它們全部判為 flaky，也不能全部判成產品 bug。** 本輪沒有改作者測試或放寬斷言，原始失敗完整保留。
 
-## 3. `97191272` 小修驗收
+## 3. `357632a6` 小修驗收
 
 ### adapt：原問題修好，但有副作用
 
@@ -60,7 +60,7 @@ python3 proto7-2/tests/run_all.py -v
 - Decimal 預設精度讓合法輸入拋例外：A8-01。
 - 無條件轉 float 改變大整數並突破誤差界：A8-02。
 
-兩者均以 **`97191272` 的精確前版**與真任務對照，不能判為「修正正確且無副作用」。
+兩者均以 **`357632a6` 的精確前版**與真任務對照，不能判為「修正正確且無副作用」。
 
 證據：`evidence/adapt/numeric-matrix.json`、`numeric-live.json`、`old-source-origin.json`、`summary.md`。
 
@@ -87,7 +87,7 @@ python3 proto7-2/tests/run_all.py -v
 - **根因／契約**：`proto7-2/packs/adapt/aos7_adapt.py:36–39`、`:213`、`:457`；`packs/adapt/spec.md:41`、`:50`、`:77`。
 - **最小重現**：`python3 evidence/adapt/numeric_minimal.py`。
 - **真任務證據**：`evidence/adapt/numeric-live.json`、`snapshots/current_precision/extreme_input/`。
-- **範圍**：52 個精度邊界案例中，26 個只有新版拋例外；沒有故障注入。**此項由 `97191272` 引入。**
+- **範圍**：52 個精度邊界案例中，26 個只有新版拋例外；沒有故障注入。**此項由 `357632a6` 引入。**
 
 ### A8-02〔B／adapt，中〕取整後強轉 float，合法整數失真且突破誤差界
 
@@ -99,8 +99,8 @@ python3 proto7-2/tests/run_all.py -v
 
 - **根因／契約**：`proto7-2/packs/adapt/aos7_adapt.py:39`、`:213–217`；`packs/adapt/spec.md:41`、`:102`。
 - **最小重現**：`python3 evidence/adapt/numeric_minimal.py`。
-- **證據**：`evidence/adapt/numeric-live.json`、`snapshots/current_integer_step/step_outcome/`、`snapshots/before_97191272_integer_step/step_outcome/`。
-- **判定**：來源讀入時仍是精確整數；失真發生於 adapt。**此項由 `97191272` 引入。**
+- **證據**：`evidence/adapt/numeric-live.json`、`snapshots/current_integer_step/step_outcome/`、`snapshots/before_357632a6_integer_step/step_outcome/`。
+- **判定**：來源讀入時仍是精確整數；失真發生於 adapt。**此項由 `357632a6` 引入。**
 
 ### A8-03〔B／adapt，中〕浮點端點塌縮，跨門檻的誤差帶被判成確定答案
 

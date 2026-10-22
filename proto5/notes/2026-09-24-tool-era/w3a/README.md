@@ -3,7 +3,7 @@
 # 第三波 W3-1 隊（模型生成員、模型造工具）報告（2026-09-25，提早收線版；**09-25 收尾＋39 翻案見 [§8](#8-09-25-追加收尾39-翻案)**）
 
 **一句話**：兩個申請都做完、有測試、合得進 main；T-spawn 真跑了 2＋2 次，**加模型版比機械版貴、慢、還多卡一次人**，目前換不到東西——**建議只留機械版（人寫名冊），spawn 預設關著**。T-toolsmith 真跑沒來得及做（使用者要關機，提早收線），對照表那半空著。
-基底：main `162cc59`（開工 `5984233`，中途 rebase 過 `d6603b9`、`162cc59`）。相關測試檔全綠（見 §6）；**astra 沒審**。
+基底：main `f4b44d1`（開工 `3ee652f`，中途 rebase 過 `16c2f9d`、`f4b44d1`）。相關測試檔全綠（見 §6）；**astra 沒審**。
 
 ## 1. 做了什麼
 
@@ -95,7 +95,7 @@ LiteLLM `deepseek-chat`，kernel default 4 顆、llm 3 顆；每次全部重建�
 
 ## 7. 數字與收尾狀態
 
-- 測試：`test_team_*.py` 相關檔 461 條全綠（rebase 到 `162cc59` 後）；新增 `test_team_spawn.py` 24 條、`test_team_toolsmith.py` 26 條，改 `test_team_format.py`、`test_team_init.py`、`test_team_notes_compact.py`（新工具、新 may）。**全套沒跑**（收線）。
+- 測試：`test_team_*.py` 相關檔 461 條全綠（rebase 到 `f4b44d1` 後）；新增 `test_team_spawn.py` 24 條、`test_team_toolsmith.py` 26 條，改 `test_team_format.py`、`test_team_init.py`、`test_team_notes_compact.py`（新工具、新 may）。**全套沒跑**（收線）。
 - 工具描述：`spawn_member` 574 字元、`tool_draft` 863 字元；task 包 11 支合計約 6500 字元（測試上限從 5500 放到 7000）。
 - **沒做、留下一輪**：T-toolsmith 真跑與對照（§3）；T-spawn 各第 3 次；astra 唯讀審查（**沒審**）；教程 08 的一小節（沒加）；README 指令表、tools/task README、code-map 的列（下面列給收尾隊）；新手試玩。
 - 給收尾隊要加的列：proto5 README 指令表 `aos-team spawn`、`aos-team tool`；tools/task/README 兩支工具；lib README 兩個模組、兩個測試檔；code-map `aos_team_spawn`、`aos_team_toolsmith`。
@@ -104,7 +104,7 @@ LiteLLM `deepseek-chat`，kernel default 4 顆、llm 3 顆；每次全部重建�
 ## 8. 09-25 追加：收尾＋39 翻案
 
 **一句話**：使用者翻案 WAIT_USER 39 做完了。生新成員現在**預設開、預設不用人批**，每個成員都能在名冊上各自設；牆照舊關牢。astra 審了，必修 6 條全修；T-toolsmith 真跑 2＋2 次補齊；教程 08 加了一節，索引也補了列。新手試玩沒做，留下一輪。
-基底：main `0cfb325`（開工 `60e4b81`，中途 rebase 兩次，都沒有衝突）。全套 **96 檔 2665 條全綠**（約 4 分鐘）。
+基底：main `e9de18f`（開工 `4d73809`，中途 rebase 兩次，都沒有衝突）。全套 **96 檔 2665 條全綠**（約 4 分鐘）。
 
 ### 8.1 做了什麼
 

@@ -1,5 +1,5 @@
 **這是什麼**：驗候選，過三關才建一條讓人合併的分支。
-**一行跑起來**：`proto7-2/packs/author/bin/aos7-gates check proto7-2/packs/author/examples/aos-tool-usage/request.json proto7-2/packs/author/examples/aos-tool-usage/valid.json --ref 3c18d378064e39b9fdcc8f4b14be2aa9a47b1fe7`
+**一行跑起來**：`proto7-2/packs/author/bin/aos7-gates check proto7-2/packs/author/examples/aos-tool-usage/request.json proto7-2/packs/author/examples/aos-tool-usage/valid.json --ref 3c916272d614b040e7d85eddabc106f9b7220a58`
 **看到什麼**：`{"ok": true, ...}`，三關都過。
 
 ## 第一次跑
@@ -9,7 +9,7 @@
 在 repo 根目錄照抄；範例已加入目前版本，用加入前的基準驗新增工具。
 
 ```sh
-proto7-2/packs/author/bin/aos7-gates check proto7-2/packs/author/examples/aos-tool-usage/request.json proto7-2/packs/author/examples/aos-tool-usage/valid.json --ref 3c18d378064e39b9fdcc8f4b14be2aa9a47b1fe7
+proto7-2/packs/author/bin/aos7-gates check proto7-2/packs/author/examples/aos-tool-usage/request.json proto7-2/packs/author/examples/aos-tool-usage/valid.json --ref 3c916272d614b040e7d85eddabc106f9b7220a58
 ```
 
 實跑輸出：
@@ -23,7 +23,7 @@ proto7-2/packs/author/bin/aos7-gates check proto7-2/packs/author/examples/aos-to
 ```sh
 DEMO_REPO=$(mktemp -d)/repo
 git clone -q --shared --no-checkout . "$DEMO_REPO"
-proto7-2/packs/author/bin/aos7-gates publish proto7-2/packs/author/examples/aos-tool-usage/request.json proto7-2/packs/author/examples/aos-tool-usage/valid.json --ref 3c18d378064e39b9fdcc8f4b14be2aa9a47b1fe7 --repo "$DEMO_REPO"
+proto7-2/packs/author/bin/aos7-gates publish proto7-2/packs/author/examples/aos-tool-usage/request.json proto7-2/packs/author/examples/aos-tool-usage/valid.json --ref 3c916272d614b040e7d85eddabc106f9b7220a58 --repo "$DEMO_REPO"
 ```
 
 clone 沒有輸出，publish 實跑輸出：

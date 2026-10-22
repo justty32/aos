@@ -7,7 +7,7 @@
 
 ## 1. 真跑數字（LiteLLM `localhost:4000` 的 deepseek-chat，1 個 agent，default 2 顆、llm 1 顆，`tick_ms`＝`interval_ms`＝1000）
 
-改前＝main `1122f8d` 的程式，改後＝這個分支（修完 astra 之後的最後版本）；同一支腳本、同一台機器。改後跑了三次，數字列最後一次，會晃的另註。
+改前＝main `eabebf2` 的程式，改後＝這個分支（修完 astra 之後的最後版本）；同一支腳本、同一台機器。改後跑了三次，數字列最後一次，會晃的另註。
 
 | 量什麼 | 改前 | 改後 |
 |---|---:|---:|
@@ -53,7 +53,7 @@
 - `start`：`done_exit` 是 102 也擋；K 的帳本讀得到、有 `chain`（真的 boot 過）而 `features` 沒有 `park` → `KernelIncompatible`（舊 kernel 會把 102 當失敗，十次就 bad）。帳本不在（還沒 boot）或讀不懂不擋。
 - `say`／`talk`（同一個 `deliver`）投完話投 `wake`；`drop_new`（T2 的郵差投信、T4 的 compact 申請都用它）投進**有 `tick.json` 的 agent 家**也投 `wake`——同名已在（前一次可能崩在投好、叫之前）也照叫。找 K：先看 `tick.json` 記的，沒有再看 `AOS_KERNEL_HOME`。找不到、放不進去都不算錯。新檔 `aos_agent_wake.py`。
 
-## 3. 改了哪些檔、哪幾行（行號是 rebase 到 main `4c42288` 之後的）
+## 3. 改了哪些檔、哪幾行（行號是 rebase 到 main `7178b4f` 之後的）
 
 **共用檔（別隊也在動，合併時注意）**
 
@@ -114,10 +114,10 @@ aos-agent 的 `tick.md`（退出碼表多 102）、`send.md`（帶 `wake`）、`
 
 | 時點 | 條數 |
 |---|---:|
-| 開工時 main（`167871e`） | 61 檔 1771 |
-| rebase 到 `1122f8d`（含 T4 的新測試）＋這隊 | 65 檔 1905（新增 38 條） |
-| 再 rebase 到 `325a602`（含 T2）＋astra 修正 | 71 檔 2035（main 69 檔 1991，這隊新增 44 條） |
-| 再 rebase 到 `4c42288`（T4 第二輪）＋status 顯示停車 | **71 檔 2044** 全綠（main 69 檔 1999，這隊新增 45 條） |
+| 開工時 main（`8c95921`） | 61 檔 1771 |
+| rebase 到 `eabebf2`（含 T4 的新測試）＋這隊 | 65 檔 1905（新增 38 條） |
+| 再 rebase 到 `709476d`（含 T2）＋astra 修正 | 71 檔 2035（main 69 檔 1991，這隊新增 44 條） |
+| 再 rebase 到 `7178b4f`（T4 第二輪）＋status 顯示停車 | **71 檔 2044** 全綠（main 69 檔 1999，這隊新增 45 條） |
 
 ## astra 審查
 

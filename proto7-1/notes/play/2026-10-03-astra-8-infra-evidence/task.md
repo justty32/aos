@@ -7,7 +7,7 @@
 ## 背景
 proto7-1 照 `proto7/spec/core.md` 試做 daemon → tick/tock → kernel → agent；使用者關注 daemon/tick 基礎設施。細部規格 `proto7-1/spec.md`，需求清單 `proto7-1/notes/infra-needs.md`。
 
-你上一輪報告：`proto7-1/notes/play/2026-10-03-astra-7-infra.md`（證據在同名 `-evidence/`）。之後 commit `b3bd7f44` 宣稱修好 H-01～H-09（測試 `proto7-1/tests/test_astra7.py`）。摘要：H-01 tock 後回合仍 open 就補 tock，補不上停在 error 退避、不開新回合；H-02 tick 不寫 owner.json，改用 `AOS7_OWNER_*` 環境變數，子 daemon 拿到鎖才寫；H-03 audit hook 先補半行；H-04 read_jsonl 以 bytes 逐行解碼；H-05 Popen 前與 aos7-run 起任務前都比對 node 與 fd 一致；H-06 out.log 開不了寫 exit 127，tick 寫 runner.json（pid＋starttime）擴大 lost 判定；H-07 ctl-failed 排他命名；H-08 可選 `keep_old_rounds`、`.aosd/retention.json`、status 的 `disk`；H-09 aos7-run 無效 fd 退出碼 2。
+你上一輪報告：`proto7-1/notes/play/2026-10-03-astra-7-infra.md`（證據在同名 `-evidence/`）。之後 commit `d3acff08` 宣稱修好 H-01～H-09（測試 `proto7-1/tests/test_astra7.py`）。摘要：H-01 tock 後回合仍 open 就補 tock，補不上停在 error 退避、不開新回合；H-02 tick 不寫 owner.json，改用 `AOS7_OWNER_*` 環境變數，子 daemon 拿到鎖才寫；H-03 audit hook 先補半行；H-04 read_jsonl 以 bytes 逐行解碼；H-05 Popen 前與 aos7-run 起任務前都比對 node 與 fd 一致；H-06 out.log 開不了寫 exit 127，tick 寫 runner.json（pid＋starttime）擴大 lost 判定；H-07 ctl-failed 排他命名；H-08 可選 `keep_old_rounds`、`.aosd/retention.json`、status 的 `disk`；H-09 aos7-run 無效 fd 退出碼 2。
 
 ## 要做
 1. **回歸**：H-01～H-09 逐條用上一輪的重現判定已修／部分／未修，附證據；也重看上一輪仍「部分」的 G-01、G-02、G-04、G-08。

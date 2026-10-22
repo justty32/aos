@@ -30,6 +30,6 @@
 
 ## 來源（複製進來，不 import 外部路徑）
 
-- `lib/aos_inst.py`、`aos_directives*.py`、`aos_dirname.py`、`aos_exec*.py`、`bin/aos-exec`：原樣複製自 proto6 `src/py/lib/` 與 `src/py/bin/`（2026-10-03，commit bb3f151f）。inst JSON 執行器，tasks.json 寫 `inst` 的任務用它跑（S-12）。
+- `lib/aos_inst.py`、`aos_directives*.py`、`aos_dirname.py`、`aos_exec*.py`、`bin/aos-exec`：原樣複製自 proto6 `src/py/lib/` 與 `src/py/bin/`（2026-10-03，commit b546ec4b）。inst JSON 執行器，tasks.json 寫 `inst` 的任務用它跑（S-12）。
 - `lib/aos7_llm.py` 的 OpenAI 相容呼叫：參考 proto5 `lib/aos_llm_call.py` 簡化改寫。
 - 示範場景仿 proto6 `notes/proposals/2026-10-03-spacetime/05-交叉例子.md` 的 team／amy／bob。

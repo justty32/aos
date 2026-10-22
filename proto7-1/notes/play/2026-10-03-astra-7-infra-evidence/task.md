@@ -7,7 +7,7 @@
 ## 背景
 proto7-1 照 `proto7/spec/core.md` 試做 daemon → tick/tock → kernel → agent；使用者關注 daemon/tick 基礎設施。細部規格 `proto7-1/spec.md`，需求清單 `proto7-1/notes/infra-needs.md`。
 
-你上一輪報告：`proto7-1/notes/play/2026-10-03-astra-6-infra.md`（證據在同名 `-evidence/`）。之後 commit `94ad4168`、`5a3d97fb` 宣稱修好 G-01～G-10（測試 `proto7-1/tests/test_astra6.py`）。修法摘要：G-01 daemon 控制檔逐件邊界、失敗搬 `.aosd/ctl-failed/`；G-02 tick 起任務前確認 node 仍是抓著的 fd，否則寫 exit 127，aos7-run 改收 taskdir fd（命令列第二參數）；G-03 daemon 的 `.aosd` 經 root fd 讀寫，root 被搬走就當消失、stop＋kill；G-04 子根 daemon.lock 已被持有就不起、不改 owner（記 tasks_error），仍有啟動前幾十 ms 的窗口；G-05 reload 先完整驗證；G-06 被宣告接管的掛載不再標 dyn；G-07 `_proc` atexit 沿用 group/grace；G-08 jsonl 半行先補換行、tock 讀回確認後才寫 ended；G-09 文件寫明合作式協定；G-10 身分不可驗時不殺、記原因。另有新探針 `probes/namespace`、`probes/ledger`。
+你上一輪報告：`proto7-1/notes/play/2026-10-03-astra-6-infra.md`（證據在同名 `-evidence/`）。之後 commit `daaffba1`、`d147ff65` 宣稱修好 G-01～G-10（測試 `proto7-1/tests/test_astra6.py`）。修法摘要：G-01 daemon 控制檔逐件邊界、失敗搬 `.aosd/ctl-failed/`；G-02 tick 起任務前確認 node 仍是抓著的 fd，否則寫 exit 127，aos7-run 改收 taskdir fd（命令列第二參數）；G-03 daemon 的 `.aosd` 經 root fd 讀寫，root 被搬走就當消失、stop＋kill；G-04 子根 daemon.lock 已被持有就不起、不改 owner（記 tasks_error），仍有啟動前幾十 ms 的窗口；G-05 reload 先完整驗證；G-06 被宣告接管的掛載不再標 dyn；G-07 `_proc` atexit 沿用 group/grace；G-08 jsonl 半行先補換行、tock 讀回確認後才寫 ended；G-09 文件寫明合作式協定；G-10 身分不可驗時不殺、記原因。另有新探針 `probes/namespace`、`probes/ledger`。
 
 ## 要做
 1. **回歸**：G-01～G-10 逐條用你上一輪的重現判定已修／部分／未修，附證據；順帶看 F-05、F-09、F-11 的部分項。

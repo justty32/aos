@@ -12,9 +12,9 @@
 
 | commit | 內容 |
 |---|---|
-| `93484d4` | `step` 走 lmstudio 也取槽；`engine.json` 帶 `priority`；等不到 exit 75 |
-| `1d0e677` | say 訊息帶 `from`；`~` 的扁平信箱與 `say --to ~`／`listen`；通訊錄天然一格 `~` |
-| `fdb590f` | `core/agent/tests/smoke_user.sh`：四條驗收的可重跑證據 |
+| `71c4fc9` | `step` 走 lmstudio 也取槽；`engine.json` 帶 `priority`；等不到 exit 75 |
+| `0351e48` | say 訊息帶 `from`；`~` 的扁平信箱與 `say --to ~`／`listen`；通訊錄天然一格 `~` |
+| `4091822` | `core/agent/tests/smoke_user.sh`：四條驗收的可重跑證據 |
 
 ### 一、step 的 lmstudio 那條取槽
 

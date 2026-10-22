@@ -2,7 +2,7 @@
 
 ← [play](../README.md)｜[astra-5 A6-01](../2026-10-04-astra-5-infra.md)｜[loop6 藍圖](../../blueprint-loop6.md) §1、§4 A 線
 
-修補 commit 95426b17（只動 `modules/subd/`，核心零改動）。探針跑在修補後的工作樹（HEAD 68b6a2c7＋未提交 subd 修補）。
+修補 commit 997a2f53（只動 `modules/subd/`，核心零改動）。探針跑在修補後的工作樹（HEAD f4ebbe1c＋未提交 subd 修補）。
 
 | 項目 | 結果 |
 |---|---|

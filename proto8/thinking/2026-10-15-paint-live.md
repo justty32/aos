@@ -1,6 +1,6 @@
 # 2026-10-15 畫家 demo 用 LiteLLM 真腦實跑
 
-← [thinking](README.md)｜前一次：[LiteLLM 實跑](2026-10-15-litellm-live.md)｜demo：demo/paint（已刪，見 git 歷史 aa2fec1f）
+← [thinking](README.md)｜前一次：[LiteLLM 實跑](2026-10-15-litellm-live.md)｜demo：demo/paint（已刪，見 git 歷史 5546be29）
 
 **原文**：使用者 10-15 要用本機已開的 LiteLLM proxy 把畫家 demo 的真腦路徑實跑一遍，確認行為跟 README 一致；demo 自己的設定問題就修，lib 層的只記錄。
 

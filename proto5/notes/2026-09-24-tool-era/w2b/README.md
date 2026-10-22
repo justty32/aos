@@ -6,9 +6,9 @@
 郵差讀 outbox 時會再驗一次路徑、指令白名單、假信頭。驗收員新增 `cmd_ok`：在牢裡跑專案自己的指令。
 逃逸測試 19 條，全部被牢擋下或被郵差退件。例子 1 在關牢下跑了 10 次，10 次都過；邊界軸從 3 升到 **4**。
 
-- 基底：main `b62e0df`（A 隊合進來、T2 修完偶發測試之後）。
+- 基底：main `a497ef1`（A 隊合進來、T2 修完偶發測試之後）。
 - 測試：84 檔 2330 條，全綠。這隊新增 3 檔 65 條。
-- 真跑：在 rebase 前的 `eacfcc2` 上跑，見 §4 的說明。
+- 真跑：在 rebase 前的 `7c4f1ea` 上跑，見 §4 的說明。
 
 ## 1. 做了什麼
 
@@ -96,7 +96,7 @@ wf 快照在工具包資料夾 `/opt/tool` 裡（唯讀），不另外映射。
 - 每次跑前刪掉整個團隊資料夾和 `p` 重建。
 - 為了不跟 A 隊同時真跑撞在一起，場地改用 `~/tmp/wf-try-b/`（代裁 1）。
 - 跑的時候的程式：第 1～5 次是 B 隊第一個 commit，第 6～10 次加上 astra 修正。修正只動 cmd_ok 與郵差再驗，兩個例子都沒用到 cmd_ok。
-- 基底是 `eacfcc2`，A 隊還沒合進來。
+- 基底是 `7c4f1ea`，A 隊還沒合進來。
 
 ### 例子 1 導入：十次
 
@@ -134,7 +134,7 @@ wf 快照在工具包資料夾 `/opt/tool` 裡（唯讀），不另外映射。
 
 `task show` 每一步都看得到：queued → sent → working → verifying → reviewing → done。**功能結果跟 T5 一樣。**
 
-### rebase 到 fd32193（A 隊合進來）之後的冒煙
+### rebase 到 eec123c（A 隊合進來）之後的冒煙
 
 同一套腳本，程式換成 rebase 後的，各跑一次：
 
@@ -218,7 +218,7 @@ A 隊的 `wf_fill` 裝在工人的 wf 包裡，在牢裡也能用：這次工人
 
 ## 10. 數字
 
-- **測試**：84 檔 2330 條，全綠；在 rebase 到 b62e0df 之後跑的，約 172 秒。
+- **測試**：84 檔 2330 條，全綠；在 rebase 到 a497ef1 之後跑的，約 172 秒。
   - 這隊新增 3 檔 65 條：`test_team_wall.py` 27、`test_team_escape.py` 19、`test_notes_recall_context.py` 19。
   - 另外改了 `test_team_route.py`、`test_team_init.py`、`test_agent_notes.py` 的預期值。
 - **工具描述**：recall 118 字元、context 81；handoff 的 done_when 說明多了 `cmd_ok{run}`，task 包仍 < 2700。

@@ -33,7 +33,7 @@
 
 ## 動工自定點
 
-10-15 做了基礎實作（lib kernel.md（已刪，見 git 歷史 aa2fec1f）），自己定的、等使用者看：
+10-15 做了基礎實作（lib kernel.md（已刪，見 git 歷史 5546be29）），自己定的、等使用者看：
 
 - 名字：閘門 `aos_gate.py`、身體 `aos_gate_kernel.py`；信箱 `tmp/ new/ cur/ reply/`。
 - `deadline`：ISO 字串或 epoch 秒；剩不到 `near_ms`（30 秒）插隊，同級也是近的先。
@@ -42,7 +42,7 @@
 - 一拍＝跑一次身體（閒的拍也算）；`slots`>1＝同一拍幾封一起跑，等最慢的。
 - target 在 kernel 的環境跑，不帶呼叫者的環境變數。
 
-（10-20 註：後來改名——`aos_gate_kernel.py`→`aos_kernel_llm.py`、lib `kernel.md`→`kernel_llm.md`，[命名盤點](2026-10-15-naming/盤點.md) P1；`aos_gate.py` 沒改名。這些程式 10-19 都已刪，見 git 歷史 aa2fec1f。）
+（10-20 註：後來改名——`aos_gate_kernel.py`→`aos_kernel_llm.py`、lib `kernel.md`→`kernel_llm.md`，[命名盤點](2026-10-15-naming/盤點.md) P1；`aos_gate.py` 沒改名。這些程式 10-19 都已刪，見 git 歷史 5546be29。）
 
 （原有的 `wait_ms` 一條被 KISS 1.8 刪；「自己的錯退 125」被 10-15 晚「自己的錯全改退 1」取代，見 [原則 § 決定](2026-10-15-principles.md#決定)。）
 

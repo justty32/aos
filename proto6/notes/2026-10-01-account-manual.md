@@ -2,9 +2,9 @@
 
 ← [筆記索引](README.md)｜[plan m3m 模組五](../plan/m3m-daemon-modules/06-模組五-帳號.md#模組五帳號modulesaccount)｜正本 [B-646](../spec/daemon/account.md)、[P-126](../spec/protocol/daemon/account.md)｜[WAIT_USER](../../wf/WAIT_USER.md)
 
-> 2026-10-05 依現行程式校正（`proto6/src/py` 最後改動 `41edba47`）：訊息模組改成第二十五批的多扇門寫法（`modules.mq` 門名→路徑、每項 `"mq"` 訂門、`aos-mq send|take <門的 socket>`、信原樣不包 `from`／`msg`）、控制 socket 環境變數改名 `AOS_DAEMON_CTL_SOCKET`、補建黑名單帳號 `aostest9`、先建好鎖檔、重開 daemon 後重抓 `$MAIN`。
+> 2026-10-05 依現行程式校正（`proto6/src/py` 最後改動 `ad19b0cb`）：訊息模組改成第二十五批的多扇門寫法（`modules.mq` 門名→路徑、每項 `"mq"` 訂門、`aos-mq send|take <門的 socket>`、信原樣不包 `from`／`msg`）、控制 socket 環境變數改名 `AOS_DAEMON_CTL_SOCKET`、補建黑名單帳號 `aostest9`、先建好鎖檔、重開 daemon 後重抓 `$MAIN`。
 
-原本照 commit `6583f565`（帳號模組併進 main）的程式寫的。自動測試已經用 `unshare --map-auto` 假 root 驗過大部分（`proto6/src/py/tests/test_account_policy.py`、`test_account_ns.py`，原 `test_account.py`），這份只補**只有真 root 才驗得到的**部分，順便把主要行為在真環境再走一遍。
+原本照 commit `c2818b9c`（帳號模組併進 main）的程式寫的。自動測試已經用 `unshare --map-auto` 假 root 驗過大部分（`proto6/src/py/tests/test_account_policy.py`、`test_account_ns.py`，原 `test_account.py`），這份只補**只有真 root 才驗得到的**部分，順便把主要行為在真環境再走一遍。
 
 **一定要在可以丟掉的機器上做**（VM、測試機）：會建帳號、刪帳號、用 root 開程序。
 

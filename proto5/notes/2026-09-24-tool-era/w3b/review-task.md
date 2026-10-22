@@ -4,7 +4,7 @@
 
 你是唯讀審查者。**不要改任何檔、不要跑模型、不要開 daemon／kernel、不要碰 LM Studio／`lms`／localhost:1234／ollama。** 可以讀檔、跑單元測試（`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test -p 'test_agent_tools_wrapcli.py'`，同樣可跑 `test_compact_summarize.py`、`test_team_crystal.py`、`test_llm_ask.py`、`test_agent_tools_dev.py`、`test_agent_memory.py`、`test_team_route.py`）。繁體中文、白話。
 
-**只審這次的改動**：`git diff d6603b9 HEAD -- proto5`。以前的審查已修，不用重提。
+**只審這次的改動**：`git diff 16c2f9d HEAD -- proto5`。以前的審查已修，不用重提。
 
 ## 背景
 

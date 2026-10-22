@@ -1,6 +1,6 @@
 # astra-7 QA 分工
 
-授權：頂層 2026-10-09 開 R 隊（plan-2026-10-09 §3），最多四條子線；全部禁止修改既有程式、測試與文件，禁止 commit/push、LLM。工人 `codex exec -m gpt-6-astra -c model_reasoning_effort="high"`，跑在 main 的 worktree 複本（ad1dfa25）；測試與長跑一律包 `systemd-run --user --scope -p TasksMax=800 -p RuntimeMaxSec=1800`。任務書原文在 [tasks/](tasks/)（[共同規則](tasks/common.md)＋各線一份）。
+授權：頂層 2026-10-09 開 R 隊（plan-2026-10-09 §3），最多四條子線；全部禁止修改既有程式、測試與文件，禁止 commit/push、LLM。工人 `codex exec -m gpt-6-astra -c model_reasoning_effort="high"`，跑在 main 的 worktree 複本（59ce8767）；測試與長跑一律包 `systemd-run --user --scope -p TasksMax=800 -p RuntimeMaxSec=1800`。任務書原文在 [tasks/](tasks/)（[共同規則](tasks/common.md)＋各線一份）。
 
 | 線 | 唯一可寫領地 | 驗收 |
 |---|---|---|

@@ -4,9 +4,9 @@
 
 | hash | 內容 |
 |---|---|
-| `0c798f1` | `core: 刪掉舊世代的 inst／llms／tooljson——core 只剩 exec wire loop llm agent 五個`（130 檔，-13548 行）|
-| `e04bf5a` | `loop: 常駐投遞匣 .aos/every/ 與可選的 <folder>——世界不必再靠自我投遞活著` |
-| `7aca466` | `agent: 一個資料夾一隻 agent——靠 .aos/every/ 活著，cwd 就是世界` |
+| `db25124` | `core: 刪掉舊世代的 inst／llms／tooljson——core 只剩 exec wire loop llm agent 五個`（130 檔，-13548 行）|
+| `840fcf2` | `loop: 常駐投遞匣 .aos/every/ 與可選的 <folder>——世界不必再靠自我投遞活著` |
+| `9718bb9` | `agent: 一個資料夾一隻 agent——靠 .aos/every/ 活著，cwd 就是世界` |
 
 `git add` 全程只加明確路徑；使用者未提交的 `wf/` 改動（40+ 個檔）原封不動。**未 push。**
 

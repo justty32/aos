@@ -9,7 +9,7 @@
 ## 背景
 你上一輪報告：`proto7-2/notes/play/2026-10-04-astra-1-infra.md`（證據在同名 `-evidence/`），A2-01～A2-13，總評要三件核心工作：未知狀態一路保留、回合與槽有足夠身分證據、控制意圖重播只生效一次，並做成固定回歸矩陣。
 
-之後 commit 5cf34d7f、9d59e233、cd26699c、29e142e2、fb2fb8e1 宣稱：
+之後 commit 6d4ef2b8、7bc6217c、70614125、e6d101a4、88f804cf 宣稱：
 - A2-01～13 全修（A2-09 只改 spec §8：用量以 run 為單位、跨 run 相加、總數是已觀測下界）。
 - 三態收斂：/proc 讀取單一入口（讀到／不在／讀不到）；回合只有 `open` 明確 false 才算關；birth 壞時看同槽 exit／pid 的 run，判不出停在不知道等人工。
 - node 登記要求路徑無符號連結，之後變連結＝missing；restart 的 once 與 birth 帶 `ctl_id`（ctl 的 id 或內容＋mtime 雜湊），重播不重做；CLI 檔名多 `@<owner>`；rounds 倒數按 owner。

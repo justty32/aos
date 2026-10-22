@@ -77,7 +77,7 @@ BROKEN flavors/dev/workflows/analysis.md -> ../WORKFLOWS.md
 
 ## 數字
 
-- 測試：1470 → **1551**，新增 81 條：files 36、aos-directives／aos-json 16、wf 29。rebase 到 main（f74cc06，含 T1）後 **1579 條全綠**。
+- 測試：1470 → **1551**，新增 81 條：files 36、aos-directives／aos-json 16、wf 29。rebase 到 main（c3d7c54，含 T1）後 **1579 條全綠**。
 - astra 審查：**必修 8 條，全修**；建議 3 條，做了 S3（跑快照程式前隔離環境），S1、S2 寫進文件。
   1. M1：信任資料會跟著 `$ref` 解；解不出來就拒寫。
   2. M2：寫入整段加資料夾鎖。

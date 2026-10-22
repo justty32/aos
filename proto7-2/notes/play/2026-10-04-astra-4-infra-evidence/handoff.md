@@ -1,6 +1,6 @@
 # astra-4 QA 分工與邊界
 
-基準 HEAD：`b8568cdbf8122b1aaa11b9e67c49228e0e145d2c`。
+基準 HEAD：`812cf731b651e781718b451bc790e9c904b6c159`。
 使用者授權最多四條 subagent 線；不修改產品／既有測試／既有文件、不 commit／push，不動 scratchpad、不呼叫 LLM。各線只寫下列自己的 evidence 子目錄，測試使用自建 /tmp，自己回收 PID、清自己的根。
 
 | 線 | 唯一可寫領地 | 可觀察驗收 |

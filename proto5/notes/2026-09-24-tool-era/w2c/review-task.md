@@ -7,7 +7,7 @@
 `-p 'test_agent_persona.py'`、`-p 'test_team_init.py'`（`ToolUnitTests`、`InitTests`；`TeamIntegrationTests` 開真 kernel＋bwrap，可略過）、
 `-p 'test_agent_home.py'`、`-p 'test_agent_tick.py'`、`-p 'test_kernel_check.py'`（都只跑本地、不叫模型）。
 
-**只審這次的改動**：`git diff 12d67d4 HEAD -- proto5`（第二波 C 隊的改動；基底是第一波收尾隊合進 main 之後）。前幾隊的審查已修，不用重提。
+**只審這次的改動**：`git diff 3fb87c2 HEAD -- proto5`（第二波 C 隊的改動；基底是第一波收尾隊合進 main 之後）。前幾隊的審查已修，不用重提。
 
 ## 這次做了什麼（catalog.md〈T-access-req〉〈T-persona〉〈T-lock〉〈T-pool〉、plan.md 第二波表格 C 那列）
 

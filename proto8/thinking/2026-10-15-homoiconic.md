@@ -1,6 +1,6 @@
 # 2026-10-15 同像性：inst 也是「純值或物件」的大號版
 
-← [討論紀錄](README.md)｜前情：[JSON 格式族](2026-10-15-json-families.md)（值的雙形）、[Lisp 組合子](2026-10-14-json-entry/10-lisp組合子.md)｜概念：[C-48](../CONCEPTS/01-設計理念.md)、[C-22](../CONCEPTS/05-agent.md)、[C-42](../CONCEPTS/05-agent.md)｜規範：[N-35](../NORMS/01-總則.md)、[N-30](../NORMS/03-基礎設施-inst.md)、[N-36](../NORMS/07-基礎設施-組合子.md)｜程式：lib fsm.md（已刪，見 git 歷史 aa2fec1f）、agent.md、aos_methods.cell
+← [討論紀錄](README.md)｜前情：[JSON 格式族](2026-10-15-json-families.md)（值的雙形）、[Lisp 組合子](2026-10-14-json-entry/10-lisp組合子.md)｜概念：[C-48](../CONCEPTS/01-設計理念.md)、[C-22](../CONCEPTS/05-agent.md)、[C-42](../CONCEPTS/05-agent.md)｜規範：[N-35](../NORMS/01-總則.md)、[N-30](../NORMS/03-基礎設施-inst.md)、[N-36](../NORMS/07-基礎設施-組合子.md)｜程式：lib fsm.md（已刪，見 git 歷史 5546be29）、agent.md、aos_methods.cell
 
 ## 原文（10-15，照記）
 
@@ -15,7 +15,7 @@
 
 ## 結論（10-20 使用者確認：留性質與 schema 的角色）
 
-**性質一句話**：凡是要放一張 inst 的地方（loop 的 `inst`、daemon 的 `children`、fsm 的格、閘門的 `target`、agent 的 `brain`／`tools`、kernel 的判官），都可以寫**名字**（路徑、資料夾、`檔#/位置`）或**整張貼進去**（物件）；貼進去的那張自己也可以是組合子（fsm／loop／daemon／gate），它的零件又是名字或整張。所以一棵 aos 程式樹就是一份 JSON 資料——跟 Lisp 的 `3`／`(+ 1 2)`、`(daemon (fsm b c))` 一樣，程式＝資料。現況已經做到：aos_inst／fsm／daemon／gate／agent 都收兩種（N-25、N-36、daemon.md、gate、agent.md），內嵌格的 id＝外層 id 接 `#/states/<名>`（aos_methods.cell）。（10-20 註：loop 放身體的 key 10-19 晚改叫 `run`〔[ideas § 22](2026-10-19-ideas.md)〕；閘門、gate 是舊說法——閘門與 kernel 的舊程式連同 aos_methods 等 lib 10-19 整套刪〔git 歷史 aa2fec1f〕，kernel 現無實作〔N-42〕；`檔#/位置` 現行寫法見 N-62。）
+**性質一句話**：凡是要放一張 inst 的地方（loop 的 `inst`、daemon 的 `children`、fsm 的格、閘門的 `target`、agent 的 `brain`／`tools`、kernel 的判官），都可以寫**名字**（路徑、資料夾、`檔#/位置`）或**整張貼進去**（物件）；貼進去的那張自己也可以是組合子（fsm／loop／daemon／gate），它的零件又是名字或整張。所以一棵 aos 程式樹就是一份 JSON 資料——跟 Lisp 的 `3`／`(+ 1 2)`、`(daemon (fsm b c))` 一樣，程式＝資料。現況已經做到：aos_inst／fsm／daemon／gate／agent 都收兩種（N-25、N-36、daemon.md、gate、agent.md），內嵌格的 id＝外層 id 接 `#/states/<名>`（aos_methods.cell）。（10-20 註：loop 放身體的 key 10-19 晚改叫 `run`〔[ideas § 22](2026-10-19-ideas.md)〕；閘門、gate 是舊說法——閘門與 kernel 的舊程式連同 aos_methods 等 lib 10-19 整套刪〔git 歷史 5546be29〕，kernel 現無實作〔N-42〕；`檔#/位置` 現行寫法見 N-62。）
 
 （AI 列的 8 個可利用處 10-20 使用者決定刪；已落成決定的見下方「決定」段，舊版見 git 歷史）
 
@@ -39,4 +39,4 @@
 
 ## 動工（10-15）
 
-〔10-15 使用者：aos_tree 只是看看狀況的小工具，不納入規範；它的 id／inline 行為是工具自己的做法。〕 `aos_tree.py`（`print`／`inline`，不跑任何東西）與 `test_tree.py`（兩檔 10-15 深夜 KISS 批次 1 刪，見 git 歷史 cb20249a） 做好了；`outline`（物件攤成資料夾）還沒做。判官 schema 放 judge.schema.json（已刪，見 git 歷史 aa2fec1f），`judge-rules.json` 用普通路徑 key `_schema` 指它；測試用手寫最小驗證器驗 `judge_rules.py` 的輸出，執行期不驗。
+〔10-15 使用者：aos_tree 只是看看狀況的小工具，不納入規範；它的 id／inline 行為是工具自己的做法。〕 `aos_tree.py`（`print`／`inline`，不跑任何東西）與 `test_tree.py`（兩檔 10-15 深夜 KISS 批次 1 刪，見 git 歷史 7ea404ea） 做好了；`outline`（物件攤成資料夾）還沒做。判官 schema 放 judge.schema.json（已刪，見 git 歷史 5546be29），`judge-rules.json` 用普通路徑 key `_schema` 指它；測試用手寫最小驗證器驗 `judge_rules.py` 的輸出，執行期不驗。

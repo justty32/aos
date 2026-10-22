@@ -4,7 +4,7 @@
 
 你是唯讀審查者。**不要改任何檔、不要跑模型、不要開 daemon／kernel、不要碰 LM Studio／`lms`／localhost:1234／ollama。** 可以讀檔、跑單元測試（`cd proto5/lib && PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s test -p 'test_team_*.py'`；會開真 daemon 的 `test_team_post_live.py`、`test_team_init.py` 的整合測試可略過）。繁體中文、白話。
 
-**只審這次的改動**：`git diff 75eadc0 HEAD -- proto5`（收尾隊的幾個 commit）。前四隊的審查（`proto5/notes/2026-09-24-tool-era/review-*.md`）已修，不用重提。
+**只審這次的改動**：`git diff a4e8bd4 HEAD -- proto5`（收尾隊的幾個 commit）。前四隊的審查（`proto5/notes/2026-09-24-tool-era/review-*.md`）已修，不用重提。
 
 ## 這次做了什麼
 

@@ -1,4 +1,4 @@
-2026-09-25 ｜ 模型 gpt-6-astra（codex-cli 0.156.1，reasoning medium）｜ 審的範圍 `b1087729..871bd5ce`（proto5/lib 拆檔，20 個 commit）｜ 指令：`codex exec -m gpt-6-astra --sandbox read-only -C /home/lorkhan/repo/simple_tools/aos --color never -o <輸出檔> "<中文 prompt>" < /dev/null`（耗時 328 秒，78,140 tokens；astra 在唯讀沙箱裡跑不了會寫暫存目錄的測試，見 README 的補跑結果）
+2026-09-25 ｜ 模型 gpt-6-astra（codex-cli 0.156.1，reasoning medium）｜ 審的範圍 `f763f886..96451eab`（proto5/lib 拆檔，20 個 commit）｜ 指令：`codex exec -m gpt-6-astra --sandbox read-only -C /home/lorkhan/repo/simple_tools/aos --color never -o <輸出檔> "<中文 prompt>" < /dev/null`（耗時 328 秒，78,140 tokens；astra 在唯讀沙箱裡跑不了會寫暫存目錄的測試，見 README 的補跑結果）
 
 ---
 
@@ -24,31 +24,31 @@
 
 | Commit | 母模組 → 子模組 | 核對結果 |
 |---|---|---|
-| `a8bf4a55` | `aos_agent_tools_dev` → `_pack, _pyread, _wrappy, _describe, _run, _test` | 本體及產生程式字串保留；`jail_ready`／`Runner`／`os.rename` patch 有效。 |
-| `84c8dadd` | `aos_agent_tools_wrapcli` → `_const, _argparse, _helptext, _check, _pack` | 解析、產包及常數保留；`HELP_TIMEOUT` 仍由母模組讀取。 |
-| `2c1141ef` | `aos_team_post` → `_base, _recheck, _text, _jobs, _watch` | 方法本體保留；MRO、初始化屬性及跨類方法完整，詳見下段。 |
-| `e983c4ae` | `aos_market` → `_book, _score, _grant, _close, _merge` | 計分與帳務邏輯保留；`cost.account_grant`／`co.down`／`shutil.move` patch 有效。 |
-| `b67f01fd` | `aos_team_format` → `_base, _io, _cmd, _roster, _letter, _template` | 外用名稱完整；模板路徑不變，反向依賴採延遲 import。 |
-| `7b4c4840` | `aos_company` → `_config, _new, _switchboard, _count` | 設定、總機及計數邏輯保留；`_run` 與 `Switchboard` 方法 patch 有效。 |
-| `a5104c9a` | `aos_agent_compact` → `_plan, _archive, _summarize` | 壓縮與封存邏輯保留；`apply` 仍解析母模組的 `plan`／`_hook`。 |
-| `dfdcfdad` | `aos_team_commons` → `_base, _ingest, _post` | 外用及動態 handler 名稱完整；與 format 的反向依賴在函式內。 |
-| `3144e3c4` | `aos_team_cost` → `_ledger, _account, _budget` | 記帳、額度及預算邏輯保留；由 `__file__` 推導的執行檔路徑不變。 |
-| `9b747901` | `aos_team_crystal` → `_stats, _rules, _llm` | 函式及常數保留；`llm → rules → stats` 單向依賴，其他反向引用延遲載入。 |
-| `042a7948` | `aos_team_hr` → `_book, _count, _members` | 函式及常數保留；`trial` 的 `_team`／`check_cpus`／`time.sleep` patch 有效。 |
-| `125c14fc` | `aos_team_task` → `_base, _machine` | 狀態機與外用名稱保留；`machine → base → format` 無循環。 |
-| `1e086cbd` | `aos_team_beat` → `_schedule, _routines` | 排程與例行邏輯保留；現存 `start` patch 有效，post 為延遲 import。 |
-| `b8890cdf` | `aos_team_verify` → `_checks, _jail` | `CHECKS` 六條全解析成功；直接呼叫的三種檢查器也完整再匯出。 |
-| `3a0ab79c` | `aos_team_score` → `_read, _calc` | 六軸算法與預設值保留；外用名稱完整，`calc → read` 無循環。 |
-| `0ff6ee32` | `aos_agent_cli` → `_parser, _args` | parser、預設秒數、參數再驗與分派保留，外部 `main` 入口不變。 |
-| `9ba147ee` | `aos_team_toolsmith` → `_check` | 檢查函式保留；`jail_ok`／`TOOL_TIMEOUT_MS` 仍從母模組解析。 |
-| `79009a7c` | `aos_directives_edit` → `_persona, _resolve` | 函式、預設值及外用名稱保留；無 import 循環，重複路徑見建議。 |
-| `4e270fdc` | `aos_team_spawn` → `_check` | 檢查函式保留；`_auto_finish` patch 有效，team／hr 在函式內載入。 |
+| `62c067c0` | `aos_agent_tools_dev` → `_pack, _pyread, _wrappy, _describe, _run, _test` | 本體及產生程式字串保留；`jail_ready`／`Runner`／`os.rename` patch 有效。 |
+| `b3df9419` | `aos_agent_tools_wrapcli` → `_const, _argparse, _helptext, _check, _pack` | 解析、產包及常數保留；`HELP_TIMEOUT` 仍由母模組讀取。 |
+| `3eff1849` | `aos_team_post` → `_base, _recheck, _text, _jobs, _watch` | 方法本體保留；MRO、初始化屬性及跨類方法完整，詳見下段。 |
+| `32d6e719` | `aos_market` → `_book, _score, _grant, _close, _merge` | 計分與帳務邏輯保留；`cost.account_grant`／`co.down`／`shutil.move` patch 有效。 |
+| `1c8d0831` | `aos_team_format` → `_base, _io, _cmd, _roster, _letter, _template` | 外用名稱完整；模板路徑不變，反向依賴採延遲 import。 |
+| `73f4f761` | `aos_company` → `_config, _new, _switchboard, _count` | 設定、總機及計數邏輯保留；`_run` 與 `Switchboard` 方法 patch 有效。 |
+| `b717caa6` | `aos_agent_compact` → `_plan, _archive, _summarize` | 壓縮與封存邏輯保留；`apply` 仍解析母模組的 `plan`／`_hook`。 |
+| `5b8a7c49` | `aos_team_commons` → `_base, _ingest, _post` | 外用及動態 handler 名稱完整；與 format 的反向依賴在函式內。 |
+| `dadbf209` | `aos_team_cost` → `_ledger, _account, _budget` | 記帳、額度及預算邏輯保留；由 `__file__` 推導的執行檔路徑不變。 |
+| `c332a169` | `aos_team_crystal` → `_stats, _rules, _llm` | 函式及常數保留；`llm → rules → stats` 單向依賴，其他反向引用延遲載入。 |
+| `2075603b` | `aos_team_hr` → `_book, _count, _members` | 函式及常數保留；`trial` 的 `_team`／`check_cpus`／`time.sleep` patch 有效。 |
+| `ef2a3749` | `aos_team_task` → `_base, _machine` | 狀態機與外用名稱保留；`machine → base → format` 無循環。 |
+| `c4c080d9` | `aos_team_beat` → `_schedule, _routines` | 排程與例行邏輯保留；現存 `start` patch 有效，post 為延遲 import。 |
+| `dbc555e6` | `aos_team_verify` → `_checks, _jail` | `CHECKS` 六條全解析成功；直接呼叫的三種檢查器也完整再匯出。 |
+| `12995672` | `aos_team_score` → `_read, _calc` | 六軸算法與預設值保留；外用名稱完整，`calc → read` 無循環。 |
+| `023b78fc` | `aos_agent_cli` → `_parser, _args` | parser、預設秒數、參數再驗與分派保留，外部 `main` 入口不變。 |
+| `018d5d40` | `aos_team_toolsmith` → `_check` | 檢查函式保留；`jail_ok`／`TOOL_TIMEOUT_MS` 仍從母模組解析。 |
+| `c15daf38` | `aos_directives_edit` → `_persona, _resolve` | 函式、預設值及外用名稱保留；無 import 循環，重複路徑見建議。 |
+| `439eefcd` | `aos_team_spawn` → `_check` | 檢查函式保留；`_auto_finish` patch 有效，team／hr 在函式內載入。 |
 
 `Post` 的 MRO 實測為 `Post → _PostJobs → _PostWatch → object`，沒有方法重名。Mixin 所需資料屬性均由 `Post.__init__` 建立；`roster`／`tz` 仍在原來的 `run()` 階段填值。Jobs 所需的 `advance/now/now_iso/say/warn`，以及 Watch 所需的 `finish/load_rec/new_rec/now/say/start_rec`，全部由 `Post` 提供，沒有缺方法。
 
 `aos_market_score`／`aos_company_config` 重複的 `LIB` 實測與母模組相等，檔案仍在同一目錄，沒有新增搜尋路徑或改變 import 解析。各家族內未發現會在載入時觸發的循環；跨家族反向引用位於函式內，全部 145 支模組也逐支以獨立程序 import 通過。
 
-文件 commit `871bd5ce` 已核對：七個家族數量 **6＋11＋6＋13＋44＋54＋11＝145**，表列模組全部存在、沒有漏列新子模組；13 個舊 `##` 標題全部有對應 `<a id>`，文件相對連結目標均存在。測試檔 **101 個**、discover 收集 **2874 條**，與文件相符。
+文件 commit `96451eab` 已核對：七個家族數量 **6＋11＋6＋13＋44＋54＋11＝145**，表列模組全部存在、沒有漏列新子模組；13 個舊 `##` 標題全部有對應 `<a id>`，文件相對連結目標均存在。測試檔 **101 個**、discover 收集 **2874 條**，與文件相符。
 
 測試實跑 2866 條：**178 通過、0 assertion failure、2620 個測試 error、68 跳過**；另有 1 個 `setUpClass` error，使 8 條未執行。全部 **2621 errors** 都是沙箱無可寫暫存目錄；68 條跳過皆與 bwrap 不可用有關。全程未修改檔案。
 
@@ -58,9 +58,9 @@
 ## 附：給 astra 的 prompt（原文）
 
 ```
-你是唯讀審查員。這個 repo 在 main 上剛合進一批「純結構搬移、零行為變更」的拆檔：範圍 `b1087729..871bd5ce`（20 個 commit），把 `proto5/lib/` 下 24 支模組拆成母模組＋子模組，並把 `proto5/lib/README.md` 拆成 `proto5/lib/docs/*.md`。
+你是唯讀審查員。這個 repo 在 main 上剛合進一批「純結構搬移、零行為變更」的拆檔：範圍 `f763f886..96451eab`（20 個 commit），把 `proto5/lib/` 下 24 支模組拆成母模組＋子模組，並把 `proto5/lib/README.md` 拆成 `proto5/lib/docs/*.md`。
 
-請先看 `git log b1087729..871bd5ce` 與 `git diff b1087729..871bd5ce -- proto5/lib`，然後逐支模組核對下面幾點（不要只抽樣，20 個 commit 每個都要看）：
+請先看 `git log f763f886..96451eab` 與 `git diff f763f886..96451eab -- proto5/lib`，然後逐支模組核對下面幾點（不要只抽樣，20 個 commit 每個都要看）：
 
 (a) 母模組是否把外部用到的名字全部再匯出。對照方法：在全 repo `grep -rn` 所有 `from aos_xxx import ...`、`import aos_xxx`、`aos_xxx.名字` 的用法，以及測試裡 `patch('aos_xxx.名字')`／`patch.object(aos_xxx, '名字')` 字串，確認被 patch 的名字在母模組命名空間裡仍存在、而且母模組裡實際呼叫的是母模組命名空間的那個名字（若子模組內部直接呼叫自己的 copy，patch 母模組就打不到——這也要列出來）。
 (b) 有沒有搬移時漏掉或改動的邏輯：函式本體、預設參數、模組層級副作用的順序（例如 `sys.path.insert`、常數初始化、logging 設定），母模組與子模組各自的 import 集合是否夠用（有沒有子模組用到但沒 import 的名字，只有在被呼叫時才會炸 NameError）。

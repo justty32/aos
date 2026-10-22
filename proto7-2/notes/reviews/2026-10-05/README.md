@@ -17,7 +17,7 @@
 | [llm-author](llm-author.md) | LLM 寫任務與 adapt-llm | 現有核心夠承載第一個原型；需補包層的候選驗證、發布與恢復、單次呼叫回條、token 部分結算 |
 | [model-check](model-check.md) | budget／subd 模型檢查（收尾版） | 讀碼找到 subd 合法 stop 後重開可能誤殺保留任務的候選反例；檢查器未完成，不宣稱任何不變條件已驗 |
 | [packs-use](packs-use.md) | 只看 README 的新使用者試玩（收尾版） | 能組出實用小程式，但缺設定範本、非同步完成條件不明、各包重試語意不一，評 5.4／10 |
-| [play7](play7.md) | 第七輪對抗式回歸（收尾版） | 確認 11 項缺陷或契約缺口；97191272 修了取整但引入兩項回歸；三次全套測試未完成 |
+| [play7](play7.md) | 第七輪對抗式回歸（收尾版） | 確認 11 項缺陷或契約缺口；357632a6 修了取整但引入兩項回歸；三次全套測試未完成 |
 | [prior-art](prior-art.md) | 與成熟系統比較 | 已有小型監督器與調和迴圈骨架；該借的是身分、恢復、停止、證據保存的明確契約，重試與子監督樹留模組層 |
 | [spec-readability](spec-readability.md) | 文件可讀性與一致性（收尾版） | 主因是把有條件保證寫成絕對保證、跨包同名術語語義不同；先修診斷手冊回合恢復判準、pause 說明、budget 接 step 的 unknown 處理 |
 | [test-review](test-review.md) | 364 項測試審查 | 正常與故障恢復覆蓋扎實，但綠燈仍會漏「沒真的崩潰、故障打錯階段」；先補判定與同步再平行化 |
@@ -31,4 +31,4 @@
 - 巨大整數 interval 讓 node 不開回合：play7 A8-11、k-crosscheck N-21。
 - 回合已關確認讀不到倒數少扣：code-quality R8-05、k-crosscheck K-02。
 - 取消登記／替換後中斷回收義務遺失：code-quality R8-02／R8-03、deep-play C8-01／C8-02。
-- adapt 小修 97191272 引入的回歸：play7 A8-01、A8-02。
+- adapt 小修 357632a6 引入的回歸：play7 A8-01、A8-02。

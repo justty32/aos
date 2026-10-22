@@ -2,7 +2,7 @@
 
 ← [討論紀錄](README.md)
 
-> 10-12 夜照使用者要求精簡成「原文整理、決定、結論」；AI 的調查表、被推翻的選項已拿掉，舊版見 git（commit 22285099）。
+> 10-12 夜照使用者要求精簡成「原文整理、決定、結論」；AI 的調查表、被推翻的選項已拿掉，舊版見 git（commit e4a7d345）。
 
 ## 1. 使用者原文（整理）
 
@@ -20,11 +20,11 @@
 
 ## 2. 決定
 
-**tasks**（已做，在 proto8-1；10-15 深夜併進 proto8/lib、資料夾刪，見 git 歷史 a0c7214d）
+**tasks**（已做，在 proto8-1；10-15 深夜併進 proto8/lib、資料夾刪，見 git 歷史 08f3fce9）
 - 只做最精簡的四支：seq、par、if、not；不管 daemon。不再加 while／retry。
 - loop／daemon 狀態加 `last_code`；daemon 自己的退出碼不改。
 - 結束碼的規矩以同夜的 [inst 進 json](2026-10-12-inst-json.md) 為準（inst 只回自己的碼，子程式的碼進 exit 檔）。
-- demo 的 15 條發現在 proto8-1/demo（現在搬到 proto8/demo/tasks（已刪，見 git 歷史 aa2fec1f），見 git 歷史 a0c7214d），使用者說「都按照建議」。
+- demo 的 15 條發現在 proto8-1/demo（現在搬到 proto8/demo/tasks（已刪，見 git 歷史 5546be29），見 git 歷史 08f3fce9），使用者說「都按照建議」。
 
 **tick-tock**：選甲 → CONCEPTS C-44。照 AI 提的規格，使用者說「做吧」：
 - tick＝回合數加一，就是 `aos-tick`；tock 不另外做。

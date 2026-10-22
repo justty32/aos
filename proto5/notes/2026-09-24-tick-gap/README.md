@@ -21,7 +21,7 @@ kernel 叫醒後同一格就派、agent 做完事退 103「馬上再來」、cpu
 
 **場景**：LiteLLM `localhost:4000` 的 deepseek-chat，default 3 顆 cpu、llm 2 顆，`tick_ms`＝`interval_ms`＝1000。
 單 agent＝bob 有一支 add 工具，`say --wait "請用 add 工具算 A 加 B"` 三次。每次會問兩次模型：第一次叫工具、第二次回答。
-改前＝main `d6603b9`＋量測（行為不變）。改後＝這個分支。表裡是 `base-solo-1` 和改後一次的數字，其他次差不多。
+改前＝main `16c2f9d`＋量測（行為不變）。改後＝這個分支。表裡是 `base-solo-1` 和改後一次的數字，其他次差不多。
 
 | 這一跳 | 改前合計（毫秒，3 次 say） | 改前每次約 | 改後合計 | 哪條改的 |
 |---|---:|---:|---:|---|
@@ -98,7 +98,7 @@ T5 的三人版（改派 worker-1、10 次模型）改前也量了 3 次：84～
 
 ## 4. 測試
 
-- 全套：rebase 到 main `162cc59`（90 檔 2520 條）之後 **92 檔 2555 條全綠**（rebase 前在 `d6603b9` 上是 88 檔 2407 條）。
+- 全套：rebase 到 main `f4b44d1`（90 檔 2520 條）之後 **92 檔 2555 條全綠**（rebase 前在 `16c2f9d` 上是 88 檔 2407 條）。
 - 新增 `test_hops.py` 6 條、`test_tick_gap.py` 29 條。後者涵蓋：103 與 woken 的判定表、提交點 D（同一格派出去、不重放第一輪的單、崩在 D 之後下一格補放）、派工按門鈴、門鈴本身（沒有 cpu 時按了沒事、響了就醒、讀乾淨、普通檔和 symlink 不寫）、pidfd（子行程一結束就醒、沒 pidfd 照舊、逾時照殺）、真的 cpu 在 30 秒輪詢時被門鈴叫醒、`on_bad` 寄信（換值、叫醒、寄不出去不擋、崩潰後只寄一次、形狀不對退件）、health 的 `bad`、團隊登記帶 `on_bad`。
 - 11 個舊測試檔改了退出碼的期望值（子 agent 做的）。改法是把 0 換成新語意的 102／103，沒刪測試、沒放寬斷言。C7 那條反而改得更嚴。
 - 時序類斷言都用「遠小於輪詢間隔」：輪詢設 30 秒，斷言 10 秒內完成，機器忙也不會誤判。
@@ -191,7 +191,7 @@ importer-1 的每一跳（`aos_hops.py report … --agent importer-1`），跟�
 
 ### 8.4 astra 唯讀審查
 
-任務書 [review/review-task.md](review/review-task.md)，報告 [review/review-astra.md](review/review-astra.md)（審 `f30ebd7`、`fdc93d6` 兩個 commit 的 lib 改動）。
+任務書 [review/review-task.md](review/review-task.md)，報告 [review/review-astra.md](review/review-astra.md)（審 `84e8f30`、`a95404f` 兩個 commit 的 lib 改動）。
 
 | 條 | 問題 | 處理 |
 |---|---|---|
@@ -218,4 +218,4 @@ astra 看過沒問題的：提交點 D 不重放、不漏帳；失敗不會因�
 1. **郵差／驗收員的節奏**：改後導入單的 18～23 秒裡，「等收件」5～6 秒、「等驗收」8～10 秒，這是現在最大的一塊（比模型還多）。要量郵差那條路的每一跳才知道卡在哪。
 2. **團隊預設寄給 human 的通知信真跑**：要故意弄壞郵差連錯 10 次。
 3. 還剩的跳（同 §7 第 6 條）：起 kernel tick 的 Python 約 35 毫秒、agent 一格起 Python 約 28 毫秒，每張導入單加起來約 1.5 秒。
-4. 測試：本輪新增 2 檔 12 條（kill9 3 條、review 9 條），全套 **96 檔 2616 條全綠**（約 3.5 分鐘，基底 main `60e4b81`）。README、lib README 的測試數沒改（三隊並行，交給事後統一改的那隊）。
+4. 測試：本輪新增 2 檔 12 條（kill9 3 條、review 9 條），全套 **96 檔 2616 條全綠**（約 3.5 分鐘，基底 main `4d73809`）。README、lib README 的測試數沒改（三隊並行，交給事後統一改的那隊）。

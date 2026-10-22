@@ -1,6 +1,6 @@
 [
   {
-    "commit": "8c6f08b8",
+    "commit": "62286c74",
     "lifecycle_record_introduced": false,
     "relevant_lines": [
       {
@@ -10,7 +10,7 @@
     ]
   },
   {
-    "commit": "8c2145c4",
+    "commit": "a11843e4",
     "lifecycle_record_introduced": true,
     "relevant_lines": [
       {
@@ -32,7 +32,7 @@
     ]
   },
   {
-    "commit": "95426b17",
+    "commit": "997a2f53",
     "lifecycle_record_introduced": true,
     "relevant_lines": [
       {

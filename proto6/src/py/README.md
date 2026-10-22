@@ -2,7 +2,7 @@
 
 ← [proto6 plan](../../plan/README.md)
 
-inst 與 `aos-exec` 直接從 proto5 複製（proto5 `470f5a04`，即 `git log -1 --format=%h -- proto5/lib proto5/cli`），不重寫。說明文件看 proto5 的 [lib/docs/exec.md](../../../proto5/lib/docs/exec.md)、[directives.md](../../../proto5/lib/docs/directives.md)。
+inst 與 `aos-exec` 直接從 proto5 複製（proto5 `ba76b29e`，即 `git log -1 --format=%h -- proto5/lib proto5/cli`），不重寫。說明文件看 proto5 的 [lib/docs/exec.md](../../../proto5/lib/docs/exec.md)、[directives.md](../../../proto5/lib/docs/directives.md)。
 
 | 這裡 | 來源 | 內容改了什麼 |
 |---|---|---|

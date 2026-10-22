@@ -4,7 +4,7 @@
 
 ## 背景
 
-kernel 剛加了應急版「行程做完」：行程某一次跑完回**退出碼 100**（`config.json` 的 `done_exit`，`aos-kernel-init --done-exit N` 可改，0＝關），kernel 下一回合（要 `runs − runs_at ≥ 2`，因為換人那刻正在跑的一次還是前一位的）就把它的 inst.json 搬到 `procs/done/<pid>.json`、cpu 換回 idle，`aos-kernel ls` 多印一行 `done: …`。細節看 `git show 1d539e5 -- proto4-3/aos_kernel_tick.py proto4-3/aos_kernel.py` 與 `proto4-3/test/test_kernel.py` 新加的三條（那裡示範了怎麼在測試裡真開 daemon＋kernel）。
+kernel 剛加了應急版「行程做完」：行程某一次跑完回**退出碼 100**（`config.json` 的 `done_exit`，`aos-kernel-init --done-exit N` 可改，0＝關），kernel 下一回合（要 `runs − runs_at ≥ 2`，因為換人那刻正在跑的一次還是前一位的）就把它的 inst.json 搬到 `procs/done/<pid>.json`、cpu 換回 idle，`aos-kernel ls` 多印一行 `done: …`。細節看 `git show 51eee11 -- proto4-3/aos_kernel_tick.py proto4-3/aos_kernel.py` 與 `proto4-3/test/test_kernel.py` 新加的三條（那裡示範了怎麼在測試裡真開 daemon＋kernel）。
 
 `aos-step`（`proto4-4/src/step.janet`）現在所有 form 跑完之後每次都回 0。要改成回 100，這樣放進 kernel 就會自己下車。
 

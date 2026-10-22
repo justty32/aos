@@ -1,6 +1,6 @@
 # astra-5 驗收分工
 
-受測 HEAD：`392a1d645eceec98c41678ab2b685959e7ab0522`。依使用者委託只新增本證據目錄與指定報告；不改既有原碼、測試、文件，不 commit／push，不碰 scratchpad，不打 LLM。測試根只在各線自建 /tmp，依 PID 清理並核對 ps。
+受測 HEAD：`af69c13c59314de68186757e01e9b200acd1b0aa`。依使用者委託只新增本證據目錄與指定報告；不改既有原碼、測試、文件，不 commit／push，不碰 scratchpad，不打 LLM。測試根只在各線自建 /tmp，依 PID 清理並核對 ps。
 
 | 線 | 獨占可寫目錄 | 驗收 |
 |---|---|---|

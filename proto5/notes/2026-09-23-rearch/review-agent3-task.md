@@ -2,11 +2,11 @@
 
 # 任務：agent 線三份規範第 3 輪審查（驗收第 2 輪必改 5 條＋定稿判定）
 
-repo `/home/lorkhan/repo/simple_tools/aos`，全部以已提交版本（HEAD = 835bb4b）為準。先讀：
+repo `/home/lorkhan/repo/simple_tools/aos`，全部以已提交版本（HEAD = 1d7593a）為準。先讀：
 - 你上兩輪的報告：`proto5/notes/2026-09-23-rearch/review-agent1-report.md`、`review-agent2-report.md`（第 2 輪 E-1～E-5 必改、D-1～D-8 要寫死、B-6／B-7／B-8、C-1～C-3）。
 - 這輪改了什麼：`proto5/notes/2026-09-23-rearch/agent-round3-changes.md`（與 round2-changes 的 C-1～C-10 表，其中 C-6／C-8 已改成沒通）。
 - 三份第 3 輪草稿（審這三份）：`proto5/spec/agent.md`、`aos-agent.md`、`aos-llm-call.md`。
-- 下層定稿：`cpu.md`、`kernel.md`、`daemon.md`（**注意**：這三份在 a221019 加了「實作補記（2026-09-24）」與新 CLI：`aos-kernel ack`、`init --cpu`、`ls --json`、`aos-daemon stop`，agent 規範若引用 CLI 要對得上）、`aos-exec.md`、`inst-posix.md`、`directives.md`。
+- 下層定稿：`cpu.md`、`kernel.md`、`daemon.md`（**注意**：這三份在 91bdbfa 加了「實作補記（2026-09-24）」與新 CLI：`aos-kernel ack`、`init --cpu`、`ls --json`、`aos-daemon stop`，agent 規範若引用 CLI 要對得上）、`aos-exec.md`、`inst-posix.md`、`directives.md`。
 - 使用者三件拍板不審方向（同上輪）。
 
 ## 要答的

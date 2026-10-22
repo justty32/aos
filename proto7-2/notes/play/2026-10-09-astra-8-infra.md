@@ -4,7 +4,7 @@
 **去重後共 24 條：A（會壞）11、B（不一致）12、C（可簡化）1。沒有發現會重複扣帳或重複跑的高嚴重度核心 bug；但有一條核心邊角（A10-02）是「倒數存檔失敗後重起，會多跑一份額度」。**
 **統一錯誤路徑還沒有涵蓋全部入口：有 12 支入口沒列進清單也沒寫豁免，其中 aos7-ctl、author CSV、mail ack 游標、aos-exec 長索引還會漏出 traceback。檢查器本身也看不到寫到 HOME 的檔案。**
 
-受測 HEAD：`cd544440`（＝main）。今天約 348 個 commit（`cbc67a3d^..cd544440`），清單見[代定清單](../decisions-2026-10-09.md)。kernel 內部已在 [kernel-astra](2026-10-09-kernel-astra.md) 審過，這輪只看它和其他模組怎麼接（接點沒有新問題）。工人是 4 條 `gpt-6-astra` high，用 `-s read-only` 唯讀審查（[任務書](2026-10-09-astra-8-infra-evidence/tasks/)）。每條發現附的重現腳本，由隊長派的驗證工人在可寫的 `/tmp` 實跑，紀錄在各線的 `verify-<id>.log`、`verify.json`。沒有改程式、測試或文件。
+受測 HEAD：`ee794f73`（＝main）。今天約 348 個 commit（`59583b4f^..ee794f73`），清單見[代定清單](../decisions-2026-10-09.md)。kernel 內部已在 [kernel-astra](2026-10-09-kernel-astra.md) 審過，這輪只看它和其他模組怎麼接（接點沒有新問題）。工人是 4 條 `gpt-6-astra` high，用 `-s read-only` 唯讀審查（[任務書](2026-10-09-astra-8-infra-evidence/tasks/)）。每條發現附的重現腳本，由隊長派的驗證工人在可寫的 `/tmp` 實跑，紀錄在各線的 `verify-<id>.log`、`verify.json`。沒有改程式、測試或文件。
 
 | 線 | 範圍 | 原始輸出 | 實跑核對 |
 |---|---|---|---|
@@ -17,8 +17,8 @@
 
 ## 前輪未修項的現況（已修，不再列）
 
-- FL：up 印「起好了」途中收到訊號誤報退 3 → `76e83b41` 已修（`aos7_up.py:165-166` 先交棒再印）。
-- longtask：brain＋llmcall 傳輸中被殺永久卡住 → 現在有不確定期限，滿期回卡住信（`aos7_up_brain.py:466-481`）；status 卡住時第七行（`aos7_up_status.py:216-225`）；跨信記憶已接（`aos7_up_memory.py`）；compact jsonl 空摘要已修（`aos7_compact.py:180-205`）；metrics 多步算重試已修（`9b8924a9`）。
+- FL：up 印「起好了」途中收到訊號誤報退 3 → `f560b38c` 已修（`aos7_up.py:165-166` 先交棒再印）。
+- longtask：brain＋llmcall 傳輸中被殺永久卡住 → 現在有不確定期限，滿期回卡住信（`aos7_up_brain.py:466-481`）；status 卡住時第七行（`aos7_up_status.py:216-225`）；跨信記憶已接（`aos7_up_memory.py`）；compact jsonl 空摘要已修（`aos7_compact.py:180-205`）；metrics 多步算重試已修（`fe071557`）。
 - kernel-astra E5（kernel 沒列進 error_path）已補。
 
 ## A：會壞（11）

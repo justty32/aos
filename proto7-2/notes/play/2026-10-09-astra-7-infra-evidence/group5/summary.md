@@ -1,4 +1,4 @@
-group5 驗收完成，HEAD=`ad1dfa25`。第 5 組指定案例通過；T8-01～08 原版全綠、移除注入副本全紅。另記 2 項發現：history 升級混檔（G／中，既有代定的延伸）、超長索引例外外洩（B／低，原已存在）。只記不修。
+group5 驗收完成，HEAD=`59ce8767`。第 5 組指定案例通過；T8-01～08 原版全綠、移除注入副本全紅。另記 2 項發現：history 升級混檔（G／中，既有代定的延伸）、超長索引例外外洩（B／低，原已存在）。只記不修。
 
 每支 `probe_*.py` 的 docstring 都有 repo 根重跑命令；探針只用 Python 標準庫。所有測試均在指定 systemd scope 內執行，快照收於各 `*-snapshots.tar.gz`。
 
@@ -51,23 +51,23 @@ T8 每組均以 /tmp 的測試副本移除注入，隨後跑原版；原 tracked
 | spec §5.5 | 有：proto7-2/spec.md:244，槽外 tmp 由寫者清 |
 | spec §6 | 有：proto7-2/spec.md:252，啟動中 kill unknown 留請求 |
 | 契約卡2.1 | 有：proto7-2/notes/component-contracts.md:50 |
-| problems A8-05 | 無：未見，HEAD=ad1dfa25 |
-| problems A8-06 | 無：未見，HEAD=ad1dfa25 |
-| problems A8-07 | 無：未見，HEAD=ad1dfa25 |
-| problems A8-08 | 無：未見，HEAD=ad1dfa25 |
+| problems A8-05 | 無：未見，HEAD=59ce8767 |
+| problems A8-06 | 無：未見，HEAD=59ce8767 |
+| problems A8-07 | 無：未見，HEAD=59ce8767 |
+| problems A8-08 | 無：未見，HEAD=59ce8767 |
 | problems A8-09 | 有：proto7-2/notes/problems.md:210 |
-| problems A8-10 | 無：未見，HEAD=ad1dfa25 |
-| problems A8-11 | 無：未見，HEAD=ad1dfa25 |
-| problems C8-01 | 無：未見，HEAD=ad1dfa25 |
-| problems C8-02 | 無：未見，HEAD=ad1dfa25 |
-| problems C8-03 | 無：未見，HEAD=ad1dfa25 |
+| problems A8-10 | 無：未見，HEAD=59ce8767 |
+| problems A8-11 | 無：未見，HEAD=59ce8767 |
+| problems C8-01 | 無：未見，HEAD=59ce8767 |
+| problems C8-02 | 無：未見，HEAD=59ce8767 |
+| problems C8-03 | 無：未見，HEAD=59ce8767 |
 
 文件整體為部分；缺列依任務要求不列 bug。
 
 自由挖：一年上限前一值／等值／後一值，以及多欄同時非法，通過；AUDIT_ALLOW 空段、相對路徑與 node 外路徑不會誤豁免，通過；mount readlink 連續EIO會保留請求，解除後即成功，分類X、不是永久卡住。[core.json][core]、[modules.json][modules]
 
 - **NEW-group5-1｜G／中：history 升級混檔，已知代定的延伸。** 契約：`modules/README.md:28`、`modules/history.py:10`；代定 `notes/decisions-2026-10-09.md:53` 明說舊檔名不變。最小重現：舊版為 a+b 寫一回合，保留輸出與 state，新版續跑 a+b 並新增 a/b；a+b.jsonl 會混入兩個 node，原 a+b 的新紀錄另在 a%2Bb.jsonl。影響是同一來源分檔、不同來源混檔且無來源標籤。建議明訂升級封存／搬移流程，有歧義不得直接追加。使用真舊／新 history writer 重現。[docs-edges.json][docs]
-- **NEW-group5-2｜B／低：超長 ASCII 索引逸出 ValueError。** 契約：`proto6/spec/inst.md:37、47`、`proto5/spec/directives/ref.md:48`（proto7-2 的 aos_inst.py:3 引用）。最小重現：inst 的 argv 參照 `#/array/` 加5000個9，array=[0]；真 aos-exec 回1並印 traceback，應是 ReferencePointerInvalid／rc125。4300位正常回具名錯誤，4301位起逸出。影響解析錯誤的退出碼與錯誤格式；未啟動子任務。建議在 int 轉換前檢查長度／範圍或轉譯 ValueError。510dd134 與 HEAD 同樣失敗，非本輪引入。[docs-edges.json][docs]、[error-loop.json][error]
+- **NEW-group5-2｜B／低：超長 ASCII 索引逸出 ValueError。** 契約：`proto6/spec/inst.md:37、47`、`proto5/spec/directives/ref.md:48`（proto7-2 的 aos_inst.py:3 引用）。最小重現：inst 的 argv 參照 `#/array/` 加5000個9，array=[0]；真 aos-exec 回1並印 traceback，應是 ReferencePointerInvalid／rc125。4300位正常回具名錯誤，4301位起逸出。影響解析錯誤的退出碼與錯誤格式；未啟動子任務。建議在 int 轉換前檢查長度／範圍或轉譯 ValueError。9c54febf 與 HEAD 同樣失敗，非本輪引入。[docs-edges.json][docs]、[error-loop.json][error]
 
 完整分類、契約、重現與修法：[findings.json][findings]。未修改任何既有 tracked 檔，未 commit／push，未呼叫 LLM。自建暫存根均清除、無本線殘留活程序；ps-before／ps-final、逐探針清理紀錄與最終核對在 [cleanup.json][cleanup]。外部啟動器的 `/tmp/astra7-group5-codex.log` 保留未動。
 

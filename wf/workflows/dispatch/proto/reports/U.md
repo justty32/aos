@@ -4,7 +4,7 @@
 
 **STATUS：DONE**
 
-commit `bdb3595`（實作）＋ 本報告。分支 main，直接在 working tree 做，沒有 push。
+commit `2c11f30`（實作）＋ 本報告。分支 main，直接在 working tree 做，沒有 push。
 
 ## 做了什麼
 
@@ -28,7 +28,7 @@ commit `bdb3595`（實作）＋ 本報告。分支 main，直接在 working tree
 | 3 | `aos agent init` | 空資料夾 init 後 `.aos/tools/` ＝ `cat.json ls.json sh.json`；`agents/<name>/` 底下**沒有** `tools.json`（白名單缺席＝全部可用）；`aos state` 印出正常 status JSON |
 | 4 | 真 LM Studio 三回合 | `aos say "列出目前資料夾的檔案"` → `aos run --step 1` ×5。log.md：turn 1 assistant 寫出 `{"tool":"ls","args":["-la", "."]}`、投遞成 `["ls","-la","."]`；turn 3 tool 訊息是 `{"args":["-la","."],"call_id":"agent-bob-tool-1-0","ok":true,"result":{"exit":0,…,"stdout":"total 0\n…\n.aos\n"},"tool":"ls"}`；turn 3 assistant 引用結果回「目前資料夾內沒有檔案，只有一個名為 `.aos` 的子資料夾」 |
 | 5 | 假回覆 `{"tool":"nope","args":[]}` | 測試接縫（注入 completion）：`aos_agent_tests "agent returns tool call errors and resumes thinking next step"` → 15 assertions 全過。history 末項 `role == "tool"`，內容是 `{"call_id":"agent-bob-tool-7-0","tool":"nope","args":[],"ok":false,"result":null,"error":{"type":"unknown_tool","message":"沒有登記工具 nope","retryable":false}}`；**下一個 step** 確實把它送進 LLM（callback 被呼叫且看得到那則 tool 訊息） |
-| 6 | contacts 與版控 | `aos contact add bob ../bob --folder-root $W && aos contact ls` 列出 `bob ../bob`；`python3 -m json.tool .aos/contacts.json` 解析成功（頂層陣列）；repo 根 `git check-ignore .aos/tools/ls.json` 回 exit 1（不再被忽略），五個 json 已隨 `bdb3595` 進版控 |
+| 6 | contacts 與版控 | `aos contact add bob ../bob --folder-root $W && aos contact ls` 列出 `bob ../bob`；`python3 -m json.tool .aos/contacts.json` 解析成功（頂層陣列）；repo 根 `git check-ignore .aos/tools/ls.json` 回 exit 1（不再被忽略），五個 json 已隨 `2c11f30` 進版控 |
 
 ## 隊長裁決
 

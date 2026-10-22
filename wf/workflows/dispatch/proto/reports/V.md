@@ -2,7 +2,7 @@
 
 ← [交接書 proto-V-sched-D](../done/proto-V-sched-D.md)｜ideas/scheduling｜[PROTOCOL](../PROTOCOL.md)
 
-**分支**：`worktree-agent-aa49bca5136311628`（已 rebase 到 main `0aea5fa`，含隊 U 的 `core/tool`）
+**分支**：`worktree-agent-aa49bca5136311628`（已 rebase 到 main `f2d5fd6`，含隊 U 的 `core/tool`）
 **隊形**：Opus 隊長＋codex gpt-5.6-sol ×3（隊長寫任務書、審 diff、跑建置與驗收、commit；不親自寫實作）
 
 ## 做了什麼
@@ -11,9 +11,9 @@
 
 | commit | 內容 |
 |---|---|
-| `11f42bc` | `core/llm` 槽層：`slot.hpp`／`slot.cpp`／`test_slot.cpp`＋CMake |
-| `df33f4c` | `aos llm` 接上槽：`--engine`／`--priority`／`--slots`、exit 75；review 修正 `O_CLOEXEC` |
-| `ea8f12a` | pi 的 step 佔一個 provider 槽；`smoke_slots.sh`＋README／code-map／ideas 註記 |
+| `96df9ea` | `core/llm` 槽層：`slot.hpp`／`slot.cpp`／`test_slot.cpp`＋CMake |
+| `1a81f4a` | `aos llm` 接上槽：`--engine`／`--priority`／`--slots`、exit 75；review 修正 `O_CLOEXEC` |
+| `8677ad8` | pi 的 step 佔一個 provider 槽；`smoke_slots.sh`＋README／code-map／ideas 註記 |
 
 **機制**：每顆 CPU 一個目錄 `<AOS_HOME>/slots/<cpu>/`，`N` 個槽檔 `<k>.lock` 用
 `flock(LOCK_EX|LOCK_NB)` 輪取；取不到就寫等待票 `wait/<pkey>-<ts>-<pid>`，
@@ -30,7 +30,7 @@
 
 | # | 驗收 | 證據 |
 |---|---|---|
-| 1 | build＋ctest 全綠（rebase 後） | rebase 到 main `0aea5fa` 後 `cmake --build --preset default -j8` 無 warning；`ctest --preset default` **8/8 全過**（隊 U 的 `aos_tool_tests` 一併過） |
+| 1 | build＋ctest 全綠（rebase 後） | rebase 到 main `f2d5fd6` 後 `cmake --build --preset default -j8` 無 warning；`ctest --preset default` **8/8 全過**（隊 U 的 `aos_tool_tests` 一併過） |
 | 2 | 兩個 `aos llm` 搶一個槽；`wait_ms` 100 → exit 75 | `smoke_slots.sh` [1/4]：`--slots` 在第一個跑時顯示 `lmstudio 1 held 1 waiting`，假端點的呼叫時序算出**同時最大呼叫數＝1**（`start A`→`end A`→`start B`），兩個都 exit 0。[2/4]：`wait_ms=100` 時第二個 `exit=75`、stderr **剛好一行** `waiting-llm` |
 | 3 | 三個等待者 priority 1／5／3 → 取槽順序 5、3、1 | `aos_llm_tests` 的 `waiting llm slots honor numeric priority`：父行程佔住唯一的槽、fork 三個子行程（priority 1／5／3）、輪詢等三張票都到齊才放槽。斷言 `{"5","3","1"} == {"5","3","1"}` PASSED |
 | 4 | 世界層只能往下限 | `smoke_slots.sh` [3/4]：使用者層 `max_inflight 1`，世界層設 `0` → `aos llm` 立刻 `exit 75`＋`waiting-llm`；世界層設 `5` → `--slots` 的 `MAX` 欄**仍是 1**（取小者） |

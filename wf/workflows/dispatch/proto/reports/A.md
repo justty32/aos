@@ -38,7 +38,7 @@
 
 | hash | 內容 |
 |---|---|
-| `fecbdac` | `core: exec / wire / loop 三個小專案——按層切乾淨的最小機器` |
+| `724478e` | `core: exec / wire / loop 三個小專案——按層切乾淨的最小機器` |
 
 51 個檔：三個小專案（含各自 README 與 tests）、`core/CMakeLists.txt` 三行 `add_subdirectory`、`core/README.md` 三列、`wf/workflows/common/code-map.md` 的登記。
 **`git add` 全程只加明確路徑**，使用者未提交的 `wf/` 改動（30+ 個檔）原封不動。**未 push。**

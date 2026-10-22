@@ -1,5 +1,5 @@
 **這是什麼**：讓 AI 學徒寫新工具：學徒交的候選先過三關（檢查、跑測試、審查），過了才變成一條等人合併的分支。
-**一行跑起來**：`proto7-2/packs/author/bin/aos7-gates check proto7-2/packs/author/examples/aos-tool-usage/request.json proto7-2/packs/author/examples/aos-tool-usage/valid.json --ref 3c18d378064e39b9fdcc8f4b14be2aa9a47b1fe7`
+**一行跑起來**：`proto7-2/packs/author/bin/aos7-gates check proto7-2/packs/author/examples/aos-tool-usage/request.json proto7-2/packs/author/examples/aos-tool-usage/valid.json --ref 3c916272d614b040e7d85eddabc106f9b7220a58`
 **看到什麼**：`{"ok": true, ...}`，三關的 `ok` 都是 true。
 
 ## 第一次跑
@@ -7,7 +7,7 @@
 在 repo 根目錄照抄。範例工具已加入目前版本，所以用加入前的基準來練習。
 
 ```sh
-proto7-2/packs/author/bin/aos7-gates check proto7-2/packs/author/examples/aos-tool-usage/request.json proto7-2/packs/author/examples/aos-tool-usage/valid.json --ref 3c18d378064e39b9fdcc8f4b14be2aa9a47b1fe7
+proto7-2/packs/author/bin/aos7-gates check proto7-2/packs/author/examples/aos-tool-usage/request.json proto7-2/packs/author/examples/aos-tool-usage/valid.json --ref 3c916272d614b040e7d85eddabc106f9b7220a58
 ```
 
 實跑輸出：

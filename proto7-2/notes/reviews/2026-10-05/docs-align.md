@@ -2,7 +2,7 @@
 
 ← [本日審查](README.md)｜素材：[spec-readability](spec-readability.md) F01～F34、[packs-use](packs-use.md) §4、§5；界線：[loop7 藍圖](../../blueprint-loop7.md) D1～D10
 
-只改「文件說錯、程式是對的」與「有條件的保證寫成絕對」；**沒改任何 .py**。每條改前對照程式（審查時的行號已部分移位，以下行號是本次核對的 HEAD 4fdf7f4b）。
+只改「文件說錯、程式是對的」與「有條件的保證寫成絕對」；**沒改任何 .py**。每條改前對照程式（審查時的行號已部分移位，以下行號是本次核對的 HEAD ad4bdc6f）。
 
 ## 改了（一行一條）
 

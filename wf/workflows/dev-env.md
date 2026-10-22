@@ -35,7 +35,7 @@
 aos 是 `simple_tools` 的 submodule：`aos/.git` 是指標檔，真正的 gitdir 在 `../.git/modules/aos`。
 
 **背景**：2026-09-02 一個 worktree session 收尾清理時把那個 gitdir 清空，四個未 push 的 commit 物件遺失，
-只能從 GitHub 重 clone、拿工作樹重建（重建後是 `9bd31c0`、`e292b83`）。之後一度禁止在本 repo 開 worktree 隔離。
+只能從 GitHub 重 clone、拿工作樹重建（重建後是 `af49170`、`b19f1d8`）。之後一度禁止在本 repo 開 worktree 隔離。
 
 **現在的規則**〔使用者方向 2026-09-30 晚〕：派出去的隊**可以**開 worktree 隔離（`isolation: worktree`／EnterWorktree），但要照下面三條防範：
 

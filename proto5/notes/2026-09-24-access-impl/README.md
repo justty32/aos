@@ -73,7 +73,7 @@ env 只有 8 個名字：沒有 OPENAI_API_KEY、AOS_KERNEL_HOME、AOS_LLM_CONFI
 
 ## 數字
 
-- 全測：1343 → **1447**（分支上）；rebase 到 main（ce8f25c，多了 talk 的測試）後是 **1470 條全綠**。新測試檔：`test_agent_access.py`（53 條）、`test_jail.py`（13 條，真的跑 bwrap）、`test_agent_tools_manage.py`（31 條）、`test_access_more.py`（7 條）。
+- 全測：1343 → **1447**（分支上）；rebase 到 main（f1a3810，多了 talk 的測試）後是 **1470 條全綠**。新測試檔：`test_agent_access.py`（53 條）、`test_jail.py`（13 條，真的跑 bwrap）、`test_agent_tools_manage.py`（31 條）、`test_access_more.py`（7 條）。
 - astra 必修 **8 條，修了 8 條**：
   - aos-jail 改用絕對路徑，aos 自己的程式算進「寫不到」的清單；
   - 符號連結本身也保護；

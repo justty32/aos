@@ -1,10 +1,10 @@
 # daemon／tick-tock 核心精簡方案（只出方案，沒改程式）
 
-**已照頂層定案執行（commit 範圍 1e94ba09～本次），F47 與 kernel 任務包、aos7-pack 未做。**（2026-10-10 註：kernel 任務包 10-09 已做成 [packs/kernel/](../packs/kernel/README.md)；aos7-pack 仍未做。）
+**已照頂層定案執行（commit 範圍 1d240b19～本次），F47 與 kernel 任務包、aos7-pack 未做。**（2026-10-10 註：kernel 任務包 10-09 已做成 [packs/kernel/](../packs/kernel/README.md)；aos7-pack 仍未做。）
 
 ← [proto7-2](../README.md)｜[spec](../spec.md)｜[problems](problems.md)｜照的原則：[principles](../../proto7/notes/principles.md) 第 1、2、4、5、7～10 條｜核心要求：[core.md](../../proto7/spec/core.md)（S- 條）
 
-**10-04 依使用者「核心保持精簡、類似用途集結成模組／模組包」（第 7 條）、「kernel 也分層、成任務包」（第 8 條）、「KISS、錯誤分類、誤用不歸組件管」（第 9 條）寫的方案。** 以 git HEAD（6ed9a7a7）為準。工作區另有另一個隊伍未 commit 的 A3 測試（`tests/test_matrix_a3.py`、`test_options_a3.py`），只拿來參考，用到的地方會標明。這份不改程式、spec、測試。
+**10-04 依使用者「核心保持精簡、類似用途集結成模組／模組包」（第 7 條）、「kernel 也分層、成任務包」（第 8 條）、「KISS、錯誤分類、誤用不歸組件管」（第 9 條）寫的方案。** 以 git HEAD（5384509d）為準。工作區另有另一個隊伍未 commit 的 A3 測試（`tests/test_matrix_a3.py`、`test_options_a3.py`），只拿來參考，用到的地方會標明。這份不改程式、spec、測試。
 
 > **判斷依據可替換。** 每項保護防的是「組件自己的錯／外部環境故障／誤用」，這個分法是**我自己的判斷**，依據寫在第 2 節。Fable 正在寫的「組件契約藍圖」（第 10 條）定稿後，以那份契約的「前置條件／明確不管」為準重新對一次；本方案的表都留了「防的是」欄，方便整批改判。
 

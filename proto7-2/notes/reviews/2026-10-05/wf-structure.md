@@ -5,7 +5,7 @@
 本報告只使用收到「立刻收尾」指示前已取得的結果。全程未修改 repo 檔案、未 commit、未 push，也未執行建置、測試、原型或會產生驗收資料的腳本。
 
 - 盤點截點：**2026-10-05 09:52:46，台灣時間**。
-- 核對的 HEAD：`6daebe2ef8227021745def649f4e3d86a3a8038c`。
+- 核對的 HEAD：`058df3988cbef0ec6a9db288e3edd5827e67ddb0`。
 - 大小以實際 bytes 計算，門檻為 **嚴格大於 8,192 bytes**。
 - 「封存」以路徑含 `archive/` 判定；不把整個舊原型直接視為封存。
 - 審查期間另有兩份未追蹤報告出現：`proto7-2/notes/reviews/2026-10-05/event-store.md`、`test-review.md`。兩份都已納入截點盤點；不是本線寫入。
@@ -29,10 +29,10 @@
 
 | Git 版本 | `proto6/` 未封存超標 | `wf/` 未封存超標 |
 |---|---:|---:|
-| `c15aee6f` | 15 | 44 |
-| `5a806afc` | 19 | 44 |
-| `c1cf5bf2` | 22 | 44 |
-| `6143919f` | 31 | 44 |
+| `2c517535` | 15 | 44 |
+| `97d92476` | 19 | 44 |
+| `aa7cae19` | 22 | 44 |
+| `888e4cad` | 31 | 44 |
 | 本次 HEAD | **31** | **45** |
 
 相對第一列，proto6 增加 16 份；wf 新增超標的是 `wf/workflows/roadmap.md`。建議把 SESSION 條目更新成「本次盤點完成、整理尚未執行」，不要繼續沿用舊數字。
@@ -59,11 +59,11 @@
 |---|---|---|
 | 頂層路由仍把 proto6 稱為現行主線，沒有完整導向 proto7-2 | `wf/INDEX.md:21`、`:22`；`wf/WORKFLOWS.md:20`；`proto7/README.md:18` 仍稱 proto7-2 只有 spec 草稿，與 `proto7-2/README.md:5` 不符 | 更新現行入口及狀態；proto7 的原則文件仍保留其權威，不因實作移到 7-2 就封存 |
 | `problems.md` 混用舊契約、修復紀錄及現況 | `proto7-2/notes/problems.md:23` 與 `:298` 的 `retry_lost` 位置不同；`:36` 與 `:292` 的 kill `run` 必填規則不同；`:74` 還談 `ctl-failed`，`:338` 已記移除 | 先校正「現行」段落，再把 A2～A7 修復歷史移出；不能直接按篇幅切成數份 |
-| core-slimming 的未完成敘述已部分失效 | `proto7-2/notes/core-slimming.md:3`；F47 已由 `daf8d5cf` 處理，step／budget／adapt 分別見 `ca7f5159`、`025d2bfe`、`d3738e04` | 抽出真正剩餘的 kernel／agent／LLM 計畫；已完成部分封存 |
+| core-slimming 的未完成敘述已部分失效 | `proto7-2/notes/core-slimming.md:3`；F47 已由 `fd8fd147` 處理，step／budget／adapt 分別見 `326464ee`、`5e021125`、`aaad7c1a` | 抽出真正剩餘的 kernel／agent／LLM 計畫；已完成部分封存 |
 | core-slimming 又不是整份都完成 | `proto7-2/notes/core-slimming.md:337`–`:394` 尚有 kernel-core、aos7-pack、supervise／schedule／relay／observe／agent 等提案；`:431` 的理由仍被 `notes/component-contracts.md:165` 使用 | **不可整份直接封存**；先保留未完成計畫與有效理由 |
 | layer-interfaces 是舊版本調查，但局部補過新結果，讀者容易當成最新契約 | `proto7-2/notes/layer-interfaces/02-ticktock-task.md:11`、`:22`、`:36`；`05-gaps.md:17` 的 G3 與 `notes/problems.md:171`、`modules/subd/README.md:23` 不符 | 抽出仍開放缺口及 kernel 遷移事項後，整組標為歷史調查並封存 |
 | 真 root 驗收尚未完成，卻指向過時操作手冊 | `wf/WAIT_USER.md:29`；`proto6/notes/2026-10-01-account-manual.md:47`、`:61`、`:134`、`:150` | 保留手動驗收待辦，**先修手冊再讓使用者照跑** |
-| 手冊的 mq／ctl 介面已落後 | 現行 `proto6/src/py/lib/aos_mq.py:3`–`:14`、`:39`；`aos_ctl.py:56`；`aos_daemon_mq.py:56`；介面變更見 `52870cbd` | 修正 socket 參數、`AOS_DAEMON_CTL_SOCKET`、subscribers 設定及原始 JSON 訊息格式，不只更新版本號 |
+| 手冊的 mq／ctl 介面已落後 | 現行 `proto6/src/py/lib/aos_mq.py:3`–`:14`、`:39`；`aos_ctl.py:56`；`aos_daemon_mq.py:56`；介面變更見 `38f50dc3` | 修正 socket 參數、`AOS_DAEMON_CTL_SOCKET`、subscribers 設定及原始 JSON 訊息格式，不只更新版本號 |
 | 舊 spec 有活引用，不能為縮小 wf 直接搬走 | `wf/workflows/spec/README.md:7` 已定位為歷史；但 `wf/workflows/ideas/README.md:33` 仍依賴 spec 的 rulings | 先把有效裁決搬到 ideas 所屬層，再封存舊規格 |
 | 整理流程的驗收條件與結構原則矛盾 | `wf/workflows/tidy/README.md:16`、`:22`、`:23` 要求超標歸零；`wf/STRUCTURE.md:33`、`:59` 明列例外 | 先統一驗收規則，否則會逼人硬拆完整規格及研究 |
 
@@ -99,23 +99,23 @@ root 手冊的具體落差包括：
 
 | 位置 | 已確認落差與證據 | 處置 |
 |---|---|---|
-| `wf/SESSION-LOG.md:18` | 仍寫「等使用者說繼續：修 F-01～F-11 與 N-55」。`proto7-1/notes/play/README.md:13` 已記修復 `ddda65a9`，`:14`、`:15` 又記後續 G／H 修復 | 移除這段待修；保留同列尚待使用者閱讀的 S-21 |
+| `wf/SESSION-LOG.md:18` | 仍寫「等使用者說繼續：修 F-01～F-11 與 N-55」。`proto7-1/notes/play/README.md:13` 已記修復 `ff22fe72`，`:14`、`:15` 又記後續 G／H 修復 | 移除這段待修；保留同列尚待使用者閱讀的 S-21 |
 | `wf/SESSION-LOG.md:26` | 仍列 09-13 r1 修補、LLM cpu、compact；`wf/session_logs/2026-09/2026-09-13.md:5` 已記相關完成且 open 無，`:7` 已記提醒 compact；`proto4/notes/play/README.md:35` 記 r1 收尾 | 刪除這條 hub 待辦；歷史留 git／原紀錄 |
 | `wf/SESSION-LOG.md:17` | 仍將 proto7-1 K 系列列為待修；但 `SESSION-LOG.md:16` 已明說不修 7-1、併入 7-2，`proto7-2/notes/changes-from-7-1.md:37`–`:42` 有承接 | 退出 7-1 活修補佇列；不能改寫成 K 系列全部已修，kernel 等仍有未做部分 |
-| `wf/SESSION-LOG.md:16` | A2／A3／P2 修復、歷次測試數佔大量篇幅；修復已記於 `proto7-2/notes/problems.md:93`–`:105`、`:128`–`:142`，相關提交包括 `5cf34d7f`、`9d59e233`、`537ef674`、`79e67233` | 刪除已完成細節；真正的 W1～W12 待決移到 WAIT 所屬位置 |
+| `wf/SESSION-LOG.md:16` | A2／A3／P2 修復、歷次測試數佔大量篇幅；修復已記於 `proto7-2/notes/problems.md:93`–`:105`、`:128`–`:142`，相關提交包括 `6d4ef2b8`、`7bc6217c`、`be5a3f53`、`12a02745` | 刪除已完成細節；真正的 W1～W12 待決移到 WAIT 所屬位置 |
 | `wf/SESSION-LOG.md:15` | 標「進行中」，內文卻記使用者要求下一批前先停，又混入更早的自主工作授權 | 改成最新的暫停／下一步狀態；事件保存、agent／LLM 等仍保留，完成史退出 hub |
 | `wf/SESSION-LOG.md:24`、`:25` | 09-22 和 09-21 重複列④⑤；`wf/session_logs/2026-09/2026-09-22.md:4` 直接說同前一天 | 合併成一筆；不是判定工作完成 |
 | `wf/SESSION-LOG.md:27` | 舊 kernel v1 缺項中的 syscalls／done／boot 已落地，見 `proto4-3/docs/kernel.md:24`、`:26`、`:46`、`:56`；但 firmware／daemon-kernel 通道仍未做，見 `:180` | 僅移除已完成子項 |
 | `wf/SESSION-LOG.md:28` | dev 模型、qa、push 已在 `wf/session_logs/2026-09/2026-09-06.md:8`–`:9` 記完成；`proto4-2/README.md:3` 已記該方向失效 | 清掉已完成／失效子項；不要一併刪除尚未證明完成的預算、cached-token／歷史成本事項 |
 | `wf/WAIT_USER.md:24` | 「已裁決／代裁紀錄」明寫非待答，卻仍計 19 open；`wf/wait-user/decided-2026-09-24.md:5`、`wf/wait-user/README.md:7` 也已明示裁決 | 不應再計入「等你一句話」；先抽出執行尾項再封存 |
-| `wf/wait-user/company-market.md:26`、`:30` | #56、#59 的額度／預算已依 09-25 董事決定從 20 改 25；現況見 `examples/company/README.md:65`、`examples/company/company.json:7`；提交 `a551b957` | 移除待拍板狀態，保留正式決策來源 |
-| `wf/wait-user/company-market.md:35` | #62 權重仍列待答，但 `:37` 及 `brief/2026-09-25.md:196` 記已決；提交 `895ad51b` | 移除待答 |
-| `wf/wait-user/company-market.md:55`、`:57` | #74、#75 還是問題句；相鄰 `:56`、`:58` 已記決定和實作；另見 `wf/wait-user/rescore-74-75.md:5`、`:7`、`:8`，提交 `9261eae0`、`895ad51b` | 移除待答，同步刪 `WAIT_USER.md:25`「74、75 最要緊」 |
+| `wf/wait-user/company-market.md:26`、`:30` | #56、#59 的額度／預算已依 09-25 董事決定從 20 改 25；現況見 `examples/company/README.md:65`、`examples/company/company.json:7`；提交 `80837b2e` | 移除待拍板狀態，保留正式決策來源 |
+| `wf/wait-user/company-market.md:35` | #62 權重仍列待答，但 `:37` 及 `brief/2026-09-25.md:196` 記已決；提交 `51b2bb5c` | 移除待答 |
+| `wf/wait-user/company-market.md:55`、`:57` | #74、#75 還是問題句；相鄰 `:56`、`:58` 已記決定和實作；另見 `wf/wait-user/rescore-74-75.md:5`、`:7`、`:8`，提交 `a90b9f13`、`51b2bb5c` | 移除待答，同步刪 `WAIT_USER.md:25`「74、75 最要緊」 |
 | `wf/wait-user/proto2.md:17` | #6 的後代層級問題已由 `proto2/docs/kids.md:26`–`:27`、`proto2/packs/kids.py:6`、`:102` 與測試固定；T16 見 `proto2/notes/tools/README.md:63` | 移除待裁 |
-| `wf/wait-user/proto2.md:18` | #8 還說 agent 通訊未做；已有 `proto2/docs/communication.md:3`、`:9`、`:17`、kids 文件及 T17；相關提交 `6de6b008`、`cb777da8` | 移除已解問題 |
-| `wf/WAIT_USER.md:35` | 「kernel 帳本整份讀寫、agent 每格讀整份」已部分失效。`proto5/spec/kernel/ledger.md:24`–`:26` 已改只寫變更；`proto5/lib/aos_agent_runtime.py:80`–`:84` 已做 O(1) 讀取；提交 `fd6b68e2` | 改成實際剩餘規模限制；kernel 全量讀取、一 cpu 一 Python 等不可順便判完成 |
-| `wf/WAIT_USER.md:36` | 還說閒置 agent 每格醒來、K 隊正在提案；`proto5/notes/2026-09-24-idle-wait-impl/README.md:5`–`:6`、`:14` 已記實作與量測；提交 `c56044de` | 移除這段舊待辦 |
-| `wf/wait-user/proto5-kernel.md:7` | #14(e) paused tick 子題已處理，見 `proto5/spec/aos-agent/tick.md:7`，提交 `39059930`、`59f85080` | 只移除該子題，其他 kernel 問題保留 |
+| `wf/wait-user/proto2.md:18` | #8 還說 agent 通訊未做；已有 `proto2/docs/communication.md:3`、`:9`、`:17`、kids 文件及 T17；相關提交 `a61e746e`、`fd443290` | 移除已解問題 |
+| `wf/WAIT_USER.md:35` | 「kernel 帳本整份讀寫、agent 每格讀整份」已部分失效。`proto5/spec/kernel/ledger.md:24`–`:26` 已改只寫變更；`proto5/lib/aos_agent_runtime.py:80`–`:84` 已做 O(1) 讀取；提交 `680e2656` | 改成實際剩餘規模限制；kernel 全量讀取、一 cpu 一 Python 等不可順便判完成 |
+| `wf/WAIT_USER.md:36` | 還說閒置 agent 每格醒來、K 隊正在提案；`proto5/notes/2026-09-24-idle-wait-impl/README.md:5`–`:6`、`:14` 已記實作與量測；提交 `1b7c6a87` | 移除這段舊待辦 |
+| `wf/wait-user/proto5-kernel.md:7` | #14(e) paused tick 子題已處理，見 `proto5/spec/aos-agent/tick.md:7`，提交 `974e74e2`、`1ecd59c0` | 只移除該子題，其他 kernel 問題保留 |
 | `wf/wait-user/proto5-kernel.md:13` | #20(a) 與 #14(a) 跨世代 stop 重複，相關實作筆記仍標未完成 | 合併重複引用；不把它判成完成 |
 | `wf/wait-user/company-market.md:31` | #60 仍使用 2M／4M 舊參數；`examples/company/README.md:66` 已是 25M／50M，`:78` 仍要求授權 | 更新背景數字，保留真正的決策問題 |
 
@@ -809,7 +809,7 @@ for root in roots:
 python3 -B -c '
 import subprocess
 
-refs = ["c15aee6f", "5a806afc", "c1cf5bf2", "6143919f", "HEAD"]
+refs = ["2c517535", "97d92476", "aa7cae19", "888e4cad", "HEAD"]
 for ref in refs:
     raw = subprocess.check_output(
         ["git", "ls-tree", "-rlz", ref, "--", "wf", "proto6"]
@@ -833,10 +833,10 @@ for ref in refs:
 各完成證據可用相同唯讀方式檢查：
 
 ```sh
-git show --format=fuller --stat ddda65a9
-git show --format=fuller --stat 52870cbd
-git show --format=fuller --stat 895ad51b
-git show --format=fuller --stat c56044de
+git show --format=fuller --stat ff22fe72
+git show --format=fuller --stat 38f50dc3
+git show --format=fuller --stat 51b2bb5c
+git show --format=fuller --stat 1b7c6a87
 ```
 
 ### 9.3 重現 lint 一般掃描，排除會寫入的 self 分支

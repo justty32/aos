@@ -1,4 +1,4 @@
-astra-7／longrun（2026-10-09，HEAD `ad1dfa25`）：本線驗收全部通過，無新發現、無未做項目。
+astra-7／longrun（2026-10-09，HEAD `59ce8767`）：本線驗收全部通過，無新發現、無未做項目。
 
 - 通過｜全套一次：458 項、0 failure／error／skip，rc 0；unittest 244.845 秒、外部計時 245.035 秒。兩個已知偶紅案例本次皆綠，未觸發補跑。證據：[suite.json](suite.json)、[suite.log](suite.log)；重跑：[probe_suite.py](probe_suite.py)。
 - 通過｜step：真 daemon 跑完並關閉 r1～r450，88.486 秒；150／150 個完成工作快照正確，兩步 attempt 均為 1，halt／error=0。證據：[step.json](step.json)、[step-snapshots.tar.gz](step-snapshots.tar.gz)；重跑：[probe_longrun.py](probe_longrun.py) 的 `step`。
@@ -9,7 +9,7 @@ astra-7／longrun（2026-10-09，HEAD `ad1dfa25`）：本線驗收全部通過�
 - 通過｜持久狀態：`nodes.json` 無 `reaping` 鍵；450 回合倒數完 `paused.json={"paused":{"a":["qa"]},"steps":{}}`，狀態為 paused。`.aosd/` r10～r450 共 441 次觀測的固定檔名均為同 8 個；暫態 tmp 未累積。證據：[step.json](step.json)、[step-snapshots.tar.gz](step-snapshots.tar.gz)。
 - 通過｜清理／寫入邊界：四個自建 `/tmp/astra7-longrun-*` 根已移除，無本線殘留程序，既有 tracked 檔無修改，證據單檔均低於 300 KiB。證據：[ps-before.txt](ps-before.txt)、[ps-final.txt](ps-final.txt)、[cleanup.json](cleanup.json)；重驗：[probe_cleanup.py](probe_cleanup.py)。
 
-各 lib 檔相對 `510dd134` 的行數變化如下；`aos7_*` 才計入核心總額。完整 `git diff --stat` 為 10 檔、268 insertions／71 deletions。
+各 lib 檔相對 `9c54febf` 的行數變化如下；`aos7_*` 才計入核心總額。完整 `git diff --stat` 為 10 檔、268 insertions／71 deletions。
 
 | lib 檔 | 總行：前→後 | 總行差 | 程式行差 |
 |---|---:|---:|---:|

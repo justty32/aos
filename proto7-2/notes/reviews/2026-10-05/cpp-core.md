@@ -2,7 +2,7 @@ proto7-2 已推翻 C++ 現行「同步批次 loop 同時承載 agent 語意」�
 
 ## 1. 審查範圍與驗證程度
 
-- **基準版本**：`6daebe2ef8227021745def649f4e3d86a3a8038c`。
+- **基準版本**：`058df3988cbef0ec6a9db288e3edd5827e67ddb0`。
 - **範圍**：`core/exec`、`wire`、`loop`、`llm`、`agent`、`tick`，對照 `proto7-2` 現行實作、spec、模組契約、`notes/problems.md` 與六輪 play 報告。
 - 六條平行審查線均已回報；主要發現另做交叉查核。
 - **全程唯讀**：沒有修改檔案、執行產品程式、建置、測試、故障注入、commit 或 push。最後檢查 `core`、`proto7-2` 沒有工作樹差異。

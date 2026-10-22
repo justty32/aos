@@ -2,7 +2,7 @@
 
 **A6-01、A6-02 修補驗收通過，subd G3 正式壓力 10／10；budget 未見重複扣款、重複效果或守恆破壞。adapt 的流速、故障恢復、step 接法與長跑通過，但確認一項低嚴重 B：A7-01 的取整實作與 spec「四捨五入」不一致。藍圖 §3.3 的 800／799 門檻例子確實算錯，這部分實作依公式是對的，應改藍圖。** 三次全套各 363 項全綠，未觀察到 flaky。
 
-受測 HEAD：`04c5d28866cdeacbb71e8bde43000f0e14a0c149`，包含 loop6 整合 `a1029d47`。依[組件契約](../component-contracts.md)、各包 README／spec 與[原則 9、10](../../../proto7/notes/principles.md)分類；M 不列 bug。本輪只新增本報告與指定 evidence，未修改既有程式、測試、文件，未 commit／push，未呼叫任何本機 LLM，也未刪除或清空 scratchpad。
+受測 HEAD：`f78ee2341a204b8908125923296ab2f26906d11e`，包含 loop6 整合 `f3c8497f`。依[組件契約](../component-contracts.md)、各包 README／spec 與[原則 9、10](../../../proto7/notes/principles.md)分類；M 不列 bug。本輪只新增本報告與指定 evidence，未修改既有程式、測試、文件，未 commit／push，未呼叫任何本機 LLM，也未刪除或清空 scratchpad。
 
 **測試結果**
 
@@ -39,7 +39,7 @@ G3 正式十案均在全套執行期間起訖；每案先證明前代任務確�
 |---|---|
 | 直接 TERM 子 daemon，allow-stop false／true | 核心照 stop＋kill 收任務；沒有控制檔 stop 回條，不留 stopped marker，之後可重開。符合新規則。 |
 | 上代 stop 回條＋本代 TERM | 舊回條早於本代 since，不會誤認為本代 allowed_stop。 |
-| life 沒有 since | 合成刪欄模型會回收；**M**。Git 初版尚無 life，首次引入 life 的 `8c2145c4` 已含 since，沒有找到真實舊版缺欄紀錄，不冒稱遷移失敗。 |
+| life 沒有 since | 合成刪欄模型會回收；**M**。Git 初版尚無 life，首次引入 life 的 `a11843e4` 已含 since，沒有找到真實舊版缺欄紀錄，不冒稱遷移失敗。 |
 | 牆鐘倒退一小時 | 成功 stop 的回條早於 since，重開會收原任務。**X／已知環境界線**：README 明定時間比較，loop6 已明說不另防倒鐘；依原則 9 不加新保護要求。README 宜揭露這個後果。 |
 | status／stop 回條 EIO | 不收、不起；解除後補完 stopped，原任務保留，符合 X 的保守分支。 |
 
@@ -114,7 +114,7 @@ step 真 daemon 跑 CSV convert→stats→end，`restart_on_end:true`；最終�
 
 adapt 由真核心 tick／tock 從已關 r1 再跑 320 回合至已關 r321，每回合檢查暫存器與檔名集合；dst/in 1 檔、dst/adapt 1 檔、adapt 槽 5 檔、src/out 1 檔，前後集合含隱藏檔皆相同。這是可控核心回合長跑，另有上表五組真 daemon 流速測試。[逐回合資料](2026-10-04-astra-6-infra-evidence/adapt/long320-registers.json)。budget 的帳與 gateway 按 §10 隨 K 保存，不能拿其成長誤判成 step／adapt 檔案洩漏。
 
-A4-01～07、F47、§4.4 抽查共 27 案未退化：掛載故障、控制競爭／去重、動態登記、step 耐性／型別／選項、同回合補通知／跨回合不補，以及 once 崩潰與槽刪除時機均符合契約。核心 `test_budget.py` 綠，lib 的 18 個 tracked 檔案與 `daf8d5cf` 逐檔 SHA256 相同；該版以後 lib 沒有 commit 變更。[回歸摘要](2026-10-04-astra-6-infra-evidence/regression/summary.md)、[核心行數](2026-10-04-astra-6-infra-evidence/regression/core-lines.json)。
+A4-01～07、F47、§4.4 抽查共 27 案未退化：掛載故障、控制競爭／去重、動態登記、step 耐性／型別／選項、同回合補通知／跨回合不補，以及 once 崩潰與槽刪除時機均符合契約。核心 `test_budget.py` 綠，lib 的 18 個 tracked 檔案與 `fd8fd147` 逐檔 SHA256 相同；該版以後 lib 沒有 commit 變更。[回歸摘要](2026-10-04-astra-6-infra-evidence/regression/summary.md)、[核心行數](2026-10-04-astra-6-infra-evidence/regression/core-lines.json)。
 
 四條線均已結束，自建 `/tmp` 測試根已清除，程序按 PID 回收並以 ps 核對，沒有本輪殘留程序；大量快照已封裝 tar.gz。460 個既有 tracked proto7-2 檔案的 SHA256 前後相同，HEAD 未變，git status 只新增本報告與 evidence，另保留原有未追蹤的 `proto7/user-advice.md`。[收場稽核](2026-10-04-astra-6-infra-evidence/final-audit.json)、[最終 ps](2026-10-04-astra-6-infra-evidence/ps-final.txt)；各線清理明細在其摘要。
 

@@ -5,7 +5,7 @@
 本報告針對「事件保存」提出調查與候選方案，沒有實作或替使用者選定方向。
 
 - 審查日期：2026-10-05。
-- 工作樹版本：`6daebe2ef8227021745def649f4e3d86a3a8038c`。
+- 工作樹版本：`058df3988cbef0ec6a9db288e3edd5827e67ddb0`。
 - 使用五條唯讀子代理線，分別檢查核心事件、history／擴充點、模組讀者、儲存語意與原始設計意圖，再交叉核對。
 - 全程未修改檔案、未執行測試或故障探針、未 commit／push。檢查前後 `git status --short` 均無輸出。
 - 下文的崩潰案例是**有程式行序支持的靜態推導**，不是本輪實測結果。既有測試只用來核對目前承諾。
@@ -13,7 +13,7 @@
 有兩項來源限制：
 
 1. **找不到 `proto7/user-advice.md` 正本。** 工作樹搜尋與 Git 歷史查詢均未找到；SESSION-LOG 也註明當時未 commit。因此只引用現存轉述，不聲稱讀過原檔。保存原則的轉述見 [changes-from-7-1.md](../../changes-from-7-1.md):18，未 commit 記載見 [SESSION-LOG.md](../../../../wf/SESSION-LOG.md):16。
-2. **`layer-interfaces.md` 是較早版本的調查。** 它明寫對象為 `6ed9a7a7`；其中部分問題已修、部分功能已移出核心。本報告用它理解分層，現況以目前程式與 spec 核對。見 [layer-interfaces.md](../../layer-interfaces.md):5、[problems.md](../../problems.md):146。
+2. **`layer-interfaces.md` 是較早版本的調查。** 它明寫對象為 `5384509d`；其中部分問題已修、部分功能已移出核心。本報告用它理解分層，現況以目前程式與 spec 核對。見 [layer-interfaces.md](../../layer-interfaces.md):5、[problems.md](../../problems.md):146。
 
 ## 2. 原始方向對事件保存的限制
 

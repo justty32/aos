@@ -56,7 +56,7 @@ OK，dead 先這樣。然後daemon會定期檢查，若發現有鐘dead了，他
 
 然後是aos-llm，這個可以有很多版本，我們先做最粗淺的，一樣需要register到daemon，每格時鐘都去資料夾內抓請求，然後內部排序，先做優先級最高的。然後會返回用量，自己本身也會紀錄用量，單位是每天。設定檔決定有幾個可用的engine，每個engine都是一個endpoint+model，配上一些參數如思考/溫度等，後續別人發來的請求可以覆蓋這些參數。用量的紀錄，是紀錄每個endpoint+model的配對的用量。然後提供指令:aos-llm send xxx，那個xxx就是檔案，這個指令會去找環境變數：AOS_LLM_DIR
 
-（三段都已在 proto2 落地：daemon 見 commit 36fbf70，aos-llm 見 e7d444b；用法在 [README](../README.md)。）
+（三段都已在 proto2 落地：daemon 見 commit 3d1ab47，aos-llm 見 df3440b；用法在 [README](../README.md)。）
 
 ## 續三：aos-llm 的請求欄位、--dir、帳本要算錢
 
@@ -66,7 +66,7 @@ OK，dead 先這樣。然後daemon會定期檢查，若發現有鐘dead了，他
 
 priority和engine沒填的話，那就是用aos llm自己設定中的默認值
 
-（已落地：commit d6ec2b6，預設值放 .aos/llm/defaults.json；用法在 [README](../README.md)。）
+（已落地：commit c77761f，預設值放 .aos/llm/defaults.json；用法在 [README](../README.md)。）
 
 ## 續四：aos-llm exec 與併發、產請求 helper、資料夾版面、回到 aos-agent
 
@@ -84,7 +84,7 @@ aos-llm send這個還是刪掉吧，這只是一個薄包裝，現在先不要�
 
 agent那邊，我希望能夠用設置的，比如放在xxx/agent，或是xxx/.aos/agent。
 
-（1、2、4 已落地：commit c6d3288；3、5、6 是 aos-agent 下一輪的依據。）
+（1、2、4 已落地：commit 3605a03；3、5、6 是 aos-agent 下一輪的依據。）
 
 ## 續五：怪癖歸 aos-llm、指令切兩種、工具包分隔、發想題目、成本
 

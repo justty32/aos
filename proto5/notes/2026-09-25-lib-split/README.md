@@ -1,4 +1,4 @@
-# 2026-09-25 lib 拆檔審查（b1087729..871bd5ce）
+# 2026-09-25 lib 拆檔審查（f763f886..96451eab）
 
 拆了什麼：main 上 20 個 commit，把 `proto5/lib/` 下 19 支母模組拆成母模組＋子模組（共 145 支 .py；原任務書寫 24 支，astra 逐 commit 數是 19 支＋1 個文件 commit），另把 `lib/README.md`（677 行）拆成入口＋ `lib/docs/` 八份（directives／exec／daemon／kernel／agent／team／company／tests）。號稱純結構搬移、零行為變更。
 

@@ -3,7 +3,7 @@
   "injection": {
     "kind": "none; static evidence"
   },
-  "head": "ad1dfa259015a94a465634023b42b177ec048331",
+  "head": "59ce8767301a0b2e84d20c3564449e4d78404bce",
   "budget_rc": 0,
   "totals": {
     "total": 2952,
@@ -21,7 +21,7 @@
     {
       "file": "proto7-2/lib/aos7_daemon.py",
       "in_core_budget": true,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 630,
         "code": 518
       },
@@ -37,7 +37,7 @@
     {
       "file": "proto7-2/lib/aos7_daemon_timeline.py",
       "in_core_budget": true,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 309,
         "code": 247
       },
@@ -53,7 +53,7 @@
     {
       "file": "proto7-2/lib/aos7_fs.py",
       "in_core_budget": true,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 343,
         "code": 221
       },
@@ -69,7 +69,7 @@
     {
       "file": "proto7-2/lib/aos7_mount.py",
       "in_core_budget": true,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 168,
         "code": 130
       },
@@ -85,7 +85,7 @@
     {
       "file": "proto7-2/lib/aos7_proc.py",
       "in_core_budget": true,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 249,
         "code": 178
       },
@@ -101,7 +101,7 @@
     {
       "file": "proto7-2/lib/aos7_run.py",
       "in_core_budget": true,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 113,
         "code": 87
       },
@@ -117,7 +117,7 @@
     {
       "file": "proto7-2/lib/aos7_task.py",
       "in_core_budget": true,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 334,
         "code": 249
       },
@@ -133,7 +133,7 @@
     {
       "file": "proto7-2/lib/aos7_tick.py",
       "in_core_budget": true,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 414,
         "code": 331
       },
@@ -149,7 +149,7 @@
     {
       "file": "proto7-2/lib/aos7_tock.py",
       "in_core_budget": true,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 197,
         "code": 162
       },
@@ -165,7 +165,7 @@
     {
       "file": "proto7-2/lib/aos_directives.py",
       "in_core_budget": false,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 228,
         "code": 137
       },
@@ -181,7 +181,7 @@
     {
       "file": "proto7-2/lib/aos_directives_base.py",
       "in_core_budget": false,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 111,
         "code": 55
       },
@@ -197,7 +197,7 @@
     {
       "file": "proto7-2/lib/aos_directives_options.py",
       "in_core_budget": false,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 73,
         "code": 41
       },
@@ -213,7 +213,7 @@
     {
       "file": "proto7-2/lib/aos_dirname.py",
       "in_core_budget": false,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 30,
         "code": 11
       },
@@ -229,7 +229,7 @@
     {
       "file": "proto7-2/lib/aos_exec.py",
       "in_core_budget": false,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 270,
         "code": 146
       },
@@ -245,7 +245,7 @@
     {
       "file": "proto7-2/lib/aos_exec_run.py",
       "in_core_budget": false,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 227,
         "code": 168
       },
@@ -261,7 +261,7 @@
     {
       "file": "proto7-2/lib/aos_exec_spawn.py",
       "in_core_budget": false,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 117,
         "code": 84
       },
@@ -277,7 +277,7 @@
     {
       "file": "proto7-2/lib/aos_exec_wait.py",
       "in_core_budget": false,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 124,
         "code": 94
       },
@@ -293,7 +293,7 @@
     {
       "file": "proto7-2/lib/aos_inst.py",
       "in_core_budget": false,
-      "baseline_510dd134": {
+      "baseline_9c54febf": {
         "total": 252,
         "code": 147
       },

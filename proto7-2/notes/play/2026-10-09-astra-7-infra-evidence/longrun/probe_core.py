@@ -26,14 +26,14 @@ try:
     (E/'core-budget.log').write_text(r.stdout+r.stderr)
     rows=[]
     for p in sorted((P/'lib').glob('*.py')):
-        rel=str(p.relative_to(ROOT)); old=git('show','510dd134:'+rel)
+        rel=str(p.relative_to(ROOT)); old=git('show','9c54febf:'+rel)
         before=count(old);after=count(p.read_text())
-        rows.append({'file':rel,'in_core_budget':p.name.startswith('aos7_'),'baseline_510dd134':before,'head':after,'delta':{k:after[k]-before[k] for k in before}})
+        rows.append({'file':rel,'in_core_budget':p.name.startswith('aos7_'),'baseline_9c54febf':before,'head':after,'delta':{k:after[k]-before[k] for k in before}})
     totals={k:sum(x['head'][k] for x in rows if x['in_core_budget']) for k in ('total','code')}
     out={'scenario':'D7 core line count and lib history','injection':{'kind':'none; static evidence'},'head':git('rev-parse','HEAD').strip(),'budget_rc':r.returncode,'totals':totals,'astra6_reported':{'total':2757,'code':2123},'vs_astra6':{'total':totals['total']-2757,'code':totals['code']-2123},'rows':rows,'assertion':'budget CLI rc0; printed counts agree with independent measurement; no enforcement under D7','pass':r.returncode==0 and ('總行 %d／'%totals['total']) in r.stderr and ('實際程式 %d／'%totals['code']) in r.stderr}
     (E/'core-lines.json').write_text(json.dumps(out,ensure_ascii=False,indent=2)+'\n')
-    (E/'lib-diff-stat.txt').write_text(git('diff','--stat','510dd134..HEAD','--','proto7-2/lib'))
-    (E/'lib-history.txt').write_text(git('log','--oneline','510dd134..HEAD','--','proto7-2/lib'))
+    (E/'lib-diff-stat.txt').write_text(git('diff','--stat','9c54febf..HEAD','--','proto7-2/lib'))
+    (E/'lib-history.txt').write_text(git('log','--oneline','9c54febf..HEAD','--','proto7-2/lib'))
     print(json.dumps({k:v for k,v in out.items() if k!='rows'},ensure_ascii=False))
 finally:
     shutil.rmtree(scratch)

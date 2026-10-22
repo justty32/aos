@@ -3,7 +3,7 @@
 給 proto3 設計用。**工具包（`proto2/packs/*.py`）沿用，這份只講骨幹。**
 只讀不改；所有出處都是 `proto2/` 底下的檔案行號、`wf/` 的文件段落，或 git commit。
 
-日期：2026-09-08。程式碼狀態＝`062e5cd`（main，乾淨）。
+日期：2026-09-08。程式碼狀態＝`1581c4b`（main，乾淨）。
 
 ---
 
@@ -85,18 +85,18 @@ proto2 從頭到尾沒有「我在等什麼、什麼事會叫醒我」這個概�
 
 | 常數 | 值 | 在哪 | 補哪一次坑 |
 |---|---:|---|---|
-| `UNREAD_REMIND_TICKS` | 30 | `aos_agent.py:31` | 信通知過、模型第一輪讀失敗，之後永遠沒人叫它（**前三局全死在這**，`journey:11`、`lessons:10`；commit `cfffb2b`） |
+| `UNREAD_REMIND_TICKS` | 30 | `aos_agent.py:31` | 信通知過、模型第一輪讀失敗，之後永遠沒人叫它（**前三局全死在這**，`journey:11`、`lessons:10`；commit `84e151e`） |
 | `LLM_WAIT_TICKS` | 60 | `aos-agent:18` | 請求不在排隊裡、結果又沒出現 |
 | `LLM_WAIT_TICKS_ALIVE` | 1800 | `aos-agent:19` | 七人共用兩路引擎，排隊超過 60 格被誤判「LLM 沒回應」（`journey:33`，11:48 4a） |
-| `LLM_ERROR_RETRY_TICKS` | 20 | `aos-agent:22` | 模型回錯之後直接回 idle，對話尾巴那句永遠不會再送（`journey:150`，15:18 4d；commit `c98dced`） |
+| `LLM_ERROR_RETRY_TICKS` | 20 | `aos-agent:22` | 模型回錯之後直接回 idle，對話尾巴那句永遠不會再送（`journey:150`，15:18 4d；commit `cb6fc4e`） |
 | `LLM_ERROR_MAX` | 5 | `aos-agent:23` | 同上，避免無限重送 |
-| `BUDGET_NAG_TICKS` | 300 | `aos-agent:21` | 凍住的人喊過一次就不再喊（`journey:40`，12:22 4b；commit `13f03bf`） |
+| `BUDGET_NAG_TICKS` | 300 | `aos-agent:21` | 凍住的人喊過一次就不再喊（`journey:40`，12:22 4b；commit `5ace613`） |
 | `AUTO_GRANT_RETRY_TICKS` | 10 | `aos-agent:24` | 300 格太久：天花板抬高了也要等五分鐘（`journey:155`，15:50 4d） |
-| `TASK_NAG_TICKS` / `TASK_NAG_LIMIT` | 45 / 3 | `packs/studio.py:802-803` | 做到一半停下來、手上有任務卻閒著（`journey:80`，13:35 4c；commit `66c9b77`＋`67f008c`）——**工具包只好自己再造一次喚醒機制** |
+| `TASK_NAG_TICKS` / `TASK_NAG_LIMIT` | 45 / 3 | `packs/studio.py:802-803` | 做到一半停下來、手上有任務卻閒著（`journey:80`，13:35 4c；commit `0bc91b6`＋`e1e9da5`）——**工具包只好自己再造一次喚醒機制** |
 
 同一族的補丁還有：
 
-1. **睡著的人也要被未讀信叫醒**——`scan_inbox` 的註解直接寫「不然『PM 等 chief 回信、chief 等 PM 補額度』這種互等會卡到旁線逾時才解」（`aos_agent.py:330-331`；commit `a0b74b3`；`journey:39`）。
+1. **睡著的人也要被未讀信叫醒**——`scan_inbox` 的註解直接寫「不然『PM 等 chief 回信、chief 等 PM 補額度』這種互等會卡到旁線逾時才解」（`aos_agent.py:330-331`；commit `fc83c77`；`journey:39`）。
    → 補的是：`sleep_until` 只記「我在等哪一筆」，沒有「還有什麼別的事也該叫醒我」。
 2. **`retry` 也要走未讀提醒那條路**，所以 `do_exec` 造了一個假的 state 視圖騙 `scan_inbox`：
    `view = dict(saved, state="idle") if state in ("retry","stuck") else saved`（`aos-agent:507-510`）。
@@ -114,19 +114,19 @@ proto2 從頭到尾沒有「我在等什麼、什麼事會叫醒我」這個概�
 
 ### 缺口二：**引擎接口層沒有自己的位置，協定修補塞進 agent 狀態機**
 
-4. **把工具呼叫寫成文字要救回來**：`TOOL_CALL_SMELL`、`_json_objects`、`_balanced_object`、`NAMED_OBJECT`、`named_tool_objects`、`salvage_tool_calls` ——**共約 100 行、5 個函式，佔 `aos-agent` 六分之一**（`aos-agent:25`、74-170、274-295）。三種花樣分三次加：`<tool_call>`／純 JSON（`cfffb2b`）、` ```plaintext 裡「工具名: {參數}」`（`13f03bf`）。
+4. **把工具呼叫寫成文字要救回來**：`TOOL_CALL_SMELL`、`_json_objects`、`_balanced_object`、`NAMED_OBJECT`、`named_tool_objects`、`salvage_tool_calls` ——**共約 100 行、5 個函式，佔 `aos-agent` 六分之一**（`aos-agent:25`、74-170、274-295）。三種花樣分三次加：`<tool_call>`／純 JSON（`84e151e`）、` ```plaintext 裡「工具名: {參數}」`（`5ace613`）。
 5. **救不回來就同題重送**：`protocol_retries`（`aos-agent:289-295`）。
    → 4、5 補的是：模型輸出的正規化應該在「引擎那一側」（`aos-llm` 的 `strip_think` 就在對的地方），卻做在 agent 裡，因為 agent 才知道自己有哪些工具（`known` 集合，`aos-agent:274`）。**「有哪些工具」這件事沒有下傳到引擎層。**
 6. **claude-cli 六條坑全在接口層**（`journey:144-158`、`docs/llm-scheduling.md:110-181`）：`.aos/inst` 沒放、PATH 沒有 `claude`、`--append-system-prompt` 帶著 Claude Code 兩萬 token 身份、`--safe-mode` 連 MCP 一起關、stream 事件要照 `message.id` 合併、haiku 直接發真的 tool_use。
    → 使用者自己的結論是「**分層是對的**，流程層一行沒動」（`journey:162`、`journey:195`）。**這一條是 proto2 做對的地方，但接口的形狀還沒被抽出來當介面**——四種引擎的翻譯碼（`to_anthropic` 82 行、`from_claude_cli` 73 行、`codex_run` 79 行）直接長在 `aos-llm` 這支 1793 行的檔案裡。
-7. **worker 打 HTTP 前先探 TCP 10 秒**（commit `cfffb2b`；`journey:24`）：公司 WSL 對關掉的埠會吞 SYN。
+7. **worker 打 HTTP 前先探 TCP 10 秒**（commit `84e151e`；`journey:24`）：公司 WSL 對關掉的埠會吞 SYN。
 7b. **「成功但空」沒有被當成失敗**：模型把工具呼叫吐成殘缺文字（夾雜 `EDIATEK`），HTTP 200、內容非空，agent 當普通回覆送走，不算 error、不重試 ── **B、C 兩局都斷在這一點**（`play/2026-09-07-studio-2.md:31`、`:60`、`play/2026-09-07-studio-3.md:25`）。spawn 時模型回空字串，outbox content 是空的、agent 沒擋也沒補送（`play/2026-09-06-whole-system.md:90`）；`think` 把整個輸出額度吃在 reasoning、最後沒有 content（`play/2026-09-06-think.md:46`，5999 completion token 全是 reasoning）。
    → 補的是：**沒有「協定錯誤」這一態**。只有 HTTP 成功／失敗兩種，所以「回來了但沒用」無處可歸。
 
 ### 缺口三：**「格」這個單位沒分清楚「做事／等待／凍住」**
 
-8. **`ticks` 只算 busy 格**（`aos-agent:563-564`、`team_status_of` 讀 `state["busy"]`，`aos_agent.py:695`；`cfffb2b`）——idle 空轉會穿透整隊上限（`play/2026-09-06-studio-2.md`：458/300）。
-9. **`question_steps` vs `question_sleep_steps`**（`aos-agent:565-572`）：睡著等旁線、排隊等模型、出錯後等重送都不算「每題動作格」。這條分兩次補（`e938d6c` 一次、`7a2d26a` 15:20 4d 又一次）。
+8. **`ticks` 只算 busy 格**（`aos-agent:563-564`、`team_status_of` 讀 `state["busy"]`，`aos_agent.py:695`；`84e151e`）——idle 空轉會穿透整隊上限（`play/2026-09-06-studio-2.md`：458/300）。
+9. **`question_steps` vs `question_sleep_steps`**（`aos-agent:565-572`）：睡著等旁線、排隊等模型、出錯後等重送都不算「每題動作格」。這條分兩次補（`b670af6` 一次、`d603a3f` 15:20 4d 又一次）。
    → 8、9 補的是同一件事，補在**兩個不同的地方**（一個給整隊預算看、一個給每題上限看）。而 `question_sleep_steps` 只被寫、只被顯示（`aos-user:519`、`aos_agent.py:436`），從來沒被判過——它存在只是為了證明「這些格沒被算進去」。
    實玩證據：慢分支會先撞 60 格硬上限、再等使用者說「繼續」（`play/2026-09-06-simplify.md:21`、`:27`，已修於 `play/2026-09-07-simplify-2.md:8`）；`register_clock` 沒有 `no_wait` 時最差等十秒，jobs 把「等 daemon 開鐘」也算進使用者的秒數（`sleep 15` 記成 16 秒，`play/2026-09-06-jobs.md:6`、`:19`）。
 9b. **`step` 同時是時間軸又是計數單位**：三個工具在同一格一起跑，ledger 三行 `step` 相同——「格數」跟「呼叫次數」不能混著看（`play/2026-09-06-review.md:37`）。
@@ -134,7 +134,7 @@ proto2 從頭到尾沒有「我在等什麼、什麼事會叫醒我」這個概�
 ### 缺口四：**資源上限沒有一致的「誰檢查、誰解除」**
 
 10. **`budget_block` 每格都守**（`aos-agent:378-457`，80 行，是第二長的函式）。裡面疊了六層特例：0 額度＝0 上限、沒事做的人安靜凍著、`budget_told` 只喊一次、每 300 格再喊、每 10 格重試自動撥款、`has_work` 判定要看 `state not in ("idle","stuck")`（`aos-agent:430`）。
-11. **`auto_grant`**：閘門自己撥錢、不叫模型（`aos_agent.py:735-780`；`36fde5f`）——因為「撥一次額度 4 輪 ≈ 35k token，而且小模型常把 grant 寫成文字沒真的做」（`studio-efficiency:16`）。
+11. **`auto_grant`**：閘門自己撥錢、不叫模型（`aos_agent.py:735-780`；`e233350`）——因為「撥一次額度 4 輪 ≈ 35k token，而且小模型常把 grant 寫成文字沒真的做」（`studio-efficiency:16`）。
 12. **池子乾了替 sales 喊甲方**：`budget_block` 裡直接 `Ctx(sales_world, ...).reply(...)`（`aos-agent:448-456`）——**在自己的閘門裡建別人的 Ctx、替別人說話**。
     → 補的是：agent 沒有「代表另一個 agent 發話」的合法途徑，也沒有「整隊層級的事件」這種東西。
 13. **`team_status_of` 每格每人都跑一次**（`aos-agent:383`）：讀整份名冊、每個成員的 `state.json`、整本當日 usage 帳本（`aos_agent.py:658-732`）。八個人＝每秒 64 次檔案掃描。`light=True` 只省掉「量資料夾大小」那一段。
@@ -151,7 +151,7 @@ proto2 從頭到尾沒有「我在等什麼、什麼事會叫醒我」這個概�
 
 ### 缺口五：**共用狀態沒有交易**
 
-14. **`team_lock()` flock**（`aos_agent.py:483-534`；commit `a5cbb30`；`journey:135`）：實測 8 進程各撥 20 次，有鎖 160 筆一筆不掉，沒鎖只剩 23 筆、還把 `budget.json` 寫壞（`write_json_atomic` 的暫存檔名固定會互踩）。
+14. **`team_lock()` flock**（`aos_agent.py:483-534`；commit `138c2f3`；`journey:135`）：實測 8 進程各撥 20 次，有鎖 160 筆一筆不掉，沒鎖只剩 23 筆、還把 `budget.json` 寫壞（`write_json_atomic` 的暫存檔名固定會互踩）。
     → 但 `proto2/README.md:282` 到現在還寫著「**目前刻意不做：鎖、fsync、重試**」。**文件與程式已經對不上了**，而且鎖只加在 `team/` 這一層；`prompts.json`、`state.json`、專案檔那層還是靠約定（`journey:111`、`journey:126`）。
 
 **同一個骨幹缺口在六個工具包裡的影子**——`fs`／`code`／`cost`／`review`／`toolsmith`／`selfmem` 各自在自己的紀錄裡報告「沒有鎖，兩個 agent 同時改會互蓋」（`play/2026-09-06-fs.md:44`、`play/2026-09-06-code.md:42`、`play/2026-09-06-cost.md:41`、`play/2026-09-06-review.md:61`、`play/2026-09-06-toolsmith.md:46`、`play/2026-09-06-selfmem.md:53`）。骨幹沒做，於是每個包都痛一次。另外：
@@ -164,7 +164,7 @@ proto2 從頭到尾沒有「我在等什麼、什麼事會叫醒我」這個概�
 
 ### 缺口六：**世界沒有型別、路徑沒有統一解析**
 
-15. **`aos-loop` 看到 `engines.json` 卻沒 `.aos/inst` 就自己補一句 `aos-llm exec .`**（`aos-loop:39-44`；`7a2d26a`；`journey:148`）。
+15. **`aos-loop` 看到 `engines.json` 卻沒 `.aos/inst` 就自己補一句 `aos-llm exec .`**（`aos-loop:39-44`；`d603a3f`；`journey:148`）。
     → 補的是：「這是不是一個 LLM 資料夾」靠猜（`README.md:151`：「有沒有 `engines.json` 就是這是不是一個 LLM 資料夾」）。**世界的型別沒有第一級表示。**
 16. **`_run_cmd` 把開頭的 `team/` 翻成 `../../`**（`packs/studio.py`；`journey:156`）——因為指令在專案目錄跑、路徑卻寫成從隊根算的。
 17. **`code` 包擋「路徑跑到專案外」，但成員家裡的 `team/` 是 symlink**（`journey:37`，12:01 4b）→ 「共用區也算裡面」。
@@ -214,7 +214,7 @@ proto2 從頭到尾沒有「我在等什麼、什麼事會叫醒我」這個概�
 
 ### 缺口十：**省 token 的兩個開關是後貼上去的**
 
-22. **`tools.json` 的 `only` 白名單**（`aos_agent.py:92-98`＋`tool_specs` 的 `only` 參數 `aos_agent.py:186-189`；`36fde5f`）：PM schema 13,439 → 2,827 字。
+22. **`tools.json` 的 `only` 白名單**（`aos_agent.py:92-98`＋`tool_specs` 的 `only` 參數 `aos_agent.py:186-189`；`e233350`）：PM schema 13,439 → 2,827 字。
 23. **`inline_mail`**（`aos_agent.py:99-109`＋`scan_inbox:308-319`）：列到的來源整封信直接進 prompt，不用再花 2～3 輪去讀。
     → 補的是：**工具表與信箱都是「全給」的預設**，沒有「這一輪這個角色需要看到什麼」的概念。這兩條省下的是最大宗的浪費（見 (d)）。
 
@@ -320,7 +320,7 @@ proto2 從頭到尾沒有「我在等什麼、什麼事會叫醒我」這個概�
 - **工具清單要能隨狀態變**：`on_system_prompt` 這個掛勾已經有了（`docs/packs-api.md:112`），但工具表沒有對應的 `on_tools`。工作室裡「PM 現在只需要 `task_assign`」是可以從單子狀態算出來的。
 - **帳要分兩欄：帳面 token 與計價 token**。`prompt_tokens_details.cached_tokens` 已經留著了（`docs/llm-scheduling.md:95`），閘門改吃 `prompt − cached + completion` 是幾行的事——只差一句拍板。
 - **usage 帳本要能增量讀**。現在每格每人重讀整本（(b) 缺口四第 13 條）。
-- **工具 schema 本身也該收**：`(d)` 那輪已經把 16 包的描述砍半（commit `aafd19e`），但 schema 是每包自己寫的字串，骨幹沒有預算概念。
+- **工具 schema 本身也該收**：`(d)` 那輪已經把 16 包的描述砍半（commit `4631e78`），但 schema 是每包自己寫的字串，骨幹沒有預算概念。
 - **預算要能預扣（reserve）與取消**。現在超支的上界＝並發數 × 單筆成本（(b) 13b），因為送出去的請求追不回來。送出前先扣、回來再結算，超支就有界了。
 - **等待要真的睡**。4b 的 PM 26 輪有 16 輪只在讀信等信（`studio-efficiency:9`）——這 16 輪的錢是「沒有阻塞式等待」直接換來的。(f) 第 1 件解掉，這一項自然就沒了。
 
@@ -387,7 +387,7 @@ proto2 從頭到尾沒有「我在等什麼、什麼事會叫醒我」這個概�
 #### 3. 「格」的會計：做事／等待／凍住三種，一個地方算、一個地方判
 
 - **問題**：`busy`、`step`、`question_steps`、`question_sleep_steps`、`frozen_ticks`、`wait_ticks` 六個計數器，散在 `aos-agent:563-584`，被 `hard_limit`、`team_status_of`、`aos-user why` 三處各自解讀。踩過兩次坑：idle 空轉穿透整隊 ticks 上限（`play/2026-09-06-studio-2.md`）、等模型的格被算成動作格而撞上限停下來問人（`journey:34`、`journey:150`）。
-- **proto2 怎麼硬撐**：兩次分別補在兩個地方（`cfffb2b` 補 `busy`、`e938d6c`＋`7a2d26a` 補 `question_sleep_steps`），而 `question_sleep_steps` 只被寫、從沒被判過。
+- **proto2 怎麼硬撐**：兩次分別補在兩個地方（`84e151e` 補 `busy`、`b670af6`＋`d603a3f` 補 `question_sleep_steps`），而 `question_sleep_steps` 只被寫、從沒被判過。
 - **重寫可以怎麼設計**：一格結束時**只記一件事：這格屬於哪一類**（做事／等待／凍住／睡）。所有上限都對「做事格」判。這是一個 enum 加一個計數，不是六個。
 - **風險**：分類的邊界會有爭議（「跑工具但工具在等網路」算哪類？）。**規則寫死一條：花了 LLM token 或改了世界的檔案就算做事，其餘都不算。**
 

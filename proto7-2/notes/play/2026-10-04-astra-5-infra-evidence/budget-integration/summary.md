@@ -39,7 +39,7 @@
 
 ## 「五個自列缺口」來源核對與可追溯替代表
 
-目前 `packs/budget/spec.md` 只有 §1～§8（84 行）；HEAD `392a1d64` 與建包 commit `025d2bfe` 都沒有題目所稱 spec 末五個自認缺口。因此**無法把不存在的五條當成已完成逐條驗收**。以下只對照確實存在的 [astra-4 五項草稿意見](../../2026-10-04-astra-4-infra-evidence/contracts/summary.md#account-草稿意見不算發現)，不是冒充原清單。
+目前 `packs/budget/spec.md` 只有 §1～§8（84 行）；HEAD `af69c13c` 與建包 commit `5e021125` 都沒有題目所稱 spec 末五個自認缺口。因此**無法把不存在的五條當成已完成逐條驗收**。以下只對照確實存在的 [astra-4 五項草稿意見](../../2026-10-04-astra-4-infra-evidence/contracts/summary.md#account-草稿意見不算發現)，不是冒充原清單。
 
 | 可追溯 astra-4 意見 | 現版對應 | v1 評估 |
 |---|---|---|

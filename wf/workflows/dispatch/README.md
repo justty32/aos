@@ -86,7 +86,7 @@
 
 | 線 | 完成證據 | 收線時間 |
 |----|---------|---------|
-| M 維護 | `1301727`／`3652c18`／`1369987`；repro 28/28、ctest 8/8；[proto-M](proto/done/proto-M-maint.md) | 2026-08-30 23:02 |
+| M 維護 | `4c9988f`／`c941e2c`／`cfda539`；repro 28/28、ctest 8/8；[proto-M](proto/done/proto-M-maint.md) | 2026-08-30 23:02 |
 
 > 上面三張表是**活狀態**，會隨每輪派線增減。膨脹到難讀就照 [STRUCTURE](../../STRUCTURE.md) 拆成 `CLAIMS.md`，本檔只留流程與連結。hackathon 各場的隊伍紀錄在 [hackathon/](../hackathon/README.md) 自己的紀錄裡，不重抄到這裡。
 

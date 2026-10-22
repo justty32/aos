@@ -90,4 +90,4 @@
 
 ### 3.7 三層通用慣例（10-12 夜定）
 
-- 結論：**設定檔讀一次 → ctl 蓋過 → state 回報，三者節奏類的 key 同名**進 NORMS（N-11）；設定檔整份只在起來時讀一次，含 loop.json 的 `inst`。loop、daemon 共用一套七個狀態值（starting／waiting／running／paused／done／stopping／stopped），各取子集；daemon 也認 `interval_mode`；`last_error` 兩層共用，`last_code` 只在 loop；daemon state 的 `loops` 只寫個數（使用者：「一百台會很麻煩」），要細節用控制指令查；inst 的 state 就是 exit 檔。欄位表與狀態值當慣例，寫在 lib README（已刪，見 git 歷史 aa2fec1f）。
+- 結論：**設定檔讀一次 → ctl 蓋過 → state 回報，三者節奏類的 key 同名**進 NORMS（N-11）；設定檔整份只在起來時讀一次，含 loop.json 的 `inst`。loop、daemon 共用一套七個狀態值（starting／waiting／running／paused／done／stopping／stopped），各取子集；daemon 也認 `interval_mode`；`last_error` 兩層共用，`last_code` 只在 loop；daemon state 的 `loops` 只寫個數（使用者：「一百台會很麻煩」），要細節用控制指令查；inst 的 state 就是 exit 檔。欄位表與狀態值當慣例，寫在 lib README（已刪，見 git 歷史 5546be29）。
