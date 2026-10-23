@@ -1,0 +1,9 @@
+{
+  "name": "aos-util",
+  "version": "0.1.0",
+  "description": "aos-util：aos 這一家命令列工具共用的小函式庫（錯誤、stdin 讀一份 JSON、印結果與錯誤）",
+  "builtin-baseline": "b781af668027bbf77f2f827f47b5c6cd8d825c08",
+  "dependencies": [
+    "nlohmann-json"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "aos-schema",
+  "version": "0.1.0",
+  "description": "aos-schema：用 JSON Schema（draft-07）驗 JSON 的 C++ 函式庫與命令列",
+  "builtin-baseline": "b781af668027bbf77f2f827f47b5c6cd8d825c08",
+  "dependencies": [
+    "nlohmann-json",
+    "json-schema-validator"
+  ]
+}

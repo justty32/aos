@@ -1,0 +1,1 @@
+{"argv": ["echo", "hi"], "cwd": "work", "envs": {"A": "1"}, "timeout_ms": 500, "grace_ms": 0, "id": null, "stdout_append": true, "extra": "不管"}

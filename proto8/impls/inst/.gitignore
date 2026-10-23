@@ -1,0 +1,10 @@
+bin/
+lib/
+build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+# clangd 的索引快取、Python 測試的快取
+.cache/
+__pycache__/

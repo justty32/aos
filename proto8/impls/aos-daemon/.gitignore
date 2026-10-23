@@ -1,0 +1,6 @@
+bin/
+lib/
+build/
+# clangd 的索引快取、Python 測試的快取
+.cache/
+__pycache__/

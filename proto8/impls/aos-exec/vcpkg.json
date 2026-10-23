@@ -1,0 +1,9 @@
+{
+  "name": "aos-exec",
+  "version": "0.1.0",
+  "description": "aos-exec：在工作區執行一個 aos 程式——找入口、備好環境變數、cd 進去、開跑",
+  "builtin-baseline": "b781af668027bbf77f2f827f47b5c6cd8d825c08",
+  "dependencies": [
+    "nlohmann-json"
+  ]
+}

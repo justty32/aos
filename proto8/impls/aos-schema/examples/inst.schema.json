@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$comment": "一張 inst 的欄位，照 proto8/lib/aos_inst.py 的 parse()。只驗認得的 key，其他 key 不管（additionalProperties 不禁）。parse() 另有一條「stderr_merge 為 true 時不能再寫 stderr」，這裡沒放。",
+  "title": "inst",
+  "type": "object",
+  "required": ["argv"],
+  "properties": {
+    "argv":          { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "id":            { "type": ["string", "null"] },
+    "cwd":           { "$ref": "#/definitions/path" },
+    "stdin":         { "$ref": "#/definitions/path" },
+    "stdout":        { "$ref": "#/definitions/path" },
+    "stderr":        { "$ref": "#/definitions/path" },
+    "envs":          { "type": "object", "additionalProperties": { "type": "string" } },
+    "timeout_ms":    { "type": ["integer", "null"], "exclusiveMinimum": 0 },
+    "grace_ms":      { "type": "integer", "minimum": 0 },
+    "cwd_mkdir":     { "$ref": "#/definitions/flag" },
+    "envs_clear":    { "$ref": "#/definitions/flag" },
+    "stdout_append": { "$ref": "#/definitions/flag" },
+    "stdout_mkdir":  { "$ref": "#/definitions/flag" },
+    "stderr_append": { "$ref": "#/definitions/flag" },
+    "stderr_mkdir":  { "$ref": "#/definitions/flag" },
+    "stderr_merge":  { "$ref": "#/definitions/flag" }
+  },
+  "definitions": {
+    "path": { "$comment": "路徑字串；null＝沒寫", "type": ["string", "null"] },
+    "flag": { "type": "boolean" }
+  }
+}
