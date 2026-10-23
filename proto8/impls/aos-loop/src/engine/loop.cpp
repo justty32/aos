@@ -1,7 +1,7 @@
-// loop.cpp：【engine】Loop 每次怎麼走（說明見 aos/loop.hpp）。照 proto8/bin/aos_loop.py 的 Loop.main、end、nap；
-// 10-23 壓測後：沒有身體時一輪只 tend 一次、只寫一份 state（bin 版沒跟，使用者 10-23「python版本可以刪掉了」）。
+// loop.cpp：【engine】Loop 每次怎麼走（說明見 aos/loop.hpp）。
+// 10-23 壓測後：沒有身體時一輪只 tend 一次、只寫一份 state。
 //
-// 訊號：block_signals 擋著的三個訊號排在 kernel 裡；signal_got 兩次之間取出第一個並記住（之後一直回它，同 Python 版 take()）；
+// 訊號：block_signals 擋著的三個訊號排在 kernel 裡；signal_got 兩次之間取出第一個並記住（之後一直回它）；
 // nap 用 sigtimedwait 睡，收到就醒。跑的期間收到的由 run_once 轉給那次、放在 Run::received。
 #include "engine/engine.hpp"
 

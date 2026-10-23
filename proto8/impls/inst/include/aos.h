@@ -7,7 +7,6 @@
  *   要跑什麼、在哪跑、環境、三個串流接哪個檔、最多跑多久；
  * 它 fork＋exec 那個程式，等它結束（或時間到把它收掉），
  * 把「回了幾號、跑了多久」填進 aos_inst_result_t。
- * 對應 Python 版 proto8/lib/aos_inst.py 的 run()，
  * 但不讀 JSON、沒有命令列、不解指示詞。
  *
  * 型別只用 C 基本型別、bool（<stdbool.h>）和三個平的結構體，
@@ -64,7 +63,7 @@ extern "C" {
  * 函數型別寫 int（FFI 比較好接），值就是這些。
  *   0＝成功跑完（子程式回幾號、被限時收掉都算成功）
  *   非 0＝lib 自己出錯，子程式沒跑或沒收到結果
- * 每個值的名字對應 Python 版 InstError 的 code，
+ * 每個值都有一個名字（錯誤代號），
  * aos_inst_strerror 回的就是那個名字。 */
 typedef enum aos_inst_error {
   AOS_INST_OK = 0,
@@ -241,7 +240,7 @@ AOS_API int aos_inst_wait(aos_inst_proc_t *proc, aos_inst_result_t *out);
  * in 和 out 都不能是 NULL。*in 只讀不改。 */
 AOS_API int aos_inst_exec(const aos_inst_input_t *in, aos_inst_result_t *out);
 
-/* 錯誤代號 → 名字（"CommandMissing" 這種，跟 Python 版一樣）。
+/* 錯誤代號 → 名字（"CommandMissing" 這種）。
  * 不認得的代號回 "Unknown"。字串是常數，不用 free。 */
 AOS_API const char *aos_inst_strerror(int code);
 

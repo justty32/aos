@@ -8,7 +8,6 @@
 //   classify.cpp  classify：實際的檔＋指標 → 種類。有 +x＝可執行檔；沒有就當 JSON 讀（跳過第一行 #!、照 #/ 取值）：
 //                 沒 argv 的物件＝當資料夾（套它的 .env key、旗標蓋回、取 [$AOS_ENTRY]，一路往下）；
 //                 陣列＝argv、有 argv 的物件＝單子、字串＝轉向（交給下一跳）。字串轉向繞圈＝EntryBad（跨跳記在 Chain）
-// 對應 proto8/bin/aos-exec 的 locate、find、hop。
 #pragma once
 
 #include "common/common.hpp"

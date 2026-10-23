@@ -125,7 +125,7 @@ Json read_json_at(const std::string& path, const std::string& pointer) {
     int err = 0;
     std::optional<std::string> text = read_file(path, err);
     if (!text) {
-        // 原因的寫法同 Python 的 OSError（`[Errno 2] No such file or directory: 'x'`），load_cfg 的一行跟 bin 版一樣
+        // 原因的寫法同 Python 的 OSError（`[Errno 2] No such file or directory: 'x'`）
         throw Error{err == ENOENT ? code::CfgMissing : code::CfgBad,
                     "[Errno " + std::to_string(err) + "] " + std::strerror(err) + ": '" + path + "'"};
     }

@@ -1,4 +1,4 @@
-// main.cpp：aos-daemon 命令列——block_signals、解命令列、讀設定、Daemon::serve（照 proto8/bin/aos-daemon，10-21 傍晚）。
+// main.cpp：aos-daemon 命令列——block_signals、解命令列、讀設定、Daemon::serve（10-21 傍晚）。
 //
 //     aos-daemon [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] daemon.json
 //

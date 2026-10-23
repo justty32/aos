@@ -8,7 +8,6 @@
 //     對整群補一發 SIGKILL 清孫程式，最後才收屍——不會誤殺到別人。
 //   - memfd：一個只活在記憶體裡、沒有檔名的檔。拿來當子程序的 stdin（先把要灌的 JSON 寫進去）和 stdout／stderr
 //     （子程序寫完再讀回來）。好處：不用管道（pipe），就不用開執行緒讀、也不會遇到「對方先死了寫入就收到 SIGPIPE」。
-// 對應 Python aos_proc.py（_exited、_killpg、reap、stop）與 subprocess.Popen(start_new_session=True)。
 #pragma once
 
 #include <optional>
@@ -39,7 +38,7 @@ void wait_exited(pid_t pid);
 // 對整群送訊號；群組不在、沒權限都不管。
 void signal_group(pid_t pgid, int sig);
 
-// 已經結束（還沒收屍）的子程序：對整群補 SIGKILL 清孫程式，再收屍。回退出碼；被訊號停掉＝負的訊號號碼（同 Python）。
+// 已經結束（還沒收屍）的子程序：對整群補 SIGKILL 清孫程式，再收屍。回退出碼；被訊號停掉＝負的訊號號碼。
 int reap(pid_t pid);
 
 // 整群 SIGTERM，等它自己結束（aos-inst 保證過它的 grace_ms 會收掉子程式並結束），收屍，回退出碼。

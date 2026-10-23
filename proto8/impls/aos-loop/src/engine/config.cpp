@@ -1,6 +1,6 @@
 // config.cpp：【engine】Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、解指示詞（resolve_keys，10-23 晚）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）；
-// 還有 parse_target（run 的寫法）、loop_cli（命令列）。照 proto8/bin/aos_loop.py 的 Loop.__init__、cli 與 aos_flags.target
-// （10-21 傍晚 ideas § 9）；錯誤分代號（Python 版是一句話）。
+// 還有 parse_target（run 的寫法）、loop_cli（命令列）
+// （10-21 傍晚 ideas § 9）；錯誤分代號。
 #include "engine/engine.hpp"
 
 #include "aos/files.hpp"
@@ -72,7 +72,7 @@ aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog)
     return cli;
 }
 
-// 旗標的數字：只收 [0-9]+（同 bin 版 re.fullmatch）；太大就夾在 long long 的上限。
+// 旗標的數字：只收 [0-9]+；太大就夾在 long long 的上限。
 static bool flag_nat(const std::string& s, long long& out) {
     if (s.empty()) {
         return false;

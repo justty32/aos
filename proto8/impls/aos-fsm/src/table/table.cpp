@@ -1,4 +1,4 @@
-// table.cpp：【table】read_table、check、pick（說明見 table.hpp）。照 proto8/bin/aos-fsm 的 main 開頭與 check（10-22）。
+// table.cpp：【table】read_table、check、pick（說明見 table.hpp；10-22）。
 #include "table/table.hpp"
 
 #include "aos/cli.hpp"
@@ -48,7 +48,7 @@ std::map<std::string, Cell> check(const Table& t) {
         throw Error{code::CfgBad, "start 的 " + t.start + " 不在表上"};
     }
     std::map<std::string, Cell> cells;
-    for (auto& [name, c] : t.states.items()) {   // 照表上的順序查，第一個壞的報出來（同 bin）
+    for (auto& [name, c] : t.states.items()) {   // 照表上的順序查，第一個壞的報出來
         if (!c.is_object() || !c.contains("val") || !c.contains("next") || !c["next"].is_string()) {
             throw Error{code::CfgBad, "狀態 " + name + " 要是 {\"val\", \"next\"}（next 是狀態名字串）"};
         }

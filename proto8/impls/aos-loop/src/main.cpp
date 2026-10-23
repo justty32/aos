@@ -3,7 +3,7 @@
 //     aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] loop.json
 //
 // 唯一的位置參數就是設定檔（必給、只能一個；可寫 `檔#/指標`）；旗標放前面、規則同 aos-exec；起跑時 旗標 ＞ loop.json ＞ 預設
-// （10-21 傍晚 ideas § 9，照 proto8/bin/aos-loop）。run＝字串或 [目標, 參數...]，每次 `aos-exec -- 目標 參數...`；max 沒寫＝不限。
+// （10-21 傍晚 ideas § 9）。run＝字串或 [目標, 參數...]，每次 `aos-exec -- 目標 參數...`；max 沒寫＝不限。
 // 那次的碼：0＝下一次；10＝正常停（以 0 結束）；其他非 0＝失敗，stderr 一行「aos-loop: 第 N 次 誰 失敗，結束碼 C」、以那個碼結束。
 // 跑滿 max 以 0 結束、stderr 不寫（N-43）。收到 SIGINT／SIGTERM／SIGHUP：轉給正在跑的那次、等它結束，再以 128＋N 結束
 // （兩次之間收到就不起下一次）。選填 interval_ms、ctl、state。

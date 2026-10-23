@@ -1,5 +1,5 @@
 // resolve.cpp：走遍整份 JSON，認出指示詞、分派給 $ref（ref.cpp）／$env（env.cpp），換出來是字串再接 $path、加 $prefix。
-// 對應 proto8/bin/aos_inst.py 的 _resolve（10-20 ideas D9～D15）；$path 10-21 傍晚改成字串拼接（join_path）。
+// 10-20 ideas D9～D15；$path 10-21 傍晚改成字串拼接（join_path）。
 //
 // 物件：有 $ref 就是 $ref（同時有 $env 也只看 $ref）；否則有 $env 就是 $env；都沒有＝普通物件，逐個 key 往下走
 //       （不認得的 $xxx 不管）。寫法不合（回 nullopt）＝整個物件原封不動留著（不往裡面走）。
@@ -12,7 +12,6 @@ namespace aos::directive {
 
 // $path 的字串拼接（10-21 傍晚 ideas § 9，原 os.path.join／aos::join）：sub 以 # 開頭＝直接接在後面（`x.json` + `#/a`）；
 // 空字串＝不接；其他＝去掉 v 結尾的 /、去掉 sub 開頭的 /，中間剛好一個 /（寫絕對路徑不再整個取代）。
-// 對應 proto8/bin/aos_inst.py 的 join。
 static std::string join_path(const std::string& v, const std::string& sub) {
     if (sub.empty()) {
         return v;

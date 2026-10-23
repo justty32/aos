@@ -1,6 +1,6 @@
 // fields.cpp：【inst】單子（$env 已解）→ Inst：認得 10 個 key、驗型別。
 //
-// 10 個 key 與檢查順序照 proto8/bin/aos_inst.py 的 parse（10-19 版，單子格式的正本）：
+// 10 個 key 與檢查順序（10-19 版）：
 //   argv（非空字串陣列，必填）→ envs（{名: 字串}）→ cwd／stdin／stdout／stderr（字串或 null）→
 //   stdout_append／stderr_append（true／false）→ timeout_ms（正整數或 null）→ grace_ms（非負整數，沒寫 2000）
 // 其他 key 一律忽略（包括 impls/aos-inst 認得的 id、envs_clear、cwd_mkdir、stdout_mkdir、stderr_mkdir、stderr_merge）。

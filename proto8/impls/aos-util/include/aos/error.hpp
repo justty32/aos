@@ -1,7 +1,7 @@
 // aos/error.hpp：【aos-util】aos 這一家命令列工具共用的錯誤型別，和「好幾支工具都會吐」的錯誤代號。
 //
 // 每個工具出錯都丟同一種 aos::Error{code, msg}；命令列在 stderr 印一行 {"error": {"code", "msg"}}、退出 1
-// （印的函數在 aos/io.hpp）。code＝錯誤代號（跟 Python 版 proto8/lib 同名，看 code 分是哪種錯），
+// （印的函數在 aos/io.hpp）。code＝錯誤代號（看 code 分是哪種錯），
 // msg＝給人看的白話（字面不保證）。代號寫成常數，打錯字編譯就會抓到。
 //
 // 規矩：一個代號只定義一次。

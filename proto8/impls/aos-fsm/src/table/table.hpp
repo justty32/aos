@@ -1,7 +1,7 @@
 // table.hpp：【table】fsm.json——`{"start": 狀態名, "states": {名: {"val": aos-exec 的目標或 [目標, 參數...], "next": 下一個狀態名}}}`。內部標頭。
 //
 //   table.cpp   read_table：讀設定檔（`檔` 或 `檔#/指標`）、驗 start／states；check：開跑時查整張表（10-22）；
-//               pick：狀態名 → 那格（照 Python 版 proto8/bin/aos-fsm）
+//               pick：狀態名 → 那格
 //
 // 表一定明寫、next 只在表上（N-36）。val 只收目標（10-21 plan F2；傍晚 ideas § 9 加陣列）：要內嵌單子寫
 // `fsm.json#/states/<名>/body`、單子放在同一格的 body，由 aos-exec 跑。表裡其他 key（body、_entry…）忽略（C-48）。

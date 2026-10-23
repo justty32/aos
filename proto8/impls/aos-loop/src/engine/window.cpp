@@ -1,4 +1,4 @@
-// window.cpp：【engine】ctl／state 兩扇窗（NORMS N-06～N-09、N-17、N-32、N-33）。照 proto8/bin/aos_window.py。
+// window.cpp：【engine】ctl／state 兩扇窗（NORMS N-06～N-09、N-17、N-32、N-33）。
 //
 //   read_ctl      回最後一份好的 ctl（一份都沒讀到過＝{}）。認 paused、stopped（布林）、max、interval_ms、seq（非負整數），
 //                 加上子類別的 check_ctl；其他 key 忽略。指示詞先解（resolve_keys；10-23 晚）。讀到壞的（讀不了、不是 JSON 物件、

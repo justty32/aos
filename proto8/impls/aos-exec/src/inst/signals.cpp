@@ -1,6 +1,6 @@
 // signals.cpp：【inst】訊號——跑單子的期間收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式的整個行程群組。
 //
-// 規矩（照 proto8/bin/aos_inst.py 的 _run／_sig）：轉過去之後過 grace_ms 還沒結束就 SIGKILL 整群；
+// 規矩：轉過去之後過 grace_ms 還沒結束就 SIGKILL 整群；
 // 子程式還沒起來就收到的，起來再補送；群組已經沒了（ESRCH）就算了。
 //
 // 做法（從 impls/aos-inst 的 src/libaos/signals.cpp 抄來改）：
@@ -9,7 +9,7 @@
 //   - 排隊的訊號用 signalfd 讀：它把「收到訊號」變成一個可以 poll、可以 read 的 fd，一次讀出一個。
 //   - 「還沒起來就收到的」不用另外記：它們排在 kernel 裡，aos_inst_start 回來（子程式已起來）才開始讀、讀到就轉。
 //   - 送的對象：子程式是組長（libaos new_session），群組號＝它的 pid，用 killpg 整群送。
-//     （aos-inst 用 pidfd 只送那一個；整群送沒有 pidfd 可用，工人收完屍就停止轉送，跟 Python 的 os.killpg 一樣。）
+//     （aos-inst 用 pidfd 只送那一個；整群送沒有 pidfd 可用，工人收完屍就停止轉送。）
 //   - forward_signals_until_done 用 poll 同時等「訊號」和「工人做完」（done_fd），逾時＝SIGKILL 期限；
 //     回轉過的第一個訊號（Result::received，給 loop／fsm「收完這次再以 128＋N 結束」用）。
 #include "inst/inst.hpp"

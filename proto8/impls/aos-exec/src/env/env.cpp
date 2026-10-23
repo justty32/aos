@@ -1,4 +1,4 @@
-// env.cpp：【env】工作區與 AOS_STACK（說明見 env.hpp）。對應 proto8/bin/aos-exec 的 hop 開頭。
+// env.cpp：【env】工作區與 AOS_STACK（說明見 env.hpp）。
 #include "env/env.hpp"
 
 #include "aos/files.hpp"

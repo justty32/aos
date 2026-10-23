@@ -3,7 +3,7 @@
 //   1. 擋住 SIGCHLD（那三個訊號 block_signals 已擋）、開 signalfd，再 fork
 //   2. 子行程：關掉 signalfd、解開四個訊號，aos::exec::run_cli（定工作區、找入口、讀 .env、cd、開跑——可執行檔／argv 陣列是 exec；
 //      inst 單子在這個子行程裡跑、回來以子程式的碼 _exit）。它自己的錯印一行「aos-exec: 代號 原因」、_exit(1)
-//      （同 Python 版 aos-exec 子程序退 1）。每次重找，入口改了下一次就生效
+//      （aos-exec 子程序退 1）。每次重找，入口改了下一次就生效
 //   3. 這個行程：poll signalfd——三個訊號 kill 給子行程（記下第一個）；SIGCHLD 就 waitpid 看是不是它結束了
 //
 // 為什麼在子行程裡呼叫、不 exec 一支 aos-exec：impls 的 aos-exec 是函式庫＋命令列（ideas § 20「aos-exec 的公開 api」），
@@ -11,7 +11,7 @@
 // 原本「這個行程算好入口、子行程 apply_env＋launch」拆不開了，整段搬進子行程。）
 // fork 之後在子行程裡做 C++ 配置、setenv：呼叫者是單執行緒（run_inst 的工人執行緒在它回來前就 join 了），
 // fork 出來的子行程只有這一條執行緒，不會撞到別條執行緒握著的鎖，所以安全。
-// 子行程跟呼叫者同一個行程群組（不另開）：同 Python 版 subprocess.call，終端機的 Ctrl-C 兩個都收得到（CONVENTION P-36）。
+// 子行程跟呼叫者同一個行程群組（不另開）：終端機的 Ctrl-C 兩個都收得到（CONVENTION P-36）。
 #include "run/run.hpp"
 
 #include <cerrno>
@@ -67,7 +67,7 @@ struct Fd {
 
 unsigned long long ms_since(Clock::time_point t0) {
     long long us = std::chrono::duration_cast<std::chrono::microseconds>(Clock::now() - t0).count();
-    return (unsigned long long)((us + 500) / 1000);   // 四捨五入（Python 版 round(秒 × 1000)）
+    return (unsigned long long)((us + 500) / 1000);   // 四捨五入
 }
 
 // 子行程：一支 aos-exec。不回來。

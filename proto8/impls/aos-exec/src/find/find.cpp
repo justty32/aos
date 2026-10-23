@@ -1,4 +1,4 @@
-// find.cpp：【find】一跳（hop）——說明見 find.hpp。對應 proto8/bin/aos-exec 的 locate、hop（10-21 ideas § 4～§ 7）。
+// find.cpp：【find】一跳（hop）——說明見 find.hpp（10-21 ideas § 4～§ 7）。
 // 這裡會 chdir、setenv（.env 要在挑入口之前讀，挑入口又要看讀完之後的 $AOS_ENTRY，拆不成純計算）。
 #include "find/find.hpp"
 

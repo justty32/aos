@@ -4,8 +4,6 @@
 //   folder.cpp    run_folder：fork 子行程、在裡面呼叫 aos-exec 的 run_cli（等同一支 aos-exec），
 //                 等它結束、期間把訊號 kill 給它；量毫秒
 //   signals.cpp   block_signals、take_signal；the_signals()＝那三個訊號
-//
-// 對應 Python 版 proto8/bin/aos_run.py 的 run（`subprocess.Popen(["aos-exec", "--", x] + args)`）。
 #pragma once
 
 #include "common/common.hpp"

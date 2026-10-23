@@ -1,4 +1,4 @@
-// child.hpp：【child】表上的一個子項＝一支子 loop。照 proto8/bin/aos-daemon 的 Child、Daemon.spawn。內部標頭。
+// child.hpp：【child】表上的一個子項＝一支子 loop。內部標頭。
 //
 //   child.cpp   spawn：小格 mkdir（只建這一層，$AOS_STACK 不在＝MkdirFailed）、寫 loop.json（子項設定補上 ctl／state、蓋上 _entry、相對的 run 轉絕對；先 .loop.json 再改名）、
 //               fork 一個子行程跑 `aos-exec -- 小格/loop.json#/_entry`（aos-exec 的 run_cli；它 cd 進小格、exec 成 PATH 上的

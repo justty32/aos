@@ -9,7 +9,6 @@
 //   is_count(v)    JSON 非負整數（true／false、1.0 不算）
 //
 // Json 用 nlohmann::ordered_json：物件的 key 照讀進來的順序留著（跟 Python 的 dict 一樣），印出來不會被排序。
-// 對應 Python proto8/lib/aos_cli.py 的 read_stream、_load_stdin、emit、error、is_int。
 #pragma once
 
 #include "aos/error.hpp"

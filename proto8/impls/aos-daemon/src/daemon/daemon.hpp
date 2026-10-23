@@ -1,4 +1,4 @@
-// daemon.hpp：【daemon】Daemon＝aos-loop 的 Loop 子類別＋一張子 loop 的表。照 proto8/bin/aos-daemon 的 Daemon（10-21 傍晚）。內部標頭。
+// daemon.hpp：【daemon】Daemon＝aos-loop 的 Loop 子類別＋一張子 loop 的表（10-21 傍晚）。內部標頭。
 //
 //   daemon.cpp   建構子（AOS_STACK、loops、adopt 的檢查）、adopt、tend（對表：收多的、看誰結束、起少的）、
 //                term／settle（收子項不等：SIGTERM 後照常巡，每次 tend 看一眼，退了標 stopped、滿 10 秒還在就 SIGKILL 整群；

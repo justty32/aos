@@ -1,4 +1,4 @@
-// daemon.cpp：【daemon】Daemon（說明見 daemon.hpp）。照 proto8/bin/aos-daemon（10-21 傍晚）。
+// daemon.cpp：【daemon】Daemon（說明見 daemon.hpp；10-21 傍晚）。
 //
 // 每次（Loop 讀完 ctl 之後的 tend）：期望表＝ctl 的 loops（有寫）或 daemon.json 的 loops，加上 ctl 的 loops_added、減掉 loops_removed（10-23 晚）→
 //   表上多出來的送 SIGTERM（phase stopping）就往下走、不等；之後每次 tend 看一眼，退了標 stopped 並移除、滿 10 秒還在就
@@ -192,7 +192,7 @@ void Daemon::adopt() {
     }
     for (auto& [name, r] : rows.items()) {
         if (!r.is_object()) {
-            return;   // 同 bin 版：有一列壞就整份不接
+            return;   // 有一列壞就整份不接
         }
     }
     for (auto& [name, r] : rows.items()) {

@@ -2,7 +2,6 @@
 //
 //   launch.cpp   cd 已在 hop 做完。可執行檔：execvp(入口, "./入口" args)；argv 陣列：解指示詞、argv0、execvp(argv[0], argv＋args)——
 //                兩者 +x 沒 #! 都由 execvp 改用 /bin/sh 跑（ideas § 22）；inst 單子：run_inst（src/inst/）後回子程式的碼
-// 對應 proto8/bin/aos-exec 的 launch。
 #pragma once
 
 #include "common/common.hpp"

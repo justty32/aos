@@ -22,7 +22,7 @@
 #include <cstdlib>
 #include <exception>
 
-static const char* USAGE = "usage: aos-fsm [旗標] 設定檔.json";   // 旗標表是空的也寫 [旗標]（同 bin，10-22）
+static const char* USAGE = "usage: aos-fsm [旗標] 設定檔.json";   // 旗標表是空的也寫 [旗標]（10-22）
 
 static int fail(const std::string& code, const std::string& msg) {
     std::fprintf(stderr, "aos-fsm: %s %s\n", code.c_str(), msg.c_str());

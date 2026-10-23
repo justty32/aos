@@ -81,7 +81,7 @@ int launch(const Found& found, const std::vector<std::string>& args) {
         try {
             return run_inst(found.doc, dir, args).code;
         } catch (const Error& e) {
-            throw Error{e.code, "單子跑不起來：" + e.msg};   // 原因開頭同 bin 版（代號照舊分種類）
+            throw Error{e.code, "單子跑不起來：" + e.msg};   // 代號照舊分種類
         }
     }
     std::vector<std::string> argv;

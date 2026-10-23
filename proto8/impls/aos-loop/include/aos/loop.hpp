@@ -5,7 +5,7 @@
 //   parse_target    loop 的 run、fsm 格的 val 的寫法（10-21 傍晚 ideas § 9）：字串＝aos-exec 的目標；陣列＝[目標, 參數...]
 //   run_once        跑一次：子行程裡 `aos-exec -- 目標 參數...`（aos-exec 的 run_cli）；只收目標，內嵌單子寫 `loop.json#/body`
 //   loop_cli        命令列 `程式 [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔`（aos-loop、aos-daemon 共用）
-//   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；照 proto8/bin/aos_loop.py 的 Loop，10-21 傍晚）：
+//   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；10-21 傍晚）：
 //                   讀設定（旗標 ＞ 設定檔 ＞ 預設：run／max／interval_ms／ctl／state）、每次讀 ctl 窗 → tend() → 跑一次 → 寫 state 窗
 //   write_window    窗的寫法：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
 //   heartbeat       state 的心跳欄位 {pid, started_at_ticks, boot_id, at}（N-32）
@@ -58,7 +58,7 @@ Target parse_target(const Json& v, const std::string& what);
 
 // 跑一次＝`aos-exec -- 目標 參數...`（`--` 讓 - 開頭的目標不被當旗標；相對路徑照 cwd，loop 不轉）：fork 一個子行程，
 // 子行程裡解開那四個訊號、呼叫 aos::exec::run_cli（可執行檔／argv 陣列 exec 掉；單子在那個子行程裡跑、它當監工；
-// 它自己的錯印一行「aos-exec: 代號 原因」、碼 1）——等同 bin 版起一支 PATH 上的 aos-exec，只是不必在 PATH 上找。
+// 它自己的錯印一行「aos-exec: 代號 原因」、碼 1）——等同起一支 PATH 上的 aos-exec，只是不必在 PATH 上找。
 // 子行程跟呼叫者同一個行程群組（不另開）；跑的期間收到的三個訊號 kill 給它（不另設 SIGKILL 期限）。fork 失敗丟 LaunchFailed。
 // 呼叫前要先 block_signals()。
 Run run_once(const std::string& target, const std::vector<std::string>& args);
@@ -85,7 +85,7 @@ aos::Resolved resolve_keys(const Json& doc, const std::string& base_dir, const s
 // 心跳欄位 {"pid", "started_at_ticks"（/proc/<pid>/stat 第 22 欄）, "boot_id", "at"（ISO 8601 UTC 到毫秒，aos::utc_now_ms）}（N-32）。
 Json heartbeat();
 
-// 每種程式的預設值（同 Python 版 Loop 的類別屬性）。
+// 每種程式的預設值。
 struct Defaults {
     std::string prog = "aos-loop";          // 錯誤一行的程式名
     std::optional<long long> max;           // nullopt＝不限（10-21 plan L8，原 10）

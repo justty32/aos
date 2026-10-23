@@ -1,11 +1,11 @@
 // child.cpp：【child】一支子 loop（說明見 child.hpp）。
 //
-// 10-21 傍晚起子 loop 經 aos-exec 起（使用者「5.要」，ideas § 9；同 bin 版 `aos-exec -- 小格/loop.json#/_entry`）：
+// 10-21 傍晚起子 loop 經 aos-exec 起（使用者「5.要」，ideas § 9；`aos-exec -- 小格/loop.json#/_entry`）：
 // daemon 把子項設定寫成小格裡的 loop.json、蓋上 "_entry": ["aos-loop", {"$env": "AOS_CF"}]，fork 一個子行程呼叫 aos-exec 的
 // run_cli——它 cd 進小格、讀小格的 .env（若有）、exec 成 PATH 上的 aos-loop（指到 #/_entry，不受 $AOS_ENTRY 影響）。
 // 所以 ps 看到的子 loop 叫 aos-loop（原本 fork 後在子行程裡直接跑 aos-loop 的 Loop、名字是 aos-daemon，那是 10-20 頂層代定的做法，換掉）。
 // fork 時 daemon 只有一條執行緒，子行程裡做 C++ 配置、setenv 不會撞鎖。三個訊號 daemon 一開始就擋著（block_signals），
-// 子行程 exec 之前解開（遮罩會跨 exec 繼承；同 bin 版 Popen 起的子行程沒擋）。
+// 子行程 exec 之前解開（遮罩會跨 exec 繼承；子行程不擋）。
 #include "child/child.hpp"
 
 #include "aos/files.hpp"

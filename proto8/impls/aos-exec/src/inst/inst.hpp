@@ -1,6 +1,6 @@
 // inst.hpp：【inst】行程內跑一張 inst 單子（公開的 run_inst 在 aos/exec.hpp）。內部標頭，只給 src/ 自己用。
 //
-//   fields.cpp     單子（$env 已解）→ Inst：認 10 個 key、驗型別，其他 key 一律忽略（格式正本＝proto8/bin/aos_inst.py 的 parse）
+//   fields.cpp     單子（$env 已解）→ Inst：認 10 個 key、驗型別，其他 key 一律忽略
 //   lib_input.cpp  Inst → libaos 的單子（aos_inst_input_t）：相對路徑算成絕對、組環境、串流沒寫＝接呼叫者的（inherits）、
 //                  一律自成行程群組（new_session）
 //   signals.cpp    訊號：run_inst 進來擋住 INT／TERM／HUP、出去還原；跑的期間收下來轉給子程式的整個群組（killpg），

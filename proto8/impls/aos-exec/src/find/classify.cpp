@@ -1,4 +1,4 @@
-// classify.cpp：【find】實際的檔 → 種類（說明見 find.hpp）。對應 proto8/bin/aos-exec 的 find。
+// classify.cpp：【find】實際的檔 → 種類（說明見 find.hpp）。
 //
 // 順序（§ 18 ②「有 argv 這個 key＝inst 單子，其餘照 KISS」；10-21 晚 § 6 一路往下）：
 //   有 +x＝可執行檔（不讀內容；帶 #/＝EntryBad）。沒 +x 當 JSON 讀（第一行 #! 跳過；不是 JSON＝EntryBad；#/ 指不到＝EntryMissing）。

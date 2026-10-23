@@ -5,7 +5,6 @@
 //   write_json                 先寫暫存檔、再改名蓋過去（原子寫入，見 files.cpp 的說明）
 //   split_hash / read_json_at  入口路徑的 JSON 尋址：`檔#/指標` 拆成兩半；讀檔（跳過第一行 #!）再照指標取值
 // （讀 JSON 串流用 aos/io.hpp 的 read_stream。）
-// 對應 Python aos_ctl_state.py 的 write_json。
 #pragma once
 
 #include "aos/io.hpp"

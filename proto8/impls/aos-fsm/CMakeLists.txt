@@ -41,7 +41,7 @@ if(PROJECT_IS_TOP_LEVEL)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   add_test(NAME test_cli
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cli.py $<TARGET_FILE:aos-fsm_main>)
-  # 整合：demo 的 agent-bob、agent-ann 在 impls 線（aos-exec／aos-loop／aos-fsm 三支的 bin/）跑，跟 proto8/bin 線比。
+  # 整合：demo 的 agent-bob、agent-ann 用 aos-exec／aos-loop／aos-fsm 三支的 bin/ 跑。
   # 要先建好 ../aos-exec、../aos-loop 自己的 bin/（這個 build 只編它們的庫）
   add_test(NAME test_demo
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_demo.py)

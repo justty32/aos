@@ -4,7 +4,7 @@
 //                export AOS_WS、AOS_STACK——工作區在不在、建 stack、轉絕對路徑只在這裡做（N-59 第 1 件）
 //   dotenv.cpp   load_env：讀 資料夾/.env 逐行套進環境（10-22 起 dotenv 基礎子集、預設不蓋）；json_env：沒 argv 的
 //                JSON 物件裡的 `.env` key；env_value：`=` 後面那段（引號、註解、去空白）；set_env：一個 `名字=值`（只展開 ${名字}）
-// 對應 proto8/bin/aos-exec 的 hop 開頭幾行、set_env、load_env、json_env。PATH 不動（ideas § 24）。
+// PATH 不動（ideas § 24）。
 #pragma once
 
 #include "common/common.hpp"
@@ -16,7 +16,7 @@ namespace aos::exec {
 
 // ws＝旗標 --ws 的值（沒給＝"-"）。"-"／空＝沿用 $AOS_WS，沒設用 "."。不是資料夾 WsMissing。
 // 回工作區的絕對路徑（旗標給的才要在每讀完一份 .env 後蓋回去，呼叫者自己記）。
-// 注意：WS 的檢查在找 XXX 之前、建 stack 在找 XXX 之後（同 bin 版的錯誤順序），所以拆成兩個。
+// 注意：WS 的檢查在找 XXX 之前、建 stack 在找 XXX 之後（錯誤的先後就是這樣），所以拆成兩個。
 std::string check_ws(const std::string& ws_flag);
 void setup_stack(const std::string& ws);   // AOS_STACK＋export AOS_WS、AOS_STACK；建不了 MkdirFailed
 

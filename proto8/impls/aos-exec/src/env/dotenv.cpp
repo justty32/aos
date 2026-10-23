@@ -1,5 +1,4 @@
 // dotenv.cpp：【env】`.env`（10-21 ideas § 4、§ 6、§ 7；10-22 ideas § 3；N-59 第 4 件）。說明見 env.hpp。
-// 對應 proto8/bin/aos-exec 的 set_env、env_value、load_env、json_env。
 //
 // 一行 `[export ]名字=值`（10-22 起 dotenv 基礎子集）：去前導空白（只認 ASCII 空白）、去行尾 \r 後，空的或 # 開頭跳過；
 // 行首 `export ` 忽略；= 只切第一個、兩邊空白忽略；值見 env_value（引號只剝一對、空白＋# 起是註解、去頭尾空白；
@@ -100,7 +99,7 @@ std::set<std::string> env_names() {
     return out;
 }
 
-// 行首的 `export ` 前綴（10-22 B1）：export 後接一個以上的空格／tab，再接不是 = 也不是空白的字（同 bin 的
+// 行首的 `export ` 前綴（10-22 B1）：export 後接一個以上的空格／tab，再接不是 = 也不是空白的字（同 regex
 // `export[ \t]+(?=[^=\s])`）。是＝回前綴長度、不是＝0（`export=1`、`export =1` 是名字 export）。
 size_t export_prefix(const std::string& line) {
     if (!line.starts_with("export")) {
@@ -211,7 +210,7 @@ std::set<std::string> load_env(const std::string& dir, bool override) {
             throw Error{code::DotenvBad, bad + "（沒有 =）"};
         }
         std::string name = line.substr(0, eq);
-        size_t name_end = name.find_last_not_of(" \t");   // 名字後面的空白只認空格／tab（同 bin 的 rstrip(" \t")）
+        size_t name_end = name.find_last_not_of(" \t");   // 名字後面的空白只認空格／tab（同 Python 的 rstrip(" \t")）
         if (name_end == std::string::npos) {
             name.clear();
         } else {

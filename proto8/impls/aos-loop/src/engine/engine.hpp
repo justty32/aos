@@ -1,5 +1,5 @@
 // engine.hpp：【engine】反覆跑的程式的骨架 Loop（公開介面在 aos/loop.hpp）。內部標頭。
-// 照 proto8/bin/aos_loop.py（Loop、cli）與 aos_window.py（Ctl、write、heartbeat），10-21 傍晚。
+// 10-21 傍晚。
 //
 //   config.cpp   Loop 的建構子：讀設定檔（檔#/指標）、旗標蓋上、驗 run／max／interval_ms／ctl／state、算兩扇窗的路徑；
 //                parse_target、loop_cli
