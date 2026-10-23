@@ -145,7 +145,7 @@
   {
    "abbr": "meta",
    "full": "metadata",
-   "meaning": "附註資訊（`_metainfo` 已寫進很多條規範，沿用、不改成 `_meta`；10-15 盤點 M8）",
+   "meaning": "後設資料（`_metainfo`＝單子裡給 kernel 參考的抽屜，已寫進很多條規範，沿用、不改成 `_meta`；10-15 盤點 M8。10-23 晚起 `_` 開頭不再表附註，`_metainfo` 是普通 key、不認得的程式照 C-48 忽略）",
    "example": "_metainfo"
   },
   {
