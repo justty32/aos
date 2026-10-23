@@ -1,9 +1,9 @@
 # aos-fsm
 
-**一句話：`aos-fsm [旗標] 設定檔.json`——一拍只跑一格：看 `$AOS_STACK/state` 記的現在狀態，跑那一格，格退 0 才把狀態換成 `next`，然後以格的碼結束。**
+**一句話：`aos-fsm [旗標] 設定檔.json`——一拍只跑一格：看 `$AOS_STACK/state.txt` 記的現在狀態，跑那一格，格退 0 才把狀態換成 `next`，然後以格的碼結束。**
 一個 lib（`lib/libaos-fsm.a`，沒有公開標頭）加一支薄薄的命令列（`bin/aos-fsm`）。連 [aos-loop](../aos-loop/README.md) 的公開 API（跑一格＝`run_beat`；它又帶進 aos-exec、inst、aos-util、aos-directive）。全家慣例見 [impls/README.md](../README.md)。
 
-像大富翁只擲一次骰子：桌上一張地圖（`fsm.json`：每格寫著「走到這裡做什麼、做完去哪格」），棋子停在哪格記在一張小紙條上（`$AOS_STACK/state`）。
+像大富翁只擲一次骰子：桌上一張地圖（`fsm.json`：每格寫著「走到這裡做什麼、做完去哪格」），棋子停在哪格記在一張小紙條上（`$AOS_STACK/state.txt`）。
 叫它一次，它就看紙條、做那格的事、做成了（0）才把棋子移到下一格，在流水帳（`trace.jsonl`）記一行，然後下班；做不成就留在原地、帶著那個碼回去。
 要一直玩下去，就讓 aos-loop 一拍拍叫它。
 
@@ -11,7 +11,7 @@
 cat fsm.json
 # {"start": "idle", "states": {"idle": {"val": "idle", "next": "think"},
 #   "think": {"val": "fsm.json#/states/think/body", "next": "act",
-#             "body": {"argv": ["python3", "brain.py"], "stdout": {"$env": "AOS_STACK", "$path": "plan"}, "timeout_ms": 120000}},
+#             "body": {"argv": ["python3", "brain.py"], "stdout": {"$env": "AOS_STACK", "$path": "plan.txt"}, "timeout_ms": 120000}},
 #   "act": {"val": ["act", "--fast"], "next": "idle"}}}
 AOS_STACK=st/ aos-fsm fsm.json; echo $?   # 跑 idle 那格（aos-exec -- idle）；退 0 → st/state 變 think
 cat st/trace.jsonl   # {"at": "2026-10-19T14:07:00.123+00:00", "state": "idle", "code": 0, "signal": null, "elapsed_ms": 3}
@@ -39,9 +39,9 @@ aos-fsm [旗標] 設定檔.json
     不是空字串、頭尾沒空白（認 Unicode 空白）、沒換行。哪一格不合都＝表壞 `CfgBad`、不跑格（原本只查這拍那一格）。
   - fsm.json 帶 `"_entry": ["aos-fsm", {"$env": "AOS_CF"}]` 時 `aos-exec fsm.json` 就是一拍；表在大 JSON 裡時寫 `{"$env": "AOS_CF", "$path": "#/fsm"}`（`$path` 字串拼接）。
 - **`$AOS_STACK`**（必要）：fsm 自己的兩個檔都在這裡（只有 fsm 自己寫，N-39）：
-  - `state`：純文字一行狀態名（跟 shell 版 fsm 同格式，可互換，P-07）。沒有、空的＝`start`；前後空白去掉（認 Unicode 空白，同 bin 的 `str.strip()`）。
+  - `state.txt`（10-23 起帶 `.txt`，原 `state`）：純文字一行狀態名（跟 shell 版 fsm 同格式，可互換，P-07）。沒有、空的＝`start`；前後空白去掉（認 Unicode 空白，同 bin 的 `str.strip()`）。
     10-22 起**在但讀不了**（沒權限、是資料夾、不是 UTF-8）＝`StateBad`、不跑格（原本當沒有檔、從 `start` 起）；裡面的狀態不在表上＝`StateUnknown`。
-    寫的時候先寫 `.state` 再改名蓋過去（N-05）。
+    寫的時候先寫 `.state.txt` 再改名蓋過去（N-05）。
   - `trace.jsonl`：每拍追加一行 `{"at", "state", "code", "signal", "elapsed_ms"}`（排版同 Python `json.dumps`；`at`＝這拍開始的時間，
     ISO 8601 UTC 到毫秒，同 Python `datetime.now(timezone.utc).isoformat(timespec="milliseconds")`（例 `2026-10-23T01:58:45.123+00:00`），P-38；
     `elapsed_ms`＝那格花了幾毫秒；`signal`＝停掉那格的訊號，沒有＝`null`；10-23 統合前 `at` 只到秒、`elapsed_ms` 叫 ms）。**沒有 `timed_out`**（C-52：fsm 看不到格裡有沒有逾時；
@@ -72,7 +72,7 @@ aos-fsm [旗標] 設定檔.json
 |---|---|
 | `src/common/common.hpp` | `using`；代號（沿用 aos-loop 的，含 `StackMissing`；再加 `StateUnknown`） |
 | `src/table/table.hpp`、`table.cpp` | `read_table`（`load_cfg` 讀 `檔` 或 `檔#/指標`、驗 `start`／`states`）、`pick`（狀態名 → 那格：`val` 用 aos-loop 的 `parse_target` 拆成目標與參數、物件＝CfgBad；`next`） |
-| `src/state/state.hpp`、`state.cpp` | `read_state`、`write_state`（`.state` 再改名）、`append_trace`、`utc_now` |
+| `src/state/state.hpp`、`state.cpp` | `read_state`、`write_state`（`.state.txt` 再改名）、`append_trace`、`utc_now` |
 | `src/main.cpp` | 命令列：`parse_cli`（旗標表空的）、要剛好一個設定檔；串上面；出錯印「aos-fsm: 代號 原因」 |
 
 ## 為什麼這樣做
@@ -93,9 +93,9 @@ aos-fsm [旗標] 設定檔.json
 | `StackMissing` | 沒設 `AOS_STACK`（或空的） |
 | `CfgMissing`（共用） | 設定檔不在；`#/` 指標指不到 |
 | `CfgBad`（共用） | 設定檔讀不了、不是 JSON；`#` 後面不是 `/`；不是 `{"start": 字串, "states": 物件}`；開跑時查整張表不合（10-22）：`start` 不在表上、某格不是 `{"val", "next": 字串}`、`next` 不在表上／空字串／頭尾有空白／有換行、`val` 不是字串或非空字串陣列（物件也不行） |
-| `StateBad` | `$AOS_STACK/state` 在但讀不了（沒權限、是資料夾、不是 UTF-8；10-22） |
+| `StateBad` | `$AOS_STACK/state.txt` 在但讀不了（沒權限、是資料夾、不是 UTF-8；10-22） |
 | `StateUnknown` | state 檔裡的狀態不在表上（10-22 起格的形狀不對改算表壞 `CfgBad`） |
-| `WriteFailed`（共用） | `trace.jsonl`、`.state` 寫不了、改名不了（例 `AOS_STACK` 資料夾不在、單子格又沒人建它） |
+| `WriteFailed`（共用） | `trace.jsonl`、`.state.txt` 寫不了、改名不了（例 `AOS_STACK` 資料夾不在、單子格又沒人建它） |
 | `LaunchFailed`、`Internal`（共用） | 跑格時 fork 失敗、準備轉送訊號失敗（原因開頭「狀態 X：」） |
 
 代號照 [10-23 命名統合](../../thinking/2026-10-23-naming.md)；統合前 `ArgumentsBad`／`FlagUnknown` 都叫 Usage、`CfgMissing`／`CfgBad` 叫 ReadFailed／JsonSyntax／FieldType、`StateBad` 叫 ReadFailed。
@@ -106,7 +106,7 @@ aos-fsm [旗標] 設定檔.json
 
 - 錯誤一行多了代號（Python 版 `aos-fsm: 原因`）。
 - 每格不叫 PATH 上的 `aos-exec`，在 fork 出來的子行程裡呼叫 aos-exec 的 `run_cli`（效果一樣）；PATH 不動、原樣傳給那格（ideas § 24，見 aos-loop README 同一條）。
-- `trace.jsonl`／`.state` 寫不了：一行 `WriteFailed`、退 1（Python 版是 traceback）。
+- `trace.jsonl`／`.state.txt` 寫不了：一行 `WriteFailed`、退 1（Python 版是 traceback）。
 - 其他一樣：`proto8/tests/test_fsm.py` 19 案拿這支跑，只差錯誤一行的代號（抹掉代號全過；10-21 晚，方法見 [aos-exec](../aos-exec/README.md) 的「拿 proto8/tests 對照」）。
 
 ## 建置與測試
@@ -124,4 +124,4 @@ cmake -B build && cmake --build build && ctest --test-dir build
   外層逾時那案要 `../aos-exec/bin/aos-exec`。
 - `test_demo`（`tests/test_demo.py`，約 1 秒）：**整合測試**。照 `proto8/demo/run.sh`，把 `proto8/demo` 的 agent-bob（含它叫的 cathy、stamp）與 agent-ann
   各跑兩次——PATH 最前面放 impls 的 aos-exec、aos-loop、aos-fsm 的 `bin/`（拿掉 `proto8/bin`）一次、放 `proto8/bin` 一次——比結束碼、stderr、
-  工作區（含 `.aos/` 整棵 stack 樹）的每個檔（`trace.jsonl` 的 `at`／`elapsed_ms`、stamp 的時間那行先抹掉）。要先建好 `../aos-exec`、`../aos-loop` 自己的 `bin/`。
+  工作區（含 `.stack/` 整棵 stack 樹）的每個檔（`trace.jsonl` 的 `at`／`elapsed_ms`、stamp 的時間那行先抹掉）。要先建好 `../aos-exec`、`../aos-loop` 自己的 `bin/`。

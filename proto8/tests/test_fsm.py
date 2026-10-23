@@ -44,7 +44,7 @@ class T(unittest.TestCase):
         return run(FSM, fsm or str(self.tmp / "fsm.json"), stack=self.stack, cwd=str(self.tmp), **kw)
 
     def state(self):
-        return (self.stack / "state").read_text()
+        return (self.stack / "state.txt").read_text()
 
     def trace(self):
         return [json.loads(l) for l in (self.stack / "trace.jsonl").read_text().splitlines()]
@@ -57,30 +57,30 @@ class T(unittest.TestCase):
         self.assertEqual(self.state(), "b\n")   # 純文字一行狀態名，跟 shell 版同格式
         self.beat()
         self.assertEqual(self.state(), "a\n")
-        self.assertEqual(list(self.tmp.glob("state")), [])
+        self.assertEqual(list(self.tmp.glob("state.txt")), [])
 
     def test_state_written_by_rename_not_in_place(self):
-        # N-05：先寫 .state 再改名蓋過去——蓋完 inode 換了、不留暫存檔
+        # N-05：先寫 .state.txt 再改名蓋過去——蓋完 inode 換了、不留暫存檔
         self.cell("a", "exit 0\n"); self.cell("b", "exit 0\n")
         self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "b", "next": "a"}})
-        (self.stack / "state").write_text("a\n")
-        before = os.stat(self.stack / "state").st_ino
+        (self.stack / "state.txt").write_text("a\n")
+        before = os.stat(self.stack / "state.txt").st_ino
         self.assertEqual(self.beat().returncode, 0)
         self.assertEqual(self.state(), "b\n")
-        self.assertNotEqual(os.stat(self.stack / "state").st_ino, before)
-        self.assertFalse((self.stack / ".state").exists())
+        self.assertNotEqual(os.stat(self.stack / "state.txt").st_ino, before)
+        self.assertFalse((self.stack / ".state.txt").exists())
 
     def test_cell_10_passes_up_and_state_unchanged(self):
         self.cell("a", "exit 10\n"); self.cell("b", "exit 0\n")
         self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "b", "next": "a"}})
-        (self.stack / "state").write_text("a\n")
+        (self.stack / "state.txt").write_text("a\n")
         self.assertEqual(self.beat().returncode, 10)
         self.assertEqual(self.state(), "a\n")
 
     def test_cell_failure_code_state_unchanged(self):
         self.cell("a", "exit 3\n")
         self.table({"a": {"val": "a", "next": "a"}, "b": {"val": "a", "next": "a"}})
-        (self.stack / "state").write_text("b\n")
+        (self.stack / "state.txt").write_text("b\n")
         self.assertEqual(self.beat().returncode, 3)
         self.assertEqual(self.state(), "b\n")
 
@@ -100,14 +100,14 @@ class T(unittest.TestCase):
         self.assertEqual(t["code"], 143)
         self.assertIsNone(t["signal"])   # 格（aos-exec）自己以 143 結束，不是被訊號殺掉（10-22 檔頭更正）
         self.assertLess(t["elapsed_ms"], 5000)
-        self.assertFalse((self.stack / "state").exists())
+        self.assertFalse((self.stack / "state.txt").exists())
 
     def test_body_cell_exit_code_and_env_resolved(self):
         self.table({"a": self.body("a", {"argv": ["sh", "-c", "echo hi; exit 4"],
                                          "stdout": {"$env": "AOS_STACK", "$path": "out.txt"}})})
         self.assertEqual(self.beat().returncode, 4)
         self.assertEqual((self.stack / "out.txt").read_text(), "hi\n")
-        self.assertFalse((self.stack / "state").exists())
+        self.assertFalse((self.stack / "state.txt").exists())
 
     def test_object_val_is_own_error(self):
         # F2：val 只收字串；物件＝表壞，退 1、一行、提 #/states/<名>/body
@@ -128,7 +128,7 @@ class T(unittest.TestCase):
         self.assertEqual((r.returncode, r.stderr, self.state()), (0, "", "b\n"))
         (self.tmp / "big.json").write_text(json.dumps({"fsms": {"x": {"start": "a", "states": {
             "a": {"val": "a", "next": "c"}, "c": {"val": "a", "next": "a"}}}}}))
-        (self.stack / "state").unlink()
+        (self.stack / "state.txt").unlink()
         r = run(FSM, str(self.tmp / "big.json") + "#/fsms/x", stack=self.stack, cwd=str(self.tmp))
         self.assertEqual((r.returncode, r.stderr, self.state()), (0, "", "c\n"))
         for argv in ([], ["--cfg", f], ["--cfg=" + f], [f, "extra"], ["--max", "1", f]):
@@ -188,7 +188,7 @@ class T(unittest.TestCase):
 
     def test_own_errors_exit_1_one_line(self):
         self.table({"a": {"val": "a", "next": "a"}})
-        (self.stack / "state").write_text("zzz\n")
+        (self.stack / "state.txt").write_text("zzz\n")
         bad = self.tmp / "bad.json"; bad.write_text("{nope")
         for f in (self.tmp / "fsm.json", bad, self.tmp / "absent.json"):
             r = self.beat(str(f))
@@ -209,7 +209,7 @@ class T(unittest.TestCase):
         # 不是 UTF-8 吐 traceback）；沒有檔照舊＝start
         self.cell("a", 'touch "$AOS_STACK/ran"\n')
         self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "a", "next": "a"}})
-        sf = self.stack / "state"
+        sf = self.stack / "state.txt"
         sf.mkdir()
         self.assert_own_error_no_beat(self.beat(), "是資料夾")
         sf.rmdir()
@@ -251,7 +251,7 @@ class T(unittest.TestCase):
         # state 檔裡的狀態不在表上：照舊是自己的錯、退 1、不跑格（10-22 寫清楚）
         self.cell("a", 'touch "$AOS_STACK/ran"\n')
         self.table({"a": {"val": "a", "next": "a"}})
-        (self.stack / "state").write_text("zzz\n")
+        (self.stack / "state.txt").write_text("zzz\n")
         r = self.beat()
         self.assert_own_error_no_beat(r, "state 不在表上")
         self.assertIn("zzz", r.stderr)
@@ -274,7 +274,7 @@ class T(unittest.TestCase):
         self.assertLess(time.monotonic() - t0, 10)   # 孤兒 sleep 會握著 pipe 拖滿 30 秒
         self.assertNotEqual(r.returncode, 0)
         self.assertNotIn("timed_out", self.trace()[0])
-        self.assertFalse((self.stack / "state").exists())
+        self.assertFalse((self.stack / "state.txt").exists())
         pid = int((self.stack / "pid").read_text())
         gone = False
         for _ in range(20):
@@ -328,7 +328,7 @@ class T(unittest.TestCase):
         p.send_signal(signal.SIGINT)
         out, err = p.communicate(timeout=20)
         x = self.trace()[0]
-        self.assertEqual((ok, p.returncode, x["code"], x["signal"], (self.stack / "state").exists()),
+        self.assertEqual((ok, p.returncode, x["code"], x["signal"], (self.stack / "state.txt").exists()),
                          (True, 130, 130, None, False))
 
 

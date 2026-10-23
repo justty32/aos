@@ -12,9 +12,9 @@ val 是物件或別的＝表壞。表裡其他 key（body、_entry…）忽略�
 開跑時（讀表後、跑格前）先查整張表（10-22）：start 要在表上；每一格要是 {"val", "next"}、val 合法、next 要是表上的狀態名、
 不能是空字串、頭尾不能有空白、不能有換行——哪一格不合都＝表壞、不跑格（原本只查這拍那一格：next 不在表上要到下一拍才擋，
 next 是空字串則下一拍靜靜回 start）。
-讀 $AOS_STACK/state（純文字一行狀態名、去頭尾空白；沒有檔或內容是空的＝start，格式與 shell 版相同；10-22 起在但讀不了
+讀 $AOS_STACK/state.txt（純文字一行狀態名、去頭尾空白；沒有檔或內容是空的＝start，格式與 shell 版相同；10-22 起在但讀不了
 〔沒權限、是資料夾、不是 UTF-8…〕＝自己的錯，原本沒權限、是資料夾當沒有檔、從 start 起，不是 UTF-8 吐 traceback；
-裡面的狀態不在表上＝自己的錯；寫的時候先寫 .state 再改名，N-05）；查格；跑格。
+裡面的狀態不在表上＝自己的錯；寫的時候先寫 .state.txt 再改名，N-05）；查格；跑格。
 每拍在 $AOS_STACK/trace.jsonl 追加一行 {"at","state","code","signal","elapsed_ms"}（at＝這拍開始的時間，ISO 8601 UTC 到毫秒；
 elapsed_ms＝這拍跑了幾毫秒；10-23 命名統合；沒有 timed_out：
 fsm 看不到格裡有沒有逾時，C-52；被逾時收掉的格是 code 143（128＋15）、signal null——
@@ -84,7 +84,7 @@ def main():
     if not isinstance(states, dict) or not isinstance(cfg.get("start"), str):
         die("CfgBad", 'fsm.json 要是 {"start": 狀態名, "states": {名: {"val", "next"}}}')
     targets = check(cfg["start"], states)   # 10-22：開跑時查整張表，哪一格壞都不跑
-    sfile = os.path.join(stack, "state")
+    sfile = os.path.join(stack, "state.txt")
     try:
         with open(sfile, encoding="utf-8") as f:
             state = f.read().strip() or cfg["start"]
@@ -109,7 +109,7 @@ def main():
         f.write(json.dumps({"at": at, "state": state, "code": res["code"], "signal": res["signal"],
                             "elapsed_ms": res["elapsed_ms"]}, ensure_ascii=False) + "\n")
     if res["code"] == 0:
-        tmp = os.path.join(stack, ".state")   # N-05：先寫 . 開頭的暫存檔再改名蓋過去，讀的人不會讀到半份
+        tmp = os.path.join(stack, ".state.txt")   # N-05：先寫 . 開頭的暫存檔再改名蓋過去，讀的人不會讀到半份
         with open(tmp, "w", encoding="utf-8") as f:
             f.write(cell["next"] + "\n")
         os.replace(tmp, sfile)

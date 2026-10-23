@@ -30,7 +30,7 @@ std::string check_ws(const std::string& ws_flag) {
 }
 
 void setup_stack(const std::string& ws) {
-    std::string stack = join(ws, ".aos");
+    std::string stack = join(ws, ".stack");
     const char* s = std::getenv("AOS_STACK");
     if (s != nullptr && s[0] != '\0') {
         stack = s;

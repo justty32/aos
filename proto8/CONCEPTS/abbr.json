@@ -25,7 +25,7 @@
    "abbr": "fsm",
    "full": "finite state machine",
    "meaning": "狀態機組合子",
-   "example": "fsm.json、aos-fsm、$AOS_STACK/state（N-39）"
+   "example": "fsm.json、aos-fsm、$AOS_STACK/state.txt（N-39）"
   },
   {
    "abbr": "cfg",
@@ -84,8 +84,8 @@
   {
    "abbr": "cur",
    "full": "current",
-   "meaning": "目前（Maildir 慣例：已認領）",
-   "example": "信箱 cur/"
+   "meaning": "目前（Maildir 慣例：已認領、處理中）",
+   "example": "信箱 cur/；demo 工作區的題目 new/ → cur/ → done/（10-23）"
   },
   {
    "abbr": "cwd",

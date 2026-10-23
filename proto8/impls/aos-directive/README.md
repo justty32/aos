@@ -6,7 +6,7 @@ aos-exec 連這個 lib 解單子、argv 陣列入口與 JSON `.env` key 裡的�
 
 ```sh
 echo '{"argv": {"$ref": "cfg.json", "$at": "/tools/stamp"}, "out": {"$env": "AOS_STACK", "$path": "out", "$prefix": "--o="}}' | aos-directive
-# {"argv": ["sh", "-c", "exit 3"], "out": "--o=/ws/.aos/out"}
+# {"argv": ["sh", "-c", "exit 3"], "out": "--o=/ws/.stack/out"}
 ```
 
 ## 用法

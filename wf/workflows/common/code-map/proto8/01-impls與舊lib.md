@@ -18,7 +18,7 @@
 | `aos-loop/src/beat/folder.cpp` | 每拍 fork 子行程呼叫 aos-exec 的 `run_cli({"--", 目標, 參數...})`、轉訊號 |
 | `aos-loop/src/engine/config.cpp` | `Loop` 建構子（`load_cfg`、旗標 ＞ 設定檔 ＞ 預設）、`parse_target`（`val`＝字串或 `[目標, 參數...]`）、`loop_cli`（aos-loop、aos-daemon 共用） |
 | `aos-fsm/src/table/table.cpp` | `read_table`（`load_cfg`）、`check`（10-22：開跑時查整張表，表壞 CfgBad，10-23 統合前叫 FieldType）、`pick`（state 不在表上 StateUnknown）；`val` 走 `parse_target`；trace 沒有 `timed_out` |
-| `aos-fsm/src/state/state.cpp` | `read_state`（10-22：在但讀不了 StateBad〔10-23 統合前叫 ReadFailed〕、去頭尾 Unicode 空白）、`write_state`（`.state` 再改名）、`append_trace`（時間用 aos-util 的 `utc_now_ms`，ISO 到毫秒） |
+| `aos-fsm/src/state/state.cpp` | `read_state`（10-22：在但讀不了 StateBad〔10-23 統合前叫 ReadFailed〕、去頭尾 Unicode 空白）、`write_state`（`.state.txt` 再改名；10-23 起狀態檔是 `state.txt`）、`append_trace`（時間用 aos-util 的 `utc_now_ms`，ISO 到毫秒） |
 | `aos-daemon/src/daemon/daemon.cpp` | `Daemon`：`check_loops`（10-23 統合前叫 `check_children`）、10-22 起 `taken_names`／`check_names`（子項名字跟自己的 ctl／state 撞名：起來時 CfgBad〔10-23 統合前叫 Conflict〕、ctl 撞＝不採用）、`adopt`、`tend`、`stop`、`finish` |
 | `aos-daemon/src/child/child.cpp` | 子 loop 經 aos-exec 起：寫小格 `loop.json`（補 ctl／state、蓋 `_entry`、相對 run 轉絕對）、fork 後呼叫 `run_cli({"--", 小格/loop.json#/_entry})`，exec 成 PATH 上的 aos-loop |
 | `aos-directive/src/resolve.cpp` | 指示詞走訪；`$path` 是字串拼接（`join_path`） |

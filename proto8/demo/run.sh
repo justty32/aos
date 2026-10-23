@@ -1,16 +1,16 @@
 #!/bin/sh
 # 各建一個暫時工作區、放一題、cd 進去跑 agent-bob（含它叫的 cathy）與 agent-ann（慣例用法）、印出工作區與整棵 stack 樹；
 # 再跑 daemon：一個 daemon 同時管 bob、ann 兩個子 loop（各自的工作區在 bob/、ann/）；
-# 最後跑 tick：aos-loop 拍 5 次 aos-tick，時鐘檔 $AOS_STACK/tick 走到 5（10-21 計畫第 4 段）
+# 最後跑 tick：aos-loop 拍 5 次 aos-tick，時鐘檔 $AOS_STACK/tick.txt 走到 5（10-21 計畫第 4 段）
 here=$(cd "$(dirname "$0")" && pwd)
 # aos 的程式都不動 PATH（ideas § 24）：agent 裡叫的 aos-exec、aos-loop、aos-fsm、aos-daemon、aos-tick 由這裡（呼叫端）放進 PATH
 PATH="$(cd "$here/../bin" && pwd):$PATH"; export PATH
 show() {   # 印工作區與 stack 樹（每檔印內容；子 agent 的工作區 ws/ 只列檔名）
-  echo "--- 工作區 $1" && (cd "$1" && find . -path ./.aos -prune -o -type f -print | sort)
-  (cd "$1" && for f in $(find . -path ./.aos -prune -o -type f \( -path '*/out/*' -o -path '*/done/*' \) -print | sort); do
+  echo "--- 工作區 $1" && (cd "$1" && find . -path ./.stack -prune -o -type f -print | sort)
+  (cd "$1" && for f in $(find . -path ./.stack -prune -o -type f \( -path '*/out/*' -o -path '*/done/*' \) -print | sort); do
     echo "== $f"; cat "$f"; done)
-  echo "--- stack 整棵樹 $1/.aos/"
-  (cd "$1" && find .aos -type f | sort | while read -r f; do
+  echo "--- stack 整棵樹 $1/.stack/"
+  (cd "$1" && find .stack -type f | sort | while read -r f; do
     case $f in
       */ws/*) echo "== $f" ;;
       *) echo "== $f"; cat "$f" ;;
@@ -20,13 +20,13 @@ show() {   # 印工作區與 stack 樹（每檔印內容；子 agent 的工作�
 for agent in agent-bob agent-ann; do
   echo "######## $agent"
   ws=$(mktemp -d)
-  mkdir "$ws/inbox"; echo "1+1 等於多少？" > "$ws/inbox/q1.txt"
+  mkdir "$ws/new"; echo "1+1 等於多少？" > "$ws/new/q1.txt"
   (cd "$ws" && aos-exec "$here/$agent"); echo "結束碼 $?"
   show "$ws"; rm -rf "$ws"
 done
 echo "######## daemon"
 ws=$(mktemp -d)
-for a in bob ann; do mkdir -p "$ws/$a/inbox"; echo "2+2 等於多少？" > "$ws/$a/inbox/q1.txt"; done
+for a in bob ann; do mkdir -p "$ws/$a/new"; echo "2+2 等於多少？" > "$ws/$a/new/q1.txt"; done
 (cd "$ws" && aos-exec "$here/daemon"); echo "結束碼 $?"
 show "$ws"; rm -rf "$ws"
 echo "######## tick"

@@ -56,7 +56,7 @@ class T(Base):
         r = subprocess.run([LOOP, "loop.json"], cwd=str(self.t), env=env_of({"PATH": path}), capture_output=True,
                            text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.t / ".aos" / "path").read_text().strip(), path)
+        self.assertEqual((self.t / ".stack" / "path").read_text().strip(), path)
 
     def test_sigterm_forwarded_to_string_beat(self):
         # 那拍收到 SIGTERM 收好自己、退 0；loop 不起下一拍，以 143 結束
@@ -64,10 +64,10 @@ class T(Base):
                        'echo beat >> "$AOS_STACK/log"; touch "$AOS_STACK/up"\nwhile :; do sleep 0.05; done\n')
         self.loop({"val": "c", "max": 5})
         p = self.start()
-        ok = wait_file(self.t / ".aos" / "up")
+        ok = wait_file(self.t / ".stack" / "up")
         p.send_signal(signal.SIGTERM)
         out, err = p.communicate(timeout=20)
-        self.assertEqual((ok, p.returncode, out, err, (self.t / ".aos" / "log").read_text().split()),
+        self.assertEqual((ok, p.returncode, out, err, (self.t / ".stack" / "log").read_text().split()),
                          (True, 143, "", "", ["beat", "got"]))
 
     def test_sigint_forwarded_to_inst_beat(self):
@@ -88,7 +88,7 @@ class T(Base):
         self.prog("c", 'touch "$AOS_STACK/up"\nexec sleep 30\n')
         self.loop({"val": "c", "max": 5})
         p = self.start()
-        ok = wait_file(self.t / ".aos" / "up")
+        ok = wait_file(self.t / ".stack" / "up")
         p.send_signal(signal.SIGHUP)
         out, err = p.communicate(timeout=20)
         self.assertEqual((ok, p.returncode, err), (True, 129, ""))
@@ -327,7 +327,7 @@ class Cli(Base):
         ws.mkdir()
         r = subprocess.run([str(BIN / "aos-exec"), "--ws", str(ws), str(d / "loop.json")], cwd=str(self.t),
                            env=env_of(), capture_output=True, text=True, timeout=30)
-        self.assertEqual((r.returncode, r.stderr, self.beats(ws / ".aos")), (0, "", ["x q"] * 2))
+        self.assertEqual((r.returncode, r.stderr, self.beats(ws / ".stack")), (0, "", ["x q"] * 2))
 
     def test_aos_exec_big_json_pointer(self):
         # 大 JSON 裡的 loop：_entry 用 {"$env": "AOS_CF", "$path": "#/loops/a"} 指回自己那一格（$path 字串拼接，10-21 傍晚）
@@ -338,7 +338,7 @@ class Cli(Base):
         ws.mkdir()
         r = subprocess.run([str(BIN / "aos-exec"), "--ws", str(ws), str(self.t / "big.json") + "#/loops/a"],
                            cwd=str(self.t), env=env_of(), capture_output=True, text=True, timeout=30)
-        self.assertEqual((r.returncode, r.stderr, len(self.beats(ws / ".aos"))), (0, "", 3))
+        self.assertEqual((r.returncode, r.stderr, len(self.beats(ws / ".stack"))), (0, "", 3))
 
 
 if __name__ == "__main__":

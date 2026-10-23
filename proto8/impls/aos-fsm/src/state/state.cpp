@@ -12,7 +12,7 @@ namespace aos::fsm {
 
 std::string read_state(const std::string& stack, const std::string& start) {
     int err = 0;
-    std::string path = aos::join(stack, "state");
+    std::string path = aos::join(stack, "state.txt");
     std::optional<std::string> text = aos::read_file(path, err);
     if (!text) {
         if (err == ENOENT) {   // 沒有檔＝從 start 起
@@ -46,8 +46,8 @@ static void write_text(const std::string& path, const std::string& text, const c
 }
 
 void write_state(const std::string& stack, const std::string& name) {
-    std::string tmp = aos::join(stack, ".state");
-    std::string dst = aos::join(stack, "state");
+    std::string tmp = aos::join(stack, ".state.txt");
+    std::string dst = aos::join(stack, "state.txt");
     write_text(tmp, name + "\n", "w");
     if (std::rename(tmp.c_str(), dst.c_str()) != 0) {
         int e = errno;

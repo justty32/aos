@@ -1,10 +1,10 @@
 #!/bin/sh
-# act：把 plan 當題目交給 tools/cathy（另一隻 agent），拿她的答案寫 $AOS_WS/out/<題名>，題目搬 done/
+# act：把 plan.txt 當題目交給 tools/cathy（另一隻 agent），拿她的答案寫 $AOS_WS/out/<題名>，題目從 cur/ 搬 done/
 [ -n "$AOS_STACK" ] || { echo "agent-bob: 沒設定 AOS_STACK" >&2; exit 1; }
-name=$(cat "$AOS_STACK/current") || { echo "agent-bob act: 讀不到 current" >&2; exit 1; }
+name=$(cat "$AOS_STACK/current.txt") || { echo "agent-bob act: 讀不到 current.txt" >&2; exit 1; }
 sub=$AOS_STACK/cathy/                          # cathy 的小格＝她的 stack；她的工作區＝$sub/ws/
-mkdir -p "$sub/ws/inbox" "$AOS_WS/out" "$AOS_WS/done"
-cp "$AOS_STACK/plan" "$sub/ws/inbox/$name"     # 照 cathy 的說明備題：inbox 一題一檔
+mkdir -p "$sub/ws/new" "$AOS_WS/out" "$AOS_WS/done"
+cp "$AOS_STACK/plan.txt" "$sub/ws/new/$name"     # 照 cathy 的說明備題：new/ 一題一檔
 AOS_STACK=$sub aos-exec --ws "$sub/ws" tools/cathy || { echo "agent-bob act: cathy 失敗" >&2; exit 1; }
 cp "$sub/ws/out/$name" "$AOS_WS/out/$name" || exit 1   # 答案從她的 out/ 拿
-mv "$AOS_WS/inbox/$name" "$AOS_WS/done/$name"
+mv "$AOS_WS/cur/$name" "$AOS_WS/done/$name"

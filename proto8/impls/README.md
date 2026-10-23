@@ -10,7 +10,8 @@
 > loop.json／daemon.json／子項的 `run` → `val`、daemon 的 `children` → `loops`；state 的 `state` 欄 → `phase`、`lap` → `beats`、`started` → `start_ticks`、心跳 `beat` → `at`
 > （值改 ISO 8601 UTC 到毫秒，例 `2026-10-23T01:58:45.123+00:00`）；daemon 子項的 `exited` 拆成 `done`（自己結束）／`stopped`（daemon 收掉）；
 > fsm trace 的 `ms` → `elapsed_ms`、`at` 也到毫秒；訊息裡的「第 N 圈」→「第 N 拍」；指示詞的 `at` → `$at`；錯誤代號照 C-54 收成 `…Missing`／`…Unknown`／`…Bad`／動作＋`Failed`
-> （`Usage` → `ArgumentsBad`／`FlagUnknown`、設定檔 → `CfgMissing`／`CfgBad`、`WsMissing`、`DotenvBad`、`StateBad`、libaos 的 `CommandMissing`／`CommandBad`…，下面代號表是現行的）。
+> （`Usage` → `ArgumentsBad`／`FlagUnknown`、設定檔 → `CfgMissing`／`CfgBad`、`WsMissing`、`DotenvBad`、`StateBad`、libaos 的 `CommandMissing`／`CommandBad`…，下面代號表是現行的）；
+> 使用者 10-23 重看代定後再改三處：純文字檔帶 `.txt`（aos-fsm 的 `$AOS_STACK/state` → `state.txt`、暫存 `.state.txt`；aos-daemon 小格的 `stderr` → `stderr.txt`）、`AOS_STACK` 預設 `$AOS_WS/.aos/` → `$AOS_WS/.stack/`、demo 題目資料夾 `inbox/` → `new/`（認領搬 `cur/`）。
 > 換完拿 `proto8/tests`（245 個；`test_tick` 用 bin 的 aos-tick，impls 沒有這支）對照，一樣只剩下面那兩個字面差別；`proto8/demo/run.sh` 換成 impls 四支跑，跟 bin 線逐行一樣（時間、pid 抹掉）。
 >
 > **10-23（對齊 bin 10-22，ideas 10-22 § 3、§ 6、§ 7）：** aos-exec 的 `.env` 改 dotenv 基礎子集（`export `、`=` 兩邊空白、引號、空白＋`#` 註解、去頭尾空白——值的空白照 python-dotenv 認 Unicode 空白、行首仍只認 ASCII）、
@@ -49,7 +50,7 @@
 ```
  aos-daemon   一個 loop＋子 loop 的表：$AOS_STACK/<名字>/ 小格、ctl 增減、不自動重起、adopt   src/{daemon,child,common}
      │ 繼承 aos-loop 的 Loop；子 loop＝fork 後子行程呼叫 run_cli(-- 小格/loop.json#/_entry)，exec 成 PATH 上的 aos-loop
- aos-fsm      一拍跑一格：$AOS_STACK/state → 跑那格 → 碼 0 才換 next；trace.jsonl   src/{table,state,common}
+ aos-fsm      一拍跑一格：$AOS_STACK/state.txt → 跑那格 → 碼 0 才換 next；trace.jsonl   src/{table,state,common}
      │ 跑一格借 aos-loop 的 run_beat（aos/loop.hpp）
  aos-loop     每拍跑一次 val：0 下一拍、10 停、其他非 0 失敗；轉訊號、收完 128＋N；interval_ms、ctl／state 窗    src/{beat,engine,common}
      │ 每拍：fork 子行程呼叫 aos-exec 的 run_cli({"--", 目標, 參數...})（等同起一支 aos-exec）
@@ -134,9 +135,9 @@
 | `InputExtra` | aos-schema、aos-directive（aos-util 讀 stdin） | stdin 有好幾份 JSON |
 | `CfgMissing` | aos-loop、aos-fsm、aos-daemon（`load_cfg`） | 設定檔（loop.json、fsm.json、daemon.json）不在；`#/` 指不到 |
 | `CfgBad` | aos-loop、aos-fsm、aos-daemon | 設定檔讀不了、不是 JSON、`#` 後不是 `/`；不是物件、某個 key 型別不對、必填沒寫；`val` 寫成物件；aos-fsm 開跑時查整張表不合（10-22：`start`／`next` 不在表上、`next` 空字串或頭尾有空白、格的形狀不對）；aos-daemon 10-22 起：子項名字跟自己的 ctl／state 撞名（10-23 統合前分成 ReadFailed、JsonSyntax、FieldType、Conflict） |
-| `StateBad` | aos-fsm | 10-22 起：`$AOS_STACK/state` 在但讀不了（沒權限、是資料夾、不是 UTF-8）（10-23 統合前叫 ReadFailed） |
+| `StateBad` | aos-fsm | 10-22 起：`$AOS_STACK/state.txt` 在但讀不了（沒權限、是資料夾、不是 UTF-8）（10-23 統合前叫 ReadFailed） |
 | `SchemaMissing` | aos-schema | SCHEMA檔 不在（10-23 統合前叫 ReadFailed） |
-| `WriteFailed` | aos-loop、aos-fsm、aos-daemon | state 窗寫不了；aos-fsm：`trace.jsonl`、`.state` 寫不了；aos-daemon：子項的 loop.json 寫不了 |
+| `WriteFailed` | aos-loop、aos-fsm、aos-daemon | state 窗寫不了；aos-fsm：`trace.jsonl`、`.state.txt` 寫不了；aos-daemon：子項的 loop.json 寫不了 |
 | `MkdirFailed` | aos-daemon、aos-exec | 資料夾建不了（aos-exec：`AOS_STACK`；aos-daemon：子項的小格） |
 | `LaunchFailed` | inst、aos-loop、aos-daemon、aos-exec | 子程序起不來（執行檔不在、fork 失敗；aos-exec 還有 exec 失敗、libaos 起不來；aos-daemon：小格的 stderr 開不了） |
 | `Internal` | 每支 | 照理不會發生的例外 |

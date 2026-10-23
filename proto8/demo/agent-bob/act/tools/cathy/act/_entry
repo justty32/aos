@@ -1,9 +1,9 @@
 #!/bin/sh
-# act（cathy 的）：經 tools/stamp 把 plan 寫進 $AOS_WS/out/<題名>，題目搬到 done/
+# act（cathy 的）：經 tools/stamp 把 plan.txt 寫進 $AOS_WS/out/<題名>，題目從 cur/ 搬到 done/
 [ -n "$AOS_STACK" ] || { echo "agent-cathy: 沒設定 AOS_STACK" >&2; exit 1; }
-name=$(cat "$AOS_STACK/current") || { echo "agent-cathy act: 讀不到 current" >&2; exit 1; }
+name=$(cat "$AOS_STACK/current.txt") || { echo "agent-cathy act: 讀不到 current.txt" >&2; exit 1; }
 mkdir -p "$AOS_WS/out" "$AOS_WS/done"
-plan=$AOS_STACK/plan
+plan=$AOS_STACK/plan.txt
 sub=$AOS_STACK/stamp/
 AOS_STACK=$sub aos-exec tools/stamp < "$plan" > "$AOS_WS/out/$name" || exit 1
-mv "$AOS_WS/inbox/$name" "$AOS_WS/done/$name"
+mv "$AOS_WS/cur/$name" "$AOS_WS/done/$name"

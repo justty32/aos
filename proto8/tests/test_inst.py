@@ -143,11 +143,11 @@ class T(unittest.TestCase):
         stack, ws = self.tmp / "stack", self.tmp / "ws"
         stack.mkdir(); ws.mkdir()
         doc = {"argv": ["echo", "x"],
-               "stdout": {"$env": "AOS_STACK", "$path": "plan"},
+               "stdout": {"$env": "AOS_STACK", "$path": "plan.txt"},
                "stderr": {"$env": "AOS_WS", "$path": "err"}}
         r = run(EXEC, "--ws", str(ws), self.single(doc), env={"AOS_STACK": str(stack) + "/"})
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((stack / "plan").read_text(), "x\n")
+        self.assertEqual((stack / "plan.txt").read_text(), "x\n")
         self.assertTrue((ws / "err").exists())
         # 不帶 path：整個變數值
         r = run(EXEC, "--ws", str(ws), self.single({"argv": ["echo", {"$env": "AOS_WS"}]}))
@@ -160,12 +160,12 @@ class T(unittest.TestCase):
         entry = d / "_entry"
         entry.write_text('#!/usr/bin/env 隨便\n' + json.dumps(
             {"argv": ["sh", "-c", 'pwd; echo "$1"; exit 4', "sh"],
-             "stdout": {"$env": "AOS_STACK", "$path": "plan"}}))
+             "stdout": {"$env": "AOS_STACK", "$path": "plan.txt"}}))
         entry.chmod(0o644)
         ws = self.tmp / "ws"; ws.mkdir()
         r = run(EXEC, "--ws", str(ws), str(d), "arg1")
         self.assertEqual(r.returncode, 4, r.stderr)
-        lines = (ws / ".aos" / "plan").read_text().split("\n")
+        lines = (ws / ".stack" / "plan.txt").read_text().split("\n")
         self.assertEqual(lines[0], str(d))
         self.assertEqual(lines[1], "arg1")
 
@@ -188,7 +188,7 @@ class T(unittest.TestCase):
         finally:
             os.environ.clear(); os.environ.update(old)
         self.assertTrue(res["timed_out"])
-        pid = int((ws / ".aos" / "pid").read_text())
+        pid = int((ws / ".stack" / "pid").read_text())
         gone = False
         for _ in range(20):
             try:

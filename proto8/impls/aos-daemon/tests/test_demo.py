@@ -4,9 +4,9 @@
 
     python3 tests/test_demo.py
 
-照 proto8/demo/run.sh 的 daemon 那段：暫存工作區、bob/inbox、ann/inbox 各放一題、cd 進去 `aos-exec <demo/daemon>`。
+照 proto8/demo/run.sh 的 daemon 那段：暫存工作區、bob/new、ann/new 各放一題、cd 進去 `aos-exec <demo/daemon>`。
 impls 線：PATH 最前面放 impls 的 aos-exec、aos-loop、aos-fsm、aos-daemon 的 bin/（不放 proto8/bin）；bin 線：PATH 最前面放 proto8/bin。
-兩條線各跑一次，比：結束碼、stderr、工作區裡（含 .aos/ stack 整棵樹）有哪些檔、每個檔的內容。
+兩條線各跑一次，比：結束碼、stderr、工作區裡（含 .stack/ stack 整棵樹）有哪些檔、每個檔的內容。
 會變的東西先抹掉：trace.jsonl 每行的 at、elapsed_ms；state.json 的 pid、start_ticks、boot_id、at（含 loops 每列的 pid、start_ticks）；
 stamp 印的「# <UTC 時間>」那行。要先建好 impls 的四支。
 """
@@ -64,8 +64,8 @@ def run_line(agent, bins):
     exe = str(bins[0] / "aos-exec")
     with tempfile.TemporaryDirectory() as ws:
         for a in ("bob", "ann"):
-            Path(ws, a, "inbox").mkdir(parents=True)
-            Path(ws, a, "inbox", "q1.txt").write_text("2+2 等於多少？\n")
+            Path(ws, a, "new").mkdir(parents=True)
+            Path(ws, a, "new", "q1.txt").write_text("2+2 等於多少？\n")
         r = subprocess.run([exe, str(DEMO / agent)], cwd=ws, env=env, capture_output=True, text=True, timeout=120)
         files = {}
         for p in sorted(Path(ws).rglob("*")):

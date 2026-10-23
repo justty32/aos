@@ -6,7 +6,7 @@
 `--dotenv-override`（不帶值，10-22）：這一次 aos-exec 讀的每份 .env 蓋掉環境裡已有的名字；沒給＝已有的不蓋（同 python-dotenv）。
 旗標蓋過對應的環境變數。不認得的旗標、旗標缺值、沒有 XXX＝usage 錯。
 XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd；不在、basename 沒有 `.` → 補找 XXX.json。
-一跳（hop；10-21 ideas § 4～§ 6）：export AOS_WS、AOS_STACK（沒設＝$AOS_WS/.aos/，建好）→ 走進資料夾或檔所在的資料夾
+一跳（hop；10-21 ideas § 4～§ 6）：export AOS_WS、AOS_STACK（沒設＝$AOS_WS/.stack/，建好）→ 走進資料夾或檔所在的資料夾
 （AOS_CD＝它、AOS_CF＝它或那個檔、AOS_CO＝空；cd；讀那裡的 .env；旗標蓋回；沒 --dotenv-override＝旗標 ＞ 原本的環境變數 ＞ .env ＞ 預設，
 有＝旗標 ＞ .env ＞ 原本的 ＞ 預設；.env 設的 AOS_* 照字面，不驗、不建）→
 照「當下的」$AOS_ENTRY（預設 _entry）挑入口：資料夾 → $AOS_ENTRY 一段段走、沿路資料夾都走進去，挑到資料夾就再走進去、
@@ -331,7 +331,7 @@ def hop(spec, base, opts, seen):
         raise Fail("工作區不存在：%s" % ws, "WsMissing")
     d, f, ptr = locate(spec, base)
     ws = os.path.abspath(ws)
-    stack = os.environ.get("AOS_STACK") or os.path.join(ws, ".aos")
+    stack = os.environ.get("AOS_STACK") or os.path.join(ws, ".stack")
     try:
         os.makedirs(stack, exist_ok=True)
     except OSError as e:

@@ -60,7 +60,7 @@ class T(unittest.TestCase):
         real = str(Path(d).resolve())
         self.assertEqual(run("--dotenv-override", "--ws", self.t, d)[:2], (0, "cf|/nowhere|st/|other|%s\n" % real))
         # 10-22 不加旗標：AOS_CF／AOS_CD／AOS_STACK 讀 .env 前已設＝跳過；AOS_ENTRY aos-exec 不 export、外面沒設＝設得了
-        st = str(Path(self.t, ".aos").resolve()) + "/"
+        st = str(Path(self.t, ".stack").resolve()) + "/"
         self.assertEqual(run("--ws", self.t, d)[:2], (0, "%s/other|%s|%s|other|%s\n" % (real, real, st, real)))
 
     # ---- 10-21 晚：AOS_ENTRY 的順序（ideas 10-21 § 5）：cd 進去、讀 .env，再照 $AOS_ENTRY 挑入口 ----
@@ -311,7 +311,7 @@ class T(unittest.TestCase):
         put(Path(d, ".env"), "AOS_WS=nope/rel\nAOS_STACK=st/\n")
         self.assertEqual(run("--dotenv-override", "--ws", "-", d, cwd=self.t)[:2], (0, "nope/rel|st/|none\n"))
         self.assertFalse(Path(d, "st").exists())
-        self.assertTrue(Path(self.t, ".aos").is_dir())   # 讀 .env 之前算好的那個照樣建
+        self.assertTrue(Path(self.t, ".stack").is_dir())   # 讀 .env 之前算好的那個照樣建
 
     def test_env_bom_is_bad(self):
         # 現行：BOM 不去掉，第一行的名字開頭多了 U+FEFF＝名字不合＝.env 壞 第 1 行

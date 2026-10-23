@@ -12,7 +12,7 @@ ctl、state 撞名——檔在 $AOS_STACK 底下時，路徑的第一段就是�
 起來時撞＝退 1，ctl 改 loops 撞＝那份 ctl 不採用）：daemon 把子項的 loop 設定補上
 "ctl": "ctl.json"、"state": "state.json"（沒寫才補）與 "_entry": ["aos-loop", {"$env": "AOS_CF"}]（一律蓋上）寫成小格裡的 loop.json，
 以 AOS_STACK=小格 起 `aos-exec -- 小格/loop.json#/_entry`（經 aos-exec，使用者 10-21 傍晚「5.要」；指到 _entry 不受 $AOS_ENTRY 影響；
-aos-exec cd 進小格、exec 成 aos-loop，pid 不變；自成一個行程群組）。子 loop 的 stdout 丟掉、stderr 附加到小格的 stderr（N-28 方案 B）。
+aos-exec cd 進小格、exec 成 aos-loop，pid 不變；自成一個行程群組）。子 loop 的 stdout 丟掉、stderr 附加到小格的 stderr.txt（N-28 方案 B）。
 每拍（拍與拍之間）：讀 ctl（多認 loops＝我要表上有誰，N-54）→ 收掉表上多出來的（SIGTERM，等 10 秒，再 SIGKILL 整群）、
 看誰結束了（phase done，記 code／signal）、起表上少掉的 → 跑 val（有寫才跑）→ 寫 state（loops 表在裡面）。
 state 的 loops 表每列 {"pid", "start_ticks", "phase", "code", "signal"}：phase＝running／done（子 loop 自己結束）／
@@ -142,13 +142,13 @@ class Daemon(aos_loop.Loop):
         cfg.setdefault("ctl", "ctl.json")
         cfg.setdefault("state", "state.json")
         cfg["_entry"] = ["aos-loop", {"$env": "AOS_CF"}]
-        code = "MkdirFailed"   # 哪一步失敗決定代號：建小格、寫 loop.json、開 stderr／起子行程
+        code = "MkdirFailed"   # 哪一步失敗決定代號：建小格、寫 loop.json、開 stderr.txt／起子行程
         try:
             os.makedirs(cell, exist_ok=True)
             code = "WriteFailed"
             aos_window.write(os.path.join(cell, "loop.json"), cfg)
             code = "LaunchFailed"
-            with open(os.path.join(cell, "stderr"), "ab") as err:
+            with open(os.path.join(cell, "stderr.txt"), "ab") as err:
                 p = subprocess.Popen(["aos-exec", "--", os.path.join(cell, "loop.json") + "#/_entry"], cwd=self.cwd,
                                      env=dict(os.environ, AOS_STACK=cell + "/"), stdin=subprocess.DEVNULL,
                                      stdout=subprocess.DEVNULL, stderr=err, start_new_session=True)

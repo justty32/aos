@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
         fsm::Table table = fsm::read_table(cli.rest[0]);
         std::map<std::string, fsm::Cell> cells = fsm::check(table);   // 10-22：開跑時查整張表，哪一格壞都不跑
         std::string state = fsm::read_state(stack, table.start);
-        fsm::Cell cell = fsm::pick(cells, state, aos::join(stack, "state"));
+        fsm::Cell cell = fsm::pick(cells, state, aos::join(stack, "state.txt"));
 
         int sig = aos::loop::take_signal();
         if (sig != 0) {

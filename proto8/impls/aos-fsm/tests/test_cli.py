@@ -81,7 +81,7 @@ def st(t):
 
 
 def state(t):
-    return (st(t) / "state").read_text()
+    return (st(t) / "state.txt").read_text()
 
 
 def trace(t):
@@ -108,18 +108,18 @@ def state_in_stack_and_advances(t):
     check("第一拍 0、state＝b", (rc, state(t)), (0, "b\n"))   # 純文字一行狀態名，跟 shell 版同格式
     run(t)
     check("第二拍 state＝a", state(t), "a\n")
-    check("cwd 不留 state", list(Path(t).glob("state")), [])
+    check("cwd 不留 state", list(Path(t).glob("state.txt")), [])
 
 
 @case
 def state_written_by_rename_not_in_place(t):
-    # N-05：先寫 .state 再改名蓋過去——蓋完 inode 換了、不留暫存檔
+    # N-05：先寫 .state.txt 再改名蓋過去——蓋完 inode 換了、不留暫存檔
     cell(t, "a", "exit 0\n"); cell(t, "b", "exit 0\n")
     table(t, AB)
-    put(st(t) / "state", "a\n")
-    before = os.stat(st(t) / "state").st_ino
+    put(st(t) / "state.txt", "a\n")
+    before = os.stat(st(t) / "state.txt").st_ino
     rc = run(t)[0]
-    check("改名寫入", (rc, state(t), os.stat(st(t) / "state").st_ino != before, (st(t) / ".state").exists()),
+    check("改名寫入", (rc, state(t), os.stat(st(t) / "state.txt").st_ino != before, (st(t) / ".state.txt").exists()),
           (0, "b\n", True, False))
 
 
@@ -127,7 +127,7 @@ def state_written_by_rename_not_in_place(t):
 def cell_10_passes_up_and_state_unchanged(t):
     cell(t, "a", "exit 10\n"); cell(t, "b", "exit 0\n")
     table(t, AB)
-    put(st(t) / "state", "a\n")
+    put(st(t) / "state.txt", "a\n")
     check("格退 10：原樣往上、state 不動", (run(t)[0], state(t)), (10, "a\n"))
 
 
@@ -135,7 +135,7 @@ def cell_10_passes_up_and_state_unchanged(t):
 def cell_failure_code_state_unchanged(t):
     cell(t, "a", "exit 3\n")
     table(t, {"a": {"val": "a", "next": "a"}, "b": {"val": "a", "next": "a"}})
-    put(st(t) / "state", "b\n")
+    put(st(t) / "state.txt", "b\n")
     rc, out, _, stderr = run(t)
     check("格失敗：原碼、state 不動、fsm 不說話", (rc, state(t), stderr), (3, "b\n", ""))
 
@@ -155,7 +155,7 @@ def object_cell_in_process_with_timeout(t):
     table(t, {"a": {"val": {"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 300}, "next": "a"}})
     rc = run(t)[0]
     tr = trace(t)[0]
-    check("單子逾時", (rc, tr["code"], tr["elapsed_ms"] < 5000, (st(t) / "state").exists()), (143, 143, True, False))
+    check("單子逾時", (rc, tr["code"], tr["elapsed_ms"] < 5000, (st(t) / "state.txt").exists()), (143, 143, True, False))
 
 
 @case
@@ -164,7 +164,7 @@ def object_cell_exit_code_and_env_resolved(t):
     table(t, {"a": {"val": {"argv": ["sh", "-c", "echo hi; exit 4"],
                             "stdout": {"$env": "AOS_STACK", "$path": "out.txt"}}, "next": "a"}})
     rc = run(t)[0]
-    check("單子的碼、$env 解開", (rc, (st(t) / "out.txt").read_text(), (st(t) / "state").exists()), (4, "hi\n", False))
+    check("單子的碼、$env 解開", (rc, (st(t) / "out.txt").read_text(), (st(t) / "state.txt").exists()), (4, "hi\n", False))
 
 
 @case
@@ -190,13 +190,13 @@ def requires_stack(t):
 @case
 def own_errors_exit_1_one_line(t):
     table(t, {"a": {"val": {"argv": ["true"]}, "next": "a"}})
-    put(st(t) / "state", "zzz\n")
+    put(st(t) / "state.txt", "zzz\n")
     put(Path(t, "bad.json"), "{nope")
     put(Path(t, "objval.json"), {"start": "a", "states": {"a": {"val": {"argv": ["no-such-cmd-xyz"]}, "next": "a"}}})
     want = {"fsm.json": "StateUnknown", "bad.json": "CfgBad", "absent.json": "CfgMissing", "objval.json": "CfgBad"}
     for f, code in want.items():
         if f == "objval.json":
-            put(st(t) / "state", "a\n")
+            put(st(t) / "state.txt", "a\n")
         rc, _, err, stderr = run(t, f)
         check("自己的錯 %s" % f, (rc, err, len(stderr.splitlines())), (1, code, 1))
 
@@ -219,7 +219,7 @@ def outer_timeout_kills_nested_tree(t):
             gone = True
             break
         time.sleep(0.05)
-    check("外層逾時整棵收掉", (fast, rc != 0, trace(t)[0]["code"] != 0, (st(t) / "state").exists(), gone),
+    check("外層逾時整棵收掉", (fast, rc != 0, trace(t)[0]["code"] != 0, (st(t) / "state.txt").exists(), gone),
           (True, True, True, False, True))
 
 
@@ -252,9 +252,9 @@ def bad_cells(t):
 def empty_state_file_means_start(t):
     cell(t, "a", "exit 0\n"); cell(t, "b", "exit 0\n")
     table(t, AB)
-    put(st(t) / "state", "  \n")
+    put(st(t) / "state.txt", "  \n")
     run(t)
-    put(st(t) / "state", "  b \n")   # 前後空白去掉
+    put(st(t) / "state.txt", "  b \n")   # 前後空白去掉
     run(t)
     check("空的 state＝start；去空白", [x["state"] for x in trace(t)], ["a", "b"])
 
@@ -360,7 +360,7 @@ def sigint_inst_cell(t):
     out, err = p.communicate(timeout=20)
     x = trace(t)[0]
     # 單子由那格的 aos-exec 跑、它當監工：子程式被 SIGINT 停掉，aos-exec 以 130 結束（signal 不是 fsm 看到的，null）
-    check("單子格被轉來的 SIGINT 停掉", (ok, p.returncode, x["code"], x["signal"], (st(t) / "state").exists()),
+    check("單子格被轉來的 SIGINT 停掉", (ok, p.returncode, x["code"], x["signal"], (st(t) / "state.txt").exists()),
           (True, 130, 130, None, False))
 
 
@@ -431,7 +431,7 @@ def own_error_no_beat(t, name, r):
 def state_exists_but_unreadable(t):
     cell(t, "a", 'touch "$AOS_STACK/ran"\n')
     table(t, {"a": {"val": "a", "next": "b"}, "b": {"val": "a", "next": "a"}})
-    sf = st(t) / "state"
+    sf = st(t) / "state.txt"
     sf.mkdir(parents=True)
     check("state 是資料夾", own_error_no_beat(t, "state 是資料夾：不跑", run(t)), "StateBad")
     sf.rmdir()

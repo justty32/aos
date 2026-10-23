@@ -43,7 +43,7 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
    - **資料夾** → 記下來，入口**這時還不挑**（要等讀完 `.env`）。資料夾帶 `#/`＝`EntryBad`。
    - **檔** → 就用它。
    - **不在、basename 沒有 `.`** → 補找 `XXX.json`；都沒有＝`EntryMissing`。
-3. **建 stack**（`setup_stack`）：`AOS_STACK` 沒設＝`$AOS_WS/.aos/`，有設沿用（相對於呼叫當下的 cwd）；mkdir -p、轉絕對、結尾 `/`；export `AOS_WS`、`AOS_STACK`。
+3. **建 stack**（`setup_stack`）：`AOS_STACK` 沒設＝`$AOS_WS/.stack/`（10-23 改名，原 `.aos/`），有設沿用（相對於呼叫當下的 cwd）；mkdir -p、轉絕對、結尾 `/`；export `AOS_WS`、`AOS_STACK`。
    只有這一步算出來的會建、會轉絕對；之後 `.env` 設的 `AOS_*` 照字面用（`.env` 改 `AOS_WS` 時 `AOS_STACK` 不跟著搬，風險自擔，ideas § 6 J8）。
 4. **走進去**（`enter`）：資料夾（或檔所在的資料夾）——`AOS_CF`、`AOS_CD` 先設成它（XXX 是檔時 `AOS_CF`＝那個檔）、`AOS_CO` 設空、**cd 進去**、
    **讀那裡的 `.env`**（見下面）、**旗標蓋回**（`--ws` 給的值再寫回 `AOS_WS`）。走進去那一刻 `$AOS_ENTRY` 是 `.env`＝那份 `.env` 不讀成環境（它就是入口）。
@@ -105,7 +105,7 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
 |---|---|---|
 | `AOS_ENTRY` | aos-exec 自己只讀、不設；沒設（或空）＝`_entry`。資料夾裡與 JSON 裡用同一個名字；每次挑入口都重讀（`.env` 可能剛改過它） | 繼承 |
 | `AOS_WS` | 每跳設：WS 的絕對路徑（`--ws` 給的，每讀完一份 `.env` 都蓋回去） | 叫別人時明給 |
-| `AOS_STACK` | 沒設＝`$AOS_WS/.aos/`；有設沿用（相對於呼叫當下的 cwd）；都 mkdir -p、轉絕對、結尾 `/` | 叫別人時明給 |
+| `AOS_STACK` | 沒設＝`$AOS_WS/.stack/`（10-23 改名，原 `.aos/`）；有設沿用（相對於呼叫當下的 cwd）；都 mkdir -p、轉絕對、結尾 `/` | 叫別人時明給 |
 | `AOS_CF` | 每跳覆寫：實際被執行的檔（解開捷徑的絕對路徑，不帶 `#/…`；往下走進 JSON 物件時不變；字串轉向後＝最後那個檔）。走進資料夾時先＝那個資料夾 | 每層覆寫 |
 | `AOS_CD` | 每跳覆寫：`AOS_CF` 所在的資料夾＝cd 進去的地方 | 每層覆寫 |
 | `AOS_CO` | 每跳覆寫（10-21 晚新增，aos current obj）：入口在那份 JSON 檔裡的位置，JSON 指標、不帶 `#`（例 `/a/_entry`；`檔#/指標` 也算在內，之後每挑一格接 `/` 加照 `~0`／`~1` 跳脫的 key）；整份檔就是入口、或可執行檔＝空。走進資料夾時先設空 | 每層覆寫 |

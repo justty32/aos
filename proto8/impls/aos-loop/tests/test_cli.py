@@ -171,13 +171,13 @@ def other_keys_ignored(t):
 
 @case
 def string_run_goes_through_aos_exec(t):
-    # 沒設 AOS_WS＝cwd、AOS_STACK＝$AOS_WS/.aos/、AOS_CF／AOS_CD、cd 進入口所在的資料夾
+    # 沒設 AOS_WS＝cwd、AOS_STACK＝$AOS_WS/.stack/、AOS_CF／AOS_CD、cd 進入口所在的資料夾
     prog(t, "cell", 'echo "$AOS_WS|$AOS_STACK|$AOS_CF|$AOS_CD|$(pwd)" >> "$AOS_STACK/seen"\n')
     loop(t, {"val": "cell", "max": 2})
     rc, _, _, stderr = run("loop.json", cwd=t)
     real = os.path.realpath(t)
-    line = "%s|%s/.aos/|%s/cell/_entry|%s/cell|%s/cell" % (real, real, real, real, real)
-    check("字串 val＝aos-exec 它", (rc, stderr, Path(t, ".aos", "seen").read_text().splitlines()),
+    line = "%s|%s/.stack/|%s/cell/_entry|%s/cell|%s/cell" % (real, real, real, real, real)
+    check("字串 val＝aos-exec 它", (rc, stderr, Path(t, ".stack", "seen").read_text().splitlines()),
           (0, "", [line, line]))
 
 
@@ -216,7 +216,7 @@ def string_run_json_entries(t):
     for name in ("a", "b"):
         loop(t, {"val": name, "max": 2})
         check("JSON 入口 %s" % name, run("loop.json", cwd=t)[0], 0)
-    check("跑了幾次", Path(t, ".aos", "n").read_text().split(), ["a", "a", "b"])
+    check("跑了幾次", Path(t, ".stack", "n").read_text().split(), ["a", "a", "b"])
 
 
 @case
@@ -225,7 +225,7 @@ def entry_reread_each_lap(t):
     put(Path(t, "c", "next"), "#!/bin/sh\nexit 10\n", 0o755)
     prog(t, "c", 'echo 1 >> "$AOS_STACK/n"; mv "$AOS_CD/next" "$AOS_CD/_entry"\n')
     loop(t, {"val": "c", "max": 5})
-    check("每拍重找入口", (run("loop.json", cwd=t)[0], Path(t, ".aos", "n").read_text().split()), (0, ["1"]))
+    check("每拍重找入口", (run("loop.json", cwd=t)[0], Path(t, ".stack", "n").read_text().split()), (0, ["1"]))
 
 
 @case
@@ -275,7 +275,7 @@ def string_run_path_as_is(t):
     prog(t, "cell", 'echo "$PATH" > "$AOS_STACK/path"\n')
     loop(t, {"val": "cell", "max": 1})
     rc = run("loop.json", cwd=t, env={"PATH": "/usr/bin:/bin"})[0]
-    check("字串 val PATH 原樣", (rc, Path(t, ".aos", "path").read_text().strip()), (0, "/usr/bin:/bin"))
+    check("字串 val PATH 原樣", (rc, Path(t, ".stack", "path").read_text().strip()), (0, "/usr/bin:/bin"))
 
 
 # ───────── C. 訊號：轉給那拍、收完以 128＋N 結束 ─────────
@@ -302,10 +302,10 @@ def sigterm_forwarded_to_string_lap(t):
                  'echo ran >> "$AOS_STACK/log"; touch "$AOS_STACK/up"\nwhile :; do sleep 0.05; done\n')
     loop(t, {"val": "c", "max": 5})
     p = start(t)
-    ok = wait_file(Path(t, ".aos", "up"))
+    ok = wait_file(Path(t, ".stack", "up"))
     p.send_signal(signal.SIGTERM)
     out, err = p.communicate(timeout=20)
-    check("字串 val：轉 SIGTERM、收完 143", (ok, p.returncode, out, err, Path(t, ".aos", "log").read_text().split()),
+    check("字串 val：轉 SIGTERM、收完 143", (ok, p.returncode, out, err, Path(t, ".stack", "log").read_text().split()),
           (True, 143, "", "", ["ran", "got"]))
 
 
@@ -327,7 +327,7 @@ def sighup_lap_dies(t):
     prog(t, "c", 'touch "$AOS_STACK/up"\nexec sleep 30\n')
     loop(t, {"val": "c", "max": 5})
     p = start(t)
-    ok = wait_file(Path(t, ".aos", "up"))
+    ok = wait_file(Path(t, ".stack", "up"))
     p.send_signal(signal.SIGHUP)
     out, err = p.communicate(timeout=20)
     check("SIGHUP：129", (ok, p.returncode, err), (True, 129, ""))
@@ -519,7 +519,7 @@ def cli_run_array(t):
     prog(t, "c", 'echo "$*" >> "$AOS_STACK/args"\n')
     loop(t, {"val": ["c", "a b", "--x"], "max": 2})
     rc, _, _, stderr = run("loop.json", cwd=t)
-    check("val 陣列＝[目標, 參數...]", (rc, stderr, Path(t, ".aos", "args").read_text().splitlines()),
+    check("val 陣列＝[目標, 參數...]", (rc, stderr, Path(t, ".stack", "args").read_text().splitlines()),
           (0, "", ["a b --x", "a b --x"]))
     prog(t, "-dash", 'echo d >> "$AOS_STACK/args"\n')
     loop(t, {"val": "-dash", "max": 1})
@@ -538,7 +538,7 @@ def loop_json_as_entry(t):
     path = os.pathsep.join([os.path.dirname(BIN), os.path.abspath(exe), "/usr/bin", "/bin"])
     r = subprocess.run([os.path.join(exe, "aos-exec"), "loop.json"], cwd=t, env=env_of({"PATH": path}),
                        capture_output=True, text=True, timeout=30)
-    check("aos-exec loop.json", (r.returncode, r.stderr, Path(t, ".aos", "n").read_text().split()), (0, "", ["x", "x"]))
+    check("aos-exec loop.json", (r.returncode, r.stderr, Path(t, ".stack", "n").read_text().split()), (0, "", ["x", "x"]))
 
 
 for fn in cases:

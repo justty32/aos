@@ -121,7 +121,7 @@ class T(unittest.TestCase):
         Path(dot, ".env").write_text("no-equals\n")
         st = Path(self.t, "st")
         st.mkdir()
-        Path(st, "state").mkdir()   # fsm 的 state 在但讀不了（是資料夾）
+        Path(st, "state.txt").mkdir()   # fsm 的 state.txt 在但讀不了（是資料夾）
         put(Path(d, "ok.json"), {"start": "a", "states": {"a": {"val": "p", "next": "a"}}})
         loop, fsm, daemon = (str(ROOT / "bin" / n) for n in ("aos-loop", "aos-fsm", "aos-daemon"))
         e = env_of({"AOS_STACK": str(st)})
@@ -345,7 +345,7 @@ class T(unittest.TestCase):
 
     def test_inst_env_directive(self):
         self.json_entry({"argv": ["echo", "s"], "stdout": {"$env": "AOS_STACK", "$path": "out"}})
-        self.assertEqual(Path(self.t, ".aos", "out").read_text(), "s\n")
+        self.assertEqual(Path(self.t, ".stack", "out").read_text(), "s\n")
         q = Path(self.t, "q").resolve()
         self.assertEqual(self.json_entry({"argv": ["echo", {"$env": "AOS_CD"}, {"$env": "AOS_CF"}]})[:2],
                          (0, "%s %s/_entry.json\n" % (q, q)))

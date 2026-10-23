@@ -166,8 +166,8 @@ class T(unittest.TestCase):
         k = self.kids()
         self.assertEqual((p.returncode, err, k["bad"]["phase"], k["bad"]["code"], k["obj"]["phase"], k["obj"]["code"]),
                          (0, "", "done", 3, "done", 1))
-        self.assertIn("aos-loop: ", (self.s / "bad" / "stderr").read_text())
-        self.assertIn("loop.json#/body", (self.s / "obj" / "stderr").read_text())
+        self.assertIn("aos-loop: ", (self.s / "bad" / "stderr.txt").read_text())
+        self.assertIn("loop.json#/body", (self.s / "obj" / "stderr.txt").read_text())
 
     def test_ctl_loops_add_and_remove(self):
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})

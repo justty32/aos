@@ -176,8 +176,8 @@ def nested_same_workspace(t):
 def stack_default_and_override(t):
     d = prog(t, "p", 'echo "$AOS_STACK"\n')
     ws = Path(t, "ws"); ws.mkdir()
-    check("AOS_STACK 預設", run(d, str(ws))[1].strip(), str(ws) + "/.aos/")
-    check("AOS_STACK 預設建好", (ws / ".aos").is_dir(), True)
+    check("AOS_STACK 預設", run(d, str(ws))[1].strip(), str(ws) + "/.stack/")
+    check("AOS_STACK 預設建好", (ws / ".stack").is_dir(), True)
     mine = Path(t, "mystack")
     check("AOS_STACK 覆寫", run(d, str(ws), env={"AOS_STACK": str(mine)})[1].strip(), str(mine) + "/")
     check("AOS_STACK 覆寫建好", mine.is_dir(), True)
@@ -190,7 +190,7 @@ def nested_shares_stack(t):
     outer = prog(t, "outer", "aos-exec %s\n" % inner)
     ws = Path(t, "ws"); ws.mkdir()
     rc = run(outer, str(ws))[0]
-    check("巢狀共用 stack", (rc, (ws / ".aos" / "seen").read_text().strip()), (0, str(ws) + "/.aos/"))
+    check("巢狀共用 stack", (rc, (ws / ".stack" / "seen").read_text().strip()), (0, str(ws) + "/.stack/"))
 
 
 @case
@@ -473,7 +473,7 @@ def inst_streams(t):
 def inst_env_directive(t):
     ws = Path(t).resolve()
     inst(t, {"argv": ["echo", "s"], "stdout": {"$env": "AOS_STACK", "$path": "out"}})
-    check("$env＋path 寫到 $AOS_STACK/out", (ws / ".aos" / "out").read_text(), "s\n")
+    check("$env＋path 寫到 $AOS_STACK/out", (ws / ".stack" / "out").read_text(), "s\n")
     rc, out, _, _ = inst(t, {"argv": ["echo", {"$env": "AOS_CD"}, {"$env": "AOS_CF"}]})
     q = Path(t, "q").resolve()
     check("$env 讀得到 AOS_CD／AOS_CF", (rc, out), (0, "%s %s/_entry.json\n" % (q, q)))

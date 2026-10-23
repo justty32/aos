@@ -1,6 +1,6 @@
 // env.hpp：【env】環境變數——工作區與 stack、`.env`（ideas 10-19 § 17、§ 19；10-21 ideas § 4～§ 7；分類照 P-39）。內部標頭。
 //
-//   env.cpp      setup_ws_stack：WS 規則（旗標 ＞ $AOS_WS ＞ cwd）、AOS_STACK（沒設＝$AOS_WS/.aos/，mkdir -p、轉絕對、結尾 /），
+//   env.cpp      setup_ws_stack：WS 規則（旗標 ＞ $AOS_WS ＞ cwd）、AOS_STACK（沒設＝$AOS_WS/.stack/，mkdir -p、轉絕對、結尾 /），
 //                export AOS_WS、AOS_STACK——工作區在不在、建 stack、轉絕對路徑只在這裡做（N-59 第 1 件）
 //   dotenv.cpp   load_env：讀 資料夾/.env 逐行套進環境（10-22 起 dotenv 基礎子集、預設不蓋）；json_env：沒 argv 的
 //                JSON 物件裡的 `.env` key；env_value：`=` 後面那段（引號、註解、去空白）；set_env：一個 `名字=值`（只展開 ${名字}）

@@ -92,7 +92,7 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
     } catch (const Error& e) {
         throw Error{e.code, "起不了子項 " + name + "：" + e.msg};
     }
-    std::string err_path = aos::join(cell, "stderr");
+    std::string err_path = aos::join(cell, "stderr.txt");
     int err_fd = open(err_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
     if (err_fd < 0) {
         throw Error{code::LaunchFailed, "起不了子項 " + name + "：開不了 " + err_path + "（" + std::strerror(errno) + "）"};
