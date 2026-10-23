@@ -1,9 +1,9 @@
-// main.cpp：aos-fsm 命令列——一拍只跑一格（N-36）。
+// main.cpp：aos-fsm 命令列——一次只跑一格（N-36）。
 //
 //     aos-fsm [旗標] 設定檔.json
 //
 //   block_signals → 命令列（目前沒有旗標；唯一的位置參數＝設定檔，可寫 `檔#/指標`；10-21 傍晚 ideas § 9）→ 要 AOS_STACK →
-//   read_table → check（開跑時查整張表，10-22）→ read_state（在但讀不了＝StateBad，10-22）→ pick → run_beat（aos-loop 的公開 API：子行程 `aos-exec -- 目標 參數...`）
+//   read_table → check（開跑時查整張表，10-22）→ read_state（在但讀不了＝StateBad，10-22）→ pick → run_once（aos-loop 的公開 API：子行程 `aos-exec -- 目標 參數...`）
 //   → append_trace → 格的碼 0 才 write_state(next) → 以格的碼結束
 //
 // val＝字串或 [目標, 參數...]（相對路徑從 cwd 算，fsm 不轉）；物件＝表壞（要內嵌單子寫 fsm.json#/states/<名>/body）。
@@ -62,9 +62,9 @@ int main(int argc, char** argv) {
             return 128 + sig;
         }
         std::string at = aos::utc_now_ms();
-        aos::loop::Beat b;
+        aos::loop::Run b;
         try {
-            b = aos::loop::run_beat(cell.val.target, cell.val.args);
+            b = aos::loop::run_once(cell.val.target, cell.val.args);
         } catch (const aos::Error& e) {
             throw aos::Error{e.code, "狀態 " + state + "：" + e.msg};
         }

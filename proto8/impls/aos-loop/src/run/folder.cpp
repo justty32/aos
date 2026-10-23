@@ -1,9 +1,9 @@
-// folder.cpp：【beat】run_folder——`aos-exec -- 目標 參數...`，在 fork 出來的子行程裡呼叫 aos-exec 的 run_cli。
+// folder.cpp：【run】run_folder——`aos-exec -- 目標 參數...`，在 fork 出來的子行程裡呼叫 aos-exec 的 run_cli。
 //
 //   1. 擋住 SIGCHLD（那三個訊號 block_signals 已擋）、開 signalfd，再 fork
 //   2. 子行程：關掉 signalfd、解開四個訊號，aos::exec::run_cli（定工作區、找入口、讀 .env、cd、開跑——可執行檔／argv 陣列是 exec；
 //      inst 單子在這個子行程裡跑、回來以子程式的碼 _exit）。它自己的錯印一行「aos-exec: 代號 原因」、_exit(1)
-//      （同 Python 版 aos-exec 子程序退 1）。每拍重找，入口改了下一拍就生效
+//      （同 Python 版 aos-exec 子程序退 1）。每次重找，入口改了下一次就生效
 //   3. 這個行程：poll signalfd——三個訊號 kill 給子行程（記下第一個）；SIGCHLD 就 waitpid 看是不是它結束了
 //
 // 為什麼在子行程裡呼叫、不 exec 一支 aos-exec：impls 的 aos-exec 是函式庫＋命令列（ideas § 20「aos-exec 的公開 api」），
@@ -12,7 +12,7 @@
 // fork 之後在子行程裡做 C++ 配置、setenv：呼叫者是單執行緒（run_inst 的工人執行緒在它回來前就 join 了），
 // fork 出來的子行程只有這一條執行緒，不會撞到別條執行緒握著的鎖，所以安全。
 // 子行程跟呼叫者同一個行程群組（不另開）：同 Python 版 subprocess.call，終端機的 Ctrl-C 兩個都收得到（CONVENTION P-36）。
-#include "beat/beat.hpp"
+#include "run/run.hpp"
 
 #include <cerrno>
 #include <chrono>
@@ -33,13 +33,13 @@ using Clock = std::chrono::steady_clock;
 namespace {
 
 // 那三個訊號＋SIGCHLD。
-sigset_t beat_signals() {
+sigset_t run_signals() {
     sigset_t set = the_signals();
     sigaddset(&set, SIGCHLD);
     return set;
 }
 
-// 這拍期間擋住 SIGCHLD（出去還原；那三個訊號由 block_signals 一直擋著）。
+// 這次期間擋住 SIGCHLD（出去還原；那三個訊號由 block_signals 一直擋著）。
 struct ChldMask {
     sigset_t old;
     ChldMask() {
@@ -73,7 +73,7 @@ unsigned long long ms_since(Clock::time_point t0) {
 // 子行程：一支 aos-exec。不回來。
 [[noreturn]] void child(const std::vector<std::string>& argv, int sig_fd) {
     close(sig_fd);
-    sigset_t set = beat_signals();
+    sigset_t set = run_signals();
     sigprocmask(SIG_UNBLOCK, &set, nullptr);
     int rc = aos::exec::run_cli(argv);   // exec 成功就不回來；inst 單子回子程式的碼；自己的錯已印好、回 1
     std::fflush(nullptr);
@@ -110,13 +110,13 @@ int wait_forwarding(pid_t pid, int sig_fd, int& received) {
 
 }  // namespace
 
-Beat run_folder(const std::vector<std::string>& argv) {
+Run run_folder(const std::vector<std::string>& argv) {
     Clock::time_point t0 = Clock::now();
-    Beat b;
+    Run b;
 
     // 1. 訊號
     ChldMask mask;
-    sigset_t set = beat_signals();
+    sigset_t set = run_signals();
     Fd sig_fd(signalfd(-1, &set, SFD_CLOEXEC));
     if (sig_fd.fd < 0) {
         throw Error{code::Internal, std::string("準備轉送訊號失敗：") + std::strerror(errno)};

@@ -1,7 +1,7 @@
 # proto8/impls：aos 的 C／C++ 實作（總入口）
 
 **一句話：這一家小工具做的是同一件事——「在工作區起一個程式、等它、看它的結束碼」——由小到大疊起來：
-`inst`（C lib，跑一次）→ `aos-exec`（在工作區執行一個資料夾程式）→ `aos-loop`（一拍拍跑）／`aos-fsm`（一拍跑一格）→ `aos-daemon`（顧一群 loop）；
+`inst`（C lib，跑一次）→ `aos-exec`（在工作區執行一個資料夾程式）→ `aos-loop`（一次次跑）／`aos-fsm`（一次跑一格）→ `aos-daemon`（顧一群 loop）；
 旁邊三個幫手：`aos-util`（全家共用的函式庫）、`aos-directive`（解 `$ref`／`$env`）、`aos-schema`（用 JSON Schema 驗 JSON）。**
 
 > **現況（2026-10-23）：提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（C++），行為對齊 `proto8/bin` 的 10-22 版。10-23 起整個 `impls/` 進 git；舊快照 `backup/` 10-23 使用者授權刪掉，下面提到的 `backup/…` 都已不在。**
@@ -9,9 +9,10 @@
 > **10-23 命名統合**（使用者「都先幫我統合」，對照表見 [thinking/2026-10-23-naming](../thinking/2026-10-23-naming.md)）：使用者看得到的名字全家照同一張表改——
 > loop.json／daemon.json／子項的 `run` → `val`、daemon 的 `children` → `loops`；state 的 `state` 欄 → `phase`、`lap` → `beats`、`started` → `started_at_ticks`、心跳 `beat` → `at`
 > （值改 ISO 8601 UTC 到毫秒，例 `2026-10-23T01:58:45.123+00:00`）；daemon 子項的 `exited` 拆成 `done`（自己結束）／`stopped`（daemon 收掉）；
-> fsm trace 的 `ms` → `elapsed_ms`、`at` 也到毫秒；訊息裡的「第 N 圈」→「第 N 拍」；指示詞的 `at` → `$at`；錯誤代號照 C-54 收成 `…Missing`／`…Unknown`／`…Bad`／動作＋`Failed`
+> fsm trace 的 `ms` → `elapsed_ms`、`at` 也到毫秒；訊息裡的「第 N 圈」→「第 N 次」；指示詞的 `at` → `$at`；錯誤代號照 C-54 收成 `…Missing`／`…Unknown`／`…Bad`／動作＋`Failed`
 > （`Usage` → `ArgumentsBad`／`FlagUnknown`、設定檔 → `CfgMissing`／`CfgBad`、`WsMissing`、`DotenvBad`、`StateBad`、libaos 的 `CommandMissing`／`CommandBad`…，下面代號表是現行的）；
 > 使用者 10-23 重看代定後再改三處：純文字檔帶 `.txt`（aos-fsm 的 `$AOS_STACK/state` → `state.txt`、暫存 `.state.txt`；aos-daemon 小格的 `stderr` → `stderr.txt`）、`AOS_STACK` 預設 `$AOS_WS/.aos/` → `$AOS_WS/.stack/`、demo 題目資料夾 `inbox/` → `new/`（認領搬 `cur/`）。
+> 10-23 晚使用者翻案（「改，beats改runs，然後val寫要跑啥，通常不會用val，應該用run。」，衝突時選「只有 loop、daemon 用 run」）：loop.json／daemon.json／子項改回 `run`（fsm 格仍是 `val`）、state 的 `beats` → `runs`；庫跟著改名：aos-loop 的 `run_beat` → `run_once`、`struct Beat` → `Run`、`src/beat/` → `src/run/`（bin 線 `aos_beat.py` → `aos_run.py`）。
 > 換完拿 `proto8/tests`（245 個；`test_tick` 用 bin 的 aos-tick，impls 沒有這支）對照，一樣只剩下面那兩個字面差別；`proto8/demo/run.sh` 換成 impls 四支跑，跟 bin 線逐行一樣（時間、pid 抹掉）。
 >
 > **10-23（對齊 bin 10-22，ideas 10-22 § 3、§ 6、§ 7）：** aos-exec 的 `.env` 改 dotenv 基礎子集（`export `、`=` 兩邊空白、引號、空白＋`#` 註解、去頭尾空白——值的空白照 python-dotenv 認 Unicode 空白、行首仍只認 ASCII）、
@@ -22,8 +23,8 @@
 > **10-21 晚（ideas 10-21 § 1～§ 9、`git show 08a511dd`）：** aos-exec 改成 `aos-exec [--ws WS] XXX [args...]`（旗標在 XXX 前、舊的位置 WS 拿掉；旗標解析在 aos-util 新的 `aos/cli.hpp`），
 > 支援 `.env`（每走進一個資料夾就 cd、讀那裡的 `.env`、旗標蓋回，讀完才照 `$AOS_ENTRY` 挑入口；旗標 ＞ `.env` ＞ 原本環境 ＞ 預設），
 > 資料夾與沒 `argv` 的 JSON 物件都一路往下、多一個環境變數 `AOS_CO`（共六個）、字串轉向＝全新的一跳；公開 API 收成 `run_cli`＋`run_inst`＋`argv0`。
-> aos-loop、aos-fsm、aos-daemon 的命令列都是「旗標＋唯一一個設定檔（可寫 `檔#/指標`）」，`val` 只收字串或 `[目標, 參數...]`（內嵌單子寫 `loop.json#/body`），
-> 每拍都在 fork 出來的子行程裡呼叫 aos-exec 的 `run_cli`；aos-loop 的 `max` 沒寫＝不限；aos-fsm 的 trace 拿掉 `timed_out`；
+> aos-loop、aos-fsm、aos-daemon 的命令列都是「旗標＋唯一一個設定檔（可寫 `檔#/指標`）」，`run`（fsm 格是 `val`）只收字串或 `[目標, 參數...]`（內嵌單子寫 `loop.json#/body`），
+> 每次都在 fork 出來的子行程裡呼叫 aos-exec 的 `run_cli`；aos-loop 的 `max` 沒寫＝不限；aos-fsm 的 trace 拿掉 `timed_out`；
 > aos-daemon 的子 loop 改經 aos-exec 起（exec 成 PATH 上的 aos-loop）。aos-directive 的 `$path` 改成字串拼接。
 > `proto8/tests` 拿這四支跑（錯誤一行的代號抹掉；方法見 [aos-exec](aos-exec/README.md) 的「拿 proto8/tests 對照」）：exec、loop、fsm、daemon 都過，只剩要 bin 版 `aos-inst` 命令列的案例（impls 刻意沒有）。
 > 動工前的樣子在 `backup/2026-10-21-night/`（10-23 已刪）。
@@ -35,8 +36,8 @@
 >
 > **10-19 晚（ideas § 20、§ 23）：** aos-exec 在工作區執行一個 aos 程式（找入口、備好環境變數、cd 進去、開跑），
 > 入口是 inst 單子時在行程內交給 `inst`（C lib）跑。`inst` 是 C 函式庫、不提供命令列；inst 單子的 JSON 解析不進 C 庫，放在 aos-exec 的 C++ 庫（`src/inst/`）。
-> **aos-loop、aos-fsm 已照 10-19 的規則重寫**（§ 23「重寫吧，fsm一起做」）：行為跟 `proto8/bin` 的 Python 版一致（`val`／`max`、看結束碼；`start`／`states`、state 與 trace 在 `$AOS_STACK`），
-> 都是「小庫＋薄命令列」、連 aos-exec 的公開 API `aos/exec.hpp`（10-21 晚起：每拍在子行程裡呼叫 `run_cli`）；aos-fsm 借 aos-loop 的 `run_beat` 跑一格。
+> **aos-loop、aos-fsm 已照 10-19 的規則重寫**（§ 23「重寫吧，fsm一起做」）：行為跟 `proto8/bin` 的 Python 版一致（`run`／`max`、看結束碼；`start`／`states`、state 與 trace 在 `$AOS_STACK`），
+> 都是「小庫＋薄命令列」、連 aos-exec 的公開 API `aos/exec.hpp`（10-21 晚起：每次在子行程裡呼叫 `run_cli`）；aos-fsm 借 aos-loop 的 `run_once` 跑一格。
 > demo 的 agent-bob、agent-ann 在 impls 線（三支的 `bin/` 放 PATH）跑得通、結果跟 bin 線一樣（aos-fsm 的 `test_demo`）。
 > `aos-util`、`aos-directive`、`aos-schema` 以**函式庫**的形式留著；aos-directive、aos-schema 的 `bin/` 不算對外提供。
 > **`aos-inst`：已刪**（10-19，碼已併入 aos-exec 的 src/inst/，舊版在備份 backup/aos-impls-2026-10-19.tar.gz（10-23 已刪））。
@@ -50,10 +51,10 @@
 ```
  aos-daemon   一個 loop＋子 loop 的表：$AOS_STACK/<名字>/ 小格、ctl 增減、不自動重起、adopt   src/{daemon,child,common}
      │ 繼承 aos-loop 的 Loop；子 loop＝fork 後子行程呼叫 run_cli(-- 小格/loop.json#/_entry)，exec 成 PATH 上的 aos-loop
- aos-fsm      一拍跑一格：$AOS_STACK/state.txt → 跑那格 → 碼 0 才換 next；trace.jsonl   src/{table,state,common}
-     │ 跑一格借 aos-loop 的 run_beat（aos/loop.hpp）
- aos-loop     每拍跑一次 val：0 下一拍、10 停、其他非 0 失敗；轉訊號、收完 128＋N；interval_ms、ctl／state 窗    src/{beat,engine,common}
-     │ 每拍：fork 子行程呼叫 aos-exec 的 run_cli({"--", 目標, 參數...})（等同起一支 aos-exec）
+ aos-fsm      一次跑一格：$AOS_STACK/state.txt → 跑那格 → 碼 0 才換 next；trace.jsonl   src/{table,state,common}
+     │ 跑一格借 aos-loop 的 run_once（aos/loop.hpp）
+ aos-loop     一次次跑 run：0 下一次、10 停、其他非 0 失敗；轉訊號、收完 128＋N；interval_ms、ctl／state 窗    src/{run,engine,common}
+     │ 每次：fork 子行程呼叫 aos-exec 的 run_cli({"--", 目標, 參數...})（等同起一支 aos-exec）
  aos-exec     [--ws WS] XXX——定工作區、走進去（cd、讀 .env）、挑入口、備六個 AOS_*、開跑   src/{cli,find,env,inst,launch,common}
      │        可執行檔／argv 陣列＝exec；inst 單子＝行程內交給 libaos、留著當監工
      │ 靜態連 inst（inst-static）、aos-directive、aos-util
@@ -69,8 +70,8 @@
 | 專案 | 是什麼 | 產物 | 現況 | README |
 |---|---|---|---|---|
 | aos-exec | 命令列：`aos-exec [--ws WS] XXX [args...]`，在工作區執行一個 aos 程式（`.env`、含行程內跑 inst 單子）；庫有公開 API（`run_cli`、`run_inst`、`argv0`） | `lib/libaos-exec.a`、`bin/aos-exec` | **提供**（10-21 晚加旗標、`.env`、`AOS_CO`） | [aos-exec](aos-exec/README.md) |
-| aos-loop | 命令列：`aos-loop [旗標] loop.json`，每拍跑一次 val；庫有公開 API（跑一拍、骨架 `Loop`、`loop_cli`） | `lib/libaos-loop.a`、`bin/aos-loop` | **提供**（10-19 晚重寫、10-21 加窗、10-21 晚收旗標） | [aos-loop](aos-loop/README.md) |
-| aos-fsm | 命令列：`aos-fsm [旗標] fsm.json`，一拍跑一格 | `lib/libaos-fsm.a`、`bin/aos-fsm` | **提供**（10-19 晚新做） | [aos-fsm](aos-fsm/README.md) |
+| aos-loop | 命令列：`aos-loop [旗標] loop.json`，一次次跑 `run`；庫有公開 API（跑一次、骨架 `Loop`、`loop_cli`） | `lib/libaos-loop.a`、`bin/aos-loop` | **提供**（10-19 晚重寫、10-21 加窗、10-21 晚收旗標） | [aos-loop](aos-loop/README.md) |
+| aos-fsm | 命令列：`aos-fsm [旗標] fsm.json`，一次跑一格 | `lib/libaos-fsm.a`、`bin/aos-fsm` | **提供**（10-19 晚新做） | [aos-fsm](aos-fsm/README.md) |
 | inst | C 函式庫 libaos：起一個程式、等它結束、告訴你結果 | `lib/libinst.so`（FFI）、`lib/libinst.a` | 庫（不讀 JSON、沒有命令列） | [inst](inst/README.md) |
 | aos-util | 全家共用的 C++ 函式庫 | `lib/libaos-util.a` | 庫 | [aos-util](aos-util/README.md) |
 | aos-directive | 指示詞 `$ref`／`$env`（可帶 `$path`、`$prefix`；10-21 改版、10-21 傍晚 `$path` 改字串拼接） | `lib/libaos-directive.a`、`bin/aos-directive` | 庫（bin 不對外提供） | [aos-directive](aos-directive/README.md) |
@@ -84,8 +85,8 @@
 2. **inst**（C）：一個 `.h` 三個 `.c`，從 `src/inst_exec.c` 的 `aos_inst_start` 由上往下讀。
 3. **aos-exec**：先看 `src/cli/cli.cpp` 的 `run_cli`（解旗標 → 一跳跳走 → 開跑），再看 `src/find/find.cpp` 的 `hop`（定工作區 → 走進去讀 `.env` → 挑入口 → 判種類），
    其餘照 README 的元素表進資料夾；inst 單子怎麼交給 libaos 在 `src/inst/`。
-4. **aos-loop** → **aos-fsm** → **aos-daemon**：同樣先 `main.cpp`（各二三十行），再看 aos-loop 的 `src/beat/`（跑一拍：fork 子行程呼叫 aos-exec 的 `run_cli`）
-   與 `src/engine/`（骨架 `Loop`：讀設定、每拍讀 ctl、睡、跑一拍、寫 state）；aos-daemon 是 `Loop` 的子類別，子 loop 在 `src/child/`。
+4. **aos-loop** → **aos-fsm** → **aos-daemon**：同樣先 `main.cpp`（各二三十行），再看 aos-loop 的 `src/run/`（跑一次：fork 子行程呼叫 aos-exec 的 `run_cli`）
+   與 `src/engine/`（骨架 `Loop`：讀設定、每次讀 ctl、睡、跑一次、寫 state）；aos-daemon 是 `Loop` 的子類別，子 loop 在 `src/child/`。
 5. aos-directive、aos-schema 各自獨立，用到再看。
 
 每個專案的 README 章節順序都一樣：一句話＋比喻＋例子 → 用法 → 元素（資料夾地圖）→ 流程（從 main 往下）→ 為什麼這樣做 →
@@ -113,7 +114,7 @@
 ### 寫法（不要太難）
 
 - 好懂 > 巧妙 > 效能。普通函數、普通 struct、if／for；一個函數做一件事、短；名字直白。
-- 不用：模板技巧、巨集魔法、多層繼承（daemon 繼承 loop 的拍引擎這一層是設計，到此為止）、`std::function`／`std::variant` 包閉包、
+- 不用：模板技巧、巨集魔法、多層繼承（daemon 繼承 loop 反覆跑的引擎這一層是設計，到此為止）、`std::function`／`std::variant` 包閉包、
   ranges 管線、縮寫函式模板（`const auto&` 參數）、`std::exception_ptr`。要「一定收尾再丟例外」就寫 `try { } catch (...) { 收尾; throw; } 收尾;`。
 - 每個 `if` 都加 `{}`；少用三元運算子（寫成 if）；少用 `auto`（型別寫出來）。
 - C++：4 格縮排、120 欄；C（inst）：`clang-format --style=LLVM`、一行一件事（不在 if 條件裡賦值、不串長的 `&&`）。
@@ -134,7 +135,7 @@
 | `InputBad` | aos-schema、aos-directive（aos-util 讀 stdin）；libaos（`aos_inst_strerror`） | stdin 一份 JSON 都解不出來（10-23 統合前叫 JsonSyntax）；libaos 的輸入 `in`／`out` 是 NULL、`argv` 空（10-23 統合前叫 FieldType） |
 | `InputExtra` | aos-schema、aos-directive（aos-util 讀 stdin） | stdin 有好幾份 JSON |
 | `CfgMissing` | aos-loop、aos-fsm、aos-daemon（`load_cfg`） | 設定檔（loop.json、fsm.json、daemon.json）不在；`#/` 指不到 |
-| `CfgBad` | aos-loop、aos-fsm、aos-daemon | 設定檔讀不了、不是 JSON、`#` 後不是 `/`；不是物件、某個 key 型別不對、必填沒寫；`val` 寫成物件；aos-fsm 開跑時查整張表不合（10-22：`start`／`next` 不在表上、`next` 空字串或頭尾有空白、格的形狀不對）；aos-daemon 10-22 起：子項名字跟自己的 ctl／state 撞名（10-23 統合前分成 ReadFailed、JsonSyntax、FieldType、Conflict） |
+| `CfgBad` | aos-loop、aos-fsm、aos-daemon | 設定檔讀不了、不是 JSON、`#` 後不是 `/`；不是物件、某個 key 型別不對、必填沒寫；`run`（fsm 格的 `val`）寫成物件；aos-fsm 開跑時查整張表不合（10-22：`start`／`next` 不在表上、`next` 空字串或頭尾有空白、格的形狀不對）；aos-daemon 10-22 起：子項名字跟自己的 ctl／state 撞名（10-23 統合前分成 ReadFailed、JsonSyntax、FieldType、Conflict） |
 | `StateBad` | aos-fsm | 10-22 起：`$AOS_STACK/state.txt` 在但讀不了（沒權限、是資料夾、不是 UTF-8）（10-23 統合前叫 ReadFailed） |
 | `SchemaMissing` | aos-schema | SCHEMA檔 不在（10-23 統合前叫 ReadFailed） |
 | `WriteFailed` | aos-loop、aos-fsm、aos-daemon | state 窗寫不了；aos-fsm：`trace.jsonl`、`.state.txt` 寫不了；aos-daemon：子項的 loop.json 寫不了 |

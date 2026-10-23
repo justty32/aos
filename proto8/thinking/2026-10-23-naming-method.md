@@ -77,3 +77,33 @@ aos-daemon - 照一張名單，把幾個 aos-loop 各自起在自己的小格裡
 aos-fsm    - 照一張狀態表，每叫一次跑「現在狀態」那一格，成功就換到下一個
 aos-tick   - 把時鐘檔的回合數往前走一格
 ```
+
+## 10-23 深夜：「拍」改「次」、`beats` → `runs`、loop／daemon 的 `val` 改回 `run`、撞名換角度
+
+### 使用者原文
+
+頂層用白話講 aos-loop 時用了「拍」：
+
+> "拍"，其實我們人類不常用這個來說，我們都是說"次"。重新說一次白話
+
+頂層問要不要把文件與名字也改：
+
+> 改，beats改runs，然後val寫要跑啥，通常不會用val，應該用run。
+
+頂層問兩個衝突，使用者選：
+
+1. C-55「原值那一格一律叫 val」跟改回 `run` 衝突 → 選「**只有 loop、daemon 用 run**」。
+2. 頂層說 daemon 子項已有 `runs`（子項被啟動過幾次），跟 loop 的新 `runs` 撞名 → 使用者自己填「**restarted_times**」。
+
+之後補一條規則：
+
+> 像這種命名重複的，可以用另一個角度用白話描述其功能與特性
+
+### 決定
+
+- 條文、程式說明與註解、錯誤／提示訊息、README、demo 說明裡的「拍」一律改「次」（「第 N 拍」→「第 N 次」）；thinking／notes 歷史與使用者原話不改。
+- loop／daemon 自己 state 窗的 `beats` → `runs`（`max_beats` 這種例子跟著改 `max_runs`）。
+- loop／daemon 的「要跑什麼」從 `val` 改回 `run`（loop.json、daemon.json、子項、daemon 把字串子項包成 `{"run": …}`、小格 loop.json）；**fsm 表每格維持 `val`**。C-55 寫明：loop／daemon 的 `run` 是「要跑什麼」的具名欄位，不是值的展開形，所以不叫 `val`。
+- 「beat」這個字在 aos 裡已沒有對應的概念，所以庫跟著改：`aos_beat.py` → `aos_run.py`；impls 的 `run_beat` → `run_once`、結果型別 `Beat` → `Run`、`src/beat/` → `src/run/`。`heartbeat`（心跳）是另一個概念，不動。
+- **`restarted_times` 沒有落地**：前提是頂層弄錯的——daemon state 裡子項那一列只有 `pid`、`started_at_ticks`、`phase`、`code`、`signal`，沒有 `runs`；子 loop 結束後也不會自動重起，所以沒有「重啟過幾次」可記。原本叫 `runs` 的是 demo stamp 工具在它自己 stack 裡的 `runs.txt`（記 stamp 被用了幾次），跟 loop state 的 `runs` key 不在同一個檔、也不是同一個主題，照 R9 不算撞名，`runs.txt` 照舊。
+- **新規則「撞名就換角度」併進 R9**：照方法推出來的名字，如果跟同一個檔或同一個主題裡的名字撞了，就換一個角度，用白話重新描述它的功能與特性，再從那句白話取名。R6 的計數規則補一句：撞名時照這條換角度，得到的名字不一定是「名詞加 s」。C-54 命名方法裡的例子是假設的（fsm trace 的「第幾格」→ 撞 `states` → 換角度「走了幾步」→ `steps`），標明是假設。

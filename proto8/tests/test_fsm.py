@@ -143,7 +143,7 @@ class T(unittest.TestCase):
         self.assertEqual(self.state(), "c\n")   # 錯就不跑格
 
     def test_val_array_args(self):
-        # val＝[目標, 參數...]（比照 loop 的 val）：每拍 aos-exec -- 目標 參數...；元素不是字串、空陣列＝表壞
+        # val＝[目標, 參數...]（比照 loop 的 run）：每次 aos-exec -- 目標 參數...；元素不是字串、空陣列＝表壞
         self.cell("a", 'echo "$@" > "$AOS_STACK/args"\n')
         self.table({"a": {"val": ["a", "x", "--y"], "next": "a"}})
         r = self.beat()
@@ -155,7 +155,7 @@ class T(unittest.TestCase):
             self.assertTrue(r.stderr.startswith("aos-fsm: "), r.stderr)
 
     def test_fsm_json_as_exec_entry(self):
-        # F6：fsm.json 帶 _entry，`aos-exec fsm.json` 就是一拍；cwd＝fsm.json 的資料夾，表裡的 _entry、body 都被 fsm 忽略
+        # F6：fsm.json 帶 _entry，`aos-exec fsm.json` 就是一次；cwd＝fsm.json 的資料夾，表裡的 _entry、body 都被 fsm 忽略
         self.cell("a", 'touch "$AOS_STACK/ran"\n')   # 從 elsewhere 叫也找得到 a＝fsm 的 cwd 是 fsm.json 的資料夾
         f = self.table({"a": {"val": "a", "next": "b"}, "b": self.body("b", {"argv": ["sh", "-c", "exit 10"]})},
                        _entry=["aos-fsm", {"$env": "AOS_CF"}])
@@ -228,7 +228,7 @@ class T(unittest.TestCase):
 
     def test_whole_table_checked_before_beat(self):
         # 10-22 b、c：開跑時查整張表——start 不在表上、任何一格的 next 不在表上或是空字串（或頭尾有空白、不是字串）、
-        # 任何一格的 val 壞，都＝表壞、退 1、不跑格（原本只查這拍那一格：next 不在表上要到下一拍才擋、空字串下一拍靜靜回 start）
+        # 任何一格的 val 壞，都＝表壞、退 1、不跑格（原本只查這次那一格：next 不在表上要到下一次才擋、空字串下一次靜靜回 start）
         self.cell("a", 'touch "$AOS_STACK/ran"\n')
         good = {"val": "a", "next": "a"}
         for what, start, states in (

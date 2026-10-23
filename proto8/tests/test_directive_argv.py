@@ -196,8 +196,8 @@ class T(unittest.TestCase):
         self.tools()
         q = self.t / "q"
         stack = self.t / "st"; stack.mkdir()
-        # 10-21：loop 的內嵌單子寫 檔#/body；val 的相對路徑照 cwd 算（L4），單子裡的 $ref 由 aos-exec 從 loop.json 的資料夾算
-        loop = put(q / "loop.json", {"val": "q/loop.json#/body", "max": 1,
+        # 10-21：loop 的內嵌單子寫 檔#/body；run 的相對路徑照 cwd 算（L4），單子裡的 $ref 由 aos-exec 從 loop.json 的資料夾算
+        loop = put(q / "loop.json", {"run": "q/loop.json#/body", "max": 1,
                                      "body": {"argv": ["tools/stamp", "L"], "cwd": str(q),
                                               "stdout": {"$env": "AOS_STACK", "$path": "out"},
                                               "envs": {"MSG": {"$ref": "sub/data.json#/msg"}}}})

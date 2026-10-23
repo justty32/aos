@@ -44,3 +44,7 @@
 —,`start_ticks`（state 窗、daemon 子項列）,`started_at_ticks`,aos-loop、aos-daemon；N-32、N-17,10-23 晚命名方法 R6：`<事件>_at_<單位>`（使用者原例「started_at_ticks」）,已定（使用者 10-23 晚選「改成 started_at_ticks」）
 —,ctl 的 `stop`,`stopped`,aos-loop、aos-daemon；N-06、N-07、C-55,10-23 晚命名方法 R4：ctl 是宣告狀態，跟 state 的 `phase: stopped` 同字（`paused`、`stopped`）,已定（使用者 10-23 晚選「改成 stopped」）
 —,state 窗的 `last_warning`,`ctl_warning`,aos-loop、aos-daemon；N-08、N-28,10-23 晚命名方法 R4／R7／R9：主詞是 ctl、主題在前（跟 `ctl_seq` 排在一起），`last_` 留給「上一拍」,否
+1,`val`（loop.json、daemon.json、子項、小格 loop.json；daemon 把字串子項包成 `{"val": 它}`）,`run`（包成 `{"run": 它}`）；fsm 的格維持 `val`,aos-loop、aos-daemon（兩版）、demo、條文,10-23 深夜使用者「val寫要跑啥，通常不會用val，應該用run」；`run` 是具名欄位、不是值的展開形（C-55 註）,已定（使用者 10-23 深夜選「只有 loop、daemon 用 run」；翻案本表第 1 項）
+5,state 的 `beats`（`max_beats` 這類例子）,`runs`（`max_runs`）,state 窗、C-54 命名方法 R6／R9,10-23 深夜使用者「beats改runs」,已定（使用者 10-23 深夜）
+—,條文、程式說明、訊息裡的「拍」（「第 N 拍」）,「次」（「第 N 次」）,bin、impls、tests、demo、CONCEPTS／NORMS／CONVENTION、code map,10-23 深夜使用者「我們都是說"次"」；thinking／notes 與原話不改,已定（使用者 10-23 深夜）
+—,程式內部：`aos_beat.py`；impls `run_beat`、`Beat`、`src/beat/`,`aos_run.py`；`run_once`、`Run`、`src/run/`（`heartbeat` 不動）,bin 庫、impls aos-loop、aos-fsm,「beat」在 aos 裡已沒有對應概念，跟著 run 一致,否

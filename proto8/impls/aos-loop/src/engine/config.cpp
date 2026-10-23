@@ -1,5 +1,5 @@
 // config.cpp：【engine】Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）；
-// 還有 parse_target（val 的寫法）、loop_cli（命令列）。照 proto8/bin/aos_loop.py 的 Loop.__init__、cli 與 aos_flags.target
+// 還有 parse_target（run 的寫法）、loop_cli（命令列）。照 proto8/bin/aos_loop.py 的 Loop.__init__、cli 與 aos_flags.target
 // （10-21 傍晚 ideas § 9）；錯誤分代號（Python 版是一句話）。
 #include "engine/engine.hpp"
 
@@ -119,15 +119,15 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
             cfg_[k] = it->second;
         }
     }
-    Json val = cfg_.value("val", Json());
-    if (val.is_object()) {
-        throw Error{code::CfgBad, "val 要是 aos-exec 的目標（字串或字串陣列）；要內嵌單子寫 loop.json#/body"};
+    Json run = cfg_.value("run", Json());
+    if (run.is_object()) {
+        throw Error{code::CfgBad, "run 要是 aos-exec 的目標（字串或字串陣列）；要內嵌單子寫 loop.json#/body"};
     }
-    if (!val.is_null()) {
-        val_ = parse_target(val, "val");
-        has_val_ = true;
-    } else if (d_.need_val) {
-        throw Error{code::CfgBad, "沒有東西可跑（設定檔沒有 val）"};
+    if (!run.is_null()) {
+        run_ = parse_target(run, "run");
+        has_run_ = true;
+    } else if (d_.need_run) {
+        throw Error{code::CfgBad, "沒有東西可跑（設定檔沒有 run）"};
     }
     max_ = d_.max;
     if (cfg_.contains("max")) {

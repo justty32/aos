@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-# aos-loop：`aos-loop loop.json`——每拍跑一次 val，看結束碼決定下一步。兩個產物：lib/libaos-loop.a、bin/aos-loop。
+# aos-loop：`aos-loop loop.json`——一次次跑 run，看結束碼決定下一步。兩個產物：lib/libaos-loop.a、bin/aos-loop。
 # CMake 的共通設定（vcpkg、Release、compile_commands、PIC、AOS_STATIC_PIE）在 ../cmake/settings.cmake。
 # 照 aos-exec 的 CMakeLists.txt 改名。
 include(../cmake/settings.cmake)

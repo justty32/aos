@@ -1,4 +1,4 @@
-// state.hpp：【state】$AOS_STACK 裡 fsm 自己的兩個檔：state（現在狀態）與 trace.jsonl（每拍一行）。內部標頭。
+// state.hpp：【state】$AOS_STACK 裡 fsm 自己的兩個檔：state（現在狀態）與 trace.jsonl（每次一行）。內部標頭。
 //
 //   state.cpp   read_state、write_state（先寫 .state.txt 再改名成 state.txt，N-05）、append_trace（時間用 aos-util 的 utc_now_ms）
 //

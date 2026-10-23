@@ -34,7 +34,7 @@ stderr 一行「aos-exec: 代號 單子跑不起來：原因」。InstError 帶 
 起不來時原因開頭再帶 libaos 的名字（CwdMissing、OpenFailed、CommandMissing、CommandBad、LaunchFailed），同 impls；
 直接叫庫的 run(FILE) 時單子檔本身不在 EntryMissing、讀不了或不是 JSON EntryBad。子程式的碼由 aos-exec 透明轉交（被訊號停掉＝128＋訊號號碼）。
 run() 回 {"code", "signal", "timed_out", "pid", "elapsed_ms", "received"}（received＝跑的期間收到、轉給子程式的第一個
-SIGINT／SIGTERM／SIGHUP，沒有＝None；給 aos-loop／aos-fsm「收完這拍再以 128＋N 結束」用）；子程式回幾號、被逾時收掉都算正常跑完，
+SIGINT／SIGTERM／SIGHUP，沒有＝None；給 aos-loop／aos-fsm「收完這次再以 128＋N 結束」用）；子程式回幾號、被逾時收掉都算正常跑完，
 單子有問題或起不來丟 InstError。
 
 行程群組（P-36）：子程式自成一個行程群組（start_new_session），逾時與轉來的訊號都對整個群組送

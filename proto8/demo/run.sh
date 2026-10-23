@@ -1,7 +1,7 @@
 #!/bin/sh
 # 各建一個暫時工作區、放一題、cd 進去跑 agent-bob（含它叫的 cathy）與 agent-ann（慣例用法）、印出工作區與整棵 stack 樹；
 # 再跑 daemon：一個 daemon 同時管 bob、ann 兩個子 loop（各自的工作區在 bob/、ann/）；
-# 最後跑 tick：aos-loop 拍 5 次 aos-tick，時鐘檔 $AOS_STACK/tick.txt 走到 5（10-21 計畫第 4 段）
+# 最後跑 tick：aos-loop 跑 5 次 aos-tick，時鐘檔 $AOS_STACK/tick.txt 走到 5（10-21 計畫第 4 段）
 here=$(cd "$(dirname "$0")" && pwd)
 # aos 的程式都不動 PATH（ideas § 24）：agent 裡叫的 aos-exec、aos-loop、aos-fsm、aos-daemon、aos-tick 由這裡（呼叫端）放進 PATH
 PATH="$(cd "$here/../bin" && pwd):$PATH"; export PATH

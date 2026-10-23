@@ -1,2 +1,2 @@
 {"_entry": ["aos-loop", {"$env": "AOS_CF"}],
- "val": "loop.json#/body", "body": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}
+ "run": "loop.json#/body", "body": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}

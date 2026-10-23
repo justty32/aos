@@ -44,7 +44,7 @@ def env_of(t, env, stack=True):
 
 
 def run(t, fsm="fsm.json", env=None, stack=True):
-    """跑一拍，回 (退出碼, stdout, 錯誤代號或 None, stderr)。"""
+    """跑一次，回 (退出碼, stdout, 錯誤代號或 None, stderr)。"""
     args = [BIN] if fsm is None else [BIN, fsm]
     r = subprocess.run(args, capture_output=True, text=True, env=env_of(t, env, stack), cwd=t, timeout=60)
     err = None
@@ -105,9 +105,9 @@ def state_in_stack_and_advances(t):
     cell(t, "a", "exit 0\n"); cell(t, "b", "exit 0\n")
     table(t, AB)
     rc = run(t)[0]
-    check("第一拍 0、state＝b", (rc, state(t)), (0, "b\n"))   # 純文字一行狀態名，跟 shell 版同格式
+    check("第一次 0、state＝b", (rc, state(t)), (0, "b\n"))   # 純文字一行狀態名，跟 shell 版同格式
     run(t)
-    check("第二拍 state＝a", state(t), "a\n")
+    check("第二次 state＝a", state(t), "a\n")
     check("cwd 不留 state", list(Path(t).glob("state.txt")), [])
 
 
@@ -174,7 +174,7 @@ def trace_jsonl_one_line_per_beat(t):
     for _ in range(3):
         run(t)
     tr = trace(t)
-    check("每拍一行", [(x["state"], x["code"]) for x in tr], [("a", 0), ("b", 5), ("b", 5)])
+    check("每次一行", [(x["state"], x["code"]) for x in tr], [("a", 0), ("b", 5), ("b", 5)])
     check("欄位（沒有 timed_out）", list(tr[0]), ["at", "state", "code", "signal", "elapsed_ms"])
     for x in tr:
         datetime.datetime.fromisoformat(x["at"])
@@ -239,7 +239,7 @@ def bad_tables(t):
 
 @case
 def bad_cells(t):
-    # 10-22 起開跑時查整張表：格的形狀不對也算表壞（CfgBad；原本這拍查到那格才擋、StateUnknown）
+    # 10-22 起開跑時查整張表：格的形狀不對也算表壞（CfgBad；原本這次查到那格才擋、StateUnknown）
     for c, code in (({"val": "a"}, "CfgBad"), ({"next": "a"}, "CfgBad"), ({"val": "a", "next": 3}, "CfgBad"),
                     ("a", "CfgBad"), ({"val": 3, "next": "a"}, "CfgBad"), ({"val": [], "next": "a"}, "CfgBad"),
                     ({"val": ["a", 1], "next": "a"}, "CfgBad"), ({"val": {"argv": ["true"]}, "next": "a"}, "CfgBad")):

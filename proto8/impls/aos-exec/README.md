@@ -4,7 +4,7 @@
 
 **一句話：`aos-exec [--ws WS] [--dotenv-override] XXX [args...]`——在工作區 WS 執行 XXX 這個程式：定好工作區、走進 XXX（cd、讀那裡的 `.env`）、挑出入口、備好環境變數、開跑。**
 一個 lib（`lib/libaos-exec.a`，公開標頭 `aos/exec.hpp`）加一支薄薄的命令列（`bin/aos-exec`，只叫 `run_cli`）。連 aos-util、aos-directive（解單子、argv 陣列與 JSON `.env` key 的指示詞）、inst（C 的 libaos，靜態版 `inst-static`）。全家慣例見 [impls/README.md](../README.md)。
-inst 是 C lib、沒有命令列，inst 單子由 aos-exec 在行程內跑（ideas § 20）。[aos-loop](../aos-loop/README.md)、[aos-fsm](../aos-fsm/README.md) 的每一拍、[aos-daemon](../aos-daemon/README.md) 的子 loop，都是在 fork 出來的子行程裡呼叫這個庫的 `run_cli`（等同起一支 `aos-exec -- 目標 參數...`；10-21 晚）。
+inst 是 C lib、沒有命令列，inst 單子由 aos-exec 在行程內跑（ideas § 20）。[aos-loop](../aos-loop/README.md)、[aos-fsm](../aos-fsm/README.md) 的每一次、[aos-daemon](../aos-daemon/README.md) 的子 loop，都是在 fork 出來的子行程裡呼叫這個庫的 `run_cli`（等同起一支 `aos-exec -- 目標 參數...`；10-21 晚）。
 
 像在門口換好鞋再進屋：它只負責帶路和換鞋，進屋之後做什麼是入口的事。`.env` 就是門口那張「進來先把這些設好」的紙條。入口是可執行檔或 argv 陣列時它不留在屋裡（exec，結束碼就是入口的碼）；
 入口是 inst 單子時它留在門口當監工：在行程內交給 libaos 起子程式（自成行程群組）、把收到的訊號轉給整群、等它結束，再以子程式的碼結束。
@@ -28,7 +28,7 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
   不認得的旗標＝`FlagUnknown`；旗標缺值、沒給 XXX、不帶值的旗標寫成 `--dotenv-override=V`＝`ArgumentsBad`，stderr 一行 `aos-exec: ArgumentsBad usage: aos-exec [--ws WS] [--dotenv-override] XXX [args...]（原因）`。
   旗標解析在 aos-util 的 `aos/cli.hpp`（`parse_cli`，loop／fsm／daemon 共用）；aos-exec 的旗標表有 `--ws`（10-21 ideas § 3）與不帶值的 `--dotenv-override`（10-22）。
 - **`--dotenv-override`**（10-22 ideas § 3，不帶值、重複給＝一樣）：`.env` 蓋掉已有的環境變數。只管這一次起來的 aos-exec：這一跳一路往下讀的每份 `.env`
-  （資料夾、`$AOS_ENTRY` 沿路、JSON 物件的 `.env` key）都吃；字串轉向（全新一跳）、argv 陣列插進去的 aos-exec、loop／fsm／daemon 每拍叫的 aos-exec 都不吃，要的人自己在 argv 寫。
+  （資料夾、`$AOS_ENTRY` 沿路、JSON 物件的 `.env` key）都吃；字串轉向（全新一跳）、argv 陣列插進去的 aos-exec、loop／fsm／daemon 每次叫的 aos-exec 都不吃，要的人自己在 argv 寫。
 - **`--ws WS`**：沒給、`-` 或空＝沿用 `$AOS_WS`，沒設用 `.`；給路徑就用那個（相對於呼叫當下的 cwd）；不是資料夾＝`WsMissing`。
   舊寫法 `aos-exec XXX WS args...` 已不認：XXX 後面的 WS 現在是 args。
 - **XXX**：資料夾、檔、或 `檔#/指標`；相對路徑從呼叫當下的 cwd 算。
@@ -173,7 +173,7 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
 
 - **`run_cli` 會動行程全域狀態（chdir、setenv）**：`.env` 要在挑入口之前讀、挑入口又要看讀完之後的 `$AOS_ENTRY`、每走進一層都要 cd 和 setenv，
   拆不成「先純計算、最後才動全域」的幾步（10-21 晚以前公開的 `find_entry`／`resolve_ws`／`prepare_env`／`apply_env`／`launch`／`Entry`／`Env` 因此收進內部，改成 `check_ws`／`setup_stack`／`hop`／`launch` 這幾個內部函數）。
-  所以長命的呼叫者不在自己的行程裡叫它：aos-loop、aos-fsm 的每一拍、aos-daemon 的子 loop 都是 **fork 出來的子行程**裡呼叫 `run_cli`，
+  所以長命的呼叫者不在自己的行程裡叫它：aos-loop、aos-fsm 的每一次、aos-daemon 的子 loop 都是 **fork 出來的子行程**裡呼叫 `run_cli`，
   效果等同起一支 `aos-exec -- 目標 參數...`，父行程的 cwd 與環境不受影響。
 - **AOS_STACK 在 chdir 之前算**：有設的相對路徑要從呼叫當下的 cwd 算。WS 的檢查在認出 XXX 之前、建 stack 在認出 XXX 之後（錯誤先後同 bin 版），所以拆成 `check_ws`、`setup_stack` 兩個。
 - **字串轉向是全新的一跳**：C-52「每層只管自己」——下一層自己定工作區、cd、讀 `.env`；這一層的旗標不帶過去。唯一的例外是繞圈偵測沿用同一條鏈，當安全網（ideas § 7 K2）。

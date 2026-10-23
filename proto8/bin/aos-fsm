@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
-"""aos-fsm FSM.json — fsm 一拍只跑一格（10-21 plan § 4；命令列 10-21 傍晚 ideas § 9 改）。
+"""aos-fsm FSM.json — fsm 一次只跑一格（10-21 plan § 4；命令列 10-21 傍晚 ideas § 9 改）。
 命令列 `aos-fsm [旗標] 設定檔`：唯一的位置參數＝設定檔（必給、只能一個；可寫 `檔#/指標`＝那份檔裡那個位置的物件）；
 目前沒有旗標（旗標表是空的，規則同 aos-exec，aos_flags；`--` 結束旗標）。沒給、多給、不認得的旗標＝usage 錯（原 `--cfg` 拿掉）。
 FSM.json: {"start": "idle", "states": {"idle": {"val": "idle", "next": "think"},
                                          "think": {"val": "fsm.json#/states/think/body", "body": {"argv": [...], ...}, "next": "act"}, ...}}
-val＝字串（aos-exec 的目標，每拍 `aos-exec -- <val>`）或陣列 [目標, 參數...]（每拍 `aos-exec -- 目標 參數...`，元素都要是字串；
-比照 loop 的 val，10-21 傍晚）；相對路徑從 cwd 算，fsm 不轉（F2）；要內嵌單子就寫
+val＝字串（aos-exec 的目標，每次 `aos-exec -- <val>`）或陣列 [目標, 參數...]（每次 `aos-exec -- 目標 參數...`，元素都要是字串；
+比照 loop 的 run，10-21 傍晚）；相對路徑從 cwd 算，fsm 不轉（F2）；要內嵌單子就寫
 `fsm.json#/states/<名>/body`、單子放在同一格的 body，由 aos-exec 在它自己的行程裡跑（逾時與訊號打整群，N-59）。
 val 是物件或別的＝表壞。表裡其他 key（body、_entry…）忽略（C-48），所以 fsm.json 可以帶 `"_entry": ["aos-fsm", {"$env": "AOS_CF"}]`
 當 aos-exec 的入口（F6）。
 開跑時（讀表後、跑格前）先查整張表（10-22）：start 要在表上；每一格要是 {"val", "next"}、val 合法、next 要是表上的狀態名、
-不能是空字串、頭尾不能有空白、不能有換行——哪一格不合都＝表壞、不跑格（原本只查這拍那一格：next 不在表上要到下一拍才擋，
-next 是空字串則下一拍靜靜回 start）。
+不能是空字串、頭尾不能有空白、不能有換行——哪一格不合都＝表壞、不跑格（原本只查這次那一格：next 不在表上要到下一次才擋，
+next 是空字串則下一次靜靜回 start）。
 讀 $AOS_STACK/state.txt（純文字一行狀態名、去頭尾空白；沒有檔或內容是空的＝start，格式與 shell 版相同；10-22 起在但讀不了
 〔沒權限、是資料夾、不是 UTF-8…〕＝自己的錯，原本沒權限、是資料夾當沒有檔、從 start 起，不是 UTF-8 吐 traceback；
 裡面的狀態不在表上＝自己的錯；寫的時候先寫 .state.txt 再改名，N-05）；查格；跑格。
-每拍在 $AOS_STACK/trace.jsonl 追加一行 {"at","state","code","signal","elapsed_ms"}（at＝這拍開始的時間，ISO 8601 UTC 到毫秒；
-elapsed_ms＝這拍跑了幾毫秒；10-23 命名統合；沒有 timed_out：
+每次在 $AOS_STACK/trace.jsonl 追加一行 {"at","state","code","signal","elapsed_ms"}（at＝這次開始的時間，ISO 8601 UTC 到毫秒；
+elapsed_ms＝這次跑了幾毫秒；10-23 命名統合；沒有 timed_out：
 fsm 看不到格裡有沒有逾時，C-52；被逾時收掉的格是 code 143（128＋15）、signal null——
 格是 aos-exec 子行程，它收掉單子後以子程式的碼正常結束，不是自己被訊號殺掉；F4；10-22 實測更正，原寫 signal 15）。
 結束碼 0 才把 next 寫進 state；以那格的碼退出（10 與其他非 0 原樣往上，狀態都不動）。
@@ -28,7 +28,7 @@ usage ArgumentsBad（不認得的旗標 FlagUnknown）、StackMissing、設定�
 表壞 CfgBad、state 讀不了 StateBad、state 不在表上 StateUnknown、起不了 aos-exec LaunchFailed）。"""
 import datetime, json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-import aos_beat, aos_flags
+import aos_run, aos_flags
 
 USAGE = "aos-fsm [旗標] 設定檔.json"   # 旗標表是空的也寫 [旗標]，跟 aos-loop、aos-tick 同一個寫法（10-22）
 FLAGS = {}   # 目前沒有旗標；以後加旗標就在這裡加一列
@@ -65,7 +65,7 @@ def check(start, states):
 
 
 def main():
-    aos_beat.block()
+    aos_run.block()
     try:
         opts, rest = aos_flags.parse(sys.argv[1:], FLAGS)
     except aos_flags.Error as e:
@@ -98,12 +98,12 @@ def main():
         die("StateUnknown", f"查不到狀態 {state}（{sfile} 裡的狀態不在表上）")
     cell = states[state]
     val, args = targets[state]
-    if aos_beat.take():
-        sys.exit(128 + aos_beat.take())
+    if aos_run.take():
+        sys.exit(128 + aos_run.take())
     at = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds")
     try:
-        res = aos_beat.run(val, args)
-    except aos_beat.StartError as e:
+        res = aos_run.run(val, args)
+    except aos_run.StartError as e:
         die(e.code, f"狀態 {state}：{e}")
     with open(os.path.join(stack, "trace.jsonl"), "a", encoding="utf-8") as f:
         f.write(json.dumps({"at": at, "state": state, "code": res["code"], "signal": res["signal"],

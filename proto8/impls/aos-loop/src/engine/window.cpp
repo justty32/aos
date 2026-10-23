@@ -4,7 +4,7 @@
 //                 加上子類別的 check_ctl；其他 key 忽略。讀到壞的（讀不了、不是 JSON 物件、型別不對）整份不採用、
 //                 維持上一份好的，原因記 ctl_warning（N-08）；讀到好的清回 null。檔不在＝還沒人寫，維持上一份好的、
 //                 不算問題（ctl_warning 不動）
-//   write_state   state 一份：kind、phase、beats、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 蓋過設定檔之後）
+//   write_state   state 一份：kind、phase、runs、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 蓋過設定檔之後）
 //                 ＋info()＋code（結束時）＋心跳；沒開 state 窗就不寫
 //   write_window  先寫同資料夾的 .名字 再改名（N-05）
 //   heartbeat     pid、started_at_ticks、boot_id、at（ISO 8601 UTC 到毫秒）
@@ -118,7 +118,7 @@ void Loop::write_state(const std::string& phase, const Json& code) {
     Json doc = Json::object();
     doc["kind"] = "state";
     doc["phase"] = phase;
-    doc["beats"] = beats_;
+    doc["runs"] = runs_;
     if (c.contains("max")) {
         doc["max"] = c["max"];
     } else if (max_) {

@@ -372,13 +372,13 @@ class T(unittest.TestCase):
         self.assertEqual(run("--dotenv-override", "--ws", self.t, str(q), env={"C": ""})[:2], (0, "x\n"))
 
     def test_loop_beat_rereads_same_env_twice_not_growing(self):
-        # 10-22 教學發現的 PATH 疊兩份，原因：aos-exec 起 loop 時讀了一次 .env（loop 繼承），每拍的 aos-exec 走進同一個
-        # 資料夾又讀一次——每拍都從 loop 自己的環境出發，所以固定兩份、不會一拍比一拍多（不是 loop 把上一拍的環境傳下去）。
-        # 照 N-59 第 4 件「同一份 .env 會再讀一次」接受。10-22 改預設不蓋之後：不加旗標＝每拍都跳過（空）；
-        # 最外層加 --dotenv-override＝只有起 loop 那跳蓋（x），每拍的 aos-exec 不吃旗標
+        # 10-22 教學發現的 PATH 疊兩份，原因：aos-exec 起 loop 時讀了一次 .env（loop 繼承），每次的 aos-exec 走進同一個
+        # 資料夾又讀一次——每次都從 loop 自己的環境出發，所以固定兩份、不會一次比一次多（不是 loop 把上一次的環境傳下去）。
+        # 照 N-59 第 4 件「同一份 .env 會再讀一次」接受。10-22 改預設不蓋之後：不加旗標＝每次都跳過（空）；
+        # 最外層加 --dotenv-override＝只有起 loop 那跳蓋（x），每次的 aos-exec 不吃旗標
         q = Path(self.t, "q")
         put(q / ".env", "C=${C}x\n")
-        put(q / "loop.json", {"_entry": ["aos-loop", {"$env": "AOS_CF"}], "val": "b.json", "max": 3})
+        put(q / "loop.json", {"_entry": ["aos-loop", {"$env": "AOS_CF"}], "run": "b.json", "max": 3})
         put(q / "b.json", ["sh", "-c", 'echo "$C" >> "$AOS_WS/seen"'])
         self.assertEqual(run("--ws", self.t, str(q / "loop.json"), env={"C": ""})[0], 0)
         self.assertEqual(Path(self.t, "seen").read_text(), "\n\n\n")

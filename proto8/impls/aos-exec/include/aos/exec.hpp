@@ -5,7 +5,7 @@
 //   run_inst      行程內跑一張 inst 單子（交給 impls/inst 的 libaos；aos-exec 留在行程裡當監工）
 //   argv0         argv[0] 帶 / 又 exec 不了（資料夾、沒 +x 的檔、不在、帶 #/）＝前面插 aos-exec（10-20 ideas D3）
 //
-// 命令列（src/main.cpp）只叫 run_cli；aos-loop／aos-fsm 的每拍、aos-daemon 的子 loop 在 fork 出來的子行程裡叫 run_cli
+// 命令列（src/main.cpp）只叫 run_cli；aos-loop／aos-fsm 的每次、aos-daemon 的子 loop 在 fork 出來的子行程裡叫 run_cli
 // （等同 bin 版起一支 `aos-exec -- 目標 參數...`）。規則見 aos-exec/README.md。
 // 10-21 晚以前的 find_entry／resolve_ws／prepare_env／apply_env／launch 五步拆不開了（.env 要在挑入口之前讀、
 // 每走進一層都要 cd 和 setenv），收進 run_cli，不再公開。
@@ -42,7 +42,7 @@ struct Result {
     long pid = 0;
     unsigned long long ms = 0;
     int received = 0;   // 跑的期間收到、轉給子程式的第一個訊號（SIGINT／SIGTERM／SIGHUP；0＝沒有）。給 loop／fsm 這種
-                        // 「收完這拍再以 128＋N 結束」的呼叫者用（訊號被 run_inst 的 signalfd 讀走了，呼叫者自己看不到）
+                        // 「收完這次再以 128＋N 結束」的呼叫者用（訊號被 run_inst 的 signalfd 讀走了，呼叫者自己看不到）
 };
 
 // 行程內跑一張 inst 單子：doc＝單子（先解指示詞 $env／$ref，再驗 10 個 key，其他 key 忽略）、

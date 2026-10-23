@@ -1,20 +1,20 @@
-"""aos_beat：跑「一拍」——loop.json 的 val、fsm.json 格的 val（同一套寫法 C-55）。aos-loop、aos-fsm 共用。純標準庫。
+"""aos_run：跑「一次」——loop.json 的 run、fsm.json 格的 val（同一套寫法；名字不同見 C-55）。aos-loop、aos-fsm 共用。純標準庫。
 
-    import aos_beat
-    aos_beat.block()        程式一開始呼叫：之後 SIGINT／SIGTERM／SIGHUP 不打死這支程式，記下來
-    aos_beat.take()         拍與拍之間：有記下的訊號就回第一個（沒有＝0）
-    aos_beat.run(x, args)   跑一拍，回 {"code", "signal", "elapsed_ms", "received"}
+    import aos_run
+    aos_run.block()        程式一開始呼叫：之後 SIGINT／SIGTERM／SIGHUP 不打死這支程式，記下來
+    aos_run.take()         兩次之間：有記下的訊號就回第一個（沒有＝0）
+    aos_run.run(x, args)   跑一次，回 {"code", "signal", "elapsed_ms", "received"}
 
 x 只收字串（aos-exec 的目標；10-21 plan L11、F2）：子行程 `aos-exec -- <x> args...`（照 PATH 找；`--` 讓 - 開頭的目標
 不被當旗標，L10；跟呼叫者同一個行程群組，同 subprocess.call）；跑的期間收到的三個訊號 os.kill 給那個子行程
 （不另設 SIGKILL 期限）。要內嵌單子就讓目標指到它（`loop.json#/body`、`fsm.json#/states/<名>/body`），
-由 aos-exec 在它自己的行程裡跑、當監工（逾時與轉來的訊號打整群，N-59 第 5 件）。拍看不到格裡有沒有逾時（C-52）：
-被逾時收掉的拍就是 code 128＋15（或補 SIGKILL 的 137）、signal None——拍是 aos-exec 子行程，它收掉單子後
-以子程式的碼正常結束，不是自己被訊號殺掉；signal 只在拍的那個行程（aos-exec，或它 exec 成的程式）本身被訊號殺掉時
+由 aos-exec 在它自己的行程裡跑、當監工（逾時與轉來的訊號打整群，N-59 第 5 件）。這一次看不到格裡有沒有逾時（C-52）：
+被逾時收掉的那次就是 code 128＋15（或補 SIGKILL 的 137）、signal None——那次是 aos-exec 子行程，它收掉單子後
+以子程式的碼正常結束，不是自己被訊號殺掉；signal 只在那次的那個行程（aos-exec，或它 exec 成的程式）本身被訊號殺掉時
 有值（10-22 實測更正，原寫 signal 15／9）。
-received＝跑的期間收到、轉給那拍的第一個訊號（沒有＝None）；呼叫者收完這拍要以 128＋它結束（CONVENTION P-36
+received＝跑的期間收到、轉給那次的第一個訊號（沒有＝None）；呼叫者收完這次要以 128＋它結束（CONVENTION P-36
 「先收好自己起的子程式、寫好狀態再結束，結束碼非 0」）。起不了 aos-exec 丟 StartError。
-對齊 impls 的 aos-loop（aos/loop.hpp 的 block_signals／take_signal／run_beat，ideas § 24）。
+對齊 impls 的 aos-loop（aos/loop.hpp 的 block_signals／take_signal／run_once，ideas § 24）。
 """
 import os
 import signal
@@ -22,8 +22,8 @@ import subprocess
 import time
 
 _SIGNALS = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
-_got = []          # 拍外（或那拍期間）收到的，依序
-_child = [None]    # 那拍正在跑的子行程
+_got = []          # 兩次之間（或那次期間）收到的，依序
+_child = [None]    # 那次正在跑的子行程
 _pending = []      # 子行程還沒記進 _child 時收到的，起來後補轉
 
 
@@ -57,7 +57,7 @@ def take():
 
 
 def run(x, args=()):
-    # 收到任何一個訊號，呼叫者這拍收完就結束，所以 _got 在第一拍之前是空的、之後也只會有這一拍收到的
+    # 收到任何一個訊號，呼叫者這次收完就結束，所以 _got 在第一次之前是空的、之後也只會有這一次收到的
     t0 = time.monotonic()
     try:
         _child[0] = p = subprocess.Popen(["aos-exec", "--", x] + list(args))

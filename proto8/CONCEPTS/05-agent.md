@@ -1,4 +1,4 @@
-← [回入口 CONCEPTS.md](../CONCEPTS.md)｜主題：**agent**｜概念：本檔｜規範：agent 的一拍一格與工具在 [NORMS 資料夾程式與執行](../NORMS/10-基礎設施-定義與工作區.md)（N-50、N-53）；慣例整套在 [CONVENTION](../CONVENTION.md)；agent 是用 fsm 組出來的（一個資料夾程式，C-50），fsm 的概念與規範在基礎設施——[CONCEPTS § fsm](03-基礎設施.md#fsm)、[NORMS 組合子 § fsm](../NORMS/07-基礎設施-組合子.md#fsm)｜實作：[bin](../bin/README.md)、[demo](../demo/README.md)（agent-bob 叫 cathy 叫 stamp、agent-ann）；腦的工具呼叫（`tool_calls`）現無實作，見 [NORMS 待定](../NORMS/08-待定.md)
+← [回入口 CONCEPTS.md](../CONCEPTS.md)｜主題：**agent**｜概念：本檔｜規範：agent 的一次一格與工具在 [NORMS 資料夾程式與執行](../NORMS/10-基礎設施-定義與工作區.md)（N-50、N-53）；慣例整套在 [CONVENTION](../CONVENTION.md)；agent 是用 fsm 組出來的（一個資料夾程式，C-50），fsm 的概念與規範在基礎設施——[CONCEPTS § fsm](03-基礎設施.md#fsm)、[NORMS 組合子 § fsm](../NORMS/07-基礎設施-組合子.md#fsm)｜實作：[bin](../bin/README.md)、[demo](../demo/README.md)（agent-bob 叫 cathy 叫 stamp、agent-ann）；腦的工具呼叫（`tool_calls`）現無實作，見 [NORMS 待定](../NORMS/08-待定.md)
 
 # agent
 
@@ -31,4 +31,4 @@
 
 ## agent 就是一台狀態機（10-16 使用者定）
 
-- **C-62** **agent 的定義就是一台狀態機；這台狀態機怎麼跑、由誰跑，概念上都不管**（接 C-18、C-39）。aos 自己的 agent 怎麼跑是規範的事（[N-53](../NORMS/10-基礎設施-定義與工作區.md)：被外面的 loop 一拍一拍驅動）；別家的 agent（例 Claude Code）是一個行程持續跑，概念上同樣是 agent。（使用者 10-16：「agent的定義就是一個狀態機，至於這個狀態機怎麼跑、由誰跑，都無所謂。這是概念。但是我們的規範會說，為了讓agent方便審視自己，所以agent就是一個被人驅動的狀態機，需要外面有人用loop驅動他。這是我們的aos agent，至於我們常見的claude code，他們就是一個process持續執行，那是他們愛的。」，[KISS 重審拍板 4](../thinking/2026-10-16-kiss-recheck.md#使用者拍板10-16)）
+- **C-62** **agent 的定義就是一台狀態機；這台狀態機怎麼跑、由誰跑，概念上都不管**（接 C-18、C-39）。aos 自己的 agent 怎麼跑是規範的事（[N-53](../NORMS/10-基礎設施-定義與工作區.md)：被外面的 loop 一次一次驅動）；別家的 agent（例 Claude Code）是一個行程持續跑，概念上同樣是 agent。（使用者 10-16：「agent的定義就是一個狀態機，至於這個狀態機怎麼跑、由誰跑，都無所謂。這是概念。但是我們的規範會說，為了讓agent方便審視自己，所以agent就是一個被人驅動的狀態機，需要外面有人用loop驅動他。這是我們的aos agent，至於我們常見的claude code，他們就是一個process持續執行，那是他們愛的。」，[KISS 重審拍板 4](../thinking/2026-10-16-kiss-recheck.md#使用者拍板10-16)）

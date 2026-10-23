@@ -1,7 +1,7 @@
 """aos-exec 的 .env 格式基礎子集與 --dotenv-override（10-22 ideas；N-58、N-59 第 4 件、N-60）。
 格式：收下的寫法給的值同 python-dotenv（export 前綴、= 兩邊空白、沒引號去頭尾空白、空白＋# 註解、單雙引號剝一對、${名字}），
 各家不一致的寫法＝.env 壞。蓋不蓋：沒旗標＝開始讀這份 .env 時環境已有的名字跳過（同一份檔裡同名照樣後者贏）；
---dotenv-override＝這一跳讀的每份 .env 都蓋，字串轉向、插進去的 aos-exec、loop 每拍的 aos-exec 不吃。
+--dotenv-override＝這一跳讀的每份 .env 都蓋，字串轉向、插進去的 aos-exec、loop 每次的 aos-exec 不吃。
 python-dotenv 有裝就把收下的寫法丟給 load_dotenv 當場比（沒裝就 skip；aos-exec 本身不依賴它）。"""
 import json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path
@@ -150,12 +150,12 @@ class T(unittest.TestCase):
         self.assertEqual(json.loads(out), {"A": "out", "B": "t"}, stderr)
 
     def test_loop_beat_needs_extra_hop_for_flag(self):
-        # loop 每拍叫 aos-exec -- <val>，-- 後面寫不了旗標：要蓋就多一跳，body 寫 ["aos-exec", "--dotenv-override", "think"]
+        # loop 每次叫 aos-exec -- <run>，-- 後面寫不了旗標：要蓋就多一跳，body 寫 ["aos-exec", "--dotenv-override", "think"]
         q = Path(self.t, "q")
         put(q / "think" / ".env", "A=think\n")
         put(q / "think" / "_entry.json", ["sh", "-c", 'echo "$A" >> "$AOS_WS/seen"'])
         for body, want in ((["aos-exec", "--dotenv-override", "think"], "think"), (["aos-exec", "think"], "out")):
-            put(q / "loop.json", {"_entry": ["aos-loop", {"$env": "AOS_CF"}], "val": "loop.json#/body", "body": body, "max": 2})
+            put(q / "loop.json", {"_entry": ["aos-loop", {"$env": "AOS_CF"}], "run": "loop.json#/body", "body": body, "max": 2})
             seen = Path(self.t, "seen")
             if seen.exists():
                 seen.unlink()

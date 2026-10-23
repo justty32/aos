@@ -1,6 +1,6 @@
 // daemon.cpp：【daemon】Daemon（說明見 daemon.hpp）。照 proto8/bin/aos-daemon（10-21 傍晚）。
 //
-// 每拍（Loop 讀完 ctl 之後的 tend）：期望表＝ctl 的 loops（有寫）或 daemon.json 的 loops →
+// 每次（Loop 讀完 ctl 之後的 tend）：期望表＝ctl 的 loops（有寫）或 daemon.json 的 loops →
 //   表上多出來的收掉（SIGTERM，等 10 秒，再 SIGKILL 整群；phase stopped）並移除 → 看誰自己結束了（phase done，記 code／signal）→
 //   起表上少掉的。子 loop 結束後不自動重起（使用者 10-20「照預設」）：停在表上 done；要再起就從 loops 拿掉再放回。
 // phase：running＝還在跑、done＝子 loop 自己結束、stopped＝daemon 收掉它（送了 SIGTERM／SIGKILL；10-23 命名統合前兩個都叫 exited）。
@@ -28,7 +28,7 @@ static aos::loop::Defaults daemon_defaults() {
     d.prog = "aos-daemon";
     d.max = std::nullopt;
     d.interval_ms = 200;
-    d.need_val = false;
+    d.need_run = false;
     return d;
 }
 
@@ -208,7 +208,7 @@ void Daemon::stop(const std::vector<std::string>& names) {
     }
     for (Child* c : live) {
         c->phase = "stopping";
-        kill(c->pid, SIGTERM);   // 給那支子 loop（它自己轉給它的那拍）；已經沒了就算了
+        kill(c->pid, SIGTERM);   // 給那支子 loop（它自己轉給它的那次）；已經沒了就算了
     }
     Clock::time_point deadline = Clock::now() + std::chrono::milliseconds(GRACE_MS);
     bool killed = false;

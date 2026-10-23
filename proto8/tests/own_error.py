@@ -22,7 +22,7 @@ _LOOP = _USAGE + _CFG + [
     (r"(寫了 \S+ 卻)?沒設定 AOS_STACK", {"StackMissing"}),
     (r"起不了 aos-exec", {"LaunchFailed"}),
     (r"起不了子項", {"MkdirFailed", "WriteFailed", "LaunchFailed"}),
-    (r"第 \d+ 拍 ", None),   # 那拍失敗：不是自己的錯
+    (r"第 \d+ 次 ", None),   # 那次失敗：不是自己的錯
     (r"", {"CfgBad"}),
 ]
 CODES = {

@@ -5,11 +5,11 @@ FILE 裡是回合數（十進位＋換行）：讀出 n、寫回 n＋1 就結束
 先寫同資料夾的 `.名字` 再改名蓋過去，讀的人不會讀到半份（N-05）；不 fsync。stdout 不吐東西。
 命令列：唯一的位置參數就是 FILE（必給、只能一個；相對路徑從 cwd 算；照字面用，`#` 不是指標——它是時鐘檔，不是設定檔）；
 目前沒有旗標（旗標表是空的，規則同 aos-exec，aos_flags；`--` 結束旗標，FILE 可以 `-` 開頭）。
-節奏、停、只走 N 回合交給拍它的 loop（`max`、`interval_ms`、ctl 的 paused），見 demo/tick。
+節奏、停、只走 N 回合交給跑它的 loop（`max`、`interval_ms`、ctl 的 paused），見 demo/tick。
 自己的錯（usage、時鐘檔讀不到、內容不是回合數、寫不了）退 1，stderr 一行 `aos-tick: 代號 原因`，FILE 不動
 （代號照 10-23 命名統合（thinking/2026-10-23-naming），格式同其他四支：usage ArgumentsBad（不認得的旗標 FlagUnknown）、
 時鐘檔讀不到或壞 ClockBad、寫不了 WriteFailed；10-23 統合前不帶代號）。
-同一個 FILE 同時有兩個人在 tick 不管（同一個 loop 的拍本來就不重疊）。"""
+同一個 FILE 同時有兩個人在 tick 不管（同一個 loop 的每一次本來就不重疊）。"""
 import os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags

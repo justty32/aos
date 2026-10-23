@@ -11,7 +11,7 @@
 //   - 送的對象：子程式是組長（libaos new_session），群組號＝它的 pid，用 killpg 整群送。
 //     （aos-inst 用 pidfd 只送那一個；整群送沒有 pidfd 可用，工人收完屍就停止轉送，跟 Python 的 os.killpg 一樣。）
 //   - forward_signals_until_done 用 poll 同時等「訊號」和「工人做完」（done_fd），逾時＝SIGKILL 期限；
-//     回轉過的第一個訊號（Result::received，給 loop／fsm「收完這拍再以 128＋N 結束」用）。
+//     回轉過的第一個訊號（Result::received，給 loop／fsm「收完這次再以 128＋N 結束」用）。
 #include "inst/inst.hpp"
 
 #include <cerrno>
