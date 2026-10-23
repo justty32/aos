@@ -210,7 +210,7 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
 
 規則照 bin 的 10-21 晚版，行為一樣；刻意不同的只有：
 
-- 錯誤一行 `aos-exec: 代號 原因`（bin 版是 `aos-exec: 原因`，沒有代號）；原因開頭兩版一樣。
+- （10-23 起不是差異）錯誤一行兩版都是 `aos-exec: 代號 原因`，代號與原因開頭一樣（bin 10-23 照這裡的代號補上）。
 - inst 單子：bin 版在行程內 `aos_inst.run()`，這裡在行程內交給 libaos（C）、aos-exec 留著當監工——兩版都是 aos-exec 這一層留在行程裡。
 - impls 沒有 `aos-inst` 命令列：P-28 的 (A)「`_exec` 第一行 `#!/usr/bin/env aos-inst`」與 (1)「小殼 `exec aos-inst _exec.json`」在這裡跑不起來；
   同一個檔拿掉 `+x` 就能用（第一行 `#!` 跳過、當單子跑）。
@@ -238,6 +238,6 @@ JSON 物件（`.env` key、一路往下、`AOS_CO`、`檔#/指標` 算進 `AOS_C
 測試的 `raw()` 把 aos-exec 的 `bin/` 放 PATH 最前面——aos-exec 不動 PATH（§ 24），入口裡要叫 `aos-exec` 由呼叫者放；`path_passed_as_is` 驗 PATH 原樣傳下去。
 
 **拿 `proto8/tests` 對照**（手動，不進 ctest）：把 `proto8/tests` 複製到暫存資料夾，旁邊的 `bin/` 換成指到 impls 四支（aos-exec、aos-loop、aos-fsm、aos-daemon）的捷徑，
-把 stderr 一行裡的代號抹掉再跑（10-23 用包一層 bash 的捷徑：`exec 2> >(sed … >&2)` 再 exec impls 那支）：
-10-23 全套 243 個只剩 2 個不過，都是 inst 單子錯誤訊息的字面（`test_inst` 要原因開頭是 key 名、這裡是「單子的 key…」；`test_directive_argv` 的 D1 要訊息裡有檔名、
+直接跑（10-23 起 bin 也帶代號，不用再抹；`tests/own_error.py` 會逐行對代號，impls 的代號也全對得上）：
+10-23 全套只剩 2 個不過，都是 inst 單子錯誤訊息的字面（`test_inst` 要原因開頭是 key 名、這裡是「單子的 key…」；`test_directive_argv` 的 D1 要訊息裡有檔名、
 這裡 libaos 的 `OpenFailed` 不帶檔名），行為一樣。裝了 python-dotenv（`pip install --target` 到暫存資料夾、`PYTHONPATH` 指過去）時 `test_exec_dotenv` 的逐案對照也過。

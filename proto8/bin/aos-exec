@@ -16,7 +16,8 @@ XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd�
 （行程內 aos_inst.run，以子程式的碼結束）、沒 argv 的物件＝當資料夾：套它的 `.env` key、旗標蓋回、取 [$AOS_ENTRY]，一路往下、
 字串＝路徑轉向（全新的一跳；從寫著它的檔所在的資料夾算，繞圈＝入口壞）。AOS_CF＝實際的檔，AOS_CO＝入口在檔裡的 JSON 指標
 （不帶 #，不是 JSON 或整份檔＝空）。PATH 不動、原樣傳下去（ideas § 24；入口裡要叫 aos-exec、aos-loop… 由呼叫者事先放進 PATH）。
-args 接在入口後面，stdin 原樣給入口。自己的錯退 1，stderr 一行「aos-exec: 原因」（N-60）。
+args 接在入口後面，stdin 原樣給入口。自己的錯退 1，stderr 一行「aos-exec: 代號 原因」（N-60；代號 10-23 照 impls：
+Usage、WorkspaceMissing、MkdirFailed、EntryMissing、EntryBad、EnvReadFailed、EnvBad、LaunchFailed，單子的錯照 aos_inst 的 code）。
 """
 import errno
 import json
@@ -29,11 +30,15 @@ BIN = os.path.dirname(os.path.realpath(__file__))
 
 
 class Fail(Exception):
-    """aos-exec 自己的錯（N-60）。"""
+    """aos-exec 自己的錯（N-60）；code＝錯誤代號（照 impls，使用者 10-22「錯誤訊息多代號也遵循」）。"""
+
+    def __init__(self, msg, code):
+        super().__init__(msg)
+        self.code = code
 
 
-def die(msg):
-    print("aos-exec: %s" % msg, file=sys.stderr)
+def die(code, msg):
+    print("aos-exec: %s %s" % (code, msg), file=sys.stderr)
     sys.exit(1)
 
 
@@ -51,7 +56,7 @@ def pointer(doc, ptr, where):
                 and int(tok) < len(doc):
             doc = doc[int(tok)]
         else:
-            raise Fail("入口不存在：%s#%s 指不到" % (where, ptr))
+            raise Fail("入口不存在：%s#%s 指不到" % (where, ptr), "EntryMissing")
     return doc
 
 
@@ -60,19 +65,19 @@ def locate(spec, base):
     XXX 是資料夾時只回資料夾（實際的資料夾），入口檔等走進去、讀完那裡的 .env 才照 $AOS_ENTRY 挑（10-21 ideas § 5、§ 6）。"""
     path, hashed, ptr = spec.partition("#")
     if hashed and not ptr.startswith("/"):
-        raise Fail("入口壞：%s 的 # 後面要接 /" % spec)
+        raise Fail("入口壞：%s 的 # 後面要接 /" % spec, "EntryBad")
     ptr = ptr if hashed else None
     p = os.path.join(base, path)
     if os.path.isdir(p):
         if ptr is not None:
-            raise Fail("入口壞：資料夾不能帶 #/：%s" % spec)
+            raise Fail("入口壞：資料夾不能帶 #/：%s" % spec, "EntryBad")
         return os.path.realpath(p), None, None
     if os.path.isfile(p):
         f = p
     elif not os.path.lexists(p) and "." not in os.path.basename(path) and os.path.isfile(p + ".json"):
         f = p + ".json"
     else:
-        raise Fail("入口不存在：%s" % spec)
+        raise Fail("入口不存在：%s" % spec, "EntryMissing")
     return None, os.path.realpath(f), ptr
 
 
@@ -85,24 +90,26 @@ def find(f, ptr, seen, layer, override):
     spec = f + ("#" + ptr if ptr is not None else "")
     if os.access(f, os.X_OK):
         if ptr is not None:
-            raise Fail("入口壞：可執行檔不能帶 #/：%s" % spec)
+            raise Fail("入口壞：可執行檔不能帶 #/：%s" % spec, "EntryBad")
         return "exe", None, "", None
     where = (f, ptr or "")
     if where in seen:
         chain = [a + b for a, b in seen + [where]]
-        raise Fail("入口壞：字串轉向繞圈：%s" % " → ".join(chain))
+        raise Fail("入口壞：字串轉向繞圈：%s" % " → ".join(chain), "EntryBad")
     seen.append(where)
     try:
         with open(f, encoding="utf-8") as fh:
             text = fh.read()
     except OSError as e:
-        raise Fail("入口讀不到：%s（%s）" % (f, e.strerror))
+        raise Fail("入口讀不到：%s（%s）" % (f, e.strerror), "EntryBad")
+    except ValueError:   # 不是 UTF-8（10-23 補：原本吐 traceback；同 impls 算不是 JSON）
+        raise Fail("入口壞：沒有 +x、也不是 JSON：%s" % f, "EntryBad")
     if text.startswith("#!"):
         text = text.partition("\n")[2]
     try:
         doc = json.loads(text)
     except ValueError:
-        raise Fail("入口壞：沒有 +x、也不是 JSON：%s" % f)
+        raise Fail("入口壞：沒有 +x、也不是 JSON：%s" % f, "EntryBad")
     at, names = ptr or "", None
     if ptr is not None:
         doc = pointer(doc, ptr, f)
@@ -113,7 +120,7 @@ def find(f, ptr, seen, layer, override):
             layer()
         name = entry_name()
         if name not in doc:
-            raise Fail("入口壞：%s 不是單子、也沒有 %s" % (here, name))
+            raise Fail("入口壞：%s 不是單子、也沒有 %s" % (here, name), "EntryBad")
         doc, at = doc[name], at + "/" + name.replace("~", "~0").replace("/", "~1")
     if isinstance(doc, str):   # 字串轉向＝交給下一層、全新的一次 aos-exec（main 的迴圈做；10-21 .env）
         return "redir", doc, at, names
@@ -121,7 +128,7 @@ def find(f, ptr, seen, layer, override):
         return "inst", doc, at, names
     if isinstance(doc, list) and doc:   # 元素可以是字串或指示詞（10-20 ideas D2、D8），開跑前才解
         return "argv", doc, at, names
-    raise Fail("入口壞：%s 不是單子、argv 陣列或路徑" % f)
+    raise Fail("入口壞：%s 不是單子、argv 陣列或路徑" % f, "EntryBad")
 
 
 def execv(prog, argv):
@@ -144,19 +151,19 @@ def launch(kind, val, f, args):
         try:
             return aos_inst.run(val, args)["code"]
         except aos_inst.InstError as e:
-            raise Fail("單子跑不起來：%s" % e)
+            raise Fail("單子跑不起來：%s" % e, e.code)
     if kind == "argv":   # 指示詞在六個 AOS_* 設好、.env 讀完之後解；$ref 從入口檔所在的資料夾（＝cwd）算
         import aos_inst
         try:
             val = aos_inst.resolve(val, os.getcwd())
         except aos_inst.InstError as e:
-            raise Fail("入口壞：argv 陣列的指示詞解不開：%s" % e)
+            raise Fail("入口壞：argv 陣列的指示詞解不開：%s" % e, "EntryBad")
         if not all(isinstance(a, str) for a in val):
-            raise Fail("入口壞：argv 陣列解完要全是字串：%s" % json.dumps(val, ensure_ascii=False))
+            raise Fail("入口壞：argv 陣列解完要全是字串：%s" % json.dumps(val, ensure_ascii=False), "EntryBad")
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)      # Python 預設忽略 SIGPIPE，exec 會繼承；還原
     if kind == "exe":
         err = execv(f, [f] + args)
-        raise Fail("起不來：%s（%s）" % (f, err.strerror))
+        raise Fail("起不來：%s（%s）" % (f, err.strerror), "LaunchFailed")
     argv = aos_inst.argv0(val + args, ".")   # 帶 / 又 exec 不了＝前面插 aos-exec（D3、D5）
     if "/" in argv[0]:
         err = execv(argv[0], argv)
@@ -167,7 +174,7 @@ def launch(kind, val, f, args):
             if first is None and not isinstance(last, (FileNotFoundError, NotADirectoryError)):
                 first = last
         err = first or last
-    raise Fail("起不來：%s（%s）" % (argv[0], err.strerror))
+    raise Fail("起不來：%s（%s）" % (argv[0], err.strerror), "LaunchFailed")
 
 
 USAGE = "aos-exec [--ws WS] [--dotenv-override] XXX [args...]"
@@ -183,9 +190,9 @@ def parse(argv):
     try:
         opts, rest = aos_flags.parse(argv, FLAGS, SWITCHES)
     except aos_flags.Error as e:
-        die("usage: %s（%s）" % (USAGE, e))
+        die("Usage", "usage: %s（%s）" % (USAGE, e))
     if not rest:
-        die("usage: %s（沒有 XXX）" % USAGE)
+        die("Usage", "usage: %s（沒有 XXX）" % USAGE)
     return opts, rest[0], rest[1:]
 
 
@@ -260,13 +267,13 @@ def load_env(d, override):
         with open(p, encoding="utf-8", newline="") as fh:
             lines = fh.read().split("\n")
     except OSError as e:
-        raise Fail(".env 讀不到：%s（%s）" % (p, e.strerror))
+        raise Fail(".env 讀不到：%s（%s）" % (p, e.strerror), "EnvReadFailed")
     except ValueError:
-        raise Fail(".env 壞：%s 不是 UTF-8" % p)
+        raise Fail(".env 壞：%s 不是 UTF-8" % p, "EnvBad")
     keep = set() if override else set(os.environ)
     for n, line in enumerate(lines, 1):
         def bad(why):
-            raise Fail(".env 壞：%s 第 %d 行（%s）" % (p, n, why))
+            raise Fail(".env 壞：%s 第 %d 行（%s）" % (p, n, why), "EnvBad")
         line = line.lstrip(" \t\n\v\f\r")   # 只認 ASCII 空白（同 C++ isspace；10-22 使用者要 Python 照 C++ 的寬鬆）
         if line.endswith("\r"):
             line = line[:-1]
@@ -292,7 +299,7 @@ def json_env(env, where, ref_base, override):
     import aos_inst
 
     def bad(why):
-        raise Fail(".env 壞：%s 的 .env（%s）" % (where, why))
+        raise Fail(".env 壞：%s 的 .env（%s）" % (where, why), "EnvBad")
     try:
         env = aos_inst.resolve(env, ref_base)
     except aos_inst.InstError:
@@ -320,14 +327,14 @@ def hop(spec, base, opts, seen):
     if not flag_ws:
         ws = os.environ.get("AOS_WS") or "."
     if not os.path.isdir(ws):
-        raise Fail("工作區不存在：%s" % ws)
+        raise Fail("工作區不存在：%s" % ws, "WorkspaceMissing")
     d, f, ptr = locate(spec, base)
     ws = os.path.abspath(ws)
     stack = os.environ.get("AOS_STACK") or os.path.join(ws, ".aos")
     try:
         os.makedirs(stack, exist_ok=True)
     except OSError as e:
-        raise Fail("建不了 AOS_STACK：%s（%s）" % (stack, e.strerror))
+        raise Fail("建不了 AOS_STACK：%s（%s）" % (stack, e.strerror), "MkdirFailed")
     os.environ.update(AOS_WS=ws, AOS_STACK=os.path.join(os.path.abspath(stack), ""))
 
     def layer():   # 每讀完一份 .env（檔或 JSON 的 .env key）旗標蓋回去
@@ -351,24 +358,24 @@ def hop(spec, base, opts, seen):
             for part in parts[:-1]:   # 多段的 $AOS_ENTRY（例 sub/run）：沿路的資料夾都走進去（由外到內）
                 nxt = os.path.realpath(os.path.join(d, part))
                 if not os.path.isdir(nxt):
-                    raise Fail("入口不存在：%s（%s 不是資料夾）" % (os.path.join(d, name), os.path.join(d, part)))
+                    raise Fail("入口不存在：%s（%s 不是資料夾）" % (os.path.join(d, name), os.path.join(d, part)), "EntryMissing")
                 if nxt != d:   # . 不算走進新資料夾；走回走過的（例 sub/../sub/run）＝繞圈
                     if nxt in visited:
-                        raise Fail("入口壞：資料夾繞圈：%s" % nxt)
+                        raise Fail("入口壞：資料夾繞圈：%s" % nxt, "EntryBad")
                     visited.add(nxt)
                     d, names = nxt, enter(nxt, nxt)
             last = os.path.join(d, parts[-1])
             if os.path.isdir(last):   # 挑到資料夾＝走進去，照當下的 $AOS_ENTRY 再挑
                 nxt = os.path.realpath(last)
                 if nxt in visited:
-                    raise Fail("入口壞：資料夾繞圈：%s" % nxt)
+                    raise Fail("入口壞：資料夾繞圈：%s" % nxt, "EntryBad")
                 visited.add(nxt)
                 d, names = nxt, enter(nxt, nxt)
                 continue
             if not os.path.lexists(last):
                 last += ".json"
             if not os.path.isfile(last):
-                raise Fail("入口不存在：%s（也沒有 %s.json）" % (os.path.join(d, parts[-1]), parts[-1]))
+                raise Fail("入口不存在：%s（也沒有 %s.json）" % (os.path.join(d, parts[-1]), parts[-1]), "EntryMissing")
             f = os.path.realpath(last)
         if "AOS_CF" not in names:
             os.environ["AOS_CF"] = f
@@ -396,7 +403,7 @@ def main(argv):
             # 下一層自己定工作區、cd、讀它那裡的 .env（疊在這層設好的環境上）。繞圈偵測沿用同一條鏈。
             spec, base, opts = val, os.path.dirname(f), {}
     except Fail as e:
-        die(e)
+        die(e.code, e)
 
 
 if __name__ == "__main__":

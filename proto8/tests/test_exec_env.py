@@ -7,6 +7,8 @@ import os, tempfile, unittest
 from pathlib import Path
 
 from test_exec_rules import put, prog, run
+import own_error  # noqa: E402
+own_error.install()   # 錯誤一行的代號（10-23 照 impls）：檢查對得上原因開頭再拿掉
 
 
 class T(unittest.TestCase):

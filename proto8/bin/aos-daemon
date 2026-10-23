@@ -82,12 +82,15 @@ class Daemon(aos_loop.Loop):
     def __init__(self, opts, rest):
         super().__init__(opts, rest)
         if not self.stack:
-            raise aos_loop.ConfigError("沒設定 AOS_STACK")
+            raise aos_loop.ConfigError("沒設定 AOS_STACK", "StackMissing")
         self.children = self.cfg.get("children", {})
-        taken = taken_names(self.stack, (self.ctl.path, self.state_path))
-        bad = check_children(self.children, taken)
+        bad = check_children(self.children)
         if bad:
             raise aos_loop.ConfigError(bad)
+        taken = taken_names(self.stack, (self.ctl.path, self.state_path))
+        bad = check_children(self.children, taken)
+        if bad:   # 名字跟自己的 ctl／state 撞名＝Conflict（照 impls，10-23）
+            raise aos_loop.ConfigError(bad, "Conflict")
         self.ctl.extra = {"children": lambda v: check_children(v, taken)}   # ctl 改 children 撞名＝整份不採用（N-08）
         adopt = self.cfg.get("adopt", True)
         if not isinstance(adopt, bool):
@@ -136,15 +139,18 @@ class Daemon(aos_loop.Loop):
         cfg.setdefault("ctl", "ctl.json")
         cfg.setdefault("state", "state.json")
         cfg["_exec"] = ["aos-loop", {"$env": "AOS_CF"}]
+        code = "MkdirFailed"   # 哪一步失敗決定代號（照 impls）：建小格、寫 loop.json、開 stderr／起子行程
         try:
             os.makedirs(cell, exist_ok=True)
+            code = "WriteFailed"
             aos_window.write(os.path.join(cell, "loop.json"), cfg)
+            code = "LaunchFailed"
             with open(os.path.join(cell, "stderr"), "ab") as err:
                 p = subprocess.Popen(["aos-exec", "--", os.path.join(cell, "loop.json") + "#/_exec"], cwd=self.cwd,
                                      env=dict(os.environ, AOS_STACK=cell + "/"), stdin=subprocess.DEVNULL,
                                      stdout=subprocess.DEVNULL, stderr=err, start_new_session=True)
         except OSError as e:
-            raise aos_beat.StartError("起不了子項 %s：%s" % (name, e))
+            raise aos_beat.StartError("起不了子項 %s：%s" % (name, e), code)
         return Child(p.pid, aos_window.started(p.pid), p)
 
     def stop(self, names):

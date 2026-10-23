@@ -21,7 +21,9 @@
 → 跑一拍（aos_beat.run）。拍的結束碼 0＝下一拍、10＝要求停（以 0 結束）、其他非 0＝失敗（stderr 一行、以原碼結束）。
 state 只在拍與拍之間寫（心跳只在兩拍之間跳，使用者 10-20「照預設」）：每圈寫一次、結束時寫最後一份。
 收到 SIGINT／SIGTERM／SIGHUP：轉給正在跑的那拍、等它結束、不起下一拍，以 128＋N 結束（P-36）。
-結束前呼叫 finish()（子類別收自己起的東西）。自己的錯退 1，stderr 一行「程式名: 原因」。"""
+結束前呼叫 finish()（子類別收自己起的東西）。自己的錯退 1，stderr 一行「程式名: 代號 原因」（代號 10-23 照 impls：Usage、
+ReadFailed、JsonSyntax、FieldType、StackMissing、LaunchFailed；daemon 另有 Conflict、MkdirFailed、WriteFailed）。
+那拍失敗那行（第 N 圈 … 失敗，結束碼 C）不是自己的錯、不帶代號（同 impls）。"""
 import os
 import sys
 import time
@@ -36,7 +38,11 @@ STOP = 10
 
 
 class ConfigError(Exception):
-    pass
+    """設定的錯；code＝錯誤代號（沒給＝FieldType）。"""
+
+    def __init__(self, msg, code="FieldType"):
+        super().__init__(msg)
+        self.code = code
 
 
 def _nat(v):
@@ -55,7 +61,7 @@ class Loop:
         try:
             cfg = aos_flags.load_cfg(spec)
         except aos_flags.Error as e:
-            raise ConfigError(str(e))
+            raise ConfigError(str(e), e.code)
         if not isinstance(cfg, dict):
             raise ConfigError("設定檔要是 JSON 物件：%s" % spec)
         self.cfg = cfg = dict(cfg)
@@ -74,7 +80,7 @@ class Loop:
             try:
                 run, self.args = aos_flags.target(run, "run")
             except aos_flags.Error as e:
-                raise ConfigError(str(e))
+                raise ConfigError(str(e), e.code)
         elif self.need_run:
             raise ConfigError("沒有東西可跑（設定檔沒有 run）")
         self.run = run
@@ -94,7 +100,7 @@ class Loop:
             if not isinstance(v, str) or not v:
                 raise ConfigError("%s 要是檔名" % k)
             if not self.stack:
-                raise ConfigError("寫了 %s 卻沒設定 AOS_STACK" % k)
+                raise ConfigError("寫了 %s 卻沒設定 AOS_STACK" % k, "StackMissing")
             win[k] = os.path.join(self.stack, v)
         self.ctl = aos_window.Ctl(win["ctl"], self.ctl_extra)
         self.state_path = win["state"]
@@ -150,7 +156,7 @@ class Loop:
             try:
                 self.tend(c)
             except aos_beat.StartError as e:
-                self.say(str(e))
+                self.say("%s %s" % (e.code, e))
                 return self.end(1, "stopped")
             if c.get("stop"):
                 return self.end(0, "stopped")
@@ -167,7 +173,7 @@ class Loop:
                 try:
                     b = aos_beat.run(self.run, args=self.args)
                 except aos_beat.StartError as e:
-                    self.say(str(e))
+                    self.say("%s %s" % (e.code, e))
                     return self.end(1, "done")
                 if b["received"]:
                     return self.end(128 + b["received"], "stopped")
@@ -190,15 +196,15 @@ def cli(cls, argv):
     try:
         opts, rest = aos_flags.parse(argv[1:], FLAGS)
     except aos_flags.Error as e:
-        print("%s: usage: %s（%s）" % (cls.prog, usage, e), file=sys.stderr)
+        print("%s: Usage usage: %s（%s）" % (cls.prog, usage, e), file=sys.stderr)
         return 1
     if len(rest) != 1:
         why = "沒有設定檔" if not rest else "設定檔只能一個，多給了 %s" % rest[1]
-        print("%s: usage: %s（%s）" % (cls.prog, usage, why), file=sys.stderr)
+        print("%s: Usage usage: %s（%s）" % (cls.prog, usage, why), file=sys.stderr)
         return 1
     try:
         me = cls(opts, rest[0])
     except ConfigError as e:
-        print("%s: %s" % (cls.prog, e), file=sys.stderr)
+        print("%s: %s %s" % (cls.prog, e.code, e), file=sys.stderr)
         return 1
     return me.main()

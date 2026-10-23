@@ -1,6 +1,8 @@
 """aos-daemon：daemon.json＝loop.json 的超集、children 表、ctl 增減、不自動重起、收工收子項、接回（N-28、N-54、P-36）。"""
 import json, os, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
+import own_error  # noqa: E402
+own_error.install()   # 錯誤一行的代號（10-23 照 impls）：檢查對得上原因開頭再拿掉
 
 ROOT = Path(__file__).resolve().parent.parent
 BIN = ROOT / "bin"

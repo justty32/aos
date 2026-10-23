@@ -29,7 +29,9 @@ argv[0] 帶 / 又 exec 不了（不是 +x 的一般檔：資料夾、沒 +x 的�
 （10-20 ideas D3、D5：["tools/stamp", "a"]＝["aos-exec", "tools/stamp", "a"]；10-21 起 a 是 args，工作區只由 --ws 給）。
 
 單子的錯（單子壞、程式找不到、$env 沒設、$ref 解不開）丟 InstError；aos-exec 接住、退 1，
-stderr 一行「aos-exec: 單子跑不起來：原因」。子程式的碼由 aos-exec 透明轉交（被訊號停掉＝128＋訊號號碼）。
+stderr 一行「aos-exec: 代號 單子跑不起來：原因」。InstError 帶 code（10-23 照 impls 的代號）：單子的 key 型別不對 EntryBad、
+指示詞解不開（$env 沒設、$ref 讀不到／不是 JSON／指不到／繞圈）DirectiveBad、起不來 LaunchFailed——起不來時原因開頭再帶
+libaos 的名字（CwdMissing、OpenFailed、CommandNotFound、CommandNotExecutable、LaunchFailed），同 impls。子程式的碼由 aos-exec 透明轉交（被訊號停掉＝128＋訊號號碼）。
 run() 回 {"code", "signal", "timed_out", "pid", "ms", "received"}（received＝跑的期間收到、轉給子程式的第一個
 SIGINT／SIGTERM／SIGHUP，沒有＝None；給 aos-loop／aos-fsm「收完這拍再以 128＋N 結束」用）；子程式回幾號、被逾時收掉都算正常跑完，
 單子有問題或起不來丟 InstError。
@@ -55,7 +57,11 @@ _FORWARDED = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
 
 class InstError(Exception):
-    """單子的錯：單子壞、程式找不到、$env 沒設…"""
+    """單子的錯：單子壞、程式找不到、$env 沒設…；code＝錯誤代號（EntryBad、DirectiveBad、LaunchFailed）。"""
+
+    def __init__(self, msg, code="EntryBad"):
+        super().__init__(msg)
+        self.code = code
 
 
 def _pointer(doc, ptr, where):
@@ -70,7 +76,7 @@ def _pointer(doc, ptr, where):
                 and int(tok) < len(doc):
             doc = doc[int(tok)]
         else:
-            raise InstError("$ref 指不到：%s#%s" % (where, ptr))
+            raise InstError("$ref 指不到：%s#%s" % (where, ptr), "DirectiveBad")
     return doc
 
 
@@ -90,7 +96,8 @@ def _ref(x, base, chain):
     ptr += at or ""                     # D7：at 接在 #/ 後面
     f = os.path.realpath(os.path.join(base, path))
     if (f, ptr) in chain:
-        raise InstError("$ref 繞圈：%s" % " → ".join(a + ("#" + b if b else "") for a, b in chain + ((f, ptr),)))
+        raise InstError("$ref 繞圈：%s" % " → ".join(a + ("#" + b if b else "") for a, b in chain + ((f, ptr),)),
+                        "DirectiveBad")
     return _resolve(_pointer(load(f, "$ref "), ptr, f), os.path.dirname(f), chain + ((f, ptr),))
 
 
@@ -100,7 +107,7 @@ def _env(x):
     if not isinstance(name, str) or not name:
         return _KEEP
     if name not in os.environ:
-        raise InstError("環境變數 %s 沒設定" % name)
+        raise InstError("環境變數 %s 沒設定" % name, "DirectiveBad")
     return os.environ[name]
 
 
@@ -197,18 +204,21 @@ def parse(doc, base=None, args=(), ref_base=None):
 
 
 def load(path, what=""):
-    """讀單子檔（或 $ref 的檔）：第一行是 `#!` 就丟掉，剩下 json.loads。"""
+    """讀單子檔（或 $ref 的檔）：第一行是 `#!` 就丟掉，剩下 json.loads。
+    錯的代號：$ref 的檔＝DirectiveBad；單子檔本身（只有直接叫庫的 run(FILE) 會走到）＝ReadFailed／JsonSyntax。"""
     try:
         with open(path, encoding="utf-8") as f:
             text = f.read()
     except OSError as e:
-        raise InstError("%s讀不到 %s：%s" % (what, path, e))
+        raise InstError("%s讀不到 %s：%s" % (what, path, e), "DirectiveBad" if what else "ReadFailed")
+    except ValueError as e:   # 不是 UTF-8
+        raise InstError("%s%s 不是 JSON：%s" % (what, path, e), "DirectiveBad" if what else "JsonSyntax")
     if text.startswith("#!"):
         text = text.partition("\n")[2]
     try:
         return json.loads(text)
     except ValueError as e:
-        raise InstError("%s%s 不是 JSON：%s" % (what, path, e))
+        raise InstError("%s%s 不是 JSON：%s" % (what, path, e), "DirectiveBad" if what else "JsonSyntax")
 
 
 def run(x, args=(), ref_base=None):
@@ -264,7 +274,7 @@ def _run(inst):
 
 def _start(inst):
     if not os.path.isdir(inst["cwd"]):
-        raise InstError("cwd %s 不是資料夾" % inst["cwd"])
+        raise InstError("CwdMissing cwd %s 不是資料夾" % inst["cwd"], "LaunchFailed")
     env = dict(os.environ, **inst["envs"])
     opened = []
     try:
@@ -273,7 +283,7 @@ def _start(inst):
             stdout = _stream(inst, "stdout", opened)
             stderr = _stream(inst, "stderr", opened)
         except OSError as e:
-            raise InstError("串流開不了：%s" % e)
+            raise InstError("OpenFailed 串流開不了：%s" % e, "LaunchFailed")
         def popen(argv):
             return subprocess.Popen(argv, cwd=inst["cwd"], env=env, stdin=stdin, stdout=stdout, stderr=stderr,
                                     start_new_session=True)
@@ -290,11 +300,11 @@ def _start(inst):
                     prog = shutil.which(prog, path=env.get("PATH", os.defpath)) or prog
                 return popen(["/bin/sh", prog] + inst["argv"][1:])
         except FileNotFoundError:
-            raise InstError("找不到要跑的程式 %s" % inst["argv"][0])
+            raise InstError("CommandNotFound 找不到要跑的程式 %s" % inst["argv"][0], "LaunchFailed")
         except PermissionError:
-            raise InstError("%s 不能執行" % inst["argv"][0])
+            raise InstError("CommandNotExecutable %s 不能執行" % inst["argv"][0], "LaunchFailed")
         except OSError as e:
-            raise InstError("起不了 %s：%s" % (inst["argv"][0], e))
+            raise InstError("LaunchFailed 起不了 %s：%s" % (inst["argv"][0], e), "LaunchFailed")
     finally:
         for f in opened:
             f.close()

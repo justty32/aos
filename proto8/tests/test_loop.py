@@ -2,6 +2,8 @@
 訊號案例移植自 proto8/impls/aos-loop/tests/test_cli.py 的 C 段；其他 aos-loop 案例在 test_exec.py（經 agent 叫）。"""
 import json, os, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
+import own_error  # noqa: E402
+own_error.install()   # 錯誤一行的代號（10-23 照 impls）：檢查對得上原因開頭再拿掉
 
 ROOT = Path(__file__).resolve().parent.parent
 BIN = ROOT / "bin"

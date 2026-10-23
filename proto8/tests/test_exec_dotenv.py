@@ -7,6 +7,8 @@ import json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
 from test_exec_rules import put, run
+import own_error  # noqa: E402
+own_error.install()   # 錯誤一行的代號（10-23 照 impls）：檢查對得上原因開頭再拿掉
 
 SHOW = 'import json, os, sys; print(json.dumps({k: os.environ.get(k) for k in sys.argv[1:]}))'
 

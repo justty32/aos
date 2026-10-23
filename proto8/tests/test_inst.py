@@ -1,8 +1,10 @@
 """inst 單子（aos_inst 庫）。10-22 使用者「aos-inst指令可以刪掉了，跟C++版一樣做成lib就好」：aos-inst 命令列刪了，
 原本叫 aos-inst 的案例改成經 aos-exec 跑同一張單子（沒 +x 的 JSON 檔＝inst 單子入口，行程內 aos_inst.run）；
-單子的錯＝aos-exec 退 1、一行「aos-exec: 單子跑不起來：…」（JSON 壞、檔不在、不是單子則是入口的錯）。"""
+單子的錯＝aos-exec 退 1、一行「aos-exec: 代號 單子跑不起來：…」（10-23 起帶代號，own_error 對過再拿掉）（JSON 壞、檔不在、不是單子則是入口的錯）。"""
 import json, os, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
+import own_error  # noqa: E402
+own_error.install()   # 錯誤一行的代號（10-23 照 impls）：檢查對得上原因開頭再拿掉
 
 ROOT = Path(__file__).resolve().parent.parent
 BIN = ROOT / "bin"

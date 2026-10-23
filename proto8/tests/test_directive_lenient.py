@@ -7,6 +7,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "bin"))
 import aos_inst  # noqa: E402
 from test_directive_argv import put, run  # noqa: E402
+import own_error  # noqa: E402
+own_error.install()   # 錯誤一行的代號（10-23 照 impls）：檢查對得上原因開頭再拿掉
 
 
 class T(unittest.TestCase):

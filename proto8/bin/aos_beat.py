@@ -28,7 +28,11 @@ _pending = []      # 子行程還沒記進 _child 時收到的，起來後補轉
 
 
 class StartError(Exception):
-    """起不了子程式（aos-exec、daemon 的子 loop）；呼叫者印一行、退 1。"""
+    """起不了子程式（aos-exec、daemon 的子 loop）；呼叫者印一行「程式名: 代號 原因」、退 1。code 沒給＝LaunchFailed（照 impls）。"""
+
+    def __init__(self, msg, code="LaunchFailed"):
+        super().__init__(msg)
+        self.code = code
 
 
 def _on_signal(signum, frame):
