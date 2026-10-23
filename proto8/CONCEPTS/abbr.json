@@ -2,6 +2,7 @@
  "contract": "wf-table/1",
  "source": "01-設計理念.md",
  "extracted": "2026-10-15",
+ "note": "進表門檻（C-54 命名方法 R5，10-23 晚）：要嘛是 Unix／POSIX 老慣例大家本來就認得（pid、cwd、argv、ms、tmp），要嘛看一眼就還原得了全字（ctl、cfg、seq）；「刪母音」式、光看還原不了的不收（例 crt、umnt）。表上已有的不追溯（cf、cd、co 照留，使用者 10-23 晚選「留著」）。index 不進表，真要用時寫 idx；計數不用 nr_（使用者「nr_這東西還是建議不要用，現在這東西不太常見了」）。",
  "columns": [
   "abbr",
   "full",

@@ -41,3 +41,6 @@
 7,`_exec`（入口預設名：`AOS_ENTRY` 預設值、入口檔、JSON 的 key）,`_entry`,aos-exec、aos-loop、aos-fsm、aos-daemon、demo、條文,10-23 晚使用者問「換_entry，有好處嗎」→「改。」；`AOS_ENTRY`、代號 `Entry…`、入口檔同一個字，跟執行器 `aos-exec` 分開,否
 7,`.env`（key 與檔）,不改,—,dotenv 生態的檔名，JSON 裡同名是為了跟資料夾對上（C-51）,已定（使用者 10-23 選「照代定」）
 7,C-48「`_` 開頭的 key＝附註、宿主程式忽略」與 `_notes` 慣例；C-55「`_` 開頭的附註照 C-48」,刪；改成通則「不認得的 key 一律忽略、不報錯」（不分開頭是不是 `_`）,C-48、C-55,10-23 晚使用者「_開頭=附註這個概念刪掉。」「不認得的key就是忽略」；程式本來就沒特別處理 `_` 開頭、不認得的 key 本來就忽略，行為不變,否
+—,`start_ticks`（state 窗、daemon 子項列）,`started_at_ticks`,aos-loop、aos-daemon；N-32、N-17,10-23 晚命名方法 R6：`<事件>_at_<單位>`（使用者原例「started_at_ticks」）,已定（使用者 10-23 晚選「改成 started_at_ticks」）
+—,ctl 的 `stop`,`stopped`,aos-loop、aos-daemon；N-06、N-07、C-55,10-23 晚命名方法 R4：ctl 是宣告狀態，跟 state 的 `phase: stopped` 同字（`paused`、`stopped`）,已定（使用者 10-23 晚選「改成 stopped」）
+—,state 窗的 `last_warning`,`ctl_warning`,aos-loop、aos-daemon；N-08、N-28,10-23 晚命名方法 R4／R7／R9：主詞是 ctl、主題在前（跟 `ctl_seq` 排在一起），`last_` 留給「上一拍」,否
