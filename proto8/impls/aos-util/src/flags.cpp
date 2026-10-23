@@ -31,14 +31,14 @@ Flags parse_flags(int argc, char** argv, const std::vector<std::string>& keys, c
             break;
         }
         if (!a.starts_with("--")) {
-            throw Error{code::Usage, prog + " 不收位置參數（設定從 stdin 讀），多了 " + a};
+            throw Error{code::ArgumentsBad, prog + " 不收位置參數（設定從 stdin 讀），多了 " + a};
         }
         std::string key = a.substr(2);
         if (!known_key(keys, key)) {
             throw Error{code::FlagUnknown, "不認得的旗標 " + a};
         }
         if (i + 1 >= argc) {
-            throw Error{code::Usage, a + " 少了值"};
+            throw Error{code::ArgumentsBad, a + " 少了值"};
         }
         out.values[key] = flag_value(argv[i + 1]);
         i += 2;

@@ -146,7 +146,7 @@ def ws_given_relative(t):
 @case
 def ws_missing(t):
     d = prog(t, "p", "echo hi\n")
-    check("WS 不存在", run(d, str(Path(t, "nope")))[:3:2], (1, "WorkspaceMissing"))
+    check("WS 不存在", run(d, str(Path(t, "nope")))[:3:2], (1, "WsMissing"))
 
 
 @case
@@ -196,7 +196,7 @@ def nested_shares_stack(t):
 @case
 def usage(t):
     rc, _, err, _ = raw()
-    check("沒給 XXX", (rc, err), (1, "Usage"))
+    check("沒給 XXX", (rc, err), (1, "ArgumentsBad"))
 
 
 # ───────── B. ideas 10-19 § 14～§ 19 ─────────
@@ -274,7 +274,7 @@ def run_with_json(t, doc, *args):
 
 @case
 def loop_config_is_not_entry(t):
-    check("{run,max} 不是入口", run_with_json(t, {"run": "x", "max": 3})[:3:2], (1, "EntryBad"))
+    check("{val,max} 不是入口", run_with_json(t, {"val": "x", "max": 3})[:3:2], (1, "EntryBad"))
 
 
 @case
@@ -561,7 +561,7 @@ def inst_bad(t):
     check("envs 值不是字串", inst(t, {"argv": ["true"], "envs": {"A": 1}})[:3:2], (1, "EntryBad"))
     check("stdout_append 不是 bool", inst(t, {"argv": ["true"], "stdout_append": 1})[:3:2], (1, "EntryBad"))
     rc, _, err, stderr = inst(t, {"argv": ["no-such-cmd-xyz"]})
-    check("argv[0] 不存在", (rc, err, "CommandNotFound" in stderr), (1, "LaunchFailed", True))
+    check("argv[0] 不存在", (rc, err, "CommandMissing" in stderr), (1, "LaunchFailed", True))
     rc, _, err, stderr = inst(t, {"argv": ["true"], "cwd": "nope"})
     check("cwd 不存在", (rc, err, "CwdMissing" in stderr), (1, "LaunchFailed", True))
     rc, _, err, stderr = inst(t, {"argv": ["true"], "stdout": "nodir/x"})
@@ -599,9 +599,9 @@ def d1_ref_pointer_and_at(t):
     dq(t)
     check("D1 #/ 指標", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/a/w"}, {"$ref": "sub/data.json#/s~0~1x"}]})[:2],
           (0, "word esc\n"))
-    check("D1 at", inst(t, {"argv": {"$ref": "sub/data.json", "at": "/a/b"}})[:2], (0, "deep\n"))
-    check("D7 #/ 再接 at", inst(t, {"argv": {"$ref": "sub/data.json#/a", "at": "/b"}})[:2], (0, "deep\n"))
-    check("D7 #/ 再接 at（元素）", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/a/b", "at": "/1"}]})[:2],
+    check("D1 $at", inst(t, {"argv": {"$ref": "sub/data.json", "$at": "/a/b"}})[:2], (0, "deep\n"))
+    check("D7 #/ 再接 $at", inst(t, {"argv": {"$ref": "sub/data.json#/a", "$at": "/b"}})[:2], (0, "deep\n"))
+    check("D7 #/ 再接 $at（元素）", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/a/b", "$at": "/1"}]})[:2],
           (0, "deep\n"))
     check("讀不到", inst(t, {"argv": ["echo", {"$ref": "sub/nope.json"}]})[:3:2], (1, "DirectiveBad"))
     check("指不到", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/zz"}]})[:3:2], (1, "DirectiveBad"))
@@ -611,7 +611,7 @@ def d1_ref_pointer_and_at(t):
     check("繞圈", (rc, err, "繞圈" in stderr), (1, "DirectiveBad", True))
     check("有 $ref 只看 $ref", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/msg", "$env": "AOS_NOPE_XYZ"}]})[:2],
           (0, "hi\n"))
-    check("at 空字串＝物件、單子 argv 不是字串", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/a", "at": ""}]})[:3:2],
+    check("$at 空字串＝物件、單子 argv 不是字串", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/a", "$at": ""}]})[:3:2],
           (1, "EntryBad"))
 
 
@@ -623,7 +623,7 @@ def d2_d8_argv_array_directives(t):
     check("D2 argv 陣列 $env＋$path", run_with_json(t, ["sh", "-c", 'echo "$1"', "sh", {"$env": "AOS_CD", "$path": "x"}])[:2],
           (0, "%s/x\n" % q))
     check("D2 _exec 底下的陣列", run_with_json(t, {"_exec": ["echo", {"$env": "AOS_WS"}]})[:2], (0, "%s\n" % ws))
-    check("D8 argv 陣列 $ref", run_with_json(t, [{"$ref": "sub/data.json#/a/b/0"}, {"$ref": "sub/data.json", "at": "/msg"}],
+    check("D8 argv 陣列 $ref", run_with_json(t, [{"$ref": "sub/data.json#/a/b/0"}, {"$ref": "sub/data.json", "$at": "/msg"}],
                                              "tail")[:2], (0, "hi tail\n"))
     check("$env 沒設＝入口壞", run_with_json(t, ["echo", {"$env": "AOS_NOPE_XYZ"}])[:3:2], (1, "EntryBad"))
     check("解出來不是字串＝入口壞", run_with_json(t, ["echo", {"$ref": "sub/data.json#/a"}])[:3:2], (1, "EntryBad"))
@@ -682,11 +682,13 @@ def e_flags(t):
     check("舊的位置 WS 變成 args", raw(d, str(ws), cwd=t)[:2], (0, "%s|%s\n" % (Path(t).resolve(), ws)))
     prog(t, "-dash", "echo dash\n")
     check("-- 結束旗標", raw("--", "-dash", cwd=t)[:2], (0, "dash\n"))
-    check("不認得的旗標", raw("--nope", "x", d)[:3:2], (1, "Usage"))
-    check("旗標缺值", raw("--ws")[:3:2], (1, "Usage"))
-    check("只有旗標沒有 XXX", raw("--ws", str(ws))[:3:2], (1, "Usage"))
+    check("不認得的旗標", raw("--nope", "x", d)[:3:2], (1, "FlagUnknown"))
+    check("旗標缺值", raw("--ws")[:3:2], (1, "ArgumentsBad"))
+    check("只有旗標沒有 XXX", raw("--ws", str(ws))[:3:2], (1, "ArgumentsBad"))
     rc, _, _, stderr = raw("--nope")
-    check("usage 一行", stderr.startswith("aos-exec: Usage usage: aos-exec [--ws WS] [--dotenv-override] XXX [args...]"), True)
+    check("usage 一行（不認得的旗標）", stderr.startswith("aos-exec: FlagUnknown usage: aos-exec "), True)
+    rc, _, _, stderr = raw("--ws")
+    check("usage 一行", stderr.startswith("aos-exec: ArgumentsBad usage: aos-exec [--ws WS] [--dotenv-override] XXX [args...]"), True)
 
 
 @case
@@ -717,16 +719,16 @@ def e_dotenv_errors(t):
     d = prog(t, "p", "echo no\n")
     put(Path(d, ".env"), "A=1\nB=${NOPE_XYZ}SECRET\n")
     rc, out, err, stderr = raw("--ws", t, d)
-    check(".env ${} 沒設", (rc, out, err, "第 2 行" in stderr, "SECRET" in stderr), (1, "", "EnvBad", True, False))
+    check(".env ${} 沒設", (rc, out, err, "第 2 行" in stderr, "SECRET" in stderr), (1, "", "DotenvBad", True, False))
     for text in ("SECRET\n", "1A=SECRET\n", "A=${SECRET\n", "\ufeffA=1\n"):
         put(Path(d, ".env"), text)
         rc, out, err, stderr = raw("--ws", t, d)
-        check(".env 壞 %r" % text, (rc, err, "SECRET" in stderr), (1, "EnvBad", False))
+        check(".env 壞 %r" % text, (rc, err, "SECRET" in stderr), (1, "DotenvBad", False))
     Path(d, ".env").write_bytes(b"A=\xff\n")
-    check(".env 不是 UTF-8", raw("--ws", t, d)[:3:2], (1, "EnvBad"))
+    check(".env 不是 UTF-8", raw("--ws", t, d)[:3:2], (1, "DotenvBad"))
     Path(d, ".env").unlink()
     Path(d, ".env").mkdir()
-    check(".env 是資料夾", raw("--ws", t, d)[:3:2], (1, "EnvReadFailed"))
+    check(".env 是資料夾", raw("--ws", t, d)[:3:2], (1, "DotenvBad"))
 
 
 @case
@@ -766,7 +768,7 @@ def e_json_object_and_co(t):
     put(q / "y.json", {".env": {"AOS_ENTRY": "alt"}, "alt": ["echo", "alt"]})
     check("JSON .env key 設 AOS_ENTRY", raw("--ws", t, str(q / "y.json"))[:2], (0, "alt\n"))
     put(q / "z.json", {".env": {"A": {"$env": "NOPE_XYZ"}}, "_exec": ["true"]})
-    check("JSON .env 指示詞解不開", raw("--ws", t, str(q / "z.json"))[:3:2], (1, "EnvBad"))
+    check("JSON .env 指示詞解不開", raw("--ws", t, str(q / "z.json"))[:3:2], (1, "DotenvBad"))
 
 
 @case
@@ -802,23 +804,23 @@ def e_dotenv_subset(t):
             if line.startswith("export"):   # 名字 export＝不是 X，X 沒設（export 本身合規則）
                 check(".env %r" % line, (rc, out), (0, "[unset]"))
             else:
-                check(".env 壞 %r" % line, (rc, err), (1, "EnvBad"))
+                check(".env 壞 %r" % line, (rc, err), (1, "DotenvBad"))
         else:
             check(".env %r" % line, (rc, out), (0, "[%s]" % want))
     put(Path(d, ".env"), "X=a 'x\n")
     check("沒引號開頭：中間的引號照字面", raw("--ws", t, d)[:2], (0, "[a 'x]"))
     put(Path(d, ".env"), "X='SECRET\n")
     rc, _, err, stderr = raw("--ws", t, d)
-    check(".env 引號沒收尾不印值", (rc, err, "SECRET" in stderr, "第 1 行" in stderr), (1, "EnvBad", False, True))
+    check(".env 引號沒收尾不印值", (rc, err, "SECRET" in stderr, "第 1 行" in stderr), (1, "DotenvBad", False, True))
     # 預設不蓋：開始讀那一刻已有的名字跳過（格式照驗）；同一份檔同名後者贏
     put(Path(d, ".env"), "X=1\nX=2\n")
     check("同一份檔後者贏", raw("--ws", t, d)[:2], (0, "[2]"))
     check("已有的不蓋", raw("--ws", t, d, env={"X": "old"})[:2], (0, "[old]"))
     check("--dotenv-override 蓋", raw("--dotenv-override", "--ws", t, d, env={"X": "old"})[:2], (0, "[2]"))
     check("重複給一樣", raw("--dotenv-override", "--dotenv-override", "--ws", t, d, env={"X": "old"})[:2], (0, "[2]"))
-    check("--dotenv-override=V 是 usage 錯", raw("--dotenv-override=1", "--ws", t, d)[:3:2], (1, "Usage"))
+    check("--dotenv-override=V 是 usage 錯", raw("--dotenv-override=1", "--ws", t, d)[:3:2], (1, "ArgumentsBad"))
     put(Path(d, ".env"), "X=1\nY=${NOPE_XYZ}\n")
-    check("跳過的行照驗", raw("--ws", t, d, env={"Y": "y"})[:3:2], (1, "EnvBad"))
+    check("跳過的行照驗", raw("--ws", t, d, env={"Y": "y"})[:3:2], (1, "DotenvBad"))
     # 旗標只管這一跳：字串轉向（全新一跳）不吃
     q = Path(t, "q")
     put(q / ".env", "X=q\n")

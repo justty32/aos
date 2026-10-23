@@ -22,13 +22,13 @@ namespace aos::exec {
 
 // 錯誤代號（全家共用的在 aos-util 的 aos::code；這裡只加 aos-exec 自己會吐的）
 namespace code {
-using namespace aos::code;   // Usage、MkdirFailed、LaunchFailed、Internal…
-inline constexpr const char* WorkspaceMissing = "WorkspaceMissing"; // WS 不是資料夾
+using namespace aos::code;   // ArgumentsBad、FlagUnknown、MkdirFailed、LaunchFailed、Internal…
+inline constexpr const char* WsMissing = "WsMissing";               // WS 不是資料夾
 inline constexpr const char* EntryMissing = "EntryMissing";         // 入口找不到（檔、.json 補找、指標指不到、多段路徑中間不是資料夾）
 inline constexpr const char* EntryBad = "EntryBad";                 // 找到了但跑不了（種類不對、# 寫錯、繞圈、單子欄位型別不對）
-inline constexpr const char* EnvReadFailed = "EnvReadFailed";       // .env 讀不到（權限、是資料夾）；bin 版原因開頭「.env 讀不到」
-inline constexpr const char* EnvBad = "EnvBad";                     // .env 壞（格式不合、${名字} 沒設、不是 UTF-8；JSON 的 .env key
-                                                                    // 指示詞解不開、名字不合）；bin 版原因開頭「.env 壞」。只印位置、不印值
+inline constexpr const char* DotenvBad = "DotenvBad";               // .env 讀不到（權限、是資料夾；原因開頭「.env 讀不到」）、.env 壞
+                                                                    // （格式不合、${名字} 沒設、不是 UTF-8；JSON 的 .env key 指示詞解不開、
+                                                                    // 名字不合；原因開頭「.env 壞」）。只印位置、不印值
 }  // namespace code
 
 // 等同 `aos-exec args...`（args 不含程式名）。見上面。

@@ -4,18 +4,16 @@
 //                 加上子類別的 check_ctl；其他 key 忽略。讀到壞的（讀不了、不是 JSON 物件、型別不對）整份不採用、
 //                 維持上一份好的，原因記 last_warning（N-08）；讀到好的清回 null。檔不在＝還沒人寫，維持上一份好的、
 //                 不算問題（last_warning 不動）
-//   write_state   state 一份：kind、state、lap、max、interval_ms、paused、ctl_seq、last_warning（生效中的值，ctl 蓋過設定檔之後）
+//   write_state   state 一份：kind、phase、beats、max、interval_ms、paused、ctl_seq、last_warning（生效中的值，ctl 蓋過設定檔之後）
 //                 ＋info()＋code（結束時）＋心跳；沒開 state 窗就不寫
 //   write_window  先寫同資料夾的 .名字 再改名（N-05）
-//   heartbeat     pid、started、boot_id、beat
+//   heartbeat     pid、start_ticks、boot_id、at（ISO 8601 UTC 到毫秒）
 #include "engine/engine.hpp"
 
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
 
 #include <cerrno>
-#include <chrono>
-#include <cmath>
 #include <cstdio>
 #include <cstring>
 
@@ -46,10 +44,10 @@ Json heartbeat() {
     if (me.is_null() || me["pid"] != (long long)getpid()) {
         me = Json::object();
         me["pid"] = (long long)getpid();
-        me["started"] = nullptr;
-        std::optional<long long> st = aos::proc_started(0);
+        me["start_ticks"] = nullptr;
+        std::optional<long long> st = aos::proc_start_ticks(0);
         if (st) {
-            me["started"] = *st;
+            me["start_ticks"] = *st;
         }
         me["boot_id"] = nullptr;
         std::optional<std::string> b = aos::boot_id();
@@ -58,8 +56,7 @@ Json heartbeat() {
         }
     }
     Json out = me;
-    double now = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
-    out["beat"] = std::round(now * 1000.0) / 1000.0;
+    out["at"] = aos::utc_now_ms();
     return out;
 }
 
@@ -113,15 +110,15 @@ Json Loop::read_ctl() {
     return ctl_good_;
 }
 
-void Loop::write_state(const std::string& state, const Json& code) {
+void Loop::write_state(const std::string& phase, const Json& code) {
     if (state_path_.empty()) {
         return;
     }
     const Json& c = ctl_now_;
     Json doc = Json::object();
     doc["kind"] = "state";
-    doc["state"] = state;
-    doc["lap"] = lap_;
+    doc["phase"] = phase;
+    doc["beats"] = beats_;
     if (c.contains("max")) {
         doc["max"] = c["max"];
     } else if (max_) {

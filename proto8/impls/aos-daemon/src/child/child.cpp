@@ -64,13 +64,13 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
         cfg = spec;
     } else {
         cfg = Json::object();
-        cfg["run"] = spec;
+        cfg["val"] = spec;
     }
-    Json run = cfg.value("run", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗）
-    if (run.is_string()) {
-        cfg["run"] = aos::join(cwd, run.get<std::string>());
-    } else if (run.is_array() && !run.empty() && run[0].is_string()) {
-        cfg["run"][0] = aos::join(cwd, run[0].get<std::string>());
+    Json val = cfg.value("val", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗）
+    if (val.is_string()) {
+        cfg["val"] = aos::join(cwd, val.get<std::string>());
+    } else if (val.is_array() && !val.empty() && val[0].is_string()) {
+        cfg["val"][0] = aos::join(cwd, val[0].get<std::string>());
     }
     if (!cfg.contains("ctl")) {
         cfg["ctl"] = "ctl.json";
@@ -110,13 +110,13 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
     close(err_fd);
     Child c;
     c.pid = pid;
-    c.started = aos::proc_started(pid);
+    c.start_ticks = aos::proc_start_ticks(pid);
     return c;
 }
 
 bool alive(Child& c) {
     if (!c.own) {
-        return c.started.has_value() && aos::proc_started(c.pid) == c.started;
+        return c.start_ticks.has_value() && aos::proc_start_ticks(c.pid) == c.start_ticks;
     }
     if (c.reaped) {
         return false;
@@ -141,9 +141,9 @@ bool alive(Child& c) {
 Json row(const Child& c) {
     Json r = Json::object();
     r["pid"] = (long long)c.pid;
-    r["started"] = nullptr;
-    if (c.started) {
-        r["started"] = *c.started;
+    r["start_ticks"] = nullptr;
+    if (c.start_ticks) {
+        r["start_ticks"] = *c.start_ticks;
     }
     r["phase"] = c.phase;
     r["code"] = c.code;

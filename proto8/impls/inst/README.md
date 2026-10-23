@@ -28,7 +28,7 @@ else printf("%d %d %llu\n", r.code, r.timed_out, r.ms);   // 3 0 11 左右
 #include "aos.h"
 
 int aos_inst_exec(const aos_inst_input_t *in, aos_inst_result_t *out);   // 一步：起、等、填結果
-const char *aos_inst_strerror(int code);   // 錯誤代號 → "CommandNotFound" 這種名字
+const char *aos_inst_strerror(int code);   // 錯誤代號 → "CommandMissing" 這種名字
 
 // 兩步：要在子程式跑的期間做別的事（例如把收到的訊號轉給它）時用
 int aos_inst_start(const aos_inst_input_t *in, aos_inst_proc_t *proc);  // 起好就回，pid 在 proc->pid
@@ -87,13 +87,13 @@ int aos_inst_wait(aos_inst_proc_t *proc, aos_inst_result_t *out);       // 等�
 
 | 常數 | `aos_inst_strerror` | 什麼時候 |
 |---|---|---|
-| `AOS_INST_ERR_FIELD_TYPE` | FieldType | `in`／`out` 是 NULL、`argv` 是 NULL 或空 |
+| `AOS_INST_ERR_INPUT_BAD` | InputBad（10-23 統合前叫 FieldType） | `in`／`out` 是 NULL、`argv` 是 NULL 或空 |
 | `AOS_INST_ERR_PATH_CONFLICT` | PathConflict | `merge` 又給了 `paths[2]` 或 `inherits[2]`；`inherits[i]` 又給了 `paths[i]` |
 | `AOS_INST_ERR_PATH_NOT_ABSOLUTE` | PathNotAbsolute | `cwd` 或 `paths[i]` 不是 `/` 開頭 |
 | `AOS_INST_ERR_CWD_MISSING` | CwdMissing | `cwd` 不存在、不是資料夾、或沒有進去的權限（x） |
 | `AOS_INST_ERR_OPEN_FAILED` | OpenFailed | 串流的檔開不了（上層資料夾不在、是資料夾…） |
-| `AOS_INST_ERR_COMMAND_NOT_FOUND` | CommandNotFound | `argv[0]` 那個檔不存在，或照 PATH 找不到 |
-| `AOS_INST_ERR_COMMAND_NOT_EXECUTABLE` | CommandNotExecutable | 沒有執行權限 |
+| `AOS_INST_ERR_COMMAND_MISSING` | CommandMissing（10-23 統合前叫 CommandNotFound） | `argv[0]` 那個檔不存在，或照 PATH 找不到 |
+| `AOS_INST_ERR_COMMAND_BAD` | CommandBad（10-23 統合前叫 CommandNotExecutable） | 沒有執行權限 |
 | `AOS_INST_ERR_LAUNCH_FAILED` | LaunchFailed | 其他起不來的原因 |
 | `AOS_INST_ERR_WAIT_FAILED` | WaitFailed | 收不到子程式的結果（見下面訊號） |
 | `AOS_INST_ERR_KILL_FAILED` | KillFailed | 時間到要收子程式，`kill` 卻失敗（例如子程式 exec 了 setuid 程式＝`EPERM`）。lib 不再等，子程式可能還在跑、還沒收屍，`out->pid` 有填，呼叫者自己處理 |

@@ -57,7 +57,7 @@ struct Fd {
     Fd& operator=(const Fd&) = delete;
 };
 
-// libaos 起不來的錯 → LaunchFailed（訊息開頭是 libaos 的名字，例「CommandNotFound 找不到要跑的程式 x」）。
+// libaos 起不來的錯 → LaunchFailed（訊息開頭是 libaos 的名字，例「CommandMissing 找不到要跑的程式 x」）。
 Error start_error(int rc, const LibInput& lib) {
     std::string name = aos_inst_strerror(rc);
     std::string prog = lib.argv[0];
@@ -66,9 +66,9 @@ Error start_error(int rc, const LibInput& lib) {
         why = "cwd " + lib.cwd + " 不是資料夾或進不去";
     } else if (rc == AOS_INST_ERR_OPEN_FAILED) {
         why = "串流開不了（stdin／stdout／stderr 其中一個）";
-    } else if (rc == AOS_INST_ERR_COMMAND_NOT_FOUND) {
+    } else if (rc == AOS_INST_ERR_COMMAND_MISSING) {
         why = "找不到要跑的程式 " + prog;
-    } else if (rc == AOS_INST_ERR_COMMAND_NOT_EXECUTABLE) {
+    } else if (rc == AOS_INST_ERR_COMMAND_BAD) {
         why = prog + " 不能執行";
     } else if (rc == AOS_INST_ERR_LAUNCH_FAILED) {
         why = "起不了 " + prog;

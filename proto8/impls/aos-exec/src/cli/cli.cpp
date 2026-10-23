@@ -27,10 +27,10 @@ int run_cli(const std::vector<std::string>& argv) {
             // 以後加旗標就在這裡加一列；--dotenv-override（10-22）不帶值：.env 蓋掉已有的，只管這一次 aos-exec
             cli = parse_cli(argv, {{"--ws", "ws"}}, {{"--dotenv-override", "dotenv_override"}});
         } catch (const Error& e) {
-            throw Error{code::Usage, std::string("usage: ") + USAGE + "（" + e.msg + "）"};
+            throw Error{e.code, std::string("usage: ") + USAGE + "（" + e.msg + "）"};   // FlagUnknown／ArgumentsBad
         }
         if (cli.rest.empty()) {
-            throw Error{code::Usage, std::string("usage: ") + USAGE + "（沒有 XXX）"};
+            throw Error{code::ArgumentsBad, std::string("usage: ") + USAGE + "（沒有 XXX）"};
         }
         std::string spec = cli.rest[0];
         std::vector<std::string> args(cli.rest.begin() + 1, cli.rest.end());

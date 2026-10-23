@@ -6,7 +6,7 @@
 照 proto8/demo/run.sh 的做法：每隻 agent 一個暫存工作區（tempfile，結束就清掉）、放一題 inbox/q1.txt、cd 進去 `aos-exec <agent>`。
 impls 線：PATH 最前面放 impls 的 aos-exec、aos-loop、aos-fsm 的 bin/（不放 proto8/bin）；bin 線：PATH 最前面放 proto8/bin。
 兩條線各跑一次，比：結束碼、stderr、工作區裡（含 .aos/ stack 整棵樹）有哪些檔、每個檔的內容。
-會變的東西先抹掉：trace.jsonl 每行的 at、ms；stamp 印的「# <UTC 時間>」那行。腦一律用假腦（清掉 AOS_BRAIN_*）。
+會變的東西先抹掉：trace.jsonl 每行的 at、elapsed_ms；stamp 印的「# <UTC 時間>」那行。腦一律用假腦（清掉 AOS_BRAIN_*）。
 要先建好 impls 的三支（aos-exec、aos-loop、aos-fsm 各自 cmake --build）。
 """
 import json
@@ -43,7 +43,7 @@ def normalize(rel, text):
         for line in text.splitlines():
             d = json.loads(line)
             d["at"] = "AT"
-            d["ms"] = "MS"
+            d["elapsed_ms"] = "MS"
             out.append(d)
         return out
     return re.sub(r"^# \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$", "# TIME", text, flags=re.M)

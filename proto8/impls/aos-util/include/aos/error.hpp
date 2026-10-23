@@ -6,7 +6,7 @@
 //
 // 規矩：一個代號只定義一次。
 //   - 兩支以上的工具都會吐的 → 放這裡（aos::code）
-//   - 只有一支工具會吐的    → 放那支工具自己的 code namespace（例如 aos::inst::code::CommandNotFound）
+//   - 只有一支工具會吐的    → 放那支工具自己的 code namespace（例如 aos::exec::code::EntryMissing）
 // 每支工具在自己的 code namespace 裡 `using namespace aos::code;`，程式裡一律寫 code::Xxx。
 // 全家的代號總表見 impls/README.md。
 #pragma once
@@ -21,16 +21,17 @@ struct Error {
 };
 
 namespace code {
+// 代號照 10-23 命名統合（proto8/thinking/2026-10-23-naming）：沒有＝…Missing、不認得＝…Unknown、壞了或不合＝…Bad、
+// 動作做不成＝動作＋Failed；Internal＝照理不會發生的錯。
 // 命令列、stdin
-inline constexpr const char* Usage = "Usage";               // 命令列用錯（給了不收的參數、旗標少了值）
+inline constexpr const char* ArgumentsBad = "ArgumentsBad"; // 命令列用錯（給了不收的參數、旗標少了值、開關帶值、沒給或多給位置參數）
 inline constexpr const char* FlagUnknown = "FlagUnknown";   // 不認得的旗標
-inline constexpr const char* JsonSyntax = "JsonSyntax";     // stdin（或某個檔）有東西但一份 JSON 都解不出來
+inline constexpr const char* InputBad = "InputBad";         // stdin 有東西但一份 JSON 都解不出來
 inline constexpr const char* InputExtra = "InputExtra";     // stdin 有好幾份 JSON（設定只要一份）
-// 設定的內容
-inline constexpr const char* FieldType = "FieldType";       // 不是物件、某個 key 型別不對、必填的沒寫
-inline constexpr const char* Conflict = "Conflict";         // 兩個欄位互相衝突（stderr_merge 又寫 stderr、ctl 放在 ctl_dir 裡…）
+// 設定檔（loop.json、fsm.json、daemon.json；load_cfg）
+inline constexpr const char* CfgMissing = "CfgMissing";     // 設定檔不在、`#/` 指不到
+inline constexpr const char* CfgBad = "CfgBad";             // 設定檔讀不了、不是 JSON、`#` 後不是 `/`、某個 key 型別不對、必填的沒寫
 // 檔案與子程序
-inline constexpr const char* ReadFailed = "ReadFailed";     // 檔讀不到
 inline constexpr const char* WriteFailed = "WriteFailed";   // 檔寫不了
 inline constexpr const char* MkdirFailed = "MkdirFailed";   // 資料夾建不了
 inline constexpr const char* LaunchFailed = "LaunchFailed"; // 子程序起不來（fork／spawn 失敗、執行檔不在）

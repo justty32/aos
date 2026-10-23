@@ -2,7 +2,7 @@
 //
 //   read_stream(t) 一串 JSON 值（空白隔開，可單行可跨行）→ 一個個值；壞掉的尾巴丟掉（前面能解的算），不丟例外。
 //                  read_stdin 就是用它；別的工具讀「JSON 串流」的檔（例如子程式的 stdout）也用它
-//   read_stdin()   讀 stdin 到底：一份 JSON（空的＝{}、一份都解不出來＝JsonSyntax、多份＝InputExtra、壞尾丟掉）
+//   read_stdin()   讀 stdin 到底：一份 JSON（空的＝{}、一份都解不出來＝InputBad、多份＝InputExtra、壞尾丟掉）
 //   dumps(v)       JSON → 一行字，排版同 Python 的 json.dumps(v, ensure_ascii=False)：", "、": "、key 照原順序
 //   emit(v)        stdout 印一行 dumps(v)、馬上 flush，回退出碼 0
 //   emit_error(e)  stderr 印一行 {"error": {"code", "msg"}}、馬上 flush，回退出碼 1

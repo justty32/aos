@@ -32,7 +32,7 @@ check("壞尾丟掉", '{"a": 1} {"bad', 0, '{"a": 1}\n')
 check("空＝{}", "", 0, "{}\n")
 check("只有空白＝{}", "  \n\t", 0, "{}\n")
 check("多份＝InputExtra", "{} {}", 1, err="InputExtra")
-check("解不出來＝JsonSyntax", "{", 1, err="JsonSyntax")
+check("解不出來＝InputBad", "{", 1, err="InputBad")
 
 if failures:
     print("test_cli：%d 個失敗" % failures)

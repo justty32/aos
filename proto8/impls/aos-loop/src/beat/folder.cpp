@@ -140,7 +140,7 @@ Beat run_folder(const std::vector<std::string>& argv) {
     } else {
         b.code = WEXITSTATUS(status);
     }
-    b.ms = ms_since(t0);
+    b.elapsed_ms = ms_since(t0);
     return b;
 }
 

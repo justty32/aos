@@ -24,7 +24,7 @@ std::string check_ws(const std::string& ws_flag) {
     }
     struct stat st;
     if (stat(ws.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)) {
-        throw Error{code::WorkspaceMissing, "工作區不存在：" + ws};
+        throw Error{code::WsMissing, "工作區不存在：" + ws};
     }
     return abspath(ws);
 }

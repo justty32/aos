@@ -7,7 +7,6 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
-#include <ctime>
 
 namespace aos::fsm {
 
@@ -19,10 +18,10 @@ std::string read_state(const std::string& stack, const std::string& start) {
         if (err == ENOENT) {   // 沒有檔＝從 start 起
             return start;
         }
-        throw Error{code::ReadFailed, "讀不了 " + path + "：" + std::strerror(err)};   // 10-22：在但讀不了＝自己的錯
+        throw Error{code::StateBad, "讀不了 " + path + "：" + std::strerror(err)};   // 10-22：在但讀不了＝自己的錯
     }
     if (!aos::is_utf8(*text)) {
-        throw Error{code::ReadFailed, "讀不了 " + path + "：不是 UTF-8"};
+        throw Error{code::StateBad, "讀不了 " + path + "：不是 UTF-8"};
     }
     std::string s = aos::strip(*text);   // 去頭尾空白（同 Python str.strip()，認 Unicode 空白）
     if (s.empty()) {
@@ -59,15 +58,6 @@ void write_state(const std::string& stack, const std::string& name) {
 
 void append_trace(const std::string& stack, const Json& line) {
     write_text(aos::join(stack, "trace.jsonl"), aos::dumps(line) + "\n", "a");
-}
-
-std::string utc_now() {
-    std::time_t now = std::time(nullptr);
-    std::tm tm{};
-    gmtime_r(&now, &tm);
-    char buf[40];
-    std::strftime(buf, sizeof buf, "%Y-%m-%dT%H:%M:%S+00:00", &tm);
-    return buf;
 }
 
 }  // namespace aos::fsm

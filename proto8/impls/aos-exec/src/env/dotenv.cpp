@@ -45,12 +45,12 @@ bool good_name(const std::string& s) {
     return true;
 }
 
-// 一個 `名字=值` 套進環境。expand＝展開 ${名字}。錯丟 EnvBad（bad_prefix＋（原因））。
+// 一個 `名字=值` 套進環境。expand＝展開 ${名字}。錯丟 DotenvBad（bad_prefix＋（原因））。
 // 名字在 keep 裡（不蓋時＝開始讀這份 .env 那一刻環境裡已有的名字，10-22）＝驗過、不設，回 false；設了回 true。
 bool set_env(const std::string& name, const std::string& val, const std::string& bad_prefix,
              const std::set<std::string>& keep, bool expand) {
     if (!good_name(name)) {
-        throw Error{code::EnvBad, bad_prefix + "（名字要是英數字和底線、不以數字開頭）"};
+        throw Error{code::DotenvBad, bad_prefix + "（名字要是英數字和底線、不以數字開頭）"};
     }
     std::string out;
     size_t i = 0;
@@ -69,19 +69,19 @@ bool set_env(const std::string& name, const std::string& val, const std::string&
             end += 1;
         }
         if (end == k || !name_start(val[k]) || end >= val.size() || val[end] != '}') {
-            throw Error{code::EnvBad, bad_prefix + "（${ 後面要接 名字}）"};
+            throw Error{code::DotenvBad, bad_prefix + "（${ 後面要接 名字}）"};
         }
         std::string ref = val.substr(k, end - k);
         const char* v = std::getenv(ref.c_str());
         if (v == nullptr) {
-            throw Error{code::EnvBad, bad_prefix + "（${…} 引用的環境變數沒設）"};
+            throw Error{code::DotenvBad, bad_prefix + "（${…} 引用的環境變數沒設）"};
         }
         out += val.substr(i, j - i);
         out += v;
         i = end + 1;
     }
     if (out.find('\0') != std::string::npos) {
-        throw Error{code::EnvBad, bad_prefix + "（值不能有 NUL）"};
+        throw Error{code::DotenvBad, bad_prefix + "（值不能有 NUL）"};
     }
     if (keep.count(name) > 0) {
         return false;
@@ -126,24 +126,24 @@ std::string env_value(const std::string& rest, const std::string& bad, bool& exp
         char q = v[0];
         size_t j = v.find(q, 1);
         if (j == std::string::npos) {
-            throw Error{code::EnvBad, bad + "（引號沒收尾（不支援多行））"};
+            throw Error{code::DotenvBad, bad + "（引號沒收尾（不支援多行））"};
         }
         std::string inner = v.substr(1, j - 1);
         std::string tail = aos::lstrip(v.substr(j + 1));
         if (inner.find('\\') != std::string::npos) {
-            throw Error{code::EnvBad, bad + "（引號裡不能有 \\（不支援跳脫））"};
+            throw Error{code::DotenvBad, bad + "（引號裡不能有 \\（不支援跳脫））"};
         }
         if (q == '\'' && inner.find("${") != std::string::npos) {
-            throw Error{code::EnvBad, bad + "（單引號裡不能有 ${）"};
+            throw Error{code::DotenvBad, bad + "（單引號裡不能有 ${）"};
         }
         if (!tail.empty() && tail[0] != '#') {
-            throw Error{code::EnvBad, bad + "（引號後面只能接空白或 # 註解）"};
+            throw Error{code::DotenvBad, bad + "（引號後面只能接空白或 # 註解）"};
         }
         expand = q == '"';
         return inner;
     }
     if (!v.empty() && v[0] == '#' && v != rest) {
-        throw Error{code::EnvBad, bad + "（= 後面空白再接 #（要空值寫 X=，要 # 開頭的值加引號））"};
+        throw Error{code::DotenvBad, bad + "（= 後面空白再接 #（要空值寫 X=，要 # 開頭的值加引號））"};
     }
     size_t i = 0;
     while (i < v.size()) {
@@ -173,10 +173,10 @@ std::set<std::string> load_env(const std::string& dir, bool override) {
     int err = 0;
     std::optional<std::string> text = read_file(p, err);
     if (!text) {
-        throw Error{code::EnvReadFailed, ".env 讀不到：" + p + "（" + std::strerror(err) + "）"};
+        throw Error{code::DotenvBad, ".env 讀不到：" + p + "（" + std::strerror(err) + "）"};
     }
     if (!aos::is_utf8(*text)) {
-        throw Error{code::EnvBad, ".env 壞：" + p + " 不是 UTF-8"};
+        throw Error{code::DotenvBad, ".env 壞：" + p + " 不是 UTF-8"};
     }
     std::set<std::string> keep;
     if (!override) {
@@ -208,7 +208,7 @@ std::set<std::string> load_env(const std::string& dir, bool override) {
         line = line.substr(export_prefix(line));
         size_t eq = line.find('=');
         if (eq == std::string::npos) {
-            throw Error{code::EnvBad, bad + "（沒有 =）"};
+            throw Error{code::DotenvBad, bad + "（沒有 =）"};
         }
         std::string name = line.substr(0, eq);
         size_t name_end = name.find_last_not_of(" \t");   // 名字後面的空白只認空格／tab（同 bin 的 rstrip(" \t")）
@@ -233,7 +233,7 @@ std::set<std::string> json_env(const Json& env, const std::string& where, const 
     try {
         v = aos::resolve(env, ref_base);
     } catch (const Error&) {
-        throw Error{code::EnvBad, bad + "（指示詞解不開）"};
+        throw Error{code::DotenvBad, bad + "（指示詞解不開）"};
     }
     std::set<std::string> names;
     if (!v.is_object()) {

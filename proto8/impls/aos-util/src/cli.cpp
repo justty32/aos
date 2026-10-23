@@ -25,7 +25,7 @@ Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, 
         auto sw = switches.find(name);
         if (sw != switches.end()) {
             if (eq != std::string::npos) {
-                throw Error{code::Usage, name + " 不帶值"};
+                throw Error{code::ArgumentsBad, name + " 不帶值"};
             }
             out.opts[sw->second] = "1";
             i += 1;
@@ -33,7 +33,7 @@ Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, 
         }
         auto it = flags.find(name);
         if (it == flags.end()) {
-            throw Error{code::Usage, "不認得的旗標 " + name};
+            throw Error{code::FlagUnknown, "不認得的旗標 " + name};
         }
         std::string val;
         if (eq != std::string::npos) {
@@ -41,7 +41,7 @@ Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, 
         } else {
             i += 1;
             if (i == argv.size()) {
-                throw Error{code::Usage, name + " 缺值"};
+                throw Error{code::ArgumentsBad, name + " 缺值"};
             }
             val = argv[i];
         }
@@ -57,15 +57,21 @@ Json load_cfg(const std::string& spec) {
     try {
         s = split_hash(spec);
     } catch (const Error&) {
-        throw Error{code::FieldType, "設定檔 " + spec + " 的 # 後面要接 /"};
+        throw Error{code::CfgBad, "設定檔 " + spec + " 的 # 後面要接 /"};
+    }
+    Json doc;
+    try {
+        doc = read_json_at(s.path, "");
+    } catch (const Error& e) {
+        throw Error{e.code, "讀不到或不是 JSON：" + s.path + "（" + e.msg + "）"};   // 檔不在 CfgMissing、其他 CfgBad
+    }
+    if (s.pointer.empty()) {
+        return doc;
     }
     try {
-        return read_json_at(s.path, s.pointer);
-    } catch (const Error& e) {
-        if (e.code == code::FieldType) {
-            throw Error{code::FieldType, "設定檔指不到：" + spec};
-        }
-        throw Error{e.code, "讀不到或不是 JSON：" + s.path + "（" + e.msg + "）"};
+        return doc.at(Json::json_pointer(s.pointer));
+    } catch (const nlohmann::json::exception&) {
+        throw Error{code::CfgMissing, "設定檔指不到：" + spec};
     }
 }
 

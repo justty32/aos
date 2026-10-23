@@ -1,7 +1,7 @@
 // internal.hpp：resolve.cpp、ref.cpp、env.cpp 之間共用的內部宣告（不公開；放在 aos::directive，公開的只有 aos::resolve）。
 //
 //   resolve.cpp  走遍整份 JSON、認出指示詞（有 $ref 看 $ref、否則有 $env 看 $env）、換完再接 $path／$prefix
-//   ref.cpp      {"$ref": "檔[#/指標]"[, "at": 指標]}
+//   ref.cpp      {"$ref": "檔[#/指標]"[, "$at": 指標]}
 //   env.cpp      {"$env": "NAME"}
 #pragma once
 

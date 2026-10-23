@@ -146,10 +146,10 @@ static void child_side(int in, int out, int err, int report, const char *cwd,
 /* exec 失敗的 errno → 錯誤代號。 */
 static int launch_error(int error) {
   if (error == ENOENT || error == ENOTDIR) {
-    return AOS_INST_ERR_COMMAND_NOT_FOUND;
+    return AOS_INST_ERR_COMMAND_MISSING;
   }
   if (error == EACCES || error == EPERM) {
-    return AOS_INST_ERR_COMMAND_NOT_EXECUTABLE;
+    return AOS_INST_ERR_COMMAND_BAD;
   }
   return AOS_INST_ERR_LAUNCH_FAILED;
 }

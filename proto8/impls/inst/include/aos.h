@@ -68,8 +68,8 @@ extern "C" {
  * aos_inst_strerror 回的就是那個名字。 */
 typedef enum aos_inst_error {
   AOS_INST_OK = 0,
-  /* FieldType：in／out 是 NULL、argv 是 NULL 或空 */
-  AOS_INST_ERR_FIELD_TYPE = 1,
+  /* InputBad：in／out 是 NULL、argv 是 NULL 或空 */
+  AOS_INST_ERR_INPUT_BAD = 1,
   /* PathConflict：merge＝true 又給了 paths[2] 或 inherits[2]；
    * 或 inherits[i] 與 paths[i] 同時給 */
   AOS_INST_ERR_PATH_CONFLICT = 2,
@@ -79,10 +79,10 @@ typedef enum aos_inst_error {
   AOS_INST_ERR_CWD_MISSING = 4,
   /* OpenFailed：串流的檔開不了（上層資料夾不存在、是資料夾…） */
   AOS_INST_ERR_OPEN_FAILED = 5,
-  /* CommandNotFound：argv[0] 那個檔不存在（或照 PATH 找不到） */
-  AOS_INST_ERR_COMMAND_NOT_FOUND = 6,
-  /* CommandNotExecutable：檔在，但不能執行 */
-  AOS_INST_ERR_COMMAND_NOT_EXECUTABLE = 7,
+  /* CommandMissing：argv[0] 那個檔不存在（或照 PATH 找不到） */
+  AOS_INST_ERR_COMMAND_MISSING = 6,
+  /* CommandBad：檔在，但不能執行 */
+  AOS_INST_ERR_COMMAND_BAD = 7,
   /* LaunchFailed：其他起不來的原因（fork 失敗…） */
   AOS_INST_ERR_LAUNCH_FAILED = 8,
   /* WaitFailed：waitpid 失敗，收不到結果（見上面訊號那段） */
@@ -213,8 +213,8 @@ typedef struct aos_inst_proc {
 /* 兩步用法的第一步：照 *in 起一個子程式就回來，不等它。
  * 回 AOS_INST_OK＝子程式已經 exec 成功，pid 在 proc->pid。
  * timeout_ms 從這裡開始算。
- * 非 0＝子程式沒起來（FieldType、PathConflict、PathNotAbsolute、
- *   CwdMissing、OpenFailed、CommandNotFound、CommandNotExecutable、
+ * 非 0＝子程式沒起來（InputBad、PathConflict、PathNotAbsolute、
+ *   CwdMissing、OpenFailed、CommandMissing、CommandBad、
  *   LaunchFailed），這時不用、也不能呼叫 aos_inst_wait。
  * 一定要配 aos_inst_wait：回 OK 之後呼叫者必須呼叫一次 aos_inst_wait，
  *   否則子程式結束後會變殭屍（沒人收屍），pidfd 也會漏掉。
@@ -229,7 +229,7 @@ AOS_API int aos_inst_start(const aos_inst_input_t *in, aos_inst_proc_t *proc);
  * （這兩個的 out 跟 aos_inst_exec 一樣：pid、timed_out、ms 有填，
  *  code＝-1、signal＝0）。
  * 每個 proc 只能呼叫一次。可以在別條執行緒呼叫（例如主執行緒 start、
- * 工人執行緒 wait）。proc 或 out 是 NULL 回 FieldType（子程式就沒人收了）。 */
+ * 工人執行緒 wait）。proc 或 out 是 NULL 回 InputBad（子程式就沒人收了）。 */
 AOS_API int aos_inst_wait(aos_inst_proc_t *proc, aos_inst_result_t *out);
 
 /* 一步做完＝aos_inst_start＋aos_inst_wait：
@@ -241,7 +241,7 @@ AOS_API int aos_inst_wait(aos_inst_proc_t *proc, aos_inst_result_t *out);
  * in 和 out 都不能是 NULL。*in 只讀不改。 */
 AOS_API int aos_inst_exec(const aos_inst_input_t *in, aos_inst_result_t *out);
 
-/* 錯誤代號 → 名字（"CommandNotFound" 這種，跟 Python 版一樣）。
+/* 錯誤代號 → 名字（"CommandMissing" 這種，跟 Python 版一樣）。
  * 不認得的代號回 "Unknown"。字串是常數，不用 free。 */
 AOS_API const char *aos_inst_strerror(int code);
 

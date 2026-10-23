@@ -47,7 +47,7 @@ Json read_stdin() {
         return Json::object();
     }
     if (docs.empty()) {
-        throw Error{code::JsonSyntax, "stdin 沒有 JSON"};
+        throw Error{code::InputBad, "stdin 沒有 JSON"};
     }
     if (docs.size() > 1) {
         throw Error{code::InputExtra, "stdin 有 " + std::to_string(docs.size()) + " 份 JSON，只要一份"};

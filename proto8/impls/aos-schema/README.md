@@ -24,12 +24,14 @@ stdin 讀一份 JSON（規則同全家：空的＝`{}`、多份＝`InputExtra`�
 
 | 代號 | 什麼時候 |
 |---|---|
-| `Usage` | 參數不是剛好一個 |
-| `ReadFailed` | SCHEMA檔 讀不到 |
-| `JsonSyntax` | SCHEMA檔 或 stdin 不是合法 JSON |
+| `ArgumentsBad` | 參數不是剛好一個 |
+| `SchemaMissing` | SCHEMA檔 不在（只有這支會吐的代號） |
+| `InputBad` | stdin 不是合法 JSON |
 | `InputExtra` | stdin 有好幾份 JSON |
-| `SchemaBad` | schema 不合 draft-07、或 `$ref` 指不到（只有這支會吐的代號） |
+| `SchemaBad` | SCHEMA檔 讀不了或不是合法 JSON、schema 不合 draft-07、或 `$ref` 指不到（只有這支會吐的代號） |
 | `Internal` | 照理不會發生的例外 |
+
+代號照 [10-23 命名統合](../../thinking/2026-10-23-naming.md)：`ArgumentsBad`（10-23 統合前叫 Usage）、`SchemaMissing`／`SchemaBad`（SCHEMA檔讀不到、不是 JSON，10-23 統合前叫 ReadFailed／JsonSyntax）、`InputBad`（stdin 不是 JSON，10-23 統合前叫 JsonSyntax）。
 
 沒有其他旗標。
 
@@ -37,8 +39,8 @@ stdin 讀一份 JSON（規則同全家：空的＝`{}`、多份＝`InputExtra`�
 
 | 檔 | 做什麼 |
 |---|---|
-| `include/aos/schema.hpp` | 公開介面：`Problem`、`load_file`、`validate`、代號 `SchemaBad` |
-| `src/load_file.cpp` | 檔 → `nlohmann::json`（讀不到＝ReadFailed、不是 JSON＝JsonSyntax） |
+| `include/aos/schema.hpp` | 公開介面：`Problem`、`load_file`、`validate`、代號 `SchemaMissing`、`SchemaBad` |
+| `src/load_file.cpp` | 檔 → `nlohmann::json`（不在＝SchemaMissing、讀不了或不是 JSON＝SchemaBad） |
 | `src/validate.cpp` | **整個專案唯一碰 pboettch/json-schema-validator 的檔**：先拿 draft-07 的 meta-schema 驗 schema 本身 → 編 schema → 驗 doc、每個錯收成一個 `Problem` |
 | `src/main.cpp` | 命令列：讀 → `load_file` → `validate` → 印 |
 | `examples/inst.schema.json` | 示範 schema：一張 inst 的欄位，照 `proto8/lib/aos_inst.py` 的 `parse()` 寫 |
@@ -52,7 +54,7 @@ namespace aos::schema {
 using Error = aos::Error;                                         // aos-util 的 {code, msg}
 struct Problem { std::string pointer; std::string message; };     // 一個驗不過的地方
 
-nlohmann::json load_file(const std::filesystem::path&);           // ReadFailed／JsonSyntax
+nlohmann::json load_file(const std::filesystem::path&);           // SchemaMissing／SchemaBad
 std::vector<Problem> validate(const nlohmann::json& schema,
                               const nlohmann::json& doc);         // 空＝通過；schema 壞＝SchemaBad
 }
@@ -71,7 +73,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
 
 - 依賴 [aos-util](../aos-util/README.md)；vcpkg 比全家多一個 [pboettch/json-schema-validator](https://github.com/pboettch/json-schema-validator) 2.4.0（`vcpkg.json`）。
   別的專案要連 `aos-schema`，那邊的 `vcpkg.json` 也要列 `json-schema-validator`（manifest 只看最上層專案）。
-- `ctest` 跑 `test_lib_*`（`tests/test_lib.cpp`：一個執行檔、第一個參數挑哪一條，8 條）和 `test_cli`（`tests/test_cli.py`：餵 stdin 看輸出，11 案）。測試資料在 `tests/data/`。
+- `ctest` 跑 `test_lib_*`（`tests/test_lib.cpp`：一個執行檔、第一個參數挑哪一條，8 條）和 `test_cli`（`tests/test_cli.py`：餵 stdin 看輸出，12 案）。測試資料在 `tests/data/`。
 
 ## 已知限制
 

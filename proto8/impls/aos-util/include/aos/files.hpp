@@ -37,7 +37,7 @@ std::optional<std::string> write_json(const std::string& path, const Json& doc);
 
 // `檔#/指標` 拆成兩半（ideas 10-19 § 19：入口路徑的 JSON 尋址，指標照 RFC 6901 JSON pointer）。
 // 第一個 `#` 就切（不支援檔名含 `#`）；沒有 `#`＝pointer 空。有 `#` 但後面不是 `/` 開頭（`檔#`、`檔#key`）
-// 丟 Error{FieldType}（呼叫者要自己的代號就接住換掉）。
+// 丟 Error{CfgBad}（呼叫者要自己的代號就接住換掉）。
 struct Spec {
     std::string path;
     std::string pointer;
@@ -45,7 +45,7 @@ struct Spec {
 Spec split_hash(const std::string& spec);
 
 // 讀一份 JSON 檔，再照 pointer 取值（pointer 空＝整份）。第一行是 `#!`（shebang）就當空行跳過。
-// 讀不到丟 Error{ReadFailed}、不是 JSON 丟 Error{JsonSyntax}、指標寫壞或指不到丟 Error{FieldType}。
+// 檔不在丟 Error{CfgMissing}、其他讀不到或不是 JSON 丟 Error{CfgBad}、指標寫壞或指不到丟 Error{CfgMissing}（訊息開頭「指不到 」）。
 Json read_json_at(const std::string& path, const std::string& pointer);
 
 }  // namespace aos

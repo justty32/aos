@@ -116,7 +116,7 @@ Spec split_hash(const std::string& spec) {
     }
     std::string pointer = spec.substr(hash + 1);
     if (!pointer.starts_with('/')) {
-        throw Error{code::FieldType, "尋址要寫成 檔#/位置（# 後面要接 /）：" + spec};
+        throw Error{code::CfgBad, "尋址要寫成 檔#/位置（# 後面要接 /）：" + spec};
     }
     return Spec{spec.substr(0, hash), pointer};
 }
@@ -125,7 +125,9 @@ Json read_json_at(const std::string& path, const std::string& pointer) {
     int err = 0;
     std::optional<std::string> text = read_file(path, err);
     if (!text) {
-        throw Error{code::ReadFailed, "讀不到 " + path + "：" + std::strerror(err)};
+        // 原因的寫法同 Python 的 OSError（`[Errno 2] No such file or directory: 'x'`），load_cfg 的一行跟 bin 版一樣
+        throw Error{err == ENOENT ? code::CfgMissing : code::CfgBad,
+                    "[Errno " + std::to_string(err) + "] " + std::strerror(err) + ": '" + path + "'"};
     }
     // 第一行 #!：換成空行（留著換行，JSON 錯誤訊息的行號才對得上）
     if (text->starts_with("#!")) {
@@ -138,7 +140,7 @@ Json read_json_at(const std::string& path, const std::string& pointer) {
     }
     Json doc = Json::parse(*text, nullptr, false);
     if (doc.is_discarded()) {
-        throw Error{code::JsonSyntax, "不是 JSON：" + path};
+        throw Error{code::CfgBad, "不是 JSON：" + path};
     }
     if (pointer.empty()) {
         return doc;
@@ -146,7 +148,7 @@ Json read_json_at(const std::string& path, const std::string& pointer) {
     try {
         return doc.at(Json::json_pointer(pointer));
     } catch (const nlohmann::json::exception& e) {
-        throw Error{code::FieldType, "指不到 " + path + "#" + pointer + "：" + e.what()};
+        throw Error{code::CfgMissing, "指不到 " + path + "#" + pointer + "：" + e.what()};
     }
 }
 

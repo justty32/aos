@@ -24,12 +24,12 @@ struct Cell {
     std::string next;
 };
 
-// 讀不到 ReadFailed、不是 JSON JsonSyntax、# 寫錯或指不到、不是 {"start": 字串, "states": 物件} FieldType。
+// 檔不在、`#/` 指不到 CfgMissing；讀不了、不是 JSON、# 寫錯、不是 {"start": 字串, "states": 物件} CfgBad。
 Table read_table(const std::string& spec);
 
 // 開跑時（讀表後、跑格前）查整張表（使用者 10-22「b、c 開跑時查整張表」）：start 要在表上；每一格要是 {"val", "next"}、
 // val 合法（字串或 [目標, 參數...]；物件＝錯）、next 是表上的狀態名、不是空字串、頭尾沒空白、沒換行（state 檔是純文字一行、
-// 讀回來會去頭尾空白）。哪一格不合都＝表壞 FieldType、不跑格。回每一格解好的樣子。
+// 讀回來會去頭尾空白）。哪一格不合都＝表壞 CfgBad、不跑格。回每一格解好的樣子。
 std::map<std::string, Cell> check(const Table& t);
 
 // 狀態名 → 那格；state 檔裡的狀態不在表上 StateUnknown（where＝state 檔的路徑，寫進原因）。

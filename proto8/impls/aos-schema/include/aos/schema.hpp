@@ -24,8 +24,9 @@ namespace aos::schema {
 using aos::Error;
 
 namespace code {
-using namespace aos::code;   // Usage、JsonSyntax、InputExtra、ReadFailed、Internal…
-inline constexpr const char* SchemaBad = "SchemaBad";   // schema 不合 draft-07、或 $ref 指不到（只有 aos-schema 會吐）
+using namespace aos::code;   // ArgumentsBad、InputBad、InputExtra、Internal…
+inline constexpr const char* SchemaMissing = "SchemaMissing";   // SCHEMA檔 不在（只有 aos-schema 會吐）
+inline constexpr const char* SchemaBad = "SchemaBad";   // SCHEMA檔 讀不了或不是 JSON、schema 不合 draft-07、或 $ref 指不到（只有 aos-schema 會吐）
 }  // namespace code
 
 // 一個驗不過的地方。pointer＝出事那一格的 JSON pointer（整份＝""），message＝驗證器的說明（英文）。
@@ -34,7 +35,7 @@ struct Problem {
     std::string message;
 };
 
-// 讀一個 JSON 檔。讀不到＝Error{ReadFailed}，不是合法 JSON＝Error{JsonSyntax}。
+// 讀 SCHEMA檔。不在＝Error{SchemaMissing}，讀不了或不是合法 JSON＝Error{SchemaBad}。
 nlohmann::json load_file(const std::filesystem::path& path);
 
 // 用 schema 驗 doc，回所有驗不過的地方（空＝通過）。

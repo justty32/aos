@@ -1,4 +1,4 @@
-// loop.cpp：【engine】Loop 每圈怎麼走（說明見 aos/loop.hpp）。照 proto8/bin/aos_loop.py 的 Loop.main、end、nap。
+// loop.cpp：【engine】Loop 每拍怎麼走（說明見 aos/loop.hpp）。照 proto8/bin/aos_loop.py 的 Loop.main、end、nap。
 //
 // 訊號：block_signals 擋著的三個訊號排在 kernel 裡；signal_got 拍與拍之間取出第一個並記住（之後一直回它，同 Python 版 take()）；
 // nap 用 sigtimedwait 睡，收到就醒。拍中收到的由 run_beat 轉給那拍、放在 Beat::received。
@@ -48,9 +48,9 @@ void Loop::nap(double secs) {
     }
 }
 
-int Loop::end(int code, const std::string& state) {
+int Loop::end(int code, const std::string& phase) {
     finish();
-    write_state(state, Json(code));
+    write_state(phase, Json(code));
     return code;
 }
 
@@ -80,7 +80,7 @@ int Loop::main_loop() {
         if (c.value("stop", false)) {
             return end(0, "stopped");
         }
-        if (mx && lap_ >= *mx) {
+        if (mx && beats_ >= *mx) {
             return end(0, "done");
         }
         double wait = std::chrono::duration<double>(next_at - Clock::now()).count();
@@ -89,12 +89,12 @@ int Loop::main_loop() {
             nap(paused ? 1.0 : wait);
             continue;
         }
-        lap_ += 1;
+        beats_ += 1;
         write_state("running", Json());
-        if (has_run_) {
+        if (has_val_) {
             Beat b;
             try {
-                b = run_beat(run_.target, run_.args);
+                b = run_beat(val_.target, val_.args);
             } catch (const Error& e) {
                 say(e.code + " " + e.msg);
                 return end(1, "done");
@@ -106,7 +106,7 @@ int Loop::main_loop() {
                 return end(0, "done");
             }
             if (b.code != 0) {
-                say("第 " + std::to_string(lap_) + " 圈 " + run_.target + " 失敗，結束碼 " + std::to_string(b.code));
+                say("第 " + std::to_string(beats_) + " 拍 " + val_.target + " 失敗，結束碼 " + std::to_string(b.code));
                 return end(b.code, "done");
             }
         }

@@ -1,26 +1,32 @@
-// load_file.cpp：把一個檔讀成 nlohmann::json。分兩步，好讓錯誤代號分得清楚：
-// 先整檔讀進字串（失敗＝ReadFailed），再解析（失敗＝JsonSyntax）。
+// load_file.cpp：把 SCHEMA檔 讀成 nlohmann::json。錯誤代號（10-23 命名統合）：檔不在＝SchemaMissing；
+// 在但讀不了、或不是合法 JSON＝SchemaBad。
 #include "aos/schema.hpp"
 
+#include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <system_error>
 
 namespace aos::schema {
 
 nlohmann::json load_file(const std::filesystem::path& path) {
+    std::error_code ec;
+    if (!std::filesystem::exists(path, ec)) {
+        throw Error{code::SchemaMissing, "沒有 " + path.string()};
+    }
     std::ifstream in(path, std::ios::binary);
     if (!in) {
-        throw Error{code::ReadFailed, "讀不到 " + path.string()};
+        throw Error{code::SchemaBad, "讀不到 " + path.string()};
     }
     std::stringstream buf;
     buf << in.rdbuf();
     if (in.bad()) {
-        throw Error{code::ReadFailed, "讀 " + path.string() + " 時出錯"};
+        throw Error{code::SchemaBad, "讀 " + path.string() + " 時出錯"};
     }
     try {
         return nlohmann::json::parse(buf.str());
     } catch (const nlohmann::json::parse_error& e) {
-        throw Error{code::JsonSyntax, path.string() + " 不是合法 JSON：" + e.what()};
+        throw Error{code::SchemaBad, path.string() + " 不是合法 JSON：" + e.what()};
     }
 }
 

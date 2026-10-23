@@ -16,7 +16,7 @@ using namespace aos::schema;
 int main(int argc, char** argv) {
     try {
         if (argc != 2) {
-            throw Error{code::Usage, "用法：aos-schema SCHEMA檔 < doc.json"};
+            throw Error{code::ArgumentsBad, "用法：aos-schema SCHEMA檔 < doc.json"};
         }
         nlohmann::json schema = load_file(argv[1]);
         aos::Json doc = aos::read_stdin();

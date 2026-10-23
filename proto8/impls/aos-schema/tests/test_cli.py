@@ -63,12 +63,14 @@ check("tail_garbage", (rc, out["valid"]), (0, True))
 
 # 工具自己出錯：stderr 一行、退 1
 check("input_extra", run([INST_SCHEMA], os.path.join(DATA, "two_docs.txt"))[:3], (1, None, "InputExtra"))
-check("input_bad_json", run([INST_SCHEMA], os.path.join(DATA, "broken.txt"))[:3], (1, None, "JsonSyntax"))
+check("input_bad_json", run([INST_SCHEMA], os.path.join(DATA, "broken.txt"))[:3], (1, None, "InputBad"))
 check("schema_bad", run([os.path.join(DATA, "bad.schema.json")], os.path.join(DATA, "inst_ok.json"))[:3],
       (1, None, "SchemaBad"))
 check("file_missing", run([os.path.join(DATA, "no_such.json")], os.path.join(DATA, "inst_ok.json"))[:3],
-      (1, None, "ReadFailed"))
-check("usage", run([], "/dev/null")[:3], (1, None, "Usage"))
+      (1, None, "SchemaMissing"))
+check("schema_not_json", run([os.path.join(DATA, "broken.txt")], os.path.join(DATA, "inst_ok.json"))[:3],
+      (1, None, "SchemaBad"))
+check("usage", run([], "/dev/null")[:3], (1, None, "ArgumentsBad"))
 
 if failures:
     print("test_cli：%d 個失敗" % failures)

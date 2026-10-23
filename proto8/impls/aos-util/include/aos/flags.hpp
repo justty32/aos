@@ -4,9 +4,9 @@
 //
 // - 旗標名＝設定 JSON 的 key 原名（底線：`--timeout_ms 100`，不收減號寫法 `--timeout-ms`）。
 //   只認 keys 裡的名字（通常＝欄位表裡的純量 key），其他＝FlagUnknown。
-// - 每個旗標都要帶一個值（少了＝Usage）；值先當 JSON 解（3、null、true），解不了就當字串。
-// - `--`：後面整段原封不動放進 rest（aos-inst 拿去蓋 argv；aos-loop 不收，看到 rest 有值就報 Usage）。
-// - 其他（位置參數，含 `-`）＝Usage：設定一律從 stdin 讀，沒有 TARGET。
+// - 每個旗標都要帶一個值（少了＝ArgumentsBad）；值先當 JSON 解（3、null、true），解不了就當字串。
+// - `--`：後面整段原封不動放進 rest（aos-inst 拿去蓋 argv；aos-loop 不收，看到 rest 有值就報 ArgumentsBad）。
+// - 其他（位置參數，含 `-`）＝ArgumentsBad：設定一律從 stdin 讀，沒有 TARGET。
 // 對應 Python aos_cli.py 的 parse_argv、_value（Python 版旗標用減號；C++ 版刻意改用 key 原名）。
 #pragma once
 

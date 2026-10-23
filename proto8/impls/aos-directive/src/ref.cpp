@@ -1,8 +1,9 @@
-// ref.cpp：{"$ref": "檔[#/指標]"[, "at": 指標]}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。
+// ref.cpp：{"$ref": "檔[#/指標]"[, "$at": 指標]}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。
 // 對應 proto8/bin/aos_inst.py 的 _ref、_pointer、load。
 //
 // 1. 寫法：$ref 不是字串、空字串、只有 #/…（沒檔名）、# 後面不是 /＝回 nullopt（原封不動，D15）；
-//    at 不是字串、或不是空字串也不是 / 開頭＝當沒寫（D14）；兩個都寫＝at 接在 #/ 後面（D7）
+//    $at 不是字串、或不是空字串也不是 / 開頭＝當沒寫（D14）；兩個都寫＝$at 接在 #/ 後面（D7）。
+//    修飾詞都帶 $（10-23 命名統合；沒帶 $ 的 at 是普通 key、不作用）
 // 2. 相對檔名從這一層的 base 算（最外層＝呼叫者給的 base_dir；被 $ref 進來的檔＝它解開捷徑後所在的資料夾）
 // 3. 同一個（檔＋指標）已經在鏈上＝繞圈
 // 4. 讀檔（第一行 #! 跳過）、解 JSON（讀不到、不是 JSON＝錯）、照指標取值（指不到＝錯），推上鏈、接著往下解
@@ -106,8 +107,8 @@ std::optional<Json> resolve_ref(const Json& d, const std::string& base, Chain& c
         return std::nullopt;
     }
     std::string at;
-    if (d.contains("at") && d["at"].is_string()) {
-        std::string a = d["at"].get<std::string>();
+    if (d.contains("$at") && d["$at"].is_string()) {
+        std::string a = d["$at"].get<std::string>();
         if (a.empty() || a[0] == '/') {
             at = a;
         }

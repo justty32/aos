@@ -3,6 +3,8 @@
 #include "aos/proc.hpp"
 
 #include <cerrno>
+#include <cstdio>
+#include <ctime>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -99,7 +101,7 @@ int stop(pid_t pid) {
     return reap(pid);
 }
 
-std::optional<long long> proc_started(pid_t pid) {
+std::optional<long long> proc_start_ticks(pid_t pid) {
     std::string path = "/proc/" + std::to_string(pid) + "/stat";
     if (pid == 0) {
         path = "/proc/self/stat";
@@ -123,6 +125,18 @@ std::optional<long long> proc_started(pid_t pid) {
     } catch (const std::exception&) {
         return std::nullopt;
     }
+}
+
+std::string utc_now_ms() {
+    timespec ts{};
+    clock_gettime(CLOCK_REALTIME, &ts);
+    std::tm tm{};
+    gmtime_r(&ts.tv_sec, &tm);
+    char day[32];
+    std::strftime(day, sizeof day, "%Y-%m-%dT%H:%M:%S", &tm);
+    char buf[80];
+    std::snprintf(buf, sizeof buf, "%s.%03ld+00:00", day, ts.tv_nsec / 1000000L);
+    return buf;
 }
 
 std::optional<std::string> boot_id() {

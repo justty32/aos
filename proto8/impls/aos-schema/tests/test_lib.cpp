@@ -98,11 +98,11 @@ void test_schema_bad() {
 }
 
 void test_file_missing() {
-    CHECK(load_error(data + "/no_such.json") == "ReadFailed");
+    CHECK(load_error(data + "/no_such.json") == "SchemaMissing");
 }
 
 void test_file_bad_json() {
-    CHECK(load_error(data + "/broken.txt") == "JsonSyntax");
+    CHECK(load_error(data + "/broken.txt") == "SchemaBad");
 }
 
 }  // namespace

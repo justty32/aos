@@ -62,12 +62,12 @@ check("巢狀 $ref 不從 cwd 算", run({"x": {"$ref": "refs/a.json"}}, {"refs/a
 check("捷徑解開", run({"x": {"$ref": "a/x.json"}}, {"lib/x.json": {"$ref": "y.json"}, "lib/y.json": "\"lib\"",
                                                  "a/y.json": "\"a\""}, links={"a/x.json": "../lib/x.json"})[:3],
       (0, {"x": "lib"}, None))
-# $ref 取檔內位置（10-20 ideas D1、D7）：檔#/指標、at、兩個都寫＝at 接在後面；~0／~1 跳脫；陣列索引
+# $ref 取檔內位置（10-20 ideas D1、D7；修飾詞 10-23 起叫 $at）：檔#/指標、$at、兩個都寫＝$at 接在後面；~0／~1 跳脫；陣列索引
 data = {"a.json": {"k": {"m": [10, 20]}, "s~/x": "esc", "msg": "hi"}}
 check("#/ 指標", run({"x": {"$ref": "a.json#/k/m/1"}}, data)[:3], (0, {"x": 20}, None))
-check("at", run({"x": {"$ref": "a.json", "at": "/k"}}, data)[:3], (0, {"x": {"m": [10, 20]}}, None))
-check("#/ 再接 at", run({"x": {"$ref": "a.json#/k", "at": "/m/0"}}, data)[:3], (0, {"x": 10}, None))
-check("at 空字串", run({"x": {"$ref": "a.json#/msg", "at": ""}}, data)[:3], (0, {"x": "hi"}, None))
+check("$at", run({"x": {"$ref": "a.json", "$at": "/k"}}, data)[:3], (0, {"x": {"m": [10, 20]}}, None))
+check("#/ 再接 $at", run({"x": {"$ref": "a.json#/k", "$at": "/m/0"}}, data)[:3], (0, {"x": 10}, None))
+check("$at 空字串", run({"x": {"$ref": "a.json#/msg", "$at": ""}}, data)[:3], (0, {"x": "hi"}, None))
 check("~0~1", run({"x": {"$ref": "a.json#/s~0~1x"}}, data)[:3], (0, {"x": "esc"}, None))
 check("指不到", run({"x": {"$ref": "a.json#/zz"}}, data)[:3], (1, None, "DirectiveBad"))
 check("索引前導 0 指不到", run({"x": {"$ref": "a.json#/k/m/01"}}, data)[:3], (1, None, "DirectiveBad"))
@@ -107,13 +107,15 @@ check("$ref 不是字串：$path／$prefix 靜默", run({"x": {"$ref": "a.json#/
 check("舊的 path 不作用", run({"x": {"$env": "AOS_DIR_TEST", "path": "plan"}}, env=E)[:3], (0, {"x": "/s"}, None))
 check("$path 變數沒設", run({"x": {"$env": "AOS_DIR_TEST_NOPE", "$path": "p"}})[:3], (1, None, "DirectiveBad"))
 # $ref 指到資料夾＝讀不到、算錯（10-21 傍晚 ideas § 9「維持報錯」；不走進去找入口）
-for x in ({"$ref": "dir"}, {"$ref": "dir#/k"}, {"$ref": "dir", "at": "/k"}):
+for x in ({"$ref": "dir"}, {"$ref": "dir#/k"}, {"$ref": "dir", "$at": "/k"}):
     check("$ref 指到資料夾 %r" % (x,), run({"x": x}, {"dir/_exec.json": {"k": 1}})[:3], (1, None, "DirectiveBad"))
 # 寫法寬容（D14）：當沒寫
 check("$path／$prefix 型別不對", run({"x": {"$env": "AOS_DIR_TEST", "$path": 3, "$prefix": ["x"]}}, env=E)[:3],
       (0, {"x": "/s"}, None))
-check("at 型別不對", run({"x": {"$ref": "a.json#/msg", "at": 3}}, data)[:3], (0, {"x": "hi"}, None))
-check("at 不是 / 開頭", run({"x": {"$ref": "a.json#/msg", "at": "k"}}, data)[:3], (0, {"x": "hi"}, None))
+check("$at 型別不對", run({"x": {"$ref": "a.json#/msg", "$at": 3}}, data)[:3], (0, {"x": "hi"}, None))
+check("$at 不是 / 開頭", run({"x": {"$ref": "a.json#/msg", "$at": "k"}}, data)[:3], (0, {"x": "hi"}, None))
+# 10-23 命名統合：沒帶 $ 的 at 是普通 key、不作用（不認得的 key 不管）
+check("舊的 at 不作用", run({"x": {"$ref": "a.json#/k", "at": "/m/0"}}, data)[:3], (0, {"x": {"m": [10, 20]}}, None))
 check("不認得的 $xxx 不管", run({"x": {"$env": "AOS_DIR_TEST", "$fmt": "%s", "$nope": 1}}, env=E)[:3],
       (0, {"x": "/s"}, None))
 check("沒 $ref／$env 的物件照常往下解", run({"x": {"$fmt": "x", "a": {"$env": "AOS_DIR_TEST"}}}, env=E)[:3],
@@ -130,11 +132,11 @@ check("找不到檔", run({"x": {"$ref": "nope.json"}})[:3], (1, None, "Directiv
 check("壞 JSON", run({"x": {"$ref": "bad.json"}}, {"bad.json": "{"})[:3], (1, None, "DirectiveBad"))
 check("繞圈", run({"x": {"$ref": "a.json"}}, {"a.json": {"$ref": "b.json"}, "b.json": {"$ref": "a.json"}})[:3],
       (1, None, "DirectiveBad"))
-# stdin：空＝{}、多份＝InputExtra、解不出來＝JsonSyntax；參數＝Usage
+# stdin：空＝{}、多份＝InputExtra、解不出來＝InputBad；參數＝ArgumentsBad
 check("stdin 空", run("")[:3], (0, {}, None))
 check("stdin 多份", run("{} {}")[:3], (1, None, "InputExtra"))
-check("stdin 壞", run("{")[:3], (1, None, "JsonSyntax"))
-check("參數", run("{}", args=["x"])[:3], (1, None, "Usage"))
+check("stdin 壞", run("{")[:3], (1, None, "InputBad"))
+check("參數", run("{}", args=["x"])[:3], (1, None, "ArgumentsBad"))
 
 if failures:
     print("test_cli：%d 個失敗" % failures)

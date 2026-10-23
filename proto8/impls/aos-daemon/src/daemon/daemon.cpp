@@ -1,10 +1,11 @@
 // daemon.cpp：【daemon】Daemon（說明見 daemon.hpp）。照 proto8/bin/aos-daemon（10-21 傍晚）。
 //
-// 每圈（Loop 讀完 ctl 之後的 tend）：期望表＝ctl 的 children（有寫）或 daemon.json 的 children →
-//   表上多出來的收掉（SIGTERM，等 10 秒，再 SIGKILL 整群）並移除 → 看誰結束了（phase exited，記 code／signal）→
-//   起表上少掉的。子 loop 結束後不自動重起（使用者 10-20「照預設」）：停在表上 exited；要再起就從 children 拿掉再放回。
+// 每拍（Loop 讀完 ctl 之後的 tend）：期望表＝ctl 的 loops（有寫）或 daemon.json 的 loops →
+//   表上多出來的收掉（SIGTERM，等 10 秒，再 SIGKILL 整群；phase stopped）並移除 → 看誰自己結束了（phase done，記 code／signal）→
+//   起表上少掉的。子 loop 結束後不自動重起（使用者 10-20「照預設」）：停在表上 done；要再起就從 loops 拿掉再放回。
+// phase：running＝還在跑、done＝子 loop 自己結束、stopped＝daemon 收掉它（送了 SIGTERM／SIGKILL；10-23 命名統合前兩個都叫 exited）。
 // 不論為什麼結束都先 finish()（收掉全部子 loop），Loop 再寫好 state。
-// adopt：起來時讀自己上次的 state，phase running、pid＋啟動時間對得上的子 loop 直接放回表上、不重起（N-17）。
+// adopt：起來時讀自己上次的 state，phase running、pid＋start_ticks 對得上的子 loop 直接放回表上、不重起（N-17）。
 #include "daemon/daemon.hpp"
 
 #include "aos/files.hpp"
@@ -27,20 +28,20 @@ static aos::loop::Defaults daemon_defaults() {
     d.prog = "aos-daemon";
     d.max = std::nullopt;
     d.interval_ms = 200;
-    d.need_run = false;
+    d.need_val = false;
     return d;
 }
 
-std::optional<std::string> check_children(const Json& v) {
+std::optional<std::string> check_loops(const Json& v) {
     if (!v.is_object()) {
-        return "children 要是 {名字: loop 設定}";
+        return "loops 要是 {名字: loop 設定}";
     }
     for (auto& [name, c] : v.items()) {
         if (name.empty() || name.find('/') != std::string::npos || name.find('#') != std::string::npos || name[0] == '.') {
-            return "children 的名字 " + aos::dumps(Json(name)) + " 不能當資料夾名";
+            return "loops 的名字 " + aos::dumps(Json(name)) + " 不能當資料夾名";
         }
         if (!c.is_string() && !c.is_array() && !c.is_object()) {
-            return "children[" + name + "] 要是 aos-exec 的目標或 loop 設定";
+            return "loops[" + name + "] 要是 aos-exec 的目標或 loop 設定";
         }
     }
     return std::nullopt;
@@ -70,7 +71,7 @@ std::set<std::string> taken_names(const std::string& stack, const std::vector<st
 std::optional<std::string> check_names(const Json& v, const std::set<std::string>& taken) {
     for (auto& [name, c] : v.items()) {
         if (taken.count(name) > 0) {
-            return "children 的名字 " + aos::dumps(Json(name)) + " 跟 daemon 自己的 ctl／state 撞名";
+            return "loops 的名字 " + aos::dumps(Json(name)) + " 跟 daemon 自己的 ctl／state 撞名";
         }
     }
     return std::nullopt;
@@ -81,22 +82,22 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     if (stack_.empty()) {
         throw Error{code::StackMissing, "沒設定 AOS_STACK"};
     }
-    children_ = Json::object();
-    if (cfg_.contains("children")) {
-        children_ = cfg_["children"];
+    loops_ = Json::object();
+    if (cfg_.contains("loops")) {
+        loops_ = cfg_["loops"];
     }
-    std::optional<std::string> bad = check_children(children_);
+    std::optional<std::string> bad = check_loops(loops_);
     if (bad) {
-        throw Error{code::FieldType, *bad};
+        throw Error{code::CfgBad, *bad};
     }
     taken_ = taken_names(stack_, {ctl_path_, state_path_});
-    bad = check_names(children_, taken_);
+    bad = check_names(loops_, taken_);
     if (bad) {
-        throw Error{code::Conflict, *bad};   // 使用者 10-22「子項名字擋掉跟 ctl／state 同名」
+        throw Error{code::CfgBad, *bad};   // 使用者 10-22「子項名字擋掉跟 ctl／state 同名」
     }
     Json a = cfg_.value("adopt", Json(true));
     if (!a.is_boolean()) {
-        throw Error{code::FieldType, "adopt 要是 true／false"};
+        throw Error{code::CfgBad, "adopt 要是 true／false"};
     }
     cwd_ = std::filesystem::current_path().string();
     if (a.get<bool>()) {
@@ -109,10 +110,10 @@ void Daemon::adopt() {
         return;
     }
     std::optional<Json> old = aos::read_json(state_path_);
-    if (!old || !old->is_object() || !old->contains("children") || !(*old)["children"].is_object()) {
+    if (!old || !old->is_object() || !old->contains("loops") || !(*old)["loops"].is_object()) {
         return;   // 第一次起來、或舊的讀不了：沒東西可接
     }
-    const Json& rows = (*old)["children"];
+    const Json& rows = (*old)["loops"];
     for (auto& [name, r] : rows.items()) {
         if (!r.is_object()) {
             return;   // 同 bin 版：有一列壞就整份不接
@@ -123,15 +124,15 @@ void Daemon::adopt() {
             continue;
         }
         Json pid = r.value("pid", Json());
-        Json st = r.value("started", Json());
+        Json st = r.value("start_ticks", Json());
         if (!pid.is_number_integer() || !st.is_number_integer()) {
             continue;
         }
-        std::optional<long long> now = aos::proc_started((pid_t)pid.get<long long>());
+        std::optional<long long> now = aos::proc_start_ticks((pid_t)pid.get<long long>());
         if (now && *now == st.get<long long>()) {
             Child c;
             c.pid = (pid_t)pid.get<long long>();
-            c.started = st.get<long long>();
+            c.start_ticks = st.get<long long>();
             c.own = false;
             table_.push_back({name, c});
         }
@@ -148,12 +149,12 @@ Child* Daemon::find(const std::string& name) {
 }
 
 std::optional<std::string> Daemon::check_ctl(const Json& doc) {
-    if (doc.contains("children")) {   // ctl 改 children 撞名＝整份不採用（N-08；原因進 last_warning）
-        std::optional<std::string> bad = check_children(doc["children"]);
+    if (doc.contains("loops")) {   // ctl 改 loops 撞名＝整份不採用（N-08；原因進 last_warning）
+        std::optional<std::string> bad = check_loops(doc["loops"]);
         if (bad) {
             return bad;
         }
-        return check_names(doc["children"], taken_);
+        return check_names(doc["loops"], taken_);
     }
     return std::nullopt;
 }
@@ -164,12 +165,12 @@ Json Daemon::info() {
         rows[n] = row(c);
     }
     Json out = Json::object();
-    out["children"] = rows;
+    out["loops"] = rows;
     return out;
 }
 
 void Daemon::tend(const Json& ctl) {
-    const Json& want = ctl.contains("children") ? ctl["children"] : children_;
+    const Json& want = ctl.contains("loops") ? ctl["loops"] : loops_;
     std::vector<std::string> gone;
     for (auto& [n, c] : table_) {
         if (!want.contains(n)) {
@@ -187,7 +188,7 @@ void Daemon::tend(const Json& ctl) {
     }
     for (auto& [n, c] : table_) {
         if (c.phase == "running" && !alive(c)) {
-            c.phase = "exited";
+            c.phase = "done";   // 子 loop 自己結束
         }
     }
     for (auto& [n, spec] : want.items()) {
@@ -232,7 +233,7 @@ void Daemon::stop(const std::vector<std::string>& names) {
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     for (Child* c : live) {
-        c->phase = "exited";
+        c->phase = "stopped";   // daemon 收掉的
     }
 }
 
@@ -242,9 +243,9 @@ void Daemon::finish() {
         all.push_back(n);
     }
     stop(all);
-    for (auto& [n, c] : table_) {   // 最後一次 tend 之後才結束的（stop 不收已經死的）也標 exited、記 code（10-21 plan D7）
+    for (auto& [n, c] : table_) {   // 最後一次 tend 之後才自己結束的（stop 不收已經死的）標 done、記 code（10-21 plan D7）
         if (c.phase == "running" && !alive(c)) {
-            c.phase = "exited";
+            c.phase = "done";
         }
     }
 }

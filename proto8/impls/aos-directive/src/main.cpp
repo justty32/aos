@@ -13,7 +13,7 @@
 int main(int argc, char** argv) {
     try {
         if (argc > 1) {
-            throw aos::Error{aos::code::Usage, std::string("aos-directive 不收參數（從 stdin 讀），多了 ") + argv[1]};
+            throw aos::Error{aos::code::ArgumentsBad, std::string("aos-directive 不收參數（從 stdin 讀），多了 ") + argv[1]};
         }
         aos::Json doc = aos::read_stdin();
         return aos::emit(aos::resolve(doc, std::filesystem::current_path()));

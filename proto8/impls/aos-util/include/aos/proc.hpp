@@ -50,10 +50,15 @@ int wait_plain(pid_t pid);
 
 // 一個行程的啟動時間（/proc/<pid>/stat 第 22 欄，clock ticks）；pid 0＝自己。讀不到＝nullopt。
 // pid＋啟動時間對得上＝同一個行程（pid 會被重用，啟動時間不會一樣）。
-std::optional<long long> proc_started(pid_t pid);
+std::optional<long long> proc_start_ticks(pid_t pid);
 
 // 開機 id（/proc/sys/kernel/random/boot_id）；讀不到＝nullopt。
 std::optional<std::string> boot_id();
+
+// 現在的 UTC 時間，ISO 8601 到毫秒（毫秒無條件捨去），同 Python
+// datetime.now(timezone.utc).isoformat(timespec="milliseconds")：2026-10-23T01:58:45.123+00:00
+// （10-23 命名統合：state 的 at、fsm trace 的 at 都用這一種寫法）。
+std::string utc_now_ms();
 
 // 兄弟專案的執行檔：自己是 impls/X/bin/X，就回 impls/<name>/bin/<name>（全家找執行檔的規則，不看 PATH）。
 std::string sibling_tool(const std::string& name);

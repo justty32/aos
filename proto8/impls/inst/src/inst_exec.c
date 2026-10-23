@@ -36,10 +36,10 @@ static bool absolute_or_null(const char *path) {
 /* 檢查單子。過關回 AOS_INST_OK。 */
 static int check_input(const aos_inst_input_t *in) {
   if (in->argv == NULL) {
-    return AOS_INST_ERR_FIELD_TYPE;
+    return AOS_INST_ERR_INPUT_BAD;
   }
   if (in->argv[0] == NULL) {
-    return AOS_INST_ERR_FIELD_TYPE;
+    return AOS_INST_ERR_INPUT_BAD;
   }
   if (in->merge && in->paths[2] != NULL) {
     return AOS_INST_ERR_PATH_CONFLICT;
@@ -86,7 +86,7 @@ static int check_input(const aos_inst_input_t *in) {
 AOS_API int aos_inst_start(const aos_inst_input_t *in, aos_inst_proc_t *proc) {
   /* 1. 參數 */
   if (in == NULL || proc == NULL) {
-    return AOS_INST_ERR_FIELD_TYPE;
+    return AOS_INST_ERR_INPUT_BAD;
   }
   int rc = check_input(in);
   if (rc != AOS_INST_OK) {
@@ -171,7 +171,7 @@ done:
 
 AOS_API int aos_inst_wait(aos_inst_proc_t *proc, aos_inst_result_t *out) {
   if (proc == NULL || out == NULL) {
-    return AOS_INST_ERR_FIELD_TYPE;
+    return AOS_INST_ERR_INPUT_BAD;
   }
   /* 先填好 pid，等待出錯時呼叫者還拿得到 */
   out->pid = proc->pid;
@@ -206,7 +206,7 @@ AOS_API int aos_inst_wait(aos_inst_proc_t *proc, aos_inst_result_t *out) {
 AOS_API int aos_inst_exec(const aos_inst_input_t *in, aos_inst_result_t *out) {
   /* out 先檢查：不然起了子程式卻沒地方填結果、也沒人收 */
   if (out == NULL) {
-    return AOS_INST_ERR_FIELD_TYPE;
+    return AOS_INST_ERR_INPUT_BAD;
   }
   aos_inst_proc_t proc = {0}; /* 全零：start 失敗時不會用到，只是讓編譯器放心 */
   int rc = aos_inst_start(in, &proc);
@@ -220,8 +220,8 @@ AOS_API const char *aos_inst_strerror(int code) {
   switch (code) {
   case AOS_INST_OK:
     return "Ok";
-  case AOS_INST_ERR_FIELD_TYPE:
-    return "FieldType";
+  case AOS_INST_ERR_INPUT_BAD:
+    return "InputBad";
   case AOS_INST_ERR_PATH_CONFLICT:
     return "PathConflict";
   case AOS_INST_ERR_PATH_NOT_ABSOLUTE:
@@ -230,10 +230,10 @@ AOS_API const char *aos_inst_strerror(int code) {
     return "CwdMissing";
   case AOS_INST_ERR_OPEN_FAILED:
     return "OpenFailed";
-  case AOS_INST_ERR_COMMAND_NOT_FOUND:
-    return "CommandNotFound";
-  case AOS_INST_ERR_COMMAND_NOT_EXECUTABLE:
-    return "CommandNotExecutable";
+  case AOS_INST_ERR_COMMAND_MISSING:
+    return "CommandMissing";
+  case AOS_INST_ERR_COMMAND_BAD:
+    return "CommandBad";
   case AOS_INST_ERR_LAUNCH_FAILED:
     return "LaunchFailed";
   case AOS_INST_ERR_WAIT_FAILED:

@@ -95,7 +95,7 @@ def main():
         assert rc == 0 and r.timed_out and r.signal == 9, (r.timed_out, r.signal)
 
         rc, r = run(lib, ["no-such-program-aos-xyz"], tmp)
-        assert lib.aos_inst_strerror(rc) == b"CommandNotFound", rc
+        assert lib.aos_inst_strerror(rc) == b"CommandMissing", rc
 
         # 兩步：start 拿到 pid、自己送訊號、wait 收結果
         argv_c = strings(["sleep", "5"])

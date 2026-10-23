@@ -244,11 +244,11 @@ static void test_merge(void) {
 static void test_not_found(void) {
   aos_inst_result_t r;
   aos_inst_input_t in = {.argv = ARGV("no-such-program-aos-xyz"), .cwd = tmp};
-  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_COMMAND_NOT_FOUND);
+  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_COMMAND_MISSING);
   in.argv = ARGV("/no/such/program");
-  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_COMMAND_NOT_FOUND);
-  const char *name = aos_inst_strerror(AOS_INST_ERR_COMMAND_NOT_FOUND);
-  CHECK(strcmp(name, "CommandNotFound") == 0);
+  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_COMMAND_MISSING);
+  const char *name = aos_inst_strerror(AOS_INST_ERR_COMMAND_MISSING);
+  CHECK(strcmp(name, "CommandMissing") == 0);
 }
 
 static void test_not_executable(void) {
@@ -259,7 +259,8 @@ static void test_not_executable(void) {
   chmod(at("noexec.sh"), 0644);
   /* 相對的 argv[0] 從 cwd 算 */
   aos_inst_input_t in = {.argv = ARGV("./noexec.sh"), .cwd = tmp};
-  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_COMMAND_NOT_EXECUTABLE);
+  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_COMMAND_BAD);
+  CHECK(strcmp(aos_inst_strerror(AOS_INST_ERR_COMMAND_BAD), "CommandBad") == 0);
   chmod(at("noexec.sh"), 0755);
   CHECK(aos_inst_exec(&in, &r) == AOS_INST_OK);
   CHECK(r.code == 0);
@@ -275,7 +276,7 @@ static void test_path_search(void) {
   fclose(f);
   chmod(at("bin/aos-hello"), 0755);
   aos_inst_input_t in = {.argv = ARGV("aos-hello")};
-  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_COMMAND_NOT_FOUND);
+  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_COMMAND_MISSING);
   char path_env[600];
   snprintf(path_env, sizeof path_env, "PATH=%s", at("bin"));
   in.envs = ARGV(path_env);
@@ -359,12 +360,13 @@ static void test_envs(void) {
 static void test_bad_args(void) {
   aos_inst_result_t r;
   aos_inst_input_t in = {0}; /* argv 沒填 */
-  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_FIELD_TYPE);
+  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_INPUT_BAD);
   in.argv = (const char *const[]){NULL}; /* argv 是空的 */
-  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_FIELD_TYPE);
+  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_INPUT_BAD);
   in.argv = ARGV("true");
-  CHECK(aos_inst_exec(&in, NULL) == AOS_INST_ERR_FIELD_TYPE);
-  CHECK(aos_inst_exec(NULL, &r) == AOS_INST_ERR_FIELD_TYPE);
+  CHECK(aos_inst_exec(&in, NULL) == AOS_INST_ERR_INPUT_BAD);
+  CHECK(aos_inst_exec(NULL, &r) == AOS_INST_ERR_INPUT_BAD);
+  CHECK(strcmp(aos_inst_strerror(AOS_INST_ERR_INPUT_BAD), "InputBad") == 0);
   /* 只填 argv，其他全零＝全預設 */
   CHECK(aos_inst_exec(&in, &r) == AOS_INST_OK);
   in.paths[0] = "/"; /* stdin 是資料夾 */
@@ -402,13 +404,13 @@ static void test_start_wait(void) {
   /* 起不來：回代號，proc 不動 */
   aos_inst_proc_t untouched = {.pid = 12345};
   aos_inst_input_t bad = {.argv = ARGV("no-such-program-aos-xyz")};
-  CHECK(aos_inst_start(&bad, &untouched) == AOS_INST_ERR_COMMAND_NOT_FOUND);
+  CHECK(aos_inst_start(&bad, &untouched) == AOS_INST_ERR_COMMAND_MISSING);
   CHECK(untouched.pid == 12345);
 
   /* NULL */
-  CHECK(aos_inst_start(NULL, &p) == AOS_INST_ERR_FIELD_TYPE);
-  CHECK(aos_inst_start(&in, NULL) == AOS_INST_ERR_FIELD_TYPE);
-  CHECK(aos_inst_wait(NULL, &r) == AOS_INST_ERR_FIELD_TYPE);
+  CHECK(aos_inst_start(NULL, &p) == AOS_INST_ERR_INPUT_BAD);
+  CHECK(aos_inst_start(&in, NULL) == AOS_INST_ERR_INPUT_BAD);
+  CHECK(aos_inst_wait(NULL, &r) == AOS_INST_ERR_INPUT_BAD);
 }
 
 static void test_empty_path_searches_cwd(void) {
@@ -424,7 +426,7 @@ static void test_empty_path_searches_cwd(void) {
   CHECK(aos_inst_exec(&in, &r) == AOS_INST_OK);
   CHECK(r.code == 4);
   in.cwd = tmp; /* 換個資料夾就找不到 */
-  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_COMMAND_NOT_FOUND);
+  CHECK(aos_inst_exec(&in, &r) == AOS_INST_ERR_COMMAND_MISSING);
 }
 
 /* 把自己的 fd（0／1／2）暫時換成 path 那個檔，跑 in，再換回來。
