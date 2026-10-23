@@ -5,7 +5,7 @@
 //   {"$ref": "檔#/a/b"}             檔內那個位置（JSON pointer，RFC 6901）
 //   {"$ref": "檔", "$at": "/a/b"}   同上；兩個都寫＝$at 接在 #/ 後面（D1、D7）
 //   {"$env": "NAME"}                環境變數的值
-// 同一物件兩個都寫只看 $ref。換出來的值是字串時：有 "$path" 就照 os.path.join 接，再在前面加 "$prefix"（D9、D10）；
+// 同一物件兩個都寫只看 $ref。換出來的值是字串時：有 "$path" 就照字串接上去（10-21 傍晚起，原 os.path.join），再在前面加 "$prefix"（D9、D10）；
 // 不是字串就靜默不作用（D11）。修飾詞都帶 $：舊的 "path" 已改名 $path、10-23 起修飾 $ref 的位置叫 $at，沒帶 $ 的寫了是普通 key、不作用。
 //
 // 錯分兩類（D13～D15）：
@@ -33,5 +33,15 @@ inline constexpr const char* DirectiveBad = "DirectiveBad"; // 指示詞解不�
 // 解掉 doc 裡所有指示詞，回新的值（原本那份不動）。base_dir＝doc 裡相對 $ref 的基準。
 // where 只為了相容舊呼叫（不再用到）。
 Json resolve(const Json& doc, const std::filesystem::path& base_dir, const std::string& where = "<stdin>");
+
+// 只換這一格（10-23 晚：aos 讀的 JSON 都解指示詞，但每支程式只解自己讀的那幾格，C-52）：v 本身是指示詞就換成它指到的值，
+// 換來的又是指示詞就再換；**不往物件、陣列裡面走**（裡面的指示詞原封不動，留給讀那幾格的人）。
+// 回換好的值，與「它裡面相對 $ref 的起點」：換過 $ref＝最後那份檔（解開捷徑後）所在的資料夾；沒換、或換的是 $env＝base_dir。
+// 呼叫者往下讀某一格時，拿這個起點對那一格再呼叫 resolve_shallow 或 resolve。錯同 resolve（DirectiveBad）。
+struct Resolved {
+    Json value;
+    std::string base_dir;
+};
+Resolved resolve_shallow(const Json& v, const std::filesystem::path& base_dir);
 
 }  // namespace aos

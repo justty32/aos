@@ -59,17 +59,47 @@ Json walk(const Json& v, const std::string& base, Chain& chain) {
     if (!got) {
         return v;
     }
-    if (got->is_string()) {   // 換出來不是字串＝$path／$prefix 靜默不作用（D11）
-        std::string s = got->get<std::string>();
-        if (v.contains("$path") && v["$path"].is_string()) {
-            s = join_path(s, v["$path"].get<std::string>());
-        }
-        if (v.contains("$prefix") && v["$prefix"].is_string()) {
-            s = v["$prefix"].get<std::string>() + s;
-        }
-        return s;
+    return decorate(v, *got);
+}
+
+Json decorate(const Json& d, const Json& got) {
+    if (!got.is_string()) {   // 換出來不是字串＝$path／$prefix 靜默不作用（D11）
+        return got;
     }
-    return *got;
+    std::string s = got.get<std::string>();
+    if (d.contains("$path") && d["$path"].is_string()) {
+        s = join_path(s, d["$path"].get<std::string>());
+    }
+    if (d.contains("$prefix") && d["$prefix"].is_string()) {
+        s = d["$prefix"].get<std::string>() + s;
+    }
+    return s;
+}
+
+// 只換這一格（10-23 晚，aos 讀的 JSON 都解指示詞）：v 是指示詞就換成它指到的原文；原文本身又是指示詞就再換，
+// 一直到不是指示詞（或寫法不合、原封不動）為止；不往物件、陣列裡面走。回換好的值與它裡面相對 $ref 的起點。
+static Resolved shallow(const Json& v, const std::string& base, Chain& chain) {
+    if (!v.is_object()) {
+        return {v, base};
+    }
+    if (v.contains("$ref")) {
+        std::optional<Fetched> f = fetch_ref(v, base, chain);
+        if (!f) {
+            return {v, base};
+        }
+        chain.push_back(f->here);
+        Resolved in = shallow(f->value, aos::dirname(f->here.first), chain);
+        in.value = decorate(v, in.value);
+        return in;
+    }
+    if (v.contains("$env")) {
+        std::optional<Json> got = resolve_env(v);
+        if (!got) {
+            return {v, base};
+        }
+        return {decorate(v, *got), base};
+    }
+    return {v, base};
 }
 
 }  // namespace aos::directive
@@ -80,6 +110,11 @@ Json resolve(const Json& doc, const std::filesystem::path& base_dir, const std::
     (void)where;
     directive::Chain chain;
     return directive::walk(doc, aos::abspath(base_dir.string()), chain);
+}
+
+Resolved resolve_shallow(const Json& v, const std::filesystem::path& base_dir) {
+    directive::Chain chain;
+    return directive::shallow(v, aos::abspath(base_dir.string()), chain);
 }
 
 }  // namespace aos

@@ -19,7 +19,7 @@ using Clock = std::chrono::steady_clock;
 void Loop::tend(const Json&) {}
 void Loop::finish() {}
 Json Loop::info() { return Json::object(); }
-std::optional<std::string> Loop::check_ctl(const Json&) { return std::nullopt; }
+std::optional<std::string> Loop::check_ctl(Json&, const std::string&) { return std::nullopt; }
 
 void Loop::say(const std::string& msg) {
     std::fprintf(stderr, "%s: %s\n", d_.prog.c_str(), msg.c_str());

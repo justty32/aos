@@ -1,4 +1,4 @@
-// config.cpp：【engine】Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）；
+// config.cpp：【engine】Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、解指示詞（resolve_keys，10-23 晚）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）；
 // 還有 parse_target（run 的寫法）、loop_cli（命令列）。照 proto8/bin/aos_loop.py 的 Loop.__init__、cli 與 aos_flags.target
 // （10-21 傍晚 ideas § 9）；錯誤分代號（Python 版是一句話）。
 #include "engine/engine.hpp"
@@ -91,8 +91,29 @@ static bool flag_nat(const std::string& s, long long& out) {
     return true;
 }
 
+aos::Resolved resolve_keys(const Json& doc, const std::string& base_dir, const std::vector<std::string>& keys) {
+    aos::Resolved r = aos::resolve_shallow(doc, base_dir);
+    if (!r.value.is_object()) {
+        return r;
+    }
+    for (const std::string& k : keys) {
+        if (r.value.contains(k)) {
+            r.value[k] = aos::resolve(r.value[k], r.base_dir);
+        }
+    }
+    return r;
+}
+
 Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& spec, const Defaults& d) : d_(d) {
     cfg_ = aos::load_cfg(spec);
+    try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45）
+        aos::Resolved r = resolve_keys(cfg_, aos::dirname(aos::abspath(aos::split_hash(spec).path)),
+                                       {"run", "max", "interval_ms", "ctl", "state"});
+        cfg_ = r.value;
+        cfg_base_ = r.base_dir;
+    } catch (const Error& e) {
+        throw Error{e.code, "設定檔 " + spec + " 的指示詞解不開：" + e.msg};
+    }
     if (!cfg_.is_object()) {
         throw Error{code::CfgBad, "設定檔要是 JSON 物件：" + spec};
     }

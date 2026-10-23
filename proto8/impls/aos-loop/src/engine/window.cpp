@@ -1,7 +1,8 @@
 // window.cpp：【engine】ctl／state 兩扇窗（NORMS N-06～N-09、N-17、N-32、N-33）。照 proto8/bin/aos_window.py。
 //
 //   read_ctl      回最後一份好的 ctl（一份都沒讀到過＝{}）。認 paused、stopped（布林）、max、interval_ms、seq（非負整數），
-//                 加上子類別的 check_ctl；其他 key 忽略。讀到壞的（讀不了、不是 JSON 物件、型別不對）整份不採用、
+//                 加上子類別的 check_ctl；其他 key 忽略。指示詞先解（resolve_keys；10-23 晚）。讀到壞的（讀不了、不是 JSON 物件、
+//                 型別不對、指示詞解不開）整份不採用、
 //                 維持上一份好的，原因記 ctl_warning（N-08）；讀到好的清回 null。檔不在＝還沒人寫，維持上一份好的、
 //                 不算問題（ctl_warning 不動）
 //   write_state   state 一份：kind、phase、runs、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 蓋過設定檔之後）
@@ -98,9 +99,16 @@ Json Loop::read_ctl() {
         ctl_warning_ = "ctl 讀不了或不是 JSON：" + ctl_path_;
         return ctl_good_;
     }
-    std::optional<std::string> bad = check_base(doc);
-    if (!bad) {
-        bad = check_ctl(doc);
+    std::optional<std::string> bad;
+    try {   // 指示詞（10-23 晚）：相對 $ref 從 ctl 所在的資料夾算；解不開＝整份不採用（N-08）
+        aos::Resolved r = resolve_keys(doc, aos::dirname(ctl_path_), {"paused", "stopped", "max", "interval_ms", "seq"});
+        doc = r.value;
+        bad = check_base(doc);
+        if (!bad) {
+            bad = check_ctl(doc, r.base_dir);
+        }
+    } catch (const Error& e) {
+        bad = "指示詞解不開：" + e.msg;
     }
     if (bad) {
         ctl_warning_ = "ctl 不採用：" + *bad;

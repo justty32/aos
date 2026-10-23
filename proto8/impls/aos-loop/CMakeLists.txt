@@ -10,6 +10,7 @@ project(aos-loop C CXX)
 # 用到的兄弟專案（包一層 if(NOT TARGET)，全家都這樣寫）。
 #   aos-exec   公開 API（aos/exec.hpp）：字串 run 走它的 resolve_ws／find_entry／prepare_env／apply_env／launch，單子用 run_inst。
 #              它又帶進 inst、aos-util、aos-directive
+#   aos-directive  設定檔與 ctl 的指示詞（resolve_keys，10-23 晚）；aos-exec 已把它 add 進來，這裡只連（PUBLIC：loop.hpp 用到）
 if(NOT TARGET aos-exec)
   add_subdirectory(../aos-exec aos-exec-build)
 endif()
@@ -23,7 +24,7 @@ add_library(aos-loop STATIC ${SOURCES})
 target_include_directories(aos-loop PUBLIC include PRIVATE src)
 target_compile_features(aos-loop PUBLIC cxx_std_20)
 target_compile_options(aos-loop PRIVATE -Wall -Wextra)
-target_link_libraries(aos-loop PUBLIC aos-exec)
+target_link_libraries(aos-loop PUBLIC aos-exec aos-directive)
 set_target_properties(aos-loop PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 

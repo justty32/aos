@@ -3,7 +3,8 @@
 `aos-directive - 解 JSON 裡的指示詞（$ref、$env）`（NAME，C-54 R1）
 
 **一句話：解 JSON 裡的指示詞——`{"$ref": "檔#/指標"}` 換成那份檔裡那個位置的值、`{"$env": "名字"}` 換成環境變數的值（可帶 `$path`、`$prefix`）。** 一個 lib（`lib/libaos-directive.a`）加一支命令列（`bin/aos-directive`，不對外提供）。
-aos-exec 連這個 lib 解單子、argv 陣列入口與 JSON `.env` key 裡的指示詞（loop／fsm／daemon 的每一次都經 aos-exec）。全家慣例見 [impls/README.md](../README.md)。
+aos-exec 連這個 lib 解單子、argv 陣列入口與 JSON `.env` key 裡的指示詞（loop／fsm／daemon 的每一次都經 aos-exec）；
+10-23 晚起 aos-loop、aos-daemon、aos-fsm 讀設定檔與 ctl 時也用它（使用者「aos 讀的 JSON 全部支援」，N-45；每支程式只解自己讀的格，用 `resolve_shallow` 一層層往下）。全家慣例見 [impls/README.md](../README.md)。
 **10-21 照 `proto8/bin/aos_inst.py` 的 resolve 改版**（10-20 ideas D1、D7、D9～D15；N-45）。
 
 ```sh
@@ -45,9 +46,9 @@ stdout 印一行解好的 JSON、退出 0；出錯 stderr 一行、退出 1。�
 
 | 檔 | 做什麼 |
 |---|---|
-| `include/aos/directive.hpp` | 公開介面：`aos::resolve`、代號 `aos::code::DirectiveBad` |
-| `src/resolve.cpp` | 走遍整份 JSON、認出指示詞、分派給 `$ref`／`$env`；換出來是字串再接 `$path`（字串拼接 `join_path`）、加 `$prefix` |
-| `src/ref.cpp` | `$ref`：檢查寫法（不合回 nullopt）、`$at`、從這一層算路徑、判斷繞圈（檔＋指標）、讀檔（跳 `#!`）、照指標取值、往下解 |
+| `include/aos/directive.hpp` | 公開介面：`aos::resolve`、`aos::resolve_shallow`（10-23 晚）、代號 `aos::code::DirectiveBad` |
+| `src/resolve.cpp` | 走遍整份 JSON、認出指示詞、分派給 `$ref`／`$env`；換出來是字串再接 `$path`（字串拼接 `join_path`）、加 `$prefix`（`decorate`）；`resolve_shallow`（只換這一格，10-23 晚） |
+| `src/ref.cpp` | `$ref`：檢查寫法（不合回 nullopt）、`$at`、從這一層算路徑、判斷繞圈（檔＋指標）、讀檔（跳 `#!`）、照指標取值（`fetch_ref`，取原文）、往下解（`resolve_ref`） |
 | `src/env.cpp` | `$env` |
 | `src/internal.hpp` | 上面三個檔之間的內部宣告（namespace `aos::directive`：`$ref` 鏈 `Chain`＝（檔, 指標）清單） |
 | `src/main.cpp` | 命令列：讀 → `resolve` → 印 |
@@ -61,7 +62,18 @@ Json resolve(const Json& doc, const std::filesystem::path& base_dir, const std::
 }
 ```
 
+```cpp
+namespace aos {
+struct Resolved { Json value; std::string base_dir; };
+Resolved resolve_shallow(const Json& v, const std::filesystem::path& base_dir);   // 10-23 晚
+}
+```
+
 `Json`、`Error` 來自 [aos-util](../aos-util/README.md)。`base_dir`＝doc 裡相對 `$ref` 的基準；`where`＝錯誤訊息裡說 doc 從哪來。
+
+`resolve_shallow`＝**只換這一格**：`v` 本身是指示詞就換成它指到的值（換來的又是指示詞就再換），**不往物件、陣列裡面走**；回換好的值與「它裡面相對 `$ref` 的起點」
+（換過 `$ref`＝最後那份檔解開捷徑後的資料夾；沒換或換的是 `$env`＝`base_dir`）。給「只解自己讀的格」的程式用：讀到哪一層就對那一層呼叫一次，讀的 key 的值再交給 `resolve`。
+錯與寬容同 `resolve`。
 
 ## 跟 Python 版的差異
 

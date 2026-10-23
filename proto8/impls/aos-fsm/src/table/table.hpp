@@ -25,6 +25,7 @@ struct Cell {
 };
 
 // 檔不在、`#/` 指不到 CfgMissing；讀不了、不是 JSON、# 寫錯、不是 {"start": 字串, "states": 物件} CfgBad。
+// 指示詞（10-23 晚）：整份、states、每一格先換一層，start、val、next 整個解（相對 $ref 從 fsm.json 的資料夾算）；解不開 DirectiveBad。
 Table read_table(const std::string& spec);
 
 // 開跑時（讀表後、跑格前）查整張表（使用者 10-22「b、c 開跑時查整張表」）：start 要在表上；每一格要是 {"val", "next"}、

@@ -43,12 +43,25 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔
 - loop.json 帶 `"_entry": ["aos-loop", {"$env": "AOS_CF"}]` 時，`aos-exec loop.json` 就把 loop 跑起來（PATH 上要有 aos-loop 與 aos-exec；`_entry` 裡也可以放旗標）。
 - 不讀 stdin、不寫 stdout（那次的 stdin／stdout／stderr 接 aos-loop 的）。不管逾時（要逾時把 run 指到一張單子、加 `timeout_ms`，P-22）。
 
+### 指示詞（10-23 晚）
+
+使用者「aos 讀的 JSON 全部支援」（N-45）：loop.json 與 ctl 裡也能寫 `$ref`／`$env`（寫法同 [aos-directive](../aos-directive/README.md)）。**只解 loop 自己讀的格**（C-52；`resolve_keys`）：
+
+- loop.json：整份先換一層（整份是 `{"$ref": "real.json"}` 也行），再把 `run`、`max`、`interval_ms`、`ctl`、`state` 整個解；相對 `$ref` 從設定檔所在的資料夾算（整份換過的從那份檔的）。
+  其他 key（`body`、`_entry`…）不碰：`loop.json#/body` 由那次的 aos-exec 自己解，body 裡的 `$env` 沒設照舊是那次的錯。
+- ctl：整份先換一層，再把 `paused`、`stopped`、`max`、`interval_ms`、`seq` 整個解（aos-daemon 多解 `loops`、`loops_added`、`loops_removed`）；相對 `$ref` 從 ctl 所在的資料夾算。
+- 解不開（變數沒設、讀不到、指不到、繞圈）：設定檔＝自己的錯 `DirectiveBad`、退 1；ctl＝整份不採用、原因進 `ctl_warning`。
+
+```json
+{"run": ["aos-fsm", {"$env": "FSM"}], "max": {"$ref": "common.json#/max"}, "state": "state.json"}
+```
+
 ### 窗（`ctl`、`state`，10-20）
 
 `"ctl": "ctl.json"`、`"state": "state.json"`＝兩扇窗的檔名，放在 `$AOS_STACK` 底下（寫了卻沒設 `AOS_STACK`＝`StackMissing`；沒寫＝不開、不提醒，N-09）。
 
 - **ctl**（誰都能寫、loop 只讀；每跑一次讀一次）：認 `paused`（不起下一次、每秒再看）、`stopped`（不起下一次、以 0 結束；10-23 晚改名，原 `stop`）、`max`、`interval_ms`（跑的途中蓋過旗標與 loop.json，後到先贏）、`seq`（state 回音 `ctl_seq`）；
-  其他 key 忽略。讀到壞的（讀不了、不是 JSON 物件、型別不對）整份不採用、維持上一份好的、原因寫進 state 的 `ctl_warning`（N-08）；檔不在＝還沒人寫，不算問題。
+  其他 key 忽略。讀到壞的（讀不了、不是 JSON 物件、型別不對、指示詞解不開）整份不採用、維持上一份好的、原因寫進 state 的 `ctl_warning`（N-08）；檔不在＝還沒人寫，不算問題。
 - **state**（只有自己寫；先寫 `.state.json` 再改名，N-05）：只在兩次之間寫（心跳只在兩次之間跳）：
   `{"kind": "state", "phase": running／waiting／paused／done／stopped, "runs", "max", "interval_ms", "paused", "ctl_seq", "ctl_warning", "pid", "started_at_ticks", "boot_id", "at"}`，
   `runs`＝跑過幾次、`started_at_ticks`＝/proc/<pid>/stat 第 22 欄、`at`＝這份 state 的時間（ISO 8601 UTC 到毫秒，例 `2026-10-23T01:58:45.123+00:00`）；
@@ -91,14 +104,14 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔
 
 | 檔 | 做什麼 |
 |---|---|
-| `include/aos/loop.hpp` | 公開介面：`Run`（`code`、`signal`、`elapsed_ms`、`received`；沒有 `timed_out`）、`block_signals`、`take_signal`、`Target`、`parse_target`、`run_once(target, args)`、`loop_cli`、`Loop(opts, spec, defaults)`（骨架，`tend`／`finish`／`info`／`check_ctl` 四個掛鉤給子類別）、`Defaults`（`max` 預設 nullopt＝不限）、`write_window`、`heartbeat`；代號 `aos::loop::code::*`（沿用 aos-exec 的＋`StackMissing`） |
+| `include/aos/loop.hpp` | 公開介面：`Run`（`code`、`signal`、`elapsed_ms`、`received`；沒有 `timed_out`）、`block_signals`、`take_signal`、`Target`、`parse_target`、`run_once(target, args)`、`loop_cli`、`Loop(opts, spec, defaults)`（骨架，`tend`／`finish`／`info`／`check_ctl` 四個掛鉤給子類別）、`Defaults`（`max` 預設 nullopt＝不限）、`write_window`、`heartbeat`、`resolve_keys`（10-23 晚；aos-daemon、aos-fsm 共用）；代號 `aos::loop::code::*`（沿用 aos-exec 的＋`StackMissing`） |
 | `src/common/common.hpp` | `using` |
 | `src/run/run.hpp` | run 元素的內部介面：`the_signals`、`run_folder` |
 | `src/run/run.cpp` | `run_once`：組好 `-- 目標 參數...` 交給 `run_folder` |
 | `src/run/folder.cpp` | `run_folder`：擋 SIGCHLD、開 signalfd、fork；子行程解開訊號、呼叫 `aos::exec::run_cli`、`_exit` 它的碼；這邊等它、期間把三個訊號 kill 給它、量毫秒 |
 | `src/run/signals.cpp` | `block_signals`（`sigprocmask`）、`take_signal`（`sigtimedwait` 不等） |
 | `src/engine/engine.hpp` | engine 元素的內部介面：`is_nat` |
-| `src/engine/config.cpp` | `Loop` 的建構子：`load_cfg` 讀設定檔（`檔#/指標`）、旗標蓋上、驗 `run`／`max`／`interval_ms`／`ctl`／`state`、算兩扇窗的路徑；`parse_target`、`loop_cli` |
+| `src/engine/config.cpp` | `resolve_keys`（設定檔、ctl 的指示詞：整份換一層、自己讀的格整個解，10-23 晚）；`Loop` 的建構子：`load_cfg` 讀設定檔（`檔#/指標`）、解指示詞、旗標蓋上、驗 `run`／`max`／`interval_ms`／`ctl`／`state`、算兩扇窗的路徑；`parse_target`、`loop_cli` |
 | `src/engine/loop.cpp` | `Loop::serve`／`main_loop`（每次怎麼走；失敗那行的「誰」＝`val_.target`）、`end`、`nap`（`sigtimedwait` 睡、收到訊號就醒）、`signal_got`、`say` |
 | `src/engine/window.cpp` | 窗：`read_ctl`、`write_state`（寫不了丟 `StateError`）、`beat`（10-23：離上一份滿 1 秒就再寫）、`write_window`、`heartbeat` |
 | `src/main.cpp` | 命令列：`block_signals` → `loop_cli` → `Loop` → `serve`；出錯印「aos-loop: 代號 原因」 |
@@ -124,6 +137,7 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔
 | `FlagUnknown`（共用） | 不認得的旗標（含 `--cfg`） |
 | `CfgMissing`（共用） | 設定檔不在；`#/` 指標指不到 |
 | `CfgBad`（共用） | 設定檔讀不了、不是 JSON；不是物件；`#` 後面不是 `/`；沒有 `run`；`run` 不是字串或非空字串陣列（物件也不行）；`max`／`interval_ms` 不是非負整數（`"3"`、`2.5`、`true`、`null`、負的都不行；旗標 `--max`／`--interval-ms` 不是 `[0-9]+`）；`ctl`／`state` 不是非空字串 |
+| `DirectiveBad`（共用） | 設定檔裡 loop 讀的格的指示詞解不開（變數沒設、`$ref` 讀不到、指不到、繞圈；10-23 晚） |
 | `StackMissing` | 寫了 `ctl` 或 `state` 卻沒設 `AOS_STACK` |
 | `WriteFailed`（共用） | state 窗寫不了（含 `$AOS_STACK` 資料夾不在） |
 | `LaunchFailed`（共用） | fork 失敗 |
@@ -145,7 +159,7 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-`ctest` 跑 `test_cli`（`tests/test_cli.py`，41 組，約 2 秒；10-23 加 F 段 1 組：`$AOS_STACK` 不在不建、`WriteFailed`、那次沒跑）。10-21 起 run 不收內嵌單子：A～D 段寫內嵌單子的案例由 `loop()` 小工具換成 `{"run": "loop.json#/body", "body": 單子}`。
+`ctest` 跑 `test_cli`（`tests/test_cli.py`，46 組，約 3 秒；10-23 加 F 段 1 組：`$AOS_STACK` 不在不建、`WriteFailed`、那次沒跑；10-23 晚加 G 段 5 組：設定檔的指示詞（`run`／`max`／`state`、整份 `$ref`、run 陣列元素）、解不開＝`DirectiveBad`（沒設、讀不到、繞圈；寫法不合原封不動＝`CfgBad`）、不讀的 key（body）不解、ctl 的 `$ref`（相對 ctl 的資料夾、整份 `$ref`）、ctl 解不開不採用）。10-21 起 run 不收內嵌單子：A～D 段寫內嵌單子的案例由 `loop()` 小工具換成 `{"run": "loop.json#/body", "body": 單子}`。
 A 段從 `proto8/tests/test_exec.py` 移植 aos-loop 的案例（失敗碼、內嵌單子每次跑、跑滿 max 不寫 stderr、10／7、失敗那行的「誰」＝run 的目標、自己的錯一行），
 B 段是 `max` 沒寫＝不限／0／負的、欄位型別、字串 run 走 aos-exec 的規則（AOS_WS／AOS_STACK／AOS_CF／AOS_CD／cd、JSON 入口、每次重找入口、入口不在＝那次碼 1）、
 不寫 stdout、PATH 原樣傳給那次（§ 24）、單子的 `$env`＋相對 cwd（`$env` 沒設＝那次 aos-exec 的錯）、逾時＝失敗（143）、被訊號停掉＝128＋N，C 段是訊號（SIGTERM 轉給字串 run、SIGINT 轉給單子、SIGHUP 停掉那次，都是收完再 128＋N），

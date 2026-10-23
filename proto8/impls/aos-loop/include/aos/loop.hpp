@@ -9,12 +9,14 @@
 //                   讀設定（旗標 ＞ 設定檔 ＞ 預設：run／max／interval_ms／ctl／state）、每次讀 ctl 窗 → tend() → 跑一次 → 寫 state 窗
 //   write_window    窗的寫法：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
 //   heartbeat       state 的心跳欄位 {pid, started_at_ticks, boot_id, at}（N-32）
+//   resolve_keys    設定檔、ctl 的指示詞（10-23 晚：aos 讀的 JSON 都解）：整份先換一層，再把自己讀的那幾格整個解，其他 key 不碰
 //
 // 規則見 aos-loop/README.md。
 // 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/error.hpp）。
 #pragma once
 
 #include "aos/cli.hpp"
+#include "aos/directive.hpp"
 #include "aos/exec.hpp"
 
 #include <chrono>
@@ -74,6 +76,12 @@ struct StateError : Error {};
 // 寫不了丟 WriteFailed。
 void write_window(const std::string& path, const Json& doc);
 
+// 指示詞（N-45，10-23 晚使用者「aos 讀的 JSON 全部支援」）：doc 本身是指示詞就先換掉（aos::resolve_shallow，不往裡面走），
+// 換完是物件就把 keys 裡有寫的那幾格整個解（aos::resolve）；其他 key（body、_entry…）原封不動，留給讀它的人（C-52）。
+// base_dir＝doc 裡相對 $ref 的起點（設定檔、ctl＝那份檔所在的資料夾）。回解好的 doc 與它裡面的起點（doc 本身換過 $ref
+// ＝那份檔的資料夾）。真的解不開丟 DirectiveBad（呼叫者決定算誰的錯：設定檔＝自己的錯退 1；ctl＝整份不採用）。
+aos::Resolved resolve_keys(const Json& doc, const std::string& base_dir, const std::vector<std::string>& keys);
+
 // 心跳欄位 {"pid", "started_at_ticks"（/proc/<pid>/stat 第 22 欄）, "boot_id", "at"（ISO 8601 UTC 到毫秒，aos::utc_now_ms）}（N-32）。
 Json heartbeat();
 
@@ -91,7 +99,9 @@ struct Defaults {
 //   max           最多幾次（非負整數；沒寫＝Defaults::max；寫 null 不行）
 //   interval_ms   一次結束到下一次開始至少隔幾毫秒（非負整數；沒寫＝Defaults::interval_ms）
 //   ctl, state    兩扇窗的檔名，在 $AOS_STACK 底下（沒寫或 null＝不開；寫了卻沒設 AOS_STACK＝StackMissing）
-// 其他 key 忽略（body、_entry…）。設定壞丟 Error（CfgMissing、CfgBad、StackMissing）。
+// 其他 key 忽略（body、_entry…）。設定壞丟 Error（CfgMissing、CfgBad、StackMissing；指示詞解不開 DirectiveBad）。
+// 指示詞（10-23 晚）：設定檔整份先換一層，上面五格整個解（resolve_keys，起點＝設定檔的資料夾）；ctl 整份先換一層，
+// paused／stopped／max／interval_ms／seq 整個解（起點＝ctl 的資料夾），子類別多認的 key 在 check_ctl 裡自己解；ctl 解不開＝整份不採用。
 // 每次：有排著的訊號 → 結束 128＋N；讀 ctl（認 paused、stopped、max、interval_ms、seq＋子類別多認的）→ tend() →
 // stopped 就結束（0）、跑滿就結束（0）→ paused 或還沒到時間就睡一下（最多 1 秒，收到訊號就醒）回頭再看 →
 // 跑一次：0＝下一次、10＝結束（0）、其他非 0＝stderr 一行、以那個碼結束；跑的期間收到訊號＝收完以 128＋N 結束。
@@ -115,7 +125,9 @@ protected:
     virtual void tend(const Json& ctl);                              // 每次讀完 ctl 後
     virtual void finish();                                           // 結束前（不論為什麼結束）
     virtual Json info();                                             // 寫進 state 的額外欄位（物件）
-    virtual std::optional<std::string> check_ctl(const Json& doc);   // ctl 多認的 key 的驗證（回原因＝不採用）
+    // ctl 多認的 key：解自己那幾格的指示詞（起點 base＝ctl 換完一層後的起點）、驗證，可以就地改寫 doc（回原因＝不採用；
+    // 丟 DirectiveBad 也＝不採用）
+    virtual std::optional<std::string> check_ctl(Json& doc, const std::string& base);
 
     void say(const std::string& msg);   // stderr 一行「程式名: msg」
 
@@ -126,7 +138,8 @@ protected:
     void beat(const std::string& phase = "");
 
     Defaults d_;
-    Json cfg_;                    // 設定檔整份（旗標已蓋上；子類別讀自己的 key）
+    Json cfg_;                    // 設定檔整份（旗標已蓋上；子類別讀自己的 key，指示詞要自己解：resolve_keys）
+    std::string cfg_base_;        // cfg_ 裡相對 $ref 的起點（設定檔所在的資料夾；整份換過 $ref＝那份檔的）
     bool has_run_ = false;        // false＝沒有身體（daemon 純監工）
     Target run_;
     std::optional<long long> max_;

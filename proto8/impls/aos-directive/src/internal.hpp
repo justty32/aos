@@ -19,8 +19,19 @@ using Chain = std::vector<std::pair<std::string, std::string>>;
 // 走一個值（遇到指示詞就換掉）。base＝這一層相對 $ref 的起點。
 Json walk(const Json& v, const std::string& base, Chain& chain);
 
+// {"$ref": …}（整個物件 d）→ 那個位置的原文（還沒往下解）＋那個位置（檔＋指標，推上鏈用）；寫法不合回 nullopt。
+// 讀不到、指不到、繞圈（here 已在 chain 上）丟 DirectiveBad。
+struct Fetched {
+    Json value;
+    std::pair<std::string, std::string> here;
+};
+std::optional<Fetched> fetch_ref(const Json& d, const std::string& base, const Chain& chain);
+
 // {"$ref": …}（整個物件 d）→ 那個位置的值（已接著解完）；寫法不合回 nullopt（物件原封不動留著）。
 std::optional<Json> resolve_ref(const Json& d, const std::string& base, Chain& chain);
+
+// $path／$prefix：換出來的 got 是字串時照 d 的 $path 接上去、再加 $prefix；不是字串原樣回（D11）。
+Json decorate(const Json& d, const Json& got);
 
 // {"$env": …}（整個物件 d）→ 環境變數的值；名字不是非空字串回 nullopt；沒設丟 DirectiveBad。
 std::optional<Json> resolve_env(const Json& d);

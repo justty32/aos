@@ -100,7 +100,7 @@ static Json pointer(const Json& doc, const std::string& ptr, const std::string& 
     return *cur;
 }
 
-std::optional<Json> resolve_ref(const Json& d, const std::string& base, Chain& chain) {
+std::optional<Fetched> fetch_ref(const Json& d, const std::string& base, const Chain& chain) {
     // 1. 寫法
     const Json& ref = d["$ref"];
     if (!ref.is_string()) {
@@ -142,10 +142,21 @@ std::optional<Json> resolve_ref(const Json& d, const std::string& base, Chain& c
         }
     }
 
-    // 4. 讀、取值、推上鏈、往下解（這份檔裡的 $ref 從它實際所在的資料夾算）
-    Json v = pointer(load(file), ptr, file);
-    chain.push_back(here);
-    Json out = walk(v, aos::dirname(file), chain);
+    // 4. 讀、取值（原文，還沒往下解）
+    Fetched f;
+    f.value = pointer(load(file), ptr, file);
+    f.here = here;
+    return f;
+}
+
+std::optional<Json> resolve_ref(const Json& d, const std::string& base, Chain& chain) {
+    std::optional<Fetched> f = fetch_ref(d, base, chain);
+    if (!f) {
+        return std::nullopt;
+    }
+    // 推上鏈、往下解（這份檔裡的 $ref 從它實際所在的資料夾算）
+    chain.push_back(f->here);
+    Json out = walk(f->value, aos::dirname(f->here.first), chain);
     chain.pop_back();
     return out;
 }

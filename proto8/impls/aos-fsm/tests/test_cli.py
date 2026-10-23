@@ -5,7 +5,8 @@
 
 每個案例一個空的暫存資料夾（tempfile，結束就清掉）、環境先清掉 AOS_*、cwd＝那個資料夾、AOS_STACK＝裡面的 stack/。
 A 段從 proto8/tests/test_fsm.py 移植（行為應一致，錯誤一行多了代號）；B 段是條文與 bin 版推得出、那邊沒測的細節；
-C 段是訊號（轉給那格、trace 與 state 照常寫完，再以 128＋N 結束）；D 段是 10-21 傍晚的命令列（ideas § 9）。
+C 段是訊號（轉給那格、trace 與 state 照常寫完，再以 128＋N 結束）；D 段是 10-21 傍晚的命令列（ideas § 9）；
+E 段是 fsm.json 的指示詞（10-23 晚）。
 10-21 起 val 不收內嵌單子、trace 沒有 timed_out：寫內嵌單子的案例由 table() 換成 `fsm.json#/states/<名>/body`（見 table）；
 格被逾時收掉＝那格的 aos-exec 以 128＋N 結束（fsm 看不到格裡有沒有逾時，C-52）。
 巢狀逾時那案要 aos-exec 在 PATH 上：用兄弟專案 ../aos-exec/bin/aos-exec（沒建就那案算失敗）。
@@ -423,7 +424,7 @@ def cell_val_array(t):
 def own_error_no_beat(t, name, r):
     rc, _, err, stderr = r
     check(name, (rc, err, len(stderr.splitlines()), (st(t) / "ran").exists(), (st(t) / "trace.jsonl").exists()),
-          (1, err if err in ("StateBad", "CfgBad", "StateUnknown") else "?", 1, False, False))
+          (1, err if err in ("StateBad", "CfgBad", "StateUnknown", "DirectiveBad") else "?", 1, False, False))
     return err
 
 
@@ -477,6 +478,41 @@ def whole_table_checked_before_beat(t):
         check("表壞 %s" % what, own_error_no_beat(t, "表壞 %s：不跑" % what, run(t)), "CfgBad")
     put(Path(t, "fsm.json"), {"start": "a", "states": {"a": good, "b": {"val": "a", "next": "a"}}})
     check("表好照跑", (run(t)[0], (st(t) / "ran").exists()), (0, True))
+
+
+# ───────── E. fsm.json 的指示詞（10-23 晚，使用者「aos 讀的 JSON 全部支援」；N-45）─────────
+
+@case
+def table_directives(t):
+    # fsm 讀的格（start、states、每一格、val、next）都解；相對 $ref 從 fsm.json 的資料夾算（cwd 在別處）
+    cell(t, "a", 'echo a >> "$AOS_STACK/log"\n'); cell(t, "b", 'echo b >> "$AOS_STACK/log"\n')
+    put(Path(t, "cfg", "states.json"), {"a": {"val": {"$env": "CELL_A"}, "next": {"$ref": "names.json#/1"}},
+                                        "b": {"$ref": "b.json"}})
+    put(Path(t, "cfg", "names.json"), ["a", "b"])
+    put(Path(t, "cfg", "b.json"), {"val": "b", "next": "a"})
+    put(Path(t, "cfg", "fsm.json"), {"start": {"$ref": "names.json#/0"}, "states": {"$ref": "states.json"}})
+    r1 = run(t, "cfg/fsm.json", env={"CELL_A": "a"})
+    r2 = run(t, "cfg/fsm.json", env={"CELL_A": "a"})
+    check("start／states／格／val／next 的指示詞", (r1[0], r1[3], r2[0], (st(t) / "log").read_text(), state(t)),
+          (0, "", 0, "a\nb\n", "a\n"))
+
+
+@case
+def table_directive_bad_is_own_error(t):
+    cell(t, "a", 'touch "$AOS_STACK/ran"\n')
+    put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"val": {"$env": "NOPE_XYZ"}, "next": "a"}}})
+    check("val 的指示詞解不開＝自己的錯、不跑", own_error_no_beat(t, "解不開不跑", run(t)), "DirectiveBad")
+    put(Path(t, "fsm.json"), {"start": "a", "states": {"$ref": "nope.json"}})
+    check("states 的 $ref 讀不到", run(t)[2], "DirectiveBad")
+
+
+@case
+def table_body_not_resolved(t):
+    # fsm 不讀格的 body：body 裡的 $env 沒設不擋開跑，是跑那格的 aos-exec 的錯（C-52）
+    put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"val": "fsm.json#/states/a/body", "next": "a",
+                                                               "body": {"argv": ["true"], "stdout": {"$env": "NOPE_XYZ"}}}}})
+    rc, _, err, stderr = run(t)
+    check("body 的指示詞留給那格", (rc, err, stderr.startswith("aos-exec: DirectiveBad ")), (1, None, True))
 
 
 for fn in cases:

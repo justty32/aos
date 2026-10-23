@@ -7,7 +7,8 @@
 直接叫 aos-loop（不經 aos-exec），所以要 AOS_STACK 的案例自己給。
 A 段從 proto8/tests/test_exec.py 裡 aos-loop 的案例移植（那邊經 aos-exec 叫；行為應一致，錯誤一行多了代號）；
 B 段是 run／max 的細節、字串 run 走 aos-exec 的規則、不寫 stdout；C 段是訊號（轉給那次、收完以 128＋N 結束）；
-D 段是窗（interval_ms、ctl、state）；E 段是 10-21 傍晚的命令列（旗標、設定檔 檔#/指標、run 陣列；ideas § 9）。
+D 段是窗（interval_ms、ctl、state）；E 段是 10-21 傍晚的命令列（旗標、設定檔 檔#/指標、run 陣列；ideas § 9）；
+F 段是 10-23 壓測後的修正；G 段是設定檔與 ctl 的指示詞（10-23 晚）。
 10-21 起 run 不收內嵌單子，A～D 段寫內嵌單子的案例由 loop() 換成 `loop.json#/body`（見 loop）。
 """
 import datetime
@@ -556,6 +557,86 @@ def stack_missing_not_created(t):
     loop(t, {"run": "c", "max": 1})
     rc, _, _, stderr = run("loop.json", cwd=t, env={"AOS_STACK": str(gone) + "/"})
     check("沒開窗就用不到 stack：照跑", (rc, stderr, mark.exists()), (0, "", True))
+
+
+# ───────── G. 設定檔與 ctl 的指示詞（10-23 晚，使用者「aos 讀的 JSON 全部支援」；N-45）─────────
+
+@case
+def cfg_directives(t):
+    # loop 讀的五格（run、max、interval_ms、ctl、state）整個解；相對 $ref 從設定檔的資料夾算（cwd 在別處）
+    s = stack(t)
+    prog(t, "c", 'echo x >> "$AOS_STACK/n"\n')
+    put(Path(t, "cfg", "n.json"), {"max": 2})
+    (s / "w").mkdir()
+    put(Path(t, "cfg", "loop.json"), {"run": {"$env": "RUN_ME"}, "max": {"$ref": "n.json#/max"},
+                                      "state": {"$env": "ST", "$path": "state.json"}})
+    r = subprocess.run([BIN, "cfg/loop.json"], cwd=t, env=env_of({"AOS_STACK": str(s), "RUN_ME": "c", "ST": "w"}),
+                       capture_output=True, text=True, timeout=30)
+    st = json.loads((s / "w" / "state.json").read_text()) if (s / "w" / "state.json").exists() else {}
+    check("run／max／state 的指示詞", (r.returncode, r.stderr, len((s / "n").read_text().split()), st.get("max")),
+          (0, "", 2, 2))
+    # 整份是 $ref：換成那份檔，裡面的 $ref 從那份檔的資料夾算
+    put(Path(t, "real", "loop.json"), {"run": "c", "max": {"$ref": "m.json"}})
+    put(Path(t, "real", "m.json"), 1)
+    put(Path(t, "top.json"), {"$ref": "real/loop.json"})
+    (s / "n").unlink()
+    r = subprocess.run([BIN, "top.json"], cwd=t, env=env_of({"AOS_STACK": str(s)}), capture_output=True, text=True)
+    check("整份 $ref", (r.returncode, r.stderr, len((s / "n").read_text().split())), (0, "", 1))
+    # run 陣列的元素也解
+    loop(t, {"run": ["c", {"$env": "ARG"}], "max": 1})
+    check("run 陣列元素的 $env", run("loop.json", cwd=t, env={"AOS_STACK": str(s), "ARG": "z"})[0], 0)
+
+
+@case
+def cfg_directive_bad_is_own_error(t):
+    loop(t, {"run": "c", "max": {"$env": "NOPE_XYZ"}})
+    rc, _, err, stderr = run("loop.json", cwd=t)
+    check("設定檔的指示詞解不開＝自己的錯", (rc, err), (1, "DirectiveBad"))
+    loop(t, {"run": "c", "max": {"$ref": "nope.json"}})
+    check("$ref 讀不到", run("loop.json", cwd=t)[2], "DirectiveBad")
+    loop(t, {"run": "c", "max": {"$ref": "loop.json#/max"}})
+    check("$ref 繞圈", run("loop.json", cwd=t)[2], "DirectiveBad")
+    # 寫法不合＝原封不動留著，照 key 的規則算（max 是物件＝CfgBad）
+    loop(t, {"run": "c", "max": {"$ref": ""}})
+    check("寫法不合原封不動", run("loop.json", cwd=t)[2], "CfgBad")
+
+
+@case
+def cfg_unread_keys_not_resolved(t):
+    # loop 不讀的 key（body、_entry…）不解：body 裡 $env 沒設，起來不算 loop 的錯，是那次 aos-exec 的錯（C-52）
+    put(Path(t, "loop.json"), {"run": "loop.json#/body", "max": 1, "other": {"$env": "NOPE_XYZ"},
+                               "body": {"argv": ["true"], "stdout": {"$env": "NOPE_XYZ"}}})
+    rc, _, err, stderr = run("loop.json", cwd=t)
+    check("body 的指示詞留給那次", (rc, err, stderr.startswith("aos-exec: DirectiveBad ")), (1, None, True))
+
+
+@case
+def ctl_directives(t):
+    # ctl 讀的五格整個解；相對 $ref 從 ctl 的資料夾（$AOS_STACK）算
+    s = stack(t)
+    put(s / "parts" / "stop.json", {"yes": True, "seq": 4})
+    (s / "ctl.json").write_text(json.dumps({"stopped": {"$ref": "parts/stop.json#/yes"},
+                                            "seq": {"$ref": "parts/stop.json", "$at": "/seq"}}))
+    r = run_loop(t, {"run": count(), "max": 3, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
+    st = json.loads((s / "state.json").read_text())
+    check("ctl 的 $ref", (r.returncode, st["phase"], st["runs"], st["ctl_seq"], st["ctl_warning"]),
+          (0, "stopped", 0, 4, None))
+    # ctl 整份是 $ref
+    (s / "ctl.json").write_text(json.dumps({"$ref": "parts/max.json"}))
+    put(s / "parts" / "max.json", {"max": 1})
+    r = run_loop(t, {"run": count(), "max": 3, "ctl": "ctl.json"}, {"AOS_STACK": str(s)})
+    check("ctl 整份 $ref", (r.returncode, len((s / "laps").read_text().split())), (0, 1))
+
+
+@case
+def ctl_directive_bad_not_adopted(t):
+    # 解不開＝整份不採用、維持上一份好的、原因進 ctl_warning（N-08），不退出
+    s = stack(t)
+    (s / "ctl.json").write_text(json.dumps({"stopped": True, "max": {"$env": "NOPE_XYZ"}}))
+    r = run_loop(t, {"run": count(), "max": 2, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
+    st = json.loads((s / "state.json").read_text())
+    check("ctl 指示詞解不開不採用", (r.returncode, r.stderr, st["phase"], st["runs"], "NOPE_XYZ" in (st["ctl_warning"] or "")),
+          (0, "", "done", 2, True))
 
 
 for fn in cases:

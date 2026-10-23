@@ -44,7 +44,7 @@ daemon.json＝loop.json 的超集（N-28）：
 | `max` | 非負整數 | 不限 | 跑幾次就收工（寫 `null` 不行，同 bin 版） |
 | `interval_ms` | 非負整數 | 200 | 兩次之間至少隔幾毫秒 |
 | `ctl`、`state` | 檔名 | 不開 | 兩扇窗，在 `$AOS_STACK` 底下（同 aos-loop） |
-| `loops` | `{名字: 字串、陣列或物件}` | `{}` | 字串或陣列＝aos-exec 的目標（包成 `{"run": 它}`）；物件＝一份 loop.json 的內容（不驗，原樣交給子 loop，寫錯了子 loop 自己退 1）。子項要內嵌單子寫 `{"run": "daemon.json#/loops/<名字>/body", "body": 單子}` |
+| `loops` | `{名字: 字串、陣列或物件}`，或它的陣列（分頁） | `{}` | 字串或陣列＝aos-exec 的目標（包成 `{"run": 它}`）；物件＝一份 loop.json 的內容（不驗，原樣交給子 loop，寫錯了子 loop 自己退 1）。子項要內嵌單子寫 `{"run": "daemon.json#/loops/<名字>/body", "body": 單子}`。寫成物件的陣列＝分頁、照順序合起來（10-23 晚，見下「指示詞與分頁」） |
 | `adopt` | 布林 | true | 起來時讀自己上次的 state，把還活著的子 loop 接回、不重起 |
 
 - 要 `$AOS_STACK`（沒設＝`StackMissing`）。名字不能當資料夾名或會被 aos-exec 誤認（空、`.`、`..`、含 `/`、含 `#`、以 `.` 開頭）＝`CfgBad`。
@@ -67,9 +67,48 @@ daemon.json＝loop.json 的超集（N-28）：
   1 萬個子 loop：一圈 483 → 205 ms、daemon CPU 86 → 6 %，state 第一份 1 秒 → 0.1 秒。
 - **子 loop 被 SIGKILL 時**來不及寫最後一份，它小格裡的 `state.json` 停在最後那份（多半 `running`）：daemon 不替它改（N-09 只有它自己寫）。
   看死活照 N-17 用 pid＋`started_at_ticks`；daemon 自己 state 的那一列是準的（`stopped`、`signal` 9、`code` 137）。
-- **子 loop 結束後不自動重起**：停在表上 `done`；要再起就從 ctl 的 `loops` 拿掉再放回，或重起 daemon。
-- **ctl** 多認 `loops`（驗法同上，壞＝整份不採用、記 `ctl_warning`）。
+- **子 loop 結束後不自動重起**：停在表上 `done`；要再起就從 ctl 的 `loops` 拿掉再放回（或寫進 `loops_removed` 再拿掉），或重起 daemon。
+- **ctl** 多認 `loops`、`loops_added`、`loops_removed`（驗法同上，壞＝整份不採用、記 `ctl_warning`）；見下「ctl 只寫變動」。
 - **adopt**：讀上次的 state（沒開 state 窗＝沒東西可接），`phase` 是 `running`、pid＋`started_at_ticks`（/proc 第 22 欄）對得上的放回表上、不重起；接回來的不是自己的子行程，之後看 /proc 判斷活不活，結束時 `code` 是 null。
+
+### ctl 只寫變動（10-23 晚，N-54）
+
+使用者「ctl這塊我會想要是"啓動XXX loop/刪除XXX loop"，而不是每次都讓他讀全部」，選「維持宣告式，但可以只寫變動的」：
+
+```json
+{"seq": 3, "loops_added": {"carl": "agent-carl"}, "loops_removed": ["bob"]}
+```
+
+- `loops_added`＝名單上要多這些（寫法同 `loops`，含分頁）；`loops_removed`＝名單上要少這些（名字的陣列）。key 名照 C-54 R4（ctl 用狀態詞，同 `stopped`）。
+- **期望表＝（ctl 的 `loops`，沒寫＝daemon.json 的 `loops`）＋`loops_added`－`loops_removed`**，先加後減：同一個名字兩邊都寫＝不要；`loops_removed` 裡名單上沒有的名字不管；
+  名單上已有的名字寫進 `loops_added`＝設定換成這份，已在跑的不重起。
+- 還是宣告（N-06）：只看這一份 ctl 與 daemon.json，讀幾次都一樣；**ctl 拿掉 `loops_added`＝加進來的收掉**、拿掉 `loops_removed`＝減掉的照 daemon.json 重新起。要一直加著就一直寫著。
+- 壞（`loops_removed` 不是字串陣列、`loops_added` 名字不合或撞名、指示詞解不開）＝整份不採用、記 `ctl_warning`。daemon.json 不認這兩個 key。
+
+### 指示詞與分頁（10-23 晚，N-28、N-45）
+
+- **daemon.json 與 ctl 的指示詞**（使用者「aos 讀的 JSON 全部支援」）：同 aos-loop 只解自己讀的格——再加 `loops`（本身、每一頁、每個子項本身）、`adopt`；
+  子項是目標＝整個解，是 loop 設定＝只解 `run`、`max`、`interval_ms`、`ctl`、`state` 再寫進小格（搬進小格後相對 `$ref` 會從小格算，所以 daemon 先解），其他 key（`body`…）原樣。
+  相對 `$ref` 從寫著它的那份檔所在的資料夾算（daemon.json 的資料夾；ctl＝`$AOS_STACK` 底下 ctl 的資料夾）。解不開：daemon.json＝`DirectiveBad` 退 1；ctl＝不採用。
+- **`loops` 拆成好幾份**（使用者「當loop太多的時候，json超大，我會希望他會自動用$ref切，每個檔案一百個」）：`$ref` 是整個值換成那份檔，所以要拆就寫成分頁陣列：
+
+  ```json
+  {"interval_ms": 200, "ctl": "ctl.json", "state": "state.json",
+   "loops": [{"$ref": "loops-1.json"}, {"$ref": "loops-2.json"}]}
+  ```
+
+  `loops-1.json`＝`{"bob": {"run": "loops-1.json#/bob/body", "body": {...}}, "ann": "agent-ann", ...}`；名字在兩頁重複＝`CfgBad`。不拆也能整份 `"loops": {"$ref": "loops.json"}`。
+  `#/` 指標走原文、不穿過 `$ref`：子項 `run` 要指進拆出去的那份檔（`loops-1.json#/bob/body`，相對路徑照舊從 daemon 的 cwd 算）。
+- **state 自動切分頁**：`loops` 表超過 100 列（`PART_ROWS`，不開 key）才切，每頁最多 100 列、照表的順序：
+
+  ```json
+  {"kind": "state", "phase": "waiting", ..., "loops": [{"$ref": "state_loops/3f9a2c1e07d45b6a.json"}, {"$ref": "state_loops/<雜湊>.json"}, ...], "pid": ..., "at": ...}
+  ```
+
+  分頁資料夾＝state 檔名去副檔名＋`_loops`、跟 state 同一層（也算子項撞名）；檔名＝內容的 FNV-1a 64 雜湊。每份先寫 `.` 開頭暫存再改名，內容沒變的頁沿用不重寫；
+  分頁都寫好才寫主檔（**主檔改名是唯一的提交點**）；寫完清掉這次與上一次主檔都沒用到的分頁（行程第一次寫時不清）；縮回 100 以內、清空後拿掉資料夾。
+  讀的人先讀主檔再照 `$ref` 讀分頁，拿到的一定是同一次寫的表；讀得比兩次寫入還慢時分頁可能已清掉、`$ref` 讀不到，重讀主檔即可。`adopt` 用 aos-directive 解分頁。
+  3000 個子 loop 的壓測：主檔約 1.7 KB、30 份分頁，平常不重寫。
 
 ### 結束碼
 
@@ -94,7 +133,7 @@ daemon.json＝loop.json 的超集（N-28）：
 |---|---|
 | `src/common/common.hpp` | `using`、代號（全沿用 aos-loop 的） |
 | `src/child/child.hpp`、`child.cpp` | 一支子 loop：`spawn`（小格、loop.json（補 ctl／state、蓋 `_entry`、相對 run 轉絕對）、fork＋子行程 `run_child` 呼叫 aos-exec 的 `run_cli`）、`alive`、`row` |
-| `src/daemon/daemon.hpp`、`daemon.cpp` | `Daemon`（`aos::loop::Loop` 的子類別）：建構子、`adopt`、`tend`、`term`／`settle`（收子項不等：送 SIGTERM、之後每次看一眼、滿 10 秒 SIGKILL）、`finish`（收全部、等的時候每秒寫 state，標 stopped、剛死的標 done）、表＝串列＋名字的雜湊表、`info`、`check_ctl`；`check_loops`（名字不能帶 `/`、`#`、不能 `.` 開頭；值字串、陣列或物件）；`taken_names`、`check_names`（跟自己的 ctl／state 撞名，10-22） |
+| `src/daemon/daemon.hpp`、`daemon.cpp` | `Daemon`（`aos::loop::Loop` 的子類別）：`read_loops`（`loops` 的分頁與指示詞，10-23 晚）、`merge_rows`、`write_parts`（state 切分頁）、ctl 的 `loops_added`／`loops_removed`；建構子、`adopt`、`tend`、`term`／`settle`（收子項不等：送 SIGTERM、之後每次看一眼、滿 10 秒 SIGKILL）、`finish`（收全部、等的時候每秒寫 state，標 stopped、剛死的標 done）、表＝串列＋名字的雜湊表、`info`、`check_ctl`；名字不能帶 `/`、`#`、不能 `.` 開頭（`read_loops`，10-23 晚前叫 `check_loops`）；`taken_names`、`check_names`（跟自己的 ctl／state 撞名，10-22） |
 | `src/main.cpp` | 命令列：`block_signals` → `loop_cli` → `Daemon` → `serve`；出錯印「aos-daemon: 代號 原因」 |
 
 ## 為什麼這樣做
@@ -126,6 +165,9 @@ cmake -B build && cmake --build build && ctest --test-dir build
   收工時剛死的子項標 done、收掉的標 stopped、adopt、`adopt: false`），加錯誤代號、子 loop 的 state 心跳是自己的 pid；10-23 再抄 bin 10-22 的 3 案（daemon 重開照名單起停機期間死掉的子項、子項撞名起來時退 1〔另驗 `--state` 旗標也算〕、ctl 撞名不採用）；
   10-23 壓測後加 4 案（共 24 案，約 25 秒）：不肯退的子 loop 不卡住 daemon（收的途中照寫 state、照起別的、那列 `stopping`，收工也等、每秒寫；被 SIGKILL 的那列 `stopped`／signal 9，
   它自己的 state 停在 `running`、pid 已不在）、一圈一份 state（inotify 數改名次數）與 `at` 間隔、起子項之前先有 state（小格放 FIFO 讓起子項卡住）、`$AOS_STACK` 不在不建。
-  四案拿修前的碼跑都紅。PATH 放 impls 的 aos-exec、aos-loop 兩支的 `bin/`（子 loop 要 exec 成 PATH 上的 aos-loop）。
+  四案拿修前的碼跑都紅；10-23 晚加 G 段 6 案（共 30 案，約 30 秒）：`loops` 分頁與每層的 `$ref`（子項 loop key 先解、body 原樣、`adopt` 也解）、分頁與指示詞寫壞（重複、不是物件、讀不到、解不開＝`DirectiveBad`）、
+  ctl 的 `loops_added`／`loops_removed`（加、減、拿掉回 daemon.json、跟 ctl 的 `loops` 一起、兩邊都寫＝不要）、寫壞不採用與 ctl 的相對 `$ref`、
+  state 超過 100 列切分頁（每頁 100＋1、檔名是雜湊、只留兩代、分頁資料夾撞名）、切了分頁照樣 adopt、縮回 100 以內變回物件並清掉分頁——六案拿改前的碼跑都紅。
+  PATH 放 impls 的 aos-exec、aos-loop 兩支的 `bin/`（子 loop 要 exec 成 PATH 上的 aos-loop）。
 - `test_demo`（`tests/test_demo.py`）：`proto8/demo/daemon` 在 impls 線（PATH 只放 impls 四支的 `bin/`）與 bin 線各跑一次，比結束碼、stderr、整棵工作區與 stack 的檔與內容。〔10-23 起只跑 impls 線、看結束碼 0、stderr 空、答案寫出來：Python 版刪了（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」），沒有 bin 線可比〕
   要先建好 ../aos-exec、../aos-loop、../aos-fsm 的 `bin/`（`test_cli` 也要前兩支）。
