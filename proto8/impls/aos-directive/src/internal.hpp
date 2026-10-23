@@ -1,7 +1,7 @@
 // internal.hpp：resolve.cpp、ref.cpp、env.cpp 之間共用的內部宣告（不公開；放在 aos::directive，公開的只有 aos::resolve）。
 //
 //   resolve.cpp  走遍整份 JSON、認出指示詞（有 $ref 看 $ref、否則有 $env 看 $env）、換完再接 $path／$prefix
-//   ref.cpp      {"$ref": "檔[#/指標]"[, "$at": 指標]}
+//   ref.cpp      {"$ref": "檔[#/指標]"}
 //   env.cpp      {"$env": "NAME"}
 #pragma once
 
@@ -20,7 +20,7 @@ using Chain = std::vector<std::pair<std::string, std::string>>;
 Json walk(const Json& v, const std::string& base, Chain& chain);
 
 // {"$ref": …}（整個物件 d）→ 每一份的原文（還沒往下解）＋位置（檔＋指標，推上鏈用）：$ref 是字串＝一份；
-// 是陣列（10-23 使用者）＝照順序每個元素一份（$at 接在每一份的指標後面）。寫法不合（含空陣列、有一個元素不合）回 nullopt。
+// 是陣列（10-23 使用者）＝照順序每個元素一份。寫法不合（含空陣列、有一個元素不合）回 nullopt。
 // 讀不到、指不到、繞圈（here 已在 chain 上）丟 DirectiveBad。
 struct Fetched {
     Json value;

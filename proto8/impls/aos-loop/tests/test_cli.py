@@ -616,7 +616,7 @@ def ctl_directives(t):
     s = stack(t)
     put(s / "parts" / "stop.json", {"yes": True, "seq": 4})
     (s / "ctl.json").write_text(json.dumps({"stopped": {"$ref": "parts/stop.json#/yes"},
-                                            "seq": {"$ref": "parts/stop.json", "$at": "/seq"}}))
+                                            "seq": {"$ref": "parts/stop.json#/seq"}}))
     r = run_loop(t, {"run": count(), "max": 3, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
     check("ctl 的 $ref", (r.returncode, st["phase"], st["runs"], st["ctl_seq"], st["ctl_warning"]),

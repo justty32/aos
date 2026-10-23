@@ -595,13 +595,14 @@ def tools(t):
 
 
 @case
-def d1_ref_pointer_and_at(t):
+def d1_ref_pointer(t):
     dq(t)
     check("D1 #/ 指標", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/a/w"}, {"$ref": "sub/data.json#/s~0~1x"}]})[:2],
           (0, "word esc\n"))
-    check("D1 $at", inst(t, {"argv": {"$ref": "sub/data.json", "$at": "/a/b"}})[:2], (0, "deep\n"))
-    check("D7 #/ 再接 $at", inst(t, {"argv": {"$ref": "sub/data.json#/a", "$at": "/b"}})[:2], (0, "deep\n"))
-    check("D7 #/ 再接 $at（元素）", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/a/b", "$at": "/1"}]})[:2],
+    check("D1 #/ 取 argv", inst(t, {"argv": {"$ref": "sub/data.json#/a/b"}})[:2], (0, "deep\n"))
+    # $at 10-23 刪（使用者「把$at刪掉，就都只認#/。」）：寫了＝不認得的 $xxx、不管，#/ 照舊
+    check("$at 不作用", inst(t, {"argv": {"$ref": "sub/data.json#/a/b", "$at": "/zz"}})[:2], (0, "deep\n"))
+    check("$at 不作用（元素）", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/a/b/1", "$at": "/zz"}]})[:2],
           (0, "deep\n"))
     check("讀不到", inst(t, {"argv": ["echo", {"$ref": "sub/nope.json"}]})[:3:2], (1, "DirectiveBad"))
     check("指不到", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/zz"}]})[:3:2], (1, "DirectiveBad"))
@@ -611,7 +612,7 @@ def d1_ref_pointer_and_at(t):
     check("繞圈", (rc, err, "繞圈" in stderr), (1, "DirectiveBad", True))
     check("有 $ref 只看 $ref", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/msg", "$env": "AOS_NOPE_XYZ"}]})[:2],
           (0, "hi\n"))
-    check("$at 空字串＝物件、單子 argv 不是字串", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/a", "$at": ""}]})[:3:2],
+    check("#/ 取到物件、單子 argv 不是字串", inst(t, {"argv": ["echo", {"$ref": "sub/data.json#/a"}]})[:3:2],
           (1, "EntryBad"))
 
 
@@ -623,7 +624,7 @@ def d2_d8_argv_array_directives(t):
     check("D2 argv 陣列 $env＋$path", run_with_json(t, ["sh", "-c", 'echo "$1"', "sh", {"$env": "AOS_CD", "$path": "x"}])[:2],
           (0, "%s/x\n" % q))
     check("D2 _entry 底下的陣列", run_with_json(t, {"_entry": ["echo", {"$env": "AOS_WS"}]})[:2], (0, "%s\n" % ws))
-    check("D8 argv 陣列 $ref", run_with_json(t, [{"$ref": "sub/data.json#/a/b/0"}, {"$ref": "sub/data.json", "$at": "/msg"}],
+    check("D8 argv 陣列 $ref", run_with_json(t, [{"$ref": "sub/data.json#/a/b/0"}, {"$ref": "sub/data.json#/msg"}],
                                              "tail")[:2], (0, "hi tail\n"))
     check("$env 沒設＝入口壞", run_with_json(t, ["echo", {"$env": "AOS_NOPE_XYZ"}])[:3:2], (1, "EntryBad"))
     check("解出來不是字串＝入口壞", run_with_json(t, ["echo", {"$ref": "sub/data.json#/a"}])[:3:2], (1, "EntryBad"))

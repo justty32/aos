@@ -375,7 +375,7 @@ def inst_ref_and_argv0(t):
     fj = str(q / "fsm.json")   # val 的相對路徑照 cwd、fsm 不轉，所以寫絕對路徑
     put(q / "fsm.json", {"start": "a", "states": {
         "a": {"val": fj + "#/states/a/body", "next": "b",
-              "body": {"argv": [{"$ref": "sub/data.json", "$at": "/a/b/0"}, {"$ref": "sub/data.json#/msg"}],
+              "body": {"argv": [{"$ref": "sub/data.json#/a/b/0"}, {"$ref": "sub/data.json#/msg"}],
                        "stdout": {"$env": "AOS_STACK", "$path": "fout"}}},
         "b": {"val": fj + "#/states/b/body", "next": "a",
               "body": {"argv": ["tools/cfg.json#/t/u"], "cwd": str(q), "stdout": {"$env": "AOS_STACK", "$path": "fout2"}}}}})

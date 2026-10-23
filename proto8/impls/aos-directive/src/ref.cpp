@@ -1,9 +1,8 @@
-// ref.cpp：{"$ref": "檔[#/指標]"[, "$at": 指標]}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。
+// ref.cpp：{"$ref": "檔[#/指標]"}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。
 // $ref 也可以是這種字串的陣列（10-23 使用者）：每個元素各取一份、各自接著解，再照順序合成一份（merge）。
 //
 // 1. 寫法：$ref 不是字串、空字串、只有 #/…（沒檔名）、# 後面不是 /＝回 nullopt（原封不動，D15）；陣列＝空的、或有一個元素這樣＝回 nullopt；
-//    $at 不是字串、或不是空字串也不是 / 開頭＝當沒寫（D14）；兩個都寫＝$at 接在 #/ 後面（D7）。
-//    修飾詞都帶 $（10-23 命名統合；沒帶 $ 的 at 是普通 key、不作用）
+//    位置只認 #/（10-23 使用者「把$at刪掉，就都只認#/。」）：寫了 $at 是不認得的 $xxx、不管。
 // 2. 相對檔名從這一層的 base 算（最外層＝呼叫者給的 base_dir；被 $ref 進來的檔＝它解開捷徑後所在的資料夾）
 // 3. 同一個（檔＋指標）已經在鏈上＝繞圈
 // 4. 讀檔（第一行 #! 跳過）、解 JSON（讀不到、不是 JSON＝錯）、照指標取值（指不到＝錯），推上鏈、接著往下解
@@ -101,8 +100,8 @@ static Json pointer(const Json& doc, const std::string& ptr, const std::string& 
     return *cur;
 }
 
-// 一個元素（"檔[#/指標]"）的寫法：不是字串、空字串、只有 #/…（沒檔名）、# 後面不是 /＝nullopt；回（檔, 指標＋at）。
-static std::optional<std::pair<std::string, std::string>> parse_spec(const Json& ref, const std::string& at) {
+// 一個元素（"檔[#/指標]"）的寫法：不是字串、空字串、只有 #/…（沒檔名）、# 後面不是 /＝nullopt；回（檔, 指標）。
+static std::optional<std::pair<std::string, std::string>> parse_spec(const Json& ref) {
     if (!ref.is_string()) {
         return std::nullopt;
     }
@@ -120,18 +119,11 @@ static std::optional<std::pair<std::string, std::string>> parse_spec(const Json&
     if (path.empty()) {
         return std::nullopt;
     }
-    return std::make_pair(path, ptr + at);
+    return std::make_pair(path, ptr);
 }
 
 std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const std::string& base, const Chain& chain) {
     // 1. 寫法：字串＝一份；陣列（10-23 使用者）＝每個元素一份，空陣列或有一個不合＝整個不合
-    std::string at;
-    if (d.contains("$at") && d["$at"].is_string()) {
-        std::string a = d["$at"].get<std::string>();
-        if (a.empty() || a[0] == '/') {
-            at = a;
-        }
-    }
     const Json& ref = d["$ref"];
     std::vector<std::pair<std::string, std::string>> specs;
     if (ref.is_array()) {
@@ -139,14 +131,14 @@ std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const std::string& 
             return std::nullopt;
         }
         for (const Json& r : ref) {
-            auto one = parse_spec(r, at);
+            auto one = parse_spec(r);
             if (!one) {
                 return std::nullopt;
             }
             specs.push_back(*one);
         }
     } else {
-        auto one = parse_spec(ref, at);
+        auto one = parse_spec(ref);
         if (!one) {
             return std::nullopt;
         }

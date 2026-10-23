@@ -1,4 +1,4 @@
-"""10-20 拍板（proto8/thinking/2026-10-20-ideas.md D1～D8）：$ref 取檔內位置（#/ 與 $at；10-23 統合前叫 at）、argv 陣列放指示詞、
+"""10-20 拍板（proto8/thinking/2026-10-20-ideas.md D1～D8）：$ref 取檔內位置（#/；原本另有 $at，10-23 使用者「把$at刪掉，就都只認#/。」）、argv 陣列放指示詞、
 argv[0] 帶 / 又 exec 不了＝前面插 aos-exec（入口 argv 陣列、單子、loop／fsm 內嵌單子都一樣）。"""
 import json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path
@@ -57,8 +57,8 @@ class T(unittest.TestCase):
         r = self.entry({"argv": ["echo", {"$ref": "sub/data.json#/a/w"}, {"$ref": "sub/data.json#/s~0~1x"}]})
         self.assertEqual(r[:2], (0, "word esc\n"), r[2])
 
-    def test_d1_ref_dollar_at(self):
-        r = self.entry({"argv": {"$ref": "sub/data.json", "$at": "/a/b"}})
+    def test_d1_ref_hash_whole_argv(self):
+        r = self.entry({"argv": {"$ref": "sub/data.json#/a/b"}})
         self.assertEqual(r[:2], (0, "deep\n"), r[2])
 
     def test_d1_ref_whole_file_and_nested_relative(self):
@@ -66,8 +66,8 @@ class T(unittest.TestCase):
         put(self.t / "q" / "sub" / "outer.json", {"argv": ["echo", {"$ref": "data.json#/msg"}]})
         # 原本 aos-inst 命令列（10-22 刪了，跟 C++ 版一樣是庫）：改經 aos-exec 跑同一張單子
         r = run("aos-exec", "--ws", self.ws, put(self.t / "q" / "s.json", {"argv": ["sh", "-c", "exit 0"],
-                                                            "stdin": {"$ref": "sub/outer.json", "$at": "/argv/0"}}))
-        self.assertEqual(r[0], 1)   # stdin "echo" 這個檔不在（$at 取到 "echo"）
+                                                            "stdin": {"$ref": "sub/outer.json#/argv/0"}}))
+        self.assertEqual(r[0], 1)   # stdin "echo" 這個檔不在（#/argv/0 取到 "echo"）
         # 10-23 起照 C++ 版的字面：libaos 的 OpenFailed 不帶檔名（Python 版訊息裡有 "echo"；使用者 10-23 說這個差別照現狀留，Python 版刪了就照 C++）
         self.assertIn("單子跑不起來：OpenFailed 串流開不了", r[2])
         # 整張單子就是一個 $ref：aos-exec 挑入口時不解 $ref（沒 argv 的物件＝資料夾），經 aos-exec 要寫成有 argv 的單子，
@@ -75,10 +75,11 @@ class T(unittest.TestCase):
         r = run("aos-exec", "--ws", self.ws, self.t / "q" / "sub" / "outer.json")
         self.assertEqual(r[:2], (0, "hi\n"), r[2])
 
-    def test_d7_hash_then_dollar_at(self):
-        r = self.entry({"argv": {"$ref": "sub/data.json#/a", "$at": "/b"}})
+    def test_dollar_at_ignored(self):
+        # $at 10-23 刪：寫了＝不認得的 $xxx、不管（N-45），#/ 照舊
+        r = self.entry({"argv": {"$ref": "sub/data.json#/a/b", "$at": "/zz"}})
         self.assertEqual(r[:2], (0, "deep\n"), r[2])
-        r = self.entry({"argv": ["echo", {"$ref": "sub/data.json#/a/b", "$at": "/1"}]})
+        r = self.entry({"argv": ["echo", {"$ref": "sub/data.json#/a/b/1", "$at": "/zz"}]})
         self.assertEqual(r[:2], (0, "deep\n"), r[2])
 
     def test_ref_errors(self):
@@ -96,9 +97,9 @@ class T(unittest.TestCase):
         r = self.entry({"argv": ["echo", {"$ref": "sub/data.json#/msg", "$env": "AOS_NOPE_XYZ", "path": "p"}]})
         self.assertEqual(r[:2], (0, "hi\n"), r[2])
 
-    def test_d7_dollar_at_appended_pins_whole_object(self):
-        # $at 空字串＝只取 #/a；值是物件、放在 argv 裡＝單子的 argv 不是字串陣列
-        self.err(self.entry({"argv": ["echo", {"$ref": "sub/data.json#/a", "$at": ""}]}), "單子跑不起來")
+    def test_hash_pointer_to_object_in_argv(self):
+        # #/a 取到物件、放在 argv 裡＝單子的 argv 不是字串陣列
+        self.err(self.entry({"argv": ["echo", {"$ref": "sub/data.json#/a"}]}), "單子跑不起來")
 
     # ───── D2、D8：argv 陣列放指示詞 ─────
 
@@ -109,7 +110,7 @@ class T(unittest.TestCase):
         self.assertEqual(r[:2], (0, "%s\n" % self.ws), r[2])
 
     def test_d8_argv_array_ref(self):
-        r = self.entry([{"$ref": "sub/data.json#/a/b/0"}, {"$ref": "sub/data.json", "$at": "/msg"}], "tail")
+        r = self.entry([{"$ref": "sub/data.json#/a/b/0"}, {"$ref": "sub/data.json#/msg"}], "tail")
         self.assertEqual(r[:2], (0, "hi tail\n"), r[2])
 
     def test_argv_array_directive_errors(self):
@@ -204,7 +205,7 @@ class T(unittest.TestCase):
         # 單子裡的 $ref 由 aos-exec 從 fsm.json 所在的資料夾算（cwd 在別處）
         fsm = put(q / "fsm.json", {"start": "a", "states": {"a": {
             "val": "q/fsm.json#/states/a/body",
-            "body": {"argv": [{"$ref": "sub/data.json", "$at": "/a/b/0"}, {"$ref": "sub/data.json#/msg"}],
+            "body": {"argv": [{"$ref": "sub/data.json#/a/b/0"}, {"$ref": "sub/data.json#/msg"}],
                      "stdout": {"$env": "AOS_STACK", "$path": "fout"}}, "next": "a"}}})
         r = run("aos-fsm", fsm, cwd=self.t, env={"AOS_STACK": str(stack)})
         self.assertEqual(r[0], 0, r[2])

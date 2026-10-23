@@ -8,7 +8,7 @@ aos-exec 連這個 lib 解單子、argv 陣列入口與 JSON `.env` key 裡的�
 **10-21 照 `proto8/bin/aos_inst.py` 的 resolve 改版**（10-20 ideas D1、D7、D9～D15；N-45）。
 
 ```sh
-echo '{"argv": {"$ref": "cfg.json", "$at": "/tools/stamp"}, "out": {"$env": "AOS_STACK", "$path": "out", "$prefix": "--o="}}' | aos-directive
+echo '{"argv": {"$ref": "cfg.json#/tools/stamp"}, "out": {"$env": "AOS_STACK", "$path": "out", "$prefix": "--o="}}' | aos-directive
 # {"argv": ["sh", "-c", "exit 3"], "out": "--o=/ws/.stack/out"}
 ```
 
@@ -21,8 +21,8 @@ echo '{"argv": {"$ref": "cfg.json", "$at": "/tools/stamp"}, "out": {"$env": "AOS
 | 寫法 | 換成 |
 |---|---|
 | `{"$ref": "file.json"}` | 那份 JSON 檔的整份內容（第一行 `#!` 跳過），換進來的值接著解 |
-| `{"$ref": "file.json#/a/b"}`、`{"$ref": "file.json", "$at": "/a/b"}` | 檔內那個位置（JSON pointer，`~1`＝`/`、`~0`＝`~`）；兩個都寫＝`$at` 接在 `#/` 後面（D1、D7）。修飾詞都帶 `$`（`$at` 10-23 統合前叫 at；沒帶 `$` 的寫了是普通 key、不作用）。指標取的是檔的原文，取到的值再接著解 |
-| `{"$ref": ["a.json", "b.json#/c/d"]}` | **陣列＝幾份照順序合成一份**（10-23 使用者「"$ref":["a.json", "b.json#/c/d]"」）：都是物件＝合 key，同名 key **後面的蓋前面的**（淺層，不往下層合；位置留在第一次出現的地方）；都是陣列＝接起來；種類混在一起＝`DirectiveBad`。每個元素寫法同上一列（各自從這一層算相對路徑、各自接著解）；`$at` 接在**每一份**的指標後面；只有一份＝它本身（不限種類）；兩份以上都是字串、數字…＝合不起來，`DirectiveBad` |
+| `{"$ref": "file.json#/a/b"}` | 檔內那個位置（JSON pointer，`~1`＝`/`、`~0`＝`~`）；**位置只認 `#/`**（10-23 使用者「把$at刪掉，就都只認#/。」；原本另有修飾詞 `$at`，現在寫了是不認得的 `$xxx`、不管）。指標取的是檔的原文，取到的值再接著解 |
+| `{"$ref": ["a.json", "b.json#/c/d"]}` | **陣列＝幾份照順序合成一份**（10-23 使用者「"$ref":["a.json", "b.json#/c/d]"」）：都是物件＝合 key，同名 key **後面的蓋前面的**（淺層，不往下層合；位置留在第一次出現的地方）；都是陣列＝接起來；種類混在一起＝`DirectiveBad`。每個元素寫法同上一列（各自從這一層算相對路徑、各自接著解、各自用 `#/` 指位置）；只有一份＝它本身（不限種類）；兩份以上都是字串、數字…＝合不起來，`DirectiveBad` |
 | `{"$env": "NAME"}` | 環境變數的值 |
 | 加 `"$path": "子路徑"` | 換出來是字串時**照字串接上去**（D9；10-21 傍晚 ideas § 9 改，原照 `os.path.join`）：子路徑 `#` 開頭＝直接接（`x.json` ＋ `#/a`＝`x.json#/a`）；空字串＝不接；其他＝去掉值結尾的 `/` 與子路徑開頭的 `/`，中間剛好一個 `/`（子路徑是絕對路徑也是接上去：`/s` ＋ `/abs/p`＝`/s/abs/p`，不再整個取代） |
 | 加 `"$prefix": "--file="` | 換出來是字串時接在前面；先接 `$path` 再加 `$prefix`（D10） |
@@ -31,7 +31,7 @@ echo '{"argv": {"$ref": "cfg.json", "$at": "/tools/stamp"}, "out": {"$env": "AOS
 - 相對檔名：最外層的 `$ref` 從呼叫者給的 `base_dir` 算（命令列＝cwd）；被 `$ref` 進來的檔裡的 `$ref`，從**那個檔解開捷徑後所在的資料夾**算（使用者 2026-10-17 定）。
 - **錯分兩類**（D13～D15）：
   - **真的解不開＝`DirectiveBad`**：環境變數沒設、`$ref` 的檔讀不到（含不是 JSON；**指到資料夾也算讀不到**，不走進去找入口，10-21 傍晚 ideas § 9「維持報錯」）、指標指不到、繞圈（同一個檔＋指標又出現）。
-  - **寫法寬容、不報錯**：不認得的 `$xxx`（含 `$fmt`）與其餘 key 不管；`$path`、`$prefix` 不是字串＝當沒寫；`$at` 不是字串、或不是空字串也不是 `/` 開頭＝當沒寫；
+  - **寫法寬容、不報錯**：不認得的 `$xxx`（含 `$fmt`）與其餘 key 不管；`$path`、`$prefix` 不是字串＝當沒寫；
     `$ref`／`$env` 的值不是非空字串、`$ref` 的 `#` 後面不是 `/`、只有 `#/…` 沒寫檔名＝換不了，**整個物件原封不動留著**（裡面也不解）。
     `$ref` 陣列：空陣列、或有一個元素是上面這些（不是字串、空字串、`#` 後不是 `/`、沒檔名）＝整個物件原封不動（不會只合其中幾份）。
   - `$ref` 陣列的錯：有一份讀不到、指不到＝`DirectiveBad`；繞圈看的是「往上那幾層」——同一個陣列裡寫兩次同一份不算繞圈（物件合起來一樣、陣列接兩次）。
@@ -52,7 +52,7 @@ stdout 印一行解好的 JSON、退出 0；出錯 stderr 一行、退出 1。�
 |---|---|
 | `include/aos/directive.hpp` | 公開介面：`aos::resolve`、`aos::resolve_shallow`（10-23 晚）、代號 `aos::code::DirectiveBad` |
 | `src/resolve.cpp` | 走遍整份 JSON、認出指示詞、分派給 `$ref`／`$env`；換出來是字串再接 `$path`（字串拼接 `join_path`）、加 `$prefix`（`decorate`）；`resolve_shallow`（只換這一格，10-23 晚） |
-| `src/ref.cpp` | `$ref`：檢查寫法（字串或字串陣列，不合回 nullopt）、`$at`、從這一層算路徑、判斷繞圈（檔＋指標）、讀檔（跳 `#!`）、照指標取值（`fetch_ref`，取原文，陣列＝每份一個）、往下解（`resolve_ref`）、幾份合成一份（`merge`，10-23） |
+| `src/ref.cpp` | `$ref`：檢查寫法（字串或字串陣列，不合回 nullopt）、從這一層算路徑、判斷繞圈（檔＋指標）、讀檔（跳 `#!`）、照指標取值（`fetch_ref`，取原文，陣列＝每份一個）、往下解（`resolve_ref`）、幾份合成一份（`merge`，10-23） |
 | `src/env.cpp` | `$env` |
 | `src/internal.hpp` | 上面三個檔之間的內部宣告（namespace `aos::directive`：`$ref` 鏈 `Chain`＝（檔, 指標）清單） |
 | `src/main.cpp` | 命令列：讀 → `resolve` → 印 |
@@ -98,7 +98,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
 - 依賴 [aos-util](../aos-util/README.md)。
-- `ctest` 跑 `test_cli`（`tests/test_cli.py`，76 組）：`$ref` 整份、巢狀、捷徑解開；`#/`、`$at`、兩個都寫、舊的 `at` 不作用、`~0~1`、索引前導 0、`#!` 跳過、同檔不同指標不算繞圈；`$env`；
+- `ctest` 跑 `test_cli`（`tests/test_cli.py`，73 組）：`$ref` 整份、巢狀、捷徑解開；`#/`、`$at` 與舊的 `at` 都不作用、`~0~1`、索引前導 0、`#!` 跳過、同檔不同指標不算繞圈；`$env`；
   `$path`／`$prefix`（相對、結尾 `/`、絕對也是接上去、`#` 開頭直接接、兩邊多個 `/`、空字串不接、值是 `/`、null、`$ref` 字串與非字串、舊 `path` 不作用）；寫法寬容（型別不對當沒寫、不認得的 `$xxx`、原封不動十種）；
-  `$ref` 指到資料夾（三種寫法）、找不到檔、壞 JSON、繞圈；`$ref` 陣列（合物件後蓋前、位置、接陣列、只有一份、`$at` 接在每份後面、各份從自己的資料夾算、
+  `$ref` 指到資料夾（兩種寫法）、找不到檔、壞 JSON、繞圈；`$ref` 陣列（合物件後蓋前、位置、接陣列、只有一份、`$at` 不作用、各份從自己的資料夾算、
   混在一起／兩份字串／兩份數字合不起來、一份讀不到／指不到、繞圈、同一份寫兩次不算繞圈、原封不動六種）；stdin 空／多份、參數。

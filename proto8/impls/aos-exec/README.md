@@ -129,7 +129,7 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
 | `timeout_ms` | 正整數或 `null`：到了先 SIGTERM **整群** | 不限 |
 | `grace_ms` | 非負整數：SIGTERM 後等多久再 SIGKILL 整群（0＝直接 SIGKILL） | 2000 |
 
-- **先解指示詞再驗**：單子裡任何位置的 `{"$env": 名}`、`{"$ref": "檔#/指標"}`／`{"$ref": 檔, "$at": 指標}`，可帶 `$path`（`join(值, $path)`）、`$prefix`（接在前面）
+- **先解指示詞再驗**：單子裡任何位置的 `{"$env": 名}`、`{"$ref": "檔#/指標"}`（位置只認 `#/`，10-23 刪 `$at`），可帶 `$path`（`join(值, $path)`）、`$prefix`（接在前面）
   先換掉（aos-directive，規則見它的 README；N-45，10-20 改版；`$path` 10-21 傍晚起是字串拼接）。在 aos-exec 設好六個環境變數、讀完 `.env` 之後才解，所以讀得到 `AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO` 與 `.env` 設的值
   （例 `"stdout": {"$env": "AOS_STACK", "$path": "out"}`）。`$ref` 的相對檔名從入口檔所在的資料夾算（命令列不給 `run_inst` 的 `ref_base`，沿用 `base_dir`＝入口檔所在的資料夾）。
 - **`argv[0]` 帶 `/` 又 exec 不了＝前面插 `aos-exec`**（10-20 ideas D3；從解出來的 `cwd` 看），`aos-exec` 照子程式的 PATH 找，找不到＝`LaunchFailed`（`CommandMissing`）。
@@ -205,7 +205,7 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
 | `LaunchFailed`（共用） | exec 失敗（ENOENT、EACCES…；原因 `起不來：X（原因）`）；inst 單子 libaos 起不來（原因 `單子跑不起來：` 接 libaos 的名字） |
 | `Internal`（共用） | 照理不會發生的例外；inst 單子收不到結果（libaos 的 `WaitFailed`／`KillFailed`）、準備轉訊號失敗 |
 
-代號照 [10-23 命名統合](../../thinking/2026-10-23-naming.md)；統合前 `ArgumentsBad`／`FlagUnknown` 都叫 Usage、`WsMissing` 叫 WorkspaceMissing、`DotenvBad` 分成 EnvReadFailed（讀不到）與 EnvBad（壞）；libaos 的 `CommandMissing`／`CommandBad` 叫 CommandNotFound／CommandNotExecutable；指示詞的 `$at` 叫 at。
+代號照 [10-23 命名統合](../../thinking/2026-10-23-naming.md)；統合前 `ArgumentsBad`／`FlagUnknown` 都叫 Usage、`WsMissing` 叫 WorkspaceMissing、`DotenvBad` 分成 EnvReadFailed（讀不到）與 EnvBad（壞）；libaos 的 `CommandMissing`／`CommandBad` 叫 CommandNotFound／CommandNotExecutable；指示詞的 `$at` 叫 at（`$at` 同日再刪，位置只認 `#/`）。
 
 入口跑起來之後的結束碼不是 aos-exec 的錯：可執行檔與 argv 陣列是 exec（碼就是入口的）；inst 單子是子程式的碼（被訊號停掉 128＋N）。
 所以入口自己退 1 跟 aos-exec 出錯分不出來時，看 stderr 那行有沒有 `aos-exec: ` 開頭。
@@ -231,7 +231,7 @@ B 段是 § 14～§ 19 的新規則（含「exec 不留行程」：入口的 `$$
 C 段是 inst 單子：結束碼轉交（3、10、SIGTERM＝143）、監工留在行程裡、shebang 開頭的非 `+x` 單子、args／`#/`／`_entry`／字串轉向、
 串流接呼叫者的（`{"argv": ["cat"]}` 透傳 stdin）與寫檔／附加、`$env`＋`path`、逾時整群殺（`sh -c 'sleep 100 & …; wait'`）、
 訊號轉給整群與 grace 後 SIGKILL（137）、單子壞的各種代號、不認的 key 被忽略；
-D 段是 10-20 的指示詞與 argv（對照 `proto8/tests/test_directive_argv.py`、`test_directive_lenient.py`）：`$ref` 的 `#/`、`$at`、兩個都寫、繞圈；argv 陣列放 `$env`／`$ref`、`$path`／`$prefix`、解不開＝入口壞；
+D 段是 10-20 的指示詞與 argv（對照 `proto8/tests/test_directive_argv.py`、`test_directive_lenient.py`）：`$ref` 的 `#/`、`$at` 不作用、繞圈；argv 陣列放 `$env`／`$ref`、`$path`／`$prefix`、解不開＝入口壞；
 argv[0] 帶 `/` 又 exec 不了＝交給 aos-exec（資料夾、JSON 檔、補 `.json`、`#/`、`+x` 檔照舊、第二個元素是 args、換工作區寫 `--ws`、沒 `/` 照 PATH、PATH 上沒 aos-exec）；
 E 段是 10-21 的新規則（對照 `proto8/tests/test_exec_rules.py`、`test_exec_env.py`）：旗標（`--ws V`／`--ws=V`、重複給、蓋過 `$AOS_WS`、`-`／空＝沿用、XXX 之後不解析、舊的位置 WS 變 args、`--`、不認得、缺值、沒 XXX、usage 一行）、
 `.env`（逐行、`${名字}`、`=` 只切第一個、沒有 `.env`；旗標 ＞ `.env` ＞ 外面；`${}` 沒設與各種壞法都不印值、不是 UTF-8、是資料夾）、

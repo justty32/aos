@@ -17,7 +17,7 @@
 > **10-23 命名統合**（使用者「都先幫我統合」，對照表見 [thinking/2026-10-23-naming](../thinking/2026-10-23-naming.md)）：使用者看得到的名字全家照同一張表改——
 > loop.json／daemon.json／子項的 `run` → `val`、daemon 的 `children` → `loops`；state 的 `state` 欄 → `phase`、`lap` → `beats`、`started` → `started_at_ticks`、心跳 `beat` → `at`
 > （值改 ISO 8601 UTC 到毫秒，例 `2026-10-23T01:58:45.123+00:00`）；daemon 子項的 `exited` 拆成 `done`（自己結束）／`stopped`（daemon 收掉）；
-> fsm trace 的 `ms` → `elapsed_ms`、`at` 也到毫秒；訊息裡的「第 N 圈」→「第 N 次」；指示詞的 `at` → `$at`；錯誤代號照 C-54 收成 `…Missing`／`…Unknown`／`…Bad`／動作＋`Failed`
+> fsm trace 的 `ms` → `elapsed_ms`、`at` 也到毫秒；訊息裡的「第 N 圈」→「第 N 次」；指示詞的 `at` → `$at`〔同日再刪，位置只認 `#/`〕；錯誤代號照 C-54 收成 `…Missing`／`…Unknown`／`…Bad`／動作＋`Failed`
 > （`Usage` → `ArgumentsBad`／`FlagUnknown`、設定檔 → `CfgMissing`／`CfgBad`、`WsMissing`、`DotenvBad`、`StateBad`、libaos 的 `CommandMissing`／`CommandBad`…，下面代號表是現行的）；
 > 使用者 10-23 重看代定後再改三處：純文字檔帶 `.txt`（aos-fsm 的 `$AOS_STACK/state` → `state.txt`、暫存 `.state.txt`；aos-daemon 小格的 `stderr` → `stderr.txt`）、`AOS_STACK` 預設 `$AOS_WS/.aos/` → `$AOS_WS/.stack/`、demo 題目資料夾 `inbox/` → `new/`（認領搬 `cur/`）。
 > 10-23 晚使用者翻案（「改，beats改runs，然後val寫要跑啥，通常不會用val，應該用run。」，衝突時選「只有 loop、daemon 用 run」）：loop.json／daemon.json／子項改回 `run`（fsm 格仍是 `val`）、state 的 `beats` → `runs`；庫跟著改名：aos-loop 的 `run_beat` → `run_once`、`struct Beat` → `Run`、`src/beat/` → `src/run/`（bin 線 `aos_beat.py` → `aos_run.py`）。
@@ -38,7 +38,7 @@
 > 動工前的樣子在 `backup/2026-10-21-night/`（10-23 已刪）。
 >
 > **10-21（對齊 bin 10-20 版）：**
-> daemon 照新做法重寫（ideas § 25）、aos-loop 長出 `interval_ms`／`ctl`／`state`、指示詞與 argv 照 10-20 ideas D1～D15（`$ref` 的 `#/` 與 `$at`、argv 陣列放指示詞、
+> daemon 照新做法重寫（ideas § 25）、aos-loop 長出 `interval_ms`／`ctl`／`state`、指示詞與 argv 照 10-20 ideas D1～D15（`$ref` 的 `#/` 與 `$at`〔10-23 刪 `$at`〕、argv 陣列放指示詞、
 > argv[0] 帶 `/` 又 exec 不了交給 aos-exec、`$path`／`$prefix`、寫法寬容；`$fmt` 未定、沒做）。PATH 只放這四支的 `bin/` 跑 `proto8/demo`（含 demo/daemon），結果跟 bin 線逐檔一樣；
 > `proto8/tests` 的 loop／fsm／daemon 測試拿這幾支跑也全過（exec 那幾份只差錯誤一行的寫法）。動工前的樣子在 `backup/aos-impls-2026-10-21-pre-align.tar.gz`（10-23 已刪）。
 >
@@ -71,7 +71,7 @@
 
  aos-util       全家共用：錯誤、三扇門（stdin／stdout／stderr）、旗標（10-21 起的 aos/cli.hpp＋舊的 aos/flags.hpp）、路徑與原子寫入、子程序、訊號
                 ← aos-exec、aos-directive、aos-schema 都連它（aos-loop、aos-fsm 經 aos-exec 連到）
- aos-directive  解 JSON 裡的 {"$ref": 檔[#/指標][, "$at"]}、{"$env": 變數}，可帶 $path（字串拼接）、$prefix（lib＋bin） ← aos-exec 連它（單子、argv 陣列、JSON .env key 的指示詞）；aos-loop 也連（設定檔與 ctl，10-23 晚）
+ aos-directive  解 JSON 裡的 {"$ref": 檔[#/指標]}、{"$env": 變數}，可帶 $path（字串拼接）、$prefix（lib＋bin） ← aos-exec 連它（單子、argv 陣列、JSON .env key 的指示詞）；aos-loop 也連（設定檔與 ctl，10-23 晚）
  aos-schema     用 JSON Schema（draft-07）驗 JSON（lib＋bin）                  ← 獨立，只連 aos-util
 ```
 
