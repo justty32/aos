@@ -15,9 +15,9 @@
 
 說明在 [proto8/demo/README.md](../../../../proto8/demo/README.md)；`run.sh` 各建暫時工作區（題目 `new/` → `cur/` → `done/`、答案 `out/`）跑一遍並印整棵 stack 樹（`.stack/`）。
 
-- `agent-bob/`（混合範本）：`_entry`＝`exec aos-loop loop.json`、`loop.json`＝`{"run": "fsm.json", "max": 20}`；`fsm.json` 帶 `_entry`（本身是 aos-exec 入口，10-21）、idle／act 是子資料夾、think 是那格 `body` 裡的單子；`act/tools/cathy/` 是另一隻完整 agent（同一套範本），她的 `act/tools/stamp/` 是最底層的工具——一次跑完四層巢狀。
+- `agent-bob/`（混合範本）：`_entry`＝`exec aos-loop loop.json`、`loop.json`＝`{"exec": "fsm.json", "max": 20}`；`fsm.json` 帶 `_entry`（本身是 aos-exec 入口，10-21）、idle／act 是子資料夾、think 是那格 `body` 裡的單子；`act/tools/cathy/` 是另一隻完整 agent（同一套範本），她的 `act/tools/stamp/` 是最底層的工具——一次跑完四層巢狀。
 - `agent-ann/`（全內嵌對照）：零子資料夾，`_entry`＝`exec aos-exec loop.json`（loop.json 帶 `_entry`），`fsm.json` 三格全是 `body` 裡的單子，各指 `idle.py`／`brain.py`／`act.py`。`.env`（10-22）是 demo 唯一的 `.env` 範例，全是註解（API key 與 `PATH=${AOS_CD}/bin:${PATH}` 的寫法；PATH 那行要最外層加 `--dotenv-override` 才生效、只多一份），不設任何東西。
-- `daemon/`（10-20）：`_entry`＝`exec aos-daemon daemon.json`、子項 `run`＝`daemon.json#/loops/<名字>/body`（10-21）；一個 daemon 同時管 bob、ann 兩個子 loop（工作區 `$AOS_WS/bob`、`$AOS_WS/ann`，stack 在 daemon 的小格裡）。
+- `daemon/`（10-20）：`_entry`＝`exec aos-daemon daemon.json`、子項 `exec`＝`daemon.json#/loops/<名字>/body`（10-21；10-23 深夜改名，原 `run`）；一個 daemon 同時管 bob、ann 兩個子 loop（工作區 `$AOS_WS/bob`、`$AOS_WS/ann`，stack 在 daemon 的小格裡）。
 - `tick/`（10-21 晚）：`_entry`＝`exec aos-loop loop.json`、`loop.json` 跑 5 次 `loop.json#/body`（`aos-tick $AOS_STACK/tick.txt`），跑完時鐘檔是 5。
 
 ### `proto8/tests/`

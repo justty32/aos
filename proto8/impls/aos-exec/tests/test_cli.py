@@ -274,7 +274,7 @@ def run_with_json(t, doc, *args):
 
 @case
 def loop_config_is_not_entry(t):
-    check("{val,max} 不是入口", run_with_json(t, {"val": "x", "max": 3})[:3:2], (1, "EntryBad"))
+    check("{exec,max} 不是入口", run_with_json(t, {"exec": "x", "max": 3})[:3:2], (1, "EntryBad"))
 
 
 @case

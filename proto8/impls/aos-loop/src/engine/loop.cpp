@@ -93,7 +93,7 @@ int Loop::main_loop() {
             continue;
         }
         runs_ += 1;
-        if (!has_run_) {
+        if (!has_exec_) {
             // 沒有身體：這一次就只是剛才那次 tend。不寫 running、不回頭重讀 ctl 重 tend，直接寫一份 waiting 睡到下一次（一輪一份 state）
             next_at = Clock::now() + std::chrono::milliseconds(iv);
             if (mx && runs_ >= *mx) {
@@ -104,10 +104,10 @@ int Loop::main_loop() {
             continue;
         }
         write_state("running", Json());
-        if (has_run_) {
+        if (has_exec_) {
             Run b;
             try {
-                b = run_once(run_.target, run_.args);
+                b = run_once(exec_.target, exec_.args);
             } catch (const Error& e) {
                 say(e.code + " " + e.msg);
                 return end(1, "done");
@@ -119,7 +119,7 @@ int Loop::main_loop() {
                 return end(0, "done");
             }
             if (b.code != 0) {
-                say("第 " + std::to_string(runs_) + " 次 " + run_.target + " 失敗，結束碼 " + std::to_string(b.code));
+                say("第 " + std::to_string(runs_) + " 次 " + exec_.target + " 失敗，結束碼 " + std::to_string(b.code));
                 return end(b.code, "done");
             }
         }

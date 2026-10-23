@@ -1,1 +1,1 @@
-{"run": "fsm.json", "max": 20}
+{"exec": "fsm.json", "max": 20}

@@ -1,12 +1,12 @@
-// aos/loop.hpp：aos-loop 的公開介面——跑「一次」（loop.json 的 run、fsm.json 格的 val，同一套寫法；名字不同見 C-55）。
+// aos/loop.hpp：aos-loop 的公開介面——跑「一次」（loop.json 的 exec、fsm.json 格的 exec，同一套寫法）。
 //
 //   block_signals   擋住 SIGINT／SIGTERM／SIGHUP（整支程式的壽命；要在第一次之前、開任何執行緒之前呼叫）
 //   take_signal     兩次之間：有排著的那三個訊號之一就取出來回它（0＝沒有）
-//   parse_target    loop 的 run、fsm 格的 val 的寫法（10-21 傍晚 ideas § 9）：字串＝aos-exec 的目標；陣列＝[目標, 參數...]
+//   parse_target    loop 的 exec、fsm 格的 exec 的寫法（10-21 傍晚 ideas § 9）：字串＝aos-exec 的目標；陣列＝[目標, 參數...]
 //   run_once        跑一次：子行程裡 `aos-exec -- 目標 參數...`（aos-exec 的 run_cli）；只收目標，內嵌單子寫 `loop.json#/body`
 //   loop_cli        命令列 `程式 [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔`（aos-loop、aos-daemon 共用）
 //   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；10-21 傍晚）：
-//                   讀設定（旗標 ＞ 設定檔 ＞ 預設：run／max／interval_ms／ctl／state）、每次讀 ctl 窗 → tend() → 跑一次 → 寫 state 窗
+//                   讀設定（旗標 ＞ 設定檔 ＞ 預設：exec／max／interval_ms／ctl／state）、每次讀 ctl 窗 → tend() → 跑一次 → 寫 state 窗
 //   write_window    窗的寫法：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
 //   heartbeat       state 的心跳欄位 {pid, started_at_ticks, boot_id, at}（N-32）
 //   resolve_keys    設定檔、ctl 的指示詞（10-23 晚：aos 讀的 JSON 都解）：整份先換一層，再把自己讀的那幾格整個解，其他 key 不碰
@@ -48,7 +48,7 @@ void block_signals();
 // 取出一個排著的 SIGINT／SIGTERM／SIGHUP（不等）；沒有回 0。
 int take_signal();
 
-// loop 的 run、fsm 格的 val：字串＝aos-exec 的目標（參數空）；陣列＝[目標, 參數...]（元素都要是字串、不能是空的）。
+// loop 的 exec、fsm 格的 exec：字串＝aos-exec 的目標（參數空）；陣列＝[目標, 參數...]（元素都要是字串、不能是空的）。
 // 其他（含物件：要內嵌單子寫 `loop.json#/body`）丟 CfgBad「<what> 要是 aos-exec 的目標（字串）或 [目標, 參數...]（非空字串陣列）」。
 struct Target {
     std::string target;
@@ -90,12 +90,12 @@ struct Defaults {
     std::string prog = "aos-loop";          // 錯誤一行的程式名
     std::optional<long long> max;           // nullopt＝不限（10-21 plan L8，原 10）
     long long interval_ms = 0;
-    bool need_run = true;                   // run 必填
+    bool need_exec = true;                  // exec 必填
 };
 
 // 反覆跑的程式的骨架。設定檔（loop.json；daemon.json 是它的超集）的 key（旗標名＝key 名底線換連字號；起跑時 旗標 ＞ 設定檔 ＞ 預設）：
-//   run           每次跑的目標：字串或 [目標, 參數...]（parse_target；每次 `aos-exec -- 目標 參數...`）；物件＝CfgBad；
-//                 need_run 時必填（沒寫＝CfgBad「沒有東西可跑」）
+//   exec          每次跑的目標（10-23 改名，原 run）：字串或 [目標, 參數...]（parse_target；每次 `aos-exec -- 目標 參數...`）；物件＝CfgBad；
+//                 need_exec 時必填（沒寫＝CfgBad「沒有東西可跑」）
 //   max           最多幾次（非負整數；沒寫＝Defaults::max；寫 null 不行）
 //   interval_ms   一次結束到下一次開始至少隔幾毫秒（非負整數；沒寫＝Defaults::interval_ms）
 //   ctl, state    兩扇窗的檔名，在 $AOS_STACK 底下（沒寫或 null＝不開；寫了卻沒設 AOS_STACK＝StackMissing）
@@ -105,7 +105,7 @@ struct Defaults {
 // 每次：有排著的訊號 → 結束 128＋N；讀 ctl（認 paused、stopped、max、interval_ms、seq＋子類別多認的）→ tend() →
 // stopped 就結束（0）、跑滿就結束（0）→ paused 或還沒到時間就睡一下（最多 1 秒，收到訊號就醒）回頭再看 →
 // 跑一次：0＝下一次、10＝結束（0）、其他非 0＝stderr 一行、以那個碼結束；跑的期間收到訊號＝收完以 128＋N 結束。
-// 沒有身體（run 沒寫，daemon 純監工）：一輪＝讀 ctl → tend → 算一次 → 寫一份 waiting → 睡到下一次，一輪只讀一次 ctl、
+// 沒有身體（exec 沒寫，daemon 純監工）：一輪＝讀 ctl → tend → 算一次 → 寫一份 waiting → 睡到下一次，一輪只讀一次 ctl、
 // 只 tend 一次、只寫一次 state、不寫 running（那一刻沒東西在跑），所以 state 的 at 間隔穩定在 interval_ms＋tend 的時間（10-23 壓測）。
 // state 只在兩次之間寫（心跳只在兩次之間跳）。結束前呼叫 finish()（不論為什麼結束）。呼叫前要先 block_signals()。
 // $AOS_STACK 不在＝state 寫不了＝WriteFailed、退 1，不自己建（建 stack 只在 aos-exec 做，N-59 第 1 件）。
@@ -141,8 +141,8 @@ protected:
     Defaults d_;
     Json cfg_;                    // 設定檔整份（旗標已蓋上；子類別讀自己的 key，指示詞要自己解：resolve_keys）
     aos::Resolved cfg_dirs_;      // cfg_ 各 key 裡相對 $ref 的起點（cfg_dirs_.dir_of(key)；設定檔所在的資料夾，整份換過 $ref＝那份檔的；value 不用）
-    bool has_run_ = false;        // false＝沒有身體（daemon 純監工）
-    Target run_;
+    bool has_exec_ = false;       // false＝沒有身體（daemon 純監工）
+    Target exec_;
     std::optional<long long> max_;
     long long interval_ms_ = 0;
     std::string stack_;           // $AOS_STACK（沒設＝空）

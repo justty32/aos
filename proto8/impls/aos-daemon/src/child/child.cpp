@@ -64,13 +64,13 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
         cfg = spec;
     } else {
         cfg = Json::object();
-        cfg["run"] = spec;
+        cfg["exec"] = spec;
     }
-    Json run = cfg.value("run", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗）
-    if (run.is_string()) {
-        cfg["run"] = aos::join(cwd, run.get<std::string>());
-    } else if (run.is_array() && !run.empty() && run[0].is_string()) {
-        cfg["run"][0] = aos::join(cwd, run[0].get<std::string>());
+    Json ex = cfg.value("exec", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗）
+    if (ex.is_string()) {
+        cfg["exec"] = aos::join(cwd, ex.get<std::string>());
+    } else if (ex.is_array() && !ex.empty() && ex[0].is_string()) {
+        cfg["exec"][0] = aos::join(cwd, ex[0].get<std::string>());
     }
     if (!cfg.contains("ctl")) {
         cfg["ctl"] = "ctl.json";

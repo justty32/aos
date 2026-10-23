@@ -6,7 +6,7 @@
 //   read_table → check（開跑時查整張表，10-22）→ read_state（在但讀不了＝StateBad，10-22）→ pick → run_once（aos-loop 的公開 API：子行程 `aos-exec -- 目標 參數...`）
 //   → append_trace → 格的碼 0 才 write_state(next) → 以格的碼結束
 //
-// val＝字串或 [目標, 參數...]（相對路徑從 cwd 算，fsm 不轉）；物件＝表壞（要內嵌單子寫 fsm.json#/states/<名>/body）。
+// exec＝字串或 [目標, 參數...]（相對路徑從 cwd 算，fsm 不轉）；物件＝表壞（要內嵌單子寫 fsm.json#/states/<名>/body）。
 // 只看格的結束碼：不讀格的 stdout、不轉述格的 stderr（N-38）。格非 0（含 10）＝state 不動、原碼往上。
 // trace 一行 {"at","state","code","signal","elapsed_ms"}（at＝ISO 8601 UTC 到毫秒），沒有 timed_out（fsm 看不到格裡有沒有逾時，C-52；10-21 plan F4）。
 // 收到 SIGINT／SIGTERM／SIGHUP：轉給那格、等它結束，trace 與 state 照常寫完，再以 128＋N 結束（P-36）。
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
         std::string at = aos::utc_now_ms();
         aos::loop::Run b;
         try {
-            b = aos::loop::run_once(cell.val.target, cell.val.args);
+            b = aos::loop::run_once(cell.exec.target, cell.exec.args);
         } catch (const aos::Error& e) {
             throw aos::Error{e.code, "狀態 " + state + "：" + e.msg};
         }

@@ -1,1 +1,1 @@
-{"run": "loop.json#/body", "body": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tick.txt"}]}, "max": 5}
+{"exec": "loop.json#/body", "body": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tick.txt"}]}, "max": 5}

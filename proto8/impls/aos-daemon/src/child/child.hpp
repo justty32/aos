@@ -1,6 +1,6 @@
 // child.hpp：【child】表上的一個子項＝一支子 loop。內部標頭。
 //
-//   child.cpp   spawn：小格 mkdir（只建這一層，$AOS_STACK 不在＝MkdirFailed）、寫 loop.json（子項設定補上 ctl／state、蓋上 _entry、相對的 run 轉絕對；先 .loop.json 再改名）、
+//   child.cpp   spawn：小格 mkdir（只建這一層，$AOS_STACK 不在＝MkdirFailed）、寫 loop.json（子項設定補上 ctl／state、蓋上 _entry、相對的 exec 轉絕對；先 .loop.json 再改名）、
 //               fork 一個子行程跑 `aos-exec -- 小格/loop.json#/_entry`（aos-exec 的 run_cli；它 cd 進小格、exec 成 PATH 上的
 //               aos-loop，pid 不變；setsid 自成一個行程群組、stdin／stdout 接 /dev/null、stderr 附加到小格的 stderr.txt、AOS_STACK＝小格/）
 //               alive：自己生的看 waitpid（結束就記 code／signal）；接回來的看 /proc 的 started_at_ticks 還對不對
@@ -32,8 +32,8 @@ struct Child {
     bool removing = false;
 };
 
-// 起一支子 loop。cell＝小格（$AOS_STACK/<名字>）、spec＝字串或陣列（aos-exec 的目標，包成 {"run": 它}）或 loop 設定物件、
-// cwd＝daemon 的 cwd（子項 run 的相對路徑從這裡算：字串、陣列的第一個元素轉成絕對路徑，其他不動、不驗）。
+// 起一支子 loop。cell＝小格（$AOS_STACK/<名字>）、spec＝字串或陣列（aos-exec 的目標，包成 {"exec": 它}）或 loop 設定物件、
+// cwd＝daemon 的 cwd（子項 exec 的相對路徑從這裡算：字串、陣列的第一個元素轉成絕對路徑，其他不動、不驗）。
 // 小格建不了 MkdirFailed、loop.json 寫不了 WriteFailed、stderr 開不了／fork 失敗 LaunchFailed。
 // aos-exec 自己的錯（PATH 上沒有 aos-loop…）寫在小格的 stderr.txt、子 loop 以 1 結束（phase done、code 1）。
 Child spawn(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd);

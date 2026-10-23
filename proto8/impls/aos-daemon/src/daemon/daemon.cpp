@@ -33,7 +33,7 @@ static aos::loop::Defaults daemon_defaults() {
     d.prog = "aos-daemon";
     d.max = std::nullopt;
     d.interval_ms = 200;
-    d.need_run = false;
+    d.need_exec = false;
     return d;
 }
 
@@ -57,7 +57,7 @@ Json read_loops(const Json& v, const std::string& base, const std::string& key) 
         if (it.value.is_string() || it.value.is_array()) {
             vec.emplace_back(name, aos::resolve(it.value, it.base_dir));
         } else if (it.value.is_object()) {
-            vec.emplace_back(name, aos::loop::resolve_keys(it.value, it.base_dir, {"run", "max", "interval_ms", "ctl", "state"}).value);
+            vec.emplace_back(name, aos::loop::resolve_keys(it.value, it.base_dir, {"exec", "max", "interval_ms", "ctl", "state"}).value);
         } else {
             throw Error{code::CfgBad, key + "[" + name + "] 要是 aos-exec 的目標或 loop 設定"};
         }

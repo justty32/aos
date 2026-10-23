@@ -1,6 +1,6 @@
 """aos_flags：命令列旗標解析（10-21 plan L1）。純標準庫。
 10-23 起只剩 aos-tick 用（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也改 C++、tick 先留 Python）：
-Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 刪了，只有它們用的 load_cfg（設定檔讀取）、target（val 的寫法）跟著拿掉，在 git 歷史。
+Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 刪了，只有它們用的 load_cfg（設定檔讀取）、target（目標的寫法）跟著拿掉，在 git 歷史。
 
     import aos_flags
     opts, rest = aos_flags.parse(argv, {"--ws": "ws"})   # 錯丟 aos_flags.Error(原因)；e.code＝錯誤代號

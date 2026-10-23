@@ -16,12 +16,12 @@
 | `aos-exec/src/env/env.cpp`、`dotenv.cpp` | `check_ws`、`setup_stack`；`.env` 檔（`load_env`；10-22 起 dotenv 基礎子集：`export_prefix`、`env_value` 管引號／註解／去空白，預設不蓋＝`set_env` 的 `keep`）與 JSON `.env` key（`json_env`，只套蓋不蓋）、`set_env`（只展開 `${名字}`、錯不印值） |
 | `aos-exec/src/launch/launch.cpp`、`src/inst/` | exec 可執行檔／argv 陣列（指示詞、argv[0] 交給 aos-exec）；inst 單子行程內交給 libaos（`run_inst`） |
 | `aos-loop/src/run/folder.cpp` | 每次 fork 子行程呼叫 aos-exec 的 `run_cli({"--", 目標, 參數...})`、轉訊號 |
-| `aos-loop/src/engine/loop.cpp`、`window.cpp` | 每次怎麼走（10-23：沒有 `run` 時一輪只 tend 一次、只寫一份 state）、窗（`read_ctl` 先解指示詞、解不開＝不採用；`write_state`、`beat`＝離上一份滿 1 秒就再寫） |
-| `aos-loop/src/engine/config.cpp` | `resolve_keys`（10-23 晚：設定檔與 ctl 的指示詞，整份換一層、自己讀的格整個解；daemon、fsm 共用）、`Loop` 建構子（`load_cfg`、解指示詞、旗標 ＞ 設定檔 ＞ 預設）、`parse_target`（loop 的 `run`、fsm 格的 `val`＝字串或 `[目標, 參數...]`）、`loop_cli`（aos-loop、aos-daemon 共用） |
-| `aos-fsm/src/table/table.cpp` | `read_table`（`load_cfg`；10-23 晚 `resolve_table` 解整份、`states`、每格、`start`／`val`／`next` 的指示詞）、`check`（10-22：開跑時查整張表，表壞 CfgBad，10-23 統合前叫 FieldType）、`pick`（state 不在表上 StateUnknown）；`val` 走 `parse_target`；trace 沒有 `timed_out` |
+| `aos-loop/src/engine/loop.cpp`、`window.cpp` | 每次怎麼走（10-23：沒有 `exec` 時一輪只 tend 一次、只寫一份 state）、窗（`read_ctl` 先解指示詞、解不開＝不採用；`write_state`、`beat`＝離上一份滿 1 秒就再寫） |
+| `aos-loop/src/engine/config.cpp` | `resolve_keys`（10-23 晚：設定檔與 ctl 的指示詞，整份換一層、自己讀的格整個解；daemon、fsm 共用）、`Loop` 建構子（`load_cfg`、解指示詞、旗標 ＞ 設定檔 ＞ 預設）、`parse_target`（loop 的 `exec`、fsm 格的 `exec`＝字串或 `[目標, 參數...]`；10-23 深夜兩邊統一叫 `exec`，原 loop 的 `run`、fsm 格的 `val`）、`loop_cli`（aos-loop、aos-daemon 共用） |
+| `aos-fsm/src/table/table.cpp` | `read_table`（`load_cfg`；10-23 晚 `resolve_table` 解整份、`states`、每格、`start`／`exec`／`next` 的指示詞）、`check`（10-22：開跑時查整張表，表壞 CfgBad，10-23 統合前叫 FieldType）、`pick`（state 不在表上 StateUnknown）；`exec` 走 `parse_target`；trace 沒有 `timed_out` |
 | `aos-fsm/src/state/state.cpp` | `read_state`（10-22：在但讀不了 StateBad〔10-23 統合前叫 ReadFailed〕、去頭尾 Unicode 空白）、`write_state`（`.state.txt` 再改名；10-23 起狀態檔是 `state.txt`）、`append_trace`（時間用 aos-util 的 `utc_now_ms`，ISO 到毫秒） |
 | `aos-daemon/src/daemon/daemon.cpp` | `Daemon`：`read_loops`（10-23 晚取代 `check_loops`〔統合前叫 `check_children`〕：`loops` 的每層指示詞（拆檔＝`$ref` 陣列，子項的起點用 `dir_of`）、名字規則；10-23 原本的分頁陣列與 `merge_rows` 同日拿掉）、`write_parts`（10-23 晚：state 的 `loops` 超過 100 列切成 `{"$ref": ["state_loops/<雜湊>.json", …]}`、清舊分檔）、ctl 的 `loops_added`／`loops_removed`（`check_ctl`、`tend` 的期望表）、10-22 起 `taken_names`／`check_names`（子項名字跟自己的 ctl／state 撞名：起來時 CfgBad〔10-23 統合前叫 Conflict〕、ctl 撞＝不採用）、`adopt`、`tend`、`term`／`settle`（10-23：收子項不等，SIGTERM 後每次看一眼、滿 10 秒 SIGKILL；表＝串列＋名字的雜湊表）、`finish`（等子項退時每秒寫 state） |
-| `aos-daemon/src/child/child.cpp` | 子 loop 經 aos-exec 起：寫小格 `loop.json`（補 ctl／state、蓋 `_entry`、相對 run 轉絕對）、fork 後呼叫 `run_cli({"--", 小格/loop.json#/_entry})`，exec 成 PATH 上的 aos-loop |
+| `aos-daemon/src/child/child.cpp` | 子 loop 經 aos-exec 起：寫小格 `loop.json`（補 ctl／state、蓋 `_entry`、相對 exec 轉絕對）、fork 後呼叫 `run_cli({"--", 小格/loop.json#/_entry})`，exec 成 PATH 上的 aos-loop |
 | `aos-directive/src/resolve.cpp` | 指示詞走訪；`$path` 是字串拼接（`join_path`、`decorate`）；10-23 晚加 `resolve_shallow`（只換這一格、不往裡面走，回值與裡面的起點；`$ref` 陣列合出來的每個 key／元素的起點在 `Resolved::dir_of`） |
 | `aos-directive/src/ref.cpp` | `$ref`：`fetch_ref`（寫法〔字串或字串陣列；位置只認 `#/`，10-23 刪 `$at`〕、繞圈、讀檔、照指標取原文，陣列＝每份一個）、`resolve_ref`（取完往下解、再合）、`merge`（10-23：`$ref` 陣列幾份合成一份——物件合 key 後蓋前、陣列接起來、混著＝DirectiveBad） |
 

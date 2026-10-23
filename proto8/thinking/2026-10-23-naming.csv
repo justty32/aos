@@ -48,3 +48,6 @@
 5,state 的 `beats`（`max_beats` 這類例子）,`runs`（`max_runs`）,state 窗、C-54 命名方法 R6／R9,10-23 深夜使用者「beats改runs」,已定（使用者 10-23 深夜）
 —,條文、程式說明、訊息裡的「拍」（「第 N 拍」）,「次」（「第 N 次」）,bin、impls、tests、demo、CONCEPTS／NORMS／CONVENTION、code map,10-23 深夜使用者「我們都是說"次"」；thinking／notes 與原話不改,已定（使用者 10-23 深夜）
 —,程式內部：`aos_beat.py`；impls `run_beat`、`Beat`、`src/beat/`,`aos_run.py`；`run_once`、`Run`、`src/run/`（`heartbeat` 不動）,bin 庫、impls aos-loop、aos-fsm,「beat」在 aos 裡已沒有對應概念，跟著 run 一致,否
+1,"`run`（loop.json、daemon.json、子項、daemon 寫進小格的 loop.json；daemon 把字串子項包成 `{""run"": 它}`）","`exec`（包成 `{""exec"": 它}`）",aos-loop、aos-daemon、demo、tests、條文,C-54 一詞一義：「要跑什麼」跟 fsm 的格同一件事、同一個字；`exec`＝交給 aos-exec 跑的目標,已定（使用者 10-23 深夜選「exec，loop／daemon 的 run 也一起改 exec」；翻案上面 10-23 深夜改回 `run` 那列）
+1,fsm 每一格的 `val`,`exec`,aos-fsm、demo、tests、條文（C-55、C-54 R3）,使用者「fsm.json，現在是用val，幫我改成exec」；`val` 只留給 C-55 值的展開形（ctl 的 `paused`／`stopped`、`priority`）,已定（使用者 10-23 深夜）
+—,程式內部：aos-loop 的 `Defaults::need_run`、`Loop::has_run_`／`run_`；aos-fsm 的 `Cell::val`,`need_exec`、`has_exec_`／`exec_`；`Cell::exec`（`run_once`、`Run`、`src/run/`、state 的 `runs` 不動）,impls aos-loop、aos-daemon、aos-fsm,跟著上面改；「跑一次」的 run 是動詞，不動,否

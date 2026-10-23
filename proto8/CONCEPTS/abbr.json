@@ -128,7 +128,7 @@
    "abbr": "val",
    "full": "value",
    "meaning": "值",
-   "example": "fsm 表每格的 val（N-36）、ctl 與 priority 這類值的展開形（C-55）；loop.json／daemon.json 的「要跑什麼」不用它，叫 run（10-23 統合一度改 val，同晚使用者改回 run）"
+   "example": "ctl 與 priority 這類值的展開形（C-55）；「要跑什麼」不用它，loop.json、daemon.json、fsm 表每格一律叫 exec（10-23 統合一度把 loop 的 run 改 val、同晚改回 run；深夜使用者「exec，loop／daemon 的 run 也一起改 exec」，fsm 格原 val 也改）"
   },
   {
    "abbr": "max",

@@ -1,5 +1,5 @@
 // config.cpp：【engine】Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、解指示詞（resolve_keys，10-23 晚）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）；
-// 還有 parse_target（run 的寫法）、loop_cli（命令列）
+// 還有 parse_target（exec 的寫法）、loop_cli（命令列）
 // （10-21 傍晚 ideas § 9）；錯誤分代號。
 #include "engine/engine.hpp"
 
@@ -108,7 +108,7 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
     cfg_ = aos::load_cfg(spec);
     try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45）
         aos::Resolved r = resolve_keys(cfg_, aos::dirname(aos::abspath(aos::split_hash(spec).path)),
-                                       {"run", "max", "interval_ms", "ctl", "state"});
+                                       {"exec", "max", "interval_ms", "ctl", "state"});
         cfg_ = std::move(r.value);
         cfg_dirs_ = std::move(r);
         cfg_dirs_.value = nullptr;
@@ -141,15 +141,15 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
             cfg_[k] = it->second;
         }
     }
-    Json run = cfg_.value("run", Json());
-    if (run.is_object()) {
-        throw Error{code::CfgBad, "run 要是 aos-exec 的目標（字串或字串陣列）；要內嵌單子寫 loop.json#/body"};
+    Json ex = cfg_.value("exec", Json());
+    if (ex.is_object()) {
+        throw Error{code::CfgBad, "exec 要是 aos-exec 的目標（字串或字串陣列）；要內嵌單子寫 loop.json#/body"};
     }
-    if (!run.is_null()) {
-        run_ = parse_target(run, "run");
-        has_run_ = true;
-    } else if (d_.need_run) {
-        throw Error{code::CfgBad, "沒有東西可跑（設定檔沒有 run）"};
+    if (!ex.is_null()) {
+        exec_ = parse_target(ex, "exec");
+        has_exec_ = true;
+    } else if (d_.need_exec) {
+        throw Error{code::CfgBad, "沒有東西可跑（設定檔沒有 exec）"};
     }
     max_ = d_.max;
     if (cfg_.contains("max")) {

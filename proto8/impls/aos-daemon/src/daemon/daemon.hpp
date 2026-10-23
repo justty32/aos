@@ -6,7 +6,7 @@
 //                最後一次之後才自己結束的標 done，D7）、
 //                info（loops 表）、check_ctl（ctl 的 loops）、taken_names／check_names（子項名字跟自己的 ctl／state 撞名，10-22）
 //
-// daemon.json＝loop.json 的超集：run、max、interval_ms、ctl、state 同 aos-loop，但 run 選填、max 沒寫＝不限、
+// daemon.json＝loop.json 的超集：exec、max、interval_ms、ctl、state 同 aos-loop，但 exec 選填、max 沒寫＝不限、
 // interval_ms 沒寫＝200；多兩個 key——loops＝{名字: aos-exec 的目標（字串或 [目標, 參數...]）或 loop 設定（物件）}
 // （要拆成好幾份檔就寫 {"$ref": ["loops-1.json", …]}，aos-directive 照順序合起來，read_loops）、adopt（布林，沒寫＝true）。
 // ctl 多認三個 key（N-54；10-23 晚加後兩個）：loops＝整份名單、loops_added＝名單上要多這些（寫法同 loops）、
@@ -29,7 +29,7 @@ namespace aos::daemon {
 //   寫法：物件 {名字: 子項}（拆成好幾份檔＝{"$ref": [檔, …]}，aos-directive 合物件、同名後面的蓋前面的；10-23 使用者，
 //   取代原本的「物件的陣列＝分檔」）。
 //   指示詞（base＝v 裡相對 $ref 的起點）：loops 本身、每個子項本身先換一層（resolve_shallow；子項的起點＝它來自的那份檔的）；子項是字串或陣列
-//   （aos-exec 的目標）就整個解；是物件（loop 設定）就只解 daemon 要寫進小格的 loop key（run、max、interval_ms、ctl、state），
+//   （aos-exec 的目標）就整個解；是物件（loop 設定）就只解 daemon 要寫進小格的 loop key（exec、max、interval_ms、ctl、state），
 //   其他 key（body…）原樣交給子 loop——相對 $ref 搬進小格就會從小格算，所以 loop key 由 daemon 先解。
 //   名字非空、不含 /、不含 #（會被 aos-exec 當成指標的開頭）、不以 . 開頭；子項是字串、陣列或物件（loop key 以外不驗）。
 // 壞丟 Error{CfgBad, 原因}（key＝訊息裡的名字）；指示詞解不開丟 DirectiveBad。

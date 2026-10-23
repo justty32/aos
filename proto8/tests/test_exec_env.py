@@ -378,7 +378,7 @@ class T(unittest.TestCase):
         # 最外層加 --dotenv-override＝只有起 loop 那跳蓋（x），每次的 aos-exec 不吃旗標
         q = Path(self.t, "q")
         put(q / ".env", "C=${C}x\n")
-        put(q / "loop.json", {"_entry": ["aos-loop", {"$env": "AOS_CF"}], "run": "b.json", "max": 3})
+        put(q / "loop.json", {"_entry": ["aos-loop", {"$env": "AOS_CF"}], "exec": "b.json", "max": 3})
         put(q / "b.json", ["sh", "-c", 'echo "$C" >> "$AOS_WS/seen"'])
         self.assertEqual(run("--ws", self.t, str(q / "loop.json"), env={"C": ""})[0], 0)
         self.assertEqual(Path(self.t, "seen").read_text(), "\n\n\n")

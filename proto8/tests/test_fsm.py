@@ -36,8 +36,8 @@ class T(unittest.TestCase):
         return str(p)
 
     def body(self, name, inst, nxt="a"):
-        # 內嵌單子的格（10-21 plan F2）：val 指到同一格的 body
-        return {"val": "fsm.json#/states/%s/body" % name, "body": inst, "next": nxt}
+        # 內嵌單子的格（10-21 plan F2）：exec 指到同一格的 body
+        return {"exec": "fsm.json#/states/%s/body" % name, "body": inst, "next": nxt}
 
     def beat(self, fsm=None, **kw):
         return run(FSM, fsm or str(self.tmp / "fsm.json"), stack=self.stack, cwd=str(self.tmp), **kw)
@@ -50,7 +50,7 @@ class T(unittest.TestCase):
 
     def test_state_in_stack_and_advances(self):
         self.cell("a", "exit 0\n"); self.cell("b", "exit 0\n")
-        self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "b", "next": "a"}})
+        self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "b", "next": "a"}})
         r = self.beat()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.state(), "b\n")   # 純文字一行狀態名，跟 shell 版同格式
@@ -61,7 +61,7 @@ class T(unittest.TestCase):
     def test_state_written_by_rename_not_in_place(self):
         # N-05：先寫 .state.txt 再改名蓋過去——蓋完 inode 換了、不留暫存檔
         self.cell("a", "exit 0\n"); self.cell("b", "exit 0\n")
-        self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "b", "next": "a"}})
+        self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "b", "next": "a"}})
         (self.stack / "state.txt").write_text("a\n")
         before = os.stat(self.stack / "state.txt").st_ino
         self.assertEqual(self.beat().returncode, 0)
@@ -71,21 +71,21 @@ class T(unittest.TestCase):
 
     def test_cell_10_passes_up_and_state_unchanged(self):
         self.cell("a", "exit 10\n"); self.cell("b", "exit 0\n")
-        self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "b", "next": "a"}})
+        self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "b", "next": "a"}})
         (self.stack / "state.txt").write_text("a\n")
         self.assertEqual(self.beat().returncode, 10)
         self.assertEqual(self.state(), "a\n")
 
     def test_cell_failure_code_state_unchanged(self):
         self.cell("a", "exit 3\n")
-        self.table({"a": {"val": "a", "next": "a"}, "b": {"val": "a", "next": "a"}})
+        self.table({"a": {"exec": "a", "next": "a"}, "b": {"exec": "a", "next": "a"}})
         (self.stack / "state.txt").write_text("b\n")
         self.assertEqual(self.beat().returncode, 3)
         self.assertEqual(self.state(), "b\n")
 
     def test_string_cell_goes_through_aos_exec(self):
         self.cell("a", 'echo "$AOS_STACK" > "$AOS_STACK/seen"\n')
-        self.table({"a": {"val": "a", "next": "a"}})
+        self.table({"a": {"exec": "a", "next": "a"}})
         self.assertEqual(self.beat().returncode, 0)
         self.assertEqual((self.stack / "seen").read_text().strip(), str(self.stack) + "/")
 
@@ -109,8 +109,8 @@ class T(unittest.TestCase):
         self.assertFalse((self.stack / "state.txt").exists())
 
     def test_object_val_is_own_error(self):
-        # F2：val 只收字串；物件＝表壞，退 1、一行、提 #/states/<名>/body
-        self.table({"a": {"val": {"argv": ["sh", "-c", 'touch "$AOS_STACK/ran"']}, "next": "a"}})
+        # F2：exec 只收字串；物件＝表壞，退 1、一行、提 #/states/<名>/body
+        self.table({"a": {"exec": {"argv": ["sh", "-c", 'touch "$AOS_STACK/ran"']}, "next": "a"}})
         r = self.beat()
         self.assertEqual(r.returncode, 1)
         self.assertEqual(len(r.stderr.strip().splitlines()), 1, r.stderr)
@@ -122,11 +122,11 @@ class T(unittest.TestCase):
     def test_cfg_is_only_positional(self):
         # 10-21 傍晚 ideas § 9：aos-fsm [旗標] 設定檔（原 --cfg 拿掉）；可寫 檔#/指標；沒給、多給、--cfg、不認得的旗標＝usage 錯
         self.cell("a", "exit 0\n")
-        f = self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "a", "next": "a"}})
+        f = self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "a", "next": "a"}})
         r = run(FSM, "--", f, stack=self.stack, cwd=str(self.tmp))
         self.assertEqual((r.returncode, r.stderr, self.state()), (0, "", "b\n"))
         (self.tmp / "big.json").write_text(json.dumps({"fsms": {"x": {"start": "a", "states": {
-            "a": {"val": "a", "next": "c"}, "c": {"val": "a", "next": "a"}}}}}))
+            "a": {"exec": "a", "next": "c"}, "c": {"exec": "a", "next": "a"}}}}}))
         (self.stack / "state.txt").unlink()
         r = run(FSM, str(self.tmp / "big.json") + "#/fsms/x", stack=self.stack, cwd=str(self.tmp))
         self.assertEqual((r.returncode, r.stderr, self.state()), (0, "", "c\n"))
@@ -142,13 +142,13 @@ class T(unittest.TestCase):
         self.assertEqual(self.state(), "c\n")   # 錯就不跑格
 
     def test_val_array_args(self):
-        # val＝[目標, 參數...]（比照 loop 的 run）：每次 aos-exec -- 目標 參數...；元素不是字串、空陣列＝表壞
+        # exec＝[目標, 參數...]（比照 loop 的 exec）：每次 aos-exec -- 目標 參數...；元素不是字串、空陣列＝表壞
         self.cell("a", 'echo "$@" > "$AOS_STACK/args"\n')
-        self.table({"a": {"val": ["a", "x", "--y"], "next": "a"}})
+        self.table({"a": {"exec": ["a", "x", "--y"], "next": "a"}})
         r = self.beat()
         self.assertEqual((r.returncode, r.stderr, (self.stack / "args").read_text()), (0, "", "x --y\n"))
         for bad in ([], ["a", 1], 3):
-            self.table({"a": {"val": bad, "next": "a"}})
+            self.table({"a": {"exec": bad, "next": "a"}})
             r = self.beat()
             self.assertEqual((r.returncode, len(r.stderr.strip().splitlines())), (1, 1), bad)
             self.assertTrue(r.stderr.startswith("aos-fsm: "), r.stderr)
@@ -156,7 +156,7 @@ class T(unittest.TestCase):
     def test_fsm_json_as_exec_entry(self):
         # F6：fsm.json 帶 _entry，`aos-exec fsm.json` 就是一次；cwd＝fsm.json 的資料夾，表裡的 _entry、body 都被 fsm 忽略
         self.cell("a", 'touch "$AOS_STACK/ran"\n')   # 從 elsewhere 叫也找得到 a＝fsm 的 cwd 是 fsm.json 的資料夾
-        f = self.table({"a": {"val": "a", "next": "b"}, "b": self.body("b", {"argv": ["sh", "-c", "exit 10"]})},
+        f = self.table({"a": {"exec": "a", "next": "b"}, "b": self.body("b", {"argv": ["sh", "-c", "exit 10"]})},
                        _entry=["aos-fsm", {"$env": "AOS_CF"}])
         other = self.tmp / "elsewhere"; other.mkdir()
         e = {"AOS_WS": str(self.tmp)}
@@ -169,7 +169,7 @@ class T(unittest.TestCase):
 
     def test_trace_jsonl_one_line_per_beat(self):
         self.cell("a", "exit 0\n"); self.cell("b", "exit 5\n")
-        self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "b", "next": "a"}})
+        self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "b", "next": "a"}})
         for _ in range(3):
             self.beat()
         tr = self.trace()
@@ -180,13 +180,13 @@ class T(unittest.TestCase):
             datetime.datetime.fromisoformat(t["at"])
 
     def test_requires_stack(self):
-        self.table({"a": {"val": "a", "next": "a"}})
+        self.table({"a": {"exec": "a", "next": "a"}})
         r = run(FSM, str(self.tmp / "fsm.json"), cwd=str(self.tmp))
         self.assertEqual(r.returncode, 1)
         self.assertIn("沒設定 AOS_STACK", r.stderr)
 
     def test_own_errors_exit_1_one_line(self):
-        self.table({"a": {"val": "a", "next": "a"}})
+        self.table({"a": {"exec": "a", "next": "a"}})
         (self.stack / "state.txt").write_text("zzz\n")
         bad = self.tmp / "bad.json"; bad.write_text("{nope")
         for f in (self.tmp / "fsm.json", bad, self.tmp / "absent.json"):
@@ -207,7 +207,7 @@ class T(unittest.TestCase):
         # 10-22 a：state 在但讀不了（是資料夾、不是 UTF-8、沒權限）＝自己的錯，退 1、一行、不跑格（原本前兩種當沒有檔從 start 跑、
         # 不是 UTF-8 吐 traceback）；沒有檔照舊＝start
         self.cell("a", 'touch "$AOS_STACK/ran"\n')
-        self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "a", "next": "a"}})
+        self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "a", "next": "a"}})
         sf = self.stack / "state.txt"
         sf.mkdir()
         self.assert_own_error_no_beat(self.beat(), "是資料夾")
@@ -227,29 +227,29 @@ class T(unittest.TestCase):
 
     def test_whole_table_checked_before_beat(self):
         # 10-22 b、c：開跑時查整張表——start 不在表上、任何一格的 next 不在表上或是空字串（或頭尾有空白、不是字串）、
-        # 任何一格的 val 壞，都＝表壞、退 1、不跑格（原本只查這次那一格：next 不在表上要到下一次才擋、空字串下一次靜靜回 start）
+        # 任何一格的 exec 壞，都＝表壞、退 1、不跑格（原本只查這次那一格：next 不在表上要到下一次才擋、空字串下一次靜靜回 start）
         self.cell("a", 'touch "$AOS_STACK/ran"\n')
-        good = {"val": "a", "next": "a"}
+        good = {"exec": "a", "next": "a"}
         for what, start, states in (
                 ("start 不在表上", "zz", {"a": good}),
-                ("next 不在表上", "a", {"a": {"val": "a", "next": "nope"}}),
-                ("別格 next 不在表上", "a", {"a": good, "b": {"val": "a", "next": "nope"}}),
-                ("next 空字串", "a", {"a": {"val": "a", "next": ""}}),
-                ("別格 next 空字串", "a", {"a": good, "b": {"val": "a", "next": ""}}),
-                ("next 頭尾空白", "a", {"a": {"val": "a", "next": " a"}, " a": good}),
-                ("next 有換行", "a", {"a": {"val": "a", "next": "x\ny"}, "x\ny": good}),
-                ("next 不是字串", "a", {"a": good, "b": {"val": "a", "next": 3}}),
-                ("別格沒 next", "a", {"a": good, "b": {"val": "a"}}),
+                ("next 不在表上", "a", {"a": {"exec": "a", "next": "nope"}}),
+                ("別格 next 不在表上", "a", {"a": good, "b": {"exec": "a", "next": "nope"}}),
+                ("next 空字串", "a", {"a": {"exec": "a", "next": ""}}),
+                ("別格 next 空字串", "a", {"a": good, "b": {"exec": "a", "next": ""}}),
+                ("next 頭尾空白", "a", {"a": {"exec": "a", "next": " a"}, " a": good}),
+                ("next 有換行", "a", {"a": {"exec": "a", "next": "x\ny"}, "x\ny": good}),
+                ("next 不是字串", "a", {"a": good, "b": {"exec": "a", "next": 3}}),
+                ("別格沒 next", "a", {"a": good, "b": {"exec": "a"}}),
                 ("別格不是物件", "a", {"a": good, "b": "a"}),
-                ("別格 val 是物件", "a", {"a": good, "b": {"val": {"argv": ["true"]}, "next": "a"}}),
-                ("別格 val 空陣列", "a", {"a": good, "b": {"val": [], "next": "a"}})):
+                ("別格 exec 是物件", "a", {"a": good, "b": {"exec": {"argv": ["true"]}, "next": "a"}}),
+                ("別格 exec 空陣列", "a", {"a": good, "b": {"exec": [], "next": "a"}})):
             self.table(states, start=start)
             self.assert_own_error_no_beat(self.beat(), what)
 
     def test_state_value_not_in_table_is_own_error(self):
         # state 檔裡的狀態不在表上：照舊是自己的錯、退 1、不跑格（10-22 寫清楚）
         self.cell("a", 'touch "$AOS_STACK/ran"\n')
-        self.table({"a": {"val": "a", "next": "a"}})
+        self.table({"a": {"exec": "a", "next": "a"}})
         (self.stack / "state.txt").write_text("zzz\n")
         r = self.beat()
         self.assert_own_error_no_beat(r, "state 不在表上")
@@ -288,7 +288,7 @@ class T(unittest.TestCase):
     def test_string_cell_path_as_is(self):
         # ideas § 24：aos 的程式都不動 PATH，字串格看到的 PATH 跟 fsm 收到的一樣（不加任何 bin）
         self.cell("a", 'echo "$PATH" > "$AOS_STACK/path"\n')
-        self.table({"a": {"val": "a", "next": "a"}})
+        self.table({"a": {"exec": "a", "next": "a"}})
         path = path_with("/usr/bin:/bin")
         self.assertEqual(self.beat(env={"PATH": path}).returncode, 0)
         self.assertEqual((self.stack / "path").read_text().strip(), path)
@@ -312,7 +312,7 @@ class T(unittest.TestCase):
     def test_sigterm_cell_finishes_then_143(self):
         # 格收到轉來的 SIGTERM 收好、退 0：trace 有一行、state 照樣換，fsm 再以 143 結束（P-36）
         self.cell("a", 'trap \'exit 0\' TERM\ntouch "$AOS_STACK/up"\nwhile :; do sleep 0.05; done\n')
-        self.table({"a": {"val": "a", "next": "b"}, "b": {"val": "a", "next": "a"}})
+        self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "a", "next": "a"}})
         p = self.start()
         ok = self.wait_file(self.stack / "up")
         p.send_signal(signal.SIGTERM)

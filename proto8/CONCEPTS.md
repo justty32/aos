@@ -21,7 +21,7 @@
 
 總則（跨主題的規範）沒有專屬的概念條，見 [NORMS 總則](NORMS/01-總則.md)；總則與設計理念維持分開（10-15 使用者「隨你」）。主題總表在 [NORMS.md](NORMS.md)。
 
-**10-23 命名統合**（[thinking 2026-10-23-naming](thinking/2026-10-23-naming.md)，使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」）：只換名字、不改原意——C-54 錯誤代號「照舊沿用」翻案、補第四種 `…Failed` 與副檔名／時間／計數規則（原是頂層代定；使用者 10-23 逐條看過，其餘認可，三條改選：純文字也帶 `.txt`、stack 預設位置 `.aos/` 改 `.stack/`（C-65）、題目資料夾 `inbox/` 改 `new/`、照 Maildir 多一步認領 `cur/`（C-65））；C-55 註 loop／daemon 的 `run` 改 `val`；C-48 指示詞例子改 `$path`、註 `_exec`／`.env`；[縮寫表](CONCEPTS/abbr.json)加 `co`、`dotenv`。舊名在歷史敘述裡照留、旁邊加〔10-23 統合…〕註。10-23 晚使用者翻案（「改，beats改runs，然後val寫要跑啥，通常不會用val，應該用run。」，衝突時選「只有 loop、daemon 用 run」）：loop／daemon 改回 `run`（fsm 格仍是 `val`）、state 的 `beats` → `runs`、「拍」→「次」。
+**10-23 命名統合**（[thinking 2026-10-23-naming](thinking/2026-10-23-naming.md)，使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」）：只換名字、不改原意——C-54 錯誤代號「照舊沿用」翻案、補第四種 `…Failed` 與副檔名／時間／計數規則（原是頂層代定；使用者 10-23 逐條看過，其餘認可，三條改選：純文字也帶 `.txt`、stack 預設位置 `.aos/` 改 `.stack/`（C-65）、題目資料夾 `inbox/` 改 `new/`、照 Maildir 多一步認領 `cur/`（C-65））；C-55 註 loop／daemon 的 `run` 改 `val`；C-48 指示詞例子改 `$path`、註 `_exec`／`.env`；[縮寫表](CONCEPTS/abbr.json)加 `co`、`dotenv`。舊名在歷史敘述裡照留、旁邊加〔10-23 統合…〕註。10-23 晚使用者翻案（「改，beats改runs，然後val寫要跑啥，通常不會用val，應該用run。」，衝突時選「只有 loop、daemon 用 run」）：loop／daemon 改回 `run`（fsm 格仍是 `val`）、state 的 `beats` → `runs`、「拍」→「次」。10-23 深夜：使用者「fsm.json，現在是用val，幫我改成exec」，再選「exec，loop／daemon 的 run 也一起改 exec」——「要跑什麼」全體系一律叫 `exec`（loop／daemon 的 `run`、fsm 格的 `val` 都改），C-55 的 `val` 只留給值的展開形。
 
 **10-23 晚入口改名、刪 `_` 附註**（[thinking 2026-10-23-naming](thinking/2026-10-23-naming.md)，使用者問「換_entry，有好處嗎」，聽完利弊後「改。然後_開頭=附註這個概念刪掉。」，又補「不認得的key就是忽略」）：入口預設名 `_exec` → `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key 都改；使用者原話裡的 `_exec` 照留）；C-48 刪「`_` 開頭的 key＝附註、宿主程式忽略」與 `_notes` 慣例，改寫成通則「不認得的 key 一律忽略、不報錯」；C-55 跟著刪那半句。
 

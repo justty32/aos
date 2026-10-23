@@ -8,7 +8,7 @@ include(../cmake/settings.cmake)
 project(aos-fsm C CXX)
 
 # 用到的兄弟專案（包一層 if(NOT TARGET)，全家都這樣寫）。
-#   aos-loop   公開 API（aos/loop.hpp）：跑一格＝run_once（格的 val 跟 loop.json 的 run 同一套寫法）、擋訊號。
+#   aos-loop   公開 API（aos/loop.hpp）：跑一格＝run_once（格的 exec 跟 loop.json 的 exec 同一套寫法）、擋訊號。
 #              它又帶進 aos-exec、inst、aos-util、aos-directive
 if(NOT TARGET aos-loop)
   add_subdirectory(../aos-loop aos-loop-build)

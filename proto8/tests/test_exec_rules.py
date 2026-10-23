@@ -112,8 +112,8 @@ class T(unittest.TestCase):
     def test_raw_codes(self):
         # 代號照 10-23 命名統合（使用者 10-22「錯誤訊息多代號也遵循」）：stderr 原樣是「程式名: 代號 原因」
         d = prog(self.t, "p", "echo hi\n")
-        put(Path(d, "loop.json"), {"run": 3})
-        put(Path(d, "fsm.json"), {"start": "a", "states": {"a": {"val": "p", "next": "zz"}}})
+        put(Path(d, "loop.json"), {"exec": 3})
+        put(Path(d, "fsm.json"), {"start": "a", "states": {"a": {"exec": "p", "next": "zz"}}})
         put(Path(d, "daemon.json"), {"state": "state.json", "loops": {"state.json": "p"}})
         Path(d, "bad.json").write_text("{nope")
         dot = prog(self.t, "dot", "echo hi\n")
@@ -121,7 +121,7 @@ class T(unittest.TestCase):
         st = Path(self.t, "st")
         st.mkdir()
         Path(st, "state.txt").mkdir()   # fsm 的 state.txt 在但讀不了（是資料夾）
-        put(Path(d, "ok.json"), {"start": "a", "states": {"a": {"val": "p", "next": "a"}}})
+        put(Path(d, "ok.json"), {"start": "a", "states": {"a": {"exec": "p", "next": "a"}}})
         loop, fsm, daemon = (tool(n) for n in ("aos-loop", "aos-fsm", "aos-daemon"))
         e = env_of({"AOS_STACK": str(st)})
         for argv, head in (([EXEC, "--nope", d], "aos-exec: FlagUnknown usage: "),
@@ -130,13 +130,13 @@ class T(unittest.TestCase):
                            ([EXEC, "--ws", str(Path(self.t, "nope")), d], "aos-exec: WsMissing 工作區不存在："),
                            ([EXEC, "--ws", self.t, str(Path(self.t, "nope"))], "aos-exec: EntryMissing 入口不存在："),
                            ([EXEC, "--ws", self.t, dot], "aos-exec: DotenvBad .env 壞："),
-                           ([loop, str(Path(d, "loop.json"))], "aos-loop: CfgBad run 要是"),
+                           ([loop, str(Path(d, "loop.json"))], "aos-loop: CfgBad exec 要是"),
                            ([loop], "aos-loop: ArgumentsBad usage: "),
                            ([loop, "--bogus", "x"], "aos-loop: FlagUnknown usage: "),
                            ([loop, str(Path(d, "none.json"))], "aos-loop: CfgMissing 讀不到或不是 JSON："),
                            ([loop, str(Path(d, "bad.json"))], "aos-loop: CfgBad 讀不到或不是 JSON："),
                            ([loop, str(Path(d, "loop.json")) + "#/nope"], "aos-loop: CfgMissing 設定檔指不到："),
-                           ([loop, str(Path(d, "loop.json")) + "#run"], "aos-loop: CfgBad 設定檔 "),
+                           ([loop, str(Path(d, "loop.json")) + "#exec"], "aos-loop: CfgBad 設定檔 "),
                            ([fsm, str(Path(d, "fsm.json"))], "aos-fsm: CfgBad 狀態 a 的 next zz 不在表上"),
                            ([fsm, str(Path(d, "ok.json"))], "aos-fsm: StateBad 讀不了 "),
                            ([daemon, str(Path(d, "daemon.json"))], "aos-daemon: CfgBad loops 的名字")):
@@ -204,7 +204,7 @@ class T(unittest.TestCase):
         self.assertEqual((rc, int(out.split()[1], 16) & (1 << (signal.SIGPIPE - 1))), (0, 0))
 
     def test_json_kinds(self):
-        self.assertEqual(self.json_entry({"run": "x", "max": 3})[:3:2], (1, "入口壞"))   # loop 設定不是入口
+        self.assertEqual(self.json_entry({"exec": "x", "max": 3})[:3:2], (1, "入口壞"))   # loop 設定不是入口
         self.assertEqual(self.json_entry({"_entry": ["sh", "-c", "echo hi"]})[:2], (0, "hi\n"))
         # 10-21 晚起沒 argv 的物件＝資料夾、一路往下（原「只往下一層」，ideas 10-21 § 6）
         self.assertEqual(self.json_entry({"_entry": {"_entry": ["echo", "deep"]}})[:2], (0, "deep\n"))

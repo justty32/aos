@@ -150,12 +150,12 @@ class T(unittest.TestCase):
         self.assertEqual(json.loads(out), {"A": "out", "B": "t"}, stderr)
 
     def test_loop_beat_needs_extra_hop_for_flag(self):
-        # loop 每次叫 aos-exec -- <run>，-- 後面寫不了旗標：要蓋就多一跳，body 寫 ["aos-exec", "--dotenv-override", "think"]
+        # loop 每次叫 aos-exec -- <exec>，-- 後面寫不了旗標：要蓋就多一跳，body 寫 ["aos-exec", "--dotenv-override", "think"]
         q = Path(self.t, "q")
         put(q / "think" / ".env", "A=think\n")
         put(q / "think" / "_entry.json", ["sh", "-c", 'echo "$A" >> "$AOS_WS/seen"'])
         for body, want in ((["aos-exec", "--dotenv-override", "think"], "think"), (["aos-exec", "think"], "out")):
-            put(q / "loop.json", {"_entry": ["aos-loop", {"$env": "AOS_CF"}], "run": "loop.json#/body", "body": body, "max": 2})
+            put(q / "loop.json", {"_entry": ["aos-loop", {"$env": "AOS_CF"}], "exec": "loop.json#/body", "body": body, "max": 2})
             seen = Path(self.t, "seen")
             if seen.exists():
                 seen.unlink()
