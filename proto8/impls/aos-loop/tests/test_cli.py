@@ -352,8 +352,8 @@ def state_written_with_heartbeat(t):
     check("state 寫好、結束碼", (r.returncode, r.stderr, st["kind"], st["phase"], st["beats"], st["code"], st["max"],
                              st["ctl_seq"]), (0, "", "state", "done", 3, 0, 3, None))
     check("state 欄位順序（同 bin 版）", list(st), ["kind", "phase", "beats", "max", "interval_ms", "paused", "ctl_seq",
-                                             "last_warning", "code", "pid", "start_ticks", "boot_id", "at"])
-    check("心跳欄位", (isinstance(st["pid"], int), isinstance(st["start_ticks"], int), isinstance(st["at"], str),
+                                             "ctl_warning", "code", "pid", "started_at_ticks", "boot_id", "at"])
+    check("心跳欄位", (isinstance(st["pid"], int), isinstance(st["started_at_ticks"], int), isinstance(st["at"], str),
                      (s / ".state.json").exists()), (True, True, True, False))
     # at＝ISO 8601 UTC 到毫秒，同 Python datetime.now(timezone.utc).isoformat(timespec="milliseconds")（10-23 命名統合）
     at = datetime.datetime.fromisoformat(st["at"])
@@ -393,12 +393,12 @@ def interval_spaces_laps(t):
 
 
 @case
-def ctl_stop_and_seq(t):
+def ctl_stopped_and_seq(t):
     s = stack(t)
-    (s / "ctl.json").write_text(json.dumps({"stop": True, "seq": 7}))
+    (s / "ctl.json").write_text(json.dumps({"stopped": True, "seq": 7}))
     r = run_loop(t, {"val": count(), "max": 3, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
-    check("ctl stop＋seq", (r.returncode, r.stderr, st["phase"], st["beats"], st["ctl_seq"], (s / "laps").exists()),
+    check("ctl stopped＋seq", (r.returncode, r.stderr, st["phase"], st["beats"], st["ctl_seq"], (s / "laps").exists()),
           (0, "", "stopped", 0, 7, False))
 
 
@@ -416,12 +416,12 @@ def bad_ctl_kept_last_good(t):
     (s / "ctl.json").write_text(json.dumps({"max": "two"}))
     r = run_loop(t, {"val": count(), "max": 2, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
-    check("壞 ctl 不採用、記 last_warning", (r.returncode, r.stderr, len((s / "laps").read_text().split()),
-                                       "max" in (st["last_warning"] or "")), (0, "", 2, True))
+    check("壞 ctl 不採用、記 ctl_warning", (r.returncode, r.stderr, len((s / "laps").read_text().split()),
+                                       "max" in (st["ctl_warning"] or "")), (0, "", 2, True))
     (s / "ctl.json").write_text("{nope")
     r = run_loop(t, {"val": count(), "max": 1, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
-    check("ctl 不是 JSON", (r.returncode, "JSON" in (st["last_warning"] or "")), (0, True))
+    check("ctl 不是 JSON", (r.returncode, "JSON" in (st["ctl_warning"] or "")), (0, True))
 
 
 @case

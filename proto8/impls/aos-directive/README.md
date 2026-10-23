@@ -1,5 +1,7 @@
 # aos-directive
 
+`aos-directive - 解 JSON 裡的指示詞（$ref、$env）`（NAME，C-54 R1）
+
 **一句話：解 JSON 裡的指示詞——`{"$ref": "檔#/指標"}` 換成那份檔裡那個位置的值、`{"$env": "名字"}` 換成環境變數的值（可帶 `$path`、`$prefix`）。** 一個 lib（`lib/libaos-directive.a`）加一支命令列（`bin/aos-directive`，不對外提供）。
 aos-exec 連這個 lib 解單子、argv 陣列入口與 JSON `.env` key 裡的指示詞（loop／fsm／daemon 的每一拍都經 aos-exec）。全家慣例見 [impls/README.md](../README.md)。
 **10-21 照 `proto8/bin/aos_inst.py` 的 resolve 改版**（10-20 ideas D1、D7、D9～D15；N-45）。

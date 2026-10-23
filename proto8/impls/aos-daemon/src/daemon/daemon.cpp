@@ -5,7 +5,7 @@
 //   起表上少掉的。子 loop 結束後不自動重起（使用者 10-20「照預設」）：停在表上 done；要再起就從 loops 拿掉再放回。
 // phase：running＝還在跑、done＝子 loop 自己結束、stopped＝daemon 收掉它（送了 SIGTERM／SIGKILL；10-23 命名統合前兩個都叫 exited）。
 // 不論為什麼結束都先 finish()（收掉全部子 loop），Loop 再寫好 state。
-// adopt：起來時讀自己上次的 state，phase running、pid＋start_ticks 對得上的子 loop 直接放回表上、不重起（N-17）。
+// adopt：起來時讀自己上次的 state，phase running、pid＋started_at_ticks 對得上的子 loop 直接放回表上、不重起（N-17）。
 #include "daemon/daemon.hpp"
 
 #include "aos/files.hpp"
@@ -124,15 +124,15 @@ void Daemon::adopt() {
             continue;
         }
         Json pid = r.value("pid", Json());
-        Json st = r.value("start_ticks", Json());
+        Json st = r.value("started_at_ticks", Json());
         if (!pid.is_number_integer() || !st.is_number_integer()) {
             continue;
         }
-        std::optional<long long> now = aos::proc_start_ticks((pid_t)pid.get<long long>());
+        std::optional<long long> now = aos::proc_started_at_ticks((pid_t)pid.get<long long>());
         if (now && *now == st.get<long long>()) {
             Child c;
             c.pid = (pid_t)pid.get<long long>();
-            c.start_ticks = st.get<long long>();
+            c.started_at_ticks = st.get<long long>();
             c.own = false;
             table_.push_back({name, c});
         }
@@ -149,7 +149,7 @@ Child* Daemon::find(const std::string& name) {
 }
 
 std::optional<std::string> Daemon::check_ctl(const Json& doc) {
-    if (doc.contains("loops")) {   // ctl 改 loops 撞名＝整份不採用（N-08；原因進 last_warning）
+    if (doc.contains("loops")) {   // ctl 改 loops 撞名＝整份不採用（N-08；原因進 ctl_warning）
         std::optional<std::string> bad = check_loops(doc["loops"]);
         if (bad) {
             return bad;

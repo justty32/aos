@@ -8,7 +8,7 @@
 //   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；照 proto8/bin/aos_loop.py 的 Loop，10-21 傍晚）：
 //                   讀設定（旗標 ＞ 設定檔 ＞ 預設：val／max／interval_ms／ctl／state）、每拍讀 ctl 窗 → tend() → 跑一拍 → 寫 state 窗
 //   write_window    窗的寫法：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
-//   heartbeat       state 的心跳欄位 {pid, start_ticks, boot_id, at}（N-32）
+//   heartbeat       state 的心跳欄位 {pid, started_at_ticks, boot_id, at}（N-32）
 //
 // 規則見 aos-loop/README.md。
 // 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/error.hpp）。
@@ -69,7 +69,7 @@ aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog)
 // 寫不了丟 WriteFailed。
 void write_window(const std::string& path, const Json& doc);
 
-// 心跳欄位 {"pid", "start_ticks"（/proc/<pid>/stat 第 22 欄）, "boot_id", "at"（ISO 8601 UTC 到毫秒，aos::utc_now_ms）}（N-32）。
+// 心跳欄位 {"pid", "started_at_ticks"（/proc/<pid>/stat 第 22 欄）, "boot_id", "at"（ISO 8601 UTC 到毫秒，aos::utc_now_ms）}（N-32）。
 Json heartbeat();
 
 // 每種程式的預設值（同 Python 版 Loop 的類別屬性）。
@@ -87,8 +87,8 @@ struct Defaults {
 //   interval_ms   一拍結束到下一拍開始至少隔幾毫秒（非負整數；沒寫＝Defaults::interval_ms）
 //   ctl, state    兩扇窗的檔名，在 $AOS_STACK 底下（沒寫或 null＝不開；寫了卻沒設 AOS_STACK＝StackMissing）
 // 其他 key 忽略（body、_entry…）。設定壞丟 Error（CfgMissing、CfgBad、StackMissing）。
-// 每拍：有排著的訊號 → 結束 128＋N；讀 ctl（認 paused、stop、max、interval_ms、seq＋子類別多認的）→ tend() →
-// stop 就結束（0）、拍滿就結束（0）→ paused 或還沒到時間就睡一下（最多 1 秒，收到訊號就醒）回頭再看 →
+// 每拍：有排著的訊號 → 結束 128＋N；讀 ctl（認 paused、stopped、max、interval_ms、seq＋子類別多認的）→ tend() →
+// stopped 就結束（0）、拍滿就結束（0）→ paused 或還沒到時間就睡一下（最多 1 秒，收到訊號就醒）回頭再看 →
 // 跑一拍：0＝下一拍、10＝結束（0）、其他非 0＝stderr 一行、以那個碼結束；拍中收到訊號＝收完以 128＋N 結束。
 // state 只在拍與拍之間寫（心跳只在兩拍之間跳）。結束前呼叫 finish()（不論為什麼結束）。呼叫前要先 block_signals()。
 class Loop {
@@ -132,7 +132,7 @@ private:
     long long beats_ = 0;
     Json ctl_now_ = Json::object();
     Json ctl_good_ = Json::object();
-    Json last_warning_;           // null 或字串
+    Json ctl_warning_;           // null 或字串
     int got_ = 0;
 };
 

@@ -50,7 +50,7 @@ int wait_plain(pid_t pid);
 
 // 一個行程的啟動時間（/proc/<pid>/stat 第 22 欄，clock ticks）；pid 0＝自己。讀不到＝nullopt。
 // pid＋啟動時間對得上＝同一個行程（pid 會被重用，啟動時間不會一樣）。
-std::optional<long long> proc_start_ticks(pid_t pid);
+std::optional<long long> proc_started_at_ticks(pid_t pid);
 
 // 開機 id（/proc/sys/kernel/random/boot_id）；讀不到＝nullopt。
 std::optional<std::string> boot_id();

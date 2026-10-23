@@ -7,7 +7,7 @@
 > **現況（2026-10-23）：提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（C++），行為對齊 `proto8/bin` 的 10-22 版。10-23 起整個 `impls/` 進 git；舊快照 `backup/` 10-23 使用者授權刪掉，下面提到的 `backup/…` 都已不在。**
 >
 > **10-23 命名統合**（使用者「都先幫我統合」，對照表見 [thinking/2026-10-23-naming](../thinking/2026-10-23-naming.md)）：使用者看得到的名字全家照同一張表改——
-> loop.json／daemon.json／子項的 `run` → `val`、daemon 的 `children` → `loops`；state 的 `state` 欄 → `phase`、`lap` → `beats`、`started` → `start_ticks`、心跳 `beat` → `at`
+> loop.json／daemon.json／子項的 `run` → `val`、daemon 的 `children` → `loops`；state 的 `state` 欄 → `phase`、`lap` → `beats`、`started` → `started_at_ticks`、心跳 `beat` → `at`
 > （值改 ISO 8601 UTC 到毫秒，例 `2026-10-23T01:58:45.123+00:00`）；daemon 子項的 `exited` 拆成 `done`（自己結束）／`stopped`（daemon 收掉）；
 > fsm trace 的 `ms` → `elapsed_ms`、`at` 也到毫秒；訊息裡的「第 N 圈」→「第 N 拍」；指示詞的 `at` → `$at`；錯誤代號照 C-54 收成 `…Missing`／`…Unknown`／`…Bad`／動作＋`Failed`
 > （`Usage` → `ArgumentsBad`／`FlagUnknown`、設定檔 → `CfgMissing`／`CfgBad`、`WsMissing`、`DotenvBad`、`StateBad`、libaos 的 `CommandMissing`／`CommandBad`…，下面代號表是現行的）；
@@ -147,7 +147,7 @@
 | `CwdMissing`、`OpenFailed`、`CommandMissing`、`CommandBad`、`WaitFailed`、`KillFailed`、`PathConflict`、`PathNotAbsolute` | libaos（`aos_inst_strerror`；aos-exec 跑 inst 單子起不來時放在 `LaunchFailed` 的原因開頭） | 見 [inst](inst/README.md)（`CommandMissing`／`CommandBad` 10-23 統合前叫 CommandNotFound／CommandNotExecutable） |
 | `StackMissing` | aos-loop（定義在 `aos/loop.hpp`）、aos-fsm、aos-daemon | 要 `AOS_STACK` 卻沒設（loop 開了窗、fsm、daemon） |
 | `StateUnknown` | aos-fsm | state 檔裡的狀態不在表上。見 [aos-fsm](aos-fsm/README.md) |
-| （舊 aos-loop 的 `WindowMissing`、`StateWriteFailed`、`Signaled`、`CtlBad`、`CtlMissing`、`CtlReadFailed`；舊 aos-daemon 的 `CommandBad`、`OpUnknown`、`NotFound`、`Exists`、`ScanFailed`、`ReplyFailed`、`PolicyFailed`、`RestartFailed`、`TableWriteFailed`） | 已隨舊版換掉 | ctl 壞不是錯（不採用、記在 state 的 `last_warning`） |
+| （舊 aos-loop 的 `WindowMissing`、`StateWriteFailed`、`Signaled`、`CtlBad`、`CtlMissing`、`CtlReadFailed`；舊 aos-daemon 的 `CommandBad`、`OpUnknown`、`NotFound`、`Exists`、`ScanFailed`、`ReplyFailed`、`PolicyFailed`、`RestartFailed`、`TableWriteFailed`） | 已隨舊版換掉 | ctl 壞不是錯（不採用、記在 state 的 `ctl_warning`） |
 | `SchemaBad` | aos-schema | schema 不合 draft-07、`$ref` 指不到 |
 
 ### 命令列：設定、旗標、三扇門、指示詞

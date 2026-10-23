@@ -4,8 +4,8 @@
 //   config.cpp   Loop 的建構子：讀設定檔（檔#/指標）、旗標蓋上、驗 val／max／interval_ms／ctl／state、算兩扇窗的路徑；
 //                parse_target、loop_cli
 //   loop.cpp     serve／main_loop：每拍讀 ctl → tend → 停不停 → 睡或跑一拍 → 寫 state；end、nap、signal_got、say
-//   window.cpp   窗：read_ctl（N-06～N-08：壞的不採用、維持上一份好的、原因記 last_warning）、write_state、
-//                write_window（先寫 .名字 再改名）、heartbeat（pid、start_ticks、boot_id、at）
+//   window.cpp   窗：read_ctl（N-06～N-08：壞的不採用、維持上一份好的、原因記 ctl_warning）、write_state、
+//                write_window（先寫 .名字 再改名）、heartbeat（pid、started_at_ticks、boot_id、at）
 #pragma once
 
 #include "common/common.hpp"

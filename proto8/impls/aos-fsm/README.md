@@ -1,5 +1,7 @@
 # aos-fsm
 
+`aos-fsm - 照一張狀態表，每叫一次跑「現在狀態」那一格，成功就換到下一個`（NAME，C-54 R1）
+
 **一句話：`aos-fsm [旗標] 設定檔.json`——一拍只跑一格：看 `$AOS_STACK/state.txt` 記的現在狀態，跑那一格，格退 0 才把狀態換成 `next`，然後以格的碼結束。**
 一個 lib（`lib/libaos-fsm.a`，沒有公開標頭）加一支薄薄的命令列（`bin/aos-fsm`）。連 [aos-loop](../aos-loop/README.md) 的公開 API（跑一格＝`run_beat`；它又帶進 aos-exec、inst、aos-util、aos-directive）。全家慣例見 [impls/README.md](../README.md)。
 

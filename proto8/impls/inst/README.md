@@ -1,5 +1,7 @@
 # inst（libaos，C 版 aos_inst）
 
+`libaos - 起一個程式、等它結束、告訴你結果`（NAME，C-54 R1）
+
 **一句話：一個很小的純 C 函式庫，只做一件事——起一個程式、等它結束、告訴你結果。**
 沒有命令列、不讀 JSON，給其他語言用 C FFI 呼叫（Python ctypes、Rust、Go、Zig…）；[aos-exec](../aos-exec/README.md) 遇到 inst 單子時在行程內呼叫它（單子 JSON 的解析在 aos-exec 的 C++ 庫，不在這裡）。
 全家慣例見 [impls/README.md](../README.md)（這個專案是純 C，名字沿用 dcap 的 C 模板：資料夾 `inst`、標頭 `aos.h`、函數 `aos_inst_*`）。

@@ -1,5 +1,7 @@
 # aos-loop
 
+`aos-loop - 以指定設定，定期執行一個 aos-exec 目標`（NAME，C-54 R1）
+
 **一句話：`aos-loop [旗標] loop.json`——每拍跑一次 `val`（`aos-exec -- 目標 參數...`），看它的結束碼決定下一步：0＝下一拍、10＝正常停、其他非 0＝失敗。**
 一個 lib（`lib/libaos-loop.a`，公開標頭 `aos/loop.hpp`）加一支薄薄的命令列（`bin/aos-loop`）。連 [aos-exec](../aos-exec/README.md) 的公開 API（它又帶進 inst、aos-util、aos-directive）；每拍在 fork 出來的子行程裡呼叫 aos-exec 的 `run_cli`。全家慣例見 [impls/README.md](../README.md)。
 
@@ -45,12 +47,12 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔
 
 `"ctl": "ctl.json"`、`"state": "state.json"`＝兩扇窗的檔名，放在 `$AOS_STACK` 底下（寫了卻沒設 `AOS_STACK`＝`StackMissing`；沒寫＝不開、不提醒，N-09）。
 
-- **ctl**（誰都能寫、loop 只讀；每拍讀一次）：認 `paused`（不起下一拍、每秒再看）、`stop`（不起下一拍、以 0 結束）、`max`、`interval_ms`（跑的途中蓋過旗標與 loop.json，後到先贏）、`seq`（state 回音 `ctl_seq`）；
-  其他 key 忽略。讀到壞的（讀不了、不是 JSON 物件、型別不對）整份不採用、維持上一份好的、原因寫進 state 的 `last_warning`（N-08）；檔不在＝還沒人寫，不算問題。
+- **ctl**（誰都能寫、loop 只讀；每拍讀一次）：認 `paused`（不起下一拍、每秒再看）、`stopped`（不起下一拍、以 0 結束；10-23 晚改名，原 `stop`）、`max`、`interval_ms`（跑的途中蓋過旗標與 loop.json，後到先贏）、`seq`（state 回音 `ctl_seq`）；
+  其他 key 忽略。讀到壞的（讀不了、不是 JSON 物件、型別不對）整份不採用、維持上一份好的、原因寫進 state 的 `ctl_warning`（N-08）；檔不在＝還沒人寫，不算問題。
 - **state**（只有自己寫；先寫 `.state.json` 再改名，N-05）：只在拍與拍之間寫（心跳只在兩拍之間跳）：
-  `{"kind": "state", "phase": running／waiting／paused／done／stopped, "beats", "max", "interval_ms", "paused", "ctl_seq", "last_warning", "pid", "start_ticks", "boot_id", "at"}`，
-  `beats`＝跑過幾拍、`start_ticks`＝/proc/<pid>/stat 第 22 欄、`at`＝這份 state 的時間（ISO 8601 UTC 到毫秒，例 `2026-10-23T01:58:45.123+00:00`）；
-  10-23 統合前 `phase` 叫 state、`beats` 叫 lap、`start_ticks` 叫 started、`at` 叫 beat（那時是 epoch 秒）（[10-23 命名統合](../../thinking/2026-10-23-naming.md)）。
+  `{"kind": "state", "phase": running／waiting／paused／done／stopped, "beats", "max", "interval_ms", "paused", "ctl_seq", "ctl_warning", "pid", "started_at_ticks", "boot_id", "at"}`，
+  `beats`＝跑過幾拍、`started_at_ticks`＝/proc/<pid>/stat 第 22 欄、`at`＝這份 state 的時間（ISO 8601 UTC 到毫秒，例 `2026-10-23T01:58:45.123+00:00`）；
+  10-23 統合前 `phase` 叫 state、`beats` 叫 lap、`started_at_ticks` 叫 started、`at` 叫 beat（那時是 epoch 秒）（[10-23 命名統合](../../thinking/2026-10-23-naming.md)）。
   結束時多 `code`（`done`＝自己跑完或失敗、`stopped`＝ctl 叫停、收到訊號或自己的錯）；`max` 不限時是 `null`。欄位與順序同 bin 版。
 
 ### 結束碼
@@ -144,7 +146,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
 A 段從 `proto8/tests/test_exec.py` 移植 aos-loop 的案例（失敗碼、內嵌單子每拍跑、跑滿 max 不寫 stderr、10／7、失敗那行的「誰」＝val 的目標、自己的錯一行），
 B 段是 `max` 沒寫＝不限／0／負的、欄位型別、字串 val 走 aos-exec 的規則（AOS_WS／AOS_STACK／AOS_CF／AOS_CD／cd、JSON 入口、每拍重找入口、入口不在＝那拍碼 1）、
 不寫 stdout、PATH 原樣傳給那拍（§ 24）、單子的 `$env`＋相對 cwd（`$env` 沒設＝那拍 aos-exec 的錯）、逾時＝失敗（143）、被訊號停掉＝128＋N，C 段是訊號（SIGTERM 轉給字串 val、SIGINT 轉給單子、SIGHUP 停掉那拍，都是收完再 128＋N），
-D 段是 10-20 的選填 key（照 `proto8/tests/test_loop.py` 的 Windows 移植：state 欄位與心跳、沒開窗不寫檔、窗沒 AOS_STACK、interval 壞／有睡、ctl stop＋seq、ctl 的 max、壞 ctl、paused 再放開、睡 interval 時收到訊號）與 `$ref` 從設定檔的資料夾算，
+D 段是 10-20 的選填 key（照 `proto8/tests/test_loop.py` 的 Windows 移植：state 欄位與心跳、沒開窗不寫檔、窗沒 AOS_STACK、interval 壞／有睡、ctl stopped＋seq、ctl 的 max、壞 ctl、paused 再放開、睡 interval 時收到訊號）與 `$ref` 從設定檔的資料夾算，
 E 段是 10-21 傍晚的命令列（ideas § 9）：usage 的各種寫法（沒給、多給、不認得、缺值、`--cfg`）、`--max`／`--interval-ms` 不是非負整數＝CfgBad、旗標蓋過 loop.json（`--max`、`--max=`、`--state`、`--ctl` 卻沒 AOS_STACK）、
 設定檔 `檔#/指標`（指不到、`#` 後沒 `/`、不是物件、讀不到）、val 陣列（參數照接、`-` 開頭的目標、失敗那行的「誰」）、`aos-exec loop.json` 當入口（`_entry` 帶 `{"$env": "AOS_CF"}`）。
 demo 的整合測試在 [aos-fsm](../aos-fsm/README.md) 的 `test_demo`。

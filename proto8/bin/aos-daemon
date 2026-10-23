@@ -15,10 +15,10 @@ ctl、state 撞名——檔在 $AOS_STACK 底下時，路徑的第一段就是�
 aos-exec cd 進小格、exec 成 aos-loop，pid 不變；自成一個行程群組）。子 loop 的 stdout 丟掉、stderr 附加到小格的 stderr.txt（N-28 方案 B）。
 每拍（拍與拍之間）：讀 ctl（多認 loops＝我要表上有誰，N-54）→ 收掉表上多出來的（SIGTERM，等 10 秒，再 SIGKILL 整群）、
 看誰結束了（phase done，記 code／signal）、起表上少掉的 → 跑 val（有寫才跑）→ 寫 state（loops 表在裡面）。
-state 的 loops 表每列 {"pid", "start_ticks", "phase", "code", "signal"}：phase＝running／done（子 loop 自己結束）／
+state 的 loops 表每列 {"pid", "started_at_ticks", "phase", "code", "signal"}：phase＝running／done（子 loop 自己結束）／
 stopped（daemon 收掉它：SIGTERM 或 SIGKILL）；收的途中的 stopping 只在內部用、不寫進 state（10-23 統合前兩種都叫 exited）。
 子 loop 結束後不自動重起（使用者 10-20「照預設」）；要再起：從 loops 拿掉再放回，或重起 daemon。
-不論為什麼結束（拍滿 max、ctl stop、val 退 10 或失敗、收到訊號、自己的錯），都先收掉所有子 loop、寫好 state 再結束
+不論為什麼結束（拍滿 max、ctl stopped、val 退 10 或失敗、收到訊號、自己的錯），都先收掉所有子 loop、寫好 state 再結束
 （最後一拍之後才自己結束的子項標 done、記 code，D7）；
 收到 SIGINT／SIGTERM／SIGHUP 以 128＋N 結束（非 0，P-36）。自己的錯退 1，stderr 一行 `aos-daemon: 代號 原因`（代號照 10-23 命名統合
 （thinking/2026-10-23-naming）：同 aos-loop，子項撞名也是 CfgBad，起子項另有 MkdirFailed、WriteFailed、LaunchFailed）。PATH 不動：
@@ -57,8 +57,8 @@ def check_loops(v, taken=()):
 
 
 class Child:
-    def __init__(self, pid, start_ticks, proc=None):
-        self.pid, self.start_ticks, self.proc = pid, start_ticks, proc
+    def __init__(self, pid, started_at_ticks, proc=None):
+        self.pid, self.started_at_ticks, self.proc = pid, started_at_ticks, proc
         self.phase, self.code, self.signal = "running", None, None
 
     def alive(self):
@@ -68,10 +68,10 @@ class Child:
                 return True
             self.code, self.signal = (rc, None) if rc >= 0 else (128 - rc, -rc)
             return False
-        return aos_window.start_ticks(self.pid) == self.start_ticks   # 接回來的不是自己的子行程：看 pid＋啟動時間
+        return aos_window.started_at_ticks(self.pid) == self.started_at_ticks   # 接回來的不是自己的子行程：看 pid＋啟動時間
 
     def row(self):
-        return {"pid": self.pid, "start_ticks": self.start_ticks, "phase": self.phase, "code": self.code,
+        return {"pid": self.pid, "started_at_ticks": self.started_at_ticks, "phase": self.phase, "code": self.code,
                 "signal": self.signal}
 
 
@@ -111,8 +111,8 @@ class Daemon(aos_loop.Loop):
         except (TypeError, OSError, ValueError, KeyError, AttributeError):
             return   # 沒開 state、第一次起來、或舊的讀不了：沒東西可接
         for name, r in rows:
-            pid, st = r.get("pid"), r.get("start_ticks")
-            if isinstance(pid, int) and st is not None and aos_window.start_ticks(pid) == st:
+            pid, st = r.get("pid"), r.get("started_at_ticks")
+            if isinstance(pid, int) and st is not None and aos_window.started_at_ticks(pid) == st:
                 self.table[name] = Child(pid, st)
 
     def info(self):
@@ -154,7 +154,7 @@ class Daemon(aos_loop.Loop):
                                      stdout=subprocess.DEVNULL, stderr=err, start_new_session=True)
         except OSError as e:
             raise aos_beat.StartError("起不了子項 %s：%s" % (name, e), code)
-        return Child(p.pid, aos_window.start_ticks(p.pid), p)
+        return Child(p.pid, aos_window.started_at_ticks(p.pid), p)
 
     def stop(self, names):
         live = [self.table[n] for n in names if self.table[n].phase == "running" and self.table[n].alive()]

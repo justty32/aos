@@ -1,5 +1,7 @@
 # aos-daemon
 
+`aos-daemon - 照一張名單，把幾個 aos-loop 各自起在自己的小格裡、看著它們`（NAME，C-54 R1）
+
 **一句話：`aos-daemon [旗標] daemon.json`——一個開了窗的 aos-loop，外加一張子 loop 的表：照表把子 loop（經 aos-exec）起起來、看著、收掉。**
 一個 lib（`lib/libaos-daemon.a`，沒有公開標頭）加一支薄命令列（`bin/aos-daemon`）。連 [aos-loop](../aos-loop/README.md) 的公開 API
 （骨架 `aos::loop::Loop`；它又帶進 aos-exec、inst、aos-util、aos-directive）。全家慣例見 [impls/README.md](../README.md)。
@@ -48,7 +50,7 @@ daemon.json＝loop.json 的超集（N-28）：
 - 要 `$AOS_STACK`（沒設＝`StackMissing`）。名字不能當資料夾名或會被 aos-exec 誤認（空、`.`、`..`、含 `/`、含 `#`、以 `.` 開頭）＝`CfgBad`。
 - **名字不能跟自己的 ctl／state 撞名**（使用者 10-22，ideas 10-22 § 6；`taken_names`／`check_names`）：會撞的名字＝ctl、state（含旗標 `--ctl`／`--state` 給的）落在 `$AOS_STACK` 底下時
   相對路徑的第一段（`state.json`、`ctl.json`、`"w/c.json"` 的 `w`；`./x/../s.json` 整理成 `s.json`；在 stack 外面的、沒開的不算）。起來時撞＝`CfgBad`、退 1（10-23 統合前叫 Conflict）；
-  ctl 改 `loops` 撞＝那份 ctl 整份不採用、維持上一份好的、原因進 state 的 `last_warning`。
+  ctl 改 `loops` 撞＝那份 ctl 整份不採用、維持上一份好的、原因進 state 的 `ctl_warning`。
 - **起子 loop**（經 aos-exec，同 bin 版 10-21 傍晚）：小格 `$AOS_STACK/<名字>/` mkdir -p；設定補上 `"ctl": "ctl.json"`、`"state": "state.json"`（沒寫才補），
   **一律蓋上 `"_entry": ["aos-loop", {"$env": "AOS_CF"}]`**，相對的 `val`（字串，或陣列的第一個元素）照 daemon 的 cwd 轉成絕對路徑（子 loop 的 cwd 會是小格），
   先寫 `.loop.json` 再改名成 `loop.json`；fork 一個子行程：`setsid` 自成 session、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`（10-23 起帶 `.txt`，原 `stderr`）、`AOS_STACK=小格/`、
@@ -56,17 +58,17 @@ daemon.json＝loop.json 的超集（N-28）：
   設好 `AOS_CF`＝小格的 loop.json，再 **exec 成 PATH 上的 aos-loop**（pid 不變；指到 `#/_entry` 不受 `$AOS_ENTRY` 影響）。
   所以 **PATH 上要有 aos-loop 和 aos-exec**（`_entry` 的 `aos-loop` 照 PATH 找；子項裡要叫的 aos-exec 也是）；沒有＝子 loop 以 1 結束、原因寫在小格的 `stderr.txt`。
 - **每拍**（Loop 讀完 ctl 之後）：期望表＝ctl 的 `loops`（有寫）或 daemon.json 的 → 表上多出來的收掉（SIGTERM 給那支子 loop，等 10 秒，還在就 SIGKILL 整群）並從表上拿掉（小格留著）
-  （`phase: stopped`）→ 看誰自己結束了（`phase: done`，記 `code`／`signal`）→ 起表上少掉的 → 跑 `val`（有寫才跑）→ 寫 state（多一欄 `loops`：`{名字: {"pid", "start_ticks", "phase", "code", "signal"}}`）。
-  `phase`：`running`＝還在跑、`done`＝子 loop 自己結束、`stopped`＝daemon 收掉它（送了 SIGTERM／SIGKILL）（`done`、`stopped` 10-23 統合前都叫 exited；`start_ticks` 統合前叫 started）。
+  （`phase: stopped`）→ 看誰自己結束了（`phase: done`，記 `code`／`signal`）→ 起表上少掉的 → 跑 `val`（有寫才跑）→ 寫 state（多一欄 `loops`：`{名字: {"pid", "started_at_ticks", "phase", "code", "signal"}}`）。
+  `phase`：`running`＝還在跑、`done`＝子 loop 自己結束、`stopped`＝daemon 收掉它（送了 SIGTERM／SIGKILL）（`done`、`stopped` 10-23 統合前都叫 exited；`started_at_ticks` 統合前叫 started）。
 - **子 loop 結束後不自動重起**：停在表上 `done`；要再起就從 ctl 的 `loops` 拿掉再放回，或重起 daemon。
-- **ctl** 多認 `loops`（驗法同上，壞＝整份不採用、記 `last_warning`）。
-- **adopt**：讀上次的 state（沒開 state 窗＝沒東西可接），`phase` 是 `running`、pid＋`start_ticks`（/proc 第 22 欄）對得上的放回表上、不重起；接回來的不是自己的子行程，之後看 /proc 判斷活不活，結束時 `code` 是 null。
+- **ctl** 多認 `loops`（驗法同上，壞＝整份不採用、記 `ctl_warning`）。
+- **adopt**：讀上次的 state（沒開 state 窗＝沒東西可接），`phase` 是 `running`、pid＋`started_at_ticks`（/proc 第 22 欄）對得上的放回表上、不重起；接回來的不是自己的子行程，之後看 /proc 判斷活不活，結束時 `code` 是 null。
 
 ### 結束碼
 
 | 怎麼結束 | 結束碼 | stderr |
 |---|---|---|
-| 跑滿 `max`、ctl `stop`、身體退 10 | 0 | 不寫 |
+| 跑滿 `max`、ctl `stopped`、身體退 10 | 0 | 不寫 |
 | 身體退其他非 0 | 那個碼 | 一行 `aos-daemon: 第 N 拍 誰 失敗，結束碼 C`（10-23 統合前寫「第 N 圈」） |
 | 收到 SIGINT／SIGTERM／SIGHUP | 128＋N | 不寫 |
 | 自己的錯（設定壞、沒 AOS_STACK、子項起不來、state 寫不了） | 1 | 一行 `aos-daemon: 代號 原因` |

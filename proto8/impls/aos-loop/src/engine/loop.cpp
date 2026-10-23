@@ -77,7 +77,7 @@ int Loop::main_loop() {
             say(e.code + " " + e.msg);
             return end(1, "stopped");
         }
-        if (c.value("stop", false)) {
+        if (c.value("stopped", false)) {
             return end(0, "stopped");
         }
         if (mx && beats_ >= *mx) {

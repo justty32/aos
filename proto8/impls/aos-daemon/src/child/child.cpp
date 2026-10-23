@@ -110,13 +110,13 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
     close(err_fd);
     Child c;
     c.pid = pid;
-    c.start_ticks = aos::proc_start_ticks(pid);
+    c.started_at_ticks = aos::proc_started_at_ticks(pid);
     return c;
 }
 
 bool alive(Child& c) {
     if (!c.own) {
-        return c.start_ticks.has_value() && aos::proc_start_ticks(c.pid) == c.start_ticks;
+        return c.started_at_ticks.has_value() && aos::proc_started_at_ticks(c.pid) == c.started_at_ticks;
     }
     if (c.reaped) {
         return false;
@@ -141,9 +141,9 @@ bool alive(Child& c) {
 Json row(const Child& c) {
     Json r = Json::object();
     r["pid"] = (long long)c.pid;
-    r["start_ticks"] = nullptr;
-    if (c.start_ticks) {
-        r["start_ticks"] = *c.start_ticks;
+    r["started_at_ticks"] = nullptr;
+    if (c.started_at_ticks) {
+        r["started_at_ticks"] = *c.started_at_ticks;
     }
     r["phase"] = c.phase;
     r["code"] = c.code;

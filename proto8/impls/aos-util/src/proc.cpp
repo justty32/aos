@@ -101,7 +101,7 @@ int stop(pid_t pid) {
     return reap(pid);
 }
 
-std::optional<long long> proc_start_ticks(pid_t pid) {
+std::optional<long long> proc_started_at_ticks(pid_t pid) {
     std::string path = "/proc/" + std::to_string(pid) + "/stat";
     if (pid == 0) {
         path = "/proc/self/stat";

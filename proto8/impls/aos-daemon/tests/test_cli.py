@@ -140,12 +140,12 @@ class T(unittest.TestCase):
                              "_entry": ["aos-loop", {"$env": "AOS_CF"}]})
         self.assertTrue(until(lambda: json.loads((self.s / "b" / "state.json").read_text())["phase"] == "running"))
         pids = [r["pid"] for r in k.values()]
-        self.ctl({"stop": True, "seq": 1})
+        self.ctl({"stopped": True, "seq": 1})
         out, err = p.communicate(timeout=30)
         st = self.state()
         self.assertEqual((p.returncode, err, st["phase"], st["ctl_seq"]), (0, "", "stopped", 1))
         self.assertEqual({r["phase"] for r in st["loops"].values()}, {"stopped"})   # daemon 收掉的＝stopped（10-23 命名統合）
-        self.assertEqual(list(st["loops"]["a"]), ["pid", "start_ticks", "phase", "code", "signal"])
+        self.assertEqual(list(st["loops"]["a"]), ["pid", "started_at_ticks", "phase", "code", "signal"])
         self.assertEqual([alive(x) for x in pids], [False, False])
 
     def test_done_child_not_restarted(self):
@@ -177,7 +177,7 @@ class T(unittest.TestCase):
         k = until(lambda: (self.s / "b" / "starts").exists() and "a" not in self.kids() and self.kids())
         self.assertEqual(list(k), ["b"])
         self.assertFalse(alive(a_pid))
-        self.ctl({"loops": {"b": self.long()}, "stop": True})
+        self.ctl({"loops": {"b": self.long()}, "stopped": True})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -227,7 +227,7 @@ class T(unittest.TestCase):
                          (os.path.join(cell, "loop.json"), cell, "/_entry"))
         self.assertEqual(json.loads((self.s / "a" / "loop.json").read_text())["val"],
                          [os.path.join(os.path.realpath(self.t), "long")])
-        self.ctl({"stop": True})
+        self.ctl({"stopped": True})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -266,7 +266,7 @@ class T(unittest.TestCase):
         p2 = self.start()
         time.sleep(1)
         self.assertEqual((self.kids()["a"]["pid"], len((self.s / "a" / "starts").read_text().split())), (pid, 1))
-        self.ctl({"stop": True})
+        self.ctl({"stopped": True})
         p2.communicate(timeout=30)
         self.assertEqual((p2.returncode, alive(pid)), (0, False))
 
@@ -301,7 +301,7 @@ class T(unittest.TestCase):
         k2 = until(lambda: self.kids()["a"]["pid"] != old and self.kids())
         self.assertTrue(k2)
         self.assertTrue(until(lambda: len((self.s / "a" / "starts").read_text().split()) == 2))
-        self.ctl({"stop": True})
+        self.ctl({"stopped": True})
         p2.communicate(timeout=30)
         self.assertEqual((p2.returncode, alive(k2["a"]["pid"])), (0, False))
 
@@ -326,17 +326,17 @@ class T(unittest.TestCase):
             self.assertEqual((r.returncode, r.stderr, (self.s / name / "loop.json").exists()), (0, "", True), (win, name))
 
     def test_ctl_loops_clash_not_adopted(self):
-        # ctl 改 loops 撞名＝那份 ctl 整份不採用、維持上一份好的，原因進 state 的 last_warning（N-08）
+        # ctl 改 loops 撞名＝那份 ctl 整份不採用、維持上一份好的，原因進 state 的 ctl_warning（N-08）
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})
         k = until(lambda: (self.s / "a" / "starts").exists() and self.kids())
-        self.ctl({"loops": {"state.json": self.long()}, "stop": True})
-        st = until(lambda: "撞名" in (self.state()["last_warning"] or "") and self.state())
+        self.ctl({"loops": {"state.json": self.long()}, "stopped": True})
+        st = until(lambda: "撞名" in (self.state()["ctl_warning"] or "") and self.state())
         self.assertTrue(st)
         self.assertEqual((list(st["loops"]), st["loops"]["a"]["pid"], alive(k["a"]["pid"])), (["a"], k["a"]["pid"], True))
         self.assertTrue((self.s / "state.json").is_file())
-        self.ctl({"stop": True})
+        self.ctl({"stopped": True})
         out, err = p.communicate(timeout=30)
-        self.assertEqual((p.returncode, err, self.state()["last_warning"]), (0, "", None))
+        self.assertEqual((p.returncode, err, self.state()["ctl_warning"]), (0, "", None))
 
 
     # ───── E. impls 才有的：錯誤代號、子 loop 的心跳是自己的 pid ─────
@@ -358,7 +358,7 @@ class T(unittest.TestCase):
         kb = until(lambda: (self.s / "b" / "starts").exists() and "b" in self.kids() and self.kids())
         sb = until(lambda: json.loads((self.s / "b" / "state.json").read_text()))
         self.assertEqual(sb["pid"], kb["b"]["pid"])
-        self.ctl({"stop": True})
+        self.ctl({"stopped": True})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 

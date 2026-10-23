@@ -122,9 +122,9 @@ class Windows(T):
         self.assertEqual((st["kind"], st["phase"], st["beats"], st["code"], st["max"], st["ctl_seq"]),
                          ("state", "done", 3, 0, 3, None))
         self.assertIsInstance(st["pid"], int)
-        # 10-23 命名統合：phase、beats、start_ticks、at（ISO 8601 UTC 到毫秒）（10-23 統合前叫 state、lap、started、beat）
-        self.assertEqual(list(st), ["kind", "phase", "beats", "max", "interval_ms", "paused", "ctl_seq", "last_warning",
-                                    "code", "pid", "start_ticks", "boot_id", "at"])
+        # 10-23 命名統合：phase、beats、started_at_ticks、at（ISO 8601 UTC 到毫秒）（10-23 統合前叫 state、lap、started、beat）
+        self.assertEqual(list(st), ["kind", "phase", "beats", "max", "interval_ms", "paused", "ctl_seq", "ctl_warning",
+                                    "code", "pid", "started_at_ticks", "boot_id", "at"])
         self.assertRegex(st["at"], r"\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00\Z")
         datetime.datetime.fromisoformat(st["at"])
         self.assertFalse((s / ".state.json").exists())
@@ -152,9 +152,9 @@ class Windows(T):
         self.assertGreaterEqual(time.monotonic() - t0, 0.6)
         self.assertEqual(len((s / "beats").read_text().split()), 3)
 
-    def test_ctl_stop_and_seq(self):
+    def test_ctl_stopped_and_seq(self):
         s = self.stack()
-        (s / "ctl.json").write_text(json.dumps({"stop": True, "seq": 7}))
+        (s / "ctl.json").write_text(json.dumps({"stopped": True, "seq": 7}))
         r = self.run_loop({"val": self.count(), "max": 3, "ctl": "ctl.json", "state": "state.json"},
                           {"AOS_STACK": str(s)})
         st = json.loads((s / "state.json").read_text())
@@ -174,7 +174,7 @@ class Windows(T):
                           {"AOS_STACK": str(s)})
         st = json.loads((s / "state.json").read_text())
         self.assertEqual((r.returncode, r.stderr, len((s / "beats").read_text().split())), (0, "", 2))
-        self.assertIn("max", st["last_warning"])
+        self.assertIn("max", st["ctl_warning"])
 
     def test_ctl_pause_then_resume(self):
         s = self.stack()
@@ -236,7 +236,7 @@ class Cli(Base):
     def test_flag_windows(self):
         s = self.stack()
         self.mark("a")
-        (s / "c.json").write_text(json.dumps({"stop": True, "seq": 3}))
+        (s / "c.json").write_text(json.dumps({"stopped": True, "seq": 3}))
         self.loop({"val": "a", "max": 2})
         r = self.loop_cli("--ctl", "c.json", "--state=st.json", "loop.json", env={"AOS_STACK": str(s)})
         st = json.loads((s / "st.json").read_text())

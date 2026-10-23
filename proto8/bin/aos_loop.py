@@ -16,12 +16,12 @@
     ctl, state    兩扇窗的檔名，在 $AOS_STACK 底下（N-09、N-13）；沒寫＝不開、不提醒；寫了卻沒設 AOS_STACK＝退 1
 其他 key 忽略（body、_entry…）。跑的途中 ctl 蓋過上面這些（每拍讀一次、後到先贏）。
 
-每拍：看有沒有收到訊號 → 讀 ctl（N-06～N-08；能蓋 max、interval_ms，認 paused、stop、seq）→ tend()（子類別的事）
-→ stop 就結束、拍滿 max 就結束 → paused 或還沒到下一拍的時間就睡一下（最多 1 秒，期間每 50 毫秒看一次訊號）、回頭再看
+每拍：看有沒有收到訊號 → 讀 ctl（N-06～N-08；能蓋 max、interval_ms，認 paused、stopped、seq）→ tend()（子類別的事）
+→ stopped 就結束、拍滿 max 就結束 → paused 或還沒到下一拍的時間就睡一下（最多 1 秒，期間每 50 毫秒看一次訊號）、回頭再看
 → 跑一拍（aos_beat.run）。拍的結束碼 0＝下一拍、10＝要求停（以 0 結束）、其他非 0＝失敗（stderr 一行、以原碼結束）。
 state 只在拍與拍之間寫（心跳只在兩拍之間跳，使用者 10-20「照預設」）：每拍寫一次、結束時寫最後一份。
-state 的形狀：{"kind": "state", "phase", "beats", "max", "interval_ms", "paused", "ctl_seq", "last_warning",
-[子類別的 info()，daemon 是 "loops"], [結束時 "code"], "pid", "start_ticks", "boot_id", "at"}（10-23 命名統合）。
+state 的形狀：{"kind": "state", "phase", "beats", "max", "interval_ms", "paused", "ctl_seq", "ctl_warning",
+[子類別的 info()，daemon 是 "loops"], [結束時 "code"], "pid", "started_at_ticks", "boot_id", "at"}（10-23 命名統合）。
 收到 SIGINT／SIGTERM／SIGHUP：轉給正在跑的那拍、等它結束、不起下一拍，以 128＋N 結束（P-36）。
 結束前呼叫 finish()（子類別收自己起的東西）。自己的錯退 1，stderr 一行「程式名: 代號 原因」（代號照 10-23 命名統合
 （thinking/2026-10-23-naming）：ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、StackMissing、LaunchFailed；
@@ -128,7 +128,7 @@ class Loop:
         c = self.ctl_now
         doc = {"kind": "state", "phase": phase, "beats": self.beats,
                "max": c.get("max", self.max), "interval_ms": c.get("interval_ms", self.interval),
-               "paused": c.get("paused", False), "ctl_seq": c.get("seq"), "last_warning": self.ctl.warning}
+               "paused": c.get("paused", False), "ctl_seq": c.get("seq"), "ctl_warning": self.ctl.warning}
         doc.update(self.info())
         doc.update(more)
         doc.update(aos_window.heartbeat())
@@ -160,7 +160,7 @@ class Loop:
             except aos_beat.StartError as e:
                 self.say("%s %s" % (e.code, e))
                 return self.end(1, "stopped")
-            if c.get("stop"):
+            if c.get("stopped"):
                 return self.end(0, "stopped")
             if mx is not None and self.beats >= mx:
                 return self.end(0, "done")

@@ -1,5 +1,7 @@
 # aos-schema
 
+`aos-schema - 拿一份 JSON Schema（draft-07）檢查一份 JSON，說出哪一格、哪裡不對`（NAME，C-54 R1）
+
 **一句話：拿一份 JSON Schema（draft-07）去檢查一份 JSON，告訴你「哪一格、哪裡不對」——有 C++ 函式庫，也有命令列。**
 全家慣例（stdin、錯誤格式、建置）見 [impls/README.md](../README.md)。
 

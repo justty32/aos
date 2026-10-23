@@ -7,7 +7,7 @@
 照 proto8/demo/run.sh 的 daemon 那段：暫存工作區、bob/new、ann/new 各放一題、cd 進去 `aos-exec <demo/daemon>`。
 impls 線：PATH 最前面放 impls 的 aos-exec、aos-loop、aos-fsm、aos-daemon 的 bin/（不放 proto8/bin）；bin 線：PATH 最前面放 proto8/bin。
 兩條線各跑一次，比：結束碼、stderr、工作區裡（含 .stack/ stack 整棵樹）有哪些檔、每個檔的內容。
-會變的東西先抹掉：trace.jsonl 每行的 at、elapsed_ms；state.json 的 pid、start_ticks、boot_id、at（含 loops 每列的 pid、start_ticks）；
+會變的東西先抹掉：trace.jsonl 每行的 at、elapsed_ms；state.json 的 pid、started_at_ticks、boot_id、at（含 loops 每列的 pid、started_at_ticks）；
 stamp 印的「# <UTC 時間>」那行。要先建好 impls 的四支。
 """
 import json
@@ -49,10 +49,10 @@ def normalize(rel, text):
         return out
     if rel.endswith("state.json"):
         d = json.loads(text)
-        for k in ("pid", "start_ticks", "boot_id", "at"):
+        for k in ("pid", "started_at_ticks", "boot_id", "at"):
             d[k] = k.upper()
         for r in d.get("loops", {}).values():
-            r["pid"] = r["start_ticks"] = "X"
+            r["pid"] = r["started_at_ticks"] = "X"
         return d
     return re.sub(r"^# \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$", "# TIME", text, flags=re.M)
 
