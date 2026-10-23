@@ -3,10 +3,7 @@ argv[0] 帶 / 又 exec 不了＝前面插 aos-exec（入口 argv 陣列、單子
 import json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-BIN = ROOT / "bin"
-sys.path.insert(0, str(BIN))
-import aos_inst  # noqa: E402
+from aos_bins import tool, path_with  # noqa: E402  四支 C++ 在 impls/<名>/bin/（10-23 起 Python 版刪了）
 import own_error  # noqa: E402
 own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
@@ -14,13 +11,13 @@ own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢�
 def env_of(extra=None, bin_on_path=True):
     e = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
     if bin_on_path:   # aos 的程式不動 PATH：D3 靠的是呼叫者放進 PATH 的 aos-exec
-        e["PATH"] = str(BIN) + os.pathsep + e.get("PATH", "")
+        e["PATH"] = path_with(e.get("PATH", ""))
     e.update(extra or {})
     return e
 
 
 def run(prog, *args, env=None, cwd=None, bin_on_path=True):
-    r = subprocess.run([str(BIN / prog), *map(str, args)], capture_output=True, text=True,
+    r = subprocess.run([tool(prog), *map(str, args)], capture_output=True, text=True,
                        env=env_of(env, bin_on_path), cwd=cwd)
     return r.returncode, r.stdout, r.stderr
 
@@ -70,13 +67,11 @@ class T(unittest.TestCase):
         # 原本 aos-inst 命令列（10-22 刪了，跟 C++ 版一樣是庫）：改經 aos-exec 跑同一張單子
         r = run("aos-exec", "--ws", self.ws, put(self.t / "q" / "s.json", {"argv": ["sh", "-c", "exit 0"],
                                                             "stdin": {"$ref": "sub/outer.json", "$at": "/argv/0"}}))
-        self.assertEqual(r[0], 1)   # stdin "echo" 這個檔不在，證明 $at 取到 "echo"
-        self.assertIn("echo", r[2])
-        # 整張單子就是一個 $ref：aos-exec 挑入口時不解 $ref（沒 argv 的物件＝資料夾，同 C++ 版），所以改用庫驗；
-        # 經 aos-exec 要寫成有 argv 的單子，或直接跑 outer.json 本身
-        w = put(self.t / "q" / "w.json", {"$ref": "sub/outer.json"})
-        res = aos_inst.parse(aos_inst.load(str(w)), ref_base=str(w.parent))
-        self.assertEqual(res["argv"], ["echo", "hi"])
+        self.assertEqual(r[0], 1)   # stdin "echo" 這個檔不在（$at 取到 "echo"）
+        # 10-23 起照 C++ 版的字面：libaos 的 OpenFailed 不帶檔名（Python 版訊息裡有 "echo"；使用者 10-23 說這個差別照現狀留，Python 版刪了就照 C++）
+        self.assertIn("單子跑不起來：OpenFailed 串流開不了", r[2])
+        # 整張單子就是一個 $ref：aos-exec 挑入口時不解 $ref（沒 argv 的物件＝資料夾），經 aos-exec 要寫成有 argv 的單子，
+        # 或直接跑 outer.json 本身（原本另用 Python 庫 aos_inst.parse 驗整張是 $ref 的單子，10-23 Python 版刪了、拿掉）
         r = run("aos-exec", "--ws", self.ws, self.t / "q" / "sub" / "outer.json")
         self.assertEqual(r[:2], (0, "hi\n"), r[2])
 
@@ -187,10 +182,11 @@ class T(unittest.TestCase):
         self.assertEqual(r[:2], (0, "stamp ws=%s cf=%s arg=a\n" % (self.ws, stamp)), r[2])
         s = put(self.t / "q" / "s.json", {"argv": ["./tools/cfg.json#/t/u"], "cwd": str(self.t / "q")})
         self.assertEqual(run("aos-exec", "--ws", self.ws, s)[:2], (0, "ptr\n"))   # 單子檔經 aos-exec（原 aos-inst 命令列）
-        res = aos_inst.parse({"argv": ["tools/stamp"]})
-        self.assertEqual(aos_inst.argv0(res["argv"], str(self.t / "q")), ["aos-exec", "tools/stamp"])
-        self.assertEqual(aos_inst.argv0(["tools/x.sh"], str(self.t / "q")), ["tools/x.sh"])
-        self.assertEqual(aos_inst.argv0(["x.sh"], str(self.t / "q" / "tools")), ["x.sh"])
+        # 原本這裡直接叫 Python 庫的 aos_inst.argv0（10-23 Python 版刪了），改經 aos-exec 看行為：
+        # +x 檔帶 / 照舊直接 exec（AOS_CF 還是外層的單子檔）；沒 / ＝照 PATH 找，不看 cwd
+        r = self.entry({"argv": ["tools/x.sh"], "cwd": str(self.t / "q")})
+        self.assertEqual(r[:2], (0, "x cf=%s\n" % (self.t / "q" / "_entry.json")), r[2])
+        self.err(self.entry({"argv": ["x.sh"], "cwd": str(self.t / "q" / "tools")}), "單子跑不起來")
 
     def test_d3_loop_and_fsm_inline(self):
         self.tools()

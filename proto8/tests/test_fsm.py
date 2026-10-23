@@ -3,14 +3,13 @@ from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
-ROOT = Path(__file__).resolve().parent.parent
-BIN = ROOT / "bin"
-FSM = str(BIN / "aos-fsm")
+from aos_bins import ROOT, tool, path_with  # noqa: E402  四支 C++ 在 impls/<名>/bin/、aos-tick 在 proto8/bin/（10-23）
+FSM = tool("aos-fsm")
 
 
 def run(*args, stack=None, env=None, **kw):
     e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY", "AOS_STACK")}
-    e["PATH"] = str(BIN) + os.pathsep + e["PATH"]
+    e["PATH"] = path_with(e["PATH"])
     if stack is not None:
         e["AOS_STACK"] = str(stack)
     e.update(env or {})
@@ -161,10 +160,10 @@ class T(unittest.TestCase):
                        _entry=["aos-fsm", {"$env": "AOS_CF"}])
         other = self.tmp / "elsewhere"; other.mkdir()
         e = {"AOS_WS": str(self.tmp)}
-        self.assertEqual(run(str(BIN / "aos-exec"), f, stack=self.stack, cwd=str(other), env=e).returncode, 0)
+        self.assertEqual(run(tool("aos-exec"), f, stack=self.stack, cwd=str(other), env=e).returncode, 0)
         self.assertEqual(self.state(), "b\n")
         self.assertTrue((self.stack / "ran").exists())
-        r = run(str(BIN / "aos-exec"), f, stack=self.stack, cwd=str(other), env=e)
+        r = run(tool("aos-exec"), f, stack=self.stack, cwd=str(other), env=e)
         self.assertEqual(r.returncode, 10, r.stderr)
         self.assertEqual([(t["state"], t["code"]) for t in self.trace()], [("a", 0), ("b", 10)])
 
@@ -290,14 +289,14 @@ class T(unittest.TestCase):
         # ideas § 24：aos 的程式都不動 PATH，字串格看到的 PATH 跟 fsm 收到的一樣（不加任何 bin）
         self.cell("a", 'echo "$PATH" > "$AOS_STACK/path"\n')
         self.table({"a": {"val": "a", "next": "a"}})
-        path = str(BIN) + ":/usr/bin:/bin"
+        path = path_with("/usr/bin:/bin")
         self.assertEqual(self.beat(env={"PATH": path}).returncode, 0)
         self.assertEqual((self.stack / "path").read_text().strip(), path)
 
     # 訊號（ideas § 24；移植自 proto8/impls/aos-fsm/tests/test_cli.py 的 C 段）
     def start(self):
         e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY", "AOS_STACK")}
-        e["PATH"] = str(BIN) + os.pathsep + e["PATH"]
+        e["PATH"] = path_with(e["PATH"])
         e["AOS_STACK"] = str(self.stack)
         return subprocess.Popen([FSM, str(self.tmp / "fsm.json")], cwd=str(self.tmp), env=e,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

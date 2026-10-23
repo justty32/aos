@@ -241,7 +241,7 @@ JSON 物件（`.env` key、一路往下、`AOS_CO`、`檔#/指標` 算進 `AOS_C
 旗標重複給與 `=V` 錯、跳過的行照驗、轉向不吃旗標、JSON `.env` key 格式不變；對照 `proto8/tests/test_exec_dotenv.py`）。
 測試的 `raw()` 把 aos-exec 的 `bin/` 放 PATH 最前面——aos-exec 不動 PATH（§ 24），入口裡要叫 `aos-exec` 由呼叫者放；`path_passed_as_is` 驗 PATH 原樣傳下去。
 
-**拿 `proto8/tests` 對照**（手動，不進 ctest）：把 `proto8/tests` 複製到暫存資料夾，旁邊的 `bin/` 換成指到 impls 四支（aos-exec、aos-loop、aos-fsm、aos-daemon）的捷徑（impls 沒有的 `aos-tick` 與 `aos_*.py` 指到 `proto8/bin` 的；`proto8/demo` 也放一份捷徑在旁邊），
+**拿 `proto8/tests` 對照**（10-23 起不用再對照：Python 版刪了，`proto8/tests` 直接跑這支與 aos-loop、aos-fsm、aos-daemon 的 `bin/`〔`proto8/tests/aos_bins.py`〕，那兩個字面差別的測試改成照這裡的字面，全過；以下是 10-23 前的做法與結果）（手動，不進 ctest）：把 `proto8/tests` 複製到暫存資料夾，旁邊的 `bin/` 換成指到 impls 四支（aos-exec、aos-loop、aos-fsm、aos-daemon）的捷徑（impls 沒有的 `aos-tick` 與 `aos_*.py` 指到 `proto8/bin` 的；`proto8/demo` 也放一份捷徑在旁邊），
 直接跑（10-23 起 bin 也帶代號，不用再抹；`tests/own_error.py` 會逐行對代號，impls 的代號也全對得上）：
 10-23 全套只剩 2 個不過（10-23 命名統合後再跑一次，245 個，還是這 2 個；設定檔讀不到那行的原因照 Python OSError 寫成 `[Errno 2] …`，`own_error.py` 靠它分 CfgMissing），都是 inst 單子錯誤訊息的字面（`test_inst` 要原因開頭是 key 名、這裡是「單子的 key…」；`test_directive_argv` 的 D1 要訊息裡有檔名、
 這裡 libaos 的 `OpenFailed` 不帶檔名），行為一樣；照現狀不改（10-23 使用者）。裝了 python-dotenv（`pip install --target` 到暫存資料夾、`PYTHONPATH` 指過去）時 `test_exec_dotenv` 的逐案對照也過。

@@ -7,15 +7,14 @@ from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
-ROOT = Path(__file__).resolve().parent.parent
-EXEC = str(ROOT / "bin" / "aos-exec")
-BIN_DIR = str(ROOT / "bin")
+from aos_bins import ROOT, tool, path_with  # noqa: E402  四支 C++ 在 impls/<名>/bin/、aos-tick 在 proto8/bin/（10-23）
+EXEC = tool("aos-exec")
 
 
 def env_of(extra=None):
     e = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    # aos 的程式都不動 PATH（ideas § 24）：入口裡叫 aos-exec，由呼叫者把 bin/ 放 PATH 最前面（env 可蓋掉）
-    e["PATH"] = os.pathsep.join([BIN_DIR] + [p for p in e.get("PATH", "").split(os.pathsep) if p != BIN_DIR])
+    # aos 的程式都不動 PATH（ideas § 24）：入口裡叫 aos-exec，由呼叫者把各支的 bin/ 放 PATH 最前面（env 可蓋掉）
+    e["PATH"] = path_with(e.get("PATH", ""))
     e.update(extra or {})
     return e
 
@@ -123,7 +122,7 @@ class T(unittest.TestCase):
         st.mkdir()
         Path(st, "state.txt").mkdir()   # fsm 的 state.txt 在但讀不了（是資料夾）
         put(Path(d, "ok.json"), {"start": "a", "states": {"a": {"val": "p", "next": "a"}}})
-        loop, fsm, daemon = (str(ROOT / "bin" / n) for n in ("aos-loop", "aos-fsm", "aos-daemon"))
+        loop, fsm, daemon = (tool(n) for n in ("aos-loop", "aos-fsm", "aos-daemon"))
         e = env_of({"AOS_STACK": str(st)})
         for argv, head in (([EXEC, "--nope", d], "aos-exec: FlagUnknown usage: "),
                            ([EXEC, "--ws"], "aos-exec: ArgumentsBad usage: "),
@@ -288,7 +287,7 @@ class T(unittest.TestCase):
     def test_path_passed_as_is(self):
         # ideas § 24：aos 的程式都不動 PATH，原樣傳下去（不加自己的 bin）
         d = prog(self.t, "p", 'echo "$PATH"\n')
-        for path in (BIN_DIR + ":/usr/bin:/bin", "/usr/bin:/bin"):
+        for path in (path_with("/usr/bin:/bin"), "/usr/bin:/bin"):
             self.assertEqual(run("--ws", self.t, d, env={"PATH": path})[1].strip(), path)
 
     def test_entry_dir_beats_json(self):
@@ -297,7 +296,7 @@ class T(unittest.TestCase):
         put(Path(self.t, "p", "_entry.json"), ["echo", "no"])
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "p")))[:2], (0, "dir\n"))
 
-    # ───── C. inst 單子（行程內 aos_inst.run，以子程式的碼結束）─────
+    # ───── C. inst 單子（行程內交給 libaos，以子程式的碼結束）─────
 
     def test_inst_exit_code(self):
         self.assertEqual(self.json_entry({"argv": ["sh", "-c", "exit 3"]})[:3:2], (3, None))

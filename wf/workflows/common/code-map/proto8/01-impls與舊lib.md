@@ -4,7 +4,7 @@
 
 ### `proto8/impls/`（使用者的 C／C++ 實作；10-23 起進 git；舊快照 `backup/` 10-23 已刪）
 
-總入口與逐專案說明在 `proto8/impls/README.md`（10-23 起進 git；各專案的 `build/`、`bin/`、`lib/` 由各自的 `.gitignore` 擋）。10-21 晚對齊 bin 版 10-21 傍晚、10-23 再對齊 bin 10-22：提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（`inst` C lib、`aos-util`、`aos-directive`、`aos-schema` 是庫）。
+總入口與逐專案說明在 `proto8/impls/README.md`（10-23 起進 git；各專案的 `build/`、`bin/`、`lib/` 由各自的 `.gitignore` 擋）。10-21 晚對齊 bin 版 10-21 傍晚、10-23 再對齊 bin 10-22：提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（`inst` C lib、`aos-util`、`aos-directive`、`aos-schema` 是庫）。**10-23 起是唯一實作**（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也改 C++、tick 先留 Python；bin 版這四支刪了，只剩 `proto8/bin/aos-tick`）；`proto8/tests` 與 `proto8/demo/run.sh` 都跑這四支的 `bin/`（要先建，見 [testing](../../../testing.md)）。下表「對應 bin 的 …」指 10-23 前的 Python 版。
 
 | 哪裡 | 負責什麼 |
 |---|---|
@@ -28,4 +28,4 @@ aos-loop 的骨架是公開的 `aos::loop::Loop`（`src/engine/`），aos-daemon
 
 ### 舊 lib（10-16 那套，已刪）
 
-`proto8/lib/`（inst、loop、daemon、fsm、agent 格庫、兩種 kernel、tasks、tick，27 支模組＋說明＋12 個測試檔 169 個）與舊 `bin/aos`、六組舊 demo（daemon、fsm、paint、kernels、tasks、tick），10-19 刪進 git 歷史；要找回：`git show 5546be29:proto8/lib/README.md`（逐檔表）。daemon 10-20 已照新做法重寫（上面 `aos-daemon`）；kernel、tasks、tick、腦的工具呼叫現無實作，待照新做法重寫（[NORMS 待定](../../../../../proto8/NORMS/08-待定.md)）。
+`proto8/lib/`（inst、loop、daemon、fsm、agent 格庫、兩種 kernel、tasks、tick，27 支模組＋說明＋12 個測試檔 169 個）與舊 `bin/aos`、六組舊 demo（daemon、fsm、paint、kernels、tasks、tick），10-19 刪進 git 歷史；要找回：`git show 5546be29:proto8/lib/README.md`（逐檔表）。daemon 10-20 已照新做法重寫（10-23 起只剩上面 impls 的 `aos-daemon`）；kernel、tasks、tick、腦的工具呼叫現無實作，待照新做法重寫（[NORMS 待定](../../../../../proto8/NORMS/08-待定.md)）。

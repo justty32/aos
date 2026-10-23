@@ -9,6 +9,8 @@
 > **10-23 壓測後**（使用者「都修都處理」、修到一半「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，[thinking](../thinking/2026-10-23-daemon-bench.md)；**只改這一家，`proto8/bin` 不跟**）：aos-daemon 收子項不等（送 SIGTERM 後照常巡、那列 `stopping`、滿 10 秒才 SIGKILL），
 > 表用雜湊找名字、沒有 `run` 時一圈一份 state（不寫 `running`）、起子項前先寫一份 state、小格只建一層；aos-loop 的 `$AOS_STACK` 不在＝`WriteFailed`、不自己建。1 萬個子 loop 一圈 483 → 205 ms、daemon CPU 86 → 6 %。
 >
+> **10-23 起 impls 是唯一實作**（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；頂層問 fsm 和 tick，使用者選「fsm 也改用 C++、tick 先留 Python」）：`proto8/bin` 的 Python 版 aos-exec、aos-loop、aos-fsm、aos-daemon 與它們的庫刪了，只剩 `proto8/bin/aos-tick`。`proto8/tests`（`tests/aos_bins.py`）與 `proto8/demo/run.sh` 改成直接跑這四支的 `bin/`（要先照下面「建置」建好）；原本那兩個 inst 錯誤字面差別的測試改成照這裡的字面，`test_demo` 不再跟 bin 線比。下面說「對齊 bin」「跟 Python 版的差異」的都是 10-23 前的事。
+>
 > **10-23 命名統合**（使用者「都先幫我統合」，對照表見 [thinking/2026-10-23-naming](../thinking/2026-10-23-naming.md)）：使用者看得到的名字全家照同一張表改——
 > loop.json／daemon.json／子項的 `run` → `val`、daemon 的 `children` → `loops`；state 的 `state` 欄 → `phase`、`lap` → `beats`、`started` → `started_at_ticks`、心跳 `beat` → `at`
 > （值改 ISO 8601 UTC 到毫秒，例 `2026-10-23T01:58:45.123+00:00`）；daemon 子項的 `exited` 拆成 `done`（自己結束）／`stopped`（daemon 收掉）；
@@ -220,7 +222,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
 | 檔 | 做什麼 | ctest 名 | 誰有 |
 |---|---|---|---|
 | `tests/test_cli.py` | 命令列黑箱：餵 stdin 或設定檔、看退出碼與輸出 | `test_cli` | aos-util、aos-directive（57 組）、aos-schema（12 案）、aos-exec（56 組）、aos-loop（40 組）、aos-fsm（29 組）、aos-daemon（20 案，unittest） |
-| `tests/test_demo.py` | 整合：proto8/demo 在 impls 線跑，跟 proto8/bin 線逐檔比 | `test_demo` | aos-fsm（agent-bob、agent-ann）、aos-daemon（demo/daemon） |
+| `tests/test_demo.py` | 整合：proto8/demo 在 impls 線跑，看結束碼 0、stderr 空、答案寫出來（10-23 前另跟 proto8/bin 線逐檔比，Python 版刪了就拿掉） | `test_demo` | aos-fsm（agent-bob、agent-ann）、aos-daemon（demo/daemon） |
 | `tests/test_lib.*` | 函式庫 | `test_lib`、`test_lib_*` | inst（C；另一份 `test_lib_nopidfd` 走輪詢退路）、aos-schema、aos-util（7 條，含 10-23 的代號 `cli`） |
 | `tests/test_ffi.py` | Python ctypes 載 `.so` | `test_ffi` | inst |
 

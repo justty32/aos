@@ -5,15 +5,14 @@ from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
-ROOT = Path(__file__).resolve().parent.parent
-BIN = ROOT / "bin"
-LOOP = str(BIN / "aos-loop")
+from aos_bins import ROOT, tool, path_with  # noqa: E402  四支 C++ 在 impls/<名>/bin/、aos-tick 在 proto8/bin/（10-23）
+LOOP = tool("aos-loop")
 
 
 def env_of(extra=None):
     # aos 的程式都不動 PATH：字串 run 要叫的 aos-exec 由呼叫者放進 PATH
     e = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    e["PATH"] = str(BIN) + os.pathsep + e.get("PATH", "")
+    e["PATH"] = path_with(e.get("PATH", ""))
     e.update(extra or {})
     return e
 
@@ -52,7 +51,7 @@ class T(Base):
         # ideas § 24：字串 run 那次看到的 PATH 跟 loop 收到的一樣（不加任何 bin）
         self.prog("cell", 'echo "$PATH" > "$AOS_STACK/path"\n')
         self.loop({"run": "cell", "max": 1})
-        path = str(BIN) + ":/usr/bin:/bin"
+        path = path_with("/usr/bin:/bin")
         r = subprocess.run([LOOP, "loop.json"], cwd=str(self.t), env=env_of({"PATH": path}), capture_output=True,
                            text=True)
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -325,7 +324,7 @@ class Cli(Base):
             "body": {"argv": ["sh", "-c", 'echo "x $1" >> "$AOS_STACK/runs"', "sh"]}}))
         ws = self.t / "ws"
         ws.mkdir()
-        r = subprocess.run([str(BIN / "aos-exec"), "--ws", str(ws), str(d / "loop.json")], cwd=str(self.t),
+        r = subprocess.run([tool("aos-exec"), "--ws", str(ws), str(d / "loop.json")], cwd=str(self.t),
                            env=env_of(), capture_output=True, text=True, timeout=30)
         self.assertEqual((r.returncode, r.stderr, self.runs(ws / ".stack")), (0, "", ["x q"] * 2))
 
@@ -336,7 +335,7 @@ class Cli(Base):
             "body": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/runs"']}}}}))
         ws = self.t / "ws"
         ws.mkdir()
-        r = subprocess.run([str(BIN / "aos-exec"), "--ws", str(ws), str(self.t / "big.json") + "#/loops/a"],
+        r = subprocess.run([tool("aos-exec"), "--ws", str(ws), str(self.t / "big.json") + "#/loops/a"],
                            cwd=str(self.t), env=env_of(), capture_output=True, text=True, timeout=30)
         self.assertEqual((r.returncode, r.stderr, len(self.runs(ws / ".stack"))), (0, "", 3))
 

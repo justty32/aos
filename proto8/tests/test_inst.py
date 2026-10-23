@@ -1,22 +1,19 @@
-"""inst 單子（aos_inst 庫）。10-22 使用者「aos-inst指令可以刪掉了，跟C++版一樣做成lib就好」：aos-inst 命令列刪了，
-原本叫 aos-inst 的案例改成經 aos-exec 跑同一張單子（沒 +x 的 JSON 檔＝inst 單子入口，行程內 aos_inst.run）；
+"""inst 單子。10-22 使用者「aos-inst指令可以刪掉了，跟C++版一樣做成lib就好」：aos-inst 命令列刪了，
+原本叫 aos-inst 的案例改成經 aos-exec 跑同一張單子（沒 +x 的 JSON 檔＝inst 單子入口，行程內交給 libaos）；
+10-23 Python 版刪了（使用者「python版本可以刪掉了」）：原本直接叫 Python 庫 aos_inst.run 的案例改成經 aos-exec 看行為，只測庫回傳形狀的拿掉；
 單子的錯＝aos-exec 退 1、一行「aos-exec: 代號 單子跑不起來：…」（10-23 起帶代號，own_error 對過再拿掉）（JSON 壞、檔不在、不是單子則是入口的錯）。"""
 import json, os, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
-ROOT = Path(__file__).resolve().parent.parent
-BIN = ROOT / "bin"
-EXEC = str(BIN / "aos-exec")
-sys.path.insert(0, str(BIN))
-import aos_inst  # noqa: E402
+from aos_bins import EXEC, path_with  # noqa: E402  四支 C++ 在 impls/<名>/bin/（10-23）
 
 
 def run(*args, env=None, **kw):
-    # aos 的程式都不動 PATH（ideas § 24）：入口裡叫 aos-exec，由呼叫者把 bin/ 放進 PATH
+    # aos 的程式都不動 PATH（ideas § 24）：入口裡叫 aos-exec，由呼叫者把各支的 bin/ 放進 PATH
     e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY", "AOS_STACK")}
-    e["PATH"] = str(BIN) + os.pathsep + e.get("PATH", "")
+    e["PATH"] = path_with(e.get("PATH", ""))
     e.update(env or {})
     return subprocess.run(args, capture_output=True, text=True, env=e, **kw)
 
@@ -73,9 +70,11 @@ class T(unittest.TestCase):
         for k, v in (("timeout_ms", 0), ("grace_ms", -1), ("envs", {"A": 1}), ("cwd", 3), ("stdout_append", "y")):
             r = self.inst(self.single({"argv": ["true"], k: v}, k + ".json"))
             self.assertEqual(r.returncode, 1, k)
-            self.assertTrue(r.stderr.startswith("aos-exec: 單子跑不起來：%s" % k), (k, r.stderr))
-        with self.assertRaises(aos_inst.InstError):   # 庫直接叫：錯丟 InstError
-            aos_inst.run({"argv": []})
+            # 10-23 起照 C++ 版的字面「單子的 <key> …」（Python 版是 key 名開頭；使用者 10-23 說兩版這個差別照現狀留，Python 版刪了就照 C++）
+            self.assertTrue(r.stderr.startswith("aos-exec: 單子跑不起來：單子的 %s " % k), (k, r.stderr))
+        r = self.inst(self.single({"argv": []}, "empty.json"))   # 原本直接叫庫（丟 InstError），10-23 改經 aos-exec
+        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertEqual(len(r.stderr.strip().splitlines()), 1, r.stderr)
 
     def test_bad_json_and_missing_file(self):
         p = self.tmp / "bad.json"; p.write_text("{nope")
@@ -83,25 +82,16 @@ class T(unittest.TestCase):
         r = self.inst(str(self.tmp / "absent.json"))
         self.assertEqual(r.returncode, 1)
         self.assertIn("aos-exec:", r.stderr)
-        # 直接叫庫的 run(FILE)：單子檔本身不在＝EntryMissing、不是 JSON＝EntryBad（10-23 命名統合，統合前叫 ReadFailed／JsonSyntax）
-        with self.assertRaises(aos_inst.InstError) as c:
-            aos_inst.run(str(p))
-        self.assertEqual(c.exception.code, "EntryBad")
-        with self.assertRaises(aos_inst.InstError) as c:
-            aos_inst.run(str(self.tmp / "absent.json"))
-        self.assertEqual(c.exception.code, "EntryMissing")
+        # 單子檔本身不在＝EntryMissing、不是 JSON＝EntryBad（10-23 命名統合，統合前叫 ReadFailed／JsonSyntax；
+        # 原本直接叫 Python 庫的 run(FILE) 看例外的代號，10-23 改經 aos-exec 看錯誤一行的代號）
+        self.assertTrue(self.inst(str(p)).raw_stderr.startswith("aos-exec: EntryBad "))
+        self.assertTrue(r.raw_stderr.startswith("aos-exec: EntryMissing "), r.raw_stderr)
 
     def test_timeout_kills(self):
-        res = aos_inst.run({"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 500})
-        self.assertTrue(res["timed_out"])
-        self.assertLess(res["elapsed_ms"], 5000)
-        r = self.inst(self.single({"argv": ["sleep", "30"], "timeout_ms": 200}))
+        t0 = time.monotonic()   # 原本直接叫庫看 timed_out／elapsed_ms，10-23 改經 aos-exec 看時間與結束碼
+        r = self.inst(self.single({"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 500}))
         self.assertNotEqual(r.returncode, 0)
-
-    def test_run_result_shape(self):
-        res = aos_inst.run({"argv": ["sh", "-c", "exit 3"]})
-        self.assertEqual(set(res), {"code", "signal", "timed_out", "pid", "elapsed_ms", "received"})
-        self.assertEqual((res["code"], res["signal"], res["timed_out"], res["received"]), (3, None, False, None))
+        self.assertLess(time.monotonic() - t0, 5)
 
     def test_stdout_to_file_and_append(self):
         d = self.tmp / "w"; d.mkdir()
@@ -178,16 +168,13 @@ class T(unittest.TestCase):
         outer = self.tmp / "outer"; outer.mkdir(parents=True)
         (outer / "_entry").write_text("#!/bin/sh" + nl + "aos-exec %s" % (self.tmp / "inner") + nl)
         (outer / "_entry").chmod(0o755)
-        ws = self.tmp / "ws"; ws.mkdir()
-        old = os.environ.copy()
-        os.environ["PATH"] = str(BIN) + os.pathsep + os.environ["PATH"]
-        os.environ.pop("AOS_STACK", None); os.environ.pop("AOS_WS", None)
-        try:
-            res = aos_inst.run({"argv": ["aos-exec", "--ws", str(ws), str(self.tmp / "outer")],
-                                "timeout_ms": 300, "grace_ms": 200})
-        finally:
-            os.environ.clear(); os.environ.update(old)
-        self.assertTrue(res["timed_out"])
+        ws = self.ws   # 外層 aos-exec 定的 AOS_STACK（ws/.stack/）一路傳給 inner
+        # 原本直接叫 Python 庫 aos_inst.run 看 timed_out，10-23 改成一張限時的單子經 aos-exec 跑
+        t0 = time.monotonic()
+        r = self.inst(self.single({"argv": ["aos-exec", "--ws", str(ws), str(self.tmp / "outer")],
+                                   "timeout_ms": 300, "grace_ms": 200}))
+        self.assertNotEqual(r.returncode, 0, r.stderr)
+        self.assertLess(time.monotonic() - t0, 5)
         pid = int((ws / ".stack" / "pid").read_text())
         gone = False
         for _ in range(20):

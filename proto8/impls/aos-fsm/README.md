@@ -126,4 +126,4 @@ cmake -B build && cmake --build build && ctest --test-dir build
   外層逾時那案要 `../aos-exec/bin/aos-exec`。
 - `test_demo`（`tests/test_demo.py`，約 1 秒）：**整合測試**。照 `proto8/demo/run.sh`，把 `proto8/demo` 的 agent-bob（含它叫的 cathy、stamp）與 agent-ann
   各跑兩次——PATH 最前面放 impls 的 aos-exec、aos-loop、aos-fsm 的 `bin/`（拿掉 `proto8/bin`）一次、放 `proto8/bin` 一次——比結束碼、stderr、
-  工作區（含 `.stack/` 整棵 stack 樹）的每個檔（`trace.jsonl` 的 `at`／`elapsed_ms`、stamp 的時間那行先抹掉）。要先建好 `../aos-exec`、`../aos-loop` 自己的 `bin/`。
+  工作區（含 `.stack/` 整棵 stack 樹）的每個檔（`trace.jsonl` 的 `at`／`elapsed_ms`、stamp 的時間那行先抹掉）。要先建好 `../aos-exec`、`../aos-loop` 自己的 `bin/`。〔10-23 起只跑 impls 線、看結束碼 0、stderr 空、答案寫出來：Python 版刪了（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」），沒有 bin 線可比〕

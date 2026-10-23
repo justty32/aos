@@ -127,5 +127,5 @@ cmake -B build && cmake --build build && ctest --test-dir build
   10-23 壓測後加 4 案（共 24 案，約 25 秒）：不肯退的子 loop 不卡住 daemon（收的途中照寫 state、照起別的、那列 `stopping`，收工也等、每秒寫；被 SIGKILL 的那列 `stopped`／signal 9，
   它自己的 state 停在 `running`、pid 已不在）、一圈一份 state（inotify 數改名次數）與 `at` 間隔、起子項之前先有 state（小格放 FIFO 讓起子項卡住）、`$AOS_STACK` 不在不建。
   四案拿修前的碼跑都紅。PATH 放 impls 的 aos-exec、aos-loop 兩支的 `bin/`（子 loop 要 exec 成 PATH 上的 aos-loop）。
-- `test_demo`（`tests/test_demo.py`）：`proto8/demo/daemon` 在 impls 線（PATH 只放 impls 四支的 `bin/`）與 bin 線各跑一次，比結束碼、stderr、整棵工作區與 stack 的檔與內容。
+- `test_demo`（`tests/test_demo.py`）：`proto8/demo/daemon` 在 impls 線（PATH 只放 impls 四支的 `bin/`）與 bin 線各跑一次，比結束碼、stderr、整棵工作區與 stack 的檔與內容。〔10-23 起只跑 impls 線、看結束碼 0、stderr 空、答案寫出來：Python 版刪了（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」），沒有 bin 線可比〕
   要先建好 ../aos-exec、../aos-loop、../aos-fsm 的 `bin/`（`test_cli` 也要前兩支）。

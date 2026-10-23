@@ -20,7 +20,7 @@
    "abbr": "inst",
    "full": "instruction",
    "meaning": "一筆要跑的指令（argv＋怎麼跑）",
-   "example": "inst 單子（{\"argv\", …}，P-28）、aos_inst 庫（bin 版；aos-inst 命令列 10-22 刪）、impls 的 inst C lib"
+   "example": "inst 單子（{\"argv\", …}，P-28）、impls 的 inst C lib（10-23 前另有 bin 版 aos_inst 庫，Python 版 10-23 刪）"
   },
   {
    "abbr": "fsm",
@@ -200,7 +200,7 @@
    "abbr": "bin",
    "full": "binary",
    "meaning": "可執行檔資料夾（Unix 慣例）",
-   "example": "proto8/bin"
+   "example": "proto8/bin（10-23 起只剩 aos-tick）、impls 各專案的 bin/"
   },
   {
    "abbr": "demo",

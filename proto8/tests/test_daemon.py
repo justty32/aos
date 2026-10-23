@@ -4,15 +4,14 @@ from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
-ROOT = Path(__file__).resolve().parent.parent
-BIN = ROOT / "bin"
-DAEMON = str(BIN / "aos-daemon")
+from aos_bins import ROOT, tool, path_with  # noqa: E402  四支 C++ 在 impls/<名>/bin/、aos-tick 在 proto8/bin/（10-23）
+DAEMON = tool("aos-daemon")
 LONG = 'echo x >> "$AOS_STACK/starts"; while :; do sleep 0.05; done'
 
 
 def env_of(extra=None):
     e = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
-    e["PATH"] = str(BIN) + os.pathsep + e.get("PATH", "")
+    e["PATH"] = path_with(e.get("PATH", ""))
     e.update(extra or {})
     return e
 
@@ -186,7 +185,7 @@ class T(unittest.TestCase):
         self.assertEqual([alive(r["pid"]) for r in k.values()], [False, False])
         self.assertEqual({r["phase"] for r in st["loops"].values()}, {"stopped"})
 
-    # ---- 10-21 計畫第 2 段：命令列（D1，共用 aos_loop.cli）、字串子項（D2）、收工時剛死的子項（D7）
+    # ---- 10-21 計畫第 2 段：命令列（D1，跟 aos-loop 共用；10-23 前 Python 版是 aos_loop.cli）、字串子項（D2）、收工時剛死的子項（D7）
 
     def test_flags_override_cfg(self):
         # --max／--interval-ms 蓋過 daemon.json（旗標 ＞ 設定檔）；state 回報實際生效的值

@@ -48,7 +48,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 檔案在 `common/`／`app/`／`cmake/` 底下或是建置設定檔（含新增小專案要加的那行 `add_subdirectory()`）→ `code-map/build.md`。
 `core/exec`、`core/wire`、`core/loop`、`core/tick` 的逐檔表格放在小專案自己的 `README.md`，不另立分冊；`core/tool`、`core/llm`、`core/agent` 的逐檔表格在 `code-map/tool.md`、`code-map/llm.md`、`code-map/agent.md`，proto5/lib 逐模組一句在 `code-map/proto5-lib.md`。
 `proto7-2/`（Python 原型，上一代）的逐檔表不另立分冊：在 [proto7-2/INDEX.md](../../../proto7-2/INDEX.md) 與 [proto7-2/tests/README.md](../../../proto7-2/tests/README.md)；改 proto7-2 的檔就同步這兩份。歷次同步紀錄見 [code-map/proto7-2.md](code-map/proto7-2.md)。
-`proto8/`（現役主線；`proto8-1/` 10-15 深夜、`proto8-2/` 10-19 併進它，兩個資料夾已刪）的逐支說明在 [proto8/bin/README.md](../../../proto8/bin/README.md)；改了就同步那份。哪個檔做什麼的一句話總覽見 [code-map/proto8.md](code-map/proto8.md)。
+`proto8/`（現役主線；`proto8-1/` 10-15 深夜、`proto8-2/` 10-19 併進它，兩個資料夾已刪）的逐支說明：四支 C++（10-23 起唯一實作）在 [proto8/impls/README.md](../../../proto8/impls/README.md)，aos-tick（Python）在 [proto8/bin/README.md](../../../proto8/bin/README.md)；改了就同步。哪個檔做什麼的一句話總覽見 [code-map/proto8.md](code-map/proto8.md)。
 未來多一個小專案，就在 `code-map/` 多一冊，並在 [code-map/README.md](code-map/README.md) 的完整對照表加一列。**這一步跟程式碼改動同一個 commit**（AGENTS.md 的「改了程式碼就要同步 code map」）。
 
 ---

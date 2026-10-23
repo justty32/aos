@@ -3,17 +3,17 @@ from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
-ROOT = Path(__file__).resolve().parent.parent
-EXEC = str(ROOT / "bin" / "aos-exec")
+from aos_bins import ROOT, tool, path_with  # noqa: E402  四支 C++ 在 impls/<名>/bin/、aos-tick 在 proto8/bin/（10-23）
+EXEC = tool("aos-exec")
 BOB = str(ROOT / "demo" / "agent-bob")
 ANN = str(ROOT / "demo" / "agent-ann")
 CATHY = str(ROOT / "demo" / "agent-bob" / "act" / "tools" / "cathy")
 
 
 def run(*args, env=None, **kw):
-    # aos 的程式都不動 PATH（ideas § 24）：入口裡叫 aos-exec／aos-loop／aos-fsm，由呼叫者把 bin/ 放進 PATH
+    # aos 的程式都不動 PATH（ideas § 24）：入口裡叫 aos-exec／aos-loop／aos-fsm，由呼叫者把各支的 bin/ 放進 PATH
     e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY", "AOS_STACK")}
-    e["PATH"] = str(ROOT / "bin") + os.pathsep + e.get("PATH", "")
+    e["PATH"] = path_with(e.get("PATH", ""))
     e.update(env or {})
     return subprocess.run(args, capture_output=True, text=True, env=e, **kw)
 
@@ -197,7 +197,7 @@ class T(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("沒設定 AOS_STACK", r.stderr)
         # fsm 本身沒設 AOS_STACK 也退 1
-        r = run(str(ROOT / "bin" / "aos-fsm"), "fsm.json", env={"AOS_WS": str(ws)},
+        r = run(tool("aos-fsm"), "fsm.json", env={"AOS_WS": str(ws)},
                 cwd=BOB)
         self.assertEqual(r.returncode, 1)
         self.assertIn("沒設定 AOS_STACK", r.stderr)
@@ -229,7 +229,7 @@ class T(unittest.TestCase):
         stack = Path(self.tmp, "stack")
         stack.mkdir()
         env = {"AOS_WS": str(ws), "AOS_STACK": str(stack),
-               "PATH": str(ROOT / "bin") + os.pathsep + os.environ["PATH"]}
+               "PATH": path_with(os.environ["PATH"])}
         r = run(str(Path(BOB) / "_entry"), env=env, cwd=BOB)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue((ws / "done" / "q.txt").exists())

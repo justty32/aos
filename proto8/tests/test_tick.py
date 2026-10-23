@@ -4,14 +4,13 @@ from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉；raw_stderr 留原樣
 
-ROOT = Path(__file__).resolve().parent.parent
-BIN = ROOT / "bin"
-TICK = str(BIN / "aos-tick")
+from aos_bins import ROOT, tool, path_with  # noqa: E402  四支 C++ 在 impls/<名>/bin/、aos-tick 在 proto8/bin/（10-23）
+TICK = tool("aos-tick")   # 唯一還是 Python 的一支（proto8/bin）
 
 
 def run(*args, cwd, **kw):
     e = {k: v for k, v in os.environ.items() if k not in ("AOS_WS", "AOS_ENTRY", "AOS_STACK")}
-    e["PATH"] = str(BIN) + os.pathsep + e["PATH"]
+    e["PATH"] = path_with(e["PATH"])
     return subprocess.run(args, capture_output=True, text=True, env=e, cwd=cwd, **kw)
 
 
