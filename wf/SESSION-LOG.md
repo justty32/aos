@@ -17,7 +17,7 @@
 - **KISS 批次 2～6 暫停**（批次 1 已做完；10-16 使用者撤回「都照推薦」）→ [10-15 § KISS 批次 1](session_logs/2026-10/2026-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)。
 - **10-15 剩的兩個候選題**（只有標題、沒展開過）：對話太長、規範草稿定稿（NORMS 多數條文還標草稿）（原第三題「標準實作」10-21 晚使用者定了說法，見 [N-18](../proto8/NORMS/01-總則.md)）→ [10-15](session_logs/2026-10/2026-10-15.md)。其餘 10-15 動工自定點與總原則四條已隨 10-19 刪舊程式作廢或併入現行規範（10-21 清點，使用者同意清掉）。
 - **proto8（主線）**導覽：[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/CONCEPTS.md)、[NORMS](../proto8/NORMS.md)、[bin README](../proto8/bin/README.md)；[restart](../proto8/thinking/2026-10-11-restart.md) §4 列了他停在半路的幾處。
-- 10-09 留下的約定（全文 [→](session_logs/2026-10/2026-10-09.md#2026-10-09)）：合併用 `../aos-wt/merge.sh <分支>`；對使用者一律 ELI5、少用隊名代號；`proto7/user-advice.md` 不碰。
+- 10-09 留下的約定（全文 [→](session_logs/2026-10/2026-10-09.md#2026-10-09)）：合併原用 `../aos-wt/merge.sh <分支>`〔10-23 註：`aos-wt/`（舊團隊 log 與 merge.sh）使用者授權刪了（「simple_tools那兩個沒追蹤的清掉」），這條作廢，合併照一般 git〕；對使用者一律 ELI5、少用隊名代號；`proto7/user-advice.md` 不碰。
 
 其餘（open 已解／無）與全文索引 → [session_logs/](session_logs/README.md)
 
