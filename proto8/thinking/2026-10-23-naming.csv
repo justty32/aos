@@ -1,0 +1,40 @@
+項,舊名,新名,在哪,理由,代定
+1,`run`（loop.json、daemon.json、子項、小格 loop.json）,`val`,aos-loop、aos-daemon,C-55「原值那一格一律叫 val」：子項字串包成物件正是值的雙形；C-54 一詞一義（跟 fsm 格的 `val` 同一件事）,否
+1,daemon 把字串子項包成 `{"run": 它}`,包成 `{"val": 它}`,aos-daemon,同上,否
+2,state.json 裡的 `state` 欄,`phase`,state 窗,C-54 一詞一義：`state` 留給「自己回報現況的那份窗／檔」；沿用子項已有的 `phase`（少改）,否
+2,state 窗（key `state`、檔 `state.json`、`kind: "state"`）、fsm 的 `$AOS_STACK/state`、trace 的 `state`,不改,—,N-09／N-39：fsm 的 state 檔也是「只有自己寫的現況」，fsm 的現況就是狀態名，同義,否
+3,有無副檔名,不改名；規則：JSON 帶 `.json`、JSON Lines 帶 `.jsonl`、純文字不帶,—,原則沒寫；現有名字全合這條,代定
+4,兩套狀態欄（N-17「不改名」）,只剩一個 key `phase`、一套值（loop：`waiting`／`running`／`paused`／`done`／`stopped`；子項取 `running`／`done`／`stopped`）,state 窗,10-23 使用者「都先幫我統合」翻案；C-54 一詞一義,否
+4,子項 `phase` 的 `exited`,`done`（子 loop 自己結束）／`stopped`（daemon 收掉它）,state 窗的子項各列,照 loop 自己的 `done`／`stopped` 定義分,代定
+5,state 的 `lap`,`beats`,state 窗,「拍」＝beat（`aos_beat`、impls `run_beat` 已用）；計數＝被數的東西加 s（C-54 複數只加 s）,代定
+5,程式訊息與說明裡的「圈」（第 N 圈、每圈）,「拍」,程式訊息、條文（原話引號不動）,條文主要用「拍」,否
+5,state 的 `beat`（心跳時間）,`at`,state 窗,`beat` 留給「拍」；`at`＝這筆紀錄的時間點，跟 trace 的 `at` 同名同義,代定
+6,時間寫法：state `beat` 是 epoch 秒、trace `at` 是 ISO 到秒,兩處都 ISO 8601 UTC 到毫秒（例 `2026-10-23T01:58:45.123+00:00`）,state 窗、trace.jsonl,C-54 好懂；時間只留一種寫法,代定
+6,`started`（state 與子項各列）,`start_ticks`,state 窗,C-54 表單位加後綴（同 `_ms`）；值不變（/proc/<pid>/stat 第 22 欄）,代定
+6,trace 的 `ms`,`elapsed_ms`,trace.jsonl,C-54 主題在前、單位當後綴；單獨的 `ms` 沒有主題,代定
+7,`_exec`（key 與檔）、`.env`（key 與檔）,不改,—,C-48「`_` 開頭＝宿主程式忽略、給別人看」：aos-loop／aos-fsm 忽略 `_exec`、給 aos-exec 看；`.env` 是 dotenv 生態的檔名，JSON 裡同名是為了跟資料夾對上（C-51）,代定
+8,指示詞的 `at`,`$at`,單子、argv 陣列、JSON `.env` key 的指示詞,N-45 修飾詞都帶 `$`（`$path`、`$prefix`）,否
+9,`.env` 檔這個主題,`dotenv`（進縮寫表）；`env` 只指環境變數,abbr.json,C-54 一詞一義、縮寫要進表；旗標 `--dotenv-override` 已這樣用,否
+9,`EnvBad`、`EnvReadFailed`,`DotenvBad`,aos-exec,主題是 .env 檔＝dotenv；讀不到也算壞（同 `EntryBad` 收「入口讀不到」）,否
+10,`AOS_ENTRY` 預設 `_exec`；執行器 `aos-exec`,不改,—,exec＝執行：aos-exec 執行、`_exec` 是要執行的那個；`AOS_ENTRY` 是變數名、`_exec` 是值；使用者 10-19 親自挑 `_exec`,代定（另一案 `_entry` 請使用者看）
+11,`WorkspaceMissing`,`WsMissing`,aos-exec,C-54 一詞一義：縮寫表有 `ws`（`AOS_WS`、`--ws`、`ws/`）；縮寫進代號照 C-54 例子 `ApiKeyMissing`,否
+11,`.aos/`,不改,—,使用者 10-19「工作區的 .aos/ stack 照舊」；照工具命名的隱藏資料夾（像 `.git/`）,代定
+12,`AOS_CO` 的 `co`,進縮寫表（current obj）,abbr.json,C-54 新縮寫要先進表,否
+13,`Usage`,`ArgumentsBad`；不認得的旗標改 `FlagUnknown`,aos-exec、aos-loop、aos-daemon、aos-fsm、aos-tick,C-54 例子原文（`ArgumentsBad`、`FlagUnknown`）；不認得一律 …Unknown,否
+13,`FieldType`、`JsonSyntax`、`Conflict`,`CfgBad`,aos-loop、aos-daemon、aos-fsm,C-54 主詞在前＋…Bad；主詞是設定檔（縮寫表 `cfg`）,否
+13,`ReadFailed`（設定檔）,`CfgMissing`（檔不在）／`CfgBad`（讀不了）,aos-loop、aos-daemon、aos-fsm,同 aos-exec：找不到＝Missing（`EntryMissing`）、讀不到＝Bad（`EntryBad`）,否
+13,設定檔 `#/` 指不到（原 `FieldType`）,`CfgMissing`,aos-loop、aos-daemon、aos-fsm,同 aos-exec「`#/` 指不到」＝`EntryMissing`,否
+13,`ReadFailed`（fsm 的 state 檔讀不了）,`StateBad`,aos-fsm,C-54 例子原文 `StateBad`,否
+13,`ReadFailed`、`JsonSyntax`（直接叫庫 `aos_inst.run(FILE)` 時單子檔本身）,`EntryMissing`／`EntryBad`,aos_inst 庫,單子檔就是入口,否
+13,`CommandNotFound`、`CommandNotExecutable`,`CommandMissing`、`CommandBad`,inst 起不來的原因字（兩版）,C-54：沒有＝Missing、不合＝Bad,否
+13,`…Failed`（`LaunchFailed`、`MkdirFailed`、`WriteFailed`、`OpenFailed`、`WaitFailed`、`KillFailed`）,不改；規則：「動作做不成」＝動作＋`Failed`,—,C-54 只訂三種（沒有／不認得／壞），「做不成」是第四種、原則沒寫,代定
+13,`Internal`,不改,impls,照理不會發生的錯，不屬四種,代定
+13,C-54 裡 10-23 的「既有代號照舊沿用、不改名」,翻案,C-54,10-23 使用者「都先幫我統合」,否
+15,aos-tick 不帶代號（10-23 認可）,帶代號：`ArgumentsBad`、`FlagUnknown`、`ClockBad`（時鐘檔讀不到或壞）、`WriteFailed`（寫不了）,aos-tick,10-23 翻案；跟其他四支同一套規則,代定（`Clock` 這個主詞）
+16,計數三名 `max`、`lap`、`runs`,`max`、`beats`、`runs`；規則：上限叫 `max`、計數＝被數的東西加 s,—,C-54：`max_` 是慣例、複數只加 s,代定
+17,`children`（daemon.json、ctl、state）,`loops`,aos-daemon,C-54「複數一律只加 s、不用不規則變化」；每項就是一份 loop 設定,代定（選字）
+17,`inbox/`、`out/`、`done/`,不改,demo 慣例,這是「題目走到哪一步」的資料夾，照 Maildir（縮寫表已收 `tmp`、`cur`），不是「裝同類」的類別名,代定
+18,"C-48 的 `{""$env"": 名, ""path"": 子路徑}`、「所以沒有 `$ref`」",`$path`；註明 `$ref` 保留,C-48,照 N-45 現況,否
+18,N-28 同名 key 裡的 `id`,註明現行沒有,N-28,照程式,否
+18,N-17 七態裡的 `starting`、`stopping`,註明這版不寫進 state（`stopping` 只在 daemon 內部用）,N-17,照程式,否
+—,程式內部：`aos_window.beat()`、庫結果的 `ms`,`aos_window.heartbeat()`、`elapsed_ms`（C 結構的欄位名不動）,bin 庫,跟著上面改，免得「beat」兩個意思,否
