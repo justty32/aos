@@ -44,58 +44,22 @@ static void check_name(const std::string& name) {
 }
 
 Json read_loops(const Json& v, const std::string& base, const std::string& key) {
-    aos::Resolved top = aos::resolve_shallow(v, base);
-    std::vector<aos::Resolved> pages;
-    if (top.value.is_object()) {
-        pages.push_back(top);
-    } else if (top.value.is_array()) {
-        for (const Json& p : top.value) {
-            aos::Resolved page = aos::resolve_shallow(p, top.base_dir);
-            if (!page.value.is_object()) {
-                throw Error{code::CfgBad, key + " 寫成陣列時每一份要是 {名字: loop 設定}"};
-            }
-            pages.push_back(page);
-        }
-    } else {
-        throw Error{code::CfgBad, key + " 要是 {名字: loop 設定}（或它的陣列）"};
+    aos::Resolved top = aos::resolve_shallow(v, base);   // 拆成好幾份檔＝{"$ref": [檔, …]}，合好的每個子項記著它來自哪份檔
+    if (!top.value.is_object()) {
+        throw Error{code::CfgBad, key + " 要是 {名字: loop 設定}"};
     }
-    Json out = Json::object();   // 名字查重用雜湊表、直接接在尾巴（ordered_json 的 []、contains 逐個比對，N 個就 N×N）
+    Json out = Json::object();   // 名字本來就不重複（JSON 物件；$ref 陣列合的同名後面的蓋前面的），直接接在尾巴
     auto& vec = static_cast<std::vector<std::pair<const std::string, Json>>&>(out.get_ref<Json::object_t&>());
-    std::unordered_set<std::string> seen;
-    for (const aos::Resolved& page : pages) {
-        for (auto& [name, c] : page.value.items()) {
-            check_name(name);
-            if (!seen.insert(name).second) {
-                throw Error{code::CfgBad, key + " 的名字 " + aos::dumps(Json(name)) + " 重複"};
-            }
-            aos::Resolved it = aos::resolve_shallow(c, page.base_dir);
-            if (it.value.is_string() || it.value.is_array()) {
-                vec.emplace_back(name, aos::resolve(it.value, it.base_dir));
-            } else if (it.value.is_object()) {
-                vec.emplace_back(name, aos::loop::resolve_keys(it.value, it.base_dir, {"run", "max", "interval_ms", "ctl", "state"}).value);
-            } else {
-                throw Error{code::CfgBad, key + "[" + name + "] 要是 aos-exec 的目標或 loop 設定"};
-            }
-        }
-    }
-    return out;
-}
-
-Json merge_rows(const Json& v) {
-    if (v.is_object()) {
-        return v;
-    }
-    if (!v.is_array()) {
-        return Json();
-    }
-    Json out = Json::object();   // daemon 自己寫的分頁名字不重複，直接接在尾巴
-    auto& vec = static_cast<std::vector<std::pair<const std::string, Json>>&>(out.get_ref<Json::object_t&>());
-    for (const Json& p : v) {
-        if (!p.is_object()) {
-            return Json();
-        }
-        for (auto& [n, r] : p.items()) {
-            vec.emplace_back(n, r);
+    vec.reserve(top.value.size());
+    for (auto& [name, c] : top.value.items()) {
+        check_name(name);
+        aos::Resolved it = aos::resolve_shallow(c, top.dir_of(name));
+        if (it.value.is_string() || it.value.is_array()) {
+            vec.emplace_back(name, aos::resolve(it.value, it.base_dir));
+        } else if (it.value.is_object()) {
+            vec.emplace_back(name, aos::loop::resolve_keys(it.value, it.base_dir, {"run", "max", "interval_ms", "ctl", "state"}).value);
+        } else {
+            throw Error{code::CfgBad, key + "[" + name + "] 要是 aos-exec 的目標或 loop 設定"};
         }
     }
     return out;
@@ -137,12 +101,12 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         throw Error{code::StackMissing, "沒設定 AOS_STACK"};
     }
     loops_ = Json::object();
-    try {   // 指示詞（10-23 晚）：起點＝設定檔的資料夾（cfg_base_）
+    try {   // 指示詞（10-23 晚）：起點＝設定檔的資料夾（cfg_dirs_）
         if (cfg_.contains("loops")) {
-            loops_ = read_loops(cfg_["loops"], cfg_base_, "loops");
+            loops_ = read_loops(cfg_["loops"], cfg_dirs_.dir_of("loops"), "loops");
         }
         if (cfg_.contains("adopt")) {
-            cfg_["adopt"] = aos::resolve(cfg_["adopt"], cfg_base_);
+            cfg_["adopt"] = aos::resolve(cfg_["adopt"], cfg_dirs_.dir_of("adopt"));
         }
     } catch (const Error& e) {
         if (e.code == code::DirectiveBad) {
@@ -150,7 +114,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         }
         throw;
     }
-    if (!state_path_.empty()) {   // state 分頁的資料夾：state 檔名去掉副檔名＋_loops，跟 state 同一層（10-23 晚）
+    if (!state_path_.empty()) {   // state 分檔的資料夾：state 檔名去掉副檔名＋_loops，跟 state 同一層（10-23 晚）
         std::string name = state_path_.substr(state_path_.rfind('/') + 1);
         size_t dot = name.rfind('.');
         if (dot != std::string::npos && dot > 0) {
@@ -182,8 +146,8 @@ void Daemon::adopt() {
         return;   // 第一次起來、或舊的讀不了：沒東西可接
     }
     Json rows;
-    try {   // 分頁（10-23 晚）：loops 是 $ref 的陣列，解開再合起來；分頁讀不到＝舊的讀不了
-        rows = merge_rows(aos::resolve((*old)["loops"], aos::dirname(state_path_)));
+    try {   // 切檔（10-23）：loops 是 {"$ref": [分檔, …]}，用 aos-directive 解開就是合好的表；分檔讀不到＝舊的讀不了
+        rows = aos::resolve((*old)["loops"], aos::dirname(state_path_));
     } catch (const Error&) {
         return;
     }
@@ -220,7 +184,7 @@ void Daemon::add(const std::string& name, const Child& c) {
     index_[name] = std::prev(table_.end());
 }
 
-std::optional<std::string> Daemon::check_ctl(Json& doc, const std::string& base) {
+std::optional<std::string> Daemon::check_ctl(Json& doc, const aos::Resolved& where) {
     // ctl 改名單撞名、寫壞＝整份不採用（N-08；原因進 ctl_warning）。指示詞解不開丟 DirectiveBad，Loop 一樣當不採用。
     const char* lists[2] = {"loops", "loops_added"};
     for (const char* k : lists) {
@@ -228,7 +192,7 @@ std::optional<std::string> Daemon::check_ctl(Json& doc, const std::string& base)
             continue;
         }
         try {
-            doc[k] = read_loops(doc[k], base, k);
+            doc[k] = read_loops(doc[k], where.dir_of(k), k);
         } catch (const Error& e) {
             if (e.code == code::DirectiveBad) {
                 throw;
@@ -241,7 +205,7 @@ std::optional<std::string> Daemon::check_ctl(Json& doc, const std::string& base)
         }
     }
     if (doc.contains("loops_removed")) {
-        Json rm = aos::resolve(doc["loops_removed"], base);
+        Json rm = aos::resolve(doc["loops_removed"], where.dir_of("loops_removed"));
         bool ok = rm.is_array();
         for (const Json& n : rm) {
             ok = ok && n.is_string();
@@ -256,7 +220,7 @@ std::optional<std::string> Daemon::check_ctl(Json& doc, const std::string& base)
 
 static const size_t PART_ROWS = 100;   // state 的 loops 表一份最多幾列（使用者 10-23「每個檔案一百個」；不開 key，C-56）
 
-// FNV-1a 64 位元，16 個十六進位字：分頁檔名＝內容的雜湊（內容不變就沿用同一份、不重寫）。
+// FNV-1a 64 位元，16 個十六進位字：分檔檔名＝內容的雜湊（內容不變就沿用同一份、不重寫）。
 static std::string fnv64(const std::string& text) {
     unsigned long long h = 1469598103934665603ULL;
     for (unsigned char c : text) {
@@ -278,7 +242,7 @@ Json Daemon::write_parts(Json rows) {
             throw Error{code::WriteFailed, "寫不了 " + parts_dir_ + "（" + ec.message() + "）"};
         }
         std::string rel = parts_dir_.substr(parts_dir_.rfind('/') + 1);
-        out = Json::array();
+        Json refs = Json::array();
         Json page = Json::object();
         auto* vec = &static_cast<std::vector<std::pair<const std::string, Json>>&>(page.get_ref<Json::object_t&>());
         size_t i = 0;
@@ -292,13 +256,14 @@ Json Daemon::write_parts(Json rows) {
                     aos::loop::write_window(path, page);
                 }
                 now.insert(name);
-                out.push_back(Json::object({{"$ref", rel + "/" + name}}));
+                refs.push_back(rel + "/" + name);
                 page = Json::object();
                 vec = &static_cast<std::vector<std::pair<const std::string, Json>>&>(page.get_ref<Json::object_t&>());
             }
         }
+        out = Json::object({{"$ref", refs}});   // {"$ref": ["state_loops/<雜湊>.json", …]}：aos-directive 照順序合回整張表
     }
-    // 清舊分頁：留這次與上一次的（磁碟上的主檔現在還指著上一次的）；這個行程第一次寫時不清（上一個行程的主檔可能還指著）。
+    // 清舊分檔：留這次與上一次的（磁碟上的主檔現在還指著上一次的）；這個行程第一次寫時不清（上一個行程的主檔可能還指著）。
     if (parts_wrote_ && !parts_dir_.empty()) {
         std::error_code ec;
         std::vector<std::filesystem::path> old;

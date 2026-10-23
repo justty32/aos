@@ -8,10 +8,10 @@
 //
 // daemon.json＝loop.json 的超集：run、max、interval_ms、ctl、state 同 aos-loop，但 run 選填、max 沒寫＝不限、
 // interval_ms 沒寫＝200；多兩個 key——loops＝{名字: aos-exec 的目標（字串或 [目標, 參數...]）或 loop 設定（物件）}
-// （可以分頁寫成物件的陣列，read_loops）、adopt（布林，沒寫＝true）。
+// （要拆成好幾份檔就寫 {"$ref": ["loops-1.json", …]}，aos-directive 照順序合起來，read_loops）、adopt（布林，沒寫＝true）。
 // ctl 多認三個 key（N-54；10-23 晚加後兩個）：loops＝整份名單、loops_added＝名單上要多這些（寫法同 loops）、
 // loops_removed＝名單上要少這些（名字的陣列）；期望表＝（ctl 的 loops，沒寫＝daemon.json 的）＋loops_added－loops_removed。
-// state 的 loops 表超過 PART_ROWS（100）列就切成分頁：loops 寫成 [{"$ref": "<state 檔名去副檔名>_loops/<雜湊>.json"}, …]（write_parts）。
+// state 的 loops 表超過 PART_ROWS（100）列就切檔：loops 寫成 {"$ref": ["<state 檔名去副檔名>_loops/<雜湊>.json", …]}（write_parts）。
 #pragma once
 
 #include "child/child.hpp"
@@ -26,16 +26,14 @@
 namespace aos::daemon {
 
 // 讀一份 loops（daemon.json 的 loops，ctl 的 loops、loops_added 共用；10-23 晚）：回 {名字: 子項}（照寫的順序）。
-//   寫法：物件 {名字: 子項}，或物件的陣列（分頁：[{名字: 子項}, …]，照順序合起來；名字在兩頁重複＝壞）。
-//   指示詞（base＝v 裡相對 $ref 的起點）：loops 本身、每一頁、每個子項本身先換一層（resolve_shallow）；子項是字串或陣列
+//   寫法：物件 {名字: 子項}（拆成好幾份檔＝{"$ref": [檔, …]}，aos-directive 合物件、同名後面的蓋前面的；10-23 使用者，
+//   取代原本的「物件的陣列＝分檔」）。
+//   指示詞（base＝v 裡相對 $ref 的起點）：loops 本身、每個子項本身先換一層（resolve_shallow；子項的起點＝它來自的那份檔的）；子項是字串或陣列
 //   （aos-exec 的目標）就整個解；是物件（loop 設定）就只解 daemon 要寫進小格的 loop key（run、max、interval_ms、ctl、state），
 //   其他 key（body…）原樣交給子 loop——相對 $ref 搬進小格就會從小格算，所以 loop key 由 daemon 先解。
 //   名字非空、不含 /、不含 #（會被 aos-exec 當成指標的開頭）、不以 . 開頭；子項是字串、陣列或物件（loop key 以外不驗）。
 // 壞丟 Error{CfgBad, 原因}（key＝訊息裡的名字）；指示詞解不開丟 DirectiveBad。
 Json read_loops(const Json& v, const std::string& base, const std::string& key);
-
-// state 的 loops 欄讀回來（adopt 用）：物件照原樣；物件的陣列（分頁）照順序合起來；其他回 null。
-Json merge_rows(const Json& v);
 
 // 小格 $AOS_STACK/<名字>/ 會撞到的名字（使用者 10-22）：ctl、state（paths，空＝沒開）落在 $AOS_STACK 底下時相對路徑的第一段
 // （"state.json"、"w/c.json" 的 "w"）；落在外面的不算。照 bin 的 taken_names（abspath 整理 `.`、`..`，不解捷徑）。
@@ -52,7 +50,7 @@ protected:
     void tend(const Json& ctl) override;
     void finish() override;
     Json info() override;
-    std::optional<std::string> check_ctl(Json& doc, const std::string& base) override;
+    std::optional<std::string> check_ctl(Json& doc, const aos::Resolved& where) override;
 
 private:
     using Table = std::list<std::pair<std::string, Child>>;
@@ -61,13 +59,13 @@ private:
     void add(const std::string& name, const Child& c);
     void term(Child& c, bool removing);   // 送 SIGTERM、phase stopping、記期限（不等）
     bool settle(Child& c);                // 收的途中看一眼：退了＝stopped、回 true；過了期限還在＝SIGKILL 整群（只送一次）
-    Json write_parts(Json rows);      // state 的 loops 欄：≤ PART_ROWS 列原樣；多了就寫分頁、回 $ref 陣列
+    Json write_parts(Json rows);      // state 的 loops 欄：≤ PART_ROWS 列原樣；多了就寫分檔、回 {"$ref": [分檔, …]}
 
     Json loops_;                                         // daemon.json 的 loops
     std::string cwd_;                                    // 子 loop 的 cwd＝daemon 起來時的 cwd
-    std::set<std::string> taken_;                        // 自己的 ctl／state／分頁資料夾用掉的名字（taken_names）
-    std::string parts_dir_;                              // state 分頁的資料夾（沒開 state＝空）
-    std::set<std::string> parts_prev_;                   // 上一次寫的 state 用到的分頁檔名（清舊分頁時留著）
+    std::set<std::string> taken_;                        // 自己的 ctl／state／分檔資料夾用掉的名字（taken_names）
+    std::string parts_dir_;                              // state 分檔的資料夾（沒開 state＝空）
+    std::set<std::string> parts_prev_;                   // 上一次寫的 state 用到的分檔檔名（清舊分檔時留著）
     bool parts_wrote_ = false;                           // 這個行程寫過 state 了沒（第一次不清：磁碟上的主檔可能還指著舊的）
     Table table_;                                        // 照加入的順序（state 的 loops 也照這個順序）
     std::unordered_map<std::string, Table::iterator> index_;   // 名字 → 表上那一列（10-23 壓測：原本逐列找，N 個名字 N×N）

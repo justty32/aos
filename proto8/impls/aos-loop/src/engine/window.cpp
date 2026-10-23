@@ -102,10 +102,10 @@ Json Loop::read_ctl() {
     std::optional<std::string> bad;
     try {   // 指示詞（10-23 晚）：相對 $ref 從 ctl 所在的資料夾算；解不開＝整份不採用（N-08）
         aos::Resolved r = resolve_keys(doc, aos::dirname(ctl_path_), {"paused", "stopped", "max", "interval_ms", "seq"});
-        doc = r.value;
+        doc = std::move(r.value);
         bad = check_base(doc);
         if (!bad) {
-            bad = check_ctl(doc, r.base_dir);
+            bad = check_ctl(doc, r);
         }
     } catch (const Error& e) {
         bad = "指示詞解不開：" + e.msg;

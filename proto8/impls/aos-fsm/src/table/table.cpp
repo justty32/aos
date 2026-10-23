@@ -16,10 +16,10 @@ static Json resolve_table(const Json& raw, const std::string& base) {
     if (!doc.is_object() || !doc.contains("states")) {
         return doc;
     }
-    aos::Resolved states = aos::resolve_shallow(doc["states"], top.base_dir);
+    aos::Resolved states = aos::resolve_shallow(doc["states"], top.dir_of("states"));
     if (states.value.is_object()) {
         for (auto& [name, c] : states.value.items()) {
-            c = aos::loop::resolve_keys(c, states.base_dir, {"val", "next"}).value;
+            c = aos::loop::resolve_keys(c, states.dir_of(name), {"val", "next"}).value;
         }
     }
     doc["states"] = states.value;

@@ -4,6 +4,7 @@
 // 物件：有 $ref 就是 $ref（同時有 $env 也只看 $ref）；否則有 $env 就是 $env；都沒有＝普通物件，逐個 key 往下走
 //       （不認得的 $xxx 不管）。寫法不合（回 nullopt）＝整個物件原封不動留著（不往裡面走）。
 // 陣列：逐個往下走。其他值原樣。
+// $ref 可以是陣列（10-23 使用者）：每一份各自解完再合成一份（ref.cpp 的 merge）。
 #include "internal.hpp"
 
 #include "aos/files.hpp"
@@ -77,28 +78,34 @@ Json decorate(const Json& d, const Json& got) {
 
 // 只換這一格（10-23 晚，aos 讀的 JSON 都解指示詞）：v 是指示詞就換成它指到的原文；原文本身又是指示詞就再換，
 // 一直到不是指示詞（或寫法不合、原封不動）為止；不往物件、陣列裡面走。回換好的值與它裡面相對 $ref 的起點。
-static Resolved shallow(const Json& v, const std::string& base, Chain& chain) {
+// $ref 陣列：每一份各自這樣換（鏈各自往下接），再合成一份；合出來的每個 key／元素記著它來自哪份檔（merge）。
+static Resolved shallow(const Json& v, const std::string& base, const Chain& chain) {
     if (!v.is_object()) {
-        return {v, base};
+        return {v, base, {}, {}};
     }
     if (v.contains("$ref")) {
-        std::optional<Fetched> f = fetch_ref(v, base, chain);
-        if (!f) {
-            return {v, base};
+        std::optional<std::vector<Fetched>> fs = fetch_ref(v, base, chain);
+        if (!fs) {
+            return {v, base, {}, {}};
         }
-        chain.push_back(f->here);
-        Resolved in = shallow(f->value, aos::dirname(f->here.first), chain);
+        std::vector<Resolved> parts;
+        for (const Fetched& f : *fs) {
+            Chain c = chain;
+            c.push_back(f.here);
+            parts.push_back(shallow(f.value, aos::dirname(f.here.first), c));
+        }
+        Resolved in = merge(parts, aos::dumps(v["$ref"]));
         in.value = decorate(v, in.value);
         return in;
     }
     if (v.contains("$env")) {
         std::optional<Json> got = resolve_env(v);
         if (!got) {
-            return {v, base};
+            return {v, base, {}, {}};
         }
-        return {decorate(v, *got), base};
+        return {decorate(v, *got), base, {}, {}};
     }
-    return {v, base};
+    return {v, base, {}, {}};
 }
 
 }  // namespace aos::directive
@@ -114,6 +121,15 @@ Json resolve(const Json& doc, const std::filesystem::path& base_dir, const std::
 Resolved resolve_shallow(const Json& v, const std::filesystem::path& base_dir) {
     directive::Chain chain;
     return directive::shallow(v, aos::abspath(base_dir.string()), chain);
+}
+
+const std::string& Resolved::dir_of(const std::string& key) const {
+    auto it = key_dirs.find(key);
+    return it == key_dirs.end() ? base_dir : it->second;
+}
+
+const std::string& Resolved::dir_of(size_t i) const {
+    return i < item_dirs.size() ? item_dirs[i] : base_dir;
 }
 
 }  // namespace aos

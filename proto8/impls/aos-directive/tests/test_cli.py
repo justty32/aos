@@ -132,6 +132,35 @@ check("找不到檔", run({"x": {"$ref": "nope.json"}})[:3], (1, None, "Directiv
 check("壞 JSON", run({"x": {"$ref": "bad.json"}}, {"bad.json": "{"})[:3], (1, None, "DirectiveBad"))
 check("繞圈", run({"x": {"$ref": "a.json"}}, {"a.json": {"$ref": "b.json"}, "b.json": {"$ref": "a.json"}})[:3],
       (1, None, "DirectiveBad"))
+# $ref 陣列（10-23 使用者「"$ref":["a.json", "b.json#/c/d]"」）：幾份照順序合成一份
+M = {"a.json": {"x": 1, "y": {"p": 1}}, "b.json": {"c": {"d": {"y": {"q": 2}, "z": 3}}}, "l1.json": [1, 2],
+     "l2.json": {"k": [3]}, "s.json": "\"str\"", "n.json": "5",
+     "sub/r.json": {"v": {"$ref": "t.json"}}, "sub/t.json": "\"sub-t\"", "t.json": "\"top-t\""}
+check("$ref 陣列：合物件、後面的蓋前面的（淺層）", run({"o": {"$ref": ["a.json", "b.json#/c/d"]}}, M)[:3],
+      (0, {"o": {"x": 1, "y": {"q": 2}, "z": 3}}, None))
+check("$ref 陣列：同名 key 位置留在第一次", run({"o": {"$ref": ["a.json", "b.json#/c/d"]}}, M)[3],
+      '{"o": {"x": 1, "y": {"q": 2}, "z": 3}}\n')
+check("$ref 陣列：接陣列", run({"o": {"$ref": ["l1.json", "l2.json#/k", "l1.json"]}}, M)[:3],
+      (0, {"o": [1, 2, 3, 1, 2]}, None))
+check("$ref 陣列：只有一份＝它本身", run({"o": {"$ref": ["s.json"], "$path": "x"}}, M)[:3], (0, {"o": "str/x"}, None))
+check("$ref 陣列：$at 接在每一份後面", run({"o": {"$ref": ["b.json#/c", "a.json"], "$at": "/d"}},
+                                          {"a.json": {"d": {"w": 0}}, "b.json": {"c": {"d": {"z": 3}}}})[:3],
+      (0, {"o": {"z": 3, "w": 0}}, None))
+check("$ref 陣列：每一份裡的 $ref 從它自己的資料夾算", run({"o": {"$ref": ["sub/r.json", "a.json"]}}, M)[:3],
+      (0, {"o": {"v": "sub-t", "x": 1, "y": {"p": 1}}}, None))
+check("$ref 陣列：物件與陣列混在一起", run({"o": {"$ref": ["a.json", "l1.json"]}}, M)[:3], (1, None, "DirectiveBad"))
+check("$ref 陣列：兩份字串合不起來", run({"o": {"$ref": ["s.json", "s.json"]}}, M)[:3], (1, None, "DirectiveBad"))
+check("$ref 陣列：兩份數字合不起來", run({"o": {"$ref": ["n.json", "n.json"]}}, M)[:3], (1, None, "DirectiveBad"))
+check("$ref 陣列：有一份讀不到", run({"o": {"$ref": ["a.json", "nope.json"]}}, M)[:3], (1, None, "DirectiveBad"))
+check("$ref 陣列：有一份指不到", run({"o": {"$ref": ["a.json", "b.json#/zz"]}}, M)[:3], (1, None, "DirectiveBad"))
+check("$ref 陣列：繞圈", run({"o": {"$ref": ["a.json", "c.json"]}}, dict(M, **{"c.json": {"$ref": ["a.json", "c.json"]}}))[:3],
+      (1, None, "DirectiveBad"))
+check("$ref 陣列：同一份寫兩次不算繞圈", run({"o": {"$ref": ["a.json", "a.json"]}}, M)[:3],
+      (0, {"o": {"x": 1, "y": {"p": 1}}}, None))
+for name, d in (("空陣列", {"$ref": []}), ("元素不是字串", {"$ref": ["a.json", 3]}), ("元素空字串", {"$ref": ["a.json", ""]}),
+                ("元素只有 #/", {"$ref": ["a.json", "#/x"]}), ("元素 # 後不是 /", {"$ref": ["a.json", "b.json#c"]}),
+                ("元素是陣列", {"$ref": [["a.json"]]})):
+    check("$ref 陣列原封不動：" + name, run({"o": d}, M)[:3], (0, {"o": d}, None))
 # stdin：空＝{}、多份＝InputExtra、解不出來＝InputBad；參數＝ArgumentsBad
 check("stdin 空", run("")[:3], (0, {}, None))
 check("stdin 多份", run("{} {}")[:3], (1, None, "InputExtra"))

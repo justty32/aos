@@ -78,8 +78,8 @@ void write_window(const std::string& path, const Json& doc);
 
 // 指示詞（N-45，10-23 晚使用者「aos 讀的 JSON 全部支援」）：doc 本身是指示詞就先換掉（aos::resolve_shallow，不往裡面走），
 // 換完是物件就把 keys 裡有寫的那幾格整個解（aos::resolve）；其他 key（body、_entry…）原封不動，留給讀它的人（C-52）。
-// base_dir＝doc 裡相對 $ref 的起點（設定檔、ctl＝那份檔所在的資料夾）。回解好的 doc 與它裡面的起點（doc 本身換過 $ref
-// ＝那份檔的資料夾）。真的解不開丟 DirectiveBad（呼叫者決定算誰的錯：設定檔＝自己的錯退 1；ctl＝整份不採用）。
+// base_dir＝doc 裡相對 $ref 的起點（設定檔、ctl＝那份檔所在的資料夾）。回解好的 doc 與它裡面各 key 的起點（dir_of(key)；
+// doc 本身換過 $ref＝那份檔的資料夾，換的是 $ref 陣列＝每個 key 來自的那份檔的）。真的解不開丟 DirectiveBad（呼叫者決定算誰的錯：設定檔＝自己的錯退 1；ctl＝整份不採用）。
 aos::Resolved resolve_keys(const Json& doc, const std::string& base_dir, const std::vector<std::string>& keys);
 
 // 心跳欄位 {"pid", "started_at_ticks"（/proc/<pid>/stat 第 22 欄）, "boot_id", "at"（ISO 8601 UTC 到毫秒，aos::utc_now_ms）}（N-32）。
@@ -127,7 +127,8 @@ protected:
     virtual Json info();                                             // 寫進 state 的額外欄位（物件）
     // ctl 多認的 key：解自己那幾格的指示詞（起點 base＝ctl 換完一層後的起點）、驗證，可以就地改寫 doc（回原因＝不採用；
     // 丟 DirectiveBad 也＝不採用）
-    virtual std::optional<std::string> check_ctl(Json& doc, const std::string& base);
+    // where＝ctl 換完一層後各 key 的起點（where.dir_of(key)；ctl 整份是 $ref 陣列時每個 key 可能來自不同的檔）
+    virtual std::optional<std::string> check_ctl(Json& doc, const aos::Resolved& where);
 
     void say(const std::string& msg);   // stderr 一行「程式名: msg」
 
@@ -139,7 +140,7 @@ protected:
 
     Defaults d_;
     Json cfg_;                    // 設定檔整份（旗標已蓋上；子類別讀自己的 key，指示詞要自己解：resolve_keys）
-    std::string cfg_base_;        // cfg_ 裡相對 $ref 的起點（設定檔所在的資料夾；整份換過 $ref＝那份檔的）
+    aos::Resolved cfg_dirs_;      // cfg_ 各 key 裡相對 $ref 的起點（cfg_dirs_.dir_of(key)；設定檔所在的資料夾，整份換過 $ref＝那份檔的；value 不用）
     bool has_run_ = false;        // false＝沒有身體（daemon 純監工）
     Target run_;
     std::optional<long long> max_;

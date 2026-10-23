@@ -1,6 +1,7 @@
 // ref.cpp：{"$ref": "檔[#/指標]"[, "$at": 指標]}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。
+// $ref 也可以是這種字串的陣列（10-23 使用者）：每個元素各取一份、各自接著解，再照順序合成一份（merge）。
 //
-// 1. 寫法：$ref 不是字串、空字串、只有 #/…（沒檔名）、# 後面不是 /＝回 nullopt（原封不動，D15）；
+// 1. 寫法：$ref 不是字串、空字串、只有 #/…（沒檔名）、# 後面不是 /＝回 nullopt（原封不動，D15）；陣列＝空的、或有一個元素這樣＝回 nullopt；
 //    $at 不是字串、或不是空字串也不是 / 開頭＝當沒寫（D14）；兩個都寫＝$at 接在 #/ 後面（D7）。
 //    修飾詞都帶 $（10-23 命名統合；沒帶 $ 的 at 是普通 key、不作用）
 // 2. 相對檔名從這一層的 base 算（最外層＝呼叫者給的 base_dir；被 $ref 進來的檔＝它解開捷徑後所在的資料夾）
@@ -14,6 +15,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iterator>
+#include <unordered_map>
 
 #include <sys/stat.h>
 
@@ -99,18 +101,10 @@ static Json pointer(const Json& doc, const std::string& ptr, const std::string& 
     return *cur;
 }
 
-std::optional<Fetched> fetch_ref(const Json& d, const std::string& base, const Chain& chain) {
-    // 1. 寫法
-    const Json& ref = d["$ref"];
+// 一個元素（"檔[#/指標]"）的寫法：不是字串、空字串、只有 #/…（沒檔名）、# 後面不是 /＝nullopt；回（檔, 指標＋at）。
+static std::optional<std::pair<std::string, std::string>> parse_spec(const Json& ref, const std::string& at) {
     if (!ref.is_string()) {
         return std::nullopt;
-    }
-    std::string at;
-    if (d.contains("$at") && d["$at"].is_string()) {
-        std::string a = d["$at"].get<std::string>();
-        if (a.empty() || a[0] == '/') {
-            at = a;
-        }
     }
     std::string spec = ref.get<std::string>();
     std::string path = spec;
@@ -126,37 +120,119 @@ std::optional<Fetched> fetch_ref(const Json& d, const std::string& base, const C
     if (path.empty()) {
         return std::nullopt;
     }
-    ptr += at;
+    return std::make_pair(path, ptr + at);
+}
 
-    // 2～3. 從這一層算、看繞圈
-    std::string file = real_path(aos::join(base, path));
-    std::pair<std::string, std::string> here{file, ptr};
-    for (const auto& seen : chain) {
-        if (seen == here) {
-            std::string walked;
-            for (const auto& s : chain) {
-                walked += s.first + (s.second.empty() ? "" : "#" + s.second) + " → ";
-            }
-            throw Error{code::DirectiveBad, "$ref 繞圈：" + walked + file + (ptr.empty() ? "" : "#" + ptr)};
+std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const std::string& base, const Chain& chain) {
+    // 1. 寫法：字串＝一份；陣列（10-23 使用者）＝每個元素一份，空陣列或有一個不合＝整個不合
+    std::string at;
+    if (d.contains("$at") && d["$at"].is_string()) {
+        std::string a = d["$at"].get<std::string>();
+        if (a.empty() || a[0] == '/') {
+            at = a;
         }
     }
+    const Json& ref = d["$ref"];
+    std::vector<std::pair<std::string, std::string>> specs;
+    if (ref.is_array()) {
+        if (ref.empty()) {
+            return std::nullopt;
+        }
+        for (const Json& r : ref) {
+            auto one = parse_spec(r, at);
+            if (!one) {
+                return std::nullopt;
+            }
+            specs.push_back(*one);
+        }
+    } else {
+        auto one = parse_spec(ref, at);
+        if (!one) {
+            return std::nullopt;
+        }
+        specs.push_back(*one);
+    }
 
-    // 4. 讀、取值（原文，還沒往下解）
-    Fetched f;
-    f.value = pointer(load(file), ptr, file);
-    f.here = here;
-    return f;
+    std::vector<Fetched> out;
+    for (const auto& [path, ptr] : specs) {
+        // 2～3. 從這一層算、看繞圈（鏈＝往上那幾層；同一個陣列裡寫兩次同一份不算繞圈）
+        std::string file = real_path(aos::join(base, path));
+        std::pair<std::string, std::string> here{file, ptr};
+        for (const auto& seen : chain) {
+            if (seen == here) {
+                std::string walked;
+                for (const auto& s : chain) {
+                    walked += s.first + (s.second.empty() ? "" : "#" + s.second) + " → ";
+                }
+                throw Error{code::DirectiveBad, "$ref 繞圈：" + walked + file + (ptr.empty() ? "" : "#" + ptr)};
+            }
+        }
+        // 4. 讀、取值（原文，還沒往下解）
+        Fetched f;
+        f.value = pointer(load(file), ptr, file);
+        f.here = here;
+        out.push_back(std::move(f));
+    }
+    return out;
 }
 
 std::optional<Json> resolve_ref(const Json& d, const std::string& base, Chain& chain) {
-    std::optional<Fetched> f = fetch_ref(d, base, chain);
-    if (!f) {
+    std::optional<std::vector<Fetched>> fs = fetch_ref(d, base, chain);
+    if (!fs) {
         return std::nullopt;
     }
-    // 推上鏈、往下解（這份檔裡的 $ref 從它實際所在的資料夾算）
-    chain.push_back(f->here);
-    Json out = walk(f->value, aos::dirname(f->here.first), chain);
-    chain.pop_back();
+    // 每一份推上鏈、往下解（那份檔裡的 $ref 從它實際所在的資料夾算），再合成一份
+    std::vector<Resolved> parts;
+    for (Fetched& f : *fs) {
+        chain.push_back(f.here);
+        parts.push_back({walk(f.value, aos::dirname(f.here.first), chain), aos::dirname(f.here.first), {}, {}});
+        chain.pop_back();
+    }
+    return merge(parts, aos::dumps(d["$ref"])).value;
+}
+
+// 合成一份（說明見 internal.hpp）。
+Resolved merge(std::vector<Resolved>& parts, const std::string& where) {
+    if (parts.size() == 1) {
+        return std::move(parts[0]);
+    }
+    bool objects = true;
+    bool arrays = true;
+    for (const Resolved& p : parts) {
+        objects = objects && p.value.is_object();
+        arrays = arrays && p.value.is_array();
+    }
+    Resolved out;
+    out.base_dir = parts[0].base_dir;
+    if (arrays) {
+        out.value = Json::array();
+        for (Resolved& p : parts) {
+            for (size_t i = 0; i < p.value.size(); ++i) {
+                out.item_dirs.push_back(p.dir_of(i));
+                out.value.push_back(std::move(p.value[i]));
+            }
+        }
+        return out;
+    }
+    if (!objects) {
+        throw Error{code::DirectiveBad, "$ref " + where + " 的幾份合不起來（要都是物件或都是陣列）"};
+    }
+    out.value = Json::object();
+    // ordered_json 的 [] 逐個比對 key（N 個就 N×N）：自己記位置、直接接在尾巴；同名的就地蓋掉（位置留在第一次出現的地方）
+    auto& vec = static_cast<std::vector<std::pair<const std::string, Json>>&>(out.value.get_ref<Json::object_t&>());
+    std::unordered_map<std::string, size_t> pos;
+    for (Resolved& p : parts) {
+        for (auto& [k, x] : p.value.items()) {
+            auto it = pos.find(k);
+            if (it == pos.end()) {
+                pos.emplace(k, vec.size());
+                vec.emplace_back(k, std::move(x));
+            } else {
+                vec[it->second].second = std::move(x);
+            }
+            out.key_dirs[k] = p.dir_of(k);
+        }
+    }
     return out;
 }
 

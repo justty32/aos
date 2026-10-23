@@ -98,7 +98,7 @@ aos::Resolved resolve_keys(const Json& doc, const std::string& base_dir, const s
     }
     for (const std::string& k : keys) {
         if (r.value.contains(k)) {
-            r.value[k] = aos::resolve(r.value[k], r.base_dir);
+            r.value[k] = aos::resolve(r.value[k], r.dir_of(k));
         }
     }
     return r;
@@ -109,8 +109,9 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
     try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45）
         aos::Resolved r = resolve_keys(cfg_, aos::dirname(aos::abspath(aos::split_hash(spec).path)),
                                        {"run", "max", "interval_ms", "ctl", "state"});
-        cfg_ = r.value;
-        cfg_base_ = r.base_dir;
+        cfg_ = std::move(r.value);
+        cfg_dirs_ = std::move(r);
+        cfg_dirs_.value = nullptr;
     } catch (const Error& e) {
         throw Error{e.code, "設定檔 " + spec + " 的指示詞解不開：" + e.msg};
     }

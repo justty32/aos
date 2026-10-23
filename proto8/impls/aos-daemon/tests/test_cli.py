@@ -37,14 +37,23 @@ def alive(pid):
 
 
 def rows_of(stack, st):
-    """state 的 loops 欄解開：物件照原樣；分頁（[{"$ref": "state_loops/<雜湊>.json"}, …]）照順序讀回來合起來（10-23 晚）。"""
+    """state 的 loops 欄解開：物件照原樣；切檔（{"$ref": ["state_loops/<雜湊>.json", …]}）照順序讀回來合起來（10-23）。"""
     v = st.get("loops", {})
-    if isinstance(v, dict):
+    if "$ref" not in v:
         return v
     out = {}
-    for ref in v:
-        out.update(json.loads((Path(stack) / ref["$ref"]).read_text()))
+    for ref in v["$ref"]:
+        out.update(json.loads((Path(stack) / ref).read_text()))
     return out
+
+
+DIRECTIVE = IMPLS / "aos-directive" / "bin" / "aos-directive"
+
+
+def directive(doc, cwd):
+    """用 aos-directive 解一份 JSON（讀 state 的人就這樣拿回完整的 loops）。"""
+    r = subprocess.run([str(DIRECTIVE)], input=json.dumps(doc), cwd=str(cwd), capture_output=True, text=True, check=True)
+    return json.loads(r.stdout)
 
 
 def until(f, secs=15):
@@ -500,24 +509,26 @@ class T(unittest.TestCase):
             self.assertEqual((r.returncode, r.stderr.split(" ")[1], r.stderr.count("\n"), gone.exists()), (1, code, 1, False),
                              r.stderr)
 
-    # ───── G. 10-23 晚：指示詞（daemon.json、ctl）、ctl 的 loops_added／loops_removed、state 的 loops 切分頁 ─────
+    # ───── G. 10-23 晚：指示詞（daemon.json、ctl）、ctl 的 loops_added／loops_removed、state 的 loops 切檔 ─────
 
     def quick(self):
         return {"run": "daemon.json#/b", "max": 1}
 
-    def test_loops_ref_pages(self):
-        # loops 可以寫成分頁（物件的陣列），每一頁、每個子項都能是 $ref；相對 $ref 從寫著它的那份檔的資料夾算。
+    def test_loops_ref_split(self):
+        # loops 拆成好幾份檔＝{"$ref": [檔, …]}（10-23 使用者：$ref 陣列，合物件、同名後面的蓋前面的），每個子項也能是 $ref；
+        # 相對 $ref 從寫著它的那份檔的資料夾算（拆出去的每一份各從自己的資料夾）。
         # 子項的 loop key（run、max…）由 daemon 先解好再寫進小格；其他 key（body）原樣交出去（daemon 不讀它）
         sub = self.t / "sub"
         sub.mkdir()
         (self.t / "loops-1.json").write_text(json.dumps({"a": self.quick()}))
-        (sub / "loops-2.json").write_text(json.dumps({"b": {"$ref": "b.json"}, "c": ["daemon.json#/b"]}))
+        (sub / "loops-2.json").write_text(json.dumps({"b": {"$ref": "b.json"}, "c": ["daemon.json#/b"], "a": self.quick()}))
         (sub / "b.json").write_text(json.dumps({"run": "daemon.json#/b", "max": {"$ref": "m.json#/n"},
                                                 "body": {"stdout": {"$env": "NOPE_XYZ"}}}))
         (sub / "m.json").write_text(json.dumps({"n": 1}))
         r = self.run_d({"state": "state.json", "max": 3, "interval_ms": 100, "b": {"argv": ["true"]},
-                        "loops": [{"$ref": "loops-1.json"}, {"$ref": "sub/loops-2.json"}]})
+                        "loops": {"$ref": ["loops-1.json", "sub/loops-2.json"]}})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(list(self.kids()), ["a", "b", "c"])   # 兩份都有 a：後面的蓋前面的、位置留在第一次
         self.assertEqual({n: k["phase"] for n, k in self.kids().items()}, {"a": "done", "b": "done", "c": "stopped"})   # c 是目標（沒 max＝不限），收工時收掉
         b = json.loads((self.s / "b" / "loop.json").read_text())
         self.assertEqual((b["max"], b["body"]), (1, {"stdout": {"$env": "NOPE_XYZ"}}))
@@ -530,10 +541,13 @@ class T(unittest.TestCase):
                         "loops": {"$ref": "all.json"}})
         self.assertEqual((r.returncode, r.stderr, list(self.kids())), (0, "", ["d"]))
 
-    def test_loops_pages_bad(self):
+    def test_loops_split_bad(self):
         (self.t / "p.json").write_text(json.dumps({"a": "x"}))
-        for loops, code in (([{"$ref": "p.json"}, {"a": "y"}], "CfgBad"),        # 兩頁名字重複
-                            ([{"$ref": "p.json"}, "x"], "CfgBad"),               # 一頁不是物件
+        (self.t / "l.json").write_text(json.dumps(["x"]))
+        for loops, code in (([{"$ref": "p.json"}, {"a": "y"}], "CfgBad"),        # 舊的「物件的陣列＝分頁」不收了（10-23 使用者改）
+                            ({"$ref": ["p.json", "l.json"]}, "DirectiveBad"),    # 一份物件、一份陣列：合不起來
+                            ({"$ref": ["p.json", "nope.json"]}, "DirectiveBad"), # 有一份讀不到
+                            ({"$ref": ["l.json", "l.json"]}, "CfgBad"),          # 合成陣列：不是 {名字: 子項}
                             ({"$ref": "nope.json"}, "DirectiveBad"),              # 讀不到
                             ({"a": {"$env": "NOPE_XYZ"}}, "DirectiveBad"),        # 子項解不開
                             ({"a": {"run": "x", "max": {"$env": "NOPE_XYZ"}}}, "DirectiveBad")):
@@ -576,50 +590,54 @@ class T(unittest.TestCase):
         until(lambda: (self.s / "a" / "starts").exists() and self.kids())
         for bad, why in (({"loops_removed": "a"}, "loops_removed"), ({"loops_removed": [1]}, "loops_removed"),
                          ({"loops_added": {"x/y": "long"}}, "資料夾名"), ({"loops_added": {"state.json": "long"}}, "撞名"),
-                         ({"loops_added": [{"b": "long"}, {"b": "long"}]}, "重複"),
+                         ({"loops_added": [{"b": "long"}]}, "要是 {名字"),
                          ({"loops_added": {"$ref": "nope.json"}}, "指示詞解不開")):
             self.ctl(dict(bad, loops_removed=bad.get("loops_removed", ["a"])))
             st = until(lambda: why in (self.state()["ctl_warning"] or "") and self.state())
             self.assertTrue(st, bad)
             self.assertEqual(list(rows_of(self.s, st)), ["a"], bad)   # 維持上一份好的
         (self.s / "more.json").write_text(json.dumps({"b": "long"}))
-        self.ctl({"loops_added": [{"$ref": "more.json"}]})
-        k = until(lambda: (self.s / "b" / "starts").exists() and set(self.kids()) == {"a", "b"} and self.kids())
+        (self.s / "w").mkdir()
+        (self.s / "w" / "more2.json").write_text(json.dumps({"c": "long"}))
+        self.ctl({"loops_added": {"$ref": ["more.json", "w/more2.json"]}})
+        k = until(lambda: (self.s / "c" / "starts").exists() and set(self.kids()) == {"a", "b", "c"} and self.kids())
         self.assertTrue(k)
         self.assertIsNone(self.state()["ctl_warning"])
         self.ctl({"stopped": True})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
-    def test_state_split_into_pages(self):
-        # state 的 loops 表超過 100 列就切成分頁：loops＝[{"$ref": "state_loops/<雜湊>.json"}, …]，每頁最多 100 列
+    def test_state_split(self):
+        # state 的 loops 表超過 100 列就切檔：loops＝{"$ref": ["state_loops/<雜湊>.json", …]}，每份最多 100 列
         names = ["k%03d" % i for i in range(101)]
         r = self.run_d({"state": "state.json", "max": 4, "interval_ms": 100, "b": {"argv": ["true"]},
                         "loops": {n: self.quick() for n in names}}, timeout=60)
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         st = self.state()
-        refs = [x["$ref"] for x in st["loops"]]
+        self.assertEqual(list(st["loops"]), ["$ref"])
+        refs = st["loops"]["$ref"]
         self.assertTrue(all(re.fullmatch(r"state_loops/[0-9a-f]{16}\.json", x) for x in refs), refs)
         pages = [json.loads((self.s / x).read_text()) for x in refs]
         self.assertEqual([len(x) for x in pages], [100, 1])
         rows = rows_of(self.s, st)
         self.assertEqual((list(rows), {x["phase"] for x in rows.values()}), (names, {"done"}))
+        self.assertEqual(directive(st, self.s)["loops"], rows)   # 讀 state 的人用 aos-directive 解就拿回整張表
         left = sorted(x.name for x in (self.s / "state_loops").iterdir())
         self.assertTrue(set(x.split("/")[1] for x in refs) <= set(left) and len(left) <= 4, left)   # 只留這次與上一次的
         self.assertFalse(any(x.startswith(".") for x in left), left)
-        # 子項名字不能跟分頁資料夾撞名
+        # 子項名字不能跟分檔資料夾撞名
         r = self.run_d({"state": "state.json", "max": 1, "loops": {"state_loops": self.long()}})
         self.assertTrue(r.returncode == 1 and "撞名" in r.stderr, r.stderr)
 
-    def test_state_pages_adopt_and_shrink(self):
-        # 切了分頁的 state 照樣接回；名單縮回 100 以內，loops 變回物件、分頁清掉
+    def test_state_split_adopt_and_shrink(self):
+        # 切了檔的 state 照樣接回；名單縮回 100 以內，loops 變回物件、分檔清掉
         names = ["k%03d" % i for i in range(101)]
         doc = {"state": "state.json", "ctl": "ctl.json", "loops": {n: ["/bin/sleep", "1000"] for n in names}}
         p = self.start(doc)
         k = until(lambda: len(self.kids()) == 101 and all(r["phase"] == "running" for r in self.kids().values())
                   and self.kids(), secs=60)
         self.assertTrue(k)
-        self.assertIsInstance(self.state()["loops"], list)
+        self.assertEqual(list(self.state()["loops"]), ["$ref"])
         p.kill()
         p.wait()
         p2 = self.start()
@@ -627,12 +645,12 @@ class T(unittest.TestCase):
         k2 = self.kids()
         self.assertEqual({n: r["pid"] for n, r in k2.items()}, {n: r["pid"] for n, r in k.items()})   # 全部接回、沒重起
         self.ctl({"loops_removed": names[:2]})
-        st = until(lambda: isinstance(self.state()["loops"], dict) and len(self.state()["loops"]) == 99 and self.state())
+        st = until(lambda: "$ref" not in self.state()["loops"] and len(self.state()["loops"]) == 99 and self.state())
         self.assertTrue(st)
         self.assertTrue(until(lambda: not (self.s / "state_loops").exists()))
         self.ctl({"stopped": True})
-        p2.communicate(timeout=60)
-        self.assertEqual(p2.returncode, 0)
+        out, err = p2.communicate(timeout=60)
+        self.assertEqual((p2.returncode, err), (0, ""))
         self.assertEqual([n for n, r in k.items() if alive(r["pid"])], [])
 
 

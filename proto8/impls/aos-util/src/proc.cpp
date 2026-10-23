@@ -1,5 +1,6 @@
 // proc.cpp：【aos-util】子程序：起、看結束了沒、整群送訊號、收屍、/proc 資訊、memfd（說明見 include/aos/proc.hpp）。
 #include "aos/error.hpp"
+#include "aos/files.hpp"
 #include "aos/proc.hpp"
 
 #include <cerrno>
@@ -106,8 +107,14 @@ std::optional<long long> proc_started_at_ticks(pid_t pid) {
     if (pid == 0) {
         path = "/proc/self/stat";
     }
-    std::ifstream f(path);
-    std::string text((std::istreambuf_iterator<char>(f)), {});
+    // 用 read(2) 讀、出錯就 nullopt：行程在 open 與 read 之間結束時 read 回 ESRCH，ifstream＋istreambuf_iterator 會把它丟成
+    // ios_base::failure（basic_filebuf::underflow），daemon 巡表時看子 loop 死活就會整支以 Internal 退 1（10-23 查 ctest 偶發失敗）。
+    int err = 0;
+    std::optional<std::string> got = aos::read_file(path, err);
+    if (!got) {
+        return std::nullopt;
+    }
+    const std::string& text = *got;
     // 第 2 欄是程式名，用括號包著、裡面可能有空白，所以從最後一個 ')' 之後開始數：之後第 1 個是第 3 欄……第 20 個是第 22 欄
     size_t close_paren = text.rfind(')');
     if (close_paren == std::string::npos) {

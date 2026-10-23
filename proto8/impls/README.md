@@ -10,7 +10,7 @@
 > 表用雜湊找名字、沒有 `run` 時一圈一份 state（不寫 `running`）、起子項前先寫一份 state、小格只建一層；aos-loop 的 `$AOS_STACK` 不在＝`WriteFailed`、不自己建。1 萬個子 loop 一圈 483 → 205 ms、daemon CPU 86 → 6 %。
 >
 > **10-23 晚（ctl 只寫變動、`$ref` 切檔、指示詞全面，[thinking](../thinking/2026-10-23-daemon-ctl-ref.md)）：** aos-loop、aos-daemon、aos-fsm 讀設定檔與 ctl 時解指示詞（只解自己讀的格；aos-directive 多 `resolve_shallow`、aos-loop 開出 `resolve_keys`；解不開：設定檔 `DirectiveBad` 退 1、ctl 不採用）；
-> aos-daemon 的 ctl 多認 `loops_added`／`loops_removed`（期望表＝ctl 的 `loops` 或 daemon.json 的＋added－removed）、`loops` 可寫成分頁陣列、state 的 `loops` 超過 100 列自動切到 `state_loops/<雜湊>.json`。
+> aos-daemon 的 ctl 多認 `loops_added`／`loops_removed`（期望表＝ctl 的 `loops` 或 daemon.json 的＋added－removed）、`loops` 要拆檔寫 `{"$ref": [檔, …]}`（aos-directive 的 `$ref` 陣列：幾份照順序合成一份，10-23 使用者；取代原本的分頁陣列）、state 的 `loops` 超過 100 列自動切成 `{"$ref": ["state_loops/<雜湊>.json", …]}`。
 >
 > **10-23 起 impls 是唯一實作**（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；頂層問 fsm 和 tick，使用者選「fsm 也改用 C++、tick 先留 Python」）：`proto8/bin` 的 Python 版 aos-exec、aos-loop、aos-fsm、aos-daemon 與它們的庫刪了，只剩 `proto8/bin/aos-tick`。`proto8/tests`（`tests/aos_bins.py`）與 `proto8/demo/run.sh` 改成直接跑這四支的 `bin/`（要先照下面「建置」建好）；原本那兩個 inst 錯誤字面差別的測試改成照這裡的字面，`test_demo` 不再跟 bin 線比。下面說「對齊 bin」「跟 Python 版的差異」的都是 10-23 前的事。
 >
