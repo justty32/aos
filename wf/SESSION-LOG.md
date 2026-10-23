@@ -12,7 +12,6 @@
 
 ## 最新進度
 
-- **open｜10-23 代定待使用者看**：impls 跟上 bin 10-22、bin 補錯誤代號都做完（7e945eb7、c3eb8230、96476758）；代定（daemon 撞名 `Conflict`、fsm 表壞 `FieldType`）、aos-tick 沒加代號、代號命名跟 C-54 不一致 → [10-23](session_logs/2026-10/2026-10-23.md#留給使用者的)
 - **open｜還是草稿的條文**：N-14 窗總則、N-15 鎖、N-16 信箱、N-34 tasks（都沒有實作可對） → [NORMS 待定](../proto8/NORMS/08-待定.md)
 - **待照新做法重寫**：loop／daemon／fsm、tick 已照 10-21 計畫改寫（[plan](../proto8/thinking/2026-10-21-plan.md)；tick 是第 4 段，commit 9d618174，代定見 [session log 10-21](session_logs/2026-10/2026-10-21.md#使用者不在時代定aos-tick計畫第-4-段10-21-晚)）；還沒做的：tasks、腦的工具呼叫（`tool_calls`）、兩種 kernel——三項都是方向題，留給使用者（plan § 1.2）；[rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)、[NORMS 待定](../proto8/NORMS/08-待定.md)。
 - **KISS 批次 2～6 暫停**（批次 1 已做完；10-16 使用者撤回「都照推薦」）→ [10-15 § KISS 批次 1](session_logs/2026-10/2026-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)。

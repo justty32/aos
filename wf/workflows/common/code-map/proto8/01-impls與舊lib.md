@@ -2,9 +2,9 @@
 
 > 2026-10-21 下午從 [proto8.md](../proto8.md) 逐字下放（那份超過 8 KB，照 [STRUCTURE](../../../../STRUCTURE.md)）。
 
-### `proto8/impls/`（使用者的 C／C++ 實作；10-23 起進 git，`backup/` 不進）
+### `proto8/impls/`（使用者的 C／C++ 實作；10-23 起進 git；舊快照 `backup/` 10-23 已刪）
 
-總入口與逐專案說明在 `proto8/impls/README.md`（10-23 起進 git；各專案的 `build/`、`bin/`、`lib/` 由各自的 `.gitignore` 擋，`proto8/impls/.gitignore` 擋 `backup/`）。10-21 晚對齊 bin 版 10-21 傍晚、10-23 再對齊 bin 10-22：提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（`inst` C lib、`aos-util`、`aos-directive`、`aos-schema` 是庫）。
+總入口與逐專案說明在 `proto8/impls/README.md`（10-23 起進 git；各專案的 `build/`、`bin/`、`lib/` 由各自的 `.gitignore` 擋）。10-21 晚對齊 bin 版 10-21 傍晚、10-23 再對齊 bin 10-22：提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（`inst` C lib、`aos-util`、`aos-directive`、`aos-schema` 是庫）。
 
 | 哪裡 | 負責什麼 |
 |---|---|
@@ -23,7 +23,7 @@
 | `aos-daemon/src/child/child.cpp` | 子 loop 經 aos-exec 起：寫小格 `loop.json`（補 ctl／state、蓋 `_exec`、相對 run 轉絕對）、fork 後呼叫 `run_cli({"--", 小格/loop.json#/_exec})`，exec 成 PATH 上的 aos-loop |
 | `aos-directive/src/resolve.cpp` | 指示詞走訪；`$path` 是字串拼接（`join_path`） |
 
-aos-loop 的骨架是公開的 `aos::loop::Loop`（`src/engine/`），aos-daemon 繼承它（`src/daemon/`）。動工前的樣子備份在 `proto8/impls/backup/2026-10-21-night/`（更早的在 `backup/aos-impls-2026-10-21-pre-align.tar.gz`；`backup/` 只在家中那台、不進 git）。
+aos-loop 的骨架是公開的 `aos::loop::Loop`（`src/engine/`），aos-daemon 繼承它（`src/daemon/`）。動工前的樣子原本備份在 `proto8/impls/backup/`（只在家中那台、不進 git），10-23 使用者授權刪掉。
 
 ### 舊 lib（10-16 那套，已刪）
 

@@ -33,6 +33,6 @@
 
 ### `proto8/impls/` 與舊 lib
 
-逐字下放到 [proto8/01-impls與舊lib](proto8/01-impls與舊lib.md)（2026-10-21 下午，本檔超過 8 KB）：impls 是使用者的 C／C++ 實作（10-23 起進 git，`backup/` 不進）；舊 lib 是 10-16 那套、10-19 刪進 git 歷史。
+逐字下放到 [proto8/01-impls與舊lib](proto8/01-impls與舊lib.md)（2026-10-21 下午，本檔超過 8 KB）：impls 是使用者的 C／C++ 實作（10-23 起進 git；舊快照 `backup/` 10-23 已刪）；舊 lib 是 10-16 那套、10-19 刪進 git 歷史。
 
 改 proto8 的檔就同步那份。

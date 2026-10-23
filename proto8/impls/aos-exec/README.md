@@ -240,4 +240,4 @@ JSON 物件（`.env` key、一路往下、`AOS_CO`、`檔#/指標` 算進 `AOS_C
 **拿 `proto8/tests` 對照**（手動，不進 ctest）：把 `proto8/tests` 複製到暫存資料夾，旁邊的 `bin/` 換成指到 impls 四支（aos-exec、aos-loop、aos-fsm、aos-daemon）的捷徑，
 直接跑（10-23 起 bin 也帶代號，不用再抹；`tests/own_error.py` 會逐行對代號，impls 的代號也全對得上）：
 10-23 全套只剩 2 個不過，都是 inst 單子錯誤訊息的字面（`test_inst` 要原因開頭是 key 名、這裡是「單子的 key…」；`test_directive_argv` 的 D1 要訊息裡有檔名、
-這裡 libaos 的 `OpenFailed` 不帶檔名），行為一樣。裝了 python-dotenv（`pip install --target` 到暫存資料夾、`PYTHONPATH` 指過去）時 `test_exec_dotenv` 的逐案對照也過。
+這裡 libaos 的 `OpenFailed` 不帶檔名），行為一樣；照現狀不改（10-23 使用者）。裝了 python-dotenv（`pip install --target` 到暫存資料夾、`PYTHONPATH` 指過去）時 `test_exec_dotenv` 的逐案對照也過。

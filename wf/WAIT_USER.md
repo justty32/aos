@@ -14,5 +14,4 @@
 ## 待使用者項
 
 - 還沒確認的：tasks、腦的 tool_calls、兩種 kernel 三個方向題 → [plan § 1.2](../proto8/thinking/2026-10-21-plan.md)
-- 錯誤代號要不要照 C-54 改名（`FieldType`、`JsonSyntax`、`ReadFailed`… 不是 `…Bad`／`…Missing` 的寫法；現在兩版照 impls 原名） → [session log 10-23](session_logs/2026-10/2026-10-23.md#留給使用者的)
 > 2026-10-12 使用者清帳：「舊帳可以清掉」「proto6 已經是老黃曆了，不管」——A 區 71 題、B 區 proto6 帳號真 root 驗收、C 區「先不決定」各項全部結案不再追。原 `wait-user/` 分類檔已封存（見 common/archive 索引），編號不回收。

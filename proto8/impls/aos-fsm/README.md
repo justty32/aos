@@ -19,7 +19,7 @@ cat st/trace.jsonl   # {"at": "2026-10-19T14:07:00+00:00", "state": "idle", "cod
 
 行為比照 Python 版 `proto8/bin/aos-fsm`（10-21 傍晚版）；規則出處：CONVENTION P-07～P-10、P-20、P-21、P-36、P-38，NORMS N-36、N-38、N-39、N-41、N-05、N-43、N-60，ideas § 20、§ 23、§ 24。
 **10-21 晚對齊 bin 版**（ideas 10-21 § 9、計畫 F2／F4）：命令列收旗標的寫法（目前沒有旗標）、設定檔可寫 `檔#/指標`；`val` 只收字串或 `[目標, 參數...]`；trace 拿掉 `timed_out`。
-舊的 10-17 設計稿（`DESIGN.md`：stdin 讀表、格吐 `next`、state 窗 `{"phase"}`）已過時、刪掉，舊版在備份 `proto8/impls/backup/aos-impls-loop-fsm-daemon-2026-10-19-pre-rewrite.tar.gz`。
+舊的 10-17 設計稿（`DESIGN.md`：stdin 讀表、格吐 `next`、state 窗 `{"phase"}`）已過時、刪掉，舊版在備份 `proto8/impls/backup/aos-impls-loop-fsm-daemon-2026-10-19-pre-rewrite.tar.gz`（10-23 已刪）。
 
 ## 用法
 

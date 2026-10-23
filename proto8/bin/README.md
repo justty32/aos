@@ -28,7 +28,7 @@
 > aos-loop、aos-daemon：`Usage`、`ReadFailed`／`JsonSyntax`（設定檔讀不到／不是 JSON）、`FieldType`（其餘設定寫錯、`#` 與指標）、`StackMissing`（要 AOS_STACK 卻沒設）、`LaunchFailed`（起不了 aos-exec）；
 > daemon 另有 `Conflict`（子項名字跟自己的 ctl／state 撞名）、起不了子項時照哪一步失敗 `MkdirFailed`／`WriteFailed`／`LaunchFailed`。那拍失敗那行（`第 N 圈 … 失敗，結束碼 C`）不是自己的錯、不帶代號（同 impls）。
 > aos-fsm：`Usage`、`StackMissing`、設定檔 `ReadFailed`／`JsonSyntax`／`FieldType`、表壞 `FieldType`、state 讀不了 `ReadFailed`、state 裡的狀態不在表上 `StateUnknown`、起不了 aos-exec `LaunchFailed`。
-> 順手修了兩處原本會吐 traceback 的：入口檔不是 UTF-8（改算 `入口壞：沒有 +x、也不是 JSON`）、`$ref` 的檔不是 UTF-8（改算單子的 `DirectiveBad`）。aos-tick 不在 impls、功用未定（10-22 擱置），沒加代號。
+> 順手修了兩處原本會吐 traceback 的：入口檔不是 UTF-8（改算 `入口壞：沒有 +x、也不是 JSON`）、`$ref` 的檔不是 UTF-8（改算單子的 `DirectiveBad`）。aos-tick 不在 impls、功用未定（10-22 擱置），沒加代號（10-23 使用者認可）。代號照 impls 原名沿用、不照 C-54 的 `…Missing`／`…Unknown`／`…Bad` 改名（10-23 使用者裁定）。
 > 測試：`tests/own_error.py` 把各測試檔拿到的 stderr 每一行都對一次代號（對不上就紅）再拿掉，既有斷言照舊；`test_exec_rules.test_raw_codes` 直接看原樣。impls 四支拿同一套測試跑，代號也全對得上。
 
 > **10-21 下午 aos-loop／aos-daemon 收旗標（使用者「旗標放前面確實比較好」「loop.json還是需要的」，見 [ideas 10-21 § 8](../thinking/2026-10-21-ideas.md#8-aos-loop10-21-下午)、[計畫](../thinking/2026-10-21-plan.md) 第 1 段；條文 N-11、N-28、N-18、P-05、P-06）**：`aos-loop [--cfg loop.json] [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [XXX [args...]]`，aos-daemon 同一套；旗標 ＞ 設定檔 ＞ 預設、命令列 XXX 蓋 `run`；`run` 只收 aos-exec 的目標（內嵌單子改寫 `loop.json#/body`）；`max` 沒寫＝不限；loop 叫 aos-exec 一律寫 `aos-exec -- 目標`。旗標解析抽成 `aos_flags.py`，aos-exec 換用它、行為不變。demo 的四個 `_exec` 與三份 loop.json、daemon.json 已改寫。aos-fsm 在計畫第 3 段跟上（見下一段）。**impls 10-21 晚已對齊**。測試在 `tests/test_loop.py` 的 `Cli`。計畫第 2 段（daemon 收尾）：daemon 的旗標、XXX、字串子項補測試（`tests/test_daemon.py`），收工時剛結束的子項不再留 `phase: running`（D7）。

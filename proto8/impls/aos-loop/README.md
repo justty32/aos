@@ -18,7 +18,7 @@ aos-loop --max 2 loop.json # 每圈 `aos-exec -- idle`，旗標蓋過 loop.json 
 **10-21 對齊 bin 版 10-20**：長出選填的 `interval_ms`、`ctl`、`state`，骨架開成公開的 `aos::loop::Loop`（aos-daemon 繼承它）。
 **10-21 晚對齊 bin 版 10-21 傍晚**（ideas 10-21 § 8、§ 9）：命令列收旗標、設定檔可寫 `檔#/指標`；`run` 只收字串或 `[目標, 參數...]`（內嵌單子改寫 `loop.json#/body`）；
 `max` 沒寫＝不限；每拍一律在子行程裡呼叫 aos-exec 的 `run_cli`（原本「這個行程算入口、子行程 apply_env＋launch」與「物件＝行程內 run_inst」兩條都拿掉）。
-舊的 10-16～17 那套（stdin 設定、ctl／state 窗、`inst`／`times`）已整個換掉，舊版在備份 `proto8/impls/backup/aos-impls-loop-fsm-daemon-2026-10-19-pre-rewrite.tar.gz`。
+舊的 10-16～17 那套（stdin 設定、ctl／state 窗、`inst`／`times`）已整個換掉，舊版在備份 `proto8/impls/backup/aos-impls-loop-fsm-daemon-2026-10-19-pre-rewrite.tar.gz`（10-23 已刪）。
 
 ## 用法
 

@@ -7,7 +7,7 @@
 **10-21 照新做法重寫**（使用者 10-19 晚「daemon也用新做法重寫吧」、10-20「照預設」，[ideas § 25](../../thinking/2026-10-19-ideas.md)；
 計畫 [PLAN-2026-10-19.md](PLAN-2026-10-19.md)）。行為照 `proto8/bin/aos-daemon`（10-20，Python）——計畫跟 bin 版不一樣的地方（例：`ctl`／`state` 是檔名不是布林、
 `children` 的值收字串、沒有「另一個 daemon 還活著」的檢查）一律照 bin 版。舊的 10-16～17 那代（控制資料夾、策略格、table 窗）整個換掉，
-舊碼在 `../backup/aos-impls-loop-fsm-daemon-2026-10-19-pre-rewrite.tar.gz` 與 `../backup/aos-impls-2026-10-21-pre-align.tar.gz`。
+舊碼在 `../backup/aos-impls-loop-fsm-daemon-2026-10-19-pre-rewrite.tar.gz` 與 `../backup/aos-impls-2026-10-21-pre-align.tar.gz`（10-23 都已刪）。
 **10-21 晚對齊 bin 版 10-21 傍晚**（ideas 10-21 § 9、計畫 D7）：命令列同 aos-loop（收旗標、設定檔可寫 `檔#/指標`）；`run` 與 `children` 的值收陣列；
 子 loop 改成**經 aos-exec 起**（exec 成 PATH 上的 aos-loop），換掉 10-20 頂層代定的「fork 後在子行程裡直接跑 Loop」；收工時最後一圈之後才自己結束的子項也標 `exited`。
 
