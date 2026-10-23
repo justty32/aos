@@ -38,3 +38,5 @@
 18,N-28 同名 key 裡的 `id`,註明現行沒有,N-28,照程式,否
 18,N-17 七態裡的 `starting`、`stopping`,註明這版不寫進 state（`stopping` 只在 daemon 內部用）,N-17,照程式,否
 —,程式內部：`aos_window.beat()`、庫結果的 `ms`,`aos_window.heartbeat()`、`elapsed_ms`（C 結構的欄位名不動）,bin 庫,跟著上面改，免得「beat」兩個意思,否
+13,impls 的 `JsonSyntax`（aos-directive、aos-schema 的 stdin 不是 JSON）與 libaos 輸入壞（原 `FieldType`）,`InputBad`,impls（aos-directive、aos-schema、inst）,C-54 主詞在前＋…Bad；跟既有的 `InputExtra` 配對,代定
+13,impls aos-schema 的 SCHEMA 檔不在（原 `ReadFailed`）,`SchemaMissing`（讀不了或不是 JSON 併進 `SchemaBad`）,impls aos-schema,同設定檔：不在＝Missing、壞＝Bad,代定
