@@ -31,7 +31,7 @@
    "abbr": "cfg",
    "full": "configuration",
    "meaning": "設定（一份 JSON 設定）",
-   "example": "程式裡的 cfg 變數；新 key 要表示設定時用它"
+   "example": "程式裡的 cfg 變數；新 key 要表示設定時用它；錯誤代號 CfgBad、CfgMissing（10-23 統合）"
   },
   {
    "abbr": "dir",
@@ -48,7 +48,7 @@
   {
    "abbr": "env",
    "full": "environment",
-   "meaning": "環境變數（只用在這個意思）",
+   "meaning": "環境變數（只指環境變數；.env 檔另叫 dotenv，10-23 統合）",
    "example": "envs、envs_clear、$env、AOS_ 開頭的環境變數"
   },
   {
@@ -97,7 +97,7 @@
    "abbr": "ms",
    "full": "millisecond",
    "meaning": "毫秒（單位後綴）",
-   "example": "timeout_ms、interval_ms、grace_ms"
+   "example": "timeout_ms、interval_ms、grace_ms、elapsed_ms（trace.jsonl，10-23 統合）"
   },
   {
    "abbr": "seq",
@@ -115,7 +115,7 @@
    "abbr": "pid",
    "full": "process id",
    "meaning": "行程號（POSIX）",
-   "example": "daemon state 窗 children 各項的 pid（N-28）"
+   "example": "daemon state 窗 loops 各項的 pid（N-28；10-23 統合，原 children）"
   },
   {
    "abbr": "op",
@@ -127,7 +127,7 @@
    "abbr": "val",
    "full": "value",
    "meaning": "值",
-   "example": "fsm 表每格的 val（N-36）"
+   "example": "fsm 表每格的 val（N-36）、loop.json／daemon.json 的 val（10-23 統合，原 run；N-28、P-06）"
   },
   {
    "abbr": "max",
@@ -217,7 +217,7 @@
    "abbr": "ws",
    "full": "workspace",
    "meaning": "工作區：使用者的檔與成品所在的資料夾（不是 stack）",
-   "example": "AOS_WS（C-65、N-55）"
+   "example": "AOS_WS（C-65、N-55）、--ws、錯誤代號 WsMissing（10-23 統合）"
   },
   {
    "abbr": "cf",
@@ -230,6 +230,18 @@
    "full": "current dir",
    "meaning": "現在所在的資料夾：AOS_CF 所在的資料夾＝aos-exec cd 進去的地方（只用在環境變數名；不是 Unix 的 cd 指令，10-19 下班前，ideas § 19）",
    "example": "AOS_CD（N-57）"
+  },
+  {
+   "abbr": "co",
+   "full": "current obj",
+   "meaning": "現在的物件：實際入口在那份 JSON 檔裡的位置，JSON 指標、不帶 #（10-21 晚使用者「aos current obj」；10-23 統合補進表）",
+   "example": "AOS_CO（N-57）"
+  },
+  {
+   "abbr": "dotenv",
+   "full": "dotenv",
+   "meaning": ".env 檔；dotenv 生態的叫法，不是環境變數本身（10-23 統合）",
+   "example": "--dotenv-override、錯誤代號 DotenvBad（N-58、N-59、N-60）"
   }
  ]
 }

@@ -19,7 +19,7 @@
 - **[CONCEPTS.md](CONCEPTS.md)**：概念——aos 怎麼看世界（C-01～C-73）。
 - **[NORMS.md](NORMS.md)**：規範——從概念推出來、大家都要守的（比實作重要，C-45）；程式符合規範但不強制。10-19 新的底在 [NORMS/10](NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62：六個環境變數（10-21 晚加 `AOS_CO`）、`aos-exec XXX`、找入口、`#/` 尋址）。
 - **[CONVENTION.md](CONVENTION.md)**：aos agent 慣例（P-05～P-40）——我們自己人寫 agent 時照抄的標準形狀，不要求別人守。
-- **[bin/](bin/README.md)**：aos-exec、aos-loop、aos-fsm、aos-daemon、aos-tick 與 inst 庫 aos_inst.py（aos-inst 命令列 10-22 刪；aos-daemon 10-20；其餘 10-19 從 proto8-2 併進來；Python，10-19 晚照 § 14～§ 21 改完）。`proto8/impls/`：使用者假日的 C／C++ 參考實作（10-23 起進 git），提供 aos-exec、aos-loop、aos-fsm、aos-daemon 四支命令列，10-21 已對齊 bin 版 10-20（daemon 照新做法重寫、指示詞與 argv D1～D15），10-21 晚再對齊 bin 版 10-21 傍晚（aos-exec 的旗標與 `.env`、設定檔是唯一參數、`run`／`val` 陣列、daemon 經 aos-exec、`$path` 字串拼接）；刻意沒有 aos-inst 命令列，也沒有 aos-tick。
+- **[bin/](bin/README.md)**：aos-exec、aos-loop、aos-fsm、aos-daemon、aos-tick 與 inst 庫 aos_inst.py（aos-inst 命令列 10-22 刪；aos-daemon 10-20；其餘 10-19 從 proto8-2 併進來；Python，10-19 晚照 § 14～§ 21 改完）。`proto8/impls/`：使用者假日的 C／C++ 參考實作（10-23 起進 git），提供 aos-exec、aos-loop、aos-fsm、aos-daemon 四支命令列，10-21 已對齊 bin 版 10-20（daemon 照新做法重寫、指示詞與 argv D1～D15），10-21 晚再對齊 bin 版 10-21 傍晚（aos-exec 的旗標與 `.env`、設定檔是唯一參數、`run`／`val` 陣列〔10-23 統合：`run` 改名 `val`，[thinking](thinking/2026-10-23-naming.md)〕、daemon 經 aos-exec、`$path` 字串拼接）；刻意沒有 aos-inst 命令列，也沒有 aos-tick。
 - **[demo/](demo/README.md)**：`sh proto8/demo/run.sh`，agent-bob 與 agent-ann 各跑一遍。
 - **tests/**：`python3 -m unittest discover -s proto8/tests`。
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
