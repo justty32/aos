@@ -541,6 +541,23 @@ def loop_json_as_entry(t):
     check("aos-exec loop.json", (r.returncode, r.stderr, Path(t, ".stack", "n").read_text().split()), (0, "", ["x", "x"]))
 
 
+# ───────── F. 10-23 壓測後（使用者「都修都處理」）─────────
+
+@case
+def stack_missing_not_created(t):
+    # 第 6 點：直接跑 aos-loop、開了 state 窗、$AOS_STACK 不在＝state 寫不了＝WriteFailed 一行、退 1，不自己建
+    # （建 stack 只在 aos-exec 做，N-59 第 1 件；資料夾不見照 N-28 開頭 ③ 是使用者自己承擔）。第一次之前就寫 state，所以那次沒跑。
+    mark = Path(t, "ran")
+    prog(t, "c", 'echo x >> "%s"\n' % mark)
+    gone = Path(t, "no", "stack")
+    loop(t, {"run": "c", "max": 1, "state": "state.json"})
+    rc, _, err, stderr = run("loop.json", cwd=t, env={"AOS_STACK": str(gone) + "/"})
+    check("stack 不在：WriteFailed、退 1、不建、那次沒跑", (rc, err, gone.exists(), mark.exists()), (1, "WriteFailed", False, False))
+    loop(t, {"run": "c", "max": 1})
+    rc, _, _, stderr = run("loop.json", cwd=t, env={"AOS_STACK": str(gone) + "/"})
+    check("沒開窗就用不到 stack：照跑", (rc, stderr, mark.exists()), (0, "", True))
+
+
 for fn in cases:
     with tempfile.TemporaryDirectory() as tmp:
         try:

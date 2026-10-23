@@ -51,15 +51,22 @@ daemon.json＝loop.json 的超集（N-28）：
 - **名字不能跟自己的 ctl／state 撞名**（使用者 10-22，ideas 10-22 § 6；`taken_names`／`check_names`）：會撞的名字＝ctl、state（含旗標 `--ctl`／`--state` 給的）落在 `$AOS_STACK` 底下時
   相對路徑的第一段（`state.json`、`ctl.json`、`"w/c.json"` 的 `w`；`./x/../s.json` 整理成 `s.json`；在 stack 外面的、沒開的不算）。起來時撞＝`CfgBad`、退 1（10-23 統合前叫 Conflict）；
   ctl 改 `loops` 撞＝那份 ctl 整份不採用、維持上一份好的、原因進 state 的 `ctl_warning`。
-- **起子 loop**（經 aos-exec，同 bin 版 10-21 傍晚）：小格 `$AOS_STACK/<名字>/` mkdir -p；設定補上 `"ctl": "ctl.json"`、`"state": "state.json"`（沒寫才補），
+- **起子 loop**（經 aos-exec，同 bin 版 10-21 傍晚）：小格 `$AOS_STACK/<名字>/` mkdir（只建這一層；10-23 前是 mkdir -p、會順手建出 `$AOS_STACK`。現在 `$AOS_STACK` 不在＝開了 state 窗就 `WriteFailed`、沒開就 `MkdirFailed`，都退 1——建 stack 只在 aos-exec 做，N-59 第 1 件）；設定補上 `"ctl": "ctl.json"`、`"state": "state.json"`（沒寫才補），
   **一律蓋上 `"_entry": ["aos-loop", {"$env": "AOS_CF"}]`**，相對的 `run`（字串，或陣列的第一個元素）照 daemon 的 cwd 轉成絕對路徑（子 loop 的 cwd 會是小格），
   先寫 `.loop.json` 再改名成 `loop.json`；fork 一個子行程：`setsid` 自成 session、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`（10-23 起帶 `.txt`，原 `stderr`）、`AOS_STACK=小格/`、
   解開三個訊號、cd 到 daemon 的 cwd，呼叫 aos-exec 的 `run_cli({"--", "小格/loop.json#/_entry"})`——它 cd 進小格、讀小格的 `.env`（若有）、
   設好 `AOS_CF`＝小格的 loop.json，再 **exec 成 PATH 上的 aos-loop**（pid 不變；指到 `#/_entry` 不受 `$AOS_ENTRY` 影響）。
   所以 **PATH 上要有 aos-loop 和 aos-exec**（`_entry` 的 `aos-loop` 照 PATH 找；子項裡要叫的 aos-exec 也是）；沒有＝子 loop 以 1 結束、原因寫在小格的 `stderr.txt`。
-- **每次**（Loop 讀完 ctl 之後）：期望表＝ctl 的 `loops`（有寫）或 daemon.json 的 → 表上多出來的收掉（SIGTERM 給那支子 loop，等 10 秒，還在就 SIGKILL 整群）並從表上拿掉（小格留著）
-  （`phase: stopped`）→ 看誰自己結束了（`phase: done`，記 `code`／`signal`）→ 起表上少掉的 → 跑 `run`（有寫才跑）→ 寫 state（多一欄 `loops`：`{名字: {"pid", "started_at_ticks", "phase", "code", "signal"}}`）。
-  `phase`：`running`＝還在跑、`done`＝子 loop 自己結束、`stopped`＝daemon 收掉它（送了 SIGTERM／SIGKILL）（`done`、`stopped` 10-23 統合前都叫 exited；`started_at_ticks` 統合前叫 started）。
+- **每次**（Loop 讀完 ctl 之後）：期望表＝ctl 的 `loops`（有寫）或 daemon.json 的 → 表上多出來的送 SIGTERM（`phase: stopping`）就往下走、**不等**；
+  之後每次看一眼：退了標 `stopped`、從表上拿掉（小格留著），滿 10 秒還在就 SIGKILL 整群 → 看誰自己結束了（`phase: done`，記 `code`／`signal`）→
+  起表上少掉的（收的途中的同名項還在表上，等它退了下一次才起）→ 跑 `run`（有寫才跑）→ 寫 state（多一欄 `loops`：`{名字: {"pid", "started_at_ticks", "phase", "code", "signal"}}`）。
+  `phase`：`running`＝還在跑、`stopping`＝送了 SIGTERM 還沒退、`done`＝子 loop 自己結束、`stopped`＝daemon 收掉它（送了 SIGTERM／SIGKILL）（`done`、`stopped` 10-23 統合前都叫 exited；`started_at_ticks` 統合前叫 started）。
+  **10-23 壓測後**（使用者「都修都處理」，[thinking](../../thinking/2026-10-23-daemon-bench.md)）：收子項原本原地等滿 10 秒（那段 state 不寫、ctl 不讀、別的子 loop 沒人顧），改成上面那樣不等；
+  表改成「照加入順序的串列＋名字→那一列的雜湊表」，期望表的名字每圈收成雜湊集合、state 的 `loops` 直接接在尾巴（原本逐個比，N 個名字 N×N）；
+  沒有 `run` 時一圈只讀一次 ctl、只對一次表、只寫一份 state（`waiting`，不寫 `running`）；起子項之前先寫一份 state、起很久時每秒一份（`Loop::beat`）。
+  1 萬個子 loop：一圈 483 → 205 ms、daemon CPU 86 → 6 %，state 第一份 1 秒 → 0.1 秒。
+- **子 loop 被 SIGKILL 時**來不及寫最後一份，它小格裡的 `state.json` 停在最後那份（多半 `running`）：daemon 不替它改（N-09 只有它自己寫）。
+  看死活照 N-17 用 pid＋`started_at_ticks`；daemon 自己 state 的那一列是準的（`stopped`、`signal` 9、`code` 137）。
 - **子 loop 結束後不自動重起**：停在表上 `done`；要再起就從 ctl 的 `loops` 拿掉再放回，或重起 daemon。
 - **ctl** 多認 `loops`（驗法同上，壞＝整份不採用、記 `ctl_warning`）。
 - **adopt**：讀上次的 state（沒開 state 窗＝沒東西可接），`phase` 是 `running`、pid＋`started_at_ticks`（/proc 第 22 欄）對得上的放回表上、不重起；接回來的不是自己的子行程，之後看 /proc 判斷活不活，結束時 `code` 是 null。
@@ -73,21 +80,21 @@ daemon.json＝loop.json 的超集（N-28）：
 | 收到 SIGINT／SIGTERM／SIGHUP | 128＋N | 不寫 |
 | 自己的錯（設定壞、沒 AOS_STACK、子項起不來、state 寫不了） | 1 | 一行 `aos-daemon: 代號 原因` |
 
-不論哪一種，都先收掉所有子 loop（同上：SIGTERM、10 秒、SIGKILL 整群）、寫好 state 再結束（P-36）：收掉的標 `stopped`；最後一次之後才自己結束的子項標 `done`、記 `code`（計畫 D7）。子項的結束碼不影響 daemon 的。
+不論哪一種，都先收掉所有子 loop（全部送 SIGTERM，等它們退；等的這段每秒寫一份 state、頂層 `phase` 是 `stopping`；滿 10 秒還在的 SIGKILL 整群）、寫好 state 再結束（P-36）：收掉的標 `stopped`；最後一次之後才自己結束的子項標 `done`、記 `code`（計畫 D7）。子項的結束碼不影響 daemon 的。
 
 ## 元素
 
 ```
  main ──▶ block_signals ──▶ loop_cli ──▶ Daemon(opts, 設定檔)（Loop 的建構子＋AOS_STACK／loops／adopt）──▶ Loop::serve
-   每次 Daemon::tend ──▶ stop（多的）──▶ alive（看誰結束）──▶ spawn（少的：寫小格 loop.json、fork ──▶ run_cli({"--", 小格/loop.json#/_entry}) ──▶ exec 成 aos-loop）
-   Daemon::info ──▶ loops 表；Daemon::finish ──▶ stop（全部，標 stopped）＋剛死的標 done；Daemon::check_ctl ──▶ ctl 的 loops
+   每次 Daemon::tend ──▶ term（多的，不等）／settle（收的途中的）──▶ alive（看誰結束）──▶ spawn（少的：寫小格 loop.json、fork ──▶ run_cli({"--", 小格/loop.json#/_entry}) ──▶ exec 成 aos-loop）
+   Daemon::info ──▶ loops 表；Daemon::finish ──▶ term（全部）＋settle 等到退（每秒 beat）＋剛死的標 done；Daemon::check_ctl ──▶ ctl 的 loops
 ```
 
 | 檔 | 做什麼 |
 |---|---|
 | `src/common/common.hpp` | `using`、代號（全沿用 aos-loop 的） |
 | `src/child/child.hpp`、`child.cpp` | 一支子 loop：`spawn`（小格、loop.json（補 ctl／state、蓋 `_entry`、相對 run 轉絕對）、fork＋子行程 `run_child` 呼叫 aos-exec 的 `run_cli`）、`alive`、`row` |
-| `src/daemon/daemon.hpp`、`daemon.cpp` | `Daemon`（`aos::loop::Loop` 的子類別）：建構子、`adopt`、`tend`、`stop`、`finish`（收全部標 stopped、剛死的標 done）、`info`、`check_ctl`；`check_loops`（名字不能帶 `/`、`#`、不能 `.` 開頭；值字串、陣列或物件）；`taken_names`、`check_names`（跟自己的 ctl／state 撞名，10-22） |
+| `src/daemon/daemon.hpp`、`daemon.cpp` | `Daemon`（`aos::loop::Loop` 的子類別）：建構子、`adopt`、`tend`、`term`／`settle`（收子項不等：送 SIGTERM、之後每次看一眼、滿 10 秒 SIGKILL）、`finish`（收全部、等的時候每秒寫 state，標 stopped、剛死的標 done）、表＝串列＋名字的雜湊表、`info`、`check_ctl`；`check_loops`（名字不能帶 `/`、`#`、不能 `.` 開頭；值字串、陣列或物件）；`taken_names`、`check_names`（跟自己的 ctl／state 撞名，10-22） |
 | `src/main.cpp` | 命令列：`block_signals` → `loop_cli` → `Daemon` → `serve`；出錯印「aos-daemon: 代號 原因」 |
 
 ## 為什麼這樣做
@@ -104,6 +111,8 @@ daemon.json＝loop.json 的超集（N-28）：
 - 錯誤一行多了代號（Python 版 `aos-daemon: 原因`）。
 - 起子 loop 不叫 PATH 上的 `aos-exec`，在 fork 出來的子行程裡呼叫 aos-exec 的 `run_cli`（效果一樣）；之後 exec 成 PATH 上的 aos-loop 這段兩版一樣，PATH 上都要有 aos-loop。
 - state 窗寫不了：這版是 `WriteFailed` 一行、先收子 loop、退 1；Python 版是 traceback。
+- **10-23 壓測後的修改只做在這一版**（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」）：收子項不等、`stopping` 寫進 state、一圈一份 state、
+  起子項前先寫 state、雜湊表、不建 `$AOS_STACK`，bin 版都沒跟。拿 `proto8/tests` 跑這一版（PATH 換成 impls 四支）照樣只差兩個 inst 訊息字面。
 - 其他行為一樣：`proto8/tests/test_daemon.py` 15 案拿這支跑，只差 usage 那行的代號（抹掉代號全過；10-21 晚）；demo/daemon 兩條線結果逐檔一樣（`tests/test_demo.py`）。
 
 ## 建置與測試
@@ -114,6 +123,9 @@ cmake -B build && cmake --build build && ctest --test-dir build
 
 - `test_cli`（`tests/test_cli.py`，20 案、unittest）：10-21 傍晚照 `proto8/tests/test_daemon.py` 重新逐案抄一次 15 案（loop.json 直接丟給 daemon、要 AOS_STACK、loops 壞、小格與窗、
   不自動重起、子項 stderr 在小格、ctl 增減、SIGTERM 收子項 143、旗標蓋過設定、run 陣列與設定檔規則、子 loop 經 aos-exec 起、字串子項是 aos-exec 的目標、
-  收工時剛死的子項標 done、收掉的標 stopped、adopt、`adopt: false`），加錯誤代號、子 loop 的 state 心跳是自己的 pid；10-23 再抄 bin 10-22 的 3 案（daemon 重開照名單起停機期間死掉的子項、子項撞名起來時退 1〔另驗 `--state` 旗標也算〕、ctl 撞名不採用）。PATH 放 impls 的 aos-exec、aos-loop 兩支的 `bin/`（子 loop 要 exec 成 PATH 上的 aos-loop）。
+  收工時剛死的子項標 done、收掉的標 stopped、adopt、`adopt: false`），加錯誤代號、子 loop 的 state 心跳是自己的 pid；10-23 再抄 bin 10-22 的 3 案（daemon 重開照名單起停機期間死掉的子項、子項撞名起來時退 1〔另驗 `--state` 旗標也算〕、ctl 撞名不採用）；
+  10-23 壓測後加 4 案（共 24 案，約 25 秒）：不肯退的子 loop 不卡住 daemon（收的途中照寫 state、照起別的、那列 `stopping`，收工也等、每秒寫；被 SIGKILL 的那列 `stopped`／signal 9，
+  它自己的 state 停在 `running`、pid 已不在）、一圈一份 state（inotify 數改名次數）與 `at` 間隔、起子項之前先有 state（小格放 FIFO 讓起子項卡住）、`$AOS_STACK` 不在不建。
+  四案拿修前的碼跑都紅。PATH 放 impls 的 aos-exec、aos-loop 兩支的 `bin/`（子 loop 要 exec 成 PATH 上的 aos-loop）。
 - `test_demo`（`tests/test_demo.py`）：`proto8/demo/daemon` 在 impls 線（PATH 只放 impls 四支的 `bin/`）與 bin 線各跑一次，比結束碼、stderr、整棵工作區與 stack 的檔與內容。
   要先建好 ../aos-exec、../aos-loop、../aos-fsm 的 `bin/`（`test_cli` 也要前兩支）。

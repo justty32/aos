@@ -6,6 +6,9 @@
 
 > **現況（2026-10-23）：提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（C++），行為對齊 `proto8/bin` 的 10-22 版。10-23 起整個 `impls/` 進 git；舊快照 `backup/` 10-23 使用者授權刪掉，下面提到的 `backup/…` 都已不在。**
 >
+> **10-23 壓測後**（使用者「都修都處理」、修到一半「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，[thinking](../thinking/2026-10-23-daemon-bench.md)；**只改這一家，`proto8/bin` 不跟**）：aos-daemon 收子項不等（送 SIGTERM 後照常巡、那列 `stopping`、滿 10 秒才 SIGKILL），
+> 表用雜湊找名字、沒有 `run` 時一圈一份 state（不寫 `running`）、起子項前先寫一份 state、小格只建一層；aos-loop 的 `$AOS_STACK` 不在＝`WriteFailed`、不自己建。1 萬個子 loop 一圈 483 → 205 ms、daemon CPU 86 → 6 %。
+>
 > **10-23 命名統合**（使用者「都先幫我統合」，對照表見 [thinking/2026-10-23-naming](../thinking/2026-10-23-naming.md)）：使用者看得到的名字全家照同一張表改——
 > loop.json／daemon.json／子項的 `run` → `val`、daemon 的 `children` → `loops`；state 的 `state` 欄 → `phase`、`lap` → `beats`、`started` → `started_at_ticks`、心跳 `beat` → `at`
 > （值改 ISO 8601 UTC 到毫秒，例 `2026-10-23T01:58:45.123+00:00`）；daemon 子項的 `exited` 拆成 `done`（自己結束）／`stopped`（daemon 收掉）；

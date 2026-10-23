@@ -1,7 +1,9 @@
 // daemon.hpp：【daemon】Daemon＝aos-loop 的 Loop 子類別＋一張子 loop 的表。照 proto8/bin/aos-daemon 的 Daemon（10-21 傍晚）。內部標頭。
 //
 //   daemon.cpp   建構子（AOS_STACK、loops、adopt 的檢查）、adopt、tend（對表：收多的、看誰結束、起少的）、
-//                stop（SIGTERM、等 10 秒、SIGKILL 整群；收掉的標 stopped）、finish（收掉全部；最後一次之後才自己結束的標 done，D7）、
+//                term／settle（收子項不等：SIGTERM 後照常巡，每次 tend 看一眼，退了標 stopped、滿 10 秒還在就 SIGKILL 整群；
+//                10-23 壓測後改，原本原地等滿 10 秒）、finish（收掉全部、等它們退，等的時候每秒寫一份 phase stopping 的 state；
+//                最後一次之後才自己結束的標 done，D7）、
 //                info（loops 表）、check_ctl（ctl 的 loops）、taken_names／check_names（子項名字跟自己的 ctl／state 撞名，10-22）
 //
 // daemon.json＝loop.json 的超集：run、max、interval_ms、ctl、state 同 aos-loop，但 run 選填、max 沒寫＝不限、
@@ -11,7 +13,9 @@
 
 #include "child/child.hpp"
 
+#include <list>
 #include <set>
+#include <unordered_map>
 #include <string>
 #include <utility>
 #include <vector>
@@ -40,14 +44,18 @@ protected:
     std::optional<std::string> check_ctl(const Json& doc) override;
 
 private:
+    using Table = std::list<std::pair<std::string, Child>>;
+
     void adopt();
-    void stop(const std::vector<std::string>& names);
-    Child* find(const std::string& name);
+    void add(const std::string& name, const Child& c);
+    void term(Child& c, bool removing);   // 送 SIGTERM、phase stopping、記期限（不等）
+    bool settle(Child& c);                // 收的途中看一眼：退了＝stopped、回 true；過了期限還在＝SIGKILL 整群（只送一次）
 
     Json loops_;                                         // daemon.json 的 loops
     std::string cwd_;                                    // 子 loop 的 cwd＝daemon 起來時的 cwd
     std::set<std::string> taken_;                        // 自己的 ctl／state 用掉的名字（taken_names）
-    std::vector<std::pair<std::string, Child>> table_;   // 照加入的順序
+    Table table_;                                        // 照加入的順序（state 的 loops 也照這個順序）
+    std::unordered_map<std::string, Table::iterator> index_;   // 名字 → 表上那一列（10-23 壓測：原本逐列找，N 個名字 N×N）
 };
 
 }  // namespace aos::daemon

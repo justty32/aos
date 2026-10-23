@@ -1,4 +1,5 @@
-// loop.cpp：【engine】Loop 每次怎麼走（說明見 aos/loop.hpp）。照 proto8/bin/aos_loop.py 的 Loop.main、end、nap。
+// loop.cpp：【engine】Loop 每次怎麼走（說明見 aos/loop.hpp）。照 proto8/bin/aos_loop.py 的 Loop.main、end、nap；
+// 10-23 壓測後：沒有身體時一輪只 tend 一次、只寫一份 state（bin 版沒跟，使用者 10-23「python版本可以刪掉了」）。
 //
 // 訊號：block_signals 擋著的三個訊號排在 kernel 裡；signal_got 兩次之間取出第一個並記住（之後一直回它，同 Python 版 take()）；
 // nap 用 sigtimedwait 睡，收到就醒。跑的期間收到的由 run_once 轉給那次、放在 Run::received。
@@ -73,6 +74,8 @@ int Loop::main_loop() {
         bool paused = c.value("paused", false);
         try {
             tend(c);
+        } catch (const StateError&) {
+            throw;   // tend 裡的心跳寫不了 state：交給 serve 印一行、收尾（不再走 end 寫 state）
         } catch (const Error& e) {
             say(e.code + " " + e.msg);
             return end(1, "stopped");
@@ -90,6 +93,16 @@ int Loop::main_loop() {
             continue;
         }
         runs_ += 1;
+        if (!has_run_) {
+            // 沒有身體：這一次就只是剛才那次 tend。不寫 running、不回頭重讀 ctl 重 tend，直接寫一份 waiting 睡到下一次（一輪一份 state）
+            next_at = Clock::now() + std::chrono::milliseconds(iv);
+            if (mx && runs_ >= *mx) {
+                continue;   // 回頂端照常收工（done）
+            }
+            write_state("waiting", Json());
+            nap(std::chrono::duration<double>(next_at - Clock::now()).count());
+            continue;
+        }
         write_state("running", Json());
         if (has_run_) {
             Run b;
@@ -117,7 +130,7 @@ int Loop::main_loop() {
 int Loop::serve() {
     try {
         return main_loop();
-    } catch (const Error& e) {
+    } catch (const Error& e) {   // 含 StateError
         say(e.code + " " + e.msg);
     } catch (const std::exception& e) {
         say(std::string(code::Internal) + " " + e.what());

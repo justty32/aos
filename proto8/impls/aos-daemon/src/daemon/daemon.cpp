@@ -1,9 +1,11 @@
 // daemon.cpp：【daemon】Daemon（說明見 daemon.hpp）。照 proto8/bin/aos-daemon（10-21 傍晚）。
 //
 // 每次（Loop 讀完 ctl 之後的 tend）：期望表＝ctl 的 loops（有寫）或 daemon.json 的 loops →
-//   表上多出來的收掉（SIGTERM，等 10 秒，再 SIGKILL 整群；phase stopped）並移除 → 看誰自己結束了（phase done，記 code／signal）→
-//   起表上少掉的。子 loop 結束後不自動重起（使用者 10-20「照預設」）：停在表上 done；要再起就從 loops 拿掉再放回。
-// phase：running＝還在跑、done＝子 loop 自己結束、stopped＝daemon 收掉它（送了 SIGTERM／SIGKILL；10-23 命名統合前兩個都叫 exited）。
+//   表上多出來的送 SIGTERM（phase stopping）就往下走、不等；之後每次 tend 看一眼，退了標 stopped 並移除、滿 10 秒還在就
+//   SIGKILL 整群（10-23 壓測後改：原本原地等滿 10 秒，那段 state 不寫、ctl 不讀、別的子 loop 沒人顧）→
+//   看誰自己結束了（phase done，記 code／signal）→ 起表上少掉的（起之前先寫一份 state、起很久時每秒一份）。子 loop 結束後不自動重起（使用者 10-20「照預設」）：停在表上 done；要再起就從 loops 拿掉再放回。
+// phase：running＝還在跑、stopping＝送了 SIGTERM 還沒退、done＝子 loop 自己結束、stopped＝daemon 收掉它（送了 SIGTERM／SIGKILL；
+// 10-23 命名統合前兩個都叫 exited）。
 // 不論為什麼結束都先 finish()（收掉全部子 loop），Loop 再寫好 state。
 // adopt：起來時讀自己上次的 state，phase running、pid＋started_at_ticks 對得上的子 loop 直接放回表上、不重起（N-17）。
 #include "daemon/daemon.hpp"
@@ -16,6 +18,7 @@
 #include <filesystem>
 #include <limits>
 #include <thread>
+#include <unordered_set>
 
 namespace aos::daemon {
 
@@ -134,18 +137,14 @@ void Daemon::adopt() {
             c.pid = (pid_t)pid.get<long long>();
             c.started_at_ticks = st.get<long long>();
             c.own = false;
-            table_.push_back({name, c});
+            add(name, c);
         }
     }
 }
 
-Child* Daemon::find(const std::string& name) {
-    for (auto& [n, c] : table_) {
-        if (n == name) {
-            return &c;
-        }
-    }
-    return nullptr;
+void Daemon::add(const std::string& name, const Child& c) {
+    table_.push_back({name, c});
+    index_[name] = std::prev(table_.end());
 }
 
 std::optional<std::string> Daemon::check_ctl(const Json& doc) {
@@ -161,91 +160,101 @@ std::optional<std::string> Daemon::check_ctl(const Json& doc) {
 
 Json Daemon::info() {
     Json rows = Json::object();
+    // ordered_json 的 rows[n] 每次都逐個比對 key（N 個就 N×N）；名字在表上本來就不重複，直接接在尾巴
+    auto& vec = static_cast<std::vector<std::pair<const std::string, Json>>&>(rows.get_ref<Json::object_t&>());
+    vec.reserve(table_.size());
     for (auto& [n, c] : table_) {
-        rows[n] = row(c);
+        vec.emplace_back(n, row(c));
     }
     Json out = Json::object();
-    out["loops"] = rows;
+    out["loops"] = std::move(rows);
     return out;
+}
+
+void Daemon::term(Child& c, bool removing) {
+    c.phase = "stopping";
+    c.removing = removing;
+    c.deadline = Clock::now() + std::chrono::milliseconds(GRACE_MS);
+    kill(c.pid, SIGTERM);   // 給那支子 loop（它自己轉給它的那次）；已經沒了就算了
+}
+
+bool Daemon::settle(Child& c) {
+    if (!alive(c)) {
+        c.phase = "stopped";   // daemon 收掉的
+        return true;
+    }
+    if (!c.killed && Clock::now() >= c.deadline) {
+        aos::signal_group(c.pid, SIGKILL);   // 整群：連孫程式一起收
+        c.killed = true;
+    }
+    return false;
 }
 
 void Daemon::tend(const Json& ctl) {
     const Json& want = ctl.contains("loops") ? ctl["loops"] : loops_;
-    std::vector<std::string> gone;
-    for (auto& [n, c] : table_) {
-        if (!want.contains(n)) {
-            gone.push_back(n);
-        }
+    std::unordered_set<std::string> wanted;   // want 是 ordered_json，contains 是逐個比對；先收成雜湊表
+    wanted.reserve(want.size());
+    for (auto& [n, spec] : want.items()) {
+        wanted.insert(n);
     }
-    stop(gone);
-    for (const std::string& n : gone) {
-        for (size_t i = 0; i < table_.size(); ++i) {
-            if (table_[i].first == n) {
-                table_.erase(table_.begin() + (long)i);
-                break;
+    for (auto it = table_.begin(); it != table_.end();) {
+        auto& [n, c] = *it;
+        if (c.phase == "running") {
+            if (!alive(c)) {
+                c.phase = "done";   // 子 loop 自己結束
+            } else if (wanted.count(n) == 0) {
+                term(c, true);      // 表上多出來的：送 SIGTERM 就往下走，不等（10-23 壓測後改）
             }
+        } else if (c.phase == "stopping") {
+            settle(c);
         }
-    }
-    for (auto& [n, c] : table_) {
-        if (c.phase == "running" && !alive(c)) {
-            c.phase = "done";   // 子 loop 自己結束
+        if (c.phase != "running" && c.phase != "stopping" && (c.removing || wanted.count(n) == 0)) {
+            index_.erase(n);        // 收完了（或早就結束了）的多出來那列：拿掉（小格留著）
+            it = table_.erase(it);
+        } else {
+            ++it;
         }
     }
     for (auto& [n, spec] : want.items()) {
-        if (find(n) == nullptr) {
-            table_.push_back({n, spawn(n, aos::join(stack_, n), spec, cwd_)});
+        if (index_.count(n) == 0) {   // 收的途中（stopping）的同名項還在表上：等它退了、下一次才起新的
+            beat();                   // 起一大批要好一陣子：起之前先寫一份、之後每秒一份（10-23 壓測後加）
+            add(n, spawn(n, aos::join(stack_, n), spec, cwd_));
         }
     }
 }
 
-void Daemon::stop(const std::vector<std::string>& names) {
-    std::vector<Child*> live;
-    for (const std::string& n : names) {
-        Child* c = find(n);
-        if (c != nullptr && c->phase == "running" && alive(*c)) {
-            live.push_back(c);
+void Daemon::finish() {
+    for (auto& [n, c] : table_) {
+        if (c.phase == "running" && alive(c)) {
+            term(c, false);
         }
     }
-    for (Child* c : live) {
-        c->phase = "stopping";
-        kill(c->pid, SIGTERM);   // 給那支子 loop（它自己轉給它的那次）；已經沒了就算了
-    }
-    Clock::time_point deadline = Clock::now() + std::chrono::milliseconds(GRACE_MS);
-    bool killed = false;
     while (true) {
         bool any = false;
-        for (Child* c : live) {
-            if (alive(*c)) {
+        for (auto& [n, c] : table_) {
+            if (c.phase == "stopping" && !settle(c)) {
                 any = true;
             }
         }
         if (!any) {
             break;
         }
-        if (!killed && Clock::now() >= deadline) {
-            for (Child* c : live) {
-                if (alive(*c)) {
-                    aos::signal_group(c->pid, SIGKILL);   // 整群：連孫程式一起收
-                }
-            }
-            killed = true;
+        try {
+            beat("stopping");   // 等子項退的時候心跳照跳（N-17）；寫不了就算了，收子項要緊
+        } catch (const Error&) {
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    for (Child* c : live) {
-        c->phase = "stopped";   // daemon 收掉的
-    }
-}
-
-void Daemon::finish() {
-    std::vector<std::string> all;
-    for (auto& [n, c] : table_) {
-        all.push_back(n);
-    }
-    stop(all);
-    for (auto& [n, c] : table_) {   // 最後一次 tend 之後才自己結束的（stop 不收已經死的）標 done、記 code（10-21 plan D7）
+    for (auto it = table_.begin(); it != table_.end();) {
+        auto& [n, c] = *it;
         if (c.phase == "running" && !alive(c)) {
-            c.phase = "done";
+            c.phase = "done";   // 最後一次 tend 之後才自己結束的（沒送 SIGTERM）標 done、記 code（10-21 plan D7）
+        }
+        if (c.removing) {       // ctl 早就要拿掉、收工時才退的：照樣拿掉
+            index_.erase(n);
+            it = table_.erase(it);
+        } else {
+            ++it;
         }
     }
 }

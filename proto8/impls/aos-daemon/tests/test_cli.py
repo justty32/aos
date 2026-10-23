@@ -9,7 +9,7 @@
 exec 成 PATH 上的 aos-loop，10-21 傍晚起同 bin 版）、usage 一行多了代號（「aos-daemon: ArgumentsBad usage: …」）、
 自己的錯多驗代號（E 段）。
 """
-import json, os, signal, subprocess, sys, tempfile, time, unittest
+import ctypes, datetime, json, os, struct, signal, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
 
 DAEMON = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "..", "bin",
@@ -361,6 +361,129 @@ class T(unittest.TestCase):
         self.ctl({"stopped": True})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
+
+    # ---- 10-23 壓測後（使用者「都修都處理」）
+
+    def watch(self, secs):
+        """secs 秒內每 10 毫秒讀一次 state，回看到的每一份（at 不同才算一份）。"""
+        seen, end = [], time.monotonic() + secs
+        while time.monotonic() < end:
+            try:
+                st = self.state()
+                if not seen or st["at"] != seen[-1]["at"]:
+                    seen.append(st)
+            except (OSError, ValueError):
+                pass
+            time.sleep(0.01)
+        return seen
+
+    @staticmethod
+    def gaps(seen):
+        ts = [datetime.datetime.fromisoformat(s["at"]).timestamp() for s in seen]
+        return [b - a for a, b in zip(ts, ts[1:])]
+
+    def test_stubborn_child_does_not_block(self):
+        # 第 1 點：不肯退的子 loop（那次不理 SIGTERM）不會卡住 daemon——送了 SIGTERM 照常巡（state 照寫、ctl 照讀、別的子項照起），
+        # 收的途中那列是 stopping，滿 10 秒才 SIGKILL 整群。第 2 點：被 SIGKILL 的子 loop 自己的 state 停在 running（只有它自己寫，
+        # N-09），看死活照 pid＋started_at_ticks（N-17）；daemon 自己的 state 那列寫 stopped、signal 9
+        stub = self.t / "stub"
+        stub.mkdir()
+        (stub / "_entry").write_text('#!/bin/sh\ntrap "" TERM\necho x >> "$AOS_STACK/starts"\nwhile :; do sleep 0.05; done\n')
+        (stub / "_entry").chmod(0o755)
+        s1, s2 = {"run": "stub", "max": 1}, {"run": "stub", "max": 1}
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "interval_ms": 100,
+                        "loops": {"s1": s1, "s2": s2, "a": self.long()}})
+        k = until(lambda: all((self.s / n / "starts").exists() for n in ("s1", "s2", "a")) and self.kids())
+        self.assertTrue(k)
+        self.assertTrue(until(lambda: json.loads((self.s / "s2" / "state.json").read_text())["phase"] == "running"))
+        t0 = time.monotonic()
+        self.ctl({"loops": {"s2": s2, "a": self.long()}})
+        seen = self.watch(1.0)
+        self.assertEqual(seen[-1]["loops"]["s1"]["phase"], "stopping")
+        self.assertTrue(alive(k["s1"]["pid"]))
+        self.ctl({"loops": {"s2": s2, "a": self.long(), "b": self.long()}})   # 收 s1 的途中照樣起別的
+        kb = until(lambda: (self.s / "b" / "starts").exists() and self.kids()["b"]["phase"] == "running" and self.kids(), 3)
+        self.assertTrue(kb)
+        self.assertLess(time.monotonic() - t0, 5)
+        seen += self.watch(0.5)
+        self.assertLess(max(self.gaps(seen)), 0.5, "收子項的途中 state 照寫")
+        p.send_signal(signal.SIGTERM)   # 收工：s2 也不肯退，等它的時候 state 照樣每秒寫（phase stopping）
+        fin = self.watch(3)
+        self.assertEqual(fin[-1]["phase"], "stopping")
+        self.assertLess(max(self.gaps(fin)), 1.5)
+        out, err = p.communicate(timeout=30)
+        took = time.monotonic() - t0
+        st = self.state()
+        self.assertEqual((p.returncode, err, st["phase"]), (143, "", "stopped"))
+        self.assertGreater(took, 9)
+        self.assertEqual(sorted(st["loops"]), ["a", "b", "s2"])   # s1 是 ctl 要拿掉的，收完照樣拿掉
+        r2 = st["loops"]["s2"]
+        self.assertEqual((r2["phase"], r2["code"], r2["signal"]), ("stopped", 137, 9))
+        self.assertEqual({st["loops"][n]["phase"] for n in ("a", "b")}, {"stopped"})
+        for n in ("s1", "s2"):
+            cs = json.loads((self.s / n / "state.json").read_text())
+            self.assertEqual(cs["phase"], "running", n)   # 來不及寫最後一份
+            self.assertFalse(alive(cs["pid"]), n)          # 讀的人看 pid（＋started_at_ticks）判斷：已經不在了
+
+    def test_one_state_per_cycle(self):
+        # 第 3、4 點：沒有 run 的 daemon 一輪只 tend 一次、只寫一份 state（不寫 running），at 的間隔穩定在 interval_ms 上下
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "interval_ms": 300, "loops": {"a": self.long()}})
+        self.assertTrue(until(lambda: (self.s / "a" / "starts").exists()))
+        # 數 state.json 被改名蓋過幾次（inotify IN_MOVED_TO）；只靠輪詢讀會漏掉連著的兩份。也聽 IN_CREATE（每份先建 .state.json），
+        # 不然連著的 IN_MOVED_TO 會被 kernel 併成一個
+        libc = ctypes.CDLL(None, use_errno=True)
+        fd = libc.inotify_init1(os.O_NONBLOCK)
+        self.assertGreaterEqual(libc.inotify_add_watch(fd, str(self.s).encode(), 0x180), 0)
+        seen = self.watch(3.0)
+        writes, buf = 0, b""
+        while True:
+            try:
+                buf += os.read(fd, 65536)
+            except BlockingIOError:
+                break
+        os.close(fd)
+        while buf:
+            _, mask, _, n = struct.unpack_from("iIII", buf)
+            writes += bool(mask & 0x80) and buf[16:16 + n].rstrip(b"\0") == b"state.json"
+            buf = buf[16 + n:]
+        self.assertTrue(3.0 / 0.3 - 3 <= writes <= 3.0 / 0.3 + 2, writes)   # 一輪只寫一份（原本一輪兩份，約 20）
+        self.ctl({"stopped": True})
+        p.communicate(timeout=30)
+        self.assertEqual(p.returncode, 0)
+        self.assertGreater(len(seen), 5)
+        self.assertEqual({s["phase"] for s in seen}, {"waiting"})
+        self.assertEqual(len({s["runs"] for s in seen}), len(seen), "一次只寫一份")
+        g = self.gaps(seen)
+        self.assertTrue(all(0.25 < x < 0.5 for x in g), g)
+
+    def test_state_written_before_spawning(self):
+        # 第 5 點：起子項之前就先寫一份 state（起一大批要好一陣子）。小格的 stderr.txt 先放一個 FIFO，daemon 開它時會卡住，
+        # 卡住的這段 state.json 已經在了
+        cell = self.s / "x"
+        cell.mkdir()
+        os.mkfifo(cell / "stderr.txt")
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"x": self.long()}})
+        st = until(lambda: self.state(), 5)
+        self.assertTrue(st, "起子項之前沒寫 state")
+        self.assertEqual((st["phase"], st["runs"], st["loops"]), ("waiting", 0, {}))
+        fd = os.open(cell / "stderr.txt", os.O_RDONLY | os.O_NONBLOCK)
+        try:
+            self.assertTrue(until(lambda: (cell / "starts").exists() and self.kids()["x"]["phase"] == "running"))
+            self.ctl({"stopped": True})
+            p.communicate(timeout=30)
+        finally:
+            os.close(fd)
+        self.assertEqual(p.returncode, 0)
+
+    def test_stack_missing_not_created(self):
+        # 第 6 點：$AOS_STACK 不在＝daemon 不自己建（建 stack 只在 aos-exec 做，N-59 第 1 件）：開了 state 窗＝WriteFailed、
+        # 沒開＝起第一個子項時建不了小格＝MkdirFailed；兩種都退 1、stderr 一行、什麼都沒起
+        gone = self.t / "no" / "stack"
+        for doc, code in (({"state": "state.json", "loops": {"a": self.long()}}, "WriteFailed"),
+                          ({"loops": {"a": self.long()}}, "MkdirFailed")):
+            r = self.run_d(dict(doc, max=1), env={"AOS_STACK": str(gone) + "/"})
+            self.assertEqual((r.returncode, r.stderr.split(" ")[1], r.stderr.count("\n"), gone.exists()), (1, code, 1, False),
+                             r.stderr)
 
 
 if __name__ == "__main__":

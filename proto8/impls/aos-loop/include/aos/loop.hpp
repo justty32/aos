@@ -17,6 +17,7 @@
 #include "aos/cli.hpp"
 #include "aos/exec.hpp"
 
+#include <chrono>
 #include <map>
 #include <optional>
 #include <string>
@@ -65,6 +66,10 @@ Run run_once(const std::string& target, const std::vector<std::string>& args);
 // argv 不含程式名；回旗標（opts）與設定檔（rest[0]）。
 aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog);
 
+// write_state 寫不了 state 時丟的（代號 WriteFailed）。跟別的 Error 分開，是為了 tend 裡的 beat 寫不了時不被當成 tend 的錯、
+// 再走一次收尾寫 state（那樣會多印一行）：一路丟到 serve，印一行、收尾、退 1。
+struct StateError : Error {};
+
 // 窗的寫法：先寫同資料夾的 `.名字`、再改名蓋過去（N-05）；內容是一行 JSON（排版同 Python json.dumps）＋換行。
 // 寫不了丟 WriteFailed。
 void write_window(const std::string& path, const Json& doc);
@@ -90,7 +95,10 @@ struct Defaults {
 // 每次：有排著的訊號 → 結束 128＋N；讀 ctl（認 paused、stopped、max、interval_ms、seq＋子類別多認的）→ tend() →
 // stopped 就結束（0）、跑滿就結束（0）→ paused 或還沒到時間就睡一下（最多 1 秒，收到訊號就醒）回頭再看 →
 // 跑一次：0＝下一次、10＝結束（0）、其他非 0＝stderr 一行、以那個碼結束；跑的期間收到訊號＝收完以 128＋N 結束。
+// 沒有身體（run 沒寫，daemon 純監工）：一輪＝讀 ctl → tend → 算一次 → 寫一份 waiting → 睡到下一次，一輪只讀一次 ctl、
+// 只 tend 一次、只寫一次 state、不寫 running（那一刻沒東西在跑），所以 state 的 at 間隔穩定在 interval_ms＋tend 的時間（10-23 壓測）。
 // state 只在兩次之間寫（心跳只在兩次之間跳）。結束前呼叫 finish()（不論為什麼結束）。呼叫前要先 block_signals()。
+// $AOS_STACK 不在＝state 寫不了＝WriteFailed、退 1，不自己建（建 stack 只在 aos-exec 做，N-59 第 1 件）。
 class Loop {
 public:
     // opts＝命令列旗標（loop_cli 解出來的：max、interval_ms、ctl、state），spec＝設定檔（`檔` 或 `檔#/指標`）。
@@ -111,6 +119,12 @@ protected:
 
     void say(const std::string& msg);   // stderr 一行「程式名: msg」
 
+    // 寫一份 state（沒開 state 窗就不寫）：phase＝這份要寫的階段，code＝結束碼（null＝還沒結束）。寫不了丟 StateError（WriteFailed）。
+    void write_state(const std::string& phase, const Json& code);
+    // 心跳（N-17、N-32「最多隔 1 秒」）：離上一次寫 state 滿 1 秒（或還沒寫過）就照 phase 寫一份。給一輪裡會花很久的工作用
+    // （daemon 起一大批子項、收工等子項退），不讓 state 停住。phase 空＝沿用上一份寫的。
+    void beat(const std::string& phase = "");
+
     Defaults d_;
     Json cfg_;                    // 設定檔整份（旗標已蓋上；子類別讀自己的 key）
     bool has_run_ = false;        // false＝沒有身體（daemon 純監工）
@@ -124,7 +138,6 @@ protected:
 private:
     int main_loop();
     int end(int code, const std::string& phase);
-    void write_state(const std::string& phase, const Json& code);
     Json read_ctl();
     int signal_got();             // 第一個收到的訊號（記住；0＝沒有）
     void nap(double secs);        // 睡 secs 秒（最多 1 秒），收到訊號就提早醒
@@ -134,6 +147,9 @@ private:
     Json ctl_good_ = Json::object();
     Json ctl_warning_;           // null 或字串
     int got_ = 0;
+    std::string phase_ = "waiting";                                    // 上一份 state 的 phase（beat 沿用）
+    bool wrote_ = false;                                               // 寫過 state 沒
+    std::chrono::steady_clock::time_point wrote_at_;                   // 上一次寫 state
 };
 
 }  // namespace aos::loop

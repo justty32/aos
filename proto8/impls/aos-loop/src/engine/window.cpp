@@ -6,6 +6,7 @@
 //                 不算問題（ctl_warning 不動）
 //   write_state   state 一份：kind、phase、runs、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 蓋過設定檔之後）
 //                 ＋info()＋code（結束時）＋心跳；沒開 state 窗就不寫
+//   beat          心跳：離上一次寫 state 滿 1 秒（或還沒寫過）就再寫一份（一輪裡很久的工作用：daemon 起一大批、收工等子項）
 //   write_window  先寫同資料夾的 .名字 再改名（N-05）
 //   heartbeat     pid、started_at_ticks、boot_id、at（ISO 8601 UTC 到毫秒）
 #include "engine/engine.hpp"
@@ -141,7 +142,21 @@ void Loop::write_state(const std::string& phase, const Json& code) {
     for (auto& [k, v] : hb.items()) {
         doc[k] = v;
     }
-    write_window(state_path_, doc);
+    phase_ = phase;
+    wrote_ = true;
+    wrote_at_ = std::chrono::steady_clock::now();
+    try {
+        write_window(state_path_, doc);
+    } catch (const Error& e) {
+        throw StateError{e};
+    }
+}
+
+void Loop::beat(const std::string& phase) {
+    if (state_path_.empty() || (wrote_ && std::chrono::steady_clock::now() - wrote_at_ < std::chrono::seconds(1))) {
+        return;
+    }
+    write_state(phase.empty() ? phase_ : phase, Json());
 }
 
 }  // namespace aos::loop

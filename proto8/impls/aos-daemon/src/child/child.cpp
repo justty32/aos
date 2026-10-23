@@ -83,7 +83,7 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
     exec_entry.push_back(Json::object({{"$env", "AOS_CF"}}));
     cfg["_entry"] = exec_entry;   // 一律蓋上
     std::error_code ec;
-    std::filesystem::create_directories(cell, ec);
+    std::filesystem::create_directory(cell, ec);   // 只建小格這一層：$AOS_STACK 不在＝建不了（建 stack 只在 aos-exec 做，N-59 第 1 件；10-23 前是 mkdir -p）
     if (ec) {
         throw Error{code::MkdirFailed, "起不了子項 " + name + "：建不了 " + cell + "（" + ec.message() + "）"};
     }
