@@ -16,23 +16,24 @@
 相對路徑：cwd 從呼叫者的 cwd 算；stdin／stdout／stderr 從解出來的 cwd 算。
 
 指示詞（N-45）：單子裡任何位置的 {"$env": 名} 換成那個環境變數的值。{"$ref": "檔"} 換成那份 JSON 檔的整份內容
-（第一行 #! 跳過）；{"$ref": "檔#/a"} 或 {"$ref": "檔", "at": "/a"} 換成檔內那個位置的值（JSON pointer；兩個都寫＝
-at 接在 #/ 後面，10-20 ideas D1、D7）；換進來的值接著解。相對檔名從寫著這個 $ref 的檔所在的資料夾算（ref_base；
+（第一行 #! 跳過）；{"$ref": "檔#/a"} 或 {"$ref": "檔", "$at": "/a"} 換成檔內那個位置的值（JSON pointer；兩個都寫＝
+$at 接在 #/ 後面，10-20 ideas D1、D7；修飾詞都帶 $，N-45，10-23 統合前叫 at，舊的 at 不再認、當不認得的 key 不管）；換進來的值接著解。相對檔名從寫著這個 $ref 的檔所在的資料夾算（ref_base；
 被 $ref 進來的檔解開捷徑再算）。指標取的是檔的原文（不穿過裡面的 $ref）。
 換出來是字串時：有 "$path" 就接上去（字串拼接：`#` 開頭直接接，其他中間剛好一個 /，寫絕對路徑也是接上去；
 10-21 傍晚 ideas § 9，原 os.path.join），再在前面加 "$prefix"（10-20 ideas D9～D11；舊的 "path" key 不再有作用）；換出來不是字串，$path／$prefix 靜默不作用。
 錯分兩類（10-20 ideas D12～D15）：真的解不開——變數沒設、$ref 檔讀不到（含不是 JSON）、指不到、繞圈——＝單子的錯；
-寫法（格式）寬容——物件有 $ref 就只看 $ref（$env 不管），其餘 key、不認得的 $xxx 都不管；$path／$prefix／at 不是
-字串（at 也不是空字串或 / 開頭）＝當沒寫；$ref／$env 的值不是字串或空字串、# 後不是 /、只有 #/… 沒檔名＝換不了，
+寫法（格式）寬容——物件有 $ref 就只看 $ref（$env 不管），其餘 key、不認得的 $xxx 都不管；$path／$prefix／$at 不是
+字串（$at 也不是空字串或 / 開頭）＝當沒寫；$ref／$env 的值不是字串或空字串、# 後不是 /、只有 #/… 沒檔名＝換不了，
 整個物件原封不動留著。
 argv[0] 帶 / 又 exec 不了（不是 +x 的一般檔：資料夾、沒 +x 的檔、不在，或帶 #/）＝前面插 aos-exec、照 PATH 找
 （10-20 ideas D3、D5：["tools/stamp", "a"]＝["aos-exec", "tools/stamp", "a"]；10-21 起 a 是 args，工作區只由 --ws 給）。
 
 單子的錯（單子壞、程式找不到、$env 沒設、$ref 解不開）丟 InstError；aos-exec 接住、退 1，
-stderr 一行「aos-exec: 代號 單子跑不起來：原因」。InstError 帶 code（10-23 照 impls 的代號）：單子的 key 型別不對 EntryBad、
-指示詞解不開（$env 沒設、$ref 讀不到／不是 JSON／指不到／繞圈）DirectiveBad、起不來 LaunchFailed——起不來時原因開頭再帶
-libaos 的名字（CwdMissing、OpenFailed、CommandNotFound、CommandNotExecutable、LaunchFailed），同 impls。子程式的碼由 aos-exec 透明轉交（被訊號停掉＝128＋訊號號碼）。
-run() 回 {"code", "signal", "timed_out", "pid", "ms", "received"}（received＝跑的期間收到、轉給子程式的第一個
+stderr 一行「aos-exec: 代號 單子跑不起來：原因」。InstError 帶 code（代號照 10-23 命名統合（thinking/2026-10-23-naming））：
+單子的 key 型別不對 EntryBad、指示詞解不開（$env 沒設、$ref 讀不到／不是 JSON／指不到／繞圈）DirectiveBad、起不來 LaunchFailed——
+起不來時原因開頭再帶 libaos 的名字（CwdMissing、OpenFailed、CommandMissing、CommandBad、LaunchFailed），同 impls；
+直接叫庫的 run(FILE) 時單子檔本身不在 EntryMissing、讀不了或不是 JSON EntryBad。子程式的碼由 aos-exec 透明轉交（被訊號停掉＝128＋訊號號碼）。
+run() 回 {"code", "signal", "timed_out", "pid", "elapsed_ms", "received"}（received＝跑的期間收到、轉給子程式的第一個
 SIGINT／SIGTERM／SIGHUP，沒有＝None；給 aos-loop／aos-fsm「收完這拍再以 128＋N 結束」用）；子程式回幾號、被逾時收掉都算正常跑完，
 單子有問題或起不來丟 InstError。
 
@@ -57,7 +58,7 @@ _FORWARDED = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
 
 
 class InstError(Exception):
-    """單子的錯：單子壞、程式找不到、$env 沒設…；code＝錯誤代號（EntryBad、DirectiveBad、LaunchFailed）。"""
+    """單子的錯：單子壞、程式找不到、$env 沒設…；code＝錯誤代號（EntryMissing、EntryBad、DirectiveBad、LaunchFailed）。"""
 
     def __init__(self, msg, code="EntryBad"):
         super().__init__(msg)
@@ -84,16 +85,16 @@ _KEEP = object()   # 格式不合（B 類）：整個指示詞物件原封不動
 
 
 def _ref(x, base, chain):
-    """{"$ref": "檔[#/指標]"[, "at": 指標]} → 那個位置的值（接著解完）；寫法不合回 _KEEP。"""
-    ref, at = x["$ref"], x.get("at")
+    """{"$ref": "檔[#/指標]"[, "$at": 指標]} → 那個位置的值（接著解完）；寫法不合回 _KEEP。"""
+    ref, at = x["$ref"], x.get("$at")
     if not isinstance(ref, str):
         return _KEEP
     if not (isinstance(at, str) and (at == "" or at.startswith("/"))):
-        at = None                       # at 寫法不合＝當沒寫
+        at = None                       # $at 寫法不合＝當沒寫
     path, hashed, ptr = ref.partition("#")
     if not path or hashed and not ptr.startswith("/"):
         return _KEEP                    # 空字串、只有 #/…、# 後不是 /
-    ptr += at or ""                     # D7：at 接在 #/ 後面
+    ptr += at or ""                     # D7：$at 接在 #/ 後面
     f = os.path.realpath(os.path.join(base, path))
     if (f, ptr) in chain:
         raise InstError("$ref 繞圈：%s" % " → ".join(a + ("#" + b if b else "") for a, b in chain + ((f, ptr),)),
@@ -205,20 +206,23 @@ def parse(doc, base=None, args=(), ref_base=None):
 
 def load(path, what=""):
     """讀單子檔（或 $ref 的檔）：第一行是 `#!` 就丟掉，剩下 json.loads。
-    錯的代號：$ref 的檔＝DirectiveBad；單子檔本身（只有直接叫庫的 run(FILE) 會走到）＝ReadFailed／JsonSyntax。"""
+    錯的代號：$ref 的檔＝DirectiveBad；單子檔本身（只有直接叫庫的 run(FILE) 會走到）＝不在 EntryMissing、
+    讀不了或不是 JSON EntryBad（10-23 命名統合）。"""
     try:
         with open(path, encoding="utf-8") as f:
             text = f.read()
+    except FileNotFoundError as e:
+        raise InstError("%s讀不到 %s：%s" % (what, path, e), "DirectiveBad" if what else "EntryMissing")
     except OSError as e:
-        raise InstError("%s讀不到 %s：%s" % (what, path, e), "DirectiveBad" if what else "ReadFailed")
+        raise InstError("%s讀不到 %s：%s" % (what, path, e), "DirectiveBad" if what else "EntryBad")
     except ValueError as e:   # 不是 UTF-8
-        raise InstError("%s%s 不是 JSON：%s" % (what, path, e), "DirectiveBad" if what else "JsonSyntax")
+        raise InstError("%s%s 不是 JSON：%s" % (what, path, e), "DirectiveBad" if what else "EntryBad")
     if text.startswith("#!"):
         text = text.partition("\n")[2]
     try:
         return json.loads(text)
     except ValueError as e:
-        raise InstError("%s%s 不是 JSON：%s" % (what, path, e), "DirectiveBad" if what else "JsonSyntax")
+        raise InstError("%s%s 不是 JSON：%s" % (what, path, e), "DirectiveBad" if what else "EntryBad")
 
 
 def run(x, args=(), ref_base=None):
@@ -265,7 +269,7 @@ def _run(inst):
         if interrupted is not None:
             raise interrupted
         return {"code": rc if rc >= 0 else 128 - rc, "signal": -rc if rc < 0 else None,
-                "timed_out": timed_out, "pid": child.pid, "ms": round((time.monotonic() - t0) * 1000),
+                "timed_out": timed_out, "pid": child.pid, "elapsed_ms": round((time.monotonic() - t0) * 1000),
                 "received": received[0] if received else None}
     finally:
         for sig, handler in old.items():
@@ -300,9 +304,9 @@ def _start(inst):
                     prog = shutil.which(prog, path=env.get("PATH", os.defpath)) or prog
                 return popen(["/bin/sh", prog] + inst["argv"][1:])
         except FileNotFoundError:
-            raise InstError("CommandNotFound 找不到要跑的程式 %s" % inst["argv"][0], "LaunchFailed")
+            raise InstError("CommandMissing 找不到要跑的程式 %s" % inst["argv"][0], "LaunchFailed")
         except PermissionError:
-            raise InstError("CommandNotExecutable %s 不能執行" % inst["argv"][0], "LaunchFailed")
+            raise InstError("CommandBad %s 不能執行" % inst["argv"][0], "LaunchFailed")
         except OSError as e:
             raise InstError("LaunchFailed 起不了 %s：%s" % (inst["argv"][0], e), "LaunchFailed")
     finally:

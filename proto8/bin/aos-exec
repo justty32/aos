@@ -16,8 +16,9 @@ XXX：資料夾、檔、或 `檔#/指標`；相對路徑照呼叫當下的 cwd�
 （行程內 aos_inst.run，以子程式的碼結束）、沒 argv 的物件＝當資料夾：套它的 `.env` key、旗標蓋回、取 [$AOS_ENTRY]，一路往下、
 字串＝路徑轉向（全新的一跳；從寫著它的檔所在的資料夾算，繞圈＝入口壞）。AOS_CF＝實際的檔，AOS_CO＝入口在檔裡的 JSON 指標
 （不帶 #，不是 JSON 或整份檔＝空）。PATH 不動、原樣傳下去（ideas § 24；入口裡要叫 aos-exec、aos-loop… 由呼叫者事先放進 PATH）。
-args 接在入口後面，stdin 原樣給入口。自己的錯退 1，stderr 一行「aos-exec: 代號 原因」（N-60；代號 10-23 照 impls：
-Usage、WorkspaceMissing、MkdirFailed、EntryMissing、EntryBad、EnvReadFailed、EnvBad、LaunchFailed，單子的錯照 aos_inst 的 code）。
+args 接在入口後面，stdin 原樣給入口。自己的錯退 1，stderr 一行「aos-exec: 代號 原因」（N-60；代號照 10-23 命名統合
+（thinking/2026-10-23-naming）：ArgumentsBad（不認得的旗標 FlagUnknown）、WsMissing、MkdirFailed、EntryMissing、EntryBad、
+DotenvBad（.env 讀不到、.env 壞都是）、LaunchFailed，單子的錯照 aos_inst 的 code）。
 """
 import errno
 import json
@@ -30,7 +31,7 @@ BIN = os.path.dirname(os.path.realpath(__file__))
 
 
 class Fail(Exception):
-    """aos-exec 自己的錯（N-60）；code＝錯誤代號（照 impls，使用者 10-22「錯誤訊息多代號也遵循」）。"""
+    """aos-exec 自己的錯（N-60）；code＝錯誤代號（照 10-23 命名統合，使用者 10-22「錯誤訊息多代號也遵循」）。"""
 
     def __init__(self, msg, code):
         super().__init__(msg)
@@ -190,9 +191,9 @@ def parse(argv):
     try:
         opts, rest = aos_flags.parse(argv, FLAGS, SWITCHES)
     except aos_flags.Error as e:
-        die("Usage", "usage: %s（%s）" % (USAGE, e))
+        die(e.code, "usage: %s（%s）" % (USAGE, e))
     if not rest:
-        die("Usage", "usage: %s（沒有 XXX）" % USAGE)
+        die("ArgumentsBad", "usage: %s（沒有 XXX）" % USAGE)
     return opts, rest[0], rest[1:]
 
 
@@ -267,13 +268,13 @@ def load_env(d, override):
         with open(p, encoding="utf-8", newline="") as fh:
             lines = fh.read().split("\n")
     except OSError as e:
-        raise Fail(".env 讀不到：%s（%s）" % (p, e.strerror), "EnvReadFailed")
+        raise Fail(".env 讀不到：%s（%s）" % (p, e.strerror), "DotenvBad")
     except ValueError:
-        raise Fail(".env 壞：%s 不是 UTF-8" % p, "EnvBad")
+        raise Fail(".env 壞：%s 不是 UTF-8" % p, "DotenvBad")
     keep = set() if override else set(os.environ)
     for n, line in enumerate(lines, 1):
         def bad(why):
-            raise Fail(".env 壞：%s 第 %d 行（%s）" % (p, n, why), "EnvBad")
+            raise Fail(".env 壞：%s 第 %d 行（%s）" % (p, n, why), "DotenvBad")
         line = line.lstrip(" \t\n\v\f\r")   # 只認 ASCII 空白（同 C++ isspace；10-22 使用者要 Python 照 C++ 的寬鬆）
         if line.endswith("\r"):
             line = line[:-1]
@@ -299,7 +300,7 @@ def json_env(env, where, ref_base, override):
     import aos_inst
 
     def bad(why):
-        raise Fail(".env 壞：%s 的 .env（%s）" % (where, why), "EnvBad")
+        raise Fail(".env 壞：%s 的 .env（%s）" % (where, why), "DotenvBad")
     try:
         env = aos_inst.resolve(env, ref_base)
     except aos_inst.InstError:
@@ -327,7 +328,7 @@ def hop(spec, base, opts, seen):
     if not flag_ws:
         ws = os.environ.get("AOS_WS") or "."
     if not os.path.isdir(ws):
-        raise Fail("工作區不存在：%s" % ws, "WorkspaceMissing")
+        raise Fail("工作區不存在：%s" % ws, "WsMissing")
     d, f, ptr = locate(spec, base)
     ws = os.path.abspath(ws)
     stack = os.environ.get("AOS_STACK") or os.path.join(ws, ".aos")

@@ -1,6 +1,8 @@
 """aos-tick（時鐘，C-44、N-01；計畫 10-21 第 4 段）。只用標準庫：python3 -m unittest discover -s proto8/tests"""
 import os, subprocess, tempfile, unittest
 from pathlib import Path
+import own_error  # noqa: E402
+own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉；raw_stderr 留原樣
 
 ROOT = Path(__file__).resolve().parent.parent
 BIN = ROOT / "bin"
@@ -23,10 +25,12 @@ class T(unittest.TestCase):
     def tick(self, *args):
         return run(TICK, *args, cwd=str(self.tmp))
 
-    def one_line_err(self, r, head):
+    def one_line_err(self, r, code, head):
+        # 10-23 命名統合起 aos-tick 也帶代號：原樣是「aos-tick: 代號 原因」（統合前不帶）
         self.assertEqual(r.returncode, 1)
         self.assertEqual(r.stdout, "")
-        self.assertEqual(r.stderr.count("\n"), 1, r.stderr)
+        self.assertEqual(r.raw_stderr.count("\n"), 1, r.raw_stderr)
+        self.assertTrue(r.raw_stderr.startswith("aos-tick: %s %s" % (code, head)), r.raw_stderr)
         self.assertTrue(r.stderr.startswith("aos-tick: " + head), r.stderr)
 
     def test_first_writes_1_then_2(self):
@@ -54,13 +58,13 @@ class T(unittest.TestCase):
         for bad in ["", "abc\n", "3\n\n", " 3\n", "-1\n", "٣\n", "3\r\n"]:
             self.clock.write_text(bad, encoding="utf-8", newline="")
             r = self.tick("clock")
-            self.one_line_err(r, "時鐘檔壞：")
+            self.one_line_err(r, "ClockBad", "時鐘檔壞：")
             self.assertEqual(self.clock.read_bytes().decode("utf-8"), bad)   # read_text 的 newline 要 3.13，這台 3.12（10-22）
         self.assertEqual(os.listdir(self.tmp), ["clock"])
 
     def test_read_failed(self):
         self.clock.mkdir()                          # 是資料夾，讀不了
-        self.one_line_err(self.tick("clock"), "時鐘檔讀不到：")
+        self.one_line_err(self.tick("clock"), "ClockBad", "時鐘檔讀不到：")
 
     @unittest.skipIf(os.geteuid() == 0, "root 寫得進唯讀資料夾")
     def test_write_failed_untouched(self):
@@ -69,17 +73,18 @@ class T(unittest.TestCase):
         (d / "clock").write_text("5\n")
         d.chmod(0o500)
         self.addCleanup(d.chmod, 0o700)
-        self.one_line_err(self.tick("ro/clock"), "時鐘檔寫不了：")
+        self.one_line_err(self.tick("ro/clock"), "WriteFailed", "時鐘檔寫不了：")
         self.assertEqual((d / "clock").read_text(), "5\n")
         self.assertEqual(os.listdir(d), ["clock"])
 
     def test_missing_dir_is_write_error(self):
-        self.one_line_err(self.tick("nope/clock"), "時鐘檔寫不了：")
+        self.one_line_err(self.tick("nope/clock"), "WriteFailed", "時鐘檔寫不了：")
         self.assertFalse((self.tmp / "nope").exists())   # 不替人建資料夾
 
     def test_usage(self):
-        for args in [(), ("a", "b"), ("--cfg", "x", "a"), ("--x=1", "a")]:
-            self.one_line_err(self.tick(*args), "usage: aos-tick [旗標] FILE（")
+        for args, code in [((), "ArgumentsBad"), (("a", "b"), "ArgumentsBad"), (("--cfg", "x", "a"), "FlagUnknown"),
+                           (("--x=1", "a"), "FlagUnknown")]:
+            self.one_line_err(self.tick(*args), code, "usage: aos-tick [旗標] FILE（")
         self.assertEqual(os.listdir(self.tmp), [])
 
     def test_double_dash_and_hash_literal(self):
@@ -89,7 +94,7 @@ class T(unittest.TestCase):
         self.assertEqual(self.tick("a#b").returncode, 0)
         self.assertEqual((self.tmp / "a#b").read_text(), "1\n")
         (self.tmp / "c.json").write_text('{"k": 3}')
-        self.one_line_err(self.tick("c.json#/k"), "時鐘檔寫不了：")   # 當成資料夾 c.json# 底下的 k
+        self.one_line_err(self.tick("c.json#/k"), "WriteFailed", "時鐘檔寫不了：")   # 當成資料夾 c.json# 底下的 k
         self.assertEqual((self.tmp / "c.json").read_text(), '{"k": 3}')
 
     def test_demo_tick_loop_5(self):

@@ -8,7 +8,7 @@ sys.path.insert(0, str(ROOT / "bin"))
 import aos_inst  # noqa: E402
 from test_directive_argv import put, run  # noqa: E402
 import own_error  # noqa: E402
-own_error.install()   # 錯誤一行的代號（10-23 照 impls）：檢查對得上原因開頭再拿掉
+own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
 
 class T(unittest.TestCase):
@@ -56,10 +56,15 @@ class T(unittest.TestCase):
 
     def test_ref_non_string_silently_ignores(self):
         self.assertEqual(self.r({"$ref": "d.json#/n", "$path": "x", "$prefix": "p"}), 3)
-        self.assertEqual(self.r({"$ref": "d.json", "at": "/o", "$prefix": "p"}), {"k": 1})
+        self.assertEqual(self.r({"$ref": "d.json", "$at": "/o", "$prefix": "p"}), {"k": 1})
 
     def test_old_path_key_ignored(self):
         self.assertEqual(self.r({"$env": "AOS_WS", "path": "a.txt"}), "/ws")
+
+    def test_old_at_key_ignored(self):
+        # 10-23 命名統合：修飾詞改 $at（統合前叫 at）；舊的 at 不再認，照寬容規則當不認得的 key 不管
+        self.assertEqual(self.r({"$ref": "d.json", "at": "/s"}), {"s": "/base", "n": 3, "o": {"k": 1}})
+        self.assertEqual(self.r({"$ref": "d.json", "$at": "/s"}), "/base")
 
     # ───── D12～D15：寫法寬容 ─────
 
@@ -73,9 +78,9 @@ class T(unittest.TestCase):
         self.assertEqual(self.r({"$env": "AOS_WS", "$path": 3, "$prefix": ["x"]}), "/ws")
         self.assertEqual(self.r({"$env": "AOS_WS", "$path": "a", "$prefix": 1}), "/ws/a")
 
-    def test_bad_at_treated_as_absent(self):
-        self.assertEqual(self.r({"$ref": "d.json#/s", "at": "a"}), "/base")
-        self.assertEqual(self.r({"$ref": "d.json#/s", "at": 3}), "/base")
+    def test_bad_dollar_at_treated_as_absent(self):
+        self.assertEqual(self.r({"$ref": "d.json#/s", "$at": "a"}), "/base")
+        self.assertEqual(self.r({"$ref": "d.json#/s", "$at": 3}), "/base")
 
     def test_malformed_left_untouched(self):
         for x in ({"$ref": 3}, {"$ref": ""}, {"$ref": "#/s"}, {"$ref": "d.json#s"},
@@ -104,7 +109,7 @@ class T(unittest.TestCase):
         # 10-21 傍晚 ideas § 9：$ref 指到資料夾＝讀不到、算錯（不走進去找入口、不把資料夾組成物件；使用者「維持報錯」）
         (self.t / "dir").mkdir()
         put(self.t / "dir" / "_exec.json", {"k": 1})
-        for x in ({"$ref": "dir"}, {"$ref": "dir#/k"}, {"$ref": "dir", "at": "/k"}):
+        for x in ({"$ref": "dir"}, {"$ref": "dir#/k"}, {"$ref": "dir", "$at": "/k"}):
             with self.assertRaises(aos_inst.InstError) as c:
                 self.r(x)
             self.assertIn("讀不到", str(c.exception))

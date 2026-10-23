@@ -8,7 +8,7 @@ from pathlib import Path
 
 from test_exec_rules import put, run
 import own_error  # noqa: E402
-own_error.install()   # 錯誤一行的代號（10-23 照 impls）：檢查對得上原因開頭再拿掉
+own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
 SHOW = 'import json, os, sys; print(json.dumps({k: os.environ.get(k) for k in sys.argv[1:]}))'
 
@@ -150,12 +150,12 @@ class T(unittest.TestCase):
         self.assertEqual(json.loads(out), {"A": "out", "B": "t"}, stderr)
 
     def test_loop_beat_needs_extra_hop_for_flag(self):
-        # loop 每拍叫 aos-exec -- <run>，-- 後面寫不了旗標：要蓋就多一跳，body 寫 ["aos-exec", "--dotenv-override", "think"]
+        # loop 每拍叫 aos-exec -- <val>，-- 後面寫不了旗標：要蓋就多一跳，body 寫 ["aos-exec", "--dotenv-override", "think"]
         q = Path(self.t, "q")
         put(q / "think" / ".env", "A=think\n")
         put(q / "think" / "_exec.json", ["sh", "-c", 'echo "$A" >> "$AOS_WS/seen"'])
         for body, want in ((["aos-exec", "--dotenv-override", "think"], "think"), (["aos-exec", "think"], "out")):
-            put(q / "loop.json", {"_exec": ["aos-loop", {"$env": "AOS_CF"}], "run": "loop.json#/body", "body": body, "max": 2})
+            put(q / "loop.json", {"_exec": ["aos-loop", {"$env": "AOS_CF"}], "val": "loop.json#/body", "body": body, "max": 2})
             seen = Path(self.t, "seen")
             if seen.exists():
                 seen.unlink()

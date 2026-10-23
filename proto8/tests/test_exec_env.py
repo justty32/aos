@@ -8,7 +8,7 @@ from pathlib import Path
 
 from test_exec_rules import put, prog, run
 import own_error  # noqa: E402
-own_error.install()   # 錯誤一行的代號（10-23 照 impls）：檢查對得上原因開頭再拿掉
+own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
 
 class T(unittest.TestCase):
@@ -378,7 +378,7 @@ class T(unittest.TestCase):
         # 最外層加 --dotenv-override＝只有起 loop 那跳蓋（x），每拍的 aos-exec 不吃旗標
         q = Path(self.t, "q")
         put(q / ".env", "C=${C}x\n")
-        put(q / "loop.json", {"_exec": ["aos-loop", {"$env": "AOS_CF"}], "run": "b.json", "max": 3})
+        put(q / "loop.json", {"_exec": ["aos-loop", {"$env": "AOS_CF"}], "val": "b.json", "max": 3})
         put(q / "b.json", ["sh", "-c", 'echo "$C" >> "$AOS_WS/seen"'])
         self.assertEqual(run("--ws", self.t, str(q / "loop.json"), env={"C": ""})[0], 0)
         self.assertEqual(Path(self.t, "seen").read_text(), "\n\n\n")

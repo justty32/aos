@@ -4,7 +4,7 @@
 import json, os, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402
-own_error.install()   # 錯誤一行的代號（10-23 照 impls）：檢查對得上原因開頭再拿掉
+own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
 ROOT = Path(__file__).resolve().parent.parent
 BIN = ROOT / "bin"
@@ -62,6 +62,12 @@ class T(unittest.TestCase):
         for name in ("no_command", "env_unset"):   # 單子本身的錯
             r = self.inst(str(self.tmp / (name + ".json")))
             self.assertTrue(r.stderr.startswith("aos-exec: 單子跑不起來："), (name, r.stderr))
+        # 起不來的原因字（10-23 命名統合，統合前叫 CommandNotFound／CommandNotExecutable）
+        noexec = self.tmp / "noexec"; noexec.write_text("x")
+        for doc, head in (({"argv": ["no-such-command-xyz"]}, "LaunchFailed 單子跑不起來：CommandMissing "),
+                          ({"argv": ["noexec"], "envs": {"PATH": str(self.tmp)}}, "LaunchFailed 單子跑不起來：CommandBad ")):
+            r = self.inst(self.single(doc, "launch.json"))
+            self.assertTrue(r.raw_stderr.startswith("aos-exec: " + head), r.raw_stderr)
         r = self.inst(self.single({"argv": ["echo", {"$env": "AOS_NOPE_NOT_SET"}]}))
         self.assertIn("AOS_NOPE_NOT_SET", r.stderr)
         for k, v in (("timeout_ms", 0), ("grace_ms", -1), ("envs", {"A": 1}), ("cwd", 3), ("stdout_append", "y")):
@@ -77,21 +83,24 @@ class T(unittest.TestCase):
         r = self.inst(str(self.tmp / "absent.json"))
         self.assertEqual(r.returncode, 1)
         self.assertIn("aos-exec:", r.stderr)
-        with self.assertRaises(aos_inst.InstError):
+        # 直接叫庫的 run(FILE)：單子檔本身不在＝EntryMissing、不是 JSON＝EntryBad（10-23 命名統合，統合前叫 ReadFailed／JsonSyntax）
+        with self.assertRaises(aos_inst.InstError) as c:
             aos_inst.run(str(p))
-        with self.assertRaises(aos_inst.InstError):
+        self.assertEqual(c.exception.code, "EntryBad")
+        with self.assertRaises(aos_inst.InstError) as c:
             aos_inst.run(str(self.tmp / "absent.json"))
+        self.assertEqual(c.exception.code, "EntryMissing")
 
     def test_timeout_kills(self):
         res = aos_inst.run({"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 500})
         self.assertTrue(res["timed_out"])
-        self.assertLess(res["ms"], 5000)
+        self.assertLess(res["elapsed_ms"], 5000)
         r = self.inst(self.single({"argv": ["sleep", "30"], "timeout_ms": 200}))
         self.assertNotEqual(r.returncode, 0)
 
     def test_run_result_shape(self):
         res = aos_inst.run({"argv": ["sh", "-c", "exit 3"]})
-        self.assertEqual(set(res), {"code", "signal", "timed_out", "pid", "ms", "received"})
+        self.assertEqual(set(res), {"code", "signal", "timed_out", "pid", "elapsed_ms", "received"})
         self.assertEqual((res["code"], res["signal"], res["timed_out"], res["received"]), (3, None, False, None))
 
     def test_stdout_to_file_and_append(self):

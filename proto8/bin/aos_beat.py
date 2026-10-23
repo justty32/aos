@@ -1,9 +1,9 @@
-"""aos_beat：跑「一拍」——loop.json 的 run、fsm.json 格的 val（同一套寫法 C-55）。aos-loop、aos-fsm 共用。純標準庫。
+"""aos_beat：跑「一拍」——loop.json 的 val、fsm.json 格的 val（同一套寫法 C-55）。aos-loop、aos-fsm 共用。純標準庫。
 
     import aos_beat
     aos_beat.block()        程式一開始呼叫：之後 SIGINT／SIGTERM／SIGHUP 不打死這支程式，記下來
     aos_beat.take()         拍與拍之間：有記下的訊號就回第一個（沒有＝0）
-    aos_beat.run(x, args)   跑一拍，回 {"code", "signal", "ms", "received"}
+    aos_beat.run(x, args)   跑一拍，回 {"code", "signal", "elapsed_ms", "received"}
 
 x 只收字串（aos-exec 的目標；10-21 plan L11、F2）：子行程 `aos-exec -- <x> args...`（照 PATH 找；`--` 讓 - 開頭的目標
 不被當旗標，L10；跟呼叫者同一個行程群組，同 subprocess.call）；跑的期間收到的三個訊號 os.kill 給那個子行程
@@ -28,7 +28,7 @@ _pending = []      # 子行程還沒記進 _child 時收到的，起來後補轉
 
 
 class StartError(Exception):
-    """起不了子程式（aos-exec、daemon 的子 loop）；呼叫者印一行「程式名: 代號 原因」、退 1。code 沒給＝LaunchFailed（照 impls）。"""
+    """起不了子程式（aos-exec、daemon 的子 loop）；呼叫者印一行「程式名: 代號 原因」、退 1。code 沒給＝LaunchFailed。"""
 
     def __init__(self, msg, code="LaunchFailed"):
         super().__init__(msg)
@@ -72,4 +72,4 @@ def run(x, args=()):
     rc = p.wait()     # 訊號處理完 wait 自己會接著等（PEP 475）
     _child[0] = None
     return {"code": rc if rc >= 0 else 128 - rc, "signal": -rc if rc < 0 else None,
-            "ms": round((time.monotonic() - t0) * 1000), "received": _got[0] if _got else None}
+            "elapsed_ms": round((time.monotonic() - t0) * 1000), "received": _got[0] if _got else None}

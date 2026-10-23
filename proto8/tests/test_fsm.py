@@ -1,7 +1,7 @@
 import datetime, json, os, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402
-own_error.install()   # 錯誤一行的代號（10-23 照 impls）：檢查對得上原因開頭再拿掉
+own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
 ROOT = Path(__file__).resolve().parent.parent
 BIN = ROOT / "bin"
@@ -99,7 +99,7 @@ class T(unittest.TestCase):
         self.assertNotIn("timed_out", t)
         self.assertEqual(t["code"], 143)
         self.assertIsNone(t["signal"])   # 格（aos-exec）自己以 143 結束，不是被訊號殺掉（10-22 檔頭更正）
-        self.assertLess(t["ms"], 5000)
+        self.assertLess(t["elapsed_ms"], 5000)
         self.assertFalse((self.stack / "state").exists())
 
     def test_body_cell_exit_code_and_env_resolved(self):
@@ -143,7 +143,7 @@ class T(unittest.TestCase):
         self.assertEqual(self.state(), "c\n")   # 錯就不跑格
 
     def test_val_array_args(self):
-        # val＝[目標, 參數...]（比照 loop 的 run）：每拍 aos-exec -- 目標 參數...；元素不是字串、空陣列＝表壞
+        # val＝[目標, 參數...]（比照 loop 的 val）：每拍 aos-exec -- 目標 參數...；元素不是字串、空陣列＝表壞
         self.cell("a", 'echo "$@" > "$AOS_STACK/args"\n')
         self.table({"a": {"val": ["a", "x", "--y"], "next": "a"}})
         r = self.beat()
@@ -175,8 +175,9 @@ class T(unittest.TestCase):
             self.beat()
         tr = self.trace()
         self.assertEqual([(t["state"], t["code"]) for t in tr], [("a", 0), ("b", 5), ("b", 5)])
-        self.assertEqual(set(tr[0]), {"at", "state", "code", "signal", "ms"})   # F4：沒有 timed_out
-        for t in tr:
+        self.assertEqual(set(tr[0]), {"at", "state", "code", "signal", "elapsed_ms"})   # F4：沒有 timed_out
+        for t in tr:   # at＝ISO 8601 UTC 到毫秒（10-23 命名統合，統合前到秒）
+            self.assertRegex(t["at"], r"\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00\Z")
             datetime.datetime.fromisoformat(t["at"])
 
     def test_requires_stack(self):

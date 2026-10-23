@@ -2,23 +2,26 @@
 """aos-daemon [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] daemon.json
 — 管一群長壽的子 loop（C-36、N-28）。命令列同 aos-loop（共用 aos_loop.cli；唯一的位置參數＝設定檔，可寫 `檔#/指標`；10-21 傍晚 ideas § 9）。
 daemon.json＝loop.json 的超集：
-    run, max, interval_ms, ctl, state   同 aos-loop（同名同義，N-28）；但 run 選填（純監工不需要）、interval_ms 沒寫＝200
-    children   {名字: loop 設定}：字串或陣列＝aos-exec 的目標（包成 {"run": 它}）、物件＝一份 loop.json 的內容（不驗，交給子 loop；
-               要內嵌單子寫 {"run": "daemon.json#/children/<名字>/body", "body": 單子}）。子項 run 的相對路徑從 daemon 的 cwd 算：
+    val, max, interval_ms, ctl, state   同 aos-loop（同名同義，N-28）；但 val 選填（純監工不需要）、interval_ms 沒寫＝200
+    loops      {名字: loop 設定}：字串或陣列＝aos-exec 的目標（包成 {"val": 它}）、物件＝一份 loop.json 的內容（不驗，交給子 loop；
+               要內嵌單子寫 {"val": "daemon.json#/loops/<名字>/body", "body": 單子}）。子項 val 的相對路徑從 daemon 的 cwd 算：
                daemon 寫小格時把它（陣列就是第一個元素）轉成絕對路徑，其他不動
     adopt      布林，沒寫＝true：起來時讀自己上次的 state，把還活著的子 loop（pid＋啟動時間對得上）接回、不重起（N-17、N-28）
 需要 $AOS_STACK（沒設＝退 1）。每個子項的小格是 $AOS_STACK/<名字>/（P-17；名字不能帶 /、#、不能 . 開頭，也不能跟 daemon 自己的
 ctl、state 撞名——檔在 $AOS_STACK 底下時，路徑的第一段就是會撞的名字，例如 "state.json"、"w/ctl.json" 的 "w"；使用者 10-22；
-起來時撞＝退 1，ctl 改 children 撞＝那份 ctl 不採用）：daemon 把子項的 loop 設定補上
+起來時撞＝退 1，ctl 改 loops 撞＝那份 ctl 不採用）：daemon 把子項的 loop 設定補上
 "ctl": "ctl.json"、"state": "state.json"（沒寫才補）與 "_exec": ["aos-loop", {"$env": "AOS_CF"}]（一律蓋上）寫成小格裡的 loop.json，
 以 AOS_STACK=小格 起 `aos-exec -- 小格/loop.json#/_exec`（經 aos-exec，使用者 10-21 傍晚「5.要」；指到 _exec 不受 $AOS_ENTRY 影響；
 aos-exec cd 進小格、exec 成 aos-loop，pid 不變；自成一個行程群組）。子 loop 的 stdout 丟掉、stderr 附加到小格的 stderr（N-28 方案 B）。
-每圈（拍與拍之間）：讀 ctl（多認 children＝我要表上有誰，N-54）→ 收掉表上多出來的（SIGTERM，等 10 秒，再 SIGKILL 整群）、
-看誰結束了（phase exited，記 code／signal）、起表上少掉的 → 跑 run（有寫才跑）→ 寫 state（children 表在裡面）。
-子 loop 結束後不自動重起（使用者 10-20「照預設」）；要再起：從 children 拿掉再放回，或重起 daemon。
-不論為什麼結束（拍滿 max、ctl stop、run 退 10 或失敗、收到訊號、自己的錯），都先收掉所有子 loop、寫好 state 再結束
-（最後一圈之後才自己結束的子項也標 exited、記 code，D7）；
-收到 SIGINT／SIGTERM／SIGHUP 以 128＋N 結束（非 0，P-36）。自己的錯退 1，stderr 一行 `aos-daemon: 原因`。PATH 不動：
+每拍（拍與拍之間）：讀 ctl（多認 loops＝我要表上有誰，N-54）→ 收掉表上多出來的（SIGTERM，等 10 秒，再 SIGKILL 整群）、
+看誰結束了（phase done，記 code／signal）、起表上少掉的 → 跑 val（有寫才跑）→ 寫 state（loops 表在裡面）。
+state 的 loops 表每列 {"pid", "start_ticks", "phase", "code", "signal"}：phase＝running／done（子 loop 自己結束）／
+stopped（daemon 收掉它：SIGTERM 或 SIGKILL）；收的途中的 stopping 只在內部用、不寫進 state（10-23 統合前兩種都叫 exited）。
+子 loop 結束後不自動重起（使用者 10-20「照預設」）；要再起：從 loops 拿掉再放回，或重起 daemon。
+不論為什麼結束（拍滿 max、ctl stop、val 退 10 或失敗、收到訊號、自己的錯），都先收掉所有子 loop、寫好 state 再結束
+（最後一拍之後才自己結束的子項標 done、記 code，D7）；
+收到 SIGINT／SIGTERM／SIGHUP 以 128＋N 結束（非 0，P-36）。自己的錯退 1，stderr 一行 `aos-daemon: 代號 原因`（代號照 10-23 命名統合
+（thinking/2026-10-23-naming）：同 aos-loop，子項撞名也是 CfgBad，起子項另有 MkdirFailed、WriteFailed、LaunchFailed）。PATH 不動：
 aos-loop、aos-exec 由呼叫者放進 PATH。"""
 import json, os, signal, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
@@ -39,23 +42,23 @@ def taken_names(stack, paths):
     return out
 
 
-def check_children(v, taken=()):
+def check_loops(v, taken=()):
     """taken＝daemon 自己在 $AOS_STACK 底下用掉的名字（taken_names）。"""
     if not isinstance(v, dict):
-        return "children 要是 {名字: loop 設定}"
+        return "loops 要是 {名字: loop 設定}"
     for name, c in v.items():
         if not name or "/" in name or "#" in name or name.startswith("."):   # # 會被 aos-exec 當成指標的開頭
-            return "children 的名字 %r 不能當資料夾名" % name
+            return "loops 的名字 %r 不能當資料夾名" % name
         if name in taken:
-            return "children 的名字 %r 跟 daemon 自己的 ctl／state 撞名" % name
+            return "loops 的名字 %r 跟 daemon 自己的 ctl／state 撞名" % name
         if not isinstance(c, (str, list, dict)):
-            return "children[%s] 要是 aos-exec 的目標或 loop 設定" % name
+            return "loops[%s] 要是 aos-exec 的目標或 loop 設定" % name
     return None
 
 
 class Child:
-    def __init__(self, pid, started, proc=None):
-        self.pid, self.started, self.proc = pid, started, proc
+    def __init__(self, pid, start_ticks, proc=None):
+        self.pid, self.start_ticks, self.proc = pid, start_ticks, proc
         self.phase, self.code, self.signal = "running", None, None
 
     def alive(self):
@@ -65,10 +68,10 @@ class Child:
                 return True
             self.code, self.signal = (rc, None) if rc >= 0 else (128 - rc, -rc)
             return False
-        return aos_window.started(self.pid) == self.started   # 接回來的不是自己的子行程：看 pid＋啟動時間
+        return aos_window.start_ticks(self.pid) == self.start_ticks   # 接回來的不是自己的子行程：看 pid＋啟動時間
 
     def row(self):
-        return {"pid": self.pid, "started": self.started, "phase": self.phase, "code": self.code,
+        return {"pid": self.pid, "start_ticks": self.start_ticks, "phase": self.phase, "code": self.code,
                 "signal": self.signal}
 
 
@@ -76,22 +79,22 @@ class Daemon(aos_loop.Loop):
     prog = "aos-daemon"
     max_default = None
     interval_default = 200
-    need_run = False
-    ctl_extra = {"children": check_children}
+    need_val = False
+    ctl_extra = {"loops": check_loops}
 
     def __init__(self, opts, rest):
         super().__init__(opts, rest)
         if not self.stack:
             raise aos_loop.ConfigError("沒設定 AOS_STACK", "StackMissing")
-        self.children = self.cfg.get("children", {})
-        bad = check_children(self.children)
+        self.loops = self.cfg.get("loops", {})
+        bad = check_loops(self.loops)
         if bad:
             raise aos_loop.ConfigError(bad)
         taken = taken_names(self.stack, (self.ctl.path, self.state_path))
-        bad = check_children(self.children, taken)
-        if bad:   # 名字跟自己的 ctl／state 撞名＝Conflict（照 impls，10-23）
-            raise aos_loop.ConfigError(bad, "Conflict")
-        self.ctl.extra = {"children": lambda v: check_children(v, taken)}   # ctl 改 children 撞名＝整份不採用（N-08）
+        bad = check_loops(self.loops, taken)
+        if bad:   # 名字跟自己的 ctl／state 撞名＝CfgBad（10-23 統合前叫 Conflict）
+            raise aos_loop.ConfigError(bad, "CfgBad")
+        self.ctl.extra = {"loops": lambda v: check_loops(v, taken)}   # ctl 改 loops 撞名＝整份不採用（N-08）
         adopt = self.cfg.get("adopt", True)
         if not isinstance(adopt, bool):
             raise aos_loop.ConfigError("adopt 要是 true／false")
@@ -103,43 +106,43 @@ class Daemon(aos_loop.Loop):
     def adopt(self):
         try:
             with open(self.state_path, encoding="utf-8") as f:
-                old = json.load(f)["children"]
+                old = json.load(f)["loops"]
             rows = [(n, r) for n, r in old.items() if r.get("phase") == "running"]
         except (TypeError, OSError, ValueError, KeyError, AttributeError):
             return   # 沒開 state、第一次起來、或舊的讀不了：沒東西可接
         for name, r in rows:
-            pid, st = r.get("pid"), r.get("started")
-            if isinstance(pid, int) and st is not None and aos_window.started(pid) == st:
+            pid, st = r.get("pid"), r.get("start_ticks")
+            if isinstance(pid, int) and st is not None and aos_window.start_ticks(pid) == st:
                 self.table[name] = Child(pid, st)
 
     def info(self):
-        return {"children": {n: c.row() for n, c in self.table.items()}}
+        return {"loops": {n: c.row() for n, c in self.table.items()}}
 
     def tend(self, ctl):
-        want = ctl["children"] if "children" in ctl else self.children
+        want = ctl["loops"] if "loops" in ctl else self.loops
         gone = [n for n in self.table if n not in want]
         self.stop(gone)
         for n in gone:
             del self.table[n]
         for c in self.table.values():
             if c.phase == "running" and not c.alive():
-                c.phase = "exited"
+                c.phase = "done"   # 子 loop 自己結束的
         for n, spec in want.items():
             if n not in self.table:
                 self.table[n] = self.spawn(n, spec)
 
     def spawn(self, name, spec):
         cell = os.path.join(self.stack, name)
-        cfg = dict(spec) if isinstance(spec, dict) else {"run": spec}
-        run = cfg.get("run")   # 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗）
-        if isinstance(run, str):
-            cfg["run"] = os.path.join(self.cwd, run)
-        elif isinstance(run, list) and run and isinstance(run[0], str):
-            cfg["run"] = [os.path.join(self.cwd, run[0])] + run[1:]
+        cfg = dict(spec) if isinstance(spec, dict) else {"val": spec}
+        val = cfg.get("val")   # 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗）
+        if isinstance(val, str):
+            cfg["val"] = os.path.join(self.cwd, val)
+        elif isinstance(val, list) and val and isinstance(val[0], str):
+            cfg["val"] = [os.path.join(self.cwd, val[0])] + val[1:]
         cfg.setdefault("ctl", "ctl.json")
         cfg.setdefault("state", "state.json")
         cfg["_exec"] = ["aos-loop", {"$env": "AOS_CF"}]
-        code = "MkdirFailed"   # 哪一步失敗決定代號（照 impls）：建小格、寫 loop.json、開 stderr／起子行程
+        code = "MkdirFailed"   # 哪一步失敗決定代號：建小格、寫 loop.json、開 stderr／起子行程
         try:
             os.makedirs(cell, exist_ok=True)
             code = "WriteFailed"
@@ -151,7 +154,7 @@ class Daemon(aos_loop.Loop):
                                      stdout=subprocess.DEVNULL, stderr=err, start_new_session=True)
         except OSError as e:
             raise aos_beat.StartError("起不了子項 %s：%s" % (name, e), code)
-        return Child(p.pid, aos_window.started(p.pid), p)
+        return Child(p.pid, aos_window.start_ticks(p.pid), p)
 
     def stop(self, names):
         live = [self.table[n] for n in names if self.table[n].phase == "running" and self.table[n].alive()]
@@ -173,13 +176,13 @@ class Daemon(aos_loop.Loop):
                 deadline = float("inf")
             time.sleep(0.05)
         for c in live:
-            c.phase = "exited"
+            c.phase = "stopped"   # daemon 收掉的
 
     def finish(self):
         self.stop(list(self.table))
-        for c in self.table.values():   # 最後一次 tend 之後才結束的（stop 不收已經死的）也標 exited（10-21 plan D7）
+        for c in self.table.values():   # 最後一次 tend 之後才自己結束的（stop 不收已經死的）標 done（10-21 plan D7）
             if c.phase == "running" and not c.alive():
-                c.phase = "exited"
+                c.phase = "done"
 
 
 sys.exit(aos_loop.cli(Daemon, sys.argv))

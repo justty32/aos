@@ -1,7 +1,7 @@
-"""錯誤一行「程式名: 代號 原因」的代號檢查（10-23 照 impls 的代號；使用者 10-22「錯誤訊息多代號也遵循」）。
+"""錯誤一行「程式名: 代號 原因」的代號檢查（代號照 10-23 命名統合（thinking/2026-10-23-naming）；使用者 10-22「錯誤訊息多代號也遵循」）。
 
 各測試檔 import 時呼叫 install()：之後 subprocess.run 與 Popen.communicate 拿回來的文字 stderr，每一行開頭是
-aos-exec／aos-loop／aos-fsm／aos-daemon 的「程式名: 」就檢查代號對不對得上原因開頭（對照表 CODES），再把代號拿掉，
+aos-exec／aos-loop／aos-fsm／aos-daemon／aos-tick 的「程式名: 」就檢查代號對不對得上原因開頭（對照表 CODES），再把代號拿掉，
 讓既有的斷言照舊認「程式名: 原因」。對不上（該有沒有、不該有卻有、代號不對）丟 AssertionError。
 subprocess.run 的結果另留一份原樣的 `raw_stderr`，要直接看代號的測試用它。"""
 import re
@@ -9,42 +9,49 @@ import subprocess
 import threading
 
 # 原因開頭（regex）→ 可以的代號。順序有關：先比的先贏。None＝不是自己的錯、不帶代號。
-_LOOP = [
-    (r"usage: ", {"Usage"}),
+_USAGE = [
+    (r"usage: .*（不認得的旗標 ", {"FlagUnknown"}),
+    (r"usage: ", {"ArgumentsBad"}),
+]
+_CFG = [
+    (r"讀不到或不是 JSON：.*\[Errno 2\]", {"CfgMissing"}),   # 檔不在
+    (r"讀不到或不是 JSON", {"CfgBad"}),
+    (r"設定檔指不到", {"CfgMissing"}),
+]
+_LOOP = _USAGE + _CFG + [
     (r"(寫了 \S+ 卻)?沒設定 AOS_STACK", {"StackMissing"}),
-    (r"讀不到或不是 JSON", {"ReadFailed", "JsonSyntax"}),
     (r"起不了 aos-exec", {"LaunchFailed"}),
     (r"起不了子項", {"MkdirFailed", "WriteFailed", "LaunchFailed"}),
-    (r"children 的名字 .* 撞名", {"Conflict"}),
-    (r"第 \d+ 圈 ", None),   # 那拍失敗：不是自己的錯
-    (r"", {"FieldType"}),
+    (r"第 \d+ 拍 ", None),   # 那拍失敗：不是自己的錯
+    (r"", {"CfgBad"}),
 ]
 CODES = {
-    "aos-exec": [
-        (r"usage: ", {"Usage"}),
-        (r"工作區不存在", {"WorkspaceMissing"}),
+    "aos-exec": _USAGE + [
+        (r"工作區不存在", {"WsMissing"}),
         (r"建不了 AOS_STACK", {"MkdirFailed"}),
         (r"入口不存在", {"EntryMissing"}),
         (r"入口(壞|讀不到)", {"EntryBad"}),
         (r"起不來", {"LaunchFailed"}),
-        (r"\.env 讀不到", {"EnvReadFailed"}),
-        (r"\.env 壞", {"EnvBad"}),
-        (r"單子跑不起來：(CwdMissing|OpenFailed|CommandNotFound|CommandNotExecutable|LaunchFailed) ", {"LaunchFailed"}),
+        (r"\.env 讀不到", {"DotenvBad"}),
+        (r"\.env 壞", {"DotenvBad"}),
+        (r"單子跑不起來：(CwdMissing|OpenFailed|CommandMissing|CommandBad|LaunchFailed) ", {"LaunchFailed"}),
         (r"單子跑不起來：", {"EntryBad", "DirectiveBad"}),
     ],
     "aos-loop": _LOOP,
     "aos-daemon": _LOOP,
-    "aos-fsm": [
-        (r"usage: ", {"Usage"}),
+    "aos-fsm": _USAGE + _CFG + [
         (r"沒設定 AOS_STACK", {"StackMissing"}),
-        (r"讀不到或不是 JSON", {"ReadFailed", "JsonSyntax"}),
-        (r"讀不了 ", {"ReadFailed"}),
+        (r"讀不了 ", {"StateBad"}),
         (r"查不到狀態", {"StateUnknown"}),
         (r"狀態 .*：起不了 aos-exec", {"LaunchFailed"}),
-        (r"", {"FieldType"}),
+        (r"", {"CfgBad"}),
+    ],
+    "aos-tick": _USAGE + [
+        (r"時鐘檔(讀不到|壞)", {"ClockBad"}),
+        (r"時鐘檔寫不了", {"WriteFailed"}),
     ],
 }
-LINE = re.compile(r"(aos-exec|aos-loop|aos-fsm|aos-daemon): (?:([A-Z][A-Za-z]+) )?")
+LINE = re.compile(r"(aos-exec|aos-loop|aos-fsm|aos-daemon|aos-tick): (?:([A-Z][A-Za-z]+) )?")
 
 
 def expected(prog, reason):
