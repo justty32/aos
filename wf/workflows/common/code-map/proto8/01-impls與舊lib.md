@@ -8,18 +8,18 @@
 
 | 哪裡 | 負責什麼 |
 |---|---|
-| `aos-util/include/aos/cli.hpp`、`src/cli.cpp` | 10-21 起的命令列：`parse_cli`（旗標在位置參數前、`--x V`／`--x=V`、`--` 結束、錯＝Usage；10-22 起另收不帶值的開關表 `switches`；四支命令列共用，對應 bin 的 `aos_flags.parse`）、`load_cfg`（設定檔 `檔` 或 `檔#/指標`）。舊的 `aos/flags.hpp`（10-16～17 那代）是另一套 |
+| `aos-util/include/aos/cli.hpp`、`src/cli.cpp` | 10-21 起的命令列：`parse_cli`（旗標在位置參數前、`--x V`／`--x=V`、`--` 結束、錯＝ArgumentsBad、不認得的旗標 FlagUnknown（10-23 統合前一律 Usage）；10-22 起另收不帶值的開關表 `switches`；四支命令列共用，對應 bin 的 `aos_flags.parse`）、`load_cfg`（設定檔 `檔` 或 `檔#/指標`）。舊的 `aos/flags.hpp`（10-16～17 那代）是另一套 |
 | `aos-util/include/aos/text.hpp`、`src/text.cpp` | 10-22 起：`is_utf8`、`space_at`、`lstrip`／`rstrip`／`strip`（照 Python `str.isspace` 認 Unicode 空白）；aos-exec 的 `.env`、aos-fsm 的 state 與 `next` 檢查用 |
-| `aos-exec/include/aos/exec.hpp` | 公開 API 只剩 `run_cli`（等同命令列；會 chdir／setenv）、`run_inst`、`argv0`、`Result`、代號（含 `EnvBad`、`EnvReadFailed`） |
+| `aos-exec/include/aos/exec.hpp` | 公開 API 只剩 `run_cli`（等同命令列；會 chdir／setenv）、`run_inst`、`argv0`、`Result`、代號（含 `DotenvBad`、`WsMissing`；10-23 統合前叫 `EnvBad`／`EnvReadFailed`、`WorkspaceMissing`） |
 | `aos-exec/src/cli/` | `run_cli`：解旗標（`--ws`、10-22 起不帶值的 `--dotenv-override`，只管這一跳、轉向時清掉）→ 一跳跳走（字串轉向＝全新的一跳）→ `launch` |
 | `aos-exec/src/find/find.cpp`、`classify.cpp` | `hop`（定工作區 → `locate` → 建 stack → `enter`：cd、讀 `.env`、旗標蓋回 → 照當下 `$AOS_ENTRY` 一路往下挑入口 → 重設 `AOS_CF`／`AOS_CD`／`AOS_CO`）；`classify`（種類、沒 argv 的 JSON 物件當資料夾、`AOS_CO`、轉向繞圈） |
 | `aos-exec/src/env/env.cpp`、`dotenv.cpp` | `check_ws`、`setup_stack`；`.env` 檔（`load_env`；10-22 起 dotenv 基礎子集：`export_prefix`、`env_value` 管引號／註解／去空白，預設不蓋＝`set_env` 的 `keep`）與 JSON `.env` key（`json_env`，只套蓋不蓋）、`set_env`（只展開 `${名字}`、錯不印值） |
 | `aos-exec/src/launch/launch.cpp`、`src/inst/` | exec 可執行檔／argv 陣列（指示詞、argv[0] 交給 aos-exec）；inst 單子行程內交給 libaos（`run_inst`） |
 | `aos-loop/src/beat/folder.cpp` | 每拍 fork 子行程呼叫 aos-exec 的 `run_cli({"--", 目標, 參數...})`、轉訊號 |
-| `aos-loop/src/engine/config.cpp` | `Loop` 建構子（`load_cfg`、旗標 ＞ 設定檔 ＞ 預設）、`parse_target`（`run`／`val`＝字串或 `[目標, 參數...]`）、`loop_cli`（aos-loop、aos-daemon 共用） |
-| `aos-fsm/src/table/table.cpp` | `read_table`（`load_cfg`）、`check`（10-22：開跑時查整張表，表壞 FieldType）、`pick`（state 不在表上 StateUnknown）；`val` 走 `parse_target`；trace 沒有 `timed_out` |
-| `aos-fsm/src/state/state.cpp` | `read_state`（10-22：在但讀不了 ReadFailed、去頭尾 Unicode 空白）、`write_state`（`.state` 再改名）、`append_trace`、`utc_now` |
-| `aos-daemon/src/daemon/daemon.cpp` | `Daemon`：`check_children`、10-22 起 `taken_names`／`check_names`（子項名字跟自己的 ctl／state 撞名：起來時 Conflict、ctl 撞＝不採用）、`adopt`、`tend`、`stop`、`finish` |
+| `aos-loop/src/engine/config.cpp` | `Loop` 建構子（`load_cfg`、旗標 ＞ 設定檔 ＞ 預設）、`parse_target`（`val`＝字串或 `[目標, 參數...]`）、`loop_cli`（aos-loop、aos-daemon 共用） |
+| `aos-fsm/src/table/table.cpp` | `read_table`（`load_cfg`）、`check`（10-22：開跑時查整張表，表壞 CfgBad，10-23 統合前叫 FieldType）、`pick`（state 不在表上 StateUnknown）；`val` 走 `parse_target`；trace 沒有 `timed_out` |
+| `aos-fsm/src/state/state.cpp` | `read_state`（10-22：在但讀不了 StateBad〔10-23 統合前叫 ReadFailed〕、去頭尾 Unicode 空白）、`write_state`（`.state` 再改名）、`append_trace`（時間用 aos-util 的 `utc_now_ms`，ISO 到毫秒） |
+| `aos-daemon/src/daemon/daemon.cpp` | `Daemon`：`check_loops`（10-23 統合前叫 `check_children`）、10-22 起 `taken_names`／`check_names`（子項名字跟自己的 ctl／state 撞名：起來時 CfgBad〔10-23 統合前叫 Conflict〕、ctl 撞＝不採用）、`adopt`、`tend`、`stop`、`finish` |
 | `aos-daemon/src/child/child.cpp` | 子 loop 經 aos-exec 起：寫小格 `loop.json`（補 ctl／state、蓋 `_exec`、相對 run 轉絕對）、fork 後呼叫 `run_cli({"--", 小格/loop.json#/_exec})`，exec 成 PATH 上的 aos-loop |
 | `aos-directive/src/resolve.cpp` | 指示詞走訪；`$path` 是字串拼接（`join_path`） |
 
