@@ -31,14 +31,14 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔
   不認得的旗標（含舊的 `--cfg`）＝`FlagUnknown`；沒給、多給設定檔、旗標缺值＝`ArgumentsBad`（原因 `usage: aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔.json（原因）`）；
   命令列不再收 XXX（舊的 `aos-loop XXX` 寫法拿掉）。`--max`／`--interval-ms` 要是非負整數（只收 `[0-9]+`），不是＝`CfgBad`（不是 usage 錯，同 bin 版）。
 - **起跑時 旗標 ＞ 設定檔 ＞ 預設**（ctl 窗在跑的途中還能再蓋，見下面「窗」）。
-- **loop.json**：`{"val": aos-exec 的目標, "max": 最多幾拍}`（`val` 10-23 統合前叫 run，照 C-55「原值那一格一律叫 val」），選填 `interval_ms`、`ctl`、`state`（下面「窗」），其他 key 忽略（`body`、`_exec`…）。
+- **loop.json**：`{"val": aos-exec 的目標, "max": 最多幾拍}`（`val` 10-23 統合前叫 run，照 C-55「原值那一格一律叫 val」），選填 `interval_ms`、`ctl`、`state`（下面「窗」），其他 key 忽略（`body`、`_entry`…）。
   - `val`（`parse_target`）＝**字串**（每拍 `aos-exec -- <val>`；`--` 讓 `-` 開頭的目標不被當旗標）或**陣列 `[目標, 參數...]`**（每拍 `aos-exec -- 目標 參數...`；元素都要是字串、不能空）。
     相對路徑照 cwd 算、loop 不 cd 不轉；loop 不驗目標存不存在，那是那拍 aos-exec 的錯。WS、`AOS_STACK` 由那拍的 aos-exec 照它的規則定（沿用 `$AOS_WS`，沒設用 cwd）。每拍重找入口，入口換了下一拍就生效。
   - `val` 寫成**物件＝`CfgBad`**（訊息提「要內嵌單子寫 loop.json#/body」）：要內嵌單子就寫 `{"val": "loop.json#/body", "body": 單子}`，由那拍的 aos-exec 在它的子行程裡跑、當監工
     （單子裡的 `$ref` 從 loop.json 所在的資料夾算——那是入口檔的資料夾）。沒有 `val`＝`CfgBad`「沒有東西可跑」。
   - `max` 非負整數，**沒寫＝不限**（10-21 前是 10）；0＝一拍都不跑、退 0（負的、`null`＝`CfgBad`）。
   - `interval_ms` 非負整數，沒寫＝0：一拍結束到下一拍開始至少隔幾毫秒。
-- loop.json 帶 `"_exec": ["aos-loop", {"$env": "AOS_CF"}]` 時，`aos-exec loop.json` 就把 loop 跑起來（PATH 上要有 aos-loop 與 aos-exec；`_exec` 裡也可以放旗標）。
+- loop.json 帶 `"_entry": ["aos-loop", {"$env": "AOS_CF"}]` 時，`aos-exec loop.json` 就把 loop 跑起來（PATH 上要有 aos-loop 與 aos-exec；`_entry` 裡也可以放旗標）。
 - 不讀 stdin、不寫 stdout（那拍的 stdin／stdout／stderr 接 aos-loop 的）。不管逾時（要逾時把 val 指到一張單子、加 `timeout_ms`，P-22）。
 
 ### 窗（`ctl`、`state`，10-20）
@@ -146,5 +146,5 @@ B 段是 `max` 沒寫＝不限／0／負的、欄位型別、字串 val 走 aos-
 不寫 stdout、PATH 原樣傳給那拍（§ 24）、單子的 `$env`＋相對 cwd（`$env` 沒設＝那拍 aos-exec 的錯）、逾時＝失敗（143）、被訊號停掉＝128＋N，C 段是訊號（SIGTERM 轉給字串 val、SIGINT 轉給單子、SIGHUP 停掉那拍，都是收完再 128＋N），
 D 段是 10-20 的選填 key（照 `proto8/tests/test_loop.py` 的 Windows 移植：state 欄位與心跳、沒開窗不寫檔、窗沒 AOS_STACK、interval 壞／有睡、ctl stop＋seq、ctl 的 max、壞 ctl、paused 再放開、睡 interval 時收到訊號）與 `$ref` 從設定檔的資料夾算，
 E 段是 10-21 傍晚的命令列（ideas § 9）：usage 的各種寫法（沒給、多給、不認得、缺值、`--cfg`）、`--max`／`--interval-ms` 不是非負整數＝CfgBad、旗標蓋過 loop.json（`--max`、`--max=`、`--state`、`--ctl` 卻沒 AOS_STACK）、
-設定檔 `檔#/指標`（指不到、`#` 後沒 `/`、不是物件、讀不到）、val 陣列（參數照接、`-` 開頭的目標、失敗那行的「誰」）、`aos-exec loop.json` 當入口（`_exec` 帶 `{"$env": "AOS_CF"}`）。
+設定檔 `檔#/指標`（指不到、`#` 後沒 `/`、不是物件、讀不到）、val 陣列（參數照接、`-` 開頭的目標、失敗那行的「誰」）、`aos-exec loop.json` 當入口（`_entry` 帶 `{"$env": "AOS_CF"}`）。
 demo 的整合測試在 [aos-fsm](../aos-fsm/README.md) 的 `test_demo`。

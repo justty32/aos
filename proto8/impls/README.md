@@ -48,7 +48,7 @@
 
 ```
  aos-daemon   一個 loop＋子 loop 的表：$AOS_STACK/<名字>/ 小格、ctl 增減、不自動重起、adopt   src/{daemon,child,common}
-     │ 繼承 aos-loop 的 Loop；子 loop＝fork 後子行程呼叫 run_cli(-- 小格/loop.json#/_exec)，exec 成 PATH 上的 aos-loop
+     │ 繼承 aos-loop 的 Loop；子 loop＝fork 後子行程呼叫 run_cli(-- 小格/loop.json#/_entry)，exec 成 PATH 上的 aos-loop
  aos-fsm      一拍跑一格：$AOS_STACK/state → 跑那格 → 碼 0 才換 next；trace.jsonl   src/{table,state,common}
      │ 跑一格借 aos-loop 的 run_beat（aos/loop.hpp）
  aos-loop     每拍跑一次 val：0 下一拍、10 停、其他非 0 失敗；轉訊號、收完 128＋N；interval_ms、ctl／state 窗    src/{beat,engine,common}

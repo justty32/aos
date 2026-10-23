@@ -18,7 +18,7 @@ def run(*args, env=None, **kw):
     return subprocess.run(args, capture_output=True, text=True, env=e, **kw)
 
 
-def prog(parent, name, body, mode=0o755, entry="_exec"):
+def prog(parent, name, body, mode=0o755, entry="_entry"):
     d = Path(parent) / name
     (d / entry).parent.mkdir(parents=True, exist_ok=True)
     (d / entry).write_text("#!/bin/sh\n" + body)
@@ -47,7 +47,7 @@ class T(unittest.TestCase):
 
     def test_exec_json_only(self):
         d = Path(self.tmp, "p"); d.mkdir(parents=True)
-        (d / "_exec.json").write_text('{"argv": ["sh", "-c", "echo $1:$AOS_WS; exit 5", "sh"]}')
+        (d / "_entry.json").write_text('{"argv": ["sh", "-c", "echo $1:$AOS_WS; exit 5", "sh"]}')
         ws = Path(self.tmp, "ws"); ws.mkdir()
         r = run(EXEC, "--ws", str(ws), str(d), "x")
         self.assertEqual(r.returncode, 5, r.stderr)
@@ -60,9 +60,9 @@ class T(unittest.TestCase):
         self.assertEqual((r.returncode, r.stdout), (0, "hi\n"))
 
     def test_small_shell_wrapper_form_1(self):
-        d = prog(self.tmp, "p", "exec aos-exec _exec.json \"$@\"\n")   # 10-22 起沒有 aos-inst，小殼改叫 aos-exec
-        Path(d, "_exec.json").write_text('{"argv": ["echo", "a"]}')
-        # 小殼 _exec 是可執行檔，優先於同名 .json；殼裡明指 _exec.json 所以還是跑得起來
+        d = prog(self.tmp, "p", "exec aos-exec _entry.json \"$@\"\n")   # 10-22 起沒有 aos-inst，小殼改叫 aos-exec
+        Path(d, "_entry.json").write_text('{"argv": ["echo", "a"]}')
+        # 小殼 _entry 是可執行檔，優先於同名 .json；殼裡明指 _entry.json 所以還是跑得起來
         r = run(EXEC, "--ws", self.tmp, d, "b")
         self.assertEqual((r.returncode, r.stdout), (0, "a b\n"))
 
@@ -70,11 +70,11 @@ class T(unittest.TestCase):
         d = Path(self.tmp, "p"); d.mkdir()
         r = run(EXEC, "--ws", self.tmp, str(d))
         self.assertEqual(r.returncode, 1)
-        self.assertIn("exec.json", r.stderr)
+        self.assertIn("_entry.json", r.stderr)
 
     def test_executable_preferred_over_json(self):
         d = prog(self.tmp, "p", "echo exe\n")
-        Path(d, "_exec.json").write_text('{"argv": ["echo", "json"]}')
+        Path(d, "_entry.json").write_text('{"argv": ["echo", "json"]}')
         r = run(EXEC, "--ws", self.tmp, d)
         self.assertEqual(r.stdout, "exe\n")
 
@@ -193,7 +193,7 @@ class T(unittest.TestCase):
 
     def test_bob_requires_stack(self):
         ws = workspace(self.tmp, "ws", "hello")
-        r = run(str(Path(BOB) / "act/_exec"), env={"AOS_WS": str(ws)})
+        r = run(str(Path(BOB) / "act/_entry"), env={"AOS_WS": str(ws)})
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("沒設定 AOS_STACK", r.stderr)
         # fsm 本身沒設 AOS_STACK 也退 1
@@ -203,7 +203,7 @@ class T(unittest.TestCase):
         self.assertIn("沒設定 AOS_STACK", r.stderr)
 
     def test_bob_think_is_embedded_inst(self):
-        # 10-21 plan F2、F6：think 的單子放在同一格的 body、val 指到它；fsm.json 帶 _exec、loop 每拍 aos-exec fsm.json
+        # 10-21 plan F2、F6：think 的單子放在同一格的 body、val 指到它；fsm.json 帶 _entry、loop 每拍 aos-exec fsm.json
         for d in (BOB, CATHY):
             cfg = json.loads((Path(d) / "fsm.json").read_text())
             think = cfg["states"]["think"]
@@ -211,17 +211,17 @@ class T(unittest.TestCase):
             self.assertEqual(think["body"]["argv"][0], "python3", d)
             self.assertEqual(cfg["states"]["idle"]["val"], "idle", d)   # 資料夾格
             self.assertEqual(cfg["states"]["act"]["val"], "act", d)
-            self.assertEqual(cfg["_exec"], ["aos-fsm", {"$env": "AOS_CF"}], d)   # 10-21 傍晚：設定檔是唯一的位置參數
-            self.assertEqual((Path(d) / "_exec").read_text().splitlines()[-1], "exec aos-loop loop.json", d)
+            self.assertEqual(cfg["_entry"], ["aos-fsm", {"$env": "AOS_CF"}], d)   # 10-21 傍晚：設定檔是唯一的位置參數
+            self.assertEqual((Path(d) / "_entry").read_text().splitlines()[-1], "exec aos-loop loop.json", d)
             self.assertEqual(json.loads((Path(d) / "loop.json").read_text()), {"val": "fsm.json", "max": 20}, d)
             self.assertFalse((Path(d) / "fsm").exists(), d)
         ann = json.loads((Path(ANN) / "fsm.json").read_text())
         for name, cell in ann["states"].items():
             self.assertEqual(cell["val"], "fsm.json#/states/%s/body" % name)
         loop = json.loads((Path(ANN) / "loop.json").read_text())
-        self.assertEqual((loop["body"]["argv"], loop["_exec"]), (["aos-fsm", "fsm.json"], ["aos-loop", {"$env": "AOS_CF"}]))
+        self.assertEqual((loop["body"]["argv"], loop["_entry"]), (["aos-fsm", "fsm.json"], ["aos-loop", {"$env": "AOS_CF"}]))
         # ann 的入口經 aos-exec loop.json 跑起 loop（10-21 傍晚：「aos-exec loop.json」的寫法）
-        self.assertEqual((Path(ANN) / "_exec").read_text().splitlines()[-1], "exec aos-exec loop.json")
+        self.assertEqual((Path(ANN) / "_entry").read_text().splitlines()[-1], "exec aos-exec loop.json")
 
     def test_bob_entry_direct_exec_no_enoexec(self):
         # 入口帶 shebang：不經 sh、直接 exec 也跑得起來（P-05）
@@ -230,7 +230,7 @@ class T(unittest.TestCase):
         stack.mkdir()
         env = {"AOS_WS": str(ws), "AOS_STACK": str(stack),
                "PATH": str(ROOT / "bin") + os.pathsep + os.environ["PATH"]}
-        r = run(str(Path(BOB) / "_exec"), env=env, cwd=BOB)
+        r = run(str(Path(BOB) / "_entry"), env=env, cwd=BOB)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue((ws / "done" / "q.txt").exists())
 
@@ -306,10 +306,10 @@ class T(unittest.TestCase):
             self.assertEqual(list(Path(ANN).rglob(n)), [], n)   # 定義資料夾乾淨
 
     def test_ann_has_no_cell_folders(self):
-        execs = sorted(str(p.relative_to(ANN)) for p in Path(ANN).rglob("_exec"))
-        self.assertEqual(execs, ["_exec"])
+        execs = sorted(str(p.relative_to(ANN)) for p in Path(ANN).rglob("_entry"))
+        self.assertEqual(execs, ["_entry"])
         self.assertEqual(sorted(p.name for p in Path(ANN).iterdir()),
-                         [".env", "_exec", "act.py", "brain.py", "fsm.json", "idle.py", "loop.json"])
+                         [".env", "_entry", "act.py", "brain.py", "fsm.json", "idle.py", "loop.json"])
         # 10-22 加的 .env 是範例、全是註解，不設任何東西
         lines = Path(ANN, ".env").read_text(encoding="utf-8").splitlines()
         self.assertTrue(lines and all(l.startswith("#") for l in lines), lines)

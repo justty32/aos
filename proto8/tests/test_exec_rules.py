@@ -37,7 +37,7 @@ def put(path, text, mode=0o644):
     return str(p)
 
 
-def prog(parent, name, body, entry="_exec"):
+def prog(parent, name, body, entry="_entry"):
     put(Path(parent) / name / entry, "#!/bin/sh\n" + body, 0o755)
     return str(Path(parent) / name)
 
@@ -58,7 +58,7 @@ class T(unittest.TestCase):
         self.addCleanup(self._t.cleanup)
 
     def json_entry(self, doc, *args, **kw):
-        put(Path(self.t, "q", "_exec.json"), doc)
+        put(Path(self.t, "q", "_entry.json"), doc)
         return run("--ws", self.t, str(Path(self.t, "q")), *args, **kw)
 
     # ───── A. impls 的 A 段裡 test_exec.py 沒有的 ─────
@@ -146,7 +146,7 @@ class T(unittest.TestCase):
             self.assertTrue(r.raw_stderr.startswith(head), (head, r.raw_stderr))
 
     def test_json_argv_entries(self):
-        put(Path(self.t, "p", "_exec.json"), ["sh", "-c", "echo $1:$AOS_WS; exit 5", "sh"])
+        put(Path(self.t, "p", "_entry.json"), ["sh", "-c", "echo $1:$AOS_WS; exit 5", "sh"])
         ws = Path(self.t, "ws"); ws.mkdir()
         rc, out, _, _ = run("--ws", str(ws), str(Path(self.t, "p")), "x")
         self.assertEqual((rc, out.strip()), (5, "x:%s" % ws.resolve()))
@@ -154,24 +154,24 @@ class T(unittest.TestCase):
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "m")), env={"AOS_ENTRY": "main"})[:2], (0, "hi\n"))
 
     def test_small_shell_wrapper_to_json(self):
-        d = prog(self.t, "p", 'exec aos-exec _exec.json "$@"\n')
-        put(Path(d, "_exec.json"), ["echo", "a"])
+        d = prog(self.t, "p", 'exec aos-exec _entry.json "$@"\n')
+        put(Path(d, "_entry.json"), ["echo", "a"])
         self.assertEqual(run("--ws", self.t, d, "b")[:2], (0, "a b\n"))
 
     # ───── B. § 14～§ 19 ─────
 
     def test_json_array_without_x_and_shebang_skipped(self):
-        put(Path(self.t, "p", "_exec"), ["sh", "-c", "echo $1", "sh"])
+        put(Path(self.t, "p", "_entry"), ["sh", "-c", "echo $1", "sh"])
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "p")), "hi")[:2], (0, "hi\n"))
-        put(Path(self.t, "s", "_exec"), '#!/usr/bin/env aos-exec\n["echo", "sb"]\n')
+        put(Path(self.t, "s", "_entry"), '#!/usr/bin/env aos-exec\n["echo", "sb"]\n')
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "s")))[:2], (0, "sb\n"))
 
     def test_not_x_not_json_and_x_without_shebang(self):
-        put(Path(self.t, "p", "_exec"), "echo hi\n")
+        put(Path(self.t, "p", "_entry"), "echo hi\n")
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "p")))[:3:2], (1, "入口壞"))
-        put(Path(self.t, "x", "_exec"), 'echo "hi:$1:$0"\n', 0o755)
+        put(Path(self.t, "x", "_entry"), 'echo "hi:$1:$0"\n', 0o755)
         x = str(Path(self.t, "x"))      # § 22：+x 沒 #! 同 execvp 改用 /bin/sh 跑（$0＝那個檔）
-        self.assertEqual(run("--ws", self.t, x, "a")[:2], (0, "hi:a:%s\n" % Path(x, "_exec").resolve()))
+        self.assertEqual(run("--ws", self.t, x, "a")[:2], (0, "hi:a:%s\n" % Path(x, "_entry").resolve()))
 
     def test_argv_sh_fallback(self):
         # § 22：argv 陣列入口的檔 +x 沒 #! → 同 execvp 改用 /bin/sh 跑（有 / 的、照 PATH 找到的都是）
@@ -193,7 +193,7 @@ class T(unittest.TestCase):
 
     def test_exec_replaces_process(self):
         d = prog(self.t, "p", "echo $$\n")
-        put(Path(self.t, "q", "_exec.json"), ["sh", "-c", "echo $$"])
+        put(Path(self.t, "q", "_entry.json"), ["sh", "-c", "echo $$"])
         for path in (d, str(Path(self.t, "q"))):
             p = subprocess.Popen([EXEC, "--ws", self.t, path], stdout=subprocess.PIPE, text=True, env=env_of())
             self.assertEqual(p.communicate()[0].strip(), str(p.pid), path)
@@ -206,35 +206,35 @@ class T(unittest.TestCase):
 
     def test_json_kinds(self):
         self.assertEqual(self.json_entry({"val": "x", "max": 3})[:3:2], (1, "入口壞"))   # loop 設定不是入口
-        self.assertEqual(self.json_entry({"_exec": ["sh", "-c", "echo hi"]})[:2], (0, "hi\n"))
+        self.assertEqual(self.json_entry({"_entry": ["sh", "-c", "echo hi"]})[:2], (0, "hi\n"))
         # 10-21 晚起沒 argv 的物件＝資料夾、一路往下（原「只往下一層」，ideas 10-21 § 6）
-        self.assertEqual(self.json_entry({"_exec": {"_exec": ["echo", "deep"]}})[:2], (0, "deep\n"))
-        self.assertEqual(self.json_entry({"_exec": {"other": ["true"]}})[:3:2], (1, "入口壞"))
-        for bad in ({"_exec": 3}, 3, [], ["echo", 1], None):
+        self.assertEqual(self.json_entry({"_entry": {"_entry": ["echo", "deep"]}})[:2], (0, "deep\n"))
+        self.assertEqual(self.json_entry({"_entry": {"other": ["true"]}})[:3:2], (1, "入口壞"))
+        for bad in ({"_entry": 3}, 3, [], ["echo", 1], None):
             self.assertEqual(self.json_entry(bad)[:3:2], (1, "入口壞"), bad)
-        put(Path(self.t, "r", "main.json"), {"main": ["echo", "m"], "_exec": ["echo", "no"]})
+        put(Path(self.t, "r", "main.json"), {"main": ["echo", "m"], "_entry": ["echo", "no"]})
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "r")), env={"AOS_ENTRY": "main"})[:2], (0, "m\n"))
 
     def test_string_redirect(self):
         prog(self.t, "a/sub", "echo sub:$1\n")
-        put(Path(self.t, "a", "_exec.json"), {"_exec": "sub"})
+        put(Path(self.t, "a", "_entry.json"), {"_entry": "sub"})
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "a")), "x")[:2], (0, "sub:x\n"))
         put(Path(self.t, "b", "tool.json"), ["sh", "-c", "pwd"])
-        put(Path(self.t, "b", "_exec.json"), {"_exec": "tool.json"})
+        put(Path(self.t, "b", "_entry.json"), {"_entry": "tool.json"})
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "b")))[:2], (0, str(Path(self.t, "b").resolve()) + "\n"))
         put(Path(self.t, "c", "tool.json"), ["echo", "補"])
-        put(Path(self.t, "c", "_exec.json"), {"_exec": "tool"})
+        put(Path(self.t, "c", "_entry.json"), {"_entry": "tool"})
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "c")))[:2], (0, "補\n"))
-        put(Path(self.t, "d", "x", "y.json"), {"_exec": "../z.json"})
+        put(Path(self.t, "d", "x", "y.json"), {"_entry": "../z.json"})
         put(Path(self.t, "d", "z.json"), ["echo", "z"])
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "d", "x", "y.json")))[:2], (0, "z\n"))
 
     def test_string_redirect_loop(self):
-        put(Path(self.t, "a.json"), {"_exec": "b.json"})
-        put(Path(self.t, "b.json"), {"_exec": "a.json"})
+        put(Path(self.t, "a.json"), {"_entry": "b.json"})
+        put(Path(self.t, "b.json"), {"_entry": "a.json"})
         rc, _, err, stderr = run("--ws", self.t, str(Path(self.t, "a.json")))
         self.assertEqual((rc, err, "→" in stderr), (1, "入口壞", True))
-        put(Path(self.t, "s", "_exec.json"), {"_exec": "."})
+        put(Path(self.t, "s", "_entry.json"), {"_entry": "."})
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "s")))[:3:2], (1, "入口壞"))
 
     def test_json_completion_and_file_cd(self):
@@ -246,7 +246,7 @@ class T(unittest.TestCase):
         self.assertEqual(run("--ws", self.t, "dir/x.json", cwd=self.t)[:2], (0, str(Path(self.t, "dir").resolve()) + "\n"))
 
     def test_pointer(self):
-        put(Path(self.t, "cfg.json"), {"tools": {"stamp": ["echo", "st"], "deep": {"_exec": ["echo", "dp"]},
+        put(Path(self.t, "cfg.json"), {"tools": {"stamp": ["echo", "st"], "deep": {"_entry": ["echo", "dp"]},
                                                  "list": [["echo", "l0"]]}, "a/b": ["echo", "esc"]})
         t = self.t
         self.assertEqual(run("--ws", t, "cfg.json#/tools/stamp", cwd=t)[:2], (0, "st\n"))
@@ -258,24 +258,24 @@ class T(unittest.TestCase):
         self.assertEqual(run("--ws", t, "cfg.json#", cwd=t)[:3:2], (1, "入口壞"))
         self.assertEqual(run("--ws", t, "cfg.json#/nope", cwd=t)[:3:2], (1, "入口不存在"))
         prog(t, "p", "echo hi\n")
-        self.assertEqual(run("--ws", t, "p/_exec#/x", cwd=t)[:3:2], (1, "入口壞"))
+        self.assertEqual(run("--ws", t, "p/_entry#/x", cwd=t)[:3:2], (1, "入口壞"))
         self.assertEqual(run("--ws", t, "p#/x", cwd=t)[:3:2], (1, "入口壞"))
-        put(Path(t, "r.json"), {"_exec": "cfg.json#/tools/stamp"})
+        put(Path(t, "r.json"), {"_entry": "cfg.json#/tools/stamp"})
         self.assertEqual(run("--ws", t, "r.json", cwd=t)[:2], (0, "st\n"))
 
     def test_cf_cd(self):
         d = prog(self.t, "p", 'echo "$AOS_CF|$AOS_CD|$(pwd)"\n')
         real = Path(d).resolve()
-        self.assertEqual(run("--ws", self.t, d)[1].strip(), "%s/_exec|%s|%s" % (real, real, real))
-        put(Path(self.t, "j", "_exec.json"), ["sh", "-c", 'echo "$AOS_CF|$AOS_CD"'])
+        self.assertEqual(run("--ws", self.t, d)[1].strip(), "%s/_entry|%s|%s" % (real, real, real))
+        put(Path(self.t, "j", "_entry.json"), ["sh", "-c", 'echo "$AOS_CF|$AOS_CD"'])
         rj = Path(self.t, "j").resolve()
-        self.assertEqual(run("--ws", self.t, str(Path(self.t, "j")))[1].strip(), "%s/_exec.json|%s" % (rj, rj))
-        put(Path(self.t, "k", "_exec.json"), {"_exec": "sub/t.json"})
+        self.assertEqual(run("--ws", self.t, str(Path(self.t, "j")))[1].strip(), "%s/_entry.json|%s" % (rj, rj))
+        put(Path(self.t, "k", "_entry.json"), {"_entry": "sub/t.json"})
         put(Path(self.t, "k", "sub", "t.json"), ["sh", "-c", 'echo "$AOS_CF|$AOS_CD"'])
         rk = Path(self.t, "k", "sub").resolve()
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "k")))[1].strip(), "%s/t.json|%s" % (rk, rk))
         os.symlink(str(Path(self.t, "j")), str(Path(self.t, "link")))
-        self.assertEqual(run("--ws", self.t, str(Path(self.t, "link")))[1].strip(), "%s/_exec.json|%s" % (rj, rj))
+        self.assertEqual(run("--ws", self.t, str(Path(self.t, "link")))[1].strip(), "%s/_entry.json|%s" % (rj, rj))
 
     def test_cf_nested(self):
         inner = prog(self.t, "outer/inner", 'echo "in:$AOS_CF"\n')
@@ -283,7 +283,7 @@ class T(unittest.TestCase):
         ro = Path(outer).resolve()
         rc, out, _, _ = run("--ws", self.t, outer)
         self.assertEqual((rc, out.split()),
-                         (0, ["out:%s/_exec" % ro, "in:%s/_exec" % Path(inner).resolve(), "out:%s/_exec" % ro]))
+                         (0, ["out:%s/_entry" % ro, "in:%s/_entry" % Path(inner).resolve(), "out:%s/_entry" % ro]))
 
     def test_path_passed_as_is(self):
         # ideas § 24：aos 的程式都不動 PATH，原樣傳下去（不加自己的 bin）
@@ -293,8 +293,8 @@ class T(unittest.TestCase):
 
     def test_entry_dir_beats_json(self):
         # 10-21 晚起 $AOS_ENTRY 指到資料夾＝走進去（N-61、ideas 10-21 J3），所以同名資料夾贏過旁邊的 .json
-        prog(Path(self.t, "p"), "_exec", "echo dir\n")
-        put(Path(self.t, "p", "_exec.json"), ["echo", "no"])
+        prog(Path(self.t, "p"), "_entry", "echo dir\n")
+        put(Path(self.t, "p", "_entry.json"), ["echo", "no"])
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "p")))[:2], (0, "dir\n"))
 
     # ───── C. inst 單子（行程內 aos_inst.run，以子程式的碼結束）─────
@@ -306,21 +306,21 @@ class T(unittest.TestCase):
         self.assertEqual(self.json_entry({"argv": ["true"]})[0], 0)
 
     def test_inst_stays_as_supervisor(self):
-        put(Path(self.t, "q", "_exec.json"), {"argv": ["sh", "-c", "echo $$"]})
+        put(Path(self.t, "q", "_entry.json"), {"argv": ["sh", "-c", "echo $$"]})
         p = subprocess.Popen([EXEC, "--ws", self.t, str(Path(self.t, "q"))], stdout=subprocess.PIPE, text=True, env=env_of())
         out = p.communicate()[0].strip()
         self.assertEqual((p.returncode, out != str(p.pid), out.isdigit()), (0, True, True))
 
     def test_inst_shebang_not_x(self):
-        put(Path(self.t, "p", "_exec"), '#!/usr/bin/env 隨便\n{"argv": ["echo", "sb"]}\n')   # 沒 +x：第一行 #! 跳過
+        put(Path(self.t, "p", "_entry"), '#!/usr/bin/env 隨便\n{"argv": ["echo", "sb"]}\n')   # 沒 +x：第一行 #! 跳過
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "p")), "x")[:2], (0, "sb x\n"))
 
     def test_inst_args_pointer_key(self):
         self.assertEqual(self.json_entry({"argv": ["echo", "a"]}, "b", "c")[:2], (0, "a b c\n"))
         put(Path(self.t, "cfg.json"), {"tools": {"stamp": {"argv": ["echo", "st"]}}})
         self.assertEqual(run("--ws", self.t, "cfg.json#/tools/stamp", "x", cwd=self.t)[:2], (0, "st x\n"))
-        self.assertEqual(self.json_entry({"_exec": {"argv": ["echo", "in"]}})[:2], (0, "in\n"))
-        put(Path(self.t, "r.json"), {"_exec": "cfg.json#/tools/stamp"})
+        self.assertEqual(self.json_entry({"_entry": {"argv": ["echo", "in"]}})[:2], (0, "in\n"))
+        put(Path(self.t, "r.json"), {"_entry": "cfg.json#/tools/stamp"})
         self.assertEqual(run("--ws", self.t, "r.json", cwd=self.t)[:2], (0, "st\n"))
 
     def test_inst_streams(self):
@@ -348,7 +348,7 @@ class T(unittest.TestCase):
         self.assertEqual(Path(self.t, ".aos", "out").read_text(), "s\n")
         q = Path(self.t, "q").resolve()
         self.assertEqual(self.json_entry({"argv": ["echo", {"$env": "AOS_CD"}, {"$env": "AOS_CF"}]})[:2],
-                         (0, "%s %s/_exec.json\n" % (q, q)))
+                         (0, "%s %s/_entry.json\n" % (q, q)))
         rc, _, err, stderr = self.json_entry({"argv": ["echo", {"$env": "AOS_NOPE_XYZ"}]})
         self.assertEqual((rc, err, "AOS_NOPE_XYZ" in stderr), (1, "單子跑不起來", True))
 
@@ -359,7 +359,7 @@ class T(unittest.TestCase):
         self.assertEqual((rc, alive(pid)), (143, False))
 
     def start(self, doc):
-        put(Path(self.t, "q", "_exec.json"), doc)
+        put(Path(self.t, "q", "_entry.json"), doc)
         return subprocess.Popen([EXEC, "--ws", self.t, str(Path(self.t, "q"))], stdout=subprocess.PIPE, text=True,
                                 env=env_of())
 
@@ -399,9 +399,9 @@ class T(unittest.TestCase):
         self.assertEqual(self.json_entry(["nosb2", "b"], env=env)[:2], (0, "path:b\n"))
 
     def test_inst_bad(self):
-        put(Path(self.t, "q", "_exec"), "{not json")
+        put(Path(self.t, "q", "_entry"), "{not json")
         self.assertEqual(run("--ws", self.t, str(Path(self.t, "q")))[:3:2], (1, "入口壞"))
-        os.remove(Path(self.t, "q", "_exec"))
+        os.remove(Path(self.t, "q", "_entry"))
         for doc in ({"argv": []}, {"argv": ["echo", 1]}, {"argv": ["true"], "timeout_ms": "5"},
                     {"argv": ["true"], "timeout_ms": 0}, {"argv": ["true"], "grace_ms": -1},
                     {"argv": ["true"], "stdout": 3}, {"argv": ["true"], "envs": {"A": 1}},

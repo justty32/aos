@@ -2,7 +2,7 @@
 //
 //   Json、Error   從 aos-util 拉進來的名字
 //   code::*、Result   在公開標頭 aos/exec.hpp（程式裡一律寫 code::Xxx）
-//   entry_name()  $AOS_ENTRY，沒設（或空的）＝"_exec"；只讀不設（每次都重讀：.env 可能剛改過它）
+//   entry_name()  $AOS_ENTRY，沒設（或空的）＝"_entry"；只讀不設（每次都重讀：.env 可能剛改過它）
 //   Kind、Found   一跳（hop）找到的入口：種類、值、實際的檔
 #pragma once
 

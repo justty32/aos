@@ -59,8 +59,8 @@ class T(unittest.TestCase):
         self.addCleanup(self._t.cleanup)
 
     def show(self, d, *names, flags=(), env=None):
-        """d 的 _exec.json 印出這些名字的值（JSON），回 dict。"""
-        put(Path(d, "_exec.json"), ["python3", "-c", SHOW, *names])
+        """d 的 _entry.json 印出這些名字的值（JSON），回 dict。"""
+        put(Path(d, "_entry.json"), ["python3", "-c", SHOW, *names])
         rc, out, err, stderr = run(*flags, "--ws", self.t, str(d), env=env)
         self.assertEqual(rc, 0, stderr)
         return json.loads(out)
@@ -75,7 +75,7 @@ class T(unittest.TestCase):
 
     def test_bad_lines(self):
         d = Path(self.t, "p")
-        put(d / "_exec.json", ["true"])
+        put(d / "_entry.json", ["true"])
         for line in BAD:
             put(d / ".env", "OK=1\n" + line + "\n")
             rc, out, err, stderr = run("--ws", self.t, str(d), env={"HOME": "/h"})
@@ -84,7 +84,7 @@ class T(unittest.TestCase):
 
     def test_bad_lines_never_print_value(self):
         d = Path(self.t, "p")
-        put(d / "_exec.json", ["true"])
+        put(d / "_entry.json", ["true"])
         for line in ("A= # sk-SECRET", "A='sk-SECRET\\'", "A=\"sk-SECRET\"x", "A=\"sk-SECRET", "A='sk-SECRET${X}'"):
             put(d / ".env", line + "\n")
             rc, out, err, stderr = run("--ws", self.t, str(d))
@@ -117,7 +117,7 @@ class T(unittest.TestCase):
         # 重複給＝一樣；放 --ws 前後都行
         self.assertEqual(self.show(d, "A", "B", "C", flags=("--dotenv-override", "--dotenv-override"), env={"A": "out"}),
                          want)
-        put(d / "_exec.json", ["true"])
+        put(d / "_entry.json", ["true"])
         for flags in (("--dotenv-override=1",), ("--dotenv-override=",)):
             rc, out, err, stderr = run(*flags, str(d))
             self.assertEqual((rc, stderr.startswith("aos-exec: usage: ")), (1, True), flags)
@@ -138,9 +138,9 @@ class T(unittest.TestCase):
     def test_redirect_does_not_take_flag(self):
         # 字串轉向＝全新一跳、不吃旗標（10-21 E4）：r 那跳蓋、t 那跳不蓋
         r, t = Path(self.t, "r"), Path(self.t, "t")
-        put(r / "_exec.json", '"../t"')
+        put(r / "_entry.json", '"../t"')
         put(t / ".env", "A=t\nB=t\n")
-        put(t / "_exec.json", ["python3", "-c", SHOW, "A", "B"])
+        put(t / "_entry.json", ["python3", "-c", SHOW, "A", "B"])
         rc, out, _, stderr = run("--dotenv-override", "--ws", self.t, str(r), env={"A": "out"})
         self.assertEqual(json.loads(out), {"A": "out", "B": "t"}, stderr)
         put(r / ".env", "A=r\n")
@@ -153,9 +153,9 @@ class T(unittest.TestCase):
         # loop 每拍叫 aos-exec -- <val>，-- 後面寫不了旗標：要蓋就多一跳，body 寫 ["aos-exec", "--dotenv-override", "think"]
         q = Path(self.t, "q")
         put(q / "think" / ".env", "A=think\n")
-        put(q / "think" / "_exec.json", ["sh", "-c", 'echo "$A" >> "$AOS_WS/seen"'])
+        put(q / "think" / "_entry.json", ["sh", "-c", 'echo "$A" >> "$AOS_WS/seen"'])
         for body, want in ((["aos-exec", "--dotenv-override", "think"], "think"), (["aos-exec", "think"], "out")):
-            put(q / "loop.json", {"_exec": ["aos-loop", {"$env": "AOS_CF"}], "val": "loop.json#/body", "body": body, "max": 2})
+            put(q / "loop.json", {"_entry": ["aos-loop", {"$env": "AOS_CF"}], "val": "loop.json#/body", "body": body, "max": 2})
             seen = Path(self.t, "seen")
             if seen.exists():
                 seen.unlink()
@@ -165,7 +165,7 @@ class T(unittest.TestCase):
     def test_json_env_key_format_unchanged(self):
         # JSON 的 .env key：格式不套引號、註解那些（JSON 自己有引號），只套蓋不蓋
         q = Path(self.t, "q")
-        put(q / "x.json", {".env": {"A": "'a' # c", "B": "x"}, "_exec": ["python3", "-c", SHOW, "A", "B"]})
+        put(q / "x.json", {".env": {"A": "'a' # c", "B": "x"}, "_entry": ["python3", "-c", SHOW, "A", "B"]})
         rc, out, _, stderr = run("--ws", self.t, str(q / "x.json"), env={"B": "out"})
         self.assertEqual(json.loads(out), {"A": "'a' # c", "B": "out"}, stderr)
         rc, out, _, stderr = run("--dotenv-override", "--ws", self.t, str(q / "x.json"), env={"B": "out"})

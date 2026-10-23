@@ -68,7 +68,7 @@ void test_split() {
 
 void test_split_bad() {
     CHECK(split_error("a.json#") == "CfgBad");
-    CHECK(split_error("a.json#_exec") == "CfgBad");
+    CHECK(split_error("a.json#_entry") == "CfgBad");
     CHECK(split_error("a.json##/x") == "CfgBad");
 }
 

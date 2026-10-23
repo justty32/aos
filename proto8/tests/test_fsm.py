@@ -28,8 +28,8 @@ class T(unittest.TestCase):
     def cell(self, name, body):
         d = self.tmp / name
         d.mkdir(parents=True, exist_ok=True)
-        (d / "_exec").write_text("#!/bin/sh\n" + body)
-        (d / "_exec").chmod(0o755)
+        (d / "_entry").write_text("#!/bin/sh\n" + body)
+        (d / "_entry").chmod(0o755)
 
     def table(self, states, start="a", name="fsm.json", **extra):
         p = self.tmp / name
@@ -155,10 +155,10 @@ class T(unittest.TestCase):
             self.assertTrue(r.stderr.startswith("aos-fsm: "), r.stderr)
 
     def test_fsm_json_as_exec_entry(self):
-        # F6：fsm.json 帶 _exec，`aos-exec fsm.json` 就是一拍；cwd＝fsm.json 的資料夾，表裡的 _exec、body 都被 fsm 忽略
+        # F6：fsm.json 帶 _entry，`aos-exec fsm.json` 就是一拍；cwd＝fsm.json 的資料夾，表裡的 _entry、body 都被 fsm 忽略
         self.cell("a", 'touch "$AOS_STACK/ran"\n')   # 從 elsewhere 叫也找得到 a＝fsm 的 cwd 是 fsm.json 的資料夾
         f = self.table({"a": {"val": "a", "next": "b"}, "b": self.body("b", {"argv": ["sh", "-c", "exit 10"]})},
-                       _exec=["aos-fsm", {"$env": "AOS_CF"}])
+                       _entry=["aos-fsm", {"$env": "AOS_CF"}])
         other = self.tmp / "elsewhere"; other.mkdir()
         e = {"AOS_WS": str(self.tmp)}
         self.assertEqual(run(str(BIN / "aos-exec"), f, stack=self.stack, cwd=str(other), env=e).returncode, 0)

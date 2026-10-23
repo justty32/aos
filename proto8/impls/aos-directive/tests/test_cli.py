@@ -108,7 +108,7 @@ check("舊的 path 不作用", run({"x": {"$env": "AOS_DIR_TEST", "path": "plan"
 check("$path 變數沒設", run({"x": {"$env": "AOS_DIR_TEST_NOPE", "$path": "p"}})[:3], (1, None, "DirectiveBad"))
 # $ref 指到資料夾＝讀不到、算錯（10-21 傍晚 ideas § 9「維持報錯」；不走進去找入口）
 for x in ({"$ref": "dir"}, {"$ref": "dir#/k"}, {"$ref": "dir", "$at": "/k"}):
-    check("$ref 指到資料夾 %r" % (x,), run({"x": x}, {"dir/_exec.json": {"k": 1}})[:3], (1, None, "DirectiveBad"))
+    check("$ref 指到資料夾 %r" % (x,), run({"x": x}, {"dir/_entry.json": {"k": 1}})[:3], (1, None, "DirectiveBad"))
 # 寫法寬容（D14）：當沒寫
 check("$path／$prefix 型別不對", run({"x": {"$env": "AOS_DIR_TEST", "$path": 3, "$prefix": ["x"]}}, env=E)[:3],
       (0, {"x": "/s"}, None))

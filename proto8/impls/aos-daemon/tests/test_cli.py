@@ -57,8 +57,8 @@ class T(unittest.TestCase):
         self.s.mkdir()
         lg = self.t / "long"   # 長壽的子項：字串目標 "long"（子 loop 的 cwd＝daemon 的 cwd＝self.t）
         lg.mkdir()
-        (lg / "_exec").write_text("#!/bin/sh\n" + LONG + "\n")
-        (lg / "_exec").chmod(0o755)
+        (lg / "_entry").write_text("#!/bin/sh\n" + LONG + "\n")
+        (lg / "_entry").chmod(0o755)
         self.procs = []
         self.addCleanup(self._t.cleanup)
         self.addCleanup(self.reap)
@@ -128,16 +128,16 @@ class T(unittest.TestCase):
     def test_loops_up_in_cells_then_stop(self):
         sub = self.t / "sub"
         sub.mkdir()
-        (sub / "_exec").write_text("#!/bin/sh\n" + LONG + "\n")
-        (sub / "_exec").chmod(0o755)
+        (sub / "_entry").write_text("#!/bin/sh\n" + LONG + "\n")
+        (sub / "_entry").chmod(0o755)
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": "sub", "b": self.long()}})
         k = until(lambda: (self.s / "a" / "starts").exists() and (self.s / "b" / "starts").exists() and self.kids())
         self.assertTrue(k)
         self.assertEqual({n: r["phase"] for n, r in k.items()}, {"a": "running", "b": "running"})
         a = json.loads((self.s / "a" / "loop.json").read_text())
-        # 10-21 傍晚：相對的 val 照 daemon 的 cwd 轉成絕對、蓋上 _exec，子 loop 經 aos-exec 起
+        # 10-21 傍晚：相對的 val 照 daemon 的 cwd 轉成絕對、蓋上 _entry，子 loop 經 aos-exec 起
         self.assertEqual(a, {"val": os.path.join(os.path.realpath(self.t), "sub"), "ctl": "ctl.json", "state": "state.json",
-                             "_exec": ["aos-loop", {"$env": "AOS_CF"}]})
+                             "_entry": ["aos-loop", {"$env": "AOS_CF"}]})
         self.assertTrue(until(lambda: json.loads((self.s / "b" / "state.json").read_text())["phase"] == "running"))
         pids = [r["pid"] for r in k.values()]
         self.ctl({"stop": True, "seq": 1})
@@ -206,8 +206,8 @@ class T(unittest.TestCase):
         # 10-21 傍晚：唯一的位置參數＝設定檔；val 可以是 [目標, 參數...]，參數每拍接上；設定檔可寫 檔#/指標
         job = self.t / "job"
         job.mkdir()
-        (job / "_exec").write_text('#!/bin/sh\necho "$@" >> "$AOS_STACK/laps"\n')
-        (job / "_exec").chmod(0o755)
+        (job / "_entry").write_text('#!/bin/sh\necho "$@" >> "$AOS_STACK/laps"\n')
+        (job / "_entry").chmod(0o755)
         self.cfg({"val": ["job", "a", "b"], "interval_ms": 0, "max": 2, "sub": {"val": ["job", "c"], "max": 1}})
         for argv, want in ((("daemon.json",), "a b\na b\n"), (("daemon.json#/sub",), "c\n")):
             (self.s / "laps").unlink(missing_ok=True)
@@ -224,7 +224,7 @@ class T(unittest.TestCase):
         env = dict(x.split("=", 1) for x in Path("/proc/%d/environ" % k["a"]["pid"]).read_text().split("\0") if "=" in x)
         cell = os.path.realpath(self.s / "a")
         self.assertEqual((env.get("AOS_CF"), env.get("AOS_CD"), env.get("AOS_CO")),
-                         (os.path.join(cell, "loop.json"), cell, "/_exec"))
+                         (os.path.join(cell, "loop.json"), cell, "/_entry"))
         self.assertEqual(json.loads((self.s / "a" / "loop.json").read_text())["val"],
                          [os.path.join(os.path.realpath(self.t), "long")])
         self.ctl({"stop": True})
@@ -241,7 +241,7 @@ class T(unittest.TestCase):
         self.assertEqual((p.returncode, err, k["s"]["phase"], k["s"]["code"]), (0, "", "done", 0))
         self.assertEqual(json.loads((self.s / "s" / "loop.json").read_text()),
                          {"val": os.path.join(os.path.realpath(self.t), "daemon.json#/kids/s"), "ctl": "ctl.json",
-                          "state": "state.json", "_exec": ["aos-loop", {"$env": "AOS_CF"}]})
+                          "state": "state.json", "_entry": ["aos-loop", {"$env": "AOS_CF"}]})
         self.assertEqual(len((self.s / "s" / "starts").read_text().split()), 1)
 
     def test_child_dead_at_finish_marked_done(self):

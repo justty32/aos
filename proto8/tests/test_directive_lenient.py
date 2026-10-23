@@ -108,7 +108,7 @@ class T(unittest.TestCase):
     def test_ref_to_folder_is_error(self):
         # 10-21 傍晚 ideas § 9：$ref 指到資料夾＝讀不到、算錯（不走進去找入口、不把資料夾組成物件；使用者「維持報錯」）
         (self.t / "dir").mkdir()
-        put(self.t / "dir" / "_exec.json", {"k": 1})
+        put(self.t / "dir" / "_entry.json", {"k": 1})
         for x in ({"$ref": "dir"}, {"$ref": "dir#/k"}, {"$ref": "dir", "$at": "/k"}):
             with self.assertRaises(aos_inst.InstError) as c:
                 self.r(x)
@@ -119,15 +119,15 @@ class T(unittest.TestCase):
     def test_cli_argv_array_and_inst(self):
         ws = self.t / "ws"; ws.mkdir()
         q = self.t / "q"
-        put(q / "_exec.json", ["echo", {"$env": "AOS_WS", "$path": "a.txt", "$prefix": "--file="}])
+        put(q / "_entry.json", ["echo", {"$env": "AOS_WS", "$path": "a.txt", "$prefix": "--file="}])
         rc, out, err = run("aos-exec", "--ws", ws, q)
         self.assertEqual((rc, out), (0, "--file=%s/a.txt\n" % ws), err)
         # 寫法不合＝物件原封不動 → argv 陣列解完不是字串＝入口壞（aos-exec 的規則，不是指示詞的錯）
-        put(q / "_exec.json", ["echo", {"$env": 3}])
+        put(q / "_entry.json", ["echo", {"$env": 3}])
         rc, _, err = run("aos-exec", "--ws", ws, q)
         self.assertEqual(rc, 1)
         self.assertTrue(err.startswith("aos-exec: 入口壞"), err)
-        put(q / "_exec.json", {"argv": ["echo", {"$env": "AOS_WS", "$fmt": "%s", "$prefix": "w="}]})
+        put(q / "_entry.json", {"argv": ["echo", {"$env": "AOS_WS", "$fmt": "%s", "$prefix": "w="}]})
         rc, out, err = run("aos-exec", "--ws", ws, q)
         self.assertEqual((rc, out), (0, "w=%s\n" % ws), err)
 

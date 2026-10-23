@@ -30,14 +30,14 @@ aos-fsm [旗標] 設定檔.json
 - **命令列**：唯一的位置參數就是設定檔——必給、只能一個；可寫 `檔#/指標`（aos-util 的 `load_cfg`；例 `agent.json#/fsm`）。
   目前**沒有旗標**（旗標表是空的，規則同 aos-exec，aos-util 的 `parse_cli`）；`--` 結束旗標。不認得的旗標（含舊的 `--cfg`）＝`FlagUnknown`；沒給、多給＝`ArgumentsBad`
   （原因 `usage: aos-fsm [旗標] 設定檔.json（原因）`；10-22 bin 補 `[旗標]`，10-23 跟上）。
-- **fsm.json**：`{"start": 起始狀態名, "states": {狀態名: {"val": 格, "next": 下一個狀態名}}}`。表一定明寫、`next` 只在表上（N-36）；其他 key 忽略（`body`、`_exec`…）。
+- **fsm.json**：`{"start": 起始狀態名, "states": {狀態名: {"val": 格, "next": 下一個狀態名}}}`。表一定明寫、`next` 只在表上（N-36）；其他 key 忽略（`body`、`_entry`…）。
   - `val`（aos-loop 的 `parse_target`，跟 loop.json 的 `val` 同一個名字、同一套寫法，C-55）＝**字串**（每拍 `aos-exec -- 它`）或**陣列 `[目標, 參數...]`**（`aos-exec -- 目標 參數...`）；
     相對路徑從 cwd 算（cwd 通常是 agent 資料夾，fsm 不轉）；WS 沿用 `$AOS_WS`、AOS_STACK 沿用（由那格的 aos-exec 定）。
   - `val` 寫成**物件＝`CfgBad`**（訊息提「要內嵌單子寫 fsm.json#/states/<名>/body」）：要內嵌單子就把單子放在同一格的 `body`、`val` 寫 `fsm.json#/states/<名>/body`，
     由那格的 aos-exec 在子行程裡跑、當監工（單子裡的 `$ref` 從 fsm.json 所在的資料夾算）。
   - **開跑時查整張表**（10-22 ideas § 7，`check`）：讀表後、跑格前，`start` 要在表上；每一格要是 `{"val", "next"}`、`val` 合法、`next` 是表上的狀態名、
     不是空字串、頭尾沒空白（認 Unicode 空白）、沒換行。哪一格不合都＝表壞 `CfgBad`、不跑格（原本只查這拍那一格）。
-  - fsm.json 帶 `"_exec": ["aos-fsm", {"$env": "AOS_CF"}]` 時 `aos-exec fsm.json` 就是一拍；表在大 JSON 裡時寫 `{"$env": "AOS_CF", "$path": "#/fsm"}`（`$path` 字串拼接）。
+  - fsm.json 帶 `"_entry": ["aos-fsm", {"$env": "AOS_CF"}]` 時 `aos-exec fsm.json` 就是一拍；表在大 JSON 裡時寫 `{"$env": "AOS_CF", "$path": "#/fsm"}`（`$path` 字串拼接）。
 - **`$AOS_STACK`**（必要）：fsm 自己的兩個檔都在這裡（只有 fsm 自己寫，N-39）：
   - `state`：純文字一行狀態名（跟 shell 版 fsm 同格式，可互換，P-07）。沒有、空的＝`start`；前後空白去掉（認 Unicode 空白，同 bin 的 `str.strip()`）。
     10-22 起**在但讀不了**（沒權限、是資料夾、不是 UTF-8）＝`StateBad`、不跑格（原本當沒有檔、從 `start` 起）；裡面的狀態不在表上＝`StateUnknown`。

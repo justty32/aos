@@ -57,7 +57,7 @@ def put(path, text, mode=0o644):
     return str(p)
 
 
-def prog(parent, name, body, entry="_exec"):
+def prog(parent, name, body, entry="_entry"):
     """parent/name/entry：可執行的 sh 小程式。回資料夾路徑。"""
     put(Path(parent) / name / entry, "#!/bin/sh\n" + body, 0o755)
     return str(Path(parent) / name)
@@ -81,11 +81,11 @@ def missing_entry(t):
 
 @case
 def json_only_argv(t):
-    # sh 版的 _exec.json 單子案例；inst 單子要等 libaos，這裡用 argv 陣列
-    put(Path(t, "p", "_exec.json"), ["sh", "-c", "echo $1:$AOS_WS; exit 5", "sh"])
+    # sh 版的 _entry.json 單子案例；inst 單子要等 libaos，這裡用 argv 陣列
+    put(Path(t, "p", "_entry.json"), ["sh", "-c", "echo $1:$AOS_WS; exit 5", "sh"])
     ws = Path(t, "ws"); ws.mkdir()
     rc, out, err, _ = run(str(Path(t, "p")), str(ws), "x")
-    check("只有 _exec.json", (rc, out.strip()), (5, "x:%s" % ws.resolve()))
+    check("只有 _entry.json", (rc, out.strip()), (5, "x:%s" % ws.resolve()))
 
 
 @case
@@ -97,17 +97,17 @@ def json_custom_entry_name(t):
 
 @case
 def small_shell_wrapper(t):
-    # 小殼 _exec 是可執行檔，優先於同名 .json；殼裡明指 _exec.json 照樣跑
-    d = prog(t, "p", 'exec aos-exec _exec.json "$@"\n')
-    put(Path(d, "_exec.json"), ["echo", "a"])
+    # 小殼 _entry 是可執行檔，優先於同名 .json；殼裡明指 _entry.json 照樣跑
+    d = prog(t, "p", 'exec aos-exec _entry.json "$@"\n')
+    put(Path(d, "_entry.json"), ["echo", "a"])
     rc, out, _, _ = run(d, t, "b")
-    check("小殼 _exec＋_exec.json", (rc, out), (0, "a b\n"))
+    check("小殼 _entry＋_entry.json", (rc, out), (0, "a b\n"))
 
 
 @case
 def executable_preferred(t):
     d = prog(t, "p", "echo exe\n")
-    put(Path(d, "_exec.json"), ["echo", "json"])
+    put(Path(d, "_entry.json"), ["echo", "json"])
     check("可執行檔優先", run(d, t)[1], "exe\n")
 
 
@@ -203,28 +203,28 @@ def usage(t):
 
 @case
 def json_array_without_x(t):
-    put(Path(t, "p", "_exec"), ["sh", "-c", "echo $1", "sh"])     # 沒 +x、內容是 JSON 陣列
+    put(Path(t, "p", "_entry"), ["sh", "-c", "echo $1", "sh"])     # 沒 +x、內容是 JSON 陣列
     check("沒 +x 的 JSON 陣列", run(str(Path(t, "p")), t, "hi")[:2], (0, "hi\n"))
 
 
 @case
 def shebang_json_array(t):
-    put(Path(t, "p", "_exec"), '#!/usr/bin/env aos-exec\n["echo", "sb"]\n')
+    put(Path(t, "p", "_entry"), '#!/usr/bin/env aos-exec\n["echo", "sb"]\n')
     check("第一行 #! 跳過", run(str(Path(t, "p")), t)[:2], (0, "sb\n"))
 
 
 @case
 def not_x_not_json(t):
-    put(Path(t, "p", "_exec"), "echo hi\n")
+    put(Path(t, "p", "_entry"), "echo hi\n")
     check("沒 +x、不是 JSON", run(str(Path(t, "p")), t)[:3:2], (1, "EntryBad"))
 
 
 @case
 def x_without_shebang(t):
     # § 22：+x 沒 #! 同 execvp 改用 /bin/sh 跑（$0＝那個檔）
-    put(Path(t, "p", "_exec"), 'echo "hi:$1:$0"\n', 0o755)
+    put(Path(t, "p", "_entry"), 'echo "hi:$1:$0"\n', 0o755)
     check("+x 沒 #! 交給 sh", run(str(Path(t, "p")), t, "a")[:2],
-          (0, "hi:a:%s\n" % Path(t, "p", "_exec").resolve()))
+          (0, "hi:a:%s\n" % Path(t, "p", "_entry").resolve()))
 
 
 @case
@@ -242,11 +242,11 @@ def argv_sh_fallback(t):
     put(tools / "good", "#!/bin/sh\necho good:$1\n", 0o755)
     put(tools / "nox", "#!/bin/sh\necho nox\n", 0o644)
     path = {"PATH": "%s:/usr/bin:/bin" % tools}
-    put(Path(t, "q", "_exec.json"), ["mytool"])
+    put(Path(t, "q", "_entry.json"), ["mytool"])
     check("argv 陣列照 PATH 找到沒 #! 的檔", run(str(Path(t, "q")), t, "b", env=path)[:2], (0, "my:b\n"))
-    put(Path(t, "q", "_exec.json"), ["good"])
+    put(Path(t, "q", "_entry.json"), ["good"])
     check("argv 陣列照 PATH 找到有 #! 的檔", run(str(Path(t, "q")), t, "x", env=path)[:2], (0, "good:x\n"))
-    put(Path(t, "q", "_exec.json"), ["nox"])
+    put(Path(t, "q", "_entry.json"), ["nox"])
     check("argv 陣列照 PATH 找到沒 +x 的檔", run(str(Path(t, "q")), t, env=path)[:3:2], (1, "LaunchFailed"))
     # PATH 裡同名的：前面那段沒 +x、後面那段有 → 用後面的（同 execvp）
     later = Path(t, "later")
@@ -259,7 +259,7 @@ def argv_sh_fallback(t):
 def exec_replaces_process(t):
     # 可執行檔、argv 陣列都是 exec：入口的 $$ 就是 aos-exec 的 pid（不留監工）
     d = prog(t, "p", 'echo $$\n')
-    put(Path(t, "q", "_exec.json"), ["sh", "-c", "echo $$"])
+    put(Path(t, "q", "_entry.json"), ["sh", "-c", "echo $$"])
     e = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
     for path in (d, str(Path(t, "q"))):
         p = subprocess.Popen([BIN, path, t], stdout=subprocess.PIPE, text=True, env=e)
@@ -268,7 +268,7 @@ def exec_replaces_process(t):
 
 
 def run_with_json(t, doc, *args):
-    put(Path(t, "q", "_exec.json"), doc)
+    put(Path(t, "q", "_entry.json"), doc)
     return run(str(Path(t, "q")), t, *args)
 
 
@@ -279,42 +279,42 @@ def loop_config_is_not_entry(t):
 
 @case
 def json_exec_key(t):
-    check("_exec 是陣列", run_with_json(t, {"_exec": ["sh", "-c", "echo hi"]})[:2], (0, "hi\n"))
+    check("_entry 是陣列", run_with_json(t, {"_entry": ["sh", "-c", "echo hi"]})[:2], (0, "hi\n"))
     # 10-21 晚起一路往下（原「只往下一層」撤回，ideas 10-21 § 6）
-    check("_exec 是物件沒 argv＝一路往下", run_with_json(t, {"_exec": {"_exec": ["echo", "deep"]}})[:2], (0, "deep\n"))
-    check("一路往下取不到 _exec", run_with_json(t, {"_exec": {"x": ["true"]}})[:3:2], (1, "EntryBad"))
-    check("_exec 是數字", run_with_json(t, {"_exec": 3})[:3:2], (1, "EntryBad"))
+    check("_entry 是物件沒 argv＝一路往下", run_with_json(t, {"_entry": {"_entry": ["echo", "deep"]}})[:2], (0, "deep\n"))
+    check("一路往下取不到 _entry", run_with_json(t, {"_entry": {"x": ["true"]}})[:3:2], (1, "EntryBad"))
+    check("_entry 是數字", run_with_json(t, {"_entry": 3})[:3:2], (1, "EntryBad"))
     check("頂層是數字", run_with_json(t, 3)[:3:2], (1, "EntryBad"))
     check("空陣列", run_with_json(t, [])[:3:2], (1, "EntryBad"))
     check("陣列有非字串", run_with_json(t, ["echo", 1])[:3:2], (1, "EntryBad"))
-    put(Path(t, "r", "main.json"), {"main": ["echo", "m"], "_exec": ["echo", "no"]})
+    put(Path(t, "r", "main.json"), {"main": ["echo", "m"], "_entry": ["echo", "no"]})
     check("自訂 AOS_ENTRY 也用在 JSON 裡", run(str(Path(t, "r")), t, env={"AOS_ENTRY": "main"})[:2], (0, "m\n"))
 
 
 @case
 def string_redirect(t):
     prog(t, "a/sub", "echo sub:$1\n")
-    put(Path(t, "a", "_exec.json"), {"_exec": "sub"})
+    put(Path(t, "a", "_entry.json"), {"_entry": "sub"})
     check("字串轉向資料夾", run(str(Path(t, "a")), t, "x")[:2], (0, "sub:x\n"))
     put(Path(t, "b", "tool.json"), ["sh", "-c", "pwd"])
-    put(Path(t, "b", "_exec.json"), {"_exec": "tool.json"})
+    put(Path(t, "b", "_entry.json"), {"_entry": "tool.json"})
     check("字串轉向檔", run(str(Path(t, "b")), t)[:2], (0, str(Path(t, "b").resolve()) + "\n"))
     put(Path(t, "c", "tool.json"), ["echo", "補"])
-    put(Path(t, "c", "_exec.json"), {"_exec": "tool"})
+    put(Path(t, "c", "_entry.json"), {"_entry": "tool"})
     check("字串轉向補 .json", run(str(Path(t, "c")), t)[:2], (0, "補\n"))
     # 轉向後相對路徑從「寫著它的檔」所在的資料夾算
-    put(Path(t, "d", "x", "y.json"), {"_exec": "../z.json"})
+    put(Path(t, "d", "x", "y.json"), {"_entry": "../z.json"})
     put(Path(t, "d", "z.json"), ["echo", "z"])
     check("轉向相對路徑從檔所在資料夾算", run(str(Path(t, "d", "x", "y.json")), t)[:2], (0, "z\n"))
 
 
 @case
 def string_redirect_loop(t):
-    put(Path(t, "a.json"), {"_exec": "b.json"})
-    put(Path(t, "b.json"), {"_exec": "a.json"})
+    put(Path(t, "a.json"), {"_entry": "b.json"})
+    put(Path(t, "b.json"), {"_entry": "a.json"})
     rc, _, err, stderr = run(str(Path(t, "a.json")), t)
     check("轉向繞圈", (rc, err, "→" in stderr), (1, "EntryBad", True))
-    put(Path(t, "s", "_exec.json"), {"_exec": "."})
+    put(Path(t, "s", "_entry.json"), {"_entry": "."})
     check("轉向回自己的資料夾", run(str(Path(t, "s")), t)[:3:2], (1, "EntryBad"))
 
 
@@ -334,18 +334,18 @@ def file_spec_cd(t):
 
 @case
 def pointer(t):
-    put(Path(t, "cfg.json"), {"tools": {"stamp": ["echo", "st"], "deep": {"_exec": ["echo", "dp"]}}, "a/b": ["echo", "esc"]})
+    put(Path(t, "cfg.json"), {"tools": {"stamp": ["echo", "st"], "deep": {"_entry": ["echo", "dp"]}}, "a/b": ["echo", "esc"]})
     check("#/ 指標", run("cfg.json#/tools/stamp", t, cwd=t)[:2], (0, "st\n"))
-    check("#/ 指到物件再找 _exec", run("cfg.json#/tools/deep", t, cwd=t)[:2], (0, "dp\n"))
+    check("#/ 指到物件再找 _entry", run("cfg.json#/tools/deep", t, cwd=t)[:2], (0, "dp\n"))
     check("#/ ~1 跳脫", run("cfg.json#/a~1b", t, cwd=t)[:2], (0, "esc\n"))
     check("沒副檔名補 .json 再加指標", run("cfg#/tools/stamp", t, cwd=t)[:2], (0, "st\n"))
     check("# 後沒 /", run("cfg.json#tools", t, cwd=t)[:3:2], (1, "EntryBad"))
     check("檔#", run("cfg.json#", t, cwd=t)[:3:2], (1, "EntryBad"))
     check("指不到", run("cfg.json#/nope", t, cwd=t)[:3:2], (1, "EntryMissing"))
     prog(t, "p", "echo hi\n")
-    check("可執行檔帶 #/", run("p/_exec#/x", t, cwd=t)[:3:2], (1, "EntryBad"))
+    check("可執行檔帶 #/", run("p/_entry#/x", t, cwd=t)[:3:2], (1, "EntryBad"))
     check("資料夾帶 #/", run("p#/x", t, cwd=t)[:3:2], (1, "EntryBad"))
-    put(Path(t, "r.json"), {"_exec": "cfg.json#/tools/stamp"})
+    put(Path(t, "r.json"), {"_entry": "cfg.json#/tools/stamp"})
     check("轉向字串帶 #/", run("r.json", t, cwd=t)[:2], (0, "st\n"))
 
 
@@ -353,19 +353,19 @@ def pointer(t):
 def cf_cd(t):
     d = prog(t, "p", 'echo "$AOS_CF|$AOS_CD|$(pwd)"\n')
     real = Path(d).resolve()
-    check("AOS_CF／AOS_CD", run(d, t)[1].strip(), "%s/_exec|%s|%s" % (real, real, real))
-    # 由 _exec.json 進來時 AOS_CF＝那個 .json
-    put(Path(t, "j", "_exec.json"), ["sh", "-c", 'echo "$AOS_CF|$AOS_CD"'])
+    check("AOS_CF／AOS_CD", run(d, t)[1].strip(), "%s/_entry|%s|%s" % (real, real, real))
+    # 由 _entry.json 進來時 AOS_CF＝那個 .json
+    put(Path(t, "j", "_entry.json"), ["sh", "-c", 'echo "$AOS_CF|$AOS_CD"'])
     rj = Path(t, "j").resolve()
-    check("AOS_CF＝.json", run(str(Path(t, "j")), t)[1].strip(), "%s/_exec.json|%s" % (rj, rj))
+    check("AOS_CF＝.json", run(str(Path(t, "j")), t)[1].strip(), "%s/_entry.json|%s" % (rj, rj))
     # 字串轉向後＝最後那個檔
-    put(Path(t, "k", "_exec.json"), {"_exec": "sub/t.json"})
+    put(Path(t, "k", "_entry.json"), {"_entry": "sub/t.json"})
     put(Path(t, "k", "sub", "t.json"), ["sh", "-c", 'echo "$AOS_CF|$AOS_CD"'])
     rk = Path(t, "k", "sub").resolve()
     check("轉向後 AOS_CF", run(str(Path(t, "k")), t)[1].strip(), "%s/t.json|%s" % (rk, rk))
     # 捷徑：AOS_CF 是解開後的實際檔
     os.symlink(str(Path(t, "j")), str(Path(t, "link")))
-    check("捷徑解開", run(str(Path(t, "link")), t)[1].strip(), "%s/_exec.json|%s" % (rj, rj))
+    check("捷徑解開", run(str(Path(t, "link")), t)[1].strip(), "%s/_entry.json|%s" % (rj, rj))
 
 
 @case
@@ -375,7 +375,7 @@ def cf_nested(t):
     ro = Path(outer).resolve()
     rc, out, _, _ = run(outer, t)
     check("巢狀各層看到自己的 AOS_CF", (rc, out.split()),
-          (0, ["out:%s/_exec" % ro, "in:%s/_exec" % Path(inner).resolve(), "out:%s/_exec" % ro]))
+          (0, ["out:%s/_entry" % ro, "in:%s/_entry" % Path(inner).resolve(), "out:%s/_entry" % ro]))
 
 
 @case
@@ -389,18 +389,18 @@ def path_passed_as_is(t):
 @case
 def entry_is_dir(t):
     # 10-21 晚起 $AOS_ENTRY 指到資料夾＝走進去（資料夾贏過同名 .json，N-61）；裡面沒有入口＝EntryMissing
-    Path(t, "p", "_exec").mkdir(parents=True)
-    put(Path(t, "p", "_exec.json"), ["echo", "no"])
+    Path(t, "p", "_entry").mkdir(parents=True)
+    put(Path(t, "p", "_entry.json"), ["echo", "no"])
     check("AOS_ENTRY 指到資料夾、裡面沒入口", run(str(Path(t, "p")), t)[:3:2], (1, "EntryMissing"))
-    put(Path(t, "p", "_exec", "_exec"), "#!/bin/sh\necho in\n", 0o755)
+    put(Path(t, "p", "_entry", "_entry"), "#!/bin/sh\necho in\n", 0o755)
     check("AOS_ENTRY 指到資料夾＝走進去", run(str(Path(t, "p")), t)[:2], (0, "in\n"))
 
 
 # ───────── C. inst 單子（§ 20：行程內交給 libaos 跑）─────────
 
 def inst(t, doc, *args, **kw):
-    """t/q/_exec.json＝doc，跑 aos-exec t/q t args…；回 run 的結果。"""
-    put(Path(t, "q", "_exec.json"), doc)
+    """t/q/_entry.json＝doc，跑 aos-exec t/q t args…；回 run 的結果。"""
+    put(Path(t, "q", "_entry.json"), doc)
     return run(str(Path(t, "q")), t, *args, **kw)
 
 
@@ -414,17 +414,17 @@ def inst_exit_code(t):
 
 @case
 def inst_only_json(t):
-    # sh 版 test_exec.py 的「只有 _exec.json」：單子、args 接尾、AOS_WS
+    # sh 版 test_exec.py 的「只有 _entry.json」：單子、args 接尾、AOS_WS
     ws = Path(t, "ws"); ws.mkdir()
-    put(Path(t, "p", "_exec.json"), {"argv": ["sh", "-c", "echo $1:$AOS_WS; exit 5", "sh"]})
+    put(Path(t, "p", "_entry.json"), {"argv": ["sh", "-c", "echo $1:$AOS_WS; exit 5", "sh"]})
     rc, out, _, _ = run(str(Path(t, "p")), str(ws), "x")
-    check("只有 _exec.json（單子）", (rc, out.strip()), (5, "x:%s" % ws.resolve()))
+    check("只有 _entry.json（單子）", (rc, out.strip()), (5, "x:%s" % ws.resolve()))
 
 
 @case
 def inst_stays_as_supervisor(t):
     # 跟 B 的「exec 不留行程」成對：單子入口的 $$ 不是 aos-exec 的 pid（aos-exec 留在行程裡當監工）
-    put(Path(t, "q", "_exec.json"), {"argv": ["sh", "-c", "echo $$"]})
+    put(Path(t, "q", "_entry.json"), {"argv": ["sh", "-c", "echo $$"]})
     e = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
     p = subprocess.Popen([BIN, str(Path(t, "q")), t], stdout=subprocess.PIPE, text=True, env=e)
     out = p.communicate()[0]
@@ -434,7 +434,7 @@ def inst_stays_as_supervisor(t):
 @case
 def inst_shebang_not_x(t):
     # 沒 +x、第一行 #!/usr/bin/env aos-inst、底下是單子 → 第一行跳過、照跑（舊 P-28 (A) 拿掉 +x 的樣子）
-    put(Path(t, "p", "_exec"), '#!/usr/bin/env aos-inst\n{"argv": ["echo", "sb"]}\n')
+    put(Path(t, "p", "_entry"), '#!/usr/bin/env aos-inst\n{"argv": ["echo", "sb"]}\n')
     check("shebang 開頭的非 +x 單子", run(str(Path(t, "p")), t, "x")[:2], (0, "sb x\n"))
 
 
@@ -443,8 +443,8 @@ def inst_args_pointer_key(t):
     check("單子 args 接尾", inst(t, {"argv": ["echo", "a"]}, "b", "c")[:2], (0, "a b c\n"))
     put(Path(t, "cfg.json"), {"tools": {"stamp": {"argv": ["echo", "st"]}}})
     check("#/ 指到單子", run("cfg.json#/tools/stamp", t, "x", cwd=t)[:2], (0, "st x\n"))
-    check("_exec 是單子", inst(t, {"_exec": {"argv": ["echo", "in"]}})[:2], (0, "in\n"))
-    put(Path(t, "r.json"), {"_exec": "cfg.json#/tools/stamp"})
+    check("_entry 是單子", inst(t, {"_entry": {"argv": ["echo", "in"]}})[:2], (0, "in\n"))
+    put(Path(t, "r.json"), {"_entry": "cfg.json#/tools/stamp"})
     check("字串轉向到單子", run("r.json", t, cwd=t)[:2], (0, "st\n"))
 
 
@@ -476,7 +476,7 @@ def inst_env_directive(t):
     check("$env＋path 寫到 $AOS_STACK/out", (ws / ".aos" / "out").read_text(), "s\n")
     rc, out, _, _ = inst(t, {"argv": ["echo", {"$env": "AOS_CD"}, {"$env": "AOS_CF"}]})
     q = Path(t, "q").resolve()
-    check("$env 讀得到 AOS_CD／AOS_CF", (rc, out), (0, "%s %s/_exec.json\n" % (q, q)))
+    check("$env 讀得到 AOS_CD／AOS_CF", (rc, out), (0, "%s %s/_entry.json\n" % (q, q)))
     check("$env 沒設", inst(t, {"argv": ["echo", {"$env": "AOS_NOPE_XYZ"}]})[:3:2], (1, "DirectiveBad"))
 
 
@@ -497,7 +497,7 @@ def inst_timeout_kills_group(t):
 
 
 def start(t, doc):
-    put(Path(t, "q", "_exec.json"), doc)
+    put(Path(t, "q", "_entry.json"), doc)
     e = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
     return subprocess.Popen([BIN, str(Path(t, "q")), t], stdout=subprocess.PIPE, text=True, env=e)
 
@@ -548,7 +548,7 @@ def inst_signal_forward(t):
 
 @case
 def inst_bad(t):
-    put(Path(t, "q", "_exec"), "{not json")
+    put(Path(t, "q", "_entry"), "{not json")
     check("單子檔不是 JSON", run(str(Path(t, "q")), t)[:3:2], (1, "EntryBad"))
     import shutil
     shutil.rmtree(str(Path(t, "q")))
@@ -588,7 +588,7 @@ def dq(t):
 
 def tools(t):
     q = Path(t, "q")
-    put(q / "tools" / "stamp" / "_exec", '#!/bin/sh\necho "stamp ws=$AOS_WS cf=$AOS_CF arg=$1"\n', 0o755)
+    put(q / "tools" / "stamp" / "_entry", '#!/bin/sh\necho "stamp ws=$AOS_WS cf=$AOS_CF arg=$1"\n', 0o755)
     put(q / "tools" / "j.json", ["sh", "-c", 'echo "json cf=$AOS_CF"'])
     put(q / "tools" / "cfg.json", {"t": {"u": ["echo", "ptr"]}})
     put(q / "tools" / "x.sh", '#!/bin/sh\necho "x cf=$AOS_CF"\n', 0o755)
@@ -622,7 +622,7 @@ def d2_d8_argv_array_directives(t):
     ws = Path(t).resolve()
     check("D2 argv 陣列 $env＋$path", run_with_json(t, ["sh", "-c", 'echo "$1"', "sh", {"$env": "AOS_CD", "$path": "x"}])[:2],
           (0, "%s/x\n" % q))
-    check("D2 _exec 底下的陣列", run_with_json(t, {"_exec": ["echo", {"$env": "AOS_WS"}]})[:2], (0, "%s\n" % ws))
+    check("D2 _entry 底下的陣列", run_with_json(t, {"_entry": ["echo", {"$env": "AOS_WS"}]})[:2], (0, "%s\n" % ws))
     check("D8 argv 陣列 $ref", run_with_json(t, [{"$ref": "sub/data.json#/a/b/0"}, {"$ref": "sub/data.json", "$at": "/msg"}],
                                              "tail")[:2], (0, "hi tail\n"))
     check("$env 沒設＝入口壞", run_with_json(t, ["echo", {"$env": "AOS_NOPE_XYZ"}])[:3:2], (1, "EntryBad"))
@@ -642,12 +642,12 @@ def d3_argv0_to_aos_exec(t):
     tools(t)
     q = Path(t, "q").resolve()
     ws = Path(t).resolve()
-    stamp = q / "tools" / "stamp" / "_exec"
+    stamp = q / "tools" / "stamp" / "_entry"
     check("D3 陣列：資料夾", run_with_json(t, ["tools/stamp"])[:2], (0, "stamp ws=%s cf=%s arg=\n" % (ws, stamp)))
     check("D3 陣列：沒 +x 的 JSON 檔", run_with_json(t, ["tools/j.json"])[:2], (0, "json cf=%s\n" % (q / "tools" / "j.json")))
     check("D3 陣列：不在（補找 .json）", run_with_json(t, ["tools/j"])[0], 0)
     check("D3 陣列：帶 #/", run_with_json(t, ["tools/cfg.json#/t/u"])[:2], (0, "ptr\n"))
-    check("D3 +x 檔照舊直接 exec", run_with_json(t, ["tools/x.sh"])[:2], (0, "x cf=%s\n" % (q / "_exec.json")))
+    check("D3 +x 檔照舊直接 exec", run_with_json(t, ["tools/x.sh"])[:2], (0, "x cf=%s\n" % (q / "_entry.json")))
     other = Path(t, "other"); other.mkdir()
     # 10-21 起插進去的 aos-exec 後面接的是 args（工作區只由 --ws 給）
     rc, out, _, _ = run_with_json(t, ["tools/stamp", "a"])
@@ -656,7 +656,7 @@ def d3_argv0_to_aos_exec(t):
     check("D5 換工作區寫 --ws", (rc, ("ws=%s " % other.resolve()) in out, out.endswith("arg=a\n")), (0, True, True))
     rc, out, _, _ = run_with_json(t, ["tools/stamp"], "b")
     check("D5 呼叫時的 args 接在後面", (rc, out.endswith("arg=b\n")), (0, True))
-    put(q / "stampdir" / "_exec", "#!/bin/sh\necho no\n", 0o755)
+    put(q / "stampdir" / "_entry", "#!/bin/sh\necho no\n", 0o755)
     check("D4 沒 / 照 PATH 找", run_with_json(t, ["stampdir"])[:3:2], (1, "LaunchFailed"))
     check("D4 單子沒 / 照 PATH 找", inst(t, {"argv": ["stampdir"]})[0], 1)
     check("D3 單子", inst(t, {"argv": ["tools/stamp", "a"]})[:2], (0, "stamp ws=%s cf=%s arg=a\n" % (ws, stamp)))
@@ -747,8 +747,8 @@ def e_entry_after_env(t):
     check("多段 $AOS_ENTRY 沿路讀 .env（不蓋＝外層贏）", raw("--ws", t, str(q), env={"AOS_ENTRY": "sub/run"})[:2],
           (0, "top|%s\n" % (q / "sub").resolve()))
     r = Path(t, "r")
-    put(r / "_exec" / ".env", "Y=mid\n")
-    put(r / "_exec" / "_exec" / "_exec", '#!/bin/sh\necho "$Y"\n', 0o755)
+    put(r / "_entry" / ".env", "Y=mid\n")
+    put(r / "_entry" / "_entry" / "_entry", '#!/bin/sh\necho "$Y"\n', 0o755)
     check("挑到資料夾就走進去、一路往下", raw("--ws", t, str(r))[:2], (0, "mid\n"))
     check("走回走過的資料夾", raw("--ws", t, str(q), env={"AOS_ENTRY": "sub/../sub/run"})[:3:2], (1, "EntryBad"))
 
@@ -757,17 +757,17 @@ def e_entry_after_env(t):
 def e_json_object_and_co(t):
     q = Path(t, "q")
     sh = ["sh", "-c", 'echo "$A|[$AOS_CO]"']
-    put(q / "x.json", {".env": {"A": "1", "N": 3}, "_exec": {".env": {"A": "${A}2"}, "_exec": sh}})
+    put(q / "x.json", {".env": {"A": "1", "N": 3}, "_entry": {".env": {"A": "${A}2"}, "_entry": sh}})
     check("JSON .env key、一路往下、AOS_CO（加旗標才蓋）", raw("--dotenv-override", "--ws", t, str(q / "x.json"))[:2],
-          (0, "12|[/_exec/_exec]\n"))
-    check("JSON .env key 不蓋＝外層贏", raw("--ws", t, str(q / "x.json"))[:2], (0, "1|[/_exec/_exec]\n"))
-    put(q / "c.json", {"a": {"_exec": sh}, "l": [sh]})
-    check("檔#/指標也算進 AOS_CO", raw("--ws", t, str(q / "c.json") + "#/a")[:2], (0, "|[/a/_exec]\n"))
+          (0, "12|[/_entry/_entry]\n"))
+    check("JSON .env key 不蓋＝外層贏", raw("--ws", t, str(q / "x.json"))[:2], (0, "1|[/_entry/_entry]\n"))
+    put(q / "c.json", {"a": {"_entry": sh}, "l": [sh]})
+    check("檔#/指標也算進 AOS_CO", raw("--ws", t, str(q / "c.json") + "#/a")[:2], (0, "|[/a/_entry]\n"))
     put(q / "a.json", sh)
     check("整份檔就是入口＝空", raw("--ws", t, str(q / "a.json"))[:2], (0, "|[]\n"))
     put(q / "y.json", {".env": {"AOS_ENTRY": "alt"}, "alt": ["echo", "alt"]})
     check("JSON .env key 設 AOS_ENTRY", raw("--ws", t, str(q / "y.json"))[:2], (0, "alt\n"))
-    put(q / "z.json", {".env": {"A": {"$env": "NOPE_XYZ"}}, "_exec": ["true"]})
+    put(q / "z.json", {".env": {"A": {"$env": "NOPE_XYZ"}}, "_entry": ["true"]})
     check("JSON .env 指示詞解不開", raw("--ws", t, str(q / "z.json"))[:3:2], (1, "DotenvBad"))
 
 
@@ -778,9 +778,9 @@ def e_redirect_is_fresh_hop(t):
     a.mkdir(); b.mkdir()
     r = Path(t, "r")
     put(r / ".env", "R=r\nAOS_WS=%s\n" % b)
-    put(r / "_exec.json", json.dumps("../t"))
+    put(r / "_entry.json", json.dumps("../t"))
     put(Path(t, "t", ".env"), "T=t\n")
-    put(Path(t, "t", "_exec"), '#!/bin/sh\necho "$R|$T|$AOS_WS|$*"\n', 0o755)
+    put(Path(t, "t", "_entry"), '#!/bin/sh\necho "$R|$T|$AOS_WS|$*"\n', 0o755)
     check("轉向：下一層讀自己的 .env", raw("--ws", str(a), str(r), "x")[:2], (0, "r|t|%s|x\n" % a.resolve()))
     check("轉向：.env 不蓋已 export 的 AOS_WS", raw(str(r), cwd=t)[:2], (0, "r|t|%s|\n" % Path(t).resolve()))
     check("轉向：--dotenv-override 時 .env 的 AOS_WS 留著", raw("--dotenv-override", str(r), cwd=t)[:2], (0, "r|t|%s|\n" % b))
@@ -824,12 +824,12 @@ def e_dotenv_subset(t):
     # 旗標只管這一跳：字串轉向（全新一跳）不吃
     q = Path(t, "q")
     put(q / ".env", "X=q\n")
-    put(q / "_exec.json", json.dumps("../r"))
+    put(q / "_entry.json", json.dumps("../r"))
     put(Path(t, "r", ".env"), "X=${X}r\n")
-    put(Path(t, "r", "_exec"), '#!/bin/sh\nprintf "[%s]" "$X"\n', 0o755)
+    put(Path(t, "r", "_entry"), '#!/bin/sh\nprintf "[%s]" "$X"\n', 0o755)
     check("轉向不吃旗標", raw("--dotenv-override", "--ws", t, str(q), env={"X": "old"})[:2], (0, "[q]"))
     # JSON 的 .env key：格式不變（引號照字面），只套蓋不蓋
-    put(q / "j.json", {".env": {"X": "'a' # c"}, "_exec": ["sh", "-c", 'printf "[%s]" "$X"']})
+    put(q / "j.json", {".env": {"X": "'a' # c"}, "_entry": ["sh", "-c", 'printf "[%s]" "$X"']})
     check("JSON .env key 格式不變", raw("--dotenv-override", "--ws", t, str(q / "j.json"), env={"X": "old"})[:2],
           (0, "['a' # c]"))
     check("JSON .env key 不蓋", raw("--ws", t, str(q / "j.json"), env={"X": "old"})[:2], (0, "[old]"))

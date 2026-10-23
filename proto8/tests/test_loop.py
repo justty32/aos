@@ -36,8 +36,8 @@ class Base(unittest.TestCase):
     def prog(self, name, body):
         d = self.t / name
         d.mkdir(parents=True, exist_ok=True)
-        (d / "_exec").write_text("#!/bin/sh\n" + body)
-        (d / "_exec").chmod(0o755)
+        (d / "_entry").write_text("#!/bin/sh\n" + body)
+        (d / "_entry").chmod(0o755)
 
     def loop(self, cfg):
         (self.t / "loop.json").write_text(json.dumps(cfg))
@@ -316,12 +316,12 @@ class Cli(Base):
         self.assertIn("沒有設定檔", self.loop_cli().stderr)
 
     def test_aos_exec_loop_json_via_exec_key(self):
-        # loop.json 帶 _exec＝["aos-loop", ..., {"$env": "AOS_CF"}]，`aos-exec loop.json` 就把 loop 跑起來
-        # （沒 argv 的物件當資料夾、取 _exec；AOS_CF＝那份 loop.json；cwd＝它的資料夾，所以 val 的相對路徑是旁邊那個）
+        # loop.json 帶 _entry＝["aos-loop", ..., {"$env": "AOS_CF"}]，`aos-exec loop.json` 就把 loop 跑起來
+        # （沒 argv 的物件當資料夾、取 _entry；AOS_CF＝那份 loop.json；cwd＝它的資料夾，所以 val 的相對路徑是旁邊那個）
         d = self.t / "agent"
         d.mkdir()
         (d / "loop.json").write_text(json.dumps({
-            "_exec": ["aos-loop", "--interval-ms", "0", {"$env": "AOS_CF"}], "val": ["loop.json#/body", "q"], "max": 2,
+            "_entry": ["aos-loop", "--interval-ms", "0", {"$env": "AOS_CF"}], "val": ["loop.json#/body", "q"], "max": 2,
             "body": {"argv": ["sh", "-c", 'echo "x $1" >> "$AOS_STACK/beats"', "sh"]}}))
         ws = self.t / "ws"
         ws.mkdir()
@@ -330,9 +330,9 @@ class Cli(Base):
         self.assertEqual((r.returncode, r.stderr, self.beats(ws / ".aos")), (0, "", ["x q"] * 2))
 
     def test_aos_exec_big_json_pointer(self):
-        # 大 JSON 裡的 loop：_exec 用 {"$env": "AOS_CF", "$path": "#/loops/a"} 指回自己那一格（$path 字串拼接，10-21 傍晚）
+        # 大 JSON 裡的 loop：_entry 用 {"$env": "AOS_CF", "$path": "#/loops/a"} 指回自己那一格（$path 字串拼接，10-21 傍晚）
         (self.t / "big.json").write_text(json.dumps({"loops": {"a": {
-            "_exec": ["aos-loop", {"$env": "AOS_CF", "$path": "#/loops/a"}], "val": "big.json#/loops/a/body", "max": 3,
+            "_entry": ["aos-loop", {"$env": "AOS_CF", "$path": "#/loops/a"}], "val": "big.json#/loops/a/body", "max": 3,
             "body": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/beats"']}}}}))
         ws = self.t / "ws"
         ws.mkdir()

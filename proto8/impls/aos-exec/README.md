@@ -8,9 +8,9 @@ inst 是 C lib、沒有命令列，inst 單子由 aos-exec 在行程內跑（ide
 入口是 inst 單子時它留在門口當監工：在行程內交給 libaos 起子程式（自成行程群組）、把收到的訊號轉給整群、等它結束，再以子程式的碼結束。
 
 ```sh
-aos-exec --ws ws agent        # 跑 agent/_exec（或 agent/_exec.json），工作區 ws
+aos-exec --ws ws agent        # 跑 agent/_entry（或 agent/_entry.json），工作區 ws
 aos-exec cfg.json#/tools/stamp a b   # 跑 cfg.json 裡 /tools/stamp 那個值，沿用 $AOS_WS，參數 a b
-echo hi | aos-exec tool              # tool/_exec.json 是 {"argv": ["cat"]}：單子沒寫串流＝接呼叫者的，印 hi
+echo hi | aos-exec tool              # tool/_entry.json 是 {"argv": ["cat"]}：單子沒寫串流＝接呼叫者的，印 hi
 ```
 
 規則出處：`proto8/thinking/2026-10-19-ideas.md` § 14～§ 20、`2026-10-21-ideas.md` § 1～§ 7（旗標、`.env`、入口順序、一路往下、`AOS_CO`）；行為比照 `proto8/bin/aos-exec`（Python，10-21 晚版），inst 單子比照 `proto8/bin/aos_inst.py`。
@@ -47,9 +47,9 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
    只有這一步算出來的會建、會轉絕對；之後 `.env` 設的 `AOS_*` 照字面用（`.env` 改 `AOS_WS` 時 `AOS_STACK` 不跟著搬，風險自擔，ideas § 6 J8）。
 4. **走進去**（`enter`）：資料夾（或檔所在的資料夾）——`AOS_CF`、`AOS_CD` 先設成它（XXX 是檔時 `AOS_CF`＝那個檔）、`AOS_CO` 設空、**cd 進去**、
    **讀那裡的 `.env`**（見下面）、**旗標蓋回**（`--ws` 給的值再寫回 `AOS_WS`）。走進去那一刻 `$AOS_ENTRY` 是 `.env`＝那份 `.env` 不讀成環境（它就是入口）。
-5. **資料夾：讀完 `.env` 才照「當下的」`$AOS_ENTRY` 挑入口**（沒設或空＝`_exec`；所以 `.env` 設 `AOS_ENTRY` 有用）：
+5. **資料夾：讀完 `.env` 才照「當下的」`$AOS_ENTRY` 挑入口**（沒設或空＝`_entry`；所以 `.env` 設 `AOS_ENTRY` 有用）：
    - `$AOS_ENTRY` **一段段走**：`sub/run`＝走進 `sub/`（cd、讀它的 `.env`、旗標蓋回）再挑 `run`；沿路的資料夾都走進去（由外到內），中間某段不是資料夾＝`EntryMissing`。
-     空的段不算一段（尾巴的 `/`、`//`；`_exec/`＝`_exec`，全是 `/`＝`.`）；`.` 不算走進新資料夾、不重讀 `.env`。
+     空的段不算一段（尾巴的 `/`、`//`；`_entry/`＝`_entry`，全是 `/`＝`.`）；`.` 不算走進新資料夾、不重讀 `.env`。
    - 挑到的是**資料夾**＝再走進去，照當下的 `$AOS_ENTRY` 再挑，**一路往下**（所以資料夾贏過旁邊同名的 `.json`）；
      走回走過的資料夾（例 `AOS_ENTRY=.`、`sub/../sub/run`、捷徑繞回上層）＝`EntryBad`（資料夾繞圈）。
    - 挑到的不在就補找 `名字.json`；都沒有＝`EntryMissing`（這個錯在建好 stack、讀完 `.env` 之後才報，所以 `.env` 壞會先報）。
@@ -103,12 +103,12 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
 
 | 變數 | aos-exec 做什麼 | 類別 |
 |---|---|---|
-| `AOS_ENTRY` | aos-exec 自己只讀、不設；沒設（或空）＝`_exec`。資料夾裡與 JSON 裡用同一個名字；每次挑入口都重讀（`.env` 可能剛改過它） | 繼承 |
+| `AOS_ENTRY` | aos-exec 自己只讀、不設；沒設（或空）＝`_entry`。資料夾裡與 JSON 裡用同一個名字；每次挑入口都重讀（`.env` 可能剛改過它） | 繼承 |
 | `AOS_WS` | 每跳設：WS 的絕對路徑（`--ws` 給的，每讀完一份 `.env` 都蓋回去） | 叫別人時明給 |
 | `AOS_STACK` | 沒設＝`$AOS_WS/.aos/`；有設沿用（相對於呼叫當下的 cwd）；都 mkdir -p、轉絕對、結尾 `/` | 叫別人時明給 |
 | `AOS_CF` | 每跳覆寫：實際被執行的檔（解開捷徑的絕對路徑，不帶 `#/…`；往下走進 JSON 物件時不變；字串轉向後＝最後那個檔）。走進資料夾時先＝那個資料夾 | 每層覆寫 |
 | `AOS_CD` | 每跳覆寫：`AOS_CF` 所在的資料夾＝cd 進去的地方 | 每層覆寫 |
-| `AOS_CO` | 每跳覆寫（10-21 晚新增，aos current obj）：入口在那份 JSON 檔裡的位置，JSON 指標、不帶 `#`（例 `/a/_exec`；`檔#/指標` 也算在內，之後每挑一格接 `/` 加照 `~0`／`~1` 跳脫的 key）；整份檔就是入口、或可執行檔＝空。走進資料夾時先設空 | 每層覆寫 |
+| `AOS_CO` | 每跳覆寫（10-21 晚新增，aos current obj）：入口在那份 JSON 檔裡的位置，JSON 指標、不帶 `#`（例 `/a/_entry`；`檔#/指標` 也算在內，之後每挑一格接 `/` 加照 `~0`／`~1` 跳脫的 key）；整份檔就是入口、或可執行檔＝空。走進資料夾時先設空 | 每層覆寫 |
 | `PATH` | aos-exec **不動**，原樣傳下去（ideas § 24「也套用，都不動path吧」）；要改由 `.env` 自己寫（`PATH=${AOS_CD}/bin:${PATH}`）。入口裡要寫 `aos-exec 別的`、`aos-loop`…，由呼叫者事先把那幾支的 `bin/` 放進 PATH | 繼承 |
 
 最後讀的那一份 `.env` 自己設了 `AOS_CF`／`AOS_CD`／`AOS_CO` 的，挑完入口不蓋（見上面一跳的第 7 步）。
@@ -139,7 +139,7 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
   第一次轉過之後過 `grace_ms` 還沒結束就 SIGKILL 整群；逾時由 libaos 管（也是整群）。子程式結束後 aos-exec **以子程式的碼結束**（被訊號停掉＝128＋N，
   例 SIGTERM＝143，透明轉交 N-43）。子程式沒有控制終端，讀不了終端（P-36 已接受）。
 - **`argv[0]` 由 libaos 跑**（glibc 的 `execvp`）：所以單子裡 `+x` 但沒 `#!` 的檔會被 glibc 改用 sh 跑——跟上面可執行檔、argv 陣列入口一樣（ideas § 22）。
-- **JSON 入口不要寫 `+x`**：拿掉 `+x` 的 `_exec`（第一行 `#!` 會被跳過）就能當單子跑。也**不要**寫成 `#!/usr/bin/env aos-exec` 再加 `+x`：
+- **JSON 入口不要寫 `+x`**：拿掉 `+x` 的 `_entry`（第一行 `#!` 會被跳過）就能當單子跑。也**不要**寫成 `#!/usr/bin/env aos-exec` 再加 `+x`：
   `+x` 的檔 aos-exec 會 exec 它、kernel 又叫 aos-exec……原地無限 exec。aos-exec 不讀 `+x` 檔的內容去擋。（舊理由「`./_exec foo` 的 foo 會被當工作區」10-21 起沒了：XXX 後面都是 args。）
 
 ## 元素
@@ -214,7 +214,7 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
 
 - （10-23 起不是差異）錯誤一行兩版都是 `aos-exec: 代號 原因`，代號與原因開頭一樣（bin 10-23 照這裡的代號補上）。
 - inst 單子：bin 版在行程內 `aos_inst.run()`，這裡在行程內交給 libaos（C）、aos-exec 留著當監工——兩版都是 aos-exec 這一層留在行程裡。
-- impls 沒有 `aos-inst` 命令列：P-28 的 (A)「`_exec` 第一行 `#!/usr/bin/env aos-inst`」與 (1)「小殼 `exec aos-inst _exec.json`」在這裡跑不起來；
+- impls 沒有 `aos-inst` 命令列：P-28 的 (A)「`_entry` 第一行 `#!/usr/bin/env aos-inst`」與 (1)「小殼 `exec aos-inst _entry.json`」在這裡跑不起來；
   同一個檔拿掉 `+x` 就能用（第一行 `#!` 跳過、當單子跑）。
 
 ## 建置與測試
@@ -226,7 +226,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
 `ctest` 跑 `test_cli`（`tests/test_cli.py`，56 組，約 1 秒）。A～D 段用 `run(XXX, WS, args...)` 小工具，轉成新命令列 `aos-exec --ws WS XXX args...`；E 段直接用 `raw(...)` 給命令列。
 A 段從 `proto8/tests/test_exec.py` 移植跟 aos-exec 本身有關的案例（靠 demo、aos-loop、aos-fsm 的不移植），
 B 段是 § 14～§ 19 的新規則（含「exec 不留行程」：入口的 `$$`＝aos-exec 的 pid；`+x` 沒 `#!` 交給 sh；`$AOS_ENTRY` 指到資料夾＝走進去、沒 `argv` 的物件一路往下），
-C 段是 inst 單子：結束碼轉交（3、10、SIGTERM＝143）、監工留在行程裡、shebang 開頭的非 `+x` 單子、args／`#/`／`_exec`／字串轉向、
+C 段是 inst 單子：結束碼轉交（3、10、SIGTERM＝143）、監工留在行程裡、shebang 開頭的非 `+x` 單子、args／`#/`／`_entry`／字串轉向、
 串流接呼叫者的（`{"argv": ["cat"]}` 透傳 stdin）與寫檔／附加、`$env`＋`path`、逾時整群殺（`sh -c 'sleep 100 & …; wait'`）、
 訊號轉給整群與 grace 後 SIGKILL（137）、單子壞的各種代號、不認的 key 被忽略；
 D 段是 10-20 的指示詞與 argv（對照 `proto8/tests/test_directive_argv.py`、`test_directive_lenient.py`）：`$ref` 的 `#/`、`$at`、兩個都寫、繞圈；argv 陣列放 `$env`／`$ref`、`$path`／`$prefix`、解不開＝入口壞；

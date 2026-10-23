@@ -86,7 +86,7 @@ struct Defaults {
 //   max           最多幾拍（非負整數；沒寫＝Defaults::max；寫 null 不行）
 //   interval_ms   一拍結束到下一拍開始至少隔幾毫秒（非負整數；沒寫＝Defaults::interval_ms）
 //   ctl, state    兩扇窗的檔名，在 $AOS_STACK 底下（沒寫或 null＝不開；寫了卻沒設 AOS_STACK＝StackMissing）
-// 其他 key 忽略（body、_exec…）。設定壞丟 Error（CfgMissing、CfgBad、StackMissing）。
+// 其他 key 忽略（body、_entry…）。設定壞丟 Error（CfgMissing、CfgBad、StackMissing）。
 // 每拍：有排著的訊號 → 結束 128＋N；讀 ctl（認 paused、stop、max、interval_ms、seq＋子類別多認的）→ tend() →
 // stop 就結束（0）、拍滿就結束（0）→ paused 或還沒到時間就睡一下（最多 1 秒，收到訊號就醒）回頭再看 →
 // 跑一拍：0＝下一拍、10＝結束（0）、其他非 0＝stderr 一行、以那個碼結束；拍中收到訊號＝收完以 128＋N 結束。

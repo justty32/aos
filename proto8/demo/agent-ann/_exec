@@ -1,3 +1,0 @@
-#!/bin/sh
-# loop.json 帶 _exec，aos-exec 它就把 loop 跑起來（10-21 傍晚）
-exec aos-exec loop.json

@@ -20,7 +20,7 @@
 | `aos-fsm/src/table/table.cpp` | `read_table`（`load_cfg`）、`check`（10-22：開跑時查整張表，表壞 CfgBad，10-23 統合前叫 FieldType）、`pick`（state 不在表上 StateUnknown）；`val` 走 `parse_target`；trace 沒有 `timed_out` |
 | `aos-fsm/src/state/state.cpp` | `read_state`（10-22：在但讀不了 StateBad〔10-23 統合前叫 ReadFailed〕、去頭尾 Unicode 空白）、`write_state`（`.state` 再改名）、`append_trace`（時間用 aos-util 的 `utc_now_ms`，ISO 到毫秒） |
 | `aos-daemon/src/daemon/daemon.cpp` | `Daemon`：`check_loops`（10-23 統合前叫 `check_children`）、10-22 起 `taken_names`／`check_names`（子項名字跟自己的 ctl／state 撞名：起來時 CfgBad〔10-23 統合前叫 Conflict〕、ctl 撞＝不採用）、`adopt`、`tend`、`stop`、`finish` |
-| `aos-daemon/src/child/child.cpp` | 子 loop 經 aos-exec 起：寫小格 `loop.json`（補 ctl／state、蓋 `_exec`、相對 run 轉絕對）、fork 後呼叫 `run_cli({"--", 小格/loop.json#/_exec})`，exec 成 PATH 上的 aos-loop |
+| `aos-daemon/src/child/child.cpp` | 子 loop 經 aos-exec 起：寫小格 `loop.json`（補 ctl／state、蓋 `_entry`、相對 run 轉絕對）、fork 後呼叫 `run_cli({"--", 小格/loop.json#/_entry})`，exec 成 PATH 上的 aos-loop |
 | `aos-directive/src/resolve.cpp` | 指示詞走訪；`$path` 是字串拼接（`join_path`） |
 
 aos-loop 的骨架是公開的 `aos::loop::Loop`（`src/engine/`），aos-daemon 繼承它（`src/daemon/`）。動工前的樣子原本備份在 `proto8/impls/backup/`（只在家中那台、不進 git），10-23 使用者授權刪掉。

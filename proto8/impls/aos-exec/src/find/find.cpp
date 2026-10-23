@@ -18,7 +18,7 @@ namespace aos::exec {
 std::string entry_name() {
     const char* v = std::getenv("AOS_ENTRY");
     if (v == nullptr || v[0] == '\0') {
-        return "_exec";
+        return "_entry";
     }
     return v;
 }

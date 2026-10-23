@@ -62,7 +62,7 @@ def put(path, text, mode=0o644):
 
 
 def cell(t, name, body):
-    put(Path(t, name, "_exec"), "#!/bin/sh\n" + body, 0o755)
+    put(Path(t, name, "_entry"), "#!/bin/sh\n" + body, 0o755)
 
 
 def table(t, states, start="a"):
@@ -402,7 +402,7 @@ def cli_usage(t):
 @case
 def cli_config_pointer(t):
     cell(t, "a", "exit 0\n")
-    put(Path(t, "agent.json"), {"_exec": ["aos-fsm", {"$env": "AOS_CF", "$path": "#/fsm"}],
+    put(Path(t, "agent.json"), {"_entry": ["aos-fsm", {"$env": "AOS_CF", "$path": "#/fsm"}],
                                 "fsm": {"start": "a", "states": {"a": {"val": "a", "next": "z"}, "z": {"val": "a", "next": "a"}}}})
     rc = run(t, "agent.json#/fsm")[0]
     check("設定檔 檔#/指標", (rc, state(t)), (0, "z\n"))

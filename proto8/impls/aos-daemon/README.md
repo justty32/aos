@@ -50,11 +50,11 @@ daemon.json＝loop.json 的超集（N-28）：
   相對路徑的第一段（`state.json`、`ctl.json`、`"w/c.json"` 的 `w`；`./x/../s.json` 整理成 `s.json`；在 stack 外面的、沒開的不算）。起來時撞＝`CfgBad`、退 1（10-23 統合前叫 Conflict）；
   ctl 改 `loops` 撞＝那份 ctl 整份不採用、維持上一份好的、原因進 state 的 `last_warning`。
 - **起子 loop**（經 aos-exec，同 bin 版 10-21 傍晚）：小格 `$AOS_STACK/<名字>/` mkdir -p；設定補上 `"ctl": "ctl.json"`、`"state": "state.json"`（沒寫才補），
-  **一律蓋上 `"_exec": ["aos-loop", {"$env": "AOS_CF"}]`**，相對的 `val`（字串，或陣列的第一個元素）照 daemon 的 cwd 轉成絕對路徑（子 loop 的 cwd 會是小格），
+  **一律蓋上 `"_entry": ["aos-loop", {"$env": "AOS_CF"}]`**，相對的 `val`（字串，或陣列的第一個元素）照 daemon 的 cwd 轉成絕對路徑（子 loop 的 cwd 會是小格），
   先寫 `.loop.json` 再改名成 `loop.json`；fork 一個子行程：`setsid` 自成 session、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr`、`AOS_STACK=小格/`、
-  解開三個訊號、cd 到 daemon 的 cwd，呼叫 aos-exec 的 `run_cli({"--", "小格/loop.json#/_exec"})`——它 cd 進小格、讀小格的 `.env`（若有）、
-  設好 `AOS_CF`＝小格的 loop.json，再 **exec 成 PATH 上的 aos-loop**（pid 不變；指到 `#/_exec` 不受 `$AOS_ENTRY` 影響）。
-  所以 **PATH 上要有 aos-loop 和 aos-exec**（`_exec` 的 `aos-loop` 照 PATH 找；子項裡要叫的 aos-exec 也是）；沒有＝子 loop 以 1 結束、原因寫在小格的 `stderr`。
+  解開三個訊號、cd 到 daemon 的 cwd，呼叫 aos-exec 的 `run_cli({"--", "小格/loop.json#/_entry"})`——它 cd 進小格、讀小格的 `.env`（若有）、
+  設好 `AOS_CF`＝小格的 loop.json，再 **exec 成 PATH 上的 aos-loop**（pid 不變；指到 `#/_entry` 不受 `$AOS_ENTRY` 影響）。
+  所以 **PATH 上要有 aos-loop 和 aos-exec**（`_entry` 的 `aos-loop` 照 PATH 找；子項裡要叫的 aos-exec 也是）；沒有＝子 loop 以 1 結束、原因寫在小格的 `stderr`。
 - **每拍**（Loop 讀完 ctl 之後）：期望表＝ctl 的 `loops`（有寫）或 daemon.json 的 → 表上多出來的收掉（SIGTERM 給那支子 loop，等 10 秒，還在就 SIGKILL 整群）並從表上拿掉（小格留著）
   （`phase: stopped`）→ 看誰自己結束了（`phase: done`，記 `code`／`signal`）→ 起表上少掉的 → 跑 `val`（有寫才跑）→ 寫 state（多一欄 `loops`：`{名字: {"pid", "start_ticks", "phase", "code", "signal"}}`）。
   `phase`：`running`＝還在跑、`done`＝子 loop 自己結束、`stopped`＝daemon 收掉它（送了 SIGTERM／SIGKILL）（`done`、`stopped` 10-23 統合前都叫 exited；`start_ticks` 統合前叫 started）。
@@ -77,22 +77,22 @@ daemon.json＝loop.json 的超集（N-28）：
 
 ```
  main ──▶ block_signals ──▶ loop_cli ──▶ Daemon(opts, 設定檔)（Loop 的建構子＋AOS_STACK／loops／adopt）──▶ Loop::serve
-   每拍 Daemon::tend ──▶ stop（多的）──▶ alive（看誰結束）──▶ spawn（少的：寫小格 loop.json、fork ──▶ run_cli({"--", 小格/loop.json#/_exec}) ──▶ exec 成 aos-loop）
+   每拍 Daemon::tend ──▶ stop（多的）──▶ alive（看誰結束）──▶ spawn（少的：寫小格 loop.json、fork ──▶ run_cli({"--", 小格/loop.json#/_entry}) ──▶ exec 成 aos-loop）
    Daemon::info ──▶ loops 表；Daemon::finish ──▶ stop（全部，標 stopped）＋剛死的標 done；Daemon::check_ctl ──▶ ctl 的 loops
 ```
 
 | 檔 | 做什麼 |
 |---|---|
 | `src/common/common.hpp` | `using`、代號（全沿用 aos-loop 的） |
-| `src/child/child.hpp`、`child.cpp` | 一支子 loop：`spawn`（小格、loop.json（補 ctl／state、蓋 `_exec`、相對 val 轉絕對）、fork＋子行程 `run_child` 呼叫 aos-exec 的 `run_cli`）、`alive`、`row` |
+| `src/child/child.hpp`、`child.cpp` | 一支子 loop：`spawn`（小格、loop.json（補 ctl／state、蓋 `_entry`、相對 val 轉絕對）、fork＋子行程 `run_child` 呼叫 aos-exec 的 `run_cli`）、`alive`、`row` |
 | `src/daemon/daemon.hpp`、`daemon.cpp` | `Daemon`（`aos::loop::Loop` 的子類別）：建構子、`adopt`、`tend`、`stop`、`finish`（收全部標 stopped、剛死的標 done）、`info`、`check_ctl`；`check_loops`（名字不能帶 `/`、`#`、不能 `.` 開頭；值字串、陣列或物件）；`taken_names`、`check_names`（跟自己的 ctl／state 撞名，10-22） |
 | `src/main.cpp` | 命令列：`block_signals` → `loop_cli` → `Daemon` → `serve`；出錯印「aos-daemon: 代號 原因」 |
 
 ## 為什麼這樣做
 
 - **繼承 aos-loop 的 `Loop`**：daemon.json 是 loop.json 的超集，每拍讀 ctl、睡 interval、跑身體、寫 state、轉訊號都一樣；daemon 只多 tend／finish／info／check_ctl 四個掛鉤（同 bin 版 `aos_loop.Loop` 的子類別）。
-- **子 loop 經 aos-exec 起**（使用者 10-21 傍晚「5.要」，同 bin 版 `aos-exec -- 小格/loop.json#/_exec`）：子 loop 跟別的程式一樣是「一個資料夾程式」——
-  小格就是它的資料夾、`loop.json` 的 `_exec` 就是入口，所以小格裡放 `.env` 也有作用。fork 後在子行程裡呼叫 aos-exec 的 `run_cli`（不必在 PATH 上找 aos-exec），
+- **子 loop 經 aos-exec 起**（使用者 10-21 傍晚「5.要」，同 bin 版 `aos-exec -- 小格/loop.json#/_entry`）：子 loop 跟別的程式一樣是「一個資料夾程式」——
+  小格就是它的資料夾、`loop.json` 的 `_entry` 就是入口，所以小格裡放 `.env` 也有作用。fork 後在子行程裡呼叫 aos-exec 的 `run_cli`（不必在 PATH 上找 aos-exec），
   它最後 exec 成 PATH 上的 aos-loop，所以 `ps` 看到的子 loop 叫 `aos-loop`。原本 10-20 頂層代定的「fork 後在子行程裡直接跑 aos-loop 的 `Loop`、`ps` 上叫 `aos-daemon`」換掉。
   fork 時 daemon 只有一條執行緒，子行程裡 C++ 配置、setenv 安全；三個訊號 daemon 一開始就擋著，子行程 exec 之前解開（遮罩會跨 exec 繼承；同 bin 版 Popen 起的子行程沒擋）。
 - **相對的 val 照 daemon 的 cwd 轉絕對**：子 loop 經 aos-exec 起之後 cwd 是小格，不轉的話 `"val": "../agent-bob"` 會從小格算。只轉字串與陣列的第一個元素，其他不動、不驗。

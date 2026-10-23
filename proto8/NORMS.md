@@ -15,6 +15,8 @@
 
 **10-23 命名統合**（[thinking 2026-10-23-naming](thinking/2026-10-23-naming.md)，使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」）：只換名字、不改原意——`run` → `val`、`children` → `loops`、state 窗的 `state` 欄 → `phase`、`started` → `start_ticks`、`beat` → `at`、子項 `exited` → `done`／`stopped`、trace 的 `ms` → `elapsed_ms`、指示詞 `at` → `$at`、錯誤代號照 C-54 三種寫法改（`Usage` → `ArgumentsBad` 等）；翻案 N-17「兩套撞名不改名」與 C-54「代號照舊沿用」。舊名在歷史敘述裡照留、旁邊加〔10-23 統合…〕註；各條改了哪些見[各批出處](NORMS/附錄2-各批出處.md)。
 
+**10-23 晚入口改名**（[thinking 2026-10-23-naming](thinking/2026-10-23-naming.md)，使用者「改。然後_開頭=附註這個概念刪掉。」「不認得的key就是忽略」）：入口預設名 `_exec` → `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者原話裡的 `_exec` 照留）；不認得的 key 一律忽略（C-48），`_` 開頭不再有特別意思。
+
 <!-- wf-nav -->
 ## 主題（10-15 使用者定：概念、規範、實作之外，再用主題分）
 

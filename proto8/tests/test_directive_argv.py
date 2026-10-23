@@ -45,7 +45,7 @@ class T(unittest.TestCase):
             {"a": {"b": ["echo", "deep"], "w": "word"}, "msg": "hi", "s~/x": "esc"})
 
     def entry(self, doc, *args, **kw):
-        put(self.t / "q" / "_exec.json", doc)
+        put(self.t / "q" / "_entry.json", doc)
         return run("aos-exec", "--ws", self.ws, self.t / "q", *args, **kw)
 
     def err(self, r, head):
@@ -110,7 +110,7 @@ class T(unittest.TestCase):
     def test_d2_argv_array_env(self):
         r = self.entry(["sh", "-c", 'echo "$1"', "sh", {"$env": "AOS_CD", "$path": "x"}])
         self.assertEqual(r[:2], (0, "%s/x\n" % (self.t / "q")), r[2])
-        r = self.entry({"_exec": ["echo", {"$env": "AOS_WS"}]})
+        r = self.entry({"_entry": ["echo", {"$env": "AOS_WS"}]})
         self.assertEqual(r[:2], (0, "%s\n" % self.ws), r[2])
 
     def test_d8_argv_array_ref(self):
@@ -127,7 +127,7 @@ class T(unittest.TestCase):
     # ───── D3、D4、D5：argv[0] 帶 / 又 exec 不了＝aos-exec ─────
 
     def tools(self):
-        put(self.t / "q" / "tools" / "stamp" / "_exec",
+        put(self.t / "q" / "tools" / "stamp" / "_entry",
             '#!/bin/sh\necho "stamp ws=$AOS_WS cf=$AOS_CF arg=$1"\n', 0o755)
         put(self.t / "q" / "tools" / "j.json", ["sh", "-c", 'echo "json cf=$AOS_CF"'])
         put(self.t / "q" / "tools" / "cfg.json", {"t": {"u": ["echo", "ptr"]}})
@@ -135,7 +135,7 @@ class T(unittest.TestCase):
 
     def test_d3_argv_array_dir_json_pointer(self):
         self.tools()
-        stamp = self.t / "q" / "tools" / "stamp" / "_exec"
+        stamp = self.t / "q" / "tools" / "stamp" / "_entry"
         r = self.entry(["tools/stamp"])
         self.assertEqual(r[:2], (0, "stamp ws=%s cf=%s arg=\n" % (self.ws, stamp)), r[2])
         r = self.entry(["tools/j.json"])                         # 沒 +x 的 JSON 檔
@@ -148,7 +148,7 @@ class T(unittest.TestCase):
     def test_d3_x_file_still_direct(self):
         self.tools()
         r = self.entry(["tools/x.sh"])          # +x 檔照舊直接 exec：AOS_CF 還是外層的入口
-        self.assertEqual(r[:2], (0, "x cf=%s\n" % (self.t / "q" / "_exec.json")), r[2])
+        self.assertEqual(r[:2], (0, "x cf=%s\n" % (self.t / "q" / "_entry.json")), r[2])
 
     def test_d5_second_element_is_arg(self):
         # 10-21 起 aos-exec 的工作區只由 --ws 給：["tools/stamp", "a"] 的 a 是 args，不再是 WS
@@ -170,7 +170,7 @@ class T(unittest.TestCase):
 
     def test_d4_no_slash_is_path_only(self):
         self.tools()
-        put(self.t / "q" / "stampdir" / "_exec", "#!/bin/sh\necho no\n", 0o755)
+        put(self.t / "q" / "stampdir" / "_entry", "#!/bin/sh\necho no\n", 0o755)
         self.err(self.entry(["stampdir"]), "起不來")             # 沒 / ＝照 PATH 找，不看 cwd 的資料夾
         self.assertEqual(self.entry({"argv": ["stampdir"]})[0], 1)
 
@@ -182,7 +182,7 @@ class T(unittest.TestCase):
 
     def test_d3_inst(self):
         self.tools()
-        stamp = self.t / "q" / "tools" / "stamp" / "_exec"
+        stamp = self.t / "q" / "tools" / "stamp" / "_entry"
         r = self.entry({"argv": ["tools/stamp", "a"]})          # aos-exec 的單子入口
         self.assertEqual(r[:2], (0, "stamp ws=%s cf=%s arg=a\n" % (self.ws, stamp)), r[2])
         s = put(self.t / "q" / "s.json", {"argv": ["./tools/cfg.json#/t/u"], "cwd": str(self.t / "q")})

@@ -1,4 +1,4 @@
-{"_exec": ["aos-fsm", {"$env": "AOS_CF"}],
+{"_entry": ["aos-fsm", {"$env": "AOS_CF"}],
  "start": "idle",
  "states": {
    "idle":  {"val": "idle", "next": "think"},

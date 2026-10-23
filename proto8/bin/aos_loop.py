@@ -14,7 +14,7 @@
     max           最多幾拍（非負整數；沒寫＝不限）
     interval_ms   一拍結束到下一拍開始至少隔幾毫秒（非負整數；loop 沒寫＝0）
     ctl, state    兩扇窗的檔名，在 $AOS_STACK 底下（N-09、N-13）；沒寫＝不開、不提醒；寫了卻沒設 AOS_STACK＝退 1
-其他 key 忽略（body、_exec…）。跑的途中 ctl 蓋過上面這些（每拍讀一次、後到先贏）。
+其他 key 忽略（body、_entry…）。跑的途中 ctl 蓋過上面這些（每拍讀一次、後到先贏）。
 
 每拍：看有沒有收到訊號 → 讀 ctl（N-06～N-08；能蓋 max、interval_ms，認 paused、stop、seq）→ tend()（子類別的事）
 → stop 就結束、拍滿 max 就結束 → paused 或還沒到下一拍的時間就睡一下（最多 1 秒，期間每 50 毫秒看一次訊號）、回頭再看

@@ -56,7 +56,7 @@ def put(path, text, mode=0o644):
     return str(p)
 
 
-def prog(parent, name, body, entry="_exec"):
+def prog(parent, name, body, entry="_entry"):
     """parent/name/entry：可執行的 sh 小程式。回資料夾路徑。"""
     put(Path(parent) / name / entry, "#!/bin/sh\n" + body, 0o755)
     return str(Path(parent) / name)
@@ -176,7 +176,7 @@ def string_run_goes_through_aos_exec(t):
     loop(t, {"val": "cell", "max": 2})
     rc, _, _, stderr = run("loop.json", cwd=t)
     real = os.path.realpath(t)
-    line = "%s|%s/.aos/|%s/cell/_exec|%s/cell|%s/cell" % (real, real, real, real, real)
+    line = "%s|%s/.aos/|%s/cell/_entry|%s/cell|%s/cell" % (real, real, real, real, real)
     check("字串 val＝aos-exec 它", (rc, stderr, Path(t, ".aos", "seen").read_text().splitlines()),
           (0, "", [line, line]))
 
@@ -211,8 +211,8 @@ def string_run_entry_missing_is_that_laps_failure(t):
 @case
 def string_run_json_entries(t):
     # 子資料夾的入口是 argv 陣列、inst 單子（子行程裡 run_inst）都行
-    put(Path(t, "a", "_exec.json"), ["sh", "-c", 'echo a >> "$AOS_STACK/n"'])
-    put(Path(t, "b", "_exec.json"), {"argv": ["sh", "-c", 'echo b >> "$AOS_STACK/n"; exit 10']})
+    put(Path(t, "a", "_entry.json"), ["sh", "-c", 'echo a >> "$AOS_STACK/n"'])
+    put(Path(t, "b", "_entry.json"), {"argv": ["sh", "-c", 'echo b >> "$AOS_STACK/n"; exit 10']})
     for name in ("a", "b"):
         loop(t, {"val": name, "max": 2})
         check("JSON 入口 %s" % name, run("loop.json", cwd=t)[0], 0)
@@ -223,7 +223,7 @@ def string_run_json_entries(t):
 def entry_reread_each_lap(t):
     # 每拍重找入口（同每拍叫一次 aos-exec）：第一拍把入口換掉，第二拍跑新的
     put(Path(t, "c", "next"), "#!/bin/sh\nexit 10\n", 0o755)
-    prog(t, "c", 'echo 1 >> "$AOS_STACK/n"; mv "$AOS_CD/next" "$AOS_CD/_exec"\n')
+    prog(t, "c", 'echo 1 >> "$AOS_STACK/n"; mv "$AOS_CD/next" "$AOS_CD/_entry"\n')
     loop(t, {"val": "c", "max": 5})
     check("每拍重找入口", (run("loop.json", cwd=t)[0], Path(t, ".aos", "n").read_text().split()), (0, ["1"]))
 
@@ -531,10 +531,10 @@ def cli_run_array(t):
 
 @case
 def loop_json_as_entry(t):
-    # loop.json 帶 "_exec": ["aos-loop", {"$env": "AOS_CF"}]，`aos-exec loop.json` 就把它跑起來（PATH 上要有兩支）
+    # loop.json 帶 "_entry": ["aos-loop", {"$env": "AOS_CF"}]，`aos-exec loop.json` 就把它跑起來（PATH 上要有兩支）
     exe = os.path.join(os.path.dirname(BIN), "..", "..", "aos-exec", "bin")
     prog(t, "c", 'echo x >> "$AOS_STACK/n"\n')
-    loop(t, {"val": "c", "max": 2, "_exec": ["aos-loop", {"$env": "AOS_CF"}]})
+    loop(t, {"val": "c", "max": 2, "_entry": ["aos-loop", {"$env": "AOS_CF"}]})
     path = os.pathsep.join([os.path.dirname(BIN), os.path.abspath(exe), "/usr/bin", "/bin"])
     r = subprocess.run([os.path.join(exe, "aos-exec"), "loop.json"], cwd=t, env=env_of({"PATH": path}),
                        capture_output=True, text=True, timeout=30)

@@ -1,7 +1,7 @@
 // child.hpp：【child】表上的一個子項＝一支子 loop。照 proto8/bin/aos-daemon 的 Child、Daemon.spawn。內部標頭。
 //
-//   child.cpp   spawn：小格 mkdir -p、寫 loop.json（子項設定補上 ctl／state、蓋上 _exec、相對的 val 轉絕對；先 .loop.json 再改名）、
-//               fork 一個子行程跑 `aos-exec -- 小格/loop.json#/_exec`（aos-exec 的 run_cli；它 cd 進小格、exec 成 PATH 上的
+//   child.cpp   spawn：小格 mkdir -p、寫 loop.json（子項設定補上 ctl／state、蓋上 _entry、相對的 val 轉絕對；先 .loop.json 再改名）、
+//               fork 一個子行程跑 `aos-exec -- 小格/loop.json#/_entry`（aos-exec 的 run_cli；它 cd 進小格、exec 成 PATH 上的
 //               aos-loop，pid 不變；setsid 自成一個行程群組、stdin／stdout 接 /dev/null、stderr 附加到小格的 stderr、AOS_STACK＝小格/）
 //               alive：自己生的看 waitpid（結束就記 code／signal）；接回來的看 /proc 的 start_ticks 還對不對
 //               row：寫進 state 的那一列

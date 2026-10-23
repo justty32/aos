@@ -12,11 +12,9 @@
 6,時間寫法：state `beat` 是 epoch 秒、trace `at` 是 ISO 到秒,兩處都 ISO 8601 UTC 到毫秒（例 `2026-10-23T01:58:45.123+00:00`）,state 窗、trace.jsonl,C-54 好懂；時間只留一種寫法,代定
 6,`started`（state 與子項各列）,`start_ticks`,state 窗,C-54 表單位加後綴（同 `_ms`）；值不變（/proc/<pid>/stat 第 22 欄）,代定
 6,trace 的 `ms`,`elapsed_ms`,trace.jsonl,C-54 主題在前、單位當後綴；單獨的 `ms` 沒有主題,代定
-7,`_exec`（key 與檔）、`.env`（key 與檔）,不改,—,C-48「`_` 開頭＝宿主程式忽略、給別人看」：aos-loop／aos-fsm 忽略 `_exec`、給 aos-exec 看；`.env` 是 dotenv 生態的檔名，JSON 裡同名是為了跟資料夾對上（C-51）,代定
 8,指示詞的 `at`,`$at`,單子、argv 陣列、JSON `.env` key 的指示詞,N-45 修飾詞都帶 `$`（`$path`、`$prefix`）,否
 9,`.env` 檔這個主題,`dotenv`（進縮寫表）；`env` 只指環境變數,abbr.json,C-54 一詞一義、縮寫要進表；旗標 `--dotenv-override` 已這樣用,否
 9,`EnvBad`、`EnvReadFailed`,`DotenvBad`,aos-exec,主題是 .env 檔＝dotenv；讀不到也算壞（同 `EntryBad` 收「入口讀不到」）,否
-10,`AOS_ENTRY` 預設 `_exec`；執行器 `aos-exec`,不改,—,exec＝執行：aos-exec 執行、`_exec` 是要執行的那個；`AOS_ENTRY` 是變數名、`_exec` 是值；使用者 10-19 親自挑 `_exec`,代定（另一案 `_entry` 請使用者看）
 11,`WorkspaceMissing`,`WsMissing`,aos-exec,C-54 一詞一義：縮寫表有 `ws`（`AOS_WS`、`--ws`、`ws/`）；縮寫進代號照 C-54 例子 `ApiKeyMissing`,否
 11,`.aos/`,不改,—,使用者 10-19「工作區的 .aos/ stack 照舊」；照工具命名的隱藏資料夾（像 `.git/`）,代定
 12,`AOS_CO` 的 `co`,進縮寫表（current obj）,abbr.json,C-54 新縮寫要先進表,否
@@ -40,3 +38,6 @@
 —,程式內部：`aos_window.beat()`、庫結果的 `ms`,`aos_window.heartbeat()`、`elapsed_ms`（C 結構的欄位名不動）,bin 庫,跟著上面改，免得「beat」兩個意思,否
 13,impls 的 `JsonSyntax`（aos-directive、aos-schema 的 stdin 不是 JSON）與 libaos 輸入壞（原 `FieldType`）,`InputBad`,impls（aos-directive、aos-schema、inst）,C-54 主詞在前＋…Bad；跟既有的 `InputExtra` 配對,代定
 13,impls aos-schema 的 SCHEMA 檔不在（原 `ReadFailed`）,`SchemaMissing`（讀不了或不是 JSON 併進 `SchemaBad`）,impls aos-schema,同設定檔：不在＝Missing、壞＝Bad,代定
+7,`_exec`（入口預設名：`AOS_ENTRY` 預設值、入口檔、JSON 的 key）,`_entry`,aos-exec、aos-loop、aos-fsm、aos-daemon、demo、條文,10-23 晚使用者問「換_entry，有好處嗎」→「改。」；`AOS_ENTRY`、代號 `Entry…`、入口檔同一個字，跟執行器 `aos-exec` 分開,否
+7,`.env`（key 與檔）,不改,—,dotenv 生態的檔名，JSON 裡同名是為了跟資料夾對上（C-51）,代定
+7,C-48「`_` 開頭的 key＝附註、宿主程式忽略」與 `_notes` 慣例；C-55「`_` 開頭的附註照 C-48」,刪；改成通則「不認得的 key 一律忽略、不報錯」（不分開頭是不是 `_`）,C-48、C-55,10-23 晚使用者「_開頭=附註這個概念刪掉。」「不認得的key就是忽略」；程式本來就沒特別處理 `_` 開頭、不認得的 key 本來就忽略，行為不變,否

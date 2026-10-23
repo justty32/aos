@@ -7,7 +7,7 @@ FSM.json: {"start": "idle", "states": {"idle": {"val": "idle", "next": "think"},
 val＝字串（aos-exec 的目標，每拍 `aos-exec -- <val>`）或陣列 [目標, 參數...]（每拍 `aos-exec -- 目標 參數...`，元素都要是字串；
 比照 loop 的 val，10-21 傍晚）；相對路徑從 cwd 算，fsm 不轉（F2）；要內嵌單子就寫
 `fsm.json#/states/<名>/body`、單子放在同一格的 body，由 aos-exec 在它自己的行程裡跑（逾時與訊號打整群，N-59）。
-val 是物件或別的＝表壞。表裡其他 key（body、_exec…）忽略（C-48），所以 fsm.json 可以帶 `"_exec": ["aos-fsm", {"$env": "AOS_CF"}]`
+val 是物件或別的＝表壞。表裡其他 key（body、_entry…）忽略（C-48），所以 fsm.json 可以帶 `"_entry": ["aos-fsm", {"$env": "AOS_CF"}]`
 當 aos-exec 的入口（F6）。
 開跑時（讀表後、跑格前）先查整張表（10-22）：start 要在表上；每一格要是 {"val", "next"}、val 合法、next 要是表上的狀態名、
 不能是空字串、頭尾不能有空白、不能有換行——哪一格不合都＝表壞、不跑格（原本只查這拍那一格：next 不在表上要到下一拍才擋，
