@@ -33,10 +33,12 @@
 ```sh
 (cd proto8/impls && for p in inst aos-util aos-directive aos-schema aos-exec aos-loop aos-fsm aos-daemon; do (cd $p && cmake -B build && cmake --build build && ctest --test-dir build) || break; done)
 python3 -m unittest discover -s proto8/tests      # 全過（python-dotenv 沒裝時 1 個 skip）
-sh proto8/demo/run.sh                            # 結束碼 0、四段都「結束碼 0」
+sh proto8/demo/run.sh                            # 結束碼 0、各段都「結束碼 0」（10-23 加 agent-dan 後五段）
 ```
 
 impls 各專案自己的 ctest（`test_cli`、`test_demo`…）說明在 [proto8/impls/README.md](../../proto8/impls/README.md)。
+
+10-23 起 `proto8/tests/test_dan.py`（agent-dan）裡連真模型的案例，在 `localhost:4000/v1/models` 連不上時 skip（其餘用假 server，離線也跑）。
 
 ## 測試分類
 
@@ -45,7 +47,7 @@ impls 各專案自己的 ctest（`test_cli`、`test_demo`…）說明在 [proto8
 - `fast`：`aos_*_tests` 全部——離線、單機、不需特殊環境；每次小改都跑。
 - `contract`：跨 process 邊界的——exec 層真 `fork`/`exec` 的測試（`core/exec/tests/`）、`aos_agent_fake_loop` 這種靠 `.aos/` 版面與 python loop 替身協作的整合測試；已含在同一個 ctest 裡，改 producer／consumer／協定時特別盯。
 - `full`：`ctest --preset default` 整套；commit 前或大改後跑。
-- `external`：真 LLM、外部 CLI agent（codex／claude）、跨機（WSL）——agent 代跑不了的記到 [WAIT_USER](../WAIT_USER.md)。
+- `external`：真 LLM、外部 CLI agent（codex／claude）、跨機（WSL）——agent 代跑不了的記到 [WAIT_USER](../WAIT_USER.md)。proto8 的 agent-dan 接真腦實跑放在 `~/code/try/agent-dan/`（使用者 10-23「試驗場放在~/code/try」；走家機 LiteLLM，agent 跑得了）。
 
 | ctest 目標 | 小專案 | 涵蓋 |
 |-----------|--------|------|

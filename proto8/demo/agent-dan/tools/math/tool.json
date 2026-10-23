@@ -1,0 +1,4 @@
+{"description": "算一個算術式子，回結果。只收數字、+ - * / // % **、括號與正負號。",
+ "parameters": {"type": "object",
+                "properties": {"expr": {"type": "string", "description": "要算的式子，例：17*23"}},
+                "required": ["expr"]}}

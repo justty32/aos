@@ -23,8 +23,15 @@
 
 ## 七、腦與工具
 
-- **P-23** 腦＝OpenAI 相容的 chat completions 端點，由環境變數 `AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY` 指定；`AOS_BRAIN_URL` 沒設＝假腦（demo 預設）。只取回覆的 `content`（有工具時加 `tool_calls`），模型想的內容不收、不存。這台電腦不跑本機模型。（原型現狀；使用者 10-15「維持 openai 格式」「模型想的內容丟掉」（[thinking 10-15 topics/02](../thinking/2026-10-15-topics/02-agent工具與試146.md)）；§ 6；變數名照 C-54 全大寫底線）
-- **P-24** 想跟做分開：think 問腦、只把「要做什麼」寫進 `$AOS_STACK/plan.txt`；act 照 plan 動手、不問腦。能寫死的步驟（搬檔、寫檔）放在 act 這種程式格，不交給模型。（C-22 能寫死的節點換成程式；C-25）
+- **P-23** 腦＝OpenAI 相容的 chat completions 端點，由環境變數 `AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY` 指定；`AOS_BRAIN_URL` 沒設＝假腦（demo 預設）。只取回覆的 `content`（有工具時加 `tool_calls`），模型想的內容不收、不存。這台電腦不跑本機模型。（原型現狀；使用者 10-15「維持 openai 格式」「模型想的內容丟掉」（[thinking 10-15 topics/02](../thinking/2026-10-15-topics/02-agent工具與試146.md)）；§ 6；變數名照 C-54 全大寫底線）〔10-23 註：腦的模型名放範本的 `.env`（`AOS_BRAIN_MODEL`；`.env` 不蓋外面已設的），端點 `AOS_BRAIN_URL` 由叫它的人給；10-23 家機走 LiteLLM `http://localhost:4000/v1`（不用 key），範本預設 `chatgpt-gpt-6-luna-low`（使用者 10-23「盡量都用gpt的」）。範本 [demo/agent-dan](../demo/README.md)、P-41〕
+- **P-24** 想跟做分開：think 問腦、只把「要做什麼」寫進 `$AOS_STACK/plan.txt`；act 照 plan 動手、不問腦。能寫死的步驟（搬檔、寫檔）放在 act 這種程式格，不交給模型。（C-22 能寫死的節點換成程式；C-25）〔10-23 註：agent-dan 沒有 `plan.txt`——腦的決定（`$AOS_STACK/history.jsonl` 最後一則 assistant）就是 plan，act 照它叫工具或交答案、不問腦（P-41）〕
 - **P-25** 工具＝`tools/<名>/` 子資料夾程式，**放在叫它的那一格的資料夾裡**（`act/tools/cathy/`），格裡寫 `aos-exec tools/<名>`：地址是從自己 cwd 起算的相對路徑、永遠零個 `..`、不靠 PATH；`AOS_WS` 自然傳下去（要換工作區見 P-32）；工具要不要碰工作區、怎麼碰，是工具自己的事、風險設計者自管；工具裡是不是另一個 agent，呼叫者不知道也不管。stack 照 P-17。細節與理由見 P-33。（C-61 不用 PATH、地址在自己資料夾裡；N-55；C-66；C-52）
 - **P-26** 工具的參數怎麼進（args、stdin、或 stack 裡的檔）由工具自己的說明定；aos-exec 保證 args 與 stdin 原樣送到。（§ 4）入口是單子時也成立：args 接在單子 `argv` 的尾巴，單子沒寫 `stdin` 就接呼叫者的（§ 20 使用者沒異議、照預設「串流沒寫＝接呼叫者的」）；單子自己寫了 `stdin: 檔` 是它自己選的，不算 aos-exec 沒送到。
+- **P-41 腦的工具呼叫（`tool_calls`）**（10-23 定，範本 [demo/agent-dan](../demo/README.md)；[thinking 2026-10-23-tool-calls](../thinking/2026-10-23-tool-calls.md)）：
+  - **工具說明**：腦可以叫的工具照舊是 `tools/<名>/` 資料夾程式（P-25），裡面多一份 `tool.json`＝給模型看的說明，內容就是 OpenAI tool 的 function 物件去掉 `name`（`{"description": …, "parameters": {JSON Schema}}`，外部 API 欄位名照原名）；**工具名＝資料夾名**，組 `tools` 陣列時由程式填；`tool.json` 裡其他 key 忽略（C-48）。沒有 `tool.json` 的資料夾不算腦可以叫的工具。
+  - **介面**：模型給的 `arguments`（JSON 字串）原樣從 stdin 餵進去，工具的 stdout 整段就是結果（像 stamp）；用 argv 陣列叫、不經 `sh -c`。每個工具一個小格：`AOS_STACK=$AOS_STACK/<名>/ aos-exec tools/<名>`（P-17）。要把另一隻 agent 給腦當工具，轉接寫在那個工具資料夾自己的 `_entry`，範本不管（C-52）。
+  - **對話**：`$AOS_STACK/history.jsonl`，一行一則 OpenAI message（照 API 原形），只附加、不改寫；system 訊息每次從範本的 `system.txt` 讀、不存；模型想的內容不收（P-23）。
+  - **三態不變**（P-08）：腦的決定就是 plan（P-24）。think 問腦、回覆接一行；act 看最後一則 assistant——有 `tool_calls` 就逐個跑工具、結果接回 history、退 0 回 idle，題目還在 `cur/`，所以 think 帶 history 再問（P-12）；沒有 `tool_calls` 才把 `content` 寫成答案、題目搬 `done/`。
+  - **錯**：腦連不上或 HTTP 非 2xx＝`BrainFailed`、回覆不是 OpenAI 的形狀＝`ReplyBad`、叫了 `tools/` 裡沒有的工具＝`ToolUnknown`、`arguments` 不是 JSON＝`ArgumentsBad`、工具退非 0（含 10，P-35）＝`ToolFailed`（範本另有 `StackMissing`、`QuestionMissing`〔new/ 與 cur/ 都空〕、`HistoryBad`〔history.jsonl 有一行不是 JSON、或沒有 assistant 可照做〕）。一律 stderr 一行 `agent-dan: 代號 原因`、退 1、state 不動、history 不接那一則；人修好再 `aos-exec` 一次從同一格接著做（P-20）。逾時是 think、act 各自單子的 `timeout_ms`（P-22）。history 不設上限，要忘記＝換 stack。
+  - （C-19、C-46、C-52、C-61、N-50、P-17、P-23～P-26、P-33、P-35；使用者 10-23「範本」「litellm我開了，去做吧。」「盡量都用gpt的」；細節是照原則代定、可翻案）
 

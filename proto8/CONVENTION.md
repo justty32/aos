@@ -12,13 +12,15 @@
 
 **10-23 晚入口改名**（[thinking 2026-10-23-naming](thinking/2026-10-23-naming.md)，使用者「改。然後_開頭=附註這個概念刪掉。」「不認得的key就是忽略」）：入口預設名 `_exec` → `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者原話裡的 `_exec` 照留）；不認得的 key 一律忽略（C-48），`_` 開頭不再有特別意思。
 
+**10-23 腦的工具呼叫**（[thinking 2026-10-23-tool-calls](thinking/2026-10-23-tool-calls.md)，使用者「litellm我開了，去做吧。」「盡量都用gpt的」）：新增 **P-41**（第七節）——工具資料夾裡的 `tool.json` 給模型看、`arguments` 從 stdin 進、stdout 出、對話落在 `$AOS_STACK/history.jsonl`、三態不變、五種錯；P-08、P-23、P-24 加註。範本是 [demo/agent-dan](demo/README.md)。
+
 ## 分檔（2026-10-20 tidy：本檔超過 8 KB，按節逐字下放）
 
 <!-- wf-nav -->
 | 分檔 | 涵蓋的段 |
 |---|---|
 | [01-保證佈局入口.md](CONVENTION/01-保證佈局入口.md) | 一、aos 保證的（不是慣例，是底）；二、佈局（每檔一句）；三、入口、loop、fsm |
-| [02-題目stack停錯腦.md](CONVENTION/02-題目stack停錯腦.md) | 四、題目與答案；五、stack；六、停與錯；七、腦與工具 |
+| [02-題目stack停錯腦.md](CONVENTION/02-題目stack停錯腦.md) | 四、題目與答案；五、stack；六、停與錯；七、腦與工具（10-23 加 P-41 腦的工具呼叫） |
 | [03-shell版與inst版.md](CONVENTION/03-shell版與inst版.md) | 八、shell 版與 inst 版 |
 | [04-範例三種寫法.md](CONVENTION/04-範例三種寫法.md) | 八之「範例：同一隻 agent 的三種寫法」 |
 | [05-不管落實待決.md](CONVENTION/05-不管落實待決.md) | 九、慣例不管的；十、程式對這份的落實（10-23 起只有 impls 的 C++ 版，aos-tick 例外；兩版差異留作 10-23 前紀錄）；十一、要使用者決定的 |

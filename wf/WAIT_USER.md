@@ -13,5 +13,6 @@
 
 ## 待使用者項
 
-- 還沒確認的：tasks、腦的 tool_calls、兩種 kernel 三個方向題 → [plan § 1.2](../proto8/thinking/2026-10-21-plan.md)
+- 還沒確認的：tasks、兩種 kernel 兩個方向題 → [plan § 1.2](../proto8/thinking/2026-10-21-plan.md)
+- 腦的工具呼叫做完後要你看的三題（都不擋、已照推薦做）：agent 當腦的工具時題目怎麼交（範本只定 stdin 進 stdout 出）、腦叫了不存在的工具是停下等人還是回給腦、對話太長 → [thinking 10-23 tool-calls](../proto8/thinking/2026-10-23-tool-calls.md) 文末
 > 2026-10-12 使用者清帳：「舊帳可以清掉」「proto6 已經是老黃曆了，不管」——A 區 71 題、B 區 proto6 帳號真 root 驗收、C 區「先不決定」各項全部結案不再追。原 `wait-user/` 分類檔已封存（見 common/archive 索引），編號不回收。

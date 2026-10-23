@@ -1,5 +1,6 @@
 #!/bin/sh
 # 各建一個暫時工作區、放一題、cd 進去跑 agent-bob（含它叫的 cathy）與 agent-ann（慣例用法）、印出工作區與整棵 stack 樹；
+# 接著跑 agent-dan（假腦、叫 clock 工具再答）；
 # 再跑 daemon：一個 daemon 同時管 bob、ann 兩個子 loop（各自的工作區在 bob/、ann/）；
 # 最後跑 tick：aos-loop 跑 5 次 aos-tick，時鐘檔 $AOS_STACK/tick.txt 走到 5（10-21 計畫第 4 段）
 here=$(cd "$(dirname "$0")" && pwd)
@@ -30,6 +31,11 @@ for agent in agent-bob agent-ann; do
   (cd "$ws" && aos-exec "$here/$agent"); echo "結束碼 $?"
   show "$ws"; rm -rf "$ws"
 done
+echo "######## agent-dan"   # 會用工具的問答 agent（假腦：先叫 clock、再答；thinking 2026-10-23-tool-calls）
+ws=$(mktemp -d)
+mkdir "$ws/new"; echo "現在幾點？" > "$ws/new/q1.txt"
+(cd "$ws" && aos-exec "$here/agent-dan"); echo "結束碼 $?"
+show "$ws"; rm -rf "$ws"
 echo "######## daemon"
 ws=$(mktemp -d)
 for a in bob ann; do mkdir -p "$ws/$a/new"; echo "2+2 等於多少？" > "$ws/$a/new/q1.txt"; done
