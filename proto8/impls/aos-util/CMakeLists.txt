@@ -34,7 +34,7 @@ if(PROJECT_IS_TOP_LEVEL)
   # 函式庫：一個執行檔，第一個參數挑要跑哪一條（tests/test_lib.cpp）
   add_executable(test_lib tests/test_lib.cpp)
   target_link_libraries(test_lib PRIVATE aos-util)
-  foreach(name split split_bad shebang escape missing)
+  foreach(name split split_bad shebang escape missing text)
     add_test(NAME test_lib_${name} COMMAND test_lib ${name})
   endforeach()
 endif()

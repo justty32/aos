@@ -7,7 +7,8 @@
 
 namespace aos {
 
-Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags) {
+Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
+              const std::map<std::string, std::string>& switches) {
     Cli out;
     size_t i = 0;
     while (i < argv.size()) {
@@ -21,6 +22,15 @@ Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, 
         }
         size_t eq = a.find('=');
         std::string name = a.substr(0, eq);
+        auto sw = switches.find(name);
+        if (sw != switches.end()) {
+            if (eq != std::string::npos) {
+                throw Error{code::Usage, name + " 不帶值"};
+            }
+            out.opts[sw->second] = "1";
+            i += 1;
+            continue;
+        }
         auto it = flags.find(name);
         if (it == flags.end()) {
             throw Error{code::Usage, "不認得的旗標 " + name};

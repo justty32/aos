@@ -13,7 +13,7 @@ using aos::Json;
 
 namespace code {
 using namespace aos::loop::code;   // Usage、StackMissing、ReadFailed、JsonSyntax、FieldType、WriteFailed、EntryBad、LaunchFailed…
-inline constexpr const char* StateUnknown = "StateUnknown";   // 表裡查不到現在的狀態，或那格不是 {"val", "next": 字串}
+inline constexpr const char* StateUnknown = "StateUnknown";   // state 檔裡的狀態不在表上（10-22 起表壞一律 FieldType）
 }  // namespace code
 
 }  // namespace aos::fsm

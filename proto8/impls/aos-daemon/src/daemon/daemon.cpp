@@ -46,6 +46,36 @@ std::optional<std::string> check_children(const Json& v) {
     return std::nullopt;
 }
 
+std::set<std::string> taken_names(const std::string& stack, const std::vector<std::string>& paths) {
+    std::set<std::string> out;
+    std::string base = aos::abspath(stack);
+    std::string prefix = base;
+    if (!prefix.ends_with('/')) {
+        prefix += "/";
+    }
+    for (const std::string& p : paths) {
+        if (p.empty()) {
+            continue;   // 沒開
+        }
+        std::string a = aos::abspath(p);
+        if (!a.starts_with(prefix) || a.size() == prefix.size()) {
+            continue;   // 在 $AOS_STACK 外面（或就是它）不算
+        }
+        std::string rel = a.substr(prefix.size());
+        out.insert(rel.substr(0, rel.find('/')));
+    }
+    return out;
+}
+
+std::optional<std::string> check_names(const Json& v, const std::set<std::string>& taken) {
+    for (auto& [name, c] : v.items()) {
+        if (taken.count(name) > 0) {
+            return "children 的名字 " + aos::dumps(Json(name)) + " 跟 daemon 自己的 ctl／state 撞名";
+        }
+    }
+    return std::nullopt;
+}
+
 Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string& spec)
     : Loop(opts, spec, daemon_defaults()) {
     if (stack_.empty()) {
@@ -58,6 +88,11 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     std::optional<std::string> bad = check_children(children_);
     if (bad) {
         throw Error{code::FieldType, *bad};
+    }
+    taken_ = taken_names(stack_, {ctl_path_, state_path_});
+    bad = check_names(children_, taken_);
+    if (bad) {
+        throw Error{code::Conflict, *bad};   // 使用者 10-22「子項名字擋掉跟 ctl／state 同名」
     }
     Json a = cfg_.value("adopt", Json(true));
     if (!a.is_boolean()) {
@@ -113,8 +148,12 @@ Child* Daemon::find(const std::string& name) {
 }
 
 std::optional<std::string> Daemon::check_ctl(const Json& doc) {
-    if (doc.contains("children")) {
-        return check_children(doc["children"]);
+    if (doc.contains("children")) {   // ctl 改 children 撞名＝整份不採用（N-08；原因進 last_warning）
+        std::optional<std::string> bad = check_children(doc["children"]);
+        if (bad) {
+            return bad;
+        }
+        return check_names(doc["children"], taken_);
     }
     return std::nullopt;
 }

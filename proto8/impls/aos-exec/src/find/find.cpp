@@ -112,7 +112,7 @@ std::set<std::string> enter(const std::string& dir, const std::string& cf, const
     }
     std::set<std::string> names;
     if (entry_name() != ".env") {
-        names = load_env(dir);
+        names = load_env(dir, layer.dotenv_override);
     }
     layer.apply();
     return names;
@@ -127,8 +127,10 @@ void mark(std::set<std::string>& visited, const std::string& dir) {
 
 }  // namespace
 
-Found hop(const std::string& spec, const std::string& base, const std::string& ws_flag, Chain& chain) {
+Found hop(const std::string& spec, const std::string& base, const std::string& ws_flag, bool dotenv_override,
+          Chain& chain) {
     Layer layer;
+    layer.dotenv_override = dotenv_override;
     layer.flag_ws = !(ws_flag == "-" || ws_flag.empty());
     std::string ws = check_ws(ws_flag);
     layer.ws = ws;

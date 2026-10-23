@@ -1,9 +1,9 @@
 // main.cpp：aos-fsm 命令列——一拍只跑一格（N-36）。
 //
-//     aos-fsm [旗標] fsm.json
+//     aos-fsm [旗標] 設定檔.json
 //
 //   block_signals → 命令列（目前沒有旗標；唯一的位置參數＝設定檔，可寫 `檔#/指標`；10-21 傍晚 ideas § 9）→ 要 AOS_STACK →
-//   read_table → read_state → pick → run_beat（aos-loop 的公開 API：子行程 `aos-exec -- 目標 參數...`）
+//   read_table → check（開跑時查整張表，10-22）→ read_state（在但讀不了＝ReadFailed，10-22）→ pick → run_beat（aos-loop 的公開 API：子行程 `aos-exec -- 目標 參數...`）
 //   → append_trace → 格的碼 0 才 write_state(next) → 以格的碼結束
 //
 // val＝字串或 [目標, 參數...]（相對路徑從 cwd 算，fsm 不轉）；物件＝表壞（要內嵌單子寫 fsm.json#/states/<名>/body）。
@@ -11,6 +11,7 @@
 // trace 一行 {"at","state","code","signal","ms"}，沒有 timed_out（fsm 看不到格裡有沒有逾時，C-52；10-21 plan F4）。
 // 收到 SIGINT／SIGTERM／SIGHUP：轉給那格、等它結束，trace 與 state 照常寫完，再以 128＋N 結束（P-36）。
 // 自己出錯：stderr 一行「aos-fsm: 代號 原因」、退 1（N-38、N-60）。
+#include "aos/files.hpp"
 #include "aos/loop.hpp"
 
 #include "state/state.hpp"
@@ -20,7 +21,7 @@
 #include <cstdlib>
 #include <exception>
 
-static const char* USAGE = "usage: aos-fsm fsm.json";
+static const char* USAGE = "usage: aos-fsm [旗標] 設定檔.json";   // 旗標表是空的也寫 [旗標]（同 bin，10-22）
 
 static int fail(const std::string& code, const std::string& msg) {
     std::fprintf(stderr, "aos-fsm: %s %s\n", code.c_str(), msg.c_str());
@@ -51,8 +52,9 @@ int main(int argc, char** argv) {
         }
         std::string stack = s;
         fsm::Table table = fsm::read_table(cli.rest[0]);
+        std::map<std::string, fsm::Cell> cells = fsm::check(table);   // 10-22：開跑時查整張表，哪一格壞都不跑
         std::string state = fsm::read_state(stack, table.start);
-        fsm::Cell cell = fsm::pick(table, state);
+        fsm::Cell cell = fsm::pick(cells, state, aos::join(stack, "state"));
 
         int sig = aos::loop::take_signal();
         if (sig != 0) {

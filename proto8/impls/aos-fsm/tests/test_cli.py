@@ -239,8 +239,9 @@ def bad_tables(t):
 
 @case
 def bad_cells(t):
-    for c, code in (({"val": "a"}, "StateUnknown"), ({"next": "a"}, "StateUnknown"), ({"val": "a", "next": 3}, "StateUnknown"),
-                    ("a", "StateUnknown"), ({"val": 3, "next": "a"}, "FieldType"), ({"val": [], "next": "a"}, "FieldType"),
+    # 10-22 起開跑時查整張表：格的形狀不對也算表壞（FieldType；原本這拍查到那格才擋、StateUnknown）
+    for c, code in (({"val": "a"}, "FieldType"), ({"next": "a"}, "FieldType"), ({"val": "a", "next": 3}, "FieldType"),
+                    ("a", "FieldType"), ({"val": 3, "next": "a"}, "FieldType"), ({"val": [], "next": "a"}, "FieldType"),
                     ({"val": ["a", 1], "next": "a"}, "FieldType"), ({"val": {"argv": ["true"]}, "next": "a"}, "FieldType")):
         put(Path(t, "fsm.json"), {"start": "a", "states": {"a": c}})
         check("格壞 %r" % (c,), run(t)[:3:2], (1, code))
@@ -390,7 +391,7 @@ def cli_usage(t):
     table(t, {"a": {"val": "a", "next": "a"}})
     for args in (("fsm.json", "more"), ("--cfg", "fsm.json"), ("--x=1", "fsm.json")):
         r = subprocess.run([BIN, *args], capture_output=True, text=True, env=env_of(t, None), cwd=t, timeout=60)
-        check("usage %r" % (args,), (r.returncode, r.stderr.startswith("aos-fsm: Usage usage: aos-fsm fsm.json")), (1, True))
+        check("usage %r" % (args,), (r.returncode, r.stderr.startswith("aos-fsm: Usage usage: aos-fsm [旗標] 設定檔.json（")), (1, True))
     cell(t, "a", "exit 0\n")
     r = subprocess.run([BIN, "--", "fsm.json"], capture_output=True, text=True, env=env_of(t, None), cwd=t, timeout=60)
     check("-- 結束旗標", (r.returncode, state(t)), (0, "a\n"))
@@ -400,7 +401,7 @@ def cli_usage(t):
 def cli_config_pointer(t):
     cell(t, "a", "exit 0\n")
     put(Path(t, "agent.json"), {"_exec": ["aos-fsm", {"$env": "AOS_CF", "$path": "#/fsm"}],
-                                "fsm": {"start": "a", "states": {"a": {"val": "a", "next": "z"}}}})
+                                "fsm": {"start": "a", "states": {"a": {"val": "a", "next": "z"}, "z": {"val": "a", "next": "a"}}}})
     rc = run(t, "agent.json#/fsm")[0]
     check("設定檔 檔#/指標", (rc, state(t)), (0, "z\n"))
     for spec, code in (("agent.json#/nope", "FieldType"), ("agent.json#fsm", "FieldType")):
@@ -413,6 +414,67 @@ def cell_val_array(t):
     table(t, {"a": {"val": ["a", "x y", "--z"], "next": "a"}})
     rc = run(t)[0]
     check("val 陣列＝[目標, 參數...]", (rc, (st(t) / "args").read_text()), (0, "x y --z\n"))
+
+
+# ───────── E. 10-22：state 在但讀不了退 1、開跑時查整張表（ideas 10-22 § 7；對照 proto8/tests/test_fsm.py）─────────
+
+def own_error_no_beat(t, name, r):
+    rc, _, err, stderr = r
+    check(name, (rc, err, len(stderr.splitlines()), (st(t) / "ran").exists(), (st(t) / "trace.jsonl").exists()),
+          (1, err if err in ("ReadFailed", "FieldType", "StateUnknown") else "?", 1, False, False))
+    return err
+
+
+@case
+def state_exists_but_unreadable(t):
+    cell(t, "a", 'touch "$AOS_STACK/ran"\n')
+    table(t, {"a": {"val": "a", "next": "b"}, "b": {"val": "a", "next": "a"}})
+    sf = st(t) / "state"
+    sf.mkdir(parents=True)
+    check("state 是資料夾", own_error_no_beat(t, "state 是資料夾：不跑", run(t)), "ReadFailed")
+    sf.rmdir()
+    sf.write_bytes(b"\xff\xfe\n")
+    check("state 不是 UTF-8", own_error_no_beat(t, "state 不是 UTF-8：不跑", run(t)), "ReadFailed")
+    check("state 不動", sf.read_bytes(), b"\xff\xfe\n")
+    if os.geteuid() != 0:   # root 讀得到沒權限的檔
+        sf.write_text("b\n")
+        sf.chmod(0)
+        try:
+            check("state 沒權限", own_error_no_beat(t, "state 沒權限：不跑", run(t)), "ReadFailed")
+        finally:
+            sf.chmod(0o644)
+    sf.write_text("zz\n")
+    check("state 不在表上", own_error_no_beat(t, "state 不在表上：不跑", run(t)), "StateUnknown")
+    sf.write_text("\u3000b\u3000\n")   # 去頭尾空白認 Unicode 空白（同 bin 的 str.strip()）
+    rc = run(t)[0]
+    check("state 去全形空白", (rc, state(t)), (0, "a\n"))
+    sf.unlink()
+    rc, _, _, stderr = run(t)
+    check("沒有檔＝start", (rc, stderr, state(t)), (0, "", "b\n"))
+
+
+@case
+def whole_table_checked_before_beat(t):
+    cell(t, "a", 'touch "$AOS_STACK/ran"\n')
+    good = {"val": "a", "next": "a"}
+    for what, start, states in (
+            ("start 不在表上", "zz", {"a": good}),
+            ("next 不在表上", "a", {"a": {"val": "a", "next": "nope"}}),
+            ("別格 next 不在表上", "a", {"a": good, "b": {"val": "a", "next": "nope"}}),
+            ("next 空字串", "a", {"a": {"val": "a", "next": ""}}),
+            ("別格 next 空字串", "a", {"a": good, "b": {"val": "a", "next": ""}}),
+            ("next 頭尾空白", "a", {"a": {"val": "a", "next": " a"}, " a": good}),
+            ("next 頭尾全形空白", "a", {"a": {"val": "a", "next": "a\u3000"}, "a\u3000": good}),
+            ("next 有換行", "a", {"a": {"val": "a", "next": "x\ny"}, "x\ny": good}),
+            ("next 不是字串", "a", {"a": good, "b": {"val": "a", "next": 3}}),
+            ("別格沒 next", "a", {"a": good, "b": {"val": "a"}}),
+            ("別格不是物件", "a", {"a": good, "b": "a"}),
+            ("別格 val 是物件", "a", {"a": good, "b": {"val": {"argv": ["true"]}, "next": "a"}}),
+            ("別格 val 空陣列", "a", {"a": good, "b": {"val": [], "next": "a"}})):
+        put(Path(t, "fsm.json"), {"start": start, "states": states})
+        check("表壞 %s" % what, own_error_no_beat(t, "表壞 %s：不跑" % what, run(t)), "FieldType")
+    put(Path(t, "fsm.json"), {"start": "a", "states": {"a": good, "b": {"val": "a", "next": "a"}}})
+    check("表好照跑", (run(t)[0], (st(t) / "ran").exists()), (0, True))
 
 
 for fn in cases:

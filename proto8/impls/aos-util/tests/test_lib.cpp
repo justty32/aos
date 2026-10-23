@@ -1,10 +1,11 @@
-// test_lib.cpp：aos-util 函式庫的測試（目前只測入口尋址：split_hash、read_json_at）。
+// test_lib.cpp：aos-util 函式庫的測試（入口尋址：split_hash、read_json_at；10-22 起加 aos/text.hpp 的空白與 UTF-8）。
 //
 //   test_lib 條名
 //
 // 一個執行檔，第一個參數挑跑哪一條（ctest 每條各叫一次，見 CMakeLists.txt；寫法照 aos-schema 的 test_lib.cpp）。
 // 不靠測試框架：CHECK 不過就印出哪一行、退 1。要用的檔自己在暫存資料夾裡寫。
 #include "aos/files.hpp"
+#include "aos/text.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -95,6 +96,23 @@ void test_missing() {
     CHECK(read_error(put("bad.json", "{"), "") == "JsonSyntax");
 }
 
+// 空白照 Python str.isspace（全形空白、不換行空白、\x1c 都算；零寬空白 U+200B、U+FEFF 不算）
+void test_text() {
+    CHECK(aos::strip(" \t a b \r\n") == "a b");
+    CHECK(aos::strip("\u3000a\u00a0\u2028") == "a");
+    CHECK(aos::lstrip("\x1c\u2000x\u3000") == "x\u3000");
+    CHECK(aos::rstrip("\u3000x\u205f\u202f") == "\u3000x");
+    CHECK(aos::strip("\u200bx\ufeff") == "\u200bx\ufeff");
+    CHECK(aos::strip("\u3000\u3000") == "");
+    CHECK(aos::strip("中文") == "中文");
+    CHECK(aos::space_at("a\u3000", 1) == 3);
+    CHECK(aos::space_at("a\u3000", 0) == 0);
+    CHECK(aos::is_utf8("中文\u3000"));
+    CHECK(!aos::is_utf8("\xff"));
+    CHECK(!aos::is_utf8("\xc0\x80"));      // 過長編碼
+    CHECK(!aos::is_utf8("\xed\xa0\x80"));  // 代理區
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -119,6 +137,8 @@ int main(int argc, char** argv) {
         test_escape();
     } else if (name == "missing") {
         test_missing();
+    } else if (name == "text") {
+        test_text();
     } else {
         std::fprintf(stderr, "沒有這條：%s\n", argv[1]);
         return 2;

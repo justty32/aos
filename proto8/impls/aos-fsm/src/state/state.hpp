@@ -11,7 +11,8 @@
 
 namespace aos::fsm {
 
-// stack/state 的內容去掉前後空白；檔不在、讀不了、空的＝start。
+// stack/state 的內容去掉前後空白（認 Unicode 空白，同 bin 的 str.strip()）；檔不在、空的＝start。
+// 10-22：在但讀不了（沒權限、是資料夾、不是 UTF-8…）ReadFailed（原本當沒有檔、從 start 起）。
 std::string read_state(const std::string& stack, const std::string& start);
 
 // stack/.state 寫 "名\n"，再改名成 stack/state。寫不了 WriteFailed。

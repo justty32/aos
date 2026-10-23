@@ -1,6 +1,6 @@
 # aos-exec
 
-**一句話：`aos-exec [--ws WS] XXX [args...]`——在工作區 WS 執行 XXX 這個程式：定好工作區、走進 XXX（cd、讀那裡的 `.env`）、挑出入口、備好環境變數、開跑。**
+**一句話：`aos-exec [--ws WS] [--dotenv-override] XXX [args...]`——在工作區 WS 執行 XXX 這個程式：定好工作區、走進 XXX（cd、讀那裡的 `.env`）、挑出入口、備好環境變數、開跑。**
 一個 lib（`lib/libaos-exec.a`，公開標頭 `aos/exec.hpp`）加一支薄薄的命令列（`bin/aos-exec`，只叫 `run_cli`）。連 aos-util、aos-directive（解單子、argv 陣列與 JSON `.env` key 的指示詞）、inst（C 的 libaos，靜態版 `inst-static`）。全家慣例見 [impls/README.md](../README.md)。
 inst 是 C lib、沒有命令列，inst 單子由 aos-exec 在行程內跑（ideas § 20）。[aos-loop](../aos-loop/README.md)、[aos-fsm](../aos-fsm/README.md) 的每一拍、[aos-daemon](../aos-daemon/README.md) 的子 loop，都是在 fork 出來的子行程裡呼叫這個庫的 `run_cli`（等同起一支 `aos-exec -- 目標 參數...`；10-21 晚）。
 
@@ -18,18 +18,21 @@ echo hi | aos-exec tool              # tool/_exec.json 是 {"argv": ["cat"]}：�
 ## 用法
 
 ```
-aos-exec [--ws WS] XXX [args...]
+aos-exec [--ws WS] [--dotenv-override] XXX [args...]
 ```
 
 - **旗標**寫在 XXX 前面；**第一個不是旗標的參數**（不以 `-` 開頭，或就是 `-`）就是 XXX，之後全部**原樣**給入口（XXX 後面的 `--ws`、`--` 也是 args）。
-  `--` 結束旗標（XXX 可以 `-` 開頭：`aos-exec -- -p`）。旗標都帶一個值：`--ws V` 或 `--ws=V`；重複給＝最後一個算。
-  不認得的旗標、旗標缺值、沒給 XXX＝`Usage`，stderr 一行 `aos-exec: Usage usage: aos-exec [--ws WS] XXX [args...]（原因）`。
-  旗標解析在 aos-util 的 `aos/cli.hpp`（`parse_cli`，loop／fsm／daemon 共用）；aos-exec 的旗標表目前只有 `--ws` 一列（10-21 ideas § 3）。
-- **`--ws WS`**（目前唯一的旗標）：沒給、`-` 或空＝沿用 `$AOS_WS`，沒設用 `.`；給路徑就用那個（相對於呼叫當下的 cwd）；不是資料夾＝`WorkspaceMissing`。
+  `--` 結束旗標（XXX 可以 `-` 開頭：`aos-exec -- -p`）。帶值的旗標寫 `--ws V` 或 `--ws=V`；重複給＝最後一個算。
+  不認得的旗標、旗標缺值、沒給 XXX、不帶值的旗標寫成 `--dotenv-override=V`＝`Usage`，stderr 一行 `aos-exec: Usage usage: aos-exec [--ws WS] [--dotenv-override] XXX [args...]（原因）`。
+  旗標解析在 aos-util 的 `aos/cli.hpp`（`parse_cli`，loop／fsm／daemon 共用）；aos-exec 的旗標表有 `--ws`（10-21 ideas § 3）與不帶值的 `--dotenv-override`（10-22）。
+- **`--dotenv-override`**（10-22 ideas § 3，不帶值、重複給＝一樣）：`.env` 蓋掉已有的環境變數。只管這一次起來的 aos-exec：這一跳一路往下讀的每份 `.env`
+  （資料夾、`$AOS_ENTRY` 沿路、JSON 物件的 `.env` key）都吃；字串轉向（全新一跳）、argv 陣列插進去的 aos-exec、loop／fsm／daemon 每拍叫的 aos-exec 都不吃，要的人自己在 argv 寫。
+- **`--ws WS`**：沒給、`-` 或空＝沿用 `$AOS_WS`，沒設用 `.`；給路徑就用那個（相對於呼叫當下的 cwd）；不是資料夾＝`WorkspaceMissing`。
   舊寫法 `aos-exec XXX WS args...` 已不認：XXX 後面的 WS 現在是 args。
 - **XXX**：資料夾、檔、或 `檔#/指標`；相對路徑從呼叫當下的 cwd 算。
 - **args** 原樣接在入口後面；stdin 不讀，原樣給入口。
-- **優先順序**：旗標 ＞ `.env` ＞ 原本的環境 ＞ 預設（例：工作區＝`--ws` ＞ `.env` 的 `AOS_WS` ＞ 外面的 `$AOS_WS` ＞ `.`）。
+- **優先順序**（10-22 改）：沒 `--dotenv-override`＝旗標 ＞ 原本的環境 ＞ `.env` ＞ 預設；有＝旗標 ＞ `.env` ＞ 原本的環境 ＞ 預設
+  （例：工作區＝`--ws` ＞ 外面的 `$AOS_WS` ＞ `.env` 的 `AOS_WS` ＞ `.`；`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO` 在讀 `.env` 前已設好，不加旗標 `.env` 改不了）。
 
 ### 一跳（hop）：走進去、讀 `.env`、挑入口
 
@@ -81,12 +84,18 @@ aos-exec [--ws WS] XXX [args...]
 
 ### `.env`
 
-格式照 `src/env/dotenv.cpp`（10-21 ideas § 4.3，N-59 第 4 件）：
+格式照 `src/env/dotenv.cpp`（10-21 ideas § 4.3，N-59 第 4 件；10-22 ideas § 3 改成 dotenv 基礎子集，照 bin 版逐案比過、跟 python-dotenv 一樣）：
 
-- 一行 `名字=值`；去前導空白、去行尾 `\r` 後，空的或 `#` 開頭＝跳過（只有行首的 `#` 是註解）；`=` 只切第一個；值照字面（不去頭尾空白）；不支援引號、`export `、多行值；同名後者贏。
-- 名字要是 `[A-Za-z_][A-Za-z0-9_]*`，不合＝`EnvBad`（`名字 =值` 也算不合）。
+- 一行 `[export ]名字=值`；去前導空白（只認 ASCII 空白）、去行尾 `\r` 後，空的或 `#` 開頭＝跳過；行首 `export `（export 後接空格／tab、再接不是 `=` 的字）忽略；
+  `=` 只切第一個、兩邊空白忽略（名字後面只認空格／tab）。
+- 值（`env_value`）：沒引號＝去頭尾空白，第一個「空白＋`#`」起是行尾註解（`a#b`、`#fff` 照字面，同 python-dotenv）；`=` 後空白再接 `#`（`X= # c`）＝`EnvBad`。
+  單、雙引號只剝一對、不跳脫、不跨行，引號後只能接空白或 `#` 註解；雙引號裡展開 `${名字}`、單引號照字面；引號沒收尾、引號裡有 `\`、單引號裡有 `${`、引號後有雜字＝`EnvBad`。
+  值頭尾與 `#` 前面的空白照 python-dotenv 認 Unicode 空白（Python `str.isspace` 那一套，含全形空白、不換行空白；aos-util 的 `aos/text.hpp`）。不支援 unset、多行、跳脫、`${X:-y}`。
+- **預設不蓋**：開始讀一份 `.env` 那一刻環境裡已有的名字，那一行跳過（格式、`${名字}` 照驗，壞了照報錯）；同一份檔裡同名照樣後者贏。加 `--dotenv-override`＝蓋。
+  JSON 物件的 `.env` key 格式不變（引號、註解那些 JSON 自己有，不套），只套蓋不蓋。
+- 名字要是 `[A-Za-z_][A-Za-z0-9_]*`，不合＝`EnvBad`。
 - 值只展開 `${名字}`，逐行（後面看得到前面設的、也看得到 aos-exec 剛算好的 `AOS_*`）；`${名字}` 沒設＝`EnvBad`、`${` 後面不是 `名字}`＝`EnvBad`；孤零零的 `$`（含 `$名字`）原樣留；值裡有 NUL＝`EnvBad`。不自動轉相對路徑。
-- 什麼都能設，包括 `AOS_*`（風險自擔）；cd 已經做了，改 `AOS_CD` 不會再 cd。旗標等整份讀完才蓋回，所以 `.env` 自己設了 `AOS_WS`、後面又寫 `${AOS_WS}` 拿到的是 `.env` 的值——建議 `.env` 不要設有旗標的變數（K5）。
+- 什麼都能設，包括 `AOS_*`（風險自擔；讀 `.env` 前已設的要加 `--dotenv-override`）；cd 已經做了，改 `AOS_CD` 不會再 cd。旗標等整份讀完才蓋回，所以 `.env` 自己設了 `AOS_WS`、後面又寫 `${AOS_WS}` 拿到的是 `.env` 的值——建議 `.env` 不要設有旗標的變數（K5）。
 - 沒有 `.env`＝什麼都不做；有但讀不到（權限、它是資料夾、壞掉的捷徑）＝`EnvReadFailed`（原因開頭 `.env 讀不到`）；不是 UTF-8（含帶 BOM：BOM 不去掉，第一行名字不合）＝`EnvBad`（原因開頭 `.env 壞`）。
   錯只印檔名和行號（JSON `.env` key：只印「檔#指標 的 .env」），**絕不印值**、也不印名字。權限不檢查。
 
@@ -212,7 +221,7 @@ aos-exec [--ws WS] XXX [args...]
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-`ctest` 跑 `test_cli`（`tests/test_cli.py`，55 組，約 1 秒）。A～D 段用 `run(XXX, WS, args...)` 小工具，轉成新命令列 `aos-exec --ws WS XXX args...`；E 段直接用 `raw(...)` 給命令列。
+`ctest` 跑 `test_cli`（`tests/test_cli.py`，56 組，約 1 秒）。A～D 段用 `run(XXX, WS, args...)` 小工具，轉成新命令列 `aos-exec --ws WS XXX args...`；E 段直接用 `raw(...)` 給命令列。
 A 段從 `proto8/tests/test_exec.py` 移植跟 aos-exec 本身有關的案例（靠 demo、aos-loop、aos-fsm 的不移植），
 B 段是 § 14～§ 19 的新規則（含「exec 不留行程」：入口的 `$$`＝aos-exec 的 pid；`+x` 沒 `#!` 交給 sh；`$AOS_ENTRY` 指到資料夾＝走進去、沒 `argv` 的物件一路往下），
 C 段是 inst 單子：結束碼轉交（3、10、SIGTERM＝143）、監工留在行程裡、shebang 開頭的非 `+x` 單子、args／`#/`／`_exec`／字串轉向、
@@ -223,9 +232,12 @@ argv[0] 帶 `/` 又 exec 不了＝交給 aos-exec（資料夾、JSON 檔、補 `
 E 段是 10-21 的新規則（對照 `proto8/tests/test_exec_rules.py`、`test_exec_env.py`）：旗標（`--ws V`／`--ws=V`、重複給、蓋過 `$AOS_WS`、`-`／空＝沿用、XXX 之後不解析、舊的位置 WS 變 args、`--`、不認得、缺值、沒 XXX、usage 一行）、
 `.env`（逐行、`${名字}`、`=` 只切第一個、沒有 `.env`；旗標 ＞ `.env` ＞ 外面；`${}` 沒設與各種壞法都不印值、不是 UTF-8、是資料夾）、
 入口順序（`.env` 設的 `AOS_ENTRY` 有作用、多段 `$AOS_ENTRY` 沿路讀 `.env`、挑到資料夾一路往下、走回走過的資料夾）、
-JSON 物件（`.env` key、一路往下、`AOS_CO`、`檔#/指標` 算進 `AOS_CO`、整份檔＝空、`.env` key 設 `AOS_ENTRY`、指示詞解不開）、轉向（下一層讀自己的 `.env`、旗標不帶過去）。
+JSON 物件（`.env` key、一路往下、`AOS_CO`、`檔#/指標` 算進 `AOS_CO`、整份檔＝空、`.env` key 設 `AOS_ENTRY`、指示詞解不開）、轉向（下一層讀自己的 `.env`、旗標不帶過去）；
+10-22 起靠「`.env` 蓋原有」的案例改成不加／加 `--dotenv-override` 各一份，另加 `e_dotenv_subset`（基礎子集的收下與壞的寫法、Unicode 空白、預設不蓋與同檔後者贏、
+旗標重複給與 `=V` 錯、跳過的行照驗、轉向不吃旗標、JSON `.env` key 格式不變；對照 `proto8/tests/test_exec_dotenv.py`）。
 測試的 `raw()` 把 aos-exec 的 `bin/` 放 PATH 最前面——aos-exec 不動 PATH（§ 24），入口裡要叫 `aos-exec` 由呼叫者放；`path_passed_as_is` 驗 PATH 原樣傳下去。
 
 **拿 `proto8/tests` 對照**（手動，不進 ctest）：把 `proto8/tests` 複製到暫存資料夾，旁邊的 `bin/` 換成指到 impls 四支（aos-exec、aos-loop、aos-fsm、aos-daemon）的捷徑，
-用 `sitecustomize` 把 stderr 一行裡的代號抹掉（代號是兩版刻意不同的地方）再跑：`test_exec`、`test_exec_rules`、`test_exec_env` 全過，
-只剩要 bin 版 `aos-inst` 命令列的案例不過（impls 沒有 aos-inst 命令列，刻意不同）。
+把 stderr 一行裡的代號抹掉再跑（10-23 用包一層 bash 的捷徑：`exec 2> >(sed … >&2)` 再 exec impls 那支）：
+10-23 全套 243 個只剩 2 個不過，都是 inst 單子錯誤訊息的字面（`test_inst` 要原因開頭是 key 名、這裡是「單子的 key…」；`test_directive_argv` 的 D1 要訊息裡有檔名、
+這裡 libaos 的 `OpenFailed` 不帶檔名），行為一樣。裝了 python-dotenv（`pip install --target` 到暫存資料夾、`PYTHONPATH` 指過去）時 `test_exec_dotenv` 的逐案對照也過。

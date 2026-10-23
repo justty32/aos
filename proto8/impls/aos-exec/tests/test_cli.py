@@ -686,7 +686,7 @@ def e_flags(t):
     check("旗標缺值", raw("--ws")[:3:2], (1, "Usage"))
     check("只有旗標沒有 XXX", raw("--ws", str(ws))[:3:2], (1, "Usage"))
     rc, _, _, stderr = raw("--nope")
-    check("usage 一行", stderr.startswith("aos-exec: Usage usage: aos-exec [--ws WS] XXX [args...]"), True)
+    check("usage 一行", stderr.startswith("aos-exec: Usage usage: aos-exec [--ws WS] [--dotenv-override] XXX [args...]"), True)
 
 
 @case
@@ -706,7 +706,10 @@ def e_dotenv_priority(t):
     d = prog(t, "p", 'echo "$AOS_WS"\n')
     put(Path(d, ".env"), "AOS_WS=%s\n" % b)
     check("旗標 ＞ .env", raw("--ws", str(a), d, env={"AOS_WS": str(c)})[1], "%s\n" % a.resolve())
-    check(".env ＞ 外面", raw(d, env={"AOS_WS": str(c)})[1], "%s\n" % b)
+    # 10-22 起 .env 預設不蓋已有的：AOS_WS 讀 .env 前已 export，要 --dotenv-override 才改得了
+    check(".env 不蓋外面（預設）", raw(d, env={"AOS_WS": str(c)})[1], "%s\n" % c.resolve())
+    check("--dotenv-override：.env ＞ 外面", raw("--dotenv-override", d, env={"AOS_WS": str(c)})[1], "%s\n" % b)
+    check("--dotenv-override 仍是旗標 ＞ .env", raw("--dotenv-override", "--ws", str(a), d)[1], "%s\n" % a.resolve())
 
 
 @case
@@ -737,8 +740,10 @@ def e_entry_after_env(t):
     put(q / ".env", "X=top\n")
     put(q / "sub" / ".env", "X=${X}-sub\n")
     put(q / "sub" / "run", '#!/bin/sh\necho "$X|$AOS_CD"\n', 0o755)
-    check("多段 $AOS_ENTRY 沿路讀 .env", raw("--ws", t, str(q), env={"AOS_ENTRY": "sub/run"})[:2],
+    check("多段 $AOS_ENTRY 沿路讀 .env（加旗標才蓋）", raw("--dotenv-override", "--ws", t, str(q), env={"AOS_ENTRY": "sub/run"})[:2],
           (0, "top-sub|%s\n" % (q / "sub").resolve()))
+    check("多段 $AOS_ENTRY 沿路讀 .env（不蓋＝外層贏）", raw("--ws", t, str(q), env={"AOS_ENTRY": "sub/run"})[:2],
+          (0, "top|%s\n" % (q / "sub").resolve()))
     r = Path(t, "r")
     put(r / "_exec" / ".env", "Y=mid\n")
     put(r / "_exec" / "_exec" / "_exec", '#!/bin/sh\necho "$Y"\n', 0o755)
@@ -751,7 +756,9 @@ def e_json_object_and_co(t):
     q = Path(t, "q")
     sh = ["sh", "-c", 'echo "$A|[$AOS_CO]"']
     put(q / "x.json", {".env": {"A": "1", "N": 3}, "_exec": {".env": {"A": "${A}2"}, "_exec": sh}})
-    check("JSON .env key、一路往下、AOS_CO", raw("--ws", t, str(q / "x.json"))[:2], (0, "12|[/_exec/_exec]\n"))
+    check("JSON .env key、一路往下、AOS_CO（加旗標才蓋）", raw("--dotenv-override", "--ws", t, str(q / "x.json"))[:2],
+          (0, "12|[/_exec/_exec]\n"))
+    check("JSON .env key 不蓋＝外層贏", raw("--ws", t, str(q / "x.json"))[:2], (0, "1|[/_exec/_exec]\n"))
     put(q / "c.json", {"a": {"_exec": sh}, "l": [sh]})
     check("檔#/指標也算進 AOS_CO", raw("--ws", t, str(q / "c.json") + "#/a")[:2], (0, "|[/a/_exec]\n"))
     put(q / "a.json", sh)
@@ -773,7 +780,58 @@ def e_redirect_is_fresh_hop(t):
     put(Path(t, "t", ".env"), "T=t\n")
     put(Path(t, "t", "_exec"), '#!/bin/sh\necho "$R|$T|$AOS_WS|$*"\n', 0o755)
     check("轉向：下一層讀自己的 .env", raw("--ws", str(a), str(r), "x")[:2], (0, "r|t|%s|x\n" % a.resolve()))
-    check("轉向：沒旗標時 .env 的 AOS_WS 留著", raw(str(r), cwd=t)[:2], (0, "r|t|%s|\n" % b))
+    check("轉向：.env 不蓋已 export 的 AOS_WS", raw(str(r), cwd=t)[:2], (0, "r|t|%s|\n" % Path(t).resolve()))
+    check("轉向：--dotenv-override 時 .env 的 AOS_WS 留著", raw("--dotenv-override", str(r), cwd=t)[:2], (0, "r|t|%s|\n" % b))
+
+@case
+def e_dotenv_subset(t):
+    # 10-22 ideas § 3：.env 改 dotenv 基礎子集、預設不蓋、--dotenv-override 只管這一跳（對照 proto8/tests/test_exec_dotenv.py）
+    d = prog(t, "p", 'printf "[%s]" "${X-unset}"\n')
+    good = {
+        "X=1": "1", "export X=1": "1", "export\tX=1": "1", "X = 1": "1", "  X=1": "1", "X=  a b  ": "a b",
+        "X=a # c": "a", "X=a\t#c": "a", "X=a#b": "a#b", "X=#fff": "#fff", "X=": "", "X=''": "", "X='a b' # c": "a b",
+        "X=\"${H}y\"": "hy", "X='${H'": None, "X='$H'": "$H", "X=$H": "$H", "X=${H}": "h",
+        "X=\u3000a\u3000": "a", "X=a\u3000#c": "a", "X=a\u00a0": "a", "export=1": None, "export =1": None,
+        "X= # c": None, "X='a\\b'": None, "X='${H}'": None, "X=\"un": None, "X='a'b": None, "X=${H:-y}": None,
+        "\u3000X=1": None,
+    }
+    for line, want in good.items():
+        put(Path(d, ".env"), line + "\n")
+        rc, out, err, _ = raw("--ws", t, d, env={"H": "h"})
+        if want is None:
+            if line.startswith("export"):   # 名字 export＝不是 X，X 沒設（export 本身合規則）
+                check(".env %r" % line, (rc, out), (0, "[unset]"))
+            else:
+                check(".env 壞 %r" % line, (rc, err), (1, "EnvBad"))
+        else:
+            check(".env %r" % line, (rc, out), (0, "[%s]" % want))
+    put(Path(d, ".env"), "X=a 'x\n")
+    check("沒引號開頭：中間的引號照字面", raw("--ws", t, d)[:2], (0, "[a 'x]"))
+    put(Path(d, ".env"), "X='SECRET\n")
+    rc, _, err, stderr = raw("--ws", t, d)
+    check(".env 引號沒收尾不印值", (rc, err, "SECRET" in stderr, "第 1 行" in stderr), (1, "EnvBad", False, True))
+    # 預設不蓋：開始讀那一刻已有的名字跳過（格式照驗）；同一份檔同名後者贏
+    put(Path(d, ".env"), "X=1\nX=2\n")
+    check("同一份檔後者贏", raw("--ws", t, d)[:2], (0, "[2]"))
+    check("已有的不蓋", raw("--ws", t, d, env={"X": "old"})[:2], (0, "[old]"))
+    check("--dotenv-override 蓋", raw("--dotenv-override", "--ws", t, d, env={"X": "old"})[:2], (0, "[2]"))
+    check("重複給一樣", raw("--dotenv-override", "--dotenv-override", "--ws", t, d, env={"X": "old"})[:2], (0, "[2]"))
+    check("--dotenv-override=V 是 usage 錯", raw("--dotenv-override=1", "--ws", t, d)[:3:2], (1, "Usage"))
+    put(Path(d, ".env"), "X=1\nY=${NOPE_XYZ}\n")
+    check("跳過的行照驗", raw("--ws", t, d, env={"Y": "y"})[:3:2], (1, "EnvBad"))
+    # 旗標只管這一跳：字串轉向（全新一跳）不吃
+    q = Path(t, "q")
+    put(q / ".env", "X=q\n")
+    put(q / "_exec.json", json.dumps("../r"))
+    put(Path(t, "r", ".env"), "X=${X}r\n")
+    put(Path(t, "r", "_exec"), '#!/bin/sh\nprintf "[%s]" "$X"\n', 0o755)
+    check("轉向不吃旗標", raw("--dotenv-override", "--ws", t, str(q), env={"X": "old"})[:2], (0, "[q]"))
+    # JSON 的 .env key：格式不變（引號照字面），只套蓋不蓋
+    put(q / "j.json", {".env": {"X": "'a' # c"}, "_exec": ["sh", "-c", 'printf "[%s]" "$X"']})
+    check("JSON .env key 格式不變", raw("--dotenv-override", "--ws", t, str(q / "j.json"), env={"X": "old"})[:2],
+          (0, "['a' # c]"))
+    check("JSON .env key 不蓋", raw("--ws", t, str(q / "j.json"), env={"X": "old"})[:2], (0, "[old]"))
+
 
 for fn in cases:
     with tempfile.TemporaryDirectory() as tmp:

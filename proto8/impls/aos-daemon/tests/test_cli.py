@@ -69,7 +69,7 @@ class T(unittest.TestCase):
                 p.kill()
             p.communicate()
         st = self.s / "state.json"
-        if st.exists():   # 測試失敗時別留孤兒
+        if st.is_file():   # 測試失敗時別留孤兒（子項叫 state.json 時它是小格）
             for r in json.loads(st.read_text()).get("children", {}).values():
                 if r.get("pid") and alive(r["pid"]):
                     try:
@@ -285,6 +285,57 @@ class T(unittest.TestCase):
             p2.communicate(timeout=30)
         finally:
             os.killpg(old, signal.SIGKILL)
+
+
+    def test_restart_starts_children_died_while_down(self):
+        # 使用者 10-22「daemon 重開時照表起，算重新開始、不算自動重起」：停機期間死掉的子項，重開時照名單起
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "children": {"a": self.long()}})
+        k = until(lambda: (self.s / "a" / "starts").exists() and self.kids())
+        old = k["a"]["pid"]
+        p.kill()
+        p.wait()
+        os.killpg(old, signal.SIGKILL)
+        self.assertTrue(until(lambda: not alive(old)))
+        p2 = self.start()
+        k2 = until(lambda: self.kids()["a"]["pid"] != old and self.kids())
+        self.assertTrue(k2)
+        self.assertTrue(until(lambda: len((self.s / "a" / "starts").read_text().split()) == 2))
+        self.ctl({"stop": True})
+        p2.communicate(timeout=30)
+        self.assertEqual((p2.returncode, alive(k2["a"]["pid"])), (0, False))
+
+    def test_child_name_clashes_with_own_windows(self):
+        # 使用者 10-22「子項名字擋掉跟 ctl／state 同名」：小格 $AOS_STACK/<名字>/ 會跟 daemon 自己的 ctl、state 撞的名字，
+        # 起來時退 1（代號 Conflict）
+        absst = str(self.s / "st.json")
+        for win, name in (({"state": "state.json"}, "state.json"), ({"ctl": "ctl.json"}, "ctl.json"),
+                          ({"ctl": "w/c.json"}, "w"), ({"state": "./x/../s.json"}, "s.json"), ({"state": absst}, "st.json")):
+            r = self.run_d(dict(win, children={name: self.long()}, max=1))
+            self.assertEqual(r.returncode, 1, (win, name))
+            self.assertTrue(r.stderr.startswith("aos-daemon: Conflict ") and "撞名" in r.stderr
+                            and r.stderr.count("\n") == 1, r.stderr)
+            self.assertFalse((self.s / name).exists(), name)
+        # 旗標給的 --state 也算
+        r = self.run_d({"children": {"s2.json": self.long()}, "max": 1}, argv=("--state", "s2.json", "daemon.json"))
+        self.assertTrue(r.returncode == 1 and r.stderr.startswith("aos-daemon: Conflict "), r.stderr)
+        # 不撞的照起：沒開 state 時 "state.json" 只是普通名字；ctl 在 stack 外面也不算
+        for win, name in (({}, "state.json"), ({"ctl": str(self.t / "ctl.json")}, "ctl.json")):
+            r = self.run_d(dict(win, children={name: {"run": "daemon.json#/b", "max": 1}},
+                                b={"argv": ["true"]}, max=3, interval_ms=100))
+            self.assertEqual((r.returncode, r.stderr, (self.s / name / "loop.json").exists()), (0, "", True), (win, name))
+
+    def test_ctl_children_clash_not_adopted(self):
+        # ctl 改 children 撞名＝那份 ctl 整份不採用、維持上一份好的，原因進 state 的 last_warning（N-08）
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "children": {"a": self.long()}})
+        k = until(lambda: (self.s / "a" / "starts").exists() and self.kids())
+        self.ctl({"children": {"state.json": self.long()}, "stop": True})
+        st = until(lambda: "撞名" in (self.state()["last_warning"] or "") and self.state())
+        self.assertTrue(st)
+        self.assertEqual((list(st["children"]), st["children"]["a"]["pid"], alive(k["a"]["pid"])), (["a"], k["a"]["pid"], True))
+        self.assertTrue((self.s / "state.json").is_file())
+        self.ctl({"stop": True})
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err, self.state()["last_warning"]), (0, "", None))
 
 
     # ───── E. impls 才有的：錯誤代號、子 loop 的心跳是自己的 pid ─────

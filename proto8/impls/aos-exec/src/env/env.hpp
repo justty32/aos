@@ -2,8 +2,8 @@
 //
 //   env.cpp      setup_ws_stack：WS 規則（旗標 ＞ $AOS_WS ＞ cwd）、AOS_STACK（沒設＝$AOS_WS/.aos/，mkdir -p、轉絕對、結尾 /），
 //                export AOS_WS、AOS_STACK——工作區在不在、建 stack、轉絕對路徑只在這裡做（N-59 第 1 件）
-//   dotenv.cpp   load_env：讀 資料夾/.env 逐行套進環境；json_env：沒 argv 的 JSON 物件裡的 `.env` key；
-//                set_env：一個 `名字=值`（只展開 ${名字}）
+//   dotenv.cpp   load_env：讀 資料夾/.env 逐行套進環境（10-22 起 dotenv 基礎子集、預設不蓋）；json_env：沒 argv 的
+//                JSON 物件裡的 `.env` key；env_value：`=` 後面那段（引號、註解、去空白）；set_env：一個 `名字=值`（只展開 ${名字}）
 // 對應 proto8/bin/aos-exec 的 hop 開頭幾行、set_env、load_env、json_env。PATH 不動（ideas § 24）。
 #pragma once
 
@@ -21,10 +21,12 @@ std::string check_ws(const std::string& ws_flag);
 void setup_stack(const std::string& ws);   // AOS_STACK＋export AOS_WS、AOS_STACK；建不了 MkdirFailed
 
 // 讀 dir/.env（沒有＝什麼都不做），回 .env 設過的名字。讀不到 EnvReadFailed；壞 EnvBad（只印檔名和行號、不印值）。
-std::set<std::string> load_env(const std::string& dir);
+// override 假＝開始讀這份檔時環境裡已有的名字那一行跳過（格式照驗）；同一份檔裡同名照樣後者贏（10-22）。
+std::set<std::string> load_env(const std::string& dir, bool override);
 
 // JSON 物件的 `.env` key：{"名字": 值}，照順序套；值可放指示詞（$ref 從 ref_base 算），解完不是字串的那一項靜默跳過；
 // 解完不是物件＝整個跳過。指示詞解不開、名字不合、${名字} 沒設＝EnvBad（只印位置 where）。回設過的名字。
-std::set<std::string> json_env(const Json& env, const std::string& where, const std::string& ref_base);
+// 格式不變（引號、註解那些 JSON 自己有，不套），只套蓋不蓋（同 load_env，10-22）。
+std::set<std::string> json_env(const Json& env, const std::string& where, const std::string& ref_base, bool override);
 
 }  // namespace aos::exec

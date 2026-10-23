@@ -4,7 +4,12 @@
 `inst`（C lib，跑一次）→ `aos-exec`（在工作區執行一個資料夾程式）→ `aos-loop`（一圈圈跑）／`aos-fsm`（一拍跑一格）→ `aos-daemon`（顧一群 loop）；
 旁邊三個幫手：`aos-util`（全家共用的函式庫）、`aos-directive`（解 `$ref`／`$env`）、`aos-schema`（用 JSON Schema 驗 JSON）。**
 
-> **現況（2026-10-21 晚）：提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（C++），行為對齊 `proto8/bin` 的 10-21 傍晚版。**
+> **現況（2026-10-23）：提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（C++），行為對齊 `proto8/bin` 的 10-22 版。10-23 起整個 `impls/` 進 git（`backup/` 不進）。**
+>
+> **10-23（對齊 bin 10-22，ideas 10-22 § 3、§ 6、§ 7）：** aos-exec 的 `.env` 改 dotenv 基礎子集（`export `、`=` 兩邊空白、引號、空白＋`#` 註解、去頭尾空白——值的空白照 python-dotenv 認 Unicode 空白、行首仍只認 ASCII）、
+> 預設不蓋已有的、加不帶值的旗標 `--dotenv-override`（只管這一跳；`parse_cli` 收開關表）；aos-daemon 擋子項名字跟自己的 ctl／state 撞名（起來時 `Conflict` 退 1、ctl 撞＝不採用）；
+> aos-fsm 開跑時查整張表（表壞 `FieldType`）、state 在但讀不了 `ReadFailed`、USAGE 補 `[旗標]`。aos-util 多一個 `aos/text.hpp`（Unicode 空白、UTF-8 檢查）。
+> 拿 `proto8/tests` 對照（243 個）只剩兩個 inst 單子錯誤訊息字面的差別（見 [aos-exec](aos-exec/README.md) 的「拿 proto8/tests 對照」）。
 >
 > **10-21 晚（ideas 10-21 § 1～§ 9、`git show 08a511dd`）：** aos-exec 改成 `aos-exec [--ws WS] XXX [args...]`（旗標在 XXX 前、舊的位置 WS 拿掉；旗標解析在 aos-util 新的 `aos/cli.hpp`），
 > 支援 `.env`（每走進一個資料夾就 cd、讀那裡的 `.env`、旗標蓋回，讀完才照 `$AOS_ENTRY` 挑入口；旗標 ＞ `.env` ＞ 原本環境 ＞ 預設），
@@ -116,13 +121,13 @@
 
 | 代號 | 誰吐 | 什麼時候 |
 |---|---|---|
-| `Usage` | 每支命令列（含 aos-exec、aos-loop、aos-fsm、aos-daemon） | 參數用錯（位置參數、旗標少了值、aos-schema 參數不是剛好一個）；10-21 起的四支：不認得的旗標、旗標缺值、沒給 XXX／設定檔、設定檔多給（`aos/cli.hpp` 的旗標錯一律算 `Usage`，不用 `FlagUnknown`） |
+| `Usage` | 每支命令列（含 aos-exec、aos-loop、aos-fsm、aos-daemon） | 參數用錯（位置參數、旗標少了值、aos-schema 參數不是剛好一個）；10-21 起的四支：不認得的旗標、旗標缺值、沒給 XXX／設定檔、設定檔多給、不帶值的旗標寫成 `--x=V`（10-22）（`aos/cli.hpp` 的旗標錯一律算 `Usage`，不用 `FlagUnknown`） |
 | `FlagUnknown` | 10-16～17 那代（`aos/flags.hpp`；目前沒有程式吐） | 不認得的旗標 |
 | `JsonSyntax` | 每支（aos-util 讀 stdin）、schema、daemon | 一份 JSON 都解不出來 |
 | `InputExtra` | 每支（aos-util 讀 stdin） | stdin 有好幾份 JSON |
-| `FieldType` | aos-loop、aos-fsm、aos-daemon | 不是物件、某個 key 型別不對、必填沒寫；設定檔 `#` 後不是 `/`、指不到（`load_cfg`）；`run`／`val` 寫成物件 |
-| `Conflict` | inst、daemon | 兩個欄位互相衝突（`stderr_merge` 又寫 `stderr`、ctl 放在 ctl_dir 裡、add_times 遇到不限次數） |
-| `ReadFailed` | schema、aos-loop、aos-fsm、aos-daemon | 檔讀不到（loop.json、fsm.json、daemon.json） |
+| `FieldType` | aos-loop、aos-fsm、aos-daemon | 不是物件、某個 key 型別不對、必填沒寫；設定檔 `#` 後不是 `/`、指不到（`load_cfg`）；`run`／`val` 寫成物件；aos-fsm 開跑時查整張表不合（10-22：`start`／`next` 不在表上、`next` 空字串或頭尾有空白、格的形狀不對） |
+| `Conflict` | inst、daemon | 兩個欄位互相衝突（`stderr_merge` 又寫 `stderr`；aos-daemon 10-22 起：子項名字跟自己的 ctl／state 撞名；舊 daemon 的 ctl 放在 ctl_dir 裡、add_times 遇到不限次數） |
+| `ReadFailed` | schema、aos-loop、aos-fsm、aos-daemon | 檔讀不到（loop.json、fsm.json、daemon.json）；aos-fsm 10-22 起：`$AOS_STACK/state` 在但讀不了（沒權限、是資料夾、不是 UTF-8） |
 | `WriteFailed` | aos-loop、aos-fsm、aos-daemon | state 窗寫不了；aos-fsm：`trace.jsonl`、`.state` 寫不了；aos-daemon：子項的 loop.json 寫不了 |
 | `MkdirFailed` | inst、aos-daemon、aos-exec | 資料夾建不了（aos-exec：`AOS_STACK`；aos-daemon：子項的小格） |
 | `LaunchFailed` | inst、aos-loop、aos-daemon、aos-exec | 子程序起不來（執行檔不在、fork 失敗；aos-exec 還有 exec 失敗、libaos 起不來；aos-daemon：小格的 stderr 開不了） |
@@ -130,10 +135,10 @@
 | `DirectiveBad` | aos-directive（aos-exec 原樣透傳） | 指示詞解不開：`$env` 沒設、`$ref` 讀不到（含指到資料夾）／不是 JSON、指不到、繞圈（寫法不合不算錯，10-20 D13～D15） |
 | `WorkspaceMissing`、`EntryMissing`、`EntryBad` | aos-exec | 見 [aos-exec](aos-exec/README.md) |
 | `EnvReadFailed` | aos-exec | `.env` 在但讀不到（權限、是資料夾、壞掉的捷徑） |
-| `EnvBad` | aos-exec | `.env` 壞（格式不合、`${名字}` 沒設、不是 UTF-8）；JSON 的 `.env` key 指示詞解不開、名字不合。只印位置、不印值 |
+| `EnvBad` | aos-exec | `.env` 壞（格式不合〔10-22 起含引號沒收尾、引號裡有 `\`、單引號裡有 `${`、引號後有雜字、`=` 後空白再接 `#`〕、`${名字}` 沒設、不是 UTF-8）；JSON 的 `.env` key 指示詞解不開、名字不合。只印位置、不印值 |
 | `CwdMissing`、`OpenFailed`、`CommandNotFound`、`CommandNotExecutable`、`WaitFailed`、`KillFailed` | aos-inst（轉自 libaos） | 見 aos-inst（已刪，舊版在備份 backup/aos-impls-2026-10-19.tar.gz） |
 | `StackMissing` | aos-loop（定義在 `aos/loop.hpp`）、aos-fsm、aos-daemon | 要 `AOS_STACK` 卻沒設（loop 開了窗、fsm、daemon） |
-| `StateUnknown` | aos-fsm | 表裡查不到現在的狀態。見 [aos-fsm](aos-fsm/README.md) |
+| `StateUnknown` | aos-fsm | state 檔裡的狀態不在表上。見 [aos-fsm](aos-fsm/README.md) |
 | （舊 aos-loop 的 `WindowMissing`、`StateWriteFailed`、`Signaled`、`CtlBad`、`CtlMissing`、`CtlReadFailed`；舊 aos-daemon 的 `CommandBad`、`OpUnknown`、`NotFound`、`Exists`、`ScanFailed`、`ReplyFailed`、`PolicyFailed`、`RestartFailed`、`TableWriteFailed`） | 已隨舊版換掉 | ctl 壞不是錯（不採用、記在 state 的 `last_warning`） |
 | `SchemaBad` | aos-schema | schema 不合 draft-07、`$ref` 指不到 |
 
@@ -142,7 +147,7 @@
 > **10-19 起的命令列（aos-exec、aos-loop、aos-fsm、aos-daemon）不照這一節**：不讀 stdin 設定，設定只認設定檔（loop.json、fsm.json、daemon.json 是唯一的位置參數，可寫 `檔#/指標`；ideas § 22「捨棄舊的」、10-21 傍晚 § 9），
 > 不寫結果 JSON（結果＝結束碼），錯誤一行「程式名: 代號 原因」。**10-21 起收旗標**（ideas 10-21 § 1～§ 3）：旗標寫在位置參數前面，`--x V` 或 `--x=V`、重複給最後一個算、`--` 結束旗標、
 > 第一個不是旗標的參數起原樣；不認得、缺值＝`Usage`。規則在 aos-util 的 `aos/cli.hpp`（`parse_cli`、`load_cfg`；對應 bin 的 `aos_flags.py`）：
-> aos-exec 只有 `--ws`；aos-loop、aos-daemon 有 `--max`、`--interval-ms`、`--ctl`、`--state`（旗標 ＞ 設定檔 ＞ 預設）；aos-fsm 目前沒有旗標。
+> aos-exec 有 `--ws` 與不帶值的 `--dotenv-override`（10-22）；aos-loop、aos-daemon 有 `--max`、`--interval-ms`、`--ctl`、`--state`（旗標 ＞ 設定檔 ＞ 預設）；aos-fsm 目前沒有旗標。
 > 下面是 10-16～17 那代（aos-schema、aos-directive 的 bin）的規矩。
 
 - **設定只從 stdin 讀一份 JSON**（`aos::read_stdin`）：空的＝`{}`、多份＝`InputExtra`、解不出來＝`JsonSyntax`、壞掉的尾巴丟掉。

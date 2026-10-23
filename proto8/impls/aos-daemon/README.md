@@ -46,6 +46,9 @@ daemon.json＝loop.json 的超集（N-28）：
 | `adopt` | 布林 | true | 起來時讀自己上次的 state，把還活著的子 loop 接回、不重起 |
 
 - 要 `$AOS_STACK`（沒設＝`StackMissing`）。名字不能當資料夾名或會被 aos-exec 誤認（空、`.`、`..`、含 `/`、含 `#`、以 `.` 開頭）＝`FieldType`。
+- **名字不能跟自己的 ctl／state 撞名**（使用者 10-22，ideas 10-22 § 6；`taken_names`／`check_names`）：會撞的名字＝ctl、state（含旗標 `--ctl`／`--state` 給的）落在 `$AOS_STACK` 底下時
+  相對路徑的第一段（`state.json`、`ctl.json`、`"w/c.json"` 的 `w`；`./x/../s.json` 整理成 `s.json`；在 stack 外面的、沒開的不算）。起來時撞＝`Conflict`、退 1；
+  ctl 改 `children` 撞＝那份 ctl 整份不採用、維持上一份好的、原因進 state 的 `last_warning`。
 - **起子 loop**（經 aos-exec，同 bin 版 10-21 傍晚）：小格 `$AOS_STACK/<名字>/` mkdir -p；設定補上 `"ctl": "ctl.json"`、`"state": "state.json"`（沒寫才補），
   **一律蓋上 `"_exec": ["aos-loop", {"$env": "AOS_CF"}]`**，相對的 `run`（字串，或陣列的第一個元素）照 daemon 的 cwd 轉成絕對路徑（子 loop 的 cwd 會是小格），
   先寫 `.loop.json` 再改名成 `loop.json`；fork 一個子行程：`setsid` 自成 session、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr`、`AOS_STACK=小格/`、
@@ -81,7 +84,7 @@ daemon.json＝loop.json 的超集（N-28）：
 |---|---|
 | `src/common/common.hpp` | `using`、代號（全沿用 aos-loop 的） |
 | `src/child/child.hpp`、`child.cpp` | 一支子 loop：`spawn`（小格、loop.json（補 ctl／state、蓋 `_exec`、相對 run 轉絕對）、fork＋子行程 `run_child` 呼叫 aos-exec 的 `run_cli`）、`alive`、`row` |
-| `src/daemon/daemon.hpp`、`daemon.cpp` | `Daemon`（`aos::loop::Loop` 的子類別）：建構子、`adopt`、`tend`、`stop`、`finish`（收全部、剛死的標 exited）、`info`、`check_ctl`；`check_children`（名字不能帶 `/`、`#`、不能 `.` 開頭；值字串、陣列或物件） |
+| `src/daemon/daemon.hpp`、`daemon.cpp` | `Daemon`（`aos::loop::Loop` 的子類別）：建構子、`adopt`、`tend`、`stop`、`finish`（收全部、剛死的標 exited）、`info`、`check_ctl`；`check_children`（名字不能帶 `/`、`#`、不能 `.` 開頭；值字串、陣列或物件）；`taken_names`、`check_names`（跟自己的 ctl／state 撞名，10-22） |
 | `src/main.cpp` | 命令列：`block_signals` → `loop_cli` → `Daemon` → `serve`；出錯印「aos-daemon: 代號 原因」 |
 
 ## 為什麼這樣做
@@ -106,8 +109,8 @@ daemon.json＝loop.json 的超集（N-28）：
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-- `test_cli`（`tests/test_cli.py`，17 案、unittest）：10-21 傍晚照 `proto8/tests/test_daemon.py` 重新逐案抄一次 15 案（loop.json 直接丟給 daemon、要 AOS_STACK、children 壞、小格與窗、
+- `test_cli`（`tests/test_cli.py`，20 案、unittest）：10-21 傍晚照 `proto8/tests/test_daemon.py` 重新逐案抄一次 15 案（loop.json 直接丟給 daemon、要 AOS_STACK、children 壞、小格與窗、
   不自動重起、子項 stderr 在小格、ctl 增減、SIGTERM 收子項 143、旗標蓋過設定、run 陣列與設定檔規則、子 loop 經 aos-exec 起、字串子項是 aos-exec 的目標、
-  收工時剛死的子項標 exited、adopt、`adopt: false`），加錯誤代號、子 loop 的 state 心跳是自己的 pid。PATH 放 impls 的 aos-exec、aos-loop 兩支的 `bin/`（子 loop 要 exec 成 PATH 上的 aos-loop）。
+  收工時剛死的子項標 exited、adopt、`adopt: false`），加錯誤代號、子 loop 的 state 心跳是自己的 pid；10-23 再抄 bin 10-22 的 3 案（daemon 重開照名單起停機期間死掉的子項、子項撞名起來時退 1〔另驗 `--state` 旗標也算〕、ctl 撞名不採用）。PATH 放 impls 的 aos-exec、aos-loop 兩支的 `bin/`（子 loop 要 exec 成 PATH 上的 aos-loop）。
 - `test_demo`（`tests/test_demo.py`）：`proto8/demo/daemon` 在 impls 線（PATH 只放 impls 四支的 `bin/`）與 bin 線各跑一次，比結束碼、stderr、整棵工作區與 stack 的檔與內容。
   要先建好 ../aos-exec、../aos-loop、../aos-fsm 的 `bin/`（`test_cli` 也要前兩支）。

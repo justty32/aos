@@ -24,15 +24,19 @@ struct Chain {
     std::vector<std::string> keys;
 };
 
-// 旗標蓋回：每讀完一份 .env（檔或 JSON 的 .env key）就把旗標給的值蓋回去（旗標 ＞ .env，N-58）。目前只有 --ws。
+// 這一跳的旗標。apply＝每讀完一份 .env（檔或 JSON 的 .env key）就把旗標給的值蓋回去（旗標 ＞ .env，N-58）：目前只有 --ws。
+// dotenv_override＝--dotenv-override（10-22）：這一跳讀的每份 .env 都蓋掉已有的；不往下傳。
 struct Layer {
     bool flag_ws = false;
     std::string ws;
+    bool dotenv_override = false;
     void apply() const;
 };
 
-// 一跳。spec 的相對路徑從 base 算；ws_flag＝這一跳的 --ws（沒給＝"-"；轉向後的跳一律 "-"）。
-Found hop(const std::string& spec, const std::string& base, const std::string& ws_flag, Chain& chain);
+// 一跳。spec 的相對路徑從 base 算；ws_flag＝這一跳的 --ws（沒給＝"-"）、dotenv_override＝這一跳的 --dotenv-override
+// （轉向後的跳一律 "-"、false）。
+Found hop(const std::string& spec, const std::string& base, const std::string& ws_flag, bool dotenv_override,
+          Chain& chain);
 
 // classify 的結果：種類＋值、入口在檔裡的指標（AOS_CO）、最後讀的那份 JSON .env key 設過的名字（一份都沒讀＝沒有）。
 struct Classified {

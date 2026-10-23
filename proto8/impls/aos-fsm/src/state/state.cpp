@@ -2,6 +2,7 @@
 #include "state/state.hpp"
 
 #include "aos/files.hpp"
+#include "aos/text.hpp"
 
 #include <cerrno>
 #include <cstdio>
@@ -10,23 +11,20 @@
 
 namespace aos::fsm {
 
-static std::string strip(const std::string& s) {
-    const char* ws = " \t\r\n\f\v";
-    size_t b = s.find_first_not_of(ws);
-    if (b == std::string::npos) {
-        return "";
-    }
-    size_t e = s.find_last_not_of(ws);
-    return s.substr(b, e - b + 1);
-}
-
 std::string read_state(const std::string& stack, const std::string& start) {
     int err = 0;
-    std::optional<std::string> text = aos::read_file(aos::join(stack, "state"), err);
+    std::string path = aos::join(stack, "state");
+    std::optional<std::string> text = aos::read_file(path, err);
     if (!text) {
-        return start;
+        if (err == ENOENT) {   // 沒有檔＝從 start 起
+            return start;
+        }
+        throw Error{code::ReadFailed, "讀不了 " + path + "：" + std::strerror(err)};   // 10-22：在但讀不了＝自己的錯
     }
-    std::string s = strip(*text);
+    if (!aos::is_utf8(*text)) {
+        throw Error{code::ReadFailed, "讀不了 " + path + "：不是 UTF-8"};
+    }
+    std::string s = aos::strip(*text);   // 去頭尾空白（同 Python str.strip()，認 Unicode 空白）
     if (s.empty()) {
         return start;
     }
