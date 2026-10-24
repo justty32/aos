@@ -1,0 +1,14 @@
+{"description": "長期記憶庫（跨對話保留；對話清空後仍在）。op=save 存一筆（同類同標題就覆蓋更新）；op=search 用關鍵字找（query 空＝最近的）；op=read 讀一筆全文；op=forget 忘掉一筆（記錯或過時時用）。kind 分六類：prefs 使用者偏好、facts 事實（專案、環境）、outcomes 做過的事的結論、gotchas 踩過的坑、snippets 檔案片段或指令、skills 可重用的做法。",
+ "parameters": {"type": "object",
+                "properties": {
+                  "op": {"type": "string", "enum": ["save", "search", "read", "forget"]},
+                  "kind": {"type": "string", "enum": ["prefs", "facts", "outcomes", "gotchas", "snippets", "skills"],
+                           "description": "save 必填；search 可選（只找這類）"},
+                  "title": {"type": "string", "description": "save：一句短而具體的標題，最多 80 字"},
+                  "text": {"type": "string", "description": "save：內容，最多 4000 字；一件事一筆"},
+                  "tags": {"type": "array", "items": {"type": "string"}, "description": "save：可選，最多 10 個"},
+                  "query": {"type": "string", "description": "search：關鍵字"},
+                  "limit": {"type": "integer", "description": "search：最多幾筆，預設 5、上限 20"},
+                  "id": {"type": "string", "description": "read／forget：例 facts/001"},
+                  "reason": {"type": "string", "description": "forget：為什麼忘（可選）"}},
+                "required": ["op"]}}
