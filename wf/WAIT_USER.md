@@ -15,4 +15,5 @@
 
 - 還沒確認的：tasks、兩種 kernel 兩個方向題 → [plan § 1.2](../proto8/thinking/2026-10-21-plan.md)
 - 腦的工具呼叫做完後要你看的三題（都不擋、已照推薦做）：agent 當腦的工具時題目怎麼交（範本只定 stdin 進 stdout 出；10-24 agent-eve 叫 pyfix 照這條做出一個實例：轉接寫在工具自己的 `_entry`、`tool.json` 不加 `input`，見 [thinking 10-24 agent-as-tool](../proto8/thinking/2026-10-24-agent-as-tool.md)；那份另有五個選項要你看：子 agent 失敗停下還是回給腦、記憶、子 agent 換強模型、轉接做成共用一支、等 LiteLLM 開著真跑一次）、腦叫了不存在的工具是停下等人還是回給腦、對話太長 → [thinking 10-23 tool-calls](../proto8/thinking/2026-10-23-tool-calls.md) 文末
+- 親手試給人用的 say／listen（LiteLLM 開著時，[human/README](../proto8/human/README.md)「怎麼用」）：① `R=~/repo/simple_tools/aos/proto8; export PATH=$R/impls/aos-exec/bin:$R/impls/aos-loop/bin:$R/impls/aos-fsm/bin:$R/human/bin:$PATH` ② `cd ~/code/try/say-listen/ws; export AOS_BRAIN_URL=http://localhost:4000/v1` ③ `aos-chat --trace $R/demo/agent-dan`，打兩三句、`/status`、Ctrl-D ④ 分開試：`N=$(aos-say 17乘23是多少)`、`aos-exec --ws . $R/demo/agent-dan`、`aos-listen "$N"`、`aos-listen --last 3`——看順不順手（10-24 只用假腦跑過，[thinking](../proto8/thinking/2026-10-24-say-listen.md)）
 > 2026-10-12 使用者清帳：「舊帳可以清掉」「proto6 已經是老黃曆了，不管」——A 區 71 題、B 區 proto6 帳號真 root 驗收、C 區「先不決定」各項全部結案不再追。原 `wait-user/` 分類檔已封存（見 common/archive 索引），編號不回收。
