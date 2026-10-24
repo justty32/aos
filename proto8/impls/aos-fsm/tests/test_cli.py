@@ -6,8 +6,9 @@
 每個案例一個空的暫存資料夾（tempfile，結束就清掉）、環境先清掉 AOS_*、cwd＝那個資料夾、AOS_STACK＝裡面的 stack/。
 A 段從 proto8/tests/test_fsm.py 移植（行為應一致，錯誤一行多了代號）；B 段是條文與 bin 版推得出、那邊沒測的細節；
 C 段是訊號（轉給那格、trace 與 state 照常寫完，再以 128＋N 結束）；D 段是 10-21 傍晚的命令列（ideas § 9）；
-E 段是 fsm.json 的指示詞（10-23 晚）。
-10-21 起 exec 不收內嵌單子、trace 沒有 timed_out：寫內嵌單子的案例由 table() 換成 `fsm.json#/states/<名>/body`（見 table）；
+E 段是 fsm.json 的指示詞（10-23 晚）；F 段是 exec 直接放內嵌單子（10-24）。
+10-21～10-23 exec 不收內嵌單子、trace 沒有 timed_out：寫內嵌單子的案例由 table() 換成 `fsm.json#/states/<名>/body`（見 table；
+10-24 起 exec 又收物件，這些案例照留、走 aos-exec 那條，直接寫物件的在 F 段）；
 格被逾時收掉＝那格的 aos-exec 以 128＋N 結束（fsm 看不到格裡有沒有逾時，C-52）。
 巢狀逾時那案要 aos-exec 在 PATH 上：用兄弟專案 ../aos-exec/bin/aos-exec（沒建就那案算失敗）。
 """
@@ -67,7 +68,7 @@ def cell(t, name, body):
 
 
 def table(t, states, start="a"):
-    """寫 t/fsm.json。10-21 起 exec 只收 aos-exec 的目標（10-21 plan F2）：exec 是物件（內嵌單子）的格，照新寫法把單子搬到
+    """寫 t/fsm.json。10-21～10-23 exec 只收 aos-exec 的目標（10-21 plan F2；10-24 起又收物件，見 F 段）：exec 是物件（內嵌單子）的格，照新寫法把單子搬到
     同一格的 body、exec 改成 "fsm.json#/states/<名>/body"（相對 cwd＝t）。要原樣寫進去就用 put。"""
     out = {}
     for name, c in states.items():
@@ -194,7 +195,8 @@ def own_errors_exit_1_one_line(t):
     put(st(t) / "state.txt", "zzz\n")
     put(Path(t, "bad.json"), "{nope")
     put(Path(t, "objval.json"), {"start": "a", "states": {"a": {"exec": {"argv": ["no-such-cmd-xyz"]}, "next": "a"}}})
-    want = {"fsm.json": "StateUnknown", "bad.json": "CfgBad", "absent.json": "CfgMissing", "objval.json": "CfgBad"}
+    want = {"fsm.json": "StateUnknown", "bad.json": "CfgBad", "absent.json": "CfgMissing",
+            "objval.json": "LaunchFailed"}   # 10-24 起物件＝內嵌單子、跑的時候起不來（10-21～10-23 是 CfgBad）
     for f, code in want.items():
         if f == "objval.json":
             put(st(t) / "state.txt", "a\n")
@@ -243,7 +245,7 @@ def bad_cells(t):
     # 10-22 起開跑時查整張表：格的形狀不對也算表壞（CfgBad；原本這次查到那格才擋、StateUnknown）
     for c, code in (({"exec": "a"}, "CfgBad"), ({"next": "a"}, "CfgBad"), ({"exec": "a", "next": 3}, "CfgBad"),
                     ("a", "CfgBad"), ({"exec": 3, "next": "a"}, "CfgBad"), ({"exec": [], "next": "a"}, "CfgBad"),
-                    ({"exec": ["a", 1], "next": "a"}, "CfgBad"), ({"exec": {"argv": ["true"]}, "next": "a"}, "CfgBad")):
+                    ({"exec": ["a", 1], "next": "a"}, "CfgBad")):   # 10-24 起 {"exec": {"argv": [...]}} 不算壞（F 段）
         put(Path(t, "fsm.json"), {"start": "a", "states": {"a": c}})
         check("格壞 %r" % (c,), run(t)[:3:2], (1, code))
     check("格壞不留 trace", (st(t) / "trace.jsonl").exists(), False)
@@ -472,7 +474,6 @@ def whole_table_checked_before_beat(t):
             ("next 不是字串", "a", {"a": good, "b": {"exec": "a", "next": 3}}),
             ("別格沒 next", "a", {"a": good, "b": {"exec": "a"}}),
             ("別格不是物件", "a", {"a": good, "b": "a"}),
-            ("別格 exec 是物件", "a", {"a": good, "b": {"exec": {"argv": ["true"]}, "next": "a"}}),
             ("別格 exec 空陣列", "a", {"a": good, "b": {"exec": [], "next": "a"}})):
         put(Path(t, "fsm.json"), {"start": start, "states": states})
         check("表壞 %s" % what, own_error_no_beat(t, "表壞 %s：不跑" % what, run(t)), "CfgBad")
@@ -513,6 +514,86 @@ def table_body_not_resolved(t):
                                                                "body": {"argv": ["true"], "stdout": {"$env": "NOPE_XYZ"}}}}})
     rc, _, err, stderr = run(t)
     check("body 的指示詞留給那格", (rc, err, stderr.startswith("aos-exec: DirectiveBad ")), (1, None, True))
+
+
+# ───────── F. exec 直接放內嵌單子（10-24：使用者「exec本來就應該要可以直接放內嵌單子吧」）─────────
+# 物件＝行程內 aos-exec 的 run_inst：AOS_CF＝fsm.json、AOS_CD＝它的資料夾、AOS_CO＝/states/<名>/exec，相對路徑從 fsm.json 的資料夾算
+
+@case
+def inline_cell_runs(t):
+    put(Path(t, "cfg", "fsm.json"), {"start": "a", "states": {
+        "a": {"exec": {"argv": ["sh", "-c", 'printf "%s|%s|%s|%s" "$AOS_CF" "$AOS_CD" "$AOS_CO" "$PWD" > "$AOS_STACK/seen"']},
+              "next": "b/c"},
+        "b/c": {"exec": {"argv": ["sh", "-c", 'printf "%s" "$AOS_CO" > "$AOS_STACK/seen2"']}, "next": "a"}}})
+    st(t).mkdir()
+    r1 = run(t, "cfg/fsm.json", env={"AOS_CO": "/_entry"})
+    r2 = run(t, "cfg/fsm.json")
+    real = os.path.realpath(Path(t, "cfg"))
+    check("內嵌單子格：AOS_CF／CD／CO、cwd、換 next",
+          (r1[0], r1[3], r2[0], (st(t) / "seen").read_text(), (st(t) / "seen2").read_text(), state(t)),
+          (0, "", 0, "%s/fsm.json|%s|/states/a/exec|%s" % (real, real, real), "/states/b~1c/exec", "a\n"))
+    check("trace 一格一行", [(x["state"], x["code"], x["signal"]) for x in trace(t)], [("a", 0, None), ("b/c", 0, None)])
+
+
+@case
+def inline_cell_nonzero(t):
+    table_raw = {"start": "a", "states": {"a": {"exec": {"argv": ["sh", "-c", "exit 4"]}, "next": "a"}}}
+    put(Path(t, "fsm.json"), table_raw)
+    st(t).mkdir()
+    rc, _, _, stderr = run(t)
+    check("內嵌單子格非 0：原碼往上、state 不動、trace 有一行", (rc, stderr, (st(t) / "state.txt").exists(), trace(t)[0]["code"]),
+          (4, "", False, 4))
+
+
+@case
+def inline_cell_timeout(t):
+    put(Path(t, "fsm.json"), {"start": "a", "states": {
+        "a": {"exec": {"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 200}, "next": "a"}}})
+    st(t).mkdir()
+    t0 = time.monotonic()
+    rc = run(t)[0]
+    tr = trace(t)[0]
+    check("內嵌單子格逾時：143、trace signal 15、state 不動", (rc, tr["code"], tr["signal"], (st(t) / "state.txt").exists(),
+                                                     time.monotonic() - t0 < 10), (143, 143, 15, False, True))
+
+
+@case
+def inline_cell_bad_shape(t):
+    # 形狀壞＝fsm 自己的錯（同 aos-exec 跑壞單子）：一行、退 1、不寫 trace、state 不動
+    for unit, code in (({"argv": "true"}, "EntryBad"), ({"argv": ["true"], "grace_ms": -1}, "EntryBad"),
+                       ({"argv": ["true"], "stdout": {"$env": "NOPE_XYZ"}}, "DirectiveBad")):
+        put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"exec": unit, "next": "a"}}})
+        rc, _, err, stderr = run(t)
+        check("單子壞 %r" % (unit,), (rc, err, "狀態 a：單子跑不起來：" in stderr, (st(t) / "trace.jsonl").exists()),
+              (1, code, True, False))
+
+
+@case
+def inline_cell_sigterm(t):
+    # 跑的期間收到 SIGTERM：轉給單子、等它收完（退 0）、trace 與 state 照寫，再以 143 結束
+    put(Path(t, "fsm.json"), {"start": "a", "states": {
+        "a": {"exec": {"argv": ["sh", "-c", 'trap \'exit 0\' TERM; touch "$AOS_STACK/up"; while :; do sleep 0.05; done']},
+              "next": "b"},
+        "b": {"exec": "a", "next": "a"}}})
+    st(t).mkdir()
+    p = subprocess.Popen([BIN, "fsm.json"], cwd=t, env=env_of(t, None), stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, text=True)
+    ok = wait_file(st(t) / "up")
+    p.send_signal(signal.SIGTERM)
+    out, err = p.communicate(timeout=20)
+    check("內嵌單子格收到 SIGTERM", (ok, p.returncode, err, state(t), trace(t)[0]["code"]), (True, 143, "", "b\n", 0))
+
+
+@case
+def inline_cell_ref_dirs(t):
+    # states 拆到別的檔：格的單子裡相對 $ref 從那份檔的資料夾算
+    put(Path(t, "cfg", "parts", "states.json"), {"a": {"exec": {"argv": ["echo", {"$ref": "data.json#/m"}],
+                                                                 "stdout": {"$env": "AOS_STACK", "$path": "out"}}, "next": "a"}})
+    put(Path(t, "cfg", "parts", "data.json"), {"m": "deep"})
+    put(Path(t, "cfg", "fsm.json"), {"start": "a", "states": {"$ref": "parts/states.json"}})
+    st(t).mkdir()
+    rc, _, _, stderr = run(t, "cfg/fsm.json")
+    check("$ref 起點跟著 states 那份檔", (rc, stderr, (st(t) / "out").read_text()), (0, "", "deep\n"))
 
 
 for fn in cases:

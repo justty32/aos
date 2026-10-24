@@ -1,7 +1,5 @@
 {"max": 10, "interval_ms": 200, "ctl": "ctl.json", "state": "state.json",
  "loops": {
-  "bob": {"exec": "daemon.json#/loops/bob/body", "max": 1,
-          "body": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}},
-  "ann": {"exec": "daemon.json#/loops/ann/body", "max": 1,
-          "body": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "ann"}, "../agent-ann"]}}
+  "bob": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}, "max": 1},
+  "ann": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "ann"}, "../agent-ann"]}, "max": 1}
  }}

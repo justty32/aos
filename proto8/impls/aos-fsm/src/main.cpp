@@ -3,10 +3,12 @@
 //     aos-fsm [旗標] 設定檔.json
 //
 //   block_signals → 命令列（目前沒有旗標；唯一的位置參數＝設定檔，可寫 `檔#/指標`；10-21 傍晚 ideas § 9）→ 要 AOS_STACK →
-//   read_table → check（開跑時查整張表，10-22）→ read_state（在但讀不了＝StateBad，10-22）→ pick → run_once（aos-loop 的公開 API：子行程 `aos-exec -- 目標 參數...`）
+//   read_table → check（開跑時查整張表，10-22）→ read_state（在但讀不了＝StateBad，10-22）→ pick → run_once（aos-loop 的公開 API：目標＝子行程 `aos-exec -- 目標 參數...`；單子＝行程內 run_inst，10-24）
 //   → append_trace → 格的碼 0 才 write_state(next) → 以格的碼結束
 //
-// exec＝字串或 [目標, 參數...]（相對路徑從 cwd 算，fsm 不轉）；物件＝表壞（要內嵌單子寫 fsm.json#/states/<名>/body）。
+// exec＝字串或 [目標, 參數...]（相對路徑從 cwd 算，fsm 不轉）；物件＝內嵌單子（10-24 恢復；行程內 aos-exec 的 run_inst，
+// 跑的期間 AOS_CF＝fsm.json、AOS_CO＝/states/<名>/exec，相對路徑從 fsm.json 的資料夾算；單子壞＝「aos-fsm: EntryBad 狀態 X：單子跑不起來：…」退 1、不寫 trace）。
+// 單子被逾時收掉：code 128＋N、signal N（目標那條是跑它的 aos-exec 以 128＋N 正常結束，signal null）。
 // 只看格的結束碼：不讀格的 stdout、不轉述格的 stderr（N-38）。格非 0（含 10）＝state 不動、原碼往上。
 // trace 一行 {"at","state","code","signal","elapsed_ms"}（at＝ISO 8601 UTC 到毫秒），沒有 timed_out（fsm 看不到格裡有沒有逾時，C-52；10-21 plan F4）。
 // 收到 SIGINT／SIGTERM／SIGHUP：轉給那格、等它結束，trace 與 state 照常寫完，再以 128＋N 結束（P-36）。
@@ -64,7 +66,7 @@ int main(int argc, char** argv) {
         std::string at = aos::utc_now_ms();
         aos::loop::Run b;
         try {
-            b = aos::loop::run_once(cell.exec.target, cell.exec.args);
+            b = aos::loop::run_once(cell.exec);
         } catch (const aos::Error& e) {
             throw aos::Error{e.code, "狀態 " + state + "：" + e.msg};
         }

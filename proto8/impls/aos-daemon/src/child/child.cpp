@@ -66,11 +66,21 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
         cfg = Json::object();
         cfg["exec"] = spec;
     }
-    Json ex = cfg.value("exec", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗）
+    Json ex = cfg.value("exec", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗；單子見下）
     if (ex.is_string()) {
         cfg["exec"] = aos::join(cwd, ex.get<std::string>());
     } else if (ex.is_array() && !ex.empty() && ex[0].is_string()) {
         cfg["exec"][0] = aos::join(cwd, ex[0].get<std::string>());
+    } else if (ex.is_object()) {
+        // 內嵌單子（10-24）：子 loop 跑它時相對路徑的基準是小格（AOS_CD），所以 cwd 照 daemon 的 cwd 定死——
+        // 沒寫＝daemon 的 cwd、相對的字串＝接在 daemon 的 cwd 後面（argv[0]、stdin／stdout／stderr 都從 cwd 算，跟著對）；
+        // cwd 是指示詞就不動（解出來若是相對的，從小格算）。裡面相對的 $ref 已在 read_loops 轉成絕對。
+        Json c = ex.value("cwd", Json());
+        if (c.is_null()) {
+            cfg["exec"]["cwd"] = cwd;
+        } else if (c.is_string()) {
+            cfg["exec"]["cwd"] = aos::join(cwd, c.get<std::string>());
+        }
     }
     if (!cfg.contains("ctl")) {
         cfg["ctl"] = "ctl.json";

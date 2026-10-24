@@ -31,9 +31,15 @@ namespace aos::daemon {
 //   指示詞（base＝v 裡相對 $ref 的起點）：loops 本身、每個子項本身先換一層（resolve_shallow；子項的起點＝它來自的那份檔的）；子項是字串或陣列
 //   （aos-exec 的目標）就整個解；是物件（loop 設定）就只解 daemon 要寫進小格的 loop key（exec、max、interval_ms、ctl、state），
 //   其他 key（body…）原樣交給子 loop——相對 $ref 搬進小格就會從小格算，所以 loop key 由 daemon 先解。
+//   exec 是單子（物件，10-24）：只換一層、裡面不解（留給子 loop 跑的時候解，那時 AOS_CF／AOS_CO 設好了），
+//   裡面相對的 $ref 檔名照它來自的那份檔轉成絕對（abs_refs）——搬進小格之後才不會從小格算。
 //   名字非空、不含 /、不含 #（會被 aos-exec 當成指標的開頭）、不以 . 開頭；子項是字串、陣列或物件（loop key 以外不驗）。
 // 壞丟 Error{CfgBad, 原因}（key＝訊息裡的名字）；指示詞解不開丟 DirectiveBad。
 Json read_loops(const Json& v, const std::string& base, const std::string& key);
+
+// 把 v 裡每個 $ref 指示詞的相對檔名接在 base 後面（`檔#/…` 只動 `#` 前面；$ref 陣列每個元素都轉；絕對的、只有 `#/…` 的不動）。
+// 不解任何指示詞。給 read_loops 處理內嵌單子用（10-24）。
+Json abs_refs(const Json& v, const std::string& base);
 
 // 小格 $AOS_STACK/<名字>/ 會撞到的名字（使用者 10-22）：ctl、state（paths，空＝沒開）落在 $AOS_STACK 底下時相對路徑的第一段
 // （"state.json"、"w/c.json" 的 "w"）；落在外面的不算。照 bin 的 taken_names（abspath 整理 `.`、`..`，不解捷徑）。

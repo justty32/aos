@@ -97,7 +97,7 @@ class T(unittest.TestCase):
         self.assertEqual((self.tmp / "c.json").read_text(), '{"k": 3}')
 
     def test_demo_tick_loop_5(self):
-        # demo/tick：aos-loop 每次 aos-exec 一次 loop.json#/body（aos-tick $AOS_STACK/tick.txt），max 5
+        # demo/tick：aos-loop 每次行程內跑一次內嵌單子 aos-tick $AOS_STACK/tick.txt（10-24 起直接寫在 exec，原 loop.json#/body），max 5
         r = run("aos-exec", str(ROOT / "demo" / "tick"), cwd=str(self.tmp), timeout=30)
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertEqual((self.tmp / ".stack" / "tick.txt").read_text(), "5\n")

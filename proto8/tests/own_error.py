@@ -23,6 +23,9 @@ _LOOP = _USAGE + _CFG + [
     (r"起不了 aos-exec", {"LaunchFailed"}),
     (r"起不了子項", {"MkdirFailed", "WriteFailed", "LaunchFailed"}),
     (r"第 \d+ 次 ", None),   # 那次失敗：不是自己的錯
+] + [   # 10-24：exec 是內嵌單子、行程內跑；單子壞＝自己的錯，代號同 aos-exec 跑單子
+    (r"單子跑不起來：(CwdMissing|OpenFailed|CommandMissing|CommandBad|LaunchFailed) ", {"LaunchFailed"}),
+    (r"單子跑不起來：", {"EntryBad", "DirectiveBad"}),
     (r"", {"CfgBad"}),
 ]
 CODES = {
@@ -44,6 +47,8 @@ CODES = {
         (r"讀不了 ", {"StateBad"}),
         (r"查不到狀態", {"StateUnknown"}),
         (r"狀態 .*：起不了 aos-exec", {"LaunchFailed"}),
+        (r"狀態 .*：單子跑不起來：(CwdMissing|OpenFailed|CommandMissing|CommandBad|LaunchFailed) ", {"LaunchFailed"}),   # 10-24
+        (r"狀態 .*：單子跑不起來：", {"EntryBad", "DirectiveBad"}),
         (r"", {"CfgBad"}),
     ],
     "aos-tick": _USAGE + [

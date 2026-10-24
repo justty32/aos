@@ -203,12 +203,13 @@ class T(unittest.TestCase):
         self.assertIn("沒設定 AOS_STACK", r.stderr)
 
     def test_bob_think_is_embedded_inst(self):
-        # 10-21 plan F2、F6：think 的單子放在同一格的 body、exec 指到它；fsm.json 帶 _entry、loop 每次 aos-exec fsm.json
+        # 10-21 plan F6：fsm.json 帶 _entry、loop 每次 aos-exec fsm.json。
+        # 10-24：think 的單子直接放在 exec（使用者「exec本來就應該要可以直接放內嵌單子吧」；10-21 F2 的「單子放 body、exec 指到它」撤回）
         for d in (BOB, CATHY):
             cfg = json.loads((Path(d) / "fsm.json").read_text())
             think = cfg["states"]["think"]
-            self.assertEqual(think["exec"], "fsm.json#/states/think/body", d)
-            self.assertEqual(think["body"]["argv"][0], "python3", d)
+            self.assertEqual(think["exec"]["argv"][0], "python3", d)
+            self.assertNotIn("body", think, d)
             self.assertEqual(cfg["states"]["idle"]["exec"], "idle", d)   # 資料夾格
             self.assertEqual(cfg["states"]["act"]["exec"], "act", d)
             self.assertEqual(cfg["_entry"], ["aos-fsm", {"$env": "AOS_CF"}], d)   # 10-21 傍晚：設定檔是唯一的位置參數
@@ -216,10 +217,11 @@ class T(unittest.TestCase):
             self.assertEqual(json.loads((Path(d) / "loop.json").read_text()), {"exec": "fsm.json", "max": 20}, d)
             self.assertFalse((Path(d) / "fsm").exists(), d)
         ann = json.loads((Path(ANN) / "fsm.json").read_text())
-        for name, cell in ann["states"].items():
-            self.assertEqual(cell["exec"], "fsm.json#/states/%s/body" % name)
+        for name, cell in ann["states"].items():   # 10-24：三格都是內嵌單子
+            self.assertEqual((cell["exec"]["argv"][0], "body" in cell), ("python3", False), name)
         loop = json.loads((Path(ANN) / "loop.json").read_text())
-        self.assertEqual((loop["body"]["argv"], loop["_entry"]), (["aos-fsm", "fsm.json"], ["aos-loop", {"$env": "AOS_CF"}]))
+        self.assertEqual((loop["exec"]["argv"], loop["_entry"]), (["aos-fsm", "fsm.json"], ["aos-loop", {"$env": "AOS_CF"}]))
+        self.assertNotIn("body", loop)
         # ann 的入口經 aos-exec loop.json 跑起 loop（10-21 傍晚：「aos-exec loop.json」的寫法）
         self.assertEqual((Path(ANN) / "_entry").read_text().splitlines()[-1], "exec aos-exec loop.json")
 
@@ -282,8 +284,9 @@ class T(unittest.TestCase):
     def test_loop_own_errors_exit_1_one_line(self):
         agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
         ws = Path(self.tmp, "ws"); ws.mkdir()
-        # 10-21：exec 是物件（舊的內嵌單子）＝loop 自己的錯；沒 exec＝沒東西可跑
-        for text in (None, "{nope", '{"max": 2}', '{"exec": {"argv": ["true"]}}', '{"exec": 3}'):
+        # 沒 exec＝沒東西可跑。10-21～10-23 exec 是物件也在這裡（＝loop 自己的錯）；10-24 起物件＝內嵌單子，
+        # 形狀壞的才是 loop 自己的錯（EntryBad）
+        for text in (None, "{nope", '{"max": 2}', '{"exec": {"argv": "true"}}', '{"exec": 3}'):
             if text is not None:
                 Path(agent, "loop.json").write_text(text)
             r = run(EXEC, "--ws", str(ws), agent)

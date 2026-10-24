@@ -107,7 +107,7 @@ int Loop::main_loop() {
         if (has_exec_) {
             Run b;
             try {
-                b = run_once(exec_.target, exec_.args);
+                b = run_once(exec_);
             } catch (const Error& e) {
                 say(e.code + " " + e.msg);
                 return end(1, "done");
@@ -119,7 +119,7 @@ int Loop::main_loop() {
                 return end(0, "done");
             }
             if (b.code != 0) {
-                say("第 " + std::to_string(runs_) + " 次 " + exec_.target + " 失敗，結束碼 " + std::to_string(b.code));
+                say("第 " + std::to_string(runs_) + " 次 " + exec_.label() + " 失敗，結束碼 " + std::to_string(b.code));
                 return end(b.code, "done");
             }
         }

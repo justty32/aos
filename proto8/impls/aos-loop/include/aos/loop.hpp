@@ -2,8 +2,11 @@
 //
 //   block_signals   擋住 SIGINT／SIGTERM／SIGHUP（整支程式的壽命；要在第一次之前、開任何執行緒之前呼叫）
 //   take_signal     兩次之間：有排著的那三個訊號之一就取出來回它（0＝沒有）
-//   parse_target    loop 的 exec、fsm 格的 exec 的寫法（10-21 傍晚 ideas § 9）：字串＝aos-exec 的目標；陣列＝[目標, 參數...]
-//   run_once        跑一次：子行程裡 `aos-exec -- 目標 參數...`（aos-exec 的 run_cli）；只收目標，內嵌單子寫 `loop.json#/body`
+//   parse_target    loop 的 exec、fsm 格的 exec 的寫法（10-21 傍晚 ideas § 9；10-24 加物件）：字串＝aos-exec 的目標；陣列＝[目標, 參數...]；
+//                   物件＝內嵌單子（10-24 使用者「exec本來就應該要可以直接放內嵌單子吧」）
+//   resolve_exec    exec 那格的指示詞：先換一層；換完是物件（單子）就不往裡面解（留到跑的時候、AOS_CF／AOS_CO 設好才解），不然整個解
+//   place_inline    內嵌單子在哪：設定檔（AOS_CF）、在檔裡的指標（AOS_CO）、單子裡相對 $ref 的起點
+//   run_once        跑一次：目標＝子行程裡 `aos-exec -- 目標 參數...`（aos-exec 的 run_cli）；單子＝行程內 aos-exec 的 run_inst
 //   loop_cli        命令列 `程式 [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔`（aos-loop、aos-daemon 共用）
 //   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；10-21 傍晚）：
 //                   讀設定（旗標 ＞ 設定檔 ＞ 預設：exec／max／interval_ms／ctl／state）、每次讀 ctl 窗 → tend() → 跑一次 → 寫 state 窗
@@ -48,20 +51,44 @@ void block_signals();
 // 取出一個排著的 SIGINT／SIGTERM／SIGHUP（不等）；沒有回 0。
 int take_signal();
 
-// loop 的 exec、fsm 格的 exec：字串＝aos-exec 的目標（參數空）；陣列＝[目標, 參數...]（元素都要是字串、不能是空的）。
-// 其他（含物件：要內嵌單子寫 `loop.json#/body`）丟 CfgBad「<what> 要是 aos-exec 的目標（字串）或 [目標, 參數...]（非空字串陣列）」。
+// loop 的 exec、fsm 格的 exec：字串＝aos-exec 的目標（參數空）；陣列＝[目標, 參數...]（元素都要是字串、不能是空的）；
+// 物件＝內嵌單子（10-24：恢復 10-21 前的寫法，使用者「exec本來就應該要可以直接放內嵌單子吧」；形狀不在這裡驗，跑的時候由 run_inst 驗）。
+// 其他丟 CfgBad「<what> 要是 aos-exec 的目標（字串）、[目標, 參數...]（非空字串陣列）或單子（物件）」。
+// 物件時呼叫者還要 place_inline 填好它在哪（cf、co、ref_base）。
 struct Target {
-    std::string target;
+    std::string target;               // 字串、陣列的第一個（物件時空）
     std::vector<std::string> args;
+    std::optional<Json> inst;         // 內嵌單子（指示詞還沒解）
+    std::string cf;                   // 物件：AOS_CF＝寫著它的設定檔（實際路徑）；AOS_CD＝它的資料夾＝單子相對路徑的基準
+    std::string co;                   // 物件：AOS_CO＝它在那份檔裡的位置（JSON 指標，例 /exec、/states/think/exec）
+    std::string ref_base;             // 物件：單子裡相對 $ref 的起點（exec 那格來自的那份檔的資料夾）
+    std::string label() const;        // 訊息裡的「誰」：目標；物件＝「檔名#指標」（例 loop.json#/exec）
 };
 Target parse_target(const Json& v, const std::string& what);
 
-// 跑一次＝`aos-exec -- 目標 參數...`（`--` 讓 - 開頭的目標不被當旗標；相對路徑照 cwd，loop 不轉）：fork 一個子行程，
+// exec 那格的指示詞（10-24）：v 本身是指示詞就先換掉（resolve_shallow）；換完是物件＝單子，裡面不解（跑的時候 run_inst 才解，
+// 那時 AOS_CF／AOS_CD／AOS_CO 已設成單子的位置，跟 aos-exec 跑 `檔#/指標` 的單子一樣）；字串、陣列整個解（同 10-23 晚）。
+// 回解好的值與「它裡面相對 $ref 的起點」（base_dir）。錯同 resolve（DirectiveBad）。
+aos::Resolved resolve_exec(const Json& v, const std::string& base_dir);
+
+// 物件的 Target 填好位置：spec＝設定檔（`檔` 或 `檔#/指標`），sub＝exec 那格在 spec 指到的值裡的 JSON 指標（例 "/exec"），
+// ref_base＝resolve_exec 回的 base_dir。cf＝檔的實際路徑（解開捷徑；解不開用絕對路徑）、co＝spec 的指標＋sub。不是物件不動。
+void place_inline(Target& t, const std::string& spec, const std::string& sub, const std::string& ref_base);
+
+// JSON 指標的一段：~ → ~0、/ → ~1（RFC 6901）。
+std::string pointer_escape(const std::string& key);
+
+// 跑一次。
+// 目標＝`aos-exec -- 目標 參數...`（`--` 讓 - 開頭的目標不被當旗標；相對路徑照 cwd，loop 不轉）：fork 一個子行程，
 // 子行程裡解開那四個訊號、呼叫 aos::exec::run_cli（可執行檔／argv 陣列 exec 掉；單子在那個子行程裡跑、它當監工；
 // 它自己的錯印一行「aos-exec: 代號 原因」、碼 1）——等同起一支 PATH 上的 aos-exec，只是不必在 PATH 上找。
 // 子行程跟呼叫者同一個行程群組（不另開）；跑的期間收到的三個訊號 kill 給它（不另設 SIGKILL 期限）。fork 失敗丟 LaunchFailed。
+// 單子（10-24）＝行程內呼叫 aos-exec 的 run_inst（aos-exec 跑單子用的同一套：inst 的 libaos、timeout_ms、grace_ms、訊號轉給整群）：
+// 跑的期間 AOS_CF／AOS_CD／AOS_CO 設成 t.cf、它的資料夾、t.co（跑完還原），相對路徑的基準＝t.cf 的資料夾，$ref 從 t.ref_base 算；
+// 其他環境（AOS_WS、AOS_STACK…）照呼叫者現有的、不讀 .env。單子壞 EntryBad、指示詞壞 DirectiveBad、起不來 LaunchFailed
+// （訊息開頭「單子跑不起來：」）；被逾時收掉＝code 128＋N、signal N。
 // 呼叫前要先 block_signals()。
-Run run_once(const std::string& target, const std::vector<std::string>& args);
+Run run_once(const Target& t);
 
 // 命令列（10-21 傍晚 ideas § 9；規則同 aos-exec，aos-util 的 parse_cli）：唯一的位置參數＝設定檔（必給、只能一個；
 // 可寫 `檔#/指標`）。不認得的旗標丟 FlagUnknown；旗標缺值、沒給或多給設定檔丟 ArgumentsBad（msg＝「usage: <prog> [...] 設定檔.json（原因）」）。
@@ -94,13 +121,14 @@ struct Defaults {
 };
 
 // 反覆跑的程式的骨架。設定檔（loop.json；daemon.json 是它的超集）的 key（旗標名＝key 名底線換連字號；起跑時 旗標 ＞ 設定檔 ＞ 預設）：
-//   exec          每次跑的目標（10-23 改名，原 run）：字串或 [目標, 參數...]（parse_target；每次 `aos-exec -- 目標 參數...`）；物件＝CfgBad；
+//   exec          每次跑的東西（10-23 改名，原 run）：字串或 [目標, 參數...]（parse_target；每次 `aos-exec -- 目標 參數...`）；
+//                 物件＝內嵌單子（10-24；每次行程內 run_inst，AOS_CO＝設定檔的指標＋/exec）；
 //                 need_exec 時必填（沒寫＝CfgBad「沒有東西可跑」）
 //   max           最多幾次（非負整數；沒寫＝Defaults::max；寫 null 不行）
 //   interval_ms   一次結束到下一次開始至少隔幾毫秒（非負整數；沒寫＝Defaults::interval_ms）
 //   ctl, state    兩扇窗的檔名，在 $AOS_STACK 底下（沒寫或 null＝不開；寫了卻沒設 AOS_STACK＝StackMissing）
 // 其他 key 忽略（body、_entry…）。設定壞丟 Error（CfgMissing、CfgBad、StackMissing；指示詞解不開 DirectiveBad）。
-// 指示詞（10-23 晚）：設定檔整份先換一層，上面五格整個解（resolve_keys，起點＝設定檔的資料夾）；ctl 整份先換一層，
+// 指示詞（10-23 晚）：設定檔整份先換一層，上面五格整個解（resolve_keys，起點＝設定檔的資料夾；exec 走 resolve_exec，單子裡面不解）；ctl 整份先換一層，
 // paused／stopped／max／interval_ms／seq 整個解（起點＝ctl 的資料夾），子類別多認的 key 在 check_ctl 裡自己解；ctl 解不開＝整份不採用。
 // 每次：有排著的訊號 → 結束 128＋N；讀 ctl（認 paused、stopped、max、interval_ms、seq＋子類別多認的）→ tend() →
 // stopped 就結束（0）、跑滿就結束（0）→ paused 或還沒到時間就睡一下（最多 1 秒，收到訊號就醒）回頭再看 →

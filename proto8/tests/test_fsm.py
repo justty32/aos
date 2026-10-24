@@ -108,15 +108,24 @@ class T(unittest.TestCase):
         self.assertEqual((self.stack / "out.txt").read_text(), "hi\n")
         self.assertFalse((self.stack / "state.txt").exists())
 
-    def test_object_val_is_own_error(self):
-        # F2：exec 只收字串；物件＝表壞，退 1、一行、提 #/states/<名>/body
-        self.table({"a": {"exec": {"argv": ["sh", "-c", 'touch "$AOS_STACK/ran"']}, "next": "a"}})
+    def test_object_exec_is_inline_inst(self):
+        # 10-24（使用者「exec本來就應該要可以直接放內嵌單子吧」；10-21 F2「物件＝表壞」撤回）：物件＝內嵌單子，fsm 行程內跑，
+        # 跑的期間 AOS_CF＝fsm.json、AOS_CO＝/states/<名>/exec、相對路徑從 fsm.json 的資料夾算
+        self.table({"a": {"exec": {"argv": ["sh", "-c", 'printf "%s %s %s" "$AOS_CF" "$AOS_CO" "$PWD" > "$AOS_STACK/ran"']},
+                          "next": "a"}})
+        r = self.beat()
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        cf, co, pwd = (self.stack / "ran").read_text().split(" ")
+        self.assertEqual((Path(cf).name, co, Path(pwd).resolve()), ("fsm.json", "/states/a/exec", Path(cf).parent.resolve()))
+        self.assertEqual(json.loads((self.stack / "trace.jsonl").read_text())["code"], 0)
+
+    def test_object_exec_bad_shape_is_own_error(self):
+        # 10-24：單子形狀壞＝fsm 自己的錯（同 aos-exec 跑壞單子：EntryBad），退 1、一行、不寫 trace、state 不動
+        self.table({"a": {"exec": {"argv": "not-a-list"}, "next": "a"}})
         r = self.beat()
         self.assertEqual(r.returncode, 1)
         self.assertEqual(len(r.stderr.strip().splitlines()), 1, r.stderr)
-        self.assertTrue(r.stderr.startswith("aos-fsm: "), r.stderr)
-        self.assertIn("#/states/a/body", r.stderr)
-        self.assertFalse((self.stack / "ran").exists())
+        self.assertTrue(r.raw_stderr.startswith("aos-fsm: EntryBad 狀態 a：單子跑不起來："), r.raw_stderr)
         self.assertFalse((self.stack / "trace.jsonl").exists())
 
     def test_cfg_is_only_positional(self):
@@ -241,7 +250,6 @@ class T(unittest.TestCase):
                 ("next 不是字串", "a", {"a": good, "b": {"exec": "a", "next": 3}}),
                 ("別格沒 next", "a", {"a": good, "b": {"exec": "a"}}),
                 ("別格不是物件", "a", {"a": good, "b": "a"}),
-                ("別格 exec 是物件", "a", {"a": good, "b": {"exec": {"argv": ["true"]}, "next": "a"}}),
                 ("別格 exec 空陣列", "a", {"a": good, "b": {"exec": [], "next": "a"}})):
             self.table(states, start=start)
             self.assert_own_error_no_beat(self.beat(), what)

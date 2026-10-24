@@ -1,5 +1,5 @@
 // config.cpp：【engine】Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、解指示詞（resolve_keys，10-23 晚）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）；
-// 還有 parse_target（exec 的寫法）、loop_cli（命令列）
+// 還有 parse_target（exec 的寫法）、resolve_exec、place_inline（內嵌單子在哪，10-24）、loop_cli（命令列）
 // （10-21 傍晚 ideas § 9）；錯誤分代號。
 #include "engine/engine.hpp"
 
@@ -9,7 +9,9 @@
 #include <climits>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <limits>
+#include <system_error>
 
 namespace aos::loop {
 
@@ -33,6 +35,10 @@ static long long as_ll(const Json& v) {
 
 Target parse_target(const Json& v, const std::string& what) {
     Target t;
+    if (v.is_object()) {   // 內嵌單子（10-24）：形狀跑的時候由 run_inst 驗
+        t.inst = v;
+        return t;
+    }
     if (v.is_string()) {
         t.target = v.get<std::string>();
         return t;
@@ -46,13 +52,54 @@ Target parse_target(const Json& v, const std::string& what) {
         }
     }
     if (!ok) {
-        throw Error{code::CfgBad, what + " 要是 aos-exec 的目標（字串）或 [目標, 參數...]（非空字串陣列）"};
+        throw Error{code::CfgBad, what + " 要是 aos-exec 的目標（字串）、[目標, 參數...]（非空字串陣列）或單子（物件）"};
     }
     t.target = v[0].get<std::string>();
     for (size_t i = 1; i < v.size(); ++i) {
         t.args.push_back(v[i].get<std::string>());
     }
     return t;
+}
+
+std::string Target::label() const {
+    if (!inst) {
+        return target;
+    }
+    return cf.substr(cf.rfind('/') + 1) + "#" + co;
+}
+
+std::string pointer_escape(const std::string& key) {
+    std::string out;
+    for (char c : key) {
+        if (c == '~') {
+            out += "~0";
+        } else if (c == '/') {
+            out += "~1";
+        } else {
+            out += c;
+        }
+    }
+    return out;
+}
+
+aos::Resolved resolve_exec(const Json& v, const std::string& base_dir) {
+    aos::Resolved r = aos::resolve_shallow(v, base_dir);
+    if (!r.value.is_object()) {
+        r.value = aos::resolve(r.value, r.base_dir);
+    }
+    return r;
+}
+
+void place_inline(Target& t, const std::string& spec, const std::string& sub, const std::string& ref_base) {
+    if (!t.inst) {
+        return;
+    }
+    aos::Spec s = aos::split_hash(spec);
+    std::error_code ec;
+    std::filesystem::path real = std::filesystem::canonical(s.path, ec);   // 解開捷徑（同 aos-exec 的 AOS_CF）
+    t.cf = ec ? aos::abspath(s.path) : real.string();
+    t.co = s.pointer + sub;
+    t.ref_base = ref_base;
 }
 
 aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog) {
@@ -106,9 +153,15 @@ aos::Resolved resolve_keys(const Json& doc, const std::string& base_dir, const s
 
 Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& spec, const Defaults& d) : d_(d) {
     cfg_ = aos::load_cfg(spec);
+    std::string exec_base;   // exec 那格裡相對 $ref 的起點（內嵌單子用）
     try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45）
         aos::Resolved r = resolve_keys(cfg_, aos::dirname(aos::abspath(aos::split_hash(spec).path)),
-                                       {"exec", "max", "interval_ms", "ctl", "state"});
+                                       {"max", "interval_ms", "ctl", "state"});
+        if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解（10-24，resolve_exec）
+            aos::Resolved ex = resolve_exec(r.value["exec"], r.dir_of("exec"));
+            r.value["exec"] = std::move(ex.value);
+            exec_base = ex.base_dir;
+        }
         cfg_ = std::move(r.value);
         cfg_dirs_ = std::move(r);
         cfg_dirs_.value = nullptr;
@@ -142,11 +195,9 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
         }
     }
     Json ex = cfg_.value("exec", Json());
-    if (ex.is_object()) {
-        throw Error{code::CfgBad, "exec 要是 aos-exec 的目標（字串或字串陣列）；要內嵌單子寫 loop.json#/body"};
-    }
     if (!ex.is_null()) {
         exec_ = parse_target(ex, "exec");
+        place_inline(exec_, spec, "/exec", exec_base);
         has_exec_ = true;
     } else if (d_.need_exec) {
         throw Error{code::CfgBad, "沒有東西可跑（設定檔沒有 exec）"};

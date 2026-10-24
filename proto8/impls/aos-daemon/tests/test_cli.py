@@ -185,13 +185,13 @@ class T(unittest.TestCase):
         p = self.start({"state": "state.json", "max": 10, "interval_ms": 100,
                         "loops": {"bad": {"exec": "daemon.json#/loops/bad/body",
                                              "body": {"argv": ["sh", "-c", "exit 3"]}},
-                                     "obj": {"exec": {"argv": ["true"]}}}})   # exec 是物件＝子 loop 自己的錯（10-21）
+                                     "obj": {"exec": {"argv": "true"}}}})   # 10-24 起物件＝內嵌單子；形狀壞＝子 loop 自己的錯（10-21～10-23 物件本身就是錯）
         out, err = p.communicate(timeout=30)
         k = self.kids()
         self.assertEqual((p.returncode, err, k["bad"]["phase"], k["bad"]["code"], k["obj"]["phase"], k["obj"]["code"]),
                          (0, "", "done", 3, "done", 1))
         self.assertIn("aos-loop: ", (self.s / "bad" / "stderr.txt").read_text())
-        self.assertIn("loop.json#/body", (self.s / "obj" / "stderr.txt").read_text())
+        self.assertIn("aos-loop: EntryBad 單子跑不起來：", (self.s / "obj" / "stderr.txt").read_text())
 
     def test_ctl_loops_add_and_remove(self):
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})
@@ -369,7 +369,7 @@ class T(unittest.TestCase):
         r = self.run_d({"max": 1}, env={})
         self.assertTrue(r.stderr.startswith("aos-daemon: StackMissing "), r.stderr)
         for doc in ({"loops": [1], "max": 1}, {"loops": {"a/b": "x"}, "max": 1}, {"loops": {"a#b": "x"}, "max": 1}, {"adopt": 1, "max": 1},
-                    {"max": None}, {"exec": 3}, {"exec": {"argv": ["true"]}}):
+                    {"max": None}, {"exec": 3}):   # 10-24 起 {"exec": {"argv": [...]}} 不算壞（內嵌單子，見 test_inline_*）
             r = self.run_d(doc)
             self.assertEqual((r.returncode, r.stderr.split(" ")[1]), (1, "CfgBad"), (doc, r.stderr))
 
@@ -653,6 +653,58 @@ class T(unittest.TestCase):
         self.assertEqual((p2.returncode, err), (0, ""))
         self.assertEqual([n for n, r in k.items() if alive(r["pid"])], [])
 
+
+    # ---- 10-24：exec 直接放內嵌單子（使用者「exec本來就應該要可以直接放內嵌單子吧」）
+
+    SHOW = 'printf "%s|%s|%s|%s\\n" "$AOS_CF" "$AOS_CD" "$AOS_CO" "$PWD" >> "$AOS_STACK/seen"'
+
+    def test_inline_own_exec(self):
+        # daemon 自己的 exec 是單子：行程內跑，AOS_CF＝daemon.json、AOS_CO＝/exec、cwd＝daemon.json 的資料夾
+        r = self.run_d({"exec": {"argv": ["sh", "-c", self.SHOW]}, "max": 2, "interval_ms": 0})
+        real = os.path.realpath(self.t)
+        line = "%s/daemon.json|%s|/exec|%s" % (real, real, real)
+        self.assertEqual((r.returncode, r.stderr, (self.s / "seen").read_text().splitlines()), (0, "", [line, line]))
+
+    def test_inline_own_exec_codes(self):
+        r = self.run_d({"exec": {"argv": ["sh", "-c", "exit 6"]}, "max": 3, "interval_ms": 0})
+        self.assertEqual((r.returncode, r.stderr), (6, "aos-daemon: 第 1 次 daemon.json#/exec 失敗，結束碼 6\n"))
+        r = self.run_d({"exec": {"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 200}, "max": 3})
+        self.assertEqual((r.returncode, r.stderr), (143, "aos-daemon: 第 1 次 daemon.json#/exec 失敗，結束碼 143\n"))
+        r = self.run_d({"exec": {"argv": ["true"], "timeout_ms": "x"}, "max": 3})
+        self.assertEqual((r.returncode, len(r.stderr.splitlines())), (1, 1), r.stderr)
+        self.assertTrue(r.stderr.startswith("aos-daemon: EntryBad 單子跑不起來："), r.stderr)
+
+    def test_inline_child(self):
+        # 子項的 exec 是單子：子 loop 跑它（AOS_CF＝小格的 loop.json、AOS_CO＝/exec）；cwd 定成 daemon 的 cwd（沒寫＝它、相對的接在它後面），
+        # 裡面相對的 $ref 照 daemon.json 的資料夾轉成絕對
+        (self.t / "sub").mkdir()
+        (self.t / "data.json").write_text('{"m": "hi"}')
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {
+            "a": {"exec": {"argv": ["sh", "-c", self.SHOW]}, "max": 1},
+            "b": {"exec": {"argv": ["sh", "-c", 'pwd > "$AOS_STACK/pwd"'], "cwd": "sub"}, "max": 1},
+            "c": {"exec": {"argv": ["echo", {"$ref": "data.json#/m"}], "stdout": {"$env": "AOS_STACK", "$path": "out"}}, "max": 1}}})
+        k = until(lambda: len(self.kids()) == 3 and all(r["phase"] == "done" for r in self.kids().values()) and self.kids())
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err, {n: r["code"] for n, r in k.items()}), (0, "", {"a": 0, "b": 0, "c": 0}))
+        real = os.path.realpath(self.t)
+        cell = os.path.realpath(self.s / "a")
+        self.assertEqual((self.s / "a" / "seen").read_text(), "%s/loop.json|%s|/exec|%s\n" % (cell, cell, real))
+        self.assertEqual((self.s / "b" / "pwd").read_text().strip(), real + "/sub")
+        self.assertEqual((self.s / "c" / "out").read_text(), "hi\n")
+        lj = json.loads((self.s / "c" / "loop.json").read_text())
+        self.assertEqual(lj["exec"]["argv"][1], {"$ref": real + "/data.json#/m"})   # 只轉 $ref 的檔名、不解
+
+    def test_inline_child_via_ctl(self):
+        # ctl 半路加的子項，exec 是單子也能跑
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {}})
+        until(lambda: self.state())
+        self.ctl({"loops_added": {"x": {"exec": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/ran"; exit 3']}, "max": 2}}})
+        k = until(lambda: self.kids().get("x", {}).get("phase") == "done" and self.kids())
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err, k["x"]["code"], (self.s / "x" / "ran").read_text()), (0, "", 3, "x\n"))
+        self.assertIn("aos-loop: 第 1 次 loop.json#/exec 失敗，結束碼 3", (self.s / "x" / "stderr.txt").read_text())
 
 if __name__ == "__main__":
     unittest.main(argv=[sys.argv[0]])

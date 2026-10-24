@@ -8,8 +8,9 @@
 A 段從 proto8/tests/test_exec.py 裡 aos-loop 的案例移植（那邊經 aos-exec 叫；行為應一致，錯誤一行多了代號）；
 B 段是 exec／max 的細節、字串 exec 走 aos-exec 的規則、不寫 stdout；C 段是訊號（轉給那次、收完以 128＋N 結束）；
 D 段是窗（interval_ms、ctl、state）；E 段是 10-21 傍晚的命令列（旗標、設定檔 檔#/指標、exec 陣列；ideas § 9）；
-F 段是 10-23 壓測後的修正；G 段是設定檔與 ctl 的指示詞（10-23 晚）。
-10-21 起 exec 不收內嵌單子，A～D 段寫內嵌單子的案例由 loop() 換成 `loop.json#/body`（見 loop）。
+F 段是 10-23 壓測後的修正；G 段是設定檔與 ctl 的指示詞（10-23 晚）；H 段是 exec 直接放內嵌單子（10-24）。
+10-21～10-23 exec 不收內嵌單子，A～D 段寫內嵌單子的案例由 loop() 換成 `loop.json#/body`（見 loop）；10-24 起 exec 又收物件，
+這些案例照留（走 aos-exec 那條），直接寫物件的在 H 段。
 """
 import datetime
 import json
@@ -64,7 +65,7 @@ def prog(parent, name, body, entry="_entry"):
 
 
 def loop(t, cfg):
-    """寫 t/loop.json。10-21 起 exec 只收 aos-exec 的目標（10-21 plan L11）：cfg 的 exec 是物件（內嵌單子）時，
+    """寫 t/loop.json。10-21～10-23 exec 只收 aos-exec 的目標（10-21 plan L11；10-24 起又收物件，見 H 段）：cfg 的 exec 是物件（內嵌單子）時，
     照新寫法搬到 body、exec 改成 "loop.json#/body"（相對 cwd；案例都在 t 裡跑）。要原樣寫進去就用 put。"""
     if isinstance(cfg, dict) and isinstance(cfg.get("exec"), dict):
         cfg = dict(cfg, exec="loop.json#/body", body=cfg["exec"])
@@ -121,7 +122,7 @@ def embedded_inst_stop_and_failure_codes(t):
 @case
 def own_errors_exit_1_one_line(t):
     want = {None: "CfgMissing", "{nope": "CfgBad", '{"max": 2}': "CfgBad",
-            '{"exec": {"argv": ["no-such-cmd-xyz"]}}': "CfgBad"}   # 10-21 起 exec 是物件＝自己的錯
+            '{"exec": {"argv": ["no-such-cmd-xyz"]}}': "LaunchFailed"}   # 10-24 起 exec 是物件＝行程內跑（10-21～10-23 是 CfgBad）
     for text, code in want.items():
         if text is not None:
             put(Path(t, "loop.json"), text)
@@ -159,7 +160,7 @@ def max_zero_and_negative(t):
 def bad_fields(t):
     for cfg in ({"exec": "x", "max": "3"}, {"exec": "x", "max": 2.5}, {"exec": "x", "max": True},
                 {"exec": "x", "max": None}, {"exec": 3}, {"exec": []}, {"exec": ["x", 1]}, {"exec": [None]},
-                {"exec": {"argv": ["true"]}}, {"exec": None}, ["exec"]):
+                {"exec": None}, ["exec"]):   # 10-24 起 {"exec": {"argv": [...]}} 不算壞（內嵌單子，H 段）
         put(Path(t, "loop.json"), cfg)
         check("欄位不對 %r" % (cfg,), run("loop.json", cwd=t)[:3:2], (1, "CfgBad"))
 
@@ -637,6 +638,110 @@ def ctl_directive_bad_not_adopted(t):
     st = json.loads((s / "state.json").read_text())
     check("ctl 指示詞解不開不採用", (r.returncode, r.stderr, st["phase"], st["runs"], "NOPE_XYZ" in (st["ctl_warning"] or "")),
           (0, "", "done", 2, True))
+
+
+# ───────── H. exec 直接放內嵌單子（10-24：使用者「exec本來就應該要可以直接放內嵌單子吧」）─────────
+# 物件＝行程內交給 aos-exec 的 run_inst（跟 aos-exec 跑 loop.json#/exec 那張單子一樣）：AOS_CF＝設定檔、AOS_CD＝它的資料夾、
+# AOS_CO＝/exec（設定檔寫 檔#/指標 時接在指標後面），跑完還原；相對路徑從設定檔的資料夾算；單子裡的指示詞跑的時候才解。
+
+SHOW = 'printf "%s|%s|%s|%s\\n" "$AOS_CF" "$AOS_CD" "$AOS_CO" "$PWD" >> "$AOS_STACK/seen"'
+
+
+@case
+def inline_runs_with_aos_vars(t):
+    s = stack(t)
+    put(Path(t, "cfg", "loop.json"), {"exec": {"argv": ["sh", "-c", SHOW]}, "max": 2})
+    rc, _, _, stderr = run("cfg/loop.json", cwd=t, env={"AOS_STACK": str(s), "AOS_CO": "/_entry"})
+    real = os.path.realpath(Path(t, "cfg"))
+    line = "%s/loop.json|%s|/exec|%s" % (real, real, real)
+    check("內嵌單子：每次跑、AOS_CF／CD／CO 指到它、cwd＝設定檔的資料夾", (rc, stderr, (s / "seen").read_text().splitlines()),
+          (0, "", [line, line]))
+
+
+@case
+def inline_pointer_spec(t):
+    # 設定檔寫 檔#/指標：AOS_CO＝那個指標＋/exec（key 照 JSON 指標跳脫）
+    s = stack(t)
+    put(Path(t, "big.json"), {"loops": {"a/b": {"exec": {"argv": ["sh", "-c", SHOW]}, "max": 1}}})
+    rc, _, _, stderr = run("big.json#/loops/a~1b", cwd=t, env={"AOS_STACK": str(s)})
+    check("檔#/指標 的 AOS_CO", (rc, stderr, (s / "seen").read_text().split("|")[2]), (0, "", "/loops/a~1b/exec"))
+
+
+@case
+def inline_directives_resolved_at_run(t):
+    # 單子裡的指示詞跑的時候才解（看得到 AOS_CO＝/exec）；$ref 從設定檔的資料夾算（cwd 在別處）
+    s = stack(t)
+    put(Path(t, "cfg", "data.json"), {"msg": "hi"})
+    put(Path(t, "cfg", "loop.json"), {"exec": {"argv": ["echo", {"$ref": "data.json#/msg"}, {"$env": "AOS_CO"}],
+                                               "stdout": {"$env": "AOS_STACK", "$path": "out"}}, "max": 1})
+    rc, _, _, stderr = run("cfg/loop.json", cwd=t, env={"AOS_STACK": str(s), "AOS_CO": "/_entry"})
+    check("指示詞跑的時候解、$ref 從設定檔的資料夾", (rc, stderr, (s / "out").read_text()), (0, "", "hi /exec\n"))
+
+
+@case
+def inline_exec_is_ref(t):
+    # exec 本身是 $ref 指到別份檔的單子：換一層、裡面的 $ref 從那份檔的資料夾算
+    s = stack(t)
+    put(Path(t, "lib", "unit.json"), {"u": {"argv": ["echo", {"$ref": "data.json#/msg"}], "stdout": {"$env": "AOS_STACK", "$path": "out"}}})
+    put(Path(t, "lib", "data.json"), {"msg": "far"})
+    put(Path(t, "loop.json"), {"exec": {"$ref": "lib/unit.json#/u"}, "max": 1})
+    rc, _, _, stderr = run("loop.json", cwd=t, env={"AOS_STACK": str(s)})
+    check("exec 是 $ref 到單子", (rc, stderr, (s / "out").read_text()), (0, "", "far\n"))
+
+
+@case
+def inline_codes(t):
+    for code, want in ((0, 0), (10, 0), (7, 7)):
+        put(Path(t, "loop.json"), {"exec": {"argv": ["sh", "-c", "exit %d" % code]}, "max": 2})
+        rc, _, _, stderr = run("loop.json", cwd=t)
+        check("內嵌單子退 %d" % code, rc, want)
+    check("非 0 那行的「誰」＝loop.json#/exec", stderr, "aos-loop: 第 1 次 loop.json#/exec 失敗，結束碼 7\n")
+
+
+@case
+def inline_timeout(t):
+    put(Path(t, "loop.json"), {"exec": {"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 200}, "max": 3})
+    t0 = time.monotonic()
+    rc, _, _, stderr = run("loop.json", cwd=t)
+    check("內嵌單子逾時＝失敗（143）", (rc, stderr, time.monotonic() - t0 < 10),
+          (143, "aos-loop: 第 1 次 loop.json#/exec 失敗，結束碼 143\n", True))
+
+
+@case
+def inline_bad_shape(t):
+    # 形狀壞＝那次跑不起來＝loop 自己的錯：一行「aos-loop: EntryBad 單子跑不起來：…」、退 1（同 aos-exec 跑壞單子）
+    for unit, code in (({"argv": "true"}, "EntryBad"), ({"argv": []}, "EntryBad"), ({"argv": ["true"], "timeout_ms": 0}, "EntryBad"),
+                       ({"cwd": "x"}, "EntryBad"), ({"argv": ["true"], "stdout": {"$env": "NOPE_XYZ"}}, "DirectiveBad"),
+                       ({"argv": ["no-such-cmd-xyz"]}, "LaunchFailed")):
+        put(Path(t, "loop.json"), {"exec": unit, "max": 2})
+        rc, _, err, stderr = run("loop.json", cwd=t)
+        check("單子壞 %r" % (unit,), (rc, err, "單子跑不起來：" in stderr), (1, code, True))
+
+
+@case
+def inline_sigterm_forwarded(t):
+    # 跑的期間收到 SIGTERM：轉給單子的整群、等它收完，以 128＋15 結束
+    s = stack(t)
+    put(Path(t, "loop.json"), {"exec": {"argv": ["sh", "-c", 'trap \'echo got > "$AOS_STACK/got"; exit 0\' TERM; '
+                                                    'touch "$AOS_STACK/up"; while :; do sleep 0.05; done']}, "max": 5})
+    p = start(t, {"AOS_STACK": str(s)})
+    ok = wait_file(s / "up")
+    p.send_signal(signal.SIGTERM)
+    out, err = p.communicate(timeout=20)
+    check("內嵌單子收到轉來的 SIGTERM", (ok, p.returncode, err, (s / "got").read_text()), (True, 143, "", "got\n"))
+
+
+@case
+def inline_env_restored(t):
+    # 跑完還原：loop 自己的環境裡 AOS_CO 沒被留成 /exec。原本沒設 AOS_CO：ctl 的 max 寫 {"$env": "AOS_CO"}，
+    # 還原了＝解不開（沒設）；沒還原＝解成 "/exec"（不是整數）。兩種都不採用，看 ctl_warning 的原因分辨（最後一次讀 ctl 在跑過之後）
+    s = stack(t)
+    (s / "ctl.json").write_text(json.dumps({"max": {"$env": "AOS_CO"}}))
+    put(Path(t, "loop.json"), {"exec": {"argv": ["true"]}, "max": 2, "ctl": "ctl.json", "state": "state.json"})
+    r = subprocess.run([BIN, "loop.json"], cwd=t, env=env_of({"AOS_STACK": str(s)}), capture_output=True, text=True, timeout=30)
+    st = json.loads((s / "state.json").read_text())
+    w = st["ctl_warning"] or ""
+    check("跑完 AOS_CO 還原", (r.returncode, st["runs"], "AOS_CO" in w, "/exec" in w), (0, 2, True, False))
 
 
 for fn in cases:

@@ -6,6 +6,10 @@
 
 > **現況（2026-10-23）：提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（C++），行為對齊 `proto8/bin` 的 10-22 版。10-23 起整個 `impls/` 進 git；舊快照 `backup/` 10-23 使用者授權刪掉，下面提到的 `backup/…` 都已不在。**
 >
+> **10-24（`exec` 又收單子物件，[thinking](../thinking/2026-10-24-exec-relative.md#10-24-exec-直接放單子)）：** 使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」——aos-loop、aos-fsm、aos-daemon 的 `exec`（fsm 是每一格的）寫成物件＝單子，
+> 在自己行程內呼叫 aos-exec 的 `run_inst` 跑（aos-loop 的 `run_once`／新的 `src/run/inline.cpp`），跑的期間 `AOS_CF`／`AOS_CD`／`AOS_CO` 設成單子的位置（設定檔、它的資料夾、`/exec` 或 `/states/<名>/exec`），
+> 單子裡的指示詞跑的時候才解（`resolve_exec`）；daemon 寫小格時給子項的單子補 `cwd`、相對 `$ref` 轉絕對。字串、字串陣列照舊每次在子行程裡 `run_cli`。下面 10-21 晚那段「只收字串」作廢。
+>
 > **10-23 壓測後**（使用者「都修都處理」、修到一半「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，[thinking](../thinking/2026-10-23-daemon-bench.md)；**只改這一家，`proto8/bin` 不跟**）：aos-daemon 收子項不等（送 SIGTERM 後照常巡、那列 `stopping`、滿 10 秒才 SIGKILL），
 > 表用雜湊找名字、沒有 `run` 時一圈一份 state（不寫 `running`）、起子項前先寫一份 state、小格只建一層；aos-loop 的 `$AOS_STACK` 不在＝`WriteFailed`、不自己建。1 萬個子 loop 一圈 483 → 205 ms、daemon CPU 86 → 6 %。
 >
@@ -144,15 +148,15 @@
 | `InputBad` | aos-schema、aos-directive（aos-util 讀 stdin）；libaos（`aos_inst_strerror`） | stdin 一份 JSON 都解不出來（10-23 統合前叫 JsonSyntax）；libaos 的輸入 `in`／`out` 是 NULL、`argv` 空（10-23 統合前叫 FieldType） |
 | `InputExtra` | aos-schema、aos-directive（aos-util 讀 stdin） | stdin 有好幾份 JSON |
 | `CfgMissing` | aos-loop、aos-fsm、aos-daemon（`load_cfg`） | 設定檔（loop.json、fsm.json、daemon.json）不在；`#/` 指不到 |
-| `CfgBad` | aos-loop、aos-fsm、aos-daemon | 設定檔讀不了、不是 JSON、`#` 後不是 `/`；不是物件、某個 key 型別不對、必填沒寫；`exec`（fsm 格也是）寫成物件；aos-fsm 開跑時查整張表不合（10-22：`start`／`next` 不在表上、`next` 空字串或頭尾有空白、格的形狀不對）；aos-daemon 10-22 起：子項名字跟自己的 ctl／state 撞名（10-23 統合前分成 ReadFailed、JsonSyntax、FieldType、Conflict） |
+| `CfgBad` | aos-loop、aos-fsm、aos-daemon | 設定檔讀不了、不是 JSON、`#` 後不是 `/`；不是物件、某個 key 型別不對、必填沒寫；`exec`（fsm 格也是）寫成物件（10-21～10-23；10-24 起物件＝單子）；aos-fsm 開跑時查整張表不合（10-22：`start`／`next` 不在表上、`next` 空字串或頭尾有空白、格的形狀不對）；aos-daemon 10-22 起：子項名字跟自己的 ctl／state 撞名（10-23 統合前分成 ReadFailed、JsonSyntax、FieldType、Conflict） |
 | `StateBad` | aos-fsm | 10-22 起：`$AOS_STACK/state.txt` 在但讀不了（沒權限、是資料夾、不是 UTF-8）（10-23 統合前叫 ReadFailed） |
 | `SchemaMissing` | aos-schema | SCHEMA檔 不在（10-23 統合前叫 ReadFailed） |
 | `WriteFailed` | aos-loop、aos-fsm、aos-daemon | state 窗寫不了；aos-fsm：`trace.jsonl`、`.state.txt` 寫不了；aos-daemon：子項的 loop.json 寫不了 |
 | `MkdirFailed` | aos-daemon、aos-exec | 資料夾建不了（aos-exec：`AOS_STACK`；aos-daemon：子項的小格） |
-| `LaunchFailed` | inst、aos-loop、aos-daemon、aos-exec | 子程序起不來（執行檔不在、fork 失敗；aos-exec 還有 exec 失敗、libaos 起不來；aos-daemon：小格的 stderr 開不了） |
+| `LaunchFailed` | inst、aos-loop、aos-daemon、aos-exec | 子程序起不來（執行檔不在、fork 失敗；aos-exec 還有 exec 失敗、libaos 起不來；aos-daemon：小格的 stderr 開不了；10-24 起 aos-loop／aos-fsm／aos-daemon 的 `exec` 單子起不來也是） |
 | `Internal` | 每支 | 照理不會發生的例外 |
 | `DirectiveBad` | aos-directive（aos-exec 原樣透傳） | 指示詞解不開：`$env` 沒設、`$ref` 讀不到（含指到資料夾）／不是 JSON、指不到、繞圈（寫法不合不算錯，10-20 D13～D15） |
-| `WsMissing`、`EntryMissing`、`EntryBad` | aos-exec | 見 [aos-exec](aos-exec/README.md)（`WsMissing` 10-23 統合前叫 WorkspaceMissing） |
+| `WsMissing`、`EntryMissing`、`EntryBad` | aos-exec | 見 [aos-exec](aos-exec/README.md)（`WsMissing` 10-23 統合前叫 WorkspaceMissing）；10-24 起 aos-loop／aos-fsm／aos-daemon 的 `exec` 單子形狀不對也是 `EntryBad`（原因開頭「單子跑不起來：」） |
 | `DotenvBad` | aos-exec | `.env` 在但讀不到（權限、是資料夾、壞掉的捷徑）；`.env` 壞（格式不合〔10-22 起含引號沒收尾、引號裡有 `\`、單引號裡有 `${`、引號後有雜字、`=` 後空白再接 `#`〕、`${名字}` 沒設、不是 UTF-8）；JSON 的 `.env` key 指示詞解不開、名字不合。只印位置、不印值（10-23 統合前分成 EnvReadFailed、EnvBad） |
 | `CwdMissing`、`OpenFailed`、`CommandMissing`、`CommandBad`、`WaitFailed`、`KillFailed`、`PathConflict`、`PathNotAbsolute` | libaos（`aos_inst_strerror`；aos-exec 跑 inst 單子起不來時放在 `LaunchFailed` 的原因開頭） | 見 [inst](inst/README.md)（`CommandMissing`／`CommandBad` 10-23 統合前叫 CommandNotFound／CommandNotExecutable） |
 | `StackMissing` | aos-loop（定義在 `aos/loop.hpp`）、aos-fsm、aos-daemon | 要 `AOS_STACK` 卻沒設（loop 開了窗、fsm、daemon） |

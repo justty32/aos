@@ -155,13 +155,13 @@ class T(unittest.TestCase):
         p = self.start({"state": "state.json", "max": 10, "interval_ms": 100,
                         "loops": {"bad": {"exec": "daemon.json#/loops/bad/body",
                                              "body": {"argv": ["sh", "-c", "exit 3"]}},
-                                     "obj": {"exec": {"argv": ["true"]}}}})   # exec 是物件＝子 loop 自己的錯（10-21）
+                                     "obj": {"exec": {"argv": "true"}}}})   # 10-24 起物件＝內嵌單子；形狀壞＝子 loop 自己的錯（10-21～10-23 物件本身就是錯）
         out, err = p.communicate(timeout=30)
         k = self.kids()
         self.assertEqual((p.returncode, err, k["bad"]["phase"], k["bad"]["code"], k["obj"]["phase"], k["obj"]["code"]),
                          (0, "", "done", 3, "done", 1))
         self.assertIn("aos-loop: ", (self.s / "bad" / "stderr.txt").read_text())
-        self.assertIn("loop.json#/body", (self.s / "obj" / "stderr.txt").read_text())
+        self.assertIn("aos-loop: EntryBad 單子跑不起來：", (self.s / "obj" / "stderr.txt").read_text())
 
     def test_ctl_loops_add_and_remove(self):
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})

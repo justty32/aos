@@ -43,6 +43,46 @@ static void check_name(const std::string& name) {
     }
 }
 
+Json abs_refs(const Json& v, const std::string& base) {
+    if (v.is_array()) {
+        Json out = Json::array();
+        for (const Json& x : v) {
+            out.push_back(abs_refs(x, base));
+        }
+        return out;
+    }
+    if (!v.is_object()) {
+        return v;
+    }
+    Json out = v;
+    if (v.contains("$ref")) {   // 指示詞：只動 $ref 的檔名（其他 key 指示詞不看，不往裡面走）
+        auto fix = [&](Json& s) {
+            if (!s.is_string()) {
+                return;
+            }
+            std::string r = s.get<std::string>();
+            size_t hash = r.find('#');
+            std::string file = r.substr(0, hash);
+            if (!file.empty() && file[0] != '/') {
+                s = aos::join(base, file) + (hash == std::string::npos ? "" : r.substr(hash));
+            }
+        };
+        Json& ref = out["$ref"];
+        if (ref.is_array()) {
+            for (Json& s : ref) {
+                fix(s);
+            }
+        } else {
+            fix(ref);
+        }
+        return out;
+    }
+    for (auto& [k, x] : out.items()) {
+        x = abs_refs(x, base);
+    }
+    return out;
+}
+
 Json read_loops(const Json& v, const std::string& base, const std::string& key) {
     aos::Resolved top = aos::resolve_shallow(v, base);   // 拆成好幾份檔＝{"$ref": [檔, …]}，合好的每個子項記著它來自哪份檔
     if (!top.value.is_object()) {
@@ -57,7 +97,15 @@ Json read_loops(const Json& v, const std::string& base, const std::string& key) 
         if (it.value.is_string() || it.value.is_array()) {
             vec.emplace_back(name, aos::resolve(it.value, it.base_dir));
         } else if (it.value.is_object()) {
-            vec.emplace_back(name, aos::loop::resolve_keys(it.value, it.base_dir, {"exec", "max", "interval_ms", "ctl", "state"}).value);
+            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", "ctl", "state"});
+            if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解、相對 $ref 轉成絕對（10-24）
+                aos::Resolved ex = aos::loop::resolve_exec(r.value["exec"], r.dir_of("exec"));
+                if (ex.value.is_object()) {
+                    ex.value = abs_refs(ex.value, ex.base_dir);
+                }
+                r.value["exec"] = std::move(ex.value);
+            }
+            vec.emplace_back(name, std::move(r.value));
         } else {
             throw Error{code::CfgBad, key + "[" + name + "] 要是 aos-exec 的目標或 loop 設定"};
         }

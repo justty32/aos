@@ -277,12 +277,16 @@ class Cli(Base):
         r = self.loop_cli("loop.json", env={"AOS_STACK": str(s)})
         self.assertEqual((r.returncode, r.stderr, len(self.runs(s))), (0, "", 12))
 
-    def test_val_object_is_own_error(self):
+    def test_exec_object_is_inline_inst(self):
+        # 10-24（使用者「exec本來就應該要可以直接放內嵌單子吧」；10-21 L3「物件＝自己的錯」撤回）：物件＝內嵌單子，loop 行程內跑
         s = self.stack()
-        self.loop({"exec": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/runs"']}, "max": 1})
+        self.loop({"exec": {"argv": ["sh", "-c", 'echo "$AOS_CO" >> "$AOS_STACK/runs"']}, "max": 2})
         r = self.loop_cli("loop.json", env={"AOS_STACK": str(s)})
-        self.assertEqual((r.returncode, len(r.stderr.splitlines()), self.runs(s)), (1, 1, []))
-        self.assertTrue(r.stderr.startswith("aos-loop: ") and "loop.json#/body" in r.stderr, r.stderr)
+        self.assertEqual((r.returncode, r.stderr, self.runs(s)), (0, "", ["/exec", "/exec"]))
+        self.loop({"exec": {"argv": "sh"}, "max": 1})   # 形狀壞＝loop 自己的錯，一行
+        r = self.loop_cli("loop.json", env={"AOS_STACK": str(s)})
+        self.assertEqual((r.returncode, len(r.stderr.splitlines())), (1, 1))
+        self.assertTrue(r.raw_stderr.startswith("aos-loop: EntryBad 單子跑不起來："), r.raw_stderr)
 
     def test_dash_target_not_flag(self):
         # L10：loop 叫 aos-exec 時寫 `aos-exec -- 目標`，- 開頭的目標不會被 aos-exec 當旗標

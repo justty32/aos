@@ -40,11 +40,11 @@ daemon.json＝loop.json 的超集（N-28）：
 
 | key | 型別 | 沒寫 | 意思 |
 |---|---|---|---|
-| `exec` | 字串或 `[目標, 參數...]` | 不跑 | 自己每次的身體（同 aos-loop：每次 `aos-exec -- 目標 參數...`；物件＝`CfgBad`；10-23 統合一度改叫 val、同晚改回 run，深夜再改 exec（使用者「exec，loop／daemon 的 run 也一起改 exec」））；純監工不寫 |
+| `exec` | 字串、`[目標, 參數...]` 或單子物件 | 不跑 | 自己每次的身體（同 aos-loop：每次 `aos-exec -- 目標 參數...`；物件＝單子、行程內 `run_inst`，`AOS_CF`＝daemon.json、`AOS_CO`＝`/exec`（10-24；10-21～10-23 物件＝`CfgBad`）；10-23 統合一度改叫 val、同晚改回 run，深夜再改 exec（使用者「exec，loop／daemon 的 run 也一起改 exec」））；純監工不寫 |
 | `max` | 非負整數 | 不限 | 跑幾次就收工（寫 `null` 不行，同 bin 版） |
 | `interval_ms` | 非負整數 | 200 | 兩次之間至少隔幾毫秒 |
 | `ctl`、`state` | 檔名 | 不開 | 兩扇窗，在 `$AOS_STACK` 底下（同 aos-loop） |
-| `loops` | `{名字: 字串、陣列或物件}` | `{}` | 字串或陣列＝aos-exec 的目標（包成 `{"exec": 它}`）；物件＝一份 loop.json 的內容（不驗，原樣交給子 loop，寫錯了子 loop 自己退 1）。子項要內嵌單子寫 `{"exec": "daemon.json#/loops/<名字>/body", "body": 單子}`。拆成好幾份檔寫 `{"$ref": ["loops-1.json", "loops-2.json"]}`（見下「指示詞與切檔」） |
+| `loops` | `{名字: 字串、陣列或物件}` | `{}` | 字串或陣列＝aos-exec 的目標（包成 `{"exec": 它}`）；物件＝一份 loop.json 的內容（不驗，原樣交給子 loop，寫錯了子 loop 自己退 1）。子項要內嵌單子寫 `{"exec": "daemon.json#/loops/<名字>/body", "body": 單子}`〔10-24 起直接寫 `{"exec": 單子}`（使用者「不過exec本來就應該要可以直接放內嵌單子吧」，[thinking 10-24](../../thinking/2026-10-24-exec-relative.md#10-24-exec-直接放單子)）：子 loop 在自己行程內跑，`AOS_CF`＝小格的 `loop.json`、`AOS_CO`＝`/exec`；daemon 寫小格時單子沒寫 `cwd`＝補上 daemon 的 cwd、相對的 `cwd` 接在 daemon 的 cwd 後面（指示詞不動），單子裡相對的 `$ref` 檔名照它來自的檔轉成絕對（`abs_refs`，不解）——相對路徑照舊從 daemon 的 cwd 算；ctl 加的子項同一套〕。拆成好幾份檔寫 `{"$ref": ["loops-1.json", "loops-2.json"]}`（見下「指示詞與切檔」） |
 | `adopt` | 布林 | true | 起來時讀自己上次的 state，把還活著的子 loop 接回、不重起 |
 
 - 要 `$AOS_STACK`（沒設＝`StackMissing`）。名字不能當資料夾名或會被 aos-exec 誤認（空、`.`、`..`、含 `/`、含 `#`、以 `.` 開頭）＝`CfgBad`。
@@ -131,8 +131,8 @@ daemon.json＝loop.json 的超集（N-28）：
 | 檔 | 做什麼 |
 |---|---|
 | `src/common/common.hpp` | `using`、代號（全沿用 aos-loop 的） |
-| `src/child/child.hpp`、`child.cpp` | 一支子 loop：`spawn`（小格、loop.json（補 ctl／state、蓋 `_entry`、相對 exec 轉絕對）、fork＋子行程 `run_child` 呼叫 aos-exec 的 `run_cli`）、`alive`、`row` |
-| `src/daemon/daemon.hpp`、`daemon.cpp` | `Daemon`（`aos::loop::Loop` 的子類別）：`read_loops`（`loops` 的指示詞：本身、每個子項各從它來自的檔算）、`write_parts`（state 切檔：`{"$ref": [分檔, …]}`）、ctl 的 `loops_added`／`loops_removed`；建構子、`adopt`、`tend`、`term`／`settle`（收子項不等：送 SIGTERM、之後每次看一眼、滿 10 秒 SIGKILL）、`finish`（收全部、等的時候每秒寫 state，標 stopped、剛死的標 done）、表＝串列＋名字的雜湊表、`info`、`check_ctl`；名字不能帶 `/`、`#`、不能 `.` 開頭（`read_loops`，10-23 晚前叫 `check_loops`）；`taken_names`、`check_names`（跟自己的 ctl／state 撞名，10-22） |
+| `src/child/child.hpp`、`child.cpp` | 一支子 loop：`spawn`（小格、loop.json（補 ctl／state、蓋 `_entry`、相對 exec 轉絕對；exec 是單子＝補／接 `cwd`，10-24）、fork＋子行程 `run_child` 呼叫 aos-exec 的 `run_cli`）、`alive`、`row` |
+| `src/daemon/daemon.hpp`、`daemon.cpp` | `Daemon`（`aos::loop::Loop` 的子類別）：`read_loops`（`loops` 的指示詞：本身、每個子項各從它來自的檔算；子項 `exec` 是單子＝只換一層、`abs_refs` 把相對 `$ref` 轉絕對，10-24）、`write_parts`（state 切檔：`{"$ref": [分檔, …]}`）、ctl 的 `loops_added`／`loops_removed`；建構子、`adopt`、`tend`、`term`／`settle`（收子項不等：送 SIGTERM、之後每次看一眼、滿 10 秒 SIGKILL）、`finish`（收全部、等的時候每秒寫 state，標 stopped、剛死的標 done）、表＝串列＋名字的雜湊表、`info`、`check_ctl`；名字不能帶 `/`、`#`、不能 `.` 開頭（`read_loops`，10-23 晚前叫 `check_loops`）；`taken_names`、`check_names`（跟自己的 ctl／state 撞名，10-22） |
 | `src/main.cpp` | 命令列：`block_signals` → `loop_cli` → `Daemon` → `serve`；出錯印「aos-daemon: 代號 原因」 |
 
 ## 為什麼這樣做
@@ -167,6 +167,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
   四案拿修前的碼跑都紅；10-23 晚加 G 段 6 案（共 30 案，約 30 秒）：`loops` 用 `$ref` 陣列拆檔與每層的 `$ref`（兩份同名後蓋前、各份從自己的資料夾算、子項 loop key 先解、body 原樣、`adopt` 也解）、拆檔與指示詞寫壞（舊的物件陣列不收、物件與陣列混著、一份讀不到、合成陣列、解不開＝`DirectiveBad`）、
   ctl 的 `loops_added`／`loops_removed`（加、減、拿掉回 daemon.json、跟 ctl 的 `loops` 一起、兩邊都寫＝不要）、寫壞不採用與 ctl 的相對 `$ref`（`$ref` 陣列、兩份在不同資料夾）、
   state 超過 100 列切檔（`{"$ref": [...]}`、每份 100＋1、檔名是雜湊、aos-directive 解回整張表、只留兩代、分檔資料夾撞名）、切了檔照樣 adopt、縮回 100 以內變回物件並清掉分檔——六案拿改前的碼跑都紅。
+  10-24 加 4 案（共 34 案，約 33 秒）：exec 直接放單子——daemon 自己的 exec（`AOS_CF`＝daemon.json、`/exec`、cwd）、非 0／逾時 143／形狀壞 `EntryBad`、子項的單子（`AOS_CF`＝小格、cwd 補成 daemon 的 cwd、相對 `cwd` 接上、相對 `$ref` 轉絕對）、ctl 半路加的子項是單子；拿掉實作（含只拿掉補 `cwd`、只拿掉 `abs_refs`）都紅。
   PATH 放 impls 的 aos-exec、aos-loop 兩支的 `bin/`（子 loop 要 exec 成 PATH 上的 aos-loop）。
 - `test_demo`（`tests/test_demo.py`）：`proto8/demo/daemon` 在 impls 線（PATH 只放 impls 四支的 `bin/`）與 bin 線各跑一次，比結束碼、stderr、整棵工作區與 stack 的檔與內容。〔10-23 起只跑 impls 線、看結束碼 0、stderr 空、答案寫出來：Python 版刪了（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」），沒有 bin 線可比〕
   要先建好 ../aos-exec、../aos-loop、../aos-fsm 的 `bin/`（`test_cli` 也要前兩支）。

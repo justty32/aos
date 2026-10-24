@@ -2,8 +2,7 @@
  "start": "idle",
  "states": {
    "idle":  {"exec": "idle", "next": "think"},
-   "think": {"exec": "fsm.json#/states/think/body",
-             "body": {"argv": ["python3", "brain.py"],
+   "think": {"exec": {"argv": ["python3", "brain.py"],
                       "stdout": {"$env": "AOS_STACK", "$path": "plan.txt"},
                       "timeout_ms": 120000},
              "next": "act"},

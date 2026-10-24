@@ -1,9 +1,8 @@
 {"start": "idle",
  "states": {
-   "idle":  {"exec": "fsm.json#/states/idle/body", "body": {"argv": ["python3", "idle.py"]}, "next": "think"},
-   "think": {"exec": "fsm.json#/states/think/body",
-             "body": {"argv": ["python3", "brain.py"],
+   "idle":  {"exec": {"argv": ["python3", "idle.py"]}, "next": "think"},
+   "think": {"exec": {"argv": ["python3", "brain.py"],
                       "stdout": {"$env": "AOS_STACK", "$path": "plan.txt"},
                       "timeout_ms": 120000},
              "next": "act"},
-   "act":   {"exec": "fsm.json#/states/act/body", "body": {"argv": ["python3", "act.py"]}, "next": "idle"}}}
+   "act":   {"exec": {"argv": ["python3", "act.py"]}, "next": "idle"}}}
