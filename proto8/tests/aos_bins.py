@@ -10,7 +10,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent      # proto8/
 IMPLS = ROOT / "impls"
-CXX = ("aos-exec", "aos-loop", "aos-fsm", "aos-daemon")
+CXX = ("aos-exec", "aos-loop", "aos-fsm", "aos-daemon", "aos-kernel-llm", "aos-gate")   # 10-24 加後兩支（LLM kernel）
 BINS = [IMPLS / n / "bin" for n in CXX] + [ROOT / "bin"]   # 最後一個是 proto8/bin（只剩 aos-tick）
 BIN_DIRS = [str(b) for b in BINS]
 

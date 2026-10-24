@@ -1,0 +1,2 @@
+{"argv": ["python3", "brain.py"], "cwd": "..", "priority": "normal",
+ "_metainfo": {"time_ms": {"val": 800, "max": 3000}, "llm_tokens": 200}}

@@ -1,0 +1,9 @@
+{
+  "name": "aos-kernel-llm",
+  "version": "0.1.0",
+  "description": "aos-kernel-llm：LLM kernel 跑一次——從信箱挑最該跑的信、跑、回信（信箱、信的格式也給 aos-gate 用）",
+  "builtin-baseline": "b781af668027bbf77f2f827f47b5c6cd8d825c08",
+  "dependencies": [
+    "nlohmann-json"
+  ]
+}

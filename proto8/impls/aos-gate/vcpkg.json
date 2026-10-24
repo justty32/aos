@@ -1,0 +1,9 @@
+{
+  "name": "aos-gate",
+  "version": "0.1.0",
+  "description": "aos-gate：把一張單子寄進 kernel 的信箱、等回信、結果原樣交回",
+  "builtin-baseline": "b781af668027bbf77f2f827f47b5c6cd8d825c08",
+  "dependencies": [
+    "nlohmann-json"
+  ]
+}

@@ -6,6 +6,10 @@
 
 > **現況（2026-10-23）：提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（C++），行為對齊 `proto8/bin` 的 10-22 版。10-23 起整個 `impls/` 進 git；舊快照 `backup/` 10-23 使用者授權刪掉，下面提到的 `backup/…` 都已不在。**
 >
+> **10-24 LLM kernel 第一版（[thinking](../thinking/2026-10-24-llm-kernel.md)）：** 使用者「LLM kernel，也就是把brain這塊弄成一個請求，而不是直接打API，請求會被丟到某個地方，由kernel排隊跑」——多兩支命令列：
+> [aos-gate](aos-gate/README.md)（`aos-gate 單子.json`：把單子寄進 `$AOS_KERNEL` 信箱、等回信、stdout／stderr／碼原樣交回、收到訊號撤信）、[aos-kernel-llm](aos-kernel-llm/README.md)（`aos-kernel-llm kernel.json`：給 loop／daemon 一次次拍，收拾、排隊、`slots` 封各 fork 一個子行程交給 `run_inst`、回信、`served.jsonl`；
+> 單子的 `_metainfo.time_ms` 同級時短的先，使用者「_metainfo好了之後，讓kernel實際去用用看」）。信箱與信的格式在 aos-kernel-llm 的公開標頭 `aos/kernel_llm.hpp`，閘門連它。
+>
 > **10-24（`exec` 又收單子物件，[thinking](../thinking/2026-10-24-exec-relative.md#10-24-exec-直接放單子)）：** 使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」——aos-loop、aos-fsm、aos-daemon 的 `exec`（fsm 是每一格的）寫成物件＝單子，
 > 在自己行程內呼叫 aos-exec 的 `run_inst` 跑（aos-loop 的 `run_once`／新的 `src/run/inline.cpp`），跑的期間 `AOS_CF`／`AOS_CD`／`AOS_CO` 設成單子的位置（設定檔、它的資料夾、`/exec` 或 `/states/<名>/exec`），
 > 單子裡的指示詞跑的時候才解（`resolve_exec`）；daemon 寫小格時給子項的單子補 `cwd`、相對 `$ref` 轉絕對。字串、字串陣列照舊每次在子行程裡 `run_cli`。下面 10-21 晚那段「只收字串」作廢。
@@ -62,6 +66,10 @@
 ## 地圖與依賴
 
 ```
+ aos-gate     寄信：單子＋整份環境＋priority → $AOS_KERNEL 信箱 new/，等 done/ 的回信、原樣交回      src/{send,wait,common}
+     │ 連 aos-kernel-llm 的公開標頭（信箱與信的格式）
+ aos-kernel-llm  一次：鎖信箱 → 收拾 → 排隊 → 認領 slots 封、各 fork 一個子行程 run_inst → 回信、served.jsonl   src/{letter,queue,serve,common}
+     │ 連 aos-loop 的公開 API（擋訊號、resolve_keys；跑單子＝aos-exec 的 run_inst）
  aos-daemon   一個 loop＋子 loop 的表：$AOS_STACK/<名字>/ 小格、ctl 增減、不自動重起、adopt   src/{daemon,child,common}
      │ 繼承 aos-loop 的 Loop；子 loop＝fork 後子行程呼叫 run_cli(-- 小格/loop.json#/_entry)，exec 成 PATH 上的 aos-loop
  aos-fsm      一次跑一格：$AOS_STACK/state.txt → 跑那格 → 碼 0 才換 next；trace.jsonl   src/{table,state,common}
@@ -90,6 +98,8 @@
 | aos-directive | 指示詞 `$ref`／`$env`（可帶 `$path`、`$prefix`；10-21 改版、10-21 傍晚 `$path` 改字串拼接） | `lib/libaos-directive.a`、`bin/aos-directive` | 庫（bin 不對外提供） | [aos-directive](aos-directive/README.md) |
 | aos-schema | JSON Schema 驗證 | `lib/libaos-schema.a`、`bin/aos-schema` | 庫（bin 不對外提供；aos-exec 這次不連） | [aos-schema](aos-schema/README.md) |
 | aos-inst | 命令列：一張 inst 跑一次 | `lib/libaos-inst.a`、`bin/aos-inst` | 已刪（10-19，碼已併入 aos-exec 的 src/inst/，舊版在備份 backup/aos-impls-2026-10-19.tar.gz（10-23 已刪）） | （已刪） |
+| aos-kernel-llm | 命令列：`aos-kernel-llm [旗標] kernel.json`，LLM kernel 跑一次（挑信、跑、回信）；庫有公開標頭 `aos/kernel_llm.hpp`（信箱與信） | `lib/libaos-kernel-llm.a`、`bin/aos-kernel-llm` | **提供**（10-24 新做） | [aos-kernel-llm](aos-kernel-llm/README.md) |
+| aos-gate | 命令列：`aos-gate [旗標] 單子.json`，把單子寄給 kernel、等回信、原樣交回 | `lib/libaos-gate.a`、`bin/aos-gate` | **提供**（10-24 新做） | [aos-gate](aos-gate/README.md) |
 | aos-daemon | 命令列：`aos-daemon [旗標] daemon.json`，顧一群子 loop（經 aos-exec 起） | `lib/libaos-daemon.a`、`bin/aos-daemon` | **提供**（10-21 重寫、10-21 晚子 loop 經 aos-exec） | [aos-daemon](aos-daemon/README.md) |
 
 ## 從哪開始讀
@@ -162,6 +172,9 @@
 | `StackMissing` | aos-loop（定義在 `aos/loop.hpp`）、aos-fsm、aos-daemon | 要 `AOS_STACK` 卻沒設（loop 開了窗、fsm、daemon） |
 | `StateUnknown` | aos-fsm | state 檔裡的狀態不在表上。見 [aos-fsm](aos-fsm/README.md) |
 | （舊 aos-loop 的 `WindowMissing`、`StateWriteFailed`、`Signaled`、`CtlBad`、`CtlMissing`、`CtlReadFailed`；舊 aos-daemon 的 `CommandBad`、`OpUnknown`、`NotFound`、`Exists`、`ScanFailed`、`ReplyFailed`、`PolicyFailed`、`RestartFailed`、`TableWriteFailed`） | 已隨舊版換掉 | ctl 壞不是錯（不採用、記在 state 的 `ctl_warning`） |
+| `MailboxMissing`、`PriorityBad`、`LetterMissing`、`ReplyBad` | aos-gate（定義在 `aos/kernel_llm.hpp`） | 沒設 `AOS_KERNEL` 或不是資料夾；priority 寫壞；信在信箱裡不見了；回信讀不懂（10-24） |
+| `LockFailed`、`QueueBad` | aos-kernel-llm | 信箱被另一個 kernel 鎖著；`$AOS_STACK/queue.json` 讀不懂（10-24） |
+| `LetterBad`、`DeadlineMissed`、`RunFailed` | aos-kernel-llm 寫進回信、aos-gate 印出來 | 信讀不懂或 priority 壞；輪到之前時限已過；上一次 kernel 跑到一半死了沒回信（10-24） |
 | `SchemaBad` | aos-schema | schema 不合 draft-07、`$ref` 指不到 |
 
 ### 命令列：設定、旗標、三扇門、指示詞
@@ -216,10 +229,10 @@ cmake -B build && cmake --build build && ctest --test-dir build
   endif()
   target_link_libraries(你的target PRIVATE aos-util)
   ```
-- 依賴順序：inst → aos-util → aos-directive → aos-exec → aos-loop → aos-fsm、aos-daemon；aos-schema 獨立（庫留著，沒人連）。
+- 依賴順序：inst → aos-util → aos-directive → aos-exec → aos-loop → aos-fsm、aos-daemon、aos-kernel-llm → aos-gate（10-24）；aos-schema 獨立（庫留著，沒人連）。
   一次全建（aos-fsm、aos-daemon 的 `test_demo` 要前面幾支的 `bin/` 先建好，所以照這個順序）：
   ```sh
-  for p in inst aos-util aos-directive aos-schema aos-exec aos-loop aos-fsm aos-daemon; do (cd $p && cmake -B build && cmake --build build && ctest --test-dir build) || break; done
+  for p in inst aos-util aos-directive aos-schema aos-exec aos-loop aos-fsm aos-daemon aos-kernel-llm aos-gate; do (cd $p && cmake -B build && cmake --build build && ctest --test-dir build) || break; done
   ```
 - Sanitizer：`cmake -B build-asan -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined"`（`settings.cmake` 看到 `-fsanitize` 就不加 `-static-pie`）。
   帶 sanitizer 的 `.a` 會蓋掉共用的 `lib/`，建完記得重建正常版。
@@ -229,7 +242,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
 
 | 檔 | 做什麼 | ctest 名 | 誰有 |
 |---|---|---|---|
-| `tests/test_cli.py` | 命令列黑箱：餵 stdin 或設定檔、看退出碼與輸出 | `test_cli` | aos-util、aos-directive（57 組）、aos-schema（12 案）、aos-exec（56 組）、aos-loop（40 組）、aos-fsm（29 組）、aos-daemon（20 案，unittest） |
+| `tests/test_cli.py` | 命令列黑箱：餵 stdin 或設定檔、看退出碼與輸出 | `test_cli` | aos-util、aos-directive（57 組）、aos-schema（12 案）、aos-exec（56 組）、aos-loop（40 組）、aos-fsm（29 組）、aos-daemon（20 案，unittest）、aos-kernel-llm（29 案，unittest）、aos-gate（15 案，unittest；測試自己當 kernel） |
 | `tests/test_demo.py` | 整合：proto8/demo 在 impls 線跑，看結束碼 0、stderr 空、答案寫出來（10-23 前另跟 proto8/bin 線逐檔比，Python 版刪了就拿掉） | `test_demo` | aos-fsm（agent-bob、agent-ann）、aos-daemon（demo/daemon） |
 | `tests/test_lib.*` | 函式庫 | `test_lib`、`test_lib_*` | inst（C；另一份 `test_lib_nopidfd` 走輪詢退路）、aos-schema、aos-util（7 條，含 10-23 的代號 `cli`） |
 | `tests/test_ffi.py` | Python ctypes 載 `.so` | `test_ffi` | inst |

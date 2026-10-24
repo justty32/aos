@@ -1,0 +1,7 @@
+#!/bin/sh
+# _entry - 一個 daemon 同時管 LLM kernel 和三隻走 kernel 的 agent（a、b 是 normal、b 的腦宣告 800 毫秒，c 是 high）
+# 信箱放在這個 daemon 的 stack 裡，用 AOS_KERNEL 告訴兩邊：kernel.json 的 mailbox 讀它、agent 的閘門（aos-gate）也讀它。
+# 先建好，免得 agent 比 kernel 第一次跑還早寄信（閘門看到信箱不在會直接報 MailboxMissing）。
+AOS_KERNEL="$AOS_STACK/mailbox"; export AOS_KERNEL
+mkdir -p "$AOS_KERNEL"
+exec aos-daemon daemon.json
