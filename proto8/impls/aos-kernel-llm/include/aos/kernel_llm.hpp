@@ -8,6 +8,7 @@
 //     .lock        kernel 跑一次的期間 flock 住（同一個信箱同時只有一個 kernel）
 //   信：letter.json＝{"inst": 單子（指示詞已解、cwd 是絕對路徑）, "env": 寄信那一刻閘門的整份環境, "priority": 原樣}
 //   回信：reply.json＝{"code": 結束碼, "signal": 訊號或 null}，或 {"error": {"code": 代號, "msg": 原因}}（kernel 沒跑或跑不起來）
+//   回報：report.json＝腦自願寫的 API 回覆 usage（kernel 跑信時給環境變數 AOS_KERNEL_REPORT 指向 cur/<id>/report.json；10-24）
 //
 //   letter_id      新信號：<UTC 奈秒 20 位>.<閘門 pid>.<閘門 started_at_ticks>——照字典序排＝照寄的先後；從名字就看得出寄信的人還在不在
 //   sender_alive   寄這封信的閘門還在不在（pid＋started_at_ticks 對得上，N-15、N-17；名字讀不懂＝不在）
@@ -40,6 +41,8 @@ inline constexpr const char* RunFailed = "RunFailed";           // 回信：跑�
 inline constexpr const char* ReplyBad = "ReplyBad";             // 閘門：回信讀不懂
 inline constexpr const char* LockFailed = "LockFailed";         // kernel：信箱被另一個 kernel 鎖著
 inline constexpr const char* QueueBad = "QueueBad";             // kernel：$AOS_STACK/queue.json 在但讀不懂
+inline constexpr const char* UsedBad = "UsedBad";               // kernel：$AOS_STACK/used.json（用量帳）在但讀不懂
+inline constexpr const char* BudgetMissing = "BudgetMissing";   // 回信：這一窗的額度（kernel.json 的 budget）用完了，沒跑（10-15 稿叫 BudgetExhausted，照 C-54 四種結尾改）
 }  // namespace code
 
 // 信箱四格的路徑。

@@ -9,6 +9,7 @@
 > **10-24 LLM kernel 第一版（[thinking](../thinking/2026-10-24-llm-kernel.md)）：** 使用者「LLM kernel，也就是把brain這塊弄成一個請求，而不是直接打API，請求會被丟到某個地方，由kernel排隊跑」——多兩支命令列：
 > [aos-gate](aos-gate/README.md)（`aos-gate 單子.json`：把單子寄進 `$AOS_KERNEL` 信箱、等回信、stdout／stderr／碼原樣交回、收到訊號撤信）、[aos-kernel-llm](aos-kernel-llm/README.md)（`aos-kernel-llm kernel.json`：給 loop／daemon 一次次拍，收拾、排隊、`slots` 封各 fork 一個子行程交給 `run_inst`、回信、`served.jsonl`；
 > 單子的 `_metainfo.time_ms` 同級時短的先，使用者「_metainfo好了之後，讓kernel實際去用用看」）。信箱與信的格式在 aos-kernel-llm 的公開標頭 `aos/kernel_llm.hpp`，閘門連它。
+> 10-24 下午加 token 回報與額度（照 rewrite-order 第 3 題推薦，使用者「都按建議做」）：kernel 跑信時給 `AOS_KERNEL_REPORT`，腦願意就寫 usage；kernel.json 的 `budget` 設 `calls`／`tokens` 每窗上限，到頂回 `BudgetMissing` 或等下一窗。
 >
 > **10-24（`exec` 又收單子物件，[thinking](../thinking/2026-10-24-exec-relative.md#10-24-exec-直接放單子)）：** 使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」——aos-loop、aos-fsm、aos-daemon 的 `exec`（fsm 是每一格的）寫成物件＝單子，
 > 在自己行程內呼叫 aos-exec 的 `run_inst` 跑（aos-loop 的 `run_once`／新的 `src/run/inline.cpp`），跑的期間 `AOS_CF`／`AOS_CD`／`AOS_CO` 設成單子的位置（設定檔、它的資料夾、`/exec` 或 `/states/<名>/exec`），
@@ -68,7 +69,7 @@
 ```
  aos-gate     寄信：單子＋整份環境＋priority → $AOS_KERNEL 信箱 new/，等 done/ 的回信、原樣交回      src/{send,wait,common}
      │ 連 aos-kernel-llm 的公開標頭（信箱與信的格式）
- aos-kernel-llm  一次：鎖信箱 → 收拾 → 排隊 → 認領 slots 封、各 fork 一個子行程 run_inst → 回信、served.jsonl   src/{letter,queue,serve,common}
+ aos-kernel-llm  一次：鎖信箱 → 收拾 → 排隊 → 額度到頂就回錯／停 → 認領 slots 封、各 fork 一個子行程 run_inst → 回信、served.jsonl、used.json   src/{letter,queue,serve,budget,common}
      │ 連 aos-loop 的公開 API（擋訊號、resolve_keys；跑單子＝aos-exec 的 run_inst）
  aos-daemon   一個 loop＋子 loop 的表：$AOS_STACK/<名字>/ 小格、ctl 增減、不自動重起、adopt   src/{daemon,child,common}
      │ 繼承 aos-loop 的 Loop；子 loop＝fork 後子行程呼叫 run_cli(-- 小格/loop.json#/_entry)，exec 成 PATH 上的 aos-loop
@@ -173,8 +174,8 @@
 | `StateUnknown` | aos-fsm | state 檔裡的狀態不在表上。見 [aos-fsm](aos-fsm/README.md) |
 | （舊 aos-loop 的 `WindowMissing`、`StateWriteFailed`、`Signaled`、`CtlBad`、`CtlMissing`、`CtlReadFailed`；舊 aos-daemon 的 `CommandBad`、`OpUnknown`、`NotFound`、`Exists`、`ScanFailed`、`ReplyFailed`、`PolicyFailed`、`RestartFailed`、`TableWriteFailed`） | 已隨舊版換掉 | ctl 壞不是錯（不採用、記在 state 的 `ctl_warning`） |
 | `MailboxMissing`、`PriorityBad`、`LetterMissing`、`ReplyBad` | aos-gate（定義在 `aos/kernel_llm.hpp`） | 沒設 `AOS_KERNEL` 或不是資料夾；priority 寫壞；信在信箱裡不見了；回信讀不懂（10-24） |
-| `LockFailed`、`QueueBad` | aos-kernel-llm | 信箱被另一個 kernel 鎖著；`$AOS_STACK/queue.json` 讀不懂（10-24） |
-| `LetterBad`、`DeadlineMissed`、`RunFailed` | aos-kernel-llm 寫進回信、aos-gate 印出來 | 信讀不懂或 priority 壞；輪到之前時限已過；上一次 kernel 跑到一半死了沒回信（10-24） |
+| `LockFailed`、`QueueBad`、`UsedBad` | aos-kernel-llm | 信箱被另一個 kernel 鎖著；`$AOS_STACK/queue.json` 讀不懂（10-24）；`$AOS_STACK/used.json`（用量帳）讀不懂（10-24 下午） |
+| `LetterBad`、`DeadlineMissed`、`BudgetMissing`、`RunFailed` | aos-kernel-llm 寫進回信、aos-gate 印出來 | 信讀不懂或 priority 壞；輪到之前時限已過；這一窗額度用完（10-24 下午）；上一次 kernel 跑到一半死了沒回信（10-24） |
 | `SchemaBad` | aos-schema | schema 不合 draft-07、`$ref` 指不到 |
 
 ### 命令列：設定、旗標、三扇門、指示詞

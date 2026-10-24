@@ -22,7 +22,7 @@
 
 - **做 LLM kernel**（使用者 10-24）：agent 那格不再直接跑腦，而是把「問腦」這張單子當成請求丟進信箱，由 kernel 排隊跑。
 - 照用 10-15 已定的：信箱（N-16 Maildir）、閘門；只包腦；排隊算在呼叫者那格的 `timeout_ms` 裡（閘門沒有自己的等待上限）；kernel 重起時 `cur/` 那封回錯不重跑；priority 的三種寫法、`level` 名字與數字、deadline 近的先與過期不跑（`DeadlineMissed`）、濫用先信任、每等 10 次升一級。
-- **token 用量**（[rewrite-order 第 3 題](2026-10-19-rewrite-order.md)）：使用者 10-24「都按建議做」＝照推薦**開通道**——kernel 跑信時給環境變數 `AOS_KERNEL_REPORT` 指向那封信小格裡的一個檔，腦願意就把 `usage` 寫進去，額度同時認 `calls` 與 `tokens` 兩個上限。**這一版沒做**（只排隊、只算次數，`served.jsonl` 的行數就是次數），排在下一步（[SESSION-LOG](../../wf/SESSION-LOG.md)）。
+- **token 用量**（[rewrite-order 第 3 題](2026-10-19-rewrite-order.md)）：使用者 10-24「都按建議做」＝照推薦**開通道**——kernel 跑信時給環境變數 `AOS_KERNEL_REPORT` 指向那封信小格裡的一個檔，腦願意就把 `usage` 寫進去，額度同時認 `calls` 與 `tokens` 兩個上限。**這一版沒做**（只排隊、只算次數，`served.jsonl` 的行數就是次數），排在下一步（[SESSION-LOG](../../wf/SESSION-LOG.md)）。〔10-24 下午做了，見下「token 回報與額度」〕
 - **`_metainfo` 接進 kernel**（使用者 10-24「讓kernel實際去用用看」，照 [metainfo 紀錄 § 5](2026-10-24-metainfo/02-誰讀與kernel接法.md#5-給-llm-kernel-實作者的接法)）：見下「`_metainfo` 實跑」。
 
 ## 結論：照推薦定、可翻案（使用者 10-24「都按建議做」）
@@ -75,4 +75,36 @@
 ## 接點
 
 - **`_metainfo` 再往下**：讀法集中在 `aos/kernel_llm.hpp` 的 `priority_of`；要加 `llm_tokens` 預估額度、閘門多帶 `from`（單子在哪）做按函數統計，都改這裡與 served 那行（metainfo 紀錄 § 5 第二步）。
-- **token 回報**：照上面的決定開 `AOS_KERNEL_REPORT`，kernel 在 `run_runner` 裡設、跑完讀回、記進 `served.jsonl` 與額度。
+- **token 回報**：照上面的決定開 `AOS_KERNEL_REPORT`，kernel 在 `run_runner` 裡設、跑完讀回、記進 `served.jsonl` 與額度。〔10-24 下午做了，見下一節〕
+- **其他從 agent-dan 抄的 agent 沒改**（agent-eve〔含 `tools/pyfix/agent`〕、fay、meg、pip、kai、liv、hal、`talk/member`、`self-improve/improver`）：它們現在直接問腦、不走 kernel，看不到 `AOS_KERNEL_REPORT` 也不需要；哪隻要改走 kernel，照 agent-dan 的 `brain.py` 抄那五行。
+
+<a id="token-回報與額度10-24-下午"></a>
+## token 回報與額度（10-24 下午）
+
+使用者原文：同上「我現在沒空管這些小事，都按建議做」——上面「決定」的 token 那條（[rewrite-order 第 3 題](2026-10-19-rewrite-order.md)推薦：開 `AOS_KERNEL_REPORT`、額度同時認 `calls` 與 `tokens`）照做。程式：[aos-kernel-llm § token 回報與額度](../impls/aos-kernel-llm/README.md)。
+
+### 結論：照推薦定、可翻案（使用者 10-24「都按建議做」）
+
+1. **回報檔**：kernel 跑每封信時在信帶來的環境上加 `AOS_KERNEL_REPORT`＝`cur/<信號>/report.json`（信裡原本有同名的也蓋掉）。內容＝API 回覆的 `usage` 物件**原樣**，腦先寫 `.report.json` 再改名（N-05）。一封信問好幾次腦＝腦自己加總後寫。翻案＝包一層 `{"usage": …}`、或讓 kernel 加總多份。
+2. **怎麼讀**：`total_tokens`（非負整數）；沒有就 `prompt_tokens`＋`completion_tokens`。檔不在＝沒回報（`tokens` null）；讀不懂、形狀不對＝`report_bad: true`。兩種都**只算次數、照樣交回信**（回報是腦自願的，跟 `_metainfo` 寫壞一樣不擋，M8 的精神）。
+3. **什麼算一次**：子行程起來過（`runner.json` 在）的信。`LetterBad`、`DeadlineMissed`、`BudgetMissing` 不算；kernel 死掉後回 `RunFailed` 的那封算（腦可能已經花了錢）。
+4. **紀錄**：`served.jsonl` 每行多 `tokens`、`report_bad`；帳本另開 `$AOS_STACK/used.json`＝`{"window", "since", "calls", "tokens", "all_calls", "all_tokens"}`，每封寫完 served 那行就記（不併進 `queue.json`：那份一次結束才寫，帳要每封記）。讀不懂＝`UsedBad`。
+5. **額度設定**：kernel.json 的 `budget`（沿用 10-15 稿的名字）：`calls`、`tokens`＝每窗上限（沒寫＝那種不限）；`window`＝`hour`／`day`／`all`，沒寫＝`day`（10-15 照建議定的「一天一期歸零」）；窗的起點用 kernel 的本地時間（整點／午夜；台北就是台北的午夜）。`budget` 沒寫也照記帳。
+6. **到頂怎麼辦**：`spent` 沒寫＝`refuse`——排著的信不跑、回 `BudgetMissing`（10-15 稿「見底＝不排隊、直接回錯」，閘門照印、退 1，agent 照 P-20 停）；`spent: "wait"`＝留在 `new/` 等下一窗（排隊時間算在包閘門那格的 `timeout_ms` 裡）。翻案＝預設改 `wait`。
+7. **錯誤代號** `BudgetMissing`：10-15 稿寫的是 `BudgetExhausted`，照 C-54 R10 四種結尾改（「沒有了」＝`…Missing`）。翻案＝照原名（像 `DeadlineMissed` 那樣）。
+8. **到頂的判法**：開下一封之前看——`calls` 已用＋這次已開的＋上一次留下還在跑的 ≥ 上限，或 `tokens` 已用 ≥ 上限。次數是準的；token 跑完才知道，所以最多超過一次的量。`refuse` 時到頂後這次排著的全回錯（不只 `slots` 那幾封）。
+9. **`_metainfo.llm_tokens` 預先擋：不做**（任務說選做）。理由：宣告只記錄不處罰（M8），而且該拿 `val` 還是 `max` 去擋還沒定。翻案＝在到頂判斷多加「已用＋這封宣告的 > 上限」。
+10. **「快見底只給 high 過」不做**：那句 10-21 列進 [NORMS 待定](../NORMS/08-待定.md)，照舊等使用者。
+11. **範本**：agent-dan 的 `brain.py` 有 `AOS_KERNEL_REPORT` 就寫 usage（五行，P-23 加註）；demo 的 agent-ivy 也寫，假腦編一份（題目與答案的字數當 token 數），demo 才看得到數字。閘門不改。
+
+### 實跑（10-24，`sh proto8/demo/run.sh` 的 kernel-llm 段，假腦）
+
+三封都回報 43 token（served 每行 `"tokens": 43, "report_bad": false`）；`used.json`＝`{"window": "day", "since": "2026-10-24T00:00:00+08:00", "calls": 3, "tokens": 129, "all_calls": 3, "all_tokens": 129}`。真腦那次仍排在 [SESSION-LOG](../../wf/SESSION-LOG.md)。
+
+### 邊緣狀況（挖出來的）
+
+- **回報是自願、不驗的**：腦少報、不報，token 額度就管不到它；單子裡的子行程也看得到 `AOS_KERNEL_REPORT`，誰最後寫算誰的。
+- **時區**：kernel 的 `TZ` 換了、或日光節約，`since` 會變＝當成換窗、歸零一次。
+- **`wait` 配 `window: "all"`**：到頂後永遠等，直到有人改 kernel.json 或刪 `used.json`；閘門那邊由那格 `timeout_ms` 收掉。
+- **跨窗才跑完的信**：算在跑完那一刻的窗。
+- **`used.json` 被刪**：從 0 算（總數也歸零）；`served.jsonl` 還在，要對帳從那裡加。

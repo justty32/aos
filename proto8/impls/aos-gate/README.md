@@ -69,7 +69,7 @@ stderr 一行 **`aos-gate: 代號 原因`**、退 1。
 | `MkdirFailed`、`WriteFailed`（共用） | 信寫不了、改名不了 |
 | `LetterMissing` | 信在信箱裡不見了 |
 | `ReplyBad` | 回信讀不懂 |
-| kernel 回的：`DeadlineMissed`、`LetterBad`、`RunFailed`、`EntryBad`、`DirectiveBad`、`LaunchFailed`、`Internal` | 見 [aos-kernel-llm](../aos-kernel-llm/README.md) |
+| kernel 回的：`DeadlineMissed`、`BudgetMissing`（額度用完，10-24 下午）、`LetterBad`、`RunFailed`、`EntryBad`、`DirectiveBad`、`LaunchFailed`、`Internal` | 見 [aos-kernel-llm](../aos-kernel-llm/README.md) |
 
 ## 建置與測試
 

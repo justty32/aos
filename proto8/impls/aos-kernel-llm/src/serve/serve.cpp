@@ -30,7 +30,7 @@ namespace aos::kernel_llm {
 Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json doc = aos::load_cfg(spec);
     std::string base = aos::dirname(aos::abspath(aos::split_hash(spec).path));
-    doc = aos::loop::resolve_keys(doc, base, {"mailbox", "slots"}).value;
+    doc = aos::loop::resolve_keys(doc, base, {"mailbox", "slots", "budget"}).value;
     if (!doc.is_object()) {
         throw Error{code::CfgBad, spec + " 要是 JSON 物件"};
     }
@@ -51,6 +51,7 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
         }
         c.slots = s.get<long long>();
     }
+    c.budget = parse_budget(doc.value("budget", Json()));
     return c;
 }
 
@@ -115,9 +116,16 @@ struct Served {
     Json metainfo_bad = Json::array();         // 寫壞而當沒寫的 `_metainfo` key
 };
 
+// 跑過的（子行程起來過＝cur/<id>/runner.json 在）才算一次、才看回報；沒跑的（LetterBad、DeadlineMissed、BudgetMissing）不算。
+bool ran(const std::string& dir) {
+    std::error_code ec;
+    return fs::exists(aos::join(dir, "runner.json"), ec);
+}
+
 class Server {
 public:
-    Server(const Cfg& cfg, const std::string& stack) : mb_{cfg.mailbox}, slots_(cfg.slots), stack_(stack) {}
+    Server(const Cfg& cfg, const std::string& stack)
+        : mb_{cfg.mailbox}, slots_(cfg.slots), budget_(cfg.budget), stack_(stack) {}
     ~Server() {
         if (lock_fd_ >= 0) {
             close(lock_fd_);
@@ -131,9 +139,11 @@ public:
 private:
     Mailbox mb_;
     long long slots_;
+    Budget budget_;
     std::string stack_;
     int lock_fd_ = -1;
     Queue q_;
+    Used used_;
     int got_ = 0;
     long long busy_ = 0;   // cur/ 裡上一次 kernel 留下、還在跑的
 
@@ -141,7 +151,7 @@ private:
     void recover();
     void sweep();
     std::vector<Waiting> scan();
-    void refuse(const std::string& id, const Json& level, const Json& reply);
+    void refuse(const std::string& id, const Json& level, const Json& reply, const Json& waited = nullptr);
     void finish(const Served& s);
     pid_t start_runner(const Waiting& w);
     void wait_runners(std::map<pid_t, Served>& running);
@@ -191,6 +201,14 @@ void Server::finish(const Served& s) {
     line["elapsed_ms"] = s.elapsed_ms;
     line["time_ms"] = s.time_ms;
     line["metainfo_bad"] = s.metainfo_bad;
+    std::string dir = aos::join(mb_.cur(), s.id);
+    bool counted = ran(dir);
+    Report rep;
+    if (counted) {
+        rep = read_report(aos::join(dir, "report.json"));   // 腦願意寫才有（AOS_KERNEL_REPORT）；沒寫＝只算次數
+    }
+    line["tokens"] = rep.tokens;
+    line["report_bad"] = rep.bad;
     std::string path = aos::join(stack_, "served.jsonl");
     std::FILE* f = std::fopen(path.c_str(), "a");
     if (f == nullptr) {
@@ -200,6 +218,9 @@ void Server::finish(const Served& s) {
     bool ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
     if (std::fclose(f) != 0 || !ok) {
         throw Error{code::WriteFailed, "寫不了 " + path};
+    }
+    if (counted) {
+        add_used(stack_, used_, rep);
     }
     std::string from = aos::join(mb_.cur(), s.id);
     std::string to = aos::join(mb_.done(), s.id);
@@ -260,8 +281,8 @@ void Server::sweep() {
     }
 }
 
-// 不跑、直接回信（LetterBad、DeadlineMissed）：先認領，認領不到＝閘門剛撤信，算了。
-void Server::refuse(const std::string& id, const Json& level, const Json& reply) {
+// 不跑、直接回信（LetterBad、DeadlineMissed、BudgetMissing）：先認領，認領不到＝閘門剛撤信，算了。
+void Server::refuse(const std::string& id, const Json& level, const Json& reply, const Json& waited) {
     std::string dir = aos::join(mb_.cur(), id);
     if (!move(aos::join(mb_.fresh(), id), dir)) {
         return;
@@ -271,7 +292,7 @@ void Server::refuse(const std::string& id, const Json& level, const Json& reply)
     s.at = aos::utc_now_ms();
     s.id = id;
     s.level = level;
-    s.waited_runs = nullptr;
+    s.waited_runs = waited;
     s.reply = reply;
     finish(s);
 }
@@ -342,6 +363,7 @@ pid_t Server::start_runner(const Waiting& w) {
             setenv(k.c_str(), v.get<std::string>().c_str(), 1);
         }
     }
+    setenv("AOS_KERNEL_REPORT", aos::join(dir, "report.json").c_str(), 1);   // 腦願意就把 API 回覆的 usage 寫進去（10-24）
     Json me = Json::object();   // 先記下自己（kernel 本體死了、自己還活著時，下一次 kernel 看這個不去搶）
     me["pid"] = (long long)getpid();
     me["started_at_ticks"] = aos::proc_started_at_ticks(0).value_or(-1);
@@ -436,6 +458,7 @@ int Server::run() {
     lock();
     q_ = read_queue(stack_);
     q_.runs += 1;
+    used_ = read_used(stack_, budget_.window);
     recover();
     sweep();
     std::vector<Waiting> ws = scan();
@@ -446,6 +469,16 @@ int Server::run() {
     if (got_ == 0) {
         long long n = 0;
         for (const Waiting& w : ws) {
+            if (spent(budget_, used_, n + busy_)) {   // 這一窗額度到頂
+                if (budget_.wait) {
+                    break;   // 留在 new/ 等下一窗（閘門一直等，由包它那格的 timeout_ms 守）
+                }
+                q_.seen_at_runs.erase(w.id);
+                refuse(w.id, level_name(w.priority.level),
+                       error_reply(code::BudgetMissing, "這一窗（" + budget_.window + "）的額度用完了，沒跑"),
+                       waited_runs(w, q_.runs));
+                continue;
+            }
             if (n + busy_ >= slots_) {
                 break;
             }

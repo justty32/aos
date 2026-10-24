@@ -1,1 +1,2 @@
-{"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1}
+{"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1,
+ "budget": {"calls": 100, "tokens": 100000, "window": "day"}}

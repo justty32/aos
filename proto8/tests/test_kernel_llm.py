@@ -2,7 +2,7 @@
 
 單元（排序、slots、回信的錯、收拾、鎖）在 impls/aos-kernel-llm、impls/aos-gate 各自的 tests/test_cli.py；這裡只測兩支接起來、
 跟 loop／fsm／daemon 一起跑的樣子：端到端、包它那格的 timeout_ms 收掉閘門（撤信）、kernel 不在時信堆著、kernel 死掉後重起、demo/kernel-llm。"""
-import json, os, signal, subprocess, tempfile, time, unittest
+import http.server, json, os, signal, subprocess, tempfile, threading, time, unittest
 from pathlib import Path
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
@@ -153,6 +153,92 @@ class KernelCase(unittest.TestCase):
         self.assertEqual((g.returncode, out), (0, "done\n"), err)
 
 
+class UsageServer:
+    """假的 OpenAI 相容 server：每次都回同一個答案，帶 usage（10-24 token 回報）。"""
+    def __init__(self, usage):
+        body = json.dumps({"choices": [{"message": {"role": "assistant", "content": "4"}}], "usage": usage}).encode()
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                self.rfile.read(int(self.headers.get("Content-Length", 0)))
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *a):
+                pass
+
+        self.server = http.server.HTTPServer(("127.0.0.1", 0), H)
+        self.url = "http://127.0.0.1:%d/v1" % self.server.server_address[1]
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+
+
+class ReportCase(unittest.TestCase):
+    """10-24 token 回報與額度：agent-dan 的 brain.py 經閘門、kernel 跑，把假 server 回的 usage 寫進 AOS_KERNEL_REPORT。"""
+    DAN = ROOT / "demo" / "agent-dan"
+    setUp, tearDown, kernel_loop = KernelCase.setUp, KernelCase.tearDown, KernelCase.kernel_loop   # 借 KernelCase 的架子，不重跑它的案例
+
+    def dan_brain(self, n, url):
+        ws, st = self.t / ("ws%d" % n), self.t / ("st%d" % n)
+        (ws / "new").mkdir(parents=True)
+        st.mkdir()
+        (ws / "new" / "q1.txt").write_text("2+2？\n")
+        (self.t / ("b%d.json" % n)).write_text(json.dumps({"argv": ["python3", "brain.py"], "cwd": str(self.DAN)}))
+        return self.gate(None, name="b%d.json" % n, extra={"AOS_STACK": str(st), "AOS_WS": str(ws),
+                                                            "AOS_BRAIN_URL": url}), st
+
+    def gate(self, inst, name="q.json", extra=None):
+        if inst is not None:
+            return KernelCase.gate(self, inst, name, extra)
+        p = subprocess.Popen([GATE, name], cwd=self.t, env=env_of(dict({"AOS_KERNEL": str(self.mb)}, **(extra or {}))),
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        self.procs.append(p)
+        return p
+
+    def test_dan_brain_reports_usage(self):
+        srv = UsageServer({"prompt_tokens": 20, "completion_tokens": 3, "total_tokens": 23})
+        self.addCleanup(srv.close)
+        self.kernel_loop()
+        g, st = self.dan_brain(1, srv.url)
+        out, err = g.communicate(timeout=30)
+        self.assertEqual(g.returncode, 0, err)
+        h = [json.loads(l) for l in (st / "history.jsonl").read_text().splitlines()]
+        self.assertEqual(h[-1], {"role": "assistant", "content": "4"})   # usage 不進 history
+        served = until(lambda: (self.t / "kst" / "served.jsonl").read_text())
+        line = json.loads(served.splitlines()[0])
+        self.assertEqual((line["code"], line["tokens"], line["report_bad"]), (0, 23, False))
+        used = json.loads((self.t / "kst" / "used.json").read_text())
+        self.assertEqual((used["calls"], used["tokens"]), (1, 23))
+
+    def test_dan_brain_without_kernel_writes_nothing(self):
+        srv = UsageServer({"total_tokens": 5})
+        self.addCleanup(srv.close)
+        ws, st = self.t / "ws", self.t / "st"
+        (ws / "new").mkdir(parents=True)
+        st.mkdir()
+        (ws / "new" / "q1.txt").write_text("hi\n")
+        r = subprocess.run(["python3", "brain.py"], cwd=self.DAN, capture_output=True, text=True, timeout=30,
+                           env=env_of({"AOS_STACK": str(st), "AOS_WS": str(ws), "AOS_BRAIN_URL": srv.url}))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(sorted(os.listdir(st)), ["current.txt", "history.jsonl"])
+
+    def test_budget_refused_through_gate(self):
+        (self.t / "kernel.json").write_text(json.dumps({"mailbox": str(self.mb), "budget": {"calls": 1}}))
+        self.kernel_loop()
+        g = self.gate({"argv": ["echo", "one"]}, name="1.json")
+        self.assertEqual(g.communicate(timeout=20)[0], "one\n")
+        g = self.gate({"argv": ["echo", "two"]}, name="2.json")
+        out, err = g.communicate(timeout=20)
+        self.assertEqual((g.returncode, out), (1, ""))
+        self.assertTrue(err.startswith("aos-gate: BudgetMissing "), err)
+
+
 class DemoCase(unittest.TestCase):
     def test_demo_kernel_llm(self):
         with tempfile.TemporaryDirectory() as ws:
@@ -168,6 +254,9 @@ class DemoCase(unittest.TestCase):
             self.assertEqual([s["level"] for s in served], ["high", "normal", "normal"])
             self.assertEqual([s["time_ms"] for s in served], [5000, 800, None])   # 同級：宣告短的（b）先、沒寫的（a）最後
             self.assertEqual([s["code"] for s in served], [0, 0, 0])
+            self.assertEqual([s["tokens"] for s in served], [33, 33, 33])   # 假腦編的 usage（字數）經 AOS_KERNEL_REPORT 交回
+            used = json.loads(Path(ws, ".stack", "kernel", "used.json").read_text())
+            self.assertEqual((used["window"], used["calls"], used["tokens"]), ("day", 3, 99))
 
 
 if __name__ == "__main__":

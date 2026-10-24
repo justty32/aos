@@ -233,17 +233,18 @@ agent-hal/                 照抄 agent-dan（brain.py、act.py 只改錯誤訊�
 kernel-llm/
   _entry          #!/bin/sh：AOS_KERNEL=$AOS_STACK/mailbox（先建好）、exec aos-daemon daemon.json
   daemon.json     一個 daemon 管四個子項：kernel（aos-kernel-llm kernel.json，interval_ms 300）、a、b、c（各跑一次 agent-ivy，工作區 $AOS_WS/<名>，環境變數 BRAIN 選腦的單子）
-  kernel.json     {"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1}
+  kernel.json     {"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1, "budget": {"calls": 100, "tokens": 100000, "window": "day"}}（budget 10-24 下午加，demo 碰不到頂）
   agent-ivy/      走 kernel 的 agent（ann 式：idle.py、brain.py、act.py）；think 格的 exec＝aos-gate $BRAIN，stdout 導到 plan.txt
     brains/       腦的單子三張：plain.json（normal）、quick.json（normal、_metainfo 宣告 time_ms 800）、urgent.json（high、宣告 5000）
 ```
 
 三隻同時拿到題目、同時問腦：think 格不直接跑 `brain.py`，而是 `aos-gate brains/<哪張>.json`——閘門把那張單子連同 priority、`_metainfo`、當下的整份環境寫成一封信丟進信箱、等回信；kernel 每 300 毫秒被拍一次，一次挑一封（`slots` 1）跑（假腦睡 1 秒），跑完寫回信，閘門把 stdout 原樣交回（think 格導進 `plan.txt`）、以腦的碼結束。agent 不知道有 kernel（C-20）。**agent-dan 範本沒改**（仍直接問腦）；走 kernel 的版本只在這裡（10-24 照推薦定，可翻案）。
 
-服務順序看 `.stack/kernel/served.jsonl`（一封一行：`level`、`waited_runs`、`code`、實際 `elapsed_ms`、宣告的 `time_ms`）：c（high）先，同級的 a、b 裡宣告了短 `time_ms` 的 b 先（即使 a 先寄）、沒寫的 a 最後；三隻的 `out/q1.txt` 都是 `FAKE ANSWER to: …`。daemon 跑 25 次（約 5 秒）就結束、收掉 kernel。要真腦：`AOS_BRAIN_URL=… aos-exec --ws <工作區> proto8/demo/kernel-llm`（PATH 照上面放好，含 `aos-kernel-llm`、`aos-gate` 的 `bin/`）。
+服務順序看 `.stack/kernel/served.jsonl`（一封一行：`level`、`waited_runs`、`code`、實際 `elapsed_ms`、宣告的 `time_ms`）：c（high）先，同級的 a、b 裡宣告了短 `time_ms` 的 b 先（即使 a 先寄）、沒寫的 a 最後；三隻的 `out/q1.txt` 都是 `FAKE ANSWER to: …`。
+10-24 下午加 token 回報：kernel 跑腦時給 `AOS_KERNEL_REPORT`，agent-ivy 的 `brain.py` 把回覆的 `usage` 寫進去（假腦也編一份：題目與答案的字數當 token 數），served 每行多 `tokens`、`report_bad`，累計在 `.stack/kernel/used.json`（這一窗與總數的 `calls`、`tokens`）；`run.sh` 那題三封各 43、累計 3 次 129。daemon 跑 25 次（約 5 秒）就結束、收掉 kernel。要真腦：`AOS_BRAIN_URL=… aos-exec --ws <工作區> proto8/demo/kernel-llm`（PATH 照上面放好，含 `aos-kernel-llm`、`aos-gate` 的 `bin/`）。
 
 ## 測試
 
-`python3 -m unittest discover -s proto8/tests`（10-23 起跑 impls 的 C++ 四支＋bin 的 aos-tick，先建 impls）：`test_loop.py`（直接叫 aos-loop：訊號、PATH、`interval_ms`／`ctl`／`state` 窗、命令列（10-21 傍晚：設定檔是唯一的位置參數、`exec` 陣列、`檔#/指標`））、`test_daemon.py`（aos-daemon）、`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與 cathy／stamp 巢狀）、`test_exec_rules.py`（aos-exec 的新規則：命令列旗標（10-21）、找入口、`#/`、四種入口、`AOS_CF`／`AOS_CD`）、`test_inst.py`（inst 單子：經 aos-exec 跑；10-23 前另直接叫 Python 的 aos_inst 庫）、`test_fsm.py`（aos-fsm）、`test_tick.py`（aos-tick 與 demo/tick）、`test_dan.py`（agent-dan，10-23：用一支假 server 照劇本回 `tool_calls`／答案；連真模型的案例在 LiteLLM 不在時 skip）、`test_kernel_llm.py`（10-24 LLM kernel：aos-gate＋aos-kernel-llm 經 aos-loop 端到端、包閘門那格逾時撤信、kernel 不在時信堆著、high 先與 slots、kernel 整群死掉後 `RunFailed`、只死本體時照常交回、demo/kernel-llm 的順序與 `_metainfo`）。
+`python3 -m unittest discover -s proto8/tests`（10-23 起跑 impls 的 C++ 四支＋bin 的 aos-tick，先建 impls）：`test_loop.py`（直接叫 aos-loop：訊號、PATH、`interval_ms`／`ctl`／`state` 窗、命令列（10-21 傍晚：設定檔是唯一的位置參數、`exec` 陣列、`檔#/指標`））、`test_daemon.py`（aos-daemon）、`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與 cathy／stamp 巢狀）、`test_exec_rules.py`（aos-exec 的新規則：命令列旗標（10-21）、找入口、`#/`、四種入口、`AOS_CF`／`AOS_CD`）、`test_inst.py`（inst 單子：經 aos-exec 跑；10-23 前另直接叫 Python 的 aos_inst 庫）、`test_fsm.py`（aos-fsm）、`test_tick.py`（aos-tick 與 demo/tick）、`test_dan.py`（agent-dan，10-23：用一支假 server 照劇本回 `tool_calls`／答案；連真模型的案例在 LiteLLM 不在時 skip）、`test_kernel_llm.py`（10-24 LLM kernel：aos-gate＋aos-kernel-llm 經 aos-loop 端到端、包閘門那格逾時撤信、kernel 不在時信堆著、high 先與 slots、kernel 整群死掉後 `RunFailed`、只死本體時照常交回、demo/kernel-llm 的順序與 `_metainfo`；10-24 下午加 token 回報與額度：agent-dan 的 `brain.py` 經閘門、kernel 跑時把假 server 的 usage 寫進回報、沒經 kernel 不寫、額度到頂閘門印 `BudgetMissing`、demo 的 tokens 與 `used.json`）。
 
 舊的 demo（daemon、fsm、paint、kernels、tasks、tick、once、`aos-demo`）10-19 進 git 歷史（daemon 10-20、tick 10-21 晚照新做法重做，見上），見 git 5546be29（刪除前的最後一個樣子）。

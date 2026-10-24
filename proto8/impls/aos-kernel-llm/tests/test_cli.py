@@ -417,5 +417,115 @@ class G_Metainfo(Case):
             self.assertEqual(self.reply(i), {"code": 0, "signal": None})
 
 
+class H_Report(Case):
+    """10-24：token 回報（AOS_KERNEL_REPORT）與額度（kernel.json 的 budget、$AOS_STACK/used.json）。"""
+    def usage(self, name, usage, raw=None):
+        """一張單子：記下名字，再照 AOS_KERNEL_REPORT 寫回報（usage 是 dict；raw 是原樣的字；兩個都 None＝不寫）。"""
+        text = raw if raw is not None else (json.dumps(usage) if usage is not None else None)
+        cmd = 'echo %s >> "%s"' % (name, self.t / "marks")
+        if text is not None:
+            cmd += "; printf '%%s' '%s' > \"$AOS_KERNEL_REPORT\"" % text
+        return self.post(["sh", "-c", cmd])
+
+    def used(self):
+        return json.loads((self.stack / "used.json").read_text())
+
+    def drain(self, n):
+        for _ in range(n):
+            r = self.run_k()
+            self.assertEqual(r.returncode, 0, r.stderr)
+
+    def test_env_points_into_letter(self):
+        i = self.post(["sh", "-c", 'echo "$AOS_KERNEL_REPORT"'], env={"PATH": os.environ["PATH"],
+                                                                        "AOS_KERNEL_REPORT": "/from/gate"})
+        self.drain(1)
+        self.assertEqual((self.mb / "done" / i / "stdout.txt").read_text().strip(),
+                         str(self.mb / "cur" / i / "report.json"))   # 信小格裡的檔，蓋掉信裡帶來的
+
+    def test_written_missing_and_bad(self):
+        a = self.usage("a", {"prompt_tokens": 30, "completion_tokens": 12, "total_tokens": 42})
+        b = self.usage("b", {"prompt_tokens": 5, "completion_tokens": 3})          # 沒 total：兩個相加
+        c = self.usage("c", None)                                                    # 沒寫：只算次數
+        d = self.usage("d", None, raw="{")                                           # 寫壞
+        e = self.usage("e", {"total_tokens": -1})
+        f = self.usage("f", None, raw="[1]")
+        self.drain(6)
+        got = {x["letter"]: (x["tokens"], x["report_bad"]) for x in self.served()}
+        self.assertEqual(got, {a: (42, False), b: (8, False), c: (None, False), d: (None, True),
+                               e: (None, True), f: (None, True)})
+        u = self.used()
+        self.assertEqual((u["window"], u["calls"], u["tokens"], u["all_calls"], u["all_tokens"]), ("day", 6, 50, 6, 50))
+        self.assertRegex(u["since"], r"^\d{4}-\d\d-\d\dT00:00:00[+-]\d\d:\d\d$")
+
+    def test_not_run_not_counted(self):
+        self.post(raw="{")                                               # LetterBad
+        self.post(self.mark("late"), {"deadline": time.time() - 1})     # DeadlineMissed
+        self.drain(1)
+        self.assertEqual(self.used()["calls"] if (self.stack / "used.json").exists() else 0, 0)
+        self.assertEqual([x["tokens"] for x in self.served()], [None, None])
+
+    def test_budget_calls_refuse(self):
+        self.cfg({"mailbox": str(self.mb), "slots": 1, "budget": {"calls": 2}})
+        ids = [self.usage(n, {"total_tokens": 10}) for n in ("x", "y", "z")]
+        self.drain(3)
+        self.assertEqual(self.marks(), ["x", "y"])
+        rep = self.reply(ids[2])
+        self.assertEqual(rep["error"]["code"], "BudgetMissing")
+        s = {x["letter"]: x for x in self.served()}   # 第二次跑 y 時就看得出 z 會超過：z 當場回錯（比 y 的那行先寫）
+        self.assertEqual([s[i]["error"] for i in ids], [None, None, "BudgetMissing"])
+        self.assertEqual((s[ids[2]]["level"], s[ids[2]]["tokens"]), ("normal", None))
+        self.assertEqual((self.used()["calls"], self.used()["tokens"]), (2, 20))   # 回錯的不算
+
+    def test_budget_tokens_refuse_all_waiting(self):
+        self.cfg({"mailbox": str(self.mb), "slots": 1, "budget": {"tokens": 100, "window": "hour"}})
+        self.usage("big", {"total_tokens": 150})
+        y = self.usage("y", {"total_tokens": 1})
+        z = self.usage("z", {"total_tokens": 1})
+        self.drain(1)   # 跑之前還沒到頂；跑完 150 > 100（事後才知道，會超過一點）
+        self.drain(1)   # 到頂：排著的全回錯，不留著
+        self.assertEqual(self.marks(), ["big"])
+        for i in (y, z):
+            self.assertEqual(self.reply(i)["error"]["code"], "BudgetMissing")
+        self.assertRegex(self.used()["since"], r"T\d\d:00:00[+-]")
+
+    def test_budget_wait_then_next_window(self):
+        self.cfg({"mailbox": str(self.mb), "slots": 2, "budget": {"calls": 1, "spent": "wait"}})
+        self.usage("x", {"total_tokens": 7})
+        y = self.usage("y", {"total_tokens": 7})
+        self.drain(2)   # slots 2 也只跑 1 封；第二次到頂：留在 new/
+        self.assertEqual(self.marks(), ["x"])
+        self.assertTrue((self.mb / "new" / y).is_dir())
+        self.assertEqual(len(self.served()), 1)   # 等著的不寫 served
+        u = self.used()
+        u["since"] = "2000-01-01T00:00:00+00:00"   # 假裝這一窗是很久以前開的＝換窗了
+        (self.stack / "used.json").write_text(json.dumps(u))
+        self.drain(1)
+        self.assertEqual(self.marks(), ["x", "y"])
+        u = self.used()
+        self.assertEqual((u["calls"], u["tokens"], u["all_calls"], u["all_tokens"]), (1, 7, 2, 14))   # 這一窗歸零、總數照留
+        self.assertEqual(self.served()[1]["waited_runs"], 2)
+
+    def test_window_all_never_resets(self):
+        self.cfg({"mailbox": str(self.mb), "budget": {"window": "all"}})
+        self.usage("x", {"total_tokens": 3})
+        self.drain(1)
+        u = self.used()
+        self.assertEqual((u["window"], u["since"], u["calls"]), ("all", None, 1))
+        self.cfg({"mailbox": str(self.mb)})   # 改回 day＝換窗：這一窗歸零、總數照留
+        self.usage("y", {"total_tokens": 4})
+        self.drain(1)
+        u = self.used()
+        self.assertEqual((u["window"], u["calls"], u["tokens"], u["all_calls"], u["all_tokens"]), ("day", 1, 4, 2, 7))
+
+    def test_budget_cfg_and_used_bad(self):
+        for bad in ({"calls": -1}, {"tokens": "9"}, {"window": "week"}, {"spent": "drop"}, {"calls": True}, [1]):
+            self.cfg({"mailbox": str(self.mb), "budget": bad})
+            self.own_error(self.run_k(), "CfgBad")
+        self.cfg({"mailbox": str(self.mb)})
+        for bad in ("{", "[]", json.dumps({"window": "day", "since": None, "calls": 1})):
+            (self.stack / "used.json").write_text(bad)
+            self.own_error(self.run_k(), "UsedBad")
+
+
 if __name__ == "__main__":
     unittest.main(argv=[sys.argv[0]], verbosity=1)
