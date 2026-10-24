@@ -1,0 +1,113 @@
+#!/usr/bin/env lua
+-- aos-lua - 把一份 Lua 原始檔編成 aos 的資料夾＋JSON（也能只印、只列）
+--
+--   aos-lua build 原始檔.lua 輸出        寫出來：原始檔 return 資料夾＝輸出是資料夾，其餘＝輸出是一個檔
+--   aos-lua json  原始檔.lua [路徑[#/指標]]   印一個檔的內容（JSON 可以再接 #/指標 只印那一段）；
+--                                          沒給路徑：原始檔 return 的不是資料夾就印它，是資料夾就每個檔都印、前面一行 ==> 路徑
+--   aos-lua ls    原始檔.lua              列出會寫哪些檔（資料夾結尾 /、可執行檔結尾 *）
+--
+-- 輸出已經在：清單上的檔覆寫、權限照設（+x 755、其餘 644），清單外的檔不動、不刪。
+-- 沒有 lua 也能用 nvim 跑：nvim -l aos-lua build ...
+-- 錯：stderr 一行「aos-lua: 代號 原因」、退 1。代號：ArgumentsBad、SourceBad（原始檔跑不起來或形狀不對）、
+-- PathMissing（json 指的檔或指標不在）、WriteFailed（寫不出去）。
+
+local here = (arg and arg[0] or ""):match("^(.*)/bin/[^/]*$") or "."
+package.path = here .. "/?.lua;" .. package.path
+local aos = require("aos")
+
+local function die(code, msg)
+  io.stderr:write("aos-lua: " .. code .. " " .. msg .. "\n")
+  os.exit(1)
+end
+
+local USAGE = "用法：aos-lua build 原始檔 輸出 | aos-lua json 原始檔 [路徑[#/指標]] | aos-lua ls 原始檔"
+
+local function load(src)
+  local ok, node = pcall(aos.load, src)
+  if not ok then
+    if type(node) == "table" then die(node.code, node.msg) end
+    die("SourceBad", tostring(node))
+  end
+  local ok2, list = pcall(aos.render, node)
+  if not ok2 then die("SourceBad", tostring(list)) end
+  return node, list
+end
+
+local function q(s) return "'" .. s:gsub("'", "'\\''") .. "'" end
+
+local function sh(cmd)
+  local r = os.execute(cmd)
+  return r == true or r == 0
+end
+
+local function mkdir(p)
+  if vim and vim.fn then return vim.fn.mkdir(p, "p") == 1 or vim.fn.isdirectory(p) == 1 end
+  return sh("mkdir -p -- " .. q(p))
+end
+
+local function chmod(p, x)
+  if vim and vim.uv then return vim.uv.fs_chmod(p, x and 493 or 420) ~= nil end   -- 0755 / 0644
+  return sh("chmod " .. (x and "755" or "644") .. " -- " .. q(p))
+end
+
+local function write(p, text, x)
+  local f, err = io.open(p, "wb")
+  if not f then die("WriteFailed", p .. "：" .. tostring(err)) end
+  f:write(text)
+  f:close()
+  if not chmod(p, x) then die("WriteFailed", "改不了權限：" .. p) end
+end
+
+local cmd, src = arg[1], arg[2]
+if cmd == "build" then
+  local out = arg[3]
+  if not src or not out or arg[4] then die("ArgumentsBad", USAGE) end
+  local node, list = load(src)
+  if aos.kind(node) == "dir" then
+    if not mkdir(out) then die("WriteFailed", "建不了資料夾：" .. out) end
+    for _, e in ipairs(list) do
+      local p = out .. "/" .. e.path
+      if e.dir then
+        if not mkdir(p) then die("WriteFailed", "建不了資料夾：" .. p) end
+      else
+        write(p, e.text, e.x)
+      end
+    end
+  else
+    local parent = out:match("^(.*)/[^/]*$")
+    if parent and parent ~= "" and not mkdir(parent) then die("WriteFailed", "建不了資料夾：" .. parent) end
+    write(out, list[1].text, list[1].x)
+  end
+elseif cmd == "json" then
+  if not src or arg[4] then die("ArgumentsBad", USAGE) end
+  local _, list = load(src)
+  local want = arg[3]
+  if not want then
+    if #list == 1 and list[1].path == "" then io.write(list[1].text) return end
+    for _, e in ipairs(list) do
+      if not e.dir then io.write("==> " .. e.path .. (e.x and " *" or "") .. "\n" .. e.text) end
+    end
+    return
+  end
+  local path, ptr = want:match("^([^#]*)#(.*)$")
+  if not path then path = want end
+  for _, e in ipairs(list) do
+    if e.path == path and not e.dir then
+      if not ptr then io.write(e.text) return end
+      if e.value == nil then die("PathMissing", path .. " 不是 JSON，不能接 #" .. ptr) end
+      local v = aos.pointer(e.value, ptr)
+      if v == nil then die("PathMissing", want .. " 指不到") end
+      io.write(aos.json(v))
+      return
+    end
+  end
+  die("PathMissing", path .. " 不在 " .. src .. " 編出來的檔裡")
+elseif cmd == "ls" then
+  if not src or arg[3] then die("ArgumentsBad", USAGE) end
+  local _, list = load(src)
+  for _, e in ipairs(list) do
+    io.write((e.path == "" and "." or e.path) .. (e.dir and "/" or (e.x and "*" or "")) .. "\n")
+  end
+else
+  die("ArgumentsBad", USAGE)
+end
