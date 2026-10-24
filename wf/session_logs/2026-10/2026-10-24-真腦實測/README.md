@@ -13,6 +13,7 @@
 | [03-外部與人](03-外部與人.md) | aos-ai（含 skill）、say／listen／chat、agent-fay（attach）、Janet、Lua 與 nvim、aos-grow、沙箱 root 那層 |
 | [結果-01-基礎](結果-01-基礎.md) | 10-24 真腦實測結果：第 1～6 項（dan、pip、json_edit 兩步、liv、kernel-llm、Janet／Lua／grow）都能用；修了 stat 的時間寫法、liv 工具錯卡住、kernel-llm 收 `--max` 與 ivy 的模型名 |
 | [結果-02-組合B](結果-02-組合B.md) | 10-24 真腦實測結果：agent-kai bench（kai 15/15、dan 14/15、kai0 14/15；kai 比 dan 少 25% prompt，但沒 cache 的部分差不多）、self-improve 能用；定了 self-improve 預設就關沙箱（代定）、沙箱加 `env` 白名單、修了 `mem_mb` 讓 aos-exec 起不來 |
+| [結果-02-組合A](結果-02-組合A.md) | 10-24 真腦實測結果：agent-meg、agent-hal compact、agent-eve（pyfix）、talk 都能用；agent-gus 修好了（小念頭規劃回散文原本 `PlanBad` 卡住，改成當不拆） |
 | [結果-03-外部](結果-03-外部.md) | 10-24 真腦實測結果：aos-ai（含 skill）、agent-fay 叫 claude／codex 都能用；修了 aos-ai spawn 工具錯卡住（`--tool-errors`） |
 
 ## 第 0 步：確認 LiteLLM 起來了
