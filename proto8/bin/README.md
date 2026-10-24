@@ -33,5 +33,5 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
 - 工作區變數名 `AOS_WS`（使用者已定）。
 - `aos-exec DIR [WS]`：WS 省略＝`-`；`-`＝沿用 `$AOS_WS`，沒設才用 `.`（使用者 10-19 定）。10-19 下班前放寬成 `aos-exec XXX [WS [args...]]`（N-58；10-19 晚這版也改了）。10-21 改成 `aos-exec [--ws WS] XXX [args...]`（使用者「放前面吧。舊的寫法也要改」；`--ws -`／沒給照舊＝沿用 `$AOS_WS`；impls 10-21 晚已對齊）。
 - `AOS_CF`、`AOS_CD`（使用者 10-19 下班前定，「同意做」）：實際被執行的檔、它所在的資料夾，aos-exec 每層覆寫（N-57；已做）。
-- `AOS_CO`（使用者 10-21 晚「AOS_CF不動。但是我們再加上AOS_CO」「aos current obj」）：入口在 JSON 檔裡的指標，aos-exec 每層覆寫（N-57；已做；impls 10-21 晚也有）。
+- `AOS_CO`（使用者 10-21 晚「AOS_CF不動。但是我們再加上AOS_CO」「aos current obj」）：入口在 JSON 檔裡的指標，aos-exec 每層覆寫（N-57；已做；impls 10-21 晚也有）。〔10-24：aos-loop、aos-fsm、aos-daemon 的 `exec` 直接放單子物件時，跑那張單子的期間也把 `AOS_CF`／`AOS_CD`／`AOS_CO` 設成它的位置（設定檔、資料夾、`/exec` 或 `/states/<名>/exec`），跑完還原，見 [impls/aos-loop](../impls/aos-loop/README.md)、[thinking 10-24](../thinking/2026-10-24-exec-relative.md#10-24-exec-直接放單子)〕
 - `#/` 尋址（使用者 10-19 下班前定，「#/。」「尋址一定值得。」）：`檔#/指標` 指進 JSON（N-62；已做）。
