@@ -2,6 +2,9 @@
 # 已經為這題規劃過（steps.json 的 question 是這題）＝什麼都不做、退 0（重跑、或 act 跑完工具繞回來時）。
 # 不拆（steps 是空的）＝這題由自己直接做：fork 格跳過、think／act 照 agent-dan 做。
 # 深度到上限、或整棵樹的小念頭額度不夠，不問腦、直接不拆（省一次腦）。
+# 腦的回覆不是規劃（解不出帶 steps 的 JSON 物件：直接回答了、或說做不到）＝當不拆（direct "prose"），不算 PlanBad：
+# 規劃時不送 tools，真模型（10-24 實測）常回「沒有 Python 工具可用」的散文；think 格會帶 tools 再問一次。
+# 是規劃但寫錯（steps 不是陣列、id、needs、步數不對）＝照舊 PlanBad。
 import fcntl, json, os, re, sys, uuid
 from shared import (STACK, STEPS, append_history, ask, claim, die, env_int, read_history, read_json, system,
                     write_atomic)
@@ -25,11 +28,13 @@ def parse(content, limit):
     text = (content or "").strip()
     m = re.search(r"\{.*\}", text, re.S)          # 容許 ```json 圍欄或前後多話
     try:
-        plan = json.loads(m.group(0) if m else text)
-    except ValueError as e:
-        die("PlanBad", "規劃不是 JSON：%s（回覆開頭：%r）" % (e, text[:80]))
-    if not isinstance(plan, dict) or not isinstance(plan.get("steps"), list):
-        die("PlanBad", "規劃要是物件、steps 要是陣列")
+        plan = json.loads(m.group(0)) if m else None
+    except ValueError:
+        plan = None
+    if not isinstance(plan, dict) or "steps" not in plan:
+        return None, []                            # 不是規劃（腦直接回答了）＝當不拆（10-24 真腦實測）
+    if not isinstance(plan["steps"], list):
+        die("PlanBad", "steps 要是陣列")
     context = plan.get("context") or ""
     if not isinstance(context, str):
         die("PlanBad", "context 要是字串")
@@ -107,7 +112,9 @@ else:
     msg = ask("plan", system() + [{"role": "system", "content": PROMPT % (min(max_steps, remaining), depth)}] + history)
     reply = msg.get("content")
     context, steps = parse(reply, min(max_steps, remaining))
-    if len(steps) == 1:                             # 只拆一步＝白 fork 一次，當成不拆
+    if context is None:                             # 回的是散文、不是規劃：自己做（think 會帶 tools 再問一次）
+        context, why = "", "prose"
+    elif len(steps) == 1:                             # 只拆一步＝白 fork 一次，當成不拆
         steps, why = [], "one"
     elif not steps:
         why = "brain"

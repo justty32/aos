@@ -159,7 +159,7 @@ $AOS_STACK/budgets/<plan_id>/  整棵念頭樹的額度（一個檔＝一個小�
 
 **別的程式叫一個小念頭**（JSON 工具集「找到要修改的 key → 提供值」那種）：`echo '{"goal": "找到要修改的 key", "context": "…"}' | AOS_STACK=<小格>/ aos-exec proto8/demo/agent-gus/thought.json`，stdout 只有結論、過程在 `<小格>/runs/NNN/`；下一步把這次的結論放進 `needs` 再叫一次。錯：`agent-gus: StepBad`（stdin 不對）、`ThoughtFailed`，退 1。
 
-真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-gus`；沒設＝假腦（第 0 層拆兩步、s2 帶 s1 的結論，答 `FAKE ANSWER … （彙整了 2 個小念頭的結論）`）。試驗場 `~/code/try/thoughts/`（`run.sh` 用 `fake_brains.py` 跑排序比較題、`measure.py` 印念頭樹與 context 省多少）。錯：同 agent-dan，另有 `PlanBad`（規劃不是 JSON、超過步數、needs 指錯或繞圈）、`ThoughtFailed`（小念頭退非 0、逾時、沒交答案；同批其他的照跑完，重跑只補失敗的、在原小格接著做）。測試 `test_gus.py`。
+真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-gus`；沒設＝假腦（第 0 層拆兩步、s2 帶 s1 的結論，答 `FAKE ANSWER … （彙整了 2 個小念頭的結論）`）。試驗場 `~/code/try/thoughts/`（`run.sh` 用 `fake_brains.py` 跑排序比較題、`measure.py` 印念頭樹與 context 省多少）。錯：同 agent-dan，另有 `PlanBad`（規劃寫錯：超過步數、needs 指錯或繞圈；腦回的不是規劃、是散文＝當不拆自己做，10-24 真腦實測改）、`ThoughtFailed`（小念頭退非 0、逾時、沒交答案；同批其他的照跑完，重跑只補失敗的、在原小格接著做）。測試 `test_gus.py`。
 
 ## agent-kai（按意圖組 context，10-24）
 
