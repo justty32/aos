@@ -115,3 +115,7 @@ act 對每個 `tool_call` 做同一件事：`AOS_STACK=$AOS_STACK/<名>/ aos-exe
 - 答案先寫 `out/.<題名>` 再改名（N-05）。math 指數上限 1000、不吃 bool、`4/2` 印 `2.0`。
 - `loop.json`、`fsm.json`、`tool.json` 是 JSON，沒有 R1 那行檔頭說明；其餘檔都有。
 - 測試 `proto8/tests/test_dan.py` 14 個（假 server 劇本：兩輪、不叫工具、工具失敗停住、未知工具、腦 500 後重跑不重複接題、第二個工具失敗後只補那一個；`../` 擋掉、ArgumentsBad、連不上、ReplyBad 兩種、三個代號、math 本體；真模型一個，LiteLLM 不在就 skip）；改掉 ToolUnknown 檢查會紅 2 個、改掉「已回過的 id 跳過」會紅 1 個。
+
+## 10-24 補記
+
+- think、act 兩格的 `exec` 從寫死的 `"fsm.json#/states/think/body"` 改成 `{"$env": "AOS_CF", "$path": "#/states/think/body"}`（act 同理）——使用者 10-24「先改成不寫死檔名的寫法」。aos-fsm 10-23 晚起會解格的 `exec` 指示詞，換出來是 fsm.json 的絕對路徑接 `#/states/think/body`。「相對於這格」的寫法還沒定，見 [2026-10-24](2026-10-24-exec-relative.md)。

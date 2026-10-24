@@ -2,9 +2,9 @@
  "start": "idle",
  "states": {
    "idle":  {"exec": "idle", "next": "think"},
-   "think": {"exec": "fsm.json#/states/think/body",
+   "think": {"exec": {"$env": "AOS_CF", "$path": "#/states/think/body"},
              "body": {"argv": ["python3", "brain.py"], "timeout_ms": 120000},
              "next": "act"},
-   "act":   {"exec": "fsm.json#/states/act/body",
+   "act":   {"exec": {"$env": "AOS_CF", "$path": "#/states/act/body"},
              "body": {"argv": ["python3", "act.py"], "timeout_ms": 60000},
              "next": "idle"}}}

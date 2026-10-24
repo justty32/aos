@@ -29,6 +29,7 @@ agent-dan/
   _entry              #!/bin/sh、exec aos-loop loop.json
   loop.json           {"exec": "fsm.json", "max": 40}
   fsm.json            三態 idle → think → act → idle；think、act 是 body 裡的單子（逾時 120 秒、60 秒）
+                      exec 不寫死檔名：{"$env": "AOS_CF", "$path": "#/states/think/body"}（10-24）
   .env                AOS_BRAIN_MODEL=chatgpt-gpt-6-luna-low（模型名；不蓋外面已設的）
   system.txt          核心人格：每次問腦時當 system 訊息送、不進 history
   idle/_entry         同 bob：cur/ 或 new/ 有題退 0，沒題退 10
@@ -40,6 +41,8 @@ agent-dan/
 ```
 
 一題的流程：think 把題目接成一則 user、問腦；腦要叫工具，act 就跑工具（`arguments` 從 stdin 進、stdout 整段是結果，小格 `$AOS_STACK/<名>/`）、把結果接回 history、退 0 回 idle；題目還在 `cur/`，所以 think 帶著 history 再問一次；腦不叫工具了，act 才把回答寫進 `out/<題名>`、題目搬 `done/`。trace 是 `idle think act idle think act idle`。對話在 `$AOS_STACK/history.jsonl`（一行一則 OpenAI message，只附加）。
+
+think、act 兩格的 `exec` 寫成 `{"$env": "AOS_CF", "$path": "#/states/think/body"}`（act 同理），不寫死 `fsm.json`（10-24，使用者「先改成不寫死檔名的寫法」，[thinking 2026-10-24](../thinking/2026-10-24-exec-relative.md)）：aos-exec 跑 `fsm.json` 時把 `AOS_CF` 設成這份檔的絕對路徑，aos-fsm 解格的 `exec` 時 `$path` 以 `#` 開頭就直接接上（N-45），換出來是 `/…/agent-dan/fsm.json#/states/think/body`。檔改名、搬家都不用跟著改。
 
 **假腦**（沒設 `AOS_BRAIN_URL`，demo 與測試用）：history 最後一則是 user 且有 `clock` 工具就叫一次 `clock`，拿到結果後回 `FAKE ANSWER to: 題目`——不連網也走得完「想 → 工具 → 想 → 答」。
 
