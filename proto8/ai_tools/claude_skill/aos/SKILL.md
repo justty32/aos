@@ -18,7 +18,7 @@ description: 操作 aos（proto8 的資料夾程式）的工具 aos-ai，含概�
 ## 最常用的一串
 
 ```bash
-aos-ai --root ~/code/try/x spawn helper                 # 起一隻（--from 範本、--tool ask_agent 加工具）
+aos-ai --root ~/code/try/x spawn helper                 # 起一隻（--from 範本、--tool ask_agent 加工具；工具出錯預設回給腦，--tool-errors stop 改成停）
 aos-ai --root ~/code/try/x ask helper --id q1 '17*23 等於多少'   # 丟題（文字加引號，zsh 會吃 *；是 - 就從 stdin 讀）
 aos-ai --root ~/code/try/x run helper --timeout 120      # 前景跑到題目做完，回 answers、errors、hint
 aos-ai --root ~/code/try/x answer helper q1              # 讀答案

@@ -34,7 +34,8 @@ HINTS = {   # 下層的錯誤代號 → 下一步（只放常見的）
     "BrainFailed": "腦連不上：設 AOS_BRAIN_URL（家機 LiteLLM http://localhost:4000/v1），或拿掉它用假腦",
     "ReplyBad": "腦回的不是 OpenAI 形狀：換模型，或 aos-ai history 看最後一則",
     "ToolUnknown": "腦叫了不存在的工具：aos-ai history 看最後一則；工具放 agents/<名>/agent/tools/<工具>/",
-    "ToolFailed": "工具退非 0：看 errors 裡工具自己那一行",
+    "ToolFailed": "工具退非 0：看 errors 裡工具自己那一行；是腦給錯參數的話重跑會再叫同一個，"
+                  "要讓腦自己改就用 spawn --tool-errors back 起的 agent",
     "ArgumentsBad": "參數不對：看原因那句",
     "QuestionMissing": "沒有題目：先 aos-ai ask",
     "HistoryBad": "history.jsonl 壞了：人工看 ws/.stack/history.jsonl",
@@ -243,6 +244,21 @@ def resolve_src(spec, home, what):
     return p.resolve()
 
 
+def tool_errors_mode(src, asked):
+    """工具退非 0 時 agent 怎麼辦：back＝回給腦（act 換成 agent-pip 的）、stop＝停（agent-dan 原樣）、template＝範本自己的。
+    沒給：範本是 agent-dan 就 back（lib 的工具錯一律退 1，停下重跑會再叫同一個、卡住），其他範本照範本。"""
+    same_as_dan = (src / "act.py").is_file() and \
+        (src / "act.py").read_bytes() == (TEMPLATES / "agent-dan" / "act.py").read_bytes()
+    if asked is None:
+        return "back" if same_as_dan else "template"
+    if asked not in ("back", "stop"):
+        raise Fail("ArgumentsBad", "--tool-errors 只收 back 或 stop：%s" % asked)
+    if not same_as_dan:
+        raise Fail("ArgumentsBad", "--tool-errors 只能用在 agent-dan 範本（act.py 跟它一樣的）：%s" % src.name,
+                   "別的範本照範本自己的 act；要改就 make 之後自己改 agents/<名>/agent/act.py")
+    return asked
+
+
 def cmd_spawn(root, o, pos):
     need(pos, 1, "spawn NAME [--from 範本] [--tool 工具]...")
     a = root.agent(pos[0], must=False)
@@ -250,6 +266,7 @@ def cmd_spawn(root, o, pos):
         raise Fail("AgentExists", "已經有 %s 了：%s" % (a.name, a.base), "換個名字，或直接 aos-ai ask %s" % a.name)
     src = resolve_src(o.get("from", ["agent-dan"])[-1], TEMPLATES, "Template")
     tools = [resolve_src(t, DAN_TOOLS, "Tool") for t in o.get("tool", [])]
+    mode = tool_errors_mode(src, o.get("tool-errors", [None])[-1])
     for t in tools:
         if (src / "tools" / t.name).exists():
             raise Fail("ToolExists", "範本裡已經有工具 %s" % t.name)
@@ -264,9 +281,12 @@ def cmd_spawn(root, o, pos):
                 link.symlink_to(orig.resolve())
     for t in tools:
         shutil.copytree(t, a.agent / "tools" / t.name, symlinks=True, ignore=ignore)
+    if mode == "back":                       # act 換成 agent-pip 的：工具退非 0 回給腦、不停（lib/README「停不停由 agent 決定」）
+        act = (TEMPLATES / "agent-pip" / "act.py").read_text(encoding="utf-8").replace("agent-pip: ", "agent-dan: ")
+        write_atomic(a.agent / "act.py", act)
     for d in ("new", "cur", "out", "done", ".stack"):
         (a.ws / d).mkdir(parents=True, exist_ok=True)
-    out({"ok": True, "name": a.name, "from": str(src), "agent": str(a.agent), "ws": str(a.ws),
+    out({"ok": True, "name": a.name, "from": str(src), "agent": str(a.agent), "ws": str(a.ws), "tool_errors": mode,
          "tools": sorted(p.name for p in (a.agent / "tools").glob("*") if (p / "tool.json").exists())})
 
 
@@ -678,13 +698,13 @@ def cmd_explain(root, o, pos):
 COMMANDS = {"make": cmd_make, "explain": cmd_explain, "templates": cmd_templates, "spawn": cmd_spawn, "ask": cmd_ask, "run": cmd_run, "status": cmd_status,
             "answer": cmd_answer, "wait": cmd_wait, "trace": cmd_trace, "history": cmd_history, "exec": cmd_exec,
             "daemon": cmd_daemon, "start": cmd_start, "stop": cmd_stop, "edit": cmd_edit, "doctor": cmd_doctor}
-VALUED = {"root", "from", "tool", "id", "timeout", "env", "n", "ws", "interval-ms", "out", "spec", "set", "argv", "cwd",
+VALUED = {"root", "from", "tool", "tool-errors", "id", "timeout", "env", "n", "ws", "interval-ms", "out", "spec", "set", "argv", "cwd",
           "stdin", "stdout", "stderr", "timeout-ms", "grace-ms", "envs", "exec", "max", "ctl", "state", "entry", "cell",
           "start", "next", "loop", "summary", "time-ms", "mem-mb", "gpu-mem-mb", "llm-calls", "llm-tokens", "cost",
           "side-effect", "idempotent", "deterministic", "parallel", "resource", "interrupt", "description", "param",
           "lang", "inst", "after"}
 SWITCHES = {"force", "no-notes", "here", "dir", "dotenv-override"}
-USAGE = ("usage: aos-ai [--root DIR] 命令 ...；命令：templates | spawn NAME [--from 範本] [--tool 工具]... | "
+USAGE = ("usage: aos-ai [--root DIR] 命令 ...；命令：templates | spawn NAME [--from 範本] [--tool 工具]... [--tool-errors back|stop] | "
          "ask NAME 文字|- [--id 題名] | run NAME [--timeout 秒] [--env K=V]... | status [NAME] | answer NAME [題名] | "
          "wait NAME 題名 [--timeout 秒] | trace NAME [-n N] | history NAME [-n N] | "
          "exec [--ws WS] 目標 [參數...] | daemon up|down|status | start NAME [--interval-ms N] | stop NAME | "
