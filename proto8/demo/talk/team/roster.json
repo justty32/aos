@@ -1,0 +1,8 @@
+{"kind": "roster",
+ "max_hops": 8, "max_sends": 4, "max_body_bytes": 16000,
+ "members": {
+  "ann":  {"mailbox": "ann",  "role": "統籌：接使用者的題目，拆成小事分給 bob、cat，收齊後把成果寄給 user"},
+  "bob":  {"mailbox": "bob",  "role": "查與算：用工具查時間、算數字，回報數字與算式"},
+  "cat":  {"mailbox": "cat",  "role": "整理：把拿到的材料寫成給人看的清楚段落"},
+  "user": {"mailbox": "user", "role": "人類使用者：只收信、不會回信", "human": true}},
+ "groups": {"all": ["ann", "bob", "cat"]}}

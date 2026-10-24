@@ -1,0 +1,10 @@
+{"max": 3600, "interval_ms": 500, "ctl": "ctl.json", "state": "state.json",
+ "exec": {"argv": ["python3", "quiet.py"], "envs": {"AOS_ROSTER": {"$env": "AOS_WS", "$path": "roster.json"}}},
+ "loops": {
+  "ann": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "ann"}, "../member"],
+                   "envs": {"AOS_ROSTER": {"$env": "AOS_WS", "$path": "roster.json"}}}, "interval_ms": 500},
+  "bob": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../member"],
+                   "envs": {"AOS_ROSTER": {"$env": "AOS_WS", "$path": "roster.json"}}}, "interval_ms": 500},
+  "cat": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "cat"}, "../member"],
+                   "envs": {"AOS_ROSTER": {"$env": "AOS_WS", "$path": "roster.json"}}}, "interval_ms": 500}
+ }}
