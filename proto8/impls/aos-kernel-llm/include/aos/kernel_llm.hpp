@@ -42,6 +42,7 @@ inline constexpr const char* ReplyBad = "ReplyBad";             // 閘門：回�
 inline constexpr const char* LockFailed = "LockFailed";         // kernel：信箱被另一個 kernel 鎖著
 inline constexpr const char* QueueBad = "QueueBad";             // kernel：$AOS_STACK/queue.json 在但讀不懂
 inline constexpr const char* UsedBad = "UsedBad";               // kernel：$AOS_STACK/used.json（用量帳）在但讀不懂
+inline constexpr const char* InstUnknown = "InstUnknown";       // 回信：kernel.json 寫了 accept，這封信的單子不在名單裡（或自帶串流、envs），沒跑（10-24 堵沙箱信箱後門）
 inline constexpr const char* BudgetMissing = "BudgetMissing";   // 回信：這一窗的額度（kernel.json 的 budget）用完了，沒跑（10-15 稿叫 BudgetExhausted，照 C-54 四種結尾改）
 }  // namespace code
 

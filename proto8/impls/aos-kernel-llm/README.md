@@ -29,8 +29,8 @@ aos-kernel-llm [旗標] kernel.json
 ```
 
 - **命令列**：唯一的位置參數＝設定檔（可寫 `檔#/指標`，aos-util 的 `load_cfg`）；目前沒有旗標（不認得＝`FlagUnknown`、沒給或多給＝`ArgumentsBad`）。
-- **kernel.json**：`mailbox`（信箱資料夾；相對的從 `$AOS_STACK` 算——N-14 窗落在 `$AOS_STACK` 底下；沒寫＝`mailbox`）、`slots`（同時跑幾封，正整數；沒寫＝1）、`budget`（額度，見下「token 回報與額度」；沒寫＝不限、只記帳）；其他 key 忽略（`_entry`…）。
-  三格的指示詞先解（`{"$env": "AOS_KERNEL"}` 就是讓 kernel 與閘門讀同一個變數）；解不開 `DirectiveBad`。
+- **kernel.json**：`mailbox`（信箱資料夾；相對的從 `$AOS_STACK` 算——N-14 窗落在 `$AOS_STACK` 底下；沒寫＝`mailbox`）、`slots`（同時跑幾封，正整數；沒寫＝1）、`budget`（額度，見下「token 回報與額度」；沒寫＝不限、只記帳）、`accept`（只跑哪幾張單子，見下「accept」；沒寫＝什麼都收）；其他 key 忽略（`_entry`…）。
+  這四格的指示詞先解（`{"$env": "AOS_KERNEL"}` 就是讓 kernel 與閘門讀同一個變數）；解不開 `DirectiveBad`。
 - **`$AOS_STACK`**（必要）：kernel 自己的兩個檔——
   - `queue.json`：`{"runs": kernel 跑過幾次, "seen_at_runs": {信號: 第一次看到它是第幾次}}`（只留還在排的；先寫暫存再改名）。在但讀不懂＝`QueueBad`（刪掉就從頭算）。
   - `served.jsonl`：每封信一行 `{"at", "letter", "level", "waited_runs", "code", "signal", "error", "elapsed_ms", "time_ms", "metainfo_bad", "tokens", "report_bad"}`（只附加）；跑了＝`code`／`signal`，沒跑或跑不起來＝`error` 是代號；
@@ -57,12 +57,25 @@ aos-kernel-llm [旗標] kernel.json
   `budget` 沒寫也照樣記 `used.json`（窗＝day）。換窗＝`used.json` 的 `window` 或 `since` 跟現在算出來的不同：`calls`、`tokens` 歸零，`all_*` 照留。
 - **到頂怎麼判**：要開下一封之前看——`calls` 已用＋這次已開的＋上一次留下還在跑的 ≥ 上限，或 `tokens` 已用 ≥ 上限。token 只能跑完才知道，所以一次裡最多超過「那一次所有封的量」（`slots` 1 時＝最後一封）。
 
+### accept：只跑名單裡的單子（10-24，堵沙箱信箱後門，[thinking sandbox S14](../../thinking/2026-10-24-sandbox.md)）
+
+kernel 在沙箱外、照信跑任何單子；關在 [aos-sandbox](../../sandbox/README.md) 裡的程式寄得到信（`kernel: true`）時，就能叫它跑「`cat 判準`」。要擋就寫 `accept`：
+
+```json
+{"mailbox": {"$env": "AOS_KERNEL"}, "accept": [{"argv": ["python3", "/abs/agent/brain.py"], "cwd": "/abs/agent"}]}
+```
+
+- 每張＝`{"argv": 非空字串陣列, "cwd": 字串}`（`cwd` 相對的從 kernel.json 的資料夾算）。信裡單子的 `argv` 與 `cwd` 要跟其中一張**一字不差**，而且不能自帶 `envs`、`stdin`、`stdout`、`stderr`、`stdout_append`、`stderr_append`；不合＝回 `InstUnknown`、不跑、不算次數。
+- **環境不整份換**：用 kernel 自己的，只疊上信裡 `AOS_` 開頭的（`AOS_WS`、`AOS_STACK`…）——寄信的改不了 `PATH`、`LD_PRELOAD`、`PYTHONPATH`；`AOS_BRAIN_KEY` 信裡沒有就用 kernel 這邊的（key 可以只放在 kernel 外面）。
+- 名單裡的 `argv` 要指沙箱寫不到的程式（絕對路徑）：`["python3", "brain.py"]` 配上沙箱寫得到的 `cwd`，等於還是讓它跑自己寫的檔。
+- 沒寫 `accept`＝照舊什麼都收、環境整份照信（閘門透明，C-20）。
+
 ### 一次
 
 1. 建信箱四格、flock；`queue.json` 的 `runs`＋1。
 2. **`cur/` 還有信**＝上一次 kernel 跑到一半死了（一次跑完才結束、又有鎖，正常時這裡是空的）：有 `reply.json` 就照它；跑信的子行程（`runner.json`）還活著＝讓它跑完、這次少一格；都不是＝回 `RunFailed`（10-15 六題 6「回錯」，不重跑）。有回信的寫一行 served、搬 `done/`。
 3. **收拾**：`tmp/`、`done/` 裡寄信的閘門不在了的刪掉；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑；跟閘門撤信同一招，不會跟認領撞）。
-4. **看 `new/`**：信讀不懂、`inst` 不是物件、priority 壞＝回 `LetterBad`；deadline 已過＝回 `DeadlineMissed`（都不佔格、不跑）。
+4. **看 `new/`**：信讀不懂、`inst` 不是物件、priority 壞＝回 `LetterBad`；有 `accept` 而單子不在名單裡＝回 `InstUnknown`；deadline 已過＝回 `DeadlineMissed`（都不佔格、不跑）。
 5. **排隊**（`used.json` 先讀進來、換窗了先歸零）：`level`＋等了幾次÷10（每等 10 次升一級，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ `_metainfo` 宣告的 `time_ms` 短的先（有寫的在沒寫的前面；10-24，從不蓋過 level 與 deadline，aging 照舊所以插隊有上限）→ 等得久的先 → 先寄的先。
 6. 跑之前看一眼訊號（有＝不認領、直接 128＋N）。照排好的順序一封封看：**額度到頂**＝`spent` 是 `refuse` 就把這封（以及之後的每一封）回 `BudgetMissing`，是 `wait` 就停、剩下的留著；沒到頂、`slots` 也還有空就認領（`new/` → `cur/` 改名；改不成＝閘門剛撤信，換下一封），**每封 fork 一個子行程**（`run_runner`）：
    先寫 `runner.json`，環境整份換成信裡的 `env`（再加 `AOS_KERNEL_REPORT`），單子沒寫 `stdout`／`stderr`＝寫進信的 `stdout.txt`／`stderr.txt`、沒寫 `stdin`＝`/dev/null`，交給 aos-exec 的 `run_inst`（`timeout_ms`、`grace_ms`、整群收都照單子），結果寫 `reply.json`。
@@ -110,6 +123,7 @@ aos-kernel-llm [旗標] kernel.json
 | `UsedBad` | kernel | `used.json` 在但讀不懂 |
 | `LetterBad` | 回信 | `letter.json` 讀不懂、`inst` 不是物件、`env` 不是物件、priority 壞 |
 | `DeadlineMissed` | 回信 | 輪到之前時限已過，沒跑（10-15 稿定的名字；C-54 R10 四種結尾套不上，照原名） |
+| `InstUnknown` | 回信 | kernel.json 寫了 `accept`，這張單子不在名單裡（或自帶 `envs`、串流），沒跑（10-24） |
 | `BudgetMissing` | 回信 | 這一窗的額度用完了（`spent` 是 `refuse`），沒跑（10-15 稿叫 `BudgetExhausted`，照 C-54 R10 四種結尾改名） |
 | `RunFailed` | 回信 | 上一次 kernel 跑到一半死了、沒回信；跑信的子行程沒寫回信就結束了 |
 | `EntryBad`、`DirectiveBad`、`LaunchFailed`、`Internal` | 回信 | 單子跑不起來（同 aos-exec 跑單子；原因開頭「單子跑不起來：」） |
@@ -120,10 +134,10 @@ aos-kernel-llm [旗標] kernel.json
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-- `test_cli`（`tests/test_cli.py`，unittest 37 案，約 3 秒）：A 命令列與設定（usage、`StackMissing`、設定壞、mailbox 預設在 stack、指示詞、`QueueBad`）；B 排隊（level／數字／deadline 字串與數字／先來先上／`waited_runs`、aging 到了與還沒到、`seen_at_runs` 只留還在排的）；
+- `test_cli`（`tests/test_cli.py`，unittest 39 案，約 3 秒）：A 命令列與設定（usage、`StackMissing`、設定壞、mailbox 預設在 stack、指示詞、`QueueBad`）；B 排隊（level／數字／deadline 字串與數字／先來先上／`waited_runs`、aging 到了與還沒到、`seen_at_runs` 只留還在排的）；
   C slots（2 封一起跑、1 封串著）；D 回信（碼與 stdout／stderr、單子自己導 stdout 不蓋、`DeadlineMissed` 不跑、`LetterBad` 七種、單子壞＝回信不是 kernel 的錯）；
   E 收拾（寄信人不在的 new／tmp／done、cur/ 留下的回 `RunFailed` 或照現成回信、跑信的子行程還活著就讓它跑完並佔格、子行程死了＝`RunFailed`）；F 鎖、環境與 cwd 照信、`timeout_ms`、SIGTERM 轉給單子、早到的訊號不留半套；G `_metainfo`（同級時宣告短的後寄也先跑、有寫的在沒寫的前面、level 與 deadline 照樣壓過它、三種寫壞照樣跑並記 `metainfo_bad`）；
-  H token 回報與額度（`AOS_KERNEL_REPORT` 指進信小格並蓋掉信裡的、回報有寫／只有 prompt＋completion／沒寫／三種寫壞、沒跑的不算、`calls` 到頂回 `BudgetMissing`、`tokens` 到頂排著的全回錯、`wait` 留著等換窗後跑、`all` 不歸零與改窗歸零、`budget` 與 `used.json` 壞）。
+  H token 回報與額度（`AOS_KERNEL_REPORT` 指進信小格並蓋掉信裡的、回報有寫／只有 prompt＋completion／沒寫／三種寫壞、沒跑的不算、`calls` 到頂回 `BudgetMissing`、`tokens` 到頂排著的全回錯、`wait` 留著等換窗後跑、`all` 不歸零與改窗歸零、`budget` 與 `used.json` 壞）；I accept（名單裡的才跑、`cat` 祕密檔與換了 `cwd`、自帶 `stdout`、`envs` 的回 `InstUnknown`，環境用 kernel 的 `PATH` 與 key、只疊信裡的 `AOS_*`；`accept` 寫壞＝`CfgBad`）。
   信是測試自己寫的（假裝閘門；pid 用測試自己＝寄信的人還在）。改掉排序、過期檢查、收拾、runner 檢查、slots、`_metainfo` 那層比較任一處都會紅（10-24 實測）；拿掉設 `AOS_KERNEL_REPORT`、讀回報、到頂判斷、`wait`、換窗歸零、「跑過才算」任一處 H 段都會紅（10-24 下午實測）。
 - gate＋kernel＋loop／daemon 一起跑的在 `proto8/tests/test_kernel_llm.py`（10 案；含 agent-dan 的 brain.py 經閘門、kernel 跑、假 server 回 usage → served 記到 token）。
 
@@ -136,4 +150,6 @@ cmake -B build && cmake --build build && ctest --test-dir build
 - kernel 整群被 SIGKILL：跑信的子行程跟著死，但單子自成行程群組、可能還在跑；下一次回 `RunFailed`，單子實際跑了一半或跑完沒人收。
 - 回信放在 `done/` 等閘門來拿；閘門還活著卻一直不拿（不會發生，除非有人 SIGSTOP 它）就一直佔著。
 - 信裡帶整份環境（含 `AOS_BRAIN_KEY` 這種），信箱在誰都讀得到的地方就會外洩：信箱放自己的 stack 裡。
+- **寄信的人是誰 kernel 不驗**：信號只是 pid＋啟動時間，寫得到信箱的程式很容易冒充一個還活著的行程；擋任意單子只能靠 `accept`。關在 aos-sandbox 裡（有自己的行程編號）的閘門反過來：它的 pid 在外面對不上，kernel 當寄信的人不在、把信丟掉——沙箱裡的 agent 現在用不了 kernel（[thinking sandbox S15](../../thinking/2026-10-24-sandbox.md)）。
+- **共用信箱看得到別人的信**：寫得到信箱就讀得到別封信（含整份環境）與回信；沙箱裡的 agent 要用 kernel，信箱與 kernel 都該是它專用的一份。
 - 沒有每個寄件人的配額（10-15「濫用：先信任」）；`class` 不看；`_metainfo` 宣告錯（說 1 秒跑 1 小時）不處罰，只記在 served 裡（只有單子的 `timeout_ms` 收得掉它）。

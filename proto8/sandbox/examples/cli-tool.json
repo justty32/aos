@@ -3,4 +3,6 @@
  "rw": [{"$env": "AOS_WS"}, {"$env": "AOS_STACK"},
         {"$env": "HOME", "$path": "/.claude"}, {"$env": "HOME", "$path": "/.claude.json"},
         {"$env": "HOME", "$path": "/.codex"}],
+ "env": ["PATH", "HOME", "TERM", "LANG", "LC_ALL", "LC_CTYPE", "TZ",
+         "AOS_ENTRY", "AOS_WS", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO"],
  "net": true}

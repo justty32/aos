@@ -30,11 +30,14 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 | `rw` | 路徑陣列 | 可寫看得到（最後綁，可以蓋在 `ro` 裡面） | 沒有 |
 | `net` | 布林 | 能不能連網 | `false`（只有沙箱自己的 loopback） |
 | `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files` | 正整數 | `s6-softlimit` 的 `-a`＋`-d`（`mem_mb`；不用 `-m`：它連堆疊上限一起設，aos-exec 一開執行緒就失敗）、`-t`、`-p`、`-f`、`-o` | 不限 |
-| `env` | 環境變數名陣列 | 只帶這幾個進去（外面有設的才帶；bwrap `--clearenv`＋`--setenv`），API key 不跟著進沙箱（10-24 補） | 整份照帶 |
+| `env` | 環境變數名陣列 | 只帶這幾個進去（外面有設的才帶；bwrap `--clearenv`＋`--setenv`）；寫了就只照它，不再加預設那幾個 | `PATH`、`LANG`、`LC_ALL`、`LC_CTYPE`、`TZ`、`PYTHONDONTWRITEBYTECODE`、`PYTHONIOENCODING` 與 aos 的六個（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`）；API key 一律不帶，要就明寫（10-24） |
+| `kernel` | 布林 | 沙箱裡能不能用 LLM kernel：`true`＝`$AOS_KERNEL`（信箱，要設、要是資料夾）可寫綁進來、`AOS_KERNEL` 帶進去 | `false`：`AOS_KERNEL` 不帶進去；信箱若落在任何綁進來的路徑裡（或包住它）、或 `env` 列了 `AOS_KERNEL`＝`CfgBad`（10-24 堵信箱後門） |
 
 - **沒列到的路徑一律看不到**（白名單）；`/proc`、`/dev`、空的 `/tmp` 一定有。綁進來的路徑在沙箱裡是同一個位置；相對路徑從 cwd 算。路徑是符號連結的，沙箱裡做同一條連結再綁它指到的地方。
 - 設定檔可以寫 `檔#/指標`（例 `_metainfo#/sandbox`）；值可以用 `{"$env": 名, "$path": 接後面, "$prefix": 接前面}`（不解 `$ref`）。
 - `--dry-run`：不跑，印出那一條 argv（一行 JSON）。
+- **`cpu_s` 是 CPU 時間**（`s6-softlimit -t`，到了收 SIGXCPU、退 152），跟單子的 `timeout_ms`、庫的 bash 的 `timeout_s` 那種**牆鐘時間**不同種：`sleep` 一整天不吃 CPU、`cpu_s` 擋不到；要限總時間用叫它那格的 `timeout_ms`。
+- **kernel 信箱**（`kernel`）：沙箱外的 aos-kernel-llm 會照信跑單子，所以預設看不到信箱。開了 `kernel: true`，關在裡面的程式寄得到任何單子（冒充寄信的人也容易），kernel 那邊要寫 `accept`（[aos-kernel-llm](../impls/aos-kernel-llm/README.md)：只跑名單裡的單子、環境用 kernel 自己的）才擋得住。
 
 錯：stderr 一行 `aos-sandbox: 代號 原因`、退 1——`ArgumentsBad`、`FlagUnknown`、`CfgMissing`（檔不在、`#/` 指不到）、`CfgBad`、`PathMissing`、`CommandMissing`（PATH 上沒有 bwrap、s6-*、`commands` 列的）、`UserBad`（要換身分卻不是 root）。
 
@@ -49,9 +52,9 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 | 例子 | 檔 | 說明 |
 |---|---|---|
 | 自我改進 | [examples/self-improve.json](examples/self-improve.json) | 放進交辦工作區當 `sandbox.json`：run 格與 try_run 都把被改的函數關起來（只看得到這次的暫時複本＋工作區、斷網、只帶 `PATH`、語系幾個環境變數、1 GB、60 秒 CPU）。工作區沒放時 self-improve 預設用自己的 [sandbox.json](../demo/self-improve/sandbox.json)（同這份、少了要 s6 的上限；10-24 定） |
-| bash 工具 | [examples/bash-boxed/](examples/bash-boxed/) | pi-tools 的 bash 原封不動（`inner` 捷徑），外面包一層：只寫得到 `$AOS_WS` 與自己的 stack、斷網 |
-| claude／codex CLI | [examples/cli-tool.json](examples/cli-tool.json) | 要連網、要寫自己的設定資料夾；擋的是「讀寫工作區以外」 |
-| agent 當工具 | [examples/agent.json](examples/agent.json) | 斷網、腦只能經 `$AOS_KERNEL` 信箱（aos-gate）問——見紀錄的邊緣狀況（kernel 會在沙箱外跑信裡的單子） |
+| bash 工具 | [examples/bash-boxed/](examples/bash-boxed/) | 庫的 bash（[lib/base/bash](../lib/base/bash/)）原封不動（`inner` 捷徑），外面包一層：只寫得到 `$AOS_WS` 與自己的 stack、斷網、環境照預設那幾個；`cpu_s` 120 是 CPU 時間，bash 自己的 `timeout_s`（最多 300）是牆鐘 |
+| claude／codex CLI | [examples/cli-tool.json](examples/cli-tool.json) | 要連網、要寫自己的設定資料夾；擋的是「讀寫工作區以外」；環境只帶 `PATH`、`HOME`、`TERM`、語系與 aos 的六個（登入靠 `~/.claude`、`~/.codex` 裡的檔；用環境變數給 key 的話自己加進 `env`） |
+| agent 當工具 | [examples/agent.json](examples/agent.json) | 斷網、`kernel: true`（腦只能經 `$AOS_KERNEL` 信箱用 aos-gate 問）、環境另帶 `AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`（不帶 key）。**現在走不通**：沙箱有自己的行程編號，閘門的信號 pid 在外面對不上，kernel 當寄信的人不在、把信丟掉（閘門 `LetterMissing`），見紀錄 S15 |
 
 ## 要 root 的那半
 

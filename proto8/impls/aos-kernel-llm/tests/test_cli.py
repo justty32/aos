@@ -6,7 +6,8 @@
 每個案例一個暫存資料夾：stack/（AOS_STACK）、mb/（信箱）、kernel.json。信是測試自己寫的（假裝是閘門寄的）：
 信號照 aos-gate 的格式 <奈秒>.<pid>.<started_at_ticks>，pid 用測試自己（所以「寄信的人還在」）；要「寄信的人不在了」就用一個已經結束的行程。
 A 段：命令列與設定；B 段：排隊（level、deadline、等了幾次、先來先上、aging）；C 段：slots；D 段：回信的各種錯
-（DeadlineMissed、LetterBad、單子壞）；E 段：收拾（寄信的人不在、上一次 kernel 死了留在 cur/）；F 段：鎖、訊號、環境與 cwd、逾時。
+（DeadlineMissed、LetterBad、單子壞）；E 段：收拾（寄信的人不在、上一次 kernel 死了留在 cur/）；F 段：鎖、訊號、環境與 cwd、逾時；
+G 段 `_metainfo`、H 段 token 回報與額度；I 段 accept（只跑名單裡的單子，10-24 堵沙箱信箱後門）。
 """
 import fcntl
 import json
@@ -525,6 +526,44 @@ class H_Report(Case):
         for bad in ("{", "[]", json.dumps({"window": "day", "since": None, "calls": 1})):
             (self.stack / "used.json").write_text(bad)
             self.own_error(self.run_k(), "UsedBad")
+
+
+class I_Accept(Case):
+    """10-24 堵沙箱信箱後門：kernel.json 寫了 accept＝只跑名單裡的單子（argv、cwd 一字不差、不自帶 envs 與串流），環境用 kernel 自己的＋信裡 AOS_ 開頭的。"""
+
+    def setUp(self):
+        super().setUp()
+        (self.t / "brain").mkdir()
+        (self.t / "secret.txt").write_text("SECRET")
+        self.brain = ["sh", "-c", 'echo "brain|$AOS_WS|${FOO-unset}|${KEY-unset}"']
+        self.cfg({"mailbox": str(self.mb), "slots": 4, "accept": [{"argv": self.brain, "cwd": "brain"}]})   # cwd 從 kernel.json 的資料夾算
+
+    def test_only_listed_inst_runs(self):
+        ok = self.post(inst={"argv": self.brain, "cwd": str(self.t / "brain")},
+                       env={"PATH": "/nowhere", "AOS_WS": "/w", "FOO": "from-letter", "LD_PRELOAD": "/x.so"})
+        cat = self.post(inst={"argv": ["cat", str(self.t / "secret.txt")], "cwd": str(self.t / "brain")})
+        cwd = self.post(inst={"argv": self.brain, "cwd": str(self.t)})                    # cwd 不同
+        out = self.post(inst={"argv": self.brain, "cwd": str(self.t / "brain"), "stdout": str(self.t / "o.txt")})
+        envs = self.post(inst={"argv": self.brain, "cwd": str(self.t / "brain"), "envs": {"A": "1"}})
+        r = self.run_k(extra={"KEY": "kernel-key"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.reply(ok), {"code": 0, "signal": None})
+        # PATH 用 kernel 的（信裡的 /nowhere 不算）、AOS_* 照信、其他（FOO）不帶、key 用 kernel 這邊的
+        self.assertEqual((self.mb / "done" / ok / "stdout.txt").read_text(), "brain|/w|unset|kernel-key\n")
+        for i in (cat, cwd, out, envs):
+            self.assertEqual(self.reply(i)["error"]["code"], "InstUnknown", i)
+            self.assertFalse((self.mb / "done" / i / "stdout.txt").exists())
+        self.assertFalse((self.t / "o.txt").exists())
+        self.assertEqual(sorted(s["error"] or "" for s in self.served()), ["", "InstUnknown", "InstUnknown", "InstUnknown", "InstUnknown"])
+        self.assertEqual(self.used()["calls"], 1)                                          # 沒跑的不算
+
+    def test_accept_cfg_bad(self):
+        for bad in ({"argv": [], "cwd": "."}, {"argv": ["x"]}, {"argv": "x", "cwd": "."}, {"argv": [1], "cwd": "."}, "x"):
+            self.cfg({"mailbox": str(self.mb), "accept": bad if bad == "x" else [bad]})
+            self.own_error(self.run_k(), "CfgBad")
+
+    def used(self):
+        return json.loads((self.stack / "used.json").read_text())
 
 
 if __name__ == "__main__":

@@ -13,7 +13,7 @@
 ## 最新進度
 
 - **open｜真腦實測**：自動項已真跑完（[基礎](session_logs/2026-10/2026-10-24-真腦實測/結果-01-基礎.md)、[組合A](session_logs/2026-10/2026-10-24-真腦實測/結果-02-組合A.md)、[組合B](session_logs/2026-10/2026-10-24-真腦實測/結果-02-組合B.md)、[外部](session_logs/2026-10/2026-10-24-真腦實測/結果-03-外部.md)）；剩使用者四項（say/listen、fay attach、nvim、沙箱 root）見 [WAIT_USER](WAIT_USER.md)
-- **open｜10-24 其餘下一步**（代定可翻案）：代定落條文、沙箱兩個洞、compact 與 P-41 → [session log 10-24](session_logs/2026-10/2026-10-24.md#下一步open)
+- **open｜10-24 其餘下一步**（代定可翻案）：代定落條文、沙箱殘項（沙箱裡用 kernel 走不通，[sandbox S15](../proto8/thinking/2026-10-24-sandbox.md)）、compact 與 P-41 → [session log 10-24](session_logs/2026-10/2026-10-24.md#下一步open)
 - **open｜還是草稿的條文**：N-14 窗總則、N-15 鎖、N-16 信箱、N-34 tasks（都沒有實作可對） → [NORMS 待定](../proto8/NORMS/08-待定.md)
 - **待照新做法重寫**：還沒做的 tasks、通用 kernel 都是方向題，留給使用者（[plan § 1.2](../proto8/thinking/2026-10-21-plan.md)）；loop／daemon／fsm、tick（9d618174）、腦的工具呼叫（10-23）、LLM kernel（10-24）已做；[rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)、[NORMS 待定](../proto8/NORMS/08-待定.md)。
 - **open｜LLM kernel 下一步**：`_metainfo` 第二步 → [session log 10-24 § LLM kernel 下一步](session_logs/2026-10/2026-10-24.md#llm-kernel-下一步從-session-log-逐字搬來)

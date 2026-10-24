@@ -62,8 +62,8 @@ impls 沒建好先照 [testing § proto8](../../../workflows/testing.md#proto8�
 ## 不在實測裡、仍掛著的殘項
 
 - **代定待落條文**（[NORMS 08-待定](../../../../proto8/NORMS/08-待定.md) 各一行）：fsm exec 直接放單子、`_metainfo`、函數成長、工具＝函式庫、Linux 權限與沙箱。使用者看過才落，改條文派 opus 以上、改完再審。
-- **沙箱兩個沒堵的洞**（[sandbox](../../../../proto8/thinking/2026-10-24-sandbox.md)）：kernel 信箱是後門（沙箱裡寄「單子＝cat 判準」，kernel 在外面照跑）；環境變數整份帶進去（`AOS_BRAIN_KEY`、`.env` 的 key 都讀得到）——設定多了 `env` 白名單，self-improve 兩份設定寫了，其他例子沒寫的照舊。「self-improve 預設就關」10-24 真腦實測前已代定（[sandbox S11](../../../../proto8/thinking/2026-10-24-sandbox.md)，見[結果-02-組合B](結果-02-組合B.md)）。
+- **沙箱兩個洞 10-24 晚堵了**（使用者「都隨意」，代定可翻案，[sandbox S14～S16](../../../../proto8/thinking/2026-10-24-sandbox.md)）：沙箱預設看不到 kernel 信箱（`kernel: true` 才開，開了 kernel 要寫 `accept` 只跑名單裡的單子）；沒寫 `env` 也只帶 PATH、語系與 aos 的六個。還剩：沙箱裡的 agent 用 kernel 走不通（S15：沙箱有自己的行程編號，閘門的 pid 在外面對不上、信被當成沒人要丟掉）；`accept` 裡的腦照信裡的 `AOS_WS` 動檔；共用信箱看得到別人的信。「self-improve 預設就關」見 [S11](../../../../proto8/thinking/2026-10-24-sandbox.md)。
 - **compact 與 P-41 擦邊**：agent-hal 把舊 history 輪替進 `compact/<run>/`、另起新檔；另兩條路是照 kai「紀錄照長、送腦的另外組」或 brain 改讀摘要檔（[compact](../../../../proto8/thinking/2026-10-24-compact.md)）。等使用者看。
-- **bash-boxed**：沒有明文殘項清單；收工時看到的——[sandbox/README](../../../../proto8/sandbox/README.md) 還寫「pi-tools 的 bash」（現在指 `lib/base/bash`）、`cpu_s` 120 是 CPU 時間、跟 bash 的牆鐘 `timeout_s`（最多 300）不同種、環境變數洩漏同樣適用。
+- **bash-boxed**：10-24 晚 [sandbox/README](../../../../proto8/sandbox/README.md) 改指 `lib/base/bash`、補了 `cpu_s`（CPU 時間）跟 `timeout_s`（牆鐘）不同種；環境照 S16 預設白名單。
 - **agent-gus 的小念頭**沒收進 lib（是 gus 自己的入口）；json_edit 兩步的第二步預定換成 gus 的 `thought.json`。
 - 方向題（tasks、通用 kernel）、腦的工具呼叫三題 → [WAIT_USER](../../../WAIT_USER.md)。

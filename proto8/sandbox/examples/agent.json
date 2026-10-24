@@ -1,5 +1,8 @@
 {"commands": ["aos-exec", "aos-loop", "aos-fsm", "aos-gate"],
  "ro": [{"$env": "AOS_CD"}],
- "rw": [{"$env": "AOS_WS"}, {"$env": "AOS_STACK"}, {"$env": "AOS_KERNEL"}],
+ "rw": [{"$env": "AOS_WS"}, {"$env": "AOS_STACK"}],
+ "kernel": true,
+ "env": ["PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "PYTHONDONTWRITEBYTECODE", "PYTHONIOENCODING",
+         "AOS_ENTRY", "AOS_WS", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL"],
  "net": false,
  "mem_mb": 2048, "cpu_s": 600}

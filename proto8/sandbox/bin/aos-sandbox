@@ -13,13 +13,18 @@
 #   ro、rw   路徑陣列：唯讀／可寫看得到（相對的從 cwd 算；rw 最後綁，可蓋在 ro 裡面）
 #   net      布林：能不能連網（預設 false：只有自己的 loopback）
 #   mem_mb、cpu_s、procs、file_mb、files  正整數 → s6-softlimit 的 -a＋-d、-t、-p、-f、-o
-#   env      環境變數名陣列：有寫＝只帶這幾個進去（外面有設的才帶；bwrap --clearenv＋--setenv），沒寫＝整份照帶
+#   env      環境變數名陣列：只帶這幾個進去（外面有設的才帶；bwrap --clearenv＋--setenv）；沒寫＝ENV_BASE 那幾個（PATH、語系、aos 的六個）
+#   kernel   布林：沙箱裡能不能用 LLM kernel（預設 false）。false＝$AOS_KERNEL 不帶進去，信箱也不能在任何綁進來的路徑裡（在＝CfgBad）；
+#            true＝信箱（$AOS_KERNEL，要設、要是資料夾）可寫綁進來、AOS_KERNEL 帶進去（10-24 堵信箱後門）
 #   沒列到的路徑一律看不到；/proc、/dev、/tmp（空的）一定有。
 # 錯：stderr 一行「aos-sandbox: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、PathMissing、CommandMissing、UserBad）。
 # 之後的結束碼都是 prog 的（bwrap 透明轉交；被訊號停＝128＋N）。
 import json, os, shutil, sys
 
 BASE = ["/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc"]
+# 設定沒寫 env 時帶進去的環境變數（10-24 照 S12 的精神：PATH、語系、aos 自己的六個路徑；API key 一律不帶，要就在 env 明寫）
+ENV_BASE = ["PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "PYTHONDONTWRITEBYTECODE", "PYTHONIOENCODING",
+            "AOS_ENTRY", "AOS_WS", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO"]
 # mem_mb 只設 -a（位址空間）與 -d（資料），不用 -m：-m 連堆疊上限也設成同一個數，glibc 開執行緒照堆疊上限配，
 # 一開執行緒就超過位址空間上限（aos-exec 退 1「Resource temporarily unavailable」；10-24 真腦實測 self-improve 撞到）
 LIMITS = [("mem_mb", ("-a", "-d"), 1024 * 1024), ("cpu_s", ("-t",), 1), ("procs", ("-p",), 1),
@@ -150,8 +155,31 @@ def bind(opts, flag, path, dry):
     opts += [flag, path, path]
 
 
+def inside(a, b):
+    """a 是 b 或在 b 底下（都先 realpath）。"""
+    a, b = os.path.realpath(a), os.path.realpath(b)
+    return a == b or a.startswith(b.rstrip("/") + "/")
+
+
+def kernel_box(cfg, opts):
+    """kernel 信箱（10-24）：沒寫 kernel: true＝沙箱裡看不到、寫不了信箱，免得關在裡面的程式寄單子給沙箱外的 kernel 跑。
+    回要不要帶 AOS_KERNEL 進去。"""
+    mb = os.environ.get("AOS_KERNEL")
+    if cfg.get("kernel", False):
+        if not mb or not os.path.isdir(mb):
+            die("CfgBad", "kernel: true 要有 $AOS_KERNEL（kernel 的信箱資料夾）")
+        opts += ["--bind", os.path.realpath(mb), os.path.realpath(mb)]
+        return True
+    if mb and os.path.isdir(mb):
+        bound = [opts[i + 1] for i in range(len(opts) - 1) if opts[i] in ("--bind", "--ro-bind")]
+        for p in bound:
+            if inside(p, mb) or inside(mb, p):
+                die("CfgBad", "綁進來的 %s 看得到 kernel 信箱 %s（沙箱裡寄的信會由外面的 kernel 跑）；要讓沙箱用 kernel 就寫 kernel: true" % (p, mb))
+    return False
+
+
 def build(cfg, prog, dry):
-    for key in ("net",):
+    for key in ("net", "kernel"):
         if key in cfg and type(cfg[key]) is not bool:
             die("CfgBad", "%s 要是 true／false" % key)
     chain = []
@@ -177,14 +205,11 @@ def build(cfg, prog, dry):
     if cfg.get("net", False):
         opts.append("--share-net")
     opts += ["--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]
-    if "env" in cfg:                                # 10-24 真腦實測前補：環境白名單（API key 不跟著進沙箱）
-        names = cfg["env"]
-        if not isinstance(names, list) or not all(isinstance(n, str) and n and "=" not in n for n in names):
-            die("CfgBad", "env 要是環境變數名的陣列")
-        opts.append("--clearenv")
-        for n in dict.fromkeys(names):
-            if n in os.environ:
-                opts += ["--setenv", n, os.environ[n]]
+    names = cfg.get("env", ENV_BASE)                # 環境白名單（10-24；API key 不跟著進沙箱）
+    if not isinstance(names, list) or not all(isinstance(n, str) and n and "=" not in n for n in names):
+        die("CfgBad", "env 要是環境變數名的陣列")
+    if "AOS_KERNEL" in names and not cfg.get("kernel", False):
+        die("CfgBad", "env 列了 AOS_KERNEL 卻沒寫 kernel: true（要讓沙箱用 kernel 就寫 kernel: true）")
     base = paths(cfg, "base") if "base" in cfg else [p for p in BASE if os.path.lexists(p)]
     for p in base:
         bind(opts, "--ro-bind", p, dry)
@@ -200,6 +225,12 @@ def build(cfg, prog, dry):
         bind(opts, "--ro-bind", p, dry)
     for p in paths(cfg, "rw"):
         bind(opts, "--bind", p, dry)
+    if kernel_box(cfg, opts):
+        names = names + ["AOS_KERNEL"]
+    opts.append("--clearenv")
+    for n in dict.fromkeys(names):
+        if n in os.environ:
+            opts += ["--setenv", n, os.environ[n]]
     return chain + [which("bwrap", dry)] + opts + ["--"] + prog
 
 

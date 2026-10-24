@@ -30,7 +30,7 @@ namespace aos::kernel_llm {
 Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json doc = aos::load_cfg(spec);
     std::string base = aos::dirname(aos::abspath(aos::split_hash(spec).path));
-    doc = aos::loop::resolve_keys(doc, base, {"mailbox", "slots", "budget"}).value;
+    doc = aos::loop::resolve_keys(doc, base, {"mailbox", "slots", "budget", "accept"}).value;
     if (!doc.is_object()) {
         throw Error{code::CfgBad, spec + " 要是 JSON 物件"};
     }
@@ -52,6 +52,30 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
         c.slots = s.get<long long>();
     }
     c.budget = parse_budget(doc.value("budget", Json()));
+    Json a = doc.value("accept", Json());
+    if (!a.is_null()) {
+        const std::string bad = "accept 要是 [{\"argv\": 非空字串陣列, \"cwd\": 字串}, …]，不是 " + aos::dumps(a);
+        if (!a.is_array()) {
+            throw Error{code::CfgBad, bad};
+        }
+        std::vector<Accepted> list;
+        for (const Json& e : a) {
+            if (!e.is_object() || !e.value("argv", Json()).is_array() || e["argv"].empty() ||
+                !e.value("cwd", Json()).is_string() || e["cwd"].get<std::string>().empty()) {
+                throw Error{code::CfgBad, bad};
+            }
+            Accepted one;
+            for (const Json& x : e["argv"]) {
+                if (!x.is_string()) {
+                    throw Error{code::CfgBad, bad};
+                }
+                one.argv.push_back(x.get<std::string>());
+            }
+            one.cwd = aos::abspath(aos::join(base, e["cwd"].get<std::string>()));
+            list.push_back(one);
+        }
+        c.accept = list;
+    }
     return c;
 }
 
@@ -116,6 +140,27 @@ struct Served {
     Json metainfo_bad = Json::array();         // 寫壞而當沒寫的 `_metainfo` key
 };
 
+// accept 名單（10-24）：單子的 argv 與 cwd 跟其中一張一字不差，而且沒自帶串流與 envs。
+bool accepted(const std::vector<Accepted>& list, const Json& inst) {
+    for (const char* k : {"envs", "stdin", "stdout", "stderr", "stdout_append", "stderr_append"}) {
+        Json v = inst.value(k, Json());
+        if (!v.is_null() && v != Json(false)) {
+            return false;
+        }
+    }
+    Json cwd = inst.value("cwd", Json());
+    Json argv = inst.value("argv", Json());
+    if (!cwd.is_string() || !argv.is_array()) {
+        return false;
+    }
+    for (const Accepted& a : list) {
+        if (aos::abspath(cwd.get<std::string>()) == a.cwd && argv == Json(a.argv)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // 跑過的（子行程起來過＝cur/<id>/runner.json 在）才算一次、才看回報；沒跑的（LetterBad、DeadlineMissed、BudgetMissing）不算。
 bool ran(const std::string& dir) {
     std::error_code ec;
@@ -125,7 +170,7 @@ bool ran(const std::string& dir) {
 class Server {
 public:
     Server(const Cfg& cfg, const std::string& stack)
-        : mb_{cfg.mailbox}, slots_(cfg.slots), budget_(cfg.budget), stack_(stack) {}
+        : mb_{cfg.mailbox}, slots_(cfg.slots), budget_(cfg.budget), accept_(cfg.accept), stack_(stack) {}
     ~Server() {
         if (lock_fd_ >= 0) {
             close(lock_fd_);
@@ -140,6 +185,7 @@ private:
     Mailbox mb_;
     long long slots_;
     Budget budget_;
+    std::optional<std::vector<Accepted>> accept_;
     std::string stack_;
     int lock_fd_ = -1;
     Queue q_;
@@ -318,6 +364,11 @@ std::vector<Waiting> Server::scan() {
             refuse(id, nullptr, error_reply(code::LetterBad, "信的 " + e.msg));
             continue;
         }
+        if (accept_ && !accepted(*accept_, w.letter["inst"])) {
+            refuse(id, level_name(w.priority.level),
+                   error_reply(code::InstUnknown, "這張單子不在 kernel.json 的 accept 名單裡（argv、cwd 要一字不差，不能自帶 envs 與串流），沒跑"));
+            continue;
+        }
         if (w.priority.deadline && *w.priority.deadline < now) {
             refuse(id, level_name(w.priority.level), error_reply(code::DeadlineMissed, "輪到之前時限已過，沒跑"));
             continue;
@@ -357,9 +408,11 @@ pid_t Server::start_runner(const Waiting& w) {
     }
     // 子行程：只跑這一封
     close(lock_fd_);   // 鎖只留在 kernel 本身（子行程拿著的話 kernel 死了鎖也不放）
-    clearenv();
+    if (!accept_) {
+        clearenv();   // 照舊：環境整份換成寄信那一刻的（閘門透明，C-20）
+    }
     for (auto& [k, v] : env.items()) {
-        if (v.is_string()) {
+        if (v.is_string() && (!accept_ || k.rfind("AOS_", 0) == 0)) {   // 有 accept：只疊信裡 AOS_ 開頭的，其他用 kernel 自己的
             setenv(k.c_str(), v.get<std::string>().c_str(), 1);
         }
     }

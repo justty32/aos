@@ -137,6 +137,16 @@ class SandboxTest(unittest.TestCase):
         time.sleep(0.3)
         self.assertEqual(subprocess.run(["pgrep", "-f", mark], capture_output=True).returncode, 1)   # 沒留孤兒
 
+    def test_env_default_whitelist(self):
+        """設定沒寫 env＝只帶 PATH、語系、aos 的六個（10-24）：外面的 key 不跟著進去；寫了 env＝只帶那幾個。"""
+        prog = 'echo "${SBX_KEY-none}|${AOS_WS-none}|${LANG-none}"'
+        r = subprocess.run([BOX, self.cfg({}), "sh", "-c", prog], capture_output=True, text=True, cwd=self.tmp,
+                           env=env(SBX_KEY="leaked", AOS_WS="/w", LANG="C.UTF-8"))
+        self.assertEqual((r.returncode, r.stdout), (0, "none|/w|C.UTF-8\n"), r.stderr)
+        r = subprocess.run([BOX, self.cfg({"env": ["PATH", "SBX_KEY"]}, "e.json"), "sh", "-c", prog], capture_output=True,
+                           text=True, cwd=self.tmp, env=env(SBX_KEY="leaked", AOS_WS="/w", LANG="C.UTF-8"))
+        self.assertEqual((r.returncode, r.stdout), (0, "leaked|none|none\n"), r.stderr)
+
     # ---- 設定檔與錯
     def test_pointer_and_env_directive(self):
         (self.tmp / "_metainfo").write_text(json.dumps({"summary": "x", "sandbox": {"rw": [{"$env": "BOXDIR", "$path": "/fn"}]}}))
@@ -316,6 +326,84 @@ class SelfImproveSandboxTest(unittest.TestCase):
         out = call({"IMPROVE_SANDBOX": str(box)}).stdout
         self.assertIn("看不到判準", out)
         self.assertNotIn("ANSWER-A", out)
+
+
+FORGE = """import json, os, sys
+mb, ticks, secret = os.environ["AOS_KERNEL"], sys.argv[1], sys.argv[2]
+lid = "%020d.1.%s" % (1, ticks)                      # 冒充 pid 1（外面的 init）：kernel 看信號以為寄信的人還在
+os.makedirs(os.path.join(mb, "tmp", lid))
+json.dump({"inst": {"argv": ["cat", secret], "cwd": "/"}, "env": {"PATH": "/usr/bin:/bin"}},
+          open(os.path.join(mb, "tmp", lid, "letter.json"), "w"))
+os.rename(os.path.join(mb, "tmp", lid), os.path.join(mb, "new", lid))
+print("posted")
+"""
+
+
+@unittest.skipUnless(HAS_BWRAP, "沒有 bwrap 或這台不給開 user namespace")
+class KernelMailboxTest(unittest.TestCase):
+    """10-24 堵 kernel 信箱後門：關在沙箱裡的程式寄「單子＝cat 判準」給沙箱外的 kernel——預設看不到信箱、寄不出去；
+    明寫 kernel: true 才寄得到，這時要靠 kernel.json 的 accept 擋（不在名單＝InstUnknown、不跑）。"""
+
+    def setUp(self):
+        self.t = Path(tempfile.mkdtemp(prefix="test_sandbox_kernel."))
+        self.addCleanup(shutil.rmtree, self.t, ignore_errors=True)
+        self.mb, self.stack, self.ws = self.t / "mb", self.t / "stack", self.t / "ws"
+        for d in (self.stack, self.ws, *(self.mb / b for b in ("tmp", "new", "cur", "done"))):
+            d.mkdir(parents=True)
+        self.secret = self.t / "judge.json"
+        self.secret.write_text("SECRET-JUDGE")
+        (self.ws / "cat.json").write_text(json.dumps({"argv": ["cat", str(self.secret)]}))
+
+    def cfg(self, obj, name="box.json"):
+        p = self.t / name
+        p.write_text(json.dumps(obj))
+        return str(p)
+
+    def box(self, cfg, *prog):
+        return subprocess.run([BOX, cfg, *prog], capture_output=True, text=True, timeout=60,
+                              env=env(AOS_KERNEL=str(self.mb)), cwd=self.t)
+
+    def kernel(self, doc):
+        (self.t / "kernel.json").write_text(json.dumps(dict(doc, mailbox=str(self.mb))))
+        r = subprocess.run(["aos-kernel-llm", "kernel.json"], capture_output=True, text=True, timeout=60,
+                           env=env(AOS_STACK=str(self.stack)), cwd=self.t)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def leaked(self):
+        return any("SECRET-JUDGE" in p.read_text(errors="replace") for p in self.mb.rglob("*") if p.is_file())
+
+    def test_default_box_cannot_reach_kernel(self):
+        prog = ("echo \"kernel=${AOS_KERNEL-unset}\"; aos-gate ws/cat.json; "
+                "mkdir %s/new/x && echo wrote" % self.mb)
+        r = self.box(self.cfg({"commands": ["aos-gate"], "rw": ["ws"]}), "sh", "-c", prog)
+        self.assertIn("kernel=unset", r.stdout)                         # AOS_KERNEL 不帶進去
+        self.assertIn("aos-gate: MailboxMissing", r.stderr)
+        self.assertNotIn("wrote", r.stdout)                             # 直接寫信箱也寫不到（沒綁進來）
+        self.kernel({})
+        self.assertEqual(list((self.mb / "done").iterdir()), [])
+        self.assertFalse((self.stack / "served.jsonl").exists())
+        self.assertFalse(self.leaked())
+
+    def test_bound_path_covering_mailbox_is_cfg_bad(self):
+        for c in ({"rw": [str(self.t)]}, {"ro": [str(self.mb / "new")]}, {"env": ["PATH", "AOS_KERNEL"]}):
+            r = self.box(self.cfg(c, "cover.json"), "true")
+            self.assertEqual(r.returncode, 1, (c, r.stderr))
+            self.assertRegex(r.stderr, r"^aos-sandbox: CfgBad .*kernel: true")
+
+    def test_kernel_true_needs_accept(self):
+        """kernel: true＝信箱寫得到，冒充寄信的人很容易（信號只是 pid＋啟動時間）；kernel 沒 accept 就照跑 cat 判準，有 accept 就 InstUnknown。"""
+        ticks = Path("/proc/1/stat").read_text().rpartition(")")[2].split()[19]
+        c = self.cfg({"rw": ["ws"], "kernel": True})
+        r = self.box(c, "python3", "-c", FORGE, ticks, str(self.secret))
+        self.assertEqual((r.returncode, r.stdout), (0, "posted\n"), r.stderr)
+        self.kernel({"accept": [{"argv": ["python3", "brain.py"], "cwd": str(self.ws)}]})
+        (lid,) = os.listdir(self.mb / "done")
+        self.assertEqual(json.loads((self.mb / "done" / lid / "reply.json").read_text())["error"]["code"], "InstUnknown")
+        self.assertFalse(self.leaked())
+        shutil.rmtree(self.mb / "done" / lid)
+        r = self.box(c, "python3", "-c", FORGE, ticks, str(self.secret))   # 對照：kernel 沒 accept＝後門真的在
+        self.kernel({})
+        self.assertTrue(self.leaked())
 
 
 if __name__ == "__main__":
