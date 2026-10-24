@@ -38,7 +38,7 @@
 | 哪裡 | 負責什麼 |
 |---|---|
 | `_entry`、`loop.json`、`fsm.json`、`idle/` | 同 agent-dan |
-| `act.py` | 同 agent-dan，差一條：工具退非 0 回給腦、不停（10-24 遷移：memory 的「模型的錯」改退 1，照 agent-pip 的做法） |
+| `act.py` | 同 agent-dan |
 | `.env` | 模型名；說明 `AOS_HEAP`（沒設＝`$AOS_WS/.heap/`，指同一個＝共用） |
 | `brain.py` | 同 agent-dan，多一件：問腦前把偏好全部＋跟題目有關的幾筆接在 system 後面（不進 history）；庫壞＝`HeapBad`；假腦附上記憶字數 |
 | `system.txt` | 教腦什麼該存、只存確認過的、衝突以現在說的為準 |
@@ -53,7 +53,7 @@ coding agent，工具全部掛 [proto8/lib](../../../../../proto8/lib/README.md)
 | `_entry`、`.env`、`idle/` | 同 agent-dan |
 | `loop.json`、`fsm.json` | max 200；think 180 秒、act 15 分鐘 |
 | `brain.py` | 同 agent-dan，假腦改叫一次 `bash`（`ls`） |
-| `act.py` | 跟 agent-dan 差一條：工具退非 0、沒有這個工具、arguments 不是 JSON，都接成一則 tool 訊息回給腦、不停 |
+| `act.py` | 工具退非 0、沒有這個工具、arguments 不是 JSON，都接成一則 tool 訊息回給腦、不停（原本跟 agent-dan 差這一條，10-24 晚起 agent-dan 也這樣） |
 | `system.txt` | 照 pi 的精神寫的短版，列各工具看／改的用途 |
 | `tools/*` | 十二條符號連結 → `../../../lib/base/<名>`：`read`、`write`、`edit`、`bash`、`ls`、`stat`、`view`、`json_edit`、`mkdir`、`move`、`copy`、`trash` |
 

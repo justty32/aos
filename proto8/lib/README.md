@@ -33,7 +33,7 @@ impls/                     基礎層與標準庫（C-74）：aos-exec 把工具�
 
 1. **參數**：stdin 一份 JSON 物件（模型的 `arguments` 原樣，P-41）；空 stdin 當 `{}`。key 全小寫底線、單位放字尾（`timeout_s`、`max_bytes`，C-54）；選填的寫預設值在 `tool.json` 的說明裡。
 2. **結果**：stdout 整段就是結果（P-41）。文字工具印文字；結構工具（`ls`、`json_*`）印一行 JSON。工具不讀、不轉述自己起的程式的 stderr 以外的東西（C-52）。
-3. **錯**：一律 stderr 一行 `工具名: 代號 原因`、退 1（P-21），**同一行也印在 stdout**——stdout 是給腦看的，腦才知道錯在哪。代號照 C-54 四種結尾（`ArgumentsBad`、`WsMissing`、`PathBad`、`FileMissing`、`FileBad`、`ReadFailed`、`WriteFailed`、`MkdirFailed`、`TextMissing`、`TextBad`、`PointerBad`、`PointerMissing`、`CommandFailed`、`LaunchFailed`）。**參數給錯對工具來說也是錯、照樣退 1**；停下等人還是把那行回給腦，是叫它的 agent 自己的決定（agent-dan 停、agent-pip 回給腦），工具不替它決定（C-52、C-53 入口檢查）。被跑的指令自己退非 0 **不是**工具的錯（那是結果，尾巴寫結束碼）。
+3. **錯**：一律 stderr 一行 `工具名: 代號 原因`、退 1（P-21），**同一行也印在 stdout**——stdout 是給腦看的，腦才知道錯在哪。代號照 C-54 四種結尾（`ArgumentsBad`、`WsMissing`、`PathBad`、`FileMissing`、`FileBad`、`ReadFailed`、`WriteFailed`、`MkdirFailed`、`TextMissing`、`TextBad`、`PointerBad`、`PointerMissing`、`CommandFailed`、`LaunchFailed`）。**參數給錯對工具來說也是錯、照樣退 1**；停下等人還是把那行回給腦，是叫它的 agent 自己的決定（agent-dan 範本與抄它的 10-24 晚起都回給腦，[thinking](../thinking/2026-10-23-tool-calls.md#10-24-定叫工具與小念頭的失敗回給腦)），工具不替它決定（C-52、C-53 入口檢查）。被跑的指令自己退非 0 **不是**工具的錯（那是結果，尾巴寫結束碼）。
 4. **沙盒＝`$AOS_WS`**：路徑一律從工作區算，解開 `..` 與捷徑後必須還在裡面（`PathBad`）；沒設或不是資料夾＝`WsMissing`。要動別的資料夾，是叫它的人 `aos-exec --ws 那裡 tools/<名>`（C-66 指標＝`AOS_WS`），工具不另收根的參數或環境變數。`bash` 擋不住指令本身跑出去，說明裡寫明。
 5. **逾時**：會跑東西的工具一定有逾時（`timeout_s`，預設與上限寫在 `tool.json`），到時整群先 TERM 再 KILL、算 `CommandFailed`；工具自己被外面 TERM（act 格逾時）時先收掉自己起的那一群再走，不留孤兒（P-36）。
 6. **寫檔**：先寫 `.` 開頭的暫存檔再改名（N-05）、留住原檔權限；幾處一起改的全有或全無。

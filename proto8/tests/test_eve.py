@@ -158,28 +158,27 @@ class T(unittest.TestCase):
         self.assertEqual(tools, ["第一件好了\n\n--- 實際改動（diff）---\n（沒有改任何檔）\n",
                                  "第二件好了\n\n--- 實際改動（diff）---\n（沒有改任何檔）\n"])
 
-    def test_sub_agent_fails_outer_stops(self):
-        """子 agent 的腦壞了：子 agent 停、pyfix 退 1、eve 停在 act（ToolFailed），題目留在 cur/。再跑一次開新小格做完。"""
-        b = self.brains([tool_reply(call("c1", "pyfix", {"task": "修", "dir": "proj"})), answer("好了")],
-                        [(500, "boom"), answer("修好了")])
-        r = self.eve(b.url)
-        self.assertEqual(r.returncode, 1, r.stderr)
-        self.assertIn("pyfix-agent: BrainFailed", r.stderr)
-        self.assertRegex(r.stderr, r"pyfix: AgentFailed 子 agent 結束碼 1（現場在 \S+/runs/001）")
-        self.assertIn("agent-eve: ToolFailed pyfix 結束碼 1", r.stderr)
-        self.assertEqual((self.stack / "state.txt").read_text(), "act\n")
-        self.assertEqual(os.listdir(self.ws / "cur"), ["q1.txt"])
+    def test_sub_agent_fails_back_to_brain(self):
+        """子 agent 的腦壞了：子 agent 停、pyfix 退 1、那行回給 eve 的腦（不停，10-24 起同 agent-pip），eve 照樣交答案。"""
+        b = self.brains([tool_reply(call("c1", "pyfix", {"task": "修", "dir": "proj"})), answer("子 agent 壞了，沒修")],
+                        [(500, "boom")])
         r = self.eve(b.url)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(sorted(os.listdir(self.stack / "pyfix" / "runs")), ["001", "002"])
-        self.assertEqual((self.ws / "out" / "q1.txt").read_text(), "好了\n")
+        self.assertIn("pyfix-agent: BrainFailed", r.stderr)
+        self.assertRegex(r.stderr, r"pyfix: AgentFailed 子 agent 結束碼 1（現場在 \S+/runs/001）")
+        self.assertIn("agent-eve: ToolFailed pyfix 結束碼 1（回給腦）", r.stderr)
+        tool = [m for m in self.history(self.stack) if m["role"] == "tool"]
+        self.assertIn("pyfix: AgentFailed", tool[0]["content"])
+        self.assertEqual(b.requests["outer"][1]["messages"][-1], tool[0])
+        self.assertEqual((self.ws / "out" / "q1.txt").read_text(), "子 agent 壞了，沒修\n")
 
     def test_dir_cannot_escape(self):
-        """pyfix 的 dir 跑出工作區＝DirBad；子 agent 沒被叫。"""
-        b = self.brains([tool_reply(call("c1", "pyfix", {"task": "修", "dir": "../"}))], [])
+        """pyfix 的 dir 跑出工作區＝DirBad（回給腦）；子 agent 沒被叫。"""
+        b = self.brains([tool_reply(call("c1", "pyfix", {"task": "修", "dir": "../"})), answer("dir 不對")], [])
         r = self.eve(b.url)
-        self.assertEqual(r.returncode, 1, r.stderr)
+        self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("pyfix: DirBad", r.stderr)
+        self.assertIn("pyfix: DirBad", [m for m in self.history(self.stack) if m["role"] == "tool"][0]["content"])
         self.assertEqual(b.requests["inner"], [])
 
     def test_sub_agent_tools_stay_in_pyfix_dir(self):

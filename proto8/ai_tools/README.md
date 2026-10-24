@@ -36,7 +36,7 @@ daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.sta
 | 命令 | 做什麼 |
 |---|---|
 | `templates` | 列 `proto8/demo/agent-*` 範本與 `proto8/lib/aos/` 的工具（`--tool` 能掛的） |
-| `spawn 名 [--from 範本] [--tool 工具]... [--tool-errors back｜stop]` | 範本（名字或路徑，預設 agent-dan）複製到 `agents/<名>/agent/`，加工具，建工作區；工具退非 0 時：`back`＝回給腦（act 換成 agent-pip 的，agent-dan 範本的預設）、`stop`＝停（agent-dan 原樣）；別的範本照範本自己的 act（回 `tool_errors: template`），給這個旗標＝`ArgumentsBad` |
+| `spawn 名 [--from 範本] [--tool 工具]...` | 範本（名字或路徑，預設 agent-dan）原樣複製到 `agents/<名>/agent/`，加工具，建工作區；工具出錯停不停照範本自己的 act（agent-dan 10-24 晚起回給腦；之前的 `--tool-errors` 拿掉了） |
 | `ask 名 文字…｜- [--id 題名]` | 題目寫進 `ws/new/<題名>.txt`（先寫暫存再改名，N-05）；題名沒給＝`q<UTC 時間>` |
 | `run 名 [--timeout 秒] [--env K=V]...` | 前景 `aos-exec --ws ws agent`（`AOS_STACK` 明寫成 `ws/.stack/`），跑到 idle 退 10；回答案、錯誤、hint |
 | `status [名]`、`answer 名 [題名]`、`trace 名 [-n N]`、`history 名 [-n N]` | 看 |
@@ -58,7 +58,7 @@ daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.sta
 
 ## 給 agent 的工具（10-24 遷移前叫 dan_tools，現在在 proto8/lib/aos）
 
-**10-24 遷移**：六個工具搬進 [proto8/lib/aos](../lib/README.md)（`aos-ai spawn --tool` 從那裡複製），錯改照 lib 契約：stderr 與 stdout 各一行「工具名: 代號 原因」、退 1（代號照 aos-ai 的，例 `NameBad`）——下面這段說的「印成 JSON、退 0」是遷移前的做法；10-24 真腦實測：aos-ai 生出來的 agent-dan 遇到工具退 1 會停（`ToolFailed`），腦給錯參數時重跑又叫同一個、卡住——所以 `spawn` 用 agent-dan 範本時預設 `--tool-errors back`（act 換成 agent-pip 的，那行回給腦），要原樣停就 `--tool-errors stop`。放題、等答案、讀 stack 的做法也跟 proto8/human 合成一份 `proto8/lib/aos/aos_ws.py`。`aos-ai spawn` 複製範本時，範本裡指出範本的相對捷徑（掛 lib 的工具）改成絕對捷徑。
+**10-24 遷移**：六個工具搬進 [proto8/lib/aos](../lib/README.md)（`aos-ai spawn --tool` 從那裡複製），錯改照 lib 契約：stderr 與 stdout 各一行「工具名: 代號 原因」、退 1（代號照 aos-ai 的，例 `NameBad`）——下面這段說的「印成 JSON、退 0」是遷移前的做法；10-24 真腦實測：aos-ai 生出來的 agent-dan 遇到工具退 1 會停（`ToolFailed`），腦給錯參數時重跑又叫同一個、卡住——當時 `spawn` 加了 `--tool-errors back｜stop` 換 act；10-24 晚 agent-dan 範本本身改成回給腦（[thinking](../thinking/2026-10-23-tool-calls.md#10-24-定叫工具與小念頭的失敗回給腦)），旗標拿掉、原樣複製。放題、等答案、讀 stack 的做法也跟 proto8/human 合成一份 `proto8/lib/aos/aos_ws.py`。`aos-ai spawn` 複製範本時，範本裡指出範本的相對捷徑（掛 lib 的工具）改成絕對捷徑。
 
 `aos-ai spawn boss --tool ask_agent --tool agent_status` 就掛上（生成與查概念：`--tool make_json --tool make_tool --tool explain_aos`）。照 P-41：`arguments` 從 stdin 進、stdout 整段是結果。子 agent 放 `$AOS_AI_ROOT`（沒設＝老闆的 `$AOS_WS`）的 `agents/<名>/`。aos-ai 回的錯（名字不合…）印成 `{"ok": false, "error": "aos-ai: 代號 …"}`、**退 0**，腦看得到、能自己改；只有 aos-ai 起不來才退 1（act 報 `ToolFailed`）。`ask_agent` 前景跑子 agent，上限 `$AOS_AI_ASK_TIMEOUT` 秒（預設 50，要小於 agent-dan act 格的 60 秒）。PATH 上要有 `aos-ai`——經 `aos-ai run` 跑的 agent 已放好。
 

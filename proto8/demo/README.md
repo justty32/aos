@@ -47,7 +47,9 @@ think、act 兩格的 `exec` 直接寫單子：`{"argv": ["python3", "brain.py"]
 
 **真腦**：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-dan`（家機的 LiteLLM，不用 key；PATH 照上面放好）。模型名在 `.env`，要換就在那一行前面加 `AOS_BRAIN_MODEL=…`。真跑的工作區放 `~/code/try/agent-dan/`（使用者 10-23「試驗場放在~/code/try」）。
 
-**錯**（都是 stderr 一行 `agent-dan: 代號 原因`、退 1、state 不動、history 不接；修好再跑一次從同一格接著做）：`BrainFailed`（腦連不上、HTTP 非 2xx）、`ReplyBad`（回覆不是 OpenAI 的形狀）、`ToolUnknown`（叫了 `tools/` 裡沒有的工具）、`ArgumentsBad`（`arguments` 不是 JSON）、`ToolFailed`（工具退非 0）。
+**叫工具出的問題回給腦、不停**（10-24 晚起，同 agent-pip；[thinking](../thinking/2026-10-23-tool-calls.md#10-24-定叫工具與小念頭的失敗回給腦)）：叫了 `tools/` 裡沒有的工具（`act: ToolUnknown …`，附能叫的）、`arguments` 不是 JSON（`act: ArgumentsBad …`）、工具退非 0（stdout 照收、尾巴加「(工具 X 結束碼 N)」；stderr 一行 `agent-dan: ToolFailed … （回給腦）` 給人看），都接成一則 tool 訊息，腦下一輪自己決定。
+
+**錯**（環境壞了才停：stderr 一行 `agent-dan: 代號 原因`、退 1、state 不動、history 不接；修好再跑一次從同一格接著做）：`BrainFailed`（腦連不上、HTTP 非 2xx）、`ReplyBad`（回覆不是 OpenAI 的形狀）、`ToolFailed`（工具起不來：PATH 上沒有 aos-exec）、`StackMissing`、`QuestionMissing`、`HistoryBad`。
 
 ## agent-eve（agent 當工具，10-24）
 
@@ -60,7 +62,7 @@ agent-eve/                主 agent：照抄 agent-dan（brain.py、act.py 只�
     tool.json             給 eve 的腦看：task（必填）、dir（相對於工作區，預設 .）
     _entry                轉接（python3，通用那段在 lib/agent/agent_tool.py）：stdin 的 task → 子 agent 的 new/task.txt；跑完把 out/task.txt＋實際 diff 印到 stdout
     agent/                子 agent（pyfix-agent）：也是一整隻 agent-dan 範本，自己的 system.txt、.env、loop.json（max 60）、fsm.json（think 180 秒、act 300 秒）
-      act.py              同 agent-dan，差兩條：工具一律 aos-exec --ws $PYFIX_DIR、工具退非 0 回給腦不停
+      act.py              同 agent-dan，差一條：工具一律 aos-exec --ws $PYFIX_DIR
       tools/              ls、read、write、edit、bash → lib/base 的捷徑（10-24 遷移前是 list_files、read_file、write_file、edit_file、run_python；bash 逾時預設 30 秒、上限 300）
 ```
 
@@ -86,7 +88,7 @@ agent-fay/
 
 **權限**（`cli.json`，要放寬就改那份）：claude 只給 `Read,Glob,Grep`、`--permission-mode dontAsk`、不載 MCP、`--model sonnet`、非互動 `--max-budget-usd 0.5`；codex `sandbox_mode="read-only"`、`approval_policy="never"`。CLI 在 `$AOS_WS` 裡跑。
 
-**錯**：工具叫的照 lib 契約 stderr 與 stdout 各一行 `claude: 代號 原因`（或 `codex:`）、退 1，attach 的是 `cli_session: 代號 原因`（act 當 `ToolFailed` 停下）——`ArgumentsBad`（10-24 遷移前叫 `PromptBad`）、`CliMissing`、`CliFailed`、`ReplyMissing`、`SessionBad`、`CfgMissing`／`CfgBad`。測試 `test_fay.py` 用假的 claude／codex，不花額度；要 tmux。
+**錯**：工具叫的照 lib 契約 stderr 與 stdout 各一行 `claude: 代號 原因`（或 `codex:`）、退 1，attach 的是 `cli_session: 代號 原因`（工具叫的那行 act 回給腦、不停，10-24 晚起同 agent-dan）——`ArgumentsBad`（10-24 遷移前叫 `PromptBad`）、`CliMissing`、`CliFailed`、`ReplyMissing`、`SessionBad`、`CfgMissing`／`CfgBad`。測試 `test_fay.py` 用假的 claude／codex，不花額度；要 tmux。
 
 ## pi-tools 與 agent-pip（仿 pi coding agent 的基本工具，10-24）
 
@@ -145,7 +147,8 @@ agent-gus/
   plan.py             認領題目、接進 history、請腦回 {"context", "steps": [{id, goal, needs}]} → $AOS_STACK/steps.json；
                       腦回 steps: []＝不拆；到深度上限或額度不夠＝不問腦、不拆
   fork.py             每步起一個小念頭＝再跑一次自己（aos-exec --ws <小格>/ws .），needs 齊了才起、同時最多 THOUGHT_PARALLEL 個；
-                      小念頭 out/ 裡那段答案＝結論，全到齊後一步一則接進 history：「小念頭 sN 的結論（目標：…）：…」
+                      小念頭 out/ 裡那段答案＝結論，全到齊後一步一則接進 history：「小念頭 sN 的結論（目標：…）：…」；
+                      小念頭失敗（退非 0、逾時、沒交答案）＝「小念頭 sN 失敗了（目標：…）：原因」照樣接、不停，needs 它的步不起（10-24 晚）
   brain.py、act.py    think／act 同 agent-dan（act 交答案時 steps.json 收進 plans/）
   thought.json        給別的程式叫一個小念頭：stdin {"goal", "context"?, "needs"?: [{id?, goal, conclusion}]} → stdout 只有結論
   thought.py          thought.json 的身體：開 $AOS_STACK/runs/NNN/、把這一步當題目起一個小念頭（shared.launch）、逾時（THOUGHT_TIMEOUT_S）整群收、印結論

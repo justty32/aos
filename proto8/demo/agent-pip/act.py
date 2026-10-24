@@ -1,6 +1,6 @@
 # act.py - agent-pip 的 act 格（從 agent-dan 改）：有 tool_calls 就逐個 aos-exec tools/<名>、結果接回 history；沒有就把 content 寫成答案
 # 工具的介面同 agent-dan：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的 stack＝$AOS_STACK/<名>/（P-17）。
-# 跟 agent-dan 不同的一條：**這一次叫工具出的問題回給腦、不停**——工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒有的工具、
+# 原本跟 agent-dan 不同的一條（10-24 起 agent-dan 也這樣）：**這一次叫工具出的問題回給腦、不停**——工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒有的工具、
 # arguments 不是 JSON，都接成一則 tool 訊息讓腦自己改（寫程式時 edit 找不到原文是常事；停下的話重跑會再叫同一個、永遠卡住）。
 # 工具的 stderr 不讀（C-52、C-53），留在 act 自己的 stderr 給人看。只有自己這層的錯才停：stderr 一行、退 1、history 不接（P-20）。
 import json, os, shutil, subprocess, sys

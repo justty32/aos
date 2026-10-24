@@ -159,7 +159,7 @@ $AOS_STACK  state.txt、current.txt、trace.jsonl、history.jsonl（一行一則
 
 一句：給腦叫的工具＝`tools/<名>/` 資料夾程式，裡面多一份 `tool.json`（OpenAI function 物件去掉 `name`：`{"description", "parameters"}`），**工具名＝資料夾名**；模型給的 `arguments` 從 stdin 進、stdout 整段是結果。
 範例：`tools/math/tool.json`＝`{"description": "算一個算術式子", "parameters": {"type": "object", "properties": {"expr": {"type": "string"}}, "required": ["expr"]}}`。
-常見錯：在 `tool.json` 寫 `name`（不用，程式填）；沒 `tool.json` 的資料夾不算工具；工具退非 0＝`ToolFailed`、整隻停（要讓腦自己修就把錯印在 stdout、退 0）。
+常見錯：在 `tool.json` 寫 `name`（不用，程式填）；沒 `tool.json` 的資料夾不算工具；工具退非 0：agent-dan 範本把 stdout 那行加上結束碼回給腦、不停（10-24 起；所以錯要印在 stdout，腦才看得到原因）。
 出處：P-41、N-50、C-61。
 
 ## heap

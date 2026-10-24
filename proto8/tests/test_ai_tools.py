@@ -202,33 +202,24 @@ class AiToolsTest(unittest.TestCase):
         self.assertEqual(r.stdout.strip(), r.stderr.strip())
 
 
-    def test_tool_errors_back_or_stop(self):
-        """spawn 預設（agent-dan 範本）--tool-errors back：工具退 1 那行回給腦、題目照樣答完；stop＝agent-dan 原樣、停在 act。
-        別的範本給這個旗標＝ArgumentsBad。（10-24 真腦實測：遷移後工具錯退 1，老闆停在 act、重跑又叫同一個，卡住。）"""
+    def test_tool_errors_back_to_brain(self):
+        """spawn 出來的 agent（agent-dan 範本）工具退 1 那行回給腦、題目照樣答完；範本原樣複製，沒有第二套 act。
+        （10-24 真腦實測：遷移後工具錯退 1，老闆停在 act、重跑又叫同一個，卡住；10-24 起 agent-dan 範本本身就回給腦。）"""
         brain = RuleBrain(helper="Bad Name")
         try:
             code, res, err = ai(self.root, "spawn", "boss", "--tool", "ask_agent")
-            self.assertEqual(res["tool_errors"], "back", err)
+            self.assertTrue(res["ok"], err)
+            self.assertEqual((Path(res["agent"]) / "act.py").read_bytes(),
+                             (Path(__file__).resolve().parents[1] / "demo" / "agent-dan" / "act.py").read_bytes())
             ai(self.root, "ask", "boss", "--id", "q1", "請 helper 算 1+1")
             code, res, err = ai(self.root, "run", "boss", env={"AOS_BRAIN_URL": brain.url})
             self.assertTrue(res["ok"], (res, err))
             self.assertIn("boss got: ask_agent: NameBad ", res["answers"][0]["text"])
             self.assertIn("ToolFailed", [e.get("code") for e in res["errors"]])     # 人在 errors 裡看得到
-            code, res, err = ai(self.root, "spawn", "boss2", "--tool", "ask_agent", "--tool-errors", "stop")
-            self.assertEqual(res["tool_errors"], "stop", err)
-            ai(self.root, "ask", "boss2", "--id", "q1", "請 helper 算 1+1")
-            code, res, err = ai(self.root, "run", "boss2", env={"AOS_BRAIN_URL": brain.url})
-            self.assertFalse(res["ok"])
-            self.assertEqual((res["fsm_state"], res["waiting"]), ("act", ["q1.txt"]))
-            self.assertIn("--tool-errors back", res["hint"])
         finally:
             brain.close()
-        code, res, _ = ai(self.root, "spawn", "p", "--from", "agent-pip")
-        self.assertEqual(res["tool_errors"], "template")
-        for v, want in (("back", "ArgumentsBad"), ("maybe", "ArgumentsBad")):
-            code, _, err = ai(self.root, "spawn", "p2", "--from", "agent-pip" if v == "back" else "agent-dan",
-                              "--tool-errors", v)
-            self.assertTrue(err.startswith("aos-ai: %s " % want), err)
+        code, _, err = ai(self.root, "spawn", "p2", "--tool-errors", "stop")      # 旗標拿掉了
+        self.assertTrue(err.startswith("aos-ai: FlagUnknown "), err)
         self.assertFalse((Path(self.root) / "agents" / "p2").exists())
 
     # ---------- 生成（make）與概念（explain） ----------

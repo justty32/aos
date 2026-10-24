@@ -42,14 +42,14 @@ agent-eve/                  主 agent：照抄 agent-dan（三態、brain.py、a
 4. **子工具只碰 `PYFIX_DIR`**（`realpath` 後必須在裡面）。**路徑跑出去、檔不在、edit 的原文不是剛好一次，算模型的錯、照實回給它（stdout「錯誤：…」、退 0）**，不當工具失敗——讓子 agent 自己改，不然模型一抄錯就整串停下。只有環境沒設好（沒 `PYFIX_DIR`＝`DirMissing`）才退 1。
 5. **`run_python` 不是沙盒**：跑的程式能碰的跟這台機器的使用者一樣多（路徑限制只管讀寫工具）。逾時預設 30 秒、上限 120 秒，到時整個行程群 SIGKILL、回「逾時」給模型。
 6. **出口保證：`_entry` 附真正的 diff**，不只信子 agent 自己說改了什麼。改之前把 `PYFIX_DIR` 裡 256 KB 以下的 UTF-8 檔備份到 `runs/NNN/before/`（不收 `.` 開頭、`__pycache__`），跑完逐檔比對；diff 超過 8000 字截斷。**不自動還原**——改壞了由外層的腦或人看 diff 決定，備份在小格裡。
-7. **子 agent 失敗＝pyfix 失敗**：子 agent 退非 0 → `pyfix: AgentFailed …（現場在 runs/NNN）`、退 1；跑完沒答案 → `AnswerMissing`。eve 的 act 照 P-41 當 `ToolFailed` 停下、題目留在 `cur/`。人再跑一次 eve，act 補跑這個 tool_call、**開新的小格**從頭做（不接著失敗的那格做）。
+7. **子 agent 失敗＝pyfix 失敗**：子 agent 退非 0 → `pyfix: AgentFailed …（現場在 runs/NNN）`、退 1；跑完沒答案 → `AnswerMissing`。eve 的 act 把那行回給腦、不停（10-24 晚改，[tool-calls 文末](2026-10-23-tool-calls.md#10-24-定叫工具與小念頭的失敗回給腦)）；腦再叫 pyfix 就**開新的小格**從頭做（不接著失敗的那格做）。
 8. **模型**：子 agent 用自己 `.env` 的模型——`_entry` 用 `aos-exec --dotenv-override` 叫它。不加的話外層 `.env` 設的 `AOS_BRAIN_MODEL` 會一路傳下來，子 agent 自己的 `.env` 不蓋（N-59 第 4 件），兩層永遠同一個模型。兩隻現在都是 `chatgpt-gpt-6-luna-low`；子 agent 要換強的就改它 `.env` 那一行。腦的位置（`AOS_BRAIN_URL`、`AOS_BRAIN_KEY`）兩層共用外層給的。
 9. **逾時**：eve 的 act 放寬到 30 分鐘（子 agent 最多 60 次 × 每次 think 3 分鐘／act 5 分鐘，理論上還是可能超過）。子 agent 的 `loop.json` `max` 60。
 10. **名字**：主 agent 照 demo 慣例取人名 `agent-eve`（接 bob、ann、cathy、dan）；工具 `pyfix`（白話：修 Python 的）；子工具 `list_files`、`read_file`、`write_file`、`edit_file`、`run_python`（動詞在前，跟 OpenAI 慣用的工具名一樣）；錯誤代號 `AgentFailed`、`AnswerMissing`、`DirBad`、`DirMissing`（主詞＋四種結尾）。eve、子 agent 的 `brain.py`／`act.py` 照抄 agent-dan，只改錯誤訊息開頭（P-25 每隻一份、不跨 agent 互指）。
 
 ## 挖出的邊緣狀況
 
-- **子 agent 失敗**：腦壞了、工具真的起不來、`max` 用完沒答案——全部變成外層的 `ToolFailed`、整隻 eve 停下等人（代定 7）。外層的腦**沒機會**知道失敗、改用別的辦法。另一條路是 `_entry` 把失敗寫成 stdout 一段文字、退 0，讓外層的腦自己決定（重試、換說法、放棄）；跟 10-23「腦叫了不存在的工具，停下還是回給腦」是同一題。
+- **子 agent 失敗**：腦壞了、工具真的起不來、`max` 用完沒答案——全部變成 pyfix 退 1、那行回給外層的腦（代定 7，10-24 晚起），腦自己決定重試、換說法、放棄。外層的腦看得到的只有 pyfix 那一行（現場在 runs/NNN，子 agent 的 stderr 不給腦）。
 - **逾時是層層套的**：外層 act 的 `timeout_ms` 一定要大於子 agent 可能跑的總時間，不然外層到時 SIGTERM 整群，子 agent 停在半路（它的 state 停在某一格、可能剛改完一個檔還沒跑測試）。範本預設 act 60 秒，直接拿 agent-dan 當主 agent 叫子 agent 幾乎一定逾時。沒有誰幫你算「裡面最多跑多久」。
 - **巢狀深度**：P-25 工具放在叫它的那一格的資料夾裡、地址零個 `..`，所以**巢狀深度就是資料夾的深度，自己叫自己做不到**（除非用捷徑繞回去）——不需要深度上限。但每多一層，逾時、token、現場位置（`runs/NNN/stack/<工具>/runs/NNN/…`）都疊上去。
 - **子 agent 寫壞檔**：寫檔是先寫暫存再改名，被殺不會留半個檔；但「改錯」擋不了。備份＋diff 讓外層看得到、拿得回（代定 6），不自動還原。改到 256 KB 以上或非 UTF-8 的檔不在 diff 裡（外層看不到）。

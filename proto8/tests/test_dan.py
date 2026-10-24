@@ -1,4 +1,4 @@
-"""test_dan - 跑 demo/agent-dan（會用工具的問答 agent）：假 server 照劇本回 tool_calls／答案，驗 tools 陣列、history 接法、失敗停住、重跑接著做。
+"""test_dan - 跑 demo/agent-dan（會用工具的問答 agent）：假 server 照劇本回 tool_calls／答案，驗 tools 陣列、history 接法、叫工具出的問題回給腦、環境壞了停住、重跑接著做。
 
 設計：proto8/thinking/2026-10-23-tool-calls.md。連真模型的那個（test_real_model）localhost:4000 連不上就 skip。"""
 import http.server, json, os, re, subprocess, tempfile, threading, unittest, urllib.request
@@ -152,42 +152,57 @@ class T(unittest.TestCase):
         self.assertEqual(self.states(), ["idle", "think", "act", "idle"])
         self.assertEqual(len(b.requests), 1)
 
-    def assert_stopped_in_act(self, r, code):
-        self.assertEqual(r.returncode, 1, r.stderr)
-        self.assertIn(code, dan_errors(r.stderr))
-        self.assertEqual((self.stack / "state.txt").read_text(), "act\n")
-        self.assertEqual((self.ls("cur"), self.ls("out"), self.ls("done")), (["q1.txt"], [], []))
+    def assert_back_to_brain(self, r, content):
+        """叫工具出的問題回給腦（10-24 起）：那則 tool 訊息帶著錯、腦第二次看得到、照樣交答案。"""
+        self.assertEqual(r.returncode, 0, r.stderr)
+        h = self.history()
+        self.assertEqual([m["role"] for m in h], ["user", "assistant", "tool", "assistant"])
+        self.assertIn(content, h[2]["content"])
+        self.assertEqual(self.b.requests[1]["messages"][1:4], h[:3])
+        self.assertEqual((self.ls("cur"), self.ls("out"), self.ls("done")), ([], ["q1.txt"], ["q1.txt"]))
+        return h
 
     def test_tool_failed(self):
-        """(c) 工具退非 0：停在 act、題目留在 cur/、工具的 stderr 原樣往上。"""
-        b = self.brain(tool_reply(call("c1", "math", {"expr": "1/0"})))
+        """(c) 工具退非 0：stdout 那行加結束碼回給腦、不停；人在 stderr 看得到。"""
+        self.b = self.brain(tool_reply(call("c1", "math", {"expr": "1/0"})), answer("除以零，算不出來"))
         self.ask()
-        r = self.dan(b.url)
-        self.assert_stopped_in_act(r, "ToolFailed")
-        self.assertIn("agent-dan: ToolFailed math 結束碼 1", r.stderr)
-        self.assertIn("math: ExprBad 除以零", r.stderr)
-        self.assertEqual([m["role"] for m in self.history()], ["user", "assistant"])
+        r = self.dan(self.b.url)
+        h = self.assert_back_to_brain(r, "math: ExprBad 除以零")
+        self.assertTrue(h[2]["content"].endswith("(工具 math 結束碼 1)\n"), h[2]["content"])
+        self.assertIn("agent-dan: ToolFailed math 結束碼 1（回給腦）", r.stderr)
+        self.assertIn("math: ExprBad 除以零", r.stderr)          # 工具自己的 stderr 原樣往上
 
     def test_tool_unknown(self):
-        """(d) 腦叫了 tools/ 裡沒有的工具。"""
-        b = self.brain(tool_reply(call("c1", "weather", {"city": "台北"})))
+        """(d) 腦叫了 tools/ 裡沒有的工具：回給腦、附能叫的。"""
+        self.b = self.brain(tool_reply(call("c1", "weather", {"city": "台北"})), answer("沒有天氣工具"))
         self.ask()
-        r = self.dan(b.url)
-        self.assert_stopped_in_act(r, "ToolUnknown")
-        self.assertIn("agent-dan: ToolUnknown weather", r.stderr)
+        self.assert_back_to_brain(self.dan(self.b.url), "act: ToolUnknown weather（能叫的：clock、math）")
 
     def test_tool_name_cannot_escape(self):
         """工具名帶 ../ 也當不認得（名字只認 tools/ 底下有 tool.json 的資料夾）。"""
-        b = self.brain(tool_reply(call("c1", "../tools/math", {"expr": "1"})))
+        self.b = self.brain(tool_reply(call("c1", "../tools/math", {"expr": "1"})), answer("好"))
         self.ask()
-        self.assert_stopped_in_act(self.dan(b.url), "ToolUnknown")
+        self.assert_back_to_brain(self.dan(self.b.url), "act: ToolUnknown ../tools/math")
+        self.assertFalse((self.stack / "math").exists())
 
     def test_arguments_bad(self):
-        b = self.brain(tool_reply({"id": "c1", "type": "function", "function": {"name": "math", "arguments": "{expr"}}))
+        self.b = self.brain(tool_reply({"id": "c1", "type": "function", "function": {"name": "math", "arguments": "{expr"}}),
+                            answer("好"))
         self.ask()
-        r = self.dan(b.url)
-        self.assert_stopped_in_act(r, "ArgumentsBad")
-        self.assertIn("agent-dan: ArgumentsBad math：", r.stderr)
+        self.assert_back_to_brain(self.dan(self.b.url), "act: ArgumentsBad math：")
+
+    def test_env_broken_still_stops(self):
+        """環境壞了照舊停：aos-exec 不在 PATH（工具起不來）＝ToolFailed、退 1、history 不接。"""
+        self.stack.mkdir()
+        h = [{"role": "user", "content": "q"},
+             {"role": "assistant", "content": None, "tool_calls": [call("c1", "math", {"expr": "1"})]}]
+        (self.stack / "history.jsonl").write_text("".join(json.dumps(m) + "\n" for m in h))
+        e = {k: v for k, v in os.environ.items() if k not in CLEAR}
+        e.update(PATH="/usr/bin:/bin", AOS_WS=str(self.ws), AOS_STACK=str(self.stack) + "/")
+        r = subprocess.run(["python3", "act.py"], cwd=DAN, env=e, capture_output=True, text=True)
+        self.assertEqual((r.returncode, dan_errors(r.stderr)), (1, ["ToolFailed"]))
+        self.assertIn("起不來", r.stderr)
+        self.assertEqual(self.history(), h)
 
     def test_brain_failed_then_rerun(self):
         """(e) 腦 HTTP 500：停在 think、只接了題目；再跑一次接著做，不重複接題。"""
@@ -232,23 +247,17 @@ class T(unittest.TestCase):
         self.assertEqual((r.returncode, dan_errors(r.stderr)), (1, ["HistoryBad"]))
 
     def test_rerun_only_answers_missing_calls(self):
-        """(f) 兩個 tool_calls、第二個失敗；人修好 history 裡的 arguments 再跑，只補第二個。"""
-        b = self.brain(tool_reply(call("c1", "math", {"expr": "2+3"}), call("c2", "math", {"expr": "1/0"})),
-                       answer("5 和 20"))
-        self.ask()
-        r = self.dan(b.url)
-        self.assert_stopped_in_act(r, "ToolFailed")
-        h = self.history()
-        self.assertEqual([m["role"] for m in h], ["user", "assistant", "tool"])
-        h[1]["tool_calls"][1]["function"]["arguments"] = json.dumps({"expr": "4*5"})   # 人修好
+        """(f) act 跑到一半被打斷（c1 有回、c2 沒回）：再跑 act 只補 c2，c1 不重跑。"""
+        self.stack.mkdir()
+        h = [{"role": "user", "content": "q"},
+             {"role": "assistant", "content": None,
+              "tool_calls": [call("c1", "math", {"expr": "2+3"}), call("c2", "math", {"expr": "4*5"})]},
+             {"role": "tool", "tool_call_id": "c1", "content": "舊的\n"}]
         (self.stack / "history.jsonl").write_text("".join(json.dumps(m, ensure_ascii=False) + "\n" for m in h))
-        r = self.dan(b.url)
+        r = run("python3", "act.py", cwd=DAN, env={"AOS_WS": str(self.ws), "AOS_STACK": str(self.stack) + "/"})
         self.assertEqual(r.returncode, 0, r.stderr)
-        h = self.history()
-        tools = [m for m in h if m["role"] == "tool"]
-        self.assertEqual([(m["tool_call_id"], m["content"]) for m in tools], [("c1", "5\n"), ("c2", "20\n")])
-        self.assertEqual((self.ws / "out" / "q1.txt").read_text(), "5 和 20\n")
-        self.assertEqual(len(b.requests), 2)
+        tools = [m for m in self.history() if m["role"] == "tool"]
+        self.assertEqual([(m["tool_call_id"], m["content"]) for m in tools], [("c1", "舊的\n"), ("c2", "20\n")])
 
     def test_fake_brain(self):
         """(h) 不設 URL＝假腦：叫一次 clock，再答。"""
@@ -273,6 +282,7 @@ class T(unittest.TestCase):
             r = run(m, input=stdin)
             self.assertEqual(r.returncode, 1, stdin)
             self.assertRegex(r.stderr, r"^math: ExprBad \S")
+            self.assertEqual(r.stdout, r.stderr)                    # stdout 也印同一行（給腦看）
 
     def test_real_model(self):
         """(g) 真模型（本機 LiteLLM）：連不上就 skip。"""

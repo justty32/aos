@@ -1,9 +1,9 @@
 # act.py - act 格：照腦的決定動手（同 agent-dan）——有 tool_calls 就逐個 aos-exec tools/<名>、結果接回 history；
 # 沒有就把 content 寫成答案 $AOS_WS/out/<題名>、題目 cur/ → done/，這題的 steps.json 收進 $AOS_STACK/plans/<plan_id>.json。
 # 工具的介面：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的 stack＝$AOS_STACK/<名>/（P-17）。
-# 中途失敗重跑時，已經有 tool 訊息的 id 不再跑。任何錯：stderr 一行、退 1、history 不接（P-20）。
-# 工具退非 0 不停、回給腦（10-24 遷移：run_python 改掛 lib/base 後「模型的錯」也退 1——lib/README「工具只報錯、停不停由 agent 決定」，
-# 這隻照舊讓腦自己改；做法同 agent-pip：stdout 照收、尾巴加結束碼，人在 stderr 看得到）。
+# 中途失敗重跑時，已經有 tool 訊息的 id 不再跑。
+# 叫工具出的問題回給腦、不停（同 agent-pip）：工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒有的工具、arguments 不是 JSON，
+# 都接成一則 tool 訊息讓腦自己決定。只有自己這層的錯（環境壞了）才停：stderr 一行、退 1、history 不接（P-20）。
 import json, os, shutil, subprocess, sys
 from shared import STACK, STEPS, WS, append_history, die, read_history, read_json, write_atomic
 
@@ -26,13 +26,16 @@ if calls:
         if cid in answered:
             continue
         if name not in tools:           # 名字只認 tools/ 底下有 tool.json 的資料夾（也擋掉 ../ 之類）
-            die("ToolUnknown", name)
-        if not isinstance(arguments, str):
-            die("ArgumentsBad", "%s：arguments 不是字串" % name)
+            append_history({"role": "tool", "tool_call_id": cid,
+                            "content": "act: ToolUnknown %s（能叫的：%s）\n" % (name, "、".join(tools))})
+            continue
         try:
+            if not isinstance(arguments, str):
+                raise ValueError("arguments 不是字串")
             json.loads(arguments)
         except ValueError as e:
-            die("ArgumentsBad", "%s：%s" % (name, e))
+            append_history({"role": "tool", "tool_call_id": cid, "content": "act: ArgumentsBad %s：%s\n" % (name, e)})
+            continue
         env = dict(os.environ, AOS_STACK=os.path.join(STACK, name) + "/")
         try:
             r = subprocess.run(["aos-exec", "tools/" + name], input=arguments, stdout=subprocess.PIPE,

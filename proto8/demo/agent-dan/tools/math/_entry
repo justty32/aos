@@ -8,8 +8,9 @@ UNARY = {ast.UAdd: operator.pos, ast.USub: operator.neg}
 POW_MAX = 1000          # 指數上限：9**9**9 這種會把機器算死
 
 
-def bad(reason):
+def bad(reason):                                # 錯：stderr 與 stdout 各一行（stdout 是給腦看的結果；10-24 act 改成工具錯回給腦）
     print("math: ExprBad " + reason, file=sys.stderr)
+    print("math: ExprBad " + reason)
     sys.exit(1)
 
 

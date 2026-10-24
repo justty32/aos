@@ -4,10 +4,11 @@
 # 它自己也能再規劃、再 fork（深度與整棵樹的額度由 THOUGHT_DEPTH、THOUGHT_BUDGET 往下帶）。
 # 小念頭交回來的只有它 out/ 裡那一段答案＝結論；全部到齊後，依規劃的順序一次接進母體的 history（一步一則）。
 # 沒有要拆的步、或結論已接進 history＝什麼都不做、退 0。
-# 有小念頭失敗（退非 0、逾時、沒交答案）：等同一批其他的跑完、記下，stderr 一行 ThoughtFailed、退 1；
-# 人修好再跑，已有結論的不重做，失敗的那個在它原本的小格裡接著跑（它自己的 state 還在）。
+# 小念頭失敗（退非 0、逾時、沒交答案）＝那一步的結論就是「失敗了：原因」，照樣接進 history、不停，讓母體的腦自己決定
+# （重做、略過、照實說；10-24 代定，同 act 的「工具出錯回給腦」）；needs 它的步不起，結論寫「沒起：要的 sN 失敗了」。
+# fork 自己被殺（跑到一半的步 status 還是 running）：重跑時那幾步在原本的小格裡接著跑。
 import json, os, signal, subprocess, sys, time
-from shared import (STEPS, STACK, append_history, conclusion, die, env_int, launch, read_history, read_json, task_text,
+from shared import (STEPS, STACK, append_history, conclusion, env_int, launch, read_history, read_json, task_text,
                     write_atomic)
 
 plan = read_json(STEPS)
@@ -66,8 +67,8 @@ def finish(s, code, why=None):
     save()
 
 
-failed = False                                      # 上次失敗或跑到一半（fork 自己被殺）的步：照樣起，小念頭在原小格接著做
 while True:
+    changed = False
     for i, p in list(running.items()):
         s = by_id[i]
         code = p.poll()
@@ -80,27 +81,28 @@ while True:
                 p.wait()
             del running[i]
             finish(s, None, "逾時：超過 %d 秒，已收掉（現場在 %s）" % (limit_s, cell(s)))
-            failed = True
         elif code is not None:
             del running[i]
             finish(s, code)
-            failed = failed or s["status"] == "failed"
-    if not failed:
-        done = {s["id"] for s in steps if s["status"] == "done"}
-        for s in steps:
-            if len(running) >= parallel:
-                break
-            if s["id"] not in running and s["status"] != "done" and set(s["needs"]) <= done:
-                running[s["id"]] = start(s)
-    if not running:
+    for s in steps:                                 # 上次跑到一半（fork 自己被殺）的步：照樣起，小念頭在原小格接著做
+        if s["id"] in running or s["status"] in ("done", "failed"):
+            continue
+        bad = [n for n in s["needs"] if by_id[n]["status"] == "failed"]
+        if bad:
+            finish(s, None, "沒起：要先拿到 %s 的結論，但它失敗了" % "、".join(bad))
+            changed = True
+        elif len(running) < parallel and all(by_id[n]["status"] == "done" for n in s["needs"]):
+            running[s["id"]] = start(s)
+    if not running and not changed:
         break
     time.sleep(0.2)
 
-bad = [s for s in steps if s["status"] == "failed"]
-if bad:
-    die("ThoughtFailed", "；".join("%s %s" % (s["id"], s["error"]) for s in bad))
-
+for s in steps:                                     # 失敗的那步：stderr 留一行給人看（不停）
+    if s["status"] == "failed":
+        print("agent-gus: ThoughtFailed %s %s（當結論回給腦）" % (s["id"], s["error"]), file=sys.stderr)
 messages = [{"role": "user", "content": "小念頭 %s 的結論（目標：%s）：\n%s" % (s["id"], s["goal"], s["conclusion"])}
+            if s["status"] == "done" else
+            {"role": "user", "content": "小念頭 %s 失敗了（目標：%s）：\n%s" % (s["id"], s["goal"], s["error"])}
             for s in steps]
 if read_history()[-len(messages):] != messages:     # 上次接完、還沒記 recorded 就被殺：不重接
     append_history(*messages)

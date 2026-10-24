@@ -265,12 +265,11 @@ class T(unittest.TestCase):
                 plan = json.loads(sorted((self.ws / ".stack" / "plans").glob("*.json"))[-1].read_text())
                 self.assertEqual((plan["direct"], plan["steps"]), ("prose", []))
 
-    def test_thought_failed_then_rerun(self):
-        """一個小念頭的腦壞了：另一個照樣做完、母體 ThoughtFailed 停住；修好再跑只補壞的那個，結論只接一次。"""
-        broken = [True]
-
+    def test_thought_failed_back_to_brain(self):
+        """一個小念頭的腦壞了：另一個照樣做完；失敗那步當結論（「小念頭 b 失敗了」）接進母體 history、不停，
+        母體的腦看得到、自己決定怎麼答（10-24 代定，原本 ThoughtFailed 停住）。"""
         def route(body):
-            if not is_plan(body) and goal_of(body) == "乙" and broken[0]:
+            if not is_plan(body) and goal_of(body) == "乙":
                 return (500, "壞了")
             if is_plan(body) and depth_of(body) == 0:
                 return plan_reply([{"id": "a", "goal": "甲"}, {"id": "b", "goal": "乙"}])
@@ -278,20 +277,35 @@ class T(unittest.TestCase):
         b = self.brain(route)
         self.ask()
         r = self.gus(b.url)
-        self.assertEqual(r.returncode, 1)
-        self.assertEqual(gus_errors(r.stderr), ["ThoughtFailed"])
-        steps = {s["id"]: s for s in json.loads((self.stack / "steps.json").read_text())["steps"]}
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(gus_errors(r.stderr), ["ThoughtFailed"])     # 人在 stderr 看得到
+        steps = {s["id"]: s for s in json.loads((self.stack / "plans" / os.listdir(self.stack / "plans")[0])
+                                                 .read_text())["steps"]}
         self.assertEqual((steps["a"]["status"], steps["b"]["status"]), ("done", "failed"))
-        a_calls = len([x for x in b.requests if goal_of(x) == "甲"])
-        broken[0] = False
+        concl = [m["content"] for m in self.history() if str(m["content"]).startswith("小念頭 ")]
+        self.assertEqual(concl[0], "小念頭 a 的結論（目標：甲）：\n結論:甲")
+        self.assertTrue(concl[1].startswith("小念頭 b 失敗了（目標：乙）：\n結束碼 1（現場在 "), concl[1])
+        last = [x for x in b.requests if not is_plan(x) and goal_of(x) is None][-1]  # 母體彙整那次看得到失敗
+        self.assertIn(concl[1], [m["content"] for m in last["messages"]])
+        self.assertEqual((self.ws / "out" / "q1.txt").read_text(), "總結\n")
+
+    def test_thought_failed_needs_not_started(self):
+        """b 要 a 的結論、a 失敗了：b 不起，結論寫「沒起」；兩則都回給母體的腦。"""
+        def route(body):
+            if not is_plan(body) and goal_of(body) == "甲":
+                return (500, "壞了")
+            return two_steps(body)
+        b = self.brain(route)
+        self.ask()
         r = self.gus(b.url)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(len([x for x in b.requests if goal_of(x) == "甲"]), a_calls)   # a 沒重做
-        concl = [m for m in self.history() if str(m["content"]).startswith("小念頭 ")]
-        self.assertEqual(len(concl), 2)
+        self.assertEqual([x for x in b.requests if goal_of(x) == "乙"], [])
+        concl = [m["content"] for m in self.history() if str(m["content"]).startswith("小念頭 ")]
+        self.assertTrue(concl[0].startswith("小念頭 a 失敗了"), concl)
+        self.assertEqual(concl[1], "小念頭 b 失敗了（目標：乙）：\n沒起：要先拿到 a 的結論，但它失敗了")
 
     def test_thought_timeout(self):
-        """小念頭超過 THOUGHT_TIMEOUT_S：整群收掉、ThoughtFailed。"""
+        """小念頭超過 THOUGHT_TIMEOUT_S：整群收掉、那步當失敗回給母體的腦。"""
         def route(body):
             if is_plan(body):
                 return two_steps(body)
@@ -300,9 +314,11 @@ class T(unittest.TestCase):
         self.ask()
         t0 = time.time()
         r = self.gus(b.url, THOUGHT_TIMEOUT_S="1")
-        self.assertEqual(r.returncode, 1)
-        self.assertEqual(gus_errors(r.stderr), ["ThoughtFailed"])
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("ThoughtFailed", gus_errors(r.stderr))
         self.assertIn("逾時", r.stderr)
+        self.assertTrue(any(str(m["content"]).startswith("小念頭 a 失敗了（目標：甲）：\n逾時")
+                            for m in self.history()))
         self.assertLess(time.time() - t0, 15)
 
     def test_conclusion_capped(self):

@@ -38,8 +38,8 @@ claude／codex CLI 當工具，人可以 `attach` 接進同一段對話。[think
 | `.env` | 模型名＋上限 `THOUGHT_MAX_STEPS`／`MAX_DEPTH`／`MAX_TOTAL`／`PARALLEL`／`TIMEOUT_S`／`MAX_CHARS`（`THOUGHT_DEPTH`、`THOUGHT_BUDGET` 由 fork 往下帶） |
 | `shared.py` | 各格共用（不是格）：`die`、`claim`、讀寫 history、`tools_spec`、`ask`（問腦、記 `usage.jsonl`）、`launch`／`conclusion`（起小念頭、取結論） |
 | `plan.py` | 認領題目、請腦回 `{context, steps}` → `$AOS_STACK/steps.json`；深度到頂或額度不夠、或腦回散文不是規劃（10-24），就不拆；規劃寫錯 `PlanBad` |
-| `fork.py` | needs 齊了才起、同時 `THOUGHT_PARALLEL` 個，小格 `thoughts/<id>/{ws,stack}`；全到齊一步一則接進 history；錯 `ThoughtFailed`，重跑只補失敗的 |
-| `brain.py`、`act.py` | think／act 同 agent-dan 的做法但改寫成用 `shared`；brain 不認領題目（plan 做了）；act 交答案時把 `steps.json` 收進 `plans/`；工具退非 0 回給腦、不停（10-24 遷移：run_python 換成庫的、模型的錯也退 1，照 agent-pip 的做法） |
+| `fork.py` | needs 齊了才起、同時 `THOUGHT_PARALLEL` 個，小格 `thoughts/<id>/{ws,stack}`；全到齊一步一則接進 history；小念頭失敗＝那步記「失敗了：原因」照樣接、不停，needs 它的步不起（10-24 晚） |
+| `brain.py`、`act.py` | think／act 同 agent-dan 的做法但改寫成用 `shared`；brain 不認領題目（plan 做了）；act 交答案時把 `steps.json` 收進 `plans/`；叫工具出的問題（退非 0、沒有的工具、arguments 壞）回給腦、不停，同 agent-dan |
 | `thought.json`、`thought.py` | 給別的程式叫一個小念頭：stdin `{goal, context?, needs?}` → stdout 只有結論，過程在 `runs/NNN/`；錯 `StepBad` |
 | `system.txt` | 人格（看到小念頭結論就彙整） |
 | `tools/run_python` | 符號連結 → `../../../lib/base/run_python`（10-24 遷移；stdin `{"code", "timeout_s"}` → 結束碼與輸出） |

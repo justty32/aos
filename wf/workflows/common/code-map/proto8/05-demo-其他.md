@@ -16,7 +16,7 @@
 | `member/.env` | `AOS_BRAIN_MODEL`（預設 `chatgpt-gpt-6-luna-low`）；腦網址註解掉＝假腦 |
 | `member/system.txt` | system 訊息：怎麼寄、要回的信直接答、通知不回 |
 | `member/brain.py` | think：同 agent-dan，多兩件——信翻成「[來信] …」給腦看；system 加上名冊（我是誰、角色、還有誰、群組）。錯開頭 `talk-member:` |
-| `member/act.py` | act：同 agent-dan，多兩件——題目是要回答的信、還沒寄過給寄件人＝答案經 `send_message` 自動寄回（自動回信不再回；寄不成照舊寫在答案後面，環境壞了才停）；工具退非 0 回給腦、不停（10-24 遷移，同 agent-pip） |
+| `member/act.py` | act：同 agent-dan，多兩件——題目是要回答的信、還沒寄過給寄件人＝答案經 `send_message` 自動寄回（自動回信不再回；寄不成照舊寫在答案後面，環境壞了才停） |
 | `member/tools/send_message`、`check_inbox` | 符號連結 → `../../../../lib/aos/<名>`（10-24 遷移；寄信、看信箱的本體見 [06-周邊工具](06-周邊工具.md)） |
 | `member/tools/math`、`clock` | 符號連結 → `../../../../lib/base/<名>`（10-24 遷移前是 agent-dan 的複本） |
 | `team/` | 整個團隊 |

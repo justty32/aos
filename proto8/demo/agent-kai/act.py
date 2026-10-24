@@ -1,6 +1,9 @@
 # act.py - act 格（agent-kai：照抄 agent-dan，只多給工具一個 RECALL_HISTORY＝自己的 history.jsonl，recall 工具靠它查舊題）：照腦的決定動手——有 tool_calls 就逐個 aos-exec tools/<名>、結果接回 history；沒有就把 content 寫成答案
 # 工具的介面：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的 stack＝$AOS_STACK/<名>/（P-17）。
-# 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。任何錯：stderr 一行、退 1、history 不接（P-20）。
+# 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。
+# 叫工具出的問題回給腦、不停（10-24 起，同 agent-pip）：工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒有的工具、arguments 不是 JSON，
+# 都接成一則 tool 訊息讓腦自己決定（停下的話重跑會再叫同一個、永遠卡住）；工具的 stderr 不讀（C-52、C-53）。
+# 只有自己這層的錯（環境壞了：沒 stack、history 壞、aos-exec 起不來）才停：stderr 一行、退 1、history 不接（P-20）。
 import json, os, shutil, subprocess, sys
 
 
@@ -48,22 +51,27 @@ if calls:
         if cid in answered:
             continue
         if name not in tools:           # 名字只認 tools/ 底下有 tool.json 的資料夾（也擋掉 ../ 之類）
-            die("ToolUnknown", name)
-        if not isinstance(arguments, str):
-            die("ArgumentsBad", "%s：arguments 不是字串" % name)
+            append({"role": "tool", "tool_call_id": cid,
+                    "content": "act: ToolUnknown %s（能叫的：%s）\n" % (name, "、".join(tools))})
+            continue
         try:
+            if not isinstance(arguments, str):
+                raise ValueError("arguments 不是字串")
             json.loads(arguments)
         except ValueError as e:
-            die("ArgumentsBad", "%s：%s" % (name, e))
+            append({"role": "tool", "tool_call_id": cid, "content": "act: ArgumentsBad %s：%s\n" % (name, e)})
+            continue
         env = dict(os.environ, AOS_STACK=os.path.join(stack, name) + "/", RECALL_HISTORY=history_path)
         try:
             r = subprocess.run(["aos-exec", "tools/" + name], input=arguments, stdout=subprocess.PIPE,
                                text=True, env=env)      # stderr 不吞：工具自己的錯原樣往上
         except OSError as e:
             die("ToolFailed", "%s 起不來：%s" % (name, e))
-        if r.returncode != 0:
-            die("ToolFailed", "%s 結束碼 %d" % (name, r.returncode))
-        append({"role": "tool", "tool_call_id": cid, "content": r.stdout})
+        content = r.stdout
+        if r.returncode != 0:           # 回給腦、不停；人在 stderr 看得到
+            print("agent-kai: ToolFailed %s 結束碼 %d（回給腦）" % (name, r.returncode), file=sys.stderr)
+            content += "%s(工具 %s 結束碼 %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
+        append({"role": "tool", "tool_call_id": cid, "content": content})
     sys.exit(0)
 
 # 沒有 tool_calls：content 就是答案，寫 $AOS_WS/out/<題名>、題目 cur/ → done/
