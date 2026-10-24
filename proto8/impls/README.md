@@ -11,6 +11,9 @@
 > 單子的 `_metainfo.time_ms` 同級時短的先，使用者「_metainfo好了之後，讓kernel實際去用用看」）。信箱與信的格式在 aos-kernel-llm 的公開標頭 `aos/kernel_llm.hpp`，閘門連它。
 > 10-24 下午加 token 回報與額度（照 rewrite-order 第 3 題推薦，使用者「都按建議做」）：kernel 跑信時給 `AOS_KERNEL_REPORT`，腦願意就寫 usage；kernel.json 的 `budget` 設 `calls`／`tokens` 每窗上限，到頂回 `BudgetMissing` 或等下一窗。
 >
+> **10-24 aos-json（嘗試，[thinking](../thinking/2026-10-24-aos-json.md)）：** 使用者「做一套方便修改json的工具集，配合指示詞」——多一支命令列 [aos-json](aos-json/README.md)（`aos-json 子命令 [旗標...] 檔#/指標 [值]`：讀、改 aos 的 JSON 設定，認得 `$ref`／`$env`，可穿過 `$ref` 改被參照的檔、只重寫有變的那一塊、寫之前先驗形狀），
+> 再加兩個給腦掛的工具 `tools/json/`、`tools/json_edit/`。庫 `lib/libaos-json.a` 沒有公開標頭（沒人連它）。做的時候沒接進共用建置，10-24 收尾補進下面「建置」的順序與 for 迴圈。
+>
 > **10-24（`exec` 又收單子物件，[thinking](../thinking/2026-10-24-exec-relative.md#10-24-exec-直接放單子)）：** 使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」——aos-loop、aos-fsm、aos-daemon 的 `exec`（fsm 是每一格的）寫成物件＝單子，
 > 在自己行程內呼叫 aos-exec 的 `run_inst` 跑（aos-loop 的 `run_once`／新的 `src/run/inline.cpp`），跑的期間 `AOS_CF`／`AOS_CD`／`AOS_CO` 設成單子的位置（設定檔、它的資料夾、`/exec` 或 `/states/<名>/exec`），
 > 單子裡的指示詞跑的時候才解（`resolve_exec`）；daemon 寫小格時給子項的單子補 `cwd`、相對 `$ref` 轉絕對。字串、字串陣列照舊每次在子行程裡 `run_cli`。下面 10-21 晚那段「只收字串」作廢。
@@ -87,6 +90,7 @@
                 ← aos-exec、aos-directive、aos-schema 都連它（aos-loop、aos-fsm 經 aos-exec 連到）
  aos-directive  解 JSON 裡的 {"$ref": 檔[#/指標]}、{"$env": 變數}，可帶 $path（字串拼接）、$prefix（lib＋bin） ← aos-exec 連它（單子、argv 陣列、JSON .env key 的指示詞）；aos-loop 也連（設定檔與 ctl，10-23 晚）
  aos-schema     用 JSON Schema（draft-07）驗 JSON（lib＋bin）                  ← 獨立，只連 aos-util
+ aos-json       讀、改 aos 的 JSON 設定：檔#/指標、穿 $ref、只重寫變的那塊、check（lib＋bin＋tools/）  ← 連 aos-directive、aos-util；test_tool 要 aos-exec 的 bin/（10-24）
 ```
 
 | 專案 | 是什麼 | 產物 | 現況 | README |
@@ -101,6 +105,7 @@
 | aos-inst | 命令列：一張 inst 跑一次 | `lib/libaos-inst.a`、`bin/aos-inst` | 已刪（10-19，碼已併入 aos-exec 的 src/inst/，舊版在備份 backup/aos-impls-2026-10-19.tar.gz（10-23 已刪）） | （已刪） |
 | aos-kernel-llm | 命令列：`aos-kernel-llm [旗標] kernel.json`，LLM kernel 跑一次（挑信、跑、回信）；庫有公開標頭 `aos/kernel_llm.hpp`（信箱與信） | `lib/libaos-kernel-llm.a`、`bin/aos-kernel-llm` | **提供**（10-24 新做） | [aos-kernel-llm](aos-kernel-llm/README.md) |
 | aos-gate | 命令列：`aos-gate [旗標] 單子.json`，把單子寄給 kernel、等回信、原樣交回 | `lib/libaos-gate.a`、`bin/aos-gate` | **提供**（10-24 新做） | [aos-gate](aos-gate/README.md) |
+| aos-json | 命令列：`aos-json 子命令 [旗標...] 檔#/指標 [值]`，讀、改 aos 的 JSON 設定（認得 `$ref`／`$env`）；另有給腦掛的工具 `tools/json/`、`tools/json_edit/`；庫沒有公開標頭 | `lib/libaos-json.a`、`bin/aos-json` | **提供**（10-24 新做，嘗試） | [aos-json](aos-json/README.md) |
 | aos-daemon | 命令列：`aos-daemon [旗標] daemon.json`，顧一群子 loop（經 aos-exec 起） | `lib/libaos-daemon.a`、`bin/aos-daemon` | **提供**（10-21 重寫、10-21 晚子 loop 經 aos-exec） | [aos-daemon](aos-daemon/README.md) |
 
 ## 從哪開始讀
@@ -176,6 +181,8 @@
 | `MailboxMissing`、`PriorityBad`、`LetterMissing`、`ReplyBad` | aos-gate（定義在 `aos/kernel_llm.hpp`） | 沒設 `AOS_KERNEL` 或不是資料夾；priority 寫壞；信在信箱裡不見了；回信讀不懂（10-24） |
 | `LockFailed`、`QueueBad`、`UsedBad` | aos-kernel-llm | 信箱被另一個 kernel 鎖著；`$AOS_STACK/queue.json` 讀不懂（10-24）；`$AOS_STACK/used.json`（用量帳）讀不懂（10-24 下午） |
 | `LetterBad`、`DeadlineMissed`、`BudgetMissing`、`RunFailed` | aos-kernel-llm 寫進回信、aos-gate 印出來 | 信讀不懂或 priority 壞；輪到之前時限已過；這一窗額度用完（10-24 下午）；上一次 kernel 跑到一半死了沒回信（10-24） |
+| `CommandUnknown`、`FileMissing`、`FileBad`、`SpecBad`、`PointerMissing`、`ValueMissing`、`ValueBad`、`TargetBad`、`FollowMissing`、`CheckFailed` | aos-json（`src/common/common.hpp`；印法同 aos-exec：`aos-json: 代號 原因`） | 見 [aos-json](aos-json/README.md)（10-24）；它也吐全家共用的 `ArgumentsBad`、`FlagUnknown`、`WriteFailed`、`Internal` 與 `DirectiveBad` |
+| `DirectiveFormBad`、`ExecBad` | aos-json 的 `check` 印在 stdout（問題，不是 aos-json 自己的錯） | 帶 `$ref`／`$env` 但寫法不合（aos 會原封不動留著）；`exec` 形狀不對（10-24） |
 | `SchemaBad` | aos-schema | schema 不合 draft-07、`$ref` 指不到 |
 
 ### 命令列：設定、旗標、三扇門、指示詞
@@ -230,10 +237,10 @@ cmake -B build && cmake --build build && ctest --test-dir build
   endif()
   target_link_libraries(你的target PRIVATE aos-util)
   ```
-- 依賴順序：inst → aos-util → aos-directive → aos-exec → aos-loop → aos-fsm、aos-daemon、aos-kernel-llm → aos-gate（10-24）；aos-schema 獨立（庫留著，沒人連）。
+- 依賴順序：inst → aos-util → aos-directive → aos-exec → aos-loop → aos-fsm、aos-daemon、aos-kernel-llm → aos-gate（10-24）；aos-schema 獨立（庫留著，沒人連）；aos-json 連 aos-util、aos-directive，它的 `test_tool` 要 aos-exec 的 `bin/`，所以排在 aos-exec 後面（10-24 收尾接進來）。
   一次全建（aos-fsm、aos-daemon 的 `test_demo` 要前面幾支的 `bin/` 先建好，所以照這個順序）：
   ```sh
-  for p in inst aos-util aos-directive aos-schema aos-exec aos-loop aos-fsm aos-daemon aos-kernel-llm aos-gate; do (cd $p && cmake -B build && cmake --build build && ctest --test-dir build) || break; done
+  for p in inst aos-util aos-directive aos-schema aos-exec aos-json aos-loop aos-fsm aos-daemon aos-kernel-llm aos-gate; do (cd $p && cmake -B build && cmake --build build && ctest --test-dir build) || break; done
   ```
 - Sanitizer：`cmake -B build-asan -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined"`（`settings.cmake` 看到 `-fsanitize` 就不加 `-static-pie`）。
   帶 sanitizer 的 `.a` 會蓋掉共用的 `lib/`，建完記得重建正常版。
@@ -243,8 +250,9 @@ cmake -B build && cmake --build build && ctest --test-dir build
 
 | 檔 | 做什麼 | ctest 名 | 誰有 |
 |---|---|---|---|
-| `tests/test_cli.py` | 命令列黑箱：餵 stdin 或設定檔、看退出碼與輸出 | `test_cli` | aos-util、aos-directive（57 組）、aos-schema（12 案）、aos-exec（56 組）、aos-loop（40 組）、aos-fsm（29 組）、aos-daemon（20 案，unittest）、aos-kernel-llm（29 案，unittest）、aos-gate（15 案，unittest；測試自己當 kernel） |
+| `tests/test_cli.py` | 命令列黑箱：餵 stdin 或設定檔、看退出碼與輸出 | `test_cli` | aos-util、aos-directive（57 組）、aos-schema（12 案）、aos-exec（56 組）、aos-loop（40 組）、aos-fsm（29 組）、aos-daemon（20 案，unittest）、aos-kernel-llm（29 案，unittest）、aos-gate（15 案，unittest；測試自己當 kernel）、aos-json（126 個） |
 | `tests/test_demo.py` | 整合：proto8/demo 在 impls 線跑，看結束碼 0、stderr 空、答案寫出來（10-23 前另跟 proto8/bin 線逐檔比，Python 版刪了就拿掉） | `test_demo` | aos-fsm（agent-bob、agent-ann）、aos-daemon（demo/daemon） |
+| `tests/test_tool.py` | 給腦掛的工具經 aos-exec 跑（假 OpenAI 端點） | `test_tool` | aos-json（30 個；aos-exec 的 `bin/` 沒建＝跳過） |
 | `tests/test_lib.*` | 函式庫 | `test_lib`、`test_lib_*` | inst（C；另一份 `test_lib_nopidfd` 走輪詢退路）、aos-schema、aos-util（7 條，含 10-23 的代號 `cli`） |
 | `tests/test_ffi.py` | Python ctypes 載 `.so` | `test_ffi` | inst |
 

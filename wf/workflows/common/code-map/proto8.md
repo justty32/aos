@@ -20,17 +20,26 @@
 - `agent-dan/`（10-23，真腦＋工具；慣例 [P-41](../../../../proto8/CONVENTION/02-題目stack停錯腦.md)）：`_entry`＝`exec aos-loop loop.json`；`loop.json`＝`{"exec": "fsm.json", "max": 40}`；`fsm.json` 三態不變，idle 是資料夾、think／act 是 `body` 裡的單子〔10-24 起直接寫在 `exec`〕（120 秒、60 秒）；`.env` 給 `AOS_BRAIN_MODEL`（預設 `chatgpt-gpt-6-luna-low`）；`system.txt` 是 system 訊息（不進 history）；`idle/_entry` 同 bob；`brain.py`（think：認領題目、組 tools、帶 `$AOS_STACK/history.jsonl` 問腦、回覆接一行；沒設 `AOS_BRAIN_URL`＝假腦叫一次 clock）；`act.py`（act：有 `tool_calls` 就逐個 `aos-exec tools/<名>`、arguments 進 stdin、stdout 接回 history；沒有就寫答案、搬 `done/`）；`tools/math/`（四則運算，stdin 收 `{"expr"}`）、`tools/clock/`（印 UTC 時間）；各工具的 `tool.json`＝給模型看的說明（function 物件去掉 name）。
 - `agent-eve/`（10-24，agent 當工具；[thinking](../../../../proto8/thinking/2026-10-24-agent-as-tool.md)）：主 agent 照抄 agent-dan（`brain.py`、`act.py` 只改錯誤訊息開頭；act 逾時 30 分鐘），唯一的工具 `tools/pyfix/`：`tool.json`（task、dir）、`_entry`（python3 轉接：開小格 `$AOS_STACK/runs/NNN/`、備份 `before/`、task 寫進子 agent 的 `ws/new/task.txt`、`aos-exec --dotenv-override --ws … agent`、印 `out/task.txt`＋實際 diff）、`agent/`（子 agent pyfix-agent，也是 agent-dan 範本：自己的 `system.txt`、`.env`、`loop.json` max 60；`tools/list_files`、`read_file`、`write_file`、`edit_file`、`run_python` 只碰 `$PYFIX_DIR`）。
 - `daemon/`（10-20）：`_entry`＝`exec aos-daemon daemon.json`、子項 `exec`＝`daemon.json#/loops/<名字>/body`（10-21；10-23 深夜改名，原 `run`）〔10-24 起子項 `exec` 直接是單子〕；一個 daemon 同時管 bob、ann 兩個子 loop（工作區 `$AOS_WS/bob`、`$AOS_WS/ann`，stack 在 daemon 的小格裡）。
-- `kernel-llm/`（10-24，[thinking](../../../../proto8/thinking/2026-10-24-llm-kernel.md)）：`_entry`（shell）設 `AOS_KERNEL=$AOS_STACK/mailbox` 並先建好、`exec aos-daemon daemon.json`；`daemon.json` 管 kernel（`aos-kernel-llm kernel.json`，`interval_ms` 300）與 a、b、c 三個子項（各跑一次 `agent-ivy/`，環境變數 `BRAIN` 選腦的單子）；`kernel.json`＝`{"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1}`；`agent-ivy/`＝ann 式 agent（`idle.py`、`brain.py`〔假腦睡 1 秒〕、`act.py`），think 格 `exec` 是 `aos-gate $BRAIN`、stdout 導到 `plan.txt`；`agent-ivy/brains/` 三張腦的單子（`plain.json` normal、`quick.json` normal＋`_metainfo.time_ms` 800、`urgent.json` high＋5000）。
+- `kernel-llm/`（10-24，[thinking](../../../../proto8/thinking/2026-10-24-llm-kernel.md)）：`_entry`（shell）設 `AOS_KERNEL=$AOS_STACK/mailbox` 並先建好、`exec aos-daemon daemon.json`；`daemon.json` 管 kernel（`aos-kernel-llm kernel.json`，`interval_ms` 300）與 a、b、c 三個子項（各跑一次 `agent-ivy/`，環境變數 `BRAIN` 選腦的單子）；`kernel.json`＝`{"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1, "budget": {…}}`（budget 10-24 下午 3fbcefcc 加）；`agent-ivy/`＝ann 式 agent（`idle.py`、`brain.py`〔假腦睡 1 秒〕、`act.py`），think 格 `exec` 是 `aos-gate $BRAIN`、stdout 導到 `plan.txt`；`agent-ivy/brains/` 三張腦的單子（`plain.json` normal、`quick.json` normal＋`_metainfo.time_ms` 800、`urgent.json` high＋5000）。
 - `tick/`（10-21 晚）：`_entry`＝`exec aos-loop loop.json`、`loop.json` 跑 5 次 `loop.json#/body`〔10-24 起單子直接寫在 `exec`〕（`aos-tick $AOS_STACK/tick.txt`），跑完時鐘檔是 5。
 
 ### `proto8/tests/`
 
-逐字下放到 [proto8/02-tests](proto8/02-tests.md)（2026-10-21 晚，本檔超過 8 KB）：每個測試檔涵蓋什麼、幾個；共 248 個（10-23 改跑 C++ 版後 233，加 `test_dan.py` 14；10-24 `test_fsm.py` 的「物件＝表壞」換成兩案：物件＝內嵌單子、形狀壞＝自己的錯），`python3 -m unittest discover -s proto8/tests`（先建 impls）。
+逐字下放到 [proto8/02-tests](proto8/02-tests.md)（2026-10-21 晚，本檔超過 8 KB）；10-24 新增的測試檔在 [proto8/08-tests-10-24](proto8/08-tests-10-24.md)（10-24 收尾實跑全部 452 個，5 個 skip）。每個測試檔涵蓋什麼、幾個；共 248 個（10-23 改跑 C++ 版後 233，加 `test_dan.py` 14；10-24 `test_fsm.py` 的「物件＝表壞」換成兩案：物件＝內嵌單子、形狀壞＝自己的錯），`python3 -m unittest discover -s proto8/tests`（先建 impls）。
 
 ### `proto8/impls/` 與舊 lib
 
 逐字下放到 [proto8/01-impls與舊lib](proto8/01-impls與舊lib.md)（2026-10-21 下午，本檔超過 8 KB）：impls 是使用者的 C／C++ 實作（10-23 起進 git；舊快照 `backup/` 10-23 已刪）；舊 lib 是 10-16 那套、10-19 刪進 git 歷史。
 
-LLM kernel 兩支（`aos-kernel-llm`、`aos-gate`，10-24）的逐檔表另開一份：[proto8/03-kernel-llm](proto8/03-kernel-llm.md)。
+LLM kernel 兩支（`aos-kernel-llm`、`aos-gate`，10-24）的逐檔表另開一份：[proto8/03-kernel-llm](proto8/03-kernel-llm.md)。改 JSON 的工具集 `aos-json`（10-24）：[proto8/07-aos-json](proto8/07-aos-json.md)。
+
+### 10-24 一天的嘗試（收尾補）
+
+各作者做的時候沒改 code map，10-24 下午收尾一次補成幾份分檔：
+
+- demo 的 agent（eve、fay、gus、hal、kai、liv、meg、pip、kernel-llm/agent-ivy）逐檔：[proto8/04-demo-agents](proto8/04-demo-agents.md)、[04-demo-agents-2](proto8/04-demo-agents-2.md)。
+- demo 的 talk、self-improve、pi-tools、file-tools、kernel-llm 頂層：[proto8/05-demo-其他](proto8/05-demo-其他.md)、[05-demo-其他-2](proto8/05-demo-其他-2.md)。
+- proto8 頂層新資料夾 lib、human、ai_tools、grow、langs/janet、langs/lua、editors/nvim、sandbox：[proto8/06-周邊工具](proto8/06-周邊工具.md)、[06-周邊工具-2](proto8/06-周邊工具-2.md)。
+- 10-24 新增的測試檔：[proto8/08-tests-10-24](proto8/08-tests-10-24.md)。
 
 改 proto8 的檔就同步那份。

@@ -115,5 +115,5 @@ cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
 依賴 aos-util、aos-directive（`add_subdirectory` 一起編）；`test_tool` 另外要 aos-exec 已經建好。
-**還沒接進共用建置**：要接的話，`wf/workflows/testing.md` 那行 `for p in inst aos-util aos-directive aos-schema aos-exec aos-loop aos-fsm aos-daemon` 在 aos-exec 後面加 `aos-json`（test_tool 要 aos-exec 先建好）；
+**共用建置**：10-24 收尾已把 `aos-json` 加進 `wf/workflows/testing.md` 與 `impls/README.md` 的建置迴圈（放在 aos-exec 後面，test_tool 要 aos-exec 先建好）；
 `proto8/tests/aos_bins.py` 與 `proto8/demo/run.sh` 只有範本真的掛上 `tools/json*` 時才要把 `aos-json/bin` 放進 PATH。
