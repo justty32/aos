@@ -207,5 +207,21 @@ class T(unittest.TestCase):
         self.assertRegex(r.stderr, r"^read_file: DirMissing ")
 
 
+class EveFiles(unittest.TestCase):
+    """agent-eve 頂層跟 agent-dan 不一樣的設定（0c8865e1 補回；曾被別的 agent 同名蓋回 dan 原樣）。"""
+
+    def test_act_timeout_30_minutes(self):
+        """act 格要等 pyfix 的子 agent 跑完，逾時 30 分鐘（dan 是 60 秒）。"""
+        fsm = json.loads((EVE / "fsm.json").read_text())
+        self.assertEqual(fsm["states"]["act"]["exec"]["timeout_ms"], 1800000)
+
+    def test_system_says_use_pyfix(self):
+        """system.txt：改 Python 的事交給 pyfix、task 寫清楚、回答前看 diff。"""
+        s = (EVE / "system.txt").read_text()
+        self.assertIn("都交給 pyfix 工具", s)
+        self.assertIn("pyfix 是另一個專精 Python 的助手", s)
+        self.assertIn("diff", s)
+
+
 if __name__ == "__main__":
     unittest.main()
