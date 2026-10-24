@@ -12,11 +12,11 @@
 
 ## 最新進度
 
-- **open｜下一個 session：開 LiteLLM 實測打磨 10-24 的嘗試**（使用者 10-24「我會開litellm，然後實際測試，開始打磨這些想法，讓他們可用」）：照表操課（指令、順序、成本、打磨方向） → [真腦實測交接](session_logs/2026-10/2026-10-24-真腦實測/README.md)
+- **open｜真腦實測**：自動項已真跑完（[基礎](session_logs/2026-10/2026-10-24-真腦實測/結果-01-基礎.md)、[組合A](session_logs/2026-10/2026-10-24-真腦實測/結果-02-組合A.md)、[組合B](session_logs/2026-10/2026-10-24-真腦實測/結果-02-組合B.md)、[外部](session_logs/2026-10/2026-10-24-真腦實測/結果-03-外部.md)）；剩使用者四項（say/listen、fay attach、nvim、沙箱 root）見 [WAIT_USER](WAIT_USER.md)
 - **open｜10-24 其餘下一步**（代定可翻案）：代定落條文、沙箱兩個洞、compact 與 P-41 → [session log 10-24](session_logs/2026-10/2026-10-24.md#下一步open)
 - **open｜還是草稿的條文**：N-14 窗總則、N-15 鎖、N-16 信箱、N-34 tasks（都沒有實作可對） → [NORMS 待定](../proto8/NORMS/08-待定.md)
 - **待照新做法重寫**：還沒做的 tasks、通用 kernel 都是方向題，留給使用者（[plan § 1.2](../proto8/thinking/2026-10-21-plan.md)）；loop／daemon／fsm、tick（9d618174）、腦的工具呼叫（10-23）、LLM kernel（10-24）已做；[rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)、[NORMS 待定](../proto8/NORMS/08-待定.md)。
-- **open｜LLM kernel 下一步**：真腦跑 demo/kernel-llm（併入上面的實測）、`_metainfo` 第二步 → [session log 10-24 § LLM kernel 下一步](session_logs/2026-10/2026-10-24.md#llm-kernel-下一步從-session-log-逐字搬來)
+- **open｜LLM kernel 下一步**：`_metainfo` 第二步 → [session log 10-24 § LLM kernel 下一步](session_logs/2026-10/2026-10-24.md#llm-kernel-下一步從-session-log-逐字搬來)
 - **open｜agent-dan artifact**：https://claude.ai/artifact/4mhycShcVdr7jJskGWc92V ，agent-dan 改了就跟著更新（使用者 10-23「之後我們慢慢做好，這個artifact也會跟着更新」；改法：Artifact `read` 拿最新版、改完同網址重發）→ [demo README § agent-dan](../proto8/demo/README.md#agent-dan真腦工具10-23)
 - **KISS 批次 2～6 暫停**（批次 1 已做完；10-16 使用者撤回「都照推薦」）→ [10-15 § KISS 批次 1](session_logs/2026-10/2026-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)。
 - **10-15 剩的兩個候選題**（只有標題、沒展開過）：對話太長（10-24 有一個可用做法：agent-kai 按意圖組 context，見 [thinking 10-24 intent-context](../proto8/thinking/2026-10-24-intent-context.md)）、規範草稿定稿（NORMS 多數條文還標草稿）→ [10-15](session_logs/2026-10/2026-10-15.md)。其餘 10-15 動工自定點與總原則四條已隨 10-19 刪舊程式作廢或併入現行規範（10-21 清點，使用者同意清掉）。
