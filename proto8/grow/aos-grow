@@ -1,0 +1,377 @@
+#!/usr/bin/env python3
+"""aos-grow - 把一個函數往上長一級（或縮回一級），呼叫方跟著改、行為不變。原型（10-24 嘗試，thinking/2026-10-24-fn-grow.md）。
+
+函數＝aos-exec 跑得動的一個東西。這支只動一格：CALLER＝`設定檔#/指標`，指到「呼叫方寫著要跑什麼」的那一格（fsm 格的 exec、loop.json 的 exec…）。
+
+  aos-grow [--dry-run] up   CALLER --to file|dir [--name NAME] [--take PATH]...
+  aos-grow [--dry-run] down CALLER
+
+up：
+  那格是內嵌單子（有 argv 的物件）→ --to file：寫成 設定檔旁的 NAME.json（就是那張單子）；--to dir：寫成 NAME/_entry（同一張單子）。
+  那格是字串、指到旁邊的 NAME.json（單子）→ 只收 --to dir：NAME.json 變 NAME/_entry。
+  那格改寫成字串 "NAME"（不帶 .json：aos-exec 找不到 NAME 會補 .json、NAME 是資料夾就進去，所以檔→資料夾時呼叫方不用再改）。
+  --take PATH（只給 --to dir）：把只有它用的檔（相對設定檔的資料夾）搬進 NAME/，單子 argv 裡等於 PATH 的那一項改成 {"$env": "AOS_CD", "$path": "/檔名"}。
+down：反過來縮一級：NAME/（裡面只剩 _entry）→ NAME.json；NAME.json → 內嵌回那格。設定檔資料夾底下還有別份 JSON 提到 NAME＝不縮。
+
+搬的時候只動「位置相關」的東西，讓跑起來一樣：單子的 cwd（沒寫＝入口所在的資料夾）、相對的 $ref 檔名（"#/…" 指自己那份＝補上原檔名）、
+{"$env": "AOS_CD", "$path": …}，一律換成相對新位置、指回原本那個地方。單子裡有 $env AOS_CF／AOS_CO＝不搬（搬了值就變了，TargetBad）。
+--dry-run：只印會做什麼（新檔全文、改的檔 unified diff、搬／刪哪些），什麼都不寫。
+假設（慣例下成立）：呼叫方跑字串目標時的 cwd＝設定檔的資料夾（aos-loop／aos-fsm 被 aos-exec 起來時就是）。
+錯：stderr 一行「aos-grow: 代號 原因」、退 1，什麼都不寫（ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、TargetBad、NameBad、WriteFailed）。"""
+import difflib, json, os, re, shutil, sys
+
+USAGE = "aos-grow [--dry-run] up CALLER --to file|dir [--name NAME] [--take PATH]... ｜ aos-grow [--dry-run] down CALLER"
+ENTRY = os.environ.get("AOS_ENTRY") or "_entry"
+
+
+class Fail(Exception):
+    def __init__(self, code, msg):
+        super().__init__(msg)
+        self.code = code
+
+
+# ---------- JSON：讀、寫、指標 ----------
+
+def load(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise Fail("CfgMissing", "找不到 %s" % path)
+    except (OSError, ValueError) as e:
+        raise Fail("CfgBad", "%s 讀不了：%s" % (path, e))
+
+
+def dump(v, ind=0, width=100):
+    """寫回 JSON：塞得進一行（含縮排）就一行，不然物件／陣列一項一行。"""
+    flat = json.dumps(v, ensure_ascii=False, separators=(", ", ": "))
+    if len(flat) + ind <= width or not isinstance(v, (dict, list)) or not v:
+        return flat
+    pad = " " * (ind + 1)
+    if isinstance(v, dict):
+        items = ["%s: %s" % (json.dumps(k, ensure_ascii=False), dump(x, ind + 2 + len(json.dumps(k, ensure_ascii=False)), width))
+                 for k, x in v.items()]
+        return "{" + (",\n" + pad).join(items) + "}"
+    return "[" + (",\n" + pad).join(dump(x, ind + 1, width) for x in v) + "]"
+
+
+def text(v):
+    return dump(v) + "\n"
+
+
+def split_ptr(ptr):
+    if ptr == "":
+        return []
+    if not ptr.startswith("/"):
+        raise Fail("ArgumentsBad", "指標要 / 開頭：%r" % ptr)
+    return [p.replace("~1", "/").replace("~0", "~") for p in ptr[1:].split("/")]
+
+
+def walk(doc, parts, where):
+    cur = doc
+    for p in parts[:-1]:
+        if isinstance(cur, dict) and p in cur:
+            cur = cur[p]
+        elif isinstance(cur, list) and p.isdigit() and int(p) < len(cur):
+            cur = cur[int(p)]
+        else:
+            raise Fail("CfgMissing", "%s 指不到" % where)
+    last = parts[-1]
+    if isinstance(cur, dict) and last in cur:
+        return cur, last
+    if isinstance(cur, list) and last.isdigit() and int(last) < len(cur):
+        return cur, int(last)
+    raise Fail("CfgMissing", "%s 指不到" % where)
+
+
+# ---------- 搬位置：把單子從 src 資料夾搬到 dst 資料夾，位置相關的值改成指回原處 ----------
+
+def rel(p, start):
+    r = os.path.relpath(p, start)
+    return "." if r == "" else r
+
+
+def rebase(inst, src, dst, src_file):
+    """回傳新的單子（不改原物件）。src／dst 是絕對路徑資料夾；src_file＝單子原本所在的那份檔（"#/…" 的 $ref 要指回它）。"""
+    out = json.loads(json.dumps(inst))
+    cwd = out.get("cwd")
+    if cwd is None or isinstance(cwd, str):
+        base = src if cwd is None else (cwd if os.path.isabs(cwd) else os.path.normpath(os.path.join(src, cwd)))
+        new = base if (cwd is not None and os.path.isabs(cwd)) else rel(base, dst)
+        if new == ".":
+            out.pop("cwd", None)
+        else:
+            out["cwd"] = new
+    # cwd 是指示詞＝照原樣（跑的時候才解，下面 fix 會把裡面的 $ref／AOS_CD 一起改）
+
+    def fix(v):
+        if isinstance(v, list):
+            return [fix(x) for x in v]
+        if not isinstance(v, dict):
+            return v
+        if "$env" in v:
+            if v["$env"] in ("AOS_CF", "AOS_CO"):
+                raise Fail("TargetBad", "單子裡用了 $env %s，搬了它的值就變了，不搬" % v["$env"])
+            if v["$env"] == "AOS_CD":
+                p = v.get("$path", "")
+                if not isinstance(p, str) or (p and not p.startswith("/")):
+                    raise Fail("TargetBad", "$env AOS_CD 的 $path 不是 / 開頭的字串，不會改：%r" % p)
+                w = dict(v)
+                np = "/" + rel(os.path.normpath(src + p) if p else src, dst)
+                w["$path"] = "" if np == "/." else np
+                return w
+            return {k: fix(x) for k, x in v.items()}
+        if "$ref" in v:
+            w = {k: fix(x) for k, x in v.items()}
+            refs = v["$ref"] if isinstance(v["$ref"], list) else [v["$ref"]]
+            new = []
+            for r in refs:
+                if not isinstance(r, str):
+                    raise Fail("TargetBad", "$ref 不是字串，不會改：%r" % r)
+                f, sep, frag = r.partition("#")
+                if f == "":
+                    f = src_file
+                if not os.path.isabs(f):
+                    f = rel(os.path.normpath(os.path.join(src, f)), dst)
+                new.append(f + sep + frag)
+            w["$ref"] = new if isinstance(v["$ref"], list) else new[0]
+            return w
+        return {k: fix(x) for k, x in v.items()}
+
+    return fix(out)
+
+
+def is_inst(v):
+    return isinstance(v, dict) and "argv" in v
+
+
+# ---------- 計畫：先算好要做的事，--dry-run 只印，否則照做 ----------
+
+class Plan:
+    def __init__(self):
+        self.writes, self.moves, self.removes, self.mkdirs = [], [], [], []   # (路徑, 新內容, 舊內容或 None)、(從, 到)、路徑、路徑
+
+    def show(self, out):
+        for d in self.mkdirs:
+            out.write("建資料夾 %s\n" % d)
+        for a, b in self.moves:
+            out.write("搬 %s → %s\n" % (a, b))
+        for path, new, old in self.writes:
+            if old is None:
+                out.write("新檔 %s：\n%s" % (path, new))
+            else:
+                out.writelines(difflib.unified_diff(old.splitlines(True), new.splitlines(True), path, path))
+        for p in self.removes:
+            out.write("刪 %s\n" % p)
+
+    def apply(self):
+        try:
+            for d in self.mkdirs:
+                os.mkdir(d)
+            for a, b in self.moves:
+                os.rename(a, b)
+            new_first = sorted(self.writes, key=lambda w: w[2] is not None)   # 先寫新的檔，最後才改呼叫方（呼叫方改名那一刻才換過去）
+            for path, new, _ in new_first:
+                tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".grow")
+                with open(tmp, "w", encoding="utf-8") as f:
+                    f.write(new)
+                os.replace(tmp, path)
+            for p in self.removes:
+                if os.path.isdir(p):
+                    shutil.rmtree(p)
+                else:
+                    os.remove(p)
+        except OSError as e:
+            raise Fail("WriteFailed", str(e))
+
+
+def name_ok(name):
+    if not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]*", name) or name.endswith(".json"):
+        raise Fail("NameBad", "名字只收英數、底線、點、連字號，不帶 .json：%r" % name)
+
+
+def mentions(root, name, skip):
+    """root 底下（不進 . 開頭的資料夾）除了 skip 以外的 JSON 檔，有沒有字串值等於 NAME／NAME.json／NAME/… 的；回檔名清單。"""
+    hits = []
+    pat = re.compile(r'"(\./)?%s(\.json)?([/#][^"]*)?"' % re.escape(name))
+    for d, dirs, files in os.walk(root):
+        dirs[:] = [x for x in dirs if not x.startswith(".")]
+        for f in files:
+            p = os.path.join(d, f)
+            if os.path.abspath(p) in skip or not (f.endswith(".json") or f == ENTRY):
+                continue
+            try:
+                with open(p, encoding="utf-8") as fh:
+                    s = fh.read()
+            except (OSError, UnicodeDecodeError):
+                continue
+            if pat.search(s):
+                hits.append(p)
+    return hits
+
+
+def calls(v, name, key=None):
+    """設定檔裡「叫 NAME」的格有幾個：key 是 exec／_entry 的字串值，或陣列（argv）裡的字串，等於 NAME、NAME.json、./NAME。"""
+    if isinstance(v, dict):
+        return sum(calls(x, name, k) for k, x in v.items())
+    if isinstance(v, list):
+        return sum(calls(x, name, "[]") for x in v)
+    return int(isinstance(v, str) and key in ("exec", ENTRY, "[]") and v in (name, name + ".json", "./" + name))
+
+
+def parse_caller(spec):
+    f, sep, ptr = spec.partition("#")
+    if not sep or not ptr.startswith("/"):
+        raise Fail("ArgumentsBad", "CALLER 要寫成 設定檔#/指標：%r" % spec)
+    return os.path.abspath(f), split_ptr(ptr)
+
+
+def up(caller, to, name, takes):
+    cfg, parts = parse_caller(caller)
+    doc = load(cfg)
+    with open(cfg, encoding="utf-8") as fh:
+        old_text = fh.read()
+    box, key = walk(doc, parts, caller)
+    val, cdir, plan = box[key], os.path.dirname(cfg), Plan()
+
+    if is_inst(val):
+        if not name:   # 預設＝那格的名字：…/states/think/exec → think；指標只有 /exec 一層就要自己給
+            if parts[-1] == "exec" and len(parts) < 2:
+                raise Fail("ArgumentsBad", "那格是 /exec，請給 --name")
+            name = parts[-2] if parts[-1] == "exec" else parts[-1]
+        name_ok(name)
+        for p in (name, name + ".json"):
+            if os.path.lexists(os.path.join(cdir, p)):
+                raise Fail("NameBad", "%s 已經有了，換一個 --name" % os.path.join(cdir, p))
+        if to == "file":
+            if takes:
+                raise Fail("ArgumentsBad", "--take 只給 --to dir")
+            inst = rebase(val, cdir, cdir, os.path.basename(cfg))
+            plan.writes.append((os.path.join(cdir, name + ".json"), text(inst), None))
+        else:
+            fdir = os.path.join(cdir, name)
+            inst = rebase(val, cdir, fdir, os.path.basename(cfg))
+            inst = take(inst, takes, cdir, fdir, plan)
+            plan.mkdirs.append(fdir)
+            plan.writes.append((os.path.join(fdir, ENTRY), text(inst), None))
+    elif isinstance(val, str):
+        if to != "dir":
+            raise Fail("TargetBad", "那格已經是字串目標 %r；字串目標只能 --to dir（NAME.json → NAME/）" % val)
+        name = name or val
+        if name != val or not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]*", val):
+            raise Fail("TargetBad", "那格要正好寫 NAME（旁邊有 NAME.json），現在是 %r" % val)
+        src = os.path.join(cdir, val + ".json")
+        if os.path.lexists(os.path.join(cdir, val)) or not os.path.isfile(src):
+            raise Fail("TargetBad", "%s 不是「只有 %s.json」的檔階段" % (val, val))
+        file_inst = load(src)
+        if not is_inst(file_inst):
+            raise Fail("TargetBad", "%s 不是單子（沒有 argv），這支只搬單子" % src)
+        fdir = os.path.join(cdir, val)
+        inst = rebase(file_inst, cdir, fdir, os.path.basename(src))
+        inst = take(inst, takes, cdir, fdir, plan)
+        plan.mkdirs.append(fdir)
+        plan.writes.append((os.path.join(fdir, ENTRY), text(inst), None))
+        plan.removes.append(src)
+        return plan    # 呼叫方不用改：「NAME」本來就會走進資料夾
+    else:
+        raise Fail("TargetBad", "那格不是內嵌單子也不是字串（%s）" % type(val).__name__)
+    box[key] = name
+    plan.writes.append((cfg, text(doc), old_text))
+    return plan
+
+
+def take(inst, takes, cdir, fdir, plan):
+    for t in takes:
+        src = os.path.normpath(os.path.join(cdir, t))
+        if not os.path.isfile(src) or os.path.dirname(src) != cdir:
+            raise Fail("TargetBad", "--take 只收設定檔資料夾裡的檔：%r" % t)
+        hit = [i for i, a in enumerate(inst["argv"]) if a in (t, "./" + t)]
+        if not hit:
+            raise Fail("TargetBad", "單子的 argv 沒有 %r，不知道要改哪一項" % t)
+        for i in hit:
+            inst["argv"][i] = {"$env": "AOS_CD", "$path": "/" + os.path.basename(src)}
+        plan.moves.append((src, os.path.join(fdir, os.path.basename(src))))
+    return inst
+
+
+def down(caller):
+    cfg, parts = parse_caller(caller)
+    doc = load(cfg)
+    with open(cfg, encoding="utf-8") as fh:
+        old_text = fh.read()
+    box, key = walk(doc, parts, caller)
+    val, cdir, plan = box[key], os.path.dirname(cfg), Plan()
+    if not isinstance(val, str) or not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]*", val):
+        raise Fail("TargetBad", "那格要正好寫 NAME（字串），現在是 %r" % (val,))
+    fdir, fjson = os.path.join(cdir, val), os.path.join(cdir, val + ".json")
+    if os.path.isdir(fdir):
+        rest = sorted(x for x in os.listdir(fdir) if x != ENTRY and x != "__pycache__")
+        if rest or not os.path.isfile(os.path.join(fdir, ENTRY)):
+            raise Fail("TargetBad", "%s/ 裡不只 %s（%s），縮不回單檔" % (val, ENTRY, ", ".join(rest) or "沒有入口"))
+        if os.access(os.path.join(fdir, ENTRY), os.X_OK):
+            raise Fail("TargetBad", "%s/%s 是可執行檔，不是單子" % (val, ENTRY))
+        inst = load(os.path.join(fdir, ENTRY))
+        if not is_inst(inst):
+            raise Fail("TargetBad", "%s/%s 不是單子" % (val, ENTRY))
+        if os.path.lexists(fjson):
+            raise Fail("NameBad", "%s 已經有了" % fjson)
+        plan.writes.append((fjson, text(rebase(inst, fdir, cdir, ENTRY)), None))
+        plan.removes.append(fdir)
+        return plan    # 呼叫方不用改
+    if not os.path.isfile(fjson):
+        raise Fail("TargetBad", "找不到 %s 或 %s/" % (fjson, fdir))
+    others = mentions(cdir, val, {cfg, os.path.abspath(fjson)})
+    other_slots = calls(doc, val) - 1
+    if others or other_slots > 0:
+        raise Fail("NameBad", "還有別處叫 %s（%s），不內嵌" % (val, ", ".join(others) or "同一份設定檔的別格"))
+    inst = load(fjson)
+    if not is_inst(inst):
+        raise Fail("TargetBad", "%s 不是單子" % fjson)
+    box[key] = rebase(inst, cdir, cdir, os.path.basename(fjson))
+    plan.writes.append((cfg, text(doc), old_text))
+    plan.removes.append(fjson)
+    return plan
+
+
+def main(argv):
+    dry, rest, i = False, [], 0
+    opts = {"to": None, "name": None, "take": []}
+    while i < len(argv):
+        a = argv[i]
+        if a == "--dry-run":
+            dry = True
+        elif a in ("--to", "--name", "--take"):
+            if i + 1 >= len(argv):
+                raise Fail("ArgumentsBad", "%s 缺值；用法：%s" % (a, USAGE))
+            i += 1
+            if a == "--take":
+                opts["take"].append(argv[i])
+            else:
+                opts[a[2:]] = argv[i]
+        elif a.startswith("--"):
+            raise Fail("FlagUnknown", "不認得的旗標 %s；用法：%s" % (a, USAGE))
+        else:
+            rest.append(a)
+        i += 1
+    if len(rest) != 2 or rest[0] not in ("up", "down"):
+        raise Fail("ArgumentsBad", "用法：" + USAGE)
+    if rest[0] == "up":
+        if opts["to"] not in ("file", "dir"):
+            raise Fail("ArgumentsBad", "up 要給 --to file 或 --to dir")
+        plan = up(rest[1], opts["to"], opts["name"], opts["take"])
+    else:
+        if opts["to"] or opts["name"] or opts["take"]:
+            raise Fail("ArgumentsBad", "down 不收 --to／--name／--take")
+        plan = down(rest[1])
+    if dry:
+        plan.show(sys.stdout)
+    else:
+        plan.apply()
+
+
+if __name__ == "__main__":
+    try:
+        main(sys.argv[1:])
+    except Fail as e:
+        print("aos-grow: %s %s" % (e.code, e), file=sys.stderr)
+        sys.exit(1)
