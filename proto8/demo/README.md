@@ -6,7 +6,7 @@
 sh proto8/demo/run.sh      # 在 WSL／Linux 跑
 ```
 
-`run.sh` 各建一個暫時工作區、放一題 `new/q1.txt`（10-23 改名，原 `inbox/`）、`cd` 進去跑 agent-bob 與 agent-ann（慣例用法 `aos-exec <agent資料夾>`），再跑一次 daemon、最後跑一次 tick（見下）〔10-23 加 agent-dan（假腦），共五段：bob、ann、dan 三隻 agent，加 daemon、tick〕，印工作區內容（`out/`、`done/`；跑完 `new/`、`cur/` 是空的）與整棵 stack 樹（`$AOS_WS/.stack/`，10-23 改名，原 `.aos/`）（每檔印內容），最後把暫時資料夾刪掉，repo 裡不留東西。**PATH 由 `run.sh` 自己放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），agent 裡寫的 `aos-loop`、`aos-fsm`、`aos-exec`、`aos-daemon`、`aos-tick` 要呼叫端事先放進 PATH——`run.sh` 開頭就這麼做：10-23 起前四支是 C++ 的 `proto8/impls/<名>/bin/`（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也改 C++、tick 先留 Python；要先建，見 [testing](../../wf/workflows/testing.md#proto8不在-ctest-裡)），aos-tick 是 `proto8/bin/`；沒建好 `run.sh` 會先停、說要先建。自己手動跑也一樣（例：`PATH=$PWD/proto8/impls/aos-exec/bin:$PWD/proto8/impls/aos-loop/bin:$PWD/proto8/impls/aos-fsm/bin:$PATH aos-exec --ws <工作區> proto8/demo/agent-bob`）。預設假腦；`AOS_BRAIN_URL`（OpenAI 相容 base URL，另可設 `AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY`）指到遠端才用真腦〔10-23：agent-dan 的模型名在它自己的 `.env`（`AOS_BRAIN_MODEL`），只要給 `AOS_BRAIN_URL`，見下〕。**這台電腦不要跑本機模型**（10-19 LM Studio 讓整台 Windows 當機，使用者定「放棄跑本機模型」，[ideas § 6](../thinking/2026-10-19-ideas.md)）。
+`run.sh` 各建一個暫時工作區、放一題 `new/q1.txt`（10-23 改名，原 `inbox/`）、`cd` 進去跑 agent-bob 與 agent-ann（慣例用法 `aos-exec <agent資料夾>`），再跑一次 daemon、最後跑一次 tick（見下）〔10-23 加 agent-dan（假腦），共五段：bob、ann、dan 三隻 agent，加 daemon、tick；10-24 再加 kernel-llm（一個 daemon 管 LLM kernel 與三隻走 kernel 的 agent）〕，印工作區內容（`out/`、`done/`；跑完 `new/`、`cur/` 是空的）與整棵 stack 樹（`$AOS_WS/.stack/`，10-23 改名，原 `.aos/`）（每檔印內容），最後把暫時資料夾刪掉，repo 裡不留東西。**PATH 由 `run.sh` 自己放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），agent 裡寫的 `aos-loop`、`aos-fsm`、`aos-exec`、`aos-daemon`、`aos-tick` 要呼叫端事先放進 PATH——`run.sh` 開頭就這麼做：10-23 起前四支是 C++ 的 `proto8/impls/<名>/bin/`（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也改 C++、tick 先留 Python；要先建，見 [testing](../../wf/workflows/testing.md#proto8不在-ctest-裡)），aos-tick 是 `proto8/bin/`；沒建好 `run.sh` 會先停、說要先建。自己手動跑也一樣（例：`PATH=$PWD/proto8/impls/aos-exec/bin:$PWD/proto8/impls/aos-loop/bin:$PWD/proto8/impls/aos-fsm/bin:$PATH aos-exec --ws <工作區> proto8/demo/agent-bob`）。預設假腦；`AOS_BRAIN_URL`（OpenAI 相容 base URL，另可設 `AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY`）指到遠端才用真腦〔10-23：agent-dan 的模型名在它自己的 `.env`（`AOS_BRAIN_MODEL`），只要給 `AOS_BRAIN_URL`，見下〕。**這台電腦不要跑本機模型**（10-19 LM Studio 讓整台 Windows 當機，使用者定「放棄跑本機模型」，[ideas § 6](../thinking/2026-10-19-ideas.md)）。
 
 ## agent-bob（混合範本，叫 cathy、cathy 叫 stamp：四層）
 
@@ -188,8 +188,25 @@ self-improve/             aos-exec --ws <交辦的工作區> proto8/demo/self-im
 
 `tick/_entry`＝`exec aos-loop loop.json`；`loop.json`＝`{"exec": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tick.txt"}]}, "max": 5}`——loop 跑 5 次，每次在自己行程內跑那張單子 `aos-tick $AOS_STACK/tick.txt`（10-24 起；原 `"exec": "loop.json#/body"`＋`body`、每次 `aos-exec -- loop.json#/body`），所以跑完工作區的 `.stack/tick.txt` 是 `5`（C-44：tick-tock 就是一個時鐘；N-01 大家抬頭讀這個檔）。節奏、停交給 loop：要隔多久走一格就在 loop.json 加 `interval_ms`，要能暫停就加 `ctl`、寫 `{"paused": true}`。程式見 [bin/README 的 aos-tick](../bin/README.md)。
 
+## kernel-llm（問腦變成請求、LLM kernel 排隊跑，10-24）
+
+使用者 10-24「LLM kernel，也就是把brain這塊弄成一個請求，而不是直接打API，請求會被丟到某個地方，由kernel排隊跑」；設計與照推薦定的十五條在 [thinking 2026-10-24-llm-kernel](../thinking/2026-10-24-llm-kernel.md)，程式是 [aos-gate](../impls/aos-gate/README.md)（寄信、等回信）與 [aos-kernel-llm](../impls/aos-kernel-llm/README.md)（一次挑信、跑、回信）。
+
+```
+kernel-llm/
+  _entry          #!/bin/sh：AOS_KERNEL=$AOS_STACK/mailbox（先建好）、exec aos-daemon daemon.json
+  daemon.json     一個 daemon 管四個子項：kernel（aos-kernel-llm kernel.json，interval_ms 300）、a、b、c（各跑一次 agent-ivy，工作區 $AOS_WS/<名>，環境變數 BRAIN 選腦的單子）
+  kernel.json     {"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1}
+  agent-ivy/      走 kernel 的 agent（ann 式：idle.py、brain.py、act.py）；think 格的 exec＝aos-gate $BRAIN，stdout 導到 plan.txt
+    brains/       腦的單子三張：plain.json（normal）、quick.json（normal、_metainfo 宣告 time_ms 800）、urgent.json（high、宣告 5000）
+```
+
+三隻同時拿到題目、同時問腦：think 格不直接跑 `brain.py`，而是 `aos-gate brains/<哪張>.json`——閘門把那張單子連同 priority、`_metainfo`、當下的整份環境寫成一封信丟進信箱、等回信；kernel 每 300 毫秒被拍一次，一次挑一封（`slots` 1）跑（假腦睡 1 秒），跑完寫回信，閘門把 stdout 原樣交回（think 格導進 `plan.txt`）、以腦的碼結束。agent 不知道有 kernel（C-20）。**agent-dan 範本沒改**（仍直接問腦）；走 kernel 的版本只在這裡（10-24 照推薦定，可翻案）。
+
+服務順序看 `.stack/kernel/served.jsonl`（一封一行：`level`、`waited_runs`、`code`、實際 `elapsed_ms`、宣告的 `time_ms`）：c（high）先，同級的 a、b 裡宣告了短 `time_ms` 的 b 先（即使 a 先寄）、沒寫的 a 最後；三隻的 `out/q1.txt` 都是 `FAKE ANSWER to: …`。daemon 跑 25 次（約 5 秒）就結束、收掉 kernel。要真腦：`AOS_BRAIN_URL=… aos-exec --ws <工作區> proto8/demo/kernel-llm`（PATH 照上面放好，含 `aos-kernel-llm`、`aos-gate` 的 `bin/`）。
+
 ## 測試
 
-`python3 -m unittest discover -s proto8/tests`（10-23 起跑 impls 的 C++ 四支＋bin 的 aos-tick，先建 impls）：`test_loop.py`（直接叫 aos-loop：訊號、PATH、`interval_ms`／`ctl`／`state` 窗、命令列（10-21 傍晚：設定檔是唯一的位置參數、`exec` 陣列、`檔#/指標`））、`test_daemon.py`（aos-daemon）、`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與 cathy／stamp 巢狀）、`test_exec_rules.py`（aos-exec 的新規則：命令列旗標（10-21）、找入口、`#/`、四種入口、`AOS_CF`／`AOS_CD`）、`test_inst.py`（inst 單子：經 aos-exec 跑；10-23 前另直接叫 Python 的 aos_inst 庫）、`test_fsm.py`（aos-fsm）、`test_tick.py`（aos-tick 與 demo/tick）、`test_dan.py`（agent-dan，10-23：用一支假 server 照劇本回 `tool_calls`／答案；連真模型的案例在 LiteLLM 不在時 skip）。
+`python3 -m unittest discover -s proto8/tests`（10-23 起跑 impls 的 C++ 四支＋bin 的 aos-tick，先建 impls）：`test_loop.py`（直接叫 aos-loop：訊號、PATH、`interval_ms`／`ctl`／`state` 窗、命令列（10-21 傍晚：設定檔是唯一的位置參數、`exec` 陣列、`檔#/指標`））、`test_daemon.py`（aos-daemon）、`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與 cathy／stamp 巢狀）、`test_exec_rules.py`（aos-exec 的新規則：命令列旗標（10-21）、找入口、`#/`、四種入口、`AOS_CF`／`AOS_CD`）、`test_inst.py`（inst 單子：經 aos-exec 跑；10-23 前另直接叫 Python 的 aos_inst 庫）、`test_fsm.py`（aos-fsm）、`test_tick.py`（aos-tick 與 demo/tick）、`test_dan.py`（agent-dan，10-23：用一支假 server 照劇本回 `tool_calls`／答案；連真模型的案例在 LiteLLM 不在時 skip）、`test_kernel_llm.py`（10-24 LLM kernel：aos-gate＋aos-kernel-llm 經 aos-loop 端到端、包閘門那格逾時撤信、kernel 不在時信堆著、high 先與 slots、kernel 整群死掉後 `RunFailed`、只死本體時照常交回、demo/kernel-llm 的順序與 `_metainfo`）。
 
 舊的 demo（daemon、fsm、paint、kernels、tasks、tick、once、`aos-demo`）10-19 進 git 歷史（daemon 10-20、tick 10-21 晚照新做法重做，見上），見 git 5546be29（刪除前的最後一個樣子）。
