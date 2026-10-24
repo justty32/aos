@@ -18,7 +18,9 @@ PROTO8 = HERE.parent.parent
 TEMPLATES = PROTO8 / "demo"
 DAN_TOOLS = HERE.parent / "dan_tools"                # 給 agent-dan 掛的工具
 IMPLS = ("aos-exec", "aos-loop", "aos-fsm", "aos-daemon", "aos-directive")
-BIN_DIRS = [PROTO8 / "impls" / n / "bin" for n in IMPLS] + [PROTO8 / "bin", HERE]
+BIN_DIRS = [PROTO8 / "impls" / n / "bin" for n in IMPLS + ("aos-json",)] + [PROTO8 / "bin", HERE]
+sys.path.insert(0, str(HERE))
+import aos_ai_make as mk, aos_ai_explain as ex  # noqa: E402
 NAME_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}\Z")
 QID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,99}\Z")
 LINE_RE = re.compile(r"([a-z][a-z0-9_-]*): (?:([A-Z][A-Za-z]+) )?(.*)")
@@ -285,7 +287,9 @@ def cmd_ask(root, o, pos):
     if a.qid_used(qid):
         raise Fail("QuestionExists", "題名用過了：%s" % qid, "換個 --id，或不給讓 aos-ai 取")
     (a.ws / "new").mkdir(parents=True, exist_ok=True)
-    write_atomic(a.ws / "new" / qid, text if text.endswith("\n") else text + "\n")
+    tmp = a.ws / (".ask-" + qid + ".tmp")              # 暫存放 new/ 外面：agent-dan 的 brain.py 連 . 開頭的檔也會撿
+    tmp.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
+    os.replace(tmp, a.ws / "new" / qid)
     out({"ok": True, "name": a.name, "id": qid, "path": str(a.ws / "new" / qid),
          "next": "aos-ai run %s（前景跑完）或 aos-ai start %s（背景）" % (a.name, a.name)})
 
@@ -575,15 +579,123 @@ def cmd_doctor(root, o, pos):
          "brain": {"url": url, "reachable": reach, "note": None if url else "沒設 AOS_BRAIN_URL＝假腦"}})
 
 
-COMMANDS = {"templates": cmd_templates, "spawn": cmd_spawn, "ask": cmd_ask, "run": cmd_run, "status": cmd_status,
+def cmd_make(root, o, pos):
+    """make <inst|loop|fsm|daemon|metainfo|tool_json> [旗標] [--out 檔]；make tool 名 工具；make cell 名 格；make func 資料夾。"""
+    need(pos, 1, "make inst|loop|fsm|daemon|metainfo|tool_json [旗標] [--out 檔] | make tool NAME 工具 | make cell NAME 格 | make func 資料夾")
+    kind, notes = pos[0], "no-notes" not in o
+    env = child_env()
+    if kind in mk.GEN:
+        x = mk.GEN[kind](o)
+        res = {"ok": True, "kind": kind, "json": x}
+        if opt1(o, "out"):
+            path = root.inside(opt1(o, "out"), "--out")
+            mk.write_new(path, mk.dump(x), force="force" in o)
+            res["path"] = str(path)
+            chk = mk.aos_json_check(which, env, path)
+            if chk is not None:
+                res["check"] = chk
+                res["ok"] = chk["ok"]
+        if notes:
+            res["notes"] = mk.notes_for(x, kind)
+        out(res)
+    elif kind == "tool":
+        need(pos, 3, "make tool NAME 工具名 --description 一句話 [--param 名:型別[:說明][:required]]... [--lang python|sh]")
+        a = root.agent(pos[1])
+        if not NAME_RE.match(pos[2]):
+            raise Fail("NameBad", "工具名不合：%r" % pos[2], "小寫英數、_、-")
+        res = {"ok": True, "name": a.name, "tool": pos[2], **mk.scaffold_tool(a.agent / "tools", pos[2], o),
+               "next": "改 _entry 的 TODO；腦下次 think 就看得到（tools/*/tool.json）"}
+        if notes:
+            res["notes"] = {**mk.notes_for(res["tool_json"], "tool_json"),
+                            "_entry": "工具本體：stdin 收 arguments（JSON）、stdout 整段是結果；退非 0＝ToolFailed、整隻停（explain tool）"}
+        out(res)
+    elif kind == "cell":
+        need(pos, 3, "make cell NAME 格名 [--exec 目標或單子JSON | --dir] [--next 下一格] [--after 前一格]")
+        a = root.agent(pos[1])
+        cell, fsm = pos[2], a.agent / "fsm.json"
+        if not NAME_RE.match(cell):
+            raise Fail("NameBad", "格名不合：%r" % cell)
+        table = read_json(fsm)
+        if not isinstance(table, dict) or not isinstance(table.get("states"), dict):
+            raise Fail("CfgBad", "%s 不是 fsm 表" % fsm)
+        if cell in table["states"]:
+            raise Fail("CellExists", "已經有格 %s" % cell, "改它用 aos-json set %s#/states/%s …" % (fsm, cell))
+        after = opt1(o, "after")
+        if after and after not in table["states"]:
+            raise Fail("CellMissing", "沒有格 %s" % after)
+        made = []
+        if "dir" in o:
+            mk.write_new(a.agent / cell / "_entry", mk.SH_CELL.format(name=cell), mode=0o755)
+            made.append(str(a.agent / cell / "_entry"))
+            exe = cell
+        elif opt1(o, "exec"):
+            exe = mk.value(opt1(o, "exec"))
+        else:
+            raise Fail("ArgumentsBad", "要 --exec（目標或單子 JSON）或 --dir（起一個格資料夾）")
+        nxt = opt1(o, "next") or (table["states"][after]["next"] if after else table.get("start"))
+        spec = {"exec": exe, "next": nxt}
+        trial = json.loads(json.dumps(table))
+        trial["states"][cell] = spec
+        if after:
+            trial["states"][after]["next"] = cell
+        mk.check_fsm(trial)                               # 先驗整張表，再交給 aos-json 改
+        by = mk.aos_json_set(which, env, "%s#/states/%s" % (fsm, cell), spec)
+        if after:
+            mk.aos_json_set(which, env, "%s#/states/%s/next" % (fsm, after), cell)
+        res = {"ok": True, "name": a.name, "cell": cell, "spec": spec, "after": after, "edited_by": by,
+               "made": made, "fsm": str(fsm)}
+        chk = mk.aos_json_check(which, env, fsm)
+        if chk is not None:
+            res["check"], res["ok"] = chk, chk["ok"]
+        if notes:
+            res["notes"] = {"exec": mk.NOTES["exec"], "next": "這格退 0 才換到 next；10 或失敗 state 不動（explain fsm）"}
+        out(res)
+    elif kind == "func":
+        need(pos, 2, "make func 資料夾 [--summary 一句話] [--argv 命令 | --inst 單子JSON] [_metainfo 旗標...]")
+        d = root.inside(pos[1], "函數資料夾")
+        res = {"ok": True, **mk.scaffold_func(d, o), "next": "aos-ai exec %s 跑跑看" % d}
+        if notes:
+            res["notes"] = {"_entry": mk.NOTES["_entry"].split("；")[0] + "；這裡是可執行檔或單子（explain entry）",
+                            "_metainfo": "跟 _entry 並列＝這個函數的特性，aos-exec 不讀（explain metainfo）"}
+        out(res)
+    else:
+        raise Fail("ArgumentsBad", "make 不認得 %s；認 %s、tool、cell、func" % (kind, "、".join(mk.GEN)))
+
+
+def opt1(o, k):
+    return o.get(k, [None])[-1]
+
+
+def cmd_explain(root, o, pos):
+    if "here" in o:
+        out(ex.here(pos[0] if pos else ".", opt1(o, "ws"), os.environ, override="dotenv-override" in o))
+        return
+    if not pos:
+        secs = ex.sections()
+        out({"ok": True, "concepts": list(secs), "how": "aos-ai explain <概念>；aos-ai explain --here [目標] 算具體值",
+             "file": str(ex.CONCEPTS)})
+        return
+    k, text = ex.find(pos[0])
+    if not k:
+        raise Fail("ConceptUnknown", "沒有概念 %s" % pos[0], "aos-ai explain 列出全部：" + "、".join(ex.sections()))
+    out({"ok": True, "concept": k, "text": text})
+
+
+COMMANDS = {"make": cmd_make, "explain": cmd_explain, "templates": cmd_templates, "spawn": cmd_spawn, "ask": cmd_ask, "run": cmd_run, "status": cmd_status,
             "answer": cmd_answer, "wait": cmd_wait, "trace": cmd_trace, "history": cmd_history, "exec": cmd_exec,
             "daemon": cmd_daemon, "start": cmd_start, "stop": cmd_stop, "edit": cmd_edit, "doctor": cmd_doctor}
-VALUED = {"root", "from", "tool", "id", "timeout", "env", "n", "ws", "interval-ms"}
+VALUED = {"root", "from", "tool", "id", "timeout", "env", "n", "ws", "interval-ms", "out", "spec", "set", "argv", "cwd",
+          "stdin", "stdout", "stderr", "timeout-ms", "grace-ms", "envs", "exec", "max", "ctl", "state", "entry", "cell",
+          "start", "next", "loop", "summary", "time-ms", "mem-mb", "gpu-mem-mb", "llm-calls", "llm-tokens", "cost",
+          "side-effect", "idempotent", "deterministic", "parallel", "resource", "interrupt", "description", "param",
+          "lang", "inst", "after"}
+SWITCHES = {"force", "no-notes", "here", "dir", "dotenv-override"}
 USAGE = ("usage: aos-ai [--root DIR] 命令 ...；命令：templates | spawn NAME [--from 範本] [--tool 工具]... | "
          "ask NAME 文字|- [--id 題名] | run NAME [--timeout 秒] [--env K=V]... | status [NAME] | answer NAME [題名] | "
          "wait NAME 題名 [--timeout 秒] | trace NAME [-n N] | history NAME [-n N] | "
          "exec [--ws WS] 目標 [參數...] | daemon up|down|status | start NAME [--interval-ms N] | stop NAME | "
-         "edit NAME 檔 ... | doctor")
+         "edit NAME 檔 ... | doctor | make inst|loop|fsm|daemon|metainfo|tool_json [--out 檔] | make tool NAME 工具 | "
+         "make cell NAME 格 | make func 資料夾 | explain [概念] | explain --here [目標] [--ws WS]")
 
 
 def need(pos, n, usage):
@@ -614,8 +726,12 @@ def parse(argv):
             break
         if a.startswith("-") and a != "-":
             key, _, val = a.lstrip("-").partition("=")
+            if key in SWITCHES and not _:
+                opts.setdefault(key, []).append(True)
+                i += 1
+                continue
             if key not in VALUED:
-                raise Fail("FlagUnknown", "不認得的旗標 %s；%s" % (a, USAGE))
+                raise Fail("FlagUnknown", "不認得的旗標 %s" % a, "aos-ai help 看用法")
             if not _:
                 i += 1
                 if i >= len(argv):
@@ -639,10 +755,13 @@ def main(argv):
             print(USAGE)
             return 0 if cmd else 1
         if cmd not in COMMANDS:
-            raise Fail("CommandUnknown", "不認得的命令 %s；%s" % (cmd, USAGE))
+            raise Fail("CommandUnknown", "不認得的命令 %s" % cmd, "aos-ai help 看用法")
         root = Root(opts.pop("root", [None])[-1])
         COMMANDS[cmd](root, opts, pos)
         return 0
+    except mk.MakeBad as f:
+        print("aos-ai: %s %s%s" % (f.code, f.reason, "（下一步：%s）" % f.hint if f.hint else ""), file=sys.stderr)
+        return 1
     except Fail as f:
         print("aos-ai: %s %s%s" % (f.code, f.reason, "（下一步：%s）" % f.hint if f.hint else ""), file=sys.stderr)
         return 1

@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+# make_tool - stdin 收 {"name", "tool", "description", "params"?, "lang"?}：aos-ai make tool，stdout 印 aos-ai 那行 JSON
+# agent 在 $AOS_AI_ROOT（沒設＝$AOS_WS）的 agents/<名>/。aos-ai 的錯印成 {"ok": false, "error"}、退 0；aos-ai 起不來才退 1。
+import json, os, subprocess, sys
+
+ROOT = os.environ.get("AOS_AI_ROOT") or os.environ.get("AOS_WS") or "."
+
+
+def say(obj):
+    print(json.dumps(obj, ensure_ascii=False))
+    sys.exit(0)
+
+
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError as e:
+    say({"ok": False, "error": "arguments 不是 JSON：%s" % e})
+if not isinstance(args, dict) or not all(isinstance(args.get(k), str) for k in ("name", "tool", "description")):
+    say({"ok": False, "error": "要 name、tool、description 三個字串"})
+cmd = ["aos-ai", "--root", ROOT, "make", "tool", args["name"], args["tool"], "--description", args["description"]]
+for p in args.get("params") or []:
+    if isinstance(p, str):
+        cmd += ["--param", p]
+if args.get("lang") in ("python", "sh"):
+    cmd += ["--lang", args["lang"]]
+try:
+    r = subprocess.run(cmd, capture_output=True, text=True)
+except OSError as e:
+    print("make_tool: LaunchFailed aos-ai 起不來：%s" % e, file=sys.stderr)
+    sys.exit(1)
+print(r.stdout.strip() if r.returncode == 0 else json.dumps(
+    {"ok": False, "error": (r.stderr.strip().splitlines() or [""])[-1]}, ensure_ascii=False))

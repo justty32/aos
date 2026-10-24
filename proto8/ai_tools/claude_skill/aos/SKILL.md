@@ -1,6 +1,6 @@
 ---
 name: aos
-description: 操作 aos agent（proto8 的資料夾程式）的工具 aos-ai。Use when the user asks to spawn/create an aos agent, give an aos agent a question/task, run aos-exec or an agent once, check aos loop/daemon/fsm state or trace, start/stop a background agent, or read an aos agent's answer or error line（「起一隻 agent」「丟題給 agent」「aos-exec 跑一次」「看 agent 狀態」「停掉 agent」）。
+description: 操作 aos（proto8 的資料夾程式）的工具 aos-ai，含概念速成。Use when the user asks to spawn/create an aos agent, give an aos agent a question/task, run aos-exec or an agent once, check aos loop/daemon/fsm state or trace, start/stop a background agent, read an aos agent's answer or error line, generate aos JSON (inst/loop.json/fsm.json/daemon.json/_metainfo/tool.json) or scaffold a tool/fsm cell/function folder, or explain aos concepts like AOS_WS/AOS_ENTRY/AOS_STACK/AOS_CF/AOS_CD/AOS_CO（「起一隻 agent」「丟題給 agent」「aos-exec 跑一次」「看 agent 狀態」「生成 loop.json」「加一個工具」「WS／STACK 是什麼」）。
 ---
 
 # aos：用 aos-ai 操作 agent
@@ -41,6 +41,35 @@ aos-ai --root ~/code/try/x answer helper q1              # 讀答案
 | `exec [--ws WS] 目標 [參數...]` | 直接 `aos-exec` 跑一次任何資料夾程式，回 `code`、`stdout`、`errors` |
 | `edit 名 檔 ...` | 改設定檔的接口（交給 `$AOS_AI_JSON_EDITOR`；沒接時直接用你的編輯工具改 `status` 給的路徑） |
 | `doctor` | 檢查程式建好沒、腦連不連得到 |
+| `make …`／`explain …` | 見上面兩節 |
+
+## 概念：先查再猜
+
+**不懂 aos 的詞先查，別猜**：同資料夾的 [concepts.md](concepts.md) 是概念速成（每節一句白話、最小範例、常見錯、條號），
+也能 `aos-ai explain <概念>` 印一節（`aos-ai explain` 列節名：env、AOS_ENTRY、AOS_WS、AOS_STACK、AOS_CF、AOS_CD、AOS_CO、entry、dotenv、inst、loop、fsm、daemon、window、exit、directive、inline、metainfo、agent、tool、heap）。
+**要具體值**：`aos-ai explain --here [目標] [--ws WS]` 算出「現在 `aos-exec 目標`」會讀哪些 `.env`、挑到哪個入口、是哪一種（可執行檔／單子／argv／轉向）、
+入口看到的 `AOS_WS`／`AOS_STACK`／`AOS_ENTRY`／`AOS_CF`／`AOS_CD`／`AOS_CO`（照規則模擬、不真的跑）。
+
+## 生成 JSON 與骨架
+
+先驗形狀再輸出；加 `--out 檔` 原子寫入（root 裡、已有的不蓋，要蓋加 `--force`），有 aos-json 就順手 `aos-json check`；輸出附 `notes`（每個欄位一句概念，`--no-notes` 關掉）。
+**改既有的 JSON 用 aos-json**（`aos-json set 檔#/指標 值`），aos-ai 只生成。
+
+```bash
+aos-ai make inst --argv 'python3 brain.py' --timeout-ms 120000 --stdout '{"$env":"AOS_STACK","$path":"plan.txt"}'
+aos-ai make loop --exec fsm.json --max 40 --out w/loop.json            # 自動帶 _entry，aos-exec w/loop.json 就能跑
+aos-ai make fsm --cell 'idle=idle' --cell 'think={"argv":["python3","brain.py"]}' --cell 'act=act' --out w/fsm.json
+#   --cell 名=exec（JSON 或字串）照順序接成環，--next 名=下一格 改；--start 改起點
+aos-ai make daemon --loop 'bob={"exec":"agent-bob","max":1}' --interval-ms 500
+aos-ai make metainfo --summary '排版 .py' --time-ms '{"val":300,"max":5000}' --resource cpu --side-effect true
+aos-ai make tool_json --description '算算式' --param 'expr:string:要算的式子:required'
+aos-ai make tool helper shout --description '轉大寫' --param 'text:string::required'   # agents/helper/agent/tools/shout/
+aos-ai make cell helper log --exec '{"argv":["sh","-c","date >> $AOS_STACK/log.txt"]}' --after act   # 插在 act 後面
+aos-ai make cell helper check --dir --after think       # 起一個格資料夾（_entry 骨架）
+aos-ai make func funcs/hello --summary '打招呼'          # 函數資料夾：_entry＋_metainfo
+```
+
+每種都有 `--spec '{整份 JSON}'` 與 `--set key=值` 可以直接給內容。
 
 ## 常見錯怎麼辦
 
@@ -48,6 +77,7 @@ aos-ai --root ~/code/try/x answer helper q1              # 讀答案
 - `BrainFailed`：腦連不上 → 檢查 `AOS_BRAIN_URL`，或拿掉用假腦。
 - `AgentBusy`：背景正在跑那隻 → `wait`，或先 `stop`。
 - `AgentExists`／`QuestionExists`：換名字或直接 `ask`。
+- `SpecBad`：生成的 JSON 形狀不對，原因那句說哪一格；`FileExists`：換 `--out` 或加 `--force`。
 
 ## 不要做
 

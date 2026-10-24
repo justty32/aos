@@ -1,0 +1,9 @@
+{"description": "在某隻 aos agent 的 tools/ 下起一個新工具骨架（tool.json＋_entry），回路徑與 tool.json。工具本體的 TODO 要另外寫。",
+ "parameters": {"type": "object",
+                "properties": {"name": {"type": "string", "description": "agent 名字（用 spawn_agent 起的那些）"},
+                               "tool": {"type": "string", "description": "新工具名（小寫英數、_、-）"},
+                               "description": {"type": "string", "description": "給模型看的一句話"},
+                               "params": {"type": "array", "items": {"type": "string"},
+                                          "description": "參數，每個寫 名:型別[:說明][:required]，例 expr:string:要算的式子:required"},
+                               "lang": {"type": "string", "enum": ["python", "sh"]}},
+                "required": ["name", "tool", "description"]}}

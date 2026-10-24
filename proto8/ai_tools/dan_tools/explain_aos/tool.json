@@ -1,0 +1,2 @@
+{"description": "查 aos 的概念（白話＋範例＋常見錯）：overview、env、AOS_ENTRY、AOS_WS、AOS_STACK、AOS_CF、AOS_CD、AOS_CO、entry、dotenv、inst、loop、fsm、daemon、window、exit、directive、inline、metainfo、agent、tool、heap。不給 concept＝列出全部。",
+ "parameters": {"type": "object", "properties": {"concept": {"type": "string"}}}}

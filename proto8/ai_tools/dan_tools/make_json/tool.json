@@ -1,0 +1,6 @@
+{"description": "生成一份 aos 的 JSON（inst 單子、loop、fsm、daemon、metainfo、tool_json），先驗形狀再回；給 out 就寫成檔（相對工作資料夾，已有的不蓋）。回的 notes 說明每個欄位的意思。",
+ "parameters": {"type": "object",
+                "properties": {"kind": {"type": "string", "enum": ["inst", "loop", "fsm", "daemon", "metainfo", "tool_json"]},
+                               "spec": {"type": "object", "description": "整份內容（照該種 JSON 的形狀寫，例 fsm：{\"start\", \"states\": {名: {\"exec\", \"next\"}}}）"},
+                               "out": {"type": "string", "description": "要寫到哪個檔（相對工作資料夾）；不給只回 JSON"}},
+                "required": ["kind", "spec"]}}

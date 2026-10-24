@@ -4,7 +4,7 @@
 import http.server, json, os, subprocess, tempfile, threading, time, unittest
 from pathlib import Path
 
-from aos_bins import ROOT  # noqa: F401  （順便檢查 impls 建好了）
+from aos_bins import ROOT, EXEC, path_with  # noqa: E402  （順便檢查 impls 建好了）
 
 AI = str(ROOT / "ai_tools" / "bin" / "aos-ai")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_AI_ROOT",
@@ -17,6 +17,40 @@ def ai(root, *args, env=None, stdin=None, timeout=60):
     r = subprocess.run([AI, "--root", root] + list(args), capture_output=True, text=True, env=e, input=stdin,
                        timeout=timeout)
     return r.returncode, (json.loads(r.stdout) if r.returncode == 0 and r.stdout.strip() else None), r.stderr
+
+
+def aos_exec(target, ws, env=None):
+    e = {k: v for k, v in os.environ.items() if k not in CLEAR}
+    e["PATH"] = path_with(e.get("PATH", ""))
+    e.update(env or {})
+    return subprocess.run([EXEC, "--ws", ws, target], capture_output=True, text=True, env=e, timeout=60)
+
+
+class ToolBrain:
+    """假 server：題目來了先叫 shout（生成出來的工具），拿到結果就把它當答案。"""
+
+    def __init__(self):
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_POST(self):
+                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
+                last = body["messages"][-1]
+                if last["role"] == "user":
+                    msg = {"role": "assistant", "content": None, "tool_calls": [{"id": "s1", "type": "function",
+                           "function": {"name": "shout", "arguments": json.dumps({"text": "hi"})}}]}
+                else:
+                    msg = {"role": "assistant", "content": "tool said " + last["content"]}
+                data = json.dumps({"choices": [{"message": msg}]}).encode()
+                self.send_response(200)
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+
+            def log_message(self, *a):
+                pass
+
+        self.server = http.server.HTTPServer(("127.0.0.1", 0), H)
+        self.url = "http://127.0.0.1:%d/v1" % self.server.server_port
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
 
 
 class RuleBrain:
@@ -166,6 +200,136 @@ class AiToolsTest(unittest.TestCase):
         res = json.loads(r.stdout)
         self.assertFalse(res["ok"])
         self.assertIn("NameBad", res["error"])
+
+
+    # ---------- 生成（make）與概念（explain） ----------
+
+    def test_make_loop_fsm_inst_func_run(self):
+        """生成的 loop.json＋fsm.json、單子、函數資料夾，都能被 aos-exec／aos-loop／aos-fsm 真的跑起來。"""
+        r = self.root
+        code, res, err = ai(r, "make", "loop", "--exec", "fsm.json", "--max", "5", "--out", r + "/w/loop.json")
+        self.assertTrue(res and res["ok"] and "exec" in res["notes"], err)
+        code, res, err = ai(r, "make", "fsm", "--cell", 'a={"argv": ["sh", "-c", "echo A >> $AOS_STACK/log.txt"]}',
+                            "--cell", 'b={"argv": ["sh", "-c", "exit 10"]}', "--out", r + "/w/fsm.json", "--no-notes")
+        self.assertEqual(res["json"]["states"]["b"]["next"], "a", err)          # 照順序接成環
+        self.assertNotIn("notes", res)
+        p = aos_exec(r + "/w/loop.json", r)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual((Path(r) / ".stack" / "log.txt").read_text(), "A\n")
+        self.assertEqual([json.loads(l)["state"] for l in (Path(r) / ".stack" / "trace.jsonl").read_text().splitlines()], ["a", "b"])
+        code, res, err = ai(r, "make", "inst", "--argv", "sh -c 'echo x'", "--out", r + "/i.json")
+        self.assertEqual(res["json"]["argv"], ["sh", "-c", "'echo", "x'"], err)  # 字串照空白切；要精確寫 JSON 陣列
+        code, res, err = ai(r, "make", "inst", "--argv", '["sh", "-c", "echo inst-ok"]', "--timeout-ms", "5000",
+                            "--out", r + "/j.json")
+        self.assertEqual(aos_exec(r + "/j.json", r).stdout, "inst-ok\n")
+        code, res, err = ai(r, "make", "func", r + "/funcs/hello", "--summary", "打招呼", "--time-ms", "5")
+        self.assertEqual(res["metainfo"], {"summary": "打招呼", "time_ms": 5}, err)
+        self.assertIn("hello: hello from", aos_exec(r + "/funcs/hello", r).stdout)
+        code, res, err = ai(r, "make", "daemon", "--loop", 'x={"exec": {"argv": ["true"]}, "max": 1}', "--max", "3",
+                            "--interval-ms", "100", "--out", r + "/d/daemon.json")
+        p = aos_exec(r + "/d/daemon.json", r, env={"AOS_STACK": r + "/dstack/"})
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertEqual(json.loads((Path(r) / "dstack" / "x" / "state.json").read_text())["phase"], "done")
+
+    def test_make_metainfo_tool_json_and_bad(self):
+        code, res, _ = ai(self.root, "make", "metainfo", "--summary", "s", "--time-ms", '{"val": 1, "max": 9}',
+                          "--resource", "cpu,llm", "--side-effect", "false")
+        self.assertEqual(res["json"], {"summary": "s", "time_ms": {"val": 1, "max": 9}, "side_effect": False,
+                                       "resource": ["cpu", "llm"]})
+        code, res, _ = ai(self.root, "make", "tool_json", "--description", "d", "--param", "expr:string:式子:required")
+        self.assertEqual(res["json"]["parameters"]["required"], ["expr"])
+        for args, want in ((["make", "metainfo", "--set", "priority=3"], "SpecBad"),
+                           (["make", "fsm", "--cell", "a=x", "--next", "a=zz"], "SpecBad"),
+                           (["make", "loop", "--max", "1"], "SpecBad"),
+                           (["make", "tool_json", "--param", "x:str"], "SpecBad"),
+                           (["make", "loop", "--exec", "x", "--out", "/tmp/aos-ai-outside.json"], "PathBad")):
+            code, _, err = ai(self.root, *args)
+            self.assertTrue(err.startswith("aos-ai: %s " % want), (args, err))
+        ai(self.root, "make", "loop", "--exec", "x", "--out", self.root + "/l.json")
+        code, _, err = ai(self.root, "make", "loop", "--exec", "y", "--out", self.root + "/l.json")
+        self.assertTrue(err.startswith("aos-ai: FileExists "), err)
+        code, res, _ = ai(self.root, "make", "loop", "--exec", "y", "--out", self.root + "/l.json", "--force")
+        self.assertEqual(json.loads(Path(self.root, "l.json").read_text())["exec"], "y")
+
+    def test_make_tool_and_cell_end_to_end(self):
+        """生成一個工具＋一個 fsm 格掛進 agent-dan，腦（假 server）叫那個工具、新格每輪都跑。"""
+        ai(self.root, "spawn", "dan")
+        code, res, err = ai(self.root, "make", "tool", "dan", "shout", "--description", "轉大寫",
+                            "--param", "text:string:要轉的字:required", "--summary", "轉大寫", "--resource", "cpu")
+        self.assertEqual(res["files"], ["tool.json", "_entry", "_metainfo"], err)
+        code, res, err = ai(self.root, "make", "cell", "dan", "log", "--after", "act",
+                            "--exec", '{"argv": ["sh", "-c", "echo logged >> $AOS_STACK/log.txt"]}')
+        self.assertTrue(res and res["ok"], err)
+        fsm = json.loads((Path(self.root) / "agents/dan/agent/fsm.json").read_text())
+        self.assertEqual((fsm["states"]["act"]["next"], fsm["states"]["log"]["next"]), ("log", "idle"))
+        code, _, err = ai(self.root, "make", "cell", "dan", "log", "--exec", "x")
+        self.assertTrue(err.startswith("aos-ai: CellExists "), err)
+        brain = ToolBrain()
+        try:
+            ai(self.root, "ask", "dan", "--id", "q1", "喊一下")
+            code, res, err = ai(self.root, "run", "dan", env={"AOS_BRAIN_URL": brain.url})
+        finally:
+            brain.server.shutdown()
+            brain.server.server_close()
+        self.assertTrue(res["ok"], (res, err))
+        self.assertIn('tool said {"ok": true, "args": {"text": "hi"}}', res["answers"][0]["text"])  # 骨架照實回 args
+        stack = Path(self.root) / "agents/dan/ws/.stack"
+        self.assertEqual((stack / "log.txt").read_text(), "logged\nlogged\n")   # act 跑兩次（叫工具、交答案）
+        self.assertTrue((stack / "shout").is_dir())                               # 工具有自己的小格
+
+    def test_explain_concepts(self):
+        code, res, _ = ai(self.root, "explain")
+        for k in ("AOS_WS", "AOS_STACK", "AOS_ENTRY", "AOS_CF", "AOS_CD", "AOS_CO", "inst", "loop", "fsm", "daemon",
+                  "window", "exit", "directive", "inline", "metainfo", "agent", "heap"):
+            self.assertIn(k, res["concepts"])
+        code, res, _ = ai(self.root, "explain", "ws")
+        self.assertEqual(res["concept"], "AOS_WS")
+        self.assertIn("出處", res["text"])
+        code, _, err = ai(self.root, "explain", "nope")
+        self.assertTrue(err.startswith("aos-ai: ConceptUnknown "), err)
+
+    def test_explain_here_matches_aos_exec(self):
+        """--here 算出來的六個值與種類，跟真的 aos-exec 給入口的一樣。"""
+        r = Path(self.root)
+        probe = "printenv | grep ^AOS_ | sort"
+        (r / "p" / "_entry").mkdir(parents=True)
+        (r / "p" / "_entry" / "run").write_text("#!/bin/sh\n" + probe + "\n")
+        os.chmod(r / "p" / "_entry" / "run", 0o755)
+        (r / "p" / "_entry" / ".env").write_text("AOS_ENTRY=run\n")
+        (r / "j.json").write_text(json.dumps({"a": {"_entry": {"argv": ["sh", "-c", probe]}}}))
+        (r / "k.json").write_text(json.dumps({"x": {".env": {"AOS_ENTRY": "go"}, "go": ["sh", "-c", probe]}}))
+        (r / "ws").mkdir()
+        for target, kind in (("p", "executable"), ("j.json#/a", "inst"), ("k.json#/x", "argv"), ("j", "bad")):
+            p = aos_exec(str(r / target), str(r / "ws"))
+            code, res, err = ai(self.root, "explain", "--here", str(r / target), "--ws", str(r / "ws"))
+            self.assertEqual(res["entry"]["kind"], kind, (target, res))
+            if kind == "bad":
+                self.assertEqual(p.returncode, 1)
+                continue
+            real = dict(l.split("=", 1) for l in p.stdout.splitlines())
+            for k in ("AOS_WS", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO"):
+                self.assertEqual(res["env_at_start"][k], real[k], (target, k))
+            if "AOS_ENTRY" in real:
+                self.assertEqual(res["env_at_start"]["AOS_ENTRY"], real["AOS_ENTRY"])
+
+    def test_dan_tools_make_and_explain(self):
+        ai(self.root, "spawn", "boss", "--tool", "make_json", "--tool", "make_tool", "--tool", "explain_aos")
+        tools = Path(self.root) / "agents" / "boss" / "agent" / "tools"
+        e = {k: v for k, v in os.environ.items() if k not in CLEAR}
+        e.update(AOS_WS=self.root, PATH=str(ROOT / "ai_tools" / "bin") + os.pathsep + path_with(e["PATH"]))
+
+        def call(tool, args):
+            p = subprocess.run([str(tools / tool / "_entry")], input=json.dumps(args), capture_output=True, text=True, env=e)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            return json.loads(p.stdout)
+
+        res = call("make_json", {"kind": "fsm", "spec": {"start": "a", "states": {"a": {"exec": "a", "next": "a"}}},
+                                 "out": "gen/fsm.json"})
+        self.assertTrue(res["ok"] and (Path(self.root) / "gen" / "fsm.json").is_file())
+        self.assertFalse(call("make_json", {"kind": "fsm", "spec": {"states": {}}})["ok"])
+        self.assertTrue(call("make_tool", {"name": "boss", "tool": "t1", "description": "d", "params": ["a:string"]})["ok"])
+        self.assertTrue((tools / "t1" / "tool.json").is_file())
+        self.assertEqual(call("explain_aos", {"concept": "stack"})["concept"], "AOS_STACK")
 
 
 if __name__ == "__main__":
