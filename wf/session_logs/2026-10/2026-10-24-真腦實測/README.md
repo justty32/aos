@@ -11,6 +11,7 @@
 | [01-基礎](01-基礎.md) | agent-dan、agent-pip、aos-json json_edit 兩步、agent-liv、kernel-llm（含 `_metainfo`、額度） |
 | [02-組合](02-組合.md) | agent-eve（pyfix）、agent-gus、agent-meg、talk、agent-kai、agent-hal compact、self-improve（含 sandbox.json） |
 | [03-外部與人](03-外部與人.md) | aos-ai（含 skill）、say／listen／chat、agent-fay（attach）、Janet、Lua 與 nvim、aos-grow、沙箱 root 那層 |
+| [結果-01-基礎](結果-01-基礎.md) | 10-24 真腦實測結果：第 1～6 項（dan、pip、json_edit 兩步、liv、kernel-llm、Janet／Lua／grow）都能用；修了 stat 的時間寫法、liv 工具錯卡住、kernel-llm 收 `--max` 與 ivy 的模型名 |
 | [結果-03-外部](結果-03-外部.md) | 10-24 真腦實測結果：aos-ai（含 skill）、agent-fay 叫 claude／codex 都能用；修了 aos-ai spawn 工具錯卡住（`--tool-errors`） |
 
 ## 第 0 步：確認 LiteLLM 起來了
