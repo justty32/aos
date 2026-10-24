@@ -237,7 +237,7 @@ class T(unittest.TestCase):
         self.assertEqual([m["content"] for m in self.history()].count("比較甲乙"), 1)
 
     def test_plan_errors(self):
-        """太多步、needs 指錯、不是 JSON：都是 PlanBad。"""
+        """太多步、needs 指錯：都是 PlanBad。"""
         for steps in ([{"id": "s%d" % i, "goal": "g"} for i in range(5)], [{"id": "a", "goal": "g", "needs": ["z"]}]):
             with self.subTest(steps=steps):
                 (self.ws / ".stack").exists() and __import__("shutil").rmtree(self.ws / ".stack")
@@ -249,9 +249,21 @@ class T(unittest.TestCase):
                 self.ask()
                 r = self.gus(b.url)
                 self.assertEqual((r.returncode, gus_errors(r.stderr)), (1, ["PlanBad"]))
-        b = self.brain(lambda body: answer("我覺得要分三步"))
-        r = self.gus(b.url)
-        self.assertEqual(gus_errors(r.stderr), ["PlanBad"])
+
+    def test_plan_prose_is_direct(self):
+        """規劃那次腦回的不是規劃（散文、或散文裡夾著 {…}）＝當不拆、自己做，不是 PlanBad（10-24 真腦實測：
+        小念頭回「沒有 Python 工具可用」、或答案裡寫了 `{i: i for i in range(1000)}`）；think 那次帶 tools 再問。"""
+        for i, prose in enumerate(("沒有工具可用，無法實測", "用 `{i: i for i in range(9)}` 測", '結果是 {"n": 3}')):
+            with self.subTest(prose=prose):
+                q = "q%d.txt" % (i + 2)
+                (self.ws / "new" / q).write_text("比較甲乙\n", encoding="utf-8")
+                b = self.brain(lambda body, p=prose: answer(p) if is_plan(body) else answer("自己答"))
+                r = self.gus(b.url)
+                self.assertEqual((r.returncode, gus_errors(r.stderr)), (0, []), r.stderr)
+                self.assertEqual((self.ws / "out" / q).read_text(), "自己答\n")
+                self.assertTrue(any(t.get("tools") for t in b.requests if not is_plan(t)))
+                plan = json.loads(sorted((self.ws / ".stack" / "plans").glob("*.json"))[-1].read_text())
+                self.assertEqual((plan["direct"], plan["steps"]), ("prose", []))
 
     def test_thought_failed_then_rerun(self):
         """一個小念頭的腦壞了：另一個照樣做完、母體 ThoughtFailed 停住；修好再跑只補壞的那個，結論只接一次。"""
