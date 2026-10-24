@@ -1,0 +1,35 @@
+#!/usr/bin/env janet
+# aos-janet - 把一份 Janet 寫的 aos 程式編成資料夾（_entry、loop.json、fsm.json…）
+#
+# 用法：aos-janet [--force] 原始檔.janet 輸出資料夾
+# 原始檔裡 aos、combine 的東西都直接能用（不用 import），要 (def program (dir …))。
+# 錯：stderr 一行「aos-janet: 代號 原因」、退 1。
+
+(import ../aos :prefix "")
+(import ../combine :prefix "")
+(import ../emit :prefix "")
+
+(def- dsl-env "aos、combine、emit 都在這裡；原始檔在它的子環境裡跑" (curenv))
+
+(defn- die [msg]
+  (eprint "aos-janet: " msg)
+  (os/exit 1))
+
+(defn main [_ & argv]
+  (def force (= (first argv) "--force"))
+  (def args (if force (slice argv 1) argv))
+  (unless (= 2 (length args))
+    (die "ArgumentsBad usage: aos-janet [--force] 原始檔.janet 輸出資料夾"))
+  (def [src out] args)
+  (unless (= :file (os/stat src :mode)) (die (string "SourceMissing 找不到原始檔 " src)))
+  (def env (make-env dsl-env))
+  (try
+    (do
+      (dofile src :env env :exit false)
+      (def prog (get-in env ['program :value]))
+      (when (nil? prog) (die (string "ProgramMissing " src " 沒有 (def program …)")))
+      (emit prog out force))
+    ([err fib]
+      (if (and (bytes? err) (peg/match '(* (range "AZ") (some (range "AZ" "az")) " ") err))
+        (die err)
+        (do (debug/stacktrace fib err "") (die (string "SourceBad " src " 跑不起來（上面是 Janet 的錯）")))))))
