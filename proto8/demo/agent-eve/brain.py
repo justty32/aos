@@ -1,4 +1,4 @@
-# brain.py - think 格：認領題目、把 tools/*/tool.json 組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history
+# brain.py - think 格：認領題目、把 tools/*/tool.json 組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history（照抄 agent-dan，只改錯誤訊息開頭的名字）
 # 沒設 AOS_BRAIN_URL＝假腦；有設就問 OpenAI 相容的 {url}/chat/completions。失敗時 history 不接任何東西、退 1（P-20）。
 import json, os, sys, urllib.error, urllib.request
 

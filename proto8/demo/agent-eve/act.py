@@ -1,4 +1,4 @@
-# act.py - act 格：照腦的決定動手——有 tool_calls 就逐個 aos-exec tools/<名>、結果接回 history；沒有就把 content 寫成答案
+# act.py - act 格：照腦的決定動手——有 tool_calls 就逐個 aos-exec tools/<名>、結果接回 history；沒有就把 content 寫成答案（照抄 agent-dan，只改錯誤訊息開頭的名字）
 # 工具的介面：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的 stack＝$AOS_STACK/<名>/（P-17）。
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。任何錯：stderr 一行、退 1、history 不接（P-20）。
 import json, os, shutil, subprocess, sys
