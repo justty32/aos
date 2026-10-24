@@ -82,6 +82,9 @@ class Tools(unittest.TestCase):
         self.assertEqual((res["format"], res["text"], res["exec"]), ("python", True, False))
         _, res, _ = self.tool("stat", {"path": "agent-dan/idle"})
         self.assertEqual((res["type"], res["aos"]), ("dir", ["_entry"]))
+        # mtime 跟 ls 同一種寫法（UTC、帶 +00:00），10-24 真腦實測前 stat 印本地時間、沒標時區
+        ls_items = {i["name"]: i for i in self.tool("ls", {"path": "agent-dan"})[1]["items"]}
+        self.assertEqual(res["mtime"], ls_items["idle"]["mtime"])
         (self.ws / "l").symlink_to("agent-dan/loop.json")
         self.assertEqual(self.tool("stat", {"path": "l"})[1]["link_to"], "agent-dan/loop.json")
         self.assertEqual(self.tool("stat", {"path": "nope"})[2], "FileMissing")
