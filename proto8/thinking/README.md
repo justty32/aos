@@ -8,6 +8,6 @@
 
 | 月份 | 份數 | 範圍 |
 |---|---|---|
-| [2026-10](months/2026-10.md) | 55 | 10-11 重來～10-19 資料夾＝程式（proto8-2 併入）、重寫順序；10-20 指示詞與 argv 第一個元素；10-21 aos-exec 收旗標、支援 `.env`；10-21 下午 loop／daemon／fsm／agent 搬到新 aos-exec 上的計畫；10-22 Python 版向 C++ 看齊、對 s6／runit 報告的回應；10-23 命名統合、命名方法、daemon 壓測後的六個問題、ctl 只寫變動與 `$ref` 切檔、aos-agent 做成範本、腦的工具呼叫；10-24 fsm 格的 exec 不寫死檔名；10-24 agent 當工具（agent-eve 叫 pyfix）；10-24 給人用的 say／listen；10-24 仿 pi 的基本工具組（pi-tools、agent-pip）；10-24 claude／codex CLI 當工具、人可以接進去（agent-fay）；10-24 `_metainfo` 函數的特性；10-24 給 AI 用的 aos 工具集（aos-ai）；10-24 記憶庫（agent-meg）；10-24 agent 之間寄信；10-24 函數成長（六級、aos-grow 原型）；10-24 小念頭（agent-gus：先規劃 steps、每步 fork、只帶結論） |
+| [2026-10](months/2026-10.md) | 56 | 10-11 重來～10-19 資料夾＝程式（proto8-2 併入）、重寫順序；10-20 指示詞與 argv 第一個元素；10-21 aos-exec 收旗標、支援 `.env`；10-21 下午 loop／daemon／fsm／agent 搬到新 aos-exec 上的計畫；10-22 Python 版向 C++ 看齊、對 s6／runit 報告的回應；10-23 命名統合、命名方法、daemon 壓測後的六個問題、ctl 只寫變動與 `$ref` 切檔、aos-agent 做成範本、腦的工具呼叫；10-24 fsm 格的 exec 不寫死檔名；10-24 agent 當工具（agent-eve 叫 pyfix）；10-24 給人用的 say／listen；10-24 仿 pi 的基本工具組（pi-tools、agent-pip）；10-24 claude／codex CLI 當工具、人可以接進去（agent-fay）；10-24 `_metainfo` 函數的特性；10-24 給 AI 用的 aos 工具集（aos-ai）；10-24 記憶庫（agent-meg）；10-24 agent 之間寄信；10-24 函數成長（六級、aos-grow 原型）；10-24 小念頭（agent-gus：先規劃 steps、每步 fork、只帶結論）；10-24 Janet 編成 aos（langs/janet） |
 
 > 10-15 晚按月份分層（使用者「都按照推薦」）：本檔只留月份索引，各月一份表放 `months/`；各天的討論檔留在原地（`thinking/2026-10-15-xxx.md`），舊連結都還能點。新增一份討論＝在那個月的表加一列。
