@@ -11,7 +11,7 @@ from aos_bins import ROOT, tool, path_with  # noqa: E402
 EXEC = tool("aos-exec")
 EVE = ROOT / "demo" / "agent-eve"
 PYFIX = EVE / "tools" / "pyfix"
-SUB_TOOLS = PYFIX / "agent" / "tools"
+SUB = PYFIX / "agent"                                # 子 agent pyfix-agent（10-24 遷移後 tools/pyfix 是捷徑 → proto8/lib/agent/pyfix）
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "PYFIX_DIR")
 
 BUGGY = "def add(a, b):\n    return a - b\n"
@@ -74,11 +74,11 @@ class TwoBrains:
         self.server.server_close()
 
 
-FIX = [tool_reply(call("s1", "list_files", {})),
-       tool_reply(call("s2", "read_file", {"path": "calc.py"})),
-       tool_reply(call("s3", "run_python", {"args": ["test_calc.py"]})),
-       tool_reply(call("s4", "edit_file", {"path": "calc.py", "old": "a - b", "new": "a + b"})),
-       tool_reply(call("s5", "run_python", {"args": ["test_calc.py"]})),
+FIX = [tool_reply(call("s1", "ls", {})),                     # 子 agent 的工具是 lib/base 的（10-24 遷移前是 list_files、read_file…）
+       tool_reply(call("s2", "read", {"path": "calc.py"})),
+       tool_reply(call("s3", "bash", {"command": "python3 test_calc.py"})),
+       tool_reply(call("s4", "edit", {"path": "calc.py", "edits": [{"old_text": "a - b", "new_text": "a + b"}]})),
+       tool_reply(call("s5", "bash", {"command": "python3 test_calc.py"})),
        answer("原因：add 用了減號。改 calc.py 第 2 行成 a + b。測試通過。")]
 
 
@@ -127,10 +127,12 @@ class T(unittest.TestCase):
         sub = self.history(run1 / "stack")
         self.assertEqual(sub[0], {"role": "user", "content": "讓 test_calc.py 通過"})
         tools = [m["content"] for m in sub if m["role"] == "tool"]
-        self.assertIn("calc.py\ntest_calc.py", tools[0])
-        self.assertTrue(tools[2].startswith("結束碼 1\n"), tools[2])
-        self.assertEqual(tools[3], "改好了：calc.py\n")
-        self.assertTrue(tools[4].startswith("結束碼 0\n"), tools[4])
+        self.assertEqual([i["name"] for i in json.loads(tools[0])["items"]], ["calc.py", "test_calc.py"])   # ls 看的是 PYFIX_DIR
+        self.assertEqual(tools[1], BUGGY)
+        self.assertTrue(tools[2].endswith("[結束碼 1]\n"), tools[2])
+        self.assertEqual(tools[3], "已在 calc.py 換掉 1 處（第一處在第 2 行）\n")
+        self.assertNotIn("結束碼", tools[4])
+        self.assertFalse((self.ws / "proj" / "__pycache__").exists())        # PYTHONDONTWRITEBYTECODE 有帶下去
         # 模型：外面設的蓋過 eve 的 .env（不蓋）；pyfix 用 --dotenv-override 叫子 agent，子 agent 用自己 .env 的
         self.assertEqual({q["model"] for q in b.requests["outer"]}, {"outer-model"})
         self.assertEqual({q["model"] for q in b.requests["inner"]}, {"chatgpt-gpt-6-luna-low"})
@@ -138,7 +140,7 @@ class T(unittest.TestCase):
         self.assertEqual(b.requests["inner"][0]["messages"][0]["content"],
                          (PYFIX / "agent" / "system.txt").read_text())
         self.assertEqual(sorted(t["function"]["name"] for t in b.requests["inner"][0]["tools"]),
-                         ["edit_file", "list_files", "read_file", "run_python", "write_file"])
+                         ["bash", "edit", "ls", "read", "write"])
 
     def test_each_call_is_fresh(self):
         """同一題叫兩次 pyfix：各開一個小格（002），第二次的子 agent 只看到自己的題目、不帶第一次的對話。"""
@@ -180,31 +182,37 @@ class T(unittest.TestCase):
         self.assertIn("pyfix: DirBad", r.stderr)
         self.assertEqual(b.requests["inner"], [])
 
-    def test_sub_tools_stay_inside(self):
-        """子 agent 的工具：路徑出不去（回給模型、不算失敗）；edit_file 要剛好一次；run_python 會逾時。"""
+    def test_sub_agent_tools_stay_in_pyfix_dir(self):
+        """子 agent 直接跑（不經 eve）：它的 act 用 aos-exec --ws $PYFIX_DIR 叫庫的工具——路徑從 PYFIX_DIR 算、出不去；
+        工具的錯（出界、找不到原文）回給腦、不停；寫得進 PYFIX_DIR；沒設 PYFIX_DIR＝act 停在 DirMissing。"""
         root = self.ws / "proj"
-        env = {"PYFIX_DIR": str(root)}
-
-        def t(name, args):
-            r = run(str(SUB_TOOLS / name / "_entry"), input=json.dumps(args), env=env, cwd=SUB_TOOLS / name)
-            self.assertEqual(r.returncode, 0, r.stderr)
-            return r.stdout
-
         (self.ws / "secret.txt").write_text("no")
-        self.assertIn("跑出工作資料夾", t("read_file", {"path": "../secret.txt"}))
-        self.assertIn("跑出工作資料夾", t("write_file", {"path": "../x.py", "content": "x"}))
-        self.assertIn("跑出工作資料夾", t("list_files", {"dir": ".."}))
-        self.assertFalse((self.ws / "x.py").exists())
-        self.assertIn("出現 2 次", t("edit_file", {"path": "calc.py", "old": "b", "new": "c"}))
-        self.assertIn("出現 0 次", t("edit_file", {"path": "calc.py", "old": "zzz", "new": "c"}))
-        self.assertEqual(t("write_file", {"path": "sub/new.py", "content": "print(1)\n"}), "寫好了：sub/new.py（9 個字）\n")
-        self.assertEqual(t("run_python", {"args": ["sub/new.py"]}), "結束碼 0\n1\n")
-        (root / "spin.py").write_text("while True: pass\n")
-        self.assertTrue(t("run_python", {"args": ["spin.py"], "timeout_s": 1}).startswith("逾時：跑超過 1 秒"))
-        self.assertEqual(t("read_file", {"path": "calc.py"}), BUGGY)
-        r = run(str(SUB_TOOLS / "read_file" / "_entry"), input="{}", cwd=self.tmp)
+        sub_ws = self.tmp / "sub"
+        (sub_ws / "new").mkdir(parents=True)
+        (sub_ws / "new" / "task.txt").write_text("試工具")
+        b = self.brains([], [tool_reply(call("t1", "read", {"path": "../secret.txt"}),
+                                        call("t2", "edit", {"path": "calc.py", "edits": [{"old_text": "zzz", "new_text": "c"}]}),
+                                        call("t3", "write", {"path": "sub/new.py", "content": "print(1)\n"}),
+                                        call("t4", "bash", {"command": "python3 sub/new.py; pwd"})),
+                             answer("試完了")])
+        r = run(EXEC, "--ws", str(sub_ws), str(SUB), cwd=self.tmp, timeout=60,
+                env={"AOS_BRAIN_URL": b.url, "AOS_STACK": str(self.tmp / "substack") + "/", "PYFIX_DIR": str(root)})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        tools = {m["tool_call_id"]: m["content"] for m in self.history(self.tmp / "substack") if m["role"] == "tool"}
+        self.assertTrue(tools["t1"].startswith("read: PathBad "), tools["t1"])
+        self.assertTrue(tools["t1"].endswith("(工具 read 結束碼 1)\n"), tools["t1"])
+        self.assertTrue(tools["t2"].startswith("edit: TextMissing "), tools["t2"])
+        self.assertEqual((root / "sub" / "new.py").read_text(), "print(1)\n")
+        self.assertEqual(tools["t4"], "1\n%s\n" % root.resolve())                  # bash 的 cwd＝PYFIX_DIR
+        self.assertIn("pyfix-agent: ToolFailed read 結束碼 1（回給腦）", r.stderr)
+        self.assertEqual((sub_ws / "out" / "task.txt").read_text(), "試完了\n")
+        # 沒設 PYFIX_DIR：腦要叫工具時 act 停下（環境沒設好是這層自己的錯）
+        (sub_ws / "new" / "t2.txt").write_text("再試")
+        b2 = self.brains([], [tool_reply(call("u1", "ls", {}))])
+        r = run(EXEC, "--ws", str(sub_ws), str(SUB), cwd=self.tmp, timeout=60,
+                env={"AOS_BRAIN_URL": b2.url, "AOS_STACK": str(self.tmp / "substack2") + "/"})
         self.assertEqual(r.returncode, 1)
-        self.assertRegex(r.stderr, r"^read_file: DirMissing ")
+        self.assertIn("pyfix-agent: DirMissing ", r.stderr)
 
 
 class EveFiles(unittest.TestCase):

@@ -19,5 +19,9 @@ agent 的 `tools/<名>` 用捷徑掛進來的標準工具（引用、不複製�
 | `aos/send_message`、`check_inbox` | agent 之間寄信：照 `$AOS_ROSTER` 名冊寄進對方信箱 `new/`、自己留 `sent/`、對話串跟 `cur/` 走、到 `max_hops`／`max_sends` 擋（`HopsBad`、`SendsBad`…退 1）；看自己信箱還沒處理的；來源 demo/talk |
 | `aos/spawn_agent`、`ask_agent`、`agent_status`、`make_json`、`make_tool`、`explain_aos` | 轉叫命令列 `aos-ai`（起 agent、問、看狀態、生成 JSON 與工具骨架、查概念）；aos-ai 的錯照它的代號退 1；子 agent 放 `$AOS_AI_ROOT`（沒設＝`$AOS_WS`）；來源 ai_tools/dan_tools |
 | `aos/try_run` | 在工作區 `target/` 的暫時複本上 `aos-exec` 跑一次、回結束碼與輸出（`timeout_s` 10／60，逾時算 `CommandFailed`；有 `$IMPROVE_SANDBOX` 就關進 aos-sandbox）；來源 self-improve 的改進者 |
+| `agent/agent_tool.py` | 不是工具：「把一隻 agent 包成工具」的轉接，共用一支——`fresh_cell`（`$AOS_STACK/runs/NNN/` mkdir 搶號）、`run_agent`（題目寫進子 agent 的 `ws/new/`、`aos-exec --dotenv-override --ws` 跑、拿 `ws/out/` 的答案；錯 `AgentFailed`、`AnswerMissing`）；10-24 遷移從 pyfix 抽出 |
+| `agent/pyfix/`（多一個 `agent/`） | 把改 Python 的事交給子 agent pyfix-agent：`_entry`（dir 檢查、備份 `before/`、叫 `agent_tool`、印答案＋實際 diff；`PYFIX_DIR`、`PYTHONDONTWRITEBYTECODE` 往下帶）；`agent/` 是 agent-dan 範本（`act.py` 工具一律 `aos-exec --ws $PYFIX_DIR`、工具退非 0 回給腦；`tools/` 是 `../../../../base/` 的 ls、read、write、edit、bash 五條捷徑；`system.txt` 照新工具名）；來源 agent-eve |
+| `agent/cli_session.py` | 不是工具：claude／codex CLI 接成工具的做法（畫面沒開＝非互動續同一段對話；開著＝tmux 貼字、等 hook）；`call_main(工具資料夾)`、`attach_main(argv, agent 資料夾)`、`hook`；工具叫的錯照 lib 契約、attach 的錯 `cli_session:`；來源 agent-fay |
+| `agent/claude`、`codex` | `_entry`（stdin `{"prompt"}` → 回答；從上一層或掛它的 agent 根找 `cli_session.py`）、`tool.json`、`cli.json`（旗標：claude 只給 Read／Glob／Grep、sonnet、每次 0.5 美元；codex 唯讀沙盒）、`_metainfo`；來源 agent-fay |
 
-測試：`proto8/tests/test_lib.py`（形狀檢查跑過每個工具、base 的行為、demo/agent-liv 經捷徑跑一題）、`test_pi_tools.py`、`test_file_tools.py`（原 pi-tools、file-tools 的案例，改指 `lib/base`）。
+測試：`proto8/tests/test_lib.py`（形狀檢查跑過三層每個工具、base 的行為、demo/agent-liv 經捷徑跑一題）、`test_pi_tools.py`、`test_file_tools.py`（原 pi-tools、file-tools 的案例，改指 `lib/base`）；aos、agent 兩層的行為在原本那幾份（`test_meg`、`test_talk`、`test_ai_tools`、`test_self_improve`、`test_eve`、`test_fay`）。

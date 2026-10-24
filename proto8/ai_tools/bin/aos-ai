@@ -21,6 +21,7 @@ IMPLS = ("aos-exec", "aos-loop", "aos-fsm", "aos-daemon", "aos-directive")
 BIN_DIRS = [PROTO8 / "impls" / n / "bin" for n in IMPLS + ("aos-json",)] + [PROTO8 / "bin", HERE]
 sys.path.insert(0, str(HERE))
 import aos_ai_make as mk, aos_ai_explain as ex  # noqa: E402
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path.insert(0, str(PROTO8 / "lib" / "aos"))
 import aos_ws  # noqa: E402  放題、等答案、讀 stack：跟 proto8/human 共用一份（lib/aos/aos_ws.py，10-24 遷移）
 NAME_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}\Z")

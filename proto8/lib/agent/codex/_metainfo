@@ -1,0 +1,8 @@
+{"summary": "把一句話交給 codex CLI 做、回它的回答（同一段對話續著講）",
+ "time_ms": {"val": 30000, "max": 600000},
+ "resource": ["cpu", "llm"],
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": false,
+ "interrupt": "unsafe",
+ "parallel": false}

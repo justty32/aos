@@ -1,4 +1,8 @@
 # act.py - act 格：照腦的決定動手——有 tool_calls 就逐個 aos-exec tools/<名>、結果接回 history；沒有就把 content 寫成答案（照抄 agent-dan，只改錯誤訊息開頭的名字）
+# 跟 agent-dan 差兩條（10-24 遷移：tools/ 改掛 proto8/lib/base 的 ls、read、write、edit、bash）：
+#   ① 工具一律 `aos-exec --ws $PYFIX_DIR tools/<名>`——庫的工具只碰 $AOS_WS，這隻要改的程式在 PYFIX_DIR（pyfix 給的），
+#      自己的 $AOS_WS 是收題交答案的小格；沒設 PYFIX_DIR＝DirMissing 停下。
+#   ② 工具退非 0 回給腦、不停（同 agent-pip；遷移前子工具「模型的錯」印「錯誤：…」退 0，庫的工具一律退 1，停不停由 agent 決定）。
 # 工具的介面：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的 stack＝$AOS_STACK/<名>/（P-17）。
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。任何錯：stderr 一行、退 1、history 不接（P-20）。
 import json, os, shutil, subprocess, sys
@@ -37,6 +41,9 @@ def append(message):
 
 calls = said.get("tool_calls") or []
 if calls:
+    code_dir = os.environ.get("PYFIX_DIR")
+    if not code_dir or not os.path.isdir(code_dir):
+        die("DirMissing", "沒設定 PYFIX_DIR 或不是資料夾（要改的程式在哪）")
     answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
     tools = sorted(t for t in (os.listdir("tools") if os.path.isdir("tools") else [])
                    if os.path.isfile(os.path.join("tools", t, "tool.json")))
@@ -57,13 +64,15 @@ if calls:
             die("ArgumentsBad", "%s：%s" % (name, e))
         env = dict(os.environ, AOS_STACK=os.path.join(stack, name) + "/")
         try:
-            r = subprocess.run(["aos-exec", "tools/" + name], input=arguments, stdout=subprocess.PIPE,
+            r = subprocess.run(["aos-exec", "--ws", code_dir, "tools/" + name], input=arguments, stdout=subprocess.PIPE,
                                text=True, env=env)      # stderr 不吞：工具自己的錯原樣往上
         except OSError as e:
             die("ToolFailed", "%s 起不來：%s" % (name, e))
-        if r.returncode != 0:
-            die("ToolFailed", "%s 結束碼 %d" % (name, r.returncode))
-        append({"role": "tool", "tool_call_id": cid, "content": r.stdout})
+        content = r.stdout
+        if r.returncode != 0:           # 回給腦、不停；人在 stderr 看得到
+            print("pyfix-agent: ToolFailed %s 結束碼 %d（回給腦）" % (name, r.returncode), file=sys.stderr)
+            content += "%s(工具 %s 結束碼 %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
+        append({"role": "tool", "tool_call_id": cid, "content": content})
     sys.exit(0)
 
 # 沒有 tool_calls：content 就是答案，寫 $AOS_WS/out/<題名>、題目 cur/ → done/

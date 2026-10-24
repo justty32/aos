@@ -1,0 +1,8 @@
+{"summary": "把一件改 Python 的事交給子 agent，回它的報告與實際 diff",
+ "time_ms": {"val": 120000, "max": 1800000},
+ "resource": ["cpu", "llm"],
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": false,
+ "interrupt": "unsafe",
+ "parallel": false}

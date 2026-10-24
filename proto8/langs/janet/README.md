@@ -1,5 +1,7 @@
 # proto8/langs/janet：用 Janet 寫 aos 程式
 
+← [proto8/langs](../README.md)｜[proto8](../../README.md)
+
 `aos-janet - 把一份 Janet 寫的 aos 程式編成資料夾（_entry、loop.json、fsm.json…）`（NAME，C-54 R1）
 
 **一句話：與其一個個 mkdir、vim 堆出一整套資料夾，不如用 Janet 寫一段、`aos-janet` 把它生成出來**（C-43，使用者 10-19「不如直接用lua/lisp生成這麼一套資料夾佈局」；10-24「我想試試看janet編譯成這套」）。

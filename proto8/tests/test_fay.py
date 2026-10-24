@@ -119,7 +119,7 @@ class Fay(unittest.TestCase):
         subprocess.run(["tmux", "-S", str(sock), "kill-server"], capture_output=True)
 
     def codes(self, stderr):
-        return re.findall(r"^cli_session: ([A-Z][A-Za-z]+) ", stderr, re.M)
+        return re.findall(r"^(?:cli_session|claude|codex): ([A-Z][A-Za-z]+) ", stderr, re.M)   # 工具叫的錯開頭是工具名（10-24 遷移進 lib/agent）
 
     # ------------------------------------------------------------ 非互動
 
@@ -158,7 +158,9 @@ class Fay(unittest.TestCase):
 
     def test_errors(self):
         r = self.tool("claude", {"text": "沒有 prompt"})
-        self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["PromptBad"]))
+        self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["ArgumentsBad"]))   # 10-24 遷移前叫 PromptBad
+        self.assertEqual(r.stdout.strip(), r.stderr.strip())                            # lib 契約：stdout 也有同一行
+        self.assertTrue(r.stderr.startswith("claude: ArgumentsBad "), r.stderr)
         r = self.tool("claude", {"prompt": "boom"})
         self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["CliFailed"]))
         self.assertFalse((self.stack / "claude" / "session.txt").exists())   # 失敗不記 id，下次重開

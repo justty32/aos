@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # attach - 接進 agent-fay 某個 CLI 工具（claude／codex）的互動畫面；Ctrl-\ 跳出、畫面留在背景，agent 之後照樣用
 # 用法（在工作區裡，或 --ws 指工作區）：attach claude｜attach -d codex（只開不接）｜attach（列出各工具狀態）
-# 畫面跑在 tmux 裡，socket 是小格的 tty.sock（$AOS_STACK 沒設＝<工作區>/.stack/<工具名>/）；做法在 cli_session.py。
+# 畫面跑在 tmux 裡，socket 是小格的 tty.sock（$AOS_STACK 沒設＝<工作區>/.stack/<工具名>/）；做法在 cli_session.py（捷徑 → proto8/lib/agent/cli_session.py，10-24 遷移）。
 import os, sys
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import cli_session  # noqa: E402
-cli_session.attach_main(sys.argv[1:])
+cli_session.attach_main(sys.argv[1:], os.path.dirname(os.path.abspath(__file__)))   # 列這隻 agent 的 tools/

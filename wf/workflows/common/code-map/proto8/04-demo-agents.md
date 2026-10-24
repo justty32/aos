@@ -11,9 +11,7 @@ agent 當工具：主 agent 照抄 agent-dan，唯一的工具 `pyfix` 是另一
 | `_entry`、`loop.json`、`idle/`、`brain.py`、`act.py` | 同 agent-dan |
 | `fsm.json` | 同 agent-dan，act 逾時放寬到 30 分鐘（等子 agent） |
 | `.env`、`system.txt` | 模型名（會往下傳，但子 agent 用自己的）；人格：改 Python 交給 pyfix、task 寫清楚、回答前看 diff |
-| `tools/pyfix/tool.json`、`_entry` | 給腦看：`task`（必填）、`dir`；轉接（python3）：每次開新小格 `runs/NNN/`（`ws/`、`stack/`、備份 `before/`）、task 寫進子 agent 的 `new/task.txt`、`aos-exec --dotenv-override` 叫它、印 `out/task.txt`＋實際 diff；錯 `AgentFailed`、`AnswerMissing`、`DirBad`… |
-| `tools/pyfix/agent/` | 子 agent pyfix-agent：agent-dan 範本（錯誤開頭 `pyfix-agent`），自己的 `system.txt`、`.env`（`--dotenv-override` 蓋過外層模型）、`loop.json` max 60、think 180 秒／act 300 秒 |
-| `tools/pyfix/agent/tools/*` | `list_files`、`read_file`、`write_file`、`edit_file`、`run_python`，只碰 `$PYFIX_DIR`（沒設＝`DirMissing`） |
+| `tools/pyfix` | 符號連結 → `../../../lib/agent/pyfix`（10-24 遷移；轉接、子 agent pyfix-agent、它掛的 lib/base 工具都在庫裡，見 [09-lib](09-lib.md)） |
 
 ### agent-fay
 
@@ -25,9 +23,9 @@ claude／codex CLI 當工具，人可以 `attach` 接進同一段對話。[think
 | `fsm.json` | act 逾時 15 分鐘 |
 | `brain.py` | 同 agent-dan，假腦改成把題目原樣交給 `claude` 工具 |
 | `system.txt` | 腦有 claude、codex 兩個幫手，看檔或判斷程式就交代給它們 |
-| `cli_session.py` | 共用做法：畫面沒開＝非互動（`claude -p --resume`／`codex exec resume`）；畫面開著＝tmux 貼字、等 hook 寫 `turns.jsonl`；小格放 `session.txt`、`tty.sock`、`lock`…；錯 `cli_session: 代號`（`SessionBad`、`CliMissing`…） |
-| `attach` | 人用的入口（python3、沒副檔名）：`attach claude`／`attach -d codex`／`attach` 列狀態；Ctrl-\ 跳出、畫面留著 |
-| `tools/claude/`、`tools/codex/` | `_entry`（stdin `{"prompt"}` → 回答，叫 `cli_session`）、`tool.json`、`cli.json`（旗標：claude 只給 Read／Glob／Grep、sonnet、每次 0.5 美元；codex 唯讀沙盒） |
+| `cli_session.py` | 符號連結 → `../../lib/agent/cli_session.py`（10-24 遷移；給 `attach` import，做法見 [09-lib](09-lib.md)） |
+| `attach` | 人用的入口（python3、沒副檔名）：`attach claude`／`attach -d codex`／`attach` 列狀態；Ctrl-\ 跳出、畫面留著；把自己的資料夾傳給 `cli_session.attach_main` 列 `tools/` |
+| `tools/claude`、`tools/codex` | 符號連結 → `../../../lib/agent/<名>`（10-24 遷移） |
 
 ### agent-gus
 

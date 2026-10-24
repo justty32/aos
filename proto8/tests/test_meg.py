@@ -191,6 +191,7 @@ class T(unittest.TestCase):
     def test_context_budget(self):
         """偏好多到超過上限：只附一部分、說還有。"""
         sys.path.insert(0, str(MEG / "tools" / "memory"))
+        sys.dont_write_bytecode = True                   # tools/memory 是捷徑 → lib/aos/memory：不在庫裡留 __pycache__
         import heap
         h = heap.Heap(str(self.heap))
         for i in range(30):

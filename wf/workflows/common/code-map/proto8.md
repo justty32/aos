@@ -25,7 +25,7 @@
 
 ### `proto8/tests/`
 
-逐字下放到 [proto8/02-tests](proto8/02-tests.md)（2026-10-21 晚，本檔超過 8 KB）；10-24 新增的測試檔在 [proto8/08-tests-10-24](proto8/08-tests-10-24.md)（10-24 收尾實跑全部 452 個，5 個 skip）。每個測試檔涵蓋什麼、幾個；共 248 個（10-23 改跑 C++ 版後 233，加 `test_dan.py` 14；10-24 `test_fsm.py` 的「物件＝表壞」換成兩案：物件＝內嵌單子、形狀壞＝自己的錯），`python3 -m unittest discover -s proto8/tests`（先建 impls）。
+逐字下放到 [proto8/02-tests](proto8/02-tests.md)（2026-10-21 晚，本檔超過 8 KB）；10-24 新增的測試檔在 [proto8/08-tests-10-24](proto8/08-tests-10-24.md)（10-24 收尾實跑全部 452 個，5 個 skip；同日函式庫遷移後 453 個）。每個測試檔涵蓋什麼、幾個；共 248 個（10-23 改跑 C++ 版後 233，加 `test_dan.py` 14；10-24 `test_fsm.py` 的「物件＝表壞」換成兩案：物件＝內嵌單子、形狀壞＝自己的錯），`python3 -m unittest discover -s proto8/tests`（先建 impls）。
 
 ### `proto8/impls/` 與舊 lib
 

@@ -7,6 +7,7 @@ import json, os, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "bin"))
 import aos_flags  # noqa: E402  旗標規則同 aos-exec（proto8/bin/aos_flags.py）
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "lib", "aos"))
 import aos_ws  # noqa: E402  放題、等答案、讀 stack：跟 aos-ai 共用一份（proto8/lib/aos/aos_ws.py，10-24 遷移）
 from aos_ws import STAGES, Error, names, where, read, new_name  # noqa: E402,F401  三支 CLI 照舊用 h.names、h.Error…
