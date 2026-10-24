@@ -1,0 +1,113 @@
+#!/usr/bin/env python3
+# edit - 在工作區裡一個檔做一處或幾處「整段原文照字面換掉」，一處不合就整個不改
+# 介面（lib/README 的契約）：stdin 收 {"path", "edits": [{"old_text", "new_text"}]}；stdout 一行說換了幾處；
+# 規則同 pi：每個 old_text 都拿改之前的原檔比、要剛好出現一次、彼此不重疊、不能空；改完跟原本一樣也算錯；
+# 全有或全無；CRLF 的檔照 LF 比、寫回時還原；不做模糊比對。路徑從 $AOS_WS 算、不能跑出去；
+# 錯：stderr 與 stdout 各一行「edit: 代號 原因」、退 1。來源：demo/pi-tools/edit（10-24）。
+import json, os, sys
+
+NAME = "edit"
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def workspace():
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+    return os.path.realpath(ws)
+
+
+def arguments():
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments 要是物件")
+    return a
+
+
+def inside(root, rel):
+    p = os.path.realpath(os.path.join(root, rel))
+    if os.path.commonpath([root, p]) != root:
+        die("PathBad", "%s 在工作區外面" % rel)
+    return p
+
+
+root = workspace()
+args = arguments()
+if not isinstance(args.get("path"), str) or not args["path"]:
+    die("ArgumentsBad", "缺 path（要一個字串）")
+edits = args.get("edits")
+if not isinstance(edits, list) or not edits:
+    die("ArgumentsBad", "edits 要是至少一項的陣列")
+for i, e in enumerate(edits):
+    if not isinstance(e, dict) or not isinstance(e.get("old_text"), str) or not isinstance(e.get("new_text"), str):
+        die("ArgumentsBad", "edits[%d] 要有 old_text、new_text 兩個字串" % i)
+    if not e["old_text"]:
+        die("TextBad", "edits[%d].old_text 是空的" % i)
+
+name = args["path"]
+path = inside(root, name)
+if not os.path.isfile(path):
+    die("FileMissing", "%s（新檔用 write）" % name)
+try:
+    with open(path, "rb") as f:
+        raw = f.read()
+except OSError as e:
+    die("ReadFailed", "%s：%s" % (name, e.strerror))
+try:
+    text = raw.decode("utf-8")
+except UnicodeDecodeError:
+    die("FileBad", "%s 不是 UTF-8 文字檔" % name)
+crlf = "\r\n" in text
+base = text.replace("\r\n", "\n")
+
+spans = []                                      # (起點, 終點, 第幾項, new_text)
+for i, e in enumerate(edits):
+    old = e["old_text"].replace("\r\n", "\n")
+    count = base.count(old)
+    which = "old_text" if len(edits) == 1 else "edits[%d].old_text" % i
+    if count == 0:
+        die("TextMissing", "%s 在 %s 裡找不到（要跟原檔一字不差，含空白與換行）" % (which, name))
+    if count > 1:
+        die("TextBad", "%s 在 %s 裡出現 %d 次，要剛好一次——多帶幾行前後文讓它唯一" % (which, name, count))
+    at = base.index(old)
+    spans.append((at, at + len(old), i, e["new_text"].replace("\r\n", "\n")))
+spans.sort()
+for a, b in zip(spans, spans[1:]):
+    if a[1] > b[0]:
+        die("TextBad", "edits[%d] 和 edits[%d] 重疊了——合成一項" % (a[2], b[2]))
+
+out, pos = [], 0
+for start, end, _, new in spans:
+    out.append(base[pos:start])
+    out.append(new)
+    pos = end
+out.append(base[pos:])
+result = "".join(out)
+if result == base:
+    die("TextBad", "%s 改完跟原本一樣" % name)
+if crlf:
+    result = result.replace("\n", "\r\n")
+
+tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".tmp")   # N-05
+try:
+    with open(tmp, "wb") as f:
+        f.write(result.encode("utf-8"))
+    os.chmod(tmp, os.stat(path).st_mode & 0o7777)
+    os.replace(tmp, path)
+except OSError as e:
+    try:
+        os.unlink(tmp)
+    except OSError:
+        pass
+    die("WriteFailed", "%s：%s" % (name, e.strerror))
+first = base[:spans[0][0]].count("\n") + 1
+print("已在 %s 換掉 %d 處（第一處在第 %d 行）" % (name, len(spans), first))

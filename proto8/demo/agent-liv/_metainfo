@@ -1,0 +1,10 @@
+{"summary": "回答工作區 new/ 裡的題目；會問腦、用函式庫的檔案／JSON／bash 工具動工作區",
+ "time_ms": {"val": 30000, "max": 600000},
+ "resource": ["llm", "cpu", "disk"],
+ "llm_calls": {"val": 3, "max": 40},
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": false,
+ "interrupt": "resumable",
+ "parallel": true,
+ "lock": [{"$env": "AOS_WS", "$prefix": "ws:"}]}

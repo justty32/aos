@@ -1,0 +1,8 @@
+{"summary": "把整份內容寫進工作區裡一個檔（建或整份蓋掉）",
+ "time_ms": {"val": 30, "max": 2000},
+ "resource": "disk",
+ "side_effect": true,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true}

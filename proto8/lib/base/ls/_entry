@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+# ls - 列工作區裡一個資料夾的子項，一次一頁、回 JSON
+# 介面（lib/README 的契約）：stdin 收 {"path"?: ".", "offset"?: 0, "limit"?: 100, "hidden"?: false}；
+# stdout 一份 JSON {"path", "total", "items": [{"name", "type"(file／dir／link), "size"?, "mtime", "link_to"?}], "next_offset"?, "hidden"?}
+# 資料夾在前、照名字排；. 開頭的預設不列（數目放 hidden）；還有就給 next_offset。路徑從 $AOS_WS 算、不能跑出去。
+# 錯：stderr 與 stdout 各一行「ls: 代號 原因」、退 1。（demo/file-tools/ls 是它的加料版：多 aos 記號與 JSON 頂層 key）
+import json, os, sys, time
+
+NAME = "ls"
+LIMIT_DEFAULT, LIMIT_MAX = 100, 500
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def workspace():
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+    return os.path.realpath(ws)
+
+
+def arguments():
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments 要是物件")
+    return a
+
+
+def inside(root, rel):
+    p = os.path.realpath(os.path.join(root, rel))
+    if os.path.commonpath([root, p]) != root:
+        die("PathBad", "%s 在工作區外面" % rel)
+    return p
+
+
+def iso(t):
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(t)) + ".%03d+00:00" % int((t % 1) * 1000)
+
+
+root = workspace()
+args = arguments()
+rel = args.get("path", ".")
+offset, limit, hidden = args.get("offset", 0), args.get("limit", LIMIT_DEFAULT), args.get("hidden", False)
+if not isinstance(rel, str) or not rel:
+    die("ArgumentsBad", "path 要是字串")
+if type(offset) is not int or offset < 0:
+    die("ArgumentsBad", "offset 要是 0 以上的整數")
+if type(limit) is not int or not 0 < limit <= LIMIT_MAX:
+    die("ArgumentsBad", "limit 要是 1～%d 的整數" % LIMIT_MAX)
+if not isinstance(hidden, bool):
+    die("ArgumentsBad", "hidden 要是布林")
+
+d = inside(root, rel)
+if not os.path.exists(d):
+    die("FileMissing", rel)
+if not os.path.isdir(d):
+    die("FileBad", "%s 不是資料夾，看檔用 read" % rel)
+try:
+    names = os.listdir(d)
+except OSError as e:
+    die("ReadFailed", "%s：%s" % (rel, e.strerror))
+dots = [n for n in names if n.startswith(".")]
+if not hidden:
+    names = [n for n in names if not n.startswith(".")]
+names.sort(key=lambda n: (not os.path.isdir(os.path.join(d, n)), n))
+
+
+def item(n):
+    p = os.path.join(d, n)
+    it = {"name": n}
+    try:
+        st = os.lstat(p)
+    except OSError:
+        it["type"] = "missing"
+        return it
+    if os.path.islink(p):
+        it["type"] = "link"
+        target = os.path.realpath(p)
+        it["link_to"] = os.path.relpath(target, root) if os.path.commonpath([root, target]) == root else "(工作區外)"
+    elif os.path.isdir(p):
+        it["type"] = "dir"
+    else:
+        it["type"] = "file"
+        it["size"] = st.st_size
+    it["mtime"] = iso(st.st_mtime)
+    return it
+
+
+page = names[offset:offset + limit]
+shown = os.path.relpath(d, root) if d != root else "."
+res = {"path": shown, "total": len(names), "items": [item(n) for n in page]}
+if offset + limit < len(names):
+    res["next_offset"] = offset + limit
+if not hidden and dots:
+    res["hidden"] = len(dots)
+print(json.dumps(res, ensure_ascii=False))

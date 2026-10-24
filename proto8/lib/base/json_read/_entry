@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+# json_read - 看工作區裡一份 JSON 檔的某個位置，一次只展開幾層、大的摺起來，讓腦一層層往下找
+# 介面（lib/README 的契約）：stdin 收 {"path", "pointer"?: "", "depth"?: 1}；stdout 一份 JSON {"path", "pointer", "value"}：
+# value 超過 depth 層的物件摺成 {"type": "object", "keys": [最多 20 個]}、陣列摺成 {"type": "array", "len": N}、
+# 長字串摺成 {"type": "string", "len": N, "head": 前 100 字}；其餘照原樣。pointer 照 RFC 6901（整份是空字串）。
+# 錯：stderr 與 stdout 各一行「json_read: 代號 原因」、退 1。（impls/aos-json 的 peek 是同一件事的 C++ 版，做好後可換）
+import json, os, sys
+
+NAME = "json_read"
+DEPTH_MAX, KEYS_MAX, STR_MAX, HEAD = 10, 20, 500, 100
+SIZE_MAX = 4 * 1024 * 1024
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def workspace():
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+    return os.path.realpath(ws)
+
+
+def arguments():
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments 要是物件")
+    return a
+
+
+def inside(root, rel):
+    p = os.path.realpath(os.path.join(root, rel))
+    if os.path.commonpath([root, p]) != root:
+        die("PathBad", "%s 在工作區外面" % rel)
+    return p
+
+
+def walk(doc, pointer):
+    """照 RFC 6901 走到 pointer 指的值；格式錯＝PointerBad、指不到＝PointerMissing。"""
+    if pointer == "":
+        return doc
+    if not pointer.startswith("/"):
+        die("PointerBad", "指標要以 / 開頭（整份是空字串）：%s" % pointer)
+    here = doc
+    for raw in pointer[1:].split("/"):
+        key = raw.replace("~1", "/").replace("~0", "~")
+        if isinstance(here, dict):
+            if key not in here:
+                die("PointerMissing", "%s：沒有 %s 這個 key" % (pointer, key))
+            here = here[key]
+        elif isinstance(here, list):
+            if not key.isdigit() or int(key) >= len(here):
+                die("PointerMissing", "%s：陣列沒有第 %s 項（共 %d 項）" % (pointer, key, len(here)))
+            here = here[int(key)]
+        else:
+            die("PointerMissing", "%s：%s 底下不是物件也不是陣列" % (pointer, key))
+    return here
+
+
+def fold(v, depth):
+    if isinstance(v, dict):
+        if depth <= 0:
+            keys = list(v)
+            res = {"type": "object", "keys": keys[:KEYS_MAX]}
+            if len(keys) > KEYS_MAX:
+                res["keys_more"] = len(keys) - KEYS_MAX
+            return res
+        return {k: fold(x, depth - 1) for k, x in v.items()}
+    if isinstance(v, list):
+        if depth <= 0:
+            return {"type": "array", "len": len(v)}
+        return [fold(x, depth - 1) for x in v]
+    if isinstance(v, str) and len(v) > STR_MAX:
+        return {"type": "string", "len": len(v), "head": v[:HEAD]}
+    return v
+
+
+root = workspace()
+args = arguments()
+if not isinstance(args.get("path"), str) or not args["path"]:
+    die("ArgumentsBad", "缺 path（要一個字串）")
+pointer, depth = args.get("pointer", ""), args.get("depth", 1)
+if not isinstance(pointer, str):
+    die("ArgumentsBad", "pointer 要是字串")
+if type(depth) is not int or not 1 <= depth <= DEPTH_MAX:
+    die("ArgumentsBad", "depth 要是 1～%d 的整數" % DEPTH_MAX)
+
+path = inside(root, args["path"])
+if not os.path.exists(path):
+    die("FileMissing", args["path"])
+if os.path.isdir(path):
+    die("FileBad", "%s 是資料夾" % args["path"])
+if os.path.getsize(path) > SIZE_MAX:
+    die("FileBad", "%s 超過 %dMB" % (args["path"], SIZE_MAX // (1024 * 1024)))
+try:
+    with open(path, encoding="utf-8") as f:
+        doc = json.load(f)
+except OSError as e:
+    die("ReadFailed", "%s：%s" % (args["path"], e.strerror))
+except (ValueError, UnicodeDecodeError) as e:
+    die("FileBad", "%s 不是 JSON：%s" % (args["path"], e))
+value = walk(doc, pointer)
+print(json.dumps({"path": args["path"], "pointer": pointer, "value": fold(value, depth)}, ensure_ascii=False))

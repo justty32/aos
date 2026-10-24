@@ -1,0 +1,8 @@
+{"summary": "列工作區裡一個資料夾的子項，一次一頁、回 JSON",
+ "time_ms": {"val": 30, "max": 2000},
+ "resource": "disk",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true}

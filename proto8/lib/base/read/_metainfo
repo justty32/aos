@@ -1,0 +1,8 @@
+{"summary": "讀工作區裡一個文字檔，太長從頭截",
+ "time_ms": {"val": 30, "max": 2000},
+ "resource": "disk",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true}

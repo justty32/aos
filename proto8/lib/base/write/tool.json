@@ -1,0 +1,5 @@
+{"description": "把整份內容寫進工作區裡一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建。只用在新檔或整份重寫；改一小段用 edit。路徑從工作區算，不能出工作區。",
+ "parameters": {"type": "object",
+                "properties": {"path": {"type": "string", "description": "要寫的檔，從工作區算的相對路徑"},
+                               "content": {"type": "string", "description": "檔案的完整內容"}},
+                "required": ["path", "content"]}}

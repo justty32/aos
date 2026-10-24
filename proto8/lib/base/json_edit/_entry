@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+# json_edit - 照 JSON 指標改工作區裡一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫
+# 介面（lib/README 的契約）：stdin 收 {"path", "set"?: {指標: 新值}, "del"?: [指標]}；先照順序做 set、再做 del；
+# set 的指標中間缺的物件層自動建，陣列用 "-" 接在尾巴、數字要是既有的那一項；del 的指標一定要指得到。
+# stdout 一份 JSON {"path", "set": 幾個, "del": 幾個, "top": 改完頂層的 key（或 type）}。寫檔先寫 . 開頭的暫存檔再改名（N-05），
+# 排版會換成這個工具的排版（縮排 1 格、不轉 ASCII）。錯：stderr 與 stdout 各一行「json_edit: 代號 原因」、退 1。
+# （demo/file-tools/json_edit 同形；impls/aos-json 的 set／batch／del 是 C++ 版、只重寫有變的那一塊，做好後可換）
+import json, os, sys
+
+NAME = "json_edit"
+SIZE_MAX = 4 * 1024 * 1024
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def workspace():
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+    return os.path.realpath(ws)
+
+
+def arguments():
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments 要是物件")
+    return a
+
+
+def inside(root, rel):
+    p = os.path.realpath(os.path.join(root, rel))
+    if os.path.commonpath([root, p]) != root:
+        die("PathBad", "%s 在工作區外面" % rel)
+    return p
+
+
+def parts(pointer):
+    if pointer == "":
+        die("PointerBad", "不能改整份（指標是空字串）；要整份重寫用 write")
+    if not pointer.startswith("/"):
+        die("PointerBad", "指標要以 / 開頭：%s" % pointer)
+    return [raw.replace("~1", "/").replace("~0", "~") for raw in pointer[1:].split("/")]
+
+
+def step(here, key, pointer, make):
+    """走一層；make＝缺的物件層自動建（set 用）。回 (容器, 正規化後的 key) 給最後一層用，中途回下一層。"""
+    if isinstance(here, dict):
+        if key not in here:
+            if not make:
+                die("PointerMissing", "%s：沒有 %s 這個 key" % (pointer, key))
+            here[key] = {}
+        return here[key]
+    if isinstance(here, list):
+        if not key.isdigit() or int(key) >= len(here):
+            die("PointerMissing", "%s：陣列沒有第 %s 項（共 %d 項）" % (pointer, key, len(here)))
+        return here[int(key)]
+    die("PointerMissing", "%s：%s 底下不是物件也不是陣列" % (pointer, key))
+
+
+def do_set(doc, pointer, value):
+    keys = parts(pointer)
+    here = doc
+    for key in keys[:-1]:
+        here = step(here, key, pointer, make=True)
+    last = keys[-1]
+    if isinstance(here, dict):
+        here[last] = value
+    elif isinstance(here, list):
+        if last == "-":
+            here.append(value)
+        elif last.isdigit() and int(last) < len(here):
+            here[int(last)] = value
+        else:
+            die("PointerMissing", "%s：陣列沒有第 %s 項（共 %d 項；接在尾巴寫 -）" % (pointer, last, len(here)))
+    else:
+        die("PointerMissing", "%s：上一層不是物件也不是陣列" % pointer)
+
+
+def do_del(doc, pointer):
+    keys = parts(pointer)
+    here = doc
+    for key in keys[:-1]:
+        here = step(here, key, pointer, make=False)
+    last = keys[-1]
+    if isinstance(here, dict) and last in here:
+        del here[last]
+    elif isinstance(here, list) and last.isdigit() and int(last) < len(here):
+        del here[int(last)]
+    else:
+        die("PointerMissing", "%s：指不到" % pointer)
+
+
+root = workspace()
+args = arguments()
+if not isinstance(args.get("path"), str) or not args["path"]:
+    die("ArgumentsBad", "缺 path（要一個字串）")
+sets, dels = args.get("set", {}), args.get("del", [])
+if not isinstance(sets, dict) or not all(isinstance(k, str) for k in sets):
+    die("ArgumentsBad", "set 要是 {指標: 新值} 的物件")
+if not isinstance(dels, list) or not all(isinstance(k, str) for k in dels):
+    die("ArgumentsBad", "del 要是指標的陣列")
+if not sets and not dels:
+    die("ArgumentsBad", "set 與 del 至少要有一個")
+
+path = inside(root, args["path"])
+if not os.path.exists(path):
+    die("FileMissing", "%s（新檔用 write）" % args["path"])
+if os.path.isdir(path):
+    die("FileBad", "%s 是資料夾" % args["path"])
+if os.path.getsize(path) > SIZE_MAX:
+    die("FileBad", "%s 超過 %dMB" % (args["path"], SIZE_MAX // (1024 * 1024)))
+try:
+    with open(path, encoding="utf-8") as f:
+        doc = json.load(f)
+except OSError as e:
+    die("ReadFailed", "%s：%s" % (args["path"], e.strerror))
+except (ValueError, UnicodeDecodeError) as e:
+    die("FileBad", "%s 不是 JSON：%s" % (args["path"], e))
+if not isinstance(doc, (dict, list)):
+    die("FileBad", "%s 頂層不是物件也不是陣列，改不了裡面" % args["path"])
+
+for pointer, value in sets.items():          # 全部先在記憶體裡做完，哪一處錯都不寫檔
+    do_set(doc, pointer, value)
+for pointer in dels:
+    do_del(doc, pointer)
+
+tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".tmp")   # N-05
+try:
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(doc, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+    os.chmod(tmp, os.stat(path).st_mode & 0o7777)
+    os.replace(tmp, path)
+except OSError as e:
+    try:
+        os.unlink(tmp)
+    except OSError:
+        pass
+    die("WriteFailed", "%s：%s" % (args["path"], e.strerror))
+top = list(doc)[:20] if isinstance(doc, dict) else {"type": "array", "len": len(doc)}
+print(json.dumps({"path": args["path"], "set": len(sets), "del": len(dels), "top": top}, ensure_ascii=False))

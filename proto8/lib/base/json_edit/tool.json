@@ -1,0 +1,6 @@
+{"description": "照 JSON 指標改工作區裡一份 JSON 檔（改 JSON 優先用這個，不用整份重寫）：set 是 {指標: 新值}（值直接給 JSON，字串、數字、物件、陣列都行；中間缺的物件層自動建；陣列尾巴接用 -），del 是要刪的指標陣列。先用 json_read 一層層找到位置再改。全部先檢查，一處不合就整份不改。",
+ "parameters": {"type": "object",
+                "properties": {"path": {"type": "string", "description": "JSON 檔，從工作區算的相對路徑"},
+                               "set": {"type": "object", "description": "指標 → 新值，例：{\"/states/act/next\": \"idle\", \"/max\": 20}"},
+                               "del": {"type": "array", "items": {"type": "string"}, "description": "要刪的指標，例：[\"/old_key\"]"}},
+                "required": ["path"]}}

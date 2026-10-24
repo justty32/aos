@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+# bash - 在工作區裡用 bash 跑一行指令，回 stdout＋stderr 合在一起的輸出
+# 介面（lib/README 的契約）：stdin 收 {"command", "timeout_s"?}；stdout 印輸出（太長留最後 2000 行或 50KB）；
+# 指令退非 0 不算這個工具的錯（結果尾巴寫結束碼，腦自己看）；逾時（預設 30 秒、上限 300）＝整群先 TERM、2 秒後 KILL、算錯。
+# 這個工具被外面 TERM 時也先停掉指令那一群再走。指令本身碰得到工作區外面——路徑檢查只在 read／write／edit。
+# 錯：stderr 與 stdout 各一行「bash: 代號 原因」、退 1。來源：demo/pi-tools/bash（10-24；參數 timeout 改名 timeout_s，C-54 單位放字尾）。
+import json, os, signal, subprocess, sys, tempfile
+
+NAME = "bash"
+MAX_LINES, MAX_BYTES = 2000, 50 * 1024
+TIMEOUT_DEFAULT, TIMEOUT_MAX = 30, 300      # 秒
+GRACE = 2                                   # TERM 之後等幾秒才 KILL
+
+
+def die(code, reason, before=""):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    sys.stdout.write(before + line + "\n")      # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def workspace():
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+    return os.path.realpath(ws)
+
+
+def arguments():
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments 要是物件")
+    return a
+
+
+root = workspace()
+args = arguments()
+if not isinstance(args.get("command"), str) or not args["command"].strip():
+    die("ArgumentsBad", "缺 command（要一個字串）")
+timeout = args.get("timeout_s", TIMEOUT_DEFAULT)
+if type(timeout) not in (int, float) or not 0 < timeout <= TIMEOUT_MAX:
+    die("ArgumentsBad", "timeout_s 要是 0 到 %d 之間的秒數" % TIMEOUT_MAX)
+
+
+def tail(f):
+    """從暫存檔讀出最後 2000 行／50KB；回 (文字, 截掉的說明或 None)。"""
+    size = f.seek(0, os.SEEK_END)
+    f.seek(max(0, size - MAX_BYTES))
+    data = f.read()
+    cut = size > MAX_BYTES
+    text = data.decode("utf-8", "replace")
+    if cut and "\n" in text:
+        text = text[text.index("\n") + 1:]      # 去掉被切一半的那行
+    lines = text.split("\n")
+    if text.endswith("\n"):
+        lines.pop()
+    if len(lines) > MAX_LINES:
+        lines = lines[-MAX_LINES:]
+        cut = True
+    note = "[輸出太長，只留最後 %d 行（上限 %d 行或 %dKB）]" % (len(lines), MAX_LINES, MAX_BYTES // 1024) if cut else None
+    return "\n".join(lines), note
+
+
+def stop(p):
+    for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, None)):
+        try:
+            os.killpg(p.pid, sig)
+        except ProcessLookupError:
+            return
+        try:
+            p.wait(wait)
+            return
+        except subprocess.TimeoutExpired:
+            pass
+
+
+with tempfile.TemporaryFile() as out:
+    try:
+        p = subprocess.Popen(["bash", "-c", args["command"]], cwd=root, stdin=subprocess.DEVNULL, stdout=out,
+                             stderr=subprocess.STDOUT, start_new_session=True)   # 自己一群：逾時整群停
+    except OSError as e:
+        die("LaunchFailed", "bash 起不來：%s" % e.strerror)
+
+    def on_term(signum, frame):                 # 外面（act 格逾時）停我時，指令那群不能留下來
+        stop(p)
+        sys.exit(128 + signum)
+    signal.signal(signal.SIGTERM, on_term)
+    signal.signal(signal.SIGINT, on_term)
+
+    try:
+        code = p.wait(timeout)
+        timed_out = False
+    except subprocess.TimeoutExpired:
+        stop(p)
+        timed_out = True
+    text, note = tail(out)
+
+parts = [text] if text else []
+if note:
+    parts.append(note)
+if timed_out:
+    die("CommandFailed", "跑超過 %g 秒，整群停掉了" % timeout, "\n\n".join(parts) + "\n\n" if parts else "")
+if code < 0:
+    parts.append("[被訊號 %d 停掉]" % -code)
+elif code != 0:
+    parts.append("[結束碼 %d]" % code)
+print("\n\n".join(parts) if parts else "(沒有輸出)")
