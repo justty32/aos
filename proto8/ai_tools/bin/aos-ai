@@ -16,11 +16,13 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent               # proto8/ai_tools/bin
 PROTO8 = HERE.parent.parent
 TEMPLATES = PROTO8 / "demo"
-DAN_TOOLS = HERE.parent / "dan_tools"                # 給 agent-dan 掛的工具
+DAN_TOOLS = PROTO8 / "lib" / "aos"                   # 給 agent 掛的工具（--tool）：proto8/lib/aos（10-24 遷移前是 ai_tools/dan_tools）
 IMPLS = ("aos-exec", "aos-loop", "aos-fsm", "aos-daemon", "aos-directive")
 BIN_DIRS = [PROTO8 / "impls" / n / "bin" for n in IMPLS + ("aos-json",)] + [PROTO8 / "bin", HERE]
 sys.path.insert(0, str(HERE))
 import aos_ai_make as mk, aos_ai_explain as ex  # noqa: E402
+sys.path.insert(0, str(PROTO8 / "lib" / "aos"))
+import aos_ws  # noqa: E402  放題、等答案、讀 stack：跟 proto8/human 共用一份（lib/aos/aos_ws.py，10-24 遷移）
 NAME_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}\Z")
 QID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,99}\Z")
 LINE_RE = re.compile(r"([a-z][a-z0-9_-]*): (?:([A-Z][A-Za-z]+) )?(.*)")
@@ -72,17 +74,7 @@ def read_json(path, default=None):
 
 
 def tail_jsonl(path, n):
-    try:
-        lines = [l for l in Path(path).read_text(encoding="utf-8").splitlines() if l.strip()]
-    except OSError:
-        return []
-    rows = []
-    for l in lines[-n:] if n > 0 else []:
-        try:
-            rows.append(json.loads(l))
-        except ValueError:
-            rows.append({"bad_line": l[:200]})
-    return rows
+    return aos_ws.tail_jsonl(str(path), n)
 
 
 def parse_errors(stderr):
@@ -158,13 +150,10 @@ class Agent:
         self.stack = self.ws / ".stack"
 
     def ls(self, d):
-        try:
-            return sorted(n for n in os.listdir(self.ws / d) if not n.startswith("."))
-        except OSError:
-            return []
+        return aos_ws.names(str(self.ws), d)
 
     def qid_used(self, qid):
-        return any((self.ws / d / qid).exists() for d in ("new", "cur", "done", "out"))
+        return bool(aos_ws.where(str(self.ws), qid))
 
 
 # ---------- 背景：一個 root 一個 aos-daemon ----------
@@ -293,10 +282,10 @@ def cmd_ask(root, o, pos):
         raise Fail("QuestionBad", "題名不合：%r" % qid, "只用英數、_ . -")
     if a.qid_used(qid):
         raise Fail("QuestionExists", "題名用過了：%s" % qid, "換個 --id，或不給讓 aos-ai 取")
-    (a.ws / "new").mkdir(parents=True, exist_ok=True)
-    tmp = a.ws / (".ask-" + qid + ".tmp")              # 暫存放 new/ 外面：agent-dan 的 brain.py 連 . 開頭的檔也會撿
-    tmp.write_text(text if text.endswith("\n") else text + "\n", encoding="utf-8")
-    os.replace(tmp, a.ws / "new" / qid)
+    try:                                                # 暫存放 new/ 外面、再 link 進去（aos_ws.put，跟 aos-say 同一份）
+        aos_ws.put(str(a.ws), text, qid, tag="ask")
+    except aos_ws.Error:
+        raise Fail("QuestionExists", "題名剛好被用了：%s" % qid, "換個 --id，或不給讓 aos-ai 取")
     out({"ok": True, "name": a.name, "id": qid, "path": str(a.ws / "new" / qid),
          "next": "aos-ai run %s（前景跑完）或 aos-ai start %s（背景）" % (a.name, a.name)})
 
@@ -386,10 +375,7 @@ def cmd_status(root, o, pos):
 
 
 def find_answer(a, qid):
-    for q in (qid, qid + ".txt"):
-        if (a.ws / "out" / q).is_file():
-            return q
-    return None
+    return aos_ws.answer_name(str(a.ws), qid)
 
 
 def cmd_answer(root, o, pos):

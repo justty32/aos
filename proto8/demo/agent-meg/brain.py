@@ -81,7 +81,8 @@ if os.path.exists("system.txt"):
     with open("system.txt", encoding="utf-8") as f:
         system = f.read()                                    # 每次從檔讀，不存進 history
 # 記憶庫自動附上（每次 think 都重算：剛存的下一輪就看得到）；庫是空的就不附
-sys.path.insert(0, os.path.join("tools", "memory"))
+sys.path.insert(0, os.path.join("tools", "memory"))   # tools/memory 是捷徑 → proto8/lib/aos/memory（10-24 遷移）
+sys.dont_write_bytecode = True                         # 不在庫的資料夾留 __pycache__
 import heap  # noqa: E402
 try:
     memory = heap.Heap().context(question)

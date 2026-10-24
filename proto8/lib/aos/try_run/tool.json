@@ -2,4 +2,4 @@
  "parameters": {"type": "object",
                 "properties": {"args": {"type": "array", "items": {"type": "string"}, "description": "命令列參數（選填，預設沒有）"},
                                "stdin": {"type": "string", "description": "餵給它的 stdin（選填，預設空）"},
-                               "timeout": {"type": "number", "description": "逾時秒數（選填，預設 10，最多 60）"}}}}
+                               "timeout_s": {"type": "number", "description": "逾時秒數（選填，預設 10，最多 60；超過＝整群停掉、算錯）"}}}}

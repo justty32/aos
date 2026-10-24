@@ -61,9 +61,12 @@ if calls:
                                text=True, env=env)      # stderr 不吞：工具自己的錯原樣往上
         except OSError as e:
             die("ToolFailed", "%s 起不來：%s" % (name, e))
-        if r.returncode != 0:
-            die("ToolFailed", "%s 結束碼 %d" % (name, r.returncode))
-        append({"role": "tool", "tool_call_id": cid, "content": r.stdout})
+        content = r.stdout
+        if r.returncode != 0:           # 回給腦、不停（10-24 遷移：memory 改掛 lib/aos 後「模型的錯」也退 1——lib/README「工具只報錯、停不停由 agent 決定」，
+            # 這隻照舊讓腦自己改；做法同 agent-pip：stdout 照收、尾巴加結束碼，人在 stderr 看得到）
+            print("agent-meg: ToolFailed %s 結束碼 %d（回給腦）" % (name, r.returncode), file=sys.stderr)
+            content += "%s(工具 %s 結束碼 %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
+        append({"role": "tool", "tool_call_id": cid, "content": content})
     sys.exit(0)
 
 # 沒有 tool_calls：content 就是答案，寫 $AOS_WS/out/<題名>、題目 cur/ → done/

@@ -189,17 +189,17 @@ class AiToolsTest(unittest.TestCase):
         finally:
             brain.close()
 
-    def test_tool_error_is_json(self):
-        """工具收到不合的參數：印 {"ok": false, "error"}、退 0，腦看得到、能自己修。"""
+    def test_tool_error_is_one_line(self):
+        """工具收到不合的參數：照 lib 契約 stderr 與 stdout 各一行「工具名: 代號 原因」、退 1（代號照 aos-ai 的）；
+        停下還是回給腦由叫它的 agent 決定（10-24 遷移前是印 {"ok": false, "error"}、退 0）。"""
         ai(self.root, "spawn", "boss", "--tool", "spawn_agent")
         tool = Path(self.root) / "agents" / "boss" / "agent" / "tools" / "spawn_agent"
         e = {k: v for k, v in os.environ.items() if k not in CLEAR}
         e.update(AOS_WS=self.root, PATH=str(ROOT / "ai_tools" / "bin") + os.pathsep + e["PATH"])
         r = subprocess.run([str(tool / "_entry")], input='{"name": "Bad Name"}', capture_output=True, text=True, env=e)
-        self.assertEqual(r.returncode, 0)
-        res = json.loads(r.stdout)
-        self.assertFalse(res["ok"])
-        self.assertIn("NameBad", res["error"])
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stderr.startswith("spawn_agent: NameBad "), r.stderr)
+        self.assertEqual(r.stdout.strip(), r.stderr.strip())
 
 
     # ---------- 生成（make）與概念（explain） ----------
@@ -326,7 +326,10 @@ class AiToolsTest(unittest.TestCase):
         res = call("make_json", {"kind": "fsm", "spec": {"start": "a", "states": {"a": {"exec": "a", "next": "a"}}},
                                  "out": "gen/fsm.json"})
         self.assertTrue(res["ok"] and (Path(self.root) / "gen" / "fsm.json").is_file())
-        self.assertFalse(call("make_json", {"kind": "fsm", "spec": {"states": {}}})["ok"])
+        p = subprocess.run([str(tools / "make_json" / "_entry")], input=json.dumps({"kind": "fsm", "spec": {"states": {}}}),
+                           capture_output=True, text=True, env=e)
+        self.assertEqual(p.returncode, 1)                                          # aos-ai 的錯照 lib 契約退 1
+        self.assertTrue(p.stdout.startswith("make_json: SpecBad "), p.stdout)
         self.assertTrue(call("make_tool", {"name": "boss", "tool": "t1", "description": "d", "params": ["a:string"]})["ok"])
         self.assertTrue((tools / "t1" / "tool.json").is_file())
         self.assertEqual(call("explain_aos", {"concept": "stack"})["concept"], "AOS_STACK")

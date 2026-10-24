@@ -16,9 +16,8 @@
 | `member/.env` | `AOS_BRAIN_MODEL`（預設 `chatgpt-gpt-6-luna-low`）；腦網址註解掉＝假腦 |
 | `member/system.txt` | system 訊息：怎麼寄、要回的信直接答、通知不回 |
 | `member/brain.py` | think：同 agent-dan，多兩件——信翻成「[來信] …」給腦看；system 加上名冊（我是誰、角色、還有誰、群組）。錯開頭 `talk-member:` |
-| `member/act.py` | act：同 agent-dan，多一件——題目是要回答的信、還沒寄過給寄件人＝答案經 `send_message` 自動寄回（自動回信不再回） |
-| `member/tools/send_message/` | `_entry`＋`tool.json`：寄給名字、群組或陣列；寫對方 `tmp/` 再改名進 `new/`、自己留 `sent/`；對話串跟 `cur/` 那封走（`thread`、`hops`＋1、`reply_to`）；超 `max_hops`／`max_sends`／信太大＝stdout「錯誤：…」退 0；名冊壞＝`RosterMissing`／`RosterBad`／`SelfUnknown` 退 1 |
-| `member/tools/check_inbox/` | `_entry`＋`tool.json`：列 `new/` 還沒處理的（只看不拿），一封一行摘要 |
+| `member/act.py` | act：同 agent-dan，多兩件——題目是要回答的信、還沒寄過給寄件人＝答案經 `send_message` 自動寄回（自動回信不再回；寄不成照舊寫在答案後面，環境壞了才停）；工具退非 0 回給腦、不停（10-24 遷移，同 agent-pip） |
+| `member/tools/send_message`、`check_inbox` | 符號連結 → `../../../../lib/aos/<名>`（10-24 遷移；寄信、看信箱的本體見 [06-周邊工具](06-周邊工具.md)） |
 | `member/tools/math`、`clock` | 符號連結 → `../../../../lib/base/<名>`（10-24 遷移前是 agent-dan 的複本） |
 | `team/` | 整個團隊 |
 | `team/_entry` | `exec aos-daemon daemon.json` |
@@ -47,4 +46,4 @@
 | `improver/brain.py` | 同 agent-pip，多記 usage 到 `$AOS_STACK/usage.jsonl`（給外面算 token 預算）；假腦不叫工具 |
 | `improver/act.py` | 同 agent-pip，只改錯誤行的名字（`improver:`） |
 | `improver/tools/read`、`write`、`edit` | 符號連結到 `../../../../lib/base/<名>`（10-24 遷移前指 demo/pi-tools） |
-| `improver/tools/try_run/` | `_entry`＋`tool.json`：在 `target/` 的暫時複本上跑一次，回結束碼、stdout、stderr（逾時預設 10、最多 60 秒）；有 `IMPROVE_SANDBOX` 就關進 `aos-sandbox` |
+| `improver/tools/try_run` | 符號連結 → `../../../../lib/aos/try_run`（10-24 遷移；參數 `timeout` 改名 `timeout_s`、逾時算錯） |

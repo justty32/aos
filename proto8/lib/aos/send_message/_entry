@@ -6,20 +6,19 @@
 # 對話串：正在處理的那封信（$AOS_WS/cur/ 裡那一份）決定——thread 照抄、hops＝它的＋1、reply_to＝它的 id；
 #   cur/ 是人放的純文字題目＝這個題目開一串（thread＝<我>:<題名>）；cur/ 是空的（人從終端寄）＝新的一串。
 # 擋迴圈：hops 超過名冊的 max_hops、或這一層已經寄了 max_sends 封，就不寄。
-# 模型的錯（收件人不認得、信太大、到上限、送不到）：stdout「錯誤：…」、退 0，讓腦自己改。
-# 環境沒設好（沒名冊、名冊壞、找不到自己）：stderr 一行「send_message: 代號 原因」、退 1。
+# 錯（lib/README 的契約）：stderr 與 stdout 各一行「send_message: 代號 原因」、退 1——參數不對 ArgumentsBad、收件人不認得 RecipientUnknown、
+#   沒有收件人 RecipientMissing、信太大 BodyBad、到手數上限 HopsBad、到寄信數上限 SendsBad、一封都送不到 MailboxMissing（送到一部分＝結果、退 0）；
+#   環境沒設好：RosterMissing、RosterBad、SelfUnknown。回不回給腦由叫它的 agent 決定（talk 的 member 回給腦）。
+# 來源：demo/talk/member/tools/send_message（10-24；遷移前「模型的錯」印「錯誤：…」退 0，現在照 lib 契約一律退 1）。
 import json, os, secrets, sys
 from datetime import datetime, timezone
 
 
 def die(code, reason):
-    print("send_message: %s %s" % (code, reason), file=sys.stderr)
+    line = "send_message: %s %s" % (code, reason)
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
-
-
-def say_error(reason):
-    print("錯誤：" + reason)
-    sys.exit(0)
 
 
 def write_atomic(dir_, name, data):
@@ -30,6 +29,12 @@ def write_atomic(dir_, name, data):
     os.replace(tmp, os.path.join(dir_, name))
 
 
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError as e:
+    die("ArgumentsBad", "參數不是 JSON：%s" % e)
+if not isinstance(args, dict):
+    die("ArgumentsBad", "參數要是物件")
 roster_path = os.environ.get("AOS_ROSTER")
 if not roster_path:
     die("RosterMissing", "沒設定 AOS_ROSTER（名冊 roster.json 的路徑）")
@@ -55,42 +60,36 @@ me = next((n for n in members if mailbox(n) == ws), None)
 if me is None:
     die("SelfUnknown", "名冊上沒有哪個成員的信箱是 %s" % ws)
 
-try:
-    args = json.loads(sys.stdin.read() or "{}")
-except ValueError as e:
-    say_error("參數不是 JSON：%s" % e)
-if not isinstance(args, dict):
-    say_error("參數要是物件")
 to, body = args.get("to"), args.get("body")
 subject = args.get("subject") or ""
 expect_reply = args.get("expect_reply", False)
 if not isinstance(body, str) or not body.strip():
-    say_error("body 要是非空字串")
+    die("ArgumentsBad", "body 要是非空字串")
 if not isinstance(subject, str) or not isinstance(expect_reply, bool):
-    say_error("subject 要是字串、expect_reply 要是 true／false")
+    die("ArgumentsBad", "subject 要是字串、expect_reply 要是 true／false")
 
 # 收件人：名字、群組名、或名字的陣列；去掉自己、去重
 names = to if isinstance(to, list) else [to]
 recipients, group = [], None
 for n in names:
     if not isinstance(n, str):
-        say_error("to 要是名字、群組名或名字的陣列")
+        die("ArgumentsBad", "to 要是名字、群組名或名字的陣列")
     if n in groups and n not in members:
         group = n if not isinstance(to, list) else None
         expand = groups[n] if isinstance(groups[n], list) else []
     elif n in members:
         expand = [n]
     else:
-        say_error("不認得「%s」。名冊上有：%s；群組：%s" % (n, "、".join(members), "、".join(groups) or "無"))
+        die("RecipientUnknown", "不認得「%s」。名冊上有：%s；群組：%s" % (n, "、".join(members), "、".join(groups) or "無"))
     for x in expand:
         if x != me and x not in recipients:
             recipients.append(x)
 if not recipients:
-    say_error("沒有收件人（不能寄給自己）")
+    die("RecipientMissing", "沒有收件人（不能寄給自己）")
 
 max_body = roster.get("max_body_bytes", 16000)
 if len(body.encode("utf-8")) > max_body:
-    say_error("信太大（%d 位元組，上限 %d）。請寫短一點，或把長內容放進檔案、信裡只寫路徑" % (len(body.encode("utf-8")), max_body))
+    die("BodyBad", "信太大（%d 位元組，上限 %d）。請寫短一點，或把長內容放進檔案、信裡只寫路徑" % (len(body.encode("utf-8")), max_body))
 
 # 對話串：看正在處理的那一份
 cur_dir = os.path.join(ws, "cur")
@@ -112,7 +111,7 @@ if cur:
 
 max_hops, max_sends = roster.get("max_hops", 8), roster.get("max_sends", 4)
 if hops > max_hops:
-    say_error("這個對話串已經傳了 %d 手，到上限 %d，不能再寄。請直接用純文字給出你的結論。" % (hops - 1, max_hops))
+    die("HopsBad", "這個對話串已經傳了 %d 手，到上限 %d，不能再寄。請直接用純文字給出你的結論。" % (hops - 1, max_hops))
 sent_dir = os.path.join(ws, "sent")
 already = 0
 if thread is not None and os.path.isdir(sent_dir):
@@ -126,7 +125,7 @@ if thread is not None and os.path.isdir(sent_dir):
             if s.get("thread") == thread and s.get("hops") == hops:
                 already += 1
 if already + len(recipients) > max_sends:
-    say_error("處理這一封時已經寄了 %d 封，再寄 %d 封會超過上限 %d。請直接用純文字給出你的結論。" % (already, len(recipients), max_sends))
+    die("SendsBad", "處理這一封時已經寄了 %d 封，再寄 %d 封會超過上限 %d。請直接用純文字給出你的結論。" % (already, len(recipients), max_sends))
 
 def new_id():
     return "%s.%06dZ-%s-%s" % (now.strftime("%Y%m%dT%H%M%S"), now.microsecond, me, secrets.token_hex(3))
@@ -153,6 +152,8 @@ for r, lid in zip(recipients, ids):
     write_atomic(sent_dir, lid + ".json", data)                      # 自己的寄件備份（也拿來數上限）
     done.append("%s（%s）" % (r, lid))
 
+if not done:
+    die("MailboxMissing", "送不到 %s" % "、".join(failed))
 out = []
 if done:
     out.append("已寄出 %d 封：%s。對話串 %s，第 %d 手%s。" % (len(done), "、".join(done), thread, hops,

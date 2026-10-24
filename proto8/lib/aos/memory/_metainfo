@@ -1,0 +1,8 @@
+{"summary": "長期記憶庫：存、找、讀、忘，跨對話保留",
+ "time_ms": {"val": 50, "max": 5000},
+ "resource": "disk",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true}

@@ -23,11 +23,8 @@ USAGE = "aos-listen [--ws WS] [--timeout 秒] [--trace] 題名 | [--last N] [--f
 
 
 def answer(ws, name):
-    """out/<題名> 的內容；還沒有＝None。"""
-    p = os.path.join(ws, "out", name)
-    if os.path.isdir(p):
-        return h.read(os.path.join(p, "answer.txt"), "")
-    return h.read(p)
+    """out/<題名> 的內容；還沒有＝None（跟 aos-ai 共用 lib/aos/aos_ws.py 的 answer_text）。"""
+    return h.aos_ws.answer_text(ws, name)
 
 
 def show_tail(tail):

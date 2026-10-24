@@ -106,14 +106,14 @@ agent-meg/
   brain.py            同 agent-dan，只多一件事：每次問腦前把記憶庫的偏好（全部）＋跟題目有關的 5 筆接在 system 後面（不進 history）
   act.py、fsm.json、loop.json、idle/   同 agent-dan
   system.txt          教腦什麼該存、只存確認過的、衝突以現在說的為準
-  tools/memory/       唯一的工具：op＝save（同類同標題＝覆蓋）／search（關鍵字）／read／forget（搬去 archive）
+  tools/memory -> ../../../lib/aos/memory   唯一的工具（10-24 遷移進函式庫）：op＝save（同類同標題＝覆蓋）／search（關鍵字）／read／forget（搬去 archive）
     heap.py           記憶庫的讀寫（brain.py 也用它）
 
 $AOS_HEAP/            記憶庫（沒設＝$AOS_WS/.heap/）：index.json（頂層，wf-table/1）→ <類>/index.json → <類>/001.md
                       六類 prefs、facts、outcomes、gotchas、snippets、skills；forget 的搬 archive/<類>/；寫入持 .lock
 ```
 
-位置由叫的人給（像 stack，C-67）：兩隻 agent 的 `AOS_HEAP` 指同一個＝共用記憶，各指各的＝私有。人也能直接叫工具：`echo '{"op": "search", "query": "縮排"}' | AOS_HEAP=<庫> proto8/demo/agent-meg/tools/memory/_entry`。錯：模型的錯照實回給它；庫的索引壞了＝`HeapBad`（工具退 1、或 think 退 1）。
+位置由叫的人給（像 stack，C-67）：兩隻 agent 的 `AOS_HEAP` 指同一個＝共用記憶，各指各的＝私有。人也能直接叫工具：`echo '{"op": "search", "query": "縮排"}' | AOS_HEAP=<庫> proto8/lib/aos/memory/_entry`。錯：模型的錯照實回給它（10-24 遷移後工具照 lib 契約退 1、印一行 `memory: 代號 原因`，agent-meg 的 act 把那行回給腦、不停）；庫的索引壞了＝`HeapBad`（工具退 1、或 think 退 1）。
 
 真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-meg`；試驗場 `~/code/try/memory/`（`run.py`：第一題記兩件事、換全新 stack 問第二題；LiteLLM 沒開自動用 `fake_brain.py`）。沒設 `AOS_BRAIN_URL`＝假腦，直接答 `FAKE ANSWER`（附上記憶的字數）。測試 `test_meg.py`。
 
@@ -124,13 +124,13 @@ $AOS_HEAP/            記憶庫（沒設＝$AOS_WS/.heap/）：index.json（頂�
 ```
 talk/
   member/                 一隻成員（照抄 agent-dan）：brain.py 把信翻成「[來信]…」、system 加上名冊；act.py 答完要回答的信就自動寄回寄件人
-    tools/send_message/   寄信：{to（名字、群組或陣列）, body, subject?, expect_reply?}；寫對方的 tmp/ 再改名進 new/、自己留 sent/
+    tools/send_message -> ../../../../lib/aos/send_message（10-24 遷移；check_inbox 同）   寄信：{to（名字、群組或陣列）, body, subject?, expect_reply?}；寫對方的 tmp/ 再改名進 new/、自己留 sent/
     tools/check_inbox/    看 new/ 裡還沒處理的（只看不拿）；另有 math、clock（捷徑掛 lib/base，10-24 遷移前是 agent-dan 的複本）
   team/                   _entry＝exec aos-daemon daemon.json：ann、bob、cat 各一個子 loop（每 500 ms 跑一次 member）；quiet.py 大家都沒信了退 10 收工
     roster.json           名冊範例（放進團隊工作區）：members（mailbox、role、human）、groups、max_hops 8、max_sends 4、max_body_bytes 16000
 ```
 
-**地址＝對方的工作區**：信是 `<工作區>/new/<id>.json`（`{"kind": "letter", "id", "from", "to", "group", "thread", "reply_to", "hops", "expect_reply", "at", "subject", "body"}`），一到就是那隻 agent 的一道題（agent-dan 的 `new/`→`cur/`→`done/`）；答案寫 `out/<id>.txt`。名冊＝`$AOS_ROSTER`，我是誰＝信箱跟 `$AOS_WS` 同一個資料夾的那位。對話串由正在處理的那封（`cur/`）決定：`thread` 照抄、`hops`＋1、`reply_to`＝它的 id。要回答的信（`expect_reply`）答完自動寄回、自動寄的回信不再自動回；手數超過 `max_hops`、處理一封寄超過 `max_sends` 封，工具回「錯誤：…」讓腦收手。人也是名冊上一個信箱（`user`，`human`），人寄信＝`AOS_ROSTER=<ws>/roster.json aos-exec --ws <ws>/user proto8/demo/talk/member/tools/send_message`、stdin 一個 JSON。
+**地址＝對方的工作區**：信是 `<工作區>/new/<id>.json`（`{"kind": "letter", "id", "from", "to", "group", "thread", "reply_to", "hops", "expect_reply", "at", "subject", "body"}`），一到就是那隻 agent 的一道題（agent-dan 的 `new/`→`cur/`→`done/`）；答案寫 `out/<id>.txt`。名冊＝`$AOS_ROSTER`，我是誰＝信箱跟 `$AOS_WS` 同一個資料夾的那位。對話串由正在處理的那封（`cur/`）決定：`thread` 照抄、`hops`＋1、`reply_to`＝它的 id。要回答的信（`expect_reply`）答完自動寄回、自動寄的回信不再自動回；手數超過 `max_hops`、處理一封寄超過 `max_sends` 封，工具回一行錯（10-24 遷移後是 `send_message: HopsBad …`／`SendsBad …`、退 1，member 的 act 把它回給腦）讓腦收手。人也是名冊上一個信箱（`user`，`human`），人寄信＝`AOS_ROSTER=<ws>/roster.json aos-exec --ws <ws>/user proto8/demo/talk/member/tools/send_message`、stdin 一個 JSON。
 
 跑：建團隊工作區（`roster.json`＋`ann/`、`bob/`、`cat/`、`user/` 四個資料夾、user 先寄一封），`cd` 進去 `AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec proto8/demo/talk/team`（PATH 照上面放好 aos-daemon 等四支；沒設 URL＝假腦，直接答 `FAKE ANSWER`）。試驗場 `~/code/try/agent-talk/`（`setup_ws.py`、LiteLLM 沒開時用 `fake_brains.py` 劇本）。測試 `test_talk.py`。錯：`talk-member: 代號 原因`（同 agent-dan 五種）、`send_message: RosterMissing／RosterBad／SelfUnknown`、`team: MemberFailed <名>`（有 member 的 loop 失敗結束，團隊退 1）。
 
@@ -172,7 +172,7 @@ agent-kai/
   tools/recall/       op＝search（關鍵字找舊題）／read（展開一題；detail=true 連當時的工具原始輸出）
     turns.py          把 history 切成題、照意圖挑（brain.py 也用它）
   tools/read、math、clock → ../../../lib/base/<名>（符號連結；10-24 遷移前 read 指 pi-tools、math／clock 是 agent-dan 的複本）
-  （選配）tools/memory → ../../agent-meg/tools/memory：放了就每題自動 search 記憶庫 3 筆附進 system
+  （選配）tools/memory → ../../../lib/aos/memory：放了就每題自動 search 記憶庫 3 筆附進 system
 
 $AOS_STACK/context.jsonl   每次組了什麼：mode（full／intent）、picked（[題號, 原因]）、粗估 token、整份全送的話多少
 ```
@@ -190,7 +190,7 @@ self-improve/             aos-exec --ws <交辦的工作區> proto8/demo/self-im
   run.py judge.py improve.py common.py
   improver/                改進者：從 agent-pip 照抄的 agent（工具出錯回給腦），多記 token 用量；.env 模型 chatgpt-gpt-6-luna-low
     tools/read、write、edit   符號連結到 ../../../../lib/base（10-24 遷移前指 pi-tools）
-    tools/try_run          在 target/ 的暫時複本上跑一次，回結束碼、stdout、stderr
+    tools/try_run          → ../../../../lib/aos/try_run：在 target/ 的暫時複本上跑一次，回結束碼、stdout、stderr（10-24 遷移：參數 timeout_s、逾時算錯）
 ```
 
 交辦的工作區：`goal.txt`（目標）、`target/` 或 `target.json`（要改的函數，原版不動）、`judge/cases.json`（一組例子 `[{"args", "stdin", "stdout", "code"?, "hidden"?, "timeout_ms"?}]`，`hidden` 的失敗時只說幾組沒過）或 `judge/check`（檢查程式，`IMPROVE_TARGET`＝函數複本，退 0＝達成、stdout＝給改進者的回饋）、`budget.json`（選填 `{"rounds": 5, "elapsed_ms": 1800000, "tokens": 500000}`）。成果：`out/best/`（最好的一版）、`out/report.txt`（每一版從哪版改、幾分、改了什麼、改進者說了什麼）、`out/result.json`。每一版拍在 `$AOS_STACK/versions/vNNN/`（`target/`、`verdict.json`、`diff.txt`、改進者那次的 `improve/ws`、`improve/stack`），新的一版一律從最好的那版改（同分取最早的）。

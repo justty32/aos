@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+# ask_agent - 問一隻 aos agent 一個問題、等它答完（沒有這隻就先 spawn）
+# 介面（lib/README 的契約）：stdin 收 {"name", "question", "template"?}；stdout 一行 JSON {"ok", "name", "answer"}（agent 跑完沒答案＝ok false 帶 code、errors、hint——那是結果、退 0）。
+# 轉叫命令列 aos-ai（proto8/ai_tools/bin，PATH 上要有；經 aos-ai run 跑的 agent 已放好）。子 agent 放在 $AOS_AI_ROOT（沒設＝$AOS_WS）的 agents/<名>/（$AOS_AI_ROOT 是 aos-ai 自己的旗標，照舊認；lib 契約 4 的例外）。前景跑子 agent，上限 $AOS_AI_ASK_TIMEOUT 秒（預設 50，要小於叫它那格的逾時）。
+# 錯：stderr 與 stdout 各一行「ask_agent: 代號 原因」、退 1——參數不對＝ArgumentsBad；aos-ai 回的錯照它的代號（例 NameBad、AgentMissing）、
+# 原因是 aos-ai 那行；aos-ai 起不來＝LaunchFailed。叫它的 agent 決定停下還是回給腦。
+# 來源：proto8/ai_tools/dan_tools/ask_agent（10-24；遷移前 aos-ai 的錯印成 {"ok": false, "error"} 退 0，現在照 lib 契約退 1）。
+import json, os, re, subprocess, sys
+
+NAME = "ask_agent"
+ROOT = os.environ.get("AOS_AI_ROOT") or os.environ.get("AOS_WS") or "."
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, str(reason).replace("\n", " "))
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def arguments():
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments 要是物件")
+    return a
+
+
+def ai(*argv):
+    """跑 aos-ai，回它 stdout 那行（去掉頭尾空白）；它退非 0＝照它 stderr 最後一行的代號報錯。"""
+    try:
+        r = subprocess.run(["aos-ai"] + list(argv), capture_output=True, text=True)
+    except OSError as e:
+        die("LaunchFailed", "aos-ai 起不來：%s" % e)
+    if r.returncode != 0:
+        last = (r.stderr.strip().splitlines() or [""])[-1]
+        m = re.match(r"aos-ai: ([A-Z][A-Za-z]+) (.*)", last)
+        if m:
+            die(m.group(1), m.group(2))
+        die("CommandFailed", "aos-ai 結束碼 %d：%s" % (r.returncode, last or "（沒有訊息）"))
+    return r.stdout.strip()
+
+TIMEOUT = os.environ.get("AOS_AI_ASK_TIMEOUT", "50")      # 秒；要小於叫它的那格的 timeout_ms（agent-dan 的 act 是 60 秒）
+args = arguments()
+name, question = args.get("name"), args.get("question")
+if not isinstance(name, str) or not isinstance(question, str) or not question.strip():
+    die("ArgumentsBad", "要 name 和 question 兩個字串")
+if not os.path.isdir(os.path.join(ROOT, "agents", name, "agent")):
+    ai("--root", ROOT, "spawn", name, "--from", args.get("template") or "agent-dan")
+q = json.loads(ai("--root", ROOT, "ask", name, "--", question))
+r = json.loads(ai("--root", ROOT, "run", name, "--timeout", TIMEOUT))
+answer = next((a["text"] for a in r.get("answers", []) if a["id"] == q["id"]), None)
+res = {"ok": answer is not None, "name": name, "answer": answer}
+if answer is None:
+    res.update({"code": r.get("code"), "errors": r.get("errors"), "hint": r.get("hint")})
+print(json.dumps(res, ensure_ascii=False))

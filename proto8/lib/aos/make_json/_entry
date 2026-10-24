@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+# make_json - 生成一份 aos 的 JSON（aos-ai make），先驗形狀
+# 介面（lib/README 的契約）：stdin 收 {"kind", "spec", "out"?}；stdout 印 aos-ai 那行 JSON（含 notes）。
+# 轉叫命令列 aos-ai（proto8/ai_tools/bin，PATH 上要有；經 aos-ai run 跑的 agent 已放好）。out 相對 $AOS_AI_ROOT（沒設＝$AOS_WS；$AOS_AI_ROOT 是 aos-ai 自己的旗標，照舊認）。
+# 錯：stderr 與 stdout 各一行「make_json: 代號 原因」、退 1——參數不對＝ArgumentsBad；aos-ai 回的錯照它的代號（例 NameBad、AgentMissing）、
+# 原因是 aos-ai 那行；aos-ai 起不來＝LaunchFailed。叫它的 agent 決定停下還是回給腦。
+# 來源：proto8/ai_tools/dan_tools/make_json（10-24；遷移前 aos-ai 的錯印成 {"ok": false, "error"} 退 0，現在照 lib 契約退 1）。
+import json, os, re, subprocess, sys
+
+NAME = "make_json"
+ROOT = os.environ.get("AOS_AI_ROOT") or os.environ.get("AOS_WS") or "."
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, str(reason).replace("\n", " "))
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def arguments():
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments 要是物件")
+    return a
+
+
+def ai(*argv):
+    """跑 aos-ai，回它 stdout 那行（去掉頭尾空白）；它退非 0＝照它 stderr 最後一行的代號報錯。"""
+    try:
+        r = subprocess.run(["aos-ai"] + list(argv), capture_output=True, text=True)
+    except OSError as e:
+        die("LaunchFailed", "aos-ai 起不來：%s" % e)
+    if r.returncode != 0:
+        last = (r.stderr.strip().splitlines() or [""])[-1]
+        m = re.match(r"aos-ai: ([A-Z][A-Za-z]+) (.*)", last)
+        if m:
+            die(m.group(1), m.group(2))
+        die("CommandFailed", "aos-ai 結束碼 %d：%s" % (r.returncode, last or "（沒有訊息）"))
+    return r.stdout.strip()
+
+args = arguments()
+if not isinstance(args.get("kind"), str) or not isinstance(args.get("spec"), dict):
+    die("ArgumentsBad", "要 kind（字串）與 spec（物件）")
+cmd = ["--root", ROOT, "make", args["kind"], "--spec", json.dumps(args["spec"], ensure_ascii=False)]
+if isinstance(args.get("out"), str) and args["out"]:
+    cmd += ["--out", os.path.join(ROOT, args["out"])]
+print(ai(*cmd))

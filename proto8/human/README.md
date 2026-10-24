@@ -9,7 +9,7 @@
 | `bin/aos-say` | aos-say - 把一句話變成一道題，丟進工作區的 new/ |
 | `bin/aos-listen` | aos-listen - 等 out/ 冒出答案、印出來（等一題／跟著看／快照） |
 | `bin/aos-chat` | aos-chat - 跟一隻 agent 一問一答（say＋listen 串起來，可以替你跑 agent） |
-| `bin/aos_human.py` | 三支共用：工作區、放題、誰在跑、trace 短行、快照 |
+| `bin/aos_human.py` | 三支共用：工作區、誰在跑、trace 短行、快照；放題、看答案、讀 stack 那幾樣在 [`proto8/lib/aos/aos_ws.py`](../lib/aos/aos_ws.py)（10-24 遷移時跟 aos-ai 合成一份） |
 
 ```
 aos-say    [--ws WS] [--name 題名] [話...]                  stdout 印題名

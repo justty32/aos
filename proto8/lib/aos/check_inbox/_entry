@@ -1,6 +1,23 @@
 #!/usr/bin/env python3
-# check_inbox - 看自己信箱裡還沒處理的信（$AOS_WS/new/），只看不認領；stdin 不讀，stdout 一封一行摘要。
+# check_inbox - 看自己信箱裡還沒處理的信（$AOS_WS/new/），只看不認領；stdout 一封一行摘要。
+# 介面（lib/README 的契約）：stdin 收 {}（沒有參數；空 stdin 也算）；錯：stdin 不是 JSON 物件＝stderr 與 stdout 各一行「check_inbox: ArgumentsBad 原因」、退 1。
+# 來源：demo/talk/member/tools/check_inbox（10-24；遷移時加上驗 stdin，原本不讀 stdin）。
 import json, os, sys
+
+
+def die(code, reason):
+    line = "check_inbox: %s %s" % (code, reason)
+    print(line, file=sys.stderr)
+    print(line)
+    sys.exit(1)
+
+
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict):
+    die("ArgumentsBad", "arguments 要是物件")
 
 new = os.path.join(os.environ.get("AOS_WS", "."), "new")
 names = sorted(n for n in os.listdir(new) if not n.startswith(".")) if os.path.isdir(new) else []

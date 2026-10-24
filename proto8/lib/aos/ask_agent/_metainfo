@@ -1,0 +1,8 @@
+{"summary": "問一隻 aos agent 一個問題、等它答完",
+ "time_ms": {"val": 20000, "max": 60000},
+ "resource": ["cpu", "llm"],
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": false,
+ "interrupt": "unsafe",
+ "parallel": true}

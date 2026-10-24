@@ -3,20 +3,16 @@
 工作區的形狀照 CONVENTION 第四節（P-11～P-14）：題目 $AOS_WS/new/<題名>、認領 cur/、答案 out/<題名>、做完 done/；
 agent 的 stack 預設 $AOS_WS/.stack/（N-57；外面設了 AOS_STACK 就用它，同 aos-exec）。
 這裡只「放題目、看答案、看 stack」，不碰 agent 的定義資料夾、不改 stack 裡的東西。設計與代定：proto8/thinking/2026-10-24-say-listen.md。"""
-import datetime, json, os, sys, time
+import json, os, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "bin"))
 import aos_flags  # noqa: E402  旗標規則同 aos-exec（proto8/bin/aos_flags.py）
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "lib", "aos"))
+import aos_ws  # noqa: E402  放題、等答案、讀 stack：跟 aos-ai 共用一份（proto8/lib/aos/aos_ws.py，10-24 遷移）
+from aos_ws import STAGES, Error, names, where, read, new_name  # noqa: E402,F401  三支 CLI 照舊用 h.names、h.Error…
 
 POLL = 0.2                                     # 看一次的間隔（秒）
 RUNNERS = ("aos-loop", "aos-fsm", "aos-exec", "aos-daemon")   # 算「有人在跑」的程式名
-STAGES = ("new", "cur", "out", "done")
-
-
-class Error(Exception):
-    def __init__(self, code, msg):
-        super().__init__(msg)
-        self.code = code
 
 
 def die(prog, code, msg):
@@ -49,67 +45,9 @@ def stack_of(ws):
     return os.environ.get("AOS_STACK") or os.path.join(ws, ".stack")
 
 
-def names(ws, stage):
-    """某個階段資料夾裡的題名（. 開頭的是別人寫到一半的暫存檔，不算）。"""
-    try:
-        return sorted(n for n in os.listdir(os.path.join(ws, stage)) if not n.startswith("."))
-    except (FileNotFoundError, NotADirectoryError):
-        return []
-
-
-def where(ws, name):
-    """這題現在在哪幾個階段資料夾。"""
-    return [s for s in STAGES if os.path.lexists(os.path.join(ws, s, name))]
-
-
-def read(path, default=None):
-    try:
-        with open(path, encoding="utf-8", errors="replace") as f:
-            return f.read()
-    except OSError:
-        return default
-
-
-def new_name():
-    """題名＝現在的 UTC 時間，ISO 8601 基本格式到毫秒（沒有冒號），加 .txt；檔名排序＝丟進來的先後（agent 照檔名排序取題，P-12）。"""
-    t = datetime.datetime.now(datetime.timezone.utc)
-    return t.strftime("%Y%m%dT%H%M%S.") + "%03dZ.txt" % (t.microsecond // 1000)
-
-
 def say(ws, text, name=None):
-    """把一句話變成一道題丟進 new/：先寫工作區頂層的暫存檔 .say-<pid>.tmp，再 link 成 new/<題名>（N-05；
-    link 不蓋已有的檔）。暫存檔不放 new/ 裡，免得 agent 列 new/ 時看到半份。回題名。"""
-    if name is not None:
-        if not name or name.startswith(".") or "/" in name or name in ("..",):
-            raise Error("NameBad", "題名不能空、不能 . 開頭、不能有 /：%r" % name)
-        used = where(ws, name)
-        if used:
-            raise Error("NameBad", "題名 %s 用過了（在 %s/）；換一個名字，免得拿到舊的答案" % (name, "、".join(used)))
-    if not text.endswith("\n"):
-        text += "\n"
-    os.makedirs(os.path.join(ws, "new"), exist_ok=True)
-    tmp = os.path.join(ws, ".say-%d.tmp" % os.getpid())
-    with open(tmp, "w", encoding="utf-8") as f:
-        f.write(text)
-    try:
-        for _ in range(1000):
-            n = name or new_name()
-            if name is None and where(ws, n):      # 同一毫秒剛好撞名（或 out/ 已有同名的舊答案）：等一下再取
-                time.sleep(0.002)
-                continue
-            try:
-                os.link(tmp, os.path.join(ws, "new", n))
-                return n
-            except FileExistsError:
-                if name is not None:
-                    raise Error("NameBad", "題名 %s 剛好被別人用了" % name)
-                time.sleep(0.002)
-        raise Error("NameBad", "一直撞名，取不到新的題名")
-    finally:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
+    """把一句話變成一道題丟進 new/（做法在 aos_ws.put：先寫工作區頂層的 .say-<pid>.tmp、再 link 成 new/<題名>）。回題名。"""
+    return aos_ws.put(ws, text, name, tag="say")
 
 
 def runners(ws):
@@ -141,13 +79,7 @@ def runners(ws):
 
 def last_trace(ws):
     """stack 裡 trace.jsonl 最後一行（fsm 每次一行，P-07）；沒有＝None。"""
-    text = read(os.path.join(stack_of(ws), "trace.jsonl"), "")
-    for line in reversed(text.splitlines()):
-        try:
-            return json.loads(line)
-        except ValueError:
-            continue
-    return None
+    return aos_ws.last_jsonl(os.path.join(stack_of(ws), "trace.jsonl"))
 
 
 def run_hint(ws):

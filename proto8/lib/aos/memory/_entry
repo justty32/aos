@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+# memory - 長期記憶庫（heap）：存、找、讀、忘，跨對話保留（stack 清空了記得的事還在）
+# 介面（lib/README 的契約）：stdin 收 {"op": "save|search|read|forget", ...}；stdout 印結果（給模型看的文字）。
+# 庫在 $AOS_HEAP（沒設＝$AOS_WS/.heap/；放哪由叫的人決定，像 stack，C-67——lib 契約 4「只碰 $AOS_WS」的例外，照 agent-meg 原樣）。
+# 讀寫做法在同資料夾的 heap.py（掛它的 agent 的 brain.py 也 import 它，把偏好與相關幾筆附在 system 後面）。
+# 錯：stderr 與 stdout 各一行「memory: 代號 原因」、退 1——ArgumentsBad（參數不對）、OpUnknown（op 不認得）、
+# MemoryMissing（沒有這一筆）、HeapBad（記憶庫本身壞了）。來源：demo/agent-meg/tools/memory（10-24；遷移前「模型的錯」印
+# 「錯誤：…」退 0，現在照 lib 契約一律退 1，回不回給腦由叫它的 agent 決定——agent-meg 回給腦）。
+import json, os, sys
+
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import heap  # noqa: E402
+
+NAME = "memory"
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, str(reason).replace("\n", " "))
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def say(text):
+    print(text)
+    sys.exit(0)
+
+
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict):
+    die("ArgumentsBad", "參數要是 JSON 物件")
+op = args.get("op")
+h = heap.Heap()
+try:
+    if op == "save":
+        kind, title, text = args.get("kind"), args.get("title"), args.get("text")
+        tags = heap._tags(args.get("tags") or [] if isinstance(args.get("tags"), list) else [])
+        if kind not in heap.KINDS:
+            die("ArgumentsBad", "kind 要是其中一個：%s" % "、".join(heap.KINDS))
+        if not isinstance(title, str) or not title.strip() or len(title) > heap.TITLE_MAX:
+            die("ArgumentsBad", "title 要是 1～%d 字的字串" % heap.TITLE_MAX)
+        if not isinstance(text, str) or not text.strip() or len(text) > heap.TEXT_MAX:
+            die("ArgumentsBad", "text 要是 1～%d 字的字串（太長就拆成幾筆）" % heap.TEXT_MAX)
+        id_, prev = h.save(kind, " ".join(title.split()), text.strip(), tags[:10])
+        if prev is None:
+            say("已存 %s（新的一筆）" % id_)
+        say("已更新 %s（同類同標題就覆蓋；舊內容：%s）" % (id_, " ".join(prev.split())[:200]))
+    if op == "search":
+        kinds = args.get("kind")
+        kinds = [kinds] if isinstance(kinds, str) and kinds in heap.KINDS else None
+        limit = args.get("limit") if isinstance(args.get("limit"), int) else 5
+        rows = h.search(args.get("query") if isinstance(args.get("query"), str) else "", kinds,
+                        max(1, min(limit, 20)))
+        if not rows:
+            say("沒有找到（記憶庫共 %d 筆）" % sum(h.counts().values()))
+        say("\n".join(heap._item(r, h.text(r), 200) for r in rows))
+    if op == "read":
+        r = h.find(args.get("id"))
+        if not r or r["status"] != "active":
+            die("MemoryMissing", "沒有 %r 這一筆（id 長這樣：facts/001）" % args.get("id"))
+        say("[%s] %s\n標籤：%s\n建立 %s，更新 %s\n\n%s" % (r["id"], r["title"], r["tags"] or "（無）",
+                                                    r["created"], r["updated"], h.text(r).rstrip("\n")))
+    if op == "forget":
+        reason = args.get("reason") if isinstance(args.get("reason"), str) else ""
+        r = h.forget(args.get("id"), reason)
+        if not r:
+            die("MemoryMissing", "沒有 %r 這一筆（或已經忘了）" % args.get("id"))
+        say("已忘記 %s（搬到 archive/，人還找得到）" % r["id"])
+    die("OpUnknown", "op 要是 save、search、read、forget 其中一個")
+except heap.HeapBad as e:
+    die("HeapBad", e)

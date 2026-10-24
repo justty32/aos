@@ -125,7 +125,7 @@ class T(unittest.TestCase):
         self.assertEqual(b.requests, [])
 
     def test_heap_bad_in_tool(self):
-        """索引壞了：工具 memory: HeapBad 退 1（agent 的 act 會當 ToolFailed 停下，同 agent-dan）。"""
+        """索引壞了：工具 memory: HeapBad 退 1（10-24 遷移後 agent-meg 的 act 把它回給腦、不停；think 一開頭就會先 HeapBad 停下）。"""
         (self.heap / "facts").mkdir(parents=True)
         (self.heap / "facts" / "index.json").write_text("[]")
         r = self.memory({"op": "search", "query": "x"})
@@ -149,14 +149,30 @@ class T(unittest.TestCase):
         self.assertIn("已存 prefs/002", self.memory({"op": "save", "kind": "prefs", "title": "縮排",
                                                      "text": "4"}).stdout)   # 忘了的不再被覆蓋、號碼不重用
 
-    def test_model_mistakes_answer_not_fail(self):
-        for args in ({"op": "nope"}, {"op": "save", "kind": "x", "title": "t", "text": "t"},
-                     {"op": "save", "kind": "facts", "title": "", "text": "t"},
-                     {"op": "save", "kind": "facts", "title": "t", "text": "x" * 5000},
-                     {"op": "read", "id": "../../etc/passwd"}, {"op": "forget", "id": "facts/999"}):
+    def test_model_mistakes_are_one_line_errors(self):
+        """模型用錯：照 lib 契約 stderr 與 stdout 各一行「memory: 代號 原因」、退 1（10-24 遷移前是 stdout「錯誤：…」退 0）。"""
+        for args, code in (({"op": "nope"}, "OpUnknown"), ({"op": "save", "kind": "x", "title": "t", "text": "t"}, "ArgumentsBad"),
+                           ({"op": "save", "kind": "facts", "title": "", "text": "t"}, "ArgumentsBad"),
+                           ({"op": "save", "kind": "facts", "title": "t", "text": "x" * 5000}, "ArgumentsBad"),
+                           ({"op": "read", "id": "../../etc/passwd"}, "MemoryMissing"),
+                           ({"op": "forget", "id": "facts/999"}, "MemoryMissing")):
             r = self.memory(args)
-            self.assertEqual(r.returncode, 0, args)
-            self.assertTrue(r.stdout.startswith("錯誤："), (args, r.stdout))
+            self.assertEqual(r.returncode, 1, args)
+            self.assertTrue(r.stderr.startswith("memory: %s " % code), (args, r.stderr))
+            self.assertEqual(r.stdout.strip(), r.stderr.strip())
+
+    def test_model_mistake_fed_back_to_brain(self):
+        """agent-meg 叫 memory 用錯：act 把那行回給腦、不停（同 agent-pip），腦改對再存、答完。"""
+        b = self.brain(tool_reply(call("c1", "memory", {"op": "keep"})),
+                       tool_reply(save("c2", "facts", "埠號", "服務跑在 8080。")),
+                       answer("記住了。"))
+        r = self.meg("記住服務跑在 8080。", b.url)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("ToolFailed", meg_errors(r.stderr))
+        tools = [m["content"] for m in b.requests[1]["messages"] if m["role"] == "tool"]
+        self.assertTrue(tools[0].startswith("memory: OpUnknown "), tools[0])
+        self.assertTrue(tools[0].endswith("(工具 memory 結束碼 1)\n"), tools[0])
+        self.assertTrue((self.heap / "facts" / "001.md").exists())
 
     def test_parallel_saves_do_not_clobber(self):
         """20 個行程同時寫同一類：20 筆都在、號碼不重複（flock）。"""

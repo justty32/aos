@@ -36,12 +36,12 @@
 
 | 哪裡 | 負責什麼 |
 |---|---|
-| `_entry`、`loop.json`、`fsm.json`、`idle/`、`act.py` | 同 agent-dan |
+| `_entry`、`loop.json`、`fsm.json`、`idle/` | 同 agent-dan |
+| `act.py` | 同 agent-dan，差一條：工具退非 0 回給腦、不停（10-24 遷移：memory 的「模型的錯」改退 1，照 agent-pip 的做法） |
 | `.env` | 模型名；說明 `AOS_HEAP`（沒設＝`$AOS_WS/.heap/`，指同一個＝共用） |
 | `brain.py` | 同 agent-dan，多一件：問腦前把偏好全部＋跟題目有關的幾筆接在 system 後面（不進 history）；庫壞＝`HeapBad`；假腦附上記憶字數 |
 | `system.txt` | 教腦什麼該存、只存確認過的、衝突以現在說的為準 |
-| `tools/memory/_entry`、`tool.json` | 唯一的工具：`op`＝save／search／read／forget；模型的錯照實回、庫壞才退 1 |
-| `tools/memory/heap.py` | 記憶庫讀寫（brain 也 import）：頂層 `index.json` → `<類>/index.json`（wf-table/1）→ `<類>/NNN.md`；六類；forget 搬 `archive/`；寫入持 `.lock` |
+| `tools/memory` | 符號連結 → `../../../lib/aos/memory`（10-24 遷移；`_entry`、`tool.json`、`_metainfo`、`heap.py` 都在庫裡，見 [06-周邊工具](06-周邊工具.md)）；brain 照舊從 `tools/memory` import `heap` |
 
 ### agent-pip
 

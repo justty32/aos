@@ -1,0 +1,8 @@
+{"summary": "看 aos agent 的狀態",
+ "time_ms": {"val": 200, "max": 5000},
+ "resource": "disk",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": false,
+ "interrupt": "safe",
+ "parallel": true}

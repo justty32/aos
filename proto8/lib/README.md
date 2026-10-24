@@ -12,7 +12,7 @@
 demo/agent-*/              最上層：agent 本身（也是函數）
   tools/<名> ─捷徑─▶ lib/<層>/<名>/        引用，不複製（見下「怎麼引用」）
 lib/agent/                 高層：裡面是一整隻 agent 的工具（pyfix、小念頭 thought、claude／codex）   ［還沒收，候選見遷移清單］
-lib/aos/                   中層：動 aos 自己東西的工具（記憶 heap、寄信、say／listen、spawn／ask／status）［還沒收］
+lib/aos/                   中層：動 aos 自己東西的工具（記憶 heap、寄信、spawn／ask／status、try_run）＋共用模組 aos_ws.py（10-24 收了 10 個）
 lib/base/                  底層原語：檔案、資料夾、JSON、行程（bash）、小工具——Linux＋Python 標準庫（json_edit 另叫 aos-json）、只碰 $AOS_WS（10-24 收了 15 個）
 impls/                     基礎層與標準庫（C-74）：aos-exec 把工具叫起來，loop／fsm 跑 agent
 ```
@@ -79,6 +79,26 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 
 不碰工作區的三個（`math`、`clock`、`run_python`）不收路徑、不看 `$AOS_WS`；`run_python` 把程式寫進自己的小格再跑（規則 8 的例外：拿小格當草稿區，不跨呼叫留東西）。
 每個工具的細節看它 `_entry` 開頭的幾行說明與 `tool.json`。
+
+## 索引：aos（10-24 遷移）
+
+| 工具 | 一句話 | 參數 | 回什麼 | 來源 |
+|---|---|---|---|---|
+| [memory](aos/memory/) | 長期記憶庫：存、找、讀、忘（庫在 `$AOS_HEAP`，沒設＝`$AOS_WS/.heap/`） | `op`（save／search／read／forget）、`kind`、`title`、`text`、`tags`、`query`、`limit`、`id`、`reason` | 給模型看的文字 | demo/agent-meg（`heap.py` 一起搬，brain 也 import） |
+| [send_message](aos/send_message/) | 寄信給名冊（`$AOS_ROSTER`）上的成員或群組 | `to`、`subject`、`body`、`expect_reply` | 一行：寄了幾封、對話串第幾手 | demo/talk |
+| [check_inbox](aos/check_inbox/) | 看自己信箱還沒處理的（只看不拿） | （無） | 一封一行摘要 | demo/talk |
+| [spawn_agent](aos/spawn_agent/) | 從範本產生一隻 agent（`aos-ai spawn`） | `name`、`template` | aos-ai 那行 JSON | ai_tools/dan_tools |
+| [ask_agent](aos/ask_agent/) | 問一隻 agent、等它答完（沒有就先 spawn） | `name`、`question`、`template` | JSON：`ok`、`answer` | ai_tools/dan_tools |
+| [agent_status](aos/agent_status/) | 看 agent 的狀態 | `name` | aos-ai 那行 JSON | ai_tools/dan_tools |
+| [make_json](aos/make_json/) | 生成一份 aos 的 JSON、先驗形狀 | `kind`、`spec`、`out` | aos-ai 那行 JSON（含 notes） | ai_tools/dan_tools |
+| [make_tool](aos/make_tool/) | 在 agent 的 `tools/` 下起工具骨架 | `name`、`tool`、`description`、`params`、`lang` | aos-ai 那行 JSON | ai_tools/dan_tools |
+| [explain_aos](aos/explain_aos/) | 查 aos 的概念 | `concept` | aos-ai 那行 JSON | ai_tools/dan_tools |
+| [try_run](aos/try_run/) | 在工作區 `target/` 的暫時複本上跑一次 | `args`、`stdin`、`timeout_s`（10／60） | 結束碼、stdout、stderr | demo/self-improve 的改進者（`timeout` 改名 `timeout_s`） |
+
+遷移前這幾個「模型的錯」多半印一段話退 0（memory、send_message 印「錯誤：…」，ai 那六個印 `{"ok": false}`）；現在一律照規則 3 退 1。原本靠退 0 讓腦自己改的 agent（agent-meg、talk 的 member），act 改成「工具退非 0 回給腦、不停」（同 agent-pip）。
+`memory` 的 `$AOS_HEAP`、`send_message` 的 `$AOS_ROSTER`、ai 那六個的 `$AOS_AI_ROOT` 是規則 4「只碰 `$AOS_WS`」的例外，照原樣留著（放哪由叫的人決定，像 stack）。
+
+**共用模組 [aos_ws.py](aos/aos_ws.py)**（不是工具、沒有 `_entry`）：「放題、等答案、讀 stack」——`names`、`where`、`put`（先寫工作區頂層暫存檔再 link 進 `new/`，不蓋已有的）、`answer_name`／`answer_text`、`tail_jsonl`、`last_jsonl`。給人用的 [proto8/human](../human/README.md)（aos-say／listen／chat）與給 AI 用的 [aos-ai](../ai_tools/README.md) 兩份合成這一份，各自用 realpath 找到這個資料夾 import。
 
 ## 範例：demo/agent-liv
 

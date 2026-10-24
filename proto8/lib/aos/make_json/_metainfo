@@ -1,0 +1,8 @@
+{"summary": "生成一份 aos 的 JSON、先驗形狀",
+ "time_ms": {"val": 200, "max": 5000},
+ "resource": "disk",
+ "side_effect": true,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true}

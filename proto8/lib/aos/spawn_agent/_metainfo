@@ -1,0 +1,8 @@
+{"summary": "從範本產生一隻新的 aos agent",
+ "time_ms": {"val": 200, "max": 10000},
+ "resource": "disk",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true}

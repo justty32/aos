@@ -62,9 +62,12 @@ if calls:
                                text=True, env=env)      # stderr 不吞：工具自己的錯原樣往上
         except OSError as e:
             die("ToolFailed", "%s 起不來：%s" % (name, e))
-        if r.returncode != 0:
-            die("ToolFailed", "%s 結束碼 %d" % (name, r.returncode))
-        append({"role": "tool", "tool_call_id": cid, "content": r.stdout})
+        content = r.stdout
+        if r.returncode != 0:           # 回給腦、不停（10-24 遷移：send_message、check_inbox 改掛 lib/aos 後「模型的錯」也退 1——lib/README「工具只報錯、停不停由 agent 決定」，
+            # 這隻照舊讓腦自己改；做法同 agent-pip：stdout 照收、尾巴加結束碼，人在 stderr 看得到）
+            print("talk-member: ToolFailed %s 結束碼 %d（回給腦）" % (name, r.returncode), file=sys.stderr)
+            content += "%s(工具 %s 結束碼 %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
+        append({"role": "tool", "tool_call_id": cid, "content": content})
     sys.exit(0)
 
 # 沒有 tool_calls：content 就是答案，寫 $AOS_WS/out/<題名>、題目 cur/ → done/
@@ -102,9 +105,10 @@ def auto_reply():
         r = subprocess.run(["aos-exec", "tools/send_message"], input=arguments, stdout=subprocess.PIPE, text=True, env=env)
     except OSError as e:
         die("ToolFailed", "send_message 起不來：%s" % e)
-    if r.returncode != 0:
+    if r.returncode != 0 and r.stdout.split(" ", 2)[1:2] not in (["HopsBad"], ["SendsBad"], ["BodyBad"],
+                                                                  ["RecipientUnknown"], ["RecipientMissing"], ["MailboxMissing"]):
         die("ToolFailed", "send_message 結束碼 %d（自動回信給 %s）" % (r.returncode, sender))
-    return r.stdout
+    return r.stdout                     # 寄不成（到上限、送不到…，10-24 遷移後也退 1）照舊寫在答案後面；環境壞了才停
 
 
 note = auto_reply()

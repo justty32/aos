@@ -1,0 +1,8 @@
+{"summary": "寄信給名冊上的成員或群組（放進對方信箱的 new/）",
+ "time_ms": {"val": 30, "max": 2000},
+ "resource": "disk",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": false,
+ "interrupt": "safe",
+ "parallel": true}

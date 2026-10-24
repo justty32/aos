@@ -42,8 +42,7 @@ class Chat:
     def print_ready(self):
         """印已經到了的答案（照送出順序）；回還沒到的有幾題。"""
         for n in list(self.pending):
-            p = os.path.join(self.ws, "out", n)
-            text = h.read(os.path.join(p, "answer.txt"), "") if os.path.isdir(p) else h.read(p)
+            text = h.aos_ws.answer_text(self.ws, n)
             if text is None:
                 continue
             self.pending.remove(n)

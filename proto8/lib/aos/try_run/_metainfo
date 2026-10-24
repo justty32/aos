@@ -1,0 +1,8 @@
+{"summary": "在工作區 target/ 的暫時複本上跑一次，回結束碼與輸出",
+ "time_ms": {"val": 1000, "max": 62000},
+ "resource": "cpu",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": false,
+ "interrupt": "safe",
+ "parallel": true}

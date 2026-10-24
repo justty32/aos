@@ -64,12 +64,12 @@ def study_group(req):
 
 
 def ping_pong(req):
-    """互相回信劇本：每封信都寄回給對方、要對方回答；被擋下（錯誤：…）就收手。"""
+    """互相回信劇本：每封信都寄回給對方、要對方回答；被擋下（send_message: 代號 …，10-24 遷移前是「錯誤：…」）就收手。"""
     msgs = req["messages"]
     me = re.search(r"你是 (\w+)。", msgs[0]["content"]).group(1)
     last = msgs[-1]
     if last["role"] == "tool":
-        return answer("停了：" + last["content"][:40]) if last["content"].startswith("錯誤") else answer("寄了")
+        return answer("停了：" + last["content"][:60]) if last["content"].startswith("send_message: ") else answer("寄了")
     other = "bob" if me == "ann" else "ann"
     return call("send_message", {"to": other, "body": "再來一次", "expect_reply": True})
 
@@ -157,13 +157,16 @@ class SendMessage(TalkCase):
         b, c = letters(self.ws / "bob" / "new"), letters(self.ws / "cat" / "new")
         self.assertEqual((len(b), len(c), b[0]["group"], b[0]["thread"]), (1, 1, "all", c[0]["thread"]))
 
-    def test_model_errors_exit_0(self):
-        for args, want in (({"to": "zed", "body": "x"}, "不認得「zed」"),
-                           ({"to": "ann", "body": "x"}, "沒有收件人"),
-                           ({"to": "bob", "body": ""}, "body 要是非空字串"),
-                           ({"to": "bob", "body": "長" * 9000}, "信太大")):
+    def test_model_errors_one_line(self):
+        """模型的錯：照 lib 契約 stderr 與 stdout 各一行「send_message: 代號 原因」、退 1（10-24 遷移前是「錯誤：…」退 0）；member 的 act 把它回給腦。"""
+        for args, code, want in (({"to": "zed", "body": "x"}, "RecipientUnknown", "不認得「zed」"),
+                                 ({"to": "ann", "body": "x"}, "RecipientMissing", "沒有收件人"),
+                                 ({"to": "bob", "body": ""}, "ArgumentsBad", "body 要是非空字串"),
+                                 ({"to": "bob", "body": "長" * 9000}, "BodyBad", "信太大")):
             r = self.send("ann", args)
-            self.assertEqual((r.returncode, r.stdout.startswith("錯誤：")), (0, True), (args, r.stdout))
+            self.assertEqual(r.returncode, 1, (args, r.stdout))
+            self.assertTrue(r.stdout.startswith("send_message: %s " % code), (args, r.stdout))
+            self.assertEqual(r.stdout.strip(), r.stderr.strip())
             self.assertIn(want, r.stdout)
         self.assertEqual(letters(self.ws / "bob" / "new"), [])
 
@@ -172,7 +175,11 @@ class SendMessage(TalkCase):
         r = self.send("ann", {"to": ["bob", "cat"], "body": "x"})
         self.assertEqual(r.returncode, 0)
         self.assertIn("已寄出 1 封", r.stdout)
-        self.assertIn("錯誤：送不到 cat", r.stdout)
+        self.assertIn("錯誤：送不到 cat", r.stdout)                       # 送到一部分＝結果、退 0
+        shutil.rmtree(self.ws / "bob")
+        r = self.send("ann", {"to": ["bob", "cat"], "body": "x"})
+        self.assertEqual(r.returncode, 1)                                   # 一封都送不到＝錯
+        self.assertTrue(r.stdout.startswith("send_message: MailboxMissing 送不到 "), r.stdout)
 
     def test_env_errors_exit_1(self):
         r = run(EXEC, "--ws", str(self.ws / "ann"), SEND, input="{}")
@@ -195,12 +202,12 @@ class SendMessage(TalkCase):
         b = letters(self.ws / "bob" / "new")[0]
         self.assertEqual((b["hops"], b["reply_to"], b["thread"]), (2, p.stem, json.loads((self.ws / "ann" / "cur" / p.name).read_text())["thread"]))
         r = self.send("ann", {"to": "bob", "body": "再一封"})            # 這一層已寄 2 封＝上限
-        self.assertTrue(r.stdout.startswith("錯誤：處理這一封時已經寄了 2 封"), r.stdout)
+        self.assertTrue(r.stdout.startswith("send_message: SendsBad 處理這一封時已經寄了 2 封"), r.stdout)
         letter = json.loads((self.ws / "ann" / "cur" / p.name).read_text())
         letter["hops"] = 3
         (self.ws / "ann" / "cur" / p.name).write_text(json.dumps(letter))
         r = self.send("ann", {"to": "bob", "body": "超過"})
-        self.assertTrue(r.stdout.startswith("錯誤：這個對話串已經傳了 3 手"), r.stdout)
+        self.assertTrue(r.stdout.startswith("send_message: HopsBad 這個對話串已經傳了 3 手"), r.stdout)
 
     def test_many_senders_at_once(self):
         with ThreadPoolExecutor(10) as ex:
@@ -255,7 +262,7 @@ class Team(TalkCase):
         sent = [l for n in ("ann", "bob") for l in letters(self.ws / n / "sent")]
         self.assertEqual(sorted(l["hops"] for l in sent), [2, 3, 4, 5])      # 第 1 手是 user 寄的；第 6 手被擋
         outs = [p.read_text() for n in ("ann", "bob") for p in (self.ws / n / "out").glob("*.txt")]
-        self.assertTrue(any("停了：錯誤：這個對話串已經傳了 5 手" in o for o in outs), outs)
+        self.assertTrue(any("停了：send_message: HopsBad 這個對話串已經傳了 5 手" in o for o in outs), outs)
 
     def test_member_failed_stops_team(self):
         self.send("user", {"to": "ann", "body": "x", "expect_reply": True})
