@@ -37,7 +37,7 @@ aos-fsm [旗標] 設定檔.json
   - `exec`（aos-loop 的 `parse_target`，跟 loop.json 的 `exec` 同一套寫法、同名）＝**字串**（每次 `aos-exec -- 它`）或**陣列 `[目標, 參數...]`**（`aos-exec -- 目標 參數...`）；
     相對路徑從 cwd 算（cwd 通常是 agent 資料夾，fsm 不轉）；WS 沿用 `$AOS_WS`、AOS_STACK 沿用（由那格的 aos-exec 定）。
   - `exec` 寫成**物件＝單子**（10-24；10-21～10-23 是 `CfgBad`）：aos-fsm 在自己行程內交給 aos-exec 的 `run_inst` 跑、當監工（`timeout_ms`、整群收、轉訊號）。跑的期間 `AOS_CF`＝fsm.json 的實際路徑、
-    `AOS_CD`＝它的資料夾、`AOS_CO`＝`/states/<名>/exec`（名字照 JSON 指標跳脫；設定檔寫 `檔#/指標` 時接在那個指標後面），跑完還原；相對路徑從 fsm.json 的資料夾算，單子裡的 `$ref` 從那格來自的檔的資料夾算。
+    `AOS_CD`＝它的資料夾、`AOS_CO`＝`/states/<名>/exec`（名字照 JSON 指標跳脫；設定檔寫 `檔#/指標` 時接在那個指標後面），跑完還原；相對路徑從 fsm.json 的資料夾算，單子裡的 `$ref` 從那格來自的檔的資料夾算；相對的 `AOS_WS`／`AOS_STACK` 以 fsm 的 cwd 轉成絕對（同 aos-loop，10-24 審後）。
     單子壞（`EntryBad`／`DirectiveBad`／`LaunchFailed`）＝自己的錯一行「aos-fsm: 代號 狀態 X：單子跑不起來：…」、退 1、不寫 trace、state 不動；被逾時收掉＝trace `code` 143、`signal` 15。
     `"exec": "fsm.json#/states/<名>/body"`＋`body` 照樣能用（字串目標，由那格的 aos-exec 跑）。
   - **開跑時查整張表**（10-22 ideas § 7，`check`）：讀表後、跑格前，`start` 要在表上；每一格要是 `{"exec", "next"}`、`exec` 合法（單子只看是物件，裡面跑那格時才驗）、`next` 是表上的狀態名、
@@ -45,7 +45,7 @@ aos-fsm [旗標] 設定檔.json
   - fsm.json 帶 `"_entry": ["aos-fsm", {"$env": "AOS_CF"}]` 時 `aos-exec fsm.json` 就是一次；表在大 JSON 裡時寫 `{"$env": "AOS_CF", "$path": "#/fsm"}`（`$path` 字串拼接）。
   - **指示詞**（10-23 晚，使用者「aos 讀的 JSON 全部支援」，N-45）：只解 fsm 自己讀的格——整份、`states`、每一格先換一層，`start`、格的 `exec`（換一層後是物件＝單子，裡面不解、跑那格時才解，10-24）、`next` 整個解
     （例 `{"start": "idle", "states": {"$ref": "states.json"}}`、`"exec": ["aos-exec", {"$env": "TOOL"}]`）；格裡其他 key（`body`…）不碰，留給跑那格的 aos-exec。
-    相對 `$ref` 從 fsm.json 所在的資料夾算（換進來的檔從那份檔的）；解不開＝自己的錯 `DirectiveBad`、不跑。`#/` 指標走原文：`states` 拆到別的檔，`exec` 要指進那份檔（`states.json#/think/body`）。
+    相對 `$ref` 從 fsm.json 所在的資料夾算（換進來的檔從那份檔的；fsm.json 是捷徑＝實際的資料夾，同 aos-exec 與單子的 `AOS_CD`，10-24 審後 `aos::loop::config_file`）；解不開＝自己的錯 `DirectiveBad`、不跑。`#/` 指標走原文：`states` 拆到別的檔，`exec` 要指進那份檔（`states.json#/think/body`）。
 - **`$AOS_STACK`**（必要）：fsm 自己的兩個檔都在這裡（只有 fsm 自己寫，N-39）：
   - `state.txt`（10-23 起帶 `.txt`，原 `state`）：純文字一行狀態名（跟 shell 版 fsm 同格式，可互換，P-07）。沒有、空的＝`start`；前後空白去掉（認 Unicode 空白，同 bin 的 `str.strip()`）。
     10-22 起**在但讀不了**（沒權限、是資料夾、不是 UTF-8）＝`StateBad`、不跑格（原本當沒有檔、從 `start` 起）；裡面的狀態不在表上＝`StateUnknown`。
@@ -125,7 +125,7 @@ aos-fsm [旗標] 設定檔.json
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-- `test_cli`（`tests/test_cli.py`，38 組，約 2 秒；10-24 加 F 段 6 組：exec 直接放單子——`AOS_CF`／`AOS_CD`／`AOS_CO`（名字帶 `/` 跳脫）／cwd 與換 next、非 0、逾時（trace 143／15）、形狀壞（`EntryBad`／`DirectiveBad`，不寫 trace）、SIGTERM、`states` 拆檔時 `$ref` 的起點，拿掉實作全紅；10-23 晚加 E 段 3 組：start／states／格／exec／next 的指示詞、解不開＝`DirectiveBad` 不跑、格的 body 不解）。10-21 起 `exec`（當時叫 `val`）不收內嵌單子：寫內嵌單子的案例由 `table()` 小工具換成 `fsm.json#/states/<名>/body`。
+- `test_cli`（`tests/test_cli.py`，41 組，約 2 秒；10-24 審後加 F2 段 3 組：設定檔 `檔#/指標` 的 `AOS_CO`、相對 `AOS_STACK`、捷徑 fsm.json（拿掉修正後兩組紅）；10-24 加 F 段 6 組：exec 直接放單子——`AOS_CF`／`AOS_CD`／`AOS_CO`（名字帶 `/` 跳脫）／cwd 與換 next、非 0、逾時（trace 143／15）、形狀壞（`EntryBad`／`DirectiveBad`，不寫 trace）、SIGTERM、`states` 拆檔時 `$ref` 的起點，拿掉實作全紅；10-23 晚加 E 段 3 組：start／states／格／exec／next 的指示詞、解不開＝`DirectiveBad` 不跑、格的 body 不解）。10-21 起 `exec`（當時叫 `val`）不收內嵌單子：寫內嵌單子的案例由 `table()` 小工具換成 `fsm.json#/states/<名>/body`。
   A 段從 `proto8/tests/test_fsm.py` 移植（state 在 stack 換、改名寫入、10 與失敗不換、字串格走 aos-exec、
   單子格逾時＝143、`$env`、trace 一次一行且沒有 `timed_out`、要 AOS_STACK、自己的錯一行、外層逾時整棵收掉），B 段是用法、表／格壞的代號（含 `exec` 是物件、空陣列、元素不是字串）、空 state、trace 排版、
   字串格被訊號停掉、格的入口不在、不讀格的 stdout、相對路徑、PATH 原樣傳給格（§ 24），C 段是訊號（SIGTERM：格收好退 0 → state 照換、143；SIGINT 停掉單子格 → 130）與單子格的 `$ref` 從 fsm.json 的資料夾算、`argv[0]` 帶 `/` 又 exec 不了交給 aos-exec（10-20），

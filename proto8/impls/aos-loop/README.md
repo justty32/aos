@@ -39,7 +39,7 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔
     相對路徑照 cwd 算、loop 不 cd 不轉；loop 不驗目標存不存在，那是那次 aos-exec 的錯。WS、`AOS_STACK` 由那次的 aos-exec 照它的規則定（沿用 `$AOS_WS`，沒設用 cwd）。每次重找入口，入口換了下一次就生效。
   - `exec` 寫成**物件＝單子**（10-24；10-21～10-23 是 `CfgBad`）：每次在 aos-loop 自己行程內交給 aos-exec 的 `run_inst`（同 aos-exec 跑單子：先解指示詞、驗 10 個 key、inst 的 libaos 起、`timeout_ms`／`grace_ms`、訊號轉給整群）。
     跑的期間 `AOS_CF`＝設定檔的實際路徑、`AOS_CD`＝它的資料夾、`AOS_CO`＝`/exec`（設定檔寫 `檔#/指標` 時＝那個指標＋`/exec`），跑完還原；相對路徑（`cwd`、串流、`argv[0]`）從設定檔的資料夾算，
-    單子裡的 `$ref` 從 `exec` 那格來自的檔的資料夾算；`AOS_WS`／`AOS_STACK` 照 loop 自己的、不讀 `.env`。單子壞＝自己的錯一行（`EntryBad`／`DirectiveBad`／`LaunchFailed`，原因開頭「單子跑不起來：」）、退 1。
+    單子裡的 `$ref` 從 `exec` 那格來自的檔的資料夾算；`AOS_WS`／`AOS_STACK` 照 loop 自己的，相對路徑以 loop 的 cwd 轉成絕對（`AOS_STACK` 結尾補 `/`，同 aos-exec；跑完還原；不驗、不建。10-24 審後補：原本原樣給，`AOS_STACK=st aos-loop cfg/loop.json` 的單子會寫到 `cfg/st/`），不讀 `.env`。單子壞＝自己的錯一行（`EntryBad`／`DirectiveBad`／`LaunchFailed`，原因開頭「單子跑不起來：」）、退 1。
     被逾時收掉＝那次 143（失敗那行的「誰」＝`loop.json#/exec`）。`{"exec": "loop.json#/body", "body": 單子}` 照樣能用（字串目標，由那次的 aos-exec 跑）。沒有 `exec`＝`CfgBad`「沒有東西可跑」。
   - `max` 非負整數，**沒寫＝不限**（10-21 前是 10）；0＝一次都不跑、退 0（負的、`null`＝`CfgBad`）。
   - `interval_ms` 非負整數，沒寫＝0：一次結束到下一次開始至少隔幾毫秒。
@@ -50,7 +50,7 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔
 
 使用者「aos 讀的 JSON 全部支援」（N-45）：loop.json 與 ctl 裡也能寫 `$ref`／`$env`（寫法同 [aos-directive](../aos-directive/README.md)）。**只解 loop 自己讀的格**（C-52；`resolve_keys`）：
 
-- loop.json：整份先換一層（整份是 `{"$ref": "real.json"}` 也行），再把 `exec`、`max`、`interval_ms`、`ctl`、`state` 整個解（`exec` 換一層後是物件＝單子，裡面不解，留到每次跑的時候 `run_inst` 解，10-24 `resolve_exec`）；相對 `$ref` 從設定檔所在的資料夾算（整份換過的從那份檔的）。
+- loop.json：整份先換一層（整份是 `{"$ref": "real.json"}` 也行），再把 `exec`、`max`、`interval_ms`、`ctl`、`state` 整個解（`exec` 換一層後是物件＝單子，裡面不解，留到每次跑的時候 `run_inst` 解，10-24 `resolve_exec`）；相對 `$ref` 從設定檔所在的資料夾算（整份換過的從那份檔的；設定檔是捷徑＝實際的資料夾，同 aos-exec 與內嵌單子的 `AOS_CD`——10-24 審後統一成 `config_file`，原本這裡不解捷徑）。
   其他 key（`body`、`_entry`…）不碰：`loop.json#/body` 由那次的 aos-exec 自己解，body 裡的 `$env` 沒設照舊是那次的錯。
 - ctl：整份先換一層，再把 `paused`、`stopped`、`max`、`interval_ms`、`seq` 整個解（aos-daemon 多解 `loops`、`loops_added`、`loops_removed`）；相對 `$ref` 從 ctl 所在的資料夾算。
 - 解不開（變數沒設、讀不到、指不到、繞圈）：設定檔＝自己的錯 `DirectiveBad`、退 1；ctl＝整份不採用、原因進 `ctl_warning`。
@@ -108,15 +108,15 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔
 
 | 檔 | 做什麼 |
 |---|---|
-| `include/aos/loop.hpp` | 公開介面：`Run`（`code`、`signal`、`elapsed_ms`、`received`；沒有 `timed_out`）、`block_signals`、`take_signal`、`Target`（10-24 多 `inst`、`cf`、`co`、`ref_base`、`label()`）、`parse_target`（10-24 收物件）、`resolve_exec`、`place_inline`、`pointer_escape`（10-24）、`run_once(Target)`、`loop_cli`、`Loop(opts, spec, defaults)`（骨架，`tend`／`finish`／`info`／`check_ctl` 四個掛鉤給子類別）、`Defaults`（`max` 預設 nullopt＝不限）、`write_window`、`heartbeat`、`resolve_keys`（10-23 晚；aos-daemon、aos-fsm 共用）；代號 `aos::loop::code::*`（沿用 aos-exec 的＋`StackMissing`） |
+| `include/aos/loop.hpp` | 公開介面：`Run`（`code`、`signal`、`elapsed_ms`、`received`；沒有 `timed_out`）、`block_signals`、`take_signal`、`Target`（10-24 多 `inst`、`cf`、`co`、`ref_base`、`label()`）、`parse_target`（10-24 收物件）、`resolve_exec`、`place_inline`、`pointer_escape`（10-24）、`config_file`（10-24 審後）、`run_once(Target)`、`loop_cli`、`Loop(opts, spec, defaults)`（骨架，`tend`／`finish`／`info`／`check_ctl` 四個掛鉤給子類別）、`Defaults`（`max` 預設 nullopt＝不限）、`write_window`、`heartbeat`、`resolve_keys`（10-23 晚；aos-daemon、aos-fsm 共用）；代號 `aos::loop::code::*`（沿用 aos-exec 的＋`StackMissing`） |
 | `src/common/common.hpp` | `using` |
 | `src/run/run.hpp` | run 元素的內部介面：`the_signals`、`run_folder`、`run_inline` |
 | `src/run/run.cpp` | `run_once`：目標＝組好 `-- 目標 參數...` 交給 `run_folder`；單子＝交給 `run_inline`（10-24） |
-| `src/run/inline.cpp` | `run_inline`（10-24）：`AOS_CF`／`AOS_CD`／`AOS_CO` 設成單子的位置（跑完還原）、行程內 `aos::exec::run_inst`、錯誤原因前面加「單子跑不起來：」、量毫秒 |
+| `src/run/inline.cpp` | `run_inline`（10-24）：`AOS_CF`／`AOS_CD`／`AOS_CO` 設成單子的位置、相對的 `AOS_WS`／`AOS_STACK` 轉成絕對（跑完都還原）、行程內 `aos::exec::run_inst`、錯誤原因前面加「單子跑不起來：」、量毫秒 |
 | `src/run/folder.cpp` | `run_folder`：擋 SIGCHLD、開 signalfd、fork；子行程解開訊號、呼叫 `aos::exec::run_cli`、`_exit` 它的碼；這邊等它、期間把三個訊號 kill 給它、量毫秒 |
 | `src/run/signals.cpp` | `block_signals`（`sigprocmask`）、`take_signal`（`sigtimedwait` 不等） |
 | `src/engine/engine.hpp` | engine 元素的內部介面：`is_nat` |
-| `src/engine/config.cpp` | `resolve_keys`（設定檔、ctl 的指示詞：整份換一層、自己讀的格整個解，10-23 晚）；`Loop` 的建構子：`load_cfg` 讀設定檔（`檔#/指標`）、解指示詞、旗標蓋上、驗 `exec`／`max`／`interval_ms`／`ctl`／`state`、算兩扇窗的路徑；`parse_target`、`loop_cli` |
+| `src/engine/config.cpp` | `resolve_keys`（設定檔、ctl 的指示詞：整份換一層、自己讀的格整個解，10-23 晚）；`Loop` 的建構子：`load_cfg` 讀設定檔（`檔#/指標`）、解指示詞、旗標蓋上、驗 `exec`／`max`／`interval_ms`／`ctl`／`state`、算兩扇窗的路徑；`parse_target`、`resolve_exec`、`place_inline`、`config_file`（設定檔的實際路徑，10-24 審後）、`loop_cli` |
 | `src/engine/loop.cpp` | `Loop::serve`／`main_loop`（每次怎麼走；失敗那行的「誰」＝`exec_.target`）、`end`、`nap`（`sigtimedwait` 睡、收到訊號就醒）、`signal_got`、`say` |
 | `src/engine/window.cpp` | 窗：`read_ctl`、`write_state`（寫不了丟 `StateError`）、`beat`（10-23：離上一份滿 1 秒就再寫）、`write_window`、`heartbeat` |
 | `src/main.cpp` | 命令列：`block_signals` → `loop_cli` → `Loop` → `serve`；出錯印「aos-loop: 代號 原因」 |
@@ -167,7 +167,7 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-`ctest` 跑 `test_cli`（`tests/test_cli.py`，55 組，約 4 秒；10-24 加 H 段 9 組：exec 直接放單子——每次跑與 `AOS_CF`／`AOS_CD`／`AOS_CO`／cwd、設定檔 `檔#/指標` 的 `AOS_CO`、指示詞跑的時候才解與 `$ref` 起點、exec 本身是 `$ref`、0／10／7、逾時 143、形狀壞（`EntryBad`／`DirectiveBad`／`LaunchFailed`）、SIGTERM 轉給單子、跑完 `AOS_CO` 還原，拿掉實作全紅；10-23 加 F 段 1 組：`$AOS_STACK` 不在不建、`WriteFailed`、那次沒跑；10-23 晚加 G 段 5 組：設定檔的指示詞（`exec`／`max`／`state`、整份 `$ref`、exec 陣列元素）、解不開＝`DirectiveBad`（沒設、讀不到、繞圈；寫法不合原封不動＝`CfgBad`）、不讀的 key（body）不解、ctl 的 `$ref`（相對 ctl 的資料夾、整份 `$ref`）、ctl 解不開不採用）。10-21 起 exec（當時叫 run）不收內嵌單子：A～D 段寫內嵌單子的案例由 `loop()` 小工具換成 `{"exec": "loop.json#/body", "body": 單子}`。
+`ctest` 跑 `test_cli`（`tests/test_cli.py`，58 組，約 4 秒；10-24 審後加 H2 段 3 組：相對 `AOS_STACK`／`AOS_WS` 轉成絕對、絕對的不動、捷徑設定檔的相對基準（拿掉修正前兩組紅）；10-24 加 H 段 9 組：exec 直接放單子——每次跑與 `AOS_CF`／`AOS_CD`／`AOS_CO`／cwd、設定檔 `檔#/指標` 的 `AOS_CO`、指示詞跑的時候才解與 `$ref` 起點、exec 本身是 `$ref`、0／10／7、逾時 143、形狀壞（`EntryBad`／`DirectiveBad`／`LaunchFailed`）、SIGTERM 轉給單子、跑完 `AOS_CO` 還原，拿掉實作全紅；10-23 加 F 段 1 組：`$AOS_STACK` 不在不建、`WriteFailed`、那次沒跑；10-23 晚加 G 段 5 組：設定檔的指示詞（`exec`／`max`／`state`、整份 `$ref`、exec 陣列元素）、解不開＝`DirectiveBad`（沒設、讀不到、繞圈；寫法不合原封不動＝`CfgBad`）、不讀的 key（body）不解、ctl 的 `$ref`（相對 ctl 的資料夾、整份 `$ref`）、ctl 解不開不採用）。10-21 起 exec（當時叫 run）不收內嵌單子：A～D 段寫內嵌單子的案例由 `loop()` 小工具換成 `{"exec": "loop.json#/body", "body": 單子}`。
 A 段從 `proto8/tests/test_exec.py` 移植 aos-loop 的案例（失敗碼、內嵌單子每次跑、跑滿 max 不寫 stderr、10／7、失敗那行的「誰」＝exec 的目標、自己的錯一行），
 B 段是 `max` 沒寫＝不限／0／負的、欄位型別、字串 exec 走 aos-exec 的規則（AOS_WS／AOS_STACK／AOS_CF／AOS_CD／cd、JSON 入口、每次重找入口、入口不在＝那次碼 1）、
 不寫 stdout、PATH 原樣傳給那次（§ 24）、單子的 `$env`＋相對 cwd（`$env` 沒設＝那次 aos-exec 的錯）、逾時＝失敗（143）、被訊號停掉＝128＋N，C 段是訊號（SIGTERM 轉給字串 exec、SIGINT 轉給單子、SIGHUP 停掉那次，都是收完再 128＋N），

@@ -94,12 +94,16 @@ void place_inline(Target& t, const std::string& spec, const std::string& sub, co
     if (!t.inst) {
         return;
     }
-    aos::Spec s = aos::split_hash(spec);
-    std::error_code ec;
-    std::filesystem::path real = std::filesystem::canonical(s.path, ec);   // 解開捷徑（同 aos-exec 的 AOS_CF）
-    t.cf = ec ? aos::abspath(s.path) : real.string();
-    t.co = s.pointer + sub;
+    t.cf = config_file(spec);
+    t.co = aos::split_hash(spec).pointer + sub;
     t.ref_base = ref_base;
+}
+
+std::string config_file(const std::string& spec) {
+    std::string path = aos::split_hash(spec).path;
+    std::error_code ec;
+    std::filesystem::path real = std::filesystem::canonical(path, ec);   // 解開捷徑（同 aos-exec 的 AOS_CF）
+    return ec ? aos::abspath(path) : real.string();
 }
 
 aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog) {
@@ -154,8 +158,8 @@ aos::Resolved resolve_keys(const Json& doc, const std::string& base_dir, const s
 Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& spec, const Defaults& d) : d_(d) {
     cfg_ = aos::load_cfg(spec);
     std::string exec_base;   // exec 那格裡相對 $ref 的起點（內嵌單子用）
-    try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45）
-        aos::Resolved r = resolve_keys(cfg_, aos::dirname(aos::abspath(aos::split_hash(spec).path)),
+    try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45；捷徑解開，10-24 審後，config_file）
+        aos::Resolved r = resolve_keys(cfg_, aos::dirname(config_file(spec)),
                                        {"max", "interval_ms", "ctl", "state"});
         if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解（10-24，resolve_exec）
             aos::Resolved ex = resolve_exec(r.value["exec"], r.dir_of("exec"));

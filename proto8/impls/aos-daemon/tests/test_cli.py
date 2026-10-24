@@ -706,5 +706,86 @@ class T(unittest.TestCase):
         self.assertEqual((p.returncode, err, k["x"]["code"], (self.s / "x" / "ran").read_text()), (0, "", 3, "x\n"))
         self.assertIn("aos-loop: 第 1 次 loop.json#/exec 失敗，結束碼 3", (self.s / "x" / "stderr.txt").read_text())
 
+    # ---- 10-24 審後補：還原、訊號、abs_refs 邊界、收不肯退的單子
+
+    def popen_env(self, extra):
+        p = subprocess.Popen([DAEMON, "daemon.json"], cwd=str(self.t), env=env_of(extra),
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        self.procs.append(p)
+        return p
+
+    def test_inline_env_restored_had_values(self):
+        # daemon 自己的 exec 是單子：跑的那段 AOS_CF／CD／CO 設成單子的位置，跑完還原成原本的值（原本有值）。
+        # 看得出來的地方：之後讀 ctl 時 loops 用 $env 讀它們——還原了＝指到 p1／p2／p3、子項都退 0；
+        # 沒還原＝指到 daemon.json、它的資料夾、/exec，子項起不來
+        for n in ("p1", "pd/p2", "p3"):   # p2 放在 pd/ 底下：AOS_CD 原本＝pd，跟 daemon.json 的資料夾分得開
+            (self.t / n).mkdir(parents=True)
+            (self.t / n / "_entry").write_text('#!/bin/sh\necho x >> "$AOS_STACK/ran"\n')
+            (self.t / n / "_entry").chmod(0o755)
+        self.cfg({"exec": {"argv": ["true"]}, "interval_ms": 100, "state": "state.json", "ctl": "ctl.json", "loops": {}})
+        p = self.popen_env({"AOS_STACK": str(self.s), "AOS_CF": str(self.t / "p1"), "AOS_CD": str(self.t / "pd"), "AOS_CO": "p3"})
+        self.assertTrue(until(lambda: self.state()["runs"] >= 1))
+        self.ctl({"loops": {"a": {"exec": {"$env": "AOS_CF"}, "max": 1}, "b": {"exec": {"$env": "AOS_CD", "$path": "p2"}, "max": 1},
+                            "c": {"exec": {"$env": "AOS_CO"}, "max": 1}}})
+        k = until(lambda: len(self.kids()) == 3 and all(r["phase"] == "done" for r in self.kids().values()) and self.kids())
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err), (0, ""))
+        self.assertEqual({n: r["code"] for n, r in k.items()}, {"a": 0, "b": 0, "c": 0})
+        self.assertEqual({n: (self.s / n / "ran").read_text() for n in "abc"}, {n: "x\n" for n in "abc"})
+
+    TRAP = 'trap \'echo got > "$AOS_STACK/got"; exit 0\' TERM; touch "$AOS_STACK/up"; while :; do sleep 0.05; done'
+
+    def test_inline_child_sigterm_forwarded(self):
+        # daemon 收 SIGTERM → 送給子 loop → 子 loop 轉給它正在跑的內嵌單子（整群）、等它收完再退
+        p = self.start({"state": "state.json", "loops": {"a": {"exec": {"argv": ["sh", "-c", self.TRAP]}, "max": 5}}})
+        self.assertTrue(until(lambda: (self.s / "a" / "up").exists()))
+        p.send_signal(signal.SIGTERM)
+        out, err = p.communicate(timeout=30)
+        r = self.kids()["a"]
+        self.assertEqual((p.returncode, err, (self.s / "a" / "got").read_text(), r["phase"], r["code"]), (143, "", "got\n", "stopped", 143))
+
+    def test_inline_own_exec_sigterm(self):
+        # daemon 自己的 exec 是內嵌單子、跑一半收 SIGTERM：轉給單子、等它收完，以 143 結束
+        p = self.start({"exec": {"argv": ["sh", "-c", self.TRAP]}, "max": 5, "state": "state.json"})
+        self.assertTrue(until(lambda: (self.s / "up").exists()))
+        p.send_signal(signal.SIGTERM)
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err, (self.s / "got").read_text(), self.state()["phase"]), (143, "", "got\n", "stopped"))
+
+    def test_abs_refs_edges(self):
+        # 子項單子裡的 $ref 搬進小格前轉成絕對（abs_refs）：絕對的不動、$ref 陣列每個字串元素都轉、只有 #/… 的不動、
+        # 寫法不合（不是字串）的不動、指示詞裡別的 key 不往裡走、不是指示詞的物件往裡走
+        unit = {"argv": ["true"], "x": [
+            {"$ref": "/abs/d.json#/m"}, {"$ref": ["d1.json", "sub/d2.json#/x", "/abs/d3.json"]}, {"$ref": "#/m"},
+            {"$ref": 5}, {"$ref": ["d1.json", 7]}, {"$ref": "d.json", "$path": {"$ref": "in.json"}},
+            {"deep": {"$ref": "sub/d4.json"}}, {"$env": "HOME"}]}
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": {"exec": unit, "max": 1}}})
+        until(lambda: self.kids().get("a", {}).get("phase") == "done")
+        self.ctl({"stopped": True})
+        p.communicate(timeout=30)
+        real = os.path.realpath(self.t)
+        x = json.loads((self.s / "a" / "loop.json").read_text())["exec"]["x"]
+        self.assertEqual(x, [
+            {"$ref": "/abs/d.json#/m"}, {"$ref": [real + "/d1.json", real + "/sub/d2.json#/x", "/abs/d3.json"]}, {"$ref": "#/m"},
+            {"$ref": 5}, {"$ref": [real + "/d1.json", 7]}, {"$ref": real + "/d.json", "$path": {"$ref": "in.json"}},
+            {"deep": {"$ref": real + "/sub/d4.json"}}, {"$env": "HOME"}])
+
+    def test_stubborn_inline_child_killed_with_loop(self):
+        # 子 loop 的內嵌單子不理 SIGTERM、grace_ms 又比 daemon 的 10 秒長：滿 10 秒 daemon SIGKILL 子 loop 那群時，
+        # 單子（inst 起的、自成一群）也一起收掉，不留孤兒（10-24 審後補；原本整群打不到它）
+        body = 'trap "" TERM; echo $$ > "$AOS_STACK/pid"; while :; do sleep 0.05; done'
+        p = self.start({"state": "state.json", "loops": {"a": {"exec": {"argv": ["sh", "-c", body], "grace_ms": 60000}, "max": 1}}})
+        self.assertTrue(until(lambda: (self.s / "a" / "pid").read_text().strip()))
+        pid = int((self.s / "a" / "pid").read_text())
+        self.addCleanup(lambda: alive(pid) and os.killpg(pid, signal.SIGKILL))
+        t0 = time.monotonic()
+        p.send_signal(signal.SIGTERM)
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err), (143, ""))
+        self.assertGreater(time.monotonic() - t0, 9)
+        self.assertTrue(until(lambda: not alive(pid), 3), "單子留成孤兒")
+
+
 if __name__ == "__main__":
     unittest.main(argv=[sys.argv[0]])

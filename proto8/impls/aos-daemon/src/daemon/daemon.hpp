@@ -1,7 +1,7 @@
 // daemon.hpp：【daemon】Daemon＝aos-loop 的 Loop 子類別＋一張子 loop 的表（10-21 傍晚）。內部標頭。
 //
 //   daemon.cpp   建構子（AOS_STACK、loops、adopt 的檢查）、adopt、tend（對表：收多的、看誰結束、起少的）、
-//                term／settle（收子項不等：SIGTERM 後照常巡，每次 tend 看一眼，退了標 stopped、滿 10 秒還在就 SIGKILL 整群；
+//                term／settle（收子項不等：SIGTERM 後照常巡，每次 tend 看一眼，退了標 stopped、滿 10 秒還在就 SIGKILL 整群＋它底下自成一群的單子；
 //                10-23 壓測後改，原本原地等滿 10 秒）、finish（收掉全部、等它們退，等的時候每秒寫一份 phase stopping 的 state；
 //                最後一次之後才自己結束的標 done，D7）、
 //                info（loops 表）、check_ctl（ctl 的 loops）、taken_names／check_names（子項名字跟自己的 ctl／state 撞名，10-22）
@@ -64,7 +64,7 @@ private:
     void adopt();
     void add(const std::string& name, const Child& c);
     void term(Child& c, bool removing);   // 送 SIGTERM、phase stopping、記期限（不等）
-    bool settle(Child& c);                // 收的途中看一眼：退了＝stopped、回 true；過了期限還在＝SIGKILL 整群（只送一次）
+    bool settle(Child& c);                // 收的途中看一眼：退了＝stopped、回 true；過了期限還在＝SIGKILL 整群＋底下自成一群的（只送一次）
     Json write_parts(Json rows);      // state 的 loops 欄：≤ PART_ROWS 列原樣；多了就寫分檔、回 {"$ref": [分檔, …]}
 
     Json loops_;                                         // daemon.json 的 loops

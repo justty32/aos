@@ -2,7 +2,7 @@
 //
 // 每次（Loop 讀完 ctl 之後的 tend）：期望表＝ctl 的 loops（有寫）或 daemon.json 的 loops，加上 ctl 的 loops_added、減掉 loops_removed（10-23 晚）→
 //   表上多出來的送 SIGTERM（phase stopping）就往下走、不等；之後每次 tend 看一眼，退了標 stopped 並移除、滿 10 秒還在就
-//   SIGKILL 整群（10-23 壓測後改：原本原地等滿 10 秒，那段 state 不寫、ctl 不讀、別的子 loop 沒人顧）→
+//   SIGKILL 整群——子 loop 那群，加上它底下自成一群的（inst 起的單子，leaders_below；10-24 審後補，原本打不到）（10-23 壓測後改：原本原地等滿 10 秒，那段 state 不寫、ctl 不讀、別的子 loop 沒人顧）→
 //   看誰自己結束了（phase done，記 code／signal）→ 起表上少掉的（起之前先寫一份 state、起很久時每秒一份）。子 loop 結束後不自動重起（使用者 10-20「照預設」）：停在表上 done；要再起就從 loops 拿掉再放回。
 // phase：running＝還在跑、stopping＝送了 SIGTERM 還沒退、done＝子 loop 自己結束、stopped＝daemon 收掉它（送了 SIGTERM／SIGKILL；
 // 10-23 命名統合前兩個都叫 exited）。
@@ -18,6 +18,7 @@
 #include <csignal>
 #include <filesystem>
 #include <limits>
+#include <sstream>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -35,6 +36,51 @@ static aos::loop::Defaults daemon_defaults() {
     d.interval_ms = 200;
     d.need_exec = false;
     return d;
+}
+
+// root 底下（子、孫…）自己當群組組長的行程：/proc 掃一遍（stat 第 4 欄 ppid、第 5 欄 pgrp）。SIGKILL 子 loop 時一起整群收（10-24 審後補）：
+// 子 loop 跑的單子——內嵌的在子 loop 自己行程內 run_inst、字串目標的在它 fork 的 aos-exec 裡——由 inst 的 libaos 起、自成 session，
+// 整群打子 loop 打不到；單子不理 SIGTERM、grace_ms 又比 10 秒長時，子 loop 被收掉後它會留成孤兒。掃完到送之間它結束了、
+// pid 又剛好被別的組長拿走的機會跟 killpg 本身一樣小，不管。讀不到 /proc＝回空的（只收子 loop 那群，同以前）。
+static std::vector<pid_t> leaders_below(pid_t root) {
+    std::unordered_map<pid_t, std::vector<pid_t>> kids;
+    std::unordered_map<pid_t, pid_t> pgrp;
+    std::error_code ec;
+    for (std::filesystem::directory_iterator it("/proc", ec), end; !ec && it != end; it.increment(ec)) {
+        std::string n = it->path().filename().string();
+        if (n.empty() || n.find_first_not_of("0123456789") != std::string::npos) {
+            continue;
+        }
+        int err = 0;
+        std::optional<std::string> text = aos::read_file("/proc/" + n + "/stat", err);
+        size_t paren = text ? text->rfind(')') : std::string::npos;
+        if (paren == std::string::npos) {
+            continue;
+        }
+        std::istringstream rest(text->substr(paren + 1));   // 第 2 欄程式名可能有空白：從最後一個 ')' 之後數
+        std::string state;
+        long ppid = 0;
+        long pg = 0;
+        if (!(rest >> state >> ppid >> pg)) {
+            continue;
+        }
+        pid_t pid = (pid_t)std::stol(n);
+        kids[(pid_t)ppid].push_back(pid);
+        pgrp[pid] = (pid_t)pg;
+    }
+    std::vector<pid_t> out;
+    std::vector<pid_t> todo{root};
+    while (!todo.empty()) {
+        pid_t p = todo.back();
+        todo.pop_back();
+        for (pid_t k : kids[p]) {
+            if (pgrp[k] == k) {
+                out.push_back(k);
+            }
+            todo.push_back(k);
+        }
+    }
+    return out;
 }
 
 static void check_name(const std::string& name) {
@@ -362,7 +408,11 @@ bool Daemon::settle(Child& c) {
         return true;
     }
     if (!c.killed && Clock::now() >= c.deadline) {
-        aos::signal_group(c.pid, SIGKILL);   // 整群：連孫程式一起收
+        std::vector<pid_t> below = leaders_below(c.pid);   // 先掃：子 loop 一死，底下自成 session 的單子就認不出是誰的了
+        aos::signal_group(c.pid, SIGKILL);   // 整群：子 loop 與它同群的孫程式
+        for (pid_t g : below) {
+            aos::signal_group(g, SIGKILL);   // 底下自成一群的（inst 起的單子，連它的子孫）
+        }
         c.killed = true;
     }
     return false;

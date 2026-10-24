@@ -7,6 +7,9 @@
 //
 // 命令列（src/main.cpp）只叫 run_cli；aos-loop／aos-fsm 的每次、aos-daemon 的子 loop 在 fork 出來的子行程裡叫 run_cli
 // （等同起一支 `aos-exec -- 目標 參數...`）。規則見 aos-exec/README.md。
+// 〔10-24 起 loop／fsm／daemon 的 exec 是內嵌單子（物件）時不經 run_cli：它們在自己行程內叫 run_inst，跑的那段自己把
+//  AOS_CF／AOS_CD／AOS_CO 設成單子的位置（跑完還原）、相對的 AOS_WS／AOS_STACK 轉成絕對——所以 AOS_CF／CD／CO 不再只由
+//  aos-exec 覆寫（aos-loop 的 src/run/inline.cpp；N-57 的 10-24 註、thinking 2026-10-24-exec-relative）〕
 // 10-21 晚以前的 find_entry／resolve_ws／prepare_env／apply_env／launch 五步拆不開了（.env 要在挑入口之前讀、
 // 每走進一層都要 cd 和 setenv），收進 run_cli，不再公開。
 // 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/error.hpp）；run_cli 自己接住印出來。

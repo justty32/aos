@@ -6,6 +6,7 @@
 //                   物件＝內嵌單子（10-24 使用者「exec本來就應該要可以直接放內嵌單子吧」）
 //   resolve_exec    exec 那格的指示詞：先換一層；換完是物件（單子）就不往裡面解（留到跑的時候、AOS_CF／AOS_CO 設好才解），不然整個解
 //   place_inline    內嵌單子在哪：設定檔（AOS_CF）、在檔裡的指標（AOS_CO）、單子裡相對 $ref 的起點
+//   config_file     設定檔的實際路徑（解開捷徑；同 aos-exec 的 AOS_CF）——設定檔裡相對 $ref 的起點與內嵌單子的 AOS_CF／AOS_CD 都從它算
 //   run_once        跑一次：目標＝子行程裡 `aos-exec -- 目標 參數...`（aos-exec 的 run_cli）；單子＝行程內 aos-exec 的 run_inst
 //   loop_cli        命令列 `程式 [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔`（aos-loop、aos-daemon 共用）
 //   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；10-21 傍晚）：
@@ -72,8 +73,14 @@ Target parse_target(const Json& v, const std::string& what);
 aos::Resolved resolve_exec(const Json& v, const std::string& base_dir);
 
 // 物件的 Target 填好位置：spec＝設定檔（`檔` 或 `檔#/指標`），sub＝exec 那格在 spec 指到的值裡的 JSON 指標（例 "/exec"），
-// ref_base＝resolve_exec 回的 base_dir。cf＝檔的實際路徑（解開捷徑；解不開用絕對路徑）、co＝spec 的指標＋sub。不是物件不動。
+// ref_base＝resolve_exec 回的 base_dir。cf＝config_file(spec)、co＝spec 的指標＋sub。不是物件不動。
 void place_inline(Target& t, const std::string& spec, const std::string& sub, const std::string& ref_base);
+
+// 設定檔（`檔` 或 `檔#/指標`，只看 # 前面）的實際路徑：解開捷徑的絕對路徑（解不開＝abspath，從 cwd 算）。
+// 10-24 審後統一：設定檔裡相對 $ref 的起點（Loop、fsm 的 read_table）＝它的資料夾，內嵌單子的 AOS_CF＝它——
+// 同 aos-exec 跑 `檔#/指標`（AOS_CF、cd、$ref 起點都走實際的資料夾），也同 aos-directive 被 $ref 進來的檔（解開捷徑後的資料夾）。
+// 原本 $ref 起點不解捷徑、AOS_CF 解，捷徑設定檔兩個相對基準不一樣。
+std::string config_file(const std::string& spec);
 
 // JSON 指標的一段：~ → ~0、/ → ~1（RFC 6901）。
 std::string pointer_escape(const std::string& key);
@@ -85,7 +92,8 @@ std::string pointer_escape(const std::string& key);
 // 子行程跟呼叫者同一個行程群組（不另開）；跑的期間收到的三個訊號 kill 給它（不另設 SIGKILL 期限）。fork 失敗丟 LaunchFailed。
 // 單子（10-24）＝行程內呼叫 aos-exec 的 run_inst（aos-exec 跑單子用的同一套：inst 的 libaos、timeout_ms、grace_ms、訊號轉給整群）：
 // 跑的期間 AOS_CF／AOS_CD／AOS_CO 設成 t.cf、它的資料夾、t.co（跑完還原），相對路徑的基準＝t.cf 的資料夾，$ref 從 t.ref_base 算；
-// 其他環境（AOS_WS、AOS_STACK…）照呼叫者現有的、不讀 .env。單子壞 EntryBad、指示詞壞 DirectiveBad、起不來 LaunchFailed
+// AOS_WS、AOS_STACK 是相對路徑時以呼叫者的 cwd 轉成絕對（AOS_STACK 結尾補 /；跑完還原；不驗、不建——同 aos-exec 的 N-59 第 1 件，
+// 10-24 審後補：原本原樣給，單子從設定檔的資料夾算，跟 loop 自己照 cwd 算的窗對不上）；其他環境照呼叫者現有的、不讀 .env。單子壞 EntryBad、指示詞壞 DirectiveBad、起不來 LaunchFailed
 // （訊息開頭「單子跑不起來：」）；被逾時收掉＝code 128＋N、signal N。
 // 呼叫前要先 block_signals()。
 Run run_once(const Target& t);

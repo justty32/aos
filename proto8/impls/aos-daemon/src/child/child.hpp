@@ -25,7 +25,7 @@ struct Child {
     std::string phase = "running";      // running／stopping（送了 SIGTERM、還沒退）／done（自己結束）／stopped（daemon 收掉）
     Json code;                          // null 或結束碼（被訊號停掉＝128＋N）
     Json signal;                        // null 或停掉它的訊號
-    // 收的途中（phase stopping）：SIGTERM 之後到這一刻還沒退就 SIGKILL 整群；killed＝已經送過 SIGKILL；
+    // 收的途中（phase stopping）：SIGTERM 之後到這一刻還沒退就 SIGKILL 整群（連底下自成一群的單子，10-24 審後）；killed＝已經送過 SIGKILL；
     // removing＝收完要從表上拿掉（ctl 的 loops 少了它；收工時全部收、不拿掉）
     std::chrono::steady_clock::time_point deadline;
     bool killed = false;

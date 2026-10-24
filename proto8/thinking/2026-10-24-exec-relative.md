@@ -52,8 +52,8 @@
 
 ### 實作時頂層代定的（可翻案；照 N-57 推）
 
-1. **環境變數**：跑單子的那段時間，`AOS_CF`＝寫著它的設定檔（解開捷徑的實際路徑）、`AOS_CD`＝那份檔的資料夾、`AOS_CO`＝它在檔裡的 JSON 指標（loop／daemon＝`/exec`，fsm＝`/states/<名>/exec`；設定檔寫成 `檔#/指標` 時接在那個指標後面；名字照 JSON 指標跳脫）——就是 aos-exec 跑 `loop.json#/exec` 時會設的那三個。跑完還原成原本的（loop 之後讀 ctl 的指示詞、下一次跑字串目標時看到的還是自己的）。`AOS_WS`、`AOS_STACK` 照呼叫者現有的。翻案＝改設別的值（例如不動這三個）。
-2. **相對路徑的基準＝`AOS_CD`**（設定檔的資料夾，同 aos-exec cd 進設定檔所在的資料夾）；字串目標仍照 cwd 算（L4 不變）。慣例下兩者一樣。單子裡相對的 `$ref` 從 `exec` 那格來自的那份檔的資料夾算。
+1. **環境變數**：跑單子的那段時間，`AOS_CF`＝寫著它的設定檔（解開捷徑的實際路徑）、`AOS_CD`＝那份檔的資料夾、`AOS_CO`＝它在檔裡的 JSON 指標（loop／daemon＝`/exec`，fsm＝`/states/<名>/exec`；設定檔寫成 `檔#/指標` 時接在那個指標後面；名字照 JSON 指標跳脫）——就是 aos-exec 跑 `loop.json#/exec` 時會設的那三個。跑完還原成原本的（loop 之後讀 ctl 的指示詞、下一次跑字串目標時看到的還是自己的）。`AOS_WS`、`AOS_STACK` 照呼叫者現有的（相對路徑先轉成絕對，見下〈審後修正〉1）。翻案＝改設別的值（例如不動這三個）。
+2. **相對路徑的基準＝`AOS_CD`**（設定檔的資料夾，同 aos-exec cd 進設定檔所在的資料夾；設定檔是捷徑＝實際的資料夾，設定檔裡的 `$ref` 也一樣，見〈審後修正〉2）；字串目標仍照 cwd 算（L4 不變）。慣例下兩者一樣。單子裡相對的 `$ref` 從 `exec` 那格來自的那份檔的資料夾算。
 3. **單子裡的指示詞跑的時候才解**（每次都解，那時三個 `AOS_*` 已設好），loop／fsm／daemon 讀設定時只把 `exec` 換一層、不往單子裡面走（10-23 晚「`exec` 整個解」改成這樣，只對物件）。
 4. **單子壞＝那支程式自己的錯**：一行「程式名: 代號 原因」、退 1（`EntryBad`＝形狀不對、`DirectiveBad`＝指示詞解不開、`LaunchFailed`＝起不來；原因開頭「單子跑不起來：」，同 aos-exec）。形狀只在跑的時候驗（同 aos-exec），fsm 開跑時查整張表不查單子裡面。fsm 遇到單子壞不寫 trace、state 不動。
 5. **daemon 的子項**：子 loop 讀的是小格裡的 `loop.json`，所以子項單子的 `AOS_CF`＝小格的 `loop.json`、`AOS_CO`＝`/exec`。為了「相對路徑從 daemon 的 cwd 算」（N-28）照舊成立，daemon 寫小格時：單子沒寫 `cwd`＝補上 daemon 的 cwd，`cwd` 是相對的字串＝接在 daemon 的 cwd 後面（`cwd` 是指示詞就不動）；單子裡相對的 `$ref` 檔名照它來自的那份檔轉成絕對（不解）。ctl 半路加的子項（`loops`／`loops_added`）同一套。
@@ -68,3 +68,24 @@
 - 沒 `argv` 的物件：aos-exec 把它當資料夾再取 `_entry`；`exec` 裡＝單子壞（`EntryBad`）。要那種寫法就照舊寫字串目標 `loop.json#/…`。
 - daemon 子項單子的 `cwd` 若是指示詞、解出來是相對路徑，會從小格算；裡面的 `$env AOS_CF` 拿到的是小格的 `loop.json`。
 - 行程內跑單子的期間 loop 自己被擋在那裡（同字串目標，阻塞到它結束）；daemon 自己的 `exec` 是單子時，那段時間不巡子項（同 10-21 前、同字串目標）。
+
+<a id="10-24-審後修正"></a>
+## 10-24 審後修正
+
+### 使用者原文（整理版）
+
+- 頂層派人唯讀審了上面的實作（commit 474dd039／206874b6），攤出六件；使用者：「都按建議做」。
+
+### 決定（照審查的建議，頂層代定、可翻案）
+
+1. **相對的 `AOS_WS`／`AOS_STACK` 跑內嵌單子前轉成絕對**：loop／fsm／daemon 行程內跑單子的那段，相對路徑以呼叫者的 cwd 轉成絕對（`AOS_STACK` 結尾補 `/`，同 aos-exec），跑完還原；本來就是絕對的照原樣；不驗、不建（建 stack 仍只在 aos-exec）。原因：單子的相對路徑從設定檔的資料夾算，原樣給的話 `AOS_STACK=st aos-loop cfg/loop.json`（從 cfg 上一層跑）的單子寫進 `cfg/st/`，loop 自己的窗卻在 `./st/`；經 aos-exec 跑時 `AOS_STACK` 早被轉成絕對。上面「代定 1」的「`AOS_WS`、`AOS_STACK` 照呼叫者現有的」改成這樣。N-59 第 1 件加 10-24 註。
+2. **設定檔是捷徑時，相對基準一律走實際的資料夾**：設定檔裡相對 `$ref` 的起點（loop.json、daemon.json、fsm.json）與內嵌單子的 `AOS_CF`／`AOS_CD`、cwd 都從「解開捷徑後的設定檔」算（aos-loop 新的 `config_file`，fsm 的 `read_table` 共用）——同 aos-exec（`AOS_CF`、cd、`$ref` 都走實際的資料夾）、同 aos-directive（被 `$ref` 進來的檔從解開捷徑後的資料夾算）。原本 `$ref` 起點不解捷徑、`AOS_CF` 解，兩個基準對不上。
+3. **N-57 補註**：`AOS_CF`／`AOS_CD`／`AOS_CO` 不再只由 aos-exec 覆寫，loop／fsm／daemon 跑內嵌單子時也設（值同 aos-exec 跑 `loop.json#/exec`）；aos-exec 公開標頭 `exec.hpp` 的舊註解同步。
+4. **daemon 收不肯退的子 loop 時，連它底下的單子一起收**：單子由 inst 起、自成一個 session，daemon 滿 10 秒對子 loop 整群 SIGKILL 時打不到（字串目標由那次的 aos-exec 跑的單子也一樣，10-24 前就這樣）；單子不理 SIGTERM、`grace_ms` 又比 10 秒長，子 loop 被收掉後它會留成孤兒。改成 SIGKILL 前先掃 `/proc` 找子 loop 底下（子、孫…）自己當組長的群，子 loop 那群之後一個一個整群 SIGKILL。
+5. **demo 各 agent 認領題目時跳過 `new/` 裡 `.` 開頭的檔**（N-05：那是別人寫到一半的暫存檔）：agent-dan 範本與從它或 agent-bob 抄出來的各隻（ann、bob、cathy、dan、eve、eve 的 pyfix、fay、hal、ivy、kai、liv、meg、pip、talk 的 member、self-improve 的 improver；agent-gus 本來就跳過），brain.py 的 `ls`、idle.py 的列檔都改。
+
+### 挖出的邊緣狀況（沒改，記著）
+
+- 第 4 件掃 `/proc` 到送 SIGKILL 之間，底下某個組長剛好結束、pid 又被不相干的行程拿去當組長，會誤殺——機會跟 killpg 本身一樣小，不處理。讀不到 `/proc` 時退回只收子 loop 那群（同以前）。
+- 第 4 件只在 daemon 收子 loop 那條路上做；直接叫 `aos-loop`、被別人 SIGKILL 時，它正在跑的單子照樣留成孤兒（沒有監工能替它收）。
+- 第 1 件：單子自己用 `$env` 讀到的 `AOS_WS`／`AOS_STACK` 是轉好的絕對路徑，跟 loop 自己環境裡的相對值字面上不同（指同一個地方）。

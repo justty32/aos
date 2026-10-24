@@ -9,7 +9,8 @@
 namespace aos::fsm {
 
 // 指示詞（10-23 晚：aos 讀的 JSON 都解；只解 fsm 自己讀的格，C-52）：整份、states、每一格先換一層，start、格的 exec、next 整個解；
-// 格裡其他 key（body…）原封不動，留給跑那格的 aos-exec。相對 $ref 從 fsm.json 所在的資料夾算（換過 $ref 的從那份檔的）。
+// 格裡其他 key（body…）原封不動，留給跑那格的 aos-exec。相對 $ref 從 fsm.json 所在的資料夾算（換過 $ref 的從那份檔的；
+// fsm.json 是捷徑＝實際的資料夾，同 aos-exec，10-24 審後 aos::loop::config_file）。
 // exec 是單子（物件）時裡面不解、記下它的起點（10-24，aos::loop::resolve_exec）。
 static Json resolve_table(const Json& raw, const std::string& base, std::map<std::string, std::string>& exec_bases) {
     aos::Resolved top = aos::loop::resolve_keys(raw, base, {"start"});
@@ -37,7 +38,7 @@ Table read_table(const std::string& spec) {
     Json doc = aos::load_cfg(spec);   // `檔` 或 `檔#/指標`（10-21 傍晚 ideas § 9）
     Table t;
     try {
-        doc = resolve_table(doc, aos::dirname(aos::abspath(aos::split_hash(spec).path)), t.exec_bases);
+        doc = resolve_table(doc, aos::dirname(aos::loop::config_file(spec)), t.exec_bases);   // 捷徑解開（10-24 審後）
     } catch (const Error& e) {
         throw Error{e.code, "設定檔 " + spec + " 的指示詞解不開：" + e.msg};
     }

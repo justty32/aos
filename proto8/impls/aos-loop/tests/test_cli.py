@@ -8,7 +8,7 @@
 A 段從 proto8/tests/test_exec.py 裡 aos-loop 的案例移植（那邊經 aos-exec 叫；行為應一致，錯誤一行多了代號）；
 B 段是 exec／max 的細節、字串 exec 走 aos-exec 的規則、不寫 stdout；C 段是訊號（轉給那次、收完以 128＋N 結束）；
 D 段是窗（interval_ms、ctl、state）；E 段是 10-21 傍晚的命令列（旗標、設定檔 檔#/指標、exec 陣列；ideas § 9）；
-F 段是 10-23 壓測後的修正；G 段是設定檔與 ctl 的指示詞（10-23 晚）；H 段是 exec 直接放內嵌單子（10-24）。
+F 段是 10-23 壓測後的修正；G 段是設定檔與 ctl 的指示詞（10-23 晚）；H 段是 exec 直接放內嵌單子（10-24）；H2 段是 10-24 審後補的（相對 AOS_WS／AOS_STACK、捷徑設定檔）。
 10-21～10-23 exec 不收內嵌單子，A～D 段寫內嵌單子的案例由 loop() 換成 `loop.json#/body`（見 loop）；10-24 起 exec 又收物件，
 這些案例照留（走 aos-exec 那條），直接寫物件的在 H 段。
 """
@@ -742,6 +742,50 @@ def inline_env_restored(t):
     st = json.loads((s / "state.json").read_text())
     w = st["ctl_warning"] or ""
     check("跑完 AOS_CO 還原", (r.returncode, st["runs"], "AOS_CO" in w, "/exec" in w), (0, 2, True, False))
+    # （原本有值時還原成原本的值：看得出來的地方在 daemon——ctl 的 loops 用 $env 讀它們，見 aos-daemon test_inline_env_restored_had_values）
+
+
+# ───────── H2. 10-24 審後補：相對的 AOS_WS／AOS_STACK、捷徑設定檔 ─────────
+
+@case
+def inline_relative_stack_ws(t):
+    # 直接叫 aos-loop、AOS_STACK／AOS_WS 寫相對路徑（從 cfg 上一層跑）：單子看到的是以 loop 的 cwd 轉好的絕對路徑
+    # （AOS_STACK 結尾 /，同 aos-exec），所以單子的 {"$env": "AOS_STACK", "$path": "out"} 跟 loop 自己的窗落在同一個 ./st/
+    # （沒轉的話從設定檔的資料夾算，落到 cfg/st/——那裡沒有，起不來）
+    Path(t, "st").mkdir()
+    Path(t, "ws").mkdir()
+    put(Path(t, "cfg", "loop.json"), {"exec": {"argv": ["sh", "-c", 'printf "%s|%s" "$AOS_STACK" "$AOS_WS"'],
+                                               "stdout": {"$env": "AOS_STACK", "$path": "out"}}, "max": 1, "state": "state.json"})
+    rc, _, _, stderr = run("cfg/loop.json", cwd=t, env={"AOS_STACK": "st", "AOS_WS": "ws"})
+    real = os.path.realpath(t)
+    got = Path(t, "st", "out").read_text() if Path(t, "st", "out").exists() else None
+    check("相對 AOS_STACK／AOS_WS 轉成絕對", (rc, stderr, got, Path(t, "st", "state.json").exists(), Path(t, "cfg", "st").exists()),
+          (0, "", "%s/st/|%s/ws" % (real, real), True, False))
+
+
+@case
+def inline_absolute_stack_untouched(t):
+    # 本來就是絕對路徑的照原樣（不補 /、不整理）
+    s = stack(t)
+    put(Path(t, "loop.json"), {"exec": {"argv": ["sh", "-c", 'printf "%s" "$AOS_STACK" > "$AOS_STACK/out"']}, "max": 1})
+    rc, _, _, stderr = run("loop.json", cwd=t, env={"AOS_STACK": str(s) + "//"})
+    check("絕對的 AOS_STACK 不動", (rc, stderr, (s / "out").read_text()), (0, "", str(s) + "//"))
+
+
+@case
+def inline_symlink_cfg(t):
+    # 設定檔是捷徑：設定檔的 $ref（max）、單子裡的 $ref、AOS_CD、cwd 全走實際的資料夾（同 aos-exec）；
+    # 原本 $ref 從捷徑所在的資料夾算、AOS_CD 卻走實際的，兩邊對不上
+    s = stack(t)
+    put(Path(t, "real", "data.json"), {"msg": "real", "n": 1})
+    put(Path(t, "link", "data.json"), {"msg": "link", "n": 2})
+    put(Path(t, "real", "loop.json"), {"exec": {"argv": ["sh", "-c", 'echo "$1|$AOS_CD|$PWD" >> "$AOS_STACK/seen"', "x",
+                                                         {"$ref": "data.json#/msg"}]}, "max": {"$ref": "data.json#/n"}})
+    os.symlink("../real/loop.json", Path(t, "link", "loop.json"))
+    rc, _, _, stderr = run("link/loop.json", cwd=t, env={"AOS_STACK": str(s)})
+    real = os.path.realpath(Path(t, "real"))
+    check("捷徑設定檔：相對基準一律是實際的資料夾", (rc, stderr, (s / "seen").read_text().splitlines()),
+          (0, "", ["real|%s|%s" % (real, real)]))
 
 
 for fn in cases:

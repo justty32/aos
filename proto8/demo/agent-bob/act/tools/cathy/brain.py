@@ -6,7 +6,7 @@ if not stack:
     sys.exit("agent-cathy: 沒設定 AOS_STACK")
 def ls(d):
     try:
-        return sorted(os.listdir(os.path.join(ws, d)))
+        return sorted(n for n in os.listdir(os.path.join(ws, d)) if not n.startswith("."))   # . 開頭＝別人寫到一半的暫存檔（N-05），不撿
     except FileNotFoundError:
         return []
 names = ls("cur")             # 上次認領了沒做完的（例如腦失敗）先接著做

@@ -4,7 +4,7 @@ ws = os.environ.get("AOS_WS", ".")
 names = []
 for d in ("cur", "new"):      # 認領了沒做完的也算還有題目
     try:
-        names += os.listdir(os.path.join(ws, d))
+        names += [n for n in os.listdir(os.path.join(ws, d)) if not n.startswith(".")]   # . 開頭＝寫到一半的暫存檔（N-05），不算
     except OSError:
         pass
 sys.exit(0 if names else 10)

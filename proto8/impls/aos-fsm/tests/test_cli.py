@@ -6,7 +6,7 @@
 每個案例一個空的暫存資料夾（tempfile，結束就清掉）、環境先清掉 AOS_*、cwd＝那個資料夾、AOS_STACK＝裡面的 stack/。
 A 段從 proto8/tests/test_fsm.py 移植（行為應一致，錯誤一行多了代號）；B 段是條文與 bin 版推得出、那邊沒測的細節；
 C 段是訊號（轉給那格、trace 與 state 照常寫完，再以 128＋N 結束）；D 段是 10-21 傍晚的命令列（ideas § 9）；
-E 段是 fsm.json 的指示詞（10-23 晚）；F 段是 exec 直接放內嵌單子（10-24）。
+E 段是 fsm.json 的指示詞（10-23 晚）；F 段是 exec 直接放內嵌單子（10-24）；F2 段是 10-24 審後補的（檔#/指標、相對 AOS_STACK、捷徑）。
 10-21～10-23 exec 不收內嵌單子、trace 沒有 timed_out：寫內嵌單子的案例由 table() 換成 `fsm.json#/states/<名>/body`（見 table；
 10-24 起 exec 又收物件，這些案例照留、走 aos-exec 那條，直接寫物件的在 F 段）；
 格被逾時收掉＝那格的 aos-exec 以 128＋N 結束（fsm 看不到格裡有沒有逾時，C-52）。
@@ -594,6 +594,48 @@ def inline_cell_ref_dirs(t):
     st(t).mkdir()
     rc, _, _, stderr = run(t, "cfg/fsm.json")
     check("$ref 起點跟著 states 那份檔", (rc, stderr, (st(t) / "out").read_text()), (0, "", "deep\n"))
+
+
+
+# ───────── F2. 10-24 審後補：設定檔 檔#/指標、相對 AOS_STACK、捷徑 fsm.json ─────────
+
+@case
+def inline_cell_pointer_spec(t):
+    # fsm 設定檔寫成 檔#/指標：AOS_CO＝那個指標＋/states/<名>/exec（AOS_CF 是那份大檔）
+    put(Path(t, "big.json"), {"m": {"fsm": {"start": "a", "states": {
+        "a": {"exec": {"argv": ["sh", "-c", 'printf "%s|%s" "$AOS_CF" "$AOS_CO" > "$AOS_STACK/seen"']}, "next": "a"}}}}})
+    st(t).mkdir()
+    rc, _, _, stderr = run(t, "big.json#/m/fsm")
+    real = os.path.realpath(t)
+    check("檔#/指標 的 AOS_CO", (rc, stderr, (st(t) / "seen").read_text(), state(t)),
+          (0, "", "%s/big.json|/m/fsm/states/a/exec" % real, "a\n"))
+
+
+@case
+def inline_cell_relative_stack(t):
+    # 直接叫 aos-fsm、AOS_STACK 寫相對路徑（從 cfg 上一層跑）：單子看到轉好的絕對路徑，跟 fsm 自己的 state、trace 落在同一處
+    put(Path(t, "cfg", "fsm.json"), {"start": "a", "states": {
+        "a": {"exec": {"argv": ["sh", "-c", 'printf "%s" "$AOS_STACK"'], "stdout": {"$env": "AOS_STACK", "$path": "out"}},
+              "next": "a"}}})
+    st(t).mkdir()
+    rc, _, _, stderr = run(t, "cfg/fsm.json", env={"AOS_STACK": "stack"})
+    out = st(t) / "out"
+    check("相對 AOS_STACK 轉成絕對", (rc, stderr, out.read_text() if out.exists() else None, state(t), len(trace(t))),
+          (0, "", os.path.realpath(t) + "/stack/", "a\n", 1))
+
+
+@case
+def inline_cell_symlink_table(t):
+    # fsm.json 是捷徑：表裡的 $ref（start）與格的單子裡的 $ref 都從實際的資料夾算（同 aos-exec、同 AOS_CD）
+    put(Path(t, "real", "data.json"), {"s": "a", "m": "real"})
+    put(Path(t, "link", "data.json"), {"s": "zz", "m": "link"})
+    put(Path(t, "real", "fsm.json"), {"start": {"$ref": "data.json#/s"}, "states": {
+        "a": {"exec": {"argv": ["echo", {"$ref": "data.json#/m"}], "stdout": {"$env": "AOS_STACK", "$path": "out"}}, "next": "a"}}})
+    os.symlink("../real/fsm.json", Path(t, "link", "fsm.json"))
+    st(t).mkdir()
+    rc, _, _, stderr = run(t, "link/fsm.json")
+    out = st(t) / "out"
+    check("捷徑 fsm.json：相對基準一律是實際的資料夾", (rc, stderr, out.read_text() if out.exists() else None), (0, "", "real\n"))
 
 
 for fn in cases:
