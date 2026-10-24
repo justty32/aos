@@ -196,6 +196,27 @@ agent-liv/
 
 brain 照舊從 `tools/*/tool.json` 組 tools、act 照舊 `aos-exec tools/<名>`——程式一個字沒改，aos-exec 走進捷徑指到的真資料夾（cwd、`AOS_CD` 是庫的位置），agent 不知道這是庫的（C-52）。跑：`aos-exec --ws <工作區> proto8/demo/agent-liv`（沒設 `AOS_BRAIN_URL`＝假腦：`idle think act idle think act idle(10)`，答 `FAKE ANSWER to: …（ls said: N items）`，小格 `.stack/ls/`）。錯同 agent-dan（`agent-liv: 代號 原因`）；庫的工具出錯是 `ToolFailed` 停下（要回給腦就照 agent-pip 改 act）。測試 `test_lib.py`。
 
+## agent-hal（土法 compact，10-24）
+
+history 太大時自己壓短的 agent（嘗試性質；使用者 10-24「做一套土法compact吧」）。設計、數據、代定、邊緣狀況、跟 agent-kai 怎麼搭配在 [thinking 2026-10-24-compact](../thinking/2026-10-24-compact.md)。
+
+```
+agent-hal/                 照抄 agent-dan（brain.py、act.py 只改錯誤訊息開頭）；system.txt 多一句「開頭【compact】那則是摘要」
+  fsm.json                 idle → compact → think → act → idle
+  compact/                 資料夾程式，也能手動跑：aos-exec --ws <工作區> proto8/demo/agent-hal/compact --force
+    _entry、compact.py     沒超過 COMPACT_OVER_KB（32）直接退 0；超過就三步：
+                           ① 每則叫工具的 assistant＋結果 → 便宜模型各一句「在幹嘛、結果如何」（tool_note）
+                           ② 每 COMPACT_SEG_KB（8）一段 → 摘要＋挑幾行原樣保留（keep，標 user_words／decision／number／open／other）
+                           ③ 各段摘要＋候選保留行 → 強一點的模型修成一份、選最後留哪幾行
+    ask.py                 問腦（COMPACT_URL，沒設用 AOS_BRAIN_URL；都沒設＝假腦照字面拼）
+    prompts/*.txt          三步的 system 訊息
+    .env                   門檻、段大小、保留上限、三步的模型（luna-low、luna-low、gpt-6-sol）
+```
+
+新 history＝一則 user（`【compact】run=…` 摘要＋保留行原文）＋一則 assistant（讀過了）＋最近 2 題與沒答完那題原樣——形狀照 agent-dan，brain 直接用。原檔整份收進 `$AOS_STACK/compact/<run>/orig.jsonl`（不刪不改），同資料夾有每步產物與 `report.json`（前後大小、三步各叫幾次、token、保留了哪些、丟了哪些）；`compact/log.jsonl` 一次一行。做到一半失敗重跑從斷的那步接著做。錯：stderr 一行 `compact: 代號 原因`、退 1、history 不動——`BrainFailed`、`ReplyBad`、`HistoryBad`、`SummaryEmpty`（摘要是空的就不換）、`HistoryChanged`（壓的期間被寫了）、`SettingBad`、`ArgumentsBad`、`StackMissing`；壓完沒變小不換（收成 `nosave-*`）。agent 的錯同 agent-dan（`agent-hal: 代號 原因`）。
+
+試驗場 `~/code/try/compact/`（`run.sh`：合成 51 則 53 KB 的 history，LiteLLM 沒開用 `fake_brain.py`）：壓成 8 則 5.3 KB，叫 note 10、segment 1、final 1 次；之後問「埠號、方案、總預算」壓過與不壓都答對，送出 5.9 KB 對 54 KB。測試 `test_compact.py`。
+
 ## daemon（一個 daemon 同時管 bob、ann，10-20）
 
 `daemon/_entry`＝`exec aos-daemon daemon.json`；`daemon.json` 是 `{"max": 10, "interval_ms": 200, "ctl", "state", "loops": {"bob": …, "ann": …}}`（`loops` 10-23 統合前叫 `children`），每個子項是一份 loop 設定：`{"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}, "max": 1}`（ann 同樣；10-24 起單子直接寫在子項的 `exec`，子 loop 在自己行程內跑它。相對路徑照舊從 daemon 的 cwd＝`demo/daemon/` 算：子 loop 經 aos-exec 起、cwd 是小格，所以 daemon 寫小格時給單子補上 `"cwd": <daemon 的 cwd>`（相對的 `$ref` 也轉成絕對）。10-21～10-23 寫成 `"exec": "daemon.json#/loops/bob/body"`＋`body`，daemon 寫小格時把那個目標轉成絕對路徑）——子 loop 跑一次那隻 agent，工作區是 `$AOS_WS/bob`、`$AOS_WS/ann`。`run.sh` 最後一段建暫時工作區、在 `bob/new/`、`ann/new/` 各放一題、`aos-exec` daemon：它跑 10 次（約 2 秒）就結束、結束前收掉子項。stack 樹：`.stack/state.json`（daemon 的 state，`loops` 表）、`.stack/bob/`、`.stack/ann/`（各子項的小格：daemon 寫的 `loop.json`（單子補了 `cwd`、帶 `_entry`）、子 loop 的 `state.json`、`stderr.txt`，以及那隻 agent 自己的 `state.txt`、`current.txt`、`plan.txt`、`trace.jsonl`…——agent 的 stack 就是小格，因為 `AOS_STACK` 已經有值、aos-exec 沿用）。子 loop 結束後不重起，所以表上兩項最後都是 `done`（子 loop 自己結束；daemon 收掉的才是 `stopped`，10-23 統合前兩種都叫 `exited`）、`code` 0。state.json 長這樣：`{"kind": "state", "phase": "done", "runs": 10, "max": 10, …, "loops": {"bob": {"pid", "started_at_ticks", "phase": "done", "code": 0, "signal": null}, …}, "code": 0, "pid", "started_at_ticks", "boot_id", "at": "2026-10-23T02:46:30.317+00:00"}`；各 agent 的 `trace.jsonl` 一行 `{"at": "…T02:46:27.633+00:00", "state": "idle", "code": 0, "signal": null, "elapsed_ms": 14}`。

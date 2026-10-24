@@ -1,0 +1,3 @@
+#!/bin/sh
+# _entry - 把 agent-hal 的 loop 跑起來（loop 每次跑一格 fsm.json；fsm 是 idle → compact → think → act）
+exec aos-loop loop.json

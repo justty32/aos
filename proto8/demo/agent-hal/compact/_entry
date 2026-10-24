@@ -1,0 +1,3 @@
+#!/bin/sh
+# _entry - compact：history 太大時壓成短的（三步：工具呼叫各一句 → 逐段總結＋保留行 → 最後修飾）；--force＝不看門檻
+exec python3 compact.py "$@"
