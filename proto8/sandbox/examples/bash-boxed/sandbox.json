@@ -1,0 +1,5 @@
+{"commands": ["aos-exec"],
+ "ro": ["inner"],
+ "rw": [{"$env": "AOS_WS"}, {"$env": "AOS_STACK"}],
+ "net": false,
+ "mem_mb": 1024, "cpu_s": 120, "file_mb": 100}

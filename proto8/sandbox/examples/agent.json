@@ -1,0 +1,5 @@
+{"commands": ["aos-exec", "aos-loop", "aos-fsm", "aos-gate"],
+ "ro": [{"$env": "AOS_CD"}],
+ "rw": [{"$env": "AOS_WS"}, {"$env": "AOS_STACK"}, {"$env": "AOS_KERNEL"}],
+ "net": false,
+ "mem_mb": 2048, "cpu_s": 600}

@@ -1,0 +1,6 @@
+{"commands": ["claude", "codex", "aos-exec"],
+ "ro": [{"$env": "AOS_CD"}],
+ "rw": [{"$env": "AOS_WS"}, {"$env": "AOS_STACK"},
+        {"$env": "HOME", "$path": "/.claude"}, {"$env": "HOME", "$path": "/.claude.json"},
+        {"$env": "HOME", "$path": "/.codex"}],
+ "net": true}

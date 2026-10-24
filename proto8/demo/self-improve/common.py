@@ -148,6 +148,12 @@ def used():
     return {"rounds": max(len(versions()) - 1, 0) + failed, "elapsed_ms": elapsed, "tokens": tokens}
 
 
+def sandbox():
+    """工作區有 sandbox.json＝函數一律關進 aos-sandbox 跑（proto8/sandbox）；沒有＝照舊不關。回設定檔路徑或 None。"""
+    path = os.path.join(ws, "sandbox.json")
+    return path if os.path.exists(path) else None
+
+
 def run_target(version_dir, argv_tail, stdin="", timeout_ms=10000, extra_env=None, exec_target=None):
     """在 version_dir 裡那份函數的暫時複本上跑一次（函數改到自己的檔也不影響拍下來的那版），回結果 dict。
     exec_target 沒給＝跑函數本身；給了＝跑那個目標（判準的 check），函數複本的路徑放在環境變數 IMPROVE_TARGET。"""
@@ -160,6 +166,10 @@ def run_target(version_dir, argv_tail, stdin="", timeout_ms=10000, extra_env=Non
         if exec_target:
             env["IMPROVE_TARGET"] = copy or os.path.join(tmp, "target")
         argv = ["aos-exec", "--ws", run_ws, "--", exec_target or copy or os.path.join(tmp, "target")] + argv_tail
+        box = sandbox()
+        if box and not exec_target:                  # 10-24 沙箱接線：只關函數本身；檢查程式就是判準，不關
+            argv = ["aos-sandbox", box] + argv
+            env["IMPROVE_RUN"] = tmp                 # 設定檔用 {"$env": "IMPROVE_RUN"} 指這次的暫時資料夾（複本＋工作區）
         t0 = datetime.datetime.now()
         try:
             p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,

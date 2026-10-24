@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+# aos-sandbox - 照一份設定把 prog 關進沙箱再跑：身分（s6-setuidgid）、上限（s6-softlimit）、看得到哪些路徑與能不能連網（bwrap）
+#
+# 用法：aos-sandbox [--dry-run] [--] 設定檔 prog [args...]
+#   設定檔可寫 `檔#/指標`（例 `_metainfo#/sandbox`）；裡面的 {"$env", "$path", "$prefix"} 先換掉。
+#   做的事＝排好一條 chain-loading（s6 那套：每支改一下行程狀態就 exec 成剩下的），然後 exec 它，自己不留下來：
+#     [s6-softlimit 上限...] [s6-setuidgid 身分] bwrap 綁定... -- prog args...
+#   --dry-run：不跑，把那條 argv 印成一行 JSON（給 root 的人先看、測試看形狀）。
+# 設定（全選填；不認得的 key 忽略，C-48）：
+#   user     字串：帳號名或 uid:gid → s6-setuidgid（要 root；沒寫＝不換身分）
+#   base     路徑陣列：系統唯讀底（預設 /usr /bin /sbin /lib /lib64 /etc 裡存在的）
+#   commands 指令名陣列：照 PATH 找到它，所在資料夾唯讀看得到（例 aos-exec）
+#   ro、rw   路徑陣列：唯讀／可寫看得到（相對的從 cwd 算；rw 最後綁，可蓋在 ro 裡面）
+#   net      布林：能不能連網（預設 false：只有自己的 loopback）
+#   mem_mb、cpu_s、procs、file_mb、files  正整數 → s6-softlimit 的 -m、-t、-p、-f、-o
+#   沒列到的路徑一律看不到；/proc、/dev、/tmp（空的）一定有。
+# 錯：stderr 一行「aos-sandbox: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、PathMissing、CommandMissing、UserBad）。
+# 之後的結束碼都是 prog 的（bwrap 透明轉交；被訊號停＝128＋N）。
+import json, os, shutil, sys
+
+BASE = ["/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc"]
+LIMITS = [("mem_mb", "-m", 1024 * 1024), ("cpu_s", "-t", 1), ("procs", "-p", 1), ("file_mb", "-f", 1024 * 1024),
+          ("files", "-o", 1)]
+
+
+def die(code, reason):
+    print("aos-sandbox: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def usage(code, reason):
+    die(code, reason + "（用法：aos-sandbox [--dry-run] [--] 設定檔 prog [args...]）")
+
+
+def parse_args(argv):
+    dry = False
+    i = 0
+    while i < len(argv) and argv[i].startswith("-") and argv[i] != "-":
+        a = argv[i]
+        i += 1
+        if a == "--":
+            break
+        if a == "--dry-run":
+            dry = True
+        else:
+            usage("FlagUnknown", "不認得的旗標 %s" % a)
+    rest = argv[i:]
+    if len(rest) < 2:
+        usage("ArgumentsBad", "要有設定檔和 prog")
+    return dry, rest[0], rest[1:]
+
+
+def pointer(doc, ptr, where):
+    """RFC 6901：#/a/b；~1＝/、~0＝~。指不到＝CfgMissing。"""
+    if ptr == "":
+        return doc
+    if not ptr.startswith("/"):
+        die("CfgBad", "%s：# 後面要是 /" % where)
+    for raw in ptr[1:].split("/"):
+        key = raw.replace("~1", "/").replace("~0", "~")
+        if isinstance(doc, dict) and key in doc:
+            doc = doc[key]
+        elif isinstance(doc, list) and key.isdigit() and int(key) < len(doc):
+            doc = doc[int(key)]
+        else:
+            die("CfgMissing", "%s 指不到" % where)
+    return doc
+
+
+def load(spec):
+    path, _, ptr = spec.partition("#")
+    if not os.path.exists(path) and os.path.exists(path + ".json"):
+        path += ".json"
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except FileNotFoundError:
+        die("CfgMissing", "設定檔不存在：%s" % path)
+    except (OSError, UnicodeDecodeError) as e:
+        die("CfgBad", "設定檔讀不了：%s（%s）" % (path, e.__class__.__name__))
+    if text.startswith("#!"):                       # 第一行 #! 跳過（同 aos-exec 讀 JSON）
+        text = text[text.find("\n") + 1:] if "\n" in text else ""
+    try:
+        doc = json.loads(text)
+    except ValueError as e:
+        die("CfgBad", "設定檔不是 JSON：%s（%s）" % (path, e))
+    cfg = pointer(doc, ptr, spec)
+    if not isinstance(cfg, dict):
+        die("CfgBad", "%s 要是 JSON 物件" % spec)
+    return resolve(cfg, spec)
+
+
+def resolve(v, where):
+    """只解 $env（可帶 $path 字串接後面、$prefix 接前面）；其他指示詞（$ref）不支援＝CfgBad。"""
+    if isinstance(v, list):
+        return [resolve(x, where) for x in v]
+    if not isinstance(v, dict):
+        return v
+    if "$ref" in v:
+        die("CfgBad", "%s：aos-sandbox 只解 $env，不解 $ref" % where)
+    if "$env" in v:
+        name = v["$env"]
+        if not isinstance(name, str) or name not in os.environ:
+            die("CfgBad", "%s：$env %s 沒設" % (where, name))
+        val = os.environ[name]
+        if isinstance(v.get("$path"), str):
+            val += v["$path"]
+        if isinstance(v.get("$prefix"), str):
+            val = v["$prefix"] + val
+        return val
+    return {k: resolve(x, where) for k, x in v.items()}
+
+
+def paths(cfg, key, default=None):
+    v = cfg.get(key, default)
+    if v is None:
+        return []
+    if not isinstance(v, list) or not all(isinstance(p, str) and p for p in v):
+        die("CfgBad", "%s 要是非空字串的陣列" % key)
+    return [os.path.abspath(p) for p in v]
+
+
+def which(name, dry):
+    found = shutil.which(name)
+    if found is None:
+        if dry:
+            return name
+        die("CommandMissing", "PATH 上找不到 %s" % name)
+    return os.path.abspath(found)
+
+
+def bind(opts, flag, path, dry):
+    """綁一個路徑到沙箱裡同一個位置。是符號連結的：沙箱裡也做同一條連結，再綁它指到的地方。"""
+    if not os.path.lexists(path):
+        if dry:
+            opts += [flag, path, path]
+            return
+        die("PathMissing", "路徑不存在：%s" % path)
+    if os.path.islink(path):
+        opts += ["--symlink", os.readlink(path), path]
+        path = os.path.realpath(path)
+        if not os.path.exists(path):
+            die("PathMissing", "連結指到不存在的地方：%s" % path)
+        for i in range(len(opts) - 2):              # 指到的地方已用同一種方式綁過（例 /bin → /usr/bin 已在 /usr 裡）就不再綁
+            if opts[i] == flag and (path == opts[i + 1] or path.startswith(opts[i + 1].rstrip("/") + "/")):
+                return
+    opts += [flag, path, path]
+
+
+def build(cfg, prog, dry):
+    for key in ("net",):
+        if key in cfg and type(cfg[key]) is not bool:
+            die("CfgBad", "%s 要是 true／false" % key)
+    chain = []
+    limits = []
+    for key, flag, mult in LIMITS:
+        if key in cfg:
+            v = cfg[key]
+            if type(v) is not int or v <= 0:
+                die("CfgBad", "%s 要是正整數" % key)
+            limits += [flag, str(v * mult)]
+    if limits:
+        chain += [which("s6-softlimit", dry)] + limits
+    user = cfg.get("user")
+    if user is not None:
+        if not isinstance(user, str) or not user:
+            die("CfgBad", "user 要是非空字串（帳號名或 uid:gid）")
+        if not dry and os.geteuid() != 0:
+            die("UserBad", "要換成 %s 得用 root 跑（s6-setuidgid 只有 root 能用）" % user)
+        which("s6-applyuidgid", dry)                # s6-setuidgid 照 PATH exec 它
+        chain += [which("s6-setuidgid", dry), user]
+    opts = ["--unshare-all", "--die-with-parent"]
+    if cfg.get("net", False):
+        opts.append("--share-net")
+    opts += ["--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp"]
+    base = paths(cfg, "base") if "base" in cfg else [p for p in BASE if os.path.lexists(p)]
+    for p in base:
+        bind(opts, "--ro-bind", p, dry)
+    cmds = cfg.get("commands", [])
+    if not isinstance(cmds, list) or not all(isinstance(c, str) and c for c in cmds):
+        die("CfgBad", "commands 要是非空字串的陣列")
+    for c in cmds:
+        found = which(c, dry)
+        for d in dict.fromkeys([os.path.dirname(found), os.path.dirname(os.path.realpath(found))]):
+            if d:
+                bind(opts, "--ro-bind", d, dry)
+    for p in paths(cfg, "ro"):
+        bind(opts, "--ro-bind", p, dry)
+    for p in paths(cfg, "rw"):
+        bind(opts, "--bind", p, dry)
+    return chain + [which("bwrap", dry)] + opts + ["--"] + prog
+
+
+def main():
+    dry, spec, prog = parse_args(sys.argv[1:])
+    chain = build(load(spec), prog, dry)
+    if dry:
+        print(json.dumps(chain, ensure_ascii=False))
+        return
+    try:
+        os.execv(chain[0], chain)
+    except OSError as e:
+        die("CommandMissing", "%s 起不來：%s" % (chain[0], e))
+
+
+main()
