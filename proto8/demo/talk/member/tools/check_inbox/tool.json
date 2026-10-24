@@ -1,2 +1,0 @@
-{"description": "看自己信箱裡還沒處理的信與題目（只看、不拿走）。每份一行：寄件人、主旨、要不要回、內容開頭。",
- "parameters": {"type": "object", "properties": {}}}

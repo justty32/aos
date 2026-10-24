@@ -1,0 +1,8 @@
+{"_entry": ["aos-fsm", {"$env": "AOS_CF"}],
+ "start": "idle",
+ "states": {
+   "idle":  {"exec": "idle", "next": "plan"},
+   "plan":  {"exec": {"argv": ["python3", "plan.py"], "timeout_ms": 120000}, "next": "fork"},
+   "fork":  {"exec": {"argv": ["python3", "fork.py"], "timeout_ms": 3600000}, "next": "think"},
+   "think": {"exec": {"argv": ["python3", "brain.py"], "timeout_ms": 120000}, "next": "act"},
+   "act":   {"exec": {"argv": ["python3", "act.py"], "timeout_ms": 180000}, "next": "idle"}}}

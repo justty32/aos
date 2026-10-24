@@ -113,22 +113,30 @@ $AOS_HEAP/            記憶庫（沒設＝$AOS_WS/.heap/）：index.json（頂�
 
 真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-meg`；試驗場 `~/code/try/memory/`（`run.py`：第一題記兩件事、換全新 stack 問第二題；LiteLLM 沒開自動用 `fake_brain.py`）。沒設 `AOS_BRAIN_URL`＝假腦，直接答 `FAKE ANSWER`（附上記憶的字數）。測試 `test_meg.py`。
 
-## talk（agent 之間寄信，10-24）
+## agent-gus（小念頭，10-24）
 
-幾隻 agent 互相寄信分工（嘗試性質；使用者 10-24「然後是各agent之間的交流」）。設計、考古、代定、邊緣狀況在 [thinking 2026-10-24-agent-talk](../thinking/2026-10-24-agent-talk.md)。
+先規劃、再把每一步 fork 成「小念頭」、回來只帶結論的 agent（照抄 agent-dan，多兩格；嘗試性質）。設計、考古（proto7-2 的 step 包）、照推薦定的、邊緣狀況在 [thinking 2026-10-24-thoughts](../thinking/2026-10-24-thoughts.md)（使用者「讓agent先規劃一件事的steps，然後每個steps都fork出去，回來只帶結論」「fork出去的東西，又可以繼續steps」「都按建議做」）。
 
 ```
-talk/
-  member/                 一隻成員（照抄 agent-dan）：brain.py 把信翻成「[來信]…」、system 加上名冊；act.py 答完要回答的信就自動寄回寄件人
-    tools/send_message/   寄信：{to（名字、群組或陣列）, body, subject?, expect_reply?}；寫對方的 tmp/ 再改名進 new/、自己留 sent/
-    tools/check_inbox/    看 new/ 裡還沒處理的（只看不拿）；另有 math、clock（照抄 agent-dan）
-  team/                   _entry＝exec aos-daemon daemon.json：ann、bob、cat 各一個子 loop（每 500 ms 跑一次 member）；quiet.py 大家都沒信了退 10 收工
-    roster.json           名冊範例（放進團隊工作區）：members（mailbox、role、human）、groups、max_hops 8、max_sends 4、max_body_bytes 16000
+agent-gus/
+  fsm.json            idle → plan → fork → think → act → idle（plan 120 秒、fork 1 小時、think 120 秒、act 180 秒）
+  plan.py             認領題目、接進 history、請腦回 {"context", "steps": [{id, goal, needs}]} → $AOS_STACK/steps.json；
+                      腦回 steps: []＝不拆；到深度上限或額度不夠＝不問腦、不拆
+  fork.py             每步起一個小念頭＝再跑一次自己（aos-exec --ws <小格>/ws .），needs 齊了才起、同時最多 THOUGHT_PARALLEL 個；
+                      小念頭 out/ 裡那段答案＝結論，全到齊後一步一則接進 history：「小念頭 sN 的結論（目標：…）：…」
+  brain.py、act.py    think／act 同 agent-dan（act 交答案時 steps.json 收進 plans/）
+  thought.json        給別的程式叫一個小念頭：stdin {"goal", "context"?, "needs"?: [{id?, goal, conclusion}]} → stdout 只有結論
+  shared.py           各格共用；tools/run_python/ 工具：stdin {"code"} → 結束碼與輸出
+  .env                模型名＋上限：THOUGHT_MAX_STEPS 4、THOUGHT_MAX_DEPTH 2、THOUGHT_MAX_TOTAL 10、THOUGHT_PARALLEL 3、
+                      THOUGHT_TIMEOUT_S 900、THOUGHT_MAX_CHARS 1500（深度 THOUGHT_DEPTH、額度 THOUGHT_BUDGET 由 fork 往下帶）
+
+$AOS_STACK/thoughts/<id>/   小格：ws/（小念頭的工作區，題目 new/<id>.txt、答案 out/<id>.txt）、stack/（它自己的，可能又有 thoughts/）、log.txt
+$AOS_STACK/budgets/<plan_id>/  整棵念頭樹的額度（一個檔＝一個小念頭）；usage.jsonl 每次問腦一行（usage、送出字數）
 ```
 
-**地址＝對方的工作區**：信是 `<工作區>/new/<id>.json`（`{"kind": "letter", "id", "from", "to", "group", "thread", "reply_to", "hops", "expect_reply", "at", "subject", "body"}`），一到就是那隻 agent 的一道題（agent-dan 的 `new/`→`cur/`→`done/`）；答案寫 `out/<id>.txt`。名冊＝`$AOS_ROSTER`，我是誰＝信箱跟 `$AOS_WS` 同一個資料夾的那位。對話串由正在處理的那封（`cur/`）決定：`thread` 照抄、`hops`＋1、`reply_to`＝它的 id。要回答的信（`expect_reply`）答完自動寄回、自動寄的回信不再自動回；手數超過 `max_hops`、處理一封寄超過 `max_sends` 封，工具回「錯誤：…」讓腦收手。人也是名冊上一個信箱（`user`，`human`），人寄信＝`AOS_ROSTER=<ws>/roster.json aos-exec --ws <ws>/user proto8/demo/talk/member/tools/send_message`、stdin 一個 JSON。
+**別的程式叫一個小念頭**（JSON 工具集「找到要修改的 key → 提供值」那種）：`echo '{"goal": "找到要修改的 key", "context": "…"}' | AOS_STACK=<小格>/ aos-exec proto8/demo/agent-gus/thought.json`，stdout 只有結論、過程在 `<小格>/runs/NNN/`；下一步把這次的結論放進 `needs` 再叫一次。錯：`agent-gus: StepBad`（stdin 不對）、`ThoughtFailed`，退 1。
 
-跑：建團隊工作區（`roster.json`＋`ann/`、`bob/`、`cat/`、`user/` 四個資料夾、user 先寄一封），`cd` 進去 `AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec proto8/demo/talk/team`（PATH 照上面放好 aos-daemon 等四支；沒設 URL＝假腦，直接答 `FAKE ANSWER`）。試驗場 `~/code/try/agent-talk/`（`setup_ws.py`、LiteLLM 沒開時用 `fake_brains.py` 劇本）。測試 `test_talk.py`。錯：`talk-member: 代號 原因`（同 agent-dan 五種）、`send_message: RosterMissing／RosterBad／SelfUnknown`、`team: MemberFailed <名>`（有 member 的 loop 失敗結束，團隊退 1）。
+真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-gus`；沒設＝假腦（第 0 層拆兩步、s2 帶 s1 的結論，答 `FAKE ANSWER … （彙整了 2 個小念頭的結論）`）。試驗場 `~/code/try/thoughts/`（`run.sh` 用 `fake_brains.py` 跑排序比較題、`measure.py` 印念頭樹與 context 省多少）。錯：同 agent-dan，另有 `PlanBad`（規劃不是 JSON、超過步數、needs 指錯或繞圈）、`ThoughtFailed`（小念頭退非 0、逾時、沒交答案；同批其他的照跑完，重跑只補失敗的、在原小格接著做）。測試 `test_gus.py`。
 
 ## daemon（一個 daemon 同時管 bob、ann，10-20）
 

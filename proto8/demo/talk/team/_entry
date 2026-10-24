@@ -1,3 +1,0 @@
-#!/bin/sh
-# _entry - 把整個團隊跑起來：一個 daemon 同時管名冊上每隻 member（各一個子 loop），大家都沒事做了就收工
-exec aos-daemon daemon.json

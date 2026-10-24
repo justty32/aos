@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+# run_python - stdin 收 {"code": "print(1+1)", "timeout_s": 60}，用 python3 跑這段程式，stdout 印結束碼與輸出（stdout＋stderr 合在一起）
+# 程式寫進自己的 stack（$AOS_STACK/main.py）再跑、cwd 也是那裡。不是沙盒：能碰到的跟這台機器的使用者一樣多。
+# 程式本身出錯、逾時（預設 60 秒、上限 300）都照實回報、退 0（是模型的事，讓它自己改）；只有環境沒設好才退 1。
+import json, os, signal, subprocess, sys
+
+stack = os.environ.get("AOS_STACK")
+if not stack:
+    print("run_python: StackMissing 沒設定 AOS_STACK", file=sys.stderr)
+    sys.exit(1)
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError:
+    args = {}
+code = args.get("code") if isinstance(args, dict) else None
+limit = args.get("timeout_s", 60) if isinstance(args, dict) else 60
+if not isinstance(code, str) or not code.strip():
+    sys.exit(print("錯誤：要給 code（一段 Python 程式的字串）"))
+if not isinstance(limit, (int, float)) or isinstance(limit, bool) or limit <= 0:
+    limit = 60
+limit = min(limit, 300)
+os.makedirs(stack, exist_ok=True)
+with open(os.path.join(stack, "main.py"), "w", encoding="utf-8") as f:
+    f.write(code)
+p = subprocess.Popen(["python3", "-I", "main.py"], cwd=stack, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                     stderr=subprocess.STDOUT, text=True, errors="replace", start_new_session=True)
+try:
+    out, _ = p.communicate(timeout=limit)
+    head = "結束碼 %d" % p.returncode
+except subprocess.TimeoutExpired:
+    os.killpg(p.pid, signal.SIGKILL)
+    out, _ = p.communicate()
+    head = "逾時：跑超過 %g 秒，已收掉" % limit
+if len(out) > 8000:
+    out = out[:3000] + "\n……（中間省略 %d 個字）……\n" % (len(out) - 6000) + out[-3000:]
+print(head)
+print(out, end="")
