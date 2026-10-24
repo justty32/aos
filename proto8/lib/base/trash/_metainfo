@@ -1,0 +1,8 @@
+{"summary": "把工作區裡一個檔或資料夾丟進 .trash（不真的刪）",
+ "time_ms": {"val": 10, "max": 2000},
+ "resource": "disk",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false}

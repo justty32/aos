@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+# run_python - 用 python3 跑一段程式，回結束碼與輸出（stdout＋stderr 合在一起）
+# 介面（lib/README 的契約）：stdin 收 {"code", "timeout_s"?}；stdout 第一行「結束碼 N」、接著是輸出（太長留頭 3000 字＋尾 3000 字）。
+# 程式寫進這個工具的小格（$AOS_STACK/main.py，P-17）再跑、cwd 也是那裡（-I：不看使用者的 site、PYTHON* 環境變數）；不用 $AOS_WS。
+# 不是沙盒：能碰到的跟這台機器的使用者一樣多。程式本身退非 0 是結果、不是錯（第一行寫結束碼）。
+# 逾時（預設 60 秒、上限 300）＝整群先 TERM、2 秒後 KILL、算 CommandFailed（已經印出來的照樣給）；這個工具被外面 TERM 時也先停掉那一群。
+# 錯：stderr 與 stdout 各一行「run_python: 代號 原因」、退 1。來源：demo/agent-gus/tools/run_python（10-24；遷移時錯誤照 lib 契約：
+# 以前「模型的錯、逾時」印「錯誤：…」退 0，現在一律退 1，回不回給腦由叫它的 agent 決定——agent-gus 回給腦）。
+import json, os, signal, subprocess, sys
+
+NAME = "run_python"
+TIMEOUT_DEFAULT, TIMEOUT_MAX = 60, 300      # 秒
+GRACE = 2                                   # TERM 之後等幾秒再 KILL
+OUT_MAX, OUT_HEAD = 8000, 3000
+
+
+def die(code, reason, before=""):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    sys.stdout.write(before)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def arguments():
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments 要是物件")
+    return a
+
+
+def clip(out):
+    if len(out) > OUT_MAX:
+        return out[:OUT_HEAD] + "\n……（中間省略 %d 個字）……\n" % (len(out) - 2 * OUT_HEAD) + out[-OUT_HEAD:]
+    return out
+
+
+stack = os.environ.get("AOS_STACK")
+if not stack:
+    die("StackMissing", "沒設定 AOS_STACK")
+args = arguments()
+code, limit = args.get("code"), args.get("timeout_s", TIMEOUT_DEFAULT)
+if not isinstance(code, str) or not code.strip():
+    die("ArgumentsBad", "缺 code（一段 Python 程式的字串）")
+if type(limit) not in (int, float) or not 0 < limit <= TIMEOUT_MAX:
+    die("ArgumentsBad", "timeout_s 要是 0 到 %d 之間的秒數" % TIMEOUT_MAX)
+os.makedirs(stack, exist_ok=True)
+with open(os.path.join(stack, "main.py"), "w", encoding="utf-8") as f:
+    f.write(code)
+try:
+    p = subprocess.Popen(["python3", "-I", "main.py"], cwd=stack, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, text=True, errors="replace", start_new_session=True)
+except OSError as e:
+    die("LaunchFailed", "python3 起不來：%s" % e.strerror)
+
+
+def stop():
+    for sig, wait in ((signal.SIGTERM, GRACE), (signal.SIGKILL, None)):
+        try:
+            os.killpg(p.pid, sig)
+        except ProcessLookupError:
+            return
+        try:
+            p.wait(wait)
+            return
+        except subprocess.TimeoutExpired:
+            pass
+
+
+def on_term(signum, frame):                     # 外面（act 格逾時）停我時，程式那群不能留下來
+    stop()
+    sys.exit(128 + signum)
+
+
+signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)
+try:
+    out, _ = p.communicate(timeout=limit)
+except subprocess.TimeoutExpired:
+    stop()
+    out, _ = p.communicate()
+    die("CommandFailed", "跑超過 %g 秒，整群停掉了" % limit, clip(out) + ("\n" if out and not out.endswith("\n") else ""))
+print("結束碼 %d" % p.returncode)
+print(clip(out), end="")

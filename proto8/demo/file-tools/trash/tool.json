@@ -1,4 +1,0 @@
-{"description": "刪除一個檔或資料夾：不是真的刪，是搬進工作資料夾的 .trash/<時間>/ 底下（原路徑照留），要救就用 move 搬回來。回 JSON {path, to}。",
- "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "要刪的路徑"}},
-                "required": ["path"]}}

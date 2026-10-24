@@ -203,7 +203,7 @@ class SandboxTest(unittest.TestCase):
 
 @unittest.skipUnless(HAS_BWRAP, "沒有 bwrap 或這台不給開 user namespace")
 class BashBoxedTest(unittest.TestCase):
-    """sandbox/examples/bash-boxed：pi-tools 的 bash 原封不動、外面包一層 aos-sandbox——寫得進工作區、出不去、連不了網。"""
+    """sandbox/examples/bash-boxed：lib/base 的 bash 原封不動、外面包一層 aos-sandbox——寫得進工作區、出不去、連不了網。"""
 
     def test_bash_tool_boxed(self):
         root = Path(tempfile.mkdtemp(prefix="test_sandbox_bash."))

@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+# stat - 看工作區裡單一個檔或資料夾的屬性，回 JSON
+# 介面（lib/README 的契約）：stdin 收 {"path"}；stdout 一份 JSON：path、type、mtime、mode、（捷徑）link_to。
+# 檔：size、exec、text（是不是 UTF-8 文字）、lines、format（json／python／markdown／shell／text）、JSON 檔的 top（頂層摘要）。
+# 資料夾：children、aos（_entry、.env、tool.json… 有哪些）。路徑從 $AOS_WS 算、不能跑出去。
+# 錯：stderr 與 stdout 各一行「stat: 代號 原因」、退 1。來源：demo/file-tools/stat（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
+import json, os, sys, time
+
+NAME = "stat"
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def out(obj):
+    print(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
+
+
+def workspace():
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+    return os.path.realpath(ws)
+
+
+def arguments(*required):
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments 要是物件")
+    for k in required:
+        if not isinstance(a.get(k), str) or not a[k]:
+            die("ArgumentsBad", "缺 %s（要一個字串）" % k)
+    return a
+
+
+def inside(rel, root_ok=True):
+    """工作區裡的真實路徑；解開 .. 與捷徑後跑出去＝PathBad。回 (絕對路徑, 給人看的相對路徑)。"""
+    p = os.path.realpath(os.path.join(ROOT, rel))
+    if os.path.commonpath([ROOT, p]) != ROOT or (p == ROOT and not root_ok):
+        die("PathBad", "%s 在工作區外面" % rel)
+    return p, (os.path.relpath(p, ROOT) if p != ROOT else ".")
+
+
+def inside_link(rel):
+    """同 inside，但最後一節是捷徑時不解開它（搬、複製、丟的是捷徑本身）。"""
+    head, tail = os.path.split(os.path.normpath(rel))
+    parent, _ = inside(head or ".")
+    p = os.path.join(parent, tail)
+    if tail in ("", ".", "..") or p == ROOT:
+        die("PathBad", "%s 不能是工作區本身" % rel)
+    return p, os.path.relpath(p, ROOT)
+
+
+def json_summary(v):
+    """一個 JSON 值的一句摘要：型別＋大小（物件幾個 key、陣列幾項、字串幾字），純值短的直接給。"""
+    if isinstance(v, dict):
+        return {"type": "object", "keys": len(v)}
+    if isinstance(v, list):
+        return {"type": "array", "items": len(v)}
+    if isinstance(v, str) and len(v) > 80:
+        return {"type": "string", "chars": len(v), "head": v[:60]}
+    names = {type(None): "null", bool: "boolean", int: "number", float: "number", str: "string"}
+    return {"type": names[type(v)], "value": v}
+
+
+AOS_MARKS = ("_entry", "_entry.json", "_metainfo", "_metainfo.json", ".env", "tool.json", "loop.json", "fsm.json")
+
+
+def aos_marks(d):
+    try:
+        names = set(os.listdir(d))
+    except OSError:
+        return []
+    return [m for m in AOS_MARKS if m in names]
+
+
+
+def iso(t):
+    return time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(t))
+
+
+ROOT = workspace()
+a = arguments("path")
+lp, _ = inside_link(a["path"]) if a["path"] not in (".", "") else inside(a["path"])
+p, shown = inside(a["path"])
+if not os.path.lexists(lp):
+    die("FileMissing", a["path"])
+res = {"path": shown, "type": "link" if os.path.islink(lp) else ("dir" if os.path.isdir(lp) else "file")}
+if res["type"] == "link":
+    res["link_to"] = os.path.relpath(p, ROOT)
+    if not os.path.exists(p):
+        res["broken"] = True
+        out(res)
+        sys.exit(0)
+st = os.stat(p)
+res["mtime"] = iso(st.st_mtime)
+res["mode"] = "%04o" % (st.st_mode & 0o7777)
+if os.path.isdir(p):
+    res["children"] = len(os.listdir(p))
+    res["aos"] = aos_marks(p)
+    out(res)
+    sys.exit(0)
+res["size"] = st.st_size
+res["exec"] = bool(st.st_mode & 0o111)
+try:
+    with open(p, "rb") as f:
+        data = f.read(4 * 1024 * 1024)
+except OSError as e:
+    die("ReadFailed", "%s：%s" % (a["path"], e.strerror))
+try:
+    text = data.decode("utf-8")
+    res["text"] = b"\0" not in data
+except UnicodeDecodeError:
+    res["text"] = False
+if res["text"]:
+    res["lines"] = text.count("\n") + (0 if text.endswith("\n") or not text else 1)
+    first = text.split("\n", 1)[0]
+    fmt = "text"
+    try:
+        v = json.loads(text)
+        fmt = "json"
+        res["top"] = json_summary(v)
+    except ValueError:
+        if p.endswith(".py") or ("python" in first and first.startswith("#!")):
+            fmt = "python"
+        elif p.endswith(".md"):
+            fmt = "markdown"
+        elif first.startswith("#!") or p.endswith(".sh"):
+            fmt = "shell"
+    res["format"] = fmt
+out(res)

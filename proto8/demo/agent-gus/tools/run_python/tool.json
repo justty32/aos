@@ -1,5 +1,0 @@
-{"description": "跑一段 Python 3 程式（只有標準庫），回結束碼與印出來的東西。要量時間就用 time.perf_counter 自己印出來。",
- "parameters": {"type": "object",
-                "properties": {"code": {"type": "string", "description": "完整的 Python 程式"},
-                               "timeout_s": {"type": "number", "description": "最多跑幾秒，預設 60、上限 300"}},
-                "required": ["code"]}}

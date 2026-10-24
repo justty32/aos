@@ -13,7 +13,7 @@ demo/agent-*/              最上層：agent 本身（也是函數）
   tools/<名> ─捷徑─▶ lib/<層>/<名>/        引用，不複製（見下「怎麼引用」）
 lib/agent/                 高層：裡面是一整隻 agent 的工具（pyfix、小念頭 thought、claude／codex）   ［還沒收，候選見遷移清單］
 lib/aos/                   中層：動 aos 自己東西的工具（記憶 heap、寄信、say／listen、spawn／ask／status）［還沒收］
-lib/base/                  底層原語：檔案、資料夾、JSON、行程（bash）——只靠 Linux 與 Python 標準庫、只碰 $AOS_WS（10-24 收了 7 個）
+lib/base/                  底層原語：檔案、資料夾、JSON、行程（bash）、小工具——Linux＋Python 標準庫（json_edit 另叫 aos-json）、只碰 $AOS_WS（10-24 收了 15 個）
 impls/                     基礎層與標準庫（C-74）：aos-exec 把工具叫起來，loop／fsm 跑 agent
 ```
 
@@ -64,10 +64,20 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 | [write](base/write/) | 整份寫進一個檔（建或蓋）、上層資料夾自動建 | `path`、`content` | 一行：寫了幾 bytes | demo/pi-tools/write |
 | [edit](base/edit/) | 幾處照字面替換，一處不合整個不改 | `path`、`edits[{old_text, new_text}]` | 一行：換了幾處 | demo/pi-tools/edit |
 | [bash](base/bash/) | 在工作區用 bash 跑一行指令 | `command`、`timeout_s`（30／300） | stdout＋stderr 合在一起、尾巴寫結束碼；留最後 2000 行／50KB | demo/pi-tools/bash（`timeout` 改名 `timeout_s`） |
-| [ls](base/ls/) | 列一個資料夾的子項，一次一頁 | `path`、`offset`、`limit`（100／500）、`hidden` | JSON：`items[{name, type, size, mtime}]`、`next_offset` | 新寫（demo/file-tools/ls 是加料版） |
-| [json_read](base/json_read/) | 看一份 JSON 檔的某個位置，大的摺起來 | `path`、`pointer`、`depth`（1／10） | JSON：`value`，物件摺成 `{type, keys}`、陣列 `{type, len}` | 新寫（impls/aos-json 的 peek 是 C++ 版） |
-| [json_edit](base/json_edit/) | 照指標改幾個位置，一處不合整份不寫 | `path`、`set{指標: 值}`、`del[指標]` | JSON：改了幾個、頂層 key | 新寫（同 demo/file-tools/json_edit 的形；aos-json 的 set／del 是 C++ 版） |
+| [ls](base/ls/) | 列一個資料夾的子項，一次一頁 | `path`、`offset`、`limit`（100／500）、`hidden` | JSON：`items[{name, type, size, mtime}]`（資料夾多 `children`、`aos`，檔多 `exec`，`.json` 多 `keys`）、`next_offset` | 新寫，遷移時併進 demo/file-tools/ls 的加料 |
+| [stat](base/stat/) | 單一個檔或資料夾的屬性 | `path` | JSON：`type`、`mtime`、`mode`；檔多 `size`、`exec`、`text`、`lines`、`format`、`top` | demo/file-tools/stat |
+| [view](base/view/) | 漸進看一個檔：JSON 照指標一次一層、大文字檔先給大綱 | `path`、`pointer` 或 `start`／`end` | JSON：`value` 或 `children`；文字的 `text` 或 `outline` | demo/file-tools/view |
+| [json_read](base/json_read/) | 看一份 JSON 檔的某個位置，大的摺起來 | `path`、`pointer`、`depth`（1／10） | JSON：`value`，物件摺成 `{type, keys}`、陣列 `{type, len}` | 新寫（Python；換 aos-json 的 peek 輸出不同、沒好處，沒換） |
+| [json_edit](base/json_edit/) | 照指標改幾個位置，一處不合整份不寫 | `path`、`set{指標: 值}`、`del[指標]` | JSON：改了幾個、頂層 key | 新寫；遷移時寫檔改叫 aos-json（只重寫有變的那塊），介面不變 |
+| [mkdir](base/mkdir/) | 建資料夾（上層一起建；已有＝沒事） | `path` | JSON：`path`、`created` | demo/file-tools/mkdir |
+| [move](base/move/) | 搬移或改名（to 有東西就不搬） | `from`、`to` | JSON：`from`、`to` | demo/file-tools/move |
+| [copy](base/copy/) | 複製檔或整個資料夾（捷徑照捷徑） | `from`、`to` | JSON：`from`、`to`、`files` | demo/file-tools/copy |
+| [trash](base/trash/) | 丟進 `.trash/<時間>/`（不真的刪，move 救回） | `path` | JSON：`path`、`to` | demo/file-tools/trash |
+| [math](base/math/) | 算一個算術式子（不用 eval） | `expr` | 結果 | demo/agent-dan/tools/math |
+| [clock](base/clock/) | 現在的 UTC 時間 | （無） | `2026-10-23T08:00:00Z` | demo/agent-dan/tools/clock（原本是 sh，改 python3 才能照契約驗 stdin） |
+| [run_python](base/run_python/) | 跑一段 Python，回結束碼與輸出 | `code`、`timeout_s`（60／300） | 第一行「結束碼 N」、接著輸出 | demo/agent-gus/tools/run_python |
 
+不碰工作區的三個（`math`、`clock`、`run_python`）不收路徑、不看 `$AOS_WS`；`run_python` 把程式寫進自己的小格再跑（規則 8 的例外：拿小格當草稿區，不跨呼叫留東西）。
 每個工具的細節看它 `_entry` 開頭的幾行說明與 `tool.json`。
 
 ## 範例：demo/agent-liv

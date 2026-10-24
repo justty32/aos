@@ -1,0 +1,4 @@
+{"description": "建資料夾（上層一起建；已經有就沒事）。回 JSON {path, created}。",
+ "parameters": {"type": "object",
+                "properties": {"path": {"type": "string", "description": "從工作區算的路徑"}},
+                "required": ["path"]}}

@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+# clock - 在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z）
+# 介面（lib/README 的契約）：stdin 收 {}（沒有參數；空 stdin 也算）；不碰檔案、不用 $AOS_WS。
+# 錯：stdin 不是 JSON 物件＝stderr 與 stdout 各一行「clock: ArgumentsBad 原因」、退 1。
+# 來源：demo/agent-dan/tools/clock（10-23，原本是一行 sh `date -u`、不讀 stdin；10-24 遷移改 python3 才能照契約檢查 stdin，印的一樣）。
+import json, sys, time
+
+NAME = "clock"
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)
+    sys.exit(1)
+
+
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict):
+    die("ArgumentsBad", "arguments 要是物件")
+print(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))

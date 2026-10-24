@@ -10,7 +10,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent      # proto8/
 IMPLS = ROOT / "impls"
-CXX = ("aos-exec", "aos-loop", "aos-fsm", "aos-daemon", "aos-kernel-llm", "aos-gate")   # 10-24 加後兩支（LLM kernel）
+CXX = ("aos-exec", "aos-loop", "aos-fsm", "aos-daemon", "aos-kernel-llm", "aos-gate",   # 10-24 加 kernel-llm、gate（LLM kernel）
+       "aos-json")                                     # 10-24 遷移：lib/base/json_edit 經 aos-json 寫檔
 BINS = [IMPLS / n / "bin" for n in CXX] + [ROOT / "bin"]   # 最後一個是 proto8/bin（只剩 aos-tick）
 BIN_DIRS = [str(b) for b in BINS]
 

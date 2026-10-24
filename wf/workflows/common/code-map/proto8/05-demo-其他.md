@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 talk、self-improve（10-24）｜下一份 [05-demo-其他-2](05-demo-其他-2.md)（pi-tools、file-tools、kernel-llm）
+← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 talk、self-improve（10-24）｜下一份 [05-demo-其他-2](05-demo-其他-2.md)（kernel-llm；pi-tools、file-tools 已遷進 lib）
 
 > 2026-10-24 收尾補：這幾個 demo 各作者做的時候沒改 code map。怎麼跑、錯誤代號見 [demo README](../../../../../proto8/demo/README.md) 各節。
 
@@ -19,7 +19,7 @@
 | `member/act.py` | act：同 agent-dan，多一件——題目是要回答的信、還沒寄過給寄件人＝答案經 `send_message` 自動寄回（自動回信不再回） |
 | `member/tools/send_message/` | `_entry`＋`tool.json`：寄給名字、群組或陣列；寫對方 `tmp/` 再改名進 `new/`、自己留 `sent/`；對話串跟 `cur/` 那封走（`thread`、`hops`＋1、`reply_to`）；超 `max_hops`／`max_sends`／信太大＝stdout「錯誤：…」退 0；名冊壞＝`RosterMissing`／`RosterBad`／`SelfUnknown` 退 1 |
 | `member/tools/check_inbox/` | `_entry`＋`tool.json`：列 `new/` 還沒處理的（只看不拿），一封一行摘要 |
-| `member/tools/math/`、`clock/` | 照抄 agent-dan：四則運算（`ExprBad`）、印 UTC 時間 |
+| `member/tools/math`、`clock` | 符號連結 → `../../../../lib/base/<名>`（10-24 遷移前是 agent-dan 的複本） |
 | `team/` | 整個團隊 |
 | `team/_entry` | `exec aos-daemon daemon.json` |
 | `team/daemon.json` | 每 500 毫秒：ann、bob、cat 各一個子 loop（`aos-exec --ws $AOS_WS/<名> ../member`，`AOS_ROSTER` 指 `$AOS_WS/roster.json`）；daemon 本體跑 `quiet.py` |
@@ -46,5 +46,5 @@
 | `improver/system.txt` | 改進者的 system：只能改 `target/`、有哪些工具 |
 | `improver/brain.py` | 同 agent-pip，多記 usage 到 `$AOS_STACK/usage.jsonl`（給外面算 token 預算）；假腦不叫工具 |
 | `improver/act.py` | 同 agent-pip，只改錯誤行的名字（`improver:`） |
-| `improver/tools/read`、`write`、`edit` | 符號連結到 `../../../pi-tools/<名>` |
+| `improver/tools/read`、`write`、`edit` | 符號連結到 `../../../../lib/base/<名>`（10-24 遷移前指 demo/pi-tools） |
 | `improver/tools/try_run/` | `_entry`＋`tool.json`：在 `target/` 的暫時複本上跑一次，回結束碼、stdout、stderr（逾時預設 10、最多 60 秒）；有 `IMPROVE_SANDBOX` 就關進 `aos-sandbox` |

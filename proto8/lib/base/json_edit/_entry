@@ -2,10 +2,12 @@
 # json_edit - 照 JSON 指標改工作區裡一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫
 # 介面（lib/README 的契約）：stdin 收 {"path", "set"?: {指標: 新值}, "del"?: [指標]}；先照順序做 set、再做 del；
 # set 的指標中間缺的物件層自動建，陣列用 "-" 接在尾巴、數字要是既有的那一項；del 的指標一定要指得到。
-# stdout 一份 JSON {"path", "set": 幾個, "del": 幾個, "top": 改完頂層的 key（或 type）}。寫檔先寫 . 開頭的暫存檔再改名（N-05），
-# 排版會換成這個工具的排版（縮排 1 格、不轉 ASCII）。錯：stderr 與 stdout 各一行「json_edit: 代號 原因」、退 1。
-# （demo/file-tools/json_edit 同形；impls/aos-json 的 set／batch／del 是 C++ 版、只重寫有變的那一塊，做好後可換）
-import json, os, sys
+# stdout 一份 JSON {"path", "set": 幾個, "del": 幾個, "top": 改完頂層的 key（或 type）}。錯：stderr 與 stdout 各一行「json_edit: 代號 原因」、退 1。
+# 做法（10-24 遷移，代定 14「換實作不換介面」）：先在記憶體裡照上面的規則全部做一遍（錯誤代號在這裡定），都合了才交給 C++ 的 aos-json 寫：
+#   連續的 set 一次 `aos-json batch --parents 檔`、接陣列尾巴的 `aos-json append 檔#指標`、del 每個一次 `aos-json del 檔#指標`——
+#   aos-json 原子寫入、只重寫有變的那一塊（排版不換）。aos-json 照 PATH 找；它的 stderr 原樣往上、這裡不讀（C-53），失敗只說結束碼。
+#   不穿 $ref：路上經過 {"$ref"}／{"$env"} 物件時 aos-json 會拒絕（WriteFailed），要穿過去用 aos-json 本身。
+import json, os, subprocess, sys
 
 NAME = "json_edit"
 SIZE_MAX = 4 * 1024 * 1024
@@ -76,12 +78,14 @@ def do_set(doc, pointer, value):
     elif isinstance(here, list):
         if last == "-":
             here.append(value)
+            return "append"
         elif last.isdigit() and int(last) < len(here):
             here[int(last)] = value
         else:
             die("PointerMissing", "%s：陣列沒有第 %s 項（共 %d 項；接在尾巴寫 -）" % (pointer, last, len(here)))
     else:
         die("PointerMissing", "%s：上一層不是物件也不是陣列" % pointer)
+    return "set"
 
 
 def do_del(doc, pointer):
@@ -127,23 +131,35 @@ except (ValueError, UnicodeDecodeError) as e:
 if not isinstance(doc, (dict, list)):
     die("FileBad", "%s 頂層不是物件也不是陣列，改不了裡面" % args["path"])
 
-for pointer, value in sets.items():          # 全部先在記憶體裡做完，哪一處錯都不寫檔
-    do_set(doc, pointer, value)
+steps = []                                   # 全部先在記憶體裡做完，哪一處錯都不寫檔
+for pointer, value in sets.items():
+    kind = do_set(doc, pointer, value)
+    if kind == "set" and steps and steps[-1][0] == "batch":
+        steps[-1][1][pointer] = value
+    elif kind == "set":
+        steps.append(("batch", {pointer: value}))
+    else:
+        steps.append(("append", pointer[:-2], value))
 for pointer in dels:
     do_del(doc, pointer)
+    steps.append(("del", pointer))
 
-tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".tmp")   # N-05
-try:
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(doc, f, ensure_ascii=False, indent=1)
-        f.write("\n")
-    os.chmod(tmp, os.stat(path).st_mode & 0o7777)
-    os.replace(tmp, path)
-except OSError as e:
+
+def aos_json(argv, stdin=None):
     try:
-        os.unlink(tmp)
-    except OSError:
-        pass
-    die("WriteFailed", "%s：%s" % (args["path"], e.strerror))
+        r = subprocess.run(["aos-json"] + argv, input=stdin, text=True, stdout=subprocess.DEVNULL)   # stderr 不吞
+    except OSError as e:
+        die("LaunchFailed", "aos-json 起不來（PATH 上要有 aos-json）：%s" % e.strerror)
+    if r.returncode != 0:
+        die("WriteFailed", "aos-json %s 結束碼 %d（原因在 stderr）" % (argv[0], r.returncode))
+
+
+for op in steps:                             # 值一律從 stdin 給（負數放參數會被當旗標）
+    if op[0] == "batch":
+        aos_json(["batch", "--parents", path], json.dumps(op[1], ensure_ascii=False))
+    elif op[0] == "append":
+        aos_json(["append", path + ("#" + op[1] if op[1] else "")], json.dumps(op[2], ensure_ascii=False))
+    else:
+        aos_json(["del", "%s#%s" % (path, op[1])])
 top = list(doc)[:20] if isinstance(doc, dict) else {"type": "array", "len": len(doc)}
 print(json.dumps({"path": args["path"], "set": len(sets), "del": len(dels), "top": top}, ensure_ascii=False))

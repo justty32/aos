@@ -1,6 +1,0 @@
-{"description": "列一個資料夾的子項，回 JSON：每項有 name、type（file／dir／link）、size、mtime；資料夾多 children（子項數）與 aos（裡面有哪些 _entry、.env、tool.json、loop.json、fsm.json…，有就代表它是 aos 的程式或設定）；.json 檔多 keys（頂層 key）。. 開頭的預設不列。一次最多 limit 項，還有就給 next_offset。先用它看結構，再用 stat／view 看單一個。",
- "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "資料夾，從工作資料夾算（預設 .）"},
-                               "offset": {"type": "integer", "description": "從第幾項開始（預設 0）"},
-                               "limit": {"type": "integer", "description": "最多幾項（預設 100，上限 500）"},
-                               "hidden": {"type": "boolean", "description": "true＝連 . 開頭的也列"}}}}

@@ -1,6 +1,0 @@
-{"description": "讀一個檔的內容（文字檔）。輸出最多 2000 行或 50KB，先到先算；被截掉時結尾會告訴你用哪個 offset 接著讀。大檔用 offset／limit 分段讀，要整份就一直用 offset 接著讀到完。路徑從工作資料夾算，不能出工作資料夾。",
- "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "要讀的檔，從工作資料夾算的相對路徑"},
-                               "offset": {"type": "integer", "description": "從第幾行開始讀（第一行是 1）"},
-                               "limit": {"type": "integer", "description": "最多讀幾行"}},
-                "required": ["path"]}}

@@ -1,0 +1,8 @@
+{"summary": "在工作區裡搬移或改名一個檔或資料夾",
+ "time_ms": {"val": 10, "max": 2000},
+ "resource": "disk",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false}

@@ -1,0 +1,8 @@
+{"summary": "算一個算術式子，回結果",
+ "time_ms": {"val": 30, "max": 1000},
+ "resource": "cpu",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true}

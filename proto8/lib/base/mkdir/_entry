@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+# mkdir - 在工作區裡建資料夾（上層一起建；已經有＝沒事）
+# 介面（lib/README 的契約）：stdin 收 {"path"}；stdout 一份 JSON {"path", "created"}。路徑從 $AOS_WS 算、不能跑出去、不能是工作區本身。
+# 錯：stderr 與 stdout 各一行「mkdir: 代號 原因」、退 1。來源：demo/file-tools/mkdir（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
+import json, os, sys
+
+NAME = "mkdir"
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def out(obj):
+    print(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
+
+
+def workspace():
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+    return os.path.realpath(ws)
+
+
+def arguments(*required):
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments 要是物件")
+    for k in required:
+        if not isinstance(a.get(k), str) or not a[k]:
+            die("ArgumentsBad", "缺 %s（要一個字串）" % k)
+    return a
+
+
+def inside(rel, root_ok=True):
+    """工作區裡的真實路徑；解開 .. 與捷徑後跑出去＝PathBad。回 (絕對路徑, 給人看的相對路徑)。"""
+    p = os.path.realpath(os.path.join(ROOT, rel))
+    if os.path.commonpath([ROOT, p]) != ROOT or (p == ROOT and not root_ok):
+        die("PathBad", "%s 在工作區外面" % rel)
+    return p, (os.path.relpath(p, ROOT) if p != ROOT else ".")
+
+
+ROOT = workspace()
+a = arguments("path")
+p, shown = inside(a["path"], root_ok=False)
+if os.path.isdir(p):
+    out({"path": shown, "created": False})
+    sys.exit(0)
+if os.path.lexists(p):
+    die("FileBad", "%s 已經是檔案" % a["path"])
+try:
+    os.makedirs(p)
+except OSError as e:
+    die("MkdirFailed", "%s：%s" % (a["path"], e.strerror))
+out({"path": shown, "created": True})

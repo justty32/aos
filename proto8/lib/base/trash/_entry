@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+# trash - 刪除工作區裡一個檔或資料夾：不真的刪，搬進 $AOS_WS/.trash/<時間>/<原路徑>
+# 介面（lib/README 的契約）：stdin 收 {"path"}；stdout 一份 JSON {"path", "to"}。要救就用 move 搬回來。
+# 垃圾桶裡的東西不再丟（.trash 本身與裡面都不收）；真的要清垃圾桶是人的事。路徑從 $AOS_WS 算、不能跑出去。
+# 錯：stderr 與 stdout 各一行「trash: 代號 原因」、退 1。來源：demo/file-tools/trash（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
+import json, os, sys, time
+
+NAME = "trash"
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def out(obj):
+    print(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
+
+
+def workspace():
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+    return os.path.realpath(ws)
+
+
+def arguments(*required):
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments 要是物件")
+    for k in required:
+        if not isinstance(a.get(k), str) or not a[k]:
+            die("ArgumentsBad", "缺 %s（要一個字串）" % k)
+    return a
+
+
+def inside(rel, root_ok=True):
+    """工作區裡的真實路徑；解開 .. 與捷徑後跑出去＝PathBad。回 (絕對路徑, 給人看的相對路徑)。"""
+    p = os.path.realpath(os.path.join(ROOT, rel))
+    if os.path.commonpath([ROOT, p]) != ROOT or (p == ROOT and not root_ok):
+        die("PathBad", "%s 在工作區外面" % rel)
+    return p, (os.path.relpath(p, ROOT) if p != ROOT else ".")
+
+
+def inside_link(rel):
+    """同 inside，但最後一節是捷徑時不解開它（搬、複製、丟的是捷徑本身）。"""
+    head, tail = os.path.split(os.path.normpath(rel))
+    parent, _ = inside(head or ".")
+    p = os.path.join(parent, tail)
+    if tail in ("", ".", "..") or p == ROOT:
+        die("PathBad", "%s 不能是工作區本身" % rel)
+    return p, os.path.relpath(p, ROOT)
+
+
+TRASH = ".trash"
+ROOT = workspace()
+a = arguments("path")
+p, rel = inside_link(a["path"])
+if not os.path.lexists(p):
+    die("FileMissing", a["path"])
+if rel.split(os.sep)[0] == TRASH:
+    die("PathBad", "%s 已經在垃圾桶裡" % a["path"])
+stamp = time.strftime("%Y%m%d-%H%M%S")
+n = 0
+while True:
+    box = os.path.join(ROOT, TRASH, stamp + ("" if n == 0 else "-%d" % n))
+    if not os.path.lexists(os.path.join(box, rel)):
+        break
+    n += 1
+to = os.path.join(box, rel)
+try:
+    os.makedirs(os.path.dirname(to), exist_ok=True)
+    os.rename(p, to)
+except OSError as e:
+    die("MoveFailed", "%s → 垃圾桶：%s" % (a["path"], e.strerror))
+out({"path": rel, "to": os.path.relpath(to, ROOT)})

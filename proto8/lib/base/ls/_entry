@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 # ls - 列工作區裡一個資料夾的子項，一次一頁、回 JSON
 # 介面（lib/README 的契約）：stdin 收 {"path"?: ".", "offset"?: 0, "limit"?: 100, "hidden"?: false}；
-# stdout 一份 JSON {"path", "total", "items": [{"name", "type"(file／dir／link), "size"?, "mtime", "link_to"?}], "next_offset"?, "hidden"?}
+# stdout 一份 JSON {"path", "total", "items": [{"name", "type"(file／dir／link), "size"?, "mtime", "link_to"?, …}], "next_offset"?, "hidden"?}
+# 資料夾多 children（子項數）與 aos（裡面有哪些 _entry、.env、tool.json…）；檔多 exec（可執行）；.json 檔多 keys（頂層 key，最多 12 個）。
 # 資料夾在前、照名字排；. 開頭的預設不列（數目放 hidden）；還有就給 next_offset。路徑從 $AOS_WS 算、不能跑出去。
-# 錯：stderr 與 stdout 各一行「ls: 代號 原因」、退 1。（demo/file-tools/ls 是它的加料版：多 aos 記號與 JSON 頂層 key）
+# 錯：stderr 與 stdout 各一行「ls: 代號 原因」、退 1。（10-24 遷移：併進 demo/file-tools/ls 的加料——aos 記號、children、exec、JSON 頂層 key）
 import json, os, sys, time
 
 NAME = "ls"
 LIMIT_DEFAULT, LIMIT_MAX = 100, 500
+AOS_MARKS = ("_entry", "_entry.json", "_metainfo", "_metainfo.json", ".env", "tool.json", "loop.json", "fsm.json")
+JSON_KEYS_MAX = 12                  # JSON 檔最多給幾個頂層 key
+JSON_PEEK_MAX = 1024 * 1024         # 這麼大以下的 .json 才打開看頂層
 
 
 def die(code, reason):
@@ -73,6 +77,29 @@ if not hidden:
 names.sort(key=lambda n: (not os.path.isdir(os.path.join(d, n)), n))
 
 
+def aos_marks(p):
+    try:
+        have = set(os.listdir(p))
+    except OSError:
+        return []
+    return [m for m in AOS_MARKS if m in have]
+
+
+def json_top(p, it):
+    try:
+        with open(p, encoding="utf-8") as f:
+            v = json.load(f)
+    except (OSError, ValueError):
+        it["json"] = "壞的"
+        return
+    if isinstance(v, dict):
+        it["keys"] = list(v)[:JSON_KEYS_MAX]
+        if len(v) > JSON_KEYS_MAX:
+            it["keys_more"] = len(v) - JSON_KEYS_MAX
+    else:
+        it["json"] = "array" if isinstance(v, list) else "value"
+
+
 def item(n):
     p = os.path.join(d, n)
     it = {"name": n}
@@ -87,9 +114,20 @@ def item(n):
         it["link_to"] = os.path.relpath(target, root) if os.path.commonpath([root, target]) == root else "(工作區外)"
     elif os.path.isdir(p):
         it["type"] = "dir"
+        try:
+            it["children"] = len(os.listdir(p))
+        except OSError:
+            pass
+        marks = aos_marks(p)
+        if marks:
+            it["aos"] = marks
     else:
         it["type"] = "file"
         it["size"] = st.st_size
+        if st.st_mode & 0o111:
+            it["exec"] = True
+        if n.endswith(".json") and st.st_size <= JSON_PEEK_MAX:
+            json_top(p, it)
     it["mtime"] = iso(st.st_mtime)
     return it
 

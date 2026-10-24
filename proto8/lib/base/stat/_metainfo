@@ -1,0 +1,8 @@
+{"summary": "看工作區裡單一個檔或資料夾的屬性",
+ "time_ms": {"val": 20, "max": 2000},
+ "resource": "disk",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true}

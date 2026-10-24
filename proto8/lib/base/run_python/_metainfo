@@ -1,0 +1,8 @@
+{"summary": "用 python3 跑一段程式，回結束碼與輸出",
+ "time_ms": {"val": 500, "max": 300000},
+ "resource": "cpu",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": false,
+ "interrupt": "unsafe",
+ "parallel": true}

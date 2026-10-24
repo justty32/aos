@@ -1,0 +1,8 @@
+{"summary": "印現在的 UTC 時間",
+ "time_ms": {"val": 20, "max": 1000},
+ "resource": "cpu",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": false,
+ "interrupt": "safe",
+ "parallel": true}

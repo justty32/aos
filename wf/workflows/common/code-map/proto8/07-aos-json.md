@@ -27,4 +27,4 @@
 
 依賴：aos-json → aos-directive、aos-util（`add_subdirectory` 一起編）；`test_tool` 另外要 aos-exec 的 `bin/` 先建好。共用建置順序與 for 迴圈見 [impls/README「建置」](../../../../../proto8/impls/README.md#建置)、[testing](../../../testing.md)。
 
-誰叫它：`proto8/demo/file-tools/json_edit`（PATH 上要有 aos-json）、`proto8/ai_tools`（`aos-ai` 自己把 `impls/aos-json/bin` 放進 PATH；`make` 有它就用 `check`／`set`）；`proto8/tests/test_file_tools.py` 直接看 `impls/aos-json/bin/aos-json`，沒建就 skip 那幾案。`proto8/tests/aos_bins.py` 與 `demo/run.sh` 不放它。
+誰叫它：`proto8/lib/base/json_edit`（10-24 遷移，原 demo/file-tools/json_edit；PATH 上要有 aos-json）、`proto8/ai_tools`（`aos-ai` 自己把 `impls/aos-json/bin` 放進 PATH；`make` 有它就用 `check`／`set`）。`proto8/tests/aos_bins.py` 10-24 遷移起把它放進 PATH（沒建就停、說要先建）；`demo/run.sh` 不放它（run.sh 跑的 agent 沒掛 json_edit）。

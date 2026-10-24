@@ -265,6 +265,13 @@ def cmd_spawn(root, o, pos):
             raise Fail("ToolExists", "範本裡已經有工具 %s" % t.name)
     ignore = shutil.ignore_patterns("__pycache__", ".stack", "*.pyc")
     shutil.copytree(src, a.agent, symlinks=True, ignore=ignore)
+    for link in [p for p in a.agent.rglob("*") if p.is_symlink()]:     # 範本裡指出範本的相對捷徑（例：tools/read -> ../../../lib/base/read）
+        target = os.readlink(link)                                      # 搬到新位置會斷：改成指同一個東西的絕對路徑（照舊跟著庫走）
+        if not os.path.isabs(target) and not link.exists():
+            orig = src / link.relative_to(a.agent)
+            if orig.exists():
+                link.unlink()
+                link.symlink_to(orig.resolve())
     for t in tools:
         shutil.copytree(t, a.agent / "tools" / t.name, symlinks=True, ignore=ignore)
     for d in ("new", "cur", "out", "done", ".stack"):

@@ -161,6 +161,12 @@ def ask(url):
         message = json.loads(raw)["choices"][0]["message"]
     except (ValueError, KeyError, IndexError, TypeError) as e:
         die("ReplyBad", ("回覆不是 OpenAI 的形狀（%s: %s）" % (type(e).__name__, e)).replace("\n", " "))
+    report, usage = os.environ.get("AOS_KERNEL_REPORT"), json.loads(raw).get("usage")
+    if report and isinstance(usage, dict):           # 經 LLM kernel 跑時把 API 回的 usage 交給它（P-23 註；不寫＝kernel 只算次數）
+        tmp = os.path.join(os.path.dirname(report), "." + os.path.basename(report))   # N-05：先寫暫存再改名
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(usage, f)
+        os.replace(tmp, report)
     if not isinstance(message, dict):
         die("ReplyBad", "choices[0].message 不是物件")
     out = {"role": message.get("role") or "assistant", "content": message.get("content")}

@@ -1,0 +1,8 @@
+{"summary": "漸進看工作區裡一個檔：JSON 一次一層、大的文字檔先給大綱",
+ "time_ms": {"val": 30, "max": 3000},
+ "resource": "disk",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true}

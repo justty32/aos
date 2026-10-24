@@ -159,13 +159,13 @@ def oracle(q, body):
 
 
 def setup(out):
-    """兩隻 agent 的快照：kai 照抄 repo 的；dan 照抄後多一個 read 工具（同 kai 用的 pi-tools/read），system 也加「讀檔」。"""
+    """兩隻 agent 的快照：kai 照抄 repo 的；dan 照抄後多一個 read 工具（同 kai 用的 lib/base/read），system 也加「讀檔」。"""
     agents = out / "agents"
     ign = shutil.ignore_patterns("__pycache__")
     shutil.copytree(ROOT / "demo" / "agent-kai", agents / "agent-kai", ignore=ign)
     dan = agents / "agent-dan-read"
     shutil.copytree(ROOT / "demo" / "agent-dan", dan, ignore=ign)
-    shutil.copytree(ROOT / "demo" / "pi-tools" / "read", dan / "tools" / "read", ignore=ign)
+    shutil.copytree(ROOT / "lib" / "base" / "read", dan / "tools" / "read", ignore=ign)
     (dan / "system.txt").write_text("你是一個問答助手。\n需要計算、查時間、讀檔時，先用提供的工具，不要自己猜。\n"
                                     "拿到工具的結果後，用純文字給出最後的回答，不要再叫工具。\n", encoding="utf-8")
     kai0 = agents / "agent-kai-norecall"          # 對照：只靠程式自動挑、腦沒有 recall 可用（拿掉 tool.json＝不算工具）

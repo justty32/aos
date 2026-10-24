@@ -1,7 +1,8 @@
-"""test_file_tools - demo/file-tools（資料夾與檔案的漸進工具：ls、stat、view、json_edit、mkdir、move、copy、trash），輸出一律 JSON。
+"""test_file_tools - 資料夾與檔案的漸進工具：ls、stat、view、json_edit、mkdir、move、copy、trash（原 demo/file-tools，10-24 遷移進 proto8/lib/base），結果一律 JSON。
 
-工具一支一支用 aos-exec 叫；agent-pip（掛 pi-tools＋file-tools）用 test_dan 的假 server 照劇本逐層看一個 aos agent 資料夾、改 loop.json。
-json_edit 交給 aos-json（proto8/impls/aos-json，另一條線在做）；沒建好時那幾個 skip。不連真模型。設計：proto8/thinking/2026-10-24-pi-tools.md。"""
+工具一支一支用 aos-exec 叫；錯照 lib 契約：stderr 一行、stdout 最後一行同一行、退 1（遷移前 stdout 是 {"error": 那行}）。
+agent-pip（tools/ 全部掛 lib/base）用 test_dan 的假 server 照劇本逐層看一個 aos agent 資料夾、改 loop.json。
+json_edit 經 aos-json（proto8/impls/aos-json）寫檔。不連真模型。設計：proto8/thinking/2026-10-24-pi-tools.md、2026-10-24-tool-lib.md。"""
 import json, os, re, shutil, subprocess, tempfile, unittest
 from pathlib import Path
 import own_error  # noqa: E402
@@ -11,18 +12,16 @@ from aos_bins import ROOT, tool, path_with  # noqa: E402
 from test_dan import FakeBrain, call, tool_reply, answer  # noqa: E402
 
 EXEC = tool("aos-exec")
-TOOLS = ROOT / "demo" / "file-tools"
+TOOLS = ROOT / "lib" / "base"                       # 10-24 遷移前是 demo/file-tools
 PIP = str(ROOT / "demo" / "agent-pip")
-JSON_BIN = ROOT / "impls" / "aos-json" / "bin"
-HAS_JSON = (JSON_BIN / "aos-json").exists()
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
 CODES = ("ArgumentsBad", "WsMissing", "PathBad", "FileMissing", "FileBad", "ReadFailed", "WriteFailed", "MkdirFailed",
-         "MoveFailed", "CopyFailed", "PointerMissing", "LaunchFailed")
+         "MoveFailed", "CopyFailed", "PointerBad", "PointerMissing", "LaunchFailed")
 
 
 def env_with(extra=None):
     e = {k: v for k, v in os.environ.items() if k not in CLEAR}
-    e["PATH"] = path_with(os.pathsep.join([str(JSON_BIN), e.get("PATH", "")]))
+    e["PATH"] = path_with(e.get("PATH", ""))           # 含 aos-json（json_edit 用）
     e.update(extra or {})
     return e
 
@@ -36,19 +35,18 @@ class Tools(unittest.TestCase):
         shutil.copytree(ROOT / "demo" / "agent-dan", self.ws / "agent-dan", ignore=shutil.ignore_patterns("__pycache__"))
 
     def tool(self, name, args):
-        """回 (結束碼, stdout 解開的 JSON, 錯誤代號或 None)；stdout 一定是一份 JSON，錯時是 {"error": stderr 那行}。"""
+        """回 (結束碼, stdout 解開的 JSON 或 None, 錯誤代號或 None)；成功時 stdout 是一份 JSON，錯時最後一行＝stderr 那行。"""
         r = subprocess.run([EXEC, str(TOOLS / name)], input=json.dumps(args), capture_output=True, text=True, timeout=30,
                            env=env_with({"AOS_WS": str(self.ws), "AOS_STACK": str(self.tmp / "stack") + "/"}))
-        res = json.loads(r.stdout)
         mine = [l for l in r.stderr.splitlines() if l.startswith(name + ": ")]
         if r.returncode == 0:
             self.assertEqual(mine, [], r.stderr)
-            return 0, res, None
+            return 0, json.loads(r.stdout), None
         self.assertEqual(len(mine), 1, r.stderr)
         m = re.match(r"%s: ([A-Z][A-Za-z]+) \S" % name, mine[0])
         self.assertTrue(m and m.group(1) in CODES, mine[0])
-        self.assertEqual(res, {"error": mine[0]})
-        return r.returncode, res, m.group(1)
+        self.assertEqual(r.stdout.rstrip("\n").splitlines()[-1], mine[0])
+        return r.returncode, None, m.group(1)
 
     def test_ls(self):
         _, res, _ = self.tool("ls", {})
@@ -117,11 +115,10 @@ class Tools(unittest.TestCase):
         self.assertEqual(res["outline"], [{"line": 1, "level": 1, "name": "A"}, {"line": 302, "level": 2, "name": "B"}])
         self.assertEqual(self.tool("view", {"path": "m.py", "start": 999})[2], "ArgumentsBad")
 
-    @unittest.skipUnless(HAS_JSON, "aos-json 還沒建")
     def test_json_edit(self):
         f = self.ws / "agent-dan" / "loop.json"
         _, res, _ = self.tool("json_edit", {"path": "agent-dan/loop.json", "set": {"/max": 80, "/note/who": "pip"}})
-        self.assertEqual(res, {"path": "agent-dan/loop.json", "set": 2, "del": 0, "top": {"type": "object", "keys": 3}})
+        self.assertEqual(res, {"path": "agent-dan/loop.json", "set": 2, "del": 0, "top": ["exec", "max", "note"]})
         self.assertEqual(json.loads(f.read_text()), {"exec": "fsm.json", "max": 80, "note": {"who": "pip"}})
         before = f.read_text()
         self.assertEqual(self.tool("json_edit", {"path": "agent-dan/loop.json", "del": ["/note", "/nope"]})[2],
@@ -131,7 +128,7 @@ class Tools(unittest.TestCase):
         self.assertEqual(json.loads(f.read_text()), {"exec": "fsm.json", "max": 80})
         self.assertEqual(self.tool("json_edit", {"path": "agent-dan/brain.py", "set": {"/a": 1}})[2], "FileBad")
         self.assertEqual(self.tool("json_edit", {"path": "agent-dan/loop.json"})[2], "ArgumentsBad")
-        self.assertEqual(self.tool("json_edit", {"path": "agent-dan/loop.json", "del": [""]})[2], "ArgumentsBad")
+        self.assertEqual(self.tool("json_edit", {"path": "agent-dan/loop.json", "del": [""]})[2], "PointerBad")
 
     def test_folder_changes(self):
         self.assertEqual(self.tool("mkdir", {"path": "a/b"})[1], {"path": "a/b", "created": True})
@@ -178,13 +175,12 @@ class Tools(unittest.TestCase):
         self.assertTrue((self.tmp / "secret.txt").exists())
 
     def test_tool_json_shape(self):
-        for d in sorted(TOOLS.iterdir()):
+        for d in sorted(TOOLS / n for n in ("ls", "stat", "view", "json_edit", "mkdir", "move", "copy", "trash")):
             if d.is_dir():
                 spec = json.loads((d / "tool.json").read_text())
                 self.assertEqual(set(spec), {"description", "parameters"}, d.name)
 
 
-@unittest.skipUnless(HAS_JSON, "aos-json 還沒建")
 class AgentPipExplores(unittest.TestCase):
     """agent-pip 逐層看一個 aos agent 資料夾、改它的 loop.json（假 server 照劇本）。"""
 

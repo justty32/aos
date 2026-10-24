@@ -15,8 +15,10 @@ BASE = LIB / "base"
 LIV = ROOT / "demo" / "agent-liv"
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
 CODES = ("ArgumentsBad", "WsMissing", "PathBad", "FileMissing", "FileBad", "ReadFailed", "WriteFailed",
-         "MkdirFailed", "TextMissing", "TextBad", "PointerBad", "PointerMissing", "CommandFailed", "LaunchFailed")
+         "MkdirFailed", "MoveFailed", "CopyFailed", "TextMissing", "TextBad", "PointerBad", "PointerMissing",
+         "CommandFailed", "LaunchFailed", "ExprBad", "StackMissing")
 META_KEYS = ("summary", "time_ms", "resource", "side_effect", "idempotent", "deterministic", "interrupt", "parallel")
+NO_WS = ("math", "clock", "run_python")                     # 不碰工作區：沒有路徑參數、不跑在 $AOS_WS
 KEY_RE = re.compile(r"^[a-z][a-z0-9]*(_[a-z0-9]+)*$")       # C-54：全小寫加底線
 
 
@@ -75,9 +77,9 @@ class Shape(unittest.TestCase):
                     self.assertEqual(r.stdout.rstrip("\n").splitlines()[-1], mine[0])
 
     def test_without_workspace_is_ws_missing(self):
-        """直接叫 _entry（不經 aos-exec，aos-exec 一定會設 AOS_WS）：沒 AOS_WS＝WsMissing。"""
+        """直接叫 _entry（不經 aos-exec，aos-exec 一定會設 AOS_WS）：沒 AOS_WS＝WsMissing。不碰工作區的三個（math、clock、run_python）除外。"""
         for t in lib_tools():
-            if t.parent.name != "base":
+            if t.parent.name != "base" or t.name in NO_WS:
                 continue
             with self.subTest(tool=t.name):
                 e = {k: v for k, v in os.environ.items() if k not in CLEAR}

@@ -89,9 +89,11 @@ agent-fay/
 
 ## pi-tools 與 agent-pip（仿 pi coding agent 的基本工具，10-24）
 
+**10-24 下午遷移**：下面兩段說的 `pi-tools/`、`file-tools/` 兩個資料夾已搬進 [proto8/lib/base](../lib/README.md)（工具名、參數不變，只有 bash 的 `timeout` 改名 `timeout_s`；file-tools 的錯從 stdout `{"error"}` 改成 stdout 同一行；`ls` 兩份併成一份；json_edit 改用庫的介面、經 aos-json 寫），原資料夾刪了（刪前最後一版 acd6c02c）。下面兩段保留當出處，路徑請讀成 `lib/base/<名>`。
+
 `pi-tools/` 是一套可重用的寫程式工具，仿 [pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) 預設的四個：`read`（讀檔，最多 2000 行或 50KB、提示 offset 接著讀）、`write`（建檔或整份蓋掉）、`edit`（`edits: [{old_text, new_text}]`，每段對原檔比、要唯一、不重疊，全有或全無）、`bash`（在 `$AOS_WS` 裡跑一行指令，留最後 2000 行或 50KB，逾時預設 30 秒、上限 300 秒、整群停）。每個都是資料夾程式＋`tool.json`（P-41），arguments 從 stdin 進、stdout 是結果。read／write／edit 的路徑從 `$AOS_WS` 算、不能跑出去（`PathBad`，符號連結也算）；bash 的指令本身擋不住。錯：stderr 一行「工具名: 代號 原因」、退 1，同一行也印在 stdout 給腦看。
 
-`agent-pip/` 是掛上這套（與下面的 file-tools）的 coding agent：從 agent-dan 照抄，`tools/` 裡是十二個指到 `../../pi-tools/<名>`、`../../file-tools/<名>` 的符號連結，`system.txt` 照 pi 的精神寫短版。跟 agent-dan 只差一條：**工具出的問題回給腦、不停**（工具退非 0、叫了沒有的工具、arguments 不是 JSON，都接成一則 tool 訊息），因為 edit 找不到原文是常事、停下來重跑會卡在同一個呼叫。真跑：`AOS_BRAIN_URL=http://localhost:4000/v1 AOS_STACK=<工作區外的資料夾>/ aos-exec --ws <工作區> proto8/demo/agent-pip`（stack 放工作區外，免得腦用工具改到自己的對話）。試驗場 `~/code/try/pi-tools/`。設計與 pi 的調查在 [thinking 2026-10-24-pi-tools](../thinking/2026-10-24-pi-tools.md)；測試 `tests/test_pi_tools.py`。
+`agent-pip/` 是掛上這套（與下面的 file-tools）的 coding agent：從 agent-dan 照抄，`tools/` 裡是十二個指到 `../../../lib/base/<名>` 的符號連結（10-24 遷移前指 `../../pi-tools/<名>`、`../../file-tools/<名>`），`system.txt` 照 pi 的精神寫短版。跟 agent-dan 只差一條：**工具出的問題回給腦、不停**（工具退非 0、叫了沒有的工具、arguments 不是 JSON，都接成一則 tool 訊息），因為 edit 找不到原文是常事、停下來重跑會卡在同一個呼叫。真跑：`AOS_BRAIN_URL=http://localhost:4000/v1 AOS_STACK=<工作區外的資料夾>/ aos-exec --ws <工作區> proto8/demo/agent-pip`（stack 放工作區外，免得腦用工具改到自己的對話）。試驗場 `~/code/try/pi-tools/`。設計與 pi 的調查在 [thinking 2026-10-24-pi-tools](../thinking/2026-10-24-pi-tools.md)；測試 `tests/test_pi_tools.py`。
 
 `file-tools/` 是資料夾與檔案的漸進工具（使用者「資料夾修改和檔案這兩個工具我需要特別設計」），**輸出一律 JSON**：`ls`（子項陣列：型別、大小、時間、子項數、`aos` 標記哪些有 `_entry`／`.env`／`tool.json`…、JSON 檔的頂層 key；分頁）、`stat`（單一個的屬性）、`view`（JSON 照 `pointer` 一層層展開、小的直接給值；大文字檔先給大綱再看 `start`／`end` 那段）、`json_edit`（`set: {指標: 值}`、`del: [指標]`，先檢查再交給 aos-json 原子寫入）、`mkdir`、`move`、`copy`（目的地有東西就不做）、`trash`（刪除＝搬進 `$AOS_WS/.trash/<時間>/`，可救回）。路徑限制同 pi-tools；共用碼在 `file-tools/common.py`。json_edit 要 PATH 上有 `aos-json`（`proto8/impls/aos-json/bin`）。測試 `tests/test_file_tools.py`。
 
@@ -123,7 +125,7 @@ $AOS_HEAP/            記憶庫（沒設＝$AOS_WS/.heap/）：index.json（頂�
 talk/
   member/                 一隻成員（照抄 agent-dan）：brain.py 把信翻成「[來信]…」、system 加上名冊；act.py 答完要回答的信就自動寄回寄件人
     tools/send_message/   寄信：{to（名字、群組或陣列）, body, subject?, expect_reply?}；寫對方的 tmp/ 再改名進 new/、自己留 sent/
-    tools/check_inbox/    看 new/ 裡還沒處理的（只看不拿）；另有 math、clock（照抄 agent-dan）
+    tools/check_inbox/    看 new/ 裡還沒處理的（只看不拿）；另有 math、clock（捷徑掛 lib/base，10-24 遷移前是 agent-dan 的複本）
   team/                   _entry＝exec aos-daemon daemon.json：ann、bob、cat 各一個子 loop（每 500 ms 跑一次 member）；quiet.py 大家都沒信了退 10 收工
     roster.json           名冊範例（放進團隊工作區）：members（mailbox、role、human）、groups、max_hops 8、max_sends 4、max_body_bytes 16000
 ```
@@ -145,7 +147,7 @@ agent-gus/
                       小念頭 out/ 裡那段答案＝結論，全到齊後一步一則接進 history：「小念頭 sN 的結論（目標：…）：…」
   brain.py、act.py    think／act 同 agent-dan（act 交答案時 steps.json 收進 plans/）
   thought.json        給別的程式叫一個小念頭：stdin {"goal", "context"?, "needs"?: [{id?, goal, conclusion}]} → stdout 只有結論
-  shared.py           各格共用；tools/run_python/ 工具：stdin {"code"} → 結束碼與輸出
+  shared.py           各格共用；tools/run_python -> ../../../lib/base/run_python 工具：stdin {"code"} → 結束碼與輸出（10-24 遷移：錯一律退 1，act 改成工具退非 0 回給腦、不停）
   .env                模型名＋上限：THOUGHT_MAX_STEPS 4、THOUGHT_MAX_DEPTH 2、THOUGHT_MAX_TOTAL 10、THOUGHT_PARALLEL 3、
                       THOUGHT_TIMEOUT_S 900、THOUGHT_MAX_CHARS 1500（深度 THOUGHT_DEPTH、額度 THOUGHT_BUDGET 由 fork 往下帶）
 
@@ -169,7 +171,7 @@ agent-kai/
   system.txt          告訴腦它看到的不是全部、不夠就 recall 或重查、回答把關鍵寫完整
   tools/recall/       op＝search（關鍵字找舊題）／read（展開一題；detail=true 連當時的工具原始輸出）
     turns.py          把 history 切成題、照意圖挑（brain.py 也用它）
-  tools/read          → ../../pi-tools/read（符號連結）；math、clock 同 agent-dan
+  tools/read、math、clock → ../../../lib/base/<名>（符號連結；10-24 遷移前 read 指 pi-tools、math／clock 是 agent-dan 的複本）
   （選配）tools/memory → ../../agent-meg/tools/memory：放了就每題自動 search 記憶庫 3 筆附進 system
 
 $AOS_STACK/context.jsonl   每次組了什麼：mode（full／intent）、picked（[題號, 原因]）、粗估 token、整份全送的話多少
@@ -187,7 +189,7 @@ self-improve/             aos-exec --ws <交辦的工作區> proto8/demo/self-im
   fsm.json                 run → judge → improve → run（三格都是內嵌單子）
   run.py judge.py improve.py common.py
   improver/                改進者：從 agent-pip 照抄的 agent（工具出錯回給腦），多記 token 用量；.env 模型 chatgpt-gpt-6-luna-low
-    tools/read、write、edit   符號連結到 ../../../pi-tools
+    tools/read、write、edit   符號連結到 ../../../../lib/base（10-24 遷移前指 pi-tools）
     tools/try_run          在 target/ 的暫時複本上跑一次，回結束碼、stdout、stderr
 ```
 
@@ -208,7 +210,7 @@ agent-liv/
   system.txt                                 教腦哪件事用哪個工具
   _metainfo                                  這隻 agent 的特性（照 _metainfo 規劃的範例 2）
   tools/read -> ../../../lib/base/read       一條相對捷徑一個工具：read、write、edit、bash、ls、json_read、json_edit 七條
-  tools/clock/                               自己的工具（真資料夾），跟庫的並存
+  tools/clock/                               自己的工具（真資料夾）：庫裡 10-24 遷移後也有 clock，同名自己的贏（示範覆寫）
 ```
 
 brain 照舊從 `tools/*/tool.json` 組 tools、act 照舊 `aos-exec tools/<名>`——程式一個字沒改，aos-exec 走進捷徑指到的真資料夾（cwd、`AOS_CD` 是庫的位置），agent 不知道這是庫的（C-52）。跑：`aos-exec --ws <工作區> proto8/demo/agent-liv`（沒設 `AOS_BRAIN_URL`＝假腦：`idle think act idle think act idle(10)`，答 `FAKE ANSWER to: …（ls said: N items）`，小格 `.stack/ls/`）。錯同 agent-dan（`agent-liv: 代號 原因`）；庫的工具出錯是 `ToolFailed` 停下（要回給腦就照 agent-pip 改 act）。測試 `test_lib.py`。
@@ -218,7 +220,7 @@ brain 照舊從 `tools/*/tool.json` 組 tools、act 照舊 `aos-exec tools/<名>
 history 太大時自己壓短的 agent（嘗試性質；使用者 10-24「做一套土法compact吧」）。設計、數據、代定、邊緣狀況、跟 agent-kai 怎麼搭配在 [thinking 2026-10-24-compact](../thinking/2026-10-24-compact.md)。
 
 ```
-agent-hal/                 照抄 agent-dan（brain.py、act.py 只改錯誤訊息開頭）；system.txt 多一句「開頭【compact】那則是摘要」
+agent-hal/                 照抄 agent-dan（brain.py、act.py 只改錯誤訊息開頭）；system.txt 多一句「開頭【compact】那則是摘要」；tools/math、clock 捷徑掛 lib/base（10-24 遷移）
   fsm.json                 idle → compact → think → act → idle
   compact/                 資料夾程式，也能手動跑：aos-exec --ws <工作區> proto8/demo/agent-hal/compact --force
     _entry、compact.py     沒超過 COMPACT_OVER_KB（32）直接退 0；超過就三步：

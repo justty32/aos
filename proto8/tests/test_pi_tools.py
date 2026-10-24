@@ -1,4 +1,4 @@
-"""test_pi_tools - demo/pi-tools（仿 pi coding agent 的 read、write、edit、bash）與掛上它們的 demo/agent-pip。
+"""test_pi_tools - 仿 pi coding agent 的 read、write、edit、bash（原 demo/pi-tools，10-24 遷移進 proto8/lib/base）與掛上它們的 demo/agent-pip。
 
 工具一支一支用 aos-exec 叫（arguments 從 stdin 進、stdout 是結果）；agent-pip 用 test_dan 的假 server 照劇本跑「讀 → 改錯 → 改對 → 跑 → 答」。
 不連真模型。設計：proto8/thinking/2026-10-24-pi-tools.md。"""
@@ -11,7 +11,7 @@ from aos_bins import ROOT, tool, path_with  # noqa: E402
 from test_dan import FakeBrain, call, tool_reply, answer  # noqa: E402
 
 EXEC = tool("aos-exec")
-TOOLS = ROOT / "demo" / "pi-tools"
+TOOLS = ROOT / "lib" / "base"                       # 10-24 遷移前是 demo/pi-tools
 PIP = str(ROOT / "demo" / "agent-pip")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
 CODES = ("ArgumentsBad", "WsMissing", "PathBad", "FileMissing", "FileBad", "ReadFailed", "WriteFailed",
@@ -34,7 +34,7 @@ class Tools(unittest.TestCase):
         self.ws.mkdir()
 
     def tool(self, name, args, timeout=30):
-        """叫 pi-tools/<名>；回 (結束碼, stdout, 錯誤代號或 None)。錯誤時 stderr 那行與 stdout 最後一行要一樣、格式對。"""
+        """叫 lib/base/<名>；回 (結束碼, stdout, 錯誤代號或 None)。錯誤時 stderr 那行與 stdout 最後一行要一樣、格式對。"""
         stdin = args if isinstance(args, str) else json.dumps(args)
         r = subprocess.run([EXEC, str(TOOLS / name)], input=stdin, capture_output=True, text=True, timeout=timeout,
                            env=env_with({"AOS_WS": str(self.ws), "AOS_STACK": str(self.tmp / "stack") + "/"}))
@@ -173,8 +173,8 @@ class Tools(unittest.TestCase):
         self.assertEqual(self.tool("bash", {"command": "true"})[1], "(沒有輸出)\n")
         self.assertEqual(self.tool("bash", {"command": "kill -9 $$"})[1], "[被訊號 9 停掉]\n")
         self.assertEqual(self.tool("bash", {"command": ""})[2], "ArgumentsBad")
-        self.assertEqual(self.tool("bash", {"command": "ls", "timeout": 0})[2], "ArgumentsBad")
-        self.assertEqual(self.tool("bash", {"command": "ls", "timeout": 301})[2], "ArgumentsBad")
+        self.assertEqual(self.tool("bash", {"command": "ls", "timeout_s": 0})[2], "ArgumentsBad")
+        self.assertEqual(self.tool("bash", {"command": "ls", "timeout_s": 301})[2], "ArgumentsBad")
         self.assertEqual(self.tool("bash", {"command": "cat"})[1], "(沒有輸出)\n")   # stdin 是 /dev/null，不會卡
 
     def test_bash_truncates_tail(self):
@@ -190,7 +190,7 @@ class Tools(unittest.TestCase):
         pidfile = self.tmp / "child.pid"
         t0 = time.monotonic()
         code, out, err = self.tool("bash", {"command": "echo started; (sleep 60 & echo $! > %s; wait)" % pidfile,
-                                            "timeout": 1})
+                                            "timeout_s": 1})
         self.assertLess(time.monotonic() - t0, 10)
         self.assertEqual((code, err), (1, "CommandFailed"))
         self.assertTrue(out.startswith("started\n"), out)               # 逾時前的輸出照給

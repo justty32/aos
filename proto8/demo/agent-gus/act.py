@@ -2,6 +2,8 @@
 # 沒有就把 content 寫成答案 $AOS_WS/out/<題名>、題目 cur/ → done/，這題的 steps.json 收進 $AOS_STACK/plans/<plan_id>.json。
 # 工具的介面：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的 stack＝$AOS_STACK/<名>/（P-17）。
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑。任何錯：stderr 一行、退 1、history 不接（P-20）。
+# 工具退非 0 不停、回給腦（10-24 遷移：run_python 改掛 lib/base 後「模型的錯」也退 1——lib/README「工具只報錯、停不停由 agent 決定」，
+# 這隻照舊讓腦自己改；做法同 agent-pip：stdout 照收、尾巴加結束碼，人在 stderr 看得到）。
 import json, os, shutil, subprocess, sys
 from shared import STACK, STEPS, WS, append_history, die, read_history, read_json, write_atomic
 
@@ -37,9 +39,11 @@ if calls:
                                text=True, env=env)
         except OSError as e:
             die("ToolFailed", "%s 起不來：%s" % (name, e))
-        if r.returncode != 0:
-            die("ToolFailed", "%s 結束碼 %d" % (name, r.returncode))
-        append_history({"role": "tool", "tool_call_id": cid, "content": r.stdout})
+        content = r.stdout
+        if r.returncode != 0:           # 回給腦、不停
+            print("agent-gus: ToolFailed %s 結束碼 %d（回給腦）" % (name, r.returncode), file=sys.stderr)
+            content += "%s(工具 %s 結束碼 %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
+        append_history({"role": "tool", "tool_call_id": cid, "content": content})
     sys.exit(0)
 
 with open(os.path.join(STACK, "current.txt"), encoding="utf-8") as f:

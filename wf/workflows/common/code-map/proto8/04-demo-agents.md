@@ -1,6 +1,6 @@
 ← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 agent-eve、agent-fay、agent-gus、agent-hal（10-24）｜下一份：[04-demo-agents-2](04-demo-agents-2.md)（agent-kai、liv、meg、pip、kernel-llm/agent-ivy）
 
-> 2026-10-24 收尾補（各 agent 做的時候沒改 code map）。用法與跑法在 [demo/README](../../../../../proto8/demo/README.md)；範本 agent-dan 見[入口](../proto8.md)的 `proto8/demo/` 段。12:46 那筆（babdaad2）只是各隻的 `brain.py` 認領題目時跳過 `new/` 裡 `.` 開頭的暫存檔。「同 agent-dan」＝只改了檔頭註解或錯誤訊息開頭的名字；10-24 下午 agent-dan 的 `brain.py` 才加的 `AOS_KERNEL_REPORT` 那幾行，這些抄本都沒有。
+> 2026-10-24 收尾補（各 agent 做的時候沒改 code map）。用法與跑法在 [demo/README](../../../../../proto8/demo/README.md)；範本 agent-dan 見[入口](../proto8.md)的 `proto8/demo/` 段。12:46 那筆（babdaad2）只是各隻的 `brain.py` 認領題目時跳過 `new/` 裡 `.` 開頭的暫存檔。「同 agent-dan」＝只改了檔頭註解或錯誤訊息開頭的名字；10-24 下午 agent-dan 的 `brain.py` 才加的 `AOS_KERNEL_REPORT` 那幾行（經 LLM kernel 跑時把 usage 交給它），10-24 遷移時抄進了 eve、pyfix 子 agent、fay、hal、kai、liv、meg、pip、talk 的 member、self-improve 的改進者（gus 的 `shared.py`、hal 的 `compact/ask.py` 問腦的寫法不同，沒抄）。
 
 ### agent-eve
 
@@ -41,9 +41,10 @@ claude／codex CLI 當工具，人可以 `attach` 接進同一段對話。[think
 | `shared.py` | 各格共用（不是格）：`die`、`claim`、讀寫 history、`tools_spec`、`ask`（問腦、記 `usage.jsonl`）、`launch`／`conclusion`（起小念頭、取結論） |
 | `plan.py` | 認領題目、請腦回 `{context, steps}` → `$AOS_STACK/steps.json`；深度到頂或額度不夠就不拆；錯 `PlanBad` |
 | `fork.py` | needs 齊了才起、同時 `THOUGHT_PARALLEL` 個，小格 `thoughts/<id>/{ws,stack}`；全到齊一步一則接進 history；錯 `ThoughtFailed`，重跑只補失敗的 |
-| `brain.py`、`act.py` | think／act 同 agent-dan 的做法但改寫成用 `shared`；brain 不認領題目（plan 做了）；act 交答案時把 `steps.json` 收進 `plans/` |
+| `brain.py`、`act.py` | think／act 同 agent-dan 的做法但改寫成用 `shared`；brain 不認領題目（plan 做了）；act 交答案時把 `steps.json` 收進 `plans/`；工具退非 0 回給腦、不停（10-24 遷移：run_python 換成庫的、模型的錯也退 1，照 agent-pip 的做法） |
 | `thought.json`、`thought.py` | 給別的程式叫一個小念頭：stdin `{goal, context?, needs?}` → stdout 只有結論，過程在 `runs/NNN/`；錯 `StepBad` |
-| `system.txt`、`tools/run_python/` | 人格（看到小念頭結論就彙整）；唯一的工具：stdin `{"code"}` → 結束碼與輸出 |
+| `system.txt` | 人格（看到小念頭結論就彙整） |
+| `tools/run_python` | 符號連結 → `../../../lib/base/run_python`（10-24 遷移；stdin `{"code", "timeout_s"}` → 結束碼與輸出） |
 
 ### agent-hal
 
@@ -51,7 +52,8 @@ claude／codex CLI 當工具，人可以 `attach` 接進同一段對話。[think
 
 | 哪裡 | 負責什麼 |
 |---|---|
-| `_entry`、`loop.json`、`.env`、`idle/`、`brain.py`、`act.py`、`tools/math/`、`tools/clock/` | 同 agent-dan |
+| `_entry`、`loop.json`、`.env`、`idle/`、`brain.py`、`act.py` | 同 agent-dan |
+| `tools/math`、`tools/clock` | 符號連結 → `../../../lib/base/<名>`（10-24 遷移前是 agent-dan 的複本） |
 | `fsm.json` | idle → compact（資料夾）→ think → act |
 | `system.txt` | 同 agent-dan，多一句：開頭【compact】那則是摘要、沒有的別猜 |
 | `compact/_entry`、`compact.py` | `exec python3 compact.py`（`--force` 不看門檻）；超過 `COMPACT_OVER_KB` 才壓：① 工具呼叫各一句 ② 每段摘要＋keep ③ 修成一份；保留最近幾題；原檔收進 `compact/<run>/orig.jsonl`、`report.json`、`log.jsonl`；斷了接著做；錯 `SummaryEmpty`、`HistoryChanged`… |

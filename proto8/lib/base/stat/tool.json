@@ -1,0 +1,4 @@
+{"description": "看單一個檔或資料夾的屬性，回 JSON：type、mtime、mode；檔多 size、exec、text（是不是文字檔）、lines、format（json／python／markdown／shell／text），JSON 檔多 top（頂層摘要）；資料夾多 children、aos；連結多 link_to。",
+ "parameters": {"type": "object",
+                "properties": {"path": {"type": "string", "description": "從工作區算的路徑"}},
+                "required": ["path"]}}

@@ -1,6 +1,6 @@
 """test_self_improve - 跑 demo/self-improve（自我改進流程：run → judge → improve，外面 aos-loop 包著）。
 
-改進者（demo/self-improve/improver，一隻 agent）的腦用 test_dan 的假 server 照劇本回；工具 read／write／edit 是 demo/pi-tools 的、try_run 是自己的。
+改進者（demo/self-improve/improver，一隻 agent）的腦用 test_dan 的假 server 照劇本回；工具 read／write／edit 掛 proto8/lib/base 的、try_run 是自己的。
 看：達成就收工（0）、預算用完退 2、改壞了從最好的那版重來、每一版都留著、原版不動、判準改進者看不到、target/ 以外寫的不採用、
 改進者失敗停住再跑接著做、判準是檢查程式、函數是單檔 JSON。不連真模型。設計：proto8/thinking/2026-10-24-self-improve.md。"""
 import json, os, re, subprocess, tempfile, unittest
