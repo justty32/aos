@@ -1,0 +1,5 @@
+{"description": "照一句話改一份 JSON 檔（aos 的設定、單子…）。分兩步：先一層層看檔找出要改的位置，再對每個位置只產出那一個新值；寫之前驗過格式與形狀。回走過的位置與改了什麼。",
+ "parameters": {"type": "object",
+                "properties": {"file": {"type": "string", "description": "工作區裡的 JSON 檔（相對路徑），例 agent/fsm.json"},
+                               "want": {"type": "string", "description": "要怎麼改，一句話，例：把 think 那格的逾時改成 30 秒"}},
+                "required": ["file", "want"]}}

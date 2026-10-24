@@ -1,0 +1,9 @@
+{"description": "看或改工作區裡的 JSON 檔。target 寫「檔#/指標」（JSON pointer，例 fsm.json#/states/think；只寫檔名＝整份）。先用 peek 從頂層一層層往下看（大的值會摺起來，想看哪個 key 再 peek 那個指標），找到位置再改。寫入一律先驗：值要是 JSON、改完 aos 設定的形狀要對，不對就不寫、回錯誤讓你重來。",
+ "parameters": {"type": "object",
+                "properties": {"cmd": {"type": "string",
+                                       "enum": ["peek", "get", "where", "set", "batch", "del", "append", "merge", "check"],
+                                       "description": "peek＝看一層（摘要）；get＝整個值；where＝這個值實際寫在哪份檔；set＝把 target 換成 value（一個值或整棵子樹）；batch＝一次改很多個：target 寫檔名，value 是 {\"/指標\": 值, …}；del＝刪；append＝陣列尾巴加 value；merge＝物件合進 value 的 key；check＝驗整份"},
+                               "target": {"type": "string", "description": "檔#/指標，例 fsm.json#/states/think/exec"},
+                               "value": {"description": "set／append／merge／batch 要寫的值（直接給 JSON：字串、數字、物件、陣列都行）"},
+                               "depth": {"type": "integer", "description": "peek 往下展開幾層，預設 1"}},
+                "required": ["cmd", "target"]}}

@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+# json_edit - 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 think 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。
+# 使用者 10-24：「修改的時候也是，AI可以一次生成一大堆函數，也可以一次生成一個值。這就需要用到小念頭概念，
+# 也就是拆成"找到要修改的key"->"提供值"」。
+#   一、找到要修改的 key：腦一開始只看到頂層（aos-json peek），用 peek 一層層往下，找到後呼叫 found 交出一個或多個 JSON 指標。
+#   二、提供值：每個指標各問一次腦（一個小念頭，不帶第一步的對話）：只給要做的事、那個位置現在的值、上一層的摘要；
+#       腦呼叫 give 交出那個位置的新值（JSON 文字，先解得開才收，解不開讓它重給，最多 3 次）。
+#   最後 aos-json batch --check --follow 一次寫進去（全部驗過才寫；拆成 $ref 的檔也改得到）。
+# 腦＝OpenAI 相容端點（同 agent-dan：AOS_BRAIN_URL、AOS_BRAIN_MODEL、AOS_BRAIN_KEY）；沒設 AOS_BRAIN_URL＝BrainMissing。
+# stdout：走過的位置（看過）、找到的位置、改了什麼；寫不進去（指不到、形狀不對）印「沒改：…」退 0（讓叫它的腦看了重來）。
+# 自己的錯（stdin 不對、腦連不上、回覆不對、找了 MAX_ROUNDS 輪還沒交）stderr 一行「json_edit: 代號 原因」、退 1。
+import json, os, subprocess, sys, urllib.error, urllib.request
+
+MAX_ROUNDS = int(os.environ.get("JSON_EDIT_MAX_ROUNDS") or 12)
+WS = os.environ.get("AOS_WS") or "."
+
+
+def die(code, reason):
+    print("json_edit: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def aos_json(*argv, stdin=None):
+    try:
+        r = subprocess.run(["aos-json", *argv], cwd=WS, input=stdin, capture_output=True, text=True)
+    except OSError as e:
+        die("ToolFailed", "aos-json 起不來（要在 PATH 上）：%s" % e)
+    return r.returncode, r.stdout, r.stderr.strip().removeprefix("aos-json: ")
+
+
+def ask(messages, tools):
+    url = os.environ.get("AOS_BRAIN_URL")
+    if not url:
+        die("BrainMissing", "沒設 AOS_BRAIN_URL")
+    body = {"model": os.environ.get("AOS_BRAIN_MODEL") or "chatgpt-gpt-6-luna-low", "messages": messages,
+            "tools": tools, "tool_choice": "required"}
+    headers = {"Content-Type": "application/json"}
+    if os.environ.get("AOS_BRAIN_KEY"):
+        headers["Authorization"] = "Bearer " + os.environ["AOS_BRAIN_KEY"]
+    req = urllib.request.Request(url.rstrip("/") + "/chat/completions",
+                                 json.dumps(body, ensure_ascii=False).encode("utf-8"), headers)
+    try:
+        with urllib.request.urlopen(req, timeout=120) as r:
+            message = json.loads(r.read())["choices"][0]["message"]
+    except urllib.error.HTTPError as e:
+        die("BrainFailed", ("HTTP %d：%s" % (e.code, e.read()[:200].decode("utf-8", "replace"))).replace("\n", " "))
+    except (urllib.error.URLError, OSError) as e:
+        die("BrainFailed", "%s 連不上或逾時：%s" % (url, getattr(e, "reason", e)))
+    except (ValueError, KeyError, IndexError, TypeError) as e:
+        die("ReplyBad", "回覆不是 OpenAI 的形狀：%s" % e)
+    if not isinstance(message, dict):
+        die("ReplyBad", "choices[0].message 不是物件")
+    calls = message.get("tool_calls") or []
+    out = {"role": "assistant", "content": message.get("content")}
+    if calls:
+        out["tool_calls"] = [{k: c[k] for k in ("id", "type", "function") if k in c} for c in calls]
+    return out, calls
+
+
+def fn(name, description, properties, required):
+    return {"type": "function", "function": {"name": name, "description": description, "parameters": {
+        "type": "object", "properties": properties, "required": required}}}
+
+
+def call_args(call):
+    try:
+        a = json.loads(call["function"].get("arguments") or "{}")
+        return a if isinstance(a, dict) else {}
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return {}
+
+
+try:
+    job = json.loads(sys.stdin.read() or "null")
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(job, dict) or not all(isinstance(job.get(k), str) and job[k].strip() for k in ("file", "want")):
+    die("ArgumentsBad", "要 {\"file\": 檔, \"want\": 要怎麼改}")
+path, want = job["file"], job["want"].strip()
+if os.path.isabs(path) or ".." in path.split("/") or "#" in path:
+    print("沒改：file 要是工作區裡的相對路徑（不收絕對路徑、..、#）：%s" % path)
+    sys.exit(0)
+rc, top, err = aos_json("peek", "--follow", path)
+if rc != 0:
+    print("沒改：" + err)
+    sys.exit(0)
+
+# 一、找到要修改的 key（漸進展開）
+seen = ["/"]
+messages = [
+    {"role": "system", "content": "你在一份 JSON 檔裡找出要改的位置。你一開始只看得到頂層；大的值摺成摘要（{N} 是物件、[N] 是陣列）。"
+                                  "想看哪個 key 就呼叫 peek（指標用 JSON pointer，/ 開頭，例 /states/think），一次看一層。"
+                                  "找到要改（或要新加）的位置就呼叫 found，交出它們的指標；不要自己寫值。"},
+    {"role": "user", "content": "要做的事：%s\n檔：%s\n頂層：\n%s" % (want, path, top)}]
+tools = [fn("peek", "看某個位置的下一層", {"pointer": {"type": "string", "description": "JSON pointer，/ 開頭"}}, ["pointer"]),
+         fn("found", "交出要改的位置", {"pointers": {"type": "array", "items": {"type": "string"},
+                                              "description": "JSON pointer 清單，/ 開頭"}}, ["pointers"])]
+pointers = None
+for _ in range(MAX_ROUNDS):
+    message, calls = ask(messages, tools)
+    messages.append(message)
+    if not calls:
+        messages.append({"role": "user", "content": "請呼叫 peek 或 found。"})
+        continue
+    for call in calls:
+        name, a = (call.get("function") or {}).get("name"), call_args(call)
+        if name == "found" and isinstance(a.get("pointers"), list) and a["pointers"] and \
+                all(isinstance(p, str) and p.startswith("/") for p in a["pointers"]):
+            pointers = a["pointers"]
+            reply = "收到"
+        elif name == "peek" and isinstance(a.get("pointer"), str) and (a["pointer"] in ("", "/") or a["pointer"].startswith("/")):
+            ptr = "" if a["pointer"] == "/" else a["pointer"]
+            seen.append(ptr or "/")
+            rc, out, err = aos_json("peek", "--follow", path + ("#" + ptr if ptr else ""))
+            reply = out if rc == 0 else "錯：" + err
+        else:
+            reply = "錯：peek 要 {pointer: \"/…\"}、found 要 {pointers: [\"/…\"]}"
+        messages.append({"role": "tool", "tool_call_id": call.get("id"), "content": reply})
+    if pointers:
+        break
+if not pointers:
+    die("PointerMissing", "問了 %d 輪，腦還沒交出要改的位置" % MAX_ROUNDS)
+
+# 二、提供值：每個位置一個小念頭，只看那一處
+give = [fn("give", "交出這個位置的新值", {"json": {"type": "string", "description": "新值的 JSON 文字，例 30000、\"abc\"、{\"a\": 1}"}},
+           ["json"])]
+values = {}
+for ptr in pointers:
+    rc, cur, _ = aos_json("get", "--follow", path + "#" + ptr)
+    cur = cur.strip() if rc == 0 else "（還沒有這個位置，會新加）"
+    parent = ptr.rsplit("/", 1)[0]
+    rc, around, _ = aos_json("peek", "--follow", path + ("#" + parent if parent else ""))
+    messages = [{"role": "system", "content": "你是一個小念頭：只負責一個 JSON 位置的新值。呼叫 give，把新值寫成 JSON 文字交出來。"},
+                {"role": "user", "content": "要做的事：%s\n位置：%s#%s\n現在的值：%s\n上一層：\n%s" %
+                                            (want, path, ptr, cur, around if rc == 0 else "（看不到）")}]
+    for _ in range(3):
+        message, calls = ask(messages, give)
+        messages.append(message)
+        if not calls:
+            messages.append({"role": "user", "content": "請呼叫 give，json 參數放新值的 JSON 文字。"})
+            continue
+        text = call_args(calls[0]).get("json")
+        try:
+            if not isinstance(text, str):
+                raise ValueError("沒有 json 參數")
+            values[ptr] = json.loads(text)
+            break
+        except ValueError as e:
+            for c in calls:
+                messages.append({"role": "tool", "tool_call_id": c.get("id"), "content": "錯：不是 JSON（%s），請重給" % e})
+    if ptr not in values:
+        die("ReplyBad", "%s：問了 3 次還沒拿到解得開的 JSON 值" % ptr)
+
+rc, _, err = aos_json("batch", "--check", "--follow", path, stdin=json.dumps(values, ensure_ascii=False))
+print("看過：" + " → ".join(seen))
+print("找到：" + "、".join(pointers))
+if rc != 0:
+    print("沒改：" + err)
+    sys.exit(0)
+for ptr, v in values.items():
+    print("改：%s#%s = %s" % (path, ptr, json.dumps(v, ensure_ascii=False)))

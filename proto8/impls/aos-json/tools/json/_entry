@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+# json - 腦用的 JSON 工具：stdin 收 {"cmd", "target", "value"?, "depth"?}，在 $AOS_WS 底下叫 aos-json，stdout 是結果。
+# 讀＝peek 一層層往下（省 token）；寫＝直接收腦生成的 JSON 值，一律加 --check（改完 aos 設定形狀不對就不寫）與 --follow（拆成 $ref 的檔也改得到）。
+# target 的檔名只收工作區裡的相對路徑（不收絕對路徑、不收 ..）。
+# aos-json 的錯（指不到、形狀不對…）是腦寫錯了，印在 stdout「錯：…」、退 0，讓腦看了重來；這支自己的錯（stdin 不對、aos-json 起不來）才退 1。
+import json, os, subprocess, sys
+
+READ = {"peek": ["--follow"], "get": ["--follow"], "where": [], "check": []}
+WRITE = {"set": ["--check", "--follow"], "batch": ["--check", "--follow"], "append": ["--check", "--follow"],
+         "merge": ["--check", "--follow"], "del": ["--follow"]}
+
+
+def die(code, reason):
+    print("json: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+try:
+    args = json.loads(sys.stdin.read() or "null")
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict) or args.get("cmd") not in {**READ, **WRITE} or not isinstance(args.get("target"), str):
+    die("ArgumentsBad", "要 {\"cmd\": peek|get|where|set|batch|del|append|merge|check, \"target\": \"檔#/指標\"}")
+cmd, target = args["cmd"], args["target"]
+path = target.split("#", 1)[0]
+if not path or os.path.isabs(path) or ".." in path.split("/"):
+    print("錯：target 的檔要是工作區裡的相對路徑（不收絕對路徑、不收 ..）：%s" % target)
+    sys.exit(0)
+
+argv = ["aos-json", cmd] + READ.get(cmd, WRITE.get(cmd))
+if cmd == "peek" and isinstance(args.get("depth"), int) and not isinstance(args.get("depth"), bool):
+    argv += ["--depth", str(max(0, min(args["depth"], 5)))]
+stdin = None
+if cmd in ("set", "append", "merge", "batch"):
+    if "value" not in args:
+        print("錯：%s 要給 value" % cmd)
+        sys.exit(0)
+    stdin = json.dumps(args["value"], ensure_ascii=False)
+argv.append(target)
+try:
+    r = subprocess.run(argv, cwd=os.environ.get("AOS_WS") or ".", input=stdin, capture_output=True, text=True)
+except OSError as e:
+    die("ToolFailed", "aos-json 起不來（要在 PATH 上）：%s" % e)
+if r.returncode == 0:
+    print(r.stdout if r.stdout else "ok", end="" if r.stdout else "\n")
+elif cmd == "check" and r.returncode == 1 and r.stdout:
+    print("有問題：\n" + r.stdout, end="")
+else:
+    print("錯：" + (r.stderr.strip() or "aos-json 結束碼 %d" % r.returncode).removeprefix("aos-json: "))
