@@ -1,0 +1,6 @@
+{"description": "問一隻 aos agent 一個問題，等它做完、回它的答案。沒有這隻就先用範本產生。適合把子問題交給別的 agent。",
+ "parameters": {"type": "object",
+                "properties": {"name": {"type": "string", "description": "agent 名字，例：helper"},
+                               "question": {"type": "string", "description": "要問的問題（純文字）"},
+                               "template": {"type": "string", "description": "還沒有這隻時用哪個範本，沒給＝agent-dan"}},
+                "required": ["name", "question"]}}

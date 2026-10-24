@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+# ask_agent - stdin 收 {"name", "question", "template"?}：沒有這隻就 aos-ai spawn、aos-ai ask、aos-ai run（前景跑完），stdout 印一行 JSON 結果
+# 子 agent 放在 $AOS_AI_ROOT（沒設＝$AOS_WS）的 agents/<名>/。aos-ai 的錯（名字不合…）照樣印成 JSON、退 0，讓腦看得到、自己修；
+# 只有 aos-ai 本身起不來才退 1（act 會報 ToolFailed）。aos-ai 要在 PATH 上（經 aos-ai run 跑的 agent 已經放好）。
+import json, os, subprocess, sys
+
+ROOT = os.environ.get("AOS_AI_ROOT") or os.environ.get("AOS_WS") or "."
+TIMEOUT = os.environ.get("AOS_AI_ASK_TIMEOUT", "50")      # 秒；要小於叫它的那格的 timeout_ms（agent-dan 的 act 是 60 秒）
+
+
+def ai(*args):
+    try:
+        r = subprocess.run(["aos-ai", "--root", ROOT] + list(args), capture_output=True, text=True)
+    except OSError as e:
+        print("ask_agent: LaunchFailed aos-ai 起不來：%s" % e, file=sys.stderr)
+        sys.exit(1)
+    if r.returncode != 0:
+        line = (r.stderr.strip().splitlines() or ["aos-ai: Internal 沒有訊息"])[-1]
+        print(json.dumps({"ok": False, "error": line}, ensure_ascii=False))
+        sys.exit(0)
+    return json.loads(r.stdout)
+
+
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError as e:
+    print(json.dumps({"ok": False, "error": "arguments 不是 JSON：%s" % e}, ensure_ascii=False))
+    sys.exit(0)
+name, question = args.get("name"), args.get("question")
+if not isinstance(name, str) or not isinstance(question, str) or not question.strip():
+    print(json.dumps({"ok": False, "error": "要 name 和 question 兩個字串"}, ensure_ascii=False))
+    sys.exit(0)
+if not os.path.isdir(os.path.join(ROOT, "agents", name, "agent")):
+    ai("spawn", name, "--from", args.get("template") or "agent-dan")
+q = ai("ask", name, "--", question)
+r = ai("run", name, "--timeout", TIMEOUT)
+answer = next((a["text"] for a in r.get("answers", []) if a["id"] == q["id"]), None)
+res = {"ok": answer is not None, "name": name, "answer": answer}
+if answer is None:
+    res.update({"code": r.get("code"), "errors": r.get("errors"), "hint": r.get("hint")})
+print(json.dumps(res, ensure_ascii=False))

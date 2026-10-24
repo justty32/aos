@@ -1,0 +1,3 @@
+{"description": "看 aos agent 的狀態：狀態機停在哪格、題目排隊／做到一半／做完幾題、最近一次跑的結果與錯誤。沒給名字＝列出全部。",
+ "parameters": {"type": "object",
+                "properties": {"name": {"type": "string", "description": "agent 名字；不給就列出全部"}}}}

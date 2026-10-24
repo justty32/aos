@@ -1,0 +1,5 @@
+{"description": "從範本產生一隻新的 aos agent（資料夾），之後可以用 ask_agent 問它。名字只用小寫英數、_、-。",
+ "parameters": {"type": "object",
+                "properties": {"name": {"type": "string", "description": "agent 名字，例：helper"},
+                               "template": {"type": "string", "description": "範本名，沒給＝agent-dan（會用工具的問答 agent）"}},
+                "required": ["name"]}}
