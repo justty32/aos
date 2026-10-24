@@ -1,0 +1,6 @@
+{"_entry": ["aos-fsm", {"$env": "AOS_CF"}],
+ "start": "run",
+ "states": {
+   "run":     {"exec": {"argv": ["python3", "run.py"], "timeout_ms": 900000}, "next": "judge"},
+   "judge":   {"exec": {"argv": ["python3", "judge.py"], "timeout_ms": 60000}, "next": "improve"},
+   "improve": {"exec": {"argv": ["python3", "improve.py"], "timeout_ms": 1800000}, "next": "run"}}}

@@ -1,0 +1,5 @@
+{"description": "拿你給的命令列參數與 stdin 實際跑一次 target/（工作資料夾裡要改的那個函數），回結束碼、stdout、stderr。每次在一份暫時的複本上跑、跑完就丟，不會動到 target/。逾時預設 10 秒、最多 60 秒。",
+ "parameters": {"type": "object",
+                "properties": {"args": {"type": "array", "items": {"type": "string"}, "description": "命令列參數（選填，預設沒有）"},
+                               "stdin": {"type": "string", "description": "餵給它的 stdin（選填，預設空）"},
+                               "timeout": {"type": "number", "description": "逾時秒數（選填，預設 10，最多 60）"}}}}

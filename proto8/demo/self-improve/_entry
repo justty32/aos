@@ -1,0 +1,3 @@
+#!/bin/sh
+# _entry - 把 self-improve 的 loop 跑起來（loop 每次跑一格 fsm.json：run → judge → improve → run …）
+exec aos-loop loop.json
