@@ -264,10 +264,10 @@ class AgentPip(unittest.TestCase):
         tools = {m["tool_call_id"]: m["content"] for m in self.history() if m["role"] == "tool"}
         self.assertTrue(tools["c2"].startswith("edit: TextMissing "), tools["c2"])
         self.assertTrue(tools["c2"].endswith("(工具 edit 結束碼 1)\n"), tools["c2"])
-        self.assertTrue(tools["c4"].startswith("act: ToolUnknown weather（能叫的：bash、edit、read、write）"))
+        self.assertTrue(tools["c4"].startswith("act: ToolUnknown weather（能叫的：bash、copy、edit、json_edit、"), tools["c4"])
         self.assertEqual(tools["c5"], "5\n")
         self.assertIn("agent-pip: ToolFailed edit 結束碼 1（回給腦）", r.stderr)
-        self.assertEqual([t["function"]["name"] for t in b.requests[0]["tools"]], ["bash", "edit", "read", "write"])
+        self.assertTrue({"bash", "edit", "read", "write"} <= {t["function"]["name"] for t in b.requests[0]["tools"]})
         self.assertEqual(b.requests[0]["messages"][0]["role"], "system")
 
     def test_arguments_bad_fed_back(self):

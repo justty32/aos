@@ -1,0 +1,7 @@
+{"description": "漸進看一個檔的內容，回 JSON。JSON 檔：用 pointer（例：/states/think；整份是空字串）一次看一層——小的直接給 value，大的給 children（每個子項的型別與大小），想看哪個子項就把它的 key 接到 pointer 後面再叫一次。文字檔：小檔整份給；大檔先給大綱（Python 的 class／def、Markdown 的標題，附行號），再用 start／end（行號，第一行是 1）看那一段。JSON 檔給 start／end 就當文字看。",
+ "parameters": {"type": "object",
+                "properties": {"path": {"type": "string", "description": "從工作資料夾算的路徑"},
+                               "pointer": {"type": "string", "description": "JSON 指標，只對 JSON 檔有用"},
+                               "start": {"type": "integer", "description": "從第幾行開始（文字）"},
+                               "end": {"type": "integer", "description": "看到第幾行（含）"}},
+                "required": ["path"]}}

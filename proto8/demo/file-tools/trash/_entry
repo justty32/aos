@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+# trash - stdin 收 {"path": "old.txt"}，「刪除」＝搬進 $AOS_WS/.trash/<時間>/<原路徑>，不真的刪（要救就用 move 搬回來）；stdout 印 {"path", "to"}
+# 垃圾桶裡的東西不再丟（.trash 本身與裡面都不收）；真的要清垃圾桶是人的事。
+import os, sys
+sys.dont_write_bytecode = True                  # 不在工具資料夾留 __pycache__
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # file-tools 這層（common.py）
+import time
+from common import args, resolve_link, die, out, TRASH, WS
+
+a = args(("path",))
+p, rel = resolve_link(a["path"])
+if not os.path.lexists(p):
+    die("FileMissing", a["path"])
+if rel.split(os.sep)[0] == TRASH:
+    die("PathBad", "%s 已經在垃圾桶裡" % a["path"])
+stamp = time.strftime("%Y%m%d-%H%M%S")
+n = 0
+while True:
+    box = os.path.join(WS, TRASH, stamp + ("" if n == 0 else "-%d" % n))
+    if not os.path.lexists(os.path.join(box, rel)):
+        break
+    n += 1
+to = os.path.join(box, rel)
+try:
+    os.makedirs(os.path.dirname(to), exist_ok=True)
+    os.rename(p, to)
+except OSError as e:
+    die("MoveFailed", "%s → 垃圾桶：%s" % (a["path"], e.strerror))
+out({"path": rel, "to": os.path.relpath(to, WS)})

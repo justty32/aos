@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+# copy - stdin 收 {"from": "agent-a", "to": "agent-b"}，複製檔或整個資料夾（連結照連結複製、不跟進去；to 的上層自動建），stdout 印 {"from", "to", "files"}
+# to 已經有東西＝不複製（FileBad）。檔案先寫暫存再改名（N-05）；資料夾先複製到 . 開頭的暫存資料夾再改名。
+import os, sys
+sys.dont_write_bytecode = True                  # 不在工具資料夾留 __pycache__
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # file-tools 這層（common.py）
+import shutil
+from common import args, resolve_link, die, out
+
+a = args(("from", "to"))
+src, s_rel = resolve_link(a["from"])
+dst, d_rel = resolve_link(a["to"])
+if not os.path.lexists(src):
+    die("FileMissing", a["from"])
+if os.path.lexists(dst):
+    die("FileBad", "%s 已經有東西" % a["to"])
+if dst.startswith(src + os.sep):
+    die("PathBad", "%s 在 %s 裡面" % (a["to"], a["from"]))
+tmp = os.path.join(os.path.dirname(dst), "." + os.path.basename(dst) + ".tmp")
+try:
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    if os.path.isdir(src) and not os.path.islink(src):
+        shutil.copytree(src, tmp, symlinks=True)
+        files = sum(len(fs) for _, _, fs in os.walk(tmp))
+    else:
+        shutil.copy2(src, tmp, follow_symlinks=False)
+        files = 1
+    os.rename(tmp, dst)
+except OSError as e:
+    if os.path.isdir(tmp) and not os.path.islink(tmp):
+        shutil.rmtree(tmp, ignore_errors=True)
+    elif os.path.lexists(tmp):
+        os.unlink(tmp)
+    die("CopyFailed", "%s → %s：%s" % (a["from"], a["to"], e.strerror or e))
+out({"from": s_rel, "to": d_rel, "files": files})

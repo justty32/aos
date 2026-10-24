@@ -1,0 +1,77 @@
+#!/usr/bin/env python3
+# ls - stdin 收 {"path": ".", "offset": 0, "limit": 100, "hidden": false}，stdout 印一份 JSON：這個資料夾的子項陣列
+# 每項：name、type（file／dir／link）、size、mtime；資料夾多 children（子項數）與 aos（有哪些 _entry、.env、tool.json…）；
+# .json 檔多 keys（頂層 key，最多 12 個）；連結多 link_to。. 開頭的預設不列（數目放 hidden）。資料夾在前、照名字排；一次最多 limit 項，還有就給 next_offset。
+import os, sys
+sys.dont_write_bytecode = True                  # 不在工具資料夾留 __pycache__
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # file-tools 這層（common.py）
+import json
+from common import args, resolve, die, out, kind, iso, aos_marks, JSON_KEYS_MAX, WS
+
+a = args()
+rel = a.get("path", ".")
+offset, limit, hidden = a.get("offset", 0), a.get("limit", 100), a.get("hidden", False)
+if not isinstance(rel, str) or type(offset) is not int or offset < 0 or type(limit) is not int or not 0 < limit <= 500 \
+        or not isinstance(hidden, bool):
+    die("ArgumentsBad", "path 字串、offset ≥ 0、limit 1～500、hidden 布林")
+d, shown = resolve(rel)
+if not os.path.exists(d):
+    die("FileMissing", rel)
+if not os.path.isdir(d):
+    die("FileBad", "%s 不是資料夾，看檔用 stat 或 view" % rel)
+try:
+    names = os.listdir(d)
+except OSError as e:
+    die("ReadFailed", "%s：%s" % (rel, e.strerror))
+dots = [n for n in names if n.startswith(".")]
+if not hidden:
+    names = [n for n in names if not n.startswith(".")]
+names.sort(key=lambda n: (not os.path.isdir(os.path.join(d, n)) or os.path.islink(os.path.join(d, n)), n))
+
+
+def item(n):
+    p = os.path.join(d, n)
+    t = kind(p)
+    it = {"name": n, "type": t}
+    try:
+        st = os.lstat(p)
+    except OSError:
+        return it
+    it["mtime"] = iso(st.st_mtime)
+    if t == "link":
+        target = os.path.realpath(p)
+        it["link_to"] = os.path.relpath(target, WS) if os.path.commonpath([WS, target]) == WS else "(工作資料夾外)"
+    elif t == "dir":
+        try:
+            it["children"] = len(os.listdir(p))
+        except OSError:
+            pass
+        marks = aos_marks(p)
+        if marks:
+            it["aos"] = marks
+    else:
+        it["size"] = st.st_size
+        if st.st_mode & 0o111:
+            it["exec"] = True
+        if n.endswith(".json") and st.st_size <= 1024 * 1024:
+            try:
+                with open(p, encoding="utf-8") as f:
+                    v = json.load(f)
+                if isinstance(v, dict):
+                    it["keys"] = list(v)[:JSON_KEYS_MAX]
+                    if len(v) > JSON_KEYS_MAX:
+                        it["keys_more"] = len(v) - JSON_KEYS_MAX
+                else:
+                    it["json"] = "array" if isinstance(v, list) else "value"
+            except (OSError, ValueError):
+                it["json"] = "壞的"
+    return it
+
+
+page = names[offset:offset + limit]
+res = {"path": shown, "total": len(names), "items": [item(n) for n in page]}
+if not hidden and dots:
+    res["hidden"] = len(dots)
+if offset + limit < len(names):
+    res["next_offset"] = offset + limit
+out(res)

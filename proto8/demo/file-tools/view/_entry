@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+# view - 漸進看一個檔：stdin 收 {"path": "fsm.json", "pointer": "/states"} 或 {"path": "a.py", "start": 10, "end": 40}，stdout 印一份 JSON
+# JSON 檔（內容解得開就算，含沒副檔名的 _entry）：照 pointer（RFC 6901，"" 或沒給＝整份）看一層——小的（≤ 1000 字）直接給 value，
+#   大的給 children（每個子項一句摘要），要看哪個子項就把它接到 pointer 後面再叫一次。
+# 文字檔：給了 start／end（行號，第一行是 1）＝那幾行原文；沒給時小檔（≤ 200 行且 ≤ 8KB）整份給，大檔先給大綱
+#   （Python：class／def 與行號範圍；Markdown：標題與行號；其他：前 40 行），再用 start／end 看要的那段。一次最多 2000 行或 50KB。
+# 要把 JSON 當文字看（看原始排版），給 start／end 就好。
+import os, sys
+sys.dont_write_bytecode = True                  # 不在工具資料夾留 __pycache__
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # file-tools 這層（common.py）
+import ast, json, re
+from common import args, resolve, die, out, json_summary
+
+SMALL_JSON = 1000                       # 序列化後幾個字以內直接給 value
+SMALL_TEXT_LINES, SMALL_TEXT_BYTES = 200, 8 * 1024
+MAX_LINES, MAX_BYTES = 2000, 50 * 1024  # 同 pi 的 read
+CHILDREN_MAX = 200
+
+a = args(("path",))
+p, shown = resolve(a["path"])
+pointer, start, end = a.get("pointer"), a.get("start"), a.get("end")
+if pointer is not None and not isinstance(pointer, str):
+    die("ArgumentsBad", "pointer 要是字串（例：/states/think）")
+for k, v in (("start", start), ("end", end)):
+    if v is not None and (type(v) is not int or v < 1):
+        die("ArgumentsBad", "%s 要是正整數" % k)
+if not os.path.exists(p):
+    die("FileMissing", a["path"])
+if os.path.isdir(p):
+    die("FileBad", "%s 是資料夾，看資料夾用 ls" % a["path"])
+try:
+    with open(p, "rb") as f:
+        data = f.read()
+except OSError as e:
+    die("ReadFailed", "%s：%s" % (a["path"], e.strerror))
+if b"\0" in data[:8192]:
+    die("FileBad", "%s 像是二進位檔，不讀" % a["path"])
+text = data.decode("utf-8", "replace")
+
+doc = None
+if start is None and end is None:
+    try:
+        doc = json.loads(text)
+    except ValueError:
+        if pointer:
+            die("FileBad", "%s 不是 JSON，不能用 pointer；用 start／end 看行" % a["path"])
+
+if doc is not None:                     # ---- JSON：照 pointer 看一層
+    v = doc
+    pointer = pointer or ""
+    if pointer and not pointer.startswith("/"):
+        die("ArgumentsBad", "pointer 要以 / 開頭（整份是 \"\"）")
+    for raw in pointer.split("/")[1:] if pointer else []:
+        key = raw.replace("~1", "/").replace("~0", "~")
+        if isinstance(v, dict) and key in v:
+            v = v[key]
+        elif isinstance(v, list) and key.isdigit() and int(key) < len(v):
+            v = v[int(key)]
+        else:
+            die("PointerMissing", "%s#%s 指不到（%s 不在）" % (shown, pointer, key))
+    res = {"path": shown, "format": "json", "pointer": pointer}
+    res.update(json_summary(v))
+    if isinstance(v, (dict, list)):
+        if len(json.dumps(v, ensure_ascii=False)) <= SMALL_JSON:
+            res["value"] = v
+        else:
+            items = list(v.items()) if isinstance(v, dict) else list(enumerate(v))
+            res["children"] = [dict({"key": k}, **json_summary(c)) for k, c in items[:CHILDREN_MAX]]
+            if len(items) > CHILDREN_MAX:
+                res["children_more"] = len(items) - CHILDREN_MAX
+            res["hint"] = "把子項的 key 接到 pointer 後面再看（例：%s/%s）" % (pointer, items[0][0]) if items else ""
+    out(res)
+    sys.exit(0)
+
+lines = text.split("\n")                # ---- 文字檔
+if text.endswith("\n"):
+    lines.pop()
+total = len(lines)
+res = {"path": shown, "format": "text", "total_lines": total}
+
+
+def segment(s, e):
+    s0 = s - 1
+    if total and s0 >= total:
+        die("ArgumentsBad", "start %d 超過檔尾（共 %d 行）" % (s, total))
+    e = min(e, total)
+    picked, size = [], 0
+    for line in lines[s0:e]:
+        n = len(line.encode("utf-8")) + 1
+        if len(picked) >= MAX_LINES or size + n > MAX_BYTES:
+            break
+        picked.append(line)
+        size += n
+    res.update({"start": s, "end": s0 + len(picked), "text": "\n".join(picked) + ("\n" if picked else "")})
+    if s0 + len(picked) < e:
+        res["hint"] = "超過 %d 行或 %dKB，用 start=%d 接著看" % (MAX_LINES, MAX_BYTES // 1024, s0 + len(picked) + 1)
+
+
+if start is not None or end is not None:
+    segment(start or 1, end or total)
+elif total <= SMALL_TEXT_LINES and len(data) <= SMALL_TEXT_BYTES:
+    segment(1, total)
+else:
+    outline = []
+    if p.endswith(".py") or lines[0].startswith("#!") and "python" in lines[0]:
+        res["format"] = "python"
+        try:
+            tree = ast.parse(text)
+            for node in tree.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    outline.append({"line": node.lineno, "end": node.end_lineno, "name": node.name,
+                                    "kind": "class" if isinstance(node, ast.ClassDef) else "def"})
+                    if isinstance(node, ast.ClassDef):
+                        outline += [{"line": m.lineno, "end": m.end_lineno, "name": node.name + "." + m.name, "kind": "def"}
+                                    for m in node.body if isinstance(m, (ast.FunctionDef, ast.AsyncFunctionDef))]
+        except SyntaxError as e:
+            res["syntax_error"] = "第 %s 行：%s" % (e.lineno, e.msg)
+    elif p.endswith(".md"):
+        res["format"] = "markdown"
+        fence = False
+        for i, line in enumerate(lines, 1):
+            if line.startswith("```"):
+                fence = not fence
+            m = None if fence else re.match(r"(#{1,6}) (.*)", line)
+            if m:
+                outline.append({"line": i, "level": len(m.group(1)), "name": m.group(2).strip()})
+    if outline:
+        res["outline"] = outline
+    else:
+        res["head"] = "\n".join(lines[:40]) + "\n"
+    res["hint"] = "用 start／end（行號）看要的那段"
+out(res)

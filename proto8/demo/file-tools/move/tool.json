@@ -1,0 +1,5 @@
+{"description": "搬移或改名一個檔或資料夾（to 的上層自動建）。to 已經有東西就不搬——要蓋先 trash 它。從垃圾桶救回來也用它。回 JSON {from, to}。",
+ "parameters": {"type": "object",
+                "properties": {"from": {"type": "string", "description": "原本的路徑"},
+                               "to": {"type": "string", "description": "新的路徑（完整路徑，不是「搬進哪個資料夾」）"}},
+                "required": ["from", "to"]}}

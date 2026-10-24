@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+# json_edit - 照 JSON 指標改 JSON 檔：stdin 收 {"path": "fsm.json", "set": {"/states/act/next": "idle"}, "del": ["/old"]}，stdout 印一份 JSON
+# set：指標 → 新值（照順序；中間缺的物件層自動建）；del：要刪的指標（要存在）。先檢查全部指得到，再交給 aos-json 寫：
+#   set 一次 `aos-json batch --parents 檔`（全有或全無、原子寫入），del 每個一次 `aos-json del 檔#指標`。
+# aos-json 照 PATH 找（呼叫者放好，同 aos-exec）；它的 stderr 原樣往上、這裡不讀（C-53），失敗只說結束碼。
+# 不穿 $ref（指標路上碰到 $ref 物件就照字面當物件看）。
+import os, sys
+sys.dont_write_bytecode = True                  # 不在工具資料夾留 __pycache__
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # file-tools 這層（common.py）
+import json, subprocess
+from common import args, resolve, die, out, json_summary
+
+a = args(("path",))
+p, shown = resolve(a["path"])
+sets, dels = a.get("set", {}), a.get("del", [])
+if not isinstance(sets, dict) or not isinstance(dels, list) or not all(isinstance(d, str) for d in dels):
+    die("ArgumentsBad", "set 要是 {指標: 值} 物件、del 要是指標字串的陣列")
+if not sets and not dels:
+    die("ArgumentsBad", "set、del 至少給一個")
+for ptr in list(sets) + dels:
+    if ptr and not ptr.startswith("/"):
+        die("ArgumentsBad", "指標 %r 要以 / 開頭（整份是 \"\"）" % ptr)
+if "" in dels:
+    die("ArgumentsBad", "不能刪整份；刪檔用 trash")
+if not os.path.isfile(p):
+    die("FileMissing", "%s（新的 JSON 檔用 write 整份寫）" % a["path"])
+try:
+    with open(p, encoding="utf-8") as f:
+        doc = json.load(f)
+except (OSError, ValueError) as e:
+    die("FileBad", "%s 不是 JSON：%s" % (a["path"], e))
+
+
+def walk(v, ptr):
+    """照指標走；回 (父, 最後一節) 或在中途指不到時 None。"""
+    keys = [k.replace("~1", "/").replace("~0", "~") for k in ptr.split("/")[1:]]
+    for k in keys[:-1]:
+        if isinstance(v, dict) and k in v:
+            v = v[k]
+        elif isinstance(v, list) and k.isdigit() and int(k) < len(v):
+            v = v[int(k)]
+        else:
+            return None
+    return v, keys[-1]
+
+
+for ptr in dels:                         # 先全部檢查，有一個不合就都不改
+    hit = walk(doc, ptr)
+    ok = hit and (isinstance(hit[0], dict) and hit[1] in hit[0]
+                  or isinstance(hit[0], list) and hit[1].isdigit() and int(hit[1]) < len(hit[0]))
+    if not ok:
+        die("PointerMissing", "%s#%s 指不到，刪不了" % (shown, ptr))
+
+
+def run(argv, stdin=None):
+    try:
+        r = subprocess.run(argv, input=stdin, text=True, stdout=subprocess.DEVNULL)   # stderr 不吞
+    except OSError as e:
+        die("LaunchFailed", "aos-json 起不來（PATH 上要有 aos-json）：%s" % e.strerror)
+    if r.returncode != 0:
+        die("WriteFailed", "aos-json %s 結束碼 %d（原因在 stderr）" % (argv[1], r.returncode))
+
+
+if sets:
+    run(["aos-json", "batch", "--parents", p], json.dumps(sets, ensure_ascii=False))
+for ptr in dels:
+    run(["aos-json", "del", p + "#" + ptr])
+with open(p, encoding="utf-8") as f:
+    after = json.load(f)
+out({"path": shown, "set": len(sets), "del": len(dels), "top": json_summary(after)})
