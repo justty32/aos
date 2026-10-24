@@ -15,7 +15,7 @@ EXEC = tool("aos-exec")
 SELF = str(ROOT / "demo" / "self-improve")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
 CODES = ("BudgetSpent", "ImproverFailed", "WsMissing", "StackMissing", "StackBad", "TargetMissing",
-         "JudgeMissing", "JudgeBad", "BudgetBad", "LaunchFailed")
+         "JudgeMissing", "JudgeBad", "BudgetBad", "LaunchFailed", "SandboxMissing")
 
 BUGGY = "import sys\nn = int(sys.argv[1])\nprint(sys.stdin.read()[:n], end='')\n"                 # 沒轉大寫、沒預設：0/3
 HALF = "import sys\nn = int(sys.argv[1])\nprint(sys.stdin.read().upper()[:n], end='')\n"          # 只轉大寫：2/3
@@ -59,6 +59,7 @@ class T(unittest.TestCase):
         self.put("target/_entry", json.dumps({"argv": ["python3", "f.py"]}))
         self.put("target/f.py", BUGGY)
         self.put("judge/cases.json", json.dumps(CASES))
+        self.put("sandbox.json", "false")       # 流程本身的測試不關沙箱（預設關；關的情形在 test_sandbox）
 
     def put(self, rel, text):
         p = self.ws / rel

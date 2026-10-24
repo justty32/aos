@@ -102,6 +102,7 @@ class Proxy:
                     try:
                         u = json.loads(data).get("usage") or {}
                         rec["prompt_tokens"], rec["completion_tokens"] = u.get("prompt_tokens"), u.get("completion_tokens")
+                        rec["cached_tokens"] = (u.get("prompt_tokens_details") or {}).get("cached_tokens")
                     except ValueError:
                         pass
                 else:
@@ -208,9 +209,11 @@ def main():
             results["questions"].append({"agent": who, "no": i + 1, "ok": ok, "code": r.returncode, "answer": ans,
                                          "calls": len(recs), "est_tokens": sum(x["est_tokens"] for x in recs),
                                          "prompt_tokens": sum(x.get("prompt_tokens") or 0 for x in recs) or None,
+                                         "cached_tokens": sum(x.get("cached_tokens") or 0 for x in recs) if a.upstream else None,
                                          "stderr": r.stderr[-500:]})
-            print("%s #%02d %s calls=%d est=%d real=%s  %s" % (who, i + 1, "OK " if ok else "BAD", len(recs),
-                  sum(x["est_tokens"] for x in recs), results["questions"][-1]["prompt_tokens"], ans[:70].replace("\n", " ")),
+            print("%s #%02d %s calls=%d est=%d real=%s cached=%s  %s" % (who, i + 1, "OK " if ok else "BAD", len(recs),
+                  sum(x["est_tokens"] for x in recs), results["questions"][-1]["prompt_tokens"],
+                  results["questions"][-1]["cached_tokens"], ans[:70].replace("\n", " ")),
                   flush=True)
     (out / "results.json").write_text(json.dumps(results, ensure_ascii=False, indent=1), encoding="utf-8")
     print()
@@ -227,7 +230,7 @@ def main():
             if x:
                 tot[who][0] += x[key] or 0
                 tot[who][1] += x["ok"]
-        oks = ["對" if by.get((w, i), {}).get("ok") else "錯" for w in ("dan", "kai", "kai0")]
+        oks = ["-" if (w, i) not in by else "對" if by[(w, i)]["ok"] else "錯" for w in ("dan", "kai", "kai0")]   # -＝這隻沒跑（--only）
         print("| %d | %s | %s | %s | %s |" % (i, row[0], row[1], row[2], " | ".join(oks)))
     n = len(QUESTIONS)
     print("| 合計 | %d | %d | %d | %d/%d | %d/%d | %d/%d |" % (tot["dan"][0], tot["kai"][0], tot["kai0"][0],

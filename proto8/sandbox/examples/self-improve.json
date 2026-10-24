@@ -1,4 +1,5 @@
 {"commands": ["aos-exec"],
  "rw": [{"$env": "IMPROVE_RUN"}],
  "net": false,
+ "env": ["PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "PYTHONDONTWRITEBYTECODE", "PYTHONIOENCODING"],
  "mem_mb": 1024, "cpu_s": 60, "file_mb": 100}

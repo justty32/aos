@@ -12,6 +12,7 @@
 | [02-組合](02-組合.md) | agent-eve（pyfix）、agent-gus、agent-meg、talk、agent-kai、agent-hal compact、self-improve（含 sandbox.json） |
 | [03-外部與人](03-外部與人.md) | aos-ai（含 skill）、say／listen／chat、agent-fay（attach）、Janet、Lua 與 nvim、aos-grow、沙箱 root 那層 |
 | [結果-01-基礎](結果-01-基礎.md) | 10-24 真腦實測結果：第 1～6 項（dan、pip、json_edit 兩步、liv、kernel-llm、Janet／Lua／grow）都能用；修了 stat 的時間寫法、liv 工具錯卡住、kernel-llm 收 `--max` 與 ivy 的模型名 |
+| [結果-02-組合B](結果-02-組合B.md) | 10-24 真腦實測結果：agent-kai bench（kai 15/15、dan 14/15、kai0 14/15；kai 比 dan 少 25% prompt，但沒 cache 的部分差不多）、self-improve 能用；定了 self-improve 預設就關沙箱（代定）、沙箱加 `env` 白名單、修了 `mem_mb` 讓 aos-exec 起不來 |
 | [結果-03-外部](結果-03-外部.md) | 10-24 真腦實測結果：aos-ai（含 skill）、agent-fay 叫 claude／codex 都能用；修了 aos-ai spawn 工具錯卡住（`--tool-errors`） |
 
 ## 第 0 步：確認 LiteLLM 起來了
@@ -60,7 +61,7 @@ impls 沒建好先照 [testing § proto8](../../../workflows/testing.md#proto8�
 ## 不在實測裡、仍掛著的殘項
 
 - **代定待落條文**（[NORMS 08-待定](../../../../proto8/NORMS/08-待定.md) 各一行）：fsm exec 直接放單子、`_metainfo`、函數成長、工具＝函式庫、Linux 權限與沙箱。使用者看過才落，改條文派 opus 以上、改完再審。
-- **沙箱兩個沒堵的洞**（[sandbox](../../../../proto8/thinking/2026-10-24-sandbox.md)）：kernel 信箱是後門（沙箱裡寄「單子＝cat 判準」，kernel 在外面照跑）；環境變數整份帶進去（`AOS_BRAIN_KEY`、`.env` 的 key 都讀得到，self-improve 只清 `AOS_*`）。另：「self-improve 預設就關」沒做，那份把翻案判準定在「拿真模型跑之前」——**跑第 12 項前要先決定**。
+- **沙箱兩個沒堵的洞**（[sandbox](../../../../proto8/thinking/2026-10-24-sandbox.md)）：kernel 信箱是後門（沙箱裡寄「單子＝cat 判準」，kernel 在外面照跑）；環境變數整份帶進去（`AOS_BRAIN_KEY`、`.env` 的 key 都讀得到）——設定多了 `env` 白名單，self-improve 兩份設定寫了，其他例子沒寫的照舊。「self-improve 預設就關」10-24 真腦實測前已代定（[sandbox S11](../../../../proto8/thinking/2026-10-24-sandbox.md)，見[結果-02-組合B](結果-02-組合B.md)）。
 - **compact 與 P-41 擦邊**：agent-hal 把舊 history 輪替進 `compact/<run>/`、另起新檔；另兩條路是照 kai「紀錄照長、送腦的另外組」或 brain 改讀摘要檔（[compact](../../../../proto8/thinking/2026-10-24-compact.md)）。等使用者看。
 - **bash-boxed**：沒有明文殘項清單；收工時看到的——[sandbox/README](../../../../proto8/sandbox/README.md) 還寫「pi-tools 的 bash」（現在指 `lib/base/bash`）、`cpu_s` 120 是 CPU 時間、跟 bash 的牆鐘 `timeout_s`（最多 300）不同種、環境變數洩漏同樣適用。
 - **agent-gus 的小念頭**沒收進 lib（是 gus 自己的入口）；json_edit 兩步的第二步預定換成 gus 的 `thought.json`。

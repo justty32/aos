@@ -11,7 +11,7 @@ aos-sandbox [--dry-run] [--] 設定檔 prog [args...]
 它不常駐：排好一條 s6 式的 chain-loading（每支改一下行程狀態就 exec 成剩下的），exec 下去就走了。結束碼、stdin、stdout、stderr 都是 prog 的（被訊號停＝128＋N）。
 
 ```
-[s6-softlimit -m … -t …]   上限（設定有寫才接）
+[s6-softlimit -a … -d … -t …]   上限（設定有寫才接）
 [s6-setuidgid 帳號]        身分（設定有寫 user 才接；要 root）
 bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接；不用 root）
   -- prog args...
@@ -29,7 +29,8 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 | `ro` | 路徑陣列 | 唯讀看得到 | 沒有 |
 | `rw` | 路徑陣列 | 可寫看得到（最後綁，可以蓋在 `ro` 裡面） | 沒有 |
 | `net` | 布林 | 能不能連網 | `false`（只有沙箱自己的 loopback） |
-| `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files` | 正整數 | `s6-softlimit` 的 `-m`、`-t`、`-p`、`-f`、`-o` | 不限 |
+| `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files` | 正整數 | `s6-softlimit` 的 `-a`＋`-d`（`mem_mb`；不用 `-m`：它連堆疊上限一起設，aos-exec 一開執行緒就失敗）、`-t`、`-p`、`-f`、`-o` | 不限 |
+| `env` | 環境變數名陣列 | 只帶這幾個進去（外面有設的才帶；bwrap `--clearenv`＋`--setenv`），API key 不跟著進沙箱（10-24 補） | 整份照帶 |
 
 - **沒列到的路徑一律看不到**（白名單）；`/proc`、`/dev`、空的 `/tmp` 一定有。綁進來的路徑在沙箱裡是同一個位置；相對路徑從 cwd 算。路徑是符號連結的，沙箱裡做同一條連結再綁它指到的地方。
 - 設定檔可以寫 `檔#/指標`（例 `_metainfo#/sandbox`）；值可以用 `{"$env": 名, "$path": 接後面, "$prefix": 接前面}`（不解 `$ref`）。
@@ -47,7 +48,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 
 | 例子 | 檔 | 說明 |
 |---|---|---|
-| 自我改進 | [examples/self-improve.json](examples/self-improve.json) | 放進交辦工作區當 `sandbox.json`：run 格與 try_run 都把被改的函數關起來（只看得到這次的暫時複本＋工作區、斷網、1 GB、60 秒 CPU） |
+| 自我改進 | [examples/self-improve.json](examples/self-improve.json) | 放進交辦工作區當 `sandbox.json`：run 格與 try_run 都把被改的函數關起來（只看得到這次的暫時複本＋工作區、斷網、只帶 `PATH`、語系幾個環境變數、1 GB、60 秒 CPU）。工作區沒放時 self-improve 預設用自己的 [sandbox.json](../demo/self-improve/sandbox.json)（同這份、少了要 s6 的上限；10-24 定） |
 | bash 工具 | [examples/bash-boxed/](examples/bash-boxed/) | pi-tools 的 bash 原封不動（`inner` 捷徑），外面包一層：只寫得到 `$AOS_WS` 與自己的 stack、斷網 |
 | claude／codex CLI | [examples/cli-tool.json](examples/cli-tool.json) | 要連網、要寫自己的設定資料夾；擋的是「讀寫工作區以外」 |
 | agent 當工具 | [examples/agent.json](examples/agent.json) | 斷網、腦只能經 `$AOS_KERNEL` 信箱（aos-gate）問——見紀錄的邊緣狀況（kernel 會在沙箱外跑信裡的單子） |

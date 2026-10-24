@@ -51,8 +51,9 @@ stack 佈局：`$AOS_STACK/versions/vNNN/{target/, version.json（from、hash、
 5. **每一版都留**（`versions/vNNN/` 拍下來就不再改），**新的一版從最好的那版改**——同分取最早的（沒變好就回原本那版重來；`out/best/` 也不會換成同分的新寫法）。改回跟以前某版一模一樣時記 `same_as`、任務說明裡標出來（防震盪）。
 6. **預算三種**（`budget.json`，沒寫的照預設）：`rounds`（改進幾輪，預設 5；中途失敗的也算一輪）、`elapsed_ms`（從第一次跑起算，預設 30 分鐘）、`tokens`（改進者問腦的 `usage.total_tokens` 加總，預設 50 萬）。每次 judge 完檢查，任何一種到了就停；loop 不設 `max`（滿了會以 0 結束、跟達成分不出來）。單格另有 `timeout_ms`：run 15 分鐘、judge 1 分鐘、improve 30 分鐘；每組例子預設 10 秒、檢查程式 5 分鐘。
 7. **模型**：改進者 `.env` 寫 `chatgpt-gpt-6-luna-low`（同 agent-dan），腦的位置照舊由叫的人給 `AOS_BRAIN_URL`，一路傳下去。
-8. **名字**（C-54）：資料夾 `self-improve` 跟 demo 其他資料夾一樣用連字號；格名 `run`／`judge`／`improve`；錯誤代號 `BudgetSpent`、`ImproverFailed`、`JudgeMissing`、`JudgeBad`、`TargetMissing`、`BudgetBad`、`StackBad`、`WsMissing`、`StackMissing`、`LaunchFailed`；環境變數 `IMPROVE_TARGET`。
+8. **名字**（C-54）：資料夾 `self-improve` 跟 demo 其他資料夾一樣用連字號；格名 `run`／`judge`／`improve`；錯誤代號 `BudgetSpent`、`ImproverFailed`、`JudgeMissing`、`JudgeBad`、`TargetMissing`、`BudgetBad`、`StackBad`、`WsMissing`、`StackMissing`、`LaunchFailed`、`SandboxMissing`（10-24 晚加）；環境變數 `IMPROVE_TARGET`。
 9. 改進者從 agent-pip 照抄（不是 agent-dan）：工具出錯（edit 找不到原文、路徑出界）要回給腦，停下來重跑只會卡在同一個呼叫。只改三處：錯誤行的名字、假腦直接答不改檔、每次問腦把 `usage` 記進自己的 `usage.jsonl`。
+10. **被改的函數預設關進沙箱**（10-24 真腦實測前定、代定可翻案；條文在 [sandbox S11、S12](2026-10-24-sandbox.md)）：工作區沒放 `sandbox.json` 就用 `demo/self-improve/sandbox.json`，寫 `false`＝不關；找不到 aos-sandbox／bwrap＝`SandboxMissing`。
 
 ## 跑一次（10-24，`~/code/try/self-improve/`）
 

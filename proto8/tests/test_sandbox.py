@@ -163,7 +163,8 @@ class SandboxTest(unittest.TestCase):
         chain = self.dry(self.cfg({"user": "aos-run", "mem_mb": 64, "cpu_s": 2, "net": True}))
         names = [os.path.basename(a) for a in chain]
         self.assertEqual(names[0], "s6-softlimit")
-        self.assertEqual(chain[1:5], ["-m", str(64 * 1024 * 1024), "-t", "2"])
+        mb64 = str(64 * 1024 * 1024)
+        self.assertEqual(chain[1:7], ["-a", mb64, "-d", mb64, "-t", "2"])
         self.assertLess(names.index("s6-setuidgid"), names.index("bwrap"))   # 先換身分、再開 namespace
         self.assertIn("--share-net", chain)
         self.assertNotIn("--new-session", chain)
@@ -175,6 +176,11 @@ class SandboxTest(unittest.TestCase):
         r = self.box(self.cfg({"mem_mb": 100}), "python3", "-c", "x = bytearray(400 * 1024 * 1024)")
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("MemoryError", r.stderr)
+        fn = self.tmp / "fn" / "_entry"                  # 有上限時 aos-exec 照樣跑得起來（-m 連堆疊一起限，開執行緒就 EAGAIN）
+        fn.write_text(json.dumps({"argv": ["python3", "-c", "print('ran')"]}))   # 單子形的入口（10-24 撞到的就是這種）
+        r = self.box(self.cfg({"mem_mb": 1024, "commands": ["aos-exec"], "rw": [str(self.tmp)]}, "mem2.json"),
+                     "aos-exec", "--ws", str(self.tmp), str(self.tmp / "fn"))
+        self.assertEqual((r.returncode, r.stdout), (0, "ran\n"), r.stderr)
         t0 = time.time()
         r = self.box(self.cfg({"cpu_s": 1}, "cpu.json"), "python3", "-c", "while True: pass")
         self.assertEqual(r.returncode, 128 + 24)        # SIGXCPU
@@ -259,10 +265,35 @@ class SelfImproveSandboxTest(unittest.TestCase):
         verdict = json.loads((stack / "versions" / "v000" / "verdict.json").read_text())
         return r, verdict
 
-    def test_without_sandbox_function_reads_judge(self):
+    def test_sandbox_false_function_reads_judge(self):
+        (self.ws / "sandbox.json").write_text("false")                 # 明寫不關
         r, v = self.run_self_improve()
         self.assertEqual(r.returncode, 0, r.stderr)                     # 偷看就「達成」了
         self.assertEqual((v["score"], v["total"], v["passed"]), (2, 2, True))
+
+    def test_default_boxes_function(self):
+        """工作區沒放 sandbox.json＝用 demo/self-improve/sandbox.json 關（10-24 定：預設就關）；外面的 key 也帶不進去。"""
+        entry = self.ws / "target" / "_entry"
+        entry.write_text((CHEAT % str(self.ws / "judge" / "cases.json")).replace(
+            "import json, sys\n", "import json, os, sys\nprint('key=' + os.environ.get('SI_TEST_KEY', 'none'), file=sys.stderr)\n"))
+        r = subprocess.run(["aos-exec", "--ws", str(self.ws), SELF], capture_output=True, text=True, timeout=120,
+                           env=env(AOS_STACK=str(self.root / "stack") + "/", SI_TEST_KEY="leaked"))
+        self.assertEqual(r.returncode, 2, r.stderr)
+        runs = [json.loads(x) for x in (self.root / "stack" / "versions" / "v000" / "runs.jsonl").read_text().splitlines()]
+        self.assertEqual([x["stdout"] for x in runs], ["看不到判準\n", "看不到判準\n"])
+        self.assertTrue(all("key=none" in x["stderr"] for x in runs), runs)
+
+    def test_default_without_bwrap_stops(self):
+        """預設要關卻沒有 bwrap：停下說 SandboxMissing，不靜靜改成不關。"""
+        stack = self.root / "stack"
+        bare = self.root / "bin"
+        bare.mkdir()
+        for name in ("aos-exec", "aos-loop", "aos-fsm", "python3", "aos-sandbox"):
+            os.symlink(shutil.which(name, path=PATH), bare / name)
+        r = subprocess.run(["aos-exec", "--ws", str(self.ws), SELF], capture_output=True, text=True, timeout=120,
+                           env=env(AOS_STACK=str(stack) + "/", PATH=str(bare)))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("self-improve: SandboxMissing", r.stderr)
 
     def test_with_sandbox_function_cannot_read_judge(self):
         (self.ws / "sandbox.json").write_text(json.dumps(

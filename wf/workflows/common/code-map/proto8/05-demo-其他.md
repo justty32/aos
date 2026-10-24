@@ -34,7 +34,8 @@
 | `_entry` | `exec aos-loop loop.json` |
 | `loop.json` | `{"exec": "fsm.json"}`，不設 max（預算由 judge 管） |
 | `fsm.json` | run（15 分）→ judge（1 分）→ improve（30 分）→ run，三格都是內嵌單子 |
-| `common.py` | 三格共用：工作區與 stack 佈局、版本（`versions/vNNN/`）、`best`、預算（`budget.json`，預設 5 輪／30 分／50 萬 token）、`run_target`（在暫時複本上跑函數）、`criteria`；10-24 沙箱接線 `sandbox()`（工作區有 `sandbox.json` 就 `aos-sandbox` 包著跑） |
+| `common.py` | 三格共用：工作區與 stack 佈局、版本（`versions/vNNN/`）、`best`、預算（`budget.json`，預設 5 輪／30 分／50 萬 token）、`run_target`（在暫時複本上跑函數）、`criteria`；10-24 沙箱接線 `sandbox()`（預設用本資料夾的 `sandbox.json` 以 `aos-sandbox` 包著跑；工作區的 `sandbox.json` 優先、`false`＝不關；找不到 aos-sandbox／bwrap＝`SandboxMissing`） |
+| `sandbox.json` | 預設的沙箱設定（10-24 真腦實測前定）：`commands` aos-exec、只寫得到 `$IMPROVE_RUN`、斷網、`env` 只帶 `PATH` 與語系幾個 |
 | `run.py` | 第一次把 `target/`（或 `target.json`）拍成 v000；跑這一版，結果寫 `runs.jsonl` |
 | `judge.py` | 比判準寫 `verdict.json`：達成退 10（放 `out/best/`、寫報告）、預算用完 `BudgetSpent` 退 2、沒達成退 0 |
 | `improve.py` | 從最好那版開新一版，工作區只給 `new/task.txt`＋`target/` 叫改進者，改完只收 `target/`；失敗 `ImproverFailed` 退 1；有沙箱就傳 `IMPROVE_SANDBOX` |

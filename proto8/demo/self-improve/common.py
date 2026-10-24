@@ -149,9 +149,19 @@ def used():
 
 
 def sandbox():
-    """工作區有 sandbox.json＝函數一律關進 aos-sandbox 跑（proto8/sandbox）；沒有＝照舊不關。回設定檔路徑或 None。"""
+    """函數要關進哪份 aos-sandbox 設定（proto8/sandbox）：工作區有 sandbox.json 用它，內容是 false＝不關；
+    沒有就用本資料夾的 sandbox.json（預設就關，10-24 真腦實測前定，代定可翻案：thinking 2026-10-24-sandbox）。
+    回設定檔路徑或 None；要關卻找不到 aos-sandbox 或 bwrap＝SandboxMissing（不靜靜改成不關）。"""
     path = os.path.join(ws, "sandbox.json")
-    return path if os.path.exists(path) else None
+    if os.path.exists(path):
+        if read_json(path) is False:
+            return None
+    else:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sandbox.json")
+    for cmd in ("aos-sandbox", "bwrap"):
+        if shutil.which(cmd) is None:
+            die("SandboxMissing", "PATH 上找不到 %s（函數預設關進沙箱跑；不要關就在工作區放 sandbox.json 寫 false）" % cmd)
+    return path
 
 
 def run_target(version_dir, argv_tail, stdin="", timeout_ms=10000, extra_env=None, exec_target=None):
