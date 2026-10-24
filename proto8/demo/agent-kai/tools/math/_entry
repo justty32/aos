@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+# math - stdin 收 {"expr": "17*23"}，在 stdout 印算出來的結果；只認數字、+ - * / // % **、括號、正負號（不用 eval）
+import ast, json, operator, sys
+
+BIN = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv,
+       ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod, ast.Pow: operator.pow}
+UNARY = {ast.UAdd: operator.pos, ast.USub: operator.neg}
+POW_MAX = 1000          # 指數上限：9**9**9 這種會把機器算死
+
+
+def bad(reason):
+    print("math: ExprBad " + reason, file=sys.stderr)
+    sys.exit(1)
+
+
+def value(node):
+    if isinstance(node, ast.Constant) and type(node.value) in (int, float):
+        return node.value
+    if isinstance(node, ast.BinOp) and type(node.op) in BIN:
+        left, right = value(node.left), value(node.right)
+        if isinstance(node.op, ast.Pow) and abs(right) > POW_MAX:
+            bad("指數太大（上限 %d）" % POW_MAX)
+        return BIN[type(node.op)](left, right)
+    if isinstance(node, ast.UnaryOp) and type(node.op) in UNARY:
+        return UNARY[type(node.op)](value(node.operand))
+    bad("不認得的寫法：" + type(node).__name__)
+
+
+try:
+    args = json.loads(sys.stdin.read())
+except ValueError as e:
+    bad("stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict) or not isinstance(args.get("expr"), str):
+    bad("缺 expr（要一個字串）")
+try:
+    tree = ast.parse(args["expr"], mode="eval")
+except SyntaxError as e:
+    bad("式子讀不懂：%s" % e.msg)
+try:
+    print(value(tree.body))
+except ZeroDivisionError:
+    bad("除以零")
+except (OverflowError, ValueError) as e:
+    bad("算不出來：%s" % e)

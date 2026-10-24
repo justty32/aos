@@ -1,0 +1,8 @@
+{"description": "查這段對話先前的題目（你只看得到目錄與幾題挑過的，其他在這裡）。op=search 用關鍵字找舊題（回每題一行）；op=read 看某一題的完整問答，detail=true 連當時叫的工具與工具原始輸出一起看（例如當時讀過的檔內容）。",
+ "parameters": {"type": "object",
+                "properties": {
+                  "op": {"type": "string", "enum": ["search", "read"]},
+                  "query": {"type": "string", "description": "search：關鍵字"},
+                  "no": {"type": "integer", "description": "read：第幾題（目錄裡的 #N）"},
+                  "detail": {"type": "boolean", "description": "read：要不要連工具過程一起看，預設 false"}},
+                "required": ["op"]}}
