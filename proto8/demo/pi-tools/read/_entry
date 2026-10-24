@@ -1,0 +1,74 @@
+#!/usr/bin/env python3
+# read - stdin 收 {"path": "a.py", "offset": 1, "limit": 100}，在 stdout 印檔案內容（照 pi 的 read：不加行號，太長從頭截、附「從第幾行接著讀」）
+# 路徑從 $AOS_WS 算、不能跑出 $AOS_WS（符號連結指到外面也算）。錯：stderr 與 stdout 各一行「read: 代號 原因」、退 1。
+import json, os, sys
+
+MAX_LINES, MAX_BYTES = 2000, 50 * 1024      # 同 pi：2000 行或 50KB，先到先算
+
+
+def die(code, reason):
+    line = "read: %s %s" % (code, reason)
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果（腦才知道錯在哪）
+    sys.exit(1)
+
+
+ws = os.environ.get("AOS_WS")
+if not ws or not os.path.isdir(ws):
+    die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+try:
+    args = json.loads(sys.stdin.read())
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict) or not isinstance(args.get("path"), str) or not args["path"]:
+    die("ArgumentsBad", "缺 path（要一個字串）")
+offset, limit = args.get("offset"), args.get("limit")
+for k, v in (("offset", offset), ("limit", limit)):
+    if v is not None and (type(v) is not int or v < 1):
+        die("ArgumentsBad", "%s 要是正整數" % k)
+
+root = os.path.realpath(ws)
+path = os.path.realpath(os.path.join(root, args["path"]))
+if os.path.commonpath([root, path]) != root:
+    die("PathBad", "%s 在工作資料夾外面" % args["path"])
+if not os.path.exists(path):
+    die("FileMissing", args["path"])
+if os.path.isdir(path):
+    die("FileBad", "%s 是資料夾，看資料夾用 bash 的 ls" % args["path"])
+try:
+    with open(path, "rb") as f:
+        data = f.read()
+except OSError as e:
+    die("ReadFailed", "%s：%s" % (args["path"], e.strerror))
+if b"\0" in data[:8192]:
+    die("FileBad", "%s 像是二進位檔，不讀" % args["path"])
+text = data.decode("utf-8", "replace")
+
+lines = text.split("\n")
+if text.endswith("\n"):
+    lines.pop()                                 # 檔尾換行不算一行
+total = len(lines)
+if total == 0:
+    print("(空檔)")
+    sys.exit(0)
+start = (offset or 1) - 1
+if start >= total:
+    die("ArgumentsBad", "offset %d 超過檔尾（共 %d 行）" % (offset, total))
+end = total if limit is None else min(start + limit, total)
+out, size = [], 0
+for line in lines[start:end]:
+    n = len(line.encode("utf-8")) + 1
+    if len(out) >= MAX_LINES or size + n > MAX_BYTES:
+        break
+    out.append(line)
+    size += n
+first = start + 1
+if not out:                                     # 第一行就超過 50KB
+    die("FileBad", "第 %d 行超過 %dKB，改用 bash：sed -n '%dp' %s | head -c %d"
+        % (first, MAX_BYTES // 1024, first, args["path"], MAX_BYTES))
+print("\n".join(out))
+shown_end = start + len(out)
+if shown_end < end:                             # 被 2000 行／50KB 截掉
+    print("\n[第 %d-%d 行，共 %d 行。用 offset=%d 接著讀。]" % (first, shown_end, total, shown_end + 1))
+elif end < total:                               # limit 停在檔尾之前
+    print("\n[檔案還有 %d 行。用 offset=%d 接著讀。]" % (total - end, end + 1))

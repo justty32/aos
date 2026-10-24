@@ -1,0 +1,5 @@
+{"description": "在工作資料夾裡用 bash 跑一行指令，回 stdout 與 stderr 合在一起的輸出；指令退非 0 時結尾會寫結束碼。輸出太長只留最後 2000 行或 50KB。逾時預設 30 秒、最多 300 秒，到時整群停掉。列檔、搜尋（ls、grep、find）、跑程式與測試都用它。",
+ "parameters": {"type": "object",
+                "properties": {"command": {"type": "string", "description": "要跑的 bash 指令"},
+                               "timeout": {"type": "number", "description": "逾時秒數（選填，預設 30，最多 300）"}},
+                "required": ["command"]}}

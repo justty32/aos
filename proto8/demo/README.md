@@ -87,6 +87,12 @@ agent-fay/
 
 **錯**：stderr 一行 `cli_session: 代號 原因`、退 1（act 當 `ToolFailed` 停下）——`PromptBad`、`CliMissing`、`CliFailed`、`ReplyMissing`、`SessionBad`、`CfgMissing`／`CfgBad`。測試 `test_fay.py` 用假的 claude／codex，不花額度；要 tmux。
 
+## pi-tools 與 agent-pip（仿 pi coding agent 的基本工具，10-24）
+
+`pi-tools/` 是一套可重用的寫程式工具，仿 [pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) 預設的四個：`read`（讀檔，最多 2000 行或 50KB、提示 offset 接著讀）、`write`（建檔或整份蓋掉）、`edit`（`edits: [{old_text, new_text}]`，每段對原檔比、要唯一、不重疊，全有或全無）、`bash`（在 `$AOS_WS` 裡跑一行指令，留最後 2000 行或 50KB，逾時預設 30 秒、上限 300 秒、整群停）。每個都是資料夾程式＋`tool.json`（P-41），arguments 從 stdin 進、stdout 是結果。read／write／edit 的路徑從 `$AOS_WS` 算、不能跑出去（`PathBad`，符號連結也算）；bash 的指令本身擋不住。錯：stderr 一行「工具名: 代號 原因」、退 1，同一行也印在 stdout 給腦看。
+
+`agent-pip/` 是掛上這套的 coding agent：從 agent-dan 照抄，`tools` 是指到 `../pi-tools` 的符號連結，`system.txt` 照 pi 的精神寫短版。跟 agent-dan 只差一條：**工具出的問題回給腦、不停**（工具退非 0、叫了沒有的工具、arguments 不是 JSON，都接成一則 tool 訊息），因為 edit 找不到原文是常事、停下來重跑會卡在同一個呼叫。真跑：`AOS_BRAIN_URL=http://localhost:4000/v1 AOS_STACK=<工作區外的資料夾>/ aos-exec --ws <工作區> proto8/demo/agent-pip`（stack 放工作區外，免得腦用工具改到自己的對話）。試驗場 `~/code/try/pi-tools/`。設計與 pi 的調查在 [thinking 2026-10-24-pi-tools](../thinking/2026-10-24-pi-tools.md)；測試 `tests/test_pi_tools.py`。
+
 ## agent-meg（記憶庫，10-24）
 
 照抄 agent-dan 的問答 agent，多一個跨對話保留的**記憶庫**（heap）：對話（stack）清空了，記得的事還在。設計與考古在 [thinking 2026-10-24-memory](../thinking/2026-10-24-memory.md)（使用者「還有在記憶庫裏存放各類東西」「我記得proto7就有那些，去看看那些方法」「都按建議做」）。
