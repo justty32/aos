@@ -211,7 +211,7 @@ class T(unittest.TestCase):
         r = self.meg(ASK, REAL_URL, stack="s2", name="q2.txt")
         self.assertEqual(r.returncode, 0, r.stderr)
         out = (self.ws / "out" / "q2.txt").read_text()
-        self.assertTrue("4" in out and "根目錄" in out, out)
+        self.assertTrue(("4" in out or "四" in out) and "根目錄" in out, out)   # 真模型會寫「四個空格」（10-24 實測）
 
 
 if __name__ == "__main__":
