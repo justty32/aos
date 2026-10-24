@@ -1,0 +1,4 @@
+{"description": "讀工作資料夾裡的一個文字檔，回全文。",
+ "parameters": {"type": "object",
+                "properties": {"path": {"type": "string", "description": "檔案的相對路徑，例：calc.py"}},
+                "required": ["path"]}}

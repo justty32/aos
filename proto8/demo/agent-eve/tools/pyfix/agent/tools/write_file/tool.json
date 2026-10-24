@@ -1,0 +1,5 @@
+{"description": "把一整份內容寫進工作資料夾裡的一個檔（蓋掉原本的；檔不在就建）。只改幾行時用 edit_file。",
+ "parameters": {"type": "object",
+                "properties": {"path": {"type": "string", "description": "檔案的相對路徑"},
+                               "content": {"type": "string", "description": "整份檔案的新內容"}},
+                "required": ["path", "content"]}}

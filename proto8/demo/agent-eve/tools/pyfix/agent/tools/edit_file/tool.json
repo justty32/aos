@@ -1,0 +1,6 @@
+{"description": "改工作資料夾裡的一個檔：把一段原文換成新的。原文要跟檔裡一字不差（含縮排）、而且只出現一次。",
+ "parameters": {"type": "object",
+                "properties": {"path": {"type": "string", "description": "檔案的相對路徑"},
+                               "old": {"type": "string", "description": "要被換掉的原文（一字不差）"},
+                               "new": {"type": "string", "description": "換成這段"}},
+                "required": ["path", "old", "new"]}}

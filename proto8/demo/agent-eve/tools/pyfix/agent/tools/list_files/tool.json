@@ -1,0 +1,3 @@
+{"description": "列出工作資料夾裡的檔（遞迴，不列隱藏檔與 __pycache__），一行一個相對路徑。",
+ "parameters": {"type": "object",
+                "properties": {"dir": {"type": "string", "description": "從哪個子資料夾開始列，預設 ."}}}}

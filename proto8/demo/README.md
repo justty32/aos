@@ -49,6 +49,24 @@ think、act 兩格的 `exec` 直接寫單子：`{"argv": ["python3", "brain.py"]
 
 **錯**（都是 stderr 一行 `agent-dan: 代號 原因`、退 1、state 不動、history 不接；修好再跑一次從同一格接著做）：`BrainFailed`（腦連不上、HTTP 非 2xx）、`ReplyBad`（回覆不是 OpenAI 的形狀）、`ToolUnknown`（叫了 `tools/` 裡沒有的工具）、`ArgumentsBad`（`arguments` 不是 JSON）、`ToolFailed`（工具退非 0）。
 
+## agent-eve（agent 當工具，10-24）
+
+把一隻 agent 包成另一隻 agent 的腦可以叫的工具（嘗試性質；使用者 10-24「把agent當做工具拿去給agent呼叫，比如一個專精於修改python程式的agent」）。設計、代定、邊緣狀況在 [thinking 2026-10-24-agent-as-tool](../thinking/2026-10-24-agent-as-tool.md)。
+
+```
+agent-eve/                主 agent：照抄 agent-dan（brain.py、act.py 只改錯誤訊息開頭），act 逾時放寬到 30 分鐘
+  system.txt              改 Python 的事交給 pyfix、task 寫清楚、回答前看 diff
+  tools/pyfix/
+    tool.json             給 eve 的腦看：task（必填）、dir（相對於工作區，預設 .）
+    _entry                轉接（python3）：stdin 的 task → 子 agent 的 new/task.txt；跑完把 out/task.txt＋實際 diff 印到 stdout
+    agent/                子 agent（pyfix-agent）：也是一整隻 agent-dan 範本，自己的 system.txt、.env、loop.json（max 60）
+      tools/              list_files、read_file、write_file、edit_file、run_python（只碰 $PYFIX_DIR；run_python 逾時預設 30 秒）
+```
+
+每次呼叫 pyfix 開一個新小格 `$AOS_STACK/pyfix/runs/<三位數>/`：`ws/`（子 agent 收題、交答案）、`stack/`（它的 history、trace）、`before/`（改之前的備份）；子 agent 要改的程式碼是 `PYFIX_DIR`＝`$AOS_WS/<dir>`。子 agent 用 `aos-exec --dotenv-override` 叫，所以模型用它自己 `.env` 的。子 agent 失敗＝`pyfix: AgentFailed …`、退 1，eve 的 act 當 `ToolFailed` 停下（同 agent-dan）；其他代號 `AnswerMissing`、`DirBad`、`ArgumentsBad`、`StackMissing`，子工具沒設 `PYFIX_DIR`＝`DirMissing`（路徑跑出去、edit 對不上這類模型的錯，照實回給模型、不算失敗）。
+
+真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-eve`；試驗場 `~/code/try/agent-as-tool/`（`setup_ws.py` 建一個有 bug 的 `proj/`，LiteLLM 沒開時用 `fake_brains.py` 劇本）。沒設 `AOS_BRAIN_URL`＝假腦，eve 沒有 clock 工具、會直接答 `FAKE ANSWER`，不會叫 pyfix。測試 `test_eve.py`。
+
 ## daemon（一個 daemon 同時管 bob、ann，10-20）
 
 `daemon/_entry`＝`exec aos-daemon daemon.json`；`daemon.json` 是 `{"max": 10, "interval_ms": 200, "ctl", "state", "loops": {"bob": …, "ann": …}}`（`loops` 10-23 統合前叫 `children`），每個子項是一份 loop 設定：`{"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}, "max": 1}`（ann 同樣；10-24 起單子直接寫在子項的 `exec`，子 loop 在自己行程內跑它。相對路徑照舊從 daemon 的 cwd＝`demo/daemon/` 算：子 loop 經 aos-exec 起、cwd 是小格，所以 daemon 寫小格時給單子補上 `"cwd": <daemon 的 cwd>`（相對的 `$ref` 也轉成絕對）。10-21～10-23 寫成 `"exec": "daemon.json#/loops/bob/body"`＋`body`，daemon 寫小格時把那個目標轉成絕對路徑）——子 loop 跑一次那隻 agent，工作區是 `$AOS_WS/bob`、`$AOS_WS/ann`。`run.sh` 最後一段建暫時工作區、在 `bob/new/`、`ann/new/` 各放一題、`aos-exec` daemon：它跑 10 次（約 2 秒）就結束、結束前收掉子項。stack 樹：`.stack/state.json`（daemon 的 state，`loops` 表）、`.stack/bob/`、`.stack/ann/`（各子項的小格：daemon 寫的 `loop.json`（單子補了 `cwd`、帶 `_entry`）、子 loop 的 `state.json`、`stderr.txt`，以及那隻 agent 自己的 `state.txt`、`current.txt`、`plan.txt`、`trace.jsonl`…——agent 的 stack 就是小格，因為 `AOS_STACK` 已經有值、aos-exec 沿用）。子 loop 結束後不重起，所以表上兩項最後都是 `done`（子 loop 自己結束；daemon 收掉的才是 `stopped`，10-23 統合前兩種都叫 `exited`）、`code` 0。state.json 長這樣：`{"kind": "state", "phase": "done", "runs": 10, "max": 10, …, "loops": {"bob": {"pid", "started_at_ticks", "phase": "done", "code": 0, "signal": null}, …}, "code": 0, "pid", "started_at_ticks", "boot_id", "at": "2026-10-23T02:46:30.317+00:00"}`；各 agent 的 `trace.jsonl` 一行 `{"at": "…T02:46:27.633+00:00", "state": "idle", "code": 0, "signal": null, "elapsed_ms": 14}`。

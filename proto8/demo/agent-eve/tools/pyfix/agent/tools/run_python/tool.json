@@ -1,0 +1,6 @@
+{"description": "在工作資料夾裡跑 python3（參數照給），回結束碼與輸出（stdout、stderr 合在一起）。跑測試用 [\"-m\", \"unittest\", \"-v\"] 或 [\"-m\", \"pytest\", \"-q\"]。",
+ "parameters": {"type": "object",
+                "properties": {"args": {"type": "array", "items": {"type": "string"},
+                                        "description": "接在 python3 後面的參數，例 [\"-m\", \"unittest\", \"-v\"]"},
+                               "timeout_s": {"type": "number", "description": "最多跑幾秒，預設 30、上限 120"}},
+                "required": ["args"]}}

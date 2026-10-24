@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+# pyfix - 把一件改 Python 的事交給子 agent（./agent）：stdin 收 {"task", "dir"}，跑子 agent 到答完，stdout 印它的答案＋改動的 diff
+# 轉接（P-41「agent 當腦的工具，轉接寫在那個工具自己的 _entry」）：task 寫進子 agent 的 new/、aos-exec 它、從 out/ 拿答案。
+# 每次呼叫一個新的小格 $AOS_STACK/runs/<三位數>/（子 agent 的工作區 ws/ 與 stack/、改之前的備份 before/）：不帶上次的記憶。
+# 子 agent 的工具只能碰 PYFIX_DIR＝$AOS_WS/<dir>。任何錯：stderr 一行「pyfix: 代號 原因」、退 1（外層 act 當 ToolFailed 停下）。
+import difflib, json, os, shutil, subprocess, sys
+
+SNAP_MAX = 256 * 1024          # 備份與 diff 只管這麼大以下的檔
+DIFF_MAX = 8000                # 回給外層的 diff 最多幾個字
+
+
+def die(code, reason):
+    print("pyfix: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+stack, ws = os.environ.get("AOS_STACK"), os.path.realpath(os.environ.get("AOS_WS", "."))
+if not stack:
+    die("StackMissing", "沒設定 AOS_STACK")
+try:
+    args = json.loads(sys.stdin.read())
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict) or not isinstance(args.get("task"), str) or not args["task"].strip():
+    die("ArgumentsBad", "要給 task（非空字串）")
+d = args.get("dir", ".")
+if not isinstance(d, str):
+    die("ArgumentsBad", "dir 要是字串")
+root = os.path.realpath(os.path.join(ws, d))
+if root != ws and not root.startswith(ws + os.sep):
+    die("DirBad", "%r 跑出工作區" % d)
+if not os.path.isdir(root):
+    die("DirBad", "%r 不是資料夾" % d)
+
+# 這次呼叫的小格：runs/001、002…（mkdir 搶號，兩個同時叫也不會撞）
+runs = os.path.join(stack, "runs")
+os.makedirs(runs, exist_ok=True)
+n = len(os.listdir(runs)) + 1
+while True:
+    run = os.path.join(runs, "%03d" % n)
+    try:
+        os.mkdir(run)
+        break
+    except FileExistsError:
+        n += 1
+sub_ws, sub_stack = os.path.join(run, "ws"), os.path.join(run, "stack")
+os.makedirs(os.path.join(sub_ws, "new"))
+os.makedirs(sub_stack)
+with open(os.path.join(sub_ws, "new", "task.txt"), "w", encoding="utf-8") as f:
+    f.write(args["task"])
+
+
+def files(top):
+    """top 底下要備份／比對的檔：相對路徑 → 內容（不收 . 開頭、__pycache__、太大的、不是 UTF-8 的）"""
+    got = {}
+    for here, dirs, names in os.walk(top):
+        dirs[:] = [x for x in dirs if not x.startswith(".") and x != "__pycache__"]
+        for name in names:
+            p = os.path.join(here, name)
+            if name.startswith(".") or not os.path.isfile(p) or os.path.getsize(p) > SNAP_MAX:
+                continue
+            try:
+                with open(p, encoding="utf-8") as f:
+                    got[os.path.relpath(p, top)] = f.read()
+            except (OSError, UnicodeDecodeError):
+                pass
+    return got
+
+
+before = files(root)
+for rel, text in before.items():          # 備份：子 agent 改壞了，從這裡拿回來（不自動還原）
+    p = os.path.join(run, "before", rel)
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+    with open(p, "w", encoding="utf-8") as f:
+        f.write(text)
+
+# 跑子 agent：--dotenv-override 讓它自己 .env 的模型名蓋過外層傳下來的；它的 stdout 不混進我的結果（轉到 stderr）
+env = dict(os.environ, AOS_STACK=sub_stack + "/", PYFIX_DIR=root)
+try:
+    r = subprocess.run(["aos-exec", "--dotenv-override", "--ws", sub_ws, "agent"], env=env, stdout=sys.stderr)
+except OSError as e:
+    die("AgentFailed", "子 agent 起不來：%s" % e)
+if r.returncode != 0:
+    die("AgentFailed", "子 agent 結束碼 %d（現場在 %s）" % (r.returncode, run))
+try:
+    with open(os.path.join(sub_ws, "out", "task.txt"), encoding="utf-8") as f:
+        answer = f.read()
+except OSError:
+    die("AnswerMissing", "子 agent 跑完了但沒有答案（現場在 %s）" % run)
+
+# 出口保證：不只信子 agent 自己說改了什麼，附上真正的 diff
+after = files(root)
+diff = []
+for rel in sorted(set(before) | set(after)):
+    a, b = before.get(rel), after.get(rel)
+    if a != b:
+        diff += difflib.unified_diff((a or "").splitlines(True), (b or "").splitlines(True),
+                                     "a/" + rel if a is not None else "/dev/null",
+                                     "b/" + rel if b is not None else "/dev/null")
+diff = "".join(x if x.endswith("\n") else x + "\n" for x in diff)
+if len(diff) > DIFF_MAX:
+    diff = diff[:DIFF_MAX] + "……（diff 太長，後面 %d 個字沒印；改之前的檔在 %s）\n" % (len(diff) - DIFF_MAX, run)
+sys.stdout.write(answer.rstrip("\n") + "\n\n--- 實際改動（diff）---\n" + (diff or "（沒有改任何檔）\n"))

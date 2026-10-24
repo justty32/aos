@@ -1,0 +1,5 @@
+{"description": "把一件「讀、改、測 Python 程式」的事交給專精 Python 的助手去做（它自己會讀檔、改檔、跑測試），回它的報告和改了哪些檔的 diff。它看不到你的對話，task 要寫清楚。",
+ "parameters": {"type": "object",
+                "properties": {"task": {"type": "string", "description": "要它做的事：哪些檔、要改成怎樣、怎麼算做完（例如哪支測試要過）"},
+                               "dir": {"type": "string", "description": "它能碰的資料夾（相對於工作區），預設 . 整個工作區"}},
+                "required": ["task"]}}

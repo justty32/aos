@@ -1,0 +1,28 @@
+#!/usr/bin/env python3
+# list_files - stdin 收 {"dir": "."}，stdout 一行一個檔（相對於 $PYFIX_DIR）；不列 . 開頭的與 __pycache__，最多 300 行
+import json, os, sys
+
+root = os.environ.get("PYFIX_DIR")
+if not root:
+    print("list_files: DirMissing 沒設定 PYFIX_DIR", file=sys.stderr)
+    sys.exit(1)
+root = os.path.realpath(root)
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError:
+    args = {}
+d = args.get("dir", ".") if isinstance(args, dict) else "."
+top = os.path.realpath(os.path.join(root, d if isinstance(d, str) else "."))
+if top != root and not top.startswith(root + os.sep):     # 錯在模型：照實回給它，不當工具失敗
+    sys.exit(print("錯誤：%r 跑出工作資料夾" % d))
+if not os.path.isdir(top):
+    sys.exit(print("錯誤：%r 不是資料夾" % d))
+lines = []
+for here, dirs, files in os.walk(top):
+    dirs[:] = sorted(x for x in dirs if not x.startswith(".") and x != "__pycache__")
+    for f in sorted(files):
+        if not f.startswith("."):
+            lines.append(os.path.relpath(os.path.join(here, f), root))
+print("\n".join(lines[:300]) or "（空的）")
+if len(lines) > 300:
+    print("……還有 %d 個沒列" % (len(lines) - 300))

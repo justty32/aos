@@ -1,0 +1,6 @@
+{"_entry": ["aos-fsm", {"$env": "AOS_CF"}],
+ "start": "idle",
+ "states": {
+   "idle":  {"exec": "idle", "next": "think"},
+   "think": {"exec": {"argv": ["python3", "brain.py"], "timeout_ms": 180000}, "next": "act"},
+   "act":   {"exec": {"argv": ["python3", "act.py"], "timeout_ms": 300000}, "next": "idle"}}}
