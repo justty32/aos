@@ -162,7 +162,7 @@ class Tail:
 
 
 def short(s, n=80):
-    s = s.replace("\n", "\\n")
+    s = s.rstrip("\n").replace("\n", " ⏎ ")       # 結尾換行去掉；中間的換行印成 ⏎，不印字面 \n
     return s if len(s) <= n else s[:n] + "…"
 
 

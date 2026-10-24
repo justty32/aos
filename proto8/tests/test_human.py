@@ -144,6 +144,20 @@ class ListenTest(Base):
         self.assertIn("== %s\n> 跟著看\nFAKE ANSWER to: 跟著看" % name, out)
 
 
+class TailNewlineTest(Base):
+    def test_tool_result_newlines_not_literal(self):
+        import json, sys
+        sys.path.insert(0, str(ROOT / "human" / "bin"))
+        import aos_human as h
+        stack = Path(h.stack_of(str(self.ws)))
+        stack.mkdir(parents=True, exist_ok=True)
+        t = h.Tail(str(self.ws))
+        with open(stack / "history.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps({"role": "tool", "tool_call_id": "x", "content": "391\n"}) + "\n")
+            f.write(json.dumps({"role": "tool", "tool_call_id": "y", "content": "a\nb\n"}) + "\n")
+        self.assertEqual(t.lines(), ["[工具 回 391]", "[工具 回 a ⏎ b]"])
+
+
 class ChatTest(Base):
     def test_two_questions_keep_history(self):
         r = run(CHAT, "--ws", str(self.ws), DAN, input="你好\n/status\n第二句\n//斜線開頭\n/bogus\n")
