@@ -1,0 +1,7 @@
+{"description": "寄信給團隊裡的成員（名字）、群組（群組名，會發給群組裡每個人，不含自己）或幾個人（名字的陣列）。信會放進對方的信箱，對方有空時當成一題來處理。expect_reply 為 true 時，對方的答案會自動寄回給你，變成你之後的一題；只是通知就設 false。正在處理的信會自動當成這封的上一封（同一個對話串）。",
+ "parameters": {"type": "object",
+                "properties": {"to": {"description": "收件人：名字、群組名，或名字的陣列", "anyOf": [{"type": "string"}, {"type": "array", "items": {"type": "string"}}]},
+                               "subject": {"type": "string", "description": "主旨，一句話"},
+                               "body": {"type": "string", "description": "信的內容，要自足：對方看不到你的對話"},
+                               "expect_reply": {"type": "boolean", "description": "要不要對方回答（預設 false）"}},
+                "required": ["to", "body"]}}
