@@ -84,8 +84,14 @@ std::string post(const Mailbox& mb, const std::string& spec) {
     make_dir(mb.tmp());
     make_dir(mb.fresh());
     std::string id = aos::kernel_llm::letter_id();
-    std::string t = aos::join(mb.tmp(), id);
+    std::string t = aos::join(mb.tmp(), "." + id);   // . 開頭＝還在寫，kernel 不碰
     make_dir(t);
+    try {
+        aos::kernel_llm::hold_sender(t);   // 拿到行程結束（fd 不關）：kernel 看這把鎖知道寄信的人還在（10-24，S15）
+    } catch (const Error&) {
+        fs::remove_all(t, ec);
+        throw;
+    }
     std::optional<std::string> err = aos::write_json(aos::join(t, "letter.json"), letter);
     if (err) {
         fs::remove_all(t, ec);

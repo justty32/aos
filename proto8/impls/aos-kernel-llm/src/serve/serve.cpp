@@ -305,20 +305,32 @@ void Server::recover() {
     }
 }
 
-// 寄信的人不在了的：tmp/、done/ 直接刪；new/ 先改名回 tmp/ 再刪（跟閘門撤信同一個做法，不會跟認領撞）。
+// 寄信的人不在了的（<信>/sender.lock 沒人鎖著）：tmp/、done/ 直接刪；new/ 先改名回 tmp/ 再刪（跟閘門撤信同一個做法，不會跟認領撞）。
+// tmp/ 裡 . 開頭的＝閘門正在寫：鎖檔在而沒人鎖著才刪（還沒建鎖檔的那一瞬間不碰）。
 void Server::sweep() {
-    for (const std::string& id : names_in(mb_.tmp())) {
-        if (!sender_alive(id)) {
-            remove_tree(aos::join(mb_.tmp(), id));
+    std::vector<std::string> tmps;
+    std::error_code ec;
+    for (const fs::directory_entry& e : fs::directory_iterator(mb_.tmp(), ec)) {
+        tmps.push_back(e.path().filename().string());
+    }
+    for (const std::string& n : tmps) {
+        std::string dir = aos::join(mb_.tmp(), n);
+        bool writing = !n.empty() && n[0] == '.';
+        if (writing && !fs::exists(aos::join(dir, "letter.json"), ec)) {
+            continue;   // 閘門鎖好才寫 letter.json：還沒有＝可能正在建鎖檔、上鎖，不碰
+        }
+        if (!sender_alive(dir)) {
+            remove_tree(dir);
         }
     }
     for (const std::string& id : names_in(mb_.done())) {
-        if (!sender_alive(id)) {
-            remove_tree(aos::join(mb_.done(), id));
+        std::string dir = aos::join(mb_.done(), id);
+        if (!sender_alive(dir)) {
+            remove_tree(dir);
         }
     }
     for (const std::string& id : names_in(mb_.fresh())) {
-        if (!sender_alive(id)) {
+        if (!sender_alive(aos::join(mb_.fresh(), id))) {
             std::string t = aos::join(mb_.tmp(), id);
             if (move(aos::join(mb_.fresh(), id), t)) {
                 remove_tree(t);

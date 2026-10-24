@@ -14,9 +14,9 @@
 #   net      布林：能不能連網（預設 false：只有自己的 loopback）
 #   mem_mb、cpu_s、procs、file_mb、files  正整數 → s6-softlimit 的 -a＋-d、-t、-p、-f、-o
 #   env      環境變數名陣列：只帶這幾個進去（外面有設的才帶；bwrap --clearenv＋--setenv）；沒寫＝ENV_BASE 那幾個（PATH、語系、aos 的六個）
-#   kernel   布林：沙箱裡能不能用 LLM kernel（預設 false）。false＝$AOS_KERNEL 不帶進去，信箱也不能在任何綁進來的路徑裡（在＝CfgBad）；
-#            true＝信箱（$AOS_KERNEL，要設、要是資料夾）可寫綁進來、AOS_KERNEL 帶進去（10-24 堵信箱後門）
 #   沒列到的路徑一律看不到；/proc、/dev、/tmp（空的）一定有。
+#   能不能用 LLM kernel 不另設開關（使用者 10-24「就是看他能不能存取檔案」）：信箱有綁進來（rw 列了 $AOS_KERNEL）、env 有帶 AOS_KERNEL 就能寄，
+#   沒有就看不到；再細的由信箱的擁有者、群組、權限位管（root/setup.sh --mailbox）。
 # 錯：stderr 一行「aos-sandbox: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、PathMissing、CommandMissing、UserBad）。
 # 之後的結束碼都是 prog 的（bwrap 透明轉交；被訊號停＝128＋N）。
 import json, os, shutil, sys
@@ -155,33 +155,9 @@ def bind(opts, flag, path, dry):
     opts += [flag, path, path]
 
 
-def inside(a, b):
-    """a 是 b 或在 b 底下（都先 realpath）。"""
-    a, b = os.path.realpath(a), os.path.realpath(b)
-    return a == b or a.startswith(b.rstrip("/") + "/")
-
-
-def kernel_box(cfg, opts):
-    """kernel 信箱（10-24）：沒寫 kernel: true＝沙箱裡看不到、寫不了信箱，免得關在裡面的程式寄單子給沙箱外的 kernel 跑。
-    回要不要帶 AOS_KERNEL 進去。"""
-    mb = os.environ.get("AOS_KERNEL")
-    if cfg.get("kernel", False):
-        if not mb or not os.path.isdir(mb):
-            die("CfgBad", "kernel: true 要有 $AOS_KERNEL（kernel 的信箱資料夾）")
-        opts += ["--bind", os.path.realpath(mb), os.path.realpath(mb)]
-        return True
-    if mb and os.path.isdir(mb):
-        bound = [opts[i + 1] for i in range(len(opts) - 1) if opts[i] in ("--bind", "--ro-bind")]
-        for p in bound:
-            if inside(p, mb) or inside(mb, p):
-                die("CfgBad", "綁進來的 %s 看得到 kernel 信箱 %s（沙箱裡寄的信會由外面的 kernel 跑）；要讓沙箱用 kernel 就寫 kernel: true" % (p, mb))
-    return False
-
-
 def build(cfg, prog, dry):
-    for key in ("net", "kernel"):
-        if key in cfg and type(cfg[key]) is not bool:
-            die("CfgBad", "%s 要是 true／false" % key)
+    if "net" in cfg and type(cfg["net"]) is not bool:
+        die("CfgBad", "net 要是 true／false")
     chain = []
     limits = []
     for key, flags, mult in LIMITS:
@@ -208,8 +184,6 @@ def build(cfg, prog, dry):
     names = cfg.get("env", ENV_BASE)                # 環境白名單（10-24；API key 不跟著進沙箱）
     if not isinstance(names, list) or not all(isinstance(n, str) and n and "=" not in n for n in names):
         die("CfgBad", "env 要是環境變數名的陣列")
-    if "AOS_KERNEL" in names and not cfg.get("kernel", False):
-        die("CfgBad", "env 列了 AOS_KERNEL 卻沒寫 kernel: true（要讓沙箱用 kernel 就寫 kernel: true）")
     base = paths(cfg, "base") if "base" in cfg else [p for p in BASE if os.path.lexists(p)]
     for p in base:
         bind(opts, "--ro-bind", p, dry)
@@ -225,8 +199,6 @@ def build(cfg, prog, dry):
         bind(opts, "--ro-bind", p, dry)
     for p in paths(cfg, "rw"):
         bind(opts, "--bind", p, dry)
-    if kernel_box(cfg, opts):
-        names = names + ["AOS_KERNEL"]
     opts.append("--clearenv")
     for n in dict.fromkeys(names):
         if n in os.environ:

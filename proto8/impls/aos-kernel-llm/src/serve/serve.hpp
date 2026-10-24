@@ -7,7 +7,8 @@
 //                1. 建信箱四格（tmp／new／cur／done）、flock 住 .lock（鎖不到＝LockFailed）；queue.json 的 runs＋1
 //                2. cur/ 裡還有信＝上一次 kernel 跑到一半死了：有 reply.json 就照它；跑信的子行程（cur/<id>/runner.json）還活著＝讓它跑完、
 //                   這次少一格；都不是＝回 RunFailed（10-15 六題 6「回錯」，不重跑）；有回信的搬 done/
-//                3. 收拾：tmp/、done/ 裡寄信的人不在了的刪掉；new/ 裡寄信的人不在了的先改名回 tmp/ 再刪（不白跑）
+//                3. 收拾：tmp/、done/ 裡寄信的人不在了（sender.lock 沒人鎖）的刪掉；new/ 裡寄信的人不在了的先改名回 tmp/ 再刪（不白跑）；
+//                   tmp/ 裡 . 開頭的＝閘門正在寫，有 letter.json 而沒人鎖才刪
 //                4. 看 new/：letter.json 讀不懂、priority 壞＝回 LetterBad；有 accept 而單子不在名單裡＝回 InstUnknown；deadline 已過＝回 DeadlineMissed（都不佔格）
 //                5. 排隊（queue.hpp 的 order），取前 slots 封：這一窗額度到頂（budget.hpp 的 spent）＝spent "refuse" 時剩下的全回 BudgetMissing、
 //                   "wait" 時留在 new/ 等下一窗；沒到頂就認領（new → cur 改名；改不成＝閘門剛撤信，換下一封）、

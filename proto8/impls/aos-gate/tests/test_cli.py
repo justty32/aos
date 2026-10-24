@@ -5,9 +5,11 @@
 
 不需要真的 kernel：測試自己當 kernel（看 new/ 裡的信、搬到 cur/、done/、寫回信），所以只測閘門這一半。
 A 段：命令列、信箱、單子檔的錯；B 段：信的內容（指示詞在閘門的環境解、AOS_CF／AOS_CD／AOS_CO、cwd 轉絕對、整份環境、priority 原樣）；
-C 段：回信原樣交回（stdout、stderr、碼、kernel 回的錯、讀不懂的回信）；D 段：訊號撤信、信不見了、kernel 不在時一直等。
+C 段：回信原樣交回（stdout、stderr、碼、kernel 回的錯、讀不懂的回信）；D 段：訊號撤信、信不見了、kernel 不在時一直等、
+等的時候一直鎖著信裡的 sender.lock（kernel 靠它認寄信的人還在，10-24）。
 gate＋kernel 一起跑的在 proto8/tests/test_kernel_llm.py。
 """
+import fcntl
 import json
 import os
 import signal
@@ -237,6 +239,25 @@ class D_Wait(Case):
         shutil.rmtree(self.mb / "new" / id)
         out, err = p.communicate(timeout=10)
         self.own_error(subprocess.CompletedProcess([], p.returncode, out, err), "LetterMissing")
+
+    def test_holds_sender_lock_while_waiting(self):
+        """kernel 看「寄信的人還在」靠 sender.lock 有沒有人鎖（不看 pid，沙箱裡也認得）：閘門等的時候一直鎖著，被 SIGKILL 就放掉。"""
+        self.inst({"argv": ["true"]})
+        p = self.start()
+        id, _ = self.letter()
+
+        def locked():
+            with open(self.mb / "new" / id / "sender.lock") as f:
+                try:
+                    fcntl.flock(f, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                    return False
+                except BlockingIOError:
+                    return True
+
+        self.assertTrue(locked())
+        p.kill()
+        p.communicate(timeout=10)
+        self.assertFalse(locked())
 
     def test_no_kernel_keeps_waiting(self):
         self.inst({"argv": ["true"]})

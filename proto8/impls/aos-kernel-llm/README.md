@@ -38,7 +38,8 @@ aos-kernel-llm [旗標] kernel.json
     `tokens`＝腦回報的 token 數（沒回報、回報壞、沒跑＝null）、`report_bad`＝回報檔在但讀不懂（10-24 下午加）。
   - `used.json`：用量帳 `{"window", "since", "calls", "tokens", "all_calls", "all_tokens"}`——這一窗（`since` 起）跑了幾封、多少 token，與開帳以來的總數；每封跑過的信寫完 served 那行就記一次（先寫暫存再改名）。在但讀不懂＝`UsedBad`（刪掉就從 0 算）。
 - **信箱**（N-16 資料夾式）：`tmp/`、`new/`、`cur/`、`done/` 四格，一封信＝一個資料夾 `<信號>/`；kernel 每次先建好四格（建不了 `MkdirFailed`），`.lock` 用 flock 鎖住整次（另一個 kernel 鎖著＝`LockFailed`）。
-  信號＝`<UTC 奈秒 20 位>.<閘門 pid>.<閘門 started_at_ticks>`：字典序＝寄的先後，名字就看得出寄信的閘門還在不在（pid＋啟動時間，N-15、N-17）。
+  信號＝`<UTC 奈秒 20 位>.<閘門 pid>.<閘門 started_at_ticks>`：字典序＝寄的先後（pid、ticks 只讓名字不撞）。
+  **寄信的人還在不在＝信裡的 `sender.lock` 有沒有人鎖著**（10-24 晚改，[thinking sandbox S15](../../thinking/2026-10-24-sandbox.md)）：閘門在 `tmp/.<信號>/` 建信、先 flock 住 `sender.lock`、拿到行程結束，寫好才改名進 `new/`；kernel 試著拿共享鎖（不等），拿得到、檔不在、開不了＝人不在。flock 跟著檔走、不看 pid，沙箱（自己的行程編號）裡的閘門也認得。`tmp/` 裡 `.` 開頭的＝閘門正在寫：已有 `letter.json`（上了鎖才寫）而沒人鎖才刪。
 - **信**（`letter.json`）：`{"inst": 單子, "env": 寄信那一刻閘門的整份環境, "priority": 原樣}`。**priority**（10-15 稿）：沒寫＝normal；`"low"`／`"normal"`／`"high"`；數字看正負；
   物件 `{"level", "deadline", 其他 key 照帶不管}`；`deadline`＝帶時區的 ISO 8601 或 epoch 秒（沒時區不猜＝壞）。
   **`_metainfo`**（10-24，被叫者自報的特性，[thinking 10-24 metainfo § 5](../../thinking/2026-10-24-metainfo/02-誰讀與kernel接法.md#5-給-llm-kernel-實作者的接法)）：只讀信裡單子的 `_metainfo` 的 `time_ms`、`llm_tokens`（數字，或 `{"val", "max"}` 取 `val`；非負數才算）；
@@ -59,7 +60,7 @@ aos-kernel-llm [旗標] kernel.json
 
 ### accept：只跑名單裡的單子（10-24，堵沙箱信箱後門，[thinking sandbox S14](../../thinking/2026-10-24-sandbox.md)）
 
-kernel 在沙箱外、照信跑任何單子；關在 [aos-sandbox](../../sandbox/README.md) 裡的程式寄得到信（`kernel: true`）時，就能叫它跑「`cat 判準`」。要擋就寫 `accept`：
+kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sandbox](../../sandbox/README.md) 裡的程式寄得到信（設定把信箱綁進來）時，就能叫它跑「`cat 判準`」。誰寄得進信箱由 Linux 權限管（[sandbox/root/setup.sh](../../sandbox/root/setup.sh) `--mailbox`），寄進來之後替它跑什麼 Linux 管不到，現在只能靠 `accept`（跟「存取控制純靠 Linux」衝突、暫留，[thinking sandbox S18](../../thinking/2026-10-24-sandbox.md)）：
 
 ```json
 {"mailbox": {"$env": "AOS_KERNEL"}, "accept": [{"argv": ["python3", "/abs/agent/brain.py"], "cwd": "/abs/agent"}]}
@@ -74,7 +75,7 @@ kernel 在沙箱外、照信跑任何單子；關在 [aos-sandbox](../../sandbox
 
 1. 建信箱四格、flock；`queue.json` 的 `runs`＋1。
 2. **`cur/` 還有信**＝上一次 kernel 跑到一半死了（一次跑完才結束、又有鎖，正常時這裡是空的）：有 `reply.json` 就照它；跑信的子行程（`runner.json`）還活著＝讓它跑完、這次少一格；都不是＝回 `RunFailed`（10-15 六題 6「回錯」，不重跑）。有回信的寫一行 served、搬 `done/`。
-3. **收拾**：`tmp/`、`done/` 裡寄信的閘門不在了的刪掉；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑；跟閘門撤信同一招，不會跟認領撞）。
+3. **收拾**：`tmp/`、`done/` 裡寄信的閘門不在了（`sender.lock` 沒人鎖）的刪掉；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑；跟閘門撤信同一招，不會跟認領撞）。
 4. **看 `new/`**：信讀不懂、`inst` 不是物件、priority 壞＝回 `LetterBad`；有 `accept` 而單子不在名單裡＝回 `InstUnknown`；deadline 已過＝回 `DeadlineMissed`（都不佔格、不跑）。
 5. **排隊**（`used.json` 先讀進來、換窗了先歸零）：`level`＋等了幾次÷10（每等 10 次升一級，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ `_metainfo` 宣告的 `time_ms` 短的先（有寫的在沒寫的前面；10-24，從不蓋過 level 與 deadline，aging 照舊所以插隊有上限）→ 等得久的先 → 先寄的先。
 6. 跑之前看一眼訊號（有＝不認領、直接 128＋N）。照排好的順序一封封看：**額度到頂**＝`spent` 是 `refuse` 就把這封（以及之後的每一封）回 `BudgetMissing`，是 `wait` 就停、剩下的留著；沒到頂、`slots` 也還有空就認領（`new/` → `cur/` 改名；改不成＝閘門剛撤信，換下一封），**每封 fork 一個子行程**（`run_runner`）：
@@ -134,11 +135,11 @@ kernel 在沙箱外、照信跑任何單子；關在 [aos-sandbox](../../sandbox
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-- `test_cli`（`tests/test_cli.py`，unittest 39 案，約 3 秒）：A 命令列與設定（usage、`StackMissing`、設定壞、mailbox 預設在 stack、指示詞、`QueueBad`）；B 排隊（level／數字／deadline 字串與數字／先來先上／`waited_runs`、aging 到了與還沒到、`seen_at_runs` 只留還在排的）；
+- `test_cli`（`tests/test_cli.py`，unittest 40 案，約 3 秒）：A 命令列與設定（usage、`StackMissing`、設定壞、mailbox 預設在 stack、指示詞、`QueueBad`）；B 排隊（level／數字／deadline 字串與數字／先來先上／`waited_runs`、aging 到了與還沒到、`seen_at_runs` 只留還在排的）；
   C slots（2 封一起跑、1 封串著）；D 回信（碼與 stdout／stderr、單子自己導 stdout 不蓋、`DeadlineMissed` 不跑、`LetterBad` 七種、單子壞＝回信不是 kernel 的錯）；
-  E 收拾（寄信人不在的 new／tmp／done、cur/ 留下的回 `RunFailed` 或照現成回信、跑信的子行程還活著就讓它跑完並佔格、子行程死了＝`RunFailed`）；F 鎖、環境與 cwd 照信、`timeout_ms`、SIGTERM 轉給單子、早到的訊號不留半套；G `_metainfo`（同級時宣告短的後寄也先跑、有寫的在沒寫的前面、level 與 deadline 照樣壓過它、三種寫壞照樣跑並記 `metainfo_bad`）；
+  E 收拾（寄信人不在〔`sender.lock` 沒人鎖或沒有〕的 new／tmp／done、`tmp/` 裡 `.` 開頭正在寫的〔還沒寫信或鎖著〕不碰、名字裡 pid 是死的但鎖著照跑〔10-24 晚〕、cur/ 留下的回 `RunFailed` 或照現成回信、跑信的子行程還活著就讓它跑完並佔格、子行程死了＝`RunFailed`）；F 鎖、環境與 cwd 照信、`timeout_ms`、SIGTERM 轉給單子、早到的訊號不留半套；G `_metainfo`（同級時宣告短的後寄也先跑、有寫的在沒寫的前面、level 與 deadline 照樣壓過它、三種寫壞照樣跑並記 `metainfo_bad`）；
   H token 回報與額度（`AOS_KERNEL_REPORT` 指進信小格並蓋掉信裡的、回報有寫／只有 prompt＋completion／沒寫／三種寫壞、沒跑的不算、`calls` 到頂回 `BudgetMissing`、`tokens` 到頂排著的全回錯、`wait` 留著等換窗後跑、`all` 不歸零與改窗歸零、`budget` 與 `used.json` 壞）；I accept（名單裡的才跑、`cat` 祕密檔與換了 `cwd`、自帶 `stdout`、`envs` 的回 `InstUnknown`，環境用 kernel 的 `PATH` 與 key、只疊信裡的 `AOS_*`；`accept` 寫壞＝`CfgBad`）。
-  信是測試自己寫的（假裝閘門；pid 用測試自己＝寄信的人還在）。改掉排序、過期檢查、收拾、runner 檢查、slots、`_metainfo` 那層比較任一處都會紅（10-24 實測）；拿掉設 `AOS_KERNEL_REPORT`、讀回報、到頂判斷、`wait`、換窗歸零、「跑過才算」任一處 H 段都會紅（10-24 下午實測）。
+  信是測試自己寫的（假裝閘門；測試自己 flock 住 `sender.lock`＝寄信的人還在，沒人鎖＝不在；名字裡 pid 是死的、鎖著的照跑）。改掉排序、過期檢查、收拾、runner 檢查、slots、`_metainfo` 那層比較任一處都會紅（10-24 實測）；拿掉設 `AOS_KERNEL_REPORT`、讀回報、到頂判斷、`wait`、換窗歸零、「跑過才算」任一處 H 段都會紅（10-24 下午實測）。
 - gate＋kernel＋loop／daemon 一起跑的在 `proto8/tests/test_kernel_llm.py`（10 案；含 agent-dan 的 brain.py 經閘門、kernel 跑、假 server 回 usage → served 記到 token）。
 
 ## 已知限制
@@ -150,6 +151,6 @@ cmake -B build && cmake --build build && ctest --test-dir build
 - kernel 整群被 SIGKILL：跑信的子行程跟著死，但單子自成行程群組、可能還在跑；下一次回 `RunFailed`，單子實際跑了一半或跑完沒人收。
 - 回信放在 `done/` 等閘門來拿；閘門還活著卻一直不拿（不會發生，除非有人 SIGSTOP 它）就一直佔著。
 - 信裡帶整份環境（含 `AOS_BRAIN_KEY` 這種），信箱在誰都讀得到的地方就會外洩：信箱放自己的 stack 裡。
-- **寄信的人是誰 kernel 不驗**：信號只是 pid＋啟動時間，寫得到信箱的程式很容易冒充一個還活著的行程；擋任意單子只能靠 `accept`。關在 aos-sandbox 裡（有自己的行程編號）的閘門反過來：它的 pid 在外面對不上，kernel 當寄信的人不在、把信丟掉——沙箱裡的 agent 現在用不了 kernel（[thinking sandbox S15](../../thinking/2026-10-24-sandbox.md)）。
-- **共用信箱看得到別人的信**：寫得到信箱就讀得到別封信（含整份環境）與回信；沙箱裡的 agent 要用 kernel，信箱與 kernel 都該是它專用的一份。
+- **寄信的人是誰 kernel 不驗**：`sender.lock` 只說「人還在」、不是身分，寫得到信箱的程式自己建一封、拿著鎖就算數；kernel 用自己的身分跑信。擋任意單子只能靠 `accept`（[thinking sandbox S18](../../thinking/2026-10-24-sandbox.md)）。
+- **共用信箱看得到別人的信**：寫得到信箱就讀得到別封信（含整份環境）與回信；要分開就分信箱、分群組（Linux 權限）。kernel 自己建的信箱照 umask（多半 755），跨帳號用照 `setup.sh --mailbox` 先建好。
 - 沒有每個寄件人的配額（10-15「濫用：先信任」）；`class` 不看；`_metainfo` 宣告錯（說 1 秒跑 1 小時）不處罰，只記在 served 裡（只有單子的 `timeout_ms` 收得掉它）。

@@ -1,7 +1,8 @@
 // aos/kernel_llm.hpp：aos-kernel-llm 的公開介面——LLM kernel 的信箱與信（aos-gate 寄信、aos-kernel-llm 收信都用這組）。
 //
 //   信箱（N-16 資料夾式，Maildir）：一個資料夾，底下四格、一封信＝一個資料夾（名字＝信號 id）：
-//     tmp/<id>/    閘門正在寫（寫好 letter.json 才改名進 new/）；撤信、丟信也先改名回這裡再刪
+//     tmp/.<id>/   閘門正在寫（. 開頭 kernel 不碰；寫好 letter.json 才改名進 new/<id>）
+//     tmp/<id>/    撤信、丟信先改名回這裡再刪
 //     new/<id>/    排隊中（kernel 認領＝改名進 cur/；閘門撤信＝改名回 tmp/，兩邊只有一個改得成）
 //     cur/<id>/    kernel 正在跑（stdout.txt、stderr.txt、跑完寫 reply.json）
 //     done/<id>/   有回信了（reply.json 寫好才改名進來），閘門讀完刪掉
@@ -9,9 +10,12 @@
 //   信：letter.json＝{"inst": 單子（指示詞已解、cwd 是絕對路徑）, "env": 寄信那一刻閘門的整份環境, "priority": 原樣}
 //   回信：reply.json＝{"code": 結束碼, "signal": 訊號或 null}，或 {"error": {"code": 代號, "msg": 原因}}（kernel 沒跑或跑不起來）
 //   回報：report.json＝腦自願寫的 API 回覆 usage（kernel 跑信時給環境變數 AOS_KERNEL_REPORT 指向 cur/<id>/report.json；10-24）
+//   寄信的人：sender.lock＝閘門建好信就 flock（LOCK_EX）住、拿到行程結束（10-24 改：原本看名字裡的 pid，沙箱有自己的行程編號就對不上）
 //
-//   letter_id      新信號：<UTC 奈秒 20 位>.<閘門 pid>.<閘門 started_at_ticks>——照字典序排＝照寄的先後；從名字就看得出寄信的人還在不在
-//   sender_alive   寄這封信的閘門還在不在（pid＋started_at_ticks 對得上，N-15、N-17；名字讀不懂＝不在）
+//   letter_id      新信號：<UTC 奈秒 20 位>.<閘門 pid>.<閘門 started_at_ticks>——照字典序排＝照寄的先後；pid、ticks 只讓名字不撞
+//   hold_sender    閘門：開 <信>/sender.lock（0666，權限照信箱的 umask／ACL）、flock 住；回 fd，一直開著到行程結束。失敗丟 WriteFailed
+//   sender_alive   寄這封信的閘門還在不在：<信>/sender.lock 有人鎖著＝在；檔不在、開不了、鎖得到＝不在
+//                  （flock 跟著檔走，不看 pid，所以沙箱〔別的 pid、mount namespace〕裡的閘門也認得）
 //   parse_priority 信裡的 priority（10-15 LLM kernel 稿）：沒寫＝normal；"low"／"normal"／"high"；數字看正負；
 //                  物件 {"level", "deadline", 其他 key 忽略}；deadline＝ISO 8601（要帶時區）或 epoch 秒。壞了丟 PriorityBad
 //   priority_of    一封信的排隊依據：priority＋單子 `_metainfo` 的 time_ms、llm_tokens（10-24）
@@ -55,8 +59,11 @@ struct Mailbox {
     std::string done() const;
 };
 
+inline constexpr const char* SENDER_LOCK = "sender.lock";
+
 std::string letter_id();
-bool sender_alive(const std::string& id);
+int hold_sender(const std::string& letter_dir);
+bool sender_alive(const std::string& letter_dir);
 
 struct Priority {
     int level = 0;                    // -1 low、0 normal、1 high

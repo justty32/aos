@@ -30,7 +30,7 @@ aos-gate [旗標] 單子.json
   2. 讀單子、**在閘門的環境解整份指示詞**（＝叫它那一刻的值；`$ref` 從單子檔的資料夾算）。不是物件＝`CfgBad`；解不開＝`DirectiveBad`。
   3. `priority` 先驗（形狀見 aos-kernel-llm），壞＝`PriorityBad`、不寄。
   4. `cwd` 轉絕對：沒寫＝單子檔的資料夾（同 aos-exec），相對的接在它後面。
-  5. 信＝`{"inst": 單子, "env": 閘門這一刻的整份環境, "priority": 原樣}`，寫進 `tmp/<信號>/letter.json` 再改名進 `new/<信號>/`。
+  5. 信＝`{"inst": 單子, "env": 閘門這一刻的整份環境, "priority": 原樣}`，寫進 `tmp/.<信號>/letter.json`（先建 `sender.lock`、flock 住，拿到行程結束：kernel 靠它認寄信的人還在，10-24 晚改、不看 pid，所以關在沙箱裡也行）再改名進 `new/<信號>/`。
 - **等**：每 20 毫秒看一次 `done/<信號>/`（中間收到訊號馬上醒）。**等多久不歸閘門管**：由包它那格的 `timeout_ms` 守（10-15 KISS 1.8）；kernel 不在＝信堆在 `new/`、一直等，kernel 起來就接著做。
   信在 `new/`、`cur/`、`done/` 都找不到（照信走的方向依序看，不會看漏）＝`LetterMissing`。
 - **交回**：`stdout.txt` 原樣寫到自己的 stdout、`stderr.txt` 寫到 stderr（單子自己導到別處的就沒有這兩個檔），刪掉 `done/<信號>/`；
@@ -77,12 +77,12 @@ stderr 一行 **`aos-gate: 代號 原因`**、退 1。
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-- `test_cli`（`tests/test_cli.py`，unittest 15 案，約 1 秒）：測試自己當 kernel（搬信、寫回信），只測閘門這一半——A 命令列、信箱不在、單子檔的錯、priority 壞不寄；B 信的內容（指示詞在閘門的環境解、`AOS_CF`／`AOS_CD`／`AOS_CO`、cwd 轉絕對、整份環境、priority 原樣、信號照寄的先後）；
-  C 交回（stdout／stderr／碼、128＋N、kernel 回的錯、回信讀不懂四種）；D 訊號撤信（在 `new/` 撤掉、在 `cur/` 留著）、信不見了、沒有 kernel 時一直等。拿掉撤信、拿掉轉 stdout 都會紅（10-24 實測）。
+- `test_cli`（`tests/test_cli.py`，unittest 16 案，約 1 秒）：測試自己當 kernel（搬信、寫回信），只測閘門這一半——A 命令列、信箱不在、單子檔的錯、priority 壞不寄；B 信的內容（指示詞在閘門的環境解、`AOS_CF`／`AOS_CD`／`AOS_CO`、cwd 轉絕對、整份環境、priority 原樣、信號照寄的先後）；
+  C 交回（stdout／stderr／碼、128＋N、kernel 回的錯、回信讀不懂四種）；D 訊號撤信（在 `new/` 撤掉、在 `cur/` 留著）、信不見了、沒有 kernel 時一直等、等的時候一直鎖著 `sender.lock`（被 SIGKILL 就放掉；改成建了不鎖會紅，10-24 晚實測）。拿掉撤信、拿掉轉 stdout 都會紅（10-24 實測）。
 - 跟真 kernel 一起跑的在 `proto8/tests/test_kernel_llm.py`。
 
 ## 已知限制
 
 - 輪詢 20 毫秒（N-14「輪詢保底、inotify 加速」，這版只有輪詢）。
 - 不轉自己的 stdin。
-- 被 SIGKILL 來不及撤信：信留在 `new/`，kernel 下一次看寄信的人不在了會丟掉、不跑。
+- 被 SIGKILL 來不及撤信：信留在 `new/`，鎖跟著行程放掉，kernel 下一次看寄信的人不在了會丟掉、不跑。

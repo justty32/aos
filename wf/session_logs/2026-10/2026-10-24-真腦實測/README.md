@@ -62,7 +62,7 @@ impls 沒建好先照 [testing § proto8](../../../workflows/testing.md#proto8�
 ## 不在實測裡、仍掛著的殘項
 
 - **代定待落條文**（[NORMS 08-待定](../../../../proto8/NORMS/08-待定.md) 各一行）：fsm exec 直接放單子、`_metainfo`、函數成長、工具＝函式庫、Linux 權限與沙箱。使用者看過才落，改條文派 opus 以上、改完再審。
-- **沙箱兩個洞 10-24 晚堵了**（使用者「都隨意」，代定可翻案，[sandbox S14～S16](../../../../proto8/thinking/2026-10-24-sandbox.md)）：沙箱預設看不到 kernel 信箱（`kernel: true` 才開，開了 kernel 要寫 `accept` 只跑名單裡的單子）；沒寫 `env` 也只帶 PATH、語系與 aos 的六個。還剩：沙箱裡的 agent 用 kernel 走不通（S15：沙箱有自己的行程編號，閘門的 pid 在外面對不上、信被當成沒人要丟掉）；`accept` 裡的腦照信裡的 `AOS_WS` 動檔；共用信箱看得到別人的信。「self-improve 預設就關」見 [S11](../../../../proto8/thinking/2026-10-24-sandbox.md)。
+- **沙箱與 kernel**（[sandbox S14～S18](../../../../proto8/thinking/2026-10-24-sandbox.md)；10-24 晚照使用者「存取控制純靠linux」重看）：沙箱預設看不到 kernel 信箱，設定把信箱綁進來就能用（沒有另外的開關）；沙箱裡的 agent 經 kernel 問腦走得通了（寄信人看 `sender.lock` 的檔案鎖、不看 pid；真腦實跑過）；跨帳號照 `setup.sh --mailbox` 設群組與權限；沒寫 `env` 也只帶 PATH、語系與 aos 的六個。還剩：`accept` 跟「純靠 Linux」衝突、暫留待使用者（S18）；`accept` 裡的腦照信裡的 `AOS_WS` 動檔；同一個信箱的人看得到彼此的信。「self-improve 預設就關」見 [S11](../../../../proto8/thinking/2026-10-24-sandbox.md)。
 - **compact 與 P-41 擦邊**：agent-hal 把舊 history 輪替進 `compact/<run>/`、另起新檔；另兩條路是照 kai「紀錄照長、送腦的另外組」或 brain 改讀摘要檔（[compact](../../../../proto8/thinking/2026-10-24-compact.md)）。等使用者看。
 - **bash-boxed**：10-24 晚 [sandbox/README](../../../../proto8/sandbox/README.md) 改指 `lib/base/bash`、補了 `cpu_s`（CPU 時間）跟 `timeout_s`（牆鐘）不同種；環境照 S16 預設白名單。
 - **agent-gus 的小念頭**沒收進 lib（是 gus 自己的入口）；json_edit 兩步的第二步預定換成 gus 的 `thought.json`。

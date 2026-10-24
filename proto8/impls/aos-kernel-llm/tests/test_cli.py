@@ -4,7 +4,8 @@
     python3 tests/test_cli.py bin/aos-kernel-llm
 
 每個案例一個暫存資料夾：stack/（AOS_STACK）、mb/（信箱）、kernel.json。信是測試自己寫的（假裝是閘門寄的）：
-信號照 aos-gate 的格式 <奈秒>.<pid>.<started_at_ticks>，pid 用測試自己（所以「寄信的人還在」）；要「寄信的人不在了」就用一個已經結束的行程。
+信號照 aos-gate 的格式 <奈秒>.<pid>.<started_at_ticks>；「寄信的人還在」＝測試自己 flock 住信裡的 sender.lock（同閘門），
+要「寄信的人不在了」就留一個沒人鎖的 sender.lock（或乾脆沒有）。
 A 段：命令列與設定；B 段：排隊（level、deadline、等了幾次、先來先上、aging）；C 段：slots；D 段：回信的各種錯
 （DeadlineMissed、LetterBad、單子壞）；E 段：收拾（寄信的人不在、上一次 kernel 死了留在 cur/）；F 段：鎖、訊號、環境與 cwd、逾時；
 G 段 `_metainfo`、H 段 token 回報與額度；I 段 accept（只跑名單裡的單子，10-24 堵沙箱信箱後門）。
@@ -56,8 +57,11 @@ class Case(unittest.TestCase):
         self.stack.mkdir()
         self.mb = self.t / "mb"
         self.cfg({"mailbox": str(self.mb), "slots": 1})
+        self.locks = []
 
     def tearDown(self):
+        for f in self.locks:
+            f.close()
         self.td.cleanup()
 
     def cfg(self, doc):
@@ -81,11 +85,17 @@ class Case(unittest.TestCase):
         self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
         self.assertTrue(r.stderr.startswith("aos-kernel-llm: %s " % code), r.stderr)
 
-    def post(self, argv=None, priority=None, id=None, inst=None, env=None, box="new", raw=None):
-        """寫一封信進 mb/<box>/<id>/；回 id。"""
+    def post(self, argv=None, priority=None, id=None, inst=None, env=None, box="new", raw=None, alive=True):
+        """寫一封信進 mb/<box>/<id>/；回 id。alive＝像閘門那樣 flock 住 sender.lock（False＝鎖檔在、沒人鎖）。"""
         id = id or new_id()
         d = self.mb / box / id
         d.mkdir(parents=True)
+        f = open(d / "sender.lock", "w")
+        if alive:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            self.locks.append(f)
+        else:
+            f.close()
         if raw is not None:
             (d / "letter.json").write_text(raw)
             return id
@@ -270,16 +280,35 @@ class D_Replies(Case):
 
 class E_Sweep(Case):
     def test_dead_sender_dropped(self):
-        n = self.post(self.mark("dead"), id=dead_id())
-        t = self.post(id=dead_id(), box="tmp")
-        d = self.post(id=dead_id(), box="done")
+        n = self.post(self.mark("dead"), alive=False)
+        t = self.post(box="tmp", alive=False)
+        d = self.post(box="done", alive=False)
         alive_done = self.post(box="done")
-        junk = self.post(id="not-an-id", box="tmp")
+        junk = "not-a-letter"
+        (self.mb / "tmp" / junk).mkdir()                            # 沒有 sender.lock＝不在
+        writing = self.post(id=".w1", box="tmp")                    # 閘門正在寫（. 開頭、鎖著）：不碰
+        bare = ".w2"
+        (self.mb / "tmp" / bare).mkdir()                            # 正在寫、還沒建鎖檔的那一瞬間：不碰
+        (self.mb / "tmp" / ".w4").mkdir()
+        (self.mb / "tmp" / ".w4" / "sender.lock").write_text("")   # 建了鎖檔、還沒上鎖（也還沒寫信）：不碰
+        gone = self.post(id=".w3", box="tmp", alive=False)          # 寫好信了、閘門死了：刪
         self.run_k()
         self.assertEqual(self.marks(), [])
-        for box, i in (("new", n), ("tmp", t), ("done", d), ("tmp", junk)):
+        for box, i in (("new", n), ("tmp", t), ("done", d), ("tmp", junk), ("tmp", gone)):
             self.assertFalse((self.mb / box / i).exists(), (box, i))
         self.assertTrue((self.mb / "done" / alive_done).exists())   # 寄信的人還在：等它來拿
+        self.assertTrue((self.mb / "tmp" / writing).exists())
+        self.assertTrue((self.mb / "tmp" / bare).exists())
+        self.assertTrue((self.mb / "tmp" / ".w4").exists())
+
+    def test_alive_is_the_lock_not_the_pid(self):
+        """10-24（S15）：名字裡的 pid 是死掉的行程也照跑，只要 sender.lock 有人鎖著（沙箱裡的閘門 pid 在外面對不上）；
+        反過來 pid 是活的（測試自己）但沒人鎖＝不在。"""
+        a = self.post(self.mark("a"), id=dead_id())
+        b = self.post(self.mark("b"), alive=False)
+        self.run_k()
+        self.assertEqual(self.marks(), ["a"])
+        self.assertFalse((self.mb / "new" / b).exists())
 
     def test_orphan_in_cur(self):
         a = self.post(self.mark("a"), "high", box="cur")

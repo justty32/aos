@@ -1,14 +1,18 @@
-// letter.cpp：【letter】信箱的路徑、信號、寄信的人還在不在、priority、回信（說明見 aos/kernel_llm.hpp）。
+// letter.cpp：【letter】信箱的路徑、信號、寄信的人還在不在（sender.lock）、priority、回信（說明見 aos/kernel_llm.hpp）。
 #include "aos/kernel_llm.hpp"
 
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
 
 #include <chrono>
+#include <cerrno>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include <ctime>
 
+#include <fcntl.h>
+#include <sys/file.h>
 #include <unistd.h>
 
 namespace aos::kernel_llm {
@@ -27,48 +31,29 @@ std::string letter_id() {
     return buf;
 }
 
-// 「數字.數字.數字」→ pid、ticks；讀不懂回 false。
-static bool split_id(const std::string& id, long long& pid, long long& ticks) {
-    size_t a = id.find('.');
-    if (a == std::string::npos) {
-        return false;
+int hold_sender(const std::string& letter_dir) {
+    std::string path = aos::join(letter_dir, SENDER_LOCK);
+    int fd = open(path.c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0666);
+    if (fd < 0) {
+        throw Error{code::WriteFailed, "開不了 " + path + "：" + std::strerror(errno)};
     }
-    size_t b = id.find('.', a + 1);
-    if (b == std::string::npos) {
-        return false;
+    if (flock(fd, LOCK_EX) != 0) {
+        int e = errno;
+        close(fd);
+        throw Error{code::WriteFailed, "鎖不了 " + path + "：" + std::strerror(e)};
     }
-    try {
-        size_t used = 0;
-        std::string p = id.substr(a + 1, b - a - 1);
-        std::string t = id.substr(b + 1);
-        pid = std::stoll(p, &used);
-        if (used != p.size()) {
-            return false;
-        }
-        ticks = std::stoll(t, &used);
-        if (used != t.size()) {
-            return false;
-        }
-    } catch (...) {
-        return false;
-    }
-    return pid > 0;
+    return fd;
 }
 
-bool sender_alive(const std::string& id) {
-    long long pid = 0;
-    long long ticks = 0;
-    if (!split_id(id, pid, ticks)) {
-        return false;
+bool sender_alive(const std::string& letter_dir) {
+    std::string path = aos::join(letter_dir, SENDER_LOCK);
+    int fd = open(path.c_str(), O_RDONLY | O_CLOEXEC);
+    if (fd < 0) {
+        return false;   // 沒有鎖檔、或 kernel 讀不到（Linux 權限不給＝這封本來也跑不了）
     }
-    std::optional<long long> now = aos::proc_started_at_ticks((pid_t)pid);
-    if (!now) {
-        return false;
-    }
-    if (ticks < 0) {   // 寄信的人讀不到自己的 started_at_ticks（非 Linux）：只看 pid
-        return true;
-    }
-    return *now == ticks;
+    bool alive = flock(fd, LOCK_SH | LOCK_NB) != 0 && errno == EWOULDBLOCK;
+    close(fd);   // 鎖得到的話一關就放掉
+    return alive;
 }
 
 static int level_of(const Json& v) {

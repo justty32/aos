@@ -328,21 +328,11 @@ class SelfImproveSandboxTest(unittest.TestCase):
         self.assertNotIn("ANSWER-A", out)
 
 
-FORGE = """import json, os, sys
-mb, ticks, secret = os.environ["AOS_KERNEL"], sys.argv[1], sys.argv[2]
-lid = "%020d.1.%s" % (1, ticks)                      # 冒充 pid 1（外面的 init）：kernel 看信號以為寄信的人還在
-os.makedirs(os.path.join(mb, "tmp", lid))
-json.dump({"inst": {"argv": ["cat", secret], "cwd": "/"}, "env": {"PATH": "/usr/bin:/bin"}},
-          open(os.path.join(mb, "tmp", lid, "letter.json"), "w"))
-os.rename(os.path.join(mb, "tmp", lid), os.path.join(mb, "new", lid))
-print("posted")
-"""
-
-
 @unittest.skipUnless(HAS_BWRAP, "沒有 bwrap 或這台不給開 user namespace")
 class KernelMailboxTest(unittest.TestCase):
-    """10-24 堵 kernel 信箱後門：關在沙箱裡的程式寄「單子＝cat 判準」給沙箱外的 kernel——預設看不到信箱、寄不出去；
-    明寫 kernel: true 才寄得到，這時要靠 kernel.json 的 accept 擋（不在名單＝InstUnknown、不跑）。"""
+    """沙箱與 LLM kernel（10-24）：能不能用 kernel＝看不看得到、寫不寫得進信箱（使用者 10-24「就是看他能不能存取檔案啊」）。
+    預設的沙箱沒綁信箱、也不帶 AOS_KERNEL＝寄不出去；設定把信箱綁進來就寄得到、kernel 在外面也認得寄信的人（S15：認 sender.lock 的 flock、不認 pid）。
+    寄得到之後 kernel 在沙箱外照信跑：要擋「單子＝cat 判準」只剩 kernel.json 的 accept。"""
 
     def setUp(self):
         self.t = Path(tempfile.mkdtemp(prefix="test_sandbox_kernel."))
@@ -353,6 +343,8 @@ class KernelMailboxTest(unittest.TestCase):
         self.secret = self.t / "judge.json"
         self.secret.write_text("SECRET-JUDGE")
         (self.ws / "cat.json").write_text(json.dumps({"argv": ["cat", str(self.secret)]}))
+        (self.ws / "hi.json").write_text(json.dumps({"argv": ["sh", "-c", "echo hi from kernel; echo \"$AOS_WS\""]}))
+        self.bound = {"commands": ["aos-gate"], "ro": ["ws"], "rw": [str(self.mb)], "env": ["PATH", "AOS_WS", "AOS_KERNEL"]}
 
     def cfg(self, obj, name="box.json"):
         p = self.t / name
@@ -369,6 +361,17 @@ class KernelMailboxTest(unittest.TestCase):
                            env=env(AOS_STACK=str(self.stack)), cwd=self.t)
         self.assertEqual(r.returncode, 0, r.stderr)
 
+    def box_with_kernel(self, cfg, kdoc, *prog):
+        """沙箱裡跑 prog（寄信、等回信），外面同時一次次拍 kernel，直到 prog 結束。"""
+        p = subprocess.Popen([BOX, cfg, *prog], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                             env=env(AOS_KERNEL=str(self.mb), AOS_WS="/ws-from-box"), cwd=self.t)
+        end = time.monotonic() + 30
+        while p.poll() is None and time.monotonic() < end:
+            self.kernel(kdoc)
+            time.sleep(0.05)
+        out, err = p.communicate(timeout=10)
+        return subprocess.CompletedProcess(p.args, p.returncode, out, err)
+
     def leaked(self):
         return any("SECRET-JUDGE" in p.read_text(errors="replace") for p in self.mb.rglob("*") if p.is_file())
 
@@ -376,7 +379,7 @@ class KernelMailboxTest(unittest.TestCase):
         prog = ("echo \"kernel=${AOS_KERNEL-unset}\"; aos-gate ws/cat.json; "
                 "mkdir %s/new/x && echo wrote" % self.mb)
         r = self.box(self.cfg({"commands": ["aos-gate"], "rw": ["ws"]}), "sh", "-c", prog)
-        self.assertIn("kernel=unset", r.stdout)                         # AOS_KERNEL 不帶進去
+        self.assertIn("kernel=unset", r.stdout)                         # AOS_KERNEL 不帶進去（不在預設的 env）
         self.assertIn("aos-gate: MailboxMissing", r.stderr)
         self.assertNotIn("wrote", r.stdout)                             # 直接寫信箱也寫不到（沒綁進來）
         self.kernel({})
@@ -384,26 +387,65 @@ class KernelMailboxTest(unittest.TestCase):
         self.assertFalse((self.stack / "served.jsonl").exists())
         self.assertFalse(self.leaked())
 
-    def test_bound_path_covering_mailbox_is_cfg_bad(self):
-        for c in ({"rw": [str(self.t)]}, {"ro": [str(self.mb / "new")]}, {"env": ["PATH", "AOS_KERNEL"]}):
-            r = self.box(self.cfg(c, "cover.json"), "true")
-            self.assertEqual(r.returncode, 1, (c, r.stderr))
-            self.assertRegex(r.stderr, r"^aos-sandbox: CfgBad .*kernel: true")
+    def test_box_uses_kernel_when_mailbox_bound(self):
+        """S15：沙箱有自己的行程編號，閘門名字裡的 pid 在外面對不上；kernel 改看 sender.lock 的 flock 之後照常服務。"""
+        r = self.box_with_kernel(self.cfg(self.bound), {}, "aos-gate", "ws/hi.json")
+        self.assertEqual((r.returncode, r.stdout), (0, "hi from kernel\n/ws-from-box\n"), r.stderr)
+        served = [json.loads(l) for l in (self.stack / "served.jsonl").read_text().splitlines()]
+        self.assertEqual([(x["code"], x["error"]) for x in served], [(0, None)])
 
-    def test_kernel_true_needs_accept(self):
-        """kernel: true＝信箱寫得到，冒充寄信的人很容易（信號只是 pid＋啟動時間）；kernel 沒 accept 就照跑 cat 判準，有 accept 就 InstUnknown。"""
-        ticks = Path("/proc/1/stat").read_text().rpartition(")")[2].split()[19]
-        c = self.cfg({"rw": ["ws"], "kernel": True})
-        r = self.box(c, "python3", "-c", FORGE, ticks, str(self.secret))
-        self.assertEqual((r.returncode, r.stdout), (0, "posted\n"), r.stderr)
-        self.kernel({"accept": [{"argv": ["python3", "brain.py"], "cwd": str(self.ws)}]})
-        (lid,) = os.listdir(self.mb / "done")
-        self.assertEqual(json.loads((self.mb / "done" / lid / "reply.json").read_text())["error"]["code"], "InstUnknown")
+    def test_bound_mailbox_needs_accept(self):
+        """寄得到信＝kernel 在沙箱外照信跑：沒 accept 時沙箱裡的閘門寄「cat 判準」就拿到判準；有 accept＝InstUnknown、不跑。"""
+        c = self.cfg(self.bound)
+        r = self.box_with_kernel(c, {"accept": [{"argv": ["python3", "/nope/brain.py"], "cwd": str(self.ws)}]},
+                                 "aos-gate", "ws/cat.json")
+        self.assertEqual(r.returncode, 1)
+        self.assertRegex(r.stderr, r"^aos-gate: InstUnknown ")
+        self.assertNotIn("SECRET-JUDGE", r.stdout)
         self.assertFalse(self.leaked())
-        shutil.rmtree(self.mb / "done" / lid)
-        r = self.box(c, "python3", "-c", FORGE, ticks, str(self.secret))   # 對照：kernel 沒 accept＝後門真的在
-        self.kernel({})
-        self.assertTrue(self.leaked())
+        r = self.box_with_kernel(c, {}, "aos-gate", "ws/cat.json")    # 對照：kernel 沒 accept＝判準從沙箱外送回來
+        self.assertEqual((r.returncode, r.stdout), (0, "SECRET-JUDGE"), r.stderr)
+
+
+SETUP = str(ROOT / "sandbox" / "root" / "setup.sh")
+HAS_SETPRIV = shutil.which("setpriv") is not None and shutil.which("setfacl") is not None
+
+# 假 root 裡跑：1000＝跑 kernel 的人、群組 2000＝aos-run、1001＝aos-run（在群組裡）、1002＝外人。照 setup.sh --mailbox 設好信箱，
+# 1001 寄一封「id -u」、1000 的 kernel 一次次拍，1002 也寄一次。印三行：1001 拿到的、1001 的碼、1002 的碼與錯。
+PERM = r"""set -u
+T=$1
+AOS_ME=1000 AOS_RUNNER=2000 sh "$2" --mailbox "$T/mb" --apply >/dev/null
+mkdir "$T/stack" && chown 1000:1000 "$T/stack"
+as() { u=$1; g=$2; shift 2; setpriv --reuid "$u" --regid "$g" --clear-groups env AOS_KERNEL="$T/mb" AOS_STACK="$T/stack" "$@"; }
+as 1001 2000 "$T/bin/aos-gate" "$T/q.json" >"$T/out" 2>"$T/err" & G=$!
+n=0; while kill -0 $G 2>/dev/null && [ $n -lt 300 ]; do as 1000 1000 "$T/bin/aos-kernel-llm" "$T/kernel.json" || exit 9; n=$((n+1)); sleep 0.05; done
+wait $G; rc=$?; echo "runner=$(cat "$T/out")|$rc|$(cat "$T/err")"
+as 1002 1002 "$T/bin/aos-gate" "$T/q.json" 2>&1; echo "stranger=$?"
+"""
+
+
+@unittest.skipUnless(FAKE_ROOT and HAS_SETPRIV, "拿不到 unshare --map-auto 的假 root，或沒有 setpriv／setfacl")
+class MailboxPermTest(unittest.TestCase):
+    """10-24：誰能寫信箱交給 Linux 的群組＋權限位＋預設 ACL（root/setup.sh --mailbox），不靠 aos 自己的開關。
+    假 root（unshare --map-auto）裡換成幾個不同的 uid 試：群組裡的寄得到、kernel（另一個 uid）收得到也回得了信；外人寫不進。
+    也看得到後果：kernel 用自己的身分跑信（id -u＝1000），寄信的人的身分沒帶過去（accept 那條仍要留的原因）。"""
+
+    def test_group_can_post_stranger_cannot(self):
+        t = Path(tempfile.mkdtemp(prefix="sbx-mb."))
+        self.addCleanup(shutil.rmtree, t, ignore_errors=True)
+        t.chmod(0o755)
+        (t / "bin").mkdir()
+        for name in ("aos-gate", "aos-kernel-llm"):   # 家目錄 700，換了 uid 走不進 repo：複製一份（兩支都是靜態連結）
+            shutil.copy(shutil.which(name, path=PATH), t / "bin" / name)
+        (t / "q.json").write_text(json.dumps({"argv": ["id", "-u"]}))
+        (t / "kernel.json").write_text(json.dumps({"mailbox": str(t / "mb")}))
+        r = subprocess.run(["unshare", "--user", "--map-root-user", "--map-auto", "sh", "-c", PERM, "perm", str(t), SETUP],
+                           capture_output=True, text=True, env=env(), timeout=90)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        lines = r.stdout.splitlines()
+        self.assertEqual(lines[0], "runner=1000|0|", r.stdout + r.stderr)   # 寄得到、kernel 回得了信；跑的身分是 kernel 的
+        self.assertRegex(lines[1], r"^aos-gate: MkdirFailed ")
+        self.assertEqual(lines[2], "stranger=1")
 
 
 if __name__ == "__main__":
