@@ -215,7 +215,7 @@ agent-liv/
   tools/clock/                               自己的工具（真資料夾）：庫裡 10-24 遷移後也有 clock，同名自己的贏（示範覆寫）
 ```
 
-brain 照舊從 `tools/*/tool.json` 組 tools、act 照舊 `aos-exec tools/<名>`——程式一個字沒改，aos-exec 走進捷徑指到的真資料夾（cwd、`AOS_CD` 是庫的位置），agent 不知道這是庫的（C-52）。跑：`aos-exec --ws <工作區> proto8/demo/agent-liv`（沒設 `AOS_BRAIN_URL`＝假腦：`idle think act idle think act idle(10)`，答 `FAKE ANSWER to: …（ls said: N items）`，小格 `.stack/ls/`）。錯同 agent-dan（`agent-liv: 代號 原因`）；庫的工具出錯是 `ToolFailed` 停下（要回給腦就照 agent-pip 改 act）。測試 `test_lib.py`。
+brain 照舊從 `tools/*/tool.json` 組 tools、act 照舊 `aos-exec tools/<名>`——叫工具那段一個字沒改，aos-exec 走進捷徑指到的真資料夾（cwd、`AOS_CD` 是庫的位置），agent 不知道這是庫的（C-52）。跑：`aos-exec --ws <工作區> proto8/demo/agent-liv`（沒設 `AOS_BRAIN_URL`＝假腦：`idle think act idle think act idle(10)`，答 `FAKE ANSWER to: …（ls said: N items）`，小格 `.stack/ls/`）。錯同 agent-dan（`agent-liv: 代號 原因`）；庫的工具出錯、叫了沒有的工具、arguments 不是 JSON 照 agent-pip **回給腦、不停**（10-24 真腦實測改：原本 `ToolFailed` 停下，edit 抄錯一字重跑就永遠卡同一個）。測試 `test_lib.py`。
 
 ## agent-hal（土法 compact，10-24）
 

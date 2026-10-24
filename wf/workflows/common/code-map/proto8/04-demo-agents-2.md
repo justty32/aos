@@ -23,12 +23,13 @@
 
 | 哪裡 | 負責什麼 |
 |---|---|
-| `_entry`、`loop.json`、`fsm.json`、`.env`、`idle/`、`act.py` | 同 agent-dan |
+| `_entry`、`loop.json`、`fsm.json`、`.env`、`idle/` | 同 agent-dan |
+| `act.py` | 同 agent-pip（10-24 真腦實測改）：工具退非 0、叫了沒有的工具、arguments 壞都接成 tool 訊息回給腦，不停 |
 | `tools/clock/` | 自己的真資料夾（agent-dan 的複本）：庫裡也有 `clock`，同名自己的贏——示範覆寫 |
 | `brain.py` | 同 agent-dan，假腦改叫一次 `ls`、答 `（ls said: N items）` |
 | `system.txt` | 教腦哪件事用哪個工具 |
 | `_metainfo` | 這隻 agent 的特性（summary、time_ms、resource、llm_calls…；_metainfo 規劃的範例 2） |
-| `tools/read`、`write`、`edit`、`bash`、`ls`、`json_read`、`json_edit` | 七條符號連結 → `../../../lib/base/<名>`（庫的工具出錯照 agent-dan 是 `ToolFailed` 停下） |
+| `tools/read`、`write`、`edit`、`bash`、`ls`、`json_read`、`json_edit` | 七條符號連結 → `../../../lib/base/<名>`（庫的工具出錯回給腦，見 `act.py`） |
 
 ### agent-meg
 

@@ -274,6 +274,28 @@ class Liv(unittest.TestCase):
             self.assertEqual(list((ws / "new").iterdir()), [])
             self.assertEqual(sorted(p.name for p in (ws / "done").iterdir()), ["q1.txt"])
 
+    def test_tool_error_goes_back_to_brain(self):
+        """庫的工具退非 0（edit 找不到原文）：act 不停，把 stdout 加結束碼接成 tool 訊息；叫了沒有的工具也一樣（10-24 真腦實測前是 ToolFailed 停下、重跑永遠卡同一個）。"""
+        with tempfile.TemporaryDirectory() as tmp:
+            ws, st = Path(tmp) / "ws", Path(tmp) / "st"
+            ws.mkdir(); st.mkdir()
+            (ws / "a.txt").write_text("hi\n")
+            calls = [{"id": "c1", "type": "function", "function": {"name": "edit", "arguments": json.dumps(
+                {"path": "a.txt", "edits": [{"old_text": "hello", "new_text": "bye"}]})}},
+                     {"id": "c2", "type": "function", "function": {"name": "nope", "arguments": "{}"}}]
+            (st / "history.jsonl").write_text(json.dumps({"role": "user", "content": "q"}) + "\n" + json.dumps(
+                {"role": "assistant", "content": None, "tool_calls": calls}) + "\n", encoding="utf-8")
+            r = subprocess.run(["python3", "act.py"], cwd=LIV, capture_output=True, text=True, timeout=60,
+                               env=env_with({"AOS_STACK": str(st) + "/", "AOS_WS": str(ws)}))
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("agent-liv: ToolFailed edit 結束碼 1（回給腦）", r.stderr)
+            tools = [json.loads(l) for l in (st / "history.jsonl").read_text(encoding="utf-8").splitlines()][2:]
+            self.assertEqual([m["tool_call_id"] for m in tools], ["c1", "c2"])
+            self.assertTrue(tools[0]["content"].startswith("edit: TextMissing "), tools[0]["content"])
+            self.assertTrue(tools[0]["content"].endswith("(工具 edit 結束碼 1)\n"), tools[0]["content"])
+            self.assertTrue(tools[1]["content"].startswith("act: ToolUnknown nope（能叫的："), tools[1]["content"])
+            self.assertEqual((ws / "a.txt").read_text(), "hi\n")
+
 
 if __name__ == "__main__":
     unittest.main()
