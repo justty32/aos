@@ -1,0 +1,4 @@
+{"description": "把一件事交給 Codex CLI（另一個 AI 助手，在工作區裡、唯讀沙盒：能跑讀檔的指令、不能改檔）去做，回它的回答。它記得之前在這個工具裡跟它講過的話。",
+ "parameters": {"type": "object",
+                "properties": {"prompt": {"type": "string", "description": "要交代給它的話，一次一件事"}},
+                "required": ["prompt"]}}

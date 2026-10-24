@@ -67,6 +67,26 @@ agent-eve/                主 agent：照抄 agent-dan（brain.py、act.py 只�
 
 真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-eve`；試驗場 `~/code/try/agent-as-tool/`（`setup_ws.py` 建一個有 bug 的 `proj/`，LiteLLM 沒開時用 `fake_brains.py` 劇本）。沒設 `AOS_BRAIN_URL`＝假腦，eve 沒有 clock 工具、會直接答 `FAKE ANSWER`，不會叫 pyfix。測試 `test_eve.py`。
 
+## agent-fay（claude／codex CLI 當工具、人可以接進去，10-24）
+
+接 agent-dan 的範本，腦有兩個工具 `claude`、`codex`：腦給一段話（`{"prompt": "..."}`），工具交給 Claude Code／Codex CLI 做、把回答交回。同一個工具一直接著同一段對話（id 在小格的 `session.txt`）。人可以**接進那段對話的互動畫面**跟它直接講話，再跳出、畫面留在背景，agent 之後照樣用。設計與實跑：[thinking 2026-10-24-cli-tools](../thinking/2026-10-24-cli-tools.md)（使用者 10-24「讓claude cli的呼叫變成工具，還有codex cli的也是……我可以透過一些指令接入操作」「都按建議做」）。
+
+```
+agent-fay/
+  _entry、loop.json、fsm.json、.env、idle/、brain.py、act.py   同 agent-dan（假腦改成把題目交給 claude 工具；act 逾時 15 分鐘）
+  system.txt          腦的人格：有 claude、codex 兩個幫手，看檔或程式判斷就交代給它們
+  cli_session.py      做法：畫面沒開＝非互動（claude -p --resume／codex exec resume）；畫面開著＝tmux 貼字、等 hook 回答
+  attach              接進某個工具的互動畫面：attach claude｜attach -d codex（只開不接）｜attach（列狀態）
+  tools/claude/       _entry（stdin {"prompt"} → stdout 回答）、tool.json（給模型看）、cli.json（怎麼叫 CLI：保守旗標）
+  tools/codex/        同上
+```
+
+**接進去**（在工作區裡打，不是 agent 資料夾）：`cd <工作區> && <repo>/proto8/demo/agent-fay/attach claude` → 進到 Claude Code 的畫面（沒開就先開、`--resume` 接上 agent 用過的那段）→ 直接打字 → **Ctrl-\ 跳出**（畫面留在背景）；在畫面裡 `/exit` 才是真的關掉。畫面是 tmux，socket 在 `$AOS_WS/.stack/<工具名>/tty.sock`。有人接著時 agent 叫工具會停下（`SessionBad`），跳出後再跑一次 agent。
+
+**權限**（`cli.json`，要放寬就改那份）：claude 只給 `Read,Glob,Grep`、`--permission-mode dontAsk`、不載 MCP、`--model sonnet`、非互動 `--max-budget-usd 0.5`；codex `sandbox_mode="read-only"`、`approval_policy="never"`。CLI 在 `$AOS_WS` 裡跑。
+
+**錯**：stderr 一行 `cli_session: 代號 原因`、退 1（act 當 `ToolFailed` 停下）——`PromptBad`、`CliMissing`、`CliFailed`、`ReplyMissing`、`SessionBad`、`CfgMissing`／`CfgBad`。測試 `test_fay.py` 用假的 claude／codex，不花額度；要 tmux。
+
 ## daemon（一個 daemon 同時管 bob、ann，10-20）
 
 `daemon/_entry`＝`exec aos-daemon daemon.json`；`daemon.json` 是 `{"max": 10, "interval_ms": 200, "ctl", "state", "loops": {"bob": …, "ann": …}}`（`loops` 10-23 統合前叫 `children`），每個子項是一份 loop 設定：`{"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}, "max": 1}`（ann 同樣；10-24 起單子直接寫在子項的 `exec`，子 loop 在自己行程內跑它。相對路徑照舊從 daemon 的 cwd＝`demo/daemon/` 算：子 loop 經 aos-exec 起、cwd 是小格，所以 daemon 寫小格時給單子補上 `"cwd": <daemon 的 cwd>`（相對的 `$ref` 也轉成絕對）。10-21～10-23 寫成 `"exec": "daemon.json#/loops/bob/body"`＋`body`，daemon 寫小格時把那個目標轉成絕對路徑）——子 loop 跑一次那隻 agent，工作區是 `$AOS_WS/bob`、`$AOS_WS/ann`。`run.sh` 最後一段建暫時工作區、在 `bob/new/`、`ann/new/` 各放一題、`aos-exec` daemon：它跑 10 次（約 2 秒）就結束、結束前收掉子項。stack 樹：`.stack/state.json`（daemon 的 state，`loops` 表）、`.stack/bob/`、`.stack/ann/`（各子項的小格：daemon 寫的 `loop.json`（單子補了 `cwd`、帶 `_entry`）、子 loop 的 `state.json`、`stderr.txt`，以及那隻 agent 自己的 `state.txt`、`current.txt`、`plan.txt`、`trace.jsonl`…——agent 的 stack 就是小格，因為 `AOS_STACK` 已經有值、aos-exec 沿用）。子 loop 結束後不重起，所以表上兩項最後都是 `done`（子 loop 自己結束；daemon 收掉的才是 `stopped`，10-23 統合前兩種都叫 `exited`）、`code` 0。state.json 長這樣：`{"kind": "state", "phase": "done", "runs": 10, "max": 10, …, "loops": {"bob": {"pid", "started_at_ticks", "phase": "done", "code": 0, "signal": null}, …}, "code": 0, "pid", "started_at_ticks", "boot_id", "at": "2026-10-23T02:46:30.317+00:00"}`；各 agent 的 `trace.jsonl` 一行 `{"at": "…T02:46:27.633+00:00", "state": "idle", "code": 0, "signal": null, "elapsed_ms": 14}`。
