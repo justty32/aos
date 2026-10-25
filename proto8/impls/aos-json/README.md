@@ -4,7 +4,7 @@
 
 **一句話：用 `檔#/指標` 讀或改一份 JSON 的某個位置；認得 `$ref`／`$env`：可以穿過 `$ref` 改被參照的檔、追一個值實際寫在哪、一層層看（漸進展開）、寫之前先驗形狀。**
 一個 lib（`lib/libaos-json.a`，沒有公開標頭）加一支命令列（`bin/aos-json`），再加兩個給腦掛的工具（`tools/json/`、`tools/json_edit/`）。
-2026-10-24 嘗試性原型（使用者「做一套方便修改json的工具集，配合指示詞」），討論與代定見 [thinking 2026-10-24 aos-json](../../thinking/2026-10-24-aos-json.md)。
+嘗試性原型（使用者「做一套方便修改json的工具集，配合指示詞」），討論與代定見 [thinking 2026-10-24 aos-json](../../thinking/2026-10-24-aos-json.md)。
 
 ```sh
 aos-json peek fsm.json                                   # 只看頂層，大的值摺起來
@@ -105,8 +105,8 @@ echo '{"file": "fsm.json", "want": "把 think 那格的逾時改成 30 秒"}' | 
 | `src/cmd/check.cpp` | `check` |
 | `tools/json/` | 腦用：一次一個動作（`tool.json`、`_entry`） |
 | `tools/json_edit/` | 腦用：兩步改（找 key → 提供值），自己問腦 |
-| `tests/test_cli.py` | 命令列黑箱（126 個） |
-| `tests/test_tool.py` | 兩個工具，經 `aos-exec` 跑、假 OpenAI 端點（30 個；`../aos-exec/bin/aos-exec` 沒建＝跳過） |
+| `tests/test_cli.py` | 命令列黑箱 |
+| `tests/test_tool.py` | 兩個工具，經 `aos-exec` 跑、假 OpenAI 端點（`../aos-exec/bin/aos-exec` 沒建＝跳過） |
 
 ## 建置與測試
 
@@ -115,5 +115,5 @@ cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
 依賴 aos-util、aos-directive（`add_subdirectory` 一起編）；`test_tool` 另外要 aos-exec 已經建好。
-**共用建置**：10-24 收尾已把 `aos-json` 加進 `wf/workflows/testing.md` 與 `impls/README.md` 的建置迴圈（放在 aos-exec 後面，test_tool 要 aos-exec 先建好）；
-`proto8/tests/aos_bins.py` 與 `proto8/demo/run.sh` 只有範本真的掛上 `tools/json*` 時才要把 `aos-json/bin` 放進 PATH。
+**共用建置**：`aos-json` 在 `wf/workflows/testing.md` 與 `impls/README.md` 的建置迴圈裡（放在 aos-exec 後面，test_tool 要 aos-exec 先建好）。
+`proto8/tests/aos_bins.py` 把 `aos-json/bin` 放進 PATH（`lib/base/json_edit` 經 aos-json 寫檔）；`proto8/demo/run.sh` 只有範本真的掛上 `tools/json*` 時才要把它放進 PATH。

@@ -60,7 +60,7 @@ int aos_inst_wait(aos_inst_proc_t *proc, aos_inst_result_t *out);       // 等�
 | `inherits[3]` | stdin、stdout、stderr 直接用呼叫者自己的 fd 0／1／2（不開檔；這時 `paths[i]` 要是 NULL） | 照 `paths[i]` |
 | `new_session` | 子程式 exec 前 `setsid()` 自成行程群組；timeout 收掉時整群送 | 跟呼叫者同群組、只收直接子程式 |
 
-`inherits`、`new_session` 是後加的（放在結構尾端），全零＝跟加之前一模一樣。
+`inherits`、`new_session` 放在結構尾端，全零＝照上表的零值。
 
 規矩（不合就報錯，lib 不幫忙補）：
 
@@ -89,13 +89,13 @@ int aos_inst_wait(aos_inst_proc_t *proc, aos_inst_result_t *out);       // 等�
 
 | 常數 | `aos_inst_strerror` | 什麼時候 |
 |---|---|---|
-| `AOS_INST_ERR_INPUT_BAD` | InputBad（10-23 統合前叫 FieldType） | `in`／`out` 是 NULL、`argv` 是 NULL 或空 |
+| `AOS_INST_ERR_INPUT_BAD` | InputBad | `in`／`out` 是 NULL、`argv` 是 NULL 或空 |
 | `AOS_INST_ERR_PATH_CONFLICT` | PathConflict | `merge` 又給了 `paths[2]` 或 `inherits[2]`；`inherits[i]` 又給了 `paths[i]` |
 | `AOS_INST_ERR_PATH_NOT_ABSOLUTE` | PathNotAbsolute | `cwd` 或 `paths[i]` 不是 `/` 開頭 |
 | `AOS_INST_ERR_CWD_MISSING` | CwdMissing | `cwd` 不存在、不是資料夾、或沒有進去的權限（x） |
 | `AOS_INST_ERR_OPEN_FAILED` | OpenFailed | 串流的檔開不了（上層資料夾不在、是資料夾…） |
-| `AOS_INST_ERR_COMMAND_MISSING` | CommandMissing（10-23 統合前叫 CommandNotFound） | `argv[0]` 那個檔不存在，或照 PATH 找不到 |
-| `AOS_INST_ERR_COMMAND_BAD` | CommandBad（10-23 統合前叫 CommandNotExecutable） | 沒有執行權限 |
+| `AOS_INST_ERR_COMMAND_MISSING` | CommandMissing | `argv[0]` 那個檔不存在，或照 PATH 找不到 |
+| `AOS_INST_ERR_COMMAND_BAD` | CommandBad | 沒有執行權限 |
 | `AOS_INST_ERR_LAUNCH_FAILED` | LaunchFailed | 其他起不來的原因 |
 | `AOS_INST_ERR_WAIT_FAILED` | WaitFailed | 收不到子程式的結果（見下面訊號） |
 | `AOS_INST_ERR_KILL_FAILED` | KillFailed | 時間到要收子程式，`kill` 卻失敗（例如子程式 exec 了 setuid 程式＝`EPERM`）。lib 不再等，子程式可能還在跑、還沒收屍，`out->pid` 有填，呼叫者自己處理 |
@@ -109,7 +109,7 @@ int aos_inst_wait(aos_inst_proc_t *proc, aos_inst_result_t *out);       // 等�
 - `src/inst_internal.h`：上面幾個檔之間共用的內部宣告（不安裝、不匯出；名字都是 `inst_` 開頭）
 - `tests/test_lib.c`：C 測試；`tests/test_ffi.py`：Python ctypes 測試
 
-## 為什麼這樣做
+## 行為細節
 
 **訊號**：lib 不碰——不裝 handler、不改你的訊號遮罩、不轉送。Ctrl-C 怎麼處理是呼叫者的事
 （子程式跟你同一個行程群組，終端機的 Ctrl-C 會一起送到它；`new_session` 時不會，見下）。子程式在 exec 前把訊號處置恢復預設、遮罩清空。
@@ -123,7 +123,7 @@ lib 用來回報 exec 失敗的 pipe（帶 CLOEXEC，它 exec 後就關），這
 
 **`new_session`＝整群收**：子程式 exec 前先 `setsid()`，自成一個 session／行程群組（群組號＝它的 pid）；
 timeout 的 SIGTERM／SIGKILL 改送 `kill(-pid, …)`，孫程式一起收掉（孫程式自己又開新群組的不算）。
-順序跟預設一樣：SIGTERM → 直接子程式在 grace 內結束就收工 → 否則整群 SIGKILL（同 Python 版 `_stop` 的 `killpg`）。
+順序跟預設一樣：SIGTERM → 直接子程式在 grace 內結束就收工 → 否則整群 SIGKILL。
 代價：子程式不再跟呼叫者同一個前景群組，終端機的 Ctrl-C 不會自動送到它（要轉送是呼叫者的事：
 對 `-proc->pid` 送就是整群），它也沒有控制終端、讀不了終端。lib 仍然不碰訊號處理。
 
@@ -142,7 +142,7 @@ timeout 的 SIGTERM／SIGKILL 改送 `kill(-pid, …)`，孫程式一起收掉�
 
 **串流的幾個坑**：
 
-- **接呼叫者自己的輸出**：最簡單是 `inherits[1]`（見上）。另一條舊路：`paths[1]` 寫 `"/dev/stdout"`（stderr 同理）時，`appends[1]` 要設 `true`。否則呼叫者的 stdout 若是檔案（`./prog > log.txt`），開的時候會先把 `log.txt` 清空。呼叫者的 stdout 是 socket 時，`/dev/stdout` 開不了，回 `OpenFailed`。
+- **接呼叫者自己的輸出**：最簡單是 `inherits[1]`（見上）。另一條路：`paths[1]` 寫 `"/dev/stdout"`（stderr 同理）時，`appends[1]` 要設 `true`。否則呼叫者的 stdout 若是檔案（`./prog > log.txt`），開的時候會先把 `log.txt` 清空。呼叫者的 stdout 是 socket 時，`/dev/stdout` 開不了，回 `OpenFailed`。
 - **FIFO（具名管道）**：路徑不要給另一端沒人接的 FIFO。`open` 會一直卡住，這時子程式還沒起來，`timeout_ms` 管不到。
 - **路徑是捷徑（symlink）會照著走**：跟 shell 的 `>` 一樣（`/dev/stdout` 本身就是捷徑，所以不能加 `O_NOFOLLOW`）。
   斷掉的捷徑會建出它指向的檔再寫進去。在多人可寫的資料夾（如 `/tmp`）要小心別人事先放好的捷徑，可能讓你寫到別處。
@@ -205,7 +205,7 @@ else:
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-- 產物：`lib/libinst.so`（給 FFI：Python ctypes、Rust、Go…）和 `lib/libinst.a`（給 [aos-exec](../aos-exec/README.md) 靜態連進去，啟動時少載入一個 .so；10-16～17 那代的 aos-inst 也連它）。
+- 產物：`lib/libinst.so`（給 FFI：Python ctypes、Rust、Go…）和 `lib/libinst.a`（給 [aos-exec](../aos-exec/README.md) 靜態連進去，啟動時少載入一個 .so）。
   同一份原始碼只編一次（CMake 的 OBJECT library），再包成兩種。沒有執行檔。
 - 一定會加 `-std=c11 -Wall -Wextra -Werror`、`-fPIC`、預設 hidden。`.so` 只匯出 `aos_inst_exec`、`aos_inst_start`、`aos_inst_wait`、
   `aos_inst_strerror` 四個符號（`nm -D lib/libinst.so` 看得到）。
