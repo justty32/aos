@@ -1,0 +1,16 @@
+{"_entry": ["aos-fsm", {"$env": "AOS_CF"}],
+ "start": "idle",
+ "states": {
+   "idle":  {"exec": "idle", "next": "think"},
+   "think": {"exec": {"argv": ["python3", "brain.py"], "timeout_ms": 180000,
+                      "_metainfo": {"summary": "問腦一次：把 brief＋beat 表（或打回理由、lint 的結果）送去，收回一稿台詞或一次 lint 呼叫",
+                                    "time_ms": {"val": 8000, "max": 180000}, "resource": "llm",
+                                    "llm_endpoint": "http://localhost:4000/v1", "llm_model": "chatgpt-gpt-6-luna-low",
+                                    "llm_calls": 1, "llm_tokens": {"val": 2500, "max": 11000},
+                                    "side_effect": false, "idempotent": false, "deterministic": false, "interrupt": "safe"}},
+             "next": "act"},
+   "act":   {"exec": {"argv": ["python3", "act.py"], "timeout_ms": 30000,
+                      "_metainfo": {"summary": "照腦的最後一則回覆動手：有 tool_calls 就叫 tools/<名>（lint）、結果接回 history；沒有就寫成 out/<n>.txt、題目 cur/→done/",
+                                    "time_ms": {"val": 100, "max": 30000}, "resource": "cpu",
+                                    "side_effect": true, "idempotent": true, "deterministic": true, "interrupt": "safe"}},
+             "next": "idle"}}}

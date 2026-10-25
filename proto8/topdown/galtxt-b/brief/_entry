@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+# brief - 認領一題場景 JSON，查 tables/ 把人物、地點、稱謂、護欄、開場收尾、few-shot 樣本、beat 文法編成 $AOS_STACK/brief.json（純程式、不問腦）
+# 已有 brief.json＝這題已編好＝什麼都不做退 0（同一題重跑的格）。固化階梯第 1～3 級：查表、規則分支、模板——執行期零 LLM。
+# 自己的錯一行 stderr「brief: 代號 原因」退 1：StackMissing、QuestionMissing、SceneBad、CastUnknown、PlaceUnknown、TableBad。
+import json, os, re, sys
+
+
+def die(code, reason):
+    print("brief: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def write_json(path, obj):                      # N-05：先寫 . 開頭的暫存檔再改名
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
+if not stack:
+    die("StackMissing", "沒設定 AOS_STACK")
+if os.path.exists(os.path.join(stack, "brief.json")):
+    sys.exit(0)                                  # 這題已經編好了
+
+
+def ls(d):
+    try:
+        return sorted(n for n in os.listdir(os.path.join(ws, d)) if not n.startswith(".") and n.endswith(".json"))
+    except FileNotFoundError:
+        return []
+
+
+# 認領（P-12）：cur/ 有上次認領沒做完的先接著做；沒有就把 new/ 第一題搬到 cur/
+names = ls("cur")
+if not names:
+    names = ls("new")
+    if not names:
+        die("QuestionMissing", "new/ 與 cur/ 都沒有 *.json 場景")
+    os.makedirs(os.path.join(ws, "cur"), exist_ok=True)
+    os.replace(os.path.join(ws, "new", names[0]), os.path.join(ws, "cur", names[0]))
+fname = names[0]
+name = fname[:-len(".json")]
+tmp = os.path.join(stack, ".current.txt")
+with open(tmp, "w", encoding="utf-8") as f:
+    f.write(name + "\n")
+os.replace(tmp, os.path.join(stack, "current.txt"))
+
+try:
+    with open(os.path.join(ws, "cur", fname), encoding="utf-8") as f:
+        scene = json.load(f)
+except ValueError as e:
+    die("SceneBad", "%s 不是 JSON：%s" % (fname, e))
+if not isinstance(scene, dict):
+    die("SceneBad", "%s 不是物件" % fname)
+
+
+def table(n):
+    try:
+        with open(os.path.join("tables", n + ".json"), encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError) as e:
+        die("TableBad", "tables/%s.json 讀不了：%s" % (n, e))
+
+
+cast_t, address_t, places_t, banned_t, openers_t, samples_t, beats_t = (
+    table(n) for n in ("cast", "address", "places", "banned", "openers", "samples", "beats"))
+
+cast_names = scene.get("cast")
+if not isinstance(cast_names, list) or len(cast_names) != 2:
+    die("SceneBad", "cast 要是兩個人的名字陣列")
+for n in cast_names:
+    if n not in cast_t or n.startswith("_"):
+        die("CastUnknown", "人物卡裡沒有 %s（有：%s）" % (n, "、".join(k for k in cast_t if not k.startswith("_"))))
+place = scene.get("place")
+if place not in places_t or str(place).startswith("_"):
+    die("PlaceUnknown", "地點卡裡沒有 %s" % place)
+level = str(scene.get("relation_level", 1))
+
+
+def fill(pattern, other):                        # 把 {surname}／{given}／{display}／{given_first} 代入對方的名字
+    return (pattern.replace("{surname}", other["surname"]).replace("{given}", other["given"])
+            .replace("{display}", other["display"]).replace("{given_first}", other["given"][:1]))
+
+
+cards = []
+for n in cast_names:
+    me = dict(cast_t[n])
+    other = cast_t[[x for x in cast_names if x != n][0]]
+    key = "heroine_to_hero" if me["role"] == "heroine" else "hero_to_heroine"
+    rule = address_t[key].get(level) or die("SceneBad", "稱謂階 %s 不在表上" % level)
+    me["address"] = {"level": int(level), "other": other["display"],
+                     "allowed": [fill(p, other) for p in rule["allowed"]],
+                     "forbidden": [fill(p, other) for p in rule["forbidden"]]}
+    cards.append(me)
+
+
+def pick(items, *keys):                          # 第一個「每個給定 key 都對得上」的；items 裡沒有該 key 的當通用
+    for k in keys:
+        for it in items:
+            if k in it and it[k] == scene.get(k):
+                return it["text"]
+    for it in items:
+        if not any(k in it for k in ("place", "season", "intent")):
+            return it["text"]
+    return ""
+
+
+opener = pick(openers_t["openers"], "place", "season")
+closer = pick(openers_t["closers"], "intent")
+lines = scene.get("lines") or {}
+bench = scene.get("benchmark")
+samples = [x for x in samples_t.get("samples", []) if not bench or x.get("benchmark") != bench]   # 不漏自己那題的前後文
+beats = {k: v for k, v in beats_t.items() if not k.startswith("_")}
+
+brief = {
+    "name": name,
+    "scene": scene,
+    "cast": cards,
+    "place": places_t[place],
+    "address_rules": address_t.get("rules", []),
+    "style_rules": banned_t.get("rules", []),
+    "banned": {k: banned_t[k] for k in ("A", "B", "C")},
+    "opener": opener,
+    "closer": closer,
+    "lines": {"min": int(lines.get("min", 5)), "max": int(lines.get("max", 10)),
+              "narration_max": int(lines.get("narration_max", 4))},
+    "must_mention": scene.get("must_mention", []),
+    "nice_to_mention": scene.get("nice_to_mention", []),
+    "max_redrafts": int(scene.get("max_redrafts", 2)),
+    "samples": samples,
+    "beats": beats,
+}
+write_json(os.path.join(stack, "brief.json"), brief)

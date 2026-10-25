@@ -1,0 +1,13 @@
+{"summary": "beat 表的文法校驗：序列合 B0 B1 B2 B3+ (B4) B5 (B6) B7（c1 B5 在 B3 後、c3 B5／B6 可對調）、B6 前要有拿書、每組必提關鍵詞有一拍認領、拍數在 beats.json 的範圍（5～10）→ violations",
+ "time_ms": {"val": 20, "max": 1000},
+ "resource": "cpu",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true,
+ "reads": ["stdin", "$AOS_WS/<brief_path>（給了才讀）"],
+ "writes": ["stdout"],
+ "grow_level": 4,
+ "tier": "固化階梯第 2 級（規則分支）：定點 01 的 beat 文法",
+ "callers": ["draft/（黏合格，驗 director 的表）"]}

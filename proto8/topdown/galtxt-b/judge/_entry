@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+# judge - check 定稿後，把 brief、定稿、benchmark 正解交給 tools/critic 打語意分（評分級聯 Tier 2），和 check 的 Tier 0／1 合成 $AOS_STACK/score.json；沒定稿或已打分就什麼都不做
+# 黏合層（同 draft）：備題目、叫 agent、收答案。critic 每題只問一次，小格每次清掉重來（單發、不續聊）。
+# 分數照 corpus/評測 README 的三層：護欄命中 0/1（check Tier 0）＋ 語域 0-2（check Tier 1，程式算）＋ 語意契合 0-3（critic）＝ 0-6。
+# critic 也會給它自己看到的語域分 register_by_judge，只拿來跟程式算的對照（雙錨：兩個不合＝該看一眼的訊號），不算進總分。
+# 自己的錯退 1：StackMissing、BriefMissing、DraftMissing、BenchmarkMissing、CriticFailed、AnswerMissing、ReplyBad。
+import json, os, re, shutil, subprocess, sys
+
+
+def die(code, reason):
+    print("judge: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def load(path, what):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        die(what + "Missing", "%s 不在" % path)
+    except ValueError as e:
+        die(what + "Bad", "%s 不是 JSON：%s" % (path, e))
+
+
+def write_json(path, obj):                      # N-05
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+stack = os.environ.get("AOS_STACK")
+if not stack:
+    die("StackMissing", "沒設定 AOS_STACK")
+check_path, score_path = os.path.join(stack, "check.json"), os.path.join(stack, "score.json")
+if not os.path.exists(check_path) or os.path.exists(score_path):
+    sys.exit(0)                                  # 還沒檢、或已經打過分
+check = load(check_path, "Check")
+if not check.get("final"):
+    sys.exit(0)                                  # 稿還會重寫，先不打分
+brief = load(os.path.join(stack, "brief.json"), "Brief")
+draft = load(os.path.join(stack, "draft.json"), "Draft")
+
+bench_id = brief["scene"].get("benchmark")
+bench = load(os.path.join("benchmarks", bench_id + ".json"), "Benchmark") if bench_id else None
+
+sub = os.path.join(stack, "critic") + "/"
+ws = os.path.join(sub, "ws")
+shutil.rmtree(sub, ignore_errors=True)          # 單發：每次都是新的對話
+os.makedirs(os.path.join(ws, "new"), exist_ok=True)
+scene = brief["scene"]
+question = {"scene": {k: scene.get(k) for k in ("summary", "place", "season", "time", "event", "intent", "cast", "relation_level")},
+            "cast_notes": [{"name": c["display"], "type": c["type"], "tone": c["voice"].get("tone"), "ng": c["voice"].get("ng"),
+                            "address_allowed": c["address"]["allowed"]} for c in brief["cast"]],
+            "style_rules": brief.get("style_rules", []),
+            "draft": draft.get("text", ""),
+            "benchmark": bench}
+write_json(os.path.join(ws, "new", "1.json"), question)
+env = dict(os.environ, AOS_STACK=sub)
+try:
+    r = subprocess.run(["aos-exec", "--ws", ws, "tools/critic"], env=env, stdin=subprocess.DEVNULL)
+except OSError as e:
+    die("CriticFailed", "tools/critic 起不來：%s" % e)
+if r.returncode != 0:
+    die("CriticFailed", "tools/critic 結束碼 %d" % r.returncode)
+try:
+    with open(os.path.join(ws, "out", "1.txt"), encoding="utf-8") as f:
+        raw = f.read()
+except FileNotFoundError:
+    die("AnswerMissing", "critic 沒交出 out/1.txt")
+body = re.sub(r"^\s*```(?:json)?\s*|\s*```\s*$", "", raw.strip())   # 腦愛包 ``` 圍欄，剝掉
+try:
+    verdict = json.loads(body)
+    semantic, register = int(verdict["semantic"]), int(verdict.get("register", -1))
+    reasons = verdict.get("reasons") or []
+except (ValueError, KeyError, TypeError) as e:
+    die("ReplyBad", "critic 的回覆不是 {semantic, register, reasons}：%s（%s）" % (raw[:120].replace("\n", " "), e))
+semantic = max(0, min(3, semantic))
+tier0 = 1 if check.get("tier0_pass") else 0
+tier1 = int(check.get("register_score", 0))
+score = {"attempt": check.get("attempt"), "benchmark": bench_id,
+         "tier0": {"score": tier0, "pass": bool(check.get("tier0_pass"))},
+         "tier1": {"score": tier1, "counter_violations": sum(1 for v in check.get("violations", []) if v.get("tier") == 1)},
+         "tier2": {"semantic": semantic, "register_by_judge": register, "reasons": reasons},
+         "total": tier0 + tier1 + semantic, "max_total": 6,
+         "register_agree": (register == tier1)}
+write_json(score_path, score)

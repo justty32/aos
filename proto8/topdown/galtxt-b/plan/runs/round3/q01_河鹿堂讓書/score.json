@@ -1,0 +1,23 @@
+{
+ "attempt": 1,
+ "benchmark": "q01",
+ "tier0": {
+  "score": 1,
+  "pass": true
+ },
+ "tier1": {
+  "score": 2,
+  "counter_violations": 0
+ },
+ "tier2": {
+  "semantic": 2,
+  "register_by_judge": 1,
+  "reasons": [
+   "「讓給佐伯同學」和「下次再來」完成讓書與留後路，但前文主角說想知道旅途讀起來的感覺，讓晴子的讀後感邀請顯得較像接話，少了正解中更自然的轉折。",
+   "晴子以「佐伯同學」稱呼符合階級；「我想聽呢」略顯直白且多了語助詞，弱化文靜角色的留白感。"
+  ]
+ },
+ "total": 5,
+ "max_total": 6,
+ "register_agree": false
+}

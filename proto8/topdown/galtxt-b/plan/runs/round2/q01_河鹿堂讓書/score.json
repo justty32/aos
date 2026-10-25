@@ -1,0 +1,23 @@
+{
+ "attempt": 1,
+ "benchmark": "q01",
+ "tier0": {
+  "score": 1,
+  "pass": true
+ },
+ "tier1": {
+  "score": 2,
+  "counter_violations": 0
+ },
+ "tier2": {
+  "semantic": 3,
+  "register_by_judge": 2,
+  "reasons": [
+   "讓書、下次再來與想聽讀後感的鉤子都自然接上，梅花章也呼應河鹿堂設定。",
+   "晴子的語氣含蓄文靜，稱呼與主角的調侃都符合角色語域。"
+  ]
+ },
+ "total": 6,
+ "max_total": 6,
+ "register_agree": true
+}

@@ -1,0 +1,54 @@
+{
+ "name": "q08_河鹿堂進新書日",
+ "benchmark": "q08",
+ "elapsed_ms": 13748,
+ "counter_cycles": 1,
+ "counter_drafts": 1,
+ "counter_plans": 1,
+ "counter_lint_calls": 1,
+ "counter_llm_calls": 4,
+ "counter_tokens": 17485,
+ "cells": {
+  "brief": {
+   "elapsed_ms": 20
+  },
+  "draft": {
+   "elapsed_ms": 11280
+  },
+  "check": {
+   "elapsed_ms": 44
+  },
+  "judge": {
+   "elapsed_ms": 2380
+  },
+  "deliver": {
+   "elapsed_ms": 0
+  }
+ },
+ "agents": {
+  "director": {
+   "counter_llm_calls": 1,
+   "counter_tokens": 3448,
+   "llm_elapsed_ms": 4499,
+   "elapsed_ms": 4499
+  },
+  "writer": {
+   "counter_llm_calls": 2,
+   "counter_tokens": 10477,
+   "llm_elapsed_ms": 6493,
+   "elapsed_ms": 6674
+  },
+  "critic": {
+   "counter_llm_calls": 1,
+   "counter_tokens": 3560,
+   "llm_elapsed_ms": 2303,
+   "elapsed_ms": 2303
+  }
+ },
+ "score": {
+  "total": 5,
+  "tier0": 1,
+  "tier1": 2,
+  "tier2": 2
+ }
+}

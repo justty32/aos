@@ -1,0 +1,5 @@
+{"description": "檢查一段 galgame 稿子有沒有違反護欄與語域規則（格式、必提關鍵詞、禁語、地點、稱謂階、感嘆號、口頭禪、句長、旁白數）。回 {violations:[{tier,rule,line,text,reason}]}；tier 0 一定要改、tier 1 盡量改。",
+ "parameters": {"type": "object",
+                "properties": {"text": {"type": "string", "description": "整段稿子原文"},
+                               "brief_path": {"type": "string", "description": "你的題目檔裡稿紙的位置，固定寫 cur/<n>.json#/brief（n 是題目檔名）"}},
+                "required": ["text", "brief_path"]}}

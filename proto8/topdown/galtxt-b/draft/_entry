@@ -1,0 +1,108 @@
+#!/usr/bin/env python3
+# draft - 兩步：沒有 $AOS_STACK/plan.json 先叫 tools/director 出 beat 表、tools/plan_lint 校驗；再把 brief.json＋plan（＋上一稿被打回的理由）交給 tools/writer 寫一稿，收成 draft.json
+# 黏合層：只備題目、叫 agent、收答案（P-32：被叫者的工作區在呼叫方的小格裡）。check 已過或已定稿就什麼都不做。
+# plan 一題只做一次：打回重寫（attempt 2、3）沿用 plan.json；deliver 收尾時一起刪。
+# director：每次「沒有 plan.json」都清掉它的小格重來（新的一題、或上次 PlanBad 停下後人重跑）；表沒過 plan_lint 就把理由寫回同一個小格再叫一次（續聊），
+#   最多 2 次，第 2 次仍壞＝PlanBad 退 1 等人（P-20）。
+# writer：第 1 稿先清掉它的小格＝新的對話（C-65 要忘記＝換一個 stack）；第 2 稿起沿用＝接著上一稿與打回理由往下寫。writer 裡面怎麼問腦、自檢幾次，這裡不知道（C-52）。
+# 自己的錯退 1：StackMissing、BriefMissing／BriefBad、CheckBad、DirectorFailed、WriterFailed（agent 退非 0）、AnswerMissing、
+#   ReplyBad（director 的答案不是 beat 表 JSON）、PlanLintFailed（plan_lint 退非 0）、PlanBad。
+import json, os, re, shutil, subprocess, sys
+
+MAX_PLANS = 2                                    # director 最多叫幾次
+
+
+def die(code, reason):
+    print("draft: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def load(path, what):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        die(what + "Missing", "%s 不在" % path)
+    except ValueError as e:
+        die(what + "Bad", "%s 不是 JSON：%s" % (path, e))
+
+
+def write_json(path, obj):                      # N-05
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, path)
+
+
+def agent(tool, k, question, code):
+    """把題目 new/<k>.json 放進 tool 的小格工作區、aos-exec 它、回答案 out/<k>.txt 的文字。"""
+    sub = os.path.join(stack, tool) + "/"        # P-17：小格名＝工具資料夾名
+    ws = os.path.join(sub, "ws")
+    os.makedirs(os.path.join(ws, "new"), exist_ok=True)
+    write_json(os.path.join(ws, "new", "%d.json" % k), question)
+    try:
+        r = subprocess.run(["aos-exec", "--ws", ws, "tools/" + tool], env=dict(os.environ, AOS_STACK=sub),
+                           stdin=subprocess.DEVNULL)   # stderr 不吞：agent 自己的錯原樣往上（P-21）
+    except OSError as e:
+        die(code, "tools/%s 起不來：%s" % (tool, e))
+    if r.returncode != 0:
+        die(code, "tools/%s 結束碼 %d" % (tool, r.returncode))
+    try:
+        with open(os.path.join(ws, "out", "%d.txt" % k), encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        die("AnswerMissing", "%s 沒交出 out/%d.txt" % (tool, k))
+
+
+def make_plan():
+    shutil.rmtree(os.path.join(stack, "director"), ignore_errors=True)
+    feedback = []
+    for k in range(1, MAX_PLANS + 1):
+        raw = agent("director", k, {"attempt": k, "brief": brief, "feedback": feedback}, "DirectorFailed")
+        body = re.sub(r"^\s*```(?:json)?\s*|\s*```\s*$", "", raw.strip())   # 腦愛包 ``` 圍欄，剝掉
+        try:
+            plan, _ = json.JSONDecoder().raw_decode(body[min([i for i in (body.find("{"), body.find("[")) if i >= 0] or [0]):])
+        except ValueError as e:                  # 只取第一份 JSON：腦偶爾在表後面多吐一段（真腦 10-25 遇過 Extra data）
+            die("ReplyBad", "director 的答案不是 JSON：%s（%s）" % (raw[:120].replace("\n", " "), e))
+        if isinstance(plan, list):
+            plan = {"beats": plan}               # 只回陣列也收
+        if not isinstance(plan, dict) or not isinstance(plan.get("beats"), list):
+            die("ReplyBad", "director 的答案不是 {\"beats\": [...]}：%s" % raw[:120].replace("\n", " "))
+        env = dict(os.environ, AOS_STACK=os.path.join(stack, "plan_lint") + "/")
+        try:
+            r = subprocess.run(["aos-exec", "tools/plan_lint"], input=json.dumps({"plan": plan, "brief": brief}, ensure_ascii=False),
+                               stdout=subprocess.PIPE, text=True, env=env)
+        except OSError as e:
+            die("PlanLintFailed", "tools/plan_lint 起不來：%s" % e)
+        if r.returncode != 0:
+            die("PlanLintFailed", "tools/plan_lint 結束碼 %d" % r.returncode)
+        try:
+            feedback = json.loads(r.stdout)["violations"]
+        except (ValueError, KeyError, TypeError) as e:
+            die("PlanLintFailed", "tools/plan_lint 回的不是 {violations}：%s" % e)
+        if not feedback:
+            return plan
+    die("PlanBad", "director 出了 %d 次表都沒過 plan_lint：%s" % (MAX_PLANS, "；".join(v.get("rule", "") for v in feedback)))
+
+
+stack = os.environ.get("AOS_STACK")
+if not stack:
+    die("StackMissing", "沒設定 AOS_STACK")
+brief = load(os.path.join(stack, "brief.json"), "Brief")
+check = load(os.path.join(stack, "check.json"), "Check") if os.path.exists(os.path.join(stack, "check.json")) else None
+if check and (check.get("pass") or check.get("final")):
+    sys.exit(0)                                  # 稿子定了，不是我的回合
+attempt = int(check.get("attempt", 0)) + 1 if check else 1
+
+plan_path = os.path.join(stack, "plan.json")
+if os.path.exists(plan_path):
+    plan = load(plan_path, "Plan")
+else:
+    plan = make_plan()
+    write_json(plan_path, plan)
+
+if attempt == 1:
+    shutil.rmtree(os.path.join(stack, "writer"), ignore_errors=True)   # 新的一題：忘掉上一題的對話
+question = {"attempt": attempt, "brief": brief, "plan": plan, "feedback": (check or {}).get("violations", [])}
+text = agent("writer", attempt, question, "WriterFailed")
+write_json(os.path.join(stack, "draft.json"), {"attempt": attempt, "text": text})

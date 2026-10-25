@@ -1,0 +1,4 @@
+#!/bin/sh
+# idle - cur/ 或 new/ 還有場景 JSON 就結束碼 0（往下走一圈），沒有就 10（請 loop 停）
+for f in "$AOS_WS"/cur/*.json "$AOS_WS"/new/*.json; do [ -e "$f" ] && exit 0; done   # 認領了沒做完的也算（P-12）
+exit 10

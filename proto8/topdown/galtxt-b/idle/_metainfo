@@ -1,0 +1,11 @@
+{"summary": "看工作區 cur/ 或 new/ 還有沒有場景 JSON：有退 0 往下走一圈，沒有退 10 讓 loop 停",
+ "time_ms": {"val": 5, "max": 100},
+ "resource": "cpu",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true,
+ "reads": ["$AOS_WS/cur/*.json", "$AOS_WS/new/*.json"],
+ "writes": [],
+ "grow_level": 3}

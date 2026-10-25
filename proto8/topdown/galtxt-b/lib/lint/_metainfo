@@ -1,0 +1,13 @@
+{"summary": "稿子的確定性檢核：格式、護欄關鍵詞、禁語、地點穿幫（Tier 0）；稱謂階、感嘆號、口頭禪、句長、旁白預算（Tier 1）→ violations；只報事實不判 pass",
+ "time_ms": {"val": 30, "max": 1000},
+ "resource": "cpu",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true,
+ "reads": ["stdin", "$AOS_WS/<brief_path>（給了才讀）"],
+ "writes": ["stdout"],
+ "grow_level": 4,
+ "tier": "評分級聯 Tier 0＋Tier 1",
+ "callers": ["check/（格，內嵌 brief）", "draft/tools/writer/（腦自檢，brief_path）"]}

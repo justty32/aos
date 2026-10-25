@@ -1,0 +1,69 @@
+# round3 收攏前後同題假腦對照（fn-grow 第 ④ 步）：plan/aos-fold verify A B --ws 空工作區 --question examples/<題>.json --env <開關>
+# A＝收攏前的樹（cp -a 到暫存，tree_before.txt 那份）、B＝收攏後的樹（現在的 galtxt-b）。抹掉 *_at、*elapsed_ms 後逐檔比 out/ 與 .stack/；
+# 「預期差異」＝級數改變本來就會不同的 state.txt、trace.jsonl（director／critic 小格只有 A 有）。X=0＝不開任何開關。BAD_PLAN=2 兩邊都 PlanBad 退 1、stderr 相同。
+# q01_河鹿堂讓書 X=0
+aos-fold: 預期差異（級數改變）.stack/critic/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/critic/trace.jsonl 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/trace.jsonl 只有 A 有
+{"action": "verify", "code": [0, 0], "counter_same": 18, "counter_time_only": 6, "counter_expected": 4, "counter_bad": 0}
+rc=0
+# q01_河鹿堂讓書 GALTXT_FAKE_BAD_FIRST=1
+aos-fold: 預期差異（級數改變）.stack/critic/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/critic/trace.jsonl 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/trace.jsonl 只有 A 有
+{"action": "verify", "code": [0, 0], "counter_same": 20, "counter_time_only": 6, "counter_expected": 4, "counter_bad": 0}
+rc=0
+# q01_河鹿堂讓書 GALTXT_FAKE_LINT=1
+aos-fold: 預期差異（級數改變）.stack/critic/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/critic/trace.jsonl 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/trace.jsonl 只有 A 有
+{"action": "verify", "code": [0, 0], "counter_same": 18, "counter_time_only": 6, "counter_expected": 4, "counter_bad": 0}
+rc=0
+# q01_河鹿堂讓書 GALTXT_FAKE_BAD_PLAN=1
+aos-fold: 預期差異（級數改變）.stack/critic/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/critic/trace.jsonl 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/trace.jsonl 只有 A 有
+{"action": "verify", "code": [0, 0], "counter_same": 20, "counter_time_only": 6, "counter_expected": 4, "counter_bad": 0}
+rc=0
+# q01_河鹿堂讓書 GALTXT_FAKE_BAD_PLAN=2
+aos-fold: 預期差異（級數改變）.stack/director/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/trace.jsonl 只有 A 有
+{"action": "verify", "code": [1, 1], "counter_same": 10, "counter_time_only": 2, "counter_expected": 2, "counter_bad": 0}
+rc=0
+# q08_河鹿堂進新書日 X=0
+aos-fold: 預期差異（級數改變）.stack/critic/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/critic/trace.jsonl 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/trace.jsonl 只有 A 有
+{"action": "verify", "code": [0, 0], "counter_same": 18, "counter_time_only": 6, "counter_expected": 4, "counter_bad": 0}
+rc=0
+# q08_河鹿堂進新書日 GALTXT_FAKE_BAD_FIRST=1
+aos-fold: 預期差異（級數改變）.stack/critic/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/critic/trace.jsonl 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/trace.jsonl 只有 A 有
+{"action": "verify", "code": [0, 0], "counter_same": 20, "counter_time_only": 6, "counter_expected": 4, "counter_bad": 0}
+rc=0
+# q08_河鹿堂進新書日 GALTXT_FAKE_LINT=1
+aos-fold: 預期差異（級數改變）.stack/critic/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/critic/trace.jsonl 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/trace.jsonl 只有 A 有
+{"action": "verify", "code": [0, 0], "counter_same": 18, "counter_time_only": 6, "counter_expected": 4, "counter_bad": 0}
+rc=0
+# q08_河鹿堂進新書日 GALTXT_FAKE_BAD_PLAN=1
+aos-fold: 預期差異（級數改變）.stack/critic/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/critic/trace.jsonl 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/trace.jsonl 只有 A 有
+{"action": "verify", "code": [0, 0], "counter_same": 20, "counter_time_only": 6, "counter_expected": 4, "counter_bad": 0}
+rc=0
+# q08_河鹿堂進新書日 GALTXT_FAKE_BAD_PLAN=2
+aos-fold: 預期差異（級數改變）.stack/director/state.txt 只有 A 有
+aos-fold: 預期差異（級數改變）.stack/director/trace.jsonl 只有 A 有
+{"action": "verify", "code": [1, 1], "counter_same": 10, "counter_time_only": 2, "counter_expected": 2, "counter_bad": 0}
+rc=0

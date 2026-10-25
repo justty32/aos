@@ -1,0 +1,9 @@
+{"_entry": ["aos-fsm", {"$env": "AOS_CF"}],
+ "start": "idle",
+ "states": {
+   "idle":    {"exec": "idle",    "next": "brief"},
+   "brief":   {"exec": "brief",   "next": "draft"},
+   "draft":   {"exec": {"argv": ["aos-exec", "draft"], "timeout_ms": 600000}, "next": "check"},
+   "check":   {"exec": "check",   "next": "judge"},
+   "judge":   {"exec": {"argv": ["aos-exec", "judge"], "timeout_ms": 300000}, "next": "deliver"},
+   "deliver": {"exec": "deliver", "next": "idle"}}}

@@ -1,0 +1,5 @@
+{"summary": "範例場景 JSON（題目的形狀）：複製到工作區 new/ 就能跑；q01、q08 各對應 judge/benchmarks 一題",
+ "kind": "data",
+ "resource": "disk",
+ "side_effect": false,
+ "deterministic": true}

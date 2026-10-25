@@ -1,0 +1,23 @@
+{
+ "attempt": 1,
+ "benchmark": "q08",
+ "tier0": {
+  "score": 1,
+  "pass": true
+ },
+ "tier1": {
+  "score": 2,
+  "counter_violations": 0
+ },
+ "tier2": {
+  "semantic": 2,
+  "register_by_judge": 1,
+  "reasons": [
+   "「下次的進新書日」和想知道佐伯同學會選哪一本，保留了以新書日為契機的含蓄邀約；但主角答應前，晴子已先說出想知道他選什麼，稍微削弱了邀約的留白。",
+   "晴子語氣文靜克制，稱呼也合階；但「佐伯同學」不符合設定中的「佐伯君／主角同學」。"
+  ]
+ },
+ "total": 5,
+ "max_total": 6,
+ "register_agree": false
+}

@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+# check - 黏合格：叫 tools/lint 拿 $AOS_STACK/draft.json 對 brief.json 的違規（Tier 0 護欄、Tier 1 語域），算 pass／final，寫 check.json；不問腦
+# 規則本身在 tools/lint（捷徑 → ../lib/lint，writer 的腦自檢也叫同一支）；這一格只知道 attempt 與 max_redrafts，所以 pass／final 歸它算。
+# 判定是資料不是錯：不管過不過都退 0。自己的錯才退 1：StackMissing、BriefMissing／BriefBad、DraftMissing／DraftBad、CheckBad、LintFailed（lint 退非 0 或回的不是 JSON）。
+# check.json：{"attempt", "pass", "final", "tier0_pass", "register_score"(0-2), "counter_violations_tier0", "counter_violations_tier1",
+#              "violations": [...], "history": [每次的 attempt 與 violations]}
+#   pass  ＝ Tier 0 全過 且 Tier 1 違規 ≤ 1（語域 0-2 分裡至少拿 1）
+#   final ＝ pass，或已經重寫到場景給的 max_redrafts（再寫也不會更好＝交出去讓 judge 打分、人看）
+import json, os, subprocess, sys
+
+
+def die(code, reason):
+    print("check: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def load(path, what):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        die(what + "Missing", "%s 不在" % path)
+    except ValueError as e:
+        die(what + "Bad", "%s 不是 JSON：%s" % (path, e))
+
+
+stack = os.environ.get("AOS_STACK")
+if not stack:
+    die("StackMissing", "沒設定 AOS_STACK")
+brief = load(os.path.join(stack, "brief.json"), "Brief")
+draft = load(os.path.join(stack, "draft.json"), "Draft")
+check_path = os.path.join(stack, "check.json")
+old = None
+if os.path.exists(check_path):
+    old = load(check_path, "Check")
+    if old.get("attempt") == draft.get("attempt"):
+        sys.exit(0)                              # 這一稿已經檢過了
+
+attempt = int(draft.get("attempt", 1))
+env = dict(os.environ, AOS_STACK=os.path.join(stack, "lint") + "/")   # P-17：小格名＝工具名（lint 是純函數，小格是空的）
+try:
+    r = subprocess.run(["aos-exec", "tools/lint"], input=json.dumps({"text": draft.get("text") or "", "brief": brief}, ensure_ascii=False),
+                       stdout=subprocess.PIPE, text=True, env=env)   # stderr 不吞：lint 自己的錯原樣往上（P-21）
+except OSError as e:
+    die("LintFailed", "tools/lint 起不來：%s" % e)
+if r.returncode != 0:
+    die("LintFailed", "tools/lint 結束碼 %d" % r.returncode)
+try:
+    violations = json.loads(r.stdout)["violations"]
+except (ValueError, KeyError, TypeError) as e:
+    die("LintFailed", "tools/lint 回的不是 {violations}：%s" % e)
+
+tier0 = sum(1 for v in violations if v["tier"] == 0)
+tier1 = sum(1 for v in violations if v["tier"] == 1)
+passed = tier0 == 0 and tier1 <= 1
+final = passed or attempt > brief.get("max_redrafts", 2)
+history = (old or {}).get("history", [])
+history = [h for h in history if h.get("attempt") != attempt] + [{"attempt": attempt, "violations": violations}]
+out = {"attempt": attempt, "pass": passed, "final": final, "tier0_pass": tier0 == 0,
+       "register_score": max(0, 2 - tier1), "counter_violations_tier0": tier0, "counter_violations_tier1": tier1,
+       "violations": violations, "history": history}
+tmp = os.path.join(stack, ".check.json")
+with open(tmp, "w", encoding="utf-8") as f:
+    json.dump(out, f, ensure_ascii=False, indent=1)
+os.replace(tmp, check_path)

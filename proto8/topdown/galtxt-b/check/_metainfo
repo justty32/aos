@@ -1,0 +1,13 @@
+{"summary": "黏合格：叫 tools/lint 拿 violations（Tier 0 護欄、Tier 1 語域），算 pass／final，寫 check.json；判定是資料不是錯，永遠退 0",
+ "time_ms": {"val": 80, "max": 2000},
+ "resource": "cpu",
+ "side_effect": true,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "reads": ["$AOS_STACK/brief.json", "$AOS_STACK/draft.json", "$AOS_STACK/check.json（上一稿的，留 history）"],
+ "writes": ["$AOS_STACK/check.json", "$AOS_STACK/lint/（空小格）"],
+ "grow_level": 4,
+ "tier": "評分級聯 Tier 0＋Tier 1（免費、確定性）；pass＝Tier 0 全過且 Tier 1 ≤ 1；final＝pass 或已到 max_redrafts",
+ "calls": ["tools/lint"]}

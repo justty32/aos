@@ -1,0 +1,12 @@
+{"summary": "有 score.json 就交件：寫 $AOS_WS/out/<題名>/{answer.txt,score.json,check.json,measure.json}（measure＝彙整這題的實跑數字）、題目 cur/→done/、清掉這題在 stack 的檔；沒有就什麼都不做",
+ "time_ms": {"val": 20, "max": 1000},
+ "resource": ["cpu", "disk"],
+ "side_effect": true,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "resumable",
+ "parallel": false,
+ "reads": ["$AOS_STACK/score.json", "$AOS_STACK/current.txt", "$AOS_STACK/draft.json", "$AOS_STACK/check.json", "$AOS_STACK/brief.json", "$AOS_STACK/trace.jsonl", "$AOS_STACK/{writer,director,critic}/llm.jsonl", "$AOS_STACK/writer/trace.jsonl（director、critic 是單發腦函數、沒有 trace：拿 llm.jsonl 的 elapsed_ms 代替）", "$AOS_STACK/writer/history.jsonl"],
+ "writes": ["$AOS_WS/out/<題名>/", "$AOS_WS/done/<題名>.json", "$AOS_STACK/{brief,plan,draft,check,score}.json、current.txt（刪）"],
+ "grow_level": 3,
+ "note": "round3 撤回 shrink_candidate：第 2 輪加了 measure 之後它讀 9 種輸入、算 7 個 counter，不薄了；量測彙整跟交件是兩件事，但只有 deliver 一個呼叫者，先不拆"}

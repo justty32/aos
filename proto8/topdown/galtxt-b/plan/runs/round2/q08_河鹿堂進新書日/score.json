@@ -1,0 +1,23 @@
+{
+ "attempt": 1,
+ "benchmark": "q08",
+ "tier0": {
+  "score": 1,
+  "pass": true
+ },
+ "tier1": {
+  "score": 2,
+  "counter_violations": 0
+ },
+ "tier2": {
+  "semantic": 1,
+  "register_by_judge": 1,
+  "reasons": [
+   "稿子有提出下次一起來，也用「想知道佐伯同學下次會挑什麼」帶出關注，但沒把邀約和「進新書日」連起來，削弱了兩人的固定小約定。",
+   "晴子先說「也想知道」再重複邀請，略顯直白且句意冗複；稱呼「佐伯同學」符合階位，但主角稱她「森下」而非「森下同學」。"
+  ]
+ },
+ "total": 4,
+ "max_total": 6,
+ "register_agree": false
+}

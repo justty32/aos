@@ -1,0 +1,556 @@
+#!/usr/bin/env python3
+"""aos-fold - 把一個資料夾樹的節點往低一級收：縮 agent、解捷徑、併薄層、資料夾打包成 JSON；_metainfo 跟著走；先 dry-run、再 verify
+
+用法（規格：plan/round3-collapse.md §5；Python 純標準庫；原型，不進 PATH）：
+  aos-fold [--dry-run] agent  DIR --script ask.py [--timeout-ms N]   5→4：留 --script 與伴隨檔，刪範本檔，寫 _entry 單子
+  aos-fold [--dry-run] link   LINK                                    捷徑 → 真資料夾；目標沒別的呼叫者就搬過來，有就複製
+  aos-fold [--dry-run] layer  DIR [--force]                           DIR 只有一個子項：子項上提到 DIR 的父層，呼叫方字串改掉
+  aos-fold [--dry-run] pack   DIR                                     DIR/*.json（含 _metainfo）→ DIR.json，檔名當 key；印出誰讀了這些檔
+  aos-fold verify TREE_A TREE_B --ws WS --question Q.json [--env K=V]...   兩棵樹同題跑、抹掉時間欄位後比 out/ 與 .stack/
+
+錯：stderr 一行「aos-fold: 代號 原因」退 1、什麼都不寫——ArgumentsBad、FlagUnknown、TargetBad、NameBad、WriteFailed、VerifyFailed。
+寫檔先寫 .暫存 再改名（N-05）；--dry-run 什麼都不寫，只印會做什麼。成功時 stdout 最後一行是一行 JSON 摘要。
+"""
+import difflib, json, os, re, shutil, stat, subprocess, sys, tempfile
+
+NAME = "aos-fold"
+STRUCT_MAX = 8 * 1024                            # STRUCTURE 門檻（F6）
+TIME_KEY = re.compile(r"(^|_)at$|elapsed_ms$")   # 時間欄：<事件>_at、*elapsed_ms（C-54 R3／R8）
+LEVEL_FILES = {"state.txt", "trace.jsonl"}       # 級數一變就本來會不同的檔（verify 列為預期差異）
+
+
+class Fail(Exception):
+    def __init__(self, code, reason):
+        super().__init__(reason)
+        self.code, self.reason = code, reason
+
+
+def note(msg):
+    print(msg, file=sys.stderr)
+
+
+# ── 共用：讀寫 ──────────────────────────────────────────────
+
+def jload(path, what=None):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise Fail("TargetBad", "%s 不在" % (what or path))
+    except (OSError, ValueError) as e:
+        raise Fail("TargetBad", "%s 讀不了：%s" % (what or path, e))
+
+
+def dumps(obj):
+    return json.dumps(obj, ensure_ascii=False, indent=1) + "\n"
+
+
+def put(path, text, mode=0o644):
+    """N-05：先寫 .名字 暫存、再改名。"""
+    tmp = os.path.join(os.path.dirname(path) or ".", "." + os.path.basename(path) + ".fold")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.chmod(tmp, mode)
+        os.replace(tmp, path)
+    except OSError as e:
+        raise Fail("WriteFailed", "%s 寫不了：%s" % (path, e))
+
+
+def git_tracked(path):
+    try:
+        r = subprocess.run(["git", "ls-files", "--error-unmatch", os.path.basename(path)], cwd=os.path.dirname(os.path.abspath(path)),
+                           capture_output=True)
+        return r.returncode == 0
+    except OSError:
+        return False
+
+
+def move(src, dst):
+    """有 git 追蹤就 git mv，沒有就 os.rename。"""
+    if git_tracked(src):
+        r = subprocess.run(["git", "mv", src, dst], capture_output=True, text=True)
+        if r.returncode == 0:
+            return "git mv"
+    try:
+        os.rename(src, dst)
+    except OSError as e:
+        raise Fail("WriteFailed", "%s → %s 搬不了：%s" % (src, dst, e))
+    return "rename"
+
+
+def show_diff(path, old, new):
+    d = "".join(difflib.unified_diff(old.splitlines(True), new.splitlines(True), path, path + "（新）"))
+    if d:
+        print(d, end="" if d.endswith("\n") else "\n")
+
+
+def tree_root(path):
+    """往上找：上一層還有 _metainfo 就繼續往上；停在最上面那個有 _metainfo 的資料夾（這棵樹的根）。"""
+    d = os.path.dirname(os.path.abspath(path))
+    while os.path.exists(os.path.join(os.path.dirname(d), "_metainfo")) and os.path.dirname(d) != d:
+        d = os.path.dirname(d)
+    return d
+
+
+def text_files(root, skip=()):
+    """樹裡的文字檔（跳過 . 開頭、plan/、skip 裡的路徑、捷徑）：yield 路徑。"""
+    skip = {os.path.abspath(s) for s in skip}
+    for d, dirs, files in os.walk(root):
+        dirs[:] = sorted(x for x in dirs if not x.startswith(".") and not (d == root and x == "plan")
+                         and os.path.abspath(os.path.join(d, x)) not in skip and not os.path.islink(os.path.join(d, x)))
+        for n in sorted(files):
+            p = os.path.join(d, n)
+            if n.startswith(".") or os.path.islink(p) or os.path.getsize(p) > 1 << 20:
+                continue
+            try:
+                with open(p, encoding="utf-8") as f:
+                    yield p, f.read()
+            except (OSError, UnicodeDecodeError):
+                continue
+
+
+# ── agent：5→4 ───────────────────────────────────────────────
+
+def drop_level_files(s):
+    """writes 字串裡 {a,b,c} 那串拿掉 state.txt、trace.jsonl（單發後小格不再有這兩個）。"""
+    def fix(m):
+        items = [x for x in m.group(1).split(",") if x.strip() not in LEVEL_FILES]
+        return "{" + ",".join(items) + "}"
+    return re.sub(r"\{([^{}]*)\}", fix, s) if isinstance(s, str) else s
+
+
+def cmd_agent(a):
+    d = a.target.rstrip("/")
+    if not os.path.isdir(d) or os.path.islink(d):
+        raise Fail("TargetBad", "%s 不是資料夾" % d)
+    entry, loop_p, fsm_p = (os.path.join(d, n) for n in ("_entry", "loop.json", "fsm.json"))
+    if not os.path.isfile(entry) or not os.access(entry, os.X_OK):
+        raise Fail("TargetBad", "%s/_entry 不是可執行的 sh（不是範本形）" % d)
+    with open(entry, encoding="utf-8") as f:
+        code = [l.strip() for l in f if l.strip() and not l.lstrip().startswith("#")]
+    if code != ["exec aos-loop loop.json"]:
+        raise Fail("TargetBad", "%s/_entry 不是範本的「exec aos-loop loop.json」：%s" % (d, code))
+    loop = jload(loop_p)
+    if not isinstance(loop, dict) or loop.get("exec") != "fsm.json":
+        raise Fail("TargetBad", "%s/loop.json 的 exec 不是 fsm.json" % d)
+    fsm = jload(fsm_p)
+    states = fsm.get("states") if isinstance(fsm, dict) else None
+    if not isinstance(states, dict) or set(states) != {"idle", "think", "act"}:
+        raise Fail("TargetBad", "%s/fsm.json 不是 idle→think→act 三態" % d)
+    if states["idle"].get("exec") != "idle" or not os.path.isdir(os.path.join(d, "idle")):
+        raise Fail("TargetBad", "%s 沒有 idle/（不是範本形）" % d)
+    think, act = states["think"].get("exec"), states["act"].get("exec")
+    if not (isinstance(think, dict) and isinstance(think.get("argv"), list) and isinstance(act, dict) and isinstance(act.get("argv"), list)):
+        raise Fail("TargetBad", "%s/fsm.json 的 think／act 不是單子" % d)
+    if not a.script or not re.fullmatch(r"[^/\0]+", a.script):
+        raise Fail("ArgumentsBad", "--script 要一個 %s 裡的檔名" % d)
+    if not os.path.isfile(os.path.join(d, a.script)):
+        raise Fail("TargetBad", "%s/%s 還沒寫（工具不合併程式：人先寫好腳本再縮）" % (d, a.script))
+
+    # 新的 _entry 單子：argv 換成腳本，timeout_ms 沿用 think 的；_metainfo 指回資料夾那份（M1 資料夾那處優先）
+    timeout = a.timeout_ms if a.timeout_ms is not None else think.get("timeout_ms")
+    single = {"argv": ["python3", a.script]}
+    if timeout is not None:
+        single["timeout_ms"] = timeout
+    single["_metainfo"] = {"$ref": "_metainfo"}
+    new_entry = json.dumps(single, ensure_ascii=False) + "\n"
+
+    # _metainfo：think 單子的併進資料夾那份（資料夾的贏，M1 外層贏；衝突印出來）
+    meta_p = os.path.join(d, "_metainfo")
+    folder_meta = jload(meta_p) if os.path.exists(meta_p) else {}
+    think_meta = think.get("_metainfo") or {}
+    merged = dict(folder_meta)                      # 資料夾那份的排序留著；think 單子多的 key 接在後面
+    conflicts = [k for k in think_meta if k in folder_meta and folder_meta[k] != think_meta[k]]
+    merged.update((k, v) for k, v in think_meta.items() if k not in folder_meta)
+    for k in conflicts:
+        note("aos-fold: 注意 _metainfo.%s 兩處不同，留資料夾的 %s（think 單子的 %s）"
+             % (k, json.dumps(folder_meta[k], ensure_ascii=False), json.dumps(think_meta[k], ensure_ascii=False)))
+    merged["grow_level"] = 4
+    if merged.get("interrupt") == "resumable":
+        merged["interrupt"] = "safe"
+        note("aos-fold: 注意 interrupt resumable→safe：沒有 state.txt 了，殺掉重跑＝整個再問一次")
+    if isinstance(merged.get("writes"), list):
+        merged["writes"] = [drop_level_files(s) for s in merged["writes"]]
+    merged["shape"] = "單發腦函數（_entry 單子＋%s；round3 由 loop→fsm idle→think→act 收攏）" % a.script
+    if "shrink_candidate" in merged:
+        note("aos-fold: 注意 拿掉 shrink_candidate（已照做）：%s" % merged.pop("shrink_candidate"))
+    new_meta = dumps_meta(merged)
+
+    # 刪：loop.json、fsm.json、idle/、think／act 指到的腳本（--script 除外）
+    scripts = [x for ex in (think, act) for x in ex["argv"][1:2] if isinstance(x, str) and os.path.isfile(os.path.join(d, x))]
+    removes = ["loop.json", "fsm.json", "idle/"] + [s for s in dict.fromkeys(scripts) if s != a.script]
+    old_meta = open(meta_p, encoding="utf-8").read() if os.path.exists(meta_p) else ""
+    if a.dry_run:
+        print("== %s/_entry（新，JSON 單子、不 +x）" % d)
+        print(new_entry, end="")
+        show_diff(os.path.join(d, "_metainfo"), old_meta, new_meta)
+        print("== 刪：" + "、".join(os.path.join(d, r) for r in removes))
+    else:
+        put(meta_p, new_meta)
+        put(entry, new_entry, 0o644)              # 換入口那一刻才切過去（先寫新的、最後才換）
+        for r in removes:
+            p = os.path.join(d, r.rstrip("/"))
+            (shutil.rmtree if os.path.isdir(p) else os.remove)(p)
+    return {"action": "agent", "dir": d, "entry": single, "removes": removes, "dry_run": a.dry_run}
+
+
+def dumps_meta(meta):
+    """_metainfo 的排版照 galtxt-b 的習慣：一個 key 一行。"""
+    items = list(meta.items())
+    lines = ["%s%s: %s" % ("{" if i == 0 else " ", json.dumps(k, ensure_ascii=False), json.dumps(v, ensure_ascii=False))
+             for i, (k, v) in enumerate(items)]
+    return (",\n".join(lines) + "}\n") if lines else "{}\n"
+
+
+# ── link：捷徑 → 真資料夾 ─────────────────────────────────────
+
+def cmd_link(a):
+    link = a.target.rstrip("/")
+    if not os.path.islink(link):
+        raise Fail("TargetBad", "%s 不是捷徑" % link)
+    rel = os.readlink(link)
+    if os.path.isabs(rel):
+        raise Fail("TargetBad", "%s 是絕對捷徑（C-61 只收相對的）" % link)
+    target = os.path.normpath(os.path.join(os.path.dirname(link), rel))
+    if not os.path.isdir(target) or os.path.islink(target):
+        raise Fail("TargetBad", "%s 指到的 %s 不是資料夾" % (link, target))
+    root = os.path.commonpath([os.path.abspath(tree_root(link)), os.path.abspath(tree_root(target))])
+    others = []
+    for d, dirs, files in os.walk(root):
+        dirs[:] = [x for x in dirs if not x.startswith(".")]
+        for n in dirs + files:
+            p = os.path.join(d, n)
+            if os.path.islink(p) and os.path.abspath(p) != os.path.abspath(link) and os.path.realpath(p) == os.path.realpath(target):
+                others.append(os.path.relpath(p, root))
+    caller = os.path.relpath(os.path.dirname(os.path.dirname(os.path.abspath(link))), root)   # 呼叫方＝捷徑所在 tools/ 的上一層
+    meta_p = os.path.join(target, "_metainfo")
+    meta = jload(meta_p) if os.path.exists(meta_p) else None
+    callers = meta.get("callers") if isinstance(meta, dict) else None
+    mine = [c for c in callers if isinstance(c, str) and c.startswith(caller + "/")] if isinstance(callers, list) else []
+    how = "move" if not others else "copy"
+    plan = {"action": "link", "link": link, "target": target, "how": how, "other_links": others, "dry_run": a.dry_run}
+    if a.dry_run:
+        print("== %s → %s（相對 %s）" % (link, target, rel))
+        print("== 別的捷徑：%s" % ("、".join(others) or "沒有"))
+        print("== 做法：%s" % ("整個搬過來（%s 那裡就沒了）" % target if how == "move" else "複製一份過來（原處還有人叫）"))
+        if how == "copy" and isinstance(callers, list):
+            print("== %s/_metainfo.callers 拿掉：%s" % (target, mine))
+        return plan
+    tmp = os.path.join(os.path.dirname(link), "." + os.path.basename(link) + ".fold")
+    if os.path.lexists(tmp):
+        raise Fail("NameBad", "%s 已經有了（上次沒做完？）" % tmp)
+    if how == "copy":
+        try:
+            shutil.copytree(target, tmp, symlinks=True)
+        except OSError as e:
+            raise Fail("WriteFailed", "複製 %s 失敗：%s" % (target, e))
+        if isinstance(callers, list):                # 原處：減掉這個呼叫者；複本：只剩這個呼叫者
+            meta_old = dict(meta, callers=[c for c in callers if c not in mine])
+            put(meta_p, dumps_meta(meta_old))
+            put(os.path.join(tmp, "_metainfo"), dumps_meta(dict(meta, callers=mine or callers)))
+        os.remove(link)
+        os.rename(tmp, link)
+    else:
+        os.remove(link)                              # 捷徑先拿掉，名字才空得出來；目標整個搬過來
+        plan["moved_by"] = move(target, link)
+        note("aos-fold: 提醒 %s 的 _metainfo.summary 還寫著 %s，要人改" % (os.path.dirname(target) or ".", os.path.basename(target)))
+    return plan
+
+
+# ── layer：併薄層 ─────────────────────────────────────────────
+
+def cmd_layer(a):
+    d = a.target.rstrip("/")
+    if not os.path.isdir(d) or os.path.islink(d):
+        raise Fail("TargetBad", "%s 不是資料夾" % d)
+    items = sorted(os.listdir(d))
+    rest = [x for x in items if x != "_metainfo"]
+    if len(rest) != 1:
+        raise Fail("TargetBad", "%s 底下要恰好一個子項（_metainfo 之外），現在是 %s" % (d, rest))
+    child = rest[0]
+    name = os.path.basename(d)
+    if name == "tools" and not a.force:
+        raise Fail("TargetBad", "%s 是 tools/（P-33 慣例：一詞一義「這格叫的東西」；P-41 腦掃 tools/ 找工具）——真要併加 --force" % d)
+    parent = os.path.dirname(d) or "."
+    dst = os.path.join(parent, child)
+    if os.path.lexists(dst):
+        raise Fail("NameBad", "%s 已經有了" % dst)
+    old, new = name + "/" + child, child
+    edits = []
+    for n in sorted(os.listdir(parent)):
+        p = os.path.join(parent, n)
+        if not os.path.isfile(p) or os.path.islink(p) or not (n in ("_entry", "_metainfo") or n.endswith((".json", ".py", ".sh"))):
+            continue
+        try:
+            with open(p, encoding="utf-8") as f:
+                s = f.read()
+        except (OSError, UnicodeDecodeError):
+            continue
+        t = re.sub(r"(?<![\w/.-])%s(?![\w-])" % re.escape(old), new, s)
+        if t != s:
+            edits.append((p, s, t))
+    relink = None
+    if os.path.islink(os.path.join(d, child)):       # 子項是相對捷徑：上提一層後目標重算
+        r = os.readlink(os.path.join(d, child))
+        if not os.path.isabs(r):
+            real = os.path.normpath(os.path.join(d, r))
+            relink = os.path.relpath(real, parent)
+    plan = {"action": "layer", "dir": d, "child": child, "to": dst, "edited": [p for p, _, _ in edits], "relink": relink, "dry_run": a.dry_run}
+    if a.dry_run:
+        print("== %s/%s → %s%s" % (d, child, dst, "（捷徑改指 %s）" % relink if relink else ""))
+        for p, s, t in edits:
+            show_diff(p, s, t)
+        print("== 刪：%s/_metainfo、%s/（%s/_metainfo 的 summary 要人併進 %s/_metainfo）" % (d, d, d, parent))
+        return plan
+    if relink:
+        tmp = os.path.join(parent, "." + child + ".fold")
+        os.symlink(relink, tmp)
+        os.rename(tmp, dst)
+        os.remove(os.path.join(d, child))
+    else:
+        move(os.path.join(d, child), dst)
+    for p, s, t in edits:                            # 最後才改呼叫方
+        put(p, t, stat.S_IMODE(os.stat(p).st_mode))
+        show_diff(p, s, t)
+    if os.path.exists(os.path.join(d, "_metainfo")):
+        note("aos-fold: 提醒 %s/_metainfo 刪了：%s" % (d, (jload(os.path.join(d, "_metainfo")) or {}).get("summary", "")))
+        os.remove(os.path.join(d, "_metainfo"))
+    os.rmdir(d)
+    return plan
+
+
+# ── pack：資料夾 → JSON（C-72）────────────────────────────────
+
+def cmd_pack(a):
+    d = a.target.rstrip("/")
+    if not os.path.isdir(d) or os.path.islink(d):
+        raise Fail("TargetBad", "%s 不是資料夾" % d)
+    out = d + ".json"
+    if os.path.lexists(out):
+        raise Fail("NameBad", "%s 已經有了" % out)
+    obj, others = {}, []
+    for n in sorted(os.listdir(d)):
+        p = os.path.join(d, n)
+        if n.startswith("."):
+            continue
+        if n.endswith(".json") and os.path.isfile(p) and not os.path.islink(p):
+            obj[n[:-len(".json")]] = jload(p)
+        elif n != "_metainfo":
+            others.append(n)
+    if others:
+        raise Fail("TargetBad", "%s 裡有不是 JSON 的東西（%s）：要檔案系統特性的不打包" % (d, "、".join(others)))
+    if "_metainfo" in obj:
+        raise Fail("NameBad", "%s/_metainfo.json 跟 _metainfo key 撞名" % d)
+    if os.path.exists(os.path.join(d, "_metainfo")):
+        obj["_metainfo"] = jload(os.path.join(d, "_metainfo"))
+    text = dumps(obj)
+    size = len(text.encode("utf-8"))
+    warn = []
+    if size > STRUCT_MAX:
+        warn.append("F6：合起來 %d bytes > %d（STRUCTURE 門檻）——併回去會超標" % (size, STRUCT_MAX))
+    root = tree_root(d)
+    base = os.path.basename(d)
+    pat = re.compile(r"(?<![\w-])%s(/|\b)" % re.escape(base))
+    readers = []
+    for p, s in text_files(root, skip=[d]):
+        for i, line in enumerate(s.splitlines(), 1):
+            if pat.search(line):
+                readers.append("%s:%d: %s" % (os.path.relpath(p, root), i, line.strip()[:120]))
+    for w in warn:
+        note("aos-fold: 警告 " + w)
+    print("== 讀者（這些要人改成讀 %s#/<檔名>，改完、verify 過了再刪 %s/）：" % (os.path.basename(out), base))
+    for r in readers:
+        print("  " + r)
+    if not a.dry_run:
+        put(out, text)
+    return {"action": "pack", "dir": d, "out": out, "keys": sorted(obj), "bytes": size, "warnings": warn,
+            "counter_readers": len(readers), "dry_run": a.dry_run}
+
+
+# ── verify：兩棵樹同題跑、比 ──────────────────────────────────
+
+def strip_time(v):
+    if isinstance(v, dict):
+        return {k: strip_time(x) for k, x in v.items() if not TIME_KEY.search(k)}
+    if isinstance(v, list):
+        return [strip_time(x) for x in v]
+    return v
+
+
+def json_or_lines(data):
+    try:
+        return json.loads(data)
+    except ValueError:
+        pass
+    try:
+        return [json.loads(l) for l in data.splitlines() if l.strip()]
+    except ValueError:
+        return None
+
+
+def snapshot(ws):
+    files, dirs = {}, set()
+    for d, ds, fs in os.walk(ws):
+        for x in ds:
+            dirs.add(os.path.relpath(os.path.join(d, x), ws))
+        for x in fs:
+            p = os.path.join(d, x)
+            with open(p, "rb") as f:
+                files[os.path.relpath(p, ws)] = f.read()
+    return files, dirs
+
+
+def bins_path():
+    here = os.path.dirname(os.path.abspath(__file__))
+    tests = os.path.normpath(os.path.join(here, "..", "..", "..", "tests"))
+    sys.path.insert(0, tests)
+    try:
+        import aos_bins                              # noqa: E402  proto8/tests/aos_bins.py：PATH 照測試的放法
+    except SystemExit as e:
+        raise Fail("VerifyFailed", str(e))
+    finally:
+        sys.path.remove(tests)
+    return aos_bins.path_with
+
+
+def cmd_verify(a):
+    trees = [os.path.abspath(t) for t in (a.target, a.tree_b)]
+    for t in trees:
+        if not os.path.isdir(t):
+            raise Fail("TargetBad", "%s 不是資料夾" % t)
+    if not a.ws or not os.path.isdir(a.ws):
+        raise Fail("ArgumentsBad", "--ws 要一個資料夾（工作區範本，會複製兩份）")
+    if not a.question or not os.path.isfile(a.question):
+        raise Fail("ArgumentsBad", "--question 要一份題目檔")
+    path_with = bins_path()
+    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+    env["PATH"] = path_with(env.get("PATH", ""))
+    for kv in a.env:
+        if "=" not in kv:
+            raise Fail("ArgumentsBad", "--env 要 K=V：%s" % kv)
+        k, v = kv.split("=", 1)
+        env[k] = v
+    tmp = tempfile.mkdtemp(prefix="aos-fold-verify-")
+    try:
+        runs = []
+        for i, t in enumerate(trees):
+            ws = os.path.join(tmp, "ws")              # 兩次用同一個路徑（工作區路徑若寫進檔裡也一樣）
+            shutil.rmtree(ws, ignore_errors=True)
+            shutil.copytree(a.ws, ws, symlinks=True)
+            os.makedirs(os.path.join(ws, "new"), exist_ok=True)
+            shutil.copyfile(a.question, os.path.join(ws, "new", os.path.basename(a.question)))
+            r = subprocess.run(["aos-exec", "--ws", ws, t], env=env, cwd=tmp, stdin=subprocess.DEVNULL,
+                               capture_output=True, text=True, timeout=a.timeout)
+            runs.append((r.returncode, r.stderr.replace(t, "<TREE>"), snapshot(ws)))
+        (ca, ea, (fa, da)), (cb, eb, (fb, db)) = runs
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    bad, expected, time_only, same = [], [], [], 0
+    if ca != cb:
+        bad.append("結束碼不同：A %d、B %d" % (ca, cb))
+    if ea != eb:
+        bad.append("stderr 不同：\nA：%s\nB：%s" % (ea.strip(), eb.strip()))
+    for p in sorted(set(fa) | set(fb)):
+        if p not in fa or p not in fb:
+            if os.path.basename(p) in LEVEL_FILES:
+                expected.append("%s 只有 %s 有" % (p, "A" if p in fa else "B"))
+            else:
+                bad.append("%s 只有 %s 有" % (p, "A" if p in fa else "B"))
+        elif fa[p] == fb[p]:
+            same += 1
+        else:
+            ja, jb = (json_or_lines(x.decode("utf-8", "replace")) for x in (fa[p], fb[p]))
+            if ja is not None and jb is not None and strip_time(ja) == strip_time(jb):
+                time_only.append(p)
+            else:
+                d = "".join(difflib.unified_diff(fa[p].decode("utf-8", "replace").splitlines(True),
+                                                 fb[p].decode("utf-8", "replace").splitlines(True), "A/" + p, "B/" + p, n=1))
+                bad.append(d[:2000])
+    bad += ["資料夾 %s 只有 %s 有" % (x, "A" if x in da else "B") for x in sorted(da ^ db)]
+    for e in expected:
+        note("aos-fold: 預期差異（級數改變）" + e)
+    summary = {"action": "verify", "code": [ca, cb], "counter_same": same, "counter_time_only": len(time_only),
+               "counter_expected": len(expected), "counter_bad": len(bad)}
+    if bad:
+        for b in bad:
+            print(b)
+        raise Fail("VerifyFailed", "兩棵樹跑出來不一樣（%d 處，見 stdout）" % len(bad))
+    return summary
+
+
+# ── 命令列 ───────────────────────────────────────────────────
+
+class Args:
+    dry_run = force = False
+    action = target = tree_b = script = ws = question = None
+    timeout_ms = None
+    timeout = 600
+
+    def __init__(self):
+        self.env = []
+
+
+VALUED = {"--script": "script", "--timeout-ms": "timeout_ms", "--ws": "ws", "--question": "question", "--env": "env"}
+ALLOWED = {"agent": {"--script", "--timeout-ms"}, "link": set(), "layer": {"--force"}, "pack": set(),
+           "verify": {"--ws", "--question", "--env"}}
+
+
+def parse(argv):
+    a, pos, i = Args(), [], 0
+    while i < len(argv):
+        x = argv[i]
+        if x == "--dry-run":
+            a.dry_run = True
+        elif x == "--force":
+            a.force = True
+        elif x in VALUED:
+            if i + 1 >= len(argv):
+                raise Fail("ArgumentsBad", "%s 缺值" % x)
+            i += 1
+            if x == "--env":
+                a.env.append(argv[i])
+            else:
+                setattr(a, VALUED[x], argv[i])
+        elif x.startswith("--"):
+            raise Fail("FlagUnknown", "不認得的旗標 %s" % x)
+        else:
+            pos.append(x)
+        i += 1
+    if not pos or pos[0] not in ALLOWED:
+        raise Fail("ArgumentsBad", "第一個要是 agent／link／layer／pack／verify（見檔頭用法）")
+    a.action = pos[0]
+    used = {x for x in argv if x.startswith("--") and x != "--dry-run"}
+    extra = used - ALLOWED[a.action]
+    if extra:
+        raise Fail("ArgumentsBad", "%s 不吃 %s" % (a.action, "、".join(sorted(extra))))
+    want = 3 if a.action == "verify" else 2
+    if len(pos) != want:
+        raise Fail("ArgumentsBad", "%s 要 %d 個位置參數，給了 %d 個" % (a.action, want - 1, len(pos) - 1))
+    a.target = pos[1]
+    if a.action == "verify":
+        a.tree_b = pos[2]
+        if a.dry_run:
+            raise Fail("ArgumentsBad", "verify 沒有 --dry-run（它本來就不改樹）")
+    if a.timeout_ms is not None:
+        try:
+            a.timeout_ms = int(a.timeout_ms)
+            assert a.timeout_ms > 0
+        except (ValueError, AssertionError):
+            raise Fail("ArgumentsBad", "--timeout-ms 要正整數")
+    return a
+
+
+def main(argv):
+    try:
+        a = parse(argv)
+        out = {"agent": cmd_agent, "link": cmd_link, "layer": cmd_layer, "pack": cmd_pack, "verify": cmd_verify}[a.action](a)
+    except Fail as e:
+        print("%s: %s %s" % (NAME, e.code, e.reason.replace("\n", " ")), file=sys.stderr)
+        return 1
+    print(json.dumps(out, ensure_ascii=False))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

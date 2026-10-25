@@ -1,0 +1,22 @@
+{
+ "_note": "從 corpus/固化/定點_盛夏黃昏河鹿堂/01_beat文法 抄的 beat 清單、產生式與約束（白話）。brief 原樣放進 brief.beats：director 照它出 beat 表，lib/plan_lint 照它校驗（拍名、拍數範圍；產生式的狀態機寫在 plan_lint 程式裡）。c5（殘響拍）、c6（義務方招呼拍）這輪不驗：河鹿堂是無義務場所、場景不寫心聲。",
+ "beats": [
+  {"beat": "B0", "name": "定場", "content": "感官 2 拍（門鈴＋一個氣味／聲／光），建立「涼、靜、舊」", "required": true},
+  {"beat": "B1", "name": "發現", "content": "偶遇：本以為沒人 → 看見她", "required": true},
+  {"beat": "B2", "name": "開口", "content": "第一句話（無義務場所：她專注於物時主角先開口）", "required": true},
+  {"beat": "B3", "name": "話題展開", "content": "2～4 輪，可以連著好幾拍", "required": true},
+  {"beat": "B4", "name": "半步", "content": "遞物／讓書／或只有一句話", "required": false},
+  {"beat": "B5", "name": "反差瞬間", "content": "表面台詞 × 一個洩底動作", "required": true},
+  {"beat": "B6", "name": "蓋章", "content": "爺爺不說話、只蓋梅花章——河鹿堂專屬的標點拍", "required": false},
+  {"beat": "B7", "name": "收尾", "content": "散場／定格／鉤子", "required": true}
+ ],
+ "grammar": "B0 B1 B2 B3+ (B4) B5 (B6) B7",
+ "constraints": [
+  "c1：B5 必須在 B3 之後（反差要先有話題鋪墊）",
+  "c2：B6 若出現，之前要有一拍拿書／買書（那一拍的 do 寫到「書」）",
+  "c3：B6 可以和 B5 對調（蓋章→反差）",
+  "c4：B4 與 B5 可融合成一拍（遞物那句本身就是反差句）——融合時只寫 B5"
+ ],
+ "min_beats": 5,
+ "max_beats": 10
+}

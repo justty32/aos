@@ -1,0 +1,147 @@
+#!/usr/bin/env python3
+# plan_lint - beat 表的文法校驗：序列合 B0 B1 B2 B3+ (B4) B5 (B6) B7、B6 前要有拿書、必提關鍵詞有拍認領、拍數在範圍裡
+# 介面（proto8/lib/README 的契約）：stdin 一份 JSON {"plan": {"beats": [{"beat","who","do","must"}]}, "brief": 稿紙}
+#   或 {"plan", "brief_path": "cur/1.json#/brief"}（相對 $AOS_WS）。稿紙要有 cast、must_mention、beats（brief/tables/beats.json 原樣）。
+# 結果：stdout 一行 JSON {"violations": [{"rule", "beat": 第幾拍（1 起；0＝整張）, "reason"}], "counter_beats"}。檢出違規不是錯，退 0。
+# 規則：beat_shape（一拍不是 {beat, who, do, must[]}）、beat_unknown（拍名不在 brief.beats）、who_unknown（不在 cast 也不是「旁白」）、
+#   grammar（產生式＋c1 B5 在 B3 後＋c3 B5／B6 可對調；連著同名的幾拍算一拍，所以 B3+ 與一拍兩人說都合法）、
+#   must_assigned（brief.must_mention 每組至少被一拍的 must 認領）、b6_needs_pickup（c2）、beats_count（拍數在 min_beats～max_beats）。
+# 錯：stderr 與 stdout 各一行「plan_lint: 代號 原因」、退 1——ArgumentsBad、WsMissing、PathBad、BriefMissing、BriefBad、PointerBad、PointerMissing。
+# 自成一格（lib 契約 9）：brief_path 的解法跟 lint 一樣、各留一份。
+import json, os, sys
+
+NAME = "plan_lint"
+NARRATOR = "旁白"
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)
+    sys.exit(1)
+
+
+def resolve(ref):
+    """「檔#/指標」相對 $AOS_WS → 那個位置的值。"""
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "沒設定 AOS_WS 或它不是資料夾")
+    path, _, pointer = ref.partition("#")
+    if not path:
+        die("ArgumentsBad", "brief_path 缺檔名：%s" % ref)
+    root = os.path.realpath(ws)
+    full = os.path.realpath(os.path.join(root, path))
+    if full != root and not full.startswith(root + os.sep):
+        die("PathBad", "%s 跑出工作區" % path)
+    try:
+        with open(full, encoding="utf-8") as f:
+            value = json.load(f)
+    except FileNotFoundError:
+        die("BriefMissing", "%s 不在" % path)
+    except (OSError, ValueError) as e:
+        die("BriefBad", "%s 讀不了或不是 JSON：%s" % (path, e))
+    if pointer and not pointer.startswith("/"):
+        die("PointerBad", "指標要以 / 開頭：#%s" % pointer)
+    for part in pointer.split("/")[1:] if pointer else []:
+        part = part.replace("~1", "/").replace("~0", "~")
+        if isinstance(value, dict) and part in value:
+            value = value[part]
+        elif isinstance(value, list) and part.isdigit() and int(part) < len(value):
+            value = value[int(part)]
+        else:
+            die("PointerMissing", "%s 裡指不到 #%s" % (path, pointer))
+    return value
+
+
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict):
+    die("ArgumentsBad", "stdin 要是 JSON 物件")
+plan = args.get("plan")
+if not isinstance(plan, dict) or not isinstance(plan.get("beats"), list):
+    die("ArgumentsBad", "缺 plan（要 {\"beats\": [...]}）")
+if isinstance(args.get("brief"), dict):
+    brief = args["brief"]
+elif isinstance(args.get("brief_path"), str):
+    brief = resolve(args["brief_path"])
+else:
+    die("ArgumentsBad", "brief（稿紙物件）與 brief_path（cur/<n>.json#/brief）都沒給")
+try:
+    table = brief["beats"]
+    known = [b["beat"] for b in table["beats"]]
+    who_ok = {lab for c in brief["cast"] for lab in c.get("labels", [c["display"]])} | {NARRATOR}
+    lo, hi = int(table.get("min_beats", 5)), int(table.get("max_beats", 10))
+except (KeyError, TypeError, ValueError) as e:
+    die("BriefBad", "稿紙缺格（cast、beats）：%s" % e)
+
+violations = []
+
+
+def bad(rule, k, reason):
+    violations.append({"rule": rule, "beat": k, "reason": reason})
+
+
+beats = []                                       # (第幾拍, 拍物件)；形狀壞的不進後面的規則
+for k, b in enumerate(plan["beats"], 1):
+    if not (isinstance(b, dict) and all(isinstance(b.get(x), str) for x in ("beat", "who", "do"))
+            and isinstance(b.get("must", []), list)):
+        bad("beat_shape", k, "第 %d 拍要是 {beat, who, do, must[]}：%s" % (k, json.dumps(b, ensure_ascii=False)[:80]))
+        continue
+    beats.append((k, b))
+for k, b in beats:
+    if b["beat"] not in known:
+        bad("beat_unknown", k, "第 %d 拍的 %s 不在 beat 清單（%s）" % (k, b["beat"], " ".join(known)))
+    if b["who"] not in who_ok:
+        bad("who_unknown", k, "第 %d 拍的 who「%s」不在場（只能是 %s）" % (k, b["who"], "、".join(sorted(who_ok))))
+
+# grammar：連著同名的幾拍併成一拍，再走一個小狀態機（不用正則）
+seq = []                                         # (拍名, 第一拍的序號)
+for k, b in beats:
+    if b["beat"] in known and (not seq or seq[-1][0] != b["beat"]):
+        seq.append((b["beat"], k))
+
+
+def nexts(last, seen):
+    if last is None:
+        return ["B0"]
+    table_ = {"B0": ["B1"], "B1": ["B2"], "B2": ["B3"], "B3": ["B4", "B5", "B6"], "B4": ["B5", "B6"],
+              "B5": ["B7"] + ([] if "B6" in seen else ["B6"]),
+              "B6": ["B7"] if "B5" in seen else ["B5"]}
+    return table_.get(last, [])
+
+
+last, seen, broken = None, set(), False
+for name, k in seq:
+    ok = nexts(last, seen)
+    if name not in ok:
+        hint = "（c1：B5 要在 B3 之後）" if name == "B5" and "B3" not in seen else ""
+        where = "開頭" if last is None else "%s 後面" % last
+        bad("grammar", k, "第 %d 拍 %s 不能放在%s：這裡只能接 %s%s（文法 %s）" % (
+            k, name, where, "／".join(ok) or "（已收尾）", hint, table.get("grammar", "")))
+        broken = True
+        break
+    last = name
+    seen.add(name)
+if not broken and seq and last != "B7":
+    bad("grammar", 0, "序列停在 %s，沒走到 B7 收尾（接下來只能是 %s；文法 %s）" % (
+        last, "／".join(nexts(last, seen)), table.get("grammar", "")))
+if not seq and not broken:
+    bad("grammar", 0, "一拍都沒有")
+
+for group in brief.get("must_mention", []):
+    alts = group if isinstance(group, list) else [group]
+    if not any(a in (b.get("must") or []) for _, b in beats for a in alts):
+        bad("must_assigned", 0, "必提的「%s」沒有一拍認領（某一拍的 must 寫其中一個）" % "／".join(alts))
+
+for i, (k, b) in enumerate(beats):
+    if b["beat"] == "B6":
+        if not any("書" in p["do"] for _, p in beats[:i]):
+            bad("b6_needs_pickup", k, "第 %d 拍蓋章（B6）之前沒有拿書／買書的一拍（c2：蓋章要有東西可蓋）" % k)
+        break
+
+n = len(plan["beats"])
+if not (lo <= n <= hi):
+    bad("beats_count", 0, "%d 拍，要 %d～%d 拍（跟台詞句數同量級）" % (n, lo, hi))
+print(json.dumps({"violations": violations, "counter_beats": n}, ensure_ascii=False))

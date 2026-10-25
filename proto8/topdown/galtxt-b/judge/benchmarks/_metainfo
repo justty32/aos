@@ -1,0 +1,6 @@
+{"summary": "corpus/評測 挖空題的抄本（context、挖空對白、正解、評分要點），只給 judge 當打分依據；writer 看不到",
+ "kind": "data",
+ "resource": "disk",
+ "side_effect": false,
+ "deterministic": true,
+ "source": "~/repo/ai_core/sub_projs/galtxt/corpus/評測/（只讀）"}

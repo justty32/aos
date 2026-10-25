@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+# deliver - 有 $AOS_STACK/score.json 就交件：寫 $AOS_WS/out/<題名>/{answer.txt,score.json,check.json,measure.json}、題目 cur/→done/、清掉這題在 stack 的檔；沒有就什麼都不做
+# measure.json＝這一題的實跑數字（round2 §4），在清 stack 之前彙整，不另算：
+#   頂層 trace.jsonl 裡「這題的那幾行」（結束時間不早於 brief.json 寫下的時間）→ 每格 elapsed_ms 加總、圈數（brief 那格跑了幾次）、總時間；
+#   director／writer／critic 小格的 llm.jsonl → 問腦次數、token；trace.jsonl → 各自的牆上時間（round3 起 director、critic 縮成單發腦函數、小格沒有 trace.jsonl：
+#   沒有 trace 就拿 llm.jsonl 的 elapsed_ms 加總代替＝只算問腦的時間，少了 python 起動與寫檔的幾十 ms）；check.json 的 history → 寫了幾稿；
+#   writer 的 history.jsonl 裡叫 lint 的 tool_calls → 自檢幾次。deliver 自己那格還沒進 trace，用自己量的時間。
+# 可重跑：中途被殺再跑一次，寫過的覆寫、搬過的不搬、清過的不清。自己的錯退 1（StackMissing、CurrentMissing、DraftMissing）。
+import json, os, shutil, sys, time
+from datetime import datetime
+
+t_start = time.time()
+
+
+def die(code, reason):
+    print("deliver: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def jsonl(path):
+    out = []
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    out.append(json.loads(line))
+                except ValueError:
+                    pass                         # 量測讀不懂的那行跳過，不擋交件
+    except OSError:
+        pass
+    return out
+
+
+def jload(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def epoch(iso):
+    try:
+        return datetime.fromisoformat(iso).timestamp()
+    except (TypeError, ValueError):
+        return None
+
+
+def measure(name, stack):
+    brief = jload(os.path.join(stack, "brief.json")) or {}
+    check = jload(os.path.join(stack, "check.json")) or {}
+    score = jload(os.path.join(stack, "score.json")) or {}
+    try:
+        since = os.path.getmtime(os.path.join(stack, "brief.json")) - 0.005   # brief 那格寫完稿紙的時間；上一題的格都在這之前結束
+    except OSError:
+        since = None
+    rows = []
+    for t in jsonl(os.path.join(stack, "trace.jsonl")):
+        s = epoch(t.get("started_at"))
+        if s is not None and since is not None and s + (t.get("elapsed_ms") or 0) / 1000 >= since:
+            rows.append((s, t))
+    cells = {}
+    for _, t in rows:
+        c = cells.setdefault(t.get("state"), {"elapsed_ms": 0})
+        c["elapsed_ms"] += int(t.get("elapsed_ms") or 0)
+    cells["deliver"] = {"elapsed_ms": cells.get("deliver", {}).get("elapsed_ms", 0) + int((time.time() - t_start) * 1000)}
+    agents = {}
+    for who in ("director", "writer", "critic"):
+        calls = jsonl(os.path.join(stack, who, "llm.jsonl"))
+        llm_ms = sum(int(c.get("elapsed_ms") or 0) for c in calls)
+        trace_path = os.path.join(stack, who, "trace.jsonl")
+        agents[who] = {"counter_llm_calls": len(calls),
+                       "counter_tokens": sum(int(c.get("counter_tokens") or 0) for c in calls),
+                       "llm_elapsed_ms": llm_ms,
+                       "elapsed_ms": sum(int(t.get("elapsed_ms") or 0) for t in jsonl(trace_path)) if os.path.exists(trace_path) else llm_ms}
+    lint_calls = sum(1 for m in jsonl(os.path.join(stack, "writer", "history.jsonl")) if m.get("role") == "assistant"
+                     for c in (m.get("tool_calls") or []) if (c.get("function") or {}).get("name") == "lint")
+    try:
+        plans = len([n for n in os.listdir(os.path.join(stack, "director", "ws", "out")) if n.endswith(".txt")])
+    except OSError:
+        plans = 0
+    return {"name": name, "benchmark": (brief.get("scene") or {}).get("benchmark"),
+            "elapsed_ms": int((time.time() - rows[0][0]) * 1000) if rows else None,
+            "counter_cycles": sum(1 for _, t in rows if t.get("state") == "brief"),
+            "counter_drafts": len(check.get("history") or []),
+            "counter_plans": plans,
+            "counter_lint_calls": lint_calls,
+            "counter_llm_calls": sum(a["counter_llm_calls"] for a in agents.values()),
+            "counter_tokens": sum(a["counter_tokens"] for a in agents.values()),
+            "cells": cells, "agents": agents,
+            "score": {"total": score.get("total"), "tier0": (score.get("tier0") or {}).get("score"),
+                      "tier1": (score.get("tier1") or {}).get("score"), "tier2": (score.get("tier2") or {}).get("semantic")}}
+
+
+def put(path, data):                             # N-05
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(data)
+    os.replace(tmp, path)
+
+
+stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
+if not stack:
+    die("StackMissing", "沒設定 AOS_STACK")
+score_path = os.path.join(stack, "score.json")
+if not os.path.exists(score_path):
+    sys.exit(0)                                  # 還沒打分，不是我的回合
+try:
+    with open(os.path.join(stack, "current.txt"), encoding="utf-8") as f:
+        name = f.read().strip()
+except FileNotFoundError:
+    die("CurrentMissing", "current.txt 不在")
+try:
+    with open(os.path.join(stack, "draft.json"), encoding="utf-8") as f:
+        text = json.load(f).get("text") or ""
+except (OSError, ValueError) as e:
+    die("DraftMissing", "draft.json 讀不了：%s" % e)
+
+out_dir = os.path.join(ws, "out", name)
+os.makedirs(out_dir, exist_ok=True)
+os.makedirs(os.path.join(ws, "done"), exist_ok=True)
+put(os.path.join(out_dir, "answer.txt"), text if text.endswith("\n") else text + "\n")
+for n in ("score.json", "check.json"):
+    src = os.path.join(stack, n)
+    if os.path.exists(src):
+        shutil.copyfile(src, os.path.join(out_dir, "." + n))
+        os.replace(os.path.join(out_dir, "." + n), os.path.join(out_dir, n))
+if os.path.exists(os.path.join(stack, "brief.json")) or not os.path.exists(os.path.join(out_dir, "measure.json")):
+    put(os.path.join(out_dir, "measure.json"), json.dumps(measure(name, stack), ensure_ascii=False, indent=1) + "\n")   # 上次清到一半被殺＝量測已寫過、別拿殘缺的蓋掉
+src = os.path.join(ws, "cur", name + ".json")
+if os.path.exists(src):
+    shutil.move(src, os.path.join(ws, "done", name + ".json"))
+for n in ("brief.json", "plan.json", "draft.json", "check.json", "score.json", "current.txt"):   # 這題在 stack 的東西；小格由叫它們的格自己管
+    try:
+        os.remove(os.path.join(stack, n))
+    except FileNotFoundError:
+        pass

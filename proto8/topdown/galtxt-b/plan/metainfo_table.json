@@ -1,0 +1,1006 @@
+{
+ "root": "..",
+ "measures": [
+  "q01_河鹿堂讓書",
+  "q08_河鹿堂進新書日"
+ ],
+ "counter_rows": 27,
+ "rows": [
+  {
+   "path": ".",
+   "source": "_metainfo",
+   "kind": "fn",
+   "summary": "galtxt-b：工作區 new/<題名>.json 的場景（兩人、一地、一事、意圖）→ out/<題名>/answer.txt 一小段 galgame 台詞＋score.json＋measure.json；確定性護欄、beat 文法、打分用純程式，排節拍、寫稿與語意分問腦",
+   "resource": [
+    "llm",
+    "cpu"
+   ],
+   "time_ms": {
+    "val": 26000,
+    "max": 900000
+   },
+   "llm_calls": {
+    "val": 3,
+    "max": 11
+   },
+   "llm_tokens": {
+    "val": 7000,
+    "max": 45000
+   },
+   "deterministic": false,
+   "side_effect": true,
+   "interrupt": "resumable",
+   "parallel": true,
+   "other": {
+    "llm_endpoint": "http://localhost:4000/v1",
+    "llm_model": "chatgpt-gpt-6-luna-low",
+    "idempotent": false,
+    "lock": [
+     {
+      "$env": "AOS_WS",
+      "$prefix": "ws:"
+     }
+    ],
+    "reads": [
+     "$AOS_WS/new/*.json",
+     "$AOS_WS/cur/*.json"
+    ],
+    "writes": [
+     "$AOS_WS/cur/",
+     "$AOS_WS/done/",
+     "$AOS_WS/out/<題名>/{answer.txt,score.json,check.json,measure.json}",
+     "$AOS_STACK/*"
+    ],
+    "grow_level": 5,
+    "per_question": {
+     "counter_cycles": {
+      "val": 1,
+      "max": 3
+     },
+     "counter_llm_calls": {
+      "val": 3,
+      "max": 11
+     },
+     "note": "一圈＝六格；check 打回就再一圈（最多 1＋max_redrafts 圈）；loop.json 的 max 30 是整次呼叫的圈數上限。問腦：director 1～2＋writer 每稿 1～3（自檢）×最多 3 稿＋critic 1"
+    }
+   },
+   "measured": {
+    "q01_河鹿堂讓書": {
+     "time_ms": 19321,
+     "llm_calls": 5,
+     "llm_tokens": 23074
+    },
+    "q08_河鹿堂進新書日": {
+     "time_ms": 13748,
+     "llm_calls": 4,
+     "llm_tokens": 17485
+    }
+   }
+  },
+  {
+   "path": "brief",
+   "source": "brief/_metainfo",
+   "kind": "fn",
+   "summary": "認領一題場景 JSON，查 tables/ 編成稿紙 brief.json（人物卡、稱謂階、地點硬設定、禁語、開場收尾、few-shot 樣本、beat 文法）；已有 brief.json 就什麼都不做",
+   "resource": [
+    "cpu",
+    "disk"
+   ],
+   "time_ms": {
+    "val": 60,
+    "max": 2000
+   },
+   "deterministic": true,
+   "side_effect": true,
+   "interrupt": "safe",
+   "parallel": false,
+   "other": {
+    "idempotent": true,
+    "reads": [
+     "$AOS_WS/new/*.json",
+     "$AOS_WS/cur/*.json",
+     "tables/*.json"
+    ],
+    "writes": [
+     "$AOS_WS/cur/<題名>.json（從 new/ 搬來）",
+     "$AOS_STACK/current.txt",
+     "$AOS_STACK/brief.json"
+    ],
+    "grow_level": 4,
+    "tier": "固化階梯 1～3 級（查表、規則分支、模板），執行期零 LLM"
+   },
+   "measured": {
+    "q01_河鹿堂讓書": {
+     "time_ms": 20
+    },
+    "q08_河鹿堂進新書日": {
+     "time_ms": 20
+    }
+   }
+  },
+  {
+   "path": "brief/tables",
+   "source": "brief/tables/_metainfo",
+   "kind": "data",
+   "summary": "brief 查的規則表：人物卡、稱謂階、地點卡、禁語、開場收尾句、samples.json（語料錨：別題的前後文）、beats.json（定點 01 的 beat 文法）——從 galtxt corpus 手工蒸餾的快取，不是函數",
+   "resource": "disk",
+   "deterministic": true,
+   "side_effect": false,
+   "other": {
+    "source": "~/repo/ai_core/sub_projs/galtxt/corpus/{人物,固化,世界,評測}（只讀）",
+    "refresh": "之後由 distill/（工廠期、LLM）從 corpus 重算；現在手改"
+   }
+  },
+  {
+   "path": "check",
+   "source": "check/_metainfo",
+   "kind": "fn",
+   "summary": "黏合格：叫 tools/lint 拿 violations（Tier 0 護欄、Tier 1 語域），算 pass／final，寫 check.json；判定是資料不是錯，永遠退 0",
+   "resource": "cpu",
+   "time_ms": {
+    "val": 80,
+    "max": 2000
+   },
+   "deterministic": true,
+   "side_effect": true,
+   "interrupt": "safe",
+   "parallel": false,
+   "other": {
+    "idempotent": true,
+    "reads": [
+     "$AOS_STACK/brief.json",
+     "$AOS_STACK/draft.json",
+     "$AOS_STACK/check.json（上一稿的，留 history）"
+    ],
+    "writes": [
+     "$AOS_STACK/check.json",
+     "$AOS_STACK/lint/（空小格）"
+    ],
+    "grow_level": 4,
+    "tier": "評分級聯 Tier 0＋Tier 1（免費、確定性）；pass＝Tier 0 全過且 Tier 1 ≤ 1；final＝pass 或已到 max_redrafts",
+    "calls": [
+     "tools/lint"
+    ]
+   },
+   "measured": {
+    "q01_河鹿堂讓書": {
+     "time_ms": 45
+    },
+    "q08_河鹿堂進新書日": {
+     "time_ms": 44
+    }
+   }
+  },
+  {
+   "path": "check/tools/lint",
+   "source": "check/tools/lint",
+   "kind": "link",
+   "summary": "捷徑 → ../../lib/lint",
+   "other": {}
+  },
+  {
+   "path": "check/tools",
+   "source": "check/tools/_metainfo",
+   "kind": "dir",
+   "summary": "check 格叫的工具：lint（相對捷徑指 lib/lint）",
+   "other": {}
+  },
+  {
+   "path": "deliver",
+   "source": "deliver/_metainfo",
+   "kind": "fn",
+   "summary": "有 score.json 就交件：寫 $AOS_WS/out/<題名>/{answer.txt,score.json,check.json,measure.json}（measure＝彙整這題的實跑數字）、題目 cur/→done/、清掉這題在 stack 的檔；沒有就什麼都不做",
+   "resource": [
+    "cpu",
+    "disk"
+   ],
+   "time_ms": {
+    "val": 20,
+    "max": 1000
+   },
+   "deterministic": true,
+   "side_effect": true,
+   "interrupt": "resumable",
+   "parallel": false,
+   "other": {
+    "idempotent": true,
+    "reads": [
+     "$AOS_STACK/score.json",
+     "$AOS_STACK/current.txt",
+     "$AOS_STACK/draft.json",
+     "$AOS_STACK/check.json",
+     "$AOS_STACK/brief.json",
+     "$AOS_STACK/trace.jsonl",
+     "$AOS_STACK/{writer,director,critic}/llm.jsonl",
+     "$AOS_STACK/writer/trace.jsonl（director、critic 是單發腦函數、沒有 trace：拿 llm.jsonl 的 elapsed_ms 代替）",
+     "$AOS_STACK/writer/history.jsonl"
+    ],
+    "writes": [
+     "$AOS_WS/out/<題名>/",
+     "$AOS_WS/done/<題名>.json",
+     "$AOS_STACK/{brief,plan,draft,check,score}.json、current.txt（刪）"
+    ],
+    "grow_level": 3,
+    "note": "round3 撤回 shrink_candidate：第 2 輪加了 measure 之後它讀 9 種輸入、算 7 個 counter，不薄了；量測彙整跟交件是兩件事，但只有 deliver 一個呼叫者，先不拆"
+   },
+   "measured": {
+    "q01_河鹿堂讓書": {
+     "time_ms": 0
+    },
+    "q08_河鹿堂進新書日": {
+     "time_ms": 0
+    }
+   }
+  },
+  {
+   "path": "draft",
+   "source": "draft/_metainfo",
+   "kind": "fn",
+   "summary": "黏合格，兩步：沒 plan.json 先叫 tools/director 出 beat 表、tools/plan_lint 校驗（最多 2 次）；再叫 tools/writer 照表寫一稿（第 2 稿起附 check 的打回理由），收成 draft.json；稿已定就什麼都不做",
+   "resource": [
+    "llm",
+    "cpu"
+   ],
+   "time_ms": {
+    "val": 16000,
+    "max": 600000
+   },
+   "llm_calls": {
+    "val": 2,
+    "max": 5
+   },
+   "llm_tokens": {
+    "val": 4300,
+    "max": 15000
+   },
+   "deterministic": false,
+   "side_effect": true,
+   "interrupt": "resumable",
+   "parallel": false,
+   "other": {
+    "llm_endpoint": "http://localhost:4000/v1",
+    "llm_model": "chatgpt-gpt-6-luna-low",
+    "idempotent": false,
+    "reads": [
+     "$AOS_STACK/brief.json",
+     "$AOS_STACK/check.json",
+     "$AOS_STACK/plan.json"
+    ],
+    "writes": [
+     "$AOS_STACK/draft.json",
+     "$AOS_STACK/plan.json",
+     "$AOS_STACK/director/（director 的小格與工作區 ws/）",
+     "$AOS_STACK/plan_lint/（空小格）",
+     "$AOS_STACK/writer/（writer 的小格與工作區 ws/）"
+    ],
+    "grow_level": 4,
+    "calls": [
+     "tools/director（單發腦函數，grow_level 4：_entry 單子＋ask.py；小格 $AOS_STACK/director/；沒 plan.json 時才叫，一題最多 2 次，第 2 次同小格續聊）",
+     "tools/plan_lint（純函數，真資料夾；round3 從 lib/ 搬回）",
+     "tools/writer（agent，小格 $AOS_STACK/writer/，工作區 $AOS_STACK/writer/ws/）"
+    ],
+    "note": "llm_* 是外層作者自報＝這一格跑一次的 director＋writer（M6 外層贏）：第 1 稿 director 1～2＋writer 1～3，第 2、3 稿只有 writer；這一格自己不問腦"
+   },
+   "measured": {
+    "q01_河鹿堂讓書": {
+     "time_ms": 16632,
+     "llm_calls": 4,
+     "llm_tokens": 19459
+    },
+    "q08_河鹿堂進新書日": {
+     "time_ms": 11280,
+     "llm_calls": 3,
+     "llm_tokens": 13925
+    }
+   },
+   "over_max": [
+    "q01_河鹿堂讓書 llm_tokens 19459>15000"
+   ]
+  },
+  {
+   "path": "draft/tools",
+   "source": "draft/tools/_metainfo",
+   "kind": "dir",
+   "summary": "draft 格叫的工具（資料夾程式；C-61 工具放在叫它的那一格自己的資料夾裡）：director（單發腦函數，出 beat 表）、plan_lint（真資料夾，round3 從 lib/ 搬回來：只有 draft 叫它）、writer",
+   "other": {}
+  },
+  {
+   "path": "draft/tools/director",
+   "source": "draft/tools/director/_metainfo",
+   "kind": "fn",
+   "summary": "規劃節拍的單發腦函數：工作區 new/<n>.json 是稿紙（第 2 次附 plan_lint 的理由），問腦一次，答案 out/<n>.txt 是 beat 表 JSON（每拍誰、做什麼、帶哪個關鍵詞）；同一個 stack 再叫＝接著上一張表聊",
+   "resource": [
+    "llm",
+    "cpu"
+   ],
+   "time_ms": {
+    "val": 6000,
+    "max": 150000
+   },
+   "llm_calls": {
+    "val": 1,
+    "max": 1
+   },
+   "llm_tokens": {
+    "val": 1800,
+    "max": 4000
+   },
+   "deterministic": false,
+   "side_effect": true,
+   "interrupt": "safe",
+   "parallel": true,
+   "other": {
+    "llm_endpoint": "http://localhost:4000/v1",
+    "llm_model": "chatgpt-gpt-6-luna-low",
+    "idempotent": false,
+    "lock": [
+     {
+      "$env": "AOS_STACK",
+      "$prefix": "stack:"
+     }
+    ],
+    "reads": [
+     "$AOS_WS/new/*.json",
+     "$AOS_WS/cur/*.json",
+     "$AOS_STACK/history.jsonl",
+     "system.txt"
+    ],
+    "writes": [
+     "$AOS_WS/out/<n>.txt",
+     "$AOS_WS/done/",
+     "$AOS_STACK/{history.jsonl,current.txt,llm.jsonl}"
+    ],
+    "grow_level": 4,
+    "shape": "單發腦函數（_entry 單子＋ask.py；round3 由 loop→fsm idle→think→act 收攏）",
+    "tier": "galtxt 五層的 L1／L2（場景規劃、beat 展開）"
+   },
+   "measured": {
+    "q01_河鹿堂讓書": {
+     "time_ms": 7332,
+     "llm_calls": 1,
+     "llm_tokens": 3610
+    },
+    "q08_河鹿堂進新書日": {
+     "time_ms": 4499,
+     "llm_calls": 1,
+     "llm_tokens": 3448
+    }
+   }
+  },
+  {
+   "path": "draft/tools/director/_entry",
+   "source": "draft/tools/director/_metainfo",
+   "kind": "單子",
+   "summary": "規劃節拍的單發腦函數：工作區 new/<n>.json 是稿紙（第 2 次附 plan_lint 的理由），問腦一次，答案 out/<n>.txt 是 beat 表 JSON（每拍誰、做什麼、帶哪個關鍵詞）；同一個 stack 再叫＝接著上一張表聊",
+   "resource": [
+    "llm",
+    "cpu"
+   ],
+   "time_ms": {
+    "val": 6000,
+    "max": 150000
+   },
+   "llm_calls": {
+    "val": 1,
+    "max": 1
+   },
+   "llm_tokens": {
+    "val": 1800,
+    "max": 4000
+   },
+   "deterministic": false,
+   "side_effect": true,
+   "interrupt": "safe",
+   "parallel": true,
+   "other": {
+    "llm_endpoint": "http://localhost:4000/v1",
+    "llm_model": "chatgpt-gpt-6-luna-low",
+    "idempotent": false,
+    "lock": [
+     {
+      "$env": "AOS_STACK",
+      "$prefix": "stack:"
+     }
+    ],
+    "reads": [
+     "$AOS_WS/new/*.json",
+     "$AOS_WS/cur/*.json",
+     "$AOS_STACK/history.jsonl",
+     "system.txt"
+    ],
+    "writes": [
+     "$AOS_WS/out/<n>.txt",
+     "$AOS_WS/done/",
+     "$AOS_STACK/{history.jsonl,current.txt,llm.jsonl}"
+    ],
+    "grow_level": 4,
+    "shape": "單發腦函數（_entry 單子＋ask.py；round3 由 loop→fsm idle→think→act 收攏）",
+    "tier": "galtxt 五層的 L1／L2（場景規劃、beat 展開）"
+   },
+   "measured": {
+    "q01_河鹿堂讓書": {
+     "time_ms": 7332,
+     "llm_calls": 1,
+     "llm_tokens": 3610
+    },
+    "q08_河鹿堂進新書日": {
+     "time_ms": 4499,
+     "llm_calls": 1,
+     "llm_tokens": 3448
+    }
+   }
+  },
+  {
+   "path": "draft/tools/plan_lint",
+   "source": "draft/tools/plan_lint/_metainfo",
+   "kind": "fn",
+   "summary": "beat 表的文法校驗：序列合 B0 B1 B2 B3+ (B4) B5 (B6) B7（c1 B5 在 B3 後、c3 B5／B6 可對調）、B6 前要有拿書、每組必提關鍵詞有一拍認領、拍數在 beats.json 的範圍（5～10）→ violations",
+   "resource": "cpu",
+   "time_ms": {
+    "val": 20,
+    "max": 1000
+   },
+   "deterministic": true,
+   "side_effect": false,
+   "interrupt": "safe",
+   "parallel": true,
+   "other": {
+    "idempotent": true,
+    "reads": [
+     "stdin",
+     "$AOS_WS/<brief_path>（給了才讀）"
+    ],
+    "writes": [
+     "stdout"
+    ],
+    "grow_level": 4,
+    "tier": "固化階梯第 2 級（規則分支）：定點 01 的 beat 文法",
+    "callers": [
+     "draft/（黏合格，驗 director 的表）"
+    ]
+   }
+  },
+  {
+   "path": "draft/tools/writer",
+   "source": "draft/tools/writer/_metainfo",
+   "kind": "fn",
+   "summary": "寫稿的 agent：工作區 new/<n>.json 是稿紙＋beat 表（第 2 稿起附打回理由），問腦寫一稿，可叫 lint 自檢（最多兩次），答案寫 out/<n>.txt；同一個 stack 再叫＝接著上一稿聊",
+   "resource": [
+    "llm",
+    "cpu"
+   ],
+   "time_ms": {
+    "val": 10000,
+    "max": 400000
+   },
+   "llm_calls": {
+    "val": 1,
+    "max": 3
+   },
+   "llm_tokens": {
+    "val": 3000,
+    "max": 11000
+   },
+   "deterministic": false,
+   "side_effect": true,
+   "interrupt": "resumable",
+   "parallel": true,
+   "other": {
+    "llm_endpoint": "http://localhost:4000/v1",
+    "llm_model": "chatgpt-gpt-6-luna-low",
+    "idempotent": false,
+    "lock": [
+     {
+      "$env": "AOS_STACK",
+      "$prefix": "stack:"
+     }
+    ],
+    "reads": [
+     "$AOS_WS/new/*.json",
+     "$AOS_WS/cur/*.json",
+     "$AOS_WS/cur/<n>.json#/brief（經 lint）",
+     "$AOS_STACK/history.jsonl",
+     "system.txt"
+    ],
+    "writes": [
+     "$AOS_WS/out/<n>.txt",
+     "$AOS_WS/done/",
+     "$AOS_STACK/{history.jsonl,current.txt,state.txt,trace.jsonl,llm.jsonl}",
+     "$AOS_STACK/lint/（lint 的小格，空的）"
+    ],
+    "grow_level": 5,
+    "shape": "demo/agent-dan（idle→think→act）",
+    "calls": [
+     "tools/lint"
+    ]
+   },
+   "measured": {
+    "q01_河鹿堂讓書": {
+     "time_ms": 9191,
+     "llm_calls": 3,
+     "llm_tokens": 15849
+    },
+    "q08_河鹿堂進新書日": {
+     "time_ms": 6674,
+     "llm_calls": 2,
+     "llm_tokens": 10477
+    }
+   },
+   "over_max": [
+    "q01_河鹿堂讓書 llm_tokens 15849>11000"
+   ]
+  },
+  {
+   "path": "draft/tools/writer/fsm.json#/states/think/exec",
+   "source": "draft/tools/writer/fsm.json#/states/think/exec",
+   "kind": "單子",
+   "summary": "問腦一次：把 brief＋beat 表（或打回理由、lint 的結果）送去，收回一稿台詞或一次 lint 呼叫",
+   "resource": "llm",
+   "time_ms": {
+    "val": 8000,
+    "max": 180000
+   },
+   "llm_calls": 1,
+   "llm_tokens": {
+    "val": 2500,
+    "max": 11000
+   },
+   "deterministic": false,
+   "side_effect": false,
+   "interrupt": "safe",
+   "other": {
+    "llm_endpoint": "http://localhost:4000/v1",
+    "llm_model": "chatgpt-gpt-6-luna-low",
+    "idempotent": false
+   },
+   "measured": {
+    "q01_河鹿堂讓書": {
+     "time_ms": 2973,
+     "llm_calls": 1,
+     "llm_tokens": 5283
+    },
+    "q08_河鹿堂進新書日": {
+     "time_ms": 3246,
+     "llm_calls": 1,
+     "llm_tokens": 5238
+    }
+   }
+  },
+  {
+   "path": "draft/tools/writer/fsm.json#/states/act/exec",
+   "source": "draft/tools/writer/fsm.json#/states/act/exec",
+   "kind": "單子",
+   "summary": "照腦的最後一則回覆動手：有 tool_calls 就叫 tools/<名>（lint）、結果接回 history；沒有就寫成 out/<n>.txt、題目 cur/→done/",
+   "resource": "cpu",
+   "time_ms": {
+    "val": 100,
+    "max": 30000
+   },
+   "deterministic": true,
+   "side_effect": true,
+   "interrupt": "safe",
+   "other": {
+    "idempotent": true
+   }
+  },
+  {
+   "path": "draft/tools/writer/idle",
+   "source": "draft/tools/writer/idle/_metainfo",
+   "kind": "fn",
+   "summary": "看工作區還有沒有題目：有退 0、沒有退 10 讓 loop 停",
+   "resource": "cpu",
+   "time_ms": {
+    "val": 5,
+    "max": 100
+   },
+   "deterministic": true,
+   "side_effect": false,
+   "interrupt": "safe",
+   "parallel": true,
+   "other": {
+    "idempotent": true,
+    "reads": [
+     "$AOS_WS/cur/*.json",
+     "$AOS_WS/new/*.json"
+    ],
+    "writes": []
+   }
+  },
+  {
+   "path": "draft/tools/writer/tools/lint",
+   "source": "draft/tools/writer/tools/lint",
+   "kind": "link",
+   "summary": "捷徑 → ../../../../lib/lint",
+   "other": {}
+  },
+  {
+   "path": "draft/tools/writer/tools",
+   "source": "draft/tools/writer/tools/_metainfo",
+   "kind": "dir",
+   "summary": "writer 的腦叫的工具：lint（相對捷徑指 lib/lint；交稿前自檢）",
+   "other": {}
+  },
+  {
+   "path": "examples",
+   "source": "examples/_metainfo",
+   "kind": "data",
+   "summary": "範例場景 JSON（題目的形狀）：複製到工作區 new/ 就能跑；q01、q08 各對應 judge/benchmarks 一題",
+   "resource": "disk",
+   "deterministic": true,
+   "side_effect": false,
+   "other": {}
+  },
+  {
+   "path": "idle",
+   "source": "idle/_metainfo",
+   "kind": "fn",
+   "summary": "看工作區 cur/ 或 new/ 還有沒有場景 JSON：有退 0 往下走一圈，沒有退 10 讓 loop 停",
+   "resource": "cpu",
+   "time_ms": {
+    "val": 5,
+    "max": 100
+   },
+   "deterministic": true,
+   "side_effect": false,
+   "interrupt": "safe",
+   "parallel": true,
+   "other": {
+    "idempotent": true,
+    "reads": [
+     "$AOS_WS/cur/*.json",
+     "$AOS_WS/new/*.json"
+    ],
+    "writes": [],
+    "grow_level": 3
+   }
+  },
+  {
+   "path": "judge",
+   "source": "judge/_metainfo",
+   "kind": "fn",
+   "summary": "黏合格：check 定稿後把 brief、定稿、benchmarks/<id>.json 正解交給 tools/critic 打語意分，和 check 的 Tier 0／1 合成 score.json（0～6）；沒定稿或已打分就什麼都不做",
+   "resource": [
+    "llm",
+    "cpu"
+   ],
+   "time_ms": {
+    "val": 7500,
+    "max": 300000
+   },
+   "llm_calls": {
+    "val": 1,
+    "max": 1
+   },
+   "llm_tokens": {
+    "val": 2200,
+    "max": 4500
+   },
+   "deterministic": false,
+   "side_effect": true,
+   "interrupt": "resumable",
+   "parallel": false,
+   "other": {
+    "llm_endpoint": "http://localhost:4000/v1",
+    "llm_model": "chatgpt-gpt-6-luna-low",
+    "idempotent": false,
+    "reads": [
+     "$AOS_STACK/check.json",
+     "$AOS_STACK/brief.json",
+     "$AOS_STACK/draft.json",
+     "benchmarks/<id>.json"
+    ],
+    "writes": [
+     "$AOS_STACK/score.json",
+     "$AOS_STACK/critic/（critic 的小格與工作區，每次清掉重來；含 llm.jsonl）"
+    ],
+    "grow_level": 4,
+    "calls": [
+     "tools/critic（單發腦函數，grow_level 4：_entry 單子＋ask.py）"
+    ],
+    "tier": "評分級聯 Tier 2（LLM judge，受治理：程式算的語域分與它給的對照、不合就是訊號）",
+    "note": "llm_* 等於 tools/critic 的（M6 外層贏）"
+   },
+   "measured": {
+    "q01_河鹿堂讓書": {
+     "time_ms": 2601,
+     "llm_calls": 1,
+     "llm_tokens": 3615
+    },
+    "q08_河鹿堂進新書日": {
+     "time_ms": 2380,
+     "llm_calls": 1,
+     "llm_tokens": 3560
+    }
+   }
+  },
+  {
+   "path": "judge/benchmarks",
+   "source": "judge/benchmarks/_metainfo",
+   "kind": "data",
+   "summary": "corpus/評測 挖空題的抄本（context、挖空對白、正解、評分要點），只給 judge 當打分依據；writer 看不到",
+   "resource": "disk",
+   "deterministic": true,
+   "side_effect": false,
+   "other": {
+    "source": "~/repo/ai_core/sub_projs/galtxt/corpus/評測/（只讀）"
+   }
+  },
+  {
+   "path": "judge/tools",
+   "source": "judge/tools/_metainfo",
+   "kind": "dir",
+   "summary": "judge 格叫的工具（資料夾程式）：critic",
+   "other": {}
+  },
+  {
+   "path": "judge/tools/critic",
+   "source": "judge/tools/critic/_metainfo",
+   "kind": "fn",
+   "summary": "打分的單發腦函數：工作區 new/<n>.json 是稿子＋場景＋benchmark，問腦一次，答案 out/<n>.txt 是一份 JSON 分數；單發、每次新對話",
+   "resource": [
+    "llm",
+    "cpu"
+   ],
+   "time_ms": {
+    "val": 7000,
+    "max": 150000
+   },
+   "llm_calls": {
+    "val": 1,
+    "max": 1
+   },
+   "llm_tokens": {
+    "val": 2200,
+    "max": 4500
+   },
+   "deterministic": false,
+   "side_effect": true,
+   "interrupt": "safe",
+   "parallel": true,
+   "other": {
+    "llm_endpoint": "http://localhost:4000/v1",
+    "llm_model": "chatgpt-gpt-6-luna-low",
+    "idempotent": false,
+    "reads": [
+     "$AOS_WS/new/*.json",
+     "$AOS_WS/cur/*.json",
+     "system.txt"
+    ],
+    "writes": [
+     "$AOS_WS/out/<n>.txt",
+     "$AOS_WS/done/",
+     "$AOS_STACK/{history.jsonl,current.txt,llm.jsonl}"
+    ],
+    "grow_level": 4,
+    "shape": "單發腦函數（_entry 單子＋ask.py；round3 由 loop→fsm idle→think→act 收攏）"
+   },
+   "measured": {
+    "q01_河鹿堂讓書": {
+     "time_ms": 2521,
+     "llm_calls": 1,
+     "llm_tokens": 3615
+    },
+    "q08_河鹿堂進新書日": {
+     "time_ms": 2303,
+     "llm_calls": 1,
+     "llm_tokens": 3560
+    }
+   }
+  },
+  {
+   "path": "judge/tools/critic/_entry",
+   "source": "judge/tools/critic/_metainfo",
+   "kind": "單子",
+   "summary": "打分的單發腦函數：工作區 new/<n>.json 是稿子＋場景＋benchmark，問腦一次，答案 out/<n>.txt 是一份 JSON 分數；單發、每次新對話",
+   "resource": [
+    "llm",
+    "cpu"
+   ],
+   "time_ms": {
+    "val": 7000,
+    "max": 150000
+   },
+   "llm_calls": {
+    "val": 1,
+    "max": 1
+   },
+   "llm_tokens": {
+    "val": 2200,
+    "max": 4500
+   },
+   "deterministic": false,
+   "side_effect": true,
+   "interrupt": "safe",
+   "parallel": true,
+   "other": {
+    "llm_endpoint": "http://localhost:4000/v1",
+    "llm_model": "chatgpt-gpt-6-luna-low",
+    "idempotent": false,
+    "reads": [
+     "$AOS_WS/new/*.json",
+     "$AOS_WS/cur/*.json",
+     "system.txt"
+    ],
+    "writes": [
+     "$AOS_WS/out/<n>.txt",
+     "$AOS_WS/done/",
+     "$AOS_STACK/{history.jsonl,current.txt,llm.jsonl}"
+    ],
+    "grow_level": 4,
+    "shape": "單發腦函數（_entry 單子＋ask.py；round3 由 loop→fsm idle→think→act 收攏）"
+   },
+   "measured": {
+    "q01_河鹿堂讓書": {
+     "time_ms": 2521,
+     "llm_calls": 1,
+     "llm_tokens": 3615
+    },
+    "q08_河鹿堂進新書日": {
+     "time_ms": 2303,
+     "llm_calls": 1,
+     "llm_tokens": 3560
+    }
+   }
+  },
+  {
+   "path": "lib",
+   "source": "lib/_metainfo",
+   "kind": "dir",
+   "summary": "galtxt-b 自己的函式庫：被兩處以上叫的純函數（stdin 一份 JSON → stdout 一行 JSON，照 proto8/lib 的契約）；格與 agent 用相對捷徑掛進自己的 tools/。現在只有 lint（check 與 writer 兩個呼叫者）；plan_lint 只有 draft 一個呼叫者，round3 搬回 draft/tools/plan_lint/",
+   "other": {}
+  },
+  {
+   "path": "lib/lint",
+   "source": "lib/lint/_metainfo",
+   "kind": "fn",
+   "summary": "稿子的確定性檢核：格式、護欄關鍵詞、禁語、地點穿幫（Tier 0）；稱謂階、感嘆號、口頭禪、句長、旁白預算（Tier 1）→ violations；只報事實不判 pass",
+   "resource": "cpu",
+   "time_ms": {
+    "val": 30,
+    "max": 1000
+   },
+   "deterministic": true,
+   "side_effect": false,
+   "interrupt": "safe",
+   "parallel": true,
+   "other": {
+    "idempotent": true,
+    "reads": [
+     "stdin",
+     "$AOS_WS/<brief_path>（給了才讀）"
+    ],
+    "writes": [
+     "stdout"
+    ],
+    "grow_level": 4,
+    "tier": "評分級聯 Tier 0＋Tier 1",
+    "callers": [
+     "check/（格，內嵌 brief）",
+     "draft/tools/writer/（腦自檢，brief_path）"
+    ]
+   }
+  }
+ ],
+ "gaps": [
+  {
+   "path": "draft/tools/writer",
+   "measure": "q01_河鹿堂讓書",
+   "key": "llm_tokens",
+   "val": 3000,
+   "measured": 15849,
+   "ratio": 5.283
+  },
+  {
+   "path": "draft",
+   "measure": "q01_河鹿堂讓書",
+   "key": "llm_tokens",
+   "val": 4300,
+   "measured": 19459,
+   "ratio": 4.525
+  },
+  {
+   "path": "draft/tools/writer",
+   "measure": "q08_河鹿堂進新書日",
+   "key": "llm_tokens",
+   "val": 3000,
+   "measured": 10477,
+   "ratio": 3.492
+  },
+  {
+   "path": ".",
+   "measure": "q01_河鹿堂讓書",
+   "key": "llm_tokens",
+   "val": 7000,
+   "measured": 23074,
+   "ratio": 3.296
+  },
+  {
+   "path": "draft",
+   "measure": "q08_河鹿堂進新書日",
+   "key": "llm_tokens",
+   "val": 4300,
+   "measured": 13925,
+   "ratio": 3.238
+  },
+  {
+   "path": "judge",
+   "measure": "q08_河鹿堂進新書日",
+   "key": "time_ms",
+   "val": 7500,
+   "measured": 2380,
+   "ratio": 0.317
+  },
+  {
+   "path": "judge/tools/critic/_entry",
+   "measure": "q08_河鹿堂進新書日",
+   "key": "time_ms",
+   "val": 7000,
+   "measured": 2303,
+   "ratio": 0.329
+  },
+  {
+   "path": "judge/tools/critic",
+   "measure": "q08_河鹿堂進新書日",
+   "key": "time_ms",
+   "val": 7000,
+   "measured": 2303,
+   "ratio": 0.329
+  },
+  {
+   "path": "draft/tools/writer",
+   "measure": "q01_河鹿堂讓書",
+   "key": "llm_calls",
+   "val": 1,
+   "measured": 3,
+   "ratio": 3.0
+  },
+  {
+   "path": "brief",
+   "measure": "q08_河鹿堂進新書日",
+   "key": "time_ms",
+   "val": 60,
+   "measured": 20,
+   "ratio": 0.333
+  },
+  {
+   "path": "brief",
+   "measure": "q01_河鹿堂讓書",
+   "key": "time_ms",
+   "val": 60,
+   "measured": 20,
+   "ratio": 0.333
+  },
+  {
+   "path": "judge",
+   "measure": "q01_河鹿堂讓書",
+   "key": "time_ms",
+   "val": 7500,
+   "measured": 2601,
+   "ratio": 0.347
+  },
+  {
+   "path": "judge/tools/critic/_entry",
+   "measure": "q01_河鹿堂讓書",
+   "key": "time_ms",
+   "val": 7000,
+   "measured": 2521,
+   "ratio": 0.36
+  },
+  {
+   "path": "judge/tools/critic",
+   "measure": "q01_河鹿堂讓書",
+   "key": "time_ms",
+   "val": 7000,
+   "measured": 2521,
+   "ratio": 0.36
+  },
+  {
+   "path": "draft/tools/writer/fsm.json#/states/think/exec",
+   "measure": "q01_河鹿堂讓書",
+   "key": "time_ms",
+   "val": 8000,
+   "measured": 2973,
+   "ratio": 0.372
+  }
+ ]
+}

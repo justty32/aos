@@ -1,0 +1,187 @@
+#!/usr/bin/env python3
+# lint - 稿子的確定性檢核：格式、護欄關鍵詞、禁語、地點穿幫、稱謂階、感嘆號、口頭禪、句長、旁白預算
+# 介面（proto8/lib/README 的契約）：stdin 一份 JSON {"text": 稿子, "brief": 稿紙} 或 {"text", "brief_path": "cur/1.json#/brief"}
+#   （brief_path 相對 $AOS_WS、`檔#/指標` 寫法——腦自檢時用，不用把整份稿紙再送一遍）。
+# 結果：stdout 一行 JSON {"violations": [{"tier": 0|1, "rule", "line": 行號（0＝整篇）, "text", "reason"}],
+#   "counter_dialogue_lines", "counter_narration_lines"}。只報事實、不判 pass（pass／final 是 check 格的事）。檢出違規不是錯，退 0。
+# 錯：stderr 與 stdout 各一行「lint: 代號 原因」、退 1——ArgumentsBad（stdin 不是 JSON 物件、沒 text、brief 與 brief_path 都沒給）、
+#   WsMissing、PathBad（brief_path 跑出 $AOS_WS）、BriefMissing、BriefBad（檔不是 JSON、稿紙缺格、稱謂 regex 壞）、PointerBad、PointerMissing。
+# 規則從第 1 輪 check/_entry 搬來（九條）＋ narration_max（旁白行數 > brief.lines.narration_max，預設 4；定點 05 的旁白預算）。
+# 自成一格（lib 契約 9）：不 import 隔壁；格（check）與腦（writer）各用自己的方式叫它。
+import json, os, re, sys
+
+NAME = "lint"
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)                                  # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def resolve(ref):
+    """「檔#/指標」相對 $AOS_WS → 那個位置的值。自己切 # 與 /，不用 aos-directive。"""
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "沒設定 AOS_WS 或它不是資料夾")
+    path, _, pointer = ref.partition("#")
+    if not path:
+        die("ArgumentsBad", "brief_path 缺檔名：%s" % ref)
+    root = os.path.realpath(ws)
+    full = os.path.realpath(os.path.join(root, path))
+    if full != root and not full.startswith(root + os.sep):
+        die("PathBad", "%s 跑出工作區" % path)
+    try:
+        with open(full, encoding="utf-8") as f:
+            value = json.load(f)
+    except FileNotFoundError:
+        die("BriefMissing", "%s 不在" % path)
+    except (OSError, ValueError) as e:
+        die("BriefBad", "%s 讀不了或不是 JSON：%s" % (path, e))
+    if pointer and not pointer.startswith("/"):
+        die("PointerBad", "指標要以 / 開頭：#%s" % pointer)
+    for part in pointer.split("/")[1:] if pointer else []:
+        part = part.replace("~1", "/").replace("~0", "~")
+        if isinstance(value, dict) and part in value:
+            value = value[part]
+        elif isinstance(value, list) and part.isdigit() and int(part) < len(value):
+            value = value[int(part)]
+        else:
+            die("PointerMissing", "%s 裡指不到 #%s" % (path, pointer))
+    return value
+
+
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict):
+    die("ArgumentsBad", "stdin 要是 JSON 物件")
+text = args.get("text")
+if not isinstance(text, str):
+    die("ArgumentsBad", "缺 text（整段稿子，字串）")
+if isinstance(args.get("brief"), dict):
+    brief = args["brief"]
+elif isinstance(args.get("brief_path"), str):
+    brief = resolve(args["brief_path"])
+else:
+    die("ArgumentsBad", "brief（稿紙物件）與 brief_path（cur/<n>.json#/brief）都沒給")
+try:
+    cast = {c["display"]: c for c in brief["cast"]}
+    label_of = {lab: c["display"] for c in brief["cast"] for lab in c.get("labels", [c["display"]])}
+    lines_cfg = brief["lines"]
+    place = brief["place"]
+except (KeyError, TypeError) as e:
+    die("BriefBad", "稿紙缺格：%s" % e)
+
+violations = []
+lines = text.splitlines()
+
+
+def bad(tier, rule, line_no, line, reason):
+    violations.append({"tier": tier, "rule": rule, "line": line_no, "text": line, "reason": reason})
+
+
+# 先把稿子拆成三種行：【標題】／（旁白）／名：「台詞」
+dialogue, narration = [], []                     # (行號, 說話者, 台詞)、(行號, 行)
+for i, raw in enumerate(lines, 1):
+    line = raw.strip()
+    if not line:
+        continue
+    if line.startswith("【") and line.endswith("】"):
+        continue
+    if line.startswith("（") and line.endswith("）"):
+        narration.append((i, line))
+        continue
+    m = re.match(r"^(\S+?)[：:]\s*「(.*)」$", line)
+    if not m:
+        bad(0, "format", i, line, "不是三種格式之一（【標題】、（旁白）、名：「台詞」）")
+        continue
+    speaker, said = m.group(1), m.group(2)
+    if speaker not in label_of:
+        bad(0, "speaker", i, line, "說話的人不在場：%s（在場：%s）" % (speaker, "、".join(cast)))
+        continue
+    dialogue.append((i, label_of[speaker], said))
+
+
+def r_line_count():
+    lo, hi = lines_cfg["min"], lines_cfg["max"]
+    if not (lo <= len(dialogue) <= hi):
+        bad(0, "line_count", 0, "", "台詞 %d 句，要 %d～%d 句" % (len(dialogue), lo, hi))
+
+
+def r_must_mention():                            # 每組擇一命中
+    for group in brief.get("must_mention", []):
+        alts = group if isinstance(group, list) else [group]
+        if not any(a in text for a in alts):
+            bad(0, "must_mention", 0, "", "沒提到 %s" % "／".join(alts))
+
+
+def r_banned():
+    for tier_name, words in brief.get("banned", {}).items():
+        for w in words:
+            for i, raw in enumerate(lines, 1):
+                if w in raw:
+                    bad(0, "banned_" + tier_name, i, raw.strip(), "禁語（%s 類）：%s" % (tier_name, w))
+
+
+def r_place_canon():
+    for w in place.get("wrong_names", []):
+        for i, raw in enumerate(lines, 1):
+            if w in raw:
+                bad(0, "place_canon", i, raw.strip(), "地點穿幫：%s（這裡是%s）" % (w, place.get("display", "")))
+
+
+def r_address():
+    for i, who, said in dialogue:
+        a = cast[who]["address"]
+        for pat in a["forbidden"]:
+            try:
+                hit = re.search(pat, said)
+            except re.error as e:
+                die("BriefBad", "稱謂 regex 壞了：%s（%s）" % (pat, e))
+            if hit:
+                bad(1, "address", i, said, "%s 這一階（%d）不該這樣叫%s：合的叫法是 %s" % (
+                    who, a["level"], a["other"], "、".join(a["allowed"])))
+                break
+
+
+def r_line_length():
+    for i, who, said in dialogue:
+        top = cast[who]["budget"].get("line_chars_max", 40)
+        if len(said) > top:
+            bad(1, "line_length", i, said, "%s 的一句太長（%d 字，上限 %d）——含蓄系要短" % (who, len(said), top))
+
+
+def r_exclaim():
+    for who, card in cast.items():
+        n = sum(s.count("！") for _, w, s in dialogue if w == who)
+        if n > card["budget"].get("exclaim_max", 2):
+            bad(1, "exclaim", 0, "", "%s 用了 %d 個感嘆號，上限 %d" % (who, n, card["budget"]["exclaim_max"]))
+
+
+def r_catchphrase():
+    for who, card in cast.items():
+        n = sum(s.count(c) for _, w, s in dialogue if w == who for c in card.get("catchphrases", []))
+        if n > card["budget"].get("catchphrase_max", 2):
+            bad(1, "catchphrase", 0, "", "%s 的口頭禪用了 %d 次，上限 %d（撒太密會假）" % (who, n, card["budget"]["catchphrase_max"]))
+
+
+def r_narration_max():
+    top = int(lines_cfg.get("narration_max", 4))
+    if len(narration) > top:
+        bad(1, "narration_max", 0, "", "旁白 %d 行，上限 %d（太多旁白＝說明腔；旁白只寫光、聲、味與小動作）" % (len(narration), top))
+
+
+# 規則表（format、speaker 在上面拆行時就判了）：名字、tier、函數——要加一條就加一行
+RULES = [("line_count", 0, r_line_count), ("must_mention", 0, r_must_mention), ("banned", 0, r_banned),
+         ("place_canon", 0, r_place_canon), ("address", 1, r_address), ("line_length", 1, r_line_length),
+         ("exclaim", 1, r_exclaim), ("catchphrase", 1, r_catchphrase), ("narration_max", 1, r_narration_max)]
+try:
+    for _, _, rule in RULES:
+        rule()
+except (KeyError, TypeError) as e:
+    die("BriefBad", "稿紙缺格：%s" % e)
+print(json.dumps({"violations": violations, "counter_dialogue_lines": len(dialogue),
+                  "counter_narration_lines": len(narration)}, ensure_ascii=False))

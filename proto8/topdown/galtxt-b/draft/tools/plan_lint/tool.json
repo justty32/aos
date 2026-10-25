@@ -1,0 +1,5 @@
+{"description": "檢查一張 beat 表合不合文法（B0 B1 B2 B3+ (B4) B5 (B6) B7、反差在話題後、蓋章前要拿書、必提關鍵詞都有拍認領）。回 {violations:[...]}。",
+ "parameters": {"type": "object",
+                "properties": {"plan": {"type": "object", "description": "{beats:[{beat,who,do,must}]}"},
+                               "brief_path": {"type": "string", "description": "固定寫 cur/<n>.json#/brief"}},
+                "required": ["plan", "brief_path"]}}

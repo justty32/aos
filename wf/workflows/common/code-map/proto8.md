@@ -41,5 +41,6 @@ LLM kernel 兩支（`aos-kernel-llm`、`aos-gate`，10-24）的逐檔表另開�
 - demo 的 talk、self-improve、pi-tools、file-tools、kernel-llm 頂層：[proto8/05-demo-其他](proto8/05-demo-其他.md)、[05-demo-其他-2](proto8/05-demo-其他-2.md)。
 - proto8 頂層新資料夾 human、ai_tools、grow、langs/janet、langs/lua、editors/nvim、sandbox：[proto8/06-周邊工具](proto8/06-周邊工具.md)、[06-周邊工具-2](proto8/06-周邊工具-2.md)；`proto8/lib`（函式庫，10-24 下午遷移後三層）：[proto8/09-lib](proto8/09-lib.md)。
 - 10-24 新增的測試檔：[proto8/08-tests-10-24](proto8/08-tests-10-24.md)。
+- 10-25 由上而下拆（乙隊 galtxt-b）：[proto8/10-topdown-galtxt-b](proto8/10-topdown-galtxt-b.md)。
 
 改 proto8 的檔就同步那份。
