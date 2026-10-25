@@ -78,7 +78,7 @@
 
 - **`_metainfo` 再往下**：讀法集中在 `aos/kernel_llm.hpp` 的 `priority_of`；要加 `llm_tokens` 預估額度、閘門多帶 `from`（單子在哪）做按函數統計，都改這裡與 served 那行（metainfo 紀錄 § 5 第二步）。
 - **token 回報**：照上面的決定開 `AOS_KERNEL_REPORT`，kernel 在 `run_runner` 裡設、跑完讀回、記進 `served.jsonl` 與額度。〔10-24 下午做了，見下一節〕
-- **其他從 agent-dan 抄的 agent 沒改**（agent-eve〔含 `tools/pyfix/agent`〕、fay、meg、pip、kai、liv、hal、`talk/member`、`self-improve/improver`）：它們現在直接問腦、不走 kernel，看不到 `AOS_KERNEL_REPORT` 也不需要；哪隻要改走 kernel，照 agent-dan 的 `brain.py` 抄那五行。
+- **其他從 agent-dan 抄的 agent 沒改**（agent-eve〔含 `tools/pyfix/agent`〕、fay、meg、pip、kai、liv、hal、`talk/member`、`self-improve/improver`）：它們現在直接問腦、不走 kernel，看不到 `AOS_KERNEL_REPORT` 也不需要；哪隻要改走 kernel，照 agent-dan 的 `brain.py` 抄那五行。〔10-24 下午遷移時這幾隻都補上了那五行（[tool-lib 遷移完成第 10 項](2026-10-24-tool-lib.md#遷移完成10-24-下午照推薦做可翻案)）。10-25 盤點（使用者「可以直接派人做的就去做」）：真的走 kernel 的只有 demo/kernel-llm 的 agent-ivy，已經會寫；agent-gus 的 `shared.py`、agent-hal 的 `compact/ask.py` 問腦寫法不同、也沒走 kernel，照「沒走 kernel 的不動」不改，哪天包進 aos-gate 再照抄〕
 
 <a id="token-回報與額度10-24-下午"></a>
 ## token 回報與額度（10-24 下午）
