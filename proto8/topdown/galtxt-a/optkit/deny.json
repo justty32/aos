@@ -1,0 +1,11 @@
+{"source": "optkit 的拒絕清單（人寫；round4-selfopt.md § 1.1、§ 5）：路徑相對樹根、glob（* 不過 /、** 過）。always＝永遠拒、優先於任何子樹的 opt_writes；unless_named＝除非白名單逐字點名（voice／beat 的 _entry）；新建的工具資料夾（opt_writes 的「資料夾/*/」、原樹沒有的）不受這兩張限制。read_deny＝opt_read 也不准讀（正解、訓練程式、測試）。anchors＝accept 時拷貝 vs 原樹 sha256 要一樣（尺、測試、宣告；白名單點名的除外）。ignore＝diff 不看、也不搬回（跑題時長出來的）",
+ "always": ["**/_metainfo", "**/fsm.json", "**/loop.json", "**/brain.py", "**/act.py", "**/.env",
+            "data/dims.json", "data/lint_switches.json", "data/templates.json", "data/bench/**",
+            "data/cast.json", "data/styles.json", "data/places.json", "data/cast/**", "data/style/**", "data/place/**", "data/scene/**",
+            "tools/lint/**", "grader/**", "train/**", "optkit/**", "plan/**", "meta/**", "human/**",
+            "**/ratings.json", "**/grad.json", "**/rollup.json", "**/human.json", "proto8/tests/**"],
+ "unless_named": ["**/_entry"],
+ "read_deny": ["data/bench/**", "train/**", "proto8/tests/**"],
+ "anchors": ["data/dims.json", "data/lint_switches.json", "data/templates.json", "tools/lint/**", "grader/**", "train/**", "data/bench/**",
+             "**/_metainfo", "**/fsm.json", "**/_entry"],
+ "ignore": ["**/__pycache__/**", "**/hard.jsonl"]}

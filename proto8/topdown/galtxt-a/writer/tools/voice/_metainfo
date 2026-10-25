@@ -4,5 +4,6 @@
  "side_effect": false, "idempotent": true, "deterministic": true, "interrupt": "safe", "parallel": true,
  "reads": [], "writes": [],
  "fs_needs": ["tool_json"], "callers": 1,
+ "opt_writes": ["_entry", "tool.json#/description", "tool.json#/parameters/properties#append"],
  "grad": {"$ref": "grad.json"},
  "rollup": {"$ref": "rollup.json"}}

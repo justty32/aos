@@ -1,0 +1,10 @@
+{"summary": "claude code CLI 當優化工具（使用者 10-25「在這套工具包尚未成熟前，可以先由claude code代勞，或是乾脆工具就是呼叫claude code cli」）：在 selfopt 的拷貝裡、cwd＝被優化的子樹，非互動跑一次 claude -p；改了什麼一律交 optkit/accept 判；每次的 token／美元／輪數／秒數記 optkit/usage.jsonl。腦只用 gpt 的例外（只當優化工具）",
+ "kind": "agent", "grow_level": 5, "role": "dev",
+ "time_ms": {"val": 120000, "max": 600000},
+ "resource": ["llm", "cpu"],
+ "llm_calls": {"val": 10, "max": 30}, "llm_tokens": {"val": 200000, "max": 1000000},
+ "llm_model": "sonnet（cli.json）", "llm_endpoint": "claude code CLI（PATH 上的 claude；測試放假的）",
+ "side_effect": true, "idempotent": false, "deterministic": false, "interrupt": "safe", "parallel": false,
+ "reads": ["stdin:{node, tree, prompt}", "optkit:claude/cli.json"],
+ "writes": ["copy:node 底下（claude 自己改；accept 判）", "stack:claude.json", "stack:usage.json", "env:OPTKIT_USAGE（optkit/usage.jsonl 追加一行）"],
+ "fs_needs": ["mount"], "callers": 1}

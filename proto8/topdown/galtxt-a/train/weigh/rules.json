@@ -1,0 +1,16 @@
+{"source": "判斷兩份梯度 diff 誰好的優先序（round4 § 4.4；人寫第一版；train/weigh 在 agent 階當指引、rules 階 rules.py 照表執行）；只有人改——優化器、判斷器、selfopt 都不准碰（改了＝改損失函數）。步驟 5 實作者加了 cost.llm_calls 兩列（假腦沒有 token，llm_calls 才看得到殼拿掉）",
+ "reject_if": [
+  {"key": "dims.護欄", "lt": 0, "label": "護欄掉"},
+  {"key": "bench.guard_hit", "drops": true, "label": "Q16 錨掉（guard_hit）"},
+  {"key": "val", "drops": true, "label": "評級掉",
+   "unless": [{"key": "cost.llm_tokens", "to_zero": true, "and": {"key": "total_avg", "ge": "-min_loss"}},
+              {"key": "cost.llm_calls", "to_zero": true, "and": {"key": "total_avg", "ge": "-min_loss"}}]},
+  {"key": "total_avg", "lt": "-min_loss", "label": "分掉超過 min_loss"}],
+ "prefer": [
+  {"key": "val", "rises": true, "label": "評級升"},
+  {"key": "cost.llm_tokens", "le": -0.3, "relative": true, "label": "token 省三成"},
+  {"key": "cost.llm_calls", "le": -0.3, "relative": true, "label": "腦呼叫省三成"},
+  {"key": "determinism", "ge": 0.1, "only_if_before_lt": 1.0, "label": "確定性升"},
+  {"key": "total_avg", "ge": "min_gain", "label": "分升"},
+  {"key": "tags.+", "contains_any": ["嘴硬心軟", "承接自然", "有留白"], "label": "好標籤多了"}],
+ "tie": "B"}

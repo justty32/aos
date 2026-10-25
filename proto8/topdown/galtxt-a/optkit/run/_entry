@@ -1,0 +1,212 @@
+#!/usr/bin/env python3
+# run - selfopt 派工（round4-selfopt.md § 1.2 的 1～2、§ 3）：run <子樹> --task task.json [--cell 小格] [--by auto|node|shell|claude] [--runs 訓練小格] [--epoch N]
+# 1. 整棵 galtxt-a 拷到 <小格>/tree/proto8/topdown/galtxt-a（捷徑照捷徑；不拷 plan／meta／.git；optkit 換成指回原樹的捷徑＝工具永遠跑原樹那份、拷貝裡改不到；
+#    <小格>/tree/proto8/lib 指回真的 lib）；訓練題（set.json 的 train＋measure，不含驗證題）拷到 <小格>/questions/。
+# 2. 白名單從**原樹**算（optkit_common.allow_entries），經 OPTKIT_ALLOW 給工具；任務寫進 <小格>/ws/new/task.json（task、subtree、history、budget）。
+# 3. 誰來改（--by，預設 auto）：node＝子樹自己是 agent（有 brain.py、stage.json 是 agent／semi）→ GALTXT_OPT=1 aos-exec 拷貝裡的那棵；
+#    shell＝其餘（純程式節點）→ aos-exec optkit/shell（OPTKIT_SUBTREE 指那棵）；claude＝optkit/claude（claude code CLI，cwd＝拷貝裡的子樹；花費記 optkit/usage.jsonl）。
+# 4. 預算（optkit/budget.json，task.json 的 budget 只能壓低）：node／shell 數 history 的 assistant 則數與 usage.jsonl 的 token、牆鐘；claude 用 --max-turns、--max-budget-usd、逾時。
+#    到頂＝先 TERM 再 KILL（P-36）、BudgetSpent、退 1；什麼都不搬（本來就只動拷貝）。
+# 寫 <小格>/run.json {subtree, by, orig, tree, task, exit, counter_calls, tokens, elapsed_ms, budget_spent, answer}；stdout 一行摘要＋一行小格路徑。搬回是 optkit/accept 的事。
+# 小格預設 $AOS_STACK/selfopt/<子樹（/ 換 _）>/NNN/。
+# 錯：stderr 一行「run: 代號 原因」、退 1——ArgumentsBad、StackMissing、SubtreeBad、TaskBad、CellExists、RunFailed、BudgetSpent。
+import json, os, shutil, signal, subprocess, sys, time
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import optkit_common as oc  # noqa: E402
+
+NAME = "run"
+KIT = oc.HERE
+ORIG = os.path.dirname(KIT)
+
+
+def die(code, reason):
+    print("%s: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
+    sys.exit(1)
+
+
+def parse(argv):
+    opts, pos, i = {"by": "auto"}, [], 0
+    while i < len(argv):
+        a = argv[i]
+        if a in ("--task", "--cell", "--by", "--runs", "--epoch"):
+            if i + 1 >= len(argv):
+                die("ArgumentsBad", "%s 要一個值" % a)
+            opts[a[2:]] = argv[i + 1]
+            i += 2
+        elif a.startswith("--"):
+            die("ArgumentsBad", "不認得 %s" % a)
+        else:
+            pos.append(a)
+            i += 1
+    if len(pos) != 1 or "task" not in opts:
+        die("ArgumentsBad", "用法：run <子樹> --task task.json [--cell 小格] [--by auto|node|shell|claude] [--runs 訓練小格] [--epoch N]")
+    if opts["by"] not in ("auto", "node", "shell", "claude"):
+        die("ArgumentsBad", "--by 要是 auto／node／shell／claude")
+    return pos[0].strip("/"), opts
+
+
+def jload(p):
+    with open(p, encoding="utf-8") as f:
+        return json.load(f)
+
+
+sub, opts = parse(sys.argv[1:])
+if sub.split("/")[0] in oc.COPY_SKIP + ("train", "grader", "data", "human") or ".." in sub.split("/") or not os.path.isfile(os.path.join(ORIG, sub, "_metainfo")):
+    die("SubtreeBad", "%s 不是能優化的子樹（要有 _metainfo；train／grader／data／optkit… 不行）" % sub)
+try:
+    task = jload(opts["task"])
+    if not isinstance(task, dict) or not isinstance(task.get("task"), str) or not task["task"].strip():
+        raise ValueError("要是 JSON 物件、task 是非空字串")
+except (OSError, ValueError) as e:
+    die("TaskBad", "%s：%s" % (opts["task"], e))
+budget = {k: v for k, v in jload(os.path.join(KIT, "budget.json")).items() if k != "source"}
+for k, v in (task.get("budget") or {}).items():                  # 只能壓低
+    if k in budget and isinstance(v, (int, float)) and not isinstance(budget[k], dict):
+        budget[k] = min(budget[k], v)
+
+if opts.get("cell"):
+    cell = os.path.abspath(opts["cell"])
+    if os.path.exists(cell) and os.listdir(cell):
+        die("CellExists", "%s 已經有東西" % cell)
+    os.makedirs(cell, exist_ok=True)
+else:
+    stack = os.environ.get("AOS_STACK")
+    if not stack:
+        die("StackMissing", "沒設定 AOS_STACK（或給 --cell）")
+    cell = oc.fresh(os.path.join(stack, "selfopt", sub.replace("/", "_")))
+
+# 1. 拷貝
+tree = os.path.join(cell, "tree", "proto8", "topdown", "galtxt-a")
+skip_top = set(oc.COPY_SKIP)
+shutil.copytree(ORIG, tree, symlinks=True,
+                ignore=lambda d, names: [n for n in names if n == "__pycache__" or (os.path.samefile(d, ORIG) and n in skip_top)])
+os.symlink(KIT, os.path.join(tree, "optkit"))
+os.symlink(os.path.realpath(os.path.join(ORIG, "..", "..", "lib")), os.path.join(cell, "tree", "proto8", "lib"))
+qdir = os.path.join(cell, "questions")
+os.makedirs(qdir)
+heldout = []
+try:
+    sets = jload(os.path.join(ORIG, "train", "set.json"))
+    for q in list(sets.get("train") or []) + ([sets["measure"]] if sets.get("measure") else []):
+        src = os.path.join(ORIG, "plan", "examples", q)
+        if os.path.isfile(src):
+            shutil.copy(src, os.path.join(qdir, q))
+    for q in sets.get("verify") or []:
+        try:
+            d = jload(os.path.join(ORIG, "plan", "examples", q)).get("detail")
+            if d:
+                heldout.append(d)
+        except (OSError, ValueError):
+            pass
+except (OSError, ValueError):
+    pass
+allow = oc.allow_entries(ORIG, sub)
+
+# 2. 任務
+ws, st = os.path.join(cell, "ws"), os.path.join(cell, "stack")
+os.makedirs(os.path.join(ws, "new"))
+os.makedirs(st)
+body = dict(task, subtree=sub, budget={k: v for k, v in budget.items() if not isinstance(v, dict)})
+with open(os.path.join(ws, "new", "task.json"), "w", encoding="utf-8") as f:
+    json.dump(body, f, ensure_ascii=False, indent=1)
+by = opts["by"]
+if by == "auto":
+    try:
+        stage = jload(os.path.join(ORIG, sub, "stage.json")).get("stage")
+    except (OSError, ValueError, AttributeError):
+        stage = None
+    by = "node" if stage in ("agent", "semi") and os.path.isfile(os.path.join(ORIG, sub, "brain.py")) else "shell"
+env = oc.clean_env({"OPTKIT_TREE": tree, "OPTKIT_SUBTREE": sub, "OPTKIT_ALLOW": json.dumps(allow, ensure_ascii=False),
+                    "OPTKIT_ORIG": ORIG, "OPTKIT_HELDOUT": json.dumps(heldout, ensure_ascii=False), "OPTKIT_QUESTIONS": qdir,
+                    "OPTKIT_CELL": cell, "OPTKIT_HOME": KIT, "OPTKIT_RUNS": os.path.abspath(opts["runs"]) if opts.get("runs") else "",
+                    "OPTKIT_EPOCH": str(opts.get("epoch", "")), "GALTXT_OPT": "1", "AOS_STACK": st + "/"})
+for k in ("GALTXT_FAKE_OPT",):                                        # 測試用的壞劇本照傳
+    if os.environ.get(k):
+        env[k] = os.environ[k]
+
+
+def kill(p):
+    for sig, wait in ((signal.SIGTERM, 3), (signal.SIGKILL, 3)):
+        try:
+            os.killpg(p.pid, sig)
+        except ProcessLookupError:
+            return
+        try:
+            p.wait(wait)
+            return
+        except subprocess.TimeoutExpired:
+            continue
+
+
+def counts():
+    calls = tokens = 0
+    for d, _, files in os.walk(st):
+        if "history.jsonl" in files and os.path.samefile(d, st):
+            with open(os.path.join(d, "history.jsonl"), encoding="utf-8") as f:
+                calls = sum(1 for l in f if l.strip() and json.loads(l).get("role") == "assistant")
+        if "usage.jsonl" in files and os.path.samefile(d, st):
+            with open(os.path.join(d, "usage.jsonl"), encoding="utf-8") as f:
+                tokens = sum(int(json.loads(l).get("total_tokens") or 0) for l in f if l.strip())
+    return calls, tokens
+
+
+def prompt():
+    rules = "\n".join("- " + a for a in allow) or "-（沒有）"
+    return ("你在優化 galtxt-a（galgame 台詞管線）這棵樹裡的子樹 %s；cwd 就是它，整棵樹的拷貝在 %s（改壞了不影響原樹）。\n"
+            "任務：%s\n\n規矩（程式會驗收，違規整筆拒）：\n只准改這些（路徑相對樹根；#/指標＝只准改那個 JSON 位置；#append＝只准追加；資料夾/*/＝只准新建子資料夾）：\n%s\n"
+            "_metainfo、fsm.json、loop.json、brain.py、act.py、.env、data/dims.json、data/templates.json、data/bench、tools/lint、grader、train、測試一律不准碰；不准刪檔、不准建捷徑；"
+            "工具介面不變（既有參數與 required 不動，只能加選填參數）。改完由程式驗收（白名單、錨 sha256、測試）。"
+            "想改 _metainfo 的宣告就在 %s/opt_log.jsonl 追加一行 JSON {\"what\", \"why\", \"metainfo_suggest\"}。\n\n先前結果：\n%s\n\n"
+            "做完只回一段純文字：改了什麼、為什麼。"
+            % (sub, tree, task["task"], rules, sub, json.dumps(task.get("history"), ensure_ascii=False)[:20000]))
+
+
+t0 = time.monotonic()
+spent, log = None, open(os.path.join(cell, "run.log"), "w", encoding="utf-8")
+if by == "claude":
+    cb = budget.get("claude") or {}
+    args = {"node": os.path.join(tree, sub), "tree": tree, "prompt": prompt(), "subtree": sub,
+            "max_turns": cb.get("max_turns"), "max_budget_usd": cb.get("max_budget_usd"), "timeout_ms": budget["max_elapsed_ms"]}
+    cenv = dict(env, AOS_STACK=os.path.join(st, "claude") + "/", OPTKIT_USAGE=os.path.join(KIT, "usage.jsonl"))
+    r = subprocess.run([os.path.join(KIT, "claude", "_entry")], input=json.dumps(args, ensure_ascii=False), capture_output=True, text=True, env=cenv, cwd=cell)
+    log.write(r.stderr)
+    code, answer = r.returncode, r.stdout
+    if code != 0 and "BudgetSpent" in r.stdout + r.stderr:
+        spent = "claude（%s）" % r.stdout.strip()
+    try:
+        u = jload(os.path.join(st, "claude", "usage.json"))
+        calls, tokens = u.get("num_turns") or 0, u.get("total_tokens") or 0
+    except (OSError, ValueError):
+        calls = tokens = 0
+else:
+    target = os.path.join(tree, sub) if by == "node" else os.path.join(KIT, "shell")
+    p = subprocess.Popen(["aos-exec", "--dotenv-override", "--ws", ws, target], cwd=cell, env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
+    while p.poll() is None:
+        time.sleep(0.1)
+        c, t = counts()
+        el = (time.monotonic() - t0) * 1000
+        if c > budget["max_calls"] or t > budget["max_tokens"] or el > budget["max_elapsed_ms"]:
+            spent = "腦 %d／%d 則、token %d／%d、%d／%d ms" % (c, budget["max_calls"], t, budget["max_tokens"], el, budget["max_elapsed_ms"])
+            kill(p)
+            break
+    code = p.returncode
+    calls, tokens = counts()
+    if not spent and (calls > budget["max_calls"] or tokens > budget["max_tokens"]):
+        spent = "腦 %d／%d 則、token %d／%d" % (calls, budget["max_calls"], tokens, budget["max_tokens"])
+    try:
+        with open(os.path.join(ws, "out", "task.json"), encoding="utf-8") as f:
+            answer = f.read()
+    except OSError:
+        answer = None
+log.close()
+elapsed = int((time.monotonic() - t0) * 1000)
+oc.save(os.path.join(cell, "run.json"), {"subtree": sub, "by": by, "orig": ORIG, "tree": tree, "task": task["task"], "exit": code,
+                                         "counter_calls": calls, "tokens": tokens, "elapsed_ms": elapsed, "budget_spent": spent,
+                                         "allow": allow, "heldout": heldout, "answer": answer, "ran_at": oc.now()})
+if spent:
+    die("BudgetSpent", "%s 到頂，殺掉、不搬（%s）" % (spent, cell))
+if code != 0 or answer is None:
+    die("RunFailed", "%s 結束碼 %s、%s（現場 %s/run.log）" % (by, code, "沒有報告" if answer is None else "有報告", cell))
+print("run: %s by %s：%d 次腦、%d token、%d ms；報告：%s" % (sub, by, calls, tokens, elapsed, " ".join(answer.split())[:200]))
+print(cell)

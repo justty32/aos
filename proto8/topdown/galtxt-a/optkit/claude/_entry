@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+# claude - 工具包未成熟前由 claude code 代勞（使用者 10-25「乾脆工具就是呼叫claude code cli」）：stdin {"node", "tree", "prompt", "subtree"?, "max_turns"?, "max_budget_usd"?, "timeout_ms"?}
+# → 在拷貝裡的子樹（cwd＝node）跑一次 `claude -p`（非互動、一次一段新對話、不留 session），stdout 印它的回答（result）。
+# 旗標在同資料夾 cli.json（只准 Read／Edit／Write／Glob／Grep、沒有 Bash、不載 MCP、只讀 project 設定、acceptEdits＋沒人回權限提問＝自動拒、--add-dir 拷貝樹根）；
+# 另外用 --settings 拒讀 data/bench、train（正解與訓練程式）。它改了什麼一律交 optkit/accept 判（白名單＋錨 sha256＋opt_test），不靠它自律。
+# 這是「腦只用 gpt」的例外：只當優化工具；台詞樹的腦照舊 gpt。
+# 每次呼叫記一行花費（token、美元、輪數、秒數）到 $OPTKIT_USAGE（optkit/run 給 optkit/usage.jsonl）；原始輸出存 $AOS_STACK/claude.json、摘要 $AOS_STACK/usage.json。
+# 逾時（timeout_ms）＝先 TERM 再 KILL 整個行程組（P-36）、BudgetSpent；到 max_turns／max_budget_usd（claude 自己回 error_max_turns 之類）也是 BudgetSpent。
+# 錯：stderr 與 stdout 各一行「claude: 代號 原因」、退 1——ArgumentsBad、CliMissing、CliFailed、BudgetSpent。
+import json, os, signal, subprocess, sys, time
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import optkit_common as oc  # noqa: E402
+
+NAME = "claude"
+HERE = os.path.dirname(os.path.realpath(__file__))
+a = oc.args_in(NAME)
+for k in ("node", "tree", "prompt"):
+    if not isinstance(a.get(k), str) or not a[k].strip():
+        oc.die(NAME, "ArgumentsBad", "%s 要是非空字串" % k)
+node, tree = os.path.abspath(a["node"]), os.path.abspath(a["tree"])
+if not os.path.isdir(node) or not (node + "/").startswith(tree + "/"):
+    oc.die(NAME, "ArgumentsBad", "node 要是 tree 底下的資料夾")
+with open(os.path.join(HERE, "cli.json"), encoding="utf-8") as f:
+    cfg = json.load(f)
+deny = {"permissions": {"deny": ["Read(/%s/**)" % os.path.join(tree, d) for d in ("data/bench", "train")]}}
+argv = ["claude", "-p", "--output-format", "json"] + cfg.get("flags", []) + ["--add-dir", tree, "--settings", json.dumps(deny)]
+if isinstance(a.get("max_turns"), int):
+    argv += ["--max-turns", str(a["max_turns"])]
+if isinstance(a.get("max_budget_usd"), (int, float)):
+    argv += ["--max-budget-usd", str(a["max_budget_usd"])]
+timeout = (a.get("timeout_ms") if isinstance(a.get("timeout_ms"), int) else cfg.get("timeout_ms", 600000)) / 1000
+stack = os.environ.get("AOS_STACK") or os.path.join(node, "..", ".claude_stack")
+os.makedirs(stack, exist_ok=True)
+t0 = time.monotonic()
+try:
+    p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=node,
+                         env=oc.clean_env(), start_new_session=True)
+except FileNotFoundError:
+    oc.die(NAME, "CliMissing", "claude 不在 PATH 上")
+try:
+    out, err = p.communicate(a["prompt"], timeout=timeout)
+    timed_out = False
+except subprocess.TimeoutExpired:
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        try:
+            os.killpg(p.pid, sig)
+        except ProcessLookupError:
+            break
+        try:
+            p.wait(3)
+            break
+        except subprocess.TimeoutExpired:
+            continue
+    out, err = p.communicate()
+    timed_out = True
+elapsed = int((time.monotonic() - t0) * 1000)
+with open(os.path.join(stack, "claude.json"), "w", encoding="utf-8") as f:
+    f.write(out or "")
+try:
+    res = json.loads(out)
+    if not isinstance(res, dict):
+        raise ValueError("不是物件")
+except ValueError:
+    res = {}
+u = res.get("usage") or {}
+tok = {k: int(u.get(k) or 0) for k in ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")}
+row = {"at": oc.now(), "subtree": a.get("subtree"), "node": node, "models": sorted((res.get("modelUsage") or {}).keys()),
+       "cost_usd": res.get("total_cost_usd"), **tok, "total_tokens": sum(tok.values()), "num_turns": res.get("num_turns"),
+       "duration_ms": res.get("duration_ms"), "elapsed_ms": elapsed, "subtype": res.get("subtype"), "is_error": res.get("is_error"),
+       "exit": p.returncode, "timed_out": timed_out, "session_id": res.get("session_id"),
+       "flags": [x for x in argv[1:] if not x.startswith("{")]}
+oc.save(os.path.join(stack, "usage.json"), row)
+if os.environ.get("OPTKIT_USAGE"):
+    oc.append_line(os.environ["OPTKIT_USAGE"], row)
+if timed_out:
+    oc.die(NAME, "BudgetSpent", "超過 %g 秒，殺掉" % timeout)
+if str(res.get("subtype") or "").startswith("error_max") or res.get("terminal_reason") in ("max_turns", "max_budget"):
+    oc.die(NAME, "BudgetSpent", "claude 到頂（%s）" % (res.get("subtype") or res.get("terminal_reason")))
+if p.returncode != 0 or not res or res.get("is_error"):
+    oc.die(NAME, "CliFailed", "claude 結束碼 %s：%s %s" % (p.returncode, (out or "").strip()[-300:], (err or "").strip()[-300:]))
+print(res.get("result") or "")

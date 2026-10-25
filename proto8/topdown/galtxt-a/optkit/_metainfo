@@ -1,0 +1,11 @@
+{"summary": "自我優化工具包（round4-selfopt.md；使用者 10-25「額外給他相關工具包，跟他說請優化一些東西，並給予一些先前的執行結果，然後他就會自動去做」）：九支 opt_* 工具（節點在拷貝裡看自己、改自己、試跑、跑測試、記一筆）、shell/（純程式節點的臨時腦）、run（拷整棵樹到小格、派工、管預算）、accept（白名單＋錨 sha256＋opt_test，過了才搬回原樹、寫 changed.json）、claude/（工具包未成熟前由 claude code CLI 代勞：在同一個沙箱裡改，一樣交 accept 判）",
+ "kind": "program", "grow_level": 4, "role": "dev",
+ "time_ms": {"val": 60000, "max": 900000},
+ "resource": ["cpu", "disk"],
+ "side_effect": true, "idempotent": false, "deterministic": false, "interrupt": "safe", "parallel": false,
+ "reads": ["tree:**/_metainfo（opt_writes）", "tree:train/set.json", "tree:plan/examples/", "optkit:deny.json", "optkit:tests.json", "optkit:budget.json"],
+ "writes": ["stack:selfopt/<子樹>/NNN/", "tree:白名單內的檔（只有 accept）", "tree:optkit/usage.jsonl（claude 那條的花費）"],
+ "fs_needs": ["mount", "isolation"], "callers": 1,
+ "children": {"opt_describe/": "看自己", "opt_history/": "先前結果", "opt_read/": "讀", "opt_edit/": "換字", "opt_write/": "寫檔",
+              "opt_extract/": "抽工具", "opt_try/": "試跑一題", "opt_test/": "跑測試", "opt_note/": "記一筆",
+              "shell/": "純程式節點的臨時腦", "run/": "派工", "accept/": "驗收搬回", "claude/": "claude code CLI 代勞"}}

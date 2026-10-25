@@ -232,9 +232,153 @@ def rollup_view(sub):
         die("RollupFailed", "rollup --dry-run %s：%s" % (sub, e))
 
 
-def brain(usage, questions):
-    """整棵樹的腦用量（round4 § 2.3）：每題平均幾次腦、幾 token（實測：usage ÷ 題數）；節點在哪階＝根的 rollup（直接子樹＋攤平的「子樹/孫」）"""
+def called(sets):
+    """這棵樹每題實際會被叫到的節點的根（步驟 5 隊長裁定）：set.json 的 writers、data/route.json 會選到的（default＋by_style）、grader、train/weigh；
+    再加它們底下的「子樹/孫」與根的 tools/*（is_called 判）。凍結的 writer-sol 只有被 route 選到才算；idle、train、train/optimize、meta、human 不算"""
+    route = load_or(os.path.join(ROOT, "data", "route.json"), {}) or {}
+    roots = set(sets.get("writers") or []) | {route.get("default")} | set((route.get("by_style") or {}).values()) | {"grader", "train/weigh"}
+    return {r for r in roots if isinstance(r, str) and r}
+
+
+def is_called(name, roots):
+    return name.startswith("tools/") or any(name == r or name.startswith(r + "/") for r in roots)
+
+
+def brain(usage, questions, sets):
+    """整棵樹的腦用量（round4 § 2.3）：每題平均幾次腦、幾 token（實測：usage ÷ 題數）；節點在哪階＝根的 rollup（直接子樹＋攤平的「子樹/孫」），
+    只留 called() 的（其餘放 excluded {名: 階}；meta/rollup 讀根評級這格的 excluded，根 rollup.json 的 brain 跟這裡同一套）"""
     b = rollup_view(".").get("brain") or {}
+    every = dict(b.get("nodes") or {}, **(b.get("excluded") or {}))
+    roots = called(sets)
+    nodes = {k: v for k, v in sorted(every.items()) if is_called(k, roots)}
+    on = sum(1 for v in nodes.values() if v in ("agent", "semi"))
     return {"llm_calls_per_question": round(usage["counter_calls"] / questions, 2) if questions else None,
             "llm_tokens_per_question": round(usage["counter_tokens"] / questions) if questions else None,
-            "nodes": b.get("nodes", {}), "counter_on_brain": b.get("counter_on_brain", 0), "counter_program": b.get("counter_program", 0)}
+            "nodes": nodes, "counter_on_brain": on, "counter_program": len(nodes) - on,
+            "excluded": {k: v for k, v in sorted(every.items()) if k not in nodes}}
+
+
+# ---- 步驟 5：梯度（round4 § 4.1）、通用改動清單 params/changed.json（§ 5.2 第 5 點、selfopt § 1.2）----
+
+def _num(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+
+def diff(before, after, _pre=""):
+    """§ 4.1 的結構化 diff（跟 _metainfo 同形，巢狀的物件攤平成「a.b」）：數值鍵＝差（after − before，三位小數）；
+    非數值（字串、布林、null↔數）＝[舊, 新]；陣列當集合＝{"+": 多的, "-": 少的}；沒變的鍵不出現；兩邊同＝{}"""
+    out = {}
+    before, after = before or {}, after or {}
+    for k in sorted(set(before) | set(after)):
+        a, b, name = before.get(k), after.get(k), _pre + k
+        if a == b:
+            continue
+        if isinstance(a, (dict, type(None))) and isinstance(b, (dict, type(None))) and (isinstance(a, dict) or isinstance(b, dict)):
+            out.update(diff(a, b, name + "."))
+        elif isinstance(a, (list, type(None))) and isinstance(b, (list, type(None))):
+            ka = {json.dumps(x, ensure_ascii=False, sort_keys=True): x for x in a or []}
+            kb = {json.dumps(x, ensure_ascii=False, sort_keys=True): x for x in b or []}
+            plus, minus = [kb[x] for x in sorted(set(kb) - set(ka))], [ka[x] for x in sorted(set(ka) - set(kb))]
+            if plus or minus:
+                out[name] = {"+": plus, "-": minus}
+        elif _num(a) and _num(b):
+            d = round(b - a, 3)
+            if d:
+                out[name] = d
+        else:
+            out[name] = [a, b]
+    return out
+
+
+def val_of(avg, k):
+    if k < 3 or avg is None:
+        return "none"
+    return "good" if avg >= 4.0 else "ok" if avg >= 3.0 else "bad"
+
+
+def epoch_cells(d):
+    """某個 epoch 的驗證＋measure 小格（verify.py 開的 epochs/NNN/{verify,measure}/<題名>/）"""
+    out = []
+    for sub in ("verify", "measure"):
+        p = os.path.join(d, sub)
+        out += [os.path.join(p, x) for x in sorted(os.listdir(p))] if os.path.isdir(p) else []
+    return out
+
+
+def snapshot(v, stage, cost):
+    """被改子樹的對外描述（§ 4.1 before／after 的形狀）：v＝那個 epoch 的 verify.json（驗證題＋measure 的實測），
+    stage＝那時的 <子樹>/stage.json（沒有＝None），cost＝那棵在驗證小格的每次用量（run_cost；量不到退回每題用量）"""
+    v = v or {}
+    out = {"val": val_of(v.get("score_mean"), v.get("counter_samples") or 0), "total_avg": v.get("score_mean"),
+           "determinism": (v.get("measure") or {}).get("一致"), "dims": v.get("dims") or {},
+           "bench": {"guard_hit": v.get("guard_hit"), "bigram_overlap": v.get("bigram_overlap")},
+           "tags": sorted(v.get("tags") or {}), "cells": sorted(v.get("cell_hits") or {})}
+    b = v.get("brain") or {}
+    out["cost"] = {"llm_tokens": (cost or {}).get("llm_tokens", b.get("llm_tokens_per_question")),
+                   "llm_calls": (cost or {}).get("llm_calls", b.get("llm_calls_per_question"))}
+    if isinstance(stage, dict):
+        out["stage"], out["tools"] = stage.get("stage"), sorted(stage.get("tools") or [])
+    return out
+
+
+def cell_prefix(rel):
+    """data/<路徑>.json → 格 id 前綴（cells.py 的規則：templates→tpl、templates.distilled→tpld；其餘「/」換「.」）；不是 data 底下的 JSON＝None"""
+    if not (rel.startswith("data/") and rel.endswith(".json")):
+        return None
+    p = rel[5:-5].replace("/", ".")
+    return {"templates": "tpl", "templates.distilled": "tpld"}.get(p, p)
+
+
+def cells_touched(rel, old_path, new_path):
+    """這一步改了 data 底下哪幾格（grad.json 的 changed_cells）：cells.touched(舊, 新, 前綴)；不是格檔＝[]"""
+    pre = cell_prefix(rel)
+    if pre is None:
+        return []
+    sys.path.insert(0, ROOT)
+    import cells  # noqa: E402
+    return cells.touched(load_or(old_path, {}) if old_path else {}, load_or(new_path, {}), pre)
+
+
+def params_save(st, n, change, files, created=()):
+    """改樹之前叫（optimize 的外部動作、selfopt accept 都用這支）：files（相對樹根）拷進 $AOS_STACK/epochs/NNN/params/<同路徑>，
+    再寫 params/changed.json＝change＋{files, created, at}。change 至少 {source, action, subtree}；可帶 target、cells（改了哪幾格；沒給＝verify 照 files 算）、
+    from／to／task。回滾（verify 選 B）＝files 有快照的拷回、沒快照的（本來不存在）刪掉、created 整個刪（只准 tools/ 底下）"""
+    for k in ("source", "action", "subtree"):
+        if not isinstance(change.get(k), str):
+            die("StateBad", "changed.json 要有字串 %s" % k)
+    p = os.path.join(edir(st, n), "params")
+    for rel in files:
+        src = os.path.join(ROOT, rel)
+        if os.path.isfile(src):
+            copy(src, os.path.join(p, rel))
+    save(os.path.join(p, "changed.json"), dict(change, files=list(files), created=list(created), at=now()))
+    return p
+
+
+def _inside(rel):
+    full = os.path.realpath(os.path.join(ROOT, rel))
+    if os.path.isabs(rel) or ".." in rel.split("/") or not full.startswith(ROOT + os.sep):
+        die("StateBad", "changed.json 的路徑 %r 不在樹裡" % rel)
+    return full
+
+
+def rollback(params, change):
+    """照 changed.json 把樹改回去；回改了哪些檔"""
+    done = []
+    for rel in change.get("files") or []:
+        full, snap = _inside(rel), os.path.join(params, rel)
+        if os.path.isfile(snap):
+            copy(snap, full)
+        elif os.path.isfile(full):
+            os.remove(full)
+        done.append(rel)
+    for rel in change.get("created") or []:
+        full = _inside(rel)
+        if "tools" not in rel.split("/")[:-1]:
+            die("StateBad", "created 只准刪 tools/ 底下的：%r" % rel)
+        if os.path.isdir(full) and not os.path.islink(full):
+            shutil.rmtree(full)
+        elif os.path.lexists(full):
+            os.remove(full)
+        done.append(rel)
+    return done

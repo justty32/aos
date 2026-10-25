@@ -1,0 +1,4 @@
+{"source": "optkit/claude 怎麼叫 claude code CLI（參考 lib/agent/claude/cli.json、thinking 2026-10-24-cli-tools.md）：-p --output-format json 由 _entry 加；這裡是其餘旗標。--tools 只給讀寫檔（沒有 Bash、沒有開子 agent）、--permission-mode acceptEdits＋--permission-prompts none（工作目錄內的改檔自動准、其他要問的一律自動拒，不會卡在提問）、--strict-mcp-config（不載 MCP）、--setting-sources project（不載使用者層的 hooks／plugins；登入照舊）、--no-session-persistence（不留對話）。--max-turns、--max-budget-usd、--add-dir 由 _entry 照 optkit/budget.json 與拷貝樹根加",
+ "flags": ["--model", "sonnet", "--tools", "Read,Edit,Write,Glob,Grep", "--permission-mode", "acceptEdits", "--permission-prompts", "none",
+           "--strict-mcp-config", "--setting-sources", "project", "--no-session-persistence"],
+ "timeout_ms": 600000}

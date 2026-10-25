@@ -55,6 +55,9 @@ except FileNotFoundError:
     done = {}
 except ValueError as e:
     die("StateBad", "judge.json 壞了：%s" % e)
+if os.environ.get("GALTXT_JUDGE") == "off":       # optkit opt_try（round4-selfopt.md § 1）：不叫評審、省腦；pick 照「沒評」算（評審的維度 null）
+    save(path, done)
+    sys.exit(0)
 
 
 def persona():

@@ -1,0 +1,23 @@
+{
+ "description": "在拷貝上跑一題看結果（預設不叫評審、省腦）：回答案、total、各維度、lint 違規。題目只有訓練題。",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "question": {
+    "type": "string",
+    "description": "題目檔名，例 cls-ribbon.json"
+   },
+   "drafts": {
+    "type": "integer",
+    "description": "幾份草稿（1～3，預設照題目）"
+   },
+   "judge": {
+    "type": "boolean",
+    "description": "要不要叫評審（預設 false）"
+   }
+  },
+  "required": [
+   "question"
+  ]
+ }
+}

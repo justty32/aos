@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+# opt_test - stdin {}，對拷貝跑跟被優化子樹有關的測試，stdout 一份 JSON {counter_pass, counter_fail, counter_skip, failed: [測試名]}（不回測試原始碼）
+# 哪些測試：optkit/tests.json（人寫）——子樹 → unittest 名清單，挑最長的前綴（writer/tools/voice 沒有就用 writer）。
+# 怎麼跑：python3 -m unittest -v <名>…，cwd＝proto8/tests（拷貝樹裡沒有測試；找原 repo 的：optkit 往上三層的 tests/，沒有就順著 proto8/lib 捷徑找），
+# 環境 GALTXT_TREE＝拷貝根（測試讀它決定 G）、拿掉 GALTXT_OPT／OPTKIT_*。也給 optkit/accept 用（accept 拿 counter_fail > 0 當拒絕理由）。round4-selfopt.md § 1。
+# 錯：stderr 與 stdout 各一行「opt_test: 代號 原因」、退 1——ArgumentsBad、EnvMissing、TestsMissing。測試紅不算這支的錯（照回 counter_fail）。
+import json, os, re, subprocess, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import optkit_common as oc  # noqa: E402
+
+NAME = "opt_test"
+oc.args_in(NAME)
+e = oc.env(NAME)
+
+
+def tests_dir():
+    up = os.path.normpath(os.path.join(oc.HERE, "..", "..", ".."))           # proto8/
+    for p in (os.path.join(up, "tests"), os.path.join(os.path.dirname(os.path.realpath(os.path.join(up, "lib"))), "tests")):
+        if os.path.isfile(os.path.join(p, "aos_bins.py")):
+            return p
+    return None
+
+
+try:
+    with open(os.path.join(oc.HERE, "tests.json"), encoding="utf-8") as f:
+        table = {k: v for k, v in json.load(f).items() if k != "source"}
+except (OSError, ValueError) as x:
+    oc.die(NAME, "TestsMissing", "optkit/tests.json 讀不了：%s" % x)
+key = max((k for k in table if e["sub"] == k or e["sub"].startswith(k + "/")), key=len, default=None)
+td = tests_dir()
+if key is None or not table[key]:
+    oc.die(NAME, "TestsMissing", "tests.json 沒有 %s（或它的上層）的測試" % e["sub"])
+if not td:
+    oc.die(NAME, "TestsMissing", "找不到 proto8/tests")
+try:
+    r = subprocess.run([sys.executable, "-B", "-m", "unittest", "-v", *table[key]], capture_output=True, text=True, cwd=td, timeout=900, stdin=subprocess.DEVNULL,
+                       env=oc.clean_env({"GALTXT_TREE": e["tree"], "PYTHONDONTWRITEBYTECODE": "1"}))
+    log = r.stderr
+except subprocess.TimeoutExpired:
+    print(json.dumps({"counter_pass": 0, "counter_fail": 1, "counter_skip": 0, "failed": ["（超過 900 秒）"]}, ensure_ascii=False))
+    sys.exit(0)
+ok = fail = skip = 0
+failed = []
+for m in re.finditer(r"^(\w+) \(([\w.]+)\)(?:\n.*?)? \.\.\. (ok|FAIL|ERROR|skipped.*)$", log, re.M):
+    if m.group(3) == "ok":
+        ok += 1
+    elif m.group(3).startswith("skipped"):
+        skip += 1
+    else:
+        fail += 1
+        failed.append(m.group(2) if m.group(2).endswith("." + m.group(1)) else "%s.%s" % (m.group(2), m.group(1)))
+if r.returncode != 0 and fail == 0:                       # 載不起來（import 錯）也是紅
+    fail, failed = 1, ["（unittest 結束碼 %d：%s）" % (r.returncode, log.strip().splitlines()[-1] if log.strip() else "")]
+print(json.dumps({"counter_pass": ok, "counter_fail": fail, "counter_skip": skip, "failed": failed}, ensure_ascii=False))

@@ -1,0 +1,24 @@
+{
+ "description": "記一筆這次改了什麼、為什麼（追加到自己的 opt_log.jsonl）。想改 _metainfo 的宣告寫在 metainfo_suggest，人看了再改。",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "what": {
+    "type": "string",
+    "description": "改了什麼"
+   },
+   "why": {
+    "type": "string",
+    "description": "為什麼"
+   },
+   "metainfo_suggest": {
+    "type": "object",
+    "description": "想改的宣告（選填）"
+   }
+  },
+  "required": [
+   "what",
+   "why"
+  ]
+ }
+}

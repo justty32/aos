@@ -81,6 +81,11 @@ except FileNotFoundError:
 except (OSError, ValueError, AttributeError, TypeError) as e:
     die("StateBad", "stage.json 讀不了：%s" % e)
 STAGE = os.environ.get("GALTXT_STAGE") or STAGE
+# optkit 自我優化模式（round4-selfopt.md § 2）：GALTXT_OPT=1（只有 optkit/run 設）＝多看得到 tools/opt_*（optkit 的捷徑）、system 換讀 system.opt.txt、
+# 沒真腦時照 optkit/fake_opt.py 的劇本叫工具。平常（沒設）一字不變：opt_* 不在 stage.tools 裡＝看不到。
+OPT = os.environ.get("GALTXT_OPT") == "1"
+if OPT and ALLOWED is not None:
+    ALLOWED |= {t for t in (os.listdir("tools") if os.path.isdir("tools") else []) if t.startswith("opt_")}
 
 # tools：工具名＝資料夾名，說明來自 tool.json 的 description／parameters（其他 key 忽略；讀不懂的 tool.json 當作沒有）
 tools = []
@@ -99,8 +104,9 @@ for tool in (sorted(os.listdir("tools")) if os.path.isdir("tools") else []):
     tools.append({"type": "function", "function": function})
 
 system = []
-if os.path.exists("system.txt"):
-    with open("system.txt", encoding="utf-8") as f:
+SYSTEM = "system.opt.txt" if OPT else "system.txt"
+if os.path.exists(SYSTEM):
+    with open(SYSTEM, encoding="utf-8") as f:
         system = [{"role": "system", "content": f.read()}]   # 每次從檔讀，不存進 history
 
 # 假腦的固定片語（確定性、不用亂數）：hint 不同就換開頭與旁白，三份草稿字面不同
@@ -267,4 +273,10 @@ def ask(url):
 
 
 url = os.environ.get("AOS_BRAIN_URL")
-append(fake() if not url else ask(url))
+if OPT and not url:
+    sys.dont_write_bytecode = True
+    sys.path.insert(0, os.environ.get("OPTKIT_HOME") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "optkit"))
+    import fake_opt  # noqa: E402
+    append(fake_opt.step(history, tools))
+else:
+    append(fake() if not url else ask(url))

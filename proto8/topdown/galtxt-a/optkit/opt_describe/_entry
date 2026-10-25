@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+# opt_describe - stdin {}，stdout 一份 JSON：被優化那棵子樹的對外描述（_metainfo 解一層 $ref：ratings、stage、grad、rollup）＋ hard.jsonl 未處理筆數＋ steps、decisions_left＋這次准寫的白名單
+# 只讀拷貝（OPTKIT_TREE／OPTKIT_SUBTREE）；round4-selfopt.md § 1。
+# 錯：stderr 與 stdout 各一行「opt_describe: 代號 原因」、退 1——ArgumentsBad、EnvMissing、MetainfoBad。
+import json, os, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import optkit_common as oc  # noqa: E402
+
+NAME = "opt_describe"
+oc.args_in(NAME)
+e = oc.env(NAME)
+d = os.path.join(e["tree"], e["sub"])
+try:
+    with open(os.path.join(d, "_metainfo"), encoding="utf-8") as f:
+        meta = json.load(f)
+    if not isinstance(meta, dict):
+        raise ValueError("不是物件")
+except (OSError, ValueError) as x:
+    oc.die(NAME, "MetainfoBad", "%s/_metainfo 讀不了：%s" % (e["sub"], x))
+out = {"subtree": e["sub"]}
+for k, v in meta.items():
+    if isinstance(v, dict) and set(v) == {"$ref"}:          # 解一層 $ref；旁檔的 source 是給人看的，拿掉
+        try:
+            with open(os.path.join(d, v["$ref"]), encoding="utf-8") as f:
+                got = json.load(f)
+            v = {kk: vv for kk, vv in got.items() if kk != "source"} if isinstance(got, dict) else got
+        except (OSError, ValueError):
+            v = None
+    out[k] = v
+pending = 0
+try:
+    with open(os.path.join(d, "hard.jsonl"), encoding="utf-8") as f:
+        pending = sum(1 for l in f if l.strip() and not json.loads(l).get("resolved_epoch"))
+except (OSError, ValueError):
+    pass
+out["counter_hard_pending"] = pending
+st = out.get("brain") if isinstance(out.get("brain"), dict) else {}
+out["decisions_left"] = st.get("decisions_left")
+out["opt_writes_allowed"] = e["allow"]
+print(json.dumps(out, ensure_ascii=False))

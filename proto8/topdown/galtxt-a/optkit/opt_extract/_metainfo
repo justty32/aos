@@ -1,0 +1,31 @@
+{
+ "summary": "寫拷貝：新建工具資料夾＋stage.tools；optkit 自我優化工具包（round4-selfopt.md § 1），只在 optkit/run 開的沙箱裡用（OPTKIT_* 環境）",
+ "kind": "program",
+ "grow_level": 4,
+ "role": "dev",
+ "time_ms": {
+  "val": 50,
+  "max": 10000
+ },
+ "resource": "cpu",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "reads": [
+  "env:OPTKIT_TREE",
+  "env:OPTKIT_SUBTREE",
+  "env:OPTKIT_ALLOW",
+  "optkit:deny.json"
+ ],
+ "writes": [
+  "copy:<子樹>/tools/<name>/",
+  "copy:<子樹>/stage.json#/tools"
+ ],
+ "fs_needs": [
+  "tool_json",
+  "mount"
+ ],
+ "callers": 2
+}

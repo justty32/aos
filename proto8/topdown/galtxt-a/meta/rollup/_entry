@@ -9,7 +9,8 @@ ratings.json／stage.json／grad.json；再沒有只列 kind。
 stage（stage.json；沒有：kind agent＝agent、data＝不算節點、其餘＝program）、cost（per_run＝那格的 cost，根那格有 brain＝per_question；
 declared＝_metainfo 的 llm_calls／llm_tokens／time_ms 的 val；role dev 標 excluded_from_cost）、grad_total（grad.json 的 sum；
 grad.json 的 context.tree 不是這棵樹根的資料夾名＝別棵樹量的：null＋grad_foreign，stdout 印「foreign grad（context.tree X）」）、
-children、brain（nodes＝直接子樹的 stage，再把子樹 rollup 的 brain.nodes 攤平成「子樹/孫」；counter_on_brain＝agent／semi 個數、counter_program）、rolled_at。
+children、brain（nodes＝直接子樹的 stage，再把子樹 rollup 的 brain.nodes 攤平成「子樹/孫」；counter_on_brain＝agent／semi 個數、counter_program；
+自己那格評級有 brain.excluded（量的人說「這些節點每題不會被叫到」，根由 train/verify.py 寫）＝那些名字搬去 brain.excluded、不算進 nodes 與兩個計數）、rolled_at。
 --up：做完往上一層有 _metainfo 的資料夾再做（中間只穿過叫 tools 的純容器），直到上一層沒有 _metainfo（樹根）。
 --dry-run：不寫檔；--json：stdout 每層一行彙總 JSON（不印摘要行）。_metainfo 一字不碰；同輸入除 rolled_at 全同。
 stdout 每層一行「rollup: <路徑> val … stage … children N on_brain N」；量的跟宣告的差兩倍以上多印「rollup: DeclaredOff <路徑> llm_tokens 宣告 vs 實測」（只印）。
@@ -272,8 +273,13 @@ def roll(d, root, fresh):
         for g, s in sorted(grand.items()):
             nodes["%s/%s" % (name, g)] = s
     out["children"] = kids
+    ex = (c.get("brain") or {}).get("excluded") if isinstance(c.get("brain"), dict) else None
+    excluded = {k: v for k, v in nodes.items() if isinstance(ex, (dict, list)) and k in ex}
+    nodes = {k: v for k, v in nodes.items() if k not in excluded}
     on = sum(1 for s in nodes.values() if s in ("agent", "semi"))
     out["brain"] = {"nodes": nodes, "counter_on_brain": on, "counter_program": len(nodes) - on}
+    if excluded:
+        out["brain"]["excluded"] = excluded
     out["rolled_at"] = now()
     lines.insert(0, "rollup: %s val %s stage %s children %d on_brain %d" % (
         where, out.get("val", "—"), out["stage"] or "—", len(kids), on))

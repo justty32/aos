@@ -1,0 +1,8 @@
+{
+ "description": "對拷貝跑跟自己有關的測試，回通過／失敗數與失敗的測試名。交之前一定要跑、要綠。",
+ "parameters": {
+  "type": "object",
+  "properties": {},
+  "required": []
+ }
+}

@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+# accept - selfopt 驗收（round4-selfopt.md § 1.2 的 3、§ 5）：accept <小格> [--dry-run] [--no-test] [--params 資料夾]
+# 讀 <小格>/run.json（optkit/run 寫的），原樹 vs 拷貝逐檔比（plan／meta／optkit 不比；deny.json 的 ignore 不比）：
+#   1. 每個變動檔過白名單（白名單從**原樹**重算，不信 run.json）；不准刪檔、不准新增或改捷徑；任一違規＝整筆拒、WriteDenied。
+#   2. 錨：deny.json anchors 的每個檔（尺、評審、訓練、正解、所有 _metainfo／fsm.json／既有 _entry；白名單逐字點名的除外）拷貝 vs 原樹 sha256 相同，否則 AnchorChanged。
+#   3. 在拷貝上跑 opt_test（--no-test 跳過）；紅＝TestFailed。
+#   4. 過了才搬：原本有的檔先拷到 <params>/<相對樹根路徑>（回滾用），再把拷貝的版本搬回原樹（保留權限位）；
+#      寫 <params>/changed.json {source: "selfopt", action: "selfopt", subtree, by, files, created, cells?, from, task, test, at}——跟 train/common.params_save
+#      同形（步驟 5 的 verify 照它回滾：files 有快照拷回、沒快照刪、created 整個刪）；files＝變動檔（相對樹根）、created＝新建的工具資料夾、
+#      cells＝data/ 的格 id 變動（cells.touched；算不出來就不給，verify 照 files 自己算）。<params> 預設 <小格>/params；6b 的優化器給 epochs/NNN/params。
+# 品質不在這裡判（下一個 verify → weigh 判，§ 5.4）；這裡不跑驗證題。--dry-run＝照樣判、印會搬什麼，原樹與 params 一個字都不寫。
+# 改動內容出現 bench 字樣＝stdout 印一行警告（§ 5.8，不拒）。不論收不收都寫 <小格>/accept.json（--dry-run 也不寫）。
+# stdout：「accept: <子樹> 收了 N 個檔（…）」或「accept: <子樹> 沒有變動」；錯：stderr 一行「accept: 代號 原因」、退 1——
+# ArgumentsBad、CellBad、RunFailed（run 沒跑完或預算到頂）、WriteDenied、AnchorChanged、TestFailed。
+import json, os, shutil, subprocess, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import optkit_common as oc  # noqa: E402
+
+NAME = "accept"
+KIT = oc.HERE
+argv = sys.argv[1:]
+dry, no_test, params, pos = False, False, None, []
+i = 0
+while i < len(argv):
+    if argv[i] == "--dry-run":
+        dry = True
+    elif argv[i] == "--no-test":
+        no_test = True
+    elif argv[i] == "--params" and i + 1 < len(argv):
+        params = os.path.abspath(argv[i + 1])
+        i += 1
+    else:
+        pos.append(argv[i])
+    i += 1
+if len(pos) != 1 or any(p.startswith("--") for p in pos):
+    print("accept: ArgumentsBad 用法：accept <小格> [--dry-run] [--no-test] [--params 資料夾]", file=sys.stderr)
+    sys.exit(1)
+cell = os.path.abspath(pos[0])
+params = params or os.path.join(cell, "params")
+
+
+def record(obj):
+    if not dry:
+        oc.save(os.path.join(cell, "accept.json"), dict(obj, at=oc.now()))
+
+
+def die(code, reason, **extra):
+    record(dict({"accepted": False, "code": code, "reason": reason}, **extra))
+    print("accept: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
+    sys.exit(1)
+
+
+try:
+    with open(os.path.join(cell, "run.json"), encoding="utf-8") as f:
+        run = json.load(f)
+    sub, tree = run["subtree"], run["tree"]
+except (OSError, ValueError, KeyError, TypeError) as e:
+    print("accept: CellBad %s 不是 optkit/run 的小格：%s" % (cell, e), file=sys.stderr)
+    sys.exit(1)
+orig = os.path.dirname(KIT)
+if run.get("budget_spent") or run.get("exit") != 0:
+    die("RunFailed", "run 沒有好好跑完（exit %s、budget_spent %s），不收" % (run.get("exit"), run.get("budget_spent")))
+deny = oc.load_deny()
+allow = oc.allow_entries(orig, sub)
+heldout = run.get("heldout") or []
+changes = oc.diff(orig, tree, deny)
+bad = []
+for rel, old, new in changes:
+    if (new or b"").startswith(b"\0link") or (old or b"").startswith(b"\0link"):
+        bad.append("%s（不准新增或改捷徑）" % rel)
+        continue
+    why = oc.check_change(rel, old, new, allow, deny, orig, heldout, sub)
+    if why:
+        bad.append("%s（%s）" % (rel, why))
+if bad:
+    die("WriteDenied", "、".join(bad), violations=bad)
+moved = oc.anchors(orig, tree, deny, allow)
+if moved:
+    die("AnchorChanged", "錨檔變了：%s" % "、".join(moved), anchors=moved)
+if not changes:
+    record({"accepted": False, "code": "NothingChanged", "reason": "拷貝跟原樹一樣"})
+    print("accept: %s 沒有變動" % sub)
+    sys.exit(0)
+warn = [rel for rel, old, new in changes if b"bench" in (new or b"") and b"bench" not in (old or b"")]
+for rel in warn:
+    print("accept: 警告 %s 的改動提到 bench（§ 5.8：看看是不是在偷看正解）" % rel)
+test = None
+if not no_test:
+    e = oc.clean_env({"OPTKIT_TREE": tree, "OPTKIT_SUBTREE": sub, "OPTKIT_ORIG": orig})
+    r = subprocess.run([os.path.join(KIT, "opt_test", "_entry")], input="{}", capture_output=True, text=True, env=e)
+    try:
+        test = json.loads(r.stdout)
+    except ValueError:
+        die("TestFailed", "opt_test 沒回 JSON：%s %s" % (r.stdout.strip()[-200:], r.stderr.strip()[-200:]))
+    if r.returncode != 0 or test.get("counter_fail"):
+        die("TestFailed", "opt_test 紅：%s" % "、".join(test.get("failed") or []) if test else r.stdout.strip(), test=test)
+
+created = sorted({d for d in (oc.new_dir_of(rel, allow, orig) for rel, _, _ in changes) if d})
+cells_changed = []                           # 算不出來＝不給 cells（verify 會照 files 自己算）
+try:
+    sys.path.insert(0, orig)
+    import cells  # noqa: E402
+    for rel, old, new in changes:
+        pre = oc.cell_prefix(rel)
+        if pre:
+            cells_changed += cells.touched(json.loads(old.decode("utf-8")) if old else {}, json.loads(new.decode("utf-8")), pre)
+except Exception:                            # 格 id 是附加資訊：算不出來不擋收
+    cells_changed = None
+files = [rel for rel, _, _ in changes]
+summary = "accept: %s 收了 %d 個檔（%s）%s" % (sub, len(files), "、".join(files), "；新工具 " + "、".join(created) if created else "")
+if dry:
+    print(summary.replace("收了", "會收"))
+    sys.exit(0)
+for rel, old, new in changes:                # 先備份原樹的版本，再搬
+    if old is not None:
+        dst = os.path.join(params, rel)
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copy2(os.path.join(orig, rel), dst)
+for rel, old, new in changes:
+    src, dst = os.path.join(tree, rel), os.path.join(orig, rel)
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    tmp = os.path.join(os.path.dirname(dst), "." + os.path.basename(dst) + ".accept")
+    shutil.copy2(src, tmp)
+    os.replace(tmp, dst)
+changed = {"source": "selfopt", "action": "selfopt", "subtree": sub, "by": "%s@selfopt" % ("shell" if run.get("by") == "shell" else "claude" if run.get("by") == "claude" else sub),
+           "files": files, "created": created, "from": cell, "task": run.get("task"), "test": test, "at": oc.now()}
+if cells_changed is not None:
+    changed["cells"] = sorted(set(cells_changed))
+os.makedirs(params, exist_ok=True)
+oc.save(os.path.join(params, "changed.json"), changed)
+record({"accepted": True, "files": files, "created": created, "params": params, "test": test})
+print(summary)

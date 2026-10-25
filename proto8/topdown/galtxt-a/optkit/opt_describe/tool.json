@@ -1,0 +1,8 @@
+{
+ "description": "看自己：被優化那棵子樹的 _metainfo（ratings、stage、grad、rollup 解開）、還沒處理的難例筆數、steps、decisions_left（腦還在做的決定）、這次准寫的白名單。",
+ "parameters": {
+  "type": "object",
+  "properties": {},
+  "required": []
+ }
+}

@@ -1,0 +1,92 @@
+#!/usr/bin/env python3
+# opt_extract - stdin {"name", "description", "parameters", "code", "summary"}：在被優化那棵子樹的 tools/<name>/ 建一支新工具（tool.json、_entry（+x）、_metainfo 骨架），
+# 並把 name 加進那棵的 stage.json.tools（有 stage.json 才加）；stdout 一行「抽了 <子樹>/tools/<name>（stage.tools 加了 name）」。
+# 檢查（round4-selfopt.md § 5.4）：code 先 compile 過（python；不寫 __pycache__）、空 stdin 跑一次要退 0 或 1 而且 stdout 至少一行（lib/README 契約規則 3）；
+# 不過＝整個新資料夾拿掉、ContractBad。_metainfo 的 author＝「<子樹>@selfopt epoch N」（M7：這是新工具自己的宣告，不是改既有的）。
+# 每個落檔都過白名單（opt_writes 的「tools/*/」＝只准新建；stage.json#/tools）。
+# 錯：stderr 與 stdout 各一行「opt_extract: 代號 原因」、退 1——ArgumentsBad、EnvMissing、NameBad、ToolExists、CompileFailed、ContractBad、WriteDenied。
+import json, os, shutil, subprocess, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import optkit_common as oc  # noqa: E402
+import re  # noqa: E402
+
+NAME = "opt_extract"
+a = oc.args_in(NAME)
+e = oc.env(NAME)
+name = a.get("name")
+if not isinstance(name, str) or not re.match(r"^[a-z][a-z0-9_]{0,31}$", name) or name.startswith("opt_"):
+    oc.die(NAME, "NameBad", "name 要是小寫英數底線、字母開頭、不以 opt_ 開頭：%r" % (name,))
+for k in ("description", "code", "summary"):
+    if not isinstance(a.get(k), str) or not a[k].strip():
+        oc.die(NAME, "ArgumentsBad", "%s 要是非空字串" % k)
+params = a.get("parameters")
+if not isinstance(params, dict) or params.get("type") != "object":
+    oc.die(NAME, "ArgumentsBad", "parameters 要是 JSON Schema 物件（type object）")
+d_rel = "%s/tools/%s" % (e["sub"], name)
+d = os.path.join(e["tree"], d_rel)
+if os.path.lexists(d):
+    oc.die(NAME, "ToolExists", "%s 已經有了" % d_rel)
+code = a["code"]
+if not code.startswith("#!"):
+    code = "#!/usr/bin/env python3\n# %s - %s\n%s" % (name, a["summary"].replace("\n", " "), code)
+if not code.endswith("\n"):
+    code += "\n"
+if "python" in code.splitlines()[0]:
+    try:
+        compile(code, d_rel + "/_entry", "exec")
+    except SyntaxError as x:
+        oc.die(NAME, "CompileFailed", "_entry 編譯不過：%s 第 %s 行" % (x.msg, x.lineno))
+epoch = e["epoch"]
+meta = {"summary": a["summary"], "kind": "program", "grow_level": 4,
+        "time_ms": {"val": 50, "max": 5000}, "resource": "cpu",
+        "side_effect": False, "idempotent": True, "deterministic": True, "interrupt": "safe", "parallel": True,
+        "reads": [], "writes": [], "fs_needs": ["tool_json"], "callers": 1,
+        "author": "%s@selfopt epoch %s" % (e["sub"], epoch or "?")}
+spec = {"description": a["description"], "parameters": params}
+files = [("tool.json", json.dumps(spec, ensure_ascii=False, indent=1) + "\n"), ("_metainfo", json.dumps(meta, ensure_ascii=False, indent=1) + "\n"),
+         ("_entry", code)]
+
+
+def undo():
+    real_tree = os.path.realpath(e["tree"])
+    assert os.path.realpath(d).startswith(real_tree + "/") and not os.path.lexists(os.path.join(e["orig"] or "/nonexistent", d_rel))
+    shutil.rmtree(d, ignore_errors=True)
+
+
+for fn, body in files:
+    p = os.path.join(d, fn)
+    try:
+        oc.guarded_write(NAME, e, p, d_rel + "/" + fn, body.encode("utf-8"))
+    except SystemExit:
+        undo()
+        raise
+os.chmod(os.path.join(d, "_entry"), 0o755)
+try:
+    r = subprocess.run([os.path.join(d, "_entry")], input="", capture_output=True, text=True, cwd=d, timeout=10, env=oc.clean_env())
+    ok = r.returncode in (0, 1) and r.stdout.strip() != ""
+    why = "空 stdin 結束碼 %d、stdout %r" % (r.returncode, r.stdout[:80])
+except (OSError, subprocess.TimeoutExpired) as x:
+    ok, why = False, str(x)
+if not ok:
+    undo()
+    oc.die(NAME, "ContractBad", "新工具不守契約（%s），已拿掉" % why)
+added = ""
+st_p = os.path.join(e["tree"], e["sub"], "stage.json")
+if os.path.isfile(st_p):
+    try:
+        with open(st_p, encoding="utf-8") as f:
+            st = json.load(f)
+        tools = list(st.get("tools") or [])
+    except (OSError, ValueError, AttributeError) as x:
+        undo()
+        oc.die(NAME, "ArgumentsBad", "stage.json 讀不了：%s" % x)
+    if name not in tools:
+        st["tools"] = tools + [name]
+        try:
+            oc.guarded_write(NAME, e, st_p, e["sub"] + "/stage.json", (json.dumps(st, ensure_ascii=False, indent=1) + "\n").encode("utf-8"))
+        except SystemExit:
+            undo()
+            raise
+        added = "（stage.tools 加了 %s）" % name
+print("抽了 %s%s" % (d_rel, added))

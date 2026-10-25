@@ -1,0 +1,9 @@
+{"summary": "optkit 的殼：純程式節點的臨時腦（agent-dan 範本；brain.py／act.py 是寫手的捷徑，GALTXT_OPT=1 模式），在拷貝裡用 opt_* 工具改 OPTKIT_SUBTREE 那棵；不屬於任何子樹、用完即丟，節點的 _metainfo 不變（round4-selfopt.md § 2）",
+ "kind": "agent", "grow_level": 5, "role": "dev",
+ "time_ms": {"val": 60000, "max": 300000},
+ "resource": ["llm", "cpu"],
+ "llm_calls": {"val": 7, "max": 12}, "llm_tokens": {"val": 25000, "max": 80000},
+ "llm_model": "chatgpt-gpt-6-luna-low（.env）", "llm_endpoint": "AOS_BRAIN_URL；沒設＝假腦（optkit/fake_opt.py 的劇本）",
+ "side_effect": true, "idempotent": false, "deterministic": false, "interrupt": "resumable", "parallel": false,
+ "reads": ["ws:new/task.json", "env:OPTKIT_*"], "writes": ["ws:out/task.json", "stack:history.jsonl", "stack:usage.jsonl", "copy:（經 opt_* 工具，白名單內）"],
+ "fs_needs": ["own_stack", "mount"], "callers": 1}

@@ -1,0 +1,3 @@
+{
+ "source": "判斷器自己的成果（round4 § 4.4）：不自評。judge:accept 格——train/verify.py 每判一次記 counter_judged／counter_chose_a／counter_chose_b，下一個 epoch 驗證分跟它的判斷反向（上一步選 A、這一步 delta < 0）記 counter_contradicted；human/import（步驟 7）記人評配對的 counter_confirmed／agreement"
+}

@@ -1,0 +1,7 @@
+{"summary": "selfopt 驗收：原樹 vs 拷貝逐檔比 → 白名單（從原樹重算）→ 錨 sha256 → opt_test → 過了才把變動檔搬回原樹、原版本備份到 params/、寫 params/changed.json（files、created、cells）；任一關不過整筆拒、原樹一個字不動",
+ "kind": "program", "grow_level": 4, "role": "dev",
+ "time_ms": {"val": 10000, "max": 900000}, "resource": ["cpu", "disk"],
+ "side_effect": true, "idempotent": false, "deterministic": true, "interrupt": "unsafe", "parallel": false,
+ "reads": ["cell:run.json", "cell:tree/", "tree:**/_metainfo（opt_writes）", "optkit:deny.json"],
+ "writes": ["tree:白名單內的變動檔", "params:<相對樹根路徑>（原版本）", "params:changed.json", "cell:accept.json"],
+ "callers": 2, "callers_note": "train/optimize（步驟 6b 的 selfopt 動作）與人／測試直接叫"}

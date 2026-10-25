@@ -1,0 +1,3 @@
+{
+ "source": "梯度（round4 § 4.1）：判斷器自己被改（換階 rules）那一步前後的 diff；train/verify.py 寫；人不手改。這圈還沒有"
+}

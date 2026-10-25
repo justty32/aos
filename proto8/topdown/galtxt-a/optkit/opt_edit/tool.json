@@ -1,0 +1,37 @@
+{
+ "description": "改拷貝樹裡的一個檔：edits 照順序把 old_text（要剛好出現一次）換成 new_text。只准白名單裡的檔／位置，否則 WriteDenied。",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "相對樹根的路徑"
+   },
+   "edits": {
+    "type": "array",
+    "description": "[{old_text, new_text}]",
+    "items": {
+     "type": "object",
+     "properties": {
+      "old_text": {
+       "type": "string",
+       "description": "原文（剛好出現一次）"
+      },
+      "new_text": {
+       "type": "string",
+       "description": "換成"
+      }
+     },
+     "required": [
+      "old_text",
+      "new_text"
+     ]
+    }
+   }
+  },
+  "required": [
+   "path",
+   "edits"
+  ]
+ }
+}

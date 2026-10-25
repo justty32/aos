@@ -1,0 +1,3 @@
+{"source": "optkit/run 一次 selfopt 的上限（round4-selfopt.md § 5.6、§ 6）：max_calls＝腦回覆幾則（history 的 assistant）、max_tokens＝usage.jsonl 的 total_tokens 合計、max_elapsed_ms＝牆鐘；到頂＝先 TERM 再 KILL（P-36）、BudgetSpent、什麼都不搬。task.json 的 budget 可以壓低（不能拉高）。claude＝走 claude code CLI 那條（optkit/claude）的輪數與花費上限",
+ "max_calls": 12, "max_tokens": 80000, "max_elapsed_ms": 300000,
+ "claude": {"max_turns": 30, "max_budget_usd": 1.0}}

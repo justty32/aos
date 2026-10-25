@@ -1,0 +1,4 @@
+#!/bin/sh
+# _entry - optkit 的殼（round4-selfopt.md § 2）：給純程式節點（voice、beat、program 階的寫手…）臨時配一個腦，在拷貝裡優化 OPTKIT_SUBTREE 那棵；agent-dan 範本，loop 每次跑一格 fsm.json
+# brain.py／act.py 是寫手那兩支的捷徑（GALTXT_OPT=1 時：沒有 stage.json＝tools/ 底下的 opt_* 全看得到、system 讀 system.opt.txt、假腦照 ../fake_opt.py）。
+exec aos-loop loop.json

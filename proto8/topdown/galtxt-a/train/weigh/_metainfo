@@ -1,0 +1,74 @@
+{
+ "summary": "判斷器（第三棵樹）：比兩份梯度 diff（A＝優化器這一步、B＝不動），照人寫的優先序表 rules.json 回「選：A|B」「理由：標籤」，每判一次追加 log.jsonl；被 train/verify.py 叫，選 B＝回滾；什麼都不改、不讀任何 _metainfo；照 stage.json 分兩階——agent（腦，假腦＝rules.py）、rules（rules.py，0 token）",
+ "kind": "agent",
+ "grow_level": 5,
+ "role": "dev",
+ "time_ms": {
+  "val": 3000,
+  "max": 300000
+ },
+ "resource": [
+  "llm",
+  "cpu"
+ ],
+ "llm_calls": {
+  "val": 1,
+  "max": 2
+ },
+ "llm_tokens": {
+  "val": 1500,
+  "max": 5000
+ },
+ "llm_model": "chatgpt-gpt-6-luna-low（.env）",
+ "llm_endpoint": "AOS_BRAIN_URL；沒設＝假腦（照 rules.json 算）",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": false,
+ "interrupt": "resumable",
+ "parallel": false,
+ "lock": [
+  {
+   "$env": "AOS_WS",
+   "$prefix": "ws:"
+  }
+ ],
+ "reads": [
+  "ws:new/*.json",
+  "tree:rules.json",
+  "tree:stage.json"
+ ],
+ "writes": [
+  "ws:out/<題名>",
+  "ws:done/<題名>",
+  "tree:log.jsonl",
+  "stack:history.jsonl",
+  "stack:usage.jsonl",
+  "stack:state.txt",
+  "stack:current.txt",
+  "stack:trace.jsonl"
+ ],
+ "fs_needs": [
+  "own_stack"
+ ],
+ "callers": 1,
+ "steps": [
+  "比較數值鍵",
+  "比較非數值鍵",
+  "套優先序"
+ ],
+ "ratings": {
+  "$ref": "ratings.json"
+ },
+ "brain": {
+  "$ref": "stage.json"
+ },
+ "grad": {
+  "$ref": "grad.json"
+ },
+ "human_ratings": {
+  "$ref": "human.json"
+ },
+ "rollup": {
+  "$ref": "rollup.json"
+ }
+}

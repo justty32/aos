@@ -853,8 +853,11 @@ class Round3T(unittest.TestCase):
             self.assertEqual(e["measure"]["question"], sets["measure"][:-5])
             self.assertTrue(0 <= e["measure"]["一致"] <= 1)
             nodes = e["brain"]["nodes"]                                  # round4 步驟 4：節點改讀根的 rollup（整棵樹的直接子樹＋攤平的「子樹/孫」）
-            self.assertEqual({k: nodes.get(k) for k in ("writer", "grader", "tools/lint", "writer-sol")},
-                             {"writer": "agent", "grader": "agent", "tools/lint": "program", "writer-sol": "agent"})
+            self.assertEqual({k: nodes.get(k) for k in ("writer", "grader", "tools/lint", "train/weigh")},
+                             {"writer": "agent", "grader": "agent", "tools/lint": "program", "train/weigh": "agent"})
+            self.assertNotIn("writer-sol", nodes)                        # 步驟 5 隊長裁定：只算每題會被叫到的；writer-sol 凍結、route 沒選它
+            self.assertEqual(e["brain"]["excluded"].get("writer-sol"), "agent")
+            self.assertTrue({"idle", "train", "train/optimize"} <= set(e["brain"]["excluded"]))
             self.assertEqual(e["brain"]["counter_on_brain"], sum(1 for v in nodes.values() if v in ("agent", "semi")))
         self.assertNotIn("writer/tools/beat", e0["brain"]["nodes"])          # epoch 0 的 verify 在 rate 之前：writer 還沒 rollup、孫子看不到
         self.assertEqual(e1["brain"]["nodes"]["writer/tools/beat"], "program")   # rate 跑過 rollup --up writer 之後才攤平得到
@@ -885,7 +888,10 @@ class Round3T(unittest.TestCase):
         after = snapshot(g)                                               # M7：只有量出來的旁檔變（route 沒換＝route.json、optimize 評級不動）
         changed = {k for k in set(before) | set(after) if before.get(k) != after.get(k)}
         self.assertEqual(changed, {"writer/ratings.json", "grader/ratings.json", "ratings.json", "human/samples.json",
-                                   "rollup.json", "writer/rollup.json", "grader/rollup.json"})   # round4 步驟 4：rate／verify 叫 rollup --up
+                                   "rollup.json", "writer/rollup.json", "grader/rollup.json",   # round4 步驟 4：rate／verify 叫 rollup --up
+                                   "train/rollup.json", "train/weigh/rollup.json",              # 步驟 5：verify 先 rollup --up train/weigh
+                                   "writer/stage.json"})                                         # 步驟 5：verify 每個 epoch 寫 stage.json.history
+        self.assertEqual([h["epoch"] for h in jread(g / "writer" / "stage.json")["history"]], [0, 1])
         r = run(EXEC, "--ws", str(self.ws), str(g / "train"), cwd=self.tmp, timeout=600)   # 收工後再叫：verify 照舊退 10、不重跑
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(len(jl(self.stack / "verify.jsonl")), 2)
@@ -1304,7 +1310,8 @@ class Round4T(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         after = snapshot(g)
         changed = {k for k in set(before) | set(after) if before.get(k) != after.get(k)}
-        frozen = {k for k in before if os.path.basename(k) in ("_metainfo", "fsm.json", "loop.json", "dims.json")}
+        frozen = {k for k in before if os.path.basename(k) in ("_metainfo", "fsm.json", "loop.json", "dims.json")} | {"train/weigh/rules.json"}
+        self.assertIn("train/weigh/rules.json", before)                                       # 步驟 5：判斷器的規則表只有人改
         self.assertTrue(frozen and not (frozen & changed), frozen & changed)
         allowed = {"ratings.json", "stage.json", "grad.json", "rollup.json", "human.json", "hard.jsonl", "log.jsonl",
                    "templates.json", "templates.distilled.json", "samples.json", "route.json", "policy.json"}
@@ -1316,7 +1323,7 @@ class Round4T(unittest.TestCase):
             self.assertNotIn(k, changed)                                                      # 不在 --up 路上的子樹 bytes 不變
         root = jread(g / "rollup.json")
         self.assertEqual(root["children"]["writer"]["stage"], "agent")
-        self.assertEqual(root["brain"], {k: jread(g / "ratings.json")["style:傲嬌"]["brain"][k] for k in ("nodes", "counter_on_brain", "counter_program")})
+        self.assertEqual(root["brain"], {k: jread(g / "ratings.json")["style:傲嬌"]["brain"][k] for k in ("nodes", "counter_on_brain", "counter_program", "excluded")})
 
     # 21. metatable（rollup 要的最小部分）：writer 列有 ratings、stage；彙總有 on_brain；--suggest 對有旁檔的候選標 N-4
     def test_metatable_sidecars(self):
@@ -1330,7 +1337,9 @@ class Round4T(unittest.TestCase):
         s = d["summary"]
         dirs = [n for n in d["nodes"] if n["path"] != "." and "#" not in n["path"] and n.get("kind") not in ("data", "捷徑", "壞")]
         self.assertEqual(s["counter_on_brain"] + s["counter_program"], len(dirs))
-        self.assertEqual(s["counter_on_brain"], jread(G / "rollup.json").get("brain", {}).get("counter_on_brain", 3))   # 未訓練：writer、writer-sol、grader
+        on = {n["path"] for n in d["nodes"] if n.get("stage") in ("agent", "semi") or (n.get("kind") == "agent" and "stage" not in n)}
+        self.assertTrue({"writer", "writer-sol", "grader", "train/weigh"} <= on, on)   # metatable 整棵樹都算（rollup 的 brain 才只算每題會被叫到的）
+        self.assertGreaterEqual(s["counter_on_brain"], 4)
         self.assertIn("| on_brain／program 節點數", run(METATABLE, str(G)).stdout)
         t = self.tmp / "sug"
         jwrite(t / "_metainfo", {"summary": "根", "kind": "program", "reads": ["tbl:a.json"]})
@@ -1604,6 +1613,219 @@ BEFORE_3B = "970b8e2c"          # 步驟 3b（設定拆成格）之前那一版
 sys.path.insert(0, str(G))
 sys.dont_write_bytecode = True  # 樹裡不留 __pycache__
 import cells as CELLS  # noqa: E402
+
+
+
+def common_of(g):
+    """拷貝樹的 train/common.py（ROOT＝拷貝），給測試叫 params_save、diff"""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("galtxt_common_%x" % abs(hash(str(g))), str(g / "train" / "common.py"))
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+class Round4GradT(unittest.TestCase):
+    """第四輪步驟 5（plan/round4.md § 4、§ 5.4；§ 10 測試 10、11、14、16）：diff、判斷器樹、verify 的梯度／判斷／回滾／分配。全部假腦、在拷貝上跑。"""
+
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.addCleanup(self._t.cleanup)
+        self.tmp = Path(self._t.name)
+        self.ws = self.tmp / "ws"
+        (self.ws / "new").mkdir(parents=True)
+
+    # 10. diff：數值差、非數值 [舊,新]、集合 {+,-}、沒變的鍵不出現；兩邊同＝{}
+    def test_diff(self):
+        c = common_of(G)
+        b = {"stage": "agent", "determinism": 0.3, "val": "ok", "cost": {"llm_tokens": 7000, "llm_calls": 2}, "dims": {"反差": 0.5, "洩底": None, "語域": 0.5},
+             "tags": ["太直白", "承接自然"], "cells": ["cast.yuzu.tic.01"], "bench": {"guard_hit": 1}}
+        a = {"stage": "semi", "determinism": 0.55, "val": "ok", "cost": {"llm_tokens": 8500, "llm_calls": 3}, "dims": {"反差": 0.75, "洩底": 0.5, "語域": 0.5},
+             "tags": ["承接自然", "嘴硬心軟"], "cells": ["cast.yuzu.tic.01", "style.tsun.deny.03"], "bench": {"guard_hit": 1}}
+        self.assertEqual(c.diff(b, a), {"stage": ["agent", "semi"], "determinism": 0.25, "cost.llm_tokens": 1500, "cost.llm_calls": 1,
+                                        "dims.反差": 0.25, "dims.洩底": [None, 0.5], "tags": {"+": ["嘴硬心軟"], "-": ["太直白"]},
+                                        "cells": {"+": ["style.tsun.deny.03"], "-": []}})
+        self.assertEqual(c.diff(b, json.loads(json.dumps(b))), {})
+        self.assertEqual(c.diff({}, {}), {})
+        self.assertEqual(c.diff({"x": 1}, {}), {"x": [1, None]})
+        self.assertEqual(c.diff({"v": 0.1 + 0.2}, {"v": 0.3}), {})                     # 三位小數內一樣＝沒變
+        v = {"score_mean": 3.5, "counter_samples": 6, "dims": {"反差": 1.0}, "measure": {"一致": 0.5}, "guard_hit": 1, "bigram_overlap": 0.1,
+             "tags": {"假腦": 6}, "cell_hits": {"cast.yuzu.tic.01": 3}, "brain": {"llm_tokens_per_question": 900, "llm_calls_per_question": 4}}
+        sn = c.snapshot(v, {"stage": "semi", "tools": ["lint", "beat"]}, None)
+        self.assertEqual(sn, {"val": "ok", "total_avg": 3.5, "determinism": 0.5, "dims": {"反差": 1.0}, "bench": {"guard_hit": 1, "bigram_overlap": 0.1},
+                              "tags": ["假腦"], "cells": ["cast.yuzu.tic.01"], "cost": {"llm_tokens": 900, "llm_calls": 4},
+                              "stage": "semi", "tools": ["beat", "lint"]})
+        self.assertEqual(c.snapshot(v, None, {"llm_tokens": 0, "llm_calls": 0})["cost"], {"llm_tokens": 0, "llm_calls": 0})   # 那棵量得到＝用它的
+        self.assertEqual(c.cell_prefix("data/templates.distilled.json"), "tpld")
+        self.assertEqual(c.cell_prefix("data/cast/yuzu.json"), "cast.yuzu")
+        self.assertIsNone(c.cell_prefix("writer/stage.json"))
+
+    def weigh(self, g, qs, stage):
+        ws = self.tmp / ("ws-" + stage)
+        for i, q in enumerate(qs):
+            jwrite(ws / "new" / ("%02d.json" % i), q)
+        r = run(EXEC, "--dotenv-override", "--ws", str(ws), str(g / "train" / "weigh"),
+                env={"AOS_STACK": str(self.tmp / ("st-" + stage)) + "/", "GALTXT_WEIGH_STAGE": stage}, timeout=120)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return [(ws / "out" / ("%02d.json" % i)).read_text(encoding="utf-8").splitlines()[0] for i in range(len(qs))]
+
+    # 11. 判斷器：rules.json 既定 → 護欄掉 B、token 歸零且 −0.2 A、−0.4 B、確定性 +0.2 token +1.5k A、全零 B；log.jsonl 一題一行；agent／rules 兩階相同；_metainfo 不變
+    def test_weigh(self):
+        g = tree_copy(self.tmp / "t")
+        meta = (g / "train" / "weigh" / "_metainfo").read_bytes()
+        P = {"min_gain": 0.25, "min_loss": 0.25}
+        b0 = {"val": "ok", "total_avg": 3.5, "determinism": 0.3, "cost": {"llm_tokens": 7000, "llm_calls": 2}, "dims": {"護欄": 1.0}, "bench": {"guard_hit": 1}}
+        c = common_of(g)
+
+        def q(after):
+            a = json.loads(json.dumps(b0))
+            for k, x in after.items():
+                h, _, t = k.partition(".")
+                if t:
+                    a[h][t] = x
+                else:
+                    a[k] = x
+            return {"A": c.diff(b0, a), "B": {}, "before": b0, "after": a, "params": P, "epoch": 1, "subtree": "writer", "action": "t"}
+        qs = [q({"dims.護欄": 0.5}),                                                       # 護欄掉 → B
+              q({"cost.llm_tokens": 0, "cost.llm_calls": 0, "total_avg": 3.3}),            # token 歸零、分 −0.2 → A
+              q({"cost.llm_tokens": 0, "cost.llm_calls": 0, "total_avg": 3.3, "val": "bad"}),   # 評級掉但殼拿掉、分沒掉超過 min_loss → A（固化的交換條件）
+              q({"cost.llm_tokens": 0, "cost.llm_calls": 0, "total_avg": 3.1}),            # token 歸零、分 −0.4 → B
+              q({"determinism": 0.5, "cost.llm_tokens": 8500, "cost.llm_calls": 3}),       # 確定性 +0.2、token +1.5k（半固化過渡）→ A
+              q({}),                                                                       # 全零 → B
+              q({"val": "bad", "total_avg": 3.4, "determinism": 0.9}),                     # 評級掉、腦沒拿掉 → B（就算確定性升）
+              q({"bench.guard_hit": 0, "determinism": 0.9})]                               # Q16 錨掉 → B
+        want = ["B", "A", "A", "B", "A", "B", "B", "B"]
+        self.assertEqual(qs[5]["A"], {})
+        for stage in ("agent", "rules"):
+            got = self.weigh(g, qs, stage)
+            self.assertEqual([l[-1] for l in got], want, stage)
+            self.assertTrue(all(l.startswith("選：") for l in got))
+        log = jl(g / "train" / "weigh" / "log.jsonl")
+        self.assertEqual(len(log), 2 * len(qs))
+        self.assertEqual([x["choice"] for x in log], want * 2)
+        self.assertEqual({x["by"] for x in log}, {"train/weigh（agent）", "train/weigh（rules）"})
+        self.assertEqual(log[1]["diff"], qs[1]["A"])
+        self.assertTrue((self.tmp / "st-agent" / "history.jsonl").is_file())           # agent 階真的走了 loop（假腦）
+        self.assertFalse((self.tmp / "st-rules" / "history.jsonl").exists())           # rules 階 0 次腦
+        self.assertEqual((g / "train" / "weigh" / "_metainfo").read_bytes(), meta)
+        (self.tmp / "ws-bad" / "new").mkdir(parents=True)
+        r = run(EXEC, "--ws", str(self.tmp / "ws-bad"), str(g / "train" / "weigh"),
+                env={"AOS_STACK": str(self.tmp / "st-bad") + "/", "GALTXT_WEIGH_STAGE": "nope"}, timeout=60)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("weigh: StateBad", r.stderr)
+
+    def verify(self, g, st, env=None):
+        return run(EXEC, str(g / "train" / "fsm.json") + "#/states/verify/exec",
+                   env=dict({"AOS_STACK": str(st) + "/", "AOS_WS": str(self.ws)}, **(env or {})), timeout=600)
+
+    def change(self, g, st, n, stage, change, created=()):
+        """照 optimize 會做的：params_save（快照＋changed.json）→ 改 writer/stage.json"""
+        common_of(g).params_save(str(st), n, change, ["writer/stage.json"], created=created)
+        s = jread(g / "writer" / "stage.json")
+        s.update(stage)
+        jwrite(g / "writer" / "stage.json", s)
+
+    def epoch0(self, g, st):
+        r = self.verify(g, st, env={"GALTXT_FAKE_JITTER": "1"})                   # 假腦 agent 加抖動＝確定性 < 1（抽工具那步才看得到確定性升）
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertLess(jread(st / "epochs" / "000" / "verify.json")["measure"]["一致"], 1.0)
+        self.assertEqual((st / "epoch.txt").read_text(), "1\n")
+        self.assertFalse((g / "train" / "weigh" / "log.jsonl").exists())           # 沒有 changed.json＝不叫判斷器
+
+    # 14. 梯度分配：extract → writer/grad.json 與 tools/beat/grad.json 同一筆（assigned_from）；stage program → beat、voice 按叫用次數分攤、和為 1；lint、grader 不動
+    def test_grad_assign(self):
+        g, st = tree_copy(self.tmp / "t"), self.tmp / "st"
+        keep = {k: x for k, x in snapshot(g).items() if k.startswith(("grader/", "tools/lint/"))}
+        self.epoch0(g, st)
+        self.change(g, st, 1, {"stage": "semi", "tools": ["lint", "beat"]},
+                    {"source": "test", "action": "extract", "subtree": "writer", "target": "tools/beat"})
+        r = self.verify(g, st)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("weigh A（確定性升）writer/extract", r.stdout)
+        w, b = jread(g / "writer" / "grad.json"), jread(g / "writer" / "tools" / "beat" / "grad.json")
+        s0 = w["steps"][0]
+        self.assertEqual((s0["epoch"], s0["action"], s0["target"], s0["accepted"], s0["weigh"]["choice"]), (1, "extract", "tools/beat", True, "A"))
+        self.assertEqual(s0["diff"]["stage"], ["agent", "semi"])
+        self.assertEqual(s0["diff"]["tools"], {"+": ["beat"], "-": []})
+        self.assertGreater(s0["diff"]["determinism"], 0)
+        self.assertEqual(s0["changed_cells"], [])
+        self.assertEqual(w["context"]["tree"], g.name)
+        self.assertEqual((w["counter_steps"], w["counter_accepted"], w["counter_rolled_back"]), (1, 1, 0))
+        self.assertEqual(w["sum"]["determinism"], s0["diff"]["determinism"])
+        t0 = b["steps"][0]
+        self.assertEqual((t0["assigned_from"], t0["step_epoch"], t0["assigned_share"]), ("writer", 1, 1))
+        self.assertEqual((t0["diff"], t0["weigh"]), (s0["diff"], s0["weigh"]))
+        self.assertNotIn("steps", jread(g / "writer" / "tools" / "voice" / "grad.json"))
+        hist = jread(g / "writer" / "stage.json")["history"]
+        self.assertEqual([(h["epoch"], h["stage"]) for h in hist], [(0, "agent"), (1, "semi")])
+        self.assertEqual((hist[1]["action"], hist[1]["accepted"]), ("extract", True))
+        self.assertEqual(jread(g / "train" / "optimize" / "ratings.json")["action:extract"]["counter_accepted"], 1)
+        self.assertEqual(jread(g / "train" / "weigh" / "ratings.json")["judge:accept"]["counter_judged"], 1)
+        self.assertEqual(len(jl(g / "train" / "weigh" / "log.jsonl")), 1)
+        self.assertEqual(jread(g / "writer" / "rollup.json")["children"]["tools/beat"]["grad_total"]["determinism"], s0["diff"]["determinism"])
+        self.assertIn("train/weigh", jread(g / "rollup.json")["brain"]["nodes"])
+        # epoch 2：殼拿掉（stage program）→ 沒新工具，按叫用次數分給 beat、voice（lint 是捷徑，不算寫手的）
+        self.change(g, st, 2, {"stage": "program", "tools": ["lint", "beat", "voice"]},
+                    {"source": "test", "action": "stage", "subtree": "writer"})
+        r = self.verify(g, st)
+        self.assertIn(r.returncode, (0, 10), r.stderr)
+        s1 = jread(g / "writer" / "grad.json")["steps"][1]
+        self.assertEqual((s1["epoch"], s1["action"]), (2, "stage"))
+        self.assertLess(s1["diff"]["cost.llm_calls"], 0)
+        shares = {}
+        for t in ("beat", "voice"):
+            last = jread(g / "writer" / "tools" / t / "grad.json")["steps"][-1]
+            self.assertEqual((last["assigned_from"], last["step_epoch"], last["action"]), ("writer", 2, "stage"))
+            shares[t] = last["assigned_share"]
+        self.assertAlmostEqual(sum(shares.values()), 1.0, places=6)
+        e1, e2 = (jread(st / "epochs" / x / "verify.json")["brain"] for x in ("001", "002"))
+        self.assertEqual((e1["nodes"]["writer"], e2["nodes"]["writer"]), ("semi", "program"))   # brain 記這次實際跑的階
+        self.assertEqual(e2["counter_on_brain"], e1["counter_on_brain"] - 1)                 # § 2.3 成功判準：on_brain 往下
+        self.assertTrue(all(0 < x < 1 for x in shares.values()), shares)
+        self.assertEqual({k: x for k, x in snapshot(g).items() if k.startswith(("grader/", "tools/lint/"))}, keep)
+
+    # 16. 回滾：rules.json 暫改成「確定性升也拒」→ epoch 1 verify 退 10、stage.json 拷回、新建的工具資料夾刪掉、grad accepted false、counter_rolled_back 1
+    def test_rollback(self):
+        g, st = tree_copy(self.tmp / "t"), self.tmp / "st"
+        rules = jread(g / "train" / "weigh" / "rules.json")
+        rules["reject_if"].append({"key": "determinism", "gt": 0, "label": "確定性升也拒"})
+        jwrite(g / "train" / "weigh" / "rules.json", rules)
+        self.epoch0(g, st)
+        stage0 = jread(g / "writer" / "stage.json")
+        (g / "writer" / "tools" / "close").mkdir()                                   # selfopt 會新建工具資料夾：回滾要整個刪
+        (g / "writer" / "tools" / "close" / "tool.json").write_text("{}")
+        self.change(g, st, 1, {"stage": "semi", "tools": ["lint", "beat"]},
+                    {"source": "test", "action": "extract", "subtree": "writer", "target": "tools/beat"}, created=["writer/tools/close"])
+        r = self.verify(g, st)
+        self.assertEqual(r.returncode, 10, r.stderr)
+        self.assertIn("train: Regressed epoch 1 回滾 writer/extract beat（weigh: 拒A：確定性升也拒）", r.stderr)
+        s = jread(g / "writer" / "stage.json")
+        self.assertEqual((s["stage"], s["tools"]), ("agent", ["lint"]))
+        self.assertEqual({k: x for k, x in s.items() if k != "history"}, {k: x for k, x in stage0.items() if k != "history"})
+        self.assertEqual([(h["epoch"], h["stage"]) for h in s["history"]], [(0, "agent"), (1, "semi")])   # 記的是這次實際跑的階
+        self.assertFalse(s["history"][1]["accepted"])
+        self.assertFalse((g / "writer" / "tools" / "close").exists())
+        w = jread(g / "writer" / "grad.json")
+        self.assertFalse(w["steps"][0]["accepted"])
+        self.assertEqual(w["steps"][0]["rolled_back"], ["writer/stage.json", "writer/tools/close"])
+        self.assertEqual((w["counter_rolled_back"], w["counter_accepted"]), (1, 0))
+        self.assertNotIn("determinism", w["sum"])                                   # 被拒的步不進 sum
+        self.assertFalse(jread(g / "writer" / "tools" / "beat" / "grad.json")["steps"][0]["accepted"])
+        a = jread(g / "train" / "optimize" / "ratings.json")["action:extract"]
+        self.assertEqual((a["counter_applied"], a["counter_rolled_back"]), (1, 1))
+        self.assertEqual((st / "epoch.txt").read_text(), "1\n")
+        r = self.verify(g, st)                                                       # 收工後再叫：照 verify.json 退 10、不重判
+        self.assertEqual(r.returncode, 10)
+        self.assertEqual(len(jl(g / "train" / "weigh" / "log.jsonl")), 1)
+        bad = self.tmp / "st2"                                                       # changed.json 的路徑出樹＝StateBad
+        (bad / "epochs" / "001" / "params").mkdir(parents=True)
+        shutil.copytree(st / "epochs" / "000", bad / "epochs" / "000")
+        (bad / "epoch.txt").write_text("1\n")
+        jwrite(bad / "epochs" / "001" / "params" / "changed.json",
+               {"source": "test", "action": "extract", "subtree": "writer", "files": ["../../outside.json"], "created": []})
+        r = self.verify(g, bad)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("train: StateBad", r.stderr)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,14 @@
+{
+ "source": "判斷器固化到哪階（round4 § 4.4）：stage ∈ agent（_entry 跑 aos-loop：腦讀兩份 diff 與 rules.json 回答；假腦＝rules.py）／rules（_entry 直接照 rules.json 算，0 token）；換階由 train/optimize（步驟 6），train/verify.py 補 history；人不手改。環境變數 GALTXT_WEIGH_STAGE 可暫時覆寫",
+ "stage": "agent",
+ "since_epoch": null,
+ "why": null,
+ "tools": [],
+ "tools_share": 0,
+ "decisions_left": [
+  "比較數值鍵",
+  "比較非數值鍵",
+  "套優先序"
+ ],
+ "history": []
+}

@@ -1,0 +1,7 @@
+{"summary": "selfopt 派工：整棵樹拷到小格、白名單從原樹算、任務寫進 ws/new/task.json，叫節點自己（GALTXT_OPT=1）、optkit/shell 或 optkit/claude 在拷貝裡改；數腦則數／token／牆鐘，到頂殺掉（BudgetSpent）；寫 run.json，不搬（搬是 accept 的事）",
+ "kind": "program", "grow_level": 4, "role": "dev",
+ "time_ms": {"val": 60000, "max": 900000}, "resource": ["cpu", "disk", "llm"],
+ "side_effect": true, "idempotent": false, "deterministic": false, "interrupt": "safe", "parallel": true,
+ "reads": ["tree:**", "optkit:budget.json", "tree:train/set.json", "tree:plan/examples/"],
+ "writes": ["stack:selfopt/<子樹>/NNN/（tree/、questions/、ws/、stack/、run.json、run.log）", "optkit:usage.jsonl（經 claude）"],
+ "callers": 2, "callers_note": "train/optimize（步驟 6b 的 selfopt 動作）與人／測試直接叫"}

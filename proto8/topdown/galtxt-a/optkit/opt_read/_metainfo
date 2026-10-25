@@ -1,0 +1,28 @@
+{
+ "summary": "只讀：拷貝樹裡的檔（read_deny 擋正解與測試）；optkit 自我優化工具包（round4-selfopt.md § 1），只在 optkit/run 開的沙箱裡用（OPTKIT_* 環境）",
+ "kind": "program",
+ "grow_level": 4,
+ "role": "dev",
+ "time_ms": {
+  "val": 50,
+  "max": 10000
+ },
+ "resource": "cpu",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "reads": [
+  "env:OPTKIT_TREE",
+  "env:OPTKIT_SUBTREE",
+  "env:OPTKIT_ALLOW",
+  "optkit:deny.json"
+ ],
+ "writes": [],
+ "fs_needs": [
+  "tool_json",
+  "mount"
+ ],
+ "callers": 2
+}

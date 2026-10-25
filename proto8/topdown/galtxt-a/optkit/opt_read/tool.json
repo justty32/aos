@@ -1,0 +1,15 @@
+{
+ "description": "讀拷貝樹裡的一個檔（路徑從樹根算，例 writer/tools/voice/_entry；資料夾回清單）。data/bench、train、測試讀不到。",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "相對樹根的路徑，例 writer/system.txt"
+   }
+  },
+  "required": [
+   "path"
+  ]
+ }
+}

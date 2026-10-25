@@ -1,0 +1,13 @@
+{
+ "description": "看先前執行結果：最近幾題的分數（total、各維度、lint 違規、評審理由）、grad.json 最近 3 步、自己上次改了什麼（opt_log）。",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "max_runs": {
+    "type": "integer",
+    "description": "最多看幾題（預設 6）"
+   }
+  },
+  "required": []
+ }
+}

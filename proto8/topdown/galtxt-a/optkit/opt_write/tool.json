@@ -1,0 +1,20 @@
+{
+ "description": "寫整個檔（新檔或白名單點名的檔）到拷貝樹，路徑從樹根算。不在白名單＝WriteDenied。",
+ "parameters": {
+  "type": "object",
+  "properties": {
+   "path": {
+    "type": "string",
+    "description": "相對樹根的路徑"
+   },
+   "content": {
+    "type": "string",
+    "description": "整個檔的內容"
+   }
+  },
+  "required": [
+   "path",
+   "content"
+  ]
+ }
+}

@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+# _entry - 判斷器（第三棵樹，round4 § 4.4）：題目＝$AOS_WS/new/*.json（兩份梯度 diff＋前後快照＋門檻），答案＝$AOS_WS/out/<題名> 兩行「選：A|B」「理由：標籤」。
+# 照 stage.json 的 stage 分流（同 writer/_entry）：agent＝aos-loop loop.json（腦讀 diff 與 rules.json 回答；假腦＝rules.py）；rules＝這支直接照 rules.json 算（0 token）。
+# 環境變數 GALTXT_WEIGH_STAGE 有設＝蓋過 stage.json（測試比兩階用）。
+# agent 階的回答解不開（沒有「選：A|B」）＝改用 rules.py 的答案覆寫、stderr 一行「weigh: ReplyBad …（改用 rules）」、by 記「rules 代」。
+# 每答一題追加一行 log.jsonl {at, epoch, subtree, action, diff, choice, reason, by}（這棵樹自己的紀錄；它不改任何別的東西）。
+# 錯：stderr 一行「weigh: 代號 原因」、退 1——StateBad（stage.json 讀不了、stage 不是 agent／rules）、QuestionBad（題目不是 JSON）、RulesBad。
+import datetime, json, os, re, shutil, subprocess, sys
+
+sys.dont_write_bytecode = True
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, HERE)
+import rules as R  # noqa: E402
+
+STAGES = ("agent", "rules")
+
+
+def die(code, reason):
+    print("weigh: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
+    sys.exit(1)
+
+
+def now():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def parse(text):
+    c = re.search(r"選[:：]\s*([AB])\b", text or "")
+    r = re.search(r"理由[:：]\s*(.+)", text or "")
+    return (c.group(1), r.group(1).strip() if r else "") if c else (None, None)
+
+
+stage = os.environ.get("GALTXT_WEIGH_STAGE")
+if not stage:
+    try:
+        with open(os.path.join(HERE, "stage.json"), encoding="utf-8") as f:
+            stage = json.load(f).get("stage")
+    except (OSError, ValueError, AttributeError) as e:
+        die("StateBad", "stage.json 讀不了：%s" % e)
+if stage not in STAGES:
+    die("StateBad", "stage %r 不是 %s" % (stage, "／".join(STAGES)))
+try:
+    rules = R.load_rules(os.path.join(HERE, "rules.json"))
+except (OSError, ValueError) as e:
+    die("RulesBad", "rules.json 讀不了：%s" % e)
+
+ws = os.environ.get("AOS_WS", ".")
+
+
+def ls(d):
+    try:
+        return sorted(n for n in os.listdir(os.path.join(ws, d)) if not n.startswith("."))
+    except FileNotFoundError:
+        return []
+
+
+def write(d, name, text):
+    os.makedirs(os.path.join(ws, d), exist_ok=True)
+    tmp = os.path.join(ws, d, "." + name)
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.replace(tmp, os.path.join(ws, d, name))
+
+
+todo = ls("cur") + ls("new")
+questions = {}
+for d in ("cur", "new"):
+    for n in ls(d):
+        try:
+            with open(os.path.join(ws, d, n), encoding="utf-8") as f:
+                questions[n] = json.load(f)
+        except (OSError, ValueError) as e:
+            die("QuestionBad", "%s 不是 JSON：%s" % (n, e))
+
+if stage == "agent":
+    r = subprocess.run(["aos-loop", "loop.json"], cwd=HERE)
+    if r.returncode != 0:
+        sys.exit(r.returncode)
+else:
+    for n in todo:
+        write("out", n, R.answer(questions[n], rules))
+        os.makedirs(os.path.join(ws, "done"), exist_ok=True)
+        src = os.path.join(ws, "cur", n) if os.path.exists(os.path.join(ws, "cur", n)) else os.path.join(ws, "new", n)
+        shutil.move(src, os.path.join(ws, "done", n))
+
+for n in todo:
+    q = questions[n]
+    try:
+        with open(os.path.join(ws, "out", n), encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        continue
+    choice, reason = parse(text)
+    by = "train/weigh（%s）" % stage
+    if choice is None:
+        print("weigh: ReplyBad %s 解不出「選：A|B」（改用 rules）" % n, file=sys.stderr)
+        write("out", n, R.answer(q, rules))
+        choice, reason = R.decide(q, rules)
+        by = "train/weigh（agent 回答解不開，rules 代）"
+    line = {"at": now(), "epoch": q.get("epoch"), "subtree": q.get("subtree"), "action": q.get("action"),
+            "diff": q.get("A"), "choice": choice, "reason": reason, "by": by}
+    with open(os.path.join(HERE, "log.jsonl"), "a", encoding="utf-8") as f:
+        f.write(json.dumps(line, ensure_ascii=False) + "\n")
