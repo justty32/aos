@@ -389,12 +389,12 @@ class T(unittest.TestCase):
     # ---- 10-23 壓測後（使用者「都修都處理」）
 
     def watch(self, secs):
-        """secs 秒內每 10 毫秒讀一次 state，回看到的每一份（at 不同才算一份）。"""
+        """secs 秒內每 10 毫秒讀一次 state，回看到的每一份（recorded_at 不同才算一份）。"""
         seen, end = [], time.monotonic() + secs
         while time.monotonic() < end:
             try:
                 st = self.state()
-                if not seen or st["at"] != seen[-1]["at"]:
+                if not seen or st["recorded_at"] != seen[-1]["recorded_at"]:
                     seen.append(st)
             except (OSError, ValueError):
                 pass
@@ -403,7 +403,7 @@ class T(unittest.TestCase):
 
     @staticmethod
     def gaps(seen):
-        ts = [datetime.datetime.fromisoformat(s["at"]).timestamp() for s in seen]
+        ts = [datetime.datetime.fromisoformat(s["recorded_at"]).timestamp() for s in seen]
         return [b - a for a, b in zip(ts, ts[1:])]
 
     def test_stubborn_child_does_not_block(self):
@@ -450,7 +450,7 @@ class T(unittest.TestCase):
             self.assertFalse(alive(cs["pid"]), n)          # 讀的人看 pid（＋started_at_ticks）判斷：已經不在了
 
     def test_one_state_per_cycle(self):
-        # 第 3、4 點：沒有 exec 的 daemon 一輪只 tend 一次、只寫一份 state（不寫 running），at 的間隔穩定在 interval_ms 上下
+        # 第 3、4 點：沒有 exec 的 daemon 一輪只 tend 一次、只寫一份 state（不寫 running），recorded_at 的間隔穩定在 interval_ms 上下
         p = self.start({"state": "state.json", "ctl": "ctl.json", "interval_ms": 300, "loops": {"a": self.long()}})
         self.assertTrue(until(lambda: (self.s / "a" / "starts").exists()))
         # 數 state.json 被改名蓋過幾次（inotify IN_MOVED_TO）；只靠輪詢讀會漏掉連著的兩份。也聽 IN_CREATE（每份先建 .state.json），
@@ -476,7 +476,7 @@ class T(unittest.TestCase):
         self.assertEqual(p.returncode, 0)
         self.assertGreater(len(seen), 5)
         self.assertEqual({s["phase"] for s in seen}, {"waiting"})
-        self.assertEqual(len({s["runs"] for s in seen}), len(seen), "一次只寫一份")
+        self.assertEqual(len({s["counter"] for s in seen}), len(seen), "一次只寫一份")
         g = self.gaps(seen)
         self.assertTrue(all(0.25 < x < 0.5 for x in g), g)
 
@@ -489,7 +489,7 @@ class T(unittest.TestCase):
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"x": self.long()}})
         st = until(lambda: self.state(), 5)
         self.assertTrue(st, "起子項之前沒寫 state")
-        self.assertEqual((st["phase"], st["runs"], st["loops"]), ("waiting", 0, {}))
+        self.assertEqual((st["phase"], st["counter"], st["loops"]), ("waiting", 0, {}))
         fd = os.open(cell / "stderr.txt", os.O_RDONLY | os.O_NONBLOCK)
         try:
             self.assertTrue(until(lambda: (cell / "starts").exists() and self.kids()["x"]["phase"] == "running"))
@@ -724,7 +724,7 @@ class T(unittest.TestCase):
             (self.t / n / "_entry").chmod(0o755)
         self.cfg({"exec": {"argv": ["true"]}, "interval_ms": 100, "state": "state.json", "ctl": "ctl.json", "loops": {}})
         p = self.popen_env({"AOS_STACK": str(self.s), "AOS_CF": str(self.t / "p1"), "AOS_CD": str(self.t / "pd"), "AOS_CO": "p3"})
-        self.assertTrue(until(lambda: self.state()["runs"] >= 1))
+        self.assertTrue(until(lambda: self.state()["counter"] >= 1))
         self.ctl({"loops": {"a": {"exec": {"$env": "AOS_CF"}, "max": 1}, "b": {"exec": {"$env": "AOS_CD", "$path": "p2"}, "max": 1},
                             "c": {"exec": {"$env": "AOS_CO"}, "max": 1}}})
         k = until(lambda: len(self.kids()) == 3 and all(r["phase"] == "done" for r in self.kids().values()) and self.kids())

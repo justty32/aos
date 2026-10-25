@@ -36,6 +36,8 @@
 > 10-23 深夜再改（使用者「fsm.json，現在是用val，幫我改成exec」；頂層指出 loop／daemon 的 `run` 跟它不同名、違反 C-54 一詞一義，使用者選「exec，loop／daemon 的 run 也一起改 exec」）：全家「要跑什麼」這一格一律叫 `exec`——fsm 每一格的 `val`、loop.json／daemon.json／子項（daemon 把字串子項包成 `{"exec": …}`、小格 loop.json）的 `run` 都改 `exec`；state 的 `runs`、`max_runs`、`run_once`、`src/run/`、`Run` 不動，旗標也不動。庫跟著改名：aos-loop 的 `Defaults::need_run` → `need_exec`、`Loop::has_run_`／`run_` → `has_exec_`／`exec_`，aos-fsm 的 `Cell::val` → `exec`。`val` 從此只用在 C-55「值長成物件時原值放 `val`」（ctl 的 `paused`／`stopped` 雙形那類）。
 > 換完拿 `proto8/tests`（245 個；`test_tick` 用 bin 的 aos-tick，impls 沒有這支）對照，一樣只剩下面那兩個字面差別；`proto8/demo/run.sh` 換成 impls 四支跑，跟 bin 線逐行一樣（時間、pid 抹掉）。
 >
+> **10-25 state.json 改名**（使用者 10-25「state.json中，runs改counter，at改成recorded_at」）：aos-loop 的 `write_state`／`heartbeat`（aos-daemon 共用）寫的 state.json `runs` → `counter`、`at` → `recorded_at`，不留舊名；fsm trace 的 `at`、kernel-llm queue.json 的 `runs` 不動。內部變數 `runs_` 沒改名。
+>
 > **10-23（對齊 bin 10-22，ideas 10-22 § 3、§ 6、§ 7）：** aos-exec 的 `.env` 改 dotenv 基礎子集（`export `、`=` 兩邊空白、引號、空白＋`#` 註解、去頭尾空白——值的空白照 python-dotenv 認 Unicode 空白、行首仍只認 ASCII）、
 > 預設不蓋已有的、加不帶值的旗標 `--dotenv-override`（只管這一跳；`parse_cli` 收開關表）；aos-daemon 擋子項名字跟自己的 ctl／state 撞名（起來時 `CfgBad` 退 1、ctl 撞＝不採用）；
 > aos-fsm 開跑時查整張表（表壞 `CfgBad`）、state 在但讀不了 `StateBad`、USAGE 補 `[旗標]`。aos-util 多一個 `aos/text.hpp`（Unicode 空白、UTF-8 檢查）。

@@ -107,3 +107,5 @@ aos-tick   - 把時鐘檔的回合數往前走一格
 - 「beat」這個字在 aos 裡已沒有對應的概念，所以庫跟著改：`aos_beat.py` → `aos_run.py`；impls 的 `run_beat` → `run_once`、結果型別 `Beat` → `Run`、`src/beat/` → `src/run/`。`heartbeat`（心跳）是另一個概念，不動。
 - **`restarted_times` 沒有落地**：前提是頂層弄錯的——daemon state 裡子項那一列只有 `pid`、`started_at_ticks`、`phase`、`code`、`signal`，沒有 `runs`；子 loop 結束後也不會自動重起，所以沒有「重啟過幾次」可記。原本叫 `runs` 的是 demo stamp 工具在它自己 stack 裡的 `runs.txt`（記 stamp 被用了幾次），跟 loop state 的 `runs` key 不在同一個檔、也不是同一個主題，照 R9 不算撞名，`runs.txt` 照舊。
 - **新規則「撞名就換角度」併進 R9**：照方法推出來的名字，如果跟同一個檔或同一個主題裡的名字撞了，就換一個角度，用白話重新描述它的功能與特性，再從那句白話取名。R6 的計數規則補一句：撞名時照這條換角度，得到的名字不一定是「名詞加 s」。C-54 命名方法裡的例子是假設的（fsm trace 的「第幾格」→ 撞 `states` → 換角度「走了幾步」→ `steps`），標明是假設。
+
+**10-25 註**（使用者 10-25「state.json中，runs改counter，at改成recorded_at」）：loop／daemon 的 state.json 現行是 `counter`（原 `runs`）、`recorded_at`（原 `at`）；上面的原文與決定照留，其他紀錄（trace 等）的 `at` 不動。

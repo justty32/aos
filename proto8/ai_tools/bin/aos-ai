@@ -496,7 +496,7 @@ def cmd_daemon(root, o, pos):
         st = d.read_state() or {}
         out({"ok": True, "running": bool(d.running()), "pid": d.running(), "phase": st.get("phase"),
              "loops": st.get("loops") or {}, "ctl_seq": st.get("ctl_seq"), "ctl_warning": st.get("ctl_warning"),
-             "at": st.get("at"), "stderr_tail": (read_text(d.dir / "stderr.txt") or "")[-500:] or None})
+             "recorded_at": st.get("recorded_at"), "stderr_tail": (read_text(d.dir / "stderr.txt") or "")[-500:] or None})
     else:
         raise Fail("ArgumentsBad", "daemon 只認 up、down、status：%s" % pos[0])
 

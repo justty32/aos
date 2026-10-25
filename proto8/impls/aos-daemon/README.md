@@ -102,7 +102,7 @@ daemon.json＝loop.json 的超集（N-28）：
 - **state 自動切檔**：`loops` 表超過 100 列（`PART_ROWS`，不開 key）才切，每份最多 100 列、照表的順序；100 列以內維持物件：
 
   ```json
-  {"kind": "state", "phase": "waiting", ..., "loops": {"$ref": ["state_loops/3f9a2c1e07d45b6a.json", "state_loops/<雜湊>.json", ...]}, "pid": ..., "at": ...}
+  {"kind": "state", "phase": "waiting", ..., "loops": {"$ref": ["state_loops/3f9a2c1e07d45b6a.json", "state_loops/<雜湊>.json", ...]}, "pid": ..., "recorded_at": ...}
   ```
 
   分檔資料夾＝state 檔名去副檔名＋`_loops`、跟 state 同一層（也算子項撞名）；檔名＝內容的 FNV-1a 64 雜湊。每份先寫 `.` 開頭暫存再改名，內容沒變的沿用不重寫；
@@ -163,7 +163,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
   不自動重起、子項 stderr 在小格、ctl 增減、SIGTERM 收子項 143、旗標蓋過設定、exec 陣列與設定檔規則、子 loop 經 aos-exec 起、字串子項是 aos-exec 的目標、
   收工時剛死的子項標 done、收掉的標 stopped、adopt、`adopt: false`），加錯誤代號、子 loop 的 state 心跳是自己的 pid；10-23 再抄 bin 10-22 的 3 案（daemon 重開照名單起停機期間死掉的子項、子項撞名起來時退 1〔另驗 `--state` 旗標也算〕、ctl 撞名不採用）；
   10-23 壓測後加 4 案（共 24 案，約 25 秒）：不肯退的子 loop 不卡住 daemon（收的途中照寫 state、照起別的、那列 `stopping`，收工也等、每秒寫；被 SIGKILL 的那列 `stopped`／signal 9，
-  它自己的 state 停在 `running`、pid 已不在）、一圈一份 state（inotify 數改名次數）與 `at` 間隔、起子項之前先有 state（小格放 FIFO 讓起子項卡住）、`$AOS_STACK` 不在不建。
+  它自己的 state 停在 `running`、pid 已不在）、一圈一份 state（inotify 數改名次數）與 `recorded_at`（10-25 前叫 `at`）間隔、起子項之前先有 state（小格放 FIFO 讓起子項卡住）、`$AOS_STACK` 不在不建。
   四案拿修前的碼跑都紅；10-23 晚加 G 段 6 案（共 30 案，約 30 秒）：`loops` 用 `$ref` 陣列拆檔與每層的 `$ref`（兩份同名後蓋前、各份從自己的資料夾算、子項 loop key 先解、body 原樣、`adopt` 也解）、拆檔與指示詞寫壞（舊的物件陣列不收、物件與陣列混著、一份讀不到、合成陣列、解不開＝`DirectiveBad`）、
   ctl 的 `loops_added`／`loops_removed`（加、減、拿掉回 daemon.json、跟 ctl 的 `loops` 一起、兩邊都寫＝不要）、寫壞不採用與 ctl 的相對 `$ref`（`$ref` 陣列、兩份在不同資料夾）、
   state 超過 100 列切檔（`{"$ref": [...]}`、每份 100＋1、檔名是雜湊、aos-directive 解回整張表、只留兩代、分檔資料夾撞名）、切了檔照樣 adopt、縮回 100 以內變回物件並清掉分檔——六案拿改前的碼跑都紅。

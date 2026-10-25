@@ -27,6 +27,8 @@
 
 **10-23 晚命名方法**（[thinking 2026-10-23-naming-method](thinking/2026-10-23-naming-method.md)，使用者提方法後「先試試看，不要急着寫進去」，查過 Unix／Linux 老慣例、八題選完後「寫進去吧」）：C-54 加「命名方法」一點，R1～R12 細則放 [CONCEPTS/01-設計理念/C-54-命名方法.md](CONCEPTS/01-設計理念/C-54-命名方法.md)（先寫一行 NAME、每格一句白話、固定格、`<事件>_at`、計數不用 `nr_`、index 用 `idx`、`_` 開頭的檔＝入口…）；C-55 例子跟著改 `stopped`；[縮寫表](CONCEPTS/abbr.json)表頭加 `note`（進表門檻）。
 
+**10-25 state.json 改名**（使用者 10-25「state.json中，runs改counter，at改成recorded_at」）：loop／daemon 的 state.json（N-17、N-32）跑過幾次 `runs` → `counter`、這份 state 的時間 `at` → `recorded_at`；不留舊名。只動 state.json 這兩格：fsm 的 trace、信、kernel-llm 的 queue.json 等其他 JSON 的同名欄位不動。跟 [C-54 命名方法](CONCEPTS/01-設計理念/C-54-命名方法.md)（計數加 s、紀錄時間用固定格 `at`）不同，規則本身沒改，見 C-54 該兩列的註。
+
 ## 條號表（2026-10-20 tidy：本檔超過 8 KB，整段逐字下放）
 
 <!-- wf-nav -->

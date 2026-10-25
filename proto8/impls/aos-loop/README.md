@@ -66,11 +66,11 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔
 - **ctl**（誰都能寫、loop 只讀；每跑一次讀一次）：認 `paused`（不起下一次、每秒再看）、`stopped`（不起下一次、以 0 結束；10-23 晚改名，原 `stop`）、`max`、`interval_ms`（跑的途中蓋過旗標與 loop.json，後到先贏）、`seq`（state 回音 `ctl_seq`）；
   其他 key 忽略。讀到壞的（讀不了、不是 JSON 物件、型別不對、指示詞解不開）整份不採用、維持上一份好的、原因寫進 state 的 `ctl_warning`（N-08）；檔不在＝還沒人寫，不算問題。
 - **state**（只有自己寫；先寫 `.state.json` 再改名，N-05）：只在兩次之間寫（心跳只在兩次之間跳）：
-  `{"kind": "state", "phase": running／waiting／paused／done／stopped, "runs", "max", "interval_ms", "paused", "ctl_seq", "ctl_warning", "pid", "started_at_ticks", "boot_id", "at"}`，
-  `runs`＝跑過幾次、`started_at_ticks`＝/proc/<pid>/stat 第 22 欄、`at`＝這份 state 的時間（ISO 8601 UTC 到毫秒，例 `2026-10-23T01:58:45.123+00:00`）；
-  10-23 統合前 `phase` 叫 state、`runs` 叫 lap（10-23 統合後一度叫 beats，同晚改 runs）、`started_at_ticks` 叫 started、`at` 叫 beat（那時是 epoch 秒）（[10-23 命名統合](../../thinking/2026-10-23-naming.md)）。
+  `{"kind": "state", "phase": running／waiting／paused／done／stopped, "counter", "max", "interval_ms", "paused", "ctl_seq", "ctl_warning", "pid", "started_at_ticks", "boot_id", "recorded_at"}`，
+  `counter`＝跑過幾次、`started_at_ticks`＝/proc/<pid>/stat 第 22 欄、`recorded_at`＝這份 state 的時間（ISO 8601 UTC 到毫秒，例 `2026-10-23T01:58:45.123+00:00`）；
+  10-23 統合前 `phase` 叫 state、`runs` 叫 lap（10-23 統合後一度叫 beats，同晚改 runs）、`started_at_ticks` 叫 started、`at` 叫 beat（那時是 epoch 秒）（[10-23 命名統合](../../thinking/2026-10-23-naming.md)）；10-25 `runs` 改 `counter`、`at` 改 `recorded_at`（使用者 10-25「state.json中，runs改counter，at改成recorded_at」）。
   **10-23 壓測後**（使用者「都修都處理」，[thinking](../../thinking/2026-10-23-daemon-bench.md)）：沒有 `exec`（只有 aos-daemon 會這樣）時一輪只讀一次 ctl、只 tend 一次、只寫一份 `waiting`（不寫 `running`），
-  `at` 的間隔穩定在 `interval_ms`＋tend 的時間；子類別在一輪裡做很久的工作時用 `beat()`（離上一份滿 1 秒或還沒寫過就再寫一份）。
+  `recorded_at` 的間隔穩定在 `interval_ms`＋tend 的時間；子類別在一輪裡做很久的工作時用 `beat()`（離上一份滿 1 秒或還沒寫過就再寫一份）。
   `$AOS_STACK` 資料夾不在＝state 寫不了＝`WriteFailed`、退 1、那次沒跑，**不自己建**（建 stack 只在 aos-exec 做，N-59 第 1 件；經 aos-exec 跑時它已經建好）。
   結束時多 `code`（`done`＝自己跑完或失敗、`stopped`＝ctl 叫停、收到訊號或自己的錯）；`max` 不限時是 `null`。欄位與順序同 bin 版。
 

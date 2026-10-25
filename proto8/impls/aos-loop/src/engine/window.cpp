@@ -5,7 +5,7 @@
 //                 型別不對、指示詞解不開）整份不採用、
 //                 維持上一份好的，原因記 ctl_warning（N-08）；讀到好的清回 null。檔不在＝還沒人寫，維持上一份好的、
 //                 不算問題（ctl_warning 不動）
-//   write_state   state 一份：kind、phase、runs、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 蓋過設定檔之後）
+//   write_state   state 一份：kind、phase、counter（跑過幾次；10-25 原 runs）、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 蓋過設定檔之後）
 //                 ＋info()＋code（結束時）＋心跳；沒開 state 窗就不寫
 //   beat          心跳：離上一次寫 state 滿 1 秒（或還沒寫過）就再寫一份（一輪裡很久的工作用：daemon 起一大批、收工等子項）
 //   write_window  先寫同資料夾的 .名字 再改名（N-05）
@@ -58,7 +58,7 @@ Json heartbeat() {
         }
     }
     Json out = me;
-    out["at"] = aos::utc_now_ms();
+    out["recorded_at"] = aos::utc_now_ms();
     return out;
 }
 
@@ -127,7 +127,7 @@ void Loop::write_state(const std::string& phase, const Json& code) {
     Json doc = Json::object();
     doc["kind"] = "state";
     doc["phase"] = phase;
-    doc["runs"] = runs_;
+    doc["counter"] = runs_;
     if (c.contains("max")) {
         doc["max"] = c["max"];
     } else if (max_) {
