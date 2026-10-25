@@ -10,7 +10,7 @@
 
 1. **先拍板並實作 `aos deliver` 的最小公開契約。**需決定 WORLD／FILE 位置參數、單筆是否接受、
    `--key`／`--durable`／`--to` 是否進第一版、成功／錯誤 JSON、退出碼、receipt、檔名 suffix，以及
-   key 在沒有 ledger 時是否只作 correlation。四位已對原子寫入順序與只負責投遞形成強訊號。
+   key 在沒有 ledger 時是否只作 correlation。原子寫入順序與「只負責投遞」已成形。
 
 2. **把 runtime tool set 收成 Deliver＋Status／Inspect＋Exec。**需拍板查詢工具叫 `status` 還是
    `inspect`、回哪些 world／queue／`.runi` 欄位，以及 Exec 是否維持現有 CLI；Init 另列建置期，
@@ -28,8 +28,8 @@
    Exec」；aos 本身不補權限彈窗。無論哪個，模型輸出不得以任意 argv 穿透高權 MCP／adapter。
 
 6. **若要完成 stdout→stdin 方向，另定專用 context 出口。**不能用 raw `aos exec` stdout；可從
-   request file、既有 Status JSON，或日後 `aos prompt／emit` 選一種。追問輪只定了回程用 Deliver，
-   去程仍需使用者拍板是否值得做成 core tool。
+   request file、既有 Status JSON，或日後 `aos prompt／emit` 選一種。回程已定用 Deliver，去程仍需
+   使用者拍板是否值得做成 core tool。
 
 7. **用這場 workshop 當第一個端到端 interop 驗證。**前置是 Deliver、四個 agent 結果的原子
    capture、完成 commit 與 join；先跑一輪 briefs→四 responses→書記 record，逐點測 agent 已付費

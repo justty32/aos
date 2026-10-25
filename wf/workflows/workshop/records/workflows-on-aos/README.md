@@ -33,16 +33,15 @@
 > 其實 **aos 在最初，只是我覺得 `C:/code/mine/workflows` 不是很好用，才想出來的規劃**。
 > 開啟下一輪吧，大家一起想想看，**如何用 aos 實現 workflows 那樣的功能**。
 
-這改變了整個專案的座標。前面幾輪的 CPU 類比、行程、lane、kernel、agent loop 都是可能的
-**手段**；這輪第一次看見它們原本想服務的**目的**。
+CPU 類比、行程、lane、kernel、agent loop 都是可能的**手段**；改善 workflows 是它們要服務的**目的**。
 
 `workflows` 本身沒有 executor：`WORKFLOWS.md` 用自然語言派發意圖，各工作流 README 解釋理由、
 判準與步驟；`SESSION-LOG.md`、`WAIT_USER.md`、`inbox/` 靠人或 agent 手動維護。它的分層原則是
-「每層只指向下一層」，也有一套非侵入式匯入方法。這個 repo 的 `wf/` 同時是它用了幾個月的
-活實例，已經長出 workshop、ideas、tick 等 template 原先沒有的東西。
+「每層只指向下一層」，也有一套非侵入式匯入方法。這個 repo 的 `wf/` 是它的活實例，已經長出
+workshop、ideas、tick 等 template 原先沒有的東西。
 
-但是使用者只說「不是很好用」，**沒有說痛在哪裡**。所以下面凡是談目前痛點，都標成四位從
-template 與活實例推出的假說，不寫成使用者已確認的事實。
+使用者只說「不是很好用」，**沒有說痛在哪裡**。所以下面凡是談目前痛點，都是從 template 與活實例
+推出的假說，不是使用者已確認的事實。
 
 ## 這場拆成五份，按用途分
 
@@ -50,9 +49,9 @@ template 與活實例推出的假說，不寫成使用者已確認的事實。
 |---|---|---|
 | [要拿去問使用者的問題](questions-for-user.md) | 〈要拿去問使用者的問題〉八題，第一題是四位都問到的核心 | **本場最主要的產出；要往下推進就先回答這裡。** |
 | [轉交提案](handoff.md) | 〈轉交提案（未拍板，不自行改規格／roadmap）〉六條 | 問題有答案之後，要決定先做哪一塊時 |
-| [現在可能痛在哪（全部是推論）](pain-points.md) | 〈`workflows` 現在可能會痛在哪〉：open-only 靠記憶、安裝升級沒有上游基準、inbox 生命週期、派發與遵守流程、tick 與 schedule | 想知道這些問題是怎麼推出來的，或要確認哪些只是假說 |
-| [哪些交給 `.aos`、哪些留在 markdown](machine-vs-markdown/README.md) | 再拆成三份：[該變成 `.aos` 的](machine-vs-markdown/to-aos.md)（共同長出的動作、兩個磁碟版面、候選動作順序、安裝與升級）、[該永遠留在 markdown 的](machine-vs-markdown/stay-in-markdown.md)、[三軸分別長成什麼](machine-vs-markdown/three-axes.md) | 要設計命令、磁碟版面，或決定什麼不該被編成 JSON 時 |
-| [還在生長的想法與明顯的坑](open-issues.md) | 〈還在生長的想法〉五條、〈明顯的坑〉 | 想知道哪些還沒收攏、哪些做法已被四位否掉 |
+| [現在可能痛在哪（全部是推論）](pain-points.md) | 〈`workflows` 現在可能會痛在哪〉：open-only 靠記憶、安裝升級沒有上游基準、inbox 生命週期、派發與遵守流程、tick 與 schedule | 要確認哪些只是假說 |
+| [哪些交給 `.aos`、哪些留在 markdown](machine-vs-markdown/README.md) | 三份：[該變成 `.aos` 的](machine-vs-markdown/to-aos.md)（共同長出的動作、兩個磁碟版面、候選動作順序、安裝與升級）、[該永遠留在 markdown 的](machine-vs-markdown/stay-in-markdown.md)、[三軸分別長成什麼](machine-vs-markdown/three-axes.md) | 要設計命令、磁碟版面，或決定什麼不該被編成 JSON 時 |
+| [還在生長的想法與明顯的坑](open-issues.md) | 〈還在生長的想法〉五條、〈明顯的坑〉 | 想知道哪些還沒收攏、哪些做法已被否掉 |
 
 ## 續場資訊
 
@@ -65,5 +64,3 @@ template 與活實例推出的假說，不寫成使用者已確認的事實。
 | 資深架構師 | `01a0367b-797f-7403-999e-fe2c685a8c10` |
 | 資深研究人員（OS／體系結構） | `01a03683-95cb-7331-8528-d1513a6c806f` |
 | 要接這個工具的開發者 | `01a03688-8b4c-70b0-87e3-ea28be9b7f9c` |
-
-> 原本是單檔 `workflows-on-aos.md`，一輪跑完膨脹到 22 KB，照 [DEV-GUIDE](../../../../STRUCTURE.md) 的「膨脹即拆」按用途拆成本資料夾。

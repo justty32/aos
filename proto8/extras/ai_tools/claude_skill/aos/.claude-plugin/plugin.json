@@ -1,0 +1,8 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "aos",
+  "version": "0.1.0",
+  "description": "用 aos-ai 操作 aos agent：從範本產生、丟題、跑、背景顧、看狀態與錯誤、停（proto8/extras/ai_tools）",
+  "author": {"name": "justty32"},
+  "skills": ["./"]
+}

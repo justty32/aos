@@ -11,13 +11,13 @@
 1. **先拿上一節的問題問使用者，不先把任一推論排進 roadmap。**最少要知道最近一次具體事故、
    只能消掉哪一步，以及 open 狀態是否需隨 Git 跨機；這三個答案會改變第一個功能與磁碟真源。
 
-2. **若使用者確認「活狀態靠記憶」是痛點，再拍板真源版面。**候選是三位的
-   `.aos/wf/tasks/*.json`／位置即狀態，加 `status --format md` 產生 view；或研究人員的
+2. **若使用者確認「活狀態靠記憶」是痛點，再拍板真源版面。**候選是
+   `.aos/wf/tasks/*.json`／位置即狀態，加 `status --format md` 產生 view；或
    `wf/open/{agent,user,peer}/*.md` 真源，`.aos` 只負責 Deliver／`.runi`。兩者不能同時不分主次。
 
 3. **若走 machine-state 版本，先做最小垂直切片。**`wf start → wait → resume → done` 加 status，
-   只覆蓋 SESSION-LOG／WAIT_USER；`WORKFLOWS.md` 仍由模型讀，所有理由與判準仍在 markdown。四位
-   都認為不需要先把 workflow 編成 lane。
+   只覆蓋 SESSION-LOG／WAIT_USER；`WORKFLOWS.md` 仍由模型讀，所有理由與判準仍在 markdown。不需要
+   先把 workflow 編成 lane。
 
 4. **inbox 只共用原子信封，不共用 instruction queue。**若要機械化，先拍板 `wf accept MAIL`
    的語意：只有明示接受才轉 open task／Deliver；未接受仍可忽略，保留 inbox 原本的寬鬆契約。

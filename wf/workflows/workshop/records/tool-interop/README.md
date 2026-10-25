@@ -28,22 +28,21 @@ exec；支援 MCP 的 agent 用無狀態薄殼轉同一語意。pi 本身明確�
 
 ---
 
-本場有兩輪。主輪先問 coding agent、skill、MCP 與權限怎麼分層；追問輪因使用者一句話，拿掉了
-主輪最重的一段 adapter：
+本場兩輪：主輪談 coding agent、skill、MCP 與權限怎麼分層；追問輪照使用者這句話拿掉 adapter 的
+自然語言解析：
 
 > **agent 的自然語言輸出變成 inst json？直接給 tool 啊。**
 
-也就是說，agent 不輸出一段等人猜的自然語言；它呼叫一支有 schema 的 tool。JSON 是否合法、
-怎麼原子寫入，是 tool 的責任。那支 tool 正好是三步交接中唯一尚未實作的「投遞」。因此下面先
-放追問輪的收攏結果，再回頭記主輪的整體分層。
+agent 不輸出等人猜的自然語言，而是呼叫一支有 schema 的 tool；JSON 是否合法、怎麼原子寫入，是 tool
+的責任。那支 tool 就是三步交接中唯一尚未實作的「投遞」。
 
 ## 這場拆成四份，按用途分
 
 | 檔案 | 裡面有什麼 | 什麼時候會想看 |
 |---|---|---|
-| [追問輪：`aos deliver` 的形狀](deliver-tool/README.md) | 再拆成兩份：[`aos deliver` 這支命令長什麼樣](deliver-tool/deliver-interface.md)（〈追問輪：那支投遞 tool 到底長什麼樣〉的合成版 `--help`、寫到哪裡檔名怎麼配、退出碼、誰驗證驗不過怎麼回，加上〈給模型看的錯誤訊息〉）、[最小 tool 組、一套 CLI，與四位收回的](deliver-tool/tool-set-and-retractions.md)（〈最小 tool 組〉、〈一套 CLI 能不能同時服務 skill／MCP／腳本〉、〈四位收回／改寫的〉） | 要動手定 Deliver 的參數、JSON、退出碼或驗證責任時 |
-| [主輪：分層與各入口怎麼接](entry-points/README.md) | 再拆成三份：[分層與已知前提](entry-points/layering.md)（〈主輪：aos 怎麼跟現有工具協作〉的 pi 前提、誰在上面誰在下面、stdout→stdin、session 只可當快取）、[skill／MCP／權限三個接法](entry-points/skill-mcp-permission.md)（〈skills 怎麼接〉、〈MCP 怎麼接，或為什麼 pi 不接〉、〈權限這塊〉）、[把這場研討會搬到 aos 上](entry-points/workshop-on-aos.md) | 要接 pi／MCP／skill，或要決定權限與 session 怎麼放時 |
-| [未決問題與明顯的坑](open-issues.md) | 〈大家問出來的問題〉九題、〈明顯的坑〉 | 想知道本場哪些還沒有答案、哪些做法已被四位否掉 |
+| [追問輪：`aos deliver` 的形狀](deliver-tool/README.md) | 兩份：[`aos deliver` 這支命令長什麼樣](deliver-tool/deliver-interface.md)（〈追問輪：那支投遞 tool 到底長什麼樣〉的合成版 `--help`、寫到哪裡檔名怎麼配、退出碼、誰驗證驗不過怎麼回，加上〈給模型看的錯誤訊息〉）、[最小 tool 組、一套 CLI，與不設自然語言解析層](deliver-tool/tool-set-and-retractions.md)（〈最小 tool 組〉、〈一套 CLI 能不能同時服務 skill／MCP／腳本〉、〈不設自然語言解析層〉） | 要動手定 Deliver 的參數、JSON、退出碼或驗證責任時 |
+| [主輪：分層與各入口怎麼接](entry-points/README.md) | 三份：[分層與已知前提](entry-points/layering.md)（〈主輪：aos 怎麼跟現有工具協作〉的 pi 前提、誰在上面誰在下面、stdout→stdin、session 只可當快取）、[skill／MCP／權限三個接法](entry-points/skill-mcp-permission.md)（〈skills 怎麼接〉、〈MCP 怎麼接，或為什麼 pi 不接〉、〈權限這塊〉）、[把這場研討會搬到 aos 上](entry-points/workshop-on-aos.md) | 要接 pi／MCP／skill，或要決定權限與 session 怎麼放時 |
+| [未決問題與明顯的坑](open-issues.md) | 〈大家問出來的問題〉九題、〈明顯的坑〉 | 想知道本場哪些還沒有答案、哪些做法已被否掉 |
 | [轉交提案](handoff.md) | 〈轉交提案（未拍板，不自行改規格／roadmap）〉八條 | **要決定下一步做什麼時從這裡開始。** |
 
 ## 續場資訊
@@ -57,5 +56,3 @@ exec；支援 MCP 的 agent 用無狀態薄殼轉同一語意。pi 本身明確�
 | 資深架構師 | `01a0367b-797f-7403-999e-fe2c685a8c10` |
 | 資深研究人員（OS／體系結構） | `01a03683-95cb-7331-8528-d1513a6c806f` |
 | 要接這個工具的開發者 | `01a03688-8b4c-70b0-87e3-ea28be9b7f9c` |
-
-> 原本是單檔 `tool-interop.md`，主輪＋追問輪跑完膨脹到 28 KB，照 [DEV-GUIDE](../../../../STRUCTURE.md) 的「膨脹即拆」按用途拆成本資料夾。

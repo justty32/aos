@@ -2,7 +2,7 @@
 
 ← [本場索引](README.md)｜[workshop](../../README.md)
 
-本檔已拆成資料夾：主輪的整體分層與各入口接法現在放在 **[`entry-points/`](entry-points/README.md)**。
+內容在 **[`entry-points/`](entry-points/README.md)**。
 
 | 檔案 | 裡面有什麼 | 什麼時候會想看 |
 |---|---|---|

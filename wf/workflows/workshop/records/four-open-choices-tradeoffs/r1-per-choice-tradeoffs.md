@@ -1,7 +1,7 @@
 # R1 想法池
 ← [四個懸而未決的設計選擇](README.md)
 
-這份想法池已再按「哪一題」拆進 [`r1-per-choice-tradeoffs/`](r1-per-choice-tradeoffs/README.md)。
+內容在 [`r1-per-choice-tradeoffs/`](r1-per-choice-tradeoffs/README.md)。
 
 | 檔案 | 裡面有什麼 | 什麼時候會想看 |
 |---|---|---|

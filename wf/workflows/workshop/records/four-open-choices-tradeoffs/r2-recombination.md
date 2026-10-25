@@ -1,7 +1,7 @@
 # R2 想法池（延伸／組合／變體）
 ← [四個懸而未決的設計選擇](README.md)
 
-這份想法池已再拆進 [`r2-recombination/`](r2-recombination/README.md)。
+內容在 [`r2-recombination/`](r2-recombination/README.md)。
 
 | 檔案 | 裡面有什麼 | 什麼時候會想看 |
 |---|---|---|
