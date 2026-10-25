@@ -1,0 +1,11 @@
+{"summary": "寫手：照 brief 寫一份台詞（整場 5～10 行，或挖空的那一行），交稿前用 lint 自檢",
+ "kind": "agent", "grow_level": 5,
+ "time_ms": {"val": 15000, "max": 720000},
+ "resource": ["llm", "cpu"],
+ "llm_calls": {"val": 2, "max": 4}, "llm_tokens": {"val": 6000, "max": 50000},
+ "llm_model": "chatgpt-gpt-6-luna-low（.env）", "llm_endpoint": "AOS_BRAIN_URL；沒設＝假腦（模板填槽）",
+ "side_effect": true, "idempotent": false, "deterministic": false, "interrupt": "resumable", "parallel": true,
+ "lock": [{"$env": "AOS_WS", "$prefix": "ws:"}],
+ "reads": ["ws:new/*.json", "ws:rules.json（經 lint）"],
+ "writes": ["ws:out/<題名>", "ws:done/<題名>.json", "stack:history.jsonl", "stack:usage.jsonl", "stack:state.txt", "stack:current.txt", "stack:trace.jsonl", "cell:lint/"],
+ "fs_needs": ["own_stack", "mount"], "callers": 1}

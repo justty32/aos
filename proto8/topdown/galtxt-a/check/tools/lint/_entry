@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+# lint - stdin 收 {"text": 台詞}，照 $AOS_WS/rules.json 驗 Tier 0 護欄（格式、說話者、禁語、設定、必要關鍵詞、行長）與 Tier 1 語域（稱呼、口氣、NG 標記），stdout 印一行 JSON
+# 結果：{"pass", "tier0": [{"code", "line", "hit"}], "tier1": 0～2, "tier1_notes": [...], "bonus": [...], "counter_lines"}；pass＝tier0 是空的。
+# 純函數：不寫檔、不用 stack；同一份 text＋rules 永遠同一個結果。規則只從工作區根的 rules.json 讀（要換規則＝叫的人 --ws 換工作區）。
+# 錯：stderr 與 stdout 各一行「lint: 代號 原因」、退 1——ArgumentsBad（stdin 不是 JSON、沒有 text 字串）、RulesMissing、RulesBad。
+import json, os, re, sys
+
+NARRATION = re.compile(r"^（.+）$")
+DIALOGUE = re.compile(r"^([^：「」（）\s]+)：「(.*)」$")
+
+
+def bad(code, reason):
+    line = "lint: %s %s" % (code, str(reason).replace("\n", " "))
+    print(line, file=sys.stderr)
+    print(line)                                  # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+raw = sys.stdin.read()
+try:
+    args = json.loads(raw) if raw.strip() else {}
+except ValueError as e:
+    bad("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict) or not isinstance(args.get("text"), str):
+    bad("ArgumentsBad", "缺 text（要一個字串：要檢查的台詞）")
+
+path = os.path.join(os.environ.get("AOS_WS", "."), "rules.json")
+try:
+    with open(path, encoding="utf-8") as f:
+        rules = json.load(f)
+except FileNotFoundError:
+    bad("RulesMissing", "工作區沒有 rules.json：%s" % path)
+except (OSError, ValueError) as e:
+    bad("RulesBad", "rules.json 讀不了或不是 JSON：%s" % e)
+try:
+    lo, hi = int(rules["min_lines"]), int(rules["max_lines"])
+    speakers = set(rules["speakers"])
+    speaker = rules.get("speaker")
+    forbidden, setting = list(rules["forbidden"]), list(rules["setting"])
+    address, markers, ng_marks = dict(rules["address"]), dict(rules["markers"]), list(rules["ng_marks"])
+    must, bonus_words, max_chars = list(rules["must"]), list(rules["bonus"]), int(rules["max_line_chars"])
+    mode = rules["mode"]
+except (KeyError, TypeError, ValueError) as e:
+    bad("RulesBad", "rules.json 少了或壞了：%s" % e)
+
+lines = [l.strip() for l in args["text"].split("\n") if l.strip()]
+text = "\n".join(lines)
+tier0, notes = [], []
+
+
+def hit(code, n, what):
+    tier0.append({"code": code, "line": n, "hit": what})
+
+
+said = {}                                        # 說話者 → 他說的台詞（只看引號裡）
+if not lo <= len(lines) <= hi:
+    hit("FormatBad", 0, "行數 %d（要 %d～%d）" % (len(lines), lo, hi))
+for n, l in enumerate(lines, 1):
+    m = DIALOGUE.match(l)
+    if m:
+        who = m.group(1)
+        if who not in speakers:
+            hit("SpeakerUnknown", n, who)
+        elif mode == "fill" and speaker and who != speaker:
+            hit("SpeakerWrong", n, "%s（要 %s）" % (who, speaker))
+        said.setdefault(who, []).append(m.group(2))
+    elif NARRATION.match(l):
+        if mode == "fill":
+            hit("FormatBad", n, "挖空模式只能寫一行對白")
+    else:
+        hit("FormatBad", n, l[:20])
+    if len(l) > max_chars:
+        hit("LineTooLong", n, "%d 字（上限 %d）" % (len(l), max_chars))
+for words, code in ((forbidden, "ForbiddenWord"), (setting, "SettingBad")):
+    for w in words:
+        for n, l in enumerate(lines, 1):
+            if w and w in l:
+                hit(code, n, w)
+for group in must:
+    if not any(w in text for w in group):
+        hit("KeywordMissing", 0, "／".join(group))
+
+# Tier 1：滿分 2，每種毛病扣 1（稱呼越階、該有的口氣一個都沒有、NG 標記），不砍
+tier1 = 2
+wrong = []
+for who, rule in address.items():
+    for q in said.get(who, []):
+        rest = q
+        for w in sorted(rule.get("ok", []), key=len, reverse=True):
+            rest = rest.replace(w, "")
+        wrong += ["%s 叫「%s」" % (who, w) for w in sorted(rule.get("bad", []), key=len, reverse=True) if w in rest]
+if wrong:
+    tier1 -= 1
+    notes.append("AddressBad")
+    notes += wrong
+elif any(said.get(w) for w in address):
+    notes.append("稱呼對")
+for who, ms in markers.items():
+    if said.get(who):
+        found = [m for m in ms if any(m in q for q in said[who])]
+        if found:
+            notes.append("%s 有口氣「%s」" % (who, found[0]))
+        else:
+            tier1 -= 1
+            notes.append("VoiceMissing")
+            break
+ng = [w for w in ng_marks if w in text]
+if ng:
+    tier1 -= 1
+    notes.append("NgMark")
+    notes += ng
+tier1 = max(0, tier1)
+
+print(json.dumps({"pass": not tier0, "tier0": tier0, "tier1": tier1, "tier1_notes": notes,
+                  "bonus": [w for w in bonus_words if w in text], "counter_lines": len(lines)}, ensure_ascii=False))

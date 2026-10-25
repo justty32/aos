@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+# pick - 合分、挑一份交卷：總分＝Tier 1＋Tier 2（0～5），Tier 0 不過＝0；嚴格比大小、平手編號小的贏（同樣的候選永遠挑同一個）
+# 寫 $AOS_WS/out/<題名>/answer.txt 與 score.json（先寫 . 開頭暫存資料夾再改名，N-05），題目 cur/ → done/。
+# 全部沒過 Tier 0 時照樣挑違規最少的那份、score.json 標 pass: false、退 0（預料到的正常結果，N-43）。
+# 挖空模式再讀 ../data/bench/<編號>.json 的 answer：記字元二元組重疊率（只記錄、不計分）與護欄關鍵詞有沒有全中。
+# 錯：stderr 一行「galtxt-a pick: 代號 原因」、退 1——StackMissing、StateBad（checks.json、drafts/、current.txt 缺或壞）。
+import json, os, shutil, sys
+
+DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "data")
+
+
+def die(code, reason):
+    print("galtxt-a pick: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
+    sys.exit(1)
+
+
+def bigrams(s):
+    s = "".join(ch for ch in s if ch.strip())
+    return {s[i:i + 2] for i in range(len(s) - 1)}
+
+
+def quote(line):
+    """「角色：「台詞」」只取引號裡；不是那個形狀就整行。"""
+    head, sep, rest = line.partition("：「")
+    return rest[:-1] if sep and rest.endswith("」") else line
+
+
+stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
+if not stack:
+    die("StackMissing", "沒設定 AOS_STACK")
+try:
+    with open(os.path.join(stack, "checks.json"), encoding="utf-8") as f:
+        checks = json.load(f)
+    with open(os.path.join(stack, "brief.json"), encoding="utf-8") as f:
+        brief = json.load(f)
+    with open(os.path.join(stack, "current.txt"), encoding="utf-8") as f:
+        name = f.read().strip()
+    texts = {}
+    for n in checks:
+        with open(os.path.join(stack, "drafts", n + ".txt"), encoding="utf-8") as f:
+            texts[n] = f.read()
+except (OSError, ValueError) as e:
+    die("StateBad", "前面的格還沒做好：%s" % e)
+if not checks:
+    die("StateBad", "checks.json 是空的")
+try:
+    with open(os.path.join(stack, "judge.json"), encoding="utf-8") as f:
+        judged = json.load(f)
+except FileNotFoundError:
+    judged = {}
+except ValueError as e:
+    die("StateBad", "judge.json 壞了：%s" % e)
+
+rows = []
+for n in sorted(checks, key=int):
+    c = checks[n]
+    t2 = judged.get(n, {}).get("tier2") if c.get("pass") else None
+    row = {"n": int(n), "tier0": [x["code"] for x in c.get("tier0", [])], "tier1": c.get("tier1"),
+           "tier1_notes": c.get("tier1_notes", []), "tier2": t2,
+           "reason": judged.get(n, {}).get("reason") if c.get("pass") else None,
+           "total": (c.get("tier1") or 0) + (t2 or 0) if c.get("pass") else 0}
+    if c.get("bonus"):
+        row["bonus"] = c["bonus"]
+    rows.append(row)
+passed = [r for r in rows if not r["tier0"]]
+if passed:
+    best = passed[0]
+    for r in passed[1:]:
+        if r["total"] > best["total"]:           # 嚴格比大小：平手留編號小的
+            best = r
+else:
+    best = rows[0]
+    for r in rows[1:]:
+        if len(r["tier0"]) < len(best["tier0"]):
+            best = r
+answer = texts[str(best["n"])]
+base = brief.get("name") or (name[:-5] if name.endswith(".json") else name)
+score = {"mode": brief.get("mode"), "name": base, "picked": best["n"], "pass": bool(passed), "drafts": rows}
+
+if brief.get("mode") == "fill":
+    task_bench = brief.get("bench")
+    if task_bench:
+        try:
+            with open(os.path.join(DATA, "bench", task_bench + ".json"), encoding="utf-8") as f:
+                bench = json.load(f)
+        except (OSError, ValueError) as e:
+            die("StateBad", "評測題讀不到：%s" % e)
+        a, b = bigrams(quote(answer.strip())), bigrams(quote(bench["answer"]))
+        score["bench"] = {"id": task_bench,
+                          "bigram_overlap": round(len(a & b) / len(a | b), 3) if a | b else 0.0,
+                          "guard_hit": all(any(w in answer for w in g) for g in bench["guard"]["must"]),
+                          "bonus_hit": [w for w in bench["guard"].get("bonus", []) if w in answer]}
+
+out = os.path.join(ws, "out", base)
+tmp = os.path.join(ws, "out", "." + base)
+shutil.rmtree(tmp, ignore_errors=True)
+os.makedirs(tmp)
+with open(os.path.join(tmp, "answer.txt"), "w", encoding="utf-8") as f:
+    f.write(answer if answer.endswith("\n") else answer + "\n")
+with open(os.path.join(tmp, "score.json"), "w", encoding="utf-8") as f:
+    f.write(json.dumps(score, ensure_ascii=False, indent=1) + "\n")
+shutil.rmtree(out, ignore_errors=True)            # 重跑同一題：蓋掉上次的答案
+os.replace(tmp, out)
+os.makedirs(os.path.join(ws, "done"), exist_ok=True)
+if os.path.exists(os.path.join(ws, "cur", name)):
+    shutil.move(os.path.join(ws, "cur", name), os.path.join(ws, "done", name))

@@ -1,0 +1,9 @@
+{"summary": "把 brief 交給寫手 agent 跑 N 次（預設 3），每次一個新小格，答案收成 drafts/N.txt；已有的草稿不重寫",
+ "kind": "glue", "grow_level": 3,
+ "time_ms": {"val": 45000, "max": 2400000},
+ "resource": ["llm", "cpu"],
+ "llm_calls": {"val": 6, "max": 36}, "llm_tokens": {"val": 18000, "max": 150000},
+ "side_effect": false, "idempotent": true, "deterministic": false, "interrupt": "resumable", "parallel": true,
+ "reads": ["stack:brief.json", "stack:rules.json", "stack:current.txt", "stack:drafts/"],
+ "writes": ["stack:drafts/N.txt", "cell:writer/runs/NNN/{ws,stack}"],
+ "fs_needs": ["mount"], "callers": 1}

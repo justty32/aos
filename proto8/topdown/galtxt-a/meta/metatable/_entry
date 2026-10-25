@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+# metatable - 把一棵資料夾樹裡所有 _metainfo 收成一張表（markdown 或 --json）
+"""用法：metatable [--json] [ROOT]。ROOT 沒給＝$AOS_WS，再沒有＝cwd。
+走整棵樹（不跟捷徑進去，捷徑本身列一行）；跳過 . 開頭的資料夾。
+另外找 fsm.json／loop.json 內嵌單子（有 argv 的物件）的 _metainfo key。
+錯：ROOT 不是資料夾＝stderr「metatable: RootMissing …」退 1；
+    某份 _metainfo 不是 JSON＝表裡標「壞」、stderr「metatable: MetainfoBad 路徑」，照樣輸出、退 0。"""
+import json, os, sys
+
+COLS = ["path", "depth", "kind", "grow_level", "summary", "time_ms", "resource", "llm_calls", "llm_tokens",
+        "deterministic", "idempotent", "side_effect", "interrupt", "parallel", "fs_needs", "callers"]
+NUMS = ("time_ms", "llm_calls", "llm_tokens")
+
+
+def fail(code, why):
+    sys.stderr.write("metatable: %s %s\n" % (code, why))
+    sys.exit(1)
+
+
+def num(v):
+    """數量欄位：數字 → {val}；{val,max} 照收；其他 → None"""
+    if isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return {"val": v}
+    if isinstance(v, dict) and ("val" in v or "max" in v):
+        return {"val": v.get("val"), "max": v.get("max")}
+    return None
+
+
+def make_node(path, depth, meta):
+    n = {"path": path, "depth": depth}
+    for k in COLS[2:]:
+        if k in meta:
+            n[k] = num(meta[k]) if k in NUMS else meta[k]
+    return n
+
+
+def bad_node(path, depth):
+    return {"path": path, "depth": depth, "kind": "壞"}
+
+
+def load(p):
+    """回 (meta 或 None, 是否壞)"""
+    try:
+        with open(p, encoding="utf-8") as f:
+            m = json.load(f)
+        if not isinstance(m, dict):
+            return None, True
+        return m, False
+    except (OSError, ValueError):
+        return None, True
+
+
+def inline(obj, ptr, out):
+    """遞迴找有 argv 的物件，它的 _metainfo key 就是內嵌單子"""
+    if isinstance(obj, dict):
+        if "argv" in obj and "_metainfo" in obj:
+            out.append((ptr, obj["_metainfo"]))
+        for k, v in obj.items():
+            inline(v, ptr + "/" + str(k).replace("~", "~0").replace("/", "~1"), out)
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            inline(v, "%s/%d" % (ptr, i), out)
+
+
+def collect(root):
+    nodes, bads = [], []
+    for here, subs, files in os.walk(root, followlinks=False):
+        subs[:] = sorted(s for s in subs if not s.startswith("."))
+        rel = os.path.relpath(here, root)
+        depth = 0 if rel == "." else rel.count(os.sep) + 1
+        shown = "." if rel == "." else rel
+        # 捷徑（指到資料夾的連結）：列一行，不進去
+        for s in list(subs):
+            full = os.path.join(here, s)
+            if os.path.islink(full):
+                subs.remove(s)
+                p = s if rel == "." else os.path.join(rel, s)
+                nodes.append({"path": p, "depth": depth + 1, "kind": "捷徑",
+                              "summary": "捷徑 → " + os.readlink(full)})
+        # 本資料夾的 _metainfo（兩個都在用 _metainfo）
+        src = next((f for f in ("_metainfo", "_metainfo.json") if f in files), None)
+        if src:
+            m, bad = load(os.path.join(here, src))
+            if bad:
+                bads.append(os.path.join(shown, src) if shown != "." else src)
+                nodes.append(bad_node(shown, depth))
+            else:
+                nodes.append(make_node(shown, depth, m))
+        # fsm.json／loop.json 內嵌單子
+        for f in ("fsm.json", "loop.json"):
+            if f not in files:
+                continue
+            try:
+                with open(os.path.join(here, f), encoding="utf-8") as fh:
+                    doc = json.load(fh)
+            except (OSError, ValueError):
+                continue
+            found = []
+            inline(doc, "", found)
+            fp = f if shown == "." else os.path.join(shown, f)
+            for ptr, m in found:
+                loc = "%s#%s" % (fp, ptr)
+                if isinstance(m, dict):
+                    nodes.append(make_node(loc, depth + 1, m))
+                else:
+                    bads.append(loc)
+                    nodes.append(bad_node(loc, depth + 1))
+    nodes.sort(key=lambda n: (n["path"] != ".", n["path"]))
+    return nodes, bads
+
+
+def vsum(nodes, key):
+    t = 0
+    for n in nodes:
+        v = n.get(key)
+        if isinstance(v, dict) and isinstance(v.get("val"), (int, float)):
+            t += v["val"]
+    return t
+
+
+def summarize(nodes):
+    kinds = {}
+    for n in nodes:
+        k = n.get("kind", "—")
+        kinds[k] = kinds.get(k, 0) + 1
+    agents = [n for n in nodes if n.get("kind") == "agent"]
+    top = next((n for n in nodes if n["path"] == "."), {})
+    empty = [n["path"] for n in nodes
+             if n.get("kind") not in ("壞", "捷徑") and "kind" in n and not n.get("fs_needs")]
+    return {
+        "counter_nodes": len(nodes),
+        "counter_kinds": kinds,
+        "max_depth": max((n["depth"] for n in nodes), default=0),
+        "sum_llm_calls_val": vsum(agents, "llm_calls"),
+        "sum_llm_tokens_val": vsum(agents, "llm_tokens"),
+        "top_declared": {"llm_calls": top.get("llm_calls"), "llm_tokens": top.get("llm_tokens")},
+        "fs_needs_empty": empty,
+    }
+
+
+def cell(n, k):
+    v = n.get(k)
+    if v is None:
+        return "—"
+    if k in NUMS:
+        if isinstance(v, dict):
+            a, b = v.get("val"), v.get("max")
+            return "%s/%s" % ("—" if a is None else a, "—" if b is None else b)
+        return "—"
+    if k == "summary":
+        v = str(v)
+        return v if len(v) <= 40 else v[:40] + "…"
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, list):
+        return ",".join(str(x) for x in v) if v else "（空）"
+    return str(v).replace("\n", " ")
+
+
+def render_md(nodes, s):
+    out = ["| " + " | ".join(COLS) + " |", "|" + "---|" * len(COLS)]
+    for n in nodes:
+        out.append("| " + " | ".join(cell(n, k).replace("|", "\\|") for k in COLS) + " |")
+    out.append("")
+    out.append("| 彙總 | 值 |")
+    out.append("|---|---|")
+    out.append("| 節點數 | %d |" % s["counter_nodes"])
+    out.append("| kind 各幾個 | %s |" % "、".join("%s %d" % kv for kv in sorted(s["counter_kinds"].items())))
+    out.append("| 最大深度 | %d |" % s["max_depth"])
+    out.append("| llm_calls.val 總和（只加 agent） | %s |" % s["sum_llm_calls_val"])
+    out.append("| llm_tokens.val 總和（只加 agent） | %s |" % s["sum_llm_tokens_val"])
+    td = s["top_declared"]
+    out.append("| 頂層宣告（llm_calls／llm_tokens） | %s ／ %s |" % (
+        cell({"llm_calls": td["llm_calls"]}, "llm_calls"), cell({"llm_tokens": td["llm_tokens"]}, "llm_tokens")))
+    out.append("| fs_needs 為空（收攏候選） | %s |" % ("、".join(s["fs_needs_empty"]) or "（無）"))
+    return "\n".join(out)
+
+
+def main(argv):
+    as_json = False
+    rest = []
+    for a in argv:
+        if a == "--json":
+            as_json = True
+        else:
+            rest.append(a)
+    if len(rest) > 1:
+        fail("ArgumentsBad", "只收一個 ROOT")
+    root = rest[0] if rest else (os.environ.get("AOS_WS") or os.getcwd())
+    if not os.path.isdir(root):
+        fail("RootMissing", "不是資料夾 " + root)
+    nodes, bads = collect(root)
+    for b in bads:
+        sys.stderr.write("metatable: MetainfoBad %s\n" % b)
+    s = summarize(nodes)
+    if as_json:
+        print(json.dumps({"nodes": nodes, "summary": s}, ensure_ascii=False))
+    else:
+        print(render_md(nodes, s))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

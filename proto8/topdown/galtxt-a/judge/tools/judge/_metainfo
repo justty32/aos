@@ -1,0 +1,11 @@
+{"summary": "評審：讀前後文（或場景條件）與一份草稿，回「分數：N」「理由：標籤」兩行；沒有工具",
+ "kind": "agent", "grow_level": 5,
+ "time_ms": {"val": 7000, "max": 300000},
+ "resource": ["llm", "cpu"],
+ "llm_calls": {"val": 1, "max": 2}, "llm_tokens": {"val": 2000, "max": 10000},
+ "llm_model": "chatgpt-gpt-6-luna-low（.env；要換更強的只改這份）", "llm_endpoint": "AOS_BRAIN_URL；沒設＝假腦（固定給 2 分）",
+ "side_effect": true, "idempotent": false, "deterministic": false, "interrupt": "resumable", "parallel": true,
+ "lock": [{"$env": "AOS_WS", "$prefix": "ws:"}],
+ "reads": ["ws:new/*.txt"],
+ "writes": ["ws:out/<題名>", "ws:done/<題名>.txt", "stack:history.jsonl", "stack:usage.jsonl", "stack:state.txt", "stack:trace.jsonl"],
+ "fs_needs": ["own_stack"], "callers": 1}

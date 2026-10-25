@@ -1,0 +1,6 @@
+{"summary": "台詞護欄：stdin 收 {text}，照 $AOS_WS/rules.json 驗格式、禁語、設定、稱謂、語域、必要關鍵詞，回一行 JSON（pass、tier0、tier1）",
+ "kind": "program", "grow_level": 4,
+ "time_ms": {"val": 40, "max": 5000}, "resource": "cpu",
+ "side_effect": false, "idempotent": true, "deterministic": true, "interrupt": "safe", "parallel": true,
+ "reads": ["ws:rules.json"], "writes": [],
+ "fs_needs": ["tool_json", "mount"], "callers": 2}

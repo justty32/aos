@@ -1,0 +1,7 @@
+{"summary": "認領一題，從 data/ 的人物卡、地點卡、固化表組出給寫手看的 brief.json 與給 lint 用的 rules.json",
+ "kind": "program", "grow_level": 3,
+ "time_ms": {"val": 50, "max": 10000}, "resource": ["cpu", "disk"],
+ "side_effect": true, "idempotent": true, "deterministic": true, "interrupt": "safe", "parallel": false,
+ "reads": ["ws:new/*.json", "ws:cur/*.json", "data:cast/*", "data:places/*", "data:address.json", "data:forbidden.json", "data:styles.json", "data:samples/*", "data:bench/<編號>.json（不讀 answer）"],
+ "writes": ["ws:cur/<題名>.json", "stack:current.txt", "stack:brief.json", "stack:rules.json"],
+ "fs_needs": [], "callers": 1}

@@ -1,0 +1,4 @@
+#!/bin/sh
+# idle：cur/ 或 new/ 有題目就結束碼 0（往下走），沒有就 10（請 loop 停）
+for f in "$AOS_WS"/cur/* "$AOS_WS"/new/*; do [ -e "$f" ] && exit 0; done   # 認領了沒做完的也算
+exit 10

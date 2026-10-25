@@ -1,0 +1,13 @@
+{"source": "corpus/固化/02_敬語與稱謂階.md",
+ "note": "階只能往上一階一階走；可以暫時退階（吵架、鬧彆扭），所以檢查只擋「越階」——用了比本場階更高階的稱呼。每個角色實際的字面在 cast/<名>.json 的 calls_lead／called_by_lead。",
+ "ranks": {
+   "0": {"heroine_to_lead": "「同學」「那個…」「不好意思」", "lead_to_heroine": "姓氏", "state": "陌生／剛認識", "register": "客氣體"},
+   "1": {"heroine_to_lead": "姓氏＋君（男用君）／姓氏＋同學", "lead_to_heroine": "姓氏", "state": "認識、點頭之交", "register": "客氣體"},
+   "2": {"heroine_to_lead": "姓氏（省敬稱，直呼姓）", "lead_to_heroine": "姓氏（更自在的語氣）／偶爾「喂」", "state": "熟、自在", "register": "自然體"},
+   "3": {"heroine_to_lead": "名字＋君／同學", "lead_to_heroine": "姓氏＋（熟稔語氣）", "state": "親近、有好感", "register": "自然體"},
+   "4": {"heroine_to_lead": "名字（直呼、去敬稱）", "lead_to_heroine": "名字", "state": "很親近／曖昧將明", "register": "親暱體"},
+   "5": {"heroine_to_lead": "暱稱／專屬叫法", "lead_to_heroine": "名字", "state": "確定關係", "register": "親暱體"}},
+ "registers": {
+   "客氣體": "完整句、「請／謝謝／不好意思」、少省略",
+   "自然體": "省略主詞、句尾軟化詞、半句",
+   "親暱體": "玩笑、輕嗔、只有兩人懂的簡稱"}}

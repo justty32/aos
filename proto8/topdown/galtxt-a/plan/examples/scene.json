@@ -1,0 +1,9 @@
+{"mode": "scene",
+ "place": "河鹿堂",
+ "cast": ["佐伯悠", "森下晴子"],
+ "event": "兩人同時伸手拿同一本《銀河鐵道之夜》，晴子決定把書讓給主角",
+ "season": "四月", "time": "午後",
+ "intent": "靜",
+ "rank": 1,
+ "min_lines": 5, "max_lines": 10,
+ "drafts": 3}

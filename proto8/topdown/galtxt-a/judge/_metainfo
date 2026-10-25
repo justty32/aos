@@ -1,0 +1,9 @@
+{"summary": "過了護欄的草稿逐份交給評審 agent 打 0～3 的語意分，每份一個新小格，收成 judge.json",
+ "kind": "glue", "grow_level": 3,
+ "time_ms": {"val": 25000, "max": 960000},
+ "resource": ["llm", "cpu"],
+ "llm_calls": {"val": 3, "max": 12}, "llm_tokens": {"val": 6000, "max": 60000},
+ "side_effect": false, "idempotent": true, "deterministic": false, "interrupt": "resumable", "parallel": true,
+ "reads": ["stack:checks.json", "stack:drafts/*.txt", "stack:brief.json"],
+ "writes": ["stack:judge.json", "cell:judge/runs/NNN/{ws,stack}"],
+ "fs_needs": ["mount"], "callers": 1}
