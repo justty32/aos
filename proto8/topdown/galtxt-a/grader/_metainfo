@@ -8,4 +8,5 @@
  "lock": [{"$env": "AOS_WS", "$prefix": "ws:"}],
  "reads": ["ws:new/*.txt"],
  "writes": ["ws:out/<題名>", "ws:done/<題名>.txt", "stack:history.jsonl", "stack:usage.jsonl", "stack:state.txt", "stack:trace.jsonl"],
- "fs_needs": ["own_stack"], "callers": 1}
+ "fs_needs": ["own_stack"], "callers": 1,
+ "ratings": {"$ref": "ratings.json"}}

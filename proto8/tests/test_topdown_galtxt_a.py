@@ -2,7 +2,7 @@
 
 規劃：proto8/topdown/galtxt-a/plan/round1.md § 6.3；第二輪收攏（round2-collapse.md § 4 第 8 步）只改路徑與讀法、斷言不改，另加 collapse 與 metatable --suggest 的測試；
 第三輪（round3.md § 11 的 1～11）加 Round3T：傲嬌與 Q16、選路、writer-sol、假腦技能表、rate、optimize、整條訓練、回滾、預算、M7（會寫樹的都在拷貝上跑）。全部離線（假腦）；連真模型的那個（test_real_model）localhost:4000 連不上就 skip。"""
-import json, os, shutil, subprocess, tempfile, unittest, urllib.request
+import json, os, shutil, statistics, subprocess, tempfile, unittest, urllib.request
 from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()
@@ -518,6 +518,15 @@ def jread(p):
     return json.loads(Path(p).read_text(encoding="utf-8"))
 
 
+def yuzu_total(dims):
+    """round4 § 1.4：5 × Σ(weight×值)/Σweight，null 不進分母（照 data/dims.json 的傲嬌 profile）。"""
+    got = [(spec.get("weight", 1), dims[k]) for k, spec in YUZU.items() if dims[k] is not None]
+    return 5 * sum(w * v for w, v in got) / sum(w for w, _ in got)
+
+
+YUZU = json.loads((G / "data" / "dims.json").read_text(encoding="utf-8"))["profiles"]["傲嬌"]
+
+
 def jwrite(p, obj):
     Path(p).parent.mkdir(parents=True, exist_ok=True)
     Path(p).write_text(json.dumps(obj, ensure_ascii=False), encoding="utf-8")
@@ -641,8 +650,17 @@ class Round3T(unittest.TestCase):
         s = self.score("Q16")
         self.assertTrue(s["bench"]["guard_hit"])
         self.assertEqual((s["writer"], s["style"]), ("writer", "傲嬌"))
-        self.assertIn("KeywordMissing", s["drafts"][2]["tier0"])          # 第 3 份（留白）沒過護欄：護欄 0、沒評＝語意 null
-        self.assertEqual(s["drafts"][2]["dims"], {"語域": 0.5, "語意": None, "護欄": 0.0})
+        self.assertIn("KeywordMissing", s["drafts"][2]["tier0"])          # 第 3 份（留白）沒過護欄：護欄 0、total 0、沒評＝評審量的維度 null
+        d3 = s["drafts"][2]
+        self.assertEqual(set(d3["dims"]), set(YUZU) | {"護欄"})            # round4：維度照 dims.json 的傲嬌 profile（＋護欄）
+        self.assertEqual((d3["dims"]["護欄"], d3["total"]), (0.0, 0))
+        for k, spec in YUZU.items():
+            if spec["by"] == "grader" or "fill" not in spec.get("modes", ["fill"]):   # 沒評、或 fill 沒這維（洩底）＝null
+                self.assertIsNone(d3["dims"][k], k)
+        for d in s["drafts"][:2]:                                         # 前兩份過護欄：fill 的洩底 null、total＝加權
+            self.assertEqual(d["dims"]["護欄"], 1.0)
+            self.assertIsNone(d["dims"]["洩底"])
+            self.assertAlmostEqual(d["total"], yuzu_total(d["dims"]), places=2)
         self.assertIn("bigram_overlap", s["bench"])
         quote = jread(G / "data" / "bench" / "Q16.json")["answer"].split("：「", 1)[1]
         for p in self.stack.rglob("*"):
@@ -658,7 +676,10 @@ class Round3T(unittest.TestCase):
         self.assertEqual([d["tier1"] for d in s["drafts"]], [1, 1, 1])
         for d in s["drafts"]:
             self.assertIn("NgMark", d["tier1_notes"])
-            self.assertEqual(d["dims"], {"語域": 0.5, "語意": 0.667, "護欄": 1.0})
+            self.assertEqual(set(d["dims"]), set(YUZU) | {"護欄"})         # round4：維度照 profile；NgMark＝語域半分、假腦有反差節拍
+            self.assertEqual((d["dims"]["護欄"], d["dims"]["語域"], d["dims"]["反差"]), (1.0, 0.5, 1.0))
+            self.assertTrue(all(v is not None and 0 <= v <= 1 for v in d["dims"].values()), d["dims"])   # scene 每維都有值
+            self.assertAlmostEqual(d["total"], yuzu_total(d["dims"]), places=2)
         self.assertTrue(0 <= s["dims"]["多樣性"] <= 1)
         shutil.rmtree(self.ws)
         (self.ws / "new").mkdir(parents=True)
@@ -686,37 +707,67 @@ class Round3T(unittest.TestCase):
         jwrite(g / "writer" / "ratings.json", r0)
         st = self.tmp / "st"
 
-        def score(where, name, writer, style, totals, fail=0, div=0.5):
-            drafts = [{"n": i + 1, "tier0": [], "tier1": 2, "total": t, "dims": {"語域": 1.0, "語意": (t - 2) / 3, "護欄": 1.0}}
+        def dims_of(t):                                                  # round4：傲嬌 profile 的維度（像柚葉跟著 total 動、其餘固定）
+            return {"反差": 1.0, "像柚葉": round((t - 2) / 3, 3), "承接": 0.5, "文筆": 0.5, "語域": 1.0, "洩底": 0.5, "護欄": 1.0}
+
+        def score(where, name, writer, totals, fail=0, div=0.5, style="傲嬌", reason="承接自然", top=st):
+            drafts = [{"n": i + 1, "tier0": [], "tier1": 2, "total": t, "dims": dims_of(t), "reason": reason}
                       for i, t in enumerate(totals)]
             drafts += [{"n": len(totals) + i + 1, "tier0": ["FormatBad"], "tier1": 0, "total": 0,
-                        "dims": {"語域": 0.0, "語意": None, "護欄": 0.0}} for i in range(fail)]
-            jwrite(st / "epochs" / "001" / where / name / "ws" / "out" / name / "score.json",
+                        "dims": {"反差": 0.0, "像柚葉": None, "承接": None, "文筆": None, "語域": 0.0, "洩底": None, "護欄": 0.0}}
+                       for i in range(fail)]
+            jwrite(top / "epochs" / "001" / where / name / "ws" / "out" / name / "score.json",
                    {"name": name, "writer": writer, "style": style, "drafts": drafts, "dims": {"多樣性": div}})
 
-        score("runs", "a", "writer", "傲嬌", [4, 4, 4], fail=1, div=0.4)
-        score("runs", "b", "writer", "傲嬌", [5, 3], div=0.6)
-        score("runs", "c", "writer", "文靜／書卷", [3, 3, 3])
-        score("runs", "d", "writer-sol", "傲嬌", [2, 2, 2])
-        score("runs", "e", "writer-sol", "文靜／書卷", [5, 5])            # 2 份＜3＝none
-        score("verify", "v", "writer", "文靜／書卷", [0, 0, 0])            # 驗證題：不算
+        score("runs", "a", "writer", [4, 4, 4], fail=1, div=0.4)
+        score("runs", "b", "writer", [5, 3], div=0.6, reason="太直白")
+        score("runs", "d", "writer-sol", [2, 2, 2])
+        score("verify", "v", "writer", [0, 0, 0], style="文靜／書卷")      # 驗證題：rate 不收、也不守門
+        run_d = st / "epochs" / "001" / "runs" / "a" / "stack" / "writer" / "runs" / "001" / "stack"   # 寫手小格一次：cost 照它算
+        run_d.mkdir(parents=True)
+        (run_d / "history.jsonl").write_text('{"role": "user"}\n{"role": "assistant"}\n{"role": "assistant"}\n', encoding="utf-8")
+        (run_d / "usage.jsonl").write_text('{"total_tokens": 1000}\n', encoding="utf-8")
+        (run_d / "trace.jsonl").write_text('{"elapsed_ms": 300}\n{"elapsed_ms": 200}\n', encoding="utf-8")
         r = self.rate(g, st)
         self.assertEqual(r.returncode, 0, r.stderr)
         w, sol = jread(g / "writer" / "ratings.json"), jread(g / "writer-sol" / "ratings.json")
         t = w["style:傲嬌"]
         self.assertEqual((t["val"], t["score_avg"], t["score_min"], t["counter_samples"], t["counter_runs"]), ("good", 4.0, 3, 5, 2))
+        self.assertEqual(set(t["dims"]), set(YUZU) | {"護欄", "多樣性"})   # 維度照 score.json 裡有的走（不寫死）
         self.assertEqual(t["dims"]["護欄"], round(5 / 6, 3))
         self.assertEqual(t["dims"]["多樣性"], 0.5)
-        self.assertEqual(t["dims"]["語意"], round(sum((x - 2) / 3 for x in [4, 4, 4, 5, 3]) / 5, 3))
-        self.assertEqual((w["style:文靜／書卷"]["val"], w["style:文靜／書卷"]["score_avg"]), ("ok", 3.0))
+        self.assertEqual(t["dims"]["像柚葉"], round(sum(round((x - 2) / 3, 3) for x in [4, 4, 4, 5, 3]) / 5, 3))
+        self.assertEqual((t["dims"]["反差"], t["dims"]["洩底"]), (1.0, 0.5))   # 沒過護欄那份的 0 不算進維度
+        self.assertIsNone(t["determinism"])                              # 這個 epoch 沒 verify.json＝沒量
+        self.assertEqual(t["cost"], {"llm_calls": 2, "llm_tokens": 1000, "time_ms": 500, "counter_runs": 1})
+        self.assertEqual(t["tags"], {"太直白": 2, "承接自然": 3})
+        self.assertEqual(w["scope"], jread(g / "train" / "set.json")["scope"])
+        self.assertNotIn("style:文靜／書卷", w)                            # 驗證題不算
         self.assertEqual(w["style:舊的"], {"val": "good", "score_avg": 5})   # 這次沒跑到的風格留舊格
-        self.assertEqual((sol["style:傲嬌"]["val"], sol["style:文靜／書卷"]["val"]), ("bad", "none"))
+        self.assertEqual((sol["style:傲嬌"]["val"], sol["style:傲嬌"]["score_avg"]), ("bad", 2.0))
         self.assertRegex(t["rated_at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
+        gr = jread(g / "grader" / "ratings.json")["role:grader"]       # 分辨力＝每題（承接、像柚葉）標準差 ÷ 0.5 的平均
+        sds = [statistics.pstdev([round((x - 2) / 3, 3) for x in xs]) / 0.5 for xs in ([4, 4, 4], [5, 3], [2, 2, 2])] + [0.0] * 3
+        self.assertEqual(gr["dims"]["分辨力"], round(sum(sds) / len(sds), 3))
+        self.assertEqual(gr["counter_samples"], 6)
         strip = lambda d: {k: {k2: v2 for k2, v2 in v.items() if k2 != "rated_at"} if isinstance(v, dict) else v for k, v in d.items()}   # noqa: E731
         r = self.rate(g, st)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(strip(jread(g / "writer" / "ratings.json")), strip(w))
         self.assertEqual(jread(g / "human" / "samples.json"), [])
+        st2 = self.tmp / "st2"                                           # 2 份＜3＝none
+        score("runs", "e", "writer-sol", [5, 5], top=st2)
+        r = self.rate(g, st2)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(jread(g / "writer-sol" / "ratings.json")["style:傲嬌"]["val"], "none")
+        st3 = self.tmp / "st3"                                           # 收窄守門：訓練題混進別的風格＝StateBad、評級不寫
+        score("runs", "a", "writer", [4, 4, 4], top=st3)
+        score("runs", "c", "writer", [3, 3, 3], style="文靜／書卷", top=st3)
+        before = (g / "writer" / "ratings.json").read_bytes()
+        r = self.rate(g, st3)
+        self.assertEqual(r.returncode, 1)
+        self.assertRegex(r.stderr, r"^train: StateBad .*文靜／書卷.*scope\.style")
+        self.assertEqual((g / "writer" / "ratings.json").read_bytes(), before)
 
     # 7. optimize 單元
     def optimize(self, g, *args, st=None):
@@ -731,6 +782,8 @@ class Round3T(unittest.TestCase):
 
     def test_optimize(self):
         g = tree_copy(self.tmp / "t")
+        jwrite(g / "train" / "set.json", dict(jread(g / "train" / "set.json"), writers=["writer", "writer-sol"]))   # round4 收窄後只剩 writer；
+        # 這個單元驗 round3 的選路優化器（步驟 6 才重寫），在拷貝上把寫手列表改回兩個
         route = lambda: jread(g / "data" / "route.json")["by_style"]      # noqa: E731
         self.ratings(g, "writer", 傲嬌=("ok", 3.0), 文靜=("good", 4.0), 元氣=("good", 4.0), 天然=("none", None))
         self.ratings(g, "writer-sol", 傲嬌=("good", 4.0), 文靜=("good", 4.5), 元氣=("good", 4.0), 天然=("none", None))
@@ -781,17 +834,27 @@ class Round3T(unittest.TestCase):
         g = tree_copy(self.tmp / "t")
         jwrite(g / "train" / "budget.json", dict(jread(g / "train" / "budget.json"), max_epochs=1))
         (g / "human" / "samples.json").unlink(missing_ok=True)
+        sets = jread(g / "train" / "set.json")
         before = snapshot(g)
         r = run(EXEC, "--ws", str(self.ws), str(g / "train"), cwd=self.tmp, timeout=600)
         self.assertEqual(r.returncode, 0, r.stderr)
         e0, e1 = (jread(self.stack / "epochs" / n / "verify.json") for n in ("000", "001"))
-        self.assertGreater(e1["score_mean"], e0["score_mean"])
-        w, sol = jread(g / "writer" / "ratings.json"), jread(g / "writer-sol" / "ratings.json")
-        self.assertEqual((w["style:傲嬌"]["val"], w["style:文靜／書卷"]["val"], sol["style:傲嬌"]["val"]), ("ok", "good", "good"))
-        self.assertEqual(jread(g / "data" / "route.json")["by_style"], {"傲嬌": "writer-sol"})
-        a = jread(g / "train" / "optimize" / "ratings.json")["action:route"]
-        self.assertGreater(a["delta_avg"], 0)
-        self.assertEqual((a["counter_applied"], a["val"]), (1, "good"))
+        # round4：writers 只剩 writer、route 沒得換（optimize 步驟 6 才重寫）＝分數不會往下掉；假腦同輸入同分，不再斷言進步
+        self.assertGreaterEqual(e1["score_mean"], e0["score_mean"])
+        self.assertEqual(e1["delta"], round(e1["score_mean"] - e0["score_mean"], 3))
+        for e in (e0, e1):
+            self.assertEqual(set(e["by_question"]), {q[:-5] for q in sets["verify"]})   # 驗證題分題記（round4 § 7.2 (c)）
+            self.assertEqual(e["measure"]["question"], sets["measure"][:-5])
+            self.assertTrue(0 <= e["measure"]["一致"] <= 1)
+            self.assertEqual(e["brain"]["nodes"], {"writer": "agent", "grader": "agent", "tools/lint": "program"})
+        w = jread(g / "writer" / "ratings.json")
+        t = w["style:傲嬌"]
+        self.assertEqual(t["val"], "good" if t["score_avg"] >= 4 else "ok" if t["score_avg"] >= 3 else "bad")
+        self.assertEqual(set(t["dims"]), set(YUZU) | {"護欄", "多樣性"})
+        self.assertEqual(w["scope"], sets["scope"])
+        root = jread(g / "ratings.json")["style:傲嬌"]                    # 根評級＝最後一次 verify 的數
+        self.assertEqual((root["score_avg"], root["determinism"], root["brain"]), (e1["score_mean"], e1["measure"]["一致"], e1["brain"]))
+        self.assertTrue(0 <= jread(g / "grader" / "ratings.json")["role:grader"]["dims"]["分辨力"] <= 1)
         samples = jread(g / "human" / "samples.json")
         self.assertTrue(1 <= len(samples) <= 6)
         for s in samples:
@@ -801,14 +864,15 @@ class Round3T(unittest.TestCase):
             self.assertTrue(1 <= len(s["lines"]) <= 8)
             self.assertTrue((g / s["produced_by"] / "_entry").is_file())
             self.assertTrue({"cast", "place", "event", "style", "intent"} <= set(s["scene"]))
+            self.assertEqual((s["scene"]["style"], s["scene"]["place"]), (sets["scope"]["style"], sets["scope"]["place"]))   # 全在收窄範圍
         self.assertEqual(len({s["id"] for s in samples}), len(samples))
-        self.assertEqual(len({(s["produced_by"], s["scene"]["style"]) for s in samples}), 4)   # 四個（寫手, 風格）格都有
+        qs = {q[:-5].lower() for q in sets["train"] + sets["verify"]}    # 先每個（寫手, 風格, 題）格一筆：訓練＋驗證每題都有
+        self.assertEqual({q for q in qs if any(s["id"].startswith("a-%s-writer-" % q) for s in samples)}, qs)
         self.assertEqual(len(jl(self.stack / "verify.jsonl")), 2)
         self.assertEqual([t["state"] for t in jl(self.stack / "trace.jsonl")], ["verify", "train", "rate", "optimize", "verify"])
-        after = snapshot(g)                                               # M7：只有量出來的旁檔與路由表變
+        after = snapshot(g)                                               # M7：只有量出來的旁檔變（route 沒換＝route.json、optimize 評級不動）
         changed = {k for k in set(before) | set(after) if before.get(k) != after.get(k)}
-        self.assertEqual(changed, {"writer/ratings.json", "writer-sol/ratings.json", "data/route.json",
-                                   "train/optimize/ratings.json", "human/samples.json"})
+        self.assertEqual(changed, {"writer/ratings.json", "grader/ratings.json", "ratings.json", "human/samples.json"})
         r = run(EXEC, "--ws", str(self.ws), str(g / "train"), cwd=self.tmp, timeout=600)   # 收工後再叫：verify 照舊退 10、不重跑
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(len(jl(self.stack / "verify.jsonl")), 2)
@@ -843,6 +907,39 @@ class Round3T(unittest.TestCase):
         self.assertIn("train: BudgetSpent max_calls", r.stderr)
         self.assertEqual((self.stack / "state.txt").read_text(), "train\n")
         self.assertEqual((g / "data" / "route.json").read_bytes(), route)
+
+
+class Round4T(unittest.TestCase):
+    """第四輪（plan/round4.md § 10）：收窄到宮澤柚葉×教室・文化祭收攤之後的測試。全部假腦；會寫樹的都在拷貝上跑。"""
+
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.addCleanup(self._t.cleanup)
+        self.tmp = Path(self._t.name)
+        self.ws = self.tmp / "ws"
+        (self.ws / "new").mkdir(parents=True)
+
+    # 4. scope 守門：set.json scope.style 暫改文靜 → rate 讀到傲嬌的 score.json＝StateBad、評級不寫
+    def test_scope_guard(self):
+        g = tree_copy(self.tmp / "t")
+        jwrite(g / "human" / "samples.json", [])
+        st = self.tmp / "st"
+        dims = {"反差": 1.0, "像柚葉": 0.667, "承接": 0.667, "文筆": 0.667, "語域": 0.5, "洩底": 0.5, "護欄": 1.0}
+        jwrite(st / "epochs" / "001" / "runs" / "a" / "ws" / "out" / "a" / "score.json",
+               {"name": "a", "writer": "writer", "style": "傲嬌", "dims": {"多樣性": 0.3},
+                "drafts": [{"n": i, "tier0": [], "tier1": 1, "total": 3.5, "dims": dims} for i in (1, 2, 3)]})
+        rate = lambda: run("python3", str(g / "train" / "rate.py"), env={"AOS_STACK": str(st) + "/", "AOS_WS": str(self.ws)},   # noqa: E731
+                           cwd=g / "train")
+        r = rate()                                                       # 對照：範圍對＝過
+        self.assertEqual(r.returncode, 0, r.stderr)
+        sets = jread(g / "train" / "set.json")
+        jwrite(g / "train" / "set.json", dict(sets, scope=dict(sets["scope"], style="文靜")))
+        before = {p: (g / p).read_bytes() for p in ("writer/ratings.json", "grader/ratings.json")}
+        r = rate()
+        self.assertEqual(r.returncode, 1)
+        self.assertEqual(r.stderr.count("\n"), 1, r.stderr)
+        self.assertRegex(r.stderr, r"^train: StateBad .*'傲嬌' 不在收窄範圍.*'文靜'")
+        self.assertEqual({p: (g / p).read_bytes() for p in before}, before)
 
 
 if __name__ == "__main__":

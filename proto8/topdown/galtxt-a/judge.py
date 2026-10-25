@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-# judge - 過了護欄（checks.json 的 pass）的草稿逐份交給評審 agent（grader/）打 0～3 的語意分，收成 $AOS_STACK/judge.json
+# judge - 過了護欄（checks.json 的 pass）的草稿逐份交給評審 agent（grader/）打三項 0～3 的分（承接、像柚葉、文筆；round4 § 1.3），收成 $AOS_STACK/judge.json
 # 每份一個新小格 $AOS_STACK/judge/runs/NNN/（lib/agent/agent_tool.py 的 fresh_cell、run_agent）；judge.json 裡已有的那份不重評（重跑接著做）。
 # 題目＝場景條件（或挖空題的前後文與評分要點的紅線）＋這份草稿；不含正解（brief.json 本來就沒有）。
-# 答案要有「分數：N」（N 是 0～3）與「理由：…」；解不出＝ReplyBad 停（出口保證；重跑會開新小格、不帶上次的回答）。
+# 答案要有「承接：N」（N 是 0～3；沒有＝ReplyBad 停——出口保證；重跑會開新小格、不帶上次的回答）；「像柚葉：N」「文筆：N」缺行＝那項 null（不停）；「理由：…」可缺。
+# judge.json 一份一格：{tier2: 承接（舊 Tier 2 改名，文靜這種沒評分結構的風格照舊算 Tier 1＋Tier 2）, scores: {承接, 像柚葉, 文筆}, reason}。
 # 沒有任何草稿過護欄時什麼都不評、judge.json 是空表、退 0。
 # 錯：stderr 一行「galtxt-a judge: 代號 原因」、退 1——StackMissing、StateBad、ReplyBad、AgentFailed／AnswerMissing（由 agent_tool 印）。
 import json, os, re, sys
@@ -11,7 +12,8 @@ sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.realpat
 import agent_tool  # noqa: E402
 
 NAME = "galtxt-a judge"
-SCORE = re.compile(r"^\s*分數\s*[:：]\s*([0-3])\s*$", re.M)
+ITEMS = ("承接", "像柚葉", "文筆")
+SCORES = {k: re.compile(r"^\s*%s\s*[:：]\s*([0-3])\s*$" % k, re.M) for k in ITEMS}
 REASON = re.compile(r"^\s*理由\s*[:：]\s*(.+?)\s*$", re.M)
 
 
@@ -69,10 +71,10 @@ for n in sorted(checks, key=int):
         draft = f.read()
     cell = agent_tool.fresh_cell(os.path.join(stack, "judge"))
     reply = agent_tool.run_agent(NAME, "grader", task(draft), cell, question=name[:-5] + ".txt" if name.endswith(".json") else name + ".txt")
-    m = SCORE.search(reply)
-    if not m:
-        die("ReplyBad", "第 %s 份的評審回覆沒有「分數：0～3」（現場在 %s）" % (n, cell))
+    got = {k: (int(m.group(1)) if m else None) for k, m in ((k, SCORES[k].search(reply)) for k in ITEMS)}
+    if got["承接"] is None:
+        die("ReplyBad", "第 %s 份的評審回覆沒有「承接：0～3」（現場在 %s）" % (n, cell))
     r = REASON.search(reply)
-    done[n] = {"tier2": int(m.group(1)), "reason": r.group(1) if r else ""}
+    done[n] = {"tier2": got["承接"], "scores": got, "reason": r.group(1) if r else ""}
     save(path, done)                              # 一份一存：被殺掉重跑時已評的不重評
 save(path, done)

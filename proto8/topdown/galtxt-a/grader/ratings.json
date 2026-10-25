@@ -1,0 +1,2 @@
+{"source": "train/rate.py 從訓練 stack 的 epochs/*/runs/*（訓練題的評審小格與 score.json）算；人不手改。role:grader＝評審這把尺本身：cost＝每評一份平均花多少、dims.分辨力＝同題幾份草稿評審分拉得多開（0＝全給同分，round4 § 5.6 漂移跡象看它）",
+ "scale": {"min": 0, "max": 1, "what": "dims 一律 0～1；cost 是 {llm_calls, llm_tokens, time_ms, counter_runs}（每次平均）"}}

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # lint - stdin 收 {"text": 台詞}，照 $AOS_WS/rules.json 驗 Tier 0 護欄（格式、說話者、禁語、設定、必要關鍵詞、行長）與 Tier 1 語域（稱呼、口氣、NG 標記），stdout 印一行 JSON
-# 結果：{"pass", "tier0": [{"code", "line", "hit"}], "tier1": 0～2, "tier1_notes": [...], "bonus": [...], "counter_lines"}；pass＝tier0 是空的。
+# 結果：{"pass", "tier0": [{"code", "line", "hit"}], "tier1": 0～2, "tier1_notes": [...], "dims", "bonus": [...], "counter_lines"}；pass＝tier0 是空的。
+# 第四輪（round4 § 1.3）：rules.json 有 contrast（女角的 deny／yield／reveal／ooc 表）時多量三件——OocMark（OOC 字面，扣 Tier 1 一分，同 NgMark）、
+# dims.反差（0／0.5／1）、dims.洩底（只有 scene；0／0.5／1）；dims.語域＝tier1 ÷ 2。沒 contrast、或 switches 關掉＝那維度 null。
 # 純函數：不寫檔、不用 stack；同一份 text＋rules 永遠同一個結果。規則只從工作區根的 rules.json 讀（要換規則＝叫的人 --ws 換工作區）。
 # 錯：stderr 與 stdout 各一行「lint: 代號 原因」、退 1——ArgumentsBad（stdin 不是 JSON、沒有 text 字串）、RulesMissing、RulesBad。
 import json, os, re, sys
@@ -109,7 +111,37 @@ if ng:
     tier1 -= 1
     notes.append("NgMark")
     notes += ng
+contrast, switches = rules.get("contrast") or {}, rules.get("switches") or {}
+ooc = [w for w in contrast.get("ooc", []) if w in text] if switches.get("ooc_mark", True) else []
+if ooc:
+    tier1 -= 1
+    notes.append("OocMark")
+    notes += ooc
 tier1 = max(0, tier1)
 
-print(json.dumps({"pass": not tier0, "tier0": tier0, "tier1": tier1, "tier1_notes": notes,
+
+def contrast_dim():
+    """反差（round4 § 1.3）：女角台詞（依序接起來）有否認標記＝0.5，讓步標記出現在第一個否認之後＝再 0.5；只有讓步、或順序反＝不加"""
+    q = "\n".join(said.get(contrast.get("who"), []))
+    at = [q.find(w) for w in contrast.get("deny", []) if w and w in q]
+    if not at:
+        return 0.0
+    first = min(at)
+    return 1.0 if any(w and q.find(w, first + 1) > first for w in contrast.get("yield", [])) else 0.5
+
+
+def reveal_dim():
+    """洩底（只有 scene）：旁白行提到女角且有洩底詞＝1；有旁白但沒洩底＝0.5；沒旁白＝0"""
+    narr = [l for l in lines if NARRATION.match(l)]
+    if not narr:
+        return 0.0
+    names = contrast.get("names", [])
+    hit_ = any(any(n in l for n in names) and any(w in l for w in contrast.get("reveal", [])) for l in narr)
+    return 1.0 if hit_ else 0.5
+
+
+dims = {"反差": contrast_dim() if contrast and switches.get("contrast_order", True) else None,
+        "洩底": reveal_dim() if contrast and mode == "scene" and switches.get("reveal", True) else None,
+        "語域": tier1 / 2}
+print(json.dumps({"pass": not tier0, "tier0": tier0, "tier1": tier1, "tier1_notes": notes, "dims": dims,
                   "bonus": [w for w in bonus_words if w in text], "counter_lines": len(lines)}, ensure_ascii=False))

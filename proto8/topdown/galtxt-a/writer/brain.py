@@ -3,6 +3,8 @@
 # 假腦技能表（第三輪，round3 § 6）：WEAK 裡的（模型標籤, 風格）＝這個假寫手寫這種風格會寫砸——女角那句句尾加 NG 標記「～～」（lint 扣 Tier 1）。
 # 模型標籤從 AOS_BRAIN_MODEL 來（各寫手 .env）：含 sol＝"sol"，其餘＝""。表是劇本、不是品質證據；測試要換時設 GALTXT_FAKE_WEAK（「標籤:風格」逗號分隔，只有假腦讀）。
 # 傲嬌另有一套模板（挖空、整場）；文靜／書卷的模板一字不動。
+# GALTXT_FAKE_JITTER=1（第四輪，round4 § 10 測試 7；只有假腦讀）：第 n 個小格（$AOS_STACK 上一層的 runs/NNN）的草稿在最後一字前多 n 個「…」，
+# 讓「同輸入同角度」的幾份字面不同，驗「一致」的公式。
 # 跟範本不同的兩處：fake() 改寫；問真腦時把 API 回的 usage 多記一行到 $AOS_STACK/usage.jsonl（給實測對照用，OpenAI 的欄位名照留）。
 import datetime, json, os, sys, urllib.error, urllib.request
 
@@ -128,13 +130,23 @@ def tsun(b, hint, lead, heroine, calls, called, must):
     return "\n".join(lines[:max(lo, min(hi, len(lines)))])
 
 
+def jitter(text):
+    if os.environ.get("GALTXT_FAKE_JITTER") != "1" or not text:
+        return text
+    try:
+        n = int(os.path.basename(os.path.dirname(stack.rstrip("/"))))
+    except ValueError:
+        return text
+    return text[:-1] + "…" * n + text[-1]
+
+
 def draft():
     """compose() 的結果過一次假腦技能表（風格＝brief 的 style）"""
     try:
         style = json.loads(question).get("style")
     except (ValueError, AttributeError):
         style = None
-    return weak(compose(), style)
+    return jitter(weak(compose(), style))
 
 
 def compose():

@@ -1,4 +1,6 @@
-# common.py - train 三支（verify.py、train.py、rate.py）共用的小東西：路徑、讀寫 JSON、跑根一題、加總用量、看預算
+# common.py - train 三支（verify.py、train.py、rate.py）共用的小東西：路徑、讀寫 JSON、跑根一題、加總用量、看預算；
+# 第四輪（round4 § 7.1）加：scope_check（收窄守門）、gather（一堆 score.json → 照表走的 total／dims／tags 彙總，不寫死維度名）、
+# run_cost（某個 agent 的小格們平均每次花多少：llm_calls、llm_tokens、time_ms）、brain（整棵樹哪些節點還靠腦）、run_question 的 env。
 # 不是格、沒有 _entry；三支用 sys.path 從自己的資料夾 import（cwd＝train/，fsm 的內嵌單子）。純標準庫。
 import datetime, json, os, shutil, subprocess, sys
 
@@ -69,8 +71,8 @@ def settings():
     return s, b
 
 
-def run_question(cell, example, writer=None):
-    """在小格 cell/{ws,stack} 跑根一題（被殺重跑：ws 已在就照原樣接著跑）；回 (結束碼, score.json 路徑)"""
+def run_question(cell, example, writer=None, env=None):
+    """在小格 cell/{ws,stack} 跑根一題（被殺重跑：ws 已在就照原樣接著跑）；回 (結束碼, score.json 路徑)；env＝多給根的環境變數"""
     base = example[:-5] if example.endswith(".json") else example
     ws, st = os.path.join(cell, "ws"), os.path.join(cell, "stack")
     score = os.path.join(ws, "out", base, "score.json")
@@ -83,7 +85,7 @@ def run_question(cell, example, writer=None):
         os.makedirs(os.path.join(ws, "new"))
         os.makedirs(st, exist_ok=True)
         save(os.path.join(ws, "new", example), task)
-    env = dict(os.environ, AOS_STACK=st + "/")
+    env = dict(os.environ, AOS_STACK=st + "/", **(env or {}))
     try:
         r = subprocess.run(["aos-exec", "--ws", ws, ROOT], env=env, stdout=sys.stderr)   # 根的 stdout 不混進這格的
     except OSError as e:
@@ -130,3 +132,91 @@ def copy(src, dst):
     tmp = os.path.join(os.path.dirname(dst), "." + os.path.basename(dst))
     shutil.copyfile(src, tmp)
     os.replace(tmp, dst)
+
+
+def scope_check(score, sets, where):
+    """收窄守門（round4 § 1.2）：score.json 的 style 不是 set.json scope.style＝StateBad（不靠人記得）"""
+    want = (sets.get("scope") or {}).get("style")
+    if want is not None and score.get("style") != want:
+        die("StateBad", "%s 的 style %r 不在收窄範圍（set.json scope.style＝%r）" % (where, score.get("style"), want))
+
+
+def mean(xs):
+    xs = [x for x in xs if x is not None]
+    return round(sum(xs) / len(xs), 3) if xs else None
+
+
+def std(xs):
+    xs = [x for x in xs if x is not None]
+    if len(xs) < 2:
+        return None
+    m = sum(xs) / len(xs)
+    return (sum((x - m) ** 2 for x in xs) / len(xs)) ** 0.5
+
+
+def gather(scores):
+    """[score.json] → {totals, dims, tags}：dims＝過護欄草稿每個維度的平均（護欄＝過的份數比例；整題維度＝各題平均），
+    tags＝評審理由標籤計數；維度名照 score.json 裡有的走（pick 照 data/dims.json 算好的），這裡不寫死"""
+    totals, per, guard, whole, tags = [], {}, [], {}, {}
+    for s in scores:
+        for d in s["drafts"]:
+            guard.append(d["dims"].get("護欄"))
+            if d["tier0"]:
+                continue
+            totals.append(d["total"])
+            for k, v in d["dims"].items():
+                if k != "護欄":
+                    per.setdefault(k, []).append(v)
+            if d.get("reason"):
+                tags[d["reason"]] = tags.get(d["reason"], 0) + 1
+        for k, v in (s.get("dims") or {}).items():
+            whole.setdefault(k, []).append(v)
+    dims = {k: mean(v) for k, v in per.items()}
+    dims["護欄"] = mean(guard)
+    dims.update({k: mean(v) for k, v in whole.items()})
+    return {"totals": totals, "dims": dims, "tags": dict(sorted(tags.items()))}
+
+
+def run_cost(cells, agent):
+    """root 小格們（cell/stack）底下 <agent>/runs/*（寫手＝寫手資料夾名、評審＝judge）平均每次：
+    llm_calls（history 的 assistant 則數）、llm_tokens（usage.jsonl）、time_ms（trace.jsonl 的 elapsed_ms 加總；程式階沒有＝0）"""
+    runs = []
+    for cell in cells:
+        d = os.path.join(cell, "stack", agent, "runs")
+        runs += [os.path.join(d, r) for r in sorted(os.listdir(d))] if os.path.isdir(d) else []
+    if not runs:
+        return None
+    calls = tokens = ms = 0
+    for r in runs:
+        u = usage_of(r)
+        calls, tokens = calls + u["counter_calls"], tokens + u["counter_tokens"]
+        t = os.path.join(r, "stack", "trace.jsonl")
+        if os.path.isfile(t):
+            with open(t, encoding="utf-8") as f:
+                for l in f:
+                    try:
+                        ms += int(json.loads(l).get("elapsed_ms") or 0)
+                    except (ValueError, AttributeError, TypeError):
+                        pass
+    k = len(runs)
+    return {"llm_calls": round(calls / k, 2), "llm_tokens": round(tokens / k), "time_ms": round(ms / k), "counter_runs": k}
+
+
+def stage_of(sub):
+    """一棵子樹現在在哪階（round4 § 3.3）：有 stage.json 照它；沒有而 _metainfo 的 resource 含 llm＝agent；不含＝program"""
+    p = os.path.join(ROOT, sub)
+    st = load_or(os.path.join(p, "stage.json"), {})
+    if isinstance(st, dict) and isinstance(st.get("stage"), str):
+        return st["stage"]
+    res = load_or(os.path.join(p, "_metainfo"), {}).get("resource") or []
+    return "agent" if "llm" in (res if isinstance(res, list) else [res]) else "program"
+
+
+def brain(sets, usage, questions):
+    """整棵樹的腦用量（round4 § 2.3）：每題平均幾次腦、幾 token（實測：usage ÷ 題數），每個用到的節點在哪階。
+    節點＝set.json 的寫手＋評審＋lint（這圈每題會叫到的；rollup 出來後改由 rollup 收）"""
+    nodes = {n: stage_of(n) for n in list(sets["writers"]) + ["grader", "tools/lint"]}
+    on = sum(1 for v in nodes.values() if v in ("agent", "semi"))
+    return {"llm_calls_per_question": round(usage["counter_calls"] / questions, 2) if questions else None,
+            "llm_tokens_per_question": round(usage["counter_tokens"] / questions) if questions else None,
+            "nodes": nodes, "counter_on_brain": on, "counter_program": len(nodes) - on}

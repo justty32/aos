@@ -1,4 +1,2 @@
-{"description": "檢查一份台詞過不過護欄。回一行 JSON：pass（true＝可以交）、tier0（不過的原因，每項有 code、第幾行 line、命中的字 hit；code：FormatBad 格式或行數不對、SpeakerUnknown 說話者不在卡司、SpeakerWrong 挖空模式說話者不對、ForbiddenWord 禁語、SettingBad 設定寫錯、KeywordMissing 必要關鍵詞一組都沒用到、LineTooLong 一行太長）、tier1（語域分 0～2，tier1_notes 說明：AddressBad 稱呼越階、VoiceMissing 角色口氣沒出來、NgMark 用了 NG 標記）、bonus（加分詞）、counter_lines（幾行）。pass 是 false 就照 tier0 改了再檢查。",
- "parameters": {"type": "object",
-                "properties": {"text": {"type": "string", "description": "要檢查的台詞，一行一句：對白寫 角色：「台詞」，旁白寫（…）"}},
-                "required": ["text"]}}
+{"description": "檢查一份台詞過不過護欄。回一行 JSON：pass（true＝可以交）、tier0（不過的原因，每項有 code、第幾行 line、命中的字 hit；code：FormatBad 格式或行數不對、SpeakerUnknown 說話者不在卡司、SpeakerWrong 挖空模式說話者不對、ForbiddenWord 禁語、SettingBad 設定寫錯、KeywordMissing 必要關鍵詞一組都沒用到、LineTooLong 一行太長）、tier1（語域分 0～2，tier1_notes 說明：AddressBad 稱呼越階、VoiceMissing 角色口氣沒出來、NgMark 用了 NG 標記、OocMark 角色跑掉的字面）、dims（反差：先否認再讓步 0～1；洩底：旁白補真心 0～1，只有整場；語域：tier1÷2；量不了的是 null）、bonus（加分詞）、counter_lines（幾行）。pass 是 false 就照 tier0 改了再檢查。",
+ "parameters": {"type": "object", "properties": {"text": {"type": "string", "description": "要檢查的台詞，一行一句：對白寫 角色：「台詞」，旁白寫（…）"}}, "required": ["text"]}}

@@ -1,0 +1,9 @@
+{"source": "評分結構（round4 § 1.3）：一維度一行——誰量（by）、權重、只在哪種模式有（modes）、改哪棵子樹才動得了它（moved_by）；pick 讀：風格在 profiles 裡＝total 是 5 × Σ(weight×值)/Σweight（null 的維度不進分母），不在＝舊公式 Tier 1＋Tier 2；權重只有人改、優化器不准碰（改了＝改損失函數）",
+ "profiles": {"傲嬌": {"反差":   {"by": "tools/lint", "weight": 2, "moved_by": ["writer"]},
+                      "像柚葉": {"by": "grader",     "weight": 2, "moved_by": ["writer"]},
+                      "承接":   {"by": "grader",     "weight": 1, "moved_by": ["writer"]},
+                      "文筆":   {"by": "grader",     "weight": 1, "moved_by": ["writer"]},
+                      "語域":   {"by": "tools/lint", "weight": 1, "moved_by": ["writer", "tools/lint"]},
+                      "洩底":   {"by": "tools/lint", "weight": 1, "modes": ["scene"], "moved_by": ["writer"]}}},
+ "question_dims": {"多樣性": {"by": "pick", "moved_by": ["."]}, "一致": {"by": "pick", "only": "hints_fixed", "moved_by": ["writer"]}},
+ "gate": "護欄（Tier 0）不是維度：沒過＝total 0"}

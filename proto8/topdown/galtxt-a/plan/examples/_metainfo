@@ -1,1 +1,1 @@
-{"summary": "題目範例：scene.json、scene-yuzuha.json（場景模式，也是 train 的訓練題）、Q01.json、Q16.json（挖空模式，也是 train 的驗證題）；複製到工作區 new/ 就能跑", "kind": "data", "fs_needs": ["git_tracked"]}
+{"summary": "題目範例：scene.json、scene-yuzuha.json（場景模式，第三輪的訓練題，第四輪起不進訓練）、Q01.json、Q16.json（挖空模式）；第四輪收窄到宮澤柚葉×教室文化祭收攤：cls-ribbon.json、cls-poster.json（訓練）、cls-lights.json（held-out 驗證）、Q16-fixed.json（hints_fixed，量確定性）；複製到工作區 new/ 就能跑", "kind": "data", "fs_needs": ["git_tracked"]}

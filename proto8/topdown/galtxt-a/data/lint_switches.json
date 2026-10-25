@@ -1,0 +1,4 @@
+{"source": "lint 規則開關（round4 § 1.2、§ 5.3 的 switch 動作改這份；人可改）：contrast_order＝量「反差」（先否認再讓步）、reveal＝量「洩底」（旁白補真心，只有 scene）、ooc_mark＝OOC 字面扣 Tier 1；關掉＝那維度 null（不進 total 分母）／不扣。brief 抄進 rules.json 的 switches",
+ "contrast_order": true,
+ "reveal": true,
+ "ooc_mark": true}

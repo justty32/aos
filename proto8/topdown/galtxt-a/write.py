@@ -3,10 +3,11 @@
 # 選寫手（第三輪）：brief.writer（題目級覆寫）> data/route.json 的 by_style[brief.style] > default；值＝根底下有 _entry 的資料夾名。
 # 選好先寫 $AOS_STACK/route.json {"writer", "style", "by": "question"|"by_style"|"default"}（狀態：它在就照它、不重讀表，重跑接著做不換人）。
 # 每次一個新小格 $AOS_STACK/<寫手>/runs/NNN/（ws/ 放題目與 rules.json、stack/ 是寫手自己的），用 lib/agent/agent_tool.py 的 fresh_cell、run_agent。
-# 題目＝brief.json 去掉 drafts、加一個 hint（第 i 個角度，固定輪著用：借景、動作、留白），三份草稿才不是同一句換字。
+# 題目＝brief.json 去掉 drafts、加一個 hint（第 i 個角度，照 data/hints.json 的 hints 輪著用），三份草稿才不是同一句換字；
+# brief 有 hints_fixed（量確定性的題，round4 § 4.2）＝每份都用 hints[0]（同輸入同角度），hints_fixed 本身不給寫手看。
 # 已經有的 drafts/<i>.txt 跳過：這格被殺掉重跑時，不重付已經寫好的草稿（P-20 接著做）。
 # 錯：stderr 一行「galtxt-a write: 代號 原因」、退 1——StackMissing、StateBad（brief.json／rules.json／current.txt 缺或壞）、
-#     RouteBad（route.json 壞、或選到的不是根底下有 _entry 的資料夾）、AgentFailed／AnswerMissing（寫手退非 0 或沒答案；那一行由 agent_tool 印，現場留在小格裡）。
+#     RouteBad（route.json 壞、或選到的不是根底下有 _entry 的資料夾）、HintsBad（data/hints.json 讀不了或 hints 不是非空字串陣列）、AgentFailed／AnswerMissing（寫手退非 0 或沒答案；那一行由 agent_tool 印，現場留在小格裡）。
 import json, os, shutil, sys
 
 sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "lib", "agent")))   # proto8/lib/agent
@@ -14,7 +15,6 @@ import agent_tool  # noqa: E402
 
 NAME = "galtxt-a write"
 HERE = os.path.dirname(os.path.realpath(__file__))
-HINTS = ["借景", "動作", "留白"]
 
 
 def die(code, reason):
@@ -37,6 +37,14 @@ except (OSError, ValueError) as e:
     die("StateBad", "brief 還沒做好：%s" % e)
 n = brief.pop("drafts", 3)
 asked = brief.pop("writer", None)                  # 題目級覆寫；給寫手看的題目不帶路由
+fixed = brief.pop("hints_fixed", False)
+try:
+    with open(os.path.join(HERE, "data", "hints.json"), encoding="utf-8") as f:
+        hints = json.load(f)["hints"]
+    if not (isinstance(hints, list) and hints and all(isinstance(h, str) for h in hints)):
+        raise ValueError("hints 要是非空字串陣列")
+except (OSError, ValueError, KeyError, TypeError) as e:
+    die("HintsBad", "data/hints.json：%s" % e)
 
 
 def save(path, obj):
@@ -83,7 +91,7 @@ for i in range(1, n + 1):
     out = os.path.join(drafts, "%d.txt" % i)
     if os.path.exists(out):
         continue
-    task = dict(brief, hint=HINTS[(i - 1) % len(HINTS)])
+    task = dict(brief, hint=hints[0] if fixed else hints[(i - 1) % len(hints)])
     cell = agent_tool.fresh_cell(os.path.join(stack, writer))
     os.makedirs(os.path.join(cell, "ws"))
     shutil.copyfile(rules, os.path.join(cell, "ws", "rules.json"))   # 寫手的 lint 從它自己的 $AOS_WS/rules.json 讀

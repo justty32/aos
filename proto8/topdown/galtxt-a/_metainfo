@@ -15,4 +15,5 @@
  "reads": ["ws:new/*.json", "ws:cur/*.json", "data:*", "data:route.json"],
  "writes": ["ws:out/<題名>/", "ws:done/<題名>.json", "stack:*"],
  "fs_needs": ["own_stack", "git_tracked"],
- "callers": 0}
+ "callers": 0,
+ "ratings": {"$ref": "ratings.json"}}

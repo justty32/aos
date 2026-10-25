@@ -1,0 +1,3 @@
+{"source": "寫手每份草稿偏重的角度（round4 § 1.2，從 write.py 的 HINTS 搬出）：第 i 份用 hints[(i−1) mod 長度]；題目有 hints_fixed＝每份都用 hints[0]；options 是 train/optimize 的 hints 動作能換的兩組（人寫）",
+ "hints": ["借景", "動作", "留白"],
+ "options": [["借景", "動作", "留白"], ["否認", "讓步", "洩底"]]}

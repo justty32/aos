@@ -1,0 +1,2 @@
+{"source": "train/verify.py 每個 epoch 從驗證題＋measure 題整格覆蓋（整棵 galtxt-a 對外的評級）；人不手改。style:<風格>：val、score_avg、score_min、counter_samples、dims、determinism（measure 題的一致）、cost（每題平均）、brain（每題幾次腦、每個節點在哪階，round4 § 2.3）",
+ "scale": {"min": 0, "max": 5, "what": "score 是 pick 的 total（風格在 data/dims.json profiles 裡＝加權；不在＝Tier 1＋Tier 2）；dims 一律 0～1"}}

@@ -5,6 +5,9 @@
 # 換了一題（current.txt 記的不是這題）時，先清掉上一題留在 stack 的 drafts/、checks.json、judge.json、route.json——不然 write、judge 會把舊的當成已做好。
 # brief.json 多兩個 key 給 write 選寫手（第三輪）：style＝風格（挖空：說話者的人物卡 type；場景：第一個不是主角的卡司的 type），
 # writer＝題目 JSON 有寫就照抄（題目級覆寫，write 那邊驗資料夾在不在）。
+# 第四輪（round4 § 1.3、§ 4.2）：brief.json 多 detail（題目的小動作開關，沒有＝不帶）、hints_fixed（題目有才帶；write 照它讓每份同一角度、pick 照它算「一致」）；
+# rules.json 多 switches（data/lint_switches.json 原樣）與 contrast（主角以外那位女角的風格在 styles.json 有 deny 表才有：
+# {who, names（display＋short）, deny, yield, cover, reveal, ooc}，lint 拿來量反差、洩底、OocMark；沒有＝null）。
 # 錯：stderr 一行「galtxt-a brief: 代號 原因」、退 1（QuestionMissing、TaskBad、CastMissing、PlaceMissing、BenchMissing、StackMissing）。
 import json, os, shutil, sys
 
@@ -129,9 +132,10 @@ for who in src["cast"]:
     cards.append(cast[who])
 lead = next((c for c in cards if c.get("display") == "主角"), None)
 if mode == "fill":
-    task_style = next((c.get("type") for c in cards if c.get("display") == src.get("speaker")), None)
+    hero = next((c for c in cards if c.get("display") == src.get("speaker")), None)
 else:
-    task_style = next((c.get("type") for c in cards if c is not lead), None)
+    hero = next((c for c in cards if c is not lead), None)
+task_style = hero.get("type") if hero else None
 
 
 def higher(table):
@@ -179,6 +183,12 @@ brief = {"mode": mode, "name": base,
          **lines, "drafts": drafts, "samples": samples, "style": task_style}
 if "writer" in task:
     brief["writer"] = task["writer"]
+if task.get("detail") is not None:
+    if not isinstance(task["detail"], str):
+        die("TaskBad", "detail 要是字串（小動作開關，例 ribbon）")
+    brief["detail"] = task["detail"]
+if task.get("hints_fixed"):
+    brief["hints_fixed"] = True
 must, bonus = [], []
 if mode == "fill":
     brief.update(bench=task["bench"], speaker=bench["speaker"], setting=bench.get("setting"), speaker_note=bench.get("speaker_note"),
@@ -194,6 +204,13 @@ rules = {"mode": mode, **lines, "speakers": [c["display"] for c in cards],
          "setting": forbidden["D"],
          "address": addr_rules, "markers": markers, "ng_marks": styles["ng_marks"],
          "must": must, "bonus": bonus, "max_line_chars": 60}
+switches = load(os.path.join(DATA, "lint_switches.json"), "TaskBad", "lint 開關表")
+rules["switches"] = {k: v for k, v in switches.items() if k != "source"}
+hero_style = styles["types"].get(task_style, {}) if hero else {}
+rules["contrast"] = None
+if hero_style.get("deny"):
+    rules["contrast"] = {"who": hero["display"], "names": [n for n in (hero["display"], hero.get("short")) if n],
+                         **{k: hero_style.get(k, []) for k in ("deny", "yield", "cover", "reveal", "ooc")}}
 
 write_atomic(os.path.join(stack, "brief.json"), dump(brief))
 write_atomic(os.path.join(stack, "rules.json"), dump(rules))
