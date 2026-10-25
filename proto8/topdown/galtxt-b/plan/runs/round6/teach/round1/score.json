@@ -1,0 +1,44 @@
+{
+ "val": "good",
+ "style": "傲嬌",
+ "dims": {
+  "護欄": 1.0,
+  "語域": 1.0,
+  "語意": {
+   "val": 0.67,
+   "承接": 0.8,
+   "含蓄": 0.5,
+   "角色味": {
+    "val": 0.8,
+    "反差": 0.7
+   },
+   "文筆": 0.7
+  }
+ },
+ "attempt": 1,
+ "benchmark": null,
+ "tier0": {
+  "score": 1,
+  "pass": true
+ },
+ "tier1": {
+  "score": 2,
+  "counter_violations": 0
+ },
+ "tier2": {
+  "semantic": 2,
+  "register_by_judge": 2,
+  "reasons": [
+   "「這些我都沒看過」與命令下次再來都接住場景，但漏了她提不動、把書塞給主角的明確動作。",
+   "「不是約你，只是書太多才方便」把邀約意圖解釋得太白，削弱了留白。",
+   "傲嬌的否認與讓步有做到，但兩句連續補充遮掩，略顯刻意。",
+   "「那本裡還夾著舊車票」場景未交代這個細節，像是突然添出的設定。"
+  ]
+ },
+ "total": 5,
+ "max_total": 6,
+ "register_agree": true,
+ "degraded": [
+  "plan_template: 主角|舊車票 不在表上，用 default"
+ ]
+}

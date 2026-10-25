@@ -1,0 +1,32 @@
+{
+ "attempt": 1,
+ "pass": true,
+ "final": true,
+ "tier0_pass": true,
+ "register_score": 1,
+ "counter_violations_tier0": 0,
+ "counter_violations_tier1": 1,
+ "violations": [
+  {
+   "tier": 1,
+   "rule": "narration_max",
+   "line": 0,
+   "text": "",
+   "reason": "旁白 6 行，上限 4（太多旁白＝說明腔；旁白只寫光、聲、味與小動作）"
+  }
+ ],
+ "history": [
+  {
+   "attempt": 1,
+   "violations": [
+    {
+     "tier": 1,
+     "rule": "narration_max",
+     "line": 0,
+     "text": "",
+     "reason": "旁白 6 行，上限 4（太多旁白＝說明腔；旁白只寫光、聲、味與小動作）"
+    }
+   ]
+  }
+ ]
+}

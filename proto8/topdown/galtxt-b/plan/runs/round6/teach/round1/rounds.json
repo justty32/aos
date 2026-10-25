@@ -1,0 +1,152 @@
+{
+ "round": 1,
+ "k": null,
+ "runs": [
+  {
+   "q": "新書_宮澤_主角先_舊車票",
+   "k": 1,
+   "style": "傲嬌",
+   "scene": {
+    "cast": [
+     "主角",
+     "宮澤柚葉"
+    ],
+    "place": "河鹿堂",
+    "season": "梅雨",
+    "time": "傍晚",
+    "summary": "梅雨的傍晚，主角與宮澤柚葉撐傘走進河鹿堂避雨，碰上進新書日；她挑了一疊提不動、嘴硬地塞給主角提，順勢「命令」他下次進新書日也來",
+    "event": "開場由主角先開口（調侃她挑太多）。躲雨進店，是進新書日，架上好多沒看過的書。柚葉一口氣挑了一疊、爺爺一本本蓋了梅花章；她提不動，把書塞給主角（才不是要你幫忙，是你手比較長）；最後用命令句要他下次的進新書日也來（其實是想約）；主角認了，反正梅雨還要下好一陣子。不升階、不告白。",
+    "intent": "鉤",
+    "style": "傲嬌"
+   },
+   "ws": "runs/1/新書_宮澤_主角先_舊車票/1",
+   "code": 0,
+   "produced_by": "draft/tools/writer",
+   "answer": "runs/1/新書_宮澤_主角先_舊車票/1/out/新書_宮澤_主角先_舊車票/answer.txt",
+   "counter_lines": 7,
+   "score": {
+    "val": "good",
+    "style": "傲嬌",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.8,
+      "含蓄": 0.5,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.7
+      },
+      "文筆": 0.7
+     }
+    },
+    "attempt": 1,
+    "benchmark": null,
+    "tier0": {
+     "score": 1,
+     "pass": true
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "tier2": {
+     "semantic": 2,
+     "register_by_judge": 2,
+     "reasons": [
+      "「這些我都沒看過」與命令下次再來都接住場景，但漏了她提不動、把書塞給主角的明確動作。",
+      "「不是約你，只是書太多才方便」把邀約意圖解釋得太白，削弱了留白。",
+      "傲嬌的否認與讓步有做到，但兩句連續補充遮掩，略顯刻意。",
+      "「那本裡還夾著舊車票」場景未交代這個細節，像是突然添出的設定。"
+     ]
+    },
+    "total": 5,
+    "max_total": 6,
+    "register_agree": true,
+    "degraded": [
+     "plan_template: 主角|舊車票 不在表上，用 default"
+    ]
+   },
+   "counter_tokens": 25259,
+   "counter_llm_calls": 5,
+   "elapsed_ms": 17230
+  }
+ ],
+ "by_q": {
+  "新書_宮澤_主角先_梅花章": {
+   "style": "傲嬌",
+   "counter_runs": 0,
+   "counter_failed": 0,
+   "total_mean": null,
+   "dims_mean": {
+    "護欄": null,
+    "語域": null,
+    "語意": null
+   }
+  },
+  "新書_宮澤_主角先_舊車票": {
+   "style": "傲嬌",
+   "counter_runs": 1,
+   "counter_failed": 0,
+   "total_mean": 5.0,
+   "dims_mean": {
+    "護欄": 1.0,
+    "語域": 1.0,
+    "語意": 0.67
+   }
+  },
+  "新書_宮澤_主角先_集章冊": {
+   "style": "傲嬌",
+   "counter_runs": 0,
+   "counter_failed": 0,
+   "total_mean": null,
+   "dims_mean": {
+    "護欄": null,
+    "語域": null,
+    "語意": null
+   }
+  },
+  "新書_宮澤_她先_梅花章": {
+   "style": "傲嬌",
+   "counter_runs": 0,
+   "counter_failed": 0,
+   "total_mean": null,
+   "dims_mean": {
+    "護欄": null,
+    "語域": null,
+    "語意": null
+   }
+  },
+  "新書_宮澤_她先_集章冊": {
+   "style": "傲嬌",
+   "counter_runs": 0,
+   "counter_failed": 0,
+   "total_mean": null,
+   "dims_mean": {
+    "護欄": null,
+    "語域": null,
+    "語意": null
+   }
+  }
+ },
+ "by_style": {
+  "傲嬌": {
+   "val": "good",
+   "語意": 0.67,
+   "語域": 1.0,
+   "護欄": 1.0,
+   "total_mean": 5.0,
+   "counter_samples": 1,
+   "weighted": 0.835
+  }
+ },
+ "totals": {
+  "total_mean": 5.0,
+  "counter_runs": 1,
+  "counter_failed": 0,
+  "counter_tokens": 25259,
+  "counter_llm_calls": 5
+ },
+ "delta": null
+}

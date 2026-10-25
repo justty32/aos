@@ -1,0 +1,112 @@
+{
+ "round": 1,
+ "moves": [
+  {
+   "kind": "teach",
+   "why": "director 有 counter_open > 0 的難例（prop 舊車票不在 plans.json）",
+   "status": "applied",
+   "taught": [
+    {
+     "key": "主角|舊車票",
+     "cases": [
+      "9d5bb0096a5f"
+     ],
+     "rows_before": 4,
+     "rows_after": 5,
+     "row": "tools/plan_template/plans.json#/plans/主角|舊車票",
+     "node": "draft/tools/director"
+    }
+   ],
+   "failed": [],
+   "counter_tokens": 3477
+  }
+ ],
+ "touched": [
+  "draft/tools/director/tools/plan_template",
+  "draft/tools/director"
+ ],
+ "cost": {
+  "counter_tokens": 3477
+ },
+ "applied_at": "2026-10-25T09:50:32.480+00:00",
+ "gradient": {
+  "draft/tools/director/tools/plan_template": {
+   "rollup.counter_rows": {
+    "from": 4,
+    "to": 5,
+    "delta": 1
+   },
+   "rollup.measured.counter_degraded": {
+    "from": 1,
+    "to": 0,
+    "delta": -1
+   }
+  },
+  "draft/tools/director": {
+   "hard_cases.counter_open": {
+    "from": 1,
+    "to": 0,
+    "delta": -1
+   },
+   "hard_cases.counter_resolved": {
+    "from": 0,
+    "to": 1,
+    "delta": 1
+   }
+  },
+  ".": {
+   "ratings.傲嬌.counter_degraded": {
+    "from": 1,
+    "to": 0,
+    "delta": -1
+   },
+   "ratings.傲嬌.反差": {
+    "from": 0.7,
+    "to": 0.8,
+    "delta": 0.1
+   },
+   "ratings.傲嬌.承接": {
+    "from": 0.8,
+    "to": 0.6,
+    "delta": -0.2
+   }
+  }
+ },
+ "gain": 1.1792,
+ "gradient_at": "2026-10-25T09:50:51.858+00:00",
+ "gradient_from": "rounds/1.metainfo.json → round 2 的樹",
+ "gradient_share": {
+  "draft/tools/director/tools/plan_template": {
+   "1": {
+    "parts": {
+     "draft/tools/director/tools/plan_template|rollup.counter_rows": 1.0,
+     "draft/tools/director/tools/plan_template|rollup.measured.counter_degraded": 1.0,
+     "draft/tools/director|hard_cases.counter_open": 0.5,
+     "draft/tools/director|hard_cases.counter_resolved": 0.5,
+     ".|ratings.傲嬌.counter_degraded": 0.5,
+     ".|ratings.傲嬌.反差": 0.5,
+     ".|ratings.傲嬌.承接": 0.5
+    },
+    "good": 2.55,
+    "gain": 0.7334,
+    "change": "changes/1.json",
+    "counter_tokens": 3477
+   }
+  },
+  "draft/tools/director": {
+   "1": {
+    "parts": {
+     "draft/tools/director|hard_cases.counter_open": 0.5,
+     "draft/tools/director|hard_cases.counter_resolved": 0.5,
+     ".|ratings.傲嬌.counter_degraded": 0.5,
+     ".|ratings.傲嬌.反差": 0.5,
+     ".|ratings.傲嬌.承接": 0.5
+    },
+    "good": 1.55,
+    "gain": 0.4458,
+    "change": "changes/1.json",
+    "counter_tokens": 3477
+   }
+  }
+ }
+}

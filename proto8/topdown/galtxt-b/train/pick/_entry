@@ -11,9 +11,53 @@
 # samples.json：陣列，每筆 {"id": "b-r<輪>-<題>-<次>", "team": "b", "round", "scene": {cast, place, season, time, summary, event, intent, style},
 #   "lines": [台詞與旁白，不含【標題】], "produced_by", "auto_scores": {val, total, max_total, dims（含多樣性）, register_agree}, "why_picked"}
 # 自己的錯一行 stderr「pick: 代號 原因」退 1：StackMissing、RoundMissing／RoundBad、RoundsBad。
+# 另有純函數 subtree_score／pick_subtree（round5 §4a 挑子樹的公式＋round6 §3b 的 λ_gain × gain；權重在 pick_rule.json）：
+#   給之後的 train/optimize 用（它還沒做），現在只有測試叫；不影響上面挑人評樣本的主程式。
 import json, os, sys
 
 MAX_SHORT = 8                                    # 台詞 ≤ 8 句算短
+WEAK_BELOW = 0.7                                 # 評級細項 < 0.7 算弱維度（沒量過貢獻時的先驗用）
+
+
+def latest_gain(meta):
+    """_metainfo.gradient_share 最新一輪的 gain（record 寫的）；沒有回 0。"""
+    gs = meta.get("gradient_share") if isinstance(meta.get("gradient_share"), dict) else {}
+    rounds = sorted((k for k in gs if str(k).isdigit()), key=int)
+    g = (gs[rounds[-1]] or {}).get("gain") if rounds else 0
+    return g if isinstance(g, (int, float)) and g > 0 else 0
+
+
+def subtree_score(meta, ratings, rule, tree_id):
+    """一棵子樹的分數（round5 §4a）＋ λ_gain × gain／(1＋gain)；凍結的回 None。回 (score, 各項)。純函數。"""
+    if meta.get("frozen"):
+        return None, {"frozen": True}
+    dims_r = {d: v for d, v in (ratings or {}).items() if isinstance(v, (int, float)) and not isinstance(v, bool)}
+    c = ((meta.get("contribution") or {}).get(tree_id)) or {}
+    g = latest_gain(meta)
+    parts = {"gain": round(g / (1 + g), 4)}
+    if isinstance(c.get("dims"), dict):
+        parts["weak"] = round(sum((1 - dims_r.get(d, 1)) * max(0, -v) for d, v in c["dims"].items() if isinstance(v, (int, float))), 4)
+        parts["cost"] = float((c.get("cost") or {}).get("share_tokens") or 0)
+        parts["trust"] = min(1.0, (c.get("counter_samples") or 0) / 4)
+        stage = (meta.get("lifecycle") or {}).get("stage")
+        parts["solid"] = 1 if meta.get("uses_llm") and stage in ("agent", "tools") else 0
+        s = parts["trust"] * parts["weak"] + rule.get("λ_cost", 0.3) * parts["cost"] + rule.get("λ_solid", 0.5) * parts["solid"] * parts["cost"]
+    else:
+        weak = {d for d, v in dims_r.items() if v < WEAK_BELOW}
+        parts["prior"] = 0.5 if weak & set(meta.get("responsible_for") or []) else 0
+        s = parts["prior"] * 0.5
+    s += rule.get("λ_gain", 0.2) * parts["gain"]
+    return round(s, 4), parts
+
+
+def pick_subtree(subtrees, ratings, rule, tree_id):
+    """subtrees＝{相對路徑: _metainfo}（只給直接子樹）→ [(score, 路徑, 各項)] 由高到低；凍結的不列。"""
+    out = []
+    for path, meta in subtrees.items():
+        s, parts = subtree_score(meta, ratings, rule, tree_id)
+        if s is not None:
+            out.append((s, path, parts))
+    return sorted(out, key=lambda x: (-x[0], x[1]))
 
 
 def die(code, reason):

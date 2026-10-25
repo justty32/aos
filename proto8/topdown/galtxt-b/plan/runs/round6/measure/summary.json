@@ -1,0 +1,860 @@
+{
+ "director_after_notrim": {
+  "rows": [
+   {
+    "ws": "director_after_notrim/新書_宮澤_主角先_梅花章/1",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.8,
+      "含蓄": 0.6,
+      "角色味": {
+       "val": 0.7,
+       "反差": 0.8
+      },
+      "文筆": 0.5
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 1,
+    "degraded": [],
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 19152,
+    "elapsed_s": 13.1,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 0,
+     "writer": 15637,
+     "critic": 3515
+    },
+    "tool_calls": [
+     "lint",
+     "lint"
+    ],
+    "drafts_trimmed": [
+     false
+    ],
+    "writer_tool_replies_argbad": 1
+   },
+   {
+    "ws": "director_after_notrim/新書_宮澤_主角先_梅花章/2",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.8,
+      "含蓄": 0.7,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.8
+      },
+      "文筆": 0.6
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": [],
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 25270,
+    "elapsed_s": 17.3,
+    "counter_llm_calls": 5,
+    "agents_tokens": {
+     "director": 0,
+     "writer": 21716,
+     "critic": 3554
+    },
+    "tool_calls": [
+     "lint",
+     "lint",
+     "lint"
+    ],
+    "drafts_trimmed": [
+     false
+    ],
+    "writer_tool_replies_argbad": 0
+   },
+   {
+    "ws": "director_after_notrim/新書_宮澤_主角先_梅花章/3",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.8,
+      "含蓄": 0.6,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.7
+      },
+      "文筆": 0.6
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": [],
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 19337,
+    "elapsed_s": 14.7,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 0,
+     "writer": 15766,
+     "critic": 3571
+    },
+    "tool_calls": [
+     "lint",
+     "lint"
+    ],
+    "drafts_trimmed": [
+     false
+    ],
+    "writer_tool_replies_argbad": 0
+   },
+   {
+    "ws": "director_after_notrim/新書_宮澤_主角先_集章冊/1",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.8,
+      "含蓄": 0.9,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.8
+      },
+      "文筆": 0.6
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": [],
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 19304,
+    "elapsed_s": 17.3,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 0,
+     "writer": 15742,
+     "critic": 3562
+    },
+    "tool_calls": [
+     "lint",
+     "lint"
+    ],
+    "drafts_trimmed": [
+     false
+    ],
+    "writer_tool_replies_argbad": 1
+   },
+   {
+    "ws": "director_after_notrim/新書_宮澤_她先_梅花章/1",
+    "total": 4,
+    "val": "ok",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 0.5,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.8,
+      "含蓄": 0.7,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.8
+      },
+      "文筆": 0.6
+     }
+    },
+    "tier1": {
+     "score": 1,
+     "counter_violations": 1
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": [],
+    "violations": [
+     "a1:narration_max"
+    ],
+    "counter_drafts": 1,
+    "counter_tokens": 13698,
+    "elapsed_s": 10.8,
+    "counter_llm_calls": 3,
+    "agents_tokens": {
+     "director": 0,
+     "writer": 10125,
+     "critic": 3573
+    },
+    "tool_calls": [
+     "lint"
+    ],
+    "drafts_trimmed": [
+     false
+    ],
+    "writer_tool_replies_argbad": 1
+   },
+   {
+    "ws": "director_after_notrim/新書_宮澤_她先_集章冊/1",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.7,
+      "含蓄": 0.8,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.6
+      },
+      "文筆": 0.5
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": [],
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 19653,
+    "elapsed_s": 14.5,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 0,
+     "writer": 16073,
+     "critic": 3580
+    },
+    "tool_calls": [
+     "lint",
+     "lint"
+    ],
+    "drafts_trimmed": [
+     false
+    ],
+    "writer_tool_replies_argbad": 0
+   }
+  ],
+  "summary": {
+   "n": 6,
+   "total_mean": 4.833,
+   "total_sd": 0.408,
+   "tokens_mean": 19402,
+   "elapsed_s_mean": 14.6,
+   "llm_calls_mean": 4,
+   "tokens_sum": 116414,
+   "trim_rate": "0/6",
+   "violations_all": [
+    "a1:narration_max"
+   ],
+   "q1": {
+    "n": 3,
+    "totals": [
+     5,
+     5,
+     5
+    ],
+    "sd": 0.0,
+    "deterministic_score": {
+     "score": 1.0,
+     "text": 0.57
+    }
+   },
+   "argbad_runs": "3/6",
+   "director_tokens_mean": 0,
+   "writer_tokens_mean": 15843,
+   "tier1_violation_runs": "1/6",
+   "semantic_mean": 2
+  }
+ },
+ "trim_after": {
+  "rows": [
+   {
+    "ws": "trim_after/新書_宮澤_主角先_梅花章/1",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 1.0,
+      "含蓄": 0.7,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.8
+      },
+      "文筆": 0.7
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": [],
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 19997,
+    "elapsed_s": 15.6,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 0,
+     "writer": 16437,
+     "critic": 3560
+    },
+    "tool_calls": [
+     "lint",
+     "trim"
+    ],
+    "drafts_trimmed": [
+     true
+    ],
+    "writer_tool_replies_argbad": 0
+   },
+   {
+    "ws": "trim_after/新書_宮澤_主角先_梅花章/2",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 1.0,
+      "含蓄": 0.7,
+      "角色味": {
+       "val": 0.7,
+       "反差": 0.7
+      },
+      "文筆": 0.7
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 1,
+    "degraded": [],
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 20361,
+    "elapsed_s": 14.4,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 0,
+     "writer": 16755,
+     "critic": 3606
+    },
+    "tool_calls": [
+     "lint",
+     "trim"
+    ],
+    "drafts_trimmed": [
+     true
+    ],
+    "writer_tool_replies_argbad": 0
+   },
+   {
+    "ws": "trim_after/新書_宮澤_主角先_梅花章/3",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 1.0,
+      "含蓄": 0.5,
+      "角色味": {
+       "val": 0.7,
+       "反差": 0.8
+      },
+      "文筆": 0.5
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": [],
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 20165,
+    "elapsed_s": 14.8,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 0,
+     "writer": 16603,
+     "critic": 3562
+    },
+    "tool_calls": [
+     "lint",
+     "trim"
+    ],
+    "drafts_trimmed": [
+     true
+    ],
+    "writer_tool_replies_argbad": 0
+   },
+   {
+    "ws": "trim_after/新書_宮澤_主角先_集章冊/1",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.8,
+      "含蓄": 0.7,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.8
+      },
+      "文筆": 0.6
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 1,
+    "degraded": [],
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 20581,
+    "elapsed_s": 17.7,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 0,
+     "writer": 16938,
+     "critic": 3643
+    },
+    "tool_calls": [
+     "lint",
+     "trim"
+    ],
+    "drafts_trimmed": [
+     true
+    ],
+    "writer_tool_replies_argbad": 0
+   },
+   {
+    "ws": "trim_after/新書_宮澤_她先_梅花章/1",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.8,
+      "含蓄": 0.6,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.8
+      },
+      "文筆": 0.7
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": [],
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 20150,
+    "elapsed_s": 14.3,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 0,
+     "writer": 16546,
+     "critic": 3604
+    },
+    "tool_calls": [
+     "lint",
+     "trim"
+    ],
+    "drafts_trimmed": [
+     true
+    ],
+    "writer_tool_replies_argbad": 0
+   },
+   {
+    "ws": "trim_after/新書_宮澤_她先_集章冊/1",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.9,
+      "含蓄": 0.7,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.8
+      },
+      "文筆": 0.6
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": [],
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 19970,
+    "elapsed_s": 15.0,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 0,
+     "writer": 16395,
+     "critic": 3575
+    },
+    "tool_calls": [
+     "lint",
+     "trim"
+    ],
+    "drafts_trimmed": [
+     true
+    ],
+    "writer_tool_replies_argbad": 0
+   }
+  ],
+  "summary": {
+   "n": 6,
+   "total_mean": 5,
+   "total_sd": 0.0,
+   "tokens_mean": 20204,
+   "elapsed_s_mean": 15.3,
+   "llm_calls_mean": 4,
+   "tokens_sum": 121224,
+   "trim_rate": "6/6",
+   "violations_all": [],
+   "q1": {
+    "n": 3,
+    "totals": [
+     5,
+     5,
+     5
+    ],
+    "sd": 0.0,
+    "deterministic_score": {
+     "score": 1.0,
+     "text": 0.546
+    }
+   },
+   "argbad_runs": "0/6",
+   "director_tokens_mean": 0,
+   "writer_tokens_mean": 16612,
+   "tier1_violation_runs": "0/6",
+   "semantic_mean": 2
+  }
+ },
+ "before_round0_agent_director": {
+  "rows": [
+   {
+    "ws": "round4/round0/新書_宮澤_主角先_梅花章/1",
+    "total": 4,
+    "val": "ok",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 0.5,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.8,
+      "含蓄": 0.8,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.8
+      },
+      "文筆": 0.6
+     }
+    },
+    "tier1": {
+     "score": 1,
+     "counter_violations": 1
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": null,
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 17467,
+    "elapsed_s": 16.7,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 3495,
+     "writer": 10355,
+     "critic": 3617
+    },
+    "tool_calls": null,
+    "drafts_trimmed": []
+   },
+   {
+    "ws": "round4/round0/新書_宮澤_主角先_梅花章/2",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.8,
+      "含蓄": 0.8,
+      "角色味": {
+       "val": 0.9,
+       "反差": 0.9
+      },
+      "文筆": 0.6
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": null,
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 22644,
+    "elapsed_s": 19.6,
+    "counter_llm_calls": 5,
+    "agents_tokens": {
+     "director": 3415,
+     "writer": 15696,
+     "critic": 3533
+    },
+    "tool_calls": null,
+    "drafts_trimmed": []
+   },
+   {
+    "ws": "round4/round0/新書_宮澤_主角先_梅花章/3",
+    "total": 4,
+    "val": "ok",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 0.5,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.7,
+      "含蓄": 0.8,
+      "角色味": {
+       "val": 0.7,
+       "反差": 0.7
+      },
+      "文筆": 0.5
+     }
+    },
+    "tier1": {
+     "score": 1,
+     "counter_violations": 1
+    },
+    "semantic": 2,
+    "register_by_judge": 1,
+    "degraded": null,
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 17165,
+    "elapsed_s": 16.4,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 3441,
+     "writer": 10126,
+     "critic": 3598
+    },
+    "tool_calls": null,
+    "drafts_trimmed": []
+   },
+   {
+    "ws": "round4/round0/新書_宮澤_主角先_集章冊/1",
+    "total": 4,
+    "val": "ok",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 0.5,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.8,
+      "含蓄": 0.7,
+      "角色味": {
+       "val": 0.9,
+       "反差": 0.8
+      },
+      "文筆": 0.6
+     }
+    },
+    "tier1": {
+     "score": 1,
+     "counter_violations": 1
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": null,
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 23824,
+    "elapsed_s": 23.9,
+    "counter_llm_calls": 5,
+    "agents_tokens": {
+     "director": 3513,
+     "writer": 16670,
+     "critic": 3641
+    },
+    "tool_calls": null,
+    "drafts_trimmed": []
+   },
+   {
+    "ws": "round4/round0/新書_宮澤_她先_梅花章/1",
+    "total": 5,
+    "val": "good",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 1.0,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.7,
+      "含蓄": 0.8,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.8
+      },
+      "文筆": 0.6
+     }
+    },
+    "tier1": {
+     "score": 2,
+     "counter_violations": 0
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": null,
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 17176,
+    "elapsed_s": 17.2,
+    "counter_llm_calls": 4,
+    "agents_tokens": {
+     "director": 3481,
+     "writer": 10157,
+     "critic": 3538
+    },
+    "tool_calls": null,
+    "drafts_trimmed": []
+   },
+   {
+    "ws": "round4/round0/新書_宮澤_她先_集章冊/1",
+    "total": 4,
+    "val": "ok",
+    "dims": {
+     "護欄": 1.0,
+     "語域": 0.5,
+     "語意": {
+      "val": 0.67,
+      "承接": 0.7,
+      "含蓄": 0.8,
+      "角色味": {
+       "val": 0.8,
+       "反差": 0.8
+      },
+      "文筆": 0.5
+     }
+    },
+    "tier1": {
+     "score": 1,
+     "counter_violations": 1
+    },
+    "semantic": 2,
+    "register_by_judge": 2,
+    "degraded": null,
+    "violations": [],
+    "counter_drafts": 1,
+    "counter_tokens": 23687,
+    "elapsed_s": 21.8,
+    "counter_llm_calls": 5,
+    "agents_tokens": {
+     "director": 3485,
+     "writer": 16538,
+     "critic": 3664
+    },
+    "tool_calls": null,
+    "drafts_trimmed": []
+   }
+  ],
+  "summary": {
+   "n": 6,
+   "total_mean": 4.333,
+   "total_sd": 0.516,
+   "tokens_mean": 20327,
+   "elapsed_s_mean": 19.3,
+   "llm_calls_mean": 4.5,
+   "tokens_sum": 121963,
+   "trim_rate": "n/a（還沒有 trim）",
+   "violations_all": "見 round4/noise.md：q1 第 1 次 narration_max、第 3 次 exclaim；其餘 tier1 扣 1 的規則名沒留",
+   "q1": {
+    "n": 3,
+    "totals": [
+     4,
+     5,
+     4
+    ],
+    "sd": 0.577,
+    "deterministic_score": {
+     "score": 0.711,
+     "text": 0.346
+    }
+   },
+   "director_tokens_mean": 3472,
+   "writer_tokens_mean": 13257,
+   "tier1_violation_runs": "4/6",
+   "semantic_mean": 2
+  }
+ }
+}

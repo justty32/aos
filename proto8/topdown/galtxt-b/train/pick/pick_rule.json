@@ -1,0 +1,4 @@
+{"_note": "挑子樹的權重（round5 §4a、round6 §3b）：score(S) = trust×weak + λ_cost×cost + λ_solid×solid×cost + λ_gain×gain/(1+gain)；gain＝上一步 gradient_share 的好變化÷千 token（train/record 算）",
+ "λ_cost": 0.3,
+ "λ_solid": 0.5,
+ "λ_gain": 0.2}

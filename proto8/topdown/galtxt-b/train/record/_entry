@@ -1,0 +1,400 @@
+#!/usr/bin/env python3
+# record - 訓練場的記帳（純程式、不問腦；plan/round6.md §2-2、§3，round5 §2a 五區的「record 寫」那幾個 key）。只寫 $AOS_WS/tree/（複本）與 rounds/、changes/。
+# 讀：$AOS_STACK/round.json 的 round（下稱 n）；$AOS_WS/runs/<n>/**/hard_cases.jsonl（各次跑的小格難例，runtime 寫的）；$AOS_WS/rounds/<n>.json（train/score 寫的，可沒有）；
+#   $AOS_WS/changes/<n-1>.json（apply 寫的：touched、cost）與 $AOS_WS/rounds/<n-1>.metainfo.json（上一輪 record 拍的快照）；polarity.json（哪些 key 越大越好／越小越好）。
+# 依序做：
+#   1. 難例：每行補 id（sha1(node＋recorded_at＋檔的相對路徑) 前 12 碼）、round、status open、run（那次跑的工作區）、brief（同小格 ws/done/*.json 的稿紙，teach 要用）
+#      → 併進 tree/<node>/hard_cases.jsonl（同 id 不重收＝重跑 idempotent）；再對每個有這個檔的節點重數 _metainfo.hard_cases {counter_open, counter_resolved, file}。
+#   2. 評級：rounds/<n>.json 的每列 → tree/_metainfo.ratings[風格] {val, total_mean, 反差, 承接, counter_degraded, counter_samples, round, rated_at}；
+#      score.degraded 的「<工具>: …」→ 那個工具節點的 rollup.measured {counter_runs, counter_degraded}。
+#   3. 事實：_metainfo 宣告了 teach.table 的節點，表的列數寫進表所在節點的 rollup.counter_rows（例 plan_template 的 plans.json 幾列）。
+#   4. 梯度（§3）：changes/<n-1>.json 還沒有 gradient 時，拿 rounds/<n-1>.metainfo.json（改前）對現在的樹（改後），只算 touched 與它們往上一路的節點；
+#      結構化 diff：數值 {from,to,delta}、非數值 {from,to}、集合 {added,removed}、文字列（notes／reasons／comments／why）{notes}；略過 *_at、round、gradient_share。
+#      gradient_share：每個 (節點, key) 分給這一步動到、在該節點底下的工具——有 contribution[tree_id].dims 就按 |dims[d]| 比例（d＝key 裡出現的細項名；
+#      沒有細項名就按 Σ|dims|），都沒有就平分（只動一個＝全給它）→ 寫 tree/<工具>/_metainfo.gradient_share[<n-1>]；
+#      gain＝Σ 好變化（照 polarity.json 的方向，評級字 bad<ok<good 也算）÷ 成本（changes.cost.counter_tokens 千 token，下限 1）→ changes 與 share 各記一份。
+#   5. 快照：整棵樹（versions/ 底下不算）每個 _metainfo → rounds/<n>.metainfo.json（下一輪算梯度的「改前」）。
+# 自己的錯一行 stderr「record: 代號 原因」退 1：StackMissing、RoundMissing／RoundBad、TreeMissing、PolarityBad。
+import hashlib, json, os, sys
+from datetime import datetime, timezone
+
+SKIP_LAST = ("round",)                          # 記帳用的 key：每輪都會變，不算梯度
+NOTE_KEYS = ("notes", "reasons", "comments", "why")
+GRADES = {"bad": 0, "ok": 1, "good": 2}
+MISSING = object()
+
+
+def die(code, reason):
+    print("record: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def now():
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+
+
+def jload(path, default=None):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def write_json(path, obj):                      # N-05
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+    os.replace(tmp, path)
+
+
+def read_jsonl(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return [json.loads(l) for l in f if l.strip()]
+    except (OSError, ValueError):
+        return []
+
+
+def write_jsonl(path, rows):
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    with open(tmp, "w", encoding="utf-8") as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    os.replace(tmp, path)
+
+
+# ── 樹的 _metainfo ───────────────────────────────────────────────
+
+def node_dir(tree, node):
+    return tree if node == "." else os.path.join(tree, node)
+
+
+def load_meta(tree, node):
+    m = jload(os.path.join(node_dir(tree, node), "_metainfo"))
+    return m if isinstance(m, dict) else None
+
+
+def save_meta(tree, node, meta):
+    write_json(os.path.join(node_dir(tree, node), "_metainfo"), meta)
+
+
+def all_metas(tree):
+    """{節點相對路徑（根＝"."）: _metainfo}；versions/ 底下（舊版、runtime 不讀）與捷徑不進去。"""
+    out = {}
+    for d, dirs, files in os.walk(tree):
+        dirs[:] = sorted(x for x in dirs if x != "versions" and x != "__pycache__" and not os.path.islink(os.path.join(d, x)))
+        if "_metainfo" in files:
+            m = jload(os.path.join(d, "_metainfo"))
+            if isinstance(m, dict):
+                rel = os.path.relpath(d, tree)
+                out["." if rel == "." else rel.replace(os.sep, "/")] = m
+    return out
+
+
+def ancestors(node):
+    """節點自己與往上一路到根（"."）。"""
+    out = [node]
+    while node != ".":
+        node = node.rsplit("/", 1)[0] if "/" in node else "."
+        out.append(node)
+    return out
+
+
+def under(tool, node):
+    return node == "." or tool == node or tool.startswith(node + "/")
+
+
+# ── 1. 難例 ─────────────────────────────────────────────────────
+
+def brief_near(case_file):
+    """難例檔同小格的 ws/done/*.json（或 cur/）裡的稿紙；找不到回 None。"""
+    for sub in ("done", "cur"):
+        d = os.path.join(os.path.dirname(case_file), "ws", sub)
+        try:
+            names = sorted(n for n in os.listdir(d) if n.endswith(".json"))
+        except OSError:
+            continue
+        for n in names:
+            q = jload(os.path.join(d, n))
+            if isinstance(q, dict) and isinstance(q.get("brief"), dict):
+                return q["brief"]
+    return None
+
+
+def ingest_hard_cases(ws, tree, n):
+    """runs/<n>/** 的小格難例 → tree/<node>/hard_cases.jsonl；回新收的筆數。"""
+    runs = os.path.join(ws, "runs", str(n))
+    found = []
+    for d, dirs, files in os.walk(runs):
+        dirs.sort()
+        if "hard_cases.jsonl" in files:
+            found.append(os.path.join(d, "hard_cases.jsonl"))
+    added = 0
+    for path in sorted(found):
+        rel = os.path.relpath(path, ws)
+        run_ws = rel.split(os.sep + ".stack" + os.sep)[0] if (os.sep + ".stack" + os.sep) in rel else os.path.dirname(rel)
+        for c in read_jsonl(path):
+            node = c.get("node")
+            if not isinstance(node, str) or not os.path.isdir(node_dir(tree, node)):
+                continue
+            cid = hashlib.sha1(("%s|%s|%s" % (node, c.get("recorded_at"), rel)).encode()).hexdigest()[:12]
+            dest = os.path.join(node_dir(tree, node), "hard_cases.jsonl")
+            have = read_jsonl(dest)
+            if any(h.get("id") == cid for h in have):
+                continue
+            row = dict(c, id=cid, round=n, status="open", run=run_ws, brief=brief_near(path))
+            write_jsonl(dest, have + [row])
+            added += 1
+    return added
+
+
+def recount_hard_cases(tree):
+    for node, meta in all_metas(tree).items():
+        path = os.path.join(node_dir(tree, node), "hard_cases.jsonl")
+        if not os.path.exists(path) and "hard_cases" not in meta:
+            continue
+        rows = read_jsonl(path)
+        hc = dict(meta.get("hard_cases") or {})
+        hc.update(counter_open=sum(1 for r in rows if r.get("status") != "resolved"),
+                  counter_resolved=sum(1 for r in rows if r.get("status") == "resolved"), file="hard_cases.jsonl")
+        if hc != meta.get("hard_cases"):
+            meta["hard_cases"] = hc
+            save_meta(tree, node, meta)
+
+
+# ── 2. 評級、3. 事實 ─────────────────────────────────────────────
+
+def dim(score, *path):
+    x = score.get("dims") or {}
+    for p in path:
+        x = x.get(p) if isinstance(x, dict) else None
+    return x.get("val") if isinstance(x, dict) else x
+
+
+def mean(xs):
+    xs = [x for x in xs if isinstance(x, (int, float)) and not isinstance(x, bool)]
+    return round(sum(xs) / len(xs), 3) if xs else None
+
+
+def write_ratings(ws, tree, n):
+    rounds = jload(os.path.join(ws, "rounds", "%d.json" % n))
+    if not isinstance(rounds, dict):
+        return False
+    rows = [r for r in rounds.get("runs") or [] if not r.get("failed") and isinstance(r.get("score"), dict)]
+    root = load_meta(tree, ".") or {}
+    ratings = dict(root.get("ratings") or {})
+    by_style = rounds.get("by_style") or {}
+    per_tool = {}
+    for style in sorted({r.get("style") for r in rows if r.get("style")}):
+        mine = [r for r in rows if r.get("style") == style]
+        ratings[style] = {"val": (by_style.get(style) or {}).get("val"),
+                          "total_mean": mean([r["score"].get("total") for r in mine]),
+                          "反差": mean([dim(r["score"], "語意", "角色味", "反差") for r in mine]),
+                          "承接": mean([dim(r["score"], "語意", "承接") for r in mine]),
+                          "counter_degraded": sum(1 for r in mine if r["score"].get("degraded")),
+                          "counter_samples": len(mine), "round": n, "rated_at": now()}
+    for r in rows:
+        for why in r["score"].get("degraded") or []:
+            tool = str(why).split(":", 1)[0].strip()
+            per_tool[tool] = per_tool.get(tool, 0) + 1
+    root["ratings"] = ratings
+    save_meta(tree, ".", root)
+    for node, meta in all_metas(tree).items():   # degraded 的「<工具>:」→ 那個工具節點
+        name = node.rsplit("/", 1)[-1]
+        if name in per_tool or (meta.get("rollup") or {}).get("measured", {}).get("counter_degraded") is not None:
+            roll = dict(meta.get("rollup") or {})
+            roll["measured"] = dict(roll.get("measured") or {}, counter_runs=len(rows), counter_degraded=per_tool.get(name, 0), round=n)
+            meta["rollup"] = roll
+            save_meta(tree, node, meta)
+    return True
+
+
+def write_facts(tree):
+    for node, meta in all_metas(tree).items():
+        table = (meta.get("teach") or {}).get("table") if isinstance(meta.get("teach"), dict) else None
+        if not isinstance(table, str):
+            continue
+        fpath, _, ptr = table.partition("#")
+        data = jload(os.path.join(node_dir(tree, node), fpath))
+        for p in [x for x in ptr.split("/") if x]:
+            data = data.get(p) if isinstance(data, dict) else None
+        owner = os.path.relpath(os.path.join(node, os.path.dirname(fpath))).replace(os.sep, "/")
+        om = load_meta(tree, owner)
+        if om is None or not isinstance(data, dict):
+            continue
+        roll = dict(om.get("rollup") or {})
+        if roll.get("counter_rows") != len(data):
+            roll["counter_rows"] = len(data)
+            om["rollup"] = roll
+            save_meta(tree, owner, om)
+
+
+# ── 4. 梯度 ─────────────────────────────────────────────────────
+
+def flatten(d, prefix=""):
+    out = {}
+    for k, v in d.items():
+        p = "%s.%s" % (prefix, k) if prefix else k
+        if isinstance(v, dict) and v:
+            out.update(flatten(v, p))
+        else:
+            out[p] = v
+    return out
+
+
+def is_num(x):
+    return isinstance(x, (int, float)) and not isinstance(x, bool)
+
+
+def skip_key(k):
+    last = k.rsplit(".", 1)[-1]
+    return k.startswith("gradient_share") or last.endswith("_at") or last in SKIP_LAST
+
+
+def diff_meta(before, after):
+    """兩份 _metainfo（同形 dict）→ 結構化 diff {"a.b.c": {...}}；只列有變的 key。純函數。"""
+    fb, fa = flatten(before or {}), flatten(after or {})
+    out = {}
+    for k in sorted(set(fb) | set(fa)):
+        if skip_key(k):
+            continue
+        a, b = fb.get(k, MISSING), fa.get(k, MISSING)
+        if a == b:
+            continue
+        if is_num(a) and is_num(b):
+            out[k] = {"from": a, "to": b, "delta": round(b - a, 4)}
+        elif isinstance(a, list) or isinstance(b, list):
+            la = a if isinstance(a, list) else []
+            lb = b if isinstance(b, list) else []
+            ka = [json.dumps(x, ensure_ascii=False, sort_keys=True) for x in la]
+            kb = [json.dumps(x, ensure_ascii=False, sort_keys=True) for x in lb]
+            added = [x for x, s in zip(lb, kb) if s not in ka]
+            if k.rsplit(".", 1)[-1] in NOTE_KEYS:
+                out[k] = {"notes": added}
+            else:
+                out[k] = {"added": added, "removed": [x for x, s in zip(la, ka) if s not in kb]}
+        else:
+            out[k] = {"from": None if a is MISSING else a, "to": None if b is MISSING else b}
+    return out
+
+
+def gradient(before, after, touched):
+    """before／after＝{節點: _metainfo}（整棵樹）；touched＝這一步動到的節點 → {節點: diff}，只含 touched 與往上一路。"""
+    nodes = []
+    for t in touched:
+        for a in ancestors(t):
+            if a not in nodes and (a in before or a in after):
+                nodes.append(a)
+    return {n: d for n in nodes for d in [diff_meta(before.get(n), after.get(n))] if d or n in touched}
+
+
+def weights(cands, key, metas, tree_id):
+    """key 的變化在 cands 之間怎麼分：有貢獻按 |dims[d]|（d＝key 裡的細項名），沒有就平分。回 {工具: 比例}。"""
+    contrib = {t: ((metas.get(t) or {}).get("contribution") or {}).get(tree_id) for t in cands}
+    dims = {t: (c or {}).get("dims") for t, c in contrib.items() if isinstance((c or {}).get("dims"), dict)}
+    if not dims:
+        return {t: round(1.0 / len(cands), 4) for t in cands}
+    segs = key.split(".")
+    d = next((s for s in segs if any(s in v for v in dims.values())), None)
+    raw = {t: (abs(dims[t].get(d, 0)) if d else sum(abs(x) for x in dims[t].values() if is_num(x))) if t in dims else None
+           for t in cands}
+    known = [v for v in raw.values() if v is not None]
+    fill = sum(known) / len(known) if known else 1.0
+    raw = {t: (fill if v is None else v) for t, v in raw.items()}
+    tot = sum(raw.values())
+    return {t: round(v / tot, 4) if tot else round(1.0 / len(cands), 4) for t, v in raw.items()}
+
+
+def good_of(key, change, polarity):
+    """一個 (key, 變化) 的好變化量（正＝變好）；沒有方向的 key 回 0。"""
+    segs = key.split(".")
+    name = segs[-2] if segs[-1] == "val" and len(segs) > 1 else segs[-1]
+    sign = 1 if name in polarity.get("higher_better", []) else -1 if name in polarity.get("lower_better", []) else 0
+    if "delta" in change:
+        return sign * change["delta"]
+    if change.get("from") in GRADES and change.get("to") in GRADES:
+        return GRADES[change["to"]] - GRADES[change["from"]]
+    return 0
+
+
+def shares(grad, touched, metas, tree_id, polarity, cost_tokens):
+    """梯度分攤 → ({工具: {"parts": {"節點|key": 比例}, "good", "gain"}}, 這一步的 gain)。"""
+    per = {t: {"parts": {}, "good": 0.0} for t in touched}
+    total_good = 0.0
+    for node, d in grad.items():
+        cands = [t for t in touched if under(t, node)]
+        if not cands:
+            continue
+        for key, change in d.items():
+            w = weights(cands, key, metas, tree_id)
+            g = max(0.0, good_of(key, change, polarity))
+            total_good += g
+            for t, f in w.items():
+                per[t]["parts"]["%s|%s" % (node, key)] = f
+                per[t]["good"] += g * f
+    denom = max(1.0, (cost_tokens or 0) / 1000.0)
+    for t in per:
+        per[t]["good"] = round(per[t]["good"], 4)
+        per[t]["gain"] = round(per[t]["good"] / denom, 4)
+    return per, round(total_good / denom, 4)
+
+
+def do_gradient(ws, tree, n, polarity):
+    """changes/<n-1>.json 有 touched、還沒有 gradient＝算；回 True 表示這次有算。"""
+    if n < 1:
+        return False
+    cpath = os.path.join(ws, "changes", "%d.json" % (n - 1))
+    change = jload(cpath)
+    before = jload(os.path.join(ws, "rounds", "%d.metainfo.json" % (n - 1)))
+    if not isinstance(change, dict) or not isinstance(before, dict) or "gradient" in change:
+        return False
+    touched = [t for t in change.get("touched") or [] if isinstance(t, str)]
+    if not touched:
+        return False
+    after = all_metas(tree)
+    tree_id = (after.get(".") or {}).get("tree_id") or "galtxt-b"
+    grad = gradient(before, after, touched)
+    cost = ((change.get("cost") or {}).get("counter_tokens")) or 0
+    per, gain = shares(grad, touched, after, tree_id, polarity, cost)
+    for t, s in per.items():
+        meta = load_meta(tree, t)
+        if meta is None:
+            continue
+        gs = dict(meta.get("gradient_share") or {})
+        gs[str(n - 1)] = dict(s, change="changes/%d.json" % (n - 1), counter_tokens=cost)
+        meta["gradient_share"] = gs
+        save_meta(tree, t, meta)
+    change.update(gradient=grad, gain=gain, gradient_at=now(), gradient_from="rounds/%d.metainfo.json → round %d 的樹" % (n - 1, n))
+    write_json(cpath, change)
+    return True
+
+
+def record(ws, n, polarity):
+    tree = os.path.join(ws, "tree")
+    if not os.path.isfile(os.path.join(tree, "_metainfo")):
+        die("TreeMissing", "%s 沒有 _metainfo（先跑 train/init）" % tree)
+    got = {"hard_cases_added": ingest_hard_cases(ws, tree, n)}
+    recount_hard_cases(tree)
+    got["ratings"] = write_ratings(ws, tree, n)
+    write_facts(tree)
+    got["gradient"] = do_gradient(ws, tree, n, polarity)
+    write_json(os.path.join(ws, "rounds", "%d.metainfo.json" % n), all_metas(tree))
+    return got
+
+
+if __name__ == "__main__":
+    stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
+    if not stack:
+        die("StackMissing", "沒設定 AOS_STACK")
+    rj = jload(os.path.join(stack, "round.json"))
+    if rj is None:
+        die("RoundMissing", "$AOS_STACK/round.json 不在或不是 JSON")
+    if not isinstance(rj, dict) or not isinstance(rj.get("round"), int):
+        die("RoundBad", "round.json 要有整數 round")
+    pol = jload(os.path.join(os.path.dirname(os.path.abspath(__file__)), "polarity.json"))
+    if not isinstance(pol, dict):
+        die("PolarityBad", "polarity.json 讀不了")
+    print(json.dumps(record(ws, rj["round"], pol), ensure_ascii=False))

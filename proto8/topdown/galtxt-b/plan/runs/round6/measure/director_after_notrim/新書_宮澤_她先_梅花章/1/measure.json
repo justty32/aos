@@ -1,0 +1,55 @@
+{
+ "name": "新書_宮澤_她先_梅花章",
+ "benchmark": null,
+ "elapsed_ms": 10802,
+ "counter_cycles": 1,
+ "counter_drafts": 1,
+ "counter_plans": 1,
+ "counter_lint_calls": 1,
+ "counter_llm_calls": 3,
+ "counter_tokens": 13698,
+ "cells": {
+  "brief": {
+   "elapsed_ms": 20
+  },
+  "draft": {
+   "elapsed_ms": 7524
+  },
+  "check": {
+   "elapsed_ms": 44
+  },
+  "judge": {
+   "elapsed_ms": 3191
+  },
+  "deliver": {
+   "elapsed_ms": 0
+  }
+ },
+ "agents": {
+  "director": {
+   "counter_llm_calls": 0,
+   "counter_tokens": 0,
+   "llm_elapsed_ms": 0,
+   "elapsed_ms": 0
+  },
+  "writer": {
+   "counter_llm_calls": 2,
+   "counter_tokens": 10125,
+   "llm_elapsed_ms": 7237,
+   "elapsed_ms": 7419
+  },
+  "critic": {
+   "counter_llm_calls": 1,
+   "counter_tokens": 3573,
+   "llm_elapsed_ms": 3115,
+   "elapsed_ms": 3115
+  }
+ },
+ "score": {
+  "val": "ok",
+  "total": 4,
+  "tier0": 1,
+  "tier1": 1,
+  "tier2": 2
+ }
+}

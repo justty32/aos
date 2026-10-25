@@ -6,6 +6,13 @@
  "deterministic": true,
  "interrupt": "safe",
  "parallel": false,
- "reads": ["$AOS_STACK/round.json", "$AOS_WS/rounds/<輪>.json", "$AOS_WS/runs/<輪>/**/out/*/answer.txt"],
+ "reads": ["$AOS_STACK/round.json", "$AOS_WS/rounds/<輪>.json", "$AOS_WS/runs/<輪>/**/out/*/answer.txt", "pick_rule.json"],
  "writes": ["$AOS_WS/human/samples.json"],
- "grow_level": 3}
+ "functions": {"subtree_score／pick_subtree": "挑子樹的公式（round5 §4a）＋ λ_gain × gain（round6 §3b），權重讀 pick_rule.json；給之後的 train/optimize 用"},
+ "grow_level": 3,
+ "subtrees": [{"path": "pick_rule.json", "kind": "data"}],
+ "uses_llm": false,
+ "rollup": {},
+ "ratings": {},
+ "contribution": {},
+ "lifecycle": {"stage": "pure", "counter_steps_tooled": 1, "counter_steps_total": 1, "brain_decides": []}}

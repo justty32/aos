@@ -11,4 +11,4 @@
  "grow_level": 3,
  "uses_llm": false,
  "responsible_for": ["語域"],
- "lifecycle": {"stage": "pure", "counter_steps_tooled": 1, "counter_steps_total": 1, "brain_decides": []}}
+ "lifecycle": {"stage": "pure", "counter_steps_tooled": 1, "counter_steps_total": 1, "brain_decides": [], "measured": {"n": 6, "runs": "round6 有 trim：4 題×1＋第一題多 2 次", "counter_called": 6, "counter_changed": 0, "note": "真腦每次都叫、每次 changes 空：稿子交到 trim 前已被 lint 自檢修乾淨", "measured_in": "plan/runs/round6/measure.md"}}}

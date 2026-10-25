@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+# init - 訓練場第 0 步（round4 §4a 最小版）：把 galtxt-b 本體複製成 $AOS_WS/tree/（優化器、record、apply 只改這份複本；runtime 不寫定義資料夾，P-15）、
+#   把 train/set/*.json 複製成 $AOS_WS/set/（已有的同名題不蓋，訓練場可以自己多放題，例 round6 的「舊車票」題）。
+# 複製：shutil.copytree(symlinks=True)——捷徑照捷徑複製（director/versions/v1_script/tools/agent → ../../v0_agent 是相對捷徑，展開會變兩份）；
+#   排除 train/、plan/、human/（訓練迴圈自己、規劃文件、人評資料不屬於台詞樹；round4 §4a）與 __pycache__。
+# tree/ 已在＝之後的輪，什麼都不做退 0（idempotent）。純程式、不問腦。
+# 自己的錯一行 stderr「init: 代號 原因」退 1：SourceBad（找不到 galtxt-b 根的 _entry）。
+import os, shutil, sys
+
+EXCLUDE = ("train", "plan", "human")
+
+
+def die(code, reason):
+    print("init: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def init(src, ws):
+    """src＝galtxt-b 根、ws＝訓練場；回 (tree 是不是這次才建的, 新放進 set/ 的題數)。測試直接叫。"""
+    if not os.path.isfile(os.path.join(src, "_entry")):
+        die("SourceBad", "%s 不是 galtxt-b 根（沒有 _entry）" % src)
+    tree = os.path.join(ws, "tree")
+    made = False
+    if not os.path.isdir(tree):
+        tmp = os.path.join(ws, ".tree.tmp")
+        shutil.rmtree(tmp, ignore_errors=True)
+        top = os.path.abspath(src)
+        shutil.copytree(src, tmp, symlinks=True,
+                        ignore=lambda d, names: [n for n in names if n == "__pycache__" or (os.path.abspath(d) == top and n in EXCLUDE)])
+        os.replace(tmp, tree)
+        made = True
+    sdir = os.path.join(ws, "set")
+    os.makedirs(sdir, exist_ok=True)
+    added = 0
+    for n in sorted(os.listdir(os.path.join(src, "train", "set"))):
+        if n.endswith(".json") and not os.path.exists(os.path.join(sdir, n)):
+            shutil.copy(os.path.join(src, "train", "set", n), os.path.join(sdir, n))
+            added += 1
+    return made, added
+
+
+if __name__ == "__main__":
+    here = os.path.dirname(os.path.abspath(__file__))
+    init(os.path.dirname(os.path.dirname(here)), os.environ.get("AOS_WS", "."))

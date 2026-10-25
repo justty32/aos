@@ -1,0 +1,259 @@
+#!/usr/bin/env python3
+# apply - 照 changes/<n>.json 的 moves 用程式改訓練場的 tree/（plan/round4 §4a、round6 §2-3）。這一版只有 teach；其他 kind 一律 rejected（還沒做）。
+# 讀：$AOS_STACK/round.json 的 round（n）；$AOS_WS/changes/<n>.json {"moves": [{"kind": "teach", "node"?: 節點}]}（不在＝沒事做，退 0）；
+#   tree/<node>/_metainfo 的 hard_cases（counter_open > 0 的才教）與 teach 宣告 {"teacher", "table", "lint", "key"}；tree/<node>/hard_cases.jsonl（record 收的，帶 brief）。
+# teach（一個節點、照 key 分組，同一組開關只教一次）：
+#   1. 題目 {"attempt": 1, "brief": 難例的稿紙, "feedback": []} 放進 $AOS_STACK/teach/<case id>/ws/new/1.json，aos-exec --ws 它 tree/<node>/<teacher>
+#      （AOS_STACK＝同一格；腦照呼叫者給的 AOS_BRAIN_URL，沒給＝假腦——v0_agent 的假腦回一張合文法的表）。
+#   2. 剝 ``` 圍欄、取第一份 JSON → tree/<node>/<lint>（plan_lint）；沒過把理由當 feedback 再叫一次（同一格＝續聊），最多 MAX_ATTEMPTS 次，仍壞＝這組 failed。
+#   3. 專名換回佔位：who/do 裡的女主角 display→{heroine}、主角 display→{hero}；must 裡 switches.prop→{prop}、第一組必提詞→{m0}、第二組→{m1}。
+#   4. 寫進 tree/<node>/<table>（例 plans.json#/plans/<first_speaker>|<prop>，加 taught 註記），再拿同一份稿紙叫 tree/<node>/tools/plan_template 核對 hit＋plan_lint 過；
+#      核對不過＝把表還原、這組 failed。過了＝那組難例 status resolved（resolved_at、resolved_by、round）。
+#   腦用量＝各格 llm.jsonl 的 counter_tokens 加總 → move.counter_tokens 與 changes.cost.counter_tokens（record 算 gain 的分母）。
+# 寫回 changes/<n>.json：每條 move 加 status（applied／rejected／failed）、why、cases、keys、counter_tokens；頂層 touched（被改的節點）、cost、applied_at。
+#   已有 applied_at＝這輪套用過了，什麼都不做退 0（idempotent；要重教就刪掉它）。
+# 自己的錯一行 stderr「apply: 代號 原因」退 1：StackMissing、RoundMissing／RoundBad、TreeMissing、ChangesBad。
+import json, os, re, shutil, subprocess, sys
+from datetime import datetime, timezone
+
+MAX_ATTEMPTS = 2
+
+
+def die(code, reason):
+    print("apply: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def now():
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+
+
+def jload(path, default=None):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def write_json(path, obj):                      # N-05
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+    os.replace(tmp, path)
+
+
+def read_jsonl(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return [json.loads(l) for l in f if l.strip()]
+    except (OSError, ValueError):
+        return []
+
+
+def write_jsonl(path, rows):
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    with open(tmp, "w", encoding="utf-8") as f:
+        for r in rows:
+            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+    os.replace(tmp, path)
+
+
+def case_key(case, fields):
+    sw = (case.get("input") or {}).get("switches") or {}
+    vals = [sw.get(f) for f in fields]
+    return "|".join(str(v) for v in vals) if all(vals) else None
+
+
+def parse_plan(raw):
+    body = re.sub(r"^\s*```(?:json)?\s*|\s*```\s*$", "", (raw or "").strip())
+    starts = [i for i in (body.find("{"), body.find("[")) if i >= 0]
+    plan, _ = json.JSONDecoder().raw_decode(body[min(starts) if starts else 0:])
+    if isinstance(plan, list):
+        plan = {"beats": plan}
+    if not isinstance(plan, dict) or not isinstance(plan.get("beats"), list):
+        raise ValueError("不是 {beats: [...]}")
+    return plan
+
+
+def to_template(plan, brief):
+    """專名 → 佔位（plan_template 的反函數）。純函數，測試直接叫。"""
+    hero = next(c["display"] for c in brief["cast"] if c.get("role") == "hero")
+    heroine = next(c["display"] for c in brief["cast"] if c.get("role") != "hero")
+    sw = (brief.get("scene") or {}).get("switches") or {}
+    groups = [g if isinstance(g, list) else [g] for g in brief.get("must_mention") or []]
+    must_map = {}
+    for i, g in enumerate(groups[:2]):
+        for w in g:
+            must_map.setdefault(w, "{m%d}" % i)
+    if sw.get("prop"):
+        must_map[sw["prop"]] = "{prop}"
+    names = {hero: "{hero}", heroine: "{heroine}"}
+    beats = []
+    for b in plan.get("beats") or []:
+        do = str(b.get("do", ""))
+        for name, ph in sorted(names.items(), key=lambda x: -len(x[0])):
+            do = do.replace(name, ph)
+        must = []
+        for m in b.get("must") or []:
+            ph = must_map.get(m, m)
+            if ph not in must:
+                must.append(ph)
+        beats.append({"beat": b.get("beat"), "who": names.get(b.get("who"), b.get("who")), "do": do, "must": must})
+    return {"beats": beats}
+
+
+class Teach:
+    def __init__(self, ws, stack, tree, node, spec, env):
+        self.ws, self.stack, self.tree, self.node, self.spec, self.env = ws, stack, tree, node, spec, env
+        self.ndir = os.path.join(tree, node)
+        self.tokens = 0
+
+    def lint(self, plan, brief):
+        r = subprocess.run(["aos-exec", os.path.normpath(os.path.join(self.ndir, self.spec["lint"]))],
+                           input=json.dumps({"plan": plan, "brief": brief}, ensure_ascii=False), stdout=subprocess.PIPE, text=True,
+                           env=dict(self.env, AOS_STACK=os.path.join(self.stack, "teach", "plan_lint") + "/"))
+        if r.returncode != 0:
+            return ["plan_lint 結束碼 %d" % r.returncode]
+        return json.loads(r.stdout).get("violations") or []
+
+    def ask(self, cid, brief):
+        """叫 agent 版出表；回 (plan 或 None, 理由)。"""
+        sub = os.path.join(self.stack, "teach", cid) + "/"
+        shutil.rmtree(sub, ignore_errors=True)
+        aws = os.path.join(sub, "ws")
+        feedback, plan, why = [], None, ""
+        for k in range(1, MAX_ATTEMPTS + 1):
+            os.makedirs(os.path.join(aws, "new"), exist_ok=True)
+            write_json(os.path.join(aws, "new", "%d.json" % k), {"attempt": k, "brief": brief, "feedback": feedback})
+            r = subprocess.run(["aos-exec", "--ws", aws, os.path.join(self.ndir, self.spec["teacher"])],
+                               env=dict(self.env, AOS_STACK=sub), stdin=subprocess.DEVNULL)
+            if r.returncode != 0:
+                why = "teacher 結束碼 %d" % r.returncode
+                break
+            try:
+                with open(os.path.join(aws, "out", "%d.txt" % k), encoding="utf-8") as f:
+                    plan = parse_plan(f.read())
+            except (OSError, ValueError) as e:
+                plan, why = None, "teacher 的答案不是 beat 表：%s" % e
+                break
+            feedback = self.lint(plan, brief)
+            if not feedback:
+                why = ""
+                break
+            plan, why = None, "plan_lint 沒過：%s" % "；".join(map(str, feedback))
+        for row in read_jsonl(os.path.join(sub, "llm.jsonl")):
+            self.tokens += int(row.get("counter_tokens") or 0)
+        return plan, why
+
+    def check(self, brief):
+        r = subprocess.run(["aos-exec", os.path.join(self.ndir, "tools", "plan_template")],
+                           input=json.dumps({"brief": brief}, ensure_ascii=False), stdout=subprocess.PIPE, text=True,
+                           env=dict(self.env, AOS_STACK=os.path.join(self.stack, "teach", "plan_template") + "/"))
+        got = json.loads(r.stdout) if r.returncode == 0 else {}
+        return bool(got.get("hit")) and not self.lint(got.get("plan") or {}, brief)
+
+    def run(self):
+        cpath = os.path.join(self.ndir, "hard_cases.jsonl")
+        cases = read_jsonl(cpath)
+        fpath, _, ptr = self.spec["table"].partition("#")
+        tpath = os.path.join(self.ndir, fpath)
+        keys = [p for p in ptr.split("/") if p]
+        groups = {}
+        for c in cases:
+            if c.get("status") != "resolved":
+                k = case_key(c, self.spec.get("key") or ["first_speaker", "prop"])
+                if k and isinstance(c.get("brief"), dict):
+                    groups.setdefault(k, []).append(c)
+        done, failed = [], []
+        for k, cs in sorted(groups.items()):
+            brief = cs[0]["brief"]
+            plan, why = self.ask(cs[0]["id"], brief)
+            if plan is None:
+                failed.append({"key": k, "why": why})
+                continue
+            with open(tpath, encoding="utf-8") as f:
+                saved = f.read()
+            table = json.loads(saved)
+            slot = table
+            for p in keys:
+                slot = slot.setdefault(p, {})
+            rows_before = len(slot)
+            slot[k] = dict(to_template(plan, brief), taught={"round": self.round, "cases": [c["id"] for c in cs],
+                                                              "teacher": self.spec["teacher"], "taught_at": now()})
+            write_json(tpath, table)
+            if not self.check(brief):
+                with open(tpath, "w", encoding="utf-8") as f:
+                    f.write(saved)
+                failed.append({"key": k, "why": "寫進表後 plan_template 沒命中或 plan_lint 沒過，已還原"})
+                continue
+            for c in cs:
+                c.update(status="resolved", resolved_at=now(), resolved_by="teach", resolved_round=self.round)
+            done.append({"key": k, "cases": [c["id"] for c in cs], "rows_before": rows_before, "rows_after": len(slot),
+                         "row": "%s#%s/%s" % (fpath, ptr, k)})
+        if done:
+            write_jsonl(cpath, cases)
+        return done, failed
+
+
+def apply(ws, stack, n, env):
+    tree = os.path.join(ws, "tree")
+    if not os.path.isfile(os.path.join(tree, "_metainfo")):
+        die("TreeMissing", "%s 沒有 _metainfo（先跑 train/init）" % tree)
+    cpath = os.path.join(ws, "changes", "%d.json" % n)
+    if not os.path.exists(cpath):
+        return None
+    change = jload(cpath)
+    if not isinstance(change, dict) or not isinstance(change.get("moves"), list):
+        die("ChangesBad", "%s 不是 {moves: [...]}" % cpath)
+    if change.get("applied_at"):
+        return change
+    touched, tokens = [], 0
+    for mv in change["moves"]:
+        if not isinstance(mv, dict) or mv.get("kind") != "teach":
+            if isinstance(mv, dict):
+                mv.update(status="rejected", why="這一版的 apply 只做 teach")
+            continue
+        nodes = [mv["node"]] if isinstance(mv.get("node"), str) else sorted(
+            os.path.relpath(d, tree).replace(os.sep, "/") for d, dirs, files in os.walk(tree)
+            if "_metainfo" in files and "versions" not in os.path.relpath(d, tree).split(os.sep)
+            and ((jload(os.path.join(d, "_metainfo"), {}) or {}).get("hard_cases") or {}).get("counter_open", 0) > 0)
+        mv.update(status="applied", taught=[], failed=[], counter_tokens=0)
+        for node in nodes:
+            meta = jload(os.path.join(tree, node, "_metainfo"), {}) or {}
+            spec = meta.get("teach")
+            if not isinstance(spec, dict) or not all(isinstance(spec.get(k), str) for k in ("teacher", "table", "lint")):
+                mv["failed"].append({"node": node, "why": "_metainfo 沒有 teach 宣告（teacher、table、lint）"})
+                continue
+            t = Teach(ws, stack, tree, node, spec, env)
+            t.round = n
+            done, failed = t.run()
+            mv["taught"] += [dict(d, node=node) for d in done]
+            mv["failed"] += [dict(f, node=node) for f in failed]
+            mv["counter_tokens"] += t.tokens
+            tokens += t.tokens
+            if done:
+                table_node = os.path.relpath(os.path.join(node, os.path.dirname(spec["table"].partition("#")[0]))).replace(os.sep, "/")
+                for x in (table_node, node):
+                    if x not in touched:
+                        touched.append(x)
+        if not mv["taught"]:
+            mv.update(status="failed" if mv["failed"] else "rejected", why=mv.get("why") or "沒有可教的難例（counter_open 都是 0）")
+    change.update(touched=touched, cost={"counter_tokens": tokens}, applied_at=now())
+    write_json(cpath, change)
+    return change
+
+
+if __name__ == "__main__":
+    stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
+    if not stack:
+        die("StackMissing", "沒設定 AOS_STACK")
+    rj = jload(os.path.join(stack, "round.json"))
+    if rj is None:
+        die("RoundMissing", "$AOS_STACK/round.json 不在或不是 JSON")
+    if not isinstance(rj, dict) or not isinstance(rj.get("round"), int):
+        die("RoundBad", "round.json 要有整數 round")
+    got = apply(os.path.abspath(ws), os.path.abspath(stack), rj["round"], dict(os.environ))
+    print(json.dumps({"touched": (got or {}).get("touched", []), "cost": (got or {}).get("cost")}, ensure_ascii=False))

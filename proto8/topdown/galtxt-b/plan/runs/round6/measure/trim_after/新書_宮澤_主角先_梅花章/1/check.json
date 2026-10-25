@@ -1,0 +1,16 @@
+{
+ "attempt": 1,
+ "pass": true,
+ "final": true,
+ "tier0_pass": true,
+ "register_score": 2,
+ "counter_violations_tier0": 0,
+ "counter_violations_tier1": 0,
+ "violations": [],
+ "history": [
+  {
+   "attempt": 1,
+   "violations": []
+  }
+ ]
+}
