@@ -50,4 +50,6 @@
   - 「理想情況是，如果那格是agent節點，那麼在我們進行優化時，就是額外給他相關工具包，跟他說請優化一些東西，並給予一些先前的執行結果，然後他就會自動去做。 其實就算不是agent節點也可以」→ fable 補充規劃 [plan/round4-selfopt.md](plan/round4-selfopt.md)（optkit 工具包、自我優化；步驟 6 改成 6a／6b；至少一個 agent 節點、一個純程式節點各自優化一次）。
   - 「在這套工具包尚未成熟前，可以先由claude code代勞，或是乾脆工具就是呼叫claude code cli」→ 6a 的 optkit 加一支主工具＝呼叫 `claude -p`（參考 proto8/ai_tools 的 aos-ai、proto8/demo/agent-fay、thinking 10-24 cli-tools／aos-ai），在 selfopt 的沙箱拷貝裡、cwd 設在節點、限輪數／時間，改完由 accept 白名單＋測試＋verify 判；這是「腦只用 gpt」的例外（只當優化工具，台詞樹的腦照舊 gpt）；token／花費記進優化器的旁檔。至少實跑一次，記：改了什麼、分數前後、有沒有越界。
 - 順序：4 rollup → 3b 資料拆格（fable 建議放 4 之前；rollup 不碰資料格，先做無妨）→ 5 梯度＋判斷器 → 6a optkit → 6b 優化器＋自優化 → 7 人評匯入 → 8 收尾 → 9 真腦（含真腦 human/samples.json ≤ 6 筆、新 id，推上後回報頂層）。
+- 已做：4 rollup（970b8e2c）、3b 資料拆格 5 檔 122 格（73d85912）、5 梯度＋weigh、6a optkit＋claude CLI 工具（1549138a）。6b 進行中。
+- 隊長裁定：brain.nodes 只算實際會被叫到的節點（writer-sol 不算）；changed.json 兩種來源共用 `{source, action, subtree, files, created, cells}`；自優化預設走 gpt，`--by claude` 可改走 claude code（真腦步驟至少跑一次）。
 - round4 § 13 待使用者裁定的，照 fable 推薦先做（頂層代定可翻案），列在 thinking 甲隊那節。
