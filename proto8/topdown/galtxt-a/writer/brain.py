@@ -6,6 +6,10 @@
 # GALTXT_FAKE_JITTER=1（第四輪，round4 § 10 測試 7；只有假腦讀）：第 n 個小格（$AOS_STACK 上一層的 runs/NNN）的草稿在最後一字前多「…」＋第 n 個天干，
 # 讓「同輸入同角度」的幾份字面不同，驗「一致」的公式。（原本是 n 個「…」：「一致」量的是二元組「集合」，n ≥ 2 多出來的「……」本來就有、三份集合一樣 → 量不出差；步驟 3 改。）
 # 第四輪步驟 3（round4 § 2.1、§ 2.2）：只列 stage.json 的 tools 裡的工具（沒有 stage.json＝全部）；假腦在 semi 階看得到 beat 時先叫 beat 一次。
+# 第四輪步驟 6b（隊長裁定：假腦 agent 階預設就有抽樣差）：腦自己決定的環節（開場旁白、收尾旁白、挖空句的口氣）照「第幾次抽」挑說法（$AOS_STACK 上一層 runs/NNN 的 NNN；
+# 第 n 次抽＝KEYS[(n−1) mod 3]），不照 hint——平常每份的 hint 剛好也是第 n 個角度，字面跟以前一字不差；同輸入同角度（hints_fixed 的 measure 題）三份才不一樣，
+# 像真腦每次抽樣不同。GALTXT_FAKE_JITTER=0＝關（照 hint，同輸入同輸出）；=1＝再加上舊的句尾記號（測試 7、14 用）。
+# 看得到 open／close 工具（selfopt 抽出來的）時先叫它、用它回的那行當開場／收尾旁白——那個環節交給工具＝不再隨抽樣變（確定性就是這樣升的）。
 # 下面的 compose() 是寫手 program 階 compose.py 的第一版（compose.py 已照 data/templates.json 另寫；這裡留給 agent／semi 階的假腦用）。
 # 跟範本不同的兩處：fake() 改寫；問真腦時把 API 回的 usage 多記一行到 $AOS_STACK/usage.jsonl（給實測對照用，OpenAI 的欄位名照留）。
 import datetime, json, os, sys, urllib.error, urllib.request
@@ -114,6 +118,7 @@ OPEN = {"借景": "春天的光正好呢……既然這樣，", "動作": "嗯�
 SCENE_OPEN = {"借景": "（{place}。{detail}。）", "動作": "（{place}深處，兩人的手同時搭上同一本書。）", "留白": "（{place}。門鈴響過之後，只剩翻頁的聲音。）"}
 SCENE_CLOSE = {"借景": "（百葉窗的光斜斜落在書背上。）", "動作": "（{heroine}把書輕輕推了過去。）", "留白": "（店裡又安靜下來。）"}
 TSUN_OPEN = {"借景": "……哼，", "動作": "哼，", "留白": "……"}
+KEYS = ["借景", "動作", "留白"]
 WEAK = {("", "傲嬌")}
 if os.environ.get("GALTXT_FAKE_WEAK") is not None:
     WEAK = {tuple(x.split(":", 1)) for x in os.environ["GALTXT_FAKE_WEAK"].split(",") if ":" in x}
@@ -137,28 +142,54 @@ def tsun(b, hint, lead, heroine, calls, called, must):
     if b.get("mode") == "fill":
         deny = must[0][0] if must and hint != "留白" else "也沒有"
         give = must[1][0] if len(must) > 1 else "也不是不能"
-        return "%s：「%s%s那樣啦。不過……%s接受，真是的。」" % (b.get("speaker") or heroine["name"], TSUN_OPEN[hint], deny, give)
+        return "%s：「%s%s那樣啦。不過……%s接受，真是的。」" % (b.get("speaker") or heroine["name"], say(TSUN_OPEN, hint), deny, give)
     place = (b.get("place") or {}).get("name", "")
     details = (b.get("place") or {}).get("details") or [""]
     samples = [s for s in b.get("samples", []) if s.startswith(heroine["name"] + "：")]
-    lines = [SCENE_OPEN[hint].format(place=place, detail=details[min(1, len(details) - 1)]),
+    lines = [used("open") or say(SCENE_OPEN, hint).format(place=place, detail=details[min(1, len(details) - 1)]),
              "%s：「喂，%s。這個幫我拿一下。」" % (heroine["name"], calls),
              "%s：「又來了？%s，這次的理由是什麼？」" % (lead["name"], called or "妳"),
              "%s：「你手比較長。……哼，別、別誤會了。」" % heroine["name"],
              samples[0] if samples else "%s：「才不是特地等你的。」" % heroine["name"],
              "%s：「好好好，我拿就是了。」" % lead["name"],
              "%s：「……真是的，隨便你啦。」" % heroine["name"],
-             SCENE_CLOSE[hint].format(heroine=heroine["name"])]
+             used("close") or say(SCENE_CLOSE, hint).format(heroine=heroine["name"])]
     lo, hi = b.get("min_lines", 5), b.get("max_lines", 10)
     return "\n".join(lines[:max(lo, min(hi, len(lines)))])
+
+
+def draw():
+    """第幾次抽：$AOS_STACK 上一層 runs/NNN 的 NNN；拿不到＝None"""
+    try:
+        return int(os.path.basename(os.path.dirname(stack.rstrip("/"))))
+    except ValueError:
+        return None
+
+
+def say(table, hint):
+    """腦自己決定的環節挑哪個說法：預設照第幾次抽（KEYS[(n−1) mod 3]），GALTXT_FAKE_JITTER=0 或拿不到 n＝照 hint"""
+    n = draw()
+    if os.environ.get("GALTXT_FAKE_JITTER") == "0" or n is None:
+        return table[hint]
+    return table[KEYS[(n - 1) % len(KEYS)]]
+
+
+def used(name):
+    """這題裡叫過的工具 name 回的第一行（沒叫過、或回的是錯誤行＝None）：腦把那個環節交給工具，用它的輸出"""
+    since = max((i for i, m in enumerate(history) if m.get("role") == "user"), default=0)
+    ids = {c.get("id") for m in history[since:] for c in m.get("tool_calls") or [] if (c.get("function") or {}).get("name") == name}
+    for m in history[since:]:
+        if m.get("role") == "tool" and m.get("tool_call_id") in ids:
+            line = (m.get("content") or "").strip().split("\n")[0].strip()
+            return line if line and not line.startswith(name + ":") else None
+    return None
 
 
 def jitter(text):
     if os.environ.get("GALTXT_FAKE_JITTER") != "1" or not text:
         return text
-    try:
-        n = int(os.path.basename(os.path.dirname(stack.rstrip("/"))))
-    except ValueError:
+    n = draw()
+    if n is None:
         return text
     return text[:-1] + "…" + "甲乙丙丁戊己庚辛壬癸"[(n - 1) % 10] + text[-1]
 
@@ -190,24 +221,24 @@ def compose():
     if b.get("mode") == "fill":
         book = "《%s》" % must[0][0] if must and hint != "留白" else "書"
         give = must[1][0] if len(must) > 1 else "讓給"
-        return "%s：「%s這本%s就%s%s吧。我下次再來呢。」" % (b.get("speaker") or heroine["name"], OPEN[hint], book, give, calls)
+        return "%s：「%s這本%s就%s%s吧。我下次再來呢。」" % (b.get("speaker") or heroine["name"], say(OPEN, hint), book, give, calls)
     place = (b.get("place") or {}).get("name", "")
     details = (b.get("place") or {}).get("details") or [""]
     samples = [s for s in b.get("samples", []) if s.startswith(heroine["name"] + "：")]
-    lines = [SCENE_OPEN[hint].format(place=place, detail=details[min(1, len(details) - 1)]),
+    lines = [say(SCENE_OPEN, hint).format(place=place, detail=details[min(1, len(details) - 1)]),
              "%s：「啊，抱歉，妳先請。」" % lead["name"],
              "%s：「不，是我沒注意到……咦，%s？」" % (heroine["name"], calls),
              "%s：「%s？原來妳也會來這裡。」" % (lead["name"], called or "是妳"),
              samples[0] if samples else "%s：「嗯，因為這裡很安靜呢。」" % heroine["name"],
              "%s：「只是突然想重溫。剛好是春天。」" % lead["name"],
              "%s：「既然這樣，這本就讓給%s吧。我下次再來呢。」" % (heroine["name"], calls),
-             SCENE_CLOSE[hint].format(heroine=heroine["name"])]
+             say(SCENE_CLOSE, hint).format(heroine=heroine["name"])]
     lo, hi = b.get("min_lines", 5), b.get("max_lines", 10)
     return "\n".join(lines[:max(lo, min(hi, len(lines)))])
 
 
 def fake():
-    """假腦的順序：semi 階而且看得到 beat＝先叫 beat 一次（三槽取自題目的 must，沒有就用通用的；回的句子不拿來用——只示範「腦叫工具」）；
+    """假腦的順序：整場題看得到 open／close（selfopt 抽的）＝先各叫一次、用它回的那行；semi 階而且看得到 beat＝先叫 beat 一次（三槽取自題目的 must，沒有就用通用的；回的句子不拿來用——只示範「腦叫工具」）；
     看得到 lint 而這題還沒叫過＝叫 lint；都叫過＝交稿。"""
     names = {t["function"]["name"] for t in tools}
     since = max((i for i, m in enumerate(history) if m.get("role") == "user"), default=0)
@@ -218,6 +249,15 @@ def fake():
                 "tool_calls": [{"id": "call_fake_%d" % (len(called) + 1), "type": "function",
                                 "function": {"name": n, "arguments": json.dumps(args, ensure_ascii=False)}}]}
     if history[-1].get("role") in ("user", "tool"):
+        try:
+            b = json.loads(question)
+        except ValueError:
+            b = {}
+        if b.get("mode") == "scene":                         # selfopt 抽出來的旁白工具：看得到就交給它（任何階；工具在 stage.tools 才看得到）
+            for t in ("open", "close"):
+                if t in names and t not in called:
+                    heroine = next((c.get("name") for c in b.get("cast") or [] if c.get("name") != "主角"), "她")
+                    return call(t, {"hint": b.get("hint"), "heroine": heroine, "place": (b.get("place") or {}).get("name", "")})
         if STAGE == "semi" and "beat" in names and "beat" not in called:
             try:
                 must = json.loads(question).get("must") or []

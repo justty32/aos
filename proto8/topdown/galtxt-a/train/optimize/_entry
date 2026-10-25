@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
-# optimize - 優化函數（第 2 層，round3 § 8.4、§ 15）：讀各寫手 _metainfo 裡的評級（ratings、human_ratings 經 $ref 併進來）→ 改 data/route.json
-# 輸入只看：set.json 的 writers、各寫手 _metainfo 解開的 ratings／human_ratings、現在的 data/route.json、自己的 ratings.json／policy.json。不看 trace、不看草稿。
-# 規則（純程式、確定性）：每個風格挑 val 最高的寫手（good > ok > bad > none）；同 val 比 score_avg；再平手留原值（不震盪）；
-# 全部 none＝不列（走 default）；人評 val bad 且 counter_ratings ≥ 3 的寫手在那個風格上不選。
-# policy.min_gap＝1 時同 val 不換、要差一個等級才換。開跑先讀自己的評級調 min_gap（§ 15.1）：action:route 的 counter_regressed > counter_improved＝升成 1；
-# counter_improved_streak ≥ 2＝降回 0。自己的 ratings.json 只讀（由 train/verify.py 寫）。
-# 寫之前把現在的 data/route.json、各寫手 ratings.json／human.json 拷進 $AOS_STACK/epochs/NNN/params/（NNN＝$AOS_STACK/epoch.txt，沒有＝0），
-# 外加 params/optimize.json {changed, diff, min_gap}（給 verify 判「這次有沒有動」）；stdout 一行一風格的舊 → 新，與「最差維度 → 建議動作」（只印、不動手）。
-# 用法：optimize [--dry-run]（--dry-run＝只印、什麼都不寫）。
-# 錯：stderr 一行「optimize: 代號 原因」、退 1——FlagUnknown、StackMissing、SetBad、RatingsBad（評級檔讀不了、$ref 懸空）、RouteBad。
-import datetime, json, os, shutil, sys
+# optimize - 優化器（第 2 層；round4 § 5.2～5.4、round4-selfopt.md § 3）：照樹挑一棵子樹＋一個動作，改了就留通用回滾清單 params/changed.json，收不收交給下一個 verify → weigh。
+# 讀：根 rollup.json 的 brain.nodes（只剩每題會被叫到的節點，verify 寫）與 children 的 cost；各子樹的 stage.json、_metainfo.steps（tools_share，train/common.tools_share）、
+#     hard.jsonl（模板還接不住、不是 held-out 的 detail，common.hard_open）；自己的 policy.json（動作表、候選工具、任務句）、selfopt.json（每次自優化的紀錄）。
+# 1. 候選＝brain.nodes 裡還在 agent／semi 的、或 policy.actions 有列的；順位＝(還靠腦, 每次 token, 每次腦呼叫, 1 − determinism) 大的先（最吃腦、最不確定的先固化）。
+# 2. 每棵照 policy.actions 的順序找第一個成立的動作（都不成立＝印「<子樹> 這圈沒動作」、換下一棵）：
+#    stage program（外部；stage agent／semi 且 tools_share ≥ min_share_program）＝改 stage.json.stage；
+#    selfopt distill（hard_open 非空）／selfopt extract（agent／semi、還有腦在做的決定）＝派工給節點自己（optkit/run → optkit/accept）：
+#      任務句照 policy.task_templates 組、先前結果＝optkit/opt_history 的輸出 inline 進 task.json、budget＝policy.selfopt.budget 與訓練預算剩下的取小；
+#      by＝--by 或 policy.selfopt.by（auto＝節點自己的腦／純程式節點配 shell，走 gpt；claude＝optkit/claude）；小格 $AOS_STACK/epochs/NNN/selfopt/<子樹>/NNN/；
+#      accept 搬回並寫 epochs/NNN/params/changed.json（source selfopt）；這裡補 goal、target（新工具或 templates.distilled.json），抽了工具而還在 agent＝順手把 stage 翻成 semi（外部動作，一起進回滾清單）；
+#    extract <工具>（外部；只在 SelfoptFallback：同一棵連 policy.selfopt.max_fail_streak 次 selfopt 被 accept 拒或被 verify 回滾）＝人寫好的工具開給腦（stage.json.tools＋、agent → semi）。
+# 3. 每次 selfopt（收不收都）記一筆到自己的 selfopt.json {epoch, subtree, goal, by, accepted, code, files, created, counter_calls, tokens, cost_usd, elapsed_ms, cell}＋sum；
+#    token／秒從 run.json，claude 那條的 $ 從 optkit/usage.jsonl 這次新增的行（gpt 那條 LiteLLM 不回錢＝null）。
+# 外部動作用 common.params_save 先拷快照再改；每個 epoch 只做一步（params/changed.json 或 selfopt.json 已有這個 epoch＝不重做，被殺重跑安全）。
+# 只讀根的對外描述、只改 stage.json（外部）——程式與模板由節點自己在拷貝上改、accept 查白名單搬回；不改 dims.json、weigh/rules.json、自己的 _entry（§ 5.3 不准那列）。
+# 用法：optimize [--dry-run] [--by auto|node|shell|claude]（--dry-run＝只印挑誰、做什麼，什麼都不寫、不派工）。
+# stdout：「optimize: epoch N 挑 <子樹>（stage，…）→ <動作>」＋run／accept 的摘要；SelfoptFallback 那行。
+# 錯：stderr 一行「optimize: 代號 原因」、退 1——FlagUnknown、StackMissing、PolicyBad、RollupBad。selfopt 沒收（run 失敗、預算、accept 拒）不是錯：記下來、退 0、這個 epoch 不改。
+import json, os, shutil, subprocess, sys
 
+sys.dont_write_bytecode = True
 HERE = os.path.dirname(os.path.realpath(__file__))          # galtxt-a/train/optimize
-TRAIN = os.path.dirname(HERE)
-ROOT = os.path.dirname(TRAIN)
-RANK = {"good": 3, "ok": 2, "bad": 1, "none": 0}
+sys.path.insert(0, os.path.dirname(HERE))
+import common as c  # noqa: E402
+
+KIT = os.path.join(c.ROOT, "optkit")
+SIDE = os.path.join(HERE, "selfopt.json")
+ON = ("agent", "semi")
 
 
 def die(code, reason):
@@ -22,137 +34,283 @@ def die(code, reason):
     sys.exit(1)
 
 
-def load(path, code, what):
+def say(line):
+    print("optimize: " + line)
+    sys.stdout.flush()
+
+
+def load(p, code, what):
     try:
-        with open(path, encoding="utf-8") as f:
+        with open(p, encoding="utf-8") as f:
             return json.load(f)
     except (OSError, ValueError) as e:
-        die(code, "%s讀不了：%s（%s）" % (what, path, e))
+        die(code, "%s讀不了：%s（%s）" % (what, p, e))
 
 
-def save(path, obj):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))   # N-05
-    with open(tmp, "w", encoding="utf-8") as f:
-        f.write(json.dumps(obj, ensure_ascii=False, indent=1) + "\n")
-    os.replace(tmp, path)
-
-
-def metainfo(d):
-    """d/_metainfo，頂層 key 的值是 {"$ref": "檔"} 就從 d 讀那個檔併進來（只解一層、只解頂層；M1 § 5）"""
-    m = load(os.path.join(d, "_metainfo"), "RatingsBad", "_metainfo ")
-    for k, v in list(m.items()):
-        if isinstance(v, dict) and set(v) == {"$ref"} and isinstance(v["$ref"], str):
-            m[k] = load(os.path.join(d, v["$ref"]), "RatingsBad", "%s 的 $ref " % k)
-    return m
-
-
-args = sys.argv[1:]
-for a in args:
-    if a != "--dry-run":
-        die("FlagUnknown", "不認得 %s（用法：optimize [--dry-run]）" % a)
-dry = "--dry-run" in args
-stack = os.environ.get("AOS_STACK")
-if not stack and not dry:
-    die("StackMissing", "沒設定 AOS_STACK")
-
-writers = load(os.path.join(TRAIN, "set.json"), "SetBad", "set.json ").get("writers")
-if not isinstance(writers, list) or not writers:
-    die("SetBad", "set.json 的 writers 要是非空陣列")
-route_path = os.path.join(ROOT, "data", "route.json")
-route = load(route_path, "RouteBad", "data/route.json ")
-if not isinstance(route, dict) or not isinstance(route.get("by_style", {}), dict) or not isinstance(route.get("default"), str):
-    die("RouteBad", "data/route.json 要是 {default: 字串, by_style: 物件}")
-me = metainfo(HERE)
-mine, policy = me.get("ratings") or {}, me.get("policy") or {}
-if not isinstance(mine, dict) or not isinstance(policy, dict):
-    die("RatingsBad", "自己的 ratings／policy 不是物件")
-
-# 1. 讀自己的紀錄調自己（單調、兩個值：§ 15.1、§ 15.3 e）
-ar = mine.get("action:route") or {}
-gap = policy.get("min_gap", 0)
-new_gap = gap
-if ar.get("counter_regressed", 0) > ar.get("counter_improved", 0):
-    new_gap = 1
-elif ar.get("counter_improved_streak", 0) >= 2:
-    new_gap = 0
-
-# 2. 各寫手的評級
-auto, human = {}, {}
-for w in writers:
-    if not isinstance(w, str) or not os.path.isfile(os.path.join(ROOT, w, "_entry")):
-        die("SetBad", "writers 裡的 %r 不是根底下的寫手資料夾" % (w,))
-    m = metainfo(os.path.join(ROOT, w))
-    auto[w] = {k[6:]: v for k, v in (m.get("ratings") or {}).items() if k.startswith("style:") and isinstance(v, dict)}
-    human[w] = {k[6:]: v for k, v in (m.get("human_ratings") or {}).items() if k.startswith("style:") and isinstance(v, dict)}
-
-
-def key(w, style):
-    cell = auto[w].get(style) or {}
-    return RANK.get(cell.get("val"), 0), cell.get("score_avg") if cell.get("score_avg") is not None else -1
-
-
-old = dict(route.get("by_style") or {})
-new = dict(old)
-diff, worst = [], []
-for style in sorted({s for w in writers for s in auto[w]}):
-    ok = [w for w in writers
-          if not ((human[w].get(style) or {}).get("val") == "bad" and (human[w].get(style) or {}).get("counter_ratings", 0) >= 3)]
-    if not ok or all(key(w, style)[0] == 0 for w in ok):
-        new.pop(style, None)                                     # 全部 none（或全被否決）＝不列，走 default
-        continue
-    cur = old.get(style, route["default"])
-    best = max(ok, key=lambda w: (key(w, style), w == cur))       # 平手時現任贏（留原值）
-    if cur in ok and best != cur:
-        (rb, ab), (rc, ac) = key(best, style), key(cur, style)
-        if rb - rc < new_gap or (rb == rc and ab <= ac):          # min_gap 1＝同 val 不換
-            best = cur
-    if best == route["default"]:
-        new.pop(style, None)
+args, by_cli, dry = sys.argv[1:], None, False
+i = 0
+while i < len(args):
+    if args[i] == "--dry-run":
+        dry = True
+    elif args[i] == "--by" and i + 1 < len(args) and args[i + 1] in ("auto", "node", "shell", "claude"):
+        by_cli = args[i + 1]
+        i += 1
     else:
-        new[style] = best
-    if new.get(style, route["default"]) != old.get(style, route["default"]):
-        diff.append("%s: %s → %s（%s %s ＞ %s %s）" % (style, cur, best, (auto[best].get(style) or {}).get("val"),
-                                                     (auto[best].get(style) or {}).get("score_avg"),
-                                                     (auto[cur].get(style) or {}).get("val") if cur in auto else "—",
-                                                     (auto[cur].get(style) or {}).get("score_avg") if cur in auto else "—"))
-    dims = (auto[best].get(style) or {}).get("dims") or {}
-    scored = {k: v for k, v in dims.items() if isinstance(v, (int, float))}
-    if scored:
-        d = min(sorted(scored), key=lambda k: scored[k])
-        worst.append("%s × %s 最差維度 %s %.2f → 建議動作 %s（這圈不做）" % (best, style, d, scored[d],
-                                                                   (policy.get("dims_to_action") or {}).get(d, "—")))
+        die("FlagUnknown", "不認得 %s（用法：optimize [--dry-run] [--by auto|node|shell|claude]）" % args[i])
+    i += 1
+st = os.environ.get("AOS_STACK")
+if not st and not dry:
+    die("StackMissing", "沒設定 AOS_STACK")
+sets, budget = c.settings()
+policy = load(os.path.join(HERE, "policy.json"), "PolicyBad", "policy.json ")
+acts_of = policy.get("actions")
+if not isinstance(acts_of, dict):
+    die("PolicyBad", "policy.json 要有 actions 物件")
+so = policy.get("selfopt") or {}
+roll = c.load_or(os.path.join(c.ROOT, "rollup.json"), {}) or {}
+if not isinstance(roll, dict):
+    die("RollupBad", "根 rollup.json 不是物件")
+if not isinstance(roll.get("brain"), dict):                   # 還沒 rollup 過＝現算一份（不寫檔）
+    roll = c.rollup_view(".")
+nodes = (roll.get("brain") or {}).get("nodes") or {}
+side = c.load_or(SIDE, None) or {"source": "train/optimize 寫：每次 selfopt（派工給節點自己改）一筆——誰、什麼目標、誰來改、收了沒、花多少（token／$／秒）；人不手改", "runs": []}
+n = c.epoch(st) if st else 0
 
-changed = new != old
-for line in diff or ["route 不變"]:
-    print("optimize: " + line)
-for line in worst:
-    print("optimize: " + line)
-if new_gap != gap:
-    print("optimize: policy.min_gap %s → %s" % (gap, new_gap))
+
+def stage_of(sub):
+    s = c.load_or(os.path.join(c.ROOT, sub, "stage.json"), None)
+    return s if isinstance(s, dict) else None
+
+
+def info(sub):
+    s = stage_of(sub) or {}
+    share, left = c.tools_share(sub, s)
+    cost = (((roll.get("children") or {}).get(sub) or {}).get("cost") or {})
+    cost = cost.get("per_run", cost) if isinstance(cost, dict) else {}
+    det = (c.load_or(os.path.join(c.ROOT, sub, "rollup.json"), {}) or {}).get("determinism")
+    if det is None:
+        det = roll.get("determinism") if sub in sets.get("writers", []) else None
+    return {"stage": s.get("stage") or nodes.get(sub), "tools": list(s.get("tools") or []), "share": share, "left": left or [],
+            "tokens": cost.get("llm_tokens") or 0, "calls": cost.get("llm_calls") or 0, "det": det}
+
+
+def failed(r):
+    """這次 selfopt 算失敗嗎：accept 沒收＝是；收了而 verify 回滾＝是；verify 還沒判＝None"""
+    if not r.get("accepted"):
+        return True
+    g = c.load_or(os.path.join(c.ROOT, r["subtree"], "grad.json"), {}) or {}
+    step = next((s for s in g.get("steps") or [] if s.get("epoch") == r.get("epoch") and s.get("action") == "selfopt"), None)
+    return None if step is None else not step.get("accepted")
+
+
+def streak(sub):
+    k = 0
+    for r in reversed([r for r in side.get("runs") or [] if r.get("subtree") == sub]):
+        f = failed(r)
+        if not f:
+            break
+        k += 1
+    return k
+
+
+def fill(t, **kw):
+    for k, v in kw.items():
+        t = t.replace("{%s}" % k, str(v))
+    return t
+
+
+def choose(sub, me):
+    """第一個成立的動作 → (動作, 目標, 說明) 或 None"""
+    fb = streak(sub) >= so.get("max_fail_streak", 2)
+    if fb:
+        say("SelfoptFallback %s（連 %d 次 selfopt 被拒或回滾）→ 改走外部動作" % (sub, streak(sub)))
+    for a in acts_of.get(sub) or []:
+        if a == "stage program" and me["stage"] in ON and me["share"] is not None and me["share"] >= policy.get("min_share_program", 0.5):
+            return "stage", "program", "tools_share %s ≥ %s，殼拿掉" % (me["share"], policy.get("min_share_program", 0.5))
+        if a == "selfopt distill" and not fb:
+            hard = c.hard_open(sub, sets)
+            if hard:
+                return "selfopt", "distill", "hard.jsonl 有模板接不住的 %s" % "、".join(hard)
+        if a == "selfopt extract" and not fb and me["stage"] in ON and me["left"]:
+            return "selfopt", "extract", "腦還在做：%s" % "、".join(me["left"])
+        if a == "extract" and (fb or not any(x.startswith("selfopt") for x in acts_of.get(sub) or [])) and me["stage"] in ON:
+            for t in ((policy.get("tools") or {}).get(sub) or []):
+                if isinstance(t, dict) and t.get("fallback") and t.get("name") not in me["tools"] and os.path.isfile(os.path.join(c.ROOT, sub, "tools", t["name"], "_entry")):
+                    return "extract", "tools/" + t["name"], "人寫好的 %s（covers %s）開給腦" % (t["name"], "、".join(t.get("covers") or []))
+    return None
+
+
+def head(sub, me):
+    return "%s（%s，calls %s/次、tokens %s/次，determinism %s，tools_share %s）" % (sub, me["stage"], me["calls"], me["tokens"], me["det"], me["share"])
+
+
+# 0. 這個 epoch 做過了（被殺重跑）＝不重做
+if st:
+    done = c.load_or(os.path.join(c.edir(st, n), "params", "changed.json"), None)
+    if isinstance(done, dict):
+        say("epoch %d 已經改過 %s/%s（params/changed.json）" % (n, done.get("subtree"), done.get("action")))
+        sys.exit(0)
+    if any(r.get("epoch") == n for r in side.get("runs") or []):
+        say("epoch %d 已經派過 selfopt（selfopt.json）" % n)
+        sys.exit(0)
+
+# 1. 候選與順位
+cands = sorted({s for s, v in nodes.items() if v in ON} | {s for s in acts_of if s in nodes},
+               key=lambda s: (lambda m: (-(m["stage"] in ON), -m["tokens"], -m["calls"], -(1 - (m["det"] if m["det"] is not None else 0)), s))(info(s)))
+pick = None
+for sub in cands:
+    me = info(sub)
+    got = choose(sub, me)
+    if got:
+        pick = (sub, me, got)
+        break
+    say("%s 這圈沒動作" % head(sub, me))
+if not pick:
+    say("這圈沒有可做的動作（候選 %s）" % "、".join(cands or ["—"]))
+    sys.exit(0)
+sub, me, (action, target, why) = pick
+by = by_cli or so.get("by") or "auto"
+say("epoch %d 挑 %s → %s %s（%s）%s" % (n, head(sub, me), action, target, why, "；by %s" % by if action == "selfopt" else ""))
 if dry:
     sys.exit(0)
 
+stage_rel = os.path.join(sub, "stage.json")
+
+
+def set_stage(**kw):
+    p = os.path.join(c.ROOT, stage_rel)
+    s = c.load(p, "StateBad", "stage.json ")
+    s.update(kw)
+    c.save(p, s)
+
+
+# 2a. 外部動作
+if action == "stage":
+    c.params_save(st, n, {"source": "optimize", "action": "stage", "subtree": sub, "target": "program", "from": me["stage"], "to": "program", "why": why}, [stage_rel])
+    set_stage(stage="program", since_epoch=n, why="token")
+    say("%s stage %s → program（params/changed.json）" % (sub, me["stage"]))
+    sys.exit(0)
+if action == "extract":
+    name = target[6:]
+    c.params_save(st, n, {"source": "optimize", "action": "extract", "subtree": sub, "target": target, "why": why}, [stage_rel])
+    set_stage(tools=me["tools"] + [name], stage="semi", since_epoch=n, why="determinism")
+    say("%s 開了 %s（stage %s → semi）" % (sub, target, me["stage"]))
+    sys.exit(0)
+
+# 2b. selfopt：派工 → 驗收
+base = os.path.join(c.edir(st, n), "selfopt", sub.replace("/", "_"))
+os.makedirs(base, exist_ok=True)
+k = 1
+while os.path.exists(os.path.join(base, "%03d" % k)):
+    k += 1
+cell, tp = os.path.join(base, "%03d" % k), os.path.join(base, "%03d.task.json" % k)
+used = c.usage_of(os.path.join(st, "epochs"))
+bud = dict(so.get("budget") or {})
+for key, used_k in (("max_calls", "counter_calls"), ("max_tokens", "counter_tokens")):
+    if key in budget:
+        left_k = budget[key] - used[used_k]
+        bud[key] = min(bud.get(key, left_k), left_k)
+henv = dict(os.environ, OPTKIT_TREE=c.ROOT, OPTKIT_SUBTREE=sub, OPTKIT_RUNS=os.path.join(st, "epochs"))
+h = subprocess.run([os.path.join(KIT, "opt_history", "_entry")], input='{"max_runs": 6}', capture_output=True, text=True, env=henv)
 try:
-    with open(os.path.join(stack, "epoch.txt"), encoding="utf-8") as f:
-        n = int(f.read().strip() or 0)
-except (OSError, ValueError):
-    n = 0
-params = os.path.join(stack, "epochs", "%03d" % n, "params")
-os.makedirs(params, exist_ok=True)
-shutil.copyfile(route_path, os.path.join(params, "route.json"))
-for w in writers:
-    for f in ("ratings.json", "human.json"):
-        if os.path.isfile(os.path.join(ROOT, w, f)):
-            os.makedirs(os.path.join(params, w), exist_ok=True)
-            shutil.copyfile(os.path.join(ROOT, w, f), os.path.join(params, w, f))
-save(os.path.join(params, "optimize.json"), {"changed": changed, "diff": diff, "min_gap": new_gap})
-if new_gap != gap:
-    p = load(os.path.join(HERE, "policy.json"), "RatingsBad", "policy.json ")
-    p["min_gap"] = new_gap
-    save(os.path.join(HERE, "policy.json"), p)
-if changed:
-    route["by_style"] = new
-    route["routed_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
-    route["routed_by"] = "train/optimize epoch %d" % n
-    save(route_path, route)
+    hist = json.loads(h.stdout)
+except ValueError:
+    hist = {"error": (h.stdout or h.stderr).strip()[-300:]}
+hard = c.hard_open(sub, sets) or []
+task = {"task": fill((policy.get("task_templates") or {}).get(target, "請優化 {sub}。"), sub=sub, stage=me["stage"], share=me["share"],
+                     left="、".join(me["left"]) or "—", why="determinism" if (me["det"] or 0) < 1 else "token", k=len(hard), details="、".join(hard) or "—"),
+        "goal": target, "why": why, "history": hist, "budget": bud}
+c.save(tp, task)
+ulog = os.path.join(KIT, "usage.jsonl")
+
+
+def lines(p):
+    try:
+        with open(p, encoding="utf-8") as f:
+            return [l for l in f if l.strip()]
+    except FileNotFoundError:
+        return []
+
+
+u0 = len(lines(ulog))
+rec = {"epoch": n, "subtree": sub, "goal": target, "by": by, "cell": os.path.relpath(cell, st), "accepted": False}
+
+
+def finish(**kw):
+    rec.update(kw)
+    rj = c.load_or(os.path.join(cell, "run.json"), {}) or {}
+    new = []
+    for l in lines(ulog)[u0:]:
+        try:
+            new.append(json.loads(l))
+        except ValueError:
+            pass
+    usd = [x.get("cost_usd") for x in new if isinstance(x.get("cost_usd"), (int, float))]
+    rec.update(by=rj.get("by", by), counter_calls=rj.get("counter_calls"), tokens=rj.get("tokens"), elapsed_ms=rj.get("elapsed_ms"),
+               cost_usd=round(sum(usd), 4) if usd else None, at=c.now())
+    if new:
+        rec["usage"] = new
+    runs = (side.get("runs") or []) + [rec]
+    side["runs"] = runs
+    side["sum"] = {"counter_runs": len(runs), "counter_accepted": sum(1 for r in runs if r.get("accepted")),
+                   "tokens": sum(r.get("tokens") or 0 for r in runs), "elapsed_ms": sum(r.get("elapsed_ms") or 0 for r in runs),
+                   "cost_usd": round(sum(r.get("cost_usd") or 0 for r in runs), 4)}
+    c.save(SIDE, side)
+    say("selfopt %s %s：%s；%s 次腦、%s token、%s ms%s" % (sub, target, "收了" if rec["accepted"] else "沒收（%s）" % rec.get("code"),
+                                                   rec["counter_calls"], rec["tokens"], rec["elapsed_ms"],
+                                                   "、$%s" % rec["cost_usd"] if rec["cost_usd"] is not None else ""))
+    sys.exit(0)
+
+
+if any(bud.get(x, 1) <= 0 for x in ("max_calls", "max_tokens")):
+    finish(code="BudgetSpent", reason="訓練預算剩 %s，不派工" % bud)
+
+
+def relay(r):
+    for l in (r.stdout or "").splitlines():
+        if l.startswith(("run:", "accept:")):
+            print(l)
+    for l in (r.stderr or "").splitlines():
+        if l.startswith(("run:", "accept:", "optkit:")):
+            print(l, file=sys.stderr)
+    sys.stdout.flush()
+
+
+def code_of(r, name):
+    for l in (r.stderr or "").splitlines():
+        if l.startswith(name + ": "):
+            return l.split(" ")[1], l
+    return "Failed", (r.stderr or "").strip()[-200:]
+
+
+r = subprocess.run([os.path.join(KIT, "run", "_entry"), sub, "--task", tp, "--cell", cell, "--by", by, "--runs", os.path.join(st, "epochs"),
+                    "--epoch", str(n)], capture_output=True, text=True, stdin=subprocess.DEVNULL)
+relay(r)
+if r.returncode != 0:
+    code, line = code_of(r, "run")
+    finish(code=code, reason=line)
+params = os.path.join(c.edir(st, n), "params")
+r = subprocess.run([os.path.join(KIT, "accept", "_entry"), cell, "--params", params], capture_output=True, text=True, stdin=subprocess.DEVNULL)
+relay(r)
+if r.returncode != 0:
+    code, line = code_of(r, "accept")
+    finish(code=code, reason=line)
+cpath = os.path.join(params, "changed.json")
+ch = c.load_or(cpath, None)
+if not isinstance(ch, dict):
+    finish(code="NothingChanged", reason="accept 沒有搬任何檔")
+ch["goal"] = target
+created = [x for x in ch.get("created") or [] if x.startswith(sub + "/tools/")]
+if created:
+    ch["target"] = os.path.relpath(created[0], sub)
+elif "data/templates.distilled.json" in (ch.get("files") or []):
+    ch["target"] = "data/templates.distilled.json"
+now_stage = stage_of(sub) or {}
+if created and now_stage.get("stage") == "agent":                       # 節點抽了工具＝進半固化；stage 只有外部改（selfopt 只准 stage.json#/tools）
+    if stage_rel not in (ch.get("files") or []):
+        c.copy(os.path.join(c.ROOT, stage_rel), os.path.join(params, stage_rel))
+        ch["files"] = (ch.get("files") or []) + [stage_rel]
+    set_stage(stage="semi", since_epoch=n, why="determinism")
+    ch["stage_flip"] = ["agent", "semi"]
+c.save(cpath, ch)
+finish(accepted=True, files=ch.get("files"), created=ch.get("created"), target=ch.get("target"))

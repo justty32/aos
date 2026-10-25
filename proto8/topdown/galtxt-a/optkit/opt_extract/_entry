@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-# opt_extract - stdin {"name", "description", "parameters", "code", "summary"}：在被優化那棵子樹的 tools/<name>/ 建一支新工具（tool.json、_entry（+x）、_metainfo 骨架），
+# opt_extract - stdin {"name", "description", "parameters", "code", "summary", "covers"?}：在被優化那棵子樹的 tools/<name>/ 建一支新工具（tool.json、_entry（+x）、_metainfo 骨架），
 # 並把 name 加進那棵的 stage.json.tools（有 stage.json 才加）；stdout 一行「抽了 <子樹>/tools/<name>（stage.tools 加了 name）」。
 # 檢查（round4-selfopt.md § 5.4）：code 先 compile 過（python；不寫 __pycache__）、空 stdin 跑一次要退 0 或 1 而且 stdout 至少一行（lib/README 契約規則 3）；
 # 不過＝整個新資料夾拿掉、ContractBad。_metainfo 的 author＝「<子樹>@selfopt epoch N」（M7：這是新工具自己的宣告，不是改既有的）。
+# covers（選填，字串陣列）＝這支工具接手那棵 _metainfo.steps 的哪幾個環節（寫進新 _metainfo.covers；train/common.tools_share 照它算 tools_share）；不在 steps 裡＝ArgumentsBad。
 # 每個落檔都過白名單（opt_writes 的「tools/*/」＝只准新建；stage.json#/tools）。
 # 錯：stderr 與 stdout 各一行「opt_extract: 代號 原因」、退 1——ArgumentsBad、EnvMissing、NameBad、ToolExists、CompileFailed、ContractBad、WriteDenied。
 import json, os, shutil, subprocess, sys
@@ -23,6 +24,15 @@ for k in ("description", "code", "summary"):
 params = a.get("parameters")
 if not isinstance(params, dict) or params.get("type") != "object":
     oc.die(NAME, "ArgumentsBad", "parameters 要是 JSON Schema 物件（type object）")
+covers = a.get("covers")
+if covers is not None:
+    try:
+        with open(os.path.join(e["tree"], e["sub"], "_metainfo"), encoding="utf-8") as f:
+            steps = json.load(f).get("steps") or []
+    except (OSError, ValueError, AttributeError):
+        steps = []
+    if not isinstance(covers, list) or not all(isinstance(x, str) and x in steps for x in covers):
+        oc.die(NAME, "ArgumentsBad", "covers 要是 %s/_metainfo.steps 裡的環節名陣列（%s）" % (e["sub"], "、".join(steps) or "沒有 steps"))
 d_rel = "%s/tools/%s" % (e["sub"], name)
 d = os.path.join(e["tree"], d_rel)
 if os.path.lexists(d):
@@ -43,6 +53,8 @@ meta = {"summary": a["summary"], "kind": "program", "grow_level": 4,
         "side_effect": False, "idempotent": True, "deterministic": True, "interrupt": "safe", "parallel": True,
         "reads": [], "writes": [], "fs_needs": ["tool_json"], "callers": 1,
         "author": "%s@selfopt epoch %s" % (e["sub"], epoch or "?")}
+if covers:
+    meta["covers"] = covers
 spec = {"description": a["description"], "parameters": params}
 files = [("tool.json", json.dumps(spec, ensure_ascii=False, indent=1) + "\n"), ("_metainfo", json.dumps(meta, ensure_ascii=False, indent=1) + "\n"),
          ("_entry", code)]

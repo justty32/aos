@@ -14,6 +14,11 @@
    "judge": {
     "type": "boolean",
     "description": "要不要叫評審（預設 false）"
+   },
+   "stage": {
+    "type": "string",
+    "enum": ["agent", "semi", "program"],
+    "description": "選填：這題暫時照哪一階跑（例 agent＝拿自己的 agent 階當老師示範難例）；不給＝照 stage.json"
    }
   },
   "required": [

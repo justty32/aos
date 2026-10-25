@@ -251,3 +251,55 @@
 結果：`test_topdown_galtxt_a_optkit.py` 17 綠；`test_topdown_galtxt_a.py` 全綠（前一節記的 `Round3T.test_tree`、`SuggestT.test_after_tree_lists_nothing` 兩紅是我施工中的 fsm.json 逾時與 callers 1，已改掉）；`proto8/tests` 全套 625 OK（skip 2）。
 
 下一步（6b）：`train/optimize` 照 § 3 派工（`policy.json.task_templates` 組任務句、`opt_history` 的輸出 inline 進 task.json、`run --runs <stack>/epochs --epoch N` → `accept --params epochs/NNN/params`）、`grad.json.steps[].by` 抄 changed.json 的 `by`、fallback 表（連兩次被拒或回滾 → `SelfoptFallback`）、§ 5.3／§ 5.7 兩條；要不要讓 6b 預設走 `--by claude` 由隊長定（腦只用 gpt 的例外）。
+
+## 步驟 6b：優化器照樹走＋selfopt 派工＋fallback（實作者，2026-10-25）
+
+照 round4 § 5.2～5.4、§ 6 與 round4-selfopt.md § 3；隊長裁定：假腦確定性用乾淨做法、預設走 gpt（`--by claude` 或 `policy.selfopt.by` 可改）、評審留 agent、weigh 規則表人寫（§ 13 推薦方案）。
+
+做了：
+- `train/optimize/_entry` 重寫（第三輪的選路＋`min_gap` 自調整個拿掉：寫手只剩一個、route 沒得選；verify 讀舊 `params/optimize.json` 的分支還在）。讀根 `rollup.json`（沒 rollup 過＝`rollup --dry-run` 現算）的 `brain.nodes`＋`children.*.cost`；候選＝還在 agent／semi 的或 `policy.actions` 有列的，順位 (還靠腦, token, 腦呼叫, 1 − determinism)；每棵照 `policy.actions` 找第一個成立的：`stage program`（tools_share ≥ `min_share_program` 0.5，外部）→ `selfopt distill`（`common.hard_open` 非空）→ `selfopt extract`（agent／semi、還有 decisions_left）→ `extract`（外部、人寫的 beat／voice，只在 fallback）；都不成立＝印「<子樹>（…）這圈沒動作」換下一棵。selfopt：任務句照 `policy.task_templates`、`opt_history` 的輸出 inline、budget＝`policy.selfopt.budget` 與訓練預算剩下的取小（剩 0＝不派工）→ `optkit/run --cell epochs/NNN/selfopt/<子樹>/NNN --runs <stack>/epochs --epoch N` → `optkit/accept --params epochs/NNN/params`；收了就在 changed.json 補 `goal`、`target`（新工具 `tools/<名>` 或 `data/templates.distilled.json`），抽了工具而還在 agent＝外部把 stage 翻成 semi（`stage_flip`，stage.json 一起進回滾清單）。同一個 epoch 已有 changed.json 或 selfopt 紀錄＝不重做。`--dry-run` 只印。
+- 自己的旁檔 `train/optimize/selfopt.json`（`_metainfo` 加 `$ref`）：每次 selfopt 一筆 `{epoch, subtree, goal, by, cell, accepted, code, reason, files, created, target, counter_calls, tokens, elapsed_ms, cost_usd, usage?}`＋`sum`。token／次數／秒從 `run.json`；**$ 只有 claude 那條有**（`optkit/usage.jsonl` 這次新增的行，原行附在 `usage`）；gpt 那條 LiteLLM 不回錢＝null。
+- `policy.json` 換成動作表：`actions`（writer 四個；grader、train/weigh 空＝這圈沒動作，§ 13 推薦方案）、`tools.writer`（lint 自檢、beat 反差節拍＋遮掩句、voice 口癖句尾的 `covers`，beat／voice 標 `fallback`）、`min_share_program`、`selfopt {by, max_fail_streak 2, budget}`、`task_templates {extract, distill}`。
+- `train/common.py`：`tools_share(sub)`（`_metainfo.steps` 裡被工具 covers 的比例；covers 先看工具自己的 `_metainfo.covers`——selfopt 抽的——再看 policy 表）、`heldout_details`、`covered_details`、`hard_rows`、`hard_open`（TemplateMissing、模板還沒有、不是 held-out 的 detail；照模板檔程式查，不信 resolved 標記）、`hard_resolve`。
+- `train/verify.py`：before／after 多 `hard.uncovered`（同一份 hard.jsonl，模板用 params 快照 vs 現在各算一次）；收下而動了 templates.distilled.json＝`hard_resolve`（`resolved_epoch`、`resolved_cells`）；grad step 多 `by`（changed.json 的，外部動作＝`optimize`）、`goal`；selfopt 抽了新工具跟 extract 一樣整筆分給它；selfopt 那步 `bench.bigram_overlap` 一步升 > 0.3＝`AnchorSuspicious` 直接 B（selfopt § 5.3，不問判斷器、stderr 一行）；每個 epoch 寫 history 時重算 `tools_share`／`decisions_left`；**每題腦用量只算驗證＋measure 小格**（原本 `usage_of(epochs/NNN)`，selfopt 小格在同一層，會把派工的 6～8 次腦算進「每題」）。
+- `train/weigh/rules.json` 加一列 prefer `{"key": "hard.uncovered", "le": -1, "label": "難例接住了"}`（人寫的表、訓練前改；source 註明）。
+- `optkit`：`opt_extract` 收選填 `covers`（要在那棵 `_metainfo.steps` 裡，寫進新 `_metainfo.covers`）；`opt_try` 收選填 `stage`（`GALTXT_STAGE`：distill 拿自己的 agent 階當老師）；`fake_opt.py` 劇本改成看任務 `goal`＋原樹：extract＝原樹還沒有的第一支（close → open，共用一段查表程式，佔位 `{heroine}`／`{place}` 會填）；distill＝opt_describe → opt_read hard.jsonl → opt_try 第一個非 held-out 難例（stage agent）→ opt_write 全部未處理 detail（含 lights → 工具回 HeldOut）→ opt_write 拿掉 held-out 再寫 → opt_test → opt_note。假老師的句子內建（同 6a 的 CLOSE_CODE）。
+- 假腦（`writer/brain.py`）見下「隊長裁定」；`system.txt` 加一句「有 open／close 工具時交給它」。
+- `set.json` 的 `measure` 換成新題 `plan/examples/cls-ribbon-fixed.json`（見偏離）；`train/_metainfo`、`plan/examples/_metainfo` 補敘述。
+
+**隊長裁定（步驟 5 的坑：假腦 agent 確定性 1.0）選了「agent 階預設帶抽樣差」**：腦自己決定、本來就照 hint 挑的環節（整場的開場／收尾旁白、挖空句的口氣）改照「第幾次抽」挑（`$AOS_STACK` 上一層 runs/NNN，第 n 次＝`KEYS[(n−1) mod 3]`）。平常每份的 hint 剛好就是第 n 個角度，**字面一字不差**（3b-2 的跨版本逐份比對、round3 的逐份斷言都沒動）；只有 hints_fixed 的 measure 題三份會不同——像真腦同輸入每次抽樣不同。`GALTXT_FAKE_JITTER=0` 關、`=1` 再疊舊的句尾記號。理由：(1) 確定性是固化的主訊號（§ 5.5「固化方向的梯度比分數準」），假腦 agent 恆 1.0 就測不到固化在幹嘛；(2)「semi 用 beat 的輸出」單獨不夠——beat 是確定性的、假腦本來也是，換誰寫都還是 1.0，判斷器照樣 tie＝B。所以「看得到 open／close 就叫它、用它回的那行」只是讓工具**接手**那個環節（那段從此不隨抽樣變），確定性才升；beat 的輸出仍沒拿來用（它接手的環節假腦本來就不抽樣）。整條訓練沒有設任何環境變數。實測（假腦，cls-ribbon-fixed）：agent 0.663 → 抽 close 0.78 → 抽 open 1.0 → program 1.0。
+
+偏離／解讀：
+- **measure 換成整場題** `cls-ribbon-fixed`（§ 4.2 是 Q16-fixed）：挖空題只有一行，量不到開場／收尾旁白——selfopt 示範抽的 close／open（selfopt § 4、§ 6 的預期序列）在 Q16-fixed 上確定性一點都不會動，判斷器只能 tie＝B。ribbon 是訓練題（確定性不是泛化指標，用訓練題量沒問題）；真腦花費不變（還是一題 3 份）。Q16-fixed 留著（測試 7 用）。optkit/run 拷給 opt_try 的題跟著變（so-4 的斷言改了）。
+- **§ 7.3 的四步要 4 個 epoch**：verify 在 `n ≥ max_epochs` 收工，`max_epochs 3` 只有三步優化（selfopt close → selfopt open → stage program），poster 的難例要 program 階的訓練題才會出現（epoch 3 train），distill 在 epoch 3 的 optimize、epoch 4 的 verify 判。所以整條測試用 `max_epochs 4`（`budget.json` 本來就是 4），前四筆 history＝§ 10 測試 15 的 agent, semi, semi, program，第五筆 program＋distill。三個 epoch 版的 stdout＝下面摘要的前三步。
+- **distill 的梯度**：驗證題只有 Q16 與 held-out 的 lights，蒸 poster 在分數上看不到（假腦實測 diff 只剩 0）→ 判斷器 tie＝B。加了 `hard.uncovered`（verify 程式查「hard.jsonl 的 detail 模板接不接得住」，不信節點自己標的）＋ rules 一列。真腦的 distill 也一樣看不到——要看分數得把 poster 放進驗證題（那就不是訓練題了）；這圈只證明「接住了」。
+- **難例的 resolved 標記由 verify 寫**（§ 6 寫 distill 那步標；selfopt 的 deny.json `ignore` 本來就不搬 hard.jsonl、節點也標不了）：收下後才標，回滾就不標。
+- **selfopt 抽了工具，stage 由優化器翻**：opt_extract 只准改 `stage.json#/tools`（6a 白名單），stage 是外部動作；accept 收了、還在 agent＝optimize 補翻成 semi，同一步、同一份回滾清單。
+- **fallback 的「失敗」**＝accept 沒收（WriteDenied／TestFailed／BudgetSpent／RunFailed／NothingChanged）或收了被 verify 回滾；verify 還沒判的不算（streak 斷在那）。fallback 時 distill 沒有外部版（舊 `train/distill.py` 照 selfopt § 6 不寫）＝跳過。
+- **優化器挑子樹的順位**沒照 § 4.3 的「鑽下一層」排序鍵（`grad_total` 與 `cost_to_extract`）：fallback 的候選工具照 policy 表順序（beat 先）。§ 5.7 震盪（`same_as`）沒做——opt_log 有每檔 sha256，留給下一步。
+- `switch`／`hints` 兩個外部動作沒做（根與 lint 都不是 agent／semi，照順位永遠輪不到；要做就在 `policy.actions` 加列）。
+- 假腦 semi 在 close＋open 之後確定性就 1.0（假腦只在那兩個環節抽樣），殼拿掉那步的判斷靠「評級升／腦呼叫歸零」——真腦 semi 階預期 < 1。
+- optimize 印的 epoch 是 params 那個（＝下一個 verify 判它的 epoch），不是剛跑完的那個。
+
+測試（新 `Round4OptT`＋optkit 檔一個；§ 10 / selfopt 編號）：
+- `test_optimize_tree`（13）：手寫根 rollup → `--dry-run` 挑 writer、selfopt extract、什麼都不寫；tools_share 0.67 → stage program；program＋hard（poster、lights）→ grader 先印「這圈沒動作」、writer selfopt distill（只 poster）；只剩 held-out → writer 也沒動作、「這圈沒有可做的動作」；真改 → changed.json＋快照、stage.json program／since_epoch；同 epoch 不重做；FlagUnknown。
+- `test_distill`（9）：program 階 verify → 手放 poster 難例 → optimize（by shell）→ distilled 只有 poster（deny／yield／cover／open…，`teacher writer@agent`）、假老師先試 lights 被 HeldOut、opt_try 是 cls-poster＋stage agent；changed.json 含 distilled、`by shell@selfopt`；verify → A（難例接住了）、`hard.uncovered −1`、poster 行 `resolved_epoch 1`＋`resolved_cells`＝changed_cells、lights 不標；再跑 poster 不記難例、答案用到蒸餾句。
+- `test_train_selfopt`（15＋so-10）：`max_epochs 4` 整條（上面那段的形狀）＋so-12（既有 `_metainfo`、fsm、dims、rules、templates.json bytes 不變）。
+- `test_selfopt_rollback`（so-8）：rules 加一列全拒 → optimize 收了 close、stage 翻 semi → verify 退 10「回滾 writer/selfopt close」、close 資料夾與 opt_log.jsonl 沒了、stage.json 回原樣、grad 最後一步 selfopt／false／`writer@selfopt`、`action:selfopt.counter_rolled_back 1`。
+- `test_selfopt_fallback`（so-11）：cheat 兩次（WriteDenied、沒 changed.json）→ 第三次 `SelfoptFallback`、外部 `extract tools/beat`、stage semi＋beat。
+- `test_budget_selfopt`（18）：訓練預算只剩 2 次腦 → task budget 壓成 2、run BudgetSpent、樹只有 selfopt.json 變、下一個 verify BudgetSpent 退 2；剩 0＝不派工。
+- `test_optimize_by_claude`（cc-4，optkit 檔；假 claude 新 mode `system`）：`--by claude` → 收了 system.txt、selfopt.json 記 by claude、180 token、$0.0123、usage 原行；policy 的 `selfopt.by` 也生效。
+- 改的：`test_determinism`（7：agent 預設 < 1、JITTER=0 是 1.0、JITTER=1 更低）、`test_grad_assign`／`test_rollback`（14、16：epoch 0 不再設 JITTER=1；epoch 1 設 `STEADY`＝JITTER=0——這兩個驗分配／回滾機制，人寫的 beat 不接手假腦會抽樣的環節，寫在測試檔註解）、`test_train_whole`／`test_m7`（epoch 0 的 selfopt 抽了 close：writer semi、變動集合多 close 三檔＋旁檔、opt_log、selfopt.json）、so-4 的題目清單、`Round3T.test_optimize` 刪掉（選路優化器沒了，單元換成 13）。
+
+變紅過一次（scratchpad `6b/red.py`：暫改 → 跑 → 還原、bytes 驗回原樣）：stage program 條件恆假 → 13 紅；verify 不放 `hard` → 9 紅（tie＝B 退 10）；假腦不用工具輸出 → 15 紅（epoch 1 就回滾）；rollback 不刪 created → so-8 紅；streak 恆 0 → so-11 紅；task budget 不壓 → 18 紅；cost_usd 不記 → cc-4 紅；say() 照 hint → 7 紅。
+
+結果：`test_topdown_galtxt_a.py`＋`test_topdown_galtxt_a_optkit.py` 74 個綠；`proto8/tests` 全套 631 OK（skip 2）。
+
+整條假腦（`max_epochs 4`）stdout 摘要（每步：挑誰 → 做什麼 → 下一個 verify 的判斷）：
+- epoch 0 verify：score 3.602、determinism 0.663、on_brain 3。optimize（params epoch 1）：writer（agent，tools_share 0.17）→ selfopt extract，by node（6 次腦、0.8 s）→ 抽 close、accept 收 5 檔、stage → semi。
+- epoch 1 verify：determinism 0.78（+0.117）、score 持平 → **weigh A（確定性升）**；梯度整筆給 tools/close。optimize：writer（semi，0.33）→ selfopt extract → 抽 open。
+- epoch 2 verify：determinism 1.0（+0.22）→ **A（確定性升）**。optimize：writer（semi，tools_share 0.5）→ **stage program（外部）**。
+- epoch 3 verify：score 4.109（+0.507、ok → good）、腦呼叫 −3.33、on_brain 3 → 2 → **A（評級升）**；close／open 各分 0.5。〔max_epochs 3 到這裡收工〕optimize：grader、train/weigh「這圈沒動作」→ writer（program）→ selfopt distill（by shell，8 次腦）→ 試蒸 lights 被 HeldOut、poster 收 → templates.distilled.json＋5 格。
+- epoch 4 verify：分數不動、`hard.uncovered −1` → **A（難例接住了）**；hard.jsonl 的 poster 標 resolved_epoch 4、lights 仍未處理（held-out）。
+
+下一步（步驟 7 人評／8 收尾／9 真腦）：真腦第 9 步用 `optimize --by claude`（或 policy `selfopt.by: claude`）至少跑一次 selfopt；gpt 那條的 $ 要另找（LiteLLM 的 spend 或照價目算）。§ 5.7 震盪、§ 4.3 候選工具排序鍵、`switch`／`hints` 動作沒做。README／code map 的 optimize 一節還是舊的選路描述（步驟 8 一起改）。

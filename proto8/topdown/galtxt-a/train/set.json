@@ -1,6 +1,6 @@
-{"source": "第四輪收窄（round4 § 1.2、§ 7.2）：只做宮澤柚葉×教室・文化祭收攤；訓練題自造（scene，小動作 ribbon／poster，沒有正解）、驗證題 Q16（benchmark，正解只有 pick 讀）＋ cls-lights（held-out 小動作）、measure＝Q16-fixed（hints_fixed，量確定性）——訓練集 ≠ 驗證集；writers 只剩 writer（writer-sol 凍結）；scope 是收窄的守門：rate／verify 讀到 score.json 的 style ≠ scope.style 就 StateBad",
+{"source": "第四輪收窄（round4 § 1.2、§ 7.2）：只做宮澤柚葉×教室・文化祭收攤；訓練題自造（scene，小動作 ribbon／poster，沒有正解）、驗證題 Q16（benchmark，正解只有 pick 讀）＋ cls-lights（held-out 小動作）、measure＝cls-ribbon-fixed（hints_fixed，量確定性；6b 從 Q16-fixed 換成整場題：挖空只有一行，量不到開場／收尾旁白這些環節固化前後的差）——訓練集 ≠ 驗證集；writers 只剩 writer（writer-sol 凍結）；scope 是收窄的守門：rate／verify 讀到 score.json 的 style ≠ scope.style 就 StateBad",
  "train": ["cls-ribbon.json", "cls-poster.json"],
  "verify": ["Q16.json", "cls-lights.json"],
- "measure": "Q16-fixed.json",
+ "measure": "cls-ribbon-fixed.json",
  "writers": ["writer"],
  "scope": {"style": "傲嬌", "place": "教室", "event": "文化祭收攤", "cast": ["佐伯悠", "宮澤柚葉"]}}

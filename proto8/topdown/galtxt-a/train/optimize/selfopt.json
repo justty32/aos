@@ -1,0 +1,4 @@
+{
+ "source": "train/optimize 寫：每次 selfopt（派工給節點自己改）一筆——誰、什麼目標、誰來改、收了沒、花多少（token／$／秒）；人不手改",
+ "runs": []
+}

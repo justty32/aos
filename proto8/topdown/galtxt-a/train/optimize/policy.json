@@ -1,3 +1,12 @@
-{"source": "optimize 自己讀、自己改一個 key（min_gap：0＝同 val 比 score_avg 就換、1＝要差一個等級才換）；其餘人寫",
- "min_gap": 0,
- "dims_to_action": {"語域": "optimize-prompt", "語意": "optimize-model", "多樣性": "hints", "護欄": "rules"}}
+{"source": "優化器的動作表（round4 § 5.2、§ 5.3；round4-selfopt.md § 3）。人寫；優化器只讀（第三輪的 min_gap 自調已拿掉：寫手只剩一個、route 沒得選）。actions＝每棵子樹照順序試的動作，第一個成立的就做：stage program（外部，tools_share ≥ min_share_program）、selfopt distill（hard.jsonl 有模板接不住、不是 held-out 的 detail）、selfopt extract（還在 agent／semi、還有腦在做的決定）、extract（外部、人寫好的工具；只在 SelfoptFallback 時）；沒列＝這圈沒動作。tools＝候選工具表（covers＝它接手 _metainfo.steps 的哪幾個環節；fallback＝selfopt 連兩次失敗才開給腦）。selfopt.by＝誰來改（auto＝節點自己的腦或 shell，走 gpt；claude＝optkit/claude；optimize --by 蓋過）。task_templates＝任務句（{sub} {why} {stage} {share} {left} {k} {details} 由程式填）",
+ "actions": {"writer": ["stage program", "selfopt distill", "selfopt extract", "extract"],
+             "grader": [],
+             "train/weigh": []},
+ "tools": {"writer": [{"name": "lint", "covers": ["自檢"]},
+                      {"name": "beat", "cost_to_extract": 0, "covers": ["反差節拍", "遮掩句"], "fallback": true},
+                      {"name": "voice", "cost_to_extract": 0, "covers": ["口癖句尾"], "fallback": true}]},
+ "min_share_program": 0.5,
+ "selfopt": {"by": "auto", "max_fail_streak": 2, "budget": {"max_calls": 12, "max_tokens": 80000}},
+ "task_templates": {
+  "extract": "請優化 {sub}：目標 {why}；現況 stage {stage}、tools_share {share}、腦還在做的決定：{left}。挑其中一個環節做成工具（opt_extract，covers 填它接手的環節），讓那段每次都一樣。先前結果附在 history。規矩：只改白名單、介面不變、改完跑 opt_test、opt_note 記改了什麼。",
+  "distill": "請優化 {sub}：目標 難例；hard.jsonl 有 {k} 個模板接不住的小動作（{details}）。用自己的 agent 階當老師示範（opt_try 帶 stage agent），把示範切成模板句追加進 data/templates.distilled.json（只准追加；驗證集的 detail 不准蒸）。先前結果附在 history。規矩：只改白名單、介面不變、改完跑 opt_test、opt_note 記改了什麼。"}}

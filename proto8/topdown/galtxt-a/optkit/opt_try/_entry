@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# opt_try - stdin {"question": "cls-ribbon.json", "drafts"?: 1, "judge"?: false}：在拷貝上跑根一題（aos-exec --ws <暫存> <拷貝根>），stdout 一份 JSON：
+# opt_try - stdin {"question": "cls-ribbon.json", "drafts"?: 1, "judge"?: false, "stage"?: "agent"}：在拷貝上跑根一題（aos-exec --ws <暫存> <拷貝根>），stdout 一份 JSON：
 # {question, exit, answer, total, dims, lint（違規代號）, stderr（尾巴）}。題目只能挑 OPTKIT_QUESTIONS 裡的（optkit/run 從 set.json 的 train／measure 拷來；驗證題不在裡面）。
-# judge 沒給或 false＝GALTXT_JUDGE=off（judge.py 寫空 judge.json、省腦）；子行程拿掉 GALTXT_OPT／OPTKIT_*（拷貝裡的寫手照平常跑）。
+# stage＝這一題暫時照哪階跑（GALTXT_STAGE；distill 拿自己的 agent 階當老師，round4 § 6）。judge 沒給或 false＝GALTXT_JUDGE=off（judge.py 寫空 judge.json、省腦）；子行程拿掉 GALTXT_OPT／OPTKIT_*（拷貝裡的寫手照平常跑）。
 # 暫存小格在 OPTKIT_CELL/try/NNN/；不寫拷貝樹以外的東西（拷貝裡的 hard.jsonl 照 compose 平常的規矩長，accept 不搬）。round4-selfopt.md § 1。
 # 錯：stderr 與 stdout 各一行「opt_try: 代號 原因」、退 1——ArgumentsBad、EnvMissing、QuestionMissing。題目本身跑壞不算這支的錯：exit 非 0 照回。
 import json, os, subprocess, sys
@@ -30,6 +30,10 @@ os.makedirs(os.path.join(ws, "new"))
 with open(os.path.join(ws, "new", q), "w", encoding="utf-8") as f:
     json.dump(task, f, ensure_ascii=False)
 extra = {} if a.get("judge") else {"GALTXT_JUDGE": "off"}
+if a.get("stage") is not None:                       # 6b：distill 的老師＝自己的 agent 階（GALTXT_STAGE 蓋過 stage.json，writer/_entry 照它分流）
+    if a["stage"] not in ("agent", "semi", "program"):
+        oc.die(NAME, "ArgumentsBad", "stage 要是 agent／semi／program")
+    extra["GALTXT_STAGE"] = a["stage"]
 try:
     r = subprocess.run(["aos-exec", "--ws", ws, e["tree"]], capture_output=True, text=True, cwd=cell, timeout=900, stdin=subprocess.DEVNULL,
                        env=oc.clean_env(extra))

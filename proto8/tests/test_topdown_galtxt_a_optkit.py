@@ -189,6 +189,9 @@ if mode == "edit":
 if mode == "cheat":
     with open("../../../data/dims.json", "a", encoding="utf-8") as f:
         f.write("\n")
+if mode == "system":                                         # 6b：writer 的白名單內（system.txt）
+    with open("system.txt", "a", encoding="utf-8") as f:
+        f.write("（claude 看過：收尾旁白固定一句。）\n")
 print(json.dumps({"type": "result", "subtype": "success", "is_error": False, "result": "改好了", "num_turns": 3,
                   "duration_ms": 1234, "total_cost_usd": 0.0123, "session_id": "fake",
                   "usage": {"input_tokens": 10, "output_tokens": 20, "cache_read_input_tokens": 100, "cache_creation_input_tokens": 50},
@@ -375,7 +378,7 @@ class OptkitT(unittest.TestCase):
         self.assertEqual(snapshot(self.g), before)                                                    # accept 前原樹 bytes 不變
         rj = jread(cell / "run.json")
         self.assertEqual((rj["by"], rj["heldout"], rj["budget_spent"]), ("node", ["lights"], None))
-        self.assertEqual(sorted(os.listdir(cell / "questions")), ["Q16-fixed.json", "cls-poster.json", "cls-ribbon.json"])   # 驗證題不在
+        self.assertEqual(sorted(os.listdir(cell / "questions")), ["cls-poster.json", "cls-ribbon-fixed.json", "cls-ribbon.json"])   # 驗證題不在（6b：measure 換成整場題）
         self.assertTrue((tree / "optkit").is_symlink())
 
     # so-4 下半：平常（沒 GALTXT_OPT）腦看不到 opt_*、system 是 system.txt；優化模式看得到、system 換 system.opt.txt（假端點抓請求）
@@ -587,6 +590,36 @@ class OptkitT(unittest.TestCase):
         u = jl(self.kit / "usage.jsonl")[-1]
         self.assertTrue(u["timed_out"])
         self.assertLess(u["elapsed_ms"], 20000)
+
+    # cc-4（6b）：train/optimize --by claude（或 policy.json 的 selfopt.by）→ 派工走 optkit/claude、accept 收、
+    #     optimize 自己的 selfopt.json 記這次的 by、token、$（從 optkit/usage.jsonl 這次新增的行）、秒
+    def test_optimize_by_claude(self):
+        env, log = self.fake_claude("system")
+        st = self.tmp / "st"
+        st.mkdir()
+        (st / "epoch.txt").write_text("1\n")
+        opt = self.g / "train" / "optimize" / "_entry"
+        r = run(opt, "--by", "claude", env=dict(env, AOS_STACK=str(st) + "/"), timeout=900)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("→ selfopt extract", r.stdout)
+        self.assertIn("run: writer by claude：3 次腦、180 token", r.stdout)
+        self.assertRegex(r.stdout, r"optimize: selfopt writer extract：收了；3 次腦、180 token、\d+ ms、\$0.0123")
+        self.assertIn("請優化 writer：目標 ", jread(log)["prompt"])                     # 任務句照 policy.task_templates
+        self.assertIn("收尾旁白", jread(log)["prompt"])                                  # 現況（腦還在做的決定）
+        self.assertIn("claude 看過", (self.g / "writer" / "system.txt").read_text(encoding="utf-8"))
+        ch = jread(st / "epochs" / "001" / "params" / "changed.json")
+        self.assertEqual((ch["by"], ch["goal"], ch["files"]), ("claude@selfopt", "extract", ["writer/system.txt"]))
+        runs = jread(self.g / "train" / "optimize" / "selfopt.json")["runs"]
+        self.assertEqual([(x["epoch"], x["by"], x["accepted"], x["tokens"], x["counter_calls"], x["cost_usd"]) for x in runs],
+                         [(1, "claude", True, 180, 3, 0.0123)])
+        self.assertEqual(runs[0]["usage"][0]["total_tokens"], 180)
+        self.assertIsInstance(runs[0]["elapsed_ms"], int)
+        pol = jread(self.g / "train" / "optimize" / "policy.json")                     # policy 那欄也行
+        pol["selfopt"]["by"] = "claude"
+        jwrite(self.g / "train" / "optimize" / "policy.json", pol)
+        (st / "epoch.txt").write_text("2\n")
+        r = run(opt, "--dry-run", env=dict(env, AOS_STACK=str(st) + "/"), timeout=900)
+        self.assertIn("；by claude", r.stdout)
 
 
 if __name__ == "__main__":

@@ -14,7 +14,11 @@
 #   stage 換到 program 那步按各工具在這次驗證小格被叫的次數分攤給 <子樹>/tools/*（assigned_share，和為 1；捷徑過來的工具不算——那是別棵的）；
 #   optimize/ratings.json 的 action:<動作>；weigh/ratings.json 的 judge:accept；最後 rollup --up <子樹>（＋分到梯度的工具）。
 #   沒有 changed.json 而有舊的 params/optimize.json（round3 的選路）＝舊規則：action:route、delta < 0 回滾 route.json。
-# 每個 epoch 寫 set.json 寫手（＋被改的那棵，有 stage.json 的）stage.json.history 一筆（同 epoch 覆蓋）：stage、tools、那棵每次的 llm_tokens／llm_calls、determinism、val、total_avg。
+# 每個 epoch 寫 set.json 寫手（＋被改的那棵，有 stage.json 的）stage.json.history 一筆（同 epoch 覆蓋）：stage、tools、那棵每次的 llm_tokens／llm_calls、determinism、val、total_avg；
+#   順手照 _metainfo.steps 與工具的 covers 重算 tools_share／decisions_left（common.tools_share）。
+# 步驟 6b：before／after 多 hard.uncovered（<子樹>/hard.jsonl 裡模板接不住、不是 held-out 的 detail 數；模板換前用 params 快照算）——distill 那步的梯度；
+#   收下而且動了 templates.distilled.json＝hard.jsonl 接得住的行標 resolved_epoch（common.hard_resolve）；grad step 多 by／goal（changed.json 抄來）；
+#   selfopt 抽了新工具（target tools/<名>）跟 extract 一樣整筆分給那支工具；selfopt 那步 bench.bigram_overlap 一步升 > 0.3＝AnchorSuspicious、直接選 B（不問判斷器）。
 # 寫完根 ratings.json → common.rollup_up(".")。stdout 一行：score、Δ、每題 token 與 on_brain（第 0 個 epoch → 現在）、判斷器選了什麼。
 # 結束碼：判斷器選 B（回滾了）＝stderr「train: Regressed epoch N 回滾 <子樹>/<動作> <目標>（weigh: 理由）」、退 10（收工）；舊選路 delta < 0 同樣退 10；
 # epoch ≥ max_epochs＝退 10；預算到頂（開跑前看一次）＝BudgetSpent 退 2；否則 epoch.txt＋1、退 0（往 train 走）。
@@ -161,6 +165,12 @@ def step_of(change, prev):
     stage_before = c.load_or(os.path.join(params, stage_rel), None) or stage_now
     before = c.snapshot(prev, stage_before, node_cost(c.epoch_cells(c.edir(st, n - 1)), sub))
     after = c.snapshot(v, stage_now, node_cost(c.epoch_cells(here), sub))
+    tpld = "data/templates.distilled.json"                       # 6b：難例接住沒（同一份 hard.jsonl，模板換前／後各算一次）
+    h_after = c.hard_open(sub, sets)
+    if h_after is not None:
+        moved = tpld in (change.get("files") or [])                  # 這步動了 distilled＝改前那份在 params（本來沒有＝當空的）
+        h_before = c.hard_open(sub, sets, os.path.join(params, tpld)) if moved else h_after
+        before["hard"], after["hard"] = {"uncovered": len(h_before)}, {"uncovered": len(h_after)}
     d = c.diff(before, after)
     cc = change.get("cells")
     if not isinstance(cc, list):
@@ -170,10 +180,17 @@ def step_of(change, prev):
     q = {"A": d, "B": {}, "before": before, "after": after,
          "params": {"min_gain": budget.get("min_gain", 0.25), "min_loss": budget.get("min_loss", 0.25)},
          "epoch": n, "subtree": sub, "action": action, "target": target}
-    choice, reason, by = ask_weigh(q)
+    jump = d.get("bench.bigram_overlap")
+    if change.get("source") == "selfopt" and isinstance(jump, (int, float)) and jump > 0.3:   # selfopt § 5.3：一步內正解重疊升太多＝可疑（背到正解），硬規則、不問判斷器
+        choice, reason, by = "B", "AnchorSuspicious bigram_overlap %+.3f（selfopt 一步內升 > 0.3）" % jump, "train/verify.py（硬規則）"
+        print("train: AnchorSuspicious epoch %d %s bigram_overlap %+.3f" % (n, sub, jump), file=sys.stderr)
+    else:
+        choice, reason, by = ask_weigh(q)
     accepted = choice == "A"
     rolled = c.rollback(params, change) if not accepted else []
-    step = {"epoch": n, "source": change.get("source"), "action": action, "target": target,
+    if accepted and tpld in (change.get("files") or []):          # distill 收下：模板接得住的難例行標 resolved_epoch
+        c.hard_resolve(sub, n, cc)
+    step = {"epoch": n, "source": change.get("source"), "by": change.get("by") or change.get("source"), "goal": change.get("goal"), "action": action, "target": target,
             "before": before, "after": after, "diff": d, "changed_cells": cc,
             "weigh": {"choice": choice, "reason": reason, "by": by}, "accepted": accepted,
             "confidence": "low" if abs(d.get("total_avg") or 0) < 0.3 else "ok", "measured_at": c.now()}
@@ -181,7 +198,7 @@ def step_of(change, prev):
         step["rolled_back"] = rolled
     write_grad(sub, step)
     tools = []                                                   # 梯度分配給工具（§ 4.3）
-    if action == "extract" and isinstance(target, str) and target.startswith("tools/") and own_tool(sub, target[6:]):
+    if action in ("extract", "selfopt") and isinstance(target, str) and target.startswith("tools/") and own_tool(sub, target[6:]):
         tools = [(target, 1)]
     elif action == "stage" and (stage_now or {}).get("stage") == "program":
         names = [t for t in (stage_now or {}).get("tools") or [] if own_tool(sub, t)]
@@ -225,6 +242,9 @@ def history(sub, step):
     if step and step.get("subtree") == sub:
         e.update({"action": step["action"], "accepted": step["accepted"]})
     s["history"] = [h for h in s.get("history") or [] if h.get("epoch") != n] + [e]
+    share, left = c.tools_share(sub, s)                          # 6b：固化進度照 steps 與工具的 covers 重算（selfopt 抽了工具、外部開了工具都跟著動）
+    if share is not None:
+        s["tools_share"], s["decisions_left"] = share, left
     c.save(p, s)
 
 
@@ -259,7 +279,10 @@ if not os.path.exists(vpath):
         m = {"question": mbase, "writer": ms.get("writer"), "style": ms.get("style"), "一致": (ms.get("dims") or {}).get("一致"),
              "dims_std": {k: (round(sd, 3) if sd is not None else None)
                           for k in names for sd in [c.std([d["dims"].get(k) for d in ms["drafts"]])]}}
-    usage = c.usage_of(here)
+    usage = {"counter_calls": 0, "counter_tokens": 0}            # 只算驗證＋measure 小格（6b：epochs/NNN/selfopt/ 是優化器派的工，不算進每題腦用量）
+    for cell in c.epoch_cells(here):
+        for k, x in c.usage_of(cell).items():
+            usage[k] += x
     questions = len(sets["verify"]) + (1 if m else 0)
     if os.path.isfile(os.path.join(WEIGH, "_metainfo")):
         c.rollup_up(os.path.relpath(WEIGH, c.ROOT))              # 判斷器那棵（train/weigh → train → 根），epoch 0 就攤平得到

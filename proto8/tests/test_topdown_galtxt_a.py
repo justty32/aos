@@ -775,65 +775,7 @@ class Round3T(unittest.TestCase):
         self.assertRegex(r.stderr, r"^train: StateBad .*文靜／書卷.*scope\.style")
         self.assertEqual((g / "writer" / "ratings.json").read_bytes(), before)
 
-    # 7. optimize 單元
-    def optimize(self, g, *args, st=None):
-        return run(str(g / "train" / "optimize" / "_entry"), *args, env={"AOS_STACK": str(st or self.tmp / "st") + "/"})
-
-    def ratings(self, g, writer, **cells):
-        r = jread(g / writer / "ratings.json")
-        for style, (val, avg) in cells.items():
-            r["style:" + style] = {"val": val, "score_avg": avg, "counter_samples": 6,
-                                   "dims": {"語域": 1.0, "語意": 0.5, "多樣性": 0.3, "護欄": 1.0}}
-        jwrite(g / writer / "ratings.json", r)
-
-    def test_optimize(self):
-        g = tree_copy(self.tmp / "t")
-        jwrite(g / "train" / "set.json", dict(jread(g / "train" / "set.json"), writers=["writer", "writer-sol"]))   # round4 收窄後只剩 writer；
-        # 這個單元驗 round3 的選路優化器（步驟 6 才重寫），在拷貝上把寫手列表改回兩個
-        route = lambda: jread(g / "data" / "route.json")["by_style"]      # noqa: E731
-        self.ratings(g, "writer", 傲嬌=("ok", 3.0), 文靜=("good", 4.0), 元氣=("good", 4.0), 天然=("none", None))
-        self.ratings(g, "writer-sol", 傲嬌=("good", 4.0), 文靜=("good", 4.5), 元氣=("good", 4.0), 天然=("none", None))
-        before = snapshot(g)
-        r = self.optimize(g, "--dry-run")
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("傲嬌: writer → writer-sol", r.stdout)
-        self.assertEqual(snapshot(g), before)                            # --dry-run 不寫
-        self.assertFalse((self.tmp / "st").exists())
-        r = self.optimize(g)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(route(), {"傲嬌": "writer-sol", "文靜": "writer-sol"})   # 同 good 比 score_avg；元氣平手留原值；天然全 none 不列
-        params = self.tmp / "st" / "epochs" / "000" / "params"
-        self.assertEqual(jread(params / "route.json")["by_style"], {})   # 改之前的快照
-        self.assertTrue((params / "writer-sol" / "ratings.json").is_file())
-        self.assertTrue(jread(params / "optimize.json")["changed"])
-        r = self.optimize(g)                                             # 再跑一次：不動
-        self.assertIn("route 不變", r.stdout)
-        self.assertFalse(jread(params / "optimize.json")["changed"])
-        h = jread(g / "writer-sol" / "human.json")                       # 人評否決：bad 且 ≥ 3 筆
-        h["style:傲嬌"] = {"val": "bad", "counter_ratings": 3}
-        jwrite(g / "writer-sol" / "human.json", h)
-        self.optimize(g)
-        self.assertEqual(route(), {"文靜": "writer-sol"})
-        h["style:傲嬌"]["counter_ratings"] = 2                            # < 3 筆不算
-        jwrite(g / "writer-sol" / "human.json", h)
-        self.optimize(g)
-        self.assertEqual(route(), {"傲嬌": "writer-sol", "文靜": "writer-sol"})
-        o = jread(g / "train" / "optimize" / "ratings.json")             # 回滾比進步多＝min_gap 升成 1：同 val 不換
-        o["action:route"] = {"val": "bad", "counter_applied": 1, "counter_improved": 0, "counter_regressed": 1}
-        jwrite(g / "train" / "optimize" / "ratings.json", o)
-        self.ratings(g, "writer", 文靜=("good", 4.9))
-        r = self.optimize(g)
-        self.assertIn("policy.min_gap 0 → 1", r.stdout)
-        self.assertEqual(jread(g / "train" / "optimize" / "policy.json")["min_gap"], 1)
-        self.assertEqual(route()["文靜"], "writer-sol")
-        o["action:route"] = {"val": "good", "counter_applied": 3, "counter_improved": 2, "counter_regressed": 1, "counter_improved_streak": 2}
-        jwrite(g / "train" / "optimize" / "ratings.json", o)
-        self.optimize(g)
-        self.assertEqual(jread(g / "train" / "optimize" / "policy.json")["min_gap"], 0)
-        self.assertNotIn("文靜", route())                                 # 換回 default（writer）＝不列
-        r = self.optimize(g, "--bogus")
-        self.assertEqual(r.returncode, 1)
-        self.assertRegex(r.stderr, r"^optimize: FlagUnknown \S")
+    # 7. optimize 單元：第三輪的選路優化器（route.json）在 6b 換成照樹走的優化器（selfopt／stage／extract），單元移到 Round4OptT.test_optimize_tree（§ 10 測試 13）
 
     # 8、11. 整條訓練＋M7
     def test_train_whole(self):
@@ -854,7 +796,7 @@ class Round3T(unittest.TestCase):
             self.assertTrue(0 <= e["measure"]["一致"] <= 1)
             nodes = e["brain"]["nodes"]                                  # round4 步驟 4：節點改讀根的 rollup（整棵樹的直接子樹＋攤平的「子樹/孫」）
             self.assertEqual({k: nodes.get(k) for k in ("writer", "grader", "tools/lint", "train/weigh")},
-                             {"writer": "agent", "grader": "agent", "tools/lint": "program", "train/weigh": "agent"})
+                             {"writer": "agent" if e is e0 else "semi", "grader": "agent", "tools/lint": "program", "train/weigh": "agent"})   # 6b：epoch 0 的 selfopt 抽了 close → semi
             self.assertNotIn("writer-sol", nodes)                        # 步驟 5 隊長裁定：只算每題會被叫到的；writer-sol 凍結、route 沒選它
             self.assertEqual(e["brain"]["excluded"].get("writer-sol"), "agent")
             self.assertTrue({"idle", "train", "train/optimize"} <= set(e["brain"]["excluded"]))
@@ -890,7 +832,11 @@ class Round3T(unittest.TestCase):
         self.assertEqual(changed, {"writer/ratings.json", "grader/ratings.json", "ratings.json", "human/samples.json",
                                    "rollup.json", "writer/rollup.json", "grader/rollup.json",   # round4 步驟 4：rate／verify 叫 rollup --up
                                    "train/rollup.json", "train/weigh/rollup.json",              # 步驟 5：verify 先 rollup --up train/weigh
-                                   "writer/stage.json"})                                         # 步驟 5：verify 每個 epoch 寫 stage.json.history
+                                   "writer/stage.json",                                          # 步驟 5：verify 每個 epoch 寫 stage.json.history
+                                   "writer/opt_log.jsonl", "train/optimize/selfopt.json",        # 6b：epoch 0 的 optimize 派 selfopt（抽 close）、accept 搬回
+                                   "writer/tools/close", "writer/tools/close/_entry", "writer/tools/close/_metainfo", "writer/tools/close/tool.json",
+                                   "writer/grad.json", "writer/tools/close/grad.json", "writer/tools/close/rollup.json",   # epoch 1 的 verify 判 A、梯度分給 close
+                                   "train/optimize/ratings.json", "train/weigh/ratings.json", "train/weigh/log.jsonl"})
         self.assertEqual([h["epoch"] for h in jread(g / "writer" / "stage.json")["history"]], [0, 1])
         r = run(EXEC, "--ws", str(self.ws), str(g / "train"), cwd=self.tmp, timeout=600)   # 收工後再叫：verify 照舊退 10、不重跑
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -1152,7 +1098,7 @@ class Round4T(unittest.TestCase):
             self.assertEqual(r.returncode, 1)
             self.assertRegex(r.stderr, r"^%s: ArgumentsBad \S" % name)
 
-    # 7. 確定性：Q16-fixed 三份同 hint；program、假腦 agent 的「一致」都是 1.0；JITTER 讓 agent 的「一致」< 1、＝1 − 多樣性
+    # 7. 確定性：Q16-fixed 三份同 hint；program 的「一致」1.0；假腦 agent 預設 < 1（6b）、JITTER=0 是 1.0、JITTER=1 更低；＝1 − 多樣性
     def test_determinism(self):
         def one(g, env=None, tag="x"):
             ws = self.fresh("ws-" + tag)
@@ -1163,9 +1109,12 @@ class Round4T(unittest.TestCase):
             self.assertEqual(hints, ["借景"] * 3)
             return jread(ws / "out" / "Q16-fixed" / "score.json")["dims"]
         self.assertEqual(one(self.staged("program"), tag="p")["一致"], 1.0)
-        self.assertEqual(one(G, tag="a")["一致"], 1.0)
-        d = one(G, env={"GALTXT_FAKE_JITTER": "1"}, tag="j")
-        self.assertLess(d["一致"], 1.0)
+        a = one(G, tag="a")                                                  # 6b：假腦 agent 階預設有抽樣差（口氣照第幾次抽挑）＝同輸入同角度三份不一樣
+        self.assertLess(a["一致"], 1.0)
+        self.assertAlmostEqual(a["一致"], 1 - a["多樣性"], places=3)
+        self.assertEqual(one(G, env={"GALTXT_FAKE_JITTER": "0"}, tag="z")["一致"], 1.0)   # 關掉＝同輸入同輸出
+        d = one(G, env={"GALTXT_FAKE_JITTER": "1"}, tag="j")                  # 再加句尾記號＝更不一致
+        self.assertLess(d["一致"], a["一致"])
         self.assertAlmostEqual(d["一致"], 1 - d["多樣性"], places=3)
 
     # 8. 難例：templates.json 沒 poster → program 照產、hard.jsonl 一行 TemplateMissing；再跑不重複；ribbon 不記
@@ -1314,15 +1263,19 @@ class Round4T(unittest.TestCase):
         self.assertIn("train/weigh/rules.json", before)                                       # 步驟 5：判斷器的規則表只有人改
         self.assertTrue(frozen and not (frozen & changed), frozen & changed)
         allowed = {"ratings.json", "stage.json", "grad.json", "rollup.json", "human.json", "hard.jsonl", "log.jsonl",
-                   "templates.json", "templates.distilled.json", "samples.json", "route.json", "policy.json"}
-        self.assertEqual({k for k in changed if os.path.basename(k) not in allowed}, set())
+                   "templates.json", "templates.distilled.json", "samples.json", "route.json", "policy.json",
+                   "opt_log.jsonl", "selfopt.json"}                                          # 6b：selfopt 的紀錄（節點自己的、優化器自己的）
+        top = lambda k: "/".join(k.split("/")[:3])                                            # noqa: E731
+        born = {k for k in changed if k.startswith("writer/tools/") and top(k) not in before}  # so-12：selfopt 新建的工具資料夾（有 author 的 _metainfo）
+        self.assertTrue(born and all(jread(g / k)["author"].startswith("writer@selfopt") for k in born if k.endswith("/_metainfo")), born)
+        self.assertEqual({k for k in changed if os.path.basename(k) not in allowed} - born, set())
         self.assertTrue({"rollup.json", "writer/rollup.json", "grader/rollup.json"} <= changed)    # rate／verify 叫了 rollup --up
         authored = {k for k in before if k.startswith(("data/cast/", "data/place/", "data/scene/", "data/style/")) or k == "data/templates.json"}
         self.assertTrue(len(authored) >= 5 and not (authored & changed), authored & changed)       # 3b-8：人寫的格檔訓練前後 bytes 不變
         for k in ("writer/tools/beat/rollup.json", "tools/lint/rollup.json", "train/optimize/rollup.json"):
             self.assertNotIn(k, changed)                                                      # 不在 --up 路上的子樹 bytes 不變
         root = jread(g / "rollup.json")
-        self.assertEqual(root["children"]["writer"]["stage"], "agent")
+        self.assertEqual(root["children"]["writer"]["stage"], "semi")                         # 6b：epoch 0 的 selfopt 抽了 close、verify 收下
         self.assertEqual(root["brain"], {k: jread(g / "ratings.json")["style:傲嬌"]["brain"][k] for k in ("nodes", "counter_on_brain", "counter_program", "excluded")})
 
     # 21. metatable（rollup 要的最小部分）：writer 列有 ratings、stage；彙總有 on_brain；--suggest 對有旁檔的候選標 N-4
@@ -1616,6 +1569,11 @@ import cells as CELLS  # noqa: E402
 
 
 
+# 梯度分配與回滾的單元驗的是機制、不是假腦的確定性模型：人寫的 beat 不接手假腦會隨抽樣變的環節（開場／收尾旁白），
+# 所以 epoch 1 關掉抽樣差（GALTXT_FAKE_JITTER=0）當作「抽了工具、確定性升」。整條訓練（so-10）不設這個，靠 selfopt 抽 close／open 自己升。
+STEADY = {"GALTXT_FAKE_JITTER": "0"}
+
+
 def common_of(g):
     """拷貝樹的 train/common.py（ROOT＝拷貝），給測試叫 params_save、diff"""
     import importlib.util
@@ -1726,7 +1684,7 @@ class Round4GradT(unittest.TestCase):
         jwrite(g / "writer" / "stage.json", s)
 
     def epoch0(self, g, st):
-        r = self.verify(g, st, env={"GALTXT_FAKE_JITTER": "1"})                   # 假腦 agent 加抖動＝確定性 < 1（抽工具那步才看得到確定性升）
+        r = self.verify(g, st)                                                    # 6b 起假腦 agent 預設就有抽樣差＝確定性 < 1
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertLess(jread(st / "epochs" / "000" / "verify.json")["measure"]["一致"], 1.0)
         self.assertEqual((st / "epoch.txt").read_text(), "1\n")
@@ -1739,7 +1697,7 @@ class Round4GradT(unittest.TestCase):
         self.epoch0(g, st)
         self.change(g, st, 1, {"stage": "semi", "tools": ["lint", "beat"]},
                     {"source": "test", "action": "extract", "subtree": "writer", "target": "tools/beat"})
-        r = self.verify(g, st)
+        r = self.verify(g, st, env=STEADY)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("weigh A（確定性升）writer/extract", r.stdout)
         w, b = jread(g / "writer" / "grad.json"), jread(g / "writer" / "tools" / "beat" / "grad.json")
@@ -1796,7 +1754,7 @@ class Round4GradT(unittest.TestCase):
         (g / "writer" / "tools" / "close" / "tool.json").write_text("{}")
         self.change(g, st, 1, {"stage": "semi", "tools": ["lint", "beat"]},
                     {"source": "test", "action": "extract", "subtree": "writer", "target": "tools/beat"}, created=["writer/tools/close"])
-        r = self.verify(g, st)
+        r = self.verify(g, st, env=STEADY)
         self.assertEqual(r.returncode, 10, r.stderr)
         self.assertIn("train: Regressed epoch 1 回滾 writer/extract beat（weigh: 拒A：確定性升也拒）", r.stderr)
         s = jread(g / "writer" / "stage.json")
@@ -1826,6 +1784,256 @@ class Round4GradT(unittest.TestCase):
         r = self.verify(g, bad)
         self.assertEqual(r.returncode, 1)
         self.assertIn("train: StateBad", r.stderr)
+
+
+class Round4OptT(unittest.TestCase):
+    """步驟 6b（round4 § 5、§ 6；round4-selfopt.md § 3）：優化器照樹走＋selfopt 派工＋SelfoptFallback。§ 10 的 9、13、15、18 與 selfopt 的 so-8、so-10、so-11。全部假腦、tree_copy 上跑。"""
+
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.addCleanup(self._t.cleanup)
+        self.tmp = Path(self._t.name)
+        self.ws = self.tmp / "ws"
+        (self.ws / "new").mkdir(parents=True)
+        self.stack = self.ws / ".stack"
+
+    def optimize(self, g, st, *args, env=None):
+        return run(str(g / "train" / "optimize" / "_entry"), *args, env=dict({"AOS_STACK": str(st) + "/"}, **(env or {})), timeout=600)
+
+    def verify(self, g, st, env=None):
+        return run(EXEC, str(g / "train" / "fsm.json") + "#/states/verify/exec",
+                   env=dict({"AOS_STACK": str(st) + "/", "AOS_WS": str(self.ws)}, **(env or {})), timeout=600)
+
+    def stage(self, g, **kw):
+        jwrite(g / "writer" / "stage.json", dict(jread(g / "writer" / "stage.json"), **kw))
+
+    def hard(self, g, *details):
+        with open(g / "writer" / "hard.jsonl", "a", encoding="utf-8") as f:
+            for d in details:
+                f.write(json.dumps({"at": "t", "question": "cls-%s" % d, "brief_key": {"mode": "scene", "detail": d}, "why": "TemplateMissing",
+                                    "output": "…", "cells": ["scene.closeup.detail.%s" % d]}, ensure_ascii=False) + "\n")
+
+    # 13. 優化器照樹走：根 rollup（writer agent 21k、grader agent 7k、lint program）→ --dry-run 挑 writer、selfopt extract；
+    #     tools_share 0.67 → stage program；program＋hard 有 poster → selfopt distill（held-out 的 lights 不算）；writer 沒動作 → 印「這圈沒動作」換下一棵；
+    #     不是 --dry-run 的外部動作 → params/changed.json＋快照、stage.json 改了
+    def test_optimize_tree(self):
+        g, st = tree_copy(self.tmp / "t"), self.tmp / "st"
+        jwrite(g / "rollup.json", {"source": "t", "brain": {"nodes": {"writer": "agent", "grader": "agent", "tools/lint": "program", "train/weigh": "agent"}},
+                                   "children": {"writer": {"cost": {"llm_tokens": 21000, "llm_calls": 2}}, "grader": {"cost": {"llm_tokens": 7000, "llm_calls": 3}},
+                                                "tools/lint": {"cost": {"llm_tokens": 0, "llm_calls": 0}}}})
+        before = snapshot(g)
+        r = self.optimize(g, st, "--dry-run")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertRegex(r.stdout, r"optimize: epoch 0 挑 writer（agent，calls 2/次、tokens 21000/次，determinism [^，]+，tools_share 0.17） → selfopt extract（腦還在做：開場旁白")
+        self.assertEqual(snapshot(g), before)                                        # --dry-run 不寫、不派工
+        self.assertFalse(st.exists())
+        self.stage(g, stage="semi", tools=["lint", "beat", "voice"])               # 自檢＋反差節拍／遮掩句＋口癖句尾＝4/6
+        r = self.optimize(g, st, "--dry-run")
+        self.assertIn("tools_share 0.67） → stage program", r.stdout)
+        self.stage(g, stage="program")
+        self.hard(g, "lights", "poster")
+        r = self.optimize(g, st, "--dry-run")
+        self.assertIn("grader（agent，calls 3/次、tokens 7000/次", r.stdout)       # 還靠腦的先：grader 排在 program 的 writer 前面、沒動作
+        self.assertIn("grader（agent，calls 3/次、tokens 7000/次，determinism None，tools_share None） 這圈沒動作", r.stdout)
+        self.assertRegex(r.stdout, r"挑 writer（program.*→ selfopt distill（hard.jsonl 有模板接不住的 poster）")   # lights 是 held-out，不算
+        (g / "writer" / "hard.jsonl").unlink()
+        self.hard(g, "lights")
+        r = self.optimize(g, st, "--dry-run")
+        self.assertRegex(r.stdout, r"writer（program[^\n]*這圈沒動作")
+        self.assertIn("optimize: 這圈沒有可做的動作", r.stdout)
+        self.stage(g, stage="semi")                                                  # 真的改：外部動作留回滾清單
+        (st).mkdir()
+        (st / "epoch.txt").write_text("1\n")
+        r = self.optimize(g, st)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        ch = jread(st / "epochs" / "001" / "params" / "changed.json")
+        self.assertEqual((ch["source"], ch["action"], ch["subtree"], ch["target"], ch["files"]), ("optimize", "stage", "writer", "program", ["writer/stage.json"]))
+        self.assertTrue(all((st / "epochs" / "001" / "params" / f).is_file() for f in ch["files"]))
+        self.assertEqual(jread(st / "epochs" / "001" / "params" / "writer" / "stage.json")["stage"], "semi")
+        self.assertEqual((jread(g / "writer" / "stage.json")["stage"], jread(g / "writer" / "stage.json")["since_epoch"]), ("program", 1))
+        r = self.optimize(g, st)                                                     # 同一個 epoch 再叫：不重做
+        self.assertIn("epoch 1 已經改過 writer/stage", r.stdout)
+        r = self.optimize(g, st, "--bogus")
+        self.assertEqual(r.returncode, 1)
+        self.assertRegex(r.stderr, r"^optimize: FlagUnknown \S")
+
+    # 9. 蒸餾：program 階 hard.jsonl 有 poster（＋held-out 的 lights）→ optimize 派 selfopt distill（shell＋假老師）→ templates.distilled.json 多 poster 的
+    #    deny／yield／cover／open、沒有 lights（工具回 HeldOut）；changed.json.files 含它；verify 判 A（難例接住了）→ poster 那行 resolved_epoch；再跑 poster 不再記難例
+    def test_distill(self):
+        g, st = tree_copy(self.tmp / "t"), self.tmp / "st"
+        self.stage(g, stage="program", tools=["lint", "beat", "voice"])
+        r = self.verify(g, st)                                                       # epoch 0（program；lights 會記一筆 held-out 的難例）
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.hard(g, "poster")
+        r = self.optimize(g, st)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("→ selfopt distill（hard.jsonl 有模板接不住的 poster）；by auto", r.stdout)
+        self.assertIn("run: writer by shell", r.stdout)                              # program 階＝純程式節點：臨時配 shell 當腦
+        self.assertIn("optimize: selfopt writer distill：收了", r.stdout)
+        by = jread(g / "data" / "templates.distilled.json")["by_detail"]
+        self.assertEqual(set(by), {"poster"})                                        # held-out 的 lights 沒蒸進去
+        self.assertTrue({"deny", "yield", "cover", "open"} <= set(by["poster"]))
+        self.assertEqual(by["poster"]["deny"]["01"]["teacher"], "writer@agent")
+        hist = jl(next((st / "epochs" / "001" / "selfopt" / "writer").glob("*/stack/history.jsonl")))
+        self.assertTrue(any("HeldOut" in (m.get("content") or "") for m in hist if m.get("role") == "tool"))   # 假老師先試了 lights、被工具擋
+        tries = [json.loads(c["function"]["arguments"]) for m in hist for c in m.get("tool_calls") or [] if c["function"]["name"] == "opt_try"]
+        self.assertEqual(tries, [{"question": "cls-poster.json", "drafts": 1, "stage": "agent"}])   # 老師＝自己的 agent 階
+        ch = jread(st / "epochs" / "001" / "params" / "changed.json")
+        self.assertIn("data/templates.distilled.json", ch["files"])
+        self.assertEqual((ch["action"], ch["goal"], ch["target"], ch["by"]), ("selfopt", "distill", "data/templates.distilled.json", "shell@selfopt"))
+        self.assertEqual(jread(g / "writer" / "stage.json")["stage"], "program")      # distill 不換階
+        r = self.verify(g, st)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("weigh A（難例接住了）writer/selfopt", r.stdout)
+        step = jread(g / "writer" / "grad.json")["steps"][-1]
+        self.assertEqual((step["diff"]["hard.uncovered"], step["accepted"]), (-1, True))
+        self.assertTrue(step["changed_cells"] and all(x.startswith("tpld.by_detail.poster.") for x in step["changed_cells"]))
+        rows = {r_["brief_key"]["detail"]: r_ for r_ in jl(g / "writer" / "hard.jsonl")}
+        self.assertEqual(rows["poster"]["resolved_epoch"], 1)
+        self.assertEqual(sorted(rows["poster"]["resolved_cells"]), sorted(step["changed_cells"]))
+        self.assertNotIn("resolved_epoch", rows["lights"])
+        n = len(jl(g / "writer" / "hard.jsonl"))
+        task = jread(EXAMPLES / "cls-poster.json")
+        jwrite(self.ws / "new" / "cls-poster.json", task)
+        r = run(EXEC, "--ws", str(self.ws), str(g), cwd=self.tmp, timeout=300)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(len(jl(g / "writer" / "hard.jsonl")), n)                   # 接得住了：不再記難例
+        self.assertIn("折", (self.ws / "out" / "cls-poster" / "answer.txt").read_text(encoding="utf-8"))   # 用到蒸餾的句子
+
+    # 15＋so-10. 整條訓練（假腦，max_epochs 4；§ 7.3 的四步要四個 epoch）：selfopt 抽 close → selfopt 抽 open → stage program（外部）→ selfopt 蒸餾 poster；
+    #     判斷器四次都 A；held-out 的 lights 沒進模板；前四筆 history＝§ 10 測試 15 的 agent, semi, semi, program
+    def test_train_selfopt(self):
+        g = tree_copy(self.tmp / "t")
+        jwrite(g / "train" / "budget.json", dict(jread(g / "train" / "budget.json"), max_epochs=4))
+        before = snapshot(g)
+        r = run(EXEC, "--ws", str(self.ws), str(g / "train"), cwd=self.tmp, timeout=1200)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual([t["state"] for t in jl(self.stack / "trace.jsonl")], ["verify", "train", "rate", "optimize"] * 4 + ["verify"])
+        for line in ("optimize: epoch 1 挑 writer（agent", "→ selfopt extract", "抽了 close", "optimize: epoch 2 挑 writer（semi", "抽了 open",
+                     "optimize: epoch 3 挑 writer（semi", "tools_share 0.5） → stage program", "optimize: epoch 4 挑 writer（program", "→ selfopt distill",
+                     "weigh A（確定性升）writer/selfopt", "weigh A（評級升）writer/stage", "weigh A（難例接住了）writer/selfopt"):
+            self.assertIn(line, r.stdout)
+        s = jread(g / "writer" / "stage.json")
+        hist = s["history"]
+        self.assertEqual([h["stage"] for h in hist], ["agent", "semi", "semi", "program", "program"])
+        self.assertEqual([(h.get("action"), h.get("accepted")) for h in hist[1:]], [("selfopt", True), ("selfopt", True), ("stage", True), ("selfopt", True)])
+        det = [h["determinism"] for h in hist]
+        self.assertTrue(det[0] < det[1] < det[2] == 1.0 and det == sorted(det), det)   # 抽一個工具升一截；殼拿掉前已 1.0（假腦只在開場／收尾旁白抽樣）
+        self.assertEqual((s["tools"], s["tools_share"]), (["lint", "close", "open"], 0.5))
+        self.assertEqual(s["decisions_left"], ["反差節拍", "口癖句尾", "遮掩句"])
+        steps = jread(g / "writer" / "grad.json")["steps"]
+        self.assertEqual([(x["action"], x.get("goal"), x["target"]) for x in steps],
+                         [("selfopt", "extract", "tools/close"), ("selfopt", "extract", "tools/open"), ("stage", None, "program"),
+                          ("selfopt", "distill", "data/templates.distilled.json")])
+        self.assertEqual(steps[3]["by"], "shell@selfopt")
+        for t in ("close", "open"):                                                  # selfopt 抽的工具＝那步整筆、殼拿掉那步分攤
+            ts = jread(g / "writer" / "tools" / t / "grad.json")["steps"]
+            self.assertEqual([(x["action"], x["assigned_share"]) for x in ts][0], ("selfopt", 1))
+            self.assertEqual(ts[1]["action"], "stage")
+            self.assertTrue(jread(g / "writer" / "tools" / t / "_metainfo")["author"].startswith("writer@selfopt"))
+        self.assertEqual([x["choice"] for x in jl(g / "train" / "weigh" / "log.jsonl")], ["A"] * 4)
+        o = jread(g / "train" / "optimize" / "ratings.json")
+        self.assertEqual((o["action:selfopt"]["counter_accepted"], o["action:stage"]["counter_accepted"]), (3, 1))
+        so = jread(g / "train" / "optimize" / "selfopt.json")
+        self.assertEqual([(x["epoch"], x["goal"], x["by"], x["accepted"]) for x in so["runs"]],
+                         [(1, "extract", "node", True), (2, "extract", "node", True), (4, "distill", "shell", True)])
+        self.assertTrue(all(isinstance(x["counter_calls"], int) and x["counter_calls"] > 0 and isinstance(x["elapsed_ms"], int) for x in so["runs"]))
+        self.assertEqual((so["sum"]["counter_runs"], so["sum"]["counter_accepted"]), (3, 3))
+        root = jread(g / "rollup.json")["brain"]
+        self.assertEqual(root["nodes"]["writer"], "program")
+        self.assertTrue({"writer/tools/close", "writer/tools/open"} <= set(root["nodes"]))
+        brains = [jread(self.stack / "epochs" / ("%03d" % i) / "verify.json")["brain"] for i in range(5)]
+        tok = [b["llm_tokens_per_question"] for b in brains]
+        self.assertEqual(tok, sorted(tok, reverse=True))                             # 單調不升（假腦 0）
+        self.assertEqual(brains[-1]["counter_on_brain"], brains[0]["counter_on_brain"] - 1)
+        self.assertLess(brains[3]["llm_calls_per_question"], brains[0]["llm_calls_per_question"])   # 殼拿掉：寫手的腦歸零
+        self.assertEqual(brains[4]["llm_calls_per_question"], brains[3]["llm_calls_per_question"])  # epoch 4 前派的 selfopt（8 次腦）不算進每題
+        by = jread(g / "data" / "templates.distilled.json")["by_detail"]
+        self.assertEqual(set(by), {"poster"})                                        # poster 蒸進來、held-out 的 lights 沒有
+        rows = {x["brief_key"]["detail"]: x for x in jl(g / "writer" / "hard.jsonl")}
+        self.assertEqual((rows["poster"].get("resolved_epoch"), rows["lights"].get("resolved_epoch")), (4, None))
+        samples = jread(g / "human" / "samples.json")
+        self.assertTrue(1 <= len(samples) <= 6)
+        self.assertTrue(all((x["scene"]["style"], x["scene"]["place"]) == ("傲嬌", "教室") for x in samples))
+        after = snapshot(g)                                                          # so-12：既有 _metainfo、尺、規則表、人寫的模板不變
+        frozen = [k for k in before if os.path.basename(k) in ("_metainfo", "fsm.json", "loop.json", "dims.json", "rules.json", "templates.json")]
+        self.assertEqual([k for k in frozen if before[k] != after.get(k)], [])
+
+    # so-8. selfopt 收下後 verify 回滾：判斷器規則暫改成全拒 → 退 10、新工具 close 整個刪、stage.json 拷回（agent、只有 lint）、grad 最後一步 selfopt／accepted false
+    def test_selfopt_rollback(self):
+        g, st = tree_copy(self.tmp / "t"), self.tmp / "st"
+        rules = jread(g / "train" / "weigh" / "rules.json")
+        rules["reject_if"].append({"key": "determinism", "gt": -9, "label": "全拒"})
+        jwrite(g / "train" / "weigh" / "rules.json", rules)
+        self.assertEqual(self.verify(g, st).returncode, 0)
+        stage0 = jread(g / "writer" / "stage.json")
+        r = self.optimize(g, st)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("optimize: selfopt writer extract：收了", r.stdout)
+        s = jread(g / "writer" / "stage.json")
+        self.assertEqual((s["stage"], s["tools"]), ("semi", ["lint", "close"]))    # accept 搬回＋優化器把 stage 翻成 semi
+        self.assertTrue((g / "writer" / "tools" / "close" / "_entry").is_file())
+        ch = jread(st / "epochs" / "001" / "params" / "changed.json")
+        self.assertEqual((ch["source"], ch["target"], ch["created"], ch["stage_flip"]), ("selfopt", "tools/close", ["writer/tools/close"], ["agent", "semi"]))
+        r = self.verify(g, st)
+        self.assertEqual(r.returncode, 10, r.stderr)
+        self.assertIn("train: Regressed epoch 1 回滾 writer/selfopt close（weigh: 拒A：全拒）", r.stderr)
+        self.assertFalse((g / "writer" / "tools" / "close").exists())
+        self.assertFalse((g / "writer" / "opt_log.jsonl").exists())
+        s = jread(g / "writer" / "stage.json")
+        self.assertEqual({k: x for k, x in s.items() if k != "history"}, {k: x for k, x in stage0.items() if k != "history"})
+        last = jread(g / "writer" / "grad.json")["steps"][-1]
+        self.assertEqual((last["action"], last["accepted"], last["by"]), ("selfopt", False, "writer@selfopt"))
+        self.assertIn("writer/tools/close", last["rolled_back"])
+        self.assertEqual(jread(g / "train" / "optimize" / "ratings.json")["action:selfopt"]["counter_rolled_back"], 1)
+
+    # so-11. fallback：selfopt 連兩次被 accept 拒（cheat）→ 第三次 optimize 印 SelfoptFallback、改走外部 extract（人寫的 beat）
+    def test_selfopt_fallback(self):
+        g, st = tree_copy(self.tmp / "t"), self.tmp / "st"
+        st.mkdir()
+        cheat = {"GALTXT_FAKE_OPT": "cheat"}
+        for k in (1, 2):
+            (st / "epoch.txt").write_text("%d\n" % k)
+            r = self.optimize(g, st, env=cheat)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("沒收（WriteDenied）", r.stdout)
+            self.assertFalse((st / "epochs" / ("%03d" % k) / "params" / "changed.json").exists())
+            self.assertNotIn("SelfoptFallback", r.stdout)
+        runs = jread(g / "train" / "optimize" / "selfopt.json")["runs"]
+        self.assertEqual([(x["epoch"], x["accepted"], x["code"]) for x in runs], [(1, False, "WriteDenied"), (2, False, "WriteDenied")])
+        (st / "epoch.txt").write_text("3\n")
+        r = self.optimize(g, st, env=cheat)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("optimize: SelfoptFallback writer（連 2 次 selfopt 被拒或回滾）", r.stdout)
+        self.assertIn("→ extract tools/beat（人寫好的 beat", r.stdout)
+        ch = jread(st / "epochs" / "003" / "params" / "changed.json")
+        self.assertEqual((ch["source"], ch["action"], ch["target"]), ("optimize", "extract", "tools/beat"))
+        s = jread(g / "writer" / "stage.json")
+        self.assertEqual((s["stage"], s["tools"]), ("semi", ["lint", "beat"]))
+        self.assertEqual(len(jread(g / "train" / "optimize" / "selfopt.json")["runs"]), 2)   # 外部動作不派工
+
+    # 18. 預算：訓練預算只剩 2 次腦 → selfopt 的 budget 壓成 2、跑到頂被殺（BudgetSpent、不搬）；下一個 verify BudgetSpent 退 2；剩 0＝不派工
+    def test_budget_selfopt(self):
+        g, st = tree_copy(self.tmp / "t"), self.tmp / "st"
+        self.assertEqual(self.verify(g, st).returncode, 0)
+        used = common_of(g).usage_of(str(st / "epochs"))["counter_calls"]
+        jwrite(g / "train" / "budget.json", dict(jread(g / "train" / "budget.json"), max_calls=used + 2))
+        before = snapshot(g)
+        r = self.optimize(g, st)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("沒收（BudgetSpent）", r.stdout)
+        cell = next((st / "epochs" / "001" / "selfopt" / "writer").glob("[0-9][0-9][0-9]"))
+        self.assertEqual(jread(cell.parent / (cell.name + ".task.json"))["budget"]["max_calls"], 2)
+        self.assertFalse((st / "epochs" / "001" / "params" / "changed.json").exists())
+        after = snapshot(g)
+        self.assertEqual({k for k in set(before) | set(after) if before.get(k) != after.get(k)}, {"train/optimize/selfopt.json"})
+        r = self.verify(g, st)
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertIn("train: BudgetSpent max_calls", r.stderr)
+        (st / "epoch.txt").write_text("2\n")
+        r = self.optimize(g, st)
+        self.assertIn("沒收（BudgetSpent）", r.stdout)
+        self.assertFalse((st / "epochs" / "002" / "selfopt" / "writer").exists() and any((st / "epochs" / "002" / "selfopt" / "writer").glob("[0-9][0-9][0-9]")))
 
 
 if __name__ == "__main__":

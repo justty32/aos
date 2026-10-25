@@ -1,0 +1,6 @@
+{"mode": "scene",
+ "scene": "closeup",
+ "detail": "ribbon",
+ "min_lines": 5, "max_lines": 10,
+ "drafts": 3,
+ "hints_fixed": true}

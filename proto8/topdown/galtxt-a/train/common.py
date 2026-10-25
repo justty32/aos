@@ -382,3 +382,95 @@ def rollback(params, change):
             os.remove(full)
         done.append(rel)
     return done
+
+
+# ---- 步驟 6b：固化進度（tools_share）、難例（hard.jsonl 還沒接住的 detail）----
+
+POLICY = os.path.join(HERE, "optimize", "policy.json")
+
+
+def tools_share(sub, stage=None):
+    """(tools_share, decisions_left)：<子樹>/_metainfo.steps 裡有工具接手的比例（round4 § 2.2）。哪支工具接手哪幾個環節：
+    工具自己 _metainfo 的 covers（selfopt 抽的，opt_extract 寫）優先，沒有＝policy.json.tools[<子樹>] 那列的 covers（人寫的 beat／voice／lint）。
+    stage＝那時的 stage.json（沒給＝讀現在的）；沒有 steps＝(None, None)"""
+    meta = load_or(os.path.join(ROOT, sub, "_metainfo"), {}) or {}
+    steps = meta.get("steps") if isinstance(meta, dict) else None
+    if not isinstance(steps, list) or not steps:
+        return None, None
+    stage = stage if isinstance(stage, dict) else load_or(os.path.join(ROOT, sub, "stage.json"), {}) or {}
+    table = {t.get("name"): t for t in ((load_or(POLICY, {}) or {}).get("tools") or {}).get(sub) or [] if isinstance(t, dict)}
+    covered = set()
+    for t in stage.get("tools") or []:
+        d = os.path.join(ROOT, sub, "tools", t)
+        own = load_or(os.path.join(d, "_metainfo"), {}) if os.path.isdir(d) and not os.path.islink(d) else {}
+        covers = own.get("covers") if isinstance(own, dict) else None
+        covered |= set(covers if isinstance(covers, list) else (table.get(t) or {}).get("covers") or [])
+    return round(sum(1 for s in steps if s in covered) / len(steps), 2), [s for s in steps if s not in covered]
+
+
+def heldout_details(sets):
+    """驗證題的 detail（held-out：永遠不准蒸進模板，也不算「還沒接住」）"""
+    out = set()
+    for q in sets.get("verify") or []:
+        d = (load_or(os.path.join(EXAMPLES, q), {}) or {}).get("detail")
+        if d:
+            out.add(d)
+    return out
+
+
+def covered_details(distilled=None):
+    """模板接得住的 detail：templates.json 的 by_detail ∪ templates.distilled.json 的 by_detail（distilled＝改用這份檔：回滾前的快照）"""
+    a = (load_or(os.path.join(ROOT, "data", "templates.json"), {}) or {}).get("by_detail") or {}
+    b = (load_or(distilled or os.path.join(ROOT, "data", "templates.distilled.json"), {}) or {}).get("by_detail") or {}
+    return set(a) | set(b)
+
+
+def hard_rows(sub):
+    rows = []
+    try:
+        with open(os.path.join(ROOT, sub, "hard.jsonl"), encoding="utf-8") as f:
+            for l in f:
+                try:
+                    r = json.loads(l)
+                except ValueError:
+                    continue
+                if isinstance(r, dict):
+                    rows.append(r)
+    except FileNotFoundError:
+        return None
+    return rows
+
+
+def _detail(r):
+    return (r.get("brief_key") or {}).get("detail") if r.get("why") == "TemplateMissing" else None
+
+
+def hard_open(sub, sets, distilled=None):
+    """<子樹>/hard.jsonl 裡 TemplateMissing、模板還接不住、不是 held-out 的 detail（排序）；沒有 hard.jsonl＝None。
+    「接住沒」照模板檔現在（或 distilled 快照）有沒有那個 detail 算——程式查，不信難例行的 resolved 標記"""
+    rows = hard_rows(sub)
+    if rows is None:
+        return None
+    skip = covered_details(distilled) | heldout_details(sets)
+    return sorted({_detail(r) for r in rows if _detail(r) and _detail(r) not in skip})
+
+
+def hard_resolve(sub, n, cells_):
+    """distill 那步收下後：模板已接得住、還沒標的 TemplateMissing 行標 resolved_epoch／resolved_cells（verify 叫）；回標了幾行"""
+    rows = hard_rows(sub)
+    if not rows:
+        return 0
+    have, k = covered_details(), 0
+    for r in rows:
+        d = _detail(r)
+        if d and d in have and not r.get("resolved_epoch"):
+            r["resolved_epoch"], r["resolved_cells"] = n, [x for x in cells_ or [] if ".%s." % d in x]
+            k += 1
+    if k:
+        p = os.path.join(ROOT, sub, "hard.jsonl")
+        tmp = os.path.join(os.path.dirname(p), "." + os.path.basename(p))
+        with open(tmp, "w", encoding="utf-8") as f:
+            for r in rows:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        os.replace(tmp, p)
+    return k
