@@ -45,6 +45,7 @@ AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md / wf/INDEX.md → 各工作流
 
 - **進度**（我自己的 open in-flight）→ [wf/SESSION-LOG.md](wf/SESSION-LOG.md)
 - **待使用者**（等使用者親自做／驗證）→ [wf/WAIT_USER.md](wf/WAIT_USER.md)
+- **日誌**（哪天做了什麼，不是知識庫）→ [wf/session_logs/](wf/session_logs/README.md)，寫法見 [user/02](wf/workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)
 - **信件**（agent 之間的訊息交換，像 email；放信處是 [`wf/inbox/`](wf/inbox/)）→ 使用方式見 [wf/workflows/inbox/](wf/workflows/inbox/README.md)
 
 > 三軸各管一種「還沒完的事」：進度＝我手上的、待使用者＝卡在人、信件＝agent 之間收發（寄失敗／不回都無妨，但接了事就得回終局狀態）。使用者說「**看看信箱**」＝跑 `wf/tools/inbox_read.sh`，把 [`wf/inbox/`](wf/inbox/) 頂層的待辦辦掉。

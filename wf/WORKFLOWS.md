@@ -70,7 +70,7 @@ multi-agent flavor 的派發表在 [WORKFLOWS-parts/01-multi-agent-flavor.md](WO
 
 ## 工作流的統一形式（規範）
 
-檔名規範、入口檔段落、資料夾型／單檔型的規範在 [WORKFLOWS-parts/02-統一形式.md](WORKFLOWS-parts/02-統一形式.md)（2026-10-13 tidy：本檔超過 8 KB，整段逐字下放）。
+檔名規範、入口檔段落、資料夾型／單檔型的規範在 [STRUCTURE「工作流的統一形式」](STRUCTURE.md#工作流的統一形式)。
 
 ## 跨工作流的活狀態（只列 open，完成即刪）
 

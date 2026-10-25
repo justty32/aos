@@ -1,8 +1,8 @@
-# session_logs — SESSION-LOG 搬出來的舊條目
+# session_logs — 日誌
 
 [SESSION-LOG](../SESSION-LOG.md)｜[INDEX](../INDEX.md)
 
-[SESSION-LOG](../SESSION-LOG.md) 只放 open、≤ 4096 bytes；舊條目全文逐字搬到這裡按月份分檔（2026-09-23 tidy；09-24 條 2026-09-24 tidy 搬）；月份檔膨脹就再按日拆進 `<月>/<日期>.md`、月份檔退回目錄（2026-09 於 2026-09-25 拆）。2026-10-10 TD3 整理：10-02～10-09 舊條目搬進 [`2026-10/`](2026-10.md)；09-xx、08-28 留在 SESSION-LOG 的 open 指標行判定已結／被取代，逐字附在各自日期檔末尾。還有 open 的，SESSION-LOG 留一行精簡列連回來。
+日誌：當月每天一個檔 `<月>/<日期>.md`，已結束的月份收成月摘要 `<月>.md`（原檔封存在 `archive/`）；下表每天一句「這天定下了什麼」，點進去看當天動了什麼、結論連到哪。寫法見 [user/02](../workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)。
 
 <!-- wf-nav -->
 | 日期 | 主題 | 全文 |

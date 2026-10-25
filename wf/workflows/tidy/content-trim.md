@@ -45,7 +45,7 @@
 
 不適用（本來就是紀錄，價值在時間順序）：
 
-- 日誌與報告：`wf/session_logs/`、`wf/HANDOFF.md`、`tidy/reports/`、`dispatch/` 的 `reports/`、`done/`、`superseded/`、`wf/inbox/` 的信。
+- 日誌與報告：`wf/session_logs/` 的每日檔（月結時收成月摘要，照 [user/02 日誌怎麼寫](../common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)，判準與原文檢查用本檔）、`wf/HANDOFF.md`、`tidy/reports/`、`dispatch/` 的 `reports/`、`done/`、`superseded/`、`wf/inbox/` 的信。
 - `archive/`：凍結，不改。
 - `wf/SESSION-LOG.md`、`wf/WAIT_USER.md`：本來就只列 open、完成即刪，不另精簡。
 

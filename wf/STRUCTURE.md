@@ -16,7 +16,7 @@
    往下走才找細節；下層檔**不向上連 AGENTS.md**。
 2. **檔名語意**：**README**＝初入一個資料夾先讀的入口／導引；**INDEX**＝描述該資料夾頂層結構的索引。小資料夾兩者合一，大了才分出獨立 INDEX。
 3. **durable 知識歸層**：每份長期知識歸到它所屬的那個工作流／那一層，**絕不往上堆**——AGENTS.md 因此永遠很薄。
-4. **活狀態只列 open**：進度記 `SESSION-LOG.md`、等使用者的記 `WAIT_USER.md`，**完成即刪**；「改了什麼」交給 git log，決定記 `workflows/decisions.md`；檔內只留現行結論（[tidy 原則 5](workflows/tidy/content-trim.md)）。兩者膨脹就分別拆 `session_logs/`／`wait-user/`，hub 只留導航表。
+4. **活狀態只列 open**：進度記 `SESSION-LOG.md`、等使用者的記 `WAIT_USER.md`，**完成即刪**；「改了什麼」交給 git log，決定記 `workflows/decisions.md`；檔內只留現行結論（[tidy 原則 5](workflows/tidy/content-trim.md)）。兩者膨脹就分別拆 `session_logs/`／`wait-user/`，hub 只留導航表；日誌寫法與月摘要見 [user/02](workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)。
 5. **鐵律極少而 always-on**：3–5 條任何時刻都適用的規矩常駐 AGENTS.md，其餘一切按需取用。
 
 ## 結構整理原則（膨脹即拆 / 雜亂即分類）
@@ -46,7 +46,7 @@
 
 **按標題切、逐字搬**：先按 `##` 切，單段仍超標再往 `###`、`####` 切；**相鄰小段併成一份**（別拆出一堆 <1 KB 小檔）。拆完驗一次「原檔＝入口前言＋各分檔本體」（連結目標以外一字不差）。
 
-**放同名子資料夾**：`x.md` 拆成 `x/NN-段名.md`，`x.md` 留原前言＋分檔目錄表（每列寫出該份涵蓋的所有段名）當入口；日誌類用日期當檔名（`session_logs/2026-09/<日期>.md`）。同名子資料夾若跟既有資料夾只差大小寫（例：`WORKFLOWS/` 對 `workflows/`），改用 `<名>-parts/`，免得在不分大小寫的檔案系統疊在一起（使用者 2026-10-20「把 wf/WORKFLOWS/ 改名」）。
+**放同名子資料夾**：`x.md` 拆成 `x/NN-段名.md`，`x.md` 留原前言＋分檔目錄表（每列寫出該份涵蓋的所有段名）當入口；日誌類用日期當檔名（`session_logs/2026-10/<日期>.md`）。同名子資料夾若跟既有資料夾只差大小寫（例：`WORKFLOWS/` 對 `workflows/`），改用 `<名>-parts/`，免得在不分大小寫的檔案系統疊在一起（使用者 2026-10-20「把 wf/WORKFLOWS/ 改名」）。
 
 **搬深一層，body 的相對連結全部重算**（補 `../`）；檔內 `#錨點` 改指所在分檔，同名重複標題的 `-1`、`-2` 編號按分檔重算；別檔連到 `x.md#錨點` 的也改指分檔。改不到的外部連結（例如 proto5/ 內），在入口目錄表留同名 `<a id="…">`，舊錨點仍有落點。
 
@@ -73,9 +73,9 @@
 
 ## 工作流的統一形式
 
-- **入口檔段落**固定，照 [workflows/TEMPLATE.workflow.md](workflows/TEMPLATE.workflow.md)：何時用 ↔ 何時不用 / `Done when:` / 流程 / 交接。
+- **入口檔段落**固定，照 [workflows/TEMPLATE.workflow.md](workflows/TEMPLATE.workflow.md)：何時用 ↔ 何時不用 / `Done when:` / 流程 / 交接。既有工作流的入口檔下次動到時再補齊，不為了補而改。
 - **`Done when:` 只准三類可觀察條件**：檔案存在、指令回傳、表格填滿（✗「功能做好」這種不可觀察的）。
-- **資料夾型**：入口 `README.md` ＋視需要的 `archive/`、`gotchas.md`、`session-log.md`；**單檔型**：一個 `.md` 同時是入口與內容。有哪些工作流看派發表。
+- **資料夾型**：入口 `README.md` ＋視需要的 `archive/`、`gotchas.md`、`session-log.md`；**單檔型**：一個 `.md` 同時是入口與內容，撐大了照上面四級成長升級成資料夾型。有哪些工作流看派發表。
 
 ## archive 規則
 
