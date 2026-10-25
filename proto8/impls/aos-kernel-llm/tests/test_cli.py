@@ -146,9 +146,9 @@ class A_Cli(Case):
         self.assertEqual(r.returncode, 0, r.stderr)
         for box in ("tmp", "new", "cur", "done"):
             self.assertTrue((self.stack / "mailbox" / box).is_dir())
-        self.assertEqual(json.loads((self.stack / "queue.json").read_text()), {"runs": 1, "seen_at_runs": {}})
+        self.assertEqual(json.loads((self.stack / "queue.json").read_text()), {"counter_runs": 1, "seen_at_runs": {}})
         self.assertEqual(self.run_k().returncode, 0)
-        self.assertEqual(json.loads((self.stack / "queue.json").read_text())["runs"], 2)
+        self.assertEqual(json.loads((self.stack / "queue.json").read_text())["counter_runs"], 2)
 
     def test_mailbox_directive(self):
         self.cfg({"mailbox": {"$env": "MB"}, "slots": {"$env": "N"}})   # 指示詞先解（slots 解出來是字串＝壞）
@@ -184,20 +184,20 @@ class B_Order(Case):
                                         "low1", "low_num"])
         s = self.served()
         self.assertEqual([x["level"] for x in s], ["high", "normal", "normal", "normal", "normal", "low", "low"])
-        self.assertEqual([x["waited_runs"] for x in s], [0, 1, 2, 3, 4, 5, 6])
+        self.assertEqual([x["counter_waited_runs"] for x in s], [0, 1, 2, 3, 4, 5, 6])
         self.assertEqual(list(os.listdir(self.mb / "done")), [i for i in os.listdir(self.mb / "done")])
 
     def test_aging(self):
         old = self.post(self.mark("low_old"), "low")
         self.post(self.mark("normal_new"))
-        (self.stack / "queue.json").write_text(json.dumps({"runs": 20, "seen_at_runs": {old: 0}}))
+        (self.stack / "queue.json").write_text(json.dumps({"counter_runs": 20, "seen_at_runs": {old: 0}}))
         self.drain(1)   # low 等了 21 次：-1＋2＝1 級，比 normal 先
         self.assertEqual(self.marks(), ["low_old"])
 
     def test_aging_not_yet(self):
         old = self.post(self.mark("low_old"), "low")
         self.post(self.mark("normal_new"))
-        (self.stack / "queue.json").write_text(json.dumps({"runs": 5, "seen_at_runs": {old: 0}}))
+        (self.stack / "queue.json").write_text(json.dumps({"counter_runs": 5, "seen_at_runs": {old: 0}}))
         self.drain(1)   # 等了 6 次還不到 10：normal 先
         self.assertEqual(self.marks(), ["normal_new"])
 
@@ -206,9 +206,9 @@ class B_Order(Case):
         b = self.post(self.mark("b"))
         self.drain(1)
         q = json.loads((self.stack / "queue.json").read_text())
-        self.assertEqual(q, {"runs": 1, "seen_at_runs": {b: 1}})
+        self.assertEqual(q, {"counter_runs": 1, "seen_at_runs": {b: 1}})
         self.drain(1)
-        self.assertEqual(json.loads((self.stack / "queue.json").read_text()), {"runs": 2, "seen_at_runs": {}})
+        self.assertEqual(json.loads((self.stack / "queue.json").read_text()), {"counter_runs": 2, "seen_at_runs": {}})
         self.assertNotIn(a, q["seen_at_runs"])
 
 
@@ -480,19 +480,19 @@ class H_Report(Case):
         e = self.usage("e", {"total_tokens": -1})
         f = self.usage("f", None, raw="[1]")
         self.drain(6)
-        got = {x["letter"]: (x["tokens"], x["report_bad"]) for x in self.served()}
+        got = {x["letter"]: (x["counter_tokens"], x["report_bad"]) for x in self.served()}
         self.assertEqual(got, {a: (42, False), b: (8, False), c: (None, False), d: (None, True),
                                e: (None, True), f: (None, True)})
         u = self.used()
-        self.assertEqual((u["window"], u["calls"], u["tokens"], u["all_calls"], u["all_tokens"]), ("day", 6, 50, 6, 50))
+        self.assertEqual((u["window"], u["counter_calls"], u["counter_tokens"], u["counter_all_calls"], u["counter_all_tokens"]), ("day", 6, 50, 6, 50))
         self.assertRegex(u["since"], r"^\d{4}-\d\d-\d\dT00:00:00[+-]\d\d:\d\d$")
 
     def test_not_run_not_counted(self):
         self.post(raw="{")                                               # LetterBad
         self.post(self.mark("late"), {"deadline": time.time() - 1})     # DeadlineMissed
         self.drain(1)
-        self.assertEqual(self.used()["calls"] if (self.stack / "used.json").exists() else 0, 0)
-        self.assertEqual([x["tokens"] for x in self.served()], [None, None])
+        self.assertEqual(self.used()["counter_calls"] if (self.stack / "used.json").exists() else 0, 0)
+        self.assertEqual([x["counter_tokens"] for x in self.served()], [None, None])
 
     def test_budget_calls_refuse(self):
         self.cfg({"mailbox": str(self.mb), "slots": 1, "budget": {"calls": 2}})
@@ -503,8 +503,8 @@ class H_Report(Case):
         self.assertEqual(rep["error"]["code"], "BudgetMissing")
         s = {x["letter"]: x for x in self.served()}   # 第二次跑 y 時就看得出 z 會超過：z 當場回錯（比 y 的那行先寫）
         self.assertEqual([s[i]["error"] for i in ids], [None, None, "BudgetMissing"])
-        self.assertEqual((s[ids[2]]["level"], s[ids[2]]["tokens"]), ("normal", None))
-        self.assertEqual((self.used()["calls"], self.used()["tokens"]), (2, 20))   # 回錯的不算
+        self.assertEqual((s[ids[2]]["level"], s[ids[2]]["counter_tokens"]), ("normal", None))
+        self.assertEqual((self.used()["counter_calls"], self.used()["counter_tokens"]), (2, 20))   # 回錯的不算
 
     def test_budget_tokens_refuse_all_waiting(self):
         self.cfg({"mailbox": str(self.mb), "slots": 1, "budget": {"tokens": 100, "window": "hour"}})
@@ -532,27 +532,28 @@ class H_Report(Case):
         self.drain(1)
         self.assertEqual(self.marks(), ["x", "y"])
         u = self.used()
-        self.assertEqual((u["calls"], u["tokens"], u["all_calls"], u["all_tokens"]), (1, 7, 2, 14))   # 這一窗歸零、總數照留
-        self.assertEqual(self.served()[1]["waited_runs"], 2)
+        self.assertEqual((u["counter_calls"], u["counter_tokens"], u["counter_all_calls"], u["counter_all_tokens"]), (1, 7, 2, 14))   # 這一窗歸零、總數照留
+        self.assertEqual(self.served()[1]["counter_waited_runs"], 2)
 
     def test_window_all_never_resets(self):
         self.cfg({"mailbox": str(self.mb), "budget": {"window": "all"}})
         self.usage("x", {"total_tokens": 3})
         self.drain(1)
         u = self.used()
-        self.assertEqual((u["window"], u["since"], u["calls"]), ("all", None, 1))
+        self.assertEqual((u["window"], u["since"], u["counter_calls"]), ("all", None, 1))
         self.cfg({"mailbox": str(self.mb)})   # 改回 day＝換窗：這一窗歸零、總數照留
         self.usage("y", {"total_tokens": 4})
         self.drain(1)
         u = self.used()
-        self.assertEqual((u["window"], u["calls"], u["tokens"], u["all_calls"], u["all_tokens"]), ("day", 1, 4, 2, 7))
+        self.assertEqual((u["window"], u["counter_calls"], u["counter_tokens"], u["counter_all_calls"], u["counter_all_tokens"]), ("day", 1, 4, 2, 7))
 
     def test_budget_cfg_and_used_bad(self):
         for bad in ({"calls": -1}, {"tokens": "9"}, {"window": "week"}, {"spent": "drop"}, {"calls": True}, [1]):
             self.cfg({"mailbox": str(self.mb), "budget": bad})
             self.own_error(self.run_k(), "CfgBad")
         self.cfg({"mailbox": str(self.mb)})
-        for bad in ("{", "[]", json.dumps({"window": "day", "since": None, "calls": 1})):
+        for bad in ("{", "[]", json.dumps({"window": "day", "since": None, "counter_calls": 1}),
+                    json.dumps({"window": "day", "since": None, "calls": 0, "tokens": 0, "all_calls": 0, "all_tokens": 0})):   # 舊名（10-25 前）不認
             (self.stack / "used.json").write_text(bad)
             self.own_error(self.run_k(), "UsedBad")
 
@@ -584,7 +585,7 @@ class I_Accept(Case):
             self.assertFalse((self.mb / "done" / i / "stdout.txt").exists())
         self.assertFalse((self.t / "o.txt").exists())
         self.assertEqual(sorted(s["error"] or "" for s in self.served()), ["", "InstUnknown", "InstUnknown", "InstUnknown", "InstUnknown"])
-        self.assertEqual(self.used()["calls"], 1)                                          # 沒跑的不算
+        self.assertEqual(self.used()["counter_calls"], 1)                                          # 沒跑的不算
 
     def test_accept_cfg_bad(self):
         for bad in ({"argv": [], "cwd": "."}, {"argv": ["x"]}, {"argv": "x", "cwd": "."}, {"argv": [1], "cwd": "."}, "x"):

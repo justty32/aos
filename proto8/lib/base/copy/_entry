@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # copy - 在工作區裡複製一個檔或整個資料夾（捷徑照捷徑複製、不跟進去；to 的上層自動建）
-# 介面（lib/README 的契約）：stdin 收 {"from", "to"}；stdout 一份 JSON {"from", "to", "files"}。
+# 介面（lib/README 的契約）：stdin 收 {"from", "to"}；stdout 一份 JSON {"from", "to", "counter_files"}（複製了幾個檔；10-25 原 files）。
 # to 已經有東西＝不複製（FileBad）。先複製到 . 開頭的暫存（檔或資料夾）再改名（N-05）。路徑從 $AOS_WS 算、不能跑出去。
 # 錯：stderr 與 stdout 各一行「copy: 代號 原因」、退 1。來源：demo/file-tools/copy（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
 import json, os, shutil, sys
@@ -83,4 +83,4 @@ except OSError as e:
     elif os.path.lexists(tmp):
         os.unlink(tmp)
     die("CopyFailed", "%s → %s：%s" % (a["from"], a["to"], e.strerror or e))
-out({"from": s_rel, "to": d_rel, "files": files})
+out({"from": s_rel, "to": d_rel, "counter_files": files})

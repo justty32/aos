@@ -351,9 +351,9 @@ def state_written_with_heartbeat(t):
     s = stack(t)
     r = run_loop(t, {"exec": count(), "max": 3, "state": "state.json"}, {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
-    check("state 寫好、結束碼", (r.returncode, r.stderr, st["kind"], st["phase"], st["counter"], st["code"], st["max"],
+    check("state 寫好、結束碼", (r.returncode, r.stderr, st["kind"], st["phase"], st["counter_runs"], st["code"], st["max"],
                              st["ctl_seq"]), (0, "", "state", "done", 3, 0, 3, None))
-    check("state 欄位順序（同 bin 版）", list(st), ["kind", "phase", "counter", "max", "interval_ms", "paused", "ctl_seq",
+    check("state 欄位順序（同 bin 版）", list(st), ["kind", "phase", "counter_runs", "max", "interval_ms", "paused", "ctl_seq",
                                              "ctl_warning", "code", "pid", "started_at_ticks", "boot_id", "recorded_at"])
     check("心跳欄位", (isinstance(st["pid"], int), isinstance(st["started_at_ticks"], int), isinstance(st["recorded_at"], str),
                      (s / ".state.json").exists()), (True, True, True, False))
@@ -400,7 +400,7 @@ def ctl_stopped_and_seq(t):
     (s / "ctl.json").write_text(json.dumps({"stopped": True, "seq": 7}))
     r = run_loop(t, {"exec": count(), "max": 3, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
-    check("ctl stopped＋seq", (r.returncode, r.stderr, st["phase"], st["counter"], st["ctl_seq"], (s / "laps").exists()),
+    check("ctl stopped＋seq", (r.returncode, r.stderr, st["phase"], st["counter_runs"], st["ctl_seq"], (s / "laps").exists()),
           (0, "", "stopped", 0, 7, False))
 
 
@@ -497,7 +497,7 @@ def cli_flags_beat_config(t):
     r = subprocess.run([BIN, "--max=1", "--state", "st.json", "--interval-ms", "0", "loop.json"], cwd=t,
                        env=env_of({"AOS_STACK": str(s)}), capture_output=True, text=True, timeout=30)
     st = json.loads((s / "st.json").read_text())
-    check("--state、--max=", (r.returncode, st["counter"], st["max"], len((s / "laps").read_text().split())), (0, 1, 1, 1))
+    check("--state、--max=", (r.returncode, st["counter_runs"], st["max"], len((s / "laps").read_text().split())), (0, 1, 1, 1))
     r = subprocess.run([BIN, "--ctl", "c.json", "loop.json"], cwd=t, env=env_of(None), capture_output=True, text=True)
     check("--ctl 卻沒 AOS_STACK", (r.returncode, r.stderr.startswith("aos-loop: StackMissing ")), (1, True))
 
@@ -620,7 +620,7 @@ def ctl_directives(t):
                                             "seq": {"$ref": "parts/stop.json#/seq"}}))
     r = run_loop(t, {"exec": count(), "max": 3, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
-    check("ctl 的 $ref", (r.returncode, st["phase"], st["counter"], st["ctl_seq"], st["ctl_warning"]),
+    check("ctl 的 $ref", (r.returncode, st["phase"], st["counter_runs"], st["ctl_seq"], st["ctl_warning"]),
           (0, "stopped", 0, 4, None))
     # ctl 整份是 $ref
     (s / "ctl.json").write_text(json.dumps({"$ref": "parts/max.json"}))
@@ -636,7 +636,7 @@ def ctl_directive_bad_not_adopted(t):
     (s / "ctl.json").write_text(json.dumps({"stopped": True, "max": {"$env": "NOPE_XYZ"}}))
     r = run_loop(t, {"exec": count(), "max": 2, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
-    check("ctl 指示詞解不開不採用", (r.returncode, r.stderr, st["phase"], st["counter"], "NOPE_XYZ" in (st["ctl_warning"] or "")),
+    check("ctl 指示詞解不開不採用", (r.returncode, r.stderr, st["phase"], st["counter_runs"], "NOPE_XYZ" in (st["ctl_warning"] or "")),
           (0, "", "done", 2, True))
 
 
@@ -741,7 +741,7 @@ def inline_env_restored(t):
     r = subprocess.run([BIN, "loop.json"], cwd=t, env=env_of({"AOS_STACK": str(s)}), capture_output=True, text=True, timeout=30)
     st = json.loads((s / "state.json").read_text())
     w = st["ctl_warning"] or ""
-    check("跑完 AOS_CO 還原", (r.returncode, st["counter"], "AOS_CO" in w, "/exec" in w), (0, 2, True, False))
+    check("跑完 AOS_CO 還原", (r.returncode, st["counter_runs"], "AOS_CO" in w, "/exec" in w), (0, 2, True, False))
     # （原本有值時還原成原本的值：看得出來的地方在 daemon——ctl 的 loops 用 $env 讀它們，見 aos-daemon test_inline_env_restored_had_values）
 
 

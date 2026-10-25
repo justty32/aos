@@ -110,7 +110,7 @@
 
 ## window
 
-一句：**ctl／state 兩扇窗**（`$AOS_STACK` 底下的檔）：ctl 誰都能寫、loop 只讀（宣告式：`paused`、`stopped`、`max`、`interval_ms`、`seq`；daemon 多 `loops`、`loops_added`、`loops_removed`）；state 只有 loop 自己寫（`phase`、`counter`（跑過幾次）、`ctl_seq` 回音、`ctl_warning`、`pid`、`started_at_ticks`、`recorded_at`）。
+一句：**ctl／state 兩扇窗**（`$AOS_STACK` 底下的檔）：ctl 誰都能寫、loop 只讀（宣告式：`paused`、`stopped`、`max`、`interval_ms`、`seq`；daemon 多 `loops`、`loops_added`、`loops_removed`）；state 只有 loop 自己寫（`phase`、`counter_runs`（跑過幾次；計數一律 `counter_<被數的東西>`）、`ctl_seq` 回音、`ctl_warning`、`pid`、`started_at_ticks`、`recorded_at`）。
 範例：叫停 `{"stopped": true, "seq": 2}`；加一隻 `{"seq": 3, "loops_added": {"carl": "agent-carl"}}`，等 state 的 `ctl_seq` 變 3＝讀到了。
 常見錯：寫 ctl 沒先寫暫存再改名（N-05）；壞的 ctl 整份不採用、原因在 `ctl_warning`；拿掉 `loops_added`＝加進來的會被收掉（宣告，不是指令）。
 出處：N-06～N-09、N-13、N-17、N-32、N-54。

@@ -183,7 +183,7 @@ class Tools(unittest.TestCase):
         self.assertEqual([i["name"] for i in res["items"]], ["d", "a.txt", "b.txt", "l"])    # 資料夾在前
         self.assertEqual([i["type"] for i in res["items"]], ["dir", "file", "file", "link"])
         self.assertEqual(res["items"][3]["link_to"], "a.txt")
-        self.assertEqual((res["total"], res["hidden"]), (4, 1))
+        self.assertEqual((res["counter_items"], res["counter_hidden"]), (4, 1))
         self.assertNotIn("next_offset", res)
         res = json.loads(self.tool("ls", {"limit": 2})[1])
         self.assertEqual(res["next_offset"], 2)
@@ -201,7 +201,7 @@ class Tools(unittest.TestCase):
         res = json.loads(self.tool("json_read", {"path": "c.json"})[1])
         self.assertEqual(res["value"]["a"], {"type": "object", "keys": ["b", "c"]})
         self.assertEqual(res["value"]["s"]["type"], "string")
-        self.assertEqual(res["value"]["s"]["len"], 600)
+        self.assertEqual(res["value"]["s"]["counter_chars"], 600)
         self.assertEqual(res["value"]["n"], 5)
         res = json.loads(self.tool("json_read", {"path": "c.json", "pointer": "/a", "depth": 2})[1])
         self.assertEqual(res["value"], {"b": [1, 2, 3], "c": {"d": 1}})
@@ -217,7 +217,7 @@ class Tools(unittest.TestCase):
         self.put("c.json", json.dumps({"a": {"b": [1, 2]}, "c": "x"}))
         res = json.loads(self.tool("json_edit", {"path": "c.json", "set": {"/a/b/-": 3, "/d/e": True, "/a/b/0": 0},
                                                  "del": ["/c"]})[1])
-        self.assertEqual((res["set"], res["del"]), (3, 1))
+        self.assertEqual((res["counter_set"], res["counter_del"]), (3, 1))
         self.assertEqual(json.loads((self.ws / "c.json").read_text()), {"a": {"b": [0, 2, 3]}, "d": {"e": True}})
         before = (self.ws / "c.json").read_text()
         self.assertEqual(self.tool("json_edit", {"path": "c.json", "set": {"/a/b/9": 1}, "del": ["/d"]})[2], "PointerMissing")

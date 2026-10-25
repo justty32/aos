@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # ls - 列工作區裡一個資料夾的子項，一次一頁、回 JSON
 # 介面（lib/README 的契約）：stdin 收 {"path"?: ".", "offset"?: 0, "limit"?: 100, "hidden"?: false}；
-# stdout 一份 JSON {"path", "total", "items": [{"name", "type"(file／dir／link), "size"?, "mtime", "link_to"?, …}], "next_offset"?, "hidden"?}
-# 資料夾多 children（子項數）與 aos（裡面有哪些 _entry、.env、tool.json…）；檔多 exec（可執行）；.json 檔多 keys（頂層 key，最多 12 個）。
-# 資料夾在前、照名字排；. 開頭的預設不列（數目放 hidden）；還有就給 next_offset。路徑從 $AOS_WS 算、不能跑出去。
+# stdout 一份 JSON {"path", "counter_items", "items": [{"name", "type"(file／dir／link), "size"?, "mtime", "link_to"?, …}], "next_offset"?, "counter_hidden"?}
+# 資料夾多 counter_children（子項數）與 aos（裡面有哪些 _entry、.env、tool.json…）；檔多 exec（可執行）；.json 檔多 keys（頂層 key，最多 12 個；多的個數放 counter_keys_more）。
+# 資料夾在前、照名字排；. 開頭的預設不列（數目放 counter_hidden）；還有就給 next_offset。路徑從 $AOS_WS 算、不能跑出去。
+# 計數的 key 一律 counter_*（10-25，原 total、children、hidden、keys_more）。
 # 錯：stderr 與 stdout 各一行「ls: 代號 原因」、退 1。（10-24 遷移：併進 demo/file-tools/ls 的加料——aos 記號、children、exec、JSON 頂層 key）
 import json, os, sys, time
 
@@ -95,7 +96,7 @@ def json_top(p, it):
     if isinstance(v, dict):
         it["keys"] = list(v)[:JSON_KEYS_MAX]
         if len(v) > JSON_KEYS_MAX:
-            it["keys_more"] = len(v) - JSON_KEYS_MAX
+            it["counter_keys_more"] = len(v) - JSON_KEYS_MAX
     else:
         it["json"] = "array" if isinstance(v, list) else "value"
 
@@ -115,7 +116,7 @@ def item(n):
     elif os.path.isdir(p):
         it["type"] = "dir"
         try:
-            it["children"] = len(os.listdir(p))
+            it["counter_children"] = len(os.listdir(p))
         except OSError:
             pass
         marks = aos_marks(p)
@@ -134,9 +135,9 @@ def item(n):
 
 page = names[offset:offset + limit]
 shown = os.path.relpath(d, root) if d != root else "."
-res = {"path": shown, "total": len(names), "items": [item(n) for n in page]}
+res = {"path": shown, "counter_items": len(names), "items": [item(n) for n in page]}
 if offset + limit < len(names):
     res["next_offset"] = offset + limit
 if not hidden and dots:
-    res["hidden"] = len(dots)
+    res["counter_hidden"] = len(dots)
 print(json.dumps(res, ensure_ascii=False))

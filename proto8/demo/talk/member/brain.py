@@ -48,7 +48,7 @@ if name.endswith(".json"):
 if letter:
     question = "[來信] 寄件人：%s%s\n對話串：%s（第 %s 手）\n要你回答：%s\n主旨：%s\n---\n%s" % (
         letter.get("from"), "（寄給群組 %s）" % letter["group"] if letter.get("group") else "",
-        letter.get("thread"), letter.get("hops"),
+        letter.get("thread"), letter.get("counter_hops"),
         "是（直接用純文字回答，會自動寄回給 %s）" % letter.get("from") if letter.get("expect_reply") else "否（只是回覆或通知）",
         letter.get("subject") or "（無）", letter.get("body", ""))
 

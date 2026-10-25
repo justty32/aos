@@ -176,7 +176,7 @@ class T(unittest.TestCase):
         r = self.improve(b)
         self.assertEqual(r.returncode, 2, r.stderr)
         self.assertIn("tokens 用完了", r.stderr)
-        self.assertEqual(self.result()["used"]["tokens"], 1100)
+        self.assertEqual(self.result()["used"]["counter_tokens"], 1100)
 
     def test_only_target_is_taken(self):
         b = self.brain(tool_reply(call("a", "write", {"path": "notes.txt", "content": "x"}),
@@ -199,7 +199,7 @@ class T(unittest.TestCase):
         r = self.improve(self.brain(write("target/f.py", GOOD), answer("好了。")))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue((self.stack / "failed" / "v001.1").is_dir())    # 半成品搬走、留著看
-        self.assertEqual(self.result()["used"]["rounds"], 2)             # 失敗的那次也算一輪
+        self.assertEqual(self.result()["used"]["counter_rounds"], 2)             # 失敗的那次也算一輪
 
     def test_check_program(self):
         (self.ws / "judge" / "cases.json").unlink()

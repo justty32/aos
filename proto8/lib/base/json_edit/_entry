@@ -2,7 +2,7 @@
 # json_edit - 照 JSON 指標改工作區裡一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫
 # 介面（lib/README 的契約）：stdin 收 {"path", "set"?: {指標: 新值}, "del"?: [指標]}；先照順序做 set、再做 del；
 # set 的指標中間缺的物件層自動建，陣列用 "-" 接在尾巴、數字要是既有的那一項；del 的指標一定要指得到。
-# stdout 一份 JSON {"path", "set": 幾個, "del": 幾個, "top": 改完頂層的 key（或 type）}。錯：stderr 與 stdout 各一行「json_edit: 代號 原因」、退 1。
+# stdout 一份 JSON {"path", "counter_set": 幾個, "counter_del": 幾個, "top": 改完頂層的 key（或 {"type": "array", "counter_items"}）}（計數 10-25 改 counter_*，原 set、del、len）。錯：stderr 與 stdout 各一行「json_edit: 代號 原因」、退 1。
 # 做法（10-24 遷移，代定 14「換實作不換介面」）：先在記憶體裡照上面的規則全部做一遍（錯誤代號在這裡定），都合了才交給 C++ 的 aos-json 寫：
 #   連續的 set 一次 `aos-json batch --parents 檔`、接陣列尾巴的 `aos-json append 檔#指標`、del 每個一次 `aos-json del 檔#指標`——
 #   aos-json 原子寫入、只重寫有變的那一塊（排版不換）。aos-json 照 PATH 找；它的 stderr 原樣往上、這裡不讀（C-53），失敗只說結束碼。
@@ -161,5 +161,5 @@ for op in steps:                             # 值一律從 stdin 給（負數�
         aos_json(["append", path + ("#" + op[1] if op[1] else "")], json.dumps(op[2], ensure_ascii=False))
     else:
         aos_json(["del", "%s#%s" % (path, op[1])])
-top = list(doc)[:20] if isinstance(doc, dict) else {"type": "array", "len": len(doc)}
-print(json.dumps({"path": args["path"], "set": len(sets), "del": len(dels), "top": top}, ensure_ascii=False))
+top = list(doc)[:20] if isinstance(doc, dict) else {"type": "array", "counter_items": len(doc)}
+print(json.dumps({"path": args["path"], "counter_set": len(sets), "counter_del": len(dels), "top": top}, ensure_ascii=False))

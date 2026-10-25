@@ -3,9 +3,9 @@
 #
 # 名冊＝$AOS_ROSTER（roster.json）；我是誰＝名冊上信箱跟 $AOS_WS 是同一個資料夾的那位。
 # 信＝收件人信箱的 new/<id>.json：先寫 tmp/<id>.json 再改名進 new/（N-05、N-16 Maildir）；自己留一份在 sent/<id>.json。
-# 對話串：正在處理的那封信（$AOS_WS/cur/ 裡那一份）決定——thread 照抄、hops＝它的＋1、reply_to＝它的 id；
+# 對話串：正在處理的那封信（$AOS_WS/cur/ 裡那一份）決定——thread 照抄、counter_hops（10-25 原 hops）＝它的＋1、reply_to＝它的 id；
 #   cur/ 是人放的純文字題目＝這個題目開一串（thread＝<我>:<題名>）；cur/ 是空的（人從終端寄）＝新的一串。
-# 擋迴圈：hops 超過名冊的 max_hops、或這一層已經寄了 max_sends 封，就不寄。
+# 擋迴圈：counter_hops 超過名冊的 max_hops、或這一層已經寄了 max_sends 封，就不寄。
 # 錯（lib/README 的契約）：stderr 與 stdout 各一行「send_message: 代號 原因」、退 1——參數不對 ArgumentsBad、收件人不認得 RecipientUnknown、
 #   沒有收件人 RecipientMissing、信太大 BodyBad、到手數上限 HopsBad、到寄信數上限 SendsBad、一封都送不到 MailboxMissing（送到一部分＝結果、退 0）；
 #   環境沒設好：RosterMissing、RosterBad、SelfUnknown。回不回給腦由叫它的 agent 決定（talk 的 member 回給腦）。
@@ -105,7 +105,7 @@ if cur:
         except (OSError, ValueError):
             parent = None
     if isinstance(parent, dict) and parent.get("kind") == "letter":
-        reply_to, hops, thread = parent.get("id"), int(parent.get("hops") or 0) + 1, parent.get("thread")
+        reply_to, hops, thread = parent.get("id"), int(parent.get("counter_hops") or 0) + 1, parent.get("thread")
     else:
         thread = "%s:%s" % (me, cur[0])
 
@@ -122,7 +122,7 @@ if thread is not None and os.path.isdir(sent_dir):
                     s = json.load(f)
             except (OSError, ValueError):
                 continue
-            if s.get("thread") == thread and s.get("hops") == hops:
+            if s.get("thread") == thread and s.get("counter_hops") == hops:
                 already += 1
 if already + len(recipients) > max_sends:
     die("SendsBad", "處理這一封時已經寄了 %d 封，再寄 %d 封會超過上限 %d。請直接用純文字給出你的結論。" % (already, len(recipients), max_sends))
@@ -140,7 +140,7 @@ for r, lid in zip(recipients, ids):
         failed.append("%s（信箱 %s 不在）" % (r, box))
         continue
     letter = {"kind": "letter", "id": lid, "from": me, "to": r, "group": group, "thread": thread,
-              "reply_to": reply_to, "hops": hops, "expect_reply": expect_reply,
+              "reply_to": reply_to, "counter_hops": hops, "expect_reply": expect_reply,
               "at": now.isoformat(timespec="milliseconds"), "subject": subject, "body": body}
     data = json.dumps(letter, ensure_ascii=False, indent=1) + "\n"
     os.makedirs(os.path.join(box, "tmp"), exist_ok=True)

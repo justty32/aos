@@ -212,9 +212,9 @@ class ReportCase(unittest.TestCase):
         self.assertEqual(h[-1], {"role": "assistant", "content": "4"})   # usage 不進 history
         served = until(lambda: (self.t / "kst" / "served.jsonl").read_text())
         line = json.loads(served.splitlines()[0])
-        self.assertEqual((line["code"], line["tokens"], line["report_bad"]), (0, 23, False))
+        self.assertEqual((line["code"], line["counter_tokens"], line["report_bad"]), (0, 23, False))
         used = json.loads((self.t / "kst" / "used.json").read_text())
-        self.assertEqual((used["calls"], used["tokens"]), (1, 23))
+        self.assertEqual((used["counter_calls"], used["counter_tokens"]), (1, 23))
 
     def test_dan_brain_without_kernel_writes_nothing(self):
         srv = UsageServer({"total_tokens": 5})
@@ -254,9 +254,9 @@ class DemoCase(unittest.TestCase):
             self.assertEqual([s["level"] for s in served], ["high", "normal", "normal"])
             self.assertEqual([s["time_ms"] for s in served], [5000, 800, None])   # 同級：宣告短的（b）先、沒寫的（a）最後
             self.assertEqual([s["code"] for s in served], [0, 0, 0])
-            self.assertEqual([s["tokens"] for s in served], [33, 33, 33])   # 假腦編的 usage（字數）經 AOS_KERNEL_REPORT 交回
+            self.assertEqual([s["counter_tokens"] for s in served], [33, 33, 33])   # 假腦編的 usage（字數）經 AOS_KERNEL_REPORT 交回
             used = json.loads(Path(ws, ".stack", "kernel", "used.json").read_text())
-            self.assertEqual((used["window"], used["calls"], used["tokens"]), ("day", 3, 99))
+            self.assertEqual((used["window"], used["counter_calls"], used["counter_tokens"]), ("day", 3, 99))
 
 
 if __name__ == "__main__":

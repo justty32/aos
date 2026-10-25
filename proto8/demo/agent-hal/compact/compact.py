@@ -193,7 +193,7 @@ def stage_note(body, report):
             if got and isinstance(got.get("notes"), list):
                 notes = {x.get("id"): x for x in got["notes"] if isinstance(x, dict) and isinstance(x.get("line"), str)}
             fell = [it["id"] for it in items if it["id"] not in notes]
-            st["fallbacks"] += len(fell)
+            st["counter_fallbacks"] += len(fell)
             cache[key] = {}
             for it in items:
                 x = notes.get(it["id"])
@@ -215,7 +215,7 @@ def stage_note(body, report):
 
 
 def count(st, usage):
-    st["calls"] += 1
+    st["counter_calls"] += 1
     st["prompt_tokens"] += usage["prompt_tokens"]
     st["completion_tokens"] += usage["completion_tokens"]
     st["estimated"] = st["estimated"] or usage["estimated"]
@@ -278,7 +278,7 @@ def render(ln, cut):
 def stage_segment(lines, report):
     st = report["stages"]["segment"]
     segs = segments(lines)
-    st["segments"] = len(segs)
+    st["counter_segments"] = len(segs)
     out = []
     os.makedirs(os.path.join(RUN, "seg"), exist_ok=True)
     for i, seg in enumerate(segs, 1):
@@ -295,7 +295,7 @@ def stage_segment(lines, report):
             reply = ask.parse_json(content)
             fallback = not (reply and isinstance(reply.get("summary"), str))
             summary = content.strip() if fallback else reply["summary"].strip()
-            st["fallbacks"] += fallback
+            st["counter_fallbacks"] += fallback
             if not summary:                    # 空的摘要換上去＝這段整個不見：寧可停下（重跑會再問這段）
                 die("SummaryEmpty", "第 %d 段（L%d～L%d）的摘要是空的" % (i, nums[0], nums[-1]))
             keeps, dropped = [], []
@@ -359,7 +359,7 @@ def stage_final(segs, old, report):
     count(st, usage)
     reply = ask.parse_json(content)
     fallback = not (reply and isinstance(reply.get("summary"), str))
-    st["fallbacks"] += fallback
+    st["counter_fallbacks"] += fallback
     if not summary_of(content, reply, fallback):
         die("SummaryEmpty", "第 3 步的摘要是空的")
     by_id = {k["id"]: k for k in cands}
@@ -373,7 +373,7 @@ def stage_final(segs, old, report):
         if x in by_id and x not in seen and len(keep) < KEEP_FINAL_MAX:
             keep.append(by_id[x])
             seen.add(x)
-    got = {"summary": summary, "keep": keep, "candidates": len(cands), "fallback": fallback}
+    got = {"summary": summary, "keep": keep, "counter_candidates": len(cands), "fallback": fallback}
     write_json(path, got)
     return got
 
@@ -415,9 +415,9 @@ def main():
         src = {"sha": sha(HIST), "bytes": before, "cut": cut, "started": now_id()}
         write_json(os.path.join(RUN, "source.json"), src)
     report = read_json(os.path.join(RUN, "report.json")) or {
-        "stages": {s: {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "estimated": False, "fallbacks": 0}
+        "stages": {s: {"counter_calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "estimated": False, "counter_fallbacks": 0}
                    for s in ("note", "segment", "final")}}
-    report["stages"]["segment"].setdefault("segments", 0)
+    report["stages"]["segment"].setdefault("counter_segments", 0)
     try:
         lines = stage_note(body, report)
         write_jsonl(os.path.join(RUN, "stage1.jsonl"), lines)
@@ -444,12 +444,12 @@ def main():
                    "models": {"note": MODEL_NOTE, "segment": MODEL_SEG, "final": MODEL_FINAL},
                    "settings": {"over_kb": OVER_KB, "seg_kb": SEG_KB, "keep_turns": KEEP_TURNS, "keep_max": KEEP_MAX,
                                 "keep_final_max": KEEP_FINAL_MAX, "keep_line_max": KEEP_LINE_MAX},
-                   "before": {"bytes": before, "messages": len(rows)},
-                   "compacted": {"bytes": sum(len(r[1].encode()) + 1 for r in prefix), "messages": len(prefix),
+                   "before": {"bytes": before, "counter_messages": len(rows)},
+                   "compacted": {"bytes": sum(len(r[1].encode()) + 1 for r in prefix), "counter_messages": len(prefix),
                                  "stage1_bytes": sum(size(x) + 1 for x in lines)},
-                   "after": {"bytes": os.path.getsize(new_path), "messages": len(new_lines)},
-                   "tail_messages": len(tail),
-                   "keep": {"candidates": final["candidates"], "final": [k["id"] + " " + k["tag"] for k in final["keep"]],
+                   "after": {"bytes": os.path.getsize(new_path), "counter_messages": len(new_lines)},
+                   "counter_tail_messages": len(tail),
+                   "keep": {"counter_candidates": final["counter_candidates"], "final": [k["id"] + " " + k["tag"] for k in final["keep"]],
                             "dropped": [d for s in segs for d in s["dropped"]]}})
     write_json(os.path.join(RUN, "report.json"), report)
     if report["after"]["bytes"] >= before:    # 沒變小就不換（摘要寫得比原文還長）；半成品收成 nosave-<run>
@@ -486,8 +486,8 @@ def finish(src):
     log(report)
     st = report["stages"]
     print("compact: %d 則 %.1f KB → %d 則 %.1f KB（呼叫 note %d、segment %d、final %d 次；留 %d 行；%s）" % (
-        report["before"]["messages"], report["before"]["bytes"] / 1024, report["after"]["messages"],
-        report["after"]["bytes"] / 1024, st["note"]["calls"], st["segment"]["calls"], st["final"]["calls"],
+        report["before"]["counter_messages"], report["before"]["bytes"] / 1024, report["after"]["counter_messages"],
+        report["after"]["bytes"] / 1024, st["note"]["counter_calls"], st["segment"]["counter_calls"], st["final"]["counter_calls"],
         len(report["keep"]["final"]), "compact/" + src["run"]))
     return 0
 

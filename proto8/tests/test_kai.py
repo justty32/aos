@@ -166,6 +166,7 @@ class T(unittest.TestCase):
         self.ask(b.url, "q2", full_under="")
         self.ask(b.url, "q3", full_under="0")
         self.assertEqual([c["mode"] for c in self.contexts()], ["full", "full", "intent"])
+        self.assertEqual([(c["counter_turns"], c["counter_history_messages"]) for c in self.contexts()], [(0, 1), (1, 3), (2, 5)])   # 計數叫 counter_*（10-25）
         self.assertEqual([m["role"] for m in b.requests[1]["messages"]], ["system", "user", "assistant", "user"])
         self.assertNotIn("## 先前對話的目錄", b.requests[1]["messages"][0]["content"])
         self.assertIn("## 先前對話的目錄", b.requests[2]["messages"][0]["content"])

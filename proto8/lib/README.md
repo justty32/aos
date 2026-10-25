@@ -58,20 +58,22 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 
 ## 索引：base（10-24）
 
+回 JSON 的工具裡，計數（幾個、幾行、幾字）的 key 一律 `counter_<被數的東西>`（10-25 使用者「計數這塊，幫我改成counter_*」，C-54 命名方法 R6；原 `total`、`children`、`hidden`、`keys_more`、`children_more`、`lines`、`total_lines`、`len`、摘要裡的 `keys`／`items`／`chars`、`set`／`del`、`files`）；陣列本身（`items`、`keys` 清單）照舊。aos 那幾個：信的 `hops` 改 `counter_hops`、memory 頂層索引的 `count` 改 `counter_active`。
+
 | 工具 | 一句話 | 參數 | 回什麼 | 來源 |
 |---|---|---|---|---|
 | [read](base/read/) | 讀工作區裡一個文字檔，太長從頭截 | `path`、`offset`、`limit` | 內容（不加行號）；被截時尾巴寫從第幾行接著讀 | demo/pi-tools/read |
 | [write](base/write/) | 整份寫進一個檔（建或蓋）、上層資料夾自動建 | `path`、`content` | 一行：寫了幾 bytes | demo/pi-tools/write |
 | [edit](base/edit/) | 幾處照字面替換，一處不合整個不改 | `path`、`edits[{old_text, new_text}]` | 一行：換了幾處 | demo/pi-tools/edit |
 | [bash](base/bash/) | 在工作區用 bash 跑一行指令 | `command`、`timeout_s`（30／300） | stdout＋stderr 合在一起、尾巴寫結束碼；留最後 2000 行／50KB | demo/pi-tools/bash（`timeout` 改名 `timeout_s`） |
-| [ls](base/ls/) | 列一個資料夾的子項，一次一頁 | `path`、`offset`、`limit`（100／500）、`hidden` | JSON：`items[{name, type, size, mtime}]`（資料夾多 `children`、`aos`，檔多 `exec`，`.json` 多 `keys`）、`next_offset` | 新寫，遷移時併進 demo/file-tools/ls 的加料 |
-| [stat](base/stat/) | 單一個檔或資料夾的屬性 | `path` | JSON：`type`、`mtime`、`mode`；檔多 `size`、`exec`、`text`、`lines`、`format`、`top` | demo/file-tools/stat |
+| [ls](base/ls/) | 列一個資料夾的子項，一次一頁 | `path`、`offset`、`limit`（100／500）、`hidden` | JSON：`counter_items`（一共幾項）、`items[{name, type, size, mtime}]`（資料夾多 `counter_children`、`aos`，檔多 `exec`，`.json` 多 `keys`）、`next_offset`、`counter_hidden` | 新寫，遷移時併進 demo/file-tools/ls 的加料 |
+| [stat](base/stat/) | 單一個檔或資料夾的屬性 | `path` | JSON：`type`、`mtime`、`mode`；檔多 `size`、`exec`、`text`、`counter_lines`、`format`、`top` | demo/file-tools/stat |
 | [view](base/view/) | 漸進看一個檔：JSON 照指標一次一層、大文字檔先給大綱 | `path`、`pointer` 或 `start`／`end` | JSON：`value` 或 `children`；文字的 `text` 或 `outline` | demo/file-tools/view |
-| [json_read](base/json_read/) | 看一份 JSON 檔的某個位置，大的摺起來 | `path`、`pointer`、`depth`（1／10） | JSON：`value`，物件摺成 `{type, keys}`、陣列 `{type, len}` | 新寫（Python；換 aos-json 的 peek 輸出不同、沒好處，沒換） |
-| [json_edit](base/json_edit/) | 照指標改幾個位置，一處不合整份不寫 | `path`、`set{指標: 值}`、`del[指標]` | JSON：改了幾個、頂層 key | 新寫；遷移時寫檔改叫 aos-json（只重寫有變的那塊），介面不變 |
+| [json_read](base/json_read/) | 看一份 JSON 檔的某個位置，大的摺起來 | `path`、`pointer`、`depth`（1／10） | JSON：`value`，物件摺成 `{type, keys}`、陣列 `{type, counter_items}`、長字串 `{type, counter_chars, head}` | 新寫（Python；換 aos-json 的 peek 輸出不同、沒好處，沒換） |
+| [json_edit](base/json_edit/) | 照指標改幾個位置，一處不合整份不寫 | `path`、`set{指標: 值}`、`del[指標]` | JSON：`counter_set`、`counter_del`（改了幾個）、頂層 key | 新寫；遷移時寫檔改叫 aos-json（只重寫有變的那塊），介面不變 |
 | [mkdir](base/mkdir/) | 建資料夾（上層一起建；已有＝沒事） | `path` | JSON：`path`、`created` | demo/file-tools/mkdir |
 | [move](base/move/) | 搬移或改名（to 有東西就不搬） | `from`、`to` | JSON：`from`、`to` | demo/file-tools/move |
-| [copy](base/copy/) | 複製檔或整個資料夾（捷徑照捷徑） | `from`、`to` | JSON：`from`、`to`、`files` | demo/file-tools/copy |
+| [copy](base/copy/) | 複製檔或整個資料夾（捷徑照捷徑） | `from`、`to` | JSON：`from`、`to`、`counter_files` | demo/file-tools/copy |
 | [trash](base/trash/) | 丟進 `.trash/<時間>/`（不真的刪，move 救回） | `path` | JSON：`path`、`to` | demo/file-tools/trash |
 | [math](base/math/) | 算一個算術式子（不用 eval） | `expr` | 結果 | demo/agent-dan/tools/math |
 | [clock](base/clock/) | 現在的 UTC 時間 | （無） | `2026-10-23T08:00:00Z` | demo/agent-dan/tools/clock（原本是 sh，改 python3 才能照契約驗 stdin） |
@@ -117,7 +119,7 @@ pyfix 的子 agent 要改的程式在 `PYFIX_DIR`（`$AOS_WS/<dir>`），自己�
 
 ## 範例：demo/agent-liv
 
-agent-dan 的複本（只改錯誤訊息開頭與假腦；act 10-24 真腦實測後改照 agent-pip：工具的錯回給腦、不停），`tools/` 裡七條捷徑掛上面七個，加一個自己的 `clock/`（真資料夾，示範並存）；`_metainfo` 寫這隻 agent 的特性。假腦叫一次 `ls`、拿 `total` 答題，證明捷徑掛進來的工具經 aos-exec 跑得動、小格落在 `$AOS_STACK/ls/`。跑法同 agent-dan：`aos-exec --ws <工作區> proto8/demo/agent-liv`（PATH 放好 impls 三支；設 `AOS_BRAIN_URL` 才用真腦）。
+agent-dan 的複本（只改錯誤訊息開頭與假腦；act 10-24 真腦實測後改照 agent-pip：工具的錯回給腦、不停），`tools/` 裡七條捷徑掛上面七個，加一個自己的 `clock/`（真資料夾，示範並存）；`_metainfo` 寫這隻 agent 的特性。假腦叫一次 `ls`、拿 `counter_items`（10-25 原 `total`）答題，證明捷徑掛進來的工具經 aos-exec 跑得動、小格落在 `$AOS_STACK/ls/`。跑法同 agent-dan：`aos-exec --ws <工作區> proto8/demo/agent-liv`（PATH 放好 impls 三支；設 `AOS_BRAIN_URL` 才用真腦）。
 
 ## 測試
 

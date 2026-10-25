@@ -96,18 +96,18 @@ Used read_used(const std::string& stack, const std::string& window) {
         std::optional<Json> doc = aos::read_json(path);
         bool ok = doc && doc->is_object() && doc->value("window", Json()).is_string() &&
                   (doc->value("since", Json()).is_string() || doc->value("since", Json()).is_null());
-        for (const char* k : {"calls", "tokens", "all_calls", "all_tokens"}) {
+        for (const char* k : {"counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens"}) {
             ok = ok && aos::is_count(doc->value(k, Json()));
         }
         if (!ok) {
-            throw Error{code::UsedBad, path + " 要是 {\"window\", \"since\", \"calls\", \"tokens\", \"all_calls\", \"all_tokens\"}（刪掉它就從 0 算）"};
+            throw Error{code::UsedBad, path + " 要是 {\"window\", \"since\", \"counter_calls\", \"counter_tokens\", \"counter_all_calls\", \"counter_all_tokens\"}（刪掉它就從 0 算）"};
         }
         u.window = (*doc)["window"].get<std::string>();
         u.since = (*doc)["since"];
-        u.calls = (*doc)["calls"].get<long long>();
-        u.tokens = (*doc)["tokens"].get<long long>();
-        u.all_calls = (*doc)["all_calls"].get<long long>();
-        u.all_tokens = (*doc)["all_tokens"].get<long long>();
+        u.calls = (*doc)["counter_calls"].get<long long>();
+        u.tokens = (*doc)["counter_tokens"].get<long long>();
+        u.all_calls = (*doc)["counter_all_calls"].get<long long>();
+        u.all_tokens = (*doc)["counter_all_tokens"].get<long long>();
     }
     roll(u, window);
     return u;
@@ -123,10 +123,10 @@ void add_used(const std::string& stack, Used& u, const Report& r) {
     Json doc = Json::object();
     doc["window"] = u.window;
     doc["since"] = u.since;
-    doc["calls"] = u.calls;
-    doc["tokens"] = u.tokens;
-    doc["all_calls"] = u.all_calls;
-    doc["all_tokens"] = u.all_tokens;
+    doc["counter_calls"] = u.calls;
+    doc["counter_tokens"] = u.tokens;
+    doc["counter_all_calls"] = u.all_calls;
+    doc["counter_all_tokens"] = u.all_tokens;
     std::optional<std::string> err = aos::write_json(aos::join(stack, "used.json"), doc);
     if (err) {
         throw Error{code::WriteFailed, *err};

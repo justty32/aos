@@ -160,10 +160,10 @@ class T(unittest.TestCase):
         rep = self.report(run_id)
         kinds = f.kinds()
         self.assertEqual(kinds.count("note"), 9)
-        self.assertEqual(kinds.count("segment"), rep["stages"]["segment"]["segments"])
-        self.assertGreater(rep["stages"]["segment"]["segments"], 1)
+        self.assertEqual(kinds.count("segment"), rep["stages"]["segment"]["counter_segments"])
+        self.assertGreater(rep["stages"]["segment"]["counter_segments"], 1)
         self.assertEqual(kinds.count("final"), 1)
-        self.assertEqual(rep["stages"]["note"]["calls"], 9)
+        self.assertEqual(rep["stages"]["note"]["counter_calls"], 9)
         self.assertEqual(rep["stages"]["note"]["prompt_tokens"], 900)
         self.assertFalse(rep["stages"]["note"]["estimated"])
         models = {k: b["model"] for k, b in f.requests}
@@ -182,8 +182,8 @@ class T(unittest.TestCase):
         self.assertEqual(h[1]["role"], "assistant")
         self.assertEqual(self.hist.read_text().splitlines()[2:], text.splitlines()[-4:])   # 最後一題原樣
         self.assertEqual((self.stack / "compact" / run_id / "orig.jsonl").read_text(), text)
-        self.assertEqual(rep["before"]["messages"], 40)
-        self.assertEqual(rep["after"]["messages"], 6)
+        self.assertEqual(rep["before"]["counter_messages"], 40)
+        self.assertEqual(rep["after"]["counter_messages"], 6)
         self.assertLess(rep["after"]["bytes"], rep["before"]["bytes"])
         log = (self.stack / "compact" / "log.jsonl").read_text().splitlines()
         self.assertEqual(json.loads(log[-1])["run"], run_id)
@@ -234,7 +234,7 @@ class T(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(good.kinds().count("note"), 0)
         rep = self.report(self.runs()[0])
-        self.assertEqual(rep["stages"]["note"]["calls"], 4)     # 前一次花的也算進來
+        self.assertEqual(rep["stages"]["note"]["counter_calls"], 4)     # 前一次花的也算進來
         self.assertEqual((self.stack / "compact" / self.runs()[0] / "orig.jsonl").read_text(), text)
 
     def test_recompact(self):
@@ -282,8 +282,8 @@ class T(unittest.TestCase):
         r = self.compact(f.url, COMPACT_KEEP_TURNS=0)
         self.assertEqual(r.returncode, 0, r.stderr)
         rep = self.report(self.runs()[0])
-        self.assertEqual(rep["stages"]["note"]["fallbacks"], 2)
-        self.assertEqual(rep["stages"]["segment"]["fallbacks"], 1)
+        self.assertEqual(rep["stages"]["note"]["counter_fallbacks"], 2)
+        self.assertEqual(rep["stages"]["segment"]["counter_fallbacks"], 1)
         seg = [b for k, b in f.requests if k == "segment"][0]["messages"][1]["content"]
         self.assertIn("叫 math", seg)
         final = [b for k, b in f.requests if k == "final"][0]["messages"][1]["content"]

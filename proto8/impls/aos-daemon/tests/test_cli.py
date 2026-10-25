@@ -476,7 +476,7 @@ class T(unittest.TestCase):
         self.assertEqual(p.returncode, 0)
         self.assertGreater(len(seen), 5)
         self.assertEqual({s["phase"] for s in seen}, {"waiting"})
-        self.assertEqual(len({s["counter"] for s in seen}), len(seen), "一次只寫一份")
+        self.assertEqual(len({s["counter_runs"] for s in seen}), len(seen), "一次只寫一份")
         g = self.gaps(seen)
         self.assertTrue(all(0.25 < x < 0.5 for x in g), g)
 
@@ -489,7 +489,7 @@ class T(unittest.TestCase):
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"x": self.long()}})
         st = until(lambda: self.state(), 5)
         self.assertTrue(st, "起子項之前沒寫 state")
-        self.assertEqual((st["phase"], st["counter"], st["loops"]), ("waiting", 0, {}))
+        self.assertEqual((st["phase"], st["counter_runs"], st["loops"]), ("waiting", 0, {}))
         fd = os.open(cell / "stderr.txt", os.O_RDONLY | os.O_NONBLOCK)
         try:
             self.assertTrue(until(lambda: (cell / "starts").exists() and self.kids()["x"]["phase"] == "running"))
@@ -724,7 +724,7 @@ class T(unittest.TestCase):
             (self.t / n / "_entry").chmod(0o755)
         self.cfg({"exec": {"argv": ["true"]}, "interval_ms": 100, "state": "state.json", "ctl": "ctl.json", "loops": {}})
         p = self.popen_env({"AOS_STACK": str(self.s), "AOS_CF": str(self.t / "p1"), "AOS_CD": str(self.t / "pd"), "AOS_CO": "p3"})
-        self.assertTrue(until(lambda: self.state()["counter"] >= 1))
+        self.assertTrue(until(lambda: self.state()["counter_runs"] >= 1))
         self.ctl({"loops": {"a": {"exec": {"$env": "AOS_CF"}, "max": 1}, "b": {"exec": {"$env": "AOS_CD", "$path": "p2"}, "max": 1},
                             "c": {"exec": {"$env": "AOS_CO"}, "max": 1}}})
         k = until(lambda: len(self.kids()) == 3 and all(r["phase"] == "done" for r in self.kids().values()) and self.kids())

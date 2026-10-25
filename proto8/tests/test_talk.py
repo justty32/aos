@@ -145,7 +145,7 @@ class SendMessage(TalkCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("已寄出 1 封", r.stdout)
         [l] = letters(self.ws / "ann" / "new")
-        self.assertEqual((l["from"], l["to"], l["hops"], l["reply_to"], l["thread"]), ("user", "ann", 1, None, l["id"]))
+        self.assertEqual((l["from"], l["to"], l["counter_hops"], l["reply_to"], l["thread"]), ("user", "ann", 1, None, l["id"]))
         self.assertTrue(l["expect_reply"])
         self.assertEqual(letters(self.ws / "user" / "sent"), [l])
         self.assertEqual(list((self.ws / "ann" / "tmp").iterdir()), [])
@@ -200,11 +200,11 @@ class SendMessage(TalkCase):
         r = self.send("ann", {"to": ["bob", "cat"], "body": "幫忙"})
         self.assertIn("第 2 手", r.stdout)
         b = letters(self.ws / "bob" / "new")[0]
-        self.assertEqual((b["hops"], b["reply_to"], b["thread"]), (2, p.stem, json.loads((self.ws / "ann" / "cur" / p.name).read_text())["thread"]))
+        self.assertEqual((b["counter_hops"], b["reply_to"], b["thread"]), (2, p.stem, json.loads((self.ws / "ann" / "cur" / p.name).read_text())["thread"]))
         r = self.send("ann", {"to": "bob", "body": "再一封"})            # 這一層已寄 2 封＝上限
         self.assertTrue(r.stdout.startswith("send_message: SendsBad 處理這一封時已經寄了 2 封"), r.stdout)
         letter = json.loads((self.ws / "ann" / "cur" / p.name).read_text())
-        letter["hops"] = 3
+        letter["counter_hops"] = 3
         (self.ws / "ann" / "cur" / p.name).write_text(json.dumps(letter))
         r = self.send("ann", {"to": "bob", "body": "超過"})
         self.assertTrue(r.stdout.startswith("send_message: HopsBad 這個對話串已經傳了 3 手"), r.stdout)
@@ -224,7 +224,7 @@ class Team(TalkCase):
         r = self.run_team()
         self.assertEqual(r.returncode, 0, r.stderr)
         [l] = letters(self.ws / "user" / "new")
-        self.assertEqual((l["from"], l["subject"], l["hops"], l["expect_reply"]), ("ann", "Re: 問", 2, False))
+        self.assertEqual((l["from"], l["subject"], l["counter_hops"], l["expect_reply"]), ("ann", "Re: 問", 2, False))
         self.assertIn("FAKE ANSWER to: 1+1？", l["body"])
         self.assertEqual(json.loads((self.ws / ".stack" / "state.json").read_text())["phase"], "done")
 
@@ -240,8 +240,8 @@ class Team(TalkCase):
         [final] = letters(self.ws / "user" / "new")
         self.assertEqual(final["from"], "ann")
         self.assertIn("總餐費 11985 元", final["body"])
-        sent = sorted((l for n in ("user", "ann", "bob", "cat") for l in letters(self.ws / n / "sent")), key=lambda l: l["hops"])
-        self.assertEqual([(l["from"], l["to"], l["hops"]) for l in sent],
+        sent = sorted((l for n in ("user", "ann", "bob", "cat") for l in letters(self.ws / n / "sent")), key=lambda l: l["counter_hops"])
+        self.assertEqual([(l["from"], l["to"], l["counter_hops"]) for l in sent],
                          [("user", "ann", 1), ("ann", "bob", 2), ("bob", "ann", 3), ("ann", "cat", 4), ("cat", "ann", 5), ("ann", "user", 6)])
         self.assertEqual(len({l["thread"] for l in sent}), 1)
         for n in ("ann", "bob", "cat"):
@@ -260,7 +260,7 @@ class Team(TalkCase):
             brain.close()
         self.assertEqual(r.returncode, 0, r.stderr)
         sent = [l for n in ("ann", "bob") for l in letters(self.ws / n / "sent")]
-        self.assertEqual(sorted(l["hops"] for l in sent), [2, 3, 4, 5])      # 第 1 手是 user 寄的；第 6 手被擋
+        self.assertEqual(sorted(l["counter_hops"] for l in sent), [2, 3, 4, 5])      # 第 1 手是 user 寄的；第 6 手被擋
         outs = [p.read_text() for n in ("ann", "bob") for p in (self.ws / n / "out").glob("*.txt")]
         self.assertTrue(any("停了：send_message: HopsBad 這個對話串已經傳了 5 手" in o for o in outs), outs)
 

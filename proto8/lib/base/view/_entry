@@ -6,6 +6,7 @@
 # 文字檔：給了 start／end（行號，第一行是 1）＝那幾行原文；沒給時小檔（≤ 200 行且 ≤ 8KB）整份給，大檔先給大綱
 #   （Python：class／def 與行號範圍；Markdown：標題與行號；其他：前 40 行），再用 start／end 看要的那段。一次最多 2000 行或 50KB。
 # 要把 JSON 當文字看（看原始排版），給 start／end 就好。路徑從 $AOS_WS 算、不能跑出去。
+# 計數的 key 一律 counter_*（10-25，原 total_lines、children_more，摘要裡的 keys、items、chars）。
 # 錯：stderr 與 stdout 各一行「view: 代號 原因」、退 1。來源：demo/file-tools/view（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
 import ast, json, os, re, sys
 
@@ -54,11 +55,11 @@ def inside(rel, root_ok=True):
 def json_summary(v):
     """一個 JSON 值的一句摘要：型別＋大小（物件幾個 key、陣列幾項、字串幾字），純值短的直接給。"""
     if isinstance(v, dict):
-        return {"type": "object", "keys": len(v)}
+        return {"type": "object", "counter_keys": len(v)}
     if isinstance(v, list):
-        return {"type": "array", "items": len(v)}
+        return {"type": "array", "counter_items": len(v)}
     if isinstance(v, str) and len(v) > 80:
-        return {"type": "string", "chars": len(v), "head": v[:60]}
+        return {"type": "string", "counter_chars": len(v), "head": v[:60]}
     names = {type(None): "null", bool: "boolean", int: "number", float: "number", str: "string"}
     return {"type": names[type(v)], "value": v}
 
@@ -120,7 +121,7 @@ if doc is not None:                     # ---- JSON：照 pointer 看一層
             items = list(v.items()) if isinstance(v, dict) else list(enumerate(v))
             res["children"] = [dict({"key": k}, **json_summary(c)) for k, c in items[:CHILDREN_MAX]]
             if len(items) > CHILDREN_MAX:
-                res["children_more"] = len(items) - CHILDREN_MAX
+                res["counter_children_more"] = len(items) - CHILDREN_MAX
             res["hint"] = "把子項的 key 接到 pointer 後面再看（例：%s/%s）" % (pointer, items[0][0]) if items else ""
     out(res)
     sys.exit(0)
@@ -129,7 +130,7 @@ lines = text.split("\n")                # ---- 文字檔
 if text.endswith("\n"):
     lines.pop()
 total = len(lines)
-res = {"path": shown, "format": "text", "total_lines": total}
+res = {"path": shown, "format": "text", "counter_lines": total}
 
 
 def segment(s, e):

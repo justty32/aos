@@ -1,6 +1,6 @@
 // queue.hpp：【queue】排隊——kernel 自己記的帳（$AOS_STACK/queue.json）與「誰先跑」。
 //
-//   read_queue / write_queue   queue.json＝{"runs": kernel 跑過幾次, "seen_at_runs": {信號: 第一次看到它是第幾次}}
+//   read_queue / write_queue   queue.json＝{"counter_runs": kernel 跑過幾次（10-25 原 runs）, "seen_at_runs": {信號: 第一次看到它是第幾次}}
 //                              （沒有＝從 0 起；在但讀不懂＝QueueBad；寫：先寫暫存再改名，N-05）
 //   effective                  這封信現在算幾級：level＋等了幾次÷10（10-15 定案「每等 10 拍升一級」；不封頂，等久了 low 可以超過 high）
 //   order                      排隊：級數大的先 → deadline 近的先（有寫的排在沒寫的前面）→ 單子 `_metainfo` 宣告的 time_ms 短的先

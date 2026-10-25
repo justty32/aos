@@ -231,7 +231,7 @@ void Server::finish(const Served& s) {
     line["at"] = s.at;
     line["letter"] = s.id;
     line["level"] = s.level;
-    line["waited_runs"] = s.waited_runs;
+    line["counter_waited_runs"] = s.waited_runs;
     Json code = nullptr;
     Json signal = nullptr;
     Json error = nullptr;
@@ -253,7 +253,7 @@ void Server::finish(const Served& s) {
     if (counted) {
         rep = read_report(aos::join(dir, "report.json"));   // 腦願意寫才有（AOS_KERNEL_REPORT）；沒寫＝只算次數
     }
-    line["tokens"] = rep.tokens;
+    line["counter_tokens"] = rep.tokens;
     line["report_bad"] = rep.bad;
     std::string path = aos::join(stack_, "served.jsonl");
     std::FILE* f = std::fopen(path.c_str(), "a");

@@ -130,7 +130,7 @@ def budget():
 
 
 def used():
-    """用掉多少：rounds＝改進了幾輪（含失敗中斷的）、elapsed_ms＝從第一次跑到現在、tokens＝改進者問腦的 usage 加總。"""
+    """用掉多少：counter_rounds＝改進了幾輪（含失敗中斷的）、elapsed_ms＝從第一次跑到現在、counter_tokens＝改進者問腦的 usage 加總（10-25 原 rounds、tokens）。"""
     started = read(os.path.join(stack, "started_at.txt"))
     elapsed = 0
     if started:
@@ -145,7 +145,7 @@ def used():
                 except (ValueError, KeyError, TypeError, AttributeError):
                     pass
     failed = len(os.listdir(os.path.join(stack, "failed"))) if os.path.isdir(os.path.join(stack, "failed")) else 0
-    return {"rounds": max(len(versions()) - 1, 0) + failed, "elapsed_ms": elapsed, "tokens": tokens}
+    return {"counter_rounds": max(len(versions()) - 1, 0) + failed, "elapsed_ms": elapsed, "counter_tokens": tokens}
 
 
 def sandbox():

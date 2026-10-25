@@ -122,8 +122,8 @@ if turns.estimate(full_system + full) <= full_under:   # 整份還很短：直�
     system, work, picked, mode = full_system, full, [], "full"
 with open(os.path.join(stack, "context.jsonl"), "a", encoding="utf-8") as f:
     f.write(json.dumps({"at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds"),
-                        "question": name, "mode": mode, "turns": len(done), "picked": [[no, why] for no, why in picked],
-                        "memory": bool(memory), "history_messages": len(history), "sent_messages": len(system + work),
+                        "question": name, "mode": mode, "counter_turns": len(done), "picked": [[no, why] for no, why in picked],
+                        "memory": bool(memory), "counter_history_messages": len(history), "counter_sent_messages": len(system + work),
                         "est_tokens": turns.estimate(system + work), "est_tokens_full": turns.estimate(full_system + full)},
                        ensure_ascii=False) + "\n")
 

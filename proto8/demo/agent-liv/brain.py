@@ -92,7 +92,7 @@ def fake():
     if last.get("role") == "tool":
         try:
             listed = json.loads(last.get("content") or "")
-            content += "（ls said: %d items）" % listed.get("total", 0)
+            content += "（ls said: %d items）" % listed.get("counter_items", 0)
         except ValueError:
             content += "（ls said: %s）" % (last.get("content") or "").rstrip("\n")
     return {"role": "assistant", "content": content}

@@ -16,8 +16,8 @@ cat loop.json
 # {"exec": {"argv": ["aos-kernel-llm", "kernel.json"]}, "interval_ms": 300}
 AOS_STACK=st/ AOS_KERNEL=$PWD/mb aos-loop loop.json &    # kernel 一直顧著信箱 mb/
 AOS_KERNEL=$PWD/mb aos-gate brain.json                    # 寄一封、等回信、結果原樣交回（見 aos-gate）
-cat st/served.jsonl   # {"at": "...", "letter": "0179...", "level": "high", "waited_runs": 0, "code": 0, "signal": null, "error": null, "elapsed_ms": 1085, …, "tokens": 43, "report_bad": false}
-cat st/used.json      # {"window": "day", "since": "2026-10-24T00:00:00+08:00", "calls": 3, "tokens": 129, "all_calls": 3, "all_tokens": 129}
+cat st/served.jsonl   # {"at": "...", "letter": "0179...", "level": "high", "counter_waited_runs": 0, "code": 0, "signal": null, "error": null, "elapsed_ms": 1085, …, "counter_tokens": 43, "report_bad": false}
+cat st/used.json      # {"window": "day", "since": "2026-10-24T00:00:00+08:00", "counter_calls": 3, "counter_tokens": 129, "counter_all_calls": 3, "counter_all_tokens": 129}
 ```
 
 設計與決定見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10-24-llm-kernel.md)；排序規則是 [10-15 LLM kernel 稿](../../thinking/2026-10-15-llm-kernel.md) 已定的六條；規範 [N-42](../../NORMS/09-kernel.md)、信箱 [N-16](../../NORMS/05-基礎設施-窗.md)。
@@ -31,12 +31,12 @@ aos-kernel-llm [旗標] kernel.json
 - **命令列**：唯一的位置參數＝設定檔（可寫 `檔#/指標`，aos-util 的 `load_cfg`）；目前沒有旗標（不認得＝`FlagUnknown`、沒給或多給＝`ArgumentsBad`）。
 - **kernel.json**：`mailbox`（信箱資料夾；相對的從 `$AOS_STACK` 算——N-14 窗落在 `$AOS_STACK` 底下；沒寫＝`mailbox`）、`slots`（同時跑幾封，正整數；沒寫＝1）、`budget`（額度，見下「token 回報與額度」；沒寫＝不限、只記帳）、`accept`（只跑哪幾張單子，見下「accept」；沒寫＝什麼都收）；其他 key 忽略（`_entry`…）。
   這四格的指示詞先解（`{"$env": "AOS_KERNEL"}` 就是讓 kernel 與閘門讀同一個變數）；解不開 `DirectiveBad`。
-- **`$AOS_STACK`**（必要）：kernel 自己的兩個檔——
-  - `queue.json`：`{"runs": kernel 跑過幾次, "seen_at_runs": {信號: 第一次看到它是第幾次}}`（只留還在排的；先寫暫存再改名）。在但讀不懂＝`QueueBad`（刪掉就從頭算）。
-  - `served.jsonl`：每封信一行 `{"at", "letter", "level", "waited_runs", "code", "signal", "error", "elapsed_ms", "time_ms", "metainfo_bad", "tokens", "report_bad"}`（只附加）；跑了＝`code`／`signal`，沒跑或跑不起來＝`error` 是代號；
+- **`$AOS_STACK`**（必要）：kernel 自己的兩個檔（計數的 key 一律 `counter_*`：10-25 使用者「計數這塊，幫我改成counter_*」，原 `runs`、`waited_runs`、`tokens`、`calls`、`all_calls`、`all_tokens`）——
+  - `queue.json`：`{"counter_runs": kernel 跑過幾次, "seen_at_runs": {信號: 第一次看到它是第幾次}}`（只留還在排的；先寫暫存再改名）。在但讀不懂＝`QueueBad`（刪掉就從頭算）。
+  - `served.jsonl`：每封信一行 `{"at", "letter", "level", "counter_waited_runs", "code", "signal", "error", "elapsed_ms", "time_ms", "metainfo_bad", "counter_tokens", "report_bad"}`（只附加）；跑了＝`code`／`signal`，沒跑或跑不起來＝`error` 是代號；
     `elapsed_ms`＝實際花多久、`time_ms`＝單子 `_metainfo` 宣告的（沒寫＝null）——宣告與實測放一起，kernel 絕不回寫使用者的 `_metainfo`（10-24 metainfo M7）；`metainfo_bad`＝寫壞而當沒寫的 key；
-    `tokens`＝腦回報的 token 數（沒回報、回報壞、沒跑＝null）、`report_bad`＝回報檔在但讀不懂（10-24 下午加）。
-  - `used.json`：用量帳 `{"window", "since", "calls", "tokens", "all_calls", "all_tokens"}`——這一窗（`since` 起）跑了幾封、多少 token，與開帳以來的總數；每封跑過的信寫完 served 那行就記一次（先寫暫存再改名）。在但讀不懂＝`UsedBad`（刪掉就從 0 算）。
+    `counter_waited_runs`＝排了幾次才輪到；`counter_tokens`＝腦回報的 token 數（沒回報、回報壞、沒跑＝null）、`report_bad`＝回報檔在但讀不懂（10-24 下午加）。
+  - `used.json`：用量帳 `{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens"}`——這一窗（`since` 起）跑了幾封、多少 token，與開帳以來的總數；每封跑過的信寫完 served 那行就記一次（先寫暫存再改名）。在但讀不懂＝`UsedBad`（刪掉就從 0 算）。
 - **信箱**（N-16 資料夾式）：`tmp/`、`new/`、`cur/`、`done/` 四格，一封信＝一個資料夾 `<信號>/`；kernel 每次先建好四格（建不了 `MkdirFailed`），`.lock` 用 flock 鎖住整次（另一個 kernel 鎖著＝`LockFailed`）。
   信號＝`<UTC 奈秒 20 位>.<閘門 pid>.<閘門 started_at_ticks>`：字典序＝寄的先後（pid、ticks 只讓名字不撞）。
   **寄信的人還在不在＝信裡的 `sender.lock` 有沒有人鎖著**（10-24 晚改，[thinking sandbox S15](../../thinking/2026-10-24-sandbox.md)）：閘門在 `tmp/.<信號>/` 建信、先 flock 住 `sender.lock`、拿到行程結束，寫好才改名進 `new/`；kernel 試著拿共享鎖（不等），拿得到、檔不在、開不了＝人不在。flock 跟著檔走、不看 pid，沙箱（自己的行程編號）裡的閘門也認得。`tmp/` 裡 `.` 開頭的＝閘門正在寫：已有 `letter.json`（上了鎖才寫）而沒人鎖才刪。
@@ -50,13 +50,13 @@ aos-kernel-llm [旗標] kernel.json
 ### token 回報與額度（10-24 下午，[thinking § token 回報與額度](../../thinking/2026-10-24-llm-kernel.md#token-回報與額度10-24-下午)）
 
 - **回報**：kernel 跑每封信時，在信裡帶來的環境上**加一個** `AOS_KERNEL_REPORT`＝這封信小格裡的 `cur/<信號>/report.json`（信裡原本有同名的也蓋掉）。腦願意就把 API 回覆的 `usage` 物件**原樣**寫進去（先寫 `.report.json` 再改名）；
-  kernel 跑完讀它：`total_tokens`（非負整數）就是這封的 token 數；沒有 `total_tokens` 就 `prompt_tokens`＋`completion_tokens`；檔不在＝沒回報（`tokens` null，只算次數）；讀不懂、不是物件、數字不對＝`report_bad: true`（也只算次數，照樣交回信）。
+  kernel 跑完讀它：`total_tokens`（非負整數）就是這封的 token 數；沒有 `total_tokens` 就 `prompt_tokens`＋`completion_tokens`；檔不在＝沒回報（`counter_tokens` null，只算次數）；讀不懂、不是物件、數字不對＝`report_bad: true`（也只算次數，照樣交回信）。
   一封信問了好幾次腦，由腦自己加總再寫（kernel 只讀最後那份）。範本 [agent-dan 的 brain.py](../../demo/agent-dan/brain.py) 與 demo 的 agent-ivy 有寫（P-23 註）。
 - **算什麼**：子行程起來過（`runner.json` 在）的信才算一次、才讀回報——`LetterBad`、`DeadlineMissed`、`BudgetMissing` 不算；kernel 死了、下一次回 `RunFailed` 的那封算（腦可能已經花了錢）。
 - **額度**（kernel.json 的 `budget`，都選填）：`calls`、`tokens`＝每窗上限（非負整數；沒寫＝那一種不限）；`window`＝`"hour"`／`"day"`／`"all"`（沒寫＝`day`，10-15 定「一天一期歸零」；窗的起點用 kernel 的本地時間〔`TZ`〕的整點／午夜，`all`＝不歸零）；
   `spent`＝到頂時排著的信怎麼辦：`"refuse"`（沒寫＝這個，10-15「見底就擋」）回 `BudgetMissing`、不跑；`"wait"` 留在 `new/` 等下一窗（閘門一直等，由包它那格的 `timeout_ms` 守）。
-  `budget` 沒寫也照樣記 `used.json`（窗＝day）。換窗＝`used.json` 的 `window` 或 `since` 跟現在算出來的不同：`calls`、`tokens` 歸零，`all_*` 照留。
-- **到頂怎麼判**：要開下一封之前看——`calls` 已用＋這次已開的＋上一次留下還在跑的 ≥ 上限，或 `tokens` 已用 ≥ 上限。token 只能跑完才知道，所以一次裡最多超過「那一次所有封的量」（`slots` 1 時＝最後一封）。
+  `budget` 沒寫也照樣記 `used.json`（窗＝day）。換窗＝`used.json` 的 `window` 或 `since` 跟現在算出來的不同：`counter_calls`、`counter_tokens` 歸零，`counter_all_*` 照留。
+- **到頂怎麼判**：要開下一封之前看——`counter_calls`（已用）＋這次已開的＋上一次留下還在跑的 ≥ `calls` 上限，或 `counter_tokens`（已用）≥ `tokens` 上限。token 只能跑完才知道，所以一次裡最多超過「那一次所有封的量」（`slots` 1 時＝最後一封）。
 
 ### accept：只跑名單裡的單子（10-24，堵沙箱信箱後門，[thinking sandbox S14](../../thinking/2026-10-24-sandbox.md)）
 
@@ -73,7 +73,7 @@ kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sand
 
 ### 一次
 
-1. 建信箱四格、flock；`queue.json` 的 `runs`＋1。
+1. 建信箱四格、flock；`queue.json` 的 `counter_runs`＋1。
 2. **`cur/` 還有信**＝上一次 kernel 跑到一半死了（一次跑完才結束、又有鎖，正常時這裡是空的）：有 `reply.json` 就照它；跑信的子行程（`runner.json`）還活著＝讓它跑完、這次少一格；都不是＝回 `RunFailed`（10-15 六題 6「回錯」，不重跑）。有回信的寫一行 served、搬 `done/`。
 3. **收拾**：`tmp/`、`done/` 裡寄信的閘門不在了（`sender.lock` 沒人鎖）的刪掉；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑；跟閘門撤信同一招，不會跟認領撞）。
 4. **看 `new/`**：信讀不懂、`inst` 不是物件、priority 壞＝回 `LetterBad`；有 `accept` 而單子不在名單裡＝回 `InstUnknown`；deadline 已過＝回 `DeadlineMissed`（都不佔格、不跑）。
@@ -96,7 +96,7 @@ kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sand
 |---|---|
 | `include/aos/kernel_llm.hpp` | 公開：信箱四格（`Mailbox`）、信號（`letter_id`、`sender_alive`）、`parse_priority`／`priority_of`（priority＋`_metainfo` 的 `time_ms`、`llm_tokens`）／`level_name`、`read_reply`、全部代號（閘門也用） |
 | `src/letter/letter.cpp` | 上面那些的實作（ISO 8601 自己解：`YYYY-MM-DDTHH:MM:SS[.小數](Z|±HH:MM)`） |
-| `src/queue/queue.hpp`、`queue.cpp` | `queue.json` 讀寫、`waited_runs`、`effective`、`order` |
+| `src/queue/queue.hpp`、`queue.cpp` | `queue.json` 讀寫、`waited_runs`（寫進 served 的 `counter_waited_runs`）、`effective`、`order` |
 | `src/serve/serve.hpp`、`serve.cpp` | `read_cfg`、`serve`（`Server`：鎖、收拾、看信、額度到頂就回錯或停、認領、fork 子行程跑〔設 `AOS_KERNEL_REPORT`〕、等、回信、served.jsonl） |
 | `src/budget/budget.hpp`、`budget.cpp` | token 回報與額度：`parse_budget`、`window_since`、`read_used`／`add_used`（`used.json`、換窗歸零）、`spent`、`read_report` |
 | `src/common/common.hpp` | `using` |
@@ -135,7 +135,7 @@ kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sand
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-- `test_cli`（`tests/test_cli.py`，unittest 40 案，約 3 秒）：A 命令列與設定（usage、`StackMissing`、設定壞、mailbox 預設在 stack、指示詞、`QueueBad`）；B 排隊（level／數字／deadline 字串與數字／先來先上／`waited_runs`、aging 到了與還沒到、`seen_at_runs` 只留還在排的）；
+- `test_cli`（`tests/test_cli.py`，unittest 40 案，約 3 秒）：A 命令列與設定（usage、`StackMissing`、設定壞、mailbox 預設在 stack、指示詞、`QueueBad`）；B 排隊（level／數字／deadline 字串與數字／先來先上／`counter_waited_runs`、aging 到了與還沒到、`seen_at_runs` 只留還在排的）；
   C slots（2 封一起跑、1 封串著）；D 回信（碼與 stdout／stderr、單子自己導 stdout 不蓋、`DeadlineMissed` 不跑、`LetterBad` 七種、單子壞＝回信不是 kernel 的錯）；
   E 收拾（寄信人不在〔`sender.lock` 沒人鎖或沒有〕的 new／tmp／done、`tmp/` 裡 `.` 開頭正在寫的〔還沒寫信或鎖著〕不碰、名字裡 pid 是死的但鎖著照跑〔10-24 晚〕、cur/ 留下的回 `RunFailed` 或照現成回信、跑信的子行程還活著就讓它跑完並佔格、子行程死了＝`RunFailed`）；F 鎖、環境與 cwd 照信、`timeout_ms`、SIGTERM 轉給單子、早到的訊號不留半套；G `_metainfo`（同級時宣告短的後寄也先跑、有寫的在沒寫的前面、level 與 deadline 照樣壓過它、三種寫壞照樣跑並記 `metainfo_bad`）；
   H token 回報與額度（`AOS_KERNEL_REPORT` 指進信小格並蓋掉信裡的、回報有寫／只有 prompt＋completion／沒寫／三種寫壞、沒跑的不算、`calls` 到頂回 `BudgetMissing`、`tokens` 到頂排著的全回錯、`wait` 留著等換窗後跑、`all` 不歸零與改窗歸零、`budget` 與 `used.json` 壞）；I accept（名單裡的才跑、`cat` 祕密檔與換了 `cwd`、自帶 `stdout`、`envs` 的回 `InstUnknown`，環境用 kernel 的 `PATH` 與 key、只疊信裡的 `AOS_*`；`accept` 寫壞＝`CfgBad`）。

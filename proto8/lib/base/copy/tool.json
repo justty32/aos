@@ -1,4 +1,4 @@
-{"description": "複製一個檔或整個資料夾（to 的上層自動建；連結照連結複製）。to 已經有東西就不複製。回 JSON {from, to, files}。",
+{"description": "複製一個檔或整個資料夾（to 的上層自動建；連結照連結複製）。to 已經有東西就不複製。回 JSON {from, to, counter_files（複製了幾個檔）}。",
  "parameters": {"type": "object",
                 "properties": {"from": {"type": "string", "description": "原本的路徑"},
                                "to": {"type": "string", "description": "複製到的完整路徑"}},

@@ -72,8 +72,8 @@ def report(why):
     lines = ["self-improve 報告（%s）" % common.now(), "結果：%s" % why,
              "最好的一版：%s（已複製到 out/best/）" % best,
              "用掉：改進 %d 輪（上限 %d）、%d 秒（上限 %d）、%d tokens（上限 %d）" % (
-                 used["rounds"], limit["rounds"], used["elapsed_ms"] // 1000, limit["elapsed_ms"] // 1000,
-                 used["tokens"], limit["tokens"]), ""]
+                 used["counter_rounds"], limit["rounds"], used["elapsed_ms"] // 1000, limit["elapsed_ms"] // 1000,
+                 used["counter_tokens"], limit["tokens"]), ""]
     for v in common.versions():
         meta = common.read_json(os.path.join(VERSIONS, v, "version.json"), {})
         d = common.verdict(v)
@@ -105,7 +105,8 @@ if passed:
     report("達成（%s 全過）" % current)
     sys.exit(10)
 used, limit = common.used(), common.budget()
-over = [k for k in ("rounds", "elapsed_ms", "tokens") if used[k] >= limit[k]]
+over = [k for k, u in (("rounds", "counter_rounds"), ("elapsed_ms", "elapsed_ms"), ("tokens", "counter_tokens"))
+        if used[u] >= limit[k]]                   # 用量是計數 counter_*（10-25）、預算是上限，照舊 rounds／tokens
 if over:
     best = common.best()
     report("沒達成：預算用完（%s）" % "、".join(over))

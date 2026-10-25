@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # json_read - 看工作區裡一份 JSON 檔的某個位置，一次只展開幾層、大的摺起來，讓腦一層層往下找
 # 介面（lib/README 的契約）：stdin 收 {"path", "pointer"?: "", "depth"?: 1}；stdout 一份 JSON {"path", "pointer", "value"}：
-# value 超過 depth 層的物件摺成 {"type": "object", "keys": [最多 20 個]}、陣列摺成 {"type": "array", "len": N}、
-# 長字串摺成 {"type": "string", "len": N, "head": 前 100 字}；其餘照原樣。pointer 照 RFC 6901（整份是空字串）。
+# value 超過 depth 層的物件摺成 {"type": "object", "keys": [最多 20 個], "counter_keys_more"?: 沒列的個數}、陣列摺成 {"type": "array", "counter_items": N}、
+# 長字串摺成 {"type": "string", "counter_chars": N, "head": 前 100 字}（計數 10-25 改 counter_*，原 len、keys_more）；其餘照原樣。pointer 照 RFC 6901（整份是空字串）。
 # 錯：stderr 與 stdout 各一行「json_read: 代號 原因」、退 1。（impls/aos-json 的 peek 是同一件事的 C++ 版，做好後可換）
 import json, os, sys
 
@@ -70,15 +70,15 @@ def fold(v, depth):
             keys = list(v)
             res = {"type": "object", "keys": keys[:KEYS_MAX]}
             if len(keys) > KEYS_MAX:
-                res["keys_more"] = len(keys) - KEYS_MAX
+                res["counter_keys_more"] = len(keys) - KEYS_MAX
             return res
         return {k: fold(x, depth - 1) for k, x in v.items()}
     if isinstance(v, list):
         if depth <= 0:
-            return {"type": "array", "len": len(v)}
+            return {"type": "array", "counter_items": len(v)}
         return [fold(x, depth - 1) for x in v]
     if isinstance(v, str) and len(v) > STR_MAX:
-        return {"type": "string", "len": len(v), "head": v[:HEAD]}
+        return {"type": "string", "counter_chars": len(v), "head": v[:HEAD]}
     return v
 
 

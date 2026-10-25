@@ -118,11 +118,11 @@ class Windows(T):
         r = self.run_loop({"exec": self.count(), "max": 3, "state": "state.json"}, {"AOS_STACK": str(s)})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         st = json.loads((s / "state.json").read_text())
-        self.assertEqual((st["kind"], st["phase"], st["counter"], st["code"], st["max"], st["ctl_seq"]),
+        self.assertEqual((st["kind"], st["phase"], st["counter_runs"], st["code"], st["max"], st["ctl_seq"]),
                          ("state", "done", 3, 0, 3, None))
         self.assertIsInstance(st["pid"], int)
         # 10-23 命名統合：phase、started_at_ticks（10-23 統合前叫 state、started）；10-25 改名：runs → counter、at → recorded_at（ISO 8601 UTC 到毫秒；更早叫 lap、beat）
-        self.assertEqual(list(st), ["kind", "phase", "counter", "max", "interval_ms", "paused", "ctl_seq", "ctl_warning",
+        self.assertEqual(list(st), ["kind", "phase", "counter_runs", "max", "interval_ms", "paused", "ctl_seq", "ctl_warning",
                                     "code", "pid", "started_at_ticks", "boot_id", "recorded_at"])
         self.assertRegex(st["recorded_at"], r"\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00\Z")
         datetime.datetime.fromisoformat(st["recorded_at"])
@@ -157,7 +157,7 @@ class Windows(T):
         r = self.run_loop({"exec": self.count(), "max": 3, "ctl": "ctl.json", "state": "state.json"},
                           {"AOS_STACK": str(s)})
         st = json.loads((s / "state.json").read_text())
-        self.assertEqual((r.returncode, r.stderr, st["phase"], st["counter"], st["ctl_seq"], (s / "runs").exists()),
+        self.assertEqual((r.returncode, r.stderr, st["phase"], st["counter_runs"], st["ctl_seq"], (s / "runs").exists()),
                          (0, "", "stopped", 0, 7, False))
 
     def test_ctl_max_overrides(self):

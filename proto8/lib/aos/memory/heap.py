@@ -101,12 +101,12 @@ class Heap:
         clean = [{c: r.get(c, "") for c in COLUMNS} for r in rows]
         _write(os.path.join(self.root, kind, "index.json"),
                json.dumps(_table(COLUMNS, clean), ensure_ascii=False, indent=1) + "\n")
-        top = [{"kind": k, "desc": d, "count": str(len([r for r in (clean if k == kind else self.rows(k))
+        top = [{"kind": k, "desc": d, "counter_active": str(len([r for r in (clean if k == kind else self.rows(k))
                                                          if r["status"] == "active"])),
                 "path": k + "/index.json"} for k, d in KINDS.items()
                if os.path.exists(os.path.join(self.root, k, "index.json"))]    # 頂層只指已經有的下一層
         _write(os.path.join(self.root, "index.json"),
-               json.dumps(_table(["kind", "desc", "count", "path"], top), ensure_ascii=False, indent=1) + "\n")
+               json.dumps(_table(["kind", "desc", "counter_active", "path"], top), ensure_ascii=False, indent=1) + "\n")
 
     def save(self, kind, title, text, tags=()):
         """同一類裡同標題（不分大小寫）＝更新那一筆；回 (id, 舊全文或 None)。"""

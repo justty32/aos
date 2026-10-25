@@ -21,18 +21,18 @@ Queue read_queue(const std::string& stack) {
         throw Error{code::QueueBad, "讀不了 " + path + "：" + std::strerror(err)};
     }
     std::optional<Json> doc = aos::read_json(path);
-    if (!doc || !doc->is_object() || !aos::is_count(doc->value("runs", Json())) ||
+    if (!doc || !doc->is_object() || !aos::is_count(doc->value("counter_runs", Json())) ||
         !doc->value("seen_at_runs", Json()).is_object()) {
-        throw Error{code::QueueBad, path + " 要是 {\"runs\": 非負整數, \"seen_at_runs\": {…}}（刪掉它就從頭算）"};
+        throw Error{code::QueueBad, path + " 要是 {\"counter_runs\": 非負整數, \"seen_at_runs\": {…}}（刪掉它就從頭算）"};
     }
-    q.runs = (*doc)["runs"].get<long long>();
+    q.runs = (*doc)["counter_runs"].get<long long>();
     q.seen_at_runs = (*doc)["seen_at_runs"];
     return q;
 }
 
 void write_queue(const std::string& stack, const Queue& q) {
     Json doc = Json::object();
-    doc["runs"] = q.runs;
+    doc["counter_runs"] = q.runs;
     doc["seen_at_runs"] = q.seen_at_runs;
     std::optional<std::string> err = aos::write_json(aos::join(stack, "queue.json"), doc);
     if (err) {

@@ -134,7 +134,7 @@ def ask(cell, messages, tools=None):
         die("ReplyBad", "choices[0].message 不是物件")
     with open(os.path.join(STACK, "usage.jsonl"), "a", encoding="utf-8") as f:
         f.write(json.dumps({"cell": cell, "usage": reply.get("usage"),
-                            "sent_chars": len(json.dumps(messages, ensure_ascii=False))}, ensure_ascii=False) + "\n")
+                            "counter_sent_chars": len(json.dumps(messages, ensure_ascii=False))}, ensure_ascii=False) + "\n")
     out = {"role": message.get("role") or "assistant", "content": message.get("content")}
     calls = message.get("tool_calls")
     if calls:

@@ -186,7 +186,7 @@ class T(unittest.TestCase):
         self.assertEqual(len({r["id"] for r in rows}), 20)
         top = json.loads((self.heap / "index.json").read_text())
         self.assertEqual(top["contract"], "wf-table/1")
-        self.assertEqual([(r["kind"], r["count"]) for r in top["rows"]], [("outcomes", "20")])
+        self.assertEqual([(r["kind"], r["counter_active"]) for r in top["rows"]], [("outcomes", "20")])
 
     def test_context_budget(self):
         """偏好多到超過上限：只附一部分、說還有。"""

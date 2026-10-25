@@ -56,10 +56,10 @@ class Tools(unittest.TestCase):
         items = {i["name"]: i for i in res["items"]}
         self.assertEqual([i["type"] for i in res["items"][:2]], ["dir", "dir"])          # 資料夾在前
         self.assertEqual(items["fsm.json"]["keys"], ["_entry", "start", "states"])
-        self.assertEqual((items["idle"]["children"], items["idle"]["aos"]), (1, ["_entry"]))
+        self.assertEqual((items["idle"]["counter_children"], items["idle"]["aos"]), (1, ["_entry"]))
         self.assertTrue(items["_entry"]["exec"])
         self.assertNotIn(".env", items)
-        self.assertEqual(res["hidden"], 1)
+        self.assertEqual(res["counter_hidden"], 1)
         _, res, _ = self.tool("ls", {"path": "agent-dan", "hidden": True})
         self.assertIn(".env", [i["name"] for i in res["items"]])
 
@@ -69,7 +69,7 @@ class Tools(unittest.TestCase):
         for i in range(250):
             (d / ("f%03d" % i)).write_text("")
         _, res, _ = self.tool("ls", {"path": "many"})
-        self.assertEqual((res["total"], len(res["items"]), res["next_offset"]), (250, 100, 100))
+        self.assertEqual((res["counter_items"], len(res["items"]), res["next_offset"]), (250, 100, 100))
         _, res, _ = self.tool("ls", {"path": "many", "offset": 200})
         self.assertEqual((len(res["items"]), res["items"][0]["name"]), (50, "f200"))
         self.assertNotIn("next_offset", res)
@@ -77,7 +77,7 @@ class Tools(unittest.TestCase):
 
     def test_stat(self):
         _, res, _ = self.tool("stat", {"path": "agent-dan/fsm.json"})
-        self.assertEqual((res["format"], res["top"]), ("json", {"type": "object", "keys": 3}))
+        self.assertEqual((res["format"], res["top"]), ("json", {"type": "object", "counter_keys": 3}))
         _, res, _ = self.tool("stat", {"path": "agent-dan/brain.py"})
         self.assertEqual((res["format"], res["text"], res["exec"]), ("python", True, False))
         _, res, _ = self.tool("stat", {"path": "agent-dan/idle"})
@@ -94,7 +94,7 @@ class Tools(unittest.TestCase):
         (self.ws / "big.json").write_text(json.dumps(big))
         _, res, _ = self.tool("view", {"path": "big.json"})
         self.assertNotIn("value", res)                                   # 大的摺起來
-        self.assertEqual(res["children"], [{"key": "states", "type": "object", "keys": 40},
+        self.assertEqual(res["children"], [{"key": "states", "type": "object", "counter_keys": 40},
                                            {"key": "start", "type": "string", "value": "s0"}])
         _, res, _ = self.tool("view", {"path": "big.json", "pointer": "/states/s3"})
         self.assertEqual(res["value"], {"exec": "x" * 50, "next": "s4"})  # 小的直接給
@@ -121,7 +121,7 @@ class Tools(unittest.TestCase):
     def test_json_edit(self):
         f = self.ws / "agent-dan" / "loop.json"
         _, res, _ = self.tool("json_edit", {"path": "agent-dan/loop.json", "set": {"/max": 80, "/note/who": "pip"}})
-        self.assertEqual(res, {"path": "agent-dan/loop.json", "set": 2, "del": 0, "top": ["exec", "max", "note"]})
+        self.assertEqual(res, {"path": "agent-dan/loop.json", "counter_set": 2, "counter_del": 0, "top": ["exec", "max", "note"]})
         self.assertEqual(json.loads(f.read_text()), {"exec": "fsm.json", "max": 80, "note": {"who": "pip"}})
         before = f.read_text()
         self.assertEqual(self.tool("json_edit", {"path": "agent-dan/loop.json", "del": ["/note", "/nope"]})[2],
@@ -138,7 +138,7 @@ class Tools(unittest.TestCase):
         self.assertEqual(self.tool("mkdir", {"path": "a/b"})[1]["created"], False)
         self.assertEqual(self.tool("mkdir", {"path": "agent-dan/loop.json"})[2], "FileBad")
         _, res, _ = self.tool("copy", {"from": "agent-dan", "to": "a/agent-x"})
-        self.assertEqual(res["files"], len([p for p in (self.ws / "agent-dan").rglob("*") if p.is_file()]))
+        self.assertEqual(res["counter_files"], len([p for p in (self.ws / "agent-dan").rglob("*") if p.is_file()]))
         self.assertEqual(self.tool("copy", {"from": "agent-dan", "to": "a/agent-x"})[2], "FileBad")    # 不蓋
         self.assertEqual(self.tool("copy", {"from": "agent-dan", "to": "agent-dan/in"})[2], "PathBad")
         self.tool("move", {"from": "a/agent-x/system.txt", "to": "a/agent-x/sys/system.txt"})

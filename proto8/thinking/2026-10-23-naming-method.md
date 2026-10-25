@@ -109,3 +109,5 @@ aos-tick   - 把時鐘檔的回合數往前走一格
 - **新規則「撞名就換角度」併進 R9**：照方法推出來的名字，如果跟同一個檔或同一個主題裡的名字撞了，就換一個角度，用白話重新描述它的功能與特性，再從那句白話取名。R6 的計數規則補一句：撞名時照這條換角度，得到的名字不一定是「名詞加 s」。C-54 命名方法裡的例子是假設的（fsm trace 的「第幾格」→ 撞 `states` → 換角度「走了幾步」→ `steps`），標明是假設。
 
 **10-25 註**（使用者 10-25「state.json中，runs改counter，at改成recorded_at」）：loop／daemon 的 state.json 現行是 `counter`（原 `runs`）、`recorded_at`（原 `at`）；上面的原文與決定照留，其他紀錄（trace 等）的 `at` 不動。
+
+**10-25 註二**（使用者 10-25「計數這塊，幫我改成counter_*」）：計數規則從「被數的東西加 s」改成 `counter_<被數的東西>`（[C-54 命名方法 R6](../CONCEPTS/01-設計理念/C-54-命名方法.md)）；state.json 的 `counter` 現叫 `counter_runs`，其他 JSON 的計數也改了。上面的原文與決定照留；時間點（`at`／`recorded_at`）那半還沒定。

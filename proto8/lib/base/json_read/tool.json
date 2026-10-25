@@ -1,4 +1,4 @@
-{"description": "看工作區裡一份 JSON 檔的某個位置，一次只展開 depth 層、大的摺起來：物件摺成 {type: object, keys: [...]}、陣列摺成 {type: array, len: N}、長字串只給開頭。先看整份頂層（pointer 空字串），想看哪個 key 就把它接到 pointer 後面再叫一次，一層層往下找到要看或要改的位置。pointer 照 JSON pointer 寫（例 /states/think）。",
+{"description": "看工作區裡一份 JSON 檔的某個位置，一次只展開 depth 層、大的摺起來：物件摺成 {type: object, keys: [...]}、陣列摺成 {type: array, counter_items: N}、長字串只給開頭。先看整份頂層（pointer 空字串），想看哪個 key 就把它接到 pointer 後面再叫一次，一層層往下找到要看或要改的位置。pointer 照 JSON pointer 寫（例 /states/think）。",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "JSON 檔，從工作區算的相對路徑"},
                                "pointer": {"type": "string", "description": "要看的位置，JSON pointer；整份是空字串（預設）"},
