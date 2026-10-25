@@ -1,0 +1,116 @@
+{
+ "node": "draft/tools/writer",
+ "a": {
+  "move": {
+   "kind": "freeze_order",
+   "node": "draft/tools/writer",
+   "tool": "trim",
+   "why": "腦 6/6 都叫 trim、6/6 changes 空：交稿前改由程式一律叫、不再給腦，省一次工具來回、違規歸零的保證留著",
+   "evidence": {
+    "counter_runs": 6,
+    "counter_runs_called": 6
+   }
+  },
+  "expected": {
+   "draft/tools/writer": {
+    "rollup.measured.llm_tokens": {
+     "from": 16579.0,
+     "to": 15777.0,
+     "delta": -802.0
+    },
+    "rollup.measured.llm_calls": {
+     "from": 3.0,
+     "to": 2.0,
+     "delta": -1.0
+    },
+    "lifecycle.tools.trim.frozen_order": {
+     "from": null,
+     "to": "act 交稿前一律叫"
+    }
+   },
+   ".": {
+    "rollup.measured.llm_tokens": {
+     "from": 20174.5,
+     "to": 19372.5,
+     "delta": -802.0
+    },
+    "ratings.傲嬌.counter_violations": {
+     "from": 0.0,
+     "to": 0.0,
+     "delta": 0
+    }
+   }
+  },
+  "evidence": [
+   "measure.md：有 trim 的組根 token 20204／次、不給 trim 的組 19402／次（差 802）；trim 6/6 有叫、6/6 沒改字；lint 違規兩組 0/6、1/6",
+   "注意：不給 trim 的那組（GALTXT_OFF_TRIM）6 次有 3 次第一次叫 lint 漏 brief_path（有 trim 的組 0/6）——拿掉 trim 後漏參可能回來",
+   "每次省 802 token（量測給的每次差）",
+   "counter_calls＝6",
+   "counter_noop＝6",
+   "counter_runs＝6",
+   "counter_runs_called＝6"
+  ]
+ },
+ "b": {
+  "move": {
+   "kind": "patch_act",
+   "node": "draft/tools/writer",
+   "tool": "lint",
+   "patch": "default_args",
+   "args": {
+    "brief_path": "cur/{name}.json#/brief"
+   },
+   "why": "腦叫 lint 漏 brief_path → ArgumentsBad、再叫一次；act 缺參數就補"
+  },
+  "expected": {
+   "draft/tools/writer": {
+    "rollup.measured.llm_tokens": {
+     "from": 16579.0,
+     "to": 15888.208,
+     "delta": -690.792
+    },
+    "rollup.measured.llm_calls": {
+     "from": 3.0,
+     "to": 2.875,
+     "delta": -0.125
+    },
+    "rollup.measured.tools.lint.counter_argbad": {
+     "from": 1,
+     "to": 0,
+     "delta": -1
+    }
+   },
+   ".": {
+    "rollup.measured.llm_tokens": {
+     "from": 20174.5,
+     "to": 19483.708,
+     "delta": -690.792
+    },
+    "ratings.傲嬌.counter_violations": {
+     "from": 0.0,
+     "to": 0.0,
+     "delta": 0
+    }
+   }
+  },
+  "evidence": [
+   "現在的樹（有 trim）：measure 有 trim 的組 0/6、teach 示範 2 次裡 1 次漏給 brief_path（合計 1/8）",
+   "不給 trim 的組 3/6；每漏一次多問腦一次（writer 每次問腦平均約 5500 token）",
+   "每次省 691 token（每次問腦平均 5526 × ArgumentsBad 次數÷跑數）",
+   "counter_argbad＝1",
+   "counter_runs＝8"
+  ]
+ },
+ "context": {
+  "root_tokens_mean": 20174.5,
+  "ratings": {
+   "傲嬌": {
+    "total_mean": 5.0,
+    "反差": 0.8,
+    "承接": 0.875,
+    "counter_violations": 0.0
+   }
+  },
+  "noise_sigma_total": 0.58
+ }
+}

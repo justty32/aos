@@ -1,0 +1,13 @@
+{"summary": "自我優化工具：在訓練場對改過的自己跑整棵樹 1 題（假腦或真腦），回凍結量尺（check／judge）打的分、token、叫工具順序；真腦用量記進 session 預算",
+ "time_ms": {"val": 20000, "max": 1200000},
+ "resource": ["cpu", "disk"],
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": false,
+ "interrupt": "safe",
+ "parallel": false,
+ "reads": ["$SELFOPT_SESSION", "$AOS_WS/set/<題>.json", "$AOS_WS/tree/"],
+ "writes": ["$AOS_WS/selfopt/<session>/tests/<k>/（一次跑的工作區）", "$SELFOPT_SESSION（counter_tokens_tests、self_tests）"],
+ "calls": ["aos-exec --ws <k> $AOS_WS/tree（真腦時 tree 裡的 agent 會問腦，用量算在 tree 各自的 llm.jsonl）"],
+ "grow_level": 3,
+ "uses_llm": false}

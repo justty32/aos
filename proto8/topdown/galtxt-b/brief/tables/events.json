@@ -1,0 +1,35 @@
+{
+ "_note": "事件表（10-25 結構化）：一個事件＝一張 cells/1 卡——開場分支（依 switches.first_speaker）、事件節拍（一拍一格）、護欄（不升階、不告白）、道具附句（依 switches.prop）；_layout.event 是組回一段事件文字的模板（{組/$開關} 代入題目 switches 的值）。brief 對題目：event 是字串＝拿同地點、同兩人、有 switches 的事件卡組一次，逐字相同才把那些格記進 cells_used（表示法對得上；題目檔不動）；event 是 {\"ref\": 事件名}＝由格組出 event 文字。格 id＝events/<事件>/<組>/<鍵>。",
+ "進新書日": {
+  "_format": "cells/1",
+  "identity": {"place": "河鹿堂", "season": "梅雨", "time": "傍晚", "cast": ["主角", "宮澤柚葉"]},
+  "opening": {
+   "主角": "開場由主角先開口（調侃她挑太多）",
+   "宮澤柚葉": "開場由柚葉先開口（直接命令他幫忙拿）"
+  },
+  "beats": {
+   "shelter": "躲雨進店",
+   "new_books_day": "是進新書日",
+   "unseen_books": "架上好多沒看過的書",
+   "pick_pile": "柚葉一口氣挑了一疊",
+   "stamp": "爺爺一本本蓋了梅花章",
+   "cant_carry": "她提不動",
+   "shove": {"text": "把書塞給主角", "kind": "反差"},
+   "excuse": {"text": "才不是要你幫忙，是你手比較長", "kind": "反差"},
+   "order_next": {"text": "最後用命令句要他下次的進新書日也來", "kind": "反差"},
+   "subtext": {"text": "其實是想約", "kind": "洩底"},
+   "accept": "主角認了，反正梅雨還要下好一陣子"
+  },
+  "guards": {
+   "no_level_up": "不升階",
+   "no_confess": "不告白"
+  },
+  "props": {
+   "梅花章": "",
+   "集章冊": "柚葉手上拿著快集滿的集章冊。"
+  },
+  "_layout": {
+   "event": "{opening/$first_speaker}。{beats/shelter}，{beats/new_books_day}，{beats/unseen_books}。{beats/pick_pile}、{beats/stamp}；{beats/cant_carry}，{beats/shove}（{beats/excuse}）；{beats/order_next}（{beats/subtext}）；{beats/accept}。{guards/no_level_up}、{guards/no_confess}。{props/$prop}"
+  }
+ }
+}

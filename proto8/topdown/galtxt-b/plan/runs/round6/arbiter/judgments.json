@@ -1,0 +1,29 @@
+{
+ "counter_judgments": 1,
+ "accuracy": null,
+ "human_agreement": null,
+ "note": "train/record 寫（訓練場那份）：accuracy＝它選的那條、事後實測真的較好的比率（兩條都實測才算）；human_agreement 這輪沒有人評，留空",
+ "items": [
+  {
+   "round": 1,
+   "change": "changes/1.json",
+   "better": "b",
+   "by": "brain",
+   "weights_used": {
+    "counter_argbad": 0.55,
+    "counter_violations": 0.2,
+    "llm_tokens": 0.15,
+    "llm_calls": 0.1
+   },
+   "measured": [
+    "b"
+   ],
+   "verdict": "partial",
+   "expectation_held": 0.2
+  }
+ ],
+ "counter_full": 0,
+ "counter_correct": 0,
+ "counter_partial": 1,
+ "expectation_held": 0.2
+}

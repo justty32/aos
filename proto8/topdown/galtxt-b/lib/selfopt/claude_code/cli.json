@@ -1,0 +1,6 @@
+{"_note": "claude_code 怎麼叫 claude CLI：非互動 -p、JSON 輸出（有 usage、total_cost_usd、permission_denials）；只給讀與改檔的工具、不給 Bash／網路；acceptEdits＝cwd（節點複本）裡的改檔自動准、cwd 外要問＝-p 時被拒。max_* 是上限，呼叫者只能往下調。",
+ "flags": ["--tools", "Read,Glob,Grep,Edit,Write", "--permission-mode", "acceptEdits", "--strict-mcp-config", "--no-session-persistence"],
+ "model": "sonnet",
+ "max_turns": 30,
+ "max_budget_usd": 2.0,
+ "timeout_ms": 900000}

@@ -5,6 +5,9 @@
 # 第 2 輪：題目多帶 plan（director 出的 beat 表，照表寫）；tools/lint（捷徑 → lib/lint）讓腦交稿前自檢——工具那段第 1 輪就留著，這裡不用改。
 # 測試用開關 GALTXT_FAKE_LINT=1：假腦每稿先回一次 tool_calls 叫 lint、看到 tool 結果再交稿——把自檢那條路跑一遍。
 # 測試用開關 GALTXT_FAKE_TRIM=1（round6）：假腦先叫 trim（稿裡故意多三行旁白、她多一個「！」）、看到結果原樣交 trim 回的 text——把抽工具那條路跑一遍。
+#   GALTXT_FAKE_TRIM=noisy：同樣的髒稿直接交（不叫工具），看 act_rules.json 的 after_answer（freeze_order）有沒有在交稿前修掉。
+#   GALTXT_FAKE_LINT=nopath：叫 lint 時漏給 brief_path（學真腦），看 act_rules.json 的 default_args（patch_act）有沒有補上。
+# act_rules.json 的 after_answer 裡的工具不給腦（順序已固化，act.py 交稿前一律叫）。
 # 每問一次腦（含假腦）在 $AOS_STACK/llm.jsonl 寫一行量測（record）。
 import json, os, sys, time, urllib.error, urllib.request
 from datetime import datetime, timezone
@@ -115,7 +118,12 @@ if not history or history[-1].get("role") not in ("user", "tool"):
 
 tools = []                                       # 第 1 輪 writer 沒有工具；留著這段，之後掛 tools/<名>/tool.json 就能用（P-41）
 OFF = {"lint": "GALTXT_OFF_SELF_LINT", "trim": "GALTXT_OFF_TRIM"}      # 量貢獻用的關閉開關（round5 §3a，宣告在 _metainfo.ablation）：設 1＝不給腦這個工具
-for tool in (sorted(t for t in os.listdir("tools") if os.environ.get(OFF.get(t, "")) != "1") if os.path.isdir("tools") else []):
+try:                                             # round6 freeze_order：act_rules.json 的 after_answer＝程式交稿前一律叫，不再給腦（同 act.py）
+    with open("act_rules.json", encoding="utf-8") as f:
+        FROZEN = set((json.load(f) or {}).get("after_answer") or [])
+except (OSError, ValueError, AttributeError):
+    FROZEN = set()
+for tool in (sorted(t for t in os.listdir("tools") if os.environ.get(OFF.get(t, "")) != "1" and t not in FROZEN) if os.path.isdir("tools") else []):
     try:
         with open(os.path.join("tools", tool, "tool.json"), encoding="utf-8") as f:
             spec = json.load(f)
@@ -143,12 +151,18 @@ def fake():
     title = "【%s%s・%s】" % (s.get("season", ""), s.get("time", ""), s.get("place", ""))
     she_calls_him = her["address"]["allowed"][0].split("（")[0]    # 她的卡上 allowed＝「她叫主角」的叫法
     he_calls_her = hero["address"]["allowed"][0].split("（")[0]    # 主角的卡上 allowed＝「主角叫她」的叫法
-    if os.environ.get("GALTXT_FAKE_LINT") == "1" and history[-1].get("role") == "user":   # 先自檢一次，看到 tool 結果再交
+    if os.environ.get("GALTXT_FAKE_LINT") in ("1", "nopath") and history[-1].get("role") == "user":   # 先自檢一次，看到 tool 結果再交
         good = fake_draft(b, s, title, hero, her, musts, nice, she_calls_him, he_calls_her)
-        args = {"text": good["content"], "brief_path": "cur/%s.json#/brief" % name}
+        args = {"text": good["content"]}
+        if os.environ["GALTXT_FAKE_LINT"] != "nopath":   # nopath（round6）：學真腦漏給 brief_path——沒有 default_args 就吃 ArgumentsBad
+            args["brief_path"] = "cur/%s.json#/brief" % name
         return {"role": "assistant", "content": None,
                 "tool_calls": [{"id": "fake_lint_%d" % attempt, "type": "function",
                                 "function": {"name": "lint", "arguments": json.dumps(args, ensure_ascii=False)}}]}
+    if os.environ.get("GALTXT_FAKE_TRIM") == "noisy":   # round6 freeze_order：直接交多三行旁白、她多一個「！」的稿（不叫工具），看 act 交稿前的固化 trim
+        good = fake_draft(b, s, title, hero, her, musts, nice, she_calls_him, he_calls_her)["content"].split("\n")
+        noisy = good[:2] + ["（門鈴又響了一聲。）", "（爺爺的算盤響了兩下。）", "（雨聲遠了一點。）"] + good[2:]
+        return {"role": "assistant", "content": "\n".join(l.replace("沒什麼。", "沒什麼！") if l.startswith(her["display"]) else l for l in noisy)}
     if os.environ.get("GALTXT_FAKE_TRIM") == "1":   # round6：先叫 trim（稿裡故意多三行旁白、她多一個「！」），看到結果原樣交 text
         last = history[-1]
         if last.get("role") == "tool":

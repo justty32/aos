@@ -1,0 +1,7 @@
+{
+ "default_args": {
+  "lint": {
+   "brief_path": "cur/{name}.json#/brief"
+  }
+ }
+}

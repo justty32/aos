@@ -1,0 +1,279 @@
+{
+ "round": 1,
+ "candidates": [
+  {
+   "label": "a",
+   "move": {
+    "kind": "freeze_order",
+    "node": "draft/tools/writer",
+    "tool": "trim",
+    "why": "腦 6/6 都叫 trim、6/6 changes 空：交稿前改由程式一律叫、不再給腦，省一次工具來回、違規歸零的保證留著",
+    "evidence": {
+     "counter_runs": 6,
+     "counter_runs_called": 6
+    }
+   },
+   "expected": {
+    "draft/tools/writer": {
+     "rollup.measured.llm_tokens": {
+      "from": 16579.0,
+      "to": 15777.0,
+      "delta": -802.0
+     },
+     "rollup.measured.llm_calls": {
+      "from": 3.0,
+      "to": 2.0,
+      "delta": -1.0
+     },
+     "lifecycle.tools.trim.frozen_order": {
+      "from": null,
+      "to": "act 交稿前一律叫"
+     }
+    },
+    ".": {
+     "rollup.measured.llm_tokens": {
+      "from": 20174.5,
+      "to": 19372.5,
+      "delta": -802.0
+     },
+     "ratings.傲嬌.counter_violations": {
+      "from": 0.0,
+      "to": 0.0,
+      "delta": 0
+     }
+    }
+   },
+   "evidence": [
+    "measure.md：有 trim 的組根 token 20204／次、不給 trim 的組 19402／次（差 802）；trim 6/6 有叫、6/6 沒改字；lint 違規兩組 0/6、1/6",
+    "注意：不給 trim 的那組（GALTXT_OFF_TRIM）6 次有 3 次第一次叫 lint 漏 brief_path（有 trim 的組 0/6）——拿掉 trim 後漏參可能回來",
+    "每次省 802 token（量測給的每次差）",
+    "counter_calls＝6",
+    "counter_noop＝6",
+    "counter_runs＝6",
+    "counter_runs_called＝6"
+   ]
+  },
+  {
+   "label": "b",
+   "move": {
+    "kind": "patch_act",
+    "node": "draft/tools/writer",
+    "tool": "lint",
+    "patch": "default_args",
+    "args": {
+     "brief_path": "cur/{name}.json#/brief"
+    },
+    "why": "腦叫 lint 漏 brief_path → ArgumentsBad、再叫一次；act 缺參數就補"
+   },
+   "expected": {
+    "draft/tools/writer": {
+     "rollup.measured.llm_tokens": {
+      "from": 16579.0,
+      "to": 15888.208,
+      "delta": -690.792
+     },
+     "rollup.measured.llm_calls": {
+      "from": 3.0,
+      "to": 2.875,
+      "delta": -0.125
+     },
+     "rollup.measured.tools.lint.counter_argbad": {
+      "from": 1,
+      "to": 0,
+      "delta": -1
+     }
+    },
+    ".": {
+     "rollup.measured.llm_tokens": {
+      "from": 20174.5,
+      "to": 19483.708,
+      "delta": -690.792
+     },
+     "ratings.傲嬌.counter_violations": {
+      "from": 0.0,
+      "to": 0.0,
+      "delta": 0
+     }
+    }
+   },
+   "evidence": [
+    "現在的樹（有 trim）：measure 有 trim 的組 0/6、teach 示範 2 次裡 1 次漏給 brief_path（合計 1/8）",
+    "不給 trim 的組 3/6；每漏一次多問腦一次（writer 每次問腦平均約 5500 token）",
+    "每次省 691 token（每次問腦平均 5526 × ArgumentsBad 次數÷跑數）",
+    "counter_argbad＝1",
+    "counter_runs＝8"
+   ]
+  }
+ ],
+ "proposed_by": "proposals/1.json",
+ "proposed_at": "2026-10-25T10:11:44.084+00:00",
+ "moves": [
+  {
+   "kind": "patch_act",
+   "node": "draft/tools/writer",
+   "tool": "lint",
+   "patch": "default_args",
+   "args": {
+    "brief_path": "cur/{name}.json#/brief"
+   },
+   "why": "腦叫 lint 漏 brief_path → ArgumentsBad、再叫一次；act 缺參數就補",
+   "status": "applied",
+   "counter_tokens": 0
+  }
+ ],
+ "arbiter": {
+  "better": "b",
+  "why": [
+   "兩者都預期省 token 且不增加 lint 違規；a 多省約 111 token，但這不是台詞分數，且 a 會移除 trim 工具。",
+   "b 修正 lint 漏 brief_path，預期將 counter_argbad 從 1 降到 0；a 拿掉 trim 後可能讓 lint 漏參回來，已有 3/6 次觀測到此情況。",
+   "總分、反差與承接沒有候選梯度，無從比較台詞表現；a、b 的效益估計樣本都有限，且兩條可能互相影響。"
+  ],
+  "weights_used": {
+   "counter_argbad": 0.55,
+   "counter_violations": 0.2,
+   "llm_tokens": 0.15,
+   "llm_calls": 0.1
+  },
+  "by": "brain",
+  "counter_tokens": 3192,
+  "asked_at": "2026-10-25T10:11:47.318+00:00"
+ },
+ "touched": [
+  "draft/tools/writer"
+ ],
+ "cost": {
+  "counter_tokens": 0
+ },
+ "applied_at": "2026-10-25T10:11:51.245+00:00",
+ "gradient": {
+  "draft/tools/writer": {
+   "lifecycle.history": {
+    "added": [
+     {
+      "round": 1,
+      "from": "tools",
+      "to": "tools",
+      "move": "patch_act:default_args:lint",
+      "why": "腦叫 lint 漏 brief_path → ArgumentsBad、再叫一次；act 缺參數就補"
+     }
+    ],
+    "removed": []
+   },
+   "rollup.llm_tokens.self": {
+    "from": 16579.0,
+    "to": 20001.0,
+    "delta": 3422.0
+   },
+   "rollup.llm_tokens.val": {
+    "from": 16579.0,
+    "to": 20001.0,
+    "delta": 3422.0
+   },
+   "rollup.measured.llm_calls": {
+    "from": 3.0,
+    "to": 3.5,
+    "delta": 0.5
+   },
+   "rollup.measured.llm_tokens": {
+    "from": 16579.0,
+    "to": 20001.0,
+    "delta": 3422.0
+   },
+   "rollup.measured.tools.lint.counter_argbad": {
+    "from": null,
+    "to": 0
+   },
+   "rollup.measured.tools.lint.counter_calls": {
+    "from": null,
+    "to": 6
+   },
+   "rollup.measured.tools.lint.counter_noop": {
+    "from": null,
+    "to": 0
+   },
+   "rollup.measured.tools.lint.counter_runs": {
+    "from": null,
+    "to": 4
+   },
+   "rollup.measured.tools.lint.counter_runs_called": {
+    "from": null,
+    "to": 4
+   },
+   "rollup.measured.tools.trim.counter_argbad": {
+    "from": null,
+    "to": 0
+   },
+   "rollup.measured.tools.trim.counter_calls": {
+    "from": null,
+    "to": 4
+   },
+   "rollup.measured.tools.trim.counter_noop": {
+    "from": null,
+    "to": 1
+   },
+   "rollup.measured.tools.trim.counter_runs": {
+    "from": null,
+    "to": 4
+   },
+   "rollup.measured.tools.trim.counter_runs_called": {
+    "from": null,
+    "to": 4
+   },
+   "subtrees": {
+    "added": [
+     {
+      "path": "act_rules.json",
+      "kind": "data",
+      "note": "train/apply 寫的固化規則（after_answer、default_args）"
+     }
+    ],
+    "removed": []
+   }
+  },
+  "draft/tools": {
+   "rollup.llm_tokens.val": {
+    "from": 16579.0,
+    "to": 20001.0,
+    "delta": 3422.0
+   }
+  },
+  "draft": {
+   "rollup.llm_tokens.val": {
+    "from": 16579.0,
+    "to": 20001.0,
+    "delta": 3422.0
+   }
+  },
+  ".": {
+   "ratings.傲嬌.反差": {
+    "from": 0.8,
+    "to": 0.75,
+    "delta": -0.05
+   },
+   "ratings.傲嬌.承接": {
+    "from": 0.875,
+    "to": 0.85,
+    "delta": -0.025
+   },
+   "rollup.llm_tokens.val": {
+    "from": 35174.5,
+    "to": 38570.0,
+    "delta": 3395.5
+   },
+   "rollup.measured.llm_calls": {
+    "from": 4.0,
+    "to": 4.5,
+    "delta": 0.5
+   },
+   "rollup.measured.llm_tokens": {
+    "from": 20174.5,
+    "to": 23570.0,
+    "delta": 3395.5
+   }
+  }
+ },
+ "gain": 0.0,
+ "gradient_at": "2026-10-25T10:12:22.556+00:00",
+ "gradient_from": "rounds/1.metainfo.json → round 2 的樹",
+ "judged_at": "2026-10-25T10:12:22.557+00:00"
+}

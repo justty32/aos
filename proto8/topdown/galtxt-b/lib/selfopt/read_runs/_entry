@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+# read_runs - 讀先前的執行結果（訓練場 runs/<輪>/<題>/<次>/ 與 rounds/、changes/）：每次一列分數、違規、token、這個節點的用量與叫工具的順序；只讀
+# 介面：stdin {"round"?: 第幾輪（預設最新）, "q"?: 題名的一段, "max_runs"?: 最多幾列（預設 8，上限 30）, "detail"?: true 才附 dims} → stdout 一行 JSON
+#   {round, rounds: [有哪些輪], runs: [{ws, q, k, total, val, dims（detail 才有）, degraded, violations, counter_tokens, node{counter_tokens, counter_llm_calls},
+#    tool_calls, counter_tool_args_bad}], totals（rounds/<輪>.json 的 totals，有才給）, gradient（changes/*.json 裡碰到這個節點的梯度，有才給）}。
+#   tool_calls：這個節點（agent 時）的 history.jsonl 裡依序叫了哪些工具；找不到 history 就用 run.json 的 tool_calls（匯入的舊跑有記）。
+#   counter_tool_args_bad：工具回「ArgumentsBad」的次數（例 lint 漏給 brief_path）。
+# 錯：SessionMissing／SessionBad、WsMissing、TreeMissing、NodeMissing、BudgetBad、ArgumentsBad、RunsMissing（訓練場還沒有 runs/）。
+import json, os, sys
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import guard  # noqa: E402
+
+
+def num(n):
+    try:
+        return int(n)
+    except ValueError:
+        return None
+
+
+def history_of(ws, me):
+    """這個節點在這次跑的 stack 裡的 history.jsonl（stack 樹＝呼叫樹，P-38：小格名＝工具名）。"""
+    for d, dirs, files in os.walk(os.path.join(ws, ".stack")):
+        if os.path.basename(d) == me and "history.jsonl" in files:
+            return os.path.join(d, "history.jsonl")
+    return None
+
+
+def row(ctx, ws, rel, q, k, detail=False):
+    me = os.path.basename(ctx.node)
+    out_dir = os.path.join(ws, "out", q)
+    sc = guard.jload(os.path.join(out_dir, "score.json"), {}) or {}
+    ms = guard.jload(os.path.join(out_dir, "measure.json"), {}) or {}
+    ck = guard.jload(os.path.join(out_dir, "check.json"), {}) or {}
+    rj = guard.jload(os.path.join(ws, "run.json"), {}) or {}
+    r = {"ws": rel, "q": q, "k": k, "total": sc.get("total"), "val": sc.get("val"),
+         "degraded": sc.get("degraded") or [], "violations": [v.get("rule") for v in ck.get("violations") or []],
+         "counter_drafts": ms.get("counter_drafts"), "counter_tokens": ms.get("counter_tokens")}
+    if detail:
+        r["dims"] = sc.get("dims")
+    ag =(ms.get("agents") or {}).get(me)
+    if ag:
+        r["node"] = {k2: ag.get(k2) for k2 in ("counter_tokens", "counter_llm_calls")}
+    hp = history_of(ws, me)
+    if hp:
+        calls, bad = [], 0
+        with open(hp, encoding="utf-8") as f:
+            for line in f:
+                try:
+                    m = json.loads(line)
+                except ValueError:
+                    continue
+                for c in m.get("tool_calls") or []:
+                    calls.append((c.get("function") or {}).get("name"))
+                if m.get("role") == "tool" and "ArgumentsBad" in str(m.get("content")):
+                    bad += 1
+        r["tool_calls"], r["counter_tool_args_bad"] = calls, bad
+    elif "tool_calls" in rj:
+        r["tool_calls"] = rj["tool_calls"]
+        if "counter_tool_args_bad" in rj:
+            r["counter_tool_args_bad"] = rj["counter_tool_args_bad"]
+    if rj.get("imported_from"):
+        r["imported_from"] = rj["imported_from"]
+    return r
+
+
+def main(args, ctx):
+    runs_dir = os.path.join(ctx.field, "runs")
+    rounds = sorted((n for n in (os.listdir(runs_dir) if os.path.isdir(runs_dir) else []) if num(n) is not None), key=int)
+    if not rounds:
+        raise guard.Fail("RunsMissing", "訓練場還沒有 runs/<輪>/")
+    want = args.get("round")
+    if want is not None and str(want) not in rounds:
+        raise guard.Fail("ArgumentsBad", "沒有第 %s 輪（有：%s）" % (want, "、".join(rounds)))
+    n = str(want) if want is not None else rounds[-1]
+    maxr = args.get("max_runs", 8)
+    if not isinstance(maxr, int) or maxr < 1:
+        raise guard.Fail("ArgumentsBad", "max_runs 要是正整數")
+    maxr = min(maxr, 30)
+    rows, more = [], 0
+    base = os.path.join(runs_dir, n)
+    for q in sorted(os.listdir(base)):
+        if args.get("q") and args["q"] not in q:
+            continue
+        qd = os.path.join(base, q)
+        for k in sorted((x for x in os.listdir(qd) if num(x) is not None), key=int) if os.path.isdir(qd) else []:
+            if len(rows) >= maxr:
+                more += 1
+                continue
+            rows.append(row(ctx, os.path.join(qd, k), os.path.relpath(os.path.join(qd, k), ctx.field), q, int(k), args.get("detail") is True))
+    out = {"round": int(n), "rounds": [int(x) for x in rounds], "runs": rows}
+    if more:
+        out["counter_runs_more"] = more
+    totals = (guard.jload(os.path.join(ctx.field, "rounds", n + ".json"), {}) or {}).get("totals")
+    if totals:
+        out["totals"] = totals
+    share = guard.read_meta(ctx.node_dir).get("gradient_share")
+    if share:
+        out["gradient_share"] = share
+    return out
+
+
+guard.tool_main("read_runs", main)

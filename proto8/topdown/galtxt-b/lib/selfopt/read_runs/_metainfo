@@ -1,0 +1,12 @@
+{"summary": "自我優化工具：讀訓練場先前的執行結果（每次一列分數、違規、token、這個節點的用量與叫工具順序）＋這輪總計與梯度；只讀",
+ "time_ms": {"val": 100, "max": 5000},
+ "resource": "cpu",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "reads": ["$SELFOPT_SESSION", "$AOS_WS/runs/<輪>/<題>/<次>/{out/<題>/*.json,run.json,.stack/**/history.jsonl}", "$AOS_WS/rounds/<輪>.json", "$AOS_WS/tree/<node>/_metainfo#/gradient_share"],
+ "writes": ["$SELFOPT_SESSION（counter_calls）"],
+ "grow_level": 3,
+ "uses_llm": false}

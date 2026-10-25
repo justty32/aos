@@ -43,7 +43,7 @@ galtxt-b/                 agent：aos-loop → fsm.json 一圈六格 idle→brie
   deliver/                純程式：寫 out/<題名>/（含 measure.json 彙整實跑數字）、題目 cur/→done/、清 stack
   examples/               範例場景 JSON（q01、q08）
   human/                  人評契約（samples.json 給人勾的 ≤ 6 筆、questions.json 網頁問什麼、ratings.json 網頁寫回）＋ import/（純程式：併進 _metainfo.ratings.human、寫校正表）；見 human/README.md
-  train/                  訓練迴圈（第 4 輪，建置中）：set/（傲嬌 × 一個固定場景，兩個開關＝4 題）、score/（每次成果 → rounds/<輪>.json）、pick/（主動學習挑人評樣本）；其餘格等 round5
+  train/                  訓練迴圈：set/（傲嬌 × 一個固定場景，兩個開關＝4 題）、init、score（含 drift）、record（含 rollup.py）、optimize、arbiter（判斷器）、apply、pick；見下方「生命週期與訓練迴圈」
   plan/                   規劃與盤點（不是這棵樹的一部分）：round1～3 的 md、metainfo_table.py（_metainfo 收表工具）、aos-fold（反向收攏原型）、
                           metainfo_table.{json,md}（宣告＋最近一輪真腦實跑數字）、runs/round2／round3/<題名>/（真腦 Q01、Q08 的 answer／score／measure）、
                           runs/round3/{tree_before,tree_after,verify}.txt（收攏前後的樹與假腦對照）、
@@ -51,3 +51,19 @@ galtxt-b/                 agent：aos-loop → fsm.json 一圈六格 idle→brie
 ```
 
 一題的 stack 樹（＝呼叫樹，P-38）：頂層 `.stack/` 放 `brief.json`、`plan.json`、`draft.json`、`check.json`、`score.json`；小格 `director/`、`writer/`（裡面還有 `lint/`）、`critic/` 各有自己的 `ws/`、`history.jsonl`、`current.txt`、`llm.jsonl`，writer 是 agent 所以另有 `state.txt`、`trace.jsonl`；`lint/`、`plan_lint/` 是純函數的空小格。
+
+## 生命週期與訓練迴圈（round6）
+
+節點走 `agent → tools → script → pure`（`_metainfo.lifecycle`；director 已 pure、writer 是 tools＋trim 抽出）。訓練迴圈只改**訓練場的複本**（`$AOS_WS/tree/`），repo 的樹不被寫（P-15）。各格都是 `aos-exec --ws <訓練場> train/<格>`，`$AOS_STACK/round.json` 給輪數 `{"round": n}`；腦照呼叫者的 `AOS_BRAIN_URL`（沒給＝假腦）。一輪的順序：
+
+| 步 | 格 | 做什麼 | 問腦 |
+|---|---|---|---|
+| 0 | `train/init` | 複製 tree/、set/；另存漂移錨點 tree_v0/、critic_v0/、v0_drafts/ 與判斷器複本 arbiter/（都只第一次） | 否 |
+| 1 | （跑）| 每題一個工作區 `runs/<n>/<題>/<次>/`：`aos-exec --ws 它 <訓練場>/tree`，寫 `run.json {"code"}` | 台詞樹 |
+| 2 | `train/score` | → `rounds/<n>.json`（每次一列、每題、每風格、合計、delta）＋`drift` 三條線（[drift.md](plan/runs/round6/drift.md)） | critic_v0 2 稿＋基準 |
+| 3 | `train/record` | 難例收進 tree/、評級、量測（agent token、工具呼叫／漏參）、子樹彙總 `rollup`（[rollup.txt](plan/runs/round6/rollup.txt)）、上一步的梯度與 gain、判斷器的帳 | 否 |
+| 4 | `train/optimize` | 提 2 條白名單候選（程式從 `_metainfo` 推，或 `proposals/<n>.json`）＋預期梯度 → 判斷器 `arbiter/` 挑 → `changes/<n>.json` | 判斷器 1 次 |
+| 5 | `train/apply` | 照 `changes/<n>.json` 改 tree/：`teach`（難例→表）、`freeze_order`（交稿前必叫的工具）、`patch_act`（漏參自動補） | teach 才問 |
+| 6 | 回到 1（n+1） | record 在 n+1 算 changes/<n> 的實測梯度、判斷器這一判的對錯 | |
+
+另：`train/pick`（人評樣本、挑子樹的 pick_rule＋λ_gain）。子樹彙總也能單獨印：`python3 train/record/rollup.py <樹根>`（不寫）。示範與數字：[measure.md](plan/runs/round6/measure.md)（director 換階、抽 trim）、[teach.md](plan/runs/round6/teach.md)（難例→teach→梯度）、[arbiter.md](plan/runs/round6/arbiter.md)（一步兩條→判斷器→apply→驗證）、[drift.md](plan/runs/round6/drift.md)。

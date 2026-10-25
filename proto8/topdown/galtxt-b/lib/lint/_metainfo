@@ -12,4 +12,5 @@
  "tier": "評分級聯 Tier 0＋Tier 1",
  "callers": ["check/（格，內嵌 brief）", "draft/tools/writer/（腦自檢，brief_path）"],
  "uses_llm": false,
- "frozen": true}
+ "frozen": true,
+ "cells": "違規對得到稿紙的格（brief.cells_used 反查）就多帶 cell（口癖另帶 limit_cell）：稱呼 forbidden、禁詞、穿幫詞、感嘆號／句長預算、口癖；只加欄、不改分數（10-25 結構化）"}

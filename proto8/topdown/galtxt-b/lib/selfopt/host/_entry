@@ -1,0 +1,3 @@
+#!/bin/sh
+# _entry - 自我優化 host：把 loop 跑起來（loop 每次跑一格 fsm.json；照 demo/agent-dan 範本）
+exec aos-loop loop.json

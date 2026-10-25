@@ -1,0 +1,4 @@
+{"description": "在訓練場用（改過的）你跑整棵樹一題，回外部量尺打的分：總分、各維、降級、lint 違規、整次 token、你自己的 token、你叫工具的順序、director 用了哪張表。真腦跑一次約 2 萬 token、算進你的預算；假腦不花 token 但分數沒意義（只驗得到流程與降級）。",
+ "parameters": {"type": "object",
+                "properties": {"question": {"type": "string", "description": "選填：set/ 裡的題名（不含 .json），預設第一題"},
+                               "brain": {"type": "string", "enum": ["fake", "real"], "description": "選填：fake 或 real，預設照這次 session 允許的"}}}}

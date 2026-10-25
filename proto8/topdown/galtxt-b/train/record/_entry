@@ -14,9 +14,20 @@
 #      沒有細項名就按 Σ|dims|），都沒有就平分（只動一個＝全給它）→ 寫 tree/<工具>/_metainfo.gradient_share[<n-1>]；
 #      gain＝Σ 好變化（照 polarity.json 的方向，評級字 bad<ok<good 也算）÷ 成本（changes.cost.counter_tokens 千 token，下限 1）→ changes 與 share 各記一份。
 #   5. 快照：整棵樹（versions/ 底下不算）每個 _metainfo → rounds/<n>.metainfo.json（下一輪算梯度的「改前」）。
+#   （round6 B 段後半加的，順序：2 之後量、3 之後彙總、4 之後判斷器的帳）
+#   2b. 量測：各次的 measure.json agents → agent 節點 rollup.measured {llm_tokens, llm_calls}；根 rollup.measured（整次平均）；
+#       .stack/<agent>/history.jsonl＋act.jsonl → rollup.measured.tools（腦叫各工具的次數、ArgumentsBad、changes 空、act 補參數、交稿前固化呼叫）。
+#   3b. 子樹彙總：rollup.py 由下往上寫各節點 _metainfo.rollup 的 llm_tokens、uses_llm、stage／stage_min、deterministic_score、hard_cases、counter_nodes。
+#   4b. 判斷器的帳：changes/<n-1>.json 有 arbiter（train/optimize 寫的）→ $AOS_WS/arbiter/_metainfo.ratings.judgments 記一筆
+#       （兩條都實測過＝correct／wrong／tie 進 accuracy；只測被選的＝partial＋expectation_held）；≥ 8 筆且還沒有規則表 → priority_rules.json、stage script。
 # 自己的錯一行 stderr「record: 代號 原因」退 1：StackMissing、RoundMissing／RoundBad、TreeMissing、PolarityBad。
-import hashlib, json, os, sys
+import hashlib, importlib.util, json, os, sys
 from datetime import datetime, timezone
+
+sys.dont_write_bytecode = True                  # 定義資料夾不留 __pycache__
+_spec = importlib.util.spec_from_file_location("galtxt_b_rollup", os.path.join(os.path.dirname(os.path.abspath(__file__)), "rollup.py"))
+rollup = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(rollup)
 
 SKIP_LAST = ("round",)                          # 記帳用的 key：每輪都會變，不算梯度
 NOTE_KEYS = ("notes", "reasons", "comments", "why")
@@ -195,6 +206,7 @@ def write_ratings(ws, tree, n):
                           "反差": mean([dim(r["score"], "語意", "角色味", "反差") for r in mine]),
                           "承接": mean([dim(r["score"], "語意", "承接") for r in mine]),
                           "counter_degraded": sum(1 for r in mine if r["score"].get("degraded")),
+                          "counter_violations": mean([(r["score"].get("tier1") or {}).get("counter_violations") for r in mine]),
                           "counter_samples": len(mine), "round": n, "rated_at": now()}
     for r in rows:
         for why in r["score"].get("degraded") or []:
@@ -209,6 +221,90 @@ def write_ratings(ws, tree, n):
             roll["measured"] = dict(roll.get("measured") or {}, counter_runs=len(rows), counter_degraded=per_tool.get(name, 0), round=n)
             meta["rollup"] = roll
             save_meta(tree, node, meta)
+    return True
+
+
+def tool_stats(history_path):
+    """一次跑的 agent history → {工具: {counter_calls, counter_argbad, counter_noop}}（noop＝工具回的 changes 是空的）。"""
+    rows = read_jsonl(history_path)
+    ids, out = {}, {}
+    for m in rows:
+        for c in (m.get("tool_calls") or []) if isinstance(m, dict) else []:
+            name = ((c or {}).get("function") or {}).get("name")
+            if isinstance(name, str):
+                ids[c.get("id")] = name
+                out.setdefault(name, {"counter_calls": 0, "counter_argbad": 0, "counter_noop": 0})["counter_calls"] += 1
+        if isinstance(m, dict) and m.get("role") == "tool" and m.get("tool_call_id") in ids:
+            s, body = out[ids[m["tool_call_id"]]], m.get("content") or ""
+            if "ArgumentsBad" in body:
+                s["counter_argbad"] += 1
+            try:
+                got = json.loads(body)
+            except ValueError:
+                got = None
+            if isinstance(got, dict) and got.get("changes") == []:
+                s["counter_noop"] += 1
+    return out
+
+
+def write_measured(ws, tree, n):
+    """rounds/<n>.json 的每次跑：measure.json 的 agents → 那個 agent 節點的 rollup.measured {llm_tokens, llm_calls}（每次平均）；
+    根的 rollup.measured {llm_tokens（整次平均）, counter_runs}；.stack/<agent>/history.jsonl 的工具呼叫 → rollup.measured.tools
+    {工具: {counter_runs, counter_runs_called, counter_calls, counter_argbad, counter_noop, counter_filled, counter_after_answer}}
+    （act.jsonl 的補參數與固化呼叫也數）。沒有 history 的輪（例：從別處帶進來的量測）不寫 tools。"""
+    rounds = jload(os.path.join(ws, "rounds", "%d.json" % n))
+    if not isinstance(rounds, dict):
+        return False
+    rows = [r for r in rounds.get("runs") or [] if not r.get("failed") and isinstance(r.get("score"), dict)]
+    if not rows:
+        return False
+    metas = all_metas(tree)
+    by_name = {node.rsplit("/", 1)[-1]: node for node in metas if node != "."}
+    agents, tools = {}, {}
+    for r in rows:
+        m = jload(os.path.join(ws, r["ws"], "out", r["q"], "measure.json"), {}) or {}
+        for a, x in (m.get("agents") or {}).items():
+            if a in by_name and isinstance(x, dict):
+                agents.setdefault(a, []).append(x)
+        st = os.path.join(ws, r["ws"], ".stack")
+        for a in by_name:
+            hp = os.path.join(st, a, "history.jsonl")
+            if not os.path.exists(hp):
+                continue
+            per = tools.setdefault(a, {"_runs": 0})
+            per["_runs"] += 1
+            stats = tool_stats(hp)
+            for row in read_jsonl(os.path.join(st, a, "act.jsonl")):
+                t = row.get("tool")
+                if isinstance(t, str):
+                    s = stats.setdefault(t, {"counter_calls": 0, "counter_argbad": 0, "counter_noop": 0})
+                    s["counter_filled"] = s.get("counter_filled", 0) + (1 if row.get("filled") else 0)
+                    if row.get("after_answer"):
+                        s["counter_after_answer"] = s.get("counter_after_answer", 0) + 1
+                        s["counter_noop"] += 1 if row.get("counter_changes") == 0 else 0
+            for t, s in stats.items():
+                acc = per.setdefault(t, {"counter_runs_called": 0})
+                acc["counter_runs_called"] += 1 if s["counter_calls"] else 0
+                for k, v in s.items():
+                    acc[k] = acc.get(k, 0) + v
+    for a, xs in agents.items():
+        node = by_name[a]
+        meta = load_meta(tree, node)
+        roll = dict(meta.get("rollup") or {})
+        measured = dict(roll.get("measured") or {}, llm_tokens=mean([x.get("counter_tokens") for x in xs]),
+                        llm_calls=mean([x.get("counter_llm_calls") for x in xs]), counter_runs=len(xs), round=n)
+        if a in tools:
+            runs = tools[a].pop("_runs")
+            measured["tools"] = {t: dict(s, counter_runs=runs) for t, s in sorted(tools[a].items())}
+        roll["measured"] = measured
+        meta["rollup"] = roll
+        save_meta(tree, node, meta)
+    root = load_meta(tree, ".")
+    roll = dict(root.get("rollup") or {})
+    roll["measured"] = dict(roll.get("measured") or {}, llm_tokens=mean([r.get("counter_tokens") for r in rows]),
+                            llm_calls=mean([r.get("counter_llm_calls") for r in rows]), counter_runs=len(rows), round=n)
+    root["rollup"] = roll
+    save_meta(tree, ".", root)
     return True
 
 
@@ -372,6 +468,112 @@ def do_gradient(ws, tree, n, polarity):
     return True
 
 
+# ── 6. 判斷器的帳（round6 §4：ratings.judgments；≥ 8 次判斷 → priority_rules.json、stage script）──────────
+
+MIN_JUDGMENTS = 8
+SCORE_TIE = 0.5                                 # 實測「誰較好」：根的總分差 < 0.5 算平手（σ≈0.58，n=4 的平均），平手再比 token
+
+
+def root_change(grad, suffix):
+    """梯度裡根（"."）的某個 key（以 suffix 結尾）的 delta；沒有回 None。"""
+    for k, v in (grad.get(".") or {}).items():
+        if k.endswith(suffix) and isinstance(v, dict) and "delta" in v:
+            return v["delta"]
+    return None
+
+
+def measured_better(ga, gb):
+    """兩條候選的實測梯度（同一個改前）→ "a"、"b" 或 None（分不出）。總分（ratings.*.total_mean）差 ≥ 0.5 高的贏；否則根 token 少 ≥ 5% 的贏。"""
+    ta, tb = root_change(ga, ".total_mean") or 0, root_change(gb, ".total_mean") or 0
+    if abs(ta - tb) >= SCORE_TIE:
+        return "a" if ta > tb else "b"
+    ka, kb = root_change(ga, "rollup.measured.llm_tokens"), root_change(gb, "rollup.measured.llm_tokens")
+    base = ((ga.get(".") or {}).get("rollup.measured.llm_tokens") or {}).get("from") or 0
+    if ka is not None and kb is not None and base and abs(ka - kb) >= 0.05 * base:
+        return "a" if ka < kb else "b"
+    return None
+
+
+def expectation_held(expected, real):
+    """只實測了被選的那條：預期梯度裡有 delta 的 key，實測同號的比率（0 也算同號＝沒變）；總分掉 ≥ 0.5 直接算沒中。"""
+    if (root_change(real, ".total_mean") or 0) <= -SCORE_TIE:
+        return 0.0
+    pairs = [(v["delta"], ((real.get(node) or {}).get(k) or {}).get("delta"))
+             for node, d in (expected or {}).items() for k, v in d.items() if isinstance(v, dict) and "delta" in v]
+    pairs = [(e, r if r is not None else 0) for e, r in pairs]
+    if not pairs:
+        return None
+    return round(sum(1 for e, r in pairs if (e > 0) == (r > 0) and (e < 0) == (r < 0)) / len(pairs), 3)
+
+
+def side_gradient(ws, m, label):
+    """沒被選的那條若也實測過（$AOS_WS/side/<m>-<label>/changes/<m>.json 有 gradient）就拿來比。"""
+    got = jload(os.path.join(ws, "side", "%d-%s" % (m, label), "changes", "%d.json" % m))
+    return got.get("gradient") if isinstance(got, dict) and isinstance(got.get("gradient"), dict) else None
+
+
+def write_judgment(ws, n):
+    """changes/<n-1>.json 有 arbiter（optimize 寫的）且已有 gradient、還沒 judged_at → 記一筆進 $AOS_WS/arbiter/_metainfo.ratings.judgments。"""
+    if n < 1:
+        return False
+    cpath = os.path.join(ws, "changes", "%d.json" % (n - 1))
+    change = jload(cpath)
+    adir = os.path.join(ws, "arbiter")
+    ameta = jload(os.path.join(adir, "_metainfo"))
+    if not isinstance(change, dict) or not isinstance(change.get("arbiter"), dict) or "gradient" not in change \
+            or change.get("judged_at") or not isinstance(ameta, dict):
+        return False
+    verdict = change["arbiter"]
+    chosen = verdict.get("better")
+    cands = {c.get("label"): c for c in change.get("candidates") or [] if isinstance(c, dict)}
+    other = next((l for l in cands if l != chosen), None)
+    real = {chosen: change["gradient"]}
+    if other and side_gradient(ws, n - 1, other) is not None:
+        real[other] = side_gradient(ws, n - 1, other)
+    item = {"round": n - 1, "change": "changes/%d.json" % (n - 1), "better": chosen, "by": verdict.get("by", "brain"),
+            "weights_used": verdict.get("weights_used") or {}, "measured": sorted(real)}
+    if other in real:
+        truth = measured_better(real["a"], real["b"])
+        item.update(truth=truth, verdict="tie" if truth is None else "correct" if truth == chosen else "wrong")
+    else:
+        item.update(verdict="partial", expectation_held=expectation_held((cands.get(chosen) or {}).get("expected"), change["gradient"]))
+    rt = dict(ameta.get("ratings") or {})
+    j = dict(rt.get("judgments") or {})
+    items = list(j.get("items") or []) + [item]
+    full = [x for x in items if x["verdict"] in ("correct", "wrong")]
+    part = [x for x in items if x["verdict"] == "partial" and x.get("expectation_held") is not None]
+    j.update(items=items, counter_judgments=len(items), counter_full=len(full), counter_correct=sum(1 for x in full if x["verdict"] == "correct"),
+             accuracy=round(sum(1 for x in full if x["verdict"] == "correct") / len(full), 3) if full else None,
+             counter_partial=len(part), expectation_held=mean([x["expectation_held"] for x in part]),
+             human_agreement=j.get("human_agreement"), note=j.get("note") or "accuracy 只算兩條都實測過的（side/）；只測被選那條的記 partial＋expectation_held（預期梯度的方向實測有沒有中）")
+    rt["judgments"] = j
+    ameta["ratings"] = rt
+    if len(items) >= MIN_JUDGMENTS and not os.path.exists(os.path.join(adir, "priority_rules.json")):
+        solidify(adir, ameta, items, n)
+    write_json(os.path.join(adir, "_metainfo"), ameta)
+    change["judged_at"] = now()
+    write_json(cpath, change)
+    return True
+
+
+def solidify(adir, ameta, items, n):
+    """≥ 8 次判斷：weights_used 平均（缺的算 0）、正規化到總和 1 → priority_rules.json；lifecycle 換 script（之後規則表平手才問腦）。"""
+    names = sorted({k for x in items for k, v in (x.get("weights_used") or {}).items() if is_num(v)})
+    avg = {k: sum(float((x.get("weights_used") or {}).get(k) or 0) for x in items) / len(items) for k in names}
+    tot = sum(abs(v) for v in avg.values()) or 1.0
+    pol = jload(os.path.join(os.path.dirname(os.path.abspath(__file__)), "polarity.json"), {}) or {}
+    rules = {"weights": {k: round(v / tot, 4) for k, v in sorted(avg.items(), key=lambda kv: -abs(kv[1]))},
+             "order": [k for k, _ in sorted(avg.items(), key=lambda kv: -abs(kv[1]))],
+             "polarity": {k: pol.get(k, []) for k in ("higher_better", "lower_better")},
+             "tie": 0.05, "counter_judgments": len(items), "round": n, "solidified_at": now()}
+    write_json(os.path.join(adir, "priority_rules.json"), rules)
+    lc = dict(ameta.get("lifecycle") or {})
+    lc["history"] = list(lc.get("history") or []) + [{"round": n, "from": lc.get("stage"), "to": "script", "move": "solidify:priority_rules",
+                                                      "why": "判了 %d 次，weights_used 平均成規則表" % len(items)}]
+    lc.update(stage="script", counter_steps_tooled=1, brain_decides=["規則表平手時哪條較好"])
+    ameta["lifecycle"] = lc
+
+
 def record(ws, n, polarity):
     tree = os.path.join(ws, "tree")
     if not os.path.isfile(os.path.join(tree, "_metainfo")):
@@ -379,8 +581,11 @@ def record(ws, n, polarity):
     got = {"hard_cases_added": ingest_hard_cases(ws, tree, n)}
     recount_hard_cases(tree)
     got["ratings"] = write_ratings(ws, tree, n)
+    got["measured"] = write_measured(ws, tree, n)
     write_facts(tree)
+    got["rollup"] = rollup.rollup(tree, write=True)["counter_nodes"]
     got["gradient"] = do_gradient(ws, tree, n, polarity)
+    got["judgment"] = write_judgment(ws, n)
     write_json(os.path.join(ws, "rounds", "%d.metainfo.json" % n), all_metas(tree))
     return got
 

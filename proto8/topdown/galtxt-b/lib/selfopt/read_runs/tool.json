@@ -1,0 +1,6 @@
+{"description": "讀先前的執行結果：訓練場某一輪（預設最新）每次跑一列——總分、評級、各維分數、降級、lint 違規、整次 token、你自己的 token 與問腦次數、你叫工具的順序、工具回 ArgumentsBad 的次數；另附這輪總計與你分到的梯度。只讀。",
+ "parameters": {"type": "object",
+                "properties": {"round": {"type": "integer", "description": "選填：第幾輪，預設最新"},
+                               "q": {"type": "string", "description": "選填：只看題名含這段字的"},
+                               "max_runs": {"type": "integer", "description": "選填：最多幾列，預設 8、上限 30"},
+                               "detail": {"type": "boolean", "description": "選填：true 才附各維分數（反差、承接、含蓄…），預設不附省篇幅"}}}}

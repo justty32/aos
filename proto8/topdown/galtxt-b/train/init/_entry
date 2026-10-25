@@ -4,6 +4,7 @@
 # 複製：shutil.copytree(symlinks=True)——捷徑照捷徑複製（director/versions/v1_script/tools/agent → ../../v0_agent 是相對捷徑，展開會變兩份）；
 #   排除 train/、plan/、human/（訓練迴圈自己、規劃文件、人評資料不屬於台詞樹；round4 §4a）與 __pycache__。
 # tree/ 已在＝之後的輪，什麼都不做退 0（idempotent）。純程式、不問腦。
+# round6 §5、§4：另存 tree_v0/、critic_v0/、v0_drafts/（漂移的錨點）與 arbiter/（判斷器的訓練場複本）；各自已在就不動（見 freeze_v0）。
 # 自己的錯一行 stderr「init: 代號 原因」退 1：SourceBad（找不到 galtxt-b 根的 _entry）。
 import os, shutil, sys
 
@@ -13,6 +14,33 @@ EXCLUDE = ("train", "plan", "human")
 def die(code, reason):
     print("init: %s %s" % (code, reason), file=sys.stderr)
     sys.exit(1)
+
+
+def copy_once(a, b):
+    """a → b（整個資料夾、捷徑照捷徑）；b 已在就不動。"""
+    if os.path.isdir(a) and not os.path.exists(b):
+        tmp = b + ".tmp"
+        shutil.rmtree(tmp, ignore_errors=True)
+        shutil.copytree(a, tmp, symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
+        os.replace(tmp, b)
+
+
+def freeze_v0(src, ws, tree):
+    """round6 §5 漂移的錨點與判斷器（都只在第一次建、之後不動）：
+    tree_v0/＝剛建好的 tree/ 複本；critic_v0/＝那時的 judge/tools/critic；v0_drafts/<題>/<次>/{answer.txt,score.json}＝A 段基準
+    plan/runs/round4/round0 的稿（tree_v0 那一代的既有稿，train/score 算 drift 用）；arbiter/＝train/arbiter（判斷器樹，record 寫它的 ratings.judgments）。"""
+    copy_once(tree, os.path.join(ws, "tree_v0"))
+    copy_once(os.path.join(tree, "judge", "tools", "critic"), os.path.join(ws, "critic_v0"))
+    copy_once(os.path.join(src, "train", "arbiter"), os.path.join(ws, "arbiter"))
+    base, dest = os.path.join(src, "plan", "runs", "round4", "round0"), os.path.join(ws, "v0_drafts")
+    if os.path.isdir(base) and not os.path.exists(dest):
+        for d, dirs, files in os.walk(base):
+            dirs.sort()
+            for n in ("answer.txt", "score.json"):
+                if n in files:
+                    to = os.path.join(dest, os.path.relpath(d, base))
+                    os.makedirs(to, exist_ok=True)
+                    shutil.copy(os.path.join(d, n), os.path.join(to, n))
 
 
 def init(src, ws):
@@ -29,6 +57,7 @@ def init(src, ws):
                         ignore=lambda d, names: [n for n in names if n == "__pycache__" or (os.path.abspath(d) == top and n in EXCLUDE)])
         os.replace(tmp, tree)
         made = True
+    freeze_v0(src, ws, tree)
     sdir = os.path.join(ws, "set")
     os.makedirs(sdir, exist_ok=True)
     added = 0

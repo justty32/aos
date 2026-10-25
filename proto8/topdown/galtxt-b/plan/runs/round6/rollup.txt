@@ -1,0 +1,93 @@
+子樹彙總（train/record/rollup.py，round6 §7-1；每節點一行：[stage／子樹最不固化的階]  tokens 子樹合計（自己那份，來源）  det  nodes 子樹節點數）
+規則：record 每輪算（寫訓練場 tree/ 的 _metainfo.rollup）；repo 的樹只用印出模式（不寫，P-15）。自己那份 token 只算有腦殼（brain.py／ask.py）的節點：
+有 record 量到的用量的（measured），沒有用 _metainfo 宣告的（declared）。捷徑子樹（→）照抄目標的 rollup、照樣算進父節點。
+注意：這是「子樹裡有什麼」，不是「跑一次花多少」——lib/selfopt（同 worktree 另一位實作者剛加的、根跑時不叫）宣告的 15000 也算進根；
+跑一次花多少看根的 rollup.measured.llm_tokens（訓練場第 2 輪 23570／次）。
+
+== 訓練場 tree/（第 2 輪 record 後；writer、critic 是量到的）==
+.  [—／min agent]  tokens 38570.0（自己 0）  det —  nodes 42
+  brief  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 2
+    tables  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+  check  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 3
+    tools  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 2
+      lint  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+  deliver  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+  draft  [—／min tools]  tokens 20001.0（自己 0）  det —  nodes 11
+    tools  [—／min tools]  tokens 20001.0（自己 0）  det —  nodes 10
+      director  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 3
+        tools  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 2
+          plan_template  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      plan_lint  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      writer  [tools／min tools]  tokens 20001.0（自己 20001.0，measured）  det —  nodes 5
+        idle  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+        tools  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 3
+          lint  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+          trim  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+  examples  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+  idle  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+  judge  [—／min agent]  tokens 3569.0（自己 0）  det —  nodes 4
+    benchmarks  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+    tools  [—／min agent]  tokens 3569.0（自己 0）  det —  nodes 2
+      critic  [agent／min agent]  tokens 3569.0（自己 3569.0，measured）  det —  nodes 1
+  lib  [—／min agent]  tokens 15000（自己 0）  det —  nodes 18
+    lint  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+    selfopt  [—／min agent]  tokens 15000（自己 0）  det —  nodes 16
+      edit_self  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      extract_tool  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      host  [agent／min agent]  tokens 15000（自己 15000，declared）  det —  nodes 9
+        idle  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+        tools  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 7
+          edit_self  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+          extract_tool  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+          note  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+          read_runs  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+          read_self  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+          run_self_test  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      note  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      read_runs  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      read_self  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      run_self_test  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+
+== repo 的 galtxt-b（印出模式，全是宣告值；排除 train／plan／human）==
+.  [—／min agent]  tokens 20200（自己 0）  det —  nodes 42
+  brief  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 2
+    tables  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+  check  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 3
+    tools  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 2
+      lint  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+  deliver  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+  draft  [—／min tools]  tokens 3000（自己 0）  det —  nodes 11
+    tools  [—／min tools]  tokens 3000（自己 0）  det —  nodes 10
+      director  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 3
+        tools  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 2
+          plan_template  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      plan_lint  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      writer  [tools／min tools]  tokens 3000（自己 3000，declared）  det —  nodes 5
+        idle  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+        tools  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 3
+          lint  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+          trim  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+  examples  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+  idle  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+  judge  [—／min agent]  tokens 2200（自己 0）  det —  nodes 4
+    benchmarks  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+    tools  [—／min agent]  tokens 2200（自己 0）  det —  nodes 2
+      critic  [agent／min agent]  tokens 2200（自己 2200，declared）  det —  nodes 1
+  lib  [—／min agent]  tokens 15000（自己 0）  det —  nodes 18
+    lint  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+    selfopt  [—／min agent]  tokens 15000（自己 0）  det —  nodes 16
+      edit_self  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      extract_tool  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      host  [agent／min agent]  tokens 15000（自己 15000，declared）  det —  nodes 9
+        idle  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+        tools  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 7
+          edit_self  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+          extract_tool  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+          note  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+          read_runs  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+          read_self  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+          run_self_test  → 捷徑（rollup 照抄目標）  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      note  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      read_runs  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      read_self  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1
+      run_self_test  [pure／min pure]  tokens 0（自己 0）  det 1.0  nodes 1

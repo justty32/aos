@@ -1,0 +1,12 @@
+{"summary": "自我優化工具：抽工具（round6 §1b，impl pure）——在節點 tools/<name>/ 建規則表殼（rules_shell.py）、system.txt 加一句、lifecycle 記一筆；改前存 versions/",
+ "time_ms": {"val": 100, "max": 5000},
+ "resource": ["cpu", "disk"],
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "reads": ["$SELFOPT_SESSION", "rules_shell.py（殼）"],
+ "writes": ["$AOS_WS/tree/<node>/tools/<name>/", "$AOS_WS/tree/<node>/{system.txt,_metainfo}", "$AOS_WS/tree/<node>/versions/selfopt_<session>/", "$SELFOPT_SESSION"],
+ "grow_level": 3,
+ "uses_llm": false}

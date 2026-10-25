@@ -1,0 +1,184 @@
+{
+ "round": 1,
+ "moves": [
+  {
+   "kind": "selfopt",
+   "via": "claude_code",
+   "node": "draft/tools/writer",
+   "status": "applied",
+   "changed": [
+    "act_rules.json",
+    "system.txt"
+   ],
+   "cost_usd": 0.104031
+  }
+ ],
+ "touched": [
+  "draft/tools/writer"
+ ],
+ "cost": {
+  "counter_tokens": 0,
+  "cost_usd": 0.104031
+ },
+ "applied_at": "2026-10-25T10:15:30Z",
+ "gradient": {
+  "draft/tools/writer": {
+   "lifecycle.history": {
+    "added": [
+     {
+      "round": 1,
+      "from": "tools",
+      "to": "tools",
+      "move": "selfopt",
+      "goal": "請優化：降低 token 且分數不掉（證據：measure.md——lint 漏給 brief_path、自檢兩回、trim 叫了卻沒改字）",
+      "why": "**改了什麼**（都在 `draft/tools/writer/`，我沒有跑測試）\n\n1. 新增 `act_rules.json`：\n   - `after_answer: [\"trim\"]`：交稿前由程式固定叫 trim，不再給腦叫。`brain.py` 和 `act.py` 本來就支援這個開關，所以兩支程式都沒動。\n   - `default_args.lint.brief_path = \"cur/{name}.json#/brief\"`：腦叫 lint 時漏給 `brief_path`，程式自動補上。\n2. `system.txt` 的第 7、8 條：\n   - lint 只叫一次，`brief_path` 要給。\n   - 沒違規就直接交稿。有 tier 0 違規，改完直接交，不必再自檢。\n   - 拿掉「叫 trim 再原樣交」那條，改成說明修剪由程式在交稿後處理。\n\n**依據**\n- `measure.md` 裡 trim 被叫 6/6，但 changes 6 次全空。腦多繞一次來回，只多花約 800 token，沒換到任何修改。\n- 不給 trim 那組，3/6 次第一次叫 lint 漏了 `brief_path`，吃 ArgumentsBad 再叫一次。現在由程式補上，這個來回應該沒了。\n- 對照 gpt 的做法：直接拿掉 trim，有一次旁白 5 行超上限、得 4",
+      "changed": [
+       "act_rules.json",
+       "system.txt"
+      ],
+      "self_tests": [],
+      "by": "claude_code",
+      "session": "cc",
+      "noted_at": "2026-10-25T10:15:14.954+00:00",
+      "cost_usd": 0.1040309,
+      "num_turns": 8,
+      "restored": []
+     }
+    ],
+    "removed": []
+   },
+   "rollup.llm_tokens.self": {
+    "from": 17348.857,
+    "to": 10070.0,
+    "delta": -7278.857
+   },
+   "rollup.llm_tokens.val": {
+    "from": 17348.9,
+    "to": 10070.0,
+    "delta": -7278.9
+   },
+   "rollup.measured.counter_runs": {
+    "from": 7,
+    "to": 1,
+    "delta": -6
+   },
+   "rollup.measured.llm_calls": {
+    "from": 3.143,
+    "to": 2.0,
+    "delta": -1.143
+   },
+   "rollup.measured.llm_tokens": {
+    "from": 17348.857,
+    "to": 10070.0,
+    "delta": -7278.857
+   },
+   "rollup.measured.tools.lint.counter_argbad": {
+    "from": null,
+    "to": 0
+   },
+   "rollup.measured.tools.lint.counter_calls": {
+    "from": null,
+    "to": 1
+   },
+   "rollup.measured.tools.lint.counter_noop": {
+    "from": null,
+    "to": 0
+   },
+   "rollup.measured.tools.lint.counter_runs": {
+    "from": null,
+    "to": 1
+   },
+   "rollup.measured.tools.lint.counter_runs_called": {
+    "from": null,
+    "to": 1
+   },
+   "rollup.measured.tools.trim.counter_after_answer": {
+    "from": null,
+    "to": 1
+   },
+   "rollup.measured.tools.trim.counter_argbad": {
+    "from": null,
+    "to": 0
+   },
+   "rollup.measured.tools.trim.counter_calls": {
+    "from": null,
+    "to": 0
+   },
+   "rollup.measured.tools.trim.counter_filled": {
+    "from": null,
+    "to": 0
+   },
+   "rollup.measured.tools.trim.counter_noop": {
+    "from": null,
+    "to": 1
+   },
+   "rollup.measured.tools.trim.counter_runs": {
+    "from": null,
+    "to": 1
+   },
+   "rollup.measured.tools.trim.counter_runs_called": {
+    "from": null,
+    "to": 0
+   }
+  },
+  "draft/tools": {
+   "rollup.llm_tokens.val": {
+    "from": 17348.9,
+    "to": 10070.0,
+    "delta": -7278.9
+   }
+  },
+  "draft": {
+   "rollup.llm_tokens.val": {
+    "from": 17348.9,
+    "to": 10070.0,
+    "delta": -7278.9
+   }
+  },
+  ".": {
+   "ratings.傲嬌.counter_degraded": {
+    "from": 1,
+    "to": 0,
+    "delta": -1
+   },
+   "ratings.傲嬌.counter_samples": {
+    "from": 7,
+    "to": 1,
+    "delta": -6
+   },
+   "ratings.傲嬌.反差": {
+    "from": 0.771,
+    "to": 0.9,
+    "delta": 0.129
+   },
+   "ratings.傲嬌.承接": {
+    "from": 0.9,
+    "to": 1.0,
+    "delta": 0.1
+   },
+   "rollup.llm_tokens.val": {
+    "from": 35926.2,
+    "to": 28631.0,
+    "delta": -7295.2
+   },
+   "rollup.measured.counter_runs": {
+    "from": 7,
+    "to": 1,
+    "delta": -6
+   },
+   "rollup.measured.llm_calls": {
+    "from": 4.143,
+    "to": 3.0,
+    "delta": -1.143
+   },
+   "rollup.measured.llm_tokens": {
+    "from": 20926.143,
+    "to": 13631.0,
+    "delta": -7295.143
+   }
+  }
+ },
+ "gain": 43709.415,
+ "gradient_at": "2026-10-25T10:15:40.466+00:00",
+ "gradient_from": "rounds/1.metainfo.json → round 2 的樹"
+}

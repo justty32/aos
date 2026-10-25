@@ -1,0 +1,7 @@
+{"description": "把「請優化 X」整件交給 Claude Code（claude -p）：它在你的資料夾（訓練場複本）裡自己讀先前結果、改檔，回一段報告。只准改你的資料夾；資料夾外、量尺、記帳檔的改動會被程式還原並記成違規。很貴（每次數角美元），一個 session 叫一次就好。",
+ "parameters": {"type": "object",
+                "properties": {"goal": {"type": "string", "description": "請優化什麼（一句）"},
+                               "evidence": {"type": "array", "items": {"type": "string"}, "description": "選填：先前結果，幾行"},
+                               "max_turns": {"type": "integer", "description": "選填：claude 最多幾輪（上限見 cli.json）"},
+                               "max_budget_usd": {"type": "number", "description": "選填：這次最多花幾美元（上限見 cli.json）"}},
+                "required": ["goal"]}}

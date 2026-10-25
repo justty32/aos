@@ -1,0 +1,13 @@
+{"description": "把你工作裡一個固定的環節抽成純程式工具：在你的 tools/<name>/ 建一個照規則表做正規式替換的工具（你給規則），你的 system.txt 會多一句「這環節交給它」，_metainfo 的 lifecycle 記一筆。只在那個環節真的能寫成固定規則時用。",
+ "parameters": {"type": "object",
+                "properties": {"name": {"type": "string", "description": "工具名，小寫英數底線，例 strip_quote"},
+                               "step": {"type": "string", "description": "交給它的那個環節（一句）"},
+                               "why": {"type": "string", "description": "為什麼抽（引先前結果的證據）"},
+                               "rules": {"type": "array", "description": "依序套用的規則",
+                                         "items": {"type": "object",
+                                                   "properties": {"pattern": {"type": "string", "description": "Python 正規式"},
+                                                                  "replace": {"type": "string"},
+                                                                  "max_count": {"type": "integer", "description": "最多換幾處，0＝全部"},
+                                                                  "note": {"type": "string"}},
+                                                   "required": ["pattern", "replace"]}}},
+                "required": ["name", "step", "why", "rules"]}}

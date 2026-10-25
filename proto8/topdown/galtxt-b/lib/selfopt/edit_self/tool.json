@@ -1,0 +1,9 @@
+{"description": "改你自己資料夾裡一個可改的檔（read_self 的 files 裡 editable 為 true 的：system.txt、規則表 JSON）。三選一：edits＝照字面替換幾段（每段 old_text 要剛好出現一次，一處不合整個不改；適合 system.txt）；set＝JSON 檔照 JSON 指標放值（例 {\"/plans/主角|舊車票\": {\"beats\": [...]}}；改 JSON 一律用這個）；content＝整份新內容。改前的原樣會自動留檔。你資料夾以外、凍結的（lint、評分、測試）一律拒絕並記錄。",
+ "parameters": {"type": "object",
+                "properties": {"path": {"type": "string", "description": "相對你資料夾的檔，例 system.txt、plans.json"},
+                               "edits": {"type": "array", "description": "照字面替換：[{old_text, new_text}]",
+                                         "items": {"type": "object", "properties": {"old_text": {"type": "string"}, "new_text": {"type": "string"}},
+                                                   "required": ["old_text", "new_text"]}},
+                               "set": {"type": "object", "description": "只給 .json：{JSON 指標: 值}；物件可加新 key，中間層要已在"},
+                               "content": {"type": "string", "description": "整份新內容"}},
+                "required": ["path"]}}

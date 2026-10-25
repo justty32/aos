@@ -8,8 +8,10 @@
 #   每次一列：q、k、style、scene（cast、place、season、time、summary、event、intent、style）、ws、code、produced_by、answer（相對 $AOS_WS）、
 #   counter_lines（台詞句數）、score（score.json 原樣）、counter_tokens、counter_llm_calls、elapsed_ms；沒交出 score.json＝failed: true。
 #   多樣性：一組稿子的台詞行，字元 3-gram 集合兩兩 Jaccard 的平均＝重疊，1 − 重疊＝多樣性。by_q 是同一題 k ≥ 2 次的；by_style 是同一風格這輪全部稿子的（≥ 2 份才有）。
+#   drift（round6 §5，drift.py）：三條線——① 現在的 critic 評 v0 稿 vs critic_v0（critic 沒變＝0、不問腦）② critic_v0 評這輪 2 稿（round.json drift_drafts）
+#   vs 它評 v0 稿的基準 ③ lint 維（有錨）與 critic 維（無錨）跟上一輪同升同降。②要問 critic_v0（AOS_BRAIN_URL 由呼叫者給，沒給＝假腦、drift 全 0）。
 # 自己的錯一行 stderr「score: 代號 原因」退 1：StackMissing、RoundMissing／RoundBad、SetMissing、WeightsBad。
-import json, os, re, sys
+import importlib.util, json, os, re, sys
 from itertools import combinations
 
 PRODUCED_BY = "draft/tools/writer"             # 產出台詞的節點（相對 galtxt-b）；評級記在它的 _metainfo
@@ -151,4 +153,10 @@ if isinstance(prev, dict):
     delta = {"total_mean": sub(totals["total_mean"], pt.get("total_mean")),
              "counter_tokens": sub(totals["counter_tokens"], pt.get("counter_tokens")),
              "by_style": {s: sub(v.get("total_mean"), ((prev.get("by_style") or {}).get(s) or {}).get("total_mean")) for s, v in by_style.items()}}
-write_json(out_path, {"round": n, "k": rj.get("k"), "runs": rows, "by_q": by_q, "by_style": by_style, "totals": totals, "delta": delta})
+sys.dont_write_bytecode = True                  # 漂移（round6 §5）：drift.py；錨點不在（沒跑過新版 train/init）＝null
+_spec = importlib.util.spec_from_file_location("galtxt_b_drift", os.path.join(os.path.dirname(os.path.abspath(__file__)), "drift.py"))
+drift = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(drift)
+drift_v = drift.compute(os.path.abspath(ws), n, rows, prev, dict(os.environ), max_drafts=int(rj.get("drift_drafts") or 2))
+write_json(out_path, {"round": n, "k": rj.get("k"), "runs": rows, "by_q": by_q, "by_style": by_style, "totals": totals, "delta": delta,
+                      "drift": drift_v})

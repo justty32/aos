@@ -1,0 +1,12 @@
+{"summary": "自我優化工具：改被優化節點自己資料夾裡白名單上的一個檔（照字面替換或整份），寫前存 versions/selfopt_<session>/；越界、凍結、白名單外一律拒寫並記 attempted_violation",
+ "time_ms": {"val": 50, "max": 3000},
+ "resource": ["cpu", "disk"],
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "reads": ["$SELFOPT_SESSION", "$AOS_WS/tree/<node>/<path>"],
+ "writes": ["$AOS_WS/tree/<node>/<path>（白名單）", "$AOS_WS/tree/<node>/versions/selfopt_<session>/", "$SELFOPT_SESSION（counter_calls、edits、attempted_violations）"],
+ "grow_level": 3,
+ "uses_llm": false}

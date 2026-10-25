@@ -4,6 +4,8 @@
 #   （brief_path 相對 $AOS_WS、`檔#/指標` 寫法——腦自檢時用，不用把整份稿紙再送一遍）。
 # 結果：stdout 一行 JSON {"violations": [{"tier": 0|1, "rule", "line": 行號（0＝整篇）, "text", "reason"}],
 #   "counter_dialogue_lines", "counter_narration_lines"}。只報事實、不判 pass（pass／final 是 check 格的事）。檢出違規不是錯，退 0。
+#   違規若對得到稿紙的某一格（brief.cells_used 反查：稱呼規則、禁詞、穿幫詞、感嘆號／句長預算、口癖）就多帶 "cell": 格 id
+#   （口癖另帶 "limit_cell"＝次數上限那格）；舊稿紙沒有 cells_used＝不帶。只加欄、不改分數（10-25 結構化，plan/runs/round6/structured.md）。
 # 錯：stderr 與 stdout 各一行「lint: 代號 原因」、退 1——ArgumentsBad（stdin 不是 JSON 物件、沒 text、brief 與 brief_path 都沒給）、
 #   WsMissing、PathBad（brief_path 跑出 $AOS_WS）、BriefMissing、BriefBad（檔不是 JSON、稿紙缺格、稱謂 regex 壞）、PointerBad、PointerMissing。
 # 規則從第 1 輪 check/_entry 搬來（九條）＋ narration_max（旁白行數 > brief.lines.narration_max，預設 4；定點 05 的旁白預算）。
@@ -77,10 +79,28 @@ except (KeyError, TypeError) as e:
 
 violations = []
 lines = text.splitlines()
+AT = {}                                          # 稿紙裡的 JSON 指標 → 格 id（cells_used 反查）
+for cid, ats in (brief.get("cells_used") or {}).items() if isinstance(brief.get("cells_used"), dict) else []:
+    for at in ats if isinstance(ats, list) else []:
+        AT.setdefault(at, cid)
+cast_i = {c["display"]: i for i, c in enumerate(brief["cast"])}
 
 
-def bad(tier, rule, line_no, line, reason):
-    violations.append({"tier": tier, "rule": rule, "line": line_no, "text": line, "reason": reason})
+def cell_at(at):                                 # 指標本身沒格就往上找（停用的舊卡整張一格：/cast/1）
+    while at:
+        if at in AT:
+            return AT[at]
+        at = at.rpartition("/")[0]
+    return None
+
+
+def bad(tier, rule, line_no, line, reason, at=None, **more):
+    v = {"tier": tier, "rule": rule, "line": line_no, "text": line, "reason": reason}
+    for k, a in dict({"cell": at}, **more).items():
+        c = cell_at(a) if a else None
+        if c:
+            v[k] = c
+    violations.append(v)
 
 
 # 先把稿子拆成三種行：【標題】／（旁白）／名：「台詞」
@@ -120,30 +140,30 @@ def r_must_mention():                            # 每組擇一命中
 
 def r_banned():
     for tier_name, words in brief.get("banned", {}).items():
-        for w in words:
+        for k, w in enumerate(words):
             for i, raw in enumerate(lines, 1):
                 if w in raw:
-                    bad(0, "banned_" + tier_name, i, raw.strip(), "禁語（%s 類）：%s" % (tier_name, w))
+                    bad(0, "banned_" + tier_name, i, raw.strip(), "禁語（%s 類）：%s" % (tier_name, w), "/banned/%s/%d" % (tier_name, k))
 
 
 def r_place_canon():
-    for w in place.get("wrong_names", []):
+    for k, w in enumerate(place.get("wrong_names", [])):
         for i, raw in enumerate(lines, 1):
             if w in raw:
-                bad(0, "place_canon", i, raw.strip(), "地點穿幫：%s（這裡是%s）" % (w, place.get("display", "")))
+                bad(0, "place_canon", i, raw.strip(), "地點穿幫：%s（這裡是%s）" % (w, place.get("display", "")), "/place/wrong_names/%d" % k)
 
 
 def r_address():
     for i, who, said in dialogue:
         a = cast[who]["address"]
-        for pat in a["forbidden"]:
+        for k, pat in enumerate(a["forbidden"]):
             try:
                 hit = re.search(pat, said)
             except re.error as e:
                 die("BriefBad", "稱謂 regex 壞了：%s（%s）" % (pat, e))
             if hit:
                 bad(1, "address", i, said, "%s 這一階（%d）不該這樣叫%s：合的叫法是 %s" % (
-                    who, a["level"], a["other"], "、".join(a["allowed"])))
+                    who, a["level"], a["other"], "、".join(a["allowed"])), "/cast/%d/address/forbidden/%d" % (cast_i[who], k))
                 break
 
 
@@ -151,21 +171,26 @@ def r_line_length():
     for i, who, said in dialogue:
         top = cast[who]["budget"].get("line_chars_max", 40)
         if len(said) > top:
-            bad(1, "line_length", i, said, "%s 的一句太長（%d 字，上限 %d）——含蓄系要短" % (who, len(said), top))
+            bad(1, "line_length", i, said, "%s 的一句太長（%d 字，上限 %d）——含蓄系要短" % (who, len(said), top),
+                "/cast/%d/budget/line_chars_max" % cast_i[who])
 
 
 def r_exclaim():
     for who, card in cast.items():
         n = sum(s.count("！") for _, w, s in dialogue if w == who)
         if n > card["budget"].get("exclaim_max", 2):
-            bad(1, "exclaim", 0, "", "%s 用了 %d 個感嘆號，上限 %d" % (who, n, card["budget"]["exclaim_max"]))
+            bad(1, "exclaim", 0, "", "%s 用了 %d 個感嘆號，上限 %d" % (who, n, card["budget"]["exclaim_max"]),
+                "/cast/%d/budget/exclaim_max" % cast_i[who])
 
 
 def r_catchphrase():
     for who, card in cast.items():
-        n = sum(s.count(c) for _, w, s in dialogue if w == who for c in card.get("catchphrases", []))
+        per = [sum(s.count(c) for _, w, s in dialogue if w == who) for c in card.get("catchphrases", [])]
+        n = sum(per)
         if n > card["budget"].get("catchphrase_max", 2):
-            bad(1, "catchphrase", 0, "", "%s 的口頭禪用了 %d 次，上限 %d（撒太密會假）" % (who, n, card["budget"]["catchphrase_max"]))
+            top = max(range(len(per)), key=lambda k: per[k])      # 用最多次的那個口癖＝這條違規的格
+            bad(1, "catchphrase", 0, "", "%s 的口頭禪用了 %d 次，上限 %d（撒太密會假）" % (who, n, card["budget"]["catchphrase_max"]),
+                "/cast/%d/catchphrases/%d" % (cast_i[who], top), limit_cell="/cast/%d/budget/catchphrase_max" % cast_i[who])
 
 
 def r_narration_max():

@@ -1,0 +1,42 @@
+{
+ "session": "writer",
+ "node": "draft/tools/writer",
+ "goal": "請優化：降低 token 且分數不掉（證據：measure.md——lint 漏給 brief_path、自檢兩回、trim 叫了卻沒改字）",
+ "answer": "（host：腦 token 預算用完（49703 ≥ 45000），不再問腦，直接收工。）",
+ "tools_called": [
+  "read_self",
+  "read_runs",
+  "edit_self",
+  "run_self_test",
+  "note"
+ ],
+ "counter_calls": 5,
+ "counter_tokens": 49703,
+ "counter_tokens_brain": 29770,
+ "counter_tokens_tests": 19933,
+ "edits": [
+  {
+   "path": "system.txt",
+   "kind": "edits",
+   "edited_at": "2026-10-25T10:08:48.826+00:00",
+   "counter_replaced": 1
+  }
+ ],
+ "diff": {
+  "system.txt": "--- a/system.txt\n+++ b/system.txt\n@@ -10,4 +10,3 @@\n 6. 稿紙附了節拍表時，照表的順序寫：每拍一到兩句，who 是旁白的拍寫成（旁白），must 列的詞在那一拍寫到。\n-7. 交稿前自檢：寫完先叫工具 lint（text＝整段稿子、brief_path＝稿紙上寫的 cur/<n>.json#/brief）。有 tier 0 違規一定改、tier 1 盡量改；最多自檢兩次。\n-8. 自檢完，把整段稿子交給工具 trim（text＝整段稿子、brief_path 同上）：旁白行數、感嘆號、口癖次數的修剪交給它，不要自己做。交稿＝原樣回覆 trim 回的 text（不再改字、不再叫工具）。\n+7. 交稿前自檢：寫完先叫工具 lint，參數一律帶 text＝整段稿子、brief_path＝cur/<n>.json#/brief（n 是稿紙檔名）。有 tier 0 違規一定改、tier 1 盡量改；最多自檢兩次。只在 lint 有指出違規時重寫並再 lint；沒有違規就直接交稿，不叫 trim。\n \n"
+ },
+ "self_tests": [
+  {
+   "question": "新書_宮澤_主角先_梅花章",
+   "brain": "real",
+   "ws": "selfopt/writer/tests/1",
+   "code": 0,
+   "total": 4,
+   "counter_tokens": 19933,
+   "degraded": []
+  }
+ ],
+ "attempted_violations": [],
+ "noted": "note",
+ "finished_at": "2026-10-25T10:09:08.302+00:00"
+}

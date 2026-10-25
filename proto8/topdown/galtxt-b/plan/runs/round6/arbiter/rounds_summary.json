@@ -1,0 +1,309 @@
+{
+ "1": {
+  "runs": [
+   {
+    "q": "新書_宮澤_主角先_梅花章",
+    "total": 5,
+    "violations": 0,
+    "語意": {
+     "val": 0.67,
+     "承接": 1.0,
+     "含蓄": 0.7,
+     "角色味": {
+      "val": 0.8,
+      "反差": 0.8
+     },
+     "文筆": 0.7
+    },
+    "counter_tokens": 19997,
+    "writer_tokens": 16437,
+    "counter_llm_calls": 4,
+    "elapsed_ms": 15589,
+    "writer_tool_calls": null,
+    "argbad": null,
+    "seeded_from": "plan/runs/round6/measure/trim_after/新書_宮澤_主角先_梅花章/1"
+   },
+   {
+    "q": "新書_宮澤_主角先_集章冊",
+    "total": 5,
+    "violations": 0,
+    "語意": {
+     "val": 0.67,
+     "承接": 0.8,
+     "含蓄": 0.7,
+     "角色味": {
+      "val": 0.8,
+      "反差": 0.8
+     },
+     "文筆": 0.6
+    },
+    "counter_tokens": 20581,
+    "writer_tokens": 16938,
+    "counter_llm_calls": 4,
+    "elapsed_ms": 17676,
+    "writer_tool_calls": null,
+    "argbad": null,
+    "seeded_from": "plan/runs/round6/measure/trim_after/新書_宮澤_主角先_集章冊/1"
+   },
+   {
+    "q": "新書_宮澤_她先_梅花章",
+    "total": 5,
+    "violations": 0,
+    "語意": {
+     "val": 0.67,
+     "承接": 0.8,
+     "含蓄": 0.6,
+     "角色味": {
+      "val": 0.8,
+      "反差": 0.8
+     },
+     "文筆": 0.7
+    },
+    "counter_tokens": 20150,
+    "writer_tokens": 16546,
+    "counter_llm_calls": 4,
+    "elapsed_ms": 14332,
+    "writer_tool_calls": null,
+    "argbad": null,
+    "seeded_from": "plan/runs/round6/measure/trim_after/新書_宮澤_她先_梅花章/1"
+   },
+   {
+    "q": "新書_宮澤_她先_集章冊",
+    "total": 5,
+    "violations": 0,
+    "語意": {
+     "val": 0.67,
+     "承接": 0.9,
+     "含蓄": 0.7,
+     "角色味": {
+      "val": 0.8,
+      "反差": 0.8
+     },
+     "文筆": 0.6
+    },
+    "counter_tokens": 19970,
+    "writer_tokens": 16395,
+    "counter_llm_calls": 4,
+    "elapsed_ms": 14977,
+    "writer_tool_calls": null,
+    "argbad": null,
+    "seeded_from": "plan/runs/round6/measure/trim_after/新書_宮澤_她先_集章冊/1"
+   }
+  ],
+  "totals": {
+   "total_mean": 5.0,
+   "counter_runs": 4,
+   "counter_failed": 0,
+   "counter_tokens": 80698,
+   "counter_llm_calls": 16
+  },
+  "drift": {
+   "critic_drift": {
+    "val": 0,
+    "dims": {
+     "semantic": 0,
+     "承接": 0,
+     "含蓄": 0,
+     "角色味": 0,
+     "反差": 0,
+     "文筆": 0
+    },
+    "counter_tokens": 0,
+    "note": "critic 未變＝漂移 0（檔案 hash 與 critic_v0 相同，沒有問腦）"
+   },
+   "progress": {
+    "val": null,
+    "dims": {
+     "semantic": null,
+     "承接": null,
+     "含蓄": null,
+     "角色味": null,
+     "反差": null,
+     "文筆": null
+    },
+    "counter_tokens": 0,
+    "counter_drafts": 0,
+    "drafts": [],
+    "critic_gap": {
+     "val": null,
+     "dims": {
+      "semantic": null,
+      "承接": null,
+      "含蓄": null,
+      "角色味": null,
+      "反差": null,
+      "文筆": null
+     }
+    }
+   },
+   "anchor": null,
+   "counter_tokens": 0,
+   "critic_same_as_v0": true
+  }
+ },
+ "2": {
+  "runs": [
+   {
+    "q": "新書_宮澤_主角先_梅花章",
+    "total": 5,
+    "violations": 0,
+    "語意": {
+     "val": 0.67,
+     "承接": 1.0,
+     "含蓄": 0.5,
+     "角色味": {
+      "val": 0.5,
+      "反差": 0.5
+     },
+     "文筆": 0.5
+    },
+    "counter_tokens": 20305,
+    "writer_tokens": 16694,
+    "counter_llm_calls": 4,
+    "elapsed_ms": 16218,
+    "writer_tool_calls": [
+     "lint",
+     "trim"
+    ],
+    "argbad": 0,
+    "seeded_from": null
+   },
+   {
+    "q": "新書_宮澤_主角先_集章冊",
+    "total": 5,
+    "violations": 0,
+    "語意": {
+     "val": 0.67,
+     "承接": 0.9,
+     "含蓄": 0.8,
+     "角色味": {
+      "val": 0.9,
+      "反差": 0.9
+     },
+     "文筆": 0.7
+    },
+    "counter_tokens": 20494,
+    "writer_tokens": 16949,
+    "counter_llm_calls": 4,
+    "elapsed_ms": 15589,
+    "writer_tool_calls": [
+     "lint",
+     "trim"
+    ],
+    "argbad": 0,
+    "seeded_from": null
+   },
+   {
+    "q": "新書_宮澤_她先_梅花章",
+    "total": 5,
+    "violations": 0,
+    "語意": {
+     "val": 0.67,
+     "承接": 0.8,
+     "含蓄": 0.7,
+     "角色味": {
+      "val": 0.7,
+      "反差": 0.8
+     },
+     "文筆": 0.6
+    },
+    "counter_tokens": 26461,
+    "writer_tokens": 22882,
+    "counter_llm_calls": 5,
+    "elapsed_ms": 18276,
+    "writer_tool_calls": [
+     "lint",
+     "lint",
+     "trim"
+    ],
+    "argbad": 0,
+    "seeded_from": null
+   },
+   {
+    "q": "新書_宮澤_她先_集章冊",
+    "total": 5,
+    "violations": 0,
+    "語意": {
+     "val": 0.67,
+     "承接": 0.7,
+     "含蓄": 0.8,
+     "角色味": {
+      "val": 0.8,
+      "反差": 0.8
+     },
+     "文筆": 0.5
+    },
+    "counter_tokens": 27020,
+    "writer_tokens": 23479,
+    "counter_llm_calls": 5,
+    "elapsed_ms": 18109,
+    "writer_tool_calls": [
+     "lint",
+     "lint",
+     "trim"
+    ],
+    "argbad": 0,
+    "seeded_from": null
+   }
+  ],
+  "totals": {
+   "total_mean": 5.0,
+   "counter_runs": 4,
+   "counter_failed": 0,
+   "counter_tokens": 94280,
+   "counter_llm_calls": 18
+  },
+  "drift": {
+   "critic_drift": {
+    "val": 0,
+    "dims": {
+     "semantic": 0,
+     "承接": 0,
+     "含蓄": 0,
+     "角色味": 0,
+     "反差": 0,
+     "文筆": 0
+    },
+    "counter_tokens": 0,
+    "note": "critic 未變＝漂移 0（檔案 hash 與 critic_v0 相同，沒有問腦）"
+   },
+   "progress": {
+    "val": -0.063,
+    "dims": {
+     "semantic": -0.08,
+     "承接": -0.05,
+     "含蓄": -0.1,
+     "角色味": -0.05,
+     "反差": -0.1,
+     "文筆": 0.0
+    },
+    "counter_tokens": 7170,
+    "counter_drafts": 2,
+    "drafts": [
+     "runs/2/新書_宮澤_主角先_梅花章/1",
+     "runs/2/新書_宮澤_主角先_集章冊/1"
+    ],
+    "critic_gap": {
+     "val": 0.008,
+     "dims": {
+      "semantic": 0.0,
+      "承接": 0.15,
+      "含蓄": 0.0,
+      "角色味": -0.1,
+      "反差": -0.05,
+      "文筆": 0.05
+     }
+    }
+   },
+   "anchor": {
+    "lint_delta": 0.0,
+    "critic_delta": -0.033,
+    "same_direction": false,
+    "suspicious": false,
+    "note": "lint 維＝護欄、語域（有錨）；critic 維＝語意拆的六維（無錨）；跟上一輪比"
+   },
+   "counter_tokens": 14478,
+   "critic_same_as_v0": true
+  }
+ }
+}

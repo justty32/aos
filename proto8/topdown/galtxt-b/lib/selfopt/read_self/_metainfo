@@ -1,0 +1,12 @@
+{"summary": "自我優化工具：讀被優化節點自己（_metainfo、可改檔、規則表、難例、預算）或樹上一個檔；只讀",
+ "time_ms": {"val": 50, "max": 3000},
+ "resource": "cpu",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "reads": ["$SELFOPT_SESSION", "$AOS_WS/tree/<node>/", "$AOS_WS/tree/<上層>/hard_cases.jsonl"],
+ "writes": ["$SELFOPT_SESSION（counter_calls）"],
+ "grow_level": 3,
+ "uses_llm": false}

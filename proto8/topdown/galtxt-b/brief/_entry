@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # brief - 認領一題場景 JSON，查 tables/ 把人物、地點、稱謂、護欄、開場收尾、few-shot 樣本、beat 文法編成 $AOS_STACK/brief.json（純程式、不問腦）
+# 表是「一格一事實」（cells/1，10-25 結構化）：本格照各卡的 _layout 組回舊形狀，另記 brief.cells_used（用到哪些格、落在稿紙哪裡）。
 # 已有 brief.json＝這題已編好＝什麼都不做退 0（同一題重跑的格）。固化階梯第 1～3 級：查表、規則分支、模板——執行期零 LLM。
 # 自己的錯一行 stderr「brief: 代號 原因」退 1：StackMissing、QuestionMissing、SceneBad、CastUnknown、PlaceUnknown、TableBad。
 import json, os, re, sys
@@ -63,8 +64,76 @@ def table(n):
         die("TableBad", "tables/%s.json 讀不了：%s" % (n, e))
 
 
-cast_t, address_t, places_t, banned_t, openers_t, samples_t, beats_t = (
-    table(n) for n in ("cast", "address", "places", "banned", "openers", "samples", "beats"))
+cast_t, address_t, places_t, banned_t, openers_t, samples_t, beats_t, events_t = (
+    table(n) for n in ("cast", "address", "places", "banned", "openers", "samples", "beats", "events"))
+
+# ---- 格（10-25 結構化，plan/runs/round6/structured.md）：表裡一個事實一格，格 id＝<表>/<路徑>（路徑段照 JSON 指標跳脫 ~0 ~1；
+# 陣列裡的格以 id／beat／benchmark 或字串本身當段）。USED 記「這題用到哪幾格、落在 brief.json 的哪個 JSON 指標」→ brief.cells_used。
+USED = {}
+
+
+def esc(s):
+    return str(s).replace("~", "~0").replace("/", "~1")
+
+
+def use(cid, at):
+    ats = USED.setdefault(cid, [])
+    if at not in ats:
+        ats.append(at)
+
+
+def value(c):                                    # 一格的值：純量照用；物件格取 text（或 value），其餘鍵是標記（kind、step…）
+    return c.get("text", c.get("value")) if isinstance(c, dict) else c
+
+
+class NoCell(Exception):
+    pass
+
+
+def render(card, cid, spec, at, switches=None):
+    """cells/1 卡的 _layout → 舊形狀。@g＝整組依序成陣列、@g/k＝一格、含 {g/k} 的字串＝模板（{g/$開關} 代入 switches）、其餘照抄。"""
+    if isinstance(spec, dict):
+        return {k: render(card, cid, v, at + "/" + esc(k), switches) for k, v in spec.items()}
+    if isinstance(spec, list):
+        return [render(card, cid, v, "%s/%d" % (at, i), switches) for i, v in enumerate(spec)]
+    if not isinstance(spec, str):
+        return spec
+
+    def cell(ref, at_):
+        g, _, k = ref.partition("/")
+        if k.startswith("$"):
+            k = str((switches or {}).get(k[1:], ""))
+        if not isinstance(card.get(g), dict) or k not in card[g]:
+            raise NoCell("%s 指不到格 %s/%s" % (cid, g, k))
+        use("%s/%s/%s" % (cid, esc(g), esc(k)), at_)
+        return value(card[g][k])
+
+    if spec.startswith("@"):
+        ref = spec[1:]
+        if "/" in ref:
+            return cell(ref, at)
+        if not isinstance(card.get(ref), dict):
+            raise NoCell("%s 沒有組 %s" % (cid, ref))
+        return [cell(ref + "/" + k, "%s/%d" % (at, i)) for i, k in enumerate(card[ref])]
+    if "{" in spec:
+        return re.sub(r"\{([^{}]+)\}", lambda m: str(cell(m.group(1), at)), spec)
+    return spec
+
+
+def unfold(t, key, at):
+    """表裡的一張卡 → 舊形狀：cells/1 照 _layout 組；舊形狀（停用的卡）整張當一格。"""
+    c = t[key]
+    if isinstance(c, dict) and c.get("_format") == "cells/1":
+        try:
+            return render(c, "%s/%s" % (t["_name"], esc(key)), c.get("_layout") or {}, at)
+        except NoCell as e:
+            die("TableBad", str(e))
+    use("%s/%s" % (t["_name"], esc(key)), at)
+    return dict(c)
+
+
+for n, t in (("cast", cast_t), ("places", places_t), ("events", events_t)):
+    t["_name"] = n
 
 cast_names = scene.get("cast")
 if not isinstance(cast_names, list) or len(cast_names) != 2:
@@ -83,49 +152,97 @@ def fill(pattern, other):                        # 把 {surname}／{given}／{di
             .replace("{display}", other["display"]).replace("{given_first}", other["given"][:1]))
 
 
-cards = []
-for n in cast_names:
-    me = dict(cast_t[n])
-    other = cast_t[[x for x in cast_names if x != n][0]]
+cards = [unfold(cast_t, n, "/cast/%d" % i) for i, n in enumerate(cast_names)]
+for i, me in enumerate(cards):
+    other = cards[1 - i]
     key = "heroine_to_hero" if me["role"] == "heroine" else "hero_to_heroine"
     rule = address_t[key].get(level) or die("SceneBad", "稱謂階 %s 不在表上" % level)
-    me["address"] = {"level": int(level), "other": other["display"],
-                     "allowed": [fill(p, other) for p in rule["allowed"]],
-                     "forbidden": [fill(p, other) for p in rule["forbidden"]]}
-    cards.append(me)
+    me["address"] = {"level": int(level), "other": other["display"], "allowed": [], "forbidden": []}
+    for side in ("allowed", "forbidden"):        # 一條稱呼規則一格（address/<方向>/<階>/<allowed|forbidden>/<鍵>）
+        for k, (rid, pat) in enumerate(rule[side].items()):
+            me["address"][side].append(fill(pat, other))
+            use("address/%s/%s/%s/%s" % (key, level, side, esc(rid)), "/cast/%d/address/%s/%d" % (i, side, k))
 
 
-def pick(items, *keys):                          # 第一個「每個給定 key 都對得上」的；items 裡沒有該 key 的當通用
+def pick(table_name, group, items, *keys):       # 第一個「每個給定 key 都對得上」的；items 裡沒有該 key 的當通用
+    def got(it):
+        use("openers/%s/%s" % (group, esc(it["id"])), "/" + table_name)
+        return it["text"]
     for k in keys:
         for it in items:
             if k in it and it[k] == scene.get(k):
-                return it["text"]
+                return got(it)
     for it in items:
         if not any(k in it for k in ("place", "season", "intent")):
-            return it["text"]
+            return got(it)
     return ""
 
 
-heroine = next((c for c in cards if c["role"] != "hero"), cards[-1])
-opener = pick(openers_t["openers"], "place", "season")
-closer = pick(openers_t["closers"], "intent").replace("{heroine}", heroine["display"])
+heroine_i = next((i for i, c in enumerate(cards) if c["role"] != "hero"), len(cards) - 1)
+heroine = cards[heroine_i]
+opener = pick("opener", "openers", openers_t["openers"], "place", "season")
+closer = pick("closer", "closers", openers_t["closers"], "intent").replace("{heroine}", heroine["display"])
 lines = scene.get("lines") or {}
 bench = scene.get("benchmark")
 samples = [x for x in samples_t.get("samples", [])
            if (not bench or x.get("benchmark") != bench)                       # 不漏自己那題的前後文
            and ("cast" not in x or set(x["cast"]) & set(cast_names))]         # 只給在場女角的語氣錨
+if os.environ.get("GALTXT_OFF_SAMPLES") == "1":  # 關閉開關（round5 §3a）：不給語料錨
+    samples = []
+for k, x in enumerate(samples):                  # 樣本是給腦的風格示範，整段一格（不拆）
+    use("samples/samples/%s" % esc(x.get("benchmark", k)), "/samples/%d" % k)
 # 風格（第 4 輪：評級的 key）：場景有寫就照用；沒寫＝女角卡 type 的第一個，去掉括號、取「／」前（「文靜／書卷（主軸）」→「文靜」）
 style = scene.get("style") or re.split(r"[（(／]", (heroine.get("type") or ["?"])[0])[0].strip()
 beats = {k: v for k, v in beats_t.items() if not k.startswith("_")}
+for k, b in enumerate(beats.get("beats", [])):
+    use("beats/beats/%s" % esc(b["beat"]), "/beats/beats/%d" % k)
+for k, w in enumerate(address_t.get("rules", {})):
+    use("address/rules/%s" % esc(w), "/address_rules/%d" % k)
+for k, w in enumerate(banned_t.get("rules", {})):
+    use("banned/rules/%s" % esc(w), "/style_rules/%d" % k)
+for t in ("A", "B", "C"):                         # 禁詞本來就一詞一格：詞本身是鍵
+    for k, w in enumerate(banned_t[t]):
+        use("banned/%s/%s" % (t, esc(w)), "/banned/%s/%d" % (t, k))
+place_card = unfold(places_t, place, "/place")
+
+
+def event_from(name, switches):
+    card = events_t.get(name)
+    if not isinstance(card, dict) or name.startswith("_") or card.get("_format") != "cells/1":
+        raise NoCell("事件表裡沒有 %s" % name)
+    return render(card, "events/" + esc(name), card["_layout"]["event"], "/scene/event", switches)
+
+
+# 事件：{"ref": 名}＝由格組出事件文字；字串＝原樣用，但若同地點、同兩人的事件卡照這題 switches 組出來逐字相同，就把那些格記進 cells_used
+sw = scene.get("switches") or {}
+ev = scene.get("event")
+if isinstance(ev, dict):
+    try:
+        scene = dict(scene, event=event_from(str(ev.get("ref")), sw))
+    except NoCell as e:
+        die("SceneBad", "event.ref 組不出來：%s" % e)
+elif isinstance(ev, str) and sw:
+    for ename, card in events_t.items():
+        idn = card.get("identity", {}) if isinstance(card, dict) else {}
+        if ename.startswith("_") or idn.get("place") != place or set(idn.get("cast", [])) != set(cast_names):
+            continue
+        saved = {k: list(v) for k, v in USED.items()}
+        try:
+            same = event_from(ename, sw) == ev
+        except NoCell:
+            same = False
+        if not same:                              # 對不上＝這題的事件是表外的散文，不記
+            USED.clear()
+            USED.update(saved)
 
 brief = {
     "name": name,
     "scene": scene,
     "style": style,
     "cast": cards,
-    "place": places_t[place],
-    "address_rules": address_t.get("rules", []),
-    "style_rules": banned_t.get("rules", []),
+    "place": place_card,
+    "address_rules": list(address_t.get("rules", {}).values()),
+    "style_rules": list(banned_t.get("rules", {}).values()),
     "banned": {k: banned_t[k] for k in ("A", "B", "C")},
     "opener": opener,
     "closer": closer,
@@ -134,7 +251,8 @@ brief = {
     "must_mention": scene.get("must_mention", []),
     "nice_to_mention": scene.get("nice_to_mention", []),
     "max_redrafts": int(scene.get("max_redrafts", 2)),
-    "samples": [] if os.environ.get("GALTXT_OFF_SAMPLES") == "1" else samples,   # 關閉開關（round5 §3a）：不給語料錨
+    "samples": samples,
     "beats": beats,
+    "cells_used": USED,                          # {格 id: [落在 brief.json 的 JSON 指標…]}；lint 用它把違規指回格
 }
 write_json(os.path.join(stack, "brief.json"), brief)

@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+# edit_self - 改自己資料夾裡白名單上的一個檔（預設 system.txt 與規則表 *.json；永遠不改 _metainfo、_entry、*.py、fsm／loop.json、.env、hard_cases.jsonl、versions/）
+# 介面：stdin {"path": 相對節點, 下面三種剛好給一種}
+#   "edits": [{"old_text", "new_text"}]——照字面換、每段要剛好出現一次，一處不合整個不改；
+#   "set": {JSON 指標: 值}——只給 .json 檔：照指標放值（/plans/主角|舊車票；~1＝/、~0＝~；物件可加新 key、陣列用索引或 - 加在尾巴；中間層要已在），整份重寫成 indent 1；
+#   "content": 整份新內容（建或蓋）。
+#   → stdout 一行 JSON {path, counter_replaced｜counter_set｜counter_bytes, saved_to}。
+#   （set 是 10-25 真腦示範後加的：腦看到的是 read_self 解析過的 JSON，猜不中原檔的縮排，用 edits 改 JSON 一直 TextMissing。）
+# 寫前存：改前的原樣存到 <節點>/versions/selfopt_<session>/<path>（同一個 session 只存第一次＝改前；新建的檔記 created）。
+# 邊界（guard，程式擋）：解開捷徑後要在 tree/<node>/ 裡（ScopeBad）、不碰凍結（FrozenBad：lib/lint、judge、check、human、train、工具包自己、
+#   _metainfo 標 frozen 的、tests）、要在白名單（WhitelistBad）；三種都在 session 記一筆 attempted_violation。.json 改完要還是合法 JSON（FileBad，不寫）。
+# 錯：SessionMissing／SessionBad、WsMissing、TreeMissing、NodeMissing、BudgetBad、ArgumentsBad、ScopeBad、FrozenBad、WhitelistBad、FileMissing、
+#   TextMissing（old_text 找不到）、TextBad（old_text 出現不只一次）、PointerMissing（指標中間層不在）、PointerBad、FileBad。
+import json, os, sys
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import guard  # noqa: E402
+
+
+def put(doc, pointer, value):
+    if not isinstance(pointer, str) or not pointer.startswith("/"):
+        raise guard.Fail("PointerBad", "指標要以 / 開頭：%r" % pointer)
+    keys = [k.replace("~1", "/").replace("~0", "~") for k in pointer[1:].split("/")]
+    cur = doc
+    for i, k in enumerate(keys):
+        last = i == len(keys) - 1
+        if isinstance(cur, dict):
+            if last:
+                cur[k] = value
+            elif k not in cur:
+                raise guard.Fail("PointerMissing", "%s：中間層 %s 不在" % (pointer, k))
+            else:
+                cur = cur[k]
+        elif isinstance(cur, list):
+            if k == "-" and last:
+                cur.append(value)
+                continue
+            if not k.isdigit() or int(k) >= len(cur):
+                raise guard.Fail("PointerMissing", "%s：陣列沒有 %s" % (pointer, k))
+            if last:
+                cur[int(k)] = value
+            else:
+                cur = cur[int(k)]
+        else:
+            raise guard.Fail("PointerBad", "%s：%s 那層不是物件或陣列" % (pointer, k))
+
+
+def main(args, ctx):
+    edits, content, sets = args.get("edits"), args.get("content"), args.get("set")
+    if sum(x is not None for x in (edits, content, sets)) != 1:
+        raise guard.Fail("ArgumentsBad", "edits、set、content 要剛好給一個")
+    real, norm = ctx.resolve_write(args.get("path"))
+    if edits is not None or sets is not None:
+        try:
+            with open(real, encoding="utf-8") as f:
+                text = f.read()
+        except OSError as e:
+            raise guard.Fail("FileMissing", "%s 讀不了：%s" % (norm, e))
+    if edits is not None:
+        if not isinstance(edits, list) or not edits or not all(isinstance(e, dict) and isinstance(e.get("old_text"), str)
+                                                               and isinstance(e.get("new_text"), str) and e["old_text"] for e in edits):
+            raise guard.Fail("ArgumentsBad", "edits 要是 [{old_text, new_text}]、old_text 不能空")
+        new = text
+        for i, e in enumerate(edits):
+            c = new.count(e["old_text"])
+            if c == 0:
+                raise guard.Fail("TextMissing", "第 %d 段 old_text 在 %s 裡找不到%s" % (i + 1, norm, "（JSON 檔請改用 set）" if norm.endswith(".json") else ""))
+            if c > 1:
+                raise guard.Fail("TextBad", "第 %d 段 old_text 在 %s 出現 %d 次，要剛好一次" % (i + 1, norm, c))
+            new = new.replace(e["old_text"], e["new_text"])
+    elif sets is not None:
+        if not norm.endswith(".json") or not isinstance(sets, dict) or not sets:
+            raise guard.Fail("ArgumentsBad", "set 只給 .json 檔、要是 {指標: 值}")
+        try:
+            doc = json.loads(text)
+        except ValueError as e:
+            raise guard.Fail("FileBad", "%s 不是合法 JSON：%s" % (norm, e))
+        for p, v in sets.items():
+            put(doc, p, v)
+        new = json.dumps(doc, ensure_ascii=False, indent=1) + "\n"
+    else:
+        if not isinstance(content, str):
+            raise guard.Fail("ArgumentsBad", "content 要是字串")
+        new = content
+    if norm.endswith(".json"):
+        try:
+            json.loads(new)
+        except ValueError as e:
+            raise guard.Fail("FileBad", "改完的 %s 不是合法 JSON：%s（沒寫）" % (norm, e))
+    saved = ctx.save_version(real, norm)
+    guard.write_text(real, new)
+    out = {"path": norm, "saved_to": saved}
+    if edits is not None:
+        out["counter_replaced"] = len(edits)
+        ctx.record_edit(norm, "edits", counter_replaced=len(edits))
+    elif sets is not None:
+        out["counter_set"] = len(sets)
+        ctx.record_edit(norm, "set", pointers=sorted(sets))
+    else:
+        out["counter_bytes"] = len(new.encode("utf-8"))
+        ctx.record_edit(norm, "content", counter_bytes=out["counter_bytes"])
+    return out
+
+
+guard.tool_main("edit_self", main)

@@ -1,0 +1,25 @@
+#!/usr/bin/env python3
+# note - 把這次自我優化的理由寫回自己的 _metainfo.lifecycle.history 一筆（工具包的記帳，不經白名單；節點凍結就不寫）
+# 介面：stdin {"why": 為什麼這樣改（引證據）, "expect"?: 預期外部量到什麼} → stdout 一行 JSON {written, entry}。
+#   entry＝{"round", "from", "to"（stage 不變＝同一個）, "move": "selfopt", "goal", "why", "expect"?, "changed": [這個 session 改過的檔],
+#           "self_tests": [這個 session 的 run_self_test 摘要], "session", "noted_at"}。
+# 錯：SessionMissing／SessionBad、WsMissing、TreeMissing、NodeMissing、BudgetBad、ArgumentsBad。
+import os, sys
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import guard  # noqa: E402
+
+
+def main(args, ctx):
+    why = args.get("why")
+    if not isinstance(why, str) or not why.strip():
+        raise guard.Fail("ArgumentsBad", "why 要是非空字串")
+    e = guard.history_entry(ctx.session, ctx.node_dir, why.strip(), args.get("expect") if isinstance(args.get("expect"), str) else None)
+    written = ctx.append_history(e)
+    ctx.session["counter_notes"] = ctx.session.get("counter_notes", 0) + (1 if written else 0)
+    ctx.save()
+    return {"written": written, "entry": e}
+
+
+guard.tool_main("note", main)

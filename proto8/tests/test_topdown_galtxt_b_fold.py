@@ -177,7 +177,7 @@ class Fold(unittest.TestCase):
         self.assertIn("F6", r.stderr)                                                # 13 KB > 8 KB
         self.assertIn("brief/_entry:", r.stdout)                                     # 讀者清單
         js = json.loads((self.copy / "brief" / "tables.json").read_text())
-        self.assertEqual(set(js), {"address", "banned", "beats", "cast", "openers", "places", "samples", "_metainfo"})
+        self.assertEqual(set(js), {"address", "banned", "beats", "cast", "events", "openers", "places", "samples", "_metainfo"})
         self.assertEqual(js["cast"], json.loads((d / "cast.json").read_text()))
         self.assertTrue(d.is_dir())                                                  # 不刪：人改完讀者、verify 過了再刪
         r = self.fold("pack", d)

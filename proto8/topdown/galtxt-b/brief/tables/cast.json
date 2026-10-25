@@ -1,43 +1,82 @@
 {
- "_note": "從 galtxt corpus/人物/ 的 dossier 與 固化/01_角色類型語言表 手工蒸餾的人物卡（第 1 輪收主角與森下晴子；第 4 輪加宮澤柚葉（傲嬌）、木下柚葉（害羞））。10-25 使用者限縮到單一性格（傲嬌）單一場景：宮澤柚葉這張卡縮成精簡、寫死的資料（幾條固定特質、一個口癖、固定稱呼），之後要把子樹固化成純程式，變量越少越好；木下柚葉停用（卡留著、不再擴）。兩位都叫柚葉：labels 只放全名、不放裸的「柚葉」。type 的第一個（去掉括號、取／前）＝這張卡的風格（brief 的 style 預設）。表＝快取，真源是 corpus。",
+ "_note": "從 galtxt corpus/人物/ 的 dossier 與 固化/01_角色類型語言表 手工蒸餾的人物卡（第 1 輪收主角與森下晴子；第 4 輪加宮澤柚葉（傲嬌）、木下柚葉（害羞））。10-25 使用者限縮到單一性格（傲嬌）單一場景：宮澤柚葉這張卡縮成精簡、寫死的資料（幾條固定特質、一個口癖、固定稱呼），之後要把子樹固化成純程式，變量越少越好；木下柚葉停用（卡留著、不再擴）。兩位都叫柚葉：labels 只放全名、不放裸的「柚葉」。type 的第一個（去掉括號、取／前）＝這張卡的風格（brief 的 style 預設）。表＝快取，真源是 corpus。 10-25 結構化（使用者「場景條件，背景故事，人物設定，都可以用結構化來表示，也就是json，拆的愈散，後續愈方便」）：主角、宮澤柚葉兩張改成 cells/1——每個事實／語氣／句型／小動作／禁忌／預算／口癖各一格（group/id），_layout 是 brief 組回舊形狀的版面（@g＝整組依序成陣列、@g/id＝一格的值、含 {g/id} 的字串＝模板、其餘照抄）；停用的森下晴子、木下柚葉不動（舊形狀，brief 整張當一格）。格 id＝cast/<人>/<組>/<鍵>，見 plan/runs/round6/structured.md。",
  "主角": {
-  "display": "主角",
-  "labels": [
-   "主角"
-  ],
-  "full_name": "佐伯悠",
-  "surname": "佐伯",
-  "given": "悠",
-  "role": "hero",
-  "type": [
-   "普通高中生（玩家代入）"
-  ],
-  "profile": "男，日和高中一年級，選修美術，愛上天台看雲發呆；嘴上愛鬥嘴、骨子裡細膩體貼，體貼全藏在抱怨與順台階裡（讓書、走外側擋車）。不搶戲、非天才。",
-  "voice": {
-   "self": "我",
-   "tone": "隨性、拌嘴式調侃，句子短；關心不直說",
-   "patterns": [
-    "調侃起手（「挖寶挖成這樣……」）",
-    "順台階句（「是是，只是一本舊書。」）",
-    "體貼藏在抱怨裡"
-   ],
-   "habits": [
-    "尷尬時右手食指抓臉頰或後頸",
-    "發呆時指尖轉自動鉛筆"
-   ],
-   "ng": [
-    "直白關心句（「我很擔心你」）",
-    "先熱絡、先跳到叫名字",
-    "解說對方的情緒（「她一定是害羞了」）",
-    "油嘴撩妹"
-   ]
+  "_format": "cells/1",
+  "identity": {
+   "display": "主角",
+   "full_name": "佐伯悠",
+   "surname": "佐伯",
+   "given": "悠",
+   "role": "hero",
+   "self": "我"
+  },
+  "labels": {
+   "main": "主角"
+  },
+  "type": {
+   "player": "普通高中生（玩家代入）"
+  },
+  "facts": {
+   "gender": "男",
+   "school": "日和高中一年級",
+   "elective": "選修美術",
+   "rooftop": "愛上天台看雲發呆",
+   "banter": "嘴上愛鬥嘴",
+   "caring": "骨子裡細膩體貼",
+   "hidden_care": "體貼全藏在抱怨與順台階裡（讓書、走外側擋車）",
+   "not_lead": "不搶戲",
+   "not_genius": "非天才"
+  },
+  "tone": {
+   "casual": "隨性",
+   "teasing": "拌嘴式調侃",
+   "short": "句子短",
+   "indirect": "關心不直說"
+  },
+  "patterns": {
+   "tease_open": "調侃起手（「挖寶挖成這樣……」）",
+   "take_cue": "順台階句（「是是，只是一本舊書。」）",
+   "care_in_complaint": "體貼藏在抱怨裡"
+  },
+  "habits": {
+   "scratch_cheek": "尷尬時右手食指抓臉頰或後頸",
+   "spin_pencil": "發呆時指尖轉自動鉛筆"
+  },
+  "ng": {
+   "direct_care": "直白關心句（「我很擔心你」）",
+   "warm_first": "先熱絡、先跳到叫名字",
+   "explain_feelings": "解說對方的情緒（「她一定是害羞了」）",
+   "flirt": "油嘴撩妹"
   },
   "budget": {
    "exclaim_max": 2,
    "line_chars_max": 40,
    "catchphrase_max": 2
   },
-  "catchphrases": []
+  "catchphrases": {},
+  "_layout": {
+   "display": "@identity/display",
+   "labels": "@labels",
+   "full_name": "@identity/full_name",
+   "surname": "@identity/surname",
+   "given": "@identity/given",
+   "role": "@identity/role",
+   "type": "@type",
+   "profile": "{facts/gender}，{facts/school}，{facts/elective}，{facts/rooftop}；{facts/banter}、{facts/caring}，{facts/hidden_care}。{facts/not_lead}、{facts/not_genius}。",
+   "voice": {
+    "self": "@identity/self",
+    "tone": "{tone/casual}、{tone/teasing}，{tone/short}；{tone/indirect}",
+    "patterns": "@patterns",
+    "habits": "@habits",
+    "ng": "@ng"
+   },
+   "budget": {
+    "exclaim_max": "@budget/exclaim_max",
+    "line_chars_max": "@budget/line_chars_max",
+    "catchphrase_max": "@budget/catchphrase_max"
+   },
+   "catchphrases": "@catchphrases"
+  }
  },
  "森下晴子": {
   "display": "森下晴子",
@@ -92,49 +131,126 @@
   ]
  },
  "宮澤柚葉": {
-  "display": "宮澤柚葉",
-  "labels": [
-   "宮澤柚葉"
-  ],
-  "full_name": "宮澤柚葉",
-  "surname": "宮澤",
-  "given": "柚葉",
-  "role": "heroine",
-  "type": [
-   "傲嬌（主軸）"
-  ],
-  "profile": "文藝社、跟主角同社不同班。愛書、河鹿堂常客、集梅花章。買太多書提不動就塞給主角提。嘴硬是保護色，只對放心的人凶。",
-  "voice": {
-   "self": "我",
-   "tone": "嘴硬、節奏快；先否認（強）→讓步（弱）→補一句遮掩",
-   "endings": [
-    "才、才不是……",
-    "別誤會了",
-    "……又沒有說不行"
-   ],
-   "patterns": [
-    "先否認再讓步、最後補一句遮掩",
-    "拜託說成命令（「幫我拿一下」）"
-   ],
-   "habits": [
-    "害羞時把瀏海往耳後撥、眼神飄向窗外",
-    "臉紅從耳朵先紅"
-   ],
-   "ng": [
-    "直白說喜歡或坦率道謝",
-    "真的惡毒或冷淡掃興",
-    "臉紅冒煙、跺腳等誇張演出",
-    "拿身高開玩笑"
-   ]
+  "_format": "cells/1",
+  "identity": {
+   "display": "宮澤柚葉",
+   "full_name": "宮澤柚葉",
+   "surname": "宮澤",
+   "given": "柚葉",
+   "role": "heroine",
+   "self": "我"
+  },
+  "labels": {
+   "full": "宮澤柚葉"
+  },
+  "type": {
+   "tsundere": {
+    "text": "傲嬌（主軸）",
+    "style": "傲嬌",
+    "axis": "主軸"
+   }
+  },
+  "facts": {
+   "club": "文藝社",
+   "same_club": "跟主角同社不同班",
+   "bookish": "愛書",
+   "regular": "河鹿堂常客",
+   "stamps": "集梅花章",
+   "hand_over": {
+    "text": "買太多書提不動就塞給主角提",
+    "kind": "反差"
+   },
+   "armor": {
+    "text": "嘴硬是保護色",
+    "kind": "反差"
+   },
+   "trusted": {
+    "text": "只對放心的人凶",
+    "kind": "反差"
+   }
+  },
+  "tone": {
+   "hard_mouth": "嘴硬",
+   "fast": "節奏快",
+   "deny": {
+    "text": "先否認（強）",
+    "kind": "反差",
+    "step": 1
+   },
+   "yield": {
+    "text": "讓步（弱）",
+    "kind": "反差",
+    "step": 2
+   },
+   "cover": {
+    "text": "補一句遮掩",
+    "kind": "反差",
+    "step": 3
+   }
+  },
+  "endings": {
+   "not_really": "才、才不是……",
+   "dont_misread": "別誤會了",
+   "not_no": "……又沒有說不行"
+  },
+  "patterns": {
+   "deny_yield_cover": {
+    "text": "先否認再讓步、最後補一句遮掩",
+    "kind": "反差"
+   },
+   "request_as_order": "拜託說成命令（「幫我拿一下」）"
+  },
+  "habits": {
+   "bangs_window": {
+    "text": "害羞時把瀏海往耳後撥、眼神飄向窗外",
+    "kind": "洩底"
+   },
+   "ears_red": {
+    "text": "臉紅從耳朵先紅",
+    "kind": "洩底"
+   }
+  },
+  "ng": {
+   "direct_love": "直白說喜歡或坦率道謝",
+   "truly_mean": "真的惡毒或冷淡掃興",
+   "overacting": "臉紅冒煙、跺腳等誇張演出",
+   "height_joke": "拿身高開玩笑"
   },
   "budget": {
    "exclaim_max": 2,
    "line_chars_max": 40,
    "catchphrase_max": 1
   },
-  "catchphrases": [
-   "才不是為了你"
-  ]
+  "catchphrases": {
+   "not_for_you": {
+    "text": "才不是為了你",
+    "kind": "反差"
+   }
+  },
+  "_layout": {
+   "display": "@identity/display",
+   "labels": "@labels",
+   "full_name": "@identity/full_name",
+   "surname": "@identity/surname",
+   "given": "@identity/given",
+   "role": "@identity/role",
+   "type": "@type",
+   "profile": "{facts/club}、{facts/same_club}。{facts/bookish}、{facts/regular}、{facts/stamps}。{facts/hand_over}。{facts/armor}，{facts/trusted}。",
+   "voice": {
+    "self": "@identity/self",
+    "tone": "{tone/hard_mouth}、{tone/fast}；{tone/deny}→{tone/yield}→{tone/cover}",
+    "endings": "@endings",
+    "patterns": "@patterns",
+    "habits": "@habits",
+    "ng": "@ng"
+   },
+   "budget": {
+    "exclaim_max": "@budget/exclaim_max",
+    "line_chars_max": "@budget/line_chars_max",
+    "catchphrase_max": "@budget/catchphrase_max"
+   },
+   "catchphrases": "@catchphrases"
+  }
  },
  "木下柚葉": {
   "display": "木下柚葉",

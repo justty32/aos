@@ -1,2 +1,2 @@
-{"summary": "訓練迴圈（plan/round4.md §4；建置中，10-25 限縮成單一性格單一場景）：對 set/ 的題把 galtxt-b 的工作複本跑 k 次、算結構化成果、記評級、挑人評樣本。現在只有 set/（傲嬌 × 一個固定場景 4 題）、score/（收成果）、pick/（挑人評樣本；另有挑子樹的 pick_rule＋λ_gain）、init/（複製 tree/）、record/（難例、評級、梯度）、apply/（teach）；loop 與其餘格未做",
+{"summary": "訓練迴圈（plan/round4.md §4；建置中，10-25 限縮成單一性格單一場景）：對 set/ 的題把 galtxt-b 的工作複本跑 k 次、算結構化成果、記評級、挑人評樣本。現在只有 set/（傲嬌 × 一個固定場景 4 題）、score/（收成果）、pick/（挑人評樣本；另有挑子樹的 pick_rule＋λ_gain）、init/（複製 tree/、存漂移錨點與判斷器複本）、record/（難例、評級、量測、子樹彙總、梯度、判斷器的帳）、optimize/（一步提 2 條、叫判斷器挑）、arbiter/（判斷器）、apply/（teach、freeze_order、patch_act）；loop、run、verify、tune 未做",
  "kind": "dir"}

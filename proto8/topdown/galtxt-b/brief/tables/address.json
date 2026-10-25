@@ -1,24 +1,130 @@
 {
- "_note": "從 corpus/固化/02_敬語與稱謝階 蒸餾的稱謂階（0～5）。allowed＝這一階能用的叫法（給 writer 看）；forbidden＝這一階不該出現的叫法，寫成 regex（給 check 用，{surname}／{given}／{display} 代入對方的名字；lookahead 擋掉「悠閒」這種誤中）。只能一階一階升、吵架可暫退半階——本輪一場戲固定一階、不跳階。",
+ "_note": "從 corpus/固化/02_敬語與稱謝階 蒸餾的稱謂階（0～5）。allowed＝這一階能用的叫法（給 writer 看）；forbidden＝這一階不該出現的叫法，寫成 regex（給 check 用，{surname}／{given}／{display} 代入對方的名字；lookahead 擋掉「悠閒」這種誤中）。只能一階一階升、吵架可暫退半階——本輪一場戲固定一階、不跳階。 10-25 結構化：每一階的 allowed／forbidden 從陣列改成 {鍵: 叫法}（一條稱呼規則一格；brief 依序組回陣列，lint 違規帶格 id），rules 三條各一格；格 id＝address/<方向>/<階>/<allowed|forbidden>/<鍵>、address/rules/<鍵>。",
  "heroine_to_hero": {
-  "0": {"allowed": ["同學", "那個……"], "forbidden": ["{surname}(?=君|同學|[」，。、？…\\s]|$)", "{given}(?=君|同學|[」，。、？…\\s]|$)"]},
-  "1": {"allowed": ["{display}同學", "{surname}同學", "{surname}君"], "forbidden": ["(?<![一-龥]){surname}(?=[」，。、？…\\s]|$)", "{given}(?=君|同學|[」，。、？…\\s]|$)", "阿{given}"]},
-  "2": {"allowed": ["{surname}", "{surname}同學"], "forbidden": ["{given}(?=君|同學|[」，。、？…\\s]|$)", "阿{given}"]},
-  "3": {"allowed": ["{given}君", "{given}同學", "{surname}"], "forbidden": ["(?<![一-龥]){given}(?=[」，。、？…\\s]|$)", "阿{given}"]},
-  "4": {"allowed": ["{given}"], "forbidden": ["阿{given}", "親愛的"]},
-  "5": {"allowed": ["（專屬叫法，留白）"], "forbidden": ["親愛的"]}
+  "0": {
+   "allowed": {
+    "classmate": "同學",
+    "um": "那個……"
+   },
+   "forbidden": {
+    "surname_any": "{surname}(?=君|同學|[」，。、？…\\s]|$)",
+    "given_any": "{given}(?=君|同學|[」，。、？…\\s]|$)"
+   }
+  },
+  "1": {
+   "allowed": {
+    "display_classmate": "{display}同學",
+    "surname_classmate": "{surname}同學",
+    "surname_kun": "{surname}君"
+   },
+   "forbidden": {
+    "surname_bare": "(?<![一-龥]){surname}(?=[」，。、？…\\s]|$)",
+    "given_any": "{given}(?=君|同學|[」，。、？…\\s]|$)",
+    "a_given": "阿{given}"
+   }
+  },
+  "2": {
+   "allowed": {
+    "surname": "{surname}",
+    "surname_classmate": "{surname}同學"
+   },
+   "forbidden": {
+    "given_any": "{given}(?=君|同學|[」，。、？…\\s]|$)",
+    "a_given": "阿{given}"
+   }
+  },
+  "3": {
+   "allowed": {
+    "given_kun": "{given}君",
+    "given_classmate": "{given}同學",
+    "surname": "{surname}"
+   },
+   "forbidden": {
+    "given_bare": "(?<![一-龥]){given}(?=[」，。、？…\\s]|$)",
+    "a_given": "阿{given}"
+   }
+  },
+  "4": {
+   "allowed": {
+    "given": "{given}"
+   },
+   "forbidden": {
+    "a_given": "阿{given}",
+    "darling": "親愛的"
+   }
+  },
+  "5": {
+   "allowed": {
+    "reserved": "（專屬叫法，留白）"
+   },
+   "forbidden": {
+    "darling": "親愛的"
+   }
+  }
  },
  "hero_to_heroine": {
-  "0": {"allowed": ["{surname}", "{surname}同學"], "forbidden": ["{given}(?=[」，。、？…\\s]|$)", "小{given_first}"]},
-  "1": {"allowed": ["{surname}", "{surname}同學"], "forbidden": ["{given}(?=[」，。、？…\\s]|$)", "小{given_first}"]},
-  "2": {"allowed": ["{surname}", "喂（對傲嬌、玩笑）"], "forbidden": ["{given}(?=[」，。、？…\\s]|$)", "小{given_first}"]},
-  "3": {"allowed": ["{surname}（更熟的語氣）"], "forbidden": ["{given}(?=[」，。、？…\\s]|$)", "小{given_first}"]},
-  "4": {"allowed": ["{given}"], "forbidden": ["親愛的", "寶貝"]},
-  "5": {"allowed": ["{given}", "（專屬叫法）"], "forbidden": ["親愛的", "寶貝"]}
+  "0": {
+   "allowed": {
+    "surname": "{surname}",
+    "surname_classmate": "{surname}同學"
+   },
+   "forbidden": {
+    "given_bare": "{given}(?=[」，。、？…\\s]|$)",
+    "xiao_given": "小{given_first}"
+   }
+  },
+  "1": {
+   "allowed": {
+    "surname": "{surname}",
+    "surname_classmate": "{surname}同學"
+   },
+   "forbidden": {
+    "given_bare": "{given}(?=[」，。、？…\\s]|$)",
+    "xiao_given": "小{given_first}"
+   }
+  },
+  "2": {
+   "allowed": {
+    "surname": "{surname}",
+    "hey": "喂（對傲嬌、玩笑）"
+   },
+   "forbidden": {
+    "given_bare": "{given}(?=[」，。、？…\\s]|$)",
+    "xiao_given": "小{given_first}"
+   }
+  },
+  "3": {
+   "allowed": {
+    "surname_warm": "{surname}（更熟的語氣）"
+   },
+   "forbidden": {
+    "given_bare": "{given}(?=[」，。、？…\\s]|$)",
+    "xiao_given": "小{given_first}"
+   }
+  },
+  "4": {
+   "allowed": {
+    "given": "{given}"
+   },
+   "forbidden": {
+    "darling": "親愛的",
+    "baby": "寶貝"
+   }
+  },
+  "5": {
+   "allowed": {
+    "given": "{given}",
+    "reserved": "（專屬叫法）"
+   },
+   "forbidden": {
+    "darling": "親愛的",
+    "baby": "寶貝"
+   }
+  }
  },
- "rules": [
-  "只能往上一階一階走，不可跳階；一場戲裡維持同一階。",
-  "主角比女角保守半階：主角很少先叫名字，等她先。",
-  "叫名字這件事要稀有而有重量；主角先熱絡＝油。"
- ]
+ "rules": {
+  "one_step": "只能往上一階一階走，不可跳階；一場戲裡維持同一階。",
+  "hero_half_step": "主角比女角保守半階：主角很少先叫名字，等她先。",
+  "name_is_weighty": "叫名字這件事要稀有而有重量；主角先熱絡＝油。"
+ }
 }

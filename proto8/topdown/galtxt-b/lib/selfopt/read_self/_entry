@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+# read_self - 讀「我自己」：這次被優化的節點的 _metainfo、可改的檔（system.txt、規則表 JSON）、難例；或節點裡（或樹上）指定的一個檔
+# 介面（proto8/lib 契約）：stdin {"path"?: 相對節點的檔（可用 ../ 讀樹上別處，只讀）} → stdout 一行 JSON。
+#   沒給 path＝總覽 {node, stage, uses_llm, metainfo, files[{path, counter_bytes, editable}], system_txt?, tables{檔: 內容}, hard_cases[...], budget}；
+#   給 path＝{path, text}（JSON 檔也回原文；超過 50KB 截掉、說從哪接）。
+# 難例：自己資料夾的 hard_cases.jsonl，加上往上幾層節點的 hard_cases.jsonl 裡 reason 以「<我的資料夾名>:」開頭的（例 plan_template 的難例記在 director）；稿紙太大只回 brief 的 key。
+# 錯：SessionMissing／SessionBad、WsMissing、TreeMissing、NodeMissing、BudgetBad、ArgumentsBad、PathBad（不在 tree/ 裡）、FileMissing。
+import fnmatch, json, os, sys
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import guard  # noqa: E402
+
+MAX_BYTES = 50000
+
+
+def hard_cases(ctx):
+    me = os.path.basename(ctx.node)
+    out, d = [], ctx.node_dir
+    while True:
+        rel = os.path.relpath(d, ctx.tree)
+        try:
+            with open(os.path.join(d, "hard_cases.jsonl"), encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        c = json.loads(line)
+                    except ValueError:
+                        continue
+                    if d == ctx.node_dir or str(c.get("reason", "")).startswith(me + ":"):
+                        c = dict(c, kept_in=rel)
+                        if isinstance(c.get("brief"), dict):
+                            c["brief"] = {"keys": sorted(c["brief"]), "note": "稿紙全文太大；要看就 read_self path=%s" % os.path.relpath(
+                                os.path.join(d, "hard_cases.jsonl"), ctx.node_dir)}
+                        out.append(c)
+        except OSError:
+            pass
+        if os.path.realpath(d) == ctx.tree or len(d) <= len(ctx.tree):
+            return out
+        d = os.path.dirname(d)
+
+
+def main(args, ctx):
+    p = args.get("path")
+    if p:
+        if not isinstance(p, str) or os.path.isabs(p):
+            raise guard.Fail("ArgumentsBad", "path 要是相對節點的路徑")
+        real = os.path.realpath(os.path.join(ctx.node_dir, p))
+        if not real.startswith(ctx.field + os.sep):
+            raise guard.Fail("PathBad", "%s 不在訓練場裡" % p)
+        try:
+            with open(real, encoding="utf-8") as f:
+                text = f.read()
+        except OSError as e:
+            raise guard.Fail("FileMissing", "%s 讀不了：%s" % (p, e))
+        out = {"path": p, "counter_bytes": len(text.encode("utf-8"))}
+        if len(text.encode("utf-8")) > MAX_BYTES:
+            text = text.encode("utf-8")[:MAX_BYTES].decode("utf-8", "ignore")
+            out["truncated"] = "只回前 %d bytes" % MAX_BYTES
+        out["text"] = text
+        return out
+    meta = guard.read_meta(ctx.node_dir)
+    allow = ctx.session.get("editable") or guard.DEFAULT_EDITABLE
+    files, tables, system_txt = [], {}, None
+    for d, dirs, names in os.walk(ctx.node_dir):
+        dirs[:] = sorted(x for x in dirs if x != guard.VERSIONS and not x.startswith(".") and x != "__pycache__"
+                         and not os.path.islink(os.path.join(d, x)))
+        for n in sorted(names):
+            rel = os.path.relpath(os.path.join(d, n), ctx.node_dir)
+            if n.startswith("."):
+                continue
+            editable = not any(fnmatch.fnmatch(rel, q) or fnmatch.fnmatch(n, q) for q in guard.NEVER_EDIT) and \
+                any(fnmatch.fnmatch(rel, q) for q in allow)
+            size = os.path.getsize(os.path.join(d, n))
+            files.append({"path": rel, "counter_bytes": size, "editable": editable})
+            if editable and rel == "system.txt":
+                with open(os.path.join(d, n), encoding="utf-8") as f:
+                    system_txt = f.read()
+            elif editable and n.endswith(".json") and size <= MAX_BYTES:
+                tables[rel] = guard.jload(os.path.join(d, n))
+        for x in sorted(os.listdir(d)):
+            if os.path.islink(os.path.join(d, x)):
+                files.append({"path": os.path.relpath(os.path.join(d, x), ctx.node_dir), "link": os.readlink(os.path.join(d, x)),
+                              "editable": False})
+    s = ctx.session
+    out = {"node": ctx.node, "stage": (meta.get("lifecycle") or {}).get("stage"), "uses_llm": meta.get("uses_llm"),
+           "metainfo": meta, "files": files, "tables": tables, "hard_cases": hard_cases(ctx),
+           "budget": {"counter_calls": s.get("counter_calls", 0), "max_calls": s.get("max_calls"),
+                      "counter_tokens": s.get("counter_tokens", 0), "max_tokens": s.get("max_tokens")}}
+    if system_txt is not None:
+        out["system_txt"] = system_txt
+    return out
+
+
+guard.tool_main("read_self", main)

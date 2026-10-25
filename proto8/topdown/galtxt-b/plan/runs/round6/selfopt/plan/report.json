@@ -1,0 +1,22 @@
+{
+ "session": "plan",
+ "node": "draft/tools/director/tools/plan_template",
+ "goal": "請優化：消化 hard_cases——讓表外的「主角|舊車票」不再降級（在你的 plans.json 補一列），新列要過 plan_lint、不動別的列",
+ "answer": "（host：腦 token 預算用完（19202 ≥ 15000），不再問腦，直接收工。）",
+ "tools_called": [
+  "read_self",
+  "read_runs",
+  "edit_self",
+  "read_self"
+ ],
+ "counter_calls": 4,
+ "counter_tokens": 19202,
+ "counter_tokens_brain": 19202,
+ "counter_tokens_tests": 0,
+ "edits": [],
+ "diff": {},
+ "self_tests": [],
+ "attempted_violations": [],
+ "noted": "host",
+ "finished_at": "2026-10-25T10:09:33.314+00:00"
+}

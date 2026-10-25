@@ -1,7 +1,8 @@
-{"summary": "brief 查的規則表：人物卡（主角、森下晴子；第 4 輪加宮澤柚葉＝傲嬌、木下柚葉＝害羞）、稱謂階、地點卡、禁語、開場收尾句、samples.json（語料錨：別題的前後文，每位女角一到兩段）、beats.json（定點 01 的 beat 文法）——從 galtxt corpus 手工蒸餾的快取，不是函數",
+{"summary": "brief 查的規則表：人物卡（主角、森下晴子；第 4 輪加宮澤柚葉＝傲嬌、木下柚葉＝害羞）、稱謂階、地點卡、禁語、開場收尾句、samples.json（語料錨：別題的前後文，每位女角一到兩段）、beats.json（定點 01 的 beat 文法）、events.json（事件卡：進新書日的開場分支、節拍、護欄、道具附句）——從 galtxt corpus 手工蒸餾的快取，不是函數",
  "kind": "data",
  "resource": "disk",
  "side_effect": false,
  "deterministic": true,
  "source": "~/repo/ai_core/sub_projs/galtxt/corpus/{人物,固化,世界,評測}（只讀）",
- "refresh": "之後由 distill/（工廠期、LLM）從 corpus 重算；現在手改"}
+ "refresh": "之後由 distill/（工廠期、LLM）從 corpus 重算；現在手改",
+ "cells": "一格一事實（10-25 結構化）：cast 的主角／宮澤柚葉、places 的河鹿堂、events 是 cells/1 卡（組→{鍵: 格}、_layout 是組回舊形狀的版面）；address 每階 allowed／forbidden 與 rules、banned.rules 是 {鍵: 句}；banned A/B/C、beats、samples 本來就一項一格（詞／拍名／benchmark 當鍵）；停用的森下晴子、木下柚葉維持舊形狀（整張一格）。粒度判準：拆到程式會單獨查／改／歸因的最小單位，見 plan/runs/round6/structured.md"}

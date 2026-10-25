@@ -1,0 +1,5 @@
+{"description": "把這次為什麼這樣改寫回你自己的 _metainfo（lifecycle.history 一筆，附這次改過哪些檔、自測分數）。改完、收工前叫一次。",
+ "parameters": {"type": "object",
+                "properties": {"why": {"type": "string", "description": "為什麼這樣改，引先前結果的證據"},
+                               "expect": {"type": "string", "description": "選填：預期外部量到什麼（例 writer token −20%、分數不掉）"}},
+                "required": ["why"]}}

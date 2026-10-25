@@ -1,0 +1,1 @@
+{"better": "b", "why": ["兩者都預期省 token 且不增加 lint 違規；a 多省約 111 token，但這不是台詞分數，且 a 會移除 trim 工具。", "b 修正 lint 漏 brief_path，預期將 counter_argbad 從 1 降到 0；a 拿掉 trim 後可能讓 lint 漏參回來，已有 3/6 次觀測到此情況。", "總分、反差與承接沒有候選梯度，無從比較台詞表現；a、b 的效益估計樣本都有限，且兩條可能互相影響。"], "weights_used": {"counter_argbad": 0.55, "counter_violations": 0.2, "llm_tokens": 0.15, "llm_calls": 0.1}, "by": "brain"}

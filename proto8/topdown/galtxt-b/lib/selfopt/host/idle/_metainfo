@@ -1,0 +1,10 @@
+{"summary": "看工作區還有沒有題目：有退 0、沒有退 10 讓 loop 停",
+ "time_ms": {"val": 5, "max": 100},
+ "resource": "cpu",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true,
+ "reads": ["$AOS_WS/cur/*.json", "$AOS_WS/new/*.json"],
+ "writes": []}

@@ -1,0 +1,16 @@
+{"_entry": ["aos-fsm", {"$env": "AOS_CF"}],
+ "start": "idle",
+ "states": {
+   "idle":  {"exec": "idle", "next": "think"},
+   "think": {"exec": {"argv": ["python3", "brain.py"], "timeout_ms": 180000,
+                      "_metainfo": {"summary": "問腦一次（被優化節點自己的腦／system.txt＋優化模式說明，或臨時配的腦）：收回一次工具呼叫或收工報告；預算用完就不問腦、直接收工",
+                                    "time_ms": {"val": 8000, "max": 180000}, "resource": "llm",
+                                    "llm_endpoint": "http://localhost:4000/v1", "llm_model": "chatgpt-gpt-6-luna-low",
+                                    "llm_calls": 1, "llm_tokens": {"val": 4000, "max": 20000},
+                                    "side_effect": true, "idempotent": false, "deterministic": false, "interrupt": "safe"}},
+             "next": "act"},
+   "act":   {"exec": {"argv": ["python3", "act.py"], "timeout_ms": 1300000,
+                      "_metainfo": {"summary": "照腦的最後一則回覆動手：有 tool_calls 就叫 tools/<名>（selfopt 工具包，帶 SELFOPT_SESSION）、結果接回 history；沒有就收工：寫報告（diff、用量、越界嘗試）、沒叫過 note 就補記 lifecycle.history、題目 cur/→done/",
+                                    "time_ms": {"val": 200, "max": 1300000}, "resource": "cpu",
+                                    "side_effect": true, "idempotent": true, "deterministic": true, "interrupt": "safe"}},
+             "next": "idle"}}}

@@ -1,0 +1,6 @@
+{"summary": "自我優化工具包（使用者 10-25「給他相關工具包，跟他說請優化一些東西，並給予一些先前的執行結果，然後他就會自動去做」）：read_self、read_runs、edit_self、extract_tool、run_self_test、note 六個工具（proto8/lib 契約）＋claude_code（主要工具：工具包不成熟前整件交給 Claude Code CLI，使用者 10-25）＋共用 guard.py（寫入範圍、凍結、白名單、預算由程式擋）＋host/（agent-dan 形的腦殼：agent 節點用自己的腦，非 agent 節點臨時配一個）。只在訓練場（train/init 的 tree/ 複本）用；放 lib/ 因為任何節點都能掛、不屬於某一格（P-33：引用的一方掛相對捷徑）",
+ "kind": "dir",
+ "subtrees": ["read_self", "read_runs", "edit_self", "extract_tool", "run_self_test", "note", "claude_code", "host"],
+ "uses_llm": true,
+ "frozen": true,
+ "frozen_note": "工具包自己不准被它優化的節點改（guard.FROZEN 也列了 lib/selfopt）"}

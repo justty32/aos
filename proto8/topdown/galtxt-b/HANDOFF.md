@@ -4,6 +4,17 @@
 
 使用者 10-25「注意context有沒有滿，可能的話抓個大斷落重開隊伍」「差不多30%的時候就該換手了其實」——原隊長 context 到約 30%，在 B 段中途交棒。
 
+## 第二任隊長收線（10-25）：B 段做完
+
+B 段 round6 §7 的 1～7、9 都做了，外加使用者途中補的兩件（結構化場景、自我優化＋claude code 當優化工具）；結論在 thinking 乙隊一節「B 段結論」，數字在 `plan/runs/round6/*.md`。真腦 B 段共約 58 萬 token＋claude code 0.10 美元。全套 unittest 585 OK（skip 2）、根 ctest 8/8、wf-lint broken 只剩 impls/README→dcap（worktree 路徑，非本隊）。
+
+**下一棒若再開**（都還沒做）：
+1. 把訓練場裡驗過的改動畢業回 repo 樹：writer 的 `act_rules.json`（交稿後必過 trim＋lint 補參；claude code 那次 −32% token，只 1 次樣本）——先外部重跑 ≥2 次。
+2. 自我優化：外部分數掉就自動退回、多次自測取平均、read_self 輸出縮短（writer 約 6k 字每輪重送）、extract_tool 的 agent 版。
+3. writer 抽 `hand_over`（反差拍句式表；結構化場景的 `tone/deny→yield→cover` 三格可直接接）。
+4. 判斷器 accuracy：兩條候選都實跑（各 4 題）才有一對可核；小改動的預期差小於 token 雜訊 30 倍，要加樣本。
+5. 人評回來後（頂層轉 `human/ratings.json`）跑 `human/import`、算 critic 校正與判斷器 human_agreement。
+
 ## 任務書要點（原隊長收到的）
 
 - 隊長＝opus：派工、核驗、收線、commit；規劃＝fable（Agent model "fable"，每輪拆法存 `plan/round*.md`）；實作誰都可；腦只用 LiteLLM `http://localhost:4000/v1` 的 gpt 系列（luna-low），不准 claude 當腦。

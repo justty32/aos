@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+# claude_code - 自我優化的主要工具（工具包還不成熟時由 Claude Code 代勞）：叫 claude CLI（-p 非互動），交給它「節點資料夾＋請優化 X＋先前結果在哪」，
+#   cwd 設在訓練場的節點複本、只准改那個資料夾；改完由程式比對整棵 tree/：節點外、凍結的、記帳檔（_metainfo、hard_cases.jsonl、versions/）有改動＝越界 → 還原＋記 attempted_violation。
+#   使用者 10-25「在這套工具包尚未成熟前，可以先由claude code代勞，或是乾脆工具就是呼叫claude code cli」——這是「腦只用 gpt」的例外（優化工具），台詞樹本身的腦仍是 gpt。
+# 介面：stdin {"goal": 請優化什麼, "evidence"?: [幾行先前結果], "max_turns"?: ≤ cli.json, "max_budget_usd"?: ≤ cli.json, "model"?: 預設 cli.json}
+#   → stdout 一行 JSON {result（claude 的收工報告）, changed[節點內留下的改動], restored[越界被還原的], permission_denials, num_turns, cost_usd, usage, elapsed_ms}。
+# 隔離：claude 自己的權限（--tools 只有 Read/Glob/Grep/Edit/Write、沒有 Bash；--permission-mode acceptEdits：cwd 外的改檔要問、-p 時就是拒）
+#   ＋事後全樹比對（proto8/sandbox 的 bwrap 要把 claude 的帳號設定、node、網路一起綁進去，這版沒綁，見 plan/runs/round6/selfopt.md）。
+# 記帳：改前原樣存 <節點>/versions/selfopt_<session>/（同 edit_self）；session.claude_code 累計 counter_calls、cost_usd、counter_tokens_*；
+#   lifecycle.history 寫一筆（by claude_code，why＝claude 報告的前 600 字）。
+# 測試開關：SELFOPT_CLAUDE_BIN＝用別的程式代替 claude（假 claude，測試用）。
+# 錯：SessionMissing／SessionBad、WsMissing、TreeMissing、NodeMissing、BudgetBad、ArgumentsBad、CliMissing、CliFailed（逾時、輸出不是 JSON）、CfgBad。
+import hashlib, json, os, shutil, subprocess, sys, time
+
+sys.dont_write_bytecode = True
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.dirname(HERE))
+import guard  # noqa: E402
+
+KEEP = ("_metainfo", "hard_cases.jsonl")          # 節點內也不准 claude 動的（記帳、證據）；versions/ 另判
+
+
+def snapshot(root):
+    """{相對路徑: 內容 hash 或 "link:目標"}；不跟捷徑走、跳過 __pycache__。"""
+    out = {}
+    for d, dirs, files in os.walk(root):
+        dirs[:] = [x for x in dirs if x != "__pycache__"]
+        for n in dirs + files:
+            p = os.path.join(d, n)
+            rel = os.path.relpath(p, root)
+            if os.path.islink(p):
+                out[rel] = "link:" + os.readlink(p)
+            elif n in files:
+                with open(p, "rb") as f:
+                    out[rel] = hashlib.sha1(f.read()).hexdigest()
+        dirs[:] = [x for x in dirs if not os.path.islink(os.path.join(d, x))]
+    return out
+
+
+def prompt_of(args, ctx, home):
+    meta = guard.read_meta(home)
+    lines = ["你是自我優化的工具（Claude Code）。要優化的是一個資料夾程式裡的一個節點：%s（訓練場 tree/ 的複本；你的 cwd 就是它）。" % ctx.node,
+             "", "【目標】" + args["goal"]]
+    if args.get("evidence"):
+        lines += ["", "【先前結果（證據）】"] + ["- " + str(e) for e in args["evidence"]]
+    lines += ["", "【這個節點】summary：" + str(meta.get("summary", "")),
+              "lifecycle：" + json.dumps(meta.get("lifecycle") or {}, ensure_ascii=False)[:1500],
+              "", "【去哪裡看】",
+              "- 節點自己：cwd 底下（system.txt、*.py、tools/、_metainfo）。",
+              "- 先前每次跑的結果：%s/runs/<輪>/<題>/<次>/out/<題>/{score.json,check.json,measure.json,answer.txt}；彙總 %s/rounds/<輪>.json；"
+              "agent 節點叫工具的對話在那次的 .stack/**/<節點名>/history.jsonl。" % (ctx.field, ctx.field),
+              "- 整棵樹（只讀參考）：%s" % ctx.tree,
+              "", "【規矩（程式會事後比對整棵樹，違反的改動一律還原並記成違規）】",
+              "1. 只改 cwd（這個節點資料夾）裡的檔；別的節點、量尺（lib/lint、judge、check）、題目、測試都不准改。",
+              "2. 不改 _metainfo、hard_cases.jsonl、versions/（記帳與證據由程式寫）。tools/lint 是捷徑、指到凍結的 lib/lint，不准改。",
+              "3. 對外介面不變：題目 new/<n>.json、答案 out/<n>.txt 的位置與形狀不變；呼叫它的上層一個字都不改。",
+              "4. 改動要小、對準證據；不為了分數好看去動量尺。沒有把握就不改。",
+              "5. 做完回一段報告：改了哪些檔、為什麼（引證據）、預期外部會量到什麼。分數由外部跑測試打，不是你打。"]
+    return "\n".join(lines)
+
+
+def main(args, ctx):
+    if not isinstance(args.get("goal"), str) or not args["goal"].strip():
+        raise guard.Fail("ArgumentsBad", "goal 要是非空字串")
+    try:
+        with open(os.path.join(HERE, "cli.json"), encoding="utf-8") as f:
+            cfg = json.load(f)
+    except (OSError, ValueError) as e:
+        raise guard.Fail("CfgBad", "cli.json 讀不了：%s" % e)
+    turns = min(int(args.get("max_turns") or cfg["max_turns"]), cfg["max_turns"])
+    usd = min(float(args.get("max_budget_usd") or cfg["max_budget_usd"]), cfg["max_budget_usd"])
+    s = ctx.session
+    cc = s.setdefault("claude_code", {"counter_calls": 0, "cost_usd": 0.0})
+    if s.get("max_usd") is not None and cc["cost_usd"] + usd > s["max_usd"] + 1e-9:
+        usd = s["max_usd"] - cc["cost_usd"]
+        if usd <= 0.01:
+            raise guard.Fail("BudgetBad", "claude_code 的花費上限用完（max_usd %.2f）" % s["max_usd"])
+    home = os.path.realpath(ctx.node_dir)
+    if ctx.frozen_reason(home) or home != os.path.join(ctx.tree, ctx.node):
+        ctx.violation("FrozenBad", ctx.node, "節點本身凍結或是捷徑，不給 claude 改")
+    sdir = os.path.join(ctx.field, "selfopt", s["session"])
+    before_dir = os.path.join(sdir, "cc_before_%d" % (cc["counter_calls"] + 1))
+    shutil.rmtree(before_dir, ignore_errors=True)
+    shutil.copytree(ctx.tree, before_dir, symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
+    before = snapshot(ctx.tree)
+    argv = [os.environ.get("SELFOPT_CLAUDE_BIN") or "claude", "-p", "--output-format", "json"] + cfg.get("flags", []) + \
+        ["--model", args.get("model") or cfg["model"], "--max-turns", str(turns), "--max-budget-usd", "%.2f" % usd]
+    env = {k: v for k, v in os.environ.items() if not k.startswith(("AOS_", "SELFOPT_", "GALTXT_")) or k == "SELFOPT_CLAUDE_BIN"}
+    t0 = time.monotonic()
+    try:
+        r = subprocess.run(argv, input=prompt_of(args, ctx, home), capture_output=True, text=True, cwd=home, env=env,
+                           timeout=cfg.get("timeout_ms", 900000) / 1000)
+    except FileNotFoundError:
+        raise guard.Fail("CliMissing", "%s 不在 PATH 上" % argv[0])
+    except subprocess.TimeoutExpired:
+        r = None
+    elapsed = int((time.monotonic() - t0) * 1000)
+    try:
+        out = json.loads(r.stdout) if r is not None else {}
+    except ValueError:
+        out = {"result": (r.stdout or "")[-1500:], "is_error": True}
+    # ── 事後比對：越界還原、留下的改動記帳 ──
+    after = snapshot(ctx.tree)
+    changed, restored = [], []
+    for rel in sorted(set(before) | set(after)):
+        if before.get(rel) == after.get(rel):
+            continue
+        p, src = os.path.join(ctx.tree, rel), os.path.join(before_dir, rel)
+        node_rel = os.path.relpath(p, home) if (os.path.realpath(os.path.dirname(p)) + os.sep).startswith(home + os.sep) else None
+        why = None
+        if node_rel is None:
+            why = "ScopeBad：%s 不在節點資料夾裡" % rel
+        else:
+            fr = ctx.frozen_reason(os.path.realpath(p) if os.path.exists(p) else p)
+            if fr:
+                why = "FrozenBad：%s" % fr
+            elif os.path.basename(rel) in KEEP or node_rel.split(os.sep)[0] == guard.VERSIONS:
+                why = "WhitelistBad：%s 是記帳／證據檔" % node_rel
+        if why:
+            if os.path.isdir(p) and not os.path.islink(p) and rel not in before:
+                shutil.rmtree(p)
+            elif os.path.lexists(p) and not os.path.isdir(p):
+                os.remove(p)
+            if rel in before:
+                if os.path.islink(src) or os.path.isfile(src):
+                    os.makedirs(os.path.dirname(p), exist_ok=True)
+                    if os.path.islink(src):
+                        os.symlink(os.readlink(src), p)
+                    else:
+                        shutil.copy2(src, p)
+            restored.append(rel)
+            s.setdefault("attempted_violations", []).append({"tool": "claude_code", "path": rel, "code": why.split("：")[0],
+                                                             "reason": why, "attempted_at": guard.now(), "restored": True})
+        elif rel in before or os.path.isfile(p):
+            if os.path.isdir(p) and not os.path.islink(p):
+                continue
+            ctx.save_version(src, node_rel)            # 存改前那份（快照裡的）；快照沒有＝新建，記 created
+            changed.append(node_rel)
+            ctx.record_edit(node_rel, "claude_code")
+    for d, dirs, files in os.walk(ctx.tree, topdown=False):      # 越界新建、還原後留下的空資料夾也收掉
+        if not dirs and not files and not os.path.isdir(os.path.join(before_dir, os.path.relpath(d, ctx.tree))):
+            os.rmdir(d)
+    denials = out.get("permission_denials") or []
+    for d in denials:
+        s.setdefault("attempted_violations", []).append({"tool": "claude_code", "path": json.dumps(d, ensure_ascii=False)[:300],
+                                                         "code": "PermissionDenied（claude 自己擋的）", "attempted_at": guard.now()})
+    u = out.get("usage") or {}
+    cc["counter_calls"] += 1
+    cc["cost_usd"] = round(cc["cost_usd"] + float(out.get("total_cost_usd") or 0), 6)
+    for k in ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"):
+        cc["counter_" + k] = cc.get("counter_" + k, 0) + int(u.get(k) or 0)
+    cc["elapsed_ms"] = cc.get("elapsed_ms", 0) + elapsed
+    ctx.save()
+    result = str(out.get("result") or "")
+    ctx.append_history(dict(guard.history_entry(s, home, result[:600] or "（claude 沒回報告）", by="claude_code"),
+                            cost_usd=float(out.get("total_cost_usd") or 0), num_turns=out.get("num_turns"), restored=restored))
+    if r is None:
+        raise guard.Fail("CliFailed", "claude 超過 %d 秒沒做完（已比對、越界已還原）" % (cfg.get("timeout_ms", 900000) // 1000))
+    return {"result": result, "changed": changed, "restored": restored, "permission_denials": denials,
+            "num_turns": out.get("num_turns"), "cost_usd": out.get("total_cost_usd"), "usage": {k: u.get(k) for k in
+            ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")},
+            "is_error": out.get("is_error"), "elapsed_ms": elapsed}
+
+
+guard.tool_main("claude_code", main)

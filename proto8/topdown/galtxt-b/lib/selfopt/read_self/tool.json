@@ -1,0 +1,3 @@
+{"description": "讀你自己（這次被優化的節點）：不給 path＝總覽（_metainfo、檔案清單與哪些可改、system.txt、可改的規則表 JSON、難例、剩多少預算）；給 path＝讀那一個檔的原文（相對你的資料夾，可用 ../ 讀樹上別處，只讀）。",
+ "parameters": {"type": "object",
+                "properties": {"path": {"type": "string", "description": "選填：相對你資料夾的檔，例 system.txt、tools/plan_template/plans.json、../hard_cases.jsonl"}}}}

@@ -1,0 +1,32 @@
+{
+ "session": "plan2",
+ "node": "draft/tools/director/tools/plan_template",
+ "goal": "請優化：消化 hard_cases——讓表外的「主角|舊車票」不再降級（在你的 plans.json 補一列），新列要過 plan_lint、不動別的列",
+ "answer": "（host：腦 token 預算用完（13289 ≥ 6000），不再問腦，直接收工。）",
+ "tools_called": [
+  "read_self",
+  "read_runs",
+  "edit_self"
+ ],
+ "counter_calls": 3,
+ "counter_tokens": 13289,
+ "counter_tokens_brain": 13289,
+ "counter_tokens_tests": 0,
+ "edits": [
+  {
+   "path": "plans.json",
+   "kind": "set",
+   "edited_at": "2026-10-25T10:11:21.637+00:00",
+   "pointers": [
+    "/plans/主角|舊車票"
+   ]
+  }
+ ],
+ "diff": {
+  "plans.json": "--- a/plans.json\n+++ b/plans.json\n@@ -254,2 +254,66 @@\n    ]\n+  },\n+  \"主角|舊車票\": {\n+   \"beats\": [\n+    {\n+     \"beat\": \"B0\",\n+     \"who\": \"旁白\",\n+     \"do\": \"門鈴＋舊紙的味道，雨聲被關在門外：涼、靜、舊\",\n+     \"must\": []\n+    },\n+    {\n+     \"beat\": \"B1\",\n+     \"who\": \"旁白\",\n+     \"do\": \"收傘進店，本以為沒人，轉過書架看見{heroine}抱著一疊書\",\n+     \"must\": []\n+    },\n+    {\n+     \"beat\": \"B2\",\n+     \"who\": \"{hero}\",\n+     \"do\": \"主角先開口，調侃她挑太多（挖寶挖成這樣）\",\n+     \"must\": []\n+    },\n+    {\n+     \"beat\": \"B3\",\n+     \"who\": \"{heroine}\",\n+     \"do\": \"嘴硬：今天是進新書日，這點根本不算多\",\n+     \"must\": [\n+      \"{m0}\"\n+     ]\n+    },\n+    {\n+     \"beat\": \"B3\",\n+     \"who\": \"{hero}\",\n+     \"do\": \"順台階：是是，那妳提得動嗎\",\n+     \"must\": []\n+    },\n+    {\n+     \"beat\": \"B4\",\n+     \"who\": \"{heroine}\",\n+     \"do\": \"提不動，把一疊書塞給主角\",\n+     \"must\": [\n+      \"{m1}\"\n+     ]\n+    },\n+    {\n+     \"beat\": \"B5\",\n+     \"who\": \"{heroine}\",\n+     \"do\": \"表面：才不是要你幫忙，是你手比較長；洩底：耳朵先紅、視線飄向窗外\",\n+     \"must\": []\n+    },\n+    {\n+     \"beat\": \"B6\",\n+     \"who\": \"旁白\",\n+     \"do\": \"爺爺不說話，一本本在書上蓋朱紅梅花章；舊車票夾在書頁間，被雨氣洇軟\",\n+     \"must\": [\n+      \"{prop}\"\n+     ]\n+    },\n+    {\n+     \"beat\": \"B7\",\n+     \"who\": \"{heroine}\",\n+     \"do\": \"命令句的鉤：下次的進新書日你也要來；主角認了，梅雨還要下好一陣子\",\n+     \"must\": []\n+    }\n+   ]\n   }\n"
+ },
+ "self_tests": [],
+ "attempted_violations": [],
+ "noted": "host",
+ "finished_at": "2026-10-25T10:11:21.691+00:00"
+}

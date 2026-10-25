@@ -95,10 +95,10 @@ class Scope(Base):
 
     def test_card(self):
         cast = json.loads((GB / "brief" / "tables" / "cast.json").read_text(encoding="utf-8"))
-        c = cast["宮澤柚葉"]
+        c = self.brief(A)["cast"][1]                                            # 10-25 起表裡是 cells/1（一格一事實），看 brief 組回來的卡
         self.assertEqual(c["labels"], ["宮澤柚葉"])                              # 不放裸的「柚葉」
         self.assertEqual(c["type"], ["傲嬌（主軸）"])                            # 精簡、寫死：單一性格
-        self.assertEqual(set(c), set(cast["森下晴子"]))                         # 照晴子那張的格
+        self.assertEqual(set(c) - {"address"}, set(cast["森下晴子"]))           # 照晴子那張的格
         self.assertLessEqual(len(c["catchphrases"]), 1)
 
     def test_set_fake_end_to_end(self):

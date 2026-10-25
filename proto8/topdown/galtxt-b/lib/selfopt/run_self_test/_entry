@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+# run_self_test - 在訓練場對（改過的）自己跑 1 題：整棵 tree/ 跑一次，回外部算的分數（judge／critic、check／lint 是凍結的量尺，不是自己算的）
+# 介面：stdin {"question"?: set/ 裡的題名（不含 .json；預設第一題）, "brain"?: "fake"|"real"（預設照 session.self_test）} → stdout 一行 JSON
+#   {question, brain, ws, code, total, val, dims, degraded, violations, counter_drafts, counter_tokens, node{counter_tokens, counter_llm_calls},
+#    tool_calls（這個節點 agent 時叫工具的順序）, plan_source（director 這次用哪張表）, budget}。
+# 工作區：$AOS_WS/selfopt/<session>/tests/<k>/（每次一個新的）；aos-exec --ws 它 $AOS_WS/tree（環境：清掉 AOS_WS／STACK／CF／CD／CO／ENTRY、
+#   AOS_BRAIN_MODEL、GALTXT_*、SELFOPT_*；fake＝也清掉 AOS_BRAIN_URL）。逾時 1200 秒。
+# 預算：session.self_test＝"off" 不准跑、"fake" 只准假腦；real 要剩下的 token ≥ session.est_tokens_per_test（預設 22000）才跑，
+#   跑完把這次整棵樹的 counter_tokens 記進 session（counter_tokens_tests）。
+# 錯：SessionMissing／SessionBad、WsMissing、TreeMissing、NodeMissing、BudgetBad、ArgumentsBad、QuestionMissing、LaunchFailed。
+#   樹自己跑失敗（結束碼非 0）不是工具的錯：照樣回結果，code 非 0、分數欄空。
+import json, os, shutil, subprocess, sys
+
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import guard  # noqa: E402
+
+CLEAR = ("AOS_WS", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_ENTRY", "AOS_BRAIN_MODEL", "AOS_KERNEL_REPORT")
+
+
+def main(args, ctx):
+    s = ctx.session
+    allowed = s.get("self_test", "fake")
+    brain = args.get("brain") or ("real" if allowed == "real" else "fake")
+    if brain not in ("fake", "real"):
+        raise guard.Fail("ArgumentsBad", "brain 要是 fake 或 real")
+    if allowed == "off":
+        raise guard.Fail("BudgetBad", "這次 session 不准跑 run_self_test")
+    if brain == "real" and allowed != "real":
+        raise guard.Fail("BudgetBad", "這次 session 只准假腦（self_test %s）" % allowed)
+    est = s.get("est_tokens_per_test", 22000)
+    if brain == "real" and ctx.tokens_left() < est:
+        raise guard.Fail("BudgetBad", "剩 %d token，不夠真腦跑一次（估 %d）" % (ctx.tokens_left(), est))
+    sdir = os.path.join(ctx.field, "set")
+    names = sorted(n[:-5] for n in os.listdir(sdir) if n.endswith(".json")) if os.path.isdir(sdir) else []
+    q = args.get("question") or (names[0] if names else None)
+    if q not in names:
+        raise guard.Fail("QuestionMissing", "set/ 沒有這題：%s（有：%s）" % (q, "、".join(names)))
+    tdir = os.path.join(ctx.field, "selfopt", s["session"], "tests")
+    k = 1 + max([int(x) for x in os.listdir(tdir) if x.isdigit()] if os.path.isdir(tdir) else [0])
+    ws = os.path.join(tdir, str(k))
+    os.makedirs(os.path.join(ws, "new"))
+    shutil.copy(os.path.join(sdir, q + ".json"), os.path.join(ws, "new", q + ".json"))
+    env = {kk: v for kk, v in os.environ.items() if kk not in CLEAR and not kk.startswith(("GALTXT_", "SELFOPT_"))}
+    if brain == "fake":
+        env.pop("AOS_BRAIN_URL", None)
+    elif not env.get("AOS_BRAIN_URL"):
+        brain = "fake (沒有 AOS_BRAIN_URL)"
+    try:
+        r = subprocess.run(["aos-exec", "--ws", ws, ctx.tree], env=env, stdin=subprocess.DEVNULL,
+                           stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=1200)
+        code, err = r.returncode, r.stderr
+    except subprocess.TimeoutExpired:
+        code, err = 124, "逾時 1200 秒"
+    except OSError as e:
+        raise guard.Fail("LaunchFailed", "aos-exec 起不來：%s" % e)
+    with open(os.path.join(ws, "run.json"), "w", encoding="utf-8") as f:
+        json.dump({"code": code, "brain": brain, "by": "selfopt/run_self_test"}, f, ensure_ascii=False)
+    od = os.path.join(ws, "out", q)
+    sc = guard.jload(os.path.join(od, "score.json"), {}) or {}
+    ms = guard.jload(os.path.join(od, "measure.json"), {}) or {}
+    ck = guard.jload(os.path.join(od, "check.json"), {}) or {}
+    me = os.path.basename(ctx.node)
+    out = {"question": q, "brain": brain, "ws": os.path.relpath(ws, ctx.field), "code": code,
+           "total": sc.get("total"), "val": sc.get("val"), "dims": sc.get("dims"), "degraded": sc.get("degraded") or [],
+           "violations": [v.get("rule") for v in ck.get("violations") or []], "counter_drafts": ms.get("counter_drafts"),
+           "counter_tokens": ms.get("counter_tokens", 0)}
+    if code != 0:
+        out["stderr_tail"] = err[-400:]
+    ag = (ms.get("agents") or {}).get(me)
+    if ag:
+        out["node"] = {kk: ag.get(kk) for kk in ("counter_tokens", "counter_llm_calls")}
+    calls = []
+    for d, dirs, files in os.walk(os.path.join(ws, ".stack")):
+        if os.path.basename(d) == me and "history.jsonl" in files:
+            with open(os.path.join(d, "history.jsonl"), encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        calls += [(c.get("function") or {}).get("name") for c in json.loads(line).get("tool_calls") or []]
+                    except ValueError:
+                        pass
+    if calls:
+        out["tool_calls"] = calls
+    plan = guard.jload(os.path.join(ws, ".stack", "director", "ws", "out", "1.txt"))
+    if isinstance(plan, dict):
+        out["plan_source"] = plan.get("source")
+    if brain == "real":
+        ctx.charge_tokens(int(out["counter_tokens"] or 0), "tests")
+    s = ctx.session
+    s.setdefault("self_tests", []).append({k2: out.get(k2) for k2 in ("question", "brain", "ws", "code", "total", "counter_tokens", "degraded")})
+    ctx.save()
+    out["budget"] = {"counter_tokens": s.get("counter_tokens", 0), "max_tokens": s.get("max_tokens")}
+    return out
+
+
+guard.tool_main("run_self_test", main)

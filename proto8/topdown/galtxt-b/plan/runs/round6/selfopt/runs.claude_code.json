@@ -1,0 +1,120 @@
+[
+ {
+  "round": 1,
+  "q": "新書_宮澤_主角先_梅花章",
+  "k": 1,
+  "total": 5,
+  "degraded": [],
+  "counter_tokens": 19997,
+  "tier1_violations": 0,
+  "brain": "real（匯入）",
+  "imported_from": "plan/runs/round6/trim_after/新書_宮澤_主角先_梅花章/1",
+  "writer_tool_calls": [
+   "lint",
+   "trim"
+  ]
+ },
+ {
+  "round": 1,
+  "q": "新書_宮澤_主角先_梅花章",
+  "k": 2,
+  "total": 5,
+  "degraded": [],
+  "counter_tokens": 20361,
+  "tier1_violations": 0,
+  "brain": "real（匯入）",
+  "imported_from": "plan/runs/round6/trim_after/新書_宮澤_主角先_梅花章/2",
+  "writer_tool_calls": [
+   "lint",
+   "trim"
+  ]
+ },
+ {
+  "round": 1,
+  "q": "新書_宮澤_主角先_梅花章",
+  "k": 3,
+  "total": 5,
+  "degraded": [],
+  "counter_tokens": 20165,
+  "tier1_violations": 0,
+  "brain": "real（匯入）",
+  "imported_from": "plan/runs/round6/trim_after/新書_宮澤_主角先_梅花章/3",
+  "writer_tool_calls": [
+   "lint",
+   "trim"
+  ]
+ },
+ {
+  "round": 1,
+  "q": "新書_宮澤_主角先_舊車票",
+  "k": 1,
+  "total": 5,
+  "degraded": [
+   "plan_template: 主角|舊車票 不在表上，用 default"
+  ],
+  "counter_tokens": 25259,
+  "tier1_violations": 0,
+  "brain": "real（匯入）",
+  "imported_from": "plan/runs/round6/teach/round1",
+  "writer_tool_calls": null
+ },
+ {
+  "round": 1,
+  "q": "新書_宮澤_主角先_集章冊",
+  "k": 1,
+  "total": 5,
+  "degraded": [],
+  "counter_tokens": 20581,
+  "tier1_violations": 0,
+  "brain": "real（匯入）",
+  "imported_from": "plan/runs/round6/trim_after/新書_宮澤_主角先_集章冊/1",
+  "writer_tool_calls": [
+   "lint",
+   "trim"
+  ]
+ },
+ {
+  "round": 1,
+  "q": "新書_宮澤_她先_梅花章",
+  "k": 1,
+  "total": 5,
+  "degraded": [],
+  "counter_tokens": 20150,
+  "tier1_violations": 0,
+  "brain": "real（匯入）",
+  "imported_from": "plan/runs/round6/trim_after/新書_宮澤_她先_梅花章/1",
+  "writer_tool_calls": [
+   "lint",
+   "trim"
+  ]
+ },
+ {
+  "round": 1,
+  "q": "新書_宮澤_她先_集章冊",
+  "k": 1,
+  "total": 5,
+  "degraded": [],
+  "counter_tokens": 19970,
+  "tier1_violations": 0,
+  "brain": "real（匯入）",
+  "imported_from": "plan/runs/round6/trim_after/新書_宮澤_她先_集章冊/1",
+  "writer_tool_calls": [
+   "lint",
+   "trim"
+  ]
+ },
+ {
+  "round": 2,
+  "q": "新書_宮澤_主角先_梅花章",
+  "k": 1,
+  "total": 5,
+  "degraded": [],
+  "counter_tokens": 13631,
+  "tier1_violations": 0,
+  "brain": null,
+  "imported_from": null,
+  "writer_tool_calls": [
+   "lint"
+  ]
+ }
+]
