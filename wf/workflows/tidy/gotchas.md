@@ -8,7 +8,7 @@
 - 母 repo 的全庫連結檢查工具可能吃**檔案**路徑不吃目錄、且只掃母 repo 追蹤的檔；子 repo 內部用它自己的 `wf-lint.sh`，全庫檢查由調度者在母 repo 根跑。
 - ```markdown 圍籬內可能刻意放「壞」連結當測試字串；改寫器與檢查都要跳過 code fence。
 - **目錄改名**會留正文引註殘留（`x.md:48` 這種），連結檢查抓不到，要另外 grep 舊目錄名。
-- 線會把「archive 不維護內部連結」讀成「archive 不能動」而卡住 `broken=0`；交接書要明說：archive 內只准動指向現役檔的「取代者」連結，且 `archive/README.md` 只准**追加**列。
+- 線會把「archive 不維護內部連結」讀成「archive 不能動」而卡住 lint 的 `broken=0`（lint 本身可選）；交接書要明說：archive 內只准動指向現役檔的「取代者」連結，且 `archive/README.md` 只准**追加**列。
 - 名冊、領地登記這種表格類活檔要**把規則段留在活檔**、只搬歷史條目；表格裡的「狀態」欄不可信，判準改用 `SESSION-LOG.md` 或明確給出的現役清單作證據，交接書要直接給出證據，否則線會「不敢猜」留一半。
 - 「不搬某個現役目錄」與「清指向 archive 的連結」會在同一批檔上打架；驗收命令只擋 rename／delete（`git diff --cached --name-status -M <dir>/ | grep -v '^M'`），不擋 modify。
 - 資料夾可能有 `.` 開頭的隱藏檔；用 `ls -A`，否則大小統計也可能漏掉。

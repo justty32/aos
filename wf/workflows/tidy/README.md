@@ -21,7 +21,7 @@
 - 目標資料夾根層只剩入口 README ＋ 語意子資料夾（或同類檔案集合），每個子資料夾有 `README.md`。
 - 每個被封存檔：`grep -rn --include='*.md' '<檔名>' <repo> | grep -v archive/` → 0 行；`archive/README.md` 有它那一列。
 - 精簡過的檔：[content-trim](content-trim.md) 的原文檢查 → 0 行 `LOST`；報告列每檔精簡前後 bytes。
-- `tools/wf-lint.sh --strict .` → `TOTAL broken=0 residue=0 oversize=0 biglist=0`（`biglist` 只算同質記錄表；連結表超標印 `BIGLIST-LINKS`，只 warning 不計入）。
+- **可選**（預設不跑，lint 很花時間；大量搬檔後擔心連結壞掉、或使用者要求時才跑；使用者 2026-10-26：「wf-lint非常花時間，我希望他是可選的。」）：`tools/wf-lint.sh --strict .` → `TOTAL broken=0 residue=0 oversize=0 biglist=0`（`biglist` 只算同質記錄表；連結表超標印 `BIGLIST-LINKS`，只 warning 不計入）。
 - `find <repo> -name '*.md' -not -path '*/archive/*' -size +8192c | wc -l` → 0。
 - 報告附 `moves.tsv`（`舊路徑<TAB>新路徑`）。
 - 子資料夾 `README.md` ≤ 300 行、入口 `README.md` ≤ 100 行；名冊／登記表 ≤ 8192 bytes；`SESSION-LOG.md` ≤ 4096 bytes 且只列 open。
