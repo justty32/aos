@@ -8,12 +8,15 @@ A-1 沒有 _metainfo、沒有 _entry、只有一個子資料夾 → unwrap；例
 B-4 同內容葉片（整個資料夾的檔名＋內容＋+x 一樣）→ 真身以外換捷徑
 B-3 kind=data、fs_needs ⊆ {git_tracked}、沒有子資料夾、全是 JSON、合計 < 8 KB 且 < 300 行、讀者恰好一個 → table
 B-2 _entry 是 +x 腳本、沒有伴隨檔、callers 1、呼叫方是 fsm.json／loop.json 的一格 → inline（kind=glue 多標 A-2）
+N-4 有旁檔（ratings／stage／grad／rollup／human.json，round4 § 3.5）：照上面的規則本來是候選的，判準欄改「N-4（原 X）」、動作改「不縮」——
+    數字算在這棵頭上；人硬要縮先把 val／stage／grad_total 寫進上一層 rollup.json.children[<名>]（collapsed_from）、刪旁檔、再 collapse
 B-1 _entry 是單子（沒 +x）、沒有伴隨檔、fs_needs 空 → callers 1 內嵌、≥ 2 寫成 x.json
 
 讀者：所有 _metainfo（含內嵌單子的）的 reads 裡「<根下資料夾名>:<路徑>」指到這個資料夾裡的，就算一個讀者。
 呼叫方：所有 fsm.json／loop.json 裡 exec 是 "X" 或 ["aos-exec", "X", …] 的格，X 從那份檔的資料夾算、解開捷徑。"""
 import hashlib, json, os
 
+SIDECARS = ("ratings.json", "stage.json", "grad.json", "rollup.json", "human.json")
 BLOCK = {"own_stack", "tool_json", "isolation", "lock", "shared_write", "permission", "large", "binary"}
 
 
@@ -117,6 +120,9 @@ def suggest(root, nodes=None):
     rows = []
 
     def row(path, rule, action, why, who):
+        side = [f for f in SIDECARS if os.path.isfile(os.path.join(path, f))]
+        if side:                                                            # N-4：有旁檔的不縮（只標、不拿掉這行）
+            rule, action, why = "N-4（原 %s）" % rule, "不縮", "有旁檔 %s；%s" % ("、".join(side), why)
         rows.append({"path": rel(path), "rule": rule, "action": action, "why": why, "callers": who})
 
     for here, subs, files, lk, meta in dirs:

@@ -4,7 +4,8 @@
 # 收窄守門：score.json 的 style 不是 set.json scope.style＝StateBad。
 # 算分寫 epochs/NNN/verify.json、追加 verify.jsonl 一行：score_mean＝驗證題所有過護欄草稿的 total 平均；dims＝照 score.json 裡有的維度走（common.gather）；
 # by_question＝每題分開記（score_mean、dims、picked_total、bench；判讀時 Q16 與 held-out 分列）；measure＝{question, writer, style, 一致, dims_std（三份各維度的標準差，只記）}；
-# 另記 picked_total_sum、guard_hit、bigram_overlap、用量（驗證＋measure）、brain（common.brain：每題幾次腦、幾 token、每個節點在哪階）。
+# 另記 picked_total_sum、guard_hit、bigram_overlap、用量（驗證＋measure）、brain（common.brain：每題幾次腦、幾 token；每個節點在哪階＝根 rollup 的 brain.nodes）。
+# 寫完根 ratings.json → common.rollup_up(".")（根的 rollup.json 重算）。
 # 根 ratings.json 的 "style:<scope.style>" 整格覆蓋（val 門檻同 rate.py；determinism＝measure 的一致；cost＝每題平均）；檔頂層 scope。
 # 跟上一個 epoch 比 score_mean：上一個 epoch 的 optimize 有改 route（epochs/NNN/params/optimize.json 的 changed）才記一筆給優化函數的評級
 # （train/optimize/ratings.json 的 action:route，§ 15：只有這支寫它）。stdout 一行：score、Δ、每題 token 與 on_brain（第 0 個 epoch → 現在）。
@@ -74,7 +75,7 @@ if not os.path.exists(vpath):
          "by_question": per_q, "measure": m,
          "picked_total_sum": picked, "guard_hit": guard, "bigram_overlap": c.mean(overlap),
          "writers": by, "route_by_style": route.get("by_style", {}),
-         "usage": usage, "brain": c.brain(sets, usage, questions), "verified_at": c.now()}
+         "usage": usage, "brain": c.brain(usage, questions), "verified_at": c.now()}
     prev = c.load_or(os.path.join(c.edir(st, n - 1), "verify.json"), None) if n > 0 else None
     if prev is not None and prev.get("score_mean") is not None and v["score_mean"] is not None:
         v["delta"] = round(v["score_mean"] - prev["score_mean"], 3)
@@ -114,6 +115,7 @@ if not os.path.exists(vpath):
                                 "cost": {"llm_calls": v["brain"]["llm_calls_per_question"], "llm_tokens": v["brain"]["llm_tokens_per_question"]},
                                 "brain": v["brain"], "rated_at": c.now(), "rated_by": "train/verify.py epoch %d @ %s" % (n, st)}
     c.save(rp, root)
+    c.rollup_up(".")
     with open(os.path.join(st, "verify.jsonl"), "a", encoding="utf-8") as f:
         f.write(json.dumps({k: v.get(k) for k in ("epoch", "score_mean", "delta", "dims", "verified_at")}, ensure_ascii=False) + "\n")
     first = c.load_or(os.path.join(c.edir(st, 0), "verify.json"), {}).get("brain") or v["brain"]

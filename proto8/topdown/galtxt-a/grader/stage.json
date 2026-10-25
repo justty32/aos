@@ -1,0 +1,15 @@
+{
+ "source": "評審固化到哪階（round4 § 2.2、§ 2.4）：這圈不動（stage agent、沒有工具）；下一圈 extract 承接／像柚葉的規則工具時 train/optimize 改 stage／tools、train/verify.py 補 history；人不手改",
+ "stage": "agent",
+ "since_epoch": null,
+ "why": null,
+ "tools": [],
+ "tools_share": 0,
+ "decisions_left": [
+  "承接",
+  "像柚葉",
+  "文筆",
+  "理由標籤"
+ ],
+ "history": []
+}

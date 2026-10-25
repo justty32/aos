@@ -1,6 +1,7 @@
 # common.py - train 三支（verify.py、train.py、rate.py）共用的小東西：路徑、讀寫 JSON、跑根一題、加總用量、看預算；
 # 第四輪（round4 § 7.1）加：scope_check（收窄守門）、gather（一堆 score.json → 照表走的 total／dims／tags 彙總，不寫死維度名）、
-# run_cost（某個 agent 的小格們平均每次花多少：llm_calls、llm_tokens、time_ms）、brain（整棵樹哪些節點還靠腦）、run_question 的 env。
+# run_cost（某個 agent 的小格們平均每次花多少：llm_calls、llm_tokens、time_ms）、brain（整棵樹哪些節點還靠腦，讀根的 rollup）、run_question 的 env；
+# 步驟 4 加 rollup_up／rollup_view（叫 meta/rollup）。
 # 不是格、沒有 _entry；三支用 sys.path 從自己的資料夾 import（cwd＝train/，fsm 的內嵌單子）。純標準庫。
 import datetime, json, os, shutil, subprocess, sys
 
@@ -202,21 +203,35 @@ def run_cost(cells, agent):
     return {"llm_calls": round(calls / k, 2), "llm_tokens": round(tokens / k), "time_ms": round(ms / k), "counter_runs": k}
 
 
-def stage_of(sub):
-    """一棵子樹現在在哪階（round4 § 3.3）：有 stage.json 照它；沒有而 _metainfo 的 resource 含 llm＝agent；不含＝program"""
-    p = os.path.join(ROOT, sub)
-    st = load_or(os.path.join(p, "stage.json"), {})
-    if isinstance(st, dict) and isinstance(st.get("stage"), str):
-        return st["stage"]
-    res = load_or(os.path.join(p, "_metainfo"), {}).get("resource") or []
-    return "agent" if "llm" in (res if isinstance(res, list) else [res]) else "program"
+ROLLUP = os.path.join(ROOT, "meta", "rollup", "_entry")
 
 
-def brain(sets, usage, questions):
-    """整棵樹的腦用量（round4 § 2.3）：每題平均幾次腦、幾 token（實測：usage ÷ 題數），每個用到的節點在哪階。
-    節點＝set.json 的寫手＋評審＋lint（這圈每題會叫到的；rollup 出來後改由 rollup 收）"""
-    nodes = {n: stage_of(n) for n in list(sets["writers"]) + ["grader", "tools/lint"]}
-    on = sum(1 for v in nodes.values() if v in ("agent", "semi"))
+def rollup_up(sub):
+    """rollup --up <子樹>（round4 § 3.3）：寫完旁檔後沿這棵往上重算 rollup.json 到根；stdout 照印（每層一行）；失敗＝RollupFailed 退 1"""
+    try:
+        r = subprocess.run([ROLLUP, "--up", sub], cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    except OSError as e:
+        die("RollupFailed", "meta/rollup 起不來：%s" % e)
+    if r.returncode != 0:
+        die("RollupFailed", "rollup --up %s 結束碼 %d：%s" % (sub, r.returncode, r.stderr.strip()))
+    sys.stdout.write(r.stdout)
+    sys.stdout.flush()
+
+
+def rollup_view(sub):
+    """rollup --dry-run --json <子樹>：現在算出來的彙總（不寫檔）"""
+    try:
+        r = subprocess.run([ROLLUP, "--dry-run", "--json", sub], cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if r.returncode != 0:
+            die("RollupFailed", "rollup --dry-run %s 結束碼 %d：%s" % (sub, r.returncode, r.stderr.strip()))
+        return json.loads(r.stdout.splitlines()[0])
+    except (OSError, ValueError, IndexError) as e:
+        die("RollupFailed", "rollup --dry-run %s：%s" % (sub, e))
+
+
+def brain(usage, questions):
+    """整棵樹的腦用量（round4 § 2.3）：每題平均幾次腦、幾 token（實測：usage ÷ 題數）；節點在哪階＝根的 rollup（直接子樹＋攤平的「子樹/孫」）"""
+    b = rollup_view(".").get("brain") or {}
     return {"llm_calls_per_question": round(usage["counter_calls"] / questions, 2) if questions else None,
             "llm_tokens_per_question": round(usage["counter_tokens"] / questions) if questions else None,
-            "nodes": nodes, "counter_on_brain": on, "counter_program": len(nodes) - on}
+            "nodes": b.get("nodes", {}), "counter_on_brain": b.get("counter_on_brain", 0), "counter_program": b.get("counter_program", 0)}

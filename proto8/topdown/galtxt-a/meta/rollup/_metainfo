@@ -1,0 +1,7 @@
+{"summary": "逐層彙總（round4 § 3.3、§ 9）：一棵子樹的 _metainfo（解一層 $ref）＋旁檔（ratings／stage／grad）＋直接子樹的 rollup.json → 它的 rollup.json（評級、固化階、梯度合計、成本、腦用量）；--up 一路彙到樹根；優化器讀的是它的產物",
+ "kind": "program", "grow_level": 3, "role": "dev",
+ "time_ms": {"val": 100, "max": 30000}, "resource": ["cpu", "disk"],
+ "side_effect": true, "idempotent": true, "deterministic": true, "interrupt": "safe", "parallel": false,
+ "reads": ["cwd:<子樹>/_metainfo", "cwd:<子樹>/*.json", "cwd:<子樹>/*/rollup.json", "cwd:<子樹>/*/_metainfo（直接子樹的 kind／role）"],
+ "writes": ["cwd:<子樹>/rollup.json（--up：路上每一層）"],
+ "fs_needs": ["mount"], "callers": 3}

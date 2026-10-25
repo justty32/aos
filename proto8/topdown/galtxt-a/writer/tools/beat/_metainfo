@@ -3,4 +3,6 @@
  "time_ms": {"val": 30, "max": 5000}, "resource": "cpu",
  "side_effect": false, "idempotent": true, "deterministic": true, "interrupt": "safe", "parallel": true,
  "reads": [], "writes": [],
- "fs_needs": ["tool_json"], "callers": 1}
+ "fs_needs": ["tool_json"], "callers": 1,
+ "grad": {"$ref": "grad.json"},
+ "rollup": {"$ref": "rollup.json"}}

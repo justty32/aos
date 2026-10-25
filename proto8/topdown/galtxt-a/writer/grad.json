@@ -1,0 +1,3 @@
+{
+ "source": "梯度（round4 § 4.1）：這棵子樹每一步改動前後對外描述（ratings＋stage）的結構化 diff；train/verify.py 每步寫、train/optimize 把 extract 那步拷給被抽出的工具（assigned_from）；人不手改。步驟 5 前只有 source"
+}

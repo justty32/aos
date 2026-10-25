@@ -13,4 +13,6 @@
  "children": {"tools/beat/": "反差節拍（反差節拍、遮掩句）", "tools/voice/": "口癖句尾", "tools/lint": "捷徑 → ../../tools/lint（自檢）"},
  "ratings": {"$ref": "ratings.json"},
  "brain": {"$ref": "stage.json"},
- "human_ratings": {"$ref": "human.json"}}
+ "human_ratings": {"$ref": "human.json"},
+ "grad": {"$ref": "grad.json"},
+ "rollup": {"$ref": "rollup.json"}}

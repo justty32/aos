@@ -1,0 +1,3 @@
+{
+ "source": "梯度（round4 § 4.3）：寫手抽出／固化這個工具那一步分配來的 diff（assigned_from、assigned_share）；train/verify.py、train/optimize 寫；人不手改。步驟 5 前只有 source"
+}

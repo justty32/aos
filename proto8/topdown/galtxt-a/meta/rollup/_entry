@@ -1,0 +1,339 @@
+#!/usr/bin/env python3
+# rollup - 逐層彙總子樹的對外描述（round4 § 3.3、§ 9）：讀一棵子樹的 _metainfo（解一層 $ref）、它的旁檔、直接子樹的 rollup.json → 寫它的 rollup.json
+"""用法：rollup [--up] [--dry-run] [--json] <子樹>（<子樹>＝有 _metainfo 的資料夾，相對 cwd）。
+
+一棵子樹＝有自己 _metainfo 檔的資料夾。直接子樹＝往下找、遇到有 _metainfo 的資料夾就停（沒有 _metainfo 的純容器，例 tools/，穿過去、名字接成 tools/lint）；
+捷徑只列 {"kind": "捷徑", "to": 目標}，不進去。孫子不看：子樹有 rollup.json（跑過的，有 rolled_at）就只讀它；沒有才退而讀那子樹的
+ratings.json／stage.json／grad.json；再沒有只列 kind。
+寫 <子樹>/rollup.json：source、kind、role、val／score_avg／determinism／dims（自己 ratings.json 那格：scope.style 的 style:<風格>，沒有就唯一那格）、
+stage（stage.json；沒有：kind agent＝agent、data＝不算節點、其餘＝program）、cost（per_run＝那格的 cost，根那格有 brain＝per_question；
+declared＝_metainfo 的 llm_calls／llm_tokens／time_ms 的 val；role dev 標 excluded_from_cost）、grad_total（grad.json 的 sum；
+grad.json 的 context.tree 不是這棵樹根的資料夾名＝別棵樹量的：null＋grad_foreign，stdout 印「foreign grad（context.tree X）」）、
+children、brain（nodes＝直接子樹的 stage，再把子樹 rollup 的 brain.nodes 攤平成「子樹/孫」；counter_on_brain＝agent／semi 個數、counter_program）、rolled_at。
+--up：做完往上一層有 _metainfo 的資料夾再做（中間只穿過叫 tools 的純容器），直到上一層沒有 _metainfo（樹根）。
+--dry-run：不寫檔；--json：stdout 每層一行彙總 JSON（不印摘要行）。_metainfo 一字不碰；同輸入除 rolled_at 全同。
+stdout 每層一行「rollup: <路徑> val … stage … children N on_brain N」；量的跟宣告的差兩倍以上多印「rollup: DeclaredOff <路徑> llm_tokens 宣告 vs 實測」（只印）。
+錯：stderr 一行「rollup: 代號 原因」、退 1、什麼都不寫——RootMissing（不是資料夾）、MetainfoBad（沒有 _metainfo 或不是 JSON 物件）、
+RefBad（$ref 指的檔不在或不是 JSON）、FlagUnknown、ArgumentsBad。純標準庫、離線。"""
+import datetime, json, os, sys
+
+SOURCE = ("meta/rollup 寫（round4 § 3.3）：這棵子樹＋直接子樹的對外數字彙總（評級、固化階、梯度合計、成本、腦用量）；"
+          "rate.py／verify.py 寫完旁檔後 rollup --up 重算；人不手改，git diff 這份就是對外數字的歷史")
+SIDE = {"ratings": "ratings.json", "brain": "stage.json", "grad": "grad.json"}
+CONTAINERS = ("tools",)
+
+
+class Bad(Exception):
+    def __init__(self, code, why):
+        Exception.__init__(self, why)
+        self.code = code
+
+
+def now():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def read_json(p):
+    with open(p, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def load_or(p, default=None):
+    try:
+        return read_json(p)
+    except (OSError, ValueError):
+        return default
+
+
+def has_meta(d):
+    return os.path.isfile(os.path.join(d, "_metainfo")) and not os.path.islink(d)
+
+
+def resolve(d, meta, where):
+    """解一層 $ref：值是 {"$ref": "x.json"} 的 key 換成那份檔（相對 d）；頂層 "$ref": [底稿…]＝先解底稿（底稿裡的相對 $ref 從底稿的資料夾算）、再合 key（外層蓋過）"""
+    out = {}
+    bases = meta.get("$ref")
+    if isinstance(bases, str):
+        bases = [bases]
+    for b in bases or []:
+        p = os.path.normpath(os.path.join(d, b))
+        try:
+            base = read_json(p)
+        except (OSError, ValueError) as e:
+            raise Bad("RefBad", "%s 的 $ref %s 讀不了（%s）" % (where, b, e))
+        if not isinstance(base, dict):
+            raise Bad("RefBad", "%s 的 $ref %s 不是物件" % (where, b))
+        out.update(resolve(os.path.dirname(p), base, p))
+    for k, v in meta.items():
+        if k == "$ref":
+            continue
+        if isinstance(v, dict) and set(v) == {"$ref"} and isinstance(v["$ref"], str):
+            try:
+                v = read_json(os.path.join(d, v["$ref"]))
+            except (OSError, ValueError) as e:
+                raise Bad("RefBad", "%s 的 %s → %s 讀不了（%s）" % (where, k, v["$ref"], e))
+        out[k] = v
+    return out
+
+
+def load_meta(d, where):
+    if not os.path.isdir(d):
+        raise Bad("RootMissing", "不是資料夾 %s" % where)
+    try:
+        m = read_json(os.path.join(d, "_metainfo"))
+    except (OSError, ValueError) as e:
+        raise Bad("MetainfoBad", "%s/_metainfo 讀不了（%s）" % (where, e))
+    if not isinstance(m, dict):
+        raise Bad("MetainfoBad", "%s/_metainfo 不是物件" % where)
+    return m
+
+
+def tree_root(d):
+    """這棵樹的根：一路往上（穿過 tools 容器）直到上一層沒有 _metainfo"""
+    while True:
+        up = parent(d)
+        if up is None:
+            return d
+        d = up
+
+
+def parent(d):
+    p = os.path.dirname(d)
+    while p != d:
+        if has_meta(p):
+            return p
+        if os.path.basename(p) not in CONTAINERS:
+            return None
+        d, p = p, os.path.dirname(p)
+    return None
+
+
+def rel(root, d):
+    r = os.path.relpath(d, root)
+    return "." if r == "." else r
+
+
+def children(d):
+    """直接子樹：[(名, 路徑, 是捷徑)]，名相對 d"""
+    out = []
+
+    def walk(here, prefix):
+        try:
+            names = sorted(os.listdir(here))
+        except OSError:
+            return
+        for n in names:
+            p = os.path.join(here, n)
+            if n.startswith(".") or n == "__pycache__":
+                continue
+            if os.path.islink(p):
+                if os.path.isdir(p) or not os.path.exists(p):           # 指資料夾的捷徑（懸空的也列：搬走後常見）
+                    out.append((prefix + n, p, True))
+                continue
+            if not os.path.isdir(p):
+                continue
+            if os.path.isfile(os.path.join(p, "_metainfo")):
+                out.append((prefix + n, p, False))
+            else:
+                walk(p, prefix + n + "/")
+    walk(d, "")
+    return out
+
+
+def cell_of(ratings):
+    """ratings.json 裡代表這棵的那格：scope.style 的 style:<風格>；沒有就唯一一格（style:*／role:*）"""
+    if not isinstance(ratings, dict):
+        return None
+    style = (ratings.get("scope") or {}).get("style") if isinstance(ratings.get("scope"), dict) else None
+    if style and isinstance(ratings.get("style:%s" % style), dict):
+        return ratings["style:%s" % style]
+    cells = [v for k, v in sorted(ratings.items()) if ":" in k and isinstance(v, dict)]
+    return cells[0] if len(cells) == 1 else None
+
+
+def stage_of(meta, stage):
+    if isinstance(stage, dict) and isinstance(stage.get("stage"), str):
+        return stage["stage"]
+    kind = meta.get("kind") if isinstance(meta, dict) else None
+    if kind == "data" or kind is None:
+        return None
+    return "agent" if kind == "agent" else "program"
+
+
+def grad_total(grad, tree):
+    """(grad_total, 別棵樹的 context.tree 或 None)"""
+    if not isinstance(grad, dict):
+        return None, None
+    ctx = (grad.get("context") or {}).get("tree") if isinstance(grad.get("context"), dict) else None
+    if ctx is not None and ctx != tree:
+        return None, ctx
+    return grad.get("sum"), None
+
+
+def declared(meta):
+    out = {}
+    for k in ("llm_calls", "llm_tokens", "time_ms"):
+        v = meta.get(k)
+        if isinstance(v, dict) and isinstance(v.get("val"), (int, float)):
+            out[k] = v["val"]
+        elif isinstance(v, (int, float)) and not isinstance(v, bool):
+            out[k] = v
+    return out
+
+
+def child_row(name, path, tree, lines, fresh):
+    meta = load_or(os.path.join(path, "_metainfo"))
+    if not isinstance(meta, dict):
+        return {"kind": "壞"}, {}
+    row = {"kind": meta.get("kind")}
+    if meta.get("role"):
+        row["role"] = meta["role"]
+    ru = fresh.get(path) or load_or(os.path.join(path, "rollup.json"))
+    if isinstance(ru, dict) and ru.get("rolled_at"):                     # 跑過的 rollup：只讀它（孫子不看）
+        for k in ("val", "stage", "grad_total", "grad_foreign"):
+            if ru.get(k) is not None:
+                row[k] = ru[k]
+        if "grad_total" not in row:
+            row["grad_total"] = None
+        cost = (ru.get("cost") or {})
+        m = cost.get("per_run") or cost.get("per_question")
+        if m:
+            row["cost"] = m
+        if cost.get("excluded_from_cost"):
+            row["excluded_from_cost"] = True
+        return row, ((ru.get("brain") or {}).get("nodes") or {})
+    c = cell_of(load_or(os.path.join(path, "ratings.json")))
+    if c and c.get("val") is not None:
+        row["val"] = c["val"]
+    st = stage_of(meta, load_or(os.path.join(path, "stage.json")))
+    if st:
+        row["stage"] = st
+    if os.path.isfile(os.path.join(path, "grad.json")):
+        g, foreign = grad_total(load_or(os.path.join(path, "grad.json")), tree)
+        row["grad_total"] = g
+        if foreign:
+            row["grad_foreign"] = foreign
+            lines.append("rollup: foreign grad（context.tree %s）%s" % (foreign, name))
+    if c and c.get("cost"):
+        row["cost"] = c["cost"]
+    if meta.get("role") == "dev":
+        row["excluded_from_cost"] = True
+    return row, {}
+
+
+def roll(d, root, fresh):
+    """回 (rollup 物件, 要印的行)；錯丟 Bad"""
+    where = rel(root, d)
+    raw = load_meta(d, where)
+    meta = resolve(d, raw, where)
+    tree = os.path.basename(os.path.abspath(root))
+    lines = []
+    side = {}
+    for k, f in SIDE.items():
+        v = meta.get(k)
+        side[k] = v if isinstance(v, dict) else load_or(os.path.join(d, f))
+    out = {"source": SOURCE, "kind": meta.get("kind")}
+    if meta.get("role"):
+        out["role"] = meta["role"]
+    c = cell_of(side["ratings"]) or {}
+    for k in ("val", "score_avg", "determinism", "dims"):
+        if c.get(k) is not None:
+            out[k] = c[k]
+    out["stage"] = stage_of(meta, side["brain"])
+    cost = {}
+    if c.get("cost"):
+        cost["per_question" if "brain" in c else "per_run"] = c["cost"]
+    dec = declared(meta)
+    if dec:
+        cost["declared"] = dec
+    if meta.get("role") == "dev":
+        cost["excluded_from_cost"] = True
+    m = cost.get("per_run") or {}
+    if isinstance(m.get("llm_tokens"), (int, float)) and dec.get("llm_tokens"):
+        a, b = dec["llm_tokens"], m["llm_tokens"]
+        if b and (a >= 2 * b or b >= 2 * a):
+            lines.append("rollup: DeclaredOff %s llm_tokens %s vs %s" % (where, a, b))
+    out["cost"] = cost
+    if isinstance(side["grad"], dict):
+        g, foreign = grad_total(side["grad"], tree)
+        out["grad_total"] = g
+        if foreign:
+            out["grad_foreign"] = foreign
+            lines.append("rollup: foreign grad（context.tree %s）%s" % (foreign, where))
+    kids, nodes = {}, {}
+    for name, path, link in children(d):
+        if link:
+            kids[name] = {"kind": "捷徑", "to": os.readlink(path)}
+            continue
+        row, grand = child_row(name, path, tree, lines, fresh)
+        kids[name] = row
+        if row.get("stage"):
+            nodes[name] = row["stage"]
+        for g, s in sorted(grand.items()):
+            nodes["%s/%s" % (name, g)] = s
+    out["children"] = kids
+    on = sum(1 for s in nodes.values() if s in ("agent", "semi"))
+    out["brain"] = {"nodes": nodes, "counter_on_brain": on, "counter_program": len(nodes) - on}
+    out["rolled_at"] = now()
+    lines.insert(0, "rollup: %s val %s stage %s children %d on_brain %d" % (
+        where, out.get("val", "—"), out["stage"] or "—", len(kids), on))
+    return out, lines
+
+
+def save(path, obj):
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))   # N-05：先寫暫存再改名
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(json.dumps(obj, ensure_ascii=False, indent=1) + "\n")
+    os.replace(tmp, path)
+
+
+def main(argv):
+    up = dry = as_json = False
+    rest = []
+    for a in argv:
+        if a == "--up":
+            up = True
+        elif a == "--dry-run":
+            dry = True
+        elif a == "--json":
+            as_json = True
+        elif a.startswith("--"):
+            raise Bad("FlagUnknown", "不認得 %s（rollup [--up] [--dry-run] [--json] <子樹>）" % a)
+        else:
+            rest.append(a)
+    if len(rest) != 1:
+        raise Bad("ArgumentsBad", "要一個 <子樹>")
+    d = os.path.abspath(rest[0])
+    if not os.path.isdir(d):
+        raise Bad("RootMissing", "不是資料夾 %s" % rest[0])
+    root = tree_root(d)
+    todo = [d]
+    while up:
+        p = parent(todo[-1])
+        if p is None:
+            break
+        todo.append(p)
+    for x in todo:                                                     # 先驗每一層的 _metainfo 與 $ref：錯＝一份都不寫
+        resolve(x, load_meta(x, rel(root, x)), rel(root, x))
+    done, fresh = [], {}
+    for x in todo:                                                     # 由下往上：上一層讀下一層剛算的（--dry-run 也一樣，只是不落檔）
+        obj, lines = roll(x, root, fresh)
+        fresh[x] = obj
+        done.append((obj, lines, rel(root, x)))
+    if not dry:
+        for x, (obj, _, _) in zip(todo, done):
+            save(os.path.join(x, "rollup.json"), obj)
+    for obj, lines, where in done:
+        if as_json:
+            print(json.dumps(dict(obj, path=where), ensure_ascii=False))
+        else:
+            print("\n".join(lines))
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except Bad as e:
+        sys.stderr.write("rollup: %s %s\n" % (e.code, str(e).replace("\n", " ")))
+        sys.exit(1)

@@ -851,7 +851,13 @@ class Round3T(unittest.TestCase):
             self.assertEqual(set(e["by_question"]), {q[:-5] for q in sets["verify"]})   # 驗證題分題記（round4 § 7.2 (c)）
             self.assertEqual(e["measure"]["question"], sets["measure"][:-5])
             self.assertTrue(0 <= e["measure"]["一致"] <= 1)
-            self.assertEqual(e["brain"]["nodes"], {"writer": "agent", "grader": "agent", "tools/lint": "program"})
+            nodes = e["brain"]["nodes"]                                  # round4 步驟 4：節點改讀根的 rollup（整棵樹的直接子樹＋攤平的「子樹/孫」）
+            self.assertEqual({k: nodes.get(k) for k in ("writer", "grader", "tools/lint", "writer-sol")},
+                             {"writer": "agent", "grader": "agent", "tools/lint": "program", "writer-sol": "agent"})
+            self.assertEqual(e["brain"]["counter_on_brain"], sum(1 for v in nodes.values() if v in ("agent", "semi")))
+        self.assertNotIn("writer/tools/beat", e0["brain"]["nodes"])          # epoch 0 的 verify 在 rate 之前：writer 還沒 rollup、孫子看不到
+        self.assertEqual(e1["brain"]["nodes"]["writer/tools/beat"], "program")   # rate 跑過 rollup --up writer 之後才攤平得到
+        self.assertEqual(e1["brain"]["nodes"], jread(g / "rollup.json")["brain"]["nodes"])
         w = jread(g / "writer" / "ratings.json")
         t = w["style:傲嬌"]
         self.assertEqual(t["val"], "good" if t["score_avg"] >= 4 else "ok" if t["score_avg"] >= 3 else "bad")
@@ -877,7 +883,8 @@ class Round3T(unittest.TestCase):
         self.assertEqual([t["state"] for t in jl(self.stack / "trace.jsonl")], ["verify", "train", "rate", "optimize", "verify"])
         after = snapshot(g)                                               # M7：只有量出來的旁檔變（route 沒換＝route.json、optimize 評級不動）
         changed = {k for k in set(before) | set(after) if before.get(k) != after.get(k)}
-        self.assertEqual(changed, {"writer/ratings.json", "grader/ratings.json", "ratings.json", "human/samples.json"})
+        self.assertEqual(changed, {"writer/ratings.json", "grader/ratings.json", "ratings.json", "human/samples.json",
+                                   "rollup.json", "writer/rollup.json", "grader/rollup.json"})   # round4 步驟 4：rate／verify 叫 rollup --up
         r = run(EXEC, "--ws", str(self.ws), str(g / "train"), cwd=self.tmp, timeout=600)   # 收工後再叫：verify 照舊退 10、不重跑
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(len(jl(self.stack / "verify.jsonl")), 2)
@@ -1179,6 +1186,161 @@ class Round4T(unittest.TestCase):
         self.assertIn("彩帶", (ws / "out" / "cls-ribbon" / "answer.txt").read_text(encoding="utf-8"))   # 用了 by_detail.ribbon
         self.assertEqual(len(jl(hard)), 1)
         self.assertFalse((G / "writer" / "hard.jsonl").exists())            # 真樹沒被弄髒
+
+    # ---- 步驟 4：rollup ----
+    def rollup(self, root, *args):
+        return run(ROLLUP, *args, cwd=root)
+
+    def mini_tree(self):
+        """暫存三層樹：根 → mid（semi、有評級）→ mid/tools/gc（program、有評級與梯度）、mid/helper（agent）；根 → uncle（program）"""
+        r = self.tmp / "forest"
+        jwrite(r / "_metainfo", {"summary": "根", "kind": "agent", "resource": ["llm"], "rollup": {"$ref": "rollup.json"}})
+        jwrite(r / "rollup.json", {"source": "只有 source"})
+        jwrite(r / "mid" / "_metainfo", {"summary": "中層", "kind": "agent", "resource": ["llm"], "llm_tokens": {"val": 1000, "max": 9000},
+                                         "ratings": {"$ref": "ratings.json"}, "brain": {"$ref": "stage.json"}})
+        jwrite(r / "mid" / "ratings.json", {"source": "s", "scope": {"style": "傲嬌"},
+                                            "style:傲嬌": {"val": "ok", "score_avg": 3.5, "cost": {"llm_calls": 2, "llm_tokens": 5000, "time_ms": 10}},
+                                            "style:文靜": {"val": "bad"}})
+        jwrite(r / "mid" / "stage.json", {"source": "s", "stage": "semi", "tools": ["gc"]})
+        jwrite(r / "mid" / "tools" / "gc" / "_metainfo", {"summary": "孫", "kind": "program"})
+        jwrite(r / "mid" / "tools" / "gc" / "ratings.json", {"style:傲嬌": {"val": "good"}})
+        jwrite(r / "mid" / "tools" / "gc" / "grad.json", {"source": "s", "context": {"tree": "forest"}, "sum": {"determinism": 0.25}})
+        jwrite(r / "mid" / "helper" / "_metainfo", {"summary": "另一個孫", "kind": "agent", "resource": ["llm"]})
+        jwrite(r / "uncle" / "_metainfo", {"summary": "叔叔", "kind": "program", "resource": "cpu"})
+        jwrite(r / "notes" / "_metainfo", {"summary": "資料", "kind": "data"})
+        return r
+
+    @staticmethod
+    def no_at(p):
+        d = jread(p)
+        d.pop("rolled_at", None)
+        return d
+
+    # 12. rollup 單元
+    def test_rollup(self):
+        r = self.mini_tree()
+        metas = {p: p.read_bytes() for p in r.rglob("_metainfo")}
+        gc, mid, top, uncle = r / "mid/tools/gc/rollup.json", r / "mid/rollup.json", r / "rollup.json", r / "uncle/rollup.json"
+        x = self.rollup(r, "uncle")
+        self.assertEqual(x.returncode, 0, x.stderr)
+        x = self.rollup(r, "--up", "mid/tools/gc")
+        self.assertEqual(x.returncode, 0, x.stderr)
+        self.assertEqual([l.split()[1] for l in x.stdout.splitlines() if l.startswith("rollup: ") and " val " in l], ["mid/tools/gc", "mid", "."])
+        self.assertIn("rollup: DeclaredOff mid llm_tokens 1000 vs 5000", x.stdout)           # 宣告與實測差兩倍以上：只印
+        m = jread(mid)
+        self.assertEqual(m["children"], {"tools/gc": {"kind": "program", "val": "good", "stage": "program", "grad_total": {"determinism": 0.25}},
+                                         "helper": {"kind": "agent", "stage": "agent"}})          # 中層 children 兩行（穿過 tools/ 容器）
+        self.assertEqual((m["val"], m["stage"], m["cost"]["per_run"]["llm_tokens"], m["cost"]["declared"]["llm_tokens"]), ("ok", "semi", 5000, 1000))
+        t = jread(top)
+        self.assertEqual(t["brain"]["nodes"], {"mid": "semi", "mid/helper": "agent", "mid/tools/gc": "program", "uncle": "program"})   # 子樹/孫
+        self.assertEqual((t["brain"]["counter_on_brain"], t["brain"]["counter_program"]), (2, 2))
+        self.assertEqual(t["children"]["notes"], {"kind": "data"})                            # data 不算腦用量的節點
+        self.assertNotIn("tools/gc", t["children"])                                          # 根不打開孫子
+        # 孫子的評級與固化階改了、只重算根 → 根除 rolled_at 不變（根只讀 mid 的 rollup.json）
+        before = self.no_at(top)
+        jwrite(r / "mid" / "tools" / "gc" / "ratings.json", {"style:傲嬌": {"val": "bad"}})
+        jwrite(r / "mid" / "tools" / "gc" / "stage.json", {"stage": "semi"})
+        self.assertEqual(self.rollup(r, ".").returncode, 0)
+        self.assertEqual(self.no_at(top), before)
+        # --up 孫子 → 孫、中、根三份變；叔叔 bytes 不變
+        snap = {p: p.read_bytes() for p in (gc, mid, top, uncle)}
+        self.assertEqual(self.rollup(r, "--up", "mid/tools/gc").returncode, 0)
+        self.assertEqual({p for p in snap if p.read_bytes() != snap[p]}, {gc, mid, top})
+        self.assertEqual(jread(mid)["children"]["tools/gc"]["val"], "bad")
+        self.assertEqual(jread(top)["brain"]["nodes"]["mid/tools/gc"], "semi")
+        # 兩次除 rolled_at 全同
+        once = {p: self.no_at(p) for p in (gc, mid, top)}
+        self.assertEqual(self.rollup(r, "--up", "mid/tools/gc").returncode, 0)
+        self.assertEqual({p: self.no_at(p) for p in once}, once)
+        # --dry-run 不寫（--json 每層一行）
+        snap = {p: p.read_bytes() for p in (gc, mid, top, uncle)}
+        x = self.rollup(r, "--up", "--dry-run", "--json", "mid/tools/gc")
+        self.assertEqual(x.returncode, 0, x.stderr)
+        self.assertEqual([json.loads(l)["path"] for l in x.stdout.splitlines()], ["mid/tools/gc", "mid", "."])
+        self.assertEqual({p: p.read_bytes() for p in snap}, snap)
+        # 懸空 $ref → RefBad、退 1、一份都不寫（下面幾層也不寫）
+        jwrite(r / "_metainfo", dict(jread(r / "_metainfo"), grad={"$ref": "nope.json"}))
+        metas[r / "_metainfo"] = (r / "_metainfo").read_bytes()
+        x = self.rollup(r, "--up", "mid/tools/gc")
+        self.assertEqual(x.returncode, 1)
+        self.assertRegex(x.stderr, r"^rollup: RefBad .*nope\.json")
+        self.assertEqual({p: p.read_bytes() for p in snap}, snap)
+        self.assertEqual(self.rollup(r, "nowhere").returncode, 1)
+        self.assertTrue(self.rollup(r, "nowhere").stderr.startswith("rollup: RootMissing"))
+        x = self.rollup(r, "mid/tools")                                                       # 純容器不是子樹
+        self.assertEqual(x.returncode, 1)
+        self.assertTrue(x.stderr.startswith("rollup: MetainfoBad"), x.stderr)
+        self.assertEqual({p: p.read_bytes() for p in r.rglob("_metainfo")}, metas)          # _metainfo 一字不碰
+
+    # 20. 搬得走：cp -r writer/ 到別棵樹 → rollup 不炸、梯度當 foreign、評級與固化階照列
+    def test_rollup_portable(self):
+        other = self.tmp / "other"
+        jwrite(other / "_metainfo", {"summary": "別棵樹", "kind": "agent", "resource": ["llm"]})
+        shutil.copytree(G / "writer", other / "writer", symlinks=True)       # 捷徑（../idle、../../tools/lint）在別棵樹裡懸空
+        jwrite(other / "writer" / "grad.json", {"source": "s", "context": {"tree": "galtxt-a"}, "sum": {"determinism": 0.25}})
+        jwrite(other / "writer" / "ratings.json", {"source": "s", "scope": {"style": "傲嬌"}, "style:傲嬌": {"val": "ok", "score_avg": 3.5}})
+        x = self.rollup(other, "--up", "writer")
+        self.assertEqual(x.returncode, 0, x.stderr)
+        self.assertIn("foreign grad（context.tree galtxt-a）", x.stdout)
+        w = jread(other / "rollup.json")["children"]["writer"]
+        self.assertIsNone(w["grad_total"])
+        self.assertEqual((w["grad_foreign"], w["val"], w["stage"]), ("galtxt-a", "ok", jread(G / "writer" / "stage.json")["stage"]))
+        own = jread(other / "writer" / "rollup.json")
+        self.assertEqual(own["children"]["tools/lint"], {"kind": "捷徑", "to": "../../tools/lint"})
+        self.assertEqual((own["children"]["tools/beat"]["stage"], own["score_avg"]), ("program", 3.5))
+        x = self.rollup(G, "--dry-run", "writer")                                            # 在原樹裡＝自己的梯度，不是 foreign
+        self.assertEqual(x.returncode, 0, x.stderr)
+        self.assertNotIn("foreign", x.stdout)
+
+    # 17. M7：訓練前後 _metainfo、fsm.json、dims.json bytes 一樣；變的只有旁檔與該變的表
+    #     （§ 10 的清單照步驟 4 已存在的檔走：weigh/rules.json、log.jsonl 步驟 5 才有，先不列）
+    def test_m7(self):
+        g = tree_copy(self.tmp / "t")
+        jwrite(g / "train" / "budget.json", dict(jread(g / "train" / "budget.json"), max_epochs=1))
+        before = snapshot(g)
+        r = run(EXEC, "--ws", str(self.ws), str(g / "train"), cwd=self.tmp, timeout=600)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        after = snapshot(g)
+        changed = {k for k in set(before) | set(after) if before.get(k) != after.get(k)}
+        frozen = {k for k in before if os.path.basename(k) in ("_metainfo", "fsm.json", "loop.json", "dims.json")}
+        self.assertTrue(frozen and not (frozen & changed), frozen & changed)
+        allowed = {"ratings.json", "stage.json", "grad.json", "rollup.json", "human.json", "hard.jsonl", "log.jsonl",
+                   "templates.json", "samples.json", "route.json", "policy.json"}
+        self.assertEqual({k for k in changed if os.path.basename(k) not in allowed}, set())
+        self.assertTrue({"rollup.json", "writer/rollup.json", "grader/rollup.json"} <= changed)    # rate／verify 叫了 rollup --up
+        for k in ("writer/tools/beat/rollup.json", "tools/lint/rollup.json", "train/optimize/rollup.json"):
+            self.assertNotIn(k, changed)                                                      # 不在 --up 路上的子樹 bytes 不變
+        root = jread(g / "rollup.json")
+        self.assertEqual(root["children"]["writer"]["stage"], "agent")
+        self.assertEqual(root["brain"], {k: jread(g / "ratings.json")["style:傲嬌"]["brain"][k] for k in ("nodes", "counter_on_brain", "counter_program")})
+
+    # 21. metatable（rollup 要的最小部分）：writer 列有 ratings、stage；彙總有 on_brain；--suggest 對有旁檔的候選標 N-4
+    def test_metatable_sidecars(self):
+        r = run(METATABLE, "--json", str(G))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        d = json.loads(r.stdout)
+        w = next(n for n in d["nodes"] if n["path"] == "writer")
+        self.assertIsInstance(w["ratings"], dict)
+        self.assertEqual(w["stage"], jread(G / "writer" / "stage.json")["stage"])
+        self.assertNotIn("stage", next(n for n in d["nodes"] if n["path"] == "idle"))
+        s = d["summary"]
+        dirs = [n for n in d["nodes"] if n["path"] != "." and "#" not in n["path"] and n.get("kind") not in ("data", "捷徑", "壞")]
+        self.assertEqual(s["counter_on_brain"] + s["counter_program"], len(dirs))
+        self.assertEqual(s["counter_on_brain"], jread(G / "rollup.json").get("brain", {}).get("counter_on_brain", 3))   # 未訓練：writer、writer-sol、grader
+        self.assertIn("| on_brain／program 節點數", run(METATABLE, str(G)).stdout)
+        t = self.tmp / "sug"
+        jwrite(t / "_metainfo", {"summary": "根", "kind": "program", "reads": ["tbl:a.json"]})
+        jwrite(t / "tbl" / "_metainfo", {"summary": "小表", "kind": "data", "fs_needs": ["git_tracked"]})
+        jwrite(t / "tbl" / "a.json", {"source": "s", "x": 1})
+        rows = json.loads(run(METATABLE, "--json", "--suggest", str(t)).stdout)["summary"]["suggest"]
+        self.assertEqual([(x["path"], x["rule"]) for x in rows], [("tbl", "B-3")])          # 對照：沒旁檔＝照舊是候選
+        jwrite(t / "tbl" / "rollup.json", {"source": "s"})
+        rows = json.loads(run(METATABLE, "--json", "--suggest", str(t)).stdout)["summary"]["suggest"]
+        self.assertEqual([(x["path"], x["rule"], x["action"]) for x in rows], [("tbl", "N-4（原 B-3）", "不縮")])
+        self.assertIn("N-4", run(METATABLE, "--suggest", str(t)).stdout)
+
+
+ROLLUP = str(G / "meta" / "rollup" / "_entry")
 
 
 if __name__ == "__main__":

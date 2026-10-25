@@ -88,3 +88,36 @@
 結果：`test_topdown_galtxt_a.py` 36 個綠；`proto8/tests` 全套 560 個 OK（skip 2）。
 
 下一步（步驟 4）：`meta/rollup/`、各子樹初始旁檔與 `$ref`（writer 的 `grad`／`rollup`，beat／voice 的 `grad`／`rollup`）、rate／verify 叫 `rollup_up`；測試 12、17、20、21。README 的樹、code map 還沒補 beat／voice／compose／templates（步驟 8 一起）。
+
+## 步驟 4：rollup（實作者，2026-10-25）
+
+做了：
+- `meta/rollup/`（`_entry` python 標準庫＋`_metainfo` 照 § 9：`kind program`、`role dev`、`grow_level 3`、`fs_needs [mount]`、`callers 3`）。`rollup [--up] [--dry-run] [--json] <子樹>`；寫 `rollup.json`：`kind`／`role`、自己那格評級的 `val`／`score_avg`／`determinism`／`dims`、`stage`、`cost`（`per_run`；根那格有 `brain`＝`per_question`；`declared`；dev 標 `excluded_from_cost`）、`grad_total`（＋`grad_foreign`）、`children`、`brain`（`nodes`／`counter_on_brain`／`counter_program`）、`rolled_at`。錯 `RootMissing`／`MetainfoBad`／`RefBad`／`FlagUnknown`／`ArgumentsBad` 退 1、一份都不寫（`--up` 先驗每一層的 `_metainfo`＋`$ref`，再由下往上算、最後才落檔）。
+- 初始旁檔（只有 `source`）：根 `rollup.json`；`writer/{grad,rollup}.json`；`grader/{grad,human,rollup}.json`＋`grader/stage.json`；`writer/tools/beat|voice/{grad,rollup}.json`；`tools/lint/{grad,rollup}.json`；`train/optimize/rollup.json`。`_metainfo` 的 `$ref` 行照 § 3.2（根 `rollup`；writer 補 `grad`／`rollup`；grader 補 `brain`／`grad`／`human_ratings`／`rollup`；beat／voice／lint `grad`／`rollup`；optimize `rollup`）。其餘子樹不加（「rollup 跑過才加」）。
+- `common.rollup_up(sub)`（`rollup --up`，stdout 照印）、`common.rollup_view(sub)`（`--dry-run --json`）；`rate.py` 寫完每個寫手評級 → `rollup_up(<寫手>)`、寫完 grader → `rollup_up("grader")`；`verify.py` 的 `brain.nodes` 改讀根 rollup（`rollup_view(".")`，不寫檔），寫完根 `ratings.json` → `rollup_up(".")`。`common.stage_of` 刪掉（規則搬進 rollup）。
+- metatable（只做 rollup 要的最小部分）：資料夾列解一層 `$ref` 多 `ratings`（`{格: val}`）、`stage` 欄；彙總多 `counter_on_brain`／`counter_program`＋md 一行；`suggest.py` 本來是候選、但有旁檔的列改標 `N-4（原 X）`、動作「不縮」。
+- 順手：`train/fsm.json` verify／rate 格的 `writes`、`train/_metainfo` 的 `writes` 補根 `ratings.json`、grader 評級、`rollup.json`；`meta/_metainfo` summary 加 rollup。
+
+偏離／解讀：
+- **直接子樹從資料夾找，不從 `_metainfo.children`**（大半 `_metainfo` 沒有 `children`；writer 那份是描述字串）。往下：沒 `_metainfo` 的資料夾一律穿過去、名字接成 `tools/lint`；往上（`--up`／找樹根）只穿過叫 `tools` 的容器（不然 galtxt-a 會往上穿 `topdown/`）。捷徑（含懸空的）列 `{"kind": "捷徑", "to"}`、不進去。
+- **固化階的退路規則用 `kind` 不用 `resource`**（§ 3.3 寫「`resource` 含 llm＝agent」）：`train/` 是 `kind program` 但 resource 有 llm（它叫寫手），照 § 3.3 會被算成 agent。改成：有 `stage.json` 照它；`kind agent`＝agent；`kind data`（或沒 kind）＝不算節點；其餘＝program。
+- **`brain.nodes` 是整棵樹的函數子樹**，不只「每題會叫到的」：現在根的 nodes＝writer、writer-sol（凍結，仍是 agent）、grader、tools/lint、idle、train（dev）＋攤平的 `writer/tools/beat|voice`；`counter_on_brain` 3（writer、writer-sol、grader）——§ 2.3 範例的 3 是 writer、grader、weigh，步驟 5 加 weigh 後會是 4。要不要把凍結的 writer-sol 拿掉，留給隊長／fable 判（拿掉要在 `_metainfo` 加個標記，這步沒做）。
+- **epoch 0 的 verify 看不到 `writer/tools/*`**：verify 在 rate 之前，那時 writer 還沒有跑過的 rollup.json（只有 source＝當作沒有），根只看得到 writer 自己的 stage；rate 跑過 `--up writer` 之後 epoch 1 才攤平到孫子。照「只看直接子樹的 rollup」的規則就是這樣，沒補。
+- `rollup.json` 只有 `source`（沒 `rolled_at`）＝當作沒跑過、退讀旁檔。`--up` 路上每層一律重寫（`rolled_at` 秒級；內容沒變時 bytes 可能一樣）；不在路上的子樹不碰。
+- 評級格：`ratings.json.scope.style` 的 `style:<風格>`，沒有就唯一一格（grader 的 `role:grader` 沒 `val`＝不列）。
+- `DeclaredOff` 只比 `per_run.llm_tokens` vs `_metainfo.llm_tokens.val`（根的 per_question 不比）。
+- `grader/stage.json` 不是只有 source：給了 `stage agent`、`tools []`、`decisions_left`（承接／像柚葉／文筆／理由標籤）、`history []`——`brain` 的 `$ref` 指它，空的會讓 stage 退回 kind 判，等價但不直觀。
+- N-4 照 § 9「加欄」的意思做成「改判準欄＋動作」（候選列留著、標不縮），沒另開一欄；md 表頭不變（SuggestT 照舊綠）。metatable 其餘（`role` 欄、`table-round4.md`）留步驟 8。
+
+測試（`Round4T`；§ 10 編號）：
+- `test_rollup`（12）：暫存三層樹（根 → mid（semi）→ `mid/tools/gc`、`mid/helper`；根 → uncle、notes（data））：中層 children 兩行、穿過 `tools/`；DeclaredOff 一行；根 nodes 有 `mid/tools/gc`、`mid/helper`、data 不算；孫子改評級＋stage 只重算根 → 根除 `rolled_at` 不變；`--up 孫子` → 三份變、叔叔不變；兩次除 `rolled_at` 全同；`--dry-run --json` 每層一行、不寫；懸空 `$ref` → `RefBad` 退 1、一份都不寫；`RootMissing`；純容器 → `MetainfoBad`；所有 `_metainfo` bytes 不變。（第一版只改孫子的評級，根的內容本來就不含孫子的 val、秒級 `rolled_at` 又同一秒 → 根 bytes 沒變、斷言錯；改成孫子也換 stage，根的 `nodes` 才會跟著變。）
+- `test_rollup_portable`（20）：`cp -r writer/` 到別棵假根（捷徑懸空）＋手放 `context.tree galtxt-a` 的 grad → `--up` 退 0、stdout `foreign grad（context.tree galtxt-a）`、`children.writer.grad_total null`、`val`／`stage` 照列；在原樹裡不是 foreign。
+- `test_m7`（17）：假腦訓練 `max_epochs 1`：所有 `_metainfo`、`fsm.json`、`loop.json`、`dims.json` bytes 不變；變的檔名 ⊆ {ratings, stage, grad, rollup, human}.json、`hard.jsonl`、`log.jsonl`、`templates.json`、`samples.json`、`route.json`、`policy.json`；根／writer／grader 的 `rollup.json` 有變、`writer/tools/beat`、`tools/lint`、`train/optimize` 的不變；根 rollup 的 brain＝根評級的 brain。§ 10 清單裡的 `weigh/rules.json` 步驟 5 才有，先不列。
+- `test_metatable_sidecars`（21 的最小部分）：`--json` writer 列有 `ratings`、`stage`；idle 沒 stage；on_brain＋program＝資料夾函數節點數；md 有 on_brain 行；`--suggest` 小表沒旁檔＝`B-3`、放了 `rollup.json`＝`N-4（原 B-3）`／不縮。
+- `Round3T.test_train_whole` 改：`brain.nodes` 斷言改成「含 writer／grader／tools/lint／writer-sol 且 on_brain 對得上」、epoch 0 沒有 `writer/tools/beat`、epoch 1 有且＝根 rollup 的 nodes；M7 變動集合加 `rollup.json`、`writer/rollup.json`、`grader/rollup.json`。
+
+變紅過一次（腳本暫改 → 跑 → 還原）：rollup 不讀子樹的 rollup.json → 12 紅；不判 `context.tree` → 20 紅；rate 不叫 `rollup_up` → 17 紅；verify 的 nodes 清空 → `test_train_whole`、17 紅；suggest 不標 N-4、metatable 不讀 stage → 21 紅。
+
+結果：`test_topdown_galtxt_a.py` 40 個綠；`proto8/tests` 全套 571 OK（skip 2）。
+
+下一步（步驟 5）：`common.diff`、`train/weigh/`（建的時候補五個 `$ref`＋初始旁檔）、verify 寫 `grad.json`（`context.tree` 用樹根資料夾名，rollup 靠它判 foreign）、`rollup --up <被改那棵>`；M7 測試的凍結清單加 `weigh/rules.json`。

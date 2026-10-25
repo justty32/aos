@@ -5,6 +5,9 @@
 另外找 fsm.json／loop.json 內嵌單子（有 argv 的物件）的 _metainfo key。
 --suggest：表後面多一張「收攏候選表」（--json 時放 summary.suggest），判準是 plan/round2-collapse.md § 1，
     只列、不做；規則在旁邊的 suggest.py。
+round4 步驟 4（rollup 要的最小部分）：資料夾的 _metainfo 解一層 $ref——ratings 欄＝{格: val}、stage 欄＝stage.json 的 stage（沒有＝—）；
+    彙總多 counter_on_brain／counter_program（資料夾節點、不含根：stage agent／semi 或沒 stage.json 而 kind agent＝on_brain；
+    其餘非 data 的＝program；跟 meta/rollup 同一條規則）。
 錯：ROOT 不是資料夾＝stderr「metatable: RootMissing …」退 1；不認得的旗標＝FlagUnknown 退 1；
     某份 _metainfo 不是 JSON＝表裡標「壞」、stderr「metatable: MetainfoBad 路徑」，照樣輸出、退 0。"""
 import json, os, sys
@@ -14,7 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import suggest  # noqa: E402
 
 COLS = ["path", "depth", "kind", "grow_level", "summary", "time_ms", "resource", "llm_calls", "llm_tokens",
-        "deterministic", "idempotent", "side_effect", "interrupt", "parallel", "fs_needs", "callers"]
+        "deterministic", "idempotent", "side_effect", "interrupt", "parallel", "fs_needs", "callers", "stage", "ratings"]
 NUMS = ("time_ms", "llm_calls", "llm_tokens")
 
 
@@ -39,6 +42,22 @@ def make_node(path, depth, meta):
     for k in COLS[2:]:
         if k in meta:
             n[k] = num(meta[k]) if k in NUMS else meta[k]
+    return n
+
+
+def sidecars(here, n, meta):
+    """解一層 $ref 的那兩格：ratings＝{格: val}、stage＝stage.json 的 stage（_metainfo 沒 $ref 時看同名檔）"""
+    def ref(key, default):
+        v = meta.get(key)
+        f = v["$ref"] if isinstance(v, dict) and isinstance(v.get("$ref"), str) else default
+        m, bad = load(os.path.join(here, f))
+        return None if bad else m
+    r = ref("ratings", "ratings.json")
+    if r is not None:
+        n["ratings"] = {k: v.get("val") for k, v in sorted(r.items()) if ":" in k and isinstance(v, dict)}
+    st = ref("brain", "stage.json")
+    if st is not None and isinstance(st.get("stage"), str):
+        n["stage"] = st["stage"]
     return n
 
 
@@ -93,7 +112,7 @@ def collect(root):
                 bads.append(os.path.join(shown, src) if shown != "." else src)
                 nodes.append(bad_node(shown, depth))
             else:
-                nodes.append(make_node(shown, depth, m))
+                nodes.append(sidecars(here, make_node(shown, depth, m), m))
         # fsm.json／loop.json 內嵌單子
         for f in ("fsm.json", "loop.json"):
             if f not in files:
@@ -133,6 +152,9 @@ def summarize(nodes):
         kinds[k] = kinds.get(k, 0) + 1
     agents = [n for n in nodes if n.get("kind") == "agent"]
     top = next((n for n in nodes if n["path"] == "."), {})
+    dirs = [n for n in nodes if n["path"] != "." and "#" not in n["path"] and n.get("kind") not in (None, "data", "捷徑", "壞")]
+    brain = [n for n in dirs if n.get("stage", "agent" if n.get("kind") == "agent" else "program") in ("agent", "semi")]
+    prog = [n for n in dirs if n not in brain]
     empty = [n["path"] for n in nodes
              if n.get("kind") not in ("壞", "捷徑") and "kind" in n and not n.get("fs_needs")]
     return {
@@ -143,6 +165,8 @@ def summarize(nodes):
         "sum_llm_tokens_val": vsum(agents, "llm_tokens"),
         "top_declared": {"llm_calls": top.get("llm_calls"), "llm_tokens": top.get("llm_tokens")},
         "fs_needs_empty": empty,
+        "counter_on_brain": len(brain),
+        "counter_program": len(prog),
     }
 
 
@@ -162,6 +186,8 @@ def cell(n, k):
         return "true" if v else "false"
     if isinstance(v, list):
         return ",".join(str(x) for x in v) if v else "（空）"
+    if isinstance(v, dict):
+        return ",".join("%s=%s" % kv for kv in v.items()) if v else "（空）"
     return str(v).replace("\n", " ")
 
 
@@ -180,6 +206,7 @@ def render_md(nodes, s):
     td = s["top_declared"]
     out.append("| 頂層宣告（llm_calls／llm_tokens） | %s ／ %s |" % (
         cell({"llm_calls": td["llm_calls"]}, "llm_calls"), cell({"llm_tokens": td["llm_tokens"]}, "llm_tokens")))
+    out.append("| on_brain／program 節點數（資料夾、不含根） | %d ／ %d |" % (s["counter_on_brain"], s["counter_program"]))
     out.append("| fs_needs 為空（收攏候選） | %s |" % ("、".join(s["fs_needs_empty"]) or "（無）"))
     return "\n".join(out)
 

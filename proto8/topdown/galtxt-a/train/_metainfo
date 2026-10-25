@@ -7,6 +7,6 @@
  "side_effect": true, "idempotent": false, "deterministic": false, "interrupt": "resumable", "parallel": false,
  "lock": ["tree:galtxt-a"],
  "reads": ["tree:set.json", "tree:budget.json", "tree:../plan/examples/*.json", "tree:../data/route.json", "tree:../writer*/ratings.json", "tree:../writer*/human.json", "tree:optimize/ratings.json", "stack:epochs/*", "stack:epoch.txt"],
- "writes": ["tree:../data/route.json", "tree:../writer*/ratings.json", "tree:optimize/ratings.json", "tree:optimize/policy.json", "tree:../human/samples.json", "stack:epochs/NNN/{runs/,verify/,verify.json,usage.json,params/}", "stack:verify.jsonl", "stack:epoch.txt", "stack:started_at.json"],
+ "writes": ["tree:../data/route.json", "tree:../writer*/ratings.json", "tree:optimize/ratings.json", "tree:optimize/policy.json", "tree:../human/samples.json", "tree:../ratings.json", "tree:../grader/ratings.json", "tree:../**/rollup.json（meta/rollup --up）", "stack:epochs/NNN/{runs/,verify/,verify.json,usage.json,params/}", "stack:verify.jsonl", "stack:epoch.txt", "stack:started_at.json"],
  "state_key": "stack:epoch.txt",
  "fs_needs": ["own_stack", "git_tracked"], "callers": 0}

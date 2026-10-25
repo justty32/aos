@@ -1,1 +1,1 @@
-{"summary": "管這棵樹自己的工具（metatable、collapse）與每輪收出來的表（table-roundN.md、suggest-roundN.md）；不是函數、執行期沒人讀", "kind": "data", "fs_needs": ["git_tracked"]}
+{"summary": "管這棵樹自己的工具（metatable、collapse、rollup）與每輪收出來的表（table-roundN.md、suggest-roundN.md）；不是函數、執行期沒人讀", "kind": "data", "fs_needs": ["git_tracked"]}

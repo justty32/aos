@@ -6,4 +6,5 @@
  "writes": ["tree:../../data/route.json", "tree:policy.json", "stack:epochs/NNN/params/"],
  "fs_needs": ["git_tracked"], "callers": 1,
  "ratings": {"$ref": "ratings.json"},
- "policy": {"$ref": "policy.json"}}
+ "policy": {"$ref": "policy.json"},
+ "rollup": {"$ref": "rollup.json"}}

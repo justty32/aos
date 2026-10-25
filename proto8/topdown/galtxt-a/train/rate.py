@@ -8,6 +8,7 @@
 # determinism＝這個 epoch 的 verify 量的 measure 題（epochs/NNN/verify.json 的 measure.一致，只給跑 measure 的那個寫手）；沒量＝null。
 # cost＝寫手每跑一次（一個小格）平均的 {llm_calls, llm_tokens, time_ms}（common.run_cost）；tags＝評審理由標籤計數（非數值梯度的來源）。
 # 評審：grader/ratings.json 的 "role:grader" 整格覆蓋：{cost, dims: {分辨力＝同題幾份承接、像柚葉的標準差平均 ÷ 0.5（0～3 分的標準差上限 1.5）}, counter_samples, rated_at, rated_by}。
+# 寫完評級 → common.rollup_up（寫手、grader 各沿自己往上重算 rollup.json 到根，round4 § 3.3）。
 # human/samples.json 不在時順手挑人評樣本（§ 16.2，≤ 6 筆；在就不動，要重挑刪掉它）。印一行摘要到 stdout。
 # 錯：stderr 一行「train: 代號 原因」、退 1——StackMissing、StateBad（score.json 壞、寫手資料夾不在、style 出了收窄範圍）、SetBad。
 import os, sys
@@ -73,6 +74,7 @@ for w in sorted({w for w, _ in cells}, key=str):
                                  "rated_at": at, "rated_by": by}
         summary.setdefault(w, []).append("%s:%s" % (style, r["style:%s" % style]["val"]))
     c.save(path, r)
+    c.rollup_up(w)
 
 # 評審：分辨力＝同一題幾份草稿評審給的分拉得多開（全給同分＝0）；只看評審量的維度（每份 dims 裡 by grader 的那幾個：承接、像柚葉）
 spread = []
@@ -88,6 +90,7 @@ if runs:
     gr["role:grader"] = {"cost": c.run_cost([cl for cl, _ in runs], "judge"), "dims": {"分辨力": c.mean(spread)},
                          "counter_samples": len(spread), "rated_at": at, "rated_by": by}
     c.save(gpath, gr)
+    c.rollup_up("grader")
 
 
 # 人評樣本（§ 16.2，主動學習）：候選＝這個 epoch 的訓練題＋上一次驗證的所有過護欄草稿
