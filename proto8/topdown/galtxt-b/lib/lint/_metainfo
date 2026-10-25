@@ -10,4 +10,6 @@
  "writes": ["stdout"],
  "grow_level": 4,
  "tier": "評分級聯 Tier 0＋Tier 1",
- "callers": ["check/（格，內嵌 brief）", "draft/tools/writer/（腦自檢，brief_path）"]}
+ "callers": ["check/（格，內嵌 brief）", "draft/tools/writer/（腦自檢，brief_path）"],
+ "uses_llm": false,
+ "frozen": true}

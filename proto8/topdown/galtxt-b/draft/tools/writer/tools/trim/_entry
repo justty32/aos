@@ -1,0 +1,106 @@
+#!/usr/bin/env python3
+# trim - 純函數：交稿前的確定性修剪（round6 §1b：writer 抽出來的第一個工具，extract_tool trim，impl pure）。
+# 為什麼：noise.md 量到同題重跑的總分 σ 0.58 全來自 lint 的兩條語域規則（旁白多一行、感嘆號多一個）——腦每次寫法不同，交給程式就歸零。
+# 介面（proto8/lib 契約）：stdin {"text": 稿子, "brief": 稿紙} 或 {"text", "brief_path": "cur/<n>.json#/brief"}（相對 $AOS_WS，同 lint）
+#   → stdout 一行 {"text": 修剪後的稿, "changes": [{"rule", "line", "from", "to"}]}。修剪不增減台詞句數。
+# 三條（預算都讀稿紙：brief.lines.narration_max、人物卡 budget.exclaim_max／catchphrase_max、catchphrases）：
+#   narration：整行旁白（全形括號）超過 narration_max → 留前面的、刪後面多的（【標題】不算旁白）
+#   exclaim：某人的「！」超過 exclaim_max → 從前面數、超過的換成「。」
+#   catchphrase：某人的口癖出現超過 catchphrase_max → 超過的那次整段口癖換成「哼」
+# 錯：stderr 與 stdout 各一行「trim: 代號 原因」退 1——ArgumentsBad、WsMissing、PathBad、BriefMissing、BriefBad、PointerBad、PointerMissing。
+import json, os, re, sys
+
+NAME = "trim"
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)
+    sys.exit(1)
+
+
+def resolve(ref):
+    """「檔#/指標」相對 $AOS_WS（同 lint 那支；自成一格不 import 隔壁）。"""
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "沒設定 AOS_WS 或它不是資料夾")
+    path, _, pointer = ref.partition("#")
+    root = os.path.realpath(ws)
+    full = os.path.realpath(os.path.join(root, path))
+    if not path or (full != root and not full.startswith(root + os.sep)):
+        die("PathBad", "%s 不在工作區裡" % path)
+    try:
+        with open(full, encoding="utf-8") as f:
+            value = json.load(f)
+    except FileNotFoundError:
+        die("BriefMissing", "%s 不在" % path)
+    except (OSError, ValueError) as e:
+        die("BriefBad", "%s 讀不了或不是 JSON：%s" % (path, e))
+    if pointer and not pointer.startswith("/"):
+        die("PointerBad", "指標要以 / 開頭：#%s" % pointer)
+    for part in pointer.split("/")[1:] if pointer else []:
+        if isinstance(value, dict) and part in value:
+            value = value[part]
+        elif isinstance(value, list) and part.isdigit() and int(part) < len(value):
+            value = value[int(part)]
+        else:
+            die("PointerMissing", "%s 裡指不到 #%s" % (path, pointer))
+    return value
+
+
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict) or not isinstance(args.get("text"), str):
+    die("ArgumentsBad", "缺 text（整段稿子，字串）")
+brief = args["brief"] if isinstance(args.get("brief"), dict) else resolve(args["brief_path"]) if isinstance(args.get("brief_path"), str) else None
+if brief is None:
+    die("ArgumentsBad", "brief 與 brief_path 都沒給")
+try:
+    label_of = {lab: c["display"] for c in brief["cast"] for lab in c.get("labels", [c["display"]])}
+    cards = {c["display"]: c for c in brief["cast"]}
+    narration_max = int(brief["lines"].get("narration_max", 4))
+except (KeyError, TypeError, ValueError, AttributeError) as e:
+    die("BriefBad", "稿紙缺格：%s" % e)
+
+changes, out, kept_narration = [], [], 0
+exclaims, phrases = {}, {}
+for i, raw in enumerate(args["text"].splitlines(), 1):
+    line = raw.strip()
+    if line.startswith("（") and line.endswith("）"):
+        kept_narration += 1
+        if kept_narration > narration_max:
+            changes.append({"rule": "narration", "line": i, "from": line, "to": None})
+            continue
+        out.append(raw)
+        continue
+    m = re.match(r"^(\s*)(\S+?)([：:]\s*「)(.*)(」\s*)$", raw)
+    who = label_of.get(m.group(2)) if m else None
+    if who is None:
+        out.append(raw)
+        continue
+    budget, said = cards[who].get("budget") or {}, m.group(4)
+    hit = []
+    new = said
+    for cp in cards[who].get("catchphrases") or []:
+        def swap(mm, cp=cp):
+            phrases[(who, cp)] = phrases.get((who, cp), 0) + 1
+            if phrases[(who, cp)] <= int(budget.get("catchphrase_max", 2)):
+                return cp
+            hit.append("catchphrase")
+            return "哼"
+        new = re.sub(re.escape(cp), swap, new)
+
+    def bang(mm):
+        exclaims[who] = exclaims.get(who, 0) + 1
+        if exclaims[who] <= int(budget.get("exclaim_max", 2)):
+            return "！"
+        hit.append("exclaim")
+        return "。"
+    new = re.sub("！", bang, new)
+    if hit:
+        changes.append({"rule": "+".join(sorted(set(hit))), "line": i, "from": said, "to": new})
+    out.append(m.group(1) + m.group(2) + m.group(3) + new + m.group(5))
+print(json.dumps({"text": "\n".join(out), "changes": changes}, ensure_ascii=False))

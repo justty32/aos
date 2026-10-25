@@ -38,7 +38,8 @@ calls = said.get("tool_calls") or []
 if calls:
     answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
     tools = sorted(t for t in (os.listdir("tools") if os.path.isdir("tools") else [])
-                   if os.path.isfile(os.path.join("tools", t, "tool.json")))
+                   if os.path.isfile(os.path.join("tools", t, "tool.json"))
+                   and os.environ.get({"lint": "GALTXT_OFF_SELF_LINT", "trim": "GALTXT_OFF_TRIM"}.get(t, "")) != "1")   # 關閉開關（同 brain.py）
     for call in calls:
         try:
             cid, name, arguments = call["id"], call["function"]["name"], call["function"].get("arguments")

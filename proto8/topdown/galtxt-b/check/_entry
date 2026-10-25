@@ -53,7 +53,7 @@ except (ValueError, KeyError, TypeError) as e:
 tier0 = sum(1 for v in violations if v["tier"] == 0)
 tier1 = sum(1 for v in violations if v["tier"] == 1)
 passed = tier0 == 0 and tier1 <= 1
-final = passed or attempt > brief.get("max_redrafts", 2)
+final = passed or attempt > brief.get("max_redrafts", 2) or os.environ.get("GALTXT_OFF_REDRAFT") == "1"   # 關閉開關（round5 §3a）：第一稿就定稿
 history = (old or {}).get("history", [])
 history = [h for h in history if h.get("attempt") != attempt] + [{"attempt": attempt, "violations": violations}]
 out = {"attempt": attempt, "pass": passed, "final": final, "tier0_pass": tier0 == 0,

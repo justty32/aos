@@ -9,4 +9,8 @@
  "reads": ["$AOS_WS/new/*.json", "$AOS_WS/cur/*.json", "tables/*.json"],
  "writes": ["$AOS_WS/cur/<題名>.json（從 new/ 搬來）", "$AOS_STACK/current.txt", "$AOS_STACK/brief.json"],
  "grow_level": 4,
- "tier": "固化階梯 1～3 級（查表、規則分支、模板），執行期零 LLM"}
+ "tier": "固化階梯 1～3 級（查表、規則分支、模板），執行期零 LLM",
+ "subtrees": [{"path": "tables", "kind": "data"}],
+ "uses_llm": false,
+ "responsible_for": ["語域", "護欄", "文筆"],
+ "ablation": {"env": "GALTXT_OFF_SAMPLES", "off": "skip", "scope": "tables/samples.json", "note": "關掉＝brief.samples 空（不給語料錨）"}}

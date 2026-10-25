@@ -16,4 +16,9 @@
  "grow_level": 5,
  "shape": "demo/agent-dan（idle→think→act）",
  "calls": ["tools/lint"],
- "ratings": {}}
+ "ratings": {},
+ "subtrees": [{"path": "tools/lint", "via": "link"}, "tools/trim"],
+ "uses_llm": true,
+ "responsible_for": ["文筆", "含蓄", "節奏", "多樣性"],
+ "ablation": [{"env": "GALTXT_OFF_SELF_LINT", "off": "skip", "scope": "tools/lint", "note": "關掉＝不給腦 lint 工具"}, {"env": "GALTXT_OFF_TRIM", "off": "skip", "scope": "tools/trim", "note": "關掉＝不給腦 trim 工具"}],
+ "lifecycle": {"stage": "tools", "counter_steps": 1, "counter_steps_tooled": 2, "counter_steps_total": 5, "steps": ["每一拍台詞的內容", "反差拍句式（否認→讓步→遮掩）", "稱謂與口吻", "自檢（lint）", "修剪旁白／感嘆號／口癖（trim）"], "brain_decides": ["叫哪個工具、什麼順序", "每一拍台詞的內容", "反差拍句式", "稱謂與口吻"], "tools": {"lint": {"since_round": 0, "why": "round2：交稿前自檢（捷徑 → lib/lint）", "stage": "pure"}, "trim": {"since_round": 2, "why": "noise.md：σ 0.58 全來自旁白與感嘆號兩條 lint 規則；腦每次寫法不同，交給程式就歸零", "stage": "pure"}}, "history": []}}

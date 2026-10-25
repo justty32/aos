@@ -1,2 +1,4 @@
 {"summary": "galtxt-b 自己的函式庫：被兩處以上叫的純函數（stdin 一份 JSON → stdout 一行 JSON，照 proto8/lib 的契約）；格與 agent 用相對捷徑掛進自己的 tools/。現在只有 lint（check 與 writer 兩個呼叫者）；plan_lint 只有 draft 一個呼叫者，round3 搬回 draft/tools/plan_lint/",
- "kind": "dir"}
+ "kind": "dir",
+ "subtrees": ["lint"],
+ "uses_llm": false}

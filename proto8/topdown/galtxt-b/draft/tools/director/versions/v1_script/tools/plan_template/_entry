@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+# plan_template - 純函數：稿紙 → beat 表（查 plans.json；round6 §1c director 固化後的核心）。不問腦、不寫檔。
+# 介面（proto8/lib 契約）：stdin {"brief": 稿紙}（稿紙要有 scene、cast、must_mention）→ stdout 一行
+#   {"plan": {"beats": [...]}, "key": "first_speaker|prop" 或 null, "hit": true|false, "degraded": [為什麼用了 default]}。
+# 查法：key＝場景 switches 的 first_speaker 與 prop 用「|」接；plans 有那一列就用它（hit），沒有或場景沒 switches＝default（降級：答案照出，degraded 寫原因）。
+# 填法：who 的 {hero}／{heroine} 換成在場兩人的 display；must 的 {m0}／{m1}＝第一、二組必提詞的第一個、{prop}＝switches.prop；
+#   沒有那一組的佔位就拿掉；第三組起的必提詞補進最後一個 B3 的 must（每組都要有一拍認領）。
+# 錯：stderr 與 stdout 各一行「plan_template: 代號 原因」退 1——ArgumentsBad（stdin 不是 {brief}）、TableBad（plans.json 壞）、BriefBad（稿紙缺 cast）。
+import json, os, sys
+
+NAME = "plan_template"
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)
+    sys.exit(1)
+
+
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+brief = args.get("brief") if isinstance(args, dict) else None
+if not isinstance(brief, dict):
+    die("ArgumentsBad", "缺 brief（稿紙物件）")
+try:
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "plans.json"), encoding="utf-8") as f:
+        table = json.load(f)
+    plans, default = table["plans"], table["default"]
+except (OSError, ValueError, KeyError, TypeError) as e:
+    die("TableBad", "plans.json 讀不了或缺 plans／default：%s" % e)
+try:
+    hero = next(c["display"] for c in brief["cast"] if c.get("role") == "hero")
+    heroine = next(c["display"] for c in brief["cast"] if c.get("role") != "hero")
+except (KeyError, TypeError, StopIteration) as e:
+    die("BriefBad", "稿紙缺 cast（要一個 hero、一個 heroine）：%s" % e)
+
+scene = brief.get("scene") or {}
+sw = scene.get("switches") if isinstance(scene.get("switches"), dict) else {}
+key = "%s|%s" % (sw.get("first_speaker"), sw.get("prop")) if sw.get("first_speaker") and sw.get("prop") else None
+degraded = []
+if key in plans:
+    chosen = plans[key]
+else:
+    chosen = default
+    degraded.append("plan_template: %s，用 default" % ("%s 不在表上" % key if key else "場景沒有 switches（first_speaker、prop）"))
+groups = [g if isinstance(g, list) else [g] for g in brief.get("must_mention") or []]
+fill_must = {"{m0}": groups[0][0] if len(groups) > 0 and groups[0] else None,
+             "{m1}": groups[1][0] if len(groups) > 1 and groups[1] else None,
+             "{prop}": sw.get("prop")}
+who = {"{hero}": hero, "{heroine}": heroine}
+beats = []
+for b in chosen.get("beats") or []:
+    must = [fill_must.get(m, m) for m in b.get("must") or []]
+    beats.append({"beat": b["beat"], "who": who.get(b["who"], b["who"]),
+                  "do": b["do"].replace("{hero}", hero).replace("{heroine}", heroine), "must": [m for m in must if m]})
+claimed = {m for b in beats for m in b["must"]}
+extra = [g[0] for g in groups if g and not any(a in claimed for a in g)]
+if extra:                                        # 表沒認領到的必提詞：補進最後一個 B3
+    last_b3 = max((i for i, b in enumerate(beats) if b["beat"] == "B3"), default=len(beats) - 1)
+    beats[last_b3]["must"] += extra
+print(json.dumps({"plan": {"beats": beats}, "key": key, "hit": key in plans, "degraded": degraded}, ensure_ascii=False))

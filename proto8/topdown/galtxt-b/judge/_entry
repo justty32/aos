@@ -42,6 +42,7 @@ if not check.get("final"):
     sys.exit(0)                                  # 稿還會重寫，先不打分
 brief = load(os.path.join(stack, "brief.json"), "Brief")
 draft = load(os.path.join(stack, "draft.json"), "Draft")
+plan = load(os.path.join(stack, "plan.json"), "Plan") if os.path.exists(os.path.join(stack, "plan.json")) else None
 
 bench_id = brief["scene"].get("benchmark")
 bench = load(os.path.join("benchmarks", bench_id + ".json"), "Benchmark") if bench_id else None
@@ -101,5 +102,6 @@ score = {"val": "good" if total >= 5 else "ok" if total >= 3 else "bad", "style"
          "tier1": {"score": tier1, "counter_violations": sum(1 for v in check.get("violations", []) if v.get("tier") == 1)},
          "tier2": {"semantic": semantic, "register_by_judge": register, "reasons": reasons},
          "total": total, "max_total": 6,
-         "register_agree": (register == tier1)}
+         "register_agree": (register == tier1),
+         "degraded": [x for x in (plan or {}).get("degraded") or [] if isinstance(x, str)]}   # 純程式節點接不住、用了預設分支（round6 §2）
 write_json(score_path, score)

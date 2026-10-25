@@ -14,4 +14,7 @@
  "writes": ["$AOS_WS/out/<n>.txt", "$AOS_WS/done/", "$AOS_STACK/{history.jsonl,current.txt,llm.jsonl}"],
  "grow_level": 4,
  "shape": "單發腦函數（_entry 單子＋ask.py；round3 由 loop→fsm idle→think→act 收攏）",
- "ratings": {"calibration": {}}}
+ "ratings": {"calibration": {}},
+ "uses_llm": true,
+ "frozen": true,
+ "lifecycle": {"stage": "agent", "counter_steps": 0, "counter_steps_tooled": 0, "counter_steps_total": 1, "brain_decides": ["語意 0～3、語域 0～2、承接／含蓄／角色味／反差／文筆"], "note": "判準（尺）凍結：不被優化器改、不在這輪固化（round5 §1b-4 Goodhart）"}}

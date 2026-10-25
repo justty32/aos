@@ -8,4 +8,5 @@
  "parallel": true,
  "reads": ["$AOS_WS/cur/*.json", "$AOS_WS/new/*.json"],
  "writes": [],
- "grow_level": 3}
+ "grow_level": 3,
+ "uses_llm": false}

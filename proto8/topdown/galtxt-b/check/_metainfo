@@ -10,4 +10,8 @@
  "writes": ["$AOS_STACK/check.json", "$AOS_STACK/lint/（空小格）"],
  "grow_level": 4,
  "tier": "評分級聯 Tier 0＋Tier 1（免費、確定性）；pass＝Tier 0 全過且 Tier 1 ≤ 1；final＝pass 或已到 max_redrafts",
- "calls": ["tools/lint"]}
+ "calls": ["tools/lint"],
+ "subtrees": [{"path": "tools/lint", "via": "link"}],
+ "uses_llm": false,
+ "responsible_for": ["護欄", "語域"],
+ "ablation": {"env": "GALTXT_OFF_REDRAFT", "off": "skip", "note": "關掉＝第一稿就定稿（不打回重寫）"}}

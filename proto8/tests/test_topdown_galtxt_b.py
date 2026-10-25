@@ -1,5 +1,6 @@
 """test_topdown_galtxt_b - 跑 proto8/topdown/galtxt-b 第 2 輪（plan/round2.md §3 驗收）＋第 3 輪收攏（plan/round3-collapse.md §4：
-director／critic 縮成單發腦函數、plan_lint 搬回 draft/tools/）：端到端（假腦）、打回重寫、writer 自檢、
+director／critic 縮成單發腦函數、plan_lint 搬回 draft/tools/；round6 director 固化成純程式（run.py＋tools/plan_template），
+舊的單發腦函數留在 versions/v0_agent——PlanBad 那條路改拿它換進樹的複本來跑）：端到端（假腦）、打回重寫、writer 自檢、
 lib/lint 與 draft/tools/plan_lint 每條規則各一個會紅的輸入（恰中那條、好輸入全空＝雙向）、工具自己的錯、director 表壞兩次停住再接著做（P-20）、
 brief 的錯、check／deliver 重跑、samples 不漏正解、_metainfo 形狀、捷徑、metainfo_table.py；真腦（localhost:4000 連不上就 skip）。"""
 import json, os, re, shutil, subprocess, tempfile, unittest, urllib.request
@@ -123,8 +124,17 @@ class Base(unittest.TestCase):
         else:
             dst.write_text(body, encoding="utf-8")
 
-    def galtxt(self, env=None, timeout=120):
-        return run(EXEC, "--ws", self.ws, GB, env=env, cwd=self.tmp, timeout=timeout)
+    def galtxt(self, env=None, timeout=120, tree=None):
+        return run(EXEC, "--ws", self.ws, tree or GB, env=env, cwd=self.tmp, timeout=timeout)
+
+    def agent_tree(self):
+        """樹的複本，director 換回 versions/v0_agent（單發腦函數）：draft 的 PlanBad 那條路只有腦會出壞表才走得到。"""
+        t = self.tmp / "tree"
+        shutil.copytree(GB, t, symlinks=True, ignore=shutil.ignore_patterns("plan", "train", "human"))
+        d = t / "draft" / "tools" / "director"
+        shutil.rmtree(d)
+        shutil.copytree(GB / "draft" / "tools" / "director" / "versions" / "v0_agent", d)
+        return t
 
     def cell(self, name, env=None):
         """單跑一格（跟 fsm 叫它時一樣：cwd＝那一格、stack＝頂層 .stack/）。"""
@@ -152,16 +162,21 @@ class EndToEnd(Base):
         self.assertEqual(trace[-1]["code"], 10)
         m = json.loads(self.out(Q01, "measure.json").read_text())
         self.assertEqual((m["name"], m["benchmark"], m["counter_cycles"], m["counter_drafts"], m["counter_plans"],
-                          m["counter_lint_calls"], m["counter_llm_calls"]), (Q01, "q01", 1, 1, 1, 0, 3))
+                          m["counter_lint_calls"], m["counter_llm_calls"]), (Q01, "q01", 1, 1, 1, 0, 2))
         self.assertEqual(set(m["cells"]), {"brief", "draft", "check", "judge", "deliver"})
-        self.assertEqual({k: v["counter_llm_calls"] for k, v in m["agents"].items()}, {"director": 1, "writer": 1, "critic": 1})
-        for who in ("director", "writer", "critic"):                      # 假腦也寫一行量測，形狀一致
+        self.assertEqual({k: v["counter_llm_calls"] for k, v in m["agents"].items()}, {"director": 0, "writer": 1, "critic": 1})
+        self.assertFalse((self.stack / "director" / "llm.jsonl").exists())   # round6：director 固化成純程式，不問腦
+        self.assertTrue((self.stack / "director" / "plan_template").is_dir())
+        self.assertEqual(json.loads(self.out(Q01, "score.json").read_text())["degraded"],
+                         ["plan_template: 場景沒有 switches（first_speaker、prop），用 default"])   # q01 不在固定場景的表上＝降級
+        self.assertEqual(len(jsonl(self.stack / "director" / "hard_cases.jsonl")), 1)            # 難例只寫小格
+        for who in ("writer", "critic"):                                  # 假腦也寫一行量測，形狀一致
             lines = jsonl(self.stack / who / "llm.jsonl")
             self.assertEqual(len(lines), 1)
             self.assertEqual(set(lines[0]), {"asked_at", "model", "elapsed_ms", "counter_tokens_prompt",
                                              "counter_tokens_completion", "counter_tokens", "usage"})
             self.assertEqual((lines[0]["model"], lines[0]["counter_tokens"]), ("fake", 0))
-        for who in ("director", "critic"):                                 # round3：單發腦函數，小格只剩 history／current／llm／ws
+        for who in ("critic",):                                            # round3：單發腦函數，小格只剩 history／current／llm／ws
             self.assertEqual([m["role"] for m in jsonl(self.stack / who / "history.jsonl")], ["user", "assistant"])
             self.assertFalse((self.stack / who / "trace.jsonl").exists() or (self.stack / who / "state.txt").exists(), who)
         # writer 拿到的題目帶 beat 表，第一則訊息有節拍表與題目檔路徑
@@ -179,10 +194,9 @@ class EndToEnd(Base):
         self.assertTrue({"must_mention", "banned_A", "exclaim"} <= rules, rules)
         self.assertEqual(h[1]["violations"], [])
         self.assertEqual(len(jsonl(self.stack / "writer" / "history.jsonl")), 4)
-        self.assertEqual(len(jsonl(self.stack / "director" / "history.jsonl")), 2)   # director 只問過一次：重寫沿用 plan.json
-        self.assertEqual(len(jsonl(self.stack / "director" / "llm.jsonl")), 1)
+        self.assertEqual(len(jsonl(self.stack / "director" / "hard_cases.jsonl")), 1)   # director 只叫過一次：重寫沿用 plan.json
         m = json.loads(self.out(Q08, "measure.json").read_text())
-        self.assertEqual((m["counter_cycles"], m["counter_drafts"], m["counter_plans"], m["counter_llm_calls"]), (2, 2, 1, 4))
+        self.assertEqual((m["counter_cycles"], m["counter_drafts"], m["counter_plans"], m["counter_llm_calls"]), (2, 2, 1, 3))
 
     def test_self_lint(self):
         self.put()
@@ -200,14 +214,15 @@ class EndToEnd(Base):
     def test_plan_bad_twice_then_resume(self):
         """director 的表兩次都壞＝PlanBad 停在 draft；開關關掉再跑，從 draft 接著做（P-20）。"""
         self.put()
-        r = self.galtxt(env={"GALTXT_FAKE_BAD_PLAN": "2"})
+        tree = self.agent_tree()
+        r = self.galtxt(env={"GALTXT_FAKE_BAD_PLAN": "2"}, tree=tree)
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("draft: PlanBad ", r.stderr)
         self.assertEqual((self.stack / "state.txt").read_text().strip(), "draft")
         self.assertEqual(len(jsonl(self.stack / "director" / "history.jsonl")), 4)   # 第 2 次帶理由續聊
         self.assertIn("B0", jsonl(self.stack / "director" / "history.jsonl")[2]["content"])   # plan_lint 的理由
         self.assertFalse((self.stack / "plan.json").exists())
-        r = self.galtxt()
+        r = self.galtxt(tree=tree)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(self.out(Q01, "answer.txt").exists())
         states = [t["state"] for t in jsonl(self.stack / "trace.jsonl")]
@@ -217,7 +232,7 @@ class EndToEnd(Base):
     def test_plan_bad_once_recovers(self):
         """壞一次：plan_lint 的理由回給 director、第 2 張過了就往下。"""
         self.put()
-        r = self.galtxt(env={"GALTXT_FAKE_BAD_PLAN": "1"})
+        r = self.galtxt(env={"GALTXT_FAKE_BAD_PLAN": "1"}, tree=self.agent_tree())
         self.assertEqual(r.returncode, 0, r.stderr)
         h = jsonl(self.stack / "director" / "history.jsonl")
         self.assertEqual([m["role"] for m in h], ["user", "assistant", "user", "assistant"])
@@ -535,8 +550,8 @@ class RealBrain(Base):
         score = json.loads(self.out(Q01, "score.json").read_text())
         self.assertGreaterEqual(score["total"], 4, score)
         m = json.loads(self.out(Q01, "measure.json").read_text())
-        self.assertTrue(3 <= m["counter_llm_calls"] <= 11, m)
-        for who in ("director", "writer", "critic"):
+        self.assertTrue(2 <= m["counter_llm_calls"] <= 10, m)            # round6：director 不問腦
+        for who in ("writer", "critic"):
             for line in jsonl(self.stack / who / "llm.jsonl"):
                 self.assertIsInstance(line["counter_tokens"], int)
                 self.assertNotEqual(line["model"], "fake")

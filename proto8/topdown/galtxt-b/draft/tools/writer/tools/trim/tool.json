@@ -1,0 +1,5 @@
+{"description": "交稿前的確定性修剪：旁白超過上限的刪掉後面多的、某人的感嘆號超過預算的換成句號、口癖超過次數的那次換成「哼」。回 {text: 修剪後的稿, changes: [...]}；交稿時原樣交出 text。",
+ "parameters": {"type": "object",
+                "properties": {"text": {"type": "string", "description": "整段稿子原文"},
+                               "brief_path": {"type": "string", "description": "你的題目檔裡稿紙的位置，固定寫 cur/<n>.json#/brief（n 是題目檔名）"}},
+                "required": ["text", "brief_path"]}}

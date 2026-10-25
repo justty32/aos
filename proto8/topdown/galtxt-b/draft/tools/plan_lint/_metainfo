@@ -10,4 +10,6 @@
  "writes": ["stdout"],
  "grow_level": 4,
  "tier": "固化階梯第 2 級（規則分支）：定點 01 的 beat 文法",
- "callers": ["draft/（黏合格，驗 director 的表）"]}
+ "callers": ["draft/（黏合格，驗 director 的表）"],
+ "uses_llm": false,
+ "frozen": true}

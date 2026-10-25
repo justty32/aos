@@ -1,1 +1,1 @@
-{"argv": ["python3", "ask.py"], "timeout_ms": 120000, "_metainfo": {"$ref": "_metainfo"}}
+{"argv": ["python3", "run.py"], "timeout_ms": 30000, "_metainfo": {"$ref": "_metainfo"}}

@@ -14,4 +14,7 @@
  "writes": ["$AOS_STACK/draft.json", "$AOS_STACK/plan.json", "$AOS_STACK/director/（director 的小格與工作區 ws/）", "$AOS_STACK/plan_lint/（空小格）", "$AOS_STACK/writer/（writer 的小格與工作區 ws/）"],
  "grow_level": 4,
  "calls": ["tools/director（單發腦函數，grow_level 4：_entry 單子＋ask.py；小格 $AOS_STACK/director/；沒 plan.json 時才叫，一題最多 2 次，第 2 次同小格續聊）", "tools/plan_lint（純函數，真資料夾；round3 從 lib/ 搬回）", "tools/writer（agent，小格 $AOS_STACK/writer/，工作區 $AOS_STACK/writer/ws/）"],
- "note": "llm_* 是外層作者自報＝這一格跑一次的 director＋writer（M6 外層贏）：第 1 稿 director 1～2＋writer 1～3，第 2、3 稿只有 writer；這一格自己不問腦"}
+ "note": "llm_* 是外層作者自報＝這一格跑一次的 director＋writer（M6 外層贏）：第 1 稿 director 1～2＋writer 1～3，第 2、3 稿只有 writer；這一格自己不問腦",
+ "subtrees": ["tools/director", "tools/plan_lint", "tools/writer"],
+ "uses_llm": true,
+ "responsible_for": ["反差", "承接", "文筆", "含蓄"]}

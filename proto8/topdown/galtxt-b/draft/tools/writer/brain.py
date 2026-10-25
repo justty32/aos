@@ -4,6 +4,7 @@
 # 測試用開關 GALTXT_FAKE_BAD_FIRST=1：假腦第 1 稿故意寫壞（叫錯名字、感嘆號、漏關鍵詞），讓 check 打回、第 2 稿才寫好——為了把重寫那條路跑一遍。
 # 第 2 輪：題目多帶 plan（director 出的 beat 表，照表寫）；tools/lint（捷徑 → lib/lint）讓腦交稿前自檢——工具那段第 1 輪就留著，這裡不用改。
 # 測試用開關 GALTXT_FAKE_LINT=1：假腦每稿先回一次 tool_calls 叫 lint、看到 tool 結果再交稿——把自檢那條路跑一遍。
+# 測試用開關 GALTXT_FAKE_TRIM=1（round6）：假腦先叫 trim（稿裡故意多三行旁白、她多一個「！」）、看到結果原樣交 trim 回的 text——把抽工具那條路跑一遍。
 # 每問一次腦（含假腦）在 $AOS_STACK/llm.jsonl 寫一行量測（record）。
 import json, os, sys, time, urllib.error, urllib.request
 from datetime import datetime, timezone
@@ -113,7 +114,8 @@ if not history or history[-1].get("role") not in ("user", "tool"):
     append({"role": "user", "content": render(question)})
 
 tools = []                                       # 第 1 輪 writer 沒有工具；留著這段，之後掛 tools/<名>/tool.json 就能用（P-41）
-for tool in (sorted(os.listdir("tools")) if os.path.isdir("tools") else []):
+OFF = {"lint": "GALTXT_OFF_SELF_LINT", "trim": "GALTXT_OFF_TRIM"}      # 量貢獻用的關閉開關（round5 §3a，宣告在 _metainfo.ablation）：設 1＝不給腦這個工具
+for tool in (sorted(t for t in os.listdir("tools") if os.environ.get(OFF.get(t, "")) != "1") if os.path.isdir("tools") else []):
     try:
         with open(os.path.join("tools", tool, "tool.json"), encoding="utf-8") as f:
             spec = json.load(f)
@@ -147,6 +149,21 @@ def fake():
         return {"role": "assistant", "content": None,
                 "tool_calls": [{"id": "fake_lint_%d" % attempt, "type": "function",
                                 "function": {"name": "lint", "arguments": json.dumps(args, ensure_ascii=False)}}]}
+    if os.environ.get("GALTXT_FAKE_TRIM") == "1":   # round6：先叫 trim（稿裡故意多三行旁白、她多一個「！」），看到結果原樣交 text
+        last = history[-1]
+        if last.get("role") == "tool":
+            try:
+                return {"role": "assistant", "content": json.loads(last.get("content") or "")["text"]}
+            except (ValueError, KeyError, TypeError):
+                pass
+        elif last.get("role") == "user":
+            good = fake_draft(b, s, title, hero, her, musts, nice, she_calls_him, he_calls_her)["content"].split("\n")
+            noisy = good[:2] + ["（門鈴又響了一聲。）", "（爺爺的算盤響了兩下。）", "（雨聲遠了一點。）"] + good[2:]
+            noisy = [l.replace("沒什麼。", "沒什麼！") if l.startswith(her["display"]) else l for l in noisy]
+            args = {"text": "\n".join(noisy), "brief_path": "cur/%s.json#/brief" % name}
+            return {"role": "assistant", "content": None,
+                    "tool_calls": [{"id": "fake_trim_%d" % attempt, "type": "function",
+                                    "function": {"name": "trim", "arguments": json.dumps(args, ensure_ascii=False)}}]}
     if os.environ.get("GALTXT_FAKE_BAD_FIRST") == "1" and attempt == 1:
         return {"role": "assistant", "content": "\n".join([
             title, "（假腦故意寫壞的第 1 稿：叫錯名字、感嘆號、沒提關鍵詞。）",

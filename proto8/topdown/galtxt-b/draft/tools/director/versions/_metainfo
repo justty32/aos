@@ -1,0 +1,1 @@
+{"summary": "director 走過的舊版（round6 §1c）：v0_agent＝單發腦函數（排 beat 表全靠腦）、v1_script＝run.py 查表、查不到才叫 v0_agent；整個舊版資料夾原樣留著，runtime 不讀（teach 拿 v0_agent 當老師）", "kind": "data", "resource": "disk", "side_effect": false, "deterministic": true}

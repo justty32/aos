@@ -15,4 +15,9 @@
  "writes": ["$AOS_WS/cur/", "$AOS_WS/done/", "$AOS_WS/out/<題名>/{answer.txt,score.json（第 2 級：val、style、dims）,check.json,measure.json}", "$AOS_STACK/*"],
  "grow_level": 5,
  "per_question": {"counter_cycles": {"val": 1, "max": 3}, "counter_llm_calls": {"val": 3, "max": 11}, "note": "一圈＝六格；check 打回就再一圈（最多 1＋max_redrafts 圈）；loop.json 的 max 30 是整次呼叫的圈數上限。問腦：director 1～2＋writer 每稿 1～3（自檢）×最多 3 稿＋critic 1"},
- "ratings": {}}
+ "ratings": {},
+ "tree_id": "galtxt-b",
+ "subtrees": ["idle", "brief", "draft", "check", "judge", "deliver", {"path": "lib", "kind": "dir"}],
+ "uses_llm": true,
+ "rollup": {},
+ "contribution": {}}

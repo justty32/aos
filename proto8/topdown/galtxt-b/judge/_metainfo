@@ -15,4 +15,7 @@
  "grow_level": 4,
  "calls": ["tools/critic（單發腦函數，grow_level 4：_entry 單子＋ask.py）"],
  "tier": "評分級聯 Tier 2（LLM judge，受治理：程式算的語域分與它給的對照、不合就是訊號）",
- "note": "llm_* 等於 tools/critic 的（M6 外層贏）"}
+ "note": "llm_* 等於 tools/critic 的（M6 外層贏）",
+ "subtrees": ["tools/critic", {"path": "benchmarks", "kind": "data"}],
+ "uses_llm": true,
+ "frozen": true}

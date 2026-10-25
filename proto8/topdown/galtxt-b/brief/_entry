@@ -134,7 +134,7 @@ brief = {
     "must_mention": scene.get("must_mention", []),
     "nice_to_mention": scene.get("nice_to_mention", []),
     "max_redrafts": int(scene.get("max_redrafts", 2)),
-    "samples": samples,
+    "samples": [] if os.environ.get("GALTXT_OFF_SAMPLES") == "1" else samples,   # 關閉開關（round5 §3a）：不給語料錨
     "beats": beats,
 }
 write_json(os.path.join(stack, "brief.json"), brief)
