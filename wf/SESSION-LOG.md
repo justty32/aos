@@ -12,6 +12,7 @@
 
 ## 最新進度
 
+- **open｜10-25 由上而下拆資料夾樹（galtxt 兩隊）**：甲隊 galtxt-a、乙隊 galtxt-b 在各自 worktree 跑（opus 隊長、fable 規劃），使用者一路補的想法都記在 [thinking 10-25 top-down](../proto8/thinking/2026-10-25-top-down.md) 原文段；人評網頁已上、使用者在外暫不評（見 [WAIT_USER](WAIT_USER.md)）
 - **open｜真腦實測**：自動項已真跑完（[基礎](session_logs/2026-10/2026-10-24-真腦實測/結果-01-基礎.md)、[組合A](session_logs/2026-10/2026-10-24-真腦實測/結果-02-組合A.md)、[組合B](session_logs/2026-10/2026-10-24-真腦實測/結果-02-組合B.md)、[外部](session_logs/2026-10/2026-10-24-真腦實測/結果-03-外部.md)）；剩使用者四項（say/listen、fay attach、nvim、沙箱 root）見 [WAIT_USER](WAIT_USER.md)
 - **open｜10-24 其餘下一步**（代定可翻案）：代定落條文、沙箱殘項（`accept` 跟「純靠 Linux」衝突待使用者，[sandbox S18](../proto8/thinking/2026-10-24-sandbox.md)）、compact 與 P-41 → [session log 10-24](session_logs/2026-10/2026-10-24.md#下一步open)
 - **open｜還是草稿的條文**：N-14 窗總則、N-15 鎖、N-16 信箱、N-34 tasks（都沒有實作可對） → [NORMS 待定](../proto8/NORMS/08-待定.md)
