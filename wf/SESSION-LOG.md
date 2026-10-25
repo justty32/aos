@@ -12,8 +12,7 @@
 
 ## 最新進度
 
-- **open｜10-25 由上而下拆資料夾樹（galtxt 兩隊）**：甲隊 galtxt-a、乙隊 galtxt-b 在各自 worktree 跑（opus 隊長、fable 規劃），使用者一路補的想法都記在 [thinking 10-25 top-down](../proto8/thinking/2026-10-25-top-down.md) 原文段；人評網頁已上、使用者在外暫不評（見 [WAIT_USER](WAIT_USER.md)）；乙隊 B 段已收線（4d59258d）、甲隊第二任在跑。**甲隊收線後**：派 opus 統整兩隊結果做成 artifact（使用者 10-25「差不多了之後，統整這些結果，弄成artifact，eli5風格，圖多，精簡，只講結論，細節折疊，要有流程，資料夾佈局，一些檔案的格式範例」）
-- **open｜真腦實測**：自動項已真跑完（[基礎](session_logs/2026-10/2026-10-24-真腦實測/結果-01-基礎.md)、[組合A](session_logs/2026-10/2026-10-24-真腦實測/結果-02-組合A.md)、[組合B](session_logs/2026-10/2026-10-24-真腦實測/結果-02-組合B.md)、[外部](session_logs/2026-10/2026-10-24-真腦實測/結果-03-外部.md)）；剩使用者四項（say/listen、fay attach、nvim、沙箱 root）見 [WAIT_USER](WAIT_USER.md)
+- **open｜10-25 galtxt 由上而下兩隊：都已收線，等使用者想完說他抓到的問題點**（再動之前先問）：兩隊沒做的見 [甲隊 HANDOFF](../proto8/topdown/galtxt-a/HANDOFF.md)、[乙隊 HANDOFF](../proto8/topdown/galtxt-b/HANDOFF.md)；統整頁 https://claude.ai/artifact/9sj3ZkRhK4ZYomb8WeSzrA ；代定清單與今天做了哪些 → [session log 10-25](session_logs/2026-10/2026-10-25.md)
 - **open｜10-24 其餘下一步**（代定可翻案）：代定落條文、沙箱殘項（`accept` 跟「純靠 Linux」衝突待使用者，[sandbox S18](../proto8/thinking/2026-10-24-sandbox.md)）、compact 與 P-41 → [session log 10-24](session_logs/2026-10/2026-10-24.md#下一步open)
 - **open｜還是草稿的條文**：N-14 窗總則、N-15 鎖、N-16 信箱、N-34 tasks（都沒有實作可對） → [NORMS 待定](../proto8/NORMS/08-待定.md)
 - **待照新做法重寫**：還沒做的 tasks、通用 kernel 都是方向題，留給使用者（[plan § 1.2](../proto8/thinking/2026-10-21-plan.md)）；loop／daemon／fsm、tick（9d618174）、腦的工具呼叫（10-23）、LLM kernel（10-24）已做；[rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)、[NORMS 待定](../proto8/NORMS/08-待定.md)。
