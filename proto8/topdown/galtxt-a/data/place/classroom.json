@@ -1,0 +1,10 @@
+{"_metainfo": {"summary": "教室的地點卡，拆成格（round4-data.md § 2.2）：fact 永久事實（一句一格、帶 keywords）；文化祭的任何東西不放這裡（那是場景狀態，見 scene/closeup.json 的 state）",
+               "kind": "data",
+               "source": "corpus/世界/日和高中詳誌/01_校內地圖與建築.md「二、本館」",
+               "counter_cells": 2,
+               "cells": {"fact": 2},
+               "writers": ["author"],
+               "readers": ["brief"]},
+ "name": "教室",
+ "fact": {"01": {"text": "本館是老木造校舍，走廊地板一走就響", "keywords": ["本館", "木造", "走廊地板會響"]},
+          "02": {"text": "老式上下滑窗關不緊，夕陽從窗斜進來", "keywords": ["上下滑窗"]}}}

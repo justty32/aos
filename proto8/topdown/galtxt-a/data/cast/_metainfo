@@ -1,0 +1,1 @@
+{"summary": "人物卡一人一檔（<英文短名>.json，檔內格有穩定 id，round4-data.md § 2）；cast.json 裡那人留 {\"$ref\"}；讀者：brief、writer/compose.py、judge", "kind": "data", "fs_needs": ["git_tracked", "isolation"]}

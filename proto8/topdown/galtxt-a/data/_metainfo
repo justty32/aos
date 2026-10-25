@@ -1,15 +1,35 @@
-{"summary": "固化表的快取：人物卡、地點卡、稱謂階、禁語、語域標記、評測題、範例句；真源是 ~/repo/ai_core/sub_projs/galtxt/corpus，每張表頂層寫 source。另有路由表 route.json（不是固化表，train/optimize 寫）",
+{
+ "summary": "固化表的快取：人物卡、地點卡、稱謂階、禁語、語域標記、評測題、範例句；真源是 ~/repo/ai_core/sub_projs/galtxt/corpus，每張表頂層寫 source。另有路由表 route.json（不是固化表，train/optimize 寫）；第四輪 3b 起柚葉×文化祭收攤教室這一範圍拆成有 id 的格（round4-data.md：cast/、style/、place/、scene/ 一個實體一檔，templates 一句一格；id＝JSON key 路徑，cells.py 解析）",
  "kind": "data",
  "grow_level": 4,
  "resource": "disk",
  "side_effect": false,
  "deterministic": true,
  "reads": [],
- "writes": [],
- "fs_needs": ["git_tracked", "isolation"],
+ "writes": [
+  "templates.distilled.json（train/optimize distill 唯一寫的格檔）",
+  "route.json（train/optimize）"
+ ],
+ "fs_needs": [
+  "git_tracked",
+  "isolation",
+  "shared_write"
+ ],
  "callers": 2,
- "children": {"bench/": "評測題一題一檔，含正解——只有 pick 讀",
-             "cast.json": "人物卡 {名: 卡}",
-             "places.json": "地點卡 {名: 卡}",
-             "samples.json": "範例句 {名: {source, lines}}",
-             "route.json": "路由表 {default, by_style}——只有 write.py 讀、只有 train/optimize 寫"}}
+ "children": {
+  "bench/": "評測題一題一檔，含正解——只有 pick 讀",
+  "cast.json": "人物卡 {名: 卡}（拆格的人留 {\"$ref\"}）",
+  "places.json": "地點卡 {名: 卡}（拆格的地點留 {\"$ref\"}）",
+  "samples.json": "範例句 {名: {source, lines}}",
+  "route.json": "路由表 {default, by_style}——只有 write.py 讀、只有 train/optimize 寫",
+  "cast/": "人物卡一人一檔（yuzu.json：trait／bio／tic／gesture／ng／稱呼，格）",
+  "style/": "風格語言表一型一檔（tsun.json：deny／yield／cover／reveal／ooc／ending／ng／order，格）",
+  "place/": "地點卡一處一檔（classroom.json：fact，格）",
+  "scene/": "場景條件＝背景故事一場一檔（closeup.json：setting／mood／state／backstory／prop／detail…，格）",
+  "templates.json": "寫手 program 階的模板句（一句一格、人寫；訓練中 bytes 不變）",
+  "templates.distilled.json": "distill 追加的模板句（id 前綴 tpld.；data/ 裡唯一有程式寫者的格檔）",
+  "dims.json": "評分維度表（每維 cells＝哪些格定義它）",
+  "styles.json": "語域表 {types: {型: 表}, ng_marks}（拆格的型留 {\"$ref\"}）"
+ },
+ "counter_cells": 122
+}

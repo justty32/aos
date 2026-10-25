@@ -46,13 +46,14 @@ galtxt-a/                 [agent] _entry → aos-loop loop.json → fsm.json：i
 ├─ check.py               [純程式格] 每份草稿 aos-exec --ws $AOS_STACK tools/lint → checks.json
 ├─ judge.py               [黏合格] 過了護欄的草稿逐份叫評審 grader/ → judge.json
 ├─ pick.py                [純程式] 合分、嚴格比大小、平手編號小的贏；寫 out/、cur/ → done/
+├─ cells.py               [伴隨檔] data/ 格的解析器（id＝JSON key 路徑，例 cast.yuzu.tic.03；$ref 解一層、expand、touched）；brief、pick、judge、writer/compose.py 共用
 ├─ tools/lint/            [純程式工具] Tier 0 護欄＋Tier 1 語域；被 check.py 與寫手兩處叫
 ├─ writer/                [agent] 寫手（agent-dan 範本；假腦＝模板填槽）
 │  ├─ idle ─捷徑─▶ ../idle
 │  └─ tools/lint ─捷徑─▶ ../../tools/lint
 ├─ grader/                [agent] 評審（沒有工具；回「分數：N」「理由：…」；假腦固定 2 分）
 │  └─ idle ─捷徑─▶ ../idle
-├─ data/                  [資料] corpus 手抄的固化表（每張帶 source）：cast.json places.json samples.json（{名: 卡}）address.json forbidden.json styles.json；bench/（一題一檔、含正解，只有 pick.py 讀）
+├─ data/                  [資料] corpus 手抄的固化表（每張帶 source）：cast.json places.json samples.json（{名: 卡}）address.json forbidden.json styles.json；bench/（一題一檔、含正解，只有 pick.py 讀）；柚葉×文化祭收攤教室拆成有 id 的格：cast/yuzu.json、style/tsun.json、place/classroom.json、scene/closeup.json、templates.json＋templates.distilled.json（plan/round4-data.md）
 ├─ meta/                  這棵樹自己的工具：metatable（收 _metainfo 成表、--suggest 列收攏候選）、collapse（收攏）；每輪收的表
 └─ plan/                  規劃書、實測、題目範例
 ```

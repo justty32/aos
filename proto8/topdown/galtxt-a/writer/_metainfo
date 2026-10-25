@@ -6,7 +6,7 @@
  "llm_model": "chatgpt-gpt-6-luna-low（.env）", "llm_endpoint": "AOS_BRAIN_URL；沒設＝假腦（模板填槽；假腦技能表：傲嬌弱）",
  "side_effect": true, "idempotent": false, "deterministic": false, "interrupt": "resumable", "parallel": true,
  "lock": [{"$env": "AOS_WS", "$prefix": "ws:"}],
- "reads": ["ws:new/*.json", "ws:rules.json（經 lint）", "data:templates.json（program 階）", "data:hints.json（program 階）"],
+ "reads": ["ws:new/*.json", "ws:rules.json（經 lint）", "data:templates.json（program 階）", "data:templates.distilled.json（program 階）", "data:hints.json（program 階）", "data:cast/yuzu.json（program 階，口癖格）", "data:scene/closeup.json（program 階，道具格）"],
  "writes": ["ws:out/<題名>", "ws:done/<題名>.json", "stack:history.jsonl", "stack:usage.jsonl", "stack:state.txt", "stack:current.txt", "stack:trace.jsonl", "cell:lint/", "cell:beat/", "cell:voice/", "tree:writer/hard.jsonl（program 階）"],
  "fs_needs": ["own_stack", "mount"], "callers": 1,
  "steps": ["開場旁白", "反差節拍", "口癖句尾", "遮掩句", "收尾旁白", "自檢"],

@@ -121,3 +121,56 @@
 結果：`test_topdown_galtxt_a.py` 40 個綠；`proto8/tests` 全套 571 OK（skip 2）。
 
 下一步（步驟 5）：`common.diff`、`train/weigh/`（建的時候補五個 `$ref`＋初始旁檔）、verify 寫 `grad.json`（`context.tree` 用樹根資料夾名，rollup 靠它判 foreign）、`rollup --up <被改那棵>`；M7 測試的凍結清單加 `weigh/rules.json`。
+
+
+## 步驟 3b：設定拆成有 id 的格（照 round4-data.md；實作者，2026-10-25）
+
+順序：fable 排在步驟 4 之前，實際在步驟 4（rollup）**之後**做。衝突只有一處：rollup／metatable 不看格層（round4-data § 6），所以 4 不用回頭改；data/ 的新子資料夾是 `kind data`、rollup 不算節點，`test_rollup`／`test_m7` 照綠。
+
+做了（3b-α 資料與 brief）：
+- `cells.py`（根下伴隨檔，標準庫）：`resolve(id) → (檔, pointer, 值)`、`load_ref`（解一層 `$ref`）、`expand("…*[旗標]")`、`kids`、`marker`、`must_groups`、`count_cells`、`ids`、**`touched(舊, 新, 前綴)`**；命令列 `cells.py get <id>｜ls [前綴]｜diff 舊.json 新.json 前綴`。id 規則照 § 2.1；別名 `tpl.`＝`templates.json`、`tpld.`＝`templates.distilled.json`；找不到 `data/<1>/<2>` 就退成 `data/<1>.json`（`styles.ng_marks`、`lint_switches.contrast_order` 這種 id 不用改檔也有）。
+- 新格檔：`data/cast/yuzu.json`（31 格）、`data/style/tsun.json`（35）、`data/place/classroom.json`（2）、`data/scene/closeup.json`（15）；`templates.json` 改成一句一格（39，`uses` 指設定格）；新 `templates.distilled.json`（0 格，distill 唯一寫的檔）。`cast.json`／`places.json`／`styles.json` 裡那一項換成 `{"$ref"}`。四個新資料夾各一份 `_metainfo`（`kind data`、`fs_needs [git_tracked, isolation]`）。
+- `bench/Q16.json`：`setting`、`speaker_note`、place／cast／季節／時間／基調／稱謂階拿掉，改 `scene: "scene.closeup"`＋`blank_note`；`points` → `point.a～c {text, dims}`；`guard.must` → `{"01": {"any": […]}, "02": …}`。`cls-*.json` 只剩 `mode, scene, detail, min/max_lines, drafts`。
+- `brief.py`：解 `$ref`、把格渲染回舊卡的形狀；場景格補題目缺的欄；`event` 渲染「`<occasion>：<before><短名><say>，<do>`」；挖空題 `setting`＝`scene.setting`＋「氛圍：」＋`mood.*`；`speaker_note`＝說話者 `trait`＋`bio`＋`scene.backstory`＋`bench.blank_note`。錯多 `SceneMissing`、`DetailMissing`。
+- 等價（改前改後用 scratchpad 腳本比）：Q01、晴子 scene 的 `brief.json`／`rules.json` bytes 一字不變；scene-yuzuha、cls 三題的 `brief.json` bytes 一字不變（event 一字不差）；Q16 的 `brief.json` 只有 `speaker_note` 變了（規劃本來就要從格渲染）；柚葉那幾題的 `rules.json` 只多 `contrast.cells`／`contrast.card`／`scene`／`cells_used`，`contrast.reveal` 集合相同（順序變：她的小動作在前）。
+
+做了（3b-β 消費者）：
+- `tools/lint`：輸出多 `hits {反差, 洩底, 語域}`（沒 `contrast.cells`＝全 `[]`）；分數一行沒動。
+- `pick.py`：每份草稿照抄 `hits`；`guard_hit` 用 `cells.must_groups`。`train/common.gather` 多 `cell_hits`（過護欄的草稿、同份同格算一次）→ `rate.py` 寫進 `ratings.json.style:<風格>.cell_hits`。
+- `judge.py`＋`grader/system.v3.txt`（`system.txt` 捷徑改指 v3；v2 留著當歷史，同 v1）：「像柚葉」那行只留評分尺度，人物描述改由 judge 從 `dims.json` 評審維度的 `cells` 渲染一行「人物設定：宮澤柚葉（傲嬌）——…」進題目。
+- `dims.json` 每維多 `cells`（§ 2.2 的；語域多 `style.tsun.ooc.*`——OocMark 扣的是語域）。
+- `writer/compose.py`：槽候選是格、`pick()` 記下格 id；`{prop}` 從 `rules.json` 的 `scene`＋題目 `detail` 解（by_detail.ribbon 的「彩帶」改成 `{prop}`）；口癖從 `rules.contrast.card` 的 `tic.*`（不再切字串；沒有才退回切）；`templates.distilled.json` 接在同槽人寫的後面；`hard.jsonl` 行多 `cells`（TemplateMissing＝缺的那格 `scene.closeup.detail.<detail>`；LintFailed＝這次用到的模板格）、`cells_hit`、`tpl`。
+- `beat`／`voice` 的 `DEFAULT`／`DEFAULT_TICS`／`GENERIC` 註明「退路，不是資料」；契約沒變。
+- `_metainfo`：`data/_metainfo` 的 `children` 加新檔、`counter_cells 122`、`writes` 加 `templates.distilled.json`、`fs_needs` 加 `shared_write`；`fsm.json` brief 的 reads 加四個格檔、judge 的 reads 加 `dims.json`／`cast/yuzu.json`；`writer/_metainfo` reads 加 distilled、yuzu、closeup。README 樹加 `cells.py` 一行、data 那行補格檔。
+
+偏離／解讀：
+- **`cells_used`、`scene`、`contrast.cells`／`card` 放 `rules.json`、不放 `brief.json`**（§ 7 風險 (b) 擇一）：`brief.json` 給腦看，格 id 不進去＝零多餘 token，晴子／cls 的 `brief.json` bytes 也就能一字不變。compose 讀工作區的 `rules.json`（write.py 本來就放進去給 lint）。
+- **`contrast.cells` 分類別的表**（`{deny|yield|cover|reveal|ooc|markers|calls: {字面: id}, ng_marks: id}`），不是 § 3 寫的一張平的「字面 → id」：「哼」同時是 `tic.01` 與 `deny.03`、「真是的」同時是 `tic.04` 與 `cover.01`，平表會撞。
+- **3b-3 的「`hits.反差 == [deny.03, yield.01]`」解讀成「決定分數的那兩格」**：位置最前的否認（同位置照表序）＋它之後照表序第一個讓步（就是 lint 的 `any()` 停下來那個）。照「所有出現的字面」算會多 `deny.02`（才沒有含「才沒」）、`yield.02`。洩底與語域則是全部命中的。
+- **粒度比 § 2.2 粗的地方**（§ 4 停止條件三問全否就不拆）：`place.fact` 只拆兩句、句子不拆（沒人單獨量它；§ 4 也預測拆了沒用）；`scene.state` 兩句（不是三格），字面就是舊 `places.教室.details` 的後兩句，brief 才能一字不變；Q16 的 setting 主句是一格 `scene.closeup.setting`（散文、沒人單獨命中），氛圍拆 `mood.01～03`。
+- **沒拆的**：`hints.json`、`lint_switches.json`（§ 2.2 說改格、§ 4 說 `hint.*` 拆了沒用——照 § 4，較後較細；switch 不拆也有 id：`lint_switches.contrast_order` 解得到）；`forbidden`、`address`、`samples`、`route`、Q01、晴子／佐伯／河鹿堂（同規劃）。
+- `cast.yuzu.type` 留 `"傲嬌"`（styles.json 的 key），不是 § 2.2 的 `"style.tsun"`：ratings 的 `style:傲嬌`、route、dims profiles 都用這個字。Q16 的 `speaker` 也留顯示名（lint 的 `rules.speaker` 用它），另加 `speaker_cell: "cast.yuzu"`。
+- 新增兩種格：`cast.yuzu.bio.01～02`（文藝社、逞強是保護色——從 system.v2「像柚葉」那行收回來的第三份卡）、`scene.closeup.occasion`／`backstory.01`（event、speaker_note 渲染要的）。`style.tsun.habits` 去掉跟 `tic` 重複的「哼」「真是的」，留「所以說啊」「…算了」陣列（沒人讀）；`narration` 留一句。
+- 格檔的 `source` 在檔內 `_metainfo`（§ 2.1）——`test_tree_shape` 原本要頂層 `source`，改成兩處擇一。
+- `brief`／`pick`／`judge`／`compose` 都 `import cells`：每支都設 `sys.dont_write_bytecode`——不然樹裡長 `__pycache__/`，`test_tree_shape` 要每個資料夾有 `_metainfo` 會紅（踩到過一次；那份 `__pycache__` 已搬去 scratchpad，沒刪 repo 裡的東西）。
+
+**給步驟 5 的介面**（`grad.json` 的 `diff.cells`／`changed_cells` 這步沒做）：
+- `changed_cells`：`cells.touched(舊實體, 新實體, 前綴)` 列出兩版之間新增／刪掉／值變了的格 id；distill 追加 → `touched(舊 distilled, 新 distilled, "tpld")`；switch 翻 → `["lint_switches.contrast_order"]`（root 檔 id 直接解得到）。命令列 `python3 -B cells.py diff 舊.json 新.json tpld`。
+- `diff.cells {"+", "-"}`：比前後兩次 `ratings.json.style:<風格>.cell_hits` 的 key 集合（已在 rate 寫）。
+- `hard.jsonl` 的 `resolved_cells`：distill 那步用 `touched` 的結果填。
+
+測試（`Round4T`，§ 5 編號）：`test_cells_resolve`（3b-1）、`test_cells_equivalent`（3b-2；用 `git archive 970b8e2c` 取 3b 前的整棵樹，對同題跑 brief 比 bytes／集合、整條假腦跑 Q01／scene／Q16／cls-ribbon 比每份 total；拿不到那版就 skip）、`test_lint_hits`（3b-3）、`test_event_render`（3b-4）、`test_rubric_render`（3b-5）、`test_template_cells`（3b-6；另驗 `{prop}`：拷貝裡把 ribbon 的道具改「紙鶴串」→ 答案裡有；distilled 追加 poster 的否認句 → 不再記難例、答案用到它）、`test_cell_hits_rate`（3b-7）、`test_cells_metainfo`（3b-8；多加一格 metatable 行數不變）。既有測試改：`test_tree_shape`（source 兩處擇一）、`test_hard_cases`（`cells`）、`test_m7`（允許變的檔加 `templates.distilled.json`；人寫的格檔 `data/cast|place|scene|style/`、`templates.json` bytes 不變）。
+
+變紅過一次（scratchpad 腳本：暫改 → 跑該測試 → 還原）：`load_entity` 不認資料夾 → 3b-1 紅；habits 用「，」接 → 3b-2 紅；反差 hits 列全部否認 → 3b-3 紅；event 不渲染 before → 3b-4 紅；judge 不加人物設定 → 3b-5 紅；`{prop}` 寫死「彩帶」→ 3b-6 紅；沒過護欄的草稿也算 cell_hits → 3b-7 紅（第一版改的「同份同格不去重」沒變紅——測試資料裡同份沒有重複的格，換這個）；`counter_cells` 差一 → 3b-8 紅；TemplateMissing 的 `cells` 給空 → `test_hard_cases` 紅。
+
+結果：`test_topdown_galtxt_a.py` 48 個綠；`proto8/tests` 全套 579 OK（skip 2）。
+
+### 給隊長寫 thinking 的結論（拆到什麼粒度、誰在用）
+
+- **量**：5 個新格檔（`cast/yuzu.json`、`style/tsun.json`、`place/classroom.json`、`scene/closeup.json`、`templates.distilled.json`）＋`templates.json` 改成格，加 4 份資料夾 `_metainfo`、1 支 `cells.py`。格數 122：設定 83（柚葉 31、傲嬌 35、教室 2、場景 15）＋模板 39（distilled 0）；Q16 另有 `point` 3、`guard.must` 2。每檔 2～39 格，都在 § 4 的「20～40、超過 80 懷疑拆過頭」以內；設定檔都 ≤ 3 KB；最大的是 `templates.json` 6.1 KB（`uses` 與 `by` 撐大的，離 B-3 的 8 KB 不遠——再多一個 detail 的專屬句就該照 § 2.3 (a)／(d) 長成 `templates/`），其餘沒有檔要長成資料夾。
+- **已有消費者單獨引用的格**（假腦跑柚葉四題、agent＋program 各一次實數）：lint `hits` 命中 25 個 id——`tic` 5／5、`gesture` 5／5、`calls_lead.r2` 2／2、`deny` 3／5、`yield` 5／7、`reveal` 4／6、`styles.ng_marks`（假腦的 NG 標記，12 次）；`hard.cells` 指到 `detail.poster`、`detail.lights`；模板 `uses` 指到 `fact.02`、`state.01～02`、`prop.ribbon`、`cover` 三格、`gesture`／`tic`／`deny`／`yield`／`reveal` 多格；評審 rubric 渲染 `trait` 3、`bio` 2；`dims.cells` 涵蓋 `order.01`、`ooc.*`。`hard.tpl` 指到 39 句模板裡的 8 句（poster／lights 走 generic 用到的那些）。
+- **拆了暫時沒人單獨用的**（只被 brief 整張渲染）：`ending` 4、`style.tsun.ng` 3、`cast.yuzu.ng` 3（brief 渲染 never）、`calls_lead`／`called_by_lead` 非本階的 9 格（lint 只當 bad 清單整張用）、`mood` 3、`backstory` 1、`occasion`、`setting`、`intent`、`fact.01`、`prop.poster／lights`（等 distill 寫 poster 句才會被 `uses`）、`ooc.*`（定義了、這輪假腦沒觸發）。
+- **對照 fable § 4 的預測**：「預測有用」那欄全中——`tic.*`（lint markers、voice tics、模板 uses 三處同一源，口癖字面真源只剩一處）、`gesture.*[reveal]`（洩底 hits 直接是它）、`deny／yield／cover`、`scene.detail.*`（題目開關＋難例缺格）、`tpl.*`、`dims.*.cells`、`Q16.point.*.dims`（已標、還沒程式讀）。「預測沒用」的照做沒拆（forbidden、address、hints、晴子卡…）；`place.fact` 拆了但只拆兩句，實測只有模板 `uses` 指到一句，跟預測（沒人量）一致。**預測外**：`styles.ng_marks` 整張是一格、卻是 hits 次數第二多的 id（假腦愛用 NG 標記）——之後若要知道「是哪個 NG 字」可能值得拆；`cover` 沒有 lint 消費者（lint 不量遮掩），只有模板 `uses`；`ending`／`ng` 完全沒人單獨讀，步驟 9 真腦後若仍 0 次，依 § 4 併回陣列。
+- 還沒長出來的引用面：`grad.cells`／`changed_cells`（步驟 5）、distill 的 `resolved_cells`（步驟 6）、`meta/cells/` 的 `where`（步驟 8）。
+
+下一步（步驟 5）：同上一節；`grad.json` 多 `diff.cells`（比兩次 `cell_hits`）與 `steps[].changed_cells`（用 `cells.touched`）。

@@ -157,8 +157,9 @@ def std(xs):
 
 def gather(scores):
     """[score.json] → {totals, dims, tags}：dims＝過護欄草稿每個維度的平均（護欄＝過的份數比例；整題維度＝各題平均），
-    tags＝評審理由標籤計數；維度名照 score.json 裡有的走（pick 照 data/dims.json 算好的），這裡不寫死"""
-    totals, per, guard, whole, tags = [], {}, [], {}, {}
+    tags＝評審理由標籤計數；cell_hits＝過護欄草稿的 hits（lint 命中的格 id，步驟 3b）每格幾次（同一份同一格只算一次）；
+    維度名照 score.json 裡有的走（pick 照 data/dims.json 算好的），這裡不寫死"""
+    totals, per, guard, whole, tags, cell_hits = [], {}, [], {}, {}, {}
     for s in scores:
         for d in s["drafts"]:
             guard.append(d["dims"].get("護欄"))
@@ -170,12 +171,14 @@ def gather(scores):
                     per.setdefault(k, []).append(v)
             if d.get("reason"):
                 tags[d["reason"]] = tags.get(d["reason"], 0) + 1
+            for cid in sorted({i for xs in (d.get("hits") or {}).values() for i in xs}):
+                cell_hits[cid] = cell_hits.get(cid, 0) + 1
         for k, v in (s.get("dims") or {}).items():
             whole.setdefault(k, []).append(v)
     dims = {k: mean(v) for k, v in per.items()}
     dims["護欄"] = mean(guard)
     dims.update({k: mean(v) for k, v in whole.items()})
-    return {"totals": totals, "dims": dims, "tags": dict(sorted(tags.items()))}
+    return {"totals": totals, "dims": dims, "tags": dict(sorted(tags.items())), "cell_hits": dict(sorted(cell_hits.items()))}
 
 
 def run_cost(cells, agent):

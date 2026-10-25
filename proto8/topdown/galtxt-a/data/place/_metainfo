@@ -1,0 +1,1 @@
+{"summary": "地點卡一處一檔（只放永久事實；場景狀態在 scene/）；places.json 裡那處留 {\"$ref\"}；讀者：brief", "kind": "data", "fs_needs": ["git_tracked", "isolation"]}

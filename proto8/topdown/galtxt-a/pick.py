@@ -8,10 +8,15 @@
 # 第四輪（round4 § 1.3、§ 1.4）：照 data/dims.json 走——風格（route.json 的 style）在 profiles 裡＝每份 dims 是表上的維度（by tools/lint 取 lint 的 dims、
 # by grader 取評審那項 ÷ 3；modes 不含這題的 mode＝null）＋護欄，total＝5 × Σ(weight×值)/Σweight（null 不進分母），Tier 0 沒過＝0；
 # 不在 profiles＝舊公式（Tier 1＋Tier 2、dims 語域／語意／護欄，一字不變）。整題 dims 照 question_dims：多樣性；一致＝1 − 多樣性，只在 brief 有 hints_fixed 時算。
+# 步驟 3b（round4-data.md § 3）：每份多 hits（lint 的 {反差, 洩底, 語域: [格 id]}，照抄）；評測題的 guard.must 拆成格也讀得懂（cells.must_groups）。
 # 錯：stderr 一行「galtxt-a pick: 代號 原因」、退 1——StackMissing、StateBad（checks.json、drafts/、current.txt、route.json 缺或壞）。
 import json, os, shutil, sys
 
-DATA = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data")
+HERE = os.path.dirname(os.path.realpath(__file__))
+DATA = os.path.join(HERE, "data")
+sys.path.insert(0, HERE)
+sys.dont_write_bytecode = True                   # 樹裡不留 __pycache__
+import cells  # noqa: E402
 
 
 def die(code, reason):
@@ -100,6 +105,8 @@ for n in sorted(checks, key=int):
                        "護欄": 1.0 if c.get("pass") else 0.0}
     if c.get("bonus"):
         row["bonus"] = c["bonus"]
+    if "hits" in c:                              # 步驟 3b：lint 命中的格 id，照抄（rate 彙成 cell_hits）
+        row["hits"] = c["hits"]
     rows.append(row)
 passed = [r for r in rows if not r["tier0"]]
 if passed:
@@ -136,7 +143,7 @@ if brief.get("mode") == "fill":
         a, b = bigrams(quote(answer.strip())), bigrams(quote(bench["answer"]))
         score["bench"] = {"id": task_bench,
                           "bigram_overlap": round(len(a & b) / len(a | b), 3) if a | b else 0.0,
-                          "guard_hit": all(any(w in answer for w in g) for g in bench["guard"]["must"]),
+                          "guard_hit": all(any(w in answer for w in g) for g in cells.must_groups(bench["guard"]["must"])),
                           "bonus_hit": [w for w in bench["guard"].get("bonus", []) if w in answer]}
 
 out = os.path.join(ws, "out", base)

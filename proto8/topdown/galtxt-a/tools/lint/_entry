@@ -3,6 +3,8 @@
 # 結果：{"pass", "tier0": [{"code", "line", "hit"}], "tier1": 0～2, "tier1_notes": [...], "dims", "bonus": [...], "counter_lines"}；pass＝tier0 是空的。
 # 第四輪（round4 § 1.3）：rules.json 有 contrast（女角的 deny／yield／reveal／ooc 表）時多量三件——OocMark（OOC 字面，扣 Tier 1 一分，同 NgMark）、
 # dims.反差（0／0.5／1）、dims.洩底（只有 scene；0／0.5／1）；dims.語域＝tier1 ÷ 2。沒 contrast、或 switches 關掉＝那維度 null。
+# 步驟 3b（round4-data.md § 3）：結果多 hits {"反差", "洩底", "語域": [格 id…]}——rules.contrast.cells（字面 → 格 id）有才填，沒有＝全 []；分數算法不變。
+#   反差＝決定分數的那兩個字面（位置最前的否認、它之後照表序第一個讓步）；洩底＝提到她的旁白裡出現的洩底字；語域＝她台詞裡的口癖、本階稱呼、OOC 字面、NG 標記（styles.ng_marks）。
 # 純函數：不寫檔、不用 stack；同一份 text＋rules 永遠同一個結果。規則只從工作區根的 rules.json 讀（要換規則＝叫的人 --ws 換工作區）。
 # 錯：stderr 與 stdout 各一行「lint: 代號 原因」、退 1——ArgumentsBad（stdin 不是 JSON、沒有 text 字串）、RulesMissing、RulesBad。
 import json, os, re, sys
@@ -121,27 +123,49 @@ tier1 = max(0, tier1)
 
 
 def contrast_dim():
-    """反差（round4 § 1.3）：女角台詞（依序接起來）有否認標記＝0.5，讓步標記出現在第一個否認之後＝再 0.5；只有讓步、或順序反＝不加"""
+    """反差（round4 § 1.3）：女角台詞（依序接起來）有否認標記＝0.5，讓步標記出現在第一個否認之後＝再 0.5；只有讓步、或順序反＝不加。
+    回 (值, 決定它的字面)"""
     q = "\n".join(said.get(contrast.get("who"), []))
-    at = [q.find(w) for w in contrast.get("deny", []) if w and w in q]
+    at = [(q.find(w), i, w) for i, w in enumerate(contrast.get("deny", [])) if w and w in q]
     if not at:
-        return 0.0
-    first = min(at)
-    return 1.0 if any(w and q.find(w, first + 1) > first for w in contrast.get("yield", [])) else 0.5
+        return 0.0, []
+    first, _, dw = min(at)
+    yw = next((w for w in contrast.get("yield", []) if w and q.find(w, first + 1) > first), None)
+    return (1.0, [dw, yw]) if yw else (0.5, [dw])
 
 
 def reveal_dim():
-    """洩底（只有 scene）：旁白行提到女角且有洩底詞＝1；有旁白但沒洩底＝0.5；沒旁白＝0"""
+    """洩底（只有 scene）：旁白行提到女角且有洩底詞＝1；有旁白但沒洩底＝0.5；沒旁白＝0。回 (值, 命中的洩底字)"""
     narr = [l for l in lines if NARRATION.match(l)]
     if not narr:
-        return 0.0
+        return 0.0, []
     names = contrast.get("names", [])
-    hit_ = any(any(n in l for n in names) and any(w in l for w in contrast.get("reveal", [])) for l in narr)
-    return 1.0 if hit_ else 0.5
+    got = [w for w in contrast.get("reveal", []) if any(any(n in l for n in names) and w in l for l in narr)]
+    return (1.0 if got else 0.5), got
 
 
-dims = {"反差": contrast_dim() if contrast and switches.get("contrast_order", True) else None,
-        "洩底": reveal_dim() if contrast and mode == "scene" and switches.get("reveal", True) else None,
-        "語域": tier1 / 2}
-print(json.dumps({"pass": not tier0, "tier0": tier0, "tier1": tier1, "tier1_notes": notes, "dims": dims,
+def ids(kind, words):
+    """字面 → 格 id（rules.contrast.cells 的那一類；對不到的不列）"""
+    table = (contrast.get("cells") or {}).get(kind) or {}
+    return [table[w] for w in words if w in table]
+
+
+hits = {"反差": [], "洩底": [], "語域": []}
+dims = {"反差": None, "洩底": None, "語域": tier1 / 2}
+if contrast and switches.get("contrast_order", True):
+    dims["反差"], ws = contrast_dim()
+    hits["反差"] = ids("deny", ws[:1]) + ids("yield", ws[1:])
+if contrast and mode == "scene" and switches.get("reveal", True):
+    dims["洩底"], ws = reveal_dim()
+    hits["洩底"] = ids("reveal", ws)
+if contrast.get("cells"):
+    mine = "\n".join(said.get(contrast.get("who"), []))
+    reg = ids("markers", [w for w in (contrast["cells"].get("markers") or {}) if w in mine])
+    reg += ids("calls", [w for w in (contrast["cells"].get("calls") or {}) if w in mine])
+    reg += ids("ooc", ooc)
+    if ng and contrast["cells"].get("ng_marks"):
+        reg.append(contrast["cells"]["ng_marks"])
+    hits["語域"] = reg
+hits = {k: sorted(set(v)) for k, v in hits.items()}
+print(json.dumps({"pass": not tier0, "tier0": tier0, "tier1": tier1, "tier1_notes": notes, "dims": dims, "hits": hits,
                   "bonus": [w for w in bonus_words if w in text], "counter_lines": len(lines)}, ensure_ascii=False))

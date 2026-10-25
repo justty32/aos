@@ -1,10 +1,5 @@
 {"mode": "scene",
- "place": "教室",
- "cast": ["佐伯悠", "宮澤柚葉"],
- "event": "文化祭閉幕後的黃昏教室收攤：柚葉撕下攤位海報，嘴上說要丟，手卻把它折得整整齊齊",
+ "scene": "closeup",
  "detail": "poster",
- "season": "十月", "time": "黃昏",
- "intent": "餘溫",
- "rank": 2,
  "min_lines": 5, "max_lines": 10,
  "drafts": 3}

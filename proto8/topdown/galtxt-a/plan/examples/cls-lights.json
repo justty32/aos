@@ -1,10 +1,5 @@
 {"mode": "scene",
- "place": "教室",
- "cast": ["佐伯悠", "宮澤柚葉"],
- "event": "文化祭閉幕後的黃昏教室收攤：收完要關燈，柚葉按了開關，卻站在窗邊不走",
+ "scene": "closeup",
  "detail": "lights",
- "season": "十月", "time": "黃昏",
- "intent": "餘溫",
- "rank": 2,
  "min_lines": 5, "max_lines": 10,
  "drafts": 3}

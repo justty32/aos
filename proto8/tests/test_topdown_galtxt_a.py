@@ -2,7 +2,7 @@
 
 規劃：proto8/topdown/galtxt-a/plan/round1.md § 6.3；第二輪收攏（round2-collapse.md § 4 第 8 步）只改路徑與讀法、斷言不改，另加 collapse 與 metatable --suggest 的測試；
 第三輪（round3.md § 11 的 1～11）加 Round3T：傲嬌與 Q16、選路、writer-sol、假腦技能表、rate、optimize、整條訓練、回滾、預算、M7（會寫樹的都在拷貝上跑）。全部離線（假腦）；連真模型的那個（test_real_model）localhost:4000 連不上就 skip。"""
-import json, os, shutil, statistics, subprocess, tempfile, unittest, urllib.request
+import json, os, shutil, statistics, subprocess, sys, tempfile, unittest, urllib.request
 from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()
@@ -86,7 +86,8 @@ class T(unittest.TestCase):
         second = (G / "tools" / "lint" / "_entry").read_text(encoding="utf-8").splitlines()[1]
         self.assertTrue(second.startswith("# lint - "), second)              # lib/README 契約：第二行 NAME
         for p in (G / "data").rglob("*.json"):
-            self.assertIn("source", json.loads(p.read_text(encoding="utf-8")), p)   # 每張表標出處
+            js = json.loads(p.read_text(encoding="utf-8"))
+            self.assertTrue("source" in js or "source" in (js.get("_metainfo") or {}), p)   # 每張表標出處（格檔放在檔內 _metainfo）
 
     # 2. 場景模式
     def test_scene(self):
@@ -1179,6 +1180,7 @@ class Round4T(unittest.TestCase):
             self.assertEqual((rows[0]["question"], rows[0]["why"], rows[0]["brief_key"]),
                              ("cls-poster", "TemplateMissing", {"mode": "scene", "detail": "poster"}))
             self.assertIn("宮澤柚葉：「", rows[0]["output"])
+            self.assertEqual(rows[0]["cells"], ["scene.closeup.detail.poster"])          # 步驟 3b：缺的那格
         ws = self.fresh("ws-ribbon")
         self.put("cls-ribbon.json", ws)
         r = self.galtxt(g, ws=ws)
@@ -1305,9 +1307,11 @@ class Round4T(unittest.TestCase):
         frozen = {k for k in before if os.path.basename(k) in ("_metainfo", "fsm.json", "loop.json", "dims.json")}
         self.assertTrue(frozen and not (frozen & changed), frozen & changed)
         allowed = {"ratings.json", "stage.json", "grad.json", "rollup.json", "human.json", "hard.jsonl", "log.jsonl",
-                   "templates.json", "samples.json", "route.json", "policy.json"}
+                   "templates.json", "templates.distilled.json", "samples.json", "route.json", "policy.json"}
         self.assertEqual({k for k in changed if os.path.basename(k) not in allowed}, set())
         self.assertTrue({"rollup.json", "writer/rollup.json", "grader/rollup.json"} <= changed)    # rate／verify 叫了 rollup --up
+        authored = {k for k in before if k.startswith(("data/cast/", "data/place/", "data/scene/", "data/style/")) or k == "data/templates.json"}
+        self.assertTrue(len(authored) >= 5 and not (authored & changed), authored & changed)       # 3b-8：人寫的格檔訓練前後 bytes 不變
         for k in ("writer/tools/beat/rollup.json", "tools/lint/rollup.json", "train/optimize/rollup.json"):
             self.assertNotIn(k, changed)                                                      # 不在 --up 路上的子樹 bytes 不變
         root = jread(g / "rollup.json")
@@ -1339,8 +1343,267 @@ class Round4T(unittest.TestCase):
         self.assertEqual([(x["path"], x["rule"], x["action"]) for x in rows], [("tbl", "N-4（原 B-3）", "不縮")])
         self.assertIn("N-4", run(METATABLE, "--suggest", str(t)).stdout)
 
+    # ---- 步驟 3b：設定拆成格（plan/round4-data.md § 5）----
+    def brief_of(self, g, example, task=None, tag="b"):
+        """在樹 g 上只跑 brief 一格；回 (退出碼, brief.json bytes, rules.json bytes, stderr)"""
+        ws = self.fresh("%s-%s-%d" % (tag, example, len(os.listdir(self.tmp))))
+        jwrite(ws / "new" / example, task if task is not None else jread(EXAMPLES / example))
+        st = ws / ".stack"
+        st.mkdir()
+        r = run(EXEC, str(g / "fsm.json") + "#/states/brief/exec", env={"AOS_WS": str(ws), "AOS_STACK": str(st) + "/"})
+        rd = lambda n: (st / n).read_bytes() if (st / n).exists() else None   # noqa: E731
+        return r.returncode, rd("brief.json"), rd("rules.json"), r.stderr
+
+    def test_cells_resolve(self):
+        """3b-1：id → (檔, pointer, 值)；expand 的旗標；不存在＝CellMissing；檔長成資料夾 id 不變、brief 產物 bytes 不變"""
+        self.assertEqual(CELLS.resolve("cast.yuzu.tic.03"), (str(G / "data" / "cast" / "yuzu.json"), "/tic/03", {"text": "才沒"}))
+        self.assertEqual(CELLS.resolve("styles.ng_marks")[0], str(G / "data" / "styles.json"))       # 第一段就是 data/ 根下的檔
+        self.assertEqual(CELLS.resolve("tpl.generic.open.01")[0], str(G / "data" / "templates.json"))
+        with self.assertRaises(CELLS.CellMissing):
+            CELLS.resolve("cast.yuzu.tic.99")
+        with self.assertRaises(CELLS.CellMissing):
+            CELLS.resolve("cast.nobody.tic.01")
+        r = run("python3", str(G / "cells.py"), "get", "cast.yuzu.nope")
+        self.assertEqual((r.returncode, r.stderr.count("\n")), (1, 1))
+        self.assertTrue(r.stderr.startswith("cells: CellMissing"), r.stderr)
+        g = tree_copy(self.tmp / "t")
+        data = str(g / "data")
+        yz = jread(g / "data" / "cast" / "yuzu.json")
+        self.assertEqual(len(CELLS.expand("cast.yuzu.gesture.*[reveal]", data)), 5)
+        yz["gesture"]["05"]["reveal"] = False
+        jwrite(g / "data" / "cast" / "yuzu.json", yz)
+        self.assertNotIn("cast.yuzu.gesture.05", CELLS.expand("cast.yuzu.gesture.*[reveal]", data))  # 只回 reveal 為真的
+        self.assertIn("cast.yuzu.gesture.05", CELLS.expand("cast.yuzu.gesture.*", data))
+        yz["gesture"]["05"]["reveal"] = True
+        jwrite(g / "data" / "cast" / "yuzu.json", yz)
+        before = {ex: self.brief_of(g, ex) for ex in ("Q16.json", "cls-ribbon.json")}
+        grown = g / "data" / "cast" / "yuzu"                                  # 長成資料夾：一個頂層 key 一個 <key>.json
+        for k, v in yz.items():
+            jwrite(grown / (k if k == "_metainfo" else k + ".json"), v)
+        (g / "data" / "cast" / "yuzu.json").unlink()                          # 在暫存拷貝裡
+        self.assertEqual(CELLS.resolve("cast.yuzu.tic.03", data), (str(grown / "tic.json"), "/03", {"text": "才沒"}))
+        for ex, want in before.items():
+            got = self.brief_of(g, ex)
+            self.assertEqual(got[0], 0, got[3])
+            self.assertEqual(got[1:3], want[1:3], ex)
+
+    def old_tree(self):
+        """步驟 3b 之前那一版的整棵樹（git archive），放成可以跑的樹（lib 指回真的）；拿不到就 skip"""
+        t = self.tmp / "old"
+        t.mkdir()
+        tar = t / "old.tar"
+        r = subprocess.run(["git", "-C", str(ROOT), "archive", "-o", str(tar), BEFORE_3B, "topdown/galtxt-a"], capture_output=True, text=True)
+        if r.returncode != 0:
+            self.skipTest("拿不到 3b 前那一版（%s）：%s" % (BEFORE_3B, r.stderr.strip()))
+        (t / "proto8").mkdir()
+        subprocess.run(["tar", "xf", str(tar), "-C", str(t / "proto8")], check=True)
+        os.symlink(ROOT / "lib", t / "proto8" / "lib")
+        return t / "proto8" / "topdown" / "galtxt-a"
+
+    def test_cells_equivalent(self):
+        """3b-2：晴子、Q01 的 brief／rules bytes 不變；Q16、cls 的 contrast 集合相同、每份 total 相同；cast.json 沒有第二份口癖"""
+        old = self.old_tree()
+        for ex in ("Q01.json", "scene.json"):
+            a, b = self.brief_of(old, ex, tag="o"), self.brief_of(G, ex, tag="n")
+            self.assertEqual(a[0], 0, a[3])
+            self.assertEqual(a[1:3], b[1:3], ex)
+        old_ex = old / "plan" / "examples"
+        for ex in ("Q16.json", "cls-ribbon.json", "cls-poster.json", "cls-lights.json"):
+            a, b = self.brief_of(old, ex, jread(old_ex / ex), tag="o"), self.brief_of(G, ex, tag="n")
+            self.assertEqual(b[0], 0, b[3])
+            ra, rb = json.loads(a[2]), json.loads(b[2])
+            for k in ("deny", "yield", "cover", "reveal", "ooc"):
+                self.assertEqual(set(ra["contrast"][k]), set(rb["contrast"][k]), (ex, k))
+            ba, bb = json.loads(a[1]), json.loads(b[1])
+            if ex.startswith("cls"):
+                self.assertEqual(a[1], b[1], ex)                                   # event 渲染得一字不差
+            else:
+                ba.pop("speaker_note"), bb.pop("speaker_note")                     # 挖空題的說話者設定改從格渲染（規劃內）
+                self.assertEqual(ba, bb)
+        for ex in ("Q01.json", "scene.json", "Q16.json", "cls-ribbon.json"):
+            got = []
+            for g, src in ((old, old_ex), (G, EXAMPLES)):
+                ws = self.fresh("eq-%s-%d" % (ex, len(got)))
+                jwrite(ws / "new" / ex, jread(src / ex))
+                r = self.galtxt(g, ws=ws)
+                self.assertEqual(r.returncode, 0, r.stderr)
+                got.append([d["total"] for d in jread(ws / "out" / ex[:-5] / "score.json")["drafts"]])
+            self.assertEqual(got[0], got[1], ex)
+        cast = (G / "data" / "cast.json").read_text(encoding="utf-8")
+        self.assertNotIn("哼", cast)
+        self.assertEqual((G / "data" / "cast" / "yuzu.json").read_text(encoding="utf-8").count('"哼"'), 1)
+
+    def test_lint_hits(self):
+        """3b-3：hits 指到格（反差＝決定分數的那兩格）；每個 hit 解得到、字面在輸入裡；沒 cells 表＝全 []、分數不變"""
+        fill = self.lint_rules("Q16.json")
+        line = "宮澤柚葉：「哼，才沒有。不過……也不是不能接受」"
+        o = self.lint_dims(fill, line)
+        self.assertEqual((o["hits"]["反差"], o["dims"]["反差"]), (["style.tsun.deny.03", "style.tsun.yield.01"], 1.0))
+        self.assertEqual(o["hits"]["洩底"], [])
+        self.assertIn("cast.yuzu.tic.01", o["hits"]["語域"])
+        scene = self.lint_rules("cls-ribbon.json")
+        text = "\n".join(["（宮澤柚葉別過臉，耳根有點紅。）", "主角：「宮澤，那個要丟嗎？」", line.replace("」", "。」"), "主角：「好。」", "宮澤柚葉：「真是的。」"])
+        o2 = self.lint_dims(scene, text)
+        self.assertIn("cast.yuzu.gesture.02", o2["hits"]["洩底"])
+        for out, src in ((o, line), (o2, text)):
+            for ids in out["hits"].values():
+                for i in ids:
+                    v = CELLS.resolve(i)[2]
+                    ms = v if isinstance(v, list) else [CELLS.marker(v)]
+                    self.assertTrue(any(m in src for m in ms), (i, ms))
+        bare = dict(fill, contrast={k: v for k, v in fill["contrast"].items() if k != "cells"})
+        o3 = self.lint_dims(bare, line)
+        self.assertEqual(o3["hits"], {"反差": [], "洩底": [], "語域": []})
+        self.assertEqual(o3["dims"], o["dims"])
+
+    def test_event_render(self):
+        """3b-4：場景題沒寫 event＝從 scene.detail 渲染；寫了＝照抄；detail 不在 scene＝DetailMissing"""
+        want = {"cls-ribbon.json": "文化祭閉幕後的黃昏教室收攤：柚葉嘴上嫌麻煩地拆彩帶，卻偷偷捲了一段塞進書包",
+                "cls-lights.json": "文化祭閉幕後的黃昏教室收攤：收完要關燈，柚葉按了開關，卻站在窗邊不走"}
+        for ex, ev in want.items():
+            self.assertNotIn("event", jread(EXAMPLES / ex))
+            code, b, _, err = self.brief_of(G, ex)
+            self.assertEqual(code, 0, err)
+            self.assertEqual(json.loads(b)["event"], ev)
+        code, b, _, err = self.brief_of(G, "cls-ribbon.json", dict(jread(EXAMPLES / "cls-ribbon.json"), event="人寫的事件"))
+        self.assertEqual(json.loads(b)["event"], "人寫的事件")
+        code, b, _, err = self.brief_of(G, "cls-ribbon.json", dict(jread(EXAMPLES / "cls-ribbon.json"), detail="nope"))
+        self.assertEqual((code, err.count("\n")), (1, 1))
+        self.assertTrue(err.startswith("galtxt-a brief: DetailMissing"), err)
+
+    def judge_tasks(self, ws):
+        return [p.read_text(encoding="utf-8") for p in sorted((ws / ".stack" / "judge" / "runs").glob("*/ws/*/*.txt")) if p.parent.name != "out"]
+
+    def test_rubric_render(self):
+        """3b-5：評審題目的「人物設定」從 dims.json 像柚葉的格渲染；改格→題目跟著變、system.txt 不變、假腦分數不變"""
+        system = (G / "grader" / "system.txt").read_text(encoding="utf-8")
+        self.assertNotIn("嘴硬心軟", system)
+        traits = [CELLS.text(CELLS.resolve(i)[2]) for i in CELLS.expand("cast.yuzu.trait.*")]
+        self.assertEqual(len(traits), 3)
+        self.put("Q16.json")
+        r = self.galtxt()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        tasks = self.judge_tasks(self.ws)
+        self.assertTrue(tasks)
+        for t in tasks:
+            self.assertTrue(all(x in t for x in traits), t)
+        g = tree_copy(self.tmp / "t")
+        yz = jread(g / "data" / "cast" / "yuzu.json")
+        yz["trait"]["01"]["text"] = "說話像砂紙"
+        jwrite(g / "data" / "cast" / "yuzu.json", yz)
+        ws = self.fresh("ws-trait")
+        self.put("Q16.json", ws)
+        r = self.galtxt(g, ws=ws)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        for t in self.judge_tasks(ws):
+            self.assertIn("說話像砂紙", t)
+            self.assertNotIn("嘴硬心軟", t.split("前後文")[0].split("人物設定")[1])
+        self.assertEqual((g / "grader" / "system.txt").read_bytes(), (G / "grader" / "system.txt").read_bytes())
+        self.assertEqual([v["scores"] for v in jread(ws / ".stack" / "judge.json").values()],
+                         [v["scores"] for v in jread(self.ws / ".stack" / "judge.json").values()])
+
+    def test_template_cells(self):
+        """3b-6：模板格都有 text、uses 解得到；{prop} 從場景格來；poster 難例指到缺的格；distilled 接在後面；Q16 正解不在任何格"""
+        for f, pre in (("templates.json", "tpl"), ("templates.distilled.json", "tpld")):
+            js = jread(G / "data" / f)
+            for i, c in CELLS.ids(js, pre).items():
+                self.assertIsInstance(c["text"], str, i)
+                for u in c.get("uses", []):
+                    CELLS.resolve(u)
+            self.assertEqual(js["_metainfo"]["counter_cells"], CELLS.count_cells(js), f)
+        g = self.staged("program")
+        sc = jread(g / "data" / "scene" / "closeup.json")
+        sc["prop"]["ribbon"]["text"] = "紙鶴串"
+        jwrite(g / "data" / "scene" / "closeup.json", sc)
+        ws = self.fresh("ws-rb")
+        self.put("cls-ribbon.json", ws)
+        r = self.galtxt(g, ws=ws)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("紙鶴串", (ws / "out" / "cls-ribbon" / "answer.txt").read_text(encoding="utf-8"))
+        ws = self.fresh("ws-po")
+        self.put("cls-poster.json", ws)
+        r = self.galtxt(g, ws=ws)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        row = jl(g / "writer" / "hard.jsonl")[0]
+        self.assertEqual(row["cells"], ["scene.closeup.detail.poster"])
+        self.assertTrue(row["cells_hit"] and all(CELLS.resolve(i, str(g / "data")) for i in row["cells_hit"]), row)
+        self.assertTrue(row["tpl"] and all(i.startswith("tpl.generic.") for i in row["tpl"]), row)
+        dd = jread(g / "data" / "templates.distilled.json")                      # distill 追加 poster 的否認句 → 不再是難例、用到 tpld 格
+        dd["by_detail"] = {"poster": {"deny": {"01": {"text": "才不是捨不得這張海報", "for": "scene.closeup.detail.poster",
+                                                      "teacher": "test", "since": 1, "by": "distill"}}}}
+        jwrite(g / "data" / "templates.distilled.json", dd)
+        (g / "writer" / "hard.jsonl").unlink()
+        ws = self.fresh("ws-po2")
+        self.put("cls-poster.json", ws)
+        r = self.galtxt(g, ws=ws)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("才不是捨不得這張海報", (ws / "out" / "cls-poster" / "answer.txt").read_text(encoding="utf-8"))
+        self.assertFalse((g / "writer" / "hard.jsonl").exists())
+        q = jread(G / "data" / "bench" / "Q16.json")
+        for p in (G / "data").rglob("*.json"):
+            if p.name == "Q16.json":
+                continue
+            body = p.read_text(encoding="utf-8")
+            for ans in (q["answer"], q["answer_min"]):
+                self.assertNotIn(ans.split("：", 1)[1], body, p)
+
+    def test_cell_hits_rate(self):
+        """3b-7：score.json 每份有 hits；rate 彙成 cell_hits（手算）；dims.json 每維的 cells 都 expand 得到"""
+        self.put("cls-ribbon.json")
+        r = self.galtxt()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        for d in jread(self.ws / "out" / "cls-ribbon" / "score.json")["drafts"]:
+            self.assertEqual(set(d["hits"]), {"反差", "洩底", "語域"})
+        prof = jread(G / "data" / "dims.json")["profiles"]["傲嬌"]
+        for dim, spec in prof.items():
+            for p in spec["cells"]:
+                self.assertTrue(CELLS.expand(p), (dim, p))
+        self.assertEqual((prof["文筆"]["cells"], prof["承接"]["cells"]), ([], []))
+        g = tree_copy(self.tmp / "t")
+        jwrite(g / "human" / "samples.json", [])
+        st = self.tmp / "st"
+        dims = {"反差": 1.0, "像柚葉": 0.667, "承接": 0.667, "文筆": 0.667, "語域": 0.5, "洩底": 0.5, "護欄": 1.0}
+        hits = [{"反差": ["style.tsun.deny.03", "style.tsun.yield.01"], "洩底": ["cast.yuzu.gesture.02"], "語域": []},
+                {"反差": ["style.tsun.deny.03"], "洩底": [], "語域": ["cast.yuzu.tic.01"]},
+                {"反差": ["style.tsun.deny.01"], "洩底": [], "語域": []}]
+        drafts = [{"n": i + 1, "tier0": [] if i < 2 else ["FormatBad"], "tier1": 1, "total": 3.5 if i < 2 else 0,
+                   "dims": dict(dims, 護欄=1.0 if i < 2 else 0.0), "hits": h} for i, h in enumerate(hits)]
+        jwrite(st / "epochs" / "001" / "runs" / "a" / "ws" / "out" / "a" / "score.json",
+               {"name": "a", "writer": "writer", "style": "傲嬌", "dims": {"多樣性": 0.3}, "drafts": drafts})
+        r = run("python3", str(g / "train" / "rate.py"), env={"AOS_STACK": str(st) + "/", "AOS_WS": str(self.ws)}, cwd=g / "train")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(jread(g / "writer" / "ratings.json")["style:傲嬌"]["cell_hits"],     # 第三份沒過護欄＝不算
+                         {"cast.yuzu.gesture.02": 1, "cast.yuzu.tic.01": 1, "style.tsun.deny.03": 2, "style.tsun.yield.01": 1})
+
+    def test_cells_metainfo(self):
+        """3b-8：data/_metainfo 列出每個格檔；每個格檔 counter_cells＝程式數的；metatable 行數不因多一格而變"""
+        meta = jread(G / "data" / "_metainfo")
+        files = ("cast/yuzu.json", "style/tsun.json", "place/classroom.json", "scene/closeup.json", "templates.json", "templates.distilled.json")
+        total = 0
+        for f in files:
+            self.assertIn(f.split("/")[0] + ("/" if "/" in f else ""), meta["children"], f)
+            js = jread(G / "data" / f)
+            self.assertEqual(js["_metainfo"]["counter_cells"], CELLS.count_cells(js), f)
+            per = js["_metainfo"].get("cells")
+            if per:
+                self.assertEqual(per, {k: CELLS.count_cells(js[k]) for k in per}, f)
+            total += js["_metainfo"]["counter_cells"]
+        self.assertEqual(meta["counter_cells"], total)
+        self.assertIn("shared_write", meta["fs_needs"])
+        g = tree_copy(self.tmp / "t")
+        rows = lambda: len(json.loads(run(METATABLE, "--json", str(g)).stdout)["nodes"])   # noqa: E731
+        n = rows()
+        yz = jread(g / "data" / "cast" / "yuzu.json")
+        yz["tic"]["06"] = {"text": "笨蛋"}
+        jwrite(g / "data" / "cast" / "yuzu.json", yz)
+        self.assertEqual(rows(), n)
+
 
 ROLLUP = str(G / "meta" / "rollup" / "_entry")
+BEFORE_3B = "970b8e2c"          # 步驟 3b（設定拆成格）之前那一版
+sys.path.insert(0, str(G))
+sys.dont_write_bytecode = True  # 樹裡不留 __pycache__
+import cells as CELLS  # noqa: E402
 
 
 if __name__ == "__main__":

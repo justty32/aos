@@ -7,7 +7,7 @@
 import json, sys
 
 SLOTS = ("deny", "yield", "cover")
-DEFAULT = {"deny": "才沒有", "yield": "也不是不行", "cover": "真是的"}
+DEFAULT = {"deny": "才沒有", "yield": "也不是不行", "cover": "真是的"}   # 退路，不是資料：真的候選是 data/templates.json 的格（style/tsun.json 的 deny／yield／cover 是 lint 的字面）
 TRIM = "。，、！？!?…．.,~～ "
 
 

@@ -1,0 +1,1 @@
+{"summary": "風格語言表一型一檔（否認／讓步／遮掩／洩底字／OOC…一字一格）；styles.json 裡那型留 {\"$ref\"}；讀者：brief、writer/compose.py", "kind": "data", "fs_needs": ["git_tracked", "isolation"]}

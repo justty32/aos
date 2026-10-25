@@ -1,0 +1,15 @@
+{
+ "source": "train/optimize 的 distill 追加的模板句（round4-data.md § 2.2、round4-selfopt.md）：形狀同 templates.json 的 by_detail，每格多 for（scene.<場>.detail.<detail>）、teacher、since（epoch）、by: distill；id 前綴 tpld.；人寫的 templates.json 訓練中不動、在 deny 清單裡。compose 把這裡的格接在同槽人寫的格後面",
+ "_metainfo": {
+  "summary": "distill 追加的模板句（data/ 裡唯一有程式寫者的檔）",
+  "kind": "data",
+  "counter_cells": 0,
+  "writers": [
+   "train/optimize distill"
+  ],
+  "readers": [
+   "writer/compose.py"
+  ]
+ },
+ "by_detail": {}
+}

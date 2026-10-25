@@ -9,8 +9,8 @@
 # 錯：stderr 與 stdout 各一行「voice: 代號 原因」、退 1——ArgumentsBad（stdin 不是 JSON 物件）。
 import json, sys
 
-DEFAULT_TICS = ["哼", "才不是", "才沒", "真是的", "隨便你"]
-GENERIC = "哼，真是的。"
+DEFAULT_TICS = ["哼", "才不是", "才沒", "真是的", "隨便你"]   # 退路，不是資料：口癖的真源是 data/cast/yuzu.json 的 tic.*（compose 一律把 tics 傳進來）
+GENERIC = "哼，真是的。"                                      # 退路，不是資料
 
 
 def bad(code, reason):

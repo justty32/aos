@@ -1,0 +1,1 @@
+{"summary": "場景條件＝背景故事一場一檔（地點、卡司、時間、氛圍、狀態、道具、小動作開關）；題目寫 scene＋detail 就由 brief 渲染；讀者：brief、writer/compose.py", "kind": "data", "fs_needs": ["git_tracked", "isolation"]}
