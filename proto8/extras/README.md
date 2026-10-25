@@ -2,7 +2,7 @@
 
 ← [proto8](../README.md)
 
-aos 主體（[impls/](../impls/README.md) 的四支 C++、[bin/](../bin/README.md) 的 aos-tick、[lib/](../lib/README.md) 工具庫）以外，**拿來用 aos、寫 aos、關住 aos 的周邊命令列與外掛**。都是 10-24 一天的嘗試（使用者「我隨便說，你隨便做，反正只是嘗試」），原本開在 proto8 頂層，2026-10-26 整理結構時收進這裡（只搬位置，內容與行為不變）。
+aos 主體（[impls/](../impls/README.md) 的四支 C++、[bin/](../bin/README.md) 的 aos-tick、[lib/](../lib/README.md) 工具庫）以外，**拿來用 aos、寫 aos、關住 aos 的周邊命令列與外掛**。都是 10-24 一天的嘗試（使用者「我隨便說，你隨便做，反正只是嘗試」）。
 
 | 資料夾 | 是什麼 | 測試 |
 |---|---|---|

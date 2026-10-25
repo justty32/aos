@@ -97,7 +97,7 @@
 ## fsm
 
 一句：`aos-fsm fsm.json`＝**一次只跑一格**：讀 `$AOS_STACK/state.txt`（沒有＝`start`），跑那格，格退 0 才把狀態換成 `next`、以格的碼結束。外面靠 loop 一次一次驅動（N-53）。
-範例：`{"_entry": ["aos-fsm", {"$env": "AOS_CF"}], "start": "idle", "states": {"idle": {"exec": "idle", "next": "think"}, "think": {"exec": {"argv": ["python3", "brain.py"]}, "next": "idle"}}}`；每次在 `$AOS_STACK/trace.jsonl` 追加一行 `{"started_at","state","code","signal","elapsed_ms"}`（`started_at`＝這格開始跑的時間，10-25 前叫 `at`）。
+範例：`{"_entry": ["aos-fsm", {"$env": "AOS_CF"}], "start": "idle", "states": {"idle": {"exec": "idle", "next": "think"}, "think": {"exec": {"argv": ["python3", "brain.py"]}, "next": "idle"}}}`；每次在 `$AOS_STACK/trace.jsonl` 追加一行 `{"started_at","state","code","signal","elapsed_ms"}`（`started_at`＝這格開始跑的時間）。
 常見錯：每一格都要有 `next`（開跑時查整張表，缺了＝`CfgBad`）；格失敗時 state 不動、下一次重跑同一格（P-20）；格之間傳東西寫 stack 裡的檔、不走 stdout（P-10）。
 出處：N-36、N-38、N-41、P-07～P-10、impls/aos-fsm。
 
@@ -131,7 +131,7 @@
 
 ## inline
 
-一句：loop／fsm／daemon 的 `exec` 可以**直接放單子物件**（10-24），由它們在**自己行程內**跑（同 aos-exec 跑單子那套：`timeout_ms`、訊號、結束碼）；跑的期間 `AOS_CF`＝寫著它的設定檔、`AOS_CD`＝那份檔的資料夾（相對路徑的基準）、`AOS_CO`＝`/exec` 或 `/states/<名>/exec`；不讀 `.env`；`AOS_WS`／`AOS_STACK` 照外層的。
+一句：loop／fsm／daemon 的 `exec` 可以**直接放單子物件**，由它們在**自己行程內**跑（同 aos-exec 跑單子那套：`timeout_ms`、訊號、結束碼）；跑的期間 `AOS_CF`＝寫著它的設定檔、`AOS_CD`＝那份檔的資料夾（相對路徑的基準）、`AOS_CO`＝`/exec` 或 `/states/<名>/exec`；不讀 `.env`；`AOS_WS`／`AOS_STACK` 照外層的。
 範例：fsm 格 `"think": {"exec": {"argv": ["python3", "brain.py"], "timeout_ms": 120000}, "next": "act"}`。
 常見錯：單子壞（`argv` 不對、指示詞解不開）＝loop／fsm 自己的錯、退 1；舊寫法 `"exec": "fsm.json#/states/think/body"` 也還能用（普通的 aos-exec 目標）。
 出處：thinking 2026-10-24-exec-relative、P-06、P-07、P-22。
@@ -159,7 +159,7 @@ $AOS_STACK  state.txt、current.txt、trace.jsonl、history.jsonl（一行一則
 
 一句：給腦叫的工具＝`tools/<名>/` 資料夾程式，裡面多一份 `tool.json`（OpenAI function 物件去掉 `name`：`{"description", "parameters"}`），**工具名＝資料夾名**；模型給的 `arguments` 從 stdin 進、stdout 整段是結果。
 範例：`tools/math/tool.json`＝`{"description": "算一個算術式子", "parameters": {"type": "object", "properties": {"expr": {"type": "string"}}, "required": ["expr"]}}`。
-常見錯：在 `tool.json` 寫 `name`（不用，程式填）；沒 `tool.json` 的資料夾不算工具；工具退非 0：agent-dan 範本把 stdout 那行加上結束碼回給腦、不停（10-24 起；所以錯要印在 stdout，腦才看得到原因）。
+常見錯：在 `tool.json` 寫 `name`（不用，程式填）；沒 `tool.json` 的資料夾不算工具；工具退非 0：agent-dan 範本把 stdout 那行加上結束碼回給腦、不停（所以錯要印在 stdout，腦才看得到原因）。
 出處：P-41、N-50、C-61。
 
 ## heap

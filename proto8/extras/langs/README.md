@@ -15,4 +15,4 @@
 `aos-lua build 原始檔.lua 輸出`：原始檔 `return` 一個 table（資料夾就是 table），編成資料夾；`json`、`ls` 只印不寫。lua 5.x、luajit、`nvim -l` 都能跑。
 設計與代定：[thinking 2026-10-24-lua-nvim](../../thinking/2026-10-24-lua-nvim.md)。測試 `proto8/tests/test_lua_aos.py`。
 
-同一份紀錄還做了 nvim 外掛（在 nvim 裡跑 aos、跳到 `檔#/指標`、預覽 Lua 編出的 JSON），放在 [../editors/nvim](../editors/nvim/README.md)。
+nvim 外掛（在 nvim 裡跑 aos、跳到 `檔#/指標`、預覽 Lua 編出的 JSON），放在 [../editors/nvim](../editors/nvim/README.md)。
