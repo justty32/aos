@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+# import - 人評匯入（round4 § 8.3；round3 § 16.3 的長法）：human/ratings.json（網頁回來的）＋human/samples.json → 各棵的 human.json、weigh 的判斷器一致度、human/calibration.json。人手叫（callers 0）。
+# 讀：../ratings.json（陣列，每筆 {id, overall: good|ok|bad, tags, dims, comment, rated_at, team?, round?, pair?}）、../samples.json（rate.py 挑的，id 對得回來才算）、
+#     ../../data/dims.json（人評的維度 → 誰量它：by）、各寫手的 ratings.json（自動評級，calibration 並排用）、../../train/weigh/log.jsonl（判斷器每一步的 choice）。
+# 寫（每格整格覆蓋，重跑結果不變；時間戳取人評裡最晚的 rated_at，不取現在）：
+#   <produced_by>/human.json  "style:<風格>"：val（overall 多數決，平手取較差的；< 3 筆＝none）、counter_ratings、overall 計數、tags 計數、dims 平均、comments、
+#                             by_stage {<scene.stage>: 同形（val、counter_ratings、overall、tags、dims）}——固化前後人怎麼看；
+#   <量那維的子樹>/human.json "dim:<維度>"：人評 dims 跟樣本 auto_scores.dims 同名的那幾維，照 dims.json 的 by 分給量它的那棵（反差→tools/lint、像柚葉／文筆→grader）：
+#                             {agreement＝1 − 平均|人−自動|, bias＝平均(自動−人)（正＝自動給得鬆）, counter_ratings}；
+#   train/weigh/ratings.json "judge:accept" 只補 counter_human_pairs、counter_confirmed、agreement（其餘計數是 verify 的，不動）；train/weigh/human.json "judge:accept" 放每一對的明細；
+#     一對＝同 scene.pair_id 的 agent 與 program 兩筆；人的答案＝評分裡的 pair（A＝program 好、B＝agent 好、差不多；網頁還沒這題時從兩筆 overall 比：good > ok > bad）；
+#     對到 log.jsonl 裡 epoch＝program 那筆 scene.epoch、subtree＝produced_by 的那一步（寫手第一次以 program 跑驗證、判斷器判殼拿掉那步）；
+#     判斷器選 A（收下）＝人說 A 或差不多就算對（規則本來就是「分沒掉就收」），選 B＝人說 B 才算對；
+#   human/calibration.json：自動 vs 人的 val／dims 並排、各維一致度、判斷器一致度、untrusted（agreement < 0.5 且 ≥ 3 筆的維度：優化器不拿它當依據）、判讀（純程式規則）。
+#     門檻、權重、rules.json 都不自動改——calibration 是給人看的。
+# 用法：import（無參數）。stdout 一行摘要。
+# 錯：stderr 一行「import: 代號 原因」——RatingsBad（ratings.json 讀不了、不是陣列、某筆缺 id／overall 或 overall 不是 good／ok／bad）退 1；
+#     SampleUnknown <id>（對不到 samples.json：網頁可能帶舊樣本或別隊的）每筆一行、跳過、退 0。
+import json, os, sys
+
+sys.dont_write_bytecode = True
+HERE = os.path.dirname(os.path.realpath(__file__))          # galtxt-a/human/import
+HUMAN = os.path.dirname(HERE)
+ROOT = os.path.dirname(HUMAN)
+RANK = {"good": 2, "ok": 1, "bad": 0}
+UNTRUSTED_BELOW, UNTRUSTED_MIN = 0.5, 3
+
+
+def die(code, reason, rc=1):
+    sys.stderr.write("import: %s %s\n" % (code, reason))
+    sys.exit(rc)
+
+
+def load(p, default=None):
+    try:
+        with open(p, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return default
+    except ValueError as e:
+        die("StateBad", "%s 不是 JSON（%s）" % (os.path.relpath(p, ROOT), e))
+
+
+def save(p, obj):
+    tmp = os.path.join(os.path.dirname(p), "." + os.path.basename(p))      # N-05
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(json.dumps(obj, ensure_ascii=False, indent=1) + "\n")
+    os.replace(tmp, p)
+
+
+def mean(xs):
+    xs = [x for x in xs if isinstance(x, (int, float)) and not isinstance(x, bool)]
+    return round(sum(xs) / len(xs), 3) if xs else None
+
+
+def cell_of(rs):
+    """一群人評 → {val, counter_ratings, overall, tags, dims}"""
+    ov = {k: 0 for k in RANK}
+    tags, dims = {}, {}
+    for r in rs:
+        ov[r["overall"]] += 1
+        for t in r.get("tags") or []:
+            tags[t] = tags.get(t, 0) + 1
+        for k, v in (r.get("dims") or {}).items():
+            dims.setdefault(k, []).append(v)
+    top = max(ov.values())
+    val = "none" if len(rs) < 3 else min((k for k in RANK if ov[k] == top), key=RANK.get)   # 平手取較差的（人嚴一點）
+    return {"val": val, "counter_ratings": len(rs), "overall": ov, "tags": dict(sorted(tags.items())),
+            "dims": {k: mean(v) for k, v in sorted(dims.items())}}
+
+
+try:
+    with open(os.path.join(HUMAN, "ratings.json"), encoding="utf-8") as f:
+        raw = json.load(f)
+except (OSError, ValueError) as e:
+    die("RatingsBad", "human/ratings.json 讀不了（%s）" % e)
+if not isinstance(raw, list):
+    die("RatingsBad", "human/ratings.json 要是陣列")
+for i, r in enumerate(raw):
+    if not isinstance(r, dict) or not isinstance(r.get("id"), str) or r.get("overall") not in RANK:
+        die("RatingsBad", "第 %d 筆缺 id／overall 或 overall 不是 good／ok／bad" % (i + 1))
+samples = load(os.path.join(HUMAN, "samples.json"), [])
+by_id = {s.get("id"): s for s in samples if isinstance(s, dict)} if isinstance(samples, list) else {}
+rated = []                                                    # [(人評, 樣本)]；同 id 多筆＝取 rated_at 最晚的（網頁改評）
+last = {}
+for r in raw:
+    if r["id"] not in by_id:
+        sys.stderr.write("import: SampleUnknown %s\n" % r["id"])
+        continue
+    if r["id"] not in last or str(r.get("rated_at") or "") >= str(last[r["id"]].get("rated_at") or ""):
+        last[r["id"]] = r
+rated = [(last[k], by_id[k]) for k in sorted(last)]
+at = max((str(r.get("rated_at") or "") for r, _ in rated), default="") or None
+by = "human/import @ human/ratings.json %d 筆" % len(rated)
+profiles = (load(os.path.join(ROOT, "data", "dims.json"), {}) or {}).get("profiles") or {}
+cal = {"source": "human/import（round4 § 8.3）：人評 vs 自動評分並排；給人看——門檻、權重、rules.json 不自動改；untrusted＝agreement < %s 且 ≥ %d 筆的維度，優化器不拿它當依據"
+                 % (UNTRUSTED_BELOW, UNTRUSTED_MIN),
+       "counter_ratings": len(rated), "rated_at": at, "cells": {}, "dims": {}, "judge": None, "untrusted": {}, "notes": []}
+
+# 1. 寫手：style 格＋by_stage
+groups = {}
+for r, s in rated:
+    groups.setdefault((s.get("produced_by"), (s.get("scene") or {}).get("style")), []).append((r, s))
+for (w, style), rs in sorted(groups.items(), key=lambda kv: str(kv[0])):
+    if not isinstance(w, str) or not os.path.isfile(os.path.join(ROOT, w, "_metainfo")):
+        continue
+    cell = cell_of([r for r, _ in rs])
+    cell["comments"] = [r["comment"] for r, _ in rs if r.get("comment")]
+    stages = {}
+    for r, s in rs:
+        stages.setdefault((s.get("scene") or {}).get("stage") or "—", []).append(r)
+    cell["by_stage"] = {k: cell_of(v) for k, v in sorted(stages.items())}
+    cell.update(rated_at=at, rated_by=by)
+    p = os.path.join(ROOT, w, "human.json")
+    h = load(p, {}) or {}
+    h["style:%s" % style] = cell
+    save(p, h)
+    auto = ((load(os.path.join(ROOT, w, "ratings.json"), {}) or {}).get("style:%s" % style)) or {}
+    both = sorted(set(auto.get("dims") or {}) & set(cell["dims"]))
+    side = {"auto": {"val": auto.get("val"), "dims": {k: auto["dims"][k] for k in both}},
+            "human": {"val": cell["val"], "dims": {k: cell["dims"][k] for k in both}, "by_stage": {k: v["val"] for k, v in cell["by_stage"].items()}},
+            "mismatch": [k for k in both if auto["dims"][k] is not None and cell["dims"][k] is not None and abs(auto["dims"][k] - cell["dims"][k]) >= 0.34]}
+    if cell["val"] == "bad" and auto.get("val") == "good":
+        side["read"] = "人 bad、自動 good：評審太鬆"
+    elif cell["val"] == "good" and auto.get("val") == "bad":
+        side["read"] = "人 good、自動 bad：lint 太嚴（看 tags 哪條）"
+    cal["cells"]["%s style:%s" % (w, style)] = side
+    formula = (cell["by_stage"].get("program") or {}).get("tags", {}).get("像套公式", 0)
+    if formula >= 2:
+        cal["notes"].append("%s：program 階被標『像套公式』%d 次——模板太死" % (w, formula))
+
+# 2. 量者的一致度：人評 dims 與樣本 auto_scores.dims 同名的維度，分給 dims.json 裡量它的那棵
+per = {}
+for r, s in rated:
+    prof = profiles.get((s.get("scene") or {}).get("style")) or {}
+    auto = (s.get("auto_scores") or {}).get("dims") or {}
+    for k, hv in (r.get("dims") or {}).items():
+        av, who = auto.get(k), (prof.get(k) or {}).get("by")
+        if who and isinstance(hv, (int, float)) and isinstance(av, (int, float)):
+            per.setdefault((who, k), []).append((av, hv))
+for who in sorted({w for w, _ in per}):
+    p = os.path.join(ROOT, who, "human.json")
+    if not os.path.isdir(os.path.dirname(p)):
+        continue
+    h = load(p, {}) or {}
+    for (w2, k), xs in sorted(per.items()):
+        if w2 != who:
+            continue
+        g = {"agreement": round(1 - sum(abs(a - b) for a, b in xs) / len(xs), 3), "bias": round(sum(a - b for a, b in xs) / len(xs), 3),
+             "counter_ratings": len(xs), "rated_at": at, "rated_by": by}
+        h["dim:%s" % k] = g
+        cal["dims"]["%s dim:%s" % (who, k)] = {kk: g[kk] for kk in ("agreement", "bias", "counter_ratings")}
+        if g["agreement"] < UNTRUSTED_BELOW and g["counter_ratings"] >= UNTRUSTED_MIN:
+            cal["untrusted"]["dim:%s" % k] = {"by": who, "agreement": g["agreement"], "bias": g["bias"], "counter_ratings": g["counter_ratings"]}
+            cal["notes"].append("dim:%s（%s 量）跟人只有 %.2f 一致（%d 筆）：不可信，優化器這維不當依據" % (k, who, g["agreement"], g["counter_ratings"]))
+    save(p, h)
+
+# 3. 判斷器：配對 vs log.jsonl 同一步的 choice
+pairs = {}
+for r, s in rated:
+    sc = s.get("scene") or {}
+    if s.get("why_picked") == "pair-stage" and sc.get("pair_id") and sc.get("stage") in ("agent", "program"):
+        pairs.setdefault(sc["pair_id"], {})[sc["stage"]] = (r, s)
+log = []
+try:
+    with open(os.path.join(ROOT, "train", "weigh", "log.jsonl"), encoding="utf-8") as f:
+        for l in f:
+            try:
+                log.append(json.loads(l))
+            except ValueError:
+                pass
+except FileNotFoundError:
+    pass
+rows = []
+for pid, two in sorted(pairs.items()):
+    if set(two) != {"agent", "program"}:
+        continue
+    (ra, _), (rp, sp) = two["agent"], two["program"]
+    said = rp.get("pair") or ra.get("pair")
+    if said not in ("A", "B", "差不多"):
+        d = RANK[rp["overall"]] - RANK[ra["overall"]]
+        said = "A" if d > 0 else "B" if d < 0 else "差不多"
+    ep = (sp.get("scene") or {}).get("epoch")
+    step = [x for x in log if x.get("epoch") == ep and x.get("subtree") == sp.get("produced_by")]
+    if not step:
+        rows.append({"pair_id": pid, "epoch": ep, "human": said, "choice": None, "confirmed": None})
+        continue
+    choice = step[-1].get("choice")
+    rows.append({"pair_id": pid, "epoch": ep, "action": step[-1].get("action"), "human": said, "choice": choice,
+                 "confirmed": (said in ("A", "差不多")) if choice == "A" else (said == "B")})
+judged = [x for x in rows if x["confirmed"] is not None]
+wp = os.path.join(ROOT, "train", "weigh")
+if rows and os.path.isdir(wp):
+    ok = sum(1 for x in judged if x["confirmed"])
+    agree = round(ok / len(judged), 3) if judged else None
+    wr = load(os.path.join(wp, "ratings.json"), {}) or {}
+    ja = dict(wr.get("judge:accept") or {})
+    ja.update(counter_human_pairs=len(judged), counter_confirmed=ok, agreement=agree, human_rated_at=at)
+    wr["judge:accept"] = ja
+    save(os.path.join(wp, "ratings.json"), wr)
+    wh = load(os.path.join(wp, "human.json"), {}) or {}
+    wh["judge:accept"] = {"pairs": rows, "counter_human_pairs": len(judged), "counter_confirmed": ok, "agreement": agree, "rated_at": at, "rated_by": by}
+    save(os.path.join(wp, "human.json"), wh)
+    cal["judge"] = {"counter_human_pairs": len(judged), "counter_confirmed": ok, "agreement": agree, "pairs": rows}
+    if judged and ok < len(judged):
+        cal["notes"].append("判斷器 %d 對裡 %d 對跟人反著選：看 weigh/human.json 的明細，規則表由人改" % (len(judged), len(judged) - ok))
+
+save(os.path.join(HUMAN, "calibration.json"), cal)
+print("import: %d 筆（跳過 %d）→ %s；untrusted %s；judge %s" % (
+    len(rated), len(raw) - sum(1 for r in raw if r["id"] in by_id), "、".join(sorted("%s/human.json" % w for w, _ in groups)) or "—",
+    "、".join(cal["untrusted"]) or "—", "%s/%s" % (cal["judge"]["counter_confirmed"], cal["judge"]["counter_human_pairs"]) if cal["judge"] else "—"))

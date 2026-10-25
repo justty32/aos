@@ -1,0 +1,7 @@
+{"summary": "人評匯入（round4 § 8.3）：human/ratings.json（網頁回來的）對回 samples.json → 寫手 human.json（style 格＋by_stage）、量者 human.json（dim:* 一致度）、判斷器 judge:accept 一致度、human/calibration.json（並排＋untrusted）；人手叫",
+ "kind": "program", "grow_level": 3, "role": "dev",
+ "time_ms": {"val": 50, "max": 10000}, "resource": "disk",
+ "side_effect": true, "idempotent": true, "deterministic": true, "interrupt": "safe", "parallel": false,
+ "reads": ["tree:../ratings.json", "tree:../samples.json", "tree:../../data/dims.json", "tree:../../writer*/ratings.json", "tree:../../train/weigh/log.jsonl", "tree:../../**/human.json"],
+ "writes": ["tree:../../<produced_by>/human.json", "tree:../../grader/human.json", "tree:../../tools/lint/human.json", "tree:../../train/weigh/ratings.json（judge:accept 只補人評三個鍵）", "tree:../../train/weigh/human.json", "tree:../calibration.json"],
+ "fs_needs": ["git_tracked"], "callers": 0}

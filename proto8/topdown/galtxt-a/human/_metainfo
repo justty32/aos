@@ -1,4 +1,4 @@
-{"summary": "人評（round3 § 16）：送給網頁的樣本與問題、網頁回來的評級；人評只拿來校正自動評分，少用（一次訓練一輪、≤ 6 筆）",
+{"summary": "人評（round3 § 16、round4 § 8）：送給網頁的樣本與問題、網頁回來的評級、匯入程式；人評只拿來校正自動評分（評審、lint、判斷器），少用（一次訓練 ≤ 6 筆）",
  "kind": "data",
  "resource": ["disk", "human"],
  "side_effect": false,
@@ -7,7 +7,8 @@
  "writes": [],
  "fs_needs": ["git_tracked"],
  "callers": 0,
- "children": {"samples.json": "送去給人評的樣本（陣列、≤ 6 筆）；train/rate.py 第一次 rate 時挑、在就不動",
-             "questions.json": "網頁要問的勾選標籤 tags 與 0～1 維度 dims；人寫",
-             "ratings.json": "網頁回來的人評（陣列，每筆 {id, overall, tags, dims, comment, rated_at}）；網頁寫（第二段才有）",
-             "calibration.json": "人評 vs 自動評級的對照；human/import 寫（第二段才有）"}}
+ "children": {"samples.json": "送去給人評的樣本（陣列、≤ 6 筆，round4 § 8.1）：train/rate.py 配對挑（pair-stage 同題 agent vs program、disagree、hard），追加不覆蓋；id a4-*；scene 多 epoch／stage／pair_id",
+             "questions.json": "網頁要問的勾選標籤 tags、0～1 維度 dims（名字跟自動評分一樣）、配對題 pair；人寫",
+             "ratings.json": "網頁回來的人評（陣列，每筆 {id, overall, tags, dims, comment, rated_at, pair?}）；網頁寫",
+             "calibration.json": "人評 vs 自動評分並排、各維一致度、判斷器一致度、untrusted（優化器不拿它當依據）；human/import 寫",
+             "import": "匯入程式（資料夾，人手叫）：ratings.json → 各棵 human.json、weigh 的 judge:accept、calibration.json"}}

@@ -10,6 +10,7 @@
 #      by＝--by 或 policy.selfopt.by（auto＝節點自己的腦／純程式節點配 shell，走 gpt；claude＝optkit/claude）；小格 $AOS_STACK/epochs/NNN/selfopt/<子樹>/NNN/；
 #      accept 搬回並寫 epochs/NNN/params/changed.json（source selfopt）；這裡補 goal、target（新工具或 templates.distilled.json），抽了工具而還在 agent＝順手把 stage 翻成 semi（外部動作，一起進回滾清單）；
 #    extract <工具>（外部；只在 SelfoptFallback：同一棵連 policy.selfopt.max_fail_streak 次 selfopt 被 accept 拒或被 verify 回滾）＝人寫好的工具開給腦（stage.json.tools＋、agent → semi）。
+#    人評校正：human/calibration.json 的 untrusted 維度（common.untrusted）印一行、從 inline 的先前結果拿掉（common.drop_dims）、task.json 多 untrusted＋任務句一句（round4 § 8.3：不拿那維度當依據）。
 # 3. 每次 selfopt（收不收都）記一筆到自己的 selfopt.json {epoch, subtree, goal, by, accepted, code, files, created, counter_calls, tokens, cost_usd, elapsed_ms, cell}＋sum；
 #    token／秒從 run.json，claude 那條的 $ 從 optkit/usage.jsonl 這次新增的行（gpt 那條 LiteLLM 不回錢＝null）。
 # 外部動作用 common.params_save 先拷快照再改；每個 epoch 只做一步（params/changed.json 或 selfopt.json 已有這個 epoch＝不重做，被殺重跑安全）。
@@ -154,6 +155,13 @@ if st:
         say("epoch %d 已經派過 selfopt（selfopt.json）" % n)
         sys.exit(0)
 
+# 人評校正（round4 § 8.3）：human/calibration.json 的 untrusted＝人評說自動分跟人不一致的維度——印出來、給節點的先前結果拿掉它們、任務句註明不當依據
+bad = c.untrusted()
+names = {k[4:] if k.startswith("dim:") else k for k in bad}
+if bad:
+    say("人評說不可信的維度 %s：這圈不當依據" % "、".join("%s（%s，agreement %s、%s 筆）" % (k, v.get("by"), v.get("agreement"), v.get("counter_ratings"))
+                                                   for k, v in sorted(bad.items())))
+
 # 1. 候選與順位
 cands = sorted({s for s, v in nodes.items() if v in ON} | {s for s in acts_of if s in nodes},
                key=lambda s: (lambda m: (-(m["stage"] in ON), -m["tokens"], -m["calls"], -(1 - (m["det"] if m["det"] is not None else 0)), s))(info(s)))
@@ -219,7 +227,10 @@ except ValueError:
 hard = c.hard_open(sub, sets) or []
 task = {"task": fill((policy.get("task_templates") or {}).get(target, "請優化 {sub}。"), sub=sub, stage=me["stage"], share=me["share"],
                      left="、".join(me["left"]) or "—", why="determinism" if (me["det"] or 0) < 1 else "token", k=len(hard), details="、".join(hard) or "—"),
-        "goal": target, "why": why, "history": hist, "budget": bud}
+        "goal": target, "why": why, "history": c.drop_dims(hist, names), "budget": bud}
+if names:
+    task["untrusted"] = sorted(names)
+    task["task"] += "（人評說 %s 這幾維的自動分不可信，先前結果裡已拿掉，別拿它們當改進依據。）" % "、".join(sorted(names))
 c.save(tp, task)
 ulog = os.path.join(KIT, "usage.jsonl")
 

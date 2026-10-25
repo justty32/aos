@@ -6,7 +6,7 @@
  "llm_model": "沿用各寫手、評審的 .env", "llm_endpoint": "AOS_BRAIN_URL；沒設＝假腦，整條離線可跑",
  "side_effect": true, "idempotent": false, "deterministic": false, "interrupt": "resumable", "parallel": false,
  "lock": ["tree:galtxt-a"],
- "reads": ["tree:set.json", "tree:budget.json", "tree:../plan/examples/*.json", "tree:../data/route.json", "tree:../writer*/ratings.json", "tree:../writer*/human.json", "tree:optimize/ratings.json", "stack:epochs/*", "stack:epoch.txt"],
+ "reads": ["tree:set.json", "tree:budget.json", "tree:../plan/examples/*.json", "tree:../data/route.json", "tree:../writer*/ratings.json", "tree:../writer*/human.json", "tree:optimize/ratings.json", "tree:../human/samples.json（rate 追加、不覆蓋）", "tree:../human/calibration.json", "tree:../writer/hard.jsonl", "stack:epochs/*", "stack:epoch.txt"],
  "writes": ["tree:../data/route.json", "tree:../writer*/ratings.json", "tree:optimize/ratings.json", "tree:optimize/selfopt.json", "tree:../**（selfopt：optkit/accept 照白名單搬回；回滾照 changed.json）", "tree:../human/samples.json", "tree:../ratings.json", "tree:../grader/ratings.json", "tree:../**/rollup.json（meta/rollup --up）", "tree:../**/grad.json", "tree:../**/stage.json", "tree:weigh/ratings.json", "tree:weigh/log.jsonl", "stack:epochs/NNN/{runs/,verify/,verify.json,usage.json,params/,selfopt/}", "stack:verify.jsonl", "stack:epoch.txt", "stack:started_at.json"],
  "state_key": "stack:epoch.txt",
  "fs_needs": ["own_stack", "git_tracked"], "callers": 0}

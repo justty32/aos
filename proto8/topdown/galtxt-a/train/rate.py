@@ -9,7 +9,7 @@
 # cost＝寫手每跑一次（一個小格）平均的 {llm_calls, llm_tokens, time_ms}（common.run_cost）；tags＝評審理由標籤計數（非數值梯度的來源）；cell_hits＝{格 id: 次數}（lint 命中哪一格，步驟 3b，「哪一格在起作用」）。
 # 評審：grader/ratings.json 的 "role:grader" 整格覆蓋：{cost, dims: {分辨力＝同題幾份承接、像柚葉的標準差平均 ÷ 0.5（0～3 分的標準差上限 1.5）}, counter_samples, rated_at, rated_by}。
 # 寫完評級 → common.rollup_up（寫手、grader 各沿自己往上重算 rollup.json 到根，round4 § 3.3）。
-# human/samples.json 不在時順手挑人評樣本（§ 16.2，≤ 6 筆；在就不動，要重挑刪掉它）。印一行摘要到 stdout。
+# 人評樣本（round4 § 8.1）：配對優先、追加到 human/samples.json（≤ 6 筆；已有的不動，只補空著的槽；要重挑刪掉它）。印一行摘要到 stdout。
 # 錯：stderr 一行「train: 代號 原因」、退 1——StackMissing、StateBad（score.json 壞、寫手資料夾不在、style 出了收窄範圍）、SetBad。
 import os, sys
 
@@ -17,7 +17,6 @@ sys.dont_write_bytecode = True                      # 不在樹裡留 __pycache_
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import common as c  # noqa: E402
 
-MAX_SAMPLES = 6
 
 
 def val_of(avg, k):
@@ -93,67 +92,127 @@ if runs:
     c.rollup_up("grader")
 
 
-# 人評樣本（§ 16.2，主動學習）：候選＝這個 epoch 的訓練題＋上一次驗證的所有過護欄草稿
-def pick_samples():
-    cands = scores(os.path.join(c.edir(st, n), "runs")) + scores(os.path.join(c.edir(st, n - 1), "verify"))
-    rows = []
-    for cell, s in cands:
-        brief = c.load_or(os.path.join(cell, "stack", "brief.json"), {})
-        totals = [d["total"] for d in s["drafts"] if not d["tier0"]]
-        for d in s["drafts"]:
-            if d["tier0"]:
-                continue
-            try:
-                with open(os.path.join(cell, "stack", "drafts", "%d.txt" % d["n"]), encoding="utf-8") as f:
-                    lines = [l.strip() for l in f.read().splitlines() if l.strip()]
-            except OSError:
-                continue
-            if len(lines) > 8:                                       # 短：場景題只收 ≤ 8 行
-                continue
-            dims = dict(d["dims"], 多樣性=(s.get("dims") or {}).get("多樣性"))
-            prog = d["dims"].get("反差", d["dims"].get("語域"))           # 純程式量的 vs 評審量的（round4 § 8.1 順位 3 的雛形）
-            brain = d["dims"].get("像柚葉", d["dims"].get("語意"))
-            disagree = abs((prog or 0) - (brain or 0))
-            tie = totals.count(d["total"]) > 1
-            edge = 3 <= d["total"] <= 4
-            why = "disagree" if disagree >= 0.3 else "tie" if tie else "threshold" if edge else "cover"
-            scene = {"cast": [x.get("name") for x in brief.get("cast", [])], "place": (brief.get("place") or {}).get("name"),
-                     "event": brief.get("event") or brief.get("setting"), "style": s.get("style"), "intent": brief.get("intent")}
-            if brief.get("mode") == "fill":
-                scene["context"] = brief.get("context", [])
-            rows.append({"score": round(disagree + 0.5 * tie + 0.5 * edge + 0.3 * (len(lines) == 1), 3),
-                         "cell": (s.get("writer"), s.get("style"), s.get("name")), "text": "\n".join(lines),
-                         "sample": {"id": "a-%s-%s-%d" % (s["name"].lower(), s.get("writer"), d["n"]), "team": "a", "round": n,
-                                    "scene": scene, "lines": lines, "produced_by": s.get("writer"),
-                                    "auto_scores": {"val": val_of(d["total"], 3), "total": d["total"], "tier1": d["tier1"],
-                                                    "tier2": d["tier2"], "dims": dims, "reason": d.get("reason")},
-                                    "brain": "real" if os.environ.get("AOS_BRAIN_URL") else "fake",
-                                    "why_picked": why}})
-    rows.sort(key=lambda r: (-r["score"], r["sample"]["id"]))
-    chosen, seen, per = [], set(), {}
-    for first in (True, False):                                  # 先每個（寫手, 風格, 題）格一筆，再照分數補到 6 筆、每格 ≤ 2
-        for r in rows:
-            if len(chosen) >= MAX_SAMPLES or r["text"] in seen or per.get(r["cell"], 0) >= (1 if first else 2):
-                continue
-            if first and r["cell"] in per:
-                continue
-            chosen.append(r)
-            seen.add(r["text"])
-            per[r["cell"]] = per.get(r["cell"], 0) + 1
-    ids = set()
+# 人評樣本（round4 § 8.1；步驟 7）：全部在收窄範圍（scope_check 過的才是候選）；配對優先、追加不覆蓋（已在 samples.json 的那幾筆一字不動，只補還空著的槽）。
+# 槽（順位＝表的順序，合起來最多 6 筆）：
+#   pair-stage × 驗證題（set.json verify：Q16、cls-lights）× {agent, program}——同一題固化前（最早一個寫手 agent 階的驗證 epoch）vs 固化後（最早一個 program 階的），pick 挑中的那份；
+#   disagree × 1——驗證小格（各 epoch）＋這個 epoch 訓練題的過護欄草稿裡 |反差 − 像柚葉| 最大、≥ 0.33 的（場景題只收 ≤ 8 行）；
+#   hard × 1——這個 epoch 訓練題裡 hard.jsonl 有 TemplateMissing、還沒蒸餾（不是 held-out）的那題，pick 挑中的降級產出。
+# 槽的產出還沒出現（program 階要 epoch 3 之後）＝這次先空著、之後的 rate 補；所以第一個 epoch 後是 3 筆（兩個 agent 半邊＋disagree），寫手到 program 之後補到 6。
+# 每筆照網頁契約（round3 § 16.1：id、team、round、scene{cast, place, event, style, intent, context}、lines、produced_by、auto_scores、brain、why_picked），
+# scene 多 epoch（產出那份的 epoch）、stage（寫手那時的階）、pair_id（同題配對共用；不是配對＝null）；頂層多 question、picked_at_epoch（哪一次 rate 補進來的）。
+# id＝a4-<題>-<階>-e<epoch>-<份>（a4＝甲隊第四輪，不跟第三輪 a-q01-writer-* 那批撞）。
+SLOTS = 6
+DISAGREE_MIN = 0.33
+
+
+def stages_of(w):
+    """寫手 stage.json.history → ({epoch: 那次驗證實際跑的階}, {epoch: 那次判完後留下的階＝下一個 epoch 訓練題用的})"""
+    hist = (c.load_or(os.path.join(c.ROOT, w, "stage.json"), {}) or {}).get("history") or []
+    ran, kept, cur = {}, {}, None
+    for h in sorted((h for h in hist if isinstance(h, dict) and isinstance(h.get("epoch"), int)), key=lambda h: h["epoch"]):
+        ran[h["epoch"]] = h.get("stage")
+        if h.get("accepted") is not False or cur is None:
+            cur = h.get("stage")
+        kept[h["epoch"]] = cur
+    return ran, kept
+
+
+def draft_of(cell, s, k=None):
+    """score.json 的第 k 份（預設 pick 挑中的）→ (草稿, 行)；沒過護欄、檔讀不到＝None"""
+    k = s.get("picked") if k is None else k
+    d = next((d for d in s.get("drafts") or [] if d.get("n") == k), None)
+    if not d or d.get("tier0"):
+        return None
+    try:
+        with open(os.path.join(cell, "stack", "drafts", "%d.txt" % k), encoding="utf-8") as f:
+            lines = [l.strip() for l in f.read().splitlines() if l.strip()]
+    except OSError:
+        return None
+    return (d, lines) if lines else None
+
+
+def sample_of(cell, s, d, lines, epoch, stage, why, pair):
+    brief = c.load_or(os.path.join(cell, "stack", "brief.json"), {}) or {}
+    q = s.get("name") or "?"
+    scene = {"cast": [x.get("name") for x in brief.get("cast") or [] if isinstance(x, dict)], "place": (brief.get("place") or {}).get("name"),
+             "event": brief.get("event") or brief.get("setting"), "style": s.get("style"), "intent": brief.get("intent")}
+    if brief.get("mode") == "fill":
+        scene["context"] = brief.get("context", [])
+    scene.update(epoch=epoch, stage=stage, pair_id=pair)
+    return {"id": "a4-%s-%s-e%d-%d" % (q.lower(), stage or "na", epoch, d["n"]), "team": "a", "round": 4, "question": q,
+            "scene": scene, "lines": lines, "produced_by": s.get("writer"),
+            "auto_scores": {"val": val_of(d["total"], 3), "total": d["total"], "tier1": d.get("tier1"), "tier2": d.get("tier2"),
+                            "dims": dict(d.get("dims") or {}, 多樣性=(s.get("dims") or {}).get("多樣性")), "reason": d.get("reason")},
+            "brain": "real" if os.environ.get("AOS_BRAIN_URL") else "fake", "why_picked": why, "picked_at_epoch": n}
+
+
+def slot_of(x):
+    sc = x.get("scene") or {}
+    if x.get("why_picked") == "pair-stage":
+        return ("pair-stage", sc.get("pair_id"), sc.get("stage"))
+    return (x.get("why_picked"),)
+
+
+def pick_samples(have):
+    w = (sets.get("writers") or ["writer"])[0]
+    ran, kept = stages_of(w)
+    taken = {slot_of(x) for x in have}
+    texts = {(x.get("question"), "\n".join(x.get("lines") or [])) for x in have}   # 同題同字面不重複（不同題同字面照收：模板沒管小動作，正是要人看的）
     out = []
-    for r in chosen:
-        s = r["sample"]
-        if s["id"] in ids:
-            s["id"] += "-e%d" % n
-        ids.add(s["id"])
-        out.append(s)
+
+    def add(slot, cell, s, d, lines, epoch, stage, why, pair=None):
+        t = (s.get("name"), "\n".join(lines))
+        if slot in taken or t in texts or len(have) + len(out) >= SLOTS:
+            return False
+        taken.add(slot)
+        texts.add(t)
+        out.append(sample_of(cell, s, d, lines, epoch, stage, why, pair))
+        return True
+
+    ver = []                                                    # [(epoch, 小格, score)]：各 epoch 的驗證小格（在範圍內的）
+    for e in sorted(os.listdir(epochs)) if os.path.isdir(epochs) else []:
+        if e.isdigit():
+            ver += [(int(e), cl, s) for cl, s in scores(os.path.join(epochs, e, "verify"))
+                    if s.get("style") == (sets.get("scope") or {}).get("style") and s.get("writer") == w]
+    for q in sets.get("verify") or []:                          # 1、2：同題 agent vs program
+        name = q[:-5] if q.endswith(".json") else q
+        pair = "a4-%s" % name.lower()
+        for stage in ("agent", "program"):
+            for e, cl, s in ver:
+                if s.get("name") == name and ran.get(e) == stage:
+                    got = draft_of(cl, s)
+                    if got and add(("pair-stage", pair, stage), cl, s, got[0], got[1], e, stage, "pair-stage", pair):
+                        break
+    cands = [(e, cl, s, ran.get(e)) for e, cl, s in ver]       # 3：純程式說好、評審說不好（或反過來）
+    cands += [(n, cl, s, kept.get(n - 1)) for cl, s in scores(os.path.join(c.edir(st, n), "runs")) if s.get("writer") == w]
+    rows = []
+    for e, cl, s, stage in cands:
+        for d in s.get("drafts") or []:
+            prog, judge = (d.get("dims") or {}).get("反差"), (d.get("dims") or {}).get("像柚葉")
+            if d.get("tier0") or prog is None or judge is None or abs(prog - judge) < DISAGREE_MIN:
+                continue
+            got = draft_of(cl, s, d.get("n"))
+            if got and (len(got[1]) <= 8 or s.get("mode") == "fill"):
+                rows.append((-round(abs(prog - judge), 3), e, s.get("name") or "", d["n"], cl, s, got, stage))
+    for _, e, _, _, cl, s, got, stage in sorted(rows, key=lambda r: r[:4]):
+        if add(("disagree",), cl, s, got[0], got[1], e, stage, "disagree"):
+            break
+    held = c.heldout_details(sets)                               # 4：難例那題蒸餾前的降級產出
+    open_q = {r.get("question") for r in c.hard_rows(w) or [] if r.get("why") == "TemplateMissing" and r.get("resolved_epoch") is None
+              and ((r.get("brief_key") or {}).get("detail") not in held)}
+    for cl, s in scores(os.path.join(c.edir(st, n), "runs")):
+        if s.get("writer") == w and s.get("name") in open_q:
+            got = draft_of(cl, s)
+            if got and add(("hard",), cl, s, got[0], got[1], n, kept.get(n - 1) or "program", "hard"):
+                break
     return out
 
 
 human = os.path.join(c.ROOT, "human", "samples.json")
-if not os.path.exists(human):
-    c.save(human, pick_samples())
+have = c.load_or(human, [])
+new = pick_samples(have) if isinstance(have, list) else []      # 壞的（不是陣列）不碰：人評樣本只追加、不覆蓋
+if new:
+    c.save(human, have + new)
 u = c.load_or(os.path.join(c.edir(st, n), "usage.json"), {})
 print("train: epoch %d rated %s tokens %s" % (n, " ".join("%s{%s}" % (w, " ".join(v)) for w, v in summary.items()),
                                              u.get("counter_tokens", "?")))

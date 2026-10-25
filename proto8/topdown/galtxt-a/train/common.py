@@ -474,3 +474,25 @@ def hard_resolve(sub, n, cells_):
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
         os.replace(tmp, p)
     return k
+
+
+def untrusted():
+    """human/calibration.json 的 untrusted（human/import 寫：人評說這幾維的自動分跟人不一致）→ {"dim:像柚葉": {by, agreement, …}}；沒有＝{}"""
+    u = (load_or(os.path.join(ROOT, "human", "calibration.json"), {}) or {}).get("untrusted")
+    return u if isinstance(u, dict) else {}
+
+
+def drop_dims(obj, names):
+    """遞迴拿掉不可信的維度：dims 物件裡的那幾個鍵、diff 攤平的 dims.<名>（優化器給節點的先前結果不拿它們當依據）"""
+    if isinstance(obj, list):
+        return [drop_dims(x, names) for x in obj]
+    if not isinstance(obj, dict):
+        return obj
+    out = {}
+    for k, v in obj.items():
+        if isinstance(k, str) and k.startswith("dims.") and k[5:] in names:
+            continue
+        if k == "dims" and isinstance(v, dict):
+            v = {k2: v2 for k2, v2 in v.items() if k2 not in names}
+        out[k] = drop_dims(v, names)
+    return out

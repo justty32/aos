@@ -815,16 +815,18 @@ class Round3T(unittest.TestCase):
         samples = jread(g / "human" / "samples.json")
         self.assertTrue(1 <= len(samples) <= 6)
         for s in samples:
-            self.assertTrue({"id", "team", "scene", "lines", "produced_by", "auto_scores", "round"} <= set(s), s)
-            self.assertTrue(s["id"].startswith("a-"))
+            self.assertTrue({"id", "team", "scene", "lines", "produced_by", "auto_scores", "round", "why_picked"} <= set(s), s)
+            self.assertTrue(s["id"].startswith("a4-"))                  # 步驟 7：新 id，不跟第三輪 a-q01-writer-* 撞
             self.assertEqual(s["team"], "a")
             self.assertTrue(1 <= len(s["lines"]) <= 8)
             self.assertTrue((g / s["produced_by"] / "_entry").is_file())
-            self.assertTrue({"cast", "place", "event", "style", "intent"} <= set(s["scene"]))
+            self.assertTrue({"cast", "place", "event", "style", "intent", "epoch", "stage", "pair_id"} <= set(s["scene"]))
             self.assertEqual((s["scene"]["style"], s["scene"]["place"]), (sets["scope"]["style"], sets["scope"]["place"]))   # 全在收窄範圍
         self.assertEqual(len({s["id"] for s in samples}), len(samples))
-        qs = {q[:-5].lower() for q in sets["train"] + sets["verify"]}    # 先每個（寫手, 風格, 題）格一筆：訓練＋驗證每題都有
-        self.assertEqual({q for q in qs if any(s["id"].startswith("a-%s-writer-" % q) for s in samples)}, qs)
+        # round4 § 8.1：第一個 epoch 後只有 agent 階的產出——兩個驗證題的 pair-stage 前半（epoch 0、agent）＋disagree；program 半邊與難例之後的 rate 補
+        pairs = sorted((s["scene"]["pair_id"], s["scene"]["stage"], s["scene"]["epoch"]) for s in samples if s["why_picked"] == "pair-stage")
+        self.assertEqual(pairs, sorted(("a4-%s" % q[:-5].lower(), "agent", 0) for q in sets["verify"]))
+        self.assertEqual({s["why_picked"] for s in samples} - {"pair-stage"}, {"disagree"})
         self.assertEqual(len(jl(self.stack / "verify.jsonl")), 2)
         self.assertEqual([t["state"] for t in jl(self.stack / "trace.jsonl")], ["verify", "train", "rate", "optimize", "verify"])
         after = snapshot(g)                                               # M7：只有量出來的旁檔變（route 沒換＝route.json、optimize 評級不動）
@@ -1952,9 +1954,15 @@ class Round4OptT(unittest.TestCase):
         self.assertEqual(set(by), {"poster"})                                        # poster 蒸進來、held-out 的 lights 沒有
         rows = {x["brief_key"]["detail"]: x for x in jl(g / "writer" / "hard.jsonl")}
         self.assertEqual((rows["poster"].get("resolved_epoch"), rows["lights"].get("resolved_epoch")), (4, None))
-        samples = jread(g / "human" / "samples.json")
-        self.assertTrue(1 <= len(samples) <= 6)
+        samples = jread(g / "human" / "samples.json")                                # 步驟 7（§ 8.1）：epoch 1 後 3 筆、寫手到 program 之後（epoch 4 的 rate）補到 6，不覆蓋
+        self.assertEqual(len(samples), 6)
         self.assertTrue(all((x["scene"]["style"], x["scene"]["place"]) == ("傲嬌", "教室") for x in samples))
+        got = [(x["why_picked"], x["scene"]["pair_id"], x["scene"]["stage"], x["scene"]["epoch"], x["picked_at_epoch"]) for x in samples]
+        self.assertEqual(got, [("pair-stage", "a4-q16", "agent", 0, 1), ("pair-stage", "a4-cls-lights", "agent", 0, 1), ("disagree", None, "agent", 0, 1),
+                               ("pair-stage", "a4-q16", "program", 3, 4), ("pair-stage", "a4-cls-lights", "program", 3, 4), ("hard", None, "program", 4, 4)])
+        self.assertEqual(samples[5]["question"], "cls-poster")                       # 難例那題蒸餾前的降級產出
+        self.assertEqual("\n".join(samples[5]["lines"]), rows["poster"]["output"])
+        self.assertTrue(all(x["id"].startswith("a4-") for x in samples) and len({x["id"] for x in samples}) == 6)
         after = snapshot(g)                                                          # so-12：既有 _metainfo、尺、規則表、人寫的模板不變
         frozen = [k for k in before if os.path.basename(k) in ("_metainfo", "fsm.json", "loop.json", "dims.json", "rules.json", "templates.json")]
         self.assertEqual([k for k in frozen if before[k] != after.get(k)], [])
@@ -2034,6 +2042,116 @@ class Round4OptT(unittest.TestCase):
         r = self.optimize(g, st)
         self.assertIn("沒收（BudgetSpent）", r.stdout)
         self.assertFalse((st / "epochs" / "002" / "selfopt" / "writer").exists() and any((st / "epochs" / "002" / "selfopt" / "writer").glob("[0-9][0-9][0-9]")))
+
+
+class Round4HumanT(unittest.TestCase):
+    """步驟 7（round4 § 8）：human/import 匯入假人評（§ 10 測試 19）；優化器讀 calibration 的 untrusted。rate 配對挑樣本由 Round4OptT.test_train_selfopt／Round3T.test_train_whole 驗。全部 tree_copy 上跑。"""
+
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.addCleanup(self._t.cleanup)
+        self.tmp = Path(self._t.name)
+
+    @staticmethod
+    def sample(sid, q, stage, epoch, why, pair=None, dims=None):
+        return {"id": sid, "team": "a", "round": 4, "question": q, "produced_by": "writer", "why_picked": why, "lines": ["宮澤柚葉：「哼。」"],
+                "scene": {"cast": ["主角", "宮澤柚葉"], "place": "教室", "event": "收攤", "style": "傲嬌", "intent": "餘溫", "epoch": epoch, "stage": stage, "pair_id": pair},
+                "auto_scores": {"val": "ok", "total": 3.7, "dims": dict({"反差": 1.0, "像柚葉": 0.667, "文筆": 0.667, "語域": 0.5}, **(dims or {}))}}
+
+    def importer(self, g):
+        return run(str(g / "human" / "import" / "_entry"), timeout=60)
+
+    # 19. 人評匯入：5 筆（Q16 一對＋lights 的 agent 半邊＋disagree＋hard）＋一筆對不到 → writer by_stage 兩格、grader 像柚葉 agreement 手算、
+    #     判斷器 judge:accept 一致度（人說 agent 好、判斷器選了 A＝沒確認）、calibration untrusted、SampleUnknown 跳過、RatingsBad 退 1、重跑不變
+    def test_human_import(self):
+        g = tree_copy(self.tmp / "t")
+        jwrite(g / "human" / "samples.json", [
+            self.sample("a4-q16-agent-e0-1", "Q16", "agent", 0, "pair-stage", "a4-q16"),
+            self.sample("a4-cls-lights-agent-e0-1", "cls-lights", "agent", 0, "pair-stage", "a4-cls-lights"),
+            self.sample("a4-q16-agent-e0-2", "Q16", "agent", 0, "disagree"),
+            self.sample("a4-q16-program-e3-1", "Q16", "program", 3, "pair-stage", "a4-q16"),
+            self.sample("a4-cls-lights-program-e3-1", "cls-lights", "program", 3, "pair-stage", "a4-cls-lights"),
+            self.sample("a4-cls-poster-program-e4-1", "cls-poster", "program", 4, "hard", dims={"像柚葉": 1.0})])
+        rat = [{"id": "a4-q16-agent-e0-1", "overall": "good", "tags": ["像柚葉"], "dims": {"反差": 1.0, "像柚葉": 0.9, "文筆": 0.5}, "comment": "可以", "rated_at": "2026-10-26T01:00:00Z"},
+               {"id": "a4-q16-program-e3-1", "overall": "bad", "tags": ["像套公式"], "dims": {"像柚葉": 0.1}, "comment": "", "rated_at": "2026-10-26T01:01:00Z"},
+               {"id": "a4-cls-lights-agent-e0-1", "overall": "ok", "tags": [], "dims": {"像柚葉": 0.0}, "rated_at": "2026-10-26T01:02:00Z"},
+               {"id": "a4-q16-agent-e0-2", "overall": "ok", "tags": ["想看下去"], "dims": {}, "rated_at": "2026-10-26T01:03:00Z"},
+               {"id": "a4-cls-poster-program-e4-1", "overall": "bad", "tags": ["像套公式", "稱呼不對"], "dims": {"像柚葉": 0.0}, "rated_at": "2026-10-26T01:04:00Z"},
+               {"id": "a-q01-writer-1", "overall": "good", "rated_at": "2026-10-25T00:00:00Z"}]          # 第三輪的舊樣本：對不到
+        jwrite(g / "human" / "ratings.json", rat)
+        jwrite(g / "writer" / "ratings.json", dict(jread(g / "writer" / "ratings.json"), **{"style:傲嬌": {"val": "good", "dims": {"像柚葉": 0.7, "反差": 1.0}}}))
+        jwrite(g / "train" / "weigh" / "ratings.json", {"source": "t", "judge:accept": {"counter_judged": 4, "counter_chose_a": 4}})
+        (g / "train" / "weigh" / "log.jsonl").write_text("".join(json.dumps(x, ensure_ascii=False) + "\n" for x in (
+            {"epoch": 1, "subtree": "writer", "action": "selfopt", "choice": "A"}, {"epoch": 3, "subtree": "writer", "action": "stage", "choice": "A"})), encoding="utf-8")
+        r = self.importer(g)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stderr, "import: SampleUnknown a-q01-writer-1\n")
+        w = jread(g / "writer" / "human.json")["style:傲嬌"]
+        self.assertEqual((w["val"], w["counter_ratings"], w["overall"]), ("bad", 5, {"good": 1, "ok": 2, "bad": 2}))   # ok／bad 平手取較差的
+        self.assertEqual(w["tags"], {"像套公式": 2, "像柚葉": 1, "想看下去": 1, "稱呼不對": 1})
+        self.assertEqual(set(w["by_stage"]), {"agent", "program"})
+        self.assertEqual((w["by_stage"]["agent"]["val"], w["by_stage"]["agent"]["counter_ratings"], w["by_stage"]["program"]["counter_ratings"]), ("ok", 3, 2))
+        self.assertEqual(w["by_stage"]["program"]["tags"]["像套公式"], 2)
+        self.assertEqual(w["comments"], ["可以"])
+        self.assertEqual(w["rated_at"], "2026-10-26T01:04:00Z")                      # 人評最晚那筆，不是現在（重跑不變）
+        xs = [(0.667, 0.9), (0.667, 0.1), (0.667, 0.0), (1.0, 0.0)]                  # 像柚葉（自動, 人）：grader 量
+        gd = jread(g / "grader" / "human.json")
+        self.assertEqual(gd["dim:像柚葉"]["agreement"], round(1 - sum(abs(a - b) for a, b in xs) / 4, 3))
+        self.assertEqual(gd["dim:像柚葉"]["bias"], round(sum(a - b for a, b in xs) / 4, 3))
+        self.assertEqual((gd["dim:文筆"]["counter_ratings"], gd["dim:文筆"]["agreement"]), (1, round(1 - 0.167, 3)))
+        self.assertNotIn("dim:反差", gd)
+        lint = jread(g / "tools" / "lint" / "human.json")                            # 反差歸 lint（dims.json 的 by）；語域人評沒問＝沒有
+        self.assertEqual((lint["dim:反差"]["agreement"], lint["dim:反差"]["counter_ratings"]), (1.0, 1))
+        self.assertNotIn("dim:語域", lint)
+        ja = jread(g / "train" / "weigh" / "ratings.json")["judge:accept"]
+        self.assertEqual((ja["counter_judged"], ja["counter_chose_a"]), (4, 4))      # verify 的計數不動
+        self.assertEqual((ja["counter_human_pairs"], ja["counter_confirmed"], ja["agreement"]), (1, 0, 0.0))   # Q16：人說 agent 好（B），判斷器 epoch 3 選了 A
+        pairs = jread(g / "train" / "weigh" / "human.json")["judge:accept"]["pairs"]
+        self.assertEqual([(p["pair_id"], p["epoch"], p["action"], p["human"], p["choice"], p["confirmed"]) for p in pairs], [("a4-q16", 3, "stage", "B", "A", False)])
+        cal = jread(g / "human" / "calibration.json")
+        self.assertEqual(set(cal["untrusted"]), {"dim:像柚葉"})                    # 4 筆、agreement 0.38 < 0.5；文筆只有 1 筆不算
+        self.assertEqual(cal["untrusted"]["dim:像柚葉"]["by"], "grader")
+        self.assertEqual(cal["cells"]["writer style:傲嬌"]["read"], "人 bad、自動 good：評審太鬆")
+        self.assertTrue(any("模板太死" in x for x in cal["notes"]))
+        self.assertEqual((cal["judge"]["counter_human_pairs"], cal["counter_ratings"]), (1, 5))
+        outs = ("writer/human.json", "grader/human.json", "tools/lint/human.json", "train/weigh/ratings.json", "train/weigh/human.json", "human/calibration.json")
+        once = {p: (g / p).read_bytes() for p in outs}
+        r = self.importer(g)                                                         # 重跑：整格覆蓋，一字不變
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual({p: (g / p).read_bytes() for p in outs}, once)
+        rat[1]["pair"] = "差不多"                                                    # 網頁有配對題時照它：差不多＝判斷器收下算對
+        jwrite(g / "human" / "ratings.json", rat)
+        self.assertEqual(self.importer(g).returncode, 0)
+        self.assertEqual(jread(g / "train" / "weigh" / "ratings.json")["judge:accept"]["counter_confirmed"], 1)
+        for bad in ({"id": "x"}, [{"id": "a4-q16-agent-e0-1"}], [{"id": "a4-q16-agent-e0-1", "overall": "great"}]):
+            jwrite(g / "human" / "ratings.json", bad)
+            before = {p: (g / p).read_bytes() for p in outs}
+            r = self.importer(g)
+            self.assertEqual(r.returncode, 1, bad)
+            self.assertRegex(r.stderr, r"^import: RatingsBad \S")
+            self.assertEqual(r.stderr.count("\n"), 1)
+            self.assertEqual({p: (g / p).read_bytes() for p in outs}, before)
+
+    # 19 之二：優化器讀 calibration 的 untrusted——印一行、給節點的先前結果拿掉那維、task.json 多 untrusted
+    def test_optimize_untrusted(self):
+        g, st = tree_copy(self.tmp / "t"), self.tmp / "st"
+        ws = self.tmp / "ws"
+        (ws / "new").mkdir(parents=True)
+        r = run(EXEC, str(g / "train" / "fsm.json") + "#/states/verify/exec", env={"AOS_STACK": str(st) + "/", "AOS_WS": str(ws)}, timeout=600)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        jwrite(g / "human" / "calibration.json", {"source": "t", "untrusted": {"dim:像柚葉": {"by": "grader", "agreement": 0.383, "counter_ratings": 4}}})
+        r = run(str(g / "train" / "optimize" / "_entry"), "--dry-run", env={"AOS_STACK": str(st) + "/"}, timeout=600)
+        self.assertIn("optimize: 人評說不可信的維度 dim:像柚葉（grader，agreement 0.383、4 筆）：這圈不當依據", r.stdout)
+        r = run(str(g / "train" / "optimize" / "_entry"), env={"AOS_STACK": str(st) + "/"}, timeout=600)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        task = jread(next((st / "epochs" / "001" / "selfopt" / "writer").glob("*.task.json")))
+        self.assertEqual(task["untrusted"], ["像柚葉"])
+        self.assertIn("像柚葉 這幾維的自動分不可信", task["task"])
+        self.assertIn("反差", json.dumps(task["history"], ensure_ascii=False))       # 別的維度還在
+        self.assertNotIn("像柚葉", json.dumps(task["history"], ensure_ascii=False))
+        drop = common_of(g).drop_dims
+        self.assertEqual(drop({"dims": {"像柚葉": 1, "反差": 0}, "diff": {"dims.像柚葉": 0.2, "dims.反差": 0.1}, "x": [{"dims": {"像柚葉": 2}}]}, {"像柚葉"}),
+                         {"dims": {"反差": 0}, "diff": {"dims.反差": 0.1}, "x": [{"dims": {}}]})
 
 
 if __name__ == "__main__":

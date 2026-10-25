@@ -303,3 +303,34 @@
 - epoch 4 verify：分數不動、`hard.uncovered −1` → **A（難例接住了）**；hard.jsonl 的 poster 標 resolved_epoch 4、lights 仍未處理（held-out）。
 
 下一步（步驟 7 人評／8 收尾／9 真腦）：真腦第 9 步用 `optimize --by claude`（或 policy `selfopt.by: claude`）至少跑一次 selfopt；gpt 那條的 $ 要另找（LiteLLM 的 spend 或照價目算）。§ 5.7 震盪、§ 4.3 候選工具排序鍵、`switch`／`hints` 動作沒做。README／code map 的 optimize 一節還是舊的選路描述（步驟 8 一起改）。
+
+## 步驟 7：人評——配對挑樣本、匯入、優化器讀 untrusted（實作者，2026-10-25）
+
+做了：
+- `human/questions.json` 換成 § 8.2（tags 九個含「像套公式」、dims `反差／像柚葉／文筆`、`pair`）；source 註明 pair 的 A／B 方向。
+- `train/rate.py` 的人評樣本整段重寫（§ 8.1）：槽＝pair-stage ×（set.json 的驗證題 Q16、cls-lights）×（agent、program）＋disagree 1＋hard 1，合計 ≤ 6；**追加不覆蓋**（已在 samples.json 的一字不動、只補空著的槽；檔壞＝不碰；沒新東西＝不寫檔）。pair 半邊＝最早一個寫手是那一階的驗證 epoch、pick 挑中那份；階從 `writer/stage.json.history` 來（驗證＝那次實際跑的階；訓練題＝上一個 epoch 判完留下的階，回滾算進去）。disagree＝各 epoch 驗證小格＋這個 epoch 訓練題、過護欄、`|反差 − 像柚葉| ≥ 0.33` 最大（場景題 ≤ 8 行）。hard＝這個 epoch 訓練題裡 `hard.jsonl` 有 TemplateMissing、沒 resolved、不是 held-out 的那題的挑中份。同題同字面不重複（不同題同字面照收：lights 與 poster 的 program 產出字面一樣——模板沒管小動作，正是要人看的）。
+- 樣本欄位（網頁契約＝round3 § 16.1＋頂層網頁 scratchpad `rating/index.html` 實際讀的）：`id`、`team`、`round`、`question`、`scene{cast, place, event, style, intent, context(只有 fill), epoch, stage, pair_id}`、`lines`、`produced_by`、`auto_scores{val, total, tier1, tier2, dims, reason}`、`brain`、`why_picked`、`picked_at_epoch`。id＝`a4-<題>-<階>-e<epoch>-<份>`（例 `a4-q16-agent-e0-1`），不跟第三輪 `a-q01-writer-*` 撞。
+- `human/import/`（`_entry`＋`_metainfo`，kind program、callers 0、人手叫）：ratings.json → `writer/human.json style:傲嬌`（多數決平手取較差、< 3 筆 none、tags 計數、dims 平均、comments、`by_stage`）；人評 dims 照 `dims.json` 的 `by` 分給量它的那棵：`grader/human.json dim:像柚葉／dim:文筆`、`tools/lint/human.json dim:反差`（`agreement`＝1 − 平均|人−自動|、`bias`＝平均(自動−人)、`counter_ratings`）；`train/weigh/ratings.json judge:accept` 只補 `counter_human_pairs／counter_confirmed／agreement／human_rated_at`（verify 的計數不動）、明細寫 `train/weigh/human.json`；`human/calibration.json`（cells 並排＋判讀、dims、judge、`untrusted`、notes：「模板太死」「評審太鬆」「判斷器反著選」）。SampleUnknown 每筆一行跳過退 0；RatingsBad 退 1 不寫；同 id 多筆取 rated_at 最晚；時間戳取人評最晚那筆（重跑一字不變）。
+- `tools/lint/human.json`（新旁檔）＋`tools/lint/_metainfo` 加 `human_ratings $ref`。
+- `train/common.py`：`untrusted()`、`drop_dims(obj, names)`。`train/optimize/_entry`：讀 untrusted → stdout 一行「人評說不可信的維度 …：這圈不當依據」（--dry-run 也印）、inline 給節點的先前結果拿掉那幾維（`dims.<名>` 與 dims 物件裡的鍵）、task.json 多 `untrusted`＋任務句一句。`_metainfo`（train、optimize、human）補 reads／children。
+
+偏離／解讀：
+- **「第一個 epoch 後 4 筆」照表改成 3 筆**：§ 8.1 標題說 4、表是 2＋2＋1＋1＝6——epoch 1 的 rate 只有 agent 階產出（Q16、lights 的 agent 半邊＋disagree），program 半邊與難例要寫手到 program 之後（整條 4 epoch 是 epoch 4 的 rate）才有。若 epoch 1 先塞第 4 筆，cap 6 會把 hard 擠掉。照表（較細）。真腦若寫手沒走到 program，pair 只有半邊（照樣交，pair_id 在）。
+- **網頁沒有配對題**：頂層網頁一筆一張卡、只存 `{id, overall, tags, dims, comment, rated_at, team, round}`，`questions.json` 的 `pair` 它不讀（多的 key 忽略）；`why_picked` 的新值 `pair-stage`／`hard` 網頁的 WHY 表沒有，會顯示「挑這筆是因為：pair-stage」。import 的人評配對答案＝評分裡有 `pair`（A＝program 好、B＝agent 好、差不多）就照它，沒有就比兩筆 overall。**頂層若要並排顯示**：用 `scene.pair_id` 分組、`scene.stage` 標前後，WHY 表加兩條。`round` 填 4（第四輪；epoch 在 `scene.epoch`），第三輪的 `round` 是 epoch 編號——語意換了。
+- **判斷器配對對哪一步**：一對跨好幾步（agent epoch 0 → program epoch 3），對 log.jsonl 裡 epoch＝program 那筆 scene.epoch 的那一步（殼拿掉那步）；判斷器選 A 時人說 A 或差不多都算對（規則就是「分沒掉就收」），選 B 只有人說 B 算對。
+- **語域沒有人評**：§ 8.3 表列了 `tools/lint dim:語域`，但 § 8.2 的 dims 只有三個；import 照「人評有問、樣本 auto 也有」的交集算，語域不出現（要量就在 questions.dims 加它）。
+- **「不拿那維度當依據」只做到優化器給節點的那一層**：優化器挑子樹本來就不看 dims（看 brain／token／determinism）；判斷器（weigh）的 diff 仍含那維——§ 8.3 寫的是「優化器」，判斷器的表只有人改，這圈不動。
+- `test_rate`／`test_scope_guard`／`test_cell_hits_rate` 先放 `samples.json = []` 的寫法還成立（單元的假 score.json 沒有 drafts 檔＝挑不到、不寫）。
+
+測試（§ 10 編號）：
+- 新 `Round4HumanT.test_human_import`（19）：6 筆樣本、5 筆人評＋1 筆舊 id → stderr 只有 `SampleUnknown a-q01-writer-1`；writer `val` bad（ok／bad 平手取較差）、`by_stage` agent／program 兩格、tags 計數；`dim:像柚葉` agreement／bias 手算（4 筆）、`dim:文筆` 1 筆、`dim:反差` 在 lint 不在 grader、沒有 `dim:語域`；`judge:accept` verify 的計數不動、人評 1 對 0 確認（人說 B、判斷器 epoch 3 選 A）；calibration `untrusted` 只有像柚葉、「評審太鬆」、「模板太死」；重跑六個輸出 bytes 不變；加 `pair: 差不多` → 確認 1；三種壞 ratings → RatingsBad 退 1、一行、輸出不動。
+- 新 `Round4HumanT.test_optimize_untrusted`（19 之二）：verify epoch 0 → 手放 calibration → `--dry-run` 印那行；真跑 → selfopt 的 task.json `untrusted ["像柚葉"]`、任務句、history 有反差沒像柚葉（不放 calibration 時 history 有 3 處像柚葉，scratchpad 驗過，不是空斷言）；`drop_dims` 單元。
+- 改的：`Round3T.test_train_whole`（max_epochs 1：id `a4-`、scene 多三欄、pair-stage 兩個 agent 半邊 epoch 0＋disagree）、`Round4OptT.test_train_selfopt`（6 筆的順序與槽：前 3 筆 `picked_at_epoch 1`、後 3 筆 4；hard 那筆是 cls-poster、字面＝hard.jsonl 那行的 output）。
+
+變紅過一次（scratchpad `s7/red.py`：暫改 → 跑 → 還原、bytes 驗回原樣）：多數決平手取較好 → 19 紅；不看 log 的 choice（恆確認）→ 19 紅；optimize 不拿掉不可信維度 → 19 之二紅；rate 覆蓋舊樣本 → 15 紅；rate 不挑 program 半邊 → 15 紅；id 用舊前綴 `a-` → test_train_whole 紅。
+
+結果：`test_topdown_galtxt_a.py`＋`_optkit` 77 個綠；`proto8/tests` 全套 633 OK（skip 2）。真樹沒有 `human/samples.json`、`calibration.json`（測試都在 tree_copy）。
+
+假腦整條（max_epochs 4）挑出的 6 筆：`a4-q16-agent-e0-1`（pair）、`a4-cls-lights-agent-e0-1`（pair）、`a4-q16-agent-e0-2`（disagree：反差 1.0 vs 像柚葉 0.667）、`a4-q16-program-e3-1`、`a4-cls-lights-program-e3-1`、`a4-cls-poster-program-e4-1`（hard）。
+
+下一步：步驟 8 收尾（README 的 human/ 與 import、code map 加 `human/import/`、`tools/lint/human.json`——鐵律 3）；步驟 9 真腦跑完 `human/samples.json` 換真腦 6 筆交頂層（網頁原始檔在 scratchpad `rating/`，換樣本用新 id；頂層 WHY 表加 pair-stage／hard、要不要做配對並排頂層決定）。

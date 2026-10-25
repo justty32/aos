@@ -5,4 +5,5 @@
  "reads": ["ws:rules.json"], "writes": [],
  "fs_needs": ["tool_json", "mount"], "callers": 2,
  "grad": {"$ref": "grad.json"},
+ "human_ratings": {"$ref": "human.json"},
  "rollup": {"$ref": "rollup.json"}}
