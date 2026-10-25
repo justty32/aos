@@ -3,8 +3,10 @@
 # 假腦技能表（第三輪，round3 § 6）：WEAK 裡的（模型標籤, 風格）＝這個假寫手寫這種風格會寫砸——女角那句句尾加 NG 標記「～～」（lint 扣 Tier 1）。
 # 模型標籤從 AOS_BRAIN_MODEL 來（各寫手 .env）：含 sol＝"sol"，其餘＝""。表是劇本、不是品質證據；測試要換時設 GALTXT_FAKE_WEAK（「標籤:風格」逗號分隔，只有假腦讀）。
 # 傲嬌另有一套模板（挖空、整場）；文靜／書卷的模板一字不動。
-# GALTXT_FAKE_JITTER=1（第四輪，round4 § 10 測試 7；只有假腦讀）：第 n 個小格（$AOS_STACK 上一層的 runs/NNN）的草稿在最後一字前多 n 個「…」，
-# 讓「同輸入同角度」的幾份字面不同，驗「一致」的公式。
+# GALTXT_FAKE_JITTER=1（第四輪，round4 § 10 測試 7；只有假腦讀）：第 n 個小格（$AOS_STACK 上一層的 runs/NNN）的草稿在最後一字前多「…」＋第 n 個天干，
+# 讓「同輸入同角度」的幾份字面不同，驗「一致」的公式。（原本是 n 個「…」：「一致」量的是二元組「集合」，n ≥ 2 多出來的「……」本來就有、三份集合一樣 → 量不出差；步驟 3 改。）
+# 第四輪步驟 3（round4 § 2.1、§ 2.2）：只列 stage.json 的 tools 裡的工具（沒有 stage.json＝全部）；假腦在 semi 階看得到 beat 時先叫 beat 一次。
+# 下面的 compose() 是寫手 program 階 compose.py 的第一版（compose.py 已照 data/templates.json 另寫；這裡留給 agent／semi 階的假腦用）。
 # 跟範本不同的兩處：fake() 改寫；問真腦時把 API 回的 usage 多記一行到 $AOS_STACK/usage.jsonl（給實測對照用，OpenAI 的欄位名照留）。
 import datetime, json, os, sys, urllib.error, urllib.request
 
@@ -67,9 +69,24 @@ def append(message):
 if not history or history[-1].get("role") not in ("user", "tool"):
     append({"role": "user", "content": question})
 
+# 固化到哪階（round4 § 2.2）：有 stage.json＝腦只看得到 stage.tools 裡的工具；沒有（例：writer-sol）＝tools/ 底下全部（原本的行為）。
+# GALTXT_STAGE 蓋過 stage（同 _entry）；這支只會在 agent／semi 階跑到。
+STAGE, ALLOWED = None, None
+try:
+    with open("stage.json", encoding="utf-8") as f:
+        _st = json.load(f)
+    STAGE, ALLOWED = _st.get("stage"), set(_st.get("tools") or [])
+except FileNotFoundError:
+    pass
+except (OSError, ValueError, AttributeError, TypeError) as e:
+    die("StateBad", "stage.json 讀不了：%s" % e)
+STAGE = os.environ.get("GALTXT_STAGE") or STAGE
+
 # tools：工具名＝資料夾名，說明來自 tool.json 的 description／parameters（其他 key 忽略；讀不懂的 tool.json 當作沒有）
 tools = []
 for tool in (sorted(os.listdir("tools")) if os.path.isdir("tools") else []):
+    if ALLOWED is not None and tool not in ALLOWED:
+        continue
     try:
         with open(os.path.join("tools", tool, "tool.json"), encoding="utf-8") as f:
             spec = json.load(f)
@@ -137,7 +154,7 @@ def jitter(text):
         n = int(os.path.basename(os.path.dirname(stack.rstrip("/"))))
     except ValueError:
         return text
-    return text[:-1] + "…" * n + text[-1]
+    return text[:-1] + "…" + "甲乙丙丁戊己庚辛壬癸"[(n - 1) % 10] + text[-1]
 
 
 def draft():
@@ -184,11 +201,26 @@ def compose():
 
 
 def fake():
-    last = history[-1]
-    if last.get("role") == "user" and any(t["function"]["name"] == "lint" for t in tools):
+    """假腦的順序：semi 階而且看得到 beat＝先叫 beat 一次（三槽取自題目的 must，沒有就用通用的；回的句子不拿來用——只示範「腦叫工具」）；
+    看得到 lint 而這題還沒叫過＝叫 lint；都叫過＝交稿。"""
+    names = {t["function"]["name"] for t in tools}
+    since = max((i for i, m in enumerate(history) if m.get("role") == "user"), default=0)
+    called = {c["function"]["name"] for m in history[since:] for c in m.get("tool_calls") or []}
+
+    def call(n, args):
         return {"role": "assistant", "content": None,
-                "tool_calls": [{"id": "call_fake_1", "type": "function",
-                                "function": {"name": "lint", "arguments": json.dumps({"text": draft()}, ensure_ascii=False)}}]}
+                "tool_calls": [{"id": "call_fake_%d" % (len(called) + 1), "type": "function",
+                                "function": {"name": n, "arguments": json.dumps(args, ensure_ascii=False)}}]}
+    if history[-1].get("role") in ("user", "tool"):
+        if STAGE == "semi" and "beat" in names and "beat" not in called:
+            try:
+                must = json.loads(question).get("must") or []
+            except (ValueError, AttributeError):
+                must = []
+            return call("beat", {"deny": must[0][0] if must else "才沒有",
+                                 "yield": must[1][0] if len(must) > 1 else "也不是不能接受", "cover": "真是的"})
+        if "lint" in names and "lint" not in called:
+            return call("lint", {"text": draft()})
     return {"role": "assistant", "content": draft()}
 
 

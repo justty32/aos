@@ -1,0 +1,5 @@
+{"source": "寫手固化到哪階（round4 § 2.2）：stage ∈ agent／semi／program（_entry 照它分流：program＝python3 compose.py，其餘＝aos-loop）；tools＝腦看得到的工具（brain.py 只列這些）；tools_share＝_metainfo.steps 裡有工具負責的比例、decisions_left＝腦還在做的決定。train/optimize 改 stage／tools、train/verify.py 補 history；人不手改。環境變數 GALTXT_STAGE 可暫時覆寫 stage（distill 讓寫手走 agent 當老師，round4 § 7.1）",
+ "stage": "agent", "since_epoch": null, "why": null,
+ "tools": ["lint"],
+ "tools_share": 0.17, "decisions_left": ["開場旁白", "反差節拍", "口癖句尾", "遮掩句", "收尾旁白"],
+ "history": []}

@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+# beat - stdin 收 {"deny", "yield", "cover"}（傲嬌反差節拍的三槽：先否認、再讓步、補一句遮掩），stdout 印一行台詞內文（不含說話者與引號）
+# 形狀固定：「<deny>。不過……<yield>，<cover>。」——三段照這個順序，每段尾巴的標點先拿掉再接（round4 § 2.4，corpus 固化/01 § 1 的節奏）。
+# 槽缺（沒給、不是字串、空字串）＝那段用通用句（DEFAULT），stderr 一行「beat: SlotMissing <槽>（用通用句）」、照樣產出、退 0（降級不報錯，round4 § 6）。
+# 純函數：不讀檔、不寫檔、不用 stack；同輸入永遠同輸出。
+# 錯：stderr 與 stdout 各一行「beat: 代號 原因」、退 1——ArgumentsBad（stdin 不是 JSON 物件）。
+import json, sys
+
+SLOTS = ("deny", "yield", "cover")
+DEFAULT = {"deny": "才沒有", "yield": "也不是不行", "cover": "真是的"}
+TRIM = "。，、！？!?…．.,~～ "
+
+
+def bad(code, reason):
+    line = "beat: %s %s" % (code, str(reason).replace("\n", " "))
+    print(line, file=sys.stderr)
+    print(line)                                  # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+raw = sys.stdin.read()
+try:
+    args = json.loads(raw) if raw.strip() else {}
+except ValueError as e:
+    bad("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict):
+    bad("ArgumentsBad", "stdin 要是 JSON 物件 {deny, yield, cover}")
+
+part = {}
+for k in SLOTS:
+    v = args.get(k)
+    v = v.replace("\n", " ").strip().rstrip(TRIM) if isinstance(v, str) else ""
+    if not v:
+        print("beat: SlotMissing %s（用通用句）" % k, file=sys.stderr)
+        v = DEFAULT[k]
+    part[k] = v
+print("%s。不過……%s，%s。" % (part["deny"], part["yield"], part["cover"]))

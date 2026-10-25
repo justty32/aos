@@ -580,6 +580,11 @@ class Round3T(unittest.TestCase):
                         self.assertIn(cell["val"], STYLE_VALS)
                         for v in cell.get("dims", {}).values():
                             self.assertTrue(v is None or 0 <= v <= 1, (d, k, v))
+        st = jread(w / "stage.json")                                      # round4 步驟 3：寫手的固化階與兩套實作都在
+        self.assertIn(st["stage"], ("agent", "semi", "program"))
+        self.assertTrue(set(st["tools"]) <= set(os.listdir(w / "tools")), st["tools"])
+        self.assertTrue((w / "compose.py").is_file())
+        self.assertEqual(jread(w / "_metainfo")["brain"], {"$ref": "stage.json"})
         m = jread(TRAIN / "optimize" / "_metainfo")
         for k in ("ratings", "policy"):
             self.assertTrue((TRAIN / "optimize" / m[k]["$ref"]).is_file(), k)
@@ -940,6 +945,240 @@ class Round4T(unittest.TestCase):
         self.assertEqual(r.stderr.count("\n"), 1, r.stderr)
         self.assertRegex(r.stderr, r"^train: StateBad .*'傲嬌' 不在收窄範圍.*'文靜'")
         self.assertEqual({p: (g / p).read_bytes() for p in before}, before)
+
+    # ---- 共用 ----
+    def put(self, example, ws=None):
+        jwrite((ws or self.ws) / "new" / example, jread(EXAMPLES / example))
+
+    def galtxt(self, g=G, env=None, ws=None):
+        return run(EXEC, "--ws", str(ws or self.ws), str(g), env=env, cwd=self.tmp, timeout=300)
+
+    def fresh(self, name):
+        ws = self.tmp / name
+        (ws / "new").mkdir(parents=True)
+        return ws
+
+    def staged(self, stage, tools=None):
+        """樹的拷貝，writer/stage.json 改成這階（tools 有給也換）"""
+        g = tree_copy(self.tmp / ("t-" + stage + "-" + "-".join(tools or [])))
+        st = jread(g / "writer" / "stage.json")
+        st["stage"] = stage
+        if tools is not None:
+            st["tools"] = tools
+        jwrite(g / "writer" / "stage.json", st)
+        return g
+
+    def histories(self, ws, agent="writer"):
+        return [jl(p) for p in sorted((ws / ".stack" / agent / "runs").glob("*/stack/history.jsonl"))]
+
+    # 1. 評分結構：dims.json 的 by 都是真的子樹（或 pick）；柚葉 fill 三份 dims 齊、洩底 null、total＝加權手算
+    def test_dims_table(self):
+        d = jread(G / "data" / "dims.json")
+        for name, spec in [*d["profiles"]["傲嬌"].items(), *d["question_dims"].items()]:
+            by = spec["by"]
+            self.assertTrue(by == "pick" or (G / by / "_metainfo").is_file(), (name, by))
+            for sub in spec["moved_by"]:
+                self.assertTrue((G / sub / "_metainfo").is_file(), (name, sub))
+        self.put("Q16.json")
+        r = self.galtxt()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        s = jread(self.ws / "out" / "Q16" / "score.json")
+        for x in s["drafts"]:
+            self.assertEqual(set(x["dims"]), set(YUZU) | {"護欄"})
+            self.assertIsNone(x["dims"]["洩底"])                          # fill 沒有洩底
+            if x["dims"]["護欄"]:
+                self.assertAlmostEqual(x["total"], yuzu_total(x["dims"]), places=2)
+            else:
+                self.assertEqual(x["total"], 0)
+        self.assertEqual(set(s["dims"]), {"多樣性"})                       # 不是 hints_fixed 的題：沒有「一致」
+
+    # 2. lint 細項：反差的順序、洩底、OocMark、開關
+    def lint_rules(self, example):
+        ws = self.fresh("b-" + example)
+        self.put(example, ws)
+        st = ws / ".stack"
+        st.mkdir()
+        r = run(EXEC, BRIEF, env={"AOS_WS": str(ws), "AOS_STACK": str(st) + "/"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return jread(st / "rules.json")
+
+    def lint_dims(self, rules, text):
+        d = self.tmp / "lintws"
+        jwrite(d / "rules.json", rules)
+        r = run(EXEC, "--ws", str(d), LINT, input=json.dumps({"text": text}, ensure_ascii=False),
+                env={"AOS_STACK": str(self.tmp / "lintstack") + "/"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return json.loads(r.stdout)
+
+    def test_lint_contrast(self):
+        fill = self.lint_rules("Q16.json")
+        y = "宮澤柚葉：「%s」"
+        o = self.lint_dims(fill, y % "哼，才沒有。不過……也不是不能接受。")
+        self.assertEqual((o["dims"]["反差"], o["dims"]["洩底"]), (1.0, None))   # fill 沒有洩底
+        self.assertEqual(self.lint_dims(fill, y % "才沒有。")["dims"]["反差"], 0.5)
+        self.assertEqual(self.lint_dims(fill, y % "也不是不能接受。才沒有。")["dims"]["反差"], 0.5)   # 順序反
+        self.assertEqual(self.lint_dims(fill, y % "嗯，好啊。")["dims"]["反差"], 0.0)
+        o = self.lint_dims(fill, y % "哼，才沒有，臉紅冒煙了。")
+        self.assertIn("OocMark", o["tier1_notes"])
+        self.assertIn("冒煙", o["tier1_notes"])
+        off = dict(fill, switches=dict(fill["switches"], contrast_order=False))
+        self.assertIsNone(self.lint_dims(off, y % "哼，才沒有。不過……也不是不能接受。")["dims"]["反差"])
+        scene = self.lint_rules("cls-ribbon.json")
+        body = ["主角：「宮澤，那個要丟嗎？」", y % "哼，才沒有。不過……也不是不能接受。", "主角：「好。」", y % "真是的。"]
+        o = self.lint_dims(scene, "\n".join(["（宮澤柚葉別過臉，耳根有點紅。）"] + body))
+        self.assertEqual(o["dims"]["洩底"], 1.0)
+        self.assertEqual(self.lint_dims(scene, "\n".join(["（夕陽斜斜照進來。）"] + body))["dims"]["洩底"], 0.5)
+        self.assertEqual(self.lint_dims(scene, "\n".join(body + ["主角：「走吧。」"]))["dims"]["洩底"], 0.0)
+
+    # 3. judge 四行：三個 dims；少「文筆：」＝null 不停；沒「承接：」＝ReplyBad
+    def test_judge_four_lines(self):
+        self.put("Q16.json")
+        r = self.galtxt()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        j = jread(self.ws / ".stack" / "judge.json")
+        self.assertTrue(j)
+        for v in j.values():
+            self.assertEqual((v["scores"], v["tier2"], v["reason"]), ({"承接": 2, "像柚葉": 2, "文筆": 2}, 2, "假腦"))
+        ws = self.fresh("ws2")
+        self.put("Q16.json", ws)
+        r = self.galtxt(ws=ws, env={"GALTXT_FAKE_GRADE": "承接：3\\n像柚葉：1\\n理由：太直白"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        for v in jread(ws / ".stack" / "judge.json").values():
+            self.assertEqual((v["scores"], v["reason"]), ({"承接": 3, "像柚葉": 1, "文筆": None}, "太直白"))
+        for x in jread(ws / "out" / "Q16" / "score.json")["drafts"]:
+            if x["dims"]["護欄"]:
+                self.assertIsNone(x["dims"]["文筆"])
+                self.assertEqual((x["dims"]["承接"], x["dims"]["像柚葉"]), (1.0, 0.333))
+        ws = self.fresh("ws3")
+        self.put("Q16.json", ws)
+        r = self.galtxt(ws=ws, env={"GALTXT_FAKE_GRADE": "像柚葉：3\\n文筆：3\\n理由：沒承接"})
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("galtxt-a judge: ReplyBad", r.stderr)
+        self.assertFalse((ws / "out" / "Q16").exists())
+
+    # 5. 寫手三階同介面：agent／semi／program 跑 Q16 都交一行、must 中；program 沒有腦的痕跡；semi 腦叫了 beat
+    def test_writer_stages(self):
+        runs = {}
+        for stage, tools in (("agent", None), ("semi", ["lint", "beat"]), ("semi", ["lint"]), ("program", None)):
+            g = self.staged(stage, tools)
+            key = "-".join([stage] + (tools or []))
+            ws = self.fresh("ws-" + key)
+            self.put("Q16.json", ws)
+            r = self.galtxt(g, ws=ws)
+            self.assertEqual(r.returncode, 0, (key, r.stderr))
+            lines = (ws / "out" / "Q16" / "answer.txt").read_text(encoding="utf-8").splitlines()
+            self.assertEqual(len(lines), 1, (key, lines))
+            self.assertTrue(lines[0].startswith("宮澤柚葉：「"), (key, lines))
+            self.assertTrue(jread(ws / "out" / "Q16" / "score.json")["bench"]["guard_hit"], key)
+            runs[key] = ws
+        called = lambda h: {c["function"]["name"] for m in h for c in m.get("tool_calls") or []}   # noqa: E731
+        for key in ("agent", "semi-lint"):
+            hs = self.histories(runs[key])
+            self.assertEqual(len(hs), 3)
+            for h in hs:
+                self.assertEqual(called(h), {"lint"}, key)                 # tools ["lint"]：腦看不到 beat（semi 也一樣）
+        hs = self.histories(runs["semi-lint-beat"])
+        self.assertEqual(len(hs), 3)
+        for h in hs:
+            self.assertEqual(called(h), {"lint", "beat"})
+            self.assertTrue(any(m.get("role") == "tool" and "不過……" in m["content"] for m in h), h)   # beat 真的跑了
+        cells = sorted((runs["program"] / ".stack" / "writer" / "runs").iterdir())
+        self.assertEqual(len(cells), 3)                                    # write.py 一字不改：小格照開
+        for c in cells:
+            for f in ("history.jsonl", "usage.jsonl", "trace.jsonl"):
+                self.assertEqual(list(c.rglob(f)), [], (c, f))             # 程式階：沒有腦、沒有 loop 的痕跡
+        self.assertEqual(self.histories(runs["program"]), [])               # counter_calls 0
+        self.assertEqual(len(self.histories(runs["program"], "judge")), 3)  # 評審照評
+        ws = self.fresh("ws-env")                                           # GALTXT_STAGE 蓋過 stage.json
+        self.put("Q16.json", ws)
+        r = self.galtxt(ws=ws, env={"GALTXT_STAGE": "program"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.histories(ws), [])
+        ws = self.fresh("ws-bad")
+        self.put("Q16.json", ws)
+        r = self.galtxt(ws=ws, env={"GALTXT_STAGE": "nope"})
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("writer: StateBad", r.stderr)
+
+    # 6. 工具契約：beat、voice
+    def tool(self, name, args):
+        return run(EXEC, str(G / "writer" / "tools" / name), input=args if isinstance(args, str) else json.dumps(args, ensure_ascii=False),
+                   env={"AOS_STACK": str(self.tmp / "toolstack" / name) + "/"})
+
+    def test_tool_contract(self):
+        for name in ("beat", "voice"):
+            d = G / "writer" / "tools" / name
+            self.assertTrue(os.access(d / "_entry", os.X_OK), name)
+            self.assertTrue({"description", "parameters"} <= set(jread(d / "tool.json")), name)
+            m = jread(d / "_metainfo")
+            self.assertEqual((m["kind"], m["deterministic"]), ("program", True), name)
+        r = self.tool("beat", {"deny": "才沒有", "yield": "也不是不能接受", "cover": "真是的"})
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(r.stdout.count("\n"), 1, r.stdout)
+        out = r.stdout.strip()
+        self.assertTrue(0 <= out.index("才沒有") < out.index("也不是不能接受") < out.index("真是的"), out)
+        self.assertEqual(self.tool("beat", {"deny": "才沒有", "yield": "也不是不能接受", "cover": "真是的"}).stdout, r.stdout)   # 確定性
+        r = self.tool("beat", {"deny": "才沒有"})                           # 槽缺：通用句補、stderr 一行、退 0
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.count("\n"), 1)
+        self.assertTrue(r.stdout.startswith("才沒有"), r.stdout)
+        self.assertRegex(r.stderr, r"^beat: SlotMissing yield")
+        self.assertEqual(r.stderr.count("SlotMissing"), 2)                 # yield、cover 各一行
+        r = self.tool("voice", {"text": "才沒有。不過……也不是不能接受，真是的。", "who": "宮澤柚葉", "ending": "啦"})
+        self.assertEqual((r.returncode, r.stdout), (0, "宮澤柚葉：「才沒有。不過……也不是不能接受，真是的啦。」\n"))
+        r = self.tool("voice", {"text": "{calls}拿著。", "calls": "你"})       # 稱呼換上、沒口癖就補第一個
+        self.assertEqual(r.stdout, "哼，你拿著。\n")
+        r = self.tool("voice", {})
+        self.assertEqual(r.returncode, 0)
+        self.assertEqual(r.stdout.count("\n"), 1)
+        self.assertEqual(r.stderr.count("\n"), 1)
+        self.assertRegex(r.stderr, r"^voice: SlotMissing text")
+        for name in ("beat", "voice"):
+            r = self.tool(name, "nope")
+            self.assertEqual(r.returncode, 1)
+            self.assertRegex(r.stderr, r"^%s: ArgumentsBad \S" % name)
+
+    # 7. 確定性：Q16-fixed 三份同 hint；program、假腦 agent 的「一致」都是 1.0；JITTER 讓 agent 的「一致」< 1、＝1 − 多樣性
+    def test_determinism(self):
+        def one(g, env=None, tag="x"):
+            ws = self.fresh("ws-" + tag)
+            self.put("Q16-fixed.json", ws)
+            r = self.galtxt(g, env=env, ws=ws)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            hints = [jread(p)["hint"] for p in sorted((ws / ".stack" / "writer" / "runs").glob("*/ws/done/Q16-fixed.json"))]
+            self.assertEqual(hints, ["借景"] * 3)
+            return jread(ws / "out" / "Q16-fixed" / "score.json")["dims"]
+        self.assertEqual(one(self.staged("program"), tag="p")["一致"], 1.0)
+        self.assertEqual(one(G, tag="a")["一致"], 1.0)
+        d = one(G, env={"GALTXT_FAKE_JITTER": "1"}, tag="j")
+        self.assertLess(d["一致"], 1.0)
+        self.assertAlmostEqual(d["一致"], 1 - d["多樣性"], places=3)
+
+    # 8. 難例：templates.json 沒 poster → program 照產、hard.jsonl 一行 TemplateMissing；再跑不重複；ribbon 不記
+    def test_hard_cases(self):
+        self.assertNotIn("poster", jread(G / "data" / "templates.json")["by_detail"])
+        self.assertNotIn("lights", jread(G / "data" / "templates.json")["by_detail"])   # held-out
+        g = self.staged("program")
+        hard = g / "writer" / "hard.jsonl"
+        for i in (1, 2):
+            ws = self.fresh("ws-poster-%d" % i)
+            self.put("cls-poster.json", ws)
+            r = self.galtxt(g, ws=ws)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            lines = (ws / "out" / "cls-poster" / "answer.txt").read_text(encoding="utf-8").splitlines()
+            self.assertTrue(5 <= len(lines) <= 10, lines)
+            rows = jl(hard)
+            self.assertEqual(len(rows), 1, rows)                            # 三份草稿、跑兩次：同題同 why 只記一次
+            self.assertEqual((rows[0]["question"], rows[0]["why"], rows[0]["brief_key"]),
+                             ("cls-poster", "TemplateMissing", {"mode": "scene", "detail": "poster"}))
+            self.assertIn("宮澤柚葉：「", rows[0]["output"])
+        ws = self.fresh("ws-ribbon")
+        self.put("cls-ribbon.json", ws)
+        r = self.galtxt(g, ws=ws)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("彩帶", (ws / "out" / "cls-ribbon" / "answer.txt").read_text(encoding="utf-8"))   # 用了 by_detail.ribbon
+        self.assertEqual(len(jl(hard)), 1)
+        self.assertFalse((G / "writer" / "hard.jsonl").exists())            # 真樹沒被弄髒
 
 
 if __name__ == "__main__":

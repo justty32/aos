@@ -1,0 +1,8 @@
+{"description": "替一句台詞補角色的口氣：text 裡的 {calls} 換成對主角的稱呼（calls）；口癖（tics）一個都沒有就在句首補第一個；給了句尾（ending）就插在最後的「。」前面。給了說話者（who）回一行「<who>：「…」」，沒給只回內文。text 缺會用通用句。",
+ "parameters": {"type": "object",
+                "properties": {"text": {"type": "string", "description": "台詞內文（不含說話者與引號），例：beat 回的那句"},
+                               "who": {"type": "string", "description": "說話者（cast 的 name），例：宮澤柚葉"},
+                               "calls": {"type": "string", "description": "她叫主角的稱呼（cast 的 calls_lead），例：你"},
+                               "tics": {"type": "array", "items": {"type": "string"}, "description": "口癖，例：[\"哼\", \"才不是\", \"真是的\"]；沒給用柚葉的"},
+                               "ending": {"type": "string", "description": "句尾語氣詞，例：啦"}},
+                "required": ["text"]}}

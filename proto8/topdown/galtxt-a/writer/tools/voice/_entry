@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+# voice - stdin 收 {"text", "who"?, "calls"?, "tics"?, "ending"?}，補口癖、句尾、稱呼，stdout 印一行（給了 who＝「<who>：「…」」對白格式；沒給＝只回內文）
+# 三步、照順序（round4 § 2.4）：
+#   稱呼：text 裡的 {calls} 換成 calls（沒給＝「你」）；
+#   口癖：tics 一個都沒出現＝在句首補 tics[0]＋「，」（沒給 tics＝DEFAULT_TICS，柚葉精簡卡的口癖）；
+#   句尾：給了 ending 而且 text 以「。」結尾、最後一句還沒用它＝插在最後的「。」前面。
+# text 缺（沒給、不是字串、空字串）＝用通用句 GENERIC，stderr 一行「voice: SlotMissing text（用通用句）」、照樣產出、退 0（降級不報錯，round4 § 6）。
+# 純函數：不讀檔、不寫檔、不用 stack；同輸入永遠同輸出。
+# 錯：stderr 與 stdout 各一行「voice: 代號 原因」、退 1——ArgumentsBad（stdin 不是 JSON 物件）。
+import json, sys
+
+DEFAULT_TICS = ["哼", "才不是", "才沒", "真是的", "隨便你"]
+GENERIC = "哼，真是的。"
+
+
+def bad(code, reason):
+    line = "voice: %s %s" % (code, str(reason).replace("\n", " "))
+    print(line, file=sys.stderr)
+    print(line)                                  # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+raw = sys.stdin.read()
+try:
+    args = json.loads(raw) if raw.strip() else {}
+except ValueError as e:
+    bad("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict):
+    bad("ArgumentsBad", "stdin 要是 JSON 物件 {text, who, calls, tics, ending}")
+
+
+def word(k, default=""):
+    v = args.get(k)
+    return v.replace("\n", " ").strip() if isinstance(v, str) else default
+
+
+text = word("text")
+if not text:
+    print("voice: SlotMissing text（用通用句）", file=sys.stderr)
+    text = GENERIC
+text = text.replace("{calls}", word("calls") or "你")
+tics = [t for t in args.get("tics") or [] if isinstance(t, str) and t] if isinstance(args.get("tics"), list) else []
+tics = tics or DEFAULT_TICS
+if not any(t in text for t in tics):
+    text = "%s，%s" % (tics[0], text)
+ending = word("ending")
+if ending and text.endswith("。") and not text[:-1].endswith(ending):
+    text = text[:-1] + ending + "。"
+who = word("who")
+print("%s：「%s」" % (who, text) if who else text)

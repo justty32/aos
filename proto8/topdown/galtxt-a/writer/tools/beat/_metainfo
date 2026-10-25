@@ -1,0 +1,6 @@
+{"summary": "反差節拍：stdin 收 {deny, yield, cover} 三槽，回一行「否認。不過……讓步，遮掩。」；槽缺用通用句、stderr 一行、照樣退 0（寫手抽出的第一個工具，round4 § 2.4）",
+ "kind": "program", "grow_level": 4,
+ "time_ms": {"val": 30, "max": 5000}, "resource": "cpu",
+ "side_effect": false, "idempotent": true, "deterministic": true, "interrupt": "safe", "parallel": true,
+ "reads": [], "writes": [],
+ "fs_needs": ["tool_json"], "callers": 1}

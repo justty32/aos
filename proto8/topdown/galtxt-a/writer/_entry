@@ -1,3 +1,21 @@
-#!/bin/sh
-# _entry - 把寫手的 loop 跑起來（loop 每次跑一格 fsm.json）
-exec aos-loop loop.json
+#!/usr/bin/env python3
+# _entry - 照 stage.json 的 stage 分流（round4 § 2.1「殼拿掉」）：program＝python3 compose.py（模板＋工具，腦 0 次）；agent／semi＝aos-loop loop.json（loop 每次跑一格 fsm.json）。
+# 環境變數 GALTXT_STAGE 有設＝蓋過 stage.json（distill 讓寫手暫走 agent 當老師，round4 § 7.1）。回滾＝stage.json 改回；兩套都留在這個資料夾。
+# 錯：stderr 一行「writer: StateBad 原因」、退 1——stage.json 讀不了、或 stage 不是 agent／semi／program。
+import json, os, sys
+
+STAGES = ("agent", "semi", "program")
+stage = os.environ.get("GALTXT_STAGE")
+if not stage:
+    try:
+        with open("stage.json", encoding="utf-8") as f:
+            stage = json.load(f).get("stage")
+    except (OSError, ValueError, AttributeError) as e:
+        print("writer: StateBad stage.json 讀不了：%s" % str(e).replace("\n", " "), file=sys.stderr)
+        sys.exit(1)
+if stage not in STAGES:
+    print("writer: StateBad stage %r 不是 %s" % (stage, "／".join(STAGES)), file=sys.stderr)
+    sys.exit(1)
+if stage == "program":
+    os.execvp("python3", ["python3", "compose.py"])
+os.execvp("aos-loop", ["aos-loop", "loop.json"])

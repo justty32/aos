@@ -58,3 +58,33 @@
 順手補完：根 `_metainfo`、`grader/_metainfo` 加 `"ratings": {"$ref": "ratings.json"}`；`fsm.json` brief 的 reads 加 `data:lint_switches.json`、write 加 `data:hints.json`、pick 加 `data:dims.json`（各格只補自己真的讀的那張）。
 
 結果：`test_topdown_galtxt_a.py` 29 個綠；`proto8/tests` 全套 544 個 OK（skip 2）。步驟 1 的測試 1～3、7 還沒寫（只補了 4）。
+
+## 步驟 3：寫手三階（節點生命週期）＋步驟 1 欠的測試 1、2、3、7（實作者，2026-10-25）
+
+做了：
+- `writer/tools/beat/`、`writer/tools/voice/`（各 `_entry`＋`tool.json`＋`_metainfo`；`kind program`、`deterministic true`、`fs_needs ["tool_json"]`——`test_metainfo_consistent` 要 program 沒 fs_needs 的資料夾只有 `_entry`／`_metainfo`）。
+  - beat：stdin `{deny, yield, cover}` → 一行「`<deny>。不過……<yield>，<cover>。`」（不含說話者；各段尾標點先拿掉）。槽缺＝**那一槽**換通用句（不是整句換），缺幾槽 stderr 幾行 `beat: SlotMissing <槽>（用通用句）`、退 0。
+  - voice：stdin `{text, who?, calls?, tics?, ending?}`：`{calls}` 換稱呼 → 口癖一個都沒有就句首補 `tics[0]，` → 有 `ending` 插在最後「。」前 → 給 `who` 回「`who：「…」`」。text 缺＝通用句「哼，真是的。」＋stderr 一行、退 0。
+- `data/templates.json`：`generic`＋`by_detail.ribbon`；**poster、lights 都不放**（照 § 7.2，同前手傾向）。偏離：槽除了 § 7.1 的 deny／yield／cover／open／close／reveal，多 `lead`、`lead2`（主角兩句；scene 要兩人對話）。字句自擬、不含 Q16 正解。
+- `writer/compose.py`：不是逐字從 `brain.py.compose()` 搬，而是照 templates 重寫（brain.py 的 compose() 留給 agent／semi 階的假腦）。順序 beat → voice → lint；候選照 hint 在 `hints.json`（hints 或 options 任一組）的位置挑，同 hint 同輸出。fill 挑含 `must` 第 1／2 組詞的 deny／yield。scene 六行：open、lead、女角（beat→voice）、reveal、lead2、close。
+  - 難例：brief 有 `detail` 而 `by_detail` 沒有 → `TemplateMissing`；**另加** `LintFailed`（專屬句沒過 lint 先退回 generic 再試，還沒過才記；答案照交）。沒 `detail` 的題（Q16）只用 generic、不算難例。去重鍵＝(question, why)，`flock` 住再查再寫（三份草稿同時跑也只一行）。
+  - **lights（held-out）在 program 階也會記 TemplateMissing**——步驟 6 的 distill 要跳過 `set.json.verify` 題的 detail，不然 held-out 被蒸進模板（前手坑的再確認，實跑看到了）。
+- `writer/stage.json`：`stage agent`、`tools ["lint"]`、`history []`、`since_epoch`／`why` null、`tools_share 0.17`（6 環節裡只有「自檢」有工具）、`decisions_left` 其餘五個。
+- `writer/_entry` 改成 python（sh 讀不了 JSON）：`GALTXT_STAGE` 有設蓋過 `stage.json`；program → `python3 compose.py`，否則 `aos-loop loop.json`；stage 不是三值之一或 stage.json 壞 → `writer: StateBad`、退 1。
+- `writer/brain.py`：有 `stage.json` 只列 `stage.tools`；**沒有＝全部**（writer-sol 的 brain.py 是捷徑過來的，它沒 stage.json，行為不變）。假腦：semi 且看得到 beat → 先叫 beat 一次（三槽取 `must` 第一個詞），再 lint，再交稿；beat 回的句子**不拿來用**（只示範腦叫工具；草稿跟 agent 階一樣）。
+- `system.txt` 加兩句（beat 組節拍、voice 補口癖句尾稱呼；writer-sol 共用這份，句子是「有…工具時」所以無害）。
+- `writer/_metainfo`：`steps`、`"brain": {"$ref": "stage.json"}`、`children`（beat、voice、lint 捷徑）、reads 加 `data:templates.json`／`data:hints.json`、writes 加 `cell:beat/`、`cell:voice/`、`tree:writer/hard.jsonl`。`kind` 留 `agent`（目前階）。`grad`／`rollup` 的 `$ref` 沒加（檔還不存在，步驟 4／5）。
+
+測試 5 的解讀（同前手）：program 階 `write.py` 照開小格 `runs/NNN/`，小格裡沒有 `history.jsonl`／`usage.jsonl`／`trace.jsonl`（→ counter_calls 0）；compose 經 aos-exec 叫工具，所以有空的 `stack/beat|voice|lint/` 資料夾。
+
+順手修的 bug（步驟 1）：`GALTXT_FAKE_JITTER` 原本在第 n 份句尾前加 n 個「…」——「一致」量的是二元組**集合**，n ≥ 2 多出來的「……」本來就有，三份集合相同、一致仍 1.0（測試 7 一寫就紅）。改成「…」＋第 n 個天干。
+
+新測試（`Round4T`，§ 10 編號）：`test_dims_table`（1）、`test_lint_contrast`（2）、`test_judge_four_lines`（3；另驗 ReplyBad 時沒有 out）、`test_writer_stages`（5；多跑一組 semi＋`["lint"]` 證明 tools 過濾、`GALTXT_STAGE=program` 蓋過、`GALTXT_STAGE=nope` → StateBad）、`test_tool_contract`（6）、`test_determinism`（7）、`test_hard_cases`（8；另驗 ribbon 用了專屬句且不記、真樹沒有 hard.jsonl）。`Round3T.test_tree` 加 `writer/stage.json`（stage 三值之一、tools ⊆ `writer/tools/`）、`compose.py`、`_metainfo.brain`。
+
+變紅過一次（暫改 → 紅 → 還原 → 綠，腳本一次跑完）：dims.json 反差 `by` 改 `tools/nolint` → 1 紅；lint 反差不看順序 → 2 紅；judge 不檢「承接」→ 3 紅；brain.py 不照 `stage.tools` 過濾、`_entry` 不認 program、假腦 semi 不叫 beat → 5 各紅；beat 三槽順序對調、voice 不補口癖 → 6 各紅；compose 用小格編號當 idx → 7 紅；hard.jsonl 不去重 → 8 紅；stage.json tools 多一個不存在的 → test_tree 紅。
+
+環境：這個 worktree 沒建 impls，`proto8/impls/*/bin/` 從主 repo 拷來（gitignore 的，不進 commit）。
+
+結果：`test_topdown_galtxt_a.py` 36 個綠；`proto8/tests` 全套 560 個 OK（skip 2）。
+
+下一步（步驟 4）：`meta/rollup/`、各子樹初始旁檔與 `$ref`（writer 的 `grad`／`rollup`，beat／voice 的 `grad`／`rollup`）、rate／verify 叫 `rollup_up`；測試 12、17、20、21。README 的樹、code map 還沒補 beat／voice／compose／templates（步驟 8 一起）。

@@ -1,0 +1,6 @@
+{"description": "把傲嬌的反差節拍組成一句台詞內文：先否認（deny）→ 再讓步（yield）→ 補一句遮掩（cover），回一行「<deny>。不過……<yield>，<cover>。」（不含說話者與引號；要加口癖、稱呼、說話者再交給 voice）。槽缺會用通用句補上。",
+ "parameters": {"type": "object",
+                "properties": {"deny": {"type": "string", "description": "否認那段，例：才沒有捨不得"},
+                               "yield": {"type": "string", "description": "讓步那段（雙重否定、偷偷承認），例：也不是不能接受"},
+                               "cover": {"type": "string", "description": "遮掩那段，例：真是的"}},
+                "required": ["deny", "yield", "cover"]}}
