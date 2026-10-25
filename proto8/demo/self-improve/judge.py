@@ -56,7 +56,7 @@ else:
 passed = score == total
 common.write(os.path.join(vdir, "verdict.json"), json.dumps(
     {"version": current, "passed": passed, "score": score, "total": total, "feedback": feedback if not passed else "",
-     "at": common.now()}, ensure_ascii=False) + "\n")
+     "judged_at": common.now()}, ensure_ascii=False) + "\n")
 
 
 def report(why):
@@ -72,8 +72,8 @@ def report(why):
     lines = ["self-improve 報告（%s）" % common.now(), "結果：%s" % why,
              "最好的一版：%s（已複製到 out/best/）" % best,
              "用掉：改進 %d 輪（上限 %d）、%d 秒（上限 %d）、%d tokens（上限 %d）" % (
-                 used["counter_rounds"], limit["rounds"], used["elapsed_ms"] // 1000, limit["elapsed_ms"] // 1000,
-                 used["counter_tokens"], limit["tokens"]), ""]
+                 used["counter_rounds"], limit["max_rounds"], used["elapsed_ms"] // 1000, limit["max_elapsed_ms"] // 1000,
+                 used["counter_tokens"], limit["max_tokens"]), ""]
     for v in common.versions():
         meta = common.read_json(os.path.join(VERSIONS, v, "version.json"), {})
         d = common.verdict(v)
@@ -98,15 +98,15 @@ def report(why):
     common.write(os.path.join(out, "report.txt"), "\n".join(lines) + "\n")
     common.write(os.path.join(out, "result.json"), json.dumps(
         {"passed": passed, "best": best, "score": common.verdict(best)["score"], "total": total,
-         "used": used, "budget": limit, "at": common.now()}, ensure_ascii=False) + "\n")
+         "used": used, "budget": limit, "finished_at": common.now()}, ensure_ascii=False) + "\n")
 
 
 if passed:
     report("達成（%s 全過）" % current)
     sys.exit(10)
 used, limit = common.used(), common.budget()
-over = [k for k, u in (("rounds", "counter_rounds"), ("elapsed_ms", "elapsed_ms"), ("tokens", "counter_tokens"))
-        if used[u] >= limit[k]]                   # 用量是計數 counter_*（10-25）、預算是上限，照舊 rounds／tokens
+over = [k for k, u in (("max_rounds", "counter_rounds"), ("max_elapsed_ms", "elapsed_ms"), ("max_tokens", "counter_tokens"))
+        if used[u] >= limit[k]]                   # 用量是計數 counter_*、預算是上限 max_*（都是 10-25 改的名）
 if over:
     best = common.best()
     report("沒達成：預算用完（%s）" % "、".join(over))

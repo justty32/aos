@@ -88,7 +88,7 @@ def recall_memory(q):
         return ""
     env = dict(os.environ, AOS_STACK=os.path.join(stack, "memory") + "/", AOS_HEAP=heap)
     try:
-        r = subprocess.run(["aos-exec", "tools/memory"], input=json.dumps({"op": "search", "query": q, "limit": 3}),
+        r = subprocess.run(["aos-exec", "tools/memory"], input=json.dumps({"op": "search", "query": q, "max_results": 3}),
                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, env=env, timeout=30)
     except (OSError, subprocess.TimeoutExpired):
         return ""
@@ -121,7 +121,7 @@ mode = "intent"
 if turns.estimate(full_system + full) <= full_under:   # 整份還很短：直接全送（不會比挑過的貴，也不會漏）
     system, work, picked, mode = full_system, full, [], "full"
 with open(os.path.join(stack, "context.jsonl"), "a", encoding="utf-8") as f:
-    f.write(json.dumps({"at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds"),
+    f.write(json.dumps({"sent_at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds"),
                         "question": name, "mode": mode, "counter_turns": len(done), "picked": [[no, why] for no, why in picked],
                         "memory": bool(memory), "counter_history_messages": len(history), "counter_sent_messages": len(system + work),
                         "est_tokens": turns.estimate(system + work), "est_tokens_full": turns.estimate(full_system + full)},

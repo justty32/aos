@@ -29,7 +29,7 @@ ai_tools/
 ```
 agents/<名>/agent/        agent 定義（範本的複本；定義資料夾不被寫，P-15）
 agents/<名>/ws/           工作區 new/ cur/ out/ done/，stack 在 ws/.stack/（state.txt、trace.jsonl、history.jsonl…）
-agents/<名>/runs.jsonl    aos-ai run 每次一行：at、code、signal、timed_out、elapsed_ms、errors、answers
+agents/<名>/runs.jsonl    aos-ai run 每次一行：finished_at（跑完的時間，10-25 前叫 at）、code、signal、timed_out、elapsed_ms、errors、answers
 daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.stack/ctl.json、.stack/state.json、各 agent 的小格
 ```
 

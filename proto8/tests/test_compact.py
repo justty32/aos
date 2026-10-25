@@ -184,6 +184,7 @@ class T(unittest.TestCase):
         self.assertEqual((self.stack / "compact" / run_id / "orig.jsonl").read_text(), text)
         self.assertEqual(rep["before"]["counter_messages"], 40)
         self.assertEqual(rep["after"]["counter_messages"], 6)
+        self.assertLessEqual({"max_keep", "max_keep_final", "max_keep_line_chars"}, set(rep["settings"]))   # 上限一律 max_*（10-25 前叫 keep_max…）
         self.assertLess(rep["after"]["bytes"], rep["before"]["bytes"])
         log = (self.stack / "compact" / "log.jsonl").read_text().splitlines()
         self.assertEqual(json.loads(log[-1])["run"], run_id)

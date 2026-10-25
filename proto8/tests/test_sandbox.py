@@ -263,7 +263,7 @@ class SelfImproveSandboxTest(unittest.TestCase):
         cases = [{"stdin": "a", "stdout": "ANSWER-A"}, {"stdin": "b", "stdout": "ANSWER-B", "hidden": True}]
         (self.ws / "judge" / "cases.json").write_text(json.dumps(cases))
         (self.ws / "goal.txt").write_text("把 a 變成 ANSWER-A")
-        (self.ws / "budget.json").write_text('{"rounds": 0}')            # 只判原版、不改進（不用腦）
+        (self.ws / "budget.json").write_text('{"max_rounds": 0}')            # 只判原版、不改進（不用腦）
         entry = self.ws / "target" / "_entry"
         entry.write_text(CHEAT % str(self.ws / "judge" / "cases.json"))
         entry.chmod(0o755)

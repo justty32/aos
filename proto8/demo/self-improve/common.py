@@ -4,7 +4,7 @@
 # stack（$AOS_STACK，執行中的）：started_at.txt、current.txt（現在輪到哪一版）、versions/vNNN/（每一版一個資料夾，拍下來就不再改）
 import datetime, hashlib, json, os, shutil, signal, subprocess, sys, tempfile
 
-BUDGET = {"rounds": 5, "elapsed_ms": 30 * 60 * 1000, "tokens": 500000}      # budget.json 沒寫的照這個
+BUDGET = {"max_rounds": 5, "max_elapsed_ms": 30 * 60 * 1000, "max_tokens": 500000}      # budget.json 沒寫的照這個（上限一律 max_*，10-25 前叫 rounds、elapsed_ms、tokens）
 TAIL = 4000                                                               # stdout、stderr 各留最後幾個字
 
 
@@ -122,6 +122,8 @@ def budget():
     if not isinstance(got, dict):
         die("BudgetBad", "budget.json 要是 JSON 物件")
     for k, v in got.items():
+        if "max_" + k in b:                                  # 10-25 前的上限名：不認，免得寫舊名的人以為有上限
+            die("BudgetBad", "budget.json 的 %s 是舊名（10-25 改叫 max_%s）" % (k, k))
         if k in b:
             if type(v) is not int or v < 0:
                 die("BudgetBad", "budget.json 的 %s 要是非負整數" % k)

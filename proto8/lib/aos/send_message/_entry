@@ -141,7 +141,7 @@ for r, lid in zip(recipients, ids):
         continue
     letter = {"kind": "letter", "id": lid, "from": me, "to": r, "group": group, "thread": thread,
               "reply_to": reply_to, "counter_hops": hops, "expect_reply": expect_reply,
-              "at": now.isoformat(timespec="milliseconds"), "subject": subject, "body": body}
+              "sent_at": now.isoformat(timespec="milliseconds"), "subject": subject, "body": body}
     data = json.dumps(letter, ensure_ascii=False, indent=1) + "\n"
     os.makedirs(os.path.join(box, "tmp"), exist_ok=True)
     os.makedirs(os.path.join(box, "new"), exist_ok=True)

@@ -229,7 +229,7 @@ class ReportCase(unittest.TestCase):
         self.assertEqual(sorted(os.listdir(st)), ["current.txt", "history.jsonl"])
 
     def test_budget_refused_through_gate(self):
-        (self.t / "kernel.json").write_text(json.dumps({"mailbox": str(self.mb), "budget": {"calls": 1}}))
+        (self.t / "kernel.json").write_text(json.dumps({"mailbox": str(self.mb), "budget": {"max_calls": 1}}))
         self.kernel_loop()
         g = self.gate({"argv": ["echo", "one"]}, name="1.json")
         self.assertEqual(g.communicate(timeout=20)[0], "one\n")

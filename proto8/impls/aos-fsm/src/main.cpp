@@ -10,7 +10,7 @@
 // 跑的期間 AOS_CF＝fsm.json、AOS_CO＝/states/<名>/exec，相對路徑從 fsm.json 的資料夾算；單子壞＝「aos-fsm: EntryBad 狀態 X：單子跑不起來：…」退 1、不寫 trace）。
 // 單子被逾時收掉：code 128＋N、signal N（目標那條是跑它的 aos-exec 以 128＋N 正常結束，signal null）。
 // 只看格的結束碼：不讀格的 stdout、不轉述格的 stderr（N-38）。格非 0（含 10）＝state 不動、原碼往上。
-// trace 一行 {"at","state","code","signal","elapsed_ms"}（at＝ISO 8601 UTC 到毫秒），沒有 timed_out（fsm 看不到格裡有沒有逾時，C-52；10-21 plan F4）。
+// trace 一行 {"started_at","state","code","signal","elapsed_ms"}（started_at＝這格開始跑的時間，ISO 8601 UTC 到毫秒；10-25 前叫 at），沒有 timed_out（fsm 看不到格裡有沒有逾時，C-52；10-21 plan F4）。
 // 收到 SIGINT／SIGTERM／SIGHUP：轉給那格、等它結束，trace 與 state 照常寫完，再以 128＋N 結束（P-36）。
 // 自己出錯：stderr 一行「aos-fsm: 代號 原因」、退 1（N-38、N-60）。
 #include "aos/files.hpp"
@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
         if (sig != 0) {
             return 128 + sig;
         }
-        std::string at = aos::utc_now_ms();
+        std::string started_at = aos::utc_now_ms();
         aos::loop::Run b;
         try {
             b = aos::loop::run_once(cell.exec);
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
         }
 
         aos::Json line = aos::Json::object();
-        line["at"] = at;
+        line["started_at"] = started_at;
         line["state"] = state;
         line["code"] = b.code;
         line["signal"] = nullptr;

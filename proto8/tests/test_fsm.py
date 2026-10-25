@@ -183,10 +183,10 @@ class T(unittest.TestCase):
             self.beat()
         tr = self.trace()
         self.assertEqual([(t["state"], t["code"]) for t in tr], [("a", 0), ("b", 5), ("b", 5)])
-        self.assertEqual(set(tr[0]), {"at", "state", "code", "signal", "elapsed_ms"})   # F4：沒有 timed_out
+        self.assertEqual(set(tr[0]), {"started_at", "state", "code", "signal", "elapsed_ms"})   # F4：沒有 timed_out
         for t in tr:   # at＝ISO 8601 UTC 到毫秒（10-23 命名統合，統合前到秒）
-            self.assertRegex(t["at"], r"\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00\Z")
-            datetime.datetime.fromisoformat(t["at"])
+            self.assertRegex(t["started_at"], r"\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00\Z")
+            datetime.datetime.fromisoformat(t["started_at"])
 
     def test_requires_stack(self):
         self.table({"a": {"exec": "a", "next": "a"}})

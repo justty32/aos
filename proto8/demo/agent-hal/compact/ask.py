@@ -103,12 +103,12 @@ def fake_segment(data):
     for ln in data["lines"]:
         who = {"user": "使用者", "assistant": "助手", "tool_note": "工具"}.get(ln["role"], ln["role"])
         out.append("%s：%s" % (who, flat(ln["text"], 50)))
-        if ln["role"] == "user" and KEEP_WORDS.search(ln["text"]) and len(keep) < data["keep_max"]:
+        if ln["role"] == "user" and KEEP_WORDS.search(ln["text"]) and len(keep) < data["max_keep"]:
             keep.append({"n": ln["n"], "tag": "user_words", "why": "使用者原話帶數字或決定"})
     return json.dumps({"summary": "\n".join(out), "keep": keep}, ensure_ascii=False)
 
 
 def fake_final(data):
     parts = ([data["old_summary"]] if data.get("old_summary") else []) + data["segments"]
-    return json.dumps({"summary": "\n".join(parts), "keep": data["candidates"][:data["keep_max"]]},
+    return json.dumps({"summary": "\n".join(parts), "keep": data["candidates"][:data["max_keep"]]},
                       ensure_ascii=False)

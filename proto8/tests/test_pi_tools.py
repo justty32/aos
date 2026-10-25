@@ -58,7 +58,7 @@ class Tools(unittest.TestCase):
     def test_read(self):
         self.put("a.py", "one\ntwo\nthree\n")
         self.assertEqual(self.tool("read", {"path": "a.py"}), (0, "one\ntwo\nthree\n", None))
-        code, out, _ = self.tool("read", {"path": "a.py", "offset": 2, "limit": 1})
+        code, out, _ = self.tool("read", {"path": "a.py", "offset": 2, "max_lines": 1})
         self.assertEqual(out, "two\n\n[檔案還有 1 行。用 offset=3 接著讀。]\n")
         self.assertEqual(self.tool("read", {"path": "a.py", "offset": 9})[2], "ArgumentsBad")
         self.assertEqual(self.tool("read", {"path": "a.py", "offset": 0})[2], "ArgumentsBad")

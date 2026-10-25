@@ -185,6 +185,9 @@ class B_Order(Case):
         s = self.served()
         self.assertEqual([x["level"] for x in s], ["high", "normal", "normal", "normal", "normal", "low", "low"])
         self.assertEqual([x["counter_waited_runs"] for x in s], [0, 1, 2, 3, 4, 5, 6])
+        for x in s:   # 這封被處理的時間（10-25 前叫 at）
+            self.assertRegex(x["served_at"], r"\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}")
+            self.assertNotIn("at", x)
         self.assertEqual(list(os.listdir(self.mb / "done")), [i for i in os.listdir(self.mb / "done")])
 
     def test_aging(self):
@@ -495,7 +498,7 @@ class H_Report(Case):
         self.assertEqual([x["counter_tokens"] for x in self.served()], [None, None])
 
     def test_budget_calls_refuse(self):
-        self.cfg({"mailbox": str(self.mb), "slots": 1, "budget": {"calls": 2}})
+        self.cfg({"mailbox": str(self.mb), "slots": 1, "budget": {"max_calls": 2}})
         ids = [self.usage(n, {"total_tokens": 10}) for n in ("x", "y", "z")]
         self.drain(3)
         self.assertEqual(self.marks(), ["x", "y"])
@@ -507,7 +510,7 @@ class H_Report(Case):
         self.assertEqual((self.used()["counter_calls"], self.used()["counter_tokens"]), (2, 20))   # 回錯的不算
 
     def test_budget_tokens_refuse_all_waiting(self):
-        self.cfg({"mailbox": str(self.mb), "slots": 1, "budget": {"tokens": 100, "window": "hour"}})
+        self.cfg({"mailbox": str(self.mb), "slots": 1, "budget": {"max_tokens": 100, "window": "hour"}})
         self.usage("big", {"total_tokens": 150})
         y = self.usage("y", {"total_tokens": 1})
         z = self.usage("z", {"total_tokens": 1})
@@ -519,7 +522,7 @@ class H_Report(Case):
         self.assertRegex(self.used()["since"], r"T\d\d:00:00[+-]")
 
     def test_budget_wait_then_next_window(self):
-        self.cfg({"mailbox": str(self.mb), "slots": 2, "budget": {"calls": 1, "spent": "wait"}})
+        self.cfg({"mailbox": str(self.mb), "slots": 2, "budget": {"max_calls": 1, "spent": "wait"}})
         self.usage("x", {"total_tokens": 7})
         y = self.usage("y", {"total_tokens": 7})
         self.drain(2)   # slots 2 也只跑 1 封；第二次到頂：留在 new/
@@ -548,7 +551,8 @@ class H_Report(Case):
         self.assertEqual((u["window"], u["counter_calls"], u["counter_tokens"], u["counter_all_calls"], u["counter_all_tokens"]), ("day", 1, 4, 2, 7))
 
     def test_budget_cfg_and_used_bad(self):
-        for bad in ({"calls": -1}, {"tokens": "9"}, {"window": "week"}, {"spent": "drop"}, {"calls": True}, [1]):
+        for bad in ({"max_calls": -1}, {"max_tokens": "9"}, {"window": "week"}, {"spent": "drop"}, {"max_calls": True}, [1],
+                    {"calls": 2}, {"tokens": 100}):   # 後兩個是 10-25 前的上限名，不認
             self.cfg({"mailbox": str(self.mb), "budget": bad})
             self.own_error(self.run_k(), "CfgBad")
         self.cfg({"mailbox": str(self.mb)})

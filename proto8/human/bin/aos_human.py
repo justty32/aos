@@ -179,7 +179,7 @@ def status_lines(ws):
     if t:
         ok = t.get("code") in (0, 10) and t.get("signal") is None
         out.append("最後一格 %s %s（%s）%s" % (t.get("state"), "訊號 %s" % t["signal"] if t.get("signal") is not None else "退 %s" % t.get("code"),
-                                          t.get("at", "?"), "" if ok else "  ← 卡住了：錯誤一行在跑它的那個終端機"))
+                                          t.get("started_at", "?"), "" if ok else "  ← 卡住了：錯誤一行在跑它的那個終端機"))
     hist = read(os.path.join(st, "history.jsonl"))
     if hist is not None:
         out.append("對話     history.jsonl %d 則（要忘記＝換 stack）" % len([l for l in hist.splitlines() if l.strip()]))

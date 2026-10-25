@@ -133,7 +133,7 @@ talk/
     roster.json           名冊範例（放進團隊工作區）：members（mailbox、role、human）、groups、max_hops 8、max_sends 4、max_body_bytes 16000
 ```
 
-**地址＝對方的工作區**：信是 `<工作區>/new/<id>.json`（`{"kind": "letter", "id", "from", "to", "group", "thread", "reply_to", "counter_hops", "expect_reply", "at", "subject", "body"}`），一到就是那隻 agent 的一道題（agent-dan 的 `new/`→`cur/`→`done/`）；答案寫 `out/<id>.txt`。名冊＝`$AOS_ROSTER`，我是誰＝信箱跟 `$AOS_WS` 同一個資料夾的那位。對話串由正在處理的那封（`cur/`）決定：`thread` 照抄、`counter_hops`＋1（10-25 原 `hops`）、`reply_to`＝它的 id。要回答的信（`expect_reply`）答完自動寄回、自動寄的回信不再自動回；手數超過 `max_hops`、處理一封寄超過 `max_sends` 封，工具回一行錯（10-24 遷移後是 `send_message: HopsBad …`／`SendsBad …`、退 1，member 的 act 把它回給腦）讓腦收手。人也是名冊上一個信箱（`user`，`human`），人寄信＝`AOS_ROSTER=<ws>/roster.json aos-exec --ws <ws>/user proto8/demo/talk/member/tools/send_message`、stdin 一個 JSON。
+**地址＝對方的工作區**：信是 `<工作區>/new/<id>.json`（`{"kind": "letter", "id", "from", "to", "group", "thread", "reply_to", "counter_hops", "expect_reply", "sent_at", "subject", "body"}`（`sent_at`＝寄出的時間，10-25 前叫 `at`）），一到就是那隻 agent 的一道題（agent-dan 的 `new/`→`cur/`→`done/`）；答案寫 `out/<id>.txt`。名冊＝`$AOS_ROSTER`，我是誰＝信箱跟 `$AOS_WS` 同一個資料夾的那位。對話串由正在處理的那封（`cur/`）決定：`thread` 照抄、`counter_hops`＋1（10-25 原 `hops`）、`reply_to`＝它的 id。要回答的信（`expect_reply`）答完自動寄回、自動寄的回信不再自動回；手數超過 `max_hops`、處理一封寄超過 `max_sends` 封，工具回一行錯（10-24 遷移後是 `send_message: HopsBad …`／`SendsBad …`、退 1，member 的 act 把它回給腦）讓腦收手。人也是名冊上一個信箱（`user`，`human`），人寄信＝`AOS_ROSTER=<ws>/roster.json aos-exec --ws <ws>/user proto8/demo/talk/member/tools/send_message`、stdin 一個 JSON。
 
 跑：建團隊工作區（`roster.json`＋`ann/`、`bob/`、`cat/`、`user/` 四個資料夾、user 先寄一封），`cd` 進去 `AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec proto8/demo/talk/team`（PATH 照上面放好 aos-daemon 等四支；沒設 URL＝假腦，直接答 `FAKE ANSWER`）。試驗場 `~/code/try/agent-talk/`（`setup_ws.py`、LiteLLM 沒開時用 `fake_brains.py` 劇本）。測試 `test_talk.py`。錯：`talk-member: 代號 原因`（同 agent-dan 五種）、`send_message: RosterMissing／RosterBad／SelfUnknown`、`team: MemberFailed <名>`（有 member 的 loop 失敗結束，團隊退 1）。
 
@@ -199,7 +199,7 @@ self-improve/             aos-exec --ws <交辦的工作區> proto8/demo/self-im
     tools/try_run          → ../../../../lib/aos/try_run：在 target/ 的暫時複本上跑一次，回結束碼、stdout、stderr（10-24 遷移：參數 timeout_s、逾時算錯）
 ```
 
-交辦的工作區：`goal.txt`（目標）、`target/` 或 `target.json`（要改的函數，原版不動）、`judge/cases.json`（一組例子 `[{"args", "stdin", "stdout", "code"?, "hidden"?, "timeout_ms"?}]`，`hidden` 的失敗時只說幾組沒過）或 `judge/check`（檢查程式，`IMPROVE_TARGET`＝函數複本，退 0＝達成、stdout＝給改進者的回饋）、`budget.json`（選填 `{"rounds": 5, "elapsed_ms": 1800000, "tokens": 500000}`）、`sandbox.json`（選填，見下）。成果：`out/best/`（最好的一版）、`out/report.txt`（每一版從哪版改、幾分、改了什麼、改進者說了什麼）、`out/result.json`。每一版拍在 `$AOS_STACK/versions/vNNN/`（`target/`、`verdict.json`、`diff.txt`、改進者那次的 `improve/ws`、`improve/stack`），新的一版一律從最好的那版改（同分取最早的）。
+交辦的工作區：`goal.txt`（目標）、`target/` 或 `target.json`（要改的函數，原版不動）、`judge/cases.json`（一組例子 `[{"args", "stdin", "stdout", "code"?, "hidden"?, "timeout_ms"?}]`，`hidden` 的失敗時只說幾組沒過）或 `judge/check`（檢查程式，`IMPROVE_TARGET`＝函數複本，退 0＝達成、stdout＝給改進者的回饋）、`budget.json`（選填 `{"max_rounds": 5, "max_elapsed_ms": 1800000, "max_tokens": 500000}`；上限一律 `max_*`，10-25 前叫 `rounds`、`elapsed_ms`、`tokens`，寫舊名＝`BudgetBad`）、`sandbox.json`（選填，見下）。成果：`out/best/`（最好的一版）、`out/report.txt`（每一版從哪版改、幾分、改了什麼、改進者說了什麼）、`out/result.json`。每一版拍在 `$AOS_STACK/versions/vNNN/`（`target/`、`verdict.json`、`diff.txt`、改進者那次的 `improve/ws`、`improve/stack`），新的一版一律從最好的那版改（同分取最早的）。
 
 改進者的工作區只有 `new/task.txt`（目標、這版的判定、看得到的失敗例子、各版分數）和 `target/` 複本，判準不在裡面、工具出不去、沒有 bash；改完只收 `target/`。**被改的函數預設關進沙箱跑**（run 格與 try_run；10-24 定）：工作區沒放 `sandbox.json` 就用本資料夾的 [sandbox.json](self-improve/sandbox.json)（只寫得到這次的暫時資料夾、斷網、只帶 `PATH` 與語系的環境變數；要 PATH 上有 `aos-sandbox`、`bwrap`，沒有＝`SandboxMissing` 退 1）；放了就用它，內容寫 `false`＝不關。結束碼：達成 0（judge 退 10）、預算用完 2（`self-improve: BudgetSpent …`，改大 `budget.json` 再跑接著改）、改進者失敗 1（`ImproverFailed`，再跑重開這一輪）。
 
@@ -258,7 +258,7 @@ agent-hal/                 照抄 agent-dan（brain.py、act.py 只改錯誤訊�
 kernel-llm/
   _entry          #!/bin/sh：AOS_KERNEL=$AOS_STACK/mailbox（先建好）、exec aos-daemon "$@" daemon.json（後面的參數給 daemon）
   daemon.json     一個 daemon 管四個子項：kernel（aos-kernel-llm kernel.json，interval_ms 300）、a、b、c（各跑一次 agent-ivy，工作區 $AOS_WS/<名>，環境變數 BRAIN 選腦的單子）
-  kernel.json     {"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1, "budget": {"calls": 100, "tokens": 100000, "window": "day"}}（budget 10-24 下午加，demo 碰不到頂）
+  kernel.json     {"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1, "budget": {"max_calls": 100, "max_tokens": 100000, "window": "day"}}（budget 10-24 下午加，demo 碰不到頂；上限 10-25 前叫 calls、tokens）
   agent-ivy/      走 kernel 的 agent（ann 式：idle.py、brain.py、act.py）；think 格的 exec＝aos-gate $BRAIN，stdout 導到 plan.txt
     brains/       腦的單子三張：plain.json（normal）、quick.json（normal、_metainfo 宣告 time_ms 800）、urgent.json（high、宣告 5000）
 ```

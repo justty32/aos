@@ -201,6 +201,7 @@ class Fay(unittest.TestCase):
         self.assertEqual(r.stdout, "fake live: 畫面上的一句\n")
         turns = [json.loads(l) for l in (self.stack / "claude" / "turns.jsonl").read_text().splitlines()]
         self.assertEqual([t["text"] for t in turns], ["fake live: 畫面上的一句"])
+        self.assertEqual(set(turns[0]), {"answered_at", "text"})          # 講完的時間（10-25 前叫 at）
         self.assertFalse((self.stack / "claude" / "busy.txt").exists())
         self.assertEqual(len(self.calls()), 2)                             # 第二句沒有再起一次 claude
         self.assertIn("本來就開著", self.attach("-d", "claude").stdout)

@@ -73,7 +73,7 @@ class Tools(unittest.TestCase):
         _, res, _ = self.tool("ls", {"path": "many", "offset": 200})
         self.assertEqual((len(res["items"]), res["items"][0]["name"]), (50, "f200"))
         self.assertNotIn("next_offset", res)
-        self.assertEqual(self.tool("ls", {"path": "many", "limit": 0})[2], "ArgumentsBad")
+        self.assertEqual(self.tool("ls", {"path": "many", "max_items": 0})[2], "ArgumentsBad")
 
     def test_stat(self):
         _, res, _ = self.tool("stat", {"path": "agent-dan/fsm.json"})

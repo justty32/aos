@@ -6,7 +6,7 @@
 照 proto8/demo/run.sh 的做法：每隻 agent 一個暫存工作區（tempfile，結束就清掉）、放一題 new/q1.txt、cd 進去 `aos-exec <agent>`。
 impls 線：PATH 最前面放 impls 的 aos-exec、aos-loop、aos-fsm 的 bin/（不放 proto8/bin）；bin 線：PATH 最前面放 proto8/bin。
 兩條線各跑一次，比：結束碼、stderr、工作區裡（含 .stack/ stack 整棵樹）有哪些檔、每個檔的內容。
-會變的東西先抹掉：trace.jsonl 每行的 at、elapsed_ms；stamp 印的「# <UTC 時間>」那行。腦一律用假腦（清掉 AOS_BRAIN_*）。
+會變的東西先抹掉：trace.jsonl 每行的 started_at、elapsed_ms；stamp 印的「# <UTC 時間>」那行。腦一律用假腦（清掉 AOS_BRAIN_*）。
 要先建好 impls 的三支（aos-exec、aos-loop、aos-fsm 各自 cmake --build）。
 10-23 起 proto8/bin 的 Python 版 aos-exec／aos-loop／aos-fsm／aos-daemon 刪了（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也改 C++）：
 不再跟 bin 線比，只跑 impls 線、看結束碼 0、stderr 空、答案寫出來了。
@@ -44,7 +44,7 @@ def normalize(rel, text):
         out = []
         for line in text.splitlines():
             d = json.loads(line)
-            d["at"] = "AT"
+            d["started_at"] = "AT"
             d["elapsed_ms"] = "MS"
             out.append(d)
         return out

@@ -10,6 +10,8 @@
 
 **10-23 命名統合**（[thinking 2026-10-23-naming](thinking/2026-10-23-naming.md)，使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」）：只換名字、不改原意——loop.json 的 `run` → `val`（P-06、P-27、P-28、範例）、trace 的 `ms` → `elapsed_ms`、`at` 改 ISO 8601 到毫秒（P-07、P-38）、指示詞 `at` → `$at`〔同日再刪，只認 `#/`〕、「圈」改「拍」（原話不動；10-23 晚再改「次」，使用者「我們都是說"次"」）；使用者 10-23 逐條重看代定後再改三處：純文字檔帶 `.txt`（fsm 的 `state.txt`、daemon 小格的 `stderr.txt`、demo 的 `current.txt`／`plan.txt`）、`AOS_STACK` 預設 `$AOS_WS/.aos/` → `$AOS_WS/.stack/`、題目資料夾 `inbox/` → `new/`（認領搬 `cur/`、做完 `done/`，答案照舊 `out/`）；慣例與範本（P-07、P-10～P-14、P-16～P-18、P-31、P-32、P-34、P-38、範例）跟著改，P-13 附檔資料夾的 `prompt`、`answer` 也帶 `.txt`。舊名在歷史敘述裡照留、旁邊加〔10-23 統合…〕註。10-23 晚使用者翻案（「改，beats改runs，然後val寫要跑啥，通常不會用val，應該用run。」，衝突時選「只有 loop、daemon 用 run」）：loop.json 改回 `run`（fsm 格仍是 `val`）、state 的 `beats` → `runs`、「拍」→「次」。10-23 深夜再改（使用者：「fsm.json，現在是用val，幫我改成exec」；問到 loop／daemon 時：「exec，loop／daemon 的 run 也一起改 exec」）：loop.json 的 `run`、fsm 格的 `val` 都改 `exec`（P-06、P-07、P-09、P-22、P-27～P-29、P-36、P-39、範例）。
 
+**10-25 時間點改名**（C-54 命名方法 R6「時間點＝`<發生了什麼>_at`」；使用者 10-25 已選 `recorded_at`〔「state.json中，runs改counter，at改成recorded_at」〕，回頂層兩題「都好」，頂層代定、可翻案）：fsm trace 的 `at` → `started_at`（P-07、P-38）；不留舊名。其他 JSON 的改名見 [NORMS.md](NORMS.md) 10-25 段。
+
 **10-23 晚入口改名**（[thinking 2026-10-23-naming](thinking/2026-10-23-naming.md)，使用者「改。然後_開頭=附註這個概念刪掉。」「不認得的key就是忽略」）：入口預設名 `_exec` → `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者原話裡的 `_exec` 照留）；不認得的 key 一律忽略（C-48），`_` 開頭不再有特別意思。
 
 **10-23 腦的工具呼叫**（[thinking 2026-10-23-tool-calls](thinking/2026-10-23-tool-calls.md)，使用者「litellm我開了，去做吧。」「盡量都用gpt的」）：新增 **P-41**（第七節）——工具資料夾裡的 `tool.json` 給模型看、`arguments` 從 stdin 進、stdout 出、對話落在 `$AOS_STACK/history.jsonl`、三態不變、五種錯；P-08、P-23、P-24 加註。範本是 [demo/agent-dan](demo/README.md)。

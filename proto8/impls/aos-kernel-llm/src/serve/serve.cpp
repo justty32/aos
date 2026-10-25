@@ -130,7 +130,7 @@ Json error_reply(const std::string& c, const std::string& msg) {
 }
 
 struct Served {
-    std::string at;
+    std::string served_at;   // 這封信被處理的時間（認領、回錯、或接手上一次留下的；10-25 前叫 at）
     std::string id;
     Json level;          // "low"／"normal"／"high" 或 null（讀不懂信）
     Json waited_runs;    // 或 null
@@ -228,7 +228,7 @@ void Server::lock() {
 // served.jsonl 一行、cur → done（reply.json 已在 cur/<id>/ 裡）。
 void Server::finish(const Served& s) {
     Json line = Json::object();
-    line["at"] = s.at;
+    line["served_at"] = s.served_at;
     line["letter"] = s.id;
     line["level"] = s.level;
     line["counter_waited_runs"] = s.waited_runs;
@@ -280,7 +280,7 @@ void Server::recover() {
     for (const std::string& id : names_in(mb_.cur())) {
         std::string dir = aos::join(mb_.cur(), id);
         Served s;
-        s.at = aos::utc_now_ms();
+        s.served_at = aos::utc_now_ms();
         s.id = id;
         s.level = nullptr;
         s.waited_runs = nullptr;
@@ -347,7 +347,7 @@ void Server::refuse(const std::string& id, const Json& level, const Json& reply,
     }
     write_reply(dir, reply);
     Served s;
-    s.at = aos::utc_now_ms();
+    s.served_at = aos::utc_now_ms();
     s.id = id;
     s.level = level;
     s.waited_runs = waited;
@@ -552,7 +552,7 @@ int Server::run() {
             }
             q_.seen_at_runs.erase(w.id);
             Served s;
-            s.at = aos::utc_now_ms();
+            s.served_at = aos::utc_now_ms();
             s.id = w.id;
             s.level = level_name(w.priority.level);
             s.waited_runs = waited_runs(w, q_.runs);

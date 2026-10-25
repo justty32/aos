@@ -8,7 +8,7 @@
                   "text": {"type": "string", "description": "save：內容，最多 4000 字；一件事一筆"},
                   "tags": {"type": "array", "items": {"type": "string"}, "description": "save：可選，最多 10 個"},
                   "query": {"type": "string", "description": "search：關鍵字"},
-                  "limit": {"type": "integer", "description": "search：最多幾筆，預設 5、上限 20"},
+                  "max_results": {"type": "integer", "description": "search：最多幾筆，預設 5、上限 20"},
                   "id": {"type": "string", "description": "read／forget：例 facts/001"},
                   "reason": {"type": "string", "description": "forget：為什麼忘（可選）"}},
                 "required": ["op"]}}

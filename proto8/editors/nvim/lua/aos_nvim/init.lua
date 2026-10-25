@@ -171,7 +171,7 @@ local function show_trace(max)
   for line in s:gmatch("[^\n]+") do
     local ok, t = pcall(vim.json.decode, line)
     if ok and type(t) == "table" then
-      lines[#lines + 1] = string.format("%s  %-8s code %s%s  %sms", tostring(t.at or ""), tostring(t.state),
+      lines[#lines + 1] = string.format("%s  %-8s code %s%s  %sms", tostring(t.started_at or ""), tostring(t.state),
         tostring(t.code), t.signal ~= nil and t.signal ~= vim.NIL and (" signal " .. tostring(t.signal)) or "",
         tostring(t.elapsed_ms or "?"))
     else

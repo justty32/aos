@@ -16,7 +16,7 @@ cat loop.json
 # {"exec": {"argv": ["aos-kernel-llm", "kernel.json"]}, "interval_ms": 300}
 AOS_STACK=st/ AOS_KERNEL=$PWD/mb aos-loop loop.json &    # kernel 一直顧著信箱 mb/
 AOS_KERNEL=$PWD/mb aos-gate brain.json                    # 寄一封、等回信、結果原樣交回（見 aos-gate）
-cat st/served.jsonl   # {"at": "...", "letter": "0179...", "level": "high", "counter_waited_runs": 0, "code": 0, "signal": null, "error": null, "elapsed_ms": 1085, …, "counter_tokens": 43, "report_bad": false}
+cat st/served.jsonl   # {"served_at": "...", "letter": "0179...", "level": "high", "counter_waited_runs": 0, "code": 0, "signal": null, "error": null, "elapsed_ms": 1085, …, "counter_tokens": 43, "report_bad": false}
 cat st/used.json      # {"window": "day", "since": "2026-10-24T00:00:00+08:00", "counter_calls": 3, "counter_tokens": 129, "counter_all_calls": 3, "counter_all_tokens": 129}
 ```
 
@@ -33,7 +33,7 @@ aos-kernel-llm [旗標] kernel.json
   這四格的指示詞先解（`{"$env": "AOS_KERNEL"}` 就是讓 kernel 與閘門讀同一個變數）；解不開 `DirectiveBad`。
 - **`$AOS_STACK`**（必要）：kernel 自己的兩個檔（計數的 key 一律 `counter_*`：10-25 使用者「計數這塊，幫我改成counter_*」，原 `runs`、`waited_runs`、`tokens`、`calls`、`all_calls`、`all_tokens`）——
   - `queue.json`：`{"counter_runs": kernel 跑過幾次, "seen_at_runs": {信號: 第一次看到它是第幾次}}`（只留還在排的；先寫暫存再改名）。在但讀不懂＝`QueueBad`（刪掉就從頭算）。
-  - `served.jsonl`：每封信一行 `{"at", "letter", "level", "counter_waited_runs", "code", "signal", "error", "elapsed_ms", "time_ms", "metainfo_bad", "counter_tokens", "report_bad"}`（只附加）；跑了＝`code`／`signal`，沒跑或跑不起來＝`error` 是代號；
+  - `served.jsonl`：每封信一行 `{"served_at", "letter", "level", "counter_waited_runs", "code", "signal", "error", "elapsed_ms", "time_ms", "metainfo_bad", "counter_tokens", "report_bad"}`（只附加；`served_at`＝kernel 處理這封的時間〔認領、回錯、或接手上一次留下的〕，10-25 前叫 `at`）；跑了＝`code`／`signal`，沒跑或跑不起來＝`error` 是代號；
     `elapsed_ms`＝實際花多久、`time_ms`＝單子 `_metainfo` 宣告的（沒寫＝null）——宣告與實測放一起，kernel 絕不回寫使用者的 `_metainfo`（10-24 metainfo M7）；`metainfo_bad`＝寫壞而當沒寫的 key；
     `counter_waited_runs`＝排了幾次才輪到；`counter_tokens`＝腦回報的 token 數（沒回報、回報壞、沒跑＝null）、`report_bad`＝回報檔在但讀不懂（10-24 下午加）。
   - `used.json`：用量帳 `{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens"}`——這一窗（`since` 起）跑了幾封、多少 token，與開帳以來的總數；每封跑過的信寫完 served 那行就記一次（先寫暫存再改名）。在但讀不懂＝`UsedBad`（刪掉就從 0 算）。
@@ -53,10 +53,10 @@ aos-kernel-llm [旗標] kernel.json
   kernel 跑完讀它：`total_tokens`（非負整數）就是這封的 token 數；沒有 `total_tokens` 就 `prompt_tokens`＋`completion_tokens`；檔不在＝沒回報（`counter_tokens` null，只算次數）；讀不懂、不是物件、數字不對＝`report_bad: true`（也只算次數，照樣交回信）。
   一封信問了好幾次腦，由腦自己加總再寫（kernel 只讀最後那份）。範本 [agent-dan 的 brain.py](../../demo/agent-dan/brain.py) 與 demo 的 agent-ivy 有寫（P-23 註）。
 - **算什麼**：子行程起來過（`runner.json` 在）的信才算一次、才讀回報——`LetterBad`、`DeadlineMissed`、`BudgetMissing` 不算；kernel 死了、下一次回 `RunFailed` 的那封算（腦可能已經花了錢）。
-- **額度**（kernel.json 的 `budget`，都選填）：`calls`、`tokens`＝每窗上限（非負整數；沒寫＝那一種不限）；`window`＝`"hour"`／`"day"`／`"all"`（沒寫＝`day`，10-15 定「一天一期歸零」；窗的起點用 kernel 的本地時間〔`TZ`〕的整點／午夜，`all`＝不歸零）；
+- **額度**（kernel.json 的 `budget`，都選填）：`max_calls`、`max_tokens`＝每窗上限（非負整數；沒寫＝那一種不限；上限一律 `max_*`，10-25 前叫 `calls`、`tokens`，寫舊名＝`CfgBad`，免得以為有上限）；`window`＝`"hour"`／`"day"`／`"all"`（沒寫＝`day`，10-15 定「一天一期歸零」；窗的起點用 kernel 的本地時間〔`TZ`〕的整點／午夜，`all`＝不歸零）；
   `spent`＝到頂時排著的信怎麼辦：`"refuse"`（沒寫＝這個，10-15「見底就擋」）回 `BudgetMissing`、不跑；`"wait"` 留在 `new/` 等下一窗（閘門一直等，由包它那格的 `timeout_ms` 守）。
   `budget` 沒寫也照樣記 `used.json`（窗＝day）。換窗＝`used.json` 的 `window` 或 `since` 跟現在算出來的不同：`counter_calls`、`counter_tokens` 歸零，`counter_all_*` 照留。
-- **到頂怎麼判**：要開下一封之前看——`counter_calls`（已用）＋這次已開的＋上一次留下還在跑的 ≥ `calls` 上限，或 `counter_tokens`（已用）≥ `tokens` 上限。token 只能跑完才知道，所以一次裡最多超過「那一次所有封的量」（`slots` 1 時＝最後一封）。
+- **到頂怎麼判**：要開下一封之前看——`counter_calls`（已用）＋這次已開的＋上一次留下還在跑的 ≥ `max_calls`，或 `counter_tokens`（已用）≥ `max_tokens`。token 只能跑完才知道，所以一次裡最多超過「那一次所有封的量」（`slots` 1 時＝最後一封）。
 
 ### accept：只跑名單裡的單子（10-24，堵沙箱信箱後門，[thinking sandbox S14](../../thinking/2026-10-24-sandbox.md)）
 
@@ -138,13 +138,13 @@ cmake -B build && cmake --build build && ctest --test-dir build
 - `test_cli`（`tests/test_cli.py`，unittest 40 案，約 3 秒）：A 命令列與設定（usage、`StackMissing`、設定壞、mailbox 預設在 stack、指示詞、`QueueBad`）；B 排隊（level／數字／deadline 字串與數字／先來先上／`counter_waited_runs`、aging 到了與還沒到、`seen_at_runs` 只留還在排的）；
   C slots（2 封一起跑、1 封串著）；D 回信（碼與 stdout／stderr、單子自己導 stdout 不蓋、`DeadlineMissed` 不跑、`LetterBad` 七種、單子壞＝回信不是 kernel 的錯）；
   E 收拾（寄信人不在〔`sender.lock` 沒人鎖或沒有〕的 new／tmp／done、`tmp/` 裡 `.` 開頭正在寫的〔還沒寫信或鎖著〕不碰、名字裡 pid 是死的但鎖著照跑〔10-24 晚〕、cur/ 留下的回 `RunFailed` 或照現成回信、跑信的子行程還活著就讓它跑完並佔格、子行程死了＝`RunFailed`）；F 鎖、環境與 cwd 照信、`timeout_ms`、SIGTERM 轉給單子、早到的訊號不留半套；G `_metainfo`（同級時宣告短的後寄也先跑、有寫的在沒寫的前面、level 與 deadline 照樣壓過它、三種寫壞照樣跑並記 `metainfo_bad`）；
-  H token 回報與額度（`AOS_KERNEL_REPORT` 指進信小格並蓋掉信裡的、回報有寫／只有 prompt＋completion／沒寫／三種寫壞、沒跑的不算、`calls` 到頂回 `BudgetMissing`、`tokens` 到頂排著的全回錯、`wait` 留著等換窗後跑、`all` 不歸零與改窗歸零、`budget` 與 `used.json` 壞）；I accept（名單裡的才跑、`cat` 祕密檔與換了 `cwd`、自帶 `stdout`、`envs` 的回 `InstUnknown`，環境用 kernel 的 `PATH` 與 key、只疊信裡的 `AOS_*`；`accept` 寫壞＝`CfgBad`）。
+  H token 回報與額度（`AOS_KERNEL_REPORT` 指進信小格並蓋掉信裡的、回報有寫／只有 prompt＋completion／沒寫／三種寫壞、沒跑的不算、`max_calls` 到頂回 `BudgetMissing`、`max_tokens` 到頂排著的全回錯、`wait` 留著等換窗後跑、`all` 不歸零與改窗歸零、`budget`〔含舊名 `calls`／`tokens`〕與 `used.json` 壞）；I accept（名單裡的才跑、`cat` 祕密檔與換了 `cwd`、自帶 `stdout`、`envs` 的回 `InstUnknown`，環境用 kernel 的 `PATH` 與 key、只疊信裡的 `AOS_*`；`accept` 寫壞＝`CfgBad`）。
   信是測試自己寫的（假裝閘門；測試自己 flock 住 `sender.lock`＝寄信的人還在，沒人鎖＝不在；名字裡 pid 是死的、鎖著的照跑）。改掉排序、過期檢查、收拾、runner 檢查、slots、`_metainfo` 那層比較任一處都會紅（10-24 實測）；拿掉設 `AOS_KERNEL_REPORT`、讀回報、到頂判斷、`wait`、換窗歸零、「跑過才算」任一處 H 段都會紅（10-24 下午實測）。
 - gate＋kernel＋loop／daemon 一起跑的在 `proto8/tests/test_kernel_llm.py`（10 案；含 agent-dan 的 brain.py 經閘門、kernel 跑、假 server 回 usage → served 記到 token）。
 
 ## 已知限制
 
-- **token 靠腦自願回報**：腦沒寫（或寫錯）就只算次數，`tokens` 額度看不到它；回報的數字 kernel 不驗（腦說幾個就是幾個）。單子裡的工具、子行程也看得到 `AOS_KERNEL_REPORT`，誰最後寫算誰的。
+- **token 靠腦自願回報**：腦沒寫（或寫錯）就只算次數，`max_tokens` 額度看不到它；回報的數字 kernel 不驗（腦說幾個就是幾個）。單子裡的工具、子行程也看得到 `AOS_KERNEL_REPORT`，誰最後寫算誰的。
 - **token 額度事後才知道**：跑之前不知道這封會吃多少，所以會超過一點（見上「到頂怎麼判」）；`_metainfo.llm_tokens` 的預先擋沒做（只讀不用）。
 - **窗用本地時間**：kernel 的 `TZ` 換了、或日光節約，`since` 會變＝當成換窗歸零一次。`wait` 配 `window: "all"`＝到頂後永遠等（直到有人改 kernel.json 或刪 `used.json`）。
 - 一次裡不補位：`slots` 2、一封 1 秒一封 10 秒，那一格空等 9 秒；新來的高優先信也要等這一次結束。

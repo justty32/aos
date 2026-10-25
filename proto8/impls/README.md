@@ -40,6 +40,8 @@
 >
 > **10-25 計數改 `counter_*`**（使用者 10-25「計數這塊，幫我改成counter_*」，C-54 命名方法 R6）：aos-loop state.json（aos-daemon 共用）`counter` → `counter_runs`；aos-kernel-llm 的 queue.json `runs` → `counter_runs`、used.json `calls`／`tokens`／`all_calls`／`all_tokens` → `counter_calls`／`counter_tokens`／`counter_all_calls`／`counter_all_tokens`、served.jsonl `tokens`／`waited_runs` → `counter_tokens`／`counter_waited_runs`，不留舊名（舊名的 used.json 讀到＝`UsedBad`、queue.json＝`QueueBad`）。kernel.json 的 `budget`（`calls`、`tokens` 是上限）、queue.json 的 `seen_at_runs`（第幾次看到，是時間點）不動；內部變數、結構欄位沒改名。
 >
+> **10-25 時間點 `<發生了什麼>_at`、上限 `max_*`**（C-54 命名方法 R3、R6；使用者 10-25 回頂層兩題「都好」，頂層代定、可翻案）：aos-fsm 的 trace.jsonl `at` → `started_at`；aos-kernel-llm 的 served.jsonl `at` → `served_at`、kernel.json `budget.calls`／`budget.tokens` → `budget.max_calls`／`budget.max_tokens`（舊名＝`CfgBad`）；不留舊名。
+>
 > **10-23（對齊 bin 10-22，ideas 10-22 § 3、§ 6、§ 7）：** aos-exec 的 `.env` 改 dotenv 基礎子集（`export `、`=` 兩邊空白、引號、空白＋`#` 註解、去頭尾空白——值的空白照 python-dotenv 認 Unicode 空白、行首仍只認 ASCII）、
 > 預設不蓋已有的、加不帶值的旗標 `--dotenv-override`（只管這一跳；`parse_cli` 收開關表）；aos-daemon 擋子項名字跟自己的 ctl／state 撞名（起來時 `CfgBad` 退 1、ctl 撞＝不採用）；
 > aos-fsm 開跑時查整張表（表壞 `CfgBad`）、state 在但讀不了 `StateBad`、USAGE 補 `[旗標]`。aos-util 多一個 `aos/text.hpp`（Unicode 空白、UTF-8 檢查）。

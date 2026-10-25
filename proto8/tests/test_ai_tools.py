@@ -114,6 +114,7 @@ class AiToolsTest(unittest.TestCase):
         code, res, _ = ai(self.root, "status", "dan")
         self.assertEqual((res["fsm_state"], res["done"], res["new"]), ("idle", ["q1.txt"], []))
         self.assertEqual(res["last_run"]["code"], 0)
+        self.assertIn("finished_at", res["last_run"])                      # 跑完的時間（10-25 前叫 at）
         code, res, _ = ai(self.root, "answer", "dan", "q1")
         self.assertIn("FAKE ANSWER", res["text"])
         code, res, _ = ai(self.root, "trace", "dan", "-n", "1")

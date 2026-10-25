@@ -62,11 +62,11 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 
 | 工具 | 一句話 | 參數 | 回什麼 | 來源 |
 |---|---|---|---|---|
-| [read](base/read/) | 讀工作區裡一個文字檔，太長從頭截 | `path`、`offset`、`limit` | 內容（不加行號）；被截時尾巴寫從第幾行接著讀 | demo/pi-tools/read |
+| [read](base/read/) | 讀工作區裡一個文字檔，太長從頭截 | `path`、`offset`、`max_lines`（10-25 前叫 `limit`） | 內容（不加行號）；被截時尾巴寫從第幾行接著讀 | demo/pi-tools/read |
 | [write](base/write/) | 整份寫進一個檔（建或蓋）、上層資料夾自動建 | `path`、`content` | 一行：寫了幾 bytes | demo/pi-tools/write |
 | [edit](base/edit/) | 幾處照字面替換，一處不合整個不改 | `path`、`edits[{old_text, new_text}]` | 一行：換了幾處 | demo/pi-tools/edit |
 | [bash](base/bash/) | 在工作區用 bash 跑一行指令 | `command`、`timeout_s`（30／300） | stdout＋stderr 合在一起、尾巴寫結束碼；留最後 2000 行／50KB | demo/pi-tools/bash（`timeout` 改名 `timeout_s`） |
-| [ls](base/ls/) | 列一個資料夾的子項，一次一頁 | `path`、`offset`、`limit`（100／500）、`hidden` | JSON：`counter_items`（一共幾項）、`items[{name, type, size, mtime}]`（資料夾多 `counter_children`、`aos`，檔多 `exec`，`.json` 多 `keys`）、`next_offset`、`counter_hidden` | 新寫，遷移時併進 demo/file-tools/ls 的加料 |
+| [ls](base/ls/) | 列一個資料夾的子項，一次一頁 | `path`、`offset`、`max_items`（100／500；10-25 前叫 `limit`）、`hidden` | JSON：`counter_items`（一共幾項）、`items[{name, type, size, mtime}]`（資料夾多 `counter_children`、`aos`，檔多 `exec`，`.json` 多 `keys`）、`next_offset`、`counter_hidden` | 新寫，遷移時併進 demo/file-tools/ls 的加料 |
 | [stat](base/stat/) | 單一個檔或資料夾的屬性 | `path` | JSON：`type`、`mtime`、`mode`；檔多 `size`、`exec`、`text`、`counter_lines`、`format`、`top` | demo/file-tools/stat |
 | [view](base/view/) | 漸進看一個檔：JSON 照指標一次一層、大文字檔先給大綱 | `path`、`pointer` 或 `start`／`end` | JSON：`value` 或 `children`；文字的 `text` 或 `outline` | demo/file-tools/view |
 | [json_read](base/json_read/) | 看一份 JSON 檔的某個位置，大的摺起來 | `path`、`pointer`、`depth`（1／10） | JSON：`value`，物件摺成 `{type, keys}`、陣列 `{type, counter_items}`、長字串 `{type, counter_chars, head}` | 新寫（Python；換 aos-json 的 peek 輸出不同、沒好處，沒換） |
@@ -86,7 +86,7 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 
 | 工具 | 一句話 | 參數 | 回什麼 | 來源 |
 |---|---|---|---|---|
-| [memory](aos/memory/) | 長期記憶庫：存、找、讀、忘（庫在 `$AOS_HEAP`，沒設＝`$AOS_WS/.heap/`） | `op`（save／search／read／forget）、`kind`、`title`、`text`、`tags`、`query`、`limit`、`id`、`reason` | 給模型看的文字 | demo/agent-meg（`heap.py` 一起搬，brain 也 import） |
+| [memory](aos/memory/) | 長期記憶庫：存、找、讀、忘（庫在 `$AOS_HEAP`，沒設＝`$AOS_WS/.heap/`） | `op`（save／search／read／forget）、`kind`、`title`、`text`、`tags`、`query`、`max_results`（10-25 前叫 `limit`）、`id`、`reason` | 給模型看的文字 | demo/agent-meg（`heap.py` 一起搬，brain 也 import） |
 | [send_message](aos/send_message/) | 寄信給名冊（`$AOS_ROSTER`）上的成員或群組 | `to`、`subject`、`body`、`expect_reply` | 一行：寄了幾封、對話串第幾手 | demo/talk |
 | [check_inbox](aos/check_inbox/) | 看自己信箱還沒處理的（只看不拿） | （無） | 一封一行摘要 | demo/talk |
 | [spawn_agent](aos/spawn_agent/) | 從範本產生一隻 agent（`aos-ai spawn`） | `name`、`template` | aos-ai 那行 JSON | ai_tools/dan_tools |

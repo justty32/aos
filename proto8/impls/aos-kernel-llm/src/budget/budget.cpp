@@ -17,9 +17,14 @@ Budget parse_budget(const Json& v) {
         return b;
     }
     if (!v.is_object()) {
-        throw Error{code::CfgBad, "budget 要是 {\"calls\", \"tokens\", \"window\", \"spent\"}，不是 " + aos::dumps(v)};
+        throw Error{code::CfgBad, "budget 要是 {\"max_calls\", \"max_tokens\", \"window\", \"spent\"}，不是 " + aos::dumps(v)};
     }
-    for (const char* k : {"calls", "tokens"}) {
+    for (const char* k : {"calls", "tokens"}) {   // 10-25 前的上限名：不認，免得寫舊名的人以為有上限
+        if (v.contains(k)) {
+            throw Error{code::CfgBad, std::string("budget.") + k + " 是舊名（10-25 改叫 budget.max_" + k + "）"};
+        }
+    }
+    for (const char* k : {"max_calls", "max_tokens"}) {
         Json x = v.value(k, Json());
         if (x.is_null()) {
             continue;
@@ -27,7 +32,7 @@ Budget parse_budget(const Json& v) {
         if (!aos::is_count(x)) {
             throw Error{code::CfgBad, std::string("budget.") + k + " 要是非負整數（每窗上限），不是 " + aos::dumps(x)};
         }
-        (std::string(k) == "calls" ? b.calls : b.tokens) = x.get<long long>();
+        (std::string(k) == "max_calls" ? b.max_calls : b.max_tokens) = x.get<long long>();
     }
     Json w = v.value("window", Json());
     if (!w.is_null()) {
@@ -134,10 +139,10 @@ void add_used(const std::string& stack, Used& u, const Report& r) {
 }
 
 bool spent(const Budget& b, const Used& u, long long started) {
-    if (b.calls && u.calls + started >= *b.calls) {
+    if (b.max_calls && u.calls + started >= *b.max_calls) {
         return true;
     }
-    return b.tokens && u.tokens >= *b.tokens;
+    return b.max_tokens && u.tokens >= *b.max_tokens;
 }
 
 Report read_report(const std::string& path) {

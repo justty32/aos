@@ -91,6 +91,6 @@ common.write(os.path.join(vdir, "diff.txt"), d.stdout.replace(VERSIONS + "/", ""
 h = common.tree_hash(vdir)
 same = next((v for v in done if (common.read_json(os.path.join(VERSIONS, v, "version.json"), {}) or {}).get("hash") == h), None)
 common.write(os.path.join(vdir, "version.json"), json.dumps(
-    {"version": new, "from": base, "hash": h, "same_as": same, "ignored": ignored, "at": common.now()},
+    {"version": new, "from": base, "hash": h, "same_as": same, "ignored": ignored, "created_at": common.now()},
     ensure_ascii=False) + "\n")
 common.write(os.path.join(stack, "current.txt"), new + "\n")

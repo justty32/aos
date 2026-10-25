@@ -16,7 +16,7 @@ cat fsm.json
 #             "next": "act"},
 #   "act": {"exec": ["act", "--fast"], "next": "idle"}}}
 AOS_STACK=st/ aos-fsm fsm.json; echo $?   # 跑 idle 那格（aos-exec -- idle）；退 0 → st/state.txt 變 think
-cat st/trace.jsonl   # {"at": "2026-10-19T14:07:00.123+00:00", "state": "idle", "code": 0, "signal": null, "elapsed_ms": 3}
+cat st/trace.jsonl   # {"started_at": "2026-10-19T14:07:00.123+00:00", "state": "idle", "code": 0, "signal": null, "elapsed_ms": 3}
 ```
 
 行為比照 Python 版 `proto8/bin/aos-fsm`（10-21 傍晚版）；規則出處：CONVENTION P-07～P-10、P-20、P-21、P-36、P-38，NORMS N-36、N-38、N-39、N-41、N-05、N-43、N-60，ideas § 20、§ 23、§ 24。
@@ -50,7 +50,7 @@ aos-fsm [旗標] 設定檔.json
   - `state.txt`（10-23 起帶 `.txt`，原 `state`）：純文字一行狀態名（跟 shell 版 fsm 同格式，可互換，P-07）。沒有、空的＝`start`；前後空白去掉（認 Unicode 空白，同 bin 的 `str.strip()`）。
     10-22 起**在但讀不了**（沒權限、是資料夾、不是 UTF-8）＝`StateBad`、不跑格（原本當沒有檔、從 `start` 起）；裡面的狀態不在表上＝`StateUnknown`。
     寫的時候先寫 `.state.txt` 再改名蓋過去（N-05）。
-  - `trace.jsonl`：每次追加一行 `{"at", "state", "code", "signal", "elapsed_ms"}`（排版同 Python `json.dumps`；`at`＝這次開始的時間，
+  - `trace.jsonl`：每次追加一行 `{"started_at", "state", "code", "signal", "elapsed_ms"}`（排版同 Python `json.dumps`；`started_at`＝這次開始的時間〔10-25 前叫 `at`，C-54 命名方法 R6「時間點＝`<發生了什麼>_at`」〕，
     ISO 8601 UTC 到毫秒，同 Python `datetime.now(timezone.utc).isoformat(timespec="milliseconds")`（例 `2026-10-23T01:58:45.123+00:00`），P-38；
     `elapsed_ms`＝那格花了幾毫秒；`signal`＝停掉那格的訊號，沒有＝`null`；10-23 統合前 `at` 只到秒、`elapsed_ms` 叫 ms）。**沒有 `timed_out`**（C-52：fsm 看不到格裡有沒有逾時；
     單子格逾時＝那格的 aos-exec 以 128＋N 正常結束，trace 是 `code` 143、`signal` null）。
@@ -134,4 +134,4 @@ cmake -B build && cmake --build build && ctest --test-dir build
   外層逾時那案要 `../aos-exec/bin/aos-exec`。
 - `test_demo`（`tests/test_demo.py`，約 1 秒）：**整合測試**。照 `proto8/demo/run.sh`，把 `proto8/demo` 的 agent-bob（含它叫的 cathy、stamp）與 agent-ann
   各跑兩次——PATH 最前面放 impls 的 aos-exec、aos-loop、aos-fsm 的 `bin/`（拿掉 `proto8/bin`）一次、放 `proto8/bin` 一次——比結束碼、stderr、
-  工作區（含 `.stack/` 整棵 stack 樹）的每個檔（`trace.jsonl` 的 `at`／`elapsed_ms`、stamp 的時間那行先抹掉）。要先建好 `../aos-exec`、`../aos-loop` 自己的 `bin/`。〔10-23 起只跑 impls 線、看結束碼 0、stderr 空、答案寫出來：Python 版刪了（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」），沒有 bin 線可比〕
+  工作區（含 `.stack/` 整棵 stack 樹）的每個檔（`trace.jsonl` 的 `started_at`／`elapsed_ms`、stamp 的時間那行先抹掉）。要先建好 `../aos-exec`、`../aos-loop` 自己的 `bin/`。〔10-23 起只跑 impls 線、看結束碼 0、stderr 空、答案寫出來：Python 版刪了（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」），沒有 bin 線可比〕

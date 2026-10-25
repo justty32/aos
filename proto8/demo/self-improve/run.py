@@ -16,7 +16,7 @@ if not current:
     common.copy_target(ws, v0)
     common.write(os.path.join(v0, "version.json"), json.dumps(
         {"version": "v000", "from": None, "hash": common.tree_hash(v0), "same_as": None, "ignored": [],
-         "at": common.now()}, ensure_ascii=False) + "\n")
+         "created_at": common.now()}, ensure_ascii=False) + "\n")
     current = "v000"
     common.write(os.path.join(stack, "current.txt"), current + "\n")
 

@@ -147,6 +147,8 @@ class SendMessage(TalkCase):
         [l] = letters(self.ws / "ann" / "new")
         self.assertEqual((l["from"], l["to"], l["counter_hops"], l["reply_to"], l["thread"]), ("user", "ann", 1, None, l["id"]))
         self.assertTrue(l["expect_reply"])
+        self.assertRegex(l["sent_at"], r"\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}")   # 寄出的時間（10-25 前叫 at）
+        self.assertNotIn("at", l)
         self.assertEqual(letters(self.ws / "user" / "sent"), [l])
         self.assertEqual(list((self.ws / "ann" / "tmp").iterdir()), [])
 

@@ -177,9 +177,9 @@ def trace_jsonl_one_line_per_beat(t):
         run(t)
     tr = trace(t)
     check("每次一行", [(x["state"], x["code"]) for x in tr], [("a", 0), ("b", 5), ("b", 5)])
-    check("欄位（沒有 timed_out）", list(tr[0]), ["at", "state", "code", "signal", "elapsed_ms"])
+    check("欄位（沒有 timed_out）", list(tr[0]), ["started_at", "state", "code", "signal", "elapsed_ms"])
     for x in tr:
-        datetime.datetime.fromisoformat(x["at"])
+        datetime.datetime.fromisoformat(x["started_at"])
 
 
 @case
@@ -264,13 +264,13 @@ def empty_state_file_means_start(t):
 
 @case
 def trace_line_format(t):
-    # 排版同 Python json.dumps：", "、": "、key 順序固定、signal null、at 是秒為單位的 UTC +00:00
+    # 排版同 Python json.dumps：", "、": "、key 順序固定、signal null、started_at 是 UTC +00:00、到毫秒
     cell(t, "a", "exit 0\n")
     table(t, {"a": {"exec": "a", "next": "a"}})
     run(t)
     line = (st(t) / "trace.jsonl").read_text()
-    ok = re.fullmatch(r'\{"at": "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00", "state": "a", "code": 0, "signal": null, '
-                      r'"elapsed_ms": \d+\}\n', line)   # at＝ISO 8601 UTC 到毫秒（10-23 命名統合）
+    ok = re.fullmatch(r'\{"started_at": "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00", "state": "a", "code": 0, "signal": null, '
+                      r'"elapsed_ms": \d+\}\n', line)   # started_at＝ISO 8601 UTC 到毫秒（10-23 命名統合；10-25 前叫 at）
     check("trace 一行的排版", (ok is not None, line), (True, line))
 
 

@@ -12,7 +12,7 @@
 //   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；10-21 傍晚）：
 //                   讀設定（旗標 ＞ 設定檔 ＞ 預設：exec／max／interval_ms／ctl／state）、每次讀 ctl 窗 → tend() → 跑一次 → 寫 state 窗
 //   write_window    窗的寫法：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
-//   heartbeat       state 的心跳欄位 {pid, started_at_ticks, boot_id, at}（N-32）
+//   heartbeat       state 的心跳欄位 {pid, started_at_ticks, boot_id, recorded_at}（N-32）
 //   resolve_keys    設定檔、ctl 的指示詞（10-23 晚：aos 讀的 JSON 都解）：整份先換一層，再把自己讀的那幾格整個解，其他 key 不碰
 //
 // 規則見 aos-loop/README.md。

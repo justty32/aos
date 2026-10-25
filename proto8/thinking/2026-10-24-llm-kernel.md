@@ -110,3 +110,5 @@
 - **`wait` 配 `window: "all"`**：到頂後永遠等，直到有人改 kernel.json 或刪 `used.json`；閘門那邊由那格 `timeout_ms` 收掉。
 - **跨窗才跑完的信**：算在跑完那一刻的窗。
 - **`used.json` 被刪**：從 0 算（總數也歸零）；`served.jsonl` 還在，要對帳從那裡加。
+
+**10-25 註**（C-54 命名方法改名，[R6](../CONCEPTS/01-設計理念/C-54-命名方法.md)）：上面的 `calls`、`tokens`、`all_*`、`waited_runs` 現在是計數 `counter_*`（使用者「計數這塊，幫我改成counter_*」）；`budget` 的上限 `calls`／`tokens` 現叫 `max_calls`／`max_tokens`、served 的 `at` 現叫 `served_at`（使用者回頂層兩題「都好」，頂層代定、可翻案）。上面的決定照留。

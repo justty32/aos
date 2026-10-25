@@ -121,7 +121,7 @@ class Tools(unittest.TestCase):
     def test_read_and_paging(self):
         self.put("a.py", "one\ntwo\nthree\n")
         self.assertEqual(self.tool("read", {"path": "a.py"}), (0, "one\ntwo\nthree\n", None))
-        _, out, _ = self.tool("read", {"path": "a.py", "offset": 2, "limit": 1})
+        _, out, _ = self.tool("read", {"path": "a.py", "offset": 2, "max_lines": 1})
         self.assertEqual(out, "two\n\n[檔案還有 1 行。用 offset=3 接著讀。]\n")
         self.put("big.txt", "".join("%d\n" % i for i in range(1, 3001)))
         _, out, _ = self.tool("read", {"path": "big.txt"})
@@ -185,15 +185,15 @@ class Tools(unittest.TestCase):
         self.assertEqual(res["items"][3]["link_to"], "a.txt")
         self.assertEqual((res["counter_items"], res["counter_hidden"]), (4, 1))
         self.assertNotIn("next_offset", res)
-        res = json.loads(self.tool("ls", {"limit": 2})[1])
+        res = json.loads(self.tool("ls", {"max_items": 2})[1])
         self.assertEqual(res["next_offset"], 2)
-        res = json.loads(self.tool("ls", {"offset": 2, "limit": 2})[1])
+        res = json.loads(self.tool("ls", {"offset": 2, "max_items": 2})[1])
         self.assertEqual([i["name"] for i in res["items"]], ["b.txt", "l"])
         res = json.loads(self.tool("ls", {"hidden": True})[1])
         self.assertIn(".h", [i["name"] for i in res["items"]])
         self.assertEqual(self.tool("ls", {"path": "a.txt"})[2], "FileBad")
         self.assertEqual(self.tool("ls", {"path": "zz"})[2], "FileMissing")
-        self.assertEqual(self.tool("ls", {"limit": 0})[2], "ArgumentsBad")
+        self.assertEqual(self.tool("ls", {"max_items": 0})[2], "ArgumentsBad")
 
     # ---- json_read
     def test_json_read_folds_and_pointer(self):

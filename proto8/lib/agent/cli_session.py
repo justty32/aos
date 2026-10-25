@@ -4,7 +4,7 @@
 #   session.txt   這段對話的 id（claude 的 session id／codex 的 thread id）；第一次講完話才有
 #   tty.sock      tmux 的 socket：互動畫面活著時，CLI 的終端就接在這裡（attach＝tmux -S tty.sock attach）
 #   tmux.conf     attach 開畫面時寫的 tmux 設定（Ctrl-\ 跳出、不用 prefix）
-#   turns.jsonl   互動畫面每講完一輪，hook 接一行 {"at", "text"}（agent 從這裡拿回答，不去解析畫面）
+#   turns.jsonl   互動畫面每講完一輪，hook 接一行 {"answered_at", "text"}（answered_at＝講完的時間，10-25 前叫 at）（agent 從這裡拿回答，不去解析畫面）
 #   busy.txt      claude 的畫面正在跑一輪（有人送出、還沒講完）
 #   lock          同一時間只有一個人用這段對話（agent 的一次呼叫、attach 開畫面）
 #
@@ -268,7 +268,7 @@ def hook_main(kind, cell_path, payload_arg=None):
         if sid and not cell.read("session.txt"):
             cell.write("session.txt", sid + "\n")
         with open(cell.file("turns.jsonl"), "a", encoding="utf-8") as f:
-            f.write(json.dumps({"at": now(), "text": text}, ensure_ascii=False) + "\n")
+            f.write(json.dumps({"answered_at": now(), "text": text}, ensure_ascii=False) + "\n")
         if os.path.exists(cell.file("busy.txt")):
             os.remove(cell.file("busy.txt"))
     except Exception:            # noqa: BLE001 —— hook 壞了也不能卡住 CLI

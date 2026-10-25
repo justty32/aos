@@ -340,7 +340,7 @@ def cmd_run(root, o, pos):
     if not res["ok"]:
         res["hint"] = ("超過 --timeout 被收掉；" + AGAIN) if timed_out else hint_for(errors) or AGAIN
     with open(a.base / "runs.jsonl", "a", encoding="utf-8") as f:
-        f.write(json.dumps({"at": now(), **{k: res[k] for k in ("code", "signal", "timed_out", "elapsed_ms", "errors")},
+        f.write(json.dumps({"finished_at": now(), **{k: res[k] for k in ("code", "signal", "timed_out", "elapsed_ms", "errors")},
                             "answers": [x["id"] for x in answers]}, ensure_ascii=False) + "\n")
     out(res)
 
@@ -468,7 +468,7 @@ def daemon_up(root):
         if ticks(p.pid) is not None:
             break
         time.sleep(0.02)
-    write_atomic(d.dir / "up.json", json.dumps({"pid": p.pid, "started_at_ticks": ticks(p.pid), "at": now()}) + "\n")
+    write_atomic(d.dir / "up.json", json.dumps({"pid": p.pid, "started_at_ticks": ticks(p.pid), "started_at": now()}) + "\n")
     time.sleep(0.3)
     if p.poll() is not None:
         raise Fail("DaemonFailed", "aos-daemon 起來就結束了（碼 %s）：%s" % (p.returncode, (read_text(d.dir / "stderr.txt") or "")[-300:]))

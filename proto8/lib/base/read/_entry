@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # read - 讀工作區裡一個文字檔，太長從頭截、告訴你從第幾行接著讀
-# 介面（lib/README 的契約）：stdin 收 {"path", "offset"?, "limit"?}；stdout 印內容（不加行號）；
+# 介面（lib/README 的契約）：stdin 收 {"path", "offset"?, "max_lines"?}；stdout 印內容（不加行號）；
 # 路徑從 $AOS_WS 算、解開 .. 與捷徑後不能跑出去；錯：stderr 與 stdout 各一行「read: 代號 原因」、退 1。
 # 來源：demo/pi-tools/read（10-24，照 pi 的 read：2000 行或 50KB 先到先算）。
 import json, os, sys
@@ -45,8 +45,8 @@ root = workspace()
 args = arguments()
 if not isinstance(args.get("path"), str) or not args["path"]:
     die("ArgumentsBad", "缺 path（要一個字串）")
-offset, limit = args.get("offset"), args.get("limit")
-for k, v in (("offset", offset), ("limit", limit)):
+offset, max_lines = args.get("offset"), args.get("max_lines")   # 上限一律 max_*（10-25 前叫 limit）
+for k, v in (("offset", offset), ("max_lines", max_lines)):
     if v is not None and (type(v) is not int or v < 1):
         die("ArgumentsBad", "%s 要是正整數" % k)
 
@@ -74,7 +74,7 @@ if total == 0:
 start = (offset or 1) - 1
 if start >= total:
     die("ArgumentsBad", "offset %d 超過檔尾（共 %d 行）" % (offset, total))
-end = total if limit is None else min(start + limit, total)
+end = total if max_lines is None else min(start + max_lines, total)
 out, size = [], 0
 for line in lines[start:end]:
     n = len(line.encode("utf-8")) + 1
@@ -90,5 +90,5 @@ print("\n".join(out))
 shown_end = start + len(out)
 if shown_end < end:                             # 被 2000 行／50KB 截掉
     print("\n[第 %d-%d 行，共 %d 行。用 offset=%d 接著讀。]" % (first, shown_end, total, shown_end + 1))
-elif end < total:                               # limit 停在檔尾之前
+elif end < total:                               # max_lines 停在檔尾之前
     print("\n[檔案還有 %d 行。用 offset=%d 接著讀。]" % (total - end, end + 1))

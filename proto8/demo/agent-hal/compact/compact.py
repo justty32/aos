@@ -52,9 +52,9 @@ RUN = os.path.join(CDIR, "run")
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 
-def prompt(name, keep_max=0):
+def prompt(name, max_keep=0):
     with open(os.path.join(HERE, "prompts", name + ".txt"), encoding="utf-8") as f:
-        return f.read().replace("{keep_max}", str(keep_max))
+        return f.read().replace("{max_keep}", str(max_keep))
 
 
 def sha(path):
@@ -287,7 +287,7 @@ def stage_segment(lines, report):
         got = read_json(path)
         if got is None or got.get("lines") != nums:
             by_n = {first_n(ln): ln for ln in seg}
-            data = {"keep_max": KEEP_MAX, "lines": [{"n": first_n(ln), "role": ln["role"], "text": text(ln)}
+            data = {"max_keep": KEEP_MAX, "lines": [{"n": first_n(ln), "role": ln["role"], "text": text(ln)}
                                                      for ln in seg]}
             user = "\n".join(render(ln, SEG_KB * 1024) for ln in seg)
             content, usage = ask.ask(MODEL_SEG, prompt("segment", KEEP_MAX), user, data, ask.fake_segment)
@@ -354,7 +354,7 @@ def stage_final(segs, old, report):
         user += "### 第 %d 段（L%d～L%d）\n%s\n\n" % (i, s["lines"][0], s["lines"][-1], s["summary"])
     user += "## 候選保留行\n" + ("\n".join(keep_entry(k) for k in cands) or "（沒有）")
     data = {"old_summary": old_summary if old else "", "segments": [s["summary"] for s in segs],
-            "candidates": [k["id"] for k in cands], "keep_max": KEEP_FINAL_MAX}
+            "candidates": [k["id"] for k in cands], "max_keep": KEEP_FINAL_MAX}
     content, usage = ask.ask(MODEL_FINAL, prompt("final", KEEP_FINAL_MAX), user, data, ask.fake_final)
     count(st, usage)
     reply = ask.parse_json(content)
@@ -442,8 +442,8 @@ def main():
         f.write("".join(x + "\n" for x in new_lines))
     report.update({"run": run_id, "round": rnd, "seconds": round(time.time() - t0, 2),
                    "models": {"note": MODEL_NOTE, "segment": MODEL_SEG, "final": MODEL_FINAL},
-                   "settings": {"over_kb": OVER_KB, "seg_kb": SEG_KB, "keep_turns": KEEP_TURNS, "keep_max": KEEP_MAX,
-                                "keep_final_max": KEEP_FINAL_MAX, "keep_line_max": KEEP_LINE_MAX},
+                   "settings": {"over_kb": OVER_KB, "seg_kb": SEG_KB, "keep_turns": KEEP_TURNS, "max_keep": KEEP_MAX,
+                                "max_keep_final": KEEP_FINAL_MAX, "max_keep_line_chars": KEEP_LINE_MAX},
                    "before": {"bytes": before, "counter_messages": len(rows)},
                    "compacted": {"bytes": sum(len(r[1].encode()) + 1 for r in prefix), "counter_messages": len(prefix),
                                  "stage1_bytes": sum(size(x) + 1 for x in lines)},

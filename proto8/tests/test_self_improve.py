@@ -108,6 +108,11 @@ class T(unittest.TestCase):
         self.assertEqual((self.stack / "versions" / "v000" / "target" / "f.py").read_text(), BUGGY)   # 每一版都留著
         self.assertEqual((self.ws / "out" / "best" / "target" / "f.py").read_text(), GOOD)
         self.assertEqual(self.result()["best"], "v001")
+        for d in (self.version("v001"), self.verdict("v001"), self.result()):   # 時間點叫 <發生了什麼>_at（10-25 前都叫 at）
+            self.assertNotIn("at", d)
+        self.assertIn("created_at", self.version("v001"))
+        self.assertIn("judged_at", self.verdict("v001"))
+        self.assertIn("finished_at", self.result())
         self.assertIn("+n = int(sys.argv[1]) if len(sys.argv) > 1 else 3",
                       (self.stack / "versions" / "v001" / "diff.txt").read_text())
         self.assertIn("補上 N 的預設值", (self.ws / "out" / "report.txt").read_text())
@@ -117,7 +122,7 @@ class T(unittest.TestCase):
     def test_task_hides_hidden_cases_and_judge(self):
         b = self.brain(tool_reply(call("r", "read", {"path": "../../../../../judge/cases.json"})),
                        answer("看不到。"))
-        self.put("budget.json", json.dumps({"rounds": 1}))
+        self.put("budget.json", json.dumps({"max_rounds": 1}))
         r = self.improve(b)
         self.assertEqual(r.returncode, 2, r.stderr)
         task = b.requests[0]["messages"][1]["content"]
@@ -143,7 +148,7 @@ class T(unittest.TestCase):
 
     def test_same_score_restarts_from_earliest_and_notes_repeats(self):
         b = self.brain(answer("沒改。"), answer("還是沒改。"))
-        self.put("budget.json", json.dumps({"rounds": 2}))
+        self.put("budget.json", json.dumps({"max_rounds": 2}))
         r = self.improve(b)
         self.assertEqual(r.returncode, 2, r.stderr)
         self.assertEqual(r.codes, ["BudgetSpent"])
@@ -153,7 +158,7 @@ class T(unittest.TestCase):
         self.assertIn("跟 v000 一模一樣", (self.ws / "out" / "report.txt").read_text())
 
     def test_budget_spent_then_more_budget_goes_on(self):
-        self.put("budget.json", json.dumps({"rounds": 1}))
+        self.put("budget.json", json.dumps({"max_rounds": 1}))
         b = self.brain(write("target/f.py", BROKEN), answer("壞的。"), write("target/f.py", GOOD), answer("好了。"))
         r = self.improve(b)
         self.assertEqual(r.returncode, 2, r.stderr)
@@ -162,27 +167,27 @@ class T(unittest.TestCase):
         self.assertEqual((self.ws / "out" / "best" / "target" / "f.py").read_text(), BUGGY)   # 回到最好的那版
         r = self.improve(b)                                    # 沒加預算：還是停在 judge、一樣的話
         self.assertEqual((r.returncode, r.codes), (2, ["BudgetSpent"]))
-        self.put("budget.json", json.dumps({"rounds": 3}))
+        self.put("budget.json", json.dumps({"max_rounds": 3}))
         r = self.improve(b)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.version("v002")["from"], "v000")
         self.assertTrue(self.result()["passed"])
 
     def test_token_budget(self):
-        self.put("budget.json", json.dumps({"tokens": 1000}))
+        self.put("budget.json", json.dumps({"max_tokens": 1000}))
         b = self.brain(tool_reply(call("r", "read", {"path": "target/f.py"}), tokens=600),
                        {"choices": [{"message": {"role": "assistant", "content": "不改。"}}],
                         "usage": {"total_tokens": 500}})
         r = self.improve(b)
         self.assertEqual(r.returncode, 2, r.stderr)
-        self.assertIn("tokens 用完了", r.stderr)
+        self.assertIn("max_tokens 用完了", r.stderr)
         self.assertEqual(self.result()["used"]["counter_tokens"], 1100)
 
     def test_only_target_is_taken(self):
         b = self.brain(tool_reply(call("a", "write", {"path": "notes.txt", "content": "x"}),
                                   call("b", "write", {"path": "target/extra.py", "content": "# extra\n"})),
                        answer("寫了兩個檔。"))
-        self.put("budget.json", json.dumps({"rounds": 1}))
+        self.put("budget.json", json.dumps({"max_rounds": 1}))
         self.improve(b)
         v1 = self.stack / "versions" / "v001"
         self.assertEqual(self.version("v001")["ignored"], ["notes.txt"])
@@ -237,6 +242,12 @@ class T(unittest.TestCase):
         self.put("judge/cases.json", json.dumps([{"args": "x", "stdout": ""}]))
         r = self.improve()
         self.assertEqual((r.returncode, r.codes), (1, ["JudgeBad"]))
+
+    def test_budget_bad(self):
+        for bad in ({"max_rounds": -1}, {"rounds": 1}, {"tokens": 1000}):   # 後兩個是 10-25 前的上限名，不認
+            self.put("budget.json", json.dumps(bad))
+            r = self.improve()
+            self.assertEqual((r.returncode, r.codes), (1, ["BudgetBad"]), (bad, r.stderr))
 
 
 if __name__ == "__main__":

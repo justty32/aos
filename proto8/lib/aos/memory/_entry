@@ -52,9 +52,9 @@ try:
     if op == "search":
         kinds = args.get("kind")
         kinds = [kinds] if isinstance(kinds, str) and kinds in heap.KINDS else None
-        limit = args.get("limit") if isinstance(args.get("limit"), int) else 5
+        max_results = args.get("max_results") if isinstance(args.get("max_results"), int) else 5   # 上限一律 max_*（10-25 前叫 limit）
         rows = h.search(args.get("query") if isinstance(args.get("query"), str) else "", kinds,
-                        max(1, min(limit, 20)))
+                        max(1, min(max_results, 20)))
         if not rows:
             say("沒有找到（記憶庫共 %d 筆）" % sum(h.counts().values()))
         say("\n".join(heap._item(r, h.text(r), 200) for r in rows))
