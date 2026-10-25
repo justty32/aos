@@ -4,8 +4,8 @@
 
 **一句話：解 JSON 裡的指示詞——`{"$ref": "檔#/指標"}` 換成那份檔裡那個位置的值、`{"$env": "名字"}` 換成環境變數的值（可帶 `$path`、`$prefix`）。** 一個 lib（`lib/libaos-directive.a`）加一支命令列（`bin/aos-directive`，不對外提供）。
 aos-exec 連這個 lib 解單子、argv 陣列入口與 JSON `.env` key 裡的指示詞（loop／fsm／daemon 的每一次都經 aos-exec）；
-10-23 晚起 aos-loop、aos-daemon、aos-fsm 讀設定檔與 ctl 時也用它（使用者「aos 讀的 JSON 全部支援」，N-45；每支程式只解自己讀的格，用 `resolve_shallow` 一層層往下）。全家慣例見 [impls/README.md](../README.md)。
-**10-21 照 `proto8/bin/aos_inst.py` 的 resolve 改版**（10-20 ideas D1、D7、D9～D15；N-45）。
+aos-loop、aos-daemon、aos-fsm 讀設定檔與 ctl 時也用它（使用者「aos 讀的 JSON 全部支援」，N-45；每支程式只解自己讀的格，用 `resolve_shallow` 一層層往下）。全家慣例見 [impls/README.md](../README.md)。
+行為照 `proto8/bin/aos_inst.py` 的 resolve（ideas D1、D7、D9～D15；N-45）。
 
 ```sh
 echo '{"argv": {"$ref": "cfg.json#/tools/stamp"}, "out": {"$env": "AOS_STACK", "$path": "out", "$prefix": "--o="}}' | aos-directive
@@ -21,16 +21,16 @@ echo '{"argv": {"$ref": "cfg.json#/tools/stamp"}, "out": {"$env": "AOS_STACK", "
 | 寫法 | 換成 |
 |---|---|
 | `{"$ref": "file.json"}` | 那份 JSON 檔的整份內容（第一行 `#!` 跳過），換進來的值接著解 |
-| `{"$ref": "file.json#/a/b"}` | 檔內那個位置（JSON pointer，`~1`＝`/`、`~0`＝`~`）；**位置只認 `#/`**（10-23 使用者「把$at刪掉，就都只認#/。」；原本另有修飾詞 `$at`，現在寫了是不認得的 `$xxx`、不管）。指標取的是檔的原文，取到的值再接著解 |
+| `{"$ref": "file.json#/a/b"}` | 檔內那個位置（JSON pointer，`~1`＝`/`、`~0`＝`~`）；**位置只認 `#/`**（10-23 使用者「把$at刪掉，就都只認#/。」；寫 `$at` 是不認得的 `$xxx`、不管）。指標取的是檔的原文，取到的值再接著解 |
 | `{"$ref": ["a.json", "b.json#/c/d"]}` | **陣列＝幾份照順序合成一份**（10-23 使用者「"$ref":["a.json", "b.json#/c/d]"」）：都是物件＝合 key，同名 key **後面的蓋前面的**（淺層，不往下層合；位置留在第一次出現的地方）；都是陣列＝接起來；種類混在一起＝`DirectiveBad`。每個元素寫法同上一列（各自從這一層算相對路徑、各自接著解、各自用 `#/` 指位置）；只有一份＝它本身（不限種類）；兩份以上都是字串、數字…＝合不起來，`DirectiveBad` |
 | `{"$env": "NAME"}` | 環境變數的值 |
-| 加 `"$path": "子路徑"` | 換出來是字串時**照字串接上去**（D9；10-21 傍晚 ideas § 9 改，原照 `os.path.join`）：子路徑 `#` 開頭＝直接接（`x.json` ＋ `#/a`＝`x.json#/a`）；空字串＝不接；其他＝去掉值結尾的 `/` 與子路徑開頭的 `/`，中間剛好一個 `/`（子路徑是絕對路徑也是接上去：`/s` ＋ `/abs/p`＝`/s/abs/p`，不再整個取代） |
+| 加 `"$path": "子路徑"` | 換出來是字串時**照字串接上去**（D9；ideas § 9）：子路徑 `#` 開頭＝直接接（`x.json` ＋ `#/a`＝`x.json#/a`）；空字串＝不接；其他＝去掉值結尾的 `/` 與子路徑開頭的 `/`，中間剛好一個 `/`（子路徑是絕對路徑也是接上去：`/s` ＋ `/abs/p`＝`/s/abs/p`） |
 | 加 `"$prefix": "--file="` | 換出來是字串時接在前面；先接 `$path` 再加 `$prefix`（D10） |
 
-- 換出來不是字串（`$ref` 取到數字、物件…）：`$path`／`$prefix` 靜默不作用（D11）。舊的 `"path"` 已改名，寫了是普通 key、不作用。
+- 換出來不是字串（`$ref` 取到數字、物件…）：`$path`／`$prefix` 靜默不作用（D11）。寫 `"path"`（不帶 `$`）是普通 key、不作用。
 - 相對檔名：最外層的 `$ref` 從呼叫者給的 `base_dir` 算（命令列＝cwd）；被 `$ref` 進來的檔裡的 `$ref`，從**那個檔解開捷徑後所在的資料夾**算（使用者 2026-10-17 定）。
 - **錯分兩類**（D13～D15）：
-  - **真的解不開＝`DirectiveBad`**：環境變數沒設、`$ref` 的檔讀不到（含不是 JSON；**指到資料夾也算讀不到**，不走進去找入口，10-21 傍晚 ideas § 9「維持報錯」）、指標指不到、繞圈（同一個檔＋指標又出現）。
+  - **真的解不開＝`DirectiveBad`**：環境變數沒設、`$ref` 的檔讀不到（含不是 JSON；**指到資料夾也算讀不到**，不走進去找入口，ideas § 9「維持報錯」）、指標指不到、繞圈（同一個檔＋指標又出現）。
   - **寫法寬容、不報錯**：不認得的 `$xxx`（含 `$fmt`）與其餘 key 不管；`$path`、`$prefix` 不是字串＝當沒寫；
     `$ref`／`$env` 的值不是非空字串、`$ref` 的 `#` 後面不是 `/`、只有 `#/…` 沒寫檔名＝換不了，**整個物件原封不動留著**（裡面也不解）。
     `$ref` 陣列：空陣列、或有一個元素是上面這些（不是字串、空字串、`#` 後不是 `/`、沒檔名）＝整個物件原封不動（不會只合其中幾份）。
@@ -43,16 +43,16 @@ echo '{"argv": {"$ref": "cfg.json#/tools/stamp"}, "out": {"$env": "AOS_STACK", "
 aos-directive < 一份 JSON
 ```
 
-stdin 一份 JSON（規則同全家：空的＝`{}`、多份＝`InputExtra`、解不出來＝`InputBad`（10-23 統合前叫 JsonSyntax）），以呼叫者的 cwd 為基準解開所有指示詞，
-stdout 印一行解好的 JSON、退出 0；出錯 stderr 一行、退出 1。不收任何參數（給了＝`ArgumentsBad`，10-23 統合前叫 Usage）。
+stdin 一份 JSON（規則同全家：空的＝`{}`、多份＝`InputExtra`、解不出來＝`InputBad`），以呼叫者的 cwd 為基準解開所有指示詞，
+stdout 印一行解好的 JSON、退出 0；出錯 stderr 一行、退出 1。不收任何參數（給了＝`ArgumentsBad`）。
 
 ## 元素
 
 | 檔 | 做什麼 |
 |---|---|
-| `include/aos/directive.hpp` | 公開介面：`aos::resolve`、`aos::resolve_shallow`（10-23 晚）、代號 `aos::code::DirectiveBad` |
-| `src/resolve.cpp` | 走遍整份 JSON、認出指示詞、分派給 `$ref`／`$env`；換出來是字串再接 `$path`（字串拼接 `join_path`）、加 `$prefix`（`decorate`）；`resolve_shallow`（只換這一格，10-23 晚） |
-| `src/ref.cpp` | `$ref`：檢查寫法（字串或字串陣列，不合回 nullopt）、從這一層算路徑、判斷繞圈（檔＋指標）、讀檔（跳 `#!`）、照指標取值（`fetch_ref`，取原文，陣列＝每份一個）、往下解（`resolve_ref`）、幾份合成一份（`merge`，10-23） |
+| `include/aos/directive.hpp` | 公開介面：`aos::resolve`、`aos::resolve_shallow`、代號 `aos::code::DirectiveBad` |
+| `src/resolve.cpp` | 走遍整份 JSON、認出指示詞、分派給 `$ref`／`$env`；換出來是字串再接 `$path`（字串拼接 `join_path`）、加 `$prefix`（`decorate`）；`resolve_shallow`（只換這一格） |
+| `src/ref.cpp` | `$ref`：檢查寫法（字串或字串陣列，不合回 nullopt）、從這一層算路徑、判斷繞圈（檔＋指標）、讀檔（跳 `#!`）、照指標取值（`fetch_ref`，取原文，陣列＝每份一個）、往下解（`resolve_ref`）、幾份合成一份（`merge`） |
 | `src/env.cpp` | `$env` |
 | `src/internal.hpp` | 上面三個檔之間的內部宣告（namespace `aos::directive`：`$ref` 鏈 `Chain`＝（檔, 指標）清單） |
 | `src/main.cpp` | 命令列：讀 → `resolve` → 印 |
@@ -76,7 +76,7 @@ struct Resolved {
     const std::string& dir_of(const std::string& key) const;   // 沒記＝base_dir
     const std::string& dir_of(size_t i) const;
 };
-Resolved resolve_shallow(const Json& v, const std::filesystem::path& base_dir);   // 10-23 晚
+Resolved resolve_shallow(const Json& v, const std::filesystem::path& base_dir);
 }
 ```
 
@@ -88,8 +88,7 @@ Resolved resolve_shallow(const Json& v, const std::filesystem::path& base_dir); 
 
 ## 跟 Python 版的差異
 
-照 `proto8/bin/aos_inst.py` 的 `resolve`（10-20 改版；`$path` 照 10-21 傍晚的 `join`）寫，行為一樣；錯誤訊息字面不同、代號一律 `DirectiveBad`。
-（舊 `proto8/lib/aos_cli.py` 那代的差異已不適用。）
+照 `proto8/bin/aos_inst.py` 的 `resolve`（`$path` 照它的 `join`）寫，行為一樣；錯誤訊息字面不同、代號一律 `DirectiveBad`。
 
 ## 建置與測試
 
