@@ -13,4 +13,5 @@
  "reads": ["$AOS_WS/new/*.json", "$AOS_WS/cur/*.json", "system.txt"],
  "writes": ["$AOS_WS/out/<n>.txt", "$AOS_WS/done/", "$AOS_STACK/{history.jsonl,current.txt,llm.jsonl}"],
  "grow_level": 4,
- "shape": "單發腦函數（_entry 單子＋ask.py；round3 由 loop→fsm idle→think→act 收攏）"}
+ "shape": "單發腦函數（_entry 單子＋ask.py；round3 由 loop→fsm idle→think→act 收攏）",
+ "ratings": {"calibration": {}}}

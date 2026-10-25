@@ -1,0 +1,23 @@
+{
+ "attempt": 1,
+ "benchmark": "q01",
+ "tier0": {
+  "score": 1,
+  "pass": true
+ },
+ "tier1": {
+  "score": 2,
+  "counter_violations": 0
+ },
+ "tier2": {
+  "semantic": 2,
+  "register_by_judge": 1,
+  "reasons": [
+   "晴子有讓書、下次再來，也接上讀後感的鉤子；但爺爺蓋章與主角先說「我先看別的」改動了事件節奏，梅花章也不像正解中用來鋪墊下次再來。",
+   "晴子稱「佐伯同學」符合稱謂階；但「我只是……剛好也想拿這本呢」略顯解釋，少了文靜角色的留白感。"
+  ]
+ },
+ "total": 5,
+ "max_total": 6,
+ "register_agree": false
+}

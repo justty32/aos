@@ -1,0 +1,55 @@
+{
+ "name": "新書_宮澤_主角先_梅花章",
+ "benchmark": null,
+ "elapsed_ms": 16709,
+ "counter_cycles": 1,
+ "counter_drafts": 1,
+ "counter_plans": 1,
+ "counter_lint_calls": 1,
+ "counter_llm_calls": 4,
+ "counter_tokens": 17467,
+ "cells": {
+  "brief": {
+   "elapsed_ms": 20
+  },
+  "draft": {
+   "elapsed_ms": 13406
+  },
+  "check": {
+   "elapsed_ms": 46
+  },
+  "judge": {
+   "elapsed_ms": 3215
+  },
+  "deliver": {
+   "elapsed_ms": 0
+  }
+ },
+ "agents": {
+  "director": {
+   "counter_llm_calls": 1,
+   "counter_tokens": 3495,
+   "llm_elapsed_ms": 5326,
+   "elapsed_ms": 5326
+  },
+  "writer": {
+   "counter_llm_calls": 2,
+   "counter_tokens": 10355,
+   "llm_elapsed_ms": 7802,
+   "elapsed_ms": 7974
+  },
+  "critic": {
+   "counter_llm_calls": 1,
+   "counter_tokens": 3617,
+   "llm_elapsed_ms": 3139,
+   "elapsed_ms": 3139
+  }
+ },
+ "score": {
+  "val": "ok",
+  "total": 4,
+  "tier0": 1,
+  "tier1": 1,
+  "tier2": 2
+ }
+}

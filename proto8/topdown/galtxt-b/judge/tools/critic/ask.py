@@ -49,7 +49,8 @@ except ValueError as e:
 def render(q):
     s = q.get("scene") or {}
     out = ["【場景】%s・%s・%s。%s" % (s.get("season", ""), s.get("time", ""), s.get("place", ""), s.get("summary", "")),
-           "【事件】%s　【意圖】%s　【稱謂階】%s" % (s.get("event", ""), s.get("intent", ""), s.get("relation_level", "")), "【在場】"]
+           "【事件】%s　【意圖】%s　【稱謂階】%s" % (s.get("event", ""), s.get("intent", ""), s.get("relation_level", "")),
+           "【女角風格】%s" % q.get("style", ""), "【在場】"]
     for c in q.get("cast_notes") or []:
         out.append("- %s（%s）：語氣 %s；不可：%s；叫對方：%s" % (
             c["name"], "、".join(c.get("type") or []), c.get("tone", ""), "；".join(c.get("ng") or []), "／".join(c.get("address_allowed") or [])))
@@ -62,7 +63,7 @@ def render(q):
                 "評分要點：(a) %s (b) %s (c) %s" % tuple((b.get("points") or {}).get(k, "") for k in "abc")]
     else:
         out.append("【沒有 benchmark】只照場景與總則打分。")
-    out.append("請只輸出 JSON：{\"semantic\": 0-3, \"register\": 0-2, \"reasons\": [...]}")
+    out.append("請只輸出 JSON：{\"semantic\": 0-3, \"register\": 0-2, \"dims\": {\"承接\": 0-1, \"含蓄\": 0-1, \"角色味\": 0-1, \"反差\": 0-1, \"文筆\": 0-1},\"reasons\": [...]}")
     return "\n".join(out)
 
 
@@ -96,10 +97,14 @@ if os.path.exists("system.txt"):
 
 
 def fake():
-    """假腦：不讀稿，給中間分；理由寫明是假的，免得有人拿它當真。"""
-    return {"role": "assistant",
-            "content": json.dumps({"semantic": 2, "register": 2, "reasons": ["假腦：沒有真的讀稿，固定給 semantic 2、register 2"]},
-                                  ensure_ascii=False)}
+    """假腦：不讀稿，給中間分（dims 也固定）；理由寫明是假的，免得有人拿它當真。
+    測試開關 GALTXT_FAKE_CRITIC_DIMS：no＝不給 dims（拆不出來那條路）、bad＝dims 給壞的值（不是數字）。"""
+    dims = {"no": None, "bad": {"承接": "高", "含蓄": True}}.get(os.environ.get("GALTXT_FAKE_CRITIC_DIMS"),
+                                                             {"承接": 0.7, "含蓄": 0.6, "角色味": 0.7, "反差": 0.5, "文筆": 0.8})
+    verdict = {"semantic": 2, "register": 2, "reasons": ["假腦：沒有真的讀稿，固定給 semantic 2、register 2、dims 固定值"]}
+    if dims is not None:
+        verdict["dims"] = dims
+    return {"role": "assistant", "content": json.dumps(verdict, ensure_ascii=False)}
 
 
 def record(asked_at, model, elapsed_ms, usage):

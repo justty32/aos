@@ -1,0 +1,203 @@
+#!/usr/bin/env python3
+# import - 把人評（$AOS_WS/human/ratings.json，網頁寫回）併進 $AOS_WS/tree/ 的 _metainfo.ratings.human，並寫 $AOS_WS/human/calibration.json（純程式、不問腦）。
+# plan/round4.md §6c、§3。工作區是「訓練場」：human/{samples.json,ratings.json}、tree/（galtxt-b 的工作複本）。
+# 對每筆評級：id → samples.json 那筆 → produced_by（產出台詞的節點，相對 tree/）與 scene.style（評級的 key）。
+#   同一個 produced_by、同一個風格的評級合成第 2 級：{"val": 多數票（平手取較差的）, "tags": 次數前三, <dims 名>: 平均, "counter_samples",
+#   "rated_at": 最晚那筆, "source"}，寫進 tree/<produced_by>/_metainfo 與 tree/_metainfo 的 ratings.human.<風格>（同風格覆寫、別的風格不動）；
+#   critic 被評的是「準不準」：tree/judge/tools/critic/_metainfo 的 ratings.calibration 記一致率（有那份檔才寫）。
+#   **只動 ratings 這個 key**：其餘 key 照原文一個字元都不動（找出頂層 ratings 的值的位置換掉；沒有就加在最後）。
+# calibration.json：{"counter_rated", "agreement": {"overall", "by_style"}, "confusion": [{auto, human, ids, tags}], "suggest": [...], "rated_at"}
+#   一致＝人的 overall 等於樣本 auto_scores.val。人評只校正、不進分數（§6c、§9 第 8 條）。
+# ratings.json 不在＝還沒人評，什麼都不做退 0。可重跑（同樣的輸入結果一樣）。
+# 單筆的問題不擋整批：stderr 一行「import: SampleUnknown <id>」（samples.json 沒這個 id）或「import: RatingBad <id> 原因」，跳過那筆。
+# 自己的錯一行 stderr「import: 代號 原因」退 1：WsMissing、SamplesMissing／SamplesBad、RatingsBad（不是陣列）、TreeMissing、MetainfoBad。
+import json, os, sys
+from datetime import datetime, timezone
+
+LEVELS = {"good": 2, "ok": 1, "bad": 0}
+
+
+def die(code, reason):
+    print("import: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def warn(code, reason):
+    print("import: %s %s" % (code, reason), file=sys.stderr)
+
+
+def put(path, text):                             # N-05
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.replace(tmp, path)
+
+
+def top_keys(text):
+    """頂層物件每個 key 的值在原文的 (key, 值開頭, 值結尾)；不是物件＝ValueError。"""
+    dec, i, out = json.JSONDecoder(), 0, []
+    skip = lambda j: len(text) - len(text[j:].lstrip())
+    i = skip(0)
+    if text[i:i + 1] != "{":
+        raise ValueError("頂層不是物件")
+    i = skip(i + 1)
+    if text[i:i + 1] == "}":
+        return out, i
+    while True:
+        key, i = dec.raw_decode(text, i)
+        i = skip(i)
+        if text[i:i + 1] != ":":
+            raise ValueError("key 後面不是冒號")
+        start = skip(i + 1)
+        _, end = dec.raw_decode(text, start)
+        out.append((key, start, end))
+        i = skip(end)
+        if text[i:i + 1] == "}":
+            return out, i
+        if text[i:i + 1] != ",":
+            raise ValueError("值後面不是逗號或 }")
+        i = skip(i + 1)
+
+
+def merge_ratings(path, update):
+    """讀 path（_metainfo）、把 update(ratings) 的結果放回 ratings；其餘原文不動。"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        meta = json.loads(text)
+        spans, close = top_keys(text)
+    except (OSError, ValueError) as e:
+        die("MetainfoBad", "%s 讀不了或不是 JSON 物件：%s" % (path, e))
+    ratings = meta.get("ratings")
+    if ratings is None:
+        ratings = {}
+    if not isinstance(ratings, dict):
+        die("MetainfoBad", "%s 的 ratings 不是物件" % path)
+    value = json.dumps(update(ratings), ensure_ascii=False)
+    span = [s for s in spans if s[0] == "ratings"]
+    if span:
+        _, a, b = span[-1]
+        text = text[:a] + value + text[b:]
+    elif spans:
+        end = spans[-1][2]
+        text = text[:end] + ',\n "ratings": ' + value + text[end:]
+    else:
+        text = text[:close] + '"ratings": ' + value + text[close:]
+    put(path, text)
+
+
+def summarize(rs):
+    """同一節點同一風格的幾筆人評 → 第 2 級評級。"""
+    votes = {}
+    for r in rs:
+        votes[r["overall"]] = votes.get(r["overall"], 0) + 1
+    top = max(votes.values())
+    val = min((v for v in votes if votes[v] == top), key=lambda v: LEVELS[v])    # 平手取較差的（保守）
+    tags, order = {}, []
+    for r in rs:
+        for t in r.get("tags") or []:
+            if t not in tags:
+                order.append(t)
+            tags[t] = tags.get(t, 0) + 1
+    out = {"val": val, "tags": sorted(order, key=lambda t: (-tags[t], order.index(t)))[:3]}
+    dims = {}
+    for r in rs:
+        for k, v in (r.get("dims") or {}).items():
+            if isinstance(v, (int, float)) and not isinstance(v, bool):
+                dims.setdefault(k, []).append(float(v))
+    for k, vs in dims.items():
+        if k not in ("val", "tags", "counter_samples", "rated_at", "source"):
+            out[k] = round(sum(vs) / len(vs), 3)
+    out["counter_samples"] = len(rs)
+    out["rated_at"] = max((r.get("rated_at") or "" for r in rs), default="") or now
+    out["source"] = "human/import（人評：網頁勾選）"
+    return out
+
+
+now = datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+ws = os.environ.get("AOS_WS")
+if not ws or not os.path.isdir(ws):
+    die("WsMissing", "沒設定 AOS_WS 或它不是資料夾")
+hdir, tree = os.path.join(ws, "human"), os.path.join(ws, "tree")
+rpath = os.path.join(hdir, "ratings.json")
+if not os.path.exists(rpath):
+    sys.exit(0)                                  # 還沒人評
+try:
+    with open(os.path.join(hdir, "samples.json"), encoding="utf-8") as f:
+        samples = json.load(f)
+except FileNotFoundError:
+    die("SamplesMissing", "human/samples.json 不在")
+except ValueError as e:
+    die("SamplesBad", "human/samples.json 不是 JSON：%s" % e)
+if not isinstance(samples, list):
+    die("SamplesBad", "human/samples.json 要是陣列")
+try:
+    with open(rpath, encoding="utf-8") as f:
+        ratings = json.load(f)
+except ValueError as e:
+    die("RatingsBad", "human/ratings.json 不是 JSON：%s" % e)
+if not isinstance(ratings, list):
+    die("RatingsBad", "human/ratings.json 要是陣列")
+if not os.path.isfile(os.path.join(tree, "_metainfo")):
+    die("TreeMissing", "tree/_metainfo 不在（訓練場還沒有 tree/）")
+
+by_id = {s.get("id"): s for s in samples if isinstance(s, dict)}
+good = []                                        # (sample, rating)
+for r in ratings:
+    rid = r.get("id") if isinstance(r, dict) else None
+    if rid not in by_id:
+        warn("SampleUnknown", "%s 不在 samples.json，跳過" % rid)
+        continue
+    if r.get("overall") not in LEVELS:
+        warn("RatingBad", "%s 的 overall 要是 good／ok／bad：%r，跳過" % (rid, r.get("overall")))
+        continue
+    s = by_id[rid]
+    node = os.path.normpath(s.get("produced_by") or ".")
+    if node.startswith("..") or os.path.isabs(node) or not os.path.isfile(os.path.join(tree, node, "_metainfo")):
+        warn("RatingBad", "%s 的 produced_by %r 在 tree/ 裡找不到 _metainfo，跳過" % (rid, s.get("produced_by")))
+        continue
+    style = (s.get("scene") or {}).get("style")
+    if not style:
+        warn("RatingBad", "%s 的樣本沒有 scene.style，跳過" % rid)
+        continue
+    good.append((s, r, node, style))
+
+groups = {}                                      # (節點, 風格) → [rating]；頂層另算一份（全部節點合起來）
+for s, r, node, style in good:
+    groups.setdefault((node, style), []).append(r)
+    if node != ".":
+        groups.setdefault((".", style), []).append(r)
+for node in sorted({k[0] for k in groups}):
+    mine = {style: summarize(rs) for (n, style), rs in groups.items() if n == node}
+    merge_ratings(os.path.join(tree, node, "_metainfo"),
+                  lambda rt: dict(rt, human=dict(rt.get("human") if isinstance(rt.get("human"), dict) else {}, **mine)))
+
+# 校正表：自動 val 對人的 overall
+agree_style, confusion = {}, {}
+for s, r, node, style in good:
+    auto = (s.get("auto_scores") or {}).get("val")
+    agree_style.setdefault(style, []).append(auto == r["overall"])
+    if auto != r["overall"]:
+        c = confusion.setdefault((auto, r["overall"]), {"auto": auto, "human": r["overall"], "ids": [], "tags": [], "styles": []})
+        c["ids"].append(r["id"])
+        c["tags"] += [t for t in r.get("tags") or [] if t not in c["tags"]]
+        if style not in c["styles"]:
+            c["styles"].append(style)
+rate = lambda xs: round(sum(xs) / len(xs), 3) if xs else None
+overall = rate([x for xs in agree_style.values() for x in xs])
+by_style = {k: rate(v) for k, v in sorted(agree_style.items())}
+suggest = []
+for c in confusion.values():
+    loose = LEVELS.get(c["auto"], -1) > LEVELS[c["human"]]
+    for st in c["styles"]:
+        suggest.append("%s：人說 %s、自動給 %s%s → 自動評分對%s太%s：%s" % (
+            st, c["human"], c["auto"], "（%s）" % "、".join(c["tags"][:2]) if c["tags"] else "", st, "鬆" if loose else "嚴",
+            "critic 的 system.txt 在這個風格上要更嚴，或 lint 加對應的規則" if loose else "critic 對這個風格扣太多，看 reasons 哪一類扣錯"))
+calibration = {"counter_rated": len(good), "agreement": {"overall": overall, "by_style": by_style},
+               "confusion": [{k: v for k, v in c.items() if k != "styles"} for c in confusion.values()],
+               "suggest": suggest, "rated_at": now}
+put(os.path.join(hdir, "calibration.json"), json.dumps(calibration, ensure_ascii=False, indent=1) + "\n")
+critic = os.path.join(tree, "judge", "tools", "critic", "_metainfo")
+if good and os.path.isfile(critic):
+    merge_ratings(critic, lambda rt: dict(rt, calibration={"val": overall, "by_style": by_style, "counter_samples": len(good),
+                                                           "rated_at": now, "source": "human/import（自動 val 對人評的一致率）"}))

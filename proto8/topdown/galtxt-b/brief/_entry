@@ -106,16 +106,22 @@ def pick(items, *keys):                          # 第一個「每個給定 key 
     return ""
 
 
+heroine = next((c for c in cards if c["role"] != "hero"), cards[-1])
 opener = pick(openers_t["openers"], "place", "season")
-closer = pick(openers_t["closers"], "intent")
+closer = pick(openers_t["closers"], "intent").replace("{heroine}", heroine["display"])
 lines = scene.get("lines") or {}
 bench = scene.get("benchmark")
-samples = [x for x in samples_t.get("samples", []) if not bench or x.get("benchmark") != bench]   # 不漏自己那題的前後文
+samples = [x for x in samples_t.get("samples", [])
+           if (not bench or x.get("benchmark") != bench)                       # 不漏自己那題的前後文
+           and ("cast" not in x or set(x["cast"]) & set(cast_names))]         # 只給在場女角的語氣錨
+# 風格（第 4 輪：評級的 key）：場景有寫就照用；沒寫＝女角卡 type 的第一個，去掉括號、取「／」前（「文靜／書卷（主軸）」→「文靜」）
+style = scene.get("style") or re.split(r"[（(／]", (heroine.get("type") or ["?"])[0])[0].strip()
 beats = {k: v for k, v in beats_t.items() if not k.startswith("_")}
 
 brief = {
     "name": name,
     "scene": scene,
+    "style": style,
     "cast": cards,
     "place": places_t[place],
     "address_rules": address_t.get("rules", []),

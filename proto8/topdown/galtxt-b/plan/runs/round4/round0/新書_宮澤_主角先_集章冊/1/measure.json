@@ -1,0 +1,55 @@
+{
+ "name": "新書_宮澤_主角先_集章冊",
+ "benchmark": null,
+ "elapsed_ms": 23882,
+ "counter_cycles": 1,
+ "counter_drafts": 1,
+ "counter_plans": 1,
+ "counter_lint_calls": 2,
+ "counter_llm_calls": 5,
+ "counter_tokens": 23824,
+ "cells": {
+  "brief": {
+   "elapsed_ms": 20
+  },
+  "draft": {
+   "elapsed_ms": 19380
+  },
+  "check": {
+   "elapsed_ms": 45
+  },
+  "judge": {
+   "elapsed_ms": 4415
+  },
+  "deliver": {
+   "elapsed_ms": 0
+  }
+ },
+ "agents": {
+  "director": {
+   "counter_llm_calls": 1,
+   "counter_tokens": 3513,
+   "llm_elapsed_ms": 5627,
+   "elapsed_ms": 5627
+  },
+  "writer": {
+   "counter_llm_calls": 3,
+   "counter_tokens": 16670,
+   "llm_elapsed_ms": 13374,
+   "elapsed_ms": 13643
+  },
+  "critic": {
+   "counter_llm_calls": 1,
+   "counter_tokens": 3641,
+   "llm_elapsed_ms": 4338,
+   "elapsed_ms": 4338
+  }
+ },
+ "score": {
+  "val": "ok",
+  "total": 4,
+  "tier0": 1,
+  "tier1": 1,
+  "tier2": 2
+ }
+}

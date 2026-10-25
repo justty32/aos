@@ -1,0 +1,55 @@
+{
+ "name": "新書_宮澤_她先_集章冊",
+ "benchmark": null,
+ "elapsed_ms": 21777,
+ "counter_cycles": 1,
+ "counter_drafts": 1,
+ "counter_plans": 1,
+ "counter_lint_calls": 2,
+ "counter_llm_calls": 5,
+ "counter_tokens": 23687,
+ "cells": {
+  "brief": {
+   "elapsed_ms": 20
+  },
+  "draft": {
+   "elapsed_ms": 18487
+  },
+  "check": {
+   "elapsed_ms": 45
+  },
+  "judge": {
+   "elapsed_ms": 3201
+  },
+  "deliver": {
+   "elapsed_ms": 0
+  }
+ },
+ "agents": {
+  "director": {
+   "counter_llm_calls": 1,
+   "counter_tokens": 3485,
+   "llm_elapsed_ms": 5115,
+   "elapsed_ms": 5115
+  },
+  "writer": {
+   "counter_llm_calls": 3,
+   "counter_tokens": 16538,
+   "llm_elapsed_ms": 12990,
+   "elapsed_ms": 13263
+  },
+  "critic": {
+   "counter_llm_calls": 1,
+   "counter_tokens": 3664,
+   "llm_elapsed_ms": 3125,
+   "elapsed_ms": 3125
+  }
+ },
+ "score": {
+  "val": "ok",
+  "total": 4,
+  "tier0": 1,
+  "tier1": 1,
+  "tier2": 2
+ }
+}

@@ -3,6 +3,8 @@
 # 黏合層（同 draft）：備題目、叫 agent、收答案。critic 每題只問一次，小格每次清掉重來（單發、不續聊）。
 # 分數照 corpus/評測 README 的三層：護欄命中 0/1（check Tier 0）＋ 語域 0-2（check Tier 1，程式算）＋ 語意契合 0-3（critic）＝ 0-6。
 # critic 也會給它自己看到的語域分 register_by_judge，只拿來跟程式算的對照（雙錨：兩個不合＝該看一眼的訊號），不算進總分。
+# 第 4 輪：score.json 是結構化分數（第 2 級）：val（good／ok／bad）、style（評級的 key）、dims（護欄／語域／語意 各 0～1；語意可長到第 3 級）；
+#   tier0／1／2、total 照舊留著（舊讀者照讀）。沒有 benchmark 的題（宮澤、木下）critic 只照場景與總則打。
 # 自己的錯退 1：StackMissing、BriefMissing、DraftMissing、BenchmarkMissing、CriticFailed、AnswerMissing、ReplyBad。
 import json, os, re, shutil, subprocess, sys
 
@@ -52,6 +54,7 @@ scene = brief["scene"]
 question = {"scene": {k: scene.get(k) for k in ("summary", "place", "season", "time", "event", "intent", "cast", "relation_level")},
             "cast_notes": [{"name": c["display"], "type": c["type"], "tone": c["voice"].get("tone"), "ng": c["voice"].get("ng"),
                             "address_allowed": c["address"]["allowed"]} for c in brief["cast"]],
+            "style": brief.get("style", ""),
             "style_rules": brief.get("style_rules", []),
             "draft": draft.get("text", ""),
             "benchmark": bench}
@@ -73,15 +76,30 @@ try:
     verdict = json.loads(body)
     semantic, register = int(verdict["semantic"]), int(verdict.get("register", -1))
     reasons = verdict.get("reasons") or []
-except (ValueError, KeyError, TypeError) as e:
+except (ValueError, KeyError, TypeError, AttributeError) as e:
     die("ReplyBad", "critic 的回覆不是 {semantic, register, reasons}：%s（%s）" % (raw[:120].replace("\n", " "), e))
 semantic = max(0, min(3, semantic))
+sub = verdict.get("dims") if isinstance(verdict, dict) else None              # critic 把語意拆開的 0～1；拆不出（沒給、給壞）就不長
+sub = {k: round(max(0.0, min(1.0, float(v))), 2) for k, v in sub.items()
+       if isinstance(v, (int, float)) and not isinstance(v, bool)} if isinstance(sub, dict) else {}
 tier0 = 1 if check.get("tier0_pass") else 0
 tier1 = int(check.get("register_score", 0))
-score = {"attempt": check.get("attempt"), "benchmark": bench_id,
+total = tier0 + tier1 + semantic
+# 結構化分數（round4 §2）：val＝good／ok／bad（total ≥5／3～4／≤2）；dims 每維 0～1。語意有 critic 拆的子維度就長成第 3 級
+# {"val": 語意, "承接", "含蓄", "角色味"}（C-55：原值進 val），沒有就是數字——讀的人兩形都收（C-48）。
+# 第 4 級往下長（10-25 限縮到傲嬌之後）：critic 給的「反差」（嘴硬心軟的反差）是「角色味」底下的細項——兩個都有就長成
+# "角色味": {"val": 角色味, "反差": …}；只有反差、沒有角色味＝留在同層（不替它編一個 val）。
+for child, parent in (("反差", "角色味"),):
+    if child in sub and parent in sub:
+        sub[parent] = {"val": sub[parent], child: sub.pop(child)}
+semantic_dim = round(semantic / 3, 2)
+dims ={"護欄": float(tier0), "語域": round(tier1 / 2, 2), "語意": dict({"val": semantic_dim}, **sub) if sub else semantic_dim}
+score = {"val": "good" if total >= 5 else "ok" if total >= 3 else "bad", "style": brief.get("style"),
+         "dims": dims,
+         "attempt": check.get("attempt"), "benchmark": bench_id,
          "tier0": {"score": tier0, "pass": bool(check.get("tier0_pass"))},
          "tier1": {"score": tier1, "counter_violations": sum(1 for v in check.get("violations", []) if v.get("tier") == 1)},
          "tier2": {"semantic": semantic, "register_by_judge": register, "reasons": reasons},
-         "total": tier0 + tier1 + semantic, "max_total": 6,
+         "total": total, "max_total": 6,
          "register_agree": (register == tier1)}
 write_json(score_path, score)

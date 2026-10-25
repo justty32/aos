@@ -1,0 +1,54 @@
+{
+ "name": "q01_河鹿堂讓書",
+ "benchmark": "q01",
+ "elapsed_ms": 18933,
+ "counter_cycles": 1,
+ "counter_drafts": 1,
+ "counter_plans": 1,
+ "counter_lint_calls": 2,
+ "counter_llm_calls": 5,
+ "counter_tokens": 23117,
+ "cells": {
+  "brief": {
+   "elapsed_ms": 19
+  },
+  "draft": {
+   "elapsed_ms": 16085
+  },
+  "check": {
+   "elapsed_ms": 46
+  },
+  "judge": {
+   "elapsed_ms": 2760
+  },
+  "deliver": {
+   "elapsed_ms": 0
+  }
+ },
+ "agents": {
+  "director": {
+   "counter_llm_calls": 1,
+   "counter_tokens": 3437,
+   "llm_elapsed_ms": 5778,
+   "elapsed_ms": 5778
+  },
+  "writer": {
+   "counter_llm_calls": 3,
+   "counter_tokens": 16021,
+   "llm_elapsed_ms": 9925,
+   "elapsed_ms": 10198
+  },
+  "critic": {
+   "counter_llm_calls": 1,
+   "counter_tokens": 3659,
+   "llm_elapsed_ms": 2683,
+   "elapsed_ms": 2683
+  }
+ },
+ "score": {
+  "total": 4,
+  "tier0": 1,
+  "tier1": 2,
+  "tier2": 1
+ }
+}

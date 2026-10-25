@@ -1,4 +1,4 @@
-{"summary": "brief 查的規則表：人物卡、稱謂階、地點卡、禁語、開場收尾句、samples.json（語料錨：別題的前後文）、beats.json（定點 01 的 beat 文法）——從 galtxt corpus 手工蒸餾的快取，不是函數",
+{"summary": "brief 查的規則表：人物卡（主角、森下晴子；第 4 輪加宮澤柚葉＝傲嬌、木下柚葉＝害羞）、稱謂階、地點卡、禁語、開場收尾句、samples.json（語料錨：別題的前後文，每位女角一到兩段）、beats.json（定點 01 的 beat 文法）——從 galtxt corpus 手工蒸餾的快取，不是函數",
  "kind": "data",
  "resource": "disk",
  "side_effect": false,

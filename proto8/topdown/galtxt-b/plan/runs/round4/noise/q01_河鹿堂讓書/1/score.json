@@ -1,0 +1,24 @@
+{
+ "attempt": 1,
+ "benchmark": "q01",
+ "tier0": {
+  "score": 1,
+  "pass": true
+ },
+ "tier1": {
+  "score": 2,
+  "counter_violations": 0
+ },
+ "tier2": {
+  "semantic": 2,
+  "register_by_judge": 1,
+  "reasons": [
+   "讓書、下次再來與讀後感的鉤子都有承接，但稿子前面已讓主角說「妳先看」，後文晴子再讓書的戲劇動作顯得重複。",
+   "晴子稱呼「佐伯同學」合階；但「我剛好也在找宮澤賢治的書」與「比起先讀」較像解釋，少了角色應有的輕聲留白。",
+   "梅花章出現在結尾，但晴子讓書時沒有把它自然繫進下次再來的鋪墊。"
+  ]
+ },
+ "total": 5,
+ "max_total": 6,
+ "register_agree": false
+}

@@ -1,0 +1,11 @@
+{"summary": "主動學習挑 ≤ 6 筆給人評：評分器不合的、critic 中間分的、最高最低各一、多樣性最低的；每風格至少 1、台詞短優先 → human/samples.json；round.json.human 不是 true 就什麼都不做",
+ "time_ms": {"val": 30, "max": 2000},
+ "resource": ["cpu", "disk"],
+ "side_effect": true,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "reads": ["$AOS_STACK/round.json", "$AOS_WS/rounds/<輪>.json", "$AOS_WS/runs/<輪>/**/out/*/answer.txt"],
+ "writes": ["$AOS_WS/human/samples.json"],
+ "grow_level": 3}

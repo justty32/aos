@@ -15,4 +15,5 @@
  "writes": ["$AOS_WS/out/<n>.txt", "$AOS_WS/done/", "$AOS_STACK/{history.jsonl,current.txt,state.txt,trace.jsonl,llm.jsonl}", "$AOS_STACK/lint/（lint 的小格，空的）"],
  "grow_level": 5,
  "shape": "demo/agent-dan（idle→think→act）",
- "calls": ["tools/lint"]}
+ "calls": ["tools/lint"],
+ "ratings": {}}

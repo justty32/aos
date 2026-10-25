@@ -60,7 +60,7 @@ def render(q):
                b["lines"]["min"], b["lines"]["max"], b["lines"].get("narration_max", 4), attempt),
            "【你的題目檔】cur/%s.json（自檢時 lint 的 brief_path 寫 cur/%s.json#/brief）" % (name, name),
            "【場景】%s・%s・%s。%s" % (s.get("season", ""), s.get("time", ""), s.get("place", ""), s.get("summary", "")),
-           "【事件】%s" % s.get("event", ""), "【意圖／風格】%s" % s.get("intent", ""), "【在場】"]
+           "【事件】%s" % s.get("event", ""), "【意圖】%s　【女角風格】%s" % (s.get("intent", ""), b.get("style", "")), "【在場】"]
     for c in b["cast"]:
         v = c["voice"]
         out.append("- %s（%s）：%s" % (c["display"], "、".join(c["type"]), c["profile"]))

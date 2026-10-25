@@ -1,0 +1,23 @@
+{
+ "attempt": 1,
+ "benchmark": "q08",
+ "tier0": {
+  "score": 1,
+  "pass": true
+ },
+ "tier1": {
+  "score": 2,
+  "counter_violations": 0
+ },
+ "tier2": {
+  "semantic": 3,
+  "register_by_judge": 2,
+  "reasons": [
+   "晴子以「下次進新書日」和想看佐伯同學挑什麼，含蓄地把讀書變成可重複的小約定，主角的回應也自然承接梅雨。",
+   "晴子的語氣輕柔克制，稱謂合階，邀約用疑問句軟化，沒有直白或油膩的表達。"
+  ]
+ },
+ "total": 6,
+ "max_total": 6,
+ "register_agree": true
+}

@@ -1,4 +1,4 @@
-{"summary": "黏合格：check 定稿後把 brief、定稿、benchmarks/<id>.json 正解交給 tools/critic 打語意分，和 check 的 Tier 0／1 合成 score.json（0～6）；沒定稿或已打分就什麼都不做",
+{"summary": "黏合格：check 定稿後把 brief、定稿、benchmarks/<id>.json 正解交給 tools/critic 打語意分，和 check 的 Tier 0／1 合成 score.json（0～6；第 4 輪起帶 val（good／ok／bad）、style 與 dims（護欄／語域／語意 0～1，語意可帶 critic 拆的承接／含蓄／角色味））；沒定稿或已打分就什麼都不做",
  "time_ms": {"val": 7500, "max": 300000},
  "resource": ["llm", "cpu"],
  "llm_calls": {"val": 1, "max": 1},

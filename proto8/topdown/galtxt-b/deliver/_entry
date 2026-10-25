@@ -88,7 +88,7 @@ def measure(name, stack):
             "counter_llm_calls": sum(a["counter_llm_calls"] for a in agents.values()),
             "counter_tokens": sum(a["counter_tokens"] for a in agents.values()),
             "cells": cells, "agents": agents,
-            "score": {"total": score.get("total"), "tier0": (score.get("tier0") or {}).get("score"),
+            "score": {"val": score.get("val"), "total": score.get("total"), "tier0": (score.get("tier0") or {}).get("score"),
                       "tier1": (score.get("tier1") or {}).get("score"), "tier2": (score.get("tier2") or {}).get("semantic")}}
 
 

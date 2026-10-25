@@ -1,0 +1,74 @@
+[
+ {
+  "q": "q01_河鹿堂讓書",
+  "k": 1,
+  "total": 5,
+  "tier0": 1,
+  "tier1": 2,
+  "semantic": 2,
+  "register_by_judge": 1,
+  "counter_tokens": 17194,
+  "counter_llm_calls": 4,
+  "elapsed_ms": 13937
+ },
+ {
+  "q": "q01_河鹿堂讓書",
+  "k": 2,
+  "total": 4,
+  "tier0": 1,
+  "tier1": 2,
+  "semantic": 1,
+  "register_by_judge": 1,
+  "counter_tokens": 23117,
+  "counter_llm_calls": 5,
+  "elapsed_ms": 18933
+ },
+ {
+  "q": "q01_河鹿堂讓書",
+  "k": 3,
+  "total": 5,
+  "tier0": 1,
+  "tier1": 2,
+  "semantic": 2,
+  "register_by_judge": 1,
+  "counter_tokens": 17019,
+  "counter_llm_calls": 4,
+  "elapsed_ms": 14361
+ },
+ {
+  "q": "q08_河鹿堂進新書日",
+  "k": 1,
+  "total": 4,
+  "tier0": 1,
+  "tier1": 1,
+  "semantic": 2,
+  "register_by_judge": 1,
+  "counter_tokens": 23627,
+  "counter_llm_calls": 5,
+  "elapsed_ms": 20816
+ },
+ {
+  "q": "q08_河鹿堂進新書日",
+  "k": 2,
+  "total": 6,
+  "tier0": 1,
+  "tier1": 2,
+  "semantic": 3,
+  "register_by_judge": 2,
+  "counter_tokens": 23999,
+  "counter_llm_calls": 5,
+  "elapsed_ms": 20543
+ },
+ {
+  "q": "q08_河鹿堂進新書日",
+  "k": 3,
+  "total": 6,
+  "tier0": 1,
+  "tier1": 2,
+  "semantic": 3,
+  "register_by_judge": 2,
+  "counter_tokens": 23177,
+  "counter_llm_calls": 5,
+  "elapsed_ms": 18287
+ }
+]

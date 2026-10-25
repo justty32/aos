@@ -1,4 +1,4 @@
-{"summary": "認領一題場景 JSON，查 tables/ 編成稿紙 brief.json（人物卡、稱謂階、地點硬設定、禁語、開場收尾、few-shot 樣本、beat 文法）；已有 brief.json 就什麼都不做",
+{"summary": "認領一題場景 JSON，查 tables/ 編成稿紙 brief.json（風格 style、人物卡、稱謂階、地點硬設定、禁語、開場收尾、few-shot 樣本（只給在場女角的）、beat 文法）；已有 brief.json 就什麼都不做",
  "time_ms": {"val": 60, "max": 2000},
  "resource": ["cpu", "disk"],
  "side_effect": true,

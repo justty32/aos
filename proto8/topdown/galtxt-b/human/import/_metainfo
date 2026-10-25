@@ -1,0 +1,12 @@
+{"summary": "把 human/ratings.json 併進 produced_by 資料夾與頂層 _metainfo 的 ratings.human（只動 ratings 這個 key），並寫 human/calibration.json（自動 vs 人的一致率、混淆、建議）；critic 的 ratings.calibration 記一致率",
+ "time_ms": {"val": 50, "max": 2000},
+ "resource": ["cpu", "disk"],
+ "side_effect": true,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "reads": ["$AOS_WS/human/ratings.json", "$AOS_WS/human/samples.json", "$AOS_WS/tree/**/_metainfo"],
+ "writes": ["$AOS_WS/tree/<produced_by>/_metainfo#/ratings/human", "$AOS_WS/tree/_metainfo#/ratings/human", "$AOS_WS/tree/judge/tools/critic/_metainfo#/ratings/calibration", "$AOS_WS/human/calibration.json"],
+ "grow_level": 3,
+ "writer_of": ["ratings.human", "ratings.calibration"]}

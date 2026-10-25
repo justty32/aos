@@ -1,0 +1,2 @@
+{"summary": "人評契約與匯入：samples.json（挑給人看的 ≤ 6 筆）、ratings.json（網頁寫回）、questions.json（網頁問什麼）、import/ 把評級併進 _metainfo.ratings.human 並算校正表",
+ "kind": "dir"}

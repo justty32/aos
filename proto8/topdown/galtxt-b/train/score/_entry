@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+# score - 收這一輪每次跑的成果 → $AOS_WS/rounds/<輪>.json（結構化成果；純程式、不問腦）。plan/round4.md §4a、§2。
+# 讀：$AOS_STACK/round.json 的 round；$AOS_WS/set/*.json（題目）；$AOS_WS/runs/<輪>/<題>/<次>/（每次一個 galtxt-b 工作區：
+#   out/<題>/{answer.txt,score.json,measure.json}，加 train/run 寫的 run.json {"code"}）；$AOS_WS/rounds/<輪-1>.json（算 delta）；
+#   $AOS_WS/human/calibration.json（人評說某風格自動評分不準＝標 calibrated: false，只標不改分）；weights.json（風格 val 的權重）。
+# 寫：$AOS_WS/rounds/<輪>.json（已在＝這輪算過了，什麼都不做退 0）。runs/<輪>/ 不在＝還沒跑，也退 0。
+# rounds/<輪>.json：{"round", "k", "runs": [每次一列], "by_q": {題: …}, "by_style": {風格: 第 2 級評級}, "totals": {…}, "delta": {…}|null}
+#   每次一列：q、k、style、scene（cast、place、season、time、summary、event、intent、style）、ws、code、produced_by、answer（相對 $AOS_WS）、
+#   counter_lines（台詞句數）、score（score.json 原樣）、counter_tokens、counter_llm_calls、elapsed_ms；沒交出 score.json＝failed: true。
+#   多樣性：一組稿子的台詞行，字元 3-gram 集合兩兩 Jaccard 的平均＝重疊，1 − 重疊＝多樣性。by_q 是同一題 k ≥ 2 次的；by_style 是同一風格這輪全部稿子的（≥ 2 份才有）。
+# 自己的錯一行 stderr「score: 代號 原因」退 1：StackMissing、RoundMissing／RoundBad、SetMissing、WeightsBad。
+import json, os, re, sys
+from itertools import combinations
+
+PRODUCED_BY = "draft/tools/writer"             # 產出台詞的節點（相對 galtxt-b）；評級記在它的 _metainfo
+
+
+def die(code, reason):
+    print("score: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def jload(path, default=None):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def write_json(path, obj):                      # N-05
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+    os.replace(tmp, path)
+
+
+def val_of(x):                                  # 第 1 級是數字、第 2 級起原值在 val（C-55）；兩形都收（C-48）
+    return x.get("val") if isinstance(x, dict) else x
+
+
+def mean(xs):
+    xs = [x for x in xs if isinstance(x, (int, float)) and not isinstance(x, bool)]
+    return round(sum(xs) / len(xs), 3) if xs else None
+
+
+def dialogue(text):
+    return [l.strip() for l in text.splitlines() if re.match(r"^\S+?[：:]\s*「.*」$", l.strip())]
+
+
+def grams(lines):
+    s = "".join(lines)
+    return {s[i:i + 3] for i in range(len(s) - 2)}
+
+
+def diversity(texts):
+    sets = [grams(dialogue(t)) for t in texts]
+    pairs = [len(a & b) / len(a | b) for a, b in combinations(sets, 2) if a | b]
+    return round(1 - sum(pairs) / len(pairs), 3) if pairs else None
+
+
+stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
+if not stack:
+    die("StackMissing", "沒設定 AOS_STACK")
+rj = jload(os.path.join(stack, "round.json"))
+if rj is None:
+    die("RoundMissing", "$AOS_STACK/round.json 不在或不是 JSON")
+if not isinstance(rj, dict) or not isinstance(rj.get("round"), int):
+    die("RoundBad", "round.json 要有整數 round")
+n = rj["round"]
+out_path = os.path.join(ws, "rounds", "%d.json" % n)
+runs_dir = os.path.join(ws, "runs", str(n))
+if os.path.exists(out_path) or not os.path.isdir(runs_dir):
+    sys.exit(0)                                  # 這輪算過了、或還沒跑
+weights = jload("weights.json")
+if not isinstance(weights, dict) or not all(isinstance(weights.get(k), (int, float)) for k in ("語意", "語域", "護欄")):
+    die("WeightsBad", "weights.json 要有 語意、語域、護欄 三個數字")
+try:
+    qs = sorted(x[:-5] for x in os.listdir(os.path.join(ws, "set")) if x.endswith(".json") and not x.startswith("."))
+except FileNotFoundError:
+    die("SetMissing", "$AOS_WS/set/ 不在")
+
+rows, by_q, style_texts = [], {}, {}
+for q in qs:
+    scene = jload(os.path.join(ws, "set", q + ".json"), {}) or {}
+    qdir = os.path.join(runs_dir, q)
+    ks = sorted((int(k) for k in os.listdir(qdir) if k.isdigit()), key=int) if os.path.isdir(qdir) else []
+    texts = []
+    for k in ks:
+        rel = os.path.join("runs", str(n), q, str(k))
+        out = os.path.join(ws, rel, "out", q)
+        score = jload(os.path.join(out, "score.json"))
+        measure = jload(os.path.join(out, "measure.json"), {}) or {}
+        run = jload(os.path.join(ws, rel, "run.json"), {}) or {}
+        try:
+            with open(os.path.join(out, "answer.txt"), encoding="utf-8") as f:
+                text = f.read()
+        except OSError:
+            text = ""
+        style = (score or {}).get("style") or scene.get("style")
+        row = {"q": q, "k": k, "style": style,
+               "scene": {x: scene.get(x) for x in ("cast", "place", "season", "time", "summary", "event", "intent")} | {"style": style},
+               "ws": rel, "code": run.get("code"), "produced_by": PRODUCED_BY,
+               "answer": os.path.join(rel, "out", q, "answer.txt") if text else None,
+               "counter_lines": len(dialogue(text)), "score": score,
+               "counter_tokens": int(measure.get("counter_tokens") or 0),
+               "counter_llm_calls": int(measure.get("counter_llm_calls") or 0),
+               "elapsed_ms": measure.get("elapsed_ms")}
+        if not isinstance(score, dict):
+            row["failed"] = True
+        else:
+            texts.append(text)
+            style_texts.setdefault(style, []).append(text)
+        rows.append(row)
+    ok = [r for r in rows if r["q"] == q and not r.get("failed")]
+    by_q[q] = {"style": scene.get("style"), "counter_runs": len(ks), "counter_failed": len(ks) - len(ok),
+               "total_mean": mean([r["score"].get("total") for r in ok]),
+               "dims_mean": {d: mean([val_of((r["score"].get("dims") or {}).get(d)) for r in ok]) for d in ("護欄", "語域", "語意")}}
+    if len(texts) >= 2:
+        by_q[q]["多樣性"] = diversity(texts)
+
+calibration = jload(os.path.join(ws, "human", "calibration.json"), {}) or {}
+agree_by_style = ((calibration.get("agreement") or {}).get("by_style") or {}) if isinstance(calibration, dict) else {}
+by_style = {}
+for style in sorted({r["style"] for r in rows if r["style"]}):
+    ok = [r for r in rows if r["style"] == style and not r.get("failed")]
+    dims = {d: mean([val_of((r["score"].get("dims") or {}).get(d)) for r in ok]) for d in ("語意", "語域", "護欄")}
+    div = diversity(style_texts.get(style, []))       # 同一風格這輪所有稿子（不同題、不同次）兩兩比：看是不是都寫成一個樣子
+    entry = {"val": None, **dims, "total_mean": mean([r["score"].get("total") for r in ok]), "counter_samples": len(ok)}
+    if div is not None:
+        entry["多樣性"] = div
+    if all(dims[d] is not None for d in dims):
+        w = sum(weights[d] * dims[d] for d in dims) / sum(weights[d] for d in dims)
+        entry["val"] = "good" if w >= 0.8 else "ok" if w >= 0.5 else "bad"
+        entry["weighted"] = round(w, 3)
+    if isinstance(agree_by_style.get(style), (int, float)) and agree_by_style[style] < 0.5:
+        entry["calibrated"] = False              # 人評說這個風格自動評分不準：只標、不改分（round4 §6c）
+    by_style[style] = entry
+
+ok_rows = [r for r in rows if not r.get("failed")]
+totals = {"total_mean": mean([r["score"].get("total") for r in ok_rows]), "counter_runs": len(rows),
+          "counter_failed": len(rows) - len(ok_rows), "counter_tokens": sum(r["counter_tokens"] for r in rows),
+          "counter_llm_calls": sum(r["counter_llm_calls"] for r in rows)}
+prev = jload(os.path.join(ws, "rounds", "%d.json" % (n - 1))) if n > 0 else None
+delta = None
+if isinstance(prev, dict):
+    pt = prev.get("totals") or {}
+    sub = lambda a, b: round(a - b, 3) if isinstance(a, (int, float)) and isinstance(b, (int, float)) else None
+    delta = {"total_mean": sub(totals["total_mean"], pt.get("total_mean")),
+             "counter_tokens": sub(totals["counter_tokens"], pt.get("counter_tokens")),
+             "by_style": {s: sub(v.get("total_mean"), ((prev.get("by_style") or {}).get(s) or {}).get("total_mean")) for s, v in by_style.items()}}
+write_json(out_path, {"round": n, "k": rj.get("k"), "runs": rows, "by_q": by_q, "by_style": by_style, "totals": totals, "delta": delta})

@@ -1,0 +1,136 @@
+#!/usr/bin/env python3
+# pick - 主動學習挑 ≤ max_samples（預設 6）筆給人評 → $AOS_WS/human/samples.json（純程式、不問腦）。plan/round4.md §6b。
+# 讀：$AOS_STACK/round.json（round；human 不是 true＝什麼都不做退 0——人評最好少用）、$AOS_WS/rounds/<輪>.json（score 寫的；不在＝還沒算，退 0）、
+#   各次的 answer.txt（rounds 裡的 answer 路徑，相對 $AOS_WS）。
+# 挑法（依序填，同一題同一次只挑一筆；同一步裡台詞短的優先：≤ 8 句的先、再照句數）：
+#   1. 兩個評分器不合的（register_agree false：程式算的語域 vs critic 給的），最多 3 筆
+#   2. critic 中間分的（semantic 1 或 2），每個風格挑 1
+#   3. 校正錨：自動 total 最高的一筆、最低的一筆
+#   4. 補滿：多樣性最低的風格先（沒有多樣性＝k＝1，就只照句數）
+#   最後保證每個風格至少 1 筆：缺的風格拿它最短的一筆，換掉「所屬風格不只一筆」的最後一筆。
+# samples.json：陣列，每筆 {"id": "b-r<輪>-<題>-<次>", "team": "b", "round", "scene": {cast, place, season, time, summary, event, intent, style},
+#   "lines": [台詞與旁白，不含【標題】], "produced_by", "auto_scores": {val, total, max_total, dims（含多樣性）, register_agree}, "why_picked"}
+# 自己的錯一行 stderr「pick: 代號 原因」退 1：StackMissing、RoundMissing／RoundBad、RoundsBad。
+import json, os, sys
+
+MAX_SHORT = 8                                    # 台詞 ≤ 8 句算短
+
+
+def die(code, reason):
+    print("pick: %s %s" % (code, reason), file=sys.stderr)
+    sys.exit(1)
+
+
+def jload(path, default=None):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return default
+
+
+def write_json(path, obj):                      # N-05
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(obj, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+    os.replace(tmp, path)
+
+
+def pick(rounds, max_samples=6):
+    """rounds＝rounds/<輪>.json 的內容 → [(run 列, why)]；純函數，測試直接餵假資料。"""
+    cands = [r for r in rounds.get("runs") or [] if not r.get("failed") and isinstance(r.get("score"), dict)]
+    by_q = rounds.get("by_q") or {}
+    short = lambda r: (r.get("counter_lines", 0) > MAX_SHORT, r.get("counter_lines", 0), r["q"], r["k"])
+    styles = []
+    for r in cands:
+        if r.get("style") not in styles:
+            styles.append(r.get("style"))
+    chosen = []
+
+    def free(rs):
+        ids = {(c["q"], c["k"]) for c, _ in chosen}
+        return sorted((r for r in rs if (r["q"], r["k"]) not in ids), key=short)
+
+    def take(r, why):
+        if r is not None and len(chosen) < max_samples:
+            chosen.append((r, why))
+
+    for r in free(c for c in cands if c["score"].get("register_agree") is False)[:3]:
+        reg = r["score"].get("tier2", {}).get("register_by_judge")
+        take(r, "兩個評分器不合：程式算的語域 %s 分、critic 給 %s 分" % (r["score"].get("tier1", {}).get("score"), reg))
+    for s in styles:
+        mid = free(c for c in cands if c.get("style") == s and c["score"].get("tier2", {}).get("semantic") in (1, 2))
+        if mid:
+            take(mid[0], "critic 給中間分（語意 %s／3），它最拿不準的一段" % mid[0]["score"]["tier2"]["semantic"])
+    for sign, word in ((-1, "最高"), (1, "最低")):
+        rest = free(cands)
+        if rest:
+            r = min(rest, key=lambda r: (sign * (r["score"].get("total") or 0),) + short(r))
+            take(r, "校正錨：這輪自動總分%s（%s／%s）" % (word, r["score"].get("total"), r["score"].get("max_total")))
+    div = {s: min([v["多樣性"] for v in by_q.values() if v.get("style") == s and isinstance(v.get("多樣性"), (int, float))] or [2]) for s in styles}
+    for r in sorted(free(cands), key=lambda r: (div.get(r.get("style"), 2),) + short(r)):
+        take(r, "補滿：同風格多樣性最低（%s），看人覺不覺得都一樣" % div[r.get("style")] if div.get(r.get("style"), 2) <= 1 else "補滿：台詞短")
+    for s in styles:                             # 每個風格至少 1 筆
+        if any(c.get("style") == s for c, _ in chosen):
+            continue
+        mine = free(c for c in cands if c.get("style") == s)
+        if not mine:
+            continue
+        counts = {}
+        for c, _ in chosen:
+            counts[c.get("style")] = counts.get(c.get("style"), 0) + 1
+        if len(chosen) < max_samples:
+            chosen.append((mine[0], "這個風格至少一筆"))
+            continue
+        for i in range(len(chosen) - 1, -1, -1):
+            if counts[chosen[i][0].get("style")] > 1:
+                chosen[i] = (mine[0], "這個風格至少一筆")
+                break
+    return chosen
+
+
+def sample(r, why, n, ws):
+    text = ""
+    if r.get("answer"):
+        try:
+            with open(os.path.join(ws, r["answer"]), encoding="utf-8") as f:
+                text = f.read()
+        except OSError:
+            pass
+    lines = [l.strip() for l in text.splitlines() if l.strip() and not (l.strip().startswith("【") and l.strip().endswith("】"))]
+    s = r["score"]
+    dims = dict(s.get("dims") or {})
+    d = ((r.get("_by_q") or {}).get("多樣性"))
+    if isinstance(d, (int, float)):
+        dims["多樣性"] = d
+    return {"id": "b-r%d-%s-%d" % (n, r["q"].replace("_", "-"), r["k"]), "team": "b", "round": n,
+            "scene": r.get("scene") or {}, "lines": lines, "produced_by": r.get("produced_by"),
+            "auto_scores": {"val": s.get("val"), "total": s.get("total"), "max_total": s.get("max_total"), "dims": dims,
+                            "register_agree": s.get("register_agree")},
+            "why_picked": why}
+
+
+if __name__ == "__main__":
+    stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
+    if not stack:
+        die("StackMissing", "沒設定 AOS_STACK")
+    rj = jload(os.path.join(stack, "round.json"))
+    if rj is None:
+        die("RoundMissing", "$AOS_STACK/round.json 不在或不是 JSON")
+    if not isinstance(rj, dict) or not isinstance(rj.get("round"), int):
+        die("RoundBad", "round.json 要有整數 round")
+    if rj.get("human") is not True:
+        sys.exit(0)                              # 人評關著（預設）
+    n = rj["round"]
+    path = os.path.join(ws, "rounds", "%d.json" % n)
+    if not os.path.exists(path):
+        sys.exit(0)                              # 這輪還沒算分
+    rounds = jload(path)
+    if not isinstance(rounds, dict):
+        die("RoundsBad", "%s 不是 JSON 物件" % path)
+    for r in rounds.get("runs") or []:
+        r["_by_q"] = (rounds.get("by_q") or {}).get(r.get("q")) or {}
+    chosen = pick(rounds, int(rj.get("max_samples", 6)))
+    write_json(os.path.join(ws, "human", "samples.json"), [sample(r, why, n, ws) for r, why in chosen])

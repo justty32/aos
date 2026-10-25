@@ -1,0 +1,11 @@
+{"summary": "收 runs/<輪>/<題>/<次>/out/<題>/{score,measure,answer} → rounds/<輪>.json：每次一列（dims、tokens、失敗）、每題平均與多樣性（k 稿台詞 3-gram 重疊）、每風格第 2 級評級（val 照 weights.json 加權）、合計、跟上一輪的 delta；讀 human/calibration.json 標 calibrated",
+ "time_ms": {"val": 100, "max": 5000},
+ "resource": ["cpu", "disk"],
+ "side_effect": true,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": false,
+ "reads": ["$AOS_STACK/round.json", "$AOS_WS/set/*.json", "$AOS_WS/runs/<輪>/", "$AOS_WS/rounds/<輪-1>.json", "$AOS_WS/human/calibration.json", "weights.json"],
+ "writes": ["$AOS_WS/rounds/<輪>.json"],
+ "grow_level": 4}
