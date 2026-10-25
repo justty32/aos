@@ -1,6 +1,6 @@
 # proto8/demo — 兩隻 agent 跑一遍
 
-← [proto8](../README.md)｜程式：[impls](../impls/README.md)（aos-exec、aos-loop、aos-fsm、aos-daemon，C++）、[bin/README](../bin/README.md)（aos-tick）｜慣例：[CONVENTION](../CONVENTION.md)
+← [proto8](../README.md)｜程式：[impls](../impls/README.md)（aos-exec、aos-loop、aos-fsm、aos-daemon，C++）、[bin/README](../bin/README.md)（aos-tick）｜慣例：[CONVENTION](../docs/CONVENTION.md)
 
 ```
 sh proto8/demo/run.sh      # 在 WSL／Linux 跑
@@ -22,7 +22,7 @@ stack 樹＝呼叫樹：`.stack/{state.txt,current.txt,plan.txt,trace.jsonl}`、
 
 ## agent-dan（真腦＋工具，10-23）
 
-會問真模型、會用工具的問答 agent（範本，混合寫法接 bob：idle 是資料夾，think／act 是內嵌單子）。慣例是 [P-41](../CONVENTION/02-題目stack停錯腦.md)，設計結論在 [thinking 2026-10-23-tool-calls](../thinking/2026-10-23-tool-calls.md)。圖解版（ELI5）：https://claude.ai/artifact/4mhycShcVdr7jJskGWc92V ——agent-dan 改了就跟著更新（新 session 用 Artifact 的 `read` 拿回最新 HTML 再改、照同一網址重發；使用者 10-23「做成artifact。之後我們慢慢做好，這個artifact也會跟着更新」）。
+會問真模型、會用工具的問答 agent（範本，混合寫法接 bob：idle 是資料夾，think／act 是內嵌單子）。慣例是 [P-41](../docs/CONVENTION/02-題目stack停錯腦.md)，設計結論在 [thinking 2026-10-23-tool-calls](../thinking/2026-10-23-tool-calls.md)。圖解版（ELI5）：https://claude.ai/artifact/4mhycShcVdr7jJskGWc92V ——agent-dan 改了就跟著更新（新 session 用 Artifact 的 `read` 拿回最新 HTML 再改、照同一網址重發；使用者 10-23「做成artifact。之後我們慢慢做好，這個artifact也會跟着更新」）。
 
 ```
 agent-dan/

@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前一份：[在 fsm 上做 aos-agent 與 aos-kernel](2026-10-23-agent-kernel.md)
 
-規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。相關條文：[C-19、C-46、C-50、C-61](../CONCEPTS/05-agent.md)、[C-52、C-54、C-56](../CONCEPTS/01-設計理念.md)、[N-50、N-53](../NORMS/10-基礎設施-定義與工作區.md)、[N-36、N-38](../NORMS/07-基礎設施-組合子.md)、[P-08、P-12、P-17、P-20、P-23～P-26、P-33、P-35](../CONVENTION.md)；前情：[rewrite-order 第 4 題、② 腦的工具呼叫](2026-10-19-rewrite-order.md)、[NORMS 待定](../NORMS/08-待定.md)。
+規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。相關條文：[C-19、C-46、C-50、C-61](../docs/CONCEPTS/05-agent.md)、[C-52、C-54、C-56](../docs/CONCEPTS/01-設計理念.md)、[N-50、N-53](../docs/NORMS/10-基礎設施-定義與工作區.md)、[N-36、N-38](../docs/NORMS/07-基礎設施-組合子.md)、[P-08、P-12、P-17、P-20、P-23～P-26、P-33、P-35](../docs/CONVENTION.md)；前情：[rewrite-order 第 4 題、② 腦的工具呼叫](2026-10-19-rewrite-order.md)、[NORMS 待定](../docs/NORMS/08-待定.md)。
 
 ## 使用者原文（整理版，10-23）
 
@@ -100,7 +100,7 @@ act 對每個 `tool_call` 做同一件事：`AOS_STACK=$AOS_STACK/<名>/ aos-exe
 
 ## 還沒定、要使用者看的（不擋實作）
 
-- **agent 當腦的工具時題目怎麼交**（[NORMS 待定](../NORMS/08-待定.md) 方向問題甲）：範本只定「stdin 進、stdout 出」；要把 cathy 那種給腦叫，轉接寫在那個工具自己的 `_entry`。另一條路是 `tool.json` 加 `input` key 讓 act 認兩種。推薦前者。
+- **agent 當腦的工具時題目怎麼交**（[NORMS 待定](../docs/NORMS/08-待定.md) 方向問題甲）：範本只定「stdin 進、stdout 出」；要把 cathy 那種給腦叫，轉接寫在那個工具自己的 `_entry`。另一條路是 `tool.json` 加 `input` key 讓 act 認兩種。推薦前者。
 - **腦叫了不存在的工具**：10-24 定了，回給腦（見文末「10-24 定」）。
 - **對話太長**：見第 6 點，方向題。
 

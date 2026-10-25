@@ -2,7 +2,7 @@
 
 ← [WORKFLOWS](../../WORKFLOWS.md)｜[INDEX](../../INDEX.md)｜舊構想全在 [archive/](archive/README.md)（2026-09-05），只留脈絡、不再維護。
 
-> **2026-10-13 封存**：下面提到的 13 章正文（01～13）與 `reflections.md` 也搬進 [archive/](archive/README.md)，本檔只留脈絡；現行概念在 proto8/CONCEPTS.md。
+> **2026-10-13 封存**：下面提到的 13 章正文（01～13）與 `reflections.md` 也搬進 [archive/](archive/README.md)，本檔只留脈絡；現行概念在 proto8/docs/CONCEPTS.md。
 
 ## aos 是什麼
 

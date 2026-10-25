@@ -1,6 +1,6 @@
 # 把 aos 的資料夾程式弄成 MCP（支線，乙隊 opus，2026-10-25）
 
-← [galtxt-b](../README.md)｜原型：[mcp/aos_mcp.py](mcp/aos_mcp.py)｜相關：[lib 工具契約](../../../lib/README.md)、[`_metainfo` 位置與格式](../../../thinking/2026-10-24-metainfo/01-位置與格式.md)、[P-41 腦的工具呼叫](../../../CONVENTION/02-題目stack停錯腦.md)、[aos-ai](../../../ai_tools/README.md)
+← [galtxt-b](../README.md)｜原型：[mcp/aos_mcp.py](mcp/aos_mcp.py)｜相關：[lib 工具契約](../../../lib/README.md)、[`_metainfo` 位置與格式](../../../thinking/2026-10-24-metainfo/01-位置與格式.md)、[P-41 腦的工具呼叫](../../../docs/CONVENTION/02-題目stack停錯腦.md)、[aos-ai](../../../extras/ai_tools/README.md)
 
 使用者 10-25（支線）：「在進行的過程中，可以適當將一些經驗留存下來。」「因爲我們目前都還是依賴claude code來操控，來制作這套程式。以後我們也會用aos體系，制作用來制作這套程式的程式」「到時候就會需要這些經驗。」「可以先想想，假如想要弄成mcp，那該怎麼做」「這是支線任務」
 

@@ -1,6 +1,6 @@
 # 2026-10-15 布局成長：檔案→資料夾、純值→物件，同一套規則
 
-← [討論紀錄](README.md)｜落成：[C-55](../CONCEPTS/01-設計理念.md#布局成長10-15-使用者說原文)｜相關：[C-48 值的雙形](../CONCEPTS/01-設計理念.md)、[C-51 資料夾⇄JSON](../CONCEPTS/01-設計理念.md)、[C-54 命名](../CONCEPTS/01-設計理念.md#命名10-15-使用者說原文)、[同像性](2026-10-15-homoiconic.md)、[意見 5～7](2026-10-15-opinions-5-7.md)、檔案那邊的既有規矩 [wf/STRUCTURE.md](../../wf/STRUCTURE.md)（膨脹即拆、四級成長）
+← [討論紀錄](README.md)｜落成：[C-55](../docs/CONCEPTS/01-設計理念.md#布局成長10-15-使用者說原文)｜相關：[C-48 值的雙形](../docs/CONCEPTS/01-設計理念.md)、[C-51 資料夾⇄JSON](../docs/CONCEPTS/01-設計理念.md)、[C-54 命名](../docs/CONCEPTS/01-設計理念.md#命名10-15-使用者說原文)、[同像性](2026-10-15-homoiconic.md)、[意見 5～7](2026-10-15-opinions-5-7.md)、檔案那邊的既有規矩 [wf/STRUCTURE.md](../../wf/STRUCTURE.md)（膨脹即拆、四級成長）
 
 ## 原文（10-15，照貼）
 
@@ -36,4 +36,4 @@
 - **例外（AI 實作時發現，最小做法先過）**：fsm 的格不能直接 `expand`——格的「純值」本身可能就是物件（內嵌 inst），所以仍是「物件裡有 `val`＝展開形，沒有＝內嵌 inst」。內嵌 inst 不會有 `val` 這個 key，目前不衝突。
 - **`_notes`**：照推薦固定叫 `_notes`，寫進 C-48 的例子。
 - **對命名盤點**：成長原則支持「同類多個→複數資料夾」（`brains/`、`gates/`、`judges/`、`kernels/llm/`、`kernels/general/`）與 frame 裡的窗分資料夾（`loop/state.json`、`fsm/state.json`）；think 連錯計數長成 `{"val": 計數, "error"}`。
-- 落點：[C-48、C-55](../CONCEPTS/01-設計理念.md)、[N-36](../NORMS/07-基礎設施-組合子.md)。
+- 落點：[C-48、C-55](../docs/CONCEPTS/01-設計理念.md)、[N-36](../docs/NORMS/07-基礎設施-組合子.md)。

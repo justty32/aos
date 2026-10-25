@@ -1,6 +1,6 @@
 # 2026-10-15 同像性：inst 也是「純值或物件」的大號版
 
-← [討論紀錄](README.md)｜前情：[JSON 格式族](2026-10-15-json-families.md)（值的雙形）、[Lisp 組合子](2026-10-14-json-entry/10-lisp組合子.md)｜概念：[C-48](../CONCEPTS/01-設計理念.md)、[C-22](../CONCEPTS/05-agent.md)、[C-42](../CONCEPTS/05-agent.md)｜規範：[N-35](../NORMS/01-總則.md)、[N-30](../NORMS/03-基礎設施-inst.md)、[N-36](../NORMS/07-基礎設施-組合子.md)｜程式：lib fsm.md（已刪，見 git 歷史 5546be29）、agent.md、aos_methods.cell
+← [討論紀錄](README.md)｜前情：[JSON 格式族](2026-10-15-json-families.md)（值的雙形）、[Lisp 組合子](2026-10-14-json-entry/10-lisp組合子.md)｜概念：[C-48](../docs/CONCEPTS/01-設計理念.md)、[C-22](../docs/CONCEPTS/05-agent.md)、[C-42](../docs/CONCEPTS/05-agent.md)｜規範：[N-35](../docs/NORMS/01-總則.md)、[N-30](../docs/NORMS/03-基礎設施-inst.md)、[N-36](../docs/NORMS/07-基礎設施-組合子.md)｜程式：lib fsm.md（已刪，見 git 歷史 5546be29）、agent.md、aos_methods.cell
 
 ## 原文（10-15，照記）
 

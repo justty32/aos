@@ -1,6 +1,6 @@
 # proto8 概念層（第二版，AI 從使用者的話抽出來的，2026-10-11）
 
-← [proto8](README.md)｜來源：[10-11 討論 §2、§3b](thinking/2026-10-11-restart.md)、使用者九月草稿 [9/19](../thinking/2026-09-19.md)、[9/23](../thinking/2026-09-23.md)、[9/24](../thinking/2026-09-24.md)｜對照：[10-03 核心 spec](../proto7/spec/core.md)｜三份獨立抽的合併：AI 自己第一版（d64dd096）、Fable 獨立抽（已刪：AI 產出，使用者 10-12 夜要求刪除）、診斷為什麼問錯（已刪：AI 產出，使用者 10-12 夜要求刪除）
+← [proto8](../README.md)｜來源：[10-11 討論 §2、§3b](../thinking/2026-10-11-restart.md)、使用者九月草稿 [9/19](../../thinking/2026-09-19.md)、[9/23](../../thinking/2026-09-23.md)、[9/24](../../thinking/2026-09-24.md)｜對照：[10-03 核心 spec](../../proto7/spec/core.md)｜三份獨立抽的合併：AI 自己第一版（d64dd096）、Fable 獨立抽（已刪：AI 產出，使用者 10-12 夜要求刪除）、診斷為什麼問錯（已刪：AI 產出，使用者 10-12 夜要求刪除）
 
 **只收使用者說過的。** 每條引出處。這份**沒有檔名、沒有格式、沒有程式結構、沒有步驤、沒有第一版**——那是下一層，使用者講了才有。「世界」「需求」「排序器」「順序表」這幾個詞是 AI 之前造的，使用者沒說過，這份不用。
 
@@ -21,11 +21,11 @@
 
 總則（跨主題的規範）沒有專屬的概念條，見 [NORMS 總則](NORMS/01-總則.md)；總則與設計理念維持分開（10-15 使用者「隨你」）。主題總表在 [NORMS.md](NORMS.md)。
 
-**10-23 命名統合**（[thinking 2026-10-23-naming](thinking/2026-10-23-naming.md)，使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」）：只換名字、不改原意——C-54 錯誤代號「照舊沿用」翻案、補第四種 `…Failed` 與副檔名／時間／計數規則（原是頂層代定；使用者 10-23 逐條看過，其餘認可，三條改選：純文字也帶 `.txt`、stack 預設位置 `.aos/` 改 `.stack/`（C-65）、題目資料夾 `inbox/` 改 `new/`、照 Maildir 多一步認領 `cur/`（C-65））；C-55 註 loop／daemon 的 `run` 改 `val`；C-48 指示詞例子改 `$path`、註 `_exec`／`.env`；[縮寫表](CONCEPTS/abbr.json)加 `co`、`dotenv`。舊名在歷史敘述裡照留、旁邊加〔10-23 統合…〕註。10-23 晚使用者翻案（「改，beats改runs，然後val寫要跑啥，通常不會用val，應該用run。」，衝突時選「只有 loop、daemon 用 run」）：loop／daemon 改回 `run`（fsm 格仍是 `val`）、state 的 `beats` → `runs`、「拍」→「次」。10-23 深夜：使用者「fsm.json，現在是用val，幫我改成exec」，再選「exec，loop／daemon 的 run 也一起改 exec」——「要跑什麼」全體系一律叫 `exec`（loop／daemon 的 `run`、fsm 格的 `val` 都改），C-55 的 `val` 只留給值的展開形。
+**10-23 命名統合**（[thinking 2026-10-23-naming](../thinking/2026-10-23-naming.md)，使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」）：只換名字、不改原意——C-54 錯誤代號「照舊沿用」翻案、補第四種 `…Failed` 與副檔名／時間／計數規則（原是頂層代定；使用者 10-23 逐條看過，其餘認可，三條改選：純文字也帶 `.txt`、stack 預設位置 `.aos/` 改 `.stack/`（C-65）、題目資料夾 `inbox/` 改 `new/`、照 Maildir 多一步認領 `cur/`（C-65））；C-55 註 loop／daemon 的 `run` 改 `val`；C-48 指示詞例子改 `$path`、註 `_exec`／`.env`；[縮寫表](CONCEPTS/abbr.json)加 `co`、`dotenv`。舊名在歷史敘述裡照留、旁邊加〔10-23 統合…〕註。10-23 晚使用者翻案（「改，beats改runs，然後val寫要跑啥，通常不會用val，應該用run。」，衝突時選「只有 loop、daemon 用 run」）：loop／daemon 改回 `run`（fsm 格仍是 `val`）、state 的 `beats` → `runs`、「拍」→「次」。10-23 深夜：使用者「fsm.json，現在是用val，幫我改成exec」，再選「exec，loop／daemon 的 run 也一起改 exec」——「要跑什麼」全體系一律叫 `exec`（loop／daemon 的 `run`、fsm 格的 `val` 都改），C-55 的 `val` 只留給值的展開形。
 
-**10-23 晚入口改名、刪 `_` 附註**（[thinking 2026-10-23-naming](thinking/2026-10-23-naming.md)，使用者問「換_entry，有好處嗎」，聽完利弊後「改。然後_開頭=附註這個概念刪掉。」，又補「不認得的key就是忽略」）：入口預設名 `_exec` → `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key 都改；使用者原話裡的 `_exec` 照留）；C-48 刪「`_` 開頭的 key＝附註、宿主程式忽略」與 `_notes` 慣例，改寫成通則「不認得的 key 一律忽略、不報錯」；C-55 跟著刪那半句。
+**10-23 晚入口改名、刪 `_` 附註**（[thinking 2026-10-23-naming](../thinking/2026-10-23-naming.md)，使用者問「換_entry，有好處嗎」，聽完利弊後「改。然後_開頭=附註這個概念刪掉。」，又補「不認得的key就是忽略」）：入口預設名 `_exec` → `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key 都改；使用者原話裡的 `_exec` 照留）；C-48 刪「`_` 開頭的 key＝附註、宿主程式忽略」與 `_notes` 慣例，改寫成通則「不認得的 key 一律忽略、不報錯」；C-55 跟著刪那半句。
 
-**10-23 晚命名方法**（[thinking 2026-10-23-naming-method](thinking/2026-10-23-naming-method.md)，使用者提方法後「先試試看，不要急着寫進去」，查過 Unix／Linux 老慣例、八題選完後「寫進去吧」）：C-54 加「命名方法」一點，R1～R12 細則放 [CONCEPTS/01-設計理念/C-54-命名方法.md](CONCEPTS/01-設計理念/C-54-命名方法.md)（先寫一行 NAME、每格一句白話、固定格、`<事件>_at`、計數不用 `nr_`、index 用 `idx`、`_` 開頭的檔＝入口…）；C-55 例子跟著改 `stopped`；[縮寫表](CONCEPTS/abbr.json)表頭加 `note`（進表門檻）。
+**10-23 晚命名方法**（[thinking 2026-10-23-naming-method](../thinking/2026-10-23-naming-method.md)，使用者提方法後「先試試看，不要急着寫進去」，查過 Unix／Linux 老慣例、八題選完後「寫進去吧」）：C-54 加「命名方法」一點，R1～R12 細則放 [CONCEPTS/01-設計理念/C-54-命名方法.md](CONCEPTS/01-設計理念/C-54-命名方法.md)（先寫一行 NAME、每格一句白話、固定格、`<事件>_at`、計數不用 `nr_`、index 用 `idx`、`_` 開頭的檔＝入口…）；C-55 例子跟著改 `stopped`；[縮寫表](CONCEPTS/abbr.json)表頭加 `note`（進表門檻）。
 
 **10-25 state.json 改名**（使用者 10-25「state.json中，runs改counter，at改成recorded_at」）：loop／daemon 的 state.json（N-17、N-32）跑過幾次 `runs` → `counter`、這份 state 的時間 `at` → `recorded_at`；不留舊名。只動 state.json 這兩格：fsm 的 trace、信、kernel-llm 的 queue.json 等其他 JSON 的同名欄位不動。跟 [C-54 命名方法](CONCEPTS/01-設計理念/C-54-命名方法.md)（計數加 s、紀錄時間用固定格 `at`）不同，規則本身沒改，見 C-54 該兩列的註。
 

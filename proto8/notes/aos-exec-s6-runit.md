@@ -2,7 +2,7 @@
 
 ← [notes](README.md)｜[proto8](../README.md)｜起點：[s6-runit 對照](s6-runit.md)（10-22 opus 寫的九點對照，這份不重寫）｜2026-10-22，AI（fable）寫
 
-**這份是 AI 寫的參考，不算數**：條文以 [CONCEPTS](../CONCEPTS.md)、[NORMS](../NORMS.md) 為準，要用哪一點由使用者決定（鐵律 5）。使用者 10-22 的題目：「讓fable去看看，s6/runit這些東西，是否有aos-exec能借用、參考，乃至於直接呼叫他們的地方。」所以這份只盯 **aos-exec 這一支**（入口怎麼寫、環境怎麼設、開跑前能接什麼），監管、重啟、日誌那些已在 s6-runit 對照裡，不重講。
+**這份是 AI 寫的參考，不算數**：條文以 [CONCEPTS](../docs/CONCEPTS.md)、[NORMS](../docs/NORMS.md) 為準，要用哪一點由使用者決定（鐵律 5）。使用者 10-22 的題目：「讓fable去看看，s6/runit這些東西，是否有aos-exec能借用、參考，乃至於直接呼叫他們的地方。」所以這份只盯 **aos-exec 這一支**（入口怎麼寫、環境怎麼設、開跑前能接什麼），監管、重啟、日誌那些已在 s6-runit 對照裡，不重講。
 
 s6／runit 的事實查自官方文件（skarnet.org、smarden.org）與 Debian 套件清單，每點附連結。WSL（Ubuntu 24.04）實查：`s6`、`execline`、`runit`、`daemontools` 四個套件 apt 都有（universe），本機一個都沒裝，所以**沒有實跑**，例子是照文件與 aos-exec 的規則推的；裝了之後要驗。nosh、perp 不在 Debian／Ubuntu（perp 官網 10-22 連不上）。
 

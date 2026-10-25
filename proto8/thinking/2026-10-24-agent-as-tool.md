@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[2026-10-23 腦的工具呼叫](2026-10-23-tool-calls.md)（文末「agent 當腦的工具時題目怎麼交」）
 
-規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。這份是**嘗試性質**（使用者「反正只是嘗試」），結論全是頂層代定、可翻案。相關條文：[P-25、P-26、P-41](../CONVENTION/02-題目stack停錯腦.md)、[P-32、P-33](../CONVENTION/06-巢狀.md)、[C-52、C-54、C-56](../CONCEPTS/01-設計理念.md)、[N-59](../NORMS/10-基礎設施-定義與工作區.md)、[NORMS 待定 方向問題甲](../NORMS/08-待定.md)。
+規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。這份是**嘗試性質**（使用者「反正只是嘗試」），結論全是頂層代定、可翻案。相關條文：[P-25、P-26、P-41](../docs/CONVENTION/02-題目stack停錯腦.md)、[P-32、P-33](../docs/CONVENTION/06-巢狀.md)、[C-52、C-54、C-56](../docs/CONCEPTS/01-設計理念.md)、[N-59](../docs/NORMS/10-基礎設施-定義與工作區.md)、[NORMS 待定 方向問題甲](../docs/NORMS/08-待定.md)。
 
 ## 使用者原文（整理版，10-24）
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # make_tool - 在某隻 aos agent 的 tools/ 下起一個新工具骨架（aos-ai make tool）
 # 介面（lib/README 的契約）：stdin 收 {"name", "tool", "description", "params"?, "lang"?}；stdout 印 aos-ai 那行 JSON。
-# 轉叫命令列 aos-ai（proto8/ai_tools/bin，PATH 上要有；經 aos-ai run 跑的 agent 已放好）。子 agent 放在 $AOS_AI_ROOT（沒設＝$AOS_WS）的 agents/<名>/（$AOS_AI_ROOT 是 aos-ai 自己的旗標，照舊認；lib 契約 4 的例外）。
+# 轉叫命令列 aos-ai（proto8/extras/ai_tools/bin，PATH 上要有；經 aos-ai run 跑的 agent 已放好）。子 agent 放在 $AOS_AI_ROOT（沒設＝$AOS_WS）的 agents/<名>/（$AOS_AI_ROOT 是 aos-ai 自己的旗標，照舊認；lib 契約 4 的例外）。
 # 錯：stderr 與 stdout 各一行「make_tool: 代號 原因」、退 1——參數不對＝ArgumentsBad；aos-ai 回的錯照它的代號（例 NameBad、AgentMissing）、
 # 原因是 aos-ai 那行；aos-ai 起不來＝LaunchFailed。叫它的 agent 決定停下還是回給腦。
-# 來源：proto8/ai_tools/dan_tools/make_tool（10-24；遷移前 aos-ai 的錯印成 {"ok": false, "error"} 退 0，現在照 lib 契約退 1）。
+# 來源：proto8/extras/ai_tools/dan_tools/make_tool（10-24；遷移前 aos-ai 的錯印成 {"ok": false, "error"} 退 0，現在照 lib 契約退 1）。
 import json, os, re, subprocess, sys
 
 NAME = "make_tool"

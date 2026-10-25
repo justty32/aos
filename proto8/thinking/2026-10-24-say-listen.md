@@ -1,6 +1,6 @@
 # 2026-10-24 給人用的 say／listen：對跑著的 fsm agent 下指令、看回覆
 
-← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜程式 [proto8/human](../human/README.md)｜測試 `proto8/tests/test_human.py`
+← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜程式 [proto8/human](../extras/human/README.md)｜測試 `proto8/tests/test_human.py`
 
 ## 使用者原文（整理版，10-24）
 
@@ -32,7 +32,7 @@
 8. **slash 指令**只留 `/status`、`/run`、`/trace`、`/help`、`/quit`；`//` 開頭送出 `/` 開頭的話。stdout 只有答案，其餘都在 stderr。
 9. **語言 Python**：這幾支只是讀寫檔、看 `/proc`，不在 aos-exec 那條執行路徑上；現存的 Python（aos-tick、agent-dan 的格、測試）同一套；旗標解析共用 `proto8/bin/aos_flags.py`（規則同 aos-exec）。
 10. **錯誤一行** `程式名: 代號 原因`、退 1，代號照 C-54 四種：`ArgumentsBad`、`FlagUnknown`、`WsMissing`、`NameBad`、`QuestionUnknown`、`AnswerMissing`、`AgentMissing`。提醒不是錯，用括號包、不帶程式名。
-11. **常駐跑法不另做程式**：要 agent 一直在，就用 aos-loop 包一層（`{"exec": {"argv": ["aos-exec", "<agent>"]}, "interval_ms": 1000}`、不寫 `max`），寫法在 [human/README](../human/README.md)。
+11. **常駐跑法不另做程式**：要 agent 一直在，就用 aos-loop 包一層（`{"exec": {"argv": ["aos-exec", "<agent>"]}, "interval_ms": 1000}`、不寫 `max`），寫法在 [human/README](../extras/human/README.md)。
 12. **agent 的錯誤一行不另外存**：外面跑的 agent，錯誤一行只在跑它的終端機；listen 只看得到 trace 的結束碼。要存得改慣例（stack 裡多一份 stderr），這次不動。
 13. **忘記對話不加指令**：照 P-41「要忘記＝換 stack」，用 `AOS_STACK=… aos-chat …` 或換工作區。
 

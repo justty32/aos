@@ -2,7 +2,7 @@
 
 **lib - agent 跑的時候會呼叫的外部函數，收成一份標準版，掛捷徑引用、不複製**
 
-← [proto8](../README.md)｜設計、盤點、代定與遷移清單：[thinking 2026-10-24 工具＝函式庫](../thinking/2026-10-24-tool-lib.md)｜慣例：[P-41、P-25](../CONVENTION/02-題目stack停錯腦.md)、[P-33](../CONVENTION/06-巢狀.md)｜特性：[`_metainfo`](../thinking/2026-10-24-metainfo.md)｜範例 agent：[demo/agent-liv](../demo/README.md)｜測試：`proto8/tests/test_lib.py`
+← [proto8](../README.md)｜設計、盤點、代定與遷移清單：[thinking 2026-10-24 工具＝函式庫](../thinking/2026-10-24-tool-lib.md)｜慣例：[P-41、P-25](../docs/CONVENTION/02-題目stack停錯腦.md)、[P-33](../docs/CONVENTION/06-巢狀.md)｜特性：[`_metainfo`](../thinking/2026-10-24-metainfo.md)｜範例 agent：[demo/agent-liv](../demo/README.md)｜測試：`proto8/tests/test_lib.py`
 
 使用者 10-24：「我們在做工具集，這其實挺像是在做函式庫。因爲agent是函數，我們給他的工具就是他在內部自己跑的時候會呼叫的外部函數。既然是這樣，那我們就要把抽象做好，把函數庫做好」——agent 是函數（一個資料夾，C-46、C-68），它 `tools/<名>/` 裡的東西是它內部呼叫的外部函數（C-42、C-61）。這裡把那些外部函數收成一份。
 
@@ -40,7 +40,7 @@ impls/                     基礎層與標準庫（C-74）：aos-exec 把工具�
 7. **上限與漸進展開**：讀最多 2000 行或 50KB、列最多 500 項、JSON 檔最多 4MB；超過就截，並在結果裡說怎麼接著拿（`offset`、`next_offset`、`pointer` 往下一層）。
 8. **stack**：工具的 stack＝呼叫者給的小格 `$AOS_STACK/<名>/`（P-17）；base 層是純函數、不用 stack，要跨呼叫留東西的工具（中層以上）才寫那裡。
 9. **自成一格**：一個工具資料夾裡的東西只靠自己，不 `import` 隔壁或上層的檔——搬到哪、被捷徑掛到哪都跑得動（C-61「兩份一起搬也不斷」）。同樣的十幾行開頭（讀 stdin、查工作區、報錯）每個工具各留一份；長到第三份一樣的大段再抽成共用庫（STRUCTURE 膨脹即拆）。
-10. **命名**：工具名＝資料夾名，一個動詞（`read`、`ls`）或「主題_動詞」（`json_read`、`json_edit`，C-54 主題在前）；縮寫照 [abbr.json](../CONCEPTS/abbr.json)；錯誤代號主詞在前。
+10. **命名**：工具名＝資料夾名，一個動詞（`read`、`ls`）或「主題_動詞」（`json_read`、`json_edit`，C-54 主題在前）；縮寫照 [abbr.json](../docs/CONCEPTS/abbr.json)；錯誤代號主詞在前。
 
 ## 怎麼引用（不複製）
 
@@ -100,7 +100,7 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 遷移前這幾個「模型的錯」多半印一段話退 0（memory、send_message 印「錯誤：…」，ai 那六個印 `{"ok": false}`）；現在一律照規則 3 退 1。原本靠退 0 讓腦自己改的 agent（agent-meg、talk 的 member），act 改成「工具退非 0 回給腦、不停」（同 agent-pip）。
 `memory` 的 `$AOS_HEAP`、`send_message` 的 `$AOS_ROSTER`、ai 那六個的 `$AOS_AI_ROOT` 是規則 4「只碰 `$AOS_WS`」的例外，照原樣留著（放哪由叫的人決定，像 stack）。
 
-**共用模組 [aos_ws.py](aos/aos_ws.py)**（不是工具、沒有 `_entry`）：「放題、等答案、讀 stack」——`names`、`where`、`put`（先寫工作區頂層暫存檔再 link 進 `new/`，不蓋已有的）、`answer_name`／`answer_text`、`tail_jsonl`、`last_jsonl`。給人用的 [proto8/human](../human/README.md)（aos-say／listen／chat）與給 AI 用的 [aos-ai](../ai_tools/README.md) 兩份合成這一份，各自用 realpath 找到這個資料夾 import。
+**共用模組 [aos_ws.py](aos/aos_ws.py)**（不是工具、沒有 `_entry`）：「放題、等答案、讀 stack」——`names`、`where`、`put`（先寫工作區頂層暫存檔再 link 進 `new/`，不蓋已有的）、`answer_name`／`answer_text`、`tail_jsonl`、`last_jsonl`。給人用的 [proto8/extras/human](../extras/human/README.md)（aos-say／listen／chat）與給 AI 用的 [aos-ai](../extras/ai_tools/README.md) 兩份合成這一份，各自用 realpath 找到這個資料夾 import。
 
 ## 索引：agent（10-24 遷移）
 

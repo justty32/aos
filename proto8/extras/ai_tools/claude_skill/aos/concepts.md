@@ -2,7 +2,7 @@
 
 每節＝一個概念：一句白話、最小範例、常見錯、出處（proto8 的條號：C-＝CONCEPTS、N-＝NORMS、P-＝CONVENTION）。
 `aos-ai explain <節名>` 印一節，`aos-ai explain` 列節名；`aos-ai explain --here [目標]` 算出「現在 aos-exec 它」的具體值。
-內容照 proto8 條文寫，條文是草稿、以 proto8/CONCEPTS.md、NORMS.md、CONVENTION.md 為準。
+內容照 proto8 條文寫，條文是草稿、以 proto8/docs/ 的 CONCEPTS.md、NORMS.md、CONVENTION.md 為準。
 
 ## overview
 

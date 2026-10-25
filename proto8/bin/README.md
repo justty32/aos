@@ -1,6 +1,6 @@
 # bin — aos-tick（只剩這一支 Python）
 
-← [proto8](../README.md)｜慣例：[CONVENTION](../CONVENTION.md)｜demo：[demo](../demo/README.md)｜C++ 實作：[impls](../impls/README.md)｜測試：`python3 -m unittest discover -s proto8/tests`（先建 impls，見 [testing](../../wf/workflows/testing.md)）
+← [proto8](../README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)｜demo：[demo](../demo/README.md)｜C++ 實作：[impls](../impls/README.md)｜測試：`python3 -m unittest discover -s proto8/tests`（先建 impls，見 [testing](../../wf/workflows/testing.md)）
 
 > **10-23 Python 版刪了**（使用者 10-23：「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；頂層問 fsm 和 tick 怎麼辦，使用者選「fsm 也改用 C++、tick 先留 Python」）：
 > 這裡原本的 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 與只有它們用的庫 `aos_inst.py`、`aos_loop.py`、`aos_run.py`、`aos_window.py` 都刪了；
@@ -17,7 +17,7 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
 
 ## 逐支說明
 
-> **分層（10-22，[C-74](../CONCEPTS/01-設計理念.md#分層10-22-使用者定)）**：`aos-tick` 擱置中、不歸層。（基礎層、標準庫那幾支 10-23 起只有 C++ 版，見 [impls](../impls/README.md)。）
+> **分層（10-22，[C-74](../docs/CONCEPTS/01-設計理念.md#分層10-22-使用者定)）**：`aos-tick` 擱置中、不歸層。（基礎層、標準庫那幾支 10-23 起只有 C++ 版，見 [impls](../impls/README.md)。）
 
 - **`aos-tick - 把時鐘檔的回合數往前走一格`**（NAME，C-54 R1）
   用法 `aos-tick [旗標] FILE`（Python，10-21 晚，計畫第 4 段）：時鐘往前走一格（C-44：只是時鐘，不包任務、不保證什麼）。FILE 裡是回合數（十進位＋換行），讀出 n、寫回 n＋1 就退 0；FILE 不在＝0（第一次寫 1）；寫進 n＋1＝第 n 回合結束、第 n＋1 回合開始，mtime＝這回合從什麼時候開始。先寫同資料夾的 `.名字` 再改名蓋過去（N-05），不 fsync，stdout 不吐東西。**命令列**：唯一的位置參數就是 FILE（必給、只能一個、相對路徑從 cwd 算）；FILE 照字面用，`#` 不切指標（它是時鐘檔不是設定檔）；目前沒有旗標（旗標表是空的、走 `aos_flags`，`--` 結束旗標）。**自己的錯**退 1、stderr 一行 `aos-tick: 代號 原因`、FILE 不動（10-23 命名統合起帶代號，統合前不帶）：`ArgumentsBad usage: aos-tick [旗標] FILE（原因）`（10-22 補 `[旗標]`，跟 aos-loop、aos-fsm 同一個寫法）（沒給、多給；不認得的旗標是 `FlagUnknown usage: …`）、`ClockBad 時鐘檔讀不到：`（例：它是資料夾）、`ClockBad 時鐘檔壞：`（內容不是 `[0-9]+` 加可有可無的一個 `\n`；空檔、`\r\n`、空白、負號、全形數字都算壞）、`WriteFailed 時鐘檔寫不了：`（資料夾不在或沒寫入權限；不替人建資料夾，暫存檔會清掉）。節奏、停、只走 N 回合交給 loop（`max`、`interval_ms`、ctl 的 `paused`）；同一個 FILE 兩個人同時 tick 不管。

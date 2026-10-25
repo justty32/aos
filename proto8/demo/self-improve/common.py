@@ -151,7 +151,7 @@ def used():
 
 
 def sandbox():
-    """函數要關進哪份 aos-sandbox 設定（proto8/sandbox）：工作區有 sandbox.json 用它，內容是 false＝不關；
+    """函數要關進哪份 aos-sandbox 設定（proto8/extras/sandbox）：工作區有 sandbox.json 用它，內容是 false＝不關；
     沒有就用本資料夾的 sandbox.json（預設就關，10-24 真腦實測前定，代定可翻案：thinking 2026-10-24-sandbox）。
     回設定檔路徑或 None；要關卻找不到 aos-sandbox 或 bwrap＝SandboxMissing（不靜靜改成不關）。"""
     path = os.path.join(ws, "sandbox.json")

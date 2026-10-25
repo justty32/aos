@@ -1,4 +1,4 @@
-← [thinking](README.md)｜月份索引：[2026-10](months/2026-10.md)｜規範：[NORMS N-28](../NORMS/04-基礎設施-loop與daemon.md)、[N-17、N-09](../NORMS/05-基礎設施-窗.md)｜實作：[impls/aos-daemon](../impls/aos-daemon/README.md)、[impls/aos-loop](../impls/aos-loop/README.md)
+← [thinking](README.md)｜月份索引：[2026-10](months/2026-10.md)｜規範：[NORMS N-28](../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-17、N-09](../docs/NORMS/05-基礎設施-窗.md)｜實作：[impls/aos-daemon](../impls/aos-daemon/README.md)、[impls/aos-loop](../impls/aos-loop/README.md)
 
 # 2026-10-23 daemon 壓測後的六個問題
 

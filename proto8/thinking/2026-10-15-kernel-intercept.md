@@ -1,6 +1,6 @@
 # 2026-10-15 kernel 截流：agent 只管叫、貴的呼叫先排隊
 
-← [討論紀錄](README.md)｜概念：[CONCEPTS kernel](../CONCEPTS/04-kernel.md)、[agent](../CONCEPTS/05-agent.md)｜前情：[10-13 kernel／agent](2026-10-13-kernel-agent.md)、[`_metainfo`](2026-10-13-json-path/02-metainfo.md)｜程式：lib agent.md（已刪，見 git 歷史 5546be29）、`aos_agent_call.py`（agent 當函數叫 agent，未進 git）｜續：[LLM kernel 優先級](2026-10-15-llm-kernel.md)
+← [討論紀錄](README.md)｜概念：[CONCEPTS kernel](../docs/CONCEPTS/04-kernel.md)、[agent](../docs/CONCEPTS/05-agent.md)｜前情：[10-13 kernel／agent](2026-10-13-kernel-agent.md)、[`_metainfo`](2026-10-13-json-path/02-metainfo.md)｜程式：lib agent.md（已刪，見 git 歷史 5546be29）、`aos_agent_call.py`（agent 當函數叫 agent，未進 git）｜續：[LLM kernel 優先級](2026-10-15-llm-kernel.md)
 
 ## 原文（10-15，照記）
 
@@ -17,7 +17,7 @@
 - **巢狀等待卡死不另做防護**：卡死就卡死，精神同 N-20（不保證、使用者的事）。
 - **kernel 排程看的是呼叫樹的特性**：一棵樹（agent、工具、子 agent 串起來的 S 表示式）的可預期性等特性，由子葉的特性彙總（總和或別的彙總法都行）。出處＝C-22／2.16（agent 當 S 表示式拆，節點有的知道有的不知道，[河堤 2.16](2026-10-11-restart/02-河堤後段.md)）、C-13（九軸是每個任務自己的屬性）、C-22b（節點＝函式＋環境）。這也回答了 10-13 §3.2 留著的「包別人的 inst，`_metainfo` 自報還是由內層推」：由子葉彙總上去。
 - **特性寫在 inst.json 的 `_metainfo`**（10-13 已定的「給 kernel 參考的抽屜」）；裡面的欄位與彙總規則之後再定。
-- **kernel 定義兩層**＝[C-47](../CONCEPTS/04-kernel.md)（原生：管什麼被執行或使用；aos：以 inst／loop／daemon 為基礎管某 inst 是否執行）。**先做兩種 kernel**＝[N-42](../NORMS/09-kernel.md)（管 LLM 呼叫的；通用管理、以 agent 判斷的），都基於 daemon。
+- **kernel 定義兩層**＝[C-47](../docs/CONCEPTS/04-kernel.md)（原生：管什麼被執行或使用；aos：以 inst／loop／daemon 為基礎管某 inst 是否執行）。**先做兩種 kernel**＝[N-42](../docs/NORMS/09-kernel.md)（管 LLM 呼叫的；通用管理、以 agent 判斷的），都基於 daemon。
 - **具體機制再規劃**：下面的閘門／信箱草案與六題未決**仍開著**，沒被這次定案取代。（後來照建議預設做了，見下方「結論」與「六題」。）
 
 ## 結論（10-15 照推薦做了基礎實作）

@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[腦的工具呼叫 第 6 點「對話太長」](2026-10-23-tool-calls.md#6-錯逾時對話太長)
 
-規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。相關條文：[C-19、C-46](../CONCEPTS/05-agent.md)、[C-52、C-54、C-56](../CONCEPTS/01-設計理念.md)、[C-65、C-66、C-67](../CONCEPTS/03-基礎設施.md)、[P-17、P-23～P-26、P-41](../CONVENTION/02-題目stack停錯腦.md)。
+規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。相關條文：[C-19、C-46](../docs/CONCEPTS/05-agent.md)、[C-52、C-54、C-56](../docs/CONCEPTS/01-設計理念.md)、[C-65、C-66、C-67](../docs/CONCEPTS/03-基礎設施.md)、[P-17、P-23～P-26、P-41](../docs/CONVENTION/02-題目stack停錯腦.md)。
 
 ## 使用者原文（逐字，10-24）
 

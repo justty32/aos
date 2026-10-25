@@ -1,6 +1,6 @@
 # round4 補充：設定全部拆成格（fable，2026-10-25）
 
-← [round4.md](round4.md)（主規劃，不重寫）｜實作偏離記 [round4-impl-notes.md](round4-impl-notes.md)｜依據：[C-72 JSON＝單檔的檔案系統](../../../CONCEPTS/01-設計理念.md)、[fn-grow 六級](../../../thinking/2026-10-24-fn-grow.md)、[round2 收攏判準 § 1](round2-collapse.md)
+← [round4.md](round4.md)（主規劃，不重寫）｜實作偏離記 [round4-impl-notes.md](round4-impl-notes.md)｜依據：[C-72 JSON＝單檔的檔案系統](../../../docs/CONCEPTS/01-設計理念.md)、[fn-grow 六級](../../../thinking/2026-10-24-fn-grow.md)、[round2 收攏判準 § 1](round2-collapse.md)
 
 使用者 10-25：「場景條件，背景故事，人物設定，都可以用結構化來表示，也就是json，拆的愈散，後續愈方便。」
 

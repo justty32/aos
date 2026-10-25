@@ -1,6 +1,6 @@
 # galtxt-a 第二輪：反向收攏方案（fable，2026-10-25）
 
-← 盤點 [round2-optimize.md](round2-optimize.md)｜第一輪 [round1.md](round1.md)、[round1-measure.md](round1-measure.md)｜依據：[fn-grow 六級與「怎麼搬才不改行為」](../../../thinking/2026-10-24-fn-grow.md)、[`_metainfo` M1 三處](../../../thinking/2026-10-24-metainfo/01-位置與格式.md#1-放哪三處同一個名字)、[aos-grow](../../../grow/README.md)、C-72（JSON＝單檔的檔案系統）、P-33／P-41（工具放 `<格>/tools/<名>`、腦靠 `tools/` 列工具）、N-59／N-61／N-62（aos-exec 怎麼找入口、`檔#/指標`）｜題目：[thinking 10-25 top-down](../../../thinking/2026-10-25-top-down.md)（「嵌套太深要收攏、尾端葉片縮成 json、要考慮權限等檔案系統特性」）
+← 盤點 [round2-optimize.md](round2-optimize.md)｜第一輪 [round1.md](round1.md)、[round1-measure.md](round1-measure.md)｜依據：[fn-grow 六級與「怎麼搬才不改行為」](../../../thinking/2026-10-24-fn-grow.md)、[`_metainfo` M1 三處](../../../thinking/2026-10-24-metainfo/01-位置與格式.md#1-放哪三處同一個名字)、[aos-grow](../../../extras/grow/README.md)、C-72（JSON＝單檔的檔案系統）、P-33／P-41（工具放 `<格>/tools/<名>`、腦靠 `tools/` 列工具）、N-59／N-61／N-62（aos-exec 怎麼找入口、`檔#/指標`）｜題目：[thinking 10-25 top-down](../../../thinking/2026-10-25-top-down.md)（「嵌套太深要收攏、尾端葉片縮成 json、要考慮權限等檔案系統特性」）
 
 給實作者照做。只寫規劃、不改程式。目標：**收攏前後同一題假腦跑出的 `out/` 與 `score.json` 一樣（抹掉時間）、測試照樣全綠**。
 

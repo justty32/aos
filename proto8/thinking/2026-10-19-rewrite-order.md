@@ -1,6 +1,6 @@
 # 2026-10-19 重寫順序：daemon、kernel、tasks、tick、工具呼叫
 
-← [討論紀錄](README.md)｜原則：[CONCEPTS](../CONCEPTS.md)、[NORMS](../NORMS.md)、[CONVENTION](../CONVENTION.md)｜待定：[NORMS/08](../NORMS/08-待定.md)｜程式：[bin](../bin/README.md)、[demo](../demo/README.md)｜舊實作：git 5546be29（`git show 5546be29:proto8/lib/README.md`）
+← [討論紀錄](README.md)｜原則：[CONCEPTS](../docs/CONCEPTS.md)、[NORMS](../docs/NORMS.md)、[CONVENTION](../docs/CONVENTION.md)｜待定：[NORMS/08](../docs/NORMS/08-待定.md)｜程式：[bin](../bin/README.md)、[demo](../demo/README.md)｜舊實作：git 5546be29（`git show 5546be29:proto8/lib/README.md`）
 
 使用者原話（10-19）：「請 fable 先讀過 proto8 的原則，再排出重寫順序（daemon、kernel、tasks、tick、工具呼叫），只把衝突帶給我。」
 

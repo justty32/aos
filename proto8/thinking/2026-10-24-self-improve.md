@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜程式 [demo/self-improve](../demo/README.md#self-improve自我改進流程10-24)｜測試 `proto8/tests/test_self_improve.py`｜試驗場 `~/code/try/self-improve/`
 
-規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。這份是**嘗試性質**，下面的決定全是頂層照推薦定的（使用者 10-24「都按建議做」），可翻案。相關條文：[C-42](../CONCEPTS/05-agent.md)（自我迴圈改進的閉環）、[C-52、C-53、C-54、C-56](../CONCEPTS/01-設計理念.md)、[C-64](../CONCEPTS/01-設計理念.md#檔案權限10-16-使用者定)（借 Linux 權限）、[C-65～C-67](../CONCEPTS/03-基礎設施.md#資料夾程式工作區與-stack10-19)（stack 與工作區）、[N-43](../NORMS/01-總則.md)（結束碼 0／10／其他）、[P-41](../CONVENTION/02-題目stack停錯腦.md)（腦的工具）。
+規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。這份是**嘗試性質**，下面的決定全是頂層照推薦定的（使用者 10-24「都按建議做」），可翻案。相關條文：[C-42](../docs/CONCEPTS/05-agent.md)（自我迴圈改進的閉環）、[C-52、C-53、C-54、C-56](../docs/CONCEPTS/01-設計理念.md)、[C-64](../docs/CONCEPTS/01-設計理念.md#檔案權限10-16-使用者定)（借 Linux 權限）、[C-65～C-67](../docs/CONCEPTS/03-基礎設施.md#資料夾程式工作區與-stack10-19)（stack 與工作區）、[N-43](../docs/NORMS/01-總則.md)（結束碼 0／10／其他）、[P-41](../docs/CONVENTION/02-題目stack停錯腦.md)（腦的工具）。
 
 ## 使用者原文（10-24，逐字）
 

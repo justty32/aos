@@ -1,4 +1,4 @@
-"""test_sandbox - proto8/sandbox 的 aos-sandbox（身分 s6-setuidgid、上限 s6-softlimit、看得到什麼與連網 bwrap）。
+"""test_sandbox - proto8/extras/sandbox 的 aos-sandbox（身分 s6-setuidgid、上限 s6-softlimit、看得到什麼與連網 bwrap）。
 
 設計：proto8/thinking/2026-10-24-sandbox.md。主角是「自我改進的被改函數讀不到判準檔」：同一支偷看判準的函數，
 工作區沒 sandbox.json 時拿滿分（偷看得到）、有 sandbox.json 時零分（讀不到）。
@@ -9,8 +9,8 @@ from pathlib import Path
 
 from aos_bins import ROOT, path_with  # noqa: E402
 
-SANDBOX_BIN = str(ROOT / "sandbox" / "bin")
-BOX = str(ROOT / "sandbox" / "bin" / "aos-sandbox")
+SANDBOX_BIN = str(ROOT / "extras" / "sandbox" / "bin")
+BOX = str(ROOT / "extras" / "sandbox" / "bin" / "aos-sandbox")
 SELF = str(ROOT / "demo" / "self-improve")
 TRY_RUN = str(ROOT / "demo" / "self-improve" / "improver" / "tools" / "try_run" / "_entry")
 
@@ -229,7 +229,7 @@ class BashBoxedTest(unittest.TestCase):
         cmd = ("echo made > f.txt; cat %s || echo no-outside; "
                "python3 -c \"import socket; socket.create_connection(('127.0.0.1', 9), timeout=2)\" 2>&1 | tail -1"
                % (root / "outside.txt"))
-        r = subprocess.run(["aos-exec", "--ws", str(root / "ws"), str(ROOT / "sandbox" / "examples" / "bash-boxed")],
+        r = subprocess.run(["aos-exec", "--ws", str(root / "ws"), str(ROOT / "extras" / "sandbox" / "examples" / "bash-boxed")],
                            input=json.dumps({"command": cmd}), capture_output=True, text=True, env=env(), timeout=60)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((root / "ws" / "f.txt").read_text(), "made\n")
@@ -407,7 +407,7 @@ class KernelMailboxTest(unittest.TestCase):
         self.assertEqual((r.returncode, r.stdout), (0, "SECRET-JUDGE"), r.stderr)
 
 
-SETUP = str(ROOT / "sandbox" / "root" / "setup.sh")
+SETUP = str(ROOT / "extras" / "sandbox" / "root" / "setup.sh")
 HAS_SETPRIV = shutil.which("setpriv") is not None and shutil.which("setfacl") is not None
 
 # 假 root 裡跑：1000＝跑 kernel 的人、群組 2000＝aos-run、1001＝aos-run（在群組裡）、1002＝外人。照 setup.sh --mailbox 設好信箱，

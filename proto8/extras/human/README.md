@@ -2,7 +2,7 @@
 
 ← [proto8](../../README.md)｜設計與代定：[thinking 2026-10-24-say-listen](../../thinking/2026-10-24-say-listen.md)｜測試 `proto8/tests/test_human.py`
 
-讓人對一隻 fsm agent（[demo/agent-dan](../../demo/README.md)、agent-bob 這類 loop＋fsm 範本）下指令、看回覆。對的是**工作區**：題目放 `$AOS_WS/new/<題名>`、答案在 `out/<題名>`（[CONVENTION P-11](../../CONVENTION/02-題目stack停錯腦.md)）。Python、純標準庫、只在 Linux（讀 `/proc`）。
+讓人對一隻 fsm agent（[demo/agent-dan](../../demo/README.md)、agent-bob 這類 loop＋fsm 範本）下指令、看回覆。對的是**工作區**：題目放 `$AOS_WS/new/<題名>`、答案在 `out/<題名>`（[CONVENTION P-11](../../docs/CONVENTION/02-題目stack停錯腦.md)）。Python、純標準庫、只在 Linux（讀 `/proc`）。
 
 | 程式 | NAME |
 |---|---|

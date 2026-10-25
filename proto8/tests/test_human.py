@@ -1,4 +1,4 @@
-"""test_human - 給人用的 aos-say／aos-listen／aos-chat（proto8/human，2026-10-24）：對 demo/agent-dan 用假腦問答。
+"""test_human - 給人用的 aos-say／aos-listen／aos-chat（proto8/extras/human，2026-10-24）：對 demo/agent-dan 用假腦問答。
 
 設計：proto8/thinking/2026-10-24-say-listen.md。不連網（假腦＝沒設 AOS_BRAIN_URL；腦壞＝指到連不上的埠）。"""
 import os, re, subprocess, tempfile, time, unittest
@@ -6,7 +6,7 @@ from pathlib import Path
 
 from aos_bins import ROOT, path_with  # noqa: E402
 
-HUMAN = ROOT / "human" / "bin"
+HUMAN = ROOT / "extras" / "human" / "bin"
 SAY, LISTEN, CHAT = (str(HUMAN / n) for n in ("aos-say", "aos-listen", "aos-chat"))
 DAN = str(ROOT / "demo" / "agent-dan")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
@@ -147,7 +147,7 @@ class ListenTest(Base):
 class TailNewlineTest(Base):
     def test_tool_result_newlines_not_literal(self):
         import json, sys
-        sys.path.insert(0, str(ROOT / "human" / "bin"))
+        sys.path.insert(0, str(ROOT / "extras" / "human" / "bin"))
         import aos_human as h
         stack = Path(h.stack_of(str(self.ws)))
         stack.mkdir(parents=True, exist_ok=True)

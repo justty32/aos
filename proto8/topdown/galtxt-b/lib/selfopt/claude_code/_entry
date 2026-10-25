@@ -5,7 +5,7 @@
 # 介面：stdin {"goal": 請優化什麼, "evidence"?: [幾行先前結果], "max_turns"?: ≤ cli.json, "max_budget_usd"?: ≤ cli.json, "model"?: 預設 cli.json}
 #   → stdout 一行 JSON {result（claude 的收工報告）, changed[節點內留下的改動], restored[越界被還原的], permission_denials, num_turns, cost_usd, usage, elapsed_ms}。
 # 隔離：claude 自己的權限（--tools 只有 Read/Glob/Grep/Edit/Write、沒有 Bash；--permission-mode acceptEdits：cwd 外的改檔要問、-p 時就是拒）
-#   ＋事後全樹比對（proto8/sandbox 的 bwrap 要把 claude 的帳號設定、node、網路一起綁進去，這版沒綁，見 plan/runs/round6/selfopt.md）。
+#   ＋事後全樹比對（proto8/extras/sandbox 的 bwrap 要把 claude 的帳號設定、node、網路一起綁進去，這版沒綁，見 plan/runs/round6/selfopt.md）。
 # 記帳：改前原樣存 <節點>/versions/selfopt_<session>/（同 edit_self）；session.claude_code 累計 counter_calls、cost_usd、counter_tokens_*；
 #   lifecycle.history 寫一筆（by claude_code，why＝claude 報告的前 600 字）。
 # 測試開關：SELFOPT_CLAUDE_BIN＝用別的程式代替 claude（假 claude，測試用）。

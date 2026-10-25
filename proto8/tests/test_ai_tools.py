@@ -1,4 +1,4 @@
-"""test_ai_tools - proto8/ai_tools：aos-ai 命令列（起 agent、丟題、前景跑、背景 daemon、邊界）與給 agent-dan 掛的三個工具。
+"""test_ai_tools - proto8/extras/ai_tools：aos-ai 命令列（起 agent、丟題、前景跑、背景 daemon、邊界）與給 agent-dan 掛的三個工具。
 
 不叫真模型、不叫 claude：腦一律是假腦（agent-dan 內建）或下面照規則回的假 server。設計：proto8/thinking/2026-10-24-ai-tools.md。"""
 import http.server, json, os, subprocess, tempfile, threading, time, unittest
@@ -6,7 +6,7 @@ from pathlib import Path
 
 from aos_bins import ROOT, EXEC, path_with  # noqa: E402  （順便檢查 impls 建好了）
 
-AI = str(ROOT / "ai_tools" / "bin" / "aos-ai")
+AI = str(ROOT / "extras" / "ai_tools" / "bin" / "aos-ai")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_AI_ROOT",
          "AOS_AI_JSON_EDITOR")
 
@@ -196,7 +196,7 @@ class AiToolsTest(unittest.TestCase):
         ai(self.root, "spawn", "boss", "--tool", "spawn_agent")
         tool = Path(self.root) / "agents" / "boss" / "agent" / "tools" / "spawn_agent"
         e = {k: v for k, v in os.environ.items() if k not in CLEAR}
-        e.update(AOS_WS=self.root, PATH=str(ROOT / "ai_tools" / "bin") + os.pathsep + e["PATH"])
+        e.update(AOS_WS=self.root, PATH=str(ROOT / "extras" / "ai_tools" / "bin") + os.pathsep + e["PATH"])
         r = subprocess.run([str(tool / "_entry")], input='{"name": "Bad Name"}', capture_output=True, text=True, env=e)
         self.assertEqual(r.returncode, 1)
         self.assertTrue(r.stderr.startswith("spawn_agent: NameBad "), r.stderr)
@@ -337,7 +337,7 @@ class AiToolsTest(unittest.TestCase):
         ai(self.root, "spawn", "boss", "--tool", "make_json", "--tool", "make_tool", "--tool", "explain_aos")
         tools = Path(self.root) / "agents" / "boss" / "agent" / "tools"
         e = {k: v for k, v in os.environ.items() if k not in CLEAR}
-        e.update(AOS_WS=self.root, PATH=str(ROOT / "ai_tools" / "bin") + os.pathsep + path_with(e["PATH"]))
+        e.update(AOS_WS=self.root, PATH=str(ROOT / "extras" / "ai_tools" / "bin") + os.pathsep + path_with(e["PATH"]))
 
         def call(tool, args):
             p = subprocess.run([str(tools / tool / "_entry")], input=json.dumps(args), capture_output=True, text=True, env=e)

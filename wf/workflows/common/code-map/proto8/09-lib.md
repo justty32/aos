@@ -14,7 +14,7 @@ agent 的 `tools/<名>` 用捷徑掛進來的標準工具（引用、不複製�
 | `base/json_read`、`json_edit` | 照指標看 JSON（大的摺起來，Python）；照指標改 JSON（`set`／`del`，先在記憶體全部驗過、再叫 PATH 上的 `aos-json` `batch`／`append`／`del` 寫，只重寫有變的那塊） |
 | `base/math`、`clock` | 四則運算（`ExprBad`）、印 UTC 時間；來源 agent-dan 的同名工具（hal、kai、talk 的複本改掛這裡；agent-dan 自己那份留著當範本） |
 | `base/run_python` | 跑一段 Python（程式寫進自己的小格 `main.py` 再跑）、回結束碼與輸出，逾時 `timeout_s` 60／300 算 `CommandFailed`；來源 agent-gus |
-| `aos/aos_ws.py` | 不是工具（沒有 `_entry`）：「放題、等答案、讀 stack」的共用模組——`names`、`where`、`put`（先寫工作區頂層暫存檔再 link 進 `new/`）、`answer_name`／`answer_text`、`tail_jsonl`、`last_jsonl`；proto8/human 的三支與 ai_tools 的 aos-ai 一起 import（10-24 遷移時兩份合一） |
+| `aos/aos_ws.py` | 不是工具（沒有 `_entry`）：「放題、等答案、讀 stack」的共用模組——`names`、`where`、`put`（先寫工作區頂層暫存檔再 link 進 `new/`）、`answer_name`／`answer_text`、`tail_jsonl`、`last_jsonl`；proto8/extras/human 的三支與 ai_tools 的 aos-ai 一起 import（10-24 遷移時兩份合一） |
 | `aos/memory/`（多一個 `heap.py`） | 長期記憶庫：`op` save／search／read／forget；庫在 `$AOS_HEAP`（沒設＝`$AOS_WS/.heap/`）；`heap.py` 是讀寫本體（掛它的 agent-meg 的 brain 也 import）；錯 `ArgumentsBad`、`OpUnknown`、`MemoryMissing`、`HeapBad` 退 1；來源 agent-meg |
 | `aos/send_message`、`check_inbox` | agent 之間寄信：照 `$AOS_ROSTER` 名冊寄進對方信箱 `new/`、自己留 `sent/`、對話串跟 `cur/` 走（信的手數 `counter_hops`）、到 `max_hops`／`max_sends` 擋（`HopsBad`、`SendsBad`…退 1）；看自己信箱還沒處理的；來源 demo/talk |
 | `aos/spawn_agent`、`ask_agent`、`agent_status`、`make_json`、`make_tool`、`explain_aos` | 轉叫命令列 `aos-ai`（起 agent、問、看狀態、生成 JSON 與工具骨架、查概念）；aos-ai 的錯照它的代號退 1；子 agent 放 `$AOS_AI_ROOT`（沒設＝`$AOS_WS`）；來源 ai_tools/dan_tools |

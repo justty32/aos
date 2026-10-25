@@ -20,7 +20,7 @@ cat st/served.jsonl   # {"served_at": "...", "letter": "0179...", "level": "high
 cat st/used.json      # {"window": "day", "since": "2026-10-24T00:00:00+08:00", "counter_calls": 3, "counter_tokens": 129, "counter_all_calls": 3, "counter_all_tokens": 129}
 ```
 
-設計與決定見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10-24-llm-kernel.md)；排序規則是 [10-15 LLM kernel 稿](../../thinking/2026-10-15-llm-kernel.md) 已定的六條；規範 [N-42](../../NORMS/09-kernel.md)、信箱 [N-16](../../NORMS/05-基礎設施-窗.md)。
+設計與決定見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10-24-llm-kernel.md)；排序規則是 [10-15 LLM kernel 稿](../../thinking/2026-10-15-llm-kernel.md) 已定的六條；規範 [N-42](../../docs/NORMS/09-kernel.md)、信箱 [N-16](../../docs/NORMS/05-基礎設施-窗.md)。
 
 ## 用法
 
@@ -60,7 +60,7 @@ aos-kernel-llm [旗標] kernel.json
 
 ### accept：只跑名單裡的單子（10-24，堵沙箱信箱後門，[thinking sandbox S14](../../thinking/2026-10-24-sandbox.md)）
 
-kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sandbox](../../sandbox/README.md) 裡的程式寄得到信（設定把信箱綁進來）時，就能叫它跑「`cat 判準`」。誰寄得進信箱由 Linux 權限管（[sandbox/root/setup.sh](../../sandbox/root/setup.sh) `--mailbox`），寄進來之後替它跑什麼 Linux 管不到，現在只能靠 `accept`（跟「存取控制純靠 Linux」衝突、暫留，[thinking sandbox S18](../../thinking/2026-10-24-sandbox.md)）：
+kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sandbox](../../extras/sandbox/README.md) 裡的程式寄得到信（設定把信箱綁進來）時，就能叫它跑「`cat 判準`」。誰寄得進信箱由 Linux 權限管（[sandbox/root/setup.sh](../../extras/sandbox/root/setup.sh) `--mailbox`），寄進來之後替它跑什麼 Linux 管不到，現在只能靠 `accept`（跟「存取控制純靠 Linux」衝突、暫留，[thinking sandbox S18](../../thinking/2026-10-24-sandbox.md)）：
 
 ```json
 {"mailbox": {"$env": "AOS_KERNEL"}, "accept": [{"argv": ["python3", "/abs/agent/brain.py"], "cwd": "/abs/agent"}]}

@@ -1,6 +1,6 @@
 # 2026-10-24 Janet 編成 aos（嘗試）
 
-← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜程式 [proto8/langs/janet](../langs/janet/README.md)｜測試 `proto8/tests/test_janet.py`
+← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜程式 [proto8/langs/janet](../extras/langs/janet/README.md)｜測試 `proto8/tests/test_janet.py`
 
 ## 使用者原文（10-24，逐字）
 
@@ -47,7 +47,7 @@
   }
 }
 ```
-（外加子資料夾 `idle/_entry`。）其他一對一的對照在 [langs/janet README](../langs/janet/README.md#寫法--編出來的東西)。
+（外加子資料夾 `idle/_entry`。）其他一對一的對照在 [langs/janet README](../extras/langs/janet/README.md#寫法--編出來的東西)。
 
 ## 實跑結果（10-24）
 

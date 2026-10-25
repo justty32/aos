@@ -16,8 +16,8 @@
 |--------------|--------|-------------------|
 | 「我想開發 / 修改某個功能」「**修 bug**」 | **feature-dev** | [workflows/feature-dev/README.md](workflows/feature-dev/README.md) |
 | 「**加一個新的小專案 / 新工具**」 | **add-subproject** | [workflows/add-subproject.md](workflows/add-subproject.md) |
-| 「**我有個 idea**」「把這個構想記下來」「要重新拷問 X」 | **ideas** | 現行落點：[proto8/CONCEPTS.md](../proto8/CONCEPTS.md)（概念層）、[proto8/thinking/](../proto8/thinking/README.md)（討論紀錄）；舊的 ideas 13 章已封存 |
-| 「**寫 spec**」「照構想集定規格」「新實作要照什麼寫」 | **spec** | 現行落點：[proto8/NORMS.md](../proto8/NORMS.md)（規範）、[proto8/CONVENTION.md](../proto8/CONVENTION.md)（aos agent 慣例）；上一代 proto7-2 照 [proto7-2/spec.md](../proto7-2/spec.md)（核心 spec 是 [proto7/spec/core.md](../proto7/spec/core.md)），proto6 照 [proto6/spec](../proto6/spec/README.md)；舊的 09-05 規格已封存 |
+| 「**我有個 idea**」「把這個構想記下來」「要重新拷問 X」 | **ideas** | 現行落點：[proto8/docs/CONCEPTS.md](../proto8/docs/CONCEPTS.md)（概念層）、[proto8/thinking/](../proto8/thinking/README.md)（討論紀錄）；舊的 ideas 13 章已封存 |
+| 「**寫 spec**」「照構想集定規格」「新實作要照什麼寫」 | **spec** | 現行落點：[proto8/docs/NORMS.md](../proto8/docs/NORMS.md)（規範）、[proto8/docs/CONVENTION.md](../proto8/docs/CONVENTION.md)（aos agent 慣例）；上一代 proto7-2 照 [proto7-2/spec.md](../proto7-2/spec.md)（核心 spec 是 [proto7/spec/core.md](../proto7/spec/core.md)），proto6 照 [proto6/spec](../proto6/spec/README.md)；舊的 09-05 規格已封存 |
 | 「**接下來做什麼**」「照進度表推進」「動工前該讀什麼」 | **roadmap** | 現行落點：[SESSION-LOG.md](SESSION-LOG.md)（open 進度與下一步）；舊的 roadmap 已封存 |
 | 「**開個研討會討論 X**」「找幾個 agent 一起腦力激盪」「給我一些靈感」 | **workshop** | [workflows/workshop/README.md](workflows/workshop/README.md)（已累積的紀錄與待決問題見 [INDEX](workflows/workshop/INDEX.md)）|
 | 「**辦個黑客松**」「找幾個 agent **各自去試做** X」「別再討論了，讓他們隨便做做看」 | **hackathon** | [workflows/hackathon/README.md](workflows/hackathon/README.md)（已辦場次見 [INDEX](workflows/hackathon/INDEX.md)）|
@@ -46,7 +46,7 @@
 |--------------|--------|--------|
 | 「**記 / 查踩坑**」 | **gotchas** | [workflows/common/gotchas.md](workflows/common/gotchas.md) |
 | 「整理 X」「封存過時的」「檔案太多／太雜」「太大要拆」「只留結論」（文件層）| **tidy** | [workflows/tidy/README.md](workflows/tidy/README.md) |
-| 「記個想法」「以後要做」「排進 roadmap」「幫我規劃」 | **planning** → 本專案落點是 [proto8/CONCEPTS](../proto8/CONCEPTS.md)／[proto8/thinking](../proto8/thinking/README.md)／[SESSION-LOG](SESSION-LOG.md)（舊的 ideas／roadmap 已封存） | [workflows/planning.md](workflows/planning.md) |
+| 「記個想法」「以後要做」「排進 roadmap」「幫我規劃」 | **planning** → 本專案落點是 [proto8/docs/CONCEPTS](../proto8/docs/CONCEPTS.md)／[proto8/thinking](../proto8/thinking/README.md)／[SESSION-LOG](SESSION-LOG.md)（舊的 ideas／roadmap 已封存） | [workflows/planning.md](workflows/planning.md) |
 | 「記個決定」「為什麼選 A 不選 B」 | **decisions** → 本專案落點是 [proto8/thinking](../proto8/thinking/README.md) 的決定與結論（舊的 ideas「待決定」表已封存） | [workflows/decisions.md](workflows/decisions.md) |
 | 「我的偏好是…」「以後直接做 / 先問」 | **user** | [workflows/common/user.md](workflows/common/user.md) |
 

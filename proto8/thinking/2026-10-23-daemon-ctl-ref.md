@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前一份：[daemon 壓測後的六個問題](2026-10-23-daemon-bench.md)
 
-規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。落點：[N-45](../NORMS/06-基礎設施-命令列與指示詞.md)、[N-06、N-08、N-11](../NORMS/05-基礎設施-窗.md)、[N-28、N-54](../NORMS/04-基礎設施-loop與daemon.md)；程式在 `proto8/impls` 的 aos-directive、aos-loop、aos-fsm、aos-daemon（只改 C++ 版）。
+規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。落點：[N-45](../docs/NORMS/06-基礎設施-命令列與指示詞.md)、[N-06、N-08、N-11](../docs/NORMS/05-基礎設施-窗.md)、[N-28、N-54](../docs/NORMS/04-基礎設施-loop與daemon.md)；程式在 `proto8/impls` 的 aos-directive、aos-loop、aos-fsm、aos-daemon（只改 C++ 版）。
 
 ## 使用者原文（整理版）
 

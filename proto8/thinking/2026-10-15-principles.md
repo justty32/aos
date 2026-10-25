@@ -1,6 +1,6 @@
 # 2026-10-15 兩條總原則：巢狀只管自己這一層、錯誤只處理自己的（深夜加：KISS 最高原則）
 
-← [討論紀錄](README.md)｜落成：[C-56、C-52、C-53](../CONCEPTS/01-設計理念.md)｜先前的標準：[proto7 設計原則](../../proto7/notes/principles.md) 第 9、10 條（10-04）、[proto7-2 契約卡](../../proto7-2/notes/component-contracts.md)（職責／前置條件／保證／明確不管）
+← [討論紀錄](README.md)｜落成：[C-56、C-52、C-53](../docs/CONCEPTS/01-設計理念.md)｜先前的標準：[proto7 設計原則](../../proto7/notes/principles.md) 第 9、10 條（10-04）、[proto7-2 契約卡](../../proto7-2/notes/component-contracts.md)（職責／前置條件／保證／明確不管）
 
 ## 原文（10-15，照貼）
 
@@ -30,7 +30,7 @@
   - **8** think 連錯時自己寫好要交的錯，done 格不讀 think 的 `work/think-fails.json`。做法：think 第 halt_after 次自己寫 cwd 的 `ret.json`＝`{"error"}`、回 `next: halted`；`halted` 從各表的 `states` 拿掉、只留在 `end`（N-40：next 不在表裡、在 end 裡＝fsm 結束），不經 done；done 只寫 `{"reply": 最後一句}`。demo 六張表（fsm、clerk、boss、judge、painter、brush）一起改。
   - **9** halted 時 loop 退 0 維持：照 C-52，loop 只說自己這一層（它照設計拍完、正常結束），agent 的錯在 `ret.json`；lib agent 寫明「看 ret.json」。照第 8 條改完後查證：halted 那拍 think 自己寫 `ret.json` 的錯、退 0、不寫 stderr，fsm 結束、loop 的 `stop_on_end` 停、退 0、stderr 空——符合「正常退出」的定義。
 - 「正常退出」的定義寫進 N-43：照設計、文檔走正常那條路、是預料到的狀況；簡化判準＝不在 stderr 噴東西。反向不成立：退非 0 時錯誤可以寫到別處（文件說好的地方）。
-- 「納入 kernel 評估」記成待定（[NORMS 待定 【kernel】](../NORMS/08-待定.md)）。
+- 「納入 kernel 評估」記成待定（[NORMS 待定 【kernel】](../docs/NORMS/08-待定.md)）。
 - 「正常退出」盤點 S1～S5 照推薦（「都按照推薦。」），10-15 晚照做完：
   - **S1 警告不開例外**：stderr 不放警告（N-29 改寫，`aos_cli.warn()` 拿掉）。逐一處理：ctl 窗壞檔／不見了／讀不了（`CtlBad`／`CtlMissing`／`CtlReadFailed`）→ loop、daemon 的 state 窗 `last_warning`（讀到好的清掉；N-08 改寫）；daemon 的 `PolicyFailed`／`RestartFailed`／`TableWriteFailed`／收工寫不了子項 ctl 的 `WriteFailed` → daemon state 窗 `last_warning`；`ScanFailed`／`ReplyFailed`（控制資料夾）原本就記 `last_error`，拿掉 stderr；信箱回信寫不進去 `ReplyFailed` → kernel（兩種）state 窗 `last_warning`；`aos_tree` 的 `TreeCycle`／`TreeDepth` 沒窗→寫在輸出（停住的 ref node 帶 `stop`、print 行尾標出），退 0；`ExtraInput`（aos_cli、兩顆腦）→ 入口錯、退非 0；**`StateWriteFailed`** 沒地方記（就是窗本身壞了）→ 改成錯：loop／daemon 收工、stderr 一份、退 1（同 N-19 窗缺）。`ToolCallsSkipped` 確認已不存在（10-15 tool 格一拍跑完全部 tool_calls 時已拿掉）。
   - **S2** loop 不再把 aos_inst 的 stderr 轉到自己的 stderr（`_Tail` 不 echo），只記 state 窗 `last_error`；daemon 的子 loop stderr 本來就落 `work_dir/N/err.json`。

@@ -45,7 +45,7 @@
 
 ## 結論：命名方法 R1～R12（定案版）
 
-寫進 C-54，細則在 [CONCEPTS C-54 命名方法](../CONCEPTS/01-設計理念/C-54-命名方法.md)。骨幹是使用者的六步（一句話 → 加功能先一句話 → 替檔取名 → 每格一句白話 → 挑字造名 → 簡化），加上 Unix／Linux 老慣例。
+寫進 C-54，細則在 [CONCEPTS C-54 命名方法](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)。骨幹是使用者的六步（一句話 → 加功能先一句話 → 替檔取名 → 每格一句白話 → 挑字造名 → 簡化），加上 Unix／Linux 老慣例。
 
 1. **R1 先寫一行 NAME**：`名字 - 一句話`（照 man page 第一行；英文小寫開頭、不加句號）。放檔頭或 README 第一行；所有名字都要能從這行推回來。加功能也先一句話，再加 key（C-48）。
 2. **R2 每一格一句白話，先不想名字。**
@@ -110,6 +110,6 @@ aos-tick   - 把時鐘檔的回合數往前走一格
 
 **10-25 註**（使用者 10-25「state.json中，runs改counter，at改成recorded_at」）：loop／daemon 的 state.json 現行是 `counter`（原 `runs`）、`recorded_at`（原 `at`）；上面的原文與決定照留，其他紀錄（trace 等）的 `at` 不動。
 
-**10-25 註二**（使用者 10-25「計數這塊，幫我改成counter_*」）：計數規則從「被數的東西加 s」改成 `counter_<被數的東西>`（[C-54 命名方法 R6](../CONCEPTS/01-設計理念/C-54-命名方法.md)）；state.json 的 `counter` 現叫 `counter_runs`，其他 JSON 的計數也改了。上面的原文與決定照留；時間點（`at`／`recorded_at`）那半還沒定。
+**10-25 註二**（使用者 10-25「計數這塊，幫我改成counter_*」）：計數規則從「被數的東西加 s」改成 `counter_<被數的東西>`（[C-54 命名方法 R6](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)）；state.json 的 `counter` 現叫 `counter_runs`，其他 JSON 的計數也改了。上面的原文與決定照留；時間點（`at`／`recorded_at`）那半還沒定。
 
-**10-25 註三**（使用者 10-25 已選 `recorded_at`〔「state.json中，runs改counter，at改成recorded_at」〕，回頂層兩題「都好」；頂層代定、可翻案）：時間點從「單獨 `at`＝這筆紀錄的時間」改成一律 `<發生了什麼>_at`（fsm trace `started_at`、信 `sent_at`、kernel-llm served `served_at`…），沒用 `max_` 的上限照 R6 補改（kernel-llm `budget.max_calls`／`max_tokens` 等），見 [C-54 命名方法 R3、R6](../CONCEPTS/01-設計理念/C-54-命名方法.md)。上面的原文與決定照留。
+**10-25 註三**（使用者 10-25 已選 `recorded_at`〔「state.json中，runs改counter，at改成recorded_at」〕，回頂層兩題「都好」；頂層代定、可翻案）：時間點從「單獨 `at`＝這筆紀錄的時間」改成一律 `<發生了什麼>_at`（fsm trace `started_at`、信 `sent_at`、kernel-llm served `served_at`…），沒用 `max_` 的上限照 R6 補改（kernel-llm `budget.max_calls`／`max_tokens` 等），見 [C-54 命名方法 R3、R6](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)。上面的原文與決定照留。

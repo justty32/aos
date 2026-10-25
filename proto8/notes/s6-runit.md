@@ -2,7 +2,7 @@
 
 ← [notes](README.md)｜[proto8](../README.md)｜2026-10-22，AI 寫（使用者 10-21 晚：「關於s6/runit的對照，納進之後要做的事情中吧」）
 
-**這份只是對照與「可借鏡的點」，不是規範**：條文以 [CONCEPTS](../CONCEPTS.md)、[NORMS](../NORMS.md) 為準，要借哪一點由使用者決定（鐵律 5）。s6／runit 的事實都附原始文件連結（skarnet.org、smarden.org）；aos 這邊以 [bin README](../bin/README.md) 與條文為準。
+**這份只是對照與「可借鏡的點」，不是規範**：條文以 [CONCEPTS](../docs/CONCEPTS.md)、[NORMS](../docs/NORMS.md) 為準，要借哪一點由使用者決定（鐵律 5）。s6／runit 的事實都附原始文件連結（skarnet.org、smarden.org）；aos 這邊以 [bin README](../bin/README.md) 與條文為準。
 
 一句話的背景：s6（skarnet.org）和 runit（smarden.org）都是 daemontools 一脈的「服務監管」工具——一支監工盯一個長壽程式，死了就重起；設定就是一個資料夾，裡面放 `run` 等小檔。這跟 aos 的「資料夾＝程式」、loop／daemon 是同一個家族的想法，所以對照起來特別有用。
 
@@ -33,7 +33,7 @@
 
 沒有找到「借鏡點跟 CONCEPTS／NORMS 條文直接打架」的地方。有四處要注意：
 
-**子項 stderr 會一直長。** N-28 寫「子 loop 的輸出檔不無限長」「stderr 只在出錯時 append」，bin 版 aos-daemon 是把 stderr 全部 append 到小格的 `stderr`、不輪替。這是現況與條文的落差（N-28 已自註「完整實作待補」，10-22 前叫標準實作），不是這份對照造成的。〔10-22 註：N-28 已照程式改寫成「aos 不保證子項輸出不無限長、使用者自己承擔」，見 [NORMS/04](../NORMS/04-基礎設施-loop與daemon.md)。〕
+**子項 stderr 會一直長。** N-28 寫「子 loop 的輸出檔不無限長」「stderr 只在出錯時 append」，bin 版 aos-daemon 是把 stderr 全部 append 到小格的 `stderr`、不輪替。這是現況與條文的落差（N-28 已自註「完整實作待補」，10-22 前叫標準實作），不是這份對照造成的。〔10-22 註：N-28 已照程式改寫成「aos 不保證子項輸出不無限長、使用者自己承擔」，見 [NORMS/04](../docs/NORMS/04-基礎設施-loop與daemon.md)。〕
 
 **自動重起。** 監管工具的核心就是自動重起，aos-daemon 偏偏不做（使用者 10-20「照預設」）。這是選擇、不是衝突；只有在使用者想改時，s6 的規則才派得上用場。
 

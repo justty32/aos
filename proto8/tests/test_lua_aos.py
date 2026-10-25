@@ -1,4 +1,4 @@
-"""test_lua_aos - Lua 寫 aos（proto8/langs/lua）：編出來跟手寫的 demo 一樣、真跑結果一樣；nvim 外掛 headless 走一遍。
+"""test_lua_aos - Lua 寫 aos（proto8/extras/langs/lua）：編出來跟手寫的 demo 一樣、真跑結果一樣；nvim 外掛 headless 走一遍。
 
 設計：proto8/thinking/2026-10-24-lua-nvim.md。lua／luajit／nvim 都沒有就整份 skip；nvim 那段沒有 nvim 才 skip。"""
 import json, os, re, shutil, subprocess, tempfile, unittest
@@ -6,10 +6,10 @@ from pathlib import Path
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
 
-LUA_DIR = ROOT / "langs" / "lua"
+LUA_DIR = ROOT / "extras" / "langs" / "lua"
 AOS_LUA = str(LUA_DIR / "bin" / "aos-lua")
 EX = LUA_DIR / "examples"
-NVIM_DIR = ROOT / "editors" / "nvim"
+NVIM_DIR = ROOT / "extras" / "editors" / "nvim"
 EXEC = tool("aos-exec")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO",
          "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")

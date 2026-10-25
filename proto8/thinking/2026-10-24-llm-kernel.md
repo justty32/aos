@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-15 kernel 截流](2026-10-15-kernel-intercept.md)（閘門／信箱、六題照建議）、[10-15 LLM kernel](2026-10-15-llm-kernel.md)（priority、排序六條）、[10-19 重寫順序 § ⑤、第 3 題](2026-10-19-rewrite-order.md)、[10-21 計畫 § 1.2](2026-10-21-plan.md)、[10-23 agent 與 kernel](2026-10-23-agent-kernel.md)、[10-24 exec 直接放單子](2026-10-24-exec-relative.md)、[10-24 `_metainfo`](2026-10-24-metainfo.md)
 
-規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。相關條文：[C-09～C-12、C-38、C-47](../CONCEPTS/04-kernel.md)、[C-20](../CONCEPTS/05-agent.md)、[N-42](../NORMS/09-kernel.md)、[N-14、N-16](../NORMS/05-基礎設施-窗.md)、[N-60](../NORMS/10-基礎設施-定義與工作區.md)、C-54。程式：[aos-kernel-llm](../impls/aos-kernel-llm/README.md)、[aos-gate](../impls/aos-gate/README.md)、[demo/kernel-llm](../demo/README.md)。
+規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。相關條文：[C-09～C-12、C-38、C-47](../docs/CONCEPTS/04-kernel.md)、[C-20](../docs/CONCEPTS/05-agent.md)、[N-42](../docs/NORMS/09-kernel.md)、[N-14、N-16](../docs/NORMS/05-基礎設施-窗.md)、[N-60](../docs/NORMS/10-基礎設施-定義與工作區.md)、C-54。程式：[aos-kernel-llm](../impls/aos-kernel-llm/README.md)、[aos-gate](../impls/aos-gate/README.md)、[demo/kernel-llm](../demo/README.md)。
 
 ## 使用者原文（10-24，逐字）
 
@@ -96,7 +96,7 @@
 7. **錯誤代號** `BudgetMissing`：10-15 稿寫的是 `BudgetExhausted`，照 C-54 R10 四種結尾改（「沒有了」＝`…Missing`）。翻案＝照原名（像 `DeadlineMissed` 那樣）。
 8. **到頂的判法**：開下一封之前看——`calls` 已用＋這次已開的＋上一次留下還在跑的 ≥ 上限，或 `tokens` 已用 ≥ 上限。次數是準的；token 跑完才知道，所以最多超過一次的量。`refuse` 時到頂後這次排著的全回錯（不只 `slots` 那幾封）。
 9. **`_metainfo.llm_tokens` 預先擋：不做**（任務說選做）。理由：宣告只記錄不處罰（M8），而且該拿 `val` 還是 `max` 去擋還沒定。翻案＝在到頂判斷多加「已用＋這封宣告的 > 上限」。
-10. **「快見底只給 high 過」不做**：那句 10-21 列進 [NORMS 待定](../NORMS/08-待定.md)，照舊等使用者。
+10. **「快見底只給 high 過」不做**：那句 10-21 列進 [NORMS 待定](../docs/NORMS/08-待定.md)，照舊等使用者。
 11. **範本**：agent-dan 的 `brain.py` 有 `AOS_KERNEL_REPORT` 就寫 usage（五行，P-23 加註）；demo 的 agent-ivy 也寫，假腦編一份（題目與答案的字數當 token 數），demo 才看得到數字。閘門不改。
 
 ### 實跑（10-24，`sh proto8/demo/run.sh` 的 kernel-llm 段，假腦）
@@ -111,4 +111,4 @@
 - **跨窗才跑完的信**：算在跑完那一刻的窗。
 - **`used.json` 被刪**：從 0 算（總數也歸零）；`served.jsonl` 還在，要對帳從那裡加。
 
-**10-25 註**（C-54 命名方法改名，[R6](../CONCEPTS/01-設計理念/C-54-命名方法.md)）：上面的 `calls`、`tokens`、`all_*`、`waited_runs` 現在是計數 `counter_*`（使用者「計數這塊，幫我改成counter_*」）；`budget` 的上限 `calls`／`tokens` 現叫 `max_calls`／`max_tokens`、served 的 `at` 現叫 `served_at`（使用者回頂層兩題「都好」，頂層代定、可翻案）。上面的決定照留。
+**10-25 註**（C-54 命名方法改名，[R6](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)）：上面的 `calls`、`tokens`、`all_*`、`waited_runs` 現在是計數 `counter_*`（使用者「計數這塊，幫我改成counter_*」）；`budget` 的上限 `calls`／`tokens` 現叫 `max_calls`／`max_tokens`、served 的 `at` 現叫 `served_at`（使用者回頂層兩題「都好」，頂層代定、可翻案）。上面的決定照留。

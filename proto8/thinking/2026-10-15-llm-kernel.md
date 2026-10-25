@@ -1,6 +1,6 @@
 # 2026-10-15 LLM kernel：請求自己填優先級
 
-← [討論紀錄](README.md)｜前情：[kernel 截流](2026-10-15-kernel-intercept.md)（閘門／信箱草案、六題照建議預設定案）｜規範：[N-42](../NORMS/09-kernel.md)、[N-16 信箱](../NORMS/05-基礎設施-窗.md)｜概念：[C-47、C-11、C-13](../CONCEPTS/04-kernel.md)｜[`_metainfo`](2026-10-13-json-path/02-metainfo.md)
+← [討論紀錄](README.md)｜前情：[kernel 截流](2026-10-15-kernel-intercept.md)（閘門／信箱草案、六題照建議預設定案）｜規範：[N-42](../docs/NORMS/09-kernel.md)、[N-16 信箱](../docs/NORMS/05-基礎設施-窗.md)｜概念：[C-47、C-11、C-13](../docs/CONCEPTS/04-kernel.md)｜[`_metainfo`](2026-10-13-json-path/02-metainfo.md)
 
 ## 原文（10-15，照記）
 
@@ -18,7 +18,7 @@
 - **key 的形狀**：`priority`，三種寫法都收——簡單值 `"low"`／`"high"`／數字 `3`；物件 `{"level": "high", "class": "chat", "deadline": "2026-10-15T18:00:00+08:00"}`，欄位都選填。kernel 先正規化：簡單值＝`{"level": 那個值}`；沒寫＝`{"level": "normal"}`，照先來先上排；不認得的欄位照帶、不報錯。
 - **跟 `_metainfo` 的分工**：`_metainfo`＝被叫 inst 作者自報（靜態、跟著定義）；`priority`＝呼叫者這一次多急（動態、跟著請求）。排序先看 `level`，同級再看 `_metainfo`（樹淺的先、便宜的先），都一樣就先來先上；`_metainfo` 從不蓋過 `level`。
 - **誰填**：不由腦或 agent 填（C-20），由**閘門**抄進信裡（閘門設定的 `priority`；10-15 深夜 KISS 1.9 拿掉 `AOS_PRIORITY` 後備，只認 gate.json）。子 agent 想更急得自己在它的閘門設定寫。
-- **token 額度**：放 kernel 自己的 state 窗（例 `{"budget": {"used", "limit", "since"}}`），每封回信的 usage 加上去；閘門、agent 都不知道額度存在。見底＝不排隊、直接回 N-29 的錯 `BudgetExhausted`，閘門照吐，agent 走 `BrainFailed`。快見底時可留一段只給 `high` 過（保底）。（10-21 註：這句「留一段只給 `high` 過」沒有採納紀錄，使用者 10-21 裁定列進待定，見 [NORMS 待定](../NORMS/08-待定.md)。）
+- **token 額度**：放 kernel 自己的 state 窗（例 `{"budget": {"used", "limit", "since"}}`），每封回信的 usage 加上去；閘門、agent 都不知道額度存在。見底＝不排隊、直接回 N-29 的錯 `BudgetExhausted`，閘門照吐，agent 走 `BrainFailed`。快見底時可留一段只給 `high` 過（保底）。（10-21 註：這句「留一段只給 `high` 過」沒有採納紀錄，使用者 10-21 裁定列進待定，見 [NORMS 待定](../docs/NORMS/08-待定.md)。）
 - **第一版只處理 `priority`（level）與 `deadline` 兩個**；其他 key（`class` 等）照樣帶著、kernel 不認就不管；需要時再用 JSON schema 限制。`class` 出本版範圍。
 - 其餘六題使用者「隨意」＝照建議預設定案（10-15 使用者『隨意』，照建議）：
   - `level` 名字 `low`／`normal`／`high`，數字也收（`<0`／`0`／`>0`）。

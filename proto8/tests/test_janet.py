@@ -1,4 +1,4 @@
-"""test_janet - Janet 編成 aos（proto8/langs/janet）：編三個例子、用 aos-exec 真的跑，agent-dan 跟手寫版比。
+"""test_janet - Janet 編成 aos（proto8/extras/langs/janet）：編三個例子、用 aos-exec 真的跑，agent-dan 跟手寫版比。
 
 設計：proto8/thinking/2026-10-24-janet-compile.md。沒裝 janet 就整個 skip。"""
 import json, os, re, shutil, subprocess, tempfile, unittest
@@ -7,7 +7,7 @@ from pathlib import Path
 from aos_bins import ROOT, tool, path_with  # noqa: E402
 
 JANET = shutil.which("janet")
-LANG = ROOT / "langs" / "janet"
+LANG = ROOT / "extras" / "langs" / "janet"
 COMPILER = str(LANG / "bin" / "aos-janet")
 EXAMPLES = LANG / "examples"
 DAN = ROOT / "demo" / "agent-dan"

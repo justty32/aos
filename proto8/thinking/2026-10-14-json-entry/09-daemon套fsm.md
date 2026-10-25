@@ -27,4 +27,4 @@ daemon 借 fsm 的紀律，但不變成一張 fsm 表。真正多狀態的是**�
 
 ## 21. 未決
 
-- **save 檔與 table 窗合一**：今天 save 存 `[{loop, ctl}]`，與新 `table.json` 會漂移；建議合成一份（table 窗就是 save 檔、load 就是接回）。已記 [NORMS 待定](../../NORMS/08-待定.md)。
+- **save 檔與 table 窗合一**：今天 save 存 `[{loop, ctl}]`，與新 `table.json` 會漂移；建議合成一份（table 窗就是 save 檔、load 就是接回）。已記 [NORMS 待定](../../docs/NORMS/08-待定.md)。

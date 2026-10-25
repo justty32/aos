@@ -1,4 +1,4 @@
-"""aos_ws - 「放題、等答案、讀 stack」的共用小零件：給人用的 aos-say／aos-listen／aos-chat（proto8/human）與給 AI 用的 aos-ai（proto8/ai_tools）一起用。
+"""aos_ws - 「放題、等答案、讀 stack」的共用小零件：給人用的 aos-say／aos-listen／aos-chat（proto8/extras/human）與給 AI 用的 aos-ai（proto8/extras/ai_tools）一起用。
 
 10-24 遷移（tool-lib 遷移清單「human、aos-ai 的放題、等答案合成一份」）：兩邊各寫了一份同樣的事，收到這裡；不是工具（沒有 _entry），
 是 lib/aos 的共用模組，兩支命令列用 realpath 找到這個資料夾再 import。純標準庫。

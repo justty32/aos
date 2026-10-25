@@ -1,6 +1,6 @@
 # galtxt-a 第一輪規劃：由上而下拆資料夾樹（fable，2026-10-25）
 
-← 題目與使用者原文：[thinking 2026-10-25-top-down](../../../thinking/2026-10-25-top-down.md)｜依據：[CONCEPTS](../../../CONCEPTS.md)（C-52 每層只管自己、C-56 KISS、C-61 工具是資料夾程式、C-65～C-67 stack 與工作區、C-68 資料夾＝程式）、[NORMS/10](../../../NORMS/10-基礎設施-定義與工作區.md)（N-50、N-53、N-57～N-61）、[CONVENTION](../../../CONVENTION.md)（P-05～P-41，特別是 P-17 小格、P-32 被叫者的工作區在呼叫方的小格裡、P-35 格可以是一整隻 agent、P-41 腦的工具呼叫）、[`_metainfo` M1～M10](../../../thinking/2026-10-24-metainfo.md)、[函數成長六級](../../../thinking/2026-10-24-fn-grow.md)、[工具＝函式庫](../../../lib/README.md)｜題目來源（只讀）：`~/repo/ai_core/sub_projs/galtxt/`
+← 題目與使用者原文：[thinking 2026-10-25-top-down](../../../thinking/2026-10-25-top-down.md)｜依據：[CONCEPTS](../../../docs/CONCEPTS.md)（C-52 每層只管自己、C-56 KISS、C-61 工具是資料夾程式、C-65～C-67 stack 與工作區、C-68 資料夾＝程式）、[NORMS/10](../../../docs/NORMS/10-基礎設施-定義與工作區.md)（N-50、N-53、N-57～N-61）、[CONVENTION](../../../docs/CONVENTION.md)（P-05～P-41，特別是 P-17 小格、P-32 被叫者的工作區在呼叫方的小格裡、P-35 格可以是一整隻 agent、P-41 腦的工具呼叫）、[`_metainfo` M1～M10](../../../thinking/2026-10-24-metainfo.md)、[函數成長六級](../../../thinking/2026-10-24-fn-grow.md)、[工具＝函式庫](../../../lib/README.md)｜題目來源（只讀）：`~/repo/ai_core/sub_projs/galtxt/`
 
 這份只規劃、不寫程式。每一節先講結論，理由放後面。文中 `galtxt/…` 一律指 `~/repo/ai_core/sub_projs/galtxt/…`（另一個 repo，只讀）。
 

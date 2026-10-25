@@ -9,7 +9,7 @@ own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
 EXEC = tool("aos-exec")
-GROW = str(ROOT / "grow" / "aos-grow")
+GROW = str(ROOT / "extras" / "grow" / "aos-grow")
 DAN = ROOT / "demo" / "agent-dan"
 CODES = ("ArgumentsBad", "FlagUnknown", "CfgMissing", "CfgBad", "TargetBad", "NameBad", "WriteFailed")
 TS = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(Z|[+-]\d\d:\d\d)")

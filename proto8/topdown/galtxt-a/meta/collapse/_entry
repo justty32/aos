@@ -48,7 +48,7 @@ def read(path):
 
 
 def dump(v, ind=0, width=100):
-    """塞得進一行（含縮排）就一行，不然物件／陣列一項一行（同 proto8/grow/aos-grow）。"""
+    """塞得進一行（含縮排）就一行，不然物件／陣列一項一行（同 proto8/extras/grow/aos-grow）。"""
     flat = json.dumps(v, ensure_ascii=False, separators=(", ", ": "))
     if len(flat) + ind <= width or not isinstance(v, (dict, list)) or not v:
         return flat
