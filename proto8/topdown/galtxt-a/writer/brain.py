@@ -1,5 +1,8 @@
 # brain.py - think 格（抄 agent-dan）：認領題目、把 tools/*/tool.json 組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history
 # 沒設 AOS_BRAIN_URL＝假腦（模板填槽：先叫 lint、再交稿）；有設就問 OpenAI 相容的 {url}/chat/completions。失敗時 history 不接任何東西、退 1（P-20）。
+# 假腦技能表（第三輪，round3 § 6）：WEAK 裡的（模型標籤, 風格）＝這個假寫手寫這種風格會寫砸——女角那句句尾加 NG 標記「～～」（lint 扣 Tier 1）。
+# 模型標籤從 AOS_BRAIN_MODEL 來（各寫手 .env）：含 sol＝"sol"，其餘＝""。表是劇本、不是品質證據；測試要換時設 GALTXT_FAKE_WEAK（「標籤:風格」逗號分隔，只有假腦讀）。
+# 傲嬌另有一套模板（挖空、整場）；文靜／書卷的模板一字不動。
 # 跟範本不同的兩處：fake() 改寫；問真腦時把 API 回的 usage 多記一行到 $AOS_STACK/usage.jsonl（給實測對照用，OpenAI 的欄位名照留）。
 import datetime, json, os, sys, urllib.error, urllib.request
 
@@ -85,9 +88,56 @@ if os.path.exists("system.txt"):
 OPEN = {"借景": "春天的光正好呢……既然這樣，", "動作": "嗯……既然這樣，", "留白": "……既然這樣，"}
 SCENE_OPEN = {"借景": "（{place}。{detail}。）", "動作": "（{place}深處，兩人的手同時搭上同一本書。）", "留白": "（{place}。門鈴響過之後，只剩翻頁的聲音。）"}
 SCENE_CLOSE = {"借景": "（百葉窗的光斜斜落在書背上。）", "動作": "（{heroine}把書輕輕推了過去。）", "留白": "（店裡又安靜下來。）"}
+TSUN_OPEN = {"借景": "……哼，", "動作": "哼，", "留白": "……"}
+WEAK = {("", "傲嬌")}
+if os.environ.get("GALTXT_FAKE_WEAK") is not None:
+    WEAK = {tuple(x.split(":", 1)) for x in os.environ["GALTXT_FAKE_WEAK"].split(",") if ":" in x}
+TAG = "sol" if "sol" in (os.environ.get("AOS_BRAIN_MODEL") or "") else ""
+
+
+def weak(text, style):
+    """技能表裡有（這個模型, 這種風格）＝在最後一句女角台詞的句尾加「～～」"""
+    if (TAG, style) not in WEAK:
+        return text
+    lines = text.split("\n")
+    for i in range(len(lines) - 1, -1, -1):
+        if lines[i].endswith("」") and not lines[i].startswith("主角："):
+            lines[i] = lines[i][:-1] + "～～」"
+            break
+    return "\n".join(lines)
+
+
+def tsun(b, hint, lead, heroine, calls, called, must):
+    """傲嬌的模板：先否認、再讓步、補一句遮掩（corpus/固化/01 § 1）"""
+    if b.get("mode") == "fill":
+        deny = must[0][0] if must and hint != "留白" else "也沒有"
+        give = must[1][0] if len(must) > 1 else "也不是不能"
+        return "%s：「%s%s那樣啦。不過……%s接受，真是的。」" % (b.get("speaker") or heroine["name"], TSUN_OPEN[hint], deny, give)
+    place = (b.get("place") or {}).get("name", "")
+    details = (b.get("place") or {}).get("details") or [""]
+    samples = [s for s in b.get("samples", []) if s.startswith(heroine["name"] + "：")]
+    lines = [SCENE_OPEN[hint].format(place=place, detail=details[min(1, len(details) - 1)]),
+             "%s：「喂，%s。這個幫我拿一下。」" % (heroine["name"], calls),
+             "%s：「又來了？%s，這次的理由是什麼？」" % (lead["name"], called or "妳"),
+             "%s：「你手比較長。……哼，別、別誤會了。」" % heroine["name"],
+             samples[0] if samples else "%s：「才不是特地等你的。」" % heroine["name"],
+             "%s：「好好好，我拿就是了。」" % lead["name"],
+             "%s：「……真是的，隨便你啦。」" % heroine["name"],
+             SCENE_CLOSE[hint].format(heroine=heroine["name"])]
+    lo, hi = b.get("min_lines", 5), b.get("max_lines", 10)
+    return "\n".join(lines[:max(lo, min(hi, len(lines)))])
 
 
 def draft():
+    """compose() 的結果過一次假腦技能表（風格＝brief 的 style）"""
+    try:
+        style = json.loads(question).get("style")
+    except (ValueError, AttributeError):
+        style = None
+    return weak(compose(), style)
+
+
+def compose():
     """固化階梯第 3 級：模板＋槽填充，用 brief 裡的東西組一份台詞。挖空模式第 3 個角度（留白）刻意漏掉第一組必要關鍵詞。"""
     try:
         b = json.loads(question)
@@ -100,6 +150,8 @@ def draft():
     calls = heroine.get("calls_lead") or "你"
     called = heroine.get("called_by_lead") or ""
     must = b.get("must") or []
+    if heroine.get("type") == "傲嬌":
+        return tsun(b, hint, lead, heroine, calls, called, must)
     if b.get("mode") == "fill":
         book = "《%s》" % must[0][0] if must and hint != "留白" else "書"
         give = must[1][0] if len(must) > 1 else "讓給"

@@ -3,7 +3,9 @@
 # 寫 $AOS_WS/out/<題名>/answer.txt 與 score.json（先寫 . 開頭暫存資料夾再改名，N-05），題目 cur/ → done/。
 # 全部沒過 Tier 0 時照樣挑違規最少的那份、score.json 標 pass: false、退 0（預料到的正常結果，N-43）。
 # 挖空模式再讀 data/bench/<編號>.json 的 answer：記字元二元組重疊率（只記錄、不計分）與護欄關鍵詞有沒有全中。
-# 錯：stderr 一行「galtxt-a pick: 代號 原因」、退 1——StackMissing、StateBad（checks.json、drafts/、current.txt 缺或壞）。
+# 結構分（第三輪，round3 § 14；只記錄、不改挑法）：score.json 多 writer、style（從 $AOS_STACK/route.json），每份草稿多 dims
+# {語域: tier1/2, 語意: tier2/3（沒評＝null）, 護欄: 過 Tier 0＝1.0 否則 0.0}，整題多 dims {多樣性: 1 − 各份兩兩字元二元組重疊率的平均}。
+# 錯：stderr 一行「galtxt-a pick: 代號 原因」、退 1——StackMissing、StateBad（checks.json、drafts/、current.txt、route.json 缺或壞）。
 import json, os, shutil, sys
 
 DATA = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data")
@@ -35,6 +37,10 @@ try:
         brief = json.load(f)
     with open(os.path.join(stack, "current.txt"), encoding="utf-8") as f:
         name = f.read().strip()
+    with open(os.path.join(stack, "route.json"), encoding="utf-8") as f:
+        route = json.load(f)
+    if not isinstance(route, dict):
+        raise ValueError("route.json 不是物件")
     texts = {}
     for n in checks:
         with open(os.path.join(stack, "drafts", n + ".txt"), encoding="utf-8") as f:
@@ -59,6 +65,9 @@ for n in sorted(checks, key=int):
            "tier1_notes": c.get("tier1_notes", []), "tier2": t2,
            "reason": judged.get(n, {}).get("reason") if c.get("pass") else None,
            "total": (c.get("tier1") or 0) + (t2 or 0) if c.get("pass") else 0}
+    row["dims"] = {"語域": round((c.get("tier1") or 0) / 2, 3),
+                   "語意": round(t2 / 3, 3) if t2 is not None else None,
+                   "護欄": 1.0 if c.get("pass") else 0.0}
     if c.get("bonus"):
         row["bonus"] = c["bonus"]
     rows.append(row)
@@ -75,7 +84,11 @@ else:
             best = r
 answer = texts[str(best["n"])]
 base = brief.get("name") or (name[:-5] if name.endswith(".json") else name)
-score = {"mode": brief.get("mode"), "name": base, "picked": best["n"], "pass": bool(passed), "drafts": rows}
+grams = [bigrams(texts[str(r["n"])]) for r in rows]
+pairs = [len(a & b) / len(a | b) if a | b else 1.0 for i, a in enumerate(grams) for b in grams[i + 1:]]
+score = {"mode": brief.get("mode"), "name": base, "writer": route.get("writer"), "style": route.get("style"),
+         "picked": best["n"], "pass": bool(passed), "drafts": rows,
+         "dims": {"多樣性": round(1 - sum(pairs) / len(pairs), 3) if pairs else None}}
 
 if brief.get("mode") == "fill":
     task_bench = brief.get("bench")

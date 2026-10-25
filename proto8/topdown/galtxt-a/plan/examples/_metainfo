@@ -1,1 +1,1 @@
-{"summary": "題目範例：scene.json（場景模式）、Q01.json（挖空模式）；複製到工作區 new/ 就能跑", "kind": "data", "fs_needs": ["git_tracked"]}
+{"summary": "題目範例：scene.json、scene-yuzuha.json（場景模式，也是 train 的訓練題）、Q01.json、Q16.json（挖空模式，也是 train 的驗證題）；複製到工作區 new/ 就能跑", "kind": "data", "fs_needs": ["git_tracked"]}

@@ -4,7 +4,7 @@
  "resource": ["llm", "cpu", "disk"],
  "llm_calls": {"val": 9, "max": 60},
  "llm_tokens": {"val": 24000, "max": 200000},
- "llm_model": "chatgpt-gpt-6-luna-low（寫手、評審各自的 .env）",
+ "llm_model": "chatgpt-gpt-6-luna-low／sol-low（寫手 writer、writer-sol、評審各自的 .env；寫手由 data/route.json 選）",
  "llm_endpoint": "AOS_BRAIN_URL（家機 LiteLLM http://localhost:4000/v1）；沒設＝假腦，離線可跑",
  "side_effect": true,
  "idempotent": false,
@@ -12,7 +12,7 @@
  "interrupt": "resumable",
  "parallel": true,
  "lock": [{"$env": "AOS_WS", "$prefix": "ws:"}],
- "reads": ["ws:new/*.json", "ws:cur/*.json", "data:*"],
+ "reads": ["ws:new/*.json", "ws:cur/*.json", "data:*", "data:route.json"],
  "writes": ["ws:out/<題名>/", "ws:done/<題名>.json", "stack:*"],
  "fs_needs": ["own_stack", "git_tracked"],
  "callers": 0}

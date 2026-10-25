@@ -1,0 +1,3 @@
+#!/bin/sh
+# _entry - 把寫手變體 writer-sol 的 loop 跑起來（loop.json、fsm.json、brain.py、act.py、system.txt 都是指到 ../writer 的捷徑；只有 .env 是自己的）
+exec aos-loop loop.json

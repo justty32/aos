@@ -1,0 +1,2 @@
+{"source": "train/verify.py：每次 optimize 改了 route.json、下一次 verify 算出 score_mean 的差，就記一筆；門檻：delta_avg ≥ min_gain＝good、≥ 0＝ok、< 0＝bad、沒改過＝none（沒有 action:* 格）",
+ "scale": {"min": -5, "max": 5, "what": "驗證題 score_mean 的前後差；dims 一律 0～1（命中＝進步比例、穩定＝1 − 回滾比例、效率＝累計增益 ÷ 每 100k token（不足 100k 當 100k），上限 1）"}}

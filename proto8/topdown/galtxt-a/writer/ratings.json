@@ -1,0 +1,2 @@
+{"source": "train/rate.py 從訓練 stack 的 epochs/*/runs/*/ws/out/*/score.json 算（只算訓練題）；門檻寫死在 rate.py；人不手改這份（要改路線改 data/route.json）",
+ "scale": {"min": 0, "max": 5, "what": "Tier 1（語域 0～2）＋ Tier 2（評審 0～3）；只算過了 Tier 0 的草稿；dims 一律 0～1"}}

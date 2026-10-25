@@ -1,0 +1,9 @@
+{"mode": "scene",
+ "place": "河鹿堂",
+ "cast": ["佐伯悠", "宮澤柚葉"],
+ "event": "柚葉買了一疊書提不動，把書包塞給主角、理由每次不同；主角照單全收",
+ "season": "十月", "time": "放學後",
+ "intent": "鬥嘴",
+ "rank": 2,
+ "min_lines": 5, "max_lines": 10,
+ "drafts": 3}

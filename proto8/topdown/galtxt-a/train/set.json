@@ -1,0 +1,4 @@
+{"source": "訓練題自造（plan/examples 的 scene 模式，沒有正解）、驗證題 benchmark（plan/examples 的 fill 模式，正解只有 pick 讀）——訓練集 ≠ 驗證集",
+ "train": ["scene.json", "scene-yuzuha.json"],
+ "verify": ["Q01.json", "Q16.json"],
+ "writers": ["writer", "writer-sol"]}

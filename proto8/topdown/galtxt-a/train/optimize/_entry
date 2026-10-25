@@ -1,0 +1,158 @@
+#!/usr/bin/env python3
+# optimize - 優化函數（第 2 層，round3 § 8.4、§ 15）：讀各寫手 _metainfo 裡的評級（ratings、human_ratings 經 $ref 併進來）→ 改 data/route.json
+# 輸入只看：set.json 的 writers、各寫手 _metainfo 解開的 ratings／human_ratings、現在的 data/route.json、自己的 ratings.json／policy.json。不看 trace、不看草稿。
+# 規則（純程式、確定性）：每個風格挑 val 最高的寫手（good > ok > bad > none）；同 val 比 score_avg；再平手留原值（不震盪）；
+# 全部 none＝不列（走 default）；人評 val bad 且 counter_ratings ≥ 3 的寫手在那個風格上不選。
+# policy.min_gap＝1 時同 val 不換、要差一個等級才換。開跑先讀自己的評級調 min_gap（§ 15.1）：action:route 的 counter_regressed > counter_improved＝升成 1；
+# counter_improved_streak ≥ 2＝降回 0。自己的 ratings.json 只讀（由 train/verify.py 寫）。
+# 寫之前把現在的 data/route.json、各寫手 ratings.json／human.json 拷進 $AOS_STACK/epochs/NNN/params/（NNN＝$AOS_STACK/epoch.txt，沒有＝0），
+# 外加 params/optimize.json {changed, diff, min_gap}（給 verify 判「這次有沒有動」）；stdout 一行一風格的舊 → 新，與「最差維度 → 建議動作」（只印、不動手）。
+# 用法：optimize [--dry-run]（--dry-run＝只印、什麼都不寫）。
+# 錯：stderr 一行「optimize: 代號 原因」、退 1——FlagUnknown、StackMissing、SetBad、RatingsBad（評級檔讀不了、$ref 懸空）、RouteBad。
+import datetime, json, os, shutil, sys
+
+HERE = os.path.dirname(os.path.realpath(__file__))          # galtxt-a/train/optimize
+TRAIN = os.path.dirname(HERE)
+ROOT = os.path.dirname(TRAIN)
+RANK = {"good": 3, "ok": 2, "bad": 1, "none": 0}
+
+
+def die(code, reason):
+    print("optimize: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
+    sys.exit(1)
+
+
+def load(path, code, what):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError) as e:
+        die(code, "%s讀不了：%s（%s）" % (what, path, e))
+
+
+def save(path, obj):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))   # N-05
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(json.dumps(obj, ensure_ascii=False, indent=1) + "\n")
+    os.replace(tmp, path)
+
+
+def metainfo(d):
+    """d/_metainfo，頂層 key 的值是 {"$ref": "檔"} 就從 d 讀那個檔併進來（只解一層、只解頂層；M1 § 5）"""
+    m = load(os.path.join(d, "_metainfo"), "RatingsBad", "_metainfo ")
+    for k, v in list(m.items()):
+        if isinstance(v, dict) and set(v) == {"$ref"} and isinstance(v["$ref"], str):
+            m[k] = load(os.path.join(d, v["$ref"]), "RatingsBad", "%s 的 $ref " % k)
+    return m
+
+
+args = sys.argv[1:]
+for a in args:
+    if a != "--dry-run":
+        die("FlagUnknown", "不認得 %s（用法：optimize [--dry-run]）" % a)
+dry = "--dry-run" in args
+stack = os.environ.get("AOS_STACK")
+if not stack and not dry:
+    die("StackMissing", "沒設定 AOS_STACK")
+
+writers = load(os.path.join(TRAIN, "set.json"), "SetBad", "set.json ").get("writers")
+if not isinstance(writers, list) or not writers:
+    die("SetBad", "set.json 的 writers 要是非空陣列")
+route_path = os.path.join(ROOT, "data", "route.json")
+route = load(route_path, "RouteBad", "data/route.json ")
+if not isinstance(route, dict) or not isinstance(route.get("by_style", {}), dict) or not isinstance(route.get("default"), str):
+    die("RouteBad", "data/route.json 要是 {default: 字串, by_style: 物件}")
+me = metainfo(HERE)
+mine, policy = me.get("ratings") or {}, me.get("policy") or {}
+if not isinstance(mine, dict) or not isinstance(policy, dict):
+    die("RatingsBad", "自己的 ratings／policy 不是物件")
+
+# 1. 讀自己的紀錄調自己（單調、兩個值：§ 15.1、§ 15.3 e）
+ar = mine.get("action:route") or {}
+gap = policy.get("min_gap", 0)
+new_gap = gap
+if ar.get("counter_regressed", 0) > ar.get("counter_improved", 0):
+    new_gap = 1
+elif ar.get("counter_improved_streak", 0) >= 2:
+    new_gap = 0
+
+# 2. 各寫手的評級
+auto, human = {}, {}
+for w in writers:
+    if not isinstance(w, str) or not os.path.isfile(os.path.join(ROOT, w, "_entry")):
+        die("SetBad", "writers 裡的 %r 不是根底下的寫手資料夾" % (w,))
+    m = metainfo(os.path.join(ROOT, w))
+    auto[w] = {k[6:]: v for k, v in (m.get("ratings") or {}).items() if k.startswith("style:") and isinstance(v, dict)}
+    human[w] = {k[6:]: v for k, v in (m.get("human_ratings") or {}).items() if k.startswith("style:") and isinstance(v, dict)}
+
+
+def key(w, style):
+    cell = auto[w].get(style) or {}
+    return RANK.get(cell.get("val"), 0), cell.get("score_avg") if cell.get("score_avg") is not None else -1
+
+
+old = dict(route.get("by_style") or {})
+new = dict(old)
+diff, worst = [], []
+for style in sorted({s for w in writers for s in auto[w]}):
+    ok = [w for w in writers
+          if not ((human[w].get(style) or {}).get("val") == "bad" and (human[w].get(style) or {}).get("counter_ratings", 0) >= 3)]
+    if not ok or all(key(w, style)[0] == 0 for w in ok):
+        new.pop(style, None)                                     # 全部 none（或全被否決）＝不列，走 default
+        continue
+    cur = old.get(style, route["default"])
+    best = max(ok, key=lambda w: (key(w, style), w == cur))       # 平手時現任贏（留原值）
+    if cur in ok and best != cur:
+        (rb, ab), (rc, ac) = key(best, style), key(cur, style)
+        if rb - rc < new_gap or (rb == rc and ab <= ac):          # min_gap 1＝同 val 不換
+            best = cur
+    if best == route["default"]:
+        new.pop(style, None)
+    else:
+        new[style] = best
+    if new.get(style, route["default"]) != old.get(style, route["default"]):
+        diff.append("%s: %s → %s（%s %s ＞ %s %s）" % (style, cur, best, (auto[best].get(style) or {}).get("val"),
+                                                     (auto[best].get(style) or {}).get("score_avg"),
+                                                     (auto[cur].get(style) or {}).get("val") if cur in auto else "—",
+                                                     (auto[cur].get(style) or {}).get("score_avg") if cur in auto else "—"))
+    dims = (auto[best].get(style) or {}).get("dims") or {}
+    scored = {k: v for k, v in dims.items() if isinstance(v, (int, float))}
+    if scored:
+        d = min(sorted(scored), key=lambda k: scored[k])
+        worst.append("%s × %s 最差維度 %s %.2f → 建議動作 %s（這圈不做）" % (best, style, d, scored[d],
+                                                                   (policy.get("dims_to_action") or {}).get(d, "—")))
+
+changed = new != old
+for line in diff or ["route 不變"]:
+    print("optimize: " + line)
+for line in worst:
+    print("optimize: " + line)
+if new_gap != gap:
+    print("optimize: policy.min_gap %s → %s" % (gap, new_gap))
+if dry:
+    sys.exit(0)
+
+try:
+    with open(os.path.join(stack, "epoch.txt"), encoding="utf-8") as f:
+        n = int(f.read().strip() or 0)
+except (OSError, ValueError):
+    n = 0
+params = os.path.join(stack, "epochs", "%03d" % n, "params")
+os.makedirs(params, exist_ok=True)
+shutil.copyfile(route_path, os.path.join(params, "route.json"))
+for w in writers:
+    for f in ("ratings.json", "human.json"):
+        if os.path.isfile(os.path.join(ROOT, w, f)):
+            os.makedirs(os.path.join(params, w), exist_ok=True)
+            shutil.copyfile(os.path.join(ROOT, w, f), os.path.join(params, w, f))
+save(os.path.join(params, "optimize.json"), {"changed": changed, "diff": diff, "min_gap": new_gap})
+if new_gap != gap:
+    p = load(os.path.join(HERE, "policy.json"), "RatingsBad", "policy.json ")
+    p["min_gap"] = new_gap
+    save(os.path.join(HERE, "policy.json"), p)
+if changed:
+    route["by_style"] = new
+    route["routed_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    route["routed_by"] = "train/optimize epoch %d" % n
+    save(route_path, route)

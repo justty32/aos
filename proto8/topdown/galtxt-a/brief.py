@@ -2,7 +2,9 @@
 # brief - 認領一題（cur/ 有就接著做，沒有就把 new/ 第一題搬到 cur/），從 data/ 組出 $AOS_STACK/brief.json（給寫手看）與 rules.json（給 lint 用）
 # 題目是 JSON：{"mode": "scene", place, cast, event, season, time, intent, rank, min_lines, max_lines, drafts} 或 {"mode": "fill", "bench": "Q01", drafts}。
 # 挖空模式從 data/bench/<編號>.json 拿前後文與護欄關鍵詞，不拿 answer（正解只有 pick 讀）。
-# 換了一題（current.txt 記的不是這題）時，先清掉上一題留在 stack 的 drafts/、checks.json、judge.json——不然 write、judge 會把舊的當成已做好。
+# 換了一題（current.txt 記的不是這題）時，先清掉上一題留在 stack 的 drafts/、checks.json、judge.json、route.json——不然 write、judge 會把舊的當成已做好。
+# brief.json 多兩個 key 給 write 選寫手（第三輪）：style＝風格（挖空：說話者的人物卡 type；場景：第一個不是主角的卡司的 type），
+# writer＝題目 JSON 有寫就照抄（題目級覆寫，write 那邊驗資料夾在不在）。
 # 錯：stderr 一行「galtxt-a brief: 代號 原因」、退 1（QuestionMissing、TaskBad、CastMissing、PlaceMissing、BenchMissing、StackMissing）。
 import json, os, shutil, sys
 
@@ -64,7 +66,7 @@ except FileNotFoundError:
     before = None
 if before is not None and before != name:          # 換題：上一題的半成品不留在桌上
     shutil.rmtree(os.path.join(stack, "drafts"), ignore_errors=True)
-    for n in ("checks.json", "judge.json"):
+    for n in ("checks.json", "judge.json", "route.json"):
         try:
             os.remove(os.path.join(stack, n))
         except FileNotFoundError:
@@ -81,6 +83,8 @@ if not isinstance(task, dict) or task.get("mode") not in ("scene", "fill"):
     die("TaskBad", "%s 要是物件、mode 是 scene 或 fill" % name)
 mode = task["mode"]
 drafts = task.get("drafts", 3)
+if "writer" in task and not isinstance(task["writer"], str):
+    die("TaskBad", "writer 要是字串（根底下的寫手資料夾名）")
 if not isinstance(drafts, int) or isinstance(drafts, bool) or not 1 <= drafts <= 9:
     die("TaskBad", "drafts 要是 1～9 的整數")
 
@@ -124,6 +128,10 @@ for who in src["cast"]:
         die("CastMissing", "找不到人物卡：%s" % who)
     cards.append(cast[who])
 lead = next((c for c in cards if c.get("display") == "主角"), None)
+if mode == "fill":
+    task_style = next((c.get("type") for c in cards if c.get("display") == src.get("speaker")), None)
+else:
+    task_style = next((c.get("type") for c in cards if c is not lead), None)
 
 
 def higher(table):
@@ -168,7 +176,9 @@ brief = {"mode": mode, "name": base,
          "cast": brief_cast,
          "season": src.get("season"), "time": src.get("time"), "intent": src.get("intent"),
          "rank": int(rank), "register": {"name": reg, "how": address["registers"].get(reg)},
-         **lines, "drafts": drafts, "samples": samples}
+         **lines, "drafts": drafts, "samples": samples, "style": task_style}
+if "writer" in task:
+    brief["writer"] = task["writer"]
 must, bonus = [], []
 if mode == "fill":
     brief.update(bench=task["bench"], speaker=bench["speaker"], setting=bench.get("setting"), speaker_note=bench.get("speaker_note"),

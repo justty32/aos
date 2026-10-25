@@ -1,0 +1,3 @@
+{"source": "optimize 自己讀、自己改一個 key（min_gap：0＝同 val 比 score_avg 就換、1＝要差一個等級才換）；其餘人寫",
+ "min_gap": 0,
+ "dims_to_action": {"語域": "optimize-prompt", "語意": "optimize-model", "多樣性": "hints", "護欄": "rules"}}

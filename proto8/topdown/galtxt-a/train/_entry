@@ -1,0 +1,3 @@
+#!/bin/sh
+# _entry - 把訓練迴圈的 loop 跑起來（loop 每次跑一格 fsm.json：verify → train → rate → optimize → verify …，verify 退 10 收工）
+exec aos-loop loop.json

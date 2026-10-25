@@ -1,4 +1,4 @@
-{"summary": "固化表的快取：人物卡、地點卡、稱謂階、禁語、語域標記、評測題、範例句；真源是 ~/repo/ai_core/sub_projs/galtxt/corpus，每張表頂層寫 source",
+{"summary": "固化表的快取：人物卡、地點卡、稱謂階、禁語、語域標記、評測題、範例句；真源是 ~/repo/ai_core/sub_projs/galtxt/corpus，每張表頂層寫 source。另有路由表 route.json（不是固化表，train/optimize 寫）",
  "kind": "data",
  "grow_level": 4,
  "resource": "disk",
@@ -11,4 +11,5 @@
  "children": {"bench/": "評測題一題一檔，含正解——只有 pick 讀",
              "cast.json": "人物卡 {名: 卡}",
              "places.json": "地點卡 {名: 卡}",
-             "samples.json": "範例句 {名: {source, lines}}"}}
+             "samples.json": "範例句 {名: {source, lines}}",
+             "route.json": "路由表 {default, by_style}——只有 write.py 讀、只有 train/optimize 寫"}}

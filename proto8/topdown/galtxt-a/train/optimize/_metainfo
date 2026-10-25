@@ -1,0 +1,9 @@
+{"summary": "優化函數（第 2 層）：讀各寫手 _metainfo 裡的評級（含人評）、改 data/route.json；自己每次改動讓驗證分升降多少記在 ratings.json（由 train/verify.py 寫），回滾過就把 policy 的 min_gap 調大一級",
+ "kind": "program", "grow_level": 4, "role": "dev",
+ "time_ms": {"val": 50, "max": 10000}, "resource": ["cpu", "disk"],
+ "side_effect": true, "idempotent": true, "deterministic": true, "interrupt": "safe", "parallel": false,
+ "reads": ["tree:../../writer*/ratings.json", "tree:../../writer*/human.json", "tree:../../data/route.json", "tree:../set.json", "tree:ratings.json", "tree:policy.json", "stack:epoch.txt"],
+ "writes": ["tree:../../data/route.json", "tree:policy.json", "stack:epochs/NNN/params/"],
+ "fs_needs": ["git_tracked"], "callers": 1,
+ "ratings": {"$ref": "ratings.json"},
+ "policy": {"$ref": "policy.json"}}

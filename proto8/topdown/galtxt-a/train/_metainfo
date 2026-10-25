@@ -1,0 +1,12 @@
+{"summary": "最小訓練迴圈：verify（驗證題照路由跑、跟上一個 epoch 比、退步就回滾、把差值記成 optimize 的評級）→ train（訓練題 × 每個寫手強制跑）→ rate（score.json → 各寫手 ratings.json；第一次挑人評樣本）→ optimize（資料夾：ratings → data/route.json）；會改自己這棵樹的幾種檔",
+ "kind": "program", "grow_level": 5, "role": "dev",
+ "time_ms": {"val": 300000, "max": 1800000},
+ "resource": ["llm", "cpu", "disk"],
+ "llm_calls": {"val": 126, "max": 150}, "llm_tokens": {"val": 380000, "max": 450000},
+ "llm_model": "沿用各寫手、評審的 .env", "llm_endpoint": "AOS_BRAIN_URL；沒設＝假腦，整條離線可跑",
+ "side_effect": true, "idempotent": false, "deterministic": false, "interrupt": "resumable", "parallel": false,
+ "lock": ["tree:galtxt-a"],
+ "reads": ["tree:set.json", "tree:budget.json", "tree:../plan/examples/*.json", "tree:../data/route.json", "tree:../writer*/ratings.json", "tree:../writer*/human.json", "tree:optimize/ratings.json", "stack:epochs/*", "stack:epoch.txt"],
+ "writes": ["tree:../data/route.json", "tree:../writer*/ratings.json", "tree:optimize/ratings.json", "tree:optimize/policy.json", "tree:../human/samples.json", "stack:epochs/NNN/{runs/,verify/,verify.json,usage.json,params/}", "stack:verify.jsonl", "stack:epoch.txt", "stack:started_at.json"],
+ "state_key": "stack:epoch.txt",
+ "fs_needs": ["own_stack", "git_tracked"], "callers": 0}

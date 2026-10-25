@@ -1,0 +1,1 @@
+{"source": "human/import 從 human/ratings.json 併；每格整格覆蓋；人評是校正用，optimize 只在 val: bad 且 counter_ratings ≥ 3 時當否決"}

@@ -1,0 +1,5 @@
+{"source": "train/optimize 從 writer*/ratings.json 算（同 val 比 score_avg，再平手留原值）；人可改，但下一次 optimize 會再算一次——要固定某題的寫手，在題目 JSON 寫 writer",
+ "default": "writer",
+ "by_style": {},
+ "routed_at": "2026-10-25T00:00:00Z",
+ "routed_by": "author"}

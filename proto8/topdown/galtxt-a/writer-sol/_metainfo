@@ -1,0 +1,13 @@
+{"summary": "寫手變體：跟 writer 同一套 prompt 與程式（捷徑），只有 .env 換模型；在哪種風格上寫得好看 ratings.json、人怎麼看看 human.json",
+ "kind": "agent", "grow_level": 5, "variant_of": "writer",
+ "time_ms": {"val": 5000, "max": 720000},
+ "resource": ["llm", "cpu"],
+ "llm_calls": {"val": 2, "max": 4}, "llm_tokens": {"val": 7000, "max": 50000},
+ "llm_model": "chatgpt-gpt-6-sol-low（.env）", "llm_endpoint": "AOS_BRAIN_URL；沒設＝假腦（技能表：沒有弱項）",
+ "side_effect": true, "idempotent": false, "deterministic": false, "interrupt": "resumable", "parallel": true,
+ "lock": [{"$env": "AOS_WS", "$prefix": "ws:"}],
+ "reads": ["ws:new/*.json", "ws:rules.json（經 lint）"],
+ "writes": ["ws:out/<題名>", "ws:done/<題名>.json", "stack:history.jsonl", "stack:usage.jsonl", "stack:state.txt", "stack:current.txt", "stack:trace.jsonl", "cell:lint/"],
+ "fs_needs": ["own_stack", "mount"], "callers": 1,
+ "ratings": {"$ref": "ratings.json"},
+ "human_ratings": {"$ref": "human.json"}}

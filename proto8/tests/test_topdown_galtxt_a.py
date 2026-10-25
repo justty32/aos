@@ -1,7 +1,8 @@
 """test_topdown_galtxt_a - 跑 topdown/galtxt-a（由上而下拆的 galgame 台詞管線：brief → write（寫手 agent）→ check（lint）→ judge（評審 agent）→ pick）。
 
-規劃：proto8/topdown/galtxt-a/plan/round1.md § 6.3；第二輪收攏（round2-collapse.md § 4 第 8 步）只改路徑與讀法、斷言不改，另加 collapse 與 metatable --suggest 的測試。全部離線（假腦）；連真模型的那個（test_real_model）localhost:4000 連不上就 skip。"""
-import json, os, subprocess, tempfile, unittest, urllib.request
+規劃：proto8/topdown/galtxt-a/plan/round1.md § 6.3；第二輪收攏（round2-collapse.md § 4 第 8 步）只改路徑與讀法、斷言不改，另加 collapse 與 metatable --suggest 的測試；
+第三輪（round3.md § 11 的 1～11）加 Round3T：傲嬌與 Q16、選路、writer-sol、假腦技能表、rate、optimize、整條訓練、回滾、預算、M7（會寫樹的都在拷貝上跑）。全部離線（假腦）；連真模型的那個（test_real_model）localhost:4000 連不上就 skip。"""
+import json, os, shutil, subprocess, tempfile, unittest, urllib.request
 from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()
@@ -498,6 +499,350 @@ class SuggestT(unittest.TestCase):
         self.assertEqual(self.suggest(G), {})
         md = run(METATABLE, "--suggest", str(G)).stdout
         self.assertIn("候選 0 個", md)
+
+
+STYLE_VALS = {"good", "ok", "bad", "none"}
+TRAIN = G / "train"
+
+
+def tree_copy(t):
+    """整棵 galtxt-a 拷到 t/proto8/topdown/galtxt-a（捷徑照留），t/proto8/lib 指回真的 lib（write.py、judge.py 從 ../../lib 找 agent_tool）；回拷貝的根。
+    訓練、rate、optimize 會寫樹（tree:），所以一律在拷貝上跑。"""
+    g = Path(t) / "proto8" / "topdown" / "galtxt-a"
+    shutil.copytree(G, g, symlinks=True)
+    os.symlink(ROOT / "lib", Path(t) / "proto8" / "lib")
+    return g
+
+
+def jread(p):
+    return json.loads(Path(p).read_text(encoding="utf-8"))
+
+
+def jwrite(p, obj):
+    Path(p).parent.mkdir(parents=True, exist_ok=True)
+    Path(p).write_text(json.dumps(obj, ensure_ascii=False), encoding="utf-8")
+
+
+class Round3T(unittest.TestCase):
+    """第三輪（plan/round3.md § 11 的 1～11）：傲嬌與 Q16、選路、writer-sol、假腦技能表、rate、optimize、整條訓練、回滾、預算、M7。全部假腦。"""
+
+    def setUp(self):
+        self._t = tempfile.TemporaryDirectory()
+        self.addCleanup(self._t.cleanup)
+        self.tmp = Path(self._t.name)
+        self.ws = self.tmp / "ws"
+        (self.ws / "new").mkdir(parents=True)
+        self.stack = self.ws / ".stack"
+
+    def put(self, example, **extra):
+        task = jread(EXAMPLES / example)
+        task.update(extra)
+        jwrite(self.ws / "new" / example, task)
+
+    def galtxt(self, g=G, env=None):
+        return run(EXEC, "--ws", str(self.ws), str(g), env=env, cwd=self.tmp, timeout=300)
+
+    def score(self, name):
+        return jread(self.ws / "out" / name / "score.json")
+
+    # 1. 樹
+    def test_tree(self):
+        sol, w = G / "writer-sol", G / "writer"
+        self.assertTrue(os.access(sol / "_entry", os.X_OK))
+        model = lambda d: [l for l in (d / ".env").read_text().splitlines() if l.startswith("AOS_BRAIN_MODEL=")]   # noqa: E731
+        self.assertNotEqual(model(sol), model(w))
+        self.assertIn("sol", model(sol)[0])
+        for f in ("brain.py", "act.py", "loop.json", "system.txt"):
+            self.assertTrue((sol / f).is_symlink(), f)
+            self.assertEqual(os.readlink(sol / f), "../writer/" + f)
+        self.assertFalse((sol / "fsm.json").is_symlink())               # aos-fsm 的 cwd 是 fsm.json 的實際資料夾：捷徑會跑在 writer/ 裡
+        self.assertEqual((sol / "fsm.json").read_bytes(), (w / "fsm.json").read_bytes())
+        self.assertEqual(os.readlink(sol / "idle"), "../idle")
+        self.assertEqual(os.readlink(sol / "tools" / "lint"), "../../tools/lint")
+        for d in (w, sol):
+            m = jread(d / "_metainfo")
+            self.assertEqual((m["ratings"], m["human_ratings"]), ({"$ref": "ratings.json"}, {"$ref": "human.json"}))
+            for f in ("ratings.json", "human.json"):
+                r = jread(d / f)
+                self.assertIsInstance(r, dict)
+                self.assertIn("source", r)
+                for k, cell in r.items():
+                    if k.startswith("style:"):
+                        self.assertIn(cell["val"], STYLE_VALS)
+                        for v in cell.get("dims", {}).values():
+                            self.assertTrue(v is None or 0 <= v <= 1, (d, k, v))
+        m = jread(TRAIN / "optimize" / "_metainfo")
+        for k in ("ratings", "policy"):
+            self.assertTrue((TRAIN / "optimize" / m[k]["$ref"]).is_file(), k)
+        route = jread(G / "data" / "route.json")
+        for v in [route["default"], *route["by_style"].values()]:
+            self.assertTrue((G / v / "_entry").is_file(), v)
+        q = jread(G / "human" / "questions.json")
+        self.assertTrue(q["tags"] and q["dims"])
+        fsm = jread(TRAIN / "fsm.json")                                   # P-36：格的 timeout_ms ≥ 那格 _metainfo 的 time_ms.max
+        for s, cell in fsm["states"].items():
+            if isinstance(cell["exec"], dict):
+                self.assertGreaterEqual(cell["exec"]["timeout_ms"], cell["exec"]["_metainfo"]["time_ms"]["max"], s)
+        self.assertEqual(jread(TRAIN / "loop.json")["max"], 4 * jread(TRAIN / "budget.json")["max_epochs"] + 1)
+
+    # 2、3. 選路、換題清狀態
+    def test_route(self):
+        self.put("scene-yuzuha.json")
+        r = self.galtxt()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(jread(self.stack / "brief.json")["style"], "傲嬌")
+        self.assertEqual(jread(self.stack / "route.json"), {"writer": "writer", "style": "傲嬌", "by": "default"})
+        self.assertEqual(self.score("scene-yuzuha")["writer"], "writer")
+        g = tree_copy(self.tmp / "t")
+        rt = jread(g / "data" / "route.json")
+        rt["by_style"] = {"傲嬌": "writer-sol"}
+        jwrite(g / "data" / "route.json", rt)
+        shutil.rmtree(self.ws)
+        (self.ws / "new").mkdir(parents=True)
+        self.put("scene.json")
+        self.put("scene-yuzuha.json")                                   # 兩題連放（scene-yuzuha 排前面）：第二題換寫手、route.json 重選
+        r = self.galtxt(g)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(jread(self.stack / "route.json"), {"writer": "writer", "style": "文靜／書卷", "by": "default"})
+        self.assertEqual((self.score("scene")["writer"], self.score("scene-yuzuha")["writer"]), ("writer", "writer-sol"))
+        self.assertEqual(len(os.listdir(self.stack / "writer" / "runs")), 3)
+        self.assertEqual(len(os.listdir(self.stack / "writer-sol" / "runs")), 3)
+        shutil.rmtree(self.ws)
+        (self.ws / "new").mkdir(parents=True)
+        self.put("scene-yuzuha.json")
+        r = self.galtxt(g)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(jread(self.stack / "route.json"), {"writer": "writer-sol", "style": "傲嬌", "by": "by_style"})
+        self.assertTrue((self.stack / "writer-sol" / "runs" / "001").is_dir())
+        shutil.rmtree(self.ws)
+        (self.ws / "new").mkdir(parents=True)
+        self.put("scene-yuzuha.json", writer="writer")                   # 題目級覆寫贏過表
+        r = self.galtxt(g)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(jread(self.stack / "route.json")["by"], "question")
+        self.assertEqual(self.score("scene-yuzuha")["writer"], "writer")
+        shutil.rmtree(self.ws)
+        (self.ws / "new").mkdir(parents=True)
+        self.put("scene-yuzuha.json", writer="nope")
+        r = self.galtxt(g)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("galtxt-a write: RouteBad", r.stderr)
+        self.assertEqual((self.stack / "state.txt").read_text(), "write\n")
+        self.assertFalse((self.stack / "route.json").exists())
+
+    # 4. Q16 離線
+    def test_fill_q16(self):
+        self.put("Q16.json")
+        r = self.galtxt()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        lines = (self.ws / "out" / "Q16" / "answer.txt").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lines), 1, lines)
+        self.assertTrue(lines[0].startswith("宮澤柚葉：「"), lines)
+        s = self.score("Q16")
+        self.assertTrue(s["bench"]["guard_hit"])
+        self.assertEqual((s["writer"], s["style"]), ("writer", "傲嬌"))
+        self.assertIn("KeywordMissing", s["drafts"][2]["tier0"])          # 第 3 份（留白）沒過護欄：護欄 0、沒評＝語意 null
+        self.assertEqual(s["drafts"][2]["dims"], {"語域": 0.5, "語意": None, "護欄": 0.0})
+        self.assertIn("bigram_overlap", s["bench"])
+        quote = jread(G / "data" / "bench" / "Q16.json")["answer"].split("：「", 1)[1]
+        for p in self.stack.rglob("*"):
+            if p.is_file():
+                self.assertNotIn(quote, p.read_text(encoding="utf-8"), p)
+
+    # 5. 假腦技能表、結構分
+    def test_fake_skill_table(self):
+        self.put("scene-yuzuha.json")
+        r = self.galtxt()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        s = self.score("scene-yuzuha")
+        self.assertEqual([d["tier1"] for d in s["drafts"]], [1, 1, 1])
+        for d in s["drafts"]:
+            self.assertIn("NgMark", d["tier1_notes"])
+            self.assertEqual(d["dims"], {"語域": 0.5, "語意": 0.667, "護欄": 1.0})
+        self.assertTrue(0 <= s["dims"]["多樣性"] <= 1)
+        shutil.rmtree(self.ws)
+        (self.ws / "new").mkdir(parents=True)
+        self.put("scene-yuzuha.json", writer="writer-sol")
+        r = self.galtxt()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual([d["tier1"] for d in self.score("scene-yuzuha")["drafts"]], [2, 2, 2])
+        shutil.rmtree(self.ws)                                           # 技能表反過來：sol 寫傲嬌砸、luna 不砸
+        (self.ws / "new").mkdir(parents=True)
+        self.put("scene-yuzuha.json", writer="writer-sol")
+        r = self.galtxt(env={"GALTXT_FAKE_WEAK": "sol:傲嬌"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual([d["tier1"] for d in self.score("scene-yuzuha")["drafts"]], [1, 1, 1])
+
+    # 6. rate 單元
+    def rate(self, g, st):
+        return run("python3", str(g / "train" / "rate.py"), env={"AOS_STACK": str(st) + "/", "AOS_WS": str(self.ws)},
+                   cwd=g / "train")
+
+    def test_rate(self):
+        g = tree_copy(self.tmp / "t")
+        jwrite(g / "human" / "samples.json", [])                         # 在就不動：這個單元不挑樣本
+        r0 = jread(g / "writer" / "ratings.json")
+        r0["style:舊的"] = {"val": "good", "score_avg": 5}
+        jwrite(g / "writer" / "ratings.json", r0)
+        st = self.tmp / "st"
+
+        def score(where, name, writer, style, totals, fail=0, div=0.5):
+            drafts = [{"n": i + 1, "tier0": [], "tier1": 2, "total": t, "dims": {"語域": 1.0, "語意": (t - 2) / 3, "護欄": 1.0}}
+                      for i, t in enumerate(totals)]
+            drafts += [{"n": len(totals) + i + 1, "tier0": ["FormatBad"], "tier1": 0, "total": 0,
+                        "dims": {"語域": 0.0, "語意": None, "護欄": 0.0}} for i in range(fail)]
+            jwrite(st / "epochs" / "001" / where / name / "ws" / "out" / name / "score.json",
+                   {"name": name, "writer": writer, "style": style, "drafts": drafts, "dims": {"多樣性": div}})
+
+        score("runs", "a", "writer", "傲嬌", [4, 4, 4], fail=1, div=0.4)
+        score("runs", "b", "writer", "傲嬌", [5, 3], div=0.6)
+        score("runs", "c", "writer", "文靜／書卷", [3, 3, 3])
+        score("runs", "d", "writer-sol", "傲嬌", [2, 2, 2])
+        score("runs", "e", "writer-sol", "文靜／書卷", [5, 5])            # 2 份＜3＝none
+        score("verify", "v", "writer", "文靜／書卷", [0, 0, 0])            # 驗證題：不算
+        r = self.rate(g, st)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        w, sol = jread(g / "writer" / "ratings.json"), jread(g / "writer-sol" / "ratings.json")
+        t = w["style:傲嬌"]
+        self.assertEqual((t["val"], t["score_avg"], t["score_min"], t["counter_samples"], t["counter_runs"]), ("good", 4.0, 3, 5, 2))
+        self.assertEqual(t["dims"]["護欄"], round(5 / 6, 3))
+        self.assertEqual(t["dims"]["多樣性"], 0.5)
+        self.assertEqual(t["dims"]["語意"], round(sum((x - 2) / 3 for x in [4, 4, 4, 5, 3]) / 5, 3))
+        self.assertEqual((w["style:文靜／書卷"]["val"], w["style:文靜／書卷"]["score_avg"]), ("ok", 3.0))
+        self.assertEqual(w["style:舊的"], {"val": "good", "score_avg": 5})   # 這次沒跑到的風格留舊格
+        self.assertEqual((sol["style:傲嬌"]["val"], sol["style:文靜／書卷"]["val"]), ("bad", "none"))
+        self.assertRegex(t["rated_at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$")
+        strip = lambda d: {k: {k2: v2 for k2, v2 in v.items() if k2 != "rated_at"} if isinstance(v, dict) else v for k, v in d.items()}   # noqa: E731
+        r = self.rate(g, st)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(strip(jread(g / "writer" / "ratings.json")), strip(w))
+        self.assertEqual(jread(g / "human" / "samples.json"), [])
+
+    # 7. optimize 單元
+    def optimize(self, g, *args, st=None):
+        return run(str(g / "train" / "optimize" / "_entry"), *args, env={"AOS_STACK": str(st or self.tmp / "st") + "/"})
+
+    def ratings(self, g, writer, **cells):
+        r = jread(g / writer / "ratings.json")
+        for style, (val, avg) in cells.items():
+            r["style:" + style] = {"val": val, "score_avg": avg, "counter_samples": 6,
+                                   "dims": {"語域": 1.0, "語意": 0.5, "多樣性": 0.3, "護欄": 1.0}}
+        jwrite(g / writer / "ratings.json", r)
+
+    def test_optimize(self):
+        g = tree_copy(self.tmp / "t")
+        route = lambda: jread(g / "data" / "route.json")["by_style"]      # noqa: E731
+        self.ratings(g, "writer", 傲嬌=("ok", 3.0), 文靜=("good", 4.0), 元氣=("good", 4.0), 天然=("none", None))
+        self.ratings(g, "writer-sol", 傲嬌=("good", 4.0), 文靜=("good", 4.5), 元氣=("good", 4.0), 天然=("none", None))
+        before = snapshot(g)
+        r = self.optimize(g, "--dry-run")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("傲嬌: writer → writer-sol", r.stdout)
+        self.assertEqual(snapshot(g), before)                            # --dry-run 不寫
+        self.assertFalse((self.tmp / "st").exists())
+        r = self.optimize(g)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(route(), {"傲嬌": "writer-sol", "文靜": "writer-sol"})   # 同 good 比 score_avg；元氣平手留原值；天然全 none 不列
+        params = self.tmp / "st" / "epochs" / "000" / "params"
+        self.assertEqual(jread(params / "route.json")["by_style"], {})   # 改之前的快照
+        self.assertTrue((params / "writer-sol" / "ratings.json").is_file())
+        self.assertTrue(jread(params / "optimize.json")["changed"])
+        r = self.optimize(g)                                             # 再跑一次：不動
+        self.assertIn("route 不變", r.stdout)
+        self.assertFalse(jread(params / "optimize.json")["changed"])
+        h = jread(g / "writer-sol" / "human.json")                       # 人評否決：bad 且 ≥ 3 筆
+        h["style:傲嬌"] = {"val": "bad", "counter_ratings": 3}
+        jwrite(g / "writer-sol" / "human.json", h)
+        self.optimize(g)
+        self.assertEqual(route(), {"文靜": "writer-sol"})
+        h["style:傲嬌"]["counter_ratings"] = 2                            # < 3 筆不算
+        jwrite(g / "writer-sol" / "human.json", h)
+        self.optimize(g)
+        self.assertEqual(route(), {"傲嬌": "writer-sol", "文靜": "writer-sol"})
+        o = jread(g / "train" / "optimize" / "ratings.json")             # 回滾比進步多＝min_gap 升成 1：同 val 不換
+        o["action:route"] = {"val": "bad", "counter_applied": 1, "counter_improved": 0, "counter_regressed": 1}
+        jwrite(g / "train" / "optimize" / "ratings.json", o)
+        self.ratings(g, "writer", 文靜=("good", 4.9))
+        r = self.optimize(g)
+        self.assertIn("policy.min_gap 0 → 1", r.stdout)
+        self.assertEqual(jread(g / "train" / "optimize" / "policy.json")["min_gap"], 1)
+        self.assertEqual(route()["文靜"], "writer-sol")
+        o["action:route"] = {"val": "good", "counter_applied": 3, "counter_improved": 2, "counter_regressed": 1, "counter_improved_streak": 2}
+        jwrite(g / "train" / "optimize" / "ratings.json", o)
+        self.optimize(g)
+        self.assertEqual(jread(g / "train" / "optimize" / "policy.json")["min_gap"], 0)
+        self.assertNotIn("文靜", route())                                 # 換回 default（writer）＝不列
+        r = self.optimize(g, "--bogus")
+        self.assertEqual(r.returncode, 1)
+        self.assertRegex(r.stderr, r"^optimize: FlagUnknown \S")
+
+    # 8、11. 整條訓練＋M7
+    def test_train_whole(self):
+        g = tree_copy(self.tmp / "t")
+        jwrite(g / "train" / "budget.json", dict(jread(g / "train" / "budget.json"), max_epochs=1))
+        (g / "human" / "samples.json").unlink(missing_ok=True)
+        before = snapshot(g)
+        r = run(EXEC, "--ws", str(self.ws), str(g / "train"), cwd=self.tmp, timeout=600)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        e0, e1 = (jread(self.stack / "epochs" / n / "verify.json") for n in ("000", "001"))
+        self.assertGreater(e1["score_mean"], e0["score_mean"])
+        w, sol = jread(g / "writer" / "ratings.json"), jread(g / "writer-sol" / "ratings.json")
+        self.assertEqual((w["style:傲嬌"]["val"], w["style:文靜／書卷"]["val"], sol["style:傲嬌"]["val"]), ("ok", "good", "good"))
+        self.assertEqual(jread(g / "data" / "route.json")["by_style"], {"傲嬌": "writer-sol"})
+        a = jread(g / "train" / "optimize" / "ratings.json")["action:route"]
+        self.assertGreater(a["delta_avg"], 0)
+        self.assertEqual((a["counter_applied"], a["val"]), (1, "good"))
+        samples = jread(g / "human" / "samples.json")
+        self.assertTrue(1 <= len(samples) <= 6)
+        for s in samples:
+            self.assertTrue({"id", "team", "scene", "lines", "produced_by", "auto_scores", "round"} <= set(s), s)
+            self.assertTrue(s["id"].startswith("a-"))
+            self.assertEqual(s["team"], "a")
+            self.assertTrue(1 <= len(s["lines"]) <= 8)
+            self.assertTrue((g / s["produced_by"] / "_entry").is_file())
+            self.assertTrue({"cast", "place", "event", "style", "intent"} <= set(s["scene"]))
+        self.assertEqual(len({s["id"] for s in samples}), len(samples))
+        self.assertEqual(len({(s["produced_by"], s["scene"]["style"]) for s in samples}), 4)   # 四個（寫手, 風格）格都有
+        self.assertEqual(len(jl(self.stack / "verify.jsonl")), 2)
+        self.assertEqual([t["state"] for t in jl(self.stack / "trace.jsonl")], ["verify", "train", "rate", "optimize", "verify"])
+        after = snapshot(g)                                               # M7：只有量出來的旁檔與路由表變
+        changed = {k for k in set(before) | set(after) if before.get(k) != after.get(k)}
+        self.assertEqual(changed, {"writer/ratings.json", "writer-sol/ratings.json", "data/route.json",
+                                   "train/optimize/ratings.json", "human/samples.json"})
+        r = run(EXEC, "--ws", str(self.ws), str(g / "train"), cwd=self.tmp, timeout=600)   # 收工後再叫：verify 照舊退 10、不重跑
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(len(jl(self.stack / "verify.jsonl")), 2)
+
+    # 9. 回滾
+    def test_regressed_rolls_back(self):
+        g = tree_copy(self.tmp / "t")
+        st = self.tmp / "st"
+        (st / "epochs" / "001" / "params").mkdir(parents=True)
+        (st / "epoch.txt").write_text("1\n")
+        jwrite(st / "epochs" / "000" / "verify.json", {"epoch": 0, "score_mean": 4.0})
+        old = jread(g / "data" / "route.json")
+        jwrite(st / "epochs" / "001" / "params" / "route.json", old)
+        jwrite(st / "epochs" / "001" / "params" / "optimize.json", {"changed": True})
+        jwrite(g / "data" / "route.json", dict(old, by_style={"傲嬌": "writer-sol"}))
+        r = run(EXEC, str(g / "train" / "fsm.json") + "#/states/verify/exec",
+                env={"AOS_STACK": str(st) + "/", "AOS_WS": str(self.ws), "GALTXT_FAKE_WEAK": "sol:傲嬌"}, timeout=300)
+        self.assertEqual(r.returncode, 10, r.stderr)
+        self.assertIn("train: Regressed epoch 1", r.stderr)
+        self.assertEqual(jread(g / "data" / "route.json"), old)
+        a = jread(g / "train" / "optimize" / "ratings.json")["action:route"]
+        self.assertEqual((a["counter_regressed"], a["counter_applied"], a["val"]), (1, 1, "bad"))
+        self.assertEqual((st / "epoch.txt").read_text(), "1\n")
+
+    # 10. 預算
+    def test_budget_spent(self):
+        g = tree_copy(self.tmp / "t")
+        jwrite(g / "train" / "budget.json", dict(jread(g / "train" / "budget.json"), max_calls=3))
+        route = (g / "data" / "route.json").read_bytes()
+        r = run(EXEC, "--ws", str(self.ws), str(g / "train"), cwd=self.tmp, timeout=300)
+        self.assertEqual(r.returncode, 2, r.stderr)
+        self.assertIn("train: BudgetSpent max_calls", r.stderr)
+        self.assertEqual((self.stack / "state.txt").read_text(), "train\n")
+        self.assertEqual((g / "data" / "route.json").read_bytes(), route)
 
 
 if __name__ == "__main__":
