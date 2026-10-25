@@ -2,11 +2,11 @@
 # pick - 合分、挑一份交卷：總分＝Tier 1＋Tier 2（0～5），Tier 0 不過＝0；嚴格比大小、平手編號小的贏（同樣的候選永遠挑同一個）
 # 寫 $AOS_WS/out/<題名>/answer.txt 與 score.json（先寫 . 開頭暫存資料夾再改名，N-05），題目 cur/ → done/。
 # 全部沒過 Tier 0 時照樣挑違規最少的那份、score.json 標 pass: false、退 0（預料到的正常結果，N-43）。
-# 挖空模式再讀 ../data/bench/<編號>.json 的 answer：記字元二元組重疊率（只記錄、不計分）與護欄關鍵詞有沒有全中。
+# 挖空模式再讀 data/bench/<編號>.json 的 answer：記字元二元組重疊率（只記錄、不計分）與護欄關鍵詞有沒有全中。
 # 錯：stderr 一行「galtxt-a pick: 代號 原因」、退 1——StackMissing、StateBad（checks.json、drafts/、current.txt 缺或壞）。
 import json, os, shutil, sys
 
-DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "data")
+DATA = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data")
 
 
 def die(code, reason):

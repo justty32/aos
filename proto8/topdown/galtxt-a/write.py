@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# write - 把 $AOS_STACK/brief.json 交給寫手 agent（tools/writer）跑 N 次，答案收成 $AOS_STACK/drafts/<i>.txt
+# write - 把 $AOS_STACK/brief.json 交給寫手 agent（writer/）跑 N 次，答案收成 $AOS_STACK/drafts/<i>.txt
 # 每次一個新小格 $AOS_STACK/writer/runs/NNN/（ws/ 放題目與 rules.json、stack/ 是寫手自己的），用 lib/agent/agent_tool.py 的 fresh_cell、run_agent。
 # 題目＝brief.json 去掉 drafts、加一個 hint（第 i 個角度，固定輪著用：借景、動作、留白），三份草稿才不是同一句換字。
 # 已經有的 drafts/<i>.txt 跳過：這格被殺掉重跑時，不重付已經寫好的草稿（P-20 接著做）。
@@ -7,7 +7,7 @@
 #     AgentFailed／AnswerMissing（寫手退非 0 或沒答案；那一行由 agent_tool 印，現場留在小格裡）。
 import json, os, shutil, sys
 
-sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "lib", "agent")))   # proto8/lib/agent
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "lib", "agent")))   # proto8/lib/agent
 import agent_tool  # noqa: E402
 
 NAME = "galtxt-a write"
@@ -44,7 +44,7 @@ for i in range(1, n + 1):
     cell = agent_tool.fresh_cell(os.path.join(stack, "writer"))
     os.makedirs(os.path.join(cell, "ws"))
     shutil.copyfile(rules, os.path.join(cell, "ws", "rules.json"))   # 寫手的 lint 從它自己的 $AOS_WS/rules.json 讀
-    answer = agent_tool.run_agent(NAME, "tools/writer", json.dumps(task, ensure_ascii=False, indent=1) + "\n", cell,
+    answer = agent_tool.run_agent(NAME, "writer", json.dumps(task, ensure_ascii=False, indent=1) + "\n", cell,
                                   question=name)
     tmp = os.path.join(drafts, ".%d.txt" % i)     # N-05
     with open(tmp, "w", encoding="utf-8") as f:

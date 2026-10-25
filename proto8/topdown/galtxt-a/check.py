@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# check - $AOS_STACK/drafts/ 每份草稿用 tools/lint 過一次（--ws $AOS_STACK：規則在頂層 stack 的 rules.json），收成 $AOS_STACK/checks.json
+# check - $AOS_STACK/drafts/ 每份草稿用 tools/lint（cwd＝galtxt-a 根）過一次（--ws $AOS_STACK：規則在頂層 stack 的 rules.json），收成 $AOS_STACK/checks.json
 # checks.json：{"<N>": lint 那一行 JSON}。這是不信任寫手的硬閘門（寫手自己的 lint 是入口自檢，這裡是出口保證）。
 # 錯：stderr 一行「galtxt-a check: 代號 原因」、退 1——StackMissing、DraftsMissing（沒有草稿）、LintFailed（lint 退非 0 或沒回 JSON）。
 import json, os, subprocess, sys

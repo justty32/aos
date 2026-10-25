@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 # metatable - 把一棵資料夾樹裡所有 _metainfo 收成一張表（markdown 或 --json）
-"""用法：metatable [--json] [ROOT]。ROOT 沒給＝$AOS_WS，再沒有＝cwd。
+"""用法：metatable [--json] [--suggest] [ROOT]。ROOT 沒給＝$AOS_WS，再沒有＝cwd。
 走整棵樹（不跟捷徑進去，捷徑本身列一行）；跳過 . 開頭的資料夾。
 另外找 fsm.json／loop.json 內嵌單子（有 argv 的物件）的 _metainfo key。
-錯：ROOT 不是資料夾＝stderr「metatable: RootMissing …」退 1；
+--suggest：表後面多一張「收攏候選表」（--json 時放 summary.suggest），判準是 plan/round2-collapse.md § 1，
+    只列、不做；規則在旁邊的 suggest.py。
+錯：ROOT 不是資料夾＝stderr「metatable: RootMissing …」退 1；不認得的旗標＝FlagUnknown 退 1；
     某份 _metainfo 不是 JSON＝表裡標「壞」、stderr「metatable: MetainfoBad 路徑」，照樣輸出、退 0。"""
 import json, os, sys
+
+sys.dont_write_bytecode = True                     # 不在樹裡留 __pycache__
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import suggest  # noqa: E402
 
 COLS = ["path", "depth", "kind", "grow_level", "summary", "time_ms", "resource", "llm_calls", "llm_tokens",
         "deterministic", "idempotent", "side_effect", "interrupt", "parallel", "fs_needs", "callers"]
@@ -179,11 +185,15 @@ def render_md(nodes, s):
 
 
 def main(argv):
-    as_json = False
+    as_json = want_suggest = False
     rest = []
     for a in argv:
         if a == "--json":
             as_json = True
+        elif a == "--suggest":
+            want_suggest = True
+        elif a.startswith("--"):
+            fail("FlagUnknown", "不認得 %s（metatable [--json] [--suggest] [ROOT]）" % a)
         else:
             rest.append(a)
     if len(rest) > 1:
@@ -195,10 +205,15 @@ def main(argv):
     for b in bads:
         sys.stderr.write("metatable: MetainfoBad %s\n" % b)
     s = summarize(nodes)
+    if want_suggest:
+        s["suggest"] = suggest.suggest(root, nodes)
     if as_json:
         print(json.dumps({"nodes": nodes, "summary": s}, ensure_ascii=False))
     else:
         print(render_md(nodes, s))
+        if want_suggest:
+            print()
+            print(suggest.render_md(s["suggest"]))
     return 0
 
 

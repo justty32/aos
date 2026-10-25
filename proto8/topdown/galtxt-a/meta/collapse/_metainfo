@@ -1,0 +1,7 @@
+{"summary": "把一棵 aos 資料夾樹往回收一級：inline（資料夾格→腳本＋內嵌單子）、unwrap（併純容器）、table（資料表資料夾→一份 JSON）、dedupe（同內容葉片→捷徑）；--dry-run 只印",
+ "kind": "program", "grow_level": 4,
+ "time_ms": {"val": 100, "max": 30000}, "resource": ["cpu", "disk"],
+ "side_effect": true, "idempotent": false, "deterministic": true, "interrupt": "safe", "parallel": false,
+ "reads": ["cwd:**/_metainfo", "cwd:**/fsm.json", "cwd:**/loop.json", "cwd:**/_entry", "cwd:**/*.py"],
+ "writes": ["cwd:<目標>", "cwd:<CFG>", "cwd:**/_metainfo（children、reads、callers）", "cwd:**/<捷徑>"],
+ "fs_needs": ["mount"], "callers": 0}

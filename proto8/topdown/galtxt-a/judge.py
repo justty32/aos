@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# judge - 過了護欄（checks.json 的 pass）的草稿逐份交給評審 agent（tools/judge）打 0～3 的語意分，收成 $AOS_STACK/judge.json
+# judge - 過了護欄（checks.json 的 pass）的草稿逐份交給評審 agent（grader/）打 0～3 的語意分，收成 $AOS_STACK/judge.json
 # 每份一個新小格 $AOS_STACK/judge/runs/NNN/（lib/agent/agent_tool.py 的 fresh_cell、run_agent）；judge.json 裡已有的那份不重評（重跑接著做）。
 # 題目＝場景條件（或挖空題的前後文與評分要點的紅線）＋這份草稿；不含正解（brief.json 本來就沒有）。
 # 答案要有「分數：N」（N 是 0～3）與「理由：…」；解不出＝ReplyBad 停（出口保證；重跑會開新小格、不帶上次的回答）。
@@ -7,7 +7,7 @@
 # 錯：stderr 一行「galtxt-a judge: 代號 原因」、退 1——StackMissing、StateBad、ReplyBad、AgentFailed／AnswerMissing（由 agent_tool 印）。
 import json, os, re, sys
 
-sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "lib", "agent")))   # proto8/lib/agent
+sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "lib", "agent")))   # proto8/lib/agent
 import agent_tool  # noqa: E402
 
 NAME = "galtxt-a judge"
@@ -68,7 +68,7 @@ for n in sorted(checks, key=int):
     with open(os.path.join(stack, "drafts", n + ".txt"), encoding="utf-8") as f:
         draft = f.read()
     cell = agent_tool.fresh_cell(os.path.join(stack, "judge"))
-    reply = agent_tool.run_agent(NAME, "tools/judge", task(draft), cell, question=name[:-5] + ".txt" if name.endswith(".json") else name + ".txt")
+    reply = agent_tool.run_agent(NAME, "grader", task(draft), cell, question=name[:-5] + ".txt" if name.endswith(".json") else name + ".txt")
     m = SCORE.search(reply)
     if not m:
         die("ReplyBad", "第 %s 份的評審回覆沒有「分數：0～3」（現場在 %s）" % (n, cell))

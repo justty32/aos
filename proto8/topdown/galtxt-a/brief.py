@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# brief - 認領一題（cur/ 有就接著做，沒有就把 new/ 第一題搬到 cur/），從 ../data 組出 $AOS_STACK/brief.json（給寫手看）與 rules.json（給 lint 用）
+# brief - 認領一題（cur/ 有就接著做，沒有就把 new/ 第一題搬到 cur/），從 data/ 組出 $AOS_STACK/brief.json（給寫手看）與 rules.json（給 lint 用）
 # 題目是 JSON：{"mode": "scene", place, cast, event, season, time, intent, rank, min_lines, max_lines, drafts} 或 {"mode": "fill", "bench": "Q01", drafts}。
 # 挖空模式從 data/bench/<編號>.json 拿前後文與護欄關鍵詞，不拿 answer（正解只有 pick 讀）。
 # 換了一題（current.txt 記的不是這題）時，先清掉上一題留在 stack 的 drafts/、checks.json、judge.json——不然 write、judge 會把舊的當成已做好。
 # 錯：stderr 一行「galtxt-a brief: 代號 原因」、退 1（QuestionMissing、TaskBad、CastMissing、PlaceMissing、BenchMissing、StackMissing）。
 import json, os, shutil, sys
 
-DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "data")
+DATA = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data")
 
 
 def die(code, reason):
@@ -112,12 +112,17 @@ forbidden = load(os.path.join(DATA, "forbidden.json"), "TaskBad", "禁語表")
 styles = load(os.path.join(DATA, "styles.json"), "TaskBad", "語域表")
 if rank not in address["ranks"]:
     die("TaskBad", "rank %s 不在稱謂階表裡（0～5）" % rank)
-place = load(os.path.join(DATA, "places", src["place"] + ".json"), "PlaceMissing", "地點卡")
+place = load(os.path.join(DATA, "places.json"), "TaskBad", "地點表").get(src["place"])
+if not isinstance(place, dict):
+    die("PlaceMissing", "找不到地點卡：%s" % src["place"])
+cast = load(os.path.join(DATA, "cast.json"), "TaskBad", "人物表")
 cards = []
 for who in src["cast"]:
     if not isinstance(who, str) or "/" in who or who.startswith("."):
         die("TaskBad", "cast 裡要是人名字串")
-    cards.append(load(os.path.join(DATA, "cast", who + ".json"), "CastMissing", "人物卡"))
+    if not isinstance(cast.get(who), dict):
+        die("CastMissing", "找不到人物卡：%s" % who)
+    cards.append(cast[who])
 lead = next((c for c in cards if c.get("display") == "主角"), None)
 
 
@@ -151,10 +156,10 @@ for c in cards:
     brief_cast.append(one)
 
 samples = []
+sample_table = load(os.path.join(DATA, "samples.json"), "TaskBad", "範例句表")
 for c in cards:
-    p = os.path.join(DATA, "samples", c["name"] + ".json")
-    if os.path.exists(p):
-        samples += load(p, "TaskBad", "範例句")["lines"]
+    if c["name"] in sample_table:
+        samples += sample_table[c["name"]]["lines"]
 
 reg = address["ranks"][rank]["register"]
 base = name[:-5] if name.endswith(".json") else name

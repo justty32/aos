@@ -1,7 +1,0 @@
-{"summary": "合 Tier 1＋Tier 2 分、嚴格比大小、平手編號小的贏；寫 out/<題名>/{answer.txt,score.json}，題目 cur/ → done/；挖空模式再跟正解比",
- "kind": "program", "grow_level": 3,
- "time_ms": {"val": 30, "max": 10000}, "resource": ["cpu", "disk"],
- "side_effect": true, "idempotent": true, "deterministic": true, "interrupt": "safe", "parallel": false,
- "reads": ["stack:brief.json", "stack:checks.json", "stack:judge.json", "stack:drafts/*.txt", "stack:current.txt", "data:bench/<編號>.json#/answer"],
- "writes": ["ws:out/<題名>/answer.txt", "ws:out/<題名>/score.json", "ws:done/<題名>.json"],
- "fs_needs": [], "callers": 1}

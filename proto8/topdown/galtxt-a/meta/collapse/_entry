@@ -1,0 +1,522 @@
+#!/usr/bin/env python3
+# collapse - 把一棵 aos 資料夾樹往回收一級：資料夾格縮成腳本＋內嵌單子、併純容器、資料表資料夾併成一份 JSON、同內容葉片換捷徑
+"""用法（路徑都從 cwd 算；--root 沒給＝cwd，是「整棵樹」的範圍：找捷徑、找誰提到、改 reads 都只在這底下）：
+
+  collapse [--dry-run] [--root R] inline CFG#/指標            B-2：那格 ["aos-exec", "X"]／"X" → ["python3", "X.py"]＋X/_metainfo 併進那格
+  collapse [--dry-run] [--root R] unwrap C [--name N]         A-1：純容器 C（只有一個子資料夾）拿掉，子資料夾上提一層（改名 N）
+  collapse [--dry-run] [--root R] table D [--source S]        B-3：資料表資料夾 D/ → D.json（key＝原檔名去 .json，頂層 source）
+  collapse [--dry-run] [--root R] dedupe REAL COPY...         B-4：COPY 跟 REAL 一字不差 → COPY 換成指向 REAL 的相對捷徑
+
+判準與為什麼：galtxt-a/plan/round2-collapse.md § 1、§ 5。搬法照 thinking/2026-10-24-fn-grow.md「怎麼搬才不改行為」：
+先寫新的、最後才改呼叫方；JSON 先寫 . 開頭暫存檔再改名（N-05）；_metainfo 跟著走（inline 併進單子、grow_level 改 0；
+table 併進上一層 _metainfo 的 children；dedupe 把 callers 加到真身）。
+不做（印成「手改清單」，要人改）：腳本裡的 __file__／sys.path／DATA、讀 AOS_CF／AOS_CD／AOS_CO、相對 cwd 的路徑字串
+（inline 之後 cwd 從 X/ 變成 CFG 所在的資料夾）、腳本裡寫死的資料夾名；測試。
+--dry-run：印新檔全文、改的檔 diff、搬／刪清單、手改清單，什麼都不寫。
+錯：stderr 一行「collapse: 代號 原因」、退 1、什麼都不寫——ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、TargetBad、NameBad、WriteFailed。"""
+import difflib, hashlib, json, os, re, shutil, sys
+
+USAGE = ("collapse [--dry-run] [--root R] inline CFG#/指標 ｜ unwrap C [--name N] ｜ table D [--source S] ｜ "
+         "dedupe REAL COPY...")
+BLOCK = {"own_stack", "tool_json", "isolation", "lock", "shared_write", "permission", "large", "binary"}   # N-1：檔案系統特性，有就不縮
+INTERP = {"python3": ("python3", ".py"), "python": ("python3", ".py"), "sh": ("sh", ".sh"), "bash": ("bash", ".sh")}
+SCRIPT_FILES = ("_entry",)
+SCRIPT_EXTS = (".py", ".sh")
+
+
+class Fail(Exception):
+    def __init__(self, code, msg):
+        super().__init__(msg)
+        self.code = code
+
+
+# ---------- JSON ----------
+
+def load(path, missing="CfgMissing"):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise Fail(missing, "找不到 %s" % path)
+    except (OSError, ValueError) as e:
+        raise Fail("CfgBad", "%s 讀不了：%s" % (path, e))
+
+
+def read(path):
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+def dump(v, ind=0, width=100):
+    """塞得進一行（含縮排）就一行，不然物件／陣列一項一行（同 proto8/grow/aos-grow）。"""
+    flat = json.dumps(v, ensure_ascii=False, separators=(", ", ": "))
+    if len(flat) + ind <= width or not isinstance(v, (dict, list)) or not v:
+        return flat
+    pad = " " * (ind + 1)
+    if isinstance(v, dict):
+        items = ["%s: %s" % (json.dumps(k, ensure_ascii=False), dump(x, ind + 2 + len(json.dumps(k, ensure_ascii=False)), width))
+                 for k, x in v.items()]
+        return "{" + (",\n" + pad).join(items) + "}"
+    return "[" + (",\n" + pad).join(dump(x, ind + 1, width) for x in v) + "]"
+
+
+def text(v):
+    return dump(v) + "\n"
+
+
+def split_ptr(ptr):
+    if not ptr.startswith("/"):
+        raise Fail("ArgumentsBad", "指標要 / 開頭：%r" % ptr)
+    return [p.replace("~1", "/").replace("~0", "~") for p in ptr[1:].split("/")]
+
+
+def get_parent(doc, parts, where):
+    cur = doc
+    for p in parts[:-1]:
+        if isinstance(cur, dict) and p in cur:
+            cur = cur[p]
+        elif isinstance(cur, list) and p.isdigit() and int(p) < len(cur):
+            cur = cur[int(p)]
+        else:
+            raise Fail("CfgMissing", "%s 指不到" % where)
+    last = parts[-1]
+    if isinstance(cur, dict) and last in cur:
+        return cur, last
+    if isinstance(cur, list) and last.isdigit() and int(last) < len(cur):
+        return cur, int(last)
+    raise Fail("CfgMissing", "%s 指不到" % where)
+
+
+def fs_needs(meta):
+    v = meta.get("fs_needs") if isinstance(meta, dict) else None
+    return set(v) if isinstance(v, list) else set()
+
+
+# ---------- 計畫：先算好，--dry-run 只印，否則照做 ----------
+
+class Plan:
+    def __init__(self):
+        self.moves, self.writes, self.links, self.removes = [], [], [], []   # (從, 到)、(路徑, 新, 舊或 None)、(路徑, 目標)、路徑
+        self.hand = []                                                         # 手改清單（字串）
+
+    def show(self, out):
+        for a, b in self.moves:
+            out.write("搬 %s → %s\n" % (a, b))
+        for path, new, old in self.writes:
+            if old is None:
+                out.write("新檔 %s：\n%s" % (path, new))
+            else:
+                out.writelines(difflib.unified_diff(old.splitlines(True), new.splitlines(True), path, path))
+        for p in self.removes:
+            out.write("刪 %s\n" % p)
+        for p, t in self.links:
+            out.write("捷徑 %s → %s\n" % (p, t))
+        self.show_hand(out)
+
+    def show_hand(self, out):
+        if self.hand:
+            out.write("手改清單（工具不改，要人看）：\n")
+            for h in self.hand:
+                out.write("  " + h + "\n")
+
+    def apply(self):
+        try:
+            for a, b in self.moves:                                       # 先放好新位置
+                os.rename(a, b)
+            new_first = sorted(self.writes, key=lambda w: w[2] is not None)   # 新檔先寫，呼叫方最後改（N-05）
+            for path, new, _ in new_first:
+                tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".collapse")
+                with open(tmp, "w", encoding="utf-8") as f:
+                    f.write(new)
+                os.replace(tmp, path)
+            for p in self.removes:
+                if os.path.islink(p) or not os.path.isdir(p):
+                    os.remove(p)
+                elif p.endswith(os.sep):                                  # 結尾 / ＝只在空了才刪（rmdir）
+                    os.rmdir(p)
+                else:
+                    shutil.rmtree(p)
+            for p, t in self.links:
+                if os.path.islink(p):
+                    tmp = os.path.join(os.path.dirname(p), "." + os.path.basename(p) + ".collapse")
+                    os.symlink(t, tmp)
+                    os.replace(tmp, p)
+                else:
+                    os.symlink(t, p)
+        except OSError as e:
+            raise Fail("WriteFailed", str(e))
+
+
+# ---------- 掃樹 ----------
+
+def walk_tree(root):
+    """(資料夾, 子資料夾, 檔, 捷徑)：不跟捷徑進去、跳過 . 開頭的資料夾。"""
+    for here, subs, files in os.walk(root, followlinks=False):
+        subs.sort()
+        links = [s for s in subs if os.path.islink(os.path.join(here, s))]
+        links += [f for f in files if os.path.islink(os.path.join(here, f))]
+        subs[:] = [s for s in subs if s not in links and not s.startswith(".")]
+        yield here, subs, sorted(f for f in files if f not in links), sorted(links)
+
+
+def scripts(root):
+    for here, _, files, _ in walk_tree(root):
+        for f in files:
+            if f in SCRIPT_FILES or f.endswith(SCRIPT_EXTS):
+                yield os.path.join(here, f)
+
+
+def grep(root, pattern, why):
+    """腳本裡命中 pattern 的行 → 手改清單項目"""
+    out = []
+    rx = re.compile(pattern)
+    for p in scripts(root):
+        try:
+            lines = read(p).splitlines()
+        except (OSError, UnicodeDecodeError):
+            continue
+        for i, line in enumerate(lines, 1):
+            if rx.search(line):
+                out.append("%s:%d（%s）%s" % (os.path.relpath(p), i, why, line.strip()[:120]))
+    return out
+
+
+def relink(root, mapping, plan):
+    """mapping(絕對路徑) → 新絕對路徑；整棵樹的相對捷徑照新位置改寫目標（捷徑本身被搬也算）。"""
+    for here, _, _, links in walk_tree(root):
+        for name in links:
+            link = os.path.join(here, name)
+            old = os.readlink(link)
+            if os.path.isabs(old):
+                continue
+            target = os.path.normpath(os.path.join(here, old))
+            new_link, new_target = mapping(link), mapping(target)
+            new = os.path.relpath(new_target, os.path.dirname(new_link))
+            if new != old or new_link != link:
+                plan.links.append((os.path.relpath(new_link), new))
+
+
+def under(p, base):
+    return p == base or p.startswith(base + os.sep)
+
+
+def remap(src, dst):
+    def f(p):
+        return dst + p[len(src):] if under(p, src) else p
+    return f
+
+
+# ---------- inline（B-2） ----------
+
+def inline(spec, root, plan):
+    cfg, sep, ptr = spec.partition("#")
+    if not sep or not ptr:
+        raise Fail("ArgumentsBad", "inline 要 CFG#/指標：%r" % spec)
+    doc = load(cfg)
+    old_text = read(cfg)
+    parent, key = get_parent(doc, split_ptr(ptr), spec)
+    cell = parent[key]
+    if isinstance(cell, str):
+        name, rest = cell, {}
+    elif isinstance(cell, dict) and isinstance(cell.get("argv"), list) and len(cell["argv"]) == 2 \
+            and cell["argv"][0] == "aos-exec" and isinstance(cell["argv"][1], str):
+        name, rest = cell["argv"][1], {k: v for k, v in cell.items() if k != "argv"}
+    else:
+        raise Fail("TargetBad", "%s 不是 \"X\" 也不是 {\"argv\": [\"aos-exec\", \"X\"]}" % spec)
+    if "_metainfo" in rest:
+        raise Fail("TargetBad", "%s 那格已經有 _metainfo（已經是內嵌單子）" % spec)
+    cdir = os.path.dirname(os.path.abspath(cfg))
+    d = os.path.join(cdir, name)
+    if os.path.islink(d):
+        raise Fail("TargetBad", "%s 是捷徑（真身在別處、可能被別人叫），不縮" % d)
+    if not os.path.isdir(d):
+        raise Fail("TargetBad", "%s 不是資料夾" % d)
+    entry = os.path.join(d, "_entry")
+    if not (os.path.isfile(entry) and os.access(entry, os.X_OK)):
+        raise Fail("TargetBad", "%s/_entry 不是可執行的腳本（單子入口用 aos-grow down）" % name)
+    names = sorted(os.listdir(d))
+    extra_files = [n for n in names if n not in ("_entry", "_metainfo") and not os.path.isdir(os.path.join(d, n))]
+    if extra_files:
+        raise Fail("TargetBad", "%s/ 有伴隨檔 %s（N-2：不縮）" % (name, "、".join(extra_files)))
+    subdirs = [n for n in names if os.path.isdir(os.path.join(d, n))]
+    meta = None
+    if "_metainfo" in names:
+        meta = load(os.path.join(d, "_metainfo"))
+        if not isinstance(meta, dict):
+            raise Fail("CfgBad", "%s/_metainfo 不是物件" % name)
+        if meta.get("kind") == "agent":
+            raise Fail("TargetBad", "%s 是 agent（N-1 own_stack）" % name)
+        hit = fs_needs(meta) & BLOCK
+        if hit:
+            raise Fail("TargetBad", "%s 的 fs_needs 有 %s（N-1：不縮）" % (name, "、".join(sorted(hit))))
+        if isinstance(meta.get("callers"), int) and meta["callers"] >= 2:
+            raise Fail("TargetBad", "%s 的 callers 是 %d（N-3：共用的真身不縮）" % (name, meta["callers"]))
+    first = read(entry).splitlines()[0] if read(entry) else ""
+    m = re.match(r"#!\s*(?:/usr/bin/env\s+)?(?:\S*/)?(\w+)", first)
+    if not m or m.group(1) not in INTERP:
+        raise Fail("TargetBad", "%s/_entry 的 shebang 認不得：%r（只收 python3、sh、bash）" % (name, first))
+    interp, ext = INTERP[m.group(1)]
+    script = os.path.join(cdir, name + ext)
+    if os.path.exists(script):
+        raise Fail("NameBad", "%s 已經有了" % os.path.relpath(script))
+    new_cell = {"argv": [interp, name + ext]}
+    new_cell.update(rest)
+    if meta is not None:
+        nm = dict(meta)
+        nm["grow_level"] = 0
+        new_cell["_metainfo"] = nm
+    parent[key] = new_cell
+    plan.moves.append((os.path.relpath(entry), os.path.relpath(script)))
+    plan.writes.append((cfg, text(doc), old_text))
+    if meta is not None:
+        plan.removes.append(os.path.relpath(os.path.join(d, "_metainfo")))
+    if subdirs:
+        plan.hand.append("%s/ 還剩 %s：不是函數了，照 A-1 用 unwrap 收（這次只拿掉 _entry、_metainfo）" % (name, "、".join(subdirs)))
+    else:
+        plan.removes.append(os.path.relpath(d) + os.sep)
+    # 手改清單：位置相關的值（fn-grow「怎麼搬才不改行為」第 2 條）
+    rel = os.path.relpath(entry)
+    src = read(entry).splitlines()
+    for i, line in enumerate(src, 1):
+        code = line.split("#", 1)[0] if not line.lstrip().startswith("#") else ""
+        if "__file__" in code:
+            plan.hand.append("%s:%d（__file__：腳本從 %s/ 搬到 %s，往上找的層數要少一層）%s"
+                             % (rel, i, name, os.path.relpath(cdir) or ".", line.strip()[:120]))
+        if re.search(r"AOS_C[FDO]\b", code):
+            plan.hand.append("%s:%d（AOS_CF／AOS_CD／AOS_CO：少一跳 aos-exec，值會變）%s" % (rel, i, line.strip()[:120]))
+        for lit in re.findall(r"[\"']([^\"'\s]*/[^\"'\s]*)[\"']", code):
+            if lit != "/" and not lit.startswith("/") and "://" not in lit:
+                plan.hand.append("%s:%d（相對 cwd 的路徑 %r：cwd 從 %s/ 變成 CFG 的資料夾）%s"
+                                 % (rel, i, lit, name, line.strip()[:120]))
+    if meta is not None and "mount" in fs_needs(meta):
+        plan.hand.append("%s 的 fs_needs 有 mount：確認它是「掛別人」（叫別人時給 --ws）而不是「被掛」" % name)
+
+
+# ---------- unwrap（A-1） ----------
+
+def unwrap(c, new_name, root, plan):
+    c = os.path.abspath(c.rstrip("/"))
+    if os.path.islink(c) or not os.path.isdir(c):
+        raise Fail("TargetBad", "%s 不是資料夾" % c)
+    names = os.listdir(c)
+    if len(names) != 1 or not os.path.isdir(os.path.join(c, names[0])) or os.path.islink(os.path.join(c, names[0])):
+        raise Fail("TargetBad", "%s 不是純容器（要恰好一個子資料夾、沒有別的檔）：%s" % (os.path.relpath(c), "、".join(sorted(names))))
+    child = names[0]
+    if os.path.basename(c) == "tools" and os.path.isfile(os.path.join(c, child, "tool.json")):
+        raise Fail("TargetBad", "%s 是腦列工具的 tools/、底下 %s 有 tool.json（A-1 例外，P-41）" % (os.path.relpath(c), child))
+    dest_name = new_name or child
+    if not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]*", dest_name):
+        raise Fail("NameBad", "名字只收英數、底線、點、連字號：%r" % dest_name)
+    src = os.path.join(c, child)
+    dest = os.path.join(os.path.dirname(c), dest_name)
+    if dest == c:
+        raise Fail("NameBad", "上提後跟容器同名（%s）：用 --name 換一個名字" % dest_name)
+    if os.path.lexists(dest):
+        raise Fail("NameBad", "%s 已經有了" % os.path.relpath(dest))
+    plan.moves.append((os.path.relpath(src), os.path.relpath(dest)))
+    plan.removes.append(os.path.relpath(c) + os.sep)
+    relink(os.path.abspath(root), remap(src, dest), plan)
+    old_ref = "%s/%s" % (os.path.basename(c), child)
+    plan.hand += grep(root, r"[\"'](\./)?%s(/|[\"'])" % re.escape(old_ref),
+                      "字串裡寫著 %s：它搬到 %s 了" % (old_ref, os.path.relpath(dest)))
+
+
+# ---------- table（B-3） ----------
+
+def table(d, source, root, plan):
+    d = os.path.abspath(d.rstrip("/"))
+    if os.path.islink(d) or not os.path.isdir(d):
+        raise Fail("TargetBad", "%s 不是資料夾" % d)
+    base, up = os.path.basename(d), os.path.dirname(d)
+    meta = load(os.path.join(d, "_metainfo")) if os.path.exists(os.path.join(d, "_metainfo")) else None
+    if not isinstance(meta, dict) or meta.get("kind") != "data":
+        raise Fail("TargetBad", "%s/_metainfo 的 kind 要是 data" % base)
+    extra = fs_needs(meta) - {"git_tracked"}
+    if extra:
+        raise Fail("TargetBad", "%s 的 fs_needs 有 %s（N-1：不縮）" % (base, "、".join(sorted(extra))))
+    items, size, lines = {}, 0, 0
+    for n in sorted(os.listdir(d)):
+        p = os.path.join(d, n)
+        if n == "_metainfo":
+            continue
+        if os.path.isdir(p) or os.path.islink(p) or not n.endswith(".json"):
+            raise Fail("TargetBad", "%s/ 裡有不是 JSON 檔的 %s" % (base, n))
+        t = read(p)
+        size += len(t.encode("utf-8"))
+        lines += t.count("\n")
+        items[n[:-5]] = load(p)
+    if not items:
+        raise Fail("TargetBad", "%s/ 裡沒有 JSON 檔" % base)
+    if size >= 8192 or lines >= 300:
+        raise Fail("TargetBad", "%s/ 合計 %d bytes、%d 行，超過 STRUCTURE 門檻（8 KB、300 行），不併" % (base, size, lines))
+    out = d + ".json"
+    if os.path.lexists(out):
+        raise Fail("NameBad", "%s 已經有了" % os.path.relpath(out))
+    if "source" in items:
+        raise Fail("NameBad", "%s/source.json 會跟頂層 source 撞名" % base)
+    doc = {"source": source or "%s/ 併成一份（各筆自己的 source 在各自那格）" % base}
+    doc.update(items)
+    plan.writes.append((os.path.relpath(out), text(doc), None))
+    # _metainfo 跟著走：併進上一層 children
+    pm_path = os.path.join(up, "_metainfo")
+    if os.path.exists(pm_path):
+        pm = load(pm_path)
+        old = read(pm_path)
+        ch = pm.get("children") if isinstance(pm.get("children"), dict) else {}
+        ch = {k: v for k, v in ch.items() if k not in (base, base + "/")}
+        ch[base + ".json"] = meta.get("summary", "")
+        pm["children"] = ch
+        plan.writes.append((os.path.relpath(pm_path), text(pm), old))
+    else:
+        plan.hand.append("%s 沒有 _metainfo：%s/_metainfo 的說明沒地方併" % (os.path.relpath(up) or ".", base))
+    # 讀者的 reads 跟著改：「<上一層名>:<base>/…」→「<上一層名>:<base>.json」
+    prefix = "%s:%s/" % (os.path.basename(up), base)
+    done = {os.path.abspath(pm_path)}
+    for here, _, files, _ in walk_tree(root):
+        for f in files:
+            p = os.path.abspath(os.path.join(here, f))
+            if p in done or f not in ("_metainfo", "fsm.json", "loop.json"):
+                continue
+            try:
+                j = load(p)
+            except Fail:
+                continue
+            if fix_reads(j, prefix, "%s:%s.json" % (os.path.basename(up), base)):
+                plan.writes.append((os.path.relpath(p), text(j), read(p)))
+    plan.removes.append(os.path.relpath(d))
+    plan.hand += grep(root, r"(os\.path\.join|open\(|/).*[\"']%s[\"']|[\"']%s/" % (re.escape(base), re.escape(base)),
+                      "腳本裡用資料夾名 %r 拼路徑：改讀 %s.json 的 key" % (base, base))
+
+
+def fix_reads(v, prefix, new):
+    hit = False
+    if isinstance(v, dict):
+        r = v.get("reads")
+        if isinstance(r, list):
+            nr = []
+            for x in r:
+                y = new if isinstance(x, str) and x.startswith(prefix) else x
+                hit |= y != x
+                if y not in nr:
+                    nr.append(y)
+            if hit:
+                v["reads"] = nr
+        for k, x in v.items():
+            if k != "reads":
+                hit |= fix_reads(x, prefix, new)
+    elif isinstance(v, list):
+        for x in v:
+            hit |= fix_reads(x, prefix, new)
+    return hit
+
+
+# ---------- dedupe（B-4） ----------
+
+def digest(d):
+    h = hashlib.sha256()
+    for here, subs, files in os.walk(d):
+        subs.sort()
+        for f in sorted(files):
+            p = os.path.join(here, f)
+            h.update(os.path.relpath(p, d).encode() + b"\0")
+            h.update(b"x" if os.access(p, os.X_OK) else b"-")
+            if os.path.islink(p):
+                h.update(b"L" + os.readlink(p).encode())
+            else:
+                with open(p, "rb") as fh:
+                    h.update(fh.read())
+        for s in subs:
+            if os.path.islink(os.path.join(here, s)):
+                h.update(b"L" + s.encode() + os.readlink(os.path.join(here, s)).encode())
+    return h.hexdigest()
+
+
+def dedupe(real, copies, root, plan):
+    real = os.path.abspath(real.rstrip("/"))
+    if os.path.islink(real) or not os.path.isdir(real):
+        raise Fail("TargetBad", "%s 不是資料夾" % real)
+    want = digest(real)
+    total, mp = 0, os.path.join(real, "_metainfo")
+    meta = load(mp) if os.path.exists(mp) else None
+    for c in copies:
+        c = os.path.abspath(c.rstrip("/"))
+        if c == real or os.path.islink(c) or not os.path.isdir(c):
+            raise Fail("TargetBad", "%s 不是另一份資料夾" % os.path.relpath(c))
+        if digest(c) != want:
+            raise Fail("TargetBad", "%s 跟 %s 內容不一樣" % (os.path.relpath(c), os.path.relpath(real)))
+        if isinstance(meta, dict) and isinstance(meta.get("callers"), int):
+            total += meta["callers"]                      # 複本的 _metainfo 跟真身一樣，callers 也一樣
+        plan.removes.append(os.path.relpath(c))
+        plan.links.append((os.path.relpath(c), os.path.relpath(real, os.path.dirname(c))))
+    if isinstance(meta, dict) and isinstance(meta.get("callers"), int):
+        nm = dict(meta, callers=meta["callers"] + total)
+        plan.writes.append((os.path.relpath(mp), text(nm), read(mp)))
+
+
+# ---------- main ----------
+
+def main(argv):
+    dry, root, rest, opts, i = False, ".", [], {}, 0
+    while i < len(argv):
+        a = argv[i]
+        if a == "--dry-run":
+            dry = True
+        elif a in ("--root", "--name", "--source"):
+            if i + 1 >= len(argv):
+                raise Fail("ArgumentsBad", "%s 缺值" % a)
+            if a == "--root":
+                root = argv[i + 1]
+            else:
+                opts[a] = argv[i + 1]
+            i += 1
+        elif a.startswith("--"):
+            raise Fail("FlagUnknown", "不認得 %s（%s）" % (a, USAGE))
+        else:
+            rest.append(a)
+        i += 1
+    if not rest:
+        raise Fail("ArgumentsBad", USAGE)
+    if not os.path.isdir(root):
+        raise Fail("ArgumentsBad", "--root 不是資料夾：%s" % root)
+    cmd, args, plan = rest[0], rest[1:], Plan()
+    allowed = {"inline": (), "unwrap": ("--name",), "table": ("--source",), "dedupe": ()}
+    if cmd not in allowed:
+        raise Fail("ArgumentsBad", "子命令只有 inline、unwrap、table、dedupe（%s）" % USAGE)
+    for k in opts:
+        if k not in allowed[cmd]:
+            raise Fail("FlagUnknown", "%s 不收 %s" % (cmd, k))
+    if cmd == "dedupe":
+        if len(args) < 2:
+            raise Fail("ArgumentsBad", "dedupe 要 REAL COPY...")
+        dedupe(args[0], args[1:], root, plan)
+    else:
+        if len(args) != 1:
+            raise Fail("ArgumentsBad", "%s 只收一個目標（%s）" % (cmd, USAGE))
+        if cmd == "inline":
+            inline(args[0], root, plan)
+        elif cmd == "unwrap":
+            unwrap(args[0], opts.get("--name"), root, plan)
+        else:
+            table(args[0], opts.get("--source"), root, plan)
+    if dry:
+        plan.show(sys.stdout)
+    else:
+        plan.apply()
+        for a, b in plan.moves:
+            print("搬 %s → %s" % (a, b))
+        for p, _, old in plan.writes:
+            print("%s %s" % ("新檔" if old is None else "改", p))
+        for p in plan.removes:
+            print("刪 %s" % p)
+        for p, t in plan.links:
+            print("捷徑 %s → %s" % (p, t))
+        plan.show_hand(sys.stdout)
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except Fail as e:
+        sys.stderr.write("collapse: %s %s\n" % (e.code, str(e).replace("\n", " ")))
+        sys.exit(1)

@@ -1,7 +1,7 @@
-{"summary": "走一棵資料夾樹，把所有 _metainfo（含 fsm.json／loop.json 內嵌的）收成一張 markdown 表或一行 JSON，附彙總",
+{"summary": "走一棵資料夾樹，把所有 _metainfo（含 fsm.json／loop.json 內嵌的）收成一張 markdown 表或一行 JSON，附彙總；--suggest 再列收攏候選（規則在 suggest.py）",
  "kind": "program", "grow_level": 4,
  "time_ms": {"val": 200, "max": 30000}, "resource": "cpu",
  "side_effect": false, "idempotent": true, "deterministic": true, "interrupt": "safe", "parallel": true,
- "reads": ["ws:**/_metainfo", "ws:**/fsm.json", "ws:**/loop.json"],
+ "reads": ["ws:**/_metainfo", "ws:**/fsm.json", "ws:**/loop.json", "ws:**/_entry（--suggest：看 +x、算同內容葉片）"],
  "writes": [],
  "fs_needs": ["mount"], "callers": 0}

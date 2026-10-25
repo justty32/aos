@@ -1,7 +1,0 @@
-{"summary": "每份草稿用 tools/lint 過一次 Tier 0 護欄與 Tier 1 語域，收成 checks.json",
- "kind": "program", "grow_level": 4,
- "time_ms": {"val": 300, "max": 30000}, "resource": "cpu",
- "side_effect": false, "idempotent": true, "deterministic": true, "interrupt": "safe", "parallel": true,
- "reads": ["stack:drafts/*.txt", "stack:rules.json（給 lint 當工作區）"],
- "writes": ["stack:checks.json", "cell:lint/"],
- "fs_needs": ["mount"], "callers": 1}
