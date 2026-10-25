@@ -16,7 +16,7 @@
    往下走才找細節；下層檔**不向上連 AGENTS.md**（也讓非侵入式佈局自然成立）。
 2. **檔名語意**：**README**＝初入一個資料夾先讀的入口／導引；**INDEX**＝描述該資料夾頂層結構的索引。小資料夾兩者合一，大了才分出獨立 INDEX。
 3. **durable 知識歸層**：每份長期知識歸到它所屬的那個工作流／那一層，**絕不往上堆**——AGENTS.md 因此永遠很薄。
-4. **活狀態只列 open**：進度記 `SESSION-LOG.md`、等使用者的記 `WAIT_USER.md`，**完成即刪**；「改了什麼」交給 git log，「為什麼這樣選」記 `workflows/decisions.md`。兩者膨脹就分別拆 `session_logs/`／`wait-user/`，hub 只留導航表。
+4. **活狀態只列 open**：進度記 `SESSION-LOG.md`、等使用者的記 `WAIT_USER.md`，**完成即刪**；「改了什麼」交給 git log，決定記 `workflows/decisions.md`；檔內只留現行結論（[tidy 原則 5](workflows/tidy/content-trim.md)）。兩者膨脹就分別拆 `session_logs/`／`wait-user/`，hub 只留導航表。
 5. **鐵律極少而 always-on**：3–5 條任何時刻都適用的規矩常駐 AGENTS.md，其餘一切按需取用。
 
 ## 結構整理原則（膨脹即拆 / 雜亂即分類）
