@@ -2,8 +2,6 @@
 
 ## 3. `_metainfo`（10-13 第二段）
 
-> 一樣只記筆記，沒動程式。
-
 ### 使用者原文（打字，照記）
 
 1. 「路徑這塊就這樣。然後，我會希望添加一個 _metainfo key，在 inst 格式中。先前有提到說所謂的函數九軸，我們可以在這裡定義。也包括資源特性啥的。」
@@ -16,20 +14,17 @@
 - inst.json 加 `_metainfo` key。意思＝「關於這個 inst 跑下去會是什麼樣子」的描述：九軸（C-13：I/O 型態、生命週期、跨呼叫狀態、資源特性、可中斷性、執行保證、組合模式、環境模式、確定性）、資源特性、乃至其他特性。這就是 `_metainfo` 的由來：檔案有 `ls -l` 那排屬性，函數沒有；`_metainfo` 就是函數的那排屬性。
 - **aos inst 與所有標準實作一律當它不存在**（N-04 那個抽屜的固定名字）；它是給之後 kernel 做規劃時參考用的。
 - **還沒動工**（使用者說先記筆記）。
-- 跟 10-12 的關係：10-12 說「不做 _metainfo」指的是 proto7-2 那個「這份 inst 是哪種格式、第幾版」（`_type`／`_version`）的 `_metainfo`，那個仍然不做；10-13 的 `_metainfo` 是另一個意思。
-- 來源：CONCEPTS C-13、C-14、C-42b；九軸逐軸套到 aos 的表在 [proto7 axes-astra](../../../proto7/notes/thinking/2026-10-04-axes-astra.md)；ai_core 原文 `~/repo/ai_core/docs/kb/kb-ss/doc_05_axes_metadata.md` 在家機，公司機沒有。
+- 10-12 說「不做 _metainfo」指的是 proto7-2 那個「這份 inst 是哪種格式、第幾版」（`_type`／`_version`）的 `_metainfo`，那個不做；這裡的 `_metainfo` 是另一個意思。
+- 來源：CONCEPTS C-13、C-14、C-42b；九軸逐軸套到 aos 的表在 [proto7 axes-astra](../../../proto7/notes/thinking/2026-10-04-axes-astra.md)；ai_core 原文 `~/repo/ai_core/docs/kb/kb-ss/doc_05_axes_metadata.md`（repo 外）。
 
 ### 實作時的預設
 
-AI 提、使用者沒回應，照 [user.md](../../../wf/workflows/common/user.md) 沒回答的邊緣狀況通則留著，不追問：
+使用者沒回應，照 [user.md](../../../wf/workflows/common/user.md) 沒回答的邊緣狀況通則留著，不追問：
 
 - inst 完全不碰，連型別都不驗；裡面的指示詞照整份檔的規則一起解。
-- （原「分三格 axes／resources／traits」、「九軸 key 表列成 N-12 候選」兩條，被下方 3.2 使用者的決定取代。）
 - 使用者 2.9 列的「有沒有 entry」對不上九軸哪一軸，沒追。
 
 ### 3.2 格式（10-13 晚，家機）
-
-AI 起草了九軸 key／值表與六題給使用者選（三格分法、資源寫法、跟 inst 欄位重疊、包別人的 inst 誰寫、沒寫的軸算什麼、版本號；草稿只在對話，不留）。
 
 #### 使用者原文（照記）
 

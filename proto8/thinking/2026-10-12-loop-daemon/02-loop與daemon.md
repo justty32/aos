@@ -4,8 +4,8 @@
 
 - **每一圈**：等暫停解除 → 跑一次 → `runs` 加一 → 等間隔；inst 自己出錯那次至少隔 `error_wait_ms`。
 - **`times` 是總數**：`runs < times` 才再起一次；跑到 `times` 就結束、退出（有 ctl 也一樣），想再跑就重新起；save 存 `times`。
-- **ctl.json 定期讀**：每 `ctl_poll_ms` 看一次，跑的途中、等間隔途中都看；原本的 `stop_poll_ms` 併進來。loop 從不寫 ctl.json。誰都能寫：人手、agent、daemon、kernel；兩個 loop 共用一個也不擋。
-- **狀態物件**：`id`、`state`（waiting／running／paused／done／stopping／stopped）、`times`、`runs`、`last_code`、`last_error`、`ctl_mtime`、`pid`、`skipped`。舊的 `removing`／`removed` 改叫 `stopping`／`stopped`（「移除」是表的事）。有給 `state` 就有變時整份寫（格式見 ctl 規範 §3.5）。
+- **ctl.json 定期讀**：每 `ctl_poll_ms` 看一次，跑的途中、等間隔途中都看。loop 從不寫 ctl.json。誰都能寫：人手、agent、daemon、kernel；兩個 loop 共用一個也不擋。
+- **狀態物件**：`id`、`state`（waiting／running／paused／done／stopping／stopped）、`times`、`runs`、`last_code`、`last_error`、`ctl_mtime`、`pid`、`skipped`（叫 `stopping`／`stopped` 不叫 removing／removed：「移除」是表的事）。有給 `state` 就有變時整份寫（格式見 ctl 規範 §3.5）。
 - **`last_code`**：每次跑完讀 inst.json 的 `exit` 檔；沒寫 `exit`＝null。
 - **`run(path)`**：正常跑完回 None；loop 自己出錯丟 `LoopError`（含繼承 inst 的）。
 - **收到 SIGINT／SIGTERM／SIGHUP**：收掉正在跑的子程式（SIGTERM，過 grace 再 SIGKILL）、不再起新的，退出碼 128＋N（參考）。
@@ -30,7 +30,7 @@
 
 **底下的 loop 是子程序**（使用者「用子程序」），daemon 跟它之間只靠兩個檔：寫它的 ctl.json、讀它的 state.json。
 
-- **add**：`{"op": "add", "id": "/abs/clock-loop.json"}`，收 loop.json 路徑，`how` 不用了；id＝realpath。daemon 用 `Popen(["aos-loop", path], start_new_session=True)` 起它（整群收的是起它的人的選擇，不違反「argv[0] 程式自己不 setsid」）。daemon 不 `chdir`，相對路徑從 daemon 的 cwd 算。
+- **add**：`{"op": "add", "id": "/abs/clock-loop.json"}`，收 loop.json 路徑；id＝realpath。daemon 用 `Popen(["aos-loop", path], start_new_session=True)` 起它（整群收的是起它的人的選擇，不違反「argv[0] 程式自己不 setsid」）。daemon 不 `chdir`，相對路徑從 daemon 的 cwd 算。
 - **add 也收 inst.json**（使用者 10-12 夜定）：當成只跑一次的 loop——daemon 自動包成 `{"inst": {"$ref": ...}, "times": 1}`，再照常起 aos-loop。判斷方式：頂層有 `"inst"` 的就是 loop.json。
 - **包裝檔**：loop.json 有寫 `ctl`／`state` 就用它寫的；沒寫的，daemon 在 `work_dir/loops/<編號>/loop.json` 生一份包裝檔——用指示詞指回原檔（`"inst": {"$ref": "/abs/x.loop.json#/inst"}`，`times`、`interval_ms` 同樣 `$ref`），只補 `ctl`、`state` 指到同一個資料夾——然後起包裝檔。
 - **控制**：pause／resume／set／add_times／remove 都變成「daemon 改那個 loop 的 ctl.json」（讀現在的、改欄位、寫暫存再改名）。daemon 是主要寫者但不獨占，人也可以直接改，後寫的算。`add_times`：daemon 讀 state.json 拿 `times`，加完寫回 ctl.json（不限次數＝Conflict）。
@@ -39,5 +39,4 @@
 - **收到 SIGTERM**：有 `save` 先存；對每個 loop 的 session 送 SIGTERM；等 daemon.json 的 `grace_ms`，沒走的整群 SIGKILL；收屍；結束。SIGINT 同樣收、不存。
 - **save／load**：每筆 `{"loop": "/abs/x.loop.json", "ctl": {…當下 ctl.json 的內容…}}`；`runs` 不存，load 回來從 0 數（要接續就自己把 `times` 調小）。load 時某個 loop.json 不在＝NotFound、全有全無；state.json 裡的 `pid` 還活著＝Exists。
 - **巢狀 grace**：只當慣例（使用者定，記在 NORMS 待定）——daemon 10000、loop 2000、inst 自定，外層宜大於內層。
-- daemon 不再 import `aos_loop`。
 - **daemon 被 pause** 就是字面：不掃資料夾、指令堆著、loop 照跑。「把表上每個 loop 都 pause」另開指令，等 kernel 要用再說。

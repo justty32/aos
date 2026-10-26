@@ -36,13 +36,13 @@
 
 - **inst**：跑一次。`aos-inst x.json`／`run(path)`。
 - **loop**：**一個** inst，跑 N 次、隔 M 毫秒，一邊定期讀**一個 ctl.json**（宣告式）。`aos-loop x.json`／`run(path)`。
-- **daemon**：很多個 loop 的表；ctl 是**資料夾**（指令式、`.done`）；它**自己也是一個 loop**——身體（每一圈做的事）＝掃一次控制資料夾，自己另有一個 ctl.json。
+- **daemon**：很多個 loop 的表；ctl 是**資料夾**（指令式、`.done`）；它**自己也是一個 loop**——身體（每一圈做的事）＝掃一次控制資料夾、跑一次 `inst`（`control_dir`、`inst` 都選填，N-28），自己另有一個 ctl.json。
 
 這是 10-11「inst → loop → node → daemon」（CONCEPTS C-36）落到程式：loop 服務一個 node，daemon 統管很多個 loop。
 
 ## 2. 決定：三個 json，一個手感
 
-命令列一律 `aos-zzz xxx.json`、一個引數，`run(path)` 也只吃那個路徑；**相對路徑一律從呼叫者的 cwd 算**。
+命令列一律 `aos-zzz xxx.json`（另收 stdin 與鏡射旗標，見 [10-14 §4](../2026-10-14-json-entry/04-argv與七題.md)）；**相對路徑一律從呼叫者的 cwd 算**。
 
 - **只在啟動時讀一次**（使用者 10-12 夜定）：loop 啟動時讀一次 loop.json，包括 `inst` 那格和其中的指示詞，之後不再重讀；執行中要改設定只能透過 ctl.json。daemon.json 也比照辦理。
 
@@ -50,7 +50,7 @@
 |---|---|---|---|
 | inst.json | `aos-inst x.json` | `argv`、`cwd`、`envs`、`stdin`／`stdout`／`stderr`、`exit`＋布林、`timeout_ms`、`grace_ms`（見 [inst 進 json](../2026-10-12-inst-json.md)） | — |
 | loop.json | `aos-loop x.json` | `times`、`interval_ms`、`interval_mode`、`grace_ms`、`ctl`、`ctl_poll_ms`、`state`、`error_wait_ms` | `inst`：一份 inst.json 格式，或 `{"$ref": …}` |
-| daemon.json | `aos-daemon x.json` | loop 那一組（`times`、`interval_ms`、`ctl`、`ctl_poll_ms`、`state`、`grace_ms`）＋ `control_dir`、`load`、`save`、`work_dir` | `inst`＝daemon 自己每拍跑一次的身體（選填；10-14 夜使用者拍板候選 g，daemon.json＝loop.json 的超集，見 [NORMS N-28](../../docs/NORMS/04-基礎設施-loop與daemon.md)）；表上每個 loop 是一支 `aos-loop` 子程序 |
+| daemon.json | `aos-daemon x.json` | loop 那一組（`times`、`interval_ms`、`ctl`、`ctl_poll_ms`、`state`、`grace_ms`）＋ `control_dir`、`load`、`save`、`work_dir` | `inst`＝daemon 自己每拍跑一次的身體（選填；daemon.json＝loop.json 的超集，見 [NORMS N-28](../../docs/NORMS/04-基礎設施-loop與daemon.md)）；表上每個 loop 是一支 `aos-loop` 子程序 |
 
 ### 2.1 loop.json
 
@@ -89,7 +89,7 @@
   "save": "table.json",              // 收到 SIGTERM／ctl 的 stop 先存
 
   "times": null,                     // 掃幾圈就走；null＝不限（1＝把這批指令處理完就走）
-  "interval_ms": 200,                // 每圈隔多久（原 control_poll_ms）
+  "interval_ms": 200,                // 每圈隔多久
   "ctl": "daemon-ctl.json",          // 控制 daemon 這個 loop（paused＝不掃、stop＝收工、interval_ms）；不能放在 control_dir 裡
   "ctl_poll_ms": 1000,
   "state": "daemon-state.json",      // 選填
@@ -98,6 +98,5 @@
 }
 ```
 
-- 跟舊 config 的差別：`control_poll_ms` 改名 `interval_ms`；`stop_poll_ms` 拿掉（併進 `ctl_poll_ms`）；多 `times`、`ctl`、`ctl_poll_ms`、`state`、`work_dir`、`grace_ms`。
-- `inst` 格＝daemon 每拍的身體（選填），每拍＝收屍 → 掃資料夾 → 跑 inst（10-14 夜候選 g 拍板，N-28）。
+- `inst` 格＝daemon 每拍的身體（選填），每拍＝收屍 → 掃資料夾 → 跑 inst（N-28）。
 - daemon 自己的退出碼 0／1 不動；SIGINT 收、不存，SIGTERM 先存再收。

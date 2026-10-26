@@ -23,7 +23,6 @@ daemon 借 fsm 的紀律，但不變成一張 fsm 表。真正多狀態的是**�
 - add 寫表與 Popen 之間被殺：先寫表、再 Popen（重起時表裡 `starting` 的要查證）。
 - /proc 是 Linux 專屬，接回孤兒在別的平台要另想。
 - 崩潰迴圈要內建退避上限（例如 `exits≥5` 強制 `leave`），不能全交策略格。
-- 原始碼：`proto8/lib/aos_daemon.py`、`aos_daemon_table.py`；`restore()` 的 Exists 檢查是「只認 Popen」的根源，要改。（proto8/lib 已在 10-19 刪）
 
 ## 21. 未決
 
