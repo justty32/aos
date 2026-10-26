@@ -12,8 +12,9 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-10-25 晚收尾（家中 Manjaro；兩隊已收線、等使用者思考）
+## 2026-10-26（家中 Manjaro；整理與精簡全部完成）
 
-1. **授權**：使用者 10-25「可以隨意push」——commit 後直接 push origin main。分工照 [user.md](workflows/common/user.md)：普通 opus、雜活 sonnet、規劃 fable（盡量少用；這次使用者點名 fable 規劃）；做事的 agent（雜活除外）先讀 wf 規矩。使用者白天外出時小決定由頂層代定，清單在 [session log 10-25 § 代定清單](session_logs/2026-10/2026-10-25.md#代定清單)（都可翻案）。context 約 30% 就換手（[user/02](workflows/common/user/02-交接與收工.md#compact-前先寫交接2026-10-15-定)）。LiteLLM 開著時腦只用 gpt 系列。
-2. **狀態**：galtxt 由上而下兩隊（甲 `proto8/topdown/galtxt-a`、乙 `galtxt-b`）**都已收線**，沒做的各在 [甲隊 HANDOFF](../proto8/topdown/galtxt-a/HANDOFF.md)、[乙隊 HANDOFF](../proto8/topdown/galtxt-b/HANDOFF.md)；結論在 [thinking 10-25 top-down](../proto8/thinking/2026-10-25-top-down.md)。統整頁 https://claude.ai/artifact/9sj3ZkRhK4ZYomb8WeSzrA ；人評頁 https://claude.ai/artifact/ENDqGGkxBpydhsh6YcxGT9 （只有乙隊六筆，甲隊沒交真腦樣本；重建：scratchpad `rating/build.py`，新樣本要新 id）。使用者說「我抓到了一些問題點」「這次我應該會思考挺久」，還沒說是什麼。
-3. **下次開場先問他抓到的問題點**，聽完再決定兩隊要不要續做、怎麼改；不要自己先開工。今天定的命名：C-54 計數 `counter_*`、上限 `max_*`、時間 `<事件>_at`（「都好」代定）。`.claude/worktrees/` 底下今天四個 worktree 與分支已刪（使用者准，內容都在 main）。
+1. **授權**：可隨意 push（commit 後直接 push origin main）。分工：普通事 opus、雜活 sonnet；做事的 agent（雜活除外）先讀 wf 規矩。
+2. **狀態**：今天 proto8 頂層整理與文件內容精簡全部完成，經過見 [session log 10-26](session_logs/2026-10/2026-10-26.md)。使用者還在改 `proto8/user-advice/README.md`，等他說好再動，不碰該資料夾。10-25 的「問題點」仍待使用者說（見 [WAIT_USER](WAIT_USER.md)），說之前不要自己續做兩隊。
+3. **新規**：日誌每日檔每條一行、結論只連過去（[user/02](workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)）；wf-lint 改可選。
+
