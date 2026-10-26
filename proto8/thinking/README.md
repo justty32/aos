@@ -8,6 +8,6 @@
 
 | 月份 | 份數 | 範圍 |
 |---|---|---|
-| [2026-10](months/2026-10.md) | 65 | 10-11 重來～10-25 由上而下拆資料夾樹：inst／loop／daemon／fsm、JSON 入口與指示詞、kernel、命名、aos-exec 與 `.env`、agent 範本與 10-24 的各種嘗試 |
+| [2026-10](months/2026-10.md) | 66 | 10-11 重來～10-26 呼叫 claude code cli 的節點：inst／loop／daemon／fsm、JSON 入口與指示詞、kernel、命名、aos-exec 與 `.env`、agent 範本與 10-24 的各種嘗試 |
 
 按月份分層（使用者「都按照推薦」）：本檔只留月份索引，各月一份表放 `months/`，各天的討論檔放在本資料夾（`thinking/2026-10-15-xxx.md`）。新增一份討論＝在那個月的表加一列。
