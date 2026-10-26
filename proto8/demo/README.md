@@ -66,7 +66,7 @@ agent-eve/                主 agent：照抄 agent-dan（brain.py、act.py 只�
       tools/              ls、read、write、edit、bash → lib/base 的捷徑（bash 逾時預設 30 秒、上限 300）
 ```
 
-每次呼叫 pyfix 開一個新小格 `$AOS_STACK/pyfix/runs/<三位數>/`：`ws/`（子 agent 收題、交答案）、`stack/`（它的 history、trace）、`before/`（改之前的備份）；子 agent 要改的程式碼是 `PYFIX_DIR`＝`$AOS_WS/<dir>`。子 agent 用 `aos-exec --dotenv-override` 叫，所以模型用它自己 `.env` 的。子 agent 失敗＝`pyfix: AgentFailed …`、退 1，eve 的 act 當 `ToolFailed` 停下（同 agent-dan）；其他代號 `AnswerMissing`、`DirBad`、`ArgumentsBad`、`StackMissing`；子 agent 沒設 `PYFIX_DIR`＝它的 act 停在 `pyfix-agent: DirMissing`（路徑跑出去、edit 對不上這類模型的錯，庫的工具退 1、子 agent 的 act 把那行回給模型、不算失敗）。子 agent 自己的逾時：think 180 秒、act 300 秒（`agent/fsm.json`）、最多 60 次（`agent/loop.json`）；eve 的 act 等它 30 分鐘。
+每次呼叫 pyfix 開一個新小格 `$AOS_STACK/pyfix/runs/<三位數>/`：`ws/`（子 agent 收題、交答案）、`stack/`（它的 history、trace）、`before/`（改之前的備份）；子 agent 要改的程式碼是 `PYFIX_DIR`＝`$AOS_WS/<dir>`。子 agent 用 `aos-exec --dotenv-override` 叫，所以模型用它自己 `.env` 的。子 agent 失敗＝`pyfix: AgentFailed …`、退 1，eve 的 act 把那行接成 tool 訊息回給腦、不停（同 agent-dan）；其他代號 `AnswerMissing`、`DirBad`、`ArgumentsBad`、`StackMissing`；子 agent 沒設 `PYFIX_DIR`＝它的 act 停在 `pyfix-agent: DirMissing`（路徑跑出去、edit 對不上這類模型的錯，庫的工具退 1、子 agent 的 act 把那行回給模型、不算失敗）。子 agent 自己的逾時：think 180 秒、act 300 秒（`agent/fsm.json`）、最多 60 次（`agent/loop.json`）；eve 的 act 等它 30 分鐘。
 
 真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-eve`；試驗場 `~/code/try/agent-as-tool/`（`setup_ws.py` 建一個有 bug 的 `proj/`，LiteLLM 沒開時用 `fake_brains.py` 劇本）。沒設 `AOS_BRAIN_URL`＝假腦，eve 沒有 clock 工具、會直接答 `FAKE ANSWER`，不會叫 pyfix。測試 `test_eve.py`。
 
@@ -102,7 +102,7 @@ file-tools 是資料夾與檔案的漸進工具（使用者「資料夾修改和
 
 ## agent-meg（記憶庫，10-24）
 
-照抄 agent-dan 的問答 agent，多一個跨對話保留的**記憶庫**（heap）：對話（stack）清空了，記得的事還在。設計與考古在 [thinking 2026-10-24-memory](../thinking/2026-10-24-memory.md)（使用者「還有在記憶庫裏存放各類東西」「我記得proto7就有那些，去看看那些方法」「都按建議做」）。
+照抄 agent-dan 的問答 agent，多一個跨對話保留的**記憶庫**（heap）：對話（stack）清空了，記得的事還在。設計在 [thinking 2026-10-24-memory](../thinking/2026-10-24-memory.md)（使用者「還有在記憶庫裏存放各類東西」「我記得proto7就有那些，去看看那些方法」「都按建議做」）。
 
 ```
 agent-meg/
@@ -122,7 +122,7 @@ $AOS_HEAP/            記憶庫（沒設＝$AOS_WS/.heap/）：index.json（頂�
 
 ## talk（agent 之間寄信，10-24）
 
-幾隻 agent 互相寄信分工（嘗試性質；使用者 10-24「然後是各agent之間的交流」）。設計、考古、代定、邊緣狀況在 [thinking 2026-10-24-agent-talk](../thinking/2026-10-24-agent-talk.md)。
+幾隻 agent 互相寄信分工（嘗試性質；使用者 10-24「然後是各agent之間的交流」）。設計、代定、限制在 [thinking 2026-10-24-agent-talk](../thinking/2026-10-24-agent-talk.md)。
 
 ```
 talk/
