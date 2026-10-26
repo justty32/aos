@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前一份：[daemon 的 ctl 只寫變動、`$ref` 切檔](2026-10-23-daemon-ctl-ref.md)
 
-規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。相關條文：[C-50、C-62](../docs/CONCEPTS/05-agent.md)、[C-47](../docs/CONCEPTS/04-kernel.md)；前情：[10-21 計畫 § 5](2026-10-21-plan.md#5-agent)。本份只記錄，規範與程式未改。
+規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。相關條文：[C-50、C-62](../docs/CONCEPTS/05-agent.md)、[C-47](../docs/CONCEPTS/04-kernel.md)；前情：[10-21 計畫 § 5](2026-10-21-plan.md#5-agent)。
 
 ## 使用者原文（整理版）
 
@@ -16,11 +16,9 @@
 
 - **aos-agent＝範本，不是一支包了邏輯的程式**：它只產生標準的 agent 資料夾，跑的時候仍靠 aos-loop＋aos-fsm（接 C-50、C-62）。
 
-## 跟 AI 討論後的結論（頂層提議、尚未定）
-
-使用者沒有反對，但也還沒拍板：
+## 未決（頂層提議，使用者沒反對、還沒拍板）
 
 - 方向跟 C-50（agent＝狀態機＋各狀態跑的 inst）、C-62（agent 的定義就是一台狀態機）一致。
 - `tool_calls`（腦的工具呼叫）是做 agent 第一個會撞到的題目。
 - kernel 的樣子：一個 loop，每次跑一台 fsm 做決定，再把結果寫進 daemon 的 ctl（`loops_added`／`loops_removed`），由 daemon 去執行——kernel 決定、daemon 動手，符合 C-47。
-- 建議順序：先定 `tool_calls` 的形狀 → 再從 demo 的 bob 改出一個真的 agent → 最後做 kernel。
+- 順序：`tool_calls` 的形狀與真 agent 先做（見 [腦的工具呼叫](2026-10-23-tool-calls.md)），kernel 最後。

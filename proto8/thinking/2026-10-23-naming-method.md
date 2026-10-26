@@ -32,16 +32,16 @@
 
 ## 決定：八題（頂層出題，使用者選）
 
-1. **事件時間**：補一句「單獨 `at`＝這筆紀錄的時間；`<事件>_at`＝某事件發生的時間」→ **補**。
+1. **事件時間**：`<事件>_at`＝某事件發生的時間 → **補**（時間點一律這樣叫、不用單獨的 `at`，見文末 10-25）。
 2. **`start_ticks`** → **改成 `started_at_ticks`**（照使用者原文的例子）。
 3. **index**：`_i` 不進縮寫表；真要用時寫 `idx` → 照此。
 4. **ctl 的 `stop`** → **改成 `stopped`**：跟 state 的 `phase: stopped` 同字，ctl 全是宣告狀態（`paused`、`stopped`）。
 5. **「上一拍的結果」`last_code`** → 先不加。
-6. **`at` 的值** → 留 ISO 8601 UTC 到毫秒（不改 Unix 的 epoch 秒）。
+6. **時間點的值** → 留 ISO 8601 UTC 到毫秒（不改 Unix 的 epoch 秒）。
 7. **`_entry` 的 `_` 開頭** → 留 `_entry`；C-54 補一句「`_` 開頭的檔＝入口」。
 8. **`AOS_CF`／`AOS_CD`／`AOS_CO`** → 留著（表上已有的縮寫不追溯）。
 
-計數：不用 kernel 的 `nr_`，留「被數的東西加 s」（使用者「nr_這東西還是建議不要用，現在這東西不太常見了」）。
+計數：不用 kernel 的 `nr_`（使用者「nr_這東西還是建議不要用，現在這東西不太常見了」）；計數現叫 `counter_<被數的東西>`（見文末 10-25）。
 
 ## 結論：命名方法 R1～R12（定案版）
 
@@ -49,13 +49,13 @@
 
 1. **R1 先寫一行 NAME**：`名字 - 一句話`（照 man page 第一行；英文小寫開頭、不加句號）。放檔頭或 README 第一行；所有名字都要能從這行推回來。加功能也先一句話，再加 key（C-48）。
 2. **R2 每一格一句白話，先不想名字。**
-3. **R3 先查固定格**：原值 `val`、這筆紀錄的時間 `at`、上限 `max`、種類 `kind`、結束碼 `code`、訊號 `signal`、流水號 `seq`、階段 `phase`、行程號 `pid`。對得上就直接用。
+3. **R3 先查固定格**：原值 `val`、上限 `max`、種類 `kind`、結束碼 `code`、訊號 `signal`、流水號 `seq`、階段 `phase`、行程號 `pid`。對得上就直接用。
 4. **R4 主題字從白話的主詞來，全體系一詞一義；巢狀已經說了的不再重複**（`loops.bob.pid`，不寫 `loop_pid`）。ctl 是宣告，key 用狀態詞、跟 state 回的同字（`paused`、`stopped`）。
 5. **R5 縮寫只用縮寫表；進表門檻＝一眼還原得了**（Unix／POSIX 老慣例，或看一眼就還原得了全字）；「刪母音」式不收。表上已有的不追溯（`cf`、`cd`、`co`）。
-6. **R6 修飾成分照表貼**：上限 `max`／`max_`；計數＝被數的東西加 s（不用 `nr_`）；時長與單位當後綴（`_ms`、`_ticks`）；單獨 `at`＝這筆紀錄的時間、`<事件>_at`＝某事件發生的時間，值都是 ISO 8601 UTC 到毫秒；同一個時間點用別的單位記，單位接在後面（`started_at_ticks`）；上一次 `last_`；index 不進表，真要用寫 `idx`。
+6. **R6 修飾成分照表貼**：上限 `max`／`max_`；計數＝`counter_<被數的東西>`（不用 `nr_`；撞名時照 R9 換角度，得到的名字不一定合這條）；時長與單位當後綴（`_ms`、`_ticks`）；時間點一律 `<發生了什麼>_at`（`recorded_at`、`started_at`），值是 ISO 8601 UTC 到毫秒；同一個時間點用別的單位記，單位接在後面（`started_at_ticks`）；上一次 `last_`；index 不進表，真要用寫 `idx`。
 7. **R7 排字序**：主題在前、由大到小，單位一律在最後；`max_`、`last_` 這種修飾詞在前是例外（C-54 原有）。
-8. **R8 名字長度跟「要被認多遠」成正比**：環境變數（`AOS_` 前綴）＞程式名（`aos-` 前綴）＞檔名、JSON key（同檔唯一就好，可短到 `max`、`code`、`at`）＞程式內部的區域變數（照該語言慣例，`i`、`tmp`）。
-9. **R9 簡化**：能省就省，條件是省完在同檔、同主題裡仍然獨一無二；同檔出現第二個同類的格就把主題字補回來。
+8. **R8 名字長度跟「要被認多遠」成正比**：環境變數（`AOS_` 前綴）＞程式名（`aos-` 前綴）＞檔名、JSON key（同檔唯一就好，可短到 `max`、`code`）＞程式內部的區域變數（照該語言慣例，`i`、`tmp`）。
+9. **R9 簡化**：能省就省，條件是省完在同檔、同主題裡仍然獨一無二；同檔出現第二個同類的格就把主題字補回來。**撞名就換角度**：照方法推出來的名字跟同一個檔或同一個主題裡的名字撞了，就換一個角度，用白話重新描述它的功能與特性，再從那句白話取名。
 10. **R10 形式照已定的**：小寫底線、指令名換連字號、環境變數全大寫、副檔名三種、複數只加 s、錯誤代號四種（C-54 原有）。
 11. **R11 不用型別前綴；`_` 開頭不表「私有」**：`_` 開頭的檔＝入口（`_entry`）。
 12. **R12 最後回頭清**：每個名字要能從 R1 那一句推回來；推不回來的，要嘛名字錯，要嘛那一句漏寫了功能（補句子）。
@@ -66,7 +66,7 @@
 
 - state 窗的 `start_ticks` → `started_at_ticks`（aos-loop、aos-daemon 的 state 與子項列；N-32）
 - ctl 的 `stop` → `stopped`（N-06、N-07）
-- state 窗的 `last_warning` → `ctl_warning`（N-08；主詞是 ctl、主題在前，`last_` 留給「上一拍」）
+- state 窗的 `last_warning` → `ctl_warning`（N-08；主詞是 ctl、主題在前，`last_` 留給「上一次」）
 
 bin／impls README 每支程式開頭補 R1 的 NAME 行：
 
@@ -78,7 +78,7 @@ aos-fsm    - 照一張狀態表，每叫一次跑「現在狀態」那一格，�
 aos-tick   - 把時鐘檔的回合數往前走一格
 ```
 
-## 10-23 深夜：「拍」改「次」、`beats` → `runs`、loop／daemon 的 `val` 改回 `run`、撞名換角度
+## 10-23 深夜：「拍」改「次」、撞名換角度
 
 ### 使用者原文
 
@@ -101,15 +101,12 @@ aos-tick   - 把時鐘檔的回合數往前走一格
 
 ### 決定
 
-- 條文、程式說明與註解、錯誤／提示訊息、README、demo 說明裡的「拍」一律改「次」（「第 N 拍」→「第 N 次」）；thinking／notes 歷史與使用者原話不改。
-- loop／daemon 自己 state 窗的 `beats` → `runs`（`max_beats` 這種例子跟著改 `max_runs`）。
-- loop／daemon 的「要跑什麼」從 `val` 改回 `run`（loop.json、daemon.json、子項、daemon 把字串子項包成 `{"run": …}`、小格 loop.json）；**fsm 表每格維持 `val`**。C-55 寫明：loop／daemon 的 `run` 是「要跑什麼」的具名欄位，不是值的展開形，所以不叫 `val`。
-- 「beat」這個字在 aos 裡已沒有對應的概念，所以庫跟著改：`aos_beat.py` → `aos_run.py`；impls 的 `run_beat` → `run_once`、結果型別 `Beat` → `Run`、`src/beat/` → `src/run/`。`heartbeat`（心跳）是另一個概念，不動。
-- **`restarted_times` 沒有落地**：前提是頂層弄錯的——daemon state 裡子項那一列只有 `pid`、`started_at_ticks`、`phase`、`code`、`signal`，沒有 `runs`；子 loop 結束後也不會自動重起，所以沒有「重啟過幾次」可記。原本叫 `runs` 的是 demo stamp 工具在它自己 stack 裡的 `runs.txt`（記 stamp 被用了幾次），跟 loop state 的 `runs` key 不在同一個檔、也不是同一個主題，照 R9 不算撞名，`runs.txt` 照舊。
-- **新規則「撞名就換角度」併進 R9**：照方法推出來的名字，如果跟同一個檔或同一個主題裡的名字撞了，就換一個角度，用白話重新描述它的功能與特性，再從那句白話取名。R6 的計數規則補一句：撞名時照這條換角度，得到的名字不一定是「名詞加 s」。C-54 命名方法裡的例子是假設的（fsm trace 的「第幾格」→ 撞 `states` → 換角度「走了幾步」→ `steps`），標明是假設。
+- 條文、程式說明與註解、錯誤／提示訊息、README、demo 說明裡用「次」（「第 N 次」），不用「拍」；thinking／notes 歷史與使用者原話不改。
+- 「要跑什麼」那一格現叫 `exec`、state 的計數現叫 `counter_runs`（[命名統合](2026-10-23-naming.md) 10-23 深夜與 10-25 那兩段；取代這裡的 `run`／`runs`）。
+- 「beat」這個字在 aos 裡沒有對應的概念：庫叫 `aos_run.py`；impls 的 `run_once`、結果型別 `Run`、`src/run/`。`heartbeat`（心跳）是另一個概念，不動。
+- **不用 `restarted_times`**：daemon state 裡子項那一列只有 `pid`、`started_at_ticks`、`phase`、`code`、`signal`，沒有 `runs`；子 loop 結束後也不會自動重起，沒有「重啟過幾次」可記。demo stamp 工具在它自己 stack 裡的 `runs.txt`（記 stamp 被用了幾次）跟 loop state 不在同一個檔、也不是同一個主題，照 R9 不算撞名。
+- **「撞名就換角度」併進 R9**（見上）。C-54 命名方法裡的例子是假設的（fsm trace 的「第幾格」→ 撞 `states` → 換角度「走了幾步」→ `steps`），標明是假設。
 
-**10-25 註**（使用者 10-25「state.json中，runs改counter，at改成recorded_at」）：loop／daemon 的 state.json 現行是 `counter`（原 `runs`）、`recorded_at`（原 `at`）；上面的原文與決定照留，其他紀錄（trace 等）的 `at` 不動。
+## 10-25：計數 `counter_`、時間點 `<發生了什麼>_at`
 
-**10-25 註二**（使用者 10-25「計數這塊，幫我改成counter_*」）：計數規則從「被數的東西加 s」改成 `counter_<被數的東西>`（[C-54 命名方法 R6](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)）；state.json 的 `counter` 現叫 `counter_runs`，其他 JSON 的計數也改了。上面的原文與決定照留；時間點（`at`／`recorded_at`）那半還沒定。
-
-**10-25 註三**（使用者 10-25 已選 `recorded_at`〔「state.json中，runs改counter，at改成recorded_at」〕，回頂層兩題「都好」；頂層代定、可翻案）：時間點從「單獨 `at`＝這筆紀錄的時間」改成一律 `<發生了什麼>_at`（fsm trace `started_at`、信 `sent_at`、kernel-llm served `served_at`…），沒用 `max_` 的上限照 R6 補改（kernel-llm `budget.max_calls`／`max_tokens` 等），見 [C-54 命名方法 R3、R6](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)。上面的原文與決定照留。
+使用者 10-25：「state.json中，runs改counter，at改成recorded_at」，再說「計數這塊，幫我改成counter_*」；頂層問時間點的兩題，使用者回「都好」（頂層代定、可翻案）。R3、R6 已照這段寫；state.json 是 `counter_runs`、`recorded_at`，細則在 [命名統合](2026-10-23-naming.md) 10-25 段與 [C-54 命名方法 R3、R6](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)。
