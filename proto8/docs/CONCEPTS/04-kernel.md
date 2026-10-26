@@ -1,11 +1,11 @@
-← [回入口 CONCEPTS.md](../CONCEPTS.md)｜主題：**kernel**｜概念：本檔｜規範：[N-42](../NORMS/09-kernel.md)（兩種 kernel，草稿；打包 N-03 在 [NORMS 時空](../NORMS/02-設計理念-時空.md)；kernel 公告、`_metainfo` 在 [NORMS 待定](../NORMS/08-待定.md)）｜實作：現無實作（舊的 LLM kernel、通用 kernel 在 git 歷史 5546be29，10-19 刪；照「資料夾＝程式」重寫時再對）〔10-24：LLM kernel 第一版有了——[aos-kernel-llm](../../impls/aos-kernel-llm/README.md)＋[aos-gate](../../impls/aos-gate/README.md)，[thinking 2026-10-24-llm-kernel](../../thinking/2026-10-24-llm-kernel.md)〕；討論見 [thinking 10-13 kernel／agent](../../thinking/2026-10-13-kernel-agent.md)）
+← [回入口 CONCEPTS.md](../CONCEPTS.md)｜主題：**kernel**｜概念：本檔｜規範：[N-42](../NORMS/09-kernel.md)（兩種 kernel，草稿；打包 N-03 在 [NORMS 時空](../NORMS/02-設計理念-時空.md)；kernel 公告、`_metainfo` 在 [NORMS 待定](../NORMS/08-待定.md)）｜實作：LLM kernel 是 [aos-kernel-llm](../../impls/aos-kernel-llm/README.md)＋[aos-gate](../../impls/aos-gate/README.md)（[thinking 2026-10-24-llm-kernel](../../thinking/2026-10-24-llm-kernel.md)），通用 kernel 現無實作；討論見 [thinking 10-13 kernel／agent](../../thinking/2026-10-13-kernel-agent.md)）
 
 # kernel
 
 - **C-09** 任務處理過程中用到的東西，只要有限，就是資源。（2.7）
 - **C-10** 資源的有限用格數表示。（3b）
 - **C-11** 排序演算法＝決定哪個任務先給哪個資源；就這樣，不多說。（2.7）
-- **C-12** 排序與資源分配本身是計算任務；資源本身也當行程看——一切都是計算任務，核心沒有第二種東西。（2.8）〔10-22 註：這裡的「核心」＝名詞表的「系統本體」，不是 C-74 分層裡的核心 aos-exec〕
+- **C-12** 排序與資源分配本身是計算任務；資源本身也當行程看——一切都是計算任務，核心沒有第二種東西。（2.8）〔這裡的「核心」＝名詞表的「系統本體」，不是 C-74 分層裡的核心 aos-exec〕
 - **C-13** 每個計算任務都有固定的基礎特性（九軸）；其中確定性是任務自己的屬性。（2.9）
 - **C-14** 基礎特性之外，人可以任意附加特性。（2.9）
 - **C-15** 排序程式可以由人寫，也可以由「生成排序程式的程式」叫模型寫。（2.10）
