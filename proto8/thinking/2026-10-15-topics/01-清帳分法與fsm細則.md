@@ -16,12 +16,12 @@
 
 **五題答覆與決定**
 1. 採方案一（輕）：NORMS.md、CONCEPTS.md 留當入口，分檔改按主題拆；條號不重編、條文原樣搬；入口各有「條號 → 檔」表；每份分檔第一行寫出該主題的概念、規範、實作在哪。
-2. 時空：「時空這塊應該在設計理念這個主題下」——當時暫定；後來「隨你」定案（見下）。
+2. 時空：「時空這塊應該在設計理念這個主題下」；使用者「隨你」，定案（見下）。
 3. tasks 組合子（seq／par／if／not）歸基礎設施，「地位等同於 C 語言的 stdlib」。fsm 跟 tasks 放一起（同為 stdlib 地位）；agent 是用 fsm 組出來的（例：agent.json），agent 主題連過去。
 4. daemon 兩義（C-04 Linux 借來的那層 vs 管 loop 的程式）：名詞表留兩列，daemon 子主題開頭註明。
 5. 待定不拆，每條前面標主題。
 
-主題：設計理念（含時空）／總則（跨主題：N-05、N-12、N-18、N-29、N-35）／基礎設施（inst、loop、daemon、窗、命令列、指示詞與路徑、組合子 tasks＋fsm）／kernel／agent。總則與設計理念目前分兩份，當時未決，後定案（見下）。
+主題：設計理念（含時空）／總則（跨主題：N-05、N-12、N-18、N-29、N-35）／基礎設施（inst、loop、daemon、窗、命令列、指示詞與路徑、組合子 tasks＋fsm）／kernel／agent。總則與設計理念分兩份（見下）。
 
 **「都隨你」三點定案**（10-15）
 1. 總則與設計理念維持分開：總則＝跨主題的規範，設計理念＝概念。
@@ -32,21 +32,12 @@
 
 **原文**：心跳——「基礎實作中連時間都不寫，保持極簡。」六處細節——「全照推薦」。
 
-**決定**（寫進 N-36、N-38、N-39，條號不增）
-- 心跳：fsm 是單次程式、壽命一拍，不適用 N-17／N-32 的每秒心跳；生死看拍它的 loop 的 state 窗；基礎實作 fsm 的 state 不寫時間、不帶 pid／started／boot_id。58 題頁 Q12「心跳可選」與 N-32 的不一致就此**對齊結案**。
+**決定**（寫進 N-36、N-39，條號不增）
+- 心跳：fsm 是單次程式、壽命一拍，不適用 N-17／N-32 的每秒心跳；生死看拍它的 loop 的 state 窗；基礎實作 fsm 的 state 不寫時間、不帶 pid／started／boot_id。58 題頁 Q12「心跳可選」與 N-32 對齊結案。
 - 第一拍：state 窗位置有、檔還沒有＝從 `start` 起。
-- 跳去 `error` 格：phase 改成 `error`，下一拍才跑（一拍一格），原狀態與錯誤放進 `prev`。
-- `error` 格自己出錯：不再跳，留在 `error`＋`last_error` 等人；`step` 在回到 `start` 或進 `error` 格時歸零（`max_steps` 自上次回 `start` 起算）。
-- 格跑完、ret 落了、state 還沒寫就被殺：下一拍重跑、不撿舊 ret（N-20），`prev.interrupted: true`；fsm 起格前先把 `step` 寫進 state 窗。
-- fsm 結束碼：只在 fsm 自己出錯（設定錯、窗缺、拿不到鎖）才非 0；格出錯由表處理、fsm 退 0。要外層接手，就讓內層 `error` 格回 `end` 名單裡的 `next`。
-- state 窗記 `phase`、`data`、`step`、`last_error`；lock 選填，拿不到＝fsm 自己出錯、不碰 state；ctl 選填，`paused`／`stop` 對單次程式都＝這拍不起格就退出。
+- 格出錯、error 格、state 窗欄位、ctl／lock、格的 stdin：現行定案見 [意見 1～4](../2026-10-15-opinions-1-4.md) Q1～Q5。
 
-**補決（動工後，使用者『照它做的寫進規範』）**：
-- state 窗加 `running`：起格前寫 true、跑完改 false；下一拍讀到 true＝上一拍被殺一半（N-38、N-39）；另記 `ctl_seq` 回音。
-- 格收到的 stdin＝`{"state","step","prev"}`〔註：10-15 稍後加 `cfg`，見 §6〕；`prev` 三形狀：平常＝上一格 `data`；被殺一半＝`{"interrupted": true, "data": …}`；進 error 格＝`{"state","error","data"}`（N-37）。
-- 後續：格的 stdin 改成 fsm 設定本身＋`fsm_state`，`prev` 三形狀作廢（被殺一半＝`fsm_state.running`；進 error 格＝`phase` error＋`last_error`＋`error_from`），見 [json-families § 動工](../2026-10-15-json-families.md#動工10-15使用者都照建議)。
-
-**未決**：標準實作的 fsm 要不要每拍記時間（列進待定）。
+**未決**：標準實作的 fsm 要不要每拍記時間（列進待定；CONVENTION P-38 定要）。
 
 ## 4. a～f 暫定預設全定
 
@@ -59,4 +50,3 @@
 - d daemon 的 save 檔＝table 窗，`load` 讀它 → N-28。
 - e inst 不開窗，exit 檔只是橋樑 → N-30。
 - f `policies.child_exit`＝inst TARGET、`children` 每項＝aos-loop 設定 TARGET → N-28。
-- 照 lib 程式核對過，文字與程式一致。

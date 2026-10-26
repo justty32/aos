@@ -1,6 +1,6 @@
 # 2026-10-15 kernel 截流：agent 只管叫、貴的呼叫先排隊
 
-← [討論紀錄](README.md)｜概念：[CONCEPTS kernel](../docs/CONCEPTS/04-kernel.md)、[agent](../docs/CONCEPTS/05-agent.md)｜前情：[10-13 kernel／agent](2026-10-13-kernel-agent.md)、[`_metainfo`](2026-10-13-json-path/02-metainfo.md)｜程式：lib agent.md（已刪，見 git 歷史 5546be29）、`aos_agent_call.py`（agent 當函數叫 agent，未進 git）｜續：[LLM kernel 優先級](2026-10-15-llm-kernel.md)
+← [討論紀錄](README.md)｜概念：[CONCEPTS kernel](../docs/CONCEPTS/04-kernel.md)、[agent](../docs/CONCEPTS/05-agent.md)｜前情：[10-13 kernel／agent](2026-10-13-kernel-agent.md)、[`_metainfo`](2026-10-13-json-path/02-metainfo.md)｜續：[LLM kernel 優先級](2026-10-15-llm-kernel.md)
 
 ## 原文（10-15，照記）
 
@@ -15,17 +15,15 @@
 ## 決定（使用者 10-15 定）
 
 - **巢狀等待卡死不另做防護**：卡死就卡死，精神同 N-20（不保證、使用者的事）。
-- **kernel 排程看的是呼叫樹的特性**：一棵樹（agent、工具、子 agent 串起來的 S 表示式）的可預期性等特性，由子葉的特性彙總（總和或別的彙總法都行）。出處＝C-22／2.16（agent 當 S 表示式拆，節點有的知道有的不知道，[河堤 2.16](2026-10-11-restart/02-河堤後段.md)）、C-13（九軸是每個任務自己的屬性）、C-22b（節點＝函式＋環境）。這也回答了 10-13 §3.2 留著的「包別人的 inst，`_metainfo` 自報還是由內層推」：由子葉彙總上去。
-- **特性寫在 inst.json 的 `_metainfo`**（10-13 已定的「給 kernel 參考的抽屜」）；裡面的欄位與彙總規則之後再定。
+- **kernel 排程看的是呼叫樹的特性**：一棵樹（agent、工具、子 agent 串起來的 S 表示式）的可預期性等特性，由子葉的特性彙總（總和或別的彙總法都行）。出處＝C-22／2.16（agent 當 S 表示式拆，節點有的知道有的不知道，[河堤 2.16](2026-10-11-restart/02-河堤後段.md)）、C-13（九軸是每個任務自己的屬性）、C-22b（節點＝函式＋環境）。10-13 §3.2 的「包別人的 inst，`_metainfo` 自報還是由內層推」：由子葉彙總上去。
+- **特性寫在 inst.json 的 `_metainfo`**（給 kernel 參考的抽屜）；裡面的欄位與彙總規則之後再定。
 - **kernel 定義兩層**＝[C-47](../docs/CONCEPTS/04-kernel.md)（原生：管什麼被執行或使用；aos：以 inst／loop／daemon 為基礎管某 inst 是否執行）。**先做兩種 kernel**＝[N-42](../docs/NORMS/09-kernel.md)（管 LLM 呼叫的；通用管理、以 agent 判斷的），都基於 daemon。
-- **具體機制再規劃**：下面的閘門／信箱草案與六題未決**仍開著**，沒被這次定案取代。（後來照建議預設做了，見下方「結論」與「六題」。）
+- **具體機制**：照下面的閘門／信箱與六題建議預設定案。
 
-## 結論（10-15 照推薦做了基礎實作）
-
-使用者沒另外回這份草案；10-15 基礎實作照它與下面六題的建議預設做了，之後的變動見檔尾「後續」。
+## 結論（照推薦定案）
 
 - **對上既有概念**：這題就是 C-20（腦＝有限資源 C-09／C-10，本機一顆＝1 格；排序 C-11；kernel 只排程 C-38；基於 daemon）。不用新概念。
-- **包裝（主線：送給 daemon）**：一支閘門 inst（`aos-gate`），設定寫真正要跑的 inst TARGET；它把那份 inst、stdin 內容、回信放哪寫成一封信丟進 kernel 的信箱（N-16 Maildir），等回信、原樣吐到 stdout。呼叫端照舊 N-12 呼叫、拿 N-30 結果；agent.json 只改 `brain` 指到閘門，工具、子 agent 要排隊也一樣包。kernel 端＝daemon（N-28）底下一個收件 loop：每拍挑一封、認領（new→cur）、起 aos-inst 真跑、寫回信、刪信；一格一次一封（＝N-41 的「非同步 think」做成通用一支程式）。
+- **包裝（主線：送給 daemon）**：一支閘門 inst（`aos-gate`），設定寫真正要跑的 inst；它把那份 inst、stdin 內容、回信放哪寫成一封信丟進 kernel 的信箱（N-16 Maildir），等回信、原樣吐到 stdout。呼叫端照舊 N-12 呼叫、拿 N-30 結果；agent.json 只改 `brain` 指到閘門，工具、子 agent 要排隊也一樣包。kernel 端＝daemon（N-28）底下一個收件 loop：每拍挑一封、認領（new→cur）、起 inst 真跑、寫回信、刪信；一格一次一封（＝N-41 的「非同步 think」做成通用一支程式）。
 - **順序與 `_metainfo`**：順序由 kernel 排序格決定（C-15），初版先來先跑；閘門把被叫 inst 的 `_metainfo` 抄進信裡給 kernel 看。
 - **巢狀卡死**：只有「包會再叫別人的工具」佔格才會卡；只包葉子（腦、單一貴工具）一格就夠。當慣例寫在閘門說明，不做機制。
 - **誰死了**：kernel 死＝信堆著，重起讀 new/ 接著做；呼叫者先死＝閘門收 SIGTERM 撤信（還在 new/ 的刪掉，已在跑的讓它跑完）；腦壞＝回信是錯，閘門照吐，agent 走既有 `BrainFailed`。
@@ -36,7 +34,7 @@
 2. 排隊用哪種窗：信箱 vs 鎖／號誌？→ 信箱，kernel 初版純先到先跑。
 3. `_metainfo` 初版欄位：先只用一個 `resource`（例 `"llm"`），九軸等通用寫法照舊晚點再說？→ 是，先當閘門私約、不進規範。
 4. 彙總規則與誰算：作者自報整棵 vs kernel 從子葉算（加總／取最大）？→ 先自報，寫了就用；沒寫的 kernel 把子葉加總。
-5. 排隊久了算誰的：含在呼叫者 `timeout_ms` vs 閘門另算？→ 含在呼叫者的 `timeout_ms` 裡（原建議另設 `wait_ms`、錯碼 `QueueTimeout`，實作也照做過，10-15 深夜 KISS 1.8 刪掉，見下「後續」）。
+5. 排隊久了算誰的：含在呼叫者 `timeout_ms` vs 閘門另算？→ 含在呼叫者的 `timeout_ms` 裡，閘門不另設等待上限（KISS 1.8，使用者「其他都按照推薦」）。
 6. kernel 重起時 cur/ 那封：重跑 vs 回錯？→ 回錯，N-20。
 
-後續：基礎實作照上面的建議預設做了（見 [LLM kernel § 動工自定點](2026-10-15-llm-kernel.md#動工自定點)）；10-15 深夜 KISS 批次 1.8（使用者「其他都按照推薦」）刪了閘門 `wait_ms`／`QueueTimeout`（第 5 題＝排隊算在呼叫者的 `timeout_ms` 裡）、「`resource` 沒寫＝直接跑」改成 `ResourceUnknown`（見 [KISS 彙整](2026-10-15-kiss/README.md)）。
+細節見 [LLM kernel § 動工自定點](2026-10-15-llm-kernel.md#動工自定點)、[KISS 彙整](2026-10-15-kiss/README.md)。
