@@ -12,6 +12,12 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-10-27（家中 Manjaro；playground 重來、aos-mcp、aos-hub）
+
+1. **授權**：可隨意 push。分工：普通事 opus、雜活 sonnet；做事的 agent（雜活除外）先讀 wf 規矩。
+2. **狀態**：playground（`~/code/try/playground`）10-26 砸掉一步一步重來：`_entry` 一行轉 `main.py`（ELI5 注解），`claude -p` 經 aos-mcp 叫 aos 工具；aos-hub 管多個 claude，使用者說是 demo、以後再完善。下一步等使用者說 → [SESSION-LOG](SESSION-LOG.md) 第一條、統整頁 https://claude.ai/artifact/W7aXZvCPTf1u2qExH6CEMM
+3. **新規**：無；代定在 [thinking 10-26 playground](../proto8/thinking/2026-10-26-playground.md)、[10-27 claude-switch](../proto8/thinking/2026-10-27-claude-switch.md)。
+
 ## 2026-10-26（家中 Manjaro；整理與精簡全部完成）
 
 1. **授權**：可隨意 push（commit 後直接 push origin main）。分工：普通事 opus、雜活 sonnet；做事的 agent（雜活除外）先讀 wf 規矩。
