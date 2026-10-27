@@ -11,7 +11,7 @@ own_error.install()
 from aos_bins import ROOT, tool, path_with  # noqa: E402
 EXEC = tool("aos-exec")
 FAY = ROOT / "demo" / "agent-fay"
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "TMUX")
+CLEAR = ("AOS_HUB", "AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "TMUX")
 HAS_TMUX = shutil.which("tmux") is not None
 SYS_PATH = "/usr/bin:/bin"          # 只留系統的：真的 claude（~/.local/bin）進不來；真的 codex（/usr/bin）被假的擋在前面
 
@@ -98,6 +98,7 @@ class Fay(unittest.TestCase):
         e = {k: v for k, v in os.environ.items() if k not in CLEAR}
         e["PATH"] = path_with(str(self.bin) + os.pathsep + SYS_PATH)
         e["FAKE_LOG"] = str(self.log)
+        e["AOS_HUB"] = str(self.tmp / "hub")          # 登記放測試自己的（10-27），不碰使用者的
         e.update(extra or {})
         return e
 

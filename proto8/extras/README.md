@@ -12,5 +12,6 @@ aos 主體（[impls/](../impls/README.md) 的四支 C++、[bin/](../bin/README.m
 | [langs/](langs/README.md) | 用 Janet、Lua 寫 aos 程式，編成資料夾＋JSON | `tests/test_janet.py`、`tests/test_lua_aos.py` |
 | [editors/nvim/](editors/nvim/README.md) | nvim 外掛 aos_nvim：在 nvim 裡跑 aos、看 trace、丟題 | `tests/test_lua_aos.py`（headless smoke） |
 | [sandbox/](sandbox/README.md) | aos-sandbox：照一份設定把程式關進沙箱（s6＋bwrap）再跑 | `tests/test_sandbox.py` |
+| [cli_hub/](cli_hub/README.md) | aos-hub（10-27）：所有 claude／codex 小格一次列出、cd 過去一個指令接入、Ctrl-] 換一格、收起閒著的、叫回收起的、看非互動那次在做什麼 | `tests/test_hub.py` |
 
 逐檔說明在 code map 的 [proto8/06-周邊工具](../../wf/workflows/common/code-map/proto8/06-周邊工具.md)、[06-周邊工具-2](../../wf/workflows/common/code-map/proto8/06-周邊工具-2.md)。

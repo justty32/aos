@@ -88,6 +88,8 @@ agent-fay/
 
 **權限**（`cli.json`，要放寬就改那份）：claude 只給 `Read,Glob,Grep`、`--permission-mode dontAsk`、不載 MCP、`--model sonnet`、非互動 `--max-budget-usd 0.5`；codex `sandbox_mode="read-only"`、`approval_policy="never"`。CLI 在 `$AOS_WS` 裡跑。
 
+**10-27**：所有工具的格都登記給 [aos-hub](../extras/cli_hub/README.md)（一個地方列出、切換、收起、叫回）；claude 非互動那次的即時紀錄在格裡的 `live.jsonl`。
+
 **錯**：工具叫的照 lib 契約 stderr 與 stdout 各一行 `claude: 代號 原因`（或 `codex:`）、退 1，attach 的是 `cli_session: 代號 原因`（工具叫的那行 act 回給腦、不停，同 agent-dan）——`ArgumentsBad`、`CliMissing`、`CliFailed`、`ReplyMissing`、`SessionBad`、`CfgMissing`／`CfgBad`。測試 `test_fay.py` 用假的 claude／codex，不花額度；要 tmux。
 
 ## pi-tools 與 agent-pip（仿 pi coding agent 的基本工具，10-24）

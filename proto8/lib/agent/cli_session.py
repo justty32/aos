@@ -7,6 +7,11 @@
 #   turns.jsonl   互動畫面每講完一輪，hook 接一行 {"answered_at", "text"}（answered_at＝講完的時間，10-25 前叫 at）（agent 從這裡拿回答，不去解析畫面）
 #   busy.txt      claude 的畫面正在跑一輪（有人送出、還沒講完）
 #   lock          同一時間只有一個人用這段對話（agent 的一次呼叫、attach 開畫面）
+#   live.jsonl    claude 非互動那一次的即時紀錄（stream-json 一行一事件，每次呼叫重寫；aos-hub watch 看它）（10-27）
+#   tool.txt、ws.txt  這格屬於哪個工具資料夾、哪個工作區（aos-hub 叫回畫面時用）（10-27）
+#
+# 登記（10-27）：每用到一格，就在 $AOS_HUB（沒設＝~/.local/state/aos-hub）的 cells/ 放一個指向這格的捷徑，
+# 給 proto8/extras/cli_hub 的 aos-hub 列出全部、切換、收起、叫回。這支只登記，不管 hub 怎麼用。
 #
 # 兩條路（每次呼叫自己挑）：
 #   畫面沒開 → 非互動：claude -p --resume <id>（第一次 --session-id <新 id>）、codex exec resume <id> -（第一次 codex exec -）
@@ -16,7 +21,7 @@
 # 放哪（10-24 遷移）：proto8/lib/agent/cli_session.py，lib/agent 的 claude、codex 兩個工具共用（用 realpath 找到這層再 import）；
 # agent-fay 根目錄的 cli_session.py 是捷徑指過來（給 attach 用）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
-import datetime, fcntl, json, os, shlex, subprocess, sys, time, uuid
+import datetime, fcntl, hashlib, json, os, shlex, subprocess, sys, threading, time, uuid
 
 TMUX_SESSION = "cli"
 PROG, ECHO = "cli_session", False                    # 錯誤行開頭、要不要也印到 stdout（call_main 改成工具名、True）
@@ -105,6 +110,31 @@ class Cell:
         return [l for l in r.stdout.splitlines() if l.strip()] if r.returncode == 0 else []
 
 
+def hub_dir():
+    return os.environ.get("AOS_HUB") or os.path.join(
+        os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "aos-hub")
+
+
+def register(cell, tool_dir, ws):
+    """記下這格是哪個工具、哪個工作區，並在 hub 的 cells/ 放捷徑（10-27）。登記失敗不擋正事。"""
+    try:
+        if cell.read("tool.txt") != tool_dir:
+            cell.write("tool.txt", tool_dir + "\n")
+        if cell.read("ws.txt") != ws:
+            cell.write("ws.txt", ws + "\n")
+        cells = os.path.join(hub_dir(), "cells")
+        os.makedirs(cells, exist_ok=True)
+        link = os.path.join(cells, hashlib.sha1(cell.path.encode()).hexdigest()[:12])
+        if os.path.realpath(link) != os.path.realpath(cell.path):
+            tmp = os.path.join(cells, "." + os.path.basename(link))
+            if os.path.lexists(tmp):
+                os.remove(tmp)
+            os.symlink(cell.path, tmp)
+            os.replace(tmp, link)
+    except OSError:
+        pass
+
+
 # ---------------------------------------------------------------- 非互動（畫面沒開）
 
 def run_cli(argv, prompt, ws, timeout_ms):
@@ -121,18 +151,57 @@ def tail(text, n=300):
     return (text or "").strip()[-n:]
 
 
+def run_claude_stream(argv, prompt, ws, timeout_ms, live_path):
+    """claude -p --output-format stream-json：每行一邊寫進 live.jsonl（人可以 tail 著看），一邊收起來；回 (結束碼, 全部行, stderr)。"""
+    try:
+        p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             text=True, cwd=ws)
+    except FileNotFoundError:
+        die("CliMissing", "%s 不在 PATH 上" % argv[0])
+    p.stdin.write(prompt)
+    p.stdin.close()
+    deadline, lines = time.time() + timeout_ms / 1000, []
+    err = []
+    t = threading.Thread(target=lambda: err.append(p.stderr.read()), daemon=True)
+    t.start()
+    timer = threading.Timer(timeout_ms / 1000, p.kill)
+    timer.start()
+    try:
+        with open(live_path, "w", encoding="utf-8") as live:
+            for line in p.stdout:
+                lines.append(line)
+                live.write(line)
+                live.flush()
+        p.wait()
+    finally:
+        timer.cancel()
+    t.join(1)
+    if time.time() > deadline:
+        die("CliFailed", "%s 超過 %d 秒沒做完" % (argv[0], timeout_ms // 1000))
+    return p.returncode, lines, "".join(err)
+
+
 def print_claude(cfg, cell, ws, prompt):
     sid = cell.read("session.txt")
     new = "" if sid else str(uuid.uuid4())
-    argv = ["claude", "-p", "--output-format", "json"] + cfg.get("flags", []) + cfg.get("print_flags", [])
+    # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-hub watch 看得到它正在做什麼；
+    # 回答取最後一個帶 result 的那行（type: result）
+    argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
     argv += ["--resume", sid] if sid else ["--session-id", new]
-    r = run_cli(argv, prompt, ws, cfg.get("timeout_ms", 600000))
-    try:
-        out = json.loads(r.stdout)
-    except ValueError:
-        die("CliFailed", "claude 結束碼 %d、輸出不是 JSON：%s %s" % (r.returncode, tail(r.stdout), tail(r.stderr)))
-    if r.returncode != 0 or not isinstance(out, dict) or out.get("is_error"):
-        die("CliFailed", "claude 結束碼 %d：%s %s" % (r.returncode, tail(r.stdout), tail(r.stderr)))
+    code, lines, err = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"))
+    out = None
+    for line in lines:
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(ev, dict) and "result" in ev:
+            out = ev
+    stdout = "".join(lines)
+    if out is None:
+        die("CliFailed", "claude 結束碼 %d、輸出沒有 result：%s %s" % (code, tail(stdout), tail(err)))
+    if code != 0 or out.get("is_error"):
+        die("CliFailed", "claude 結束碼 %d：%s %s" % (code, tail(stdout), tail(err)))
     if not sid:
         cell.write("session.txt", (out.get("session_id") or new) + "\n")
     return out.get("result") or ""
@@ -204,6 +273,7 @@ def call_main(tool_dir):
     if not isinstance(args, dict) or not isinstance(args.get("prompt"), str) or not args["prompt"].strip():
         die("ArgumentsBad", "缺 prompt（要一個非空字串）")
     cell = Cell(stack)
+    register(cell, os.path.abspath(tool_dir), os.path.abspath(ws))
     f, ok = cell.lock()
     if not ok:
         die("SessionBad", "這段對話有人在用（另一次呼叫、或 attach 正在開畫面）")
@@ -370,19 +440,28 @@ def attach_main(argv, agent_dir):
         die("ArgumentsBad", "一次只接一個工具")
     if names[0] not in known:
         die("ToolUnknown", "%s（有：%s）" % (names[0], ", ".join(known)))
-    cfg = load_cfg(os.path.join(tools_dir, names[0]))
     cell = Cell(os.path.join(stack, names[0]))
-    f, ok = cell.lock()
-    if not ok:
-        print("agent 正在用這段對話，等它這次講完…", file=sys.stderr)
-        fcntl.flock(f, fcntl.LOCK_EX)
-    with f:
-        opened = start(cfg, cell, ws)
+    register(cell, os.path.realpath(os.path.join(tools_dir, names[0])), ws)
+    opened = open_cell(cell)
     if detached:
         print("%s 的畫面%s：%s" % (names[0], "開好了" if opened else "本來就開著", cell.file("tty.sock")))
         return
     print("接進 %s（Ctrl-\\ 跳出、畫面留著；在裡面 /exit 結束）" % names[0], file=sys.stderr)
     os.execvp("tmux", ["tmux", "-S", cell.file("tty.sock"), "attach", "-t", TMUX_SESSION])
+
+
+def open_cell(cell):
+    """畫面沒開就開（有 session.txt 就 --resume 接回那段＝叫回）；工具與工作區照格裡的 tool.txt、ws.txt。回 True＝這次才開的。"""
+    tool_dir, ws = cell.read("tool.txt"), cell.read("ws.txt")
+    if not tool_dir or not ws:
+        die("CellBad", "%s 沒有 tool.txt／ws.txt（不是 cli_session 用過的格）" % cell.path)
+    cfg = load_cfg(tool_dir)
+    f, ok = cell.lock()
+    if not ok:
+        print("agent 正在用這段對話，等它這次講完…", file=sys.stderr)
+        fcntl.flock(f, fcntl.LOCK_EX)
+    with f:
+        return start(cfg, cell, ws)
 
 
 if __name__ == "__main__":
