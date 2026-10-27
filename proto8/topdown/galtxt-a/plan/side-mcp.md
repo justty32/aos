@@ -55,3 +55,5 @@
 - 範圍：用 galtxt-a 試兩個 tool——`lint`（readOnly、確定性、一秒回）與 `galtxt-a`（agent、openWorld、十幾秒、要 progress）；Claude Code 以 `claude mcp add` 掛上、跑一題、拿到 answer。
 - 驗收：`tools/list` 的 annotations 跟 `_metainfo` 一致（純程式對）；`tools/call lint` 的 `isError` 與結束碼一致；agent 那條逾時時整棵子樹被收掉、小格留著給人看。
 - 不做：資源（resources/）、提示（prompts/）、HTTP 傳輸、aos 當 client。
+
+**10-27 實作的偏離**（[thinking 10-26 playground](../../../thinking/2026-10-26-playground.md#10-27接-aos-工具mcp)）：放在 `proto8/extras/ai_tools/bin/aos-mcp`（ai_tools 10-26 搬進 extras）；先試 lib/base 的 clock、math、read，不試 galtxt-a；沒做 progress、也沒做「agent 資料夾當 tool」；`destructiveHint` 不給；多一份 `<stack>/calls.jsonl` 記每次呼叫。

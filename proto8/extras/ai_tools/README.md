@@ -11,6 +11,7 @@ ai_tools/
   bin/aos-ai                 命令列（Python，只用標準庫）。PATH 自己放好 impls 各支（含 aos-json）、proto8/bin、自己
   bin/aos_ai_make.py         make：生成 JSON（驗形狀、欄位說明 notes）與骨架（工具、fsm 格、函數資料夾）
   bin/aos_ai_explain.py      explain：印概念一節；--here 照 N-58／N-59／N-61 模擬 aos-exec 會給的值
+  bin/aos-mcp                MCP server（stdio）：有 tool.json 的資料夾程式＝一個 MCP tool，見下「aos-mcp」
   （給 agent 掛的六個工具在 proto8/lib/aos/，見下「給 agent 的工具」）
     spawn_agent/             {"name", "template"?} → aos-ai spawn
     ask_agent/               {"name", "question", "template"?} → 沒有就 spawn，再 ask＋run，回答案
@@ -61,6 +62,16 @@ daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.sta
 六個工具（spawn_agent、ask_agent、agent_status、make_json、make_tool、explain_aos）在 [proto8/lib/aos](../../lib/README.md)，`aos-ai spawn --tool` 從那裡複製；照 lib 契約，錯是 stderr 與 stdout 各一行「工具名: 代號 原因」、退 1（代號照 aos-ai 的，例 `NameBad`），停下還是回給腦由叫它的 agent 決定（agent-dan 範本回給腦，[thinking](../../thinking/2026-10-23-tool-calls.md#10-24-定叫工具與小念頭的失敗回給腦)）。放題、等答案、讀 stack 的做法跟 proto8/extras/human 共用 `proto8/lib/aos/aos_ws.py`。`aos-ai spawn` 複製範本時，範本裡指出範本的相對捷徑（掛 lib 的工具）改成絕對捷徑。
 
 `aos-ai spawn boss --tool ask_agent --tool agent_status` 就掛上（生成與查概念：`--tool make_json --tool make_tool --tool explain_aos`）。照 P-41：`arguments` 從 stdin 進、stdout 整段是結果。子 agent 放 `$AOS_AI_ROOT`（沒設＝老闆的 `$AOS_WS`）的 `agents/<名>/`。`ask_agent` 前景跑子 agent，上限 `$AOS_AI_ASK_TIMEOUT` 秒（預設 50，要小於 agent-dan act 格的 60 秒）。PATH 上要有 `aos-ai`——經 `aos-ai run` 跑的 agent 已放好。
+
+## aos-mcp（10-27）
+
+`bin/aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] DIR...`：把有 `tool.json` 的資料夾程式當 MCP tools 給外部 agent（Claude Code 等）叫，stdio JSON-RPC、只用標準庫。給不了外部 agent Bash 時用這條（能給 Bash 就繼續用 aos-ai＋skill）。設計 [side-mcp](../../topdown/galtxt-a/plan/side-mcp.md)，決定 [thinking 10-26 playground](../../thinking/2026-10-26-playground.md)。
+
+- DIR 有 `tool.json`＝一個 tool（名字＝資料夾名、`description`／`inputSchema`＝`tool.json` 的 `description`／`parameters`）；沒有但有 `tools/`＝`tools/*/` 有 `tool.json` 的都列。`_metainfo` 搬成 annotations：`side_effect`→`readOnlyHint`（反）、`idempotent`→`idempotentHint`、`resource` 含 llm／net→`openWorldHint`。
+- 叫一次：`AOS_STACK=<stack>/<名>/ aos-exec --ws WS DIR`（aos-exec 從 PATH 找），arguments 進 stdin、stdout 整段回 text、退非 0＝`isError`（stdout 空就回一行 `aos-mcp: CommandFailed …`）；逾時＝`_metainfo` 的 `time_ms.max`，沒寫用 `--timeout-s`（預設 60），整群 TERM、2 秒後 KILL。每次叫完在 `<stack>/calls.jsonl` 記一行（`name`、`arguments`、`code`、`elapsed_ms`、`called_at`）。
+- 工作區＝`--ws` ＞ `$AOS_WS`；stack＝`--stack` ＞ `$AOS_STACK` ＞ `$WS/.stack/`。自己的錯 stderr 一行 `aos-mcp: 代號 原因` 退 1（`ArgumentsBad`、`WsMissing`、`ToolMissing`、`ToolJsonBad`）。
+- 只做 `initialize`、`ping`、`tools/list`、`tools/call`；沒有 progress、agent 資料夾（沒 `tool.json`）當 tool、resources、prompts、HTTP。
+- 掛法（Claude Code）：`--mcp-config` 一份 `{"mcpServers": {"aos": {"command": ".../aos-mcp", "args": [DIR...]}}}`，`--allowedTools mcp__aos__<名>`；例子在試驗場 `~/code/try/playground/agent/`（不在 git）。測試 `proto8/tests/test_aos_mcp.py`。
 
 ## Claude Code skill（claude_skill/aos）
 
