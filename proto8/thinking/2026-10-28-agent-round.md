@@ -2,11 +2,11 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-28 agent-ops](2026-10-28-agent-ops.md)（決定 1～10：各單位都是 aos 函數、六題的回答；本份是它的「結論／代定」）、[10-28 hub-kernel](2026-10-28-hub-kernel.md)（決定 11 prompt＝queue、13 插話不訂死）、[10-28 aos-tools](2026-10-28-aos-tools.md)、[10-28 hub-adapter](2026-10-28-hub-adapter.md)（信箱協議）、[10-24 compact](2026-10-24-compact.md)（agent-hal 的土法 compact）、[10-24 tool-lib](2026-10-24-tool-lib.md)（捷徑指到庫）｜相關條文：[CONVENTION P-11～P-26、P-41](../docs/CONVENTION/02-題目stack停錯腦.md)、[P-32～P-39](../docs/CONVENTION/06-巢狀.md)、[C-61](../docs/CONCEPTS/05-agent.md)、[N-43](../docs/NORMS/01-總則.md)、[N-57～N-61](../docs/NORMS/10-基礎設施-定義與工作區.md)
 
-規矩見 [thinking/README](README.md)。這份**全部是照原則代定、可翻案**，使用者定的在 agent-ops 的「決定」；文末原本要使用者看的七條，使用者 10-28 回「照新做法」，已定（agent-ops 決定 11）；之後再定粒度看 `_entry`、round 是零件庫的語法糖、aos 歸 aos、round 列入外部接口（決定 12～15），對應的結論已改。只寫文件、程式沒改、這次不動手做。
+規矩見 [thinking/README](README.md)。這份**全部是照原則代定、可翻案**，使用者定的在 agent-ops 的「決定」；文末原本要使用者看的七條，使用者 10-28 回「照新做法」，已定（agent-ops 決定 11）；之後再定粒度看 `_entry`、round 是零件庫的語法糖、aos 歸 aos、round 列入外部接口（決定 12～15）、格全部走註冊檔、捷徑只是方便用（決定 16），對應的結論已改。只寫文件、程式沒改、這次不動手做。
 
 ## 白話版
 
-一隻 agent 就是一個資料夾，裡面每一格都是一個小程式（aos 函數）：收題的 `queue`、記對話的 `history`、問腦的 `endpoint`、跑工具的 `act`，加上幾個可以不裝的插座 `hook/`。`round` 是把這些格照順序叫一遍的那支骨架，也是 aos 函數（零件庫裡的語法糖）；`_entry` 寫 aos-loop 就一格一格跑、寫 round 就一次跑完一輪。外面的人也能直接叫一次 round 同步問一題（外部接口）。格都是共用標準件，agent 資料夾裡只放捷徑（symlink）指過去；要換哪一格，就把那條捷徑換成自己的資料夾。執行中的東西全在 `$AOS_STACK`。
+一隻 agent 就是一個資料夾，裡面每一格都是一個小程式（aos 函數）：收題的 `queue`、記對話的 `history`、問腦的 `endpoint`、跑工具的 `act`，加上幾個可以不裝的插座 `hook/`。`round` 是把這些格照順序叫一遍的那支骨架，也是 aos 函數（零件庫裡的語法糖）；`_entry` 寫 aos-loop 就一格一格跑、寫 round 就一次跑完一輪。外面的人也能直接叫一次 round 同步問一題（外部接口）。格多半是共用標準件，**agent 資料夾裡的 `parts.json`（格的通訊錄）記每一格指到哪裡**，用 `aos-parts add` 登記；要換哪一格，就重新登記那一格。通訊錄沒寫的格，就去 agent 資料夾找同名的東西——放一條捷徑（symlink）或一個真的資料夾都行，這就是「捷徑方便使用」；兩邊都沒有，掛勾就當沒掛。給模型看的工具清單另外一份（`tools.json`），只認通訊錄。執行中的東西全在 `$AOS_STACK`。
 
 ## 1. 佈局
 
@@ -17,6 +17,8 @@ agent-x/
   .env          agent 層的設定（可無）
   system.txt    system 訊息（P-41 照舊）
   tools.json    腦能叫的工具，aos-tools 管（10-28 aos-tools）
+  parts.json    格的註冊檔（槽名 → 絕對路徑），aos-parts 管（決定 16；下面「格怎麼找」）
+  （以下各格都是「註冊檔沒寫時的固定名字」，可有可無：捷徑、真的資料夾或檔都行）
   round/        _entry → ../../lib/agent/round/_entry（捷徑）
   queue/        _entry → …/lib/agent/queue/_entry
   history/      _entry → …/lib/agent/history/_entry
@@ -29,8 +31,22 @@ agent-x/
 - **格跟工具的界線**：上面這些格是 agent 自己的格，**共用同一個 `$AOS_STACK`**（P-16：同一台狀態機）；`tools.json` 登記的工具是「別人」，每個一個小格 `$AOS_STACK/<名>/`（P-17），由 aos-tools call 給。
 - **round 跟每一格都拿 agent 資料夾的絕對路徑當第一個參數**（`loop.json` 用 `{"$env": "AOS_CD"}` 給 round，round 再原樣給每一格）。理由：aos-exec 解開捷徑後 cwd 是庫的位置（10-24 tool-lib 已知），共用件靠 cwd 找不到引用它的 agent 的其他格；用參數明給，跟 `aos-fsm fsm.json`「設定檔是唯一的位置參數」、`"_entry": ["aos-fsm", {"$env": "AOS_CF"}]` 同一個樣子。這跟 P-33「不給程式根變數」字面相撞，見文末第 1 條。
 - **共用件放 `proto8/lib/agent/<名>/`**（round、queue、history、act）與 **`proto8/lib/endpoint/<名>/`**（fake、openai；LiteLLM 就是 openai 那個加一份 `.env`）。10-24 已定庫在 `lib/<層>/<名>/`，agent 層的件放 `lib/agent/`（現在已有 cli_session、pyfix）。
-- **捷徑用相對路徑**（repo 內，C-61「相對捷徑、兩份一起搬也不斷」、agent-liv 的做法）；repo 外的 agent 用絕對捷徑（aos-ai spawn 的做法）。只管 Linux；Windows checkout 捷徑變普通檔（10-24 已知）。捷徑目標裡的 `..` 跟 P-25／C-61「零個 `..`」字面相撞，使用者已定照新做法走（agent-ops 決定 10）。
-- **跟 tools.json 的對照**：工具走註冊檔、存絕對路徑（10-28 上午定）；agent 自己的格走捷徑（10-28 下午定）。代定**兩套並存、照種類分**：腦叫的工具＝tools.json，agent 的格＝捷徑。要不要合一見文末第 2 條。
+- **捷徑**（決定 16 起降為方便用）：固定名字的格可以是捷徑；repo 內用相對捷徑、repo 外用絕對捷徑，只管 Linux（10-24 已知）。捷徑目標裡的 `..` 跟 P-25／C-61 字面相撞，使用者已定照新做法走（決定 10）；正式機制改走註冊檔後，這個衝突只剩在可有可無的捷徑裡。
+- **跟 tools.json 的對照**：原本代定「兩套並存」已由決定 16 取代——格也走註冊檔，但是**另一份**（`parts.json`），見下。
+
+### 格怎麼找：註冊檔 → 固定名字 → 預設（決定 16）
+
+照原則代定、可翻案：
+
+- **另一份檔 `parts.json`，不跟 tools.json 合一**。形狀照 tools.json：`{"parts": {"<槽>": {"path": "/絕對/路徑", "env": {名: 值}}}}`。理由：tools.json 是給模型與 aos-mcp（外部 CLI）看的清單，混進格就會被列給模型（C-52 各管各的）；兩邊的檢查也不同（工具要 `_tooldef`、格不用）。要一處看全用 `aos-parts ls`。
+- **管理指令另一支 `aos-parts`**，用法照 aos-tools：`add [--override] [--env K=V]… 槽 XXX`、`rm 槽`、`ls [--json]`、`get 槽`，加一個 **`which 槽`**——照「註冊檔 → 固定名字」查，印路徑；都沒有退 10。查找順序只寫在這一處（C-52）。不擴充 aos-tools：aos-tools 的 `call`、`--tooldef` 對格沒意義。實作可以共用程式碼。
+- **槽名**＝固定名字的相對路徑：`round`、`queue`、`history`、`act`、`endpoint/<名>`、`hook/<點>`。只檢查格式（小寫、底線、最多一層 `/`），不檢查槽的清單——round 可以換成別人的、用別的槽（C-52）。XXX 要是 aos-exec 跑得動的東西（資料夾、可執行檔、JSON），不是就報錯（同 aos-tools 決定 4）。
+- **迴圈怎麼叫格**：round 每叫一格先 `aos-parts --file <agent>/parts.json which <槽>`，再 `aos-exec <路徑> <agent 資料夾> …`；註冊檔有 `env` 就放進那次的環境（取代原本「這格的 `.env`」放設定，例 endpoint 的 `AOS_BRAIN_MODEL`、act 的 `MAX_PARALLEL`、compact 的 `MAX_BYTES`；值可用 `$env` 指示詞，金鑰不必寫死，N-45）。固定名字那條路照舊用那格自己的 `.env`。
+- **找不到怎麼辦**：註冊檔寫了但路徑壞了＝報錯（`PartBad`），**不**退去找固定名字（報錯不猜）。註冊檔沒寫、固定名字也沒有：掛勾＝沒掛的預設行為（§ 3 表）；round、queue、history、act、endpoint 這些必要的格＝`PartMissing`、round 退 1（P-20）。是否改成「必要的格找不到就用 lib 的標準件」**未定**（來不及細想，見文末）。
+- **endpoint 的候選**＝註冊檔裡 `endpoint/<名>` 與資料夾 `endpoint/` 底下同名的聯集（同名以註冊檔為準）；`endpoint.txt` 照舊寫名字，沒有＝`endpoint/default`。
+- **工具清單不套這條**：工具只認 tools.json（aos-tools 現狀），不退去掃 `tools/<名>/`——那正是使用者嫌「太土太粗暴」的做法（aos-tools 決定 7），給模型看的清單要明白登記。
+- **共用件怎麼登記、搬家**：照 aos-tools 結論第 6 點——`add` 存絕對路徑；手寫的相對路徑從 parts.json 所在資料夾算，所以 git 裡的範本 `parts.json` 手寫 `../../lib/agent/queue` 這種相對路徑、整個 repo 搬家不斷；`add` 寫的絕對路徑搬家要重新 add（使用者選的代價）。
+- **「捷徑方便使用」具體是**：不想登記時，在 agent 資料夾放一個固定名字的捷徑（或真的資料夾）就能用；`aos-parts add` 收捷徑路徑也行（照 aos-tools 存 abspath、不解開捷徑）。不另做「產生捷徑」的指令。
 
 ## 2. round：一輪本身
 
@@ -191,6 +207,8 @@ round:
 10. 黑盒子（claude code）那條：hub 已做，round 不碰（決定 14：aos 歸 aos）。
 11. **round 當外部接口**（決定 15）：做一個「問 agent-xxx」的工具（push 一題＋叫一次 round＋印 `out/` 答案），登記進 claude code 用的 tools.json；驗：claude code 經 aos-mcp 問一題拿到答案、agent 不常駐；搶信箱不加保護。
 
+0. （決定 16，排在第 1 步前）**`proto8/bin/aos-parts`**：add／rm／ls／get／which；驗：註冊的優先、沒註冊走固定名字（捷徑與真資料夾各一）、都沒有退 10、註冊了但路徑壞＝`PartBad`。之後第 5 步 round 叫格一律經 `which`；第 6 步範本改成手寫相對路徑的 `parts.json`（不必擺捷徑）；第 7 步 aos-ai spawn 改成 `aos-parts add`（不複製捷徑）；第 9 步 P-25／C-61 的加註改成「格也走註冊檔，同 aos-tools 的加註；`..` 只在方便用的捷徑」。
+
 每步各一個 commit，每步結尾在 WSL 實跑一次。
 
 <a id="要使用者看的只這一節"></a>
@@ -202,7 +220,7 @@ round:
 (a) 跟既有原則的衝突（照新做法走）：
 
 1. **每格拿 agent 資料夾當第一個參數**，P-33「不給程式根變數」／C-52 加例外——落在 [§ 1 佈局](#1-佈局)（round 跟每一格的參數）與 [§ 2](#2-round一輪本身)（叫法）。理由照舊：aos-exec 解開捷徑後 cwd 在庫那邊，共用件靠 cwd 找不到引用者的其他格；這是跟 fsm 拿 fsm.json 同一種參數、不是環境變數。
-2. **兩套引用並存**（照代定）：腦叫的工具走 `tools.json`、agent 自己的格走捷徑，照種類分、不合一——落在 [§ 1 佈局](#1-佈局)（跟 tools.json 的對照）。
+2. ~~**兩套引用並存**（照代定）~~——**已由決定 16 取代**：格也全部走註冊檔（另一份 `parts.json`），捷徑只是註冊檔沒寫時的固定名字、方便用——落在 [§ 1 格怎麼找](#格怎麼找註冊檔--固定名字--預設決定-16)。
 3. **粒度看 `_entry`**（原本代定「預設一個行程跑完一輪」，改由 agent-ops 決定 12 取代）：`_entry` 寫 aos-loop 就一格一格跑、寫 round 就一次跑完一輪；N-53／C-25 的衝突改寫成「一格一次仍然可用，用 aos-loop」——落在 [§ 2](#2-round一輪本身)（第一條與最後一條）。
 4. **只有 compact 可以改寫 history**，其餘只附加（P-41 改寫；壓掉的整份搬 `history_archive/`）——落在 [§ 4 單位介面](#4-單位介面) 的 history。
 5. **錯誤分類靠 stderr 代號**（`BrainFailed`／`KeyBad`／`ModelUnknown`／`RequestBad`／`ReplyBad`），結束碼照 N-43 一律 1，`on_error` 讀代號——落在 [§ 4 單位介面](#4-單位介面) 的 endpoint（錯）。
@@ -211,3 +229,9 @@ round:
 (b) 原則推不出的方向題（照代定）：
 
 7. **round 留在 `lib/agent/round/` 當庫的資料夾程式、用捷徑引用，不升成 aos-round**；它是語法糖＝aos-loop 加「這一輪結束就停」（agent-ops 決定 13）。另外 round 列入外部接口、外部 CLI 不納入 round（決定 14、15），落在 [§ 6](#6-外部指令對內部單位)——本條落在 [§ 1 佈局](#1-佈局)（共用件放 `proto8/lib/agent/<名>/`）與 [§ 7](#7-怎麼落地做一隻新範本-agent這次不做) 第 5、10、11 步。
+
+## 未定（決定 16 來不及細想的，10-28）
+
+使用者下班前收尾，下面先標未定、照代定的寫法走：
+
+- 必要的格（round、queue、history、act、endpoint）註冊檔和固定名字都沒有時：代定報錯 `PartMissing`；另一個做法是退去用 lib 的標準件（零設定就能跑，但等於多一層看不見的預設）。
