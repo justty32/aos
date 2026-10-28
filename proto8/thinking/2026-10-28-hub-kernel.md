@@ -24,17 +24,33 @@
 
 > 其實應該還是要aos-hub。因為不只claude code cli，可能也要包括pi coding agent, codex之類。kernel掛掉後這些依賴於他的指令就報錯，限制數量這塊之後實作時再說。應該要有pause和stop兩種。舊的，應該會在AOS_HUB這個路徑下，對，把AOS_CLAUDE_CODE_CLI_HUB那個路徑改成這個。
 
+頂層接著把五處跟原則對不上的地方攤給他（①常駐 kernel 後狀態以誰為準 ②名字撞 CONCEPTS 的 kernel ③舊對話搬到全機的 `AOS_HUB` ④pause／stop 的解讀 ⑤`AOS_HUB` 沒設怎麼辦），他回：
+
+> 首先是筆記中那段pseudo code，其中的prompt那塊，確實應該換成stdin/out，可以把它當queue，然後在迴圈中做queue.pop(), queue.push()。然後像這種別人做好了的agent程式，他和我們aos loop/fsm agent的差別，就在於我們的aos loop/fsm agent我們可以靈活地掌握底層，所以其各階段都可以是aos函數，這使我們能夠更好的進行控制。 1. 以kernel記的為準。2.就是同個東西，kernel他就是一個負責排隊和分配資源的程式，hub他是在kernel的基礎上去額外做的功能，或者說他是kernel的一種。3.可以放在工作區啦。4.你的解讀比較好。5.報錯
+
+頂層再問兩個邊緣狀況（使用者插話時 agent 正在等工具：排隊等這輪做完還是打斷；kernel 記的跟實際不符〔實例自己掛了、被 OOM 砍〕要不要定期對帳、kernel 重開後記錄要不要存硬碟），他回：
+
+> prompt當queue這塊，等工具做完或打斷，這就隨意，沒必要訂死，因為大家都有不同需求，可能有些agent適合打斷，有些適合做完，這就是aos agent的靈活之處，你可以自己掌控設定。kernel這塊，寄售等實際遇到問題之後再來解決。
+
+（「寄售」應是「就」的打字誤：意思是 kernel 這塊就等實際遇到問題之後再來解決。）
+
 ## 決定（10-28）
 
 1. **名字仍叫 aos-hub**，不叫 aos-ccc：管的不只 claude code，也包括 codex、pi coding agent 之類。
 2. **環境變數用 `AOS_HUB`**（取代筆記裡的 `AOS_CLAUDE_CODE_CLI_HUB`）；`AOS_HUB` 指的資料夾裡跑一個**常駐的 aos-kernel**，管所有實例。
 3. **kernel 掛了，依賴它的指令直接報錯**，不做自動接回或自動重開。
 4. **限制實例數量：實作時再說。**
-5. **要有 pause 和 stop 兩種。** 怎麼分是頂層的解讀（**代定、可翻案**）：
+5. **要有 pause 和 stop 兩種**（頂層的解讀，使用者 10-28「你的解讀比較好」，定案）：
    - **pause**＝10-27 的「收起」：關掉程式，對話 id 留著，之後叫得回來。
-   - **stop**＝結束這個實例：舊對話歸檔到 `AOS_HUB` 底下，不再叫回。
-6. **舊的（舊對話歷史）放在 `AOS_HUB` 路徑下。**
+   - **stop**＝結束這個實例：舊對話歸檔，不再叫回。
+6. **舊對話歸檔放在工作區**（使用者「可以放在工作區啦」）——改掉原本「放在 `AOS_HUB` 路徑下」。
 7. **Ctrl-]＝跳出畫面但不結束實例**——這是筆記本身的意思，跟 10-27 晚「退出鍵只留一個」那條候選一致。
+8. **實例狀態以 kernel 記的為準**，不再像 10-27 那樣當場讀格裡的檔。
+9. **hub 是 kernel 的一種**：kernel＝負責排隊和分配資源的程式，hub 在它上面多做事（列實例、接畫面、pause／stop）。所以不算撞名，跟 CONCEPTS 的 kernel（C-12 排序與資源分配）是同一個概念。
+10. **`AOS_HUB` 沒設＝報錯**，不給預設路徑（取代 10-27 的 `~/.local/state/aos-hub/`）。
+11. **筆記 pseudo code 裡的 prompt 參數＝stdin／stdout**，當成一條 queue：使用者的新話、模型的回覆都經它，迴圈裡 `queue.pop()`／`queue.push()`。
+12. **現成 agent 程式（claude code 之類）跟 aos loop／fsm agent 的差別**：後者底層握在我們手上，每個階段都能是 aos 函數，所以控制得更細。
+13. **插話時等這輪做完還是打斷：不訂死**，每個 aos agent 自己設定——這正是 aos agent 的靈活處。現成 agent 程式（claude code 之類）的 queue 不在我們手上，照它自己的。
 
 ## 未決
 
@@ -43,6 +59,19 @@
 - 跟 aos-say／listen 怎麼結合（使用者自己也覺得「可能不太行」）。
 - 一輪跑起來沒開畫面時怎麼看：`_entry` 那邊處理，還是 aos-mcp 記（筆記兩個都可）；10-27 的 `aos-hub watch`（讀 `live.jsonl`）是現有的一條路。
 - 限制實例數量（決定 4，實作時再說）。
+- **kernel 記的跟實際不符**（實例自己掛了、被 OOM 砍）要不要定期對帳、kernel 重開後記錄要不要存硬碟：使用者說等實際遇到問題再解決，先不處理、不列待辦。
+- **「hub 是 kernel 的一種」跟通用 kernel 那題相關**：plan 留給使用者的方向題「通用 kernel 未決」（[plan § 1.2 第 3 題](2026-10-21-plan.md#12-留給你討論的不代定鐵律-5)、WAIT_USER 也掛著）——aos-hub 的常駐 kernel 算不算那支通用 kernel、還是另一種，使用者沒說，不代定。
+
+## 跟原則的對照（10-28）
+
+10-28 的回答解掉的：狀態以誰為準（決定 8）、名字撞 kernel（決定 9）、舊對話搬到全機一份的地方跟 C-67／N-13（狀態落在 stack、位置由叫的人給）打架（決定 6，放工作區就不搬出去了）、pause／stop 解讀（決定 5）、`AOS_HUB` 沒設（決定 10，跟 N-13「需要的環境變數沒設就退 1」同調）。
+
+還對不上的（實作時要看，不是新的方向題）：
+
+- **C-65 工作區只放交辦的東西與成果、執行時的東西落在 stack**：舊對話「放工作區」若是放在 `$AOS_WS/.stack/` 底下（stack 預設就在工作區裡），就不衝突；若跟 `new/`、`out/` 並排放在工作區本體，就跟 C-65 打架。
+- **C-47／N-42**：kernel 的 aos 實作定義是「以 inst／loop／daemon 為基礎」，N-42 只列兩種 kernel（LLM、通用）、都基於 daemon。hub 的常駐 kernel 要不要也照 daemon 做、算不算第三種——連到上面未決那條。
+- **N-13／C-52**：狀態以 kernel 記的為準，但格裡的 `busy.txt`、`lock` 這些仍是 cli_session 自己在 stack 外顯的狀態（N-13）。兩邊不一致時以 kernel 為準是定了，kernel 怎麼得知格裡的變化而不去讀下一層的內部（C-52 只管自己這層，10-27 已記的老問題）還沒定。
+- **C-67 位置由叫的人給**：`AOS_HUB` 由環境變數給，形式上合；但「全機所有實例共用一個 kernel」這種全機一份的東西，原則裡還沒有。
 
 ## 現有 aos-hub 跟新方向的差異（之後要改的）
 
@@ -50,11 +79,11 @@
 
 | 項目 | 現在（10-27） | 新方向（10-28） |
 |---|---|---|
-| 常駐程式 | 沒有；`aos-hub` 每次當場讀格裡的檔，自動收起靠 aos-loop 跑 `reap.json` | `AOS_HUB` 裡跑一個常駐 aos-kernel 管實例；kernel 沒在跑，指令直接報錯 |
-| 位置 | `AOS_HUB` 沒設＝`~/.local/state/aos-hub/` | 一律 `AOS_HUB`（沒設時怎麼辦還沒定） |
+| 常駐程式 | 沒有；`aos-hub` 每次當場讀格裡的檔，自動收起靠 aos-loop 跑 `reap.json` | `AOS_HUB` 裡跑一個常駐 aos-kernel 管實例，狀態以它記的為準；kernel 沒在跑，指令直接報錯 |
+| 位置 | `AOS_HUB` 沒設＝`~/.local/state/aos-hub/` | 一律 `AOS_HUB`；沒設＝報錯 |
 | Ctrl-] | 跳出並叫 `aos-hub pick` 換一格 | 只跳出、不結束實例 |
 | 停的方式 | 只有 `stop`（＝收起，叫得回來） | 分 `pause`（＝現在的收起）和 `stop`（結束、歸檔、不再叫回） |
-| 舊對話 | 留在格裡，沒歸檔 | stop 時歸檔到 `AOS_HUB` 底下 |
+| 舊對話 | 留在格裡，沒歸檔 | stop 時歸檔，放在工作區 |
 | 指令 | `ls`、`pick`、`attach`、`watch`、`stop`；cd 過去打 `aos-hub` 直接接 | 筆記的 `state`（這裡是不是納管的實例）、`open [資料夾]`（＝現在的 `aos-hub`／`attach`）、`ls`；`state` 現在沒有 |
 | 管哪些 CLI | claude、codex（cli_session 用過的格） | 加 pi coding agent 之類 |
 | 數量上限 | 沒有 | 實作時再說 |
