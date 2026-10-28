@@ -2,11 +2,11 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-28 agent-ops](2026-10-28-agent-ops.md)（決定 1～10：各單位都是 aos 函數、六題的回答；本份是它的「結論／代定」）、[10-28 hub-kernel](2026-10-28-hub-kernel.md)（決定 11 prompt＝queue、13 插話不訂死）、[10-28 aos-tools](2026-10-28-aos-tools.md)、[10-28 hub-adapter](2026-10-28-hub-adapter.md)（信箱協議）、[10-24 compact](2026-10-24-compact.md)（agent-hal 的土法 compact）、[10-24 tool-lib](2026-10-24-tool-lib.md)（捷徑指到庫）｜相關條文：[CONVENTION P-11～P-26、P-41](../docs/CONVENTION/02-題目stack停錯腦.md)、[P-32～P-39](../docs/CONVENTION/06-巢狀.md)、[C-61](../docs/CONCEPTS/05-agent.md)、[N-43](../docs/NORMS/01-總則.md)、[N-57～N-61](../docs/NORMS/10-基礎設施-定義與工作區.md)
 
-規矩見 [thinking/README](README.md)。這份**全部是照原則代定、可翻案**，使用者定的在 agent-ops 的「決定」；要使用者看的只有文末那一節。只寫文件、程式沒改、這次不動手做。
+規矩見 [thinking/README](README.md)。這份**全部是照原則代定、可翻案**，使用者定的在 agent-ops 的「決定」；文末原本要使用者看的七條，使用者 10-28 回「照新做法」，已定（agent-ops 決定 11）；之後再定粒度看 `_entry`、round 是零件庫的語法糖、aos 歸 aos、round 列入外部接口（決定 12～15），對應的結論已改。只寫文件、程式沒改、這次不動手做。
 
 ## 白話版
 
-一隻 agent 就是一個資料夾，裡面每一格都是一個小程式（aos 函數）：收題的 `queue`、記對話的 `history`、問腦的 `endpoint`、跑工具的 `act`，加上幾個可以不裝的插座 `hook/`。`round` 是把這些格照順序叫一遍的那支骨架，也是 aos 函數；loop 反覆叫 round。格都是共用標準件，agent 資料夾裡只放捷徑（symlink）指過去；要換哪一格，就把那條捷徑換成自己的資料夾。執行中的東西全在 `$AOS_STACK`。
+一隻 agent 就是一個資料夾，裡面每一格都是一個小程式（aos 函數）：收題的 `queue`、記對話的 `history`、問腦的 `endpoint`、跑工具的 `act`，加上幾個可以不裝的插座 `hook/`。`round` 是把這些格照順序叫一遍的那支骨架，也是 aos 函數（零件庫裡的語法糖）；`_entry` 寫 aos-loop 就一格一格跑、寫 round 就一次跑完一輪。外面的人也能直接叫一次 round 同步問一題（外部接口）。格都是共用標準件，agent 資料夾裡只放捷徑（symlink）指過去；要換哪一格，就把那條捷徑換成自己的資料夾。執行中的東西全在 `$AOS_STACK`。
 
 ## 1. 佈局
 
@@ -34,7 +34,8 @@ agent-x/
 
 ## 2. round：一輪本身
 
-- **叫法**：`aos-exec round <agent 資料夾>`；loop 每次叫一次。結束碼照 P-19：`0`＝這輪好了（或中途 yield，狀態在 stack，下次接著）、`10`＝沒題目、其他＝失敗停下等人（P-20）。
+- **粒度看 `_entry`**（agent-ops 決定 12、13）：格只有一套。`_entry` 寫 aos-loop、每次只做下一格（照下面「從哪接著做」判）＝一格一格跑；寫 round＝一次跑完一輪。round 是**語法糖**：等於 aos-loop 加上「這一輪結束就停」的條件，留在零件庫 `lib/agent/round/`、不升成 aos 指令。§ 1 的 `loop.json` 是「loop 反覆叫 round」那種寫法，只是其中一種設定。
+- **叫法**：`aos-exec round <agent 資料夾>`；loop 每次叫一次，或外面直接叫一次（§ 6 外部接口）。結束碼照 P-19：`0`＝這輪好了（或中途 yield，狀態在 stack，下次接著）、`10`＝沒題目、其他＝失敗停下等人（P-20）。
 - **從哪接著做**（不另設狀態檔，看 `cur/` 跟 `history.jsonl` 最後一則就夠，agent-dan 的 brain 現在就是這樣判）：`cur/` 與 `new/` 都空 → 10；`cur/` 空 → `queue claim`；最後一則是 user／tool → 問腦；最後一則是 assistant 且有 `tool_calls` → `act`；最後一則是 assistant 沒 `tool_calls` → `queue finish`。
 - **順序**（每一步都是 `aos-exec <格> <agent 資料夾> [子命令]`，stdin／stdout／結束碼是介面）：
 
@@ -61,7 +62,7 @@ round:
 - **格失敗（非 0）＝round 失敗**，round 以那個碼退、stderr 不轉述（P-21 誰的錯誰講；格自己已經寫了一行）；只有 endpoint 的失敗先問 `hook/on_error`。
 - **逾時**：整輪的 `timeout_ms` 寫在 `loop.json` 的單子（P-22、P-36 打整棵子樹）；endpoint 自己那次的逾時寫在 endpoint 格的 `.env`（`TIMEOUT_MS`），由 endpoint 自己守。
 - **插話**：round 不管；由 act 在兩個工具之間問 `queue peek` 與 `hook/on_interrupt`（見 § 5）。
-- 一個行程跑完一輪，不是一次一格。要回到「一次一格」的粒度，掛 `hook/pause` 永遠退 10 就是（每做完一批工具就 yield）。預設不 yield——這跟 N-53／C-25 的「每次短促」怎麼對，見文末第 3 條。
+- 用 round 時一個行程跑完一輪；要一次一格，`_entry` 改用 aos-loop（決定 12，取代原本「掛 `hook/pause` 永遠退 10」的代定；`pause` 仍可用來在一輪中途 yield）。N-53／C-25 見文末第 3 條。
 
 ## 3. 掛勾（hook）
 
@@ -169,8 +170,12 @@ round:
 | `aos-listen` | `queue pop`；`--follow` 讀 `live.jsonl` | 現成；follow 改讀 live.jsonl |
 | `aos-tools add／rm／ls／get／call` | `tools.json`；act 用 `call` | 現成 |
 | （未來）`aos-endpoint ls／set／get` | `ls endpoint/`、`endpoint.txt` | 先不做，手打就行 |
-| `aos-hub`（黑盒子 CLI） | 整個 round 換成 hub 包的一個 aos 函數 | agent-ops 附帶結論 |
+| `aos-hub`（外部 CLI：claude code、codex、pi） | 外部 CLI 跟 aos 接入的接口；**不納入 round**、不另做東西 | agent-ops 決定 14；「黑盒子當 round」已否決 |
+| `aos-exec <agent>/round <agent>`（外部接口） | 同步問一題、等答案：先 `queue push` 一題，叫一次 round 認領、跑完一輪、答案在 `out/<題名>`；不需要 agent 常駐 | agent-ops 決定 15；例：claude code 的 tools.json 登記「問 agent-xxx」，背後 push＋round＋讀答案，經 aos-mcp 叫到 |
 | loop 的 ctl.json | 外部停、暫停 | 現成（N-06），round 不另做 |
+
+- **外部接口四種並列**：hub、aos-mcp、say／listen 協議、round（決定 14、15）。say／listen 是非同步（要有 agent 開著收信）；round 是同步（叫一次跑完一題）。
+- **搶信箱是呼叫者自己的風險**：同一個工作區如果另有 aos-loop 在收信，外面叫的 round 會搶同一個信箱；工具不另加保護（決定 15、C-53），要避開就照 P-18 給各自的工作區或 stack。
 
 ## 7. 怎麼落地：做一隻新範本 agent（這次不做）
 
@@ -178,26 +183,31 @@ round:
 2. **`lib/agent/queue/`**：從 brain.py 的認領段＋aos-say／listen 抽；驗：push → peek 看得到 → claim 搬到 cur/、current.txt 有 → finish 寫 out/、done/ 有；withdraw 已認領的報錯。
 3. **`lib/agent/history/`**：append／read／compact；compact 搬 agent-hal 的三步；驗：塞一份大的 history 跑 compact，`history_archive/` 多一份、新的能被 read。
 4. **`lib/agent/act/`**：從 act.py 抽；驗：餵一則有兩個 tool_calls 的 assistant，吐兩則 tool、順序對；`MAX_PARALLEL=2` 結果順序仍對；掛一個 pre_tool 退 10 看到那次不跑。
-5. **`lib/agent/round/`**：照 § 2 寫骨架；驗：假腦跑完一題退 0、沒題退 10；endpoint 壞掉退 1 且 state／history 不動；掛 `on_error` 印 switch 看到 `endpoint.txt` 換名字再成功。
+5. **`lib/agent/round/`**（零件庫、語法糖＝aos-loop 加「這一輪結束就停」，不升成 aos 指令，決定 13）：照 § 2 寫骨架，「從哪接著做」那段要能單獨做一格（給 aos-loop 一格一格跑用，決定 12）；驗：假腦跑完一題退 0、沒題退 10；endpoint 壞掉退 1 且 state／history 不動；掛 `on_error` 印 switch 看到 `endpoint.txt` 換名字再成功。
 6. **範本 `demo/agent-nia/`**（人名接 meg、pip…）：照 § 1 擺捷徑與 `.env`；`demo/run.sh` 加一段；驗：WSL 上假腦一題、LiteLLM 一題，`tree -a .stack` 看得到 § 5 的檔。
 7. **aos-ai spawn**：多一種範本（捷徑複製後改絕對）。
 8. **測試** `tests/test_round.py`：以上各驗各一案；跑 proto8 全套不退。
-9. **條文**：P-23、P-41 改寫（agent-ops 決定 3）、P-25／C-61 加註（決定 10）、P-20 改「預設」、P-33 加「round 的參數」一句；NORMS 待定加這份的代定；code map、demo README、artifact 同步。
-10. 黑盒子（claude code）那條：hub 已做，round 不碰。
+9. **條文**：P-23、P-41 改寫（agent-ops 決定 3；P-41 含「只有 compact 可改寫」）、P-25／C-61 加註（決定 10）、P-20 改「預設」、P-33／C-52 加「round 的參數」一句、N-43 加「分類靠代號」、N-53／C-25 加「一格一次用 aos-loop、一輪用 round，看 `_entry`」（決定 12）；NORMS 待定加這份的代定；code map、demo README、artifact 同步。
+10. 黑盒子（claude code）那條：hub 已做，round 不碰（決定 14：aos 歸 aos）。
+11. **round 當外部接口**（決定 15）：做一個「問 agent-xxx」的工具（push 一題＋叫一次 round＋印 `out/` 答案），登記進 claude code 用的 tools.json；驗：claude code 經 aos-mcp 問一題拿到答案、agent 不常駐；搶信箱不加保護。
 
 每步各一個 commit，每步結尾在 WSL 實跑一次。
 
-## 要使用者看的（只這一節）
+<a id="要使用者看的只這一節"></a>
 
-(a) 跟既有原則的衝突：
+## 已定（原本要使用者看的七條，10-28）
 
-1. **P-33「不給程式根變數」／C-52 徹底切割 ↔ 每一格拿 agent 資料夾當第一個參數**。aos-exec 解開捷徑後 cwd 在庫那邊，共用件靠 cwd 找不到引用者的其他格（compact 要找 endpoint、act 要找 tools.json），所以 round 把 agent 資料夾明給每一格。不給的後果：共用件只能複製、不能捷徑（demo 現在的做法）。給的後果：格知道「我是誰的格」，跟 fsm 拿 fsm.json 是同一種參數、不是環境變數，但 P-33 那句要加例外。
-2. **兩套引用並存**：腦叫的工具走 `tools.json`（絕對路徑註冊檔，10-28 上午定）、agent 自己的格走捷徑（10-28 下午定）。一隻 agent 裡兩種寫法。合一的兩條路：格也進一份註冊檔（像 round.json），或工具也回到捷徑（10-24 tool-lib 的路，10-28 剛換掉）。我代定並存、照種類分，不合一。
-3. **N-53／C-25「agent 每次被叫只走一格、短促」 ↔ round 一個行程跑完一輪**（問腦、跑工具、再問腦……到吐出答案）。agent 審視自己靠的 stack 檔每一步都還在，但「每次之間」變成「每輪之間」；要回到一格一次，掛 `hook/pause` 永遠退 10。預設要不要 yield，我定不 yield。
-4. **P-41「history 只附加、不改寫」 ↔ compact 改寫**（壓掉的整份搬 `history_archive/`）。P-41 本來就要重寫（決定 3），這句要改成「只有 compact 可以改寫，其餘只附加」。
-5. **N-43「錯一律退 1、不用結束碼分種類」 ↔ 六題之 3 要錯誤分類**。代定分類靠 stderr 的代號（`BrainFailed`／`KeyBad`／`ModelUnknown`／`RequestBad`／`ReplyBad`），`on_error` 讀代號、不看結束碼；429 跟 503 都歸 `BrainFailed`，要細分看原因裡的 HTTP 碼。
-6. **P-20「出錯就停、不重試」**（agent-ops 已列）：`on_error` 能回 retry／switch；範本不掛＝照舊停。條文改成「預設」。
+頂層白話地問：四條衝突照新做法直接走、另外三題沒意見就照代定。使用者 10-28 回「照新做法」——七條全部定案（[agent-ops 決定 11](2026-10-28-agent-ops.md#決定10-28)）。四條衝突照新做法走；另外三題使用者沒另外表示，照代定走（依 [user.md「沒回答的邊緣狀況」](../../wf/workflows/common/user.md) 通則）。條文一樣**待實作時改**（§ 7 第 9 步；待辦在 [SESSION-LOG](../../wf/SESSION-LOG.md)）。
 
-(b) 原則推不出的方向題：
+(a) 跟既有原則的衝突（照新做法走）：
 
-7. **round 要不要升成 aos 的指令**（`aos-round`，像 `aos-fsm fsm.json`），還是留在 `lib/agent/round/` 當庫的資料夾程式、用捷徑引用？規範說 aos 只有四支指令、aos-agent 只做範本不包邏輯（10-23），但 aos-tools 已經是 bin 裡的第五支。我代定留在 lib、捷徑引用；差別是 PATH 上多不多一支。
+1. **每格拿 agent 資料夾當第一個參數**，P-33「不給程式根變數」／C-52 加例外——落在 [§ 1 佈局](#1-佈局)（round 跟每一格的參數）與 [§ 2](#2-round一輪本身)（叫法）。理由照舊：aos-exec 解開捷徑後 cwd 在庫那邊，共用件靠 cwd 找不到引用者的其他格；這是跟 fsm 拿 fsm.json 同一種參數、不是環境變數。
+2. **兩套引用並存**（照代定）：腦叫的工具走 `tools.json`、agent 自己的格走捷徑，照種類分、不合一——落在 [§ 1 佈局](#1-佈局)（跟 tools.json 的對照）。
+3. **粒度看 `_entry`**（原本代定「預設一個行程跑完一輪」，改由 agent-ops 決定 12 取代）：`_entry` 寫 aos-loop 就一格一格跑、寫 round 就一次跑完一輪；N-53／C-25 的衝突改寫成「一格一次仍然可用，用 aos-loop」——落在 [§ 2](#2-round一輪本身)（第一條與最後一條）。
+4. **只有 compact 可以改寫 history**，其餘只附加（P-41 改寫；壓掉的整份搬 `history_archive/`）——落在 [§ 4 單位介面](#4-單位介面) 的 history。
+5. **錯誤分類靠 stderr 代號**（`BrainFailed`／`KeyBad`／`ModelUnknown`／`RequestBad`／`ReplyBad`），結束碼照 N-43 一律 1，`on_error` 讀代號——落在 [§ 4 單位介面](#4-單位介面) 的 endpoint（錯）。
+6. **`on_error` 預設停**：能回 retry／switch，沒掛＝stop；P-20 改成「預設」而不是「一律」——落在 [§ 3](#3-掛勾hook)（`on_error`）與 [§ 4](#4-單位介面) 的 endpoint（換手）。
+
+(b) 原則推不出的方向題（照代定）：
+
+7. **round 留在 `lib/agent/round/` 當庫的資料夾程式、用捷徑引用，不升成 aos-round**；它是語法糖＝aos-loop 加「這一輪結束就停」（agent-ops 決定 13）。另外 round 列入外部接口、外部 CLI 不納入 round（決定 14、15），落在 [§ 6](#6-外部指令對內部單位)——本條落在 [§ 1 佈局](#1-佈局)（共用件放 `proto8/lib/agent/<名>/`）與 [§ 7](#7-怎麼落地做一隻新範本-agent這次不做) 第 5、10、11 步。
