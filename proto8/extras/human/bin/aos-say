@@ -6,7 +6,8 @@
 話＝其餘的參數用空白接起來；沒給就整段讀 stdin。題目寫成 $AOS_WS/new/<題名>（一題一檔、純文字，CONVENTION P-11），
 先寫工作區頂層的暫存檔再 link 進 new/（N-05；不蓋已有的檔）。題名預設＝現在的 UTC 時間（ISO 8601 基本格式到毫秒，
 例 20261024T031500.123Z.txt，排序＝先後）；--name 自己取，名字在 new/ cur/ out/ done/ 任一處用過＝NameBad。
-工作區＝--ws ＞ $AOS_WS ＞ cwd（同 aos-exec）。stdout 只印題名一行（給 aos-listen 用：aos-listen "$(aos-say 你好)"）。
+工作區＝--ws ＞ $AOS_WS ＞ cwd（同 aos-exec）；沒設 AOS_STACK、工作區/.stack/new/ 在＝信箱在 stack 裡（aos-hub 代答的實例，
+10-28），題目改放 工作區/.stack/new/。stdout 只印題名一行（給 aos-listen 用：aos-listen "$(aos-say 你好)"）。
 只放題目、不叫醒誰：agent 要有人跑（aos-exec --ws WS <agent>，或 aos-chat）；放完看到沒人在跑，stderr 提醒一行。
 錯：stderr 一行 `aos-say: 代號 原因`、退 1（ArgumentsBad、FlagUnknown、WsMissing、NameBad）。"""
 import os, sys

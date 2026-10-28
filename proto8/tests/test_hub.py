@@ -123,12 +123,17 @@ class Hub(unittest.TestCase):
         self.assertIn("再一句", self.listen(w, self.say(w, "再一句")))
         argv = self.last_argv()
         self.assertEqual((argv[argv.index("--resume") + 1], "-p" in argv), (sid, True))    # 同一段對話續著
-        self.assertEqual(sorted(os.listdir(w / "done")), sorted(os.listdir(w / "out")))
-        trace = [json.loads(l) for l in (w / ".stack" / "trace.jsonl").read_text().splitlines()]
-        self.assertEqual([(t["state"], t["code"]) for t in trace], [("aos-hub-kernel", 0)] * 2)
+        box = w / ".stack"                                               # 信箱在 stack 裡（10-28「放Stack比較好。」）
+        self.assertEqual(sorted(os.listdir(box / "done")), sorted(os.listdir(box / "out")))
+        self.assertEqual(sorted(os.listdir(w)), [".stack"])              # 資料夾本身不長信箱
+        r = self.run_([HUMAN / "aos-say", "從資料夾裡說"], cwd=w)          # cd 過去、不給 --ws 也找得到
+        r = self.run_([HUMAN / "aos-listen", "--timeout", "20", r.stdout.strip()], cwd=w)
+        self.assertIn("從資料夾裡說", r.stdout, r.stderr)
+        trace = [json.loads(l) for l in (box / "trace.jsonl").read_text().splitlines()]
+        self.assertEqual([(t["state"], t["code"]) for t in trace], [("aos-hub-kernel", 0)] * 3)
         st = self.run_([HUMAN / "aos-listen", "--ws", w, "--status"])
         self.assertIn("aos-hub-kernel", st.stdout)                       # server.txt：listen 知道有人在服務
-        self.assertEqual(len((w / ".stack" / "claude" / "live.jsonl").read_text().splitlines()), 2)   # 只接不重寫
+        self.assertEqual(len((box / "claude" / "live.jsonl").read_text().splitlines()), 3)   # 只接不重寫
         self.assertEqual(self.ls()[0]["state"], "收起了")
         self.assertIn(sid, self.hub("state", cwd=w).stdout)
 
@@ -157,11 +162,11 @@ class Hub(unittest.TestCase):
         row = self.ls()[0]
         self.assertEqual(row["state"], "出錯")
         self.assertIn("CliFailed", row["error"])
-        self.assertTrue((w / "cur" / n).exists())                        # 題目留在 cur/（P-20）
+        self.assertTrue((w / ".stack" / "cur" / n).exists())             # 題目留在 cur/（P-20）
         r = self.run_([HUMAN / "aos-listen", "--ws", w, "--timeout", "1.5", n])
         self.assertEqual(r.returncode, 1)
         self.assertIn("aos-hub-kernel 答 %s 失敗：claude: CliFailed" % n, r.stderr)   # listen 說得出卡在哪
-        (w / "cur" / n).write_text("修好了")                              # 人修好、pause 一次＝重新收題
+        (w / ".stack" / "cur" / n).write_text("修好了")                              # 人修好、pause 一次＝重新收題
         self.assertEqual(self.hub("pause", w).returncode, 0)
         self.assertIn("修好了", self.listen(w, n))
 

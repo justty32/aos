@@ -12,6 +12,7 @@ argv[0] 是 aos-loop／aos-fsm／aos-exec／aos-daemon），沒有就在 stderr 
 沒給題名：先印最後 N 個答案（--last N，照時間；沒給＝0 個），再跟著看新的；給了 --last 沒給 --follow＝印完就走。
 --trace：同時把 stack 裡新長出來的 trace.jsonl（每格一行，P-07）與 history.jsonl 的工具呼叫（agent-dan，P-41）翻成短行印到 stderr。
 stdout 只有答案；提醒、trace、錯都在 stderr。工作區＝--ws ＞ $AOS_WS ＞ cwd；stack＝$AOS_STACK ＞ $AOS_WS/.stack/。
+信箱在 stack 裡的（沒設 AOS_STACK、工作區/.stack/new/ 在；aos-hub 代答的實例，10-28）：new／cur／out／done 與 trace 都在 .stack/ 裡。
 錯：stderr 一行 `aos-listen: 代號 原因`、退 1（ArgumentsBad、FlagUnknown、WsMissing、QuestionUnknown〔四個階段資料夾都沒有這題〕、
 AnswerMissing〔逾時、或題目到了 done/ 卻沒有答案〕）。"""
 import os, sys, time

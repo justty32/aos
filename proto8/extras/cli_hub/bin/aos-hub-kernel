@@ -7,7 +7,9 @@ $AOS_HUB 沒設＝HubMissing、退 1（不給預設路徑，10-28 決定 10）�
 開 $AOS_HUB/kernel.sock，一行 JSON 請求、一行 JSON 回覆（hub_ipc.py）；aos-hub 的指令都經它，它掛了指令就報錯（決定 3）。
 狀態以它記的為準（決定 8）：只在記憶體裡，kernel 重開就清空（實際遇到問題再說，10-28）。SIGTERM／SIGINT 收乾淨就走。
 
-實例＝一個小格（cli_session 的格，$工作區/.stack/<工具名>/）＋它代答的工作區。兩種來路：
+實例＝一個小格（cli_session 的格，<資料夾>/.stack/<工具名>/）＋它代答的信箱。資料夾＝CLI 的 cwd（使用者 cd 過去的那個，
+例如程式專案）；**信箱放在 stack 裡**（<資料夾>/.stack/ 底下的 new/ cur/ out/ done/；使用者 10-28「放Stack比較好。」），
+資料夾本身不長信箱。aos-say／listen 給資料夾就找得到（它們看到 <資料夾>/.stack/new/ 就改用 stack 當信箱）。兩種來路：
   aos-hub add／open 加的＝**代答**：kernel 照「agent 對話協議」（CONVENTION P-11～P-14）替它收題——new/ 取檔名最前的
     搬到 cur/、交給工具（lib/agent/claude 的 _entry：stdin {"prompt"} → stdout 回答；畫面開著就打進畫面、沒開就 --resume 問一次，
     這是 cli_session 本來的兩條路）、答案寫 out/<題名>、題目搬 done/；每題在 stack 的 trace.jsonl 接一行；
@@ -91,12 +93,14 @@ class Kernel:
         with self.lock:
             for it in self.items.values():
                 if it["serve"] and it["ws"] == ws and it["cell"] != cell:
-                    raise Fail("InstanceBusy", "這個工作區已經有代答的實例（%s）；一個工作區一個（P-18）" % it["cell"])
+                    raise Fail("InstanceBusy", "這個資料夾已經有代答的實例（%s）；一個資料夾一個（P-18）" % it["cell"])
             it = self.items.get(cell)
             if it is None:
                 it = self.items[cell] = dict(cell=cell, ws=ws, tool=tool, kind=kind_of(tool), serve=True, screen="paused",
                                              error=None, busy=None, retry_at=0, since=now())
             it["serve"] = True
+        for d in ("new", "cur", "out", "done"):                    # 信箱放 stack 裡（10-28「放Stack比較好。」）；new/ 在＝say／listen 認得
+            os.makedirs(os.path.join(stack, d), exist_ok=True)
         cli_session.register(cli_session.Cell(cell), tool, ws)     # 寫 tool.txt、ws.txt（open_cell 要）；送回自己的 register 無妨
         with open(os.path.join(stack, ".server.txt"), "w", encoding="utf-8") as f:
             f.write("%d %s\n" % (os.getpid(), PROG))
@@ -181,7 +185,7 @@ class Kernel:
                         if it["serve"] and not it["busy"] and not it["error"] and it["retry_at"] <= time.time()]
             for it in todo:
                 try:
-                    name = self.pick(it["ws"])
+                    name = self.pick(os.path.dirname(it["cell"]))     # 信箱＝實例的 stack
                 except OSError:
                     name = None
                 if name:
@@ -192,7 +196,8 @@ class Kernel:
 
     def answer(self, it, name):
         ws, started, t0 = it["ws"], now(), time.monotonic()
-        q = os.path.join(ws, "cur", name)
+        box = os.path.dirname(it["cell"])               # 信箱＝實例的 stack；ws＝CLI 的 cwd
+        q = os.path.join(box, "cur", name)
         try:
             if os.path.isdir(q):
                 with open(os.path.join(q, "prompt.txt"), encoding="utf-8") as f:
@@ -211,9 +216,9 @@ class Kernel:
             return self.done(it, name, started, t0, 1, "ToolFailed %s" % e)
         if r.returncode != 0:
             return self.done(it, name, started, t0, r.returncode, (r.stdout or r.stderr).strip().splitlines()[0:1])
-        out = os.path.join(ws, "out")
+        out = os.path.join(box, "out")
         os.makedirs(out, exist_ok=True)
-        tmp = os.path.join(ws, ".hub-%d-%d.tmp" % (os.getpid(), threading.get_ident()))
+        tmp = os.path.join(box, ".hub-%d-%d.tmp" % (os.getpid(), threading.get_ident()))
         if os.path.isdir(q):                             # 題目是資料夾（P-13）＝答案也是資料夾、主答案 answer.txt
             os.makedirs(tmp, exist_ok=True)
             with open(os.path.join(tmp, "answer.txt"), "w", encoding="utf-8") as f:
@@ -222,8 +227,8 @@ class Kernel:
             with open(tmp, "w", encoding="utf-8") as f:
                 f.write(r.stdout)
         os.replace(tmp, os.path.join(out, name))
-        os.makedirs(os.path.join(ws, "done"), exist_ok=True)
-        os.rename(q, os.path.join(ws, "done", name))
+        os.makedirs(os.path.join(box, "done"), exist_ok=True)
+        os.rename(q, os.path.join(box, "done", name))
         self.done(it, name, started, t0, 0, None)
 
     def done(self, it, name, started, t0, code, err):

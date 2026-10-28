@@ -33,16 +33,27 @@ def parse(prog, usage, argv, flags, switches=None):
         die(prog, e.code, "usage: %s（%s）" % (usage, e))
 
 
+STACK_BOXES = set()                            # 信箱就在 stack 裡的（stack 自己就是信箱）
+
+
 def workspace(opt):
-    """--ws ＞ $AOS_WS ＞ cwd（同 aos-exec，N-58）；轉絕對路徑；不在＝WsMissing。"""
+    """--ws ＞ $AOS_WS ＞ cwd（同 aos-exec，N-58）；轉絕對路徑；不在＝WsMissing。
+    10-28：信箱在 stack 裡的（aos-hub 代答的實例，使用者「放Stack比較好。」）——沒設 AOS_STACK、<資料夾>/.stack/new/ 在，
+    就回 <資料夾>/.stack 當信箱（之後的 new／cur／out／done 都在那），它的 stack 就是它自己。"""
     ws = opt if opt not in (None, "-") else (os.environ.get("AOS_WS") or ".")
     ws = os.path.abspath(ws)
     if not os.path.isdir(ws):
         raise Error("WsMissing", "工作區不存在：%s" % ws)
+    box = os.path.join(ws, ".stack")
+    if not os.environ.get("AOS_STACK") and os.path.isdir(os.path.join(box, "new")):
+        STACK_BOXES.add(box)
+        return box
     return ws
 
 
 def stack_of(ws):
+    if ws in STACK_BOXES:
+        return ws
     return os.environ.get("AOS_STACK") or os.path.join(ws, ".stack")
 
 

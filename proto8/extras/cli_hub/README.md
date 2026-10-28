@@ -17,7 +17,7 @@
 |---|---|
 | `aos-hub ls [--json]` | 列出全部：編號、狀態、哪種 CLI、工作區、對話 id 前 8 碼 |
 | `aos-hub state [資料夾\|編號]` | 這裡是不是納管的實例；不是＝`InstanceMissing`、退 1 |
-| `aos-hub add [--kind claude\|codex \| --tool 工具資料夾] [工作區]` | 納管、不開畫面：kernel 開始替它回答 `new/` 的題 |
+| `aos-hub add [--kind claude\|codex \| --tool 工具資料夾] [資料夾]` | 納管、不開畫面：kernel 開始替它回答 `資料夾/.stack/new/` 的題 |
 | `aos-hub open [-d] [--kind …\|--tool …] [資料夾\|編號]` | 接進畫面；沒開就開、收起的用 `--resume` 叫回；還沒納管就先 add。`-d` 只開不接 |
 | `aos-hub pause [資料夾\|編號]`／`pause --idle 分` | 收起：關畫面、對話留著（之後題目照樣用 `--resume` 答）；出錯的實例 pause 一次＝重新收題 |
 | `aos-hub stop [資料夾\|編號]` | 結束：關畫面，小格搬到 `<stack>/hub_archive/<工具名>-<UTC>/`，CLI 自己存的對話拷一份進 `transcripts/`，從清單拿掉 |
@@ -29,13 +29,16 @@
 - `--kind` 沒給＝claude；工具資料夾預設 `proto8/lib/agent/<kind>`（旗標在它的 `cli.json`：claude 只給 Read／Glob／Grep、sonnet、每次 0.5 美元）。要別的模型、權限，複製一份工具資料夾改 `cli.json`，用 `--tool` 指。
 - 失敗（腦、CLI 出錯）：題目留在 `cur/`、實例標「出錯」、不再收題；`aos-listen` 會說是哪題、原因一行。修好後 `aos-hub pause` 一次重新收。人接在畫面上時題目等著（5 秒再試一次）。
 
-## 對它說話（aos-say／listen 不用改）
+## 對它說話
+
+資料夾＝claude 工作的地方（例如程式專案），**信箱放在 `資料夾/.stack/` 裡**（使用者 10-28「放Stack比較好。」）：資料夾本身不長 `new/` 之類，題目、答案、trace、小格、歸檔全在 `.stack/`。aos-say／listen 認得：沒設 `AOS_STACK`、`.stack/new/` 在，就把 `.stack/` 當信箱。
 
 ```sh
-aos-hub add ~/somewhere/ws                      # 納管
-N=$(aos-say --ws ~/somewhere/ws 讀 notes.txt 說說裡面有什麼)
-aos-listen --ws ~/somewhere/ws "$N"             # 畫面開著＝打進畫面、沒開＝--resume 問一次
-aos-listen --ws ~/somewhere/ws --status         # 「在跑 aos-hub-kernel」：kernel 在 stack 放了 server.txt
+aos-hub add ~/code/myproj                       # 納管（建 .stack/new cur out done）
+cd ~/code/myproj
+N=$(aos-say 讀 src/calc.py 說說裡面有什麼)
+aos-listen "$N"                                 # 畫面開著＝打進畫面、沒開＝--resume 問一次
+aos-listen --status                             # 「在跑 aos-hub-kernel」：kernel 在 .stack/ 放了 server.txt
 ```
 
 ## 怎麼試（WSL）
@@ -45,13 +48,14 @@ aos-listen --ws ~/somewhere/ws --status         # 「在跑 aos-hub-kernel」：
 ```sh
 cd ~/code/try/hub-say && . ./env.sh              # 拿掉外層 Claude Code 的環境變數、設 AOS_HUB、PATH（含 ~/.local/bin 的 claude／codex）
 aos-hub-kernel 2>kernel.err &                    # kernel 從這個 shell 繼承 PATH：claude／codex 要找得到
-aos-hub add --tool tools/claude ws-c             # tools/claude 是 haiku 版的 cli.json
+aos-hub add --tool tools/claude ws-c             # tools/claude 是 haiku 版的 cli.json；信箱在 ws-c/.stack/
 N=$(aos-say --ws ws-c "讀 notes.txt，魔術數字是多少"); aos-listen --ws ws-c "$N"
 aos-hub open ws-c                                # 接進畫面（第一次會問信任這個資料夾，選 Yes）；Ctrl-] 跳出
 N=$(aos-say --ws ws-c "乘以二？"); aos-listen --ws ws-c "$N"   # 畫面開著：打進畫面，再 open 進去看得到
 aos-hub pause ws-c && aos-hub ls                 # 收起；再問一句照樣答（--resume）
 aos-hub add --kind codex ws-x                    # codex 也一樣
 aos-hub stop ws-c                                # 結束：看 ws-c/.stack/hub_archive/
+aos-hub add --tool tools/claude proj && cd proj && aos-say 'src/calc.py 的函式叫什麼'   # 程式專案也行：proj 頂層只多一個 .stack/
 ```
 
 ## 已知限制
@@ -59,6 +63,7 @@ aos-hub stop ws-c                                # 結束：看 ws-c/.stack/hub_
 - **kernel 的 PATH**：kernel 用自己啟動時的環境叫 claude／codex。從沒有 `~/.local/bin` 的 shell 起 kernel，每題都 `CliMissing`（10-28 實跑撞到）。
 - **新資料夾第一次開畫面，claude 會先問「信任這個資料夾嗎」**：人 `open` 接進去回答就好；但 `open -d` 之後馬上丟題，題目會被貼進這個提問、Enter 可能選到「No, exit」，畫面關掉、那題出錯（`pause` 一次就改走 `--resume` 答）。非互動（`-p`）沒有這個提問。
 - **kernel 重開＝清單清空**：工作區、小格、對話都還在，重新 `add` 就接得上（同一個 `session.txt`）。kernel 記的跟實際不符（人在畫面裡 `/exit`、tmux 被砍）時以 kernel 記的為準（使用者 10-28：遇到再說）；agent 的工具呼叫本身照樣會挑對的路。
+- 信箱放在 `.stack/` 裡：一個資料夾若同時有 aos agent 在用它的 `new/`、又被 aos-hub 納管，aos-say 會丟進 hub 的信箱（一個工作區一個 agent，P-18）；設了 `AOS_STACK` 時 say／listen 不套這條規則。stop 只搬小格，`.stack/new` 還在，之後丟的題沒人答（listen 會提醒）。
 - 只登記的格要在 kernel 跑著時被用過才列得到；kernel 沒跑時 cli_session 不報錯、只是不登記。
 - codex 沒有「正在跑一輪」的訊號：人在畫面上送出、還沒講完就跳出，kernel 這時送字會插進去（10-24 舊坑）。
 - `watch` 只讀 `live.jsonl`（非互動那條路）；畫面上那幾輪看不到，要 `open` 進去看。

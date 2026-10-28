@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- **open｜playground 一步一步重來（10-26 起）**：節點只有 `_entry`→`main.py` 叫 `claude -p`＋經 aos-mcp 接 clock／math／read；aos-hub 10-28 照新方向重寫完（常駐 aos-hub-kernel、`AOS_HUB`、pause／stop、Ctrl-] 只跳出、aos-say／listen 可對 claude／codex 說話，WSL 實跑過）；等使用者親手試與答「信箱跟工作資料夾要不要分開」；pi coding agent 沒裝、只有適配表 → [thinking 10-26 playground](../proto8/thinking/2026-10-26-playground.md)、[10-28 hub-kernel](../proto8/thinking/2026-10-28-hub-kernel.md)、[10-28 hub-adapter](../proto8/thinking/2026-10-28-hub-adapter.md)、統整頁 https://claude.ai/artifact/W7aXZvCPTf1u2qExH6CEMM
+- **open｜playground 一步一步重來（10-26 起）**：節點只有 `_entry`→`main.py` 叫 `claude -p`＋經 aos-mcp 接 clock／math／read；aos-hub 10-28 照新方向重寫完（常駐 aos-hub-kernel、`AOS_HUB`、pause／stop、Ctrl-] 只跳出、aos-say／listen 可對 claude／codex 說話，WSL 實跑過）；信箱放進 `.stack/`（使用者「放Stack比較好。」，已改）；等使用者親手試；pi coding agent 沒裝、只有適配表 → [thinking 10-26 playground](../proto8/thinking/2026-10-26-playground.md)、[10-28 hub-kernel](../proto8/thinking/2026-10-28-hub-kernel.md)、[10-28 hub-adapter](../proto8/thinking/2026-10-28-hub-adapter.md)、統整頁 https://claude.ai/artifact/W7aXZvCPTf1u2qExH6CEMM
 - **open｜10-25 galtxt 由上而下兩隊：都已收線，等使用者想完說他抓到的問題點**（再動之前先問）：兩隊沒做的見 [甲隊 HANDOFF](../proto8/topdown/galtxt-a/HANDOFF.md)、[乙隊 HANDOFF](../proto8/topdown/galtxt-b/HANDOFF.md)；統整頁 https://claude.ai/artifact/9sj3ZkRhK4ZYomb8WeSzrA ；代定清單與今天做了哪些 → [session log 10-25](session_logs/2026-10/2026-10-25.md)
 - **open｜10-24 其餘下一步**（代定可翻案）：代定落條文、沙箱殘項（`accept` 跟「純靠 Linux」衝突待使用者，[sandbox S18](../proto8/thinking/2026-10-24-sandbox.md)）、compact 與 P-41 → [session log 10-24](session_logs/2026-10/2026-10-24.md#下一步open)
 - **open｜還是草稿的條文**：N-14 窗總則、N-15 鎖、N-16 信箱、N-34 tasks（都沒有實作可對） → [NORMS 待定](../proto8/docs/NORMS/08-待定.md)

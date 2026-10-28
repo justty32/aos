@@ -16,6 +16,10 @@
 
 （aos-tools／aos-mcp 另一隊做，這份不碰。）
 
+隊長攤了方向題「信箱跟 claude 的工作資料夾要不要分開」（代答實例的工作區＝claude 的 cwd，`new/ cur/ out/ done/` 會長在使用者的專案裡；另一條路是信箱放別處），他回：
+
+> 放Stack比較好。
+
 ## 結論一：agent 對話協議（從 aos-say／listen 抽出來的）
 
 **白話**：一個工作區就是一個信箱。說話＝往 `new/` 丟一張紙條；誰來回答都行，回答的人把紙條拿到 `cur/`（認領）、把回答寫成 `out/` 裡同名的一張、紙條收進 `done/`；聽＝等 `out/` 出現那一張。aos-say／listen 只認這個信箱，不管後面是誰。
@@ -24,7 +28,7 @@
 
 | 部分 | 內容 | 出處 |
 |---|---|---|
-| 地址 | 工作區（`--ws` ＞ `$AOS_WS` ＞ cwd） | N-58 |
+| 地址 | 工作區（`--ws` ＞ `$AOS_WS` ＞ cwd）；**信箱在 stack 裡的**：沒設 `AOS_STACK`、`<資料夾>/.stack/new/` 在＝信箱是 `<資料夾>/.stack/`（它的 stack 就是它自己） | N-58＋10-28 使用者「放Stack比較好。」 |
 | 說 | `new/<題名>`，純文字一題一檔；題名＝UTC 時間到毫秒、排序＝先後；先寫暫存再 link、不重名 | P-11、P-12、N-05 |
 | 答（服務者要做的） | 照檔名取最前一題搬 `cur/`（`cur/` 有沒做完的先做）；答案寫 `out/<題名>`；題目搬 `done/`；失敗＝題目留 `cur/`、停下等人 | P-11～P-14、P-20 |
 | 聽 | 等 `out/<題名>`；`--last` 照 out/ 的時間 | 10-24 決定 5 |
@@ -43,7 +47,8 @@ aos loop／fsm agent 是一種實作（agent-dan、bob）；**aos-hub-kernel 是
 - **指令**：`ls`、`state`、`add`、`open [-d]`、`pause [--idle 分]`、`stop`、`watch`（用法在 [README](../extras/cli_hub/README.md)）。10-27 的 `pick`、`attach` 由 `open` 取代；不帶參數＝印說明。
 - **pause**＝關畫面、對話 id 留著，題目照樣用 `--resume` 答；**stop**＝關畫面，小格整個搬到 `<stack>/hub_archive/<工具名>-<UTC>/`，CLI 自己存的對話拷一份進 `transcripts/`，從清單拿掉（決定 5、6）。拷不搬：CLI 自己之後還能 resume。
 - **Ctrl-]＝只跳出**（決定 7），寫進 cli_session 開畫面的 `tmux.conf`（Ctrl-\ 照舊也跳出）。
-- **兩種實例**：`add`／`open` 加的＝代答（kernel 收這個工作區的題）；agent 叫 claude／codex 工具時 cli_session 送來的 register＝只登記（列得到、接得進，不收題——那個工作區的題是 agent 的）。一個工作區最多一個代答實例（P-18），小格＝`$工作區/.stack/<工具名>/`。
+- **兩種實例**：`add`／`open` 加的＝代答（kernel 收這個資料夾的題）；agent 叫 claude／codex 工具時 cli_session 送來的 register＝只登記（列得到、接得進，不收題——那個工作區的題是 agent 的）。一個資料夾最多一個代答實例（P-18），小格＝`<資料夾>/.stack/<工具名>/`。
+- **信箱放在 stack 裡**（使用者 10-28「放Stack比較好。」，決定）：資料夾＝claude 的 cwd（可以是使用者 cd 過去的程式專案），本身不長任何東西；`new/ cur/ out/ done/`、`trace.jsonl`、`server.txt`、小格、`hub_archive/` 全在 `<資料夾>/.stack/`。aos-say／listen 不用給新旗標：cd 到資料夾（或 `--ws 資料夾`）就認得——沒設 `AOS_STACK`、`.stack/new/` 在，就把 `.stack/` 當信箱。stop 只搬小格，信箱的舊題留著。
 - **失敗**：題目留 `cur/`、實例標「出錯」、不再收題；人修好後 `pause` 或 `open` 一次＝重新收（P-20）。限數量不做（決定 4）。
 - **自動收起**：`reap.json` 改成 `aos-hub pause --idle 30`（10-27 代定的 30 分沿用）。
 
@@ -80,7 +85,9 @@ hub 要接一種新的 CLI，就交這張表（目前是文件；程式裡 claud
 
 ## 實跑（WSL，10-28）
 
-`~/code/try/hub-say/`：claude 用 haiku、codex 用預設。`add` → `aos-say`「讀 notes.txt，魔術數字是多少」→ `aos-listen` 4 秒拿到「魔術數字是 42。」→ 乘二「84」（同一段對話 `--resume`）→ `open -d` 開畫面（先像人那樣回答信任提問）→ 再加一「85」（打進畫面）→ `pause` → 「講了幾輪」答「4」（`--resume` 接得上畫面那輪）→ codex 兩題「顏色是藍色。」「Blue」→ 兩個都 `stop`，歸檔裡有 `transcripts/` 各一份；kernel 關掉後 `aos-hub ls` 報 `KernelMissing`。claude 非互動四題合計 **$0.00096**（畫面那輪另計、同量級）；codex 走訂閱。
+`~/code/try/hub-say/`：claude 用 haiku、codex 用預設。`add` → `aos-say`「讀 notes.txt，魔術數字是多少」→ `aos-listen` 4 秒拿到「魔術數字是 42。」→ 乘二「84」（同一段對話 `--resume`）→ `open -d` 開畫面（先像人那樣回答信任提問）→ 再加一「85」（打進畫面）→ `pause` → 「講了幾輪」答「4」（`--resume` 接得上畫面那輪）→ codex 兩題「顏色是藍色。」「Blue」→ 兩個都 `stop`，歸檔裡有 `transcripts/` 各一份；kernel 關掉後 `aos-hub ls` 報 `KernelMissing`。claude 非互動四題合計 **$0.00096**（畫面那輪另計、同量級）；codex 走訂閱。（這段是信箱還在資料夾頂層時跑的。）
+
+信箱改放 stack 之後再跑一次：假專案 `proj/src/calc.py`，`aos-hub add proj`、`cd proj`、不給 `--ws` 直接 `aos-say`／`aos-listen`，兩題答「add」「2」；`proj` 頂層只多一個 `.stack/`，題目與答案都在 `.stack/` 的 new／cur／out／done；兩題 $0.0018。
 
 ## 代定（可翻案）
 
@@ -94,9 +101,12 @@ hub 要接一種新的 CLI，就交這張表（目前是文件；程式裡 claud
 8. 自動收起沿用閒 30 分、靠 aos-loop 跑 `reap.json`。
 9. 適配表先是文件，不做成資料檔；pi 建議走 rpc 模式。
 
-## 帶給使用者的方向題
+## 跟原則的對照（信箱放 stack，10-28）
 
-- **信箱跟 claude 的工作資料夾要不要分開**：現在代答實例的工作區＝claude 的 cwd，所以 `new/ cur/ out/ done/ .stack/` 會長在 claude 正在工作的資料夾裡。拿它當「agent 的工作區」沒問題（C-65）；但若你想要的是「cd 到某個程式碼資料夾，叫 claude 在那裡改程式」，信箱就混進專案裡。另一條路是信箱放別處、claude 的 cwd 另外指（`cli.json` 加一欄）。哪個才是你說的「那個資料夾」，原則推不出來。
+使用者已定（「放Stack比較好。」），下面兩處字面上對不上，列給他看、不擋：
+
+- **C-65「工作區只放交辦的東西與成果、執行時的東西落在 stack」**：題目與答案算「交辦的東西與成果」，照 C-65 該在工作區；現在放進 stack。換個看法也通：代答實例的「工作區」（P-11 的 `$AOS_WS`）就是 `.stack/` 這個信箱，claude 工作的資料夾只是 CLI 自己的 cwd、不算 aos 的工作區——這樣 P-11～P-14 照字面成立，只是信箱跟它的 stack 是同一個資料夾。
+- **P-11 題目＝`$AOS_WS/new/`**：aos-say／listen 多了一條找信箱的規則（`.stack/new/` 在就改用 `.stack/`）。一個資料夾若同時有 aos agent 用它的 `new/`、又被 aos-hub 納管，say 會丟進 hub 的信箱（P-18 本來就說一個工作區一個 agent）。設了 `AOS_STACK` 時不套這條規則。
 
 ## 已知限制
 
