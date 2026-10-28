@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：agent-round 的格（`proto8/lib/agent/` 的 round、queue、history、compact、act，`proto8/lib/endpoint/`）與它們的測試，10-28 晚｜工具庫其他部分見 [09-lib](09-lib.md)
+← [入口](../proto8.md)｜涵蓋：agent-round 的格（`proto8/lib/agent/` 的 round、queue、history、compact、act，`proto8/lib/endpoint/`）與它們的測試、範本 `demo/agent-nia`，10-28 晚｜工具庫其他部分見 [09-lib](09-lib.md)
 
 ### agent 自己的格（不是給腦叫的工具）
 
@@ -15,6 +15,17 @@
 | `lib/agent/act/_entry` | 跑工具格：吃一則 assistant，每個 tool_call 經 `hook/pre_tool`（10＝不跑）→ `aos-tools call` → `hook/post_tool`，吐一行一則 tool 訊息、照原順序；`MAX_PARALLEL` 一批一批跑；批與批之間 `new/` 有題就問 `hook/on_interrupt`，interrupt＝剩下的接「被打斷」、退 10；全有或全無 |
 | `lib/endpoint/fake/_entry` | 假腦：最後一則 user＋tools 有 clock＝叫 clock，否則 `FAKE ANSWER to: …`（接過 tool 附 clock said）；不連網、不寫 usage |
 | `lib/endpoint/openai/_entry` | OpenAI 相容腦：stdin 請求體 → `{AOS_BRAIN_URL}/chat/completions` → 一行 assistant（只留 role／content／tool_calls）；usage 追加 `$AOS_STACK/usage.jsonl`；錯 `BrainFailed`／`KeyBad`／`ModelUnknown`／`RequestBad`／`ReplyBad`／`UrlMissing`／`TimeoutBad` |
+
+### 範本 agent-nia（10-28 晚，第 6 步）
+
+| 哪裡 | 負責什麼 |
+|---|---|
+| `demo/agent-nia/_entry` | JSON 入口 `["aos-loop", "loop.json"]` |
+| `demo/agent-nia/loop.json` | 單子 `aos-parts run round {"$env": "AOS_CD"}`（`timeout_ms` 600000、`max` 40）：round 退 0＝再叫一次、退 10＝loop 停 |
+| `demo/agent-nia/parts.json` | 格的通訊錄，手寫相對路徑指 `../../lib/`：round、queue、history、act、`hook/pre_think`＝compact（`MAX_BYTES` 65536）、`endpoint/default`＝fake、`endpoint/litellm`＝openai（localhost:4000） |
+| `demo/agent-nia/tools.json` | 腦的工具：clock、math（相對路徑指 `../../lib/base/`） |
+| `demo/agent-nia/system.txt` | system 訊息 |
+| `demo/run.sh`（職責變了） | 最後多一段 agent-nia（假腦一題、印工作區與 stack 樹），共七段 |
 
 ### 測試
 

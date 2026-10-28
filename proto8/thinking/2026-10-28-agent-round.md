@@ -203,7 +203,7 @@ round:
 3. **`lib/agent/history/`**：append／read／compact；compact 搬 agent-hal 的三步；驗：塞一份大的 history 跑 compact，`history_archive/` 多一份、新的能被 read。
 4. **`lib/agent/act/`**：從 act.py 抽；驗：餵一則有兩個 tool_calls 的 assistant，吐兩則 tool、順序對；`MAX_PARALLEL=2` 結果順序仍對；掛一個 pre_tool 退 10 看到那次不跑。
 5. **`lib/agent/round/`**（零件庫、語法糖＝aos-loop 加「這一輪結束就停」，不升成 aos 指令，決定 13）：照 § 2 寫骨架，「從哪接著做」那段要能單獨做一格（給 aos-loop 一格一格跑用，決定 12）；驗：假腦跑完一題退 0、沒題退 10；endpoint 壞掉退 1 且 state／history 不動；掛 `on_error` 印 switch 看到 `endpoint.txt` 換名字再成功。
-6. **範本 `demo/agent-nia/`**（人名接 meg、pip…）：照 § 1 擺捷徑與 `.env`；`demo/run.sh` 加一段；驗：WSL 上假腦一題、LiteLLM 一題，`tree -a .stack` 看得到 § 5 的檔。
+6. **範本 `demo/agent-nia/`**（人名接 meg、pip…）：照 § 1 擺捷徑與 `.env`；`demo/run.sh` 加一段；驗：WSL 上假腦一題、LiteLLM 一題，`tree -a .stack` 看得到 § 5 的檔。（10-28 晚做了：照第 0 步改成手寫相對路徑的 `parts.json`、不擺捷徑；LiteLLM 那題這台連不上沒跑，見文末 39～41）
 7. **aos-ai spawn**：多一種範本（捷徑複製後改絕對）。
 8. **測試** `tests/test_round.py`：以上各驗各一案；跑 proto8 全套不退。
 9. **條文**：P-23、P-41 改寫（agent-ops 決定 3；P-41 含「只有 compact 可改寫」）、P-25／C-61 加註（決定 10）、P-20 改「預設」、P-33／C-52 加「round 的參數」一句、N-43 加「分類靠代號」、N-53／C-25 加「一格一次用 aos-loop、一輪用 round，看 `_entry`」（決定 12）；NORMS 待定加這份的代定；code map、demo README、artifact 同步。
@@ -289,3 +289,9 @@ round:
 36. **問腦前讀一次 history；有掛 `pre_think` 就叫完再讀一次**（compact 可能換掉了）。system＝`<agent>/system.txt`，每次從檔讀、有才帶、不進 history（同 agent-dan）。送給 endpoint 的請求體一行結尾帶換行。
 37. **交卷的 stdin＝那則 assistant 的 content**：字串照用、`null`＝空字串、其他形狀＝它的 JSON。
 38. **round 收的 agent 資料夾要是存在的絕對路徑**（同 act 第 15 條，`AgentBad`）；`AOS_WS` 要是資料夾（`WsMissing`，要看 `cur/`、`new/`）；`AOS_STACK` 沒設＝`StackMissing`。
+
+### 做範本 agent-nia 時再代定的（10-28 晚，第 6 步，代定、可翻案）
+
+39. **`endpoint/default`＝假腦（`lib/endpoint/fake`）**，LiteLLM 另登記成 `endpoint/litellm`（openai＋`AOS_BRAIN_URL` localhost:4000、`AOS_BRAIN_MODEL` chatgpt-gpt-6-luna-low、`TIMEOUT_MS` 120000）。要用就在 stack 寫 `endpoint.txt`＝`litellm`（§ 4 換手原本的做法，不另開設定）。理由：demo、測試、spawn 出來的第一題零設定就跑得動，不連網；真腦只差一行檔。沒掛 `on_error`，LiteLLM 連不上＝stop（P-20 預設停）。
+40. **`hook/pre_think` 預設掛 compact**（`MAX_BYTES` 65536，寫在 parts.json 的 `env`）：§ 4 說 compact 掛這裡；沒超過門檻時只多一格 trace、什麼都不動。代價：每次問腦多叫一格、多讀一次 history（第 36 條）。不要就從 parts.json 拿掉那一列。
+41. **範本只有 `_entry`（JSON `["aos-loop", "loop.json"]`）、`loop.json`、`system.txt`、`tools.json`、`parts.json` 五個檔**：沒有 `.env`（設定都在 parts.json 的 `env`）、沒有捷徑（決定 16）。`tools.json` 手寫相對路徑指 `../../lib/base/`（clock、math），同 parts.json 搬家不斷。loop 的 `max` 40＝一次最多答 40 題（每題 round 退 0 一次，最後沒題退 10 停）。
