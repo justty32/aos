@@ -2,14 +2,15 @@
 
 ## proto8 逐檔總覽（10-19 proto8-2 併入、舊 lib 進 git 後重寫）
 
-（新增或刪檔時這裡與 [proto8/bin/README.md](../../../../proto8/bin/README.md)（aos-tick、aos-tools）、[proto8/impls/README.md](../../../../proto8/impls/README.md)（四支 C++ 與庫）一起改。）
+（新增或刪檔時這裡與 [proto8/bin/README.md](../../../../proto8/bin/README.md)（aos-tick、aos-tools、aos-parts）、[proto8/impls/README.md](../../../../proto8/impls/README.md)（四支 C++ 與庫）一起改。）
 
 ### `proto8/bin/`（Python 純標準庫）
 
 逐支說明在 [proto8/bin/README.md](../../../../proto8/bin/README.md)。**10-23 Python 版刪了**（使用者 10-23）：`aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 與只有它們用的 `aos_inst.py`、`aos_loop.py`、`aos_run.py`、`aos_window.py` 刪了（在 git 歷史，刪前最後一版 60d677cc），四支只剩 C++ 版，見下面 `proto8/impls/`。
 
-- `aos_flags.py`（10-21）：旗標解析 `parse()`（10-22 多收一張不帶值的旗標表 `switches`）；`Error.code`＝錯誤代號。aos-tick、aos-tools 用（10-23 刪了 `load_cfg()`、`target()`）。
+- `aos_flags.py`（10-21）：旗標解析 `parse()`（10-22 多收一張不帶值的旗標表 `switches`）；`Error.code`＝錯誤代號。aos-tick、aos-tools、aos-parts 用（10-23 刪了 `load_cfg()`、`target()`）。
 - `aos-tools`（10-28）：agent 資料夾工具註冊檔 `tools.json` 的命令列；aos agent 範本與 aos-mcp 都經它。
+- `aos-parts`（10-28 晚，agent-round 第 0 步）：agent 資料夾格的註冊檔 `parts.json` 的命令列（add／rm／ls／get／which／run）；找格＝註冊檔 → 固定名字，round 叫格經它。測試 `tests/test_aos_parts.py`。
 - `aos-tick`（10-21 晚，計畫第 4 段）：`aos-tick [旗標] FILE`＝時鐘往前走一格，讀 n 寫 n＋1（沒檔＝0，先寫 `.名字` 再改名）；唯一的位置參數、旗標表是空的；錯退 1 一行 `aos-tick: 代號 原因`（10-23 起帶代號）、檔不動。
 
 ### `proto8/demo/`

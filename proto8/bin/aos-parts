@@ -1,0 +1,351 @@
+#!/usr/bin/env python3
+"""aos-parts [--file F] add|rm|ls|get|which|run … — 一個 agent 資料夾一份格的註冊檔（parts.json），記每一格指到哪裡。
+
+設計與代定：proto8/thinking/2026-10-28-agent-round.md「§ 1 格怎麼找」與文末「實作時代定」。白話：parts.json 是
+「這隻 agent 的格的通訊錄」（round、queue、history、act、endpoint/<名>、hook/<點>…）；round 叫一格之前先問
+`aos-parts which 槽`（或直接 `aos-parts run 槽 …`）。給模型看的工具清單不在這裡，在 tools.json（aos-tools）。
+
+    aos-parts [--file F] add [--override] [--env K=V]… 槽 XXX   登記：槽 → XXX（相對路徑從 cwd 算，存絕對路徑；捷徑不解開）
+    aos-parts [--file F] rm 槽                                   拿掉登記
+    aos-parts [--file F] ls [--json]                             列登記了的：一行一個「槽 TAB 路徑」；--json＝一行 JSON 陣列
+    aos-parts [--file F] get 槽                                  登記了的一格一行 JSON：slot、path、env
+    aos-parts [--file F] which [--json] 槽                       照「註冊檔 → 固定名字」找，印路徑；--json＝一行
+                                                                 {"slot", "path", "from": "parts"|"fixed", "env"}；都沒有＝退 10、什麼都不印
+    aos-parts [--file F] run 槽 [args…]                          照 which 找，帶上 env 換成 `aos-exec 路徑 args…`（結束碼是那格的）
+
+註冊檔：--file ＞ ./parts.json。長這樣：{"parts": {"槽": {"path": "/絕對/路徑", "env": {名: 值}}, …}}；沒有這份檔＝沒登記任何格。
+  aos 讀的 JSON 都解指示詞（N-45）：有 $ref／$env 就交給 aos-json 解；只解要用的那一格（parts 本身是 $ref＝整份解），
+  所以別格的 $env 沒設不擋這一格。改的時候 aos-json set／del --follow 穿過 $ref 改被參照的那份。
+  add 一律寫絕對路徑；手寫的相對路徑從這份檔的資料夾算（範本搬家不斷）。env 值要用 $env 就手寫，或 `aos-json env`。
+槽名：小寫英數與底線、最多一層 `/`（例 round、endpoint/fake、hook/pre_tool）；只檢查格式、不檢查清單（C-52）。
+固定名字：註冊檔沒寫這個槽，就看註冊檔所在資料夾裡的 `<資料夾>/<槽>`（捷徑、真資料夾、檔都行；印的是 abspath、捷徑不解開）。
+  固定名字那條路沒有 env，那格自己的 .env 照 aos-exec 的規則讀。
+找法只寫在這一處（C-52）：註冊檔有＝用它，路徑壞＝PartBad、不退去找固定名字（報錯不猜）；固定名字在但壞（壞捷徑、不是 JSON 的檔）＝PartBad；
+  都沒有＝which 退 10、run 報 PartMissing。不退去用 lib 的標準件。
+XXX 要是 aos-exec 跑得動的（N-61）：資料夾；檔有 +x＝可執行檔；檔沒 +x＝JSON（第一行 #! 跳過）。不存在＝PathMissing、不是這三種＝PathBad。
+run 的環境：註冊檔的 env 疊在自己的環境上（同名以註冊檔為準）；AOS_STACK、AOS_WS 原樣傳。
+錯：stderr 一行「aos-parts: 代號 原因」、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、RegistryBad、SlotBad、PathMissing、
+  PathBad、PartBad、PartExists、PartMissing、DirectiveBad、CommandMissing、WriteFailed。which 找不到退 10（不算錯、不印）；run 自己沒錯時結束碼是那格的。
+"""
+import json, os, re, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import aos_flags
+
+NAME = "aos-parts"
+USAGE = ("aos-parts [--file F] add [--override] [--env K=V]… 槽 XXX | rm 槽 | ls [--json] | get 槽 | "
+         "which [--json] 槽 | run 槽 [args…]")
+SLOT_RE = re.compile(r"^[a-z0-9_]+(/[a-z0-9_]+)?$")
+ENV_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+NOT_FOUND = 10
+
+
+class Fail(Exception):
+    def __init__(self, code, reason):
+        super().__init__(reason)
+        self.code = code
+
+
+def has_directive(v):
+    if isinstance(v, dict):
+        return "$ref" in v or "$env" in v or any(has_directive(x) for x in v.values())
+    if isinstance(v, list):
+        return any(has_directive(x) for x in v)
+    return False
+
+
+def is_directive(v):
+    return isinstance(v, dict) and ("$ref" in v or "$env" in v)
+
+
+def ptr(slot):
+    return slot.replace("~", "~0").replace("/", "~1")
+
+
+def resolve(target):
+    try:
+        r = subprocess.run(["aos-json", "get", "--follow", "--resolve", target], stdout=subprocess.PIPE,
+                           stdin=subprocess.DEVNULL, text=True)     # stderr 不吞：aos-json 自己說哪裡解不開
+    except OSError as e:
+        raise Fail("CommandMissing", "%s 有指示詞，要 aos-json 解，但 aos-json 起不來：%s" % (target, e))
+    if r.returncode != 0:
+        raise Fail("DirectiveBad", "%s 的指示詞解不開（aos-json 退 %d）" % (target, r.returncode))
+    return json.loads(r.stdout)
+
+
+def check_slot(slot, bad="SlotBad", where=""):
+    if not isinstance(slot, str) or not SLOT_RE.match(slot):
+        raise Fail(bad, "%s槽名 %r 不合（小寫英數與底線、最多一層 /，例 endpoint/fake）" % (where, slot))
+    return slot
+
+
+class Registry:
+    """註冊檔。只解要用的那一格：parts 是普通物件＝一格一格解；parts（或整份）是指示詞＝整份解。"""
+
+    def __init__(self, reg):
+        self.reg = reg
+        self.base = os.path.dirname(os.path.abspath(reg))
+        self.raw = None          # parts 的原文（普通物件）；None＝沒有
+        self.all = None          # 整份解開的 parts（parts 是指示詞時）
+        if not os.path.exists(reg):
+            self.raw = {}
+            return
+        try:
+            with open(reg, encoding="utf-8") as f:
+                top = json.load(f)
+        except (OSError, ValueError) as e:
+            raise Fail("RegistryBad", "%s 讀不了或不是 JSON：%s" % (reg, e))
+        if not isinstance(top, dict):
+            raise Fail("RegistryBad", "%s 要是 JSON 物件（{\"parts\": {…}}）" % reg)
+        if is_directive(top) or is_directive(top.get("parts")):
+            parts = resolve(reg + "#/parts") if ("parts" in top or "$ref" in top) else {}
+            self.all = self.check_parts(parts)
+        else:
+            self.raw = self.check_parts(top.get("parts", {}))
+
+    def check_parts(self, parts):
+        if parts is None:
+            return {}
+        if not isinstance(parts, dict):
+            raise Fail("RegistryBad", "%s 的 parts 要是物件（槽 → {\"path\": …}）" % self.reg)
+        for s in parts:
+            check_slot(s, "RegistryBad", "%s 的 " % self.reg)
+        return parts
+
+    def slots(self):
+        return sorted(self.all if self.all is not None else self.raw)
+
+    def entry(self, slot):
+        """登記了的那一格 → {path(絕對), env}；沒登記＝None。形狀不對＝RegistryBad。"""
+        if self.all is not None:
+            if slot not in self.all:
+                return None
+            e = self.all[slot]
+        else:
+            if slot not in self.raw:
+                return None
+            e = self.raw[slot]
+            if has_directive(e):
+                e = resolve("%s#/parts/%s" % (self.reg, ptr(slot)))
+        where = "%s 的 parts/%s" % (self.reg, slot)
+        if not isinstance(e, dict) or not isinstance(e.get("path"), str) or not e["path"]:
+            raise Fail("RegistryBad", "%s 要是 {\"path\": 非空字串, \"env\"?: {名: 字串}}" % where)
+        env = e.get("env", {})
+        if not isinstance(env, dict) or not all(ENV_RE.match(k) and isinstance(v, str) for k, v in env.items()):
+            raise Fail("RegistryBad", "%s 的 env 要是 {名: 字串}（名＝[A-Za-z_][A-Za-z0-9_]*）" % where)
+        return {"path": os.path.normpath(os.path.join(self.base, e["path"])), "env": env}
+
+    def raw_path(self, slot):
+        """給撞名訊息用：原文的 path（不解指示詞）。"""
+        src = self.all if self.all is not None else self.raw
+        e = src.get(slot)
+        return e.get("path") if isinstance(e, dict) and isinstance(e.get("path"), str) else "（指示詞）"
+
+
+def runnable(path):
+    """aos-exec 跑得動的（N-61）：資料夾；檔有 +x；檔沒 +x＝JSON（第一行 #! 跳過）。
+    沒問題回 None；否則回 (代號, 原因)，代號是 add 用的 PathMissing／PathBad。"""
+    if not os.path.lexists(path):
+        return ("PathMissing", "不存在")
+    if os.path.isdir(path):
+        return None
+    if not os.path.isfile(path):
+        return ("PathMissing", "不存在（壞的捷徑？）或不是檔也不是資料夾")
+    if os.access(path, os.X_OK):
+        return None
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except (OSError, ValueError) as e:
+        return ("PathBad", "讀不了：%s" % e)
+    if text.startswith("#!"):
+        text = text.partition("\n")[2]
+    try:
+        json.loads(text)
+    except ValueError:
+        return ("PathBad", "沒有執行權限、也不是 JSON（python／可執行檔要 chmod +x、開頭寫 #!）")
+    return None
+
+
+def find(reg, slot):
+    """照「註冊檔 → 固定名字」找 → {slot, path, from, env}；都沒有＝None。壞的＝PartBad。"""
+    r = Registry(reg)
+    e = r.entry(slot)
+    if e is not None:
+        why = runnable(e["path"])
+        if why:
+            raise Fail("PartBad", "槽 %s 登記在 %s，指到 %s，%s（不退去找固定名字）" % (slot, reg, e["path"], why[1]))
+        return {"slot": slot, "path": e["path"], "from": "parts", "env": e["env"]}
+    fixed = os.path.normpath(os.path.join(r.base, slot))
+    if not os.path.lexists(fixed):
+        return None
+    why = runnable(fixed)
+    if why:
+        raise Fail("PartBad", "槽 %s 沒登記，固定名字 %s 在但%s" % (slot, fixed, why[1]))
+    return {"slot": slot, "path": fixed, "from": "fixed", "env": {}}
+
+
+def aos_json(args):
+    try:
+        r = subprocess.run(["aos-json"] + args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+    except OSError as e:
+        raise Fail("CommandMissing", "改註冊檔要 aos-json，起不來：%s" % e)
+    if r.returncode != 0:
+        raise Fail("WriteFailed", "aos-json %s 退 %d" % (args[0], r.returncode))
+
+
+def write_new(reg, obj):
+    tmp = os.path.join(os.path.dirname(os.path.abspath(reg)), ".%s.%d.tmp" % (os.path.basename(reg), os.getpid()))
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(obj, ensure_ascii=False, indent=1) + "\n")
+        os.replace(tmp, reg)                         # N-05：先寫暫存再改名
+    except OSError as e:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise Fail("WriteFailed", "%s 寫不了：%s" % (reg, e))
+
+
+def parse_add(args):
+    """add 的旗標：--override、--env K=V（可重複；aos_flags 的重複給是最後一個算，所以這裡自己解）。"""
+    override, env, i = False, {}, 0
+    while i < len(args):
+        a = args[i]
+        if a == "--":
+            i += 1
+            break
+        if not a.startswith("-") or a == "-":
+            break
+        name, eq, val = a.partition("=")
+        if name == "--override":
+            if eq:
+                raise Fail("ArgumentsBad", "--override 不帶值")
+            override = True
+        elif name == "--env":
+            if not eq:
+                i += 1
+                if i == len(args):
+                    raise Fail("ArgumentsBad", "--env 缺值")
+                val = args[i]
+            k, eq2, v = val.partition("=")
+            if not eq2 or not ENV_RE.match(k):
+                raise Fail("ArgumentsBad", "--env 要寫 K=V（K＝[A-Za-z_][A-Za-z0-9_]*），收到 %r" % val)
+            env[k] = v
+        else:
+            raise Fail("FlagUnknown", "不認得的旗標 %s" % name)
+        i += 1
+    return override, env, args[i:]
+
+
+def cmd_add(reg, args):
+    override, env, rest = parse_add(args)
+    if len(rest) != 2:
+        raise Fail("ArgumentsBad", "usage: aos-parts [--file F] add [--override] [--env K=V]… 槽 XXX")
+    slot = check_slot(rest[0])
+    path = os.path.normpath(os.path.abspath(rest[1]))
+    why = runnable(path)
+    if why:
+        raise Fail(why[0], "%s %s" % (path, why[1]))
+    r = Registry(reg)
+    if slot in r.slots() and not override:
+        raise Fail("PartExists", "槽 %s 已經登記了（指到 %s）；要蓋掉加 --override" % (slot, r.raw_path(slot)))
+    entry = {"path": path}
+    if env:
+        entry["env"] = env
+    if os.path.exists(reg):
+        aos_json(["set", "--follow", "--parents", "%s#/parts/%s" % (reg, ptr(slot)), json.dumps(entry, ensure_ascii=False)])
+    else:
+        write_new(reg, {"parts": {slot: entry}})
+    print(json.dumps(dict(slot=slot, **entry), ensure_ascii=False))
+
+
+def cmd_rm(reg, args):
+    opts, rest = aos_flags.parse(args, {})
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "usage: aos-parts [--file F] rm 槽")
+    slot = check_slot(rest[0])
+    if slot not in Registry(reg).slots():
+        raise Fail("PartMissing", "槽 %s 沒登記" % slot)
+    aos_json(["del", "--follow", "%s#/parts/%s" % (reg, ptr(slot))])
+    print(json.dumps({"removed": slot}, ensure_ascii=False))
+
+
+def describe(r, slot):
+    e = r.entry(slot)
+    why = runnable(e["path"])
+    if why:
+        raise Fail("PartBad", "槽 %s（%s）%s" % (slot, e["path"], why[1]))
+    return {"slot": slot, "path": e["path"], "env": e["env"]}
+
+
+def cmd_ls(reg, args):
+    opts, rest = aos_flags.parse(args, {}, {"--json": "json"})
+    if rest:
+        raise Fail("ArgumentsBad", "usage: aos-parts [--file F] ls [--json]")
+    r = Registry(reg)
+    found = [describe(r, s) for s in r.slots()]
+    if opts.get("json"):
+        print(json.dumps(found, ensure_ascii=False))
+    else:
+        for p in found:
+            print("%s\t%s" % (p["slot"], p["path"]))
+
+
+def cmd_get(reg, args):
+    opts, rest = aos_flags.parse(args, {})
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "usage: aos-parts [--file F] get 槽")
+    slot = check_slot(rest[0])
+    r = Registry(reg)
+    if slot not in r.slots():
+        raise Fail("PartMissing", "槽 %s 沒登記（登記了的：%s）" % (slot, "、".join(r.slots()) or "沒有"))
+    print(json.dumps(describe(r, slot), ensure_ascii=False))
+
+
+def cmd_which(reg, args):
+    opts, rest = aos_flags.parse(args, {}, {"--json": "json"})
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "usage: aos-parts [--file F] which [--json] 槽")
+    got = find(reg, check_slot(rest[0]))
+    if got is None:
+        sys.exit(NOT_FOUND)
+    print(json.dumps(got, ensure_ascii=False) if opts.get("json") else got["path"])
+
+
+def cmd_run(reg, args):
+    if not args:
+        raise Fail("ArgumentsBad", "usage: aos-parts [--file F] run 槽 [args…]")
+    slot = check_slot(args[0])
+    got = find(reg, slot)
+    if got is None:
+        raise Fail("PartMissing", "槽 %s 沒登記，%s 也沒有" % (slot, os.path.join(os.path.dirname(os.path.abspath(reg)), slot)))
+    env = dict(os.environ)
+    env.update(got["env"])
+    try:
+        os.execvpe("aos-exec", ["aos-exec", got["path"]] + args[1:], env)
+    except OSError as e:
+        raise Fail("CommandMissing", "aos-exec 起不來：%s" % e)
+
+
+COMMANDS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls, "get": cmd_get, "which": cmd_which, "run": cmd_run}
+
+
+def main():
+    try:
+        try:
+            opts, rest = aos_flags.parse(sys.argv[1:], {"--file": "file"})
+            if not rest:
+                raise Fail("ArgumentsBad", "usage: %s" % USAGE)
+            if rest[0] not in COMMANDS:
+                raise Fail("CommandUnknown", "不認得的子命令 %s（usage: %s）" % (rest[0], USAGE))
+            COMMANDS[rest[0]](opts.get("file") or "parts.json", rest[1:])
+        except aos_flags.Error as e:
+            raise Fail(e.code, "%s（usage: %s）" % (e, USAGE))
+    except Fail as e:
+        print("%s: %s %s" % (NAME, e.code, e), file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

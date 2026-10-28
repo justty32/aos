@@ -242,3 +242,10 @@ round:
 4. **叫格的環境**：註冊檔的 `env` 疊在 round 自己的環境上（同名以註冊檔為準）；`AOS_STACK`、`AOS_WS` 原樣傳（P-16 同一台狀態機）。固定名字那條路沒有 `env`，那格自己的 `.env` 照 aos-exec 的規則讀（預設不蓋，N-58）。
 5. **`queue claim` 的寫入順序**：先接 user 訊息進 history（經 `history append`；最後一則已經是 user／tool 就不接）、再寫 `current.txt`、最後才把題目搬進 `cur/`。這樣任何一步中途當掉，重跑都接得上、不會把上一題的答案當成這題的（`cur/` 是空的就重新認領同一題，history 不會接兩次）。
 
+### 做 aos-parts 時再代定的（10-28 晚，第 0 步，代定、可翻案）
+
+6. **指示詞只解要用的那一格**：`parts` 是普通物件時，which／run／get 只把那一格交給 aos-json 解（`parts.json#/parts/<槽>`）；`parts` 本身（或整份檔）是 `$ref` 才整份解。理由：endpoint/openai 的 `env` 寫 `{"$env": "OPENAI_API_KEY"}`，跑假腦時沒設這個變數，不該連 `which round` 都擋（報錯只報自己的，C-56）。`ls` 看全部，所以任何一格解不開都報錯（同 aos-tools 的 ls）。
+7. **固定名字在但壞也是 `PartBad`**：壞掉的捷徑、沒 `+x` 又不是 JSON 的檔——有人放了東西，就不當「沒有」（報錯不猜）。
+8. **XXX 驗到哪**：資料夾、`+x` 的檔、沒 `+x` 但能當 JSON 讀的檔（第一行 `#!` 跳過，同 aos-exec）就收；`_entry` 對不對不驗，交給 aos-exec（C-52 不替下層驗）。不存在＝`PathMissing`，不是這三種＝`PathBad`（新代號）。
+9. **ls／get 只看登記了的**：固定名字不列（槽不設清單，列不出來）；`get` 沒登記＝`PartMissing`；`ls --json`／`get` 的 `env` 印解開後的值（同 aos-tools 的 get 印解開的）。
+10. **`--env K=V` 只收字面字串**：要 `$env` 就手寫進 parts.json，或 `aos-json env`；不另開旗標。
