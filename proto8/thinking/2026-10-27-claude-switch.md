@@ -1,6 +1,6 @@
 # 2026-10-27 很多 claude 在跑：一個地方看全部、cd 過去接入、收起與叫回（aos-hub）
 
-← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-24 claude／codex 當工具、人可以接進去](2026-10-24-cli-tools.md)（attach、小格、hook）｜程式：[extras/cli_hub](../extras/cli_hub/README.md)，測試 `proto8/tests/test_hub.py`
+← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-24 claude／codex 當工具、人可以接進去](2026-10-24-cli-tools.md)（attach、小格、hook）｜程式：[extras/cli_hub](../extras/cli_hub/README.md)，測試 `proto8/tests/test_hub.py`｜後續：[10-28 常駐 aos-kernel、pause 與 stop](2026-10-28-hub-kernel.md)
 
 規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。
 

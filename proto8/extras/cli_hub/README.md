@@ -1,6 +1,6 @@
 # cli_hub — aos-hub：一個地方看所有 claude／codex，切換、接入、收起、叫回
 
-← [extras](../README.md)｜設計：[thinking 2026-10-27-claude-switch](../../thinking/2026-10-27-claude-switch.md)｜接的是 [lib/agent/cli_session.py](../../lib/agent/cli_session.py)（10-24 的 attach，[thinking](../../thinking/2026-10-24-cli-tools.md)）｜測試 `proto8/tests/test_hub.py`
+← [extras](../README.md)｜設計：[thinking 2026-10-27-claude-switch](../../thinking/2026-10-27-claude-switch.md)｜接的是 [lib/agent/cli_session.py](../../lib/agent/cli_session.py)（10-24 的 attach，[thinking](../../thinking/2026-10-24-cli-tools.md)）｜測試 `proto8/tests/test_hub.py`｜**下一步（10-28 定、還沒改）**：常駐 aos-kernel、pause／stop 分開、Ctrl-] 只跳出，見 [thinking 2026-10-28-hub-kernel](../../thinking/2026-10-28-hub-kernel.md#現有-aos-hub-跟新方向的差異之後要改的)
 
 使用者 10-27：「往後搞不好會有很多claude code cli在跑……是否有一些方式，可以讓我方便切換瀏覽呢？……我cd過去某個資料夾，輸入指令，就可以打開正在該資料夾工作的claude code。」「能不能我輸入指令，就先讓這個已經沒在動作的claude code cli實例結束，下次輸入指令再把他叫回來……接入aos體系，並且統一管理每個實例？」
 
