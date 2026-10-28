@@ -12,6 +12,12 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-10-28 晚（家中 Manjaro；新 session 開場）
+
+1. **授權**：可隨意 push。分工：普通事 opus、雜活 sonnet；做事的 agent（雜活除外）先讀 wf 規矩；agent 可再派 agent、模型隨意。
+2. **狀態**：開場只看了狀況、還沒動工；設計已定等實作的是 agent-round（[SESSION-LOG](SESSION-LOG.md) 第一條）。
+3. **新規**：無。
+
 ## 2026-10-27（家中 Manjaro；playground 重來、aos-mcp、aos-hub）
 
 1. **授權**：可隨意 push。分工：普通事 opus、雜活 sonnet；做事的 agent（雜活除外）先讀 wf 規矩。
