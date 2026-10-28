@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+# fake - endpoint 格的假腦：不連網，照固定規則吐一則 assistant message（測試與範本用）
+# 叫法：aos-exec <這格> <agent 資料夾>（agent 資料夾收下不用；設計：proto8/thinking/2026-10-28-agent-round.md § 4 endpoint）。
+# stdin：{"messages": [...], "tools"?: [...]}（同 lib/endpoint/openai）；AOS_BRAIN_URL 那些設定一概不讀。
+# 規則（照 demo/agent-dan 的假腦）：
+#   最後一則是 user、tools 裡有 clock＝叫一次 clock（tool_calls id call_fake_1、arguments "{}"）；
+#   否則答「FAKE ANSWER to: <最後一則 user 的內容>」，最後一則是 tool 就再附「（clock said: <那則的 content>）」。
+# stdout：一行 JSON＝assistant message。不寫 usage.jsonl（沒有 API、沒有 usage）。
+# 錯：stderr 一行「endpoint: 代號 原因」、退 1——RequestBad（stdin 不是請求體、messages 裡沒有 user）、ArgumentsBad（參數多於一個）。
+import json, sys
+
+NAME = "endpoint"
+
+
+def die(code, reason):
+    print("%s: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
+    sys.exit(1)
+
+
+if len(sys.argv) > 2:
+    die("ArgumentsBad", "usage: aos-exec <endpoint 格> [<agent 資料夾>]（收到 %d 個參數）" % (len(sys.argv) - 1))
+try:
+    body = json.loads(sys.stdin.read())
+except ValueError as e:
+    die("RequestBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(body, dict) or not isinstance(body.get("messages"), list) \
+        or not all(isinstance(m, dict) for m in body["messages"]):
+    die("RequestBad", "stdin 要是 {\"messages\": [物件...], \"tools\"?: [...]}")
+messages, tools = body["messages"], body.get("tools") or []
+users = [m for m in messages if m.get("role") == "user"]
+if not users:
+    die("RequestBad", "messages 裡沒有 user")
+names = {(t.get("function") or {}).get("name") for t in tools if isinstance(t, dict)}
+last = messages[-1]
+if last.get("role") == "user" and "clock" in names:
+    out = {"role": "assistant", "content": None,
+           "tool_calls": [{"id": "call_fake_1", "type": "function",
+                           "function": {"name": "clock", "arguments": "{}"}}]}
+else:
+    question = users[-1].get("content")
+    content = "FAKE ANSWER to: " + (question if isinstance(question, str) else json.dumps(question, ensure_ascii=False)).rstrip("\n")
+    if last.get("role") == "tool":
+        content += "（clock said: %s）" % (last.get("content") or "").rstrip("\n")
+    out = {"role": "assistant", "content": content}
+print(json.dumps(out, ensure_ascii=False))

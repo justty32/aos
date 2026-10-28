@@ -1,0 +1,202 @@
+#!/usr/bin/env python3
+# act - act 格：照腦的決定跑工具——吃一則 assistant message，每個 tool_call 經 pre_tool → aos-tools call → post_tool，吐一行一則 tool 訊息、照原順序
+# 叫法：aos-exec <這格> <agent 資料夾絕對路徑>（設計：proto8/thinking/2026-10-28-agent-round.md § 3、§ 4 act、文末「實作時代定」）。
+# stdin：一則 assistant message（一行 JSON）；沒有 tool_calls＝什麼都不吐、退 0。act 不寫 history（round 接）。
+# 每個 call：
+#   hook/pre_tool  stdin＝那個 tool_call（一行 JSON）；0＝跑、10＝不跑（stdout 當那次 tool 訊息的 content）、其他＝act 失敗（HookFailed）
+#   工具           aos-tools --file <agent>/tools.json call 名，arguments 從 stdin 進、AOS_STACK＝$AOS_STACK/<名>/（P-17）
+#   hook/post_tool stdin＝那則 tool 訊息；0 且 stdout 非空＝那一行 JSON 取代它（不是 JSON 物件＝HookFailed）；非 0＝HookFailed
+#   掛勾經 `aos-parts --file <agent>/parts.json which --json hook/<點>` 找：退 10＝沒掛（照 § 3 表的預設）；拿到就 `aos-exec 路徑 <agent>`，註冊檔的 env 疊上去。
+# 叫工具出的問題回給腦、不停（P-41 現狀，照 demo/agent-dan/act.py）：叫了 tools.json 沒登記的＝ToolUnknown、arguments 不是 JSON 字串＝ArgumentsBad、
+#   工具退非 0（stdout 照收、尾巴加結束碼）——都接成一則 tool 訊息。工具與掛勾的 stderr 不讀不吞（C-52）。
+# 平行：MAX_PARALLEL（沒設或 1＝依序；N＝一批最多 N 個一起跑），吐出來仍照原順序。
+# 插話：每一批（依序＝每一個）跑完、後面還有 call 時，看 $AOS_WS/new/ 有沒有題（. 開頭的不算，N-05）；有就問 hook/on_interrupt
+#   （stdin＝題名一行一個；stdout「interrupt」＝打斷，其他字、非 0、沒掛＝wait）。打斷＝剩下的 call 不跑、各接一則「act: Interrupted …」的 tool 訊息，
+#   照樣全部吐完、退 10（「正常、但到此為止」，同 pre_tool 的 10）；新題怎麼接進來是 round 的事，act 不認領。
+# 錯（自己這層的）：stderr 一行「act: 代號 原因」、退 1、stdout 什麼都不吐——ArgumentsBad、AgentBad、StackMissing、MessageBad、
+#   ToolsBad（aos-tools 起不來或 ls 退非 0）、PartsBad（aos-parts 起不來或退 0／10 以外）、HookFailed、ParallelBad（MAX_PARALLEL 不是正整數）。
+import concurrent.futures, json, os, subprocess, sys
+
+NAME = "act"
+NOT_FOUND = 10
+
+
+class Fail(Exception):
+    def __init__(self, code, reason):
+        super().__init__(reason)
+        self.code = code
+
+
+def die(code, reason):
+    print("%s: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
+    sys.exit(1)
+
+
+if len(sys.argv) != 2:
+    die("ArgumentsBad", "usage: aos-exec <act 格> <agent 資料夾絕對路徑>")
+agent = sys.argv[1]
+if not os.path.isabs(agent) or not os.path.isdir(agent):
+    die("AgentBad", "agent 資料夾要是存在的絕對路徑（aos-exec 走進格以後 cwd 不在 agent 那邊），收到 %r" % agent)
+stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
+if not stack:
+    die("StackMissing", "沒設定 AOS_STACK")
+try:
+    max_parallel = int(os.environ.get("MAX_PARALLEL") or "1")
+    if max_parallel < 1:
+        raise ValueError
+except ValueError:
+    die("ParallelBad", "MAX_PARALLEL 要是正整數，收到 %r" % os.environ.get("MAX_PARALLEL"))
+tools_json = os.path.join(agent, "tools.json")
+parts_json = os.path.join(agent, "parts.json")
+
+try:
+    said = json.loads(sys.stdin.read())
+except ValueError as e:
+    die("MessageBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(said, dict):
+    die("MessageBad", "stdin 要是一則 assistant message（JSON 物件）")
+calls = said.get("tool_calls") or []
+if not isinstance(calls, list):
+    die("MessageBad", "tool_calls 要是陣列")
+for c in calls:
+    if not (isinstance(c, dict) and isinstance(c.get("id"), str) and isinstance(c.get("function"), dict)
+            and isinstance(c["function"].get("name"), str)):
+        die("MessageBad", "tool_calls 裡有一個沒有 id 或 function.name：%s" % json.dumps(c, ensure_ascii=False))
+if not calls:
+    sys.exit(0)
+
+hooks = {}
+
+
+def hook(point):
+    """hook/<點> → {"path", "env"}；沒掛＝None。只問一次。"""
+    if point not in hooks:
+        try:
+            r = subprocess.run(["aos-parts", "--file", parts_json, "which", "--json", "hook/" + point],
+                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)   # stderr 不吞：aos-parts 自己說哪裡壞
+        except OSError as e:
+            raise Fail("PartsBad", "aos-parts 起不來：%s" % e)
+        if r.returncode == NOT_FOUND:
+            hooks[point] = None
+        elif r.returncode == 0:
+            hooks[point] = json.loads(r.stdout)
+        else:
+            raise Fail("PartsBad", "aos-parts which hook/%s 退 %d" % (point, r.returncode))
+    return hooks[point]
+
+
+def call_hook(point, got, stdin):
+    env = dict(os.environ)
+    env.update(got.get("env") or {})
+    try:
+        return subprocess.run(["aos-exec", got["path"], agent], input=stdin, stdout=subprocess.PIPE, text=True, env=env)
+    except OSError as e:
+        raise Fail("HookFailed", "hook/%s 起不來：%s" % (point, e))
+
+
+def registered():
+    try:
+        r = subprocess.run(["aos-tools", "--file", tools_json, "ls", "--json"], stdin=subprocess.DEVNULL,
+                           stdout=subprocess.PIPE, text=True)
+    except OSError as e:
+        raise Fail("ToolsBad", "aos-tools 起不來：%s" % e)
+    if r.returncode != 0:
+        raise Fail("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
+    return [t["name"] for t in json.loads(r.stdout)]
+
+
+def tool_message(cid, content):
+    return {"role": "tool", "tool_call_id": cid, "content": content}
+
+
+def run_tool(cid, name, arguments, tools):
+    if name not in tools:                # 名字只認 tools.json 登記過的
+        return tool_message(cid, "act: ToolUnknown %s（能叫的：%s）\n" % (name, "、".join(tools) or "沒有"))
+    try:
+        if not isinstance(arguments, str):
+            raise ValueError("arguments 不是字串")
+        json.loads(arguments)
+    except ValueError as e:
+        return tool_message(cid, "act: ArgumentsBad %s：%s\n" % (name, e))
+    env = dict(os.environ, AOS_STACK=os.path.join(stack, name) + "/")
+    try:
+        r = subprocess.run(["aos-tools", "--file", tools_json, "call", name], input=arguments,
+                           stdout=subprocess.PIPE, text=True, env=env)
+    except OSError as e:
+        raise Fail("ToolsBad", "aos-tools 起不來：%s" % e)
+    content = r.stdout
+    if r.returncode != 0:                # 回給腦、不停
+        content += "%s(工具 %s 結束碼 %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
+    return tool_message(cid, content)
+
+
+def one(call, tools):
+    cid, name, arguments = call["id"], call["function"]["name"], call["function"].get("arguments")
+    pre = hook("pre_tool")
+    if pre:
+        r = call_hook("pre_tool", pre, json.dumps(call, ensure_ascii=False) + "\n")
+        if r.returncode == NOT_FOUND:
+            return tool_message(cid, r.stdout)
+        if r.returncode != 0:
+            raise Fail("HookFailed", "hook/pre_tool 退 %d（%s）" % (r.returncode, name))
+    message = run_tool(cid, name, arguments, tools)
+    post = hook("post_tool")
+    if post:
+        r = call_hook("post_tool", post, json.dumps(message, ensure_ascii=False) + "\n")
+        if r.returncode != 0:
+            raise Fail("HookFailed", "hook/post_tool 退 %d（%s）" % (r.returncode, name))
+        if r.stdout.strip():
+            try:
+                replaced = json.loads(r.stdout)
+            except ValueError as e:
+                raise Fail("HookFailed", "hook/post_tool 的 stdout 不是 JSON（%s）：%s" % (name, e))
+            if not isinstance(replaced, dict):
+                raise Fail("HookFailed", "hook/post_tool 的 stdout 要是一則 tool 訊息（JSON 物件）（%s）" % name)
+            message = replaced
+    return message
+
+
+def waiting():
+    try:
+        return sorted(n for n in os.listdir(os.path.join(ws, "new")) if not n.startswith("."))
+    except (FileNotFoundError, NotADirectoryError):
+        return []
+
+
+def interrupted():
+    names = waiting()
+    if not names:
+        return None
+    got = hook("on_interrupt")
+    if not got:
+        return None                      # 沒掛＝wait（hub-kernel 決定 13）
+    r = call_hook("on_interrupt", got, "".join(n + "\n" for n in names))
+    return names if r.returncode == 0 and r.stdout.strip() == "interrupt" else None
+
+
+def main():
+    tools = registered()
+    out, i, stop = [], 0, None
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_parallel) as pool:
+        while i < len(calls):
+            batch = calls[i:i + max_parallel]
+            if len(batch) == 1:
+                out.append(one(batch[0], tools))
+            else:
+                out.extend(pool.map(lambda c: one(c, tools), batch))    # map 照原順序回；有一個 Fail 就在這裡拋
+            i += len(batch)
+            if i < len(calls):
+                stop = interrupted()
+                if stop:
+                    break
+    if stop:
+        for c in calls[i:]:
+            out.append(tool_message(c["id"], "act: Interrupted 有新題（%s），這個工具沒跑\n" % "、".join(stop)))
+    sys.stdout.write("".join(json.dumps(m, ensure_ascii=False) + "\n" for m in out))
+    sys.exit(NOT_FOUND if stop else 0)
+
+
+try:
+    main()
+except Fail as e:
+    die(e.code, e)

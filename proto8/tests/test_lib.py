@@ -29,10 +29,16 @@ def env_with(extra=None):
     return e
 
 
+# agent 自己的格（10-28 agent-round）不是給腦叫的工具，沒有 _tooldef.json／_metainfo：lib/endpoint/ 整層、lib/agent/ 底下這幾個
+PARTS = {"agent": ("act", "queue", "history", "round", "compact")}
+PART_LAYERS = ("endpoint",)
+
+
 def lib_tools():
-    """lib/<層>/<名>/ 每一個工具資料夾（有 _entry 的）。"""
-    return sorted(p for layer in LIB.iterdir() if layer.is_dir()
-                  for p in layer.iterdir() if p.is_dir() and (p / "_entry").exists())
+    """lib/<層>/<名>/ 每一個工具資料夾（有 _entry 的；agent 的格除外）。"""
+    return sorted(p for layer in LIB.iterdir() if layer.is_dir() and layer.name not in PART_LAYERS
+                  for p in layer.iterdir() if p.is_dir() and (p / "_entry").exists()
+                  and p.name not in PARTS.get(layer.name, ()))
 
 
 class Shape(unittest.TestCase):

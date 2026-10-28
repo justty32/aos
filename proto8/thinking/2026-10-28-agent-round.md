@@ -249,3 +249,25 @@ round:
 8. **XXX 驗到哪**：資料夾、`+x` 的檔、沒 `+x` 但能當 JSON 讀的檔（第一行 `#!` 跳過，同 aos-exec）就收；`_entry` 對不對不驗，交給 aos-exec（C-52 不替下層驗）。不存在＝`PathMissing`，不是這三種＝`PathBad`（新代號）。
 9. **ls／get 只看登記了的**：固定名字不列（槽不設清單，列不出來）；`get` 沒登記＝`PartMissing`；`ls --json`／`get` 的 `env` 印解開後的值（同 aos-tools 的 get 印解開的）。
 10. **`--env K=V` 只收字面字串**：要 `$env` 就手寫進 parts.json，或 `aos-json env`；不另開旗標。
+
+### 做 endpoint、act 時再代定的（10-28 晚，第 1、4 步，代定、可翻案）
+
+11. **usage.jsonl 的 `endpoint` 名**＝環境變數 `ENDPOINT_NAME`（註冊檔的 `env` 給，例 `endpoint/litellm` 那格寫 `"ENDPOINT_NAME": "litellm"`）；沒設＝那支 `_entry` 實際所在的資料夾名（`openai`）。理由：endpoint 不知道自己被登記成哪個槽（C-52），資料夾名只分得出種類、分不出同一種的兩份設定，所以要分的人自己寫一個名字；round 叫 `endpoint/<名>` 時要不要順手設，留給第 5 步。
+12. **endpoint 的設定缺了就報錯、不偷用預設**：沒設 `AOS_BRAIN_URL`＝`UrlMissing`；stdin 沒給 `model`、也沒設 `AOS_BRAIN_MODEL`＝`ModelUnknown`（agent-dan 原本偷填 `"default"`，C-56「寫什麼就做什麼」不照抄）；`TIMEOUT_MS` 沒設＝120000（同 brain.py 的 120 秒），不是正整數＝`TimeoutBad`。stdin 不是請求體＝`RequestBad`（「我們要送的東西不對」，跟 4xx 同一類）。`tools` 是空陣列就不送（有些 server 收到空 tools 會報錯）；stdin 的其他 key 原樣送。失敗時 stdout 不吐、`usage.jsonl` 不寫。
+13. **usage.jsonl 每次問成功都寫一行**，API 沒回 `usage`＝`"usage": null`（行數＝問了幾次）；`model` 記「送出去的」那個（不是回覆裡 server 換過的名字）；`answered_at` 是 UTC 到毫秒。**假腦不寫** usage.jsonl（沒有 API、沒有 usage，不造假數字）。
+14. **假腦答「最後一則 user」**（原本 agent-dan 是「這一題」；history 有好幾題時第一則 user 是很早的舊題，最後一則才是現在這題）；messages 裡沒有 user＝`RequestBad`。
+15. **endpoint 的第一個參數（agent 資料夾）收下不用**：同一叫法才收；多於一個參數＝`ArgumentsBad`。act 要用它找 `tools.json`、`parts.json`，所以 act 一定要給、要是絕對路徑（aos-exec 走進格以後 cwd 在庫那邊，相對路徑會算錯），不合＝`AgentBad`。
+16. **act 吐東西是全有或全無**：一路跑完才一次吐；中途自己這層出錯（`HookFailed`、`ToolsBad`、`PartsBad`）＝stdout 什麼都不吐、退 1，已跑的工具不算（round 照 P-20 停、history 不動，重跑會再跑一次）。`pre_tool` 退 0／10 以外、`post_tool` 退非 0、`post_tool` 的 stdout 不是一個 JSON 物件，都算 `HookFailed`（§ 3 表「其他＝act 失敗」，post_tool 比照）。`post_tool` 的 stdout＝整則取代的 tool 訊息（不是只有 content）。
+17. **找掛勾一律經 `aos-parts which --json hook/<點>`**（實作時代定 2）：退 10＝沒掛；退 0／10 以外（例：登記了但壞，`PartBad`）＝`PartsBad`、act 失敗，不當沒掛。拿到就 `aos-exec 路徑 <agent>`，註冊檔的 `env` 疊上去（實作時代定 4）。每個點一次 act 只問一次。
+18. **插話看 `$AOS_WS/new/`，不經 queue 格的 `peek`**：信箱的版面是 P-11 的慣例、不是 queue 的內部，直接看最少依賴（queue 格跟 act 同時在做、act 的測試不必先有 queue）；`.` 開頭的不算（N-05）。之後要改走 `queue peek` 只動 act 的 `waiting()` 一處。
+19. **平行＝一批一批跑**：`MAX_PARALLEL=N` 就每 N 個一批一起跑、一批跑完才看插話（§ 4「平行模式一批跑完才檢查」）；依序＝一批一個。最後一批後面不看（沒有剩下的可以不跑）。`MAX_PARALLEL` 不是正整數＝`ParallelBad`。
+20. **打斷之後**：剩下的 call 各接一則 content「`act: Interrupted 有新題（題名…），這個工具沒跑`」，全部照原順序吐完、**退 10**（「正常、但到此為止」，同 `pre_tool` 的 10），讓 round 分得出「這批被打斷」。**act 不認領新題**（§ 4 原本寫 act 做 `queue claim`，但 act 不寫 history，改由 round 管）：round 看到 act 退 10，先照常把 act 吐的 tool 訊息全部接進 history，再叫 queue 把 `new/` 的新題接進來（題文接成一則 user、題名加進 `current.txt`，`finish` 時一起答，§ 4 queue），然後回去問腦。這個「把新題接進來」的子命令叫什麼、怎麼做由 queue 與 round（第 2、5 步）定。`on_interrupt` 每個空檔都重問（`new/` 還有題、上次說 wait，下一個空檔再問一次）。
+
+### 做 queue、history、compact 時再代定的（10-28 晚，第 2、3 步，代定、可翻案）
+
+21. **插話時再認領一題＝`queue claim --more`**（接上面第 20 條）：`cur/` 有沒有題都取 `new/` 排序最前一題，照第 5 條的三步做；第 ① 步只在 history 最後一則**已是 user** 時不接（被打斷後最後一則是 tool，要接；當掉重跑時最後一則已是這題的 user，不接兩次）；`current.txt`＝`cur/` 原有的再加這題；stdout 這題題名；`new/` 空＝退 10。round 看到 act 退 10、接完 tool 訊息後叫它。
+22. **一般 `claim` 遇到 `cur/` 已有題**＝不搬、不碰 history，只把 `cur/` 的題名重寫進 `current.txt`、全部印出來。理由：照第 5 條順序，題目進了 `cur/` 就代表前兩步已做完；這時去看 history 最後一則反而猜不準（可能正在跑工具）。
+23. **`finish` 的順序**：先把 `cur/` 每一題的 `out/<題名>` 都寫好（N-05），再一題一題搬 `done/`，最後刪掉 `current.txt`（交完就沒有認領中的題）；中途當掉重跑同樣的答案再寫一次就接上。`cur/` 空＝`QuestionMissing`。答案沒換行結尾就補一個（同 agent-dan 的 act）。
+24. **「壓」放在 compact 格，history 的 `compact` 只管換檔**：`history compact` 的 stdin＝新的短版（一行一則，每行都要是 JSON 物件，否則 `HistoryBad`、什麼都不動）；舊的整份用 hard link 收進 `history_archive/<UTC 到毫秒>.jsonl`（不成才複製），再把新的暫存檔改名換上——`history.jsonl` 一刻都不會不見；stdout 印 `history_archive/<名>` 一行（§ 4 表原寫「— → —」，多印這行讓 compact 格記進報告）。加 `--expect-bytes N`：現在不是 N bytes（壓的期間有人接了）＝`HistoryChanged`、不換。理由：§ 4 寫「門檻、怎麼壓是 compact 那格自己的事」，history 只管檔（C-52）；換壓法只換 compact 格、history 不動。
+25. **compact 格從 agent-hal 搬來時改的**：設定是這格自己的 env（註冊檔的 `env`），所以拿掉 `COMPACT_` 字首（`MAX_BYTES` 沒設＝65536、`SEG_KB`、`KEEP_TURNS`…）；問腦走 endpoint 格（`ENDPOINT` ＞ `$AOS_STACK/endpoint.txt` ＞ `default`），`MODEL_NOTE／SEG／FINAL` 有設才帶 `model`；agent-hal 自己連網址、內建假腦、token 統計都拿掉（假腦是 endpoint 的事、usage 由 endpoint 寫 `usage.jsonl`），報告只記問了幾次、走了幾次退路。原文改收在 `history_archive/`（不再是 `compact/<run>/orig.jsonl`）；做到一半的產物與報告仍在 `$AOS_STACK/compact/`（§ 5 表要多一列）。換上之後、改名之前當掉：下次那份半成品收成 `compact/stale-<時間>/`，不丟東西。endpoint 退非 0＝`EndpointFailed`、history 不動。
+26. **三格的小規矩**：都收 agent 資料夾當第一個參數（history 用不到也收，共通介面），不是資料夾＝`AgentMissing`；queue 的 `pop` 逾時退 10、什麼都不印；`push --wait` 先印題名一行、再印答案，`--timeout-s` 只能跟 `--wait` 一起；`emit` 的 stdin 要是 JSON 物件（`MessageBad`），原樣接一行；題目是資料夾（P-13）就讀裡面的 `prompt.txt`。
