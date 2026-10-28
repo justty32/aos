@@ -1,0 +1,8 @@
+{"summary": "同步問一隻格組起來的 agent 一題、等它答完",
+ "time_ms": {"val": 20000, "max": 600000},
+ "resource": ["cpu", "llm"],
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": false,
+ "interrupt": "unsafe",
+ "parallel": false}

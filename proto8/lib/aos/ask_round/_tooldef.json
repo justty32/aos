@@ -1,0 +1,6 @@
+{"description": "問一隻 aos agent 一個問題，等它答完、回它的答案原文。agent 不必開著：這個工具放題、叫它跑到答完再收答案。適合把子問題交給專門的 agent。",
+ "parameters": {"type": "object",
+                "properties": {"question": {"type": "string", "description": "要問的問題（純文字）"},
+                               "agent": {"type": "string", "description": "agent 資料夾的絕對路徑（選填；這個工具已固定一隻時不用給）"},
+                               "timeout_s": {"type": "number", "description": "最多等幾秒（選填，預設 120，最多 600）"}},
+                "required": ["question"]}}

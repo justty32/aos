@@ -4,7 +4,9 @@
   沒題＝loop 第一次就停、結束碼 0；parts.json／tools.json 只用相對路徑、每格 aos-parts which 找得到。
 spawn：--from agent-nia 後 parts.json、tools.json 指出範本的相對路徑改成絕對、搬到 agents/<名>/agent/ 後跑一題答得出來；
   沒有 parts.json 的範本（agent-dan）tools.json 一個字不動。
-設計：proto8/thinking/2026-10-28-agent-round.md § 1、§ 7 第 6、7 步、文末 39～。"""
+ask_round（lib/aos，第 11 步：round 當外部接口）：登記進 tools.json、aos-tools call 拿到假腦答案、agent 不常駐（工作區在工具小格）；
+  工具小資料夾 .env 固定 ASK_AGENT；round 中途 yield 時重叫到答完、ASK_MAX_ROUNDS 用完＝AnswerMissing；round 失敗＝RoundFailed；參數錯。
+設計：proto8/thinking/2026-10-28-agent-round.md § 1、§ 6、§ 7 第 6、7、11 步、文末 39～。"""
 import json, os, subprocess, tempfile, unittest
 from pathlib import Path
 
@@ -108,6 +110,100 @@ class Spawn(unittest.TestCase):
         agent = Path(res["agent"])
         self.assertEqual((agent / "tools.json").read_bytes(), (ROOT / "demo" / "agent-dan" / "tools.json").read_bytes())
         self.assertFalse((agent / "parts.json").exists())
+
+
+ASK = ROOT / "lib" / "aos" / "ask_round"
+TOOLS = str(ROOT / "bin" / "aos-tools")
+
+
+class AskRound(unittest.TestCase):
+    def setUp(self):
+        t = tempfile.TemporaryDirectory()
+        self.addCleanup(t.cleanup)
+        self.tmp = Path(t.name)
+        self.boss = self.tmp / "boss"
+        self.boss.mkdir()
+        self.stack = self.tmp / "stack"
+
+    def add(self, target):
+        r = subprocess.run([TOOLS, "--file", str(self.boss / "tools.json"), "add", str(target)], capture_output=True,
+                           text=True, env=env())
+        self.assertEqual(r.returncode, 0, r.stderr)
+
+    def call(self, name, args, extra=None):
+        e = env()
+        e.update({"AOS_WS": str(self.tmp), "AOS_STACK": str(self.stack / name) + "/"})
+        e.update(extra or {})
+        return subprocess.run([TOOLS, "--file", str(self.boss / "tools.json"), "call", name], input=json.dumps(args),
+                              capture_output=True, text=True, env=e, cwd=self.tmp, timeout=120)
+
+    def code(self, r):
+        last = r.stderr.strip().splitlines()[-1]
+        self.assertTrue(last.startswith("ask_round: "), r.stderr)
+        self.assertEqual(r.stdout.strip().splitlines()[-1], last)                 # 錯也印在 stdout（給腦看）
+        return (r.returncode, last.split()[1])
+
+    def own_agent(self, pause=None):
+        """agent-nia 的格（絕對路徑）＋可選的 hook/pause。"""
+        a = self.tmp / "agent"
+        a.mkdir()
+        parts = json.loads((NIA / "parts.json").read_text())["parts"]
+        for row in parts.values():
+            row["path"] = os.path.normpath(os.path.join(NIA, row["path"]))
+        if pause:
+            h = self.tmp / "pause"
+            h.mkdir()
+            (h / "_entry").write_text("#!/bin/sh\n" + pause)
+            (h / "_entry").chmod(0o755)
+            parts["hook/pause"] = {"path": str(h)}
+        (a / "parts.json").write_text(json.dumps({"parts": parts}))
+        (a / "tools.json").write_text(json.dumps({"tools": {"clock": {"path": str(ROOT / "lib" / "base" / "clock")}}}))
+        return a
+
+    def test_registered_and_called(self):
+        self.add(ASK)
+        r = self.call("ask_round", {"question": "現在幾點？", "agent": str(NIA)})
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertRegex(r.stdout, r"^FAKE ANSWER to: 現在幾點？（clock said: \d{4}-.*Z）\n$")
+        ws = self.stack / "ask_round" / "agent-nia"                                   # 工作區＝工具的小格（P-17）
+        self.assertEqual([p.name for p in (ws / "done").iterdir()], [p.name for p in (ws / "out").iterdir()])
+        self.assertTrue((ws / ".stack" / "history.jsonl").exists())
+        self.assertEqual(list((ws / "new").iterdir()) + list((ws / "cur").iterdir()), [])   # 答完就停、不常駐
+
+    def test_fixed_agent_by_cell_env(self):
+        cell = self.boss / "tools" / "ask_nia"
+        cell.mkdir(parents=True)
+        for f in ("_entry", "_tooldef.json", "_metainfo"):
+            (cell / f).symlink_to(ASK / f)
+        (cell / ".env").write_text("ASK_AGENT=%s\n" % NIA)
+        self.add(cell)
+        r = self.call("ask_nia", {"question": "1+1？"})
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 1+1？"), r.stdout)
+
+    def test_yield_rounds_until_answer_and_limit(self):
+        agent = self.own_agent(pause="exit 10\n")                                    # 每批工具後 yield：要叫兩次 round
+        self.add(ASK)
+        r = self.call("ask_round", {"question": "幾點？", "agent": str(agent)})
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 幾點？"), r.stdout)
+        r = self.call("ask_round", {"question": "再一次", "agent": str(agent)}, {"ASK_MAX_ROUNDS": "1"})
+        self.assertEqual(self.code(r), (1, "AnswerMissing"))
+
+    def test_round_failed_and_argument_errors(self):
+        agent = self.own_agent()
+        parts = json.loads((agent / "parts.json").read_text())
+        parts["parts"]["endpoint/default"] = {"path": str(ROOT / "lib" / "endpoint" / "openai")}   # 沒 AOS_BRAIN_URL＝UrlMissing
+        (agent / "parts.json").write_text(json.dumps(parts))
+        self.add(ASK)
+        r = self.call("ask_round", {"question": "q", "agent": str(agent)})
+        self.assertEqual(self.code(r), (1, "RoundFailed"))
+        self.assertIn("endpoint: UrlMissing", r.stderr)                                 # 下層自己說、不轉述
+        self.assertEqual(self.code(self.call("ask_round", {"question": "q"})), (1, "AgentMissing"))
+        self.assertEqual(self.code(self.call("ask_round", {"question": "q", "agent": "agent"})), (1, "AgentBad"))
+        self.assertEqual(self.code(self.call("ask_round", {"agent": str(agent)})), (1, "ArgumentsBad"))
+        self.assertEqual(self.code(self.call("ask_round", {"question": "q", "agent": str(agent), "timeout_s": 0})),
+                         (1, "ArgumentsBad"))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+# ask_round - 同步問一隻格組起來的 agent 一題：放進它的信箱、叫 round 跑到答完、印答案（agent 不必常駐）
+# 介面（lib/README 的契約）：stdin 收 {"question", "agent"?, "timeout_s"?}；stdout＝答案原文（out/<題名> 整份）。
+# 設計：thinking 2026-10-28-agent-round § 6「round 當外部接口」、§ 7 第 11 步、文末實作時代定 43～。
+#   agent＝參數 agent（絕對路徑）＞ 環境變數 ASK_AGENT（「問 agent-xxx」固定一隻：工具小資料夾的 .env 寫它，_entry 捷徑指這支）。
+#   被問的 agent 的工作區＝ASK_WS（有設）＞ $AOS_STACK/<agent 資料夾名>/（這個工具自己的小格，P-17）；它的 stack＝<工作區>/.stack/。
+#   做法：aos-parts --file <agent>/parts.json run queue <agent> push（題文進 stdin，拿題名）
+#         → aos-parts … run round <agent> 反覆叫（round 退 0 可能只是 yield），直到 out/<題名> 出來；
+#         最多叫 ASK_MAX_ROUNDS 次（預設 20），總時間 timeout_s（預設 120、最多 600）。
+#   搶信箱不加保護（決定 15）：同一個工作區另有 aos-loop 在收信，round 可能先答別題、這題被別人答——呼叫者自己避開（給各自的 ASK_WS）。
+# 錯：stderr 與 stdout 各一行「ask_round: 代號 原因」、退 1——ArgumentsBad、AgentBad（不是存在的絕對路徑）、AgentMissing（沒給也沒設 ASK_AGENT）、
+#   StackMissing（沒 ASK_WS 也沒 AOS_STACK）、SettingBad、MkdirFailed、LaunchFailed（aos-parts 起不來）、QueueFailed（push 退非 0）、
+#   RoundFailed（round 退 0／10 以外；round 自己那行照樣在 stderr）、AnswerMissing（round 退 10 沒題了、次數用完或逾時，答案還沒出來）。
+# 逾時或自己被 TERM：先 TERM 正在跑的那一群、2 秒後 KILL，不留孤兒（契約 5）。
+import json, os, signal, subprocess, sys, time
+
+NAME = "ask_round"
+TIMEOUT_DEFAULT, TIMEOUT_MAX = 120, 600
+CHILD = None
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, str(reason).replace("\n", " "))
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def stop_child():
+    if CHILD and CHILD.poll() is None:
+        try:
+            os.killpg(CHILD.pid, signal.SIGTERM)
+            CHILD.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            os.killpg(CHILD.pid, signal.SIGKILL)
+            CHILD.wait()
+        except ProcessLookupError:
+            pass
+
+
+def on_term(signum, frame):
+    stop_child()
+    sys.exit(128 + signum)
+
+
+signal.signal(signal.SIGTERM, on_term)
+
+
+def run(argv, stdin, env, deadline):
+    """起一群、等它；回 (結束碼, stdout)；到 deadline＝收掉那群、回 None。"""
+    global CHILD
+    try:
+        CHILD = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=env,
+                                 start_new_session=True)   # stderr 不吞：下層自己說哪裡壞（C-52）
+    except OSError as e:
+        die("LaunchFailed", "%s 起不來：%s" % (argv[0], e))
+    try:
+        out, _ = CHILD.communicate(stdin, timeout=max(0.1, deadline - time.monotonic()))
+    except subprocess.TimeoutExpired:
+        stop_child()
+        return None, ""
+    return CHILD.returncode, out
+
+
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+if not isinstance(args, dict):
+    die("ArgumentsBad", "arguments 要是物件")
+question = args.get("question")
+if not isinstance(question, str) or not question.strip():
+    die("ArgumentsBad", "要 question（非空字串）")
+timeout_s = args.get("timeout_s", TIMEOUT_DEFAULT)
+if isinstance(timeout_s, bool) or not isinstance(timeout_s, (int, float)) or not 0 < timeout_s <= TIMEOUT_MAX:
+    die("ArgumentsBad", "timeout_s 要是 0～%d 的數字，收到 %r" % (TIMEOUT_MAX, timeout_s))
+agent = args.get("agent", os.environ.get("ASK_AGENT"))
+if agent in (None, ""):
+    die("AgentMissing", "沒給 agent，也沒設 ASK_AGENT")
+if not isinstance(agent, str) or not os.path.isabs(agent) or not os.path.isdir(agent):
+    die("AgentBad", "agent 要是存在的資料夾絕對路徑，收到 %r" % (agent,))
+agent = os.path.normpath(agent)
+try:
+    max_rounds = int(os.environ.get("ASK_MAX_ROUNDS") or "20")
+    if max_rounds < 1:
+        raise ValueError
+except ValueError:
+    die("SettingBad", "ASK_MAX_ROUNDS 要是 ≥1 的整數，收到 %r" % os.environ.get("ASK_MAX_ROUNDS"))
+ws = os.environ.get("ASK_WS")
+if not ws:
+    if not os.environ.get("AOS_STACK"):
+        die("StackMissing", "沒設 ASK_WS，也沒有 AOS_STACK（工具的小格）可以放被問的 agent 的工作區")
+    ws = os.path.join(os.environ["AOS_STACK"], os.path.basename(agent))
+ws = os.path.abspath(ws)
+stack = os.path.join(ws, ".stack")
+try:
+    for d in ("new", "cur", "out", "done", ".stack"):
+        os.makedirs(os.path.join(ws, d), exist_ok=True)
+except OSError as e:
+    die("MkdirFailed", "建不了工作區 %s：%s" % (ws, e))
+
+env = dict(os.environ)
+env.update({"AOS_WS": ws, "AOS_STACK": stack + "/"})   # 明寫：外面的 AOS_STACK 是這個工具的小格，不是被問的 agent 的
+parts = ["aos-parts", "--file", os.path.join(agent, "parts.json"), "run"]
+deadline = time.monotonic() + timeout_s
+
+code, out = run(parts + ["queue", agent, "push"], question, env, deadline)
+if code is None:
+    die("AnswerMissing", "放題就逾時了（timeout_s=%s）" % timeout_s)
+if code != 0 or not out.strip():
+    die("QueueFailed", "queue push 退 %d" % code)
+qid = out.strip().splitlines()[0]
+answer = os.path.join(ws, "out", qid)
+for n in range(1, max_rounds + 1):
+    code, _ = run(parts + ["round", agent], "", env, deadline)
+    if os.path.exists(answer):
+        break
+    if code is None:
+        die("AnswerMissing", "%s 逾時（timeout_s=%s），叫了 %d 次 round 還沒答（工作區 %s）" % (qid, timeout_s, n, ws))
+    if code == 10:
+        die("AnswerMissing", "round 說沒題了，%s 卻沒有答案（被別人收走？工作區 %s）" % (qid, ws))
+    if code != 0:
+        die("RoundFailed", "round 退 %d（題目留在 %s，修好再叫一次會接著做）" % (code, ws))
+else:
+    die("AnswerMissing", "叫了 %d 次 round（ASK_MAX_ROUNDS）%s 還沒答（工作區 %s）" % (max_rounds, qid, ws))
+with open(answer, encoding="utf-8", errors="replace") as f:
+    sys.stdout.write(f.read())

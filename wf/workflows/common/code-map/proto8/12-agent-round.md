@@ -27,11 +27,18 @@
 | `demo/agent-nia/system.txt` | system 訊息 |
 | `demo/run.sh`（職責變了） | 最後多一段 agent-nia（假腦一題、印工作區與 stack 樹），共七段 |
 
+### round 當外部接口（10-28 晚，第 11 步）
+
+| 哪裡 | 負責什麼 |
+|---|---|
+| `lib/aos/ask_round/_entry` | 工具（照 lib 契約）：stdin `{"question", "agent"?, "timeout_s"?}`；`aos-parts run queue <agent> push` 放題 → `aos-parts run round <agent>` 反覆叫到 `out/<題名>` 出來（`ASK_MAX_ROUNDS` 預設 20、`timeout_s` 預設 120）→ 印答案；agent＝參數 ＞ `ASK_AGENT`，工作區＝`ASK_WS` ＞ `$AOS_STACK/<agent 名>/`、stack＝`<工作區>/.stack/`；錯 `AgentMissing`／`AgentBad`／`StackMissing`／`SettingBad`／`QueueFailed`／`RoundFailed`／`AnswerMissing`… |
+| `lib/aos/ask_round/_tooldef.json`、`_metainfo` | 給模型的說明（question 必給、agent／timeout_s 選填）；特性（`time_ms.max` 600000，aos-mcp 拿它當逾時） |
+
 ### 測試
 
 | 哪裡 | 涵蓋 |
 |---|---|
 | `tests/test_round.py` | endpoint fake、openai（假 server：答案與 usage、經 aos-parts run 帶註冊檔 env、各錯誤代號、連不上；LiteLLM 實跑連不上就 skip）；act（順序、平行、工具的問題回給腦、pre_tool／post_tool、插話退 10、自己的錯）；round（假腦答完一題、system 與 tools 帶進請求、trace 每格一行、沒題退 10；endpoint 壞退 1 且 history 沒多接、on_error switch 換 endpoint.txt 再成功、retry 有上限；pause yield 後接著做；`--step` 一格一格、aos-loop 跑 `--step`；pre_round 失敗；插話 claim --more 再問腦、兩題一起答；PartMissing／AgentBad／SettingBad） |
 | `tests/test_round_queue.py` | queue（push → claim → finish、撞名與空題、withdraw、claim 各步當掉重跑、不拿上一題答案、claim --more、沒 history 格、pop 逾時、emit、沒認領就 finish）、history（壞輸入、compact 換上與 `--expect-bytes`）、compact（大 history 壓短、沒超過不動、endpoint 壞 history 不動） |
-| `tests/test_nia.py` | 範本 agent-nia（一題答完、stack 的檔與 trace 有 pre_think、兩題＝round 退 0 後 loop 再叫、沒題 loop 正常停、parts.json／tools.json 只用相對路徑且每格找得到）、`aos-ai spawn --from agent-nia`（註冊檔改成絕對、跑一題答得出來）、沒有 parts.json 的範本 tools.json 不動 |
+| `tests/test_nia.py` | ask_round（登記進 tools.json 經 aos-tools call 拿到假腦答案、工作區在工具小格、答完不常駐；工具小資料夾 `.env` 固定 `ASK_AGENT`；round yield 時重叫到答完、`ASK_MAX_ROUNDS` 用完 AnswerMissing；RoundFailed 與參數錯）；範本 agent-nia（一題答完、stack 的檔與 trace 有 pre_think、兩題＝round 退 0 後 loop 再叫、沒題 loop 正常停、parts.json／tools.json 只用相對路徑且每格找得到）、`aos-ai spawn --from agent-nia`（註冊檔改成絕對、跑一題答得出來）、沒有 parts.json 的範本 tools.json 不動 |
 | `tests/test_lib.py`（職責變了） | 形狀檢查（三個檔、NAME 行…）跳過 agent 的格：`lib/endpoint/` 整層與 `lib/agent/` 的 act、queue、history、round、compact（不是工具，沒有 `_tooldef.json`） |

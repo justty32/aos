@@ -208,7 +208,7 @@ round:
 8. **測試** `tests/test_round.py`：以上各驗各一案；跑 proto8 全套不退。（10-28 晚做了：範本與 spawn 的案在 `tests/test_nia.py`）
 9. **條文**：P-23、P-41 改寫（agent-ops 決定 3；P-41 含「只有 compact 可改寫」）、P-25／C-61 加註（決定 10）、P-20 改「預設」、P-33／C-52 加「round 的參數」一句、N-43 加「分類靠代號」、N-53／C-25 加「一格一次用 aos-loop、一輪用 round，看 `_entry`」（決定 12）；NORMS 待定加這份的代定；code map、demo README、artifact 同步。
 10. 黑盒子（claude code）那條：hub 已做，round 不碰（決定 14：aos 歸 aos）。
-11. **round 當外部接口**（決定 15）：做一個「問 agent-xxx」的工具（push 一題＋叫一次 round＋印 `out/` 答案），登記進 claude code 用的 tools.json；驗：claude code 經 aos-mcp 問一題拿到答案、agent 不常駐；搶信箱不加保護。
+11. **round 當外部接口**（決定 15）：做一個「問 agent-xxx」的工具（push 一題＋叫一次 round＋印 `out/` 答案），登記進 claude code 用的 tools.json；驗：claude code 經 aos-mcp 問一題拿到答案、agent 不常駐；搶信箱不加保護。（10-28 晚做了：`lib/aos/ask_round`，見文末 43～47；claude -p〔haiku〕經 aos-mcp 問 agent-nia 一題拿到假腦答案）
 
 0. （決定 16，排在第 1 步前）**`proto8/bin/aos-parts`**：add／rm／ls／get／which；驗：註冊的優先、沒註冊走固定名字（捷徑與真資料夾各一）、都沒有退 10、註冊了但路徑壞＝`PartBad`。之後第 5 步 round 叫格一律經 `which`；第 6 步範本改成手寫相對路徑的 `parts.json`（不必擺捷徑）；第 7 步 aos-ai spawn 改成 `aos-parts add`（不複製捷徑）；第 9 步 P-25／C-61 的加註改成「格也走註冊檔，同 aos-tools 的加註；`..` 只在方便用的捷徑」。
 
@@ -299,3 +299,11 @@ round:
 ### 做 aos-ai spawn 時再代定的（10-28 晚，第 7、8 步，代定、可翻案）
 
 42. **spawn 改寫註冊檔、不改用 `aos-parts add` 重登記**：複製後 `parts.json`、`tools.json` 每一格的 `path` 若是相對、從範本資料夾算指到範本外面，就換成那個絕對路徑（`normpath`、不解開捷徑，同 `add` 存 abspath）；指在範本裡面的（例 agent-dan 的 `tools/clock`）照舊相對、跟著複製；`env`、其他 key、指示詞（`$ref`／`$env`）原樣；沒有要改的就不寫檔（agent-dan 這類範本一個 byte 都不動）。理由：重登記會把 `env` 拆成 `--env K=V` 再組回去（`$env` 指示詞組不回去，第 10 條），改寫只動 `path` 最少；兩份註冊檔同一種規則（手寫相對＝從檔所在資料夾算）一起處理，跟範本相對捷徑改絕對（10-24）同一個想法。
+
+### 做「問 agent」工具時再代定的（10-28 晚，第 11 步，代定、可翻案）
+
+43. **工具名 `ask_round`、放 `lib/aos/`**：動 aos 自己的東西（別隻 agent 的信箱），是中層；名字跟隔壁的 `ask_agent`（經 aos-ai  spawn＋run 的那支）同一種「動詞_對象」，對象寫 round 分得出走的是哪條路。不併進 `ask_agent`：那支照 aos-ai 的 `agents/<名>/` 佈局、會先 spawn，這支只吃一個已有的 agent 資料夾（C-52 各管各的）。
+44. **agent 怎麼給**：參數 `agent`（絕對路徑）＞ 環境變數 `ASK_AGENT`；都沒有＝`AgentMissing`。「問 agent-xxx」固定一隻＝一個工具小資料夾（`.env` 寫 `ASK_AGENT`，`_entry`／`_tooldef.json`／`_metainfo` 捷徑指庫）——§ 1「一格＝`.env`＋`_entry` 捷徑」同一招，tools.json 不必多一種 `env` 欄。`_tooldef.json` 也可自己寫一份（拿掉 agent 參數、改說明）。
+45. **被問的 agent 的工作區**＝`ASK_WS` ＞ `$AOS_STACK/<agent 資料夾名>/`（這個工具的小格，P-17；經 act 是 `$AOS_STACK/<工具名>/`，經 aos-mcp 是 `<stack>/<工具名>/`），信箱四個資料夾沒有就建；它的 stack＝`<工作區>/.stack/`（N-57 預設，明寫，不讓外面的 `AOS_STACK`〔工具的小格〕漏進去）。理由：預設不碰叫它的人自己的信箱（放進 `$AOS_WS/new/` 會變成問自己）；同一個工具小格問同一隻，history 接著累積（agent 有記憶）；要跟常駐的那隻共用信箱就設 `ASK_WS`，搶信箱是呼叫者的風險（決定 15）。
+46. **重叫 round 的規則**：每次 round 退回來先看 `out/<題名>`，有就收（round 之後的格失敗也照收——答案已寫）；退 0 沒答案＝yield、再叫；退 10＝`AnswerMissing`（題目被別人收走）；其他＝`RoundFailed`（題目留在工作區，再叫一次 round 會接著做）。最多 `ASK_MAX_ROUNDS` 次（預設 20，≥1，`SettingBad`），總時間 `timeout_s`（預設 120、上限 600，跟 bash 一樣寫在 `_tooldef.json`），到了＝收掉正在跑的那群（TERM、2 秒後 KILL）、`AnswerMissing`。放題與叫 round 都經 `aos-parts --file <agent>/parts.json run`（註冊檔的 env 照帶，C-52 怎麼找只在 aos-parts）。
+47. **stdout＝答案原文**（`out/<題名>` 整份），不包 JSON：契約 2「文字工具印文字」，外面的 CLI 直接看得懂；`ask_agent` 印 JSON 是它轉 aos-ai 的歷史形狀，這支不跟。
