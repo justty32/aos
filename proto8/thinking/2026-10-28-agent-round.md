@@ -125,7 +125,7 @@ round:
 |---|---|
 | `append` | 一行 JSON → —；不是 JSON 物件＝`HistoryBad` |
 | `read` | — → JSON 陣列（整份） |
-| `compact` | — → —；太大就壓短 |
+| `compact [--expect-bytes N]` | 新的短版（一行一則）→ 印 `history_archive/<名>` 一行；怎麼壓是 compact 格的事（實作時代定 24） |
 
 - **compact 怎麼觸發**：掛勾不收子命令，所以 `hook/pre_think/` 的 `_entry` 捷徑指到一支專門的 `lib/agent/compact/`，它看 `history.jsonl` 超過自己 `.env` 的 `MAX_BYTES`（例 65536）才 `aos-exec <agent>/history <agent> compact`。門檻、怎麼壓（摘要、刪舊、按意圖）是 compact 那格自己的事；agent-hal 的三步土法（10-24）搬進 `lib/agent/compact/` 當預設做法，問腦走 `endpoint/<目前的>`（或它自己 `.env` 指定的便宜一個）。
 - **壓掉的原文去哪**：整份舊的 `history.jsonl` 先搬到 `$AOS_STACK/history_archive/<UTC 到毫秒>.jsonl`，新的短版再改名換上（agent-hal 現在就是 `os.replace` 換上）。副產物都留，不清（hub-adapter 使用者「反正就留著」；清理是人的事，P-14）。
@@ -157,7 +157,7 @@ round:
 - **stdin**：那一則 assistant message；**stdout**：一行一則 tool 訊息，照 `tool_calls` 原順序。
 - 每個 call：`hook/pre_tool` → `aos-tools --file <agent>/tools.json call <名>`（arguments 從 stdin 進、`AOS_STACK=$AOS_STACK/<名>/`，P-41 照舊）→ `hook/post_tool`。`ToolUnknown`、`ArgumentsBad`、工具退非 0 都接成 tool 訊息回給腦、不停（P-41 現狀）；aos-tools 自己起不來＝`ToolsBad`、act 失敗（P-20）。
 - **平行或依序交給 act 這格**（使用者六題之 5）：act 的 `.env` `MAX_PARALLEL`（C-54 R6 上限 `max_*`），沒設或 1＝依序；N＝最多 N 個一起跑，結果仍照原順序吐。要別的策略（看工具種類決定）就把 `act/` 換成自己的。
-- **插話檢查**：依序模式在兩個 call 之間 `queue peek`，有東西就問 `hook/on_interrupt`；`interrupt`＝剩下的 call 不跑（各接一則 tool 訊息「被打斷」）、`queue claim` 把新題接進 history、吐出去讓 round 再問腦；平行模式一批跑完才檢查。
+- **插話檢查**：依序模式在兩個 call 之間看 `new/`（實作時代定 18），有東西就問 `hook/on_interrupt`；`interrupt`＝剩下的 call 不跑（各接一則 tool 訊息「被打斷」）、照樣全部吐完、**act 退 10**；act 不認領新題，由 round 把 tool 訊息接進 history 後叫 `queue claim --more` 把新題接進來、再問腦（實作時代定 20、21）；平行模式一批跑完才檢查。
 
 ### tools 生效時間點（使用者六題之 1：「變成掛在哪個點」）
 
@@ -170,6 +170,7 @@ round:
 | `current.txt` | queue claim | 認領中的題名，一行一題（插話多題） |
 | `history.jsonl` | history append／compact | 對話（P-41） |
 | `history_archive/<UTC>.jsonl` | history compact | 壓掉的原文整份 |
+| `compact/` | compact 格 | 壓到一半的半成品（`run/`）與每次的報告（`<run>/report.json`、`log.jsonl`；實作時代定 25） |
 | `endpoint.txt` | round（switch）、外面的人 | 目前用的 endpoint 名；沒有＝default |
 | `usage.jsonl` | endpoint | 每次問腦的 usage |
 | `live.jsonl` | queue emit、endpoint 串流 | 中間輸出；只接不重寫 |
@@ -193,7 +194,9 @@ round:
 - **外部接口四種並列**：hub、aos-mcp、say／listen 協議、round（決定 14、15）。say／listen 是非同步（要有 agent 開著收信）；round 是同步（叫一次跑完一題）。
 - **搶信箱是呼叫者自己的風險**：同一個工作區如果另有 aos-loop 在收信，外面叫的 round 會搶同一個信箱；工具不另加保護（決定 15、C-53），要避開就照 P-18 給各自的工作區或 stack。
 
-## 7. 怎麼落地：做一隻新範本 agent（這次不做）
+<a id="7-怎麼落地做一隻新範本-agent這次不做"></a>
+
+## 7. 怎麼落地：做一隻新範本 agent（10-28 晚實作中）
 
 1. **`lib/endpoint/fake/`、`lib/endpoint/openai/`**：從 agent-dan 的 brain.py 把「問腦」那段抽出來；驗：`echo '{"messages":[…]}' | aos-exec lib/endpoint/fake X` 吐一則 assistant；openai 接 LiteLLM 吐真的、`usage.jsonl` 多一行；拔掉 key 看到 `KeyBad`、指錯埠看到 `BrainFailed`（用 tests/dead_brain.py）。
 2. **`lib/agent/queue/`**：從 brain.py 的認領段＋aos-say／listen 抽；驗：push → peek 看得到 → claim 搬到 cur/、current.txt 有 → finish 寫 out/、done/ 有；withdraw 已認領的報錯。
@@ -228,7 +231,7 @@ round:
 
 (b) 原則推不出的方向題（照代定）：
 
-7. **round 留在 `lib/agent/round/` 當庫的資料夾程式、用捷徑引用，不升成 aos-round**；它是語法糖＝aos-loop 加「這一輪結束就停」（agent-ops 決定 13）。另外 round 列入外部接口、外部 CLI 不納入 round（決定 14、15），落在 [§ 6](#6-外部指令對內部單位)——本條落在 [§ 1 佈局](#1-佈局)（共用件放 `proto8/lib/agent/<名>/`）與 [§ 7](#7-怎麼落地做一隻新範本-agent這次不做) 第 5、10、11 步。
+7. **round 留在 `lib/agent/round/` 當庫的資料夾程式、用捷徑引用，不升成 aos-round**；它是語法糖＝aos-loop 加「這一輪結束就停」（agent-ops 決定 13）。另外 round 列入外部接口、外部 CLI 不納入 round（決定 14、15），落在 [§ 6](#6-外部指令對內部單位)——本條落在 [§ 1 佈局](#1-佈局)（共用件放 `proto8/lib/agent/<名>/`）與 [§ 7](#7-怎麼落地做一隻新範本-agent10-28-晚實作中) 第 5、10、11 步。
 
 ## 實作時代定（10-28 晚，照原則代定、可翻案）
 
@@ -271,3 +274,18 @@ round:
 24. **「壓」放在 compact 格，history 的 `compact` 只管換檔**：`history compact` 的 stdin＝新的短版（一行一則，每行都要是 JSON 物件，否則 `HistoryBad`、什麼都不動）；舊的整份用 hard link 收進 `history_archive/<UTC 到毫秒>.jsonl`（不成才複製），再把新的暫存檔改名換上——`history.jsonl` 一刻都不會不見；stdout 印 `history_archive/<名>` 一行（§ 4 表原寫「— → —」，多印這行讓 compact 格記進報告）。加 `--expect-bytes N`：現在不是 N bytes（壓的期間有人接了）＝`HistoryChanged`、不換。理由：§ 4 寫「門檻、怎麼壓是 compact 那格自己的事」，history 只管檔（C-52）；換壓法只換 compact 格、history 不動。
 25. **compact 格從 agent-hal 搬來時改的**：設定是這格自己的 env（註冊檔的 `env`），所以拿掉 `COMPACT_` 字首（`MAX_BYTES` 沒設＝65536、`SEG_KB`、`KEEP_TURNS`…）；問腦走 endpoint 格（`ENDPOINT` ＞ `$AOS_STACK/endpoint.txt` ＞ `default`），`MODEL_NOTE／SEG／FINAL` 有設才帶 `model`；agent-hal 自己連網址、內建假腦、token 統計都拿掉（假腦是 endpoint 的事、usage 由 endpoint 寫 `usage.jsonl`），報告只記問了幾次、走了幾次退路。原文改收在 `history_archive/`（不再是 `compact/<run>/orig.jsonl`）；做到一半的產物與報告仍在 `$AOS_STACK/compact/`（§ 5 表要多一列）。換上之後、改名之前當掉：下次那份半成品收成 `compact/stale-<時間>/`，不丟東西。endpoint 退非 0＝`EndpointFailed`、history 不動。
 26. **三格的小規矩**：都收 agent 資料夾當第一個參數（history 用不到也收，共通介面），不是資料夾＝`AgentMissing`；queue 的 `pop` 逾時退 10、什麼都不印；`push --wait` 先印題名一行、再印答案，`--timeout-s` 只能跟 `--wait` 一起；`emit` 的 stdin 要是 JSON 物件（`MessageBad`），原樣接一行；題目是資料夾（P-13）就讀裡面的 `prompt.txt`。
+
+### 做 round 時再代定的（10-28 晚，第 5 步，代定、可翻案）
+
+27. **一格一格跑＝`round <agent> --step`**：只做「從哪接著做」判出的下一步就退 0（沒題仍退 10），一步＝認領／問腦／跑工具／交卷四種之一，步裡面的掛勾與 history append 跟著同一步做（問腦＝pre_think＋endpoint＋post_think＋append＋emit；跑工具＝act＋每則 append＋必要時 claim --more＋pause；交卷＝finish＋post_round）。aos-loop 一格一格跑寫 `{"exec": {"argv": ["aos-parts", "run", "round", {"$env": "AOS_CD"}, "--step"]}}`；不加 `--step`＝一個行程跑完一輪。理由：格只有一套（決定 12），「下一步是什麼」只寫在 round 一處（C-52），不另做一支只會判斷的程式。
+28. **`pre_round` 只在認領那一步叫**（`cur/` 空、要認領新題時）；yield 或失敗修好後接著做的那一輪不再叫（§ 3 表寫「認領前」）。
+29. **「跑工具」看最後一則 assistant 的 tool_calls 有沒有都回了**，不只看最後一則：act 吐的 tool 訊息是一則一則 append，接到一半當掉，重跑只把還沒回的那幾個交給 act（已回的不重跑）。act 退 10 之後、`claim --more` 之前當掉：重跑看到 tool 都回了＝直接問腦，新題留在 `new/`、下一輪當一般題認領（不追補）。
+30. **`cur/` 有題、history 卻是空的**（或最後一則的 role 不認得）＝`round: HistoryBad`、退 1：不猜從哪接著做（正常的 claim 一定先接 user 再搬 `cur/`，第 5 條）。
+31. **endpoint 怎麼選、怎麼換**：`endpoint.txt` 去掉頭尾空白，空的＝`default`。switch 的候選＝`parts.json` 裡 `endpoint/<名>` 的槽（`parts` 是指示詞時才經 `aos-parts ls --json` 整份解，免得別格的 `$env` 沒設就擋，同第 6 條）與 `<agent>/endpoint/` 底下不是 `.` 開頭的名字，聯集排序；目前那個之後的下一個、繞一圈（只有一個＝等於 retry），先寫暫存再改名（N-05）。叫 endpoint 時環境先放 `ENDPOINT_NAME=<名>`、註冊檔的 `env` 再疊上去（第 11 條留給這一步的那題：round 順手設，註冊檔寫了以它為準）。
+32. **retry／switch 的上限＝round 這格的 `MAX_RETRIES`**（parts.json 裡 round 的 `env` 或 round 格的 `.env`；預設 3，≥0 的整數，不是＝`SettingBad`；C-54 上限 `max_*`）：一次問腦最多重來幾次，retry 與 switch 合算、問成功就歸零；用完＝`round: EndpointFailed`、退 1，`endpoint.txt` 停在最後換到的那個。
+33. **on_error 的 stdin＝endpoint stderr 的最後一行**：round 收下 endpoint 的 stderr 只為了給 on_error，收下的原樣印到自己的 stderr（人照樣看得到，不轉述不改寫，P-21）。
+34. **格退了它不該退的 10**（history、emit、finish、post_think、pre_round、pre_think、post_round、endpoint〔on_error 說 stop 時〕）＝`round: UnitFailed`、退 1，不把 10 原樣往外傳——免得 loop 當成「沒題」正常停（P-19）。`pause` 退 0／10 以外＝round 以那個碼退。
+35. **trace 的 `unit`＝槽名，有子命令就接一個空格再子命令**（`queue claim`、`queue claim --more`、`history append`、`endpoint/default`、`hook/pause`）；沒掛的掛勾、`aos-parts which`、`aos-tools ls` 不記（不是格）；`code`＝那格的結束碼。
+36. **問腦前讀一次 history；有掛 `pre_think` 就叫完再讀一次**（compact 可能換掉了）。system＝`<agent>/system.txt`，每次從檔讀、有才帶、不進 history（同 agent-dan）。送給 endpoint 的請求體一行結尾帶換行。
+37. **交卷的 stdin＝那則 assistant 的 content**：字串照用、`null`＝空字串、其他形狀＝它的 JSON。
+38. **round 收的 agent 資料夾要是存在的絕對路徑**（同 act 第 15 條，`AgentBad`）；`AOS_WS` 要是資料夾（`WsMissing`，要看 `cur/`、`new/`）；`AOS_STACK` 沒設＝`StackMissing`。

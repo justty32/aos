@@ -35,6 +35,10 @@
 
 LLM kernel 兩支（`aos-kernel-llm`、`aos-gate`，10-24）的逐檔表另開一份：[proto8/03-kernel-llm](proto8/03-kernel-llm.md)。改 JSON 的工具集 `aos-json`（10-24）：[proto8/07-aos-json](proto8/07-aos-json.md)。
 
+### agent-round 的格（10-28 晚）
+
+`proto8/lib/agent/` 的 round、queue、history、compact（`_entry`、`ask.py`、`prompts/`）、act 與 `proto8/lib/endpoint/` 的 fake、openai（agent 自己的格，不是工具），加上 `tests/test_round.py`、`test_round_queue.py`、`test_lib.py` 跳過這些格：逐檔一列在 [proto8/12-agent-round](proto8/12-agent-round.md)（本檔超過 8 KB，另開分檔）。
+
 ### 10-24 一天的嘗試（收尾補）
 
 各作者做的時候沒改 code map，10-24 下午收尾一次補成幾份分檔：
