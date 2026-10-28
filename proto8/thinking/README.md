@@ -8,6 +8,6 @@
 
 | 月份 | 份數 | 範圍 |
 |---|---|---|
-| [2026-10](months/2026-10.md) | 71 | 10-11 重來～10-28 aos-hub 常駐 kernel 與實作（say／listen 協議、適配表）、aos-tools 工具註冊檔、agent 函數的常用操作都要是 aos 函數：inst／loop／daemon／fsm、JSON 入口與指示詞、kernel、命名、aos-exec 與 `.env`、agent 範本與 10-24 的各種嘗試 |
+| [2026-10](months/2026-10.md) | 72 | 10-11 重來～10-28 aos-hub 常駐 kernel 與實作（say／listen 協議、適配表）、aos-tools 工具註冊檔、agent 函數的常用操作都要是 aos 函數、agent 一輪（round）的細節設計：inst／loop／daemon／fsm、JSON 入口與指示詞、kernel、命名、aos-exec 與 `.env`、agent 範本與 10-24 的各種嘗試 |
 
 按月份分層（使用者「都按照推薦」）：本檔只留月份索引，各月一份表放 `months/`，各天的討論檔放在本資料夾（`thinking/2026-10-15-xxx.md`）。新增一份討論＝在那個月的表加一列。
