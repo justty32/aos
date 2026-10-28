@@ -734,7 +734,9 @@ class T(unittest.TestCase):
         self.assertEqual({n: r["code"] for n, r in k.items()}, {"a": 0, "b": 0, "c": 0})
         self.assertEqual({n: (self.s / n / "ran").read_text() for n in "abc"}, {n: "x\n" for n in "abc"})
 
-    TRAP = 'trap \'echo got > "$AOS_STACK/got"; exit 0\' TERM; touch "$AOS_STACK/up"; while :; do sleep 0.05; done'
+    # 內嵌單子收的是整群的 SIGTERM，sleep 也被殺；sh（dash／bash）有時會在自己的 stderr 報一行「Terminated」
+    # （看時序，10-28 WSL 撞到）——那是測試小程式自己說的、不是被測程式；開頭 exec 2>/dev/null 讓 err 只剩被測程式自己的。
+    TRAP = 'exec 2>/dev/null; trap \'echo got > "$AOS_STACK/got"; exit 0\' TERM; touch "$AOS_STACK/up"; while :; do sleep 0.05; done'
 
     def test_inline_child_sigterm_forwarded(self):
         # daemon 收 SIGTERM → 送給子 loop → 子 loop 轉給它正在跑的內嵌單子（整群）、等它收完再退

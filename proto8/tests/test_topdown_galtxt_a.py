@@ -8,6 +8,7 @@ import own_error  # noqa: E402
 own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
+from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 EXEC = tool("aos-exec")
 G = ROOT / "topdown" / "galtxt-a"
 EXAMPLES = G / "plan" / "examples"
@@ -216,7 +217,7 @@ class T(unittest.TestCase):
     # 5. 壞了停、修好接著做
     def test_stop_then_resume(self):
         self.put("Q01.json")
-        r = self.galtxt("http://127.0.0.1:9/v1")
+        r = self.galtxt(DEAD)
         self.assertEqual(r.returncode, 1, r.stderr)
         self.assertIn("writer: BrainFailed", r.stderr)
         self.assertIn("galtxt-a write: AgentFailed", r.stderr)

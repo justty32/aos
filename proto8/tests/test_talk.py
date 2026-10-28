@@ -9,6 +9,7 @@ import own_error  # noqa: E402
 own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
+from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 EXEC = tool("aos-exec")
 TALK = ROOT / "demo" / "talk"
 SEND = str(TALK / "member" / "tools" / "send_message")
@@ -268,7 +269,7 @@ class Team(TalkCase):
 
     def test_member_failed_stops_team(self):
         self.send("user", {"to": "ann", "body": "x", "expect_reply": True})
-        r = self.run_team("http://127.0.0.1:9/v1")          # 連不上：ann 的腦 BrainFailed、她的 loop 退 1
+        r = self.run_team(DEAD)          # 連不上：ann 的腦 BrainFailed、她的 loop 退 1
         self.assertNotEqual(r.returncode, 0)
         self.assertIn("talk-member: BrainFailed", r.stderr + (self.ws / ".stack" / "ann" / "stderr.txt").read_text())
         self.assertIn("team: MemberFailed ann", r.stderr)

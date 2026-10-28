@@ -8,6 +8,7 @@ import own_error  # noqa: E402
 own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
+from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 EXEC = tool("aos-exec")
 GROW = str(ROOT / "extras" / "grow" / "aos-grow")
 DAN = ROOT / "demo" / "agent-dan"
@@ -91,7 +92,7 @@ class GrowDan(unittest.TestCase):
     def test_same_result_after_growing(self):
         """鐵律 1：長完跑起來一樣（假腦兩題；腦掛掉的失敗路徑也一樣）。"""
         self.grow_both()
-        for extra in (None, {"AOS_BRAIN_URL": "http://127.0.0.1:9/v1"}):
+        for extra in (None, {"AOS_BRAIN_URL": DEAD}):
             a, b = run_agent(self.before, extra), run_agent(self.after, extra)
             self.assertEqual(a, b, "extra=%r" % extra)
         self.assertEqual(a[0], 1)                      # 第二輪是腦掛掉的，真的走到失敗那條

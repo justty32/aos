@@ -571,8 +571,10 @@ def inline_cell_bad_shape(t):
 @case
 def inline_cell_sigterm(t):
     # 跑的期間收到 SIGTERM：轉給單子、等它收完（退 0）、trace 與 state 照寫，再以 143 結束
+    # 內嵌單子收的是整群的 SIGTERM，sleep 也被殺；sh（dash／bash）有時會在自己的 stderr 報一行「Terminated」
+    # （看時序，10-28 WSL 撞到）——那是測試小程式自己說的、不是被測程式；開頭 exec 2>/dev/null 讓 err 只剩被測程式自己的。
     put(Path(t, "fsm.json"), {"start": "a", "states": {
-        "a": {"exec": {"argv": ["sh", "-c", 'trap \'exit 0\' TERM; touch "$AOS_STACK/up"; while :; do sleep 0.05; done']},
+        "a": {"exec": {"argv": ["sh", "-c", 'exec 2>/dev/null; trap \'exit 0\' TERM; touch "$AOS_STACK/up"; while :; do sleep 0.05; done']},
               "next": "b"},
         "b": {"exec": "a", "next": "a"}}})
     st(t).mkdir()

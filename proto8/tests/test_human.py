@@ -10,7 +10,7 @@ HUMAN = ROOT / "extras" / "human" / "bin"
 SAY, LISTEN, CHAT = (str(HUMAN / n) for n in ("aos-say", "aos-listen", "aos-chat"))
 DAN = str(ROOT / "demo" / "agent-dan")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
-DEAD = "http://127.0.0.1:9/v1"          # 沒人聽的埠：腦連不上
+from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 NAME = re.compile(r"^\d{8}T\d{6}\.\d{3}Z\.txt$")
 
 

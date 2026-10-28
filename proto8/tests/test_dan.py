@@ -7,6 +7,7 @@ import own_error  # noqa: E402
 own_error.install()   # aos-* 那幾支的錯誤代號照舊檢查；agent-dan 自己的那行在下面 dan_errors 檢查
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
+from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 EXEC = tool("aos-exec")
 DAN = str(ROOT / "demo" / "agent-dan")
 REAL_URL = "http://localhost:4000/v1"
@@ -221,7 +222,7 @@ class T(unittest.TestCase):
 
     def test_brain_unreachable(self):
         self.ask()
-        r = self.dan("http://127.0.0.1:9/v1")
+        r = self.dan(DEAD)
         self.assertEqual(r.returncode, 1, r.stderr)
         self.assertIn("BrainFailed", dan_errors(r.stderr))
         self.assertEqual([m["role"] for m in self.history()], ["user"])

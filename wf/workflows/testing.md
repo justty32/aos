@@ -40,7 +40,9 @@ impls 各專案自己的 ctest（`test_cli`、`test_demo`…）說明在 [proto8
 
 10-23 起 `proto8/tests/test_dan.py`（agent-dan）裡連真模型的案例，在 `localhost:4000/v1/models` 連不上時 skip（其餘用假 server，離線也跑）。
 
-10-28 Windows 機的 WSL：連沒人聽的埠（測試拿 `http://127.0.0.1:9/v1` 當腦壞了）會**逾時**而不是馬上被拒，所以 test_dan、test_human、test_ai_tools、test_talk、test_grow、test_topdown_galtxt_a 裡那 7 案會逾時失敗——是環境，不是程式壞；其餘全過才算綠。
+10-28 Windows 機的 WSL（`networkingMode=mirrored`）：連 `127.0.0.1` 低號的空埠（原本測試拿 `http://127.0.0.1:9/v1` 當腦壞了）會**等到逾時**而不是馬上被拒，test_dan、test_human、test_ai_tools、test_talk、test_grow、test_topdown_galtxt_a 那 7 案因此逾時失敗——是環境，不是程式壞。**已解（10-28）**：改從 `proto8/tests/dead_brain.py` 拿 `DEAD`（本行程 bind 一個埠、不 listen、一直拿著，連上去一定馬上被拒）；WSL 上 `python3 -m unittest discover -s proto8/tests` 全過（657 案、31 skip），`sh proto8/demo/run.sh` 結束碼 0。
+
+同一天 impls 的 aos-loop、aos-fsm、aos-daemon 自己的 `test_cli` 各一案多一行「Terminated」：那是測試裡的 `sh -c` 小程式自己印的（內嵌單子收的是整群的 SIGTERM，`sleep` 也被殺，dash／bash 看時序會在自己的 stderr 報一行），不是被測程式；**已解（10-28）**：那幾支小程式開頭加 `exec 2>/dev/null`，斷言照舊看被測程式自己的 stderr 是空的。WSL 上 11 個 impls 的 ctest 全過。
 
 ## 測試分類
 

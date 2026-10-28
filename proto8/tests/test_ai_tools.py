@@ -5,6 +5,7 @@ import http.server, json, os, subprocess, tempfile, threading, time, unittest
 from pathlib import Path
 
 from aos_bins import ROOT, EXEC, path_with  # noqa: E402  （順便檢查 impls 建好了）
+from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 
 AI = str(ROOT / "extras" / "ai_tools" / "bin" / "aos-ai")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_AI_ROOT",
@@ -145,7 +146,7 @@ class AiToolsTest(unittest.TestCase):
     def test_failure_is_data_with_hint(self):
         ai(self.root, "spawn", "dan")
         ai(self.root, "ask", "dan", "--id", "q1", "hi")
-        code, res, _ = ai(self.root, "run", "dan", env={"AOS_BRAIN_URL": "http://127.0.0.1:9/v1"})
+        code, res, _ = ai(self.root, "run", "dan", env={"AOS_BRAIN_URL": DEAD})
         self.assertEqual(code, 0)                                # 跑的結果是資料
         self.assertFalse(res["ok"])
         self.assertIn("BrainFailed", [e.get("code") for e in res["errors"]])
