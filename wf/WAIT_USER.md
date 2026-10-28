@@ -13,6 +13,8 @@
 
 ## 待使用者項
 
+- 親手試 agent-nia 接真腦（10-28 晚，家機 LiteLLM 開著時）：`R=~/repo/simple_tools/aos/proto8; export PATH=$R/bin:$R/impls/aos-exec/bin:$R/impls/aos-loop/bin:$R/impls/aos-json/bin:$PATH`；`ws=$(mktemp -d); mkdir -p $ws/new $ws/.stack; echo 現在幾點？ > $ws/new/q1.txt; echo litellm > $ws/.stack/endpoint.txt; aos-exec --ws $ws $R/demo/agent-nia; cat $ws/out/q1.txt $ws/.stack/usage.jsonl`——有答案、usage 多一行就算過 → [demo README § agent-nia](../proto8/demo/README.md)
+- 親手試 Claude Code 經 aos-mcp 用 ask_round 問 agent-nia（10-28 晚，這台沒跑過）：做一份 tools.json 登記 `$R/lib/aos/ask_round`（或照 lib README 做一個 `.env` 寫 `ASK_AGENT=$R/demo/agent-nia` 的小資料夾），`--mcp-config` 指 aos-mcp 給那個 agent 資料夾，叫 claude 問一題——拿到 agent-nia 的答案、agent-nia 不必常駐就算過 → [ai_tools README](../proto8/extras/ai_tools/README.md)、[lib README](../proto8/lib/README.md)
 - 親手試 aos-tools 與新的 aos-mcp（10-28，不急；代定清單在 [thinking 10-28 aos-tools § 結論](../proto8/thinking/2026-10-28-aos-tools.md#結論10-28-實作照原則代定可翻案)）：WSL 裡 `R=~/repo/aos-tools/proto8; export PATH=$R/bin:$R/impls/aos-exec/bin:$R/impls/aos-json/bin:$PATH; cd ~/code/try/aos-tools/agent && aos-tools ls`，再 `cd ../cws && claude --mcp-config ../mcp.json` 叫它用 clock／echo／add
 - 看統整頁、說你抓到的問題點（10-25 你說「我抓到了一些問題點」，兩隊都已收線等你）：https://claude.ai/artifact/9sj3ZkRhK4ZYomb8WeSzrA → [thinking 10-25 top-down](../proto8/thinking/2026-10-25-top-down.md)
 - 10-25 的代定清單要你看（命名兩題、agent-gus 小念頭不搬、乙隊 claude code 改動先不搬回／不用沙箱、甲隊 § 13 幾條，都可翻案）→ [session log 10-25 § 代定清單](session_logs/2026-10/2026-10-25.md#代定清單)
