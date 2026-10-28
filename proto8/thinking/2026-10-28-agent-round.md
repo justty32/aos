@@ -42,7 +42,7 @@ agent-x/
 - **管理指令另一支 `aos-parts`**，用法照 aos-tools：`add [--override] [--env K=V]… 槽 XXX`、`rm 槽`、`ls [--json]`、`get 槽`，加一個 **`which 槽`**——照「註冊檔 → 固定名字」查，印路徑；都沒有退 10。查找順序只寫在這一處（C-52）。不擴充 aos-tools：aos-tools 的 `call`、`--tooldef` 對格沒意義。實作可以共用程式碼。
 - **槽名**＝固定名字的相對路徑：`round`、`queue`、`history`、`act`、`endpoint/<名>`、`hook/<點>`。只檢查格式（小寫、底線、最多一層 `/`），不檢查槽的清單——round 可以換成別人的、用別的槽（C-52）。XXX 要是 aos-exec 跑得動的東西（資料夾、可執行檔、JSON），不是就報錯（同 aos-tools 決定 4）。
 - **迴圈怎麼叫格**：round 每叫一格先 `aos-parts --file <agent>/parts.json which <槽>`，再 `aos-exec <路徑> <agent 資料夾> …`；註冊檔有 `env` 就放進那次的環境（取代原本「這格的 `.env`」放設定，例 endpoint 的 `AOS_BRAIN_MODEL`、act 的 `MAX_PARALLEL`、compact 的 `MAX_BYTES`；值可用 `$env` 指示詞，金鑰不必寫死，N-45）。固定名字那條路照舊用那格自己的 `.env`。
-- **找不到怎麼辦**：註冊檔寫了但路徑壞了＝報錯（`PartBad`），**不**退去找固定名字（報錯不猜）。註冊檔沒寫、固定名字也沒有：掛勾＝沒掛的預設行為（§ 3 表）；round、queue、history、act、endpoint 這些必要的格＝`PartMissing`、round 退 1（P-20）。是否改成「必要的格找不到就用 lib 的標準件」**未定**（來不及細想，見文末）。
+- **找不到怎麼辦**：註冊檔寫了但路徑壞了＝報錯（`PartBad`），**不**退去找固定名字（報錯不猜）。註冊檔沒寫、固定名字也沒有：掛勾＝沒掛的預設行為（§ 3 表）；round、queue、history、act、endpoint 這些必要的格＝`PartMissing`、round 退 1（P-20）；不退去用 lib 的標準件（10-28 晚代定、可翻案，見文末「實作時代定」第 1 條）。
 - **endpoint 的候選**＝註冊檔裡 `endpoint/<名>` 與資料夾 `endpoint/` 底下同名的聯集（同名以註冊檔為準）；`endpoint.txt` 照舊寫名字，沒有＝`endpoint/default`。
 - **工具清單不套這條**：工具只認 tools.json（aos-tools 現狀），不退去掃 `tools/<名>/`——那正是使用者嫌「太土太粗暴」的做法（aos-tools 決定 7），給模型看的清單要明白登記。
 - **共用件怎麼登記、搬家**：照 aos-tools 結論第 6 點——`add` 存絕對路徑；手寫的相對路徑從 parts.json 所在資料夾算，所以 git 裡的範本 `parts.json` 手寫 `../../lib/agent/queue` 這種相對路徑、整個 repo 搬家不斷；`add` 寫的絕對路徑搬家要重新 add（使用者選的代價）。
@@ -230,8 +230,15 @@ round:
 
 7. **round 留在 `lib/agent/round/` 當庫的資料夾程式、用捷徑引用，不升成 aos-round**；它是語法糖＝aos-loop 加「這一輪結束就停」（agent-ops 決定 13）。另外 round 列入外部接口、外部 CLI 不納入 round（決定 14、15），落在 [§ 6](#6-外部指令對內部單位)——本條落在 [§ 1 佈局](#1-佈局)（共用件放 `proto8/lib/agent/<名>/`）與 [§ 7](#7-怎麼落地做一隻新範本-agent這次不做) 第 5、10、11 步。
 
-## 未定（決定 16 來不及細想的，10-28）
+## 實作時代定（10-28 晚，照原則代定、可翻案）
 
-使用者下班前收尾，下面先標未定、照代定的寫法走：
+使用者 10-28 晚授權照 § 7 實作；沒定的照原則代定、寫在這裡，不回頭問。
 
-- 必要的格（round、queue、history、act、endpoint）註冊檔和固定名字都沒有時：代定報錯 `PartMissing`；另一個做法是退去用 lib 的標準件（零設定就能跑，但等於多一層看不見的預設）。
+1. **必要的格找不到，不退 lib 標準件，報 `PartMissing`**（原本標未定的那題）。理由：報錯不猜（aos-tools 決定 4、hub-kernel 決定 10「`AOS_HUB` 沒設＝報錯」同調）；KISS「寫什麼就做什麼，不讓特定值偷偷變成另一種行為」（C-56）——退 lib 等於多一層看不見的預設，換掉一格忘了登記時會默默跑標準件、不會發現；查找順序只寫在 aos-parts 一處（C-52）。「零設定就能跑」改由範本自帶手寫的 `parts.json`（相對路徑指 lib）、`aos-ai spawn` 照抄來給。翻案的話只要改 aos-parts 的 `which` 一處。
+2. **aos-parts 多兩個用法**（照 aos-tools 的 `call` 那個理由：怎麼找、env 怎麼給只寫在一處，C-52）：
+   - `which --json 槽`：一行 JSON `{"slot", "path", "from": "parts"|"fixed", "env": {…}}`，`env` 已解指示詞（`$env`／`$ref` 交給 aos-json，同 aos-tools）。round 叫格前用它——分得出「沒掛」（退 10）與「格自己退 10」（例 `pre_tool` 的 10＝不跑）。
+   - `run 槽 [args…]`：找到＝帶上 `env` 換成 `aos-exec 路徑 args…`（結束碼就是那格的）；找不到＝`PartMissing` 退 1（叫你跑卻沒有，是錯）。給 `loop.json` 叫 round 用：`{"argv": ["aos-parts", "run", "round", {"$env": "AOS_CD"}]}`，不用 sh（user/03 少用 sh）；單子的 cwd 是 agent 資料夾，預設的 `./parts.json` 剛好就是那份。
+3. **`add` 的形狀**＝`add [--override] [--env K=V]… 槽 XXX`：槽名必給（格不像工具有「預設取檔名」的需要）。槽已登記＝`PartExists`，`--override` 蓋掉（同 aos-tools 決定 11）。
+4. **叫格的環境**：註冊檔的 `env` 疊在 round 自己的環境上（同名以註冊檔為準）；`AOS_STACK`、`AOS_WS` 原樣傳（P-16 同一台狀態機）。固定名字那條路沒有 `env`，那格自己的 `.env` 照 aos-exec 的規則讀（預設不蓋，N-58）。
+5. **`queue claim` 的寫入順序**：先接 user 訊息進 history（經 `history append`；最後一則已經是 user／tool 就不接）、再寫 `current.txt`、最後才把題目搬進 `cur/`。這樣任何一步中途當掉，重跑都接得上、不會把上一題的答案當成這題的（`cur/` 是空的就重新認領同一題，history 不會接兩次）。
+
