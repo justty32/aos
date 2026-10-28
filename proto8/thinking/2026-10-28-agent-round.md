@@ -204,8 +204,8 @@ round:
 4. **`lib/agent/act/`**：從 act.py 抽；驗：餵一則有兩個 tool_calls 的 assistant，吐兩則 tool、順序對；`MAX_PARALLEL=2` 結果順序仍對；掛一個 pre_tool 退 10 看到那次不跑。
 5. **`lib/agent/round/`**（零件庫、語法糖＝aos-loop 加「這一輪結束就停」，不升成 aos 指令，決定 13）：照 § 2 寫骨架，「從哪接著做」那段要能單獨做一格（給 aos-loop 一格一格跑用，決定 12）；驗：假腦跑完一題退 0、沒題退 10；endpoint 壞掉退 1 且 state／history 不動；掛 `on_error` 印 switch 看到 `endpoint.txt` 換名字再成功。
 6. **範本 `demo/agent-nia/`**（人名接 meg、pip…）：照 § 1 擺捷徑與 `.env`；`demo/run.sh` 加一段；驗：WSL 上假腦一題、LiteLLM 一題，`tree -a .stack` 看得到 § 5 的檔。（10-28 晚做了：照第 0 步改成手寫相對路徑的 `parts.json`、不擺捷徑；LiteLLM 那題這台連不上沒跑，見文末 39～41）
-7. **aos-ai spawn**：多一種範本（捷徑複製後改絕對）。
-8. **測試** `tests/test_round.py`：以上各驗各一案；跑 proto8 全套不退。
+7. **aos-ai spawn**：多一種範本（捷徑複製後改絕對）。（10-28 晚做了：複製後把 `parts.json`、`tools.json` 指出範本的相對路徑改成絕對，見文末 42）
+8. **測試** `tests/test_round.py`：以上各驗各一案；跑 proto8 全套不退。（10-28 晚做了：範本與 spawn 的案在 `tests/test_nia.py`）
 9. **條文**：P-23、P-41 改寫（agent-ops 決定 3；P-41 含「只有 compact 可改寫」）、P-25／C-61 加註（決定 10）、P-20 改「預設」、P-33／C-52 加「round 的參數」一句、N-43 加「分類靠代號」、N-53／C-25 加「一格一次用 aos-loop、一輪用 round，看 `_entry`」（決定 12）；NORMS 待定加這份的代定；code map、demo README、artifact 同步。
 10. 黑盒子（claude code）那條：hub 已做，round 不碰（決定 14：aos 歸 aos）。
 11. **round 當外部接口**（決定 15）：做一個「問 agent-xxx」的工具（push 一題＋叫一次 round＋印 `out/` 答案），登記進 claude code 用的 tools.json；驗：claude code 經 aos-mcp 問一題拿到答案、agent 不常駐；搶信箱不加保護。
@@ -295,3 +295,7 @@ round:
 39. **`endpoint/default`＝假腦（`lib/endpoint/fake`）**，LiteLLM 另登記成 `endpoint/litellm`（openai＋`AOS_BRAIN_URL` localhost:4000、`AOS_BRAIN_MODEL` chatgpt-gpt-6-luna-low、`TIMEOUT_MS` 120000）。要用就在 stack 寫 `endpoint.txt`＝`litellm`（§ 4 換手原本的做法，不另開設定）。理由：demo、測試、spawn 出來的第一題零設定就跑得動，不連網；真腦只差一行檔。沒掛 `on_error`，LiteLLM 連不上＝stop（P-20 預設停）。
 40. **`hook/pre_think` 預設掛 compact**（`MAX_BYTES` 65536，寫在 parts.json 的 `env`）：§ 4 說 compact 掛這裡；沒超過門檻時只多一格 trace、什麼都不動。代價：每次問腦多叫一格、多讀一次 history（第 36 條）。不要就從 parts.json 拿掉那一列。
 41. **範本只有 `_entry`（JSON `["aos-loop", "loop.json"]`）、`loop.json`、`system.txt`、`tools.json`、`parts.json` 五個檔**：沒有 `.env`（設定都在 parts.json 的 `env`）、沒有捷徑（決定 16）。`tools.json` 手寫相對路徑指 `../../lib/base/`（clock、math），同 parts.json 搬家不斷。loop 的 `max` 40＝一次最多答 40 題（每題 round 退 0 一次，最後沒題退 10 停）。
+
+### 做 aos-ai spawn 時再代定的（10-28 晚，第 7、8 步，代定、可翻案）
+
+42. **spawn 改寫註冊檔、不改用 `aos-parts add` 重登記**：複製後 `parts.json`、`tools.json` 每一格的 `path` 若是相對、從範本資料夾算指到範本外面，就換成那個絕對路徑（`normpath`、不解開捷徑，同 `add` 存 abspath）；指在範本裡面的（例 agent-dan 的 `tools/clock`）照舊相對、跟著複製；`env`、其他 key、指示詞（`$ref`／`$env`）原樣；沒有要改的就不寫檔（agent-dan 這類範本一個 byte 都不動）。理由：重登記會把 `env` 拆成 `--env K=V` 再組回去（`$env` 指示詞組不回去，第 10 條），改寫只動 `path` 最少；兩份註冊檔同一種規則（手寫相對＝從檔所在資料夾算）一起處理，跟範本相對捷徑改絕對（10-24）同一個想法。

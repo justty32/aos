@@ -37,7 +37,7 @@ daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.sta
 | 命令 | 做什麼 |
 |---|---|
 | `templates` | 列 `proto8/demo/agent-*` 範本與 `proto8/lib/aos/` 的工具（`--tool` 能掛的） |
-| `spawn 名 [--from 範本] [--tool 工具]...` | 範本（名字或路徑，預設 agent-dan）原樣複製到 `agents/<名>/agent/`，加工具，建工作區；工具出錯停不停照範本自己的 act（agent-dan 回給腦） |
+| `spawn 名 [--from 範本] [--tool 工具]...` | 範本（名字或路徑，預設 agent-dan）原樣複製到 `agents/<名>/agent/`，加工具，建工作區；範本的 `parts.json`（格的通訊錄，例 `agent-nia`）與 `tools.json` 裡指出範本的相對路徑改成絕對（指在範本裡面的照舊相對；沒有 parts.json 的範本不受影響）；工具出錯停不停照範本自己的 act（agent-dan 回給腦） |
 | `ask 名 文字…｜- [--id 題名]` | 題目寫進 `ws/new/<題名>.txt`（先寫暫存再改名，N-05）；題名沒給＝`q<UTC 時間>` |
 | `run 名 [--timeout 秒] [--env K=V]...` | 前景 `aos-exec --ws ws agent`（`AOS_STACK` 明寫成 `ws/.stack/`），跑到 idle 退 10；回答案、錯誤、hint |
 | `status [名]`、`answer 名 [題名]`、`trace 名 [-n N]`、`history 名 [-n N]` | 看 |
@@ -59,7 +59,7 @@ daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.sta
 
 ## 給 agent 的工具（proto8/lib/aos）
 
-六個工具（spawn_agent、ask_agent、agent_status、make_json、make_tool、explain_aos）在 [proto8/lib/aos](../../lib/README.md)，`aos-ai spawn --tool` 從那裡複製；照 lib 契約，錯是 stderr 與 stdout 各一行「工具名: 代號 原因」、退 1（代號照 aos-ai 的，例 `NameBad`），停下還是回給腦由叫它的 agent 決定（agent-dan 範本回給腦，[thinking](../../thinking/2026-10-23-tool-calls.md#10-24-定叫工具與小念頭的失敗回給腦)）。放題、等答案、讀 stack 的做法跟 proto8/extras/human 共用 `proto8/lib/aos/aos_ws.py`。`aos-ai spawn` 複製範本時，範本裡指出範本的相對捷徑（掛 lib 的工具）改成絕對捷徑。
+六個工具（spawn_agent、ask_agent、agent_status、make_json、make_tool、explain_aos）在 [proto8/lib/aos](../../lib/README.md)，`aos-ai spawn --tool` 從那裡複製；照 lib 契約，錯是 stderr 與 stdout 各一行「工具名: 代號 原因」、退 1（代號照 aos-ai 的，例 `NameBad`），停下還是回給腦由叫它的 agent 決定（agent-dan 範本回給腦，[thinking](../../thinking/2026-10-23-tool-calls.md#10-24-定叫工具與小念頭的失敗回給腦)）。放題、等答案、讀 stack 的做法跟 proto8/extras/human 共用 `proto8/lib/aos/aos_ws.py`。`aos-ai spawn` 複製範本時，範本裡指出範本的相對捷徑（掛 lib 的工具）改成絕對捷徑。註冊檔也一樣：`parts.json`、`tools.json` 每一格的 `path` 是相對路徑、從範本資料夾算指到範本外面的（例 agent-nia 的 `../../lib/agent/round`），改成絕對路徑（不解開捷徑，同 `aos-parts add`／`aos-tools add`）；指示詞（`$ref`／`$env`）不碰。所以 `aos-ai spawn x --from agent-nia` 搬到 `agents/x/agent/` 後仍找得到 lib 的格（agent-round § 7 第 7 步，測試 `test_nia.py`）。
 
 `aos-ai spawn boss --tool ask_agent --tool agent_status` 就掛上（生成與查概念：`--tool make_json --tool make_tool --tool explain_aos`）。照 P-41：`arguments` 從 stdin 進、stdout 整段是結果。子 agent 放 `$AOS_AI_ROOT`（沒設＝老闆的 `$AOS_WS`）的 `agents/<名>/`。`ask_agent` 前景跑子 agent，上限 `$AOS_AI_ASK_TIMEOUT` 秒（預設 50，要小於 agent-dan act 格的 60 秒）。PATH 上要有 `aos-ai`——經 `aos-ai run` 跑的 agent 已放好。
 
