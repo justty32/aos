@@ -158,13 +158,13 @@ def check_metainfo(x):
 
 def check_tool_json(x):
     if not isinstance(x.get("description"), str) or not x["description"].strip():
-        bad("tool.json：要有 description（給模型看的一句話）")
+        bad("_tooldef.json：要有 description（給模型看的一句話）")
     p = x.get("parameters")
     if not isinstance(p, dict) or p.get("type") != "object" or not isinstance(p.get("properties", {}), dict):
-        bad("tool.json：parameters 要是 {\"type\": \"object\", \"properties\": {...}}")
+        bad("_tooldef.json：parameters 要是 {\"type\": \"object\", \"properties\": {...}}")
     for r in p.get("required", []):
         if r not in p.get("properties", {}):
-            bad("tool.json：required 的 %s 不在 properties 裡" % r)
+            bad("_tooldef.json：required 的 %s 不在 properties 裡" % r)
 
 
 # ---------- 各種 JSON 怎麼從參數生出來 ----------
@@ -407,9 +407,9 @@ def scaffold_tool(tools_dir, name, o):
     props = tj["parameters"].get("properties", {})
     reads = "".join('%s = args.get("%s")\n' % (k if k.isidentifier() else "arg_" + k, k) for k in props)
     entry = (PY_TOOL if lang == "python" else SH_TOOL).format(name=name, desc=desc.replace("\n", " "), reads=reads)
-    write_new(d / "tool.json", dump(tj))
+    write_new(d / "_tooldef.json", dump(tj))
     write_new(d / "_entry", entry, mode=0o755)
-    files = ["tool.json", "_entry"]
+    files = ["_tooldef.json", "_entry"]
     meta = gen_metainfo(o) if any(k in o for k in ("summary", "resource", "time-ms", "side-effect")) else None
     if meta:
         write_new(d / "_metainfo", dump(meta))
@@ -472,5 +472,5 @@ def notes_for(x, kind):
     if kind == "metainfo":
         out["(整份)"] = "_metainfo＝作者自報的特性，aos-exec／loop／fsm／daemon 都不讀（explain metainfo）"
     if kind == "tool_json":
-        out["(整份)"] = "工具名＝資料夾名，這份不寫 name；沒 tool.json 的資料夾不算工具（explain tool）"
+        out["(整份)"] = "工具名＝資料夾名，這份不寫 name；資料夾要有 _tooldef.json、還要登記進 agent 的 tools.json（aos-tools add）才算工具（explain tool）"
     return out

@@ -58,7 +58,7 @@ calls = said.get("tool_calls") or []
 if calls:
     answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
     tools = sorted(t for t in (os.listdir("tools") if os.path.isdir("tools") else [])
-                   if os.path.isfile(os.path.join("tools", t, "tool.json")) and t not in after_answer
+                   if os.path.isfile(os.path.join("tools", t, "_tooldef.json")) and t not in after_answer
                    and os.environ.get({"lint": "GALTXT_OFF_SELF_LINT", "trim": "GALTXT_OFF_TRIM"}.get(t, "")) != "1")   # 關閉開關（同 brain.py）
     for call in calls:
         try:
@@ -101,7 +101,7 @@ if calls:
 
 content = said.get("content") or ""
 for t in after_answer:                         # 順序已固化的工具：交稿前一律由程式叫（freeze_order），失敗＝原稿照交、記一行
-    if not os.path.isfile(os.path.join("tools", t, "tool.json")):
+    if not os.path.isfile(os.path.join("tools", t, "_tooldef.json")):
         continue
     env = dict(os.environ, AOS_STACK=os.path.join(stack, t) + "/")
     arg = json.dumps({"text": content, "brief_path": "cur/%s.json#/brief" % name_q}, ensure_ascii=False)

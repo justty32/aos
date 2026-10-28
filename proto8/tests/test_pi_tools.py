@@ -222,7 +222,7 @@ class Tools(unittest.TestCase):
 
     def test_tool_json_shape(self):
         for name in ("read", "write", "edit", "bash"):
-            spec = json.loads((TOOLS / name / "tool.json").read_text())
+            spec = json.loads((TOOLS / name / "_tooldef.json").read_text())
             self.assertEqual(set(spec), {"description", "parameters"})
             self.assertEqual(spec["parameters"]["type"], "object")
 

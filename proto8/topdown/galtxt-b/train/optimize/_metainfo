@@ -11,7 +11,7 @@
  "interrupt": "safe",
  "parallel": false,
  "lock": [{"$env": "AOS_STACK", "$prefix": "stack:"}],
- "reads": ["$AOS_STACK/round.json", "$AOS_WS/tree/**/_metainfo", "$AOS_WS/tree/<node>/{act_rules.json,tools/*/tool.json}", "$AOS_WS/proposals/<輪>.json（可沒有）"],
+ "reads": ["$AOS_STACK/round.json", "$AOS_WS/tree/**/_metainfo", "$AOS_WS/tree/<node>/{act_rules.json,tools/*/_tooldef.json}", "$AOS_WS/proposals/<輪>.json（可沒有）"],
  "writes": ["$AOS_WS/changes/<輪>.json", "$AOS_STACK/arbiter/<輪>/"],
  "grow_level": 4,
  "note": "腦不在 optimize 裡：提案與預期梯度是程式，只有挑哪條問判斷器（$AOS_WS/arbiter，AOS_BRAIN_URL 由呼叫者給，沒給＝假腦）",

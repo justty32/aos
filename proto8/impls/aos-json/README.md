@@ -60,7 +60,7 @@ check 印的問題代號：`DirectiveBad`、`DirectiveFormBad`（帶 `$ref`／`$
 
 ## 給腦用的兩個工具（`tools/`）
 
-照 agent-dan 的慣例（P-41：工具名＝資料夾名、`tool.json` 給模型看、arguments 從 stdin 進、stdout 是結果）。掛法：把資料夾複製或捷徑到範本的 `tools/` 底下、`aos-json` 放進 PATH（aos 的程式都不動 PATH，N-50）。
+照 agent-dan 的慣例（P-41：工具名＝資料夾名、`_tooldef.json` 給模型看、arguments 從 stdin 進、stdout 是結果）。掛法：把資料夾複製或捷徑到範本的 `tools/` 底下、登記進範本的 `tools.json`（`aos-tools add`）、`aos-json` 放進 PATH（aos 的程式都不動 PATH，N-50）。
 檔名只收工作區（`$AOS_WS`）裡的相對路徑（不收絕對路徑、不收 `..`；`--follow` 穿過的 `$ref` 不在這個限制裡）。
 
 - **`tools/json/`**：一次一個動作——`{"cmd": peek|get|where|set|batch|del|append|merge|check, "target": "檔#/指標", "value": JSON, "depth": N}`。
@@ -103,7 +103,7 @@ echo '{"file": "fsm.json", "want": "把 think 那格的逾時改成 30 秒"}' | 
 | `src/cmd/peek.cpp` | `peek`（摘要怎麼寫） |
 | `src/cmd/write.cpp` | `set`、`batch`、`del`、`append`、`merge`、`env`、`ref`；`Edit`（每一步更新原文、`--check`、只寫有變的） |
 | `src/cmd/check.cpp` | `check` |
-| `tools/json/` | 腦用：一次一個動作（`tool.json`、`_entry`） |
+| `tools/json/` | 腦用：一次一個動作（`_tooldef.json`、`_entry`） |
 | `tools/json_edit/` | 腦用：兩步改（找 key → 提供值），自己問腦 |
 | `tests/test_cli.py` | 命令列黑箱 |
 | `tests/test_tool.py` | 兩個工具，經 `aos-exec` 跑、假 OpenAI 端點（`../aos-exec/bin/aos-exec` 沒建＝跳過） |

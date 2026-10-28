@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # optimize - 優化器一步（plan/round6.md §4、§7-6）：提 2 條候選改動（白名單內）→ 叫判斷器挑一條 → 把它選的寫成 changes/<n>.json 交給 train/apply。
 # 這一版的提案是程式（最便宜可行的那條路）：從訓練場 tree/ 的 _metainfo 推，不問腦。兩個提案器：
-#   freeze_order：lifecycle.stage 是 tools 的節點，rollup.measured.tools.<工具> 腦叫的比率 ≥ 90%、工具是純程式、tool.json 宣告 returns: text
+#   freeze_order：lifecycle.stage 是 tools 的節點，rollup.measured.tools.<工具> 腦叫的比率 ≥ 90%、工具是純程式、_tooldef.json 宣告 returns: text
 #     （回的 text 能直接當稿交；lint 這種回意見的不行）、還沒固化 → 交稿前一律由 act 叫、不再給腦。
-#   patch_act（default_args）：rollup.measured.tools.<工具>.counter_argbad > 0、tool.json 有 brief_path、還沒補 → act 補 brief_path＝cur/{name}.json#/brief。
+#   patch_act（default_args）：rollup.measured.tools.<工具>.counter_argbad > 0、_tooldef.json 有 brief_path、還沒補 → act 補 brief_path＝cur/{name}.json#/brief。
 #   $AOS_WS/proposals/<n>.json {"candidates": [{"move", "stats"?, "evidence"?}]} 在＝用它（外面給的候選，例：隊長照量測給的兩條），不跑提案器；
 #   stats（{counter_runs, counter_runs_called, counter_calls, counter_argbad, counter_noop, tokens_saved}）蓋過 _metainfo 量到的數字。
 # 預期梯度（形狀同 changes.gradient，交給判斷器）：
@@ -80,7 +80,7 @@ def propose(tree, metas):
         for t, s in sorted(tools.items()):
             tmeta = metas.get("%s/tools/%s" % (node, t)) or jload(os.path.join(tree, node, "tools", t, "_metainfo"), {}) or {}
             runs, called = num(s.get("counter_runs")), num(s.get("counter_runs_called"))
-            spec = jload(os.path.join(tree, node, "tools", t, "tool.json"), {}) or {}
+            spec = jload(os.path.join(tree, node, "tools", t, "_tooldef.json"), {}) or {}
             if ((meta.get("lifecycle") or {}).get("stage") == "tools" and runs and called / runs >= MIN_ORDER_RATIO
                     and tmeta.get("uses_llm") is False and spec.get("returns") == "text" and t not in (rules.get("after_answer") or [])):
                 out.append({"move": {"kind": "freeze_order", "node": node, "tool": t,

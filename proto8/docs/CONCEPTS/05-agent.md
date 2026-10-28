@@ -29,6 +29,7 @@
 出處：[稿 § 四](../../thinking/2026-10-16-agent-inherit.md#四使用者決定10-16)、[ideas § 4、§ 10](../../thinking/2026-10-19-ideas.md)。名詞：資料夾程式、stack、小格、工作區，見 [CONCEPTS 基礎設施 § 資料夾程式、工作區與 stack](03-基礎設施.md#資料夾程式工作區與-stack10-19)。規範 N-50、N-53；慣例 P-11（題目與答案）、P-17（小格）、P-25、P-32、P-33（工具）。
 
 - **C-61** **工具的地址不用 PATH**：工具是資料夾程式，放在呼叫它的那一格自己的資料夾裡（例 `act/tools/cathy/`），格裡寫 `aos-exec tools/<名>`——從自己 cwd 算的相對路徑、永遠零個 `..`（P-25、P-33），兩份定義一起搬也不斷；**工具一律做成資料夾程式**（`date` 這種也是），所以叫每個工具都做同一件事：給它一個小格（它自己的 stack，P-17）、`aos-exec` 它。工具裡是不是另一個 agent，呼叫的格不知道（C-52）。**工具的參數怎麼進（args、stdin、或 stack 裡的檔）由工具自己的說明定**，aos-exec 保證 args 與 stdin 原樣送到（P-26）。例外：aos 自己的指令（`aos-exec`、`aos-loop`、`aos-fsm`；沒有 `aos-inst`，[ideas § 20](../../thinking/2026-10-19-ideas.md)）入口裡直接寫指令名（N-59、P-39）——那是 aos 的指令，不是工具；**aos 的程式都不動 PATH**（使用者「也套用，都不動path吧」，[ideas § 24](../../thinking/2026-10-19-ideas.md)），這些指令由呼叫者自己放進 PATH。PATH 其餘的只留給人在終端打指令。（使用者 10-16 夜：「可以不使用PATH嗎？」→ 看完提案：「好!」）〔腦可以叫的工具另有 `tool.json`（給模型看的說明），`arguments` 從 stdin 進、stdout 出，P-41〕
+  - **10-28 補**（使用者 10-28 aos-tools，[thinking](../../thinking/2026-10-28-aos-tools.md)）：agent 的工具改由自己資料夾的 `tools.json` 登記（`aos-tools add`），登記對象可以是資料夾、JSON 檔或可執行檔、可以放在任何地方（註冊檔存絕對路徑）；這條「放在那一格自己的資料夾、零個 `..`、一律資料夾」留給沒經 tools.json 的叫法（例 topdown 的 agent、bob 的 `act/tools/cathy`）。範本裡手寫的 `tools.json` 用相對路徑（從註冊檔的資料夾算），兩份定義一起搬照樣不斷。
 
 ## agent 就是一台狀態機（10-16 使用者定）
 

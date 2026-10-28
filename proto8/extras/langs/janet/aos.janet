@@ -109,9 +109,9 @@
           "\n")))
 
 (defn tool
-  "agent 的工具：資料夾裡 tool.json（給模型看）＋ _entry。"
+  "agent 的工具：資料夾裡 _tooldef.json（給模型看）＋ _entry。"
   [&named description parameters entry]
-  (dir "tool.json" (obj "description" description "parameters" (or parameters {:type "object" :properties {}}))
+  (dir "_tooldef.json" (obj "description" description "parameters" (or parameters {:type "object" :properties {}}))
        "_entry" entry))
 
 (defmacro janet-main

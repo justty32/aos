@@ -19,6 +19,8 @@
        "system.txt" system
        "brain.py" brain
        "act.py" act
+       "tools.json" (obj "tools" (obj ;(mapcat (fn [i] [(tools i) (obj "path" (string "tools/" (tools i)))])   # 腦／act 吃的工具清單（aos-tools）
+                                               (range 0 (length tools) 2))))
        "tools" (dir ;tools)))
 
 (def program

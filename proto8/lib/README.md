@@ -26,16 +26,16 @@ impls/                     基礎層與標準庫（C-74）：aos-exec 把工具�
 | 檔 | 給誰看 | 內容 |
 |---|---|---|
 | `_entry` | aos-exec | 可執行檔（python3 純標準庫，或 sh）；第一行 shebang，第二行 `# <名> - 一句話`（C-54 R1） |
-| `tool.json` | 模型 | `{"description", "parameters"}`（P-41，OpenAI function 物件去掉 name；工具名＝資料夾名） |
+| `_tooldef.json` | 模型 | `{"description", "parameters"}`（P-41，OpenAI function 物件去掉 name；工具名＝登記進 agent 的 `tools.json` 時取的名字，預設＝資料夾名） |
 | `_metainfo` | kernel 與人 | JSON，通用 key 照 [`_metainfo` 規劃](../thinking/2026-10-24-metainfo/01-位置與格式.md)：`summary`、`time_ms`、`resource`、`side_effect`、`idempotent`、`deterministic`、`interrupt`、`parallel`；模型看不到（M10） |
 
 規則（`tests/test_lib.py` 檢查形狀、每條都有案例）：
 
-1. **參數**：stdin 一份 JSON 物件（模型的 `arguments` 原樣，P-41）；空 stdin 當 `{}`。key 全小寫底線、單位放字尾（`timeout_s`、`max_bytes`，C-54）；選填的寫預設值在 `tool.json` 的說明裡。
+1. **參數**：stdin 一份 JSON 物件（模型的 `arguments` 原樣，P-41）；空 stdin 當 `{}`。key 全小寫底線、單位放字尾（`timeout_s`、`max_bytes`，C-54）；選填的寫預設值在 `_tooldef.json` 的說明裡。
 2. **結果**：stdout 整段就是結果（P-41）。文字工具印文字；結構工具（`ls`、`json_*`）印一行 JSON。工具不讀、不轉述自己起的程式的 stderr 以外的東西（C-52）。
 3. **錯**：一律 stderr 一行 `工具名: 代號 原因`、退 1（P-21），**同一行也印在 stdout**——stdout 是給腦看的，腦才知道錯在哪。代號照 C-54 四種結尾（`ArgumentsBad`、`WsMissing`、`PathBad`、`FileMissing`、`FileBad`、`ReadFailed`、`WriteFailed`、`MkdirFailed`、`TextMissing`、`TextBad`、`PointerBad`、`PointerMissing`、`CommandFailed`、`LaunchFailed`）。**參數給錯對工具來說也是錯、照樣退 1**；停下等人還是把那行回給腦，是叫它的 agent 自己的決定（agent-dan 範本與抄它的都回給腦，[thinking](../thinking/2026-10-23-tool-calls.md#10-24-定叫工具與小念頭的失敗回給腦)），工具不替它決定（C-52、C-53 入口檢查）。被跑的指令自己退非 0 **不是**工具的錯（那是結果，尾巴寫結束碼）。
 4. **沙盒＝`$AOS_WS`**：路徑一律從工作區算，解開 `..` 與捷徑後必須還在裡面（`PathBad`）；沒設或不是資料夾＝`WsMissing`。要動別的資料夾，是叫它的人 `aos-exec --ws 那裡 tools/<名>`（C-66 指標＝`AOS_WS`），工具不另收根的參數或環境變數。`bash` 擋不住指令本身跑出去，說明裡寫明。
-5. **逾時**：會跑東西的工具一定有逾時（`timeout_s`，預設與上限寫在 `tool.json`），到時整群先 TERM 再 KILL、算 `CommandFailed`；工具自己被外面 TERM（act 格逾時）時先收掉自己起的那一群再走，不留孤兒（P-36）。
+5. **逾時**：會跑東西的工具一定有逾時（`timeout_s`，預設與上限寫在 `_tooldef.json`），到時整群先 TERM 再 KILL、算 `CommandFailed`；工具自己被外面 TERM（act 格逾時）時先收掉自己起的那一群再走，不留孤兒（P-36）。
 6. **寫檔**：先寫 `.` 開頭的暫存檔再改名（N-05）、留住原檔權限；幾處一起改的全有或全無。
 7. **上限與漸進展開**：讀最多 2000 行或 50KB、列最多 500 項、JSON 檔最多 4MB；超過就截，並在結果裡說怎麼接著拿（`offset`、`next_offset`、`pointer` 往下一層）。
 8. **stack**：工具的 stack＝呼叫者給的小格 `$AOS_STACK/<名>/`（P-17）；base 層是純函數、不用 stack，要跨呼叫留東西的工具（中層以上）才寫那裡。
@@ -50,7 +50,8 @@ agent 的 `tools/` 裡放**一條相對捷徑指到庫裡那個工具**，一個
 cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 ```
 
-- agent 的程式**一個字不用改**：act 照舊 `aos-exec tools/read`（P-25、P-33，地址零個 `..`）；aos-exec 走進捷徑指到的真資料夾（cwd、`AOS_CF`、`AOS_CD` 都是庫裡的位置，N-57、N-59），brain 照舊從 `tools/*/tool.json` 組 tools 陣列。agent 不知道、也不必知道這個工具是庫的（C-52）。
+- 捷徑建好再**登記進 agent 的 `tools.json`**（範本手寫相對路徑 `"read": {"path": "tools/read"}`，或 `aos-tools --file ../tools.json add read` 寫絕對路徑）；沒登記＝腦看不到。
+- agent 的程式**一個字不用改**：act 照舊 `aos-tools call read`（→ `aos-exec <agent>/tools/read`，P-25、P-33）；aos-exec 走進捷徑指到的真資料夾（cwd、`AOS_CF`、`AOS_CD` 都是庫裡的位置，N-57、N-59），brain 照舊從 `tools.json`（`aos-tools ls --json`）組 tools 陣列。agent 不知道、也不必知道這個工具是庫的（C-52）。
 - **要哪些掛哪些**，自己的工具（真資料夾）跟庫的並存在同一個 `tools/`；同名時自己的贏（一個名字只能有一個東西），這就是覆寫。
 - **版本＝git**：庫改了，掛著的 agent 下次跑就是新的；要釘住某一版就複製那個資料夾進自己的 `tools/`（複製＝覆寫＝自己維護）。
 - 代價：只有 Linux 有捷徑（使用者 10-19「先只考慮在linux上」）；repo 外的 agent 要寫絕對路徑；複製 agent 資料夾時要保留捷徑（`cp -a`，不要 `cp -r`／跟著捷徑複製，不然就變成複本）。
@@ -79,7 +80,7 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 | [run_python](base/run_python/) | 跑一段 Python，回結束碼與輸出 | `code`、`timeout_s`（60／300） | 第一行「結束碼 N」、接著輸出 | demo/agent-gus/tools/run_python |
 
 不碰工作區的三個（`math`、`clock`、`run_python`）不收路徑、不看 `$AOS_WS`；`run_python` 把程式寫進自己的小格再跑（規則 8 的例外：拿小格當草稿區，不跨呼叫留東西）。
-每個工具的細節看它 `_entry` 開頭的幾行說明與 `tool.json`。
+每個工具的細節看它 `_entry` 開頭的幾行說明與 `_tooldef.json`。
 
 ## 索引：aos
 
@@ -114,7 +115,7 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 - [cli_session.py](agent/cli_session.py)：claude／codex CLI 接成工具的做法（非互動續對話、或 tmux 畫面開著時從畫面送字）；工具資料夾由 `_entry` 傳進來（`cli.json` 在那裡）、agent 資料夾由 `attach` 傳進來。工具被整個複製進某隻 agent 的 `tools/`（覆寫）時，`_entry` 改找那隻 agent 根的 `cli_session.py`。
 
 pyfix 的子 agent 要改的程式在 `PYFIX_DIR`（`$AOS_WS/<dir>`），自己的 `$AOS_WS` 是收題交答案的小格，所以它的 act 用 `aos-exec --ws $PYFIX_DIR tools/<名>` 叫庫的工具（規則 4：換根是呼叫者的事）；庫的工具錯一律退 1，子 agent 的 act 把那行回給腦。
-沒收進來的：agent-gus 的「小念頭」（`thought.json`／`thought.py`）——它是 agent-gus 自己的入口、遞迴起 agent-gus 本身（`shared.launch`），要收就得把整隻 agent-gus 搬進庫；也沒有給模型的 `tool.json`。aos-json 自帶的 `tools/json`、`tools/json_edit`（小念頭式兩步改）留在 `impls/aos-json/`，跟它的測試在一起。
+沒收進來的：agent-gus 的「小念頭」（`thought.json`／`thought.py`）——它是 agent-gus 自己的入口、遞迴起 agent-gus 本身（`shared.launch`），要收就得把整隻 agent-gus 搬進庫；也沒有給模型的 `_tooldef.json`。aos-json 自帶的 `tools/json`、`tools/json_edit`（小念頭式兩步改）留在 `impls/aos-json/`，跟它的測試在一起。
 
 ## 範例：demo/agent-liv
 
@@ -122,4 +123,4 @@ agent-dan 的複本（錯誤訊息開頭與假腦不同；act 照 agent-pip：�
 
 ## 測試
 
-`python3 -m unittest discover -s proto8/tests -p test_lib.py`：形狀檢查跑過 `lib/` 底下每個工具（三個檔、NAME 行、`tool.json` 與 `_metainfo` 的形、壞 stdin 的錯誤行格式與 stdout 同一行），base 上午那七個各自的行為（截斷、全有或全無、逾時整群停、路徑出不去、沒 `AOS_WS`；不碰工作區的 math、clock、run_python 不驗這條），agent-liv 經捷徑用庫的工具跑完一題。其他工具的行為案例在這幾份：`test_pi_tools.py`、`test_file_tools.py`（base）、`test_meg.py`、`test_talk.py`、`test_ai_tools.py`、`test_self_improve.py`（aos）、`test_eve.py`、`test_fay.py`（agent）、`test_gus.py`（run_python）。
+`python3 -m unittest discover -s proto8/tests -p test_lib.py`：形狀檢查跑過 `lib/` 底下每個工具（三個檔、NAME 行、`_tooldef.json` 與 `_metainfo` 的形、壞 stdin 的錯誤行格式與 stdout 同一行），base 上午那七個各自的行為（截斷、全有或全無、逾時整群停、路徑出不去、沒 `AOS_WS`；不碰工作區的 math、clock、run_python 不驗這條），agent-liv 經捷徑用庫的工具跑完一題。其他工具的行為案例在這幾份：`test_pi_tools.py`、`test_file_tools.py`（base）、`test_meg.py`、`test_talk.py`、`test_ai_tools.py`、`test_self_improve.py`（aos）、`test_eve.py`、`test_fay.py`（agent）、`test_gus.py`（run_python）。

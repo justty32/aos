@@ -11,7 +11,7 @@
  "interrupt": "resumable",
  "parallel": false,
  "lock": [{"$env": "AOS_STACK", "$prefix": "stack:"}],
- "reads": ["$AOS_WS/new/*.json", "$AOS_WS/cur/*.json", "$AOS_WS/tree/<node>/{system.txt,.env,_metainfo,fsm.json}", "system.txt", "tools/*/tool.json"],
+ "reads": ["$AOS_WS/new/*.json", "$AOS_WS/cur/*.json", "$AOS_WS/tree/<node>/{system.txt,.env,_metainfo,fsm.json}", "system.txt", "tools/*/_tooldef.json"],
  "writes": ["$AOS_WS/selfopt/<n>/{session.json,report.json,tests/}", "$AOS_WS/out/<n>.txt", "$AOS_WS/done/", "$AOS_WS/tree/<node>/（經工具包，白名單）", "$AOS_STACK/{history.jsonl,current.txt,state.txt,trace.jsonl,llm.jsonl}"],
  "grow_level": 5,
  "shape": "demo/agent-dan（idle→think→act）",

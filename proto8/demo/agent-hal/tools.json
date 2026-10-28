@@ -1,0 +1,6 @@
+{
+ "tools": {
+  "clock": {"path": "tools/clock"},
+  "math": {"path": "tools/math"}
+ }
+}

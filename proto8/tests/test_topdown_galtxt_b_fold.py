@@ -136,7 +136,7 @@ class Fold(unittest.TestCase):
         r = self.fold("link", ck)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(json.loads(r.stdout.splitlines()[-1])["how"], "move")
-        self.assertTrue(ck.is_dir() and not ck.is_symlink() and os.access(ck / "_entry", os.X_OK) and (ck / "tool.json").exists())
+        self.assertTrue(ck.is_dir() and not ck.is_symlink() and os.access(ck / "_entry", os.X_OK) and (ck / "_tooldef.json").exists())
         self.assertFalse(lib.exists())
         self.assertIn("要人改", r.stderr)
         # 不是捷徑＝TargetBad

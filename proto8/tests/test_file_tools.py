@@ -51,7 +51,7 @@ class Tools(unittest.TestCase):
     def test_ls(self):
         _, res, _ = self.tool("ls", {})
         self.assertEqual(res["items"][0]["name"], "agent-dan")
-        self.assertEqual(res["items"][0]["aos"], ["_entry", ".env", "loop.json", "fsm.json"])
+        self.assertEqual(res["items"][0]["aos"], ["_entry", ".env", "tools.json", "loop.json", "fsm.json"])
         _, res, _ = self.tool("ls", {"path": "agent-dan"})
         items = {i["name"]: i for i in res["items"]}
         self.assertEqual([i["type"] for i in res["items"][:2]], ["dir", "dir"])          # 資料夾在前
@@ -180,7 +180,7 @@ class Tools(unittest.TestCase):
     def test_tool_json_shape(self):
         for d in sorted(TOOLS / n for n in ("ls", "stat", "view", "json_edit", "mkdir", "move", "copy", "trash")):
             if d.is_dir():
-                spec = json.loads((d / "tool.json").read_text())
+                spec = json.loads((d / "_tooldef.json").read_text())
                 self.assertEqual(set(spec), {"description", "parameters"}, d.name)
 
 
@@ -207,7 +207,7 @@ class AgentPipExplores(unittest.TestCase):
             self.assertEqual(json.loads((ws / "proj/agent-dan/loop.json").read_text())["max"], 80)
             h = [json.loads(l) for l in (tmp / "stack" / "history.jsonl").read_text().splitlines()]
             tools = {m["tool_call_id"]: json.loads(m["content"]) for m in h if m["role"] == "tool"}
-            self.assertEqual(tools["c1"]["items"][0]["aos"], ["_entry", ".env", "loop.json", "fsm.json"])
+            self.assertEqual(tools["c1"]["items"][0]["aos"], ["_entry", ".env", "tools.json", "loop.json", "fsm.json"])
             self.assertEqual(tools["c2"]["value"], {"exec": "fsm.json", "max": 40})
             names = [t["function"]["name"] for t in b.requests[0]["tools"]]
             self.assertEqual(names, sorted(["read", "write", "edit", "bash", "ls", "stat", "view", "json_edit",

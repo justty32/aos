@@ -82,7 +82,7 @@ class TreeContractT(unittest.TestCase):
 
     def tools(self):
         d = self.G / "writer" / "tools"
-        return sorted(p for p in d.iterdir() if p.is_dir() and not p.is_symlink() and (p / "tool.json").exists())
+        return sorted(p for p in d.iterdir() if p.is_dir() and not p.is_symlink() and (p / "_tooldef.json").exists())
 
     def call(self, name, args):
         return run(EXEC, self.G / "writer" / "tools" / name, input=args if isinstance(args, str) else json.dumps(args, ensure_ascii=False),
@@ -92,7 +92,7 @@ class TreeContractT(unittest.TestCase):
         names = [p.name for p in self.tools()]
         self.assertTrue({"beat", "voice"} <= set(names), names)
         for d in self.tools():
-            spec = jread(d / "tool.json")
+            spec = jread(d / "_tooldef.json")
             self.assertTrue({"description", "parameters"} <= set(spec), d)
             self.assertEqual(spec["parameters"].get("type"), "object", d)
             e = d / "_entry"
@@ -128,7 +128,7 @@ class TreeContractT(unittest.TestCase):
     def test_stage(self):
         st = jread(self.G / "writer" / "stage.json")
         self.assertIn(st["stage"], ("agent", "semi", "program"))
-        have = {p.name for p in (self.G / "writer" / "tools").iterdir() if (p / "tool.json").exists()}
+        have = {p.name for p in (self.G / "writer" / "tools").iterdir() if (p / "_tooldef.json").exists()}
         self.assertTrue(set(st["tools"]) <= have, set(st["tools"]) - have)
 
     def test_compose_program(self):
@@ -252,13 +252,13 @@ class OptkitT(unittest.TestCase):
     def tool_results(self, cell):
         return [m["content"] for m in jl(cell / "stack" / "history.jsonl") if m.get("role") == "tool"]
 
-    # so-1 工具契約：九支各有三檔、tool.json 形狀、沒環境／空 stdin／壞 stdin 都一行錯（stderr＋stdout）不炸
+    # so-1 工具契約：九支各有三檔、_tooldef.json 形狀、沒環境／空 stdin／壞 stdin 都一行錯（stderr＋stdout）不炸
     def test_contract(self):
         sb, env = self.sandbox()
         for n in OPT_TOOLS:
             d = self.kit / n
-            self.assertEqual(sorted(os.listdir(d)), ["_entry", "_metainfo", "tool.json"], n)
-            spec = jread(d / "tool.json")
+            self.assertEqual(sorted(os.listdir(d)), ["_entry", "_metainfo", "_tooldef.json"], n)
+            spec = jread(d / "_tooldef.json")
             self.assertTrue({"description", "parameters"} <= set(spec), n)
             self.assertEqual(spec["parameters"]["type"], "object", n)
             self.assertEqual(jread(d / "_metainfo")["kind"], "program", n)
@@ -299,8 +299,8 @@ class OptkitT(unittest.TestCase):
         self.assertIn("（改）", (sb / "writer" / "system.txt").read_text(encoding="utf-8"))
         r = self.opt("opt_write", {"path": "writer/tools/new/_entry", "content": "#!/bin/sh\necho hi\n"}, env)
         self.assertEqual(r.returncode, 0, r.stderr)
-        r = self.opt("opt_write", {"path": "writer/tools/voice/tool.json", "content": "{}"}, env)     # 既有工具資料夾不算新建
-        self.assertRegex(r.stderr, r"^opt_write: WriteDenied writer/tools/voice/tool.json")
+        r = self.opt("opt_write", {"path": "writer/tools/voice/_tooldef.json", "content": "{}"}, env)     # 既有工具資料夾不算新建
+        self.assertRegex(r.stderr, r"^opt_write: WriteDenied writer/tools/voice/_tooldef.json")
         r = self.opt("opt_write", {"path": "writer/_metainfo", "content": "{}"}, env)                 # M7
         self.assertRegex(r.stderr, r"^opt_write: WriteDenied writer/_metainfo")
         r = self.opt("opt_read", {"path": "data/bench/Q16.json"}, env)
@@ -344,13 +344,13 @@ class OptkitT(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         r = self.opt("opt_write", {"path": "writer/stage.json", "content": json.dumps(dict(st, stage="program"), ensure_ascii=False)}, env)
         self.assertRegex(r.stderr, r"^opt_write: WriteDenied .*其他位置也變了")
-        tj = (sb / "writer" / "tools" / "voice" / "tool.json").read_text(encoding="utf-8")
-        r = self.opt("opt_edit", {"path": "writer/tools/voice/tool.json", "edits": [{"old_text": '"required": ["text"]', "new_text": '"required": ["text", "who"]'}]}, env)
+        tj = (sb / "writer" / "tools" / "voice" / "_tooldef.json").read_text(encoding="utf-8")
+        r = self.opt("opt_edit", {"path": "writer/tools/voice/_tooldef.json", "edits": [{"old_text": '"required": ["text"]', "new_text": '"required": ["text", "who"]'}]}, env)
         self.assertRegex(r.stderr, r"^opt_edit: WriteDenied ")                                     # required 不准動
-        r = self.opt("opt_edit", {"path": "writer/tools/voice/tool.json",
+        r = self.opt("opt_edit", {"path": "writer/tools/voice/_tooldef.json",
                                   "edits": [{"old_text": '"description": "句尾語氣詞，例：啦"}', "new_text": '"description": "句尾語氣詞，例：啦"}, "idx": {"type": "integer"}'}]}, env)
         self.assertEqual(r.returncode, 0, r.stderr)                                                 # properties 追加：准
-        self.assertNotEqual((sb / "writer" / "tools" / "voice" / "tool.json").read_text(encoding="utf-8"), tj)
+        self.assertNotEqual((sb / "writer" / "tools" / "voice" / "_tooldef.json").read_text(encoding="utf-8"), tj)
 
     # so-4 agent 示範：writer semi 階、GALTXT_OPT=1 跑拷貝 → 劇本的 tool_call 序列、close 三檔、stage.tools 含 close、opt_log 一行；原樹不變
     def test_agent_selfopt(self):
@@ -366,7 +366,7 @@ class OptkitT(unittest.TestCase):
         self.assertGreater(json.loads(res[3])["counter_pass"], 0)
         tree = cell / "tree" / "proto8" / "topdown" / "galtxt-a"
         close = tree / "writer" / "tools" / "close"
-        self.assertEqual(sorted(os.listdir(close)), ["_entry", "_metainfo", "tool.json"])
+        self.assertEqual(sorted(os.listdir(close)), ["_entry", "_metainfo", "_tooldef.json"])
         self.assertEqual(jread(close / "_metainfo")["author"], "writer@selfopt epoch 0")
         self.assertIn("close", jread(tree / "writer" / "stage.json")["tools"])
         log = jl(tree / "writer" / "opt_log.jsonl")
@@ -414,7 +414,7 @@ class OptkitT(unittest.TestCase):
         call = lambda args: run(EXEC, voice, input=json.dumps(args, ensure_ascii=False), env={"AOS_STACK": str(self.tmp / "vs") + "/"})   # noqa: E731
         samples = [{"text": "拿著。"}, {"text": "{calls}拿著。", "calls": "你", "who": "宮澤柚葉"}, {"text": "哼，好啦。", "ending": "啦"}, {}]
         before = [(call(a).stdout, call(a).returncode) for a in samples]
-        req = jread(voice / "tool.json")["parameters"]["required"]
+        req = jread(voice / "_tooldef.json")["parameters"]["required"]
         r, cell = self.selfopt("writer/tools/voice", task="同題三份口癖都是『哼』；請讓口癖照 idx 輪替")
         self.assertEqual(r.returncode, 0, r.stderr + (cell / "run.log").read_text(encoding="utf-8"))
         self.assertRegex(r.stdout, r"^run: writer/tools/voice by shell：7 次腦")
@@ -422,7 +422,7 @@ class OptkitT(unittest.TestCase):
         tree = cell / "tree" / "proto8" / "topdown" / "galtxt-a"
         tv = tree / "writer" / "tools" / "voice"
         self.assertNotEqual((tv / "_entry").read_bytes(), (voice / "_entry").read_bytes())
-        spec = jread(tv / "tool.json")
+        spec = jread(tv / "_tooldef.json")
         self.assertIn("idx", spec["parameters"]["properties"])
         self.assertEqual(spec["parameters"]["required"], req)
         self.assertEqual(jread(tv / "_metainfo"), jread(voice / "_metainfo"))                        # 殼不屬於節點：_metainfo 不變
@@ -433,7 +433,7 @@ class OptkitT(unittest.TestCase):
         self.assertEqual(call({"text": "拿著。", "idx": 5}).stdout, "哼，拿著。\n")
         ch = jread(cell / "params" / "changed.json")
         self.assertEqual((ch["action"], ch["subtree"], ch["by"]), ("selfopt", "writer/tools/voice", "shell@selfopt"))
-        self.assertEqual(set(ch["files"]), {"writer/tools/voice/_entry", "writer/tools/voice/tool.json", "writer/tools/voice/opt_log.jsonl"})
+        self.assertEqual(set(ch["files"]), {"writer/tools/voice/_entry", "writer/tools/voice/_tooldef.json", "writer/tools/voice/opt_log.jsonl"})
 
     # so-6 accept 搬回（＋ so-12 M7）：--dry-run 不搬；搬了以後 close 三檔在原樹、changed.json 對、原版本在 params、尺與宣告 bytes 不變
     def test_accept_moves(self):
@@ -452,7 +452,7 @@ class OptkitT(unittest.TestCase):
         after = snapshot(self.g)
         changed = {k for k in set(before) | set(after) if before.get(k) != after.get(k)}
         self.assertEqual(changed, {"writer/stage.json", "writer/opt_log.jsonl", "writer/tools/close",
-                                   "writer/tools/close/_entry", "writer/tools/close/_metainfo", "writer/tools/close/tool.json"})
+                                   "writer/tools/close/_entry", "writer/tools/close/_metainfo", "writer/tools/close/_tooldef.json"})
         self.assertTrue(after["writer/tools/close/_entry"][1])                                       # +x 跟著搬
         ch = jread(cell / "params" / "changed.json")
         self.assertEqual((ch["source"], ch["action"], ch["subtree"], ch["by"], ch["created"]), ("selfopt", "selfopt", "writer", "writer@selfopt", ["writer/tools/close"]))

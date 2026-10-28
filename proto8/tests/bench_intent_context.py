@@ -167,11 +167,17 @@ def setup(out):
     dan = agents / "agent-dan-read"
     shutil.copytree(ROOT / "demo" / "agent-dan", dan, ignore=ign)
     shutil.copytree(ROOT / "lib" / "base" / "read", dan / "tools" / "read", ignore=ign)
+    reg = json.loads((dan / "tools.json").read_text(encoding="utf-8"))           # 登記進 tools.json 才算工具
+    reg["tools"]["read"] = {"path": "tools/read"}
+    (dan / "tools.json").write_text(json.dumps(reg), encoding="utf-8")
     (dan / "system.txt").write_text("你是一個問答助手。\n需要計算、查時間、讀檔時，先用提供的工具，不要自己猜。\n"
                                     "拿到工具的結果後，用純文字給出最後的回答，不要再叫工具。\n", encoding="utf-8")
-    kai0 = agents / "agent-kai-norecall"          # 對照：只靠程式自動挑、腦沒有 recall 可用（拿掉 tool.json＝不算工具）
+    kai0 = agents / "agent-kai-norecall"          # 對照：只靠程式自動挑、腦沒有 recall 可用（從 tools.json 拿掉＝不算工具）
     shutil.copytree(agents / "agent-kai", kai0)
-    (kai0 / "tools" / "recall" / "tool.json").unlink()
+    r = subprocess.run([tool("aos-tools"), "--file", str(kai0 / "tools.json"), "rm", "recall"], stdout=subprocess.DEVNULL,
+                       env=dict(os.environ, PATH=path_with()))   # rm 經 aos-json 改檔
+    if r.returncode != 0:
+        sys.exit("aos-tools rm recall 退 %d" % r.returncode)
     return {"dan": dan, "kai": agents / "agent-kai", "kai0": kai0}
 
 

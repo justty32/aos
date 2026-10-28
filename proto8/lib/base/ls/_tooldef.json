@@ -1,0 +1,6 @@
+{"description": "列工作區裡一個資料夾的子項，回 JSON：items 每項有 name、type（file／dir／link）、size、mtime；資料夾多 counter_children（子項數）與 aos（裡面有哪些 _entry、.env、_tooldef.json、loop.json、fsm.json…，有就代表它是 aos 的程式或設定）；.json 檔多 keys（頂層 key）。資料夾在前；. 開頭的預設不列（個數放 counter_hidden）；counter_items＝這個資料夾一共幾項。一次最多 max_items 項，還有就給 next_offset，用 offset 接著看。先用它看結構，再用 stat／view／read 看單一個。路徑從工作區算，不能出工作區。",
+ "parameters": {"type": "object",
+                "properties": {"path": {"type": "string", "description": "資料夾，從工作區算的相對路徑（預設 .）"},
+                               "offset": {"type": "integer", "description": "從第幾項開始（預設 0）"},
+                               "max_items": {"type": "integer", "description": "最多幾項（預設 100，上限 500）"},
+                               "hidden": {"type": "boolean", "description": "true＝連 . 開頭的也列"}}}}

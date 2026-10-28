@@ -1,0 +1,8 @@
+{
+ "tools": {
+  "edit": {"path": "tools/edit"},
+  "read": {"path": "tools/read"},
+  "try_run": {"path": "tools/try_run"},
+  "write": {"path": "tools/write"}
+ }
+}

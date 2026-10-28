@@ -1,6 +1,6 @@
 ---
 name: aos
-description: 操作 aos（proto8 的資料夾程式）的工具 aos-ai，含概念速成。Use when the user asks to spawn/create an aos agent, give an aos agent a question/task, run aos-exec or an agent once, check aos loop/daemon/fsm state or trace, start/stop a background agent, read an aos agent's answer or error line, generate aos JSON (inst/loop.json/fsm.json/daemon.json/_metainfo/tool.json) or scaffold a tool/fsm cell/function folder, or explain aos concepts like AOS_WS/AOS_ENTRY/AOS_STACK/AOS_CF/AOS_CD/AOS_CO（「起一隻 agent」「丟題給 agent」「aos-exec 跑一次」「看 agent 狀態」「生成 loop.json」「加一個工具」「WS／STACK 是什麼」）。
+description: 操作 aos（proto8 的資料夾程式）的工具 aos-ai，含概念速成。Use when the user asks to spawn/create an aos agent, give an aos agent a question/task, run aos-exec or an agent once, check aos loop/daemon/fsm state or trace, start/stop a background agent, read an aos agent's answer or error line, generate aos JSON (inst/loop.json/fsm.json/daemon.json/_metainfo/_tooldef.json/tools.json) or scaffold a tool/fsm cell/function folder, or explain aos concepts like AOS_WS/AOS_ENTRY/AOS_STACK/AOS_CF/AOS_CD/AOS_CO（「起一隻 agent」「丟題給 agent」「aos-exec 跑一次」「看 agent 狀態」「生成 loop.json」「加一個工具」「WS／STACK 是什麼」）。
 ---
 
 # aos：用 aos-ai 操作 agent

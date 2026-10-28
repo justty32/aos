@@ -61,18 +61,18 @@ def append(message):
 if not history or history[-1].get("role") not in ("user", "tool"):
     append({"role": "user", "content": question})
 
-# tools：工具名＝資料夾名，說明來自 tool.json 的 description／parameters（其他 key 忽略；讀不懂的 tool.json 當作沒有）
+# tools：工具清單來自 tools.json（aos-tools ls --json；沒有 tools.json＝沒有工具），說明取工具定義的 description／parameters（其他 key 忽略）
+# aos-tools 起不來、退非 0（例：登記了但壞掉的工具）＝自己這層的錯：停、人修好再跑（P-20）；aos-tools 的 stderr 不吞，它自己說哪個工具壞
+try:
+    r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+except OSError as e:
+    die("ToolsBad", "aos-tools 起不來：%s" % e)
+if r.returncode != 0:
+    die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
 tools = []
-for tool in (sorted(os.listdir("tools")) if os.path.isdir("tools") else []):
-    try:
-        with open(os.path.join("tools", tool, "tool.json"), encoding="utf-8") as f:
-            spec = json.load(f)
-    except (OSError, ValueError):
-        continue
-    if not isinstance(spec, dict):
-        continue
-    function = {"name": tool}
-    function.update({k: spec[k] for k in ("description", "parameters") if k in spec})
+for t in json.loads(r.stdout):
+    function = {"name": t["name"]}
+    function.update({k: t["tooldef"][k] for k in ("description", "parameters") if k in t["tooldef"]})
     tools.append({"type": "function", "function": function})
 
 system_text = ""
@@ -82,13 +82,13 @@ if os.path.exists("system.txt"):
 
 
 def recall_memory(q):
-    """有 tools/memory（例：連到 agent-meg 的記憶庫工具）而且記憶庫在，就用它的 search 找跟這題有關的幾筆；沒有就空字串。"""
+    """tools.json 登記了 memory（例：連到 agent-meg 的記憶庫工具）而且記憶庫在，就用它的 search 找跟這題有關的幾筆；沒有就空字串。"""
     heap = os.environ.get("AOS_HEAP") or os.path.join(ws, ".heap")
-    if not os.path.isfile(os.path.join("tools", "memory", "tool.json")) or not os.path.isdir(heap):
+    if not any(t["function"]["name"] == "memory" for t in tools) or not os.path.isdir(heap):
         return ""
     env = dict(os.environ, AOS_STACK=os.path.join(stack, "memory") + "/", AOS_HEAP=heap)
     try:
-        r = subprocess.run(["aos-exec", "tools/memory"], input=json.dumps({"op": "search", "query": q, "max_results": 3}),
+        r = subprocess.run(["aos-tools", "call", "memory"], input=json.dumps({"op": "search", "query": q, "max_results": 3}),
                            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True, env=env, timeout=30)
     except (OSError, subprocess.TimeoutExpired):
         return ""

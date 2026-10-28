@@ -302,8 +302,8 @@ def unwrap(c, new_name, root, plan):
     if len(names) != 1 or not os.path.isdir(os.path.join(c, names[0])) or os.path.islink(os.path.join(c, names[0])):
         raise Fail("TargetBad", "%s 不是純容器（要恰好一個子資料夾、沒有別的檔）：%s" % (os.path.relpath(c), "、".join(sorted(names))))
     child = names[0]
-    if os.path.basename(c) == "tools" and os.path.isfile(os.path.join(c, child, "tool.json")):
-        raise Fail("TargetBad", "%s 是腦列工具的 tools/、底下 %s 有 tool.json（A-1 例外，P-41）" % (os.path.relpath(c), child))
+    if os.path.basename(c) == "tools" and os.path.isfile(os.path.join(c, child, "_tooldef.json")):
+        raise Fail("TargetBad", "%s 是腦列工具的 tools/、底下 %s 有 _tooldef.json（A-1 例外，P-41）" % (os.path.relpath(c), child))
     dest_name = new_name or child
     if not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_.-]*", dest_name):
         raise Fail("NameBad", "名字只收英數、底線、點、連字號：%r" % dest_name)

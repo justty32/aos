@@ -13,6 +13,7 @@
 
 ## 待使用者項
 
+- 親手試 aos-tools 與新的 aos-mcp（10-28，不急；代定清單在 [thinking 10-28 aos-tools § 結論](../proto8/thinking/2026-10-28-aos-tools.md#結論10-28-實作照原則代定可翻案)）：WSL 裡 `R=~/repo/aos-tools/proto8; export PATH=$R/bin:$R/impls/aos-exec/bin:$R/impls/aos-json/bin:$PATH; cd ~/code/try/aos-tools/agent && aos-tools ls`，再 `cd ../cws && claude --mcp-config ../mcp.json` 叫它用 clock／echo／add
 - 看統整頁、說你抓到的問題點（10-25 你說「我抓到了一些問題點」，兩隊都已收線等你）：https://claude.ai/artifact/9sj3ZkRhK4ZYomb8WeSzrA → [thinking 10-25 top-down](../proto8/thinking/2026-10-25-top-down.md)
 - 10-25 的代定清單要你看（命名兩題、agent-gus 小念頭不搬、乙隊 claude code 改動先不搬回／不用沙箱、甲隊 § 13 幾條，都可翻案）→ [session log 10-25 § 代定清單](session_logs/2026-10/2026-10-25.md#代定清單)
 - 有空時評 galtxt 台詞樣本（10-25，不急；目前只有乙隊六筆，甲隊收尾時沒交真腦樣本）：開 https://claude.ai/artifact/ENDqGGkxBpydhsh6YcxGT9 ，每筆按好／普通／不好就行，其餘選填；評完說一聲，頂層用 ArtifactData 讀 `ratings` 轉成各隊 `human/ratings.json` 匯入 → [thinking 10-25 top-down](../proto8/thinking/2026-10-25-top-down.md)。網頁原始檔與重建方法：scratchpad `rating/`（`build.py` 收兩隊 `human/samples.json`），換樣本要用新 id

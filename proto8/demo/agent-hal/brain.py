@@ -1,6 +1,6 @@
-# brain.py - think 格（agent-hal：照抄 agent-dan，只改錯誤訊息開頭）：認領題目、把 tools/*/tool.json 組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history
+# brain.py - think 格（agent-hal：照抄 agent-dan，只改錯誤訊息開頭）：認領題目、把 tools.json 登記的工具（aos-tools ls --json）組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history
 # 沒設 AOS_BRAIN_URL＝假腦；有設就問 OpenAI 相容的 {url}/chat/completions。失敗時 history 不接任何東西、退 1（P-20）。
-import json, os, sys, urllib.error, urllib.request
+import json, os, subprocess, sys, urllib.error, urllib.request
 
 
 def die(code, reason):
@@ -61,18 +61,18 @@ def append(message):
 if not history or history[-1].get("role") not in ("user", "tool"):
     append({"role": "user", "content": question})
 
-# tools：工具名＝資料夾名，說明來自 tool.json 的 description／parameters（其他 key 忽略；讀不懂的 tool.json 當作沒有）
+# tools：工具清單來自 tools.json（aos-tools ls --json；沒有 tools.json＝沒有工具），說明取工具定義的 description／parameters（其他 key 忽略）
+# aos-tools 起不來、退非 0（例：登記了但壞掉的工具）＝自己這層的錯：停、人修好再跑（P-20）；aos-tools 的 stderr 不吞，它自己說哪個工具壞
+try:
+    r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+except OSError as e:
+    die("ToolsBad", "aos-tools 起不來：%s" % e)
+if r.returncode != 0:
+    die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
 tools = []
-for tool in (sorted(os.listdir("tools")) if os.path.isdir("tools") else []):
-    try:
-        with open(os.path.join("tools", tool, "tool.json"), encoding="utf-8") as f:
-            spec = json.load(f)
-    except (OSError, ValueError):
-        continue
-    if not isinstance(spec, dict):
-        continue
-    function = {"name": tool}
-    function.update({k: spec[k] for k in ("description", "parameters") if k in spec})
+for t in json.loads(r.stdout):
+    function = {"name": t["name"]}
+    function.update({k: t["tooldef"][k] for k in ("description", "parameters") if k in t["tooldef"]})
     tools.append({"type": "function", "function": function})
 
 system = []

@@ -1,4 +1,4 @@
-{"description": "在某隻 aos agent 的 tools/ 下起一個新工具骨架（tool.json＋_entry），回路徑與 tool.json。工具本體的 TODO 要另外寫。",
+{"description": "在某隻 aos agent 的 tools/ 下起一個新工具骨架（_tooldef.json＋_entry，並登記進那隻 agent 的 tools.json），回路徑與 _tooldef.json。工具本體的 TODO 要另外寫。",
  "parameters": {"type": "object",
                 "properties": {"name": {"type": "string", "description": "agent 名字（用 spawn_agent 起的那些）"},
                                "tool": {"type": "string", "description": "新工具名（小寫英數、_、-）"},

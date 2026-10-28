@@ -48,7 +48,7 @@ def append(message):
 calls = said.get("tool_calls") or []
 if calls:
     answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
-    tools = sorted(t for t in (os.listdir("tools") if os.path.isdir("tools") else []) if os.path.isfile(os.path.join("tools", t, "tool.json")))
+    tools = sorted(t for t in (os.listdir("tools") if os.path.isdir("tools") else []) if os.path.isfile(os.path.join("tools", t, "_tooldef.json")))
     for call in calls:
         try:
             cid, tname, arguments = call["id"], call["function"]["name"], call["function"].get("arguments")

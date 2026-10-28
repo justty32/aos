@@ -151,7 +151,7 @@ tools = []
 if session.get("counter_calls", 0) < session["max_calls"]:
     for tool in sorted(os.listdir("tools")) if os.path.isdir("tools") else []:
         try:
-            with open(os.path.join("tools", tool, "tool.json"), encoding="utf-8") as f:
+            with open(os.path.join("tools", tool, "_tooldef.json"), encoding="utf-8") as f:
                 spec = json.load(f)
         except (OSError, ValueError):
             continue

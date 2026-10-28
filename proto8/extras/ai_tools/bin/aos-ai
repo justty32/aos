@@ -33,8 +33,10 @@ HINTS = {   # 下層的錯誤代號 → 下一步（只放常見的）
     "EntryMissing": "目標裡沒有 _entry：aos-ai templates 看可用範本",
     "BrainFailed": "腦連不上：設 AOS_BRAIN_URL（家機 LiteLLM http://localhost:4000/v1），或拿掉它用假腦",
     "ReplyBad": "腦回的不是 OpenAI 形狀：換模型，或 aos-ai history 看最後一則",
-    "ToolUnknown": "腦叫了不存在的工具：aos-ai history 看最後一則；工具放 agents/<名>/agent/tools/<工具>/",
-    "ToolFailed": "工具起不來（aos-exec 不在 PATH？）；工具自己退非 0 不會停在這裡，那行已回給腦",
+    "ToolUnknown": "腦叫了沒登記的工具：aos-ai history 看最後一則；工具放 agents/<名>/agent/tools/<工具>/、"
+                   "登記進 agents/<名>/agent/tools.json（aos-tools --file 那份 add 工具資料夾）",
+    "ToolFailed": "工具起不來（aos-tools、aos-exec 不在 PATH？）；工具自己退非 0 不會停在這裡，那行已回給腦",
+    "ToolsBad": "tools.json 登記的工具有壞的：aos-tools --file agents/<名>/agent/tools.json ls 看是哪個",
     "ArgumentsBad": "參數不對：看原因那句",
     "QuestionMissing": "沒有題目：先 aos-ai ask",
     "HistoryBad": "history.jsonl 壞了：人工看 ws/.stack/history.jsonl",
@@ -107,6 +109,31 @@ def child_env(extra=None):
 
 def which(prog):
     return shutil.which(prog, path=child_env()["PATH"])
+
+
+def aos_tools(agent, *args):
+    """aos-tools --file <agent>/tools.json ……（aos-tools 在 proto8/bin，child_env 已放進 PATH）→ CompletedProcess。"""
+    prog = which("aos-tools")
+    if not prog:
+        raise Fail("CommandMissing", "PATH 上沒有 aos-tools（proto8/bin）", HINTS["CommandMissing"])
+    return subprocess.run([prog, "--file", str(Path(agent) / "tools.json")] + list(args), capture_output=True,
+                          text=True, env=child_env(), stdin=subprocess.DEVNULL)
+
+
+def register_tool(agent, tool_dir):
+    """把 tool_dir 登記進 agent 的 tools.json（aos-tools add，存絕對路徑）；不成＝Fail。"""
+    r = aos_tools(agent, "add", os.path.abspath(tool_dir))
+    if r.returncode != 0:
+        err = (r.stderr.strip().splitlines() or ["aos-tools 退 %d" % r.returncode])[-1]
+        raise Fail("ToolsBad", "登記 %s 進 %s/tools.json 失敗：%s" % (Path(tool_dir).name, agent, err), HINTS["ToolsBad"])
+
+
+def tool_rows(agent):
+    """agent 的工具＝它 tools.json 登記的（aos-tools ls）→ {"tools": [名…]}；登記了壞的工具＝多一個 tools_error（那行錯）。"""
+    r = aos_tools(agent, "ls", "--json")
+    if r.returncode != 0:
+        return {"tools": [], "tools_error": (r.stderr.strip().splitlines() or ["aos-tools 退 %d" % r.returncode])[-1]}
+    return {"tools": [t["name"] for t in json.loads(r.stdout)]}
 
 
 def ticks(pid):                                       # /proc/<pid>/stat 第 22 欄（N-17：pid＋started_at_ticks 認行程）
@@ -229,10 +256,9 @@ def cmd_templates(root, o, pos):
     rows = []
     for d in sorted(TEMPLATES.iterdir()):
         if d.name.startswith("agent-") and (d / "_entry").exists():
-            rows.append({"name": d.name, "path": str(d), "tools": sorted(p.name for p in (d / "tools").glob("*")
-                                                                         if (p / "tool.json").exists())})
+            rows.append({"name": d.name, "path": str(d), **tool_rows(d)})
     out({"ok": True, "templates": rows, "default": "agent-dan",
-         "bundled_tools": sorted(p.name for p in DAN_TOOLS.iterdir() if (p / "tool.json").exists())})
+         "bundled_tools": sorted(p.name for p in DAN_TOOLS.iterdir() if (p / "_tooldef.json").exists())})
 
 
 def resolve_src(spec, home, what):
@@ -264,10 +290,10 @@ def cmd_spawn(root, o, pos):
                 link.symlink_to(orig.resolve())
     for t in tools:
         shutil.copytree(t, a.agent / "tools" / t.name, symlinks=True, ignore=ignore)
+        register_tool(a.agent, a.agent / "tools" / t.name)             # 範本的 tools.json 是相對路徑、複製後照用；加的工具登記絕對路徑
     for d in ("new", "cur", "out", "done", ".stack"):
         (a.ws / d).mkdir(parents=True, exist_ok=True)
-    out({"ok": True, "name": a.name, "from": str(src), "agent": str(a.agent), "ws": str(a.ws),
-         "tools": sorted(p.name for p in (a.agent / "tools").glob("*") if (p / "tool.json").exists())})
+    out({"ok": True, "name": a.name, "from": str(src), "agent": str(a.agent), "ws": str(a.ws), **tool_rows(a.agent)})
 
 
 def cmd_ask(root, o, pos):
@@ -362,7 +388,7 @@ def agent_status(root, a, brief=False):
         s["paths"] = {"agent": str(a.agent), "ws": str(a.ws), "stack": str(a.stack),
                       "cfgs": sorted(str(p.relative_to(a.agent)) for p in a.agent.rglob("*.json")
                                      if "__pycache__" not in p.parts),
-                      "tools": sorted(p.name for p in (a.agent / "tools").glob("*") if (p / "tool.json").exists())}
+                      **tool_rows(a.agent)}
     return s
 
 
@@ -598,7 +624,8 @@ def cmd_make(root, o, pos):
         if not NAME_RE.match(pos[2]):
             raise Fail("NameBad", "工具名不合：%r" % pos[2], "小寫英數、_、-")
         res = {"ok": True, "name": a.name, "tool": pos[2], **mk.scaffold_tool(a.agent / "tools", pos[2], o),
-               "next": "改 _entry 的 TODO；腦下次 think 就看得到（tools/*/tool.json）"}
+               "next": "改 _entry 的 TODO；已登記進 tools.json，腦下次 think 就看得到（aos-tools ls）"}
+        register_tool(a.agent, a.agent / "tools" / pos[2])
         if notes:
             res["notes"] = {**mk.notes_for(res["tool_json"], "tool_json"),
                             "_entry": "工具本體：stdin 收 arguments（JSON）、stdout 整段是結果；退非 0＝ToolFailed、整隻停（explain tool）"}

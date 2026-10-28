@@ -83,18 +83,17 @@ def append_history(*messages):
 
 
 def tools_spec():
-    """工具名＝資料夾名，說明來自 tool.json（同 dan）。"""
+    """工具清單來自 tools.json（aos-tools ls --json，同 dan）；aos-tools 起不來、退非 0＝自己這層的錯。"""
+    try:
+        r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    except OSError as e:
+        die("ToolsBad", "aos-tools 起不來：%s" % e)
+    if r.returncode != 0:
+        die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
     tools = []
-    for tool in (sorted(os.listdir("tools")) if os.path.isdir("tools") else []):
-        spec = None
-        try:
-            spec = read_json(os.path.join("tools", tool, "tool.json"))
-        except (OSError, ValueError):
-            pass
-        if not isinstance(spec, dict):
-            continue
-        function = {"name": tool}
-        function.update({k: spec[k] for k in ("description", "parameters") if k in spec})
+    for t in json.loads(r.stdout):
+        function = {"name": t["name"]}
+        function.update({k: t["tooldef"][k] for k in ("description", "parameters") if k in t["tooldef"]})
         tools.append({"type": "function", "function": function})
     return tools
 

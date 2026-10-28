@@ -1,6 +1,6 @@
 """test_topdown_galtxt_b_selfopt - galtxt-b 自我優化工具包（lib/selfopt：六個工具＋claude_code＋host；plan/runs/round6/selfopt.md）。全部假腦、假 claude。
 訓練場：train/init 複製出 tree/（一次，之後每個測試複製一份），session.json 指定節點、預算；工具用 aos-exec --ws 訓練場 叫（SELFOPT_SESSION 指 session）。
-驗：工具契約（tool.json、_metainfo、錯誤一行 stderr＋stdout 退 1）、寫入範圍外拒寫、凍結節點拒寫、白名單、edit_self 先存 versions/、set（JSON 指標）、
+驗：工具契約（_tooldef.json、_metainfo、錯誤一行 stderr＋stdout 退 1）、寫入範圍外拒寫、凍結節點拒寫、白名單、edit_self 先存 versions/、set（JSON 指標）、
 extract_tool 建出能跑的工具、預算、host 假腦走一次後 lifecycle.history 多一筆、claude_code（假 claude）越界還原。repo 的定義資料夾 hash 不變。"""
 import hashlib, json, os, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
@@ -94,7 +94,7 @@ class SelfOpt(unittest.TestCase):
         for t in TOOLS:
             with self.subTest(tool=t):
                 self.assertTrue(os.access(KIT / t / "_entry", os.X_OK))
-                spec = jload(KIT / t / "tool.json")
+                spec = jload(KIT / t / "_tooldef.json")
                 self.assertTrue(spec["description"])
                 self.assertEqual(spec["parameters"]["type"], "object")
                 meta = jload(KIT / t / "_metainfo")
@@ -143,7 +143,7 @@ class SelfOpt(unittest.TestCase):
                 self.assertEqual(r.returncode, 1)
                 self.assertIn("FrozenBad", r.stdout)
         s2 = self.session(node="lib/lint")                                 # 節點本身凍結：自己的檔也不准
-        r = self.call("edit_self", {"path": "tool.json", "content": "{}"}, s2)
+        r = self.call("edit_self", {"path": "_tooldef.json", "content": "{}"}, s2)
         self.assertIn("FrozenBad", r.stdout)
         self.assertEqual(len(jload(s2)["attempted_violations"]), 1)
 

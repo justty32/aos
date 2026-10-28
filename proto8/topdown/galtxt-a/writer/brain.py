@@ -1,4 +1,4 @@
-# brain.py - think 格（抄 agent-dan）：認領題目、把 tools/*/tool.json 組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history
+# brain.py - think 格（抄 agent-dan）：認領題目、把 tools/*/_tooldef.json 組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history
 # 沒設 AOS_BRAIN_URL＝假腦（模板填槽：先叫 lint、再交稿）；有設就問 OpenAI 相容的 {url}/chat/completions。失敗時 history 不接任何東西、退 1（P-20）。
 # 假腦技能表（第三輪，round3 § 6）：WEAK 裡的（模型標籤, 風格）＝這個假寫手寫這種風格會寫砸——女角那句句尾加 NG 標記「～～」（lint 扣 Tier 1）。
 # 模型標籤從 AOS_BRAIN_MODEL 來（各寫手 .env）：含 sol＝"sol"，其餘＝""。表是劇本、不是品質證據；測試要換時設 GALTXT_FAKE_WEAK（「標籤:風格」逗號分隔，只有假腦讀）。
@@ -91,13 +91,13 @@ OPT = os.environ.get("GALTXT_OPT") == "1"
 if OPT and ALLOWED is not None:
     ALLOWED |= {t for t in (os.listdir("tools") if os.path.isdir("tools") else []) if t.startswith("opt_")}
 
-# tools：工具名＝資料夾名，說明來自 tool.json 的 description／parameters（其他 key 忽略；讀不懂的 tool.json 當作沒有）
+# tools：工具名＝資料夾名，說明來自 _tooldef.json 的 description／parameters（其他 key 忽略；讀不懂的 _tooldef.json 當作沒有）
 tools = []
 for tool in (sorted(os.listdir("tools")) if os.path.isdir("tools") else []):
     if ALLOWED is not None and tool not in ALLOWED:
         continue
     try:
-        with open(os.path.join("tools", tool, "tool.json"), encoding="utf-8") as f:
+        with open(os.path.join("tools", tool, "_tooldef.json"), encoding="utf-8") as f:
             spec = json.load(f)
     except (OSError, ValueError):
         continue

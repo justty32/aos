@@ -1,5 +1,5 @@
 {
- "description": "把一個環節抽成新工具：在自己的 tools/<name>/ 建 tool.json、_entry（code）、_metainfo，並把 name 加進 stage.json 的 tools。code 是 python 程式：stdin 收 JSON、stdout 印結果、錯時 stderr 與 stdout 各一行「<name>: 代號 原因」退 1。",
+ "description": "把一個環節抽成新工具：在自己的 tools/<name>/ 建 _tooldef.json、_entry（code）、_metainfo，並把 name 加進 stage.json 的 tools。code 是 python 程式：stdin 收 JSON、stdout 印結果、錯時 stderr 與 stdout 各一行「<name>: 代號 原因」退 1。",
  "parameters": {
   "type": "object",
   "properties": {

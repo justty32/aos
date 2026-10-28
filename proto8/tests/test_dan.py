@@ -131,7 +131,7 @@ class T(unittest.TestCase):
         fns = [t["function"] for t in first["tools"]]
         self.assertEqual([f["name"] for f in fns], ["clock", "math"])
         for f in fns:
-            spec = json.loads(Path(DAN, "tools", f["name"], "tool.json").read_text())
+            spec = json.loads(Path(DAN, "tools", f["name"], "_tooldef.json").read_text())
             self.assertEqual((f["description"], f["parameters"]), (spec["description"], spec["parameters"]))
         self.assertEqual(first["messages"][0], {"role": "system", "content": Path(DAN, "system.txt").read_text()})
         self.assertEqual(first["messages"][1], {"role": "user", "content": "17*23 是多少？"})
@@ -179,7 +179,7 @@ class T(unittest.TestCase):
         self.assert_back_to_brain(self.dan(self.b.url), "act: ToolUnknown weather（能叫的：clock、math）")
 
     def test_tool_name_cannot_escape(self):
-        """工具名帶 ../ 也當不認得（名字只認 tools/ 底下有 tool.json 的資料夾）。"""
+        """工具名帶 ../ 也當不認得（名字只認 tools.json 登記過的）。"""
         self.b = self.brain(tool_reply(call("c1", "../tools/math", {"expr": "1"})), answer("好"))
         self.ask()
         self.assert_back_to_brain(self.dan(self.b.url), "act: ToolUnknown ../tools/math")

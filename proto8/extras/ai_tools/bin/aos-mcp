@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
-# aos-mcp - 把 aos 的資料夾程式（有 tool.json 的）當 MCP tools 給外部 agent（Claude Code 等）叫；stdio JSON-RPC
-# 白話版：這支是「翻譯櫃台」。外面的 agent 只會講 MCP 這種話，aos 的工具只認「stdin 給 JSON、stdout 拿結果」；
-# 櫃台把兩邊的話互相翻過去，自己不懂任何一個工具在做什麼（C-52）。設計：proto8/topdown/galtxt-a/plan/side-mcp.md。
+# aos-mcp - 把 agent 資料夾的 tools.json（aos-tools 的工具註冊檔）當 MCP tools 給外部 agent（Claude Code、pi coding agent 等）叫；stdio JSON-RPC
+# 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。
+# 外面的 agent 只會講 MCP；櫃台把「有哪些工具」交給 `aos-tools ls --json`、「叫一次」交給 `aos-tools call 名`，
+# 自己不懂任何一個工具在做什麼、也不管工具是資料夾、JSON 還是可執行檔（C-52）。設計：proto8/thinking/2026-10-28-aos-tools.md。
 #
-# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] DIR...
-#   DIR 有 tool.json＝一個 tool（名字＝資料夾名）；沒有但底下有 tools/＝把 tools/*/ 裡有 tool.json 的都列進來。
+# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] AGENT_DIR...
+#   每個 AGENT_DIR 讀它的 AGENT_DIR/tools.json（沒有這份檔＝ToolMissing）；好幾個的工具合在一起，撞名＝ToolsBad。
+#   清單每次 tools/list、tools/call 都重讀（tools.json 變了，下次列就看得到；不主動通知 listChanged）。
 #   工作區＝--ws ＞ $AOS_WS；stack＝--stack ＞ $AOS_STACK ＞ $WS/.stack/。每次叫工具：
-#   AOS_STACK=<stack>/<名>/ aos-exec --ws WS DIR（aos-exec 由 PATH 找，呼叫者放好），arguments 進 stdin、stdout 整段回去，
-#   退非 0＝isError；逾時＝_metainfo 的 time_ms.max，沒寫用 --timeout-s（預設 60），到了整群 TERM、2 秒後 KILL。
-#   每次叫完在 <stack>/calls.jsonl 記一行（名字、arguments、結束碼、花多久），事後查「外面的 agent 叫了什麼」。
-# 只做 initialize、ping、tools/list、tools/call；沒有 progress（長工具第二版再做）、resources、prompts、HTTP。
-# 錯：自己的錯 stderr 一行「aos-mcp: 代號 原因」、退 1（ArgumentsBad、WsMissing、ToolMissing、ToolJsonBad）。
+#   AOS_WS=WS AOS_STACK=<stack>/<名>/ aos-tools --file AGENT_DIR/tools.json call 名（aos-tools、aos-exec 由 PATH 找，呼叫者放好），
+#   arguments 進 stdin、stdout 整段回去，退非 0＝isError；逾時＝工具 _metainfo 的 time_ms.max，沒寫用 --timeout-s（預設 60），
+#   到了整群 TERM、2 秒後 KILL。每次叫完在 <stack>/calls.jsonl 記一行（名字、arguments、結束碼、花多久）。
+# 只做 initialize、ping、tools/list、tools/call；沒有 progress、resources、prompts、HTTP。
+# 錯：自己的錯 stderr 一行「aos-mcp: 代號 原因」、退 1（ArgumentsBad、WsMissing、ToolMissing、ToolsBad）。
+#   啟動時 aos-tools ls 失敗＝ToolsBad（aos-tools 自己那行照樣在 stderr）；跑起來之後重讀失敗＝那一則 JSON-RPC 回錯誤、不退。
 import json, os, signal, subprocess, sys, time
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
+
+
+class ToolsBad(Exception):
+    pass
 
 
 def die(code, reason):
@@ -23,7 +30,7 @@ def die(code, reason):
 
 
 def parse_args(argv):
-    """命令列 → (ws, stack, timeout_s, dirs)。"""
+    """命令列 → (ws, stack, timeout_s, registries)。"""
     ws, stack, timeout_s, dirs = os.environ.get("AOS_WS"), os.environ.get("AOS_STACK"), 60.0, []
     i = 0
     while i < len(argv):
@@ -43,25 +50,23 @@ def parse_args(argv):
                     die("ArgumentsBad", "--timeout-s 要是數字")
             i += 2
         elif a.startswith("--"):
-            die("ArgumentsBad", "不認得的旗標 %s（usage: aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] DIR...）" % a)
+            die("ArgumentsBad", "不認得的旗標 %s（usage: aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] AGENT_DIR...）" % a)
         else:
             dirs.append(a)
             i += 1
     if not dirs:
-        die("ArgumentsBad", "至少給一個 DIR（usage: aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] DIR...）")
+        die("ArgumentsBad", "至少給一個 AGENT_DIR（usage: aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] AGENT_DIR...）")
     if not ws or not os.path.isdir(ws):
         die("WsMissing", "沒給 --ws、也沒設 AOS_WS，或不是資料夾")
+    regs = []
+    for d in dirs:
+        reg = os.path.join(os.path.abspath(d), "tools.json")
+        if not os.path.isfile(reg):
+            die("ToolMissing", "%s 沒有 tools.json（用 aos-tools add 登記工具）" % d)
+        regs.append(reg)
     ws = os.path.abspath(ws)
     stack = os.path.abspath(stack) if stack else os.path.join(ws, ".stack")
-    return ws, stack, timeout_s, dirs
-
-
-def load_json(path):
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError) as e:
-        die("ToolJsonBad", "%s 讀不了：%s" % (path, e))
+    return ws, stack, timeout_s, regs
 
 
 def annotations(meta):
@@ -78,55 +83,41 @@ def annotations(meta):
     return out
 
 
-def load_tool(d):
-    """一個有 tool.json 的資料夾 → {name, dir, spec, max_s}。"""
-    tj = load_json(os.path.join(d, "tool.json"))
-    if not isinstance(tj, dict) or not isinstance(tj.get("parameters"), dict):
-        die("ToolJsonBad", "%s/tool.json 要是物件、有 parameters" % d)
-    name = os.path.basename(os.path.normpath(d))
-    spec = {"name": name, "description": tj.get("description", ""), "inputSchema": tj["parameters"]}
-    meta, max_s = {}, None
-    if os.path.isfile(os.path.join(d, "_metainfo")):
-        meta = load_json(os.path.join(d, "_metainfo"))
-        if not isinstance(meta, dict):
-            die("ToolJsonBad", "%s/_metainfo 要是物件" % d)
-    hints = annotations(meta)
-    if hints:
-        spec["annotations"] = hints
-    t = meta.get("time_ms")
-    if isinstance(t, dict) and isinstance(t.get("max"), (int, float)) and t["max"] > 0:
-        max_s = t["max"] / 1000.0
-    return {"name": name, "dir": os.path.abspath(d), "spec": spec, "max_s": max_s}
-
-
-def load_tools(dirs):
+def load_tools(regs):
+    """問 aos-tools 每份註冊檔登記了什麼 → {名: {reg, spec, max_s}}；失敗丟 ToolsBad。"""
     tools = {}
-    for d in dirs:
-        if os.path.isfile(os.path.join(d, "tool.json")):
-            found = [d]
-        elif os.path.isdir(os.path.join(d, "tools")):
-            sub = os.path.join(d, "tools")
-            found = [os.path.join(sub, n) for n in sorted(os.listdir(sub))
-                     if os.path.isfile(os.path.join(sub, n, "tool.json"))]
-        else:
-            die("ToolMissing", "%s 沒有 tool.json、也沒有 tools/" % d)
-        for f in found:
-            t = load_tool(f)
+    for reg in regs:
+        try:
+            r = subprocess.run(["aos-tools", "--file", reg, "ls", "--json"], stdin=subprocess.DEVNULL,
+                               stdout=subprocess.PIPE, text=True)   # stderr 不吞：aos-tools 自己說哪個工具壞了
+        except OSError as e:
+            raise ToolsBad("aos-tools 起不來：%s" % e)
+        if r.returncode != 0:
+            raise ToolsBad("aos-tools ls %s 退 %d" % (reg, r.returncode))
+        for t in json.loads(r.stdout):
             if t["name"] in tools:
-                die("ArgumentsBad", "工具名重複：%s" % t["name"])
-            tools[t["name"]] = t
+                raise ToolsBad("工具名重複：%s（%s 與 %s）" % (t["name"], tools[t["name"]]["reg"], reg))
+            td, meta = t["tooldef"], t.get("metainfo") or {}
+            spec = {"name": t["name"], "description": td.get("description", ""),
+                    "inputSchema": td.get("parameters", {"type": "object", "properties": {}})}
+            hints = annotations(meta)
+            if hints:
+                spec["annotations"] = hints
+            max_s, tm = None, meta.get("time_ms")
+            if isinstance(tm, dict) and isinstance(tm.get("max"), (int, float)) and tm["max"] > 0:
+                max_s = tm["max"] / 1000.0
+            tools[t["name"]] = {"reg": reg, "spec": spec, "max_s": max_s}
     return tools
 
 
-def call(tool, args, ws, stack, timeout_s):
+def call(name, tool, args, ws, stack, timeout_s):
     """跑一次工具 → (結束碼, stdout, 花幾毫秒, 逾時秒數)。結束碼 None＝逾時被收掉。"""
-    cell = os.path.join(stack, tool["name"]) + "/"
-    env = dict(os.environ, AOS_STACK=cell)
+    env = dict(os.environ, AOS_WS=ws, AOS_STACK=os.path.join(stack, name) + "/")
     env.pop("AOS_ENTRY", None)                  # 讓 aos-exec 用預設入口 _entry，不吃外面殘留的
     limit = tool["max_s"] or timeout_s
     t0 = time.monotonic()
-    p = subprocess.Popen(["aos-exec", "--ws", ws, tool["dir"]], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         env=env, start_new_session=True)   # 自成一群：逾時能整群收掉（P-36）；stderr 不讀，照原樣流出去
+    p = subprocess.Popen(["aos-tools", "--file", tool["reg"], "call", name], stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE, env=env, start_new_session=True)   # 自成一群：逾時能整群收掉（P-36）
     try:
         out, _ = p.communicate(json.dumps(args).encode(), timeout=limit)
         code = p.returncode
@@ -155,7 +146,7 @@ def tools_call(params, tools, ws, stack, timeout_s):
     name, args = params.get("name"), params.get("arguments") or {}
     if name not in tools:
         return None, (-32602, "沒有這個工具：%s" % name)
-    code, out, ms, limit = call(tools[name], args, ws, stack, timeout_s)
+    code, out, ms, limit = call(name, tools[name], args, ws, stack, timeout_s)
     record(stack, {"name": name, "arguments": args, "code": code, "elapsed_ms": ms,
                    "called_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
     if code is None:
@@ -167,37 +158,43 @@ def tools_call(params, tools, ws, stack, timeout_s):
     return {"content": [{"type": "text", "text": text}], "isError": code != 0}, None
 
 
-def handle(msg, tools, ws, stack, timeout_s):
+def handle(msg, regs, ws, stack, timeout_s):
     """一則 JSON-RPC → 回覆（通知不回，傳回 None）。"""
     method, params, mid = msg.get("method"), msg.get("params") or {}, msg.get("id")
     if mid is None:                             # 通知（notifications/initialized 等）：不用回
         return None
     result, err = None, None
-    if method == "initialize":
-        result = {"protocolVersion": params.get("protocolVersion", PROTOCOL),
-                  "capabilities": {"tools": {}}, "serverInfo": {"name": NAME, "version": "0.1"}}
-    elif method == "ping":
-        result = {}
-    elif method == "tools/list":
-        result = {"tools": [t["spec"] for t in tools.values()]}
-    elif method == "tools/call":
-        result, err = tools_call(params, tools, ws, stack, timeout_s)
-    else:
-        err = (-32601, "不支援的方法：%s" % method)
+    try:
+        if method == "initialize":
+            result = {"protocolVersion": params.get("protocolVersion", PROTOCOL),
+                      "capabilities": {"tools": {}}, "serverInfo": {"name": NAME, "version": "0.2"}}
+        elif method == "ping":
+            result = {}
+        elif method == "tools/list":
+            result = {"tools": [t["spec"] for t in load_tools(regs).values()]}
+        elif method == "tools/call":
+            result, err = tools_call(params, load_tools(regs), ws, stack, timeout_s)
+        else:
+            err = (-32601, "不支援的方法：%s" % method)
+    except ToolsBad as e:                       # 跑起來之後 tools.json 壞了：這一則回錯，不退
+        err = (-32603, "%s: ToolsBad %s" % (NAME, e))
     if err:
         return {"jsonrpc": "2.0", "id": mid, "error": {"code": err[0], "message": err[1]}}
     return {"jsonrpc": "2.0", "id": mid, "result": result}
 
 
 def main():
-    ws, stack, timeout_s, dirs = parse_args(sys.argv[1:])
-    tools = load_tools(dirs)
+    ws, stack, timeout_s, regs = parse_args(sys.argv[1:])
+    try:
+        load_tools(regs)                        # 啟動時先讀一次：壞了就別開櫃台
+    except ToolsBad as e:
+        die("ToolsBad", str(e))
     for line in sys.stdin:                      # 一行一則（MCP stdio 傳輸）
         if not line.strip():
             continue
         try:
             msg = json.loads(line)
-            reply = handle(msg, tools, ws, stack, timeout_s) if isinstance(msg, dict) else \
+            reply = handle(msg, regs, ws, stack, timeout_s) if isinstance(msg, dict) else \
                 {"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "要是一個物件"}}
         except ValueError as e:
             reply = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "不是 JSON：%s" % e}}

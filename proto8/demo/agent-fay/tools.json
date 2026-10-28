@@ -1,0 +1,6 @@
+{
+ "tools": {
+  "claude": {"path": "tools/claude"},
+  "codex": {"path": "tools/codex"}
+ }
+}

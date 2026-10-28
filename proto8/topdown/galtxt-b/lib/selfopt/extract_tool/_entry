@@ -2,7 +2,7 @@
 # extract_tool - 抽工具（plan/round6.md §1b，impl pure）：在自己的 tools/<name>/ 建一個純函數殼（rules_shell.py＝照 rules.json 做正規式替換）＋你給的規則表
 # 介面：stdin {"name": 工具名（小寫英數底線）, "step": 交給它的那個環節（一句）, "why": 為什麼抽, "rules": [{"pattern", "replace", "max_count"?, "note"?}]}
 #   → stdout 一行 JSON {tool, files, system_txt_line?, lifecycle}。
-# 做的事（照 §1b ①～④）：① tools/<name>/{_entry（殼）, rules.json, tool.json, _metainfo（宣告由程式生成）}；② tools/ 沒有就建（帶 _metainfo）；
+# 做的事（照 §1b ①～④）：① tools/<name>/{_entry（殼）, rules.json, _tooldef.json, _metainfo（宣告由程式生成）}；② tools/ 沒有就建（帶 _metainfo）；
 #   ③ 自己有 system.txt 就加一句「<step>：交給工具 <name>（text＝整段稿子），不要自己做。」；④ _metainfo.lifecycle 的 tools[<name>]、counter_steps_tooled +1。
 #   改 system.txt 與 _metainfo 前先存 versions/selfopt_<session>/（同 edit_self）。impl agent 這版不做（ArgumentsBad）。
 # 邊界同 edit_self（ScopeBad、FrozenBad；tools/<name>/ 是新建、不經白名單）。已有同名工具＝ToolBad（不蓋）。
@@ -50,7 +50,7 @@ def main(args, ctx):
     guard.write_text(os.path.join(tdir, "_entry"), src)
     os.chmod(os.path.join(tdir, "_entry"), 0o755)
     guard.write_json(os.path.join(tdir, "rules.json"), rules)
-    guard.write_json(os.path.join(tdir, "tool.json"), {
+    guard.write_json(os.path.join(tdir, "_tooldef.json"), {
         "description": "%s（純函數，照規則表做；回 {text: 改後的稿, changes}，交稿時原樣交出 text）" % step.strip(),
         "parameters": {"type": "object", "properties": {"text": {"type": "string", "description": "整段原文"}}, "required": ["text"]}})
     guard.write_meta(tdir, {"summary": "純函數（selfopt extract_tool 抽的）：%s" % step.strip(),
@@ -59,7 +59,7 @@ def main(args, ctx):
                             "reads": ["stdin {text}", "rules.json"], "writes": [], "grow_level": 3, "uses_llm": False,
                             "lifecycle": {"stage": "pure", "counter_steps_tooled": 1, "counter_steps_total": 1, "brain_decides": []},
                             "extracted": {"by": "selfopt", "session": ctx.session["session"], "why": why.strip()}})
-    files += ["tools/%s/%s" % (name, n) for n in ("_entry", "rules.json", "tool.json", "_metainfo")]
+    files += ["tools/%s/%s" % (name, n) for n in ("_entry", "rules.json", "_tooldef.json", "_metainfo")]
     out = {"tool": "tools/" + name, "files": files}
     sp = os.path.join(home, "system.txt")
     if os.path.isfile(sp):

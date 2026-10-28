@@ -13,7 +13,7 @@
 | `brain.py` | 組 context：system＋先前對話目錄＋〔有 `tools/memory` 就附記憶〕＋挑出的舊題（只有問與結論）＋這題完整；整份 ≤ `KAI_FULL_UNDER`（1500 token）就全送；每次記一行 `$AOS_STACK/context.jsonl` |
 | `act.py` | 同 agent-dan，多給工具 `RECALL_HISTORY`＝自己的 `history.jsonl` |
 | `system.txt` | 告訴腦看到的不是全部、不夠就 recall 或重查、回答把關鍵寫完整 |
-| `tools/recall/_entry`、`tool.json` | `op`＝search（關鍵字找舊題）／read（展開一題，`detail` 連工具原始輸出）；錯 `HistoryMissing`、`HistoryBad` |
+| `tools/recall/_entry`、`_tooldef.json` | `op`＝search（關鍵字找舊題）／read（展開一題，`detail` 連工具原始輸出）；錯 `HistoryMissing`、`HistoryBad` |
 | `tools/recall/turns.py` | 把 history 切成題、照意圖挑（上一題、指代詞、「第 N 題」、字面重疊）；brain 也 import |
 | `tools/read` | 符號連結 → `../../../lib/base/read`（10-24 遷移前指 demo/pi-tools/read） |
 
@@ -42,7 +42,7 @@
 | `.env` | 模型名；說明 `AOS_HEAP`（沒設＝`$AOS_WS/.heap/`，指同一個＝共用） |
 | `brain.py` | 同 agent-dan，多一件：問腦前把偏好全部＋跟題目有關的幾筆接在 system 後面（不進 history）；庫壞＝`HeapBad`；假腦附上記憶字數 |
 | `system.txt` | 教腦什麼該存、只存確認過的、衝突以現在說的為準 |
-| `tools/memory` | 符號連結 → `../../../lib/aos/memory`（10-24 遷移；`_entry`、`tool.json`、`_metainfo`、`heap.py` 都在庫裡，見 [06-周邊工具](06-周邊工具.md)）；brain 照舊從 `tools/memory` import `heap` |
+| `tools/memory` | 符號連結 → `../../../lib/aos/memory`（10-24 遷移；`_entry`、`_tooldef.json`、`_metainfo`、`heap.py` 都在庫裡，見 [06-周邊工具](06-周邊工具.md)）；brain 照舊從 `tools/memory` import `heap` |
 
 ### agent-pip
 

@@ -1,0 +1,8 @@
+{
+ "tools": {
+  "clock": {"path": "tools/clock"},
+  "math": {"path": "tools/math"},
+  "read": {"path": "tools/read"},
+  "recall": {"path": "tools/recall"}
+ }
+}

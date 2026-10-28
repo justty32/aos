@@ -1,10 +1,10 @@
 # suggest.py - metatable --suggest 的規則：套 plan/round2-collapse.md § 1 的判準，列出收攏候選（只列、不做）
 """每個真資料夾（不跟捷徑、跳過 . 開頭）看 _metainfo＋掃資料夾，先看「不縮」再看「併／縮」：
 
-N-1 fs_needs 有 BLOCK 裡的（或有 tool.json；mount 只在 agent／有 tool.json 時擋，其餘標「要人判」）；kind 不是 data 卻有 git_tracked 也擋
+N-1 fs_needs 有 BLOCK 裡的（或有 _tooldef.json；mount 只在 agent／有 _tooldef.json 時擋，其餘標「要人判」）；kind 不是 data 卻有 git_tracked 也擋
 N-2 伴隨檔（_entry、_metainfo 以外的檔）≥ 2——只數檔，不看 grow_level（grow_level 4 可能只是因為底下有 tools/）
 N-3 callers ≥ 2 而且入口是腳本（同內容葉片先合計 callers：真身＝最淺那份）
-A-1 沒有 _metainfo、沒有 _entry、只有一個子資料夾 → unwrap；例外：叫 tools/ 而且那個子資料夾有 tool.json
+A-1 沒有 _metainfo、沒有 _entry、只有一個子資料夾 → unwrap；例外：叫 tools/ 而且那個子資料夾有 _tooldef.json
 B-4 同內容葉片（整個資料夾的檔名＋內容＋+x 一樣）→ 真身以外換捷徑
 B-3 kind=data、fs_needs ⊆ {git_tracked}、沒有子資料夾、全是 JSON、合計 < 8 KB 且 < 300 行、讀者恰好一個 → table
 B-2 _entry 是 +x 腳本、沒有伴隨檔、callers 1、呼叫方是 fsm.json／loop.json 的一格 → inline（kind=glue 多標 A-2）
@@ -133,7 +133,7 @@ def suggest(root, nodes=None):
         if meta is None:
             if "_entry" in files or extra or lk or len(subs) != 1:
                 continue
-            if name == "tools" and os.path.isfile(os.path.join(here, subs[0], "tool.json")):
+            if name == "tools" and os.path.isfile(os.path.join(here, subs[0], "_tooldef.json")):
                 continue                                                    # A-1 例外（P-41）
             into = [rel(a) for a, t in links if t == os.path.join(here, subs[0]) or t.startswith(here + os.sep)]
             row(here, "A-1", "collapse unwrap %s（%s 上提一層）" % (rel(here), subs[0]),
@@ -144,13 +144,13 @@ def suggest(root, nodes=None):
         kind = meta.get("kind")
         fs = set(meta.get("fs_needs") or []) if isinstance(meta.get("fs_needs"), list) else set()
         block = fs & BLOCK
-        if "tool.json" in files:
+        if "_tooldef.json" in files:
             block.add("tool_json")
         if "git_tracked" in fs and kind != "data":
             block.add("git_tracked")
         notes = []
         if "mount" in fs:
-            if kind == "agent" or "tool.json" in files:
+            if kind == "agent" or "_tooldef.json" in files:
                 block.add("mount")
             else:
                 notes.append("要人判：fs_needs 有 mount（是掛別人還是被掛？）")

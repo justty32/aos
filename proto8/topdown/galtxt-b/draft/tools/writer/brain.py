@@ -116,7 +116,7 @@ def append(message):
 if not history or history[-1].get("role") not in ("user", "tool"):
     append({"role": "user", "content": render(question)})
 
-tools = []                                       # 第 1 輪 writer 沒有工具；留著這段，之後掛 tools/<名>/tool.json 就能用（P-41）
+tools = []                                       # 第 1 輪 writer 沒有工具；留著這段，之後掛 tools/<名>/_tooldef.json 就能用（P-41）
 OFF = {"lint": "GALTXT_OFF_SELF_LINT", "trim": "GALTXT_OFF_TRIM"}      # 量貢獻用的關閉開關（round5 §3a，宣告在 _metainfo.ablation）：設 1＝不給腦這個工具
 try:                                             # round6 freeze_order：act_rules.json 的 after_answer＝程式交稿前一律叫，不再給腦（同 act.py）
     with open("act_rules.json", encoding="utf-8") as f:
@@ -125,7 +125,7 @@ except (OSError, ValueError, AttributeError):
     FROZEN = set()
 for tool in (sorted(t for t in os.listdir("tools") if os.environ.get(OFF.get(t, "")) != "1" and t not in FROZEN) if os.path.isdir("tools") else []):
     try:
-        with open(os.path.join("tools", tool, "tool.json"), encoding="utf-8") as f:
+        with open(os.path.join("tools", tool, "_tooldef.json"), encoding="utf-8") as f:
             spec = json.load(f)
     except (OSError, ValueError):
         continue

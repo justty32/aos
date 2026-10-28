@@ -1,0 +1,341 @@
+#!/usr/bin/env python3
+"""aos-tools [--file F] add|rm|ls|get|call … — 一個 agent 資料夾一份工具註冊檔（tools.json），登記這隻 agent 能叫哪些工具。
+
+設計與代定：proto8/thinking/2026-10-28-aos-tools.md。白話：tools.json 是「這隻 agent 的工具通訊錄」，
+aos agent（agent-dan 等範本）想問腦之前先 `aos-tools ls --json` 拿工具清單，腦要叫工具時 `aos-tools call 名`；
+claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的翻譯櫃台）。
+
+    aos-tools [--file F] add [--override] [--name N] XXX   登記 XXX（檔或資料夾；相對路徑從 cwd 算），存絕對路徑
+    aos-tools [--file F] rm XXX                            拿掉（XXX＝工具名；不是登記過的名字就當路徑，拿掉指到那裡的）
+    aos-tools [--file F] ls [--json]                       列：一行一個「名字 TAB 種類 TAB 路徑」；--json＝一行 JSON 陣列
+    aos-tools [--file F] get XXX                           一個工具一行 JSON：name、kind、path、tooldef、metainfo（有才給）
+    aos-tools [--file F] call 名                           叫一次：stdin＝arguments（JSON），stdout／結束碼＝工具的
+
+註冊檔：--file ＞ ./tools.json。長這樣：{"tools": {"名": {"path": "/絕對/路徑"}, …}}；沒有這份檔＝沒登記任何工具。
+  aos 讀的 JSON 都解指示詞（N-45）：檔裡有 $ref／$env 就交給 aos-json 解（`$ref` 陣列＝把註冊檔拆成好幾份），
+  改的時候 aos-json set／del --follow 穿過 $ref 改被參照的那份。add 一律寫絕對路徑；手寫的相對路徑從這份檔的資料夾算（範本搬家不斷）。
+三種登記對象（種類照 aos-exec 認法，N-61：資料夾；檔有 +x＝可執行檔；檔沒 +x＝JSON）：
+  dir   資料夾裡有 _tooldef（先找）或 _tooldef.json；_metainfo（或 _metainfo.json）有就一起給。叫＝aos-exec 資料夾，arguments 進 stdin。
+  json  JSON 檔（aos-exec 跑得動的那種）頂層要有 _tooldef 物件；_metainfo key 有就一起給。叫＝aos-exec 檔，arguments 進 stdin。
+  exe   python 或其他可執行檔：`XXX --tooldef` 在 stdout 吐工具定義（JSON 物件，10 秒內、退 0）；結果快取在註冊檔裡
+        （檔的 mtime 與大小沒變就用快取；變了就重跑、不寫回——跑起來時不寫定義資料夾，P-15）。
+        叫＝aos-exec 檔 --tool-call 任務檔：arguments 先寫成 $AOS_STACK/tool_call.json（沒設 AOS_STACK＝暫存檔、用完刪），stdin 不給。
+工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收不管。
+工具名：--name ＞ 檔名去掉副檔名（資料夾＝資料夾名），只收 [A-Za-z0-9_-]、最多 64 字（OpenAI／MCP 的限制）。撞名＝ToolExists，--override 蓋掉。
+不符合要求一律報錯、不猜不跳過（ls／get 碰到登記了但壞掉的工具也報錯，訊息帶工具名）。
+錯：stderr 一行「aos-tools: 代號 原因」、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、RegistryBad、PathMissing、
+  ToolDefMissing、ToolDefBad、NameBad、ToolExists、ToolMissing、DirectiveBad、CommandMissing、WriteFailed。call 自己沒錯時結束碼是工具的。
+"""
+import json, os, re, subprocess, sys, tempfile
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import aos_flags
+
+NAME = "aos-tools"
+USAGE = "aos-tools [--file F] add [--override] [--name N] XXX | rm XXX | ls [--json] | get XXX | call 名"
+NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+TOOLDEF_TIMEOUT_S = 10
+
+
+class Fail(Exception):
+    def __init__(self, code, reason):
+        super().__init__(reason)
+        self.code = code
+
+
+def has_directive(v):
+    if isinstance(v, dict):
+        return "$ref" in v or "$env" in v or any(has_directive(x) for x in v.values())
+    if isinstance(v, list):
+        return any(has_directive(x) for x in v)
+    return False
+
+
+def read_json(path, key, bad):
+    """讀 path（key＝None 讀整份，否則讀頂層那個 key）；有指示詞就交給 aos-json 解（只解讀的那一格，N-45）。
+    回 (原文整份, 值)；key 不在＝值是 None。讀不了、不是 JSON＝bad 代號。"""
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f)
+    except (OSError, ValueError) as e:
+        raise Fail(bad, "%s 讀不了或不是 JSON：%s" % (path, e))
+    if not has_directive(raw):
+        if key is None:
+            return raw, raw
+        return raw, (raw.get(key) if isinstance(raw, dict) else None)
+    if key is not None and isinstance(raw, dict) and key not in raw and "$ref" not in raw:
+        return raw, None
+    target = path + ("#/" + key if key is not None else "")
+    try:
+        r = subprocess.run(["aos-json", "get", "--follow", "--resolve", target], stdout=subprocess.PIPE,
+                           stdin=subprocess.DEVNULL, text=True)     # stderr 不吞：aos-json 自己說哪裡解不開
+    except OSError as e:
+        raise Fail("CommandMissing", "%s 有指示詞，要 aos-json 解，但 aos-json 起不來：%s" % (path, e))
+    if r.returncode != 0:
+        raise Fail("DirectiveBad", "%s 的指示詞解不開（aos-json 退 %d）" % (target, r.returncode))
+    return raw, json.loads(r.stdout)
+
+
+def check_tooldef(td, where):
+    if not isinstance(td, dict):
+        raise Fail("ToolDefBad", "%s 的工具定義要是 JSON 物件" % where)
+    if "description" in td and not isinstance(td["description"], str):
+        raise Fail("ToolDefBad", "%s 的工具定義 description 要是字串" % where)
+    if "parameters" in td and not isinstance(td["parameters"], dict):
+        raise Fail("ToolDefBad", "%s 的工具定義 parameters 要是物件（JSON Schema）" % where)
+    return td
+
+
+def stamp(path):
+    st = os.stat(path)
+    return "%d-%d" % (st.st_mtime_ns, st.st_size)
+
+
+def run_tooldef(path):
+    try:
+        r = subprocess.run([path, "--tooldef"], cwd=os.path.dirname(path), stdin=subprocess.DEVNULL,
+                           stdout=subprocess.PIPE, timeout=TOOLDEF_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        raise Fail("ToolDefBad", "%s --tooldef 超過 %d 秒沒結束" % (path, TOOLDEF_TIMEOUT_S))
+    except OSError as e:
+        raise Fail("ToolDefBad", "%s --tooldef 跑不起來（可執行檔要有 #! 開頭）：%s" % (path, e))
+    if r.returncode != 0:
+        raise Fail("ToolDefBad", "%s --tooldef 退 %d（不支援 --tooldef？）" % (path, r.returncode))
+    try:
+        return json.loads(r.stdout.decode("utf-8"))
+    except ValueError as e:
+        raise Fail("ToolDefBad", "%s --tooldef 吐的不是 JSON：%s" % (path, e))
+
+
+def kind_of(path):
+    if os.path.isdir(path):
+        return "dir"
+    if os.path.isfile(path):
+        return "exe" if os.access(path, os.X_OK) else "json"
+    raise Fail("PathMissing", "%s 不存在（或不是檔也不是資料夾）" % path)
+
+
+def first_file(d, names):
+    for n in names:
+        if os.path.isfile(os.path.join(d, n)):
+            return os.path.join(d, n)
+    return None
+
+
+def inspect(path, cache=None):
+    """登記對象 → {kind, tooldef, metainfo?, cache?}；不符合要求丟 Fail。cache＝註冊檔裡存的 exe 快取。"""
+    kind = kind_of(path)
+    out = {"kind": kind}
+    if kind == "dir":
+        p = first_file(path, ("_tooldef", "_tooldef.json"))   # 同 _entry 的找法：不帶副檔名的先（N-61）
+        if p is None:
+            raise Fail("ToolDefMissing", "%s 是資料夾，裡面要有 _tooldef 或 _tooldef.json" % path)
+        out["tooldef"] = check_tooldef(read_json(p, None, "ToolDefBad")[1], p)
+        m = first_file(path, ("_metainfo", "_metainfo.json"))
+        meta = read_json(m, None, "ToolDefBad")[1] if m else None
+    elif kind == "json":
+        try:
+            raw, td = read_json(path, "_tooldef", "ToolDefBad")
+        except Fail as e:
+            if e.code != "ToolDefBad":
+                raise
+            raise Fail(e.code, "%s；沒有執行權限的檔當 JSON 讀（python／可執行檔要 chmod +x、開頭寫 #!）" % e)
+        if not isinstance(raw, dict) or td is None:
+            raise Fail("ToolDefMissing", "%s 是 JSON 檔（沒有執行權限），頂層要有 _tooldef（python／可執行檔要 chmod +x）" % path)
+        out["tooldef"] = check_tooldef(td, path + "#/_tooldef")
+        meta = read_json(path, "_metainfo", "ToolDefBad")[1] if "_metainfo" in raw else None
+    else:
+        s = stamp(path)
+        if isinstance(cache, dict) and cache.get("stamp") == s and isinstance(cache.get("tooldef"), dict):
+            td = cache["tooldef"]
+        else:
+            td = run_tooldef(path)
+        out["tooldef"] = check_tooldef(td, path + " --tooldef")
+        out["cache"] = {"stamp": s, "tooldef": td}
+        meta = None
+    if isinstance(meta, dict):
+        out["metainfo"] = meta
+    return out
+
+
+def load_registry(reg):
+    """註冊檔 → {名: {path(絕對), entry(原樣)}}。沒有這份檔＝空的。"""
+    if not os.path.exists(reg):
+        return {}
+    raw, tools = read_json(reg, "tools", "RegistryBad")
+    if not isinstance(raw, dict):
+        raise Fail("RegistryBad", "%s 要是 JSON 物件（{\"tools\": {…}}）" % reg)
+    if tools is None:
+        return {}
+    if not isinstance(tools, dict):
+        raise Fail("RegistryBad", "%s 的 tools 要是物件（名字 → {\"path\": …}）" % reg)
+    base = os.path.dirname(os.path.abspath(reg))
+    out = {}
+    for name, e in tools.items():
+        if not isinstance(e, dict) or not isinstance(e.get("path"), str) or not e["path"]:
+            raise Fail("RegistryBad", "%s 的 tools/%s 要是 {\"path\": 非空字串}" % (reg, name))
+        out[name] = {"path": os.path.normpath(os.path.join(base, e["path"])), "entry": e}
+    return out
+
+
+def describe(name, t):
+    try:
+        info = inspect(t["path"], t["entry"].get("cache"))
+    except Fail as e:
+        raise Fail(e.code, "工具 %s（%s）：%s" % (name, t["path"], e))
+    out = {"name": name, "kind": info["kind"], "path": t["path"], "tooldef": info["tooldef"]}
+    if "metainfo" in info:
+        out["metainfo"] = info["metainfo"]
+    return out
+
+
+def match(tools, xxx):
+    """名字優先；不是登記過的名字就當路徑（從 cwd 算），找指到那裡的。"""
+    if xxx in tools:
+        return [xxx]
+    p = os.path.normpath(os.path.abspath(xxx))
+    names = sorted(n for n, t in tools.items() if t["path"] == p)
+    if not names:
+        raise Fail("ToolMissing", "%s 不是登記過的工具名，也沒有工具指到這個路徑" % xxx)
+    return names
+
+
+def aos_json(args):
+    try:
+        r = subprocess.run(["aos-json"] + args, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+    except OSError as e:
+        raise Fail("CommandMissing", "改註冊檔要 aos-json，起不來：%s" % e)
+    if r.returncode != 0:
+        raise Fail("WriteFailed", "aos-json %s 退 %d" % (args[0], r.returncode))
+
+
+def write_new(reg, obj):
+    tmp = os.path.join(os.path.dirname(os.path.abspath(reg)), ".%s.%d.tmp" % (os.path.basename(reg), os.getpid()))
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(obj, ensure_ascii=False, indent=1) + "\n")
+        os.replace(tmp, reg)                         # N-05：先寫暫存再改名
+    except OSError as e:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise Fail("WriteFailed", "%s 寫不了：%s" % (reg, e))
+
+
+def cmd_add(reg, args):
+    opts, rest = aos_flags.parse(args, {"--name": "name"}, {"--override": "override"})
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "usage: aos-tools [--file F] add [--override] [--name N] XXX")
+    path = os.path.normpath(os.path.abspath(rest[0]))
+    info = inspect(path)
+    name = opts.get("name") or (os.path.basename(path) if info["kind"] == "dir"
+                                else os.path.splitext(os.path.basename(path))[0])
+    if not NAME_RE.match(name):
+        raise Fail("NameBad", "工具名 %r 不合（只收 [A-Za-z0-9_-]、最多 64 字；用 --name 另取）" % name)
+    tools = load_registry(reg)
+    if name in tools and not opts.get("override"):
+        raise Fail("ToolExists", "%s 已經登記了（指到 %s）；要蓋掉加 --override" % (name, tools[name]["path"]))
+    entry = {"path": path}
+    if info["kind"] == "exe":
+        entry["cache"] = info["cache"]
+    if os.path.exists(reg):
+        aos_json(["set", "--follow", "--parents", "%s#/tools/%s" % (reg, name), json.dumps(entry, ensure_ascii=False)])
+    else:
+        write_new(reg, {"tools": {name: entry}})
+    print(json.dumps({"name": name, "kind": info["kind"], "path": path}, ensure_ascii=False))
+
+
+def cmd_rm(reg, args):
+    opts, rest = aos_flags.parse(args, {})
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "usage: aos-tools [--file F] rm XXX")
+    names = match(load_registry(reg), rest[0])
+    for n in names:
+        aos_json(["del", "--follow", "%s#/tools/%s" % (reg, n)])
+    print(json.dumps({"removed": names}, ensure_ascii=False))
+
+
+def cmd_ls(reg, args):
+    opts, rest = aos_flags.parse(args, {}, {"--json": "json"})
+    if rest:
+        raise Fail("ArgumentsBad", "usage: aos-tools [--file F] ls [--json]")
+    tools = load_registry(reg)
+    found = [describe(n, tools[n]) for n in sorted(tools)]
+    if opts.get("json"):
+        print(json.dumps(found, ensure_ascii=False))
+    else:
+        for t in found:
+            print("%s\t%s\t%s" % (t["name"], t["kind"], t["path"]))
+
+
+def cmd_get(reg, args):
+    opts, rest = aos_flags.parse(args, {})
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "usage: aos-tools [--file F] get XXX")
+    tools = load_registry(reg)
+    for n in match(tools, rest[0]):
+        print(json.dumps(describe(n, tools[n]), ensure_ascii=False))
+
+
+def cmd_call(reg, args):
+    opts, rest = aos_flags.parse(args, {})
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "usage: aos-tools [--file F] call 名（stdin＝arguments）")
+    tools = load_registry(reg)
+    if rest[0] not in tools:
+        raise Fail("ToolMissing", "%s 沒登記（能叫的：%s）" % (rest[0], "、".join(sorted(tools)) or "沒有"))
+    path = tools[rest[0]]["path"]
+    if kind_of(path) != "exe":
+        try:
+            os.execvp("aos-exec", ["aos-exec", path])   # 資料夾、JSON：arguments 原樣從 stdin 進（P-41）
+        except OSError as e:
+            raise Fail("CommandMissing", "aos-exec 起不來：%s" % e)
+    data = sys.stdin.buffer.read()
+    stack, tmpdir = os.environ.get("AOS_STACK"), None
+    if stack:
+        d = os.path.abspath(stack)
+    else:
+        d = tmpdir = tempfile.mkdtemp(prefix="aos-tools-")
+    task = os.path.join(d, "tool_call.json")
+    try:
+        try:
+            os.makedirs(d, exist_ok=True)
+            tmp = os.path.join(d, ".tool_call.json.%d" % os.getpid())
+            with open(tmp, "wb") as f:
+                f.write(data)
+            os.replace(tmp, task)
+        except OSError as e:
+            raise Fail("WriteFailed", "任務檔 %s 寫不了：%s" % (task, e))
+        try:
+            r = subprocess.run(["aos-exec", path, "--tool-call", task], stdin=subprocess.DEVNULL)
+        except OSError as e:
+            raise Fail("CommandMissing", "aos-exec 起不來：%s" % e)
+    finally:
+        if tmpdir:
+            for f in os.listdir(tmpdir):
+                os.unlink(os.path.join(tmpdir, f))
+            os.rmdir(tmpdir)
+    sys.exit(r.returncode if r.returncode >= 0 else 128 - r.returncode)
+
+
+COMMANDS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls, "get": cmd_get, "call": cmd_call}
+
+
+def main():
+    try:
+        try:
+            opts, rest = aos_flags.parse(sys.argv[1:], {"--file": "file"})
+            if not rest:
+                raise Fail("ArgumentsBad", "usage: %s" % USAGE)
+            if rest[0] not in COMMANDS:
+                raise Fail("CommandUnknown", "不認得的子命令 %s（usage: %s）" % (rest[0], USAGE))
+            COMMANDS[rest[0]](opts.get("file") or "tools.json", rest[1:])
+        except aos_flags.Error as e:
+            raise Fail(e.code, "%s（usage: %s）" % (e, USAGE))
+    except Fail as e:
+        print("%s: %s %s" % (NAME, e.code, e), file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

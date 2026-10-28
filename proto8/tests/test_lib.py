@@ -36,7 +36,7 @@ def lib_tools():
 
 
 class Shape(unittest.TestCase):
-    """lib/README「一個工具長什麼樣」：三個檔、NAME 行、tool.json 與 _metainfo 的形、錯誤行的格式。"""
+    """lib/README「一個工具長什麼樣」：三個檔、NAME 行、_tooldef.json 與 _metainfo 的形、錯誤行的格式。"""
 
     def test_library_has_tools(self):
         self.assertGreaterEqual(len(lib_tools()), 7)
@@ -49,7 +49,7 @@ class Shape(unittest.TestCase):
                 lines = entry.read_text(encoding="utf-8").splitlines()
                 self.assertTrue(lines[0].startswith("#!"), "%s 的 _entry 第一行要是 shebang" % t.name)
                 self.assertTrue(lines[1].startswith("# %s - " % t.name), "%s 的 _entry 第二行要是「# 名 - 一句話」" % t.name)
-                spec = json.loads((t / "tool.json").read_text(encoding="utf-8"))
+                spec = json.loads((t / "_tooldef.json").read_text(encoding="utf-8"))
                 self.assertIsInstance(spec.get("description"), str)
                 self.assertTrue(spec["description"].strip())
                 params = spec.get("parameters")

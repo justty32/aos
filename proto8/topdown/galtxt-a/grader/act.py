@@ -42,7 +42,7 @@ calls = said.get("tool_calls") or []
 if calls:
     answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
     tools = sorted(t for t in (os.listdir("tools") if os.path.isdir("tools") else [])
-                   if os.path.isfile(os.path.join("tools", t, "tool.json")))
+                   if os.path.isfile(os.path.join("tools", t, "_tooldef.json")))
     for call in calls:
         try:
             cid, name, arguments = call["id"], call["function"]["name"], call["function"].get("arguments")
@@ -50,7 +50,7 @@ if calls:
             die("HistoryBad", "tool_calls 裡有一個沒有 id 或 function.name：%s" % json.dumps(call, ensure_ascii=False))
         if cid in answered:
             continue
-        if name not in tools:           # 名字只認 tools/ 底下有 tool.json 的資料夾（也擋掉 ../ 之類）
+        if name not in tools:           # 名字只認 tools/ 底下有 _tooldef.json 的資料夾（也擋掉 ../ 之類）
             append({"role": "tool", "tool_call_id": cid,
                     "content": "act: ToolUnknown %s（能叫的：%s）\n" % (name, "、".join(tools))})
             continue

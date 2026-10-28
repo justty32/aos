@@ -1,0 +1,9 @@
+{
+ "tools": {
+  "bash": {"path": "tools/bash"},
+  "edit": {"path": "tools/edit"},
+  "ls": {"path": "tools/ls"},
+  "read": {"path": "tools/read"},
+  "write": {"path": "tools/write"}
+ }
+}

@@ -1,5 +1,7 @@
 ← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 agent-eve、agent-fay、agent-gus、agent-hal（10-24）｜下一份：[04-demo-agents-2](04-demo-agents-2.md)（agent-kai、liv、meg、pip、kernel-llm/agent-ivy）
 
+> 10-28 起 demo／lib 的 agent 範本：工具清單＝範本的 `tools.json`〔手寫相對路徑〕，brain `aos-tools ls --json`、act `aos-tools call`；topdown 的 agent 照舊掃 `tools/*/_tooldef.json`。
+
 > 2026-10-24 收尾補（各 agent 做的時候沒改 code map）。用法與跑法在 [demo/README](../../../../../proto8/demo/README.md)；範本 agent-dan 見[入口](../proto8.md)的 `proto8/demo/` 段。12:46 那筆（babdaad2）只是各隻的 `brain.py` 認領題目時跳過 `new/` 裡 `.` 開頭的暫存檔。「同 agent-dan」＝只改了檔頭註解或錯誤訊息開頭的名字；10-24 下午 agent-dan 的 `brain.py` 才加的 `AOS_KERNEL_REPORT` 那幾行（經 LLM kernel 跑時把 usage 交給它），10-24 遷移時抄進了 eve、pyfix 子 agent、fay、hal、kai、liv、meg、pip、talk 的 member、self-improve 的改進者（gus 的 `shared.py`、hal 的 `compact/ask.py` 問腦的寫法不同，沒抄）。
 
 ### agent-eve

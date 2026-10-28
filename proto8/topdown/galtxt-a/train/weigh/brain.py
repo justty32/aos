@@ -67,11 +67,11 @@ def append(message):
 if not history or history[-1].get("role") not in ("user", "tool"):
     append({"role": "user", "content": question})
 
-# tools：工具名＝資料夾名，說明來自 tool.json 的 description／parameters（其他 key 忽略；讀不懂的 tool.json 當作沒有）
+# tools：工具名＝資料夾名，說明來自 _tooldef.json 的 description／parameters（其他 key 忽略；讀不懂的 _tooldef.json 當作沒有）
 tools = []
 for tool in (sorted(os.listdir("tools")) if os.path.isdir("tools") else []):
     try:
-        with open(os.path.join("tools", tool, "tool.json"), encoding="utf-8") as f:
+        with open(os.path.join("tools", tool, "_tooldef.json"), encoding="utf-8") as f:
             spec = json.load(f)
     except (OSError, ValueError):
         continue

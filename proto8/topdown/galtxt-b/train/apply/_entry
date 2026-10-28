@@ -2,7 +2,7 @@
 # apply - 照 changes/<n>.json 的 moves 用程式改訓練場的 tree/（plan/round4 §4a、round6 §2-3）。白名單：teach、freeze_order、patch_act；其他 kind 一律 rejected。
 # freeze_order {"node", "tool"}（round6 §1b-⑤）：node/tools/<tool> 是純程式、且腦叫它的比率 ≥ 90%（node 的 rollup.measured.tools.<tool>，record 從 history 數的；
 #   沒有就看 move 的 evidence）→ node/act_rules.json 的 after_answer 加它（act.py 交稿前一律叫、brain.py 不再給腦）、system.txt 刪掉叫它的那行、lifecycle 記一筆。
-# patch_act {"node", "tool", "patch": "default_args", "args"}：腦叫工具漏了參數就由 act 補（例 lint 的 brief_path＝cur/{name}.json#/brief）；只收 tool.json 宣告過的參數。
+# patch_act {"node", "tool", "patch": "default_args", "args"}：腦叫工具漏了參數就由 act 補（例 lint 的 brief_path＝cur/{name}.json#/brief）；只收 _tooldef.json 宣告過的參數。
 #   凍結節點（_metainfo.frozen）一律 rejected。這兩種不問腦（counter_tokens 0）。
 # 讀：$AOS_STACK/round.json 的 round（n）；$AOS_WS/changes/<n>.json {"moves": [{"kind": "teach", "node"?: 節點}]}（不在＝沒事做，退 0）；
 #   tree/<node>/_metainfo 的 hard_cases（counter_open > 0 的才教）與 teach 宣告 {"teacher", "table", "lint", "key"}；tree/<node>/hard_cases.jsonl（record 收的，帶 brief）。
@@ -208,7 +208,7 @@ MIN_ORDER_RATIO = 0.9                           # freeze_order 只在「腦叫�
 
 
 def node_tool(tree, mv):
-    """共同檢查：回 (節點資料夾, _metainfo, 工具 tool.json) 或 (None, 理由)。"""
+    """共同檢查：回 (節點資料夾, _metainfo, 工具 _tooldef.json) 或 (None, 理由)。"""
     node, tool = mv.get("node"), mv.get("tool")
     if not isinstance(node, str) or not isinstance(tool, str) or ".." in node.split("/") or "/" in tool:
         return None, "要有 node 與 tool（相對 tree/ 的節點、tools/ 底下的名字）"
@@ -218,9 +218,9 @@ def node_tool(tree, mv):
         return None, "%s 不是節點（沒有 _metainfo）" % node
     if meta.get("frozen"):
         return None, "%s 是凍結節點（尺，不被優化器改）" % node
-    spec = jload(os.path.join(ndir, "tools", tool, "tool.json"))
+    spec = jload(os.path.join(ndir, "tools", tool, "_tooldef.json"))
     if not isinstance(spec, dict):
-        return None, "%s/tools/%s 沒有 tool.json" % (node, tool)
+        return None, "%s/tools/%s 沒有 _tooldef.json" % (node, tool)
     return (ndir, meta, spec), ""
 
 
@@ -252,7 +252,7 @@ def do_freeze_order(tree, mv, n):
     if tmeta.get("uses_llm") is not False:
         return {"status": "rejected", "why": "tools/%s 不是純程式（uses_llm 不是 false），不能固化成交稿前必叫" % tool}
     if spec.get("returns") != "text":
-        return {"status": "rejected", "why": "tools/%s 的 tool.json 沒宣告 returns: text（回的不是稿，不能放在交稿前）" % tool}
+        return {"status": "rejected", "why": "tools/%s 的 _tooldef.json 沒宣告 returns: text（回的不是稿，不能放在交稿前）" % tool}
     seen = ((meta.get("rollup") or {}).get("measured") or {}).get("tools", {}).get(tool) or mv.get("evidence") or {}
     runs, called = seen.get("counter_runs") or 0, seen.get("counter_runs_called") or 0
     if not runs or called / runs < MIN_ORDER_RATIO:
@@ -291,7 +291,7 @@ def do_patch_act(tree, mv, n):
     args = mv.get("args")
     props = ((spec.get("parameters") or {}).get("properties") or {})
     if not isinstance(args, dict) or not args or not all(k in props and isinstance(v, str) for k, v in args.items()):
-        return {"status": "rejected", "why": "args 要是 tool.json 宣告過的參數、值是字串"}
+        return {"status": "rejected", "why": "args 要是 _tooldef.json 宣告過的參數、值是字串"}
     tool = mv["tool"]
     update_rules(ndir, lambda r: r.setdefault("default_args", {}).setdefault(tool, {}).update(args))
     lifecycle_note(meta, n, "patch_act:default_args:%s" % tool, mv.get("why") or "")

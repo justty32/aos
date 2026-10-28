@@ -5,7 +5,7 @@
   writer（goal distill）       opt_describe → opt_read writer/hard.jsonl → opt_try 第一個難例那題（stage agent＝自己的 agent 階當老師示範）
                                → opt_write data/templates.distilled.json（全部未處理的 detail，含驗證集的 → 工具回 HeldOut 拒）
                                → opt_write（拿掉 OPTKIT_HELDOUT 的 detail 再寫一次）→ opt_test → opt_note → 交稿。模板句是內建的（假老師）。
-  …/voice                      opt_describe → opt_read _entry → opt_edit _entry（口癖照 idx 輪替）→ opt_edit tool.json（加 idx）→ opt_test → opt_note → 交稿
+  …/voice                      opt_describe → opt_read _entry → opt_edit _entry（口癖照 idx 輪替）→ opt_edit _tooldef.json（加 idx）→ opt_test → opt_note → 交稿
   其他                         opt_describe → opt_note → 交稿
 劇本在每次 step() 重算，選哪支只看**原樹**（OPTKIT_ORIG：一次 selfopt 裡不會變）與任務，不看拷貝（拷貝做到一半會變）。
 壞劇本（GALTXT_FAKE_OPT）：cheat＝叫工具改尺／寫測試／讀正解（工具層擋下），交稿前再用「程式」直接改拷貝裡的 data/dims.json（模擬跑起來的程式繞過工具；accept 要抓到）；
@@ -143,7 +143,7 @@ def script(sub, mode, task=None):
     if sub.endswith("/voice"):
         return [("opt_describe", {}), ("opt_read", {"path": sub + "/_entry"}),
                 ("opt_edit", {"path": sub + "/_entry", "edits": [{"old_text": VOICE_OLD, "new_text": VOICE_NEW}]}),
-                ("opt_edit", {"path": sub + "/tool.json", "edits": [{"old_text": TOOL_OLD, "new_text": TOOL_NEW}]}),
+                ("opt_edit", {"path": sub + "/_tooldef.json", "edits": [{"old_text": TOOL_OLD, "new_text": TOOL_NEW}]}),
                 ("opt_test", {}),
                 ("opt_note", {"what": "voice 加選填參數 idx：口癖照 idx 輪替", "why": "同題三份口癖都是第一個（多樣性低）；不帶 idx 行為不變"})], \
             "voice 的口癖改成照 idx 輪替（選填、不帶＝原行為）；opt_test 綠。"

@@ -16,7 +16,7 @@
 - 純文字檔帶 `.txt`（fsm 的 `state.txt`、daemon 小格的 `stderr.txt`、demo 的 `current.txt`／`plan.txt`、P-13 的 `prompt.txt`／`answer.txt`）；`AOS_STACK` 預設 `$AOS_WS/.stack/`；題目資料夾 `new/`（認領搬 `cur/`、做完 `done/`，答案 `out/`）。
 - 入口預設名 `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者「改。然後_開頭=附註這個概念刪掉。」，原話裡的 `_exec` 照留）；不認得的 key 一律忽略（「不認得的key就是忽略」，C-48），`_` 開頭沒有特別意思。
 
-**腦的工具呼叫**＝**P-41**（第七節；[thinking 2026-10-23-tool-calls](../thinking/2026-10-23-tool-calls.md)，使用者「litellm我開了，去做吧。」「盡量都用gpt的」）：工具資料夾裡的 `tool.json` 給模型看、`arguments` 從 stdin 進、stdout 出、對話落在 `$AOS_STACK/history.jsonl`、三態不變、五種錯。範本是 [demo/agent-dan](../demo/README.md)。
+**腦的工具呼叫**＝**P-41**（第七節；[thinking 2026-10-23-tool-calls](../thinking/2026-10-23-tool-calls.md)，使用者「litellm我開了，去做吧。」「盡量都用gpt的」）：工具資料夾裡的 `tool.json`（10-28 起改名 `_tooldef.json`、清單改由 agent 資料夾的 `tools.json` 登記，[aos-tools](../bin/README.md)）給模型看、`arguments` 從 stdin 進、stdout 出、對話落在 `$AOS_STACK/history.jsonl`、三態不變、五種錯。範本是 [demo/agent-dan](../demo/README.md)。
 
 ## 分檔
 

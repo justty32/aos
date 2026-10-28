@@ -1,10 +1,10 @@
-# act.py - act 格（照抄 agent-dan，加一件）：照腦的決定動手——有 tool_calls 就逐個 aos-exec tools/<名>、結果接回 history；沒有就把 content 寫成答案
-#   多的：題目是一封 expect_reply 的信、而且處理這封時還沒寄過信給寄件人＝把答案當回信，經 tools/send_message 寄回去（expect_reply false，不會再被自動回）
+# act.py - act 格（照抄 agent-dan，加一件）：照腦的決定動手——有 tool_calls 就逐個 aos-tools call <名>、結果接回 history；沒有就把 content 寫成答案
+#   多的：題目是一封 expect_reply 的信、而且處理這封時還沒寄過信給寄件人＝把答案當回信，經 send_message 工具（aos-tools call send_message）寄回去（expect_reply false，不會再被自動回）
 # 工具的介面：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的 stack＝$AOS_STACK/<名>/（P-17）。
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。
 # 叫工具出的問題回給腦、不停（10-24 起，同 agent-pip）：工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒有的工具、arguments 不是 JSON，
 # 都接成一則 tool 訊息讓腦自己決定（停下的話重跑會再叫同一個、永遠卡住）；工具的 stderr 不讀（C-52、C-53）。
-# 只有自己這層的錯（環境壞了：沒 stack、history 壞、aos-exec 起不來）才停：stderr 一行、退 1、history 不接（P-20）。
+# 只有自己這層的錯（環境壞了：沒 stack、history 壞、aos-tools 起不來）才停：stderr 一行、退 1、history 不接（P-20）。
 import json, os, shutil, subprocess, sys
 
 
@@ -42,8 +42,13 @@ def append(message):
 calls = said.get("tool_calls") or []
 if calls:
     answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
-    tools = sorted(t for t in (os.listdir("tools") if os.path.isdir("tools") else [])
-                   if os.path.isfile(os.path.join("tools", t, "tool.json")))
+    try:                                # 能叫的＝tools.json 登記的（aos-tools ls --json）；失敗＝自己這層的錯
+        r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    except OSError as e:
+        die("ToolFailed", "aos-tools 起不來：%s" % e)
+    if r.returncode != 0:
+        die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
+    tools = [t["name"] for t in json.loads(r.stdout)]
     for call in calls:
         try:
             cid, name, arguments = call["id"], call["function"]["name"], call["function"].get("arguments")
@@ -51,7 +56,7 @@ if calls:
             die("HistoryBad", "tool_calls 裡有一個沒有 id 或 function.name：%s" % json.dumps(call, ensure_ascii=False))
         if cid in answered:
             continue
-        if name not in tools:           # 名字只認 tools/ 底下有 tool.json 的資料夾（也擋掉 ../ 之類）
+        if name not in tools:           # 名字只認 tools.json 登記過的（也擋掉 ../ 之類）
             append({"role": "tool", "tool_call_id": cid,
                     "content": "act: ToolUnknown %s（能叫的：%s）\n" % (name, "、".join(tools))})
             continue
@@ -64,7 +69,7 @@ if calls:
             continue
         env = dict(os.environ, AOS_STACK=os.path.join(stack, name) + "/")
         try:
-            r = subprocess.run(["aos-exec", "tools/" + name], input=arguments, stdout=subprocess.PIPE,
+            r = subprocess.run(["aos-tools", "call", name], input=arguments, stdout=subprocess.PIPE,
                                text=True, env=env)      # stderr 不吞：工具自己的錯原樣往上
         except OSError as e:
             die("ToolFailed", "%s 起不來：%s" % (name, e))
@@ -107,7 +112,7 @@ def auto_reply():
                             "body": content, "expect_reply": False}, ensure_ascii=False)
     env = dict(os.environ, AOS_STACK=os.path.join(stack, "send_message") + "/")
     try:
-        r = subprocess.run(["aos-exec", "tools/send_message"], input=arguments, stdout=subprocess.PIPE, text=True, env=env)
+        r = subprocess.run(["aos-tools", "call", "send_message"], input=arguments, stdout=subprocess.PIPE, text=True, env=env)
     except OSError as e:
         die("ToolFailed", "send_message 起不來：%s" % e)
     if r.returncode != 0 and r.stdout.split(" ", 2)[1:2] not in (["HopsBad"], ["SendsBad"], ["BodyBad"],

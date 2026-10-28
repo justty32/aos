@@ -277,7 +277,7 @@ class AiToolsTest(unittest.TestCase):
         ai(self.root, "spawn", "dan")
         code, res, err = ai(self.root, "make", "tool", "dan", "shout", "--description", "轉大寫",
                             "--param", "text:string:要轉的字:required", "--summary", "轉大寫", "--resource", "cpu")
-        self.assertEqual(res["files"], ["tool.json", "_entry", "_metainfo"], err)
+        self.assertEqual(res["files"], ["_tooldef.json", "_entry", "_metainfo"], err)
         code, res, err = ai(self.root, "make", "cell", "dan", "log", "--after", "act",
                             "--exec", '{"argv": ["sh", "-c", "echo logged >> $AOS_STACK/log.txt"]}')
         self.assertTrue(res and res["ok"], err)
@@ -352,7 +352,7 @@ class AiToolsTest(unittest.TestCase):
         self.assertEqual(p.returncode, 1)                                          # aos-ai 的錯照 lib 契約退 1
         self.assertTrue(p.stdout.startswith("make_json: SpecBad "), p.stdout)
         self.assertTrue(call("make_tool", {"name": "boss", "tool": "t1", "description": "d", "params": ["a:string"]})["ok"])
-        self.assertTrue((tools / "t1" / "tool.json").is_file())
+        self.assertTrue((tools / "t1" / "_tooldef.json").is_file())
         self.assertEqual(call("explain_aos", {"concept": "stack"})["concept"], "AOS_STACK")
 
 

@@ -2,7 +2,7 @@
 # stat - 看工作區裡單一個檔或資料夾的屬性，回 JSON
 # 介面（lib/README 的契約）：stdin 收 {"path"}；stdout 一份 JSON：path、type、mtime、mode、（捷徑）link_to。
 # 檔：size、exec、text（是不是 UTF-8 文字）、counter_lines、format（json／python／markdown／shell／text）、JSON 檔的 top（頂層摘要）。
-# 資料夾：counter_children、aos（_entry、.env、tool.json… 有哪些）。路徑從 $AOS_WS 算、不能跑出去。
+# 資料夾：counter_children、aos（_entry、.env、_tooldef.json… 有哪些）。路徑從 $AOS_WS 算、不能跑出去。
 # 計數的 key 一律 counter_*（10-25，原 lines、children，top 摘要裡的 keys、items、chars）。
 # 錯：stderr 與 stdout 各一行「stat: 代號 原因」、退 1。來源：demo/file-tools/stat（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
 import json, os, sys, time
@@ -71,7 +71,7 @@ def json_summary(v):
     return {"type": names[type(v)], "value": v}
 
 
-AOS_MARKS = ("_entry", "_entry.json", "_metainfo", "_metainfo.json", ".env", "tool.json", "loop.json", "fsm.json")
+AOS_MARKS = ("_entry", "_entry.json", "_metainfo", "_metainfo.json", ".env", "_tooldef", "_tooldef.json", "tools.json", "loop.json", "fsm.json")
 
 
 def aos_marks(d):

@@ -1,0 +1,8 @@
+{
+ "tools": {
+  "check_inbox": {"path": "tools/check_inbox"},
+  "clock": {"path": "tools/clock"},
+  "math": {"path": "tools/math"},
+  "send_message": {"path": "tools/send_message"}
+ }
+}

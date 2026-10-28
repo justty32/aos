@@ -6,9 +6,9 @@
 # 最後跑 kernel-llm：一個 daemon 同時管 LLM kernel 與三隻走 kernel 的 agent（c 是 high），看服務順序（thinking 2026-10-24-llm-kernel）
 here=$(cd "$(dirname "$0")" && pwd)
 # aos 的程式都不動 PATH（ideas § 24）：agent 裡叫的 aos-exec、aos-loop、aos-fsm、aos-daemon、aos-tick 由這裡（呼叫端）放進 PATH。
-# 10-23 起前四支是 C++（10-24 加 aos-kernel-llm、aos-gate 兩支）（proto8/impls/<名>/bin/，要先建，見 wf/workflows/testing.md）；aos-tick 還是 Python（proto8/bin/）
+# 10-23 起前四支是 C++（10-24 加 aos-kernel-llm、aos-gate 兩支；10-28 加 aos-json：aos-tools 解指示詞、改 tools.json 要它）（proto8/impls/<名>/bin/，要先建，見 wf/workflows/testing.md）；aos-tick 還是 Python（proto8/bin/，aos agent 讀工具清單的 aos-tools 也在這）
 impls=$(cd "$here/../impls" && pwd)
-for p in aos-exec aos-loop aos-fsm aos-daemon aos-kernel-llm aos-gate; do
+for p in aos-exec aos-loop aos-fsm aos-daemon aos-kernel-llm aos-gate aos-json; do
   [ -x "$impls/$p/bin/$p" ] || { echo "run.sh：$impls/$p/bin/$p 還沒建（先建 proto8/impls，見 wf/workflows/testing.md）" >&2; exit 1; }
   PATH="$impls/$p/bin:$PATH"
 done

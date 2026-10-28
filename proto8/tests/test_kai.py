@@ -173,13 +173,16 @@ class T(unittest.TestCase):
         self.assertIn("## 先前對話的目錄", b.requests[2]["messages"][0]["content"])
 
     def test_memory_from_agent_meg(self):
-        """tools/memory 接 agent-meg 的記憶庫工具、記憶庫在：每題自動附上 search 到的幾筆（不進 history）。"""
+        """tools/memory 接 agent-meg 的記憶庫工具（登記進 tools.json）、記憶庫在：每題自動附上 search 到的幾筆（不進 history）。"""
         meg = ROOT / "demo" / "agent-meg" / "tools" / "memory"
-        if not (meg / "tool.json").exists():
+        if not (meg / "_tooldef.json").exists():
             self.skipTest("agent-meg 的記憶庫工具不在")
         agent = self.tmp / "agent-kai"
         shutil.copytree(KAI, agent, ignore=shutil.ignore_patterns("__pycache__"))
         (agent / "tools" / "memory").symlink_to(meg)
+        reg = json.loads((agent / "tools.json").read_text(encoding="utf-8"))      # 登記進 tools.json 才算工具
+        reg["tools"]["memory"] = {"path": "tools/memory"}
+        (agent / "tools.json").write_text(json.dumps(reg), encoding="utf-8")
         heap = self.tmp / "heap"
         save = {"op": "save", "kind": "facts", "title": "藍鯨專案的資料庫", "text": "藍鯨專案用 PostgreSQL 16。"}
         r = run(EXEC, str(meg), input=json.dumps(save, ensure_ascii=False), env={"AOS_HEAP": str(heap)},

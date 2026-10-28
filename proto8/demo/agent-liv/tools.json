@@ -1,0 +1,12 @@
+{
+ "tools": {
+  "bash": {"path": "tools/bash"},
+  "clock": {"path": "tools/clock"},
+  "edit": {"path": "tools/edit"},
+  "json_edit": {"path": "tools/json_edit"},
+  "json_read": {"path": "tools/json_read"},
+  "ls": {"path": "tools/ls"},
+  "read": {"path": "tools/read"},
+  "write": {"path": "tools/write"}
+ }
+}

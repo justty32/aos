@@ -1,0 +1,16 @@
+{
+ "tools": {
+  "bash": {"path": "tools/bash"},
+  "copy": {"path": "tools/copy"},
+  "edit": {"path": "tools/edit"},
+  "json_edit": {"path": "tools/json_edit"},
+  "ls": {"path": "tools/ls"},
+  "mkdir": {"path": "tools/mkdir"},
+  "move": {"path": "tools/move"},
+  "read": {"path": "tools/read"},
+  "stat": {"path": "tools/stat"},
+  "trash": {"path": "tools/trash"},
+  "view": {"path": "tools/view"},
+  "write": {"path": "tools/write"}
+ }
+}

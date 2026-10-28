@@ -57,13 +57,13 @@ class JanetCompile(unittest.TestCase):
         """編出來的檔跟手寫的一樣多；JSON 檔內容相同（順序、空白可以不同）；Python 葉子位元組相同。"""
         out = self.compile("agent_dan")
         self.assertEqual(files(out), files(DAN))
-        for f in ("fsm.json", "loop.json", "tools/clock/tool.json", "tools/math/tool.json"):
+        for f in ("fsm.json", "loop.json", "tools.json", "tools/clock/_tooldef.json", "tools/math/_tooldef.json"):
             self.assertEqual(json.loads((out / f).read_text()), json.loads((DAN / f).read_text()), f)
         for f in ("brain.py", "act.py", "system.txt", "tools/math/_entry"):
             self.assertEqual((out / f).read_bytes(), (DAN / f).read_bytes(), f)
         self.assertEqual(json.loads((out / "_entry").read_text()), ["aos-loop", "loop.json"])   # 手寫版是 sh，這裡是 argv 陣列
         self.assertIn("AOS_BRAIN_MODEL=chatgpt-gpt-6-luna-low\n", (out / ".env").read_text())
-        self.assertIn("算一個算術式子", (out / "tools/math/tool.json").read_text(encoding="utf-8"))   # 中文不跳脫
+        self.assertIn("算一個算術式子", (out / "tools/math/_tooldef.json").read_text(encoding="utf-8"))   # 中文不跳脫
         for f in ("idle/_entry", "tools/clock/_entry", "tools/math/_entry"):
             self.assertTrue(os.access(out / f, os.X_OK), f)
 

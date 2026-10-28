@@ -69,8 +69,8 @@ class T(unittest.TestCase):
                 res = meta["resource"] if isinstance(meta["resource"], list) else [meta["resource"]]
                 self.assertIn("llm", res, here)
                 self.assertIn("llm_calls", meta, here)
-            if here.parent.name == "tools" and meta["kind"] != "agent":   # 腦可以叫的工具（P-41）：要有 tool.json
-                spec = json.loads((here / "tool.json").read_text(encoding="utf-8"))
+            if here.parent.name == "tools" and meta["kind"] != "agent":   # 腦可以叫的工具（P-41）：要有 _tooldef.json
+                spec = json.loads((here / "_tooldef.json").read_text(encoding="utf-8"))
                 self.assertTrue({"description", "parameters"} <= set(spec), here)
             if (here / "_entry").exists():
                 e = here / "_entry"
@@ -451,9 +451,9 @@ class CollapseT(unittest.TestCase):
         self.assertEqual(json.loads((self.t / "a" / "_metainfo").read_text())["reads"], ["d:t.json"])   # 讀者的 reads 跟著改
 
     def test_refuses_and_writes_nothing(self):
-        (self.t / "box" / "tools" / "agent" / "tool.json").write_text("{}", encoding="utf-8")
+        (self.t / "box" / "tools" / "agent" / "_tooldef.json").write_text("{}", encoding="utf-8")
         before = snapshot(self.t)
-        for args, code in ((["unwrap", "box/tools"], "TargetBad"),           # tools/ 底下有 tool.json＝A-1 例外（P-41）
+        for args, code in ((["unwrap", "box/tools"], "TargetBad"),           # tools/ 底下有 _tooldef.json＝A-1 例外（P-41）
                            (["inline", "fsm.json#/states/nope/exec"], "CfgMissing"),
                            (["dedupe", "idle", "a"], "TargetBad"),            # 內容不一樣
                            (["table", "a"], "TargetBad"),                     # kind 不是 data
@@ -836,7 +836,7 @@ class Round3T(unittest.TestCase):
                                    "train/rollup.json", "train/weigh/rollup.json",              # 步驟 5：verify 先 rollup --up train/weigh
                                    "writer/stage.json",                                          # 步驟 5：verify 每個 epoch 寫 stage.json.history
                                    "writer/opt_log.jsonl", "train/optimize/selfopt.json",        # 6b：epoch 0 的 optimize 派 selfopt（抽 close）、accept 搬回
-                                   "writer/tools/close", "writer/tools/close/_entry", "writer/tools/close/_metainfo", "writer/tools/close/tool.json",
+                                   "writer/tools/close", "writer/tools/close/_entry", "writer/tools/close/_metainfo", "writer/tools/close/_tooldef.json",
                                    "writer/grad.json", "writer/tools/close/grad.json", "writer/tools/close/rollup.json",   # epoch 1 的 verify 判 A、梯度分給 close
                                    "train/optimize/ratings.json", "train/weigh/ratings.json", "train/weigh/log.jsonl"})
         self.assertEqual([h["epoch"] for h in jread(g / "writer" / "stage.json")["history"]], [0, 1])
@@ -1071,7 +1071,7 @@ class Round4T(unittest.TestCase):
         for name in ("beat", "voice"):
             d = G / "writer" / "tools" / name
             self.assertTrue(os.access(d / "_entry", os.X_OK), name)
-            self.assertTrue({"description", "parameters"} <= set(jread(d / "tool.json")), name)
+            self.assertTrue({"description", "parameters"} <= set(jread(d / "_tooldef.json")), name)
             m = jread(d / "_metainfo")
             self.assertEqual((m["kind"], m["deterministic"]), ("program", True), name)
         r = self.tool("beat", {"deny": "才沒有", "yield": "也不是不能接受", "cover": "真是的"})
@@ -1753,7 +1753,7 @@ class Round4GradT(unittest.TestCase):
         self.epoch0(g, st)
         stage0 = jread(g / "writer" / "stage.json")
         (g / "writer" / "tools" / "close").mkdir()                                   # selfopt 會新建工具資料夾：回滾要整個刪
-        (g / "writer" / "tools" / "close" / "tool.json").write_text("{}")
+        (g / "writer" / "tools" / "close" / "_tooldef.json").write_text("{}")
         self.change(g, st, 1, {"stage": "semi", "tools": ["lint", "beat"]},
                     {"source": "test", "action": "extract", "subtree": "writer", "target": "tools/beat"}, created=["writer/tools/close"])
         r = self.verify(g, st, env=STEADY)

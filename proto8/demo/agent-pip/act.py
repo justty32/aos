@@ -1,4 +1,4 @@
-# act.py - agent-pip 的 act 格（從 agent-dan 改）：有 tool_calls 就逐個 aos-exec tools/<名>、結果接回 history；沒有就把 content 寫成答案
+# act.py - agent-pip 的 act 格（從 agent-dan 改）：有 tool_calls 就逐個 aos-tools call <名>、結果接回 history；沒有就把 content 寫成答案
 # 工具的介面同 agent-dan：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的 stack＝$AOS_STACK/<名>/（P-17）。
 # 原本跟 agent-dan 不同的一條（10-24 起 agent-dan 也這樣）：**這一次叫工具出的問題回給腦、不停**——工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒有的工具、
 # arguments 不是 JSON，都接成一則 tool 訊息讓腦自己改（寫程式時 edit 找不到原文是常事；停下的話重跑會再叫同一個、永遠卡住）。
@@ -40,8 +40,13 @@ def append(message):
 calls = said.get("tool_calls") or []
 if calls:
     answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
-    tools = sorted(t for t in (os.listdir("tools") if os.path.isdir("tools") else [])
-                   if os.path.isfile(os.path.join("tools", t, "tool.json")))
+    try:                                # 能叫的＝tools.json 登記的（aos-tools ls --json）；失敗＝自己這層的錯
+        r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    except OSError as e:
+        die("ToolFailed", "aos-tools 起不來：%s" % e)
+    if r.returncode != 0:
+        die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
+    tools = [t["name"] for t in json.loads(r.stdout)]
     for call in calls:
         try:
             cid, name, arguments = call["id"], call["function"]["name"], call["function"].get("arguments")
@@ -49,7 +54,7 @@ if calls:
             die("HistoryBad", "tool_calls 裡有一個沒有 id 或 function.name：%s" % json.dumps(call, ensure_ascii=False))
         if cid in answered:
             continue
-        if name not in tools:           # 名字只認 tools/ 底下有 tool.json 的資料夾（也擋掉 ../ 之類）
+        if name not in tools:           # 名字只認 tools.json 登記過的（也擋掉 ../ 之類）
             append({"role": "tool", "tool_call_id": cid,
                     "content": "act: ToolUnknown %s（能叫的：%s）\n" % (name, "、".join(tools))})
             continue
@@ -62,7 +67,7 @@ if calls:
             continue
         env = dict(os.environ, AOS_STACK=os.path.join(stack, name) + "/")
         try:
-            r = subprocess.run(["aos-exec", "tools/" + name], input=arguments, stdout=subprocess.PIPE,
+            r = subprocess.run(["aos-tools", "call", name], input=arguments, stdout=subprocess.PIPE,
                                text=True, env=env)      # stderr 不吞：工具自己的錯原樣往上
         except OSError as e:
             die("ToolFailed", "%s 起不來：%s" % (name, e))

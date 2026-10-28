@@ -1,4 +1,4 @@
-# brain.py - think 格（抄 agent-dan）：認領題目、把 tools/*/tool.json 組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history
+# brain.py - think 格（抄 agent-dan）：認領題目、把 tools/*/_tooldef.json 組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history
 # 沒設 AOS_BRAIN_URL＝假腦（第四輪：固定回四行「承接：2」「像柚葉：2」「文筆：2」「理由：假腦」，照 system.v2.txt 的格式；
 # 測試要換回覆時設 GALTXT_FAKE_GRADE＝整段回覆（\n 換行；只有假腦讀））；有設就問 OpenAI 相容的 {url}/chat/completions。失敗時 history 不接任何東西、退 1（P-20）。
 # 跟範本不同的兩處：fake() 改寫；評審沒有 tools/，tools 陣列是空的、不帶；問真腦時把 API 回的 usage 多記一行到 $AOS_STACK/usage.jsonl（給實測對照用，OpenAI 的欄位名照留）。
@@ -63,11 +63,11 @@ def append(message):
 if not history or history[-1].get("role") not in ("user", "tool"):
     append({"role": "user", "content": question})
 
-# tools：工具名＝資料夾名，說明來自 tool.json 的 description／parameters（其他 key 忽略；讀不懂的 tool.json 當作沒有）
+# tools：工具名＝資料夾名，說明來自 _tooldef.json 的 description／parameters（其他 key 忽略；讀不懂的 _tooldef.json 當作沒有）
 tools = []
 for tool in (sorted(os.listdir("tools")) if os.path.isdir("tools") else []):
     try:
-        with open(os.path.join("tools", tool, "tool.json"), encoding="utf-8") as f:
+        with open(os.path.join("tools", tool, "_tooldef.json"), encoding="utf-8") as f:
             spec = json.load(f)
     except (OSError, ValueError):
         continue

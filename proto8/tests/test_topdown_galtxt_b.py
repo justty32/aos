@@ -448,7 +448,7 @@ class Shape(unittest.TestCase):
         links = {"check/tools/lint": "lib/lint", "draft/tools/writer/tools/lint": "lib/lint"}
         p = GB / "draft" / "tools" / "plan_lint"                           # round3：只有一個呼叫者，搬回來當真資料夾
         self.assertTrue(p.is_dir() and not p.is_symlink())
-        self.assertTrue((p / "tool.json").exists() and os.access(p / "_entry", os.X_OK))
+        self.assertTrue((p / "_tooldef.json").exists() and os.access(p / "_entry", os.X_OK))
         self.assertFalse((GB / "lib" / "plan_lint").exists())
         for at, real in links.items():
             with self.subTest(link=at):
@@ -456,7 +456,7 @@ class Shape(unittest.TestCase):
                 self.assertTrue(p.is_symlink())
                 self.assertFalse(os.path.isabs(os.readlink(p)))
                 self.assertEqual(p.resolve(), (GB / real).resolve())
-                self.assertTrue((p / "tool.json").exists() and os.access(p / "_entry", os.X_OK))
+                self.assertTrue((p / "_tooldef.json").exists() and os.access(p / "_entry", os.X_OK))
 
 
 class MetainfoTable(unittest.TestCase):

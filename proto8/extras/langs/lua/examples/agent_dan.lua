@@ -5,10 +5,10 @@
 local aos = require("aos")
 local demo = "../../../../demo/agent-dan/"
 
--- 一個工具＝一個資料夾：tool.json（給模型看）＋可執行的 _entry
+-- 一個工具＝一個資料夾：_tooldef.json（給模型看）＋可執行的 _entry
 local function tool(name, description, properties, required)
   return aos.dir {
-    ["tool.json"] = {
+    ["_tooldef.json"] = {
       description = description,
       parameters = { type = "object", properties = properties or aos.object(), required = required },
     },
@@ -18,6 +18,8 @@ end
 
 -- 一隻 agent-dan 範本：給 system、模型名、工具表，回一個資料夾
 local function agent(opts)
+  local registry = {}                  -- tools.json：腦／act 吃的工具清單（aos-tools），路徑相對 agent 資料夾
+  for name in pairs(opts.tools) do registry[name] = { path = "tools/" .. name } end
   return aos.dir {
     _entry = aos.script("#!/bin/sh\n# _entry - 把 agent-dan 的 loop 跑起來（loop 每次跑一格 fsm.json）\nexec aos-loop loop.json\n"),
     ["loop.json"] = aos.loop { exec = "fsm.json", max = opts.max or 40 },
@@ -35,6 +37,7 @@ local function agent(opts)
     idle = aos.dir { _entry = aos.script(aos.read(demo .. "idle/_entry")) },
     ["brain.py"] = aos.read(demo .. "brain.py"),
     ["act.py"] = aos.read(demo .. "act.py"),
+    ["tools.json"] = { tools = registry },
     tools = aos.dir(opts.tools),
   }
 end

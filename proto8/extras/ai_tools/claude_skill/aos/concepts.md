@@ -140,7 +140,7 @@
 
 一句：**`_metainfo`＝函數的特性**（跑多久、吃多少資源…），作者自報、給 kernel 與人看；aos-exec、loop、fsm、daemon 都不讀、不因它改行為。放在跟 `_entry` 並列的地方（資料夾裡的 `_metainfo` 檔、JSON 物件或單子的 `_metainfo` key）。
 範例：`{"summary": "把 .py 照 PEP8 排版", "time_ms": {"val": 300, "max": 5000}, "resource": "cpu", "side_effect": true, "idempotent": true}`；通用 key 全選填：`summary`、`time_ms`、`resource`、`mem_mb`、`gpu_mem_mb`、`llm_calls`、`llm_tokens`、`lock`、`cost`、`side_effect`、`idempotent`、`deterministic`、`interrupt`（safe／unsafe／resumable）、`parallel`。
-常見錯：拿 `time_ms` 當逾時（強制的是單子的 `timeout_ms`）；寫 `priority`（跟著請求、不放這）；跟 `tool.json` 混（那是給模型看的）。
+常見錯：拿 `time_ms` 當逾時（強制的是單子的 `timeout_ms`）；寫 `priority`（跟著請求、不放這）；跟 `_tooldef.json` 混（那是給模型看的）。
 出處：thinking 2026-10-24-metainfo（M1～M10，照推薦定、待落條文）。
 
 ## agent
@@ -148,18 +148,18 @@
 一句：aos 的 agent＝一個資料夾程式＋一台被 loop 一次次驅動的狀態機（三態 `idle → think → act → idle`）。定義資料夾不被寫；跑的東西都在工作區與 stack。
 範例（agent-dan）：
 ```
-agent-dan/  _entry（exec aos-loop loop.json）、loop.json、fsm.json、.env、system.txt、idle/_entry、brain.py、act.py、tools/<名>/{tool.json,_entry}
+agent-dan/  _entry（exec aos-loop loop.json）、loop.json、fsm.json、.env、system.txt、idle/_entry、brain.py、act.py、tools.json（工具通訊錄）、tools/<名>/{_tooldef.json,_entry}
 工作區      new/<題名>（題目）→ cur/（認領）→ out/<題名>（答案）、done/（做完的題目）
 $AOS_STACK  state.txt、current.txt、trace.jsonl、history.jsonl（一行一則 OpenAI message）、<工具名>/（工具的小格）
 ```
-常見錯：答案找 stdout（結果只在工作區，P-11）；任一格失敗＝整隻停下等人，修好再跑一次從同一格接著做（P-20）；工具不靠 PATH，寫 `aos-exec tools/<名>`（N-50、P-25）。
+常見錯：答案找 stdout（結果只在工作區，P-11）；任一格失敗＝整隻停下等人，修好再跑一次從同一格接著做（P-20）；工具不靠 PATH，act 用 `aos-tools call <名>` 叫 tools.json 登記的工具（N-50、P-25）。
 出處：N-53、P-05～P-26、P-41。
 
 ## tool
 
-一句：給腦叫的工具＝`tools/<名>/` 資料夾程式，裡面多一份 `tool.json`（OpenAI function 物件去掉 `name`：`{"description", "parameters"}`），**工具名＝資料夾名**；模型給的 `arguments` 從 stdin 進、stdout 整段是結果。
-範例：`tools/math/tool.json`＝`{"description": "算一個算術式子", "parameters": {"type": "object", "properties": {"expr": {"type": "string"}}, "required": ["expr"]}}`。
-常見錯：在 `tool.json` 寫 `name`（不用，程式填）；沒 `tool.json` 的資料夾不算工具；工具退非 0：agent-dan 範本把 stdout 那行加上結束碼回給腦、不停（所以錯要印在 stdout，腦才看得到原因）。
+一句：給腦叫的工具＝`tools/<名>/` 資料夾程式，裡面多一份 `_tooldef.json`（OpenAI function 物件去掉 `name`：`{"description", "parameters"}`），再登記進 agent 資料夾的 `tools.json`（`{"tools": {名: {"path": …}}}`，`aos-tools add`）；**工具名＝登記的名字**（預設資料夾名）；模型給的 `arguments` 從 stdin 進、stdout 整段是結果。
+範例：`tools/math/_tooldef.json`＝`{"description": "算一個算術式子", "parameters": {"type": "object", "properties": {"expr": {"type": "string"}}, "required": ["expr"]}}`。
+常見錯：在 `_tooldef.json` 寫 `name`（不用，程式填）；沒登記進 `tools.json` 的不算工具（資料夾放進 `tools/` 不夠）；登記了但壞掉（沒 `_tooldef.json`）＝brain 停下（ToolsBad）；工具退非 0：agent-dan 範本把 stdout 那行加上結束碼回給腦、不停（所以錯要印在 stdout，腦才看得到原因）。
 出處：P-41、N-50、C-61。
 
 ## heap

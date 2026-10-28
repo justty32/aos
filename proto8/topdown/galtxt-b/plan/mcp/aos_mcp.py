@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# aos_mcp - 把一棵 aos 資料夾樹裡有 tool.json 的資料夾程式攤成 MCP tools（stdio JSON-RPC 原型，只做 initialize／tools/list／tools/call）
+# aos_mcp - 把一棵 aos 資料夾樹裡有 _tooldef.json 的資料夾程式攤成 MCP tools（stdio JSON-RPC 原型，只做 initialize／tools/list／tools/call）
 #
 # 用法：aos_mcp.py ROOT [--ws WS] [--stack DIR] [--timeout-s N]
-#   ROOT        掃這個資料夾底下的 tool.json（跟著捷徑走、同一個實體只算一次、找到 tool.json 就不再往下、跳過 . 開頭的）
+#   ROOT        掃這個資料夾底下的 _tooldef.json（跟著捷徑走、同一個實體只算一次、找到 _tooldef.json 就不再往下、跳過 . 開頭的）
 #   --ws WS     工具的工作區（傳給 aos-exec --ws）；沒給＝$AOS_WS，再沒有＝目前資料夾
 #   --stack DIR 這支 server 自己的 stack；每個工具一個小格 DIR/<工具名>/（P-17），跨呼叫延續；沒給＝$AOS_STACK，再沒有＝WS/.stack/
 #   --timeout-s 一次呼叫的上限（秒，預設 600）：到了先 TERM 整群、2 秒後 KILL
@@ -74,7 +74,7 @@ def scan(root):
     for d, dirs, files in os.walk(root, followlinks=True):
         real = os.path.realpath(d)
         rel = os.path.relpath(d, root)
-        if "tool.json" in files:
+        if "_tooldef.json" in files:
             dirs[:] = []                 # 工具裡面是工具自己的事（C-52），不往下找
             if real not in found or os.path.join(rroot, rel) == real:
                 found[real] = rel
@@ -88,9 +88,9 @@ def scan(root):
     for real, rel in sorted(found.items(), key=lambda x: x[1]):
         d = os.path.join(root, rel)
         try:
-            spec = read_json(os.path.join(d, "tool.json"))
+            spec = read_json(os.path.join(d, "_tooldef.json"))
         except (OSError, ValueError) as e:
-            log("tool.json 讀不了，跳過：%s（%s）" % (rel, e))
+            log("_tooldef.json 讀不了，跳過：%s（%s）" % (rel, e))
             continue
         name = tool_name(rel if rel != "." else os.path.basename(real))
         if name in tools:

@@ -32,11 +32,12 @@ agent-dan/
   .env                AOS_BRAIN_MODEL=chatgpt-gpt-6-luna-low（模型名；不蓋外面已設的）
   system.txt          核心人格：每次問腦時當 system 訊息送、不進 history
   idle/_entry         同 bob：cur/ 或 new/ 有題退 0，沒題退 10
-  brain.py            think 格：認領題目、把 tools/*/tool.json 組成 tools、帶 history 問腦、回覆接一行
-  act.py              act 格：有 tool_calls 就逐個 aos-exec tools/<名>、結果接回 history；沒有就把 content 寫成答案
+  brain.py            think 格：認領題目、把 tools.json 登記的工具（aos-tools ls --json）組成 tools、帶 history 問腦、回覆接一行
+  act.py              act 格：有 tool_calls 就逐個 aos-tools call <名>、結果接回 history；沒有就把 content 寫成答案
+  tools.json          工具通訊錄：{"tools": {"clock": {"path": "tools/clock"}, …}}（手寫的範本寫相對路徑、從這份檔的資料夾算；aos-tools add 寫絕對路徑）
   tools/math/         工具：stdin 收 {"expr": "17*23"}、stdout 印 391（只做四則運算）
   tools/clock/        工具：stdin 不讀、stdout 印 UTC 時間
-  tools/*/tool.json   給模型看的說明（OpenAI function 物件去掉 name；工具名＝資料夾名）
+  tools/*/_tooldef.json  給模型看的說明（OpenAI function 物件去掉 name；工具名＝tools.json 登記的名字，範本裡＝資料夾名）
 ```
 
 一題的流程：think 把題目接成一則 user、問腦；腦要叫工具，act 就跑工具（`arguments` 從 stdin 進、stdout 整段是結果，小格 `$AOS_STACK/<名>/`）、把結果接回 history、退 0 回 idle；題目還在 `cur/`，所以 think 帶著 history 再問一次；腦不叫工具了，act 才把回答寫進 `out/<題名>`、題目搬 `done/`。trace 是 `idle think act idle think act idle`。對話在 `$AOS_STACK/history.jsonl`（一行一則 OpenAI message，只附加）。
@@ -59,7 +60,7 @@ think、act 兩格的 `exec` 直接寫單子：`{"argv": ["python3", "brain.py"]
 agent-eve/                主 agent：照抄 agent-dan（brain.py、act.py 只改錯誤訊息開頭），act 逾時放寬到 30 分鐘
   system.txt              改 Python 的事交給 pyfix、task 寫清楚、回答前看 diff
   tools/pyfix -> ../../../lib/agent/pyfix   （函式庫的 agent 層）
-    tool.json             給 eve 的腦看：task（必填）、dir（相對於工作區，預設 .）
+    _tooldef.json         給 eve 的腦看：task（必填）、dir（相對於工作區，預設 .）
     _entry                轉接（python3，通用那段在 lib/agent/agent_tool.py）：stdin 的 task → 子 agent 的 new/task.txt；跑完把 out/task.txt＋實際 diff 印到 stdout
     agent/                子 agent（pyfix-agent）：也是一整隻 agent-dan 範本，自己的 system.txt、.env、loop.json（max 60）、fsm.json（think 180 秒、act 300 秒）
       act.py              同 agent-dan，差一條：工具一律 aos-exec --ws $PYFIX_DIR
@@ -80,7 +81,7 @@ agent-fay/
   system.txt          腦的人格：有 claude、codex 兩個幫手，看檔或程式判斷就交代給它們
   cli_session.py      → ../../lib/agent/cli_session.py（claude、codex 兩個工具共用）做法：畫面沒開＝非互動（claude -p --resume／codex exec resume）；畫面開著＝tmux 貼字、等 hook 回答
   attach              接進某個工具的互動畫面：attach claude｜attach -d codex（只開不接）｜attach（列狀態）
-  tools/claude -> ../../../lib/agent/claude   _entry（stdin {"prompt"} → stdout 回答）、tool.json（給模型看）、cli.json（怎麼叫 CLI：保守旗標）、_metainfo
+  tools/claude -> ../../../lib/agent/claude   _entry（stdin {"prompt"} → stdout 回答）、_tooldef.json（給模型看）、cli.json（怎麼叫 CLI：保守旗標）、_metainfo
   tools/codex -> ../../../lib/agent/codex     同上
 ```
 
@@ -96,11 +97,11 @@ agent-fay/
 
 下面兩組工具（pi 那組與 file-tools）都在 [proto8/lib/base](../lib/README.md)，路徑是 `lib/base/<名>`。
 
-pi 那組是一套可重用的寫程式工具，仿 [pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) 預設的四個：`read`（讀檔，最多 2000 行或 50KB、提示 offset 接著讀）、`write`（建檔或整份蓋掉）、`edit`（`edits: [{old_text, new_text}]`，每段對原檔比、要唯一、不重疊，全有或全無）、`bash`（在 `$AOS_WS` 裡跑一行指令，留最後 2000 行或 50KB，逾時 `timeout_s` 預設 30 秒、上限 300 秒、整群停）。每個都是資料夾程式＋`tool.json`（P-41），arguments 從 stdin 進、stdout 是結果。read／write／edit 的路徑從 `$AOS_WS` 算、不能跑出去（`PathBad`，符號連結也算）；bash 的指令本身擋不住。錯：stderr 一行「工具名: 代號 原因」、退 1，同一行也印在 stdout 給腦看。
+pi 那組是一套可重用的寫程式工具，仿 [pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) 預設的四個：`read`（讀檔，最多 2000 行或 50KB、提示 offset 接著讀）、`write`（建檔或整份蓋掉）、`edit`（`edits: [{old_text, new_text}]`，每段對原檔比、要唯一、不重疊，全有或全無）、`bash`（在 `$AOS_WS` 裡跑一行指令，留最後 2000 行或 50KB，逾時 `timeout_s` 預設 30 秒、上限 300 秒、整群停）。每個都是資料夾程式＋`_tooldef.json`（P-41），arguments 從 stdin 進、stdout 是結果。read／write／edit 的路徑從 `$AOS_WS` 算、不能跑出去（`PathBad`，符號連結也算）；bash 的指令本身擋不住。錯：stderr 一行「工具名: 代號 原因」、退 1，同一行也印在 stdout 給腦看。
 
 `agent-pip/` 是掛上這套（與下面的 file-tools）的 coding agent：從 agent-dan 照抄，`tools/` 裡是十二個指到 `../../../lib/base/<名>` 的符號連結，`system.txt` 照 pi 的精神寫短版。跟 agent-dan 只差一條：**工具出的問題回給腦、不停**（工具退非 0、叫了沒有的工具、arguments 不是 JSON，都接成一則 tool 訊息）。真跑：`AOS_BRAIN_URL=http://localhost:4000/v1 AOS_STACK=<工作區外的資料夾>/ aos-exec --ws <工作區> proto8/demo/agent-pip`（stack 放工作區外，免得腦用工具改到自己的對話）。試驗場 `~/code/try/pi-tools/`。設計與 pi 的調查在 [thinking 2026-10-24-pi-tools](../thinking/2026-10-24-pi-tools.md)；測試 `tests/test_pi_tools.py`。
 
-file-tools 是資料夾與檔案的漸進工具（使用者「資料夾修改和檔案這兩個工具我需要特別設計」），**輸出一律 JSON**：`ls`（子項陣列：型別、大小、時間、子項數、`aos` 標記哪些有 `_entry`／`.env`／`tool.json`…、JSON 檔的頂層 key；分頁）、`stat`（單一個的屬性）、`view`（JSON 照 `pointer` 一層層展開、小的直接給值；大文字檔先給大綱再看 `start`／`end` 那段）、`json_edit`（`set: {指標: 值}`、`del: [指標]`，先檢查再經 aos-json 原子寫入）、`mkdir`、`move`、`copy`（目的地有東西就不做）、`trash`（刪除＝搬進 `$AOS_WS/.trash/<時間>/`，可救回）。路徑限制與錯的格式同 pi 那組。json_edit 要 PATH 上有 `aos-json`（`proto8/impls/aos-json/bin`）。測試 `tests/test_file_tools.py`。
+file-tools 是資料夾與檔案的漸進工具（使用者「資料夾修改和檔案這兩個工具我需要特別設計」），**輸出一律 JSON**：`ls`（子項陣列：型別、大小、時間、子項數、`aos` 標記哪些有 `_entry`／`.env`／`_tooldef.json`／`tools.json`…、JSON 檔的頂層 key；分頁）、`stat`（單一個的屬性）、`view`（JSON 照 `pointer` 一層層展開、小的直接給值；大文字檔先給大綱再看 `start`／`end` 那段）、`json_edit`（`set: {指標: 值}`、`del: [指標]`，先檢查再經 aos-json 原子寫入）、`mkdir`、`move`、`copy`（目的地有東西就不做）、`trash`（刪除＝搬進 `$AOS_WS/.trash/<時間>/`，可救回）。路徑限制與錯的格式同 pi 那組。json_edit 要 PATH 上有 `aos-json`（`proto8/impls/aos-json/bin`）。測試 `tests/test_file_tools.py`。
 
 ## agent-meg（記憶庫，10-24）
 
@@ -221,7 +222,7 @@ agent-liv/
   tools/clock/                               自己的工具（真資料夾）：庫裡也有 clock，同名自己的贏（示範覆寫）
 ```
 
-brain 照舊從 `tools/*/tool.json` 組 tools、act 照舊 `aos-exec tools/<名>`——叫工具那段跟 agent-dan 一樣，aos-exec 走進捷徑指到的真資料夾（cwd、`AOS_CD` 是庫的位置），agent 不知道這是庫的（C-52）。跑：`aos-exec --ws <工作區> proto8/demo/agent-liv`（沒設 `AOS_BRAIN_URL`＝假腦：`idle think act idle think act idle(10)`，答 `FAKE ANSWER to: …（ls said: N items）`，小格 `.stack/ls/`）。錯同 agent-dan（`agent-liv: 代號 原因`）；庫的工具出錯、叫了沒有的工具、arguments 不是 JSON 照 agent-pip **回給腦、不停**。測試 `test_lib.py`。
+brain 照舊從 `tools.json`（`aos-tools ls --json`）組 tools、act 照舊 `aos-tools call <名>`——叫工具那段跟 agent-dan 一樣，tools.json 登記的是 `tools/<名>` 這條捷徑，aos-exec 走進捷徑指到的真資料夾（cwd、`AOS_CD` 是庫的位置），agent 不知道這是庫的（C-52）。跑：`aos-exec --ws <工作區> proto8/demo/agent-liv`（沒設 `AOS_BRAIN_URL`＝假腦：`idle think act idle think act idle(10)`，答 `FAKE ANSWER to: …（ls said: N items）`，小格 `.stack/ls/`）。錯同 agent-dan（`agent-liv: 代號 原因`）；庫的工具出錯、叫了沒有的工具、arguments 不是 JSON 照 agent-pip **回給腦、不停**。測試 `test_lib.py`。
 
 ## agent-hal（土法 compact，10-24）
 

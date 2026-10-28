@@ -40,7 +40,7 @@ aos-janet [--force] 原始檔.janet 輸出資料夾
 | `(text s)`、`(script s)`、`(sh 行 …)` | 文字檔（644）、可執行檔（755）、`#!/bin/sh` 加上每一行 |
 | `(copy "路徑")` | 照抄那個檔（相對路徑從原始檔所在的資料夾算），權限照原檔 |
 | `(dotenv "# 註解" ["名" "值"])` | `.env` |
-| `(tool :description … :parameters … :entry …)` | 工具資料夾：`tool.json`＋`_entry` |
+| `(tool :description … :parameters … :entry …)` | 工具資料夾：`_tooldef.json`＋`_entry`（agent-dan 範例另外生 `tools.json` 登記它們） |
 | `(janet-main [_ & args] 程式…)` | `#!/usr/bin/env janet` 的可執行檔，內容 `(defn main [_ & args] 程式…)` |
 | `(aos-seq a b c)`、`(aos-par a b)`、`(aos-if c t e)` | 一個資料夾：`_entry` 是短 shell 腳本，每一步 `aos-exec` 一次、各給一個小格 `$AOS_STACK/<步名>`；單子放 `steps.json`、資料夾長成 `s1/`、`p1/`、`cond/`… |
 
