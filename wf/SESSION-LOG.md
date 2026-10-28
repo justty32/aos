@@ -12,7 +12,7 @@
 
 ## 最新進度
 
-- **open｜agent 函數的常用操作（10-28）**：已定各種單位（queue 操作、endpoint、tools、時間點掛勾、一輪本身）都要是 aos 函數、包括 endpoint；queue／endpoint／tools／阻塞的操作與重寫的 pseudo code 都是提案，等使用者逐條看，跟 P-23／P-41／P-20 對不上處待他定 → [thinking 10-28 agent-ops](../proto8/thinking/2026-10-28-agent-ops.md)
+- **open｜agent 函數的常用操作（10-28）**：已定各種單位（queue 操作、endpoint、tools、時間點掛勾、一輪本身）都要是 aos 函數、包括 endpoint；跟 P-23／P-41 衝突時照新做法走（使用者「就是要這樣」）——**待辦：實作時改 CONVENTION P-23、P-41 與相關 NORMS 條文**；剩下 P-20 那條和其他提案（queue／endpoint／tools／阻塞的操作、重寫的 pseudo code）等使用者看 → [thinking 10-28 agent-ops](../proto8/thinking/2026-10-28-agent-ops.md)
 - **open｜aos-tools 做完第一版（10-28）**：後續兩件——topdown 的 agent 還照舊掃 `tools/*/_tooldef.json`、沒換成 tools.json；10-26 playground（家機 `~/code/try/playground/agent/`）的 mcp 設定還是舊寫法（給工具資料夾），要改成給 agent 資料夾＋`aos-tools add` → [thinking 10-28 aos-tools § 結論](../proto8/thinking/2026-10-28-aos-tools.md#結論10-28-實作照原則代定可翻案)
 - **open｜playground 一步一步重來（10-26 起）**：節點只有 `_entry`→`main.py` 叫 `claude -p`＋經 aos-mcp 接 clock／math／read；aos-hub 10-28 照新方向重寫完（常駐 aos-hub-kernel、`AOS_HUB`、pause／stop、Ctrl-] 只跳出、aos-say／listen 可對 claude／codex 說話，WSL 實跑過）；信箱放進 `.stack/`（使用者「放Stack比較好。」，已改）；等使用者親手試；pi coding agent 沒裝、只有適配表 → [thinking 10-26 playground](../proto8/thinking/2026-10-26-playground.md)、[10-28 hub-kernel](../proto8/thinking/2026-10-28-hub-kernel.md)、[10-28 hub-adapter](../proto8/thinking/2026-10-28-hub-adapter.md)、統整頁 https://claude.ai/artifact/W7aXZvCPTf1u2qExH6CEMM
 - **open｜10-25 galtxt 由上而下兩隊：都已收線，等使用者想完說他抓到的問題點**（再動之前先問）：兩隊沒做的見 [甲隊 HANDOFF](../proto8/topdown/galtxt-a/HANDOFF.md)、[乙隊 HANDOFF](../proto8/topdown/galtxt-b/HANDOFF.md)；統整頁 https://claude.ai/artifact/9sj3ZkRhK4ZYomb8WeSzrA ；代定清單與今天做了哪些 → [session log 10-25](session_logs/2026-10/2026-10-25.md)
