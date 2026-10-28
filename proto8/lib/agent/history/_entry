@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+# history - agent 的對話紀錄格：$AOS_STACK/history.jsonl 一行一則 OpenAI message，附加、整份讀、整份換成短版（compact）
+"""叫法（agent-round § 4）：aos-exec <history 格> <agent 資料夾> <子命令> [args]
+
+    append                 stdin 一個 JSON 物件（一則 message）→ 追加一行；不是 JSON 物件＝HistoryBad
+    read                   → stdout 一行 JSON 陣列（整份；沒有檔＝[]）；檔裡有一行壞＝HistoryBad
+    compact [--expect-bytes N]
+                           stdin＝新的短版（一行一則 message，空行略過；每行都要是 JSON 物件，否則 HistoryBad、什麼都不動）
+                           → 整份舊的先收進 $AOS_STACK/history_archive/<UTC 到毫秒>.jsonl（hard link，不成就複製），
+                             再把新的（先寫 . 開頭的暫存檔，N-05）改名換上；stdout 印收進去的那份「history_archive/<名>」一行。
+                           --expect-bytes N：現在的 history.jsonl 不是 N bytes（壓的期間有人又接了）＝HistoryChanged、不換。
+
+只有 compact 可以改寫 history.jsonl，其他一律只附加（P-41 改寫，agent-ops 決定 11）。「怎麼壓」不在這格：
+壓成什麼樣是叫它的人（lib/agent/compact）的事，這格只負責「收起舊的、換上給的那份」（實作時代定，見 agent-round 文末）。
+副產物（history_archive/ 底下）都留著不清（清理是人的事，P-14）。
+agent 資料夾這個參數這格用不到（只碰 $AOS_STACK），照共通介面收、只驗是資料夾。
+錯：stderr 一行「history: 代號 原因」、退 1（N-43）。代號：ArgumentsBad、AgentMissing、StackMissing、HistoryBad、HistoryChanged、WriteFailed。"""
+import datetime, json, os, shutil, sys
+
+NAME = "history"
+USAGE = "history <agent 資料夾> append | read | compact [--expect-bytes N]"
+
+
+def die(code, reason):
+    print("%s: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
+    sys.exit(1)
+
+
+def parse_lines(text, where):
+    """一行一則；空行略過；每行都要是 JSON 物件。回 [(原文那行, 物件)]。"""
+    out = []
+    for n, line in enumerate(text.splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            m = json.loads(line)
+        except ValueError as e:
+            die("HistoryBad", "%s第 %d 行不是 JSON：%s" % (where, n, e))
+        if not isinstance(m, dict):
+            die("HistoryBad", "%s第 %d 行不是 JSON 物件" % (where, n))
+        out.append((line.strip(), m))
+    return out
+
+
+def read_file(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        return ""
+    except OSError as e:
+        die("HistoryBad", "讀不到 %s：%s" % (path, e))
+
+
+def append(hist):
+    text = sys.stdin.read()
+    try:
+        m = json.loads(text)
+    except ValueError as e:
+        die("HistoryBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(m, dict):
+        die("HistoryBad", "stdin 不是 JSON 物件（%s）" % type(m).__name__)
+    line = json.dumps(m, ensure_ascii=False) + "\n"
+    try:
+        with open(hist, "a", encoding="utf-8") as f:       # 只附加：一次 write 一整行
+            f.write(line)
+    except OSError as e:
+        die("WriteFailed", "接不進 %s：%s" % (hist, e))
+
+
+def read(hist):
+    rows = [m for _, m in parse_lines(read_file(hist), "history.jsonl ")]
+    sys.stdout.write(json.dumps(rows, ensure_ascii=False) + "\n")
+
+
+def archive_name(stack):
+    t = datetime.datetime.now(datetime.timezone.utc)
+    base = t.strftime("%Y%m%dT%H%M%S.") + "%03dZ" % (t.microsecond // 1000)
+    name, i = base + ".jsonl", 1
+    while os.path.lexists(os.path.join(stack, "history_archive", name)):   # 同一毫秒壓兩次（幾乎不會）：加尾碼
+        i += 1
+        name = "%s-%d.jsonl" % (base, i)
+    return name
+
+
+def compact(stack, hist, args):
+    expect = None
+    if args:
+        if len(args) != 2 or args[0] != "--expect-bytes" or not args[1].isdigit():
+            die("ArgumentsBad", "usage: %s（compact 只收 --expect-bytes N）" % USAGE)
+        expect = int(args[1])
+    rows = parse_lines(sys.stdin.read(), "stdin ")
+    size = os.path.getsize(hist) if os.path.exists(hist) else 0
+    if expect is not None and size != expect:
+        die("HistoryChanged", "history.jsonl 是 %d bytes，不是 --expect-bytes %d（壓的期間被接了），不換" % (size, expect))
+    tmp = os.path.join(stack, ".history.jsonl.compact")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write("".join(line + "\n" for line, _ in rows))
+        arch = os.path.join(stack, "history_archive")
+        os.makedirs(arch, exist_ok=True)
+        name = None
+        if os.path.exists(hist):
+            name = archive_name(stack)
+            try:
+                os.link(hist, os.path.join(arch, name))       # 舊的整份原封不動收進去；history.jsonl 一刻都不會不見
+            except OSError:
+                shutil.copy2(hist, os.path.join(arch, name))
+        os.replace(tmp, hist)                                  # 新的一步換上（別人看到的不是舊的就是新的）
+    except OSError as e:
+        die("WriteFailed", "換不上新的 history：%s" % e)
+    if name:
+        print("history_archive/" + name)
+
+
+def main():
+    argv = sys.argv[1:]
+    if len(argv) < 2:
+        die("ArgumentsBad", "usage: " + USAGE)
+    agent, cmd, rest = argv[0], argv[1], argv[2:]
+    if not os.path.isdir(agent):
+        die("AgentMissing", "agent 資料夾不存在：%s" % agent)
+    stack = os.environ.get("AOS_STACK")
+    if not stack:
+        die("StackMissing", "沒設定 AOS_STACK")
+    hist = os.path.join(stack, "history.jsonl")
+    if cmd in ("append", "read") and rest:
+        die("ArgumentsBad", "usage: %s（%s 不收參數：%s）" % (USAGE, cmd, " ".join(rest)))
+    if cmd == "append":
+        append(hist)
+    elif cmd == "read":
+        read(hist)
+    elif cmd == "compact":
+        compact(stack, hist, rest)
+    else:
+        die("ArgumentsBad", "usage: %s（不認得子命令 %s）" % (USAGE, cmd))
+
+
+main()

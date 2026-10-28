@@ -1,0 +1,360 @@
+#!/usr/bin/env python3
+# queue - agent 的收題格：信箱 $AOS_WS/new cur out done 的放題、等答案、認領、看、中間輸出、交答案、撤回
+"""叫法（agent-round § 4）：aos-exec <queue 格> <agent 資料夾> <子命令> [args]
+
+    push [--wait] [--timeout-s N] [題名]   stdin 題文 → stdout 題名（＝aos-say：先寫工作區頂層暫存檔再 link 進 new/，不蓋）
+                                          --wait＝放完接著 pop（stdout 先印題名一行、再印答案）
+    pop [--timeout-s N] 題名               等 out/<題名>，印出來（＝aos-listen 等一題）；逾時退 10
+    claim [--more]                         認領 → stdout 題名（一行一題）；沒題退 10
+    peek | current | done                  new/ ｜ cur/ ｜ done/ 的題名，一行一個
+    emit                                   stdin 一則訊息（JSON 物件）→ 追加一行進 $AOS_STACK/live.jsonl（只接不重寫）
+    finish                                 stdin 答案 → cur/ 有幾題就寫幾份 out/<題名>、cur/ → done/、清掉 current.txt
+    withdraw 題名                          只刪 new/ 裡的；已認領（cur/ out/ done/ 有）＝QuestionClaimed
+
+claim 的順序（agent-round 文末「實作時代定」第 5 條；任何一步當掉重跑都接得上）：
+  cur/ 已有題（上次搬進去了）＝不再搬、不碰 history，只把 cur/ 的題名重寫進 current.txt、印出來。
+  cur/ 空：取 new/ 排序最前一題 → ① 題文接成一則 user 經 history 格 append（history 最後一則已是 user／tool 就不接）
+  → ② 題名寫 $AOS_STACK/current.txt → ③ 題目 new/ → cur/。
+  --more（插話：act 決定打斷時再認領一題）：cur/ 有沒有都取 new/ 最前一題，同樣三步；① 只在最後一則已是 user 時不接
+  （被打斷後最後一則是 tool，要接；當掉重跑時最後一則已是這題的 user，不接兩次）；current.txt＝原本的再加這題。
+history 格怎麼找：aos-parts --file <agent>/parts.json which --json history（沒掛＝PartMissing），拿到的 env 疊上去、aos-exec 它。
+題目是資料夾（P-13）就讀裡面的 prompt.txt。寫檔一律先寫 . 開頭暫存再改名（N-05）。. 開頭的檔不算題（別人寫到一半）。
+錯：stderr 一行「queue: 代號 原因」、退 1（N-43）。代號：ArgumentsBad、AgentMissing、WsMissing、StackMissing、NameBad、
+TextMissing、MessageBad、QuestionUnknown、QuestionClaimed、QuestionMissing、AnswerMissing、PartMissing、PartsFailed、
+HistoryFailed、WriteFailed。退 10＝pop 逾時、claim 沒題（正常停，P-19）。"""
+import datetime, json, os, shutil, subprocess, sys, time
+
+NAME = "queue"
+STAGES = ("new", "cur", "out", "done")
+USAGE = ("queue <agent 資料夾> push [--wait] [--timeout-s N] [題名] | pop [--timeout-s N] 題名 | claim [--more] | "
+         "peek | current | done | emit | finish | withdraw 題名")
+POLL = 0.1
+
+
+def die(code, reason):
+    print("%s: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
+    sys.exit(1)
+
+
+def names(ws, stage):
+    try:
+        return sorted(n for n in os.listdir(os.path.join(ws, stage)) if not n.startswith("."))
+    except (FileNotFoundError, NotADirectoryError):
+        return []
+
+
+def where(ws, name):
+    return [s for s in STAGES if os.path.lexists(os.path.join(ws, s, name))]
+
+
+def write_atomic(path, text):
+    """N-05：先寫同資料夾 . 開頭的暫存檔再改名。"""
+    d = os.path.dirname(path)
+    tmp = os.path.join(d, "." + os.path.basename(path) + ".tmp")
+    try:
+        os.makedirs(d, exist_ok=True)
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except OSError as e:
+        die("WriteFailed", "寫不了 %s：%s" % (path, e))
+
+
+def check_name(name):
+    if not name or name.startswith(".") or "/" in name:
+        die("NameBad", "題名不能空、不能 . 開頭、不能有 /：%r" % name)
+
+
+# ---- push／pop（同 aos-say／aos-listen 碰的檔；那兩支不改）----
+
+def new_name():
+    t = datetime.datetime.now(datetime.timezone.utc)
+    return t.strftime("%Y%m%dT%H%M%S.") + "%03dZ.txt" % (t.microsecond // 1000)
+
+
+def push(ws, text, name):
+    if name is not None:
+        check_name(name)
+        used = where(ws, name)
+        if used:
+            die("NameBad", "題名 %s 用過了（在 %s/）" % (name, "、".join(used)))
+    if not text.endswith("\n"):
+        text += "\n"
+    tmp = os.path.join(ws, ".queue-push-%d.tmp" % os.getpid())   # 暫存檔放工作區頂層，不放 new/（免得被當成半份題）
+    try:
+        os.makedirs(os.path.join(ws, "new"), exist_ok=True)
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text)
+    except OSError as e:
+        die("WriteFailed", "寫不了暫存檔：%s" % e)
+    try:
+        for _ in range(1000):
+            n = name or new_name()
+            if name is None and where(ws, n):
+                time.sleep(0.002)
+                continue
+            try:
+                os.link(tmp, os.path.join(ws, "new", n))      # link 不蓋已有的
+                return n
+            except FileExistsError:
+                if name is not None:
+                    die("NameBad", "題名 %s 剛好被別人用了" % name)
+                time.sleep(0.002)
+            except OSError as e:
+                die("WriteFailed", "放不進 new/：%s" % e)
+        die("NameBad", "一直撞名，取不到新的題名")
+    finally:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+
+
+def answer_text(ws, name):
+    p = os.path.join(ws, "out", name)
+    try:
+        if os.path.isdir(p):
+            p = os.path.join(p, "answer.txt")
+        with open(p, encoding="utf-8", errors="replace") as f:
+            return f.read()
+    except OSError:
+        return None
+
+
+def pop(ws, name, timeout):
+    check_name(name)
+    start = time.monotonic()
+    while True:
+        text = answer_text(ws, name)
+        if text is not None:
+            sys.stdout.write(text)
+            sys.stdout.flush()
+            return
+        stages = where(ws, name)
+        if not stages:
+            die("QuestionUnknown", "new/ cur/ out/ done/ 都沒有 %s" % name)
+        if stages == ["done"]:
+            die("AnswerMissing", "%s 已經在 done/，out/ 卻沒有答案" % name)
+        if timeout is not None and time.monotonic() - start >= timeout:
+            sys.exit(10)
+        time.sleep(POLL)
+
+
+# ---- claim（要叫 history 格）----
+
+def history_part(agent):
+    try:
+        r = subprocess.run(["aos-parts", "--file", os.path.join(agent, "parts.json"), "which", "--json", "history"],
+                           stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    except OSError as e:
+        die("PartsFailed", "aos-parts 起不來：%s" % e)
+    if r.returncode == 10:
+        die("PartMissing", "沒掛 history 格（%s/parts.json 沒登記、也沒有 %s/history）" % (agent, agent))
+    if r.returncode != 0:
+        die("PartsFailed", "aos-parts which history 退 %d" % r.returncode)
+    try:
+        part = json.loads(r.stdout)
+        return part["path"], {k: str(v) for k, v in (part.get("env") or {}).items()}
+    except (ValueError, KeyError, TypeError, AttributeError) as e:
+        die("PartsFailed", "aos-parts which --json 印的不是 {path, env}：%s" % e)
+
+
+def history(agent, part, sub, stdin_text=""):
+    path, env = part
+    e = dict(os.environ)
+    e.update(env)
+    try:
+        r = subprocess.run(["aos-exec", path, agent, sub], input=stdin_text, stdout=subprocess.PIPE, text=True, env=e)
+    except OSError as ex:
+        die("HistoryFailed", "aos-exec 起不來：%s" % ex)
+    if r.returncode != 0:                                   # history 自己已在 stderr 說了原因（P-21），這裡只說自己這層
+        die("HistoryFailed", "history %s 退 %d" % (sub, r.returncode))
+    return r.stdout
+
+
+def question_text(ws, stage, name):
+    p = os.path.join(ws, stage, name)
+    if os.path.isdir(p):
+        p = os.path.join(p, "prompt.txt")
+    try:
+        with open(p, encoding="utf-8", errors="replace") as f:
+            return f.read()
+    except OSError as e:
+        die("QuestionMissing", "讀不到題目 %s/%s：%s" % (stage, name, e))
+
+
+def claim(agent, ws, stack, more):
+    cur = names(ws, "cur")
+    if cur and not more:
+        write_atomic(os.path.join(stack, "current.txt"), "".join(n + "\n" for n in cur))
+        print("\n".join(cur))
+        return
+    new = names(ws, "new")
+    if not new:
+        sys.exit(10)
+    name = new[0]
+    text = question_text(ws, "new", name)
+    part = history_part(agent)
+    try:
+        rows = json.loads(history(agent, part, "read"))
+        last = rows[-1].get("role") if rows and isinstance(rows[-1], dict) else None
+    except (ValueError, TypeError):
+        die("HistoryFailed", "history read 印的不是 JSON 陣列")
+    skip = ("user",) if more else ("user", "tool")
+    if last not in skip:                                      # ① 題文接成一則 user
+        history(agent, part, "append", json.dumps({"role": "user", "content": text}, ensure_ascii=False))
+    listed = cur if more else []                              # ② current.txt
+    write_atomic(os.path.join(stack, "current.txt"), "".join(n + "\n" for n in listed + [name] if n))
+    try:                                                      # ③ new/ → cur/
+        os.makedirs(os.path.join(ws, "cur"), exist_ok=True)
+        os.replace(os.path.join(ws, "new", name), os.path.join(ws, "cur", name))
+    except OSError as e:
+        die("WriteFailed", "搬不進 cur/：%s" % e)
+    print(name)
+
+
+# ---- 其他 ----
+
+def emit(stack):
+    text = sys.stdin.read()
+    try:
+        m = json.loads(text)
+    except ValueError as e:
+        die("MessageBad", "stdin 不是 JSON：%s" % e)
+    if not isinstance(m, dict):
+        die("MessageBad", "stdin 不是 JSON 物件")
+    try:
+        with open(os.path.join(stack, "live.jsonl"), "a", encoding="utf-8") as f:
+            f.write(json.dumps(m, ensure_ascii=False) + "\n")
+    except OSError as e:
+        die("WriteFailed", "接不進 live.jsonl：%s" % e)
+
+
+def finish(ws, stack):
+    cur = names(ws, "cur")
+    if not cur:
+        die("QuestionMissing", "cur/ 是空的，沒有認領中的題目可以交")
+    answer = sys.stdin.read()
+    if not answer.endswith("\n"):
+        answer += "\n"
+    for n in cur:                                             # 先寫完所有答案，再搬；中途當掉重跑同樣的答案再寫一次
+        write_atomic(os.path.join(ws, "out", n), answer)
+    try:
+        os.makedirs(os.path.join(ws, "done"), exist_ok=True)
+        for n in cur:
+            shutil.move(os.path.join(ws, "cur", n), os.path.join(ws, "done", n))
+    except OSError as e:
+        die("WriteFailed", "搬不進 done/：%s" % e)
+    try:
+        os.unlink(os.path.join(stack, "current.txt"))
+    except FileNotFoundError:
+        pass
+    except OSError as e:
+        die("WriteFailed", "清不掉 current.txt：%s" % e)
+
+
+def withdraw(ws, name):
+    check_name(name)
+    stages = where(ws, name)
+    if not stages:
+        die("QuestionUnknown", "new/ cur/ out/ done/ 都沒有 %s" % name)
+    if stages != ["new"]:
+        die("QuestionClaimed", "%s 已經認領（在 %s/），不能撤回" % (name, "、".join(s for s in stages if s != "new")))
+    p = os.path.join(ws, "new", name)
+    try:
+        shutil.rmtree(p) if os.path.isdir(p) and not os.path.islink(p) else os.unlink(p)
+    except OSError as e:
+        die("WriteFailed", "刪不掉 new/%s：%s" % (name, e))
+
+
+def take_flags(rest, valued, plain):
+    """把 --x N 與 --y 從 rest 抽出來；其他 -- 開頭的＝ArgumentsBad。"""
+    opts, left, i = {}, [], 0
+    while i < len(rest):
+        a = rest[i]
+        if a in valued:
+            if i + 1 >= len(rest):
+                die("ArgumentsBad", "usage: %s（%s 後面要給值）" % (USAGE, a))
+            opts[a] = rest[i + 1]
+            i += 2
+        elif a in plain:
+            opts[a] = True
+            i += 1
+        elif a.startswith("--"):
+            die("ArgumentsBad", "usage: %s（不認得 %s）" % (USAGE, a))
+        else:
+            left.append(a)
+            i += 1
+    return opts, left
+
+
+def seconds(opts):
+    v = opts.get("--timeout-s")
+    if v is None:
+        return None
+    try:
+        n = float(v)
+        if n < 0 or n != n:
+            raise ValueError
+    except ValueError:
+        die("ArgumentsBad", "usage: %s（--timeout-s 要給不小於 0 的數字：%s）" % (USAGE, v))
+    return n
+
+
+def main():
+    argv = sys.argv[1:]
+    if len(argv) < 2:
+        die("ArgumentsBad", "usage: " + USAGE)
+    agent, cmd, rest = os.path.abspath(argv[0]), argv[1], argv[2:]
+    if not os.path.isdir(agent):
+        die("AgentMissing", "agent 資料夾不存在：%s" % argv[0])
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "沒設定 AOS_WS 或不是資料夾：%r" % ws)
+    stack = os.environ.get("AOS_STACK")
+    if cmd in ("claim", "emit", "finish") and not stack:
+        die("StackMissing", "沒設定 AOS_STACK")
+    if cmd == "push":
+        opts, left = take_flags(rest, ("--timeout-s",), ("--wait",))
+        if len(left) > 1 or ("--timeout-s" in opts and "--wait" not in opts):
+            die("ArgumentsBad", "usage: " + USAGE)
+        text = sys.stdin.read()
+        if not text.strip():
+            die("TextMissing", "題文是空的")
+        name = push(ws, text, left[0] if left else None)
+        print(name, flush=True)
+        if opts.get("--wait"):
+            pop(ws, name, seconds(opts))
+        return
+    if cmd == "pop":
+        opts, left = take_flags(rest, ("--timeout-s",), ())
+        if len(left) != 1:
+            die("ArgumentsBad", "usage: %s（pop 要一個題名）" % USAGE)
+        pop(ws, left[0], seconds(opts))
+        return
+    if cmd == "claim":
+        opts, left = take_flags(rest, (), ("--more",))
+        if left:
+            die("ArgumentsBad", "usage: " + USAGE)
+        claim(agent, ws, stack, bool(opts.get("--more")))
+        return
+    if cmd == "withdraw":
+        if len(rest) != 1:
+            die("ArgumentsBad", "usage: %s（withdraw 要一個題名）" % USAGE)
+        withdraw(ws, rest[0])
+        return
+    if rest:
+        die("ArgumentsBad", "usage: %s（%s 不收參數）" % (USAGE, cmd))
+    if cmd in ("peek", "current", "done"):
+        ns = names(ws, {"peek": "new", "current": "cur", "done": "done"}[cmd])
+        if ns:
+            print("\n".join(ns))
+    elif cmd == "emit":
+        emit(stack)
+    elif cmd == "finish":
+        finish(ws, stack)
+    else:
+        die("ArgumentsBad", "usage: %s（不認得子命令 %s）" % (USAGE, cmd))
+
+
+main()
