@@ -21,6 +21,8 @@ aos-chat   [--ws WS] [--trace] [agent 資料夾]               /status /run /tra
 
 工作區＝`--ws` ＞ `$AOS_WS` ＞ cwd（同 aos-exec）；stack＝`$AOS_STACK` ＞ `$AOS_WS/.stack/`。每支開頭的說明寫了全部規則。
 
+**回答的不一定是 aos agent**（10-28）：say／listen 只認工作區這個信箱（agent 對話協議＝P-11～P-14，見 [thinking 10-28 hub-adapter](../../thinking/2026-10-28-hub-adapter.md)）。`aos-hub add <工作區>` 之後，常駐的 aos-hub-kernel 就替 claude／codex 收題，見 [cli_hub](../cli_hub/README.md)。「有沒有人在跑」除了看 `/proc`，也認 stack 裡的 `server.txt`（`<pid> <程式名>`）；服務者答某題失敗時在 `trace.jsonl` 留 `question`、`error`，listen 會說出來。
+
 ## 怎麼用
 
 PATH 要有 aos-exec、aos-loop、aos-fsm（同 demo/run.sh）與這裡的 `bin/`：

@@ -52,7 +52,8 @@ def say(ws, text, name=None):
 
 
 def runners(ws):
-    """有哪些行程在跑這個工作區：/proc 裡環境變數 AOS_WS＝這個工作區、argv[0] 是 aos-loop／aos-fsm／aos-exec／aos-daemon 的。
+    """有哪些行程在跑這個工作區：/proc 裡環境變數 AOS_WS＝這個工作區、argv[0] 是 aos-loop／aos-fsm／aos-exec／aos-daemon 的，
+    加上 stack 裡 server.txt 自己報名的（declared）。
     回 [(pid, 程式名)]。讀不到的行程（別的使用者的）跳過。"""
     found, me = [], os.getpid()
     for d in os.listdir("/proc"):
@@ -75,7 +76,16 @@ def runners(ws):
                 except OSError:
                     pass
                 break
-    return found
+    return found + declared(ws)
+
+
+def declared(ws):
+    """不靠 /proc 猜的服務者（10-28）：stack 裡的 server.txt 寫「<pid> <程式名>」（例：aos-hub-kernel 替 claude 代答），
+    那個 pid 還活著就算有人在跑。回 [(pid, 程式名)]。"""
+    line = (read(os.path.join(stack_of(ws), "server.txt")) or "").split()
+    if len(line) < 2 or not line[0].isdigit() or not os.path.exists("/proc/%s" % line[0]):
+        return []
+    return [(int(line[0]), line[1])]
 
 
 def last_trace(ws):

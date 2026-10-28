@@ -40,6 +40,8 @@ impls 各專案自己的 ctest（`test_cli`、`test_demo`…）說明在 [proto8
 
 10-23 起 `proto8/tests/test_dan.py`（agent-dan）裡連真模型的案例，在 `localhost:4000/v1/models` 連不上時 skip（其餘用假 server，離線也跑）。
 
+10-28 Windows 機的 WSL：連沒人聽的埠（測試拿 `http://127.0.0.1:9/v1` 當腦壞了）會**逾時**而不是馬上被拒，所以 test_dan、test_human、test_ai_tools、test_talk、test_grow、test_topdown_galtxt_a 裡那 7 案會逾時失敗——是環境，不是程式壞；其餘全過才算綠。
+
 ## 測試分類
 
 四類對照本專案的實況：

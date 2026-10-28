@@ -4,6 +4,8 @@ vcpkg_installed/
 bin/
 # proto8 的薄入口腳本（不是建置產物）要進版控
 !proto8/bin/
+# proto8/extras 各工具的 bin/ 是手寫的命令列、不是建置產物（10-28：10-27 的 aos-hub 被上一行 bin/ 擋掉、從沒進版控）
+!proto8/extras/*/bin/
 .cache/
 compile_commands.json
 CMakeUserPresets.json

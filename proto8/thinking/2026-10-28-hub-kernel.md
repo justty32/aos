@@ -1,6 +1,6 @@
 # 2026-10-28 aos-hub 下一步：常駐 aos-kernel 管所有 CLI 實例、pause 與 stop
 
-← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-27 aos-hub（demo）](2026-10-27-claude-switch.md)、[10-26 playground](2026-10-26-playground.md)（`_entry` 叫 claude、經 aos-mcp 接工具）｜使用者筆記：[user-advice/20261027](../user-advice/20261027.md)（使用者的資料夾，不改）｜程式（還沒改）：[extras/cli_hub](../extras/cli_hub/README.md)
+← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-27 aos-hub（demo）](2026-10-27-claude-switch.md)、[10-26 playground](2026-10-26-playground.md)（`_entry` 叫 claude、經 aos-mcp 接工具）｜使用者筆記：[user-advice/20261027](../user-advice/20261027.md)（使用者的資料夾，不改）｜程式：[extras/cli_hub](../extras/cli_hub/README.md)（10-28 下午照這裡的決定改完）｜後續：[10-28 hub-adapter](2026-10-28-hub-adapter.md)（say／listen 協議、適配表、副產物、實作與實跑）
 
 規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。
 
@@ -61,7 +61,7 @@
 
 - kernel 跟各指令怎麼溝通（IPC 用什麼）——使用者說是技術細節，先不考慮。
 - aos-tools 長什麼樣（使用者還在規劃）；aos-mcp 怎麼包在它上面。
-- 跟 aos-say／listen 怎麼結合（使用者自己也覺得「可能不太行」）。
+- ~~跟 aos-say／listen 怎麼結合~~：10-28 下午做成了——hub 實作 say／listen 的信箱協議，見 [hub-adapter](2026-10-28-hub-adapter.md)。
 - 一輪跑起來沒開畫面時怎麼看：`_entry` 那邊處理，還是 aos-mcp 記（筆記兩個都可）；10-27 的 `aos-hub watch`（讀 `live.jsonl`）是現有的一條路。
 - 限制實例數量（決定 4，實作時再說）。
 - **kernel 記的跟實際不符**（實例自己掛了、被 OOM 砍）要不要定期對帳、kernel 重開後記錄要不要存硬碟：使用者說等實際遇到問題再解決，先不處理、不列待辦。
@@ -83,7 +83,7 @@
 
 ## 現有 aos-hub 跟新方向的差異（之後要改的）
 
-10-27 的 aos-hub 是 demo（使用者 10-27「以後再完善」），以下照 10-28 的決定，實作時要改：
+10-27 的 aos-hub 是 demo（使用者 10-27「以後再完善」），以下照 10-28 的決定，實作時要改。**10-28 下午已照表改完**（使用者「hub也可以開始做」），做法與代定見 [hub-adapter](2026-10-28-hub-adapter.md#結論二aos-hub-照-10-28-決定改完)：
 
 | 項目 | 現在（10-27） | 新方向（10-28） |
 |---|---|---|

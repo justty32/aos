@@ -52,7 +52,12 @@ def wait_one(ws, name, timeout, tail):
         if now >= next_check:
             next_check = now + 1.0
             if h.runners(ws):
-                warned = False
+                t = h.last_trace(ws)                    # 10-28：常駐的服務者（aos-hub-kernel）答這題失敗時，在 trace 留 question＋error
+                failed = t and t.get("question") == name and t.get("error") and "cur" in stages
+                if failed and not warned:
+                    h.note("%s 答 %s 失敗：%s。修好後讓它再收題（aos-hub 的實例：aos-hub pause 一次）；我繼續等，Ctrl-C 離開"
+                           % (t.get("state"), name, t["error"]))
+                warned = bool(failed)
             elif not warned and answer(ws, name) is None:
                 h.note(h.stuck_hint(ws, name) + "。我繼續等，Ctrl-C 離開")
                 warned = True

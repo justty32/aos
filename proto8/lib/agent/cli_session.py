@@ -3,15 +3,15 @@
 # 一個工具的小格（$AOS_STACK，act 給的是 $AOS_STACK/<工具名>/）裡放：
 #   session.txt   這段對話的 id（claude 的 session id／codex 的 thread id）；第一次講完話才有
 #   tty.sock      tmux 的 socket：互動畫面活著時，CLI 的終端就接在這裡（attach＝tmux -S tty.sock attach）
-#   tmux.conf     attach 開畫面時寫的 tmux 設定（Ctrl-\ 跳出、不用 prefix）
+#   tmux.conf     attach 開畫面時寫的 tmux 設定（Ctrl-] 或 Ctrl-\ 跳出、不用 prefix）
 #   turns.jsonl   互動畫面每講完一輪，hook 接一行 {"answered_at", "text"}（answered_at＝講完的時間，10-25 前叫 at）（agent 從這裡拿回答，不去解析畫面）
 #   busy.txt      claude 的畫面正在跑一輪（有人送出、還沒講完）
 #   lock          同一時間只有一個人用這段對話（agent 的一次呼叫、attach 開畫面）
-#   live.jsonl    claude 非互動那一次的即時紀錄（stream-json 一行一事件，每次呼叫重寫；aos-hub watch 看它）（10-27）
+#   live.jsonl    非互動的即時紀錄兼副產物：claude 的 stream-json、codex 的 --json 事件，一行一事件、只接不重寫（10-28；10-27 是每次重寫）
 #   tool.txt、ws.txt  這格屬於哪個工具資料夾、哪個工作區（aos-hub 叫回畫面時用）（10-27）
 #
-# 登記（10-27）：每用到一格，就在 $AOS_HUB（沒設＝~/.local/state/aos-hub）的 cells/ 放一個指向這格的捷徑，
-# 給 proto8/extras/cli_hub 的 aos-hub 列出全部、切換、收起、叫回。這支只登記，不管 hub 怎麼用。
+# 登記（10-28 改）：每用到一格，若設了 $AOS_HUB、那裡有常駐的 aos-hub-kernel（kernel.sock），就送一行 register 給它；
+# 沒設、kernel 沒在跑都不擋正事（工具照用，只是 hub 列不到）。這支只登記，不管 hub 怎麼用（proto8/extras/cli_hub）。
 #
 # 兩條路（每次呼叫自己挑）：
 #   畫面沒開 → 非互動：claude -p --resume <id>（第一次 --session-id <新 id>）、codex exec resume <id> -（第一次 codex exec -）
@@ -21,7 +21,7 @@
 # 放哪（10-24 遷移）：proto8/lib/agent/cli_session.py，lib/agent 的 claude、codex 兩個工具共用（用 realpath 找到這層再 import）；
 # agent-fay 根目錄的 cli_session.py 是捷徑指過來（給 attach 用）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
-import datetime, fcntl, hashlib, json, os, shlex, subprocess, sys, threading, time, uuid
+import datetime, fcntl, glob, json, os, shlex, socket, subprocess, sys, threading, time, uuid
 
 TMUX_SESSION = "cli"
 PROG, ECHO = "cli_session", False                    # 錯誤行開頭、要不要也印到 stdout（call_main 改成工具名、True）
@@ -110,29 +110,46 @@ class Cell:
         return [l for l in r.stdout.splitlines() if l.strip()] if r.returncode == 0 else []
 
 
-def hub_dir():
-    return os.environ.get("AOS_HUB") or os.path.join(
-        os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "aos-hub")
-
-
 def register(cell, tool_dir, ws):
-    """記下這格是哪個工具、哪個工作區，並在 hub 的 cells/ 放捷徑（10-27）。登記失敗不擋正事。"""
+    """記下這格是哪個工具、哪個工作區（tool.txt、ws.txt），並告訴 $AOS_HUB 的常駐 kernel（10-28）。登記失敗不擋正事。"""
     try:
         if cell.read("tool.txt") != tool_dir:
             cell.write("tool.txt", tool_dir + "\n")
         if cell.read("ws.txt") != ws:
             cell.write("ws.txt", ws + "\n")
-        cells = os.path.join(hub_dir(), "cells")
-        os.makedirs(cells, exist_ok=True)
-        link = os.path.join(cells, hashlib.sha1(cell.path.encode()).hexdigest()[:12])
-        if os.path.realpath(link) != os.path.realpath(cell.path):
-            tmp = os.path.join(cells, "." + os.path.basename(link))
-            if os.path.lexists(tmp):
-                os.remove(tmp)
-            os.symlink(cell.path, tmp)
-            os.replace(tmp, link)
     except OSError:
         pass
+    hub = os.environ.get("AOS_HUB")
+    if not hub:
+        return
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+            s.settimeout(2)
+            s.connect(os.path.join(hub, "kernel.sock"))
+            s.sendall((json.dumps({"op": "register", "cell": cell.path, "tool": tool_dir, "ws": ws}) + "\n").encode())
+            s.recv(4096)
+    except OSError:
+        pass
+
+
+def close(cell):
+    """關掉畫面（tmux 和裡面的 CLI；對話是 CLI 邊講邊存的，id 留在 session.txt）。回 True＝本來開著。"""
+    if not cell.alive():
+        return False
+    cell.tmux("kill-server")
+    return True
+
+
+def transcripts(kind, sid):
+    """CLI 自己存的這段對話（含中間訊息、工具呼叫等副產物）放在哪：claude ~/.claude/projects/*/<id>.jsonl、
+    codex ~/.codex/sessions/年/月/日/rollout-*-<id>.jsonl。aos-hub stop 歸檔時拷一份（10-28）。"""
+    if not sid:
+        return []
+    if kind == "claude":
+        base = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
+        return sorted(glob.glob(os.path.join(base, "projects", "*", sid + ".jsonl")))
+    base = os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex")
+    return sorted(glob.glob(os.path.join(base, "sessions", "**", "*%s.jsonl" % sid), recursive=True))
 
 
 # ---------------------------------------------------------------- 非互動（畫面沒開）
@@ -167,7 +184,7 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path):
     timer = threading.Timer(timeout_ms / 1000, p.kill)
     timer.start()
     try:
-        with open(live_path, "w", encoding="utf-8") as live:
+        with open(live_path, "a", encoding="utf-8") as live:      # 10-28：只接不重寫（副產物留著）
             for line in p.stdout:
                 lines.append(line)
                 live.write(line)
@@ -215,6 +232,11 @@ def print_codex(cfg, cell, ws, prompt):
     if os.path.exists(last):
         os.remove(last)
     r = run_cli(argv, prompt, ws, cfg.get("timeout_ms", 600000))
+    try:                                         # 10-28：--json 的事件（中間訊息、跑過的指令）也接進 live.jsonl 留著
+        with open(cell.file("live.jsonl"), "a", encoding="utf-8") as live:
+            live.write(r.stdout if not r.stdout or r.stdout.endswith("\n") else r.stdout + "\n")
+    except OSError:
+        pass
     thread = ""
     for line in r.stdout.splitlines():
         try:
@@ -351,10 +373,11 @@ TMUX_CONF = """# tmux.conf - attach 開的畫面用的 tmux 設定（cli_session
 set -g prefix None
 unbind-key C-b
 bind-key -n 'C-\\' detach-client
+bind-key -n 'C-]' detach-client
 set -g escape-time 0
 set -g focus-events on
 set -g status-left ''
-set -g status-right ' Ctrl-\\ 跳出（畫面留著）｜在裡面 /exit 或 /quit 結束 '
+set -g status-right ' Ctrl-] 跳出（畫面留著）｜在裡面 /exit 或 /quit 結束 '
 set -g status-right-length 80
 """
 

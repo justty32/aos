@@ -1,53 +1,68 @@
-# cli_hub — aos-hub：一個地方看所有 claude／codex，切換、接入、收起、叫回
+# cli_hub — aos-hub：常駐 kernel 管所有 claude／codex 實例；接進畫面、收起、結束歸檔；aos-say／listen 可以對它說話
 
-← [extras](../README.md)｜設計：[thinking 2026-10-27-claude-switch](../../thinking/2026-10-27-claude-switch.md)｜接的是 [lib/agent/cli_session.py](../../lib/agent/cli_session.py)（10-24 的 attach，[thinking](../../thinking/2026-10-24-cli-tools.md)）｜測試 `proto8/tests/test_hub.py`｜**下一步（10-28 定、還沒改）**：常駐 aos-kernel、pause／stop 分開、Ctrl-] 只跳出，見 [thinking 2026-10-28-hub-kernel](../../thinking/2026-10-28-hub-kernel.md#現有-aos-hub-跟新方向的差異之後要改的)
+← [extras](../README.md)｜設計：[thinking 2026-10-28-hub-adapter](../../thinking/2026-10-28-hub-adapter.md)（協議、適配表、副產物）、[10-28 hub-kernel](../../thinking/2026-10-28-hub-kernel.md)（使用者定的 14 條）、[10-27 claude-switch](../../thinking/2026-10-27-claude-switch.md)（第一版）｜接的是 [lib/agent/cli_session.py](../../lib/agent/cli_session.py)｜測試 `proto8/tests/test_hub.py`
 
-使用者 10-27：「往後搞不好會有很多claude code cli在跑……是否有一些方式，可以讓我方便切換瀏覽呢？……我cd過去某個資料夾，輸入指令，就可以打開正在該資料夾工作的claude code。」「能不能我輸入指令，就先讓這個已經沒在動作的claude code cli實例結束，下次輸入指令再把他叫回來……接入aos體系，並且統一管理每個實例？」
+使用者 10-27：「往後搞不好會有很多claude code cli在跑……我cd過去某個資料夾，輸入指令，就可以打開正在該資料夾工作的claude code。」10-28：「其實應該還是要aos-hub。因為不只claude code cli，可能也要包括pi coding agent, codex之類。」「aos-say/listen是面對aos agent的，或許可以提取出相關協議，然後讓hub實作之類。」
 
 ## 是什麼
 
-agent 用 claude／codex 工具（`lib/agent/claude`、`codex`）時，每個工具在 stack 裡有一格（10-24：`session.txt`、`tty.sock`、`turns.jsonl`…）。10-27 起 `cli_session.py` 用到一格就**登記**：在 `$AOS_HUB/cells/`（沒設＝`~/.local/state/aos-hub/cells/`）放一個指過去的捷徑，格裡另記 `tool.txt`（哪個工具資料夾）、`ws.txt`（哪個工作區）。aos-hub 就是讀這份登記的一支指令。
+| 檔 | 做什麼 |
+|---|---|
+| `bin/aos-hub-kernel` | 常駐 kernel：開 `$AOS_HUB/kernel.sock`，記著所有實例；替「代答」的實例照 agent 對話協議收題（`new/`→`cur/`→交給 claude／codex 工具→`out/`、`done/`） |
+| `bin/aos-hub` | 給人用的指令，全部經 kernel |
+| `bin/hub_ipc.py` | 兩支共用：找 `$AOS_HUB`、跟 kernel 講一句 |
+| `reap.json` | 自動收起：aos-loop 每分鐘跑 `aos-hub pause --idle 30` |
 
 | 指令 | 做什麼 |
 |---|---|
-| `aos-hub` | **cd 到工作區打這個**：這裡只有一格＝直接接進去（收起了就叫回）；好幾格＝選；沒有＝列全部選 |
-| `aos-hub ls`（`--json`） | 列全部：編號、狀態、閒了幾分、工具、工作區、對話 id 前 8 碼 |
-| `aos-hub pick` | 列全部、打編號接進去。**畫面裡按 Ctrl-]** 也是它：跳出這格、選另一格 |
-| `aos-hub attach [-d] 編號｜路徑` | 接進那格；`-d` 只開不接 |
-| `aos-hub watch [編號]` | 看 agent 那次非互動的 claude **正在做什麼**（讀了哪個檔、說了什麼、花多少）；它跑完就結束 |
-| `aos-hub stop 編號...` | 收起：畫面（tmux 和裡面的 claude）關掉，對話 id 留在格裡 |
-| `aos-hub stop --idle 30` | 收起所有閒了 30 分以上的 |
+| `aos-hub ls [--json]` | 列出全部：編號、狀態、哪種 CLI、工作區、對話 id 前 8 碼 |
+| `aos-hub state [資料夾\|編號]` | 這裡是不是納管的實例；不是＝`InstanceMissing`、退 1 |
+| `aos-hub add [--kind claude\|codex \| --tool 工具資料夾] [工作區]` | 納管、不開畫面：kernel 開始替它回答 `new/` 的題 |
+| `aos-hub open [-d] [--kind …\|--tool …] [資料夾\|編號]` | 接進畫面；沒開就開、收起的用 `--resume` 叫回；還沒納管就先 add。`-d` 只開不接 |
+| `aos-hub pause [資料夾\|編號]`／`pause --idle 分` | 收起：關畫面、對話留著（之後題目照樣用 `--resume` 答）；出錯的實例 pause 一次＝重新收題 |
+| `aos-hub stop [資料夾\|編號]` | 結束：關畫面，小格搬到 `<stack>/hub_archive/<工具名>-<UTC>/`，CLI 自己存的對話拷一份進 `transcripts/`，從清單拿掉 |
+| `aos-hub watch [資料夾\|編號]` | 跟著看非互動那次在做什麼（讀了哪個檔、說了什麼、花多少），一次回答結束就走 |
 
-狀態：`agent 在叫`（agent 正在用這格）、`有人接著`、`畫面在跑`（畫面上正在跑一輪）、`畫面閒著`、`收起了`（沒畫面、對話留著）、`還沒對話`。前三種**不收**。
+- **`AOS_HUB` 沒設＝`HubMissing`；kernel 沒在跑＝`KernelMissing`**，都退 1（不給預設路徑、不自動重開）。
+- 畫面裡 **Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束**。
+- 狀態：`收起了`、`畫面開著`、`在答題`、`出錯`；後面標「（只登記）」的是 agent 叫 claude／codex 工具時登記進來的格——列得到、接得進，**不替它收題**（那個工作區的題是 agent 的）。
+- `--kind` 沒給＝claude；工具資料夾預設 `proto8/lib/agent/<kind>`（旗標在它的 `cli.json`：claude 只給 Read／Glob／Grep、sonnet、每次 0.5 美元）。要別的模型、權限，複製一份工具資料夾改 `cli.json`，用 `--tool` 指。
+- 失敗（腦、CLI 出錯）：題目留在 `cur/`、實例標「出錯」、不再收題；`aos-listen` 會說是哪題、原因一行。修好後 `aos-hub pause` 一次重新收。人接在畫面上時題目等著（5 秒再試一次）。
 
-**叫回**＝對收起的格 `aos-hub`／`attach`：照 10-24 的 `start` 用 `--resume <session.txt>` 開畫面，接回同一段對話（人在畫面上講的、agent 非互動講的都在）。agent 那邊不用改：畫面沒開就走非互動 `-p --resume`，開著就從畫面送字（10-24 兩條路）。
-
-**自動收起**（代定 30 分，見 thinking）：讓 aos-loop 每分鐘跑一次 `stop --idle 30`——
+## 對它說話（aos-say／listen 不用改）
 
 ```sh
-cd proto8/extras/cli_hub && aos-loop reap.json      # reap.json：{"exec": ["bin/aos-hub", "stop", "--idle", "30"], "interval_ms": 60000}
+aos-hub add ~/somewhere/ws                      # 納管
+N=$(aos-say --ws ~/somewhere/ws 讀 notes.txt 說說裡面有什麼)
+aos-listen --ws ~/somewhere/ws "$N"             # 畫面開著＝打進畫面、沒開＝--resume 問一次
+aos-listen --ws ~/somewhere/ws --status         # 「在跑 aos-hub-kernel」：kernel 在 stack 放了 server.txt
 ```
 
-## 怎麼試
+## 怎麼試（WSL）
 
-試驗場 `~/code/try/claude-switch/`，haiku、每句約 $0.001。
+試驗場 `~/code/try/hub-say/`（10-28 實跑過，haiku 四題合計約 $0.001）：
 
 ```sh
-cd ~/code/try/claude-switch && . ./env.sh            # 拿掉外層 Claude Code 的環境變數
-H=~/repo/simple_tools/aos/proto8/extras/cli_hub/bin/aos-hub
-./ask ws-a "讀 notes.txt，一句話說裡面有什麼"         # 像 agent 那樣叫一次（ws-b、ws-c 同樣）
-$H ls                                                # 三格都「收起了」（只有非互動用過）
-cd ws-a && $H                                        # 接進 ws-a 那格（叫回）：看得到剛才那句；Ctrl-] 換一格、Ctrl-\ 跳出
-cd .. && ./ask ws-a "數字乘以二？"                    # 畫面開著：agent 從畫面送字，跳回去看得到
-$H stop --idle 0 && $H ls                            # 收起；再 cd ws-a && $H 又叫回
-./ask ws-b "用 Glob 找出所有 txt 再一一讀" & (cd ws-b && $H watch)   # 看非互動那次即時在做什麼
+cd ~/code/try/hub-say && . ./env.sh              # 拿掉外層 Claude Code 的環境變數、設 AOS_HUB、PATH（含 ~/.local/bin 的 claude／codex）
+aos-hub-kernel 2>kernel.err &                    # kernel 從這個 shell 繼承 PATH：claude／codex 要找得到
+aos-hub add --tool tools/claude ws-c             # tools/claude 是 haiku 版的 cli.json
+N=$(aos-say --ws ws-c "讀 notes.txt，魔術數字是多少"); aos-listen --ws ws-c "$N"
+aos-hub open ws-c                                # 接進畫面（第一次會問信任這個資料夾，選 Yes）；Ctrl-] 跳出
+N=$(aos-say --ws ws-c "乘以二？"); aos-listen --ws ws-c "$N"   # 畫面開著：打進畫面，再 open 進去看得到
+aos-hub pause ws-c && aos-hub ls                 # 收起；再問一句照樣答（--resume）
+aos-hub add --kind codex ws-x                    # codex 也一樣
+aos-hub stop ws-c                                # 結束：看 ws-c/.stack/hub_archive/
 ```
 
 ## 已知限制
 
-- 只管 **cli_session 用過的格**（lib/agent 的 claude／codex 工具、agent-fay 的 attach）。你自己在終端機開的 claude、playground 那種直接 `claude -p` 的節點不在裡面；前者用 Claude Code 內建的 `claude agents`（列出所有互動與背景 session）看。
-- `watch` 只有 claude（codex 非互動沒做即時紀錄）。
-- 判斷「agent 在叫」要碰一下格的 lock：剛好碰上 agent 開始叫的那一瞬間，agent 那次會 `SessionBad`（機率很小，再跑一次就好）。
-- 收起＝`tmux kill-server`（claude 收到 SIGHUP 結束；對話是邊講邊存的，不會掉）。人打到一半沒送出的字會丟。
-- 「閒了幾分」看格裡檔案最後被動的時間（hook 寫 turns、非互動寫 live、開畫面寫 tmux.conf）：人只是捲畫面、打字沒送出，不算動作。
-- 已經在 tmux 裡也能接（拿掉 `TMUX` 再接，會是巢狀 tmux；外層的 prefix 照舊）。
+- **kernel 的 PATH**：kernel 用自己啟動時的環境叫 claude／codex。從沒有 `~/.local/bin` 的 shell 起 kernel，每題都 `CliMissing`（10-28 實跑撞到）。
+- **新資料夾第一次開畫面，claude 會先問「信任這個資料夾嗎」**：人 `open` 接進去回答就好；但 `open -d` 之後馬上丟題，題目會被貼進這個提問、Enter 可能選到「No, exit」，畫面關掉、那題出錯（`pause` 一次就改走 `--resume` 答）。非互動（`-p`）沒有這個提問。
+- **kernel 重開＝清單清空**：工作區、小格、對話都還在，重新 `add` 就接得上（同一個 `session.txt`）。kernel 記的跟實際不符（人在畫面裡 `/exit`、tmux 被砍）時以 kernel 記的為準（使用者 10-28：遇到再說）；agent 的工具呼叫本身照樣會挑對的路。
+- 只登記的格要在 kernel 跑著時被用過才列得到；kernel 沒跑時 cli_session 不報錯、只是不登記。
+- codex 沒有「正在跑一輪」的訊號：人在畫面上送出、還沒講完就跳出，kernel 這時送字會插進去（10-24 舊坑）。
+- `watch` 只讀 `live.jsonl`（非互動那條路）；畫面上那幾輪看不到，要 `open` 進去看。
+- `live.jsonl` 只接不重寫，會一直長；清理是人的事。
+- 「閒了幾分」看格裡檔案最後被動的時間：人只是捲畫面、打字沒送出，不算動作。
+- 收起＝`tmux kill-server`：人打到一半沒送出的字會丟。
+- 你自己在終端機開的 claude 不在裡面，用 Claude Code 內建的 `claude agents` 看。

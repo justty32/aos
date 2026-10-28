@@ -1,0 +1,330 @@
+#!/usr/bin/env python3
+"""aos-hub-kernel - aos-hub 的常駐 kernel：記著所有 claude／codex 實例、替它們回答工作區裡的題目（10-28）。
+
+    AOS_HUB=資料夾 aos-hub-kernel
+
+$AOS_HUB 沒設＝HubMissing、退 1（不給預設路徑，10-28 決定 10）；那裡已經有一個在跑＝KernelBusy、退 1。
+開 $AOS_HUB/kernel.sock，一行 JSON 請求、一行 JSON 回覆（hub_ipc.py）；aos-hub 的指令都經它，它掛了指令就報錯（決定 3）。
+狀態以它記的為準（決定 8）：只在記憶體裡，kernel 重開就清空（實際遇到問題再說，10-28）。SIGTERM／SIGINT 收乾淨就走。
+
+實例＝一個小格（cli_session 的格，$工作區/.stack/<工具名>/）＋它代答的工作區。兩種來路：
+  aos-hub add／open 加的＝**代答**：kernel 照「agent 對話協議」（CONVENTION P-11～P-14）替它收題——new/ 取檔名最前的
+    搬到 cur/、交給工具（lib/agent/claude 的 _entry：stdin {"prompt"} → stdout 回答；畫面開著就打進畫面、沒開就 --resume 問一次，
+    這是 cli_session 本來的兩條路）、答案寫 out/<題名>、題目搬 done/；每題在 stack 的 trace.jsonl 接一行；
+    stack 放 server.txt（「<pid> aos-hub-kernel」），aos-listen 靠它知道有人在服務。一個實例同時只答一題；實例之間不限數量（決定 4）。
+  agent 叫 claude／codex 工具時 cli_session 送來的 register＝**只登記**：列得到、接得進去，不替它收題（那個工作區的題是 agent 的）。
+答題失敗：題目留在 cur/、實例標「出錯」不再收題，等人 aos-hub pause／open 一次才再收（P-20 停下等人）；
+工具回 SessionBad（有人接在畫面上、畫面正在跑一輪）不算錯，5 秒後再試。
+pause＝關畫面、對話 id 留著（之後題目照樣用 --resume 答）；stop＝關畫面、把小格搬到 $stack/hub_archive/<工具名>-<UTC>/、
+CLI 自己存的對話（含中間訊息與工具呼叫）拷一份進去、從清單拿掉（決定 5、6）。"""
+import datetime, json, os, shutil, signal, socket, subprocess, sys, threading, time
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True
+sys.path[:0] = [HERE, os.path.join(HERE, "..", "..", "..", "lib", "agent")]
+import hub_ipc  # noqa: E402
+import cli_session  # noqa: E402
+
+PROG = "aos-hub-kernel"
+POLL, RETRY = 0.3, 5.0
+
+
+class Fail(Exception):
+    def __init__(self, code, msg):
+        super().__init__(msg)
+        self.code = code
+
+
+def _die(code, reason):                           # cli_session 出錯時本來 exit；在 kernel 裡改成丟例外回給叫的人
+    raise Fail(code, str(reason).replace("\n", " "))
+
+
+cli_session.die = _die
+
+
+def now():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds")
+
+
+def kind_of(tool):
+    try:
+        with open(os.path.join(tool, "cli.json"), encoding="utf-8") as f:
+            return json.load(f).get("kind") or "?"
+    except (OSError, ValueError):
+        return "?"
+
+
+class Kernel:
+    def __init__(self, hub):
+        self.hub, self.lock, self.items = hub, threading.Lock(), {}      # items：小格路徑 → 實例
+
+    # ------------------------------------------------------------ 請求
+    def handle(self, req):
+        op = req.get("op")
+        fn = getattr(self, "op_" + str(op), None)
+        if fn is None:
+            raise Fail("ArgumentsBad", "不認得的請求 %r" % op)
+        return fn(req) or {}
+
+    def find(self, req):
+        cell = req.get("cell")
+        with self.lock:
+            if cell in self.items:
+                return self.items[cell]
+        raise Fail("InstanceMissing", "kernel 沒記這一格：%s" % cell)
+
+    def op_register(self, req):
+        with self.lock:
+            it = self.items.get(req["cell"])
+            if it is None:
+                self.items[req["cell"]] = dict(cell=req["cell"], ws=req["ws"], tool=req["tool"], kind=kind_of(req["tool"]),
+                                               serve=False, screen="paused", error=None, busy=None, retry_at=0, since=now())
+
+    def op_add(self, req):
+        ws, tool = os.path.abspath(req["ws"]), os.path.abspath(req["tool"])
+        if not os.path.isdir(ws):
+            raise Fail("WsMissing", ws)
+        if not os.path.isfile(os.path.join(tool, "cli.json")):
+            raise Fail("ToolUnknown", "%s 沒有 cli.json" % tool)
+        stack = os.path.join(ws, ".stack")
+        cell = os.path.join(stack, os.path.basename(tool))
+        with self.lock:
+            for it in self.items.values():
+                if it["serve"] and it["ws"] == ws and it["cell"] != cell:
+                    raise Fail("InstanceBusy", "這個工作區已經有代答的實例（%s）；一個工作區一個（P-18）" % it["cell"])
+            it = self.items.get(cell)
+            if it is None:
+                it = self.items[cell] = dict(cell=cell, ws=ws, tool=tool, kind=kind_of(tool), serve=True, screen="paused",
+                                             error=None, busy=None, retry_at=0, since=now())
+            it["serve"] = True
+        cli_session.register(cli_session.Cell(cell), tool, ws)     # 寫 tool.txt、ws.txt（open_cell 要）；送回自己的 register 無妨
+        with open(os.path.join(stack, ".server.txt"), "w", encoding="utf-8") as f:
+            f.write("%d %s\n" % (os.getpid(), PROG))
+        os.replace(os.path.join(stack, ".server.txt"), os.path.join(stack, "server.txt"))
+        return {"cell": cell}
+
+    def op_ls(self, req):
+        with self.lock:
+            return {"items": [dict(it) for it in self.items.values()]}
+
+    def op_open(self, req):
+        it = self.find(req)
+        cell = cli_session.Cell(it["cell"])
+        opened = cli_session.open_cell(cell)            # 要等格的 lock（正在答題就等它答完）、等畫面穩
+        with self.lock:
+            it["screen"], it["error"] = "open", None
+        return {"opened": opened, "sock": cell.file("tty.sock")}
+
+    def op_pause(self, req):
+        it = self.find(req)
+        with self.lock:
+            if it["busy"]:
+                raise Fail("SessionBad", "正在答 %s，等它答完再 pause" % it["busy"])
+        closed = cli_session.close(cli_session.Cell(it["cell"]))
+        with self.lock:
+            it["screen"], it["error"] = "paused", None
+        return {"closed": closed}
+
+    def op_stop(self, req):
+        it = self.find(req)
+        with self.lock:
+            if it["busy"]:
+                raise Fail("SessionBad", "正在答 %s，等它答完再 stop" % it["busy"])
+            it["serve"] = False                          # 先不收新題
+            del self.items[it["cell"]]
+        cell = cli_session.Cell(it["cell"])
+        cli_session.close(cell)
+        stack = os.path.dirname(it["cell"])
+        stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        dest = os.path.join(stack, "hub_archive", "%s-%s" % (os.path.basename(it["cell"]), stamp))
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        os.rename(it["cell"], dest)
+        copied = []
+        for src in cli_session.transcripts(it["kind"], cli_session.Cell(dest).read("session.txt")):
+            os.makedirs(os.path.join(dest, "transcripts"), exist_ok=True)
+            shutil.copy2(src, os.path.join(dest, "transcripts", os.path.basename(src)))
+            copied.append(src)
+        self.drop_marker(stack)
+        return {"archive": dest, "transcripts": copied}
+
+    def op_shutdown(self, req):
+        threading.Thread(target=lambda: (time.sleep(0.1), os.kill(os.getpid(), signal.SIGTERM)), daemon=True).start()
+
+    # ------------------------------------------------------------ 代答（agent 對話協議）
+    def drop_marker(self, stack):
+        with self.lock:
+            if any(it["serve"] and os.path.dirname(it["cell"]) == stack for it in self.items.values()):
+                return
+        try:
+            os.remove(os.path.join(stack, "server.txt"))
+        except OSError:
+            pass
+
+    def pick(self, ws):
+        """cur/ 有認領了沒做完的先接著做（P-12），否則 new/ 檔名最前的搬到 cur/。回題名或 None。"""
+        cur = sorted(n for n in listdir(os.path.join(ws, "cur")) if not n.startswith("."))
+        if cur:
+            return cur[0]
+        for n in sorted(n for n in listdir(os.path.join(ws, "new")) if not n.startswith(".")):
+            os.makedirs(os.path.join(ws, "cur"), exist_ok=True)
+            try:
+                os.rename(os.path.join(ws, "new", n), os.path.join(ws, "cur", n))
+                return n
+            except OSError:
+                continue
+        return None
+
+    def serve_loop(self):
+        while True:
+            with self.lock:
+                todo = [it for it in self.items.values()
+                        if it["serve"] and not it["busy"] and not it["error"] and it["retry_at"] <= time.time()]
+            for it in todo:
+                try:
+                    name = self.pick(it["ws"])
+                except OSError:
+                    name = None
+                if name:
+                    with self.lock:
+                        it["busy"] = name
+                    threading.Thread(target=self.answer, args=(it, name), daemon=True).start()
+            time.sleep(POLL)
+
+    def answer(self, it, name):
+        ws, started, t0 = it["ws"], now(), time.monotonic()
+        q = os.path.join(ws, "cur", name)
+        try:
+            if os.path.isdir(q):
+                with open(os.path.join(q, "prompt.txt"), encoding="utf-8") as f:
+                    prompt = f.read()
+            else:
+                with open(q, encoding="utf-8") as f:
+                    prompt = f.read()
+        except OSError as e:
+            return self.done(it, name, started, t0, 1, "QuestionBad 讀不到題目：%s" % e)
+        env = dict(os.environ, AOS_WS=ws, AOS_STACK=it["cell"] + "/")
+        env.pop("AOS_ENTRY", None)
+        try:
+            r = subprocess.run([os.path.join(it["tool"], "_entry")], input=json.dumps({"prompt": prompt}), text=True,
+                               capture_output=True, cwd=ws, env=env)
+        except OSError as e:
+            return self.done(it, name, started, t0, 1, "ToolFailed %s" % e)
+        if r.returncode != 0:
+            return self.done(it, name, started, t0, r.returncode, (r.stdout or r.stderr).strip().splitlines()[0:1])
+        out = os.path.join(ws, "out")
+        os.makedirs(out, exist_ok=True)
+        tmp = os.path.join(ws, ".hub-%d-%d.tmp" % (os.getpid(), threading.get_ident()))
+        if os.path.isdir(q):                             # 題目是資料夾（P-13）＝答案也是資料夾、主答案 answer.txt
+            os.makedirs(tmp, exist_ok=True)
+            with open(os.path.join(tmp, "answer.txt"), "w", encoding="utf-8") as f:
+                f.write(r.stdout)
+        else:
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(r.stdout)
+        os.replace(tmp, os.path.join(out, name))
+        os.makedirs(os.path.join(ws, "done"), exist_ok=True)
+        os.rename(q, os.path.join(ws, "done", name))
+        self.done(it, name, started, t0, 0, None)
+
+    def done(self, it, name, started, t0, code, err):
+        if isinstance(err, list):
+            err = err[0] if err else "退 %d、沒說原因" % code
+        line = {"state": PROG, "question": name, "code": code, "started_at": started,
+                "elapsed_ms": int((time.monotonic() - t0) * 1000)}
+        if err:
+            line["error"] = err
+        try:
+            with open(os.path.join(os.path.dirname(it["cell"]), "trace.jsonl"), "a", encoding="utf-8") as f:
+                f.write(json.dumps(line, ensure_ascii=False) + "\n")
+        except OSError:
+            pass
+        with self.lock:
+            it["busy"] = None
+            if code == 0:
+                return
+            if err and err.split(":", 1)[-1].split()[:1] == ["SessionBad"]:
+                it["retry_at"] = time.time() + RETRY       # 有人接著、畫面正在跑：等一下再試，不算錯
+            else:
+                it["error"] = err
+
+
+def listdir(p):
+    try:
+        return os.listdir(p)
+    except (FileNotFoundError, NotADirectoryError):
+        return []
+
+
+def serve_conn(k, conn):
+    with conn:
+        data = b""
+        try:
+            while not data.endswith(b"\n"):
+                chunk = conn.recv(65536)
+                if not chunk:
+                    break
+                data += chunk
+            req = json.loads(data.decode())
+            rep = dict(k.handle(req), ok=True)
+        except Fail as e:
+            rep = {"ok": False, "code": e.code, "error": str(e)}
+        except (ValueError, KeyError, TypeError, AttributeError) as e:
+            rep = {"ok": False, "code": "ArgumentsBad", "error": "請求壞了：%r" % e}
+        except OSError as e:
+            rep = {"ok": False, "code": "KernelFailed", "error": str(e)}
+        try:
+            conn.sendall((json.dumps(rep, ensure_ascii=False) + "\n").encode())
+        except OSError:
+            pass
+
+
+def main():
+    if len(sys.argv) > 1:
+        print(__doc__ if sys.argv[1] in ("-h", "--help") else "%s: ArgumentsBad 不收參數（位置由 AOS_HUB 給）" % PROG,
+              file=sys.stderr if sys.argv[1] not in ("-h", "--help") else sys.stdout)
+        sys.exit(0 if sys.argv[1] in ("-h", "--help") else 1)
+    try:
+        hub = hub_ipc.hub_dir()
+    except hub_ipc.Error as e:
+        print("%s: %s %s" % (PROG, e.code, e), file=sys.stderr)
+        sys.exit(1)
+    os.makedirs(hub, exist_ok=True)
+    path = os.path.join(hub, hub_ipc.SOCK)
+    probe = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        probe.connect(path)
+        print("%s: KernelBusy %s 已經有一個在跑" % (PROG, path), file=sys.stderr)
+        sys.exit(1)
+    except OSError:
+        pass
+    finally:
+        probe.close()
+    if os.path.lexists(path):
+        os.remove(path)                               # 上次沒收乾淨留下的
+    srv = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    srv.bind(path)
+    srv.listen(16)
+    k = Kernel(hub)
+
+    def bye(signum, frame):
+        with k.lock:
+            stacks = {os.path.dirname(it["cell"]) for it in k.items.values() if it["serve"]}
+            for it in k.items.values():
+                it["serve"] = False
+        for st in stacks:
+            k.drop_marker(st)
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        os._exit(0)
+
+    signal.signal(signal.SIGTERM, bye)
+    signal.signal(signal.SIGINT, bye)
+    threading.Thread(target=k.serve_loop, daemon=True).start()
+    while True:
+        conn, _ = srv.accept()
+        threading.Thread(target=serve_conn, args=(k, conn), daemon=True).start()
+
+
+main()
