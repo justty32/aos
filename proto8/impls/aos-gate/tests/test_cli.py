@@ -4,11 +4,13 @@
     python3 tests/test_cli.py bin/aos-gate
 
 不需要真的 kernel：測試自己當 kernel（看 new/ 裡的信、搬到 cur/、done/、寫回信），所以只測閘門這一半。
-A 段：命令列、信箱、單子檔的錯；B 段：信的內容（指示詞在閘門的環境解、AOS_CF／AOS_CD／AOS_CO、cwd 轉絕對、整份環境、priority 原樣）；
+A 段：命令列、信箱、單子檔的錯；B 段：信的內容（指示詞在閘門的環境解、AOS_CF／AOS_CD／AOS_CO、cwd 轉絕對、整份環境、priority 原樣；
+10-29 信封 kind、sender〔$AOS_WS，沒設＝$HOME〕、sent_at）；
 C 段：回信原樣交回（stdout、stderr、碼、kernel 回的錯、讀不懂的回信）；D 段：訊號撤信、信不見了、kernel 不在時一直等、
 等的時候一直鎖著信裡的 sender.lock（kernel 靠它認寄信的人還在，10-24）。
 gate＋kernel 一起跑的在 proto8/tests/test_kernel_llm.py。
 """
+import datetime
 import fcntl
 import json
 import os
@@ -156,6 +158,33 @@ class B_Letter(Case):
         self.assertIsNone(letter["priority"])
         self.answer(id, {"code": 0, "signal": None})
         p.communicate(timeout=10)
+
+    def envelope(self, extra):
+        self.inst({"argv": ["true"]})
+        before = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0)
+        p = self.start(extra=extra)
+        id, letter = self.letter()
+        self.answer(id, {"code": 0, "signal": None})
+        p.communicate(timeout=10)
+        self.assertEqual(letter["kind"], "letter")
+        self.assertRegex(letter["sent_at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00$")   # 同 aos::utc_now_ms
+        at = datetime.datetime.fromisoformat(letter["sent_at"])
+        self.assertTrue(before <= at <= datetime.datetime.now(datetime.timezone.utc), letter["sent_at"])
+        for k in ("inst", "env", "priority"):   # 過渡期照舊在頂層
+            self.assertIn(k, letter)
+        return letter["sender"]
+
+    def test_envelope_sender_is_ws(self):
+        """10-29 信封：sender＝$AOS_WS（轉絕對路徑），有設就不看 HOME。"""
+        (self.t / "ws").mkdir()
+        self.assertEqual(self.envelope({"AOS_WS": str(self.t / "ws"), "HOME": "/nope"}), str(self.t / "ws"))
+        self.assertEqual(self.envelope({"AOS_WS": "ws/../ws", "HOME": "/nope"}), str((self.t / "ws").resolve()))   # 相對的從閘門的 cwd 算
+
+    def test_envelope_sender_falls_back_to_home(self):
+        """10-29 信封：沒設 AOS_WS（或空）＝$HOME 的絕對路徑。"""
+        home = str(self.t / "home")
+        self.assertEqual(self.envelope({"HOME": home}), home)
+        self.assertEqual(self.envelope({"HOME": home, "AOS_WS": ""}), home)
 
     def test_ids_in_order(self):
         self.inst({"argv": ["true"]})

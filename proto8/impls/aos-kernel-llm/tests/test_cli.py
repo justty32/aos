@@ -270,6 +270,21 @@ class D_Replies(Case):
             self.assertEqual(self.reply(i)["error"]["code"], "LetterBad", i)
         self.assertEqual(self.marks(), [])
 
+    def test_envelope_not_checked(self):
+        """10-29 信封（kind、sender、sent_at）不檢查也不擋：寫了、寫怪、沒寫都照跑；不認得的 key 忽略（N-16）。"""
+        env = {"PATH": os.environ["PATH"]}
+        inst = {"argv": self.mark("a"), "cwd": str(self.t)}
+        i = self.post(raw=json.dumps({"kind": "letter", "sender": "/home/u/ws", "sent_at": "2026-10-29T08:12:33.123+00:00",
+                                      "inst": inst, "env": env}))
+        j = self.post(raw=json.dumps({"kind": 3, "sender": None, "sent_at": [], "body": {"x": 1}, "whatever": True,
+                                      "inst": {"argv": self.mark("b"), "cwd": str(self.t)}, "env": env}))
+        for _ in range(2):   # slots 1：一次跑一封
+            r = self.run_k()
+            self.assertEqual(r.returncode, 0, r.stderr)
+        for x in (i, j):
+            self.assertEqual(self.reply(x), {"code": 0, "signal": None}, x)
+        self.assertEqual(sorted(self.marks()), ["a", "b"])
+
     def test_inst_bad_is_reply_not_kernel_error(self):
         i = self.post(inst={"cwd": str(self.t)})
         j = self.post(inst={"argv": ["/nope/x"], "cwd": str(self.t)})
@@ -352,12 +367,23 @@ class E_Sweep(Case):
 class F_Run(Case):
     def test_lock(self):
         (self.mb).mkdir()
-        with open(self.mb / ".lock", "w") as f:
+        with open(self.mb / ".flock", "w") as f:   # 10-29 改名（原 .lock；.lock/ 留給 N-15 的資料夾鎖）
             fcntl.flock(f, fcntl.LOCK_EX)
             self.post(self.mark("x"))
             self.own_error(self.run_k(), "LockFailed")
             self.assertEqual(self.marks(), [])
         self.assertEqual(self.run_k().returncode, 0)
+        self.assertEqual(self.marks(), ["x"])
+        self.assertTrue((self.mb / ".flock").is_file())
+        self.assertFalse((self.mb / ".lock").exists())
+
+    def test_old_lock_name_not_used(self):
+        """10-29：別人 flock 住舊名 .lock 不算鎖著（不留舊名）；kernel 只認 .flock。"""
+        (self.mb).mkdir()
+        with open(self.mb / ".lock", "w") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            self.post(self.mark("x"))
+            self.assertEqual(self.run_k().returncode, 0)
         self.assertEqual(self.marks(), ["x"])
 
     def test_env_and_cwd_from_letter(self):

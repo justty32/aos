@@ -215,7 +215,7 @@ bool runner_alive(const std::string& dir) {
 }
 
 void Server::lock() {
-    std::string path = aos::join(mb_.root, ".lock");
+    std::string path = aos::join(mb_.root, ".flock");   // 10-29 改名（原 .lock；.lock/ 留給 N-15 的資料夾鎖）
     lock_fd_ = open(path.c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
     if (lock_fd_ < 0) {
         throw Error{code::LockFailed, "開不了 " + path + "：" + std::strerror(errno)};

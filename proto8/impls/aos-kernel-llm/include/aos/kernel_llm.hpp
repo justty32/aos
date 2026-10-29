@@ -6,8 +6,11 @@
 //     new/<id>/    排隊中（kernel 認領＝改名進 cur/；閘門撤信＝改名回 tmp/，兩邊只有一個改得成）
 //     cur/<id>/    kernel 正在跑（stdout.txt、stderr.txt、跑完寫 reply.json）
 //     done/<id>/   有回信了（reply.json 寫好才改名進來），閘門讀完刪掉
-//     .lock        kernel 跑一次的期間 flock 住（同一個信箱同時只有一個 kernel）
-//   信：letter.json＝{"inst": 單子（指示詞已解、cwd 是絕對路徑）, "env": 寄信那一刻閘門的整份環境, "priority": 原樣}
+//     .flock       kernel 跑一次的期間 flock 住（同一個信箱同時只有一個 kernel；10-29 原叫 .lock，改名把 .lock/ 留給 N-15 的資料夾鎖）
+//   信：letter.json＝{"kind": "letter", "sender": 寄信人身分路徑（$AOS_WS，沒設＝$HOME）, "sent_at": ISO 8601 UTC 到毫秒,
+//                    "inst": 單子（指示詞已解、cwd 是絕對路徑）, "env": 寄信那一刻閘門的整份環境, "priority": 原樣}
+//       信封三欄（N-16 10-29）閘門會寫、kernel 不檢查也不擋（舊信沒有也照收）；inst／env／priority 過渡期照舊在頂層（還沒包進 body）；
+//       其他不認得的 key 一律忽略（C-48）
 //   回信：reply.json＝{"code": 結束碼, "signal": 訊號或 null}，或 {"error": {"code": 代號, "msg": 原因}}（kernel 沒跑或跑不起來）
 //   回報：report.json＝腦自願寫的 API 回覆 usage（kernel 跑信時給環境變數 AOS_KERNEL_REPORT 指向 cur/<id>/report.json；10-24）
 //   寄信的人：sender.lock＝閘門建好信就 flock（LOCK_EX）住、拿到行程結束（10-24 改：原本看名字裡的 pid，沙箱有自己的行程編號就對不上）

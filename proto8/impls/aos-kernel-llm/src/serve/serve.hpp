@@ -4,7 +4,7 @@
 //              沒寫＝"mailbox"）、slots（同時跑幾封，正整數；沒寫＝1）、budget（額度，budget.hpp）、accept（只收哪幾張單子，見下）；其他 key 忽略（_entry…）。mailbox、slots、budget、accept 的指示詞先解
 //              （aos-loop 的 resolve_keys）。壞了 CfgMissing／CfgBad／DirectiveBad
 //   serve      跑一次（給 aos-loop／aos-daemon 一次次拍），回結束碼（0；跑的期間收到訊號＝收完 128＋N）：
-//                1. 建信箱四格（tmp／new／cur／done）、flock 住 .lock（鎖不到＝LockFailed）；queue.json 的 counter_runs＋1
+//                1. 建信箱四格（tmp／new／cur／done）、flock 住 .flock（鎖不到＝LockFailed；10-29 原叫 .lock）；queue.json 的 counter_runs＋1
 //                2. cur/ 裡還有信＝上一次 kernel 跑到一半死了：有 reply.json 就照它；跑信的子行程（cur/<id>/runner.json）還活著＝讓它跑完、
 //                   這次少一格；都不是＝回 RunFailed（10-15 六題 6「回錯」，不重跑）；有回信的搬 done/
 //                3. 收拾：tmp/、done/ 裡寄信的人不在了（sender.lock 沒人鎖）的刪掉；new/ 裡寄信的人不在了的先改名回 tmp/ 再刪（不白跑）；

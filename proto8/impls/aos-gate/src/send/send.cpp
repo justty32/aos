@@ -4,6 +4,7 @@
 #include "aos/cli.hpp"
 #include "aos/directive.hpp"
 #include "aos/files.hpp"
+#include "aos/proc.hpp"
 
 #include <cerrno>
 #include <cstdio>
@@ -27,6 +28,18 @@ Mailbox mailbox() {
         throw Error{code::MailboxMissing, std::string("AOS_KERNEL 指的信箱不在：") + k};
     }
     return Mailbox{aos::abspath(k)};
+}
+
+std::string sender() {
+    const char* ws = std::getenv("AOS_WS");
+    if (ws != nullptr && ws[0] != '\0') {
+        return aos::abspath(ws);
+    }
+    const char* home = std::getenv("HOME");
+    if (home != nullptr && home[0] != '\0') {
+        return aos::abspath(home);
+    }
+    return "/";   // HOME 也沒設（不查 getpwuid：靜態連結的執行檔用它要帶 glibc 的 NSS）
 }
 
 static void make_dir(const std::string& dir) {
@@ -77,6 +90,9 @@ std::string post(const Mailbox& mb, const std::string& spec) {
         }
     }
     Json letter = Json::object();
+    letter["kind"] = "letter";   // 信封三欄（N-16 10-29）；inst／env／priority 過渡期照舊在頂層
+    letter["sender"] = sender();
+    letter["sent_at"] = aos::utc_now_ms();
     letter["inst"] = doc;
     letter["env"] = env;
     letter["priority"] = priority;
