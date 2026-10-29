@@ -1,0 +1,9 @@
+{
+  "name": "aos-post",
+  "version": "0.1.0",
+  "description": "aos-post：投遞（N-16 信箱：寄、認領、處理完、撤回）的 lib 與命令列",
+  "builtin-baseline": "b781af668027bbf77f2f827f47b5c6cd8d825c08",
+  "dependencies": [
+    "nlohmann-json"
+  ]
+}

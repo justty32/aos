@@ -2,7 +2,7 @@
 
 ## proto8 逐檔總覽（10-19 proto8-2 併入、舊 lib 進 git 後重寫）
 
-（新增或刪檔時這裡與 [proto8/bin/README.md](../../../../proto8/bin/README.md)（aos-tick、aos-tools、aos-parts）、[proto8/impls/README.md](../../../../proto8/impls/README.md)（四支 C++ 與庫）一起改。）
+（新增或刪檔時這裡與 [proto8/bin/README.md](../../../../proto8/bin/README.md)（aos-tick、aos-tools、aos-parts）、[proto8/impls/README.md](../../../../proto8/impls/README.md)（C++ 命令列與庫）一起改。）
 
 ### `proto8/bin/`（Python 純標準庫）
 
@@ -25,7 +25,7 @@
 
 逐字下放到 [proto8/01-impls與舊lib](proto8/01-impls與舊lib.md)（2026-10-21 下午，本檔超過 8 KB）：impls 是使用者的 C／C++ 實作（10-23 起進 git；舊快照 `backup/` 10-23 已刪）；舊 lib 是 10-16 那套、10-19 刪進 git 歷史。
 
-LLM kernel 兩支（`aos-kernel-llm`、`aos-gate`，10-24）的逐檔表另開一份：[proto8/03-kernel-llm](proto8/03-kernel-llm.md)。aos-daemon 的 `src/` 逐檔（10-29 下放）：[proto8/14-aos-daemon](proto8/14-aos-daemon.md)。改 JSON 的工具集 `aos-json`（10-24）：[proto8/07-aos-json](proto8/07-aos-json.md)。
+LLM kernel 兩支（`aos-kernel-llm`、`aos-gate`，10-24）的逐檔表另開一份：[proto8/03-kernel-llm](proto8/03-kernel-llm.md)。aos-daemon 的 `src/` 逐檔（10-29 下放）：[proto8/14-aos-daemon](proto8/14-aos-daemon.md)。改 JSON 的工具集 `aos-json`（10-24）：[proto8/07-aos-json](proto8/07-aos-json.md)。投遞 `aos-post`、鎖 `aos-lock`（10-29）：[proto8/15-aos-post](proto8/15-aos-post.md)、[proto8/16-aos-lock](proto8/16-aos-lock.md)。
 
 ### agent-round 的格（10-28 晚）
 
