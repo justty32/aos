@@ -8,6 +8,7 @@
 // phase：running＝還在跑、stopping＝送了 SIGTERM 還沒退、done＝子 loop 自己結束、stopped＝daemon 收掉它（送了 SIGTERM／SIGKILL；
 // 10-23 命名統合前兩個都叫 exited）。
 // 不論為什麼結束都先 finish()（收掉全部子 loop），Loop 再寫好 state。
+// 信箱模式（loops_mailbox，10-29）：期望表改成記憶體裡的 want_，每圈先 take_letters 套信、reconcile 對表、done_letters 回信收信（mailbox.cpp）。
 // adopt：起來時讀自己上次的 loops_state（10-29 前是 state），phase running、pid＋started_at_ticks 對得上的子 loop 直接放回表上、不重起（N-17）。
 #include "daemon/daemon.hpp"
 
@@ -184,7 +185,7 @@ std::set<std::string> taken_names(const std::string& stack, const std::vector<st
 std::optional<std::string> check_names(const Json& v, const std::set<std::string>& taken) {
     for (auto& [name, c] : v.items()) {
         if (taken.count(name) > 0) {
-            return "loops 的名字 " + aos::dumps(Json(name)) + " 跟 daemon 自己的 ctl／state／loops_ctl／loops_state 撞名";
+            return "loops 的名字 " + aos::dumps(Json(name)) + " 跟 daemon 自己的 ctl／state／loops_ctl／loops_state／loops_mailbox 撞名";
         }
     }
     return std::nullopt;
@@ -200,7 +201,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         if (cfg_.contains("loops")) {
             loops_ = read_loops(cfg_["loops"], cfg_dirs_.dir_of("loops"), "loops");
         }
-        for (const char* k : {"adopt", "loops_ctl", "loops_state"}) {
+        for (const char* k : {"adopt", "loops_ctl", "loops_state", "loops_mailbox"}) {
             if (cfg_.contains(k)) {
                 cfg_[k] = aos::resolve(cfg_[k], cfg_dirs_.dir_of(k));
             }
@@ -211,9 +212,23 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         }
         throw;
     }
+    // 信箱模式（10-29 medium-plan § 四 3）：loops_mailbox 寫了（非 null）＝信箱模式、loops_ctl 不開；loops_ctl 也明寫了（非 null）＝CfgBad
+    Json mb = cfg_.value("loops_mailbox", Json());
+    if (!mb.is_null()) {
+        if (!mb.is_string() || mb.get<std::string>().empty()) {
+            throw Error{code::CfgBad, "loops_mailbox 要是信箱的路徑或 null"};
+        }
+        if (cfg_.contains("loops_ctl") && !cfg_["loops_ctl"].is_null()) {
+            throw Error{code::CfgBad, "loops_ctl 與 loops_mailbox 只能寫一個（信箱模式不開 loops_ctl）"};
+        }
+        mbox_path_ = aos::join(stack_, mb.get<std::string>());
+    }
     // 管轄那一對窗（10-29 拆窗）：沒寫＝預設檔名、null＝不開；路徑同 ctl／state 接在 $AOS_STACK 後面
     std::pair<const char*, std::string*> wins[2] = {{"loops_ctl", &lctl_path_}, {"loops_state", &lstate_path_}};
     for (auto& [k, path] : wins) {
+        if (!mbox_path_.empty() && path == &lctl_path_) {
+            continue;   // 信箱模式：loops_ctl 沒寫（走預設）也不開
+        }
         Json v = cfg_.contains(k) ? cfg_[k] : Json(std::string(k) + ".json");
         if (v.is_null()) {
             continue;
@@ -231,7 +246,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         }
         parts_dir_ = aos::join(aos::dirname(lstate_path_), name + "_loops");
     }
-    taken_ = taken_names(stack_, {ctl_path_, state_path_, lctl_path_, lstate_path_, parts_dir_});
+    taken_ = taken_names(stack_, {ctl_path_, state_path_, lctl_path_, lstate_path_, parts_dir_, mbox_path_});
     std::optional<std::string> bad = check_names(loops_, taken_);
     if (bad) {
         throw Error{code::CfgBad, *bad};   // 使用者 10-22「子項名字擋掉跟 ctl／state 同名」
@@ -243,6 +258,9 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     cwd_ = std::filesystem::current_path().string();
     if (a.get<bool>()) {
         adopt();
+    }
+    if (!mbox_path_.empty()) {
+        open_mailbox();
     }
 }
 
@@ -352,10 +370,20 @@ void Daemon::tend(const Json& loop_ctl) {
         }
         return;
     }
+    if (mbox_path_.empty()) {
+        Json merged;
+        reconcile(ctl_want(merged));
+        return;
+    }
+    Letters got = take_letters();   // 信箱模式：全部認領、照順序套進 want_，套完才對一次表、再回信收信
+    reconcile(want_);
+    done_letters(got);
+}
+
+const Json& Daemon::ctl_want(Json& merged) {
     const Json& ctl = lctl_good_;
     // 期望表（N-06：整份 loops_ctl 就是期望，沒寫的回 daemon.json）＝（loops_ctl 的 loops，沒寫＝daemon.json 的）＋loops_added－loops_removed（10-23 晚）
     const Json* base = ctl.contains("loops") ? &ctl["loops"] : &loops_;
-    Json merged;
     if (ctl.contains("loops_added") || ctl.contains("loops_removed")) {
         std::unordered_map<std::string, const Json*> added;
         if (ctl.contains("loops_added")) {
@@ -389,7 +417,10 @@ void Daemon::tend(const Json& loop_ctl) {
         }
         base = &merged;
     }
-    const Json& want = *base;
+    return *base;
+}
+
+void Daemon::reconcile(const Json& want) {
     std::unordered_set<std::string> wanted;   // want 是 ordered_json，contains 是逐個比對；先收成雜湊表
     wanted.reserve(want.size());
     for (auto& [n, spec] : want.items()) {
@@ -414,7 +445,7 @@ void Daemon::tend(const Json& loop_ctl) {
         }
     }
     for (auto& [n, spec] : want.items()) {
-        if (index_.count(n) == 0) {   // 收的途中（stopping）的同名項還在表上：等它退了、下一次才起新的
+        if (index_.count(n) == 0 && !spec.is_null()) {   // null＝信箱模式接回的（只留名、沒有設定），不會起；收的途中（stopping）的同名項還在表上：等它退了、下一次才起新的
             beat();                   // 起一大批要好一陣子：起之前先寫一份、之後每秒一份（10-23 壓測後加）
             add(n, spawn(n, aos::join(stack_, n), spec, cwd_));
         }

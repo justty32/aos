@@ -14,4 +14,4 @@
 | `tests/test_cli.py` | ctest `test_cli`：命令列黑箱（unittest） |
 | `CMakeLists.txt`、`vcpkg.json`、`.gitignore` | 照 aos-directive 改名；靜態庫＋`-static-pie` 執行檔；nlohmann-json；連 aos-lock、aos-util；`bin/`、`lib/`、`build/` 不進 git |
 
-誰連它：aos-daemon 的信箱模式（實作第 5 步，還沒做）。`proto8/tests/aos_bins.py` 沒列（proto8/tests 還沒用到它的 `bin/`）。
+誰連它：aos-daemon 的信箱模式（實作第 5 步，10-29；[14-aos-daemon](14-aos-daemon.md) 的 `mailbox.cpp`）。`proto8/tests/aos_bins.py` 沒列（proto8/tests 還沒用到它的 `bin/`）。

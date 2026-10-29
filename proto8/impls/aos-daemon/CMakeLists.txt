@@ -7,10 +7,14 @@ include(../cmake/settings.cmake)
 # 也開 C：間接連進來的 inst（libaos）是 C 專案，C 語言要在最上層就開好
 project(aos-daemon C CXX)
 
-# 用到的兄弟專案：aos-loop（骨架 Loop、ctl／state 窗；它再帶進 aos-exec、inst、aos-util、aos-directive）。
+# 用到的兄弟專案：aos-post（信箱模式）、aos-loop（骨架 Loop、ctl／state 窗；它再帶進 aos-exec、inst、aos-util、aos-directive）。
 # daemon＝一個 loop，所以直接繼承 aos-loop 的 aos::loop::Loop，不另寫一份；子 loop 也是 fork 之後在子行程裡跑同一個 Loop。
 if(NOT TARGET aos-loop)
   add_subdirectory(../aos-loop aos-loop-build)
+endif()
+# 信箱模式（loops_mailbox，10-29）連 aos-post 的庫（公開標頭 aos/post.hpp；它再帶進 aos-lock）。
+if(NOT TARGET aos-post)
+  add_subdirectory(../aos-post aos-post-build)
 endif()
 
 # src/ 底下除了 src/main.cpp 全是函式庫的程式碼（分成 daemon、child、common，見 README）。
@@ -22,7 +26,7 @@ add_library(aos-daemon STATIC ${SOURCES})
 target_include_directories(aos-daemon PRIVATE src)
 target_compile_features(aos-daemon PUBLIC cxx_std_20)
 target_compile_options(aos-daemon PRIVATE -Wall -Wextra)
-target_link_libraries(aos-daemon PUBLIC aos-loop)
+target_link_libraries(aos-daemon PUBLIC aos-loop aos-post)
 set_target_properties(aos-daemon PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
@@ -40,7 +44,7 @@ if(PROJECT_IS_TOP_LEVEL)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   add_test(NAME test_cli
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cli.py $<TARGET_FILE:aos-daemon_main>)
-  # 整合：proto8/demo/daemon 兩條線比（要先建好 ../aos-exec、../aos-loop、../aos-fsm 的 bin/）
+  # 整合：proto8/demo/daemon 與 daemon-2（信箱模式，10-29）在 impls 線跑（要先建好 ../aos-exec、../aos-loop、../aos-fsm、../aos-post 的 bin/）
   add_test(NAME test_demo
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_demo.py)
 endif()

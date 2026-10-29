@@ -4,7 +4,7 @@
 //                   讀到壞的（讀不了、不是 JSON 物件、seq 不是非負整數、名單壞或撞名、指示詞解不開）整份不採用、維持上一份好的，
 //                   原因記 lctl_warning_（loops_state 的 ctl_warning）；讀到好的清回 null；檔不在＝還沒人寫，維持上一份好的、不算問題
 //   check_lists     loops、loops_added（read_loops＋撞名）、loops_removed（名字的陣列）；10-29 前是 ctl.json 的 check_ctl
-//   write_more      loops_state 一份：{kind, ctl_seq, ctl_warning, loops, 心跳四欄}；Loop 每寫一份 state 就呼叫（心跳同一份值）
+//   write_more      loops_state 一份：{kind, ctl_seq, ctl_warning, letter_warning（信箱模式才有，10-29）, loops, 心跳四欄}；Loop 每寫一份 state 就呼叫（心跳同一份值）
 //   write_parts     loops 表超過 PART_ROWS 列就切檔（10-23 晚）
 #include "daemon/daemon.hpp"
 
@@ -180,6 +180,9 @@ void Daemon::write_more(const Json& hb) {
     doc["kind"] = "state";
     doc["ctl_seq"] = lctl_good_.contains("seq") ? lctl_good_["seq"] : Json();
     doc["ctl_warning"] = lctl_warning_;
+    if (!mbox_path_.empty()) {
+        doc["letter_warning"] = letter_warning_;   // 信箱模式才有：最後一封壞信（ctl 模式不寫這欄）
+    }
     doc["loops"] = write_parts(std::move(rows));   // 分檔都寫好才寫主檔（主檔改名是唯一的提交點）
     for (auto& [k, v] : hb.items()) {
         doc[k] = v;

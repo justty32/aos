@@ -6,7 +6,7 @@
 從 proto8/tests/test_daemon.py（bin 版）逐案移植（10-21 傍晚重新照抄一次：命令列 `aos-daemon [旗標] 設定檔`、exec 陣列、
 子 loop 經 aos-exec 起、收工時剛死的子項標 done）：daemon.json＝loop.json 的超集、loops 表、ctl 增減、不自動重起、
 收工收子項、接回（N-28、N-54、P-36）。10-29 拆窗（medium-plan § 四）：名單的手把在 loops_ctl.json、子項表在 loops_state.json，
-ctl.json／state.json 只管 loop 面向（H 段）。差別只有：PATH 放 impls 的 aos-exec、aos-loop 兩支的 bin/（子 loop 經 aos-exec
+ctl.json／state.json 只管 loop 面向（H 段）；信箱模式 loops_mailbox（I 段，實作步驟 5）。差別只有：PATH 放 impls 的 aos-exec、aos-loop 兩支的 bin/（子 loop 經 aos-exec
 exec 成 PATH 上的 aos-loop，10-21 傍晚起同 bin 版）、usage 一行多了代號（「aos-daemon: ArgumentsBad usage: …」）、
 自己的錯多驗代號（E 段）。
 """
@@ -908,6 +908,156 @@ class T(unittest.TestCase):
         r = self.run_d({"state": "state.json", "loops": {"state_loops": self.quick()}, "b": {"argv": ["true"]}, "max": 3,
                         "interval_ms": 100})
         self.assertEqual((r.returncode, r.stderr, (self.s / "state_loops" / "loop.json").exists()), (0, "", True))
+
+    # ───── I. 10-29 信箱模式（medium-plan § 四 3、實作步驟 5）：daemon.json 寫 loops_mailbox，名單的增減改成一封封信 ─────
+
+    def box(self):
+        return self.s / "box"
+
+    def post(self, name, body, reply_to=None, raw=None):
+        """照 N-16 寄一封（tmp/ 寫好再 rename 進 new/）；信號自己取，好控制名字順序。"""
+        d = self.box() / "tmp" / name
+        d.mkdir()
+        letter = {"kind": "letter", "sender": str(self.t), "sent_at": "2026-10-29T00:00:00.000+00:00", "body": body}
+        if reply_to is not None:
+            letter["reply_to"] = str(reply_to)
+        (d / "letter.json").write_text(raw if raw is not None else json.dumps(letter))
+        os.rename(d, self.box() / "new" / name)
+
+    def drained(self):
+        return not list((self.box() / "new").iterdir()) and not list((self.box() / "cur").iterdir())
+
+    def reply_box(self):
+        rb = self.t / "rb"
+        for x in ("tmp", "new", "cur"):
+            (rb / x).mkdir(parents=True)
+        return rb
+
+    def mstart(self):
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops_mailbox": "box", "loops": {"a": self.long()}})
+        self.assertTrue(until(lambda: (self.s / "a" / "starts").exists() and self.kids()))
+        return p
+
+    def pause(self, seq):
+        self.ctl({"paused": True, "seq": seq})
+        self.assertTrue(until(lambda: self.state()["phase"] == "paused" and self.state()["ctl_seq"] == seq))
+
+    def mstop(self, p):
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err), (0, ""))
+
+    def test_mailbox_same_cycle_later_name_wins_and_paused_holds(self):
+        # 兩個寄信人同一圈各一封（一加 bob、一刪 bob）：照名字順序套，後面的贏。paused＝信留在 new/ 不認領，解除那圈才套
+        p = self.mstart()
+        self.assertEqual((sorted(x.name for x in self.box().iterdir()), (self.s / "loops_ctl.json").exists()),
+                         (["cur", "new", "tmp"], False))
+        self.pause(1)
+        self.post("0001", {"loops_added": {"bob": self.long()}})
+        self.post("0002", {"loops_removed": ["bob"]})
+        time.sleep(1)
+        self.assertEqual((sorted(x.name for x in (self.box() / "new").iterdir()), (self.s / "bob").exists()),
+                         (["0001", "0002"], False))
+        self.ctl({"seq": 2})   # 解除暫停：同一圈認領兩封，加了又刪＝bob 沒起
+        self.assertTrue(until(self.drained))
+        time.sleep(0.6)
+        self.assertEqual((list(self.kids()), (self.s / "bob").exists()), (["a"], False))
+        self.pause(3)
+        self.post("0003", {"loops_removed": ["bob"]})   # 反過來：先刪後加＝bob 起
+        self.post("0004", {"loops_added": {"bob": self.long()}})
+        self.ctl({"seq": 4})
+        self.assertTrue(until(lambda: (self.s / "bob" / "starts").exists() and set(self.kids()) == {"a", "bob"}))
+        self.assertTrue(until(self.drained))
+        self.assertEqual(((self.box() / "done").exists(), self.lstate()["letter_warning"]), (False, None))   # 預設收掉、不留 done/
+        self.mstop(p)
+
+    def test_mailbox_adopted_stays_until_removed(self):
+        # 方向題 1：重起後 adopt 接回的（daemon.json 沒有的）留在名單上，直到有信 loops_removed 它
+        p = self.mstart()
+        self.post("0001", {"loops_added": {"bob": self.long()}})
+        k = until(lambda: (self.s / "bob" / "starts").exists() and set(self.kids()) == {"a", "bob"} and self.kids())
+        self.assertTrue(k)
+        bob = k["bob"]["pid"]
+        p.kill()
+        p.wait()
+        p2 = self.start()
+        self.assertTrue(until(lambda: self.lstate()["pid"] == p2.pid))
+        time.sleep(1.5)
+        k2 = self.kids()
+        self.assertEqual((set(k2), k2["bob"]["pid"], k2["bob"]["phase"], alive(bob),
+                          len((self.s / "bob" / "starts").read_text().split())), ({"a", "bob"}, bob, "running", True, 1))
+        self.post("0002", {"loops_removed": ["bob"]})
+        self.assertTrue(until(lambda: list(self.kids()) == ["a"]))
+        self.assertFalse(alive(bob))
+        self.mstop(p2)
+
+    def test_mailbox_bad_letters_dont_block_good(self):
+        # 壞信丟掉、不影響同一圈的好信；letter_warning＝最後一封壞信的原因（沒有壞信的圈維持原值）；壞信有 reply_to 也不回（決定 27）
+        rb = self.reply_box()
+        p = self.mstart()
+        self.pause(1)
+        self.post("0001", [1], reply_to=rb)                                   # body 不是物件
+        self.post("0002", {"loops_added": {"box": self.long()}})              # 跟信箱撞名
+        self.post("0003", {"loops_added": {"bob": self.long()}, "x": 1})      # 好信（不認得的 key 忽略）
+        self.post("0004", {"loops_removed": "bob"})                           # 型別錯
+        self.post("0005", None, raw="{not json")                              # letter.json 壞
+        self.ctl({"seq": 2})
+        self.assertTrue(until(lambda: (self.s / "bob" / "starts").exists() and set(self.kids()) == {"a", "bob"}))
+        self.assertTrue(until(self.drained))
+        w = until(lambda: self.lstate()["letter_warning"])
+        self.assertTrue(w and w.startswith("信 0005 不採用：") and "letter.json" in w, w)
+        self.assertEqual((list((rb / "new").iterdir()), (self.box() / "loop.json").exists()), ([], False))
+        self.post("0006", {"loops_removed": ["bob"]})   # 只有好信的圈：letter_warning 維持
+        self.assertTrue(until(lambda: list(self.kids()) == ["a"]))
+        self.assertEqual(self.lstate()["letter_warning"], w)
+        self.mstop(p)
+
+    def test_mailbox_reply_to_applied(self):
+        # 寫了 reply_to 的好信：對完表才回一封 body {"applied": true}、in_reply_to＝原信號；沒寫 reply_to 的不回
+        rb = self.reply_box()
+        p = self.mstart()
+        self.post("0001", {"loops_added": {"bob": self.long()}}, reply_to=rb)
+        self.post("0002", {"loops_added": {"carl": self.long()}})
+        got = until(lambda: list((rb / "new").iterdir()))
+        self.assertTrue(got)
+        self.assertTrue((self.s / "bob" / "loop.json").exists())
+        time.sleep(0.6)
+        self.assertEqual(len(list((rb / "new").iterdir())), 1)
+        r = json.loads((got[0] / "letter.json").read_text())
+        self.assertEqual((r["kind"], r["in_reply_to"], r["body"]), ("letter", "0001", {"applied": True}))
+        self.mstop(p)
+
+    def test_mailbox_cfg_rules(self):
+        # loops_ctl 明寫（非 null）＋loops_mailbox＝CfgBad；loops_ctl 寫 null 或沒寫＝不開、不報錯；型別錯、撞名＝CfgBad
+        for doc in ({"loops_mailbox": "box", "loops_ctl": "loops_ctl.json"}, {"loops_mailbox": "box", "loops_ctl": "x.json"},
+                    {"loops_mailbox": 3}, {"loops_mailbox": ""}, {"loops_mailbox": ["box"]},
+                    {"loops_mailbox": "m/box", "loops": {"m": self.long()}}):
+            r = self.run_d(dict(doc, max=1))
+            self.assertEqual((r.returncode, r.stderr.split(" ")[1], r.stderr.count("\n")), (1, "CfgBad", 1), (doc, r.stderr))
+            self.assertFalse((self.s / "box").exists() or (self.s / "m").exists(), doc)
+        (self.s / "loops_ctl.json").write_text(json.dumps({"loops_added": {"x": self.quick()}}))
+        for lc in ({}, {"loops_ctl": None}):
+            r = self.run_d(dict(lc, loops_mailbox="box", state="state.json", max=3, interval_ms=100))
+            self.assertEqual((r.returncode, r.stderr, (self.s / "x").exists(), (self.box() / "new").is_dir()),
+                             (0, "", False, True), lc)
+        # $AOS_STACK 不在＝不替人建（信箱的 init 是 mkdir -p）
+        gone = self.t / "no" / "stack"
+        r = self.run_d({"loops_mailbox": "box", "loops_state": None, "max": 1}, env={"AOS_STACK": str(gone)})
+        self.assertEqual((r.returncode, r.stderr.split(" ")[1], gone.exists()), (1, "MkdirFailed", False), r.stderr)
+
+    def test_mailbox_cur_leftovers_redone_first(self):
+        # 起來時 cur/ 不空（上次認領了、沒收完就死）：當成這圈認領到的，排在 new/ 前面重做
+        for x in ("tmp", "new", "cur"):
+            (self.box() / x).mkdir(parents=True)
+        self.post("0009", {"loops_added": {"bob": self.long(), "carl": self.long()}})
+        os.rename(self.box() / "new" / "0009", self.box() / "cur" / "0009")
+        self.post("0001", {"loops_removed": ["carl"]})   # 名字排前面，但在 new/：排在 cur/ 的後面＝carl 被刪
+        p = self.mstart()
+        self.assertTrue(until(lambda: (self.s / "bob" / "starts").exists() and set(self.kids()) == {"a", "bob"}))
+        self.assertTrue(until(self.drained))
+        time.sleep(0.6)
+        self.assertEqual((set(self.kids()), (self.s / "carl").exists()), ({"a", "bob"}, False))
+        self.mstop(p)
 
 
 if __name__ == "__main__":
