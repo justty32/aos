@@ -14,4 +14,4 @@ aos 主體（[impls/](../impls/README.md) 的四支 C++、[bin/](../bin/README.m
 | [sandbox/](sandbox/README.md) | aos-sandbox：照一份設定把程式關進沙箱（s6＋bwrap）再跑 | `tests/test_sandbox.py` |
 | [cli_hub/](cli_hub/README.md) | aos-hub（10-27 起、10-28 重寫）：`$AOS_HUB` 裡常駐的 aos-hub-kernel 管所有 claude／codex 實例；接進畫面（Ctrl-] 只跳出）、pause 收起、stop 結束歸檔、aos-say／listen 可以對它說話 | `tests/test_hub.py` |
 
-逐檔說明在 code map 的 [proto8/06-周邊工具](../../wf/workflows/common/code-map/proto8/06-周邊工具.md)、[06-周邊工具-2](../../wf/workflows/common/code-map/proto8/06-周邊工具-2.md)。
+逐檔說明在 code map 的 [proto8/06-周邊工具](../../wf/workflows/common/code-map/proto8/06-周邊工具.md)、[06-周邊工具-2](../../wf/workflows/common/code-map/proto8/06-周邊工具-2.md)、[06-周邊工具-3](../../wf/workflows/common/code-map/proto8/06-周邊工具-3.md)、[06-周邊工具-3](../../wf/workflows/common/code-map/proto8/06-周邊工具-3.md)。
