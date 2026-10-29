@@ -1,0 +1,7 @@
+#!/bin/sh
+# agent-sam - daemon-2 的 agent 格：跑一次就寄一封信，請 daemon 加一個子項 tick（不接腦；真的 agent 是腦決定寄什麼、寄給誰）。
+# $1＝daemon 的信箱（daemon.json 給 $AOS_STACK/../loops_mailbox：sam 的 AOS_STACK 是自己的小格，上一層是 daemon 的 stack）。
+# tick＝每 300 毫秒叫一次 aos-tick 的 loop，時鐘檔是 tick 小格裡的 tick.txt；沒寫 max＝一直跑，直到有信 loops_removed 它或 daemon 收工。
+[ -n "$1" ] || { echo "agent-sam: ArgumentsBad usage: agent-sam 信箱" >&2; exit 1; }
+echo '{"loops_added": {"tick": {"exec": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tick.txt"}]}, "interval_ms": 300}}}' |
+  exec aos-post send "$1"

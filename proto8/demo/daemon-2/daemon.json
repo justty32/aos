@@ -1,0 +1,4 @@
+{"interval_ms": 200, "ctl": "ctl.json", "state": "state.json", "loops_mailbox": "loops_mailbox",
+ "loops": {
+  "sam": {"exec": {"argv": ["aos-exec", "./agent-sam", {"$env": "AOS_STACK", "$path": "../loops_mailbox"}]}, "max": 1}
+ }}

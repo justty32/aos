@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/demo/`（agent-bob、ann、dan、eve、daemon、kernel-llm、tick）｜`proto8/bin/` 見入口
+← [入口](../proto8.md)｜涵蓋：`proto8/demo/`（agent-bob、ann、dan、eve、daemon、daemon-2、kernel-llm、tick）｜`proto8/bin/` 見入口
 
 ### `proto8/demo/`
 
@@ -10,4 +10,5 @@
 - `agent-eve/`（10-24，agent 當工具；[thinking](../../../../../proto8/thinking/2026-10-24-agent-as-tool.md)）：主 agent 照抄 agent-dan（`brain.py`、`act.py` 只改錯誤訊息開頭；act 逾時 30 分鐘），唯一的工具 `tools/pyfix/`：`_tooldef.json`（task、dir）、`_entry`（python3 轉接：開小格 `$AOS_STACK/runs/NNN/`、備份 `before/`、task 寫進子 agent 的 `ws/new/task.txt`、`aos-exec --dotenv-override --ws … agent`、印 `out/task.txt`＋實際 diff）、`agent/`（子 agent pyfix-agent，也是 agent-dan 範本：自己的 `system.txt`、`.env`、`loop.json` max 60；`tools/list_files`、`read_file`、`write_file`、`edit_file`、`run_python` 只碰 `$PYFIX_DIR`）。
 - `daemon/`（10-20）：`_entry`＝`exec aos-daemon daemon.json`、子項 `exec`＝`daemon.json#/loops/<名字>/body`（10-21；10-23 深夜改名，原 `run`）〔10-24 起子項 `exec` 直接是單子〕；一個 daemon 同時管 bob、ann 兩個子 loop（工作區 `$AOS_WS/bob`、`$AOS_WS/ann`，stack 在 daemon 的小格裡）。
 - `kernel-llm/`（10-24，[thinking](../../../../../proto8/thinking/2026-10-24-llm-kernel.md)）：`_entry`（shell）設 `AOS_KERNEL=$AOS_STACK/mailbox` 並先建好、`exec aos-daemon "$@" daemon.json`（後面的參數原樣給 daemon，`--max` 改收工次數，10-24 真腦實測加）；`daemon.json` 管 kernel（`aos-kernel-llm kernel.json`，`interval_ms` 300）與 a、b、c 三個子項（各跑一次 `agent-ivy/`，環境變數 `BRAIN` 選腦的單子）；`kernel.json`＝`{"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1, "budget": {…}}`（budget 10-24 下午 3fbcefcc 加）；`agent-ivy/`＝ann 式 agent（`idle.py`、`brain.py`〔假腦睡 1 秒〕、`act.py`），think 格 `exec` 是 `aos-gate $BRAIN`、stdout 導到 `plan.txt`；`agent-ivy/brains/` 三張腦的單子（`plain.json` normal、`quick.json` normal＋`_metainfo.time_ms` 800、`urgent.json` high＋5000）。
+- `daemon-2/`（10-29，[medium-plan](../../../../../proto8/thinking/2026-10-29-medium-plan.md) 實作第 8 步）：信箱模式的 daemon。`_entry`＝`exec aos-daemon "$@" daemon.json`；`daemon.json` 寫 `loops_mailbox`、沒寫 `max`（`run.sh` 給 `--max 25`）、`loops` 只有 `sam`；`agent-sam/_entry`（shell，agent 格）：`$1`＝daemon 的信箱，`aos-post send` 一封加子項 `tick`（每 300 毫秒 `aos-tick`）的信；`README.md`（怎麼起、人怎麼寄、怎麼看 loops_state、怎麼停）。自動測在 `impls/aos-daemon/tests/test_demo.py` 的 `run_daemon2`。
 - `tick/`（10-21 晚）：`_entry`＝`exec aos-loop loop.json`、`loop.json` 跑 5 次 `loop.json#/body`〔10-24 起單子直接寫在 `exec`〕（`aos-tick $AOS_STACK/tick.txt`），跑完時鐘檔是 5。
