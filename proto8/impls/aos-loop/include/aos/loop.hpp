@@ -10,7 +10,7 @@
 //   run_once        跑一次：目標＝子行程裡 `aos-exec -- 目標 參數...`（aos-exec 的 run_cli）；單子＝行程內 aos-exec 的 run_inst
 //   loop_cli        命令列 `程式 [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔`（aos-loop、aos-daemon 共用）
 //   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；10-21 傍晚）：
-//                   讀設定（旗標 ＞ 設定檔 ＞ 預設：exec／max／interval_ms／ctl／state）、每次讀 ctl 窗 → tend() → 跑一次 → 寫 state 窗
+//                   讀設定（旗標 ＞ 設定檔 ＞ 預設：exec／max／interval_ms／ctl／state）、每次讀 ctl 窗 → tend() → 跑一次 → 寫 state 窗（＋write_more）
 //   write_window    窗的寫法：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
 //   heartbeat       state 的心跳欄位 {pid, started_at_ticks, boot_id, recorded_at}（N-32）
 //   resolve_keys    設定檔、ctl 的指示詞（10-23 晚：aos 讀的 JSON 都解）：整份先換一層，再把自己讀的那幾格整個解，其他 key 不碰
@@ -143,7 +143,7 @@ struct Defaults {
 // 跑一次：0＝下一次、10＝結束（0）、其他非 0＝stderr 一行、以那個碼結束；跑的期間收到訊號＝收完以 128＋N 結束。
 // 沒有身體（exec 沒寫，daemon 純監工）：一輪＝讀 ctl → tend → 算一次 → 寫一份 waiting → 睡到下一次，一輪只讀一次 ctl、
 // 只 tend 一次、只寫一次 state、不寫 running（那一刻沒東西在跑），所以 state 的 at 間隔穩定在 interval_ms＋tend 的時間（10-23 壓測）。
-// state 只在兩次之間寫（心跳只在兩次之間跳）。結束前呼叫 finish()（不論為什麼結束）。呼叫前要先 block_signals()。
+// state 只在兩次之間寫（心跳只在兩次之間跳）；每寫一份接著呼叫 write_more（子類別自己的狀態窗）。結束前呼叫 finish()（不論為什麼結束）。呼叫前要先 block_signals()。
 // $AOS_STACK 不在＝state 寫不了＝WriteFailed、退 1，不自己建（建 stack 只在 aos-exec 做，N-59 第 1 件）。
 class Loop {
 public:
@@ -157,18 +157,22 @@ public:
     int serve();
 
 protected:
-    // 子類別蓋這四個
+    // 子類別蓋這五個
     virtual void tend(const Json& ctl);                              // 每次讀完 ctl 後
     virtual void finish();                                           // 結束前（不論為什麼結束）
     virtual Json info();                                             // 寫進 state 的額外欄位（物件）
     // ctl 多認的 key：解自己那幾格的指示詞（起點 base＝ctl 換完一層後的起點）、驗證，可以就地改寫 doc（回原因＝不採用；
     // 丟 DirectiveBad 也＝不採用）
     // where＝ctl 換完一層後各 key 的起點（where.dir_of(key)；ctl 整份是 $ref 陣列時每個 key 可能來自不同的檔）
+    // 採用了、但要提醒一句的（10-29 daemon 的 loops* 搬家過渡期）：填 ctl_note_，這份採用後它就是 state 的 ctl_warning。
     virtual std::optional<std::string> check_ctl(Json& doc, const aos::Resolved& where);
+    // 子類別自己的狀態窗（10-29：aos-daemon 的 loops_state）：每寫一份 state 之後呼叫（沒開 state 窗也照樣呼叫），
+    // hb＝這份 state 的心跳欄位（同一份值）。寫不了丟 Error（當成 state 寫不了：StateError）。
+    virtual void write_more(const Json& hb);
 
     void say(const std::string& msg);   // stderr 一行「程式名: msg」
 
-    // 寫一份 state（沒開 state 窗就不寫）：phase＝這份要寫的階段，code＝結束碼（null＝還沒結束）。寫不了丟 StateError（WriteFailed）。
+    // 寫一份 state（沒開 state 窗就不寫）再呼叫 write_more：phase＝這份要寫的階段，code＝結束碼（null＝還沒結束）。寫不了丟 StateError（WriteFailed）。
     void write_state(const std::string& phase, const Json& code);
     // 心跳（N-17、N-32「最多隔 1 秒」）：離上一次寫 state 滿 1 秒（或還沒寫過）就照 phase 寫一份。給一輪裡會花很久的工作用
     // （daemon 起一大批子項、收工等子項退），不讓 state 停住。phase 空＝沿用上一份寫的。
@@ -184,11 +188,13 @@ protected:
     std::string stack_;           // $AOS_STACK（沒設＝空）
     std::string ctl_path_;        // 空＝不開
     std::string state_path_;      // 空＝不開
+    std::string ctl_note_;        // check_ctl 填：採用了但要提醒的一句（空＝沒有；read_ctl 每次呼叫 check_ctl 前清掉）
 
 private:
     int main_loop();
     int end(int code, const std::string& phase);
     Json read_ctl();
+    void write_main(const std::string& phase, const Json& code, const Json& hb);   // write_state 的 state 窗那份
     int signal_got();             // 第一個收到的訊號（記住；0＝沒有）
     void nap(double secs);        // 睡 secs 秒（最多 1 秒），收到訊號就提早醒
 

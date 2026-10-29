@@ -4,7 +4,7 @@
 //               fork 一個子行程跑 `aos-exec -- 小格/loop.json#/_entry`（aos-exec 的 run_cli；它 cd 進小格、exec 成 PATH 上的
 //               aos-loop，pid 不變；setsid 自成一個行程群組、stdin／stdout 接 /dev/null、stderr 附加到小格的 stderr.txt、AOS_STACK＝小格/）
 //               alive：自己生的看 waitpid（結束就記 code／signal）；接回來的看 /proc 的 started_at_ticks 還對不對
-//               row：寫進 state 的那一列
+//               row：寫進 loops_state 的那一列
 #pragma once
 
 #include "common/common.hpp"
@@ -41,7 +41,7 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
 // 還活著嗎（自己生的：結束了就收屍、記 code／signal）。
 bool alive(Child& c);
 
-// state 裡的一列：{"pid", "started_at_ticks", "phase", "code", "signal"}。
+// loops_state 裡的一列：{"pid", "started_at_ticks", "phase", "code", "signal"}。
 Json row(const Child& c);
 
 }  // namespace aos::daemon

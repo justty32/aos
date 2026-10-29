@@ -105,7 +105,7 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔
 
 | 檔 | 做什麼 |
 |---|---|
-| `include/aos/loop.hpp` | 公開介面：`Run`（`code`、`signal`、`elapsed_ms`、`received`；沒有 `timed_out`）、`block_signals`、`take_signal`、`Target`（含 `inst`、`cf`、`co`、`ref_base`、`label()`）、`parse_target`（收字串、陣列、物件）、`resolve_exec`、`place_inline`、`pointer_escape`、`config_file`、`run_once(Target)`、`loop_cli`、`Loop(opts, spec, defaults)`（骨架，`tend`／`finish`／`info`／`check_ctl` 四個掛鉤給子類別）、`Defaults`（`max` 預設 nullopt＝不限）、`write_window`、`heartbeat`、`resolve_keys`（aos-daemon、aos-fsm 共用）；代號 `aos::loop::code::*`（沿用 aos-exec 的＋`StackMissing`） |
+| `include/aos/loop.hpp` | 公開介面：`Run`（`code`、`signal`、`elapsed_ms`、`received`；沒有 `timed_out`）、`block_signals`、`take_signal`、`Target`（含 `inst`、`cf`、`co`、`ref_base`、`label()`）、`parse_target`（收字串、陣列、物件）、`resolve_exec`、`place_inline`、`pointer_escape`、`config_file`、`run_once(Target)`、`loop_cli`、`Loop(opts, spec, defaults)`（骨架，`tend`／`finish`／`info`／`check_ctl`／`write_more` 五個掛鉤給子類別；`check_ctl` 可填 `ctl_note_`＝採用了但 `ctl_warning` 提醒一句，`write_more`＝每寫一份 state 之後寫子類別自己的窗、同一份心跳，沒開 state 也呼叫——10-29 aos-daemon 拆窗用）、`Defaults`（`max` 預設 nullopt＝不限）、`write_window`、`heartbeat`、`resolve_keys`（aos-daemon、aos-fsm 共用）；代號 `aos::loop::code::*`（沿用 aos-exec 的＋`StackMissing`） |
 | `src/common/common.hpp` | `using` |
 | `src/run/run.hpp` | run 元素的內部介面：`the_signals`、`run_folder`、`run_inline` |
 | `src/run/run.cpp` | `run_once`：目標＝組好 `-- 目標 參數...` 交給 `run_folder`；單子＝交給 `run_inline` |

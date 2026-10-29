@@ -20,6 +20,7 @@ void Loop::tend(const Json&) {}
 void Loop::finish() {}
 Json Loop::info() { return Json::object(); }
 std::optional<std::string> Loop::check_ctl(Json&, const aos::Resolved&) { return std::nullopt; }
+void Loop::write_more(const Json&) {}
 
 void Loop::say(const std::string& msg) {
     std::fprintf(stderr, "%s: %s\n", d_.prog.c_str(), msg.c_str());

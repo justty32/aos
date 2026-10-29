@@ -3,10 +3,10 @@
 //   read_ctl      回最後一份好的 ctl（一份都沒讀到過＝{}）。認 paused、stopped（布林）、max、interval_ms、seq（非負整數），
 //                 加上子類別的 check_ctl；其他 key 忽略。指示詞先解（resolve_keys；10-23 晚）。讀到壞的（讀不了、不是 JSON 物件、
 //                 型別不對、指示詞解不開）整份不採用、
-//                 維持上一份好的，原因記 ctl_warning（N-08）；讀到好的清回 null。檔不在＝還沒人寫，維持上一份好的、
+//                 維持上一份好的，原因記 ctl_warning（N-08）；讀到好的清回 null（check_ctl 填了 ctl_note_＝那一句）。檔不在＝還沒人寫，維持上一份好的、
 //                 不算問題（ctl_warning 不動）
 //   write_state   state 一份：kind、phase、counter_runs（跑過幾次；10-25 原 runs、同日再改 counter_runs）、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 蓋過設定檔之後）
-//                 ＋info()＋code（結束時）＋心跳；沒開 state 窗就不寫
+//                 ＋info()＋code（結束時）＋心跳；沒開 state 窗就不寫；接著呼叫 write_more（子類別的窗，同一份心跳；10-29）
 //   beat          心跳：離上一次寫 state 滿 1 秒（或還沒寫過）就再寫一份（一輪裡很久的工作用：daemon 起一大批、收工等子項）
 //   write_window  先寫同資料夾的 .名字 再改名（N-05）
 //   heartbeat     pid、started_at_ticks、boot_id、at（ISO 8601 UTC 到毫秒）
@@ -105,6 +105,7 @@ Json Loop::read_ctl() {
         doc = std::move(r.value);
         bad = check_base(doc);
         if (!bad) {
+            ctl_note_.clear();
             bad = check_ctl(doc, r);
         }
     } catch (const Error& e) {
@@ -115,14 +116,28 @@ Json Loop::read_ctl() {
         return ctl_good_;
     }
     ctl_good_ = doc;
-    ctl_warning_ = nullptr;
+    ctl_warning_ = ctl_note_.empty() ? Json() : Json(ctl_note_);   // 採用了但子類別要提醒的（10-29 daemon 過渡期）
     return ctl_good_;
 }
 
 void Loop::write_state(const std::string& phase, const Json& code) {
-    if (state_path_.empty()) {
-        return;
+    Json hb = heartbeat();
+    phase_ = phase;
+    wrote_ = true;
+    wrote_at_ = std::chrono::steady_clock::now();
+    if (!state_path_.empty()) {
+        write_main(phase, code, hb);
     }
+    try {   // 子類別自己的狀態窗（10-29 daemon 的 loops_state）：同一份心跳
+        write_more(hb);
+    } catch (const StateError&) {
+        throw;
+    } catch (const Error& e) {
+        throw StateError{e};
+    }
+}
+
+void Loop::write_main(const std::string& phase, const Json& code, const Json& hb) {
     const Json& c = ctl_now_;
     Json doc = Json::object();
     doc["kind"] = "state";
@@ -146,13 +161,9 @@ void Loop::write_state(const std::string& phase, const Json& code) {
     if (!code.is_null()) {
         doc["code"] = code;
     }
-    Json hb = heartbeat();
     for (auto& [k, v] : hb.items()) {
         doc[k] = v;
     }
-    phase_ = phase;
-    wrote_ = true;
-    wrote_at_ = std::chrono::steady_clock::now();
     try {
         write_window(state_path_, doc);
     } catch (const Error& e) {
@@ -161,7 +172,7 @@ void Loop::write_state(const std::string& phase, const Json& code) {
 }
 
 void Loop::beat(const std::string& phase) {
-    if (state_path_.empty() || (wrote_ && std::chrono::steady_clock::now() - wrote_at_ < std::chrono::seconds(1))) {
+    if (wrote_ && std::chrono::steady_clock::now() - wrote_at_ < std::chrono::seconds(1)) {   // 沒開 state 窗也照跳（write_more 的窗）
         return;
     }
     write_state(phase.empty() ? phase_ : phase, Json());

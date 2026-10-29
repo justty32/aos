@@ -41,7 +41,7 @@ daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.sta
 | `ask 名 文字…｜- [--id 題名]` | 題目寫進 `ws/new/<題名>.txt`（先寫暫存再改名，N-05）；題名沒給＝`q<UTC 時間>` |
 | `run 名 [--timeout 秒] [--env K=V]...` | 前景 `aos-exec --ws ws agent`（`AOS_STACK` 明寫成 `ws/.stack/`），跑到 idle 退 10；回答案、錯誤、hint |
 | `status [名]`、`answer 名 [題名]`、`trace 名 [-n N]`、`history 名 [-n N]` | 看 |
-| `start 名 [--interval-ms N]`、`stop 名`、`wait 名 題名 [--timeout 秒]` | 背景：寫 daemon 的 ctl `loops_added`（N-54），等 `ctl_seq` 回音才回 |
+| `start 名 [--interval-ms N]`、`stop 名`、`wait 名 題名 [--timeout 秒]` | 背景：寫 daemon 的 `loops_ctl.json` 的 `loops_added`（N-54；10-29 拆窗前寫在 ctl），等 `loops_state.json` 的 `ctl_seq` 回音才回 |
 | `daemon up｜down｜status` | 起／停（ctl `stopped`）／看背景的 aos-daemon |
 | `exec [--ws WS] 目標 [參數...]` | 直接 `aos-exec` 跑一次，回 `code`、`stdout`、`errors`；WS 要在 root 裡 |
 | `edit 名 檔 [參數...]` | JSON 編輯的接口：交給 `$AOS_AI_JSON_EDITOR`（argv＋檔的絕對路徑＋參數）；檔要在 `agents/<名>/` 裡 |

@@ -6,7 +6,7 @@ root 的樣子：
   agents/<名>/agent/      agent 定義（從範本複製來的，例 proto8/demo/agent-dan）
   agents/<名>/ws/         它的工作區：new/ cur/ out/ done/，stack 在 ws/.stack/
   agents/<名>/runs.jsonl  aos-ai run 每跑一次記一行（結束碼、錯誤、答案）
-  daemon/                 背景用的 aos-daemon：daemon.json、.stack/（ctl.json、state.json、各 agent 的小格）
+  daemon/                 背景用的 aos-daemon：daemon.json、.stack/（ctl.json、state.json、loops_ctl.json、loops_state.json、各 agent 的小格）
 錯：stderr 一行「aos-ai: 代號 原因（下一步：…）」、退 1。跑的結果（agent 失敗也算）是資料，照樣退 0、看 JSON 的 ok／code。
 設計與代定見 proto8/thinking/2026-10-24-ai-tools.md。"""
 import fcntl, json, os, re, shlex, shutil, signal, subprocess, sys, time, urllib.request
@@ -191,16 +191,22 @@ class Daemon:
         self.dir = root.dir / "daemon"
         self.stack = self.dir / ".stack"
         self.cfg, self.ctl, self.state = self.dir / "daemon.json", self.stack / "ctl.json", self.stack / "state.json"
+        # 10-29 aos-daemon 拆窗：名單的手把、子項表另外一對（daemon.json 沒寫＝這兩個預設檔名）
+        self.lctl, self.lstate = self.stack / "loops_ctl.json", self.stack / "loops_state.json"
 
     def read_state(self):
         st = read_json(self.state)
+        return st if isinstance(st, dict) else None
+
+    def read_lstate(self):
+        st = read_json(self.lstate)
         if not isinstance(st, dict):
             return None
         loops = st.get("loops")
         if isinstance(loops, dict) and "$ref" in loops:   # 超過 100 列會切檔：交給 aos-directive 解
             d = which("aos-directive")
             if d:
-                r = subprocess.run([d], input=self.state.read_text(encoding="utf-8"), capture_output=True,
+                r = subprocess.run([d], input=self.lstate.read_text(encoding="utf-8"), capture_output=True,
                                    text=True, cwd=self.stack)
                 st = read_json_text(r.stdout) or st
         return st
@@ -216,26 +222,28 @@ class Daemon:
         return None
 
     def row(self, name):
-        st = self.read_state() or {}
+        st = self.read_lstate() or {}
         return (st.get("loops") or {}).get(name) if self.running() else None
 
-    def write_ctl(self, change):
-        """ctl 是宣告（N-06）：讀現在那份、改、seq＋1、整份換掉；同時只一個 aos-ai 寫（flock）。回 seq。"""
+    def write_ctl(self, change, path=None):
+        """ctl 是宣告（N-06）：讀現在那份、改、seq＋1、整份換掉；同時只一個 aos-ai 寫（flock）。回 seq。
+        path 沒給＝ctl.json（stopped 這類 loop 面向）；名單寫 self.lctl（loops_ctl.json，10-29 拆窗）。"""
+        path = path or self.ctl
         self.stack.mkdir(parents=True, exist_ok=True)
         with open(self.dir / ".ctl.lock", "w") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
-            ctl = read_json(self.ctl, {})
+            ctl = read_json(path, {})
             ctl = ctl if isinstance(ctl, dict) else {}
             change(ctl)
             ctl["seq"] = int(ctl.get("seq") or 0) + 1
-            write_atomic(self.ctl, json.dumps(ctl, ensure_ascii=False, indent=1) + "\n")
+            write_atomic(path, json.dumps(ctl, ensure_ascii=False, indent=1) + "\n")
             return ctl["seq"]
 
     def wait_seq(self, seq, until=None, timeout=8.0):
-        """等 daemon 讀到這份 ctl（state 的 ctl_seq 回音）；until(state) 另給條件。回 (state, 是否等到)。"""
+        """等 daemon 讀到這份 loops_ctl（loops_state 的 ctl_seq 回音）；until(loops_state) 另給條件。回 (loops_state, 是否等到)。"""
         end = time.monotonic() + timeout
         while True:
-            st = self.read_state() or {}
+            st = self.read_lstate() or {}
             if (st.get("ctl_seq") or 0) >= seq and (until is None or until(st)):
                 return st, True
             if time.monotonic() > end or not self.running():
@@ -506,7 +514,7 @@ def daemon_up(root):
     if not d.cfg.exists():
         write_atomic(d.cfg, json.dumps({"interval_ms": 500, "ctl": "ctl.json", "state": "state.json", "loops": {}},
                                        indent=1) + "\n")
-    d.write_ctl(lambda c: c.pop("stopped", None))    # 上次 down 留下的 stopped 拿掉；loops_added 照留＝上次在跑的照起
+    d.write_ctl(lambda c: c.pop("stopped", None))    # 上次 down 留下的 stopped 拿掉；loops_ctl 的 loops_added 照留＝上次在跑的照起
     prog = which("aos-daemon")
     if not prog:
         raise Fail("CommandMissing", "PATH 上沒有 aos-daemon", HINTS["CommandMissing"])
@@ -543,8 +551,10 @@ def cmd_daemon(root, o, pos):
         out({"ok": not d.running(), "running": bool(d.running()), "phase": st.get("phase"), "code": st.get("code")})
     elif pos[0] == "status":
         st = d.read_state() or {}
+        ls = d.read_lstate() or {}
         out({"ok": True, "running": bool(d.running()), "pid": d.running(), "phase": st.get("phase"),
-             "loops": st.get("loops") or {}, "ctl_seq": st.get("ctl_seq"), "ctl_warning": st.get("ctl_warning"),
+             "loops": ls.get("loops") or {}, "ctl_seq": st.get("ctl_seq"), "ctl_warning": st.get("ctl_warning"),
+             "loops_ctl_seq": ls.get("ctl_seq"), "loops_ctl_warning": ls.get("ctl_warning"),
              "recorded_at": st.get("recorded_at"), "stderr_tail": (read_text(d.dir / "stderr.txt") or "")[-500:] or None})
     else:
         raise Fail("ArgumentsBad", "daemon 只認 up、down、status：%s" % pos[0])
@@ -567,9 +577,9 @@ def cmd_start(root, o, pos):
         out({"ok": True, "name": a.name, "already_running": True, "background": row})
         return
     if row:                                            # done／stopped 還在表上：拿掉、等它下表，再放回（daemon 不自己重起）
-        seq = d.write_ctl(lambda c: (c.setdefault("loops_added", {}).pop(a.name, None)))
+        seq = d.write_ctl(lambda c: (c.setdefault("loops_added", {}).pop(a.name, None)), d.lctl)
         d.wait_seq(seq, until=lambda st: a.name not in (st.get("loops") or {}))
-    seq = d.write_ctl(lambda c: c.setdefault("loops_added", {}).__setitem__(a.name, spec))
+    seq = d.write_ctl(lambda c: c.setdefault("loops_added", {}).__setitem__(a.name, spec), d.lctl)
     st, acked = d.wait_seq(seq, until=lambda st: a.name in (st.get("loops") or {}))
     row = (st.get("loops") or {}).get(a.name)
     res = {"ok": acked and bool(row), "name": a.name, "background": row, "ctl_warning": st.get("ctl_warning"),
@@ -586,7 +596,7 @@ def cmd_stop(root, o, pos):
     if not d.running():
         out({"ok": True, "name": a.name, "background": None, "note": "daemon 沒在跑"})
         return
-    seq = d.write_ctl(lambda c: c.setdefault("loops_added", {}).pop(a.name, None))
+    seq = d.write_ctl(lambda c: c.setdefault("loops_added", {}).pop(a.name, None), d.lctl)
     st, acked = d.wait_seq(seq, until=lambda st: (st.get("loops") or {}).get(a.name, {}).get("phase") != "running")
     out({"ok": acked, "name": a.name, "background": (st.get("loops") or {}).get(a.name),
          "note": "已叫停；正在跑的那次收完才真的停（stopping → 下表）"})

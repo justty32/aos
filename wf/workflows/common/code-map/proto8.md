@@ -25,7 +25,7 @@
 
 逐字下放到 [proto8/01-impls與舊lib](proto8/01-impls與舊lib.md)（2026-10-21 下午，本檔超過 8 KB）：impls 是使用者的 C／C++ 實作（10-23 起進 git；舊快照 `backup/` 10-23 已刪）；舊 lib 是 10-16 那套、10-19 刪進 git 歷史。
 
-LLM kernel 兩支（`aos-kernel-llm`、`aos-gate`，10-24）的逐檔表另開一份：[proto8/03-kernel-llm](proto8/03-kernel-llm.md)。改 JSON 的工具集 `aos-json`（10-24）：[proto8/07-aos-json](proto8/07-aos-json.md)。
+LLM kernel 兩支（`aos-kernel-llm`、`aos-gate`，10-24）的逐檔表另開一份：[proto8/03-kernel-llm](proto8/03-kernel-llm.md)。aos-daemon 的 `src/` 逐檔（10-29 下放）：[proto8/14-aos-daemon](proto8/14-aos-daemon.md)。改 JSON 的工具集 `aos-json`（10-24）：[proto8/07-aos-json](proto8/07-aos-json.md)。
 
 ### agent-round 的格（10-28 晚）
 

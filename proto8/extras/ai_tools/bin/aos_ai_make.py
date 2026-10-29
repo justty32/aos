@@ -445,6 +445,8 @@ NOTES = {
     "start": "fsm 的起始格；$AOS_STACK/state.txt 沒有時從這格開始（explain fsm）",
     "states": "fsm 的整張表：每格 {exec, next}，格退 0 才換到 next（explain fsm）",
     "loops": "daemon 顧的子 loop：名字→目標或一份 loop.json；小格＝$AOS_STACK/<名字>/（explain daemon）",
+    "loops_ctl": "daemon 名單的手把檔名（loops、loops_added、loops_removed），在 $AOS_STACK 底下；沒寫＝loops_ctl.json、null＝不開（explain daemon）",
+    "loops_state": "daemon 子項表的狀態窗檔名，在 $AOS_STACK 底下；沒寫＝loops_state.json、null＝不開（explain daemon）",
     "argv": "單子要跑的程式與參數；argv[0] 沒 / 照 PATH 找（explain inst）",
     "cwd": "單子的工作資料夾，相對路徑從入口所在的資料夾算",
     "envs": "疊在現有環境上的環境變數",

@@ -171,7 +171,8 @@ class AiToolsTest(unittest.TestCase):
         code, res, _ = ai(self.root, "daemon", "down")
         self.assertFalse(res["running"])
         ctl = json.loads((Path(self.root) / "daemon" / ".stack" / "ctl.json").read_text())
-        self.assertEqual((ctl["loops_added"], ctl["stopped"]), ({}, True))
+        lctl = json.loads((Path(self.root) / "daemon" / ".stack" / "loops_ctl.json").read_text())   # 10-29 daemon 拆窗
+        self.assertEqual((lctl["loops_added"], ctl["stopped"], "loops_added" in ctl), ({}, True, False))
 
     def test_dan_tools_ask_agent(self):
         """② 老闆 agent 掛 ask_agent，腦叫它 → 起一隻 helper、問、拿答案，再交答案。"""

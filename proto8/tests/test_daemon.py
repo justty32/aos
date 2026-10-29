@@ -1,4 +1,5 @@
-"""aos-daemon：daemon.json＝loop.json 的超集、loops 表、ctl 增減、不自動重起、收工收子項、接回（N-28、N-54、P-36）。"""
+"""aos-daemon：daemon.json＝loop.json 的超集、loops 表、ctl 增減、不自動重起、收工收子項、接回（N-28、N-54、P-36）。
+10-29 拆窗（thinking 2026-10-29-medium-plan § 四）：名單的手把在 loops_ctl.json、子項表在 loops_state.json；ctl.json／state.json 只管 loop 面向。"""
 import json, os, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402
@@ -59,8 +60,8 @@ class T(unittest.TestCase):
             if p.poll() is None:
                 p.kill()
             p.communicate()
-        st = self.s / "state.json"
-        if st.is_file():   # 測試失敗時別留孤兒（子項叫 state.json 時它是小格）
+        st = self.s / "loops_state.json"
+        if st.is_file():   # 測試失敗時別留孤兒（子項叫 loops_state.json 時它是小格）
             for r in json.loads(st.read_text()).get("loops", {}).values():
                 if r.get("pid") and alive(r["pid"]):
                     try:
@@ -88,13 +89,19 @@ class T(unittest.TestCase):
     def state(self):
         return json.loads((self.s / "state.json").read_text())
 
-    def kids(self):
-        return self.state()["loops"]
+    def lstate(self):
+        return json.loads((self.s / "loops_state.json").read_text())
 
-    def ctl(self, doc):
-        tmp = self.s / ".ctl.json"
+    def kids(self):
+        return self.lstate()["loops"]
+
+    def ctl(self, doc, name="ctl.json"):
+        tmp = self.s / ("." + name)
         tmp.write_text(json.dumps(doc))
-        os.replace(tmp, self.s / "ctl.json")
+        os.replace(tmp, self.s / name)
+
+    def lctl(self, doc):
+        self.ctl(doc, "loops_ctl.json")
 
     def long(self, mx=1):
         return {"exec": "long", "max": mx}
@@ -136,8 +143,9 @@ class T(unittest.TestCase):
         st = self.state()
         self.assertEqual((p.returncode, err, st["phase"], st["ctl_seq"]), (0, "", "stopped", 1))
         # 10-23 命名統合：daemon 收掉的子項＝stopped（統合前叫 exited）；每列 {pid, started_at_ticks, phase, code, signal}
-        self.assertEqual({r["phase"] for r in st["loops"].values()}, {"stopped"})
-        self.assertEqual({frozenset(r) for r in st["loops"].values()},
+        self.assertNotIn("loops", st)   # 10-29 拆窗：子項表在 loops_state.json
+        self.assertEqual({r["phase"] for r in self.kids().values()}, {"stopped"})
+        self.assertEqual({frozenset(r) for r in self.kids().values()},
                          {frozenset({"pid", "started_at_ticks", "phase", "code", "signal"})})
         self.assertEqual([alive(x) for x in pids], [False, False])
 
@@ -167,11 +175,11 @@ class T(unittest.TestCase):
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})
         k = until(lambda: (self.s / "a" / "starts").exists() and self.kids())
         a_pid = k["a"]["pid"]
-        self.ctl({"loops": {"b": self.long()}})
+        self.lctl({"loops": {"b": self.long()}})
         k = until(lambda: (self.s / "b" / "starts").exists() and "a" not in self.kids() and self.kids())
         self.assertEqual(list(k), ["b"])
         self.assertFalse(alive(a_pid))
-        self.ctl({"loops": {"b": self.long()}, "stopped": True})
+        self.ctl({"stopped": True})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -183,7 +191,7 @@ class T(unittest.TestCase):
         st = self.state()
         self.assertEqual((p.returncode, err, st["phase"], st["code"]), (143, "", "stopped", 143))
         self.assertEqual([alive(r["pid"]) for r in k.values()], [False, False])
-        self.assertEqual({r["phase"] for r in st["loops"].values()}, {"stopped"})
+        self.assertEqual({r["phase"] for r in self.kids().values()}, {"stopped"})
 
     # ---- 10-21 計畫第 2 段：命令列（D1，跟 aos-loop 共用；10-23 前 Python 版是 aos_loop.cli）、字串子項（D2）、收工時剛死的子項（D7）
 
@@ -298,17 +306,33 @@ class T(unittest.TestCase):
             self.assertEqual((r.returncode, r.stderr, (self.s / name / "loop.json").exists()), (0, "", True), (win, name))
 
     def test_ctl_loops_clash_not_adopted(self):
-        # ctl 改 loops 撞名＝那份 ctl 整份不採用、維持上一份好的，原因進 state 的 ctl_warning（N-08）
+        # loops_ctl 改 loops 撞名＝那份 loops_ctl 整份不採用、維持上一份好的，原因進 loops_state 的 ctl_warning（N-08）
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})
         k = until(lambda: (self.s / "a" / "starts").exists() and self.kids())
-        self.ctl({"loops": {"state.json": self.long()}, "stopped": True})
-        st = until(lambda: "撞名" in (self.state()["ctl_warning"] or "") and self.state())
+        self.lctl({"loops": {"state.json": self.long()}})
+        st = until(lambda: "撞名" in (self.lstate()["ctl_warning"] or "") and self.lstate())
         self.assertTrue(st)
         self.assertEqual((list(st["loops"]), st["loops"]["a"]["pid"], alive(k["a"]["pid"])), (["a"], k["a"]["pid"], True))
         self.assertTrue((self.s / "state.json").is_file())
         self.ctl({"stopped": True})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err, self.state()["ctl_warning"]), (0, "", None))
+
+    def test_ctl_loops_moved_to_loops_ctl(self):
+        # 10-29 拆窗：ctl.json 寫 loops_added 不採用（state 的 ctl_warning 提醒搬家，過渡期）；寫進 loops_ctl.json 才起
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})
+        self.assertTrue(until(lambda: (self.s / "a" / "starts").exists() and self.kids()))
+        self.ctl({"loops_added": {"b": self.long()}, "seq": 1})
+        st = until(lambda: self.state()["ctl_seq"] == 1 and self.state())
+        self.assertIn("loops_ctl.json", st["ctl_warning"] or "")
+        time.sleep(1)
+        self.assertFalse((self.s / "b").exists())
+        self.lctl({"loops_added": {"b": self.long()}, "seq": 1})
+        self.assertTrue(until(lambda: (self.s / "b" / "starts").exists() and set(self.kids()) == {"a", "b"}))
+        self.assertEqual(self.lstate()["ctl_seq"], 1)
+        self.ctl({"stopped": True})
+        p.communicate(timeout=30)
+        self.assertEqual(p.returncode, 0)
 
     def test_adopt_false_starts_fresh(self):
         doc = {"state": "state.json", "loops": {"a": self.long()}}
