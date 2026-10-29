@@ -125,10 +125,11 @@ class SandboxTest(unittest.TestCase):
         self.assertNotEqual(r.returncode, 0)                 # 沒列 commands：沙箱裡沒有 aos-exec
 
     def test_timeout_kills_whole_group_through_box(self):
-        """單子的 timeout_ms 照樣打得到沙箱裡的程式（不 --new-session，同一個行程群組）。"""
+        """單子的 timeout_ms 照樣打得到沙箱裡的程式（不 --new-session，同一個行程群組）。
+        記號放在 python3 的 argv 裡給 pgrep -f 找（不用 sh 的 exec -a：那是 bash 才有，/bin/sh 是 dash 時不認）。"""
         mark = "sbx-sleep-%d" % os.getpid()
         (self.tmp / "inst.json").write_text(json.dumps(
-            {"argv": ["aos-sandbox", "box.json", "sh", "-c", "exec -a %s sleep 30" % mark], "timeout_ms": 500}))
+            {"argv": ["aos-sandbox", "box.json", "python3", "-c", "import time; time.sleep(30)", mark], "timeout_ms": 500}))
         self.cfg({})
         t0 = time.time()
         r = subprocess.run(["aos-exec", "inst.json"], capture_output=True, text=True, env=env(), cwd=self.tmp, timeout=30)
@@ -221,6 +222,7 @@ class SandboxTest(unittest.TestCase):
 class BashBoxedTest(unittest.TestCase):
     """sandbox/examples/bash-boxed：lib/base 的 bash 原封不動、外面包一層 aos-sandbox——寫得進工作區、出不去、連不了網。"""
 
+    @unittest.skipUnless(S6, "沒有 s6-softlimit（bash-boxed 的 sandbox.json 有 mem_mb／cpu_s／file_mb）")
     def test_bash_tool_boxed(self):
         root = Path(tempfile.mkdtemp(prefix="test_sandbox_bash."))
         self.addCleanup(shutil.rmtree, root, ignore_errors=True)
