@@ -387,7 +387,7 @@ def main():
     if not force and before <= OVER_KB * 1024 and not os.path.isdir(RUN):
         return 0
     os.makedirs(CDIR, exist_ok=True)
-    lock = open(os.path.join(CDIR, ".lock"), "w")
+    lock = open(os.path.join(CDIR, ".flock"), "w")
     fcntl.flock(lock, fcntl.LOCK_EX)           # 同一個 stack 一次只壓一個（手動跑與 fsm 格撞到時，後到的等）
     t0 = time.time()
     src = read_json(os.path.join(RUN, "source.json"))

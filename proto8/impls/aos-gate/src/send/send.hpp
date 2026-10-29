@@ -9,7 +9,7 @@
 //               3. priority 先驗（壞＝PriorityBad，不寄）
 //               4. cwd 轉成絕對路徑（沒寫＝單子檔的資料夾，同 aos-exec；相對的接在它後面）——kernel 在別的資料夾跑也一樣
 //               5. 信＝{"kind": "letter", "sender": sender(), "sent_at": aos::utc_now_ms(),
-//                       "inst": 單子, "env": 這一刻閘門的整份環境, "priority": 原樣}（信封三欄 10-29；後三個過渡期照舊在頂層）；寫進 tmp/.<id>/（先建 sender.lock、flock 住，拿到行程結束）
+//                       "inst": 單子, "env": 這一刻閘門的整份環境, "priority": 原樣}（信封三欄 10-29；後三個過渡期照舊在頂層）；寫進 tmp/.<id>/（先建 sender.flock、flock 住，拿到行程結束）
 //                  再改名進 new/<id>
 //             回信號 id。
 #pragma once

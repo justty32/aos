@@ -230,7 +230,7 @@ class Daemon:
         path 沒給＝ctl.json（stopped 這類 loop 面向）；名單寫 self.lctl（loops_ctl.json，10-29 拆窗）。"""
         path = path or self.ctl
         self.stack.mkdir(parents=True, exist_ok=True)
-        with open(self.dir / ".ctl.lock", "w") as lock:
+        with open(self.dir / ".ctl.flock", "w") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             ctl = read_json(path, {})
             ctl = ctl if isinstance(ctl, dict) else {}
@@ -376,7 +376,7 @@ def cmd_run(root, o, pos):
     a = root.agent(pos[0])
     if Daemon(root).row(a.name) and Daemon(root).row(a.name).get("phase") in ("running", "stopping"):
         raise Fail("AgentBusy", "%s 正在背景跑" % a.name, "等它（aos-ai wait）或先 aos-ai stop %s" % a.name)
-    with open(a.base / ".run.lock", "w") as lock:
+    with open(a.base / ".run.flock", "w") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError:
@@ -563,7 +563,7 @@ def cmd_daemon(root, o, pos):
 def cmd_start(root, o, pos):
     need(pos, 1, "start NAME [--interval-ms N]")
     a = root.agent(pos[0])
-    with open(a.base / ".run.lock", "w") as lock:
+    with open(a.base / ".run.flock", "w") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError:

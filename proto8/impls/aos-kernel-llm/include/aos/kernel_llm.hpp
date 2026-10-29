@@ -13,11 +13,11 @@
 //       其他不認得的 key 一律忽略（C-48）
 //   回信：reply.json＝{"code": 結束碼, "signal": 訊號或 null}，或 {"error": {"code": 代號, "msg": 原因}}（kernel 沒跑或跑不起來）
 //   回報：report.json＝腦自願寫的 API 回覆 usage（kernel 跑信時給環境變數 AOS_KERNEL_REPORT 指向 cur/<id>/report.json；10-24）
-//   寄信的人：sender.lock＝閘門建好信就 flock（LOCK_EX）住、拿到行程結束（10-24 改：原本看名字裡的 pid，沙箱有自己的行程編號就對不上）
+//   寄信的人：sender.flock＝閘門建好信就 flock（LOCK_EX）住、拿到行程結束（10-24 改：原本看名字裡的 pid，沙箱有自己的行程編號就對不上）
 //
 //   letter_id      新信號：<UTC 奈秒 20 位>.<閘門 pid>.<閘門 started_at_ticks>——照字典序排＝照寄的先後；pid、ticks 只讓名字不撞
-//   hold_sender    閘門：開 <信>/sender.lock（0666，權限照信箱的 umask／ACL）、flock 住；回 fd，一直開著到行程結束。失敗丟 WriteFailed
-//   sender_alive   寄這封信的閘門還在不在：<信>/sender.lock 有人鎖著＝在；檔不在、開不了、鎖得到＝不在
+//   hold_sender    閘門：開 <信>/sender.flock（0666，權限照信箱的 umask／ACL）、flock 住；回 fd，一直開著到行程結束。失敗丟 WriteFailed
+//   sender_alive   寄這封信的閘門還在不在：<信>/sender.flock 有人鎖著＝在；檔不在、開不了、鎖得到＝不在
 //                  （flock 跟著檔走，不看 pid，所以沙箱〔別的 pid、mount namespace〕裡的閘門也認得）
 //   parse_priority 信裡的 priority（10-15 LLM kernel 稿）：沒寫＝normal；"low"／"normal"／"high"；數字看正負；
 //                  物件 {"level", "deadline", 其他 key 忽略}；deadline＝ISO 8601（要帶時區）或 epoch 秒。壞了丟 PriorityBad
@@ -62,7 +62,7 @@ struct Mailbox {
     std::string done() const;
 };
 
-inline constexpr const char* SENDER_LOCK = "sender.lock";
+inline constexpr const char* SENDER_FLOCK = "sender.flock";   // 10-29 原叫 sender.lock（.lock 留給 N-15 的資料夾鎖）
 
 std::string letter_id();
 int hold_sender(const std::string& letter_dir);

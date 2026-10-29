@@ -1,4 +1,4 @@
-// letter.cpp：【letter】信箱的路徑、信號、寄信的人還在不在（sender.lock）、priority、回信（說明見 aos/kernel_llm.hpp）。
+// letter.cpp：【letter】信箱的路徑、信號、寄信的人還在不在（sender.flock）、priority、回信（說明見 aos/kernel_llm.hpp）。
 #include "aos/kernel_llm.hpp"
 
 #include "aos/files.hpp"
@@ -32,7 +32,7 @@ std::string letter_id() {
 }
 
 int hold_sender(const std::string& letter_dir) {
-    std::string path = aos::join(letter_dir, SENDER_LOCK);
+    std::string path = aos::join(letter_dir, SENDER_FLOCK);
     int fd = open(path.c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0666);
     if (fd < 0) {
         throw Error{code::WriteFailed, "開不了 " + path + "：" + std::strerror(errno)};
@@ -46,7 +46,7 @@ int hold_sender(const std::string& letter_dir) {
 }
 
 bool sender_alive(const std::string& letter_dir) {
-    std::string path = aos::join(letter_dir, SENDER_LOCK);
+    std::string path = aos::join(letter_dir, SENDER_FLOCK);
     int fd = open(path.c_str(), O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
         return false;   // 沒有鎖檔、或 kernel 讀不到（Linux 權限不給＝這封本來也跑不了）

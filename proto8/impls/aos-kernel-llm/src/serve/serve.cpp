@@ -305,7 +305,7 @@ void Server::recover() {
     }
 }
 
-// 寄信的人不在了的（<信>/sender.lock 沒人鎖著）：tmp/、done/ 直接刪；new/ 先改名回 tmp/ 再刪（跟閘門撤信同一個做法，不會跟認領撞）。
+// 寄信的人不在了的（<信>/sender.flock 沒人鎖著）：tmp/、done/ 直接刪；new/ 先改名回 tmp/ 再刪（跟閘門撤信同一個做法，不會跟認領撞）。
 // tmp/ 裡 . 開頭的＝閘門正在寫：鎖檔在而沒人鎖著才刪（還沒建鎖檔的那一瞬間不碰）。
 void Server::sweep() {
     std::vector<std::string> tmps;

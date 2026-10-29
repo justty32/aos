@@ -70,7 +70,7 @@ def parse(content, limit):
 def reserve(budget, plan_id, ids, total):
     """整棵樹的額度：budget/ 裡一個檔＝一個已經算進去的小念頭；拿鎖數一數，夠才建。回 True＝拿到了。"""
     os.makedirs(budget, exist_ok=True)
-    with open(os.path.join(budget, ".lock"), "w") as lock:
+    with open(os.path.join(budget, ".flock"), "w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         used = [n for n in os.listdir(budget) if not n.startswith(".")]
         if len(used) + len(ids) > total:

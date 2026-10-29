@@ -116,7 +116,7 @@ agent-meg/
     heap.py           記憶庫的讀寫（brain.py 也用它）
 
 $AOS_HEAP/            記憶庫（沒設＝$AOS_WS/.heap/）：index.json（頂層，wf-table/1）→ <類>/index.json → <類>/001.md
-                      六類 prefs、facts、outcomes、gotchas、snippets、skills；forget 的搬 archive/<類>/；寫入持 .lock
+                      六類 prefs、facts、outcomes、gotchas、snippets、skills；forget 的搬 archive/<類>/；寫入持 .flock
 ```
 
 位置由叫的人給（像 stack，C-67）：兩隻 agent 的 `AOS_HEAP` 指同一個＝共用記憶，各指各的＝私有。人也能直接叫工具：`echo '{"op": "search", "query": "縮排"}' | AOS_HEAP=<庫> proto8/lib/aos/memory/_entry`。錯：模型的錯照實回給它（工具照 lib 契約退 1、印一行 `memory: 代號 原因`，agent-meg 的 act 把那行回給腦、不停）；庫的索引壞了＝`HeapBad`（工具退 1、或 think 退 1）。

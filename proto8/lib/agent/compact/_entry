@@ -427,7 +427,7 @@ def main():
     if not FORCE and before <= MAX_BYTES and not os.path.isdir(RUN):
         return 0                               # 沒超過門檻：什麼都不動
     os.makedirs(CDIR, exist_ok=True)
-    lock = open(os.path.join(CDIR, ".lock"), "w")
+    lock = open(os.path.join(CDIR, ".flock"), "w")
     fcntl.flock(lock, fcntl.LOCK_EX)           # 同一個 stack 一次只壓一個（手動跑與掛勾撞到時，後到的等）
     t0 = time.time()
     raw = history("read")

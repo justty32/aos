@@ -331,7 +331,7 @@ class SelfImproveSandboxTest(unittest.TestCase):
 @unittest.skipUnless(HAS_BWRAP, "沒有 bwrap 或這台不給開 user namespace")
 class KernelMailboxTest(unittest.TestCase):
     """沙箱與 LLM kernel（10-24）：能不能用 kernel＝看不看得到、寫不寫得進信箱（使用者 10-24「就是看他能不能存取檔案啊」）。
-    預設的沙箱沒綁信箱、也不帶 AOS_KERNEL＝寄不出去；設定把信箱綁進來就寄得到、kernel 在外面也認得寄信的人（S15：認 sender.lock 的 flock、不認 pid）。
+    預設的沙箱沒綁信箱、也不帶 AOS_KERNEL＝寄不出去；設定把信箱綁進來就寄得到、kernel 在外面也認得寄信的人（S15：認 sender.flock 的 flock、不認 pid）。
     寄得到之後 kernel 在沙箱外照信跑：要擋「單子＝cat 判準」只剩 kernel.json 的 accept。"""
 
     def setUp(self):
@@ -388,7 +388,7 @@ class KernelMailboxTest(unittest.TestCase):
         self.assertFalse(self.leaked())
 
     def test_box_uses_kernel_when_mailbox_bound(self):
-        """S15：沙箱有自己的行程編號，閘門名字裡的 pid 在外面對不上；kernel 改看 sender.lock 的 flock 之後照常服務。"""
+        """S15：沙箱有自己的行程編號，閘門名字裡的 pid 在外面對不上；kernel 改看 sender.flock 的 flock 之後照常服務。"""
         r = self.box_with_kernel(self.cfg(self.bound), {}, "aos-gate", "ws/hi.json")
         self.assertEqual((r.returncode, r.stdout), (0, "hi from kernel\n/ws-from-box\n"), r.stderr)
         served = [json.loads(l) for l in (self.stack / "served.jsonl").read_text().splitlines()]

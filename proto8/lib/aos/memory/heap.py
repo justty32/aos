@@ -6,7 +6,7 @@
 #     <類>/index.json     這類的索引（wf-table/1）：一筆一列——id、標題、標籤、摘要、建立／更新時間、狀態、檔案
 #     <類>/<NNN>.md       一筆的全文（第一行 # 標題）
 #     archive/<類>/       forget 掉的筆搬來這裡（不刪；索引那列 status=forgotten）
-#     .lock               寫入時 flock（並行寫不互蓋）
+#     .flock              寫入時 flock（並行寫不互蓋）
 import datetime, fcntl, json, os, re
 
 KINDS = {   # 類名＝資料夾名（複數，C-54）：一句說明
@@ -90,7 +90,7 @@ class Heap:
     def _lock(self):
         try:
             os.makedirs(self.root, exist_ok=True)
-            f = open(os.path.join(self.root, ".lock"), "a")
+            f = open(os.path.join(self.root, ".flock"), "a")
         except OSError as e:
             raise HeapBad("記憶庫 %s 建不了：%s" % (self.root, e))
         fcntl.flock(f, fcntl.LOCK_EX)
