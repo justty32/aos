@@ -213,12 +213,12 @@ daemon 起子 loop 就是父子交代的一個實例：寫小格 `loop.json`、`
 2. **`sender`／`holder`**：`$AOS_WS`（空字串算沒設）＞ `$HOME` ＞ `/`，都轉絕對路徑；不查 passwd（靜態連結叫 getpwuid 會出警告）。鎖名牌的 `holder` 跟信封 `sender` 同一條（N-15 補的那句；§ 五原寫「人＝`~/`」）。
 3. **`ctl.json` 寫 `loops*` 的提醒字句**：「ctl 的 loops／loops_added／loops_removed 已搬到 loops_ctl.json（ctl 裡的不採用）」；檔名寫死，不跟著設定改。
 4. **paused／stopped 那圈**：不調表、不認領信，但自己結束的子項照標 `done`、早就要移除的收完照拿掉；paused 時讀到好的 `loops_ctl` 照回 `ctl_seq`，名單等解除才套用。
-5. **撞名**取實際路徑第一段：擋 `loops_ctl.json`、`loops_state.json`、`loops_state_loops`，信箱模式再擋信箱路徑第一段（§ 四 1 寫的是不帶 `.json` 的名字；N-28 沒列信箱）。
+5. **撞名**取實際路徑第一段：擋 `loops_ctl.json`、`loops_state.json`、`loops_state_loops`，信箱模式再擋信箱路徑第一段（§ 四 1 寫的是不帶 `.json` 的名字；N-28 沒列信箱）。**10-29 使用者定：照建議**（[medium 決定 31](2026-10-28-medium.md)，條文照程式改）。
 6. **`loops_state.json`** key 順序 kind、ctl_seq、ctl_warning、（信箱模式才有的 letter_warning）、loops、心跳四欄；先寫 `state.json` 再寫它，寫不了一樣 `WriteFailed`。預設就開，所以沒寫 `state` 的 daemon.json 在 `$AOS_STACK` 不在時從 `MkdirFailed` 變成 `WriteFailed`。
 7. **升級後第一次重起不接回**：新版 `adopt` 只讀 `loops_state.json`，舊版留在 `state.json` 的子項表不讀。
 8. **aos-post**：多 `check` 子命令（好信印 letter.json、壞信 `LetterBad`）；壞信判法＝讀不了／不是物件／`kind` 不是 `"letter"`／`sender`、`sent_at` 不是字串／沒 `body`／`reply_to`、`in_reply_to` 不是字串；`finish` 遇壞信一律丟、不管 `--keep`；`.` 開頭的名字不算信；`init` 不建 `done/`；stdin 空＝body `{}`。
 9. **aos-lock**：目標結尾 `/` 或是現有資料夾＝`<目標>/.lock/`，其他＝`<目標>.lock/`；命令列 `acquire` 的名牌 pid 預設寫叫它的行程（getppid）；名牌壞了或不在，鎖資料夾 10 秒沒動才算死；**收屍前先 `mkdir .reaping` 收屍牌、再讀名牌比 inode 才改名**——實測 20 人同時收，光靠「改名只有一個會成功」會搬走別人剛拿到的新鎖（§ 五那句不成立）。
-10. **有序投遞**：信先在 `tmp/` 寫好才拿鎖；`order.json` 先寫 N+1 再 rename 進 `new/`（§ 三原本是先 rename 再寫計數，死在兩步之間下一個人會拿到同號；對調後只會缺號）；一個有序信箱只收 `--ordered` 的信。鎖名照 § 三與 N-16 叫 `order.lock/`（照 N-15 ② 應叫 `order.json.lock/`，兩條字面對不上，列 WAIT_USER）。
-11. **信箱模式**：`letter_warning` 只記最後一封壞信「信 <信號> 不採用：原因」，沒壞信的圈維持原值；信裡相對 `exec`／`$ref` 從 daemon 的 cwd 算；回信在對完表之後才寄；body 是 `{}` 也算好信、照回 applied；回信寄不出去、finish 失敗都吞掉照跑；接回而 daemon.json 沒有的子項期望表裡設定記 null（結束了停在 done、不重起，有信重新加就換設定）；`cur/` 殘骸記在記憶體、第一個認領的圈先做。
+10. **有序投遞**：信先在 `tmp/` 寫好才拿鎖；`order.json` 先寫 N+1 再 rename 進 `new/`（§ 三原本是先 rename 再寫計數，死在兩步之間下一個人會拿到同號；對調後只會缺號）；一個有序信箱只收 `--ordered` 的信。鎖名照 § 三與 N-16 叫 `order.lock/`（照 N-15 ② 應叫 `order.json.lock/`，兩條字面對不上，列 WAIT_USER）。**10-29 使用者定：照建議**（[medium 決定 31](2026-10-28-medium.md)，條文照程式改）。
+11. **信箱模式**：`letter_warning` 只記最後一封壞信「信 <信號> 不採用：原因」，沒壞信的圈維持原值；信裡相對 `exec`／`$ref` 從 daemon 的 cwd 算；回信在對完表之後才寄；body 是 `{}` 也算好信、照回 applied；回信寄不出去、finish 失敗都吞掉照跑；接回而 daemon.json 沒有的子項期望表裡設定記 null（結束了停在 done、不重起，有信重新加就換設定）；`cur/` 殘骸記在記憶體、第一個認領的圈先做。**10-29 使用者定：照建議**（[medium 決定 31](2026-10-28-medium.md)，條文照程式改）。
 12. **代號與信號產生法暫時各定一份**：`MailboxMissing`／`LetterMissing`／`LetterBad`／`CommandUnknown` 在 aos-post、aos-lock 各自又定一次，信號產生法有三份（kernel、aos-post、aos-lock）；之後該下放到 aos-util。
 13. **其他叫 `.lock` 的 flock 檔沒改**：`sender.lock`（決定 6 照留）、`demo/agent-gus` 的 `budget/.lock`、compact 的 `CDIR/.lock`、`lib/aos/memory/heap.py`——跟決定 4 是同一類撞名，這次只改 kernel 的，其餘列 WAIT_USER。
