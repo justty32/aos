@@ -44,6 +44,8 @@ impls 各專案自己的 ctest（`test_cli`、`test_demo`…）說明在 [proto8
 
 同一天 impls 的 aos-loop、aos-fsm、aos-daemon 自己的 `test_cli` 各一案多一行「Terminated」：那是測試裡的 `sh -c` 小程式自己印的（內嵌單子收的是整群的 SIGTERM，`sleep` 也被殺，dash／bash 看時序會在自己的 stderr 報一行），不是被測程式；**已解（10-28）**：那幾支小程式開頭加 `exec 2>/dev/null`，斷言照舊看被測程式自己的 stderr 是空的。WSL 上 11 個 impls 的 ctest 全過。
 
+10-29 skip 從 31 變 11：這台 WSL 13:35 裝了 bubblewrap（`/var/log/dpkg.log`），`test_sandbox` 用 bwrap 的 20 案從跳過變成真跑，不是測試條件改了。**這台 WSL 還缺 s6**（`s6-softlimit`、`s6-setuidgid`；PATH 或 `~/code/try/sandbox/s6-root/bin` 有就跑）與 `unshare --map-auto` 的假 root，所以 `test_sandbox` 還跳 4 案（上限、身分、bash-boxed、信箱權限）；裝了就能跑。其餘的 skip 是 LiteLLM／`localhost:4000` 連不上、沒設 `AOS_REAL_MODEL`、沒裝 python-dotenv。
+
 ## 測試分類
 
 四類對照本專案的實況：
