@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜題目來源：[10-28 medium](2026-10-28-medium.md)（決定 1～29）｜相關條文：[N-14～N-17](../docs/NORMS/05-基礎設施-窗.md)、[N-28、N-54](../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-57、N-63](../docs/NORMS/10-基礎設施-定義與工作區.md)、[N-43](../docs/NORMS/01-總則.md)、[P-11～P-14](../docs/CONVENTION/02-題目stack停錯腦.md)、[P-32、P-36、P-39](../docs/CONVENTION/06-巢狀.md)
 
-**這是什麼**：10-28～10-29 的介質討論收線後（medium 決定 29「可以開始規劃了」），照 [user/03](../../wf/workflows/common/user/03-討論紀錄與規劃.md)「規劃交給 fable、只把衝突帶給他」寫的**細節設計**。前提是 medium 的決定 1～29，每一條都當定案、不翻；細節照 CONCEPTS／NORMS 的原則自己定，標「照哪條」。寫的時候只寫文件、程式與 NORMS／CONVENTION 正文都沒改；**使用者 10-29 看完最後兩節（衝突、方向題）回「都照建議」**，九條照下面「決定」一節定案，之後才落條文、動程式。
+**這是什麼**：10-28～10-29 的介質討論收線後（medium 決定 29「可以開始規劃了」），照 [user/03](../../wf/workflows/common/user/03-討論紀錄與規劃.md)「規劃交給 fable、只把衝突帶給他」寫的**細節設計**。前提是 medium 的決定 1～29，每一條都當定案、不翻；細節照 CONCEPTS／NORMS 的原則自己定，標「照哪條」。寫的時候只寫文件、程式與 NORMS／CONVENTION 正文都沒改；**使用者 10-29 看完最後兩節（衝突、方向題）回「都照建議」**，九條照下面「決定」一節定案，之後才落條文、動程式。**10-29 當天條文已落、實作八步做完**（各步註 commit，細節代定在文末「實作時代定」）。
 
 白話總綱：aos 裡兩個程式講話只有三種底：**投遞**（把一封信放進對方的資料夾，每封都算數）、**窗**（一個固定檔，只看最新那份）、**父子交代**（生小孩時給的參數與環境變數、小孩結束時留下的結束碼與檔）。其他都是這三種拼出來的。鎖不是講話，是「這東西我在用」的牌子，只在有順序的投遞那一層用到。
 
@@ -183,14 +183,14 @@ daemon 起子 loop 就是父子交代的一個實例：寫小格 `loop.json`、`
 
 ## 實作步驟（每步可驗；程式都在 `proto8/impls`，C++；順序照依賴）
 
-1. **拆 aos-daemon 的窗**：daemon.json 認 `loops_ctl`／`loops_state`；`ctl.json` 不認 `loops*`；`state.json` 拿掉 `loops`；`loops_state.json` 帶表、心跳、`ctl_seq`、`ctl_warning`；分頁與 `adopt` 跟著搬。驗：現有 daemon 測試改過全綠；新測「`ctl.json` 寫 `loops_added` 沒反應、`loops_ctl.json` 寫才起」「同一圈 `ctl.json` 改 `interval_ms` 且 `loops_ctl.json` 加子項，兩邊都生效」「`ctl.json` 壞、`loops_ctl.json` 好，只有 `state.json` 有 `ctl_warning`」「paused 時 `loops_ctl` 的變動不生效、解除後生效」。demo/daemon 與 README、code map 同步。
-2. **投遞的小工具 `aos-post`**（名字可翻案；C++ 命令列＋可 link 的 lib，像 aos-json）：`send <信箱> [--reply-to 路徑] < body.json`（印信號）、`claim <信箱>`（印一個信號，沒有退 10）、`claim-all <信箱>`（全部）、`finish <信箱> <信號> [--keep] [--reply < body.json]`、`withdraw <信箱> <信號>`、`init <信箱>`（建四格）。`sender` 自動填 `$AOS_WS`（沒設＝`~/`）。驗：20 個寄信人並發寄 200 封、一個處理者 claim-all，不漏不重；`tmp/` 裡手放一個半截資料夾永遠不被 claim；撤回：`new/` 裡的成功、`cur/` 裡的失敗；壞 `letter.json` 被 finish 丟掉。
-3. **鎖的小工具 `aos-lock`**（只做 § 五那四點：`acquire <目標> [--lease-ms N]`、`release`、名牌 `holder`）。驗：兩個行程搶同一把只有一個拿到；把持有者 kill -9 後第二個人能收屍拿到；`boot_id` 不同的舊名牌也能收。
-4. **有順序的投遞**：`aos-post send --ordered`（§ 三）。驗：50 個寄信人並發，`new/` 裡名字的 12 位序號連續無缺、順序＝`order.json` 計數；中途 kill 一個拿著鎖的寄信人，其他人仍能繼續。
-5. **aos-daemon 信箱模式**：`loops_mailbox`（§ 四 3），每圈 claim-all → 套用 → 對表；`letter_warning`；`reply_to` 回 `applied`。驗：兩個寄信人同一圈各寄一封（一加 bob、一刪 bob）→ 名字排序後面的贏；重起 daemon 後接回的子項不被收掉（方向題 1 定了再寫死）；壞信不影響好信。
-6. **回信過渡**（可延後）：aos-gate／aos-kernel-llm 的 `letter.json` 補信封欄位（`kind`、`sender`、`sent_at`），回信改走 `reply_to`（寄信人在自己 stack 開一個小信箱）；`done/` 保留當它的紀錄。驗：既有 kernel 測試全綠、沙箱裡的 agent 照 S14 綁信箱仍能寄。
-7. **條文落地**：使用者看完衝突與方向題後，把上一節草稿寫進 NORMS／CONVENTION 正文（N-14、N-15、N-16、N-28、N-54、N-07、新 N-64、C-75、P-11 加註），條號表、各批出處、NORMS 待定、code map 同步，`wf-lint` broken=0。
-8. **demo**：`demo/daemon-2`——一個信箱模式的 daemon、兩個寄信人腳本（一個人手寫 `aos-post send`、一個 agent 的格），README 一頁。
+1. **拆 aos-daemon 的窗**：daemon.json 認 `loops_ctl`／`loops_state`；`ctl.json` 不認 `loops*`；`state.json` 拿掉 `loops`；`loops_state.json` 帶表、心跳、`ctl_seq`、`ctl_warning`；分頁與 `adopt` 跟著搬。驗：現有 daemon 測試改過全綠；新測「`ctl.json` 寫 `loops_added` 沒反應、`loops_ctl.json` 寫才起」「同一圈 `ctl.json` 改 `interval_ms` 且 `loops_ctl.json` 加子項，兩邊都生效」「`ctl.json` 壞、`loops_ctl.json` 好，只有 `state.json` 有 `ctl_warning`」「paused 時 `loops_ctl` 的變動不生效、解除後生效」。demo/daemon 與 README、code map 同步。 **做了（c33ccf44）**：拆窗、`ctl.json` 的 `loops*` 過渡期提醒、paused／stopped 那圈不調表；aos-loop 的 `Loop` 加 `ctl_note_`、`write_more` 兩個掛鉤。
+2. **投遞的小工具 `aos-post`**（名字可翻案；C++ 命令列＋可 link 的 lib，像 aos-json）：`send <信箱> [--reply-to 路徑] < body.json`（印信號）、`claim <信箱>`（印一個信號，沒有退 10）、`claim-all <信箱>`（全部）、`finish <信箱> <信號> [--keep] [--reply < body.json]`、`withdraw <信箱> <信號>`、`init <信箱>`（建四格）。`sender` 自動填 `$AOS_WS`（沒設＝`~/`）。驗：20 個寄信人並發寄 200 封、一個處理者 claim-all，不漏不重；`tmp/` 裡手放一個半截資料夾永遠不被 claim；撤回：`new/` 裡的成功、`cur/` 裡的失敗；壞 `letter.json` 被 finish 丟掉。 **做了（d96c91f0，跟第 4 步同一個 commit）**：多一個 `check` 子命令；旗標寫在位置參數前（`send --reply-to X 信箱`）。
+3. **鎖的小工具 `aos-lock`**（只做 § 五那四點：`acquire <目標> [--lease-ms N]`、`release`、名牌 `holder`）。驗：兩個行程搶同一把只有一個拿到；把持有者 kill -9 後第二個人能收屍拿到；`boot_id` 不同的舊名牌也能收。 **做了（d59d3bab）**：收屍前多一道收屍牌 `.reaping`（代定 9）。
+4. **有順序的投遞**：`aos-post send --ordered`（§ 三）。驗：50 個寄信人並發，`new/` 裡名字的 12 位序號連續無缺、順序＝`order.json` 計數；中途 kill 一個拿著鎖的寄信人，其他人仍能繼續。 **做了（d96c91f0）**：步驟順序改成先寫計數再 rename（死在中間缺號不重號），跟 N-16 正文相反，列 WAIT_USER。
+5. **aos-daemon 信箱模式**：`loops_mailbox`（§ 四 3），每圈 claim-all → 套用 → 對表；`letter_warning`；`reply_to` 回 `applied`。驗：兩個寄信人同一圈各寄一封（一加 bob、一刪 bob）→ 名字排序後面的贏；重起 daemon 後接回的子項不被收掉（方向題 1 定了再寫死）；壞信不影響好信。 **做了（0c086942）**：壞信不回信（照 medium 決定 27；跟 § 四 3「可回 applied:false」不一致，列 WAIT_USER）。
+6. **回信過渡**（可延後）：aos-gate／aos-kernel-llm 的 `letter.json` 補信封欄位（`kind`、`sender`、`sent_at`），回信改走 `reply_to`（寄信人在自己 stack 開一個小信箱）；`done/` 保留當它的紀錄。驗：既有 kernel 測試全綠、沙箱裡的 agent 照 S14 綁信箱仍能寄。 **做了一部分（7d1fe331）**：kernel 的 flock 檔改 `.flock`（決定 4）、aos-gate 的信補 `kind`／`sender`／`sent_at`；回信改走 `reply_to` 照決定 3 先不做（還 open）。
+7. **條文落地**：使用者看完衝突與方向題後，把上一節草稿寫進 NORMS／CONVENTION 正文（N-14、N-15、N-16、N-28、N-54、N-07、新 N-64、C-75、P-11 加註），條號表、各批出處、NORMS 待定、code map 同步，`wf-lint` broken=0。 **做了（84b8e346）**：在實作前先落（使用者「都照建議」後就定了）；code map 隨各步同步。
+8. **demo**：`demo/daemon-2`——一個信箱模式的 daemon、兩個寄信人腳本（一個人手寫 `aos-post send`、一個 agent 的格），README 一頁。 **做了（b61188e2）**：`demo/daemon-2`，agent 格是 `agent-sam`；run.sh 加一段。
 
 ## 衝突（要給使用者看的；設計跟既有原則或實作對不上的地方）
 
@@ -206,3 +206,19 @@ daemon 起子 loop 就是父子交代的一個實例：寫小格 `loop.json`、`
 1. **信箱模式的 daemon 重起後，名單怎麼算？** 背景：ctl 模式下名單永遠能從兩份檔（daemon.json＋`loops_ctl.json`）算出來，重起不會變。信箱模式下信處理完就刪了，重起後只剩 daemon.json 的名單；可是 `adopt` 會把還活著的子 loop 接回來——它們不在 daemon.json 裡，照 N-54「名單上沒有的就收掉」會被殺。例：daemon.json 只有 ann，有人寄信加了 bob，daemon 重開，bob 還活著被接回——然後呢？選項：(a) **接回的留在名單上**，直到有信叫它走（我在 § 四 3 先這樣寫）：直覺、不會誤殺，但「名單」變成算不出來的東西，得看 `loops_state.json` 才知道；(b) 回 daemon.json 的名單、多的收掉：規則乾淨，但重開一次就把別人加的全殺了；(c) daemon 自己把目前的期望表寫成一份檔（像它替自己寫 ctl），重起時讀回：名單算得出來，但多一個檔、而且 daemon 寫自己的手把跟 N-06「讀的人只讀不寫」打架。建議 (a)。 **已定：照建議**（使用者 10-29「都照建議」）。
 2. **信封要不要定 `reply_to`？** 決定 9 說回信可以不定標準。定了（選填）的好處：想回信的人有共同寫法，kernel 以後能改成同一套，一問一答就是「投遞＋`reply_to`」不用另外發明；壞處：標準多兩個欄位，而且回信得再開一個信箱（寄信人自己 stack 裡一個小資料夾），比 kernel 現在「去 `done/` 撈」多一步。不定的話，daemon 管轄信箱的「加進去了沒」只能看 `loops_state.json`（決定 27 本來就是這個態度）。建議：定，選填——因為一問一答（ask_round 那類）遲早要有共同寫法。 **已定：照建議**（使用者 10-29「都照建議」）。
 3. **人寄信時 `sender` 填什麼？** 決定 25 說人的路徑是 `~/`。但人常常是在某個專案資料夾裡下 `aos-say`，那個資料夾也是一條路徑。選項：(a) 一律 `~/`（照原話）；(b) 人在哪個工作區裡寄就填那個工作區（跟程式同一條規則：`sender`＝`$AOS_WS`，沒設才退回 `~/`）。差別只在事後看信能不能知道「是哪個專案的人」。建議 (b)：規則只有一條，而且 `$AOS_WS` 沒設時自然就是 `~/`，跟原話不衝突。 **已定：照建議**（使用者 10-29「都照建議」）。
+
+## 實作時代定（10-29，隊長與工人照原則定的細節，可翻案）
+
+1. **`sent_at` 的寫法**照全家現行 `utc_now_ms`（`2026-10-29T08:12:33.123+00:00`），不是 § 二 2 範例裡的 `…Z`。
+2. **`sender`／`holder`**：`$AOS_WS`（空字串算沒設）＞ `$HOME` ＞ `/`，都轉絕對路徑；不查 passwd（靜態連結叫 getpwuid 會出警告）。鎖名牌的 `holder` 跟信封 `sender` 同一條（N-15 補的那句；§ 五原寫「人＝`~/`」）。
+3. **`ctl.json` 寫 `loops*` 的提醒字句**：「ctl 的 loops／loops_added／loops_removed 已搬到 loops_ctl.json（ctl 裡的不採用）」；檔名寫死，不跟著設定改。
+4. **paused／stopped 那圈**：不調表、不認領信，但自己結束的子項照標 `done`、早就要移除的收完照拿掉；paused 時讀到好的 `loops_ctl` 照回 `ctl_seq`，名單等解除才套用。
+5. **撞名**取實際路徑第一段：擋 `loops_ctl.json`、`loops_state.json`、`loops_state_loops`，信箱模式再擋信箱路徑第一段（§ 四 1 寫的是不帶 `.json` 的名字；N-28 沒列信箱）。
+6. **`loops_state.json`** key 順序 kind、ctl_seq、ctl_warning、（信箱模式才有的 letter_warning）、loops、心跳四欄；先寫 `state.json` 再寫它，寫不了一樣 `WriteFailed`。預設就開，所以沒寫 `state` 的 daemon.json 在 `$AOS_STACK` 不在時從 `MkdirFailed` 變成 `WriteFailed`。
+7. **升級後第一次重起不接回**：新版 `adopt` 只讀 `loops_state.json`，舊版留在 `state.json` 的子項表不讀。
+8. **aos-post**：多 `check` 子命令（好信印 letter.json、壞信 `LetterBad`）；壞信判法＝讀不了／不是物件／`kind` 不是 `"letter"`／`sender`、`sent_at` 不是字串／沒 `body`／`reply_to`、`in_reply_to` 不是字串；`finish` 遇壞信一律丟、不管 `--keep`；`.` 開頭的名字不算信；`init` 不建 `done/`；stdin 空＝body `{}`。
+9. **aos-lock**：目標結尾 `/` 或是現有資料夾＝`<目標>/.lock/`，其他＝`<目標>.lock/`；命令列 `acquire` 的名牌 pid 預設寫叫它的行程（getppid）；名牌壞了或不在，鎖資料夾 10 秒沒動才算死；**收屍前先 `mkdir .reaping` 收屍牌、再讀名牌比 inode 才改名**——實測 20 人同時收，光靠「改名只有一個會成功」會搬走別人剛拿到的新鎖（§ 五那句不成立）。
+10. **有序投遞**：信先在 `tmp/` 寫好才拿鎖；`order.json` 先寫 N+1 再 rename 進 `new/`（§ 三原本是先 rename 再寫計數，死在兩步之間下一個人會拿到同號；對調後只會缺號）；一個有序信箱只收 `--ordered` 的信。鎖名照 § 三與 N-16 叫 `order.lock/`（照 N-15 ② 應叫 `order.json.lock/`，兩條字面對不上，列 WAIT_USER）。
+11. **信箱模式**：`letter_warning` 只記最後一封壞信「信 <信號> 不採用：原因」，沒壞信的圈維持原值；信裡相對 `exec`／`$ref` 從 daemon 的 cwd 算；回信在對完表之後才寄；body 是 `{}` 也算好信、照回 applied；回信寄不出去、finish 失敗都吞掉照跑；接回而 daemon.json 沒有的子項期望表裡設定記 null（結束了停在 done、不重起，有信重新加就換設定）；`cur/` 殘骸記在記憶體、第一個認領的圈先做。
+12. **代號與信號產生法暫時各定一份**：`MailboxMissing`／`LetterMissing`／`LetterBad`／`CommandUnknown` 在 aos-post、aos-lock 各自又定一次，信號產生法有三份（kernel、aos-post、aos-lock）；之後該下放到 aos-util。
+13. **其他叫 `.lock` 的 flock 檔沒改**：`sender.lock`（決定 6 照留）、`demo/agent-gus` 的 `budget/.lock`、compact 的 `CDIR/.lock`、`lib/aos/memory/heap.py`——跟決定 4 是同一類撞名，這次只改 kernel 的，其餘列 WAIT_USER。
