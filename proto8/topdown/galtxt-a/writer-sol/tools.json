@@ -1,0 +1,5 @@
+{
+ "tools": {
+  "lint": {"path": "tools/lint"}
+ }
+}

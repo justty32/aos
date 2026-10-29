@@ -1,4 +1,4 @@
-# brain.py - think 格（抄 agent-dan）：認領題目、把 tools/*/_tooldef.json 組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history
+# brain.py - think 格（抄 agent-dan）：認領題目、把 tools.json 登記的工具（aos-tools ls --json）組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history
 # 沒設 AOS_BRAIN_URL＝假腦（模板填槽：先叫 lint、再交稿）；有設就問 OpenAI 相容的 {url}/chat/completions。失敗時 history 不接任何東西、退 1（P-20）。
 # 假腦技能表（第三輪，round3 § 6）：WEAK 裡的（模型標籤, 風格）＝這個假寫手寫這種風格會寫砸——女角那句句尾加 NG 標記「～～」（lint 扣 Tier 1）。
 # 模型標籤從 AOS_BRAIN_MODEL 來（各寫手 .env）：含 sol＝"sol"，其餘＝""。表是劇本、不是品質證據；測試要換時設 GALTXT_FAKE_WEAK（「標籤:風格」逗號分隔，只有假腦讀）。
@@ -12,12 +12,24 @@
 # 看得到 open／close 工具（selfopt 抽出來的）時先叫它、用它回的那行當開場／收尾旁白——那個環節交給工具＝不再隨抽樣變（確定性就是這樣升的）。
 # 下面的 compose() 是寫手 program 階 compose.py 的第一版（compose.py 已照 data/templates.json 另寫；這裡留給 agent／semi 階的假腦用）。
 # 跟範本不同的兩處：fake() 改寫；問真腦時把 API 回的 usage 多記一行到 $AOS_STACK/usage.jsonl（給實測對照用，OpenAI 的欄位名照留）。
-import datetime, json, os, sys, urllib.error, urllib.request
+import datetime, json, os, subprocess, sys, urllib.error, urllib.request
 
 
 def die(code, reason):
     print("writer: %s %s" % (code, reason), file=sys.stderr)
     sys.exit(1)
+
+
+def registered():
+    """tools.json 登記的工具（aos-tools ls --json，cwd＝agent 資料夾；沒有 tools.json＝沒有工具），照名字排。
+    aos-tools 起不來、退非 0（例：登記了但壞掉的工具）＝自己這層的錯：停、人修好再跑（P-20）；aos-tools 的 stderr 不吞，它自己說哪個工具壞。"""
+    try:
+        r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    except OSError as e:
+        die("ToolsBad", "aos-tools 起不來：%s" % e)
+    if r.returncode != 0:
+        die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
+    return json.loads(r.stdout)
 
 
 stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
@@ -73,7 +85,7 @@ def append(message):
 if not history or history[-1].get("role") not in ("user", "tool"):
     append({"role": "user", "content": question})
 
-# 固化到哪階（round4 § 2.2）：有 stage.json＝腦只看得到 stage.tools 裡的工具；沒有（例：writer-sol）＝tools/ 底下全部（原本的行為）。
+# 固化到哪階（round4 § 2.2）：有 stage.json＝腦只看得到 stage.tools 裡的工具；沒有（例：writer-sol）＝tools.json 登記的全部（原本的行為）。
 # GALTXT_STAGE 蓋過 stage（同 _entry）；這支只會在 agent／semi 階跑到。
 STAGE, ALLOWED = None, None
 try:
@@ -85,26 +97,20 @@ except FileNotFoundError:
 except (OSError, ValueError, AttributeError, TypeError) as e:
     die("StateBad", "stage.json 讀不了：%s" % e)
 STAGE = os.environ.get("GALTXT_STAGE") or STAGE
-# optkit 自我優化模式（round4-selfopt.md § 2）：GALTXT_OPT=1（只有 optkit/run 設）＝多看得到 tools/opt_*（optkit 的捷徑）、system 換讀 system.opt.txt、
+# optkit 自我優化模式（round4-selfopt.md § 2）：GALTXT_OPT=1（只有 optkit/run 設）＝多看得到 opt_*（tools.json 登記的 tools/opt_*，optkit 的捷徑）、system 換讀 system.opt.txt、
 # 沒真腦時照 optkit/fake_opt.py 的劇本叫工具。平常（沒設）一字不變：opt_* 不在 stage.tools 裡＝看不到。
 OPT = os.environ.get("GALTXT_OPT") == "1"
+REGISTERED = registered()
 if OPT and ALLOWED is not None:
-    ALLOWED |= {t for t in (os.listdir("tools") if os.path.isdir("tools") else []) if t.startswith("opt_")}
+    ALLOWED |= {t["name"] for t in REGISTERED if t["name"].startswith("opt_")}
 
-# tools：工具名＝資料夾名，說明來自 _tooldef.json 的 description／parameters（其他 key 忽略；讀不懂的 _tooldef.json 當作沒有）
+# tools：工具清單來自 tools.json（aos-tools ls --json；10-28 aos-tools 起，沒有 tools.json＝沒有工具），說明取工具定義的 description／parameters（其他 key 忽略）
 tools = []
-for tool in (sorted(os.listdir("tools")) if os.path.isdir("tools") else []):
-    if ALLOWED is not None and tool not in ALLOWED:
+for t in REGISTERED:
+    if ALLOWED is not None and t["name"] not in ALLOWED:
         continue
-    try:
-        with open(os.path.join("tools", tool, "_tooldef.json"), encoding="utf-8") as f:
-            spec = json.load(f)
-    except (OSError, ValueError):
-        continue
-    if not isinstance(spec, dict):
-        continue
-    function = {"name": tool}
-    function.update({k: spec[k] for k in ("description", "parameters") if k in spec})
+    function = {"name": t["name"]}
+    function.update({k: t["tooldef"][k] for k in ("description", "parameters") if k in t["tooldef"]})
     tools.append({"type": "function", "function": function})
 
 system = []

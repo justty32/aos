@@ -1,0 +1,6 @@
+{
+ "tools": {
+  "lint": {"path": "tools/lint"},
+  "trim": {"path": "tools/trim"}
+ }
+}

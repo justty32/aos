@@ -1,0 +1,10 @@
+{
+ "tools": {
+  "edit_self": {"path": "tools/edit_self"},
+  "extract_tool": {"path": "tools/extract_tool"},
+  "note": {"path": "tools/note"},
+  "read_runs": {"path": "tools/read_runs"},
+  "read_self": {"path": "tools/read_self"},
+  "run_self_test": {"path": "tools/run_self_test"}
+ }
+}

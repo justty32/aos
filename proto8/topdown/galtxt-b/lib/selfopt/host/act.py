@@ -1,4 +1,4 @@
-# act.py - selfopt host 的 act 格（照 demo/agent-dan／writer 的 act.py）：有 tool_calls 就逐個 aos-exec tools/<名>（環境加 SELFOPT_SESSION）、結果接回 history；
+# act.py - selfopt host 的 act 格（照 demo/agent-dan／writer 的 act.py）：有 tool_calls 就逐個 aos-tools call <名>（tools.json 登記的；環境加 SELFOPT_SESSION）、結果接回 history；
 #   沒有＝收工：$AOS_WS/selfopt/<n>/report.json（腦的報告、改了哪些檔的 diff、叫了哪些工具、用量、越界嘗試）、out/<n>.txt（腦的報告原文）、
 #   這個 session 沒有成功寫過 note＝host 補記一筆 lifecycle.history（by host）、題目 cur/→done/。
 # 工具失敗（結束碼非 0）照 agent-dan：stdout 那行回給腦、不停線；邊界與預算是工具自己擋（guard）。
@@ -14,6 +14,17 @@ import guard  # noqa: E402
 def die(code, reason):
     print("selfopt: %s %s" % (code, reason), file=sys.stderr)
     sys.exit(1)
+
+
+def registered():
+    """tools.json 登記的工具名（aos-tools ls --json，cwd＝agent 資料夾；沒有 tools.json＝沒有工具），照名字排；失敗＝自己這層的錯（P-20）"""
+    try:
+        r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    except OSError as e:
+        die("ToolFailed", "aos-tools 起不來：%s" % e)
+    if r.returncode != 0:
+        die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
+    return [t["name"] for t in json.loads(r.stdout)]
 
 
 stack, ws = os.environ.get("AOS_STACK"), os.path.realpath(os.environ.get("AOS_WS", "."))
@@ -48,7 +59,7 @@ def append(message):
 calls = said.get("tool_calls") or []
 if calls:
     answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
-    tools = sorted(t for t in (os.listdir("tools") if os.path.isdir("tools") else []) if os.path.isfile(os.path.join("tools", t, "_tooldef.json")))
+    tools = registered()                # 能叫的＝tools.json 登記的（aos-tools ls --json）
     for call in calls:
         try:
             cid, tname, arguments = call["id"], call["function"]["name"], call["function"].get("arguments")
@@ -63,7 +74,7 @@ if calls:
             arguments = json.dumps(arguments or {}, ensure_ascii=False)
         env = dict(os.environ, AOS_STACK=os.path.join(stack, tname) + "/", SELFOPT_SESSION=session_path)
         try:
-            r = subprocess.run(["aos-exec", "tools/" + tname], input=arguments, stdout=subprocess.PIPE, text=True, env=env)
+            r = subprocess.run(["aos-tools", "call", tname], input=arguments, stdout=subprocess.PIPE, text=True, env=env)
         except OSError as e:
             die("ToolFailed", "%s 起不來：%s" % (tname, e))
         content = r.stdout

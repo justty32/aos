@@ -839,6 +839,7 @@ class Round3T(unittest.TestCase):
                                    "train/rollup.json", "train/weigh/rollup.json",              # 步驟 5：verify 先 rollup --up train/weigh
                                    "writer/stage.json",                                          # 步驟 5：verify 每個 epoch 寫 stage.json.history
                                    "writer/opt_log.jsonl", "train/optimize/selfopt.json",        # 6b：epoch 0 的 optimize 派 selfopt（抽 close）、accept 搬回
+                                   "writer/tools.json",                                          # 抽出的 close 登記進 tools.json（10-28 aos-tools）
                                    "writer/tools/close", "writer/tools/close/_entry", "writer/tools/close/_metainfo", "writer/tools/close/_tooldef.json",
                                    "writer/grad.json", "writer/tools/close/grad.json", "writer/tools/close/rollup.json",   # epoch 1 的 verify 判 A、梯度分給 close
                                    "train/optimize/ratings.json", "train/weigh/ratings.json", "train/weigh/log.jsonl"})
@@ -1269,7 +1270,8 @@ class Round4T(unittest.TestCase):
         self.assertTrue(frozen and not (frozen & changed), frozen & changed)
         allowed = {"ratings.json", "stage.json", "grad.json", "rollup.json", "human.json", "hard.jsonl", "log.jsonl",
                    "templates.json", "templates.distilled.json", "samples.json", "route.json", "policy.json",
-                   "opt_log.jsonl", "selfopt.json"}                                          # 6b：selfopt 的紀錄（節點自己的、優化器自己的）
+                   "opt_log.jsonl", "selfopt.json",                                          # 6b：selfopt 的紀錄（節點自己的、優化器自己的）
+                   "tools.json"}                                                             # selfopt 抽的新工具登記進 tools.json（10-28 aos-tools）
         top = lambda k: "/".join(k.split("/")[:3])                                            # noqa: E731
         born = {k for k in changed if k.startswith("writer/tools/") and top(k) not in before}  # so-12：selfopt 新建的工具資料夾（有 author 的 _metainfo）
         self.assertTrue(born and all(jread(g / k)["author"].startswith("writer@selfopt") for k in born if k.endswith("/_metainfo")), born)

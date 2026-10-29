@@ -50,6 +50,7 @@ galtxt-a/                 [agent] _entry → aos-loop loop.json → fsm.json：i
 ├─ tools/lint/            [純程式工具] Tier 0 護欄＋Tier 1 語域；被 check.py 與寫手兩處叫
 ├─ writer/                [agent] 寫手（agent-dan 範本；假腦＝模板填槽）
 │  ├─ idle ─捷徑─▶ ../idle
+│  ├─ tools.json         腦看得到哪些工具（aos-tools 註冊檔，10-28；相對路徑 tools/<名>，selfopt 抽新工具時 opt_extract 追加一筆）
 │  └─ tools/lint ─捷徑─▶ ../../tools/lint
 ├─ grader/                [agent] 評審（沒有工具；回「分數：N」「理由：…」；假腦固定 2 分）
 │  └─ idle ─捷徑─▶ ../idle

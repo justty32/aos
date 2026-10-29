@@ -1,4 +1,4 @@
-# act.py - act 格：照腦的決定動手——有 tool_calls 就逐個 aos-exec tools/<名>、結果接回 history；沒有就把 content 寫成答案 out/<n>.txt
+# act.py - act 格：照腦的決定動手——有 tool_calls 就逐個 aos-tools call <名>（tools.json 登記的）、結果接回 history；沒有就把 content 寫成答案 out/<n>.txt
 # 照 demo/agent-dan/act.py，只改：答案檔叫 out/<題名>.txt（題目是 <題名>.json）、錯誤開頭是 writer。工具那段原樣留（第 1 輪沒有工具）。
 # round6 §1b（train/apply 的 freeze_order／patch_act 寫的資料，不在＝舊行為）：act_rules.json
 #   {"after_answer": ["trim"]}＝順序已固化：交稿前一律由程式叫這些工具（{text, brief_path: cur/<n>.json#/brief}，回的 text 當答案），也不再給腦叫（brain.py 同）；
@@ -10,6 +10,17 @@ import json, os, shutil, subprocess, sys
 def die(code, reason):
     print("writer: %s %s" % (code, reason), file=sys.stderr)
     sys.exit(1)
+
+
+def registered():
+    """tools.json 登記的工具名（aos-tools ls --json，cwd＝agent 資料夾；沒有 tools.json＝沒有工具），照名字排；失敗＝自己這層的錯（P-20）"""
+    try:
+        r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    except OSError as e:
+        die("ToolFailed", "aos-tools 起不來：%s" % e)
+    if r.returncode != 0:
+        die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
+    return [t["name"] for t in json.loads(r.stdout)]
 
 
 stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
@@ -55,10 +66,10 @@ with open(os.path.join(stack, "current.txt"), encoding="utf-8") as f:
     name_q = f.read().strip()                  # 題目名（下面迴圈裡的 name 是工具名）
 
 calls = said.get("tool_calls") or []
+REGISTERED = registered() if calls or after_answer else []
 if calls:
     answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
-    tools = sorted(t for t in (os.listdir("tools") if os.path.isdir("tools") else [])
-                   if os.path.isfile(os.path.join("tools", t, "_tooldef.json")) and t not in after_answer
+    tools = sorted(t for t in REGISTERED if t not in after_answer         # 能叫的＝tools.json 登記的（aos-tools ls --json）
                    and os.environ.get({"lint": "GALTXT_OFF_SELF_LINT", "trim": "GALTXT_OFF_TRIM"}.get(t, "")) != "1")   # 關閉開關（同 brain.py）
     for call in calls:
         try:
@@ -89,7 +100,7 @@ if calls:
             note({"tool": name, "call": cid, "filled": filled})
         env = dict(os.environ, AOS_STACK=os.path.join(stack, name) + "/")
         try:
-            r = subprocess.run(["aos-exec", "tools/" + name], input=arguments, stdout=subprocess.PIPE, text=True, env=env)
+            r = subprocess.run(["aos-tools", "call", name], input=arguments, stdout=subprocess.PIPE, text=True, env=env)
         except OSError as e:
             die("ToolFailed", "%s 起不來：%s" % (name, e))
         content = r.stdout
@@ -101,12 +112,12 @@ if calls:
 
 content = said.get("content") or ""
 for t in after_answer:                         # 順序已固化的工具：交稿前一律由程式叫（freeze_order），失敗＝原稿照交、記一行
-    if not os.path.isfile(os.path.join("tools", t, "_tooldef.json")):
+    if t not in REGISTERED:                    # 沒登記在 tools.json＝沒有這個工具，跳過（同以前沒有 tools/<t>/_tooldef.json）
         continue
     env = dict(os.environ, AOS_STACK=os.path.join(stack, t) + "/")
     arg = json.dumps({"text": content, "brief_path": "cur/%s.json#/brief" % name_q}, ensure_ascii=False)
     try:
-        r = subprocess.run(["aos-exec", "tools/" + t], input=arg, stdout=subprocess.PIPE, text=True, env=env)
+        r = subprocess.run(["aos-tools", "call", t], input=arg, stdout=subprocess.PIPE, text=True, env=env)
         got = json.loads(r.stdout) if r.returncode == 0 else None
     except (OSError, ValueError):
         r, got = None, None

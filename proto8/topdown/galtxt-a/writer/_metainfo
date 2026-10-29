@@ -11,7 +11,7 @@
  "fs_needs": ["own_stack", "mount"], "callers": 1,
  "steps": ["開場旁白", "反差節拍", "口癖句尾", "遮掩句", "收尾旁白", "自檢"],
  "children": {"tools/beat/": "反差節拍（反差節拍、遮掩句）", "tools/voice/": "口癖句尾", "tools/lint": "捷徑 → ../../tools/lint（自檢）"},
- "opt_writes": ["system.txt", "stage.json#/tools", "tools/*/", "compose.py", "../data/templates.distilled.json#append"],
+ "opt_writes": ["system.txt", "stage.json#/tools", "tools/*/", "tools.json#/tools#append", "compose.py", "../data/templates.distilled.json#append"],
  "ratings": {"$ref": "ratings.json"},
  "brain": {"$ref": "stage.json"},
  "human_ratings": {"$ref": "human.json"},

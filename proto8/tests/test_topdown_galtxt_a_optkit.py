@@ -443,16 +443,17 @@ class OptkitT(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         a = self.accept(cell, "--dry-run")
         self.assertEqual(a.returncode, 0, a.stderr)
-        self.assertRegex(a.stdout, r"^accept: writer 會收 5 個檔")
+        self.assertRegex(a.stdout, r"^accept: writer 會收 6 個檔")
         self.assertEqual(snapshot(self.g), before)
         self.assertFalse((cell / "params").exists() or (cell / "accept.json").exists())
         a = self.accept(cell)
         self.assertEqual(a.returncode, 0, a.stderr)
-        self.assertRegex(a.stdout, r"^accept: writer 收了 5 個檔.*新工具 writer/tools/close")
+        self.assertRegex(a.stdout, r"^accept: writer 收了 6 個檔.*新工具 writer/tools/close")
         after = snapshot(self.g)
         changed = {k for k in set(before) | set(after) if before.get(k) != after.get(k)}
-        self.assertEqual(changed, {"writer/stage.json", "writer/opt_log.jsonl", "writer/tools/close",
+        self.assertEqual(changed, {"writer/stage.json", "writer/opt_log.jsonl", "writer/tools.json", "writer/tools/close",
                                    "writer/tools/close/_entry", "writer/tools/close/_metainfo", "writer/tools/close/_tooldef.json"})
+        self.assertEqual(jread(self.g / "writer" / "tools.json")["tools"]["close"], {"path": "tools/close"})   # opt_extract 登記進 tools.json（相對路徑）
         self.assertTrue(after["writer/tools/close/_entry"][1])                                       # +x 跟著搬
         ch = jread(cell / "params" / "changed.json")
         self.assertEqual((ch["source"], ch["action"], ch["subtree"], ch["by"], ch["created"]), ("selfopt", "selfopt", "writer", "writer@selfopt", ["writer/tools/close"]))

@@ -1,0 +1,13 @@
+{
+ "tools": {
+  "opt_describe": {"path": "tools/opt_describe"},
+  "opt_edit": {"path": "tools/opt_edit"},
+  "opt_extract": {"path": "tools/opt_extract"},
+  "opt_history": {"path": "tools/opt_history"},
+  "opt_note": {"path": "tools/opt_note"},
+  "opt_read": {"path": "tools/opt_read"},
+  "opt_test": {"path": "tools/opt_test"},
+  "opt_try": {"path": "tools/opt_try"},
+  "opt_write": {"path": "tools/opt_write"}
+ }
+}

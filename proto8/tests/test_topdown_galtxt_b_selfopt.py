@@ -196,6 +196,9 @@ class SelfOpt(unittest.TestCase):
         x = subprocess.run([EXEC, str(node / "tools" / "strip_dash")], input='{"text": "啊——好"}', capture_output=True, text=True,
                            env=env_base({"AOS_STACK": str(self.f / ".stack" / "sd") + "/"}))
         self.assertEqual(json.loads(x.stdout)["text"], "啊……好")
+        reg = jload(node / "tools.json")["tools"]                                       # 登記進 tools.json（10-28 aos-tools；相對路徑、原本的 lint、trim 還在）
+        self.assertEqual(reg["strip_dash"], {"path": "tools/strip_dash"})
+        self.assertTrue({"lint", "trim"} <= set(reg), reg)
         self.assertIn("ToolBad", self.call("extract_tool", {"name": "strip_dash", "step": "x", "why": "x", "rules": [{"pattern": "a", "replace": "b"}]}, s).stdout)
         self.assertIn("RulesBad", self.call("extract_tool", {"name": "bad_rx", "step": "x", "why": "x", "rules": [{"pattern": "(", "replace": "b"}]}, s).stdout)
 

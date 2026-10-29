@@ -34,6 +34,7 @@ galtxt-b/                 agent：aos-loop → fsm.json 一圈六格 idle→brie
     tools/director/       單發腦函數（第 4 級：_entry 是 JSON 單子 → ask.py）：問腦一次出 beat 表 JSON；被打回就同一小格接著聊
     tools/plan_lint/      純函數：beat 表的文法校驗（B0 B1 B2 B3+ (B4) B5 (B6) B7、蓋章前要拿書、必提詞有拍認領、拍數）→ violations（只有 draft 叫，round3 從 lib/ 搬回）
     tools/writer/         agent（照 agent-dan，loop→fsm idle→think→act）：問腦寫稿；同一小格再叫＝接著上一稿聊
+      tools.json          腦看得到哪些工具（aos-tools 註冊檔，10-28；相對路徑 tools/<名>，selfopt extract_tool 抽新工具時追加一筆）
       tools/lint          → ../../../../lib/lint（腦交稿前自檢，最多兩次）
   check/                  黏合：叫 tools/lint 拿 violations，算 pass／final，寫 check.json
     tools/lint            → ../../lib/lint

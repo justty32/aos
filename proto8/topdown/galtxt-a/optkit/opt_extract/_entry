@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # opt_extract - stdin {"name", "description", "parameters", "code", "summary", "covers"?}：在被優化那棵子樹的 tools/<name>/ 建一支新工具（_tooldef.json、_entry（+x）、_metainfo 骨架），
+# 登記進那棵的 tools.json（相對路徑 tools/<name>；沒有就新建）、
 # 並把 name 加進那棵的 stage.json.tools（有 stage.json 才加）；stdout 一行「抽了 <子樹>/tools/<name>（stage.tools 加了 name）」。
 # 檢查（round4-selfopt.md § 5.4）：code 先 compile 過（python；不寫 __pycache__）、空 stdin 跑一次要退 0 或 1 而且 stdout 至少一行（lib/README 契約規則 3）；
 # 不過＝整個新資料夾拿掉、ContractBad。_metainfo 的 author＝「<子樹>@selfopt epoch N」（M7：這是新工具自己的宣告，不是改既有的）。
 # covers（選填，字串陣列）＝這支工具接手那棵 _metainfo.steps 的哪幾個環節（寫進新 _metainfo.covers；train/common.tools_share 照它算 tools_share）；不在 steps 裡＝ArgumentsBad。
-# 每個落檔都過白名單（opt_writes 的「tools/*/」＝只准新建；stage.json#/tools）。
+# 每個落檔都過白名單（opt_writes 的「tools/*/」＝只准新建；tools.json#/tools#append；stage.json#/tools）。
 # 錯：stderr 與 stdout 各一行「opt_extract: 代號 原因」、退 1——ArgumentsBad、EnvMissing、NameBad、ToolExists、CompileFailed、ContractBad、WriteDenied。
 import json, os, shutil, subprocess, sys
 sys.dont_write_bytecode = True
@@ -83,6 +84,36 @@ except (OSError, subprocess.TimeoutExpired) as x:
 if not ok:
     undo()
     oc.die(NAME, "ContractBad", "新工具不守契約（%s），已拿掉" % why)
+# 登記進那棵的 tools.json（10-28 aos-tools：腦只看得到 tools.json 登記的工具）：相對路徑 tools/<name>（同手寫範本；accept 搬回原樹也不斷），
+# 經白名單「tools.json#/tools#append」只准追加；沒有 tools.json 就新建。寫不了＝新資料夾拿掉。
+tj_p, tj_rel = os.path.join(e["tree"], e["sub"], "tools.json"), e["sub"] + "/tools.json"
+tj_old = oc.read_bytes(tj_p)
+try:
+    tj = json.loads(tj_old.decode("utf-8")) if tj_old is not None else {}
+    if not isinstance(tj, dict) or not isinstance(tj.setdefault("tools", {}), dict):
+        raise ValueError("要是 {\"tools\": {…}}")
+except (ValueError, UnicodeDecodeError) as x:
+    undo()
+    oc.die(NAME, "ArgumentsBad", "tools.json 讀不了：%s" % x)
+if name in tj["tools"]:
+    undo()
+    oc.die(NAME, "ToolExists", "tools.json 已經登記了 %s" % name)
+tj["tools"][name] = {"path": "tools/" + name}
+try:
+    oc.guarded_write(NAME, e, tj_p, tj_rel, (json.dumps(tj, ensure_ascii=False, indent=1) + "\n").encode("utf-8"))
+except SystemExit:
+    undo()
+    raise
+
+
+def undo_registry():
+    if tj_old is None:
+        os.unlink(tj_p)
+    else:
+        with open(tj_p, "wb") as f:
+            f.write(tj_old)
+
+
 added = ""
 st_p = os.path.join(e["tree"], e["sub"], "stage.json")
 if os.path.isfile(st_p):
@@ -91,6 +122,7 @@ if os.path.isfile(st_p):
             st = json.load(f)
         tools = list(st.get("tools") or [])
     except (OSError, ValueError, AttributeError) as x:
+        undo_registry()
         undo()
         oc.die(NAME, "ArgumentsBad", "stage.json 讀不了：%s" % x)
     if name not in tools:
@@ -98,7 +130,8 @@ if os.path.isfile(st_p):
         try:
             oc.guarded_write(NAME, e, st_p, e["sub"] + "/stage.json", (json.dumps(st, ensure_ascii=False, indent=1) + "\n").encode("utf-8"))
         except SystemExit:
+            undo_registry()
             undo()
             raise
-        added = "（stage.tools 加了 %s）" % name
+        added ="（stage.tools 加了 %s）" % name
 print("抽了 %s%s" % (d_rel, added))

@@ -9,13 +9,25 @@
 #   GALTXT_FAKE_LINT=nopath：叫 lint 時漏給 brief_path（學真腦），看 act_rules.json 的 default_args（patch_act）有沒有補上。
 # act_rules.json 的 after_answer 裡的工具不給腦（順序已固化，act.py 交稿前一律叫）。
 # 每問一次腦（含假腦）在 $AOS_STACK/llm.jsonl 寫一行量測（record）。
-import json, os, sys, time, urllib.error, urllib.request
+import json, os, subprocess, sys, time, urllib.error, urllib.request
 from datetime import datetime, timezone
 
 
 def die(code, reason):
     print("writer: %s %s" % (code, reason), file=sys.stderr)
     sys.exit(1)
+
+
+def registered():
+    """tools.json 登記的工具（aos-tools ls --json，cwd＝agent 資料夾；沒有 tools.json＝沒有工具），照名字排。
+    aos-tools 起不來、退非 0（例：登記了但壞掉的工具）＝自己這層的錯：停、人修好再跑（P-20）；aos-tools 的 stderr 不吞，它自己說哪個工具壞。"""
+    try:
+        r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    except OSError as e:
+        die("ToolsBad", "aos-tools 起不來：%s" % e)
+    if r.returncode != 0:
+        die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
+    return json.loads(r.stdout)
 
 
 stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
@@ -116,23 +128,19 @@ def append(message):
 if not history or history[-1].get("role") not in ("user", "tool"):
     append({"role": "user", "content": render(question)})
 
-tools = []                                       # 第 1 輪 writer 沒有工具；留著這段，之後掛 tools/<名>/_tooldef.json 就能用（P-41）
+tools = []                                       # 工具清單來自 tools.json（aos-tools ls --json；10-28 aos-tools 起，沒有 tools.json＝沒有工具）
 OFF = {"lint": "GALTXT_OFF_SELF_LINT", "trim": "GALTXT_OFF_TRIM"}      # 量貢獻用的關閉開關（round5 §3a，宣告在 _metainfo.ablation）：設 1＝不給腦這個工具
 try:                                             # round6 freeze_order：act_rules.json 的 after_answer＝程式交稿前一律叫，不再給腦（同 act.py）
     with open("act_rules.json", encoding="utf-8") as f:
         FROZEN = set((json.load(f) or {}).get("after_answer") or [])
 except (OSError, ValueError, AttributeError):
     FROZEN = set()
-for tool in (sorted(t for t in os.listdir("tools") if os.environ.get(OFF.get(t, "")) != "1" and t not in FROZEN) if os.path.isdir("tools") else []):
-    try:
-        with open(os.path.join("tools", tool, "_tooldef.json"), encoding="utf-8") as f:
-            spec = json.load(f)
-    except (OSError, ValueError):
+for t in registered():
+    if os.environ.get(OFF.get(t["name"], "")) == "1" or t["name"] in FROZEN:
         continue
-    if isinstance(spec, dict):
-        function = {"name": tool}
-        function.update({k: spec[k] for k in ("description", "parameters") if k in spec})
-        tools.append({"type": "function", "function": function})
+    function = {"name": t["name"]}
+    function.update({k: t["tooldef"][k] for k in ("description", "parameters") if k in t["tooldef"]})
+    tools.append({"type": "function", "function": function})
 
 system = []
 if os.path.exists("system.txt"):

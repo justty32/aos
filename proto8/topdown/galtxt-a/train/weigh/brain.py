@@ -2,7 +2,7 @@
 # 沒設 AOS_BRAIN_URL＝假腦：直接照 rules.json 算（rules.py；假腦就是判斷器的 rules 階，round4 § 4.4）；有設就問 OpenAI 相容的 {url}/chat/completions。
 # 跟 grader 不同的兩處：fake() 改成 rules.py；system＝system.txt＋rules.json 全文（每次從檔讀，不存進 history）。判斷器沒有 tools/。
 # 失敗時 history 不接任何東西、退 1（P-20）。問真腦時把 API 回的 usage 多記一行到 $AOS_STACK/usage.jsonl。
-import datetime, json, os, sys, urllib.error, urllib.request
+import datetime, json, os, subprocess, sys, urllib.error, urllib.request
 
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
@@ -12,6 +12,18 @@ import rules as R  # noqa: E402
 def die(code, reason):
     print("weigh: %s %s" % (code, reason), file=sys.stderr)
     sys.exit(1)
+
+
+def registered():
+    """tools.json 登記的工具（aos-tools ls --json，cwd＝agent 資料夾；沒有 tools.json＝沒有工具），照名字排。
+    aos-tools 起不來、退非 0（例：登記了但壞掉的工具）＝自己這層的錯：停、人修好再跑（P-20）；aos-tools 的 stderr 不吞，它自己說哪個工具壞。"""
+    try:
+        r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    except OSError as e:
+        die("ToolsBad", "aos-tools 起不來：%s" % e)
+    if r.returncode != 0:
+        die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
+    return json.loads(r.stdout)
 
 
 stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
@@ -67,18 +79,11 @@ def append(message):
 if not history or history[-1].get("role") not in ("user", "tool"):
     append({"role": "user", "content": question})
 
-# tools：工具名＝資料夾名，說明來自 _tooldef.json 的 description／parameters（其他 key 忽略；讀不懂的 _tooldef.json 當作沒有）
+# tools：工具清單來自 tools.json（aos-tools ls --json；10-28 aos-tools 起，沒有 tools.json＝沒有工具），說明取工具定義的 description／parameters（其他 key 忽略）
 tools = []
-for tool in (sorted(os.listdir("tools")) if os.path.isdir("tools") else []):
-    try:
-        with open(os.path.join("tools", tool, "_tooldef.json"), encoding="utf-8") as f:
-            spec = json.load(f)
-    except (OSError, ValueError):
-        continue
-    if not isinstance(spec, dict):
-        continue
-    function = {"name": tool}
-    function.update({k: spec[k] for k in ("description", "parameters") if k in spec})
+for t in registered():
+    function = {"name": t["name"]}
+    function.update({k: t["tooldef"][k] for k in ("description", "parameters") if k in t["tooldef"]})
     tools.append({"type": "function", "function": function})
 
 system = []
