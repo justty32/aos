@@ -335,7 +335,7 @@ class MetatableT(unittest.TestCase):
 
 
 COLLAPSE = str(G / "meta" / "collapse" / "_entry")
-BEFORE_COMMIT = "2967009e"          # galtxt-a 收攏前那一版（round2-collapse.md § 3 的「前」）
+BEFORE_COMMIT = "e36771d5"          # galtxt-a 收攏前那一版（round2-collapse.md § 3 的「前」；plan 裡寫的 2967009e 是 rebase 前的編號，現在的歷史沒有它）
 
 
 def snapshot(root):
@@ -481,6 +481,8 @@ class SuggestT(unittest.TestCase):
             if r.returncode != 0:
                 self.skipTest("拿不到收攏前那一版（%s）：%s" % (BEFORE_COMMIT, r.stderr.strip()))
             subprocess.run(["tar", "xf", str(tar), "-C", t], check=True)
+            for old in (Path(t) / "topdown" / "galtxt-a").rglob("tool.json"):     # 那一版的工具定義還叫 tool.json；10-28 aos-tools 決定 14 改名 _tooldef.json，
+                old.rename(old.with_name("_tooldef.json"))                         # suggest 照新名認 A-1 例外——先照新名改好再列（判準本身沒變）
             got = self.suggest(Path(t) / "topdown" / "galtxt-a")
         self.assertEqual({k: got.get(k) for k in ("brief", "pick", "write", "check", "judge")}, dict.fromkeys(
             ("brief", "pick", "write", "check", "judge"), "B-2"))
