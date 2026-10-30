@@ -16,7 +16,7 @@
 
 ### `proto8/demo/`
 
-逐字下放到 [proto8/13-demo](proto8/13-demo.md)（本檔超過 8 KB）：agent-bob、ann、dan、eve、daemon、daemon-2、daemon-3、kernel-llm、tick 的逐檔說明；說明另在 [proto8/demo/README.md](../../../../proto8/demo/README.md)。
+逐字下放到 [proto8/13-demo](proto8/13-demo.md)（本檔超過 8 KB）：agent-bob、ann、dan、eve、daemon、daemon-2、daemon-3、llm-kernel、tick 的逐檔說明；說明另在 [proto8/demo/README.md](../../../../proto8/demo/README.md)。
 
 ### `proto8/tests/`
 
@@ -26,7 +26,7 @@
 
 逐字下放到 [proto8/01-impls與舊lib](proto8/01-impls與舊lib.md)（2026-10-21 下午，本檔超過 8 KB）：impls 是使用者的 C／C++ 實作（10-23 起進 git；舊快照 `backup/` 10-23 已刪）；舊 lib 是 10-16 那套、10-19 刪進 git 歷史。
 
-LLM kernel 兩支（`aos-kernel-llm`、`aos-gate`，10-24）的逐檔表另開一份：[proto8/03-kernel-llm](proto8/03-kernel-llm.md)。aos-daemon 的 `src/` 逐檔（10-29 下放；同日加信箱模式 `mailbox.cpp`）：[proto8/14-aos-daemon](proto8/14-aos-daemon.md)。改 JSON 的工具集 `aos-json`（10-24）：[proto8/07-aos-json](proto8/07-aos-json.md)。投遞 `aos-post`、鎖 `aos-lock`（10-29）：[proto8/15-aos-post](proto8/15-aos-post.md)、[proto8/16-aos-lock](proto8/16-aos-lock.md)。
+LLM kernel 兩支（`aos-llm-kernel`、`aos-gate`，10-24）的逐檔表另開一份：[proto8/03-llm-kernel](proto8/03-llm-kernel.md)。aos-daemon 的 `src/` 逐檔（10-29 下放；同日加信箱模式 `mailbox.cpp`）：[proto8/14-aos-daemon](proto8/14-aos-daemon.md)。改 JSON 的工具集 `aos-json`（10-24）：[proto8/07-aos-json](proto8/07-aos-json.md)。投遞 `aos-post`、鎖 `aos-lock`（10-29）：[proto8/15-aos-post](proto8/15-aos-post.md)、[proto8/16-aos-lock](proto8/16-aos-lock.md)。
 
 ### agent-round 的格（10-28 晚）
 
@@ -36,8 +36,8 @@ LLM kernel 兩支（`aos-kernel-llm`、`aos-gate`，10-24）的逐檔表另開�
 
 各作者做的時候沒改 code map，10-24 下午收尾一次補成幾份分檔：
 
-- demo 的 agent（eve、fay、gus、hal、kai、liv、meg、pip、kernel-llm/agent-ivy）逐檔：[proto8/04-demo-agents](proto8/04-demo-agents.md)、[04-demo-agents-2](proto8/04-demo-agents-2.md)。
-- demo 的 talk、self-improve、pi-tools、file-tools、kernel-llm 頂層：[proto8/05-demo-其他](proto8/05-demo-其他.md)、[05-demo-其他-2](proto8/05-demo-其他-2.md)。
+- demo 的 agent（eve、fay、gus、hal、kai、liv、meg、pip、llm-kernel/agent-ivy）逐檔：[proto8/04-demo-agents](proto8/04-demo-agents.md)、[04-demo-agents-2](proto8/04-demo-agents-2.md)。
+- demo 的 talk、self-improve、pi-tools、file-tools、llm-kernel 頂層：[proto8/05-demo-其他](proto8/05-demo-其他.md)、[05-demo-其他-2](proto8/05-demo-其他-2.md)。
 - `proto8/extras/` 周邊工具 human、ai_tools、grow、langs/janet、langs/lua、editors/nvim、sandbox（10-26 從頂層收進）、cli_hub（10-27，在 -3）：[proto8/06-周邊工具](proto8/06-周邊工具.md)、[06-周邊工具-2](proto8/06-周邊工具-2.md)、[06-周邊工具-3](proto8/06-周邊工具-3.md)；`proto8/lib`（函式庫，10-24 下午遷移後三層）：[proto8/09-lib](proto8/09-lib.md)。
 - 10-24 新增的測試檔：[proto8/08-tests-10-24](proto8/08-tests-10-24.md)。
 - 10-25 由上而下拆：`proto8/topdown/` 總覽與甲隊 galtxt-a [proto8/11-topdown-galtxt-a](proto8/11-topdown-galtxt-a.md)；乙隊 galtxt-b [proto8/10-topdown-galtxt-b](proto8/10-topdown-galtxt-b.md)。

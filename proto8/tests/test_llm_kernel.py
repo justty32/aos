@@ -1,14 +1,14 @@
-"""LLM kernel 整合（10-24，thinking 2026-10-24-llm-kernel）：aos-gate 寄信、aos-kernel-llm 被 aos-loop／aos-daemon 一次次拍、回信原樣交回。
+"""LLM kernel 整合（10-24，thinking 2026-10-24-llm-kernel）：aos-gate 寄信、aos-llm-kernel 被 aos-loop／aos-daemon 一次次拍、回信原樣交回。
 
-單元（排序、slots、回信的錯、收拾、鎖）在 impls/aos-kernel-llm、impls/aos-gate 各自的 tests/test_cli.py；這裡只測兩支接起來、
-跟 loop／fsm／daemon 一起跑的樣子：端到端、包它那格的 timeout_ms 收掉閘門（撤信）、kernel 不在時信堆著、kernel 死掉後重起、demo/kernel-llm。"""
+單元（排序、slots、回信的錯、收拾、鎖）在 impls/aos-llm-kernel、impls/aos-gate 各自的 tests/test_cli.py；這裡只測兩支接起來、
+跟 loop／fsm／daemon 一起跑的樣子：端到端、包它那格的 timeout_ms 收掉閘門（撤信）、kernel 不在時信堆著、kernel 死掉後重起、demo/llm-kernel。"""
 import http.server, json, os, signal, subprocess, tempfile, threading, time, unittest
 from pathlib import Path
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
 
 GATE = tool("aos-gate")
-KERNEL = tool("aos-kernel-llm")
+KERNEL = tool("aos-llm-kernel")
 LOOP = tool("aos-loop")
 
 
@@ -40,7 +40,7 @@ class KernelCase(unittest.TestCase):
         self.mb.mkdir()
         (self.t / "kst").mkdir()
         (self.t / "kernel.json").write_text(json.dumps({"mailbox": str(self.mb), "slots": 1}))
-        (self.t / "loop.json").write_text(json.dumps({"exec": {"argv": ["aos-kernel-llm", "kernel.json"]},
+        (self.t / "loop.json").write_text(json.dumps({"exec": {"argv": ["aos-llm-kernel", "kernel.json"]},
                                                        "interval_ms": 50}))
         self.procs = []
 
@@ -242,12 +242,12 @@ class ReportCase(unittest.TestCase):
 
 
 class DemoCase(unittest.TestCase):
-    def test_demo_kernel_llm(self):
+    def test_demo_llm_kernel(self):
         with tempfile.TemporaryDirectory() as ws:
             for a in "abc":
                 Path(ws, a, "new").mkdir(parents=True)
                 Path(ws, a, "new", "q1.txt").write_text("%s 問：2+2？\n" % a)
-            r = subprocess.run([tool("aos-exec"), str(ROOT / "demo" / "kernel-llm")], cwd=ws, env=env_of(),
+            r = subprocess.run([tool("aos-exec"), str(ROOT / "demo" / "llm-kernel")], cwd=ws, env=env_of(),
                                capture_output=True, text=True, timeout=60)
             self.assertEqual(r.returncode, 0, r.stderr)
             for a in "abc":

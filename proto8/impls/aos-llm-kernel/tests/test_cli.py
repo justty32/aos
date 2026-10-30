@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""test_cli.py：aos-kernel-llm 命令列的測試（ctest 會跑）。只用標準庫（unittest）。
+"""test_cli.py：aos-llm-kernel 命令列的測試（ctest 會跑）。只用標準庫（unittest）。
 
-    python3 tests/test_cli.py bin/aos-kernel-llm
+    python3 tests/test_cli.py bin/aos-llm-kernel
 
 每個案例一個暫存資料夾：stack/（AOS_STACK）、mb/（信箱）、kernel.json。信是測試自己寫的（假裝是閘門寄的）：
 信號照 aos-gate 的格式 <奈秒>.<pid>.<started_at_ticks>；「寄信的人還在」＝測試自己 flock 住信裡的 sender.flock（同閘門），
@@ -22,7 +22,7 @@ import unittest
 from pathlib import Path
 
 BIN = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else
-                      os.path.join(os.path.dirname(__file__), "..", "bin", "aos-kernel-llm"))
+                      os.path.join(os.path.dirname(__file__), "..", "bin", "aos-llm-kernel"))
 IMPLS = Path(__file__).resolve().parent.parent.parent
 EXEC_BIN = IMPLS / "aos-exec" / "bin"
 
@@ -83,7 +83,7 @@ class Case(unittest.TestCase):
     def own_error(self, r, code):
         self.assertEqual(r.returncode, 1, r.stderr)
         self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
-        self.assertTrue(r.stderr.startswith("aos-kernel-llm: %s " % code), r.stderr)
+        self.assertTrue(r.stderr.startswith("aos-llm-kernel: %s " % code), r.stderr)
 
     def post(self, argv=None, priority=None, id=None, inst=None, env=None, box="new", raw=None, alive=True):
         """寫一封信進 mb/<box>/<id>/；回 id。alive＝像閘門那樣 flock 住 sender.flock（False＝鎖檔在、沒人鎖）。"""

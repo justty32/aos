@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 agent-eve、agent-fay、agent-gus、agent-hal（10-24）｜下一份：[04-demo-agents-2](04-demo-agents-2.md)（agent-kai、liv、meg、pip、kernel-llm/agent-ivy）
+← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 agent-eve、agent-fay、agent-gus、agent-hal（10-24）｜下一份：[04-demo-agents-2](04-demo-agents-2.md)（agent-kai、liv、meg、pip、llm-kernel/agent-ivy）
 
 > 10-28 起 demo／lib 的 agent 範本：工具清單＝範本的 `tools.json`〔手寫相對路徑〕，brain `aos-tools ls --json`、act `aos-tools call`；topdown 的 agent 照舊掃 `tools/*/_tooldef.json`。
 

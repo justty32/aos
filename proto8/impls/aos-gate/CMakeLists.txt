@@ -9,10 +9,10 @@ include(../cmake/settings.cmake)
 project(aos-gate C CXX)
 
 # 用到的兄弟專案（包一層 if(NOT TARGET)，全家都這樣寫）。
-#   aos-kernel-llm  公開 API（aos/kernel_llm.hpp）：信箱與信的格式（信號、priority、回信）；
+#   aos-llm-kernel  公開 API（aos/llm_kernel.hpp）：信箱與信的格式（信號、priority、回信）；
 #                   它又帶進 aos-loop（擋訊號）、aos-exec、inst、aos-util、aos-directive（解指示詞）
-if(NOT TARGET aos-kernel-llm)
-  add_subdirectory(../aos-kernel-llm aos-kernel-llm-build)
+if(NOT TARGET aos-llm-kernel)
+  add_subdirectory(../aos-llm-kernel aos-llm-kernel-build)
 endif()
 
 # src/ 底下除了 src/main.cpp 全是函式庫的程式碼。
@@ -24,7 +24,7 @@ add_library(aos-gate STATIC ${SOURCES})
 target_include_directories(aos-gate PRIVATE src)
 target_compile_features(aos-gate PUBLIC cxx_std_20)
 target_compile_options(aos-gate PRIVATE -Wall -Wextra)
-target_link_libraries(aos-gate PUBLIC aos-kernel-llm)
+target_link_libraries(aos-gate PUBLIC aos-llm-kernel)
 set_target_properties(aos-gate PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 

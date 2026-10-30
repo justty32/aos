@@ -359,7 +359,7 @@ class KernelMailboxTest(unittest.TestCase):
 
     def kernel(self, doc):
         (self.t / "kernel.json").write_text(json.dumps(dict(doc, mailbox=str(self.mb))))
-        r = subprocess.run(["aos-kernel-llm", "kernel.json"], capture_output=True, text=True, timeout=60,
+        r = subprocess.run(["aos-llm-kernel", "kernel.json"], capture_output=True, text=True, timeout=60,
                            env=env(AOS_STACK=str(self.stack)), cwd=self.t)
         self.assertEqual(r.returncode, 0, r.stderr)
 
@@ -420,7 +420,7 @@ AOS_ME=1000 AOS_RUNNER=2000 sh "$2" --mailbox "$T/mb" --apply >/dev/null
 mkdir "$T/stack" && chown 1000:1000 "$T/stack"
 as() { u=$1; g=$2; shift 2; setpriv --reuid "$u" --regid "$g" --clear-groups env AOS_KERNEL="$T/mb" AOS_STACK="$T/stack" "$@"; }
 as 1001 2000 "$T/bin/aos-gate" "$T/q.json" >"$T/out" 2>"$T/err" & G=$!
-n=0; while kill -0 $G 2>/dev/null && [ $n -lt 300 ]; do as 1000 1000 "$T/bin/aos-kernel-llm" "$T/kernel.json" || exit 9; n=$((n+1)); sleep 0.05; done
+n=0; while kill -0 $G 2>/dev/null && [ $n -lt 300 ]; do as 1000 1000 "$T/bin/aos-llm-kernel" "$T/kernel.json" || exit 9; n=$((n+1)); sleep 0.05; done
 wait $G; rc=$?; echo "runner=$(cat "$T/out")|$rc|$(cat "$T/err")"
 as 1002 1002 "$T/bin/aos-gate" "$T/q.json" 2>&1; echo "stranger=$?"
 """
@@ -437,7 +437,7 @@ class MailboxPermTest(unittest.TestCase):
         self.addCleanup(shutil.rmtree, t, ignore_errors=True)
         t.chmod(0o755)
         (t / "bin").mkdir()
-        for name in ("aos-gate", "aos-kernel-llm"):   # 家目錄 700，換了 uid 走不進 repo：複製一份（兩支都是靜態連結）
+        for name in ("aos-gate", "aos-llm-kernel"):   # 家目錄 700，換了 uid 走不進 repo：複製一份（兩支都是靜態連結）
             shutil.copy(shutil.which(name, path=PATH), t / "bin" / name)
         (t / "q.json").write_text(json.dumps({"argv": ["id", "-u"]}))
         (t / "kernel.json").write_text(json.dumps({"mailbox": str(t / "mb")}))

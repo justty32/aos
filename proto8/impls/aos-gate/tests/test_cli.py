@@ -8,7 +8,7 @@ A 段：命令列、信箱、單子檔的錯；B 段：信的內容（指示詞�
 10-29 信封 kind、sender〔$AOS_WS，沒設＝$HOME〕、sent_at）；
 C 段：回信原樣交回（stdout、stderr、碼、kernel 回的錯、讀不懂的回信）；D 段：訊號撤信、信不見了、kernel 不在時一直等、
 等的時候一直鎖著信裡的 sender.flock（kernel 靠它認寄信的人還在，10-24）。
-gate＋kernel 一起跑的在 proto8/tests/test_kernel_llm.py。
+gate＋kernel 一起跑的在 proto8/tests/test_llm_kernel.py。
 """
 import datetime
 import fcntl

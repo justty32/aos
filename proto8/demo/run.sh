@@ -3,15 +3,15 @@
 # 接著跑 agent-dan（假腦、叫 clock 工具再答）；
 # 再跑 daemon：一個 daemon 同時管 bob、ann 兩個子 loop（各自的工作區在 bob/、ann/）；
 # 再跑 tick：aos-loop 跑 5 次 aos-tick，時鐘檔 $AOS_STACK/tick.txt 走到 5（10-21 計畫第 4 段）；
-# 再跑 kernel-llm：一個 daemon 同時管 LLM kernel 與三隻走 kernel 的 agent（c 是 high），看服務順序（thinking 2026-10-24-llm-kernel）；
+# 再跑 llm-kernel：一個 daemon 同時管 LLM kernel 與三隻走 kernel 的 agent（c 是 high），看服務順序（thinking 2026-10-24-llm-kernel）；
 # 再跑 agent-nia：照 agent-round 的格組起來（parts.json 指 lib 的 round／queue／history／act／endpoint），假腦叫 clock 再答（thinking 2026-10-28-agent-round）；題目經 queue 格放進 stack、答案看 history（10-30 agent-lifecycle）；
 # 再跑 daemon-2：信箱模式的 daemon，agent 格 sam 寄信加 tick、人手寫 aos-post send 加 tock（帶 --reply-to 收回信）（10-29 medium-plan 實作第 8 步）；
 # 最後跑 daemon-3：同一支 demo/tick 掛兩次——loops 的 tick_loop（包成 max: 1 的子 loop）、execs 的 tick_exec（直接 aos-exec 一次），看 loops_state 兩張表（10-30 agent-lifecycle 實作第 8 步）
 here=$(cd "$(dirname "$0")" && pwd)
 # aos 的程式都不動 PATH（ideas § 24）：agent 裡叫的 aos-exec、aos-loop、aos-fsm、aos-daemon、aos-tick 由這裡（呼叫端）放進 PATH。
-# 10-23 起前四支是 C++（10-24 加 aos-kernel-llm、aos-gate 兩支；10-28 加 aos-json：aos-tools 解指示詞、改 tools.json 要它；10-29 加 aos-post：daemon-2 寄信；10-30 起 agent-nia 的 queue 格也經它）（proto8/impls/<名>/bin/，要先建，見 wf/workflows/testing.md）；aos-tick 還是 Python（proto8/bin/，aos agent 讀工具清單的 aos-tools 也在這）
+# 10-23 起前四支是 C++（10-24 加 aos-llm-kernel、aos-gate 兩支；10-28 加 aos-json：aos-tools 解指示詞、改 tools.json 要它；10-29 加 aos-post：daemon-2 寄信；10-30 起 agent-nia 的 queue 格也經它）（proto8/impls/<名>/bin/，要先建，見 wf/workflows/testing.md）；aos-tick 還是 Python（proto8/bin/，aos agent 讀工具清單的 aos-tools 也在這）
 impls=$(cd "$here/../impls" && pwd)
-for p in aos-exec aos-loop aos-fsm aos-daemon aos-kernel-llm aos-gate aos-json aos-post; do
+for p in aos-exec aos-loop aos-fsm aos-daemon aos-llm-kernel aos-gate aos-json aos-post; do
   [ -x "$impls/$p/bin/$p" ] || { echo "run.sh：$impls/$p/bin/$p 還沒建（先建 proto8/impls，見 wf/workflows/testing.md）" >&2; exit 1; }
   PATH="$impls/$p/bin:$PATH"
 done
@@ -49,10 +49,10 @@ echo "######## tick"
 ws=$(mktemp -d)
 (cd "$ws" && aos-exec "$here/tick"); echo "結束碼 $?"
 show "$ws"; rm -rf "$ws"
-echo "######## kernel-llm"   # 三隻 agent 同時問腦，腦經 kernel 排隊（slots 1、假腦想 1 秒）；served.jsonl 是服務順序，high 的 c 先
+echo "######## llm-kernel"   # 三隻 agent 同時問腦，腦經 kernel 排隊（slots 1、假腦想 1 秒）；served.jsonl 是服務順序，high 的 c 先
 ws=$(mktemp -d)
 for a in a b c; do mkdir -p "$ws/$a/new"; echo "$a 問：2+2 等於多少？" > "$ws/$a/new/q1.txt"; done
-(cd "$ws" && aos-exec "$here/kernel-llm"); echo "結束碼 $?"
+(cd "$ws" && aos-exec "$here/llm-kernel"); echo "結束碼 $?"
 show "$ws"; rm -rf "$ws"
 echo "######## agent-nia"   # 格組起來的 agent：aos-loop 反覆叫 round（aos-parts run round），一題答完 round 退 0、再叫一次 queue 空退 10（ROUND_ON_EMPTY=stop）、loop 停
 ws=$(mktemp -d)

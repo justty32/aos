@@ -1,5 +1,5 @@
-// letter.cpp：【letter】信箱的路徑、信號、寄信的人還在不在（sender.flock）、priority、回信（說明見 aos/kernel_llm.hpp）。
-#include "aos/kernel_llm.hpp"
+// letter.cpp：【letter】信箱的路徑、信號、寄信的人還在不在（sender.flock）、priority、回信（說明見 aos/llm_kernel.hpp）。
+#include "aos/llm_kernel.hpp"
 
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
@@ -15,7 +15,7 @@
 #include <sys/file.h>
 #include <unistd.h>
 
-namespace aos::kernel_llm {
+namespace aos::llm_kernel {
 
 std::string Mailbox::tmp() const { return aos::join(root, "tmp"); }
 std::string Mailbox::fresh() const { return aos::join(root, "new"); }
@@ -246,4 +246,4 @@ std::optional<Json> read_reply(const std::string& path) {
     return r;
 }
 
-}  // namespace aos::kernel_llm
+}  // namespace aos::llm_kernel

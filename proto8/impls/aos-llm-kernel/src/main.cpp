@@ -1,9 +1,9 @@
-// main.cpp：aos-kernel-llm 命令列——LLM kernel 跑一次：從信箱挑最該跑的信、跑、回信（給 aos-loop／aos-daemon 一次次拍）。
+// main.cpp：aos-llm-kernel 命令列——LLM kernel 跑一次：從信箱挑最該跑的信、跑、回信（給 aos-loop／aos-daemon 一次次拍）。
 //
-//     aos-kernel-llm [旗標] kernel.json
+//     aos-llm-kernel [旗標] kernel.json
 //
 //   block_signals → 命令列（目前沒有旗標；唯一的位置參數＝設定檔，可寫 `檔#/指標`）→ 要 AOS_STACK → read_cfg → serve
-// 自己出錯：stderr 一行「aos-kernel-llm: 代號 原因」、退 1（N-60）。一封信的錯不是 kernel 的錯：寫進那封信的回信。
+// 自己出錯：stderr 一行「aos-llm-kernel: 代號 原因」、退 1（N-60）。一封信的錯不是 kernel 的錯：寫進那封信的回信。
 #include "serve/serve.hpp"
 
 #include "aos/cli.hpp"
@@ -12,16 +12,16 @@
 #include <cstdlib>
 #include <exception>
 
-static const char* USAGE = "usage: aos-kernel-llm [旗標] kernel.json";
+static const char* USAGE = "usage: aos-llm-kernel [旗標] kernel.json";
 
 static int fail(const std::string& code, const std::string& msg) {
-    std::fprintf(stderr, "aos-kernel-llm: %s %s\n", code.c_str(), msg.c_str());
+    std::fprintf(stderr, "aos-llm-kernel: %s %s\n", code.c_str(), msg.c_str());
     std::fflush(stderr);
     return 1;
 }
 
 int main(int argc, char** argv) {
-    namespace k = aos::kernel_llm;
+    namespace k = aos::llm_kernel;
     try {
         aos::loop::block_signals();
         aos::Cli cli;

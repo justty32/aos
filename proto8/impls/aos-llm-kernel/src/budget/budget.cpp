@@ -9,7 +9,7 @@
 #include <cstdlib>
 #include <cstring>
 
-namespace aos::kernel_llm {
+namespace aos::llm_kernel {
 
 Budget parse_budget(const Json& v) {
     Budget b;
@@ -172,4 +172,4 @@ Report read_report(const std::string& path) {
     return r;
 }
 
-}  // namespace aos::kernel_llm
+}  // namespace aos::llm_kernel

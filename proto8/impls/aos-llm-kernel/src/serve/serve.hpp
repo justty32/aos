@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-namespace aos::kernel_llm {
+namespace aos::llm_kernel {
 
 struct Accepted {
     std::vector<std::string> argv;
@@ -45,4 +45,4 @@ struct Cfg {
 Cfg read_cfg(const std::string& spec, const std::string& stack);
 int serve(const Cfg& cfg, const std::string& stack);
 
-}  // namespace aos::kernel_llm
+}  // namespace aos::llm_kernel

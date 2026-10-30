@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace aos::kernel_llm {
+namespace aos::llm_kernel {
 
 struct Queue {
     long long runs = 0;
@@ -33,4 +33,4 @@ long long waited_runs(const Waiting& w, long long runs);
 long long effective(const Waiting& w, long long runs);
 void order(std::vector<Waiting>& ws, long long runs);
 
-}  // namespace aos::kernel_llm
+}  // namespace aos::llm_kernel

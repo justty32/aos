@@ -20,7 +20,7 @@
 #include <optional>
 #include <string>
 
-namespace aos::kernel_llm {
+namespace aos::llm_kernel {
 
 struct Budget {
     std::optional<long long> max_calls;
@@ -50,4 +50,4 @@ void add_used(const std::string& stack, Used& u, const Report& r);
 bool spent(const Budget& b, const Used& u, long long started);
 Report read_report(const std::string& path);
 
-}  // namespace aos::kernel_llm
+}  // namespace aos::llm_kernel

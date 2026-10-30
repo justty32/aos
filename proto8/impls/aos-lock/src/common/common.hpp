@@ -2,7 +2,7 @@
 //
 //   now_ms      現在（UTC epoch 毫秒）
 //   parse_at    ISO 8601 UTC 到毫秒（aos-util 的 utc_now_ms 那種：2026-10-23T01:58:45.123+00:00，結尾也收 Z）→ epoch 毫秒；讀不懂 nullopt
-//   unique_id   獨一無二的名字 <UTC 奈秒 20 位>.<pid>.<started_at_ticks>（同 aos-kernel-llm、aos-post 的信號）
+//   unique_id   獨一無二的名字 <UTC 奈秒 20 位>.<pid>.<started_at_ticks>（同 aos-llm-kernel、aos-post 的信號）
 #pragma once
 
 #include "aos/lock.hpp"

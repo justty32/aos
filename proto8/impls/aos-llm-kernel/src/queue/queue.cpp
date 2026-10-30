@@ -7,7 +7,7 @@
 #include <cerrno>
 #include <cstring>
 
-namespace aos::kernel_llm {
+namespace aos::llm_kernel {
 
 Queue read_queue(const std::string& stack) {
     Queue q;
@@ -81,4 +81,4 @@ void order(std::vector<Waiting>& ws, long long runs) {
     });
 }
 
-}  // namespace aos::kernel_llm
+}  // namespace aos::llm_kernel

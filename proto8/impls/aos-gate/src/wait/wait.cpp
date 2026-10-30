@@ -41,7 +41,7 @@ static int relay(const Mailbox& mb, const std::string& id) {
     std::fflush(nullptr);
     copy_to(aos::join(dir, "stdout.txt"), 1);
     copy_to(aos::join(dir, "stderr.txt"), 2);
-    std::optional<Json> reply = aos::kernel_llm::read_reply(aos::join(dir, "reply.json"));
+    std::optional<Json> reply = aos::llm_kernel::read_reply(aos::join(dir, "reply.json"));
     std::error_code ec;
     fs::remove_all(dir, ec);
     if (!reply) {

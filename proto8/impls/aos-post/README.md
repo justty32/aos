@@ -30,7 +30,7 @@ aos-post finish box 信號                            # 收掉（--keep 進 done
 | `withdraw 信箱 信號` | 撤回：rename `new/<信號>` 回 `tmp/` 再刪；已被認領（或本來就沒有）退 1 `WithdrawFailed` |
 
 - **信箱**：拿得到＝信箱與 `tmp/`、`new/`、`cur/` 都是資料夾，少一個＝`MailboxMissing`（`init` 以外的子命令都不替人建）。位置由擁有者定（N-16）。
-- **信號**：`<UTC 奈秒 20 位>.<pid>.<started_at_ticks>`（同 aos-kernel-llm 的產生法；`sent_at` 取自同一刻）。命令列給的信號要是單純的名字（不空、不含 `/`、不以 `.` 開頭），不是＝`ArgumentsBad`。
+- **信號**：`<UTC 奈秒 20 位>.<pid>.<started_at_ticks>`（同 aos-llm-kernel 的產生法；`sent_at` 取自同一刻）。命令列給的信號要是單純的名字（不空、不含 `/`、不以 `.` 開頭），不是＝`ArgumentsBad`。
 - **`letter.json`**：`{"kind": "letter", "sender", "sent_at", "reply_to"?, "in_reply_to"?, "body"}`。`sender`＝`$AOS_WS`（轉絕對），沒設或空＝`$HOME`（轉絕對；`HOME` 也沒有＝`/`），人也一樣。`sent_at`＝ISO 8601 UTC 到毫秒（同全家的 `recorded_at`，`…+00:00`）。`reply_to`＝`--reply-to` 給的路徑轉絕對（不驗在不在）。
 - **壞信**（`check` 退 1、`finish` 丟掉）：`letter.json` 讀不了或不是 JSON 物件、`kind` 不是 `"letter"`、`sender`／`sent_at` 不是字串、沒有 `body`、`reply_to`／`in_reply_to` 不是字串。`body` 的形狀由收信的程式自己驗。不通知寄信人（決定 27）；記 `letter_warning` 是處理者的事（拿 `check` 的原因）。
 - **回信寄不出去**（`reply_to` 不是信箱等）：退 1，原信**留在 `cur/`**，可以再 `finish` 一次。

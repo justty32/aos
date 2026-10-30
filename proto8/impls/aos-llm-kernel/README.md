@@ -1,10 +1,12 @@
-# aos-kernel-llm
+# aos-llm-kernel
 
-`aos-kernel-llm - 從信箱挑最該跑的信、跑、回信，一次一輪`（NAME，C-54 R1）
+`aos-llm-kernel - 從信箱挑最該跑的信、跑、回信，一次一輪`（NAME，C-54 R1）
 
-**一句話：`aos-kernel-llm [旗標] kernel.json`——LLM kernel 跑一次：看信箱 `new/` 裡排隊的信（每封是一張「問腦」的單子），照優先度挑最該跑的幾封（`slots`），跑完把結果寫成回信，然後結束。**
+10-30 改名，舊名 aos-kernel-llm（標頭舊名 `aos/kernel_llm.hpp`；照 `aos-<領域>-<功能>`，[thinking 10-30 map-review 第 9 點](../../thinking/2026-10-30-map-review.md#決定10-30)）。
+
+**一句話：`aos-llm-kernel [旗標] kernel.json`——LLM kernel 跑一次：看信箱 `new/` 裡排隊的信（每封是一張「問腦」的單子），照優先度挑最該跑的幾封（`slots`），跑完把結果寫成回信，然後結束。**
 要它一直顧著，就讓 aos-loop 或 aos-daemon 一次次拍它（C-47：kernel＝以 inst／loop／daemon 為基礎、管某張單子跑不跑的一張單子）。寄信的一方是 [aos-gate](../aos-gate/README.md)。
-一個 lib（`lib/libaos-kernel-llm.a`，公開標頭 `aos/kernel_llm.hpp`：信箱與信的格式，aos-gate 也用）加一支薄命令列（`bin/aos-kernel-llm`）。連 [aos-loop](../aos-loop/README.md) 的公開 API（擋訊號、`resolve_keys`；它又帶進 aos-exec 的 `run_inst`）。全家慣例見 [impls/README.md](../README.md)。
+一個 lib（`lib/libaos-llm-kernel.a`，公開標頭 `aos/llm_kernel.hpp`：信箱與信的格式，aos-gate 也用）加一支薄命令列（`bin/aos-llm-kernel`）。連 [aos-loop](../aos-loop/README.md) 的公開 API（擋訊號、`resolve_keys`；它又帶進 aos-exec 的 `run_inst`）。全家慣例見 [impls/README.md](../README.md)。
 
 像醫院掛號櫃台只叫號一次：候診室（`new/`）每張掛號單寫著要看什麼、急不急；叫號的人看一眼，急的先、時限近的先、等很久的先、其餘先來先看，一次叫幾個（診間數＝`slots`），看完把結果放進取件櫃（`done/`），這一輪就下班。
 病人中途走掉（閘門被收掉）就把他的單子抽掉；上一輪的醫生昏倒、診間裡還有人（`cur/`）——還在看的讓他看完，沒人在看又沒結果的，回一張「沒看完」（`RunFailed`），不重看。
@@ -13,7 +15,7 @@
 cat kernel.json
 # {"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1}
 cat loop.json
-# {"exec": {"argv": ["aos-kernel-llm", "kernel.json"]}, "interval_ms": 300}
+# {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300}
 AOS_STACK=st/ AOS_KERNEL=$PWD/mb aos-loop loop.json &    # kernel 一直顧著信箱 mb/
 AOS_KERNEL=$PWD/mb aos-gate brain.json                    # 寄一封、等回信、結果原樣交回（見 aos-gate）
 cat st/served.jsonl   # {"served_at": "...", "letter": "0179...", "level": "high", "counter_waited_runs": 0, "code": 0, "signal": null, "error": null, "elapsed_ms": 1085, …, "counter_tokens": 43, "report_bad": false}
@@ -25,7 +27,7 @@ cat st/used.json      # {"window": "day", "since": "2026-10-24T00:00:00+08:00", 
 ## 用法
 
 ```
-aos-kernel-llm [旗標] kernel.json
+aos-llm-kernel [旗標] kernel.json
 ```
 
 - **命令列**：唯一的位置參數＝設定檔（可寫 `檔#/指標`，aos-util 的 `load_cfg`）；目前沒有旗標（不認得＝`FlagUnknown`、沒給或多給＝`ArgumentsBad`）。
@@ -94,13 +96,13 @@ kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sand
 
 | 檔 | 做什麼 |
 |---|---|
-| `include/aos/kernel_llm.hpp` | 公開：信箱四格（`Mailbox`）、信號（`letter_id`、`sender_alive`）、`parse_priority`／`priority_of`（priority＋`_metainfo` 的 `time_ms`、`llm_tokens`）／`level_name`、`read_reply`、全部代號（閘門也用） |
+| `include/aos/llm_kernel.hpp` | 公開：信箱四格（`Mailbox`）、信號（`letter_id`、`sender_alive`）、`parse_priority`／`priority_of`（priority＋`_metainfo` 的 `time_ms`、`llm_tokens`）／`level_name`、`read_reply`、全部代號（閘門也用） |
 | `src/letter/letter.cpp` | 上面那些的實作（ISO 8601 自己解：`YYYY-MM-DDTHH:MM:SS[.小數](Z|±HH:MM)`） |
 | `src/queue/queue.hpp`、`queue.cpp` | `queue.json` 讀寫、`waited_runs`（寫進 served 的 `counter_waited_runs`）、`effective`、`order` |
 | `src/serve/serve.hpp`、`serve.cpp` | `read_cfg`、`serve`（`Server`：鎖、收拾、看信、額度到頂就回錯或停、認領、fork 子行程跑〔設 `AOS_KERNEL_REPORT`〕、等、回信、served.jsonl） |
 | `src/budget/budget.hpp`、`budget.cpp` | token 回報與額度：`parse_budget`、`window_since`、`read_used`／`add_used`（`used.json`、換窗歸零）、`spent`、`read_report` |
 | `src/common/common.hpp` | `using` |
-| `src/main.cpp` | 命令列：串上面；出錯印「aos-kernel-llm: 代號 原因」 |
+| `src/main.cpp` | 命令列：串上面；出錯印「aos-llm-kernel: 代號 原因」 |
 
 ## 做法
 
@@ -111,7 +113,7 @@ kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sand
 
 ## 錯誤代號
 
-自己出錯：stderr 一行 **`aos-kernel-llm: 代號 原因`**、退 1（N-60）。**一封信的錯不是 kernel 的錯**：寫進那封的回信，閘門印成它自己的一行。
+自己出錯：stderr 一行 **`aos-llm-kernel: 代號 原因`**、退 1（N-60）。**一封信的錯不是 kernel 的錯**：寫進那封的回信，閘門印成它自己的一行。
 
 | 代號 | 誰 | 什麼時候 |
 |---|---|---|
@@ -140,7 +142,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
   E 收拾（寄信人不在〔`sender.flock` 沒人鎖或沒有〕的 new／tmp／done、`tmp/` 裡 `.` 開頭正在寫的〔還沒寫信或鎖著〕不碰、名字裡 pid 是死的但鎖著照跑、cur/ 留下的回 `RunFailed` 或照現成回信、跑信的子行程還活著就讓它跑完並佔格、子行程死了＝`RunFailed`）；F 鎖（`.flock`；舊名 `.lock` 被鎖著不算）、環境與 cwd 照信、`timeout_ms`、SIGTERM 轉給單子、早到的訊號不留半套；G `_metainfo`（同級時宣告短的後寄也先跑、有寫的在沒寫的前面、level 與 deadline 照樣壓過它、三種寫壞照樣跑並記 `metainfo_bad`）；
   H token 回報與額度（`AOS_KERNEL_REPORT` 指進信小格並蓋掉信裡的、回報有寫／只有 prompt＋completion／沒寫／三種寫壞、沒跑的不算、`max_calls` 到頂回 `BudgetMissing`、`max_tokens` 到頂排著的全回錯、`wait` 留著等換窗後跑、`all` 不歸零與改窗歸零、`budget`〔含 `calls`／`tokens`〕與 `used.json` 壞）；I accept（名單裡的才跑、`cat` 祕密檔與換了 `cwd`、自帶 `stdout`、`envs` 的回 `InstUnknown`，環境用 kernel 的 `PATH` 與 key、只疊信裡的 `AOS_*`；`accept` 寫壞＝`CfgBad`）。
   信是測試自己寫的（假裝閘門；測試自己 flock 住 `sender.flock`＝寄信的人還在，沒人鎖＝不在；名字裡 pid 是死的、鎖著的照跑）。
-- gate＋kernel＋loop／daemon 一起跑的在 `proto8/tests/test_kernel_llm.py`（含 agent-dan 的 brain.py 經閘門、kernel 跑、假 server 回 usage → served 記到 token）。
+- gate＋kernel＋loop／daemon 一起跑的在 `proto8/tests/test_llm_kernel.py`（含 agent-dan 的 brain.py 經閘門、kernel 跑、假 server 回 usage → served 記到 token）。
 
 ## 已知限制
 

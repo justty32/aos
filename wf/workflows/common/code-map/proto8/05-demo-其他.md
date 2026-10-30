@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 talk、self-improve（10-24）｜下一份 [05-demo-其他-2](05-demo-其他-2.md)（kernel-llm；pi-tools、file-tools 已遷進 lib）
+← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 talk、self-improve（10-24）｜下一份 [05-demo-其他-2](05-demo-其他-2.md)（llm-kernel；pi-tools、file-tools 已遷進 lib）
 
 > 2026-10-24 收尾補：這幾個 demo 各作者做的時候沒改 code map。怎麼跑、錯誤代號見 [demo README](../../../../../proto8/demo/README.md) 各節。
 

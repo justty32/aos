@@ -1,4 +1,4 @@
 #!/bin/sh
 # _entry - 信箱模式的 daemon（daemon.json 寫 loops_mailbox）：名單的增減一封封投進 $AOS_STACK/loops_mailbox/，每圈收。
-# 後面的參數原樣給 aos-daemon（同 kernel-llm）：daemon.json 沒寫 max＝一直跑，run.sh 用 `aos-exec demo/daemon-2 --max 25` 跑 5 秒就收工。
+# 後面的參數原樣給 aos-daemon（同 llm-kernel）：daemon.json 沒寫 max＝一直跑，run.sh 用 `aos-exec demo/daemon-2 --max 25` 跑 5 秒就收工。
 exec aos-daemon "$@" daemon.json

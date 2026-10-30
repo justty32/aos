@@ -6,7 +6,7 @@
 //     new/<信號>/   寄好了、排隊中（寄信人寫好才 rename 進來，所以看到就是完整的）
 //     cur/<信號>/   被處理者認領、處理中（rename new→cur，只有一個人會成功）
 //     done/<信號>/  選用：finish 時 keep＝留在這裡
-//   信＝一個資料夾，名字叫信號 <UTC 奈秒 20 位>.<pid>.<started_at_ticks>（同 aos-kernel-llm 的產生法），
+//   信＝一個資料夾，名字叫信號 <UTC 奈秒 20 位>.<pid>.<started_at_ticks>（同 aos-llm-kernel 的產生法），
 //     裡面必有 letter.json：{"kind": "letter", "sender": 寄信人身分, "sent_at": ISO 8601 UTC 到毫秒,
 //     "reply_to"?: 信箱路徑, "in_reply_to"?: 原信號, "body": 內容（形狀由收信的程式定）}
 //   有順序的投遞（SendOpts::ordered；N-16、medium-plan § 三）：信箱多 order.lock/（aos-lock 的鎖）與 order.json
@@ -40,7 +40,7 @@
 namespace aos::post {
 
 // 錯誤代號：全家共用的（ArgumentsBad、FlagUnknown、InputBad、InputExtra、WriteFailed、MkdirFailed、Internal）＋投遞會吐的。
-// MailboxMissing、LetterMissing、LetterBad 跟 aos-kernel-llm（aos/kernel_llm.hpp）同名同義；那份不在這次的領地，先各定一份。
+// MailboxMissing、LetterMissing、LetterBad 跟 aos-llm-kernel（aos/llm_kernel.hpp）同名同義；那份不在這次的領地，先各定一份。
 namespace code {
 using namespace aos::code;
 inline constexpr const char* CommandUnknown = "CommandUnknown"; // 命令列：不認得的子命令（同 aos-json）

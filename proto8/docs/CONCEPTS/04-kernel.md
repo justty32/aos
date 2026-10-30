@@ -1,4 +1,4 @@
-← [回入口 CONCEPTS.md](../CONCEPTS.md)｜主題：**kernel**｜概念：本檔｜規範：[N-42](../NORMS/09-kernel.md)（兩種 kernel，草稿；打包 N-03 在 [NORMS 時空](../NORMS/02-設計理念-時空.md)；kernel 公告、`_metainfo` 在 [NORMS 待定](../NORMS/08-待定.md)）｜實作：LLM kernel 是 [aos-kernel-llm](../../impls/aos-kernel-llm/README.md)＋[aos-gate](../../impls/aos-gate/README.md)（[thinking 2026-10-24-llm-kernel](../../thinking/2026-10-24-llm-kernel.md)），通用 kernel 現無實作；討論見 [thinking 10-13 kernel／agent](../../thinking/2026-10-13-kernel-agent.md)）
+← [回入口 CONCEPTS.md](../CONCEPTS.md)｜主題：**kernel**｜概念：本檔｜規範：[N-42](../NORMS/09-kernel.md)（兩種 kernel，草稿；打包 N-03 在 [NORMS 時空](../NORMS/02-設計理念-時空.md)；kernel 公告、`_metainfo` 在 [NORMS 待定](../NORMS/08-待定.md)）｜實作：LLM kernel 是 [aos-llm-kernel](../../impls/aos-llm-kernel/README.md)＋[aos-gate](../../impls/aos-gate/README.md)（[thinking 2026-10-24-llm-kernel](../../thinking/2026-10-24-llm-kernel.md)），通用 kernel 現無實作；討論見 [thinking 10-13 kernel／agent](../../thinking/2026-10-13-kernel-agent.md)）
 
 # kernel
 

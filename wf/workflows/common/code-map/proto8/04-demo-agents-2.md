@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 agent-kai、agent-liv、agent-meg、agent-pip、`kernel-llm/agent-ivy`（10-24）｜上一份：[04-demo-agents](04-demo-agents.md)（agent-eve、fay、gus、hal）
+← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 agent-kai、agent-liv、agent-meg、agent-pip、`llm-kernel/agent-ivy`（10-24）｜上一份：[04-demo-agents](04-demo-agents.md)（agent-eve、fay、gus、hal）
 
 > 2026-10-24 收尾補（各 agent 做的時候沒改 code map）。「同 agent-dan」的意思、babdaad2 那一行，見上一份開頭。
 
@@ -57,9 +57,9 @@ coding agent，工具全部掛 [proto8/lib](../../../../../proto8/lib/README.md)
 | `system.txt` | 照 pi 的精神寫的短版，列各工具看／改的用途 |
 | `tools/*` | 十二條符號連結 → `../../../lib/base/<名>`：`read`、`write`、`edit`、`bash`、`ls`、`stat`、`view`、`json_edit`、`mkdir`、`move`、`copy`、`trash` |
 
-### kernel-llm/agent-ivy
+### llm-kernel/agent-ivy
 
-走 LLM kernel 的 ann 式 agent（零子資料夾的全內嵌寫法）；`kernel-llm/` 本身見入口那句。[thinking](../../../../../proto8/thinking/2026-10-24-llm-kernel.md)
+走 LLM kernel 的 ann 式 agent（零子資料夾的全內嵌寫法）；`llm-kernel/` 本身見入口那句。[thinking](../../../../../proto8/thinking/2026-10-24-llm-kernel.md)
 
 | 哪裡 | 負責什麼 |
 |---|---|

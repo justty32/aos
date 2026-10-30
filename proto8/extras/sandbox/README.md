@@ -37,7 +37,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 - `--dry-run`：不跑，印出那一條 argv（一行 JSON）。
 - **`cpu_s` 是 CPU 時間**（`s6-softlimit -t`，到了收 SIGXCPU、退 152），跟單子的 `timeout_ms`、庫的 bash 的 `timeout_s` 那種**牆鐘時間**不同種：`sleep` 一整天不吃 CPU、`cpu_s` 擋不到；要限總時間用叫它那格的 `timeout_ms`。
 - **能不能用 LLM kernel＝看不看得到信箱**（使用者 10-24「就是看他能不能存取檔案啊」，[紀錄 S14、S17](../../thinking/2026-10-24-sandbox.md)）：不另設開關。預設看不到（信箱沒列進 `rw`、`AOS_KERNEL` 不在預設的 `env`）；要用就 `rw` 列 `{"$env": "AOS_KERNEL"}`、`env` 列 `AOS_KERNEL`。綁了信箱的上層資料夾也等於給了信箱（寫什麼就做什麼）。換帳號（`user`／身分層）跑時，寫不寫得進由信箱的擁有者、群組、權限位決定：[root/setup.sh](root/setup.sh) `--mailbox 信箱`。
-  寄得進去之後，沙箱外的 aos-kernel-llm 會用它自己的身分照信跑單子——關在裡面的程式寄得到任何單子，kernel 那邊要寫 `accept`（[aos-kernel-llm](../../impls/aos-kernel-llm/README.md)：只跑名單裡的單子、環境用 kernel 自己的）才擋得住；這條是 Linux 權限管不到的，暫留（紀錄 S18）。
+  寄得進去之後，沙箱外的 aos-llm-kernel 會用它自己的身分照信跑單子——關在裡面的程式寄得到任何單子，kernel 那邊要寫 `accept`（[aos-llm-kernel](../../impls/aos-llm-kernel/README.md)：只跑名單裡的單子、環境用 kernel 自己的）才擋得住；這條是 Linux 權限管不到的，暫留（紀錄 S18）。
 
 錯：stderr 一行 `aos-sandbox: 代號 原因`、退 1——`ArgumentsBad`、`FlagUnknown`、`CfgMissing`（檔不在、`#/` 指不到）、`CfgBad`、`PathMissing`、`CommandMissing`（PATH 上沒有 bwrap、s6-*、`commands` 列的）、`UserBad`（要換身分卻不是 root）。
 

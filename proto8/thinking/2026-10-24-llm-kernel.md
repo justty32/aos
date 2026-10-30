@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-15 kernel 截流](2026-10-15-kernel-intercept.md)（閘門／信箱、六題照建議）、[10-15 LLM kernel](2026-10-15-llm-kernel.md)（priority、排序六條）、[10-19 重寫順序 § ⑤、第 3 題](2026-10-19-rewrite-order.md)、[10-21 計畫 § 1.2](2026-10-21-plan.md)、[10-23 agent 與 kernel](2026-10-23-agent-kernel.md)、[10-24 exec 直接放單子](2026-10-24-exec-relative.md)、[10-24 `_metainfo`](2026-10-24-metainfo.md)
 
-規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。相關條文：[C-09～C-12、C-38、C-47](../docs/CONCEPTS/04-kernel.md)、[C-20](../docs/CONCEPTS/05-agent.md)、[N-42](../docs/NORMS/09-kernel.md)、[N-14、N-16](../docs/NORMS/05-基礎設施-窗.md)、[N-60](../docs/NORMS/10-基礎設施-定義與工作區.md)、C-54。程式：[aos-kernel-llm](../impls/aos-kernel-llm/README.md)、[aos-gate](../impls/aos-gate/README.md)、[demo/kernel-llm](../demo/README.md)。
+規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。相關條文：[C-09～C-12、C-38、C-47](../docs/CONCEPTS/04-kernel.md)、[C-20](../docs/CONCEPTS/05-agent.md)、[N-42](../docs/NORMS/09-kernel.md)、[N-14、N-16](../docs/NORMS/05-基礎設施-窗.md)、[N-60](../docs/NORMS/10-基礎設施-定義與工作區.md)、C-54。程式：[aos-kernel-llm](../impls/aos-llm-kernel/README.md)、[aos-gate](../impls/aos-gate/README.md)、[demo/kernel-llm](../demo/README.md)。
 
 ## 使用者原文（10-24，逐字）
 
@@ -47,7 +47,7 @@
 14. **demo**：`demo/kernel-llm/`——一個 daemon 管 kernel（`slots` 1、`interval_ms` 300）＋三隻 agent（假腦睡 1 秒；a 普通、b 普通但宣告 `time_ms` 800、c high），三題同時丟；接進 `demo/run.sh`。
 15. **`_metainfo` 讀法**（照 metainfo 紀錄 § 5 第一步）：只讀信裡單子的 `_metainfo` 的 `time_ms`、`llm_tokens`（數字或 `{"val", "max"}` 取 `val`）；形狀不對＝那個 key 當沒寫、記進 `metainfo_bad`，照樣跑。`llm_tokens` 只讀不用。全部從 `priority_of` 一個函式讀。
 
-## 邊緣狀況（挖出來的；多數已照上面處理，剩的寫在 [aos-kernel-llm README 已知限制](../impls/aos-kernel-llm/README.md#已知限制)）
+## 邊緣狀況（挖出來的；多數已照上面處理，剩的寫在 [aos-kernel-llm README 已知限制](../impls/aos-llm-kernel/README.md#已知限制)）
 
 - **slots 大於 1 時一次裡不補位**：一封 1 秒、一封 10 秒，那格空等 9 秒；新來的 high 也等這一次結束。
 - **kernel 整群被 SIGKILL**：跑信的子行程跟著死，但單子自成行程群組、可能還在跑；下一次回 `RunFailed`，單子實際做了一半沒人收（brain.py 可能已認領題目、寫了一半 history）。只殺 kernel 本體時，子行程跑完照常交回。
@@ -68,7 +68,7 @@
 <a id="token-回報與額度10-24-下午"></a>
 ## token 回報與額度（10-24 下午）
 
-使用者原文：同上「我現在沒空管這些小事，都按建議做」——上面「決定」的 token 那條（[rewrite-order 第 3 題](2026-10-19-rewrite-order.md)推薦：開 `AOS_KERNEL_REPORT`、額度同時認次數與 token）照做。程式：[aos-kernel-llm § token 回報與額度](../impls/aos-kernel-llm/README.md)。
+使用者原文：同上「我現在沒空管這些小事，都按建議做」——上面「決定」的 token 那條（[rewrite-order 第 3 題](2026-10-19-rewrite-order.md)推薦：開 `AOS_KERNEL_REPORT`、額度同時認次數與 token）照做。程式：[aos-kernel-llm § token 回報與額度](../impls/aos-llm-kernel/README.md)。
 
 ### 結論：照推薦定、可翻案（使用者 10-24「都按建議做」）
 

@@ -25,7 +25,7 @@
 
 namespace fs = std::filesystem;
 
-namespace aos::kernel_llm {
+namespace aos::llm_kernel {
 
 Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json doc = aos::load_cfg(spec);
@@ -448,7 +448,7 @@ pid_t Server::start_runner(const Waiting& w) {
     }
     std::optional<std::string> err = aos::write_json(aos::join(dir, "reply.json"), reply);
     if (err) {
-        std::fprintf(stderr, "aos-kernel-llm: WriteFailed %s\n", err->c_str());
+        std::fprintf(stderr, "aos-llm-kernel: WriteFailed %s\n", err->c_str());
         std::fflush(stderr);
     }
     _exit(0);
@@ -595,4 +595,4 @@ int serve(const Cfg& cfg, const std::string& stack) {
     return s.run();
 }
 
-}  // namespace aos::kernel_llm
+}  // namespace aos::llm_kernel
