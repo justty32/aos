@@ -1,8 +1,8 @@
-# 2026-10-30 使用者看現況地圖後的想法：plan 9 式檔案串流、round 的定位、外部 agent 平級、aos-hub 通用化
+# 2026-10-30 使用者看現況地圖後的想法：plan 9 式檔案串流、round 的定位、外部 agent 平級、aos-hub 通用化、掛 daemon 的指令、kernel 改名
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜相關：[10-28 agent-round](2026-10-28-agent-round.md)（`parts.json` 在 [§ 1 佈局](2026-10-28-agent-round.md#1-佈局)、round 在 [§ 2](2026-10-28-agent-round.md#2-round一輪本身)）、[10-30 agent-lifecycle](2026-10-30-agent-lifecycle.md)、[10-28 hub-kernel](2026-10-28-hub-kernel.md)
 
-規矩見 [thinking/README](README.md)。10-30 早頂層做了一份「aos 現況地圖」網頁給使用者（在他桌面、不在 git），他看完講了下面五點，最後說「好了我還在看」——之後還會再講，接著補進本檔。本檔只放原文與已定／開著的標記；頂層的回答之後補成結論。
+規矩見 [thinking/README](README.md)。10-30 早頂層做了一份「aos 現況地圖」網頁給使用者（在他桌面、不在 git），他看完講了下面五點，說「好了我還在看」，接著又回第 4、5 點、再講第 6～9 點，最後說「剩下的我覺得之後有遇到再說」——這輪到此。本檔只放原文與已定／開著的標記；頂層的回答之後補成結論。
 
 ## 使用者原文（10-30，逐字）
 
