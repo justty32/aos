@@ -60,7 +60,9 @@ def _same(a, b):
 
 def runners(w):
     """有哪些行程在跑這隻 agent：/proc 裡 argv[0] 是 aos-loop／aos-fsm／aos-exec／aos-daemon、
-    環境變數 AOS_STACK＝這個 stack 或 AOS_WS＝這個工作區（沒設 AOS_STACK 時）的，加上 stack 裡 server.txt 自己報名的（declared）。
+    環境變數 AOS_STACK＝這個 stack 或 AOS_WS＝這個工作區（沒設 AOS_STACK 時）的。只靠 /proc（eca 10-30 C 結論 9、F 結論 18：
+    server.txt 自己報名那招刪了——外部 coding agent 也是 aos-loop 包著 turn 格在跑，掃得到；掛在 daemon 底下的，子 loop 的
+    AOS_STACK 是 daemon 的小格，工作區的 .stack 是指過去的 symlink，samefile 認得出來）。
     回 [(pid, 程式名)]。讀不到的行程（別的使用者的）跳過。"""
     found, me = [], os.getpid()
     for d in os.listdir("/proc"):
@@ -81,15 +83,7 @@ def runners(w):
             hit = "AOS_WS" in env and _same(env["AOS_WS"], w.ws) and _same(os.path.join(w.ws, ".stack"), w.stack)
         if hit:
             found.append((int(d), argv0))
-    return found + declared(w)
-
-
-def declared(w):
-    """不靠 /proc 猜的服務者（10-28）：stack 裡的 server.txt 寫「<pid> <程式名>」，那個 pid 還活著就算有人在跑。"""
-    line = (read(os.path.join(w.stack, "server.txt")) or "").split()
-    if len(line) < 2 or not line[0].isdigit() or not os.path.exists("/proc/%s" % line[0]):
-        return []
-    return [(int(line[0]), line[1])]
+    return found
 
 
 def last_trace(w):

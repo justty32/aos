@@ -3,6 +3,8 @@
 10-30 起照 agent 對話協議（CONVENTION P-42；thinking 2026-10-30-agent-lifecycle A-7、A-8、第 4 步）：say＝aos-post send --ordered
 <stack>/queue、listen 只看 stack（信還在 queue 就等、不見了就印 history 最新的回答；--status 看 aos-loop state.json 的 phase）。
 agent＝demo/agent-nia 的格（註冊檔改成絕對路徑放在暫存資料夾，腦壞＝endpoint 換 openai 指到 dead_brain.DEAD）。
+10-30 eca 第 7 步（去 hub 化）：External 段＝外部 coding agent（aos-loop 包 lib/eca/turn、假 claude）跑著時 say／listen 照用、
+--status 只靠 /proc 認得服務者（直接跑、掛 daemon 經 .stack symlink 兩種）；stack 的 server.txt 那招刪了。
 設計：proto8/thinking/2026-10-24-say-listen.md。不連網。"""
 import json, os, re, subprocess, tempfile, time, unittest
 from pathlib import Path
@@ -15,6 +17,8 @@ NIA = ROOT / "demo" / "agent-nia"
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "ROUND_ON_EMPTY")
 from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 SIG = re.compile(r"^\d{12}\.\d{20}\.\d+\.\d+$")
+TURN = ROOT / "lib" / "eca" / "turn"                 # 10-30 eca：外部 coding agent 的一格（External 段）
+from test_fay import FAKE_CLAUDE, SYS_PATH  # noqa: E402  假 claude（不花額度）
 
 
 def env(**kw):
@@ -280,6 +284,101 @@ class ChatTest(Base):
     def test_agent_missing(self):
         r = run(CHAT, "--ws", str(self.ws), str(self.ws / "nope"), input="")
         self.assertRegex(r.stderr, r"^aos-chat: AgentMissing ")
+
+
+class External(Base):
+    """10-30 eca 第 7 步（C 結論 9、F 結論 18；衝突 6 刪 server.txt）：外部 coding agent＝aos-loop 包著 lib/eca/turn 的定義（P-43 草稿），
+    say／listen 不用改；--status 的服務者只靠 /proc。定義在這裡臨時組（demo/eca-claude 還沒有），CLI 用 test_fay 的假 claude。"""
+
+    def setUp(self):
+        super().setUp()
+        t = Path(self._tmp.name)
+        self.bin = t / "fakebin"
+        self.bin.mkdir()
+        (self.bin / "claude").write_text(FAKE_CLAUDE)
+        (self.bin / "claude").chmod(0o755)
+        self.eca = t / "eca-claude"                     # 定義：cli.json＋loop.json（一格 turn）＋_entry 轉 aos-loop
+        self.eca.mkdir()
+        cfg = json.loads((ROOT / "lib" / "agent" / "claude" / "cli.json").read_text())
+        (self.eca / "cli.json").write_text(json.dumps(dict(cfg, timeout_ms=15000)))
+        (self.eca / "loop.json").write_text(json.dumps({"exec": [str(TURN), str(self.eca)], "interval_ms": 100,
+                                                        "ctl": "ctl.json", "state": "state.json"}))
+        (self.eca / "_entry").write_text(json.dumps(["aos-loop", "loop.json"]))
+        self.xenv = dict(PATH=path_with(str(self.bin) + os.pathsep + str(ROOT / "bin") + os.pathsep + SYS_PATH),
+                         FAKE_LOG=str(t / "cli.log"), CLAUDE_CONFIG_DIR=str(t / "claude-home"), ECA_ON_EMPTY="idle")
+
+    def xrun(self, *args, **kw):
+        return run(*args, **dict(self.xenv, **kw))
+
+    def popen(self, argv, **kw):
+        e = env(**dict(self.xenv, **kw))
+        for k in ("TMUX", "CODEX_HOME", "FAKE_TRANSCRIPTS"):
+            e.pop(k, None)
+        p = subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, env=e)
+        self.addCleanup(lambda: (p.poll() is None and p.kill(), p.communicate()))
+        return p
+
+    def phase(self, stack, want):
+        end = time.time() + 20
+        while time.time() < end:
+            try:
+                if json.loads((stack / "state.json").read_text() or "{}").get("phase") in want:
+                    return True
+            except (OSError, ValueError):
+                pass
+            time.sleep(0.05)
+        return False
+
+    def test_status_shows_external_runner_and_phase(self):
+        """aos-exec 直接跑外部範本（idle）：say／listen 答得出；--status 印得出服務者（aos-loop）、phase、最後一格 turn；
+        暫停時 phase paused；stack 裡沒有 server.txt。"""
+        p = self.popen(["aos-exec", "--ws", str(self.ws), str(self.eca)])
+        self.assertTrue(self.phase(self.stack, ("waiting", "running")))
+        sig = self.say("你好", **self.xenv)
+        r = self.xrun(LISTEN, "--ws", str(self.ws), "--timeout", "30", sig)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(r.stdout.startswith("fake claude[") and r.stdout.rstrip().endswith(": 你好"), r.stdout)
+        r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
+        self.assertRegex(r.stdout, r"在跑     .*aos-loop（pid %d）" % p.pid)
+        self.assertRegex(r.stdout, r"loop     phase (waiting|running)（state\.json）")
+        self.assertRegex(r.stdout, r"最後一格 turn 退 0")
+        self.assertFalse((self.stack / "server.txt").exists())
+        (self.stack / "ctl.json").write_text('{"paused": true}')
+        self.assertTrue(self.phase(self.stack, ("paused",)))
+        r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
+        self.assertIn("loop     phase paused", r.stdout)
+        self.assertRegex(r.stdout, r"在跑     .*aos-loop")
+        (self.stack / "ctl.json").write_text('{"stopped": true}')
+        self.assertEqual(p.wait(timeout=20), 0)
+        r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
+        self.assertIn("在跑     沒有", r.stdout)
+
+    def test_status_sees_runner_under_daemon(self):
+        """掛在 daemon 底下（aos-daemon-ctl add --ws）：子 loop 的 AOS_STACK 是 daemon 的小格、工作區的 .stack 是指過去的 symlink，
+        --status 照樣認得服務者；say／listen 經 symlink 答得出。"""
+        ds = Path(self._tmp.name) / "dstack"
+        ds.mkdir()
+        dj = Path(self._tmp.name) / "daemon.json"
+        dj.write_text(json.dumps({"interval_ms": 100, "ctl": "ctl.json", "state": "state.json", "loops_mailbox": "loops_mailbox"}))
+        d = self.popen(["aos-daemon", str(dj)], AOS_STACK=str(ds))
+        end = time.time() + 20
+        while not (ds / "loops_mailbox" / "new").is_dir():
+            self.assertLess(time.time(), end)
+            time.sleep(0.05)
+        r = self.xrun(str(ROOT / "bin" / "aos-daemon-ctl"), "--daemon", str(ds), "add", "--ws", str(self.ws), "--name", "bob",
+                      str(self.eca))
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(os.readlink(self.stack), str(ds / "bob"))
+        self.assertTrue(self.phase(ds / "bob", ("waiting", "running")))
+        sig = self.say("在 daemon 底下", **self.xenv)
+        r = self.xrun(LISTEN, "--ws", str(self.ws), "--timeout", "30", sig)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(r.stdout.rstrip().endswith(": 在 daemon 底下"), r.stdout)
+        r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
+        self.assertRegex(r.stdout, r"在跑     .*aos-loop")
+        self.assertRegex(r.stdout, r"loop     phase (waiting|running)")
+        (ds / "ctl.json").write_text('{"stopped": true}')
+        self.assertEqual(d.wait(timeout=30), 0)
 
 
 if __name__ == "__main__":
