@@ -85,7 +85,9 @@ class Chat:
             h.note("agent 停了（%s、agent 結束碼 %d）；queue 裡還有 %d 封沒答，信留在 cur/／new/。上面那行錯誤修好後打 /run 接著做"
                    % (why or "trace 沒記到哪一格", code, left))
         else:
-            h.note("agent 跑完了，但 queue 裡還有 %d 封沒答（%s）；打 /status 看看" % (left, "、".join(self.pending())))
+            new = h.names(self.w.stack, "new")
+            h.note("agent 跑完了，但 queue 裡還有 %d 封沒答（%s）；%s打 /status 看看"
+                   % (left, "、".join(self.pending()), "new/ 的沒被認領：%s；" % h.OLD_PROTOCOL if new and h.unclaimed(self.w, new[0]) else ""))
 
     def wait_other(self):
         """沒給 agent：等別人跑。回答到了、queue 也清了就回；沒人跑提醒一次、繼續等。"""

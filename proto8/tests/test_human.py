@@ -14,6 +14,7 @@ from aos_bins import ROOT, path_with  # noqa: E402
 HUMAN = ROOT / "extras" / "human" / "bin"
 SAY, LISTEN, CHAT = (str(HUMAN / n) for n in ("aos-say", "aos-listen", "aos-chat"))
 NIA = ROOT / "demo" / "agent-nia"
+DAN = str(ROOT / "demo" / "agent-dan")              # 舊協議（讀工作區 new/、不收 queue）：10-30 晚真腦實測發現 2
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "ROUND_ON_EMPTY")
 from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 SIG = re.compile(r"^\d{12}\.\d{20}\.\d+\.\d+$")
@@ -146,6 +147,31 @@ class ListenTest(Base):
         self.assertIn("[叫工具 clock {}]", err)                # --trace：工具呼叫與每格一行
         self.assertRegex(err, r"· idle \d+ms")                   # 10-30 aos-round 起 trace 是 fsm 的一格一行（state）
 
+    def test_old_protocol_agent_unclaimed(self):
+        """say 之後拿舊協議的 agent（agent-dan）跑：退 0、信原封留在 new/；listen 不一直等，說「沒人認領、可能是舊協議」就退（LetterUnclaimed）。
+        先開 listen、後跑也一樣；之後換走 queue 的 agent 跑就答得出。"""
+        sig = self.say("舊協議")
+        self.assertEqual(self.go(DAN).returncode, 0)
+        self.assertEqual(self.queue("new"), [sig])
+        t0 = time.time()
+        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "30", sig)
+        self.assertLess(time.time() - t0, 10)
+        self.assertEqual(r.returncode, 1)
+        self.assertRegex(r.stderr.splitlines()[-1], r"^aos-listen: LetterUnclaimed %s 還在 queue 的 new/ 沒人認領" % re.escape(sig))
+        self.assertIn("舊協議", r.stderr)
+        sig2 = self.say("先開 listen")
+        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "30", sig2], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True, env=env())
+        time.sleep(1.5)                                        # 這時還沒人跑過：提醒一次、照等
+        self.assertEqual(self.go(DAN).returncode, 0)
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, out), (1, ""))
+        self.assertIn("還在 queue 的 new/，但目前沒有程式在跑", err)
+        self.assertIn("aos-listen: LetterUnclaimed", err)
+        self.assertEqual(self.go().returncode, 0)                # 換走 queue 的 agent-nia：兩封都答
+        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "5", sig2)
+        self.assertEqual(r.returncode, 0, r.stderr)
+
     def test_waits_while_letter_in_cur(self):
         """信在 cur/（認領了、腦壞停住）：listen 照等、說停在哪一格；修好再跑就答出。"""
         sig = self.say("壞腦")
@@ -264,6 +290,13 @@ class ChatTest(Base):
         r = run(CHAT, "--ws", str(self.ws), self.agent, input="/run\n")   # 新開一個 chat（假腦）：認得還沒答的那封，/run 接著做
         self.assertIn("queue 裡已經有 1 封還沒答", r.stderr)
         self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 壞腦那題"), r.stdout + r.stderr)
+
+    def test_old_protocol_agent_hint(self):
+        """chat 替你跑舊協議的 agent：跑完信還在 new/，提醒可能是舊協議（10-30 晚真腦實測發現 2）。"""
+        r = run(CHAT, "--ws", str(self.ws), DAN, input="你好\n")
+        self.assertEqual((r.returncode, r.stdout), (0, ""), r.stderr)
+        self.assertIn("agent 跑完了，但 queue 裡還有 1 封沒答", r.stderr)
+        self.assertIn("舊協議", r.stderr)
 
     def test_without_agent_waits_for_other_runner(self):
         p = subprocess.Popen([CHAT, "--ws", str(self.ws)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,

@@ -103,9 +103,30 @@ def failure(t):
     return "停在 %s 那格、%s" % (aos_ws.unit_of(t), how)
 
 
+OLD_PROTOCOL = ("這隻 agent 可能還是舊協議（讀工作區的 new/*.txt、不收 queue，例 demo/agent-dan；改用走 queue 的版本，例 agent-dan-q），"
+                "或 loop 的 max 先到了")
+
+
+def unclaimed(w, sig):
+    """sig 還在 queue 的 new/，可是 stack 的 trace.jsonl 比這封信新＝它寄出之後有程式跑過這個 stack、卻沒認領它
+    （10-30 晚真腦實測發現 2；「現在沒人在跑」由呼叫的人先確認）。trace 或信讀不到＝False。"""
+    try:
+        return (os.stat(os.path.join(w.stack, "trace.jsonl")).st_mtime_ns
+                > os.stat(os.path.join(aos_ws.box_of(w.stack), "new", sig)).st_mtime_ns)
+    except OSError:
+        return False
+
+
+def unclaimed_hint(w, sig):
+    return ("%s 還在 queue 的 new/ 沒人認領，可是它寄出之後已經有程式跑過這個 stack、現在停了（trace.jsonl 比這封新）：%s"
+            % (sig, OLD_PROTOCOL))
+
+
 def stuck_hint(w, sig):
     """這封還沒答、又沒人在跑時，說一句它停在哪。"""
     stages = where(w.stack, sig)
+    if stages == ["new"] and unclaimed(w, sig):
+        return unclaimed_hint(w, sig)
     why = failure(last_trace(w))
     if "cur" in stages and why:
         return ("%s 做到一半停了：上次%s（錯誤一行在跑它的那個終端機）。修好再跑一次會接著做這封。%s"
