@@ -96,7 +96,7 @@ kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sand
 
 | 檔 | 做什麼 |
 |---|---|
-| `include/aos/llm_kernel.hpp` | 公開：信箱四格（`Mailbox`）、信號（`letter_id`、`sender_alive`）、`parse_priority`／`priority_of`（priority＋`_metainfo` 的 `time_ms`、`llm_tokens`）／`level_name`、`read_reply`、全部代號（閘門也用） |
+| `include/aos/llm_kernel.hpp` | 公開：信箱四格（`Mailbox`）、寄信的人（`hold_sender`、`sender_alive`；信號產生法 10-30 起在 aos-util 的 `aos::unique_id`）、`parse_priority`／`priority_of`（priority＋`_metainfo` 的 `time_ms`、`llm_tokens`）／`level_name`、`read_reply`、全部代號（閘門也用） |
 | `src/letter/letter.cpp` | 上面那些的實作（ISO 8601 自己解：`YYYY-MM-DDTHH:MM:SS[.小數](Z|±HH:MM)`） |
 | `src/queue/queue.hpp`、`queue.cpp` | `queue.json` 讀寫、`waited_runs`（寫進 served 的 `counter_waited_runs`）、`effective`、`order` |
 | `src/serve/serve.hpp`、`serve.cpp` | `read_cfg`、`serve`（`Server`：鎖、收拾、看信、額度到頂就回錯或停、認領、fork 子行程跑〔設 `AOS_KERNEL_REPORT`〕、等、回信、served.jsonl） |

@@ -6,7 +6,7 @@
 //     new/<信號>/   寄好了、排隊中（寄信人寫好才 rename 進來，所以看到就是完整的）
 //     cur/<信號>/   被處理者認領、處理中（rename new→cur，只有一個人會成功）
 //     done/<信號>/  選用：finish 時 keep＝留在這裡
-//   信＝一個資料夾，名字叫信號 <UTC 奈秒 20 位>.<pid>.<started_at_ticks>（同 aos-llm-kernel 的產生法），
+//   信＝一個資料夾，名字叫信號 <UTC 奈秒 20 位>.<pid>.<started_at_ticks>（產生法是 aos-util 的 aos::unique_id，全家一份），
 //     裡面必有 letter.json：{"kind": "letter", "sender": 寄信人身分, "sent_at": ISO 8601 UTC 到毫秒,
 //     "reply_to"?: 信箱路徑, "in_reply_to"?: 原信號, "body": 內容（形狀由收信的程式定）}
 //   有順序的投遞（SendOpts::ordered；N-16、medium-plan § 三）：信箱多 order.lock/（aos-lock 的鎖）與 order.json
@@ -16,7 +16,6 @@
 //   init        建信箱（mkdir -p 信箱、tmp/ new/ cur/）；已經有＝沒事。建不了丟 MkdirFailed
 //   open        拿一個已建好的信箱：信箱或 tmp/ new/ cur/ 不是資料夾丟 MailboxMissing
 //   sender      寄信人身分＝$AOS_WS（絕對路徑），沒設才 $HOME（絕對路徑）；人也一樣
-//   letter_id   新信號
 //   send        寄一封：mkdir tmp/<信號>（撞名換一個）→ 寫 letter.json → rename 進 new/。回信號（ordered＝帶序號的那個名字）
 //   claim       認領一封：new/ 照名字排序，第一個 rename 進 cur/ 成功的；沒有＝nullopt
 //   claim_all   認領 new/ 裡全部（照名字排序），回認領到的（照名字排序）；沒有＝空
@@ -39,14 +38,10 @@
 
 namespace aos::post {
 
-// 錯誤代號：全家共用的（ArgumentsBad、FlagUnknown、InputBad、InputExtra、WriteFailed、MkdirFailed、Internal）＋投遞會吐的。
-// MailboxMissing、LetterMissing、LetterBad 跟 aos-llm-kernel（aos/llm_kernel.hpp）同名同義；那份不在這次的領地，先各定一份。
+// 錯誤代號：全家共用的（ArgumentsBad、FlagUnknown、InputBad、InputExtra、WriteFailed、MkdirFailed、Internal；
+// 投遞的 CommandUnknown、MailboxMissing、LetterMissing、LetterBad 10-30 收進 aos-util 的 aos/error.hpp）＋只有投遞會吐的。
 namespace code {
 using namespace aos::code;
-inline constexpr const char* CommandUnknown = "CommandUnknown"; // 命令列：不認得的子命令（同 aos-json）
-inline constexpr const char* MailboxMissing = "MailboxMissing"; // 信箱不在、或 tmp/ new/ cur/ 沒建好（同 aos-llm-send）
-inline constexpr const char* LetterMissing = "LetterMissing";   // 指名的信不在 cur/（check、finish）
-inline constexpr const char* LetterBad = "LetterBad";           // 命令列 check：letter.json 不是 JSON 物件、缺必填、型別不對
 inline constexpr const char* WithdrawFailed = "WithdrawFailed"; // 命令列 withdraw：信不在 new/（已被認領，或本來就沒有）
 inline constexpr const char* OrderBad = "OrderBad";             // ordered：order.json 在但讀不懂（不是 {"counter_letters": 非負整數}）
 }  // namespace code
@@ -75,7 +70,6 @@ struct Checked {
 void init(const std::string& root);
 Mailbox open(const std::string& root);
 std::string sender();
-std::string letter_id();
 std::string send(const Mailbox& mb, const Json& body, const SendOpts& opts);
 std::optional<std::string> claim(const Mailbox& mb);
 std::vector<std::string> claim_all(const Mailbox& mb);

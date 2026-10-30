@@ -1,6 +1,6 @@
 // common.hpp：aos-json 跨元素共用——自己的錯誤代號。
 //
-// 全家共用的代號（ArgumentsBad、FlagUnknown、WriteFailed、Internal）在 aos-util 的 aos::code；
+// 全家共用的代號（ArgumentsBad、FlagUnknown、WriteFailed、CommandUnknown〔10-30 收過去〕、Internal）在 aos-util 的 aos::code；
 // DirectiveBad 在 aos-directive。這裡只加 aos-json 自己會吐的（照 C-54：…Missing／…Unknown／…Bad）。
 #pragma once
 
@@ -12,7 +12,6 @@ namespace aos::json {
 
 namespace code {
 using namespace aos::code;   // ArgumentsBad、FlagUnknown、WriteFailed、Internal、DirectiveBad…
-inline constexpr const char* CommandUnknown = "CommandUnknown"; // 不認得的子命令
 inline constexpr const char* FileMissing = "FileMissing";       // 要讀、要改的檔不在
 inline constexpr const char* FileBad = "FileBad";               // 檔讀不了（含資料夾）、不是 JSON
 inline constexpr const char* SpecBad = "SpecBad";               // `檔#xx`：# 後面不是 /

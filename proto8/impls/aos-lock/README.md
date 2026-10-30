@@ -39,7 +39,7 @@ aos-lock show data.json                                                         
 | 檔 | 做什麼 |
 |---|---|
 | `include/aos/lock.hpp` | 公開介面：`Holder`、`Seen`、`STALE_MS`；`lock_dir_of`、`identity`、`holder_of`、`to_json`、`look`、`reapable`、`try_acquire`、`acquire`、`release`；自己的代號 |
-| `src/holder/holder.cpp` | 名牌：`identity`、`holder_of`、`to_json`、`look`、`reapable`（判死活、殭屍、租約）；common 的 `now_ms`、`parse_at`、`unique_id` |
+| `src/holder/holder.cpp` | 名牌：`identity`、`holder_of`、`to_json`、`look`、`reapable`（判死活、殭屍、租約）；common 的 `now_ms`、`parse_at`（獨一無二的名字 10-30 起用 aos-util 的 `aos::unique_id`） |
 | `src/lock/lock.cpp` | 鎖：`lock_dir_of`、寫名牌（暫存改名、不建資料夾）、`try_acquire`、`reap`（收屍牌 `.reaping` → 再讀名牌確認 → 改名再刪）、`acquire`（steady_clock 計時）、`release` |
 | `src/common/common.hpp` | 內部標頭：`using`、時間與名字小工具的宣告 |
 | `src/main.cpp` | 命令列：子命令表、旗標、持有者預設 getppid；出錯印「aos-lock: 代號 原因」 |
@@ -51,7 +51,7 @@ stderr 一行 **`aos-lock: 代號 原因`**、退 1。
 | 代號 | 什麼時候 |
 |---|---|
 | `ArgumentsBad`、`FlagUnknown`（共用） | 子命令沒給、目標不是剛好一個、`--lease-ms`／`--wait-ms`／`--pid` 不是非負整數、`--pid` 的行程不在、不認得的旗標 |
-| `CommandUnknown`（同 aos-json） | 不認得的子命令 |
+| `CommandUnknown`（全家共用，aos-util） | 不認得的子命令 |
 | `LockMissing` | `release`：鎖不在 |
 | `HolderBad` | `show`：鎖在，名牌不在或讀不懂 |
 | `MkdirFailed`、`WriteFailed`、`Internal`（共用） | 鎖資料夾建不了（上一層不在、沒權限）；名牌寫不了、改名不了；照理不會發生的 |

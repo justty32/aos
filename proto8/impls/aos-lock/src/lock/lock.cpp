@@ -4,6 +4,7 @@
 #include "common/common.hpp"
 
 #include "aos/files.hpp"
+#include "aos/proc.hpp"
 
 #include <cerrno>
 #include <cstdio>
@@ -69,7 +70,7 @@ static bool write_holder(const std::string& lock_dir, const Json& doc, std::stri
 
 // 改名成 <鎖>.releasing.<信號>：成功回新名字，鎖不在回空字串。
 static std::string move_away(const std::string& lock_dir) {
-    std::string gone = lock_dir + ".releasing." + unique_id();
+    std::string gone = lock_dir + ".releasing." + aos::unique_id();
     if (std::rename(lock_dir.c_str(), gone.c_str()) == 0) {
         return gone;
     }

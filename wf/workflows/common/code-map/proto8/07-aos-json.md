@@ -6,7 +6,7 @@
 | 哪裡 | 負責什麼 |
 |---|---|
 | `src/main.cpp` | 命令列 `aos-json 子命令 [旗標...] 檔#/指標 [...]`：第一個參數查表挑子命令（`get`、`peek`、`where`、`set`、`batch`、`del`、`append`、`merge`、`env`、`ref`、`check`）；錯一行 `aos-json: 代號 原因`、退 1（同 aos-exec，N-60） |
-| `src/common/common.hpp` | 自己的錯誤代號（`CommandUnknown`、`FileMissing`、`FileBad`、`SpecBad`、`PointerMissing`、`ValueMissing`、`ValueBad`、`TargetBad`、`CheckFailed`、`FollowMissing`；check 報的 `DirectiveFormBad`、`ExecBad`）；全家共用的從 aos-util、`DirectiveBad` 從 aos-directive |
+| `src/common/common.hpp` | 自己的錯誤代號（`FileMissing`、`FileBad`、`SpecBad`、`PointerMissing`、`ValueMissing`、`ValueBad`、`TargetBad`、`CheckFailed`、`FollowMissing`；check 報的 `DirectiveFormBad`、`ExecBad`）；全家共用的（含 10-30 收過去的 `CommandUnknown`）從 aos-util、`DirectiveBad` 從 aos-directive |
 | `src/doc/doc.hpp` | 【doc】`File`（原文、`#!` 行、縮排、結尾換行、權限）、`Docs`（讀過的檔都留著、改完一起寫）、`Spec`、指標 |
 | `src/doc/file.cpp` | `load_file`（記 `#!`、猜縮排、權限）、`render_body`、`save_file`（同資料夾 `.名字.<pid>.tmp` → fsync → rename，N-05；值沒變不寫；捷徑寫到它指的檔） |
 | `src/doc/splice.cpp` | 寫回時只重寫有變的那一塊（自己掃 JSON 找起訖、一行的寫一行、跨行的照檔的縮排），其他原文不動；做不到才整份重排 |

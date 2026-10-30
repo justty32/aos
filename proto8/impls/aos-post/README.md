@@ -56,9 +56,9 @@ stderr 一行 **`aos-post: 代號 原因`**、退 1。
 | 代號 | 什麼時候 |
 |---|---|
 | `ArgumentsBad`、`FlagUnknown`（共用） | 子命令沒給、位置參數個數不對、信號不是單純的名字、旗標缺值、開關帶值、不認得的旗標 |
-| `CommandUnknown`（同 aos-json） | 不認得的子命令 |
+| `CommandUnknown`（全家共用，aos-util） | 不認得的子命令 |
 | `InputBad`、`InputExtra`（共用） | `send`、`finish --reply` 的 stdin 解不出 JSON、有好幾份 |
-| `MailboxMissing`（同 aos-llm-send） | 信箱或 `tmp/`、`new/`、`cur/` 不是資料夾；`finish --reply` 時 `reply_to` 指的不是信箱 |
+| `MailboxMissing`（全家共用，aos-util） | 信箱或 `tmp/`、`new/`、`cur/` 不是資料夾；`finish --reply` 時 `reply_to` 指的不是信箱 |
 | `LetterMissing`（同 aos-llm-send） | `check`、`finish`：信不在 `cur/` |
 | `LetterBad` | `check`：壞信 |
 | `WithdrawFailed` | `withdraw`：信不在 `new/` |

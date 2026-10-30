@@ -15,7 +15,8 @@
 //   回報：report.json＝腦自願寫的 API 回覆 usage（kernel 跑信時給環境變數 AOS_KERNEL_REPORT 指向 cur/<id>/report.json；10-24）
 //   寄信的人：sender.flock＝閘門建好信就 flock（LOCK_EX）住、拿到行程結束（10-24 改：原本看名字裡的 pid，沙箱有自己的行程編號就對不上）
 //
-//   letter_id      新信號：<UTC 奈秒 20 位>.<閘門 pid>.<閘門 started_at_ticks>——照字典序排＝照寄的先後；pid、ticks 只讓名字不撞
+//   信號＝aos-util 的 aos::unique_id()：<UTC 奈秒 20 位>.<閘門 pid>.<閘門 started_at_ticks>——照字典序排＝照寄的先後；pid、ticks 只讓名字不撞
+//          （10-30 起全家一份；原本這裡的 letter_id 與 aos-post、aos-lock 各一份）
 //   hold_sender    閘門：開 <信>/sender.flock（0666，權限照信箱的 umask／ACL）、flock 住；回 fd，一直開著到行程結束。失敗丟 WriteFailed
 //   sender_alive   寄這封信的閘門還在不在：<信>/sender.flock 有人鎖著＝在；檔不在、開不了、鎖得到＝不在
 //                  （flock 跟著檔走，不看 pid，所以沙箱〔別的 pid、mount namespace〕裡的閘門也認得）
@@ -39,10 +40,9 @@ namespace aos::llm_kernel {
 // 錯誤代號：沿用 aos-loop 的（→ aos-exec → aos-util），再加信箱、信會吐的。
 namespace code {
 using namespace aos::loop::code;   // ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、StackMissing、WriteFailed、MkdirFailed…
-inline constexpr const char* MailboxMissing = "MailboxMissing"; // 閘門：沒設 AOS_KERNEL、或它指的不是資料夾
+                                   // MailboxMissing（閘門：沒設 AOS_KERNEL、不是資料夾）、LetterBad（回信：信讀不懂）、
+                                   // LetterMissing（閘門：自己的信不見了）10-30 收進 aos-util
 inline constexpr const char* PriorityBad = "PriorityBad";       // priority 寫壞（閘門自己擋；kernel 收到這種信回 LetterBad）
-inline constexpr const char* LetterBad = "LetterBad";           // 回信：letter.json 讀不了、不是物件、inst 不是物件、priority 壞
-inline constexpr const char* LetterMissing = "LetterMissing";   // 閘門：自己的信在信箱裡不見了（被人刪掉）
 inline constexpr const char* DeadlineMissed = "DeadlineMissed"; // 回信：輪到之前時限已過，沒跑（10-15 LLM kernel 稿定的名字）
 inline constexpr const char* RunFailed = "RunFailed";           // 回信：跑到一半 kernel 死了、沒寫回信（下次 kernel 起來時發現）
 inline constexpr const char* ReplyBad = "ReplyBad";             // 閘門：回信讀不懂
@@ -64,7 +64,6 @@ struct Mailbox {
 
 inline constexpr const char* SENDER_FLOCK = "sender.flock";   // 10-29 原叫 sender.lock（.lock 留給 N-15 的資料夾鎖）
 
-std::string letter_id();
 int hold_sender(const std::string& letter_dir);
 bool sender_alive(const std::string& letter_dir);
 

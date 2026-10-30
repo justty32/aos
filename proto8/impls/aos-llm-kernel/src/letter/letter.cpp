@@ -4,7 +4,6 @@
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
 
-#include <chrono>
 #include <cerrno>
 #include <cmath>
 #include <cstdio>
@@ -21,15 +20,6 @@ std::string Mailbox::tmp() const { return aos::join(root, "tmp"); }
 std::string Mailbox::fresh() const { return aos::join(root, "new"); }
 std::string Mailbox::cur() const { return aos::join(root, "cur"); }
 std::string Mailbox::done() const { return aos::join(root, "done"); }
-
-std::string letter_id() {
-    long long ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                       std::chrono::system_clock::now().time_since_epoch()).count();
-    std::optional<long long> ticks = aos::proc_started_at_ticks(0);
-    char buf[96];
-    std::snprintf(buf, sizeof buf, "%020lld.%ld.%lld", ns, (long)getpid(), ticks ? *ticks : -1LL);
-    return buf;
-}
 
 int hold_sender(const std::string& letter_dir) {
     std::string path = aos::join(letter_dir, SENDER_FLOCK);

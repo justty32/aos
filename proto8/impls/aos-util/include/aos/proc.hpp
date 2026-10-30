@@ -59,6 +59,18 @@ std::optional<std::string> boot_id();
 // （10-23 命名統合：state 的 at、fsm trace 的 at 都用這一種寫法）。
 std::string utc_now_ms();
 
+// 現在（UTC epoch 奈秒，system_clock）。
+long long utc_now_ns();
+
+// 一個時間點（UTC epoch 奈秒）的 ISO 8601 UTC 到毫秒，寫法同 utc_now_ms（aos-post 讓信號與 sent_at 取自同一刻）。
+std::string utc_ms_at(long long ns);
+
+// 信號（獨一無二的名字）：<UTC 奈秒 20 位>.<pid>.<started_at_ticks>（讀不到 ticks＝-1）；ns 省略＝現在。
+// 照字典序排＝照產生的先後（同一刻以後的比較不保證）；pid、ticks 只讓名字在同機不撞。N-16 的信號、aos-lock 放鎖時的改名都用這個
+// （10-30 從 aos-llm-kernel、aos-post、aos-lock 三份一樣的寫法收來，medium-plan 實作時代定 12）。
+std::string unique_id();
+std::string unique_id(long long ns);
+
 // 兄弟專案的執行檔：自己是 impls/X/bin/X，就回 impls/<name>/bin/<name>（全家找執行檔的規則，不看 PATH）。
 std::string sibling_tool(const std::string& name);
 

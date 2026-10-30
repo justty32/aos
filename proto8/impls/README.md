@@ -133,12 +133,13 @@
 | `CwdMissing`、`OpenFailed`、`CommandMissing`、`CommandBad`、`WaitFailed`、`KillFailed`、`PathConflict`、`PathNotAbsolute` | libaos（`aos_inst_strerror`；aos-exec 跑 inst 單子起不來時放在 `LaunchFailed` 的原因開頭） | 見 [inst](inst/README.md) |
 | `StackMissing` | aos-loop（定義在 `aos/loop.hpp`）、aos-fsm、aos-daemon | 要 `AOS_STACK` 卻沒設（loop 開了窗、fsm、daemon） |
 | `StateUnknown` | aos-fsm | state 檔裡的狀態不在表上。見 [aos-fsm](aos-fsm/README.md) |
-| `MailboxMissing`、`PriorityBad`、`LetterMissing`、`ReplyBad` | aos-llm-send（定義在 `aos/llm_kernel.hpp`） | 沒設 `AOS_KERNEL` 或不是資料夾；priority 寫壞；信在信箱裡不見了；回信讀不懂 |
+| `PriorityBad`、`ReplyBad` | aos-llm-send（定義在 `aos/llm_kernel.hpp`） | priority 寫壞；回信讀不懂 |
+| `MailboxMissing`、`LetterMissing`、`LetterBad`、`CommandUnknown` | aos-post、aos-llm-send、aos-llm-kernel（回信）；`CommandUnknown`＝aos-json、aos-post、aos-lock（10-30 從各定一份收進 aos-util 的 `aos::code`） | 信箱或四格不在、沒設 `AOS_KERNEL`；信不在該在的格（aos-post 的 `cur/`、aos-llm-send 等的信不見了）；信壞了（aos-post `check`、kernel 回信）；不認得的子命令 |
 | `LockFailed`、`QueueBad`、`UsedBad` | aos-llm-kernel | 信箱被另一個 kernel 鎖著；`$AOS_STACK/queue.json` 讀不懂；`$AOS_STACK/used.json`（用量帳）讀不懂 |
 | `LetterBad`、`DeadlineMissed`、`BudgetMissing`、`RunFailed` | aos-llm-kernel 寫進回信、aos-llm-send 印出來 | 信讀不懂或 priority 壞；輪到之前時限已過；這一窗額度用完；上一次 kernel 跑到一半死了沒回信 |
-| `CommandUnknown`、`FileMissing`、`FileBad`、`SpecBad`、`PointerMissing`、`ValueMissing`、`ValueBad`、`TargetBad`、`FollowMissing`、`CheckFailed` | aos-json（`src/common/common.hpp`；印法同 aos-exec：`aos-json: 代號 原因`） | 見 [aos-json](aos-json/README.md)；它也吐全家共用的 `ArgumentsBad`、`FlagUnknown`、`WriteFailed`、`Internal` 與 `DirectiveBad` |
-| `MailboxMissing`、`LetterMissing`、`LetterBad`、`WithdrawFailed`、`OrderBad`、`CommandUnknown` | aos-post（`aos/post.hpp`；前三個跟 aos-llm-send／aos-llm-kernel 同名同義、`CommandUnknown` 同 aos-json，各定一份；印法 `aos-post: 代號 原因`） | 信箱或四格不在；信不在 `cur/`；`check` 到壞信；撤不了（不在 `new/`）；`order.json` 讀不懂；不認得的子命令。見 [aos-post](aos-post/README.md) |
-| `LockMissing`、`HolderBad`、`CommandUnknown` | aos-lock（`aos/lock.hpp`；印法 `aos-lock: 代號 原因`） | `release` 的鎖不在；`show` 的名牌不在或讀不懂；不認得的子命令。見 [aos-lock](aos-lock/README.md) |
+| `FileMissing`、`FileBad`、`SpecBad`、`PointerMissing`、`ValueMissing`、`ValueBad`、`TargetBad`、`FollowMissing`、`CheckFailed` | aos-json（`src/common/common.hpp`；印法同 aos-exec：`aos-json: 代號 原因`） | 見 [aos-json](aos-json/README.md)；它也吐全家共用的 `ArgumentsBad`、`FlagUnknown`、`WriteFailed`、`Internal` 與 `DirectiveBad` |
+| `WithdrawFailed`、`OrderBad` | aos-post（`aos/post.hpp`；印法 `aos-post: 代號 原因`；它也吐上面那列的四個） | 撤不了（不在 `new/`）；`order.json` 讀不懂。見 [aos-post](aos-post/README.md) |
+| `LockMissing`、`HolderBad` | aos-lock（`aos/lock.hpp`；印法 `aos-lock: 代號 原因`） | `release` 的鎖不在；`show` 的名牌不在或讀不懂；不認得的子命令。見 [aos-lock](aos-lock/README.md) |
 | `DirectiveFormBad`、`ExecBad` | aos-json 的 `check` 印在 stdout（問題，不是 aos-json 自己的錯） | 帶 `$ref`／`$env` 但寫法不合（aos 會原封不動留著）；`exec` 形狀不對 |
 | `SchemaBad` | aos-schema | schema 不合 draft-07、`$ref` 指不到 |
 

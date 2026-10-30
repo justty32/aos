@@ -34,10 +34,9 @@
 
 namespace aos::lock {
 
-// 錯誤代號：全家共用的（ArgumentsBad、FlagUnknown、WriteFailed、MkdirFailed、Internal）＋鎖會吐的。
+// 錯誤代號：全家共用的（ArgumentsBad、FlagUnknown、WriteFailed、MkdirFailed、CommandUnknown、Internal）＋鎖會吐的。
 namespace code {
 using namespace aos::code;
-inline constexpr const char* CommandUnknown = "CommandUnknown"; // 命令列：不認得的子命令（同 aos-json、aos-post）
 inline constexpr const char* LockMissing = "LockMissing";       // 命令列 release：鎖不在
 inline constexpr const char* HolderBad = "HolderBad";           // 命令列 show：鎖在，名牌不在或讀不懂
 }  // namespace code

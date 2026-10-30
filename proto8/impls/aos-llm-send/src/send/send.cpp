@@ -99,7 +99,7 @@ std::string post(const Mailbox& mb, const std::string& spec) {
 
     make_dir(mb.tmp());
     make_dir(mb.fresh());
-    std::string id = aos::llm_kernel::letter_id();
+    std::string id = aos::unique_id();
     std::string t = aos::join(mb.tmp(), "." + id);   // . 開頭＝還在寫，kernel 不碰
     make_dir(t);
     try {

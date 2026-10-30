@@ -49,25 +49,8 @@ struct Stamp {
 };
 
 static Stamp stamp() {
-    long long ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                       std::chrono::system_clock::now().time_since_epoch()).count();
-    std::optional<long long> ticks = aos::proc_started_at_ticks(0);
-    char id[96];
-    std::snprintf(id, sizeof id, "%020lld.%ld.%lld", ns, (long)getpid(), ticks ? *ticks : -1LL);
-    // sent_at：照 aos-util 的 utc_now_ms 同一種寫法（2026-10-23T01:58:45.123+00:00）
-    time_t sec = (time_t)(ns / 1000000000LL);
-    long ms = (long)((ns / 1000000LL) % 1000LL);
-    std::tm tm{};
-    gmtime_r(&sec, &tm);
-    char day[32];
-    std::strftime(day, sizeof day, "%Y-%m-%dT%H:%M:%S", &tm);
-    char at[80];
-    std::snprintf(at, sizeof at, "%s.%03ld+00:00", day, ms);
-    return Stamp{id, at};
-}
-
-std::string letter_id() {
-    return stamp().id;
+    long long ns = aos::utc_now_ns();
+    return Stamp{aos::unique_id(ns), aos::utc_ms_at(ns)};   // 信號與 sent_at 的產生法在 aos-util（10-30 收過去）
 }
 
 // order.json 的 N：沒有＝0；在但讀不懂丟 OrderBad。

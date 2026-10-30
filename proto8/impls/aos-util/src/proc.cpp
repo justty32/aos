@@ -4,6 +4,7 @@
 #include "aos/proc.hpp"
 
 #include <cerrno>
+#include <chrono>
 #include <cstdio>
 #include <ctime>
 #include <cstring>
@@ -135,14 +136,34 @@ std::optional<long long> proc_started_at_ticks(pid_t pid) {
 }
 
 std::string utc_now_ms() {
-    timespec ts{};
-    clock_gettime(CLOCK_REALTIME, &ts);
+    return utc_ms_at(utc_now_ns());
+}
+
+long long utc_now_ns() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+               std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+std::string utc_ms_at(long long ns) {
+    time_t sec = (time_t)(ns / 1000000000LL);
+    long ms = (long)((ns / 1000000LL) % 1000LL);
     std::tm tm{};
-    gmtime_r(&ts.tv_sec, &tm);
+    gmtime_r(&sec, &tm);
     char day[32];
     std::strftime(day, sizeof day, "%Y-%m-%dT%H:%M:%S", &tm);
     char buf[80];
-    std::snprintf(buf, sizeof buf, "%s.%03ld+00:00", day, ts.tv_nsec / 1000000L);
+    std::snprintf(buf, sizeof buf, "%s.%03ld+00:00", day, ms);
+    return buf;
+}
+
+std::string unique_id() {
+    return unique_id(utc_now_ns());
+}
+
+std::string unique_id(long long ns) {
+    std::optional<long long> ticks = proc_started_at_ticks(0);
+    char buf[96];
+    std::snprintf(buf, sizeof buf, "%020lld.%ld.%lld", ns, (long)getpid(), ticks ? *ticks : -1LL);
     return buf;
 }
 

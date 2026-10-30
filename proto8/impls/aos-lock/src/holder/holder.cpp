@@ -42,15 +42,6 @@ std::optional<long long> parse_at(const std::string& at) {
     return (long long)timegm(&tm) * 1000LL + ms;
 }
 
-std::string unique_id() {
-    long long ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                       std::chrono::system_clock::now().time_since_epoch()).count();
-    std::optional<long long> ticks = aos::proc_started_at_ticks(0);
-    char buf[96];
-    std::snprintf(buf, sizeof buf, "%020lld.%ld.%lld", ns, (long)getpid(), ticks ? *ticks : -1LL);
-    return buf;
-}
-
 std::string identity() {
     const char* ws = std::getenv("AOS_WS");
     if (ws != nullptr && ws[0] != '\0') {
