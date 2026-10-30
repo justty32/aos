@@ -87,7 +87,7 @@ def runners(w):
 
 
 def last_trace(w):
-    """stack 裡 trace.jsonl 最後一行（round 每格一行 unit、fsm 每次一行 state）；沒有＝None。"""
+    """stack 裡 trace.jsonl 最後一行（fsm〔含 aos-round〕每次一行 state；eca turn 與 10-30 前的舊 round 是 unit）；沒有＝None。"""
     return aos_ws.last_jsonl(os.path.join(w.stack, "trace.jsonl"))
 
 

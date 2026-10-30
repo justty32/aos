@@ -30,7 +30,7 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
   **槽名**只驗格式：小寫英數與底線、最多一層 `/`（`round`、`endpoint/fake`、`hook/pre_tool`），不驗清單。**XXX** 要是 aos-exec 跑得動的：資料夾、`+x` 的檔、沒 `+x` 但能當 JSON 讀的檔（第一行 `#!` 跳過）；不存在 `PathMissing`、不是這三種 `PathBad`。槽已登記 `PartExists`，`--override` 蓋掉。
   **存法**同 aos-tools：add 的相對路徑從 cwd 算、存 abspath（捷徑不解開）；手寫的相對路徑從註冊檔的資料夾算；`$ref`／`$env` 交給 aos-json 解與改。**只解要用的那一格**（`parts` 本身是 `$ref`＝整份解），所以別格的 `$env` 沒設不擋這一格。`--env` 只收字面字串，要 `$env` 就手寫或 `aos-json env`。
   **找（which／run）**：註冊檔有＝用它，路徑壞＝`PartBad`、不退去找固定名字；沒有＝註冊檔所在資料夾的 `<資料夾>/<槽>`（捷徑、真資料夾、檔都行；印 abspath、捷徑不解開；在但壞也是 `PartBad`）；都沒有＝`which` 退 10、什麼都不印，`run` 報 `PartMissing`。`which --json` 印 `{"slot", "path", "from": "parts"|"fixed", "env"}`（env 已解指示詞；固定名字＝`{}`）。不退去用 lib 的標準件。
-  **run**：`aos-exec 路徑 args…`（exec 換過去，結束碼是那格的），環境＝自己的環境疊上註冊檔的 `env`（同名以註冊檔為準）；`AOS_STACK`、`AOS_WS` 原樣傳。`loop.json` 叫 round 用 `["aos-parts", "run", "round", {"$env": "AOS_CD"}]`。
+  **run**：`aos-exec 路徑 args…`（exec 換過去，結束碼是那格的），環境＝自己的環境疊上註冊檔的 `env`（同名以註冊檔為準）；`AOS_STACK`、`AOS_WS` 原樣傳。`loop.json` 叫一格用 `["aos-parts", "run", 槽, {"$env": "AOS_CD"}]`（例 eca-claude 的 `turn`；agent-nia 的一輪是下面的 `aos-round`，不經 aos-parts run）。
   **ls／get** 只看登記了的（固定名字不列）；ls 一行「槽 TAB 路徑」，`--json`／get 帶 env（解開後的值）；登記了但壞也報錯。
   **錯**：stderr 一行 `aos-parts: 代號 原因`、退 1（`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`RegistryBad`、`SlotBad`、`PathMissing`、`PathBad`、`PartBad`、`PartExists`、`PartMissing`、`DirectiveBad`、`CommandMissing`、`WriteFailed`）。要 PATH 上有 aos-exec、aos-json。測試 `proto8/tests/test_aos_parts.py`。
 

@@ -4,10 +4,10 @@ endpoint：fake 照規則吐一則；openai 接假的 OpenAI 相容 server 吐�
   401／403 KeyBad、連不上（dead_brain.DEAD）與 5xx BrainFailed、404 ModelUnknown、其他 4xx RequestBad、壞回覆 ReplyBad，失敗時 stdout 與 usage.jsonl 都不動。
 act：兩個 tool_calls 吐兩則、順序對；MAX_PARALLEL=2 真的一起跑、順序仍對；pre_tool 退 10＝不跑、stdout 當 content；post_tool 取代；
   ToolUnknown／ArgumentsBad／工具退非 0 接成 tool 訊息；插話（queue 的 new/ 有信＋on_interrupt 說 interrupt）剩下的不跑、退 10；aos-tools 壞＝ToolsBad。
-round（10-30 改 queue 佈局，agent-lifecycle 第 2 步）：題目經 queue push 進 $AOS_STACK/queue/，答案看 history 最新那則 assistant；
-  另有 ROUND_ON_EMPTY（stop 退 10、idle 退 0 不動 history、壞值 SettingBad）、claim 死在搬進 cur/ 之後的補認領、
-  aos-loop 下 idle＋interval_ms 常駐時 ctl paused 擋住新信、放行後答出。
-RoundFsm（10-30 aos-round 第 2 步）：lib/agent/round 的表＋五格，aos-fsm 一次一格、驗 state.txt 與 trace 的 (state, code, next)。
+一輪（10-30 起 aos-round：lib/agent/round 的 fsm 表＋五格；舊骨架 round/_entry 與它的 Round 類、--step、hook/pause 第 6 步刪了）：
+  題目經 queue push 進 $AOS_STACK/queue/，答案看 history 最新那則 assistant。
+RoundFsm（第 2 步）：aos-fsm 一次一格、驗 state.txt 與 trace 的 (state, code, next)；system.txt 與 tools 帶進請求、
+  第一題答完後 claim 死在搬進 cur/ 之後的補認領（這兩案第 6 步從舊 Round 類搬來）。
 AosRound（第 3 步）：bin/aos-round 單次叫、loop.json 用它整隻跑（stop、idle＋ctl paused／stopped、單子逾時殺在 think）、自己的錯。
 設計：proto8/thinking/2026-10-28-agent-round.md § 3、§ 4、文末「實作時代定」；2026-10-30-agent-lifecycle 結論 A、B-11。
 LiteLLM（localhost:4000）實跑那案連不上就 skip。"""
@@ -388,7 +388,7 @@ else:
 
 
 class AgentCase(Base):
-    """tmp agent（queue、history、act、fake 腦、tools.json 只有 clock）＋queue 裡一題；Round 與 RoundFsm 共用。"""
+    """tmp agent（queue、history、act、fake 腦、tools.json 只有 clock）＋queue 裡一題；RoundFsm 與 AosRound 共用。"""
 
     def setUp(self):
         super().setUp()
@@ -434,203 +434,6 @@ class AgentCase(Base):
     def ls(self, stage):
         d = self.stack / "queue" / stage
         return sorted(x.name for x in d.iterdir()) if d.is_dir() else []
-
-
-class Round(AgentCase):
-    """lib/agent/round（agent-round § 7 第 5 步）：照「從哪接著做」叫各格；經 aos-parts run round 叫（註冊檔的 env 給 round）。"""
-
-    def setUp(self):
-        super().setUp()
-        self.parts["round"] = {"path": ROUND}
-        self.save()
-
-    def round(self, *flags, env=None):
-        return subprocess.run([PARTS, "--file", str(self.agent / "parts.json"), "run", "round", str(self.agent)] + list(flags),
-                              capture_output=True, text=True, env=self.env(env), cwd=self.tmp, timeout=120)
-
-    def trace(self):
-        return [t["unit"] for t in self.lines((self.stack / "trace.jsonl").read_text())]
-
-    def test_fake_brain_one_question_then_no_question(self):
-        (self.agent / "system.txt").write_text("你是測試")
-        log = self.tmp / "req.log"
-        self.parts["endpoint/default"] = {"path": self.script("rec", 'tee -a "%s" | exec aos-exec "%s" "$1"\n' % (log, FAKE))}
-        self.save()
-        r = self.round()
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertRegex(self.answer(), r"^FAKE ANSWER to: 幾點？（clock said: \d{4}-.*Z）$")
-        self.assertEqual((self.ls("new"), self.ls("cur"), self.ls("done")), ([], [], []))         # 收掉＝刪
-        self.assertFalse((self.ws / "out").exists() or (self.ws / "new").exists())
-        self.assertEqual([m["role"] for m in self.history()], ["user", "assistant", "tool", "assistant"])
-        first = self.lines(log.read_text())[0]
-        self.assertEqual(first["messages"][0], {"role": "system", "content": "你是測試"})      # system 每次帶、不進 history
-        self.assertEqual(first["tools"][0]["function"]["name"], "clock")                       # tools.json → OpenAI tools
-        self.assertEqual(self.trace(), ["queue claim", "history read", "endpoint/default", "history append", "queue emit",
-                                        "history read", "act", "history append", "history read", "endpoint/default",
-                                        "history append", "queue emit", "history read", "queue finish"])
-        t = self.lines((self.stack / "trace.jsonl").read_text())[0]
-        self.assertEqual(set(t), {"started_at", "unit", "code", "elapsed_ms"})
-        self.assertRegex(t["started_at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$")
-        r = self.round()
-        self.assertEqual((r.returncode, r.stderr), (10, ""))                                    # 沒題退 10（ROUND_ON_EMPTY 預設 stop）
-
-    def test_endpoint_broken_then_on_error_switch(self):
-        self.parts["endpoint/default"] = {"path": OPENAI, "env": {"AOS_BRAIN_URL": DEAD, "AOS_BRAIN_MODEL": "m"}}
-        self.save()
-        r = self.round()
-        self.assertEqual(r.returncode, 1)
-        self.assertEqual(err_code("endpoint", r.stderr), "BrainFailed")                         # 格自己說、round 不轉述
-        self.assertEqual([m["role"] for m in self.history()], ["user"])                          # 沒多接 assistant
-        self.assertEqual(self.ls("cur"), [self.q1])
-        self.parts["endpoint/fake"] = {"path": FAKE}
-        self.hook("on_error", 'read line; case "$line" in "endpoint: BrainFailed "*) echo switch;; esac\n')
-        r = self.round()
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.stack / "endpoint.txt").read_text(), "fake\n")
-        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 幾點？"))
-        self.assertEqual(self.ls("cur"), [])
-        self.assertEqual([m["role"] for m in self.history()], ["user", "assistant", "tool", "assistant"])
-
-    def test_retry_has_a_limit(self):
-        self.parts["endpoint/default"] = {"path": OPENAI, "env": {"AOS_BRAIN_URL": DEAD, "AOS_BRAIN_MODEL": "m"}}
-        self.parts["round"]["env"] = {"MAX_RETRIES": "2"}
-        self.hook("on_error", "cat > /dev/null; echo retry\n")
-        r = self.round()
-        self.assertEqual(r.returncode, 1)
-        self.assertEqual(err_code("round", r.stderr), "EndpointFailed")
-        self.assertEqual(self.trace().count("endpoint/default"), 3)                              # 1 次＋重來 2 次
-        self.assertFalse((self.stack / "endpoint.txt").exists())
-
-    def test_pause_yields_and_next_round_resumes(self):
-        self.hook("pause", "exit 10\n")
-        r = self.round()
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.ls("cur"), self.answer()), ([self.q1], None))                     # yield：還沒答
-        self.assertEqual([m["role"] for m in self.history()], ["user", "assistant", "tool"])
-        r = self.round()
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.ls("cur"), [])
-        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 幾點？"))
-        self.assertEqual(self.trace().count("queue claim"), 1)                                   # 接著做、不重新認領
-
-    def test_step_one_unit_at_a_time(self):
-        codes = [self.round("--step").returncode for _ in range(7)]
-        self.assertEqual(codes, [0, 0, 0, 0, 0, 10, 10])                                          # 認領、問腦、工具、問腦、交卷
-        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 幾點？（clock said:"))
-        self.assertEqual((self.ls("new"), self.ls("cur")), ([], []))
-
-    def test_step_under_aos_loop(self):
-        (self.agent / "loop.json").write_text(json.dumps(
-            {"exec": {"argv": ["aos-parts", "run", "round", {"$env": "AOS_CD"}, "--step"]}, "max": 20}))
-        (self.agent / "_entry").write_text('["aos-loop", "loop.json"]')
-        r = subprocess.run([EXEC, str(self.agent)], capture_output=True, text=True, env=self.env(), cwd=self.tmp, timeout=120)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.ls("new"), self.ls("cur")), ([], []))
-        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 幾點？"))
-        self.assertEqual(self.trace().count("queue claim"), 1)
-
-    def test_pre_round_fails_round_fails(self):
-        self.hook("pre_round", "exit 3\n")
-        r = self.round()
-        self.assertEqual(r.returncode, 3)
-        self.assertEqual((self.ls("new"), self.ls("cur")), ([self.q1], []))                      # 沒認領
-        self.assertEqual(self.history(), [])
-
-    def test_interrupt_claims_more_and_asks_again(self):
-        self.parts["endpoint/default"] = {"path": self.script("two", TWO_CLOCKS, sh=False)}
-        q2 = self.put("插話")
-        self.hook("on_interrupt", 'read n; [ "$n" = %s ] && echo interrupt\n' % q2)
-        r = self.round()
-        self.assertEqual(r.returncode, 0, r.stderr)
-        h = self.history()
-        self.assertEqual([m["role"] for m in h], ["user", "assistant", "tool", "tool", "user", "assistant"])
-        self.assertTrue(h[3]["content"].startswith("act: Interrupted 有新題（%s）" % q2), h[3])
-        self.assertEqual(h[4]["content"], "插話")
-        self.assertEqual((self.ls("new"), self.ls("cur")), ([], []))                              # 一起答完、一起收
-        self.assertEqual(self.answer(), "答：幾點？／插話")
-        self.assertIn("queue claim --more", self.trace())
-
-    def test_own_errors(self):
-        del self.parts["act"]
-        self.save()
-        r = self.round()
-        self.assertEqual((r.returncode, err_code("round", r.stderr)), (1, "PartMissing"))         # 必要的格沒有
-        r = subprocess.run([EXEC, ROUND, "agent"], capture_output=True, text=True, env=self.env(), cwd=self.tmp, timeout=60)
-        self.assertEqual((r.returncode, err_code("round", r.stderr)), (1, "AgentBad"))
-        self.parts["round"]["env"] = {"MAX_RETRIES": "-1"}
-        self.save()
-        r = self.round()
-        self.assertEqual((r.returncode, err_code("round", r.stderr)), (1, "SettingBad"))
-        self.parts["round"]["env"] = {"ROUND_ON_EMPTY": "wait"}
-        self.save()
-        r = self.round()
-        self.assertEqual((r.returncode, err_code("round", r.stderr)), (1, "SettingBad"))
-
-    def test_on_empty_idle(self):
-        """ROUND_ON_EMPTY=idle：queue 空退 0、什麼都不做（history、trace 不動）；有信照常答。"""
-        self.parts["round"]["env"] = {"ROUND_ON_EMPTY": "idle"}
-        self.save()
-        r = self.round()
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 幾點？"))
-        before = ((self.stack / "history.jsonl").read_text(), (self.stack / "trace.jsonl").read_text())
-        for flags in ((), ("--step",)):
-            r = self.round(*flags)
-            self.assertEqual((r.returncode, r.stderr), (0, ""))
-        self.assertEqual(((self.stack / "history.jsonl").read_text(), (self.stack / "trace.jsonl").read_text()), before)
-        self.parts["round"]["env"] = {"ROUND_ON_EMPTY": "stop"}
-        self.save()
-        self.assertEqual(self.round().returncode, 10)
-
-    def test_resume_claim_after_move(self):
-        """queue claim 死在搬進 cur/ 之後、接進 history 之前：round 補認領（不再叫 pre_round），不拿 history 裡上一題的答案交卷。"""
-        self.assertEqual(self.round().returncode, 0)                                             # 第一題答完
-        q2 = self.put("第二題")
-        subprocess.run([tool("aos-post"), "claim", str(self.stack / "queue")], capture_output=True, env=self.env(), check=True)
-        self.hook("pre_round", "exit 3\n")
-        r = self.round()
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 第二題"), self.answer())
-        self.assertEqual([m["content"] for m in self.history() if m["role"] == "user"], ["幾點？", "第二題"])
-        self.assertEqual(self.ls("cur"), [])
-        self.assertNotIn(q2, self.ls("new"))
-
-    def test_idle_under_aos_loop_with_ctl_paused(self):
-        """aos-loop 常駐（ROUND_ON_EMPTY=idle＋interval_ms）：ctl paused 時 say 的信留在 new/，放行後答出；stopped 收工。"""
-        self.parts["round"]["env"] = {"ROUND_ON_EMPTY": "idle"}
-        self.save()
-        (self.agent / "loop.json").write_text(json.dumps(
-            {"exec": {"argv": ["aos-parts", "run", "round", {"$env": "AOS_CD"}]}, "interval_ms": 100,
-             "ctl": "ctl.json", "state": "state.json"}))
-        (self.agent / "_entry").write_text('["aos-loop", "loop.json"]')
-        p = subprocess.Popen([EXEC, str(self.agent)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                             env=self.env(), cwd=self.tmp)
-        self.addCleanup(lambda: (p.poll() is None and p.kill(), p.communicate()))
-
-        def until(what, cond, secs=30):
-            end = time.time() + secs
-            while time.time() < end:
-                if cond():
-                    return
-                time.sleep(0.05)
-            self.fail("等不到：" + what)
-
-        def phase():
-            try:
-                return json.loads((self.stack / "state.json").read_text()).get("phase")
-            except (OSError, ValueError):
-                return None
-
-        until("第一題答完", lambda: self.answer() is not None and not self.ls("cur") and not self.ls("new"))
-        (self.stack / "ctl.json").write_text('{"paused": true}')
-        until("loop 暫停", lambda: phase() == "paused")
-        q2 = self.put("第二題")
-        time.sleep(1)
-        self.assertEqual(self.ls("new"), [q2])                                                   # 暫停：不起下一輪
-        (self.stack / "ctl.json").write_text('{"paused": false}')
-        until("第二題答完", lambda: (self.answer() or "").startswith("FAKE ANSWER to: 第二題") and not self.ls("cur") and not self.ls("new"))
-        (self.stack / "ctl.json").write_text('{"stopped": true}')
-        self.assertEqual(p.wait(timeout=30), 0)
 
 
 class RoundFsm(AgentCase):
@@ -744,6 +547,30 @@ class RoundFsm(AgentCase):
         self.assertEqual(self.steps(3, table="fsm-idle.json"), [0, 0, 0])
         self.assertEqual(self.answer(), "FAKE ANSWER to: 第二題")
         self.assertNotIn(q2, self.ls("new") + self.ls("cur"))
+
+    def test_system_and_tools_in_request(self):
+        """system.txt 每次帶進請求、不進 history；tools.json → OpenAI tools（從舊 Round 類搬來）。"""
+        (self.agent / "system.txt").write_text("你是測試")
+        log = self.tmp / "req.log"
+        self.parts["endpoint/default"] = {"path": self.script("rec", 'tee -a "%s" | exec aos-exec "%s" "$1"\n' % (log, FAKE))}
+        self.save()
+        self.assertEqual(self.steps(6), [0, 0, 0, 0, 0, 10])
+        first = self.lines(log.read_text())[0]
+        self.assertEqual(first["messages"][0], {"role": "system", "content": "你是測試"})
+        self.assertEqual(first["tools"][0]["function"]["name"], "clock")
+        self.assertEqual([m["role"] for m in self.history()], ["user", "assistant", "tool", "assistant"])
+
+    def test_resume_claim_does_not_answer_with_old_answer(self):
+        """第一題答完後，claim 死在搬進 cur/ 之後：idle 補認領（不叫 pre_round），不拿 history 裡上一題的答案交卷（從舊 Round 類搬來）。"""
+        self.assertEqual(self.steps(6)[-1], 10)
+        q2 = self.put("第二題")
+        subprocess.run([tool("aos-post"), "claim", str(self.stack / "queue")], capture_output=True, env=self.env(), check=True)
+        self.hook("pre_round", "exit 3\n")
+        self.assertEqual(self.steps(6), [0, 0, 0, 0, 0, 10])
+        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 第二題"), self.answer())
+        self.assertEqual([m["content"] for m in self.history() if m["role"] == "user"], ["幾點？", "第二題"])
+        self.assertEqual(self.ls("cur"), [])
+        self.assertNotIn(q2, self.ls("new"))
 
     def test_resume_claim_does_not_call_pre_round(self):
         subprocess.run([tool("aos-post"), "claim", str(self.stack / "queue")], capture_output=True, env=self.env(), check=True)
