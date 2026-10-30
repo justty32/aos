@@ -3,9 +3,13 @@
 endpoint：fake 照規則吐一則；openai 接假的 OpenAI 相容 server 吐真的、usage.jsonl 多一行、經 aos-parts run 帶註冊檔的 env；
   401／403 KeyBad、連不上（dead_brain.DEAD）與 5xx BrainFailed、404 ModelUnknown、其他 4xx RequestBad、壞回覆 ReplyBad，失敗時 stdout 與 usage.jsonl 都不動。
 act：兩個 tool_calls 吐兩則、順序對；MAX_PARALLEL=2 真的一起跑、順序仍對；pre_tool 退 10＝不跑、stdout 當 content；post_tool 取代；
-  ToolUnknown／ArgumentsBad／工具退非 0 接成 tool 訊息；插話（new/ 有題＋on_interrupt 說 interrupt）剩下的不跑、退 10；aos-tools 壞＝ToolsBad。
-設計：proto8/thinking/2026-10-28-agent-round.md § 3、§ 4、文末「實作時代定」。LiteLLM（localhost:4000）實跑那案連不上就 skip。"""
-import http.server, json, os, re, subprocess, tempfile, threading, unittest, urllib.request
+  ToolUnknown／ArgumentsBad／工具退非 0 接成 tool 訊息；插話（queue 的 new/ 有信＋on_interrupt 說 interrupt）剩下的不跑、退 10；aos-tools 壞＝ToolsBad。
+round（10-30 改 queue 佈局，agent-lifecycle 第 2 步）：題目經 queue push 進 $AOS_STACK/queue/，答案看 history 最新那則 assistant；
+  另有 ROUND_ON_EMPTY（stop 退 10、idle 退 0 不動 history、壞值 SettingBad）、claim 死在搬進 cur/ 之後的補認領、
+  aos-loop 下 idle＋interval_ms 常駐時 ctl paused 擋住新信、放行後答出。
+設計：proto8/thinking/2026-10-28-agent-round.md § 3、§ 4、文末「實作時代定」；2026-10-30-agent-lifecycle 結論 A、B-11。
+LiteLLM（localhost:4000）實跑那案連不上就 skip。"""
+import http.server, json, os, re, subprocess, tempfile, threading, time, unittest, urllib.request
 from pathlib import Path
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
@@ -19,7 +23,7 @@ ACT = str(ROOT / "lib" / "agent" / "act")
 CLOCK = str(ROOT / "lib" / "base" / "clock")
 REAL_URL = "http://localhost:4000/v1"
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL",
-         "AOS_BRAIN_KEY", "AOS_KERNEL_REPORT", "TIMEOUT_MS", "ENDPOINT_NAME", "MAX_PARALLEL")
+         "AOS_BRAIN_KEY", "AOS_KERNEL_REPORT", "TIMEOUT_MS", "ENDPOINT_NAME", "MAX_PARALLEL", "MAX_RETRIES", "ROUND_ON_EMPTY")
 CLOCK_TOOL = {"type": "function", "function": {"name": "clock", "parameters": {"type": "object", "properties": {}}}}
 
 
@@ -332,21 +336,22 @@ class Act(Base):
         self.assertEqual(out[1]["content"], "B|%s/say/\n" % self.stack)          # stdout 空＝原樣
 
     def test_interrupt(self):
-        (self.ws / "new").mkdir()
-        (self.ws / "new" / "q9.txt").write_text("插話")
+        new = self.stack / "queue" / "new"
+        new.mkdir(parents=True)
+        (new / "000000000009.x").mkdir()                                       # act 只看名字，不讀信
         calls = assistant(call("a", "say", text="A"), call("b", "say", touch="ran_b"), call("c", "clock"))
         r = self.act(calls)                                                     # 沒掛 on_interrupt＝wait
         self.assertEqual((r.returncode, len(self.lines(r.stdout))), (0, 3), r.stderr)
         os.unlink(self.ws / "ran_b")
-        self.hook("on_interrupt", 'read n; [ "$n" = q9.txt ] && echo interrupt\n')
+        self.hook("on_interrupt", 'read n; [ "$n" = 000000000009.x ] && echo interrupt\n')
         r = self.act(calls)
         self.assertEqual(r.returncode, 10, r.stderr)
         out = self.lines(r.stdout)
         self.assertEqual([m["tool_call_id"] for m in out], ["a", "b", "c"])
         self.assertEqual(out[0]["content"], "A|%s/say/\n" % self.stack)
-        self.assertEqual(out[1]["content"], "act: Interrupted 有新題（q9.txt），這個工具沒跑\n")
+        self.assertEqual(out[1]["content"], "act: Interrupted 有新題（000000000009.x），這個工具沒跑\n")
         self.assertFalse((self.ws / "ran_b").exists())
-        os.unlink(self.ws / "new" / "q9.txt")                                   # new/ 空了＝不問、全跑
+        os.rmdir(new / "000000000009.x")                                        # new/ 空了＝不問、全跑
         r = self.act(calls)
         self.assertEqual((r.returncode, len(self.lines(r.stdout))), (0, 3))
 
@@ -390,14 +395,24 @@ class Round(Base):
                       "endpoint/default": {"path": FAKE}}
         self.save()
         (self.agent / "tools.json").write_text(json.dumps({"tools": {"clock": {"path": CLOCK}}}))
-        self.put("q1.txt", "幾點？")
+        self.q1 = self.put("幾點？")
 
     def save(self):
         (self.agent / "parts.json").write_text(json.dumps({"parts": self.parts}, ensure_ascii=False))
 
-    def put(self, name, text):
-        (self.ws / "new").mkdir(exist_ok=True)
-        (self.ws / "new" / name).write_text(text)
+    def put(self, text):
+        """經 queue 格放一則 user（同 aos-say）；回信號。"""
+        r = subprocess.run([EXEC, str(AGENT_LIB / "queue"), str(self.agent), "push"], input=json.dumps(user(text)),
+                           capture_output=True, text=True, env=self.env(), cwd=self.tmp, timeout=60)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        return r.stdout.strip()
+
+    def answer(self):
+        """history 最新那則沒有 tool_calls 的 assistant 的 content（答案）。"""
+        for m in reversed(self.history()):
+            if m["role"] == "assistant" and not m.get("tool_calls"):
+                return m["content"]
+        return None
 
     def script(self, name, body, sh=True):
         p = self.tmp / "scripts" / name
@@ -422,7 +437,7 @@ class Round(Base):
         return [t["unit"] for t in self.lines((self.stack / "trace.jsonl").read_text())]
 
     def ls(self, stage):
-        d = self.ws / stage
+        d = self.stack / "queue" / stage
         return sorted(x.name for x in d.iterdir()) if d.is_dir() else []
 
     def test_fake_brain_one_question_then_no_question(self):
@@ -432,8 +447,9 @@ class Round(Base):
         self.save()
         r = self.round()
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertRegex((self.ws / "out" / "q1.txt").read_text(), r"^FAKE ANSWER to: 幾點？（clock said: \d{4}-.*Z）\n$")
-        self.assertEqual((self.ls("new"), self.ls("cur"), self.ls("done")), ([], [], ["q1.txt"]))
+        self.assertRegex(self.answer(), r"^FAKE ANSWER to: 幾點？（clock said: \d{4}-.*Z）$")
+        self.assertEqual((self.ls("new"), self.ls("cur"), self.ls("done")), ([], [], []))         # 收掉＝刪
+        self.assertFalse((self.ws / "out").exists() or (self.ws / "new").exists())
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant", "tool", "assistant"])
         first = self.lines(log.read_text())[0]
         self.assertEqual(first["messages"][0], {"role": "system", "content": "你是測試"})      # system 每次帶、不進 history
@@ -445,7 +461,7 @@ class Round(Base):
         self.assertEqual(set(t), {"started_at", "unit", "code", "elapsed_ms"})
         self.assertRegex(t["started_at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$")
         r = self.round()
-        self.assertEqual((r.returncode, r.stderr), (10, ""))                                    # 沒題退 10
+        self.assertEqual((r.returncode, r.stderr), (10, ""))                                    # 沒題退 10（ROUND_ON_EMPTY 預設 stop）
 
     def test_endpoint_broken_then_on_error_switch(self):
         self.parts["endpoint/default"] = {"path": OPENAI, "env": {"AOS_BRAIN_URL": DEAD, "AOS_BRAIN_MODEL": "m"}}
@@ -454,13 +470,14 @@ class Round(Base):
         self.assertEqual(r.returncode, 1)
         self.assertEqual(err_code("endpoint", r.stderr), "BrainFailed")                         # 格自己說、round 不轉述
         self.assertEqual([m["role"] for m in self.history()], ["user"])                          # 沒多接 assistant
-        self.assertEqual(self.ls("cur"), ["q1.txt"])
+        self.assertEqual(self.ls("cur"), [self.q1])
         self.parts["endpoint/fake"] = {"path": FAKE}
         self.hook("on_error", 'read line; case "$line" in "endpoint: BrainFailed "*) echo switch;; esac\n')
         r = self.round()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((self.stack / "endpoint.txt").read_text(), "fake\n")
-        self.assertTrue((self.ws / "out" / "q1.txt").read_text().startswith("FAKE ANSWER to: 幾點？"))
+        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 幾點？"))
+        self.assertEqual(self.ls("cur"), [])
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant", "tool", "assistant"])
 
     def test_retry_has_a_limit(self):
@@ -477,17 +494,19 @@ class Round(Base):
         self.hook("pause", "exit 10\n")
         r = self.round()
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.ls("cur"), self.ls("out")), (["q1.txt"], []))                     # yield：還沒答
+        self.assertEqual((self.ls("cur"), self.answer()), ([self.q1], None))                     # yield：還沒答
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant", "tool"])
         r = self.round()
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.ls("done"), ["q1.txt"])
+        self.assertEqual(self.ls("cur"), [])
+        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 幾點？"))
         self.assertEqual(self.trace().count("queue claim"), 1)                                   # 接著做、不重新認領
 
     def test_step_one_unit_at_a_time(self):
         codes = [self.round("--step").returncode for _ in range(7)]
         self.assertEqual(codes, [0, 0, 0, 0, 0, 10, 10])                                          # 認領、問腦、工具、問腦、交卷
-        self.assertTrue((self.ws / "out" / "q1.txt").read_text().startswith("FAKE ANSWER to: 幾點？（clock said:"))
+        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 幾點？（clock said:"))
+        self.assertEqual((self.ls("new"), self.ls("cur")), ([], []))
 
     def test_step_under_aos_loop(self):
         (self.agent / "loop.json").write_text(json.dumps(
@@ -495,29 +514,29 @@ class Round(Base):
         (self.agent / "_entry").write_text('["aos-loop", "loop.json"]')
         r = subprocess.run([EXEC, str(self.agent)], capture_output=True, text=True, env=self.env(), cwd=self.tmp, timeout=120)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(self.ls("done"), ["q1.txt"])
+        self.assertEqual((self.ls("new"), self.ls("cur")), ([], []))
+        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 幾點？"))
         self.assertEqual(self.trace().count("queue claim"), 1)
 
     def test_pre_round_fails_round_fails(self):
         self.hook("pre_round", "exit 3\n")
         r = self.round()
         self.assertEqual(r.returncode, 3)
-        self.assertEqual((self.ls("new"), self.ls("cur")), (["q1.txt"], []))                     # 沒認領
+        self.assertEqual((self.ls("new"), self.ls("cur")), ([self.q1], []))                      # 沒認領
         self.assertEqual(self.history(), [])
 
     def test_interrupt_claims_more_and_asks_again(self):
         self.parts["endpoint/default"] = {"path": self.script("two", TWO_CLOCKS, sh=False)}
-        self.hook("on_interrupt", 'read n; [ "$n" = q2.txt ] && echo interrupt\n')
-        self.put("q2.txt", "插話")
+        q2 = self.put("插話")
+        self.hook("on_interrupt", 'read n; [ "$n" = %s ] && echo interrupt\n' % q2)
         r = self.round()
         self.assertEqual(r.returncode, 0, r.stderr)
         h = self.history()
         self.assertEqual([m["role"] for m in h], ["user", "assistant", "tool", "tool", "user", "assistant"])
-        self.assertTrue(h[3]["content"].startswith("act: Interrupted 有新題（q2.txt）"), h[3])
-        self.assertEqual(h[4]["content"].strip(), "插話")
-        self.assertEqual(self.ls("done"), ["q1.txt", "q2.txt"])                                   # 一起答
-        for q in ("q1.txt", "q2.txt"):
-            self.assertEqual((self.ws / "out" / q).read_text(), "答：幾點？／插話\n")
+        self.assertTrue(h[3]["content"].startswith("act: Interrupted 有新題（%s）" % q2), h[3])
+        self.assertEqual(h[4]["content"], "插話")
+        self.assertEqual((self.ls("new"), self.ls("cur")), ([], []))                              # 一起答完、一起收
+        self.assertEqual(self.answer(), "答：幾點？／插話")
         self.assertIn("queue claim --more", self.trace())
 
     def test_own_errors(self):
@@ -531,6 +550,76 @@ class Round(Base):
         self.save()
         r = self.round()
         self.assertEqual((r.returncode, err_code("round", r.stderr)), (1, "SettingBad"))
+        self.parts["round"]["env"] = {"ROUND_ON_EMPTY": "wait"}
+        self.save()
+        r = self.round()
+        self.assertEqual((r.returncode, err_code("round", r.stderr)), (1, "SettingBad"))
+
+    def test_on_empty_idle(self):
+        """ROUND_ON_EMPTY=idle：queue 空退 0、什麼都不做（history、trace 不動）；有信照常答。"""
+        self.parts["round"]["env"] = {"ROUND_ON_EMPTY": "idle"}
+        self.save()
+        r = self.round()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 幾點？"))
+        before = ((self.stack / "history.jsonl").read_text(), (self.stack / "trace.jsonl").read_text())
+        for flags in ((), ("--step",)):
+            r = self.round(*flags)
+            self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(((self.stack / "history.jsonl").read_text(), (self.stack / "trace.jsonl").read_text()), before)
+        self.parts["round"]["env"] = {"ROUND_ON_EMPTY": "stop"}
+        self.save()
+        self.assertEqual(self.round().returncode, 10)
+
+    def test_resume_claim_after_move(self):
+        """queue claim 死在搬進 cur/ 之後、接進 history 之前：round 補認領（不再叫 pre_round），不拿 history 裡上一題的答案交卷。"""
+        self.assertEqual(self.round().returncode, 0)                                             # 第一題答完
+        q2 = self.put("第二題")
+        subprocess.run([tool("aos-post"), "claim", str(self.stack / "queue")], capture_output=True, env=self.env(), check=True)
+        self.hook("pre_round", "exit 3\n")
+        r = self.round()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.answer().startswith("FAKE ANSWER to: 第二題"), self.answer())
+        self.assertEqual([m["content"] for m in self.history() if m["role"] == "user"], ["幾點？", "第二題"])
+        self.assertEqual(self.ls("cur"), [])
+        self.assertNotIn(q2, self.ls("new"))
+
+    def test_idle_under_aos_loop_with_ctl_paused(self):
+        """aos-loop 常駐（ROUND_ON_EMPTY=idle＋interval_ms）：ctl paused 時 say 的信留在 new/，放行後答出；stopped 收工。"""
+        self.parts["round"]["env"] = {"ROUND_ON_EMPTY": "idle"}
+        self.save()
+        (self.agent / "loop.json").write_text(json.dumps(
+            {"exec": {"argv": ["aos-parts", "run", "round", {"$env": "AOS_CD"}]}, "interval_ms": 100,
+             "ctl": "ctl.json", "state": "state.json"}))
+        (self.agent / "_entry").write_text('["aos-loop", "loop.json"]')
+        p = subprocess.Popen([EXEC, str(self.agent)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                             env=self.env(), cwd=self.tmp)
+        self.addCleanup(lambda: (p.poll() is None and p.kill(), p.communicate()))
+
+        def until(what, cond, secs=30):
+            end = time.time() + secs
+            while time.time() < end:
+                if cond():
+                    return
+                time.sleep(0.05)
+            self.fail("等不到：" + what)
+
+        def phase():
+            try:
+                return json.loads((self.stack / "state.json").read_text()).get("phase")
+            except (OSError, ValueError):
+                return None
+
+        until("第一題答完", lambda: self.answer() is not None and not self.ls("cur") and not self.ls("new"))
+        (self.stack / "ctl.json").write_text('{"paused": true}')
+        until("loop 暫停", lambda: phase() == "paused")
+        q2 = self.put("第二題")
+        time.sleep(1)
+        self.assertEqual(self.ls("new"), [q2])                                                   # 暫停：不起下一輪
+        (self.stack / "ctl.json").write_text('{"paused": false}')
+        until("第二題答完", lambda: (self.answer() or "").startswith("FAKE ANSWER to: 第二題") and not self.ls("cur") and not self.ls("new"))
+        (self.stack / "ctl.json").write_text('{"stopped": true}')
+        self.assertEqual(p.wait(timeout=30), 0)
 
 
 if __name__ == "__main__":
