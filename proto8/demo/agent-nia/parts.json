@@ -1,6 +1,6 @@
 {
  "parts": {
-  "round": {"path": "../../lib/agent/round"},
+  "round": {"path": "../../lib/agent/round", "env": {"ROUND_ON_EMPTY": "stop"}},
   "queue": {"path": "../../lib/agent/queue"},
   "history": {"path": "../../lib/agent/history"},
   "act": {"path": "../../lib/agent/act"},

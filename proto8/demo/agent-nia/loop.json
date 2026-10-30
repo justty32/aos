@@ -1,1 +1,2 @@
-{"exec": {"argv": ["aos-parts", "run", "round", {"$env": "AOS_CD"}], "timeout_ms": 600000}, "max": 40}
+{"exec": {"argv": ["aos-parts", "run", "round", {"$env": "AOS_CD"}], "timeout_ms": 600000}, "max": 40,
+ "ctl": "ctl.json", "state": "state.json"}
