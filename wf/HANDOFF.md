@@ -12,11 +12,12 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-10-30 16:40（公司 Windows＋WSL；aos-round 實作隊長，時限 17:00 收線）
+## 2026-10-30 白天（公司 Windows；頂層 session 收工）
 
-1. **授權**：可隨意 push；只 `git add <明確的檔>`、不 `-A`、不 force／reset、`stash@{0}` 不動；寫程式派 opus、雜活 sonnet，條文那步不派 sonnet；工人不 commit。測試在 WSL clone `~/.cache/aos-c8a7-e`（`~/.cache/aos-c8a7-sync.sh`、`~/.cache/aos-c8a7-test.sh`，`-j2`、nice 15、一次一個測試程序）；全套基準 780 案、0 fail、12 skip。工人共同規矩草稿在隊長 scratchpad（`r_common.md`），要重寫一份。
-2. **題目**：[thinking 10-30 aos-round](../proto8/thinking/2026-10-30-aos-round.md) 使用者「都照建議」（[§ 決定](../proto8/thinking/2026-10-30-aos-round.md#決定10-30)，`cbaf3f4f`）。實作八步：**第 1 步 aos-fsm 分岔做了**（`c06a841c`）；**下一步＝第 2 步** lib/agent/round 長出 `roundlib.py`、`fsm-stop.json`／`fsm-idle.json`、五個薄格（舊 `_entry` 不刪），接著 3 `bin/aos-round` → 4 agent-nia＋aos-ai → 5 ask_round → 6 刪舊骨架 → 7 條文落正文（自己做或派 opus）→ 收尾（八步註 commit、SESSION-LOG、日誌、WAIT_USER 親手試指令）。
-3. **新條目**：沒有落正文的；WAIT_USER 加了 aos_ws.py 判失敗那題。
+1. **授權**：可隨意 push；只 `git add <明確的檔>`、不 `git add -A`、不 force／reset、`stash@{0}` 不動。分工：普通事 opus、簡單與雜活 sonnet、規劃 fable（條文那步不派 sonnet）；做事的 agent（簡單／雜活除外）先讀 wf 規矩；agent 可再派 agent；工人不 commit、任務書帶時限。**測試負載**：在 WSL 跑（clone `~/.cache/aos-c8a7-e`，`~/.cache/aos-c8a7-sync.sh`、`~/.cache/aos-c8a7-test.sh`）、`-j2`、`nice -n 15`、同時只跑一個測試程序；全套基準 780 案、0 fail、12 skip。
+2. **狀態**：今天完成——介質條文與實作（10-29 起）、queue／daemon execs／改名（[agent-lifecycle](../proto8/thinking/2026-10-29-agent-bob.md#決定10-30)）、eca 九步、歸檔改 daemon 小格（[eca § 決定](../proto8/thinking/2026-10-30-eca.md#決定10-30)）、aos-round 規劃拍板（`cbaf3f4f`）與第 1 步 aos-fsm 分岔（`c06a841c`）。**下一步＝aos-round 第 2～7 步**（[aos-round 步驟表](../proto8/thinking/2026-10-30-aos-round.md)）：2 lib/agent/round 長出 `roundlib.py`、`fsm-stop.json`／`fsm-idle.json`、五個薄格（舊 `_entry` 不刪）→ 3 `bin/aos-round` → 4 agent-nia＋aos-ai → 5 ask_round → 6 刪舊骨架 → 7 條文落正文 → 收尾（步驟註、SESSION-LOG、日誌、WAIT_USER 親手試指令）。開著的題見 [SESSION-LOG](SESSION-LOG.md)；[WAIT_USER](WAIT_USER.md) 有要裁的（aos_ws.py 失敗判法）與親手試的。
+3. **今天的 artifact**（桌面各有同名 HTML）：現況地圖 https://claude.ai/artifact/Cjgx6VAwCvMYirsMHdNrji 、親手試指南 https://claude.ai/artifact/WSrwpLQqibw2QC2tfwwM3m 、proto8 概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、proto8 實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。後三個與新的「aos 指令與格式參考」正在重寫，新網址由頂層另記。
+4. **新規**：今天落正文的 C-75、C-54 R13、N-64、P-42、P-43；N-36 分岔還沒落正文（aos-round 第 7 步）。
 
 ## 2026-10-29 晚（家中 Manjaro；新 session 開場）
 
@@ -29,16 +30,3 @@
 1. **授權**：可隨意 push。分工：普通事 opus、雜活 sonnet；做事的 agent（雜活除外）先讀 wf 規矩；agent 可再派 agent、模型隨意。
 2. **狀態**：開場只看了狀況、還沒動工；設計已定等實作的是 agent-round（[SESSION-LOG](SESSION-LOG.md) 第一條）。
 3. **新規**：無。
-
-## 2026-10-27（家中 Manjaro；playground 重來、aos-mcp、aos-hub）
-
-1. **授權**：可隨意 push。分工：普通事 opus、雜活 sonnet；做事的 agent（雜活除外）先讀 wf 規矩。
-2. **狀態**：playground（`~/code/try/playground`）10-26 砸掉一步一步重來：`_entry` 一行轉 `main.py`（ELI5 注解），`claude -p` 經 aos-mcp 叫 aos 工具；aos-hub 管多個 claude，使用者說是 demo、以後再完善。下一步等使用者說 → [SESSION-LOG](SESSION-LOG.md) 第一條、統整頁 https://claude.ai/artifact/W7aXZvCPTf1u2qExH6CEMM
-3. **新規**：無；代定在 [thinking 10-26 playground](../proto8/thinking/2026-10-26-playground.md)、[10-27 claude-switch](../proto8/thinking/2026-10-27-claude-switch.md)。
-
-## 2026-10-26（家中 Manjaro；整理與精簡全部完成）
-
-1. **授權**：可隨意 push（commit 後直接 push origin main）。分工：普通事 opus、雜活 sonnet；做事的 agent（雜活除外）先讀 wf 規矩。
-2. **狀態**：今天 proto8 頂層整理與文件內容精簡全部完成，經過見 [session log 10-26](session_logs/2026-10/2026-10-26.md)。使用者還在改 `proto8/user-advice/README.md`，等他說好再動，不碰該資料夾。10-25 的「問題點」仍待使用者說（見 [WAIT_USER](WAIT_USER.md)），說之前不要自己續做兩隊。
-3. **新規**：日誌每日檔每條一行、結論只連過去（[user/02](workflows/common/user/02-交接與收工.md#日誌怎麼寫2026-10-26-定)）；wf-lint 改可選。
-
