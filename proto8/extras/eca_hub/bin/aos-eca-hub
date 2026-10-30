@@ -7,7 +7,7 @@
     aos-eca-hub open  [-d] [--kind …|--template …] [--name N] [資料夾|名字]   接進畫面（沒開就開、有對話就 --resume；還沒掛就先 add）
     aos-eca-hub close [資料夾|名字]                    收起：關畫面、對話留著（turn 照樣用 --resume 答）；出錯停了的＝重新掛一次
     aos-eca-hub close --idle 分                        收起所有畫面開著、閒了這麼多分的（reap.json 每分鐘叫一次）
-    aos-eca-hub stop  [資料夾|名字]                    結束：關畫面、從 daemon 拿掉、小格搬到 <工作區>/.stack/eca_archive/<名字>-<UTC>/
+    aos-eca-hub stop  [資料夾|名字]                    結束：關畫面、從 daemon 拿掉、拿掉工作區的 .stack 捷徑、小格搬到 <daemon>/eca_archive/<名字>-<UTC>/
     aos-eca-hub watch [資料夾|名字]                    跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走
 
 設計：proto8/thinking/2026-10-30-eca.md C 結論 7～10（daemon＋三件 daemon 做不到的事：畫面、對話接回、CLI 自己的 session 檔）。
@@ -320,12 +320,10 @@ def cmd_stop(argv):
     wait_for(lambda: gone(r["name"]), "daemon 還沒收掉 %s" % r["name"])
     cell, ws = os.path.realpath(r["cell"]), r["ws"]
     link = os.path.join(ws, ".stack")
-    if os.path.islink(link) and os.path.realpath(link) == cell:
-        os.unlink(link)                                  # 還指著小格（ctl 沒拿掉）：先拿掉，不然會把小格搬進自己
+    if os.path.islink(link) and (os.path.realpath(link) + os.sep).startswith(cell + os.sep):
+        os.unlink(link)                                  # 還指著小格（或小格裡面；ctl 沒拿掉）：工作區只留過捷徑，拿掉就好
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    arch = os.path.join(link, "eca_archive")
-    if os.path.realpath(arch).startswith(cell + os.sep):    # .stack 是指進小格裡面的捷徑：退到 daemon 底下
-        arch = os.path.join(daemon_dir(), "eca_archive")
+    arch = os.path.join(daemon_dir(), "eca_archive")     # 歸檔放 daemon 這邊（10-30 使用者「A」），工作區不建真的 .stack/
     dest = os.path.join(arch, "%s-%s" % (r["name"], stamp))
     os.makedirs(arch, exist_ok=True)
     shutil.move(cell, dest)

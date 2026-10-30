@@ -175,7 +175,7 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: self.tables()["execs"] == {}))
 
     def test_add_ws_existing_stack_kept(self):
-        # <WS>/.stack 已經在（資料夾、或指到別處的 symlink）＝不建、stderr 一句叫人用 --stack、add 照樣成功；rm 不動別人的
+        # <WS>/.stack 已經在（資料夾、或指到別處的 symlink）＝不建、stderr 一句叫人先搬開（或用 --stack）、add 照樣成功；rm 不動別人的
         self.wsprog("job")
         w1, w2 = self.t / "p1", self.t / "p2"
         (w1 / ".stack").mkdir(parents=True)
@@ -185,7 +185,8 @@ class T(unittest.TestCase):
         for w, n in ((w1, "a"), (w2, "b")):
             r = self.ctl("add", "--ws", str(w), "--name", n, "job")
             self.assertEqual((r.returncode, r.stdout.count("\n"), r.stderr.count("\n")), (0, 1, 1), r.stderr)
-            self.assertTrue(r.stderr.startswith("aos-daemon-ctl: ") and "--stack" in r.stderr, r.stderr)
+            self.assertTrue(r.stderr.startswith("aos-daemon-ctl: 注意 工作區已有 .stack") and "請先搬開" in r.stderr
+                            and "--stack" in r.stderr, r.stderr)
         self.assertTrue(until(lambda: {r.get("ws") for r in self.tables()["execs"].values()} == {str(w1), str(w2)}))
         self.assertEqual(((self.s / "a" / "ws").read_text(), os.readlink(w2 / ".stack")), (str(w1), str(self.t / "elsewhere")))
         self.assertEqual((self.ctl("rm", "a").returncode, self.ctl("rm", "b").returncode), (0, 0))

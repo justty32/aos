@@ -20,12 +20,12 @@
 | `aos-eca-hub state [資料夾\|名字]` | 這裡是不是掛著的外部 agent；不是＝`InstanceMissing`、退 1 | 同一張表 |
 | `aos-eca-hub open [-d] [--kind …\|--template …] [--name N] [資料夾\|名字]` | 接進畫面；沒開就開（有對話就 `--resume` 叫回）；還沒掛就先 add。`-d` 只開不接 | cli_session 的 `open_cell`（agent-fay 的 attach 同一段）；只有人開畫面，turn 從不自己開 |
 | `aos-eca-hub close [資料夾\|名字]`／`close --idle 分` | 收起：關畫面、對話留著，turn 照樣用 `--resume` 答；**出錯停了的**（子 loop 以非 0 結束，P-20）close 一次＝拿掉再掛回去、重新收（信還在 `cur/`，turn 接著做） | `tmux kill-server`；正在答題＝`SessionBad` |
-| `aos-eca-hub stop [資料夾\|名字]` | 結束：關畫面、從 daemon 拿掉、小格搬到 `<工作區>/.stack/eca_archive/<名字>-<UTC>/`、`transcripts/` 的 symlink 換成真的複製 | `aos-daemon-ctl rm` → 等那列 `done`／`stopped` 或不見 → 搬小格 → `freeze_transcripts` |
+| `aos-eca-hub stop [資料夾\|名字]` | 結束：關畫面、從 daemon 拿掉、拿掉工作區的 `.stack` 捷徑、小格搬到 `$AOS_DAEMON/eca_archive/<名字>-<UTC>/`、`transcripts/` 的 symlink 換成真的複製 | `aos-daemon-ctl rm` → 等那列 `done`／`stopped` 或不見 → 捷徑還在就拿掉 → 搬小格 → `freeze_transcripts` |
 | `aos-eca-hub watch [資料夾\|名字]` | 跟著看非互動那次在做什麼（讀了哪個檔、說了什麼、花多少），一次回答結束就走 | 讀 CLI 小格的 `live.jsonl` |
 
 - **小格**：daemon 的 `$AOS_DAEMON/<名字>/` 就是這隻的 stack（`queue/`、`history.jsonl`、`ctl.json`、`state.json`、`trace.jsonl`、`eca.json`），CLI 的小格是它底下的 `<kind>/`（`session.txt`、`tty.sock`、`live.jsonl`、`transcripts/`…）。
-- **`.stack` symlink**（衝突 3）：add 時工作區沒有 `.stack`，aos-daemon-ctl 就建一個捷徑指到小格，cd 進去 `aos-say`、`aos-listen` 直接接上；已經有＝不建、stderr 說一句（要用 `--stack $AOS_DAEMON/<名字>`）。rm／stop 時指到小格的那條會拿掉。
-- **歸檔放哪**：stop 時 `.stack` 的捷徑已被 aos-daemon-ctl 拿掉，`<工作區>/.stack/` 就建成真資料夾、放 `eca_archive/`；捷徑萬一還在、指著小格，先拿掉再搬（不然會把小格搬進自己）；`.stack` 是指進小格裡面的捷徑時，退到 `$AOS_DAEMON/eca_archive/`。
+- **`.stack` symlink**（衝突 3）：add 時工作區沒有 `.stack`，aos-daemon-ctl 就建一個捷徑指到小格，cd 進去 `aos-say`、`aos-listen` 直接接上；已經有（例如直接 `aos-exec` 跑過留下的真 `.stack/`）＝不建、stderr 一句「工作區已有 .stack，沒建捷徑…要接上請先搬開（或用 `--stack $AOS_DAEMON/<名字>`）」，add 照樣退 0。rm／stop 時指到小格的那條會拿掉，工作區不留東西。
+- **歸檔放哪**（使用者 10-30「A」，翻 10-28 hub-kernel 決定 6）：放 daemon 小格那邊 `$AOS_DAEMON/eca_archive/<名字>-<UTC>/`；工作區永遠只有 `.stack` 捷徑，stop 時捷徑拿掉就好（aos-daemon-ctl rm 會拿；萬一還指著小格或小格裡面，這支補拿），不在工作區建真的 `.stack/`。之後再 add 同一個資料夾，捷徑照樣建得起來。
 - **狀態**：`收起了`、`畫面開著`、`出錯停了`，或 daemon 的 `phase`（`stopping`、`done`…）。「暫停」只有一種：寫小格的 `ctl.json` `{"paused": true}`（aos-loop 的窗，不餵下一則），這裡不另做 pause（10-28 的 `pause` 改名 `close`）。
 - 畫面裡 **Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束**。人在畫面上自己打的話不進 history（方向題 2），全貌看 `transcripts/`。
 - 定義＝頂層有 `cli.json` 的資料夾（`kind`、`flags`、`print_flags`、`timeout_ms`），要別的模型、權限就複製一份 `demo/eca-claude` 改 `cli.json`，用 `--template` 指。
@@ -41,7 +41,7 @@ aos-listen "$N"                                  # 畫面開著＝打進畫面�
 aos-listen --status                              # 「在跑 aos-loop」：daemon 底下的子 loop，經 .stack 捷徑認得
 aos-eca-hub open                                 # 接進畫面（第一次會問信任這個資料夾，選 Yes）；Ctrl-] 跳出
 aos-eca-hub close && aos-eca-hub ls              # 收起；再問一句照樣答（--resume）
-aos-eca-hub stop                                 # 結束：看 ~/code/myproj/.stack/eca_archive/
+aos-eca-hub stop                                 # 結束：看 $AOS_DAEMON/eca_archive/myproj-<UTC>/
 ```
 
 不掛 daemon 也行：`aos-exec --ws ~/code/myproj proto8/demo/eca-claude` 直接跑（stack 在 `~/code/myproj/.stack/`，say／listen 一樣），只是沒有 ls、close --idle 這些。
@@ -51,7 +51,7 @@ aos-eca-hub stop                                 # 結束：看 ~/code/myproj/.s
 - **daemon 的 PATH**：子 loop 用 daemon 啟動時的環境叫 claude／codex、aos-parts、aos-post。從沒有 `~/.local/bin` 的 shell 起 daemon，每則都 `CliMissing`。
 - **新資料夾第一次開畫面，claude 會先問「信任這個資料夾嗎」**：人 `open` 接進去回答就好；`open -d` 之後馬上 say，那句會被貼進這個提問。非互動（`-p`）沒有這個提問。
 - **ls 要等子 loop 跑第一次**：`eca.json` 是 turn 寫的，add 之後一個 `interval_ms` 內才列得到。
-- **stop 之後工作區留下真的 `.stack/`**（裡面只有 `eca_archive/`）：之後再 add 同一個資料夾，aos-daemon-ctl 看到 `.stack` 已在就不建捷徑，要用 `--stack`，或先把 `eca_archive/` 搬走、刪掉空的 `.stack/`。
+- **直接 `aos-exec` 跑過的工作區留著真的 `.stack/`**：之後再 add 這個資料夾，aos-daemon-ctl 看到 `.stack` 已在就不建捷徑、印一行警告（add 照樣退 0），cd 進去 aos-say 接到的是舊的那個；要接上就先搬開（例如 `mv .stack .stack-direct`）再 add，或用 `--stack $AOS_DAEMON/<名字>`。
 - codex 沒有「正在跑一輪」的訊號：人在畫面上送出、還沒講完就跳出，turn 這時送字會插進去（10-24 舊坑）。
 - `watch` 只讀 `live.jsonl`（非互動那條路）；畫面上那幾輪看不到，要 `open` 進去看。`live.jsonl` 只接不重寫，會一直長。
 - 「閒了幾分」看 CLI 小格裡檔案最後被動的時間：人只是捲畫面、打字沒送出，不算動作。收起＝`tmux kill-server`：人打到一半沒送出的字會丟。

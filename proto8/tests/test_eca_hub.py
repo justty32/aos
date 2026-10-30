@@ -159,7 +159,8 @@ class EcaHub(unittest.TestCase):
 
     def test_close_and_stop_archive(self):
         """close（畫面沒開）＝本來就沒畫面、再 say 照答；stop 後 daemon 表上沒它、.stack 捷徑拿掉、
-        小格搬到 <工作區>/.stack/eca_archive/<名字>-<UTC>/，transcripts/ 是真檔；之後 state＝InstanceMissing。"""
+        小格搬到 <daemon>/eca_archive/<名字>-<UTC>/（10-30 使用者「A」），transcripts/ 是真檔、工作區不留真的 .stack/；
+        之後 state＝InstanceMissing。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
@@ -172,8 +173,8 @@ class EcaHub(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertNotIn(name, self.daemon_rows())
         self.assertFalse((self.ds / name).exists())
-        self.assertFalse((w / ".stack").is_symlink())
-        arch = list((w / ".stack" / "eca_archive").iterdir())
+        self.assertFalse(os.path.lexists(w / ".stack"))
+        arch = list((self.ds / "eca_archive").iterdir())
         self.assertEqual(len(arch), 1)
         self.assertTrue(arch[0].name.startswith(name + "-"), arch)
         self.assertEqual((arch[0] / "claude" / "session.txt").read_text().strip(), sid)
@@ -182,6 +183,28 @@ class EcaHub(unittest.TestCase):
         self.assertEqual(len((arch[0] / "history.jsonl").read_text().splitlines()), 4)
         self.assertEqual(self.ls(), [])
         self.assertEqual(self.code(self.hub("state", cwd=w)), (1, "InstanceMissing"))
+
+    def test_stop_then_add_again(self):
+        """stop 後再 add 同一工作區：.stack 又是捷徑指到新小格、say／listen 答得出；歸檔留在 daemon 那邊不受影響。
+        工作區已有真的 .stack/（例如直接 aos-exec 跑過）＝add 照樣成功、stderr 一句「工作區已有 .stack…請先搬開」、不建捷徑。"""
+        self.start_daemon()
+        w = self.ws()
+        name = self.add(w)
+        self.listen(w, self.say(w, "第一輪"))
+        r = self.hub("stop", name)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse(os.path.lexists(w / ".stack"))
+        name = self.add(w)
+        self.assertEqual(os.readlink(w / ".stack"), str(self.ds / name))
+        self.assertIn("第二輪", self.listen(w, self.say(w, "第二輪")))
+        self.assertEqual(len(list((self.ds / "eca_archive").iterdir())), 1)
+        d = self.ws("direct")
+        (d / ".stack").mkdir()
+        r = self.hub("add", "--template", self.tpl, d)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("工作區已有 .stack", r.stderr)
+        self.assertIn("請先搬開", r.stderr)
+        self.assertTrue((d / ".stack").is_dir() and not (d / ".stack").is_symlink())
 
     def test_failed_close_readds(self):
         """CLI 失敗＝子 loop 停（P-20）、ls 標「出錯停了」、信留 cur/；修好後 close 一次＝拿掉再掛回去，接著答那封。"""
