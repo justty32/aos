@@ -12,27 +12,9 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-10-31 早（家中 Manjaro；同一 session 續）
+## 2026-10-31 早（家中 Manjaro；頂層 session 收工，使用者要開新 session）
 
-1. **授權**：沿用昨晚同一 session（可隨意 push；普通事 opus、簡單與雜活 sonnet；做事的 agent 先讀 wf 規矩；agent 可再派 agent）。腦走 LiteLLM 一律用 GPT（`chatgpt-gpt-6-sol`）。
-2. **狀態**：昨晚四隊全收線（aos-round 第 2～7 步、SESSION-LOG 三件收尾、真腦實測、試驗場重建、真腦實測兩件小事修好；最新 `13b45c7a`，全套 794／0 fail／3 skip）。使用者親手跑過 bob-1、bob-2，兩份說明頁在桌面；**試驗場剩 hub 畫面那段**（`~/code/playground/README.md` 第 5 節）。開著的題見 [SESSION-LOG](SESSION-LOG.md)；[WAIT_USER](WAIT_USER.md) 14 條（要裁的：aos_ws.py 失敗判法、`wip/hub-step6` 刪不刪、eca 代定；其餘親手試）。兩個舊建置目錄 `proto8/impls/aos-gate/`、`aos-kernel-llm/` 未追蹤、沒刪。
-3. **新規**：無。
-
-## 2026-10-30 晚（家中 Manjaro；新 session 開場）
-
-1. **授權**：可隨意 push。分工：普通事 opus、簡單工作與雜活 sonnet；做事的 agent（簡單／雜活除外）先讀 wf 規矩；agent 可再派 agent、模型隨意。測試在家機本地跑（不是 WSL）。
-2. **狀態**：opus 隊長把 **aos-round 第 2～7 步做完**（每步一個 commit：`771747e1`、`f2818ae5`、`88cd1450`、`86c9f935`、`6f32b6a2`、`ef379dc7`；家機全套 788／0 fail／8 skip；commit 與代定註在 [aos-round 步驟表與文末](../proto8/thinking/2026-10-30-aos-round.md)）。還開著：WAIT_USER 的 aos_ws.py 失敗判法那題（沒裁、維持現況）、aos-round 接真腦的親手試（WAIT_USER 新加一行）。之後實作隊長又做完 SESSION-LOG 三件收尾（`8e266704` 代號與信號產生法下放 aos-util、`edeab029` round 的 `letter_warning`、`9d976dd7` 回信改走 `reply_to`；全套 789／0 fail／3 skip），代定在 medium-plan 文末 14、15 與 agent-lifecycle Q-17。
-3. **新規**：無。
-
-## 2026-10-30 白天（公司 Windows；頂層 session 收工）
-
-1. **授權**：可隨意 push；只 `git add <明確的檔>`、不 `git add -A`、不 force／reset、`stash@{0}` 不動。分工：普通事 opus、簡單與雜活 sonnet、規劃 fable（條文那步不派 sonnet）；做事的 agent（簡單／雜活除外）先讀 wf 規矩；agent 可再派 agent；工人不 commit、任務書帶時限。**測試負載**：在 WSL 跑（clone `~/.cache/aos-c8a7-e`，`~/.cache/aos-c8a7-sync.sh`、`~/.cache/aos-c8a7-test.sh`）、`-j2`、`nice -n 15`、同時只跑一個測試程序；全套基準 780 案、0 fail、12 skip。
-2. **狀態**：今天完成——介質條文與實作（10-29 起）、queue／daemon execs／改名（[agent-lifecycle](../proto8/thinking/2026-10-29-agent-bob.md#決定10-30)）、eca 九步、歸檔改 daemon 小格（[eca § 決定](../proto8/thinking/2026-10-30-eca.md#決定10-30)）、aos-round 規劃拍板（`cbaf3f4f`）與第 1 步 aos-fsm 分岔（`c06a841c`）。**下一步＝aos-round 第 2～7 步**（[aos-round 步驟表](../proto8/thinking/2026-10-30-aos-round.md)）：2 lib/agent/round 長出 `roundlib.py`、`fsm-stop.json`／`fsm-idle.json`、五個薄格（舊 `_entry` 不刪）→ 3 `bin/aos-round` → 4 agent-nia＋aos-ai → 5 ask_round → 6 刪舊骨架 → 7 條文落正文 → 收尾（步驟註、SESSION-LOG、日誌、WAIT_USER 親手試指令）。開著的題見 [SESSION-LOG](SESSION-LOG.md)；[WAIT_USER](WAIT_USER.md) 有要裁的（aos_ws.py 失敗判法）與親手試的。
-3. **今天的 artifact**（桌面各有同名 HTML）：現況地圖 https://claude.ai/artifact/Cjgx6VAwCvMYirsMHdNrji 、親手試指南 https://claude.ai/artifact/WSrwpLQqibw2QC2tfwwM3m 、proto8 概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、proto8 實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 。概念層、實作想法兩個已整頁重寫（只講現況、舊分頁移除）；另補兩個新的：「aos 指令與格式參考」https://claude.ai/artifact/XFA2HA5WbeBpkJyC7wGSCn 、「proto8 入口與 demo」（實作想法拆出的第二頁）https://claude.ai/artifact/TVnjc4gvpgWjQnU3WJujtt 。
-4. **新規**：今天落正文的 C-75、C-54 R13、N-64、P-42、P-43；N-36 分岔還沒落正文（aos-round 第 7 步）。
-
-## 2026-10-29 晚（家中 Manjaro；新 session 開場）
-
-1. **授權**：可隨意 push。分工：普通事 opus、簡單工作與雜活 sonnet；做事的 agent（簡單／雜活除外）先讀 wf 規矩；agent 可再派 agent、模型隨意。
-2. **狀態**：今晚做了試驗場 `~/code/playground` 的 A（對話簿＋inbox tool）→ 使用者看完改方向（射後不理／射後有理兩個場景，inbox tool 先擱著）→ agent-bob-1／2 兩場景實跑（say／listen 直接可用）→ 隊長帶回八題 → 頂層再想成三題，使用者說「先等等吧，把這些都記錄到thinking，明天我們繼續想」。明天從 [thinking 10-29 agent-bob § 頂層對八題的再想](../proto8/thinking/2026-10-29-agent-bob.md#頂層對八題的再想10-29-晚使用者幫我多想想後未定) 接（三題也在 [WAIT_USER](WAIT_USER.md) 第一條）。
-3. **新規**：無（決定 32 旁已註先擱著）。
+1. **授權**：上個 session（10-30 晚～10-31 早）給的是：可隨意 push；普通事 opus、簡單與雜活 sonnet、規劃 fable；做事的 agent（簡單／雜活除外）先讀 wf 規矩；agent 可再派 agent；工人不 commit；只 `git add <明確的檔>`、不 `-A`、不 force／reset、`stash@{0}` 不動。**新 session 要重新問一次**。腦走 LiteLLM（`http://localhost:4000/v1`）一律用 GPT（`chatgpt-gpt-6-sol`），claude 那層用 haiku。測試在家機本地跑，`nice -n 10`、一次一個程序；基準全套 794 案、0 fail、3 skip（`AOS_TEST_REAL=0`）。
+2. **狀態**：10-30 晚四隊全收線——aos-round 第 2～7 步（`771747e1`～`ef379dc7`）、SESSION-LOG 三件收尾（aos-util 下放、round `letter_warning`、回信走 `reply_to`）、真腦實測（WAIT_USER 親手試六條代跑過、刪）、家機試驗場 `~/code/playground` 重建（舊的在 `playground-old-10-29/`）、真腦實測兩件小事修好（`57545c59`、`d069c6f7`）；最新 `13b45c7a`＋wf 兩筆。使用者親手跑過 bob-1、bob-2，兩份 ELI5 說明頁在桌面 `~/Desktop/bob-1-說明.html`、`bob-2-說明.html`（產生腳本在上個 session 的 scratchpad，沒進 git）；**試驗場剩 hub 畫面那段**（`~/code/playground/README.md` 第 5 節）。**正在討論**：使用者看了兩份說明頁後說「心中有些想法」「AI 能把東西做出來，但還需要人微調一下」——**內容還沒講，新 session 開場先聽他說**，照 [user/03](workflows/common/user/03-討論紀錄與規劃.md) 記原文、方向題交 fable 規劃。開著的題見 [SESSION-LOG](SESSION-LOG.md)；[WAIT_USER](WAIT_USER.md) 14 條（要裁的：aos_ws.py 失敗判法、`wip/hub-step6` 刪不刪、eca 代定；其餘親手試）。兩個舊建置目錄 `proto8/impls/aos-gate/`、`aos-kernel-llm/` 未追蹤、沒刪、等他點頭。
+3. **artifact**（桌面各有同名 HTML）：現況地圖 https://claude.ai/artifact/Cjgx6VAwCvMYirsMHdNrji 、親手試指南 https://claude.ai/artifact/WSrwpLQqibw2QC2tfwwM3m 、proto8 概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、proto8 實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 、aos 指令與格式參考 https://claude.ai/artifact/XFA2HA5WbeBpkJyC7wGSCn 、proto8 入口與 demo https://claude.ai/artifact/TVnjc4gvpgWjQnU3WJujtt 。10-30 晚的改動（aos-round、reply_to、aos-listen 新代號）**還沒回寫**到這幾頁。
+4. **新規**：10-30 晚無新條文；N-36 分岔已落正文（`ef379dc7`）。
