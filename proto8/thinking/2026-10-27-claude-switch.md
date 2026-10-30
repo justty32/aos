@@ -1,6 +1,6 @@
 # 2026-10-27 很多 claude 在跑：一個地方看全部、cd 過去接入、收起與叫回（aos-hub）
 
-← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-24 claude／codex 當工具、人可以接進去](2026-10-24-cli-tools.md)（attach、小格、hook）｜程式：[extras/cli_hub](../extras/cli_hub/README.md)，測試 `proto8/tests/test_hub.py`｜後續：[10-28 常駐 aos-kernel、pause 與 stop](2026-10-28-hub-kernel.md)、[10-28 實作（程式已照新方向重寫，下面的指令多半已換）](2026-10-28-hub-adapter.md)
+← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-24 claude／codex 當工具、人可以接進去](2026-10-24-cli-tools.md)（attach、小格、hook）｜程式：[extras/cli_hub](../extras/eca_hub/README.md)，測試 `proto8/tests/test_hub.py`｜後續：[10-28 常駐 aos-kernel、pause 與 stop](2026-10-28-hub-kernel.md)、[10-28 實作（程式已照新方向重寫，下面的指令多半已換）](2026-10-28-hub-adapter.md)
 
 規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。
 
@@ -21,7 +21,7 @@
 10-24 已經讓每個 claude／codex 工具在 stack 裡有一格（`session.txt` 對話 id、`tty.sock` 畫面、hook 接 `turns.jsonl`、`busy.txt`、`lock`），平常非互動、人 attach 時開畫面。這次**全部沿用**，只加三樣：
 
 - **登記**：`cli_session.py` 每用到一格，就在 `$AOS_HUB/cells/`（沒設＝`~/.local/state/aos-hub/cells/`）放一個指過去的捷徑，格裡記 `tool.txt`、`ws.txt`。登記只是一排捷徑；狀態一律當場從格裡的檔讀（N-13：狀態外顯在 stack 的檔），不另存一份會過期的表。
-- **一支指令 `aos-hub`**（[extras/cli_hub](../extras/cli_hub/README.md)）：列出、接入、切換、看、收起、叫回。
+- **一支指令 `aos-hub`**（[extras/cli_hub](../extras/eca_hub/README.md)）：列出、接入、切換、看、收起、叫回。
 - **claude 非互動改 `--output-format stream-json`**，每行一邊寫進格裡的 `live.jsonl`，回答取最後的 `result` 那行。
 
 ### 2. 六件事各怎麼做
@@ -74,4 +74,4 @@ v2.1.311 有 `claude --bg`（背景開）、`claude agents`（列出所有互動
 
 ## 已知限制
 
-見 [cli_hub/README 已知限制](../extras/cli_hub/README.md#已知限制)。另：試的時候自己開的 tmux 一定要 `-f /dev/null`——使用者的 `~/.tmux.conf` 開了 tmux-continuum 自動復原，任何新開的 tmux server 都會把他存的 session 搬進來（10-27 試 Ctrl-] 時踩到；格的畫面有自己的 `tmux.conf`，不受影響）。
+見 [cli_hub/README 已知限制](../extras/eca_hub/README.md#已知限制)。另：試的時候自己開的 tmux 一定要 `-f /dev/null`——使用者的 `~/.tmux.conf` 開了 tmux-continuum 自動復原，任何新開的 tmux server 都會把他存的 session 搬進來（10-27 試 Ctrl-] 時踩到；格的畫面有自己的 `tmux.conf`，不受影響）。

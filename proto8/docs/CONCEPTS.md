@@ -30,6 +30,7 @@
 - **10-23 晚入口與 `_` 開頭的 key**（[thinking 2026-10-23-naming](../thinking/2026-10-23-naming.md)）：使用者問「換_entry，有好處嗎」，聽完利弊後「改。然後_開頭=附註這個概念刪掉。」，又補「不認得的key就是忽略」——入口預設名 `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者原話裡的 `_exec` 照留）；C-48 是通則「不認得的 key 一律忽略、不報錯」，沒有 `_notes` 慣例。
 - **10-23 晚命名方法**（[thinking 2026-10-23-naming-method](../thinking/2026-10-23-naming-method.md)）：使用者「先試試看，不要急着寫進去」，查過 Unix／Linux 老慣例、八題選完後「寫進去吧」——C-54 的「命名方法」一點，R1～R12 細則在 [C-54 命名方法](CONCEPTS/01-設計理念/C-54-命名方法.md)。
 - **10-25 state.json、計數、時間點、上限**：使用者「state.json中，runs改counter，at改成recorded_at」、「計數這塊，幫我改成counter_*」；頂層問兩題（時間點規則要不要跟著改、上限要不要照 R6 改 `max_*`），使用者回「都好」（頂層代定、可翻案）——計數一律 `counter_<被數的東西>`（state.json 是 `counter_runs`）、時間點一律 `<發生了什麼>_at`（state.json 是 `recorded_at`）、上限一律 `max` 或 `max_*`（[C-54 命名方法 R3、R6](CONCEPTS/01-設計理念/C-54-命名方法.md)）。
+- **10-30 程式名**（[thinking 2026-10-30-eca](../thinking/2026-10-30-eca.md#決定10-30) F-21、[10-30 map-review](../thinking/2026-10-30-map-review.md#決定10-30) 第 9、11 點）：使用者「我其實更prefer前者，因為以後會有一大堆領域，而kernel作為基底，他就是算...lib？」（aos-kernel-llm 改名 aos-llm-kernel），再要 aos-gate 換名字；頂層推成「程式名＝`aos-<領域>-<功能>`」寫進條文草稿，使用者 10-30「都照建議」——[C-54 命名方法](CONCEPTS/01-設計理念/C-54-命名方法.md) R13（頂層推論、可翻案）。
 
 ## 條號表
 

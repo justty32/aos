@@ -24,7 +24,7 @@
 | 分檔 | 涵蓋的段 |
 |---|---|
 | [01-保證佈局入口.md](CONVENTION/01-保證佈局入口.md) | 一、aos 保證的（不是慣例，是底）；二、佈局（每檔一句）；三、入口、loop、fsm |
-| [02-題目stack停錯腦.md](CONVENTION/02-題目stack停錯腦.md) | 四、題目與答案（含 10-30 P-11 改口成 queue、P-42 agent 對話協議）；五、stack；六、停與錯；七、腦與工具（含 P-41 腦的工具呼叫） |
+| [02-題目stack停錯腦.md](CONVENTION/02-題目stack停錯腦.md) | 四、題目與答案（含 10-30 P-11 改口成 queue、P-42 agent 對話協議〔10-30 夜改口：外部 coding agent 也只碰這三樣〕、P-43 外部 coding agent〔eca〕的定義）；五、stack；六、停與錯；七、腦與工具（含 P-41 腦的工具呼叫） |
 | [03-shell版與inst版.md](CONVENTION/03-shell版與inst版.md) | 八、shell 版與 inst 版 |
 | [04-範例三種寫法.md](CONVENTION/04-範例三種寫法.md) | 八之「範例：同一隻 agent 的三種寫法」 |
 | [05-不管落實待決.md](CONVENTION/05-不管落實待決.md) | 九、慣例不管的；十、程式對這份的落實（只有 impls 的 C++ 版，aos-tick 例外）；十一、要使用者決定的 |

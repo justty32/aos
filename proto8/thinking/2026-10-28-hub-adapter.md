@@ -1,6 +1,8 @@
 # 2026-10-28 aos-hub 實作：say／listen 對 claude 說話（agent 對話協議）、每種 CLI 一張適配表、副產物留著
 
-← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-28 hub-kernel](2026-10-28-hub-kernel.md)（今天定的 14 條決定）、[10-24 say／listen](2026-10-24-say-listen.md)、[10-24 claude／codex 當工具](2026-10-24-cli-tools.md)｜程式：[extras/cli_hub](../extras/cli_hub/README.md)，測試 `proto8/tests/test_hub.py`
+← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-28 hub-kernel](2026-10-28-hub-kernel.md)（今天定的 14 條決定）、[10-24 say／listen](2026-10-24-say-listen.md)、[10-24 claude／codex 當工具](2026-10-24-cli-tools.md)｜程式：[extras/cli_hub](../extras/eca_hub/README.md)，測試 `proto8/tests/test_hub.py`
+
+> 10-30 起 aos-hub 改做 aos-eca-hub，見 [eca](2026-10-30-eca.md)。
 
 規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。下面「結論」除了標明使用者定的，都是隊長照 CONCEPTS／NORMS 代定、**可翻案**。
 
@@ -44,7 +46,7 @@ aos loop／fsm agent 是一種實作（agent-dan、bob）；**aos-hub-kernel 是
 10-27 的 `bin/aos-hub` **從來沒進 git**（根 `.gitignore` 的 `bin/` 擋掉了，只有 Linux 家機上有），這次照 10-28 決定重寫，`.gitignore` 加 `!proto8/extras/*/bin/`。
 
 - **常駐 kernel `aos-hub-kernel`**：`$AOS_HUB/kernel.sock` 一行 JSON 問答；狀態只在記憶體（決定 8；重開就清空，遇到問題再說）；`AOS_HUB` 沒設＝`HubMissing`、kernel 沒跑＝指令 `KernelMissing`（決定 3、10）；不建在 aos-daemon 上（決定 14 自由選，Python 常駐最小）。
-- **指令**：`ls`、`state`、`add`、`open [-d]`、`pause [--idle 分]`、`stop`、`watch`（用法在 [README](../extras/cli_hub/README.md)）。10-27 的 `pick`、`attach` 由 `open` 取代；不帶參數＝印說明。
+- **指令**：`ls`、`state`、`add`、`open [-d]`、`pause [--idle 分]`、`stop`、`watch`（用法在 [README](../extras/eca_hub/README.md)）。10-27 的 `pick`、`attach` 由 `open` 取代；不帶參數＝印說明。
 - **pause**＝關畫面、對話 id 留著，題目照樣用 `--resume` 答；**stop**＝關畫面，小格整個搬到 `<stack>/hub_archive/<工具名>-<UTC>/`，CLI 自己存的對話拷一份進 `transcripts/`，從清單拿掉（決定 5、6）。拷不搬：CLI 自己之後還能 resume。
 - **Ctrl-]＝只跳出**（決定 7），寫進 cli_session 開畫面的 `tmux.conf`（Ctrl-\ 照舊也跳出）。
 - **兩種實例**：`add`／`open` 加的＝代答（kernel 收這個資料夾的題）；agent 叫 claude／codex 工具時 cli_session 送來的 register＝只登記（列得到、接得進，不收題——那個工作區的題是 agent 的）。一個資料夾最多一個代答實例（P-18），小格＝`<資料夾>/.stack/<工具名>/`。
@@ -91,9 +93,9 @@ hub 要接一種新的 CLI，就交這張表（目前是文件；程式裡 claud
 
 ## 代定（可翻案）
 
-1. 協議＝CONVENTION P-11～P-14 原樣，只補 `server.txt` 與 trace 的 `question`／`error` 兩處；沒升進 CONVENTION 條文，用穩再說。
+1. 協議＝CONVENTION P-11～P-14 原樣，只補 `server.txt` 與 trace 的 `question`／`error` 兩處；沒升進 CONVENTION 條文，用穩再說。（10-30 刪：`server.txt` 刪掉，見 [eca](2026-10-30-eca.md#決定10-30) 衝突 6）
 2. IPC＝`$AOS_HUB/kernel.sock` 一行 JSON；kernel 是獨立 Python 常駐、不建在 daemon 上；狀態只在記憶體。
-3. 代答實例 vs 只登記實例；一個工作區一個代答實例；小格 `$工作區/.stack/<工具名>/`。
+3. 代答實例 vs 只登記實例（10-30 刪：「只登記的實例」這個分類拿掉，見 [eca](2026-10-30-eca.md#決定10-30) 衝突 6）；一個工作區一個代答實例；小格 `$工作區/.stack/<工具名>/`。
 4. 失敗停下等人，`pause`／`open` 一次重收；`SessionBad` 5 秒後再試。
 5. 歸檔 `<stack>/hub_archive/<工具名>-<UTC>/`，CLI 對話用拷的。
 6. `live.jsonl` 只接不重寫（會一直長，清理是人的事，同 P-14 的 `done/`）。
@@ -110,4 +112,4 @@ hub 要接一種新的 CLI，就交這張表（目前是文件；程式裡 claud
 
 ## 已知限制
 
-見 [cli_hub/README 已知限制](../extras/cli_hub/README.md#已知限制)。
+見 [cli_hub/README 已知限制](../extras/eca_hub/README.md#已知限制)。

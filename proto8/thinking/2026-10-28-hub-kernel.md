@@ -1,6 +1,8 @@
 # 2026-10-28 aos-hub 下一步：常駐 aos-kernel 管所有 CLI 實例、pause 與 stop
 
-← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-27 aos-hub（demo）](2026-10-27-claude-switch.md)、[10-26 playground](2026-10-26-playground.md)（`_entry` 叫 claude、經 aos-mcp 接工具）｜使用者筆記：[user-advice/20261027](../user-advice/20261027.md)（使用者的資料夾，不改）｜程式：[extras/cli_hub](../extras/cli_hub/README.md)（10-28 下午照這裡的決定改完）｜後續：[10-28 hub-adapter](2026-10-28-hub-adapter.md)（say／listen 協議、適配表、副產物、實作與實跑）
+← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-27 aos-hub（demo）](2026-10-27-claude-switch.md)、[10-26 playground](2026-10-26-playground.md)（`_entry` 叫 claude、經 aos-mcp 接工具）｜使用者筆記：[user-advice/20261027](../user-advice/20261027.md)（使用者的資料夾，不改）｜程式：[extras/cli_hub](../extras/eca_hub/README.md)（10-28 下午照這裡的決定改完）｜後續：[10-28 hub-adapter](2026-10-28-hub-adapter.md)（say／listen 協議、適配表、副產物、實作與實跑）
+
+> 10-30 起 aos-hub 改做 aos-eca-hub，見 [eca](2026-10-30-eca.md)。
 
 規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。
 
@@ -41,16 +43,16 @@
 ## 決定（10-28）
 
 1. **名字仍叫 aos-hub**，不叫 aos-ccc：管的不只 claude code，也包括 codex、pi coding agent 之類。
-2. **環境變數用 `AOS_HUB`**（取代筆記裡的 `AOS_CLAUDE_CODE_CLI_HUB`）；`AOS_HUB` 指的資料夾裡跑一個**常駐的 aos-kernel**，管所有實例。
-3. **kernel 掛了，依賴它的指令直接報錯**，不做自動接回或自動重開。
+2. **環境變數用 `AOS_HUB`**（取代筆記裡的 `AOS_CLAUDE_CODE_CLI_HUB`）；`AOS_HUB` 指的資料夾裡跑一個**常駐的 aos-kernel**，管所有實例。（10-30 改口：aos-eca-hub 建在 daemon 上，見 [eca](2026-10-30-eca.md)）
+3. **kernel 掛了，依賴它的指令直接報錯**，不做自動接回或自動重開。（10-30 改口：aos-eca-hub 建在 daemon 上，見 [eca](2026-10-30-eca.md)）
 4. **限制實例數量：實作時再說。**
 5. **要有 pause 和 stop 兩種**（頂層的解讀，使用者 10-28「你的解讀比較好」，定案）：
    - **pause**＝10-27 的「收起」：關掉程式，對話 id 留著，之後叫得回來。
    - **stop**＝結束這個實例：舊對話歸檔，不再叫回。
 6. **舊對話歸檔放在工作區的 stack 裡**（`$AOS_WS/.stack/` 底下，具體路徑實作時定；使用者「可以放在工作區啦」、「隨意，盡量不要與現有的衝突」）——改掉原本「放在 `AOS_HUB` 路徑下」；不跟 `new/`、`out/` 並排，所以不碰 C-65。
 7. **Ctrl-]＝跳出畫面但不結束實例**——這是筆記本身的意思，跟 10-27 晚「退出鍵只留一個」那條候選一致。
-8. **實例狀態以 kernel 記的為準**，不再像 10-27 那樣當場讀格裡的檔。
-9. **hub 是 kernel 的一種**：kernel＝負責排隊和分配資源的程式，hub 在它上面多做事（列實例、接畫面、pause／stop）。所以不算撞名，跟 CONCEPTS 的 kernel（C-12 排序與資源分配）是同一個概念。
+8. **實例狀態以 kernel 記的為準**，不再像 10-27 那樣當場讀格裡的檔。（10-30 改口：aos-eca-hub 建在 daemon 上，見 [eca](2026-10-30-eca.md)）
+9. **hub 是 kernel 的一種**：kernel＝負責排隊和分配資源的程式，hub 在它上面多做事（列實例、接畫面、pause／stop）。所以不算撞名，跟 CONCEPTS 的 kernel（C-12 排序與資源分配）是同一個概念。（10-30 改口：aos-eca-hub 建在 daemon 上，見 [eca](2026-10-30-eca.md)）
 10. **`AOS_HUB` 沒設＝報錯**，不給預設路徑（取代 10-27 的 `~/.local/state/aos-hub/`）。
 11. **筆記 pseudo code 裡的 prompt 參數＝stdin／stdout**，當成一條 queue：使用者的新話、模型的回覆都經它，迴圈裡 `queue.pop()`／`queue.push()`。
 12. **現成 agent 程式（claude code 之類）跟 aos loop／fsm agent 的差別**：後者底層握在我們手上，每個階段都能是 aos 函數，所以控制得更細。
