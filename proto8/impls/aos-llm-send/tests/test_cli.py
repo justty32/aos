@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""test_cli.py：aos-gate 命令列的測試（ctest 會跑）。只用標準庫（unittest）。
+"""test_cli.py：aos-llm-send 命令列的測試（ctest 會跑）。只用標準庫（unittest）。
 
-    python3 tests/test_cli.py bin/aos-gate
+    python3 tests/test_cli.py bin/aos-llm-send
 
 不需要真的 kernel：測試自己當 kernel（看 new/ 裡的信、搬到 cur/、done/、寫回信），所以只測閘門這一半。
 A 段：命令列、信箱、單子檔的錯；B 段：信的內容（指示詞在閘門的環境解、AOS_CF／AOS_CD／AOS_CO、cwd 轉絕對、整份環境、priority 原樣；
 10-29 信封 kind、sender〔$AOS_WS，沒設＝$HOME〕、sent_at）；
 C 段：回信原樣交回（stdout、stderr、碼、kernel 回的錯、讀不懂的回信）；D 段：訊號撤信、信不見了、kernel 不在時一直等、
 等的時候一直鎖著信裡的 sender.flock（kernel 靠它認寄信的人還在，10-24）。
-gate＋kernel 一起跑的在 proto8/tests/test_llm_kernel.py。
+llm-send＋kernel 一起跑的在 proto8/tests/test_llm_kernel.py。
 """
 import datetime
 import fcntl
@@ -23,7 +23,7 @@ import unittest
 from pathlib import Path
 
 BIN = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else
-                      os.path.join(os.path.dirname(__file__), "..", "bin", "aos-gate"))
+                      os.path.join(os.path.dirname(__file__), "..", "bin", "aos-llm-send"))
 
 
 def until(f, secs=5):
@@ -71,7 +71,7 @@ class Case(unittest.TestCase):
         rc, err = (r.returncode, r.stderr)
         self.assertEqual(rc, 1, err)
         self.assertEqual(len(err.splitlines()), 1, err)
-        self.assertTrue(err.startswith("aos-gate: %s " % code), err)
+        self.assertTrue(err.startswith("aos-llm-send: %s " % code), err)
 
     def letter(self):
         """等 new/ 出現一封信，回 (id, letter)。"""
@@ -225,7 +225,7 @@ class C_Relay(Case):
         self.answer(id, {"error": {"code": "DeadlineMissed", "msg": "輪到之前時限已過，沒跑"}})
         out, err = p.communicate(timeout=10)
         self.assertEqual(p.returncode, 1)
-        self.assertEqual(err, "aos-gate: DeadlineMissed 輪到之前時限已過，沒跑\n")
+        self.assertEqual(err, "aos-llm-send: DeadlineMissed 輪到之前時限已過，沒跑\n")
 
     def test_reply_bad(self):
         for bad in ("{", {"code": "0"}, {"error": "x"}, {}):

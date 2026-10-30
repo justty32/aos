@@ -26,7 +26,7 @@
 
 逐字下放到 [proto8/01-impls與舊lib](proto8/01-impls與舊lib.md)（2026-10-21 下午，本檔超過 8 KB）：impls 是使用者的 C／C++ 實作（10-23 起進 git；舊快照 `backup/` 10-23 已刪）；舊 lib 是 10-16 那套、10-19 刪進 git 歷史。
 
-LLM kernel 兩支（`aos-llm-kernel`、`aos-gate`，10-24）的逐檔表另開一份：[proto8/03-llm-kernel](proto8/03-llm-kernel.md)。aos-daemon 的 `src/` 逐檔（10-29 下放；同日加信箱模式 `mailbox.cpp`）：[proto8/14-aos-daemon](proto8/14-aos-daemon.md)。改 JSON 的工具集 `aos-json`（10-24）：[proto8/07-aos-json](proto8/07-aos-json.md)。投遞 `aos-post`、鎖 `aos-lock`（10-29）：[proto8/15-aos-post](proto8/15-aos-post.md)、[proto8/16-aos-lock](proto8/16-aos-lock.md)。
+LLM kernel 兩支（`aos-llm-kernel`、`aos-llm-send`，10-24）的逐檔表另開一份：[proto8/03-llm-kernel](proto8/03-llm-kernel.md)。aos-daemon 的 `src/` 逐檔（10-29 下放；同日加信箱模式 `mailbox.cpp`）：[proto8/14-aos-daemon](proto8/14-aos-daemon.md)。改 JSON 的工具集 `aos-json`（10-24）：[proto8/07-aos-json](proto8/07-aos-json.md)。投遞 `aos-post`、鎖 `aos-lock`（10-29）：[proto8/15-aos-post](proto8/15-aos-post.md)、[proto8/16-aos-lock](proto8/16-aos-lock.md)。
 
 ### agent-round 的格（10-28 晚）
 

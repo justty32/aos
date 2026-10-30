@@ -54,7 +54,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 | 自我改進 | [examples/self-improve.json](examples/self-improve.json) | 放進交辦工作區當 `sandbox.json`：run 格與 try_run 都把被改的函數關起來（只看得到這次的暫時複本＋工作區、斷網、只帶 `PATH`、語系幾個環境變數、1 GB、60 秒 CPU）。工作區沒放時 self-improve 預設用自己的 [sandbox.json](../../demo/self-improve/sandbox.json)（同這份、少了要 s6 的上限；10-24 定） |
 | bash 工具 | [examples/bash-boxed/](examples/bash-boxed) | 庫的 bash（[lib/base/bash](../../lib/base/bash)）原封不動（`inner` 捷徑），外面包一層：只寫得到 `$AOS_WS` 與自己的 stack、斷網、環境照預設那幾個；`cpu_s` 120 是 CPU 時間，bash 自己的 `timeout_s`（最多 300）是牆鐘 |
 | claude／codex CLI | [examples/cli-tool.json](examples/cli-tool.json) | 要連網、要寫自己的設定資料夾；擋的是「讀寫工作區以外」；環境只帶 `PATH`、`HOME`、`TERM`、語系與 aos 的六個（登入靠 `~/.claude`、`~/.codex` 裡的檔；用環境變數給 key 的話自己加進 `env`） |
-| agent 當工具 | [examples/agent.json](examples/agent.json) | 斷網、信箱綁進來（`rw` 的 `$AOS_KERNEL`；腦只能經信箱用 aos-gate 問）、環境另帶 `AOS_KERNEL`、`AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`（不帶 key）；kernel 那邊寫 `accept`。沙箱有自己的行程編號也行：kernel 認寄信的人看信裡 `sender.flock` 的檔案鎖、不看 pid（紀錄 S15） |
+| agent 當工具 | [examples/agent.json](examples/agent.json) | 斷網、信箱綁進來（`rw` 的 `$AOS_KERNEL`；腦只能經信箱用 aos-llm-send 問）、環境另帶 `AOS_KERNEL`、`AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`（不帶 key）；kernel 那邊寫 `accept`。沙箱有自己的行程編號也行：kernel 認寄信的人看信裡 `sender.flock` 的檔案鎖、不看 pid（紀錄 S15） |
 
 ## 要 root 的那半
 

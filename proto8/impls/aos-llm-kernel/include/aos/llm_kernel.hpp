@@ -1,4 +1,4 @@
-// aos/llm_kernel.hpp：aos-llm-kernel 的公開介面——LLM kernel 的信箱與信（aos-gate 寄信、aos-llm-kernel 收信都用這組）。
+// aos/llm_kernel.hpp：aos-llm-kernel 的公開介面——LLM kernel 的信箱與信（aos-llm-send 寄信、aos-llm-kernel 收信都用這組）。
 //
 //   信箱（N-16 資料夾式，Maildir）：一個資料夾，底下四格、一封信＝一個資料夾（名字＝信號 id）：
 //     tmp/.<id>/   閘門正在寫（. 開頭 kernel 不碰；寫好 letter.json 才改名進 new/<id>）

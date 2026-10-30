@@ -18,10 +18,10 @@
 
 #include <string>
 
-namespace aos::gate {
+namespace aos::llm_send {
 
 Mailbox mailbox();
 std::string sender();
 std::string post(const Mailbox& mb, const std::string& spec);
 
-}  // namespace aos::gate
+}  // namespace aos::llm_send

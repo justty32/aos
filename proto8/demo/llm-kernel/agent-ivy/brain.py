@@ -1,5 +1,5 @@
 # brain.py - 腦（經 kernel 排隊才跑）：認領題目（new/ → cur/）、題名寫 $AOS_STACK/current.txt、答案草稿印到 stdout。
-# 跟 agent-ann 的 brain.py 一樣，只是它不是 think 格直接跑的：think 格跑 aos-gate，把 brains/ 裡那張「python3 brain.py」單子（$BRAIN 選哪張：priority、_metainfo 不同）寄給 kernel，
+# 跟 agent-ann 的 brain.py 一樣，只是它不是 think 格直接跑的：think 格跑 aos-llm-send，把 brains/ 裡那張「python3 brain.py」單子（$BRAIN 選哪張：priority、_metainfo 不同）寄給 kernel，
 # kernel 輪到它時才跑（環境、cwd 跟直接跑一樣），stdout 由閘門原樣交回、think 格把它導到 plan.txt。
 # 沒設 AOS_BRAIN_URL＝假腦：睡 1 秒（假裝想很久，demo 才看得出排隊）再回 FAKE ANSWER；有設就問 OpenAI 相容的端點。
 # 有 AOS_KERNEL_REPORT（kernel 跑它時給的）就把回覆的 usage 寫進去，kernel 記進 served.jsonl 與額度（10-24）。

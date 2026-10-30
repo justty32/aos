@@ -1,4 +1,4 @@
-{"commands": ["aos-exec", "aos-loop", "aos-fsm", "aos-gate"],
+{"commands": ["aos-exec", "aos-loop", "aos-fsm", "aos-llm-send"],
  "ro": [{"$env": "AOS_CD"}],
  "rw": [{"$env": "AOS_WS"}, {"$env": "AOS_STACK"}, {"$env": "AOS_KERNEL"}],
  "env": ["PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "PYTHONDONTWRITEBYTECODE", "PYTHONIOENCODING",

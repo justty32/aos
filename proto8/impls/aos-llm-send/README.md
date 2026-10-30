@@ -1,15 +1,17 @@
-# aos-gate
+# aos-llm-send
 
-`aos-gate - 把一張單子寄進 kernel 的信箱，等回信，結果原樣交回`（NAME，C-54 R1）
+`aos-llm-send - 把一張單子寄進 kernel 的信箱，等回信，結果原樣交回`（NAME，C-54 R1）
 
-**一句話：`aos-gate [旗標] 單子.json`——不直接跑那張單子，而是寫成一封信丟進 `$AOS_KERNEL` 信箱的 `new/`，等 kernel（[aos-llm-kernel](../aos-llm-kernel/README.md)）輪到它、跑完回信，再把 stdout、stderr 原樣吐出來、以單子的碼結束。**
-叫它的那一格看到的跟直接跑那張單子一樣，不知道有 kernel（C-20）。一個 lib（`lib/libaos-gate.a`，沒有公開標頭）加一支薄命令列（`bin/aos-gate`）。連 aos-llm-kernel 的公開標頭（信箱與信的格式）。全家慣例見 [impls/README.md](../README.md)。
+10-30 改名，舊名 aos-gate（照 `aos-<領域>-<功能>`、跟 aos-llm-kernel 成對；[thinking 10-30 map-review 第 11 點](../../thinking/2026-10-30-map-review.md#決定10-30)）。
+
+**一句話：`aos-llm-send [旗標] 單子.json`——不直接跑那張單子，而是寫成一封信丟進 `$AOS_KERNEL` 信箱的 `new/`，等 kernel（[aos-llm-kernel](../aos-llm-kernel/README.md)）輪到它、跑完回信，再把 stdout、stderr 原樣吐出來、以單子的碼結束。**
+叫它的那一格看到的跟直接跑那張單子一樣，不知道有 kernel（C-20）。一個 lib（`lib/libaos-llm-send.a`，沒有公開標頭）加一支薄命令列（`bin/aos-llm-send`）。連 aos-llm-kernel 的公開標頭（信箱與信的格式）。全家慣例見 [impls/README.md](../README.md)。
 
 像寄掛號信：你不自己跑一趟，把要辦的事寫好丟進郵筒、站在旁邊等回條；回條來了就照著上面的結果交差。等太久被叫走（收到訊號）就把信從郵筒抽回來；已經在辦的就讓他辦完，回條沒人拿、由郵局清掉。
 
 ```sh
 cat fsm.json   # think 格不直接跑腦，跑閘門；腦那張單子放在同一格的 brain，加 priority
-# "think": {"exec": {"argv": ["aos-gate", {"$env": "AOS_CF", "$path": "#/states/think/brain"}],
+# "think": {"exec": {"argv": ["aos-llm-send", {"$env": "AOS_CF", "$path": "#/states/think/brain"}],
 #                    "stdout": {"$env": "AOS_STACK", "$path": "plan.txt"}, "timeout_ms": 120000},
 #           "brain": {"argv": ["python3", "brain.py"], "priority": "high"}, "next": "act"}
 AOS_KERNEL=/path/to/mailbox aos-exec --ws ws agent    # 信箱位置由叫它的人綁（像 AOS_BRAIN_*，P-39）
@@ -20,7 +22,7 @@ AOS_KERNEL=/path/to/mailbox aos-exec --ws ws agent    # 信箱位置由叫它的
 ## 用法
 
 ```
-aos-gate [旗標] 單子.json
+aos-llm-send [旗標] 單子.json
 ```
 
 - **命令列**：唯一的位置參數＝單子檔（可寫 `檔#/指標`）；目前沒有旗標。不讀 stdin（單子要 stdin 就自己寫 `stdin` key；沒寫＝kernel 那邊給 `/dev/null`）。
@@ -34,7 +36,7 @@ aos-gate [旗標] 單子.json
 - **等**：每 20 毫秒看一次 `done/<信號>/`（中間收到訊號馬上醒）。**等多久不歸閘門管**：由包它那格的 `timeout_ms` 守（10-15 KISS 1.8）；kernel 不在＝信堆在 `new/`、一直等，kernel 起來就接著做。
   信在 `new/`、`cur/`、`done/` 都找不到（照信走的方向依序看，不會看漏）＝`LetterMissing`。
 - **交回**：`stdout.txt` 原樣寫到自己的 stdout、`stderr.txt` 寫到 stderr（單子自己導到別處的就沒有這兩個檔），刪掉 `done/<信號>/`；
-  回信 `{"code", "signal"}`＝以那個碼結束（被訊號停掉的單子是 128＋N）；回信 `{"error": {"code", "msg"}}`（kernel 沒跑或跑不起來）＝印一行 `aos-gate: 代號 原因`、退 1；回信讀不懂＝`ReplyBad`。
+  回信 `{"code", "signal"}`＝以那個碼結束（被訊號停掉的單子是 128＋N）；回信 `{"error": {"code", "msg"}}`（kernel 沒跑或跑不起來）＝印一行 `aos-llm-send: 代號 原因`、退 1；回信讀不懂＝`ReplyBad`。
 - **訊號**（SIGINT／SIGTERM／SIGHUP，例如包它那格逾時）：撤信——`new/<信號>` 改名回 `tmp/` 再刪（改得成＝還沒被認領）；已經在 `cur/`（正在跑）就讓它跑完、回信由 kernel 之後清掉；已經在 `done/` 就刪。以 128＋N 結束。
 
 ## 元素
@@ -48,11 +50,11 @@ aos-gate [旗標] 單子.json
 | `src/send/send.hpp`、`send.cpp` | `mailbox`、`post` |
 | `src/wait/wait.hpp`、`wait.cpp` | `wait_reply`（輪詢、`withdraw`、`relay`） |
 | `src/common/common.hpp` | `using`；代號沿用 aos-llm-kernel 的 |
-| `src/main.cpp` | 命令列：串上面；出錯印「aos-gate: 代號 原因」 |
+| `src/main.cpp` | 命令列：串上面；出錯印「aos-llm-send: 代號 原因」 |
 
 ## 錯誤代號
 
-stderr 一行 **`aos-gate: 代號 原因`**、退 1。
+stderr 一行 **`aos-llm-send: 代號 原因`**、退 1。
 
 | 代號 | 什麼時候 |
 |---|---|

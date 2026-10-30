@@ -4,7 +4,7 @@
     python3 tests/test_cli.py bin/aos-llm-kernel
 
 每個案例一個暫存資料夾：stack/（AOS_STACK）、mb/（信箱）、kernel.json。信是測試自己寫的（假裝是閘門寄的）：
-信號照 aos-gate 的格式 <奈秒>.<pid>.<started_at_ticks>；「寄信的人還在」＝測試自己 flock 住信裡的 sender.flock（同閘門），
+信號照 aos-llm-send 的格式 <奈秒>.<pid>.<started_at_ticks>；「寄信的人還在」＝測試自己 flock 住信裡的 sender.flock（同閘門），
 要「寄信的人不在了」就留一個沒人鎖的 sender.flock（或乾脆沒有）。
 A 段：命令列與設定；B 段：排隊（level、deadline、等了幾次、先來先上、aging）；C 段：slots；D 段：回信的各種錯
 （DeadlineMissed、LetterBad、單子壞）；E 段：收拾（寄信的人不在、上一次 kernel 死了留在 cur/）；F 段：鎖、訊號、環境與 cwd、逾時；
@@ -35,7 +35,7 @@ SEQ = [0]
 
 
 def new_id(pid=None, t=None):
-    """跟 aos-gate 的 letter_id 同格式；pid 預設＝測試自己（寄信的人還在）。"""
+    """跟 aos-llm-send 的 letter_id 同格式；pid 預設＝測試自己（寄信的人還在）。"""
     SEQ[0] += 1
     pid = pid or os.getpid()
     t = ticks(pid) if t is None else t
@@ -390,11 +390,11 @@ class F_Run(Case):
         (self.t / "w").mkdir()
         i = self.post(inst={"argv": ["sh", "-c", 'echo "$FOO|${KERNEL_ONLY-unset}|$(pwd)"; cat'],
                             "cwd": str(self.t / "w")},
-                      env={"PATH": os.environ["PATH"], "FOO": "from-gate"})
+                      env={"PATH": os.environ["PATH"], "FOO": "from-llm-send"})
         r = self.run_k(extra={"KERNEL_ONLY": "x"})
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual((self.mb / "done" / i / "stdout.txt").read_text(),
-                         "from-gate|unset|%s\n" % (self.t / "w"))   # stdin 是 /dev/null（cat 馬上結束）
+                         "from-llm-send|unset|%s\n" % (self.t / "w"))   # stdin 是 /dev/null（cat 馬上結束）
 
     def test_timeout_in_inst(self):
         i = self.post(inst={"argv": ["sleep", "5"], "cwd": str(self.t), "timeout_ms": 200})
@@ -496,7 +496,7 @@ class H_Report(Case):
 
     def test_env_points_into_letter(self):
         i = self.post(["sh", "-c", 'echo "$AOS_KERNEL_REPORT"'], env={"PATH": os.environ["PATH"],
-                                                                        "AOS_KERNEL_REPORT": "/from/gate"})
+                                                                        "AOS_KERNEL_REPORT": "/from/llm-send"})
         self.drain(1)
         self.assertEqual((self.mb / "done" / i / "stdout.txt").read_text().strip(),
                          str(self.mb / "cur" / i / "report.json"))   # 信小格裡的檔，蓋掉信裡帶來的

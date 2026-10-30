@@ -6,7 +6,7 @@
 
 > **10-12 夜使用者定**：thinking 只留「使用者原文整理、決策結果、跟 AI 討論後的結論、未決」，其餘 AI 產出拿掉（「今天 10/12 產出的那些 thinking 也是，留結論」）；整份都是 AI 產出的檔整份刪。
 
-> **10-30 改名**：aos-kernel-llm 改名 aos-llm-kernel（`demo/kernel-llm/` → `demo/llm-kernel/`、標頭 `aos/kernel_llm.hpp` → `aos/llm_kernel.hpp`、`tests/test_kernel_llm.py` → `tests/test_llm_kernel.py`；[map-review 第 9 點](2026-10-30-map-review.md#決定10-30)），舊紀錄照舊名。
+> **10-30 改名**：aos-kernel-llm 改名 aos-llm-kernel（`demo/kernel-llm/` → `demo/llm-kernel/`、標頭 `aos/kernel_llm.hpp` → `aos/llm_kernel.hpp`、`tests/test_kernel_llm.py` → `tests/test_llm_kernel.py`；[map-review 第 9 點](2026-10-30-map-review.md#決定10-30)）；aos-gate 改名 aos-llm-send（[第 11 點](2026-10-30-map-review.md#決定10-30)）。舊紀錄照舊名。
 
 | 月份 | 份數 | 範圍 |
 |---|---|---|

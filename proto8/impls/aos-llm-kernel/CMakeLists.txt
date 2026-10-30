@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 # aos-llm-kernel：`aos-llm-kernel kernel.json`——LLM kernel 跑一次（挑信、跑、回信）。兩個產物：lib/libaos-llm-kernel.a、bin/aos-llm-kernel。
-# 公開標頭 aos/llm_kernel.hpp（信箱與信的格式）也給 aos-gate 用。
+# 公開標頭 aos/llm_kernel.hpp（信箱與信的格式）也給 aos-llm-send 用。
 # CMake 的共通設定（vcpkg、Release、compile_commands、PIC、AOS_STATIC_PIE）在 ../cmake/settings.cmake。
 # 照 aos-fsm 的 CMakeLists.txt 改名。
 include(../cmake/settings.cmake)

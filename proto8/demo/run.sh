@@ -9,9 +9,9 @@
 # 最後跑 daemon-3：同一支 demo/tick 掛兩次——loops 的 tick_loop（包成 max: 1 的子 loop）、execs 的 tick_exec（直接 aos-exec 一次），看 loops_state 兩張表（10-30 agent-lifecycle 實作第 8 步）
 here=$(cd "$(dirname "$0")" && pwd)
 # aos 的程式都不動 PATH（ideas § 24）：agent 裡叫的 aos-exec、aos-loop、aos-fsm、aos-daemon、aos-tick 由這裡（呼叫端）放進 PATH。
-# 10-23 起前四支是 C++（10-24 加 aos-llm-kernel、aos-gate 兩支；10-28 加 aos-json：aos-tools 解指示詞、改 tools.json 要它；10-29 加 aos-post：daemon-2 寄信；10-30 起 agent-nia 的 queue 格也經它）（proto8/impls/<名>/bin/，要先建，見 wf/workflows/testing.md）；aos-tick 還是 Python（proto8/bin/，aos agent 讀工具清單的 aos-tools 也在這）
+# 10-23 起前四支是 C++（10-24 加 aos-llm-kernel、aos-llm-send 兩支；10-28 加 aos-json：aos-tools 解指示詞、改 tools.json 要它；10-29 加 aos-post：daemon-2 寄信；10-30 起 agent-nia 的 queue 格也經它）（proto8/impls/<名>/bin/，要先建，見 wf/workflows/testing.md）；aos-tick 還是 Python（proto8/bin/，aos agent 讀工具清單的 aos-tools 也在這）
 impls=$(cd "$here/../impls" && pwd)
-for p in aos-exec aos-loop aos-fsm aos-daemon aos-llm-kernel aos-gate aos-json aos-post; do
+for p in aos-exec aos-loop aos-fsm aos-daemon aos-llm-kernel aos-llm-send aos-json aos-post; do
   [ -x "$impls/$p/bin/$p" ] || { echo "run.sh：$impls/$p/bin/$p 還沒建（先建 proto8/impls，見 wf/workflows/testing.md）" >&2; exit 1; }
   PATH="$impls/$p/bin:$PATH"
 done

@@ -16,8 +16,8 @@
 
 #include <string>
 
-namespace aos::gate {
+namespace aos::llm_send {
 
 int wait_reply(const Mailbox& mb, const std::string& id);
 
-}  // namespace aos::gate
+}  // namespace aos::llm_send

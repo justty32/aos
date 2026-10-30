@@ -1,10 +1,10 @@
-// main.cpp：aos-gate 命令列——把一張單子當成請求寄進 kernel 的信箱，等回信，結果原樣交回、以單子的碼結束。
+// main.cpp：aos-llm-send 命令列——把一張單子當成請求寄進 kernel 的信箱，等回信，結果原樣交回、以單子的碼結束。
 //
-//     aos-gate [旗標] 單子.json
+//     aos-llm-send [旗標] 單子.json
 //
 //   block_signals → 命令列（目前沒有旗標；唯一的位置參數＝單子檔，可寫 `檔#/指標`）→ mailbox（$AOS_KERNEL）→ post → wait_reply
 // 呼叫它的那一格不知道有 kernel（C-20）：跟直接跑那張單子一樣拿到 stdout、stderr、結束碼。
-// 自己出錯、或 kernel 回「沒跑／跑不起來」：stderr 一行「aos-gate: 代號 原因」、退 1（N-60）。
+// 自己出錯、或 kernel 回「沒跑／跑不起來」：stderr 一行「aos-llm-send: 代號 原因」、退 1（N-60）。
 #include "send/send.hpp"
 #include "wait/wait.hpp"
 
@@ -13,17 +13,17 @@
 #include <cstdio>
 #include <exception>
 
-static const char* USAGE = "usage: aos-gate [旗標] 單子.json";
+static const char* USAGE = "usage: aos-llm-send [旗標] 單子.json";
 
 static int fail(const std::string& code, const std::string& msg) {
     std::fflush(stdout);
-    std::fprintf(stderr, "aos-gate: %s %s\n", code.c_str(), msg.c_str());
+    std::fprintf(stderr, "aos-llm-send: %s %s\n", code.c_str(), msg.c_str());
     std::fflush(stderr);
     return 1;
 }
 
 int main(int argc, char** argv) {
-    namespace g = aos::gate;
+    namespace g = aos::llm_send;
     try {
         aos::loop::block_signals();
         aos::Cli cli;

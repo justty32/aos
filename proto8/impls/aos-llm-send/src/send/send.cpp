@@ -16,7 +16,7 @@ extern char** environ;
 
 namespace fs = std::filesystem;
 
-namespace aos::gate {
+namespace aos::llm_send {
 
 Mailbox mailbox() {
     const char* k = std::getenv("AOS_KERNEL");
@@ -122,4 +122,4 @@ std::string post(const Mailbox& mb, const std::string& spec) {
     return id;
 }
 
-}  // namespace aos::gate
+}  // namespace aos::llm_send

@@ -44,7 +44,7 @@ namespace aos::post {
 namespace code {
 using namespace aos::code;
 inline constexpr const char* CommandUnknown = "CommandUnknown"; // 命令列：不認得的子命令（同 aos-json）
-inline constexpr const char* MailboxMissing = "MailboxMissing"; // 信箱不在、或 tmp/ new/ cur/ 沒建好（同 aos-gate）
+inline constexpr const char* MailboxMissing = "MailboxMissing"; // 信箱不在、或 tmp/ new/ cur/ 沒建好（同 aos-llm-send）
 inline constexpr const char* LetterMissing = "LetterMissing";   // 指名的信不在 cur/（check、finish）
 inline constexpr const char* LetterBad = "LetterBad";           // 命令列 check：letter.json 不是 JSON 物件、缺必填、型別不對
 inline constexpr const char* WithdrawFailed = "WithdrawFailed"; // 命令列 withdraw：信不在 new/（已被認領，或本來就沒有）

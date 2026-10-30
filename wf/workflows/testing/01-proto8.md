@@ -5,7 +5,7 @@
 10-23 起 proto8 的 aos-exec、aos-loop、aos-fsm、aos-daemon 只剩 C++ 版（`proto8/impls/<名>/bin/`；使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也改 C++、tick 先留 Python），aos-tick 還是 `proto8/bin/` 的 Python。`proto8/tests` 與 `proto8/demo/run.sh` 都把這幾個 `bin/` 放進 PATH 跑（`proto8/tests/aos_bins.py`；沒建好會直接停、說要先建），所以**先建 impls**（各專案獨立的 CMake 專案，照依賴順序；`bin/`、`build/` 不進 git）：
 
 ```sh
-(cd proto8/impls && for p in inst aos-util aos-directive aos-schema aos-exec aos-json aos-loop aos-fsm aos-lock aos-post aos-daemon aos-llm-kernel aos-gate; do (cd $p && cmake -B build && cmake --build build && ctest --test-dir build) || break; done)
+(cd proto8/impls && for p in inst aos-util aos-directive aos-schema aos-exec aos-json aos-loop aos-fsm aos-lock aos-post aos-daemon aos-llm-kernel aos-llm-send; do (cd $p && cmake -B build && cmake --build build && ctest --test-dir build) || break; done)
 python3 -m unittest discover -s proto8/tests      # 全過（python-dotenv 沒裝時 1 個 skip）
 sh proto8/demo/run.sh                            # 結束碼 0、各段都「結束碼 0」（10-23 加 agent-dan 後五段；10-24 加 llm-kernel 後六段）
 ```

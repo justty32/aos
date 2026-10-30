@@ -6,7 +6,7 @@
 sh proto8/demo/run.sh      # 在 WSL／Linux 跑
 ```
 
-`run.sh` 每段各建一個暫時工作區、放一題 `new/q1.txt`、`cd` 進去跑（慣例用法 `aos-exec <agent資料夾>`），共九段：agent-bob、agent-ann、agent-dan（假腦）三隻 agent，再跑 daemon、tick、llm-kernel（一個 daemon 管 LLM kernel 與三隻走 kernel 的 agent）、agent-nia（照 agent-round 的格組起來，10-28；10-30 起題目經 queue 格放進 `$AOS_WS/.stack/queue/`、答案看 history，不用 `new/`、`out/`）、daemon-2（信箱模式的 daemon，10-29），最後 daemon-3（一次性的東西掛 daemon 的兩種寫法，10-30）（見下）；印工作區內容（`out/`、`done/`；跑完 `new/`、`cur/` 是空的）與整棵 stack 樹（`$AOS_WS/.stack/`，每檔印內容），最後把暫時資料夾刪掉，repo 裡不留東西。**PATH 由 `run.sh` 自己放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），agent 裡寫的 `aos-loop`、`aos-fsm`、`aos-exec`、`aos-daemon`、`aos-tick` 要呼叫端事先放進 PATH——`run.sh` 開頭就這麼做：aos-exec、aos-loop、aos-fsm、aos-daemon（與 llm-kernel 用的 aos-llm-kernel、aos-gate、daemon-2 與 agent-nia 的 queue 格用的 aos-post）是 C++ 的 `proto8/impls/<名>/bin/`（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；要先建，見 [testing](../../wf/workflows/testing.md#proto8不在-ctest-裡)），aos-tick 是 Python 的 `proto8/bin/`；沒建好 `run.sh` 會先停、說要先建。自己手動跑也一樣（例：`PATH=$PWD/proto8/impls/aos-exec/bin:$PWD/proto8/impls/aos-loop/bin:$PWD/proto8/impls/aos-fsm/bin:$PATH aos-exec --ws <工作區> proto8/demo/agent-bob`）。預設假腦；`AOS_BRAIN_URL`（OpenAI 相容 base URL，另可設 `AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY`）指到遠端才用真腦；agent-dan 這類帶 `.env` 的 agent 模型名在自己的 `.env`（`AOS_BRAIN_MODEL`），只要給 `AOS_BRAIN_URL`。**這台電腦不要跑本機模型**（使用者定「放棄跑本機模型」，[ideas § 6](../thinking/2026-10-19-ideas.md)）。
+`run.sh` 每段各建一個暫時工作區、放一題 `new/q1.txt`、`cd` 進去跑（慣例用法 `aos-exec <agent資料夾>`），共九段：agent-bob、agent-ann、agent-dan（假腦）三隻 agent，再跑 daemon、tick、llm-kernel（一個 daemon 管 LLM kernel 與三隻走 kernel 的 agent）、agent-nia（照 agent-round 的格組起來，10-28；10-30 起題目經 queue 格放進 `$AOS_WS/.stack/queue/`、答案看 history，不用 `new/`、`out/`）、daemon-2（信箱模式的 daemon，10-29），最後 daemon-3（一次性的東西掛 daemon 的兩種寫法，10-30）（見下）；印工作區內容（`out/`、`done/`；跑完 `new/`、`cur/` 是空的）與整棵 stack 樹（`$AOS_WS/.stack/`，每檔印內容），最後把暫時資料夾刪掉，repo 裡不留東西。**PATH 由 `run.sh` 自己放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），agent 裡寫的 `aos-loop`、`aos-fsm`、`aos-exec`、`aos-daemon`、`aos-tick` 要呼叫端事先放進 PATH——`run.sh` 開頭就這麼做：aos-exec、aos-loop、aos-fsm、aos-daemon（與 llm-kernel 用的 aos-llm-kernel、aos-llm-send、daemon-2 與 agent-nia 的 queue 格用的 aos-post）是 C++ 的 `proto8/impls/<名>/bin/`（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；要先建，見 [testing](../../wf/workflows/testing.md#proto8不在-ctest-裡)），aos-tick 是 Python 的 `proto8/bin/`；沒建好 `run.sh` 會先停、說要先建。自己手動跑也一樣（例：`PATH=$PWD/proto8/impls/aos-exec/bin:$PWD/proto8/impls/aos-loop/bin:$PWD/proto8/impls/aos-fsm/bin:$PATH aos-exec --ws <工作區> proto8/demo/agent-bob`）。預設假腦；`AOS_BRAIN_URL`（OpenAI 相容 base URL，另可設 `AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY`）指到遠端才用真腦；agent-dan 這類帶 `.env` 的 agent 模型名在自己的 `.env`（`AOS_BRAIN_MODEL`），只要給 `AOS_BRAIN_URL`。**這台電腦不要跑本機模型**（使用者定「放棄跑本機模型」，[ideas § 6](../thinking/2026-10-19-ideas.md)）。
 
 ## agent-bob（混合範本，叫 cathy、cathy 叫 stamp：四層）
 
@@ -263,21 +263,21 @@ agent-hal/                 照抄 agent-dan（brain.py、act.py 只改錯誤訊�
 
 ## llm-kernel（問腦變成請求、LLM kernel 排隊跑，10-24）
 
-使用者 10-24「LLM kernel，也就是把brain這塊弄成一個請求，而不是直接打API，請求會被丟到某個地方，由kernel排隊跑」；設計與照推薦定的十五條在 [thinking 2026-10-24-llm-kernel](../thinking/2026-10-24-llm-kernel.md)，程式是 [aos-gate](../impls/aos-gate/README.md)（寄信、等回信）與 [aos-llm-kernel](../impls/aos-llm-kernel/README.md)（一次挑信、跑、回信）。
+使用者 10-24「LLM kernel，也就是把brain這塊弄成一個請求，而不是直接打API，請求會被丟到某個地方，由kernel排隊跑」；設計與照推薦定的十五條在 [thinking 2026-10-24-llm-kernel](../thinking/2026-10-24-llm-kernel.md)，程式是 [aos-llm-send](../impls/aos-llm-send/README.md)（寄信、等回信）與 [aos-llm-kernel](../impls/aos-llm-kernel/README.md)（一次挑信、跑、回信）。
 
 ```
 llm-kernel/
   _entry          #!/bin/sh：AOS_KERNEL=$AOS_STACK/mailbox（先建好）、exec aos-daemon "$@" daemon.json（後面的參數給 daemon）
   daemon.json     一個 daemon 管四個子項：kernel（aos-llm-kernel kernel.json，interval_ms 300）、a、b、c（各跑一次 agent-ivy，工作區 $AOS_WS/<名>，環境變數 BRAIN 選腦的單子）
   kernel.json     {"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1, "budget": {"max_calls": 100, "max_tokens": 100000, "window": "day"}}（demo 碰不到 budget 的頂）
-  agent-ivy/      走 kernel 的 agent（ann 式：idle.py、brain.py、act.py）；think 格的 exec＝aos-gate $BRAIN，stdout 導到 plan.txt
+  agent-ivy/      走 kernel 的 agent（ann 式：idle.py、brain.py、act.py）；think 格的 exec＝aos-llm-send $BRAIN，stdout 導到 plan.txt
     brains/       腦的單子三張：plain.json（normal）、quick.json（normal、_metainfo 宣告 time_ms 800）、urgent.json（high、宣告 5000）
 ```
 
-三隻同時拿到題目、同時問腦：think 格不直接跑 `brain.py`，而是 `aos-gate brains/<哪張>.json`——閘門把那張單子連同 priority、`_metainfo`、當下的整份環境寫成一封信丟進信箱、等回信；kernel 每 300 毫秒被拍一次，一次挑一封（`slots` 1）跑（假腦睡 1 秒），跑完寫回信，閘門把 stdout 原樣交回（think 格導進 `plan.txt`）、以腦的碼結束。agent 不知道有 kernel（C-20）。**agent-dan 範本沒改**（仍直接問腦）；走 kernel 的版本只在這裡（照推薦定，可翻案）。
+三隻同時拿到題目、同時問腦：think 格不直接跑 `brain.py`，而是 `aos-llm-send brains/<哪張>.json`——閘門把那張單子連同 priority、`_metainfo`、當下的整份環境寫成一封信丟進信箱、等回信；kernel 每 300 毫秒被拍一次，一次挑一封（`slots` 1）跑（假腦睡 1 秒），跑完寫回信，閘門把 stdout 原樣交回（think 格導進 `plan.txt`）、以腦的碼結束。agent 不知道有 kernel（C-20）。**agent-dan 範本沒改**（仍直接問腦）；走 kernel 的版本只在這裡（照推薦定，可翻案）。
 
 服務順序看 `.stack/kernel/served.jsonl`（一封一行：`level`、`counter_waited_runs`、`code`、實際 `elapsed_ms`、宣告的 `time_ms`）：c（high）先，同級的 a、b 裡宣告了短 `time_ms` 的 b 先（即使 a 先寄）、沒寫的 a 最後；三隻的 `out/q1.txt` 都是 `FAKE ANSWER to: …`。
-token 回報：kernel 跑腦時給 `AOS_KERNEL_REPORT`，agent-ivy 的 `brain.py` 把回覆的 `usage` 寫進去（假腦也編一份：題目與答案的字數當 token 數），served 每行多 `counter_tokens`、`report_bad`，累計在 `.stack/kernel/used.json`（這一窗與總數的 `counter_calls`、`counter_tokens`）；`run.sh` 那題三封各 43、累計 3 次 129。daemon 跑 25 次（約 5 秒）就結束、收掉 kernel。要真腦：`AOS_BRAIN_URL=… aos-exec --ws <工作區> proto8/demo/llm-kernel --max 300`（PATH 照上面放好，含 `aos-llm-kernel`、`aos-gate` 的 `bin/`；`--max` 原樣給 aos-daemon，真腦三封排隊約 5～15 秒，預設 25 次可能來不及；模型名在 `agent-ivy/.env`，外面設 `AOS_BRAIN_MODEL` 為準）。daemon 照樣跑滿 `max` 次才收工，不會在三隻做完時先停。
+token 回報：kernel 跑腦時給 `AOS_KERNEL_REPORT`，agent-ivy 的 `brain.py` 把回覆的 `usage` 寫進去（假腦也編一份：題目與答案的字數當 token 數），served 每行多 `counter_tokens`、`report_bad`，累計在 `.stack/kernel/used.json`（這一窗與總數的 `counter_calls`、`counter_tokens`）；`run.sh` 那題三封各 43、累計 3 次 129。daemon 跑 25 次（約 5 秒）就結束、收掉 kernel。要真腦：`AOS_BRAIN_URL=… aos-exec --ws <工作區> proto8/demo/llm-kernel --max 300`（PATH 照上面放好，含 `aos-llm-kernel`、`aos-llm-send` 的 `bin/`；`--max` 原樣給 aos-daemon，真腦三封排隊約 5～15 秒，預設 25 次可能來不及；模型名在 `agent-ivy/.env`，外面設 `AOS_BRAIN_MODEL` 為準）。daemon 照樣跑滿 `max` 次才收工，不會在三隻做完時先停。
 
 ## agent-nia（照 agent-round 的格組起來，10-28；10-30 改走 queue）
 
@@ -330,4 +330,4 @@ aos-exec --ws <工作區> proto8/demo/agent-nia        # PATH 照上面放好（
 
 ## 測試
 
-`python3 -m unittest discover -s proto8/tests`（跑 impls 的 C++ 程式＋bin 的 aos-tick，先建 impls）：`test_loop.py`（直接叫 aos-loop：訊號、PATH、`interval_ms`／`ctl`／`state` 窗、命令列（設定檔是唯一的位置參數、`exec` 陣列、`檔#/指標`））、`test_daemon.py`（aos-daemon）、`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與 cathy／stamp 巢狀）、`test_exec_rules.py`（aos-exec 的規則：命令列旗標、找入口、`#/`、四種入口、`AOS_CF`／`AOS_CD`）、`test_inst.py`（inst 單子，經 aos-exec 跑）、`test_fsm.py`（aos-fsm）、`test_tick.py`（aos-tick 與 demo/tick）、`test_dan.py`（agent-dan：用一支假 server 照劇本回 `tool_calls`／答案；連真模型的案例在 LiteLLM 不在時 skip）、`test_llm_kernel.py`（LLM kernel：aos-gate＋aos-llm-kernel 經 aos-loop 端到端、包閘門那格逾時撤信、kernel 不在時信堆著、high 先與 slots、kernel 整群死掉後 `RunFailed`、只死本體時照常交回、demo/llm-kernel 的順序與 `_metainfo`；token 回報與額度：agent-dan 的 `brain.py` 經閘門、kernel 跑時把假 server 的 usage 寫進回報、沒經 kernel 不寫、額度到頂閘門印 `BudgetMissing`、demo 的 tokens 與 `used.json`）。
+`python3 -m unittest discover -s proto8/tests`（跑 impls 的 C++ 程式＋bin 的 aos-tick，先建 impls）：`test_loop.py`（直接叫 aos-loop：訊號、PATH、`interval_ms`／`ctl`／`state` 窗、命令列（設定檔是唯一的位置參數、`exec` 陣列、`檔#/指標`））、`test_daemon.py`（aos-daemon）、`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與 cathy／stamp 巢狀）、`test_exec_rules.py`（aos-exec 的規則：命令列旗標、找入口、`#/`、四種入口、`AOS_CF`／`AOS_CD`）、`test_inst.py`（inst 單子，經 aos-exec 跑）、`test_fsm.py`（aos-fsm）、`test_tick.py`（aos-tick 與 demo/tick）、`test_dan.py`（agent-dan：用一支假 server 照劇本回 `tool_calls`／答案；連真模型的案例在 LiteLLM 不在時 skip）、`test_llm_kernel.py`（LLM kernel：aos-llm-send＋aos-llm-kernel 經 aos-loop 端到端、包閘門那格逾時撤信、kernel 不在時信堆著、high 先與 slots、kernel 整群死掉後 `RunFailed`、只死本體時照常交回、demo/llm-kernel 的順序與 `_metainfo`；token 回報與額度：agent-dan 的 `brain.py` 經閘門、kernel 跑時把假 server 的 usage 寫進回報、沒經 kernel 不寫、額度到頂閘門印 `BudgetMissing`、demo 的 tokens 與 `used.json`）。

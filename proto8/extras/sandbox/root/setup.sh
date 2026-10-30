@@ -48,9 +48,9 @@ if [ -n "$MAILBOX" ]; then
 	echo "#    沙箱裡要綁進來才看得到：設定的 rw 列 $MAILBOX、env 列 AOS_KERNEL（aos-sandbox 不另設開關）"
 	echo "# 不讓 $RUNNER 寫：chmod 700 $MAILBOX（或 chgrp 回 $ME 自己的群組）。kernel 自己建的信箱照 umask（多半 755＝別人讀得到信、寫不進），"
 	echo "#    放在 700 的家目錄底下就連看都看不到。"
-	echo "# 驗（不用 root；aos-gate 寫絕對路徑，sudo 用自己的 PATH）：kernel 開著時"
-	echo "#    sudo -n /usr/local/bin/s6-setuidgid $RUNNER env AOS_KERNEL=$MAILBOX /絕對/aos-gate 單子.json   # 拿到回信"
-	echo "#    chmod 700 $MAILBOX 之後同一行＝aos-gate: MkdirFailed（寫不進）；chmod 2770 改回來"
+	echo "# 驗（不用 root；aos-llm-send 寫絕對路徑，sudo 用自己的 PATH）：kernel 開著時"
+	echo "#    sudo -n /usr/local/bin/s6-setuidgid $RUNNER env AOS_KERNEL=$MAILBOX /絕對/aos-llm-send 單子.json   # 拿到回信"
+	echo "#    chmod 700 $MAILBOX 之後同一行＝aos-llm-send: MkdirFailed（寫不進）；chmod 2770 改回來"
 	exit 0
 fi
 

@@ -346,7 +346,7 @@ class KernelMailboxTest(unittest.TestCase):
         self.secret.write_text("SECRET-JUDGE")
         (self.ws / "cat.json").write_text(json.dumps({"argv": ["cat", str(self.secret)]}))
         (self.ws / "hi.json").write_text(json.dumps({"argv": ["sh", "-c", "echo hi from kernel; echo \"$AOS_WS\""]}))
-        self.bound = {"commands": ["aos-gate"], "ro": ["ws"], "rw": [str(self.mb)], "env": ["PATH", "AOS_WS", "AOS_KERNEL"]}
+        self.bound = {"commands": ["aos-llm-send"], "ro": ["ws"], "rw": [str(self.mb)], "env": ["PATH", "AOS_WS", "AOS_KERNEL"]}
 
     def cfg(self, obj, name="box.json"):
         p = self.t / name
@@ -378,11 +378,11 @@ class KernelMailboxTest(unittest.TestCase):
         return any("SECRET-JUDGE" in p.read_text(errors="replace") for p in self.mb.rglob("*") if p.is_file())
 
     def test_default_box_cannot_reach_kernel(self):
-        prog = ("echo \"kernel=${AOS_KERNEL-unset}\"; aos-gate ws/cat.json; "
+        prog = ("echo \"kernel=${AOS_KERNEL-unset}\"; aos-llm-send ws/cat.json; "
                 "mkdir %s/new/x && echo wrote" % self.mb)
-        r = self.box(self.cfg({"commands": ["aos-gate"], "rw": ["ws"]}), "sh", "-c", prog)
+        r = self.box(self.cfg({"commands": ["aos-llm-send"], "rw": ["ws"]}), "sh", "-c", prog)
         self.assertIn("kernel=unset", r.stdout)                         # AOS_KERNEL 不帶進去（不在預設的 env）
-        self.assertIn("aos-gate: MailboxMissing", r.stderr)
+        self.assertIn("aos-llm-send: MailboxMissing", r.stderr)
         self.assertNotIn("wrote", r.stdout)                             # 直接寫信箱也寫不到（沒綁進來）
         self.kernel({})
         self.assertEqual(list((self.mb / "done").iterdir()), [])
@@ -391,7 +391,7 @@ class KernelMailboxTest(unittest.TestCase):
 
     def test_box_uses_kernel_when_mailbox_bound(self):
         """S15：沙箱有自己的行程編號，閘門名字裡的 pid 在外面對不上；kernel 改看 sender.flock 的 flock 之後照常服務。"""
-        r = self.box_with_kernel(self.cfg(self.bound), {}, "aos-gate", "ws/hi.json")
+        r = self.box_with_kernel(self.cfg(self.bound), {}, "aos-llm-send", "ws/hi.json")
         self.assertEqual((r.returncode, r.stdout), (0, "hi from kernel\n/ws-from-box\n"), r.stderr)
         served = [json.loads(l) for l in (self.stack / "served.jsonl").read_text().splitlines()]
         self.assertEqual([(x["code"], x["error"]) for x in served], [(0, None)])
@@ -400,12 +400,12 @@ class KernelMailboxTest(unittest.TestCase):
         """寄得到信＝kernel 在沙箱外照信跑：沒 accept 時沙箱裡的閘門寄「cat 判準」就拿到判準；有 accept＝InstUnknown、不跑。"""
         c = self.cfg(self.bound)
         r = self.box_with_kernel(c, {"accept": [{"argv": ["python3", "/nope/brain.py"], "cwd": str(self.ws)}]},
-                                 "aos-gate", "ws/cat.json")
+                                 "aos-llm-send", "ws/cat.json")
         self.assertEqual(r.returncode, 1)
-        self.assertRegex(r.stderr, r"^aos-gate: InstUnknown ")
+        self.assertRegex(r.stderr, r"^aos-llm-send: InstUnknown ")
         self.assertNotIn("SECRET-JUDGE", r.stdout)
         self.assertFalse(self.leaked())
-        r = self.box_with_kernel(c, {}, "aos-gate", "ws/cat.json")    # 對照：kernel 沒 accept＝判準從沙箱外送回來
+        r = self.box_with_kernel(c, {}, "aos-llm-send", "ws/cat.json")    # 對照：kernel 沒 accept＝判準從沙箱外送回來
         self.assertEqual((r.returncode, r.stdout), (0, "SECRET-JUDGE"), r.stderr)
 
 
@@ -419,10 +419,10 @@ T=$1
 AOS_ME=1000 AOS_RUNNER=2000 sh "$2" --mailbox "$T/mb" --apply >/dev/null
 mkdir "$T/stack" && chown 1000:1000 "$T/stack"
 as() { u=$1; g=$2; shift 2; setpriv --reuid "$u" --regid "$g" --clear-groups env AOS_KERNEL="$T/mb" AOS_STACK="$T/stack" "$@"; }
-as 1001 2000 "$T/bin/aos-gate" "$T/q.json" >"$T/out" 2>"$T/err" & G=$!
+as 1001 2000 "$T/bin/aos-llm-send" "$T/q.json" >"$T/out" 2>"$T/err" & G=$!
 n=0; while kill -0 $G 2>/dev/null && [ $n -lt 300 ]; do as 1000 1000 "$T/bin/aos-llm-kernel" "$T/kernel.json" || exit 9; n=$((n+1)); sleep 0.05; done
 wait $G; rc=$?; echo "runner=$(cat "$T/out")|$rc|$(cat "$T/err")"
-as 1002 1002 "$T/bin/aos-gate" "$T/q.json" 2>&1; echo "stranger=$?"
+as 1002 1002 "$T/bin/aos-llm-send" "$T/q.json" 2>&1; echo "stranger=$?"
 """
 
 
@@ -437,7 +437,7 @@ class MailboxPermTest(unittest.TestCase):
         self.addCleanup(shutil.rmtree, t, ignore_errors=True)
         t.chmod(0o755)
         (t / "bin").mkdir()
-        for name in ("aos-gate", "aos-llm-kernel"):   # 家目錄 700，換了 uid 走不進 repo：複製一份（兩支都是靜態連結）
+        for name in ("aos-llm-send", "aos-llm-kernel"):   # 家目錄 700，換了 uid 走不進 repo：複製一份（兩支都是靜態連結）
             shutil.copy(shutil.which(name, path=PATH), t / "bin" / name)
         (t / "q.json").write_text(json.dumps({"argv": ["id", "-u"]}))
         (t / "kernel.json").write_text(json.dumps({"mailbox": str(t / "mb")}))
@@ -446,7 +446,7 @@ class MailboxPermTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         lines = r.stdout.splitlines()
         self.assertEqual(lines[0], "runner=1000|0|", r.stdout + r.stderr)   # 寄得到、kernel 回得了信；跑的身分是 kernel 的
-        self.assertRegex(lines[1], r"^aos-gate: MkdirFailed ")
+        self.assertRegex(lines[1], r"^aos-llm-send: MkdirFailed ")
         self.assertEqual(lines[2], "stranger=1")
 
 

@@ -1,6 +1,6 @@
 #!/bin/sh
 # _entry - 一個 daemon 同時管 LLM kernel 和三隻走 kernel 的 agent（a、b 是 normal、b 的腦宣告 800 毫秒，c 是 high）
-# 信箱放在這個 daemon 的 stack 裡，用 AOS_KERNEL 告訴兩邊：kernel.json 的 mailbox 讀它、agent 的閘門（aos-gate）也讀它。
+# 信箱放在這個 daemon 的 stack 裡，用 AOS_KERNEL 告訴兩邊：kernel.json 的 mailbox 讀它、agent 的閘門（aos-llm-send）也讀它。
 # 先建好，免得 agent 比 kernel 第一次跑還早寄信（閘門看到信箱不在會直接報 MailboxMissing）。
 # 後面的參數原樣給 aos-daemon（10-24 真腦實測加）：daemon.json 的 max 25（約 5 秒）是照假腦定的，真腦慢一點就被收工收掉，
 # 用 `aos-exec demo/llm-kernel --max 300` 改大，不用複製一份改檔。

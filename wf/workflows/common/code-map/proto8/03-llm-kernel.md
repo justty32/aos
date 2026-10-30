@@ -1,6 +1,6 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/impls/` 的 LLM kernel 兩支（aos-llm-kernel、aos-gate，10-24）
+← [入口](../proto8.md)｜涵蓋：`proto8/impls/` 的 LLM kernel 兩支（aos-llm-kernel、aos-llm-send，10-24）
 
-> 2026-10-24 新做時另開一份（[01-impls與舊lib](01-impls與舊lib.md) 已近 8 KB，照 [STRUCTURE](../../../../STRUCTURE.md) 不往裡塞）。逐專案說明在 [aos-llm-kernel](../../../../../proto8/impls/aos-llm-kernel/README.md)、[aos-gate](../../../../../proto8/impls/aos-gate/README.md)；設計紀錄 [thinking 2026-10-24-llm-kernel](../../../../../proto8/thinking/2026-10-24-llm-kernel.md)。
+> 2026-10-24 新做時另開一份（[01-impls與舊lib](01-impls與舊lib.md) 已近 8 KB，照 [STRUCTURE](../../../../STRUCTURE.md) 不往裡塞）。逐專案說明在 [aos-llm-kernel](../../../../../proto8/impls/aos-llm-kernel/README.md)、[aos-llm-send](../../../../../proto8/impls/aos-llm-send/README.md)；設計紀錄 [thinking 2026-10-24-llm-kernel](../../../../../proto8/thinking/2026-10-24-llm-kernel.md)。
 
 | 哪裡 | 負責什麼 |
 |---|---|
@@ -9,8 +9,8 @@
 | `aos-llm-kernel/src/serve/serve.cpp` | `read_cfg`（`mailbox` 從 `$AOS_STACK` 算、`slots`、`budget`、`accept`〔10-24 晚〕）、`accepted`（有 `accept` 時單子的 argv、cwd 要一字不差、不能自帶 envs 與串流，不然回 `InstUnknown`）、`Server`：flock（`<信箱>/.flock`，10-29 前叫 `.lock`）、`recover`（cur/ 留下的：有回信照交、`runner.json` 活著就讓它跑完、不然 `RunFailed`）、`sweep`（寄信人不在〔`sender.flock` 沒人鎖〕的刪；`tmp/` 裡 `.` 開頭的＝閘門正在寫，已有 `letter.json` 而沒人鎖才刪）、`scan`（`LetterBad`、`DeadlineMissed`）、額度到頂（`spent`＝refuse 回 `BudgetMissing`／wait 停）、`start_runner`（fork、環境換成信裡的〔有 `accept`＝kernel 自己的＋信裡 `AOS_*`〕再加 `AOS_KERNEL_REPORT`、串流預設、`run_inst`、寫 `reply.json`）、`wait_runners`（轉訊號）、`finish`（`runner.json` 在才算一次並讀 `report.json`、`served.jsonl` 一行〔含 `counter_waited_runs`、`counter_tokens`、`report_bad`〕、記 `used.json`、cur → done） |
 | `aos-llm-kernel/src/budget/budget.cpp` | 10-24 下午：token 回報與額度——`parse_budget`（`max_calls`、`max_tokens`〔10-25 前叫 `calls`、`tokens`，舊名＝`CfgBad`〕、`window` hour／day／all、`spent` refuse／wait）、`window_since`（本地時間的整點／午夜）、`read_used`／`add_used`（`$AOS_STACK/used.json` 的 `counter_calls`、`counter_tokens`、`counter_all_*`，換窗歸零、`counter_all_*` 照留、`UsedBad`；10-25 計數改 `counter_*`）、`spent`、`read_report`（usage 的 `total_tokens` 或 prompt＋completion） |
 | `aos-llm-kernel/src/main.cpp` | 命令列 `aos-llm-kernel [旗標] kernel.json`、要 `AOS_STACK` |
-| `aos-gate/src/send/send.cpp` | `mailbox`（`$AOS_KERNEL`，不在＝`MailboxMissing`）、`sender`（10-29 信封：`$AOS_WS`，沒設或空＝`$HOME`，轉絕對路徑）、`post`（設 `AOS_CF`／`AOS_CD`／`AOS_CO`、解指示詞、驗 priority、cwd 轉絕對、整份環境、信封 `kind`／`sender`／`sent_at`〔`aos::utc_now_ms`〕、在 `tmp/.<id>/` 先 `hold_sender` 鎖住再寫信、→ new） |
-| `aos-gate/src/wait/wait.cpp`、`src/main.cpp` | `wait_reply`（每 20 毫秒看 done/、訊號＝撤信 `withdraw`、`LetterMissing`）、`relay`（stdout／stderr 原樣、回信的碼或錯）；命令列 `aos-gate [旗標] 單子.json` |
-| `aos-llm-kernel/tests/test_cli.py`、`aos-gate/tests/test_cli.py` | 單元（ctest 的 `test_cli`）：kernel 42 案（信自己寫、自己鎖 `sender.flock`；H 段＝回報與額度、I 段＝accept；10-29 加信封不擋、舊鎖名 `.lock` 不算）、閘門 18 案（測試自己當 kernel；10-29 加信封兩案：`sender` 有設／沒設 `AOS_WS`）；兩支接起來跑的在 `proto8/tests/test_llm_kernel.py`（10 案，含 agent-dan 的 brain.py 經閘門回報 usage、額度到頂閘門印 `BudgetMissing`） |
+| `aos-llm-send/src/send/send.cpp` | `mailbox`（`$AOS_KERNEL`，不在＝`MailboxMissing`）、`sender`（10-29 信封：`$AOS_WS`，沒設或空＝`$HOME`，轉絕對路徑）、`post`（設 `AOS_CF`／`AOS_CD`／`AOS_CO`、解指示詞、驗 priority、cwd 轉絕對、整份環境、信封 `kind`／`sender`／`sent_at`〔`aos::utc_now_ms`〕、在 `tmp/.<id>/` 先 `hold_sender` 鎖住再寫信、→ new） |
+| `aos-llm-send/src/wait/wait.cpp`、`src/main.cpp` | `wait_reply`（每 20 毫秒看 done/、訊號＝撤信 `withdraw`、`LetterMissing`）、`relay`（stdout／stderr 原樣、回信的碼或錯）；命令列 `aos-llm-send [旗標] 單子.json` |
+| `aos-llm-kernel/tests/test_cli.py`、`aos-llm-send/tests/test_cli.py` | 單元（ctest 的 `test_cli`）：kernel 42 案（信自己寫、自己鎖 `sender.flock`；H 段＝回報與額度、I 段＝accept；10-29 加信封不擋、舊鎖名 `.lock` 不算）、閘門 18 案（測試自己當 kernel；10-29 加信封兩案：`sender` 有設／沒設 `AOS_WS`）；兩支接起來跑的在 `proto8/tests/test_llm_kernel.py`（10 案，含 agent-dan 的 brain.py 經閘門回報 usage、額度到頂閘門印 `BudgetMissing`） |
 
-依賴：aos-gate → aos-llm-kernel（公開標頭 `aos/llm_kernel.hpp`）→ aos-loop → aos-exec（`run_inst`）。
+依賴：aos-llm-send → aos-llm-kernel（公開標頭 `aos/llm_kernel.hpp`）→ aos-loop → aos-exec（`run_inst`）。

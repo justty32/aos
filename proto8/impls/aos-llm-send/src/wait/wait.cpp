@@ -11,7 +11,7 @@
 
 namespace fs = std::filesystem;
 
-namespace aos::gate {
+namespace aos::llm_send {
 
 static bool exists(const std::string& p) {
     std::error_code ec;
@@ -91,4 +91,4 @@ int wait_reply(const Mailbox& mb, const std::string& id) {
     }
 }
 
-}  // namespace aos::gate
+}  // namespace aos::llm_send
