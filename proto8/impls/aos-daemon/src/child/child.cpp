@@ -8,6 +8,8 @@
 // 子行程 exec 之前解開（遮罩會跨 exec 繼承；子行程不擋）。
 // 10-30 execs（thinking 2026-10-30-agent-lifecycle B-12 ②、使用者「讓daemon可以掛aos-exec，也是不錯的」）：exec 型子項走同一條 launch
 // （小格、stderr.txt、setsid、/dev/null、AOS_STACK、cd 到 daemon 的 cwd），只是不寫 loop.json、run_cli 直接拿 {"--", 目標, 參數...}——中間沒有 aos-loop。
+// 10-30 eca（thinking 2026-10-30-eca 衝突 1，使用者「都照建議」；N-55 工作區由呼叫方設，daemon 是呼叫方）：子項寫了 ws＝run_child 多設 AOS_WS；
+// 沒寫＝不碰（繼承 daemon 的）。
 #include "child/child.hpp"
 
 #include "aos/files.hpp"
@@ -31,8 +33,9 @@ namespace aos::daemon {
 
 // 子行程：自成 session、接好三個串流、設 AOS_STACK、cd 到 daemon 的 cwd，呼叫 aos-exec 的 run_cli(argv)。不回來。
 // argv：子 loop＝{"--", 小格/loop.json#/_entry}；exec 型子項＝{"--", 目標, 參數...}（10-30）。fork 之前就備好。
+// ws：空＝AOS_WS 不碰（繼承 daemon 的）；不空＝設成它（eca 10-30）。
 [[noreturn]] static void run_child(const std::string& cell, const std::string& cwd, int err_fd,
-                                   const std::vector<std::string>& argv) {
+                                   const std::vector<std::string>& argv, const std::string& ws) {
     setsid();
     int null_fd = open("/dev/null", O_RDWR);
     if (null_fd >= 0) {
@@ -54,6 +57,9 @@ namespace aos::daemon {
     sigprocmask(SIG_UNBLOCK, &set, nullptr);
     int rc = 1;
     setenv("AOS_STACK", (cell + "/").c_str(), 1);
+    if (!ws.empty()) {
+        setenv("AOS_WS", ws.c_str(), 1);
+    }
     if (chdir(cwd.c_str()) != 0) {
         std::fprintf(stderr, "aos-daemon: %s cd 不進 %s：%s\n", code::Internal, cwd.c_str(), std::strerror(errno));
     } else {
@@ -72,9 +78,10 @@ static void make_cell(const std::string& name, const std::string& cell) {
     }
 }
 
-// 小格建好之後：開小格的 stderr.txt（附加）、fork、子行程 run_child(argv)。spawn 與 spawn_exec 共用。
+// 小格建好之後：開小格的 stderr.txt（附加）、fork、子行程 run_child(argv, ws)。spawn 與 spawn_exec 共用。ws＝null 或絕對路徑（記進 Child）。
 static Child launch(const std::string& name, const std::string& cell, const std::string& cwd,
-                    const std::vector<std::string>& argv) {
+                    const std::vector<std::string>& argv, const Json& ws) {
+    std::string ws_s = ws.is_string() ? ws.get<std::string>() : std::string();   // fork 之前備好
     std::string err_path = aos::join(cell, "stderr.txt");
     int err_fd = open(err_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
     if (err_fd < 0) {
@@ -88,12 +95,13 @@ static Child launch(const std::string& name, const std::string& cell, const std:
         throw Error{code::LaunchFailed, "起不了子項 " + name + "：fork 失敗（" + std::strerror(e) + "）"};
     }
     if (pid == 0) {
-        run_child(cell, cwd, err_fd, argv);
+        run_child(cell, cwd, err_fd, argv, ws_s);
     }
     close(err_fd);
     Child c;
     c.pid = pid;
     c.started_at_ticks = aos::proc_started_at_ticks(pid);
+    c.ws = ws_s.empty() ? Json() : Json(ws_s);
     return c;
 }
 
@@ -105,6 +113,8 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
         cfg = Json::object();
         cfg["exec"] = spec;
     }
+    Json ws = cfg.value("ws", Json());   // eca 10-30：不是 loop 的 key，不灌進小格的 loop.json，只進子行程的環境（AOS_WS）
+    cfg.erase("ws");
     Json ex = cfg.value("exec", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗；單子見下）
     if (ex.is_string()) {
         cfg["exec"] = aos::join(cwd, ex.get<std::string>());
@@ -137,10 +147,13 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
     } catch (const Error& e) {
         throw Error{e.code, "起不了子項 " + name + "：" + e.msg};
     }
-    return launch(name, cell, cwd, {"--", aos::join(cell, "loop.json") + "#/_entry"});
+    return launch(name, cell, cwd, {"--", aos::join(cell, "loop.json") + "#/_entry"}, ws);
 }
 
-Child spawn_exec(const std::string& name, const std::string& cell, const Json& target, const std::string& cwd) {
+Child spawn_exec(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd) {
+    // 寫了 ws 的子項，read_execs 收成 {"exec": 目標, "ws": 絕對路徑}（eca 10-30）；沒寫＝目標本身
+    const Json& target = spec.is_object() ? spec["exec"] : spec;
+    Json ws = spec.is_object() ? spec.value("ws", Json()) : Json();
     std::vector<std::string> argv{"--"};   // 相對的目標不轉：子行程 cd 到 daemon 的 cwd 才叫 aos-exec，本來就從那裡算
     if (target.is_string()) {
         argv.push_back(target.get<std::string>());
@@ -150,7 +163,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, const Json& t
         }
     }
     make_cell(name, cell);
-    Child c = launch(name, cell, cwd, argv);
+    Child c = launch(name, cell, cwd, argv, ws);
     c.once = true;
     return c;
 }
@@ -189,6 +202,9 @@ Json row(const Child& c) {
     r["phase"] = c.phase;
     r["code"] = c.code;
     r["signal"] = c.signal;
+    if (!c.ws.is_null()) {
+        r["ws"] = c.ws;   // eca 10-30：有給才寫（沒給不寫這欄：列的形狀跟 10-30 前一樣，舊的讀者不受影響）
+    }
     return r;
 }
 

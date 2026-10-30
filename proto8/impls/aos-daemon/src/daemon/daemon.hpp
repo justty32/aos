@@ -33,6 +33,9 @@
 // loops_ctl 與信多認 execs_added／execs_removed（語意同 loops_added／loops_removed；loops_ctl 沒有整份的 execs，名單的底＝daemon.json 的 execs）。
 // 表只有一張（table_，Child::once 分兩種），loops_state.json 寫成兩張：loops、execs；adopt 兩張都接。表上的種類跟期望表的不一樣
 // （例 loops_removed bob＋execs_added bob）＝當成不在期望表上：收掉舊的、下一次起新的。
+// 子項的工作區 ws（eca 10-30，thinking 2026-10-30-eca 衝突 1、N-28／N-54 補草稿）：loops、execs（daemon.json、loops_ctl 的 loops、*_added、信）的子項物件
+// 多認選填 ws——解指示詞、從 daemon 的 cwd 轉絕對、留在期望表上；起子項時子行程設 AOS_WS（沒寫＝繼承 daemon 的）。loop 型的 ws 不寫進小格 loop.json。
+// ws 改了＝設定變了，照 N-54「已在跑的不重起」；loops_state 的列起它時給了 ws 才多一欄 ws（起的那一刻的值；沒給不寫）。
 #pragma once
 
 #include "child/child.hpp"
@@ -57,6 +60,7 @@ namespace aos::daemon {
 //   exec 是單子（物件，10-24）：只換一層、裡面不解（留給子 loop 跑的時候解，那時 AOS_CF／AOS_CO 設好了），
 //   裡面相對的 $ref 檔名照它來自的那份檔轉成絕對（abs_refs）——搬進小格之後才不會從小格算。
 //   名字非空、不含 /、不含 #（會被 aos-exec 當成指標的開頭）、不以 . 開頭；子項是字串、陣列或物件（loop key 以外不驗）。
+//   物件的 ws（eca 10-30）：解指示詞、要是非空字串（null＝拿掉）、從 daemon 的 cwd 轉絕對（fix_ws）。
 // 壞丟 Error{CfgBad, 原因}（key＝訊息裡的名字）；指示詞解不開丟 DirectiveBad。
 Json read_loops(const Json& v, const std::string& base, const std::string& key);
 
@@ -73,6 +77,7 @@ std::optional<std::string> check_names(const Json& v, const std::set<std::string
 
 // 讀一份 execs（daemon.json 的 execs，loops_ctl 與信的 execs_added 共用；10-30）：同 read_loops（名字規則、指示詞），再把每項收成目標——
 // 字串、[目標, 參數...]（非空字串陣列）原樣；物件＝取它的 exec（要是上面兩種；其他 key 忽略）。單子物件、其他型別＝Error{CfgBad}。
+// 例外（eca 10-30）：物件寫了 ws＝收成 {"exec": 目標, "ws": 絕對路徑}（spawn_exec 認這個形狀）。
 Json read_execs(const Json& v, const std::string& base, const std::string& key);
 
 // 期望表的一半（10-23 晚，10-30 抽出來給 loops、execs 共用）：base＋ctl[added]－ctl[removed]，先加後減（同一個名字兩邊都寫＝不要；

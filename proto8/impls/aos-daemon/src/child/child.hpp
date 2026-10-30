@@ -7,6 +7,8 @@
 //               AOS_STACK＝小格/、cd 到 daemon 的 cwd 都同上，但不包 aos-loop、不寫 loop.json、不補 ctl／state：子行程直接 `aos-exec -- 目標 參數...` 一次
 //               alive：自己生的看 waitpid（結束就記 code／signal）；接回來的看 /proc 的 started_at_ticks 還對不對
 //               row：寫進 loops_state 的那一列
+//               ws（eca 10-30，thinking 2026-10-30-eca 衝突 1、N-28／N-54 補草稿）：子項物件寫了 ws（read_loops 已轉絕對）＝子行程的環境多設 AOS_WS＝它；
+//               沒寫＝照舊繼承 daemon 的環境。loop 型的 ws 不寫進小格的 loop.json（不是 loop 的 key），只進環境
 #pragma once
 
 #include "common/common.hpp"
@@ -33,23 +35,26 @@ struct Child {
     std::chrono::steady_clock::time_point deadline;
     bool killed = false;
     bool removing = false;
+    Json ws;                            // null 或起它時給的工作區（絕對路徑；子行程的 AOS_WS）——起的那一刻的值，名單後來改了 ws 也不變（已在跑的不重起，N-54）
 };
 
 // 起一支子 loop。cell＝小格（$AOS_STACK/<名字>）、spec＝字串或陣列（aos-exec 的目標，包成 {"exec": 它}）或 loop 設定物件、
 // cwd＝daemon 的 cwd（子項 exec 的相對路徑從這裡算：字串、陣列的第一個元素轉成絕對路徑，其他不動、不驗）。
+// spec 是物件且有 ws（字串，read_loops 已轉絕對）＝拿掉它再寫 loop.json，子行程設 AOS_WS＝它（eca 10-30）。
 // 小格建不了 MkdirFailed、loop.json 寫不了 WriteFailed、stderr 開不了／fork 失敗 LaunchFailed。
 // aos-exec 自己的錯（PATH 上沒有 aos-loop…）寫在小格的 stderr.txt、子 loop 以 1 結束（phase done、code 1）。
 Child spawn(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd);
 
-// 起一個 exec 型子項（execs，10-30）。target＝aos-exec 的目標：字串或 [目標, 參數...]（read_execs 驗過）；相對路徑從 cwd（daemon 的 cwd）算——
+// 起一個 exec 型子項（execs，10-30）。spec＝aos-exec 的目標：字串或 [目標, 參數...]（read_execs 驗過），
+// 或 {"exec": 上面兩種, "ws": 絕對路徑}（子項寫了 ws，read_execs 收成這樣；子行程設 AOS_WS，eca 10-30）；相對路徑從 cwd（daemon 的 cwd）算——
 // 子行程 cd 到 cwd 才叫 aos-exec，所以不轉。小格建不了 MkdirFailed、stderr 開不了／fork 失敗 LaunchFailed；aos-exec 自己的錯寫在小格的
 // stderr.txt、子項以 1 結束（phase done、code 1）。它退了＝done、不重起（同子 loop）。
-Child spawn_exec(const std::string& name, const std::string& cell, const Json& target, const std::string& cwd);
+Child spawn_exec(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd);
 
 // 還活著嗎（自己生的：結束了就收屍、記 code／signal）。
 bool alive(Child& c);
 
-// loops_state 裡的一列：{"pid", "started_at_ticks", "phase", "code", "signal"}。
+// loops_state 裡的一列：{"pid", "started_at_ticks", "phase", "code", "signal"}，起它時給了工作區才多一欄 "ws"（eca 10-30）。
 Json row(const Child& c);
 
 }  // namespace aos::daemon

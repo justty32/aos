@@ -12,6 +12,8 @@
 // adopt：起來時讀自己上次的 loops_state（10-29 前是 state），phase running、pid＋started_at_ticks 對得上的子 loop 直接放回表上、不重起（N-17）。
 // execs（10-30）：exec 型子項跟子 loop 同一張表（Child::once）、同一套對表與收法（SIGTERM 直接打那支程式、10 秒 SIGKILL 整群），
 // 只是起的時候 spawn_exec；期望表兩份（loops、execs），loops_state 寫成兩張表、adopt 兩張都接。
+// ws（eca 10-30，thinking 2026-10-30-eca 衝突 1、N-28／N-54 補草稿）：loops、execs 的子項物件多認一個選填 ws（工作區）——read_loops 解指示詞、
+// 從 daemon 的 cwd 轉絕對、留在期望表的子項上；起的時候子行程設 AOS_WS（child.cpp）。execs 物件「只看 exec、其他 key 忽略」的第一個例外。
 #include "daemon/daemon.hpp"
 
 #include "aos/files.hpp"
@@ -133,6 +135,23 @@ Json abs_refs(const Json& v, const std::string& base) {
     return out;
 }
 
+// 子項物件的 ws（eca 10-30）：要是非空字串（null＝當沒寫、拿掉），相對路徑從 daemon 的 cwd 轉絕對（abspath 從行程的 cwd 算；
+// daemon 自己不 cd，所以就是 daemon 的 cwd——信、loops_ctl、daemon.json 裡寫的都一樣，同相對 exec）。不驗在不在（aos-exec 會報 WsMissing，寫在小格 stderr.txt）。
+static void fix_ws(Json& c, const std::string& name, const std::string& key) {
+    if (!c.contains("ws")) {
+        return;
+    }
+    const Json& w = c["ws"];
+    if (w.is_null()) {
+        c.erase("ws");
+        return;
+    }
+    if (!w.is_string() || w.get<std::string>().empty()) {
+        throw Error{code::CfgBad, key + "[" + name + "].ws 要是工作區的路徑（非空字串）"};
+    }
+    c["ws"] = aos::abspath(w.get<std::string>());
+}
+
 Json read_loops(const Json& v, const std::string& base, const std::string& key) {
     aos::Resolved top = aos::resolve_shallow(v, base);   // 拆成好幾份檔＝{"$ref": [檔, …]}，合好的每個子項記著它來自哪份檔
     if (!top.value.is_object()) {
@@ -147,13 +166,16 @@ Json read_loops(const Json& v, const std::string& base, const std::string& key) 
         if (it.value.is_string() || it.value.is_array()) {
             vec.emplace_back(name, aos::resolve(it.value, it.base_dir));
         } else if (it.value.is_object()) {
-            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", "ctl", "state"});
+            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", "ctl", "state", "ws"});
             if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解、相對 $ref 轉成絕對（10-24）
                 aos::Resolved ex = aos::loop::resolve_exec(r.value["exec"], r.dir_of("exec"));
                 if (ex.value.is_object()) {
                     ex.value = abs_refs(ex.value, ex.base_dir);
                 }
                 r.value["exec"] = std::move(ex.value);
+            }
+            if (r.value.is_object()) {
+                fix_ws(r.value, name, key);   // eca 10-30：子項的工作區
             }
             vec.emplace_back(name, std::move(r.value));
         } else {
@@ -206,7 +228,11 @@ Json read_execs(const Json& v, const std::string& base, const std::string& key) 
         if (!ok) {
             throw Error{code::CfgBad, key + "[" + name + "] 要是 aos-exec 的目標（字串或 [目標, 參數...]）或 {\"exec\": 目標}（單子物件不收）"};
         }
-        c = std::move(t);
+        if (c.is_object() && c.contains("ws")) {   // eca 10-30：寫了 ws（read_loops 已轉絕對）＝收成 {"exec": 目標, "ws": 它}，其他 key 照舊忽略
+            c = Json::object({{"exec", std::move(t)}, {"ws", c["ws"]}});
+        } else {
+            c = std::move(t);
+        }
     }
     return out;
 }
@@ -393,6 +419,9 @@ void Daemon::adopt() {
                 c.started_at_ticks = st.get<long long>();
                 c.own = false;
                 c.once = (i == 1);
+                if (r.value("ws", Json()).is_string()) {
+                    c.ws = r["ws"];   // eca 10-30：照舊列記著（10-30 前的列沒有＝null）
+                }
                 add(name, c);
             }
         }

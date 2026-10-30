@@ -1,6 +1,7 @@
 """aos-daemon：daemon.json＝loop.json 的超集、loops 表、ctl 增減、不自動重起、收工收子項、接回（N-28、N-54、P-36）。
 10-29 拆窗（thinking 2026-10-29-medium-plan § 四）：名單的手把在 loops_ctl.json、子項表在 loops_state.json；ctl.json／state.json 只管 loop 面向。
-10-30 exec 型子項 execs（thinking 2026-10-30-agent-lifecycle B-12 ②）：直接 aos-exec 一次、不包 aos-loop，loops_state.json 多一張 execs 表。"""
+10-30 exec 型子項 execs（thinking 2026-10-30-agent-lifecycle B-12 ②）：直接 aos-exec 一次、不包 aos-loop，loops_state.json 多一張 execs 表。
+10-30 eca 子項的工作區 ws（thinking 2026-10-30-eca 衝突 1）：子項物件寫 ws＝起它時設 AOS_WS，沒寫＝繼承 daemon 的。"""
 import json, os, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402
@@ -425,6 +426,57 @@ class T(unittest.TestCase):
         self.assertEqual((r.returncode, r.stderr, st["loops"]["bob"]["phase"], st["loops"]["bob"]["code"], st["execs"]),
                          (0, "", "done", 0, {}))
         self.assertEqual(((self.s / "bob" / "runs").read_text(), (self.s / "bob" / "loop.json").is_file()), ("x\n", True))
+
+    # ---- 10-30 eca 子項的工作區 ws（thinking 2026-10-30-eca 衝突 1、實作步驟 1；N-28／N-54 補草稿）
+
+    def ws_run(self, doc, daemon_ws=None):
+        # 子項印出自己看到的 AOS_WS；跑 1.5 秒收工
+        if not (self.t / "pw").exists():
+            self.prog("pw", 'printf %s "$AOS_WS" > "$AOS_STACK/ws"\n')
+        env = {"AOS_STACK": str(self.s)}
+        if daemon_ws:
+            env["AOS_WS"] = daemon_ws
+        return self.run_d(dict({"state": "state.json", "max": 15, "interval_ms": 100}, **doc), env=env)
+
+    def test_ws_execs_child_sees_it(self):
+        # execs 子項寫 ws：子程式看到的 AOS_WS 等於它，loops_state 的列記著
+        w = self.t / "w1"
+        w.mkdir()
+        r = self.ws_run({"execs": {"j": {"exec": "pw", "ws": str(w)}}}, daemon_ws=str(self.t))
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(((self.s / "j" / "ws").read_text(), self.xkids()["j"]["ws"]), (str(w), str(w)))
+
+    def test_ws_loop_child_sees_it(self):
+        # loop 子項寫 ws：同上，而且 ws 不灌進小格的 loop.json（不是 loop 的 key）
+        w = self.t / "w2"
+        w.mkdir()
+        r = self.ws_run({"loops": {"bob": {"exec": "pw", "max": 1, "ws": str(w)}}}, daemon_ws=str(self.t))
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(((self.s / "bob" / "ws").read_text(), self.kids()["bob"]["ws"]), (str(w), str(w)))
+        self.assertNotIn("ws", json.loads((self.s / "bob" / "loop.json").read_text()))
+
+    def test_ws_unset_inherits_daemon(self):
+        # 沒寫 ws＝照舊繼承 daemon 的 AOS_WS；列上不寫 ws 這欄（形狀同 10-30 前）
+        d = self.t / "dws"
+        d.mkdir()
+        r = self.ws_run({"loops": {"bob": {"exec": "pw", "max": 1}}, "execs": {"j": "pw"}}, daemon_ws=str(d))
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(((self.s / "bob" / "ws").read_text(), (self.s / "j" / "ws").read_text()), (str(d), str(d)))
+        self.assertEqual(("ws" in self.kids()["bob"], "ws" in self.xkids()["j"]), (False, False))
+
+    def test_ws_relative_from_daemon_cwd(self):
+        # 相對的 ws 從 daemon 的 cwd 算（daemon.json、loops_ctl 的 *_added 都一樣）；型別錯＝CfgBad 退 1
+        for n in ("r1", "r2", "r3"):
+            (self.t / "rel" / n).mkdir(parents=True)
+        self.prog("pw", 'printf %s "$AOS_WS" > "$AOS_STACK/ws"\n')
+        self.lctl({"loops_added": {"c": {"exec": "pw", "max": 1, "ws": "./rel/x/../r3"}}})
+        r = self.ws_run({"loops": {"a": {"exec": "pw", "max": 1, "ws": "rel/r1"}}, "execs": {"b": {"exec": "pw", "ws": "rel/r2"}}})
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        for n, rel in (("a", "r1"), ("b", "r2"), ("c", "r3")):
+            self.assertEqual((self.s / n / "ws").read_text(), str(self.t / "rel" / rel), n)
+        r = self.run_d({"max": 1, "execs": {"b": {"exec": "pw", "ws": 3}}})
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stderr.startswith("aos-daemon: ") and "ws" in r.stderr, r.stderr)
 
 
 if __name__ == "__main__":

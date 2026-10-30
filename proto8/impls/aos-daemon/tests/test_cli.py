@@ -6,7 +6,7 @@
 從 proto8/tests/test_daemon.py（bin 版）逐案移植（10-21 傍晚重新照抄一次：命令列 `aos-daemon [旗標] 設定檔`、exec 陣列、
 子 loop 經 aos-exec 起、收工時剛死的子項標 done）：daemon.json＝loop.json 的超集、loops 表、ctl 增減、不自動重起、
 收工收子項、接回（N-28、N-54、P-36）。10-29 拆窗（medium-plan § 四）：名單的手把在 loops_ctl.json、子項表在 loops_state.json，
-ctl.json／state.json 只管 loop 面向（H 段）；信箱模式 loops_mailbox（I 段，實作步驟 5）。差別只有：PATH 放 impls 的 aos-exec、aos-loop 兩支的 bin/（子 loop 經 aos-exec
+ctl.json／state.json 只管 loop 面向（H 段）；信箱模式 loops_mailbox（I 段，實作步驟 5）；exec 型子項 execs（J 段）；子項的工作區 ws（K 段，10-30 eca）。差別只有：PATH 放 impls 的 aos-exec、aos-loop 兩支的 bin/（子 loop 經 aos-exec
 exec 成 PATH 上的 aos-loop，10-21 傍晚起同 bin 版）、usage 一行多了代號（「aos-daemon: ArgumentsBad usage: …」）、
 自己的錯多驗代號（E 段）。
 """
@@ -1209,6 +1209,39 @@ class T(unittest.TestCase):
         rows = self.xkids()
         self.assertEqual((list(rows), {(x["phase"], x["code"]) for x in rows.values()}), (names, {("done", 0)}))
         self.assertEqual(directive(st, self.s)["execs"], rows)
+
+
+    # ───── K. 10-30 eca 子項的工作區 ws（thinking 2026-10-30-eca 衝突 1、實作步驟 1；N-28／N-54 補草稿）─────
+
+    def test_ws_mailbox_change_and_adopt(self):
+        # 信的 loops_added／execs_added 帶相對 ws＝從 daemon 的 cwd 算；名單改了 ws＝設定變了、已在跑的不重起（N-54），列上仍是起它時的；
+        # 重起 adopt 接回時列上的 ws 照留；ws 型別錯＝壞信
+        for n in ("w1", "w2", "w3"):
+            (self.t / "rel" / n).mkdir(parents=True)
+        self.prog("lw", 'printf %s "$AOS_WS" > "$AOS_STACK/ws"\nwhile :; do sleep 0.05; done\n')
+        p = self.mstart()
+        self.post("0001", {"loops_added": {"b": {"exec": "lw", "max": 1, "ws": "rel/w1"}},
+                           "execs_added": {"x": {"exec": "lw", "ws": "./rel/w2", "other": 1}}})
+        self.assertTrue(until(lambda: (self.s / "b" / "ws").exists() and (self.s / "x" / "ws").exists()
+                              and len(self.kids()) == 2 and len(self.xkids()) == 1))
+        w1, w2 = str(self.t / "rel" / "w1"), str(self.t / "rel" / "w2")
+        self.assertEqual(((self.s / "b" / "ws").read_text(), (self.s / "x" / "ws").read_text()), (w1, w2))
+        self.assertEqual((self.kids()["b"]["ws"], self.xkids()["x"]["ws"], "ws" in self.kids()["a"]), (w1, w2, False))
+        self.assertNotIn("ws", json.loads((self.s / "b" / "loop.json").read_text()))
+        bpid = self.kids()["b"]["pid"]
+        self.post("0002", {"loops_added": {"b": {"exec": "lw", "max": 1, "ws": "rel/w3"}}})
+        self.assertTrue(until(lambda: self.drained()))
+        time.sleep(0.5)
+        self.assertEqual((self.kids()["b"]["pid"], self.kids()["b"]["ws"]), (bpid, w1))
+        self.post("0003", {"execs_added": {"y": {"exec": "lw", "ws": ["rel/w3"]}}})
+        w = until(lambda: self.lstate()["letter_warning"])
+        self.assertTrue(w.startswith("信 0003 不採用：") and "ws" in w, w)
+        p.kill()
+        p.wait()
+        p2 = self.start()
+        self.assertTrue(until(lambda: self.lstate()["pid"] == p2.pid))
+        self.assertEqual((self.kids()["b"]["pid"], self.kids()["b"]["ws"], self.xkids()["x"]["ws"]), (bpid, w1, w2))
+        self.mstop(p2)
 
 
 if __name__ == "__main__":
