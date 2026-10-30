@@ -10,6 +10,6 @@
 
 | 月份 | 份數 | 範圍 |
 |---|---|---|
-| [2026-10](months/2026-10.md) | 78 | 10-11 重來～10-28 介質概念討論（納入管理透過介質、daemon 手把與狀態窗拆兩個、投遞／鎖／請求格式要正規化）與 10-29 的後續規劃（投遞格式與佈局、有順序的投遞、daemon 兩個手把、鎖的用法、父子交代；衝突與方向題等使用者看）、aos-hub 常駐 kernel 與實作（say／listen 協議、適配表）、aos-tools 工具註冊檔、10-29 playground（agent 輸入是對話簿、看信箱是 tool；看完後改成兩個使用場景：射後不理／射後有理，跑完結不結束寫死在定義裡；兩隻 agent-bob 實跑、塞話看回覆共用 aos-say／listen、aos-hub 對照；10-30 agent-lifecycle 規劃：queue、外部 agent 生命週期、session 檔接管）；10-30 使用者看現況地圖後的五點：plan 9 式檔案串流、round 的定位、外部 agent 與 aos agent 平級、aos-hub 通用化）、agent 函數的常用操作都要是 aos 函數、agent 一輪（round）的細節設計：inst／loop／daemon／fsm、JSON 入口與指示詞、kernel、命名、aos-exec 與 `.env`、agent 範本與 10-24 的各種嘗試 |
+| [2026-10](months/2026-10.md) | 79 | 10-11 重來～10-28 介質概念討論（納入管理透過介質、daemon 手把與狀態窗拆兩個、投遞／鎖／請求格式要正規化）與 10-29 的後續規劃（投遞格式與佈局、有順序的投遞、daemon 兩個手把、鎖的用法、父子交代；衝突與方向題等使用者看）、aos-hub 常駐 kernel 與實作（say／listen 協議、適配表）、aos-tools 工具註冊檔、10-29 playground（agent 輸入是對話簿、看信箱是 tool；看完後改成兩個使用場景：射後不理／射後有理，跑完結不結束寫死在定義裡；兩隻 agent-bob 實跑、塞話看回覆共用 aos-say／listen、aos-hub 對照；10-30 agent-lifecycle 規劃：queue、外部 agent 生命週期、session 檔接管）；10-30 使用者看現況地圖後的五點：plan 9 式檔案串流、round 的定位、外部 agent 與 aos agent 平級、aos-hub 通用化；10-30 夜 eca 規劃：外部 coding agent 平級、aos-eca-hub＝daemon＋畫面／session 檔）、agent 函數的常用操作都要是 aos 函數、agent 一輪（round）的細節設計：inst／loop／daemon／fsm、JSON 入口與指示詞、kernel、命名、aos-exec 與 `.env`、agent 範本與 10-24 的各種嘗試 |
 
 按月份分層（使用者「都按照推薦」）：本檔只留月份索引，各月一份表放 `months/`，各天的討論檔放在本資料夾（`thinking/2026-10-15-xxx.md`）。新增一份討論＝在那個月的表加一列。
