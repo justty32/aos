@@ -52,6 +52,36 @@ think、act 兩格的 `exec` 直接寫單子：`{"argv": ["python3", "brain.py"]
 
 **錯**（環境壞了才停：stderr 一行 `agent-dan: 代號 原因`、退 1、state 不動、history 不接；修好再跑一次從同一格接著做）：`BrainFailed`（腦連不上、HTTP 非 2xx）、`ReplyBad`（回覆不是 OpenAI 的形狀）、`ToolFailed`（工具起不來：PATH 上沒有 aos-exec）、`StackMissing`、`QuestionMissing`、`HistoryBad`。
 
+**舊協議**（P-11 的 10-30 改口）：題目在工作區的 `new/`、答案寫 `out/`，aos-say／listen／chat 說不到它；要 queue 版（say／listen 說得到、loop 開 ctl／state 窗、格與格之間停得下來）用下面的 [agent-dan-q](#agent-dan-q)。agent-dan 本身不搬：test_dan、test_grow、test_janet、test_lua_aos 等七份測試與 janet／lua 的範例都照它的檔逐字比（10-30 代定）。
+
+<a id="agent-dan-q"></a>
+## agent-dan-q（agent-dan 搬到 queue，10-30）
+
+agent-dan 的 queue 版，仍是 fsm agent：aos-loop 每次跑一格 fsm（idle → think → act），所以**格與格之間停得下來**——在 think 問完腦、act 還沒動手時寫 `paused`，改 `fsm.json` 或 `system.txt`，放行後照改過的走（場景二）。照 P-11 的 10-30 改口與 P-42：題目從 `$AOS_STACK/queue/` 認領、user 接進 history、回答接成 assistant 進 history 才收信。設計：[thinking 2026-10-30 eca](../thinking/2026-10-30-eca.md) D 表 dan-pause、方向題 1（「哪隻真要用才搬那隻」）。
+
+```
+agent-dan-q/
+  _entry       ["aos-loop", "loop.json"]（JSON 入口，不用 +x）
+  loop.json    {"exec": "fsm.json", "max": 40, "ctl": "ctl.json", "state": "state.json"}（兩扇窗落在 $AOS_STACK）
+  fsm.json     同 agent-dan 的三格，idle 改成單子 python3 idle.py
+  idle.py      $AOS_STACK/queue/ 的 cur/ 或 new/ 有信退 0，沒有退 10（loop 收工）
+  brain.py     think：cur/ 有沒答完的先接，否則 aos-post claim 一封（壞信 finish 丟掉、認領下一封）→ user 接進 history、
+               信號寫 current.txt → 問腦（同 agent-dan）
+  act.py       act：有 tool_calls 同 agent-dan；沒有＝回答已在 history，aos-post finish 那封、清 current.txt（不寫 out/、done/）
+  tools.json   clock、math → ../../lib/base/<名>（同 agent-nia；agent-dan 是自己的 tools/ 複本）
+  .env、system.txt  同 agent-dan
+```
+
+**只做射後不理**：queue 空 idle 退 10、loop 收工，所以**先 say、再跑**；排著的幾封一次答完。停著等的 fsm agent 要 fsm 有「成功但留在原地」的轉移，等方向題 1 再說；要停著等用 agent-nia（本檔下面） 或 [eca 範本](#eca-templates)。
+
+```sh
+aos-say --ws <工作區> 17*23 是多少？         # 印信號
+aos-exec --ws <工作區> proto8/demo/agent-dan-q  # PATH：impls 的 aos-exec／aos-loop／aos-fsm／aos-post、proto8/bin 的 aos-tools
+aos-listen --ws <工作區> <信號>                # 或 --last 1
+```
+
+錯同 agent-dan（開頭改 `agent-dan-q:`），多一個 `PostFailed`（aos-post 起不來或退非 0）。測試 `test_dan_q.py`（假腦與假 server：say／run／listen、兩封加一封壞信、think 與 act 之間暫停改 system.txt）。
+
 ## agent-eve（agent 當工具，10-24）
 
 把一隻 agent 包成另一隻 agent 的腦可以叫的工具（嘗試性質；使用者 10-24「把agent當做工具拿去給agent呼叫，比如一個專精於修改python程式的agent」）。設計、代定、邊緣狀況在 [thinking 2026-10-24-agent-as-tool](../thinking/2026-10-24-agent-as-tool.md)。

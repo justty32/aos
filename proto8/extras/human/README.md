@@ -28,7 +28,7 @@ stack＝`--stack` ＞ `$AOS_STACK` ＞ `<工作區>/.stack/`（N-57）；工作�
 - **看**：`aos-listen --status` 印誰在服務（只靠 `/proc` 掃 `AOS_STACK`／`AOS_WS`）、**aos-loop `state.json` 的 `phase`**（看得出 `paused`）、認領中的信（`current.txt`）、queue 各格幾封、trace 最後一格（round 每格一行 `unit`、fsm 寫 `state`；失敗＝「停在 X 那格、結束碼 N」）、history 幾則。
 - **停**：寫 `<stack>/ctl.json`（aos-loop 的窗，N-07）：`{"paused": true}` 不起下一輪、`{"stopped": true}` 收工。
 
-**舊協議的範本說不到**：agent-bob／ann／dan、topdown 這些 fsm 範本讀工作區的 `new/`、寫 `out/`（P-11 的 10-30 改口標「舊協議」），say／listen 不再認它們；要用就手放 `<工作區>/new/<題名>`、`aos-exec` 跑、看 `out/`。
+**舊協議的範本說不到**：agent-bob／ann／dan、topdown 這些 fsm 範本讀工作區的 `new/`、寫 `out/`（P-11 的 10-30 改口標「舊協議」），say／listen 不再認它們；要用就手放 `<工作區>/new/<題名>`、`aos-exec` 跑、看 `out/`。agent-dan 有搬到 queue 的版本 [agent-dan-q](../../demo/README.md#agent-dan-q)（10-30），say／listen 說得到。
 
 **外部 coding agent（claude／codex）一樣說得到**（[thinking 10-30 eca](../../thinking/2026-10-30-eca.md) P-43 草稿、C 結論 9）：它的定義跟 aos agent 同形（`_entry` 是 aos-loop、一格 turn＝[`lib/eca/turn`](../../lib/eca/turn/turn.py)），由 turn 格收 queue、把回答寫進 history，所以 say／listen／chat 一行不用改、不分是誰在答。「有沒有人在跑」只看 `/proc`（10-30 刪了 stack 裡 `server.txt` 自己報名那招，eca 衝突 6）：直接 `aos-exec` 跑的，aos-loop 的 `AOS_STACK` 就是這個 stack；掛在 daemon 底下的，子 loop 的 `AOS_STACK` 是 daemon 的小格、工作區的 `.stack` 是指過去的 symlink（`aos-daemon-ctl add --ws`），也認得。turn 答某封失敗時在 `trace.jsonl` 留 `question`、`error`，listen 會說出來。
 
