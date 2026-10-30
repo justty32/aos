@@ -1,0 +1,71 @@
+#!/usr/bin/env python3
+"""aos-round <agent 資料夾> — 把 agent 的「一輪」跑一格：拿 lib/agent/round/ 的 fsm 表交給 aos-fsm（10-30，使用者「整個框架則化作 aos-round」）。
+
+設計：proto8/thinking/2026-10-30-aos-round.md § B 第 1 點、實作步驟第 3 步。白話：一輪＝idle → think → (act → think)* → finish → idle，
+這張表與五個薄格在 lib/agent/round/（fsm-stop.json、fsm-idle.json、idle/ think/ act/ more/ finish/）；aos-round 只挑表、設變數、換成 aos-fsm。
+外面由 agent 的 loop.json（aos-loop）一次一次叫它：{"exec": {"argv": ["aos-round", {"$env": "AOS_CD"}], "timeout_ms": 600000}}（timeout_ms 管一格）。
+
+    aos-round <agent 資料夾絕對路徑>
+
+設定：`aos-parts --file <agent>/parts.json which --json round` 拿 round 槽的 env（退 10＝沒登記也沒有同名資料夾＝用預設；path 不用），
+  疊在自己的環境上（同名以註冊檔為準，同 aos-parts run）。ROUND_ON_EMPTY＝queue 空時：stop（沒設或空；表 fsm-stop.json，
+  fsm 退 10 → loop 收工）｜idle（表 fsm-idle.json，idle 退 10 被表接住 → fsm 退 0 → loop 隔 interval_ms 再來）。MAX_RETRIES 照樣往下傳給 think 格。
+跑法：設 ROUND_AGENT＝<agent>（表的 exec 用 {"$env": "ROUND_AGENT"} 帶給每一格）；AOS_STACK、AOS_WS 是相對路徑就先以目前 cwd 轉絕對；
+  cd 到 lib/agent/round/（從自己的實際位置找 ../lib/agent/round，格的相對路徑從這裡算）；exec 成 `aos-fsm 表檔`。
+  結束碼就是 aos-fsm 的（換過去、透明）。沒設 AOS_STACK 不自己擋，交給 aos-fsm 說。沒有旗標、不開窗、不寫檔。
+錯（自己這層的）：stderr 一行「aos-round: 代號 原因」、退 1——ArgumentsBad（沒給、多給）、AgentBad（不是存在的絕對路徑）、
+  PartsBad（aos-parts 起不來、退 0／10 以外、印的不是 {path, env}）、SettingBad（ROUND_ON_EMPTY 不是 stop／idle）、CommandMissing（aos-fsm 起不來）。
+"""
+import json, os, subprocess, sys
+
+NAME = "aos-round"
+ROUND = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "lib", "agent", "round")
+
+
+def die(code, reason):
+    print("%s: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
+    sys.exit(1)
+
+
+def round_env(agent):
+    try:
+        r = subprocess.run(["aos-parts", "--file", os.path.join(agent, "parts.json"), "which", "--json", "round"],
+                           stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)   # stderr 不吞：aos-parts 自己說
+    except OSError as e:
+        die("PartsBad", "aos-parts 起不來：%s" % e)
+    if r.returncode == 10:
+        return {}
+    if r.returncode != 0:
+        die("PartsBad", "aos-parts which round 退 %d" % r.returncode)
+    try:
+        got = json.loads(r.stdout)
+        got["path"]
+        return {k: str(v) for k, v in (got.get("env") or {}).items()}
+    except (ValueError, KeyError, TypeError, AttributeError) as e:
+        die("PartsBad", "aos-parts which --json 印的不是 {path, env}：%s" % e)
+
+
+def main():
+    if len(sys.argv) != 2:
+        die("ArgumentsBad", "usage: aos-round <agent 資料夾絕對路徑>")
+    agent = sys.argv[1]
+    if not os.path.isabs(agent) or not os.path.isdir(agent):
+        die("AgentBad", "agent 資料夾要是存在的絕對路徑，收到 %r" % agent)
+    env = dict(os.environ)
+    env.update(round_env(agent))
+    empty = env.get("ROUND_ON_EMPTY") or "stop"
+    if empty not in ("stop", "idle"):
+        die("SettingBad", "ROUND_ON_EMPTY 要是 stop 或 idle，收到 %r" % empty)
+    env["ROUND_AGENT"] = agent
+    for k in ("AOS_STACK", "AOS_WS"):
+        if env.get(k) and not os.path.isabs(env[k]):
+            env[k] = os.path.abspath(env[k]) + ("/" if env[k].endswith("/") else "")
+    table = "fsm-%s.json" % empty
+    try:
+        os.chdir(ROUND)
+        os.execvpe("aos-fsm", ["aos-fsm", table], env)
+    except OSError as e:
+        die("CommandMissing", "aos-fsm 起不來（%s）：%s" % (ROUND, e))
+
+
+main()

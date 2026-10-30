@@ -1,4 +1,4 @@
-# bin — aos-tick、aos-tools、aos-parts、aos-daemon-ctl（Python）
+# bin — aos-tick、aos-tools、aos-parts、aos-daemon-ctl、aos-round（Python）
 
 ← [proto8](../README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)｜demo：[demo](../demo/README.md)｜C++ 實作：[impls](../impls/README.md)｜測試：`python3 -m unittest discover -s proto8/tests`（先建 impls，見 [testing](../../wf/workflows/testing.md)）
 
@@ -33,6 +33,11 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
   **run**：`aos-exec 路徑 args…`（exec 換過去，結束碼是那格的），環境＝自己的環境疊上註冊檔的 `env`（同名以註冊檔為準）；`AOS_STACK`、`AOS_WS` 原樣傳。`loop.json` 叫 round 用 `["aos-parts", "run", "round", {"$env": "AOS_CD"}]`。
   **ls／get** 只看登記了的（固定名字不列）；ls 一行「槽 TAB 路徑」，`--json`／get 帶 env（解開後的值）；登記了但壞也報錯。
   **錯**：stderr 一行 `aos-parts: 代號 原因`、退 1（`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`RegistryBad`、`SlotBad`、`PathMissing`、`PathBad`、`PartBad`、`PartExists`、`PartMissing`、`DirectiveBad`、`CommandMissing`、`WriteFailed`）。要 PATH 上有 aos-exec、aos-json。測試 `proto8/tests/test_aos_parts.py`。
+
+- **`aos-round - 把 agent 的「一輪」跑一格：拿 lib/agent/round/ 的 fsm 表交給 aos-fsm`**（10-30；使用者「整個框架則化作 aos-round」；設計 [thinking 10-30 aos-round](../thinking/2026-10-30-aos-round.md) § B 第 1 點、實作步驟第 3 步；完整說明在檔頭 docstring）
+  用法 `aos-round <agent 資料夾絕對路徑>`（沒有旗標；沒給／多給 `ArgumentsBad`、不是存在的絕對路徑 `AgentBad`）。`aos-parts --file <agent>/parts.json which --json round` 拿 round 槽的 env（退 10＝用預設；壞＝`PartsBad`），疊在自己的環境上（同名以註冊檔為準）；`ROUND_ON_EMPTY`＝`stop`（沒設或空，表 `fsm-stop.json`：queue 空 fsm 退 10、loop 收工）｜`idle`（表 `fsm-idle.json`：idle 退 10 被表接住、fsm 退 0、loop 隔 `interval_ms` 再來），其他＝`SettingBad`。
+  設 `ROUND_AGENT=<agent>`、相對的 `AOS_STACK`／`AOS_WS` 先以 cwd 轉絕對，cd 到 `lib/agent/round/`（從自己的實際位置找），exec 成 `aos-fsm 表檔`——結束碼就是 aos-fsm 的。沒設 `AOS_STACK` 交給 aos-fsm 說。不開窗、不寫檔。agent 的 `loop.json` 這樣叫：`{"exec": {"argv": ["aos-round", {"$env": "AOS_CD"}], "timeout_ms": 600000}}`（`timeout_ms` 管一格）。
+  **錯**：stderr 一行 `aos-round: 代號 原因`、退 1（`ArgumentsBad`、`AgentBad`、`PartsBad`、`SettingBad`、`CommandMissing`）。要 PATH 上有 aos-parts、aos-fsm（格還要 aos-exec、aos-tools、aos-post）。測試 `proto8/tests/test_round.py` 的 `AosRound`。
 
 - **`aos-tick - 把時鐘檔的回合數往前走一格`**（NAME，C-54 R1）
   用法 `aos-tick [旗標] FILE`（Python）：時鐘往前走一格（C-44：只是時鐘，不包任務、不保證什麼）。FILE 裡是回合數（十進位＋換行），讀出 n、寫回 n＋1 就退 0；FILE 不在＝0（第一次寫 1）；寫進 n＋1＝第 n 回合結束、第 n＋1 回合開始，mtime＝這回合從什麼時候開始。先寫同資料夾的 `.名字` 再改名蓋過去（N-05），不 fsync，stdout 不吐東西。**命令列**：唯一的位置參數就是 FILE（必給、只能一個、相對路徑從 cwd 算）；FILE 照字面用，`#` 不切指標（它是時鐘檔不是設定檔）；目前沒有旗標（旗標表是空的、走 `aos_flags`，`--` 結束旗標）。**自己的錯**退 1、stderr 一行 `aos-tick: 代號 原因`、FILE 不動：`ArgumentsBad usage: aos-tick [旗標] FILE（原因）`（跟 aos-loop、aos-fsm 同一個寫法）（沒給、多給；不認得的旗標是 `FlagUnknown usage: …`）、`ClockBad 時鐘檔讀不到：`（例：它是資料夾）、`ClockBad 時鐘檔壞：`（內容不是 `[0-9]+` 加可有可無的一個 `\n`；空檔、`\r\n`、空白、負號、全形數字都算壞）、`WriteFailed 時鐘檔寫不了：`（資料夾不在或沒寫入權限；不替人建資料夾，暫存檔會清掉）。節奏、停、只走 N 回合交給 loop（`max`、`interval_ms`、ctl 的 `paused`）；同一個 FILE 兩個人同時 tick 不管。
