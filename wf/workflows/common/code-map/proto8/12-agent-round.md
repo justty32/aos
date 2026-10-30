@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：agent-round 的格（`proto8/lib/agent/` 的 round、queue、history、compact、act，`proto8/lib/endpoint/`）與它們的測試、範本 `demo/agent-nia`，10-28 晚｜工具庫其他部分見 [09-lib](09-lib.md)
+← [入口](../proto8.md)｜涵蓋：agent-round 的格（`proto8/lib/agent/` 的 round、queue、history、compact、act，`proto8/lib/endpoint/`）與它們的測試、範本 `demo/agent-nia`，10-28 晚｜下一份：[12-agent-round-2](12-agent-round-2.md)（範本 agent-nia、round 當外部接口、測試）｜工具庫其他部分見 [09-lib](09-lib.md)
 
 ### agent 自己的格（不是給腦叫的工具）
 
@@ -15,30 +15,3 @@
 | `lib/agent/act/_entry` | 跑工具格：吃一則 assistant，每個 tool_call 經 `hook/pre_tool`（10＝不跑）→ `aos-tools call` → `hook/post_tool`，吐一行一則 tool 訊息、照原順序；`MAX_PARALLEL` 一批一批跑；批與批之間 queue 的 `$AOS_STACK/queue/new/` 有信就問 `hook/on_interrupt`（10-30 起，原本看 `$AOS_WS/new/`），interrupt＝剩下的接「被打斷」、退 10；全有或全無 |
 | `lib/endpoint/fake/_entry` | 假腦：最後一則 user＋tools 有 clock＝叫 clock，否則 `FAKE ANSWER to: …`（接過 tool 附 clock said）；不連網、不寫 usage |
 | `lib/endpoint/openai/_entry` | OpenAI 相容腦：stdin 請求體 → `{AOS_BRAIN_URL}/chat/completions` → 一行 assistant（只留 role／content／tool_calls）；usage 追加 `$AOS_STACK/usage.jsonl`；錯 `BrainFailed`／`KeyBad`／`ModelUnknown`／`RequestBad`／`ReplyBad`／`UrlMissing`／`TimeoutBad` |
-
-### 範本 agent-nia（10-28 晚，第 6 步）
-
-| 哪裡 | 負責什麼 |
-|---|---|
-| `demo/agent-nia/_entry` | JSON 入口 `["aos-loop", "loop.json"]` |
-| `demo/agent-nia/loop.json` | 單子 `aos-parts run round {"$env": "AOS_CD"}`（`timeout_ms` 600000、`max` 40；10-30 起開 `ctl.json`／`state.json` 兩扇窗，落在 `$AOS_STACK`）：round 退 0＝再叫一次、退 10＝loop 停 |
-| `demo/agent-nia/parts.json` | 格的通訊錄，手寫相對路徑指 `../../lib/`：round（10-30 起 env `ROUND_ON_EMPTY` `stop`，範本射後不理）、queue、history、act、`hook/pre_think`＝compact（`MAX_BYTES` 65536）、`endpoint/default`＝fake、`endpoint/litellm`＝openai（localhost:4000） |
-| `demo/agent-nia/tools.json` | 腦的工具：clock、math（相對路徑指 `../../lib/base/`） |
-| `demo/agent-nia/system.txt` | system 訊息 |
-| `demo/run.sh`（職責變了） | 最後多一段 agent-nia（假腦一題、印工作區與 stack 樹；10-30 起題目經 `aos-parts run queue … push` 放進 stack 的 queue），共七段 |
-
-### round 當外部接口（10-28 晚，第 11 步）
-
-| 哪裡 | 負責什麼 |
-|---|---|
-| `lib/aos/ask_round/_entry` | 工具（照 lib 契約）：stdin `{"question", "agent"?, "timeout_s"?}`；`aos-parts run queue <agent> push` 放一則 user message（10-30 起，agent-lifecycle 第 5 步）→ `aos-parts run round <agent>` 反覆叫，每次後 `queue pop --timeout-s 0 <信號>`：信不見了就印 history 最新的 assistant（`ASK_MAX_ROUNDS` 預設 20、`timeout_s` 預設 120）；工作區只建 `.stack/`；agent＝參數 ＞ `ASK_AGENT`，工作區＝`ASK_WS` ＞ `$AOS_STACK/<agent 名>/`、stack＝`<工作區>/.stack/`；錯 `AgentMissing`／`AgentBad`／`StackMissing`／`SettingBad`／`QueueFailed`／`RoundFailed`／`AnswerMissing`… |
-| `lib/aos/ask_round/_tooldef.json`、`_metainfo` | 給模型的說明（question 必給、agent／timeout_s 選填）；特性（`time_ms.max` 600000，aos-mcp 拿它當逾時） |
-
-### 測試
-
-| 哪裡 | 涵蓋 |
-|---|---|
-| `tests/test_round.py` | endpoint fake、openai（假 server：答案與 usage、經 aos-parts run 帶註冊檔 env、各錯誤代號、連不上；LiteLLM 實跑連不上就 skip）；act（順序、平行、工具的問題回給腦、pre_tool／post_tool、插話退 10、自己的錯）；round（10-30 起題目經 queue push、答案看 history；假腦答完一題、system 與 tools 帶進請求、trace 每格一行、沒題退 10；`ROUND_ON_EMPTY=idle` 空退 0 不動 history／trace、壞值 SettingBad；claim 死在搬進 cur/ 之後的補認領；aos-loop 下 idle＋`interval_ms` 常駐、ctl paused 時信留 new/、放行後答出、stopped 收工；endpoint 壞退 1 且 history 沒多接、on_error switch 換 endpoint.txt 再成功、retry 有上限；pause yield 後接著做；`--step` 一格一格、aos-loop 跑 `--step`；pre_round 失敗；插話 claim --more 再問腦、兩題一起答；PartMissing／AgentBad／SettingBad） |
-| `tests/test_round_queue.py` | queue（10-30 改 `$AOS_STACK/queue/` 佈局：push 之後 `queue/new/` 一封有序號、body 原樣；claim 之後 history 多一則、信在 `cur/`；finish 之後信不見、`--keep` 進 `done/`；照 push 的順序；push 壞 message、不收名字；沒 stack 也建得出 queue；非有序與 body 壞＝壞信丟掉；withdraw、claim 各步當掉重跑（含 --more）、舊 `current.txt` 不算、不拿上一題答案、claim --more、沒 history 格信留 `new/`、沒 queue 退 10、pop 等到答案（跳過帶 tool_calls 的）／逾時／LetterUnknown／AnswerMissing、push --wait、emit、沒認領就 finish；`aos_bins.py` 的 C++ 清單 10-30 加 `aos-post`）、history（壞輸入、compact 換上與 `--expect-bytes`）、compact（大 history 壓短、沒超過不動、endpoint 壞 history 不動） |
-| `tests/test_nia.py` | 10-30 起範本與 spawn 經 queue 格放題、看 history（spawn 不再經 `aos-ai ask`／`run`），範本另驗 loop 的 state 窗收工 `done`、parts.json 的 `ROUND_ON_EMPTY`、loop.json 的兩扇窗；ask_round（登記進 tools.json 經 aos-tools call 拿到假腦答案、工作區在工具小格、答完不常駐；工具小資料夾 `.env` 固定 `ASK_AGENT`；round yield 時重叫到答完、`ASK_MAX_ROUNDS` 用完 AnswerMissing；RoundFailed 與參數錯）；範本 agent-nia（一題答完、stack 的檔與 trace 有 pre_think、兩題＝round 退 0 後 loop 再叫、沒題 loop 正常停、parts.json／tools.json 只用相對路徑且每格找得到）、`aos-ai spawn --from agent-nia`（註冊檔改成絕對、跑一題答得出來）、沒有 parts.json 的範本 tools.json 不動 |
-| `tests/test_lib.py`（職責變了） | 形狀檢查（三個檔、NAME 行…）跳過 agent 的格：`lib/endpoint/` 整層與 `lib/agent/` 的 act、queue、history、round、compact（不是工具，沒有 `_tooldef.json`） |

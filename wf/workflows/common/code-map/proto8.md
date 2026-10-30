@@ -20,7 +20,7 @@
 
 ### `proto8/tests/`
 
-逐字下放到 [proto8/02-tests](proto8/02-tests.md)（2026-10-21 晚，本檔超過 8 KB）；10-24 新增的測試檔在 [proto8/08-tests-10-24](proto8/08-tests-10-24.md)（10-24 收尾實跑全部 452 個，5 個 skip；同日函式庫遷移後 453 個）。每個測試檔涵蓋什麼、幾個；共 248 個（10-23 改跑 C++ 版後 233，加 `test_dan.py` 14；10-24 `test_fsm.py` 的「物件＝表壞」換成兩案：物件＝內嵌單子、形狀壞＝自己的錯），`python3 -m unittest discover -s proto8/tests`（先建 impls）。
+逐字下放到 [proto8/02-tests](proto8/02-tests.md)、[proto8/02-tests-2](proto8/02-tests-2.md)（2026-10-21 晚，本檔超過 8 KB；後又拆成兩份）；10-24 新增的測試檔在 [proto8/08-tests-10-24](proto8/08-tests-10-24.md)（10-24 收尾實跑全部 452 個，5 個 skip；同日函式庫遷移後 453 個）。每個測試檔涵蓋什麼、幾個；共 248 個（10-23 改跑 C++ 版後 233，加 `test_dan.py` 14；10-24 `test_fsm.py` 的「物件＝表壞」換成兩案：物件＝內嵌單子、形狀壞＝自己的錯），`python3 -m unittest discover -s proto8/tests`（先建 impls）。
 
 ### `proto8/impls/` 與舊 lib
 
@@ -30,7 +30,7 @@ LLM kernel 兩支（`aos-llm-kernel`、`aos-llm-send`，10-24）的逐檔表另�
 
 ### agent-round 的格（10-28 晚）
 
-`proto8/lib/agent/` 的 round、queue、history、compact（`_entry`、`ask.py`、`prompts/`）、act 與 `proto8/lib/endpoint/` 的 fake、openai（agent 自己的格，不是工具），範本 `demo/agent-nia`，加上 `tests/test_round.py`、`test_round_queue.py`、`test_lib.py` 跳過這些格：逐檔一列在 [proto8/12-agent-round](proto8/12-agent-round.md)（本檔超過 8 KB，另開分檔）。
+`proto8/lib/agent/` 的 round、queue、history、compact（`_entry`、`ask.py`、`prompts/`）、act 與 `proto8/lib/endpoint/` 的 fake、openai（agent 自己的格，不是工具），範本 `demo/agent-nia`，加上 `tests/test_round.py`、`test_round_queue.py`、`test_lib.py` 跳過這些格：逐檔一列在 [proto8/12-agent-round](proto8/12-agent-round.md)、[proto8/12-agent-round-2](proto8/12-agent-round-2.md)（本檔超過 8 KB，另開分檔）。
 
 ### 外部 coding agent 的格（10-30）
 
