@@ -12,6 +12,12 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-10-31 早（家中 Manjaro；同一 session 續）
+
+1. **授權**：沿用昨晚同一 session（可隨意 push；普通事 opus、簡單與雜活 sonnet；做事的 agent 先讀 wf 規矩；agent 可再派 agent）。腦走 LiteLLM 一律用 GPT（`chatgpt-gpt-6-sol`）。
+2. **狀態**：昨晚四隊全收線（aos-round 第 2～7 步、SESSION-LOG 三件收尾、真腦實測、試驗場重建、真腦實測兩件小事修好；最新 `13b45c7a`，全套 794／0 fail／3 skip）。使用者親手跑過 bob-1、bob-2，兩份說明頁在桌面；**試驗場剩 hub 畫面那段**（`~/code/playground/README.md` 第 5 節）。開著的題見 [SESSION-LOG](SESSION-LOG.md)；[WAIT_USER](WAIT_USER.md) 14 條（要裁的：aos_ws.py 失敗判法、`wip/hub-step6` 刪不刪、eca 代定；其餘親手試）。兩個舊建置目錄 `proto8/impls/aos-gate/`、`aos-kernel-llm/` 未追蹤、沒刪。
+3. **新規**：無。
+
 ## 2026-10-30 晚（家中 Manjaro；新 session 開場）
 
 1. **授權**：可隨意 push。分工：普通事 opus、簡單工作與雜活 sonnet；做事的 agent（簡單／雜活除外）先讀 wf 規矩；agent 可再派 agent、模型隨意。測試在家機本地跑（不是 WSL）。
