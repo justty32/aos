@@ -12,6 +12,6 @@ aos 主體（[impls/](../impls/README.md) 的四支 C++、[bin/](../bin/README.m
 | [langs/](langs/README.md) | 用 Janet、Lua 寫 aos 程式，編成資料夾＋JSON | `tests/test_janet.py`、`tests/test_lua_aos.py` |
 | [editors/nvim/](editors/nvim/README.md) | nvim 外掛 aos_nvim：在 nvim 裡跑 aos、看 trace、丟題 | `tests/test_lua_aos.py`（headless smoke） |
 | [sandbox/](sandbox/README.md) | aos-sandbox：照一份設定把程式關進沙箱（s6＋bwrap）再跑 | `tests/test_sandbox.py` |
-| [cli_hub/](cli_hub/README.md) | aos-hub（10-27 起、10-28 重寫）：`$AOS_HUB` 裡常駐的 aos-hub-kernel 管所有 claude／codex 實例；接進畫面（Ctrl-] 只跳出）、pause 收起、stop 結束歸檔、aos-say／listen 可以對它說話 | `tests/test_hub.py` |
+| [eca_hub/](eca_hub/README.md) | aos-eca-hub（10-30 起；前身 10-27／10-28 的 cli_hub／aos-hub）：把外部 coding agent（claude／codex）掛到 aos-daemon 底下、列出、接進畫面（Ctrl-] 只跳出）、close 收起、stop 結束歸檔；沒有自己的常駐 kernel，aos-say／listen 經工作區的 `.stack` 對它說話 | `tests/test_eca_hub.py` |
 
 逐檔說明在 code map 的 [proto8/06-周邊工具](../../wf/workflows/common/code-map/proto8/06-周邊工具.md)、[06-周邊工具-2](../../wf/workflows/common/code-map/proto8/06-周邊工具-2.md)、[06-周邊工具-3](../../wf/workflows/common/code-map/proto8/06-周邊工具-3.md)、[06-周邊工具-3](../../wf/workflows/common/code-map/proto8/06-周邊工具-3.md)。

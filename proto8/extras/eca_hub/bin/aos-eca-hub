@@ -1,0 +1,418 @@
+#!/usr/bin/env python3
+"""aos-eca-hub - 管掛在 aos-daemon 底下的外部 coding agent（claude／codex）：掛上、列出、接進畫面、收起、結束歸檔（10-30 eca）。
+
+    aos-eca-hub [--daemon D] add   [--kind claude|codex | --template 定義] [--name N] [資料夾]   掛到 daemon（aos-daemon-ctl add --ws）；印小格
+    aos-eca-hub ls    [--json]                         列掛著的外部 agent：名字、phase、畫面、種類、工作區、對話 id 前 8 碼
+    aos-eca-hub state [資料夾|名字]                    這裡是不是掛著的外部 agent（不是＝InstanceMissing、退 1）
+    aos-eca-hub open  [-d] [--kind …|--template …] [--name N] [資料夾|名字]   接進畫面（沒開就開、有對話就 --resume；還沒掛就先 add）
+    aos-eca-hub close [資料夾|名字]                    收起：關畫面、對話留著（turn 照樣用 --resume 答）；出錯停了的＝重新掛一次
+    aos-eca-hub close --idle 分                        收起所有畫面開著、閒了這麼多分的（reap.json 每分鐘叫一次）
+    aos-eca-hub stop  [資料夾|名字]                    結束：關畫面、從 daemon 拿掉、小格搬到 <工作區>/.stack/eca_archive/<名字>-<UTC>/
+    aos-eca-hub watch [資料夾|名字]                    跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走
+
+設計：proto8/thinking/2026-10-30-eca.md C 結論 7～10（daemon＋三件 daemon 做不到的事：畫面、對話接回、CLI 自己的 session 檔）。
+沒有自己的常駐 kernel：常駐的是 aos-daemon（信箱模式），以它的 loops_state.json 為準（衝突 2）；每個子命令都是
+「叫 aos-daemon-ctl ＋ 動小格裡 cli_session 的東西」。哪個 daemon＝--daemon ＞ $AOS_DAEMON（同 aos-daemon-ctl；沒設、不是資料夾、
+daemon 沒在跑〔loops_state.json 的 pid＋started_at_ticks 對不上〕＝DaemonMissing）。不另設 hub 的環境變數（10-28 那個退場，衝突 4）。
+一隻＝「定義 × 資料夾」：定義＝--template ＞ proto8/demo/eca-<--kind，沒給＝claude>（頂層要有 cli.json）；資料夾沒給＝cwd，就是 claude 的 cwd。
+  add＝aos-daemon-ctl add --ws 資料夾 --name 名字 定義（名字沒給＝資料夾名）；資料夾沒有 .stack 就由 aos-daemon-ctl 建 symlink 指到小格
+  （衝突 3），cd 進去 aos-say／aos-listen 就接上；已經有＝不建、它在 stderr 說一句。
+「掛著的外部 agent」＝daemon 的 loops 表上、小格裡有 eca.json 的（turn 每次跑都寫：kind、ws、template）；add 之後子 loop 跑第一次才有。
+CLI 的小格＝<daemon>/<名字>/<kind>/（cli_session 的 session.txt、tty.sock、live.jsonl、transcripts/）。
+畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。「暫停」只有 ctl.json 的 paused 一種（寫 <小格>/ctl.json），這裡不另做。
+錯：stderr 一行 `aos-eca-hub: 代號 原因`、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、
+  TemplateUnknown、WsMissing、SessionBad（正在答題時 close）、Timeout（等 daemon 收掉逾時），加 aos-daemon-ctl 與 cli_session 的。"""
+import datetime, json, os, shutil, subprocess, sys, time
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+ROOT = os.path.normpath(os.path.join(HERE, "..", "..", ".."))           # proto8/
+CTL = os.path.join(ROOT, "bin", "aos-daemon-ctl")
+DEMO = os.path.join(ROOT, "demo")
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.join(ROOT, "lib", "agent"))
+import cli_session  # noqa: E402
+
+PROG = "aos-eca-hub"
+WAIT_S = 30                                     # stop／close 重掛時等 daemon 收掉的上限（daemon 的 grace 是 10 秒）
+
+
+def die(code, msg):
+    print("%s: %s %s" % (PROG, code, str(msg).replace("\n", " ")), file=sys.stderr)
+    sys.exit(1)
+
+
+cli_session.PROG = PROG                         # cli_session 出錯時那一行用這支的名字
+
+
+def parse(argv, flags=(), switches=()):
+    opts, rest, it = {}, [], iter(argv)
+    for a in it:
+        name, eq, val = a.partition("=")
+        if name in flags:
+            v = val if eq else next(it, None)
+            if v is None:
+                die("ArgumentsBad", "%s 要一個值" % a)
+            opts[name] = v
+        elif a in switches:
+            opts[a] = True
+        elif a.startswith("-") and a != "-":
+            die("FlagUnknown", a)
+        else:
+            rest.append(a)
+    if len(rest) > 1:
+        die("ArgumentsBad", "多給了 %s" % rest[1])
+    return opts, (rest[0] if rest else None)
+
+
+# ---------------------------------------------------------------- daemon（經 aos-daemon-ctl）
+
+DAEMON = None                                   # main 裡從 --daemon／$AOS_DAEMON 定
+
+
+def daemon_dir():
+    d = DAEMON or os.environ.get("AOS_DAEMON", "")
+    if not d:
+        die("DaemonMissing", "沒給 --daemon、也沒設 AOS_DAEMON（要指到 aos-daemon 的 $AOS_STACK 資料夾）")
+    if not os.path.isdir(d):
+        die("DaemonMissing", "daemon 的資料夾不在：%s" % d)
+    d = os.path.abspath(d)
+    try:
+        with open(os.path.join(d, "loops_state.json"), encoding="utf-8") as f:
+            st = json.load(f)
+        pid, ticks = int(st["pid"]), st["started_at_ticks"]
+        with open("/proc/%d/stat" % pid, encoding="utf-8") as f:
+            alive = int(f.read().rpartition(")")[2].split()[19]) == ticks
+    except (OSError, ValueError, KeyError, TypeError, IndexError):
+        alive = False
+    if not alive:
+        die("DaemonMissing", "%s 的 aos-daemon 沒在跑（loops_state.json 不在或心跳的行程不在）" % d)
+    return d
+
+
+def ctl(*args):
+    """叫 aos-daemon-ctl；錯＝把它那一行換成這支的名字、退 1。回 stdout。stderr 的提醒照轉。"""
+    try:
+        r = subprocess.run([sys.executable, CTL, "--daemon", daemon_dir()] + list(args), capture_output=True, text=True)
+    except OSError as e:
+        die("CommandMissing", "叫不了 aos-daemon-ctl：%s" % e)
+    if r.returncode != 0:
+        line = (r.stderr.strip().splitlines() or ["aos-daemon-ctl: CtlFailed 退 %d" % r.returncode])[-1]
+        code, _, why = line.partition(": ")[2].partition(" ")
+        die(code or "CtlFailed", why or line)
+    if r.stderr:
+        sys.stderr.write(r.stderr)
+    return r.stdout
+
+
+def instances():
+    """daemon 的 loops 表上、小格有 eca.json 的：[{name, cell, phase, code, pid, kind, ws, template}]（照表的順序）。"""
+    d = daemon_dir()
+    rows = json.loads(ctl("ls", "--json") or "{}").get("loops", {})
+    out = []
+    for name, r in rows.items():
+        cell = os.path.join(d, name)
+        try:
+            with open(os.path.join(cell, "eca.json"), encoding="utf-8") as f:
+                eca = json.load(f)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(eca, dict) or eca.get("kind") not in ("claude", "codex"):
+            continue
+        out.append(dict(name=name, cell=cell, phase=r.get("phase"), code=r.get("code"), pid=r.get("pid"),
+                        kind=eca["kind"], ws=eca.get("ws") or r.get("ws") or "", template=eca.get("template") or ""))
+    return out
+
+
+def cli_cell(it):
+    return os.path.join(it["cell"], it["kind"])
+
+
+def has_screen(it):
+    p = cli_cell(it)
+    return os.path.exists(os.path.join(p, "tty.sock")) and cli_session.Cell(p).alive()
+
+
+def session_of(it):
+    try:
+        with open(os.path.join(cli_cell(it), "session.txt"), encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def failed(it):
+    return it["phase"] == "done" and it["code"] not in (0, None)
+
+
+def label(it):
+    if failed(it):
+        return "出錯停了"
+    if it["phase"] != "running":
+        return it["phase"] or "-"
+    return "畫面開著" if has_screen(it) else "收起了"
+
+
+def find(arg, rows=None):
+    """名字或資料夾 → 一隻；資料夾比對：工作區相同、或在它的小格裡面。找不到＝None。"""
+    rows = instances() if rows is None else rows
+    for r in rows:
+        if arg and r["name"] == arg:
+            return r
+    d = os.path.abspath(arg or ".")
+    hit = [r for r in rows if r["ws"] == d or d == r["cell"] or d.startswith(r["cell"] + os.sep)]
+    if len(hit) > 1:
+        die("ArgumentsBad", "%s 有 %d 隻掛著，用名字指定（aos-eca-hub ls）" % (d, len(hit)))
+    return hit[0] if hit else None
+
+
+def resolve(arg):
+    r = find(arg)
+    if r is None:
+        die("InstanceMissing", "%s 不是掛著的外部 agent（aos-eca-hub add 或 open 掛上）" % (arg or os.getcwd()))
+    return r
+
+
+def template_of(opts):
+    if "--template" in opts and "--kind" in opts:
+        die("ArgumentsBad", "--template 跟 --kind 只給一個")
+    t = opts.get("--template") or os.path.join(DEMO, "eca-" + opts.get("--kind", "claude"))
+    if not os.path.isfile(os.path.join(t, "cli.json")):
+        die("TemplateUnknown", "%s 沒有 cli.json（不是外部 coding agent 的定義）" % t)
+    return os.path.abspath(t)
+
+
+def wait_for(cond, what, secs=WAIT_S):
+    end = time.time() + secs
+    while time.time() < end:
+        v = cond()
+        if v:
+            return v
+        time.sleep(0.1)
+    die("Timeout", "等了 %d 秒，%s" % (secs, what))
+
+
+def rows_named(name):
+    return [r for t in json.loads(ctl("ls", "--json") or "{}").values() for n, r in t.items() if n == name]
+
+
+def gone(name):
+    """daemon 收掉它了：表上沒有這列，或那列是 done／stopped（不會再動）。"""
+    rows = rows_named(name)
+    return not rows or all(r.get("phase") in ("done", "stopped") for r in rows)
+
+
+def do_add(opts, arg):
+    ws = os.path.abspath(arg or ".")
+    if not os.path.isdir(ws):
+        die("WsMissing", "%s 不是資料夾" % ws)
+    name = opts.get("--name") or os.path.basename(ws.rstrip("/"))
+    ctl("add", "--ws", ws, "--name", name, template_of(opts))
+    return name, os.path.join(daemon_dir(), name)
+
+
+# ---------------------------------------------------------------- 子命令
+
+def cmd_add(argv):
+    opts, arg = parse(argv, flags=("--kind", "--template", "--name"))
+    print(do_add(opts, arg)[1])
+
+
+def cmd_ls(argv):
+    opts, _ = parse(argv, switches=("--json",))
+    rows = instances()
+    if opts.get("--json"):
+        print(json.dumps([dict(r, state=label(r), screen=has_screen(r), session=session_of(r)) for r in rows],
+                         ensure_ascii=False))
+        return
+    for r in rows:
+        print("%-12s %-10s %-6s %s  對話 %s" % (r["name"], label(r), r["kind"], r["ws"], session_of(r)[:8] or "-"))
+
+
+def cmd_state(argv):
+    _, arg = parse(argv)
+    r = resolve(arg)
+    print("名字   %s\n狀態   %s（daemon phase %s）\n種類   %s（定義 %s）\n工作區 %s\n小格   %s\n對話   %s" % (
+        r["name"], label(r), r["phase"], r["kind"], r["template"], r["ws"], r["cell"], session_of(r) or "（還沒有）"))
+
+
+def cmd_open(argv):
+    opts, arg = parse(argv, flags=("--kind", "--template", "--name"), switches=("-d",))
+    r = find(arg)
+    if r is None:                                        # 還沒掛：先 add，等子 loop 跑第一次（寫 eca.json）
+        if arg and not os.path.isdir(arg):
+            die("InstanceMissing", "%s 不是資料夾、也不是掛著的名字" % arg)
+        name, _ = do_add(opts, arg)
+        r = wait_for(lambda: next((x for x in instances() if x["name"] == name), None), "%s 的子 loop 還沒跑起來" % name)
+    cell = cli_session.Cell(cli_cell(r))
+    cli_session.note_cell(cell, r["template"], r["ws"])  # open_cell 照 tool.txt（定義）、ws.txt 開
+    opened = cli_session.open_cell(cell)                 # 正在答題就等它答完（格的 lock）、等畫面穩
+    if opts.get("-d"):
+        print("畫面%s：%s" % ("開好了（有對話就是 --resume 叫回）" if opened else "本來就開著", cell.file("tty.sock")))
+        return
+    env = {k: v for k, v in os.environ.items() if k != "TMUX"}
+    print("接進 %s（Ctrl-] 跳出、實例不結束）" % r["ws"], file=sys.stderr)
+    os.execvpe("tmux", ["tmux", "-S", cell.file("tty.sock"), "attach", "-t", cli_session.TMUX_SESSION], env)
+
+
+def idle_min(path):
+    """閒了幾分：CLI 小格裡檔案最後被動的時間（hook 寫 turns、非互動寫 live、開畫面寫 tmux.conf）。"""
+    try:
+        last = max(os.path.getmtime(os.path.join(path, n)) for n in os.listdir(path))
+    except (OSError, ValueError):
+        return 0
+    return (time.time() - last) / 60
+
+
+def close_screen(it):
+    """關畫面；正在答題（格的 lock 被拿著）＝SessionBad。回 True＝本來開著。"""
+    cell = cli_session.Cell(cli_cell(it))
+    f, ok = cell.lock()
+    with f:
+        if not ok:
+            raise Busy(it)
+        return cli_session.close(cell)
+
+
+class Busy(Exception):
+    def __init__(self, it):
+        super().__init__("%s 正在答題，等它答完再收" % it["name"])
+
+
+def cmd_close(argv):
+    opts, arg = parse(argv, flags=("--idle",))
+    if "--idle" in opts:                                 # 自動收起（reap.json 用 aos-loop 每分鐘叫一次）
+        if arg:
+            die("ArgumentsBad", "--idle 不跟資料夾一起給")
+        try:
+            limit = float(opts["--idle"])
+        except ValueError:
+            die("ArgumentsBad", "--idle 要分鐘數：%s" % opts["--idle"])
+        for r in instances():
+            if has_screen(r) and idle_min(cli_cell(r)) >= limit:
+                try:
+                    close_screen(r)
+                    print("收起 %s（閒了 %d 分）" % (r["name"], idle_min(cli_cell(r))))
+                except Busy as e:
+                    print("沒收 %s：%s" % (r["name"], e))
+        return
+    r = resolve(arg)
+    try:
+        closed = close_screen(r)
+    except Busy as e:
+        die("SessionBad", e)
+    if failed(r):                                        # 出錯停了（P-20）：拿掉再掛回去＝重新收（信還在 cur/，turn 接著做）
+        ctl("rm", r["name"])
+        wait_for(lambda: not rows_named(r["name"]), "daemon 還沒把 %s 拿掉" % r["name"])
+        ctl("add", "--ws", r["ws"], "--name", r["name"], r["template"])
+        print("收起了，重新掛上（上次停在結束碼 %s）" % r["code"])
+        return
+    print("收起了" if closed else "本來就沒畫面（已收起）")
+
+
+def cmd_stop(argv):
+    _, arg = parse(argv)
+    r = resolve(arg)
+    try:
+        close_screen(r)
+    except Busy as e:
+        die("SessionBad", e)
+    ctl("rm", r["name"])                                 # aos-daemon-ctl 順手拿掉指到小格的 <ws>/.stack symlink
+    wait_for(lambda: gone(r["name"]), "daemon 還沒收掉 %s" % r["name"])
+    cell, ws = os.path.realpath(r["cell"]), r["ws"]
+    link = os.path.join(ws, ".stack")
+    if os.path.islink(link) and os.path.realpath(link) == cell:
+        os.unlink(link)                                  # 還指著小格（ctl 沒拿掉）：先拿掉，不然會把小格搬進自己
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    arch = os.path.join(link, "eca_archive")
+    if os.path.realpath(arch).startswith(cell + os.sep):    # .stack 是指進小格裡面的捷徑：退到 daemon 底下
+        arch = os.path.join(daemon_dir(), "eca_archive")
+    dest = os.path.join(arch, "%s-%s" % (r["name"], stamp))
+    os.makedirs(arch, exist_ok=True)
+    shutil.move(cell, dest)
+    copied = cli_session.freeze_transcripts(cli_session.Cell(os.path.join(dest, r["kind"])), r["kind"])
+    print("結束，歸檔在 %s%s" % (dest, "（CLI 的對話 %d 份換成了複製）" % len(copied) if copied else ""))
+
+
+def describe(ev):
+    """live.jsonl 一行 → 給人看的短行（claude stream-json、codex --json）；不認得的＝None。"""
+    t = ev.get("type")
+    if t == "system" and ev.get("subtype") == "init":
+        return "── 開始（對話 %s，模型 %s）" % ((ev.get("session_id") or "")[:8], ev.get("model"))
+    if t == "assistant":
+        out = []
+        for c in (ev.get("message") or {}).get("content") or []:
+            if c.get("type") == "text" and c.get("text", "").strip():
+                out.append(c["text"].strip())
+            elif c.get("type") == "tool_use":
+                out.append("  ▶ %s %s" % (c.get("name"), json.dumps(c.get("input"), ensure_ascii=False)[:120]))
+        return "\n".join(out) or None
+    if t == "user":
+        for c in (ev.get("message") or {}).get("content") or []:
+            if isinstance(c, dict) and c.get("type") == "tool_result":
+                body = c.get("content")
+                body = body if isinstance(body, str) else json.dumps(body, ensure_ascii=False)
+                return "  ◀ %s" % body.replace("\n", " ")[:120]
+    if t == "result":
+        return "── 結束（%s，%.4f 美元）" % ("出錯" if ev.get("is_error") else "完成", ev.get("total_cost_usd") or 0)
+    if t in ("item.completed", "item.started") and isinstance(ev.get("item"), dict):
+        item = ev["item"]
+        return "  %s %s" % (item.get("type") or item.get("item_type"), (item.get("text") or item.get("command") or "")[:120])
+    if t == "turn.completed":
+        return "── 結束"
+    return None
+
+
+def cmd_watch(argv):
+    _, arg = parse(argv)
+    path = os.path.join(cli_cell(resolve(arg)), "live.jsonl")
+    pos = os.path.getsize(path) if os.path.exists(path) else 0
+    print("（跟著看 %s；Ctrl-C 離開）" % path, file=sys.stderr, flush=True)
+    try:
+        while True:
+            try:
+                with open(path, "rb") as f:
+                    f.seek(pos)
+                    data = f.read()
+            except OSError:
+                data = b""
+            end = data.rfind(b"\n") + 1
+            pos += end
+            for line in data[:end].decode("utf-8", "replace").splitlines():
+                try:
+                    ev = json.loads(line)
+                except ValueError:
+                    continue
+                s = describe(ev) if isinstance(ev, dict) else None
+                if s:
+                    print(s, flush=True)
+                if isinstance(ev, dict) and ev.get("type") in ("result", "turn.completed"):
+                    return
+            time.sleep(0.2)
+    except KeyboardInterrupt:
+        pass
+
+
+CMDS = {"add": cmd_add, "ls": cmd_ls, "state": cmd_state, "open": cmd_open, "close": cmd_close, "stop": cmd_stop,
+        "watch": cmd_watch}
+
+
+def main():
+    global DAEMON
+    a = sys.argv[1:]
+    while a and (a[0] == "--daemon" or a[0].startswith("--daemon=")):
+        if a[0] == "--daemon":
+            if len(a) < 2:
+                die("ArgumentsBad", "--daemon 要一個值")
+            DAEMON, a = a[1], a[2:]
+        else:
+            DAEMON, a = a[0][len("--daemon="):], a[1:]
+    if not a or a[0] in ("-h", "--help"):
+        print(__doc__)
+        return
+    if a[0] not in CMDS:
+        die("CommandUnknown", "不認得的子命令 %s（%s）" % (a[0], "、".join(CMDS)))
+    CMDS[a[0]](a[1:])
+
+
+if __name__ == "__main__":
+    main()

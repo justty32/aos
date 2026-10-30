@@ -1,0 +1,1 @@
+{"exec": ["bin/aos-eca-hub", "close", "--idle", "30"], "interval_ms": 60000}
