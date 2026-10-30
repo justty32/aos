@@ -33,7 +33,7 @@
 
 結論：
 
-- **新程式 `aos-mcp`**（`proto8/extras/ai_tools/bin/`，照 [side-mcp](../topdown/galtxt-a/plan/side-mcp.md) 的最小原型）：一個有 `tool.json` 的資料夾程式＝一個 MCP tool；外面叫一次＝`aos-exec --ws WS 該資料夾`，arguments 進 stdin、stdout 回去、退非 0＝錯。說明在 [ai_tools/README](../extras/ai_tools/README.md#aos-mcp10-27)。這也把 [10-24 ai-tools](2026-10-24-ai-tools.md) 的未決題「要不要另做 MCP server」定成「做」（門檻「外部 agent 不能給 Bash」正好碰到）。
+- **新程式 `aos-mcp`**（`proto8/extras/ai_tools/bin/`，照 [side-mcp](../topdown/galtxt-a/plan/side-mcp.md) 的最小原型）：一個有 `tool.json` 的資料夾程式＝一個 MCP tool；外面叫一次＝`aos-exec --ws WS 該資料夾`，arguments 進 stdin、stdout 回去、退非 0＝錯。說明在 [ai_tools/README](../extras/ai_tools/README.md#aos-mcp10-2710-28-改成包在-aos-tools-上)。這也把 [10-24 ai-tools](2026-10-24-ai-tools.md) 的未決題「要不要另做 MCP server」定成「做」（門檻「外部 agent 不能給 Bash」正好碰到）。
 - **試驗場**：`agent/mcp.json` 掛 aos-mcp、只開 lib/base 的 clock、math、read；`main.py` 加 `--mcp-config`、`--allowedTools` 放行 `mcp__aos__*` 三個，其餘安全鎖不拆（`--strict-mcp-config` 留著＝只接 mcp.json 那一支）；aos-mcp 的小格是 `$AOS_STACK/mcp/`（main.py 給，C-70）。
 - **實跑一次**（10-27，haiku，題目：現在 UTC 幾點、兩個 18 位數相乘、讀 `note.txt`）：claude 依序叫了 clock、math、read 三個 aos 工具（`$AOS_STACK/mcp/calls.jsonl` 三行，每次約 19 ms），乘積對；整趟 4.3 秒（claude 3.2 秒）、4 回合、$0.0016。
 
