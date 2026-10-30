@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""aos-hub-kernel - aos-hub 的常駐 kernel：記著所有 claude／codex 實例、替它們回答工作區裡的題目（10-28）。
+"""aos-hub-kernel - aos-hub 的常駐 kernel：記著所有 claude／codex 實例、替它們回答 stack 裡 queue 的訊息（10-28；10-30 改走 queue）。
 
     AOS_HUB=資料夾 aos-hub-kernel
 
@@ -7,19 +7,22 @@ $AOS_HUB 沒設＝HubMissing、退 1（不給預設路徑，10-28 決定 10）�
 開 $AOS_HUB/kernel.sock，一行 JSON 請求、一行 JSON 回覆（hub_ipc.py）；aos-hub 的指令都經它，它掛了指令就報錯（決定 3）。
 狀態以它記的為準（決定 8）：只在記憶體裡，kernel 重開就清空（實際遇到問題再說，10-28）。SIGTERM／SIGINT 收乾淨就走。
 
-實例＝一個小格（cli_session 的格，<資料夾>/.stack/<工具名>/）＋它代答的信箱。資料夾＝CLI 的 cwd（使用者 cd 過去的那個，
-例如程式專案）；**信箱放在 stack 裡**（<資料夾>/.stack/ 底下的 new/ cur/ out/ done/；使用者 10-28「放Stack比較好。」），
-資料夾本身不長信箱。aos-say／listen 給資料夾就找得到（它們看到 <資料夾>/.stack/new/ 就改用 stack 當信箱）。兩種來路：
-  aos-hub add／open 加的＝**代答**：kernel 照「agent 對話協議」（CONVENTION P-11～P-14）替它收題——new/ 取檔名最前的
-    搬到 cur/、交給工具（lib/agent/claude 的 _entry：stdin {"prompt"} → stdout 回答；畫面開著就打進畫面、沒開就 --resume 問一次，
-    這是 cli_session 本來的兩條路）、答案寫 out/<題名>、題目搬 done/；每題在 stack 的 trace.jsonl 接一行；
-    stack 放 server.txt（「<pid> aos-hub-kernel」），aos-listen 靠它知道有人在服務。一個實例同時只答一題；實例之間不限數量（決定 4）。
+實例＝一個小格（cli_session 的格，<資料夾>/.stack/<工具名>/）＋它代答的 queue。資料夾＝CLI 的 cwd（使用者 cd 過去的那個，
+例如程式專案）；**對話放在 stack 裡**（使用者 10-28「放Stack比較好。」）：輸入是 <資料夾>/.stack/queue/（N-16 有順序信箱，
+10-30 agent-lifecycle A-9），紀錄是 <資料夾>/.stack/history.jsonl（P-41 一行一則 OpenAI message），資料夾本身不長東西。兩種來路：
+  aos-hub add／open 加的＝**代答**：add 時 aos-post init 那個 queue；kernel 一封封 aos-post claim（cur/ 有沒答完的先接，P-12）、
+    aos-post check 讀信——body＝一則 {"role": "user", "content": 字串}（不是就算壞信：aos-post finish 丟掉、trace 記 letter_warning，
+    衝突 5）——body 原樣接進 history（最後一行已是同一則就不接兩次：重試、kernel 重開），content 交給工具（lib/agent/claude 的
+    _entry：stdin {"prompt"} → stdout 回答；畫面開著就打進畫面、沒開就 --resume 問一次，這是 cli_session 本來的兩條路），
+    回答接成一則 {"role": "assistant", "content": 回答} 進 history，才 aos-post finish 那封信（刪掉）。回答就是 history 最新那則
+    assistant，沒有 out/（A-6）。每封在 stack 的 trace.jsonl 接一行（question＝信號）；stack 放 server.txt（「<pid> aos-hub-kernel」），
+    aos-listen 靠它知道有人在服務。一個實例同時只答一封；實例之間不限數量（決定 4）。aos-post 要在 PATH 上（叫的人放）。
   agent 叫 claude／codex 工具時 cli_session 送來的 register＝**只登記**：列得到、接得進去，不替它收題（那個工作區的題是 agent 的）。
-答題失敗：題目留在 cur/、實例標「出錯」不再收題，等人 aos-hub pause／open 一次才再收（P-20 停下等人）；
+答題失敗：信留在 queue/cur/、實例標「出錯」不再收題，等人 aos-hub close／open 一次才再收（P-20 停下等人）；
 工具回 SessionBad（有人接在畫面上、畫面正在跑一輪）不算錯，5 秒後再試。
-pause＝關畫面、對話 id 留著（之後題目照樣用 --resume 答）；stop＝關畫面、把小格搬到 $stack/hub_archive/<工具名>-<UTC>/、
-CLI 自己存的對話（含中間訊息與工具呼叫）拷一份進去、從清單拿掉（決定 5、6）。"""
-import datetime, json, os, shutil, signal, socket, subprocess, sys, threading, time
+close＝關畫面、對話 id 留著（之後題目照樣用 --resume 答；10-30 由 pause 改名，paused 留給 N-07）；stop＝關畫面、把小格搬到
+$stack/hub_archive/<工具名>-<UTC>/、小格 transcripts/ 裡指到 CLI 自己對話檔的 symlink 換成真的複製、從清單拿掉（決定 5、6；10-30 C-16）。"""
+import datetime, json, os, signal, socket, subprocess, sys, threading, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
@@ -46,6 +49,18 @@ cli_session.die = _die
 
 def now():
     return datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds")
+
+
+def post(*args):
+    """叫 aos-post（N-16 投遞）；起不來＝PostMissing。回 CompletedProcess。"""
+    try:
+        return subprocess.run(["aos-post"] + list(args), stdin=subprocess.DEVNULL, capture_output=True, text=True)
+    except OSError as e:
+        raise Fail("PostMissing", "aos-post 起不來（要在 PATH 上）：%s" % e)
+
+
+def first_line(r):
+    return ((r.stderr or r.stdout).strip().splitlines() or ["退 %d、沒說原因" % r.returncode])[0]
 
 
 def kind_of(tool):
@@ -80,7 +95,7 @@ class Kernel:
             it = self.items.get(req["cell"])
             if it is None:
                 self.items[req["cell"]] = dict(cell=req["cell"], ws=req["ws"], tool=req["tool"], kind=kind_of(req["tool"]),
-                                               serve=False, screen="paused", error=None, busy=None, retry_at=0, since=now())
+                                               serve=False, screen="closed", error=None, busy=None, retry_at=0, since=now())
 
     def op_add(self, req):
         ws, tool = os.path.abspath(req["ws"]), os.path.abspath(req["tool"])
@@ -96,11 +111,12 @@ class Kernel:
                     raise Fail("InstanceBusy", "這個資料夾已經有代答的實例（%s）；一個資料夾一個（P-18）" % it["cell"])
             it = self.items.get(cell)
             if it is None:
-                it = self.items[cell] = dict(cell=cell, ws=ws, tool=tool, kind=kind_of(tool), serve=True, screen="paused",
+                it = self.items[cell] = dict(cell=cell, ws=ws, tool=tool, kind=kind_of(tool), serve=True, screen="closed",
                                              error=None, busy=None, retry_at=0, since=now())
             it["serve"] = True
-        for d in ("new", "cur", "out", "done"):                    # 信箱放 stack 裡（10-28「放Stack比較好。」）；new/ 在＝say／listen 認得
-            os.makedirs(os.path.join(stack, d), exist_ok=True)
+        r = post("init", os.path.join(stack, "queue"))             # queue 放 stack 裡（10-28「放Stack比較好。」、10-30 A-2）
+        if r.returncode != 0:
+            raise Fail("PostFailed", "aos-post init：%s" % first_line(r))
         cli_session.register(cli_session.Cell(cell), tool, ws)     # 寫 tool.txt、ws.txt（open_cell 要）；送回自己的 register 無妨
         with open(os.path.join(stack, ".server.txt"), "w", encoding="utf-8") as f:
             f.write("%d %s\n" % (os.getpid(), PROG))
@@ -119,14 +135,14 @@ class Kernel:
             it["screen"], it["error"] = "open", None
         return {"opened": opened, "sock": cell.file("tty.sock")}
 
-    def op_pause(self, req):
+    def op_close(self, req):
         it = self.find(req)
         with self.lock:
             if it["busy"]:
-                raise Fail("SessionBad", "正在答 %s，等它答完再 pause" % it["busy"])
+                raise Fail("SessionBad", "正在答 %s，等它答完再 close" % it["busy"])
         closed = cli_session.close(cli_session.Cell(it["cell"]))
         with self.lock:
-            it["screen"], it["error"] = "paused", None
+            it["screen"], it["error"] = "closed", None
         return {"closed": closed}
 
     def op_stop(self, req):
@@ -142,12 +158,8 @@ class Kernel:
         stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         dest = os.path.join(stack, "hub_archive", "%s-%s" % (os.path.basename(it["cell"]), stamp))
         os.makedirs(os.path.dirname(dest), exist_ok=True)
-        os.rename(it["cell"], dest)
-        copied = []
-        for src in cli_session.transcripts(it["kind"], cli_session.Cell(dest).read("session.txt")):
-            os.makedirs(os.path.join(dest, "transcripts"), exist_ok=True)
-            shutil.copy2(src, os.path.join(dest, "transcripts", os.path.basename(src)))
-            copied.append(src)
+        os.rename(it["cell"], dest)                      # transcripts/ 的 symlink 指絕對路徑，跟著搬
+        copied = cli_session.freeze_transcripts(cli_session.Cell(dest), it["kind"])   # symlink 換成真的複製（10-30 C-16）
         self.drop_marker(stack)
         return {"archive": dest, "transcripts": copied}
 
@@ -164,19 +176,15 @@ class Kernel:
         except OSError:
             pass
 
-    def pick(self, ws):
-        """cur/ 有認領了沒做完的先接著做（P-12），否則 new/ 檔名最前的搬到 cur/。回題名或 None。"""
-        cur = sorted(n for n in listdir(os.path.join(ws, "cur")) if not n.startswith("."))
+    def pick(self, q):
+        """queue/cur/ 有認領了沒答完的先接著做（P-12），否則 new/ 有信才 aos-post claim 一封。回信號或 None。"""
+        cur = sorted(n for n in listdir(os.path.join(q, "cur")) if not n.startswith("."))
         if cur:
             return cur[0]
-        for n in sorted(n for n in listdir(os.path.join(ws, "new")) if not n.startswith(".")):
-            os.makedirs(os.path.join(ws, "cur"), exist_ok=True)
-            try:
-                os.rename(os.path.join(ws, "new", n), os.path.join(ws, "cur", n))
-                return n
-            except OSError:
-                continue
-        return None
+        if not any(not n.startswith(".") for n in listdir(os.path.join(q, "new"))):
+            return None                                  # 沒信就不起 aos-post（每 0.3 秒一輪）
+        r = post("claim", q)
+        return (r.stdout.strip() or None) if r.returncode == 0 else None
 
     def serve_loop(self):
         while True:
@@ -185,59 +193,60 @@ class Kernel:
                         if it["serve"] and not it["busy"] and not it["error"] and it["retry_at"] <= time.time()]
             for it in todo:
                 try:
-                    name = self.pick(os.path.dirname(it["cell"]))     # 信箱＝實例的 stack
-                except OSError:
-                    name = None
-                if name:
+                    sig = self.pick(os.path.join(os.path.dirname(it["cell"]), "queue"))   # queue＝實例的 stack 裡
+                except (OSError, Fail):
+                    sig = None
+                if sig:
                     with self.lock:
-                        it["busy"] = name
-                    threading.Thread(target=self.answer, args=(it, name), daemon=True).start()
+                        it["busy"] = sig
+                    threading.Thread(target=self.answer, args=(it, sig), daemon=True).start()
             time.sleep(POLL)
 
-    def answer(self, it, name):
+    def answer(self, it, sig):
         ws, started, t0 = it["ws"], now(), time.monotonic()
-        box = os.path.dirname(it["cell"])               # 信箱＝實例的 stack；ws＝CLI 的 cwd
-        q = os.path.join(box, "cur", name)
+        stack = os.path.dirname(it["cell"])              # queue、history、trace 在實例的 stack；ws＝CLI 的 cwd
+        q = os.path.join(stack, "queue")
         try:
-            if os.path.isdir(q):
-                with open(os.path.join(q, "prompt.txt"), encoding="utf-8") as f:
-                    prompt = f.read()
-            else:
-                with open(q, encoding="utf-8") as f:
-                    prompt = f.read()
-        except OSError as e:
-            return self.done(it, name, started, t0, 1, "QuestionBad 讀不到題目：%s" % e)
+            r = post("check", q, sig)
+            body = json.loads(r.stdout).get("body") if r.returncode == 0 else None
+            why = first_line(r) if r.returncode != 0 else "body 要是 {\"role\": \"user\", \"content\": 非空字串}"
+            if not (isinstance(body, dict) and body.get("role") == "user" and isinstance(body.get("content"), str)
+                    and body["content"].strip()):
+                post("finish", q, sig)                   # 壞信照 N-16 丟掉、不通知寄信人（決定 27）
+                return self.done(it, sig, started, t0, 0, None, warning=why)
+            append_history(stack, body)
+        except Fail as e:
+            return self.done(it, sig, started, t0, 1, "%s %s" % (e.code, e))
+        except (OSError, ValueError, AttributeError) as e:
+            return self.done(it, sig, started, t0, 1, "HistoryFailed %s" % e)
         env = dict(os.environ, AOS_WS=ws, AOS_STACK=it["cell"] + "/")
         env.pop("AOS_ENTRY", None)
         try:
-            r = subprocess.run([os.path.join(it["tool"], "_entry")], input=json.dumps({"prompt": prompt}), text=True,
-                               capture_output=True, cwd=ws, env=env)
+            r = subprocess.run([os.path.join(it["tool"], "_entry")], input=json.dumps({"prompt": body["content"]}),
+                               text=True, capture_output=True, cwd=ws, env=env)
         except OSError as e:
-            return self.done(it, name, started, t0, 1, "ToolFailed %s" % e)
+            return self.done(it, sig, started, t0, 1, "ToolFailed %s" % e)
         if r.returncode != 0:
-            return self.done(it, name, started, t0, r.returncode, (r.stdout or r.stderr).strip().splitlines()[0:1])
-        out = os.path.join(box, "out")
-        os.makedirs(out, exist_ok=True)
-        tmp = os.path.join(box, ".hub-%d-%d.tmp" % (os.getpid(), threading.get_ident()))
-        if os.path.isdir(q):                             # 題目是資料夾（P-13）＝答案也是資料夾、主答案 answer.txt
-            os.makedirs(tmp, exist_ok=True)
-            with open(os.path.join(tmp, "answer.txt"), "w", encoding="utf-8") as f:
-                f.write(r.stdout)
-        else:
-            with open(tmp, "w", encoding="utf-8") as f:
-                f.write(r.stdout)
-        os.replace(tmp, os.path.join(out, name))
-        os.makedirs(os.path.join(box, "done"), exist_ok=True)
-        os.rename(q, os.path.join(box, "done", name))
-        self.done(it, name, started, t0, 0, None)
+            return self.done(it, sig, started, t0, r.returncode, (r.stdout or r.stderr).strip().splitlines()[0:1])
+        text = r.stdout[:-1] if r.stdout.endswith("\n") else r.stdout     # 工具保證結尾一個換行；那個不算回答
+        try:
+            append_history(stack, {"role": "assistant", "content": text})
+            f = post("finish", q, sig)                   # 回答已在 history 才收信（A-5）
+        except (OSError, Fail) as e:
+            return self.done(it, sig, started, t0, 1, "HistoryFailed %s" % e)
+        if f.returncode != 0:
+            return self.done(it, sig, started, t0, 1, "PostFailed aos-post finish：%s" % first_line(f))
+        self.done(it, sig, started, t0, 0, None)
 
-    def done(self, it, name, started, t0, code, err):
+    def done(self, it, sig, started, t0, code, err, warning=None):
         if isinstance(err, list):
             err = err[0] if err else "退 %d、沒說原因" % code
-        line = {"state": PROG, "question": name, "code": code, "started_at": started,
+        line = {"state": PROG, "question": sig, "code": code, "started_at": started,
                 "elapsed_ms": int((time.monotonic() - t0) * 1000)}
         if err:
             line["error"] = err
+        if warning:
+            line["letter_warning"] = warning             # 壞信：丟掉了、記一筆（N-16）
         try:
             with open(os.path.join(os.path.dirname(it["cell"]), "trace.jsonl"), "a", encoding="utf-8") as f:
                 f.write(json.dumps(line, ensure_ascii=False) + "\n")
@@ -251,6 +260,22 @@ class Kernel:
                 it["retry_at"] = time.time() + RETRY       # 有人接著、畫面正在跑：等一下再試，不算錯
             else:
                 it["error"] = err
+
+
+def append_history(stack, msg):
+    """接一行進 <stack>/history.jsonl（只附加，P-41）；最後一行已是同一則就不接（重試、kernel 重開後接著答同一封）。"""
+    path = os.path.join(stack, "history.jsonl")
+    try:
+        with open(path, encoding="utf-8") as f:
+            lines = [l for l in f.read().splitlines() if l.strip()]
+        if lines and json.loads(lines[-1]) == msg:
+            return
+    except FileNotFoundError:
+        pass
+    except ValueError:
+        pass                                             # 最後一行壞了：照樣接（history 是給人看的紀錄）
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(msg, ensure_ascii=False) + "\n")
 
 
 def listdir(p):

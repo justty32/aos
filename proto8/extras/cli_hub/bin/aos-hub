@@ -1,29 +1,32 @@
 #!/usr/bin/env python3
-"""aos-hub - 管所有 claude／codex 實例：列出、接進畫面、收起（pause）、結束歸檔（stop）、讓 aos-say／listen 對它說話（10-28 版）。
+"""aos-hub - 管所有 claude／codex 實例：列出、接進畫面、收起（close）、結束歸檔（stop）、讓 aos-say／listen 對它說話（10-30 版）。
 
     aos-hub ls [--json]                              列出 kernel 記的全部實例
     aos-hub state [資料夾|編號]                      這裡是不是納管的實例（不是＝InstanceMissing、退 1）
-    aos-hub add  [--kind claude|codex | --tool 工具資料夾] [資料夾]   納管：kernel 開始替它回答 資料夾/.stack/new/ 的題（不開畫面）
+    aos-hub add  [--kind claude|codex | --tool 工具資料夾] [資料夾]   納管：kernel 開始替它回答 資料夾/.stack/queue/ 的訊息（不開畫面）
     aos-hub open [-d] [--kind …|--tool …] [資料夾|編號]  接進畫面（沒開就開、收起的用 --resume 叫回；還沒納管就先 add）；-d 只開不接
-    aos-hub pause [資料夾|編號]                      收起：關畫面、對話留著（題目照樣用 --resume 答）；出錯的實例 pause 一次＝重新收題
-    aos-hub pause --idle 分                          收起所有畫面開著、閒了這麼多分的（reap.json 每分鐘叫一次）
-    aos-hub stop  [資料夾|編號]                      結束：關畫面、小格與 CLI 存的對話歸檔到 <stack>/hub_archive/、從清單拿掉
+    aos-hub close [資料夾|編號]                      收起：關畫面、對話留著（照樣收題、用 --resume 答）；出錯的實例 close 一次＝重新收題
+    aos-hub close --idle 分                          收起所有畫面開著、閒了這麼多分的（reap.json 每分鐘叫一次）
+    aos-hub stop  [資料夾|編號]                      結束：關畫面、小格歸檔到 <stack>/hub_archive/（CLI 的對話檔換成複製）、從清單拿掉
     aos-hub watch [資料夾|編號]                      跟著看非互動那次在做什麼（live.jsonl 新長的行），到一次回答結束就走
 
 都要 $AOS_HUB 指向常駐的 aos-hub-kernel（沒設＝HubMissing、kernel 沒在跑＝KernelMissing，退 1；10-28 決定 3、10）。
-資料夾沒給＝cwd；資料夾＝CLI 工作的地方（例如程式專案；或小格本身）。信箱（new/ cur/ out/ done/）放在 資料夾/.stack/ 裡，
-資料夾本身不長信箱（使用者 10-28「放Stack比較好。」）。--kind 沒給＝claude，工具資料夾＝proto8/lib/agent/<kind>（旗標在它的 cli.json）。
-畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束（決定 7）。對它說話：cd 到資料夾 aos-say 話、aos-listen 題名（認得 .stack/new/）。
-錯：stderr 一行 `aos-hub: 代號 原因`、退 1。設計：proto8/thinking/2026-10-28-hub-adapter.md。"""
+資料夾沒給＝cwd；資料夾＝CLI 工作的地方（例如程式專案；或小格本身）。對話放在 資料夾/.stack/ 裡：輸入 queue/（N-16 有順序信箱）、
+紀錄 history.jsonl（回答＝最新那則 assistant），資料夾本身不長東西（使用者 10-28「放Stack比較好。」、10-30 agent-lifecycle）。
+--kind 沒給＝claude，工具資料夾＝proto8/lib/agent/<kind>（旗標在它的 cli.json）。close 10-30 由 pause 改名（跟 open 成對；paused 留給 N-07）。
+小格的 transcripts/<kind>-<id>.jsonl＝指到 CLI 自己存的對話檔的 symlink；指不到時 state、ls 說一句（不算錯）。
+畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束（決定 7）。對它說話：cd 到資料夾 aos-say 話、aos-listen 信號。
+錯：stderr 一行 `aos-hub: 代號 原因`、退 1。設計：proto8/thinking/2026-10-28-hub-adapter.md、2026-10-30-agent-lifecycle.md。"""
 import json, os, sys, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
 sys.path.insert(0, HERE)
-import hub_ipc  # noqa: E402
-
 PROG = "aos-hub"
 LIB = os.path.normpath(os.path.join(HERE, "..", "..", "..", "lib", "agent"))
+sys.path.insert(1, LIB)
+import hub_ipc  # noqa: E402
+import cli_session  # noqa: E402
 
 
 def die(code, msg):
@@ -57,6 +60,11 @@ def session_of(it):
             return f.read().strip()
     except OSError:
         return ""
+
+
+def note_of(it):
+    """CLI 自己的對話檔：(一句, 指不到嗎)。"""
+    return cli_session.transcript_note(it["cell"], it["kind"], session_of(it))
 
 
 def resolve(arg):
@@ -111,18 +119,21 @@ def cmd_ls(argv):
     opts, _ = parse(argv, switches=("--json",))
     rows = items()
     if opts.get("--json"):
-        print(json.dumps([dict(r, state=label(r), session=session_of(r)) for r in rows], ensure_ascii=False))
+        print(json.dumps([dict(r, state=label(r), session=session_of(r), transcript=note_of(r)[0],
+                                transcript_missing=note_of(r)[1]) for r in rows], ensure_ascii=False))
         return
     for i, r in enumerate(rows, 1):
-        print("%2d  %-14s %-6s %s  對話 %s%s" % (i, label(r), r["kind"], r["ws"], session_of(r)[:8] or "-",
-                                             "\n    %s" % r["error"] if r["error"] else ""))
+        note, missing = note_of(r)
+        print("%2d  %-14s %-6s %s  對話 %s%s%s" % (i, label(r), r["kind"], r["ws"], session_of(r)[:8] or "-",
+                                               "\n    %s" % r["error"] if r["error"] else "",
+                                               "\n    %s" % note if missing else ""))
 
 
 def cmd_state(argv):
     _, arg = parse(argv)
     r = resolve(arg)
-    print("實例   %s\n狀態   %s\n工具   %s（%s）\n工作區 %s\n對話   %s%s" % (
-        r["cell"], label(r), r["kind"], r["tool"], r["ws"], session_of(r) or "（還沒有）",
+    print("實例   %s\n狀態   %s\n工具   %s（%s）\n工作區 %s\n對話   %s\n對話檔 %s%s" % (
+        r["cell"], label(r), r["kind"], r["tool"], r["ws"], session_of(r) or "（還沒有）", note_of(r)[0],
         "\n錯     %s" % r["error"] if r["error"] else ""))
 
 
@@ -161,7 +172,7 @@ def idle_min(cell):
     return (time.time() - last) / 60
 
 
-def cmd_pause(argv):
+def cmd_close(argv):
     opts, arg = parse(argv, flags=("--idle",))
     if "--idle" in opts:                                 # 自動收起（reap.json 用 aos-loop 每分鐘叫一次）
         if arg:
@@ -173,12 +184,12 @@ def cmd_pause(argv):
         for r in items():
             if r["screen"] == "open" and not r["busy"] and idle_min(r["cell"]) >= limit:
                 try:
-                    hub_ipc.ask({"op": "pause", "cell": r["cell"]})
+                    hub_ipc.ask({"op": "close", "cell": r["cell"]})
                     print("收起 %s（閒了 %d 分）" % (r["ws"], idle_min(r["cell"])))
                 except hub_ipc.Error as e:
                     print("沒收 %s：%s %s" % (r["ws"], e.code, e))
         return
-    rep = ask({"op": "pause", "cell": resolve(arg)["cell"]})
+    rep = ask({"op": "close", "cell": resolve(arg)["cell"]})
     print("收起了" if rep["closed"] else "本來就沒畫面（已收起）")
 
 
@@ -247,7 +258,7 @@ def cmd_watch(argv):
         pass
 
 
-CMDS = {"ls": cmd_ls, "state": cmd_state, "add": cmd_add, "open": cmd_open, "pause": cmd_pause, "stop": cmd_stop,
+CMDS = {"ls": cmd_ls, "state": cmd_state, "add": cmd_add, "open": cmd_open, "close": cmd_close, "stop": cmd_stop,
         "watch": cmd_watch}
 
 

@@ -1,1 +1,1 @@
-{"exec": ["bin/aos-hub", "pause", "--idle", "30"], "interval_ms": 60000}
+{"exec": ["bin/aos-hub", "close", "--idle", "30"], "interval_ms": 60000}
