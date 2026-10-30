@@ -52,9 +52,12 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
 - `#/` 尋址（使用者 10-19 下班前定，「#/。」「尋址一定值得。」）：`檔#/指標` 指進 JSON（N-62；已做）。
 
 - **`aos-daemon-ctl - 把東西掛到一個 aos-daemon 上（往它的信箱投 loops_added／execs_added）`**（10-30；使用者「我們現在跑aos-exec XXX，等同於把這個proc掛到linux這個原生proc管理器上。假如我們想要掛在daemon上呢？或許是aos-daemon-ctl add XXX這樣，然後會自動識別XXX是否為loop，不是的話就max:1這樣？」；[thinking 10-30 agent-lifecycle](../thinking/2026-10-30-agent-lifecycle.md) 實作第 7 步的補；完整說明在檔頭 docstring；例子在 [demo/daemon-3](../demo/daemon-3/README.md)）
-  用法 `aos-daemon-ctl [--daemon D] add [--name N] [--kind loop|exec|max1] XXX｜rm 名字｜ls [--json]`。
+  用法 `aos-daemon-ctl [--daemon D] add [--name N] [--kind loop|exec|max1] [--ws WS] XXX｜rm 名字｜ls [--json]`。
   **哪個 daemon**（N-63 hub 型變數）：`--daemon` ＞ `$AOS_DAEMON`，值＝那個 daemon 的 `$AOS_STACK`（它的窗用預設名字：信箱 `loops_mailbox/`、`loops_state.json`）；都沒有或不是資料夾＝`DaemonMissing`；子 proc 照常繼承。
   **add／rm＝投信**（信箱模式，N-28 的 10-29 補、N-54）：daemon.json 要寫 `"loops_mailbox": "loops_mailbox"`，沒有 `new/`＝`MailboxMissing`；stdout 印 aos-post 的信號；daemon 下一圈才套，結果看 ls（壞信在 `letter_warning`）。rm＝`loops_removed`＋`execs_removed` 都寫那個名字。
   **自動識別**：XXX 是有 `loop.json` 的資料夾＝loop 子項，設定＝它的 loop.json（去掉 `_entry`；相對 exec 照 XXX 轉絕對、單子沒寫 cwd＝補 XXX）——子 loop 直接跑它的 loop，ctl／state 落在小格；其他＝`execs`（XXX 的絕對路徑）。`--kind max1`＝`{"exec": XXX, "max": 1}` 的 loop（使用者的底線）。名字＝`--name` ＞ XXX 的資料夾名。XXX 的 `.env`、loop.json 裡的指示詞不處理。
-  **ls**：讀 `loops_state.json` 兩張表（切檔的 `$ref` 合回來），一行「名字 TAB loop|exec TAB phase TAB pid TAB code」（code 沒有＝`-`）；`--json`＝一行 `{"loops", "execs"}`。
-  **錯**：stderr 一行 `aos-daemon-ctl: 代號 原因`、退 1（`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`DaemonMissing`、`MailboxMissing`、`PathMissing`、`LoopBad`、`KindBad`、`StateMissing`、`StateBad`、`CommandMissing`、`SendFailed`）。要 PATH 上有 aos-post。測試 `proto8/tests/test_aos_daemon_ctl.py`（4 案）。
+  **`--ws WS`**（10-30 eca 第 2 步，[thinking 10-30 eca](../thinking/2026-10-30-eca.md) 衝突 1、3，使用者「都照建議」）：這一隻的工作區。WS 從呼叫當下的 cwd 轉絕對（不是資料夾＝`PathMissing`、空＝`ArgumentsBad`），寫進子項物件的 `ws`（loop／max1＝子項設定多一個 `ws`；exec＝`{"exec": XXX, "ws": WS}`），daemon 起它時設 `AOS_WS`（[aos-daemon「子項的工作區 ws」](../impls/aos-daemon/README.md)）。
+  信送出之後：`<WS>/.stack` 不在（`lexists`，壞掉的 symlink 也算在）＝建一個 symlink 指到這一隻在 daemon 的小格 `<D>/<名字>`（小格還沒建也先建），cd 到 WS 打 aos-say 就接上這一隻；已經在＝不建、stderr 一句「`aos-daemon-ctl: 注意 …`」叫人用 `--stack`，add 照樣成功、退 0。
+  rm（代定）：信送出之後，`loops_state.json` 那一列有 `ws`、而且 `<ws>/.stack` 是指到 `<D>/<名字>` 的 symlink＝順手拿掉；拿不到 ws、不是 symlink、指到別處＝不動、不報。
+  **ls**：讀 `loops_state.json` 兩張表（切檔的 `$ref` 合回來），一行「名字 TAB loop|exec TAB phase TAB pid TAB code TAB ws」（code、ws 沒有＝`-`；ws 那欄 10-30 eca 加）；`--json`＝一行 `{"loops", "execs"}`（列照 loops_state 原樣，有給 ws 的帶 `ws`）。
+  **錯**：stderr 一行 `aos-daemon-ctl: 代號 原因`、退 1（`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`DaemonMissing`、`MailboxMissing`、`PathMissing`、`LoopBad`、`KindBad`、`StateMissing`、`StateBad`、`CommandMissing`、`SendFailed`）。要 PATH 上有 aos-post。測試 `proto8/tests/test_aos_daemon_ctl.py`（7 案；10-30 eca `--ws` 3 案）。

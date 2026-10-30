@@ -5,9 +5,9 @@
 往 daemon 的信箱（信箱模式，N-28 的 10-29 補）投一封 `loops_added`／`execs_added` 的信。設計與代定見
 proto8/thinking/2026-10-30-agent-lifecycle.md（實作第 7 步的補）與 bin/README.md。
 
-    aos-daemon-ctl [--daemon D] add [--name N] [--kind loop|exec|max1] XXX   掛上去；stdout 印信號（aos-post 給的）
+    aos-daemon-ctl [--daemon D] add [--name N] [--kind loop|exec|max1] [--ws WS] XXX   掛上去；stdout 印信號（aos-post 給的）
     aos-daemon-ctl [--daemon D] rm 名字                                       拿下來（loops_removed＋execs_removed 都寫）；印信號
-    aos-daemon-ctl [--daemon D] ls [--json]                                   列 loops_state.json 兩張表：一行「名字 TAB loop|exec TAB phase TAB pid TAB code」
+    aos-daemon-ctl [--daemon D] ls [--json]                                   列 loops_state.json 兩張表：一行「名字 TAB loop|exec TAB phase TAB pid TAB code TAB ws」
 
 哪個 daemon（N-63 hub 型變數）：--daemon ＞ $AOS_DAEMON；值＝那個 daemon 的 $AOS_STACK 資料夾（它的窗都在這：
   loops_mailbox/、loops_state.json，用預設名字）。都沒有＝DaemonMissing；不是資料夾＝DaemonMissing。子 proc 照常繼承 AOS_DAEMON。
@@ -19,6 +19,12 @@ add 的自動識別（--kind 沒給時）：XXX 是資料夾、裡面有 loop.js
   max1（使用者 10-30「包成max:1也是可以」，只在 --kind 指定時）：loops_added {名字: {"exec": XXX, "max": 1}}。
   名字：--name ＞ XXX 的資料夾名（# 前面那段的 basename）。名字合不合格、撞不撞名由 daemon 驗（壞信記在 loops_state.json 的 letter_warning）。
   信只說「要」，daemon 下一圈才套；結果看 ls。
+--ws WS（10-30 eca 第 2 步，thinking 2026-10-30-eca 衝突 1、3）：這個子項的工作區。WS 從呼叫當下的 cwd 轉絕對（不是資料夾＝PathMissing），
+  寫進子項物件的 ws（loop／max1＝子項設定多一個 ws；exec＝{"exec": XXX, "ws": WS}），daemon 起它時設 AOS_WS＝WS（沒給＝繼承 daemon 的）。
+  另外：<WS>/.stack 不在（連壞掉的 symlink 都沒有）就建一個 symlink 指到這個子項在 daemon 的小格 <D>/<名字>（小格還沒建也先建），
+  cd 到 WS 打 aos-say 等就接上這一隻；已經在＝不建、stderr 一句「aos-daemon-ctl: 注意 …」（要接小格請用 --stack），add 照樣送出、退 0。
+  ls 多一欄 ws（列上沒有＝-；--json 照 loops_state 原樣，有給 ws 的列帶 ws）。
+  rm：信送出之後，loops_state 那一列有 ws、而且 <ws>/.stack 是指到 <D>/<名字> 的 symlink＝順手拿掉（代定）；拿不到 ws、不是 symlink、指到別處＝不動。
 錯：stderr 一行「aos-daemon-ctl: 代號 原因」、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、MailboxMissing、
   PathMissing、LoopBad（loop.json 讀不了或不是物件）、KindBad、StateMissing（ls：loops_state.json 不在）、StateBad、CommandMissing（PATH 沒 aos-post）、
   SendFailed（aos-post 退非 0，它的 stderr 照轉）。
@@ -29,7 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
 NAME = "aos-daemon-ctl"
-USAGE = ("aos-daemon-ctl [--daemon D] add [--name N] [--kind loop|exec|max1] XXX | rm 名字 | ls [--json]")
+USAGE = ("aos-daemon-ctl [--daemon D] add [--name N] [--kind loop|exec|max1] [--ws WS] XXX | rm 名字 | ls [--json]")
 KINDS = ("loop", "exec", "max1")
 
 
@@ -96,8 +102,20 @@ def send(d, body):
     sys.stdout.write(r.stdout)
 
 
+def link_stack(ws, cell):
+    """<ws>/.stack 不在就建 symlink 指到小格（衝突 3）；在（含壞掉的 symlink）＝不建、stderr 一句。"""
+    link = os.path.join(ws, ".stack")
+    if os.path.lexists(link):
+        sys.stderr.write("%s: 注意 %s 已經在，沒建 symlink 到小格 %s（要接這個子項的 stack 請用 --stack %s）\n" % (NAME, link, cell, cell))
+        return
+    try:
+        os.symlink(cell, link)
+    except OSError as e:
+        sys.stderr.write("%s: 注意 建不了 symlink %s → %s：%s\n" % (NAME, link, cell, e))
+
+
 def cmd_add(opts, args):
-    o, rest = aos_flags.parse(args, {"--name": "name", "--kind": "kind"})
+    o, rest = aos_flags.parse(args, {"--name": "name", "--kind": "kind", "--ws": "ws"})
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "add 要一個 XXX（usage: %s）" % USAGE)
     d = daemon_dir(opts)
@@ -110,21 +128,53 @@ def cmd_add(opts, args):
         raise Fail("KindBad", "--kind 要是 loop、exec、max1 之一：%s" % kind)
     if kind == "loop" and not os.path.isdir(path):
         raise Fail("KindBad", "--kind loop 要 XXX 是有 loop.json 的資料夾：%s" % path)
+    ws = None
+    if o.get("ws") is not None:
+        if not o["ws"]:
+            raise Fail("ArgumentsBad", "--ws 不能是空的（usage: %s）" % USAGE)
+        ws = os.path.abspath(o["ws"])   # 從呼叫當下的 cwd 算（daemon 會從它自己的 cwd 算，所以這裡先轉）
+        if not os.path.isdir(ws):
+            raise Fail("PathMissing", "--ws 不是資料夾：%s" % ws)
     name = o.get("name") or os.path.basename(path.rstrip("/"))
     if kind == "loop":
-        body = {"loops_added": {name: loop_spec(path)}}
+        spec = loop_spec(path)
     elif kind == "max1":
-        body = {"loops_added": {name: {"exec": xxx, "max": 1}}}
+        spec = {"exec": xxx, "max": 1}
     else:
-        body = {"execs_added": {name: xxx}}
-    send(d, body)
+        spec = {"exec": xxx} if ws else xxx
+    if ws:
+        spec["ws"] = ws
+    send(d, {("execs_added" if kind == "exec" else "loops_added"): {name: spec}})
+    if ws:
+        link_stack(ws, os.path.join(d, name))
 
 
 def cmd_rm(opts, args):
     o, rest = aos_flags.parse(args, {})
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "rm 要一個名字（usage: %s）" % USAGE)
-    send(daemon_dir(opts), {"loops_removed": [rest[0]], "execs_removed": [rest[0]]})
+    d = daemon_dir(opts)
+    send(d, {"loops_removed": [rest[0]], "execs_removed": [rest[0]]})
+    unlink_stack(d, rest[0])
+
+
+def unlink_stack(d, name):
+    """rm 之後（代定）：loops_state 那一列的 ws/.stack 是指到 <D>/<名字> 的 symlink 就拿掉；拿不到、對不上＝不動、不報。"""
+    try:
+        with open(os.path.join(d, "loops_state.json"), encoding="utf-8") as fh:
+            st = json.load(fh)
+        rows = {}
+        for k in ("loops", "execs"):
+            rows.update(table(d, st.get(k, {})))
+        ws = rows.get(name, {}).get("ws")
+        if not isinstance(ws, str):
+            return
+        link = os.path.join(ws, ".stack")
+        cell = os.path.join(d, name)
+        if os.path.islink(link) and os.path.abspath(os.path.join(ws, os.readlink(link))) == cell:
+            os.unlink(link)
+    except (OSError, ValueError, AttributeError):
+        pass
 
 
 def table(d, v):
@@ -159,7 +209,8 @@ def cmd_ls(opts, args):
         return
     for kind, rows in (("loop", loops), ("exec", execs)):
         for n, r in rows.items():
-            print("\t".join([n, kind, str(r.get("phase")), str(r.get("pid")), "-" if r.get("code") is None else str(r["code"])]))
+            print("\t".join([n, kind, str(r.get("phase")), str(r.get("pid")), "-" if r.get("code") is None else str(r["code"]),
+                             r.get("ws") or "-"]))
 
 
 COMMANDS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls}

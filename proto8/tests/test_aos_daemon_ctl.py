@@ -1,5 +1,6 @@
 """aos-daemon-ctl：把東西掛到 aos-daemon 上（10-30，使用者「或許是aos-daemon-ctl add XXX這樣，然後會自動識別XXX是否為loop」）。
-哪個 daemon＝--daemon ＞ $AOS_DAEMON（N-63），值＝daemon 的 $AOS_STACK；投信進 <D>/loops_mailbox/（信箱模式）；ls 讀 loops_state.json 兩張表。"""
+哪個 daemon＝--daemon ＞ $AOS_DAEMON（N-63），值＝daemon 的 $AOS_STACK；投信進 <D>/loops_mailbox/（信箱模式）；ls 讀 loops_state.json 兩張表。
+10-30 eca 第 2 步：add --ws（子項的 ws、<WS>/.stack symlink 到小格、rm 拿掉）、ls 多一欄 ws。"""
 import json, os, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402
@@ -94,7 +95,7 @@ class T(unittest.TestCase):
         self.assertEqual((x["loops"], x["execs"]["job"]["code"]), ({}, 3))
         self.assertFalse((self.s / "job" / "loop.json").exists())
         r = self.ctl("ls")
-        self.assertEqual(r.stdout, "job\texec\tdone\t%d\t3\n" % x["execs"]["job"]["pid"])
+        self.assertEqual(r.stdout, "job\texec\tdone\t%d\t3\t-\n" % x["execs"]["job"]["pid"])   # 最後一欄 ws（沒給＝-，10-30 eca）
         self.assertEqual(self.ctl("rm", "job").returncode, 0)
         self.assertTrue(until(lambda: self.tables()["execs"] == {}))
         self.assertEqual((self.s / "job" / "runs").read_text().count("\n"), 1)
@@ -125,6 +126,70 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: self.tables()["loops"].get("job", {}).get("phase") == "done"))
         self.assertEqual(json.loads((self.s / "job" / "loop.json").read_text())["exec"], os.path.realpath(self.t / "job"))
         self.assertEqual((self.s / "job" / "runs").read_text(), "x\n")
+
+
+    # ---- 10-30 eca 第 2 步：--ws（thinking 2026-10-30-eca 衝突 1、3）
+
+    def wsprog(self, name, loop=None):
+        # 子程式印出自己看到的 AOS_WS
+        return self.prog(name, 'printf %s "$AOS_WS" > "$AOS_STACK/ws"\n', loop=loop)
+
+    def test_add_ws_exec_and_loop_ls_and_env(self):
+        # add --ws：exec 型、loop 型、max1 的子項都帶 ws；子程式看到的 AOS_WS 對；ls --json 那列有 ws、ls 多一欄
+        self.wsprog("job")
+        self.prog("ag", "exit 0\n", loop={"exec": {"argv": ["sh", "-c", 'printf %s "$AOS_WS" > "$AOS_STACK/ws"']}, "max": 1})
+        ws = [self.t / ("w%d" % i) for i in range(3)]
+        for w in ws:
+            w.mkdir()
+        self.start()
+        for args in (("--ws", str(ws[0]), "job"), ("--ws", "w1", "ag"), ("--kind", "max1", "--name", "m", "--ws", str(ws[2]), "job")):
+            r = self.ctl("add", *args)
+            self.assertEqual((r.returncode, r.stderr), (0, ""), args)
+        x = until(lambda: len(self.tables()["loops"]) == 2 and len(self.tables()["execs"]) == 1
+                  and {r["phase"] for t in self.tables().values() for r in t.values()} == {"done"} and self.tables())
+        self.assertTrue(x, self.tables())
+        self.assertEqual((x["execs"]["job"]["ws"], x["loops"]["ag"]["ws"], x["loops"]["m"]["ws"]), tuple(map(str, ws)))
+        for n, w in (("job", ws[0]), ("ag", ws[1]), ("m", ws[2])):
+            self.assertEqual((self.s / n / "ws").read_text(), str(w), n)
+        lines = {l.split("\t")[0]: l.split("\t") for l in self.ctl("ls").stdout.splitlines()}
+        self.assertEqual((lines["job"][5], lines["ag"][5], len(lines["m"])), (str(ws[0]), str(ws[1]), 6))
+        r = self.ctl("add", "--ws", str(self.t / "nope"), "job")
+        self.assertEqual((r.returncode, r.stderr.startswith("aos-daemon-ctl: ")), (1, True), r.stderr)
+
+    def test_add_ws_links_stack_and_rm_unlinks(self):
+        # add --ws：<WS>/.stack 不在＝建 symlink 指到小格（小格還沒建也先建）；cd 到 WS 就是這隻的 stack；rm 後 symlink 拿掉
+        self.prog("job", 'echo "$AOS_WS" > "$AOS_STACK/ws"\nwhile :; do sleep 0.05; done\n')
+        w = self.t / "proj"
+        w.mkdir()
+        r = self.ctl("add", "--ws", str(w), "job")   # daemon 還沒起：信箱不在＝送不出去、也不建 symlink
+        self.assertEqual(r.returncode, 1)
+        self.assertFalse(os.path.lexists(w / ".stack"))
+        self.start()
+        r = self.ctl("add", "--ws", str(w), "job")
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(os.readlink(w / ".stack"), str(self.s / "job"))
+        self.assertTrue(until(lambda: (w / ".stack" / "ws").exists()))
+        self.assertEqual((w / ".stack" / "ws").read_text().strip(), str(w))
+        self.assertEqual(self.ctl("rm", "job").returncode, 0)
+        self.assertFalse(os.path.lexists(w / ".stack"))
+        self.assertTrue(until(lambda: self.tables()["execs"] == {}))
+
+    def test_add_ws_existing_stack_kept(self):
+        # <WS>/.stack 已經在（資料夾、或指到別處的 symlink）＝不建、stderr 一句叫人用 --stack、add 照樣成功；rm 不動別人的
+        self.wsprog("job")
+        w1, w2 = self.t / "p1", self.t / "p2"
+        (w1 / ".stack").mkdir(parents=True)
+        w2.mkdir()
+        os.symlink(str(self.t / "elsewhere"), w2 / ".stack")
+        self.start()
+        for w, n in ((w1, "a"), (w2, "b")):
+            r = self.ctl("add", "--ws", str(w), "--name", n, "job")
+            self.assertEqual((r.returncode, r.stdout.count("\n"), r.stderr.count("\n")), (0, 1, 1), r.stderr)
+            self.assertTrue(r.stderr.startswith("aos-daemon-ctl: ") and "--stack" in r.stderr, r.stderr)
+        self.assertTrue(until(lambda: {r.get("ws") for r in self.tables()["execs"].values()} == {str(w1), str(w2)}))
+        self.assertEqual(((self.s / "a" / "ws").read_text(), os.readlink(w2 / ".stack")), (str(w1), str(self.t / "elsewhere")))
+        self.assertEqual((self.ctl("rm", "a").returncode, self.ctl("rm", "b").returncode), (0, 0))
+        self.assertEqual(((w1 / ".stack").is_dir(), os.readlink(w2 / ".stack")), (True, str(self.t / "elsewhere")))
 
 
 if __name__ == "__main__":
