@@ -183,7 +183,7 @@ def short(s, n=80):
 
 
 def status_lines(w):
-    """一份快照：誰在跑、aos-loop 的 phase、最後一格、queue 各格幾封、history 幾則。"""
+    """一份快照：誰在跑、aos-loop 的 phase、最後一格、queue 各格幾封、最後一封壞信（有才印）、history 幾則。"""
     st = w.stack
     run = runners(w)
     t = last_trace(w)
@@ -198,6 +198,9 @@ def status_lines(w):
         why = failure(t)
         out.append("最後一格 %s %s（%s）%s" % (aos_ws.unit_of(t), "訊號 %s" % t["signal"] if t.get("signal") is not None else "退 %s" % t.get("code"),
                                           t.get("started_at", "?"), "  ← 卡住了：錯誤一行在跑它的那個終端機" if why else ""))
+    warning = (read(os.path.join(st, "letter_warning.txt")) or "").strip()
+    if warning:
+        out.append("壞信     %s（letter_warning.txt：只留最後一封）" % warning)
     hist = read(os.path.join(st, "history.jsonl"))
     if hist is not None:
         out.append("對話     history.jsonl %d 則（要忘記＝換 stack）" % len([l for l in hist.splitlines() if l.strip()]))

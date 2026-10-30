@@ -147,14 +147,19 @@ class Queue(Base):
         plain = self.post("send", str(self.box), stdin=user("沒序號"))
         self.post("send", "--ordered", str(self.box), stdin='"純字串"')
         good = self.say("好的")
+        self.assertFalse((self.stack / "letter_warning.txt").exists())
         r = self.part("queue", "claim")                                      # 照名字排：bad（序號 1）→ good（2）→ plain
         self.assertEqual((r.returncode, r.stdout.strip(), r.stderr), (0, good, ""))
+        warning = (self.stack / "letter_warning.txt").read_text()            # 壞信的原因記 letter_warning（10-30 Q-4 的補）
+        self.assertRegex(warning, r"^信 000000000001\.\S+ 不採用：body 不是一則 OpenAI message")
         self.assertEqual(self.ls("cur"), [good])
         self.assertEqual(self.ls("new"), [plain])
         self.assertEqual(self.history(), [{"role": "user", "content": "好的"}])
         self.ok("queue", "finish", "--keep")
         r = self.part("queue", "claim")                                      # 剩下非有序的那封：丟掉＝沒信
         self.assertEqual((r.returncode, r.stderr), (10, ""))
+        self.assertEqual((self.stack / "letter_warning.txt").read_text(),    # 只留最後一封壞信的
+                         "信 %s 不採用：名字不是有序的 <12 位序號>.<信號>（寄的時候沒帶 --ordered）\n" % plain)
         self.assertEqual(self.ls("new"), [])
         self.assertEqual(self.ls("done"), [good])                            # 壞信不進 done/
         self.assertEqual(os.listdir(self.box / "tmp"), [])
@@ -167,6 +172,16 @@ class Queue(Base):
         self.assertEqual((r.returncode, r.stderr), (10, ""))
         self.assertEqual(self.ls("cur"), [])
         self.assertEqual(self.history(), [])
+
+    def test_unreadable_letter_warning(self):
+        """letter.json 壞了（aos-post check 不過）＝壞信：丟掉，原因帶 aos-post 自己那一行。"""
+        self.post("init", str(self.box))
+        bad = self.post("send", "--ordered", str(self.box), stdin=user("壞"))
+        (self.box / "new" / bad / "letter.json").write_text("{")
+        r = self.part("queue", "claim")
+        self.assertEqual((r.returncode, r.stderr), (10, ""))
+        self.assertRegex((self.stack / "letter_warning.txt").read_text(), r"^信 %s 不採用：aos-post check 不過：aos-post: LetterBad " % bad)
+        self.assertEqual(self.ls("new") + self.ls("cur"), [])
 
     def test_withdraw_only_new(self):
         a = self.say("一")

@@ -15,7 +15,7 @@
 - 沒給信號：先印最後 N 段一問一答（--last N；沒給＝0 段），再跟著看新的；給了 --last 沒給 --follow＝印完就走。
   一段＝「== #第幾則回答」、問的話每行前面加「> 」、回答。
 - --trace：同時把 stack 裡新長出來的 trace.jsonl（每格一行）與 history.jsonl 的工具呼叫翻成短行印到 stderr。
-- --status：誰在服務、aos-loop state.json 的 phase（看得出 paused）、認領中的信、queue 各格幾封、最後一格、history 幾則。
+- --status：誰在服務、aos-loop state.json 的 phase（看得出 paused）、認領中的信、queue 各格幾封、最後一格、最後一封壞信（stack 有 letter_warning.txt 才印）、history 幾則。
 stdout 只有回答；提醒、trace、錯都在 stderr。stack＝--stack ＞ $AOS_STACK ＞ <工作區>/.stack/；工作區＝--ws ＞ $AOS_WS ＞ cwd。
 10-30 起不認工作區的 new/ out/（舊協議的 fsm 範本，P-11 的 10-30 改口）。
 錯：stderr 一行 `aos-listen: 代號 原因`、退 1（ArgumentsBad、FlagUnknown、WsMissing、QuestionUnknown、AnswerMissing〔逾時、或信不見了卻沒有回答〕）。"""

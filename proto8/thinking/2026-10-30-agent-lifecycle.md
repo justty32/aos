@@ -144,7 +144,7 @@
 - **Q-1** claim 的順序是：先 `aos-post claim`，再把 body 接進 history，最後寫 `current.txt`。`current.txt` 記的是「已經接進 history 的信」；`cur/` 裡有信卻沒列在上面，表示上次死在中間，下次 claim 先把它補完。理由：aos-post 不能指定要認領哪一封，先看再接會碰上撤回。
 - **Q-2** queue push 的 stdin 是一則 message JSON，不收純文字，也不收題名。信號由 aos-post 給（衝突 5）。
 - **Q-3** pop：信不見了，就印 history 最新那則沒有 `tool_calls` 的 assistant。history 裡沒有 assistant 時：看到過這封信＝`AnswerMissing`，從沒看到＝`LetterUnknown`（A-6：不保證一題配一答）。
-- **Q-4** 壞信，就是不是有序的名字、`aos-post check` 不過、或 body 不是 message。處理法是 `aos-post finish` 丟掉，不寫 stderr。round 的 `letter_warning` 還沒做。
+- **Q-4** 壞信，就是不是有序的名字、`aos-post check` 不過、或 body 不是 message。處理法是 `aos-post finish` 丟掉，不寫 stderr。round 的 `letter_warning` 還沒做（10-30 晚做了，見 Q-17）。
 - **Q-5** queue 的 finish 不看 stdin（答案在 history）。
 - **Q-6** 代號改用 `Letter*`，對齊 aos-post；新增 `PostFailed`。queue 只要 `AOS_STACK`，不再查 `AOS_WS`。
 - **Q-7** claim 時沒掛 history 格＝`PartMissing`，信留在 `new/`。
@@ -156,6 +156,13 @@
 - **Q-13** listen 判斷服務者失敗：看 trace 最後一行，`code` 不是 0、10，或有 `signal`，就算失敗。格名先取 `unit`（round 的寫法），沒有再取 `state`（fsm 的寫法），說成「停在 X 那格、結束碼 N」。chat 用同一句。
 - **Q-14** say 去掉 content 結尾那一個換行。`--last`／`--follow` 一段的格式是「== #N」，問的話每行前面加「> 」，再接回答。上一則回答之後的 user 都算這段的問題。
 - **Q-15** 判斷有沒有服務者：先比行程環境的 `AOS_STACK`；沒設的，只在它用預設的 `<ws>/.stack/` 時才比 `AOS_WS`。
+- **Q-17**（10-30 晚，補 Q-4 的 `letter_warning`；round 已換成 aos-round）：
+  - **誰記**：queue 格自己記，在丟壞信的那一刻。原本說交給 round，是因為「它才知道有沒有 state 窗」；換成 aos-round 以後，五個格也不知道外面 aos-loop 開了什麼窗，這個理由不成立了。丟信的人最知道原因（C-52 各層只說自己的），idle、more 兩格叫 `queue claim` 時就一起記到了，格不用改。
+  - **記在哪**：`$AOS_STACK/letter_warning.txt`，一行「信 <信號> 不採用：原因」（寫法同 daemon 的 `letter_warning`），先寫暫存再改名（N-05）。不寫進 aos-loop 的 `state.json`：那扇窗是 loop 的，一個窗一個寫者（N-09）；也不寫 trace，因為 aos-round 的 trace 只留 fsm 的一格一行（aos-round 決定 5）。
+  - **留多少**：只留最後一封壞信的，好信不清掉（同 daemon 的「沒壞信的圈維持原值」，medium-plan 實作時代定 11）。不看有沒有 state 窗，一律記。
+  - **原因的寫法**：名字不是有序的、`aos-post check` 不過（接 aos-post 自己 stderr 的最後一行）、body 不是 message，三種。
+  - **看得到**：`aos-listen --status` 在 stack 有這個檔時多印一行「壞信」。
+  - eca 的 turn 照舊記在 trace 那行（P-43 已寫），兩種 agent 記的位置不一樣。
 - **Q-16** aos-ai 跟著 aos_ws 改走 queue（隊長代定「甲」，照衝突 4 推過來）：
   - ask 拿掉 `--id`；run 回 `answers`，不帶 id，另外回 `answered`；spawn 預設範本改成 agent-nia。
   - 後果：舊 fsm 範本只剩 `run` 能用，題目要手放 `ws/new/`。

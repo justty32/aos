@@ -26,7 +26,8 @@ claim 的順序（任何一步當掉重跑都接得上；current.txt＝「已接
   cur/ 有信卻沒列在 current.txt（上次死在 ①、② 之後）＝先把這幾封照 ②、③ 補完、印出來，不再認領新的
   （current.txt 已有別封＝那次是 --more，照 --more 的規則）。cur/ 有信、都列了、不是 --more＝只重寫 current.txt、印 cur/ 全部。
   壞信（aos-post check 不過、名字不是有序的 <12 位序號>.<信號>、body 不是有 role 的物件）＝aos-post finish 丟掉、認領下一封；
-  不寫 stderr（N-43）；記 letter_warning 是之後 round 的事（它才知道有沒有 state 窗）。
+  不寫 stderr（N-43）；原因寫進 $AOS_STACK/letter_warning.txt 一行「信 <信號> 不採用：原因」（N-16 壞信記 letter_warning；
+  只留最後一封壞信的，好信不清掉；10-30 agent-lifecycle Q-4 的補，aos-round 的 idle、more 格叫 claim 時就記到了）。
 history 格怎麼找：aos-parts --file <agent>/parts.json which --json history（沒掛＝PartMissing），拿到的 env 疊上去、aos-exec 它。
 . 開頭的名字不算信（N-05）。寫檔一律先寫 . 開頭暫存再改名（N-05）。
 錯：stderr 一行「queue: 代號 原因」、退 1（N-43；aos-post、history 自己的錯它們自己先說一行）。代號：ArgumentsBad、AgentMissing、
@@ -192,24 +193,37 @@ def read_current(stack):
 
 
 def letter_body(box, sig):
-    """好信回 body；壞信回 None（不是這格的錯，不寫 stderr）。"""
+    """好信回 (body, None)；壞信回 (None, 原因)（不是這格的錯，不寫 stderr）。"""
     if not ORDERED.match(sig):
-        return None
-    code, out = post(["check", box, sig], quiet=True)
-    if code != 0:
-        return None
+        return None, "名字不是有序的 <12 位序號>.<信號>（寄的時候沒帶 --ordered）"
     try:
-        body = json.loads(out).get("body")
+        r = subprocess.run(["aos-post", "check", box, sig], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, text=True)
+    except OSError as e:
+        die("PostFailed", "aos-post 起不來：%s" % e)
+    if r.returncode != 0:
+        why = r.stderr.strip().splitlines()
+        return None, "aos-post check 不過：%s" % (why[-1] if why else "退 %d" % r.returncode)
+    try:
+        body = json.loads(r.stdout).get("body")
     except (ValueError, AttributeError):
-        return None
-    return body if is_message(body) else None
+        return None, "aos-post check 印的不是 JSON 物件"
+    if not is_message(body):
+        return None, "body 不是一則 OpenAI message（JSON 物件、有字串 role）"
+    return body, None
+
+
+def warn(stack, sig, why):
+    """N-16 壞信記 letter_warning：$AOS_STACK/letter_warning.txt 一行，只留最後一封的（N-05 暫存改名）。"""
+    write_atomic(os.path.join(stack, "letter_warning.txt"), "信 %s 不採用：%s\n" % (sig, why.replace("\n", " ")))
 
 
 def register(agent, part, box, stack, listed, sig, more):
-    """② body 接進 history、③ current.txt；壞信丟掉回 False。"""
-    body = letter_body(box, sig)
+    """② body 接進 history、③ current.txt；壞信丟掉、記 letter_warning.txt，回 False。"""
+    body, why = letter_body(box, sig)
     if body is None:
         post(["finish", box, sig], quiet=True)              # 壞信一律丟（aos-post finish 不管 --keep）
+        warn(stack, sig, why)
         return False
     rows = history_rows(agent, part)
     last = rows[-1].get("role") if rows and isinstance(rows[-1], dict) else None
