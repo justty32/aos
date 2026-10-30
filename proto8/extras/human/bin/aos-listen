@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
-"""aos-listen - 等工作區的 out/ 冒出答案、印出來（給人用，2026-10-24）。
+"""aos-listen - 看一隻 agent 回了什麼：等一封信的回答、跟著看對話、看快照（給人用，2026-10-24；10-30 改看 stack）。
 
-    aos-listen [--ws WS] [--timeout 秒] [--trace] 題名     等這一題的答案，印出來就退 0
-    aos-listen [--ws WS] [--last N] [--trace] [--follow]   跟著看：之後每冒出一個答案就印一段（像 tail -f）
-    aos-listen [--ws WS] --status                          一份快照：誰在跑、停在哪一格、這題是哪題、各階段幾題
+    aos-listen [--ws WS] [--stack STACK] [--timeout 秒] [--trace] 信號     等這封信的回答，印出來就退 0
+    aos-listen [--ws WS] [--stack STACK] [--last N] [--trace] [--follow]   跟著看：之後每多一則回答就印一段（像 tail -f）
+    aos-listen [--ws WS] [--stack STACK] --status                          快照：誰在跑、aos-loop 的 phase、最後一格、queue 幾封
 
-題名＝aos-say 印的那一行；答案＝$AOS_WS/out/<題名>（CONVENTION P-11；是資料夾就印裡面的 answer.txt，P-13）。
-等一題時：答案已經在了就立刻印（先 say、後 listen 不會漏）；每秒看一次有沒有程式在跑這個工作區（/proc 裡 AOS_WS＝它、
-argv[0] 是 aos-loop／aos-fsm／aos-exec／aos-daemon），沒有就在 stderr 提醒一次它停在哪、怎麼跑起來，然後**繼續等**
-（可以先開 listen、再去別的終端機跑 agent）。--timeout 沒給＝一直等；Ctrl-C 離開（退 130）。
-沒給題名：先印最後 N 個答案（--last N，照時間；沒給＝0 個），再跟著看新的；給了 --last 沒給 --follow＝印完就走。
---trace：同時把 stack 裡新長出來的 trace.jsonl（每格一行，P-07）與 history.jsonl 的工具呼叫（agent-dan，P-41）翻成短行印到 stderr。
-stdout 只有答案；提醒、trace、錯都在 stderr。工作區＝--ws ＞ $AOS_WS ＞ cwd；stack＝$AOS_STACK ＞ $AOS_WS/.stack/。
-信箱在 stack 裡的（沒設 AOS_STACK、工作區/.stack/new/ 在；aos-hub 代答的實例，10-28）：new／cur／out／done 與 trace 都在 .stack/ 裡。
-錯：stderr 一行 `aos-listen: 代號 原因`、退 1（ArgumentsBad、FlagUnknown、WsMissing、QuestionUnknown〔四個階段資料夾都沒有這題〕、
-AnswerMissing〔逾時、或題目到了 done/ 卻沒有答案〕）。"""
-import os, sys, time
+只看 stack（CONVENTION P-42；thinking 2026-10-30-agent-lifecycle A-8）：
+- 等一封（信號＝aos-say 印的那一行）：信還在 <stack>/queue/new/ 或 cur/ 就等；不見了就印 history.jsonl 最新那則沒有 tool_calls 的
+  assistant 的 content（回答就是它，沒有 out/；先 say、後 listen 不會漏）。queue 沒這封、history 也沒有回答＝QuestionUnknown；
+  等的期間看到過、信不見了 history 卻沒有回答＝AnswerMissing。每秒看一次有沒有程式在跑這隻 agent（/proc 裡 AOS_STACK＝這個 stack、
+  或 AOS_WS＝這個工作區，argv[0] 是 aos-loop／aos-fsm／aos-exec／aos-daemon；或 stack 的 server.txt），沒有就在 stderr 提醒一次
+  它停在哪（trace.jsonl 最後一行失敗＝「停在 <unit> 那格、結束碼 N」，round 寫 unit、fsm 寫 state）、怎麼跑起來，然後**繼續等**。
+  --timeout 沒給＝一直等；Ctrl-C 離開（退 130）。
+- 沒給信號：先印最後 N 段一問一答（--last N；沒給＝0 段），再跟著看新的；給了 --last 沒給 --follow＝印完就走。
+  一段＝「== #第幾則回答」、問的話每行前面加「> 」、回答。
+- --trace：同時把 stack 裡新長出來的 trace.jsonl（每格一行）與 history.jsonl 的工具呼叫翻成短行印到 stderr。
+- --status：誰在服務、aos-loop state.json 的 phase（看得出 paused）、認領中的信、queue 各格幾封、最後一格、history 幾則。
+stdout 只有回答；提醒、trace、錯都在 stderr。stack＝--stack ＞ $AOS_STACK ＞ <工作區>/.stack/；工作區＝--ws ＞ $AOS_WS ＞ cwd。
+10-30 起不認工作區的 new/ out/（舊協議的 fsm 範本，P-11 的 10-30 改口）。
+錯：stderr 一行 `aos-listen: 代號 原因`、退 1（ArgumentsBad、FlagUnknown、WsMissing、QuestionUnknown、AnswerMissing〔逾時、或信不見了卻沒有回答〕）。"""
+import sys, time
+import os
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_human as h
 
 PROG = "aos-listen"
-USAGE = "aos-listen [--ws WS] [--timeout 秒] [--trace] 題名 | [--last N] [--follow] | --status"
-
-
-def answer(ws, name):
-    """out/<題名> 的內容；還沒有＝None（跟 aos-ai 共用 lib/aos/aos_ws.py 的 answer_text）。"""
-    return h.aos_ws.answer_text(ws, name)
+USAGE = "aos-listen [--ws WS] [--stack STACK] [--timeout 秒] [--trace] 信號 | [--last N] [--follow] | --status"
 
 
 def show_tail(tail):
@@ -34,80 +34,73 @@ def show_tail(tail):
             print(line, file=sys.stderr, flush=True)
 
 
-def wait_one(ws, name, timeout, tail):
-    start, warned, next_check = time.monotonic(), False, 0.0
+def wait_one(w, sig, timeout, tail):
+    start, warned, seen, next_check = time.monotonic(), False, False, 0.0
     while True:
-        text = answer(ws, name)
-        if text is not None:
+        stages = [s for s in h.where(w.stack, sig) if s in ("new", "cur")]
+        if not stages:
+            got = h.aos_ws.answers(w.stack)
             show_tail(tail)
-            sys.stdout.write(text)
-            sys.stdout.flush()
-            return
-        stages = h.where(ws, name)
-        if not stages and answer(ws, name) is None:
-            h.die(PROG, "QuestionUnknown", "new/ cur/ out/ done/ 都沒有 %s" % name)
-        if stages == ["done"] and answer(ws, name) is None:
-            h.die(PROG, "AnswerMissing", "%s 已經在 done/，out/ 卻沒有答案" % name)
+            if got:
+                sys.stdout.write(got[-1] if got[-1].endswith("\n") else got[-1] + "\n")
+                sys.stdout.flush()
+                return
+            if seen:
+                h.die(PROG, "AnswerMissing", "%s 已經不在 queue 了，history 卻沒有回答" % sig)
+            h.die(PROG, "QuestionUnknown", "queue 的 new/ cur/ 都沒有 %s，history 也沒有回答" % sig)
+        seen = True
         show_tail(tail)
         now = time.monotonic()
         if now >= next_check:
             next_check = now + 1.0
-            if h.runners(ws):
-                t = h.last_trace(ws)                    # 10-28：常駐的服務者（aos-hub-kernel）答這題失敗時，在 trace 留 question＋error
-                failed = t and t.get("question") == name and t.get("error") and "cur" in stages
-                if failed and not warned:
-                    h.note("%s 答 %s 失敗：%s。修好後讓它再收題（aos-hub 的實例：aos-hub pause 一次）；我繼續等，Ctrl-C 離開"
-                           % (t.get("state"), name, t["error"]))
-                warned = bool(failed)
-            elif not warned and answer(ws, name) is None:
-                h.note(h.stuck_hint(ws, name) + "。我繼續等，Ctrl-C 離開")
+            if h.runners(w):
+                t = h.last_trace(w)                    # 10-28：常駐的服務者（aos-hub-kernel）答這封失敗時，在 trace 留 question＋error
+                bad = t and t.get("question") == sig and t.get("error") and "cur" in stages
+                if bad and not warned:
+                    h.note("%s 答 %s 失敗：%s。修好後讓它再收一次；我繼續等，Ctrl-C 離開" % (h.aos_ws.unit_of(t), sig, t["error"]))
+                warned = bool(bad)
+            elif not warned:
+                h.note(h.stuck_hint(w, sig) + "。我繼續等，Ctrl-C 離開")
                 warned = True
         if timeout is not None and now - start >= timeout:
-            h.die(PROG, "AnswerMissing", "等了 %g 秒，還沒有 out/%s（題目在 %s/）" % (timeout, name, "、".join(stages)))
+            h.die(PROG, "AnswerMissing", "等了 %g 秒，%s 還沒答（信在 queue 的 %s/）" % (timeout, sig, "、".join(stages)))
         time.sleep(h.POLL)
 
 
-def block(ws, name):
-    q = h.read(os.path.join(ws, "done", name)) or h.read(os.path.join(ws, "done", name, "prompt.txt")) or ""
-    out = "== %s\n" % name
-    out += "".join("> %s\n" % l for l in q.rstrip("\n").splitlines())
-    a = answer(ws, name) or ""
-    return out + a + ("" if a.endswith("\n") else "\n")
+def block(n, asked, answer):
+    out = "== #%d\n" % n
+    for q in asked:
+        out += "".join("> %s\n" % l for l in q.rstrip("\n").splitlines())
+    return out + answer + ("" if answer.endswith("\n") else "\n")
 
 
-def by_time(ws, ns):
-    def mtime(n):
-        try:
-            return os.path.getmtime(os.path.join(ws, "out", n))
-        except OSError:
-            return 0
-    return sorted(ns, key=lambda n: (mtime(n), n))
-
-
-def follow(ws, last, keep, tail):
-    seen = set(h.names(ws, "out"))
-    for n in by_time(ws, seen)[-last:] if last else []:
-        sys.stdout.write(block(ws, n))
+def follow(w, last, keep, tail):
+    ex = h.aos_ws.exchanges(w.stack)
+    seen = len(ex)
+    for i in range(max(0, seen - last), seen) if last else []:
+        sys.stdout.write(block(i + 1, *ex[i]))
     sys.stdout.flush()
     if not keep:
         return
     warned, next_check = False, 0.0
     while True:
-        fresh = by_time(ws, [n for n in h.names(ws, "out") if n not in seen])
+        ex = h.aos_ws.exchanges(w.stack)
+        if len(ex) < seen:                            # history 被 compact 換短了：從現在的尾巴接著看
+            seen = len(ex)
         show_tail(tail)
-        for n in fresh:
-            seen.add(n)
-            sys.stdout.write(block(ws, n))
+        for i in range(seen, len(ex)):
+            sys.stdout.write(block(i + 1, *ex[i]))
+        seen = len(ex)
         sys.stdout.flush()
         now = time.monotonic()
         if now >= next_check:
             next_check = now + 1.0
-            waiting = h.names(ws, "new") + h.names(ws, "cur")
-            if not waiting or h.runners(ws):
+            waiting = h.aos_ws.waiting(w.stack)
+            if not waiting or h.runners(w):
                 warned = False
             elif not warned:
-                h.note("還有 %d 題沒答（%s），但目前沒有程式在跑這個工作區。%s。我繼續等，Ctrl-C 離開"
-                       % (len(waiting), "、".join(waiting[:3]) + ("…" if len(waiting) > 3 else ""), h.run_hint(ws)))
+                h.note("queue 裡還有 %d 封沒答（%s），但目前沒有程式在跑這隻 agent。%s。我繼續等，Ctrl-C 離開"
+                       % (len(waiting), "、".join(waiting[:3]) + ("…" if len(waiting) > 3 else ""), h.run_hint(w)))
                 warned = True
         time.sleep(h.POLL)
 
@@ -126,29 +119,29 @@ def number(opts, key, flag):
 
 
 def main():
-    opts, rest = h.parse(PROG, USAGE, sys.argv[1:], {"--ws": "ws", "--timeout": "timeout", "--last": "last"},
+    opts, rest = h.parse(PROG, USAGE, sys.argv[1:], {"--ws": "ws", "--stack": "stack", "--timeout": "timeout", "--last": "last"},
                          {"--trace": "trace", "--follow": "follow", "--status": "status"})
     timeout, last = number(opts, "timeout", "--timeout"), number(opts, "last", "--last")
     if len(rest) > 1:
-        h.die(PROG, "ArgumentsBad", "usage: %s（題名只能一個，多給了 %s）" % (USAGE, rest[1]))
+        h.die(PROG, "ArgumentsBad", "usage: %s（信號只能一個，多給了 %s）" % (USAGE, rest[1]))
     if rest and (last is not None or opts.get("follow") or opts.get("status")):
-        h.die(PROG, "ArgumentsBad", "usage: %s（給了題名就不收 --last／--follow／--status）" % USAGE)
+        h.die(PROG, "ArgumentsBad", "usage: %s（給了信號就不收 --last／--follow／--status）" % USAGE)
     if opts.get("status") and (last is not None or opts.get("follow") or timeout is not None or opts.get("trace")):
         h.die(PROG, "ArgumentsBad", "usage: %s（--status 不跟別的旗標一起用）" % USAGE)
     if not rest and timeout is not None:
-        h.die(PROG, "ArgumentsBad", "usage: %s（--timeout 只給等一題用）" % USAGE)
+        h.die(PROG, "ArgumentsBad", "usage: %s（--timeout 只給等一封用）" % USAGE)
     try:
-        ws = h.workspace(opts.get("ws"))
+        w = h.Where(opts.get("ws"), opts.get("stack"))
     except h.Error as e:
         h.die(PROG, e.code, str(e))
-    tail = h.Tail(ws) if opts.get("trace") else None
+    tail = h.Tail(w) if opts.get("trace") else None
     try:
         if opts.get("status"):
-            print("\n".join(h.status_lines(ws)))
+            print("\n".join(h.status_lines(w)))
         elif rest:
-            wait_one(ws, rest[0], timeout, tail)
+            wait_one(w, rest[0], timeout, tail)
         else:
-            follow(ws, int(last or 0), last is None or bool(opts.get("follow")), tail)
+            follow(w, int(last or 0), last is None or bool(opts.get("follow")), tail)
     except KeyboardInterrupt:
         sys.exit(130 if rest else 0)
 

@@ -1,16 +1,18 @@
 """aos_human - aos-say／aos-listen／aos-chat 共用的小零件（給人用的 CLI，2026-10-24）。純標準庫、只在 Linux 上（讀 /proc）。
 
-工作區的形狀照 CONVENTION 第四節（P-11～P-14）：題目 $AOS_WS/new/<題名>、認領 cur/、答案 out/<題名>、做完 done/；
-agent 的 stack 預設 $AOS_WS/.stack/（N-57；外面設了 AOS_STACK 就用它，同 aos-exec）。
-這裡只「放題目、看答案、看 stack」，不碰 agent 的定義資料夾、不改 stack 裡的東西。設計與代定：proto8/thinking/2026-10-24-say-listen.md。"""
+10-30 起照 agent 對話協議（CONVENTION P-42；thinking 2026-10-30-agent-lifecycle A-7、A-8）：只碰 agent 的 stack——
+queue＝<stack>/queue/（說話＝寄一封有序的信）、history＝<stack>/history.jsonl（回答＝最新那則沒有 tool_calls 的 assistant）、
+aos-loop 的 ctl／state 窗。stack＝--stack ＞ $AOS_STACK ＞ <工作區>/.stack/（N-57）；工作區＝--ws ＞ $AOS_WS ＞ cwd（同 aos-exec）。
+工作區的 new/ cur/ out/ done/（舊協議，P-11 的 10-30 改口）不再認。這裡不碰 agent 的定義資料夾、不改 stack 裡的東西（寄信除外）。
+設計與代定：proto8/thinking/2026-10-24-say-listen.md、2026-10-30-agent-lifecycle.md。"""
 import json, os, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "bin"))
 import aos_flags  # noqa: E402  旗標規則同 aos-exec（proto8/bin/aos_flags.py）
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "lib", "aos"))
-import aos_ws  # noqa: E402  放題、等答案、讀 stack：跟 aos-ai 共用一份（proto8/lib/aos/aos_ws.py，10-24 遷移）
-from aos_ws import STAGES, Error, names, where, read, new_name  # noqa: E402,F401  三支 CLI 照舊用 h.names、h.Error…
+import aos_ws  # noqa: E402  放訊息、等答案、讀 stack：跟 aos-ai 共用一份（proto8/lib/aos/aos_ws.py）
+from aos_ws import STAGES, Error, names, where, read  # noqa: E402,F401
 
 POLL = 0.2                                     # 看一次的間隔（秒）
 RUNNERS = ("aos-loop", "aos-fsm", "aos-exec", "aos-daemon")   # 算「有人在跑」的程式名
@@ -33,38 +35,32 @@ def parse(prog, usage, argv, flags, switches=None):
         die(prog, e.code, "usage: %s（%s）" % (usage, e))
 
 
-STACK_BOXES = set()                            # 信箱就在 stack 裡的（stack 自己就是信箱）
+class Where:
+    """一隻 agent 在哪：工作區 ws、stack。"""
+
+    def __init__(self, ws_opt, stack_opt):
+        ws = ws_opt if ws_opt not in (None, "-") else (os.environ.get("AOS_WS") or ".")
+        self.ws = os.path.abspath(ws)
+        if not os.path.isdir(self.ws):
+            raise Error("WsMissing", "工作區不存在：%s" % self.ws)
+        self.stack = aos_ws.stack_of(self.ws, stack_opt)
 
 
-def workspace(opt):
-    """--ws ＞ $AOS_WS ＞ cwd（同 aos-exec，N-58）；轉絕對路徑；不在＝WsMissing。
-    10-28：信箱在 stack 裡的（aos-hub 代答的實例，使用者「放Stack比較好。」）——沒設 AOS_STACK、<資料夾>/.stack/new/ 在，
-    就回 <資料夾>/.stack 當信箱（之後的 new／cur／out／done 都在那），它的 stack 就是它自己。"""
-    ws = opt if opt not in (None, "-") else (os.environ.get("AOS_WS") or ".")
-    ws = os.path.abspath(ws)
-    if not os.path.isdir(ws):
-        raise Error("WsMissing", "工作區不存在：%s" % ws)
-    box = os.path.join(ws, ".stack")
-    if not os.environ.get("AOS_STACK") and os.path.isdir(os.path.join(box, "new")):
-        STACK_BOXES.add(box)
-        return box
-    return ws
+def say(w, text):
+    """把一句話寄進 queue（aos_ws.put：一則 user message、aos-post send --ordered）。回信號。"""
+    return aos_ws.put(w.stack, text)
 
 
-def stack_of(ws):
-    if ws in STACK_BOXES:
-        return ws
-    return os.environ.get("AOS_STACK") or os.path.join(ws, ".stack")
+def _same(a, b):
+    try:
+        return os.path.samefile(a, b)
+    except OSError:
+        return False
 
 
-def say(ws, text, name=None):
-    """把一句話變成一道題丟進 new/（做法在 aos_ws.put：先寫工作區頂層的 .say-<pid>.tmp、再 link 成 new/<題名>）。回題名。"""
-    return aos_ws.put(ws, text, name, tag="say")
-
-
-def runners(ws):
-    """有哪些行程在跑這個工作區：/proc 裡環境變數 AOS_WS＝這個工作區、argv[0] 是 aos-loop／aos-fsm／aos-exec／aos-daemon 的，
-    加上 stack 裡 server.txt 自己報名的（declared）。
+def runners(w):
+    """有哪些行程在跑這隻 agent：/proc 裡 argv[0] 是 aos-loop／aos-fsm／aos-exec／aos-daemon、
+    環境變數 AOS_STACK＝這個 stack 或 AOS_WS＝這個工作區（沒設 AOS_STACK 時）的，加上 stack 裡 server.txt 自己報名的（declared）。
     回 [(pid, 程式名)]。讀不到的行程（別的使用者的）跳過。"""
     found, me = [], os.getpid()
     for d in os.listdir("/proc"):
@@ -76,56 +72,61 @@ def runners(ws):
             if argv0 not in RUNNERS:
                 continue
             with open("/proc/%s/environ" % d, "rb") as f:
-                env = f.read().split(b"\0")
+                env = dict(kv.decode("utf-8", "replace").split("=", 1) for kv in f.read().split(b"\0") if b"=" in kv)
         except OSError:
             continue
-        for kv in env:
-            if kv.startswith(b"AOS_WS="):
-                try:
-                    if os.path.samefile(kv[7:].decode("utf-8", "replace"), ws):
-                        found.append((int(d), argv0))
-                except OSError:
-                    pass
-                break
-    return found + declared(ws)
+        if "AOS_STACK" in env:
+            hit = _same(env["AOS_STACK"], w.stack)
+        else:
+            hit = "AOS_WS" in env and _same(env["AOS_WS"], w.ws) and _same(os.path.join(w.ws, ".stack"), w.stack)
+        if hit:
+            found.append((int(d), argv0))
+    return found + declared(w)
 
 
-def declared(ws):
-    """不靠 /proc 猜的服務者（10-28）：stack 裡的 server.txt 寫「<pid> <程式名>」（例：aos-hub-kernel 替 claude 代答），
-    那個 pid 還活著就算有人在跑。回 [(pid, 程式名)]。"""
-    line = (read(os.path.join(stack_of(ws), "server.txt")) or "").split()
+def declared(w):
+    """不靠 /proc 猜的服務者（10-28）：stack 裡的 server.txt 寫「<pid> <程式名>」，那個 pid 還活著就算有人在跑。"""
+    line = (read(os.path.join(w.stack, "server.txt")) or "").split()
     if len(line) < 2 or not line[0].isdigit() or not os.path.exists("/proc/%s" % line[0]):
         return []
     return [(int(line[0]), line[1])]
 
 
-def last_trace(ws):
-    """stack 裡 trace.jsonl 最後一行（fsm 每次一行，P-07）；沒有＝None。"""
-    return aos_ws.last_jsonl(os.path.join(stack_of(ws), "trace.jsonl"))
+def last_trace(w):
+    """stack 裡 trace.jsonl 最後一行（round 每格一行 unit、fsm 每次一行 state）；沒有＝None。"""
+    return aos_ws.last_jsonl(os.path.join(w.stack, "trace.jsonl"))
 
 
-def run_hint(ws):
-    return "另開一個終端機跑它：aos-exec --ws %s <agent 資料夾>（或用 aos-chat <agent 資料夾>，由 chat 幫你跑）" % ws
+def run_hint(w):
+    return "另開一個終端機跑它：aos-exec --ws %s <agent 資料夾>（或用 aos-chat <agent 資料夾>，由 chat 幫你跑）" % w.ws
 
 
-def stuck_hint(ws, name):
-    """題目還沒答、又沒人在跑時，說一句它停在哪。"""
-    stages = where(ws, name)
-    t = last_trace(ws)
-    if "cur" in stages and t and t.get("code") not in (0, 10):
-        return ("題目 %s 做到一半停了：上次停在 %s 格、結束碼 %s（錯誤一行在跑它的那個終端機）。修好再跑一次會接著做這題。%s"
-                % (name, t.get("state"), t.get("code") if t.get("signal") is None else "訊號 %s" % t.get("signal"), run_hint(ws)))
+def failure(t):
+    """trace 最後一行失敗時的一句「停在 X 那格、結束碼 N」；沒失敗＝None。"""
+    if not aos_ws.failed(t):
+        return None
+    how = "訊號 %s" % t["signal"] if t.get("signal") is not None else "結束碼 %s" % t.get("code")
+    return "停在 %s 那格、%s" % (aos_ws.unit_of(t), how)
+
+
+def stuck_hint(w, sig):
+    """這封還沒答、又沒人在跑時，說一句它停在哪。"""
+    stages = where(w.stack, sig)
+    why = failure(last_trace(w))
+    if "cur" in stages and why:
+        return ("%s 做到一半停了：上次%s（錯誤一行在跑它的那個終端機）。修好再跑一次會接著做這封。%s"
+                % (sig, why, run_hint(w)))
     if "cur" in stages:
-        return "題目 %s 在 cur/（認領了、還沒做完），但目前沒有程式在跑這個工作區。%s" % (name, run_hint(ws))
-    return "題目 %s 還在 new/，但目前沒有程式在跑這個工作區。%s" % (name, run_hint(ws))
+        return "%s 在 queue 的 cur/（認領了、還沒答完），但目前沒有程式在跑這隻 agent。%s" % (sig, run_hint(w))
+    return "%s 還在 queue 的 new/，但目前沒有程式在跑這隻 agent。%s" % (sig, run_hint(w))
 
 
 class Tail:
-    """跟著看 stack 裡的 trace.jsonl（每格一行）與 history.jsonl（agent-dan 的對話，P-41）新長出來的行，翻成給人看的短行。
+    """跟著看 stack 裡的 trace.jsonl（每格一行）與 history.jsonl 新長出來的行，翻成給人看的短行（工具呼叫、工具回了什麼、每格的結果）。
     從建立當下的檔尾開始（之前的不重印）。"""
 
-    def __init__(self, ws):
-        self.stack = stack_of(ws)
+    def __init__(self, w):
+        self.stack = w.stack
         self.pos = {f: self._size(f) for f in ("trace.jsonl", "history.jsonl")}
         self.tool_names = {}
 
@@ -140,7 +141,7 @@ class Tail:
         try:
             with open(path, "rb") as fh:
                 size = os.fstat(fh.fileno()).st_size
-                if size < self.pos[f]:            # 檔被換掉、變短了（例如人換了 stack）：從頭
+                if size < self.pos[f]:            # 檔被換掉、變短了（compact、人換了 stack）：從頭
                     self.pos[f] = 0
                 fh.seek(self.pos[f])
                 data = fh.read()
@@ -176,8 +177,8 @@ class Tail:
             code, sig = t.get("code"), t.get("signal")
             what = "訊號 %s" % sig if sig is not None else ("" if code == 0 else "退 %s" % code)
             if code == 10:
-                what = "退 10（沒題了，停）"
-            out.append("· %s%s%s" % (t.get("state"), " " + what if what else "",
+                what = "退 10"
+            out.append("· %s%s%s" % (aos_ws.unit_of(t), " " + what if what else "",
                                      " %sms" % t["elapsed_ms"] if "elapsed_ms" in t else ""))
         return out
 
@@ -187,20 +188,22 @@ def short(s, n=80):
     return s if len(s) <= n else s[:n] + "…"
 
 
-def status_lines(ws):
-    """一份快照：誰在跑、停在哪一格、正在做哪題、各階段幾題、最後一格的結果。"""
-    st = stack_of(ws)
-    run = runners(ws)
-    t = last_trace(ws)
-    out = ["工作區   %s" % ws,
-           "在跑     %s" % ("、".join("%s（pid %d）" % (p, i) for i, p in run) if run else "沒有（%s）" % run_hint(ws)),
-           "狀態     %s" % ((read(os.path.join(st, "state.txt")) or "").strip() or "-"),
-           "最近一題 %s" % ((read(os.path.join(st, "current.txt")) or "").strip() or "-"),
-           "題目     new %d、cur %d、out %d、done %d" % tuple(len(names(ws, s)) for s in STAGES)]
+def status_lines(w):
+    """一份快照：誰在跑、aos-loop 的 phase、最後一格、queue 各格幾封、history 幾則。"""
+    st = w.stack
+    run = runners(w)
+    t = last_trace(w)
+    loop = aos_ws.loop_state(st)
+    out = ["工作區   %s" % w.ws,
+           "stack    %s" % st,
+           "在跑     %s" % ("、".join("%s（pid %d）" % (p, i) for i, p in run) if run else "沒有（%s）" % run_hint(w)),
+           "loop     %s" % ("phase %s（state.json）" % loop.get("phase") if loop else "-（沒有 state.json：沒開 aos-loop 的 state 窗）"),
+           "認領中   %s" % ("、".join(l.strip() for l in (read(os.path.join(st, "current.txt")) or "").splitlines() if l.strip()) or "-"),
+           "queue    new %d、cur %d、done %d" % tuple(len(names(st, s)) for s in STAGES)]
     if t:
-        ok = t.get("code") in (0, 10) and t.get("signal") is None
-        out.append("最後一格 %s %s（%s）%s" % (t.get("state"), "訊號 %s" % t["signal"] if t.get("signal") is not None else "退 %s" % t.get("code"),
-                                          t.get("started_at", "?"), "" if ok else "  ← 卡住了：錯誤一行在跑它的那個終端機"))
+        why = failure(t)
+        out.append("最後一格 %s %s（%s）%s" % (aos_ws.unit_of(t), "訊號 %s" % t["signal"] if t.get("signal") is not None else "退 %s" % t.get("code"),
+                                          t.get("started_at", "?"), "  ← 卡住了：錯誤一行在跑它的那個終端機" if why else ""))
     hist = read(os.path.join(st, "history.jsonl"))
     if hist is not None:
         out.append("對話     history.jsonl %d 則（要忘記＝換 stack）" % len([l for l in hist.splitlines() if l.strip()]))

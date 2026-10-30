@@ -88,19 +88,11 @@ check("AosExec! 只走一格", trace_n() == before + 1 and panel_has("dan/fsm.js
 vim.cmd("AosTrace")
 check("AosTrace 有 idle", panel_has("idle"))
 
--- 6. :AosSay!：用 aos-say／aos-listen 放題、順便跑 agent、等答案
+-- 6. :AosSay!：預設外掛自己寫 new/、輪詢 out/（舊協議；10-30 起 aos-say／aos-listen 走 queue、說不到 fsm 範本，use_say 預設 false）
 local answer
-aos.say("17*23 是多少？", true, function(a) answer = a end)
-wait()
-check("AosSay! 拿到答案（aos-say）", answer and answer:find("FAKE ANSWER to: 17%*23") ~= nil, table.concat(aos.panel_lines(), "\n"))
-
--- 7. 不用 aos-say：外掛自己寫 new/、輪詢 out/
-aos.config.use_say = false
-answer = nil
 aos.say("第二題", true, function(a) answer = a end)
 wait()
 check("AosSay! 拿到答案（自己寫檔）", answer and answer:find("FAKE ANSWER to: 第二題") ~= nil, table.concat(aos.panel_lines(), "\n"))
-aos.config.use_say = true
 
 -- 8. pointer：陣列、跳脫、空白
 local p = require("aos_nvim.pointer")

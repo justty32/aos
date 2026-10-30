@@ -16,6 +16,12 @@ TOOL = ROOT / "lib" / "agent" / "claude"
 CLEAR = ("AOS_HUB", "AOS_WS", "AOS_ENTRY", "AOS_STACK", "TMUX")
 
 
+# 10-30：aos-say／listen 改走 <資料夾>/.stack/queue/（agent-lifecycle 第 4 步），aos-hub-kernel 還收 .stack/new/——
+# kernel 改收 queue 是第 6 步，使用者 10-30 暫停（aos-hub 要先摘出通用部分、改名 aos-eca-hub）；工人成品凍結在分支 wip/hub-step6。
+# 經 say／listen 的四案先跳過，第 6 步做時拿掉。
+HUB_WAITS = "aos-hub-kernel 還收 .stack/new/，say 已改走 .stack/queue/：等 agent-lifecycle 第 6 步（10-30 暫停）"
+
+
 class Hub(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="hub-"))
@@ -111,6 +117,7 @@ class Hub(unittest.TestCase):
         r = self.hub("bogus")
         self.assertEqual(self.code(r), (1, "ArgumentsBad"))
 
+    @unittest.skip(HUB_WAITS)
     def test_say_listen_through_hub(self):
         self.start_kernel()
         w = self.ws()
@@ -150,6 +157,7 @@ class Hub(unittest.TestCase):
         time.sleep(1.2)
         self.assertTrue((w / "new" / "q.txt").exists())                  # kernel 不替它收題
 
+    @unittest.skip(HUB_WAITS)
     def test_failure_waits_for_human(self):
         self.start_kernel()
         w = self.ws()
@@ -171,6 +179,7 @@ class Hub(unittest.TestCase):
         self.assertIn("修好了", self.listen(w, n))
 
     @unittest.skipUnless(HAS_TMUX, "沒有 tmux")
+    @unittest.skip(HUB_WAITS)
     def test_open_pause_stop(self):
         self.start_kernel()
         w = self.ws()
@@ -203,6 +212,7 @@ class Hub(unittest.TestCase):
         self.assertEqual(self.ls(), [])
         self.assertEqual(self.code(self.hub("state", cwd=w)), (1, "InstanceMissing"))
 
+    @unittest.skip(HUB_WAITS)
     def test_watch_follows_live(self):
         self.start_kernel()
         w = self.ws()

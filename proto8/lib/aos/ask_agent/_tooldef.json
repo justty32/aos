@@ -2,5 +2,5 @@
  "parameters": {"type": "object",
                 "properties": {"name": {"type": "string", "description": "agent 名字，例：helper"},
                                "question": {"type": "string", "description": "要問的問題（純文字）"},
-                               "template": {"type": "string", "description": "還沒有這隻時用哪個範本，沒給＝agent-dan"}},
+                               "template": {"type": "string", "description": "還沒有這隻時用哪個範本，沒給＝agent-nia"}},
                 "required": ["name", "question"]}}

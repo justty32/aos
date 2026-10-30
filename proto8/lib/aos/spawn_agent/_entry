@@ -45,4 +45,4 @@ def ai(*argv):
 args = arguments()
 if not isinstance(args.get("name"), str):
     die("ArgumentsBad", "要 name（字串）")
-print(ai("--root", ROOT, "spawn", args["name"], "--from", args.get("template") or "agent-dan"))
+print(ai("--root", ROOT, "spawn", args["name"], "--from", args.get("template") or "agent-nia"))

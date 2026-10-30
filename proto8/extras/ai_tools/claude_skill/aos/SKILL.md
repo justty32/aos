@@ -11,32 +11,33 @@ description: 操作 aos（proto8 的資料夾程式）的工具 aos-ai，含概�
 ## 先知道三件事
 
 - **只在一個工作資料夾（root）裡動**：`--root DIR`（放在命令前面），沒給用 `$AOS_AI_ROOT`，再沒有用 cwd。root 外面的東西不寫。
-- **agent＝資料夾**：`spawn` 把範本（預設 `agent-dan`：會用工具的問答 agent）複製到 `root/agents/<名>/agent/`，
-  工作區是 `root/agents/<名>/ws/`（題目 `new/`、做到一半 `cur/`、答案 `out/`、做完的題目 `done/`；執行狀態在 `ws/.stack/`）。
+- **agent＝資料夾**：`spawn` 把範本（預設 `agent-nia`：格組起來、會用工具的問答 agent）複製到 `root/agents/<名>/agent/`，
+  工作區是 `root/agents/<名>/ws/`（成品檔）；題目與回答都在 `ws/.stack/`：`ask` 寄進 `queue/`，回答是 `history.jsonl` 最新那則 assistant
+  （10-30 起；舊範本 agent-dan 讀工作區的 `new/`，`ask` 說不到它）。
 - **腦**：沒設 `AOS_BRAIN_URL`＝假腦（回 `FAKE ANSWER to: …`，測流程用）。真腦：`AOS_BRAIN_URL=http://localhost:4000/v1`（家機 LiteLLM）。
 
 ## 最常用的一串
 
 ```bash
-aos-ai --root ~/code/try/x spawn helper                 # 起一隻（--from 範本、--tool ask_agent 加工具；工具出錯回給腦，範本 agent-dan 本身就這樣）
-aos-ai --root ~/code/try/x ask helper --id q1 '17*23 等於多少'   # 丟題（文字加引號，zsh 會吃 *；是 - 就從 stdin 讀）
-aos-ai --root ~/code/try/x run helper --timeout 120      # 前景跑到題目做完，回 answers、errors、hint
-aos-ai --root ~/code/try/x answer helper q1              # 讀答案
+aos-ai --root ~/code/try/x spawn helper                 # 起一隻（--from 範本、--tool ask_agent 加工具；工具出錯回給腦）
+aos-ai --root ~/code/try/x ask helper '17*23 等於多少'   # 丟題（文字加引號，zsh 會吃 *；是 - 就從 stdin 讀）；回 id＝信號
+aos-ai --root ~/code/try/x run helper --timeout 120      # 前景跑到 queue 空了，回 answers、answered、errors、hint
+aos-ai --root ~/code/try/x answer helper <信號>          # 讀答案（不給信號＝每段一問一答）
 ```
 
-`run` 的 JSON：`ok`、`code`（0＝好）、`answers[{id,text,path}]`、`waiting`（還沒做完的題）、`fsm_state`、
-`errors[{prog,code,reason}]`（各層 stderr 的 `程式名: 代號 原因` 拆好的）、`hint`。**agent 失敗 aos-ai 照樣退 0**，看 `ok`。
-失敗後 agent 停在出錯那格（例 `fsm_state: think`）；修好原因再 `run` 一次就從同一題接著做。
+`run` 的 JSON：`ok`、`code`（0＝好）、`answers[{text}]`（這次新的回答）、`answered`（這次答完的信號）、`waiting`（queue 裡還沒答的）、
+`loop_phase`、`errors[{prog,code,reason}]`（各層 stderr 的 `程式名: 代號 原因` 拆好的）、`hint`。**agent 失敗 aos-ai 照樣退 0**，看 `ok`。
+失敗後信留在 queue 的 `cur/`（`trace` 看停在哪一格）；修好原因再 `run` 一次就從同一封接著做。
 
 ## 其他命令
 
 | 命令 | 做什麼 |
 |---|---|
 | `templates` | 列範本與可加的工具 |
-| `status [名]` | 一隻的詳細狀態（狀態機格、各資料夾的題、最近一次 run、背景列、trace 尾巴、可改的設定檔）；不給名字＝列全部 |
-| `trace 名 [-n N]`／`history 名 [-n N]` | 狀態機每格紀錄／跟腦的對話（工具呼叫看這裡） |
+| `status [名]` | 一隻的詳細狀態（queue 各格的信、loop_phase、最近一次 run、背景列、trace 尾巴、可改的設定檔）；不給名字＝列全部 |
+| `trace 名 [-n N]`／`history 名 [-n N]` | 每格紀錄／跟腦的對話（工具呼叫、回答看這裡） |
 | `start 名 [--interval-ms N]` | 交給背景（root 一個 aos-daemon，沒起就起），之後 `ask` 的題它會自己做 |
-| `wait 名 題名 [--timeout 秒]` | 等背景做完那題、回答案 |
+| `wait 名 信號 [--timeout 秒]` | 等背景做完那封、回答案 |
 | `stop 名`／`daemon down`／`daemon status` | 停一隻／停整個背景／看背景 |
 | `exec [--ws WS] 目標 [參數...]` | 直接 `aos-exec` 跑一次任何資料夾程式，回 `code`、`stdout`、`errors` |
 | `edit 名 檔 ...` | 改設定檔的接口（交給 `$AOS_AI_JSON_EDITOR`；沒接時直接用你的編輯工具改 `status` 給的路徑） |

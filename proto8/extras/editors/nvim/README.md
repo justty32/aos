@@ -19,7 +19,7 @@ aos_nvim - 在 nvim 裡跑 aos 程式、看 trace、對 agent 丟題、跳到 `�
 | `:AosExec [目標 args...]` | `aos-exec --ws 工作區 目標`，輸出一行行進下方面板，跑完印結束碼和 trace 最後 20 格。沒給目標＝目前檔案往上找、第一個有 `_entry` 的資料夾 |
 | `:AosExec!` | 跑目前這個檔本身（例 `fsm.json` 帶 `_entry`＝fsm 只走一格，一步一步看） |
 | `:AosTrace` | 看 `工作區/.stack/trace.jsonl`，一格一行（時間、格名、結束碼、毫秒） |
-| `:AosSay 話` | 放一題到 `工作區/new/`、等 `out/` 的答案印在面板；有 `aos-say`／`aos-listen`（[proto8/extras/human](../../human/README.md)）就用它們，沒有就自己寫檔、輪詢 |
+| `:AosSay 話` | 放一題到 `工作區/new/`、等 `out/` 的答案印在面板（舊協議，外掛編的 fsm agent 走這條）；`setup{use_say=true}` 才改用 `aos-say`／`aos-listen`（[proto8/extras/human](../../human/README.md)）——10-30 起它們走 queue（CONVENTION P-42），只對 agent-nia 這種 queue 的 agent、說不到 fsm 範本，所以預設 false |
 | `:AosSay! 話` | 同上，放完順便替你跑一次目前的 agent（同 `:AosExec`） |
 | `:AosGoto [檔#/指標]` | 跳過去：資料夾＝它的 `_entry`、沒副檔名又不在＝補 `.json`（同 aos-exec）、`#/…` 開頭＝目前這個檔。沒給＝游標下那串字 |
 | `:AosLuaPreview [路徑[#/指標]]` | 目前的 `.lua` 用 aos-lua 編一次、在面板看 JSON |

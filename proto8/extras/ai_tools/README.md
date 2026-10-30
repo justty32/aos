@@ -2,9 +2,11 @@
 
 **aos-ai - 讓 AI 用 aos：起 agent、丟題、跑、背景顧、看狀態與錯誤、停，生成 aos 的 JSON 與骨架，查概念；每次輸出一行 JSON。**
 
-← [proto8](../../README.md)｜設計與代定：[thinking 2026-10-24-ai-tools](../../thinking/2026-10-24-ai-tools.md)｜用到的程式：[impls](../../impls/README.md)（aos-exec、aos-loop、aos-fsm、aos-daemon、aos-directive）、範本 [demo/agent-dan](../../demo/README.md)
+← [proto8](../../README.md)｜設計與代定：[thinking 2026-10-24-ai-tools](../../thinking/2026-10-24-ai-tools.md)｜用到的程式：[impls](../../impls/README.md)（aos-exec、aos-loop、aos-fsm、aos-daemon、aos-directive、aos-post）、預設範本 [demo/agent-nia](../../demo/README.md)
 
-嘗試性質（使用者 10-24「4.做一套方便AI使用我們這套aos工具的工具集」「我隨便說，你隨便做，反正只是嘗試」）。只管「aos 指令與資料夾」這一層；JSON 編輯只留接口（`edit`），agent 當工具、CLI 當工具、LLM kernel 是別的嘗試。
+嘗試性質（使用者 10-24「4.做一套方便AI使用我們這套aos工具的工具集」「我隨便說，你隨便做，反正只是嘗試」）。
+
+> **10-30 起走 queue**（agent 對話協議 [CONVENTION P-42](../../docs/CONVENTION/02-題目stack停錯腦.md)；[thinking 2026-10-30 agent-lifecycle](../../thinking/2026-10-30-agent-lifecycle.md) 第 4 步，隊長代定甲：aos-ai 跟著 `aos_ws.py` 走 queue）：`ask`＝寄一封有序的信進 `ws/.stack/queue/`（一則 user message，`aos-post send --ordered`），答案＝`ws/.stack/history.jsonl` 最新那則沒有 `tool_calls` 的 assistant，沒有 `out/`、沒有 `--id`（信號由 aos-post 給）；`spawn` 預設範本改 **agent-nia**。**舊協議的 fsm 範本（agent-dan／bob／ann…讀工作區的 `new/`、寫 `out/`）`ask` 說不到**（衝突 4、方向題 1）：要用就 `--from agent-dan` 後手放 `ws/new/<題名>`，`run` 照樣跑、答案照樣從 history 拿（dan 也寫 history），`answer`／`wait` 不認它們的題名。只管「aos 指令與資料夾」這一層；JSON 編輯只留接口（`edit`），agent 當工具、CLI 當工具、LLM kernel 是別的嘗試。
 
 ```
 ai_tools/
@@ -29,19 +31,19 @@ ai_tools/
 
 ```
 agents/<名>/agent/        agent 定義（範本的複本；定義資料夾不被寫，P-15）
-agents/<名>/ws/           工作區 new/ cur/ out/ done/，stack 在 ws/.stack/（state.txt、trace.jsonl、history.jsonl…）
-agents/<名>/runs.jsonl    aos-ai run 每次一行：finished_at（跑完的時間）、code、signal、timed_out、elapsed_ms、errors、answers
+agents/<名>/ws/           工作區（成品檔）；stack 在 ws/.stack/：queue/（題目，N-16 有序信箱）、history.jsonl（回答）、trace.jsonl、state.json（aos-loop 的窗）…
+agents/<名>/runs.jsonl    aos-ai run 每次一行：finished_at（跑完的時間）、code、signal、timed_out、elapsed_ms、errors、answered（這次答完的信號）、counter_answers
 daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.stack/ctl.json、.stack/state.json、各 agent 的小格
 ```
 
 | 命令 | 做什麼 |
 |---|---|
 | `templates` | 列 `proto8/demo/agent-*` 範本與 `proto8/lib/aos/` 的工具（`--tool` 能掛的） |
-| `spawn 名 [--from 範本] [--tool 工具]...` | 範本（名字或路徑，預設 agent-dan）原樣複製到 `agents/<名>/agent/`，加工具，建工作區；範本的 `parts.json`（格的通訊錄，例 `agent-nia`）與 `tools.json` 裡指出範本的相對路徑改成絕對（指在範本裡面的照舊相對；沒有 parts.json 的範本不受影響）；工具出錯停不停照範本自己的 act（agent-dan 回給腦） |
-| `ask 名 文字…｜- [--id 題名]` | 題目寫進 `ws/new/<題名>.txt`（先寫暫存再改名，N-05）；題名沒給＝`q<UTC 時間>` |
-| `run 名 [--timeout 秒] [--env K=V]...` | 前景 `aos-exec --ws ws agent`（`AOS_STACK` 明寫成 `ws/.stack/`），跑到 idle 退 10；回答案、錯誤、hint |
-| `status [名]`、`answer 名 [題名]`、`trace 名 [-n N]`、`history 名 [-n N]` | 看 |
-| `start 名 [--interval-ms N]`、`stop 名`、`wait 名 題名 [--timeout 秒]` | 背景：寫 daemon 的 `loops_ctl.json` 的 `loops_added`（N-54；10-29 拆窗前寫在 ctl），等 `loops_state.json` 的 `ctl_seq` 回音才回 |
+| `spawn 名 [--from 範本] [--tool 工具]...` | 範本（名字或路徑，預設 agent-nia；10-30 前 agent-dan）原樣複製到 `agents/<名>/agent/`，加工具，建工作區（只建 `ws/.stack/`）；範本的 `parts.json`（格的通訊錄，例 `agent-nia`）與 `tools.json` 裡指出範本的相對路徑改成絕對（指在範本裡面的照舊相對；沒有 parts.json 的範本不受影響）；工具出錯停不停照範本自己的 act（agent-nia 的 lib/agent/act、agent-dan 都回給腦） |
+| `ask 名 文字…｜- ` | 寄一封有序的信進 `ws/.stack/queue/`（`{"role": "user", "content": 文字}`；沒有 queue 就先 `aos-post init`）；回 `id`＝信號、`path`＝那封信 |
+| `run 名 [--timeout 秒] [--env K=V]...` | 前景 `aos-exec --ws ws agent`（`AOS_STACK` 明寫成 `ws/.stack/`），nia 跑到 queue 空 loop 收工；回 `answers`（這次 history 新長出來的回答，`[{"text"}]`）、`answered`（跑之前在 queue、跑完不見了的信號）、`waiting`（queue 裡還沒答的）、`loop_phase`、錯誤、hint |
+| `status [名]`、`answer 名 [信號]`、`trace 名 [-n N]`、`history 名 [-n N]` | 看：status 有 queue 各格（`new`、`cur`、`done`）、`loop_phase`（state.json）、`counter_answers`；answer 沒給信號＝每段一問一答（`asked`、`text`），給了＝那封還在 queue＝`AnswerMissing`、不見了＝history 最新的回答（A-8） |
+| `start 名 [--interval-ms N]`、`stop 名`、`wait 名 信號 [--timeout 秒]` | 背景：寫 daemon 的 `loops_ctl.json` 的 `loops_added`（N-54；10-29 拆窗前寫在 ctl），等 `loops_state.json` 的 `ctl_seq` 回音才回 |
 | `daemon up｜down｜status` | 起／停（ctl `stopped`）／看背景的 aos-daemon |
 | `exec [--ws WS] 目標 [參數...]` | 直接 `aos-exec` 跑一次，回 `code`、`stdout`、`errors`；WS 要在 root 裡 |
 | `edit 名 檔 [參數...]` | JSON 編輯的接口：交給 `$AOS_AI_JSON_EDITOR`（argv＋檔的絕對路徑＋參數）；檔要在 `agents/<名>/` 裡 |
@@ -53,15 +55,15 @@ daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.sta
 | `explain [概念]`、`explain --here [目標] [--ws WS] [--dotenv-override]` | 概念速成一節；或算出「現在 aos-exec 目標」會讀哪些 `.env`、挑到哪個入口、六個變數的值（模擬，以 aos-exec 為準） |
 
 - **輸出**：stdout 一行 JSON，`ok` 一定有。下層 stderr 的每一行拆成 `errors[{prog, code, reason}]`（認不出的放 `raw`），失敗時加一句 `hint`（下一步）。答案文字超過 4000 字截斷、給 `path`。
-- **錯**：aos-ai 自己的錯 stderr 一行 `aos-ai: 代號 原因（下一步：…）`、退 1。代號：`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`RootMissing`、`PathBad`、`NameBad`、`AgentMissing`、`AgentExists`、`AgentBusy`、`TemplateMissing`、`ToolMissing`、`ToolExists`、`SpecBad`、`FileExists`、`CellExists`、`CellMissing`、`CfgBad`、`EditFailed`、`ConceptUnknown`、`QuestionBad`、`QuestionExists`、`AnswerMissing`、`WaitFailed`、`EditorMissing`、`CommandMissing`、`DaemonFailed`、`Internal`。**agent 跑失敗不是 aos-ai 的錯**：退 0，看 JSON 的 `ok`／`code`。
+- **錯**：aos-ai 自己的錯 stderr 一行 `aos-ai: 代號 原因（下一步：…）`、退 1。代號：`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`RootMissing`、`PathBad`、`NameBad`、`AgentMissing`、`AgentExists`、`AgentBusy`、`TemplateMissing`、`ToolMissing`、`ToolExists`、`SpecBad`、`FileExists`、`CellExists`、`CellMissing`、`CfgBad`、`EditFailed`、`ConceptUnknown`、`QuestionBad`、`PostFailed`（寄不進 queue：PATH 上沒有 aos-post 等）、`AnswerMissing`、`WaitFailed`、`EditorMissing`、`CommandMissing`、`DaemonFailed`、`Internal`。**agent 跑失敗不是 aos-ai 的錯**：退 0，看 JSON 的 `ok`／`code`。
 - **安全**：只寫 root 底下（`--ws`、`edit` 的檔都檢查）；名字只收 `[a-z0-9][a-z0-9_-]*`（擋 `../`）；不刪任何東西（`stop` 只是從 ctl 拿掉）；不碰 git。
 - **同一隻不能同時兩個人跑**：前景 `run` 拿 `agents/<名>/.run.flock`（flock）；背景表上 running 時 `run` 回 `AgentBusy`。寫 ctl 也拿 `daemon/.ctl.flock`。
 
 ## 給 agent 的工具（proto8/lib/aos）
 
-六個工具（spawn_agent、ask_agent、agent_status、make_json、make_tool、explain_aos）在 [proto8/lib/aos](../../lib/README.md)，`aos-ai spawn --tool` 從那裡複製；照 lib 契約，錯是 stderr 與 stdout 各一行「工具名: 代號 原因」、退 1（代號照 aos-ai 的，例 `NameBad`），停下還是回給腦由叫它的 agent 決定（agent-dan 範本回給腦，[thinking](../../thinking/2026-10-23-tool-calls.md#10-24-定叫工具與小念頭的失敗回給腦)）。放題、等答案、讀 stack 的做法跟 proto8/extras/human 共用 `proto8/lib/aos/aos_ws.py`。`aos-ai spawn` 複製範本時，範本裡指出範本的相對捷徑（掛 lib 的工具）改成絕對捷徑。註冊檔也一樣：`parts.json`、`tools.json` 每一格的 `path` 是相對路徑、從範本資料夾算指到範本外面的（例 agent-nia 的 `../../lib/agent/round`），改成絕對路徑（不解開捷徑，同 `aos-parts add`／`aos-tools add`）；指示詞（`$ref`／`$env`）不碰。所以 `aos-ai spawn x --from agent-nia` 搬到 `agents/x/agent/` 後仍找得到 lib 的格（agent-round § 7 第 7 步，測試 `test_nia.py`）。
+六個工具（spawn_agent、ask_agent、agent_status、make_json、make_tool、explain_aos）在 [proto8/lib/aos](../../lib/README.md)，`aos-ai spawn --tool` 從那裡複製；照 lib 契約，錯是 stderr 與 stdout 各一行「工具名: 代號 原因」、退 1（代號照 aos-ai 的，例 `NameBad`），停下還是回給腦由叫它的 agent 決定（agent-nia 的 lib/agent/act 與 agent-dan 範本都回給腦，[thinking](../../thinking/2026-10-23-tool-calls.md#10-24-定叫工具與小念頭的失敗回給腦)）。寄信、等答案、讀 stack 的做法跟 proto8/extras/human 共用 `proto8/lib/aos/aos_ws.py`（10-30 起走 queue）。`aos-ai spawn` 複製範本時，範本裡指出範本的相對捷徑（掛 lib 的工具）改成絕對捷徑。註冊檔也一樣：`parts.json`、`tools.json` 每一格的 `path` 是相對路徑、從範本資料夾算指到範本外面的（例 agent-nia 的 `../../lib/agent/round`），改成絕對路徑（不解開捷徑，同 `aos-parts add`／`aos-tools add`）；指示詞（`$ref`／`$env`）不碰。所以 `aos-ai spawn x --from agent-nia` 搬到 `agents/x/agent/` 後仍找得到 lib 的格（agent-round § 7 第 7 步，測試 `test_nia.py`）。
 
-`aos-ai spawn boss --tool ask_agent --tool agent_status` 就掛上（生成與查概念：`--tool make_json --tool make_tool --tool explain_aos`）。照 P-41：`arguments` 從 stdin 進、stdout 整段是結果。子 agent 放 `$AOS_AI_ROOT`（沒設＝老闆的 `$AOS_WS`）的 `agents/<名>/`。`ask_agent` 前景跑子 agent，上限 `$AOS_AI_ASK_TIMEOUT` 秒（預設 50，要小於 agent-dan act 格的 60 秒）。PATH 上要有 `aos-ai`——經 `aos-ai run` 跑的 agent 已放好。
+`aos-ai spawn boss --tool ask_agent --tool agent_status` 就掛上（生成與查概念：`--tool make_json --tool make_tool --tool explain_aos`）。照 P-41：`arguments` 從 stdin 進、stdout 整段是結果。子 agent 放 `$AOS_AI_ROOT`（沒設＝老闆的 `$AOS_WS`）的 `agents/<名>/`。`ask_agent` 前景跑子 agent，上限 `$AOS_AI_ASK_TIMEOUT` 秒（預設 50，要小於叫它那格的逾時）；`spawn_agent`／`ask_agent` 的 `template` 沒給＝agent-nia（10-30 起），答案＝那次 `run` 的 `answered` 有這封時最後一則回答。PATH 上要有 `aos-ai`——經 `aos-ai run` 跑的 agent 已放好。
 
 ## aos-mcp（10-27；10-28 改成包在 aos-tools 上）
 
@@ -89,4 +91,4 @@ mkdir -p .claude/skills && ln -s ../../proto8/extras/ai_tools/claude_skill/aos .
 
 ## 測試
 
-`python3 -m unittest discover -s proto8/tests -p test_ai_tools.py`（或整包 `discover -s proto8/tests`）：前景一題、stdin 題目與重複題名、邊界（名字、路徑、範本、旗標、edit）、腦壞了停住再接著做、背景 start／wait／stop／down、老闆掛 `ask_agent` 經假 server 叫 helper、工具錯一行退 1；生成的 loop＋fsm、單子、函數、daemon 真的經 aos-exec 跑、生成的工具＋格掛進 agent-dan 經假 server 叫到、`explain --here` 跟真 aos-exec 給入口的值逐個比、三個生成／概念工具。不叫真模型、不叫 claude。
+`python3 -m unittest discover -s proto8/tests -p test_ai_tools.py`（或整包 `discover -s proto8/tests`）：前景一題（nia、信號、answered、status 的 queue 與 loop_phase）、stdin 題目與 `--id` 拿掉、邊界（名字、路徑、範本、旗標、edit）、腦壞了停住再接著做（nia 的 endpoint 換 openai 指假 server）、背景 start／wait／stop／down、老闆掛 `ask_agent` 經假 server 叫 helper（helper＝預設 nia 假腦）、工具錯一行退 1；生成的 loop＋fsm、單子、函數、daemon 真的經 aos-exec 跑、生成的工具＋格掛進 agent-dan 經假 server 叫到（舊協議：題目手放 `ws/new/`）、`explain --here` 跟真 aos-exec 給入口的值逐個比、三個生成／概念工具。不叫真模型、不叫 claude。

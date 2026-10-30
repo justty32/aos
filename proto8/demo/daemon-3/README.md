@@ -1,6 +1,6 @@
 # daemon-3：一次性的東西掛 daemon 的兩種寫法（10-30）
 
-← [demo](../README.md)｜程式：[aos-daemon § execs](../../impls/aos-daemon/README.md)｜設計：[thinking 10-30 agent-lifecycle](../../thinking/2026-10-30-agent-lifecycle.md) 結論 B-12、實作第 8 步；條文草稿「N-28 10-30 補：execs」「N-54 10-30 補」（正文還沒落）
+← [demo](../README.md)｜程式：[aos-daemon § execs](../../impls/aos-daemon/README.md)｜設計：[thinking 10-30 agent-lifecycle](../../thinking/2026-10-30-agent-lifecycle.md) 結論 B-12、實作第 8 步；條文：[N-28 的 10-30 補（`execs`）、N-54 的 10-30 補（`execs_added`／`execs_removed`）](../../docs/NORMS/04-基礎設施-loop與daemon.md)
 
 要跑一次就結束的東西（例：一隻射後不理的 agent、`claude -p` 的腳本）想讓 daemon 管著（看得到死活、收得掉），有兩種寫法。這個 demo 用同一支小程式 [`demo/tick`](../tick/)（aos-loop 跑 5 次 aos-tick，時鐘檔 `$AOS_STACK/tick.txt` 走到 5；離線、不接腦）各掛一次：
 

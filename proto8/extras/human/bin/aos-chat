@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
-"""aos-chat - 跟一隻 agent 一問一答：你打一句，它回一句（給人用，2026-10-24；＝aos-say＋aos-listen 串起來）。
+"""aos-chat - 跟一隻 agent 一問一答：你打一句，它回一句（給人用，2026-10-24；＝aos-say＋aos-listen 串起來；10-30 改走 queue）。
 
-    aos-chat [--ws WS] [--trace] [agent 資料夾]
+    aos-chat [--ws WS] [--stack STACK] [--trace] [agent 資料夾]
 
-每打一行＝aos-say 一題進 $AOS_WS/new/，然後等那題的 out/。
-- **給了 agent 資料夾**：chat 自己跑它——每句之後 `aos-exec --ws WS <agent>` 跑一次（loop 跑到 new/ 空了自己停，CONVENTION P-19），
-  agent 的 stderr 原樣出現在你的終端機（錯誤一行看得到）、stdout 也轉到 stderr；跑完印答案。agent 失敗（非 0）就說停在哪，
-  題目留在 cur/，修好打 /run 再跑一次會接著做（P-20）。aos-exec、aos-loop、aos-fsm 要在 PATH 上（同 demo/run.sh）。
-- **沒給**：chat 只放題、等答案，要別人跑（另一個終端機的 aos-exec，或常駐的 loop）；沒人在跑時提醒一次怎麼跑、繼續等。
-對話記憶是 agent 自己的事：agent-dan 把對話接在 stack 的 history.jsonl，所以同一個工作區（同一個 stack）連問就接著聊；agent-bob 每題獨立。
+每打一行＝aos-say 一封寄進 <stack>/queue/（CONVENTION P-42），然後等 history.jsonl 長出新的回答（沒有 tool_calls 的 assistant）。
+- **給了 agent 資料夾**：chat 自己跑它——每句之後 `aos-exec --ws WS <agent>` 跑一次（範本 agent-nia 是射後不理：queue 空了 loop 自己停，
+  P-19、P-42 的 ROUND_ON_EMPTY=stop），agent 的 stderr 原樣出現在你的終端機（錯誤一行看得到）、stdout 也轉到 stderr；跑完印新的回答。
+  agent 失敗（非 0）就說停在哪一格（trace.jsonl 最後一行），信留在 queue 的 cur/，修好打 /run 再跑一次會接著做（P-20）。
+  aos-exec、aos-loop、aos-post 要在 PATH 上（同 demo/run.sh；agent-nia 另要 proto8/bin 的 aos-parts、aos-tools）。
+- **沒給**：chat 只寄信、等回答，要別人跑（另一個終端機的 aos-exec，或常駐的 loop）；沒人在跑時提醒一次怎麼跑、繼續等。
+對話記憶就是 stack 的 history.jsonl：同一個 stack 連問就接著聊。舊協議的 fsm 範本（agent-bob／dan…，讀工作區的 new/）說不到（P-11 的 10-30 改口）。
 指令（/ 開頭不送出；要送 / 開頭的話打兩個 //）：/status 一份快照、/run 再跑一次（只在給了 agent 時）、/trace 開關 trace、/help、/quit。
-空行不送。Ctrl-C、Ctrl-D、/quit 都退 0；離開時還有題沒答，提醒一行（題目已放進去，之後 aos-listen 題名 看）。
-stdout 只有答案；提示符在 stdin、stdout 都是終端機時才印。工作區＝--ws ＞ $AOS_WS ＞ cwd。
-錯（進入前）：stderr 一行 `aos-chat: 代號 原因`、退 1（ArgumentsBad、FlagUnknown、WsMissing、AgentMissing〔agent 資料夾不在〕）。"""
+空行不送。Ctrl-C、Ctrl-D、/quit 都退 0；離開時 queue 裡還有沒答的，提醒一行（信已寄進去，之後 aos-listen 信號 看）。
+stdout 只有回答；提示符在 stdin、stdout 都是終端機時才印。stack＝--stack ＞ $AOS_STACK ＞ <工作區>/.stack/；工作區＝--ws ＞ $AOS_WS ＞ cwd。
+錯（進入前）：stderr 一行 `aos-chat: 代號 原因`、退 1（ArgumentsBad、FlagUnknown、WsMissing、AgentMissing〔agent 資料夾不在〕）；
+寄不出去（PostFailed）印一行、不離開。"""
 import os, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_human as h
 
-PROG, USAGE = "aos-chat", "aos-chat [--ws WS] [--trace] [agent 資料夾]"
-HELP = """/status   一份快照：誰在跑、停在哪一格、正在做哪題、各階段幾題
-/run      再跑一次 agent（只在 aos-chat 有給 agent 資料夾時；題目卡在 cur/ 時修好用它接著做）
+PROG, USAGE = "aos-chat", "aos-chat [--ws WS] [--stack STACK] [--trace] [agent 資料夾]"
+HELP = """/status   一份快照：誰在跑、aos-loop 的 phase、最後一格、queue 幾封
+/run      再跑一次 agent（只在 aos-chat 有給 agent 資料夾時；信卡在 cur/ 時修好用它接著做）
 /trace    開／關 trace（每格一行、工具呼叫）
 /help     這張表
 /quit     離開（Ctrl-C、Ctrl-D 也是）
@@ -27,11 +29,14 @@ HELP = """/status   一份快照：誰在跑、停在哪一格、正在做哪題
 
 
 class Chat:
-    def __init__(self, ws, agent, trace):
-        self.ws, self.agent, self.trace = ws, agent, trace
-        self.pending = []                      # 送出去還沒印答案的題名（照送出順序）
-        self.last = None                       # 最後送出的那題
-        self.tail = h.Tail(ws)
+    def __init__(self, w, agent, trace):
+        self.w, self.agent, self.trace = w, agent, trace
+        self.printed = len(h.aos_ws.answers(w.stack))   # history 裡已經有的回答不重印
+        self.tail = h.Tail(w)
+
+    def pending(self):
+        """queue 裡還沒答的信（cur/ 先、再 new/）。"""
+        return h.aos_ws.waiting(self.w.stack)
 
     def flush_tail(self):
         lines = self.tail.lines()             # 不開 trace 也要讀，免得打開時倒出一大串舊的
@@ -40,24 +45,23 @@ class Chat:
                 print(line, file=sys.stderr, flush=True)
 
     def print_ready(self):
-        """印已經到了的答案（照送出順序）；回還沒到的有幾題。"""
-        for n in list(self.pending):
-            text = h.aos_ws.answer_text(self.ws, n)
-            if text is None:
-                continue
-            self.pending.remove(n)
-            if self.pending or n != self.last:
-                h.note("較早那題 %s 的回答" % n)
+        """印 history 新長出來的回答（照順序）；回 queue 裡還有幾封沒答。"""
+        got = h.aos_ws.answers(self.w.stack)
+        if len(got) < self.printed:             # history 被 compact 換短了：從現在的尾巴接著看
+            self.printed = len(got)
+        for text in got[self.printed:]:
             sys.stdout.write(text if text.endswith("\n") else text + "\n")
-            sys.stdout.flush()
-        return len(self.pending)
+        self.printed = len(got)
+        sys.stdout.flush()
+        return len(self.pending())
 
     def run_agent(self):
         """跑一次 agent，跑的期間照樣印 trace；回結束碼。"""
         try:
-            p = subprocess.Popen(["aos-exec", "--ws", self.ws, self.agent], stdout=sys.stderr)
+            env = dict(os.environ, AOS_STACK=self.w.stack + "/")
+            p = subprocess.Popen(["aos-exec", "--ws", self.w.ws, self.agent], stdout=sys.stderr, env=env)
         except OSError as e:
-            h.note("aos-exec 起不來（%s）：PATH 上要有 aos-exec、aos-loop、aos-fsm" % e)
+            h.note("aos-exec 起不來（%s）：PATH 上要有 aos-exec、aos-loop、aos-post" % e)
             return None
         try:
             while p.poll() is None:
@@ -77,38 +81,35 @@ class Chat:
         if code is None or not left:
             return
         if code != 0:
-            t = h.last_trace(self.ws)
-            where = "停在 %s 格、" % t.get("state") if t and t.get("code") not in (0, 10) else ""
-            h.note("agent 停了（%s結束碼 %d）；還有 %d 題沒答，題目留在 cur/／new/。上面那行錯誤修好後打 /run 接著做"
-                   % (where, code, left))
+            why = h.failure(h.last_trace(self.w))
+            h.note("agent 停了（%s、agent 結束碼 %d）；queue 裡還有 %d 封沒答，信留在 cur/／new/。上面那行錯誤修好後打 /run 接著做"
+                   % (why or "trace 沒記到哪一格", code, left))
         else:
-            h.note("agent 跑完了，但還有 %d 題沒答（%s）；打 /status 看看" % (left, "、".join(self.pending)))
+            h.note("agent 跑完了，但 queue 裡還有 %d 封沒答（%s）；打 /status 看看" % (left, "、".join(self.pending())))
 
     def wait_other(self):
-        """沒給 agent：等別人跑。答案到了就回；沒人跑提醒一次、繼續等。"""
+        """沒給 agent：等別人跑。回答到了、queue 也清了就回；沒人跑提醒一次、繼續等。"""
         warned, next_check = False, 0.0
-        while self.pending:
+        while True:
             self.flush_tail()
             if not self.print_ready():
                 return
             now = time.monotonic()
             if now >= next_check:
                 next_check = now + 1.0
-                if h.runners(self.ws):
+                if h.runners(self.w):
                     warned = False
                 elif not warned:
-                    h.note(h.stuck_hint(self.ws, self.pending[-1]) + "。我繼續等，Ctrl-C 離開")
+                    h.note(h.stuck_hint(self.w, self.pending()[-1]) + "。我繼續等，Ctrl-C 離開")
                     warned = True
             time.sleep(h.POLL)
 
     def send(self, text):
         try:
-            name = h.say(self.ws, text)
+            h.say(self.w, text)
         except h.Error as e:
             print("%s: %s %s" % (PROG, e.code, e), file=sys.stderr)
             return
-        self.last = name
-        self.pending.append(name)
         if self.agent:
             self.after_run(self.run_agent())
         else:
@@ -117,7 +118,7 @@ class Chat:
     def command(self, line):
         cmd = line.split()
         if cmd == ["/status"]:
-            print("\n".join(h.status_lines(self.ws)), file=sys.stderr)
+            print("\n".join(h.status_lines(self.w)), file=sys.stderr)
         elif cmd == ["/run"]:
             if not self.agent:
                 h.note("沒給 agent 資料夾，chat 不幫你跑；重開：aos-chat <agent 資料夾>")
@@ -140,8 +141,7 @@ class Chat:
         except ImportError:
             pass
         while True:
-            if self.pending:
-                self.print_ready()
+            self.print_ready()
             try:
                 line = input(prompt).strip()
             except EOFError:
@@ -159,35 +159,35 @@ class Chat:
 
 
 def main():
-    opts, rest = h.parse(PROG, USAGE, sys.argv[1:], {"--ws": "ws"}, {"--trace": "trace"})
+    opts, rest = h.parse(PROG, USAGE, sys.argv[1:], {"--ws": "ws", "--stack": "stack"}, {"--trace": "trace"})
     if len(rest) > 1:
         h.die(PROG, "ArgumentsBad", "usage: %s（agent 資料夾只能一個，多給了 %s）" % (USAGE, rest[1]))
     try:
-        ws = h.workspace(opts.get("ws"))
+        w = h.Where(opts.get("ws"), opts.get("stack"))
     except h.Error as e:
         h.die(PROG, e.code, str(e))
     agent = os.path.abspath(rest[0]) if rest else None
     if agent and not os.path.exists(agent):
         h.die(PROG, "AgentMissing", "agent 資料夾不在：%s" % agent)
-    run = h.runners(ws)
+    run = h.runners(w)
     who = ("每句之後由我跑 %s" % agent if agent else
            "沒給 agent，由別人跑；目前在跑的：%s" % "、".join("%s（pid %d）" % (n, i) for i, n in run) if run else
-           "沒給 agent，要別人跑，目前沒人在跑（%s）" % h.run_hint(ws))
-    h.note("工作區 %s；%s。/help 看指令，Ctrl-C 或 Ctrl-D 離開" % (ws, who))
-    chat = Chat(ws, agent, bool(opts.get("trace")))
-    chat.pending = h.names(ws, "cur") + [n for n in h.names(ws, "new") if n not in h.names(ws, "cur")]
-    if chat.pending:                           # 之前放進去、還沒答的題（例如上次 agent 停在半路）：答案到了一起印
-        h.note("工作區裡已經有 %d 題還沒答（%s），答案到了會一起印%s"
-               % (len(chat.pending), "、".join(chat.pending), "；打 /run 先跑一次" if agent else ""))
+           "沒給 agent，要別人跑，目前沒人在跑（%s）" % h.run_hint(w))
+    h.note("工作區 %s、stack %s；%s。/help 看指令，Ctrl-C 或 Ctrl-D 離開" % (w.ws, w.stack, who))
+    chat = Chat(w, agent, bool(opts.get("trace")))
+    left = chat.pending()
+    if left:                                   # 之前寄進去、還沒答的信（例如上次 agent 停在半路）：回答到了一起印
+        h.note("queue 裡已經有 %d 封還沒答（%s），回答到了會一起印%s"
+               % (len(left), "、".join(left), "；打 /run 先跑一次" if agent else ""))
     try:
         chat.loop()
     except (KeyboardInterrupt, EOFError):
         print(file=sys.stderr)
-    if chat.pending:
-        chat.print_ready()
-    if chat.pending:
-        h.note("還有 %d 題沒答（%s）：題目已經放進去了，不用再說一次；之後 aos-listen --ws %s %s 看"
-               % (len(chat.pending), "、".join(chat.pending), ws, chat.pending[-1]))
+    chat.print_ready()
+    left = chat.pending()
+    if left:
+        h.note("queue 裡還有 %d 封沒答（%s）：信已經寄進去了，不用再說一次；之後 aos-listen --stack %s %s 看"
+               % (len(left), "、".join(left), w.stack, left[-1]))
 
 
 main()

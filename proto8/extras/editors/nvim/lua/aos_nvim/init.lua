@@ -22,7 +22,8 @@ M.config = {
   bins = nil,          -- 叫子行程時接在 PATH 前面的資料夾；nil＝這個 repo 的 impls/*/bin、bin、extras/human/bin、extras/langs/lua/bin
   lua_cmd = nil,       -- 跑 aos-lua 的方式；nil＝有 lua 用 lua、沒有用 nvim -l
   listen_timeout = 300, -- :AosSay 等答案最多幾秒
-  use_say = true,      -- 有 aos-say／aos-listen 就用它們；false＝外掛自己寫 new/、輪詢 out/
+  use_say = false,     -- true＝有 aos-say／aos-listen 就用它們（10-30 起它們走 queue，只對 agent-nia 這種 queue 的 agent）；
+                       -- false（預設，10-30 起）＝外掛自己寫 new/、輪詢 out/（舊協議，外掛編的 fsm agent 走這條）
   panel_height = 15,
 }
 

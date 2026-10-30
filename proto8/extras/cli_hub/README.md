@@ -2,6 +2,8 @@
 
 ← [extras](../README.md)｜設計：[thinking 2026-10-28-hub-adapter](../../thinking/2026-10-28-hub-adapter.md)（協議、適配表、副產物）、[10-28 hub-kernel](../../thinking/2026-10-28-hub-kernel.md)（使用者定的 14 條）、[10-27 claude-switch](../../thinking/2026-10-27-claude-switch.md)（第一版）｜接的是 [lib/agent/cli_session.py](../../lib/agent/cli_session.py)｜測試 `proto8/tests/test_hub.py`
 
+> **10-30 暫時說不到**：aos-say／aos-listen 已改走 `<資料夾>/.stack/queue/`（[agent-lifecycle](../../thinking/2026-10-30-agent-lifecycle.md) 第 4 步、CONVENTION P-42），aos-hub-kernel 還收 `.stack/new/`、寫 `out/`；kernel 改收 queue 是第 6 步，使用者 10-30 暫停（aos-hub 要先摘出通用部分、改名 aos-eca-hub），工人成品凍結在分支 `wip/hub-step6`。在那之前經 say／listen 對 hub 實例說話不通（`tests/test_hub.py` 那四案先跳過），open／close 畫面、stop 歸檔照舊。
+
 使用者 10-27：「往後搞不好會有很多claude code cli在跑……我cd過去某個資料夾，輸入指令，就可以打開正在該資料夾工作的claude code。」10-28：「其實應該還是要aos-hub。因為不只claude code cli，可能也要包括pi coding agent, codex之類。」「aos-say/listen是面對aos agent的，或許可以提取出相關協議，然後讓hub實作之類。」
 
 ## 是什麼

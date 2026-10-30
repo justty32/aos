@@ -48,10 +48,11 @@ name, question = args.get("name"), args.get("question")
 if not isinstance(name, str) or not isinstance(question, str) or not question.strip():
     die("ArgumentsBad", "要 name 和 question 兩個字串")
 if not os.path.isdir(os.path.join(ROOT, "agents", name, "agent")):
-    ai("--root", ROOT, "spawn", name, "--from", args.get("template") or "agent-dan")
+    ai("--root", ROOT, "spawn", name, "--from", args.get("template") or "agent-nia")   # 10-30 起預設 agent-nia（走 queue）
 q = json.loads(ai("--root", ROOT, "ask", name, "--", question))
 r = json.loads(ai("--root", ROOT, "run", name, "--timeout", TIMEOUT))
-answer = next((a["text"] for a in r.get("answers", []) if a["id"] == q["id"]), None)
+# 10-30 起回答在 history：這封信答完了（answered 有它）就拿這次最後一則回答（A-8）
+answer = r["answers"][-1]["text"] if q["id"] in r.get("answered", []) and r.get("answers") else None
 res = {"ok": answer is not None, "name": name, "answer": answer}
 if answer is None:
     res.update({"code": r.get("code"), "errors": r.get("errors"), "hint": r.get("hint")})

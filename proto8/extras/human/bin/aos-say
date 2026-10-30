@@ -1,35 +1,35 @@
 #!/usr/bin/env python3
-"""aos-say - 把一句話變成一道題，丟進工作區的 new/（給人用，2026-10-24）。
+"""aos-say - 對一隻 agent 說一句話：寄進它 stack 的 queue（給人用，2026-10-24；10-30 改走 queue）。
 
-    aos-say [--ws WS] [--name 題名] [話...]
+    aos-say [--ws WS] [--stack STACK] [話...]
 
-話＝其餘的參數用空白接起來；沒給就整段讀 stdin。題目寫成 $AOS_WS/new/<題名>（一題一檔、純文字，CONVENTION P-11），
-先寫工作區頂層的暫存檔再 link 進 new/（N-05；不蓋已有的檔）。題名預設＝現在的 UTC 時間（ISO 8601 基本格式到毫秒，
-例 20261024T031500.123Z.txt，排序＝先後）；--name 自己取，名字在 new/ cur/ out/ done/ 任一處用過＝NameBad。
-工作區＝--ws ＞ $AOS_WS ＞ cwd（同 aos-exec）；沒設 AOS_STACK、工作區/.stack/new/ 在＝信箱在 stack 裡（aos-hub 代答的實例，
-10-28），題目改放 工作區/.stack/new/。stdout 只印題名一行（給 aos-listen 用：aos-listen "$(aos-say 你好)"）。
-只放題目、不叫醒誰：agent 要有人跑（aos-exec --ws WS <agent>，或 aos-chat）；放完看到沒人在跑，stderr 提醒一行。
-錯：stderr 一行 `aos-say: 代號 原因`、退 1（ArgumentsBad、FlagUnknown、WsMissing、NameBad）。"""
+話＝其餘的參數用空白接起來；沒給就整段讀 stdin。說話＝`aos-post send --ordered <stack>/queue`（CONVENTION P-42、NORMS N-16），
+一封信的 body＝一則 {"role": "user", "content": 話}（結尾的換行去掉）；queue 還沒有就先 aos-post init（可以先說、再跑 agent）。
+stack＝--stack ＞ $AOS_STACK ＞ <工作區>/.stack/；工作區＝--ws ＞ $AOS_WS ＞ cwd（同 aos-exec）。
+stdout 只印信號一行（給 aos-listen 用：aos-listen "$(aos-say 你好)"）。PATH 上要有 aos-post（proto8/impls/aos-post/bin）。
+只寄信、不叫醒誰：agent 要有人跑（aos-exec --ws WS <agent>，或 aos-chat）；寄完看到沒人在跑，stderr 提醒一行。
+10-30 起不認工作區的 new/（舊協議的 fsm 範本，P-11 的 10-30 改口），也沒有 --name（信號由 aos-post 給）。
+錯：stderr 一行 `aos-say: 代號 原因`、退 1（ArgumentsBad、FlagUnknown、WsMissing、PostFailed）。"""
 import os, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_human as h
 
-PROG, USAGE = "aos-say", "aos-say [--ws WS] [--name 題名] [話...]"
+PROG, USAGE = "aos-say", "aos-say [--ws WS] [--stack STACK] [話...]"
 
 
 def main():
-    opts, rest = h.parse(PROG, USAGE, sys.argv[1:], {"--ws": "ws", "--name": "name"})
+    opts, rest = h.parse(PROG, USAGE, sys.argv[1:], {"--ws": "ws", "--stack": "stack"})
     text = " ".join(rest) if rest else sys.stdin.read()
     if not text.strip():
         h.die(PROG, "ArgumentsBad", "usage: %s（話是空的）" % USAGE)
     try:
-        ws = h.workspace(opts.get("ws"))
-        name = h.say(ws, text, opts.get("name"))
+        w = h.Where(opts.get("ws"), opts.get("stack"))
+        sig = h.say(w, text)
     except h.Error as e:
         h.die(PROG, e.code, str(e))
-    print(name, flush=True)
-    if not h.runners(ws):
-        h.note("已放進 new/%s；目前沒有程式在跑這個工作區，%s" % (name, h.run_hint(ws)))
+    print(sig, flush=True)
+    if not h.runners(w):
+        h.note("已寄進 %s/queue/new/；目前沒有程式在跑這隻 agent，%s" % (w.stack, h.run_hint(w)))
 
 
 main()
