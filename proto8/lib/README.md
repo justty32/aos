@@ -14,6 +14,7 @@ demo/agent-*/              最上層：agent 本身（也是函數）
 lib/agent/                 高層：裡面是一整隻 agent（或外部 agent CLI）的工具（pyfix、claude、codex）＋共用模組 agent_tool.py、cli_session.py
                            ＋agent 自己的格（round、queue、history、compact、act；不是工具，見下「agent 自己的格」）
 lib/endpoint/              腦（endpoint 格）：fake、openai——round 問腦叫的，不是工具
+lib/eca/                   外部 coding agent（claude／codex 當平級 agent）的格：turn——定義的 aos-loop 叫的，不是工具（見下「外部 agent 的格」）
 lib/aos/                   中層：動 aos 自己東西的工具（記憶 heap、寄信、spawn／ask／status、try_run）＋共用模組 aos_ws.py
 lib/base/                  底層原語：檔案、資料夾、JSON、行程（bash）、小工具——Linux＋Python 標準庫（json_edit 另叫 aos-json）、只碰 $AOS_WS
 impls/                     基礎層與標準庫（C-74）：aos-exec 把工具叫起來，loop／fsm 跑 agent
@@ -123,7 +124,7 @@ pyfix 的子 agent 要改的程式在 `PYFIX_DIR`（`$AOS_WS/<dir>`），自己�
 
 ## agent 自己的格（不是工具，沒有 _tooldef.json）
 
-一隻 agent 的一輪（round）照順序叫的格（設計與代定：[thinking 2026-10-28 agent-round](../thinking/2026-10-28-agent-round.md)）。它們**不是給腦叫的工具**：沒有 `_tooldef.json`、`_metainfo`，不登記進 `tools.json`，而是登記進 agent 資料夾的格註冊檔 `parts.json`（[`aos-parts`](../bin/README.md)），或在 agent 資料夾放同名的捷徑。叫法一律 `aos-exec <格> <agent 資料夾絕對路徑> [子命令]`，stdin／stdout 是資料、錯 stderr 一行 `名: 代號 原因`、退 1（N-43）；這幾格共用 agent 的 `$AOS_STACK`（P-16）。所以上面「一個工具長什麼樣」的契約不套它們，`tests/test_lib.py` 的形狀檢查跳過這些格（`lib/endpoint/` 整層、`lib/agent/` 的 round、queue、history、compact、act）；它們的測試在 `tests/test_round.py`、`test_round_queue.py`。
+一隻 agent 的一輪（round）照順序叫的格（設計與代定：[thinking 2026-10-28 agent-round](../thinking/2026-10-28-agent-round.md)）。它們**不是給腦叫的工具**：沒有 `_tooldef.json`、`_metainfo`，不登記進 `tools.json`，而是登記進 agent 資料夾的格註冊檔 `parts.json`（[`aos-parts`](../bin/README.md)），或在 agent 資料夾放同名的捷徑。叫法一律 `aos-exec <格> <agent 資料夾絕對路徑> [子命令]`，stdin／stdout 是資料、錯 stderr 一行 `名: 代號 原因`、退 1（N-43）；這幾格共用 agent 的 `$AOS_STACK`（P-16）。所以上面「一個工具長什麼樣」的契約不套它們，`tests/test_lib.py` 的形狀檢查跳過這些格（`lib/endpoint/`、`lib/eca/` 整層、`lib/agent/` 的 round、queue、history、compact、act）；它們的測試在 `tests/test_round.py`、`test_round_queue.py`。
 
 | 格 | 一句話 | 子命令／stdin → stdout |
 |---|---|---|
@@ -132,6 +133,14 @@ pyfix 的子 agent 要改的程式在 `PYFIX_DIR`（`$AOS_WS/<dir>`），自己�
 | [history](agent/history/) | 對話紀錄 `$AOS_STACK/history.jsonl` | append／read／compact（只有 compact 可改寫，舊的收進 `history_archive/`） |
 | [compact](agent/compact/) | 掛 `hook/pre_think`：超過 `MAX_BYTES` 才壓（agent-hal 三步土法），交給 history compact 換上 | `[--force]` |
 | [act](agent/act/) | 照腦的決定跑工具（pre_tool → aos-tools call → post_tool，`MAX_PARALLEL`、插話退 10） | 一則 assistant → 一行一則 tool 訊息 |
+
+## 外部 agent 的格（eca，不是工具）
+
+claude code、codex 這類外部 coding agent 包成跟 aos agent 範本同形的定義資料夾（`_entry` aos-loop、`parts.json` 只登記一格 `turn`、頂層 `cli.json`、選填 `prompt.txt`；條文草稿 P-43，設計 [thinking 10-30 eca](../thinking/2026-10-30-eca.md) B）。這層放它們共用的格，跟上面 agent 的格一樣沒有 `_tooldef.json`、不登記進 `tools.json`；測試 `tests/test_eca_turn.py`。
+
+| 格 | 一句話 | 叫法 |
+|---|---|---|
+| [turn](eca/turn/turn.py) | 一次替外部 agent 答一則：`$AOS_STACK/queue/` 認領（`cur/` 先接、壞信丟掉記 `letter_warning`、history 空＋有 `prompt.txt`＝先投開場白）→ user 接進 `history.jsonl` → 經 [cli_session](agent/cli_session.py) 問 CLI（小格 `$AOS_STACK/<kind>/`；畫面開著貼字、沒開 `--resume`）→ assistant 接進 history → 收信；trace 一行 `unit: turn`；`SessionBad`＝退 0 信留 `cur/`；`$AOS_STACK/eca.json` 記 kind、ws、template | `aos-exec lib/eca/turn <定義資料夾絕對路徑>`：0＝答了一則（或壞信、SessionBad）、queue 空照 `ECA_ON_EMPTY` stop 退 10／idle 退 0；`--one`＝工具形（stdin `{"prompt"}` → stdout，同 lib/agent/claude） |
 
 ## 索引：endpoint
 

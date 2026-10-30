@@ -29,9 +29,9 @@ def env_with(extra=None):
     return e
 
 
-# agent 自己的格（10-28 agent-round）不是給腦叫的工具，沒有 _tooldef.json／_metainfo：lib/endpoint/ 整層、lib/agent/ 底下這幾個
+# agent 自己的格（10-28 agent-round）不是給腦叫的工具，沒有 _tooldef.json／_metainfo：lib/endpoint/、lib/eca/ 整層（eca 的 turn 格 10-30）、lib/agent/ 底下這幾個
 PARTS = {"agent": ("act", "queue", "history", "round", "compact")}
-PART_LAYERS = ("endpoint",)
+PART_LAYERS = ("endpoint", "eca")
 
 
 def lib_tools():
