@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜出發點：[10-29 agent-bob § 決定（10-30）](2026-10-29-agent-bob.md#決定10-30)（決定 33～35）｜前一份規劃：[10-29 medium-plan](2026-10-29-medium-plan.md)｜相關條文：[N-14～N-16](../docs/NORMS/05-基礎設施-窗.md)、[N-28、N-54](../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-63、N-64](../docs/NORMS/10-基礎設施-定義與工作區.md)、[P-11～P-14、P-41](../docs/CONVENTION/02-題目stack停錯腦.md)、[C-65～C-67](../docs/CONCEPTS/03-基礎設施.md#資料夾程式工作區與-stack10-19)、[C-75](../docs/CONCEPTS/03-基礎設施.md#proc-之間的交流10-29)｜程式（只翻、沒改）：[lib/agent](../lib/README.md) 的 queue／history／round、[extras/human](../extras/human/README.md)、[extras/cli_hub](../extras/cli_hub/README.md)、[impls/aos-daemon](../impls/aos-daemon/README.md)、[impls/aos-post](../impls/aos-post/README.md)
 
-規矩見 [thinking/README](README.md)。**這份整份是 fable 照原則代定的細節設計，可翻案**；使用者定的在 agent-bob 的決定 33～35。條文草稿標「草稿、待使用者看」，**NORMS／CONVENTION 正文沒動、程式沒動**。衝突與方向題寫在文末，寫給不看 CS 術語的人。
+規矩見 [thinking/README](README.md)。**這份整份是 fable 照原則代定的細節設計，可翻案**；使用者定的在 agent-bob 的決定 33～35。條文草稿標「草稿、待使用者看」，**NORMS／CONVENTION 正文沒動、程式沒動**。衝突與方向題寫在文末，寫給不看 CS 術語的人。**10-30 使用者「都照建議」→ [§ 決定（10-30）](#決定10-30)**。
 
 ## 前提（引用哪些決定）
 
@@ -104,15 +104,29 @@
 
 ## 衝突（跟既有原則、實作對不上的；寫給使用者看）
 
-1. **對話的輸入放 stack，跟 C-65 原文的例子字面不合。** C-65 寫「工作區只放交辦的東西與成果（`new/`、`cur/`、`done/`、`out/` 這類）」，P-11 也把題目放在工作區；這份把 queue 放進 `$AOS_STACK/queue/`。**各選項後果**：放工作區（`$AOS_WS/queue/`）＝使用者的專案資料夾會長出一個 `queue/`（你 10-16 說過不喜歡 ws 底下出現 `work/`），hub 那種「資料夾＝你的程式專案」的情況你 10-28 已經選了放 `.stack/`，兩種 agent 就變兩條規則；放 stack＝工作區乾淨、aos agent 跟 hub 同一條規則、say／listen 只要找 stack，但 C-65 括號裡的例子要改口（對話是執行狀態、不是成果）。**建議**：放 stack，C-65 例子改口（草稿在上面）。
-2. **替黑盒子留 session 檔，跟決定 26「紀錄 aos 不管」字面上相反。** 26 說交流標準不管「發生過什麼」；決定 35 又要 aos 弄一份 symlink 或複製。**後果**：寫進 NORMS＝26 要改口；只寫在 hub 的說明＝標準照舊、這是 hub（adapter）自己的功能。**建議**：不進 NORMS，寫在 hub 說明與 CONVENTION 的 adapter 段；26 不動。
-3. **daemon 原生掛 exec 型子項（②）要動 N-28、N-54。** N-28 寫「daemon 多的只有 `loops`、`adopt`」、子項一律是子 loop；N-54 的手把只認 `loops*`。**後果**：只用 ①＝條文不動，但掛一隻 aos agent 時外層 loop 的窗跟它自己的窗撞同一個檔（要改名或不開窗），而且每個一次性的東西都多一層行程；做 ②＝N-28 多一個 key、state 多一張表、手把多兩個 key，程式約一天。**建議**：做 ②，① 留著當底層與過渡；條文草稿在上面。
-4. **say／listen 不再認舊的 `new/`／`out/`，舊 fsm 範本就對不上通用接口。** agent-bob／ann／dan、topdown 的腦與 fsm 直接讀工作區的 `new/`；P-11 的 10-29 加註又說「照舊用，新東西才走標準」。**後果**：不遷＝這些範本只能手放題目、`aos-exec` 跑，`aos-chat agent-dan` 這種用法沒了（test_human 要改用新的假 agent）；遷＝十幾隻 demo 的 brain.py／fsm 都要改，一兩天。**建議**：不遷、標舊協議，等真要用到那隻再遷（見方向題 1）。
-5. **queue 的一則訊息＝OpenAI message，跟 N-16「`body` 形狀由收信程式定」合、但跟「給人用」有點硬。** 人用 aos-say 說一句話，say 替他包成 `{"role": "user", "content": …}`；有人想直接 `aos-post send` 投一句純文字就是壞信。**後果**：只收 message 物件＝agent 不用轉換、history 一行一行對得上；也收純字串＝多一條「字串＝user 的 content」的暗規則（C-56 不藏規則）。**建議**：只收 message 物件，人一律經 aos-say。
-6. **停著等的 agent 對 `paused`／`stopped` 的反應最多慢一個 `interval_ms`。** aos-loop 只在兩次之間讀 ctl；`ROUND_ON_EMPTY=idle` 時 round 每次退 0、loop 隔 `interval_ms` 再起。**後果**：不在 round 裡阻塞等信＝程式最簡單、反應時間＝`interval_ms`（範本給 300 毫秒）、空轉時每 300 毫秒起一次行程；在 round 裡等＝反應更即時，但暫停要等它等完那段才生效、多一段阻塞程式。**建議**：不阻塞，照上面。
+1. **對話的輸入放 stack，跟 C-65 原文的例子字面不合。** C-65 寫「工作區只放交辦的東西與成果（`new/`、`cur/`、`done/`、`out/` 這類）」，P-11 也把題目放在工作區；這份把 queue 放進 `$AOS_STACK/queue/`。**各選項後果**：放工作區（`$AOS_WS/queue/`）＝使用者的專案資料夾會長出一個 `queue/`（你 10-16 說過不喜歡 ws 底下出現 `work/`），hub 那種「資料夾＝你的程式專案」的情況你 10-28 已經選了放 `.stack/`，兩種 agent 就變兩條規則；放 stack＝工作區乾淨、aos agent 跟 hub 同一條規則、say／listen 只要找 stack，但 C-65 括號裡的例子要改口（對話是執行狀態、不是成果）。**建議**：放 stack，C-65 例子改口（草稿在上面）。 **已定：照建議（使用者 10-30「都照建議」）。**
+2. **替黑盒子留 session 檔，跟決定 26「紀錄 aos 不管」字面上相反。** 26 說交流標準不管「發生過什麼」；決定 35 又要 aos 弄一份 symlink 或複製。**後果**：寫進 NORMS＝26 要改口；只寫在 hub 的說明＝標準照舊、這是 hub（adapter）自己的功能。**建議**：不進 NORMS，寫在 hub 說明與 CONVENTION 的 adapter 段；26 不動。 **已定：照建議（使用者 10-30「都照建議」）。**
+3. **daemon 原生掛 exec 型子項（②）要動 N-28、N-54。** N-28 寫「daemon 多的只有 `loops`、`adopt`」、子項一律是子 loop；N-54 的手把只認 `loops*`。**後果**：只用 ①＝條文不動，但掛一隻 aos agent 時外層 loop 的窗跟它自己的窗撞同一個檔（要改名或不開窗），而且每個一次性的東西都多一層行程；做 ②＝N-28 多一個 key、state 多一張表、手把多兩個 key，程式約一天。**建議**：做 ②，① 留著當底層與過渡；條文草稿在上面。 **已定：照建議（使用者 10-30「都照建議」）。**
+4. **say／listen 不再認舊的 `new/`／`out/`，舊 fsm 範本就對不上通用接口。** agent-bob／ann／dan、topdown 的腦與 fsm 直接讀工作區的 `new/`；P-11 的 10-29 加註又說「照舊用，新東西才走標準」。**後果**：不遷＝這些範本只能手放題目、`aos-exec` 跑，`aos-chat agent-dan` 這種用法沒了（test_human 要改用新的假 agent）；遷＝十幾隻 demo 的 brain.py／fsm 都要改，一兩天。**建議**：不遷、標舊協議，等真要用到那隻再遷（見方向題 1）。 **已定：照建議（使用者 10-30「都照建議」）。**
+5. **queue 的一則訊息＝OpenAI message，跟 N-16「`body` 形狀由收信程式定」合、但跟「給人用」有點硬。** 人用 aos-say 說一句話，say 替他包成 `{"role": "user", "content": …}`；有人想直接 `aos-post send` 投一句純文字就是壞信。**後果**：只收 message 物件＝agent 不用轉換、history 一行一行對得上；也收純字串＝多一條「字串＝user 的 content」的暗規則（C-56 不藏規則）。**建議**：只收 message 物件，人一律經 aos-say。 **已定：照建議（使用者 10-30「都照建議」）。**
+6. **停著等的 agent 對 `paused`／`stopped` 的反應最多慢一個 `interval_ms`。** aos-loop 只在兩次之間讀 ctl；`ROUND_ON_EMPTY=idle` 時 round 每次退 0、loop 隔 `interval_ms` 再起。**後果**：不在 round 裡阻塞等信＝程式最簡單、反應時間＝`interval_ms`（範本給 300 毫秒）、空轉時每 300 毫秒起一次行程；在 round 裡等＝反應更即時，但暫停要等它等完那段才生效、多一段阻塞程式。**建議**：不阻塞，照上面。 **已定：照建議（使用者 10-30「都照建議」）。**
 
 ## 方向題（原則推不出的，附背景例子）
 
-1. **舊的 fsm 範本（agent-bob／ann／dan、topdown 兩隊）要不要一起搬到 queue？** 背景：它們是 10-19～10-25 的範本，腦跟 fsm 直接讀工作區 `new/`；aos-say／listen 改走 queue 之後就說不到它們。agent-dan 是 P-41 腦的工具呼叫的範本，10-28 起新範本是 agent-nia（round）。**建議**：不搬，P-11 標舊協議；哪隻真要再用（例如場景二拿 fsm agent 試「暫停改東西」）就只搬那隻。
-2. **daemon 的 `execs` 子項退了之後要不要讓 state 列留著？** 背景：loop 型子項 `done` 之後列留在 `loops_state.json` 上直到名單拿掉；一次性的 exec 子項會很多（每個射後不理的 agent 一列），表會越來越長、超過 100 列就切分頁。**建議**：跟 loop 型同一條規則（留著，名單拿掉才消失）——規則只有一套（C-52 同一把尺）；表長是使用者自己把名單清乾淨的事（同 P-14 `done/` 清理是人的事）。
-3. **外部 CLI 的 session 檔，hub 只替「hub 自己開的」實例留，還是也替 agent 當工具叫的 claude／codex 留？** 背景：agent 的 act 經 cli_session 叫 claude 工具時會 `register` 進 hub（只登記），那次的 session 檔同樣在 `~/.claude/projects/`；留＝每次工具呼叫的小格都多一個 symlink；不留＝只有 `aos-hub add／open` 的實例有。**建議**：都留（建 symlink 零成本、知道 id 的地方同一處），stop 時才複製的只有 hub 管的實例。
+1. **舊的 fsm 範本（agent-bob／ann／dan、topdown 兩隊）要不要一起搬到 queue？** 背景：它們是 10-19～10-25 的範本，腦跟 fsm 直接讀工作區 `new/`；aos-say／listen 改走 queue 之後就說不到它們。agent-dan 是 P-41 腦的工具呼叫的範本，10-28 起新範本是 agent-nia（round）。**建議**：不搬，P-11 標舊協議；哪隻真要再用（例如場景二拿 fsm agent 試「暫停改東西」）就只搬那隻。 **已定：照建議（使用者 10-30「都照建議」）。**
+2. **daemon 的 `execs` 子項退了之後要不要讓 state 列留著？** 背景：loop 型子項 `done` 之後列留在 `loops_state.json` 上直到名單拿掉；一次性的 exec 子項會很多（每個射後不理的 agent 一列），表會越來越長、超過 100 列就切分頁。**建議**：跟 loop 型同一條規則（留著，名單拿掉才消失）——規則只有一套（C-52 同一把尺）；表長是使用者自己把名單清乾淨的事（同 P-14 `done/` 清理是人的事）。 **已定：照建議（使用者 10-30「都照建議」）。**
+3. **外部 CLI 的 session 檔，hub 只替「hub 自己開的」實例留，還是也替 agent 當工具叫的 claude／codex 留？** 背景：agent 的 act 經 cli_session 叫 claude 工具時會 `register` 進 hub（只登記），那次的 session 檔同樣在 `~/.claude/projects/`；留＝每次工具呼叫的小格都多一個 symlink；不留＝只有 `aos-hub add／open` 的實例有。**建議**：都留（建 symlink 零成本、知道 id 的地方同一處），stop 時才複製的只有 hub 管的實例。 **已定：照建議（使用者 10-30「都照建議」）。**
+
+## 決定（10-30）
+
+使用者看完衝突六條與方向題三條，原文「都照建議」。九條各一句（連回上面各條）：
+
+- **衝突 1**：queue 放 `$AOS_STACK/queue/`，C-65 括號裡的例子改口（對話是執行狀態、不是成果）。
+- **衝突 2**：替黑盒子留 session 檔不進 NORMS，寫在 hub 說明與 CONVENTION 的 adapter 段；決定 26 不動。
+- **衝突 3**：做 daemon 原生 `execs`（②），N-28、N-54 照草稿補；`max: 1`（①）留著當底層與過渡。
+- **衝突 4**：舊 fsm 範本不遷、P-11 標舊協議，aos-say／listen 不再認它們。
+- **衝突 5**：queue 只收 OpenAI message 物件，人一律經 aos-say。
+- **衝突 6**：停著等不在 round 裡阻塞，暫停反應時間＝`interval_ms`。
+- **方向題 1**：舊範本不搬；哪隻真要用（例如場景二的 fsm agent）才只搬那隻。
+- **方向題 2**：`execs` 子項退了以後 state 列跟 loop 型同一條規則（留著，名單拿掉才消失）。
+- **方向題 3**：工具叫的 claude／codex 也留 session 檔 symlink；stop 時才複製的只有 hub 管的實例。
