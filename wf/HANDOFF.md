@@ -12,6 +12,12 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-10-30 16:40（公司 Windows＋WSL；aos-round 實作隊長，時限 17:00 收線）
+
+1. **授權**：可隨意 push；只 `git add <明確的檔>`、不 `-A`、不 force／reset、`stash@{0}` 不動；寫程式派 opus、雜活 sonnet，條文那步不派 sonnet；工人不 commit。測試在 WSL clone `~/.cache/aos-c8a7-e`（`~/.cache/aos-c8a7-sync.sh`、`~/.cache/aos-c8a7-test.sh`，`-j2`、nice 15、一次一個測試程序）；全套基準 780 案、0 fail、12 skip。工人共同規矩草稿在隊長 scratchpad（`r_common.md`），要重寫一份。
+2. **題目**：[thinking 10-30 aos-round](../proto8/thinking/2026-10-30-aos-round.md) 使用者「都照建議」（[§ 決定](../proto8/thinking/2026-10-30-aos-round.md#決定10-30)，`cbaf3f4f`）。實作八步：**第 1 步 aos-fsm 分岔做了**（`c06a841c`）；**下一步＝第 2 步** lib/agent/round 長出 `roundlib.py`、`fsm-stop.json`／`fsm-idle.json`、五個薄格（舊 `_entry` 不刪），接著 3 `bin/aos-round` → 4 agent-nia＋aos-ai → 5 ask_round → 6 刪舊骨架 → 7 條文落正文（自己做或派 opus）→ 收尾（八步註 commit、SESSION-LOG、日誌、WAIT_USER 親手試指令）。
+3. **新條目**：沒有落正文的；WAIT_USER 加了 aos_ws.py 判失敗那題。
+
 ## 2026-10-29 晚（家中 Manjaro；新 session 開場）
 
 1. **授權**：可隨意 push。分工：普通事 opus、簡單工作與雜活 sonnet；做事的 agent（簡單／雜活除外）先讀 wf 規矩；agent 可再派 agent、模型隨意。
