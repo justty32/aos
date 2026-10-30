@@ -27,7 +27,7 @@ run 的環境：註冊檔的 env 疊在自己的環境上（同名以註冊檔�
 錯：stderr 一行「aos-parts: 代號 原因」、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、RegistryBad、SlotBad、PathMissing、
   PathBad、PartBad、PartExists、PartMissing、DirectiveBad、CommandMissing、WriteFailed。which 找不到退 10（不算錯、不印）；run 自己沒錯時結束碼是那格的。
 """
-import json, os, re, subprocess, sys
+import json, os, re, shutil, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
@@ -322,10 +322,13 @@ def cmd_run(reg, args):
         raise Fail("PartMissing", "槽 %s 沒登記，%s 也沒有" % (slot, os.path.join(os.path.dirname(os.path.abspath(reg)), slot)))
     env = dict(os.environ)
     env.update(got["env"])
+    exe = shutil.which("aos-exec", path=os.pathsep.join(os.get_exec_path(env)))   # 自己找：execvpe 失敗時只報 PATH 最後一格，會誤導
+    if exe is None:
+        raise Fail("CommandMissing", "PATH 上找不到可執行的 aos-exec")
     try:
-        os.execvpe("aos-exec", ["aos-exec", got["path"]] + args[1:], env)
+        os.execve(exe, ["aos-exec", got["path"]] + args[1:], env)
     except OSError as e:
-        raise Fail("CommandMissing", "aos-exec 起不來：%s" % e)
+        raise Fail("CommandMissing", "%s 起不來：%s" % (exe, e.strerror or e))
 
 
 COMMANDS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls, "get": cmd_get, "which": cmd_which, "run": cmd_run}

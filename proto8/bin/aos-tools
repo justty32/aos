@@ -26,7 +26,7 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
 錯：stderr 一行「aos-tools: 代號 原因」、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、RegistryBad、PathMissing、
   ToolDefMissing、ToolDefBad、NameBad、ToolExists、ToolMissing、DirectiveBad、CommandMissing、WriteFailed。call 自己沒錯時結束碼是工具的。
 """
-import json, os, re, subprocess, sys, tempfile
+import json, os, re, shutil, subprocess, sys, tempfile
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
@@ -286,10 +286,13 @@ def cmd_call(reg, args):
         raise Fail("ToolMissing", "%s 沒登記（能叫的：%s）" % (rest[0], "、".join(sorted(tools)) or "沒有"))
     path = tools[rest[0]]["path"]
     if kind_of(path) != "exe":
+        exe = shutil.which("aos-exec")             # 自己找：execvp 失敗時只報 PATH 最後一格，會誤導
+        if exe is None:
+            raise Fail("CommandMissing", "PATH 上找不到可執行的 aos-exec")
         try:
-            os.execvp("aos-exec", ["aos-exec", path])   # 資料夾、JSON：arguments 原樣從 stdin 進（P-41）
+            os.execv(exe, ["aos-exec", path])          # 資料夾、JSON：arguments 原樣從 stdin 進（P-41）
         except OSError as e:
-            raise Fail("CommandMissing", "aos-exec 起不來：%s" % e)
+            raise Fail("CommandMissing", "%s 起不來：%s" % (exe, e.strerror or e))
     data = sys.stdin.buffer.read()
     stack, tmpdir = os.environ.get("AOS_STACK"), None
     if stack:

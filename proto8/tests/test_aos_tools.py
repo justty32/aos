@@ -128,6 +128,14 @@ class AosTools(unittest.TestCase):
         self.assertEqual((r.returncode, r.stdout), (7, "2\n"))                     # 結束碼是工具的
         self.bad("ToolMissing", "call", "nope")
 
+    def test_call_exec_not_on_path(self):
+        """call 資料夾／JSON 工具時 PATH 上沒有 aos-exec：CommandMissing、說「PATH 上找不到」（10-30 晚）。"""
+        self.add3()
+        env = dict(self.env, PATH=os.pathsep.join([str(ROOT / "impls" / "aos-json" / "bin"), "/usr/bin", "/bin"]))
+        err = self.bad("CommandMissing", "call", "clock", env=env)
+        self.assertIn("PATH 上找不到可執行的 aos-exec", err)
+        self.assertNotIn("/bin/aos-exec", err)
+
     def test_tooldef_cache(self):
         self.ok("add", "../lib/add.py")
         count = self.lib / "add.py.count"

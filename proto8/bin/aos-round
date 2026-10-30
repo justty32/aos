@@ -14,9 +14,9 @@
   cd 到 lib/agent/round/（從自己的實際位置找 ../lib/agent/round，格的相對路徑從這裡算）；exec 成 `aos-fsm 表檔`。
   結束碼就是 aos-fsm 的（換過去、透明）。沒設 AOS_STACK 不自己擋，交給 aos-fsm 說。沒有旗標、不開窗、不寫檔。
 錯（自己這層的）：stderr 一行「aos-round: 代號 原因」、退 1——ArgumentsBad（沒給、多給）、AgentBad（不是存在的絕對路徑）、
-  PartsBad（aos-parts 起不來、退 0／10 以外、印的不是 {path, env}）、SettingBad（ROUND_ON_EMPTY 不是 stop／idle）、CommandMissing（aos-fsm 起不來）。
+  PartsBad（aos-parts 起不來、退 0／10 以外、印的不是 {path, env}）、SettingBad（ROUND_ON_EMPTY 不是 stop／idle）、CommandMissing（PATH 上找不到 aos-fsm、或起不來）。
 """
-import json, os, subprocess, sys
+import json, os, shutil, subprocess, sys
 
 NAME = "aos-round"
 ROUND = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "lib", "agent", "round")
@@ -61,11 +61,14 @@ def main():
         if env.get(k) and not os.path.isabs(env[k]):
             env[k] = os.path.abspath(env[k]) + ("/" if env[k].endswith("/") else "")
     table = "fsm-%s.json" % empty
+    fsm = shutil.which("aos-fsm", path=os.pathsep.join(os.get_exec_path(env)))   # 自己找：execvpe 失敗時只報 PATH 最後一格，會誤導
+    if fsm is None:
+        die("CommandMissing", "PATH 上找不到可執行的 aos-fsm（proto8/impls/aos-fsm/bin）")
     try:
         os.chdir(ROUND)
-        os.execvpe("aos-fsm", ["aos-fsm", table], env)
+        os.execve(fsm, ["aos-fsm", table], env)
     except OSError as e:
-        die("CommandMissing", "aos-fsm 起不來（%s）：%s" % (ROUND, e))
+        die("CommandMissing", "%s 起不來（cwd %s）：%s" % (fsm, ROUND, e.strerror or e))
 
 
 main()

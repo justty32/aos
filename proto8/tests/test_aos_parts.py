@@ -191,6 +191,14 @@ class AosParts(unittest.TestCase):
         self.bad("ArgumentsBad", "run")
         self.bad("SlotBad", "which", "../x")
 
+    def test_run_exec_not_on_path(self):
+        """run 時 PATH 上沒有 aos-exec：CommandMissing、說「PATH 上找不到」，不印 PATH 最後一格的路徑（10-30 晚）。"""
+        self.ok("add", "act", "../lib/show")
+        env = dict(self.env, PATH=os.pathsep.join([str(ROOT / "impls" / "aos-json" / "bin"), "/usr/bin", "/bin"]))
+        err = self.bad("CommandMissing", "run", "act", env=env)
+        self.assertIn("PATH 上找不到可執行的 aos-exec", err)
+        self.assertNotIn("/bin/aos-exec", err)
+
 
 if __name__ == "__main__":
     unittest.main()

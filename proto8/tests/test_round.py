@@ -712,6 +712,14 @@ class AosRound(AgentCase):
         self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "PartsBad"))
         self.assertFalse((self.stack / "state.txt").exists())
 
+    def test_fsm_not_on_path(self):
+        """PATH 上沒有 aos-fsm：CommandMissing、說「PATH 上找不到」，不印 PATH 最後一格的路徑（10-30 晚真腦實測發現 1）。"""
+        path = os.pathsep.join([str(ROOT / "bin"), "/usr/bin", "/bin"])        # 有 aos-parts、沒有 aos-fsm
+        r = self.aos_round(str(self.agent), env={"PATH": path})
+        self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "CommandMissing"))
+        self.assertIn("PATH 上找不到可執行的 aos-fsm", r.stderr)
+        self.assertNotIn("/bin/aos-fsm", r.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
