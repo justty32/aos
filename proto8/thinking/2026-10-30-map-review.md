@@ -1,8 +1,8 @@
-# 2026-10-30 使用者看現況地圖後的想法：plan 9 式檔案串流、round 的定位、外部 agent 平級、aos-hub 通用化、掛 daemon 的指令、kernel 改名
+# 2026-10-30 使用者看現況地圖後的想法：plan 9 式檔案串流、round 的定位、外部 agent 平級、aos-hub 通用化、掛 daemon 的指令、kernel 與 gate 改名
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜相關：[10-28 agent-round](2026-10-28-agent-round.md)（`parts.json` 在 [§ 1 佈局](2026-10-28-agent-round.md#1-佈局)、round 在 [§ 2](2026-10-28-agent-round.md#2-round一輪本身)）、[10-30 agent-lifecycle](2026-10-30-agent-lifecycle.md)、[10-28 hub-kernel](2026-10-28-hub-kernel.md)
 
-規矩見 [thinking/README](README.md)。10-30 早頂層做了一份「aos 現況地圖」網頁給使用者（在他桌面、不在 git），他看完講了下面五點，說「好了我還在看」，接著又回第 4、5 點、再講第 6～9 點，最後說「剩下的我覺得之後有遇到再說」——這輪到此。本檔只放原文與已定／開著的標記；頂層的回答之後補成結論。
+規矩見 [thinking/README](README.md)。10-30 早頂層做了一份「aos 現況地圖」網頁給使用者（在他桌面、不在 git），他看完講了下面五點，說「好了我還在看」，接著又回第 4、5 點、再講第 6～9 點，說「剩下的我覺得之後有遇到再說」，再補第 10、11 點。本檔只放原文與已定／開著的標記；頂層的回答之後補成結論。
 
 ## 使用者原文（10-30，逐字）
 
@@ -36,6 +36,15 @@
 
 最後一句：「剩下的我覺得之後有遇到再說」——使用者看地圖這輪到此。
 
+再接著回（同一段話，逐字；前段「好，我覺得OK。」、後段「然後簡單跟我說說wait user那些」是問題、頂層已答、不記內容）：
+
+「好，我覺得OK。關於那個aos-daemon-ctl，他應該是要吃環境變數+argv來確定daemon home在哪裡的(要用哪個daemon)。然後aos-gate這個名字不太直觀，換個名字吧。然後簡單跟我說說wait user那些」
+
+10. （接第 6 點）「關於那個aos-daemon-ctl，他應該是要吃環境變數+argv來確定daemon home在哪裡的(要用哪個daemon)。」
+    - **已定**，見 [§ 決定（10-30）](#決定10-30)。
+11. 「然後aos-gate這個名字不太直觀，換個名字吧。」
+    - **已定要改**，名字是頂層建議，見 [§ 決定（10-30）](#決定10-30)。
+
 ## 決定（10-30）
 
 - **第 4 點已定**：`parts.json` 的設計 OK，[10-28 agent-round](2026-10-28-agent-round.md) 決定 16 那套維持。
@@ -45,4 +54,6 @@
 - **第 6 點方向已定**：要一個把 proc 掛到 aos-daemon 的指令（像 `aos-daemon-ctl add XXX`），自動識別 XXX 是不是 loop、不是就包成 `max: 1`。名字與細節由實作隊長代定、可翻案（[agent-lifecycle](2026-10-30-agent-lifecycle.md) 第 7 步 `execs` 的命令列面）。
 - **第 9 點已定**：**aos-kernel-llm 改名 aos-llm-kernel**——領域在前、kernel 是基底（像 lib），以後會有很多領域。排在 agent-lifecycle 實作十步之後做。
   - **開著**（頂層推論，非使用者原話）：這等於一條命名慣例「`aos-<領域>-<功能>`」，要不要寫成條文。
+- **第 10 點已定**（接第 6 點）：掛到 daemon 的指令靠**環境變數＋argv** 決定用哪個 daemon（daemon home）。變數名、argv 蓋過環境變數等細節交實作隊長照 N-63 代定、可翻案。
+- **第 11 點已定要改名**：aos-gate 換名字。名字照頂層建議用 **`aos-llm-send`**（備選 `aos-llm-call`；照 `aos-<領域>-<功能>`、與 aos-llm-kernel 成對），使用者未反對即採用——**頂層建議、代定可翻案**。排在改名那步，跟第 9 點 kernel 改名同一批。
 - 第 7 點（aos-post／aos-lock 要不要補 `get`／`unlock`）開著、不急；第 8 點已答。
