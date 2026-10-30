@@ -37,9 +37,10 @@ def alive(pid):
         return False
 
 
-def rows_of(stack, st):
-    """loops_state 的 loops 欄解開：物件照原樣；切檔（{"$ref": ["loops_state_loops/<雜湊>.json", …]}）照順序讀回來合起來（10-23）。"""
-    v = st.get("loops", {})
+def rows_of(stack, st, key="loops"):
+    """loops_state 的 loops 欄（key＝"execs"：exec 型子項那張表，10-30）解開：物件照原樣；
+    切檔（{"$ref": ["loops_state_loops/<雜湊>.json", …]}）照順序讀回來合起來（10-23）。"""
+    v = st.get(key, {})
     if "$ref" not in v:
         return v
     out = {}
@@ -92,10 +93,11 @@ class T(unittest.TestCase):
         st = self.s / "loops_state.json"
         if st.is_file():   # 測試失敗時別留孤兒（子項叫 loops_state.json 時它是小格）
             try:
-                rows = rows_of(self.s, json.loads(st.read_text()))
-            except (OSError, ValueError):
-                rows = {}
-            for r in rows.values():
+                doc = json.loads(st.read_text())
+                rows = list(rows_of(self.s, doc).values()) + list(rows_of(self.s, doc, "execs").values())
+            except (OSError, ValueError, AttributeError):
+                rows = []
+            for r in rows:
                 if r.get("pid") and alive(r["pid"]):
                     try:
                         os.killpg(r["pid"], signal.SIGKILL)
@@ -179,7 +181,9 @@ class T(unittest.TestCase):
         ls = self.lstate()
         self.assertEqual({r["phase"] for r in ls["loops"].values()}, {"stopped"})   # daemon 收掉的＝stopped（10-23 命名統合）
         self.assertEqual(list(ls["loops"]["a"]), ["pid", "started_at_ticks", "phase", "code", "signal"])
-        self.assertEqual(list(ls), ["kind", "ctl_seq", "ctl_warning", "loops", "pid", "started_at_ticks", "boot_id", "recorded_at"])
+        self.assertEqual(list(ls), ["kind", "ctl_seq", "ctl_warning", "loops", "execs", "pid", "started_at_ticks", "boot_id",
+                                    "recorded_at"])   # execs＝exec 型子項那張表（10-30；沒有就是 {}）
+        self.assertEqual(ls["execs"], {})
         self.assertEqual([ls[k] for k in ("kind", "ctl_seq", "ctl_warning", "pid", "started_at_ticks", "boot_id")],
                          ["state", None, None] + [st[k] for k in ("pid", "started_at_ticks", "boot_id")])   # 心跳同一個行程的值
         self.assertEqual([alive(x) for x in pids], [False, False])
@@ -1058,6 +1062,153 @@ class T(unittest.TestCase):
         time.sleep(0.6)
         self.assertEqual((set(self.kids()), (self.s / "carl").exists()), ({"a", "bob"}, False))
         self.mstop(p)
+
+    # ───── J. 10-30 exec 型子項 execs（thinking 2026-10-30-agent-lifecycle B-12 ②、實作步驟 7）：直接 aos-exec 一次、不包 aos-loop ─────
+
+    JOB = ('echo "$*" >> "$AOS_STACK/runs"\necho "$AOS_STACK" > "$AOS_STACK/stack.txt"\ncat > "$AOS_STACK/stdin.txt"\n'
+           'echo "$$ $(cut -d" " -f5 /proc/$$/stat)" > "$AOS_STACK/ids"\necho "job 的 stderr" >&2\nexit 3\n')
+
+    def prog(self, name, body):
+        d = self.t / name
+        d.mkdir()
+        (d / "_entry").write_text("#!/bin/sh\n" + body)
+        (d / "_entry").chmod(0o755)
+
+    def xkids(self):
+        return rows_of(self.s, self.lstate(), "execs")
+
+    def test_execs_once_done_not_restarted(self):
+        # 字串、[目標, 參數...]、{"exec": 目標}（其他 key 忽略）三種寫法；各跑一次、退 3＝done／code 3、不重起；
+        # 小格裡沒有 loop.json／ctl.json／state.json；AOS_STACK＝小格/、stdin /dev/null、stderr 進小格的 stderr.txt、自成群組（pgrp＝pid）
+        self.prog("job", self.JOB)
+        r = self.run_d({"state": "state.json", "max": 15, "interval_ms": 100,
+                        "execs": {"j": "job", "k": ["job", "a", "b"], "o": {"exec": ["job", "c"], "max": 5}}})
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        st = self.lstate()
+        self.assertEqual(st["loops"], {})
+        x = self.xkids()
+        self.assertEqual(list(x), ["j", "k", "o"])
+        self.assertEqual({n: (r["phase"], r["code"], r["signal"]) for n, r in x.items()},
+                         {n: ("done", 3, None) for n in "jko"})
+        self.assertEqual({frozenset(r) for r in x.values()}, {frozenset({"pid", "started_at_ticks", "phase", "code", "signal"})})
+        for n, args in (("j", ""), ("k", "a b"), ("o", "c")):
+            cell = self.s / n
+            self.assertEqual((cell / "runs").read_text(), args + "\n", n)   # 只跑一次
+            self.assertEqual(sorted(f.name for f in cell.iterdir()), ["ids", "runs", "stack.txt", "stderr.txt", "stdin.txt"], n)
+            self.assertEqual(((cell / "stack.txt").read_text(), (cell / "stdin.txt").read_text()), (str(cell) + "/\n", ""), n)
+            self.assertEqual((cell / "stderr.txt").read_text(), "job 的 stderr\n", n)
+            pid, pgrp = (cell / "ids").read_text().split()
+            self.assertEqual((int(pid), int(pgrp)), (x[n]["pid"], x[n]["pid"]), n)   # 那支程式就是表上的 pid（中間沒有 aos-loop）
+
+    def test_execs_removed_sigterm_then_kill_group(self):
+        # execs_removed：SIGTERM 直接打那支程式（a 退了就拿掉）；不理的（b）10 秒後 SIGKILL 整群（連它的 sleep）
+        self.prog("stub", 'trap "" TERM\nsleep 1000 &\necho "$$ $!" > "$AOS_STACK/pids"\nwhile :; do sleep 0.05; done\n')
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "execs": {"a": "long", "b": "stub"}})
+        x = until(lambda: (self.s / "a" / "starts").exists() and (self.s / "b" / "pids").exists() and len(self.xkids()) == 2
+                  and self.xkids())
+        self.assertTrue(x)
+        self.assertIn("long/_entry", Path("/proc/%d/cmdline" % x["a"]["pid"]).read_text())   # 就是那支程式、不是 aos-loop
+        bpid, bsleep = map(int, (self.s / "b" / "pids").read_text().split())
+        self.addCleanup(lambda: alive(bsleep) and os.kill(bsleep, signal.SIGKILL))
+        self.assertEqual(bpid, x["b"]["pid"])
+        t0 = time.monotonic()
+        self.lctl({"execs_removed": ["a", "b"], "seq": 1})
+        self.assertTrue(until(lambda: list(self.xkids()) == ["b"] and self.xkids()["b"]["phase"] == "stopping", 5))
+        self.assertLess(time.monotonic() - t0, 5)
+        self.assertFalse(alive(x["a"]["pid"]))
+        self.assertTrue(until(lambda: self.xkids() == {}, 20))
+        self.assertGreater(time.monotonic() - t0, 9)
+        self.assertEqual((alive(bpid), alive(bsleep)), (False, False))
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err), (0, ""))
+
+    def test_execs_cfg_rules_and_clash(self):
+        # daemon.json：execs 跟 loops 同名、跟自己的窗撞名、寫法不合＝CfgBad 退 1、一行、不建小格
+        for doc in ({"loops": {"x": self.long()}, "execs": {"x": "long"}}, {"state": "state.json", "execs": {"state.json": "long"}},
+                    {"execs": [1]}, {"execs": {"a": 3}}, {"execs": {"a": {"exec": {"argv": ["true"]}}}}, {"execs": {"a": {"max": 1}}},
+                    {"execs": {"a": []}}, {"execs": {"a": ["long", 1]}}, {"execs": {"a/b": "long"}}):
+            r = self.run_d(dict(doc, max=1))
+            self.assertEqual((r.returncode, r.stderr.split(" ")[1], r.stderr.count("\n")), (1, "CfgBad", 1), (doc, r.stderr))
+            self.assertFalse((self.s / "x").exists() or (self.s / "a").exists(), doc)
+        # loops_ctl：合出來 loops 與 execs 同名＝整份不採用（ctl_warning）；loops_removed＋execs_added 同名＝換種類：收掉舊的 loop、起 exec 型
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})
+        k = until(lambda: (self.s / "a" / "starts").exists() and self.kids())
+        self.lctl({"execs_added": {"a": "long"}, "seq": 1})
+        w = until(lambda: self.lstate()["ctl_warning"])
+        self.assertIn("同時在 loops 與 execs", w)
+        self.assertEqual((list(self.kids()), self.xkids(), alive(k["a"]["pid"])), (["a"], {}, True))
+        self.lctl({"loops_removed": ["a"], "execs_added": {"a": "long"}, "seq": 2})
+        x = until(lambda: "a" in self.xkids() and self.xkids()["a"]["phase"] == "running" and self.xkids())
+        self.assertTrue(x)
+        self.assertEqual((self.kids(), alive(k["a"]["pid"]), self.lstate()["ctl_warning"], self.lstate()["ctl_seq"]), ({}, False, None, 2))
+        self.assertTrue(until(lambda: len((self.s / "a" / "starts").read_text().split()) == 2))
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err, self.xkids()["a"]["phase"], alive(x["a"]["pid"])), (0, "", "stopped", False))
+
+    def test_execs_adopt(self):
+        # adopt 兩張表都接：exec 型子項接回、不重起；收工時照收
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"l": self.long()}, "execs": {"a": "long"}})
+        x = until(lambda: (self.s / "a" / "starts").exists() and (self.s / "l" / "starts").exists() and self.xkids()
+                  and self.kids() and self.xkids())
+        self.assertTrue(x)
+        pid, lpid = x["a"]["pid"], self.kids()["l"]["pid"]
+        p.kill()
+        p.wait()
+        p2 = self.start()
+        self.assertTrue(until(lambda: self.lstate()["pid"] == p2.pid))
+        time.sleep(1)
+        self.assertEqual((self.xkids()["a"]["pid"], self.kids()["l"]["pid"], len((self.s / "a" / "starts").read_text().split())),
+                         (pid, lpid, 1))
+        self.ctl({"stopped": True})
+        out, err = p2.communicate(timeout=30)
+        self.assertEqual((p2.returncode, err, self.xkids()["a"]["phase"], alive(pid), alive(lpid)), (0, "", "stopped", False, False))
+
+    def test_max1_loop_still_runs_beside_execs(self):
+        # ①（使用者 10-30「包成max:1也是可以」）：{"exec": X, "max": 1} 的 loop 型照舊——小格有 loop.json／ctl／state、列在 loops 表；
+        # 同一份 daemon.json 裡的 exec 型子項列在 execs 表、小格沒有 loop.json
+        self.prog("job", self.JOB)
+        r = self.run_d({"state": "state.json", "max": 15, "interval_ms": 100,
+                        "loops": {"bob": {"exec": "job", "max": 1}}, "execs": {"carl": "job"}})
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        st = self.lstate()
+        self.assertEqual(({n: (r["phase"], r["code"]) for n, r in st["loops"].items()},
+                          {n: (r["phase"], r["code"]) for n, r in st["execs"].items()}),
+                         ({"bob": ("done", 3)}, {"carl": ("done", 3)}))
+        self.assertEqual(((self.s / "bob" / "runs").read_text(), (self.s / "carl" / "runs").read_text()), ("\n", "\n"))
+        self.assertTrue(all((self.s / "bob" / f).is_file() for f in ("loop.json", "state.json")))
+        self.assertFalse((self.s / "carl" / "loop.json").exists())
+        self.assertIn("aos-loop: 第 1 次", (self.s / "bob" / "stderr.txt").read_text())   # 多一層 aos-loop：它自己的那行
+
+    def test_execs_mailbox(self):
+        # 信箱模式的信多認 execs_added／execs_removed；套完 loops 與 execs 同名＝壞信、不套；done 的列留著，execs_removed 才拿掉（方向題 2）
+        self.prog("job", self.JOB)
+        p = self.mstart()
+        self.post("0001", {"execs_added": {"j": "job"}})
+        self.assertTrue(until(lambda: self.xkids().get("j", {}).get("phase") == "done"))
+        time.sleep(0.6)
+        self.assertEqual(((self.s / "j" / "runs").read_text(), self.xkids()["j"]["code"]), ("\n", 3))   # 不重起
+        self.post("0002", {"execs_added": {"a": "long"}})   # a 已是 loop＝撞名
+        w = until(lambda: self.lstate()["letter_warning"])
+        self.assertTrue(w.startswith("信 0002 不採用：") and "同時在 loops 與 execs" in w, w)
+        self.assertEqual(set(self.xkids()), {"j"})
+        self.post("0003", {"execs_removed": ["j"]})
+        self.assertTrue(until(lambda: self.xkids() == {}))
+        self.mstop(p)
+
+    def test_execs_state_split(self):
+        # execs 表超過 100 列一樣切檔（同一個分檔資料夾）；loops 表照舊是物件
+        names = ["x%03d" % i for i in range(101)]
+        r = self.run_d({"state": "state.json", "max": 4, "interval_ms": 100, "b": {"argv": ["true"]},
+                        "loops": {"l": self.quick()}, "execs": {n: "daemon.json#/b" for n in names}}, timeout=60)
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        st = self.lstate()
+        self.assertEqual((list(st["execs"]), list(st["loops"])), (["$ref"], ["l"]))
+        self.assertTrue(all(re.fullmatch(r"loops_state_loops/[0-9a-f]{16}\.json", x) for x in st["execs"]["$ref"]))
+        rows = self.xkids()
+        self.assertEqual((list(rows), {(x["phase"], x["code"]) for x in rows.values()}), (names, {("done", 0)}))
+        self.assertEqual(directive(st, self.s)["execs"], rows)
 
 
 if __name__ == "__main__":

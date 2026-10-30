@@ -1,4 +1,4 @@
-// child.cpp：【child】一支子 loop（說明見 child.hpp）。
+// child.cpp：【child】一支子 loop，或一個 exec 型子項（說明見 child.hpp）。
 //
 // 10-21 傍晚起子 loop 經 aos-exec 起（使用者「5.要」，ideas § 9；`aos-exec -- 小格/loop.json#/_entry`）：
 // daemon 把子項設定寫成小格裡的 loop.json、蓋上 "_entry": ["aos-loop", {"$env": "AOS_CF"}]，fork 一個子行程呼叫 aos-exec 的
@@ -6,6 +6,8 @@
 // 所以 ps 看到的子 loop 叫 aos-loop（原本 fork 後在子行程裡直接跑 aos-loop 的 Loop、名字是 aos-daemon，那是 10-20 頂層代定的做法，換掉）。
 // fork 時 daemon 只有一條執行緒，子行程裡做 C++ 配置、setenv 不會撞鎖。三個訊號 daemon 一開始就擋著（block_signals），
 // 子行程 exec 之前解開（遮罩會跨 exec 繼承；子行程不擋）。
+// 10-30 execs（thinking 2026-10-30-agent-lifecycle B-12 ②、使用者「讓daemon可以掛aos-exec，也是不錯的」）：exec 型子項走同一條 launch
+// （小格、stderr.txt、setsid、/dev/null、AOS_STACK、cd 到 daemon 的 cwd），只是不寫 loop.json、run_cli 直接拿 {"--", 目標, 參數...}——中間沒有 aos-loop。
 #include "child/child.hpp"
 
 #include "aos/files.hpp"
@@ -19,6 +21,7 @@
 #include <exception>
 #include <filesystem>
 #include <system_error>
+#include <vector>
 
 #include <fcntl.h>
 #include <sys/wait.h>
@@ -26,8 +29,10 @@
 
 namespace aos::daemon {
 
-// 子行程：自成 session、接好三個串流、設 AOS_STACK、cd 到 daemon 的 cwd，`aos-exec -- 小格/loop.json#/_entry`。不回來。
-[[noreturn]] static void run_child(const std::string& cell, const std::string& cwd, int err_fd) {
+// 子行程：自成 session、接好三個串流、設 AOS_STACK、cd 到 daemon 的 cwd，呼叫 aos-exec 的 run_cli(argv)。不回來。
+// argv：子 loop＝{"--", 小格/loop.json#/_entry}；exec 型子項＝{"--", 目標, 參數...}（10-30）。fork 之前就備好。
+[[noreturn]] static void run_child(const std::string& cell, const std::string& cwd, int err_fd,
+                                   const std::vector<std::string>& argv) {
     setsid();
     int null_fd = open("/dev/null", O_RDWR);
     if (null_fd >= 0) {
@@ -52,10 +57,44 @@ namespace aos::daemon {
     if (chdir(cwd.c_str()) != 0) {
         std::fprintf(stderr, "aos-daemon: %s cd 不進 %s：%s\n", code::Internal, cwd.c_str(), std::strerror(errno));
     } else {
-        rc = aos::exec::run_cli({"--", aos::join(cell, "loop.json") + "#/_entry"});   // exec 成功就不回來
+        rc = aos::exec::run_cli(argv);   // exec 成功就不回來
     }
     std::fflush(nullptr);
     _exit(rc);
+}
+
+// 只建小格這一層：$AOS_STACK 不在＝建不了（建 stack 只在 aos-exec 做，N-59 第 1 件；10-23 前是 mkdir -p）。spawn 與 spawn_exec 共用。
+static void make_cell(const std::string& name, const std::string& cell) {
+    std::error_code ec;
+    std::filesystem::create_directory(cell, ec);
+    if (ec) {
+        throw Error{code::MkdirFailed, "起不了子項 " + name + "：建不了 " + cell + "（" + ec.message() + "）"};
+    }
+}
+
+// 小格建好之後：開小格的 stderr.txt（附加）、fork、子行程 run_child(argv)。spawn 與 spawn_exec 共用。
+static Child launch(const std::string& name, const std::string& cell, const std::string& cwd,
+                    const std::vector<std::string>& argv) {
+    std::string err_path = aos::join(cell, "stderr.txt");
+    int err_fd = open(err_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
+    if (err_fd < 0) {
+        throw Error{code::LaunchFailed, "起不了子項 " + name + "：開不了 " + err_path + "（" + std::strerror(errno) + "）"};
+    }
+    std::fflush(nullptr);
+    pid_t pid = fork();
+    if (pid < 0) {
+        int e = errno;
+        close(err_fd);
+        throw Error{code::LaunchFailed, "起不了子項 " + name + "：fork 失敗（" + std::strerror(e) + "）"};
+    }
+    if (pid == 0) {
+        run_child(cell, cwd, err_fd, argv);
+    }
+    close(err_fd);
+    Child c;
+    c.pid = pid;
+    c.started_at_ticks = aos::proc_started_at_ticks(pid);
+    return c;
 }
 
 Child spawn(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd) {
@@ -92,35 +131,27 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
     exec_entry.push_back("aos-loop");
     exec_entry.push_back(Json::object({{"$env", "AOS_CF"}}));
     cfg["_entry"] = exec_entry;   // 一律蓋上
-    std::error_code ec;
-    std::filesystem::create_directory(cell, ec);   // 只建小格這一層：$AOS_STACK 不在＝建不了（建 stack 只在 aos-exec 做，N-59 第 1 件；10-23 前是 mkdir -p）
-    if (ec) {
-        throw Error{code::MkdirFailed, "起不了子項 " + name + "：建不了 " + cell + "（" + ec.message() + "）"};
-    }
+    make_cell(name, cell);
     try {
         aos::loop::write_window(aos::join(cell, "loop.json"), cfg);
     } catch (const Error& e) {
         throw Error{e.code, "起不了子項 " + name + "：" + e.msg};
     }
-    std::string err_path = aos::join(cell, "stderr.txt");
-    int err_fd = open(err_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
-    if (err_fd < 0) {
-        throw Error{code::LaunchFailed, "起不了子項 " + name + "：開不了 " + err_path + "（" + std::strerror(errno) + "）"};
+    return launch(name, cell, cwd, {"--", aos::join(cell, "loop.json") + "#/_entry"});
+}
+
+Child spawn_exec(const std::string& name, const std::string& cell, const Json& target, const std::string& cwd) {
+    std::vector<std::string> argv{"--"};   // 相對的目標不轉：子行程 cd 到 daemon 的 cwd 才叫 aos-exec，本來就從那裡算
+    if (target.is_string()) {
+        argv.push_back(target.get<std::string>());
+    } else {
+        for (const Json& a : target) {
+            argv.push_back(a.get<std::string>());
+        }
     }
-    std::fflush(nullptr);
-    pid_t pid = fork();
-    if (pid < 0) {
-        int e = errno;
-        close(err_fd);
-        throw Error{code::LaunchFailed, "起不了子項 " + name + "：fork 失敗（" + std::strerror(e) + "）"};
-    }
-    if (pid == 0) {
-        run_child(cell, cwd, err_fd);
-    }
-    close(err_fd);
-    Child c;
-    c.pid = pid;
-    c.started_at_ticks = aos::proc_started_at_ticks(pid);
+    make_cell(name, cell);
+    Child c = launch(name, cell, cwd, argv);
+    c.once = true;
     return c;
 }
 

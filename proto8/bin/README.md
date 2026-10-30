@@ -1,10 +1,10 @@
-# bin — aos-tick、aos-tools、aos-parts（Python）
+# bin — aos-tick、aos-tools、aos-parts、aos-daemon-ctl（Python）
 
 ← [proto8](../README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)｜demo：[demo](../demo/README.md)｜C++ 實作：[impls](../impls/README.md)｜測試：`python3 -m unittest discover -s proto8/tests`（先建 impls，見 [testing](../../wf/workflows/testing.md)）
 
 > **C++（[proto8/impls](../impls/README.md)）是唯一實作**（使用者 10-23：「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；fsm 和 tick，使用者選「fsm 也改用 C++、tick 先留 Python」）：
 > `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 的說明在各自的 README：[aos-exec](../impls/aos-exec/README.md)、[aos-loop](../impls/aos-loop/README.md)、[aos-fsm](../impls/aos-fsm/README.md)、[aos-daemon](../impls/aos-daemon/README.md)；inst 是 C lib [inst](../impls/inst/README.md)。
-> 這裡是 `aos-tick` 與 10-28 加的 `aos-tools`、`aos-parts`（Python，都用 `aos_flags.py` 的旗標解析 `parse`）。
+> 這裡是 `aos-tick` 與 10-28 加的 `aos-tools`、`aos-parts`、10-30 加的 `aos-daemon-ctl`（Python，都用 `aos_flags.py` 的旗標解析 `parse`）。
 > 刪掉的 bin 版各支逐支說明在 git 歷史：`git show 60d677cc:proto8/bin/README.md`。
 
 ```
@@ -50,3 +50,11 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
 - `AOS_CF`、`AOS_CD`（使用者 10-19 下班前定，「同意做」）：實際被執行的檔、它所在的資料夾，aos-exec 每層覆寫（N-57；已做）。
 - `AOS_CO`（使用者 10-21 晚「AOS_CF不動。但是我們再加上AOS_CO」「aos current obj」）：入口在 JSON 檔裡的指標，aos-exec 每層覆寫（N-57；已做）。aos-loop、aos-fsm、aos-daemon 的 `exec` 直接放單子物件時，跑那張單子的期間也把 `AOS_CF`／`AOS_CD`／`AOS_CO` 設成它的位置（設定檔、資料夾、`/exec` 或 `/states/<名>/exec`），跑完還原，見 [impls/aos-loop](../impls/aos-loop/README.md)、[thinking 10-24](../thinking/2026-10-24-exec-relative.md#10-24-exec-直接放單子)。
 - `#/` 尋址（使用者 10-19 下班前定，「#/。」「尋址一定值得。」）：`檔#/指標` 指進 JSON（N-62；已做）。
+
+- **`aos-daemon-ctl - 把東西掛到一個 aos-daemon 上（往它的信箱投 loops_added／execs_added）`**（10-30；使用者「我們現在跑aos-exec XXX，等同於把這個proc掛到linux這個原生proc管理器上。假如我們想要掛在daemon上呢？或許是aos-daemon-ctl add XXX這樣，然後會自動識別XXX是否為loop，不是的話就max:1這樣？」；[thinking 10-30 agent-lifecycle](../thinking/2026-10-30-agent-lifecycle.md) 實作第 7 步的補；完整說明在檔頭 docstring；例子在 [demo/daemon-3](../demo/daemon-3/README.md)）
+  用法 `aos-daemon-ctl [--daemon D] add [--name N] [--kind loop|exec|max1] XXX｜rm 名字｜ls [--json]`。
+  **哪個 daemon**（N-63 hub 型變數）：`--daemon` ＞ `$AOS_DAEMON`，值＝那個 daemon 的 `$AOS_STACK`（它的窗用預設名字：信箱 `loops_mailbox/`、`loops_state.json`）；都沒有或不是資料夾＝`DaemonMissing`；子 proc 照常繼承。
+  **add／rm＝投信**（信箱模式，N-28 的 10-29 補、N-54）：daemon.json 要寫 `"loops_mailbox": "loops_mailbox"`，沒有 `new/`＝`MailboxMissing`；stdout 印 aos-post 的信號；daemon 下一圈才套，結果看 ls（壞信在 `letter_warning`）。rm＝`loops_removed`＋`execs_removed` 都寫那個名字。
+  **自動識別**：XXX 是有 `loop.json` 的資料夾＝loop 子項，設定＝它的 loop.json（去掉 `_entry`；相對 exec 照 XXX 轉絕對、單子沒寫 cwd＝補 XXX）——子 loop 直接跑它的 loop，ctl／state 落在小格；其他＝`execs`（XXX 的絕對路徑）。`--kind max1`＝`{"exec": XXX, "max": 1}` 的 loop（使用者的底線）。名字＝`--name` ＞ XXX 的資料夾名。XXX 的 `.env`、loop.json 裡的指示詞不處理。
+  **ls**：讀 `loops_state.json` 兩張表（切檔的 `$ref` 合回來），一行「名字 TAB loop|exec TAB phase TAB pid TAB code」（code 沒有＝`-`）；`--json`＝一行 `{"loops", "execs"}`。
+  **錯**：stderr 一行 `aos-daemon-ctl: 代號 原因`、退 1（`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`DaemonMissing`、`MailboxMissing`、`PathMissing`、`LoopBad`、`KindBad`、`StateMissing`、`StateBad`、`CommandMissing`、`SendFailed`）。要 PATH 上有 aos-post。測試 `proto8/tests/test_aos_daemon_ctl.py`（4 案）。

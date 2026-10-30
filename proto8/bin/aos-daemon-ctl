@@ -1,0 +1,185 @@
+#!/usr/bin/env python3
+"""aos-daemon-ctl [--daemon D] add|rm|ls … — 把東西掛到一個 aos-daemon 上（10-30，使用者「或許是aos-daemon-ctl add XXX這樣」）。
+
+`aos-exec XXX`＝掛到 Linux 的 proc 管理；`aos-daemon-ctl add XXX`＝掛到 daemon 上。本質是 N-54 的管轄手把：
+往 daemon 的信箱（信箱模式，N-28 的 10-29 補）投一封 `loops_added`／`execs_added` 的信。設計與代定見
+proto8/thinking/2026-10-30-agent-lifecycle.md（實作第 7 步的補）與 bin/README.md。
+
+    aos-daemon-ctl [--daemon D] add [--name N] [--kind loop|exec|max1] XXX   掛上去；stdout 印信號（aos-post 給的）
+    aos-daemon-ctl [--daemon D] rm 名字                                       拿下來（loops_removed＋execs_removed 都寫）；印信號
+    aos-daemon-ctl [--daemon D] ls [--json]                                   列 loops_state.json 兩張表：一行「名字 TAB loop|exec TAB phase TAB pid TAB code」
+
+哪個 daemon（N-63 hub 型變數）：--daemon ＞ $AOS_DAEMON；值＝那個 daemon 的 $AOS_STACK 資料夾（它的窗都在這：
+  loops_mailbox/、loops_state.json，用預設名字）。都沒有＝DaemonMissing；不是資料夾＝DaemonMissing。子 proc 照常繼承 AOS_DAEMON。
+  信箱固定是 <D>/loops_mailbox/（daemon.json 要寫 "loops_mailbox": "loops_mailbox"）；沒有 new/＝MailboxMissing（daemon 不是信箱模式或還沒起）。
+add 的自動識別（--kind 沒給時）：XXX 是資料夾、裡面有 loop.json＝loop 型（daemon 的子 loop 直接跑 XXX 的 loop.json）；其他＝exec 型（execs）。
+  loop：子項設定＝XXX/loop.json 的內容（去掉 _entry），exec 的相對目標照 XXX 轉絕對、單子沒寫 cwd＝補 XXX、相對的 cwd 接在 XXX 後面；
+        ctl／state 原樣（相對 $AOS_STACK，落在小格）。XXX 的 .env、loop.json 裡的 $ref／$env 不處理（照 daemon 的規則從它的 cwd 算）。
+  exec：execs_added {名字: XXX 的絕對路徑}（`檔#/指標` 只轉 # 前面）。
+  max1（使用者 10-30「包成max:1也是可以」，只在 --kind 指定時）：loops_added {名字: {"exec": XXX, "max": 1}}。
+  名字：--name ＞ XXX 的資料夾名（# 前面那段的 basename）。名字合不合格、撞不撞名由 daemon 驗（壞信記在 loops_state.json 的 letter_warning）。
+  信只說「要」，daemon 下一圈才套；結果看 ls。
+錯：stderr 一行「aos-daemon-ctl: 代號 原因」、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、MailboxMissing、
+  PathMissing、LoopBad（loop.json 讀不了或不是物件）、KindBad、StateMissing（ls：loops_state.json 不在）、StateBad、CommandMissing（PATH 沒 aos-post）、
+  SendFailed（aos-post 退非 0，它的 stderr 照轉）。
+要 PATH 上有 aos-post。
+"""
+import json, os, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import aos_flags
+
+NAME = "aos-daemon-ctl"
+USAGE = ("aos-daemon-ctl [--daemon D] add [--name N] [--kind loop|exec|max1] XXX | rm 名字 | ls [--json]")
+KINDS = ("loop", "exec", "max1")
+
+
+class Fail(Exception):
+    def __init__(self, code, reason):
+        super().__init__(reason)
+        self.code = code
+
+
+def daemon_dir(opts):
+    d = opts.get("daemon") or os.environ.get("AOS_DAEMON", "")
+    if not d:
+        raise Fail("DaemonMissing", "沒給 --daemon、也沒設 AOS_DAEMON（要指到 daemon 的 $AOS_STACK 資料夾）")
+    if not os.path.isdir(d):
+        raise Fail("DaemonMissing", "daemon 的資料夾不在：%s" % d)
+    return os.path.abspath(d)
+
+
+def abs_target(t, base):
+    """相對的目標接在 base 後面（`檔#/指標` 只動 # 前面；絕對的、只有 #/… 的不動）。"""
+    f, h, p = t.partition("#")
+    if f and not f.startswith("/"):
+        f = os.path.abspath(os.path.join(base, f))
+    return f + h + p
+
+
+def loop_spec(xxx):
+    try:
+        with open(os.path.join(xxx, "loop.json"), encoding="utf-8") as fh:
+            text = fh.read()
+        if text.startswith("#!"):
+            text = text.split("\n", 1)[1] if "\n" in text else ""
+        cfg = json.loads(text)
+    except (OSError, ValueError) as e:
+        raise Fail("LoopBad", "%s/loop.json 讀不了或不是 JSON：%s" % (xxx, e))
+    if not isinstance(cfg, dict):
+        raise Fail("LoopBad", "%s/loop.json 要是 JSON 物件" % xxx)
+    cfg.pop("_entry", None)
+    ex = cfg.get("exec")
+    if isinstance(ex, str):
+        cfg["exec"] = abs_target(ex, xxx)
+    elif isinstance(ex, list) and ex and isinstance(ex[0], str):
+        cfg["exec"] = [abs_target(ex[0], xxx)] + ex[1:]
+    elif isinstance(ex, dict) and "$ref" not in ex and "$env" not in ex:   # 內嵌單子：cwd 定死在 XXX（aos-exec XXX 時本來就 cd 進去）
+        c = ex.get("cwd")
+        if c is None:
+            ex["cwd"] = xxx
+        elif isinstance(c, str):
+            ex["cwd"] = os.path.join(xxx, c)
+    return cfg
+
+
+def send(d, body):
+    box = os.path.join(d, "loops_mailbox")
+    if not os.path.isdir(os.path.join(box, "new")):
+        raise Fail("MailboxMissing", "%s 不是信箱（daemon.json 要寫 \"loops_mailbox\": \"loops_mailbox\"，或 daemon 還沒起）" % box)
+    try:
+        r = subprocess.run(["aos-post", "send", box], input=json.dumps(body, ensure_ascii=False), capture_output=True, text=True)
+    except FileNotFoundError:
+        raise Fail("CommandMissing", "PATH 上沒有 aos-post")
+    if r.returncode != 0:
+        sys.stderr.write(r.stderr)
+        raise Fail("SendFailed", "aos-post send 退 %d" % r.returncode)
+    sys.stdout.write(r.stdout)
+
+
+def cmd_add(opts, args):
+    o, rest = aos_flags.parse(args, {"--name": "name", "--kind": "kind"})
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "add 要一個 XXX（usage: %s）" % USAGE)
+    d = daemon_dir(opts)
+    xxx = abs_target(rest[0], os.getcwd())
+    path = xxx.partition("#")[0]
+    if not os.path.exists(path):
+        raise Fail("PathMissing", "沒有 %s" % path)
+    kind = o.get("kind") or ("loop" if os.path.isdir(path) and os.path.isfile(os.path.join(path, "loop.json")) else "exec")
+    if kind not in KINDS:
+        raise Fail("KindBad", "--kind 要是 loop、exec、max1 之一：%s" % kind)
+    if kind == "loop" and not os.path.isdir(path):
+        raise Fail("KindBad", "--kind loop 要 XXX 是有 loop.json 的資料夾：%s" % path)
+    name = o.get("name") or os.path.basename(path.rstrip("/"))
+    if kind == "loop":
+        body = {"loops_added": {name: loop_spec(path)}}
+    elif kind == "max1":
+        body = {"loops_added": {name: {"exec": xxx, "max": 1}}}
+    else:
+        body = {"execs_added": {name: xxx}}
+    send(d, body)
+
+
+def cmd_rm(opts, args):
+    o, rest = aos_flags.parse(args, {})
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "rm 要一個名字（usage: %s）" % USAGE)
+    send(daemon_dir(opts), {"loops_removed": [rest[0]], "execs_removed": [rest[0]]})
+
+
+def table(d, v):
+    """loops_state 的一張表：物件原樣；切檔（{"$ref": [分檔, …]}）照順序讀回來合起來。"""
+    if isinstance(v, dict) and isinstance(v.get("$ref"), list):
+        out = {}
+        for ref in v["$ref"]:
+            with open(os.path.join(d, ref), encoding="utf-8") as fh:
+                out.update(json.load(fh))
+        return out
+    if not isinstance(v, dict):
+        raise ValueError("表不是物件")
+    return v
+
+
+def cmd_ls(opts, args):
+    o, rest = aos_flags.parse(args, {}, {"--json": "json"})
+    if rest:
+        raise Fail("ArgumentsBad", "ls 不收參數（usage: %s）" % USAGE)
+    d = daemon_dir(opts)
+    p = os.path.join(d, "loops_state.json")
+    if not os.path.isfile(p):
+        raise Fail("StateMissing", "沒有 %s（daemon 還沒起，或 loops_state 沒開）" % p)
+    try:
+        with open(p, encoding="utf-8") as fh:
+            st = json.load(fh)
+        loops, execs = table(d, st.get("loops", {})), table(d, st.get("execs", {}))
+    except (OSError, ValueError, AttributeError) as e:
+        raise Fail("StateBad", "%s 讀不懂：%s" % (p, e))
+    if o.get("json"):
+        print(json.dumps({"loops": loops, "execs": execs}, ensure_ascii=False))
+        return
+    for kind, rows in (("loop", loops), ("exec", execs)):
+        for n, r in rows.items():
+            print("\t".join([n, kind, str(r.get("phase")), str(r.get("pid")), "-" if r.get("code") is None else str(r["code"])]))
+
+
+COMMANDS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls}
+
+
+def main():
+    try:
+        try:
+            opts, rest = aos_flags.parse(sys.argv[1:], {"--daemon": "daemon"})
+            if not rest:
+                raise Fail("ArgumentsBad", "usage: %s" % USAGE)
+            if rest[0] not in COMMANDS:
+                raise Fail("CommandUnknown", "不認得的子命令 %s（usage: %s）" % (rest[0], USAGE))
+            COMMANDS[rest[0]](opts, rest[1:])
+        except aos_flags.Error as e:
+            raise Fail(e.code, "%s（usage: %s）" % (e, USAGE))
+    except Fail as e:
+        print("%s: %s %s" % (NAME, e.code, e), file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

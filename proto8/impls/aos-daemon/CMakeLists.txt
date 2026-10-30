@@ -44,7 +44,7 @@ if(PROJECT_IS_TOP_LEVEL)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   add_test(NAME test_cli
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cli.py $<TARGET_FILE:aos-daemon_main>)
-  # 整合：proto8/demo/daemon 與 daemon-2（信箱模式，10-29）在 impls 線跑（要先建好 ../aos-exec、../aos-loop、../aos-fsm、../aos-post 的 bin/）
+  # 整合：proto8/demo/daemon、daemon-2（信箱模式，10-29）、daemon-3（execs，10-30）在 impls 線跑（要先建好 ../aos-exec、../aos-loop、../aos-fsm、../aos-post 的 bin/）
   add_test(NAME test_demo
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_demo.py)
 endif()

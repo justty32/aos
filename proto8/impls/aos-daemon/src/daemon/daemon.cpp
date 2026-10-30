@@ -10,6 +10,8 @@
 // 不論為什麼結束都先 finish()（收掉全部子 loop），Loop 再寫好 state。
 // 信箱模式（loops_mailbox，10-29）：期望表改成記憶體裡的 want_，每圈先 take_letters 套信、reconcile 對表、done_letters 回信收信（mailbox.cpp）。
 // adopt：起來時讀自己上次的 loops_state（10-29 前是 state），phase running、pid＋started_at_ticks 對得上的子 loop 直接放回表上、不重起（N-17）。
+// execs（10-30）：exec 型子項跟子 loop 同一張表（Child::once）、同一套對表與收法（SIGTERM 直接打那支程式、10 秒 SIGKILL 整群），
+// 只是起的時候 spawn_exec；期望表兩份（loops、execs），loops_state 寫成兩張表、adopt 兩張都接。
 #include "daemon/daemon.hpp"
 
 #include "aos/files.hpp"
@@ -182,10 +184,82 @@ std::set<std::string> taken_names(const std::string& stack, const std::vector<st
     return out;
 }
 
-std::optional<std::string> check_names(const Json& v, const std::set<std::string>& taken) {
+std::optional<std::string> check_names(const Json& v, const std::set<std::string>& taken, const std::string& what) {
     for (auto& [name, c] : v.items()) {
         if (taken.count(name) > 0) {
-            return "loops 的名字 " + aos::dumps(Json(name)) + " 跟 daemon 自己的 ctl／state／loops_ctl／loops_state／loops_mailbox 撞名";
+            return what + " 的名字 " + aos::dumps(Json(name)) + " 跟 daemon 自己的 ctl／state／loops_ctl／loops_state／loops_mailbox 撞名";
+        }
+    }
+    return std::nullopt;
+}
+
+Json read_execs(const Json& v, const std::string& base, const std::string& key) {
+    Json out = read_loops(v, base, key);   // 名字規則、指示詞同 loops（物件的 exec 已整個解；是單子就只換了一層——下面擋掉）
+    for (auto& [name, c] : out.items()) {
+        Json t = c.is_object() ? c.value("exec", Json()) : c;
+        bool ok = t.is_string() || (t.is_array() && !t.empty());
+        if (t.is_array()) {
+            for (const Json& a : t) {
+                ok = ok && a.is_string();
+            }
+        }
+        if (!ok) {
+            throw Error{code::CfgBad, key + "[" + name + "] 要是 aos-exec 的目標（字串或 [目標, 參數...]）或 {\"exec\": 目標}（單子物件不收）"};
+        }
+        c = std::move(t);
+    }
+    return out;
+}
+
+const Json& merge_want(const Json& base, const Json& ctl, const char* added_key, const char* removed_key, Json& merged) {
+    if (!ctl.contains(added_key) && !ctl.contains(removed_key)) {
+        return base;
+    }
+    std::unordered_map<std::string, const Json*> added;
+    if (ctl.contains(added_key)) {
+        for (auto& [n, spec] : ctl[added_key].items()) {
+            added[n] = &spec;
+        }
+    }
+    std::unordered_set<std::string> removed;
+    if (ctl.contains(removed_key)) {
+        for (const Json& n : ctl[removed_key]) {
+            removed.insert(n.get<std::string>());
+        }
+    }
+    merged = Json::object();   // 名字不重複，直接接在尾巴（ordered_json 的 [] 逐個比對，N 個就 N×N）
+    auto& vec = static_cast<std::vector<std::pair<const std::string, Json>>&>(merged.get_ref<Json::object_t&>());
+    for (auto& [n, spec] : base.items()) {
+        if (removed.count(n) == 0) {   // 先加後減：同一個名字兩邊都寫＝不要
+            auto a = added.find(n);    // 已在名單上的：設定換成 added 的（已在跑的不看設定變了沒，同 N-54）
+            vec.emplace_back(n, a == added.end() ? spec : *a->second);
+            if (a != added.end()) {
+                added.erase(a);
+            }
+        }
+    }
+    if (ctl.contains(added_key)) {
+        for (auto& [n, spec] : ctl[added_key].items()) {
+            if (added.count(n) > 0 && removed.count(n) == 0) {   // 名單上本來沒有的：接在後面
+                vec.emplace_back(n, spec);
+            }
+        }
+    }
+    return merged;
+}
+
+std::optional<std::string> check_apart(const Json& loops, const Json& execs) {
+    if (execs.empty()) {
+        return std::nullopt;
+    }
+    std::unordered_set<std::string> names;
+    names.reserve(loops.size());
+    for (auto& [n, spec] : loops.items()) {
+        names.insert(n);
+    }
+    for (auto& [n, spec] : execs.items()) {
+        if (names.count(n) > 0) {
+            return "名字 " + aos::dumps(Json(n)) + " 同時在 loops 與 execs（兩邊共用名字空間）";
         }
     }
     return std::nullopt;
@@ -200,6 +274,9 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     try {   // 指示詞（10-23 晚）：起點＝設定檔的資料夾（cfg_dirs_）
         if (cfg_.contains("loops")) {
             loops_ = read_loops(cfg_["loops"], cfg_dirs_.dir_of("loops"), "loops");
+        }
+        if (cfg_.contains("execs")) {   // 10-30：一次性的子項，形狀同 loops
+            execs_ = read_execs(cfg_["execs"], cfg_dirs_.dir_of("execs"), "execs");
         }
         for (const char* k : {"adopt", "loops_ctl", "loops_state", "loops_mailbox"}) {
             if (cfg_.contains(k)) {
@@ -248,6 +325,12 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     }
     taken_ = taken_names(stack_, {ctl_path_, state_path_, lctl_path_, lstate_path_, parts_dir_, mbox_path_});
     std::optional<std::string> bad = check_names(loops_, taken_);
+    if (!bad) {
+        bad = check_names(execs_, taken_, "execs");
+    }
+    if (!bad) {
+        bad = check_apart(loops_, execs_);   // 10-30：execs 與 loops 共用名字空間
+    }
     if (bad) {
         throw Error{code::CfgBad, *bad};   // 使用者 10-22「子項名字擋掉跟 ctl／state 同名」
     }
@@ -272,36 +355,46 @@ void Daemon::adopt() {
     if (!old || !old->is_object() || !old->contains("loops")) {
         return;   // 第一次起來、或舊的讀不了：沒東西可接
     }
-    Json rows;
-    try {   // 切檔（10-23）：loops 是 {"$ref": [分檔, …]}，用 aos-directive 解開就是合好的表；分檔讀不到＝舊的讀不了
-        rows = aos::resolve((*old)["loops"], aos::dirname(lstate_path_));
-    } catch (const Error&) {
-        return;
-    }
-    if (!rows.is_object()) {
-        return;
-    }
-    for (auto& [name, r] : rows.items()) {
-        if (!r.is_object()) {
-            return;   // 有一列壞就整份不接
-        }
-    }
-    for (auto& [name, r] : rows.items()) {
-        if (r.value("phase", Json()) != "running") {
+    Json tables[2];   // loops、execs（10-30；10-30 前的 loops_state 沒有 execs＝空的）
+    const char* keys[2] = {"loops", "execs"};
+    for (int i = 0; i < 2; ++i) {
+        if (i == 1 && !old->contains("execs")) {
+            tables[i] = Json::object();
             continue;
         }
-        Json pid = r.value("pid", Json());
-        Json st = r.value("started_at_ticks", Json());
-        if (!pid.is_number_integer() || !st.is_number_integer()) {
-            continue;
+        try {   // 切檔（10-23）：是 {"$ref": [分檔, …]}，用 aos-directive 解開就是合好的表；分檔讀不到＝舊的讀不了
+            tables[i] = aos::resolve((*old)[keys[i]], aos::dirname(lstate_path_));
+        } catch (const Error&) {
+            return;
         }
-        std::optional<long long> now = aos::proc_started_at_ticks((pid_t)pid.get<long long>());
-        if (now && *now == st.get<long long>()) {
-            Child c;
-            c.pid = (pid_t)pid.get<long long>();
-            c.started_at_ticks = st.get<long long>();
-            c.own = false;
-            add(name, c);
+        if (!tables[i].is_object()) {
+            return;
+        }
+        for (auto& [name, r] : tables[i].items()) {
+            if (!r.is_object()) {
+                return;   // 有一列壞就整份不接
+            }
+        }
+    }
+    for (int i = 0; i < 2; ++i) {
+        for (auto& [name, r] : tables[i].items()) {
+            if (r.value("phase", Json()) != "running" || index_.count(name) > 0) {
+                continue;   // 兩張表同名（不該有）：先接到的算
+            }
+            Json pid = r.value("pid", Json());
+            Json st = r.value("started_at_ticks", Json());
+            if (!pid.is_number_integer() || !st.is_number_integer()) {
+                continue;
+            }
+            std::optional<long long> now = aos::proc_started_at_ticks((pid_t)pid.get<long long>());
+            if (now && *now == st.get<long long>()) {
+                Child c;
+                c.pid = (pid_t)pid.get<long long>();
+                c.started_at_ticks = st.get<long long>();
+                c.own = false;
+                c.once = (i == 1);
+                add(name, c);
+            }
         }
     }
 }
@@ -371,83 +464,66 @@ void Daemon::tend(const Json& loop_ctl) {
         return;
     }
     if (mbox_path_.empty()) {
-        Json merged;
-        reconcile(ctl_want(merged));
+        Json lm;
+        Json em;
+        auto [lw, ew] = ctl_want(lctl_good_, lm, em);
+        reconcile(*lw, *ew);
         return;
     }
-    Letters got = take_letters();   // 信箱模式：全部認領、照順序套進 want_，套完才對一次表、再回信收信
-    reconcile(want_);
+    Letters got = take_letters();   // 信箱模式：全部認領、照順序套進 want_／want_execs_，套完才對一次表、再回信收信
+    reconcile(want_, want_execs_);
     done_letters(got);
 }
 
-const Json& Daemon::ctl_want(Json& merged) {
-    const Json& ctl = lctl_good_;
-    // 期望表（N-06：整份 loops_ctl 就是期望，沒寫的回 daemon.json）＝（loops_ctl 的 loops，沒寫＝daemon.json 的）＋loops_added－loops_removed（10-23 晚）
-    const Json* base = ctl.contains("loops") ? &ctl["loops"] : &loops_;
-    if (ctl.contains("loops_added") || ctl.contains("loops_removed")) {
-        std::unordered_map<std::string, const Json*> added;
-        if (ctl.contains("loops_added")) {
-            for (auto& [n, spec] : ctl["loops_added"].items()) {
-                added[n] = &spec;
-            }
-        }
-        std::unordered_set<std::string> removed;
-        if (ctl.contains("loops_removed")) {
-            for (const Json& n : ctl["loops_removed"]) {
-                removed.insert(n.get<std::string>());
-            }
-        }
-        merged = Json::object();   // 名字不重複，直接接在尾巴（ordered_json 的 [] 逐個比對，N 個就 N×N）
-        auto& vec = static_cast<std::vector<std::pair<const std::string, Json>>&>(merged.get_ref<Json::object_t&>());
-        for (auto& [n, spec] : base->items()) {
-            if (removed.count(n) == 0) {   // 先加後減：同一個名字兩邊都寫＝不要
-                auto a = added.find(n);    // 已在名單上的：設定換成 loops_added 的（已在跑的不看設定變了沒，同 N-54）
-                vec.emplace_back(n, a == added.end() ? spec : *a->second);
-                if (a != added.end()) {
-                    added.erase(a);
-                }
-            }
-        }
-        if (ctl.contains("loops_added")) {
-            for (auto& [n, spec] : ctl["loops_added"].items()) {
-                if (added.count(n) > 0 && removed.count(n) == 0) {   // 名單上本來沒有的：接在後面
-                    vec.emplace_back(n, spec);
-                }
-            }
-        }
-        base = &merged;
-    }
-    return *base;
+std::pair<const Json*, const Json*> Daemon::ctl_want(const Json& ctl, Json& lm, Json& em) const {
+    // 期望表（N-06：整份 loops_ctl 就是期望，沒寫的回 daemon.json）＝（loops_ctl 的 loops，沒寫＝daemon.json 的）＋loops_added－loops_removed（10-23 晚）；
+    // execs 那半＝daemon.json 的 execs＋execs_added－execs_removed（10-30；loops_ctl 沒有整份的 execs）
+    const Json& base = ctl.contains("loops") ? ctl["loops"] : loops_;
+    return {&merge_want(base, ctl, "loops_added", "loops_removed", lm), &merge_want(execs_, ctl, "execs_added", "execs_removed", em)};
 }
 
-void Daemon::reconcile(const Json& want) {
-    std::unordered_set<std::string> wanted;   // want 是 ordered_json，contains 是逐個比對；先收成雜湊表
-    wanted.reserve(want.size());
+void Daemon::reconcile(const Json& want, const Json& want_execs) {
+    std::unordered_map<std::string, bool> wanted;   // 名字 → 是不是 exec 型（want 是 ordered_json，contains 是逐個比對；先收成雜湊表）
+    wanted.reserve(want.size() + want_execs.size());
     for (auto& [n, spec] : want.items()) {
-        wanted.insert(n);
+        wanted.emplace(n, false);
     }
+    for (auto& [n, spec] : want_execs.items()) {
+        wanted.emplace(n, true);   // 兩邊同名不會到這裡（check_apart 擋在前面）
+    }
+    auto keep = [&](const std::string& n, const Child& c) {   // 期望表上有、而且種類一樣（種類換了＝收掉舊的、下一次起新的，10-30）
+        auto w = wanted.find(n);
+        return w != wanted.end() && w->second == c.once;
+    };
     for (auto it = table_.begin(); it != table_.end();) {
         auto& [n, c] = *it;
         if (c.phase == "running") {
             if (!alive(c)) {
-                c.phase = "done";   // 子 loop 自己結束
-            } else if (wanted.count(n) == 0) {
+                c.phase = "done";   // 子項自己結束
+            } else if (!keep(n, c)) {
                 term(c, true);      // 表上多出來的：送 SIGTERM 就往下走，不等（10-23 壓測後改）
             }
         } else if (c.phase == "stopping") {
             settle(c);
         }
-        if (c.phase != "running" && c.phase != "stopping" && (c.removing || wanted.count(n) == 0)) {
+        if (c.phase != "running" && c.phase != "stopping" && (c.removing || !keep(n, c))) {
             index_.erase(n);        // 收完了（或早就結束了）的多出來那列：拿掉（小格留著）
             it = table_.erase(it);
         } else {
             ++it;
         }
     }
+    // null＝信箱模式接回的（只留名、沒有設定），不會起；收的途中（stopping）的同名項還在表上：等它退了、下一次才起新的
     for (auto& [n, spec] : want.items()) {
-        if (index_.count(n) == 0 && !spec.is_null()) {   // null＝信箱模式接回的（只留名、沒有設定），不會起；收的途中（stopping）的同名項還在表上：等它退了、下一次才起新的
+        if (index_.count(n) == 0 && !spec.is_null()) {
             beat();                   // 起一大批要好一陣子：起之前先寫一份、之後每秒一份（10-23 壓測後加）
             add(n, spawn(n, aos::join(stack_, n), spec, cwd_));
+        }
+    }
+    for (auto& [n, target] : want_execs.items()) {
+        if (index_.count(n) == 0 && !target.is_null()) {
+            beat();
+            add(n, spawn_exec(n, aos::join(stack_, n), target, cwd_));   // 10-30：直接 aos-exec 一次，不包 aos-loop
         }
     }
 }

@@ -27,7 +27,7 @@
      │ 連 aos-kernel-llm 的公開標頭（信箱與信的格式）
  aos-kernel-llm  一次：鎖信箱 → 收拾 → 排隊 → 額度到頂就回錯／停 → 認領 slots 封、各 fork 一個子行程 run_inst → 回信、served.jsonl、used.json   src/{letter,queue,serve,budget,common}
      │ 連 aos-loop 的公開 API（擋訊號、resolve_keys；跑單子＝aos-exec 的 run_inst）
- aos-daemon   一個 loop＋子 loop 的表：$AOS_STACK/<名字>/ 小格、loops_ctl 增減（或信箱模式 loops_mailbox）、loops_state 表、不自動重起、adopt   src/{daemon,child,common}
+ aos-daemon   一個 loop＋子 loop 的表：$AOS_STACK/<名字>/ 小格、loops_ctl 增減（或信箱模式 loops_mailbox）、loops_state 表（loops、execs 兩張；execs＝直接 aos-exec 一次的子項，10-30）、不自動重起、adopt   src/{daemon,child,common}
      │ 繼承 aos-loop 的 Loop；信箱模式連 aos-post 的庫（aos/post.hpp）；子 loop＝fork 後子行程呼叫 run_cli(-- 小格/loop.json#/_entry)，exec 成 PATH 上的 aos-loop
  aos-fsm      一次跑一格：$AOS_STACK/state.txt → 跑那格 → 碼 0 才換 next；trace.jsonl   src/{table,state,common}
      │ 跑一格借 aos-loop 的 run_once（aos/loop.hpp）

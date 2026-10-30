@@ -1,11 +1,13 @@
 // windows.cpp：【daemon】管轄那一對窗——loops_ctl.json（手把）、loops_state.json（狀態窗）（10-29 拆窗，medium-plan § 四 1；說明見 daemon.hpp）。
 //
-//   read_loops_ctl  每圈讀一次（tend 開頭）。同 aos-loop 的 read_ctl（N-06～N-08）：認 loops、loops_added、loops_removed、seq，其他 key 忽略；
+//   read_loops_ctl  每圈讀一次（tend 開頭）。同 aos-loop 的 read_ctl（N-06～N-08）：認 loops、loops_added、loops_removed、execs_added、execs_removed（10-30）、seq，其他 key 忽略；
 //                   讀到壞的（讀不了、不是 JSON 物件、seq 不是非負整數、名單壞或撞名、指示詞解不開）整份不採用、維持上一份好的，
 //                   原因記 lctl_warning_（loops_state 的 ctl_warning）；讀到好的清回 null；檔不在＝還沒人寫，維持上一份好的、不算問題
-//   check_lists     loops、loops_added（read_loops＋撞名）、loops_removed（名字的陣列）；10-29 前是 ctl.json 的 check_ctl
-//   write_more      loops_state 一份：{kind, ctl_seq, ctl_warning, letter_warning（信箱模式才有，10-29）, loops, 心跳四欄}；Loop 每寫一份 state 就呼叫（心跳同一份值）
-//   write_parts     loops 表超過 PART_ROWS 列就切檔（10-23 晚）
+//   check_lists     loops、loops_added（read_loops＋撞名）、loops_removed（名字的陣列）；10-29 前是 ctl.json 的 check_ctl；
+//                   10-30 多 execs_added（read_execs＋撞名）、execs_removed。read_loops_ctl 另外驗合出來的 loops 與 execs 不同名（check_apart）
+//   write_more      loops_state 一份：{kind, ctl_seq, ctl_warning, letter_warning（信箱模式才有，10-29）, loops, execs（10-30）, 心跳四欄}；
+//                   Loop 每寫一份 state 就呼叫（心跳同一份值）
+//   write_parts     loops、execs 表各自超過 PART_ROWS 列就切檔（10-23 晚；10-30 兩張表共用分檔資料夾）；clean_parts 兩張都寫好才清舊分檔
 #include "daemon/daemon.hpp"
 
 #include "aos/files.hpp"
@@ -49,6 +51,12 @@ void Daemon::read_loops_ctl() {
         } else {
             bad = check_lists(doc, r);
         }
+        if (!bad) {   // 10-30：合出來的期望表 loops 與 execs 同名＝撞名（共用名字空間），整份不採用
+            Json lm;
+            Json em;
+            auto [lw, ew] = ctl_want(doc, lm, em);
+            bad = check_apart(*lw, *ew);
+        }
     } catch (const Error& e) {
         bad = "指示詞解不開：" + e.msg;
     }
@@ -62,34 +70,39 @@ void Daemon::read_loops_ctl() {
 
 std::optional<std::string> Daemon::check_lists(Json& doc, const aos::Resolved& where) {
     // loops_ctl 改名單撞名、寫壞＝整份不採用（N-08；原因進 loops_state 的 ctl_warning）。指示詞解不開丟 DirectiveBad，read_loops_ctl 一樣當不採用。
-    const char* lists[2] = {"loops", "loops_added"};
+    // 10-30 多 execs_added（read_execs）、execs_removed（同 loops_removed）。
+    const char* lists[3] = {"loops", "loops_added", "execs_added"};
     for (const char* k : lists) {
         if (!doc.contains(k)) {
             continue;
         }
+        bool execs = std::string(k) == "execs_added";
         try {
-            doc[k] = read_loops(doc[k], where.dir_of(k), k);
+            doc[k] = execs ? read_execs(doc[k], where.dir_of(k), k) : read_loops(doc[k], where.dir_of(k), k);
         } catch (const Error& e) {
             if (e.code == code::DirectiveBad) {
                 throw;
             }
             return e.msg;
         }
-        std::optional<std::string> bad = check_names(doc[k], taken_);
+        std::optional<std::string> bad = check_names(doc[k], taken_, execs ? "execs" : "loops");
         if (bad) {
             return bad;
         }
     }
-    if (doc.contains("loops_removed")) {
-        Json rm = aos::resolve(doc["loops_removed"], where.dir_of("loops_removed"));
+    for (const char* k : {"loops_removed", "execs_removed"}) {
+        if (!doc.contains(k)) {
+            continue;
+        }
+        Json rm = aos::resolve(doc[k], where.dir_of(k));
         bool ok = rm.is_array();
         for (const Json& n : rm) {
             ok = ok && n.is_string();
         }
         if (!ok) {
-            return std::string("loops_removed 要是名字（字串）的陣列");
+            return std::string(k) + " 要是名字（字串）的陣列";
         }
-        doc["loops_removed"] = rm;
+        doc[k] = rm;
     }
     return std::nullopt;
 }
@@ -109,8 +122,7 @@ static std::string fnv64(const std::string& text) {
     return buf;
 }
 
-Json Daemon::write_parts(Json rows) {
-    std::set<std::string> now;
+Json Daemon::write_parts(Json rows, std::set<std::string>& now) {
     Json out;
     if (rows.size() > PART_ROWS) {
         std::error_code ec;
@@ -140,7 +152,15 @@ Json Daemon::write_parts(Json rows) {
         }
         out = Json::object({{"$ref", refs}});   // {"$ref": ["loops_state_loops/<雜湊>.json", …]}：aos-directive 照順序合回整張表
     }
+    if (out.is_null()) {
+        return rows;   // 沒超過：原樣
+    }
+    return out;
+}
+
+void Daemon::clean_parts(const std::set<std::string>& now) {
     // 清舊分檔：留這次與上一次的（磁碟上的主檔現在還指著上一次的）；這個行程第一次寫時不清（上一個行程的主檔可能還指著）。
+    // 10-30 起 loops、execs 兩張表的分檔都在這個資料夾（檔名＝內容的雜湊，兩張表的名字不重複、內容不會撞），now 是兩張的合起來。
     if (parts_wrote_ && !parts_dir_.empty()) {
         std::error_code ec;
         std::vector<std::filesystem::path> old;
@@ -159,10 +179,6 @@ Json Daemon::write_parts(Json rows) {
     }
     parts_prev_ = now;
     parts_wrote_ = true;
-    if (out.is_null()) {
-        return rows;   // 沒超過：原樣
-    }
-    return out;
 }
 
 void Daemon::write_more(const Json& hb) {
@@ -170,11 +186,13 @@ void Daemon::write_more(const Json& hb) {
         return;
     }
     Json rows = Json::object();
+    Json exec_rows = Json::object();   // 10-30：exec 型子項另一張表，列的形狀同 loops
     // ordered_json 的 rows[n] 每次都逐個比對 key（N 個就 N×N）；名字在表上本來就不重複，直接接在尾巴
     auto& vec = static_cast<std::vector<std::pair<const std::string, Json>>&>(rows.get_ref<Json::object_t&>());
+    auto& evec = static_cast<std::vector<std::pair<const std::string, Json>>&>(exec_rows.get_ref<Json::object_t&>());
     vec.reserve(table_.size());
     for (auto& [n, c] : table_) {
-        vec.emplace_back(n, row(c));
+        (c.once ? evec : vec).emplace_back(n, row(c));
     }
     Json doc = Json::object();
     doc["kind"] = "state";
@@ -183,7 +201,10 @@ void Daemon::write_more(const Json& hb) {
     if (!mbox_path_.empty()) {
         doc["letter_warning"] = letter_warning_;   // 信箱模式才有：最後一封壞信（ctl 模式不寫這欄）
     }
-    doc["loops"] = write_parts(std::move(rows));   // 分檔都寫好才寫主檔（主檔改名是唯一的提交點）
+    std::set<std::string> now;
+    doc["loops"] = write_parts(std::move(rows), now);   // 分檔都寫好才寫主檔（主檔改名是唯一的提交點）
+    doc["execs"] = write_parts(std::move(exec_rows), now);
+    clean_parts(now);
     for (auto& [k, v] : hb.items()) {
         doc[k] = v;
     }

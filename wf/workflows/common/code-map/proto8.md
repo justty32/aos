@@ -11,11 +11,12 @@
 - `aos_flags.py`（10-21）：旗標解析 `parse()`（10-22 多收一張不帶值的旗標表 `switches`）；`Error.code`＝錯誤代號。aos-tick、aos-tools、aos-parts 用（10-23 刪了 `load_cfg()`、`target()`）。
 - `aos-tools`（10-28）：agent 資料夾工具註冊檔 `tools.json` 的命令列；aos agent 範本與 aos-mcp 都經它。
 - `aos-parts`（10-28 晚，agent-round 第 0 步）：agent 資料夾格的註冊檔 `parts.json` 的命令列（add／rm／ls／get／which／run）；找格＝註冊檔 → 固定名字，round 叫格經它。測試 `tests/test_aos_parts.py`。
+- `aos-daemon-ctl`（10-30，agent-lifecycle 實作第 7 步的補）：把東西掛到 daemon 上（add／rm 往 `$AOS_DAEMON/loops_mailbox/` 投 `loops_added`／`execs_added`／`*_removed` 的信、經 aos-post；add 有 `loop.json`＝loop 子項、沒有＝`execs`；ls 讀 `loops_state.json` 兩張表）。測試 `tests/test_aos_daemon_ctl.py`。
 - `aos-tick`（10-21 晚，計畫第 4 段）：`aos-tick [旗標] FILE`＝時鐘往前走一格，讀 n 寫 n＋1（沒檔＝0，先寫 `.名字` 再改名）；唯一的位置參數、旗標表是空的；錯退 1 一行 `aos-tick: 代號 原因`（10-23 起帶代號）、檔不動。
 
 ### `proto8/demo/`
 
-逐字下放到 [proto8/13-demo](proto8/13-demo.md)（本檔超過 8 KB）：agent-bob、ann、dan、eve、daemon、daemon-2、kernel-llm、tick 的逐檔說明；說明另在 [proto8/demo/README.md](../../../../proto8/demo/README.md)。
+逐字下放到 [proto8/13-demo](proto8/13-demo.md)（本檔超過 8 KB）：agent-bob、ann、dan、eve、daemon、daemon-2、daemon-3、kernel-llm、tick 的逐檔說明；說明另在 [proto8/demo/README.md](../../../../proto8/demo/README.md)。
 
 ### `proto8/tests/`
 
