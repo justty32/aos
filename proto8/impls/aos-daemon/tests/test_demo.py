@@ -12,6 +12,7 @@ stamp 印的「# <UTC 時間>」那行。要先建好 impls 的四支。
 10-23 起 proto8/bin 的 Python 版 aos-exec／aos-loop／aos-fsm／aos-daemon 刪了（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也改 C++）：
 不再跟 bin 線比，只跑 impls 線、看結束碼 0、stderr 空、答案寫出來了。
 10-29 加 proto8/demo/daemon-2（信箱模式；run_daemon2）：要多建 impls 的 aos-post，aos-tick 用 proto8/bin 的。
+10-30 加 proto8/demo/daemon-3（同一支 tick 用 loops 的 max: 1 與 execs 各掛一次；run_daemon3）。
 """
 import json
 import os
@@ -113,6 +114,29 @@ def run_daemon2():
         print("daemon-2：結束碼 %d、tick %d、tock %d" % (p.returncode, ticks[0], ticks[1]))
 
 
+def run_daemon3():
+    """proto8/demo/daemon-3（10-30，execs）：同一支 demo/tick 掛兩次——loops 的 tick_loop（max: 1 的子 loop）、
+    execs 的 tick_exec（直接 aos-exec 一次）。看 loops_state 兩張表、兩格的檔。PATH 多 proto8/bin（aos-tick）。"""
+    bins = IMPLS_BINS + [PY_BIN]
+    env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
+    env["PATH"] = os.pathsep.join([str(b) for b in bins] + path_without(*bins))
+    with tempfile.TemporaryDirectory() as t:
+        ws = Path(t)
+        r = subprocess.run([str(IMPLS_BINS[0] / "aos-exec"), str(DEMO / "daemon-3")], cwd=str(ws), env=env,
+                           capture_output=True, text=True, timeout=60)
+        check("daemon-3 結束碼／stderr", (r.returncode, r.stderr), (0, ""))
+        ls = json.loads((ws / ".stack" / "loops_state.json").read_text())
+        check("daemon-3 兩張表", ({n: (x["phase"], x["code"]) for n, x in ls["loops"].items()},
+                                 {n: (x["phase"], x["code"]) for n, x in ls["execs"].items()}),
+              ({"tick_loop": ("done", 0)}, {"tick_exec": ("done", 0)}))
+        files = {n: sorted(f.name for f in (ws / ".stack" / n).iterdir()) for n in ("tick_loop", "tick_exec")}
+        check("daemon-3 小格", files, {"tick_loop": ["loop.json", "state.json", "stderr.txt", "tick.txt"],
+                                      "tick_exec": ["stderr.txt", "tick.txt"]})
+        ticks = [(ws / ".stack" / n / "tick.txt").read_text().strip() for n in ("tick_loop", "tick_exec")]
+        check("daemon-3 tick 都走到 5", ticks, ["5", "5"])
+        print("daemon-3：結束碼 %d、loops %s、execs %s" % (r.returncode, list(ls["loops"]), list(ls["execs"])))
+
+
 def main():
     for b in IMPLS_BINS + [IMPLS / "aos-post" / "bin"]:
         name = b.parent.name
@@ -125,6 +149,7 @@ def main():
         check(agent + " 答案寫出來了", all(a + "/out/q1.txt" in impls[2] for a in ("bob", "ann")), True)
         print("%s：impls 線結束碼 %d、%d 個檔（含 stack）" % (agent, impls[0], len(impls[2])))
     run_daemon2()
+    run_daemon3()
     print("daemon demo、%d 個失敗" % failures)
     sys.exit(1 if failures else 0)
 

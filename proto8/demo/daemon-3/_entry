@@ -1,0 +1,4 @@
+#!/bin/sh
+# _entry - 一個 daemon 用兩種寫法各掛一次 demo/tick（10-30）：loops 的 tick_loop（① 包成 max: 1 的子 loop）、execs 的 tick_exec（② 直接 aos-exec 一次）。
+# 後面的參數原樣給 aos-daemon（同 daemon-2）；daemon.json 寫了 max 10（約 2 秒就收工）。
+exec aos-daemon "$@" daemon.json
