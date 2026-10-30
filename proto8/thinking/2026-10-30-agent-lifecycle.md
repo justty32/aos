@@ -195,6 +195,8 @@
 
 ### 使用者問：round 能不能放在 aos-loop／fsm 的框架下實現（10-30，只查、沒改）
 
+> **已選甲 → [thinking 10-30 aos-round](2026-10-30-aos-round.md)**（fsm 的 `next` 照結束碼分岔，round 化作 aos-round）。
+
 **拼得出來，但 round 會散到每一格裡；要乾淨得先改規範，這是方向題。** agent-dan 已經是這種形狀：loop 跑 fsm，idle 格 queue 空了退 10，loop 就停。
 
 - **對得上的**：

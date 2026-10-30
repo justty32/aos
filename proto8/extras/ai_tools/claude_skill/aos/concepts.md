@@ -96,8 +96,8 @@
 
 ## fsm
 
-一句：`aos-fsm fsm.json`＝**一次只跑一格**：讀 `$AOS_STACK/state.txt`（沒有＝`start`），跑那格，格退 0 才把狀態換成 `next`、以格的碼結束。外面靠 loop 一次一次驅動（N-53）。
-範例：`{"_entry": ["aos-fsm", {"$env": "AOS_CF"}], "start": "idle", "states": {"idle": {"exec": "idle", "next": "think"}, "think": {"exec": {"argv": ["python3", "brain.py"]}, "next": "idle"}}}`；每次在 `$AOS_STACK/trace.jsonl` 追加一行 `{"started_at","state","code","signal","elapsed_ms"}`（`started_at`＝這格開始跑的時間）。
+一句：`aos-fsm fsm.json`＝**一次只跑一格**：讀 `$AOS_STACK/state.txt`（沒有＝`start`），跑那格，`next` 是字串＝格退 0 才把狀態換成它、以格的碼結束；`next` 也可以是 `{結束碼: 狀態名}`（key `"0"`～`"255"` 或 `"*"`，至少要有 `"0"` 或 `"*"`）＝照格的碼查表、查到就換過去並以 0 結束、查不到照舊（10-30 N-36）。外面靠 loop 一次一次驅動（N-53）。
+範例：`{"_entry": ["aos-fsm", {"$env": "AOS_CF"}], "start": "idle", "states": {"idle": {"exec": "idle", "next": "think"}, "think": {"exec": {"argv": ["python3", "brain.py"]}, "next": "idle"}}}`；每次在 `$AOS_STACK/trace.jsonl` 追加一行 `{"started_at","state","code","signal","elapsed_ms","next"}`（`started_at`＝這格開始跑的時間；`next`＝這次換到的狀態、沒換＝`null`）。
 常見錯：每一格都要有 `next`（開跑時查整張表，缺了＝`CfgBad`）；格失敗時 state 不動、下一次重跑同一格（P-20）；格之間傳東西寫 stack 裡的檔、不走 stdout（P-10）。
 出處：N-36、N-38、N-41、P-07～P-10、impls/aos-fsm。
 

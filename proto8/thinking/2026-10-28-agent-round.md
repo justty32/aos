@@ -50,6 +50,8 @@ agent-x/
 
 ## 2. round：一輪本身
 
+> **10-30 起由 aos-round 取代**（[thinking 10-30 aos-round](2026-10-30-aos-round.md#決定10-30)）：順序搬到 `lib/agent/round/fsm-*.json`、現在在哪看 fsm 的 `state.txt`、`--step` 與 `hook/pause` 退場、trace 看 fsm 的行。
+
 - **粒度看 `_entry`**（agent-ops 決定 12、13）：格只有一套。`_entry` 寫 aos-loop、每次只做下一格（照下面「從哪接著做」判）＝一格一格跑；寫 round＝一次跑完一輪。round 是**語法糖**：等於 aos-loop 加上「這一輪結束就停」的條件，留在零件庫 `lib/agent/round/`、不升成 aos 指令。§ 1 的 `loop.json` 是「loop 反覆叫 round」那種寫法，只是其中一種設定。
 - **叫法**：`aos-exec round <agent 資料夾>`；loop 每次叫一次，或外面直接叫一次（§ 6 外部接口）。結束碼照 P-19：`0`＝這輪好了（或中途 yield，狀態在 stack，下次接著）、`10`＝沒題目、其他＝失敗停下等人（P-20）。
 - **從哪接著做**（不另設狀態檔，看 `cur/` 跟 `history.jsonl` 最後一則就夠，agent-dan 的 brain 現在就是這樣判）：`cur/` 與 `new/` 都空 → 10；`cur/` 空 → `queue claim`；最後一則是 user／tool → 問腦；最後一則是 assistant 且有 `tool_calls` → `act`；最後一則是 assistant 沒 `tool_calls` → `queue finish`。
@@ -81,6 +83,8 @@ round:
 - 用 round 時一個行程跑完一輪；要一次一格，`_entry` 改用 aos-loop（決定 12，取代原本「掛 `hook/pause` 永遠退 10」的代定；`pause` 仍可用來在一輪中途 yield）。N-53／C-25 見文末第 3 條。
 
 ## 3. 掛勾（hook）
+
+> **10-30 起由 aos-round 取代**（[thinking 10-30 aos-round](2026-10-30-aos-round.md#決定10-30)）：順序搬到 `lib/agent/round/fsm-*.json`、現在在哪看 fsm 的 `state.txt`、`--step` 與 `hook/pause` 退場、trace 看 fsm 的行。
 
 | 點 | 何時 | stdin | stdout／結束碼 | 沒掛時 |
 |---|---|---|---|---|
@@ -278,6 +282,7 @@ round:
 ### 做 round 時再代定的（10-28 晚，第 5 步，代定、可翻案）
 
 27. **一格一格跑＝`round <agent> --step`**：只做「從哪接著做」判出的下一步就退 0（沒題仍退 10），一步＝認領／問腦／跑工具／交卷四種之一，步裡面的掛勾與 history append 跟著同一步做（問腦＝pre_think＋endpoint＋post_think＋append＋emit；跑工具＝act＋每則 append＋必要時 claim --more＋pause；交卷＝finish＋post_round）。aos-loop 一格一格跑寫 `{"exec": {"argv": ["aos-parts", "run", "round", {"$env": "AOS_CD"}, "--step"]}}`；不加 `--step`＝一個行程跑完一輪。理由：格只有一套（決定 12），「下一步是什麼」只寫在 round 一處（C-52），不另做一支只會判斷的程式。
+   > **10-30 起由 aos-round 取代**（[thinking 10-30 aos-round](2026-10-30-aos-round.md#決定10-30)）：順序搬到 `lib/agent/round/fsm-*.json`、現在在哪看 fsm 的 `state.txt`、`--step` 與 `hook/pause` 退場、trace 看 fsm 的行。
 28. **`pre_round` 只在認領那一步叫**（`cur/` 空、要認領新題時）；yield 或失敗修好後接著做的那一輪不再叫（§ 3 表寫「認領前」）。
 29. **「跑工具」看最後一則 assistant 的 tool_calls 有沒有都回了**，不只看最後一則：act 吐的 tool 訊息是一則一則 append，接到一半當掉，重跑只把還沒回的那幾個交給 act（已回的不重跑）。act 退 10 之後、`claim --more` 之前當掉：重跑看到 tool 都回了＝直接問腦，新題留在 `new/`、下一輪當一般題認領（不追補）。
 30. **`cur/` 有題、history 卻是空的**（或最後一則的 role 不認得）＝`round: HistoryBad`、退 1：不猜從哪接著做（正常的 claim 一定先接 user 再搬 `cur/`，第 5 條）。
@@ -306,6 +311,7 @@ round:
 44. **agent 怎麼給**：參數 `agent`（絕對路徑）＞ 環境變數 `ASK_AGENT`；都沒有＝`AgentMissing`。「問 agent-xxx」固定一隻＝一個工具小資料夾（`.env` 寫 `ASK_AGENT`，`_entry`／`_tooldef.json`／`_metainfo` 捷徑指庫）——§ 1「一格＝`.env`＋`_entry` 捷徑」同一招，tools.json 不必多一種 `env` 欄。`_tooldef.json` 也可自己寫一份（拿掉 agent 參數、改說明）。
 45. **被問的 agent 的工作區**＝`ASK_WS` ＞ `$AOS_STACK/<agent 資料夾名>/`（這個工具的小格，P-17；經 act 是 `$AOS_STACK/<工具名>/`，經 aos-mcp 是 `<stack>/<工具名>/`），信箱四個資料夾沒有就建；它的 stack＝`<工作區>/.stack/`（N-57 預設，明寫，不讓外面的 `AOS_STACK`〔工具的小格〕漏進去）。理由：預設不碰叫它的人自己的信箱（放進 `$AOS_WS/new/` 會變成問自己）；同一個工具小格問同一隻，history 接著累積（agent 有記憶）；要跟常駐的那隻共用信箱就設 `ASK_WS`，搶信箱是呼叫者的風險（決定 15）。
 46. **重叫 round 的規則**：每次 round 退回來先看 `out/<題名>`，有就收（round 之後的格失敗也照收——答案已寫）；退 0 沒答案＝yield、再叫；退 10＝`AnswerMissing`（題目被別人收走）；其他＝`RoundFailed`（題目留在工作區，再叫一次 round 會接著做）。最多 `ASK_MAX_ROUNDS` 次（預設 20，≥1，`SettingBad`），總時間 `timeout_s`（預設 120、上限 600，跟 bash 一樣寫在 `_tooldef.json`），到了＝收掉正在跑的那群（TERM、2 秒後 KILL）、`AnswerMissing`。放題與叫 round 都經 `aos-parts --file <agent>/parts.json run`（註冊檔的 env 照帶，C-52 怎麼找只在 aos-parts）。
+   > **10-30 起由 aos-round 取代**（[thinking 10-30 aos-round § C](2026-10-30-aos-round.md#c-換過去的路結論)）：ask_round 改成重叫 `aos-round`（一次一格）直到 fsm 的 state 回到 `idle` 且 history 有比題目新的 assistant；`ASK_MAX_ROUNDS` 改名 `ASK_MAX_STEPS`（預設 200）。
 47. **stdout＝答案原文**（`out/<題名>` 整份），不包 JSON：契約 2「文字工具印文字」，外面的 CLI 直接看得懂；`ask_agent` 印 JSON 是它轉 aos-ai 的歷史形狀，這支不跟。
 
 **10-29 註**：使用者 10-29 傍晚定 agent 的輸入是 queue（對話）、不是信箱；接單以後放在 tools 裡，agent 做完事自己用 tool 去看信箱 → [10-28 medium 決定 32](2026-10-28-medium.md#十七agent-的輸入是-queue不是信箱10-29-傍晚)。本檔 round 從工作區 `new/` 收題（P-11）、`ask_round` 把題放進對方 `new/`，都是信箱形狀，要不要改等之後再看，現在不動。
