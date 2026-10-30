@@ -89,7 +89,7 @@ daemon.json＝loop.json 的超集（N-28）：
 ### exec 型子項 execs（10-30，[thinking 10-30 agent-lifecycle](../../thinking/2026-10-30-agent-lifecycle.md) B-12 ②、實作第 7 步）
 
 使用者 10-30「包成max:1也是可以」「不過可以的話，我也覺得讓daemon可以掛aos-exec，也是不錯的」：一次性的東西（射後不理的 agent、`claude -p` 的腳本）可以照舊寫成
-`"loops": {"名字": {"exec": 目標, "max": 1}}`（①，多一層 aos-loop），也可以寫成 exec 型子項（②）。條文是草稿（N-28／N-54 的 10-30 補，NORMS 正文還沒落）。兩種並排的例子：[demo/daemon-3](../../demo/daemon-3/README.md)。
+`"loops": {"名字": {"exec": 目標, "max": 1}}`（①，多一層 aos-loop），也可以寫成 exec 型子項（②）。條文在 [N-28、N-54](../../docs/NORMS/04-基礎設施-loop與daemon.md) 的 10-30 補（10-30 落正文）。兩種並排的例子：[demo/daemon-3](../../demo/daemon-3/README.md)。
 
 ```json
 {"execs": {"bob": "/path/agent-bob", "carl": ["../job", "a", "b"], "dan": {"exec": "daemon.json#/jobs/dan"}}}

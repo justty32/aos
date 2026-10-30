@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜出發點：[10-29 agent-bob § 決定（10-30）](2026-10-29-agent-bob.md#決定10-30)（決定 33～35）｜前一份規劃：[10-29 medium-plan](2026-10-29-medium-plan.md)｜相關條文：[N-14～N-16](../docs/NORMS/05-基礎設施-窗.md)、[N-28、N-54](../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-63、N-64](../docs/NORMS/10-基礎設施-定義與工作區.md)、[P-11～P-14、P-41](../docs/CONVENTION/02-題目stack停錯腦.md)、[C-65～C-67](../docs/CONCEPTS/03-基礎設施.md#資料夾程式工作區與-stack10-19)、[C-75](../docs/CONCEPTS/03-基礎設施.md#proc-之間的交流10-29)｜程式（只翻、沒改）：[lib/agent](../lib/README.md) 的 queue／history／round、[extras/human](../extras/human/README.md)、[extras/cli_hub](../extras/cli_hub/README.md)、[impls/aos-daemon](../impls/aos-daemon/README.md)、[impls/aos-post](../impls/aos-post/README.md)
 
-規矩見 [thinking/README](README.md)。**這份整份是 fable 照原則代定的細節設計，可翻案**；使用者定的在 agent-bob 的決定 33～35。條文草稿標「草稿、待使用者看」，**NORMS／CONVENTION 正文沒動、程式沒動**。衝突與方向題寫在文末，寫給不看 CS 術語的人。**10-30 使用者「都照建議」→ [§ 決定（10-30）](#決定10-30)**。
+規矩見 [thinking/README](README.md)。**這份整份是 fable 照原則代定的細節設計，可翻案**；使用者定的在 agent-bob 的決定 33～35。條文草稿標「草稿、待使用者看」，**NORMS／CONVENTION 正文沒動、程式沒動**。衝突與方向題寫在文末，寫給不看 CS 術語的人。**10-30 使用者「都照建議」→ [§ 決定（10-30）](#決定10-30)**。**10-30 第 10 步落正文（縮小範圍）**：只落跟第 1～5、7、8 步直接相關的條文，hub 那部分暫緩；每條的狀態標在[條文草稿](#條文草稿草稿待使用者看不改-normsconvention-正文)各條上。
 
 ## 前提（引用哪些決定）
 
@@ -59,27 +59,31 @@
 
 ## 條文草稿（草稿、待使用者看；不改 NORMS／CONVENTION 正文）
 
+> 10-30 使用者「都照建議」後落了一部分（第 10 步，範圍縮小：第 6 步 aos-hub 與第 9 步試驗場使用者 10-30 先暫停）；每條標「已落正文（10-30）」或「暫緩」。正文才是準的，下面保留草稿原文。
+
 ### CONVENTION 四、題目與答案
 
-- **P-11 改口（10-30）**：「題目＝`$AOS_WS/new/<題名>`……答案＝`$AOS_WS/out/<題名>`」整段改讀成：**aos agent 的輸入是 queue**——`$AOS_STACK/queue/`，一個 [N-16](../docs/NORMS/05-基礎設施-窗.md) 的**有順序信箱**，一封信＝一則訊息（`body` 是一則 OpenAI message，照 P-41 history 的一行）；agent 認領（rename 進 `cur/`）就把 `body` 接進 `history.jsonl`，答完（assistant 那則已進 history）才把信收掉（預設刪、要留紀錄進 `done/`）。**回答就是 history 最新那則 assistant，沒有別的回答通道**；檔案成品照舊落在工作區（「結果＝工作區內容」那句只管檔案）。原本的 `new/`、`cur/`、`out/`、`done/` 四格留給 10-30 前的 fsm 範本（agent-bob／ann／dan、topdown），標**舊協議**，新東西不用；aos-say／listen 不再認它。（決定 33、35；N-16；C-65 執行中的東西落 stack；C-56）
-- **P-12、P-13、P-14 跟著改口**：P-12「一次做一題、`cur/` 有沒做完的先接」照舊，資料夾換成 queue 的；P-13 附檔＝信資料夾裡的其他檔（N-16「其他檔隨意」），`prompt.txt`／`answer.txt` 不再需要；P-14「agent 只動 `new/`…與 `$AOS_STACK`」改成「agent 只動 `$AOS_STACK` 與工作區裡它說明寫明的檔」。
-- **新 P-42 agent 對話協議（10-30）**：人或程式要對一隻跑著的 agent 說話、看它說什麼、停它，只碰它的 stack 四樣東西：① **queue**＝`$AOS_STACK/queue/`（N-16 有順序投遞；寄＝`aos-post send --ordered`）；② **history**＝`$AOS_STACK/history.jsonl`（只附加；偷看就是讀它，N-13 外顯的檔）；③ **ctl／state**＝aos-loop 開在 `$AOS_STACK/ctl.json`、`state.json` 的窗（N-07 `paused`／`stopped`、N-17 `phase`）——停著等的能力由 aos-loop 提供，agent 本身仍是函數、沒有 ctl；④ **`server.txt`**（選用）＝不是 aos-loop 在服務時（例 aos-hub-kernel 代答）寫一行「`<pid> <程式名>`」讓人知道誰在服務。aos-say／aos-listen／aos-hub 都照這四樣，不管後面是 aos agent 還是外部 CLI。**跑完要不要結束寫在定義裡**：round 格的 `ROUND_ON_EMPTY=stop`（queue 空退 10、loop 收工）或 `idle`（退 0、由 loop 的 `interval_ms` 再來）。（決定 11、33～35；N-14、N-16、N-07、N-53；C-75）
+- **已落正文（10-30）**：[CONVENTION/02](../docs/CONVENTION/02-題目stack停錯腦.md) P-11 的 10-30 改口。**P-11 改口（10-30）**：「題目＝`$AOS_WS/new/<題名>`……答案＝`$AOS_WS/out/<題名>`」整段改讀成：**aos agent 的輸入是 queue**——`$AOS_STACK/queue/`，一個 [N-16](../docs/NORMS/05-基礎設施-窗.md) 的**有順序信箱**，一封信＝一則訊息（`body` 是一則 OpenAI message，照 P-41 history 的一行）；agent 認領（rename 進 `cur/`）就把 `body` 接進 `history.jsonl`，答完（assistant 那則已進 history）才把信收掉（預設刪、要留紀錄進 `done/`）。**回答就是 history 最新那則 assistant，沒有別的回答通道**；檔案成品照舊落在工作區（「結果＝工作區內容」那句只管檔案）。原本的 `new/`、`cur/`、`out/`、`done/` 四格留給 10-30 前的 fsm 範本（agent-bob／ann／dan、topdown），標**舊協議**，新東西不用；aos-say／listen 不再認它。（決定 33、35；N-16；C-65 執行中的東西落 stack；C-56）
+- **已落正文（10-30）**：P-12～P-14 各一條「10-30 跟著改口」。**P-12、P-13、P-14 跟著改口**：P-12「一次做一題、`cur/` 有沒做完的先接」照舊，資料夾換成 queue 的；P-13 附檔＝信資料夾裡的其他檔（N-16「其他檔隨意」），`prompt.txt`／`answer.txt` 不再需要；P-14「agent 只動 `new/`…與 `$AOS_STACK`」改成「agent 只動 `$AOS_STACK` 與工作區裡它說明寫明的檔」。
+- **已落正文（10-30），只落 ①～③ 與「跑完要不要結束」**：[CONVENTION/02](../docs/CONVENTION/02-題目stack停錯腦.md) 的 P-42（第四節，P-14 之後；寫「人經 aos-say／aos-listen 碰這三樣」）。④ `server.txt` 與「aos-say／aos-listen／aos-hub 都照這四樣，不管後面是 aos agent 還是外部 CLI」**暫緩（10-30）**：hub／外部 agent 那部分等使用者定 aos-eca-hub（實作第 6 步暫停，[10-30 map-review](2026-10-30-map-review.md#決定10-30) 第 5 點）。**新 P-42 agent 對話協議（10-30）**：人或程式要對一隻跑著的 agent 說話、看它說什麼、停它，只碰它的 stack 四樣東西：① **queue**＝`$AOS_STACK/queue/`（N-16 有順序投遞；寄＝`aos-post send --ordered`）；② **history**＝`$AOS_STACK/history.jsonl`（只附加；偷看就是讀它，N-13 外顯的檔）；③ **ctl／state**＝aos-loop 開在 `$AOS_STACK/ctl.json`、`state.json` 的窗（N-07 `paused`／`stopped`、N-17 `phase`）——停著等的能力由 aos-loop 提供，agent 本身仍是函數、沒有 ctl；④ **`server.txt`**（選用）＝不是 aos-loop 在服務時（例 aos-hub-kernel 代答）寫一行「`<pid> <程式名>`」讓人知道誰在服務。aos-say／aos-listen／aos-hub 都照這四樣，不管後面是 aos agent 還是外部 CLI。**跑完要不要結束寫在定義裡**：round 格的 `ROUND_ON_EMPTY=stop`（queue 空退 10、loop 收工）或 `idle`（退 0、由 loop 的 `interval_ms` 再來）。（決定 11、33～35；N-14、N-16、N-07、N-53；C-75）
 
 ### NORMS 窗 N-16 加註
 
-- **10-30 加註：queue**：agent 層把自己的輸入叫 **queue**，它就是本條的有順序投遞、資料夾叫 `queue/`、位置在那隻 agent 的 `$AOS_STACK`（CONVENTION P-42）；「信箱」這個詞留給 agent 之間的請求投遞。本條內容不變。
+- **已落正文（10-30）**：[NORMS/05](../docs/NORMS/05-基礎設施-窗.md) N-16 的 10-30 加註。**10-30 加註：queue**：agent 層把自己的輸入叫 **queue**，它就是本條的有順序投遞、資料夾叫 `queue/`、位置在那隻 agent 的 `$AOS_STACK`（CONVENTION P-42）；「信箱」這個詞留給 agent 之間的請求投遞。本條內容不變。
 
 ### NORMS loop 與 daemon N-28、N-54 加註（exec 型子項，②）
 
-- **N-28 10-30 補：`execs`**：daemon.json 多一個選填 key `execs`＝一次性的子項，形狀同 `loops`（`{名字: 目標}` 或 `{名字: {"exec": 目標}}`；目標＝aos-exec 的目標、相對路徑從 daemon 的 cwd 算）；daemon 對每項直接 `aos-exec` 一次（小格 `$AOS_STACK/<名字>/`、`AOS_STACK`＝小格、stderr 附加到小格 `stderr.txt`、自成群組、stdin `/dev/null`），**不包 aos-loop、不寫 `loop.json`、不補 `ctl`／`state`**；退了＝`done`、記 `code`／`signal`、不重起。`loops_state.json` 多一張 `execs` 表，列的形狀與 `phase` 同 `loops`；`adopt` 兩張表都接。收法同子 loop（SIGTERM 直接打它、10 秒 SIGKILL 整群）。`execs` 與 `loops` 共用名字空間。「daemon 多的只有 `loops`、`adopt`」改成「多的只有 `loops`、`execs`、`adopt`」。要一次跑完的東西也可以照舊寫成 `{"exec": 它, "max": 1}` 的 loop（使用者 10-30「包成max:1也是可以」），差別只在多一層 aos-loop 與它的窗。
-- **N-54 10-30 補**：`loops_ctl.json` 與信箱模式的信多認 `execs_added`／`execs_removed`，語意同 `loops_added`／`loops_removed`。
-- **一句（放 N-28 開頭那段「不管」之後）**：直接 `aos-exec` 跑的東西歸 Linux 管（`ps`、`kill`），aos 不另做程式；要納進 aos 就掛 daemon（[10-28 medium](2026-10-28-medium.md) 決定 1、使用者 10-30）。
+- **已落正文（10-30），照實作寫**（def6f2a3）：[NORMS/04](../docs/NORMS/04-基礎設施-loop與daemon.md) N-28 的「10-30 補：exec 型子項 `execs`」；比草稿多寫實作有的幾件（單子物件不收＝`CfgBad`、stdout 也接 `/dev/null`、cwd＝daemon 的 cwd、換種類＝收舊起新、分頁同 `loops_state_loops/`），並指到 [aos-daemon-ctl](../bin/README.md)（工具、不算規範；`AOS_DAEMON` 寫成 N-63 的 10-30 補）。**N-28 10-30 補：`execs`**：daemon.json 多一個選填 key `execs`＝一次性的子項，形狀同 `loops`（`{名字: 目標}` 或 `{名字: {"exec": 目標}}`；目標＝aos-exec 的目標、相對路徑從 daemon 的 cwd 算）；daemon 對每項直接 `aos-exec` 一次（小格 `$AOS_STACK/<名字>/`、`AOS_STACK`＝小格、stderr 附加到小格 `stderr.txt`、自成群組、stdin `/dev/null`），**不包 aos-loop、不寫 `loop.json`、不補 `ctl`／`state`**；退了＝`done`、記 `code`／`signal`、不重起。`loops_state.json` 多一張 `execs` 表，列的形狀與 `phase` 同 `loops`；`adopt` 兩張表都接。收法同子 loop（SIGTERM 直接打它、10 秒 SIGKILL 整群）。`execs` 與 `loops` 共用名字空間。「daemon 多的只有 `loops`、`adopt`」改成「多的只有 `loops`、`execs`、`adopt`」。要一次跑完的東西也可以照舊寫成 `{"exec": 它, "max": 1}` 的 loop（使用者 10-30「包成max:1也是可以」），差別只在多一層 aos-loop 與它的窗。
+- **已落正文（10-30），照實作寫**：N-54 的「10-30 補：`execs_added`／`execs_removed`」，多寫 loops_ctl 沒有整份的 `execs`、同名的處理。**N-54 10-30 補**：`loops_ctl.json` 與信箱模式的信多認 `execs_added`／`execs_removed`，語意同 `loops_added`／`loops_removed`。
+- **已落正文（10-30）**：放成 N-28 底下的「10-30 補：沒掛 daemon＝Linux 管」（開頭那段「不管」是 10-22 使用者列的自行承擔清單，不往裡加）。**一句（放 N-28 開頭那段「不管」之後）**：直接 `aos-exec` 跑的東西歸 Linux 管（`ps`、`kill`），aos 不另做程式；要納進 aos 就掛 daemon（[10-28 medium](2026-10-28-medium.md) 決定 1、使用者 10-30）。
 
 ### CONCEPTS C-65 例子改口
 
-- 「工作區只放交辦的東西與成果（`new/`、`cur/`、`done/`、`out/` 這類，P-11、P-14…）」→ 括號裡的例子改成「使用者的檔、agent 寫出的成品檔」；對話（queue、history）是這次執行的狀態、落在 stack（P-41、P-42）。本條其餘不動。
+- **已落正文（10-30）**：[CONCEPTS/03](../docs/CONCEPTS/03-基礎設施.md) C-65 的「10-30 改口：括號裡的例子」（原文保留、加改口）。「工作區只放交辦的東西與成果（`new/`、`cur/`、`done/`、`out/` 這類，P-11、P-14…）」→ 括號裡的例子改成「使用者的檔、agent 寫出的成品檔」；對話（queue、history）是這次執行的狀態、落在 stack（P-41、P-42）。本條其餘不動。
 
 ### hub 的說明（extras/cli_hub、CONVENTION adapter 那段）
+
+**暫緩（10-30）**：這一節整節等使用者定 aos-eca-hub（實作第 6 步暫停，[10-30 map-review](2026-10-30-map-review.md#決定10-30) 第 5 點）。
 
 - `pause` → `close`（關畫面、對話留著、照樣收題）；`stop` 照舊。
 - 代答實例的收題改走 `<資料夾>/.stack/queue/`，答案接進 `<資料夾>/.stack/history.jsonl`。
@@ -98,7 +102,7 @@
 | 7 | **aos-daemon `execs`（②）**：`daemon.cpp` 讀 `execs`（形狀同 `loops`、同一套 `check_lists`、撞名共用）；`child.cpp` 多一種 spawn（不寫 `loop.json`、`run_cli({"--", 目標, 參數...})`）；`loops_state.json` 多 `execs` 表、`adopt` 接；`loops_ctl.json`／信箱多認 `execs_added`／`execs_removed`；`term`／`settle` 共用 | `impls/aos-daemon/src/daemon/{daemon,windows,mailbox}.cpp`、`src/child/child.cpp`、README、code map `proto8/14-aos-daemon.md` | `tests/test_daemon*.py`：新案「`execs` 一項跑完＝`done`、記 `code`、不重起」「`execs_removed` 送 SIGTERM、不理的 10 秒 SIGKILL 整群」「`execs` 與 `loops` 撞名＝CfgBad」「adopt 接回 `execs` 列」「`{"exec": X, "max": 1}` 的 loop 型照舊能跑（①）」 |
 | 8 | **demo/daemon-3**：一份 daemon.json 同時掛一個 loop 型與一個 `execs` 型（例 `execs: {"bob": "/path/agent-bob-1"}`）；README 寫 ① 跟 ② 兩種寫法 | `demo/daemon-3/*`、`demo/README.md` | 跑一次、看 `loops_state.json` 兩張表 |
 | 9 | **試驗場 `~/code/playground`**（不進 git）：bob-1 不變（history 改回 stack）；bob-2 改成「函數＋aos-loop」：`_entry: ["aos-loop", "loop.json"]`、loop.json 開窗、`interval_ms` 300、本體每次 `aos-post claim` 一封 → `claude -p` → history → `finish`、沒信退 0；再用 ① 與 ② 各掛一次到 daemon 底下；最後拿一隻 fsm agent（agent-dan 加 ctl 窗的 loop）試場景二「paused 停在格之間改東西」 | 試驗場 README | say／listen 一行沒改就能用；`listen --status` 看得到 `paused`；daemon `loops_removed`／`execs_removed` 能收掉 |
-| 10 | **條文落正文**（等使用者看過這份）：P-11～P-14 改口、新 P-42、N-16 加註、N-28／N-54 補、C-65 例子改口、hub 說明；條號表、各批出處、code map、thinking 同步 | docs、wf | `wf-lint` broken=0 |
+| 10 | **條文落正文**（等使用者看過這份）：P-11～P-14 改口、新 P-42、N-16 加註、N-28／N-54 補、C-65 例子改口、hub 說明；條號表、各批出處、code map、thinking 同步。**10-30 做了縮小範圍的那部分**（跟 1～5、7、8 步直接相關的；hub 說明與 P-42 的 hub／外部 agent 部分暫緩，見條文草稿各條的標記） | docs、wf | `wf-lint` broken=0 |
 
 順序：1→2→3→4→5 是 queue 那條線（每步 WSL 跑 proto8 全套）；6 獨立；7→8 獨立；9 在 1～7 之後；10 最後。
 

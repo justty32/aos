@@ -13,7 +13,7 @@
 - loop.json 與 fsm 格要跑的東西都叫 `exec`（使用者：「fsm.json，現在是用val，幫我改成exec」；「exec，loop／daemon 的 run 也一起改 exec」）。
 - fsm trace 一行是 `{"started_at","state","code","signal","elapsed_ms"}`，`started_at` 是 ISO 8601 到毫秒（P-07、P-38）。時間點＝C-54 命名方法 R6「時間點＝`<發生了什麼>_at`」（使用者 10-25「state.json中，runs改counter，at改成recorded_at」，回頂層兩題「都好」，頂層代定、可翻案）；其他 JSON 的命名見 [NORMS.md](NORMS.md)。
 - 指示詞的檔內位置只認 `#/`。計數說「次」（使用者「我們都是說"次"」）。
-- 純文字檔帶 `.txt`（fsm 的 `state.txt`、daemon 小格的 `stderr.txt`、demo 的 `current.txt`／`plan.txt`、P-13 的 `prompt.txt`／`answer.txt`）；`AOS_STACK` 預設 `$AOS_WS/.stack/`；題目資料夾 `new/`（認領搬 `cur/`、做完 `done/`，答案 `out/`）。
+- 純文字檔帶 `.txt`（fsm 的 `state.txt`、daemon 小格的 `stderr.txt`、demo 的 `current.txt`／`plan.txt`、P-13 的 `prompt.txt`／`answer.txt`）；`AOS_STACK` 預設 `$AOS_WS/.stack/`；題目資料夾 `new/`（認領搬 `cur/`、做完 `done/`，答案 `out/`）；10-30 起新 agent 的輸入是 `$AOS_STACK/queue/`，題目資料夾留給舊協議（P-11 的 10-30 改口、P-42）。
 - 入口預設名 `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者「改。然後_開頭=附註這個概念刪掉。」，原話裡的 `_exec` 照留）；不認得的 key 一律忽略（「不認得的key就是忽略」，C-48），`_` 開頭沒有特別意思。
 
 **腦的工具呼叫**＝**P-41**（第七節；[thinking 2026-10-23-tool-calls](../thinking/2026-10-23-tool-calls.md)，使用者「litellm我開了，去做吧。」「盡量都用gpt的」）：工具資料夾裡的 `tool.json`（10-28 起改名 `_tooldef.json`、清單改由 agent 資料夾的 `tools.json` 登記，[aos-tools](../bin/README.md)）給模型看、`arguments` 從 stdin 進、stdout 出、對話落在 `$AOS_STACK/history.jsonl`、三態不變、五種錯。範本是 [demo/agent-dan](../demo/README.md)。10-28 起照 [agent-round](../thinking/2026-10-28-agent-round.md) 拆成格的 agent：腦是 `endpoint/<名>` 格（P-23）、history 只有 compact 可改寫（P-41）、格經 `parts.json` 登記（P-25）、每格拿 agent 資料夾當第一個參數（P-33）、`on_error` 預設停（P-20），各條的 10-28 加註。
@@ -24,7 +24,7 @@
 | 分檔 | 涵蓋的段 |
 |---|---|
 | [01-保證佈局入口.md](CONVENTION/01-保證佈局入口.md) | 一、aos 保證的（不是慣例，是底）；二、佈局（每檔一句）；三、入口、loop、fsm |
-| [02-題目stack停錯腦.md](CONVENTION/02-題目stack停錯腦.md) | 四、題目與答案；五、stack；六、停與錯；七、腦與工具（含 P-41 腦的工具呼叫） |
+| [02-題目stack停錯腦.md](CONVENTION/02-題目stack停錯腦.md) | 四、題目與答案（含 10-30 P-11 改口成 queue、P-42 agent 對話協議）；五、stack；六、停與錯；七、腦與工具（含 P-41 腦的工具呼叫） |
 | [03-shell版與inst版.md](CONVENTION/03-shell版與inst版.md) | 八、shell 版與 inst 版 |
 | [04-範例三種寫法.md](CONVENTION/04-範例三種寫法.md) | 八之「範例：同一隻 agent 的三種寫法」 |
 | [05-不管落實待決.md](CONVENTION/05-不管落實待決.md) | 九、慣例不管的；十、程式對這份的落實（只有 impls 的 C++ 版，aos-tick 例外）；十一、要使用者決定的 |
