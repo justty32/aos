@@ -29,7 +29,7 @@
      │ 連 aos-loop 的公開 API（擋訊號、resolve_keys；跑單子＝aos-exec 的 run_inst）
  aos-daemon   一個 loop＋子 loop 的表：$AOS_STACK/<名字>/ 小格、loops_ctl 增減（或信箱模式 loops_mailbox）、loops_state 表（loops、execs 兩張；execs＝直接 aos-exec 一次的子項，10-30）、不自動重起、adopt   src/{daemon,child,common}
      │ 繼承 aos-loop 的 Loop；信箱模式連 aos-post 的庫（aos/post.hpp）；子 loop＝fork 後子行程呼叫 run_cli(-- 小格/loop.json#/_entry)，exec 成 PATH 上的 aos-loop
- aos-fsm      一次跑一格：$AOS_STACK/state.txt → 跑那格 → 碼 0 才換 next；trace.jsonl   src/{table,state,common}
+ aos-fsm      一次跑一格：$AOS_STACK/state.txt → 跑那格 → 照 next 換（字串＝碼 0 才換；物件＝照碼查，10-30）；trace.jsonl   src/{table,state,common}
      │ 跑一格借 aos-loop 的 run_once（aos/loop.hpp）
  aos-loop     一次次跑 exec：0 下一次、10 停、其他非 0 失敗；轉訊號、收完 128＋N；interval_ms、ctl／state 窗  src/{run,engine,common}
      │ 每次：fork 子行程呼叫 aos-exec 的 run_cli({"--", 目標, 參數...})（等同起一支 aos-exec）
@@ -120,7 +120,7 @@
 | `InputBad` | aos-schema、aos-directive（aos-util 讀 stdin）；libaos（`aos_inst_strerror`） | stdin 一份 JSON 都解不出來；libaos 的輸入 `in`／`out` 是 NULL、`argv` 空 |
 | `InputExtra` | aos-schema、aos-directive（aos-util 讀 stdin） | stdin 有好幾份 JSON |
 | `CfgMissing` | aos-loop、aos-fsm、aos-daemon（`load_cfg`） | 設定檔（loop.json、fsm.json、daemon.json）不在；`#/` 指不到 |
-| `CfgBad` | aos-loop、aos-fsm、aos-daemon | 設定檔讀不了、不是 JSON、`#` 後不是 `/`；不是物件、某個 key 型別不對、必填沒寫；aos-fsm 開跑時查整張表不合（`start`／`next` 不在表上、`next` 空字串或頭尾有空白、格的形狀不對）；aos-daemon：子項名字跟自己的 ctl／state／loops_ctl／loops_state 撞名、`loops_ctl`／`loops_state` 不是檔名或 null |
+| `CfgBad` | aos-loop、aos-fsm、aos-daemon | 設定檔讀不了、不是 JSON、`#` 後不是 `/`；不是物件、某個 key 型別不對、必填沒寫；aos-fsm 開跑時查整張表不合（`start`／`next` 不在表上、`next` 空字串或頭尾有空白、物件 `next` 的 key 不對或沒有 `"0"`／`"*"`、格的形狀不對）；aos-daemon：子項名字跟自己的 ctl／state／loops_ctl／loops_state 撞名、`loops_ctl`／`loops_state` 不是檔名或 null |
 | `StateBad` | aos-fsm | `$AOS_STACK/state.txt` 在但讀不了（沒權限、是資料夾、不是 UTF-8） |
 | `SchemaMissing` | aos-schema | SCHEMA檔 不在 |
 | `WriteFailed` | aos-loop、aos-fsm、aos-daemon | state 窗寫不了；aos-fsm：`trace.jsonl`、`.state.txt` 寫不了；aos-daemon：loops_state 窗、子項的 loop.json 寫不了 |

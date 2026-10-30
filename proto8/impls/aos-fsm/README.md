@@ -2,7 +2,7 @@
 
 `aos-fsm - 照一張狀態表，每叫一次跑「現在狀態」那一格，成功就換到下一個`（NAME，C-54 R1）
 
-**一句話：`aos-fsm [旗標] 設定檔.json`——一次只跑一格：看 `$AOS_STACK/state.txt` 記的現在狀態，跑那一格，格退 0 才把狀態換成 `next`，然後以格的碼結束。**
+**一句話：`aos-fsm [旗標] 設定檔.json`——一次只跑一格：看 `$AOS_STACK/state.txt` 記的現在狀態，跑那一格，照表上的 `next` 換狀態（字串＝格退 0 才換；物件＝照格的結束碼查），換了以 0 結束、沒換以格的碼結束。**
 一個 lib（`lib/libaos-fsm.a`，沒有公開標頭）加一支薄薄的命令列（`bin/aos-fsm`）。連 [aos-loop](../aos-loop/README.md) 的公開 API（跑一格＝`run_once`；它又帶進 aos-exec、inst、aos-util、aos-directive）。全家慣例見 [impls/README.md](../README.md)。
 
 像大富翁只擲一次骰子：桌上一張地圖（`fsm.json`：每格寫著「走到這裡做什麼、做完去哪格」），棋子停在哪格記在一張小紙條上（`$AOS_STACK/state.txt`）。
@@ -16,7 +16,7 @@ cat fsm.json
 #             "next": "act"},
 #   "act": {"exec": ["act", "--fast"], "next": "idle"}}}
 AOS_STACK=st/ aos-fsm fsm.json; echo $?   # 跑 idle 那格（aos-exec -- idle）；退 0 → st/state.txt 變 think
-cat st/trace.jsonl   # {"started_at": "2026-10-19T14:07:00.123+00:00", "state": "idle", "code": 0, "signal": null, "elapsed_ms": 3}
+cat st/trace.jsonl   # {"started_at": "2026-10-19T14:07:00.123+00:00", "state": "idle", "code": 0, "signal": null, "elapsed_ms": 3, "next": "think"}
 ```
 
 規則出處：CONVENTION P-07～P-10、P-20、P-21、P-36、P-38，NORMS N-36、N-38、N-39、N-41、N-05、N-43、N-60，ideas § 20、§ 23、§ 24。
@@ -32,6 +32,12 @@ aos-fsm [旗標] 設定檔.json
   目前**沒有旗標**（旗標表是空的，規則同 aos-exec，aos-util 的 `parse_cli`）；`--` 結束旗標。不認得的旗標（含 `--cfg`）＝`FlagUnknown`；沒給、多給＝`ArgumentsBad`
   （原因 `usage: aos-fsm [旗標] 設定檔.json（原因）`）。
 - **fsm.json**：`{"start": 起始狀態名, "states": {狀態名: {"exec": 格, "next": 下一個狀態名}}}`（使用者「fsm.json，現在是用val，幫我改成exec」）。表一定明寫、`next` 只在表上（N-36）；其他 key 忽略（`body`、`_entry`…）。
+  - `next` 兩種寫法（10-30 N-36 改口，使用者「fsm 的 next 可以按照結束碼分岔」選甲；細節代定、可翻案，[thinking 10-30 aos-round § A](../../thinking/2026-10-30-aos-round.md#a-n-36-分岔的格式結論)）：
+    - **字串**＝一個狀態名，舊的照舊：格退 0 才寫進 state、fsm 退 0；其他碼 state 不動、fsm 以那個碼退。
+    - **物件 `{結束碼: 狀態名, …}`**＝照格的結束碼 c 查：有 `"c"`（沒有就看 `"*"`＝其餘全部，含被訊號停掉的 128＋N）＝把那個狀態名寫進 state、**fsm 退 0**（這一步照表走了，N-43 每層只說自己）；
+      查不到＝state 不動、fsm 以 c 退（透明轉交，照舊）。例 `"next": {"0": "think", "10": "idle"}`。
+      key 是 `"0"`～`"255"`（十進位，沒有正負號、空白、前導 0）或 `"*"`；值的規則同字串 `next`；**至少要有 `"0"` 或 `"*"`**（退 0 不准查不到，免得變成「成功但留在原地」）。
+      把錯誤碼或 `"*"` 導回同一格，fsm 不擋、不數（無窮轉移只有 loop 的 `max` 擋）。
   - `exec`（aos-loop 的 `parse_target`，跟 loop.json 的 `exec` 同一套寫法、同名）＝**字串**（每次 `aos-exec -- 它`）或**陣列 `[目標, 參數...]`**（`aos-exec -- 目標 參數...`）；
     相對路徑從 cwd 算（cwd 通常是 agent 資料夾，fsm 不轉）；WS 沿用 `$AOS_WS`、AOS_STACK 沿用（由那格的 aos-exec 定）。
   - `exec` 寫成**物件＝單子**：aos-fsm 在自己行程內交給 aos-exec 的 `run_inst` 跑、當監工（`timeout_ms`、整群收、轉訊號）。跑的期間 `AOS_CF`＝fsm.json 的實際路徑、
@@ -39,7 +45,7 @@ aos-fsm [旗標] 設定檔.json
     單子壞（`EntryBad`／`DirectiveBad`／`LaunchFailed`）＝自己的錯一行「aos-fsm: 代號 狀態 X：單子跑不起來：…」、退 1、不寫 trace、state 不動；被逾時收掉＝trace `code` 143、`signal` 15。
     `"exec": "fsm.json#/states/<名>/body"`＋`body` 照樣能用（字串目標，由那格的 aos-exec 跑）。
   - **開跑時查整張表**（ideas 10-22 § 7，`check`）：讀表後、跑格前，`start` 要在表上；每一格要是 `{"exec", "next"}`、`exec` 合法（單子只看是物件，裡面跑那格時才驗）、`next` 是表上的狀態名、
-    不是空字串、頭尾沒空白（認 Unicode 空白）、沒換行。哪一格不合都＝表壞 `CfgBad`、不跑格。
+    不是空字串、頭尾沒空白（認 Unicode 空白）、沒換行；物件 `next` 的 key 與每個值照上面。哪一格不合都＝表壞 `CfgBad`、不跑格。
   - fsm.json 帶 `"_entry": ["aos-fsm", {"$env": "AOS_CF"}]` 時 `aos-exec fsm.json` 就是一次；表在大 JSON 裡時寫 `{"$env": "AOS_CF", "$path": "#/fsm"}`（`$path` 字串拼接）。
   - **指示詞**（使用者「aos 讀的 JSON 全部支援」，N-45）：只解 fsm 自己讀的格——整份、`states`、每一格先換一層，`start`、格的 `exec`（換一層後是物件＝單子，裡面不解、跑那格時才解）、`next` 整個解
     （例 `{"start": "idle", "states": {"$ref": "states.json"}}`、`"exec": ["aos-exec", {"$env": "TOOL"}]`）；格裡其他 key（`body`…）不碰，留給跑那格的 aos-exec。
@@ -48,7 +54,7 @@ aos-fsm [旗標] 設定檔.json
   - `state.txt`：純文字一行狀態名（跟 shell 版 fsm 同格式，可互換，P-07）。沒有、空的＝`start`；前後空白去掉（認 Unicode 空白，同 Python `str.strip()`）。
     **在但讀不了**（沒權限、是資料夾、不是 UTF-8）＝`StateBad`、不跑格；裡面的狀態不在表上＝`StateUnknown`。
     寫的時候先寫 `.state.txt` 再改名蓋過去（N-05）。
-  - `trace.jsonl`：每次追加一行 `{"started_at", "state", "code", "signal", "elapsed_ms"}`（排版同 Python `json.dumps`；`started_at`＝這次開始的時間〔C-54 命名方法 R6「時間點＝`<發生了什麼>_at`」〕，
+  - `trace.jsonl`：每次追加一行 `{"started_at", "state", "code", "signal", "elapsed_ms", "next"}`（`next`＝這次寫進 state 的狀態名、沒換＝`null`，字串 `next` 的格也記，10-30 N-39 加註；排版同 Python `json.dumps`；`started_at`＝這次開始的時間〔C-54 命名方法 R6「時間點＝`<發生了什麼>_at`」〕，
     ISO 8601 UTC 到毫秒，同 Python `datetime.now(timezone.utc).isoformat(timespec="milliseconds")`（例 `2026-10-23T01:58:45.123+00:00`），P-38；
     `elapsed_ms`＝那格花了幾毫秒；`signal`＝停掉那格的訊號，沒有＝`null`）。**沒有 `timed_out`**（C-52：fsm 看不到格裡有沒有逾時；
     單子格逾時＝那格的 aos-exec 以 128＋N 正常結束，trace 是 `code` 143、`signal` null）。
@@ -60,21 +66,21 @@ aos-fsm [旗標] 設定檔.json
 1. 命令列不對、沒設 `AOS_STACK`、設定檔讀不到或指不到、表壞、查不到現在那格、`exec` 型別不對 → 自己的錯（state、trace 都不動）。
 2. 跑那格（那層 aos-exec 的錯——入口不在、單子壞…：stderr 一行 `aos-exec: 代號 原因`、格的碼＝1）。
 3. 追加 trace 一行。
-4. 格的碼 **0** 才寫 `next`；10 與其他非 0（含被訊號停掉 128＋N、逾時）state 不動（下一次重跑同一格，P-20）。
-5. 以格的碼結束（10 原樣往上，由 loop 決定停；fsm 不說話）。
+4. 照 `next` 查格的碼（字串 `next` 只接 0）：查到才寫 state；查不到（字串 `next` 的 10 與其他非 0，含被訊號停掉 128＋N、逾時）state 不動（下一次重跑同一格，P-20）。
+5. 查到以 0 結束；查不到以格的碼結束（10 原樣往上，由 loop 決定停；fsm 不說話）。
 
 trace 在 state 之前寫：trace 寫不了就不換狀態（下一次重跑同一格）。
 
 ### 訊號
 
 同 aos-loop：整支程式擋著 SIGINT／SIGTERM／SIGHUP。跑格的期間收到就轉給那格（`kill` 給那格的 aos-exec 子行程；單子格再由它轉給整群），
-等格結束，**trace 與 state 照常寫完**（格收好自己、退 0 就照樣換狀態），再以 **128＋N** 結束（P-36「寫好狀態再結束，但結束碼非 0」）。
+等格結束，**trace 與 state 照表寫完**（格收好自己、退的碼表上接得住就照樣換狀態，含物件 `next` 的分岔），再以 **128＋N** 結束、不以 0 結束（P-36「寫好狀態再結束，但結束碼非 0」、N-38）。
 跑格之前就收到：不跑，直接 128＋N。
 
 ## 元素
 
 ```
- main ──▶ block_signals ──▶ parse_cli ──▶ 要 AOS_STACK ──▶ read_table ──▶ read_state ──▶ pick ──▶ run_once（aos-loop）──▶ append_trace ──▶ write_state（碼 0）
+ main ──▶ block_signals ──▶ parse_cli ──▶ 要 AOS_STACK ──▶ read_table ──▶ read_state ──▶ pick ──▶ run_once（aos-loop）──▶ next_for ──▶ append_trace ──▶ write_state（查到才寫）
 ```
 
 跑一格借 aos-loop 的 `run_once`（格的 `exec` 跟 loop.json 的 `exec` 是同一個東西，訊號轉送也一樣）；fsm 不知道格是什麼（C-52）：`run_once` 只回碼、訊號、毫秒（沒有逾時）。沒有公開標頭（沒有別的專案要用 fsm 的庫）。
@@ -82,9 +88,9 @@ trace 在 state 之前寫：trace 寫不了就不換狀態（下一次重跑同�
 | 檔 | 做什麼 |
 |---|---|
 | `src/common/common.hpp` | `using`；代號（沿用 aos-loop 的，含 `StackMissing`；再加 `StateUnknown`） |
-| `src/table/table.hpp`、`table.cpp` | `read_table`（`load_cfg` 讀 `檔` 或 `檔#/指標`、解指示詞（`resolve_table`）、驗 `start`／`states`）、`pick`（狀態名 → 那格：`exec` 用 aos-loop 的 `parse_target` 拆成目標與參數、物件＝單子（`place_inline` 填 `AOS_CF`／`AOS_CO`、`exec_bases` 記單子的 `$ref` 起點）；`next`） |
+| `src/table/table.hpp`、`table.cpp` | `read_table`（`load_cfg` 讀 `檔` 或 `檔#/指標`、解指示詞（`resolve_table`）、驗 `start`／`states`）、`pick`（狀態名 → 那格：`exec` 用 aos-loop 的 `parse_target` 拆成目標與參數、物件＝單子（`place_inline` 填 `AOS_CF`／`AOS_CO`、`exec_bases` 記單子的 `$ref` 起點）；`next`＝字串或 `{結束碼: 狀態名}`（`Next`，`check` 驗 key 與值））、`next_for`（格的碼 → 要寫的狀態名，查不到＝沒有） |
 | `src/state/state.hpp`、`state.cpp` | `read_state`、`write_state`（`.state.txt` 再改名）、`append_trace`、`utc_now` |
-| `src/main.cpp` | 命令列：`parse_cli`（旗標表空的）、要剛好一個設定檔；串上面；出錯印「aos-fsm: 代號 原因」 |
+| `src/main.cpp` | 命令列：`parse_cli`（旗標表空的）、要剛好一個設定檔；串上面；trace 一行（含 `next`）由這裡組；查到退 0、查不到以格的碼退、自己收到訊號 128＋N；出錯印「aos-fsm: 代號 原因」 |
 
 ## 錯誤代號
 
@@ -97,7 +103,7 @@ trace 在 state 之前寫：trace 寫不了就不換狀態（下一次重跑同�
 | `StackMissing` | 沒設 `AOS_STACK`（或空的） |
 | `DirectiveBad`（共用） | fsm.json 裡 fsm 讀的格（整份、`start`、`states`、每一格、`exec`、`next`）的指示詞解不開；那格的單子裡的指示詞跑的時候解不開 |
 | `CfgMissing`（共用） | 設定檔不在；`#/` 指標指不到 |
-| `CfgBad`（共用） | 設定檔讀不了、不是 JSON；`#` 後面不是 `/`；不是 `{"start": 字串, "states": 物件}`；開跑時查整張表不合：`start` 不在表上、某格不是 `{"exec", "next": 字串}`、`next` 不在表上／空字串／頭尾有空白／有換行、`exec` 不是字串、非空字串陣列或物件 |
+| `CfgBad`（共用） | 設定檔讀不了、不是 JSON；`#` 後面不是 `/`；不是 `{"start": 字串, "states": 物件}`；開跑時查整張表不合：`start` 不在表上、某格不是 `{"exec", "next": 字串或物件}`、`next`（或物件 `next` 的值）不在表上／空字串／頭尾有空白／有換行／不是字串、物件 `next` 的 key 不是 `"0"`～`"255"` 或 `"*"`、物件 `next` 沒有 `"0"` 也沒有 `"*"`、`exec` 不是字串、非空字串陣列或物件 |
 | `EntryBad`（共用） | 那格的單子形狀不對（原因開頭「狀態 X：單子跑不起來：」） |
 | `StateBad` | `$AOS_STACK/state.txt` 在但讀不了（沒權限、是資料夾、不是 UTF-8） |
 | `StateUnknown` | state 檔裡的狀態不在表上 |
@@ -120,7 +126,8 @@ cmake -B build && cmake --build build && ctest --test-dir build
   C 段訊號（SIGTERM：格收好退 0 → state 照換、143；SIGINT 停掉單子格 → 130）與單子格的 `$ref` 從 fsm.json 的資料夾算、`argv[0]` 帶 `/` 又 exec 不了交給 aos-exec；
   D 段命令列（usage：多給、`--cfg`、不認得的旗標；`--` 結束旗標；設定檔 `檔#/指標`、指不到、`#` 後沒 `/`；`exec` 陣列）；
   E 段 state 在但讀不了（是資料夾、不是 UTF-8、沒權限）退 1 不跑、state 不在表上、state 去全形空白、開跑時查整張表（12 種壞法）、start／states／格／exec／next 的指示詞、解不開＝`DirectiveBad` 不跑、格的 body 不解；
-  F 段 exec 直接放單子——`AOS_CF`／`AOS_CD`／`AOS_CO`（名字帶 `/` 跳脫）／cwd 與換 next、非 0、逾時（trace 143／15）、形狀壞（`EntryBad`／`DirectiveBad`，不寫 trace）、SIGTERM、`states` 拆檔時 `$ref` 的起點；設定檔 `檔#/指標` 的 `AOS_CO`、相對 `AOS_STACK`、捷徑 fsm.json。
+  F 段 exec 直接放單子——`AOS_CF`／`AOS_CD`／`AOS_CO`（名字帶 `/` 跳脫）／cwd 與換 next、非 0、逾時（trace 143／15）、形狀壞（`EntryBad`／`DirectiveBad`，不寫 trace）、SIGTERM、`states` 拆檔時 `$ref` 的起點；設定檔 `檔#/指標` 的 `AOS_CO`、相對 `AOS_STACK`、捷徑 fsm.json；
+  G 段 `next` 分岔（10-30）——10 接住→state 換、fsm 退 0；10 沒接→退 10 不換；`*` 接 1、只有 `*` 也接 0；137 寫在表上接得住；表壞 13 種（沒 `"0"` 也沒 `"*"`、空物件、key `abc`／`-1`／`010`／` 1`／`256`、值不在表上／空／頭尾空白／換行／不是字串）；`next` 的 `$ref` 解成物件；SIGTERM＋分岔→state 照表、143；trace 的 `next` 沒換是 null、排在最後（A 段 trace 也驗字串 `next` 的 `next` 欄）。
   外層逾時那案要 `../aos-exec/bin/aos-exec`。
 - `test_demo`（`tests/test_demo.py`）：**整合測試**。照 `proto8/demo/run.sh`，PATH 最前面放 impls 的 aos-exec、aos-loop、aos-fsm 的 `bin/`，把 `proto8/demo` 的 agent-bob（含它叫的 cathy、stamp）與 agent-ann 各跑一次，
   看結束碼 0、stderr 空、答案寫出來（`out/q1.txt`、`done/q1.txt`）。要先建好 `../aos-exec`、`../aos-loop` 自己的 `bin/`。（Python 版已刪：使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」。）

@@ -177,7 +177,8 @@ def trace_jsonl_one_line_per_beat(t):
         run(t)
     tr = trace(t)
     check("每次一行", [(x["state"], x["code"]) for x in tr], [("a", 0), ("b", 5), ("b", 5)])
-    check("欄位（沒有 timed_out）", list(tr[0]), ["started_at", "state", "code", "signal", "elapsed_ms"])
+    check("欄位（沒有 timed_out；10-30 加 next）", list(tr[0]), ["started_at", "state", "code", "signal", "elapsed_ms", "next"])
+    check("next：換了是名字、沒換 null（字串 next）", [x["next"] for x in tr], ["b", None, None])
     for x in tr:
         datetime.datetime.fromisoformat(x["started_at"])
 
@@ -270,7 +271,7 @@ def trace_line_format(t):
     run(t)
     line = (st(t) / "trace.jsonl").read_text()
     ok = re.fullmatch(r'\{"started_at": "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00", "state": "a", "code": 0, "signal": null, '
-                      r'"elapsed_ms": \d+\}\n', line)   # started_at＝ISO 8601 UTC 到毫秒（10-23 命名統合；10-25 前叫 at）
+                      r'"elapsed_ms": \d+, "next": "a"\}\n', line)   # started_at＝ISO 8601 UTC 到毫秒（10-23 命名統合；10-25 前叫 at）；10-30 加 next
     check("trace 一行的排版", (ok is not None, line), (True, line))
 
 
@@ -638,6 +639,110 @@ def inline_cell_symlink_table(t):
     rc, _, _, stderr = run(t, "link/fsm.json")
     out = st(t) / "out"
     check("捷徑 fsm.json：相對基準一律是實際的資料夾", (rc, stderr, out.read_text() if out.exists() else None), (0, "", "real\n"))
+
+
+# ───────── G. 10-30 N-36 分岔：next 是 {結束碼: 狀態名}（thinking 10-30 aos-round § A）─────────
+
+def branch_table(t, a_next, codes_b="exit 0\n"):
+    cell(t, "a", 'exit "$(cat "$AOS_STACK/code" 2>/dev/null || echo 0)"\n'); cell(t, "b", codes_b)
+    put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"exec": "a", "next": a_next}, "b": {"exec": "b", "next": "a"},
+                                                       "c": {"exec": "b", "next": "a"}}})
+
+
+@case
+def branch_10_caught(t):
+    branch_table(t, {"0": "b", "10": "c"})
+    put(st(t) / "code", "10")
+    rc, _, _, stderr = run(t)
+    check("10 接住：state 換、fsm 退 0", (rc, stderr, state(t), trace(t)[-1]["code"], trace(t)[-1]["next"]), (0, "", "c\n", 10, "c"))
+    put(st(t) / "state.txt", "a\n")
+    put(st(t) / "code", "0")
+    check("0 照表", (run(t)[0], state(t), trace(t)[-1]["next"]), (0, "b\n", "b"))
+
+
+@case
+def branch_10_not_caught(t):
+    branch_table(t, {"0": "b", "1": "c"})
+    put(st(t) / "state.txt", "a\n")
+    put(st(t) / "code", "10")
+    rc = run(t)[0]
+    check("10 沒接：退 10、state 不換、trace next null", (rc, state(t), trace(t)[-1]["code"], trace(t)[-1]["next"]),
+          (10, "a\n", 10, None))
+
+
+@case
+def branch_star(t):
+    branch_table(t, {"0": "b", "*": "c"})
+    put(st(t) / "code", "1")
+    check("* 接 1", (run(t)[0], state(t), trace(t)[-1]["next"]), (0, "c\n", "c"))
+    put(st(t) / "state.txt", "a\n")
+    put(st(t) / "code", "0")
+    check("有 \"0\" 就不走 *", (run(t)[0], state(t)), (0, "b\n"))
+    branch_table(t, {"*": "c"})
+    put(st(t) / "state.txt", "a\n")
+    check("只有 * 也接 0", (run(t)[0], state(t)), (0, "c\n"))
+
+
+@case
+def branch_killed_by_signal_caught(t):
+    # 格被訊號停掉的 128＋N 也照表查（* 接得住，要不要接是寫表的人的事）
+    cell(t, "a", "kill -9 $$\n"); cell(t, "b", "exit 0\n")
+    put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"exec": "a", "next": {"0": "b", "137": "b"}},
+                                                       "b": {"exec": "b", "next": "a"}}})
+    rc = run(t)[0]
+    check("137 寫在表上就接住", (rc, state(t), trace(t)[0]["code"], trace(t)[0]["signal"]), (0, "b\n", 137, 9))
+
+
+@case
+def branch_bad_tables(t):
+    cell(t, "a", 'touch "$AOS_STACK/ran"\n')
+    good = {"exec": "a", "next": "a"}
+    for what, nxt in (("沒有 0 也沒有 *", {"10": "a"}), ("空物件", {}), ("key abc", {"0": "a", "abc": "a"}),
+                      ("key -1", {"0": "a", "-1": "a"}), ("key 前導 0", {"0": "a", "010": "a"}),
+                      ("key 帶空白", {"0": "a", " 1": "a"}), ("key 256", {"0": "a", "256": "a"}),
+                      ("值不在表上", {"0": "a", "10": "nope"}), ("值空字串", {"0": ""}),
+                      ("值頭尾空白", {"0": "a "}), ("值有換行", {"*": "x\ny"}), ("值不是字串", {"0": 3}),
+                      ("值是物件", {"0": {"0": "a"}})):
+        put(Path(t, "fsm.json"), {"start": "a", "states": {"a": good, "b": {"exec": "a", "next": nxt}, "a ": good, "x\ny": good}})
+        check("分岔表壞 %s" % what, own_error_no_beat(t, "分岔表壞 %s：不跑" % what, run(t)), "CfgBad")
+    put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"exec": "a", "next": {"0": "a", "255": "a", "*": "a"}}}})
+    check("分岔表好照跑", (run(t)[0], (st(t) / "ran").exists()), (0, True))
+
+
+@case
+def branch_directive_in_next(t):
+    # 物件 next 也照舊整個解指示詞
+    cell(t, "a", "exit 10\n")
+    put(Path(t, "names.json"), {"m": {"0": "a", "10": "z"}})
+    put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"exec": "a", "next": {"$ref": "names.json#/m"}},
+                                                       "z": {"exec": "a", "next": "a"}}})
+    check("next 的 $ref 解成物件", (run(t)[0], state(t)), (0, "z\n"))
+
+
+@case
+def branch_sigterm_writes_branch_then_143(t):
+    # fsm 自己收到 SIGTERM（N-38）：格收好退 10、表上 10 → c：state 照表換 c、trace next c、fsm 仍以 143 結束
+    cell(t, "a", 'trap \'exit 10\' TERM\ntouch "$AOS_STACK/up"\nwhile :; do sleep 0.05; done\n')
+    put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"exec": "a", "next": {"0": "b", "10": "c"}},
+                                                       "b": {"exec": "a", "next": "a"}, "c": {"exec": "a", "next": "a"}}})
+    st(t).mkdir()
+    p = subprocess.Popen([BIN, "fsm.json"], cwd=t, env=env_of(t, None), stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE, text=True)
+    ok = wait_file(st(t) / "up")
+    p.send_signal(signal.SIGTERM)
+    out, err = p.communicate(timeout=20)
+    x = trace(t)[0]
+    check("SIGTERM＋分岔：state 照表、143", (ok, p.returncode, err, state(t), x["code"], x["next"]),
+          (True, 143, "", "c\n", 10, "c"))
+
+
+@case
+def branch_trace_line_format(t):
+    cell(t, "a", "exit 10\n")
+    put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"exec": "a", "next": {"0": "a"}}}})
+    run(t)
+    line = (st(t) / "trace.jsonl").read_text()
+    check("沒換：next null、在最後", line.endswith('"signal": null, "elapsed_ms": %d, "next": null}\n' % trace(t)[0]["elapsed_ms"]), True)
 
 
 for fn in cases:

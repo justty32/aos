@@ -19,6 +19,7 @@ std::string read_state(const std::string& stack, const std::string& start);
 void write_state(const std::string& stack, const std::string& name);
 
 // stack/trace.jsonl 追加一行（dumps，排版同 Python json.dumps）。寫不了 WriteFailed。
+// 那一行由 main 組：{"started_at","state","code","signal","elapsed_ms","next"}（next＝這次寫進 state 的狀態名、沒換＝null，10-30）。
 void append_trace(const std::string& stack, const Json& line);
 
 }  // namespace aos::fsm

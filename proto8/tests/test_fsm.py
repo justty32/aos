@@ -183,7 +183,8 @@ class T(unittest.TestCase):
             self.beat()
         tr = self.trace()
         self.assertEqual([(t["state"], t["code"]) for t in tr], [("a", 0), ("b", 5), ("b", 5)])
-        self.assertEqual(set(tr[0]), {"started_at", "state", "code", "signal", "elapsed_ms"})   # F4：沒有 timed_out
+        self.assertEqual(list(tr[0]), ["started_at", "state", "code", "signal", "elapsed_ms", "next"])   # F4：沒有 timed_out；10-30 加 next
+        self.assertEqual([t["next"] for t in tr], ["b", None, None])   # 字串 next 也記：退 0 是名字、其他 null
         for t in tr:   # at＝ISO 8601 UTC 到毫秒（10-23 命名統合，統合前到秒）
             self.assertRegex(t["started_at"], r"\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00\Z")
             datetime.datetime.fromisoformat(t["started_at"])
@@ -337,6 +338,52 @@ class T(unittest.TestCase):
         x = self.trace()[0]
         self.assertEqual((ok, p.returncode, x["code"], x["signal"], (self.stack / "state.txt").exists()),
                          (True, 130, 130, None, False))
+
+    # ───── 10-30 N-36 改口：next 是 {結束碼: 狀態名}（thinking 10-30 aos-round § A）─────
+
+    def three(self, a_next):
+        self.cell("a", 'exit "$(cat "$AOS_STACK/code" 2>/dev/null || echo 0)"\n'); self.cell("b", "exit 0\n")
+        self.table({"a": {"exec": "a", "next": a_next}, "b": {"exec": "b", "next": "a"}, "c": {"exec": "b", "next": "a"}})
+
+    def test_branch_10_caught(self):
+        self.three({"0": "b", "10": "c"})
+        (self.stack / "code").write_text("10")
+        r = self.beat()
+        self.assertEqual((r.returncode, r.stderr, self.state()), (0, "", "c\n"))
+        self.assertEqual((self.trace()[-1]["code"], self.trace()[-1]["next"]), (10, "c"))
+
+    def test_branch_10_not_caught(self):
+        self.three({"0": "b"})
+        (self.stack / "state.txt").write_text("a\n")
+        (self.stack / "code").write_text("10")
+        self.assertEqual(self.beat().returncode, 10)
+        self.assertEqual((self.state(), self.trace()[-1]["next"]), ("a\n", None))
+
+    def test_branch_star_catches_1(self):
+        self.three({"0": "b", "*": "c"})
+        (self.stack / "code").write_text("1")
+        self.assertEqual((self.beat().returncode, self.state()), (0, "c\n"))
+
+    def test_branch_bad_tables(self):
+        self.cell("a", 'touch "$AOS_STACK/ran"\n')
+        good = {"exec": "a", "next": "a"}
+        for nxt in ({"10": "a"}, {}, {"0": "a", "abc": "a"}, {"0": "a", "10": "nope"}):
+            self.table({"a": good, "b": {"exec": "a", "next": nxt}})
+            r = self.beat()
+            self.assertEqual((r.returncode, r.raw_stderr.startswith("aos-fsm: CfgBad 狀態 b 的 next")), (1, True), (nxt, r.raw_stderr))
+            self.assertFalse((self.stack / "ran").exists())
+            self.assertFalse((self.stack / "trace.jsonl").exists())
+
+    def test_branch_sigterm_then_143(self):
+        self.cell("a", 'trap \'exit 10\' TERM\ntouch "$AOS_STACK/up"\nwhile :; do sleep 0.05; done\n')
+        self.table({"a": {"exec": "a", "next": {"0": "b", "10": "c"}}, "b": {"exec": "a", "next": "a"},
+                    "c": {"exec": "a", "next": "a"}})
+        p = self.start()
+        ok = self.wait_file(self.stack / "up")
+        p.send_signal(signal.SIGTERM)
+        out, err = p.communicate(timeout=20)
+        x = self.trace()[0]
+        self.assertEqual((ok, p.returncode, err, self.state(), x["code"], x["next"]), (True, 143, "", "c\n", 10, "c"))
 
 
 if __name__ == "__main__":

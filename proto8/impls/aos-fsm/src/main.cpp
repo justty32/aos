@@ -4,14 +4,17 @@
 //
 //   block_signals → 命令列（目前沒有旗標；唯一的位置參數＝設定檔，可寫 `檔#/指標`；10-21 傍晚 ideas § 9）→ 要 AOS_STACK →
 //   read_table → check（開跑時查整張表，10-22）→ read_state（在但讀不了＝StateBad，10-22）→ pick → run_once（aos-loop 的公開 API：目標＝子行程 `aos-exec -- 目標 參數...`；單子＝行程內 run_inst，10-24）
-//   → append_trace → 格的碼 0 才 write_state(next) → 以格的碼結束
+//   → next_for（照格的碼查表）→ append_trace → 查到才 write_state → 查到退 0、沒查到以格的碼結束
 //
+// next 兩種寫法（10-30 N-36 改口）：字串＝格退 0 才換（其他碼 state 不動、以那個碼退）；物件 {結束碼: 狀態名}＝格退 c，表上有 "c"
+// （或沒有但有 "*"）就寫進 state、fsm 退 0；查不到＝state 不動、以 c 退。
 // exec＝字串或 [目標, 參數...]（相對路徑從 cwd 算，fsm 不轉）；物件＝內嵌單子（10-24 恢復；行程內 aos-exec 的 run_inst，
 // 跑的期間 AOS_CF＝fsm.json、AOS_CO＝/states/<名>/exec，相對路徑從 fsm.json 的資料夾算；單子壞＝「aos-fsm: EntryBad 狀態 X：單子跑不起來：…」退 1、不寫 trace）。
 // 單子被逾時收掉：code 128＋N、signal N（目標那條是跑它的 aos-exec 以 128＋N 正常結束，signal null）。
-// 只看格的結束碼：不讀格的 stdout、不轉述格的 stderr（N-38）。格非 0（含 10）＝state 不動、原碼往上。
-// trace 一行 {"started_at","state","code","signal","elapsed_ms"}（started_at＝這格開始跑的時間，ISO 8601 UTC 到毫秒；10-25 前叫 at），沒有 timed_out（fsm 看不到格裡有沒有逾時，C-52；10-21 plan F4）。
-// 收到 SIGINT／SIGTERM／SIGHUP：轉給那格、等它結束，trace 與 state 照常寫完，再以 128＋N 結束（P-36）。
+// 只看格的結束碼：不讀格的 stdout、不轉述格的 stderr（N-38）。表上沒接住的碼（字串 next 的非 0，含 10）＝state 不動、原碼往上。
+// trace 一行 {"started_at","state","code","signal","elapsed_ms","next"}（started_at＝這格開始跑的時間，ISO 8601 UTC 到毫秒；10-25 前叫 at；
+// next＝這次寫進 state 的狀態名、沒換＝null，10-30），沒有 timed_out（fsm 看不到格裡有沒有逾時，C-52；10-21 plan F4）。
+// 收到 SIGINT／SIGTERM／SIGHUP：轉給那格、等它結束，trace 與 state 照表寫完（含分岔），再以 128＋N 結束（P-36、N-38）。
 // 自己出錯：stderr 一行「aos-fsm: 代號 原因」、退 1（N-38、N-60）。
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
@@ -23,6 +26,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
+#include <optional>
 
 static const char* USAGE = "usage: aos-fsm [旗標] 設定檔.json";   // 旗標表是空的也寫 [旗標]（10-22）
 
@@ -80,14 +84,22 @@ int main(int argc, char** argv) {
             line["signal"] = b.signal;
         }
         line["elapsed_ms"] = b.elapsed_ms;
+        std::optional<std::string> next = fsm::next_for(cell, b.code);   // 10-30 N-36：照表查，查不到＝state 不動
+        line["next"] = nullptr;
+        if (next) {
+            line["next"] = *next;
+        }
         fsm::append_trace(stack, line);
-        if (b.code == 0) {
-            fsm::write_state(stack, cell.next);
+        if (next) {
+            fsm::write_state(stack, *next);
         }
         if (b.received != 0) {
-            return 128 + b.received;
+            return 128 + b.received;   // fsm 自己收到訊號：照表寫完 state（含分岔），仍以 128＋N 結束（N-38、P-36）
         }
-        return b.code;
+        if (next) {
+            return 0;   // 表上接住了這個碼＝這一步照表走了（字串 next 只接 0；每層只說自己，N-43）
+        }
+        return b.code;   // 沒接住：透明轉交
     } catch (const aos::Error& e) {
         return fail(e.code, e.msg);
     } catch (const std::exception& e) {
