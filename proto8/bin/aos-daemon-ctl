@@ -14,8 +14,8 @@ proto8/thinking/2026-10-30-agent-lifecycle.md（實作第 7 步的補）與 bin/
   信箱固定是 <D>/loops_mailbox/（daemon.json 要寫 "loops_mailbox": "loops_mailbox"）；沒有 new/＝MailboxMissing（daemon 不是信箱模式或還沒起）。
 add 的自動識別（--kind 沒給時）：XXX 是資料夾、裡面有 loop.json＝loop 型（daemon 的子 loop 直接跑 XXX 的 loop.json）；其他＝exec 型（execs）。
   loop：子項設定＝XXX/loop.json 的內容（去掉 _entry），exec 的相對目標照 XXX 轉絕對、單子沒寫 cwd＝補 XXX、相對的 cwd 接在 XXX 後面；
-        exec 裡剛好等於 {"$env": "AOS_CD"} 的值換成 XXX 的絕對路徑（搬進小格後 AOS_CD 是小格；10-30 eca 代定，agent-nia、eca-claude
-        的 `aos-parts run 槽 {"$env": "AOS_CD"}` 靠這條掛得上 daemon；帶 $path 等其他 key 的不動）。
+        exec 裡剛好等於 {"$env": "AOS_CD"} 的值換成 XXX 的絕對路徑（搬進小格後 AOS_CD 是小格；10-30 eca 代定，agent-nia 的
+        `aos-round {"$env": "AOS_CD"}`、eca-claude 的 `aos-parts run 槽 {"$env": "AOS_CD"}` 靠這條掛得上 daemon；帶 $path 等其他 key 的不動）。
         ctl／state 原樣（相對 $AOS_STACK，落在小格）。XXX 的 .env、loop.json 裡的 $ref／$env 不處理（照 daemon 的規則從它的 cwd 算）。
   exec：execs_added {名字: XXX 的絕對路徑}（`檔#/指標` 只轉 # 前面）。
   max1（使用者 10-30「包成max:1也是可以」，只在 --kind 指定時）：loops_added {名字: {"exec": XXX, "max": 1}}。

@@ -144,7 +144,7 @@ class ListenTest(Base):
         self.assertTrue(out.startswith("FAKE ANSWER to: 等我"), out)
         self.assertIn("還在 queue 的 new/，但目前沒有程式在跑", err)
         self.assertIn("[叫工具 clock {}]", err)                # --trace：工具呼叫與每格一行
-        self.assertRegex(err, r"· queue claim \d+ms")
+        self.assertRegex(err, r"· idle \d+ms")                   # 10-30 aos-round 起 trace 是 fsm 的一格一行（state）
 
     def test_waits_while_letter_in_cur(self):
         """信在 cur/（認領了、腦壞停住）：listen 照等、說停在哪一格；修好再跑就答出。"""
@@ -155,11 +155,11 @@ class ListenTest(Base):
         self.assertEqual(self.queue("cur"), [sig])
         r = run(LISTEN, "--ws", str(self.ws), "--timeout", "1", sig)
         self.assertEqual(r.returncode, 1)
-        self.assertIn("做到一半停了：上次停在 endpoint/default 那格、結束碼 1", r.stderr)
+        self.assertIn("做到一半停了：上次停在 think 那格、結束碼 1", r.stderr)
         self.assertRegex(r.stderr.splitlines()[-1], r"^aos-listen: AnswerMissing 等了 1 秒.*（信在 queue 的 cur/）")
         r = run(LISTEN, "--ws", str(self.ws), "--status")
         self.assertIn("queue    new 0、cur 1、done 0", r.stdout)
-        self.assertIn("最後一格 endpoint/default 退 1", r.stdout)
+        self.assertIn("最後一格 think 退 1", r.stdout)
         self.assertIn("← 卡住了", r.stdout)
         self.assertIn("loop     phase done", r.stdout)                 # aos-loop 的 state 窗（失敗也是 done、帶 code）
         p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "30", sig], stdout=subprocess.PIPE,
@@ -259,7 +259,7 @@ class ChatTest(Base):
         r = run(CHAT, "--ws", str(self.ws), bad, input="壞腦那題\n")
         self.assertEqual((r.returncode, r.stdout), (0, ""))
         self.assertIn("endpoint: BrainFailed", r.stderr)       # agent 的錯誤一行原樣看得到
-        self.assertIn("agent 停了（停在 endpoint/default 那格、結束碼 1、agent 結束碼 1）", r.stderr)
+        self.assertIn("agent 停了（停在 think 那格、結束碼 1、agent 結束碼 1）", r.stderr)
         self.assertIn("queue 裡還有 1 封沒答", r.stderr)
         r = run(CHAT, "--ws", str(self.ws), self.agent, input="/run\n")   # 新開一個 chat（假腦）：認得還沒答的那封，/run 接著做
         self.assertIn("queue 裡已經有 1 封還沒答", r.stderr)

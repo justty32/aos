@@ -54,7 +54,7 @@ ws=$(mktemp -d)
 for a in a b c; do mkdir -p "$ws/$a/new"; echo "$a 問：2+2 等於多少？" > "$ws/$a/new/q1.txt"; done
 (cd "$ws" && aos-exec "$here/llm-kernel"); echo "結束碼 $?"
 show "$ws"; rm -rf "$ws"
-echo "######## agent-nia"   # 格組起來的 agent：aos-loop 反覆叫 round（aos-parts run round），一題答完 round 退 0、再叫一次 queue 空退 10（ROUND_ON_EMPTY=stop）、loop 停
+echo "######## agent-nia"   # 格組起來的 agent：aos-loop 反覆叫 aos-round（一次一格：idle → think → act → think → finish → idle），queue 空 idle 退 10（ROUND_ON_EMPTY=stop）、loop 停
 ws=$(mktemp -d)
 # 題目經 queue 格放進 $AOS_STACK/queue/（N-16 有順序的信箱，一則 OpenAI message；10-30 agent-lifecycle 第 3 步，原本放 $ws/new/q1.txt）
 echo '{"role": "user", "content": "現在幾點？"}' | AOS_WS="$ws" aos-parts --file "$here/agent-nia/parts.json" run queue "$here/agent-nia" push

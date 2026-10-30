@@ -129,7 +129,7 @@ class AiToolsTest(unittest.TestCase):
         self.assertEqual(len(res["answers"]), 1)
         self.assertIn("FAKE ANSWER to: 幾點了", res["answers"][0]["text"])
         code, res, _ = ai(self.root, "status", "nia")
-        self.assertEqual((res["fsm_state"], res["new"], res["cur"], res["counter_answers"]), (None, [], [], 1))
+        self.assertEqual((res["fsm_state"], res["new"], res["cur"], res["counter_answers"]), ("idle", [], [], 1))   # nia 走 aos-round（fsm）、答完停在 idle
         self.assertEqual(res["last_run"]["code"], 0)
         self.assertIn("finished_at", res["last_run"])                      # 跑完的時間（10-25 前叫 at）
         code, res, _ = ai(self.root, "answer", "nia", qid)
@@ -137,7 +137,7 @@ class AiToolsTest(unittest.TestCase):
         code, res, _ = ai(self.root, "answer", "nia")
         self.assertEqual(res["answers"][0]["asked"], ["幾點了"])
         code, res, _ = ai(self.root, "trace", "nia", "-n", "1")
-        self.assertEqual((res["trace"][0]["unit"], res["trace"][0]["code"]), ("queue finish", 0))   # round 最後一格交卷
+        self.assertEqual((res["fsm_state"], res["trace"][0]["state"], res["trace"][0]["code"]), ("idle", "idle", 10))   # aos-round：最後一格 idle 沒信退 10
 
     def test_question_from_stdin_and_no_id(self):
         ai(self.root, "spawn", "nia")

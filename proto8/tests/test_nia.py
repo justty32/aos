@@ -1,7 +1,8 @@
 """test_nia - agent-round 落地第 6、7 步：範本 demo/agent-nia（parts.json 手寫相對路徑指 lib 的格）與 aos-ai spawn 的 parts.json 範本。
 
 範本（10-30 起題目經 queue 格 push 進 $AOS_STACK/queue/、答案看 history，agent-lifecycle 第 3 步）：aos-exec 跑一題（假腦叫 clock 再答）、
-  § 5 的檔在 stack、trace 有 compact 那格、loop 的 state 窗收工是 done；兩題＝round 退 0 後 loop 再叫、答完退 10 正常停；
+  § 5 的檔在 stack、loop 的 state 窗收工是 done；10-30 起 loop.json 叫 aos-round（aos-round 第 4 步），trace 是 fsm 的一格一行
+  （idle → think → act → think → finish → idle 退 10）；兩題＝finish 兩次、最後 idle 退 10 正常停；
   沒題＝loop 第一次就停、結束碼 0；parts.json 的 round 給 ROUND_ON_EMPTY=stop、loop.json 開 ctl／state 窗；
   parts.json／tools.json 只用相對路徑、每格 aos-parts which 找得到。
 spawn：--from agent-nia 後 parts.json、tools.json 指出範本的相對路徑改成絕對、搬到 agents/<名>/agent/ 後經 queue 放一題、
@@ -66,8 +67,9 @@ class Template(unittest.TestCase):
     def run_nia(self):
         return subprocess.run([EXEC, str(NIA)], capture_output=True, text=True, env=env(), cwd=self.ws, timeout=120)
 
-    def units(self):
-        return [json.loads(l)["unit"] for l in (self.ws / ".stack" / "trace.jsonl").read_text().splitlines()]
+    def states(self):
+        """fsm trace 的 (state, code)：aos-round 一格一行（10-30 aos-round 第 4 步，原本看 round 的 unit 行）。"""
+        return [(t["state"], t["code"]) for t in map(json.loads, (self.ws / ".stack" / "trace.jsonl").read_text().splitlines())]
 
     def test_one_question(self):
         self.put("現在幾點？")
@@ -76,14 +78,13 @@ class Template(unittest.TestCase):
         self.assertEqual(len(answers(self.ws)), 1)
         self.assertRegex(answers(self.ws)[0], r"^FAKE ANSWER to: 現在幾點？（clock said: \d{4}-.*Z）$")
         self.assertEqual(sorted(p.name for p in (self.ws / ".stack").iterdir()),
-                         ["clock", "history.jsonl", "live.jsonl", "queue", "state.json", "trace.jsonl"])   # clock＝工具的小格（P-17）
+                         ["clock", "history.jsonl", "live.jsonl", "queue", "state.json", "state.txt", "trace.jsonl"])   # clock＝工具的小格（P-17）；state.txt＝fsm 的
         self.assertEqual(sorted(p.name for p in self.ws.iterdir()), [".stack"])           # 工作區不長 new/ out/ 這些
         self.assertEqual((queue_ls(self.ws, "new"), queue_ls(self.ws, "cur")), ([], []))
         self.assertEqual(json.loads((self.ws / ".stack" / "state.json").read_text())["phase"], "done")   # loop 的 state 窗
         self.assertEqual([m["role"] for m in history(self.ws)], ["user", "assistant", "tool", "assistant"])
-        u = self.units()
-        self.assertEqual(u.count("hook/pre_think"), 2)                          # compact 預設掛在 pre_think、沒超過不動
-        self.assertEqual((u[0], u[-1]), ("queue claim", "queue finish"))
+        self.assertEqual(self.states(), [("idle", 0), ("think", 0), ("act", 0), ("think", 10), ("finish", 0), ("idle", 10)])
+        self.assertEqual((self.ws / ".stack" / "state.txt").read_text().strip(), "idle")   # 一題答完、停在起點
 
     def test_two_questions_loop_calls_round_again(self):
         self.put("幾點？")
@@ -94,12 +95,14 @@ class Template(unittest.TestCase):
         self.assertEqual(len(got), 2)
         self.assertTrue(got[0].startswith("FAKE ANSWER to: 幾點？") and got[1].startswith("FAKE ANSWER to: 1+1？"), got)   # 照放的順序
         self.assertEqual((queue_ls(self.ws, "new"), queue_ls(self.ws, "cur")), ([], []))
-        self.assertEqual(self.units().count("queue claim"), 2)                   # 一題一輪：round 退 0 → loop 再叫
+        self.assertEqual([x for x, _ in self.states()].count("finish"), 2)       # 一題交卷一次；finish → idle 接著認下一題
+        self.assertEqual(self.states()[-1], ("idle", 10))
 
     def test_no_question_loop_stops_ok(self):
         r = self.run_nia()
-        self.assertEqual((r.returncode, r.stderr), (0, ""))                      # round 退 10＝loop 正常停
+        self.assertEqual((r.returncode, r.stderr), (0, ""))                      # idle 退 10、表沒接＝fsm 退 10＝loop 正常停
         self.assertEqual(history(self.ws), [])
+        self.assertEqual(self.states(), [("idle", 10)])
 
     def test_registries_relative_and_found(self):
         parts = json.loads((NIA / "parts.json").read_text())["parts"]
@@ -110,6 +113,8 @@ class Template(unittest.TestCase):
         self.assertEqual(parts["round"]["env"], {"ROUND_ON_EMPTY": "stop"})        # 範本預設射後不理
         loop = json.loads((NIA / "loop.json").read_text())
         self.assertEqual((loop["ctl"], loop["state"]), ("ctl.json", "state.json"))   # 窗開在 $AOS_STACK
+        self.assertEqual(loop["exec"], {"argv": ["aos-round", {"$env": "AOS_CD"}], "timeout_ms": 600000})   # timeout_ms 管一格
+        self.assertEqual(parts["hook/pre_think"]["path"], "../../lib/agent/compact")   # compact 預設掛在 pre_think
         for slot in parts:
             r = subprocess.run([PARTS, "--file", str(NIA / "parts.json"), "which", slot], capture_output=True, text=True,
                                env=env(), cwd=self.ws)
