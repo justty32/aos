@@ -4,6 +4,7 @@
 #include "aos/cli.hpp"
 #include "aos/directive.hpp"
 #include "aos/files.hpp"
+#include "aos/post.hpp"
 #include "aos/proc.hpp"
 
 #include <cerrno>
@@ -80,7 +81,7 @@ std::string post(const Mailbox& mb, const std::string& spec) {
     } else if (cwd.is_string()) {
         doc["cwd"] = aos::abspath(aos::join(cd, cwd.get<std::string>()));
     }   // 其他型別原樣交過去，由 kernel 那邊的 run_inst 回 EntryBad
-    // 5. 信
+    // 5、6. 信
     Json env = Json::object();
     for (char** e = environ; *e != nullptr; ++e) {
         std::string kv = *e;
@@ -93,6 +94,8 @@ std::string post(const Mailbox& mb, const std::string& spec) {
     letter["kind"] = "letter";   // 信封三欄（N-16 10-29）；inst／env／priority 過渡期照舊在頂層
     letter["sender"] = sender();
     letter["sent_at"] = aos::utc_now_ms();
+    aos::post::init(reply_box(mb));   // 5. 回信信箱（10-30 回信改走 reply_to；建不了丟 MkdirFailed）
+    letter["reply_to"] = reply_box(mb);
     letter["inst"] = doc;
     letter["env"] = env;
     letter["priority"] = priority;

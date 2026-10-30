@@ -8,7 +8,8 @@
 要「寄信的人不在了」就留一個沒人鎖的 sender.flock（或乾脆沒有）。
 A 段：命令列與設定；B 段：排隊（level、deadline、等了幾次、先來先上、aging）；C 段：slots；D 段：回信的各種錯
 （DeadlineMissed、LetterBad、單子壞）；E 段：收拾（寄信的人不在、上一次 kernel 死了留在 cur/）；F 段：鎖、訊號、環境與 cwd、逾時；
-G 段 `_metainfo`、H 段 token 回報與額度；I 段 accept（只跑名單裡的單子，10-24 堵沙箱信箱後門）。
+G 段 `_metainfo`、H 段 token 回報與額度；I 段 accept（只跑名單裡的單子，10-24 堵沙箱信箱後門）；
+J 段 reply_to（10-30 回信改走 N-16 的回信：寄進信封的 reply_to、記 reply_letter.txt、寄不出去記 served 的 reply_error、收拾時撤回沒人拿的）。
 """
 import fcntl
 import json
@@ -85,7 +86,7 @@ class Case(unittest.TestCase):
         self.assertEqual(len(r.stderr.splitlines()), 1, r.stderr)
         self.assertTrue(r.stderr.startswith("aos-llm-kernel: %s " % code), r.stderr)
 
-    def post(self, argv=None, priority=None, id=None, inst=None, env=None, box="new", raw=None, alive=True):
+    def post(self, argv=None, priority=None, id=None, inst=None, env=None, box="new", raw=None, alive=True, reply_to=None):
         """寫一封信進 mb/<box>/<id>/；回 id。alive＝像閘門那樣 flock 住 sender.flock（False＝鎖檔在、沒人鎖）。"""
         id = id or new_id()
         d = self.mb / box / id
@@ -104,6 +105,8 @@ class Case(unittest.TestCase):
         letter = {"inst": inst, "env": env if env is not None else {"PATH": os.environ["PATH"]}}
         if priority is not None:
             letter["priority"] = priority
+        if reply_to is not None:
+            letter["reply_to"] = reply_to
         (d / "letter.json").write_text(json.dumps(letter))
         return id
 
@@ -624,6 +627,82 @@ class I_Accept(Case):
 
     def used(self):
         return json.loads((self.stack / "used.json").read_text())
+
+
+class J_ReplyTo(Case):
+    """10-30 回信改走 reply_to（medium 決定 3、N-16）：信封寫了 reply_to＝kernel 照 N-16 另寄一封回信進那個信箱
+    （in_reply_to＝原信號、body＝reply.json 那份、stdout.txt／stderr.txt 附上），寄出的信號記在 <信>/reply_letter.txt；
+    reply.json 照寫、信照搬 done/。寄不出去記 served 的 reply_error；寄信的人不在了，收拾 done/ 時撤回沒人拿的回信。"""
+
+    def box(self, name="rb"):
+        b = self.t / name
+        for s in ("tmp", "new", "cur"):
+            (b / s).mkdir(parents=True)
+        return b
+
+    def replies(self, b):
+        out = []
+        for n in sorted(os.listdir(b / "new")):
+            d = b / "new" / n
+            out.append((n, json.loads((d / "letter.json").read_text()),
+                        {f: (d / f).read_text() for f in ("stdout.txt", "stderr.txt") if (d / f).exists()}))
+        return out
+
+    def test_reply_letter_posted(self):
+        b = self.box()
+        a = self.post(["sh", "-c", "echo 答; echo 警 >&2; exit 4"], reply_to=str(b))
+        r = self.run_k(extra={"AOS_WS": str(self.t)})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        (n, letter, files), = self.replies(b)
+        self.assertEqual((letter["kind"], letter["sender"], letter["in_reply_to"], letter["body"]),
+                         ("letter", str(self.t), a, {"code": 4, "signal": None}))
+        self.assertEqual(files, {"stdout.txt": "答\n", "stderr.txt": "警\n"})
+        self.assertEqual((self.mb / "done" / a / "reply_letter.txt").read_text(), n + "\n")
+        self.assertEqual(self.reply(a), {"code": 4, "signal": None})   # reply.json 照寫、信在 done/ 當紀錄
+        self.assertIsNone(self.served()[0]["reply_error"])
+
+    def test_refused_letter_also_replies(self):
+        b = self.box()
+        a = self.post(priority={"level": "high", "deadline": 1}, reply_to=str(b))
+        self.run_k()
+        (_, letter, files), = self.replies(b)
+        self.assertEqual(letter["body"]["error"]["code"], "DeadlineMissed")
+        self.assertEqual(files, {})
+
+    def test_without_reply_to_no_letter(self):
+        a = self.post(["true"])
+        self.run_k()
+        self.assertFalse((self.mb / "done" / a / "reply_letter.txt").exists())
+        self.assertIsNone(self.served()[0]["reply_error"])
+
+    def test_reply_box_missing_is_not_kernel_error(self):
+        a = self.post(["true"], reply_to=str(self.t / "nope"))
+        r = self.run_k()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.reply(a), {"code": 0, "signal": None})
+        self.assertTrue(self.served()[0]["reply_error"].startswith("MailboxMissing "), self.served())
+
+    def test_recover_does_not_reply_twice(self):
+        b = self.box()
+        a = self.post(box="cur", reply_to=str(b))
+        (self.mb / "cur" / a / "reply.json").write_text(json.dumps({"code": 0, "signal": None}))
+        (self.mb / "cur" / a / "reply_letter.txt").write_text("已經寄過\n")   # 上一次寄完、還沒搬 done/ 就死了
+        self.run_k()
+        self.assertEqual(self.replies(b), [])
+        self.assertTrue((self.mb / "done" / a).exists())
+
+    def test_sweep_withdraws_unclaimed_reply(self):
+        b = self.box()
+        lock = self.post(["true"], reply_to=str(b))
+        self.run_k()
+        (n, _, _), = self.replies(b)
+        self.locks.pop().close()                                       # 閘門不在了、回信沒人拿
+        other = b / "new" / "00000000000000000001.1.1"                 # 別人寄的不碰
+        other.mkdir()
+        self.run_k()
+        self.assertFalse((self.mb / "done" / lock).exists())
+        self.assertEqual(os.listdir(b / "new"), [other.name])
+        self.assertEqual(os.listdir(b / "tmp"), [])
 
 
 if __name__ == "__main__":

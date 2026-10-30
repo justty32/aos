@@ -8,9 +8,10 @@
 //               2. load_cfg 讀、解整份指示詞（在閘門的環境解＝呼叫方那一刻的值；$ref 從單子檔的資料夾算）；不是物件＝CfgBad
 //               3. priority 先驗（壞＝PriorityBad，不寄）
 //               4. cwd 轉成絕對路徑（沒寫＝單子檔的資料夾，同 aos-exec；相對的接在它後面）——kernel 在別的資料夾跑也一樣
-//               5. 信＝{"kind": "letter", "sender": sender(), "sent_at": aos::utc_now_ms(),
-//                       "inst": 單子, "env": 這一刻閘門的整份環境, "priority": 原樣}（信封三欄 10-29；後三個過渡期照舊在頂層）；寫進 tmp/.<id>/（先建 sender.flock、flock 住，拿到行程結束）
-//                  再改名進 new/<id>
+//               5. 回信信箱 <信箱>/reply/ 沒有就建（aos-post 的 init；建不了＝MkdirFailed）
+//               6. 信＝{"kind": "letter", "sender": sender(), "sent_at": aos::utc_now_ms(), "reply_to": 回信信箱（絕對路徑）,
+//                       "inst": 單子, "env": 這一刻閘門的整份環境, "priority": 原樣}（信封三欄 10-29、reply_to 10-30；後三個過渡期照舊在頂層）；
+//                  寫進 tmp/.<id>/（先建 sender.flock、flock 住，拿到行程結束）再改名進 new/<id>
 //             回信號 id。
 #pragma once
 

@@ -5,7 +5,7 @@
 
 | 哪裡 | 負責什麼 |
 |---|---|
-| `include/aos/post.hpp` | 公開介面（aos-daemon 信箱模式要連）：`Mailbox`（`tmp`／`fresh`＝new／`cur`／`done`）、`SendOpts`、`Checked`；`init`、`open`、`sender`、`send`、`claim`、`claim_all`、`check`、`reply`、`finish`、`withdraw`、`check_id`；代號 `WithdrawFailed`、`OrderBad`（`CommandUnknown`、`MailboxMissing`、`LetterMissing`、`LetterBad` 10-30 收進 aos-util 的 `aos::code`）；信號＝aos-util 的 `aos::unique_id`（原 `letter_id` 刪了） |
+| `include/aos/post.hpp` | 公開介面（aos-daemon 信箱模式要連）：`Mailbox`（`tmp`／`fresh`＝new／`cur`／`done`）、`SendOpts`（10-30 加 `files`：信裡另放的檔，寫 letter.json 前複製進去）、`Checked`；`init`、`open`、`sender`、`send`、`claim`、`claim_all`、`check`、`reply`、`finish`、`withdraw`、`check_id`；代號 `WithdrawFailed`、`OrderBad`（`CommandUnknown`、`MailboxMissing`、`LetterMissing`、`LetterBad` 10-30 收進 aos-util 的 `aos::code`）；信號＝aos-util 的 `aos::unique_id`（原 `letter_id` 刪了） |
 | `src/main.cpp` | 命令列 `aos-post 子命令 [旗標...] 信箱 [信號]`：子命令表（`init`、`send`、`claim`、`claim-all`、`check`、`finish`、`withdraw`）、`parse_cli`、印結果；沒東西退 10；錯一行 `aos-post: 代號 原因`、退 1 |
 | `src/common/common.hpp` | 內部標頭：`is_dir`、`names_in`（照名字排序、`.` 開頭不算）、`drop`、`move`（rename；不在／搶輸＝false） |
 | `src/mailbox/mailbox.cpp` | 信箱四格的路徑、`init`（mkdir -p＋三格）、`open`（缺格＝MailboxMissing）、`check_id`；common 小工具的實作 |

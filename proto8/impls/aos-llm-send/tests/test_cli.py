@@ -3,7 +3,9 @@
 
     python3 tests/test_cli.py bin/aos-llm-send
 
-不需要真的 kernel：測試自己當 kernel（看 new/ 裡的信、搬到 cur/、done/、寫回信），所以只測閘門這一半。
+不需要真的 kernel：測試自己當 kernel（看 new/ 裡的信、搬到 cur/、照信封的 reply_to 寄回信、搬 done/），所以只測閘門這一半。
+10-30 回信改走 reply_to：閘門建回信信箱 <信箱>/reply/（tmp／new／cur），信封寫 reply_to；回信是一封 N-16 的信（in_reply_to＝原信號、
+body＝{"code", "signal"} 或 {"error"}、stdout.txt／stderr.txt 附在信裡），閘門認領、交回、收掉；done/ 是 kernel 的紀錄，閘門不碰。
 A 段：命令列、信箱、單子檔的錯；B 段：信的內容（指示詞在閘門的環境解、AOS_CF／AOS_CD／AOS_CO、cwd 轉絕對、整份環境、priority 原樣；
 10-29 信封 kind、sender〔$AOS_WS，沒設＝$HOME〕、sent_at）；
 C 段：回信原樣交回（stdout、stderr、碼、kernel 回的錯、讀不懂的回信）；D 段：訊號撤信、信不見了、kernel 不在時一直等、
@@ -80,17 +82,25 @@ class Case(unittest.TestCase):
         return ids[0], json.loads((self.mb / "new" / ids[0] / "letter.json").read_text())
 
     def answer(self, id, reply, out=None, err=None):
-        """假 kernel：new → cur、寫 stdout／stderr／reply.json、cur → done。"""
+        """假 kernel：new → cur、照信封的 reply_to 寄一封回信（body＝reply、stdout／stderr 附在信裡）、cur → done。"""
         (self.mb / "cur").mkdir(exist_ok=True)
         os.rename(self.mb / "new" / id, self.mb / "cur" / id)
         d = self.mb / "cur" / id
+        box = Path(json.loads((d / "letter.json").read_text())["reply_to"])
+        r = box / "tmp" / ("%020d.1.1" % time.time_ns())
+        r.mkdir()
         if out is not None:
-            (d / "stdout.txt").write_text(out)
+            (r / "stdout.txt").write_text(out)
         if err is not None:
-            (d / "stderr.txt").write_text(err)
-        (d / "reply.json").write_text(reply if isinstance(reply, str) else json.dumps(reply))
+            (r / "stderr.txt").write_text(err)
+        (r / "letter.json").write_text(json.dumps({"kind": "letter", "sender": "/k", "sent_at": "2026-10-30T00:00:00.000+00:00",
+                                                   "in_reply_to": id, "body": reply}))
+        os.rename(r, box / "new" / r.name)
         (self.mb / "done").mkdir(exist_ok=True)
         os.rename(d, self.mb / "done" / id)
+
+    def reply_box_empty(self):
+        return all(os.listdir(self.mb / "reply" / s) == [] for s in ("tmp", "new", "cur"))
 
 
 class A_Errors(Case):
@@ -144,6 +154,8 @@ class B_Letter(Case):
         self.assertEqual(letter["env"]["AOS_CD"], cd)
         self.assertEqual(letter["env"]["AOS_CO"], "/big")
         self.assertEqual(letter["env"]["AOS_KERNEL"], str(self.mb))
+        self.assertEqual(letter["reply_to"], str(self.mb / "reply"))          # 10-30 回信信箱：<信箱>/reply/，閘門先建好
+        self.assertTrue(all((self.mb / "reply" / s).is_dir() for s in ("tmp", "new", "cur")))
         pid, t = id.split(".")[1:]
         self.assertEqual(int(pid), p.pid)
         self.assertEqual(os.listdir(self.mb / "tmp"), [])
@@ -208,7 +220,24 @@ class C_Relay(Case):
         self.answer(id, {"code": 7, "signal": None}, out="答案\n", err="警告\n")
         out, err = p.communicate(timeout=10)
         self.assertEqual((p.returncode, out, err), (7, "答案\n", "警告\n"))
-        self.assertFalse((self.mb / "done" / id).exists())   # 讀完就刪
+        self.assertTrue(self.reply_box_empty())               # 回信讀完就收掉
+        self.assertTrue((self.mb / "done" / id).exists())     # done/ 是 kernel 的紀錄，閘門不碰（寄信的人不在了 kernel 收拾）
+
+    def test_other_replies_left_alone(self):
+        """回信信箱裡不是回我的信（別的閘門的）不碰，只拿 in_reply_to＝自己信號的那封。"""
+        self.inst({"argv": ["true"]})
+        p = self.start()
+        id, _ = self.letter()
+        other = self.mb / "reply" / "new" / "00000000000000000001.1.1"
+        other.mkdir()
+        (other / "letter.json").write_text(json.dumps({"kind": "letter", "sender": "/k", "sent_at": "x",
+                                                       "in_reply_to": "別人的", "body": {"code": 3, "signal": None}}))
+        time.sleep(0.1)
+        self.assertIsNone(p.poll())
+        self.answer(id, {"code": 0, "signal": None})
+        p.communicate(timeout=10)
+        self.assertEqual(p.returncode, 0)
+        self.assertEqual(os.listdir(self.mb / "reply" / "new"), [other.name])
 
     def test_signal_code(self):
         self.inst({"argv": ["true"]})
@@ -228,14 +257,14 @@ class C_Relay(Case):
         self.assertEqual(err, "aos-llm-send: DeadlineMissed 輪到之前時限已過，沒跑\n")
 
     def test_reply_bad(self):
-        for bad in ("{", {"code": "0"}, {"error": "x"}, {}):
+        for bad in ("{", {"code": "0"}, {"error": "x"}, {}):   # body 不是 {"code", "signal"} 或 {"error": {"code", "msg"}}
             self.inst({"argv": ["true"]})
             p = self.start()
             id, _ = self.letter()
             self.answer(id, bad)
             out, err = p.communicate(timeout=10)
             self.own_error(subprocess.CompletedProcess([], p.returncode, out, err), "ReplyBad")
-            self.assertFalse((self.mb / "done" / id).exists())
+            self.assertTrue(self.reply_box_empty())
 
 
 class D_Wait(Case):
@@ -259,6 +288,19 @@ class D_Wait(Case):
         p.communicate(timeout=10)
         self.assertEqual(p.returncode, 130)
         self.assertTrue((self.mb / "cur" / id).exists())         # 讓它跑完，kernel 之後清
+
+    def test_signal_takes_arrived_reply(self):
+        """回信已經到了才收到訊號：回信收掉（不留給沒人拿），以 128＋N 結束。"""
+        self.inst({"argv": ["sleep", "0"]})
+        p = self.start()
+        id, _ = self.letter()
+        p.send_signal(signal.SIGSTOP)
+        self.answer(id, {"code": 0, "signal": None})
+        p.send_signal(signal.SIGTERM)
+        p.send_signal(signal.SIGCONT)
+        p.communicate(timeout=10)
+        self.assertIn(p.returncode, (0, 143))                   # 停著時兩件事都到了，先看到哪個看排程
+        self.assertTrue(self.reply_box_empty())
 
     def test_letter_missing(self):
         self.inst({"argv": ["true"]})

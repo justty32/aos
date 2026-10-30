@@ -12,6 +12,8 @@
 //       信封三欄（N-16 10-29）閘門會寫、kernel 不檢查也不擋（舊信沒有也照收）；inst／env／priority 過渡期照舊在頂層（還沒包進 body）；
 //       其他不認得的 key 一律忽略（C-48）
 //   回信：reply.json＝{"code": 結束碼, "signal": 訊號或 null}，或 {"error": {"code": 代號, "msg": 原因}}（kernel 沒跑或跑不起來）
+//       信裡寫了 reply_to（信箱路徑，N-16 信封）：kernel 另把同一份當 body、照 N-16 寄一封回信進那個信箱（in_reply_to＝原信號、
+//       stdout.txt／stderr.txt 有就附在信裡），寄出的信號記在 <信>/reply_letter.txt；reply.json 照寫、信照搬 done/ 當紀錄（10-30，medium 決定 3）
 //   回報：report.json＝腦自願寫的 API 回覆 usage（kernel 跑信時給環境變數 AOS_KERNEL_REPORT 指向 cur/<id>/report.json；10-24）
 //   寄信的人：sender.flock＝閘門建好信就 flock（LOCK_EX）住、拿到行程結束（10-24 改：原本看名字裡的 pid，沙箱有自己的行程編號就對不上）
 //
@@ -24,7 +26,8 @@
 //                  物件 {"level", "deadline", 其他 key 忽略}；deadline＝ISO 8601（要帶時區）或 epoch 秒。壞了丟 PriorityBad
 //   priority_of    一封信的排隊依據：priority＋單子 `_metainfo` 的 time_ms、llm_tokens（10-24）
 //   level_name     -1／0／1 → "low"／"normal"／"high"
-//   read_reply     讀回信；壞了回 nullopt
+//   reply_of       回信的內容合不合（{"code": 整數, "signal": 整數或 null} 或 {"error": {"code", "msg"}}）：合＝原樣、不合＝nullopt
+//   read_reply     讀 reply.json、照 reply_of 驗；壞了回 nullopt
 //
 // 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/error.hpp）。
 #pragma once
@@ -82,6 +85,7 @@ std::string level_name(int level);
 // （letter["inst"]["_metainfo"]，只認 time_ms、llm_tokens；形狀不對＝那個 key 當沒寫、記在 metainfo_bad，不擋跑——10-24 metainfo M8）。
 Priority priority_of(const Json& letter);
 
+std::optional<Json> reply_of(const Json& r);
 std::optional<Json> read_reply(const std::string& path);
 
 }  // namespace aos::llm_kernel

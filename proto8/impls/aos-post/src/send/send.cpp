@@ -18,6 +18,8 @@
 #include "aos/lock.hpp"
 #include "aos/proc.hpp"
 
+#include <filesystem>
+
 #include <cerrno>
 #include <chrono>
 #include <cstdio>
@@ -120,6 +122,19 @@ std::string send(const Mailbox& mb, const Json& body, const SendOpts& opts) {
         int e = errno;
         if (e != EEXIST || i >= 100) {
             throw Error{code::MkdirFailed, "建不了 " + t + "：" + std::strerror(e)};
+        }
+    }
+    // 1'. 另放的檔（在 tmp/ 裡，處理者還看不到）
+    for (const auto& [name, from] : opts.files) {
+        if (name.empty() || name[0] == '.' || name.find('/') != std::string::npos || name == "letter.json") {
+            drop(t);
+            throw Error{code::ArgumentsBad, "信裡另放的檔名要是單純的名字、不是 letter.json：" + name};
+        }
+        std::error_code ec;
+        std::filesystem::copy_file(from, aos::join(t, name), ec);
+        if (ec) {
+            drop(t);
+            throw Error{code::WriteFailed, "複製不了 " + from + " → " + aos::join(t, name) + "：" + ec.message()};
         }
     }
     // 2. 寫 letter.json

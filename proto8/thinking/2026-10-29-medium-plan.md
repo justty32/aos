@@ -222,3 +222,15 @@ daemon 起子 loop 就是父子交代的一個實例：寫小格 `loop.json`、`
 11. **信箱模式**：`letter_warning` 只記最後一封壞信「信 <信號> 不採用：原因」，沒壞信的圈維持原值；信裡相對 `exec`／`$ref` 從 daemon 的 cwd 算；回信在對完表之後才寄；body 是 `{}` 也算好信、照回 applied；回信寄不出去、finish 失敗都吞掉照跑；接回而 daemon.json 沒有的子項期望表裡設定記 null（結束了停在 done、不重起，有信重新加就換設定）；`cur/` 殘骸記在記憶體、第一個認領的圈先做。**10-29 使用者定：照建議**（[medium 決定 31](2026-10-28-medium.md)，條文照程式改）。
 12. **代號與信號產生法暫時各定一份**：`MailboxMissing`／`LetterMissing`／`LetterBad`／`CommandUnknown` 在 aos-post、aos-lock 各自又定一次，信號產生法有三份（kernel、aos-post、aos-lock）；之後該下放到 aos-util。
 13. **其他叫 `.lock` 的 flock 檔沒改**：`sender.lock`（決定 6 照留）、`demo/agent-gus` 的 `budget/.lock`、compact 的 `CDIR/.lock`、`lib/aos/memory/heap.py`——跟決定 4 是同一類撞名，這次只改 kernel 的，其餘列 WAIT_USER。**10-29 使用者定：照建議**（[medium 決定 31](2026-10-28-medium.md)，程式照條文改：這四處加上 aos-ai 的 `.ctl.lock`／`.run.lock` 全改 `.flock`，N-15「名字分清」擴到全部）。
+14. **回信改走 `reply_to`（10-30 晚，決定 3 的「有空再改」、實作第 6 步後半）**：
+    - **回信信箱放哪**：放在 kernel 信箱底下的 `<信箱>/reply/`（tmp／new／cur，閘門第一次寄信時用 aos-post 的 `init` 建），不放第 6 步括號寫的「寄信人自己的 stack」。理由有兩個。第一，kernel 可能是另一個帳號、在沙箱外，它得寫得進回信信箱；kernel 的信箱本來就是兩邊都寫得到的地方（沙箱把它綁進去，`root/setup.sh --mailbox` 給它權限），寄信人的 stack 不是。第二，沙箱裡不一定有 `AOS_STACK`（`test_sandbox` 的閘門就沒帶）。kernel 本身不管 `reply/` 在哪，只照信封的 `reply_to` 寄，所以要換位置只改閘門。
+    - **kernel 怎麼寄**：信封有字串的 `reply_to` 就照 N-16 寄回信，用 aos-post 的庫，kernel 多連一個 aos-post。`in_reply_to` 填原信號；`body` 跟 `reply.json` 同一份；`sender` 是 kernel 自己的身分；`stdout.txt`、`stderr.txt` 有的話附在回信裡（aos-post 的 `SendOpts` 多一個 `files`，N-16 本來就說「其他檔隨意」）。寄出的信號記在 `<信>/reply_letter.txt`，已經有這個檔就不寄第二封。`reply.json` 照寫，信照搬 `done/`，`done/` 當紀錄（照第 6 步）。沒寫 `reply_to` 的信跟以前一樣，kernel 的測試照舊。
+    - **寄不出去**（信箱不在、寫不進）：不算 kernel 的錯。原因記進 served 那行多出來的 `reply_error`，閘門等到包它那格逾時為止。
+    - **閘門怎麼等**：只看回信信箱 `new/` 裡 `in_reply_to` 是自己的那封。別人的不碰；看過不是自己的就記住，不再讀。拿到後認領、交回、收掉（刪）。`done/<信號>` 閘門不再刪，等寄信人不在了由 kernel 收拾。原信在 new／cur／done 都找不到、也沒有回信，才算 `LetterMissing`。收到訊號時，回信已經到了就收掉。
+    - **沒人拿的回信**：kernel 收拾 `done/`（寄信人不在了）時，照 `reply_letter.txt` 把自己寄出、還在對方 `new/` 的那封撤回。這是 N-16 寄信人撤回自己的信，不算動別人的信箱。
+    - **已知漏洞**：寄出回信、還沒寫成 `reply_letter.txt` 就死掉，接手時會再寄一封。閘門只拿第一封，第二封會一直留在回信信箱。
+    - **跨帳號**：`root/setup.sh --mailbox` 多建 `reply/` 與它的三格，給一樣的權限與預設 ACL。不然 `reply/` 是閘門用自己的 umask 建的，kernel 寫不進去。
+15. **重複的代號與信號產生法下放 aos-util（10-30 晚，第 12 條說的「之後」）**：
+    - `CommandUnknown`、`MailboxMissing`、`LetterMissing`、`LetterBad` 收進 `aos::code`，aos-post、aos-lock、aos-json、aos-llm-kernel 各自那份刪掉。代號的字和意思都不變。
+    - 信號產生法 `aos::unique_id()`（`<UTC 奈秒 20 位>.<pid>.<started_at_ticks>`）放進 aos-util 的 `proc.hpp`，另外加 `utc_now_ns`、`utc_ms_at`，讓 aos-post 的信號與 `sent_at` 照舊取自同一刻。kernel 的 `letter_id`、aos-post 的 `letter_id`、aos-lock 的 `unique_id` 都刪了。
+    - 沒收的：寄信人身分（`$AOS_WS` ＞ `$HOME` ＞ `/`）也有三份（aos-post 的 `sender`、aos-lock 的 `identity`、aos-llm-send 的 `sender`）。它不在第 12 條裡，所以沒動。

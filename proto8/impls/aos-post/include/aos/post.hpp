@@ -16,7 +16,7 @@
 //   init        建信箱（mkdir -p 信箱、tmp/ new/ cur/）；已經有＝沒事。建不了丟 MkdirFailed
 //   open        拿一個已建好的信箱：信箱或 tmp/ new/ cur/ 不是資料夾丟 MailboxMissing
 //   sender      寄信人身分＝$AOS_WS（絕對路徑），沒設才 $HOME（絕對路徑）；人也一樣
-//   send        寄一封：mkdir tmp/<信號>（撞名換一個）→ 寫 letter.json → rename 進 new/。回信號（ordered＝帶序號的那個名字）
+//   send        寄一封：mkdir tmp/<信號>（撞名換一個）→ 複製 opts.files → 寫 letter.json → rename 進 new/。回信號（ordered＝帶序號的那個名字）
 //   claim       認領一封：new/ 照名字排序，第一個 rename 進 cur/ 成功的；沒有＝nullopt
 //   claim_all   認領 new/ 裡全部（照名字排序），回認領到的（照名字排序）；沒有＝空
 //   check       讀 cur/<信號>/letter.json、驗必填：好信 ok＝true、letter＝整份；壞信 ok＝false、reason＝原因。
@@ -34,6 +34,7 @@
 
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace aos::post {
@@ -59,6 +60,9 @@ struct SendOpts {
     std::optional<std::string> reply_to;      // 信箱路徑（存成絕對路徑；不驗在不在）
     std::optional<std::string> in_reply_to;   // 原信號
     bool ordered = false;                     // 有順序的投遞（order.lock/＋order.json）；拿不到鎖就一直等
+    // 信裡另放的檔（N-16「其他檔隨意」）：{信裡的名字, 來源檔路徑}，在寫 letter.json 之前複製進去；複製不了丟 WriteFailed。
+    // 名字要是單純的檔名、不能叫 letter.json（ArgumentsBad）。aos-llm-kernel 的回信用它附 stdout.txt、stderr.txt（10-30）
+    std::vector<std::pair<std::string, std::string>> files;
 };
 
 struct Checked {

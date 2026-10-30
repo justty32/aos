@@ -2,9 +2,12 @@
 #include "wait/wait.hpp"
 
 #include "aos/files.hpp"
+#include "aos/post.hpp"
 
 #include <cstdio>
 #include <filesystem>
+#include <optional>
+#include <set>
 #include <signal.h>
 
 #include <unistd.h>
@@ -36,16 +39,50 @@ static void copy_to(const std::string& path, int fd) {
     }
 }
 
-static int relay(const Mailbox& mb, const std::string& id) {
-    std::string dir = aos::join(mb.done(), id);
+// 回信信箱 new/ 裡回 id 的那封（看過不是的記在 seen，不再讀）；沒有＝nullopt。
+static std::optional<std::string> find_reply(const aos::post::Mailbox& rb, const std::string& id,
+                                             std::set<std::string>& seen) {
+    std::error_code ec;
+    std::vector<std::string> names;
+    for (const fs::directory_entry& e : fs::directory_iterator(rb.fresh(), ec)) {
+        names.push_back(e.path().filename().string());
+    }
+    for (const std::string& n : names) {
+        if (n.empty() || n[0] == '.' || seen.count(n)) {
+            continue;
+        }
+        std::optional<Json> l = aos::read_json(aos::join(aos::join(rb.fresh(), n), "letter.json"));
+        if (l && l->is_object() && l->value("in_reply_to", Json()) == Json(id)) {
+            return n;
+        }
+        if (l) {
+            seen.insert(n);   // 讀得到、不是回我的；讀不到的（正在被別人認領）下次再看
+        }
+    }
+    return std::nullopt;
+}
+
+// 認領回信（new → cur）；被別人搶走（不會發生，除非有人亂動）＝false。
+static bool take(const aos::post::Mailbox& rb, const std::string& n) {
+    return std::rename(aos::join(rb.fresh(), n).c_str(), aos::join(rb.cur(), n).c_str()) == 0;
+}
+
+static int relay(const aos::post::Mailbox& rb, const std::string& n) {
+    std::string dir = aos::join(rb.cur(), n);
     std::fflush(nullptr);
     copy_to(aos::join(dir, "stdout.txt"), 1);
     copy_to(aos::join(dir, "stderr.txt"), 2);
-    std::optional<Json> reply = aos::llm_kernel::read_reply(aos::join(dir, "reply.json"));
-    std::error_code ec;
-    fs::remove_all(dir, ec);
+    std::optional<Json> l = aos::read_json(aos::join(dir, "letter.json"));
+    std::optional<Json> reply;
+    if (l && l->is_object() && l->contains("body")) {
+        reply = aos::llm_kernel::reply_of((*l)["body"]);
+    }
+    try {
+        aos::post::finish(rb, n, false);
+    } catch (const Error&) {
+    }
     if (!reply) {
-        throw Error{code::ReplyBad, "回信讀不懂：" + aos::join(dir, "reply.json")};
+        throw Error{code::ReplyBad, "回信讀不懂：" + aos::join(dir, "letter.json") + " 的 body"};
     }
     if (reply->contains("error")) {
         const Json& e = (*reply)["error"];
@@ -54,38 +91,45 @@ static int relay(const Mailbox& mb, const std::string& id) {
     return (*reply)["code"].get<int>();
 }
 
-static void withdraw(const Mailbox& mb, const std::string& id) {
+static void withdraw(const Mailbox& mb, const aos::post::Mailbox& rb, const std::string& id,
+                     std::set<std::string>& seen) {
     std::error_code ec;
     std::string t = aos::join(mb.tmp(), id);
     if (std::rename(aos::join(mb.fresh(), id).c_str(), t.c_str()) == 0) {
         fs::remove_all(t, ec);
         return;
     }
-    std::string d = aos::join(mb.done(), id);
-    if (exists(d)) {
-        fs::remove_all(d, ec);
+    // 在 cur/：正在跑，讓它跑完；回信已經到了就收掉，沒到的 kernel 之後看寄信的人不在了會撤回
+    std::optional<std::string> n = find_reply(rb, id, seen);
+    if (n && take(rb, *n)) {
+        try {
+            aos::post::finish(rb, *n, false);
+        } catch (const Error&) {
+        }
     }
-    // 在 cur/：正在跑，讓它跑完；kernel 之後看寄信的人不在了會清掉
 }
 
 int wait_reply(const Mailbox& mb, const std::string& id) {
+    aos::post::Mailbox rb = aos::post::open(reply_box(mb));
+    std::set<std::string> seen;
     sigset_t set;
     sigemptyset(&set);
     sigaddset(&set, SIGINT);
     sigaddset(&set, SIGTERM);
     sigaddset(&set, SIGHUP);
     while (true) {
-        if (exists(aos::join(mb.done(), id))) {
-            return relay(mb, id);
+        std::optional<std::string> n = find_reply(rb, id, seen);
+        if (n && take(rb, *n)) {
+            return relay(rb, *n);
         }
         if (!exists(aos::join(mb.fresh(), id)) && !exists(aos::join(mb.cur(), id)) &&
-            !exists(aos::join(mb.done(), id))) {
+            !exists(aos::join(mb.done(), id)) && !find_reply(rb, id, seen)) {
             throw Error{code::LetterMissing, "信 " + id + " 在信箱 " + mb.root + " 裡不見了"};
         }
         timespec ts{0, 20 * 1000 * 1000};
         int sig = sigtimedwait(&set, nullptr, &ts);
         if (sig > 0) {
-            withdraw(mb, id);
+            withdraw(mb, rb, id, seen);
             return 128 + sig;
         }
     }

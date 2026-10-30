@@ -13,6 +13,10 @@ project(aos-llm-kernel C CXX)
 if(NOT TARGET aos-loop)
   add_subdirectory(../aos-loop aos-loop-build)
 endif()
+#   aos-post   公開 API（aos/post.hpp）：回信走信封的 reply_to＝照 N-16 寄一封回信（10-30，medium 決定 3）；它又帶進 aos-lock
+if(NOT TARGET aos-post)
+  add_subdirectory(../aos-post aos-post-build)
+endif()
 
 # src/ 底下除了 src/main.cpp 全是函式庫的程式碼。
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
@@ -23,7 +27,7 @@ add_library(aos-llm-kernel STATIC ${SOURCES})
 target_include_directories(aos-llm-kernel PUBLIC include PRIVATE src)
 target_compile_features(aos-llm-kernel PUBLIC cxx_std_20)
 target_compile_options(aos-llm-kernel PRIVATE -Wall -Wextra)
-target_link_libraries(aos-llm-kernel PUBLIC aos-loop)
+target_link_libraries(aos-llm-kernel PUBLIC aos-loop PRIVATE aos-post)
 set_target_properties(aos-llm-kernel PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 

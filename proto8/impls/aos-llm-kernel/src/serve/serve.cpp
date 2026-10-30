@@ -4,6 +4,7 @@
 #include "queue/queue.hpp"
 
 #include "aos/exec.hpp"
+#include "aos/post.hpp"
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
 
@@ -140,6 +141,61 @@ struct Served {
     Json metainfo_bad = Json::array();         // 寫壞而當沒寫的 `_metainfo` key
 };
 
+// 回信走 reply_to（10-30，medium 決定 3、N-16）：信裡寫了 reply_to＝照 N-16 寄一封回信進去（body＝reply.json 那份、
+// in_reply_to＝原信號、stdout.txt／stderr.txt 有就附上），寄出的信號記在 <信>/reply_letter.txt（已經有＝上一次寄過了，不寄第二封）。
+// 寄不出去（信箱不在、寫不進）不是 kernel 的錯：回「代號 原因」記進 served 的 reply_error，信照搬 done/。沒寫 reply_to＝null。
+Json post_reply(const std::string& dir, const std::string& id, const Json& reply) {
+    std::optional<Json> letter = aos::read_json(aos::join(dir, "letter.json"));
+    if (!letter || !letter->is_object() || !letter->value("reply_to", Json()).is_string()) {
+        return nullptr;
+    }
+    std::error_code ec;
+    if (fs::exists(aos::join(dir, "reply_letter.txt"), ec)) {
+        return nullptr;
+    }
+    try {
+        aos::post::Mailbox box = aos::post::open((*letter)["reply_to"].get<std::string>());
+        aos::post::SendOpts opts;
+        opts.in_reply_to = id;
+        for (const char* f : {"stdout.txt", "stderr.txt"}) {
+            if (fs::is_regular_file(aos::join(dir, f), ec)) {
+                opts.files.push_back({f, aos::join(dir, f)});
+            }
+        }
+        std::string sig = aos::post::send(box, reply, opts);
+        std::string tmp = aos::join(dir, ".reply_letter.txt.tmp");   // N-05
+        std::FILE* f = std::fopen(tmp.c_str(), "w");
+        if (f == nullptr || std::fprintf(f, "%s\n", sig.c_str()) < 0 || std::fclose(f) != 0 ||
+            std::rename(tmp.c_str(), aos::join(dir, "reply_letter.txt").c_str()) != 0) {
+            return std::string(code::WriteFailed) + " 回信寄出了（" + sig + "），但記不進 " + dir + "/reply_letter.txt";
+        }
+        return nullptr;
+    } catch (const Error& e) {
+        return e.code + " " + e.msg;
+    }
+}
+
+// done/<id> 被收拾前：它寄過的回信還在 reply_to 的 new/（寄信的人不在了，沒人會拿）＝撤回自己寄的那封（N-16 撤回；在 cur/ 以後的不碰）。
+void withdraw_reply(const std::string& dir) {
+    std::optional<Json> letter = aos::read_json(aos::join(dir, "letter.json"));
+    int err = 0;
+    std::optional<std::string> sig = aos::read_file(aos::join(dir, "reply_letter.txt"), err);
+    if (!letter || !letter->is_object() || !letter->value("reply_to", Json()).is_string() || !sig) {
+        return;
+    }
+    std::string name = *sig;
+    while (!name.empty() && (name.back() == '\n' || name.back() == ' ')) {
+        name.pop_back();
+    }
+    if (name.empty() || name[0] == '.' || name.find('/') != std::string::npos) {
+        return;
+    }
+    try {
+        aos::post::withdraw(aos::post::open((*letter)["reply_to"].get<std::string>()), name);
+    } catch (const Error&) {
+    }
+}
+
 // accept 名單（10-24）：單子的 argv 與 cwd 跟其中一張一字不差，而且沒自帶串流與 envs。
 bool accepted(const std::vector<Accepted>& list, const Json& inst) {
     for (const char* k : {"envs", "stdin", "stdout", "stderr", "stdout_append", "stderr_append"}) {
@@ -255,6 +311,7 @@ void Server::finish(const Served& s) {
     }
     line["counter_tokens"] = rep.tokens;
     line["report_bad"] = rep.bad;
+    line["reply_error"] = post_reply(dir, s.id, s.reply);   // 回信走 reply_to（10-30）
     std::string path = aos::join(stack_, "served.jsonl");
     std::FILE* f = std::fopen(path.c_str(), "a");
     if (f == nullptr) {
@@ -326,6 +383,7 @@ void Server::sweep() {
     for (const std::string& id : names_in(mb_.done())) {
         std::string dir = aos::join(mb_.done(), id);
         if (!sender_alive(dir)) {
+            withdraw_reply(dir);   // 它寄過、沒人拿的回信撤回（10-30）
             remove_tree(dir);
         }
     }

@@ -35,7 +35,7 @@ aos-llm-kernel [旗標] kernel.json
   這四格的指示詞先解（`{"$env": "AOS_KERNEL"}` 就是讓 kernel 與閘門讀同一個變數）；解不開 `DirectiveBad`。
 - **`$AOS_STACK`**（必要）：kernel 自己的兩個檔（計數的 key 一律 `counter_*`：使用者「計數這塊，幫我改成counter_*」）——
   - `queue.json`：`{"counter_runs": kernel 跑過幾次, "seen_at_runs": {信號: 第一次看到它是第幾次}}`（只留還在排的；先寫暫存再改名）。在但讀不懂＝`QueueBad`（刪掉就從頭算）。
-  - `served.jsonl`：每封信一行 `{"served_at", "letter", "level", "counter_waited_runs", "code", "signal", "error", "elapsed_ms", "time_ms", "metainfo_bad", "counter_tokens", "report_bad"}`（只附加；`served_at`＝kernel 處理這封的時間〔認領、回錯、或接手上一次留下的〕）；跑了＝`code`／`signal`，沒跑或跑不起來＝`error` 是代號；
+  - `served.jsonl`：每封信一行 `{"served_at", "letter", "level", "counter_waited_runs", "code", "signal", "error", "elapsed_ms", "time_ms", "metainfo_bad", "counter_tokens", "report_bad", "reply_error"}`（只附加；`served_at`＝kernel 處理這封的時間〔認領、回錯、或接手上一次留下的〕）；跑了＝`code`／`signal`，沒跑或跑不起來＝`error` 是代號；
     `elapsed_ms`＝實際花多久、`time_ms`＝單子 `_metainfo` 宣告的（沒寫＝null）——宣告與實測放一起，kernel 絕不回寫使用者的 `_metainfo`（10-24 metainfo M7）；`metainfo_bad`＝寫壞而當沒寫的 key；
     `counter_waited_runs`＝排了幾次才輪到；`counter_tokens`＝腦回報的 token 數（沒回報、回報壞、沒跑＝null）、`report_bad`＝回報檔在但讀不懂。
   - `used.json`：用量帳 `{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens"}`——這一窗（`since` 起）跑了幾封、多少 token，與開帳以來的總數；每封跑過的信寫完 served 那行就記一次（先寫暫存再改名）。在但讀不懂＝`UsedBad`（刪掉就從 0 算）。
@@ -48,6 +48,7 @@ aos-llm-kernel [旗標] kernel.json
   形狀不對＝那個 key 當沒寫、記進 served 的 `metainfo_bad`，**照樣跑、不回 `LetterBad`**（M8）。`llm_tokens` 只讀不用（留給額度）。不讀單子以外的檔（資料夾的 `_metainfo`、子葉）。
   排隊依據都從 `priority_of` 一個函式讀（priority＋`_metainfo`）。
 - **回信**（`reply.json`）：`{"code", "signal"}` 或 `{"error": {"code", "msg"}}`。
+  **信封寫了 `reply_to`（信箱路徑）**（10-30，[medium 決定 3](../../thinking/2026-10-28-medium.md)；aos-llm-send 都會寫）：另把同一份當 `body`、照 [N-16](../../docs/NORMS/05-基礎設施-窗.md) 寄一封回信進那個信箱（aos-post 的庫；`in_reply_to`＝原信號、`sender`＝kernel 自己的身分、信裡有 `stdout.txt`／`stderr.txt` 就附上），寄出的信號記在 `<信>/reply_letter.txt`（已經有＝寄過了、不寄第二封，接手上一次留下的也一樣）。`reply.json` 照寫、信照搬 `done/` 當紀錄。寄不出去（信箱不在、寫不進）不是 kernel 的錯：原因記進 served 的 `reply_error`（`"代號 原因"`；成功或沒寫 `reply_to`＝null）。寄信的人不在了、收拾 `done/<信號>` 時，那封回信還在對方 `new/`（沒人拿）就撤回。沒寫 `reply_to` 的信照舊：回信只在 `done/<信號>/reply.json`，由寄信人來撈。
 
 ### token 回報與額度（[thinking § token 回報與額度](../../thinking/2026-10-24-llm-kernel.md#token-回報與額度10-24-下午)）
 
@@ -77,12 +78,12 @@ kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sand
 
 1. 建信箱四格、flock；`queue.json` 的 `counter_runs`＋1。
 2. **`cur/` 還有信**＝上一次 kernel 跑到一半死了（一次跑完才結束、又有鎖，正常時這裡是空的）：有 `reply.json` 就照它；跑信的子行程（`runner.json`）還活著＝讓它跑完、這次少一格；都不是＝回 `RunFailed`（10-15 六題 6「回錯」，不重跑）。有回信的寫一行 served、搬 `done/`。
-3. **收拾**：`tmp/`、`done/` 裡寄信的閘門不在了（`sender.flock` 沒人鎖）的刪掉；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑；跟閘門撤信同一招，不會跟認領撞）。
+3. **收拾**：`tmp/`、`done/` 裡寄信的閘門不在了（`sender.flock` 沒人鎖）的刪掉（`done/` 的先撤回它寄過、還沒人拿的回信）；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑；跟閘門撤信同一招，不會跟認領撞）。
 4. **看 `new/`**：信讀不懂、`inst` 不是物件、priority 壞＝回 `LetterBad`；有 `accept` 而單子不在名單裡＝回 `InstUnknown`；deadline 已過＝回 `DeadlineMissed`（都不佔格、不跑）。
 5. **排隊**（`used.json` 先讀進來、換窗了先歸零）：`level`＋等了幾次÷10（每等 10 次升一級，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ `_metainfo` 宣告的 `time_ms` 短的先（有寫的在沒寫的前面；從不蓋過 level 與 deadline，aging 照算所以插隊有上限）→ 等得久的先 → 先寄的先。
 6. 跑之前看一眼訊號（有＝不認領、直接 128＋N）。照排好的順序一封封看：**額度到頂**＝`spent` 是 `refuse` 就把這封（以及之後的每一封）回 `BudgetMissing`，是 `wait` 就停、剩下的留著；沒到頂、`slots` 也還有空就認領（`new/` → `cur/` 改名；改不成＝閘門剛撤信，換下一封），**每封 fork 一個子行程**（`run_runner`）：
    先寫 `runner.json`，環境整份換成信裡的 `env`（再加 `AOS_KERNEL_REPORT`），單子沒寫 `stdout`／`stderr`＝寫進信的 `stdout.txt`／`stderr.txt`、沒寫 `stdin`＝`/dev/null`，交給 aos-exec 的 `run_inst`（`timeout_ms`、`grace_ms`、整群收都照單子），結果寫 `reply.json`。
-7. **全部跑完才往下**（一次裡不補位）：每封讀回報、寫一行 served、記進 `used.json`、`cur/` → `done/`；寫 `queue.json`；結束碼 0。
+7. **全部跑完才往下**（一次裡不補位）：每封讀回報、有 `reply_to` 就寄回信、寫一行 served、記進 `used.json`、`cur/` → `done/`；寫 `queue.json`；結束碼 0。
 
 ### 訊號
 
@@ -96,10 +97,10 @@ kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sand
 
 | 檔 | 做什麼 |
 |---|---|
-| `include/aos/llm_kernel.hpp` | 公開：信箱四格（`Mailbox`）、寄信的人（`hold_sender`、`sender_alive`；信號產生法 10-30 起在 aos-util 的 `aos::unique_id`）、`parse_priority`／`priority_of`（priority＋`_metainfo` 的 `time_ms`、`llm_tokens`）／`level_name`、`read_reply`、全部代號（閘門也用） |
+| `include/aos/llm_kernel.hpp` | 公開（`reply_of`：回信內容合不合，閘門驗回信的 body 也用）：信箱四格（`Mailbox`）、寄信的人（`hold_sender`、`sender_alive`；信號產生法 10-30 起在 aos-util 的 `aos::unique_id`）、`parse_priority`／`priority_of`（priority＋`_metainfo` 的 `time_ms`、`llm_tokens`）／`level_name`、`read_reply`、全部代號（閘門也用） |
 | `src/letter/letter.cpp` | 上面那些的實作（ISO 8601 自己解：`YYYY-MM-DDTHH:MM:SS[.小數](Z|±HH:MM)`） |
 | `src/queue/queue.hpp`、`queue.cpp` | `queue.json` 讀寫、`waited_runs`（寫進 served 的 `counter_waited_runs`）、`effective`、`order` |
-| `src/serve/serve.hpp`、`serve.cpp` | `read_cfg`、`serve`（`Server`：鎖、收拾、看信、額度到頂就回錯或停、認領、fork 子行程跑〔設 `AOS_KERNEL_REPORT`〕、等、回信、served.jsonl） |
+| `src/serve/serve.hpp`、`serve.cpp` | `read_cfg`、`serve`（`Server`：鎖、收拾、看信、額度到頂就回錯或停、認領、fork 子行程跑〔設 `AOS_KERNEL_REPORT`〕、等、回信、served.jsonl）；`post_reply`（照 `reply_to` 寄回信、記 `reply_letter.txt`）、`withdraw_reply`（收拾 `done/` 前撤回沒人拿的回信） |
 | `src/budget/budget.hpp`、`budget.cpp` | token 回報與額度：`parse_budget`、`window_since`、`read_used`／`add_used`（`used.json`、換窗歸零）、`spent`、`read_report` |
 | `src/common/common.hpp` | `using` |
 | `src/main.cpp` | 命令列：串上面；出錯印「aos-llm-kernel: 代號 原因」 |
@@ -140,7 +141,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
 - `test_cli`（`tests/test_cli.py`，unittest）：A 命令列與設定（usage、`StackMissing`、設定壞、mailbox 預設在 stack、指示詞、`QueueBad`）；B 排隊（level／數字／deadline 字串與數字／先來先上／`counter_waited_runs`、aging 到了與還沒到、`seen_at_runs` 只留還在排的）；
   C slots（2 封一起跑、1 封串著）；D 回信（碼與 stdout／stderr、單子自己導 stdout 不蓋、`DeadlineMissed` 不跑、`LetterBad` 七種、信封〔`kind`／`sender`／`sent_at`〕寫了或寫怪都不擋、單子壞＝回信不是 kernel 的錯）；
   E 收拾（寄信人不在〔`sender.flock` 沒人鎖或沒有〕的 new／tmp／done、`tmp/` 裡 `.` 開頭正在寫的〔還沒寫信或鎖著〕不碰、名字裡 pid 是死的但鎖著照跑、cur/ 留下的回 `RunFailed` 或照現成回信、跑信的子行程還活著就讓它跑完並佔格、子行程死了＝`RunFailed`）；F 鎖（`.flock`；舊名 `.lock` 被鎖著不算）、環境與 cwd 照信、`timeout_ms`、SIGTERM 轉給單子、早到的訊號不留半套；G `_metainfo`（同級時宣告短的後寄也先跑、有寫的在沒寫的前面、level 與 deadline 照樣壓過它、三種寫壞照樣跑並記 `metainfo_bad`）；
-  H token 回報與額度（`AOS_KERNEL_REPORT` 指進信小格並蓋掉信裡的、回報有寫／只有 prompt＋completion／沒寫／三種寫壞、沒跑的不算、`max_calls` 到頂回 `BudgetMissing`、`max_tokens` 到頂排著的全回錯、`wait` 留著等換窗後跑、`all` 不歸零與改窗歸零、`budget`〔含 `calls`／`tokens`〕與 `used.json` 壞）；I accept（名單裡的才跑、`cat` 祕密檔與換了 `cwd`、自帶 `stdout`、`envs` 的回 `InstUnknown`，環境用 kernel 的 `PATH` 與 key、只疊信裡的 `AOS_*`；`accept` 寫壞＝`CfgBad`）。
+  J reply_to（10-30：寄回信〔信封、body、附 stdout／stderr、`reply_letter.txt`〕、被拒的信也回、沒寫不寄、信箱不在記 `reply_error` 不算 kernel 的錯、接手時不寄第二封、寄信的人不在了撤回沒人拿的回信、別人的信不碰）；H token 回報與額度（`AOS_KERNEL_REPORT` 指進信小格並蓋掉信裡的、回報有寫／只有 prompt＋completion／沒寫／三種寫壞、沒跑的不算、`max_calls` 到頂回 `BudgetMissing`、`max_tokens` 到頂排著的全回錯、`wait` 留著等換窗後跑、`all` 不歸零與改窗歸零、`budget`〔含 `calls`／`tokens`〕與 `used.json` 壞）；I accept（名單裡的才跑、`cat` 祕密檔與換了 `cwd`、自帶 `stdout`、`envs` 的回 `InstUnknown`，環境用 kernel 的 `PATH` 與 key、只疊信裡的 `AOS_*`；`accept` 寫壞＝`CfgBad`）。
   信是測試自己寫的（假裝閘門；測試自己 flock 住 `sender.flock`＝寄信的人還在，沒人鎖＝不在；名字裡 pid 是死的、鎖著的照跑）。
 - llm-send＋kernel＋loop／daemon 一起跑的在 `proto8/tests/test_llm_kernel.py`（含 agent-dan 的 brain.py 經閘門、kernel 跑、假 server 回 usage → served 記到 token）。
 
@@ -151,7 +152,8 @@ cmake -B build && cmake --build build && ctest --test-dir build
 - **窗用本地時間**：kernel 的 `TZ` 換了、或日光節約，`since` 會變＝當成換窗歸零一次。`wait` 配 `window: "all"`＝到頂後永遠等（直到有人改 kernel.json 或刪 `used.json`）。
 - 一次裡不補位：`slots` 2、一封 1 秒一封 10 秒，那一格空等 9 秒；新來的高優先信也要等這一次結束。
 - kernel 整群被 SIGKILL：跑信的子行程跟著死，但單子自成行程群組、可能還在跑；下一次回 `RunFailed`，單子實際跑了一半或跑完沒人收。
-- 回信放在 `done/` 等閘門來拿；閘門還活著卻一直不拿（不會發生，除非有人 SIGSTOP 它）就一直佔著。
+- 回信放在 `done/` 等閘門來拿；閘門還活著卻一直不拿（不會發生，除非有人 SIGSTOP 它）就一直佔著。10-30 起閘門拿 `reply_to` 的回信、不再刪 `done/`，`done/` 留到寄信的人不在了才收（通常是下一次 kernel 起來時）。
+- 寄回信跟搬 `done/` 之間 kernel 死掉（`reply_letter.txt` 還沒寫成）：下一次接手會再寄一封，閘門只拿第一封，第二封在寄信人不在之後也不會被撤回（`reply_letter.txt` 記的是第二封）——留在回信信箱的 `new/`。
 - 信裡帶整份環境（含 `AOS_BRAIN_KEY` 這種），信箱在誰都讀得到的地方就會外洩：信箱放自己的 stack 裡。
 - **寄信的人是誰 kernel 不驗**：`sender.flock` 只說「人還在」、不是身分，信封的 `sender` 是閘門照環境填的、kernel 也不看，寫得到信箱的程式自己建一封、拿著鎖就算數；kernel 用自己的身分跑信。擋任意單子只能靠 `accept`（[thinking sandbox S18](../../thinking/2026-10-24-sandbox.md)）。
 - **共用信箱看得到別人的信**：寫得到信箱就讀得到別封信（含整份環境）與回信；要分開就分信箱、分群組（Linux 權限）。kernel 自己建的信箱照 umask（多半 755），跨帳號用照 `setup.sh --mailbox` 先建好。

@@ -216,24 +216,31 @@ std::string level_name(int level) {
     return "normal";
 }
 
-std::optional<Json> read_reply(const std::string& path) {
-    std::optional<Json> r = aos::read_json(path);
-    if (!r || !r->is_object()) {
+std::optional<Json> reply_of(const Json& r) {
+    if (!r.is_object()) {
         return std::nullopt;
     }
-    if (r->contains("error")) {
-        const Json& e = (*r)["error"];
+    if (r.contains("error")) {
+        const Json& e = r["error"];
         if (e.is_object() && e.value("code", Json()).is_string() && e.value("msg", Json()).is_string()) {
-            return r;
+            return std::optional<Json>(std::in_place, r);
         }
         return std::nullopt;
     }
-    Json c = r->value("code", Json());
-    Json s = r->value("signal", Json());
+    Json c = r.value("code", Json());
+    Json s = r.value("signal", Json());
     if (!c.is_number_integer() || !(s.is_null() || s.is_number_integer())) {
         return std::nullopt;
     }
-    return r;
+    return std::optional<Json>(std::in_place, r);
+}
+
+std::optional<Json> read_reply(const std::string& path) {
+    std::optional<Json> r = aos::read_json(path);
+    if (!r) {
+        return std::nullopt;
+    }
+    return reply_of(*r);
 }
 
 }  // namespace aos::llm_kernel

@@ -37,10 +37,11 @@ fi
 [ "$APPLY" = 1 ] || echo "# 乾跑：下面的指令都沒執行。用 root 加 --apply 才會真的做。"
 
 if [ -n "$MAILBOX" ]; then
-	BOXES="$MAILBOX/tmp $MAILBOX/new $MAILBOX/cur $MAILBOX/done"
+	BOXES="$MAILBOX/tmp $MAILBOX/new $MAILBOX/cur $MAILBOX/done $MAILBOX/reply $MAILBOX/reply/tmp $MAILBOX/reply/new $MAILBOX/reply/cur"
 	echo "# 讓 $RUNNER 寫得到信箱 $MAILBOX（kernel 用 $ME 跑）：擁有者 $ME、群組 $RUNNER、2770（別人進不來、看不到信）"
 	# shellcheck disable=SC2086
 	run install -d -o "$ME" -g "$RUNNER" -m 2770 "$MAILBOX" $BOXES
+	echo "#    reply/ 是 aos-llm-send 的回信信箱（10-30 回信走 reply_to）：kernel 寄回信進去、閘門拿，兩邊都要寫得到"
 	echo "#    四格加預設 ACL：誰建的信（閘門建資料夾、kernel 寫回信）都讓 $ME 與群組 $RUNNER 讀寫得到，不看各自的 umask"
 	# shellcheck disable=SC2086
 	run setfacl -m "d:u:$ME:rwx,d:g:$RUNNER:rwx,d:o::---" $BOXES
