@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+# act - aos-round 的 act 格：最後一則 assistant 還有沒回的 tool_calls 就叫 act 器官跑，吐的 tool 訊息逐則接進 history
+"""叫法：aos-exec <act 格> <agent 資料夾絕對路徑>（aos-round 的表叫它；thinking 2026-10-30-aos-round § B）。
+沒有要跑的（state 說 act、history 卻沒有待回的 tool_calls）＝什麼都不做、退 0。有＝act（stdin＝那則 assistant、只留沒回的 calls）
+→ 吐的每一行 history append。退 0＝跑完；退 10＝act 說插話打斷（剩下的已接成「被打斷」，接著 more 認領新信）。錯見 roundlib。"""
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import roundlib as r  # noqa: E402
+
+
+def act():
+    msg = r.pending(r.history())
+    if msg is None:
+        return 0
+    out = r.must("act", (), r.dumps(msg) + "\n", ok=(0, r.NOT_FOUND))
+    for line in out.stdout.splitlines():
+        if line.strip():
+            r.must("history", ("append",), line + "\n")
+    return out.returncode
+
+
+r.main("act", act)

@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+# finish - aos-round 的 finish 格：交卷——queue finish 收掉 cur/ 的信，再叫 hook/post_round
+"""叫法：aos-exec <finish 格> <agent 資料夾絕對路徑>（aos-round 的表叫它；thinking 2026-10-30-aos-round § B）。
+cur/ 空或 current.txt 空＝沒東西可收、退 0；history 最後一則不是沒有 tool_calls 的 assistant＝還沒答完、不收、退 0
+（回 idle → think 接著答）。否則 queue finish（答案就是那則 assistant，已在 history）→ hook/post_round（stdin＝那則一行 JSON）→ 退 0。
+錯見 roundlib。"""
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import roundlib as r  # noqa: E402
+
+
+def finish():
+    if not r.names("cur") or not r.listed():
+        return 0
+    rows = r.history()
+    last = rows[-1] if rows else {}
+    if last.get("role") != "assistant" or last.get("tool_calls"):
+        return 0
+    r.must("queue", ("finish",))
+    r.hook("post_round", r.dumps(last) + "\n")
+    return 0
+
+
+r.main("finish", finish)

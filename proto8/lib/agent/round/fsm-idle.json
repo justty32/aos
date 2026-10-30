@@ -1,0 +1,7 @@
+{"start": "idle",
+ "states": {
+  "idle": {"exec": ["idle", {"$env": "ROUND_AGENT"}], "next": {"0": "think", "10": "idle"}},
+  "think": {"exec": ["think", {"$env": "ROUND_AGENT"}], "next": {"0": "act", "10": "finish"}},
+  "act": {"exec": ["act", {"$env": "ROUND_AGENT"}], "next": {"0": "think", "10": "more"}},
+  "more": {"exec": ["more", {"$env": "ROUND_AGENT"}], "next": {"0": "act", "10": "act"}},
+  "finish": {"exec": ["finish", {"$env": "ROUND_AGENT"}], "next": "idle"}}}

@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+# more - aos-round 的 more 格：插話後把新信接進 history（queue claim --more）
+"""叫法：aos-exec <more 格> <agent 資料夾絕對路徑>（aos-round 的表叫它；thinking 2026-10-30-aos-round § B）。
+queue claim --more：退 0＝接到了；退 10＝沒信（搶輸了、被撤回）。重跑也安全（queue 自己判接過了沒）。錯見 roundlib。"""
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import roundlib as r  # noqa: E402
+
+
+def more():
+    return r.must("queue", ("claim", "--more"), ok=(0, r.NOT_FOUND)).returncode
+
+
+r.main("more", more)

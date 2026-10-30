@@ -128,7 +128,7 @@ pyfix 的子 agent 要改的程式在 `PYFIX_DIR`（`$AOS_WS/<dir>`），自己�
 
 | 格 | 一句話 | 子命令／stdin → stdout |
 |---|---|---|
-| [round](agent/round/) | 一輪的骨架：照「從哪接著做」（queue 的 `cur/`、`new/`、`current.txt` 與 history 最後一則）認領 → 問腦 → 跑工具 → 交卷，叫各格與 `hook/`；每叫一格 `$AOS_STACK/trace.jsonl` 一行；`ROUND_ON_EMPTY`＝queue 空時 `stop`（預設，退 10）或 `idle`（退 0、什麼都不做，交給 aos-loop 的 `interval_ms` 再來） | 結束碼 0＝好了、yield 或 idle、10＝queue 空（stop）；`--step`＝只做下一格 |
+| [round](agent/round/) | 一輪的骨架：照「從哪接著做」（queue 的 `cur/`、`new/`、`current.txt` 與 history 最後一則）認領 → 問腦 → 跑工具 → 交卷，叫各格與 `hook/`；每叫一格 `$AOS_STACK/trace.jsonl` 一行；`ROUND_ON_EMPTY`＝queue 空時 `stop`（預設，退 10）或 `idle`（退 0、什麼都不做，交給 aos-loop 的 `interval_ms` 再來）。同資料夾另有表＋五格（`fsm-stop.json`／`fsm-idle.json`、`roundlib.py`、`idle/` `think/` `act/` `more/` `finish/`；aos-round 用，[10-30 aos-round](../thinking/2026-10-30-aos-round.md) 第 2 步） | 結束碼 0＝好了、yield 或 idle、10＝queue 空（stop）；`--step`＝只做下一格 |
 | [queue](agent/queue/) | agent 的輸入：`$AOS_STACK/queue/`（N-16 有順序的信箱，底下叫 aos-post，PATH 上要有它；一封信的 `body`＝一則 OpenAI message，認領時原樣接進 history；回答＝history 最新那則沒有 tool_calls 的 assistant，[thinking 10-30 agent-lifecycle](../thinking/2026-10-30-agent-lifecycle.md) A-1～A-9；round、act、ask_round 10-30 第 2、5 步跟上） | push [--wait]（stdin 一則 message → 信號）／pop 信號／claim [--more]／peek／current／done／emit／finish [--keep]／withdraw 信號 |
 | [history](agent/history/) | 對話紀錄 `$AOS_STACK/history.jsonl` | append／read／compact（只有 compact 可改寫，舊的收進 `history_archive/`） |
 | [compact](agent/compact/) | 掛 `hook/pre_think`：超過 `MAX_BYTES` 才壓（agent-hal 三步土法），交給 history compact 換上 | `[--force]` |

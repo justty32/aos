@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+# think - aos-round 的 think 格：問腦一次（pre_think → endpoint → on_error → post_think），接進 history、queue emit
+"""叫法：aos-exec <think 格> <agent 資料夾絕對路徑>（aos-round 的表叫它；thinking 2026-10-30-aos-round § B）。
+history 空＝HistoryBad。最後一則 assistant 還有沒回的 tool_calls＝不問腦、退 0（去 act）；最後一則是 assistant、沒有＝不問腦、退 10（去 finish）
+（上次接完、state 還沒換就斷了）。最後一則 user／tool＝hook/pre_think → endpoint/<目前的> → 失敗問 hook/on_error
+（retry／switch 最多重來 MAX_RETRIES 次〔預設 3〕、用完 EndpointFailed；stop 或沒掛＝以 endpoint 的碼退、10 改 1）
+→ hook/post_think（stdout 非空＝取代）→ history append → queue emit。退 0＝那則有 tool_calls；退 10＝沒有（該交卷了）。
+設定：MAX_RETRIES（≥0 的整數，壞值 SettingBad）。錯見 roundlib。"""
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import roundlib as r  # noqa: E402
+
+
+def think():
+    retries = r.max_retries()
+    rows = r.history()
+    if not rows:
+        r.fail("HistoryBad", "history 是空的，沒東西可問（idle 認領時會先接進 history）")
+    if r.pending(rows):
+        return 0
+    role = rows[-1].get("role")
+    if role == "assistant":
+        return r.NOT_FOUND
+    if role not in ("user", "tool"):
+        r.fail("HistoryBad", "history 最後一則的 role 是 %r，不知道怎麼問腦" % role)
+    msg = r.ask(rows, retries)
+    p = r.hook("post_think", r.dumps(msg) + "\n")
+    if p is not None and p.stdout.strip():
+        msg = r.one_json(p.stdout.strip(), "hook/post_think")
+    r.must("history", ("append",), r.dumps(msg) + "\n")
+    r.must("queue", ("emit",), r.dumps(msg) + "\n")
+    return 0 if msg.get("tool_calls") else r.NOT_FOUND
+
+
+r.main("think", think)

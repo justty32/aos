@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+# idle - aos-round 的 idle 格：認領一題（queue claim）；cur/ 已有沒接完的就補認領、不叫 pre_round
+"""叫法：aos-exec <idle 格> <agent 資料夾絕對路徑>（aos-round 的表叫它；thinking 2026-10-30-aos-round § B）。
+cur/ 有沒列進 current.txt 的信＝補認領（queue claim，不叫 hook/pre_round）；cur/ 有信、都列了＝已認領、什麼都不做；
+cur/ 空：new/ 也空＝退 10；否則 hook/pre_round → queue claim。退 0＝cur/ 有認到的信；退 10＝queue 空。錯見 roundlib。"""
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+import roundlib as r  # noqa: E402
+
+
+def idle():
+    cur = r.names("cur")
+    if cur and not set(cur) - r.listed():
+        return 0                                        # 已認領（state 還沒換就斷了、或有人改了 state）
+    if not cur:
+        if not r.names("new"):
+            return r.NOT_FOUND
+        r.hook("pre_round")
+    r.must("queue", ("claim",), ok=(0, r.NOT_FOUND))    # 10＝沒信（剛被撤回、或全是壞信）：看 cur/ 判
+    return 0 if r.names("cur") else r.NOT_FOUND
+
+
+r.main("idle", idle)
