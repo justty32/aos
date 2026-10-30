@@ -156,7 +156,7 @@
 - **Q-13** listen 判斷服務者失敗：看 trace 最後一行，`code` 不是 0、10，或有 `signal`，就算失敗。格名先取 `unit`（round 的寫法），沒有再取 `state`（fsm 的寫法），說成「停在 X 那格、結束碼 N」。chat 用同一句。
 - **Q-14** say 去掉 content 結尾那一個換行。`--last`／`--follow` 一段的格式是「== #N」，問的話每行前面加「> 」，再接回答。上一則回答之後的 user 都算這段的問題。
 - **Q-15** 判斷有沒有服務者：先比行程環境的 `AOS_STACK`；沒設的，只在它用預設的 `<ws>/.stack/` 時才比 `AOS_WS`。
-- **Q-17**（10-30 晚，補 Q-4 的 `letter_warning`；round 已換成 aos-round）：
+- **Q-17**（10-30 晚，補 Q-4 的 `letter_warning`；round 已換成 aos-round；edeab029）：
   - **誰記**：queue 格自己記，在丟壞信的那一刻。原本說交給 round，是因為「它才知道有沒有 state 窗」；換成 aos-round 以後，五個格也不知道外面 aos-loop 開了什麼窗，這個理由不成立了。丟信的人最知道原因（C-52 各層只說自己的），idle、more 兩格叫 `queue claim` 時就一起記到了，格不用改。
   - **記在哪**：`$AOS_STACK/letter_warning.txt`，一行「信 <信號> 不採用：原因」（寫法同 daemon 的 `letter_warning`），先寫暫存再改名（N-05）。不寫進 aos-loop 的 `state.json`：那扇窗是 loop 的，一個窗一個寫者（N-09）；也不寫 trace，因為 aos-round 的 trace 只留 fsm 的一格一行（aos-round 決定 5）。
   - **留多少**：只留最後一封壞信的，好信不清掉（同 daemon 的「沒壞信的圈維持原值」，medium-plan 實作時代定 11）。不看有沒有 state 窗，一律記。

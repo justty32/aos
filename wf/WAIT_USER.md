@@ -13,6 +13,7 @@
 
 ## 待使用者項
 
+- 回信改走 `reply_to` 之後，沙箱跨帳號用 kernel 要多一格權限（10-30 晚，不急；沒用過 `setup.sh --mailbox` 就不用管）：之前照 `sudo sh proto8/extras/sandbox/root/setup.sh --mailbox <信箱> --apply` 設過的信箱，要再跑一次同一行，讓它多建 `<信箱>/reply/` 三格與權限。過關＝它印的「驗」那行 `sudo -n …s6-setuidgid aos-run env AOS_KERNEL=<信箱> …/aos-llm-send 單子.json` 拿到回信、結束碼 0 → [medium-plan 實作時代定 14](../proto8/thinking/2026-10-29-medium-plan.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - aos-round 第 1 步發現一題要你裁（10-30，不擋）：`lib/aos/aos_ws.py` 把「非 0、非 10 或被訊號停」的 trace 行當失敗；fsm 分岔後，表上接住的錯碼（`"*"`、`"1"`）其實是照表走了一步，要不要改成「`next` 不是 null 就不算失敗」？範本表只接 0 與 10，眼前遇不到 → [thinking 10-30 aos-round § 實作時代定](../proto8/thinking/2026-10-30-aos-round.md#實作時代定10-30隊長與工人照原則定的細節可翻案)
 - 親手試 aos-tools 與新的 aos-mcp（10-28，不急；代定清單在 [thinking 10-28 aos-tools § 結論](../proto8/thinking/2026-10-28-aos-tools.md#結論10-28-實作照原則代定可翻案)）：WSL 裡 `R=~/repo/aos-tools/proto8; export PATH=$R/bin:$R/impls/aos-exec/bin:$R/impls/aos-json/bin:$PATH; cd ~/code/try/aos-tools/agent && aos-tools ls`，再 `cd ../cws && claude --mcp-config ../mcp.json` 叫它用 clock／echo／add
 - 看統整頁、說你抓到的問題點（10-25 你說「我抓到了一些問題點」，兩隊都已收線等你；使用者 10-30：很複雜，先拖著，不催）：https://claude.ai/artifact/9sj3ZkRhK4ZYomb8WeSzrA → [thinking 10-25 top-down](../proto8/thinking/2026-10-25-top-down.md)

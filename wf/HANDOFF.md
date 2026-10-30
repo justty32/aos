@@ -15,7 +15,7 @@
 ## 2026-10-30 晚（家中 Manjaro；新 session 開場）
 
 1. **授權**：可隨意 push。分工：普通事 opus、簡單工作與雜活 sonnet；做事的 agent（簡單／雜活除外）先讀 wf 規矩；agent 可再派 agent、模型隨意。測試在家機本地跑（不是 WSL）。
-2. **狀態**：opus 隊長把 **aos-round 第 2～7 步做完**（每步一個 commit：`771747e1`、`f2818ae5`、`88cd1450`、`86c9f935`、`6f32b6a2`、`ef379dc7`；家機全套 788／0 fail／8 skip；commit 與代定註在 [aos-round 步驟表與文末](../proto8/thinking/2026-10-30-aos-round.md)）。還開著：WAIT_USER 的 aos_ws.py 失敗判法那題（沒裁、維持現況）、aos-round 接真腦的親手試（WAIT_USER 新加一行）。
+2. **狀態**：opus 隊長把 **aos-round 第 2～7 步做完**（每步一個 commit：`771747e1`、`f2818ae5`、`88cd1450`、`86c9f935`、`6f32b6a2`、`ef379dc7`；家機全套 788／0 fail／8 skip；commit 與代定註在 [aos-round 步驟表與文末](../proto8/thinking/2026-10-30-aos-round.md)）。還開著：WAIT_USER 的 aos_ws.py 失敗判法那題（沒裁、維持現況）、aos-round 接真腦的親手試（WAIT_USER 新加一行）。之後實作隊長又做完 SESSION-LOG 三件收尾（`8e266704` 代號與信號產生法下放 aos-util、`edeab029` round 的 `letter_warning`、`9d976dd7` 回信改走 `reply_to`；全套 789／0 fail／3 skip），代定在 medium-plan 文末 14、15 與 agent-lifecycle Q-17。
 3. **新規**：無。
 
 ## 2026-10-30 白天（公司 Windows；頂層 session 收工）
