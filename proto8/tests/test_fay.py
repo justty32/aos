@@ -1,7 +1,8 @@
 """test_fay - 跑 demo/agent-fay（claude／codex CLI 當工具、可接入）：用假的 claude／codex，不花額度。
 
 驗：非互動模式續同一段對話（session.txt）、attach -d 開畫面後改從 tmux 送字、hook 把回答接進 turns.jsonl、
-人用 attach 接進去打字再 Ctrl-\\ 跳出（pty 模擬）、有人接著時 agent 叫＝SessionBad、各種錯的代號。
+人用 attach 接進去打字再 Ctrl-\\ 跳出（pty 模擬）、有人接著時 agent 叫＝SessionBad、各種錯的代號、
+小格的 transcripts/ symlink 與 freeze_transcripts（10-30 eca 第 3 步）。
 設計：proto8/thinking/2026-10-24-cli-tools.md。需要 tmux（沒有就 skip 畫面那幾個）。"""
 import json, os, pty, re, select, shutil, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
@@ -11,7 +12,8 @@ own_error.install()
 from aos_bins import ROOT, tool, path_with  # noqa: E402
 EXEC = tool("aos-exec")
 FAY = ROOT / "demo" / "agent-fay"
-CLEAR = ("AOS_HUB", "AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "TMUX")
+CLEAR = ("AOS_HUB", "AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "TMUX",
+         "CLAUDE_CONFIG_DIR", "CODEX_HOME", "FAKE_TRANSCRIPTS")    # 後三個：CLI 自己的對話檔放哪，測試自己給
 HAS_TMUX = shutil.which("tmux") is not None
 SYS_PATH = "/usr/bin:/bin"          # 只留系統的：真的 claude（~/.local/bin）進不來；真的 codex（/usr/bin）被假的擋在前面
 
@@ -26,6 +28,11 @@ def opt(name):
 sid = opt("--resume") or opt("--session-id") or str(uuid.uuid4())
 if "-p" in a:
     prompt = sys.stdin.read()
+    if os.environ.get("FAKE_TRANSCRIPTS"):        # 像真的 claude 一樣把對話存進自己的資料夾（測 transcripts symlink 用）
+        d = os.path.join(os.environ["CLAUDE_CONFIG_DIR"], "projects", "fake")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, sid + ".jsonl"), "a") as f:
+            f.write(json.dumps({"type": "user", "text": prompt}) + "\n")
     if "boom" in prompt:
         print(json.dumps({"is_error": True, "result": "壞了", "session_id": sid})); sys.exit(1)
     print(json.dumps({"is_error": False, "result": "fake claude[%s]: %s" % (sid[:8], prompt), "session_id": sid}))
@@ -57,6 +64,11 @@ with open(os.environ["FAKE_LOG"], "a") as f:
 thread = a[a.index("resume") + 1] if "resume" in a else str(uuid.uuid4())
 if a and a[0] == "exec":
     prompt = sys.stdin.read()
+    if os.environ.get("FAKE_TRANSCRIPTS"):        # 像真的 codex：$CODEX_HOME/sessions/年/月/日/rollout-…-<thread>.jsonl
+        d = os.path.join(os.environ["CODEX_HOME"], "sessions", "2026", "10", "30")
+        os.makedirs(d, exist_ok=True)
+        with open(os.path.join(d, "rollout-2026-10-30T00-00-00-%s.jsonl" % thread), "a") as f:
+            f.write(json.dumps({"type": "user", "text": prompt}) + "\n")
     print(json.dumps({"type": "thread.started", "thread_id": thread}))
     with open(a[a.index("-o") + 1], "w") as f:
         f.write("fake codex[%s]: %s" % (thread[:8], prompt))
@@ -98,7 +110,6 @@ class Fay(unittest.TestCase):
         e = {k: v for k, v in os.environ.items() if k not in CLEAR}
         e["PATH"] = path_with(str(self.bin) + os.pathsep + SYS_PATH)
         e["FAKE_LOG"] = str(self.log)
-        e["AOS_HUB"] = str(self.tmp / "hub")          # 登記放測試自己的（10-27），不碰使用者的
         e.update(extra or {})
         return e
 
@@ -174,6 +185,66 @@ class Fay(unittest.TestCase):
         self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["CfgBad"]))
         r = self.attach("nope")
         self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["ToolUnknown"]))
+
+    # ------------------------------------------------------------ CLI 自己的對話檔（transcripts/，10-30）
+
+    def transcript_env(self):
+        return dict(FAKE_TRANSCRIPTS="1", CLAUDE_CONFIG_DIR=str(self.tmp / "claude-home"),
+                    CODEX_HOME=str(self.tmp / "codex-home"))
+
+    def cli_session(self):
+        """在測試程序裡 import lib 的 cli_session（freeze_transcripts 是給 aos-eca-hub 叫的函式，沒有命令列）。"""
+        sys.path.insert(0, str(ROOT / "lib" / "agent"))
+        self.addCleanup(sys.path.remove, str(ROOT / "lib" / "agent"))
+        import cli_session
+        return cli_session
+
+    def test_transcripts_link_then_freeze(self):
+        """工具形叫一次＝小格有 transcripts/<kind>-<id>.jsonl symlink 指到 CLI 自己的檔；freeze 後是真檔、內容一樣；
+        再叫一次 symlink 不重建（已有就不動）。claude、codex 各一次。"""
+        cs = self.cli_session()
+        for kind in ("claude", "codex"):
+            r = self.tool(kind, {"prompt": "第一句"}, self.transcript_env())
+            self.assertEqual(r.returncode, 0, r.stderr)
+            cell = self.stack / kind
+            sid = (cell / "session.txt").read_text().strip()
+            link = cell / "transcripts" / ("%s-%s.jsonl" % (kind, sid))
+            self.assertTrue(link.is_symlink(), sorted(os.listdir(cell)))
+            target = Path(os.readlink(link))
+            home = self.tmp / ("claude-home" if kind == "claude" else "codex-home")
+            self.assertTrue(target.is_absolute() and home in target.parents, target)
+            self.assertTrue(target.name.endswith(sid + ".jsonl"))
+            self.assertEqual(sorted(os.listdir(cell / "transcripts")), [link.name])   # 沒有殘留的暫存檔
+            r = self.tool(kind, {"prompt": "第二句"}, self.transcript_env())
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(Path(os.readlink(link)), target)
+            self.assertEqual(len(link.read_text().splitlines()), 2)           # 指到的是 CLI 正在接的那份
+            copied = cs.freeze_transcripts(cs.Cell(cell), kind)
+            self.assertEqual(copied, [str(target)])
+            self.assertFalse(link.is_symlink())
+            self.assertEqual(link.read_text(), target.read_text())
+            self.assertEqual(cs.freeze_transcripts(cs.Cell(cell), kind), [])  # 已經是真檔：不再拷
+
+    def test_transcripts_freeze_target_gone(self):
+        """CLI 自己把對話檔清掉了：freeze 不報錯、不拷，symlink 留著（看得出原本指哪）；沒有 transcripts/ 的格也不報錯。"""
+        cs = self.cli_session()
+        r = self.tool("claude", {"prompt": "講完就清"}, self.transcript_env())
+        self.assertEqual(r.returncode, 0, r.stderr)
+        cell = self.stack / "claude"
+        sid = (cell / "session.txt").read_text().strip()
+        link = cell / "transcripts" / ("claude-%s.jsonl" % sid)
+        os.remove(os.readlink(link))
+        self.assertEqual(cs.freeze_transcripts(cs.Cell(cell), "claude"), [])
+        self.assertTrue(link.is_symlink() and not link.exists())
+        empty = self.tmp / "empty-cell"
+        self.assertEqual(cs.freeze_transcripts(cs.Cell(empty), "claude"), [])  # 還沒有對話的格
+        self.assertFalse((empty / "transcripts").exists())
+
+    def test_no_transcript_no_link(self):
+        """CLI 沒存對話檔（找不到）：照答、不建 symlink，也不建空的 transcripts/。"""
+        r = self.tool("claude", {"prompt": "不存檔"}, dict(CLAUDE_CONFIG_DIR=str(self.tmp / "claude-home")))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse((self.stack / "claude" / "transcripts").exists())
 
     # ------------------------------------------------------------ 畫面（tmux）
 

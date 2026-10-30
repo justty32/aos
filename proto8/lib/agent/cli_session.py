@@ -8,10 +8,13 @@
 #   busy.txt      claude 的畫面正在跑一輪（有人送出、還沒講完）
 #   lock          同一時間只有一個人用這段對話（agent 的一次呼叫、attach 開畫面）
 #   live.jsonl    非互動的即時紀錄兼副產物：claude 的 stream-json、codex 的 --json 事件，一行一事件、只接不重寫（10-28；10-27 是每次重寫）
-#   tool.txt、ws.txt  這格屬於哪個工具資料夾、哪個工作區（aos-hub 叫回畫面時用）（10-27）
+#   tool.txt、ws.txt  這格屬於哪個工具資料夾、哪個工作區（open_cell 叫回畫面時用）（10-27）
+#   transcripts/<kind>-<id>.jsonl  指到 CLI 自己存的這段對話的 symlink（claude ~/.claude/projects/*/<id>.jsonl、
+#                 codex ~/.codex/sessions/**/*<id>.jsonl）：拿到 session id 就建（10-30 agent-lifecycle C-15～C-17；
+#                 agent 叫的工具格也建，方向題 3）；歸檔時 freeze_transcripts 換成真的複製（CLI 會自己清舊對話）
 #
-# 登記（10-28 改）：每用到一格，若設了 $AOS_HUB、那裡有常駐的 aos-hub-kernel（kernel.sock），就送一行 register 給它；
-# 沒設、kernel 沒在跑都不擋正事（工具照用，只是 hub 列不到）。這支只登記，不管 hub 怎麼用（proto8/extras/cli_hub）。
+# 不再登記（10-30 eca 衝突 6）：10-28 起每用到一格就送一行 register 給 $AOS_HUB 的 aos-hub-kernel，現在刪了——
+# 沒有 kernel，「只登記的實例」這個分類消失；工具叫的格是那隻 agent 的事（C-52），要看去看那隻 agent 的 trace。
 #
 # 兩條路（每次呼叫自己挑）：
 #   畫面沒開 → 非互動：claude -p --resume <id>（第一次 --session-id <新 id>）、codex exec resume <id> -（第一次 codex exec -）
@@ -21,7 +24,7 @@
 # 放哪（10-24 遷移）：proto8/lib/agent/cli_session.py，lib/agent 的 claude、codex 兩個工具共用（用 realpath 找到這層再 import）；
 # agent-fay 根目錄的 cli_session.py 是捷徑指過來（給 attach 用）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
-import datetime, fcntl, glob, json, os, shlex, socket, subprocess, sys, threading, time, uuid
+import datetime, fcntl, glob, json, os, shlex, shutil, subprocess, sys, threading, time, uuid
 
 TMUX_SESSION = "cli"
 PROG, ECHO = "cli_session", False                    # 錯誤行開頭、要不要也印到 stdout（call_main 改成工具名、True）
@@ -110,24 +113,14 @@ class Cell:
         return [l for l in r.stdout.splitlines() if l.strip()] if r.returncode == 0 else []
 
 
-def register(cell, tool_dir, ws):
-    """記下這格是哪個工具、哪個工作區（tool.txt、ws.txt），並告訴 $AOS_HUB 的常駐 kernel（10-28）。登記失敗不擋正事。"""
+def note_cell(cell, tool_dir, ws):
+    """記下這格是哪個工具、哪個工作區（tool.txt、ws.txt；open_cell 叫回畫面要）。寫不成不擋正事。
+    10-30 前叫 register，還會送一行給 $AOS_HUB 的 kernel；那段刪了（eca 衝突 6）。"""
     try:
         if cell.read("tool.txt") != tool_dir:
             cell.write("tool.txt", tool_dir + "\n")
         if cell.read("ws.txt") != ws:
             cell.write("ws.txt", ws + "\n")
-    except OSError:
-        pass
-    hub = os.environ.get("AOS_HUB")
-    if not hub:
-        return
-    try:
-        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-            s.settimeout(2)
-            s.connect(os.path.join(hub, "kernel.sock"))
-            s.sendall((json.dumps({"op": "register", "cell": cell.path, "tool": tool_dir, "ws": ws}) + "\n").encode())
-            s.recv(4096)
     except OSError:
         pass
 
@@ -142,7 +135,7 @@ def close(cell):
 
 def transcripts(kind, sid):
     """CLI 自己存的這段對話（含中間訊息、工具呼叫等副產物）放在哪：claude ~/.claude/projects/*/<id>.jsonl、
-    codex ~/.codex/sessions/年/月/日/rollout-*-<id>.jsonl。aos-hub stop 歸檔時拷一份（10-28）。"""
+    codex ~/.codex/sessions/年/月/日/rollout-*-<id>.jsonl。小格的 transcripts/ symlink 指到這裡（10-30；10-28 是 stop 時才拷）。"""
     if not sid:
         return []
     if kind == "claude":
@@ -150,6 +143,62 @@ def transcripts(kind, sid):
         return sorted(glob.glob(os.path.join(base, "projects", "*", sid + ".jsonl")))
     base = os.environ.get("CODEX_HOME") or os.path.expanduser("~/.codex")
     return sorted(glob.glob(os.path.join(base, "sessions", "**", "*%s.jsonl" % sid), recursive=True))
+
+
+def transcript_link(cell_path, kind, sid):
+    """小格裡指到 CLI 自己那份對話的 symlink 放哪：transcripts/<kind>-<id>.jsonl（10-30）。"""
+    return os.path.join(cell_path, "transcripts", "%s-%s.jsonl" % (kind, sid))
+
+
+def link_transcript(cell, kind):
+    """拿到 session id 就在小格建 symlink 指到 CLI 自己的對話檔（10-30 C-16、C-17）。已有就不動；
+    找不到（CLI 還沒寫、--no-session-persistence）就不建；任何問題都不擋正事。"""
+    sid = cell.read("session.txt")
+    if not sid:
+        return
+    link = transcript_link(cell.path, kind, sid)
+    try:
+        if os.path.lexists(link):
+            return
+        found = transcripts(kind, sid)
+        if not found:
+            return
+        os.makedirs(os.path.dirname(link), exist_ok=True)
+        tmp = os.path.join(os.path.dirname(link), "." + os.path.basename(link) + ".tmp")   # N-05：先建暫存再改名
+        if os.path.lexists(tmp):
+            os.remove(tmp)
+        os.symlink(os.path.abspath(found[0]), tmp)
+        os.replace(tmp, link)
+    except OSError:
+        pass
+
+
+def freeze_transcripts(cell, kind):
+    """歸檔時：小格 transcripts/ 裡的 symlink 換成真的複製（CLI 會自己清舊對話，複製才留得住；10-30 C-16）。
+    還沒建 symlink 的先補一次；指不到的 symlink 留著、不報錯（看得出原本指哪）。回複製了哪些來源路徑。"""
+    link_transcript(cell, kind)
+    d, copied = cell.file("transcripts"), []
+    try:
+        names = sorted(os.listdir(d))
+    except OSError:
+        return copied
+    for n in names:
+        p = os.path.join(d, n)
+        if n.startswith(".") or not os.path.islink(p):
+            continue
+        src = os.path.realpath(p)
+        if not os.path.isfile(src):
+            continue
+        tmp = os.path.join(d, "." + n + ".tmp")
+        try:
+            shutil.copy2(src, tmp)
+            os.replace(tmp, p)
+        except OSError:                              # 拷到一半來源被清掉：當作指不到，symlink 留著
+            if os.path.lexists(tmp):
+                os.remove(tmp)
+            continue
+        copied.append(src)
+    return copied
 
 
 # ---------------------------------------------------------------- 非互動（畫面沒開）
@@ -295,7 +344,7 @@ def call_main(tool_dir):
     if not isinstance(args, dict) or not isinstance(args.get("prompt"), str) or not args["prompt"].strip():
         die("ArgumentsBad", "缺 prompt（要一個非空字串）")
     cell = Cell(stack)
-    register(cell, os.path.abspath(tool_dir), os.path.abspath(ws))
+    note_cell(cell, os.path.abspath(tool_dir), os.path.abspath(ws))
     f, ok = cell.lock()
     if not ok:
         die("SessionBad", "這段對話有人在用（另一次呼叫、或 attach 正在開畫面）")
@@ -306,6 +355,7 @@ def call_main(tool_dir):
             text = print_claude(cfg, cell, os.path.abspath(ws), args["prompt"])
         else:
             text = print_codex(cfg, cell, os.path.abspath(ws), args["prompt"])
+        link_transcript(cell, cfg["kind"])               # 工具形也留（方向題 3）
     sys.stdout.write(text if text.endswith("\n") else text + "\n")
 
 
@@ -359,6 +409,7 @@ def hook_main(kind, cell_path, payload_arg=None):
             sid = p.get("thread-id") or p.get("thread_id")
         if sid and not cell.read("session.txt"):
             cell.write("session.txt", sid + "\n")
+        link_transcript(cell, kind)
         with open(cell.file("turns.jsonl"), "a", encoding="utf-8") as f:
             f.write(json.dumps({"answered_at": now(), "text": text}, ensure_ascii=False) + "\n")
         if os.path.exists(cell.file("busy.txt")):
@@ -391,6 +442,7 @@ def start(cfg, cell, ws):
     if cell.alive():
         return False
     sid = cell.read("session.txt")
+    link_transcript(cell, cfg["kind"])                   # 叫回舊對話：id 早就知道
     if cfg["kind"] == "claude":
         cmd = " ".join(shlex.quote(a) for a in hook_cmd("claude", cell))
         hooks = {"hooks": {e: [{"hooks": [{"type": "command", "command": cmd}]}]
@@ -464,7 +516,7 @@ def attach_main(argv, agent_dir):
     if names[0] not in known:
         die("ToolUnknown", "%s（有：%s）" % (names[0], ", ".join(known)))
     cell = Cell(os.path.join(stack, names[0]))
-    register(cell, os.path.realpath(os.path.join(tools_dir, names[0])), ws)
+    note_cell(cell, os.path.realpath(os.path.join(tools_dir, names[0])), ws)
     opened = open_cell(cell)
     if detached:
         print("%s 的畫面%s：%s" % (names[0], "開好了" if opened else "本來就開著", cell.file("tty.sock")))

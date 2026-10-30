@@ -144,6 +144,7 @@ class Hub(unittest.TestCase):
         self.assertEqual(self.ls()[0]["state"], "收起了")
         self.assertIn(sid, self.hub("state", cwd=w).stdout)
 
+    @unittest.skip("只登記的實例 10-30 刪了（eca 衝突 6）；第 6 步 test_eca_hub 取代")
     def test_agent_cells_are_listed_not_served(self):
         self.start_kernel()
         w = self.ws("ws-agent")
