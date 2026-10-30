@@ -89,7 +89,9 @@ agent-fay/
 
 **權限**（`cli.json`，要放寬就改那份）：claude 只給 `Read,Glob,Grep`、`--permission-mode dontAsk`、不載 MCP、`--model sonnet`、非互動 `--max-budget-usd 0.5`；codex `sandbox_mode="read-only"`、`approval_policy="never"`。CLI 在 `$AOS_WS` 裡跑。
 
-**10-27**：所有工具的格都登記給 [aos-hub](../extras/cli_hub/README.md)（一個地方列出、切換、收起、叫回）；claude 非互動那次的即時紀錄在格裡的 `live.jsonl`。
+**10-27**：claude 非互動那次的即時紀錄在格裡的 `live.jsonl`（只接不重寫）。10-27～10-29 每用到一格還會登記給 aos-hub 的 kernel，10-30 刪了（[eca](../thinking/2026-10-30-eca.md) 衝突 6：工具叫的格是這隻 agent 的事）；拿到 session id 就在格裡建 `transcripts/<kind>-<id>.jsonl` → CLI 自己對話檔的 symlink。
+
+**10-30**：這兩個工具就是外部 coding agent 的「工具形」——跟下面 [eca-claude／eca-codex](#eca-templates) 的「平級形」是同一份程式（`lib/agent/cli_session.py`，問 CLI 那段 `ask` 兩邊共用），差別只在對話記在誰的小格。
 
 **錯**：工具叫的照 lib 契約 stderr 與 stdout 各一行 `claude: 代號 原因`（或 `codex:`）、退 1，attach 的是 `cli_session: 代號 原因`（工具叫的那行 act 回給腦、不停，同 agent-dan）——`ArgumentsBad`、`CliMissing`、`CliFailed`、`ReplyMissing`、`SessionBad`、`CfgMissing`／`CfgBad`。測試 `test_fay.py` 用假的 claude／codex，不花額度；要 tmux。
 
@@ -327,6 +329,32 @@ aos-exec --ws <工作區> proto8/demo/agent-nia        # PATH 照上面放好（
 ```
 
 `usage.jsonl` 會多一行。要換模型或網址，改 `parts.json` 裡 `endpoint/litellm` 的 `env`；要讓 litellm 當預設，把 `endpoint/default` 的 `path` 改成 `../../lib/endpoint/openai`、`env` 抄過去。要多一隻：`aos-ai spawn <名> --from agent-nia`（parts.json、tools.json 指出範本的相對路徑會改成絕對，見 [ai_tools](../extras/ai_tools/README.md)；放題照上面經 queue 格，`aos-ai ask`／`run` 還是舊協議〔`new/`、`out/`〕，對 agent-nia 這種 queue 的 agent 不管用）。測試 `test_nia.py`。
+
+<a id="eca-templates"></a>
+## 外部 coding agent 範本（eca-claude、eca-codex，10-30）
+
+claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 agent-nia 同形的定義資料夾，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。設計：[thinking 2026-10-30 eca](../thinking/2026-10-30-eca.md) B 結論 1、2；條文草稿 P-43。兩份只差 `cli.json`。
+
+```
+eca-claude/
+  _entry      ["aos-loop", "loop.json"]（JSON 入口，同 agent-nia）
+  loop.json   {"exec": {"argv": ["aos-parts", "run", "turn", {"$env": "AOS_CD"}], "timeout_ms": 900000}, "interval_ms": 300,
+               "ctl": "ctl.json", "state": "state.json"}（停著等版：沒有 max；兩扇窗落在 $AOS_STACK）
+  parts.json  只有一格 turn → ../../lib/eca/turn（env ECA_ON_EMPTY idle：queue 空就退 0、loop 隔 300 毫秒再來）
+  cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms），抄 lib/agent/claude 的保守旗標；eca-codex 抄 lib/agent/codex 的
+  prompt.txt  （選填，範本沒有）開場白：history 與 queue 都空時當第一則 user 投進 queue
+```
+
+**實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`，裡面長 `queue/`、`history.jsonl`、`trace.jsonl`、`ctl.json`、`state.json`、`eca.json`（kind、ws、template）與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）。
+
+```sh
+aos-exec --ws ~/code/myproj proto8/demo/eca-claude &     # PATH 要有 impls 的 aos-exec／aos-loop／aos-post、proto8/bin 的 aos-parts、claude
+aos-listen --ws ~/code/myproj "$(aos-say --ws ~/code/myproj 看一下 README 在講什麼)"
+echo '{"paused": true}' > ~/code/myproj/.stack/ctl.json     # 暫停：不餵下一則（新信留 queue/new/），粒度＝一則訊息
+echo '{"stopped": true}' > ~/code/myproj/.stack/ctl.json    # 收工
+```
+
+turn 一次答一則：`cur/` 有沒答完的先接、否則認領一封 → user 接進 history → 問 CLI（畫面開著＝貼進 tmux 畫面等 hook；沒開＝`claude -p --resume <id>`，第一次開新的）→ assistant 接進 history → 收信；壞信丟掉、trace 記 `letter_warning`；有人接在畫面上（`SessionBad`）＝這次不動、信留著下次再試。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，parts.json 的 turn 改 `"ECA_ON_EMPTY": "stop"`（複本搬了家，`path` 要改絕對；或在定義放 `prompt.txt`）——queue 空 turn 退 10、loop 以 0 收工。CLI 那層出錯＝turn 退 1、loop 停下等人（信留 `cur/`）。接進畫面與歸檔（aos-eca-hub）是第 6 步。測試 `test_eca.py`（範本）、`test_eca_turn.py`（turn 格）。
 
 ## 測試
 

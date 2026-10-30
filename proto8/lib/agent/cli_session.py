@@ -329,6 +329,26 @@ def live(cfg, cell, prompt):
         % (cfg.get("timeout_ms", 600000) // 1000))
 
 
+def ask(cfg, cell, tool_dir, ws, prompt):
+    """問 CLI 一句 → 回答文字：記下這格（note_cell）→ 拿格的 lock（拿不到＝SessionBad）→ 畫面開著走 live、沒開走非互動
+    → 建 transcripts symlink。工具形（call_main）與 eca 的 turn 共用這一段（10-30 eca 第 5 步抽出來）。
+    tool_dir＝cli.json 所在的資料夾（工具資料夾或 eca 定義）；ws＝CLI 的 cwd（絕對路徑）。錯一律走 die
+    （工具形印一行退 1；turn 把 die 換成丟例外）。"""
+    note_cell(cell, tool_dir, ws)
+    f, ok = cell.lock()
+    if not ok:
+        die("SessionBad", "這段對話有人在用（另一次呼叫、或 attach 正在開畫面）")
+    with f:
+        if cell.alive():
+            text = live(cfg, cell, prompt)
+        elif cfg["kind"] == "claude":
+            text = print_claude(cfg, cell, ws, prompt)
+        else:
+            text = print_codex(cfg, cell, ws, prompt)
+        link_transcript(cell, cfg["kind"])               # 工具形也留（方向題 3）
+    return text
+
+
 def call_main(tool_dir):
     """工具入口：stdin {"prompt": "..."} → stdout 回答。tool_dir＝工具資料夾（cli.json 在裡面；名字＝資料夾名）。"""
     global PROG, ECHO
@@ -343,19 +363,7 @@ def call_main(tool_dir):
         die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
     if not isinstance(args, dict) or not isinstance(args.get("prompt"), str) or not args["prompt"].strip():
         die("ArgumentsBad", "缺 prompt（要一個非空字串）")
-    cell = Cell(stack)
-    note_cell(cell, os.path.abspath(tool_dir), os.path.abspath(ws))
-    f, ok = cell.lock()
-    if not ok:
-        die("SessionBad", "這段對話有人在用（另一次呼叫、或 attach 正在開畫面）")
-    with f:
-        if cell.alive():
-            text = live(cfg, cell, args["prompt"])
-        elif cfg["kind"] == "claude":
-            text = print_claude(cfg, cell, os.path.abspath(ws), args["prompt"])
-        else:
-            text = print_codex(cfg, cell, os.path.abspath(ws), args["prompt"])
-        link_transcript(cell, cfg["kind"])               # 工具形也留（方向題 3）
+    text = ask(cfg, Cell(stack), os.path.abspath(tool_dir), os.path.abspath(ws), args["prompt"])
     sys.stdout.write(text if text.endswith("\n") else text + "\n")
 
 

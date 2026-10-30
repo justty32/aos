@@ -34,7 +34,7 @@ LLM kernel 兩支（`aos-llm-kernel`、`aos-llm-send`，10-24）的逐檔表另�
 
 ### 外部 coding agent 的格（10-30）
 
-`proto8/lib/eca/turn`（claude／codex 當平級 agent 的一輪：queue → CLI → history）與 `tests/test_eca_turn.py`：逐檔一列在 [proto8/17-eca](proto8/17-eca.md)。
+`proto8/lib/eca/turn`（claude／codex 當平級 agent 的一輪：queue → CLI → history）、範本 `demo/eca-claude`、`eca-codex` 與 `tests/test_eca_turn.py`、`test_eca.py`：逐檔一列在 [proto8/17-eca](proto8/17-eca.md)。
 
 ### 10-24 一天的嘗試（收尾補）
 
@@ -42,7 +42,7 @@ LLM kernel 兩支（`aos-llm-kernel`、`aos-llm-send`，10-24）的逐檔表另�
 
 - demo 的 agent（eve、fay、gus、hal、kai、liv、meg、pip、llm-kernel/agent-ivy）逐檔：[proto8/04-demo-agents](proto8/04-demo-agents.md)、[04-demo-agents-2](proto8/04-demo-agents-2.md)。
 - demo 的 talk、self-improve、pi-tools、file-tools、llm-kernel 頂層：[proto8/05-demo-其他](proto8/05-demo-其他.md)、[05-demo-其他-2](proto8/05-demo-其他-2.md)。
-- `proto8/extras/` 周邊工具 human、ai_tools、grow、langs/janet、langs/lua、editors/nvim、sandbox（10-26 從頂層收進）、cli_hub（10-27，在 -3）：[proto8/06-周邊工具](proto8/06-周邊工具.md)、[06-周邊工具-2](proto8/06-周邊工具-2.md)、[06-周邊工具-3](proto8/06-周邊工具-3.md)；`proto8/lib`（函式庫，10-24 下午遷移後三層）：[proto8/09-lib](proto8/09-lib.md)。
+- `proto8/extras/` 周邊工具 human、ai_tools、grow、langs/janet、langs/lua、editors/nvim、sandbox（10-26 從頂層收進）、eca_hub（10-30 aos-eca-hub，前身 10-27 的 cli_hub，在 -3）：[proto8/06-周邊工具](proto8/06-周邊工具.md)、[06-周邊工具-2](proto8/06-周邊工具-2.md)、[06-周邊工具-3](proto8/06-周邊工具-3.md)；`proto8/lib`（函式庫，10-24 下午遷移後三層）：[proto8/09-lib](proto8/09-lib.md)。
 - 10-24 新增的測試檔：[proto8/08-tests-10-24](proto8/08-tests-10-24.md)。
 - 10-25 由上而下拆：`proto8/topdown/` 總覽與甲隊 galtxt-a [proto8/11-topdown-galtxt-a](proto8/11-topdown-galtxt-a.md)；乙隊 galtxt-b [proto8/10-topdown-galtxt-b](proto8/10-topdown-galtxt-b.md)。
 

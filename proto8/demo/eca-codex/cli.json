@@ -1,0 +1,4 @@
+{"kind": "codex",
+ "flags": ["-c", "sandbox_mode=\"read-only\"", "-c", "approval_policy=\"never\""],
+ "print_flags": [],
+ "timeout_ms": 600000}

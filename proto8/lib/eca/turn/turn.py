@@ -220,23 +220,6 @@ def pick(stack, box, template):
     return out.strip(), False
 
 
-def ask(cfg, cell, template, ws, prompt):
-    """交給 CLI（cli_session 的兩條路；跟 call_main 同一段）→ 回答文字。"""
-    cli_session.note_cell(cell, template, ws)
-    f, ok = cell.lock()
-    if not ok:
-        raise Fail("SessionBad", "這段對話有人在用（attach 正在開畫面）")
-    with f:
-        if cell.alive():
-            text = cli_session.live(cfg, cell, prompt)
-        elif cfg["kind"] == "claude":
-            text = cli_session.print_claude(cfg, cell, ws, prompt)
-        else:
-            text = cli_session.print_codex(cfg, cell, ws, prompt)
-        cli_session.link_transcript(cell, cfg["kind"])
-    return text
-
-
 def one_turn(template, stack, ws, empty_code):
     box = os.path.join(stack, "queue")
     if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
@@ -270,7 +253,7 @@ def one_turn(template, stack, ws, empty_code):
         prompt = body["content"]
     if prompt is not None:
         try:
-            text = ask(cfg, cell, template, ws, prompt)
+            text = cli_session.ask(cfg, cell, template, ws, prompt)       # 跟工具形（call_main）同一段
         except Fail as e:
             if e.code == "SessionBad":
                 return 0                                            # 信留 cur/，下一次再試

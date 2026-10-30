@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/demo/`（agent-bob、ann、dan、eve、daemon、daemon-2、daemon-3、llm-kernel、tick）｜`proto8/bin/` 見入口
+← [入口](../proto8.md)｜涵蓋：`proto8/demo/`（agent-bob、ann、dan、eve、daemon、daemon-2、daemon-3、llm-kernel、tick；外部 coding agent 範本 eca-claude／eca-codex 見 [17-eca](17-eca.md)）｜`proto8/bin/` 見入口
 
 ### `proto8/demo/`
 
