@@ -10,7 +10,8 @@ spawn：--from agent-nia 後 parts.json、tools.json 指出範本的相對路徑
   沒有 parts.json 的範本（agent-dan）tools.json 一個字不動。
 ask_round（lib/aos，第 11 步：round 當外部接口；10-30 起放進 queue、答案看 history，agent-lifecycle 第 5 步）：
   登記進 tools.json、aos-tools call 拿到假腦答案、agent 不常駐（工作區在工具小格、只有 .stack、queue 收乾淨）；
-  工具小資料夾 .env 固定 ASK_AGENT；round 中途 yield 時重叫到答完、ASK_MAX_ROUNDS 用完＝AnswerMissing；round 失敗＝RoundFailed；參數錯。
+  工具小資料夾 .env 固定 ASK_AGENT；10-30 起一格一格叫 aos-round（aos-round 第 5 步）：ASK_MAX_STEPS 用完＝AnswerMissing、再叫接著做；
+  被問的 agent 設 ROUND_ON_EMPTY=idle 也答完就停；aos-round 失敗＝RoundFailed；參數錯。
 設計：proto8/thinking/2026-10-28-agent-round.md § 1、§ 6、§ 7 第 6、7、11 步、文末 39～。"""
 import json, os, subprocess, tempfile, unittest
 from pathlib import Path
@@ -186,19 +187,13 @@ class AskRound(unittest.TestCase):
         self.assertEqual(r.stdout.strip().splitlines()[-1], last)                 # 錯也印在 stdout（給腦看）
         return (r.returncode, last.split()[1])
 
-    def own_agent(self, pause=None):
-        """agent-nia 的格（絕對路徑）＋可選的 hook/pause。"""
+    def own_agent(self):
+        """agent-nia 的格（絕對路徑）。"""
         a = self.tmp / "agent"
         a.mkdir()
         parts = json.loads((NIA / "parts.json").read_text())["parts"]
         for row in parts.values():
             row["path"] = os.path.normpath(os.path.join(NIA, row["path"]))
-        if pause:
-            h = self.tmp / "pause"
-            h.mkdir()
-            (h / "_entry").write_text("#!/bin/sh\n" + pause)
-            (h / "_entry").chmod(0o755)
-            parts["hook/pause"] = {"path": str(h)}
         (a / "parts.json").write_text(json.dumps({"parts": parts}))
         (a / "tools.json").write_text(json.dumps({"tools": {"clock": {"path": str(ROOT / "lib" / "base" / "clock")}}}))
         return a
@@ -224,16 +219,35 @@ class AskRound(unittest.TestCase):
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 1+1？"), r.stdout)
 
-    def test_yield_rounds_until_answer_and_limit(self):
-        agent = self.own_agent(pause="exit 10\n")                                    # 每批工具後 yield：要叫兩次 round
+    def test_step_limit_then_resume(self):
+        """ASK_MAX_STEPS=1：只走一格（idle 認領）就 AnswerMissing、信留在 cur/；再叫一次（不設上限）從 state.txt 接著做、答得出來。"""
+        agent = self.own_agent()
         self.add(ASK)
-        r = self.call("ask_round", {"question": "幾點？", "agent": str(agent)})
-        self.assertEqual((r.returncode, r.stderr), (0, ""))
-        self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 幾點？"), r.stdout)
-        r = self.call("ask_round", {"question": "再一次", "agent": str(agent)}, {"ASK_MAX_ROUNDS": "1"})
+        r = self.call("ask_round", {"question": "幾點？", "agent": str(agent)}, {"ASK_MAX_STEPS": "1"})
         self.assertEqual(self.code(r), (1, "AnswerMissing"))
         ws = self.stack / "ask_round" / "agent"
-        self.assertEqual(len(queue_ls(ws, "cur")), 1)                                   # 沒答完：信留在 cur/，再叫會接著做
+        self.assertEqual(len(queue_ls(ws, "cur")), 1)                                   # 沒答完：信留在 cur/
+        self.assertEqual((ws / ".stack" / "state.txt").read_text().strip(), "think")
+        r = self.call("ask_round", {"question": "再一次", "agent": str(agent)})
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 再一次"), r.stdout)
+        self.assertTrue(answers(ws)[0].startswith("FAKE ANSWER to: 幾點？"), answers(ws))  # 卡著的那題先接著答完
+        self.assertEqual((queue_ls(ws, "new"), queue_ls(ws, "cur")), ([], []))
+        self.assertEqual(self.code(self.call("ask_round", {"question": "q", "agent": str(agent)}, {"ASK_MAX_STEPS": "0"})),
+                         (1, "SettingBad"))
+
+    def test_idle_agent_does_not_hang(self):
+        """被問的 agent 設 ROUND_ON_EMPTY=idle（aos-round 用 fsm-idle.json、queue 空也退 0）：答完就停手，不叫到次數用完。"""
+        agent = self.own_agent()
+        parts = json.loads((agent / "parts.json").read_text())
+        parts["parts"]["round"]["env"] = {"ROUND_ON_EMPTY": "idle"}
+        (agent / "parts.json").write_text(json.dumps(parts))
+        self.add(ASK)
+        r = self.call("ask_round", {"question": "幾點？", "agent": str(agent)}, {"ASK_MAX_STEPS": "8"})
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 幾點？"), r.stdout)
+        trace = (self.stack / "ask_round" / "agent" / ".stack" / "trace.jsonl").read_text().splitlines()
+        self.assertEqual([json.loads(l)["state"] for l in trace], ["idle", "think", "act", "think", "finish"])
 
     def test_round_failed_and_argument_errors(self):
         agent = self.own_agent()
