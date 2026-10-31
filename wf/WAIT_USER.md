@@ -14,7 +14,6 @@
 ## 待使用者項
 
 - 公司那台（WSL／Windows）桌面的六份說明頁 HTML 還是舊版（10-31 早六份 artifact 已照 10-30 晚改動回寫、同網址）：回公司時從各網址重存一次即可，網址見 [HANDOFF](HANDOFF.md) 第 3 點 → [校對表](session_logs/2026-10/2026-10-31-artifact-回寫.md)
-- turn 格改名：新名字 `aos-eca-turn` 還是 `eca`？（10-31 你說「改名叫 aos eca」「aos eca turn 也不錯」，turn 名字讓出來作他用；不急）→ [eca § 10-31 改名](../proto8/thinking/2026-10-30-eca.md#10-31-使用者想法turn-改名把-turn-讓出來先記之後處理)
 - 回信改走 `reply_to` 之後，沙箱跨帳號用 kernel 要多一格權限（10-30 晚，不急；沒用過 `setup.sh --mailbox` 就不用管）：之前照 `sudo sh proto8/extras/sandbox/root/setup.sh --mailbox <信箱> --apply` 設過的信箱，要再跑一次同一行，讓它多建 `<信箱>/reply/` 三格與權限。過關＝它印的「驗」那行 `sudo -n …s6-setuidgid aos-run env AOS_KERNEL=<信箱> …/aos-llm-send 單子.json` 拿到回信、結束碼 0 → [medium-plan 實作時代定 14](../proto8/thinking/2026-10-29-medium-plan.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - aos-round 第 1 步發現一題要你裁（10-30，不擋）：`lib/aos/aos_ws.py` 把「非 0、非 10 或被訊號停」的 trace 行當失敗；fsm 分岔後，表上接住的錯碼（`"*"`、`"1"`）其實是照表走了一步，要不要改成「`next` 不是 null 就不算失敗」？範本表只接 0 與 10，眼前遇不到 → [thinking 10-30 aos-round § 實作時代定](../proto8/thinking/2026-10-30-aos-round.md#實作時代定10-30隊長與工人照原則定的細節可翻案)
 - 親手試 aos-tools 與新的 aos-mcp（10-28，不急；代定清單在 [thinking 10-28 aos-tools § 結論](../proto8/thinking/2026-10-28-aos-tools.md#結論10-28-實作照原則代定可翻案)）：WSL 裡 `R=~/repo/aos-tools/proto8; export PATH=$R/bin:$R/impls/aos-exec/bin:$R/impls/aos-json/bin:$PATH; cd ~/code/try/aos-tools/agent && aos-tools ls`，再 `cd ../cws && claude --mcp-config ../mcp.json` 叫它用 clock／echo／add
