@@ -172,5 +172,5 @@ commit `9424ff9b`，共 49 個名字，程式、`fsm-*.json` 的 `$env`、parts.
 
 - Python 裡的區域變數名照語言慣例留著，只改環境變數字串，例如 `MAX_BYTES = env_int("AOS_COMPACT_MAX_BYTES", …)`。
 - **副作用**：好幾處給子程式的環境會先清掉 `AOS_*`（`lib/aos/try_run`、`demo/self-improve/common.py`、多數測試的 `env_of`），所以這些改了名的設定現在也會被清掉。`try_run` 原本從清過的那份環境讀 `IMPROVE_SANDBOX`，所以改成從自己的環境讀。其餘幾處照「aos 自己的變數」本意，讓它們被清掉，沒有再改。`aos-llm-kernel` 只疊信裡 `AOS_` 開頭的變數，所以這些設定現在也會跟著信疊進去。
-- **沒改、待使用者定**：`proto8/topdown/`（galtxt 兩隊凍結的試驗）有 33 個自己的變數，`GALTXT_*` 20 個、`OPTKIT_*` 11 個、`SELFOPT_*` 2 個，約 320 處，還會牽動 `test_topdown_*`。這些名字已經帶領域前綴，又是歷史試驗場，所以這批先不動。
+- **沒改、待使用者定**：`proto8/topdown/`（galtxt 兩隊凍結的試驗）有 33 個自己的變數，`GALTXT_*` 20 個、`OPTKIT_*` 11 個、`SELFOPT_*` 2 個，約 320 處，還會牽動 `test_topdown_*`。這些名字已經帶領域前綴，又是歷史試驗場，所以這批先不動。使用者 10-31 照預設、這批不補，可重訪 → [eca § 實作時代定（10-31）決定](2026-10-30-eca.md#決定10-31)。
 
