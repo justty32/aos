@@ -13,6 +13,8 @@
 
 ## 待使用者項
 
+- tidy 拆檔題一（10-31，不急）：條文大檔 NORMS/04、NORMS/10、CONCEPTS/01 沒拆——單條條文就超 8 KB（N-28 約 22 KB、N-59 約 11 KB、C-54 約 8 KB），要不要允許把一條的子項切到不同分檔，還是接受單條超標 → [STRUCTURE § 膨脹即拆](STRUCTURE.md#結構整理原則膨脹即拆--雜亂即分類)
+- tidy 拆檔題二（10-31，不急）：thinking 三份沒拆（10-28-medium、10-25-top-down、10-24-sandbox）——單段超 8 KB 又沒有下一級標題，要不要允許在段落／條列中間切 → [STRUCTURE § 膨脹即拆](STRUCTURE.md#結構整理原則膨脹即拆--雜亂即分類)
 - 公司那台（WSL／Windows）桌面的六份說明頁 HTML 還是舊版（10-31 早六份 artifact 已照 10-30 晚改動回寫、同網址）：回公司時從各網址重存一次即可，網址見 [HANDOFF](HANDOFF.md) 第 3 點 → [校對表](session_logs/2026-10/2026-10-31-artifact-回寫.md)
 - 回信改走 `reply_to` 之後，沙箱跨帳號用 kernel 要多一格權限（10-30 晚，不急；沒用過 `setup.sh --mailbox` 就不用管）：之前照 `sudo sh proto8/extras/sandbox/root/setup.sh --mailbox <信箱> --apply` 設過的信箱，要再跑一次同一行，讓它多建 `<信箱>/reply/` 三格與權限。過關＝它印的「驗」那行 `sudo -n …s6-setuidgid aos-run env AOS_KERNEL=<信箱> …/aos-llm-send 單子.json` 拿到回信、結束碼 0 → [medium-plan 實作時代定 14](../proto8/thinking/2026-10-29-medium-plan.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - aos-round 第 1 步發現一題要你裁（10-30，不擋）：`lib/aos/aos_ws.py` 把「非 0、非 10 或被訊號停」的 trace 行當失敗；fsm 分岔後，表上接住的錯碼（`"*"`、`"1"`）其實是照表走了一步，要不要改成「`next` 不是 null 就不算失敗」？範本表只接 0 與 10，眼前遇不到 → [thinking 10-30 aos-round § 實作時代定](../proto8/thinking/2026-10-30-aos-round.md#實作時代定10-30隊長與工人照原則定的細節可翻案)
