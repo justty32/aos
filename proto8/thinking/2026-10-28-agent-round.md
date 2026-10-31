@@ -315,3 +315,17 @@ round:
 47. **stdout＝答案原文**（`out/<題名>` 整份），不包 JSON：契約 2「文字工具印文字」，外面的 CLI 直接看得懂；`ask_agent` 印 JSON 是它轉 aos-ai 的歷史形狀，這支不跟。
 
 **10-29 註**：使用者 10-29 傍晚定 agent 的輸入是 queue（對話）、不是信箱；接單以後放在 tools 裡，agent 做完事自己用 tool 去看信箱 → [10-28 medium 決定 32](2026-10-28-medium.md#十七agent-的輸入是-queue不是信箱10-29-傍晚)。本檔 round 從工作區 `new/` 收題（P-11）、`ask_round` 把題放進對方 `new/`，都是信箱形狀，要不要改等之後再看，現在不動。
+
+## 10-31 使用者原文：parts 的定位
+
+使用者 10-31 早（另一個唯讀 session，談 aos-parts）原文：
+
+> parts 也會跟 loop/fsm 一樣，成為一個基底，甚至地位會稍高於 fsm。
+
+跟 AI 討論後的結論（那個 session 轉述）：
+
+- 「為何新發明 parts、不沿用 proto6 的 tasks」：兩者是不同軸——tasks＝工作量（proto8 已改成資料夾流）；parts＝agent 零件的「名字→路徑」通訊錄，解 C-52 下「格怎麼找」（[§ 格怎麼找](#格怎麼找註冊檔--固定名字--預設決定-16)）。
+- 使用者認同「parts 本質上是另一種 symlink 的集結」：`parts.json` 的指標表等同一個資料夾的捷徑，固定名字那條退路字面上就是捷徑；表多出的能力是每槽可帶 `env`／`$ref`／`$env`。
+- 在這個理解上，parts 定位成跟 loop／fsm 同級的基底、地位稍高於 fsm（大方向層的定位判斷）。
+
+待對條文：[C-74](../docs/CONCEPTS/01-設計理念.md#分層10-22-使用者定) 的分層表（基礎層 aos-exec＋loop、daemon → 標準庫 fsm、tasks → agent／kernel）沒有 parts；parts 現在只寫在 agent 那章 [C-61 的「10-28 再補：格也走註冊檔」](../docs/CONCEPTS/05-agent.md)，是「agent 自己的格」的附屬設定，跟「基底、稍高於 fsm」有張力——要不要把 parts 列進 C-74、放哪一層，等使用者看。
