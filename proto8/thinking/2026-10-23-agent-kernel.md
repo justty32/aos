@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前一份：[daemon 的 ctl 只寫變動、`$ref` 切檔](2026-10-23-daemon-ctl-ref.md)
 
-規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。相關條文：[C-50、C-62](../docs/CONCEPTS/05-agent.md)、[C-47](../docs/CONCEPTS/04-kernel.md)；前情：[10-21 計畫 § 5](2026-10-21-plan.md#5-agent)。
+規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。相關條文：[C-50、C-62](../docs/CONCEPTS/05-agent.md)、[C-47](../docs/CONCEPTS/04-kernel.md)；前情：[10-21 計畫 § 5](2026-10-21-plan/02-3-daemon.md#5-agent)。
 
 ## 使用者原文（整理版）
 
