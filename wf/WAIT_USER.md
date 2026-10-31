@@ -13,6 +13,8 @@
 
 ## 待使用者項
 
+- parts／round 收斂的衝突三條要你裁（10-31 傍晚，不擋；我各有建議）：① C-74 10-31 加註「parts 與 fsm 平級的標準庫」vs 核對結果「parts 是 aos-exec 格式的約定＋查找薄殼」（建議改口）；② C-51 加註「只有一個檔案固定」vs 決定 16「註冊檔沒寫＝固定名字」（建議先留 fallback）；③ round 重切草圖 vs 10-30「round 化作 loop／fsm 薄殼」決定（建議不重切） → [parts-round § 衝突](../proto8/thinking/2026-10-31-parts-round/04-匯流與衝突.md#衝突)
+- parts／round 收斂的方向題兩題（10-31 傍晚，不擋）：① `parts.json` 留名還是併進一份 `agent.json`（建議這輪不併、等你 C-51 的後續想法）；② 日後什麼情況把五格收回 aos-round 單體（建議三條門檻同時成立才收） → [parts-round § 方向性問題](../proto8/thinking/2026-10-31-parts-round/05-方向題與實作計畫.md#方向性問題)
 - tidy 拆檔題一（10-31，不急）：條文大檔 NORMS/04、NORMS/10、CONCEPTS/01 沒拆——單條條文就超 8 KB（N-28 約 22 KB、N-59 約 11 KB、C-54 約 8 KB），要不要允許把一條的子項切到不同分檔，還是接受單條超標 → [STRUCTURE § 膨脹即拆](STRUCTURE.md#結構整理原則膨脹即拆--雜亂即分類)
 - tidy 拆檔題二（10-31，不急）：thinking 三份沒拆（10-28-medium、10-25-top-down、10-24-sandbox）——單段超 8 KB 又沒有下一級標題，要不要允許在段落／條列中間切 → [STRUCTURE § 膨脹即拆](STRUCTURE.md#結構整理原則膨脹即拆--雜亂即分類)
 - 公司那台（WSL／Windows）桌面的六份說明頁 HTML 還是舊版（10-31 早六份 artifact 已照 10-30 晚改動回寫、同網址）：回公司時從各網址重存一次即可，網址見 [HANDOFF](HANDOFF.md) 第 3 點 → [校對表](session_logs/2026-10/2026-10-31-artifact-回寫.md)
