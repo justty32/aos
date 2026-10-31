@@ -37,10 +37,10 @@ claude／codex CLI 當工具，人可以 `attach` 接進同一段對話。[think
 |---|---|
 | `_entry`、`idle/` | 同 agent-dan |
 | `loop.json`、`fsm.json` | max 60；idle → plan（120 秒）→ fork（1 小時）→ think（120 秒）→ act（180 秒） |
-| `.env` | 模型名＋上限 `THOUGHT_MAX_STEPS`／`MAX_DEPTH`／`MAX_TOTAL`／`PARALLEL`／`TIMEOUT_S`／`MAX_CHARS`（`THOUGHT_DEPTH`、`THOUGHT_BUDGET` 由 fork 往下帶） |
+| `.env` | 模型名＋上限 `AOS_THOUGHT_MAX_STEPS`／`MAX_DEPTH`／`MAX_TOTAL`／`PARALLEL`／`TIMEOUT_S`／`MAX_CHARS`（`AOS_THOUGHT_DEPTH`、`AOS_THOUGHT_BUDGET` 由 fork 往下帶） |
 | `shared.py` | 各格共用（不是格）：`die`、`claim`、讀寫 history、`tools_spec`、`ask`（問腦、記 `usage.jsonl`）、`launch`／`conclusion`（起小念頭、取結論） |
 | `plan.py` | 認領題目、請腦回 `{context, steps}` → `$AOS_STACK/steps.json`；深度到頂或額度不夠、或腦回散文不是規劃（10-24），就不拆；規劃寫錯 `PlanBad` |
-| `fork.py` | needs 齊了才起、同時 `THOUGHT_PARALLEL` 個，小格 `thoughts/<id>/{ws,stack}`；全到齊一步一則接進 history；小念頭失敗＝那步記「失敗了：原因」照樣接、不停，needs 它的步不起（10-24 晚） |
+| `fork.py` | needs 齊了才起、同時 `AOS_THOUGHT_PARALLEL` 個，小格 `thoughts/<id>/{ws,stack}`；全到齊一步一則接進 history；小念頭失敗＝那步記「失敗了：原因」照樣接、不停，needs 它的步不起（10-24 晚） |
 | `brain.py`、`act.py` | think／act 同 agent-dan 的做法但改寫成用 `shared`；brain 不認領題目（plan 做了）；act 交答案時把 `steps.json` 收進 `plans/`；叫工具出的問題（退非 0、沒有的工具、arguments 壞）回給腦、不停，同 agent-dan |
 | `thought.json`、`thought.py` | 給別的程式叫一個小念頭：stdin `{goal, context?, needs?}` → stdout 只有結論，過程在 `runs/NNN/`；錯 `StepBad` |
 | `system.txt` | 人格（看到小念頭結論就彙整） |
@@ -56,7 +56,7 @@ claude／codex CLI 當工具，人可以 `attach` 接進同一段對話。[think
 | `tools/math`、`tools/clock` | 符號連結 → `../../../lib/base/<名>`（10-24 遷移前是 agent-dan 的複本） |
 | `fsm.json` | idle → compact（資料夾）→ think → act |
 | `system.txt` | 同 agent-dan，多一句：開頭【compact】那則是摘要、沒有的別猜 |
-| `compact/_entry`、`compact.py` | `exec python3 compact.py`（`--force` 不看門檻）；超過 `COMPACT_OVER_KB` 才壓：① 工具呼叫各一句 ② 每段摘要＋keep ③ 修成一份；保留最近幾題；原檔收進 `compact/<run>/orig.jsonl`、`report.json`、`log.jsonl`；斷了接著做；錯 `SummaryEmpty`、`HistoryChanged`… |
-| `compact/ask.py` | 問腦（`COMPACT_URL`，沒設用 `AOS_BRAIN_URL`；都沒設＝假腦照字面拼），回 content 與 usage（沒帶就粗估） |
+| `compact/_entry`、`compact.py` | `exec python3 compact.py`（`--force` 不看門檻）；超過 `AOS_COMPACT_OVER_KB` 才壓：① 工具呼叫各一句 ② 每段摘要＋keep ③ 修成一份；保留最近幾題；原檔收進 `compact/<run>/orig.jsonl`、`report.json`、`log.jsonl`；斷了接著做；錯 `SummaryEmpty`、`HistoryChanged`… |
+| `compact/ask.py` | 問腦（`AOS_COMPACT_URL`，沒設用 `AOS_BRAIN_URL`；都沒設＝假腦照字面拼），回 content 與 usage（沒帶就粗估） |
 | `compact/prompts/` | `note.txt`、`segment.txt`、`final.txt`：三步的 system 訊息 |
 | `compact/.env` | 門檻 32 KB、段 8 KB、保留最近 2 題、保留行上限、三步的模型 |

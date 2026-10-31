@@ -11,7 +11,7 @@
 # 自己的錯（stdin 不對、腦連不上、回覆不對、找了 MAX_ROUNDS 輪還沒交）stderr 一行「json_edit: 代號 原因」、退 1。
 import json, os, subprocess, sys, urllib.error, urllib.request
 
-MAX_ROUNDS = int(os.environ.get("JSON_EDIT_MAX_ROUNDS") or 12)
+MAX_ROUNDS = int(os.environ.get("AOS_JSON_EDIT_MAX_ROUNDS") or 12)
 WS = os.environ.get("AOS_WS") or "."
 
 

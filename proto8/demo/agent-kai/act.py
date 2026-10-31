@@ -1,4 +1,4 @@
-# act.py - act 格（agent-kai：照抄 agent-dan，只多給工具一個 RECALL_HISTORY＝自己的 history.jsonl，recall 工具靠它查舊題）：照腦的決定動手——有 tool_calls 就逐個 aos-tools call <名>、結果接回 history；沒有就把 content 寫成答案
+# act.py - act 格（agent-kai：照抄 agent-dan，只多給工具一個 AOS_RECALL_HISTORY＝自己的 history.jsonl，recall 工具靠它查舊題）：照腦的決定動手——有 tool_calls 就逐個 aos-tools call <名>、結果接回 history；沒有就把 content 寫成答案
 # 工具的介面：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的 stack＝$AOS_STACK/<名>/（P-17）。
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。
 # 叫工具出的問題回給腦、不停（10-24 起，同 agent-pip）：工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒有的工具、arguments 不是 JSON，
@@ -66,7 +66,7 @@ if calls:
         except ValueError as e:
             append({"role": "tool", "tool_call_id": cid, "content": "act: ArgumentsBad %s：%s\n" % (name, e)})
             continue
-        env = dict(os.environ, AOS_STACK=os.path.join(stack, name) + "/", RECALL_HISTORY=history_path)
+        env = dict(os.environ, AOS_STACK=os.path.join(stack, name) + "/", AOS_RECALL_HISTORY=history_path)
         try:
             r = subprocess.run(["aos-tools", "call", name], input=arguments, stdout=subprocess.PIPE,
                                text=True, env=env)      # stderr 不吞：工具自己的錯原樣往上

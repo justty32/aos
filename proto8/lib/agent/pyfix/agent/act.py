@@ -1,6 +1,6 @@
 # act.py - act 格：照腦的決定動手——有 tool_calls 就逐個 aos-tools call <名>、結果接回 history；沒有就把 content 寫成答案（照抄 agent-dan，只改錯誤訊息開頭的名字）
-# 跟 agent-dan 差一條（10-24 遷移：tools/ 改掛 proto8/lib/base 的 ls、read、write、edit、bash）：工具一律 `AOS_WS=$PYFIX_DIR aos-tools call <名>`（aos-exec 沒給 --ws＝用 $AOS_WS，同以前的 `aos-exec --ws $PYFIX_DIR tools/<名>`）——庫的工具只碰 $AOS_WS，這隻要改的程式在 PYFIX_DIR（pyfix 給的），
-#   自己的 $AOS_WS 是收題交答案的小格；沒設 PYFIX_DIR＝DirMissing 停下。
+# 跟 agent-dan 差一條（10-24 遷移：tools/ 改掛 proto8/lib/base 的 ls、read、write、edit、bash）：工具一律 `AOS_WS=$AOS_PYFIX_DIR aos-tools call <名>`（aos-exec 沒給 --ws＝用 $AOS_WS，同以前的 `aos-exec --ws $AOS_PYFIX_DIR tools/<名>`）——庫的工具只碰 $AOS_WS，這隻要改的程式在 AOS_PYFIX_DIR（pyfix 給的），
+#   自己的 $AOS_WS 是收題交答案的小格；沒設 AOS_PYFIX_DIR＝DirMissing 停下。
 # 工具的介面：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的 stack＝$AOS_STACK/<名>/（P-17）。
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。
 # 叫工具出的問題回給腦、不停（10-24 起，同 agent-pip）：工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒有的工具、arguments 不是 JSON，
@@ -42,9 +42,9 @@ def append(message):
 
 calls = said.get("tool_calls") or []
 if calls:
-    code_dir = os.environ.get("PYFIX_DIR")
+    code_dir = os.environ.get("AOS_PYFIX_DIR")
     if not code_dir or not os.path.isdir(code_dir):
-        die("DirMissing", "沒設定 PYFIX_DIR 或不是資料夾（要改的程式在哪）")
+        die("DirMissing", "沒設定 AOS_PYFIX_DIR 或不是資料夾（要改的程式在哪）")
     answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
     try:                                # 能叫的＝tools.json 登記的（aos-tools ls --json）；失敗＝自己這層的錯
         r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
@@ -71,7 +71,7 @@ if calls:
         except ValueError as e:
             append({"role": "tool", "tool_call_id": cid, "content": "act: ArgumentsBad %s：%s\n" % (name, e)})
             continue
-        env = dict(os.environ, AOS_STACK=os.path.join(stack, name) + "/", AOS_WS=os.path.abspath(code_dir))   # 工作區＝PYFIX_DIR（aos-exec 沒給 --ws 就用 $AOS_WS）
+        env = dict(os.environ, AOS_STACK=os.path.join(stack, name) + "/", AOS_WS=os.path.abspath(code_dir))   # 工作區＝AOS_PYFIX_DIR（aos-exec 沒給 --ws 就用 $AOS_WS）
         try:
             r = subprocess.run(["aos-tools", "call", name], input=arguments, stdout=subprocess.PIPE,
                                text=True, env=env)      # stderr 不吞：工具自己的錯原樣往上

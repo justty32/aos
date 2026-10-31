@@ -13,6 +13,6 @@
 | 哪裡 | 負責什麼 |
 |---|---|
 | `_entry` | shell：`AOS_KERNEL=$AOS_STACK/mailbox` 並先建好（免得閘門 `MailboxMissing`）、`exec aos-daemon daemon.json` |
-| `daemon.json` | max 25、每 200 毫秒；子項 kernel（`aos-llm-kernel kernel.json`，`interval_ms` 300）與 a、b、c（各跑一次 `agent-ivy`，工作區 `$AOS_WS/<名>`，`BRAIN` 選 `brains/plain.json`／`quick.json`／`urgent.json`） |
+| `daemon.json` | max 25、每 200 毫秒；子項 kernel（`aos-llm-kernel kernel.json`，`interval_ms` 300）與 a、b、c（各跑一次 `agent-ivy`，工作區 `$AOS_WS/<名>`，`AOS_IVY_BRAIN` 選 `brains/plain.json`／`quick.json`／`urgent.json`） |
 | `kernel.json` | `mailbox` 讀 `$AOS_KERNEL`、`slots` 1、`budget`（calls 100、tokens 100000、window day；10-24 下午加，demo 碰不到頂） |
 | `agent-ivy/`（含 `brains/`） | 走 kernel 的 agent 與三張腦的單子，逐檔見 [04-demo-agents](04-demo-agents.md) |

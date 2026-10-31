@@ -73,7 +73,7 @@ common.write(os.path.join(iws, "new", "task.txt"), task)
 env = dict(os.environ, AOS_STACK=istack + "/")
 env.pop("AOS_ENTRY", None)
 if common.sandbox():                                  # 10-24 沙箱接線：try_run 也照同一份設定關函數
-    env["IMPROVE_SANDBOX"] = common.sandbox()
+    env["AOS_IMPROVE_SANDBOX"] = common.sandbox()
 r = subprocess.run(["aos-exec", "--ws", iws, "improver"], env=env)
 if r.returncode != 0:
     common.die("ImproverFailed", "improver 結束碼 %d（半成品在 %s，下次開跑會搬到 failed/ 重來）" % (r.returncode, vdir))

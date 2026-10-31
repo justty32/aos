@@ -3,18 +3,18 @@
 # 介面（lib/README 的契約）：stdin 收 {"question", "agent"?, "timeout_s"?}；stdout＝答案原文（history 最新那則沒有 tool_calls 的 assistant 的 content）。
 # 設計：thinking 2026-10-28-agent-round § 6「round 當外部接口」、§ 7 第 11 步、文末實作時代定 43～；
 #   10-30 改走 queue（thinking 2026-10-30-agent-lifecycle 第 5 步）：題目＝一則 user message、放進 <工作區>/.stack/queue/，答案看 history。
-#   agent＝參數 agent（絕對路徑）＞ 環境變數 ASK_AGENT（「問 agent-xxx」固定一隻：工具小資料夾的 .env 寫它，_entry 捷徑指這支）。
-#   被問的 agent 的工作區＝ASK_WS（有設）＞ $AOS_STACK/<agent 資料夾名>/（這個工具自己的小格，P-17）；它的 stack＝<工作區>/.stack/。
+#   agent＝參數 agent（絕對路徑）＞ 環境變數 AOS_ASK_AGENT（「問 agent-xxx」固定一隻：工具小資料夾的 .env 寫它，_entry 捷徑指這支）。
+#   被問的 agent 的工作區＝AOS_ASK_WS（有設）＞ $AOS_STACK/<agent 資料夾名>/（這個工具自己的小格，P-17）；它的 stack＝<工作區>/.stack/。
 #   做法：aos-parts --file <agent>/parts.json run queue <agent> push（stdin 一則 {"role": "user", "content": 題文}，拿信號）
 #         → aos-round <agent> 反覆叫（10-30 aos-round 第 5 步起；每叫一次＝fsm 走一格）；每叫完一次就
 #           aos-parts … run queue <agent> pop --timeout-s 0 <信號>（A-8 的規則交給 queue：信還在＝退 10、再叫一格；
 #           信不見了＝finish 格已經 queue finish 完、整格跑完（state 回到 idle）＝印 history 最新那則 assistant＝答案）；
-#         「答完就停手」看的是信不見了、不是 aos-round 的 10：被問的 agent 的 round 槽若設 ROUND_ON_EMPTY=idle，
+#         「答完就停手」看的是信不見了、不是 aos-round 的 10：被問的 agent 的 round 槽若設 AOS_ROUND_ON_EMPTY=idle，
 #           aos-round 用 fsm-idle.json、queue 空也退 0，靠 10 會一直叫到次數用完（parts.json 的 env 壓過環境，外面給 stop 沒用）。
-#         最多叫 ASK_MAX_STEPS 格（預設 200，一題大約 4～8 格），總時間 timeout_s（預設 120、最多 600）。
-#   搶信箱不加保護（決定 15）：同一個工作區另有 aos-loop 在收信，round 可能先答別題、這題被別人答——呼叫者自己避開（給各自的 ASK_WS）。
-# 錯：stderr 與 stdout 各一行「ask_round: 代號 原因」、退 1——ArgumentsBad、AgentBad（不是存在的絕對路徑）、AgentMissing（沒給也沒設 ASK_AGENT）、
-#   StackMissing（沒 ASK_WS 也沒 AOS_STACK）、SettingBad、MkdirFailed、LaunchFailed（aos-parts、aos-round 起不來）、QueueFailed（push 退非 0）、
+#         最多叫 AOS_ASK_MAX_STEPS 格（預設 200，一題大約 4～8 格），總時間 timeout_s（預設 120、最多 600）。
+#   搶信箱不加保護（決定 15）：同一個工作區另有 aos-loop 在收信，round 可能先答別題、這題被別人答——呼叫者自己避開（給各自的 AOS_ASK_WS）。
+# 錯：stderr 與 stdout 各一行「ask_round: 代號 原因」、退 1——ArgumentsBad、AgentBad（不是存在的絕對路徑）、AgentMissing（沒給也沒設 AOS_ASK_AGENT）、
+#   StackMissing（沒 AOS_ASK_WS 也沒 AOS_STACK）、SettingBad、MkdirFailed、LaunchFailed（aos-parts、aos-round 起不來）、QueueFailed（push 退非 0）、
 #   RoundFailed（aos-round 退 0／10 以外；那格自己那行照樣在 stderr）、AnswerMissing（信不見了 history 卻沒有答案〔queue pop 自己那行在 stderr〕、
 #   aos-round 退 10 queue 空了信卻還在、格數用完或逾時，答案還沒出來）。
 # 逾時或自己被 TERM：先 TERM 正在跑的那一群、2 秒後 KILL，不留孤兒（契約 5）。
@@ -80,22 +80,22 @@ if not isinstance(question, str) or not question.strip():
 timeout_s = args.get("timeout_s", TIMEOUT_DEFAULT)
 if isinstance(timeout_s, bool) or not isinstance(timeout_s, (int, float)) or not 0 < timeout_s <= TIMEOUT_MAX:
     die("ArgumentsBad", "timeout_s 要是 0～%d 的數字，收到 %r" % (TIMEOUT_MAX, timeout_s))
-agent = args.get("agent", os.environ.get("ASK_AGENT"))
+agent = args.get("agent", os.environ.get("AOS_ASK_AGENT"))
 if agent in (None, ""):
-    die("AgentMissing", "沒給 agent，也沒設 ASK_AGENT")
+    die("AgentMissing", "沒給 agent，也沒設 AOS_ASK_AGENT")
 if not isinstance(agent, str) or not os.path.isabs(agent) or not os.path.isdir(agent):
     die("AgentBad", "agent 要是存在的資料夾絕對路徑，收到 %r" % (agent,))
 agent = os.path.normpath(agent)
 try:
-    max_steps = int(os.environ.get("ASK_MAX_STEPS") or "200")
+    max_steps = int(os.environ.get("AOS_ASK_MAX_STEPS") or "200")
     if max_steps < 1:
         raise ValueError
 except ValueError:
-    die("SettingBad", "ASK_MAX_STEPS 要是 ≥1 的整數，收到 %r" % os.environ.get("ASK_MAX_STEPS"))
-ws = os.environ.get("ASK_WS")
+    die("SettingBad", "AOS_ASK_MAX_STEPS 要是 ≥1 的整數，收到 %r" % os.environ.get("AOS_ASK_MAX_STEPS"))
+ws = os.environ.get("AOS_ASK_WS")
 if not ws:
     if not os.environ.get("AOS_STACK"):
-        die("StackMissing", "沒設 ASK_WS，也沒有 AOS_STACK（工具的小格）可以放被問的 agent 的工作區")
+        die("StackMissing", "沒設 AOS_ASK_WS，也沒有 AOS_STACK（工具的小格）可以放被問的 agent 的工作區")
     ws = os.path.join(os.environ["AOS_STACK"], os.path.basename(agent))
 ws = os.path.abspath(ws)
 stack = os.path.join(ws, ".stack")
@@ -132,4 +132,4 @@ for n in range(1, max_steps + 1):
         die("AnswerMissing", "%s 已經不在 queue，卻拿不到答案（queue pop 退 %s；工作區 %s）" % (qid, got, ws))
     if code == 10:
         die("AnswerMissing", "aos-round 說 queue 空了，%s 卻還在（被別人收走？工作區 %s）" % (qid, ws))
-die("AnswerMissing", "叫了 %d 格 aos-round（ASK_MAX_STEPS）%s 還沒答（工作區 %s）" % (max_steps, qid, ws))
+die("AnswerMissing", "叫了 %d 格 aos-round（AOS_ASK_MAX_STEPS）%s 還沒答（工作區 %s）" % (max_steps, qid, ws))

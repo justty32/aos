@@ -13,9 +13,9 @@ GUS = str(ROOT / "demo" / "agent-gus")
 REAL_URL = "http://localhost:4000/v1"
 CODES = ("BrainFailed", "ReplyBad", "ToolUnknown", "ArgumentsBad", "ToolFailed", "StackMissing", "QuestionMissing",
          "HistoryBad", "PlanBad", "ThoughtFailed", "StepBad")
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "THOUGHT_DEPTH",
-         "THOUGHT_BUDGET", "THOUGHT_MAX_STEPS", "THOUGHT_MAX_DEPTH", "THOUGHT_MAX_TOTAL", "THOUGHT_PARALLEL",
-         "THOUGHT_TIMEOUT_S", "THOUGHT_MAX_CHARS")
+CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_THOUGHT_DEPTH",
+         "AOS_THOUGHT_BUDGET", "AOS_THOUGHT_MAX_STEPS", "AOS_THOUGHT_MAX_DEPTH", "AOS_THOUGHT_MAX_TOTAL", "AOS_THOUGHT_PARALLEL",
+         "AOS_THOUGHT_TIMEOUT_S", "AOS_THOUGHT_MAX_CHARS")
 
 
 def run(*args, env=None, **kw):
@@ -181,10 +181,10 @@ class T(unittest.TestCase):
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant"])
 
     def test_depth_limit_skips_planning(self):
-        """THOUGHT_MAX_DEPTH=1：小念頭（第 1 層）不再問腦規劃，直接做。"""
+        """AOS_THOUGHT_MAX_DEPTH=1：小念頭（第 1 層）不再問腦規劃，直接做。"""
         b = self.brain(two_steps)
         self.ask()
-        r = self.gus(b.url, THOUGHT_MAX_DEPTH="1")
+        r = self.gus(b.url, AOS_THOUGHT_MAX_DEPTH="1")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual([depth_of(x) for x in b.plans()], [0])
         plan = json.loads(next((self.stack / "thoughts" / "a" / "stack" / "plans").iterdir()).read_text())
@@ -202,7 +202,7 @@ class T(unittest.TestCase):
             return answer("結論:" + g if g else "總結")
         b = self.brain(route)
         self.ask()
-        r = self.gus(b.url, THOUGHT_MAX_TOTAL="4")
+        r = self.gus(b.url, AOS_THOUGHT_MAX_TOTAL="4")
         self.assertEqual(r.returncode, 0, r.stderr)
         # 第 0 層用 2、x0 那棵再用 2；y0 輪到時剩 0 → 不拆、不問腦規劃（x0 先起或 y0 先起都一樣：兩個第 1 層只有一個能拆）
         reasons = []
@@ -305,7 +305,7 @@ class T(unittest.TestCase):
         self.assertEqual(concl[1], "小念頭 b 失敗了（目標：乙）：\n沒起：要先拿到 a 的結論，但它失敗了")
 
     def test_thought_timeout(self):
-        """小念頭超過 THOUGHT_TIMEOUT_S：整群收掉、那步當失敗回給母體的腦。"""
+        """小念頭超過 AOS_THOUGHT_TIMEOUT_S：整群收掉、那步當失敗回給母體的腦。"""
         def route(body):
             if is_plan(body):
                 return two_steps(body)
@@ -313,7 +313,7 @@ class T(unittest.TestCase):
         b = self.brain(route)
         self.ask()
         t0 = time.time()
-        r = self.gus(b.url, THOUGHT_TIMEOUT_S="1")
+        r = self.gus(b.url, AOS_THOUGHT_TIMEOUT_S="1")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("ThoughtFailed", gus_errors(r.stderr))
         self.assertIn("逾時", r.stderr)
@@ -322,14 +322,14 @@ class T(unittest.TestCase):
         self.assertLess(time.time() - t0, 15)
 
     def test_conclusion_capped(self):
-        """結論超過 THOUGHT_MAX_CHARS 截斷，全文留在小念頭的 out/。"""
+        """結論超過 AOS_THOUGHT_MAX_CHARS 截斷，全文留在小念頭的 out/。"""
         def route(body):
             if not is_plan(body) and goal_of(body):
                 return answer("長" * 50)
             return two_steps(body)
         b = self.brain(route)
         self.ask()
-        r = self.gus(b.url, THOUGHT_MAX_CHARS="10")
+        r = self.gus(b.url, AOS_THOUGHT_MAX_CHARS="10")
         self.assertEqual(r.returncode, 0, r.stderr)
         c = [m["content"] for m in self.history() if str(m["content"]).startswith("小念頭 a")][0]
         self.assertIn("長" * 10 + "…（截斷", c)

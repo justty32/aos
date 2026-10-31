@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-# compact - history.jsonl 超過 MAX_BYTES 就壓成短版（三步：工具呼叫各一句 → 逐段總結＋保留行 → 最後修飾），交給 history 格換上
+# compact - history.jsonl 超過 AOS_COMPACT_MAX_BYTES 就壓成短版（三步：工具呼叫各一句 → 逐段總結＋保留行 → 最後修飾），交給 history 格換上
 """叫法：aos-exec <compact 格> <agent 資料夾> [--force]；掛在 hook/pre_think（掛勾只收 agent 資料夾這一個參數）。
 
-觸發（agent-round § 4 history）：$AOS_STACK/history.jsonl 沒超過 MAX_BYTES（沒設＝65536）＝什麼都不動、退 0；--force＝不看門檻。
+觸發（agent-round § 4 history）：$AOS_STACK/history.jsonl 沒超過 AOS_COMPACT_MAX_BYTES（沒設＝65536）＝什麼都不動、退 0；--force＝不看門檻。
 「壓」的實際內容在這格（實作時代定，見 agent-round 文末）：history 格的 compact 只負責「舊的整份收進 history_archive/、
 換上給它的短版」，壓成什麼樣是這格的事。三步土法從 demo/agent-hal/compact 搬來（thinking 2026-10-24-compact）：
   第 1 步 note：每次叫工具（assistant 的 tool_calls＋對應的 tool 結果）交給腦，一個呼叫一句「在幹嘛，結果如何」。
-  第 2 步 segment：第 1 步後的紀錄每 SEG_KB 切一段，各段產總結，並挑幾行原樣保留（keep，打標記＋理由）。
+  第 2 步 segment：第 1 步後的紀錄每 AOS_COMPACT_SEG_KB 切一段，各段產總結，並挑幾行原樣保留（keep，打標記＋理由）。
   第 3 步 final：各段總結＋候選保留行串起來修成一份摘要、選最後要留的 keep。
-  最近 KEEP_TURNS 題與還沒答完的那題原樣不動；更早的換成一則 user（摘要＋保留原文）＋一則 assistant（讀過了）。
-問腦走 endpoint 格：ENDPOINT（這格的設定）＞ $AOS_STACK/endpoint.txt ＞ default，槽名 endpoint/<名>；
-  MODEL_NOTE／MODEL_SEG／MODEL_FINAL 有設才在請求裡帶 model（沒設＝用 endpoint 自己的）。腦回的不是 JSON 就走退路（照字面拼／整段當摘要）。
+  最近 AOS_COMPACT_KEEP_TURNS 題與還沒答完的那題原樣不動；更早的換成一則 user（摘要＋保留原文）＋一則 assistant（讀過了）。
+問腦走 endpoint 格：AOS_COMPACT_ENDPOINT（這格的設定）＞ $AOS_STACK/endpoint.txt ＞ default，槽名 endpoint/<名>；
+  AOS_COMPACT_MODEL_NOTE／AOS_COMPACT_MODEL_SEG／AOS_COMPACT_MODEL_FINAL 有設才在請求裡帶 model（沒設＝用 endpoint 自己的）。腦回的不是 JSON 就走退路（照字面拼／整段當摘要）。
 history 與 endpoint 怎麼找：aos-parts --file <agent>/parts.json which --json <槽>（沒掛＝PartMissing），env 疊上去、aos-exec 它。
 做到一半的產物落在 $AOS_STACK/compact/run/（失敗重跑從斷的那步接著做）；換上之後改名成 compact/<run>/（report.json、log.jsonl）。
 壓了沒變小＝不換（收成 compact/nosave-<run>/，同一份 history 不再壓）。同一個 stack 一次只壓一個（flock）。
-設定（這格的 env；parts.json 的 env 或這格的 .env）：MAX_BYTES、SEG_KB（8）、KEEP_TURNS（2）、KEEP_MAX（3）、KEEP_FINAL_MAX（12）、
-  KEEP_LINE_MAX（1500）、RESULT_CUT（2000）、ENDPOINT、MODEL_NOTE、MODEL_SEG、MODEL_FINAL。
+設定（這格的 env；parts.json 的 env 或這格的 .env）：AOS_COMPACT_MAX_BYTES、AOS_COMPACT_SEG_KB（8）、AOS_COMPACT_KEEP_TURNS（2）、AOS_COMPACT_KEEP_MAX（3）、AOS_COMPACT_KEEP_FINAL_MAX（12）、
+  AOS_COMPACT_KEEP_LINE_MAX（1500）、AOS_COMPACT_RESULT_CUT（2000）、AOS_COMPACT_ENDPOINT、AOS_COMPACT_MODEL_NOTE、AOS_COMPACT_MODEL_SEG、AOS_COMPACT_MODEL_FINAL。
 錯：stderr 一行「compact: 代號 原因」、退 1（N-43）。代號：ArgumentsBad、AgentMissing、StackMissing、SettingBad、PartMissing、
 PartsFailed、HistoryFailed、HistoryChanged、EndpointFailed、SummaryEmpty。"""
 import datetime, fcntl, hashlib, json, os, subprocess, sys, time
@@ -41,14 +41,14 @@ def env_int(name, default):
     return n
 
 
-MAX_BYTES = env_int("MAX_BYTES", 65536)
-SEG_KB = max(1, env_int("SEG_KB", 8))
-KEEP_TURNS = env_int("KEEP_TURNS", 2)
-KEEP_MAX = env_int("KEEP_MAX", 3)
-KEEP_FINAL_MAX = env_int("KEEP_FINAL_MAX", 12)
-KEEP_LINE_MAX = env_int("KEEP_LINE_MAX", 1500)
-RESULT_CUT = env_int("RESULT_CUT", 2000)
-MODEL_NOTE, MODEL_SEG, MODEL_FINAL = (os.environ.get(k) or "" for k in ("MODEL_NOTE", "MODEL_SEG", "MODEL_FINAL"))
+MAX_BYTES = env_int("AOS_COMPACT_MAX_BYTES", 65536)
+SEG_KB = max(1, env_int("AOS_COMPACT_SEG_KB", 8))
+KEEP_TURNS = env_int("AOS_COMPACT_KEEP_TURNS", 2)
+KEEP_MAX = env_int("AOS_COMPACT_KEEP_MAX", 3)
+KEEP_FINAL_MAX = env_int("AOS_COMPACT_KEEP_FINAL_MAX", 12)
+KEEP_LINE_MAX = env_int("AOS_COMPACT_KEEP_LINE_MAX", 1500)
+RESULT_CUT = env_int("AOS_COMPACT_RESULT_CUT", 2000)
+MODEL_NOTE, MODEL_SEG, MODEL_FINAL = (os.environ.get(k) or "" for k in ("AOS_COMPACT_MODEL_NOTE", "AOS_COMPACT_MODEL_SEG", "AOS_COMPACT_MODEL_FINAL"))
 
 args = sys.argv[1:]
 if not args or any(a != "--force" for a in args[1:]):
@@ -100,7 +100,7 @@ def history(sub, extra=(), stdin_text=""):
 
 
 def endpoint():
-    name = os.environ.get("ENDPOINT") or ""
+    name = os.environ.get("AOS_COMPACT_ENDPOINT") or ""
     if not name:
         try:
             with open(os.path.join(STACK, "endpoint.txt"), encoding="utf-8") as f:

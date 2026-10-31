@@ -3,7 +3,7 @@
 # 介面（lib/README 的契約）：stdin 收 {"task", "dir"?: "."}；stdout 印子 agent 的答案＋「--- 實際改動（diff）---」＋真正的 diff。
 # 轉接（「把 agent 包成工具」）用 lib/agent/agent_tool.py：每次呼叫一個新的小格 $AOS_STACK/runs/<三位數>/（子 agent 的工作區 ws/ 與 stack/），
 # 這裡多做的：改之前的備份 before/、跑完比對出真正的 diff（出口保證：不只信子 agent 自己說改了什麼）。
-# 子 agent 的工具是庫的 ls、read、write、edit、bash（tools/ 裡的捷徑），它的 act 用 `aos-exec --ws $PYFIX_DIR` 叫，所以只碰得到 PYFIX_DIR＝$AOS_WS/<dir>
+# 子 agent 的工具是庫的 ls、read、write、edit、bash（tools/ 裡的捷徑），它的 act 用 `aos-exec --ws $AOS_PYFIX_DIR` 叫，所以只碰得到 AOS_PYFIX_DIR＝$AOS_WS/<dir>
 # （bash 的指令本身擋不住出去，同 lib/base/bash）。PYTHONDONTWRITEBYTECODE=1 往下帶：跑測試不在使用者的程式資料夾留 __pycache__。
 # 錯：stderr 與 stdout 各一行「pyfix: 代號 原因」、退 1——ArgumentsBad、StackMissing、DirBad、AgentFailed、AnswerMissing。
 # 來源：demo/agent-eve/tools/pyfix（10-24；遷移時子 agent 改掛 lib/base 的工具、轉接抽成 agent_tool.py）。
@@ -68,7 +68,7 @@ for rel, text in before.items():          # 備份：子 agent 改壞了，從�
         f.write(text)
 
 answer = agent_tool.run_agent(NAME, "agent", args["task"], run,
-                              {"PYFIX_DIR": root, "PYTHONDONTWRITEBYTECODE": "1"})
+                              {"AOS_PYFIX_DIR": root, "PYTHONDONTWRITEBYTECODE": "1"})
 
 after = files(root)
 diff = []

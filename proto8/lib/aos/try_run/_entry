@@ -3,7 +3,7 @@
 # 介面（lib/README 的契約）：stdin 收 {"args"?: [...], "stdin"?: "...", "timeout_s"?: 10}；stdout「結束碼 N」＋兩段輸出（各留最後 8000 字）。
 # 不動 target/ 本身（每次複製一份、跑完刪）；函數的工作區也是一個空的暫時資料夾；被跑的函數退非 0 是結果、不是錯。
 # 逾時（預設 10 秒、上限 60）＝整群先 TERM、2 秒後 KILL，已經有的輸出照給、再接錯誤行 CommandFailed；這個工具被外面 TERM 時也先停掉那一群。
-# 有 $IMPROVE_SANDBOX 就把函數關進 aos-sandbox（self-improve 的沙箱接線，10-24）。
+# 有 $AOS_IMPROVE_SANDBOX 就把函數關進 aos-sandbox（self-improve 的沙箱接線，10-24）。
 # 錯：stderr 與 stdout 各一行「try_run: 代號 原因」、退 1。來源：demo/self-improve/improver/tools/try_run（10-24；遷移時參數 timeout 改名
 # timeout_s（C-54 單位放字尾）、逾時從「印出來退 0」改成照 lib 契約算 CommandFailed；self-improve 的改進者照舊把錯回給腦）。
 import json, os, shutil, signal, subprocess, sys, tempfile
@@ -52,9 +52,10 @@ with tempfile.TemporaryDirectory(prefix="try_run.") as tmp:
     os.mkdir(os.path.join(tmp, "ws"))
     env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}    # 函數拿到的是乾淨的 aos 環境
     cmd = ["aos-exec", "--ws", os.path.join(tmp, "ws"), dst] + argv
-    if env.get("IMPROVE_SANDBOX"):            # 10-24 沙箱接線：self-improve 給了設定就關進 aos-sandbox（同 run 格）
-        cmd = ["aos-sandbox", env["IMPROVE_SANDBOX"]] + cmd
-        env["IMPROVE_RUN"] = tmp
+    box = os.environ.get("AOS_IMPROVE_SANDBOX")   # 從自己的環境讀（上面那份 env 已經清掉 AOS_*）
+    if box:                                       # 10-24 沙箱接線：self-improve 給了設定就關進 aos-sandbox（同 run 格）
+        cmd = ["aos-sandbox", box] + cmd
+        env["AOS_IMPROVE_RUN"] = tmp
     p = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, start_new_session=True)
 

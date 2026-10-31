@@ -14,7 +14,7 @@ EXEC = tool("aos-exec")
 KAI = ROOT / "demo" / "agent-kai"
 RECALL = KAI / "tools" / "recall" / "_entry"
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_HEAP",
-         "KAI_FULL_UNDER", "RECALL_HISTORY")
+         "AOS_KAI_FULL_UNDER", "AOS_RECALL_HISTORY")
 CODES = ("BrainFailed", "ReplyBad", "ToolUnknown", "ArgumentsBad", "ToolFailed", "StackMissing",
          "QuestionMissing", "HistoryBad")
 
@@ -59,7 +59,7 @@ class T(unittest.TestCase):
         """放一題、跑到答完；回 aos-exec 的結果。full_under 預設 0＝一律按意圖組（測短對話全送的另外測）。"""
         self.n += 1
         (self.ws / "new" / ("q%02d.txt" % self.n)).write_text(question)
-        env = {"AOS_BRAIN_URL": url, "KAI_FULL_UNDER": full_under}
+        env = {"AOS_BRAIN_URL": url, "AOS_KAI_FULL_UNDER": full_under}
         env.update(extra or {})
         r = run(EXEC, "--ws", "ws", str(agent), env=env, cwd=self.tmp, timeout=600)
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -123,7 +123,7 @@ class T(unittest.TestCase):
         self.assertNotIn("今天星期幾？", msgs)                                            # 無關的只在目錄裡
 
     def test_recall_through_act(self):
-        """腦用 recall 看舊題的工具原始輸出：act 給工具的 RECALL_HISTORY 指到自己的 history.jsonl。"""
+        """腦用 recall 看舊題的工具原始輸出：act 給工具的 AOS_RECALL_HISTORY 指到自己的 history.jsonl。"""
         b = self.brain(tool_reply(call("c1", "math", {"expr": "2**40"})), answer("算好了"),
                        answer("嗯"),
                        tool_reply(call("c2", "recall", {"op": "read", "no": 1, "detail": True})), answer("1099511627776"))
@@ -147,7 +147,7 @@ class T(unittest.TestCase):
             {"role": "user", "content": "還沒答完的題"}]) + "\n")
 
         def recall(args, env=None):
-            return run(str(RECALL), input=json.dumps(args), env=env if env is not None else {"RECALL_HISTORY": str(h)})
+            return run(str(RECALL), input=json.dumps(args), env=env if env is not None else {"AOS_RECALL_HISTORY": str(h)})
         r = recall({"op": "search", "query": "docs 讀"})
         self.assertEqual(r.stdout.strip(), "#1 問：讀 docs/a.md → 答：讀完了（用了 read）")
         r = recall({"op": "read", "no": 1})
@@ -157,10 +157,10 @@ class T(unittest.TestCase):
         self.assertIn("no 要是 1～2", recall({"op": "read", "no": 3}).stdout)             # 沒答完的那題不算
         self.assertIn("沒有找到（共 2 題）", recall({"op": "search", "query": "天氣"}).stdout)
         r = recall({"op": "search"}, env={})
-        self.assertEqual((r.returncode, r.stderr.strip()), (1, "recall: HistoryMissing 沒設定 RECALL_HISTORY"))
+        self.assertEqual((r.returncode, r.stderr.strip()), (1, "recall: HistoryMissing 沒設定 AOS_RECALL_HISTORY"))
 
     def test_short_history_sent_whole(self):
-        """整份還很短（粗估 ≤ KAI_FULL_UNDER）就全送，跟 agent-dan 一樣；超過才按意圖組。"""
+        """整份還很短（粗估 ≤ AOS_KAI_FULL_UNDER）就全送，跟 agent-dan 一樣；超過才按意圖組。"""
         b = self.brain(answer("a1"), answer("a2"), answer("a3"))
         self.ask(b.url, "q1", full_under="")
         self.ask(b.url, "q2", full_under="")

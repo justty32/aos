@@ -309,7 +309,7 @@ class SelfImproveSandboxTest(unittest.TestCase):
 
     def test_with_sandbox_function_cannot_read_judge(self):
         (self.ws / "sandbox.json").write_text(json.dumps(
-            {"commands": ["aos-exec"], "rw": [{"$env": "IMPROVE_RUN"}], "net": False}))
+            {"commands": ["aos-exec"], "rw": [{"$env": "AOS_IMPROVE_RUN"}], "net": False}))
         r, v = self.run_self_improve()
         self.assertEqual(r.returncode, 2, r.stderr)                     # 沒達成、預算 0 輪用完
         self.assertEqual((v["score"], v["passed"]), (0, False))
@@ -317,15 +317,15 @@ class SelfImproveSandboxTest(unittest.TestCase):
         self.assertEqual([x["stdout"] for x in runs], ["看不到判準\n", "看不到判準\n"])
 
     def test_try_run_is_boxed_too(self):
-        """改進者的 try_run 也照 IMPROVE_SANDBOX 關：同一支函數在 try_run 裡也讀不到判準。"""
+        """改進者的 try_run 也照 AOS_IMPROVE_SANDBOX 關：同一支函數在 try_run 裡也讀不到判準。"""
         iws = self.root / "iws"
         shutil.copytree(self.ws / "target", iws / "target")
         call = lambda e: subprocess.run([TRY_RUN], input='{"stdin": "a"}', capture_output=True, text=True,
                                         env=env(AOS_WS=str(iws), **e), timeout=60)
         self.assertIn("ANSWER-A", call({}).stdout)
         box = self.root / "box.json"
-        box.write_text(json.dumps({"commands": ["aos-exec"], "rw": [{"$env": "IMPROVE_RUN"}]}))
-        out = call({"IMPROVE_SANDBOX": str(box)}).stdout
+        box.write_text(json.dumps({"commands": ["aos-exec"], "rw": [{"$env": "AOS_IMPROVE_RUN"}]}))
+        out = call({"AOS_IMPROVE_SANDBOX": str(box)}).stdout
         self.assertIn("看不到判準", out)
         self.assertNotIn("ANSWER-A", out)
 

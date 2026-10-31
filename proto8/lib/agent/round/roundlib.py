@@ -53,7 +53,7 @@ def main(cell, body):
 
 
 def max_retries():
-    v = os.environ.get("MAX_RETRIES")
+    v = os.environ.get("AOS_ROUND_MAX_RETRIES")
     if v in (None, ""):
         return 3
     try:
@@ -61,7 +61,7 @@ def max_retries():
         if n < 0:
             raise ValueError
     except ValueError:
-        fail("SettingBad", "MAX_RETRIES 要是 ≥0 的整數，收到 %r" % v)
+        fail("SettingBad", "AOS_ROUND_MAX_RETRIES 要是 ≥0 的整數，收到 %r" % v)
     return n
 
 
@@ -283,7 +283,7 @@ def ask(rows, retries):
     while True:
         name = endpoint_name()
         slot = "endpoint/" + name
-        r = run(slot, which(slot), (), dumps(body) + "\n", {"ENDPOINT_NAME": name}, keep_err=True)
+        r = run(slot, which(slot), (), dumps(body) + "\n", {"AOS_ENDPOINT_NAME": name}, keep_err=True)
         if r.returncode == 0:
             return one_json(r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "", slot)
         lines = [l for l in (r.stderr or "").splitlines() if l.strip()]
@@ -292,6 +292,6 @@ def ask(rows, retries):
             raise Exit(r.returncode if r.returncode != NOT_FOUND else 1)
         tries += 1
         if tries > retries:
-            fail("EndpointFailed", "on_error 說 %s，但這次問腦已經重來 %d 次（MAX_RETRIES=%d）" % (word, retries, retries))
+            fail("EndpointFailed", "on_error 說 %s，但這次問腦已經重來 %d 次（AOS_ROUND_MAX_RETRIES=%d）" % (word, retries, retries))
         if word == "switch":
             switch(name)

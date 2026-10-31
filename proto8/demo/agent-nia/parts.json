@@ -1,13 +1,13 @@
 {
  "parts": {
-  "round": {"path": "../../lib/agent/round", "env": {"ROUND_ON_EMPTY": "stop"}},
+  "round": {"path": "../../lib/agent/round", "env": {"AOS_ROUND_ON_EMPTY": "stop"}},
   "queue": {"path": "../../lib/agent/queue"},
   "history": {"path": "../../lib/agent/history"},
   "act": {"path": "../../lib/agent/act"},
-  "hook/pre_think": {"path": "../../lib/agent/compact", "env": {"MAX_BYTES": "65536"}},
+  "hook/pre_think": {"path": "../../lib/agent/compact", "env": {"AOS_COMPACT_MAX_BYTES": "65536"}},
   "endpoint/default": {"path": "../../lib/endpoint/fake"},
   "endpoint/litellm": {"path": "../../lib/endpoint/openai",
                        "env": {"AOS_BRAIN_URL": "http://localhost:4000/v1", "AOS_BRAIN_MODEL": "chatgpt-gpt-6-luna-low",
-                               "TIMEOUT_MS": "120000"}}
+                               "AOS_ENDPOINT_TIMEOUT_MS": "120000"}}
  }
 }

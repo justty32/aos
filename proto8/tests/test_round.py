@@ -2,7 +2,7 @@
 
 endpoint：fake 照規則吐一則；openai 接假的 OpenAI 相容 server 吐真的、usage.jsonl 多一行、經 aos-parts run 帶註冊檔的 env；
   401／403 KeyBad、連不上（dead_brain.DEAD）與 5xx BrainFailed、404 ModelUnknown、其他 4xx RequestBad、壞回覆 ReplyBad，失敗時 stdout 與 usage.jsonl 都不動。
-act：兩個 tool_calls 吐兩則、順序對；MAX_PARALLEL=2 真的一起跑、順序仍對；pre_tool 退 10＝不跑、stdout 當 content；post_tool 取代；
+act：兩個 tool_calls 吐兩則、順序對；AOS_ACT_MAX_PARALLEL=2 真的一起跑、順序仍對；pre_tool 退 10＝不跑、stdout 當 content；post_tool 取代；
   ToolUnknown／ArgumentsBad／工具退非 0 接成 tool 訊息；插話（queue 的 new/ 有信＋on_interrupt 說 interrupt）剩下的不跑、退 10；aos-tools 壞＝ToolsBad。
 一輪（10-30 起 aos-round：lib/agent/round 的 fsm 表＋五格；舊骨架 round/_entry 與它的 Round 類、--step、hook/pause 第 6 步刪了）：
   題目經 queue push 進 $AOS_STACK/queue/，答案看 history 最新那則 assistant。
@@ -25,7 +25,7 @@ ACT = str(ROOT / "lib" / "agent" / "act")
 CLOCK = str(ROOT / "lib" / "base" / "clock")
 REAL_URL = "http://localhost:4000/v1"
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL",
-         "AOS_BRAIN_KEY", "AOS_KERNEL_REPORT", "TIMEOUT_MS", "ENDPOINT_NAME", "MAX_PARALLEL", "MAX_RETRIES", "ROUND_ON_EMPTY")
+         "AOS_BRAIN_KEY", "AOS_KERNEL_REPORT", "AOS_ENDPOINT_TIMEOUT_MS", "AOS_ENDPOINT_NAME", "AOS_ACT_MAX_PARALLEL", "AOS_ROUND_MAX_RETRIES", "AOS_ROUND_ON_EMPTY")
 CLOCK_TOOL = {"type": "function", "function": {"name": "clock", "parameters": {"type": "object", "properties": {}}}}
 
 
@@ -169,8 +169,8 @@ class EndpointOpenai(Base):
         self.assertEqual((u[0]["endpoint"], u[0]["model"], u[0]["usage"]["total_tokens"]), ("openai", "m1", 7))
         self.assertRegex(u[0]["answered_at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$")
         self.assertEqual(json.loads(report.read_text())["total_tokens"], 7)
-        # 第二次：stdin 給的 model 優先、空 tools 不送、沒 usage 也記一行（usage＝null）、ENDPOINT_NAME 改名
-        r = self.ask(b.url, {"ENDPOINT_NAME": "litellm"}, stdin=json.dumps({"messages": [user("x")], "tools": [], "model": "m2"}))
+        # 第二次：stdin 給的 model 優先、空 tools 不送、沒 usage 也記一行（usage＝null）、AOS_ENDPOINT_NAME 改名
+        r = self.ask(b.url, {"AOS_ENDPOINT_NAME": "litellm"}, stdin=json.dumps({"messages": [user("x")], "tools": [], "model": "m2"}))
         self.assertEqual(self.lines(r.stdout), [{"role": "assistant", "content": "好"}])
         self.assertEqual(b.requests[1], {"messages": [user("x")], "model": "m2"})
         self.assertIsNone(b.auth[1])
@@ -179,7 +179,7 @@ class EndpointOpenai(Base):
     def test_via_parts_registry_env(self):
         b = self.brain({"choices": [{"message": {"role": "assistant", "content": "經註冊檔"}}]})
         (self.agent / "parts.json").write_text(json.dumps({"parts": {"endpoint/main": {
-            "path": OPENAI, "env": {"AOS_BRAIN_URL": b.url, "AOS_BRAIN_MODEL": "reg", "ENDPOINT_NAME": "main"}}}}))
+            "path": OPENAI, "env": {"AOS_BRAIN_URL": b.url, "AOS_BRAIN_MODEL": "reg", "AOS_ENDPOINT_NAME": "main"}}}}))
         r = subprocess.run([PARTS, "--file", str(self.agent / "parts.json"), "run", "endpoint/main", str(self.agent)],
                            input=req(user("q")), capture_output=True, text=True, env=self.env(), timeout=60)
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -212,7 +212,7 @@ class EndpointOpenai(Base):
     def test_config_errors(self):
         self.assert_fails("UrlMissing", self.cell(OPENAI, req(user("q"))))
         self.assert_fails("ModelUnknown", self.cell(OPENAI, req(user("q")), {"AOS_BRAIN_URL": DEAD}))
-        self.assert_fails("TimeoutBad", self.ask(DEAD, {"TIMEOUT_MS": "0"}))
+        self.assert_fails("TimeoutBad", self.ask(DEAD, {"AOS_ENDPOINT_TIMEOUT_MS": "0"}))
         self.assert_fails("RequestBad", self.ask(DEAD, stdin='{"messages": "x"}'))
 
     @unittest.skipUnless(os.environ.get("AOS_TEST_REAL", "1") != "0", "")
@@ -222,7 +222,7 @@ class EndpointOpenai(Base):
         except OSError:
             self.skipTest("localhost:4000 連不上")
         model = os.environ.get("AOS_REAL_MODEL", "fast")
-        r = self.ask(REAL_URL, {"AOS_BRAIN_MODEL": model, "TIMEOUT_MS": "120000"}, stdin=req(user("只回一個字：好")))
+        r = self.ask(REAL_URL, {"AOS_BRAIN_MODEL": model, "AOS_ENDPOINT_TIMEOUT_MS": "120000"}, stdin=req(user("只回一個字：好")))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.lines(r.stdout)[0]["role"], "assistant")
         self.assertEqual(len(self.usage()), 1)
@@ -293,7 +293,7 @@ class Act(Base):
 
     def test_parallel_runs_together_order_kept(self):
         calls = assistant(call("a", "say", wait_for="mark", text="A\n"), call("b", "say", touch="mark", text="B\n"))
-        r = self.act(calls, {"MAX_PARALLEL": "2"})
+        r = self.act(calls, {"AOS_ACT_MAX_PARALLEL": "2"})
         self.assertEqual(r.returncode, 0, r.stderr)
         out = self.lines(r.stdout)
         self.assertEqual([m["tool_call_id"] for m in out], ["a", "b"])
@@ -301,7 +301,7 @@ class Act(Base):
         os.unlink(self.ws / "mark")
         r = self.act(calls)                                                     # 依序：a 先跑、等不到
         self.assertTrue(self.lines(r.stdout)[0]["content"].startswith("no\nA\n"))
-        r = self.act(calls, {"MAX_PARALLEL": "x"})
+        r = self.act(calls, {"AOS_ACT_MAX_PARALLEL": "x"})
         self.assertEqual((r.returncode, r.stdout, err_code("act", r.stderr)), (1, "", "ParallelBad"))
 
     def test_tool_problems_go_back_to_brain(self):
@@ -443,7 +443,7 @@ class RoundFsm(AgentCase):
     def step(self, table="fsm-stop.json", env=None):
         """aos-fsm 跑一格；回 (碼, stderr)。"""
         r = subprocess.run([tool("aos-fsm"), table], capture_output=True, text=True, cwd=ROUND, timeout=120,
-                           env=self.env(dict({"ROUND_AGENT": str(self.agent)}, **(env or {}))))
+                           env=self.env(dict({"AOS_ROUND_AGENT": str(self.agent)}, **(env or {}))))
         return r.returncode, r.stderr
 
     def steps(self, n, **kw):
@@ -510,7 +510,7 @@ class RoundFsm(AgentCase):
         self.parts["endpoint/default"] = {"path": OPENAI, "env": {"AOS_BRAIN_URL": DEAD, "AOS_BRAIN_MODEL": "m"}}
         self.hook("on_error", "cat > /dev/null; echo retry\n")
         self.step()
-        code, err = self.step(env={"MAX_RETRIES": "2"})
+        code, err = self.step(env={"AOS_ROUND_MAX_RETRIES": "2"})
         self.assertEqual((code, err_code("round/think", err)), (1, "EndpointFailed"))
         self.assertEqual(err.count("endpoint: BrainFailed"), 3)                                  # 1 次＋重來 2 次
         self.assertEqual(self.state(), "think")
@@ -591,7 +591,7 @@ class RoundFsm(AgentCase):
         code, err = self.step()
         self.assertEqual((code, err_code("round/act", err), self.state()), (1, "PartMissing", "act"))
         (self.stack / "state.txt").write_text("think\n")
-        code, err = self.step(env={"MAX_RETRIES": "-1"})
+        code, err = self.step(env={"AOS_ROUND_MAX_RETRIES": "-1"})
         self.assertEqual((code, err_code("round/think", err), self.state()), (1, "SettingBad", "think"))
         r = subprocess.run([EXEC, str(Path(ROUND) / "more"), "agent"], capture_output=True, text=True, env=self.env(),
                            cwd=self.tmp, timeout=60)
@@ -599,7 +599,7 @@ class RoundFsm(AgentCase):
 
 
 class AosRound(AgentCase):
-    """bin/aos-round（10-30 aos-round 第 3 步）：挑表（ROUND_ON_EMPTY）、設 ROUND_AGENT、cd lib/agent/round、換成 aos-fsm；
+    """bin/aos-round（10-30 aos-round 第 3 步）：挑表（AOS_ROUND_ON_EMPTY）、設 AOS_ROUND_AGENT、cd lib/agent/round、換成 aos-fsm；
     agent 的 loop.json 用 aos-round、aos-exec <agent> 整隻跑；驗 fsm trace 的 state／next 序列。"""
 
     def loop(self, **cfg):
@@ -641,8 +641,8 @@ class AosRound(AgentCase):
         self.assertEqual((self.ls("new"), self.ls("cur")), ([], []))
 
     def test_idle_under_loop_with_ctl(self):
-        """ROUND_ON_EMPTY=idle（round 槽的 env）＋interval_ms：答完後 idle 一行一行（next 都是 idle）；paused 時新信留在 new/，放行後答出；stopped 收工。"""
-        self.parts["round"] = {"path": ROUND, "env": {"ROUND_ON_EMPTY": "idle"}}
+        """AOS_ROUND_ON_EMPTY=idle（round 槽的 env）＋interval_ms：答完後 idle 一行一行（next 都是 idle）；paused 時新信留在 new/，放行後答出；stopped 收工。"""
+        self.parts["round"] = {"path": ROUND, "env": {"AOS_ROUND_ON_EMPTY": "idle"}}
         self.save()
         self.loop(interval_ms=100, ctl="ctl.json", state="state.json")
         p = subprocess.Popen([EXEC, str(self.agent)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
@@ -702,7 +702,7 @@ class AosRound(AgentCase):
         self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "ArgumentsBad"))
         r = self.aos_round("agent")
         self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "AgentBad"))
-        self.parts["round"] = {"path": ROUND, "env": {"ROUND_ON_EMPTY": "wait"}}
+        self.parts["round"] = {"path": ROUND, "env": {"AOS_ROUND_ON_EMPTY": "wait"}}
         self.save()
         r = self.aos_round(str(self.agent))
         self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "SettingBad"))

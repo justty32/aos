@@ -5,7 +5,7 @@
 
 每打一行＝aos-say 一封寄進 <stack>/queue/（CONVENTION P-42），然後等 history.jsonl 長出新的回答（沒有 tool_calls 的 assistant）。
 - **給了 agent 資料夾**：chat 自己跑它——每句之後 `aos-exec --ws WS <agent>` 跑一次（範本 agent-nia 是射後不理：queue 空了 loop 自己停，
-  P-19、P-42 的 ROUND_ON_EMPTY=stop），agent 的 stderr 原樣出現在你的終端機（錯誤一行看得到）、stdout 也轉到 stderr；跑完印新的回答。
+  P-19、P-42 的 AOS_ROUND_ON_EMPTY=stop），agent 的 stderr 原樣出現在你的終端機（錯誤一行看得到）、stdout 也轉到 stderr；跑完印新的回答。
   agent 失敗（非 0）就說停在哪一格（trace.jsonl 最後一行），信留在 queue 的 cur/，修好打 /run 再跑一次會接著做（P-20）。
   aos-exec、aos-loop、aos-post 要在 PATH 上（同 demo/run.sh；agent-nia 另要 proto8/bin 的 aos-parts、aos-tools）。
 - **沒給**：chat 只寄信、等回答，要別人跑（另一個終端機的 aos-exec，或常駐的 loop）；沒人在跑時提醒一次怎麼跑、繼續等。

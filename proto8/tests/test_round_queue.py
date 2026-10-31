@@ -5,7 +5,7 @@ queue（10-30 起＝$AOS_STACK/queue/，N-16 有順序的信箱，底下叫 aos-
 → claim（信在 cur/、current.txt、history 多一則）→ finish（信不見、--keep 進 done/）；pop 等信不見後印 history 最新 assistant；
 沒有 queue/ 就建；push 壞 message；非有序的信與 body 壞＝壞信丟掉；withdraw 已認領報錯；claim 各步之間當掉重跑接得上（含 --more）；
 claim --more（插話）；pop 逾時退 10。history：append 壞輸入 HistoryBad、compact 換上與 --expect-bytes。
-compact：塞大 history 跑 compact，history_archive/ 多一份原文、新的 read 得到；沒超過 MAX_BYTES 什麼都不動。
+compact：塞大 history 跑 compact，history_archive/ 多一份原文、新的 read 得到；沒超過 AOS_COMPACT_MAX_BYTES 什麼都不動。
 問腦用測試自己寫的假 endpoint（一支 sh），不連真模型。設計：proto8/thinking/2026-10-28-agent-round.md § 4、§ 5、文末「實作時代定」；
 queue 佈局：proto8/thinking/2026-10-30-agent-lifecycle.md 結論 A-1～A-9。"""
 import json, os, re, subprocess, tempfile, time, unittest
@@ -16,7 +16,7 @@ from aos_bins import ROOT, tool, path_with  # noqa: E402
 EXEC = tool("aos-exec")
 POST = tool("aos-post")
 LIB = ROOT / "lib" / "agent"
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_BRAIN_URL", "MAX_BYTES", "ENDPOINT")
+CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_BRAIN_URL", "AOS_COMPACT_MAX_BYTES", "AOS_COMPACT_ENDPOINT")
 FAKE_ENDPOINT = """#!/bin/sh
 # 假 endpoint：吃一份請求、記一行到 calls.log、吐一則 assistant（不是 JSON 的 content＝compact 走退路）
 cat > /dev/null
@@ -44,7 +44,7 @@ class Base(unittest.TestCase):
         ep.write_text(FAKE_ENDPOINT % self.calls)
         ep.chmod(0o755)
         self.parts = {"queue": {"path": str(LIB / "queue")}, "history": {"path": str(LIB / "history")},
-                      "compact": {"path": str(LIB / "compact"), "env": {"MAX_BYTES": "4096"}},
+                      "compact": {"path": str(LIB / "compact"), "env": {"AOS_COMPACT_MAX_BYTES": "4096"}},
                       "endpoint/default": {"path": str(ep)}}
         self.write_parts()
         self.env = {k: v for k, v in os.environ.items() if k not in CLEAR}
@@ -394,7 +394,7 @@ class Compact(Base):
     def test_under_max_bytes_does_nothing(self):
         old = big_history(6, 1500)
         (self.stack / "history.jsonl").write_text(old)
-        self.parts["compact"]["env"]["MAX_BYTES"] = str(len(old.encode()))
+        self.parts["compact"]["env"]["AOS_COMPACT_MAX_BYTES"] = str(len(old.encode()))
         self.write_parts()
         self.assertEqual(self.ok("compact"), "")
         self.assertEqual((self.stack / "history.jsonl").read_text(), old)

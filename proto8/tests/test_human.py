@@ -15,7 +15,7 @@ HUMAN = ROOT / "extras" / "human" / "bin"
 SAY, LISTEN, CHAT = (str(HUMAN / n) for n in ("aos-say", "aos-listen", "aos-chat"))
 NIA = ROOT / "demo" / "agent-nia"
 DAN = str(ROOT / "demo" / "agent-dan")              # 舊協議（讀工作區 new/、不收 queue）：10-30 晚真腦實測發現 2
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "ROUND_ON_EMPTY")
+CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_ROUND_ON_EMPTY")
 from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 SIG = re.compile(r"^\d{12}\.\d{20}\.\d+\.\d+$")
 TURN = ROOT / "bin" / "aos-eca-turn"                # 10-30 eca：外部 coding agent 的一輪（External 段；10-31 前是 lib/eca/turn 格）
@@ -44,7 +44,7 @@ class Base(unittest.TestCase):
         self.agent = self.nia(t / "nia")
 
     def nia(self, where, brain=None, idle=False):
-        """agent-nia 的一份拷貝：註冊檔改成絕對路徑；brain＝openai 的網址（腦壞用）；idle＝ROUND_ON_EMPTY idle＋常駐的 loop。"""
+        """agent-nia 的一份拷貝：註冊檔改成絕對路徑；brain＝openai 的網址（腦壞用）；idle＝AOS_ROUND_ON_EMPTY idle＋常駐的 loop。"""
         where.mkdir()
         for f in ("_entry", "system.txt"):
             (where / f).write_bytes((NIA / f).read_bytes())
@@ -58,7 +58,7 @@ class Base(unittest.TestCase):
             parts["parts"]["endpoint/default"] = {"path": str(ROOT / "lib" / "endpoint" / "openai"),
                                                   "env": {"AOS_BRAIN_URL": brain, "AOS_BRAIN_MODEL": "m"}}
         if idle:
-            parts["parts"]["round"]["env"] = {"ROUND_ON_EMPTY": "idle"}
+            parts["parts"]["round"]["env"] = {"AOS_ROUND_ON_EMPTY": "idle"}
             del loop["max"]
             loop["interval_ms"] = 100
         (where / "loop.json").write_text(json.dumps(loop))

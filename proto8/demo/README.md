@@ -93,11 +93,11 @@ agent-eve/                主 agent：照抄 agent-dan（brain.py、act.py 只�
     _tooldef.json         給 eve 的腦看：task（必填）、dir（相對於工作區，預設 .）
     _entry                轉接（python3，通用那段在 lib/agent/agent_tool.py）：stdin 的 task → 子 agent 的 new/task.txt；跑完把 out/task.txt＋實際 diff 印到 stdout
     agent/                子 agent（pyfix-agent）：也是一整隻 agent-dan 範本，自己的 system.txt、.env、loop.json（max 60）、fsm.json（think 180 秒、act 300 秒）
-      act.py              同 agent-dan，差一條：工具一律 aos-exec --ws $PYFIX_DIR
+      act.py              同 agent-dan，差一條：工具一律 aos-exec --ws $AOS_PYFIX_DIR
       tools/              ls、read、write、edit、bash → lib/base 的捷徑（bash 逾時預設 30 秒、上限 300）
 ```
 
-每次呼叫 pyfix 開一個新小格 `$AOS_STACK/pyfix/runs/<三位數>/`：`ws/`（子 agent 收題、交答案）、`stack/`（它的 history、trace）、`before/`（改之前的備份）；子 agent 要改的程式碼是 `PYFIX_DIR`＝`$AOS_WS/<dir>`。子 agent 用 `aos-exec --dotenv-override` 叫，所以模型用它自己 `.env` 的。子 agent 失敗＝`pyfix: AgentFailed …`、退 1，eve 的 act 把那行接成 tool 訊息回給腦、不停（同 agent-dan）；其他代號 `AnswerMissing`、`DirBad`、`ArgumentsBad`、`StackMissing`；子 agent 沒設 `PYFIX_DIR`＝它的 act 停在 `pyfix-agent: DirMissing`（路徑跑出去、edit 對不上這類模型的錯，庫的工具退 1、子 agent 的 act 把那行回給模型、不算失敗）。子 agent 自己的逾時：think 180 秒、act 300 秒（`agent/fsm.json`）、最多 60 次（`agent/loop.json`）；eve 的 act 等它 30 分鐘。
+每次呼叫 pyfix 開一個新小格 `$AOS_STACK/pyfix/runs/<三位數>/`：`ws/`（子 agent 收題、交答案）、`stack/`（它的 history、trace）、`before/`（改之前的備份）；子 agent 要改的程式碼是 `AOS_PYFIX_DIR`＝`$AOS_WS/<dir>`。子 agent 用 `aos-exec --dotenv-override` 叫，所以模型用它自己 `.env` 的。子 agent 失敗＝`pyfix: AgentFailed …`、退 1，eve 的 act 把那行接成 tool 訊息回給腦、不停（同 agent-dan）；其他代號 `AnswerMissing`、`DirBad`、`ArgumentsBad`、`StackMissing`；子 agent 沒設 `AOS_PYFIX_DIR`＝它的 act 停在 `pyfix-agent: DirMissing`（路徑跑出去、edit 對不上這類模型的錯，庫的工具退 1、子 agent 的 act 把那行回給模型、不算失敗）。子 agent 自己的逾時：think 180 秒、act 300 秒（`agent/fsm.json`）、最多 60 次（`agent/loop.json`）；eve 的 act 等它 30 分鐘。
 
 真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-eve`；試驗場 `~/code/try/agent-as-tool/`（`setup_ws.py` 建一個有 bug 的 `proj/`，LiteLLM 沒開時用 `fake_brains.py` 劇本）。沒設 `AOS_BRAIN_URL`＝假腦，eve 沒有 clock 工具、會直接答 `FAKE ANSWER`，不會叫 pyfix。測試 `test_eve.py`。
 
@@ -181,15 +181,15 @@ agent-gus/
   fsm.json            idle → plan → fork → think → act → idle（plan 120 秒、fork 1 小時、think 120 秒、act 180 秒）
   plan.py             認領題目、接進 history、請腦回 {"context", "steps": [{id, goal, needs}]} → $AOS_STACK/steps.json；
                       腦回 steps: []＝不拆；到深度上限或額度不夠＝不問腦、不拆
-  fork.py             每步起一個小念頭＝再跑一次自己（aos-exec --ws <小格>/ws .），needs 齊了才起、同時最多 THOUGHT_PARALLEL 個；
+  fork.py             每步起一個小念頭＝再跑一次自己（aos-exec --ws <小格>/ws .），needs 齊了才起、同時最多 AOS_THOUGHT_PARALLEL 個；
                       小念頭 out/ 裡那段答案＝結論，全到齊後一步一則接進 history：「小念頭 sN 的結論（目標：…）：…」；
                       小念頭失敗（退非 0、逾時、沒交答案）＝「小念頭 sN 失敗了（目標：…）：原因」照樣接、不停，needs 它的步不起
   brain.py、act.py    think／act 同 agent-dan（act 交答案時 steps.json 收進 plans/）
   thought.json        給別的程式叫一個小念頭：stdin {"goal", "context"?, "needs"?: [{id?, goal, conclusion}]} → stdout 只有結論
-  thought.py          thought.json 的身體：開 $AOS_STACK/runs/NNN/、把這一步當題目起一個小念頭（shared.launch）、逾時（THOUGHT_TIMEOUT_S）整群收、印結論
+  thought.py          thought.json 的身體：開 $AOS_STACK/runs/NNN/、把這一步當題目起一個小念頭（shared.launch）、逾時（AOS_THOUGHT_TIMEOUT_S）整群收、印結論
   shared.py           各格共用；tools/run_python -> ../../../lib/base/run_python 工具：stdin {"code"} → 結束碼與輸出（錯一律退 1，act 把工具退非 0 回給腦、不停）
-  .env                模型名＋上限：THOUGHT_MAX_STEPS 4、THOUGHT_MAX_DEPTH 2、THOUGHT_MAX_TOTAL 10、THOUGHT_PARALLEL 3、
-                      THOUGHT_TIMEOUT_S 900、THOUGHT_MAX_CHARS 1500（深度 THOUGHT_DEPTH、額度 THOUGHT_BUDGET 由 fork 往下帶）
+  .env                模型名＋上限：AOS_THOUGHT_MAX_STEPS 4、AOS_THOUGHT_MAX_DEPTH 2、AOS_THOUGHT_MAX_TOTAL 10、AOS_THOUGHT_PARALLEL 3、
+                      AOS_THOUGHT_TIMEOUT_S 900、AOS_THOUGHT_MAX_CHARS 1500（深度 AOS_THOUGHT_DEPTH、額度 AOS_THOUGHT_BUDGET 由 fork 往下帶）
 
 $AOS_STACK/thoughts/<id>/   小格：ws/（小念頭的工作區，題目 new/<id>.txt、答案 out/<id>.txt）、stack/（它自己的，可能又有 thoughts/）、log.txt
 $AOS_STACK/budgets/<plan_id>/  整棵念頭樹的額度（一個檔＝一個小念頭）；usage.jsonl 每次問腦一行（usage、送出字數）
@@ -206,8 +206,8 @@ $AOS_STACK/budgets/<plan_id>/  整棵念頭樹的額度（一個檔＝一個小�
 ```
 agent-kai/
   brain.py            組 context：system.txt ＋ 先前對話的目錄（一題一行）＋〔有記憶庫就附幾筆〕＋ 挑出來的舊題（只有問題與結論）＋ 這題的完整訊息
-                      挑：上一題、指代詞（剛剛、那個…）再加一題、「第 N 題」、字面重疊最多兩題；整份粗估 ≤ KAI_FULL_UNDER（1500 token）就全送
-  act.py              同 agent-dan，只多給工具 RECALL_HISTORY＝自己的 history.jsonl
+                      挑：上一題、指代詞（剛剛、那個…）再加一題、「第 N 題」、字面重疊最多兩題；整份粗估 ≤ AOS_KAI_FULL_UNDER（1500 token）就全送
+  act.py              同 agent-dan，只多給工具 AOS_RECALL_HISTORY＝自己的 history.jsonl
   system.txt          告訴腦它看到的不是全部、不夠就 recall 或重查、回答把關鍵寫完整
   tools/recall/       op＝search（關鍵字找舊題）／read（展開一題；detail=true 連當時的工具原始輸出）
     turns.py          把 history 切成題、照意圖挑（brain.py 也用它）
@@ -217,7 +217,7 @@ agent-kai/
 $AOS_STACK/context.jsonl   每次組了什麼：mode（full／intent）、picked（[題號, 原因]）、粗估 token、整份全送的話多少
 ```
 
-真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-kai`；沒設＝假腦（同 agent-dan）。對比腳本 `python3 proto8/tests/bench_intent_context.py [--upstream http://localhost:4000/v1]`：15 題跳來跳去的對話，各跑 dan（整份）、kai、kai0（kai 拿掉 recall），結果放 `~/code/try/intent-context/runs/<時間>/`；LiteLLM 沒開時用「照證據回答」的假腦。錯：同 agent-dan；recall 自己的 `recall: HistoryMissing`（沒設 `RECALL_HISTORY`）、`HistoryBad`。測試 `test_kai.py`。
+真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-kai`；沒設＝假腦（同 agent-dan）。對比腳本 `python3 proto8/tests/bench_intent_context.py [--upstream http://localhost:4000/v1]`：15 題跳來跳去的對話，各跑 dan（整份）、kai、kai0（kai 拿掉 recall），結果放 `~/code/try/intent-context/runs/<時間>/`；LiteLLM 沒開時用「照證據回答」的假腦。錯：同 agent-dan；recall 自己的 `recall: HistoryMissing`（沒設 `AOS_RECALL_HISTORY`）、`HistoryBad`。測試 `test_kai.py`。
 
 ## self-improve（自我改進流程，10-24）
 
@@ -234,7 +234,7 @@ self-improve/             aos-exec --ws <交辦的工作區> proto8/demo/self-im
     tools/try_run          → ../../../../lib/aos/try_run：在 target/ 的暫時複本上跑一次，回結束碼、stdout、stderr（參數 timeout_s、逾時算錯）
 ```
 
-交辦的工作區：`goal.txt`（目標）、`target/` 或 `target.json`（要改的函數，原版不動）、`judge/cases.json`（一組例子 `[{"args", "stdin", "stdout", "code"?, "hidden"?, "timeout_ms"?}]`，`hidden` 的失敗時只說幾組沒過）或 `judge/check`（檢查程式，`IMPROVE_TARGET`＝函數複本，退 0＝達成、stdout＝給改進者的回饋）、`budget.json`（選填 `{"max_rounds": 5, "max_elapsed_ms": 1800000, "max_tokens": 500000}`；上限一律 `max_*`，寫不帶 `max_` 的 `rounds`、`elapsed_ms`、`tokens`＝`BudgetBad`）、`sandbox.json`（選填，見下）。成果：`out/best/`（最好的一版）、`out/report.txt`（每一版從哪版改、幾分、改了什麼、改進者說了什麼）、`out/result.json`。每一版拍在 `$AOS_STACK/versions/vNNN/`（`target/`、`verdict.json`、`diff.txt`、改進者那次的 `improve/ws`、`improve/stack`），新的一版一律從最好的那版改（同分取最早的）。
+交辦的工作區：`goal.txt`（目標）、`target/` 或 `target.json`（要改的函數，原版不動）、`judge/cases.json`（一組例子 `[{"args", "stdin", "stdout", "code"?, "hidden"?, "timeout_ms"?}]`，`hidden` 的失敗時只說幾組沒過）或 `judge/check`（檢查程式，`AOS_IMPROVE_TARGET`＝函數複本，退 0＝達成、stdout＝給改進者的回饋）、`budget.json`（選填 `{"max_rounds": 5, "max_elapsed_ms": 1800000, "max_tokens": 500000}`；上限一律 `max_*`，寫不帶 `max_` 的 `rounds`、`elapsed_ms`、`tokens`＝`BudgetBad`）、`sandbox.json`（選填，見下）。成果：`out/best/`（最好的一版）、`out/report.txt`（每一版從哪版改、幾分、改了什麼、改進者說了什麼）、`out/result.json`。每一版拍在 `$AOS_STACK/versions/vNNN/`（`target/`、`verdict.json`、`diff.txt`、改進者那次的 `improve/ws`、`improve/stack`），新的一版一律從最好的那版改（同分取最早的）。
 
 改進者的工作區只有 `new/task.txt`（目標、這版的判定、看得到的失敗例子、各版分數）和 `target/` 複本，判準不在裡面、工具出不去、沒有 bash；改完只收 `target/`。**被改的函數預設關進沙箱跑**（run 格與 try_run）：工作區沒放 `sandbox.json` 就用本資料夾的 [sandbox.json](self-improve/sandbox.json)（只寫得到這次的暫時資料夾、斷網、只帶 `PATH` 與語系的環境變數；要 PATH 上有 `aos-sandbox`、`bwrap`，沒有＝`SandboxMissing` 退 1）；放了就用它，內容寫 `false`＝不關。結束碼：達成 0（judge 退 10）、預算用完 2（`self-improve: BudgetSpent …`，改大 `budget.json` 再跑接著改）、改進者失敗 1（`ImproverFailed`，再跑重開這一輪）。
 
@@ -264,11 +264,11 @@ history 太大時自己壓短的 agent（嘗試性質；使用者 10-24「做一
 agent-hal/                 照抄 agent-dan（brain.py、act.py 只改錯誤訊息開頭）；system.txt 多一句「開頭【compact】那則是摘要」；tools/math、clock 捷徑掛 lib/base
   fsm.json                 idle → compact → think → act → idle
   compact/                 資料夾程式，也能手動跑：aos-exec --ws <工作區> proto8/demo/agent-hal/compact --force
-    _entry、compact.py     沒超過 COMPACT_OVER_KB（32）直接退 0；超過就三步：
+    _entry、compact.py     沒超過 AOS_COMPACT_OVER_KB（32）直接退 0；超過就三步：
                            ① 每則叫工具的 assistant＋結果 → 便宜模型各一句「在幹嘛、結果如何」（tool_note）
-                           ② 每 COMPACT_SEG_KB（8）一段 → 摘要＋挑幾行原樣保留（keep，標 user_words／decision／number／open／other）
+                           ② 每 AOS_COMPACT_SEG_KB（8）一段 → 摘要＋挑幾行原樣保留（keep，標 user_words／decision／number／open／other）
                            ③ 各段摘要＋候選保留行 → 強一點的模型修成一份、選最後留哪幾行
-    ask.py                 問腦（COMPACT_URL，沒設用 AOS_BRAIN_URL；都沒設＝假腦照字面拼）
+    ask.py                 問腦（AOS_COMPACT_URL，沒設用 AOS_BRAIN_URL；都沒設＝假腦照字面拼）
     prompts/*.txt          三步的 system 訊息
     .env                   門檻、段大小、保留上限、三步的模型（luna-low、luna-low、gpt-6-sol）
 ```
@@ -300,9 +300,9 @@ agent-hal/                 照抄 agent-dan（brain.py、act.py 只改錯誤訊�
 ```
 llm-kernel/
   _entry          #!/bin/sh：AOS_KERNEL=$AOS_STACK/mailbox（先建好）、exec aos-daemon "$@" daemon.json（後面的參數給 daemon）
-  daemon.json     一個 daemon 管四個子項：kernel（aos-llm-kernel kernel.json，interval_ms 300）、a、b、c（各跑一次 agent-ivy，工作區 $AOS_WS/<名>，環境變數 BRAIN 選腦的單子）
+  daemon.json     一個 daemon 管四個子項：kernel（aos-llm-kernel kernel.json，interval_ms 300）、a、b、c（各跑一次 agent-ivy，工作區 $AOS_WS/<名>，環境變數 AOS_IVY_BRAIN 選腦的單子）
   kernel.json     {"mailbox": {"$env": "AOS_KERNEL"}, "slots": 1, "budget": {"max_calls": 100, "max_tokens": 100000, "window": "day"}}（demo 碰不到 budget 的頂）
-  agent-ivy/      走 kernel 的 agent（ann 式：idle.py、brain.py、act.py）；think 格的 exec＝aos-llm-send $BRAIN，stdout 導到 plan.txt
+  agent-ivy/      走 kernel 的 agent（ann 式：idle.py、brain.py、act.py）；think 格的 exec＝aos-llm-send $AOS_IVY_BRAIN，stdout 導到 plan.txt
     brains/       腦的單子三張：plain.json（normal）、quick.json（normal、_metainfo 宣告 time_ms 800）、urgent.json（high、宣告 5000）
 ```
 
@@ -323,11 +323,11 @@ agent-nia/
   system.txt   system 訊息（每次問腦從檔讀、不進 history）
   tools.json   腦能叫的工具：clock、math，手寫相對路徑指 ../../lib/base/
   parts.json   格的通訊錄，手寫相對路徑（從 parts.json 所在資料夾算，整個 repo 搬家不斷）：
-               round → ../../lib/agent/round（aos-round 從這槽讀 env：ROUND_ON_EMPTY stop＝queue 空就收工；表與五格在那個資料夾）
+               round → ../../lib/agent/round（aos-round 從這槽讀 env：AOS_ROUND_ON_EMPTY stop＝queue 空就收工；表與五格在那個資料夾）
                queue、history、act → ../../lib/agent/<名>
-               hook/pre_think → ../../lib/agent/compact（env MAX_BYTES 65536：history 超過才壓）
+               hook/pre_think → ../../lib/agent/compact（env AOS_COMPACT_MAX_BYTES 65536：history 超過才壓）
                endpoint/default → ../../lib/endpoint/fake（假腦）
-               endpoint/litellm → ../../lib/endpoint/openai（env：localhost:4000、chatgpt-gpt-6-luna-low、TIMEOUT_MS 120000）
+               endpoint/litellm → ../../lib/endpoint/openai（env：localhost:4000、chatgpt-gpt-6-luna-low、AOS_ENDPOINT_TIMEOUT_MS 120000）
 ```
 
 沒有捷徑、沒有 `.env`。**輸入是 queue**：`$AOS_STACK/queue/`（N-16 有順序的信箱，一封信的 body＝一則 OpenAI message），經 queue 格放：
@@ -341,8 +341,8 @@ aos-exec --ws <工作區> proto8/demo/agent-nia        # PATH 照上面放好（
 
 **兩種定義：跑完要不要結束寫在定義裡**（playground-queue 結論 2；agent-lifecycle B-11）：
 
-- **射後不理（範本預設）**：parts.json 的 round 給 `"env": {"ROUND_ON_EMPTY": "stop"}`、loop.json 照上面（`max` 40）。queue 空＝idle 退 10＝fsm 退 10＝loop 收工；想再問就先放題再跑一次。
-- **射後有理（停著等）**：round 改 `"env": {"ROUND_ON_EMPTY": "idle"}`（aos-round 改用 `fsm-idle.json`），loop.json 拿掉 `max`、加 `"interval_ms": 300`：
+- **射後不理（範本預設）**：parts.json 的 round 給 `"env": {"AOS_ROUND_ON_EMPTY": "stop"}`、loop.json 照上面（`max` 40）。queue 空＝idle 退 10＝fsm 退 10＝loop 收工；想再問就先放題再跑一次。
+- **射後有理（停著等）**：round 改 `"env": {"AOS_ROUND_ON_EMPTY": "idle"}`（aos-round 改用 `fsm-idle.json`），loop.json 拿掉 `max`、加 `"interval_ms": 300`：
 
   ```
   {"exec": {"argv": ["aos-round", {"$env": "AOS_CD"}], "timeout_ms": 600000}, "interval_ms": 300,

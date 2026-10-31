@@ -1,7 +1,7 @@
 # fork.py - fork 格：照 steps.json 把每一步 fork 成一個小念頭（再跑一次自己這個資料夾：aos-exec .），
-# 同時最多 THOUGHT_PARALLEL 個；needs 都有結論了才起那一步（前面的結論寫進它的題目）。
+# 同時最多 AOS_THOUGHT_PARALLEL 個；needs 都有結論了才起那一步（前面的結論寫進它的題目）。
 # 小念頭＝同一隻 agent-gus，自己的工作區與 stack 在小格 $AOS_STACK/thoughts/<id>/{ws,stack}/，深度 +1，
-# 它自己也能再規劃、再 fork（深度與整棵樹的額度由 THOUGHT_DEPTH、THOUGHT_BUDGET 往下帶）。
+# 它自己也能再規劃、再 fork（深度與整棵樹的額度由 AOS_THOUGHT_DEPTH、AOS_THOUGHT_BUDGET 往下帶）。
 # 小念頭交回來的只有它 out/ 裡那一段答案＝結論；全部到齊後，依規劃的順序一次接進母體的 history（一步一則）。
 # 沒有要拆的步、或結論已接進 history＝什麼都不做、退 0。
 # 小念頭失敗（退非 0、逾時、沒交答案）＝那一步的結論就是「失敗了：原因」，照樣接進 history、不停，讓母體的腦自己決定
@@ -15,9 +15,9 @@ plan = read_json(STEPS)
 if not isinstance(plan, dict) or not plan.get("steps") or plan.get("recorded"):
     sys.exit(0)
 steps = plan["steps"]
-parallel = max(1, env_int("THOUGHT_PARALLEL", 3))
-limit_s = env_int("THOUGHT_TIMEOUT_S", 900)
-max_chars = env_int("THOUGHT_MAX_CHARS", 1500)
+parallel = max(1, env_int("AOS_THOUGHT_PARALLEL", 3))
+limit_s = env_int("AOS_THOUGHT_TIMEOUT_S", 900)
+max_chars = env_int("AOS_THOUGHT_MAX_CHARS", 1500)
 by_id = {s["id"]: s for s in steps}
 
 

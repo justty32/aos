@@ -90,10 +90,10 @@ if not history or history[-1].get("role") not in ("user", "tool"):
     append_history({"role": "user", "content": question})
     history.append({"role": "user", "content": question})
 
-depth, max_depth = env_int("THOUGHT_DEPTH", 0), env_int("THOUGHT_MAX_DEPTH", 2)
-max_steps, total = env_int("THOUGHT_MAX_STEPS", 4), env_int("THOUGHT_MAX_TOTAL", 10)
+depth, max_depth = env_int("AOS_THOUGHT_DEPTH", 0), env_int("AOS_THOUGHT_MAX_DEPTH", 2)
+max_steps, total = env_int("AOS_THOUGHT_MAX_STEPS", 4), env_int("AOS_THOUGHT_MAX_TOTAL", 10)
 plan_id = uuid.uuid4().hex[:8]
-budget = os.environ.get("THOUGHT_BUDGET") or os.path.join(STACK, "budgets", plan_id)   # 母體：一題一份額度
+budget = os.environ.get("AOS_THOUGHT_BUDGET") or os.path.join(STACK, "budgets", plan_id)   # 母體：一題一份額度
 os.makedirs(budget, exist_ok=True)
 remaining = total - len([n for n in os.listdir(budget) if not n.startswith(".")])
 

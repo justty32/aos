@@ -1,6 +1,6 @@
 # run.py - run 格：跑「現在這一版」的函數，結果寫進 $AOS_STACK/versions/<版>/runs.jsonl（判定是 judge 格的事）
 # 第一次（還沒有任何版本）先把工作區的 target/（或 target.json）拍成 v000；工作區那份原版之後永遠不動。
-# 判準是例子＝每組在函數的暫時複本上 aos-exec 一次；判準是檢查程式＝aos-exec 它一次（函數複本的路徑在 IMPROVE_TARGET）。
+# 判準是例子＝每組在函數的暫時複本上 aos-exec 一次；判準是檢查程式＝aos-exec 它一次（函數複本的路徑在 AOS_IMPROVE_TARGET）。
 import json, os, shutil
 import common
 from common import VERSIONS, stack, ws

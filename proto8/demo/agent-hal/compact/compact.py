@@ -1,8 +1,8 @@
 # compact.py - 土法 compact：$AOS_STACK/history.jsonl 太大時，壓成一份短的 history（形狀照舊，agent-dan 的 brain 直接能用）。
 #   第 1 步 note：每次叫工具（assistant 的 tool_calls＋對應的 tool 結果）交給便宜模型，一個呼叫一句「在幹嘛，結果如何」。
-#   第 2 步 segment：第 1 步後的紀錄每 COMPACT_SEG_KB 切一段，各段產總結，並挑幾行原樣保留（keep，打標記＋理由）。
+#   第 2 步 segment：第 1 步後的紀錄每 AOS_COMPACT_SEG_KB 切一段，各段產總結，並挑幾行原樣保留（keep，打標記＋理由）。
 #   第 3 步 final：各段總結＋候選保留行串起來，交給較強的模型修飾成一份摘要、選最後要留的 keep。
-# 最近 COMPACT_KEEP_TURNS 題與還沒答完的那題原樣不動；更早的換成一則 user（摘要＋保留原文）＋一則 assistant（讀過了）。
+# 最近 AOS_COMPACT_KEEP_TURNS 題與還沒答完的那題原樣不動；更早的換成一則 user（摘要＋保留原文）＋一則 assistant（讀過了）。
 # 原始 history 不刪不改：整份輪替到 $AOS_STACK/compact/<run>/orig.jsonl（像 log 輪替），新的另寫一份換上去。
 # 每步的產物都落在 $AOS_STACK/compact/run/（做到一半失敗，重跑從斷的那步接著做）；做完改名成 <run>，報告 report.json、log.jsonl。
 # 用法：aos-exec compact [--force]（--force＝不看門檻；在 fsm 裡當一格就不帶，沒超過門檻直接退 0）。
@@ -28,16 +28,16 @@ def env_int(name, default):
     return n
 
 
-OVER_KB = env_int("COMPACT_OVER_KB", 32)            # history 超過幾 KB 才壓
-SEG_KB = max(1, env_int("COMPACT_SEG_KB", 8))        # 第 2 步每段幾 KB
-KEEP_TURNS = env_int("COMPACT_KEEP_TURNS", 2)        # 最近幾題原樣不動（還沒答完的那題一定不動）
-KEEP_MAX = env_int("COMPACT_KEEP_MAX", 3)            # 第 2 步每段最多保留幾行
-KEEP_FINAL_MAX = env_int("COMPACT_KEEP_FINAL_MAX", 12)   # 第 3 步最後最多留幾行
-KEEP_LINE_MAX = env_int("COMPACT_KEEP_LINE_MAX", 1500)   # 一行保留行最多幾字，超過不收（記在報告的 dropped）
-RESULT_CUT = env_int("COMPACT_RESULT_CUT", 2000)     # 給第 1 步看的工具結果最多幾字（頭 3/4＋尾 1/4）
-MODEL_NOTE = os.environ.get("COMPACT_MODEL_NOTE") or "chatgpt-gpt-6-luna-low"
-MODEL_SEG = os.environ.get("COMPACT_MODEL_SEG") or "chatgpt-gpt-6-luna-low"
-MODEL_FINAL = os.environ.get("COMPACT_MODEL_FINAL") or "chatgpt-gpt-6-sol"
+OVER_KB = env_int("AOS_COMPACT_OVER_KB", 32)            # history 超過幾 KB 才壓
+SEG_KB = max(1, env_int("AOS_COMPACT_SEG_KB", 8))        # 第 2 步每段幾 KB
+KEEP_TURNS = env_int("AOS_COMPACT_KEEP_TURNS", 2)        # 最近幾題原樣不動（還沒答完的那題一定不動）
+KEEP_MAX = env_int("AOS_COMPACT_KEEP_MAX", 3)            # 第 2 步每段最多保留幾行
+KEEP_FINAL_MAX = env_int("AOS_COMPACT_KEEP_FINAL_MAX", 12)   # 第 3 步最後最多留幾行
+KEEP_LINE_MAX = env_int("AOS_COMPACT_KEEP_LINE_MAX", 1500)   # 一行保留行最多幾字，超過不收（記在報告的 dropped）
+RESULT_CUT = env_int("AOS_COMPACT_RESULT_CUT", 2000)     # 給第 1 步看的工具結果最多幾字（頭 3/4＋尾 1/4）
+MODEL_NOTE = os.environ.get("AOS_COMPACT_MODEL_NOTE") or "chatgpt-gpt-6-luna-low"
+MODEL_SEG = os.environ.get("AOS_COMPACT_MODEL_SEG") or "chatgpt-gpt-6-luna-low"
+MODEL_FINAL = os.environ.get("AOS_COMPACT_MODEL_FINAL") or "chatgpt-gpt-6-sol"
 
 stack = os.environ.get("AOS_STACK")
 if not stack:

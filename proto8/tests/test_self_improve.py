@@ -211,7 +211,7 @@ class T(unittest.TestCase):
         self.put("judge/check/_entry", json.dumps({"argv": ["python3", "check.py"]}))
         self.put("judge/check/check.py", (
             "import os, subprocess, sys\n"
-            "out = subprocess.run(['aos-exec', os.environ['IMPROVE_TARGET']], input='hello', capture_output=True,"
+            "out = subprocess.run(['aos-exec', os.environ['AOS_IMPROVE_TARGET']], input='hello', capture_output=True,"
             " text=True).stdout\n"
             "print('沒給 N 時拿到 %r' % out)\n"
             "sys.exit(0 if out == 'HEL' else 1)\n"))

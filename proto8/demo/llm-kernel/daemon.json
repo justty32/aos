@@ -1,7 +1,7 @@
 {"max": 25, "interval_ms": 200, "state": "state.json",
  "loops": {
   "kernel": {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300},
-  "a": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "a"}, "agent-ivy"], "envs": {"BRAIN": "brains/plain.json"}}, "max": 1},
-  "b": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "b"}, "agent-ivy"], "envs": {"BRAIN": "brains/quick.json"}}, "max": 1},
-  "c": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "c"}, "agent-ivy"], "envs": {"BRAIN": "brains/urgent.json"}}, "max": 1}
+  "a": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "a"}, "agent-ivy"], "envs": {"AOS_IVY_BRAIN": "brains/plain.json"}}, "max": 1},
+  "b": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "b"}, "agent-ivy"], "envs": {"AOS_IVY_BRAIN": "brains/quick.json"}}, "max": 1},
+  "c": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "c"}, "agent-ivy"], "envs": {"AOS_IVY_BRAIN": "brains/urgent.json"}}, "max": 1}
  }}

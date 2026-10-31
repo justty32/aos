@@ -9,12 +9,12 @@
 #   掛勾經 `aos-parts --file <agent>/parts.json which --json hook/<點>` 找：退 10＝沒掛（照 § 3 表的預設）；拿到就 `aos-exec 路徑 <agent>`，註冊檔的 env 疊上去。
 # 叫工具出的問題回給腦、不停（P-41 現狀，照 demo/agent-dan/act.py）：叫了 tools.json 沒登記的＝ToolUnknown、arguments 不是 JSON 字串＝ArgumentsBad、
 #   工具退非 0（stdout 照收、尾巴加結束碼）——都接成一則 tool 訊息。工具與掛勾的 stderr 不讀不吞（C-52）。
-# 平行：MAX_PARALLEL（沒設或 1＝依序；N＝一批最多 N 個一起跑），吐出來仍照原順序。
+# 平行：AOS_ACT_MAX_PARALLEL（沒設或 1＝依序；N＝一批最多 N 個一起跑），吐出來仍照原順序。
 # 插話：每一批（依序＝每一個）跑完、後面還有 call 時，看 queue 的 $AOS_STACK/queue/new/ 有沒有信（. 開頭的不算，N-05；10-30 起，原本看 $AOS_WS/new/）；
 #   有就問 hook/on_interrupt（stdin＝信號一行一個；stdout「interrupt」＝打斷，其他字、非 0、沒掛＝wait）。打斷＝剩下的 call 不跑、各接一則「act: Interrupted …」的 tool 訊息，
 #   照樣全部吐完、退 10（「正常、但到此為止」，同 pre_tool 的 10）；新題怎麼接進來是 round 的事，act 不認領。
 # 錯（自己這層的）：stderr 一行「act: 代號 原因」、退 1、stdout 什麼都不吐——ArgumentsBad、AgentBad、StackMissing、MessageBad、
-#   ToolsBad（aos-tools 起不來或 ls 退非 0）、PartsBad（aos-parts 起不來或退 0／10 以外）、HookFailed、ParallelBad（MAX_PARALLEL 不是正整數）。
+#   ToolsBad（aos-tools 起不來或 ls 退非 0）、PartsBad（aos-parts 起不來或退 0／10 以外）、HookFailed、ParallelBad（AOS_ACT_MAX_PARALLEL 不是正整數）。
 import concurrent.futures, json, os, subprocess, sys
 
 NAME = "act"
@@ -41,11 +41,11 @@ stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "沒設定 AOS_STACK")
 try:
-    max_parallel = int(os.environ.get("MAX_PARALLEL") or "1")
+    max_parallel = int(os.environ.get("AOS_ACT_MAX_PARALLEL") or "1")
     if max_parallel < 1:
         raise ValueError
 except ValueError:
-    die("ParallelBad", "MAX_PARALLEL 要是正整數，收到 %r" % os.environ.get("MAX_PARALLEL"))
+    die("ParallelBad", "AOS_ACT_MAX_PARALLEL 要是正整數，收到 %r" % os.environ.get("AOS_ACT_MAX_PARALLEL"))
 tools_json = os.path.join(agent, "tools.json")
 parts_json = os.path.join(agent, "parts.json")
 

@@ -151,10 +151,10 @@ rc, out, err, doc = run("json_edit", want, script=[call("found", {"pointers": ["
 check("json_edit 新加 key", doc["states"]["think"]["exec"].get("grace_ms"), 500)
 check("  新 key 告訴腦還沒有", "還沒有這個位置" in Brain.seen[1]["messages"][1]["content"] if len(Brain.seen) > 1 else None, True)
 
-os.environ["JSON_EDIT_MAX_ROUNDS"] = "2"
+os.environ["AOS_JSON_EDIT_MAX_ROUNDS"] = "2"
 rc, out, err, _ = run("json_edit", want, script=[{"content": "我想想"}, call("peek", {"pointer": "/states"})])
 check("json_edit 幾輪都沒交＝PointerMissing", (rc, err.startswith("json_edit: PointerMissing")), (1, True))
-del os.environ["JSON_EDIT_MAX_ROUNDS"]
+del os.environ["AOS_JSON_EDIT_MAX_ROUNDS"]
 rc, out, err, _ = run("json_edit", want, url=None)
 check("json_edit 沒設腦＝BrainMissing", (rc, err.startswith("json_edit: BrainMissing")), (1, True))
 rc, out, err, _ = run("json_edit", want, url="http://127.0.0.1:1/v1")

@@ -21,7 +21,7 @@ while [ $# -gt 0 ]; do
 	shift
 done
 ME="${AOS_ME:-${SUDO_USER:-$(id -un)}}"            # 我（跑 kernel 的人）；AOS_ME 給測試在假 root 裡用數字
-BIN="${S6_BIN:-/home/$ME/code/try/sandbox/s6-root/bin}"   # 試驗場編好的 s6（靜態連 skalibs，只靠 libc）
+BIN="${AOS_S6_BIN:-/home/$ME/code/try/sandbox/s6-root/bin}"   # 試驗場編好的 s6（靜態連 skalibs，只靠 libc）
 RUNNER="${AOS_RUNNER:-aos-run}"                     # 跑「不信任的函數」用的帳號與它的群組（沒有家目錄、不能登入）
 AREA=/srv/aos-run                                   # 它能寫的地方：放函數複本與暫時工作區
 

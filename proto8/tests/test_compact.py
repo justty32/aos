@@ -7,9 +7,9 @@ from pathlib import Path
 from aos_bins import ROOT, tool, path_with  # noqa: E402
 EXEC = tool("aos-exec")
 HAL = ROOT / "demo" / "agent-hal"
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "COMPACT_URL",
-         "COMPACT_OVER_KB", "COMPACT_SEG_KB", "COMPACT_KEEP_TURNS", "COMPACT_KEEP_MAX", "COMPACT_KEEP_FINAL_MAX",
-         "COMPACT_KEEP_LINE_MAX", "COMPACT_RESULT_CUT", "COMPACT_MODEL_NOTE", "COMPACT_MODEL_SEG", "COMPACT_MODEL_FINAL")
+CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_COMPACT_URL",
+         "AOS_COMPACT_OVER_KB", "AOS_COMPACT_SEG_KB", "AOS_COMPACT_KEEP_TURNS", "AOS_COMPACT_KEEP_MAX", "AOS_COMPACT_KEEP_FINAL_MAX",
+         "AOS_COMPACT_KEEP_LINE_MAX", "AOS_COMPACT_RESULT_CUT", "AOS_COMPACT_MODEL_NOTE", "AOS_COMPACT_MODEL_SEG", "AOS_COMPACT_MODEL_FINAL")
 
 
 def run(*args, env=None, **kw):
@@ -154,7 +154,7 @@ class T(unittest.TestCase):
         text = build(10)
         self.hist.write_text(text)
         f = self.fake()
-        r = self.compact(f.url, COMPACT_KEEP_TURNS=1, COMPACT_SEG_KB=1)
+        r = self.compact(f.url, AOS_COMPACT_KEEP_TURNS=1, AOS_COMPACT_SEG_KB=1)
         self.assertEqual(r.returncode, 0, r.stderr)
         run_id, = self.runs()
         rep = self.report(run_id)
@@ -190,11 +190,11 @@ class T(unittest.TestCase):
         self.assertEqual(json.loads(log[-1])["run"], run_id)
 
     def test_unfinished_turn_kept(self):
-        """還沒答完的那題（叫了工具、結果回來了、還沒答）原樣留在最後；KEEP_TURNS=0 時更早的全壓。"""
+        """還沒答完的那題（叫了工具、結果回來了、還沒答）原樣留在最後；AOS_COMPACT_KEEP_TURNS=0 時更早的全壓。"""
         text = build(3, unfinished=True)
         self.hist.write_text(text)
         f = self.fake()
-        r = self.compact(f.url, COMPACT_KEEP_TURNS=0)
+        r = self.compact(f.url, AOS_COMPACT_KEEP_TURNS=0)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.hist.read_text().splitlines()[2:], text.splitlines()[-3:])
         self.assertEqual(self.lines()[-1]["role"], "tool")
@@ -210,7 +210,7 @@ class T(unittest.TestCase):
                     {"n": 2, "tag": "number"}, {"n": 5, "tag": "decision"}, {"n": 4, "tag": "open"}]}))
             return default_reply(kind, body)
         f = self.fake(reply)
-        r = self.compact(f.url, COMPACT_KEEP_TURNS=0, COMPACT_SEG_KB=64, COMPACT_KEEP_MAX=2, COMPACT_KEEP_LINE_MAX=60)
+        r = self.compact(f.url, AOS_COMPACT_KEEP_TURNS=0, AOS_COMPACT_SEG_KB=64, AOS_COMPACT_KEEP_MAX=2, AOS_COMPACT_KEEP_LINE_MAX=60)
         self.assertEqual(r.returncode, 0, r.stderr)
         rep = self.report(self.runs()[0])
         self.assertEqual(rep["keep"]["final"], ["L1 other", "L5 decision"])
@@ -224,14 +224,14 @@ class T(unittest.TestCase):
         text = build(4)
         self.hist.write_text(text)
         bad = self.fake(lambda k, b: (500, "boom") if k == "segment" else default_reply(k, b))
-        r = self.compact(bad.url, COMPACT_KEEP_TURNS=0)
+        r = self.compact(bad.url, AOS_COMPACT_KEEP_TURNS=0)
         self.assertEqual(r.returncode, 1)
         self.assertIn("compact: BrainFailed", r.stderr)
         self.assertEqual(self.hist.read_text(), text)
         self.assertTrue((self.stack / "compact" / "run" / "notes.json").exists())
         self.assertEqual(bad.kinds().count("note"), 4)
         good = self.fake()
-        r = self.compact(good.url, COMPACT_KEEP_TURNS=0)
+        r = self.compact(good.url, AOS_COMPACT_KEEP_TURNS=0)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(good.kinds().count("note"), 0)
         rep = self.report(self.runs()[0])
@@ -242,10 +242,10 @@ class T(unittest.TestCase):
         """壓縮再壓縮：第二次把上一次的摘要當「更早的摘要」、上一次的保留行當候選（old:），第 2 次。"""
         self.hist.write_text(build(3))
         f = self.fake()
-        self.assertEqual(self.compact(f.url, COMPACT_KEEP_TURNS=0).returncode, 0)
+        self.assertEqual(self.compact(f.url, AOS_COMPACT_KEEP_TURNS=0).returncode, 0)
         with open(self.hist, "a") as fh:
             fh.write(build(2).replace("c0", "d0").replace("c1", "d1"))
-        r = self.compact(f.url, COMPACT_KEEP_TURNS=0)
+        r = self.compact(f.url, AOS_COMPACT_KEEP_TURNS=0)
         self.assertEqual(r.returncode, 0, r.stderr)
         first, second = self.runs()
         final_req = [b for k, b in f.requests if k == "final"][-1]["messages"][1]["content"]
@@ -261,7 +261,7 @@ class T(unittest.TestCase):
         text = build(3)
         self.hist.write_text(text)
         f = self.fake(lambda k, b: ok(json.dumps({"summary": "  ", "keep": []})) if k == "final" else default_reply(k, b))
-        r = self.compact(f.url, COMPACT_KEEP_TURNS=0)
+        r = self.compact(f.url, AOS_COMPACT_KEEP_TURNS=0)
         self.assertEqual(r.returncode, 1)
         self.assertIn("compact: SummaryEmpty", r.stderr)
         self.assertEqual(self.hist.read_text(), text)
@@ -271,7 +271,7 @@ class T(unittest.TestCase):
         text = build(3)
         self.hist.write_text(text)
         f = self.fake(lambda k, b: ok(json.dumps({"summary": "", "keep": []})) if k == "segment" else default_reply(k, b))
-        r = self.compact(f.url, COMPACT_KEEP_TURNS=0)
+        r = self.compact(f.url, AOS_COMPACT_KEEP_TURNS=0)
         self.assertEqual(r.returncode, 1)
         self.assertIn("compact: SummaryEmpty 第 1 段", r.stderr)
         self.assertEqual(self.hist.read_text(), text)
@@ -280,7 +280,7 @@ class T(unittest.TestCase):
         """便宜模型沒回 JSON：第 1 步照字面拼一句、第 2 步整段回覆當摘要；退路次數記在報告。"""
         self.hist.write_text(build(2))
         f = self.fake(lambda k, b: ok("這段在算乘法") if k in ("note", "segment") else default_reply(k, b))
-        r = self.compact(f.url, COMPACT_KEEP_TURNS=0)
+        r = self.compact(f.url, AOS_COMPACT_KEEP_TURNS=0)
         self.assertEqual(r.returncode, 0, r.stderr)
         rep = self.report(self.runs()[0])
         self.assertEqual(rep["stages"]["note"]["counter_fallbacks"], 2)
@@ -301,11 +301,11 @@ class T(unittest.TestCase):
                     fh.write(json.dumps({"role": "user", "content": "插隊"}, ensure_ascii=False) + "\n")
             return default_reply(kind, body)
         f = self.fake(reply)
-        r = self.compact(f.url, COMPACT_KEEP_TURNS=0)
+        r = self.compact(f.url, AOS_COMPACT_KEEP_TURNS=0)
         self.assertEqual(r.returncode, 1)
         self.assertIn("compact: HistoryChanged", r.stderr)
         self.assertEqual(self.lines()[-1]["content"], "插隊")
-        r = self.compact(f.url, COMPACT_KEEP_TURNS=0)
+        r = self.compact(f.url, AOS_COMPACT_KEEP_TURNS=0)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(any(p.name.startswith("stale-") for p in (self.stack / "compact").iterdir()))
         self.assertEqual(self.lines()[-1]["content"], "插隊")      # 沒答完的那題原樣留著
@@ -316,12 +316,12 @@ class T(unittest.TestCase):
         self.hist.write_text(text)
         f = self.fake(lambda k, b: ok(json.dumps({"summary": "很長" * 20000, "keep": []})) if k == "final"
                       else default_reply(k, b))
-        r = self.compact(f.url, COMPACT_KEEP_TURNS=0)
+        r = self.compact(f.url, AOS_COMPACT_KEEP_TURNS=0)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.hist.read_text(), text)
         self.assertTrue(any(p.name.startswith("nosave-") for p in (self.stack / "compact").iterdir()))
         n = len(f.requests)
-        r = self.compact(f.url, force=False, COMPACT_KEEP_TURNS=0, COMPACT_OVER_KB=1)
+        r = self.compact(f.url, force=False, AOS_COMPACT_KEEP_TURNS=0, AOS_COMPACT_OVER_KB=1)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(len(f.requests), n)
 
@@ -330,7 +330,7 @@ class T(unittest.TestCase):
         self.hist.write_text(build(6))
         (self.ws / "new" / "q9.txt").write_text("第 1 題算的是什麼？")
         f = self.fake()
-        r = self.hal(f.url, COMPACT_OVER_KB=4)
+        r = self.hal(f.url, AOS_COMPACT_OVER_KB=4)
         self.assertEqual(r.returncode, 0, r.stderr)
         states = [json.loads(l)["state"] for l in (self.stack / "trace.jsonl").read_text().splitlines()]
         self.assertEqual(states, ["idle", "compact", "think", "act", "idle"])
@@ -349,7 +349,7 @@ class T(unittest.TestCase):
         """沒設網址＝假腦：agent-hal 也走得完（compact 照字面拼，腦叫 clock 再答）。"""
         self.hist.write_text(build(6))
         (self.ws / "new" / "q9.txt").write_text("現在幾點？")
-        r = self.hal(COMPACT_OVER_KB=4)
+        r = self.hal(AOS_COMPACT_OVER_KB=4)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("compact: ", r.stdout + r.stderr)
         self.assertTrue(self.lines()[0]["content"].startswith("【compact】"))

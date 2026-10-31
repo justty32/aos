@@ -67,7 +67,7 @@ check 印的問題代號：`DirectiveBad`、`DirectiveFormBad`（帶 `$ref`／`$
   讀＝peek 一層層往下（帶 `--follow`）；寫＝直接收腦生成的 JSON 值（單值、整棵子樹、或 batch 一次很多個），一律帶 `--check --follow`。
   aos-json 的錯（指不到、形狀不對）是腦寫錯了：stdout 印 `錯：代號 原因`、退 0，讓腦看了重來；這支自己的錯（stdin 不對、aos-json 起不來）才 stderr 一行、退 1。
 - **`tools/json_edit/`**：「小念頭」式兩步改——`{"file": "fsm.json", "want": "把 think 那格的逾時改成 30 秒"}`。
-  一、**找到要修改的 key**：腦只看到頂層 peek，用 `peek` 一層層往下，`found` 交出一個或多個指標（最多 `JSON_EDIT_MAX_ROUNDS` 輪，預設 12）；
+  一、**找到要修改的 key**：腦只看到頂層 peek，用 `peek` 一層層往下，`found` 交出一個或多個指標（最多 `AOS_JSON_EDIT_MAX_ROUNDS` 輪，預設 12）；
   二、**提供值**：每個指標各開一次新對話（不帶第一步），只給要做的事、那個位置現在的值、上一層的摘要，腦用 `give` 交出新值的 JSON 文字（解不開讓它重給，最多 3 次）；
   最後 `aos-json batch --check --follow` 一次寫進去。stdout：`看過：/ → /states → …`、`找到：…`、`改：檔#/指標 = 值`；寫不進去印 `沒改：…` 退 0。
   腦＝OpenAI 相容端點（`AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`（預設 `chatgpt-gpt-6-luna-low`）、`AOS_BRAIN_KEY`，同 agent-dan）；沒設 URL＝`BrainMissing`。

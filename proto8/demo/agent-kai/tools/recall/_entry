@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # recall - 查先前的題目：stdin 收 {"op": "search", "query": "…"} 或 {"op": "read", "no": 3, "detail": true}，stdout 印給模型看的文字
-# 讀哪份紀錄由叫的人用環境變數 RECALL_HISTORY 指（agent-kai 的 act 指向自己的 $AOS_STACK/history.jsonl；像 AOS_WS 是指標，C-66）。
+# 讀哪份紀錄由叫的人用環境變數 AOS_RECALL_HISTORY 指（agent-kai 的 act 指向自己的 $AOS_STACK/history.jsonl；像 AOS_WS 是指標，C-66）。
 # 模型的錯（op 不認得、沒這題）照實回給它、退 0；紀錄本身壞了或沒指才 recall: 代號、退 1。
 import json, os, sys
 
@@ -20,9 +20,9 @@ def die(code, reason):
     sys.exit(1)
 
 
-path = os.environ.get("RECALL_HISTORY")
+path = os.environ.get("AOS_RECALL_HISTORY")
 if not path:
-    die("HistoryMissing", "沒設定 RECALL_HISTORY")
+    die("HistoryMissing", "沒設定 AOS_RECALL_HISTORY")
 try:
     args = json.loads(sys.stdin.read() or "{}")
 except ValueError:

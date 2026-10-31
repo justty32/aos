@@ -170,7 +170,7 @@ def launch(cell, qname, task, depth, budget):
     if fresh:
         write_atomic(os.path.join(ws, "new", qname + ".txt"), task)
     env = dict(os.environ, AOS_STACK=os.path.join(cell, "stack") + "/", AOS_WS=ws,
-               THOUGHT_DEPTH=str(depth), THOUGHT_BUDGET=budget)
+               AOS_THOUGHT_DEPTH=str(depth), AOS_THOUGHT_BUDGET=budget)
     with open(os.path.join(cell, "log.txt"), "a", encoding="utf-8") as log:
         return subprocess.Popen(["aos-exec", "--ws", ws, "."], cwd=os.getcwd(), env=env, stdin=subprocess.DEVNULL,
                                 stdout=log, stderr=log, start_new_session=True)

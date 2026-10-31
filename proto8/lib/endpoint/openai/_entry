@@ -7,12 +7,12 @@
 #   有 AOS_KERNEL_REPORT 就把 usage 寫成那份檔（照 agent-dan 的 brain.py，P-23 註）。usage 不進 stdout。
 # 設定（環境變數；註冊檔 parts.json 的 env 或固定名字那格的 .env 給）：
 #   AOS_BRAIN_URL（必給，例 http://localhost:4000/v1）、AOS_BRAIN_MODEL（stdin 沒給 model 時用；兩邊都沒有＝ModelUnknown）、
-#   AOS_BRAIN_KEY（有才帶 Authorization: Bearer）、TIMEOUT_MS（這一次請求的逾時，預設 120000）、
-#   ENDPOINT_NAME（寫進 usage.jsonl 的名字；沒設＝這支 _entry 實際所在的資料夾名，例 openai）。
+#   AOS_BRAIN_KEY（有才帶 Authorization: Bearer）、AOS_ENDPOINT_TIMEOUT_MS（這一次請求的逾時，預設 120000）、
+#   AOS_ENDPOINT_NAME（寫進 usage.jsonl 的名字；沒設＝這支 _entry 實際所在的資料夾名，例 openai）。
 # 錯：stderr 一行「endpoint: 代號 原因」、退 1（N-43，分類靠代號）：
 #   BrainFailed（連不上、逾時、5xx、429；原因帶 HTTP 碼）、KeyBad（401／403）、ModelUnknown（404，或沒給 model）、
 #   RequestBad（其他 4xx；stdin 不是請求體也算——我們要送的東西不對）、ReplyBad（2xx 但不是 OpenAI 的形狀）、
-#   UrlMissing（沒設 AOS_BRAIN_URL）、TimeoutBad（TIMEOUT_MS 不是正整數）、StackMissing、ArgumentsBad（參數多於一個）。
+#   UrlMissing（沒設 AOS_BRAIN_URL）、TimeoutBad（AOS_ENDPOINT_TIMEOUT_MS 不是正整數）、StackMissing、ArgumentsBad（參數多於一個）。
 # 失敗時 stdout 不吐、usage.jsonl 不寫。
 import datetime, json, os, sys, urllib.error, urllib.request
 
@@ -33,12 +33,12 @@ url = os.environ.get("AOS_BRAIN_URL")
 if not url:
     die("UrlMissing", "沒設定 AOS_BRAIN_URL")
 try:
-    timeout_ms = int(os.environ.get("TIMEOUT_MS") or "120000")
+    timeout_ms = int(os.environ.get("AOS_ENDPOINT_TIMEOUT_MS") or "120000")
     if timeout_ms <= 0:
         raise ValueError
 except ValueError:
-    die("TimeoutBad", "TIMEOUT_MS 要是正整數（毫秒），收到 %r" % os.environ.get("TIMEOUT_MS"))
-endpoint = os.environ.get("ENDPOINT_NAME") or os.path.basename(os.path.dirname(os.path.realpath(__file__)))
+    die("TimeoutBad", "AOS_ENDPOINT_TIMEOUT_MS 要是正整數（毫秒），收到 %r" % os.environ.get("AOS_ENDPOINT_TIMEOUT_MS"))
+endpoint = os.environ.get("AOS_ENDPOINT_NAME") or os.path.basename(os.path.dirname(os.path.realpath(__file__)))
 
 try:
     body = json.loads(sys.stdin.read())

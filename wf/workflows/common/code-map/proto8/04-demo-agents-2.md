@@ -10,8 +10,8 @@
 |---|---|
 | `_entry`、`loop.json`、`fsm.json`、`.env`、`idle/` | 同 agent-dan |
 | `tools/math`、`tools/clock` | 符號連結 → `../../../lib/base/<名>`（10-24 遷移前是 agent-dan 的複本） |
-| `brain.py` | 組 context：system＋先前對話目錄＋〔有 `tools/memory` 就附記憶〕＋挑出的舊題（只有問與結論）＋這題完整；整份 ≤ `KAI_FULL_UNDER`（1500 token）就全送；每次記一行 `$AOS_STACK/context.jsonl` |
-| `act.py` | 同 agent-dan，多給工具 `RECALL_HISTORY`＝自己的 `history.jsonl` |
+| `brain.py` | 組 context：system＋先前對話目錄＋〔有 `tools/memory` 就附記憶〕＋挑出的舊題（只有問與結論）＋這題完整；整份 ≤ `AOS_KAI_FULL_UNDER`（1500 token）就全送；每次記一行 `$AOS_STACK/context.jsonl` |
+| `act.py` | 同 agent-dan，多給工具 `AOS_RECALL_HISTORY`＝自己的 `history.jsonl` |
 | `system.txt` | 告訴腦看到的不是全部、不夠就 recall 或重查、回答把關鍵寫完整 |
 | `tools/recall/_entry`、`_tooldef.json` | `op`＝search（關鍵字找舊題）／read（展開一題，`detail` 連工具原始輸出）；錯 `HistoryMissing`、`HistoryBad` |
 | `tools/recall/turns.py` | 把 history 切成題、照意圖挑（上一題、指代詞、「第 N 題」、字面重疊）；brain 也 import |
@@ -65,7 +65,7 @@ coding agent，工具全部掛 [proto8/lib](../../../../../proto8/lib/README.md)
 |---|---|
 | `_entry`、`loop.json` | `exec aos-loop loop.json`；`loop.json` 的 `exec` 是單子 `aos-fsm fsm.json`、max 20 |
 | `.env` | `AOS_BRAIN_MODEL=chatgpt-gpt-6-luna-low`（同 agent-dan，不蓋外面的；10-24 真腦實測加，沒這份時送 `default`） |
-| `fsm.json` | 沒有 `_entry`；idle／act 跑 python，think 的 `exec`＝`aos-llm-send $BRAIN`、stdout 導到 `$AOS_STACK/plan.txt`、120 秒 |
+| `fsm.json` | 沒有 `_entry`；idle／act 跑 python，think 的 `exec`＝`aos-llm-send $AOS_IVY_BRAIN`、stdout 導到 `$AOS_STACK/plan.txt`、120 秒 |
 | `idle.py` | `cur/` 或 `new/` 有題退 0，沒有退 10 |
 | `brain.py` | 經 kernel 才跑：認領題目、答案草稿印 stdout；假腦睡 1 秒；有 `AOS_KERNEL_REPORT` 就寫 usage（假腦用字數編） |
 | `act.py` | `plan.txt` 寫成 `out/<題名>`、題目搬 `done/` |

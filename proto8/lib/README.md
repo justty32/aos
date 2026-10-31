@@ -93,7 +93,7 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 | [check_inbox](aos/check_inbox/) | 看自己信箱還沒處理的（只看不拿） | （無） | 一封一行摘要 | demo/talk |
 | [spawn_agent](aos/spawn_agent/) | 從範本產生一隻 agent（`aos-ai spawn`；`template` 沒給＝agent-nia，10-30 起） | `name`、`template` | aos-ai 那行 JSON | ai_tools/dan_tools |
 | [ask_agent](aos/ask_agent/) | 問一隻 agent、等它答完（沒有就先 spawn，預設 agent-nia；10-30 起走 queue，答案＝那次 run 答完這封時最後一則回答） | `name`、`question`、`template` | JSON：`ok`、`answer` | ai_tools/dan_tools |
-| [ask_round](aos/ask_round/) | 同步問一隻格組起來的 agent（例 demo/agent-nia）一題：queue push（一則 user message）→ 一格一格叫 `aos-round`、每格後 `queue pop --timeout-s 0` 看答完沒（信不見了＝交卷了）→ 印答案；agent 不常駐 | `question`、`agent`（絕對路徑，沒給＝`ASK_AGENT`）、`timeout_s`（120／600） | 答案原文（history 最新那則沒有 tool_calls 的 assistant；10-30 起，原本 `out/<題名>`） | 新寫（agent-round § 7 第 11 步；10-30 agent-lifecycle 第 5 步改走 queue；10-30 aos-round 第 5 步改叫 aos-round） |
+| [ask_round](aos/ask_round/) | 同步問一隻格組起來的 agent（例 demo/agent-nia）一題：queue push（一則 user message）→ 一格一格叫 `aos-round`、每格後 `queue pop --timeout-s 0` 看答完沒（信不見了＝交卷了）→ 印答案；agent 不常駐 | `question`、`agent`（絕對路徑，沒給＝`AOS_ASK_AGENT`）、`timeout_s`（120／600） | 答案原文（history 最新那則沒有 tool_calls 的 assistant；10-30 起，原本 `out/<題名>`） | 新寫（agent-round § 7 第 11 步；10-30 agent-lifecycle 第 5 步改走 queue；10-30 aos-round 第 5 步改叫 aos-round） |
 | [agent_status](aos/agent_status/) | 看 agent 的狀態 | `name` | aos-ai 那行 JSON | ai_tools/dan_tools |
 | [make_json](aos/make_json/) | 生成一份 aos 的 JSON、先驗形狀 | `kind`、`spec`、`out` | aos-ai 那行 JSON（含 notes） | ai_tools/dan_tools |
 | [make_tool](aos/make_tool/) | 在 agent 的 `tools/` 下起工具骨架 | `name`、`tool`、`description`、`params`、`lang` | aos-ai 那行 JSON | ai_tools/dan_tools |
@@ -102,7 +102,7 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 
 這幾個的「模型的錯」也照規則 3 退 1；用它們的 agent（agent-meg、talk 的 member）的 act 把工具退非 0 回給腦、不停（同 agent-pip）。
 `memory` 的 `$AOS_HEAP`、`send_message` 的 `$AOS_ROSTER`、ai 那六個的 `$AOS_AI_ROOT` 是規則 4「只碰 `$AOS_WS`」的例外，照原樣留著（放哪由叫的人決定，像 stack）。
-`ask_round` 也是例外：被問的 agent 的工作區＝`ASK_WS`（有設）＞ `$AOS_STACK/<agent 資料夾名>/`（這個工具自己的小格），stack＝`<工作區>/.stack/`；要「問 agent-xxx」固定一隻，就做一個工具小資料夾：`.env` 寫 `ASK_AGENT=<絕對路徑>`、`_entry`／`_tooldef.json`／`_metainfo` 捷徑指 `lib/aos/ask_round/` 的（`_tooldef.json` 也可自己寫一份改說明），登記進 tools.json——claude code 經 aos-mcp 叫的就是這份。aos-round 一次只走一格，信還在就再叫，最多 `ASK_MAX_STEPS`（200）格（一題大約 4～8 格）；停手看「信不見了」、不看 aos-round 的 10（被問的 agent 設 `ROUND_ON_EMPTY=idle` 時 queue 空也退 0）；搶信箱不加保護（同一個工作區另有 aos-loop 在收信，給各自的 `ASK_WS`）。
+`ask_round` 也是例外：被問的 agent 的工作區＝`AOS_ASK_WS`（有設）＞ `$AOS_STACK/<agent 資料夾名>/`（這個工具自己的小格），stack＝`<工作區>/.stack/`；要「問 agent-xxx」固定一隻，就做一個工具小資料夾：`.env` 寫 `AOS_ASK_AGENT=<絕對路徑>`、`_entry`／`_tooldef.json`／`_metainfo` 捷徑指 `lib/aos/ask_round/` 的（`_tooldef.json` 也可自己寫一份改說明），登記進 tools.json——claude code 經 aos-mcp 叫的就是這份。aos-round 一次只走一格，信還在就再叫，最多 `AOS_ASK_MAX_STEPS`（200）格（一題大約 4～8 格）；停手看「信不見了」、不看 aos-round 的 10（被問的 agent 設 `AOS_ROUND_ON_EMPTY=idle` 時 queue 空也退 0）；搶信箱不加保護（同一個工作區另有 aos-loop 在收信，給各自的 `AOS_ASK_WS`）。
 
 **共用模組 [aos_ws.py](aos/aos_ws.py)**（不是工具、沒有 `_entry`）：「寄信、等答案、讀 stack」；10-30 起照 agent 對話協議（[CONVENTION P-42](../docs/CONVENTION/02-題目stack停錯腦.md)）只碰 stack——`stack_of`、`names`／`where`／`waiting`（queue 的 new／cur／done）、`put`（一則 user message，`aos-post init`＋`send --ordered`，PATH 上要有 aos-post）、`history`／`answers`／`exchanges`（回答＝沒有 tool_calls 的 assistant）、`loop_state`（aos-loop 的 state.json）、`unit_of`／`failed`（trace 一行）、`tail_jsonl`、`last_jsonl`；舊協議的工作區 `new/`／`out/` 不再認。給人用的 [proto8/extras/human](../extras/human/README.md)（aos-say／listen／chat）與給 AI 用的 [aos-ai](../extras/ai_tools/README.md) 兩份合成這一份，各自用 realpath 找到這個資料夾 import。
 
@@ -118,7 +118,7 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 - [agent_tool.py](agent/agent_tool.py)：「把一隻 agent 包成工具」的轉接，共用一支——每次呼叫開新小格 `$AOS_STACK/runs/NNN/`、題目寫進子 agent 的 `ws/new/`、`aos-exec --dotenv-override --ws` 跑、拿 `ws/out/` 的答案（錯 `AgentFailed`、`AnswerMissing`）。要把另一隻 agent 包成工具：資料夾裡放 `agent/`、`_entry` 叫 `agent_tool.run_agent`（pyfix 是範例）。
 - [cli_session.py](agent/cli_session.py)：claude／codex CLI 接成工具的做法（非互動續對話、或 tmux 畫面開著時從畫面送字）；工具資料夾由 `_entry` 傳進來（`cli.json` 在那裡）、agent 資料夾由 `attach` 傳進來。工具被整個複製進某隻 agent 的 `tools/`（覆寫）時，`_entry` 改找那隻 agent 根的 `cli_session.py`。拿到 session id 就在小格建 `transcripts/<kind>-<id>.jsonl`＝指到 CLI 自己存的對話檔（claude `~/.claude/projects/*/<id>.jsonl`、codex `~/.codex/sessions/**/*<id>.jsonl`）的 symlink，工具形（agent 叫的）也建；歸檔時 `freeze_transcripts(cell, kind)` 換成複製、指不到的不報錯（10-30 [eca](../thinking/2026-10-30-eca.md) 第 3 步、agent-lifecycle C-15～C-17）。問 CLI 那段（note_cell → lock → 畫面開著貼字／沒開非互動 → symlink）是 `ask(cfg, cell, tool_dir, ws, prompt)`，工具形 `call_main` 與 eca 的 [`aos-eca-turn`](../bin/aos-eca-turn) 共用（10-30 eca 第 5 步；10-31 前是 `lib/eca/turn` 格）。`live`、`ask`、`call_main` 10-31 多一個參數 `on_busy`（預設 `"yield"`＝有人佔著就 `SessionBad`，lib/agent/claude、codex 照用預設；`"answer"`＝lock 等、有人接著照樣貼、`busy.txt` 等它消失，給 `aos-eca-turn --on-busy answer`）。10-30 起不再送 `register` 給 `$AOS_HUB` 的 kernel（eca 衝突 6），格裡照舊記 `tool.txt`／`ws.txt`（`note_cell`，叫回畫面用）。
 
-pyfix 的子 agent 要改的程式在 `PYFIX_DIR`（`$AOS_WS/<dir>`），自己的 `$AOS_WS` 是收題交答案的小格，所以它的 act 用 `aos-exec --ws $PYFIX_DIR tools/<名>` 叫庫的工具（規則 4：換根是呼叫者的事）；庫的工具錯一律退 1，子 agent 的 act 把那行回給腦。
+pyfix 的子 agent 要改的程式在 `AOS_PYFIX_DIR`（`$AOS_WS/<dir>`），自己的 `$AOS_WS` 是收題交答案的小格，所以它的 act 用 `aos-exec --ws $AOS_PYFIX_DIR tools/<名>` 叫庫的工具（規則 4：換根是呼叫者的事）；庫的工具錯一律退 1，子 agent 的 act 把那行回給腦。
 沒收進來的：agent-gus 的「小念頭」（`thought.json`／`thought.py`）——它是 agent-gus 自己的入口、遞迴起 agent-gus 本身（`shared.launch`），要收就得把整隻 agent-gus 搬進庫；也沒有給模型的 `_tooldef.json`。aos-json 自帶的 `tools/json`、`tools/json_edit`（小念頭式兩步改）留在 `impls/aos-json/`，跟它的測試在一起。
 
 ## agent 自己的格（不是工具，沒有 _tooldef.json）
@@ -127,11 +127,11 @@ pyfix 的子 agent 要改的程式在 `PYFIX_DIR`（`$AOS_WS/<dir>`），自己�
 
 | 格 | 一句話 | 子命令／stdin → stdout |
 |---|---|---|
-| [round](agent/round/) | 一輪＝`aos-round <agent>` 照這裡的 fsm 表一次跑一格（10-30 aos-round 第 4 步起 agent-nia 用它）：`fsm-stop.json`／`fsm-idle.json`（idle →0 think；think →0 act、10 finish；act →0 think、10 more；more → act；finish → idle）＋五個薄格 `idle/`（認領；`cur/` 有沒列進 `current.txt` 的＝補認領、不叫 pre_round）、`think/`（pre_think → endpoint → on_error〔retry／switch，`MAX_RETRIES`〕→ post_think → history append → queue emit）、`act/`（有沒回的 tool_calls 才叫 act；插話退 10）、`more/`（`queue claim --more`）、`finish/`（`queue finish` → post_round），共用 `roundlib.py`；每格對 state 與資料對不上自保；trace＝fsm 的一格一行（`state`、`code`、`next`）；`ROUND_ON_EMPTY`（這一槽的 env）＝`stop`（預設：queue 空 fsm 退 10、loop 收工）或 `idle`（idle 的 10 被表接住、fsm 退 0、aos-loop 隔 `interval_ms` 再來）（舊骨架 `_entry`、`--step`、`hook/pause`、round 的 `unit` trace 10-30 aos-round 第 6 步刪了） | aos-round：結束碼＝aos-fsm 的（0＝走了一格、10＝queue 空〔stop〕）；格的錯一行 `round/<格>: 代號 原因` |
+| [round](agent/round/) | 一輪＝`aos-round <agent>` 照這裡的 fsm 表一次跑一格（10-30 aos-round 第 4 步起 agent-nia 用它）：`fsm-stop.json`／`fsm-idle.json`（idle →0 think；think →0 act、10 finish；act →0 think、10 more；more → act；finish → idle）＋五個薄格 `idle/`（認領；`cur/` 有沒列進 `current.txt` 的＝補認領、不叫 pre_round）、`think/`（pre_think → endpoint → on_error〔retry／switch，`AOS_ROUND_MAX_RETRIES`〕→ post_think → history append → queue emit）、`act/`（有沒回的 tool_calls 才叫 act；插話退 10）、`more/`（`queue claim --more`）、`finish/`（`queue finish` → post_round），共用 `roundlib.py`；每格對 state 與資料對不上自保；trace＝fsm 的一格一行（`state`、`code`、`next`）；`AOS_ROUND_ON_EMPTY`（這一槽的 env）＝`stop`（預設：queue 空 fsm 退 10、loop 收工）或 `idle`（idle 的 10 被表接住、fsm 退 0、aos-loop 隔 `interval_ms` 再來）（舊骨架 `_entry`、`--step`、`hook/pause`、round 的 `unit` trace 10-30 aos-round 第 6 步刪了） | aos-round：結束碼＝aos-fsm 的（0＝走了一格、10＝queue 空〔stop〕）；格的錯一行 `round/<格>: 代號 原因` |
 | [queue](agent/queue/) | agent 的輸入：`$AOS_STACK/queue/`（N-16 有順序的信箱，底下叫 aos-post，PATH 上要有它；一封信的 `body`＝一則 OpenAI message，認領時原樣接進 history；回答＝history 最新那則沒有 tool_calls 的 assistant，[thinking 10-30 agent-lifecycle](../thinking/2026-10-30-agent-lifecycle.md) A-1～A-9；round、act、ask_round 10-30 第 2、5 步跟上；壞信丟掉、原因寫 `$AOS_STACK/letter_warning.txt` 一行「信 <信號> 不採用：原因」，只留最後一封，N-16 的 `letter_warning`） | push [--wait]（stdin 一則 message → 信號）／pop 信號／claim [--more]／peek／current／done／emit／finish [--keep]／withdraw 信號 |
 | [history](agent/history/) | 對話紀錄 `$AOS_STACK/history.jsonl` | append／read／compact（只有 compact 可改寫，舊的收進 `history_archive/`） |
-| [compact](agent/compact/) | 掛 `hook/pre_think`：超過 `MAX_BYTES` 才壓（agent-hal 三步土法），交給 history compact 換上 | `[--force]` |
-| [act](agent/act/) | 照腦的決定跑工具（pre_tool → aos-tools call → post_tool，`MAX_PARALLEL`、插話退 10） | 一則 assistant → 一行一則 tool 訊息 |
+| [compact](agent/compact/) | 掛 `hook/pre_think`：超過 `AOS_COMPACT_MAX_BYTES` 才壓（agent-hal 三步土法），交給 history compact 換上 | `[--force]` |
+| [act](agent/act/) | 照腦的決定跑工具（pre_tool → aos-tools call → post_tool，`AOS_ACT_MAX_PARALLEL`、插話退 10） | 一則 assistant → 一行一則 tool 訊息 |
 
 <a id="外部-agent-的格eca不是工具"></a>
 ## 外部 agent 的一輪（eca，10-31 搬到 bin/）
@@ -143,7 +143,7 @@ claude code、codex 這類外部 coding agent 包成跟 aos agent 範本同形�
 | 格 | 一句話 | 設定 |
 |---|---|---|
 | [fake](endpoint/fake/) | 假腦：最後一則 user＋tools 有 clock＝叫 clock，否則 `FAKE ANSWER to: …`；不連網、不寫 usage | 無 |
-| [openai](endpoint/openai/) | OpenAI 相容 `/chat/completions`（LiteLLM 也是它）；usage 追加 `$AOS_STACK/usage.jsonl`；錯分 `BrainFailed`／`KeyBad`／`ModelUnknown`／`RequestBad`／`ReplyBad` | `AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY`、`TIMEOUT_MS`、`ENDPOINT_NAME` |
+| [openai](endpoint/openai/) | OpenAI 相容 `/chat/completions`（LiteLLM 也是它）；usage 追加 `$AOS_STACK/usage.jsonl`；錯分 `BrainFailed`／`KeyBad`／`ModelUnknown`／`RequestBad`／`ReplyBad` | `AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY`、`AOS_ENDPOINT_TIMEOUT_MS`、`AOS_ENDPOINT_NAME` |
 
 叫法：stdin 一份 OpenAI 請求體 `{"messages", "tools"?}`，stdout 一行 assistant message。round 照 `$AOS_STACK/endpoint.txt`（沒有＝`default`）選槽 `endpoint/<名>`。
 

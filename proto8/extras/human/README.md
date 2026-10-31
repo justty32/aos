@@ -51,4 +51,4 @@ aos-listen --last 5                                     # 最近五段一問一�
 aos-listen --status                                     # 快照
 ```
 
-**要 agent 一直在**（不用每次跑）：把 agent-nia 改成「停著等」的定義——`parts.json` 的 round 給 `"env": {"ROUND_ON_EMPTY": "idle"}`、`loop.json` 拿掉 `max`、加 `"interval_ms": 300`（[demo/README agent-nia 段](../../demo/README.md)「兩種定義」）。`aos-exec --ws ~/code/try/say-listen/ws <那份 agent>` 開著，另一個終端機 `aos-chat`（不給 agent）就行；`aos-listen --status` 看得到 `loop     phase waiting`／`paused`。agent 失敗時 loop 會停（P-20），修好再開。
+**要 agent 一直在**（不用每次跑）：把 agent-nia 改成「停著等」的定義——`parts.json` 的 round 給 `"env": {"AOS_ROUND_ON_EMPTY": "idle"}`、`loop.json` 拿掉 `max`、加 `"interval_ms": 300`（[demo/README agent-nia 段](../../demo/README.md)「兩種定義」）。`aos-exec --ws ~/code/try/say-listen/ws <那份 agent>` 開著，另一個終端機 `aos-chat`（不給 agent）就行；`aos-listen --status` 看得到 `loop     phase waiting`／`paused`。agent 失敗時 loop 會停（P-20），修好再開。

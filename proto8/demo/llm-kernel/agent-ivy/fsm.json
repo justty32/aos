@@ -1,7 +1,7 @@
 {"start": "idle",
  "states": {
    "idle":  {"exec": {"argv": ["python3", "idle.py"]}, "next": "think"},
-   "think": {"exec": {"argv": ["aos-llm-send", {"$env": "BRAIN"}],
+   "think": {"exec": {"argv": ["aos-llm-send", {"$env": "AOS_IVY_BRAIN"}],
                       "stdout": {"$env": "AOS_STACK", "$path": "plan.txt"},
                       "timeout_ms": 120000},
              "next": "act"},
