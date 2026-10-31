@@ -328,4 +328,9 @@ round:
 - 使用者認同「parts 本質上是另一種 symlink 的集結」：`parts.json` 的指標表等同一個資料夾的捷徑，固定名字那條退路字面上就是捷徑；表多出的能力是每槽可帶 `env`／`$ref`／`$env`。
 - 在這個理解上，parts 定位成跟 loop／fsm 同級的基底、地位稍高於 fsm（大方向層的定位判斷）。
 
-待對條文：[C-74](../docs/CONCEPTS/01-設計理念.md#分層10-22-使用者定) 的分層表（基礎層 aos-exec＋loop、daemon → 標準庫 fsm、tasks → agent／kernel）沒有 parts；parts 現在只寫在 agent 那章 [C-61 的「10-28 再補：格也走註冊檔」](../docs/CONCEPTS/05-agent.md)，是「agent 自己的格」的附屬設定，跟「基底、稍高於 fsm」有張力——要不要把 parts 列進 C-74、放哪一層，等使用者看。
+**決定（10-31）**：使用者 10-31 早原文：
+
+> 關於parts這塊，就是說，因爲他相比symlink，多了可以用$env/$ref指定東西的功能，喔天啊，這真的很實用。我估計他會是跟aos-exec/loop/daemon做一桌，好啦，基本上跟fsm平級，就是底層標準庫那樣。只是說他的一些指令用法，json格式啥的還需要微調，這個之後再說
+
+- 定案：parts（`aos-parts`、`parts.json`）進 [C-74](../docs/CONCEPTS/01-設計理念.md#分層10-22-使用者定) 的**標準庫層、與 fsm 平級**；理由是比 symlink 多出每槽 `$env`／`$ref` 的能力。「跟 aos-exec/loop/daemon 做一桌」是講到一半的估計、隨即收成「基本上跟 fsm 平級」，所以不進基礎層。C-61 補註加半句指回 C-74。
+- 開著、不排：parts 的指令用法與 JSON 格式還要微調，使用者「之後再說」。

@@ -11,7 +11,7 @@
 
 | 分檔 | 主題 | 條號 |
 |---|---|---|
-| [01-設計理念.md](CONCEPTS/01-設計理念.md) | 設計理念 | C-01～C-04、C-07、C-24、C-43、C-45、C-48、C-51～C-56、C-64、C-68～C-74（**C-56 KISS＝最高原則，也是最後原則**；C-52／C-53 兩條總原則；C-54 命名；旁邊的 [abbr.json](CONCEPTS/abbr.json)＝aos 認可縮寫表；C-55 布局成長；C-64 用檔案為了借 Linux 權限；C-68～C-70 資料夾＝程式、aos 只訂環境變數、巢狀由程式自己訂子 stack；C-71 資料夾的比喻用 table；C-72 JSON＝埋在檔案裡的 table、入口尋址方式同樣適用；C-73 entry 的定義＝可執行檔或 aos-exec 完整實作跑得動的檔〔四種〕；C-74 分層＝基礎層〔核心 aos-exec＋loop、daemon〕→ 標準庫〔fsm、tasks〕→ agent／kernel） |
+| [01-設計理念.md](CONCEPTS/01-設計理念.md) | 設計理念 | C-01～C-04、C-07、C-24、C-43、C-45、C-48、C-51～C-56、C-64、C-68～C-74（**C-56 KISS＝最高原則，也是最後原則**；C-52／C-53 兩條總原則；C-54 命名；旁邊的 [abbr.json](CONCEPTS/abbr.json)＝aos 認可縮寫表；C-55 布局成長；C-64 用檔案為了借 Linux 權限；C-68～C-70 資料夾＝程式、aos 只訂環境變數、巢狀由程式自己訂子 stack；C-71 資料夾的比喻用 table；C-72 JSON＝埋在檔案裡的 table、入口尋址方式同樣適用；C-73 entry 的定義＝可執行檔或 aos-exec 完整實作跑得動的檔〔四種〕；C-74 分層＝基礎層〔核心 aos-exec＋loop、daemon〕→ 標準庫〔fsm、tasks、parts〕→ agent／kernel） |
 | [02-設計理念-時空.md](CONCEPTS/02-設計理念-時空.md) | 設計理念／時空 | C-05、C-06、C-16、C-17、C-26、C-27、C-30～C-33、C-35、C-37、C-44 |
 | [03-基礎設施.md](CONCEPTS/03-基礎設施.md) | 基礎設施：inst、loop 與 daemon、proc 之間的交流（投遞、窗、父子交代，10-29）、組合子（tasks、fsm）、資料夾程式、工作區與 stack（10-19） | C-08、C-18、C-25、C-34、C-36、C-39、C-41、C-42b、C-49、C-65～C-67、C-75 |
 | [04-kernel.md](CONCEPTS/04-kernel.md) | kernel | C-09～C-15、C-28、C-29、C-38、C-47 |
