@@ -142,6 +142,35 @@ aos-tick   - 把時鐘檔的回合數往前走一格
 - 不算：外部工具自己的 `CODEX_HOME`、`CLAUDE_CONFIG_DIR`，系統的 `PATH`、`TMUX`、`SUDO_USER`。
 - 可能有個刻意分野（沒前綴＝格自己的設定、只有該格讀），但沒有寫明，也防不了撞名。
 
-狀態：**開著**，使用者定一次性全改、時機未定（現在不動 C-54 條文、不改碼）。
+狀態：**10-31 已改**（`9424ff9b`，見下面「10-31 已改」）。
 
 交互：`ECA_ON_EMPTY` 使用者另想改 argv（→ [eca § 10-31 想法](2026-10-30-eca.md#10-31-使用者想法turn-的兩個改法先記之後處理)），一次性全改時對齊。
+
+### 10-31 已改（隊長與工人照 R8／R9 代定新名，可翻案）
+
+commit `9424ff9b`，共 49 個名字，程式、`fsm-*.json` 的 `$env`、parts.json、`.env`、README、測試、code map 一起改，**不留舊名相容層**；條文 [C-54 R8 加註](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)、[P-42 加註](../docs/CONVENTION/02-題目stack停錯腦.md)。`ECA_ON_EMPTY` 不在內：它改成 aos-eca-turn 的 argv `--on-empty`（`a8d42682`，[eca § 實作時代定（10-31）](2026-10-30-eca.md#實作時代定10-31隊長與工人照原則定的細節可翻案)）。家機試驗場 `~/code/playground/nia-idle/parts.json` 也跟著改。
+
+| 舊名 | 新名 | 誰讀 |
+|---|---|---|
+| `ROUND_ON_EMPTY`、`ROUND_AGENT` | `AOS_ROUND_ON_EMPTY`、`AOS_ROUND_AGENT` | `bin/aos-round`、`lib/agent/round/fsm-*.json` |
+| `MAX_RETRIES` | `AOS_ROUND_MAX_RETRIES` | `lib/agent/round/roundlib.py`（補上領域字） |
+| `TIMEOUT_MS`、`ENDPOINT_NAME` | `AOS_ENDPOINT_TIMEOUT_MS`、`AOS_ENDPOINT_NAME` | `lib/endpoint/openai` |
+| `ENDPOINT`、`MODEL_NOTE`、`MODEL_SEG`、`MODEL_FINAL` | `AOS_COMPACT_ENDPOINT`、`AOS_COMPACT_MODEL_NOTE`、`AOS_COMPACT_MODEL_SEG`、`AOS_COMPACT_MODEL_FINAL` | `lib/agent/compact` |
+| `MAX_BYTES`、`SEG_KB`、`KEEP_TURNS`、`KEEP_MAX`、`KEEP_FINAL_MAX`、`KEEP_LINE_MAX`、`RESULT_CUT`（核對補上） | `AOS_COMPACT_` 加原名 | `lib/agent/compact` |
+| `MAX_PARALLEL` | `AOS_ACT_MAX_PARALLEL` | `lib/agent/act` |
+| `ASK_AGENT`、`ASK_MAX_STEPS`、`ASK_WS` | `AOS_ASK_AGENT`、`AOS_ASK_MAX_STEPS`、`AOS_ASK_WS` | `lib/aos/ask_round` |
+| `PYFIX_DIR` | `AOS_PYFIX_DIR` | `lib/agent/pyfix` |
+| `S6_BIN`（邊界，判成 aos 的） | `AOS_S6_BIN` | `extras/sandbox/root/setup.sh` |
+| `IMPROVE_RUN`、`IMPROVE_SANDBOX`、`IMPROVE_TARGET`（核對補上） | `AOS_IMPROVE_RUN`、`AOS_IMPROVE_SANDBOX`、`AOS_IMPROVE_TARGET` | `demo/self-improve`、`lib/aos/try_run`、`extras/sandbox/examples` |
+| `JSON_EDIT_MAX_ROUNDS`（核對補上） | `AOS_JSON_EDIT_MAX_ROUNDS` | `impls/aos-json/tools/json_edit` |
+| `COMPACT_*`（agent-hal，含 `COMPACT_URL`、`COMPACT_TIMEOUT_S`、`COMPACT_OVER_KB`） | `AOS_COMPACT_*` | `demo/agent-hal/compact`（跟 lib compact 同名同義） |
+| `THOUGHT_*`（agent-gus，含 `THOUGHT_DEPTH`、`THOUGHT_BUDGET`） | `AOS_THOUGHT_*` | `demo/agent-gus` |
+| `KAI_FULL_UNDER`、`RECALL_HISTORY` | `AOS_KAI_FULL_UNDER`、`AOS_RECALL_HISTORY` | `demo/agent-kai` |
+| `BRAIN` | `AOS_IVY_BRAIN` | `demo/llm-kernel`（只有 agent-ivy 讀，所以用 agent 名當領域；不跟 `AOS_BRAIN_*` 那一組混） |
+
+代定與留意：
+
+- Python 裡的區域變數名照語言慣例留著，只改環境變數字串，例如 `MAX_BYTES = env_int("AOS_COMPACT_MAX_BYTES", …)`。
+- **副作用**：好幾處給子程式的環境會先清掉 `AOS_*`（`lib/aos/try_run`、`demo/self-improve/common.py`、多數測試的 `env_of`），所以這些改了名的設定現在也會被清掉。`try_run` 原本從清過的那份環境讀 `IMPROVE_SANDBOX`，所以改成從自己的環境讀。其餘幾處照「aos 自己的變數」本意，讓它們被清掉，沒有再改。`aos-llm-kernel` 只疊信裡 `AOS_` 開頭的變數，所以這些設定現在也會跟著信疊進去。
+- **沒改、待使用者定**：`proto8/topdown/`（galtxt 兩隊凍結的試驗）有 33 個自己的變數，`GALTXT_*` 20 個、`OPTKIT_*` 11 個、`SELFOPT_*` 2 個，約 320 處，還會牽動 `test_topdown_*`。這些名字已經帶領域前綴，又是歷史試驗場，所以這批先不動。
+
