@@ -11,6 +11,10 @@
 ```
 ai_tools/
   bin/aos-ai                 命令列（Python，只用標準庫）。PATH 自己放好 impls 各支（含 aos-json）、proto8/bin、自己
+  bin/aos_ai_base.py         各命令共用的底（Fail、PATH、Root／Agent／Daemon）；10-31 從 aos-ai 拆出，行為不變
+  bin/aos_ai_agents.py       對單隻 agent 的命令：templates、spawn、ask、run、status、answer、wait、trace、history、exec
+  bin/aos_ai_daemon.py       背景命令：daemon、start、stop
+  bin/aos_ai_tools.py        make、explain、edit、doctor 的命令本體
   bin/aos_ai_make.py         make：生成 JSON（驗形狀、欄位說明 notes）與骨架（工具、fsm 格、函數資料夾）
   bin/aos_ai_explain.py      explain：印概念一節；--here 照 N-58／N-59／N-61 模擬 aos-exec 會給的值
   bin/aos-mcp                MCP server（stdio）：包在 aos-tools 上，agent 資料夾 tools.json 登記的工具＝MCP tools，見下「aos-mcp」
