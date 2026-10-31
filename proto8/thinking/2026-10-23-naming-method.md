@@ -110,3 +110,30 @@ aos-tick   - 把時鐘檔的回合數往前走一格
 ## 10-25：計數 `counter_`、時間點 `<發生了什麼>_at`
 
 使用者 10-25：「state.json中，runs改counter，at改成recorded_at」，再說「計數這塊，幫我改成counter_*」；頂層問時間點的兩題，使用者回「都好」（頂層代定、可翻案）。R3、R6 已照這段寫；state.json 是 `counter_runs`、`recorded_at`，細則在 [命名統合](2026-10-23-naming.md) 10-25 段與 [C-54 命名方法 R3、R6](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)。
+
+## 10-31 使用者原文：aos 的環境變數加 AOS_ 前綴（先記、之後處理）
+
+使用者原文（10-31 早，另一個唯讀 session，看 bob-1/parts.json 的 `ECA_ON_EMPTY` 時）：
+
+> 那個環境變數，感覺要加上 AOS_ 前綴。
+
+定調：先記下來、之後處理；範圍（全改或只改某幾個）使用者之後再定。
+
+跟 AI 討論後的結論（10-31 對過碼，grep `proto8/bin`、`lib`、`extras` 讀 env 的地方）：
+
+- 依據是 [C-54 命名方法 R8](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)：名字長度跟「要被認多遠」成正比，環境變數全系統都看得到 → 全大寫、帶 `AOS_` 前綴。env 是全域命名空間；現有 `AOS_STACK`、`AOS_WS`、`AOS_CD` 等都有前綴。
+- 使用者看到的那一組（四個）：
+  - `ECA_ON_EMPTY`：`lib/eca/turn/turn.py`
+  - `ROUND_ON_EMPTY`、`ROUND_AGENT`：`bin/aos-round`（`ROUND_AGENT` 也被 `lib/agent/round/fsm-*.json` 用 `{"$env": "ROUND_AGENT"}` 帶給每一格）
+  - `MAX_RETRIES`：`lib/agent/round/roundlib.py`；連領域字都沒有，最易撞名
+- 同類、也沒掛 `AOS_` 的（核對時多找到的）：
+  - `TIMEOUT_MS`、`ENDPOINT_NAME`：`lib/endpoint/openai/_entry`（`ENDPOINT_NAME` 由 `roundlib.py` 設給 endpoint）
+  - `ENDPOINT`、`MODEL_NOTE`、`MODEL_SEG`、`MODEL_FINAL`：`lib/agent/compact/_entry`
+  - `MAX_PARALLEL`：`lib/agent/act/_entry`
+  - `ASK_AGENT`、`ASK_MAX_STEPS`、`ASK_WS`：`lib/aos/ask_round/_entry`
+  - `PYFIX_DIR`：`lib/agent/pyfix/_entry` 自己設給子 agent，是 aos 的、不是外部工具的
+  - `S6_BIN`：`extras/sandbox/root/setup.sh`，覆寫 s6 的位置，算邊界
+- 不算：外部工具自己的 `CODEX_HOME`、`CLAUDE_CONFIG_DIR`，系統的 `PATH`、`TMUX`、`SUDO_USER`。
+- 可能有個刻意分野（沒前綴＝格自己的設定、只有該格讀），但沒有寫明，也防不了撞名。
+
+狀態：**開著**，使用者定先記、之後處理（不動 C-54 條文、不改碼）。
