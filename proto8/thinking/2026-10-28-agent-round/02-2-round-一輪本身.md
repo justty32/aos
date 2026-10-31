@@ -2,7 +2,7 @@
 
 ## 2. round：一輪本身
 
-> **10-30 起由 aos-round 取代**（[thinking 10-30 aos-round](../2026-10-30-aos-round.md#決定10-30)）：順序搬到 `lib/agent/round/fsm-*.json`、現在在哪看 fsm 的 `state.txt`、`--step` 與 `hook/pause` 退場、trace 看 fsm 的行。
+> **10-30 起由 aos-round 取代**（[thinking 10-30 aos-round](../2026-10-30-aos-round/07-決定.md#決定10-30)）：順序搬到 `lib/agent/round/fsm-*.json`、現在在哪看 fsm 的 `state.txt`、`--step` 與 `hook/pause` 退場、trace 看 fsm 的行。
 
 - **粒度看 `_entry`**（agent-ops 決定 12、13）：格只有一套。`_entry` 寫 aos-loop、每次只做下一格（照下面「從哪接著做」判）＝一格一格跑；寫 round＝一次跑完一輪。round 是**語法糖**：等於 aos-loop 加上「這一輪結束就停」的條件，留在零件庫 `lib/agent/round/`、不升成 aos 指令。§ 1 的 `loop.json` 是「loop 反覆叫 round」那種寫法，只是其中一種設定。
 - **叫法**：`aos-exec round <agent 資料夾>`；loop 每次叫一次，或外面直接叫一次（§ 6 外部接口）。結束碼照 P-19：`0`＝這輪好了（或中途 yield，狀態在 stack，下次接著）、`10`＝沒題目、其他＝失敗停下等人（P-20）。
@@ -36,7 +36,7 @@ round:
 
 ## 3. 掛勾（hook）
 
-> **10-30 起由 aos-round 取代**（[thinking 10-30 aos-round](../2026-10-30-aos-round.md#決定10-30)）：順序搬到 `lib/agent/round/fsm-*.json`、現在在哪看 fsm 的 `state.txt`、`--step` 與 `hook/pause` 退場、trace 看 fsm 的行。
+> **10-30 起由 aos-round 取代**（[thinking 10-30 aos-round](../2026-10-30-aos-round/07-決定.md#決定10-30)）：順序搬到 `lib/agent/round/fsm-*.json`、現在在哪看 fsm 的 `state.txt`、`--step` 與 `hook/pause` 退場、trace 看 fsm 的行。
 
 | 點 | 何時 | stdin | stdout／結束碼 | 沒掛時 |
 |---|---|---|---|---|

@@ -48,7 +48,7 @@
 - Ctrl-C 在 chat 跑 agent 時同時送到 agent（同一個行程群組）：loop 收完那次就走（P-36），chat 等它最多 10 秒再離開；題目留在 cur/，下次會接著做。
 - 兩個 chat 對同一個工作區：各自只印自己送的題，但 agent-dan 的 history 是同一段，兩邊的話會混在同一段對話裡。
 - `--last N` 照 out/ 的 mtime 排，人手動碰過 out/ 的檔順序會變。
-- 10-30 晚：say 之後拿舊協議的 agent 跑、信留在 queue 沒人認領，listen 改成說一句就退（`LetterUnclaimed`）——代定見 [aos-round 實作時代定的「真腦實測發現 2」](2026-10-30-aos-round.md#實作時代定10-30隊長與工人照原則定的細節可翻案)。
+- 10-30 晚：say 之後拿舊協議的 agent 跑、信留在 queue 沒人認領，listen 改成說一句就退（`LetterUnclaimed`）——代定見 [aos-round 實作時代定的「真腦實測發現 2」](2026-10-30-aos-round/07-決定.md#實作時代定10-30隊長與工人照原則定的細節可翻案)。
 
 ## 未決
 
