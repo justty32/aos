@@ -1,6 +1,6 @@
 # 2026-10-24 按意圖組 context（agent-kai）：history 照存，給腦看的另外組
 
-← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[腦的工具呼叫 第 6 點「對話太長」](2026-10-23-tool-calls.md#6-錯逾時對話太長)
+← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[腦的工具呼叫 第 6 點「對話太長」](2026-10-23-tool-calls/02-結論.md#6-錯逾時對話太長)
 
 規矩見 [thinking/README](README.md)：只留使用者原文、決定、結論。程式與佈局在 [demo/agent-kai](../demo/README.md)（agent-kai 一節）。相關條文：[C-19、C-46](../docs/CONCEPTS/05-agent.md)、[C-52、C-54、C-56](../docs/CONCEPTS/01-設計理念.md)、[C-65、C-66、C-67](../docs/CONCEPTS/03-基礎設施.md)、[P-17、P-23～P-26、P-41](../docs/CONVENTION/02-題目stack停錯腦.md)。
 

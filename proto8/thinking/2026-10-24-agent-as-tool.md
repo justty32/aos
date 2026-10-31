@@ -18,7 +18,7 @@
 4. **子工具只碰 `PYFIX_DIR`**（`realpath` 後必須在裡面）。路徑跑出去、檔不在、edit 的原文不是剛好一次，算模型的錯、照實回給它，不當工具失敗；只有環境沒設好（沒 `PYFIX_DIR`＝`DirMissing`）才算失敗。
 5. **跑程式的子工具不是沙盒**：跑的程式能碰的跟這台機器的使用者一樣多（路徑限制只管讀寫工具）；逾時到了整個行程群 SIGKILL、回「逾時」給模型。
 6. **出口保證：`_entry` 附真正的 diff**，不只信子 agent 自己說改了什麼。改之前把 `PYFIX_DIR` 裡 256 KB 以下的 UTF-8 檔備份到 `runs/NNN/before/`（不收 `.` 開頭、`__pycache__`），跑完逐檔比對；diff 超過 8000 字截斷。**不自動還原**，改壞了由外層的腦或人看 diff 決定。
-7. **子 agent 失敗＝pyfix 失敗**：子 agent 退非 0 → `pyfix: AgentFailed …（現場在 runs/NNN）`、退 1；跑完沒答案 → `AnswerMissing`。eve 的 act 把那行回給腦、不停（[tool-calls 文末](2026-10-23-tool-calls.md#10-24-定叫工具與小念頭的失敗回給腦)）；腦再叫 pyfix 就**開新的小格**從頭做。
+7. **子 agent 失敗＝pyfix 失敗**：子 agent 退非 0 → `pyfix: AgentFailed …（現場在 runs/NNN）`、退 1；跑完沒答案 → `AnswerMissing`。eve 的 act 把那行回給腦、不停（[tool-calls 文末](2026-10-23-tool-calls/02-結論.md#10-24-定叫工具與小念頭的失敗回給腦)）；腦再叫 pyfix 就**開新的小格**從頭做。
 8. **模型**：子 agent 用自己 `.env` 的模型（`_entry` 用 `aos-exec --dotenv-override` 叫；不加的話外層的 `AOS_BRAIN_MODEL` 一路傳下來、子 agent 的 `.env` 不蓋，N-59 第 4 件）。子 agent 要換模型就改它 `.env` 那一行。腦的位置（`AOS_BRAIN_URL`、`AOS_BRAIN_KEY`）兩層共用外層給的；要分開就在子 agent 的 `.env` 也寫 URL。
 9. **逾時**：eve 的 act 放寬到 30 分鐘；子 agent 的 `loop.json` `max` 60。
 10. **名字**：主 agent `agent-eve`（demo 慣例取人名）；工具 `pyfix`（白話：修 Python 的）；錯誤代號 `AgentFailed`、`AnswerMissing`、`DirBad`、`DirMissing`。eve、子 agent 的 `brain.py`／`act.py` 照抄 agent-dan，只改錯誤訊息開頭（P-25 每隻一份、不跨 agent 互指）。子工具現行名字見 [demo/agent-eve](../demo/README.md#agent-eveagent-當工具10-24)。
