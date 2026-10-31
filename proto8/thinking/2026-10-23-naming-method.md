@@ -144,11 +144,11 @@ aos-tick   - 把時鐘檔的回合數往前走一格
 
 狀態：**10-31 已改**（`9424ff9b`，見下面「10-31 已改」）。
 
-交互：`ECA_ON_EMPTY` 使用者另想改 argv（→ [eca § 10-31 想法](2026-10-30-eca.md#10-31-使用者想法turn-的兩個改法先記之後處理)），一次性全改時對齊。
+交互：`ECA_ON_EMPTY` 使用者另想改 argv（→ [eca § 10-31 想法](2026-10-30-eca/10-10-31-使用者原文-turn-的定義檔只認固.md#10-31-使用者想法turn-的兩個改法先記之後處理)），一次性全改時對齊。
 
 ### 10-31 已改（隊長與工人照 R8／R9 代定新名，可翻案）
 
-commit `9424ff9b`，共 49 個名字，程式、`fsm-*.json` 的 `$env`、parts.json、`.env`、README、測試、code map 一起改，**不留舊名相容層**；條文 [C-54 R8 加註](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)、[P-42 加註](../docs/CONVENTION/02-題目stack停錯腦.md)。`ECA_ON_EMPTY` 不在內：它改成 aos-eca-turn 的 argv `--on-empty`（`a8d42682`，[eca § 實作時代定（10-31）](2026-10-30-eca.md#實作時代定10-31隊長與工人照原則定的細節可翻案)）。家機試驗場 `~/code/playground/nia-idle/parts.json` 也跟著改。
+commit `9424ff9b`，共 49 個名字，程式、`fsm-*.json` 的 `$env`、parts.json、`.env`、README、測試、code map 一起改，**不留舊名相容層**；條文 [C-54 R8 加註](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)、[P-42 加註](../docs/CONVENTION/02-題目stack停錯腦.md)。`ECA_ON_EMPTY` 不在內：它改成 aos-eca-turn 的 argv `--on-empty`（`a8d42682`，[eca § 實作時代定（10-31）](2026-10-30-eca/13-實作時代定.md#實作時代定10-31隊長與工人照原則定的細節可翻案)）。家機試驗場 `~/code/playground/nia-idle/parts.json` 也跟著改。
 
 | 舊名 | 新名 | 誰讀 |
 |---|---|---|
@@ -172,5 +172,5 @@ commit `9424ff9b`，共 49 個名字，程式、`fsm-*.json` 的 `$env`、parts.
 
 - Python 裡的區域變數名照語言慣例留著，只改環境變數字串，例如 `MAX_BYTES = env_int("AOS_COMPACT_MAX_BYTES", …)`。
 - **副作用**：好幾處給子程式的環境會先清掉 `AOS_*`（`lib/aos/try_run`、`demo/self-improve/common.py`、多數測試的 `env_of`），所以這些改了名的設定現在也會被清掉。`try_run` 原本從清過的那份環境讀 `IMPROVE_SANDBOX`，所以改成從自己的環境讀。其餘幾處照「aos 自己的變數」本意，讓它們被清掉，沒有再改。`aos-llm-kernel` 只疊信裡 `AOS_` 開頭的變數，所以這些設定現在也會跟著信疊進去。
-- **沒改、待使用者定**：`proto8/topdown/`（galtxt 兩隊凍結的試驗）有 33 個自己的變數，`GALTXT_*` 20 個、`OPTKIT_*` 11 個、`SELFOPT_*` 2 個，約 320 處，還會牽動 `test_topdown_*`。這些名字已經帶領域前綴，又是歷史試驗場，所以這批先不動。使用者 10-31 照預設、這批不補，可重訪 → [eca § 實作時代定（10-31）決定](2026-10-30-eca.md#決定10-31)。
+- **沒改、待使用者定**：`proto8/topdown/`（galtxt 兩隊凍結的試驗）有 33 個自己的變數，`GALTXT_*` 20 個、`OPTKIT_*` 11 個、`SELFOPT_*` 2 個，約 320 處，還會牽動 `test_topdown_*`。這些名字已經帶領域前綴，又是歷史試驗場，所以這批先不動。使用者 10-31 照預設、這批不補，可重訪 → [eca § 實作時代定（10-31）決定](2026-10-30-eca/13-實作時代定.md#決定10-31)。
 

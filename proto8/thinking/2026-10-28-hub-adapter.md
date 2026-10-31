@@ -93,9 +93,9 @@ hub 要接一種新的 CLI，就交這張表（目前是文件；程式裡 claud
 
 ## 代定（可翻案）
 
-1. 協議＝CONVENTION P-11～P-14 原樣，只補 `server.txt` 與 trace 的 `question`／`error` 兩處；沒升進 CONVENTION 條文，用穩再說。（10-30 刪：`server.txt` 刪掉，見 [eca](2026-10-30-eca.md#決定10-30) 衝突 6）
+1. 協議＝CONVENTION P-11～P-14 原樣，只補 `server.txt` 與 trace 的 `question`／`error` 兩處；沒升進 CONVENTION 條文，用穩再說。（10-30 刪：`server.txt` 刪掉，見 [eca](2026-10-30-eca/09-方向題.md#決定10-30) 衝突 6）
 2. IPC＝`$AOS_HUB/kernel.sock` 一行 JSON；kernel 是獨立 Python 常駐、不建在 daemon 上；狀態只在記憶體。
-3. 代答實例 vs 只登記實例（10-30 刪：「只登記的實例」這個分類拿掉，見 [eca](2026-10-30-eca.md#決定10-30) 衝突 6）；一個工作區一個代答實例；小格 `$工作區/.stack/<工具名>/`。
+3. 代答實例 vs 只登記實例（10-30 刪：「只登記的實例」這個分類拿掉，見 [eca](2026-10-30-eca/09-方向題.md#決定10-30) 衝突 6）；一個工作區一個代答實例；小格 `$工作區/.stack/<工具名>/`。
 4. 失敗停下等人，`pause`／`open` 一次重收；`SessionBad` 5 秒後再試。
 5. 歸檔 `<stack>/hub_archive/<工具名>-<UTC>/`，CLI 對話用拷的。
 6. `live.jsonl` 只接不重寫（會一直長，清理是人的事，同 P-14 的 `done/`）。
