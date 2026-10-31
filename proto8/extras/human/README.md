@@ -25,7 +25,7 @@ stack＝`--stack` ＞ `$AOS_STACK` ＞ `<工作區>/.stack/`（N-57）；工作�
 
 - **說**：`aos-say 話`＝`aos-post send --ordered <stack>/queue`，一封信的 body＝`{"role": "user", "content": 話}`（N-16 有順序的信箱；queue 還沒有就先建，可以先說、再跑 agent）。印的信號就是 `new/` 裡那封的名字（`<12 位序號>.<信號>`）。
 - **聽**：`aos-listen 信號`——信還在 `queue/new/` 或 `cur/` 就等；不見了就印 history 最新那則回答（先 say 後 listen 不會漏）。queue 沒這封、history 也沒回答＝`QuestionUnknown`；等的時候看到過、信不見了卻沒有回答＝`AnswerMissing`；信還在 `new/`、沒人在跑、可是 stack 的 `trace.jsonl` 比這封新（寄出之後有程式跑過又停了、卻沒認領它，多半是舊協議的 agent）＝`LetterUnclaimed`，說一句就退、不等（10-30 晚）。`--follow`／`--last N` 直接跟 history（一段＝問的話＋回答）。
-- **看**：`aos-listen --status` 印誰在服務（只靠 `/proc` 掃 `AOS_STACK`／`AOS_WS`）、**aos-loop `state.json` 的 `phase`**（看得出 `paused`）、認領中的信（`current.txt`）、queue 各格幾封、trace 最後一格（fsm〔含 aos-round〕寫 `state`、eca turn 與 10-30 前的舊 round 寫 `unit`；失敗＝「停在 X 那格、結束碼 N」）、history 幾則。
+- **看**：`aos-listen --status` 印誰在服務（只靠 `/proc` 掃 `AOS_STACK`／`AOS_WS`）、**aos-loop `state.json` 的 `phase`**（看得出 `paused`）、認領中的信（`current.txt`）、queue 各格幾封、trace 最後一格（fsm〔含 aos-round〕寫 `state`、eca turn 與 10-30 前的舊 round 寫 `unit`；失敗＝「停在 X 那格、結束碼 N」）、有壞信（stack 有 `letter_warning.txt`）時多印一行「壞信」、history 幾則。
 - **停**：寫 `<stack>/ctl.json`（aos-loop 的窗，N-07）：`{"paused": true}` 不起下一輪、`{"stopped": true}` 收工。
 
 **舊協議的範本說不到**：agent-bob／ann／dan、topdown 這些 fsm 範本讀工作區的 `new/`、寫 `out/`（P-11 的 10-30 改口標「舊協議」），say／listen 不再認它們（say 之後拿它們跑，listen 會報 `LetterUnclaimed`、chat 會提醒「可能是舊協議」）；要用就手放 `<工作區>/new/<題名>`、`aos-exec` 跑、看 `out/`。agent-dan 有搬到 queue 的版本 [agent-dan-q](../../demo/README.md#agent-dan-q)（10-30），say／listen 說得到。

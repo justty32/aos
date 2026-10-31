@@ -358,7 +358,7 @@ mkdir -p <工作區>/.stack && echo litellm > <工作區>/.stack/endpoint.txt
 aos-exec --ws <工作區> proto8/demo/agent-nia        # PATH 照上面放好（含 proto8/bin 的 aos-round、aos-parts、aos-tools）
 ```
 
-`usage.jsonl` 會多一行。要換模型或網址，改 `parts.json` 裡 `endpoint/litellm` 的 `env`；要讓 litellm 當預設，把 `endpoint/default` 的 `path` 改成 `../../lib/endpoint/openai`、`env` 抄過去。要多一隻：`aos-ai spawn <名> --from agent-nia`（parts.json、tools.json 指出範本的相對路徑會改成絕對，見 [ai_tools](../extras/ai_tools/README.md)；放題照上面經 queue 格，`aos-ai ask`／`run` 還是舊協議〔`new/`、`out/`〕，對 agent-nia 這種 queue 的 agent 不管用）。測試 `test_nia.py`。
+`usage.jsonl` 會多一行。要換模型或網址，改 `parts.json` 裡 `endpoint/litellm` 的 `env`；要讓 litellm 當預設，把 `endpoint/default` 的 `path` 改成 `../../lib/endpoint/openai`、`env` 抄過去。要多一隻：`aos-ai spawn <名> --from agent-nia`（parts.json、tools.json 指出範本的相對路徑會改成絕對，見 [ai_tools](../extras/ai_tools/README.md)；放題照上面經 queue 格，`aos-ai ask` 已走 queue、`run` 照跑；只有舊協議的 fsm 範本〔agent-dan 等，讀 `new/`、寫 `out/`〕`ask` 說不到）。測試 `test_nia.py`。
 
 <a id="eca-templates"></a>
 ## 外部 coding agent 範本（eca-claude、eca-codex，10-30）
