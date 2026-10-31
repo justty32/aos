@@ -6,7 +6,7 @@
 
 每條後面括號是依據：§ 幾＝[ideas](../thinking/2026-10-19-ideas.md) 裡使用者原話的段號；拍板點 1～3＝ideas § 8；C-xx／N-xx＝proto8 的概念與規範；引不到的、這份自己定的，標「本稿定」。
 
-> **實作**：只有 C++ 的 [impls](../impls/README.md)（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；fsm 也是 C++、tick 先留 Python，`proto8/bin` 只剩 `aos-tick`）。impls 提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（loop／fsm 照 [ideas § 23](../thinking/2026-10-19-ideas.md)）；inst 是 C lib、沒有 `aos-inst` 命令列（§ 20；使用者 10-22「對於python版，aos-inst指令可以刪掉了，跟C++版一樣做成lib就好。」），單子交給 aos-exec 公開 API 的 `run_inst`。aos-exec 收旗標、讀入口資料夾的 `.env`（[N-58、N-59](NORMS/10-基礎設施-定義與工作區.md)，[ideas 10-21](../thinking/2026-10-21-ideas.md#4-aos-exec-支援-env10-21)）。
+> **實作**：只有 C++ 的 [impls](../impls/README.md)（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；fsm 也是 C++、tick 先留 Python，`proto8/bin` 只剩 `aos-tick`）。impls 提供 `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 四支命令列（loop／fsm 照 [ideas § 23](../thinking/2026-10-19-ideas.md)）；inst 是 C lib、沒有 `aos-inst` 命令列（§ 20；使用者 10-22「對於python版，aos-inst指令可以刪掉了，跟C++版一樣做成lib就好。」），單子交給 aos-exec 公開 API 的 `run_inst`。aos-exec 收旗標、讀入口資料夾的 `.env`（[N-58、N-59](NORMS/10-基礎設施-定義與工作區.md)，[ideas 10-21](../thinking/2026-10-21-ideas/02-4-aos-exec-支援-env.md#4-aos-exec-支援-env10-21)）。
 
 **命名**（[thinking 2026-10-23-naming](../thinking/2026-10-23-naming.md)，使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」；條文裡的使用者原話不動）：
 
