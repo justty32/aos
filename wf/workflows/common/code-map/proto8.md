@@ -13,6 +13,7 @@
 - `aos-parts`（10-28 晚，agent-round 第 0 步）：agent 資料夾格的註冊檔 `parts.json` 的命令列（add／rm／ls／get／which／run）；找格＝註冊檔 → 固定名字，round 叫格經它。測試 `tests/test_aos_parts.py`。
 - `aos-daemon-ctl`（10-30，agent-lifecycle 實作第 7 步的補）：把東西掛到 daemon 上（add／rm 往 `$AOS_DAEMON/loops_mailbox/` 投 `loops_added`／`execs_added`／`*_removed` 的信、經 aos-post；add 有 `loop.json`＝loop 子項、沒有＝`execs`；ls 讀 `loops_state.json` 兩張表；10-30 eca 第 2 步 `add --ws`：子項物件帶 `ws`、`<WS>/.stack` 不在就 symlink 到小格〔`link_stack`〕、rm 時拿掉指到小格的那條〔`unlink_stack`〕，ls 多一欄 ws）。測試 `tests/test_aos_daemon_ctl.py`。
 - `aos-round`（10-30，aos-round 第 3 步）：`aos-round <agent>`＝讀 round 槽的 env（`aos-parts which --json round`）、`ROUND_ON_EMPTY` 挑 `lib/agent/round/fsm-stop.json`／`fsm-idle.json`、設 `ROUND_AGENT`、相對 `AOS_STACK`／`AOS_WS` 轉絕對、cd 進 `lib/agent/round/`、exec 成 aos-fsm；錯 `ArgumentsBad`／`AgentBad`／`PartsBad`／`SettingBad`／`CommandMissing`。測試 `tests/test_round.py` 的 `AosRound`。
+- `aos-eca-turn`（10-31 改名＋升 bin：前身 10-30 的 `lib/eca/turn/turn.py`，`lib/eca/` 整層刪了；C-54 R13，跟 aos-round 對稱）：`aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] <定義>`＝外部 coding agent 的一輪（queue → `cli_session.ask` → history）；`--on-empty` 取代環境變數 `ECA_ON_EMPTY`、`--on-busy answer`＝不因 SessionBad 退讓；trace `unit` 是 `aos-eca-turn`；錯 `aos-eca-turn: 代號 原因`。逐檔見 [proto8/17-eca](proto8/17-eca.md)。測試 `tests/test_eca_turn.py`。
 - `aos-tick`（10-21 晚，計畫第 4 段）：`aos-tick [旗標] FILE`＝時鐘往前走一格，讀 n 寫 n＋1（沒檔＝0，先寫 `.名字` 再改名）；唯一的位置參數、旗標表是空的；錯退 1 一行 `aos-tick: 代號 原因`（10-23 起帶代號）、檔不動。
 
 ### `proto8/demo/`
@@ -35,7 +36,7 @@ LLM kernel 兩支（`aos-llm-kernel`、`aos-llm-send`，10-24）的逐檔表另�
 
 ### 外部 coding agent 的格（10-30）
 
-`proto8/lib/eca/turn`（claude／codex 當平級 agent 的一輪：queue → CLI → history）、範本 `demo/eca-claude`、`eca-codex` 與 `tests/test_eca_turn.py`、`test_eca.py`：逐檔一列在 [proto8/17-eca](proto8/17-eca.md)。
+`proto8/bin/aos-eca-turn`（claude／codex 當平級 agent 的一輪：queue → CLI → history；10-31 改名＋升 bin，前身 `lib/eca/turn`）、範本 `demo/eca-claude`、`eca-codex`（10-31 起沒有 `parts.json`）與 `tests/test_eca_turn.py`、`test_eca.py`：逐檔一列在 [proto8/17-eca](proto8/17-eca.md)。
 
 ### 10-24 一天的嘗試（收尾補）
 

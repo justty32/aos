@@ -1,10 +1,10 @@
-# bin — aos-tick、aos-tools、aos-parts、aos-daemon-ctl、aos-round（Python）
+# bin — aos-tick、aos-tools、aos-parts、aos-daemon-ctl、aos-round、aos-eca-turn（Python）
 
 ← [proto8](../README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)｜demo：[demo](../demo/README.md)｜C++ 實作：[impls](../impls/README.md)｜測試：`python3 -m unittest discover -s proto8/tests`（先建 impls，見 [testing](../../wf/workflows/testing.md)）
 
 > **C++（[proto8/impls](../impls/README.md)）是唯一實作**（使用者 10-23：「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；fsm 和 tick，使用者選「fsm 也改用 C++、tick 先留 Python」）：
 > `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 的說明在各自的 README：[aos-exec](../impls/aos-exec/README.md)、[aos-loop](../impls/aos-loop/README.md)、[aos-fsm](../impls/aos-fsm/README.md)、[aos-daemon](../impls/aos-daemon/README.md)；inst 是 C lib [inst](../impls/inst/README.md)。
-> 這裡是 `aos-tick` 與 10-28 加的 `aos-tools`、`aos-parts`、10-30 加的 `aos-daemon-ctl`（Python，都用 `aos_flags.py` 的旗標解析 `parse`）。
+> 這裡是 `aos-tick` 與 10-28 加的 `aos-tools`、`aos-parts`、10-30 加的 `aos-daemon-ctl`、`aos-round`、10-31 加的 `aos-eca-turn`（Python，都用 `aos_flags.py` 的旗標解析 `parse`）。
 > 刪掉的 bin 版各支逐支說明在 git 歷史：`git show 60d677cc:proto8/bin/README.md`。
 
 ```
@@ -30,7 +30,7 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
   **槽名**只驗格式：小寫英數與底線、最多一層 `/`（`round`、`endpoint/fake`、`hook/pre_tool`），不驗清單。**XXX** 要是 aos-exec 跑得動的：資料夾、`+x` 的檔、沒 `+x` 但能當 JSON 讀的檔（第一行 `#!` 跳過）；不存在 `PathMissing`、不是這三種 `PathBad`。槽已登記 `PartExists`，`--override` 蓋掉。
   **存法**同 aos-tools：add 的相對路徑從 cwd 算、存 abspath（捷徑不解開）；手寫的相對路徑從註冊檔的資料夾算；`$ref`／`$env` 交給 aos-json 解與改。**只解要用的那一格**（`parts` 本身是 `$ref`＝整份解），所以別格的 `$env` 沒設不擋這一格。`--env` 只收字面字串，要 `$env` 就手寫或 `aos-json env`。
   **找（which／run）**：註冊檔有＝用它，路徑壞＝`PartBad`、不退去找固定名字；沒有＝註冊檔所在資料夾的 `<資料夾>/<槽>`（捷徑、真資料夾、檔都行；印 abspath、捷徑不解開；在但壞也是 `PartBad`）；都沒有＝`which` 退 10、什麼都不印，`run` 報 `PartMissing`。`which --json` 印 `{"slot", "path", "from": "parts"|"fixed", "env"}`（env 已解指示詞；固定名字＝`{}`）。不退去用 lib 的標準件。
-  **run**：`aos-exec 路徑 args…`（exec 換過去，結束碼是那格的），環境＝自己的環境疊上註冊檔的 `env`（同名以註冊檔為準）；`AOS_STACK`、`AOS_WS` 原樣傳。`loop.json` 叫一格用 `["aos-parts", "run", 槽, {"$env": "AOS_CD"}]`（例 eca-claude 的 `turn`；agent-nia 的一輪是下面的 `aos-round`，不經 aos-parts run）。
+  **run**：`aos-exec 路徑 args…`（exec 換過去，結束碼是那格的），環境＝自己的環境疊上註冊檔的 `env`（同名以註冊檔為準）；`AOS_STACK`、`AOS_WS` 原樣傳。`loop.json` 叫一格用 `["aos-parts", "run", 槽, {"$env": "AOS_CD"}]`（10-31 前 eca-claude 的 `turn` 就這樣叫，現在改成直接叫下面的 `aos-eca-turn`；agent-nia 的一輪是下面的 `aos-round`，都不經 aos-parts run）。
   **ls／get** 只看登記了的（固定名字不列）；ls 一行「槽 TAB 路徑」，`--json`／get 帶 env（解開後的值）；登記了但壞也報錯。
   **錯**：stderr 一行 `aos-parts: 代號 原因`、退 1（`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`RegistryBad`、`SlotBad`、`PathMissing`、`PathBad`、`PartBad`、`PartExists`、`PartMissing`、`DirectiveBad`、`CommandMissing`、`WriteFailed`）。要 PATH 上有 aos-exec、aos-json。測試 `proto8/tests/test_aos_parts.py`。
 
@@ -39,10 +39,15 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
   設 `ROUND_AGENT=<agent>`、相對的 `AOS_STACK`／`AOS_WS` 先以 cwd 轉絕對，cd 到 `lib/agent/round/`（從自己的實際位置找），exec 成 `aos-fsm 表檔`——結束碼就是 aos-fsm 的。沒設 `AOS_STACK` 交給 aos-fsm 說。不開窗、不寫檔。agent 的 `loop.json` 這樣叫：`{"exec": {"argv": ["aos-round", {"$env": "AOS_CD"}], "timeout_ms": 600000}}`（`timeout_ms` 管一格）。
   **錯**：stderr 一行 `aos-round: 代號 原因`、退 1（`ArgumentsBad`、`AgentBad`、`PartsBad`、`SettingBad`、`CommandMissing`）。要 PATH 上有 aos-parts、aos-fsm（格還要 aos-exec、aos-tools、aos-post）。測試 `proto8/tests/test_round.py` 的 `AosRound`。
 
+- **`aos-eca-turn - 外部 coding agent（claude／codex）的一輪：從 stack 的 queue 認領一則、交給 CLI 答、回答接進 history`**（10-31 改名、升成 bin 指令；使用者「aos eca turn」、C-54 R13 `aos-<領域>-<功能>`，跟 `aos-round` 對稱；前身 10-30 的 `lib/eca/turn` 格；設計 [thinking 10-30 eca](../thinking/2026-10-30-eca.md)；完整說明在檔頭 docstring）
+  用法 `aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] <定義資料夾絕對路徑>`（旗標在位置參數前）。定義＝`demo/eca-claude` 那種（頂層 `cli.json`、選填 `prompt.txt`），定義不被寫、寫的都在 `$AOS_STACK`。一次答一則：`queue/cur/` 有信先接、否則 `aos-post claim` 一封 → user 接進 `history.jsonl` → 經 `lib/agent/cli_session.py` 的 `ask` 問 CLI（畫面開著貼字、沒開 `--resume`）→ assistant 接進 history → 收信；壞信丟掉、trace 記 `letter_warning`；trace 一行 `unit: "aos-eca-turn"`；`$AOS_STACK/eca.json` 記 kind、ws、template。
+  **`--on-empty`**（10-31 取代環境變數 `ECA_ON_EMPTY`，不再讀它）：queue 空時 `stop`（沒給；退 10＝loop 收工）｜`idle`（退 0＝loop 隔 `interval_ms` 再來）；壞值、跟 `--one` 一起給＝`ArgumentsBad`。**`--on-busy`**（10-31）：`yield`（沒給）＝lock 拿不到、有人接在 tmux 畫面上、`busy.txt` 在＝這輪退 0、信留 `cur/`、不寫 trace（`--one` 照錯退 1）｜`answer`＝照常答不退讓（lock 等、有人接著照樣貼、`busy.txt` 等它消失，共用 `timeout_ms` 期限，逾時 `ReplyMissing`）。`--one`＝工具形（stdin `{"prompt"}` → stdout，同 `lib/agent/claude` 的 `call_main`）。定義的 `loop.json` 這樣叫：`{"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000}}`。
+  **錯**：stderr 一行 `aos-eca-turn: 代號 原因`、退 1（`ArgumentsBad`、`FlagUnknown`、`AgentBad`、`StackMissing`、`HistoryBad`、`PostFailed`、`WriteFailed`，加 cli_session 的 `CfgMissing`、`CfgBad`、`CliMissing`、`CliFailed`、`ReplyMissing`）；10-30 的 `SettingBad` 拿掉了。要 PATH 上有 aos-post。測試 `proto8/tests/test_eca_turn.py`（範本 `test_eca.py`）。
+
 - **`aos-tick - 把時鐘檔的回合數往前走一格`**（NAME，C-54 R1）
   用法 `aos-tick [旗標] FILE`（Python）：時鐘往前走一格（C-44：只是時鐘，不包任務、不保證什麼）。FILE 裡是回合數（十進位＋換行），讀出 n、寫回 n＋1 就退 0；FILE 不在＝0（第一次寫 1）；寫進 n＋1＝第 n 回合結束、第 n＋1 回合開始，mtime＝這回合從什麼時候開始。先寫同資料夾的 `.名字` 再改名蓋過去（N-05），不 fsync，stdout 不吐東西。**命令列**：唯一的位置參數就是 FILE（必給、只能一個、相對路徑從 cwd 算）；FILE 照字面用，`#` 不切指標（它是時鐘檔不是設定檔）；目前沒有旗標（旗標表是空的、走 `aos_flags`，`--` 結束旗標）。**自己的錯**退 1、stderr 一行 `aos-tick: 代號 原因`、FILE 不動：`ArgumentsBad usage: aos-tick [旗標] FILE（原因）`（跟 aos-loop、aos-fsm 同一個寫法）（沒給、多給；不認得的旗標是 `FlagUnknown usage: …`）、`ClockBad 時鐘檔讀不到：`（例：它是資料夾）、`ClockBad 時鐘檔壞：`（內容不是 `[0-9]+` 加可有可無的一個 `\n`；空檔、`\r\n`、空白、負號、全形數字都算壞）、`WriteFailed 時鐘檔寫不了：`（資料夾不在或沒寫入權限；不替人建資料夾，暫存檔會清掉）。節奏、停、只走 N 回合交給 loop（`max`、`interval_ms`、ctl 的 `paused`）；同一個 FILE 兩個人同時 tick 不管。
 
-- `aos_flags.py`：命令列旗標解析 `parse(argv, 旗標表)` 回 `(opts, [XXX, args...])`（`--x V`／`--x=V`、重複給最後一個算、`--` 結束旗標、第一個不是旗標的參數起原樣；不認得＝`FlagUnknown`、缺值＝`ArgumentsBad`）。aos-tick、aos-tools、aos-parts 用。
+- `aos_flags.py`：命令列旗標解析 `parse(argv, 旗標表)` 回 `(opts, [XXX, args...])`（`--x V`／`--x=V`、重複給最後一個算、`--` 結束旗標、第一個不是旗標的參數起原樣；不認得＝`FlagUnknown`、缺值＝`ArgumentsBad`）。aos-tick、aos-tools、aos-parts、aos-eca-turn 用。
 
 執行中狀態（`state.txt`、`trace.jsonl`、`plan.txt`、`current.txt`）在 `$AOS_STACK`（預設 `$AOS_WS/.stack/`）；工作區只放交辦的東西與成果（題目 `new/` → 認領 `cur/` → `done/`，答案 `out/`）；定義資料夾不被寫，所以同一個 agent 可同時被兩個工作區跑。結果＝工作區內容；沒有別的結果通道。
 

@@ -1,5 +1,5 @@
 """test_eca - 外部 coding agent 範本 demo/eca-claude、demo/eca-codex（eca B 結論 1、實作第 5 步）：
-aos-say → aos-exec 跑範本（aos-loop 包 lib/eca/turn）→ aos-listen 拿回答；射後不理（ECA_ON_EMPTY=stop）跑完就結束，
+aos-say → aos-exec 跑範本（aos-loop 包 bin/aos-eca-turn，10-31 前是 lib/eca/turn）→ aos-listen 拿回答；射後不理（--on-empty stop）跑完就結束，
 停著等（範本本身，idle）背景跑、ctl.json paused 時信留 new/、aos-listen --status 看得到 paused。
 
 用 test_fay 的假 claude／codex，不花額度。設計：proto8/thinking/2026-10-30-eca.md。"""
@@ -12,8 +12,7 @@ from aos_bins import ROOT, EXEC, path_with  # noqa: E402
 from test_fay import FAKE_CLAUDE, FAKE_CODEX, SYS_PATH  # noqa: E402
 HUMAN = ROOT / "extras" / "human" / "bin"
 TEMPLATES = {k: ROOT / "demo" / ("eca-" + k) for k in ("claude", "codex")}
-TURN = ROOT / "lib" / "eca" / "turn"
-CLEAR = ("AOS_HUB", "AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CD", "AOS_CF", "AOS_CO", "TMUX", "ECA_ON_EMPTY",
+CLEAR = ("AOS_HUB", "AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CD", "AOS_CF", "AOS_CO", "TMUX",
          "CLAUDE_CONFIG_DIR", "CODEX_HOME", "FAKE_TRANSCRIPTS")
 
 
@@ -50,10 +49,13 @@ class Eca(unittest.TestCase):
         return self.run_([HUMAN / "aos-listen", "--ws", self.ws] + list(args))
 
     def fire_and_forget(self, kind):
-        """範本複製一份改成射後不理：parts.json 的 turn 指絕對路徑、ECA_ON_EMPTY=stop（複本搬了家，相對路徑會斷）。"""
+        """範本複製一份改成射後不理：loop.json 的 --on-empty idle 換成 stop（aos-eca-turn 在 PATH 上、定義＝AOS_CD，搬家不斷）。"""
         d = self.tmp / ("eca-%s-once" % kind)
         shutil.copytree(TEMPLATES[kind], d)
-        (d / "parts.json").write_text(json.dumps({"parts": {"turn": {"path": str(TURN), "env": {"ECA_ON_EMPTY": "stop"}}}}))
+        loop = json.loads((d / "loop.json").read_text())
+        argv = loop["exec"]["argv"]
+        argv[argv.index("--on-empty") + 1] = "stop"
+        (d / "loop.json").write_text(json.dumps(loop))
         return d
 
     def sid(self, kind):
@@ -71,20 +73,20 @@ class Eca(unittest.TestCase):
         return False
 
     def test_templates_shape(self):
-        """兩份範本：_entry 是 aos-loop loop.json 的一行 argv（JSON、不給 +x）、loop.json 停著等版、parts.json 一格 turn（idle）、cli.json 的 kind。"""
+        """兩份範本：_entry 是 aos-loop loop.json 的一行 argv（JSON、不給 +x）、loop.json 停著等版（exec 直接叫 aos-eca-turn，
+        --on-empty idle、--on-busy yield 明寫；10-31 起沒有 parts.json）、cli.json 的 kind。"""
         for kind, d in TEMPLATES.items():
             self.assertEqual(json.loads((d / "_entry").read_text()), ["aos-loop", "loop.json"])
             self.assertFalse(os.stat(d / "_entry").st_mode & 0o111, "%s/_entry 不該有 +x" % d.name)
             loop = json.loads((d / "loop.json").read_text())
             self.assertEqual((loop["interval_ms"], loop["ctl"], loop["state"], "max" in loop), (300, "ctl.json", "state.json", False))
-            parts = json.loads((d / "parts.json").read_text())["parts"]
-            self.assertEqual(list(parts), ["turn"])
-            self.assertEqual(parts["turn"]["env"], {"ECA_ON_EMPTY": "idle"})
-            self.assertEqual((d / parts["turn"]["path"]).resolve(), TURN.resolve())
+            self.assertEqual(loop["exec"], {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}],
+                                            "timeout_ms": 900000})
+            self.assertFalse((d / "parts.json").exists())
             self.assertEqual(json.loads((d / "cli.json").read_text())["kind"], kind)
 
     def test_fire_and_forget(self):
-        """射後不理：say 一句 → aos-exec 跑到 queue 空就收工（turn 退 10、aos-loop 以 0 結束）→ listen 拿到回答。"""
+        """射後不理：say 一句 → aos-exec 跑到 queue 空就收工（aos-eca-turn 退 10、aos-loop 以 0 結束）→ listen 拿到回答。"""
         for kind in ("claude", "codex"):
             sig = self.say("%s 你好" % kind)
             r = self.run_([EXEC, "--ws", self.ws, self.fire_and_forget(kind)])

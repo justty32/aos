@@ -2,7 +2,7 @@
 信箱模式的 aos-daemon 底下（aos-daemon-ctl add --ws），add／ls／state／open／close／stop，以及 aos-say／aos-listen 經工作區的
 .stack 捷徑對它說話。
 
-定義在測試裡臨時組（cli.json＋loop.json 一格 lib/eca/turn＋_entry 轉 aos-loop），用 --template 指；CLI 用 test_fay 的假 claude
+定義在測試裡臨時組（cli.json＋loop.json 叫 bin/aos-eca-turn --on-empty idle＋_entry 轉 aos-loop），用 --template 指；CLI 用 test_fay 的假 claude
 （外面包一層：有 BROKEN 這個檔就退 1，測「出錯停了」），不花額度。要 tmux 的只有 open -d 那案（沒有就 skip）。
 設計：proto8/thinking/2026-10-30-eca.md C 結論 7～10。"""
 import json, os, shutil, subprocess, tempfile, time, unittest
@@ -14,9 +14,9 @@ from aos_bins import ROOT, tool, path_with  # noqa: E402
 from test_fay import FAKE_CLAUDE, SYS_PATH, HAS_TMUX  # noqa: E402
 HUB = ROOT / "extras" / "eca_hub" / "bin" / "aos-eca-hub"
 HUMAN = ROOT / "extras" / "human" / "bin"
-TURN = ROOT / "lib" / "eca" / "turn"
+TURN = ROOT / "bin" / "aos-eca-turn"
 DAEMON = tool("aos-daemon")
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CD", "AOS_CF", "AOS_CO", "AOS_DAEMON", "TMUX", "ECA_ON_EMPTY",
+CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CD", "AOS_CF", "AOS_CO", "AOS_DAEMON", "TMUX",
          "CLAUDE_CONFIG_DIR", "CODEX_HOME", "FAKE_TRANSCRIPTS")
 WRAP = '#!/bin/sh\nif [ -e "$BROKEN" ]; then echo \'{"is_error": true, "result": "壞了"}\'; exit 1; fi\nexec "$(dirname "$0")/claude-real" "$@"\n'
 
@@ -32,11 +32,11 @@ class EcaHub(unittest.TestCase):
             (self.bin / name).chmod(0o755)
         self.log = self.tmp / "cli.log"
         self.broken = self.tmp / "BROKEN"
-        self.tpl = self.tmp / "eca-claude"                          # 定義：exec 直接寫 turn 與定義的絕對路徑（不靠 AOS_CD）
+        self.tpl = self.tmp / "eca-claude"                          # 定義：exec 直接寫 aos-eca-turn 與定義的絕對路徑（不靠 AOS_CD）
         self.tpl.mkdir()
         cfg = json.loads((ROOT / "lib" / "agent" / "claude" / "cli.json").read_text())
         (self.tpl / "cli.json").write_text(json.dumps(dict(cfg, timeout_ms=15000)))
-        (self.tpl / "loop.json").write_text(json.dumps({"exec": [str(TURN), str(self.tpl)], "interval_ms": 100,
+        (self.tpl / "loop.json").write_text(json.dumps({"exec": [str(TURN), "--on-empty", "idle", str(self.tpl)], "interval_ms": 100,
                                                         "ctl": "ctl.json", "state": "state.json"}))
         (self.tpl / "_entry").write_text(json.dumps(["aos-loop", "loop.json"]))
         self.ds = self.tmp / "dstack"                                # daemon 的 $AOS_STACK＝AOS_DAEMON
@@ -55,7 +55,7 @@ class EcaHub(unittest.TestCase):
     def env(self, extra=None, daemon=True):
         e = {k: v for k, v in os.environ.items() if k not in CLEAR}
         e.update(PATH=path_with(str(self.bin) + os.pathsep + str(ROOT / "bin") + os.pathsep + SYS_PATH), FAKE_LOG=str(self.log),
-                 CLAUDE_CONFIG_DIR=str(self.tmp / "claude-home"), FAKE_TRANSCRIPTS="1", ECA_ON_EMPTY="idle",
+                 CLAUDE_CONFIG_DIR=str(self.tmp / "claude-home"), FAKE_TRANSCRIPTS="1",
                  BROKEN=str(self.broken))
         if daemon:
             e["AOS_DAEMON"] = str(self.ds)
@@ -224,7 +224,7 @@ class EcaHub(unittest.TestCase):
 
     def test_default_template(self):
         """不給 --template＝proto8/demo/eca-claude（方向題 3）：掛 daemon 時 aos-daemon-ctl 把 {"$env": "AOS_CD"} 換成定義路徑，
-        turn 拿得到 cli.json；say／listen 答得出、ls 的 template 是 demo/eca-claude。"""
+        aos-eca-turn 拿得到 cli.json；say／listen 答得出、ls 的 template 是 demo/eca-claude。"""
         self.start_daemon()
         w = self.ws()
         r = self.hub("add", w)

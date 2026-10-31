@@ -2,8 +2,8 @@
 # codex - 把 stdin 的 {"prompt": "..."} 交給 codex CLI 做，stdout 印它的回答；對話續在這個工具的小格（$AOS_STACK），人可以用 agent 的 attach 接進去
 # 介面（lib/README 的契約）：stdin 收 {"prompt"}；錯：stderr 與 stdout 各一行「codex: 代號 原因」、退 1（ArgumentsBad、CliMissing、CliFailed、SessionBad…）。
 # 怎麼叫 CLI（旗標、逾時 timeout_ms）在同資料夾的 cli.json；做法在 lib/agent/cli_session.py（claude、codex 共用）。
-# 10-30 eca 第 5 步：這就是 eca 的「工具形」——跟 lib/eca/turn --one 走同一支 cli_session.call_main（問 CLI 那段是 cli_session.ask，
-# 平級形的 turn 也叫它）；不改成 exec turn：多一層行程，而且整個資料夾被複製進 agent 的 tools/ 時找不到 lib/eca/。
+# 10-30 eca 第 5 步：這就是 eca 的「工具形」——跟 aos-eca-turn --one（proto8/bin，10-31 前是 lib/eca/turn）走同一支 cli_session.call_main
+# （問 CLI 那段是 cli_session.ask，平級形的 aos-eca-turn 也叫它；這裡用 on_busy 預設 yield）；不改成 exec aos-eca-turn：多一層行程。
 # 來源：demo/agent-fay/tools/codex（10-24 遷移）。找 cli_session.py：庫裡在上一層（lib/agent/）；整個資料夾被複製進某隻 agent 的 tools/
 # （覆寫、釘版）時，找那隻 agent 根的 cli_session.py（agent-fay 根就有一個捷徑）。
 import os, sys

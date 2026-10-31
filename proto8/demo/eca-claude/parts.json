@@ -1,5 +1,0 @@
-{
- "parts": {
-  "turn": {"path": "../../lib/eca/turn", "env": {"ECA_ON_EMPTY": "idle"}}
- }
-}

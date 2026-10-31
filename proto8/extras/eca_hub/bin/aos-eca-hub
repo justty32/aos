@@ -5,7 +5,7 @@
     aos-eca-hub ls    [--json]                         列掛著的外部 agent：名字、phase、畫面、種類、工作區、對話 id 前 8 碼
     aos-eca-hub state [資料夾|名字]                    這裡是不是掛著的外部 agent（不是＝InstanceMissing、退 1）
     aos-eca-hub open  [-d] [--kind …|--template …] [--name N] [資料夾|名字]   接進畫面（沒開就開、有對話就 --resume；還沒掛就先 add）
-    aos-eca-hub close [資料夾|名字]                    收起：關畫面、對話留著（turn 照樣用 --resume 答）；出錯停了的＝重新掛一次
+    aos-eca-hub close [資料夾|名字]                    收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）；出錯停了的＝重新掛一次
     aos-eca-hub close --idle 分                        收起所有畫面開著、閒了這麼多分的（reap.json 每分鐘叫一次）
     aos-eca-hub stop  [資料夾|名字]                    結束：關畫面、從 daemon 拿掉、拿掉工作區的 .stack 捷徑、小格搬到 <daemon>/eca_archive/<名字>-<UTC>/
     aos-eca-hub watch [資料夾|名字]                    跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走
@@ -17,7 +17,7 @@ daemon 沒在跑〔loops_state.json 的 pid＋started_at_ticks 對不上〕＝Da
 一隻＝「定義 × 資料夾」：定義＝--template ＞ proto8/demo/eca-<--kind，沒給＝claude>（頂層要有 cli.json）；資料夾沒給＝cwd，就是 claude 的 cwd。
   add＝aos-daemon-ctl add --ws 資料夾 --name 名字 定義（名字沒給＝資料夾名）；資料夾沒有 .stack 就由 aos-daemon-ctl 建 symlink 指到小格
   （衝突 3），cd 進去 aos-say／aos-listen 就接上；已經有＝不建、它在 stderr 說一句。
-「掛著的外部 agent」＝daemon 的 loops 表上、小格裡有 eca.json 的（turn 每次跑都寫：kind、ws、template）；add 之後子 loop 跑第一次才有。
+「掛著的外部 agent」＝daemon 的 loops 表上、小格裡有 eca.json 的（aos-eca-turn 每次跑都寫：kind、ws、template）；add 之後子 loop 跑第一次才有。
 CLI 的小格＝<daemon>/<名字>/<kind>/（cli_session 的 session.txt、tty.sock、live.jsonl、transcripts/）。
 畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。「暫停」只有 ctl.json 的 paused 一種（寫 <小格>/ctl.json），這裡不另做。
 錯：stderr 一行 `aos-eca-hub: 代號 原因`、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、
@@ -300,7 +300,7 @@ def cmd_close(argv):
         closed = close_screen(r)
     except Busy as e:
         die("SessionBad", e)
-    if failed(r):                                        # 出錯停了（P-20）：拿掉再掛回去＝重新收（信還在 cur/，turn 接著做）
+    if failed(r):                                        # 出錯停了（P-20）：拿掉再掛回去＝重新收（信還在 cur/，aos-eca-turn 接著做）
         ctl("rm", r["name"])
         wait_for(lambda: not rows_named(r["name"]), "daemon 還沒把 %s 拿掉" % r["name"])
         ctl("add", "--ws", r["ws"], "--name", r["name"], r["template"])

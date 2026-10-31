@@ -7,7 +7,7 @@
   ② history＝<stack>/history.jsonl（回答＝最新那則沒有 tool_calls 的 assistant，沒有 out/）；
   ③ ctl／state＝aos-loop 開在 <stack>/ctl.json、state.json 的窗（state 的 phase 看得出 paused）。
 舊協議（工作區的 new/ cur/ out/ done/，P-11 的 10-30 改口：agent-bob／ann／dan、topdown 這些 fsm 範本）這裡不再認。
-stack 裡 fsm 每格一行 trace.jsonl（P-07；aos-round 也是這種）、eca turn 與 10-30 前的舊 round 每格一行（unit）這裡只讀不改。"""
+stack 裡 fsm 每格一行 trace.jsonl（P-07；aos-round 也是這種）、aos-eca-turn 與 10-30 前的舊 round 每格一行（unit）這裡只讀不改。"""
 import json, os, subprocess
 
 STAGES = ("new", "cur", "done")              # queue 的格；tmp/ 是寄到一半的，不看
@@ -149,7 +149,7 @@ def last_jsonl(path):
 
 
 def unit_of(t):
-    """trace 一行是哪一格：fsm（含 aos-round）寫 state；eca turn 與 10-30 前的舊 round 寫 unit（舊 stack 還讀得到）。"""
+    """trace 一行是哪一格：fsm（含 aos-round）寫 state；aos-eca-turn 與 10-30 前的舊 round 寫 unit（舊 stack 還讀得到）。"""
     return t.get("unit") or t.get("state") or "?"
 
 

@@ -363,14 +363,13 @@ aos-exec --ws <工作區> proto8/demo/agent-nia        # PATH 照上面放好（
 <a id="eca-templates"></a>
 ## 外部 coding agent 範本（eca-claude、eca-codex，10-30）
 
-claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 agent-nia 同形的定義資料夾，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。設計：[thinking 2026-10-30 eca](../thinking/2026-10-30-eca.md) B 結論 1、2；條文草稿 P-43。兩份只差 `cli.json`。
+claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 agent-nia 同形的定義資料夾（10-31 起 `loop.json` 直接叫 [`aos-eca-turn`](../bin/README.md)，`parts.json` 拿掉了；10-30 是 `aos-parts run turn` 叫 `lib/eca/turn` 格），aos 只碰它 stack 裡的 queue／history／ctl（P-42）。設計：[thinking 2026-10-30 eca](../thinking/2026-10-30-eca.md) B 結論 1、2；條文草稿 P-43。兩份只差 `cli.json`。
 
 ```
 eca-claude/
   _entry      ["aos-loop", "loop.json"]（JSON 入口，同 agent-nia）
-  loop.json   {"exec": {"argv": ["aos-parts", "run", "turn", {"$env": "AOS_CD"}], "timeout_ms": 900000}, "interval_ms": 300,
-               "ctl": "ctl.json", "state": "state.json"}（停著等版：沒有 max；兩扇窗落在 $AOS_STACK）
-  parts.json  只有一格 turn → ../../lib/eca/turn（env ECA_ON_EMPTY idle：queue 空就退 0、loop 隔 300 毫秒再來）
+  loop.json   {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000},
+               "interval_ms": 300, "ctl": "ctl.json", "state": "state.json"}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；兩扇窗落在 $AOS_STACK）
   cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms），抄 lib/agent/claude 的保守旗標；eca-codex 抄 lib/agent/codex 的
   prompt.txt  （選填，範本沒有）開場白：history 與 queue 都空時當第一則 user 投進 queue
 ```
@@ -378,13 +377,13 @@ eca-claude/
 **實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`，裡面長 `queue/`、`history.jsonl`、`trace.jsonl`、`ctl.json`、`state.json`、`eca.json`（kind、ws、template）與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）。
 
 ```sh
-aos-exec --ws ~/code/myproj proto8/demo/eca-claude &     # PATH 要有 impls 的 aos-exec／aos-loop／aos-post、proto8/bin 的 aos-parts、claude
+aos-exec --ws ~/code/myproj proto8/demo/eca-claude &     # PATH 要有 impls 的 aos-exec／aos-loop／aos-post、proto8/bin 的 aos-eca-turn、claude
 aos-listen --ws ~/code/myproj "$(aos-say --ws ~/code/myproj 看一下 README 在講什麼)"
 echo '{"paused": true}' > ~/code/myproj/.stack/ctl.json     # 暫停：不餵下一則（新信留 queue/new/），粒度＝一則訊息
 echo '{"stopped": true}' > ~/code/myproj/.stack/ctl.json    # 收工
 ```
 
-turn 一次答一則：`cur/` 有沒答完的先接、否則認領一封 → user 接進 history → 問 CLI（畫面開著＝貼進 tmux 畫面等 hook；沒開＝`claude -p --resume <id>`，第一次開新的）→ assistant 接進 history → 收信；壞信丟掉、trace 記 `letter_warning`；有人接在畫面上（`SessionBad`）＝這次不動、信留著下次再試。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，parts.json 的 turn 改 `"ECA_ON_EMPTY": "stop"`（複本搬了家，`path` 要改絕對；或在定義放 `prompt.txt`）——queue 空 turn 退 10、loop 以 0 收工。CLI 那層出錯＝turn 退 1、loop 停下等人（信留 `cur/`）。接進畫面與歸檔（aos-eca-hub）是第 6 步。測試 `test_eca.py`（範本）、`test_eca_turn.py`（turn 格）。
+`aos-eca-turn` 一次答一則：`cur/` 有沒答完的先接、否則認領一封 → user 接進 history → 問 CLI（畫面開著＝貼進 tmux 畫面等 hook；沒開＝`claude -p --resume <id>`，第一次開新的）→ assistant 接進 history → 收信；壞信丟掉、trace 記 `letter_warning`；有人接在畫面上（`SessionBad`）＝這次不動、信留著下次再試（`--on-busy yield`；改 `answer`＝照常答、不退讓）。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就在定義放 `prompt.txt`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。接進畫面與歸檔（aos-eca-hub）是第 6 步。測試 `test_eca.py`（範本）、`test_eca_turn.py`（aos-eca-turn）。
 
 ## 測試
 

@@ -14,7 +14,6 @@ demo/agent-*/              最上層：agent 本身（也是函數）
 lib/agent/                 高層：裡面是一整隻 agent（或外部 agent CLI）的工具（pyfix、claude、codex）＋共用模組 agent_tool.py、cli_session.py
                            ＋agent 自己的格（round、queue、history、compact、act；不是工具，見下「agent 自己的格」）
 lib/endpoint/              腦（endpoint 格）：fake、openai——round 問腦叫的，不是工具
-lib/eca/                   外部 coding agent（claude／codex 當平級 agent）的格：turn——定義的 aos-loop 叫的，不是工具（見下「外部 agent 的格」）
 lib/aos/                   中層：動 aos 自己東西的工具（記憶 heap、寄信、spawn／ask／status、try_run）＋共用模組 aos_ws.py
 lib/base/                  底層原語：檔案、資料夾、JSON、行程（bash）、小工具——Linux＋Python 標準庫（json_edit 另叫 aos-json）、只碰 $AOS_WS
 impls/                     基礎層與標準庫（C-74）：aos-exec 把工具叫起來，loop／fsm 跑 agent
@@ -117,14 +116,14 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 
 **共用模組**（不是工具、沒有 `_entry`；工具用 realpath 找到 `lib/agent/` 再 import）：
 - [agent_tool.py](agent/agent_tool.py)：「把一隻 agent 包成工具」的轉接，共用一支——每次呼叫開新小格 `$AOS_STACK/runs/NNN/`、題目寫進子 agent 的 `ws/new/`、`aos-exec --dotenv-override --ws` 跑、拿 `ws/out/` 的答案（錯 `AgentFailed`、`AnswerMissing`）。要把另一隻 agent 包成工具：資料夾裡放 `agent/`、`_entry` 叫 `agent_tool.run_agent`（pyfix 是範例）。
-- [cli_session.py](agent/cli_session.py)：claude／codex CLI 接成工具的做法（非互動續對話、或 tmux 畫面開著時從畫面送字）；工具資料夾由 `_entry` 傳進來（`cli.json` 在那裡）、agent 資料夾由 `attach` 傳進來。工具被整個複製進某隻 agent 的 `tools/`（覆寫）時，`_entry` 改找那隻 agent 根的 `cli_session.py`。拿到 session id 就在小格建 `transcripts/<kind>-<id>.jsonl`＝指到 CLI 自己存的對話檔（claude `~/.claude/projects/*/<id>.jsonl`、codex `~/.codex/sessions/**/*<id>.jsonl`）的 symlink，工具形（agent 叫的）也建；歸檔時 `freeze_transcripts(cell, kind)` 換成複製、指不到的不報錯（10-30 [eca](../thinking/2026-10-30-eca.md) 第 3 步、agent-lifecycle C-15～C-17）。問 CLI 那段（note_cell → lock → 畫面開著貼字／沒開非互動 → symlink）是 `ask(cfg, cell, tool_dir, ws, prompt)`，工具形 `call_main` 與 eca 的 [turn](eca/turn/turn.py) 共用（10-30 eca 第 5 步）。10-30 起不再送 `register` 給 `$AOS_HUB` 的 kernel（eca 衝突 6），格裡照舊記 `tool.txt`／`ws.txt`（`note_cell`，叫回畫面用）。
+- [cli_session.py](agent/cli_session.py)：claude／codex CLI 接成工具的做法（非互動續對話、或 tmux 畫面開著時從畫面送字）；工具資料夾由 `_entry` 傳進來（`cli.json` 在那裡）、agent 資料夾由 `attach` 傳進來。工具被整個複製進某隻 agent 的 `tools/`（覆寫）時，`_entry` 改找那隻 agent 根的 `cli_session.py`。拿到 session id 就在小格建 `transcripts/<kind>-<id>.jsonl`＝指到 CLI 自己存的對話檔（claude `~/.claude/projects/*/<id>.jsonl`、codex `~/.codex/sessions/**/*<id>.jsonl`）的 symlink，工具形（agent 叫的）也建；歸檔時 `freeze_transcripts(cell, kind)` 換成複製、指不到的不報錯（10-30 [eca](../thinking/2026-10-30-eca.md) 第 3 步、agent-lifecycle C-15～C-17）。問 CLI 那段（note_cell → lock → 畫面開著貼字／沒開非互動 → symlink）是 `ask(cfg, cell, tool_dir, ws, prompt)`，工具形 `call_main` 與 eca 的 [`aos-eca-turn`](../bin/aos-eca-turn) 共用（10-30 eca 第 5 步；10-31 前是 `lib/eca/turn` 格）。`live`、`ask`、`call_main` 10-31 多一個參數 `on_busy`（預設 `"yield"`＝有人佔著就 `SessionBad`，lib/agent/claude、codex 照用預設；`"answer"`＝lock 等、有人接著照樣貼、`busy.txt` 等它消失，給 `aos-eca-turn --on-busy answer`）。10-30 起不再送 `register` 給 `$AOS_HUB` 的 kernel（eca 衝突 6），格裡照舊記 `tool.txt`／`ws.txt`（`note_cell`，叫回畫面用）。
 
 pyfix 的子 agent 要改的程式在 `PYFIX_DIR`（`$AOS_WS/<dir>`），自己的 `$AOS_WS` 是收題交答案的小格，所以它的 act 用 `aos-exec --ws $PYFIX_DIR tools/<名>` 叫庫的工具（規則 4：換根是呼叫者的事）；庫的工具錯一律退 1，子 agent 的 act 把那行回給腦。
 沒收進來的：agent-gus 的「小念頭」（`thought.json`／`thought.py`）——它是 agent-gus 自己的入口、遞迴起 agent-gus 本身（`shared.launch`），要收就得把整隻 agent-gus 搬進庫；也沒有給模型的 `_tooldef.json`。aos-json 自帶的 `tools/json`、`tools/json_edit`（小念頭式兩步改）留在 `impls/aos-json/`，跟它的測試在一起。
 
 ## agent 自己的格（不是工具，沒有 _tooldef.json）
 
-一隻 agent 的一輪（round）照順序叫的格（設計與代定：[thinking 2026-10-28 agent-round](../thinking/2026-10-28-agent-round.md)；10-30 起一輪由 [`aos-round`](../bin/README.md) 跑：`lib/agent/round/` 的 fsm 表＋五個薄格，一次一格，[thinking 2026-10-30 aos-round](../thinking/2026-10-30-aos-round.md)）。它們**不是給腦叫的工具**：沒有 `_tooldef.json`、`_metainfo`，不登記進 `tools.json`，而是登記進 agent 資料夾的格註冊檔 `parts.json`（[`aos-parts`](../bin/README.md)），或在 agent 資料夾放同名的捷徑。叫法一律 `aos-exec <格> <agent 資料夾絕對路徑> [子命令]`，stdin／stdout 是資料、錯 stderr 一行 `名: 代號 原因`、退 1（N-43）；這幾格共用 agent 的 `$AOS_STACK`（P-16）。所以上面「一個工具長什麼樣」的契約不套它們，`tests/test_lib.py` 的形狀檢查跳過這些格（`lib/endpoint/`、`lib/eca/` 整層、`lib/agent/` 的 round、queue、history、compact、act）；它們的測試在 `tests/test_round.py`、`test_round_queue.py`。
+一隻 agent 的一輪（round）照順序叫的格（設計與代定：[thinking 2026-10-28 agent-round](../thinking/2026-10-28-agent-round.md)；10-30 起一輪由 [`aos-round`](../bin/README.md) 跑：`lib/agent/round/` 的 fsm 表＋五個薄格，一次一格，[thinking 2026-10-30 aos-round](../thinking/2026-10-30-aos-round.md)）。它們**不是給腦叫的工具**：沒有 `_tooldef.json`、`_metainfo`，不登記進 `tools.json`，而是登記進 agent 資料夾的格註冊檔 `parts.json`（[`aos-parts`](../bin/README.md)），或在 agent 資料夾放同名的捷徑。叫法一律 `aos-exec <格> <agent 資料夾絕對路徑> [子命令]`，stdin／stdout 是資料、錯 stderr 一行 `名: 代號 原因`、退 1（N-43）；這幾格共用 agent 的 `$AOS_STACK`（P-16）。所以上面「一個工具長什麼樣」的契約不套它們，`tests/test_lib.py` 的形狀檢查跳過這些格（`lib/endpoint/` 整層〔10-31 前還有 `lib/eca/`〕、`lib/agent/` 的 round、queue、history、compact、act）；它們的測試在 `tests/test_round.py`、`test_round_queue.py`。
 
 | 格 | 一句話 | 子命令／stdin → stdout |
 |---|---|---|
@@ -134,13 +133,10 @@ pyfix 的子 agent 要改的程式在 `PYFIX_DIR`（`$AOS_WS/<dir>`），自己�
 | [compact](agent/compact/) | 掛 `hook/pre_think`：超過 `MAX_BYTES` 才壓（agent-hal 三步土法），交給 history compact 換上 | `[--force]` |
 | [act](agent/act/) | 照腦的決定跑工具（pre_tool → aos-tools call → post_tool，`MAX_PARALLEL`、插話退 10） | 一則 assistant → 一行一則 tool 訊息 |
 
-## 外部 agent 的格（eca，不是工具）
+<a id="外部-agent-的格eca不是工具"></a>
+## 外部 agent 的一輪（eca，10-31 搬到 bin/）
 
-claude code、codex 這類外部 coding agent 包成跟 aos agent 範本同形的定義資料夾（`_entry` aos-loop、`parts.json` 只登記一格 `turn`、頂層 `cli.json`、選填 `prompt.txt`；條文草稿 P-43，設計 [thinking 10-30 eca](../thinking/2026-10-30-eca.md) B）。這層放它們共用的格，跟上面 agent 的格一樣沒有 `_tooldef.json`、不登記進 `tools.json`；測試 `tests/test_eca_turn.py`。
-
-| 格 | 一句話 | 叫法 |
-|---|---|---|
-| [turn](eca/turn/turn.py) | 一次替外部 agent 答一則：`$AOS_STACK/queue/` 認領（`cur/` 先接、壞信丟掉記 `letter_warning`、history 空＋有 `prompt.txt`＝先投開場白）→ user 接進 `history.jsonl` → 經 [cli_session](agent/cli_session.py) 的 `ask` 問 CLI（跟工具形 `call_main` 同一段；小格 `$AOS_STACK/<kind>/`；畫面開著貼字、沒開 `--resume`）→ assistant 接進 history → 收信；trace 一行 `unit: turn`；`SessionBad`＝退 0 信留 `cur/`；`$AOS_STACK/eca.json` 記 kind、ws、template | `aos-exec lib/eca/turn <定義資料夾絕對路徑>`：0＝答了一則（或壞信、SessionBad）、queue 空照 `ECA_ON_EMPTY` stop 退 10／idle 退 0；`--one`＝工具形（stdin `{"prompt"}` → stdout，同 lib/agent/claude） |
+claude code、codex 這類外部 coding agent 包成跟 aos agent 範本同形的定義資料夾（`_entry` aos-loop、頂層 `cli.json`、選填 `prompt.txt`；條文草稿 P-43，設計 [thinking 10-30 eca](../thinking/2026-10-30-eca.md) B）。10-30 它們共用的格 `lib/eca/turn` 放這層；**10-31 改名 `aos-eca-turn`、升成 bin 指令**（使用者「aos eca turn」，C-54 R13），`lib/eca/` 整層刪了，定義的 `loop.json` 直接叫它、不再有 `parts.json`。說明見 [bin/README](../bin/README.md)、檔頭 docstring [bin/aos-eca-turn](../bin/aos-eca-turn)；問 CLI 那段仍是這層的 [cli_session](agent/cli_session.py) `ask`。測試 `tests/test_eca_turn.py`。
 
 ## 索引：endpoint
 

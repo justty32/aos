@@ -3,7 +3,7 @@
 10-30 起照 agent 對話協議（CONVENTION P-42；thinking 2026-10-30-agent-lifecycle A-7、A-8、第 4 步）：say＝aos-post send --ordered
 <stack>/queue、listen 只看 stack（信還在 queue 就等、不見了就印 history 最新的回答；--status 看 aos-loop state.json 的 phase）。
 agent＝demo/agent-nia 的格（註冊檔改成絕對路徑放在暫存資料夾，腦壞＝endpoint 換 openai 指到 dead_brain.DEAD）。
-10-30 eca 第 7 步（去 hub 化）：External 段＝外部 coding agent（aos-loop 包 lib/eca/turn、假 claude）跑著時 say／listen 照用、
+10-30 eca 第 7 步（去 hub 化）：External 段＝外部 coding agent（aos-loop 包 bin/aos-eca-turn、假 claude）跑著時 say／listen 照用、
 --status 只靠 /proc 認得服務者（直接跑、掛 daemon 經 .stack symlink 兩種）；stack 的 server.txt 那招刪了。
 設計：proto8/thinking/2026-10-24-say-listen.md。不連網。"""
 import json, os, re, subprocess, tempfile, time, unittest
@@ -18,7 +18,7 @@ DAN = str(ROOT / "demo" / "agent-dan")              # 舊協議（讀工作區 n
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "ROUND_ON_EMPTY")
 from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 SIG = re.compile(r"^\d{12}\.\d{20}\.\d+\.\d+$")
-TURN = ROOT / "lib" / "eca" / "turn"                 # 10-30 eca：外部 coding agent 的一格（External 段）
+TURN = ROOT / "bin" / "aos-eca-turn"                # 10-30 eca：外部 coding agent 的一輪（External 段；10-31 前是 lib/eca/turn 格）
 from test_fay import FAKE_CLAUDE, SYS_PATH  # noqa: E402  假 claude（不花額度）
 
 
@@ -320,7 +320,7 @@ class ChatTest(Base):
 
 
 class External(Base):
-    """10-30 eca 第 7 步（C 結論 9、F 結論 18；衝突 6 刪 server.txt）：外部 coding agent＝aos-loop 包著 lib/eca/turn 的定義（P-43 草稿），
+    """10-30 eca 第 7 步（C 結論 9、F 結論 18；衝突 6 刪 server.txt）：外部 coding agent＝aos-loop 包著 aos-eca-turn 的定義（P-43 草稿），
     say／listen 不用改；--status 的服務者只靠 /proc。定義在這裡臨時組（demo/eca-claude 還沒有），CLI 用 test_fay 的假 claude。"""
 
     def setUp(self):
@@ -330,15 +330,15 @@ class External(Base):
         self.bin.mkdir()
         (self.bin / "claude").write_text(FAKE_CLAUDE)
         (self.bin / "claude").chmod(0o755)
-        self.eca = t / "eca-claude"                     # 定義：cli.json＋loop.json（一格 turn）＋_entry 轉 aos-loop
+        self.eca = t / "eca-claude"                     # 定義：cli.json＋loop.json（叫 aos-eca-turn）＋_entry 轉 aos-loop
         self.eca.mkdir()
         cfg = json.loads((ROOT / "lib" / "agent" / "claude" / "cli.json").read_text())
         (self.eca / "cli.json").write_text(json.dumps(dict(cfg, timeout_ms=15000)))
-        (self.eca / "loop.json").write_text(json.dumps({"exec": [str(TURN), str(self.eca)], "interval_ms": 100,
+        (self.eca / "loop.json").write_text(json.dumps({"exec": [str(TURN), "--on-empty", "idle", str(self.eca)], "interval_ms": 100,
                                                         "ctl": "ctl.json", "state": "state.json"}))
         (self.eca / "_entry").write_text(json.dumps(["aos-loop", "loop.json"]))
         self.xenv = dict(PATH=path_with(str(self.bin) + os.pathsep + str(ROOT / "bin") + os.pathsep + SYS_PATH),
-                         FAKE_LOG=str(t / "cli.log"), CLAUDE_CONFIG_DIR=str(t / "claude-home"), ECA_ON_EMPTY="idle")
+                         FAKE_LOG=str(t / "cli.log"), CLAUDE_CONFIG_DIR=str(t / "claude-home"))
 
     def xrun(self, *args, **kw):
         return run(*args, **dict(self.xenv, **kw))
@@ -363,7 +363,7 @@ class External(Base):
         return False
 
     def test_status_shows_external_runner_and_phase(self):
-        """aos-exec 直接跑外部範本（idle）：say／listen 答得出；--status 印得出服務者（aos-loop）、phase、最後一格 turn；
+        """aos-exec 直接跑外部範本（idle）：say／listen 答得出；--status 印得出服務者（aos-loop）、phase、最後一格 aos-eca-turn；
         暫停時 phase paused；stack 裡沒有 server.txt。"""
         p = self.popen(["aos-exec", "--ws", str(self.ws), str(self.eca)])
         self.assertTrue(self.phase(self.stack, ("waiting", "running")))
@@ -374,7 +374,7 @@ class External(Base):
         r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
         self.assertRegex(r.stdout, r"在跑     .*aos-loop（pid %d）" % p.pid)
         self.assertRegex(r.stdout, r"loop     phase (waiting|running)（state\.json）")
-        self.assertRegex(r.stdout, r"最後一格 turn 退 0")
+        self.assertRegex(r.stdout, r"最後一格 aos-eca-turn 退 0")
         self.assertFalse((self.stack / "server.txt").exists())
         (self.stack / "ctl.json").write_text('{"paused": true}')
         self.assertTrue(self.phase(self.stack, ("paused",)))

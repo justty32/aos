@@ -18,7 +18,8 @@
 #
 # 兩條路（每次呼叫自己挑）：
 #   畫面沒開 → 非互動：claude -p --resume <id>（第一次 --session-id <新 id>）、codex exec resume <id> -（第一次 codex exec -）
-#   畫面開著 → 從 pty 送字：tmux paste-buffer 貼上＋Enter，等 hook 在 turns.jsonl 接一行（有人接著看、或 claude 正在跑一輪＝SessionBad）
+#   畫面開著 → 從 pty 送字：tmux paste-buffer 貼上＋Enter，等 hook 在 turns.jsonl 接一行（有人接著看、或 claude 正在跑一輪＝SessionBad；
+#             on_busy="answer" 時不退讓：照樣貼、busy.txt 等它消失，10-31）
 # 錯：當工具叫（call_main）時照 lib 契約 stderr 與 stdout 各一行「工具名: 代號 原因」、退 1；attach 與 hook 是 stderr 一行「cli_session: 代號 原因」、退 1。
 #
 # 放哪（10-24 遷移）：proto8/lib/agent/cli_session.py，lib/agent 的 claude、codex 兩個工具共用（用 realpath 找到這層再 import）；
@@ -304,12 +305,22 @@ def print_codex(cfg, cell, ws, prompt):
 
 # ---------------------------------------------------------------- 從畫面送字（畫面開著）
 
-def live(cfg, cell, prompt):
-    who = cell.clients()
-    if who:
-        die("SessionBad", "有人接在畫面上（%s），等他跳出再叫" % ", ".join(who))
-    if os.path.exists(cell.file("busy.txt")):
-        die("SessionBad", "畫面上正在跑一輪（有人送出、還沒講完），等它講完再叫")
+def live(cfg, cell, prompt, on_busy="yield"):
+    """on_busy＝yield（預設）：有人接在畫面上、或 busy.txt 在＝SessionBad；answer（10-31 eca --on-busy）：有人接著照樣貼，
+    busy.txt 在就等它消失再貼——等它跟等回答共用 timeout_ms 的期限，逾時 ReplyMissing。"""
+    deadline = time.time() + cfg.get("timeout_ms", 600000) / 1000
+    if on_busy == "yield":
+        who = cell.clients()
+        if who:
+            die("SessionBad", "有人接在畫面上（%s），等他跳出再叫" % ", ".join(who))
+        if os.path.exists(cell.file("busy.txt")):
+            die("SessionBad", "畫面上正在跑一輪（有人送出、還沒講完），等它講完再叫")
+    while os.path.exists(cell.file("busy.txt")) and time.time() < deadline:
+        if not cell.alive():
+            die("CliFailed", "畫面在講完之前關掉了")
+        time.sleep(0.2)
+    if os.path.exists(cell.file("busy.txt")):                # 等到期限還在跑：不貼，免得逾時了還打進畫面
+        die("ReplyMissing", "畫面上那一輪 %d 秒還沒講完，沒送出（attach 進去看）" % (cfg.get("timeout_ms", 600000) // 1000))
     seen = len(cell.turns())
     r = cell.tmux("load-buffer", "-b", "aos", "-", input=prompt)
     if r.returncode != 0:
@@ -317,7 +328,6 @@ def live(cfg, cell, prompt):
     cell.tmux("paste-buffer", "-p", "-d", "-b", "aos", "-t", TMUX_SESSION)   # -p：程式要的話包成 bracketed paste，多行不會半路送出
     time.sleep(0.3)
     cell.tmux("send-keys", "-t", TMUX_SESSION, "Enter")
-    deadline = time.time() + cfg.get("timeout_ms", 600000) / 1000
     while time.time() < deadline:
         turns = cell.turns()
         if len(turns) > seen:
@@ -329,18 +339,21 @@ def live(cfg, cell, prompt):
         % (cfg.get("timeout_ms", 600000) // 1000))
 
 
-def ask(cfg, cell, tool_dir, ws, prompt):
-    """問 CLI 一句 → 回答文字：記下這格（note_cell）→ 拿格的 lock（拿不到＝SessionBad）→ 畫面開著走 live、沒開走非互動
-    → 建 transcripts symlink。工具形（call_main）與 eca 的 turn 共用這一段（10-30 eca 第 5 步抽出來）。
+def ask(cfg, cell, tool_dir, ws, prompt, on_busy="yield"):
+    """問 CLI 一句 → 回答文字：記下這格（note_cell）→ 拿格的 lock（拿不到：on_busy＝yield（預設）＝SessionBad、
+    answer＝等到拿到，同 open_cell）→ 畫面開著走 live（on_busy 照傳）、沒開走非互動
+    → 建 transcripts symlink。工具形（call_main）與 aos-eca-turn 共用這一段（10-30 eca 第 5 步抽出來）。
     tool_dir＝cli.json 所在的資料夾（工具資料夾或 eca 定義）；ws＝CLI 的 cwd（絕對路徑）。錯一律走 die
-    （工具形印一行退 1；turn 把 die 換成丟例外）。"""
+    （工具形印一行退 1；aos-eca-turn 把 die 換成丟例外）。"""
     note_cell(cell, tool_dir, ws)
     f, ok = cell.lock()
     if not ok:
-        die("SessionBad", "這段對話有人在用（另一次呼叫、或 attach 正在開畫面）")
+        if on_busy == "yield":
+            die("SessionBad", "這段對話有人在用（另一次呼叫、或 attach 正在開畫面）")
+        fcntl.flock(f, fcntl.LOCK_EX)
     with f:
         if cell.alive():
-            text = live(cfg, cell, prompt)
+            text = live(cfg, cell, prompt, on_busy)
         elif cfg["kind"] == "claude":
             text = print_claude(cfg, cell, ws, prompt)
         else:
@@ -349,8 +362,9 @@ def ask(cfg, cell, tool_dir, ws, prompt):
     return text
 
 
-def call_main(tool_dir):
-    """工具入口：stdin {"prompt": "..."} → stdout 回答。tool_dir＝工具資料夾（cli.json 在裡面；名字＝資料夾名）。"""
+def call_main(tool_dir, on_busy="yield"):
+    """工具入口：stdin {"prompt": "..."} → stdout 回答。tool_dir＝工具資料夾（cli.json 在裡面；名字＝資料夾名）。
+    on_busy 照傳給 ask（lib/agent/claude、codex 用預設 yield；aos-eca-turn --one 照它的 --on-busy）。"""
     global PROG, ECHO
     PROG, ECHO = os.path.basename(tool_dir), True
     cfg = load_cfg(tool_dir)
@@ -363,7 +377,7 @@ def call_main(tool_dir):
         die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
     if not isinstance(args, dict) or not isinstance(args.get("prompt"), str) or not args["prompt"].strip():
         die("ArgumentsBad", "缺 prompt（要一個非空字串）")
-    text = ask(cfg, Cell(stack), os.path.abspath(tool_dir), os.path.abspath(ws), args["prompt"])
+    text = ask(cfg, Cell(stack), os.path.abspath(tool_dir), os.path.abspath(ws), args["prompt"], on_busy)
     sys.stdout.write(text if text.endswith("\n") else text + "\n")
 
 

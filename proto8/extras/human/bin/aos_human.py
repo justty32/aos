@@ -61,7 +61,7 @@ def _same(a, b):
 def runners(w):
     """有哪些行程在跑這隻 agent：/proc 裡 argv[0] 是 aos-loop／aos-fsm／aos-exec／aos-daemon、
     環境變數 AOS_STACK＝這個 stack 或 AOS_WS＝這個工作區（沒設 AOS_STACK 時）的。只靠 /proc（eca 10-30 C 結論 9、F 結論 18：
-    server.txt 自己報名那招刪了——外部 coding agent 也是 aos-loop 包著 turn 格在跑，掃得到；掛在 daemon 底下的，子 loop 的
+    server.txt 自己報名那招刪了——外部 coding agent 也是 aos-loop 包著 aos-eca-turn 在跑，掃得到；掛在 daemon 底下的，子 loop 的
     AOS_STACK 是 daemon 的小格，工作區的 .stack 是指過去的 symlink，samefile 認得出來）。
     回 [(pid, 程式名)]。讀不到的行程（別的使用者的）跳過。"""
     found, me = [], os.getpid()
@@ -87,7 +87,7 @@ def runners(w):
 
 
 def last_trace(w):
-    """stack 裡 trace.jsonl 最後一行（fsm〔含 aos-round〕每次一行 state；eca turn 與 10-30 前的舊 round 是 unit）；沒有＝None。"""
+    """stack 裡 trace.jsonl 最後一行（fsm〔含 aos-round〕每次一行 state；aos-eca-turn 與 10-30 前的舊 round 是 unit）；沒有＝None。"""
     return aos_ws.last_jsonl(os.path.join(w.stack, "trace.jsonl"))
 
 
