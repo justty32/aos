@@ -1,6 +1,6 @@
 # 2026-10-29 playground：agent 的輸入是對話簿、看信箱是一個 tool（「A」的最小版）
 
-← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜出發點：[10-28 medium 決定 32](2026-10-28-medium.md)（第十七段）｜前一個試驗場：[10-26 playground](2026-10-26-playground.md)｜history 的格式：[agent-round § 4](2026-10-28-agent-round.md#4-單位介面)｜信箱：[N-16](../docs/NORMS/05-基礎設施-窗.md)、[aos-post](../impls/aos-post/README.md)
+← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜出發點：[10-28 medium 決定 32](2026-10-28-medium.md)（第十七段）｜前一個試驗場：[10-26 playground](2026-10-26-playground.md)｜history 的格式：[agent-round § 4](2026-10-28-agent-round/02-2-round-一輪本身.md#4-單位介面)｜信箱：[N-16](../docs/NORMS/05-基礎設施-窗.md)、[aos-post](../impls/aos-post/README.md)
 
 > **10-29 晚看完實跑後方向改了**：兩個使用場景都用不到「agent 自己用 tool 看信箱」，這份的 inbox tool 解錯題；下面的代定與「要帶給使用者的題」先擱著，見文末[看完 A 之後](#結論10-29-晚看完-a-之後)。
 
@@ -52,7 +52,7 @@
 
 ### 新做法跟既有原則的衝突
 
-1. **history 放哪**：[agent-round § 4](2026-10-28-agent-round.md#4-單位介面) 與 P-41 寫 `$AOS_STACK/history.jsonl`（執行中的狀態），任務書與決定 32（history 是輸入）推到 `$AOS_WS/history.jsonl`。後果：放 stack＝agent-round 那套格（queue／history／round）不用改，但「輸入」藏在執行中的抽屜裡；放工作區＝外面的人一眼看到對話、也能自己往裡接一句，但 agent-round 的 history 格要改位置。這個最小版用工作區。
+1. **history 放哪**：[agent-round § 4](2026-10-28-agent-round/02-2-round-一輪本身.md#4-單位介面) 與 P-41 寫 `$AOS_STACK/history.jsonl`（執行中的狀態），任務書與決定 32（history 是輸入）推到 `$AOS_WS/history.jsonl`。後果：放 stack＝agent-round 那套格（queue／history／round）不用改，但「輸入」藏在執行中的抽屜裡；放工作區＝外面的人一眼看到對話、也能自己往裡接一句，但 agent-round 的 history 格要改位置。這個最小版用工作區。
 2. **信箱放哪**：10-28 hub-adapter 使用者說信箱「放Stack比較好。」，lib 契約第 4 條又說工具只碰 `$AOS_WS`。tool 看得到的只有工作區和自己那一小格 stack（`$AOS_STACK/mcp/inbox/`），看不到 agent 的 stack。後果：要放 stack，就得讓 tool 收一個信箱路徑（`AOS_INBOX` 這種 hub 型變數，N-63），跟第 4 條打架；放工作區（這個最小版）就跟「放 Stack」不一致。
 3. **信的內容跑進了對話**：決定 32 把信箱跟 queue 分開，但 agent 看了信之後是把結果寫在回給使用者的那段裡，所以信的內容還是進了 `history.jsonl`。後果：對話簿裡混進了別人寄的事，使用者看到的回答多了一段跟他問的無關的話（信箱空時也會多一句「信箱檢查過了」）。要分開，得給 agent 回信的手段（照 `reply_to` 寄回去），或在 prompt 裡講信的事不要寫進回答。
 4. **認領了卻沒人收掉**：N-16 寄／認領／處理完三步，tool 只做到認領。agent 不照做（天氣那封）的信也已經被認領，停在 `cur/`，不會再出現。後果：信等於被默默吞掉；要不要讓 agent 有「放回去」或「收掉」的動作，看使用者想不想讓 agent 管到那一步。
