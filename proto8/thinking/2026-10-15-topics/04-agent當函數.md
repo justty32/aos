@@ -9,4 +9,4 @@
 
 **決定**
 - 概念進 [C-46](../../docs/CONCEPTS/05-agent.md#agent函數binding)：定義（bob/，不變）、frame（history 等累積處，像 stack）、cwd 三處分開；tools＝傳進 call 的函數，bob 綁的只是預設，裡面可以是別的 agent。規範之後再說。
-- agent 當工具：使用者「照預設做」。現行寫法見 [意見 1～4](../2026-10-15-opinions-1-4.md)（frame 由呼叫方決定、工具在 `work/<n>/` 跑）與 [inst-exec 第四版](../2026-10-15-inst-exec-v4.md)（工具 inst 的 argv 直接是 `aos loop`）；frame 現稱 stack（[agent-inherit § 四](../2026-10-16-agent-inherit.md#四使用者決定10-16)）。
+- agent 當工具：使用者「照預設做」。現行寫法見 [意見 1～4](../2026-10-15-opinions-1-4.md)（frame 由呼叫方決定、工具在 `work/<n>/` 跑）與 [inst-exec 第四版](../2026-10-15-inst-exec-v4.md)（工具 inst 的 argv 直接是 `aos loop`）；frame 現稱 stack（[agent-inherit § 四](../2026-10-16-agent-inherit/02-四-使用者決定.md#四使用者決定10-16)）。
