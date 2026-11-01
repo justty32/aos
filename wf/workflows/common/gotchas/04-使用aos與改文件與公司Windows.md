@@ -6,6 +6,8 @@
   子命令了**（`core/exec` 只當函式庫用，`aos --help` 印不出 `exec`）。現在的對應規則是
   **`aos run` 會反映**：任一條 inst 非零 exit／被 signal 中止就回 1（exit 75 當
   `waiting-llm` 回壓、不算失敗），逐條細節照樣讀 `.aos/batch/<turn>/out/<id>.json`。
+- **家機 Manjaro 的 zsh 把 `ls` 設成 `eza --icons --git`，在 Claude Code 的 Bash 工具（非互動、沒有 tty）裡會掛住不回**（11-01 撞到兩次，被誤判成 claude -p 超時）：agent 跑的指令用 `/bin/ls`（或 `command ls`），別用 `ls`。
+- **從管線或程式叫 `claude -p`，stdin 開著又沒東西時它會等 stdin 等到卡住**（11-01）：不是終端機直接跑的就 `</dev/null`。
 
 ## 改文件
 
