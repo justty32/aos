@@ -2,6 +2,8 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜程式 [proto8/human](../extras/human/README.md)｜測試 `proto8/tests/test_human.py`
 
+11-01 晚翻案：`aos-listen 信號` 拿掉，見下「11-01 晚使用者」一節。
+
 ## 使用者原文（整理版，10-24）
 
 - 前文：「然後我這邊有不少想法，都麻煩你試着去思考去實作。我隨便說，你隨便做，反正只是嘗試」
@@ -49,6 +51,21 @@
 - 兩個 chat 對同一個工作區：各自只印自己送的題，但 agent-dan 的 history 是同一段，兩邊的話會混在同一段對話裡。
 - `--last N` 照 out/ 的 mtime 排，人手動碰過 out/ 的檔順序會變。
 - 10-30 晚：say 之後拿舊協議的 agent 跑、信留在 queue 沒人認領，listen 改成說一句就退（`LetterUnclaimed`）——代定見 [aos-round 實作時代定的「真腦實測發現 2」](2026-10-30-aos-round/07-決定.md#實作時代定10-30隊長與工人照原則定的細節可翻案)。
+
+## 11-01 晚使用者：`aos-say "..." && aos-listen` 才是正規用法
+
+使用者原文（逐字，看到 amy README 與頂層回覆裡寫 `N=$(aos-say 現在狀況); aos-listen "$N"` 之後）：
+
+> aos-listen "..."這種使用方式是誰定的，我不喜歡。aos-say "..." && aos-listen才是正規用法。
+
+誰定的：10-24 隊長照推薦代定（上面「決定」第 5 點「對應我剛問的那一題：say 的 stdout 只印題名、`aos-listen 題名` 等它」），使用者當時「都按建議做」整批點頭；今天翻案。
+
+決定（11-01 晚，使用者定；實作細節頂層代定、可翻案）：
+
+- 正規用法只有一種：`aos-say 話 && aos-listen`。`aos-listen` 不帶參數＝等**最新那封**（queue 裡最後寄出的、或剛被認領的）的回答，印出來就退 0；答案已經到了就立刻印。
+- `aos-listen 信號` 這個位置參數拿掉（少一種機制）；aos-chat 內部要對應信號是函式庫的事，不露在命令列。
+- 原本「不帶參數＝跟著看（tail -f）」改成明寫 `--follow`；`--last N`、`--status`、`--timeout`、`--trace` 不動。
+- 實作排在 11-01 晚 worktree（刪 aos-round、改旋鈕）併入 main 之後做，避免同時改 `extras/human/bin/aos-listen`。連帶：extras/human/README、test_human、demo／playground／amy README 裡的 `aos-listen "$N"` 寫法全改。
 
 ## 未決
 
