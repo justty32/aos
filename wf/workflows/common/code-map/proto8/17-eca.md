@@ -10,7 +10,7 @@
 
 | 哪裡 | 負責什麼 |
 |---|---|
-| `demo/eca-claude/`、`demo/eca-codex/` | `_entry`＝`["aos-loop", "loop.json"]`（JSON、不給 +x）；`loop.json`＝停著等版（10-31 起 `["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}]`、`timeout_ms` 900000、`interval_ms` 300、ctl／state 窗、沒有 max；aos-daemon-ctl 的 pin_cd 照樣換 `$env AOS_CD`）；`parts.json` 10-31 刪了（10-30 是一格 turn → `../../lib/eca/turn`、env `ECA_ON_EMPTY` idle）；`cli.json` 抄 `lib/agent/claude`／`codex` 的保守旗標 |
+| `demo/eca-claude/`、`demo/eca-codex/` | `_entry`＝`["aos-loop", "loop.json"]`（JSON、不給 +x）；`loop.json`＝停著等版（10-31 起 `["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}]`、`timeout_ms` 900000、`interval_ms` 300、ctl／state 窗、沒有 max；掛上 daemon 時 aos-daemon-ctl 把單子換成 `<定義>/loop.json#/exec`，`$env AOS_CD` 照原地解（11-01 起，pin_cd 刪了））；`parts.json` 10-31 刪了（10-30 是一格 turn → `../../lib/eca/turn`、env `ECA_ON_EMPTY` idle）；`cli.json` 抄 `lib/agent/claude`／`codex` 的保守旗標 |
 
 測試：
 

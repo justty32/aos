@@ -12,7 +12,7 @@ EXEC = tool("aos-exec")
 EVE = ROOT / "demo" / "agent-eve"
 PYFIX = EVE / "tools" / "pyfix"
 SUB = PYFIX / "agent"                                # 子 agent pyfix-agent（10-24 遷移後 tools/pyfix 是捷徑 → proto8/lib/agent/pyfix）
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_PYFIX_DIR")
+CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
 
 BUGGY = "def add(a, b):\n    return a - b\n"
 TEST = ("import unittest\nfrom calc import add\n\n\nclass T(unittest.TestCase):\n"
@@ -124,10 +124,11 @@ class T(unittest.TestCase):
         run1 = self.stack / "pyfix" / "runs" / "001"
         self.assertEqual((run1 / "before" / "calc.py").read_text(), BUGGY)
         self.assertEqual(os.listdir(run1 / "ws" / "done"), ["task.txt"])
+        self.assertEqual((run1 / "stack" / "pyfix_dir.txt").read_text(), "%s\n" % (self.ws / "proj").resolve())   # 要改的資料夾給子 agent
         sub = self.history(run1 / "stack")
         self.assertEqual(sub[0], {"role": "user", "content": "讓 test_calc.py 通過"})
         tools = [m["content"] for m in sub if m["role"] == "tool"]
-        self.assertEqual([i["name"] for i in json.loads(tools[0])["items"]], ["calc.py", "test_calc.py"])   # ls 看的是 AOS_PYFIX_DIR
+        self.assertEqual([i["name"] for i in json.loads(tools[0])["items"]], ["calc.py", "test_calc.py"])   # ls 看的是 pyfix_dir.txt 的資料夾
         self.assertEqual(tools[1], BUGGY)
         self.assertTrue(tools[2].endswith("[結束碼 1]\n"), tools[2])
         self.assertEqual(tools[3], "已在 calc.py 換掉 1 處（第一處在第 2 行）\n")
@@ -182,8 +183,8 @@ class T(unittest.TestCase):
         self.assertEqual(b.requests["inner"], [])
 
     def test_sub_agent_tools_stay_in_pyfix_dir(self):
-        """子 agent 直接跑（不經 eve）：它的 act 用 aos-exec --ws $AOS_PYFIX_DIR 叫庫的工具——路徑從 AOS_PYFIX_DIR 算、出不去；
-        工具的錯（出界、找不到原文）回給腦、不停；寫得進 AOS_PYFIX_DIR；沒設 AOS_PYFIX_DIR＝act 停在 DirMissing。"""
+        """子 agent 直接跑（不經 eve）：它的 act 把庫的工具的工作區換成 $AOS_STACK/pyfix_dir.txt 的資料夾——路徑從那裡算、出不去；
+        工具的錯（出界、找不到原文）回給腦、不停；寫得進那個資料夾；沒有 pyfix_dir.txt＝act 停在 DirMissing（11-01 起環境變數不再讀）。"""
         root = self.ws / "proj"
         (self.ws / "secret.txt").write_text("no")
         sub_ws = self.tmp / "sub"
@@ -194,22 +195,33 @@ class T(unittest.TestCase):
                                         call("t3", "write", {"path": "sub/new.py", "content": "print(1)\n"}),
                                         call("t4", "bash", {"command": "python3 sub/new.py; pwd"})),
                              answer("試完了")])
+        (self.tmp / "substack").mkdir()
+        (self.tmp / "substack" / "pyfix_dir.txt").write_text("%s\n" % root)
         r = run(EXEC, "--ws", str(sub_ws), str(SUB), cwd=self.tmp, timeout=60,
-                env={"AOS_BRAIN_URL": b.url, "AOS_STACK": str(self.tmp / "substack") + "/", "AOS_PYFIX_DIR": str(root)})
+                env={"AOS_BRAIN_URL": b.url, "AOS_STACK": str(self.tmp / "substack") + "/"})
         self.assertEqual(r.returncode, 0, r.stderr)
         tools = {m["tool_call_id"]: m["content"] for m in self.history(self.tmp / "substack") if m["role"] == "tool"}
         self.assertTrue(tools["t1"].startswith("read: PathBad "), tools["t1"])
         self.assertTrue(tools["t1"].endswith("(工具 read 結束碼 1)\n"), tools["t1"])
         self.assertTrue(tools["t2"].startswith("edit: TextMissing "), tools["t2"])
         self.assertEqual((root / "sub" / "new.py").read_text(), "print(1)\n")
-        self.assertEqual(tools["t4"], "1\n%s\n" % root.resolve())                  # bash 的 cwd＝AOS_PYFIX_DIR
+        self.assertEqual(tools["t4"], "1\n%s\n" % root.resolve())                  # bash 的 cwd＝pyfix_dir.txt 的資料夾
         self.assertIn("pyfix-agent: ToolFailed read 結束碼 1（回給腦）", r.stderr)
         self.assertEqual((sub_ws / "out" / "task.txt").read_text(), "試完了\n")
-        # 沒設 AOS_PYFIX_DIR：腦要叫工具時 act 停下（環境沒設好是這層自己的錯）
+        # 沒有 pyfix_dir.txt（舊的環境變數設了也不算）：腦要叫工具時 act 停下（環境沒設好是這層自己的錯）
         (sub_ws / "new" / "t2.txt").write_text("再試")
         b2 = self.brains([], [tool_reply(call("u1", "ls", {}))])
         r = run(EXEC, "--ws", str(sub_ws), str(SUB), cwd=self.tmp, timeout=60,
-                env={"AOS_BRAIN_URL": b2.url, "AOS_STACK": str(self.tmp / "substack2") + "/"})
+                env={"AOS_BRAIN_URL": b2.url, "AOS_STACK": str(self.tmp / "substack2") + "/", "AOS_PYFIX_DIR": str(root)})
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("pyfix-agent: DirMissing ", r.stderr)
+        # pyfix_dir.txt 寫的不是資料夾：同樣 DirMissing
+        (self.tmp / "substack3").mkdir()
+        (self.tmp / "substack3" / "pyfix_dir.txt").write_text("%s\n" % (root / "calc.py"))
+        (sub_ws / "new" / "t3.txt").write_text("三試")
+        b3 = self.brains([], [tool_reply(call("v1", "ls", {}))])
+        r = run(EXEC, "--ws", str(sub_ws), str(SUB), cwd=self.tmp, timeout=60,
+                env={"AOS_BRAIN_URL": b3.url, "AOS_STACK": str(self.tmp / "substack3") + "/"})
         self.assertEqual(r.returncode, 1)
         self.assertIn("pyfix-agent: DirMissing ", r.stderr)
 

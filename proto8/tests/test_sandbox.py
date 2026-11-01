@@ -416,7 +416,7 @@ HAS_SETPRIV = shutil.which("setpriv") is not None and shutil.which("setfacl") is
 # 1001 寄一封「id -u」、1000 的 kernel 一次次拍，1002 也寄一次。印三行：1001 拿到的、1001 的碼、1002 的碼與錯。
 PERM = r"""set -u
 T=$1
-AOS_ME=1000 AOS_RUNNER=2000 sh "$2" --mailbox "$T/mb" --apply >/dev/null
+sh "$2" --me 1000 --runner 2000 --mailbox "$T/mb" --apply >/dev/null
 mkdir "$T/stack" && chown 1000:1000 "$T/stack"
 as() { u=$1; g=$2; shift 2; setpriv --reuid "$u" --regid "$g" --clear-groups env AOS_KERNEL="$T/mb" AOS_STACK="$T/stack" "$@"; }
 as 1001 2000 "$T/bin/aos-llm-send" "$T/q.json" >"$T/out" 2>"$T/err" & G=$!
@@ -448,6 +448,36 @@ class MailboxPermTest(unittest.TestCase):
         self.assertEqual(lines[0], "runner=1000|0|", r.stdout + r.stderr)   # 寄得到、kernel 回得了信；跑的身分是 kernel 的
         self.assertRegex(lines[1], r"^aos-llm-send: MkdirFailed ")
         self.assertEqual(lines[2], "stranger=1")
+
+
+class SetupFlagsTest(unittest.TestCase):
+    """root/setup.sh 乾跑（不用 root）：--me、--runner、--s6-bin 換預設值（11-01 起取代環境變數，舊的不再讀）；缺值、不認得的旗標退 1。"""
+
+    def setup(self, *args, extra=None):
+        e = dict(env(), **(extra or {}))
+        return subprocess.run(["sh", SETUP] + list(args), capture_output=True, text=True, env=e, timeout=30)
+
+    def test_flags_and_old_env_ignored(self):
+        old = {"AOS_ME": "zz", "AOS_RUNNER": "zz", "AOS_S6_BIN": "/zz"}
+        r = self.setup("--me", "u1", "--runner", "r1", "--s6-bin", "/x/bin", extra=old)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("+ install -o root -g root -m 755 /x/bin/s6-setuidgid ", r.stdout)
+        self.assertNotIn("zz", r.stdout)
+        r = self.setup("--mailbox", "/m", "--me", "u1", "--runner", "r1", extra=old)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("+ install -d -o u1 -g r1 -m 2770 /m ", r.stdout)
+        self.assertNotIn("zz", r.stdout)
+        r = self.setup("--mailbox", "/m", extra=old)                    # 沒給＝預設（我自己、aos-run），環境變數不算
+        self.assertIn(" -g aos-run -m 2770 /m ", r.stdout)
+        self.assertNotIn("zz", r.stdout)
+
+    def test_bad_flags(self):
+        r = self.setup("--me")
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stderr.startswith("setup.sh: ArgumentsBad --me "), r.stderr)
+        r = self.setup("--nope")
+        self.assertEqual(r.returncode, 1)
+        self.assertTrue(r.stderr.startswith("setup.sh: FlagUnknown --nope"), r.stderr)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 """test_round_fsm - agent-round 一輪：lib/agent/round 的 fsm 表＋五格（10-31 自 test_round.py 拆出，行為不變）。
 
-一輪（10-30 起 aos-round：lib/agent/round 的 fsm 表＋五格；舊骨架 round/_entry 與它的 Round 類、--step、hook/pause 第 6 步刪了）：
+一輪（10-30 起：lib/agent/round 的 fsm 表＋五格；舊骨架 round/_entry 與它的 Round 類、--step、hook/pause 第 6 步刪了）：
   題目經 queue push 進 $AOS_STACK/queue/，答案看 history 最新那則 assistant。
 RoundFsm（第 2 步）：aos-fsm 一次一格、驗 state.txt 與 trace 的 (state, code, next)；system.txt 與 tools 帶進請求、
   第一題答完後 claim 死在搬進 cur/ 之後的補認領（這兩案第 6 步從舊 Round 類搬來）。
@@ -27,13 +27,13 @@ else:
 
 
 class RoundFsm(AgentCase):
-    """lib/agent/round 的表＋五格（thinking 2026-10-30-aos-round § B、實作步驟第 2 步）：aos-fsm 一次一格（cwd＝round 資料夾），
+    """lib/agent/round 的表＋五格（thinking 2026-10-30-aos-round § B、實作步驟第 2 步）：aos-fsm 一次一格（cwd＝round 資料夾、AOS_CD＝agent，表的格參數從它來），
     驗 state.txt、history 與 fsm trace 的 (state, code, next) 序列；格對 state 與資料對不上要自保（crash 接續）。"""
 
     def step(self, table="fsm-stop.json", env=None):
         """aos-fsm 跑一格；回 (碼, stderr)。"""
         r = subprocess.run([tool("aos-fsm"), table], capture_output=True, text=True, cwd=ROUND, timeout=120,
-                           env=self.env(dict({"AOS_ROUND_AGENT": str(self.agent)}, **(env or {}))))
+                           env=self.env(dict({"AOS_CD": str(self.agent)}, **(env or {}))))
         return r.returncode, r.stderr
 
     def steps(self, n, **kw):
@@ -100,9 +100,9 @@ class RoundFsm(AgentCase):
         self.parts["endpoint/default"] = {"path": OPENAI, "env": {"AOS_BRAIN_URL": DEAD, "AOS_BRAIN_MODEL": "m"}}
         self.hook("on_error", "cat > /dev/null; echo retry\n")
         self.step()
-        code, err = self.step(env={"AOS_ROUND_MAX_RETRIES": "2"})
+        code, err = self.step(env={"AOS_ROUND_MAX_RETRIES": "1"})                               # 11-01 起寫死 3、這個環境變數沒作用
         self.assertEqual((code, err_code("round/think", err)), (1, "EndpointFailed"))
-        self.assertEqual(err.count("endpoint: BrainFailed"), 3)                                  # 1 次＋重來 2 次
+        self.assertEqual(err.count("endpoint: BrainFailed"), 4)                                  # 1 次＋重來 3 次
         self.assertEqual(self.state(), "think")
         self.assertFalse((self.stack / "endpoint.txt").exists())
 
@@ -180,9 +180,6 @@ class RoundFsm(AgentCase):
         self.steps(2)
         code, err = self.step()
         self.assertEqual((code, err_code("round/act", err), self.state()), (1, "PartMissing", "act"))
-        (self.stack / "state.txt").write_text("think\n")
-        code, err = self.step(env={"AOS_ROUND_MAX_RETRIES": "-1"})
-        self.assertEqual((code, err_code("round/think", err), self.state()), (1, "SettingBad", "think"))
         r = subprocess.run([EXEC, str(Path(ROUND) / "more"), "agent"], capture_output=True, text=True, env=self.env(),
                            cwd=self.tmp, timeout=60)
         self.assertEqual((r.returncode, err_code("round/more", r.stderr)), (1, "AgentBad"))

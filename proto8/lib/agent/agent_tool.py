@@ -31,10 +31,11 @@ def fresh_cell(stack):
 
 def run_agent(name, agent, task, cell, env_extra=None, question="task.txt"):
     """在小格 cell 裡跑子 agent（資料夾 agent）做 task，回它的答案（ws/out/<question> 的內容）。
-    --dotenv-override：子 agent 自己 .env 的值（例：模型名）蓋過外層傳下來的。env_extra 加給子 agent 的環境變數。"""
+    --dotenv-override：子 agent 自己 .env 的值（例：模型名）蓋過外層傳下來的。env_extra 加給子 agent 的環境變數。
+    要先放檔給子 agent 讀（例 pyfix 的 pyfix_dir.txt）就先建好 <cell>/stack/ 寫進去（已在就沿用）。"""
     sub_ws, sub_stack = os.path.join(cell, "ws"), os.path.join(cell, "stack")
     os.makedirs(os.path.join(sub_ws, "new"))
-    os.makedirs(sub_stack)
+    os.makedirs(sub_stack, exist_ok=True)
     with open(os.path.join(sub_ws, "new", question), "w", encoding="utf-8") as f:
         f.write(task)
     env = dict(os.environ, AOS_STACK=sub_stack + "/", **(env_extra or {}))

@@ -168,7 +168,7 @@ def sandbox():
 
 def run_target(version_dir, argv_tail, stdin="", timeout_ms=10000, extra_env=None, exec_target=None):
     """在 version_dir 裡那份函數的暫時複本上跑一次（函數改到自己的檔也不影響拍下來的那版），回結果 dict。
-    exec_target 沒給＝跑函數本身；給了＝跑那個目標（判準的 check），函數複本的路徑放在環境變數 AOS_IMPROVE_TARGET。"""
+    exec_target 沒給＝跑函數本身；給了＝跑那個目標（判準的 check），函數複本的路徑當 argv 最後一個參數給它（11-01 起取代環境變數）。"""
     with tempfile.TemporaryDirectory(prefix="self-improve.") as tmp:
         copy = copy_target(version_dir, tmp)
         run_ws = os.path.join(tmp, "ws")
@@ -176,7 +176,7 @@ def run_target(version_dir, argv_tail, stdin="", timeout_ms=10000, extra_env=Non
         env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}   # 函數拿到乾淨的 aos 環境
         env.update(extra_env or {})
         if exec_target:
-            env["AOS_IMPROVE_TARGET"] = copy or os.path.join(tmp, "target")
+            argv_tail = list(argv_tail) + [copy or os.path.join(tmp, "target")]   # aos-exec <check> <複本路徑>
         argv = ["aos-exec", "--ws", run_ws, "--", exec_target or copy or os.path.join(tmp, "target")] + argv_tail
         box = sandbox()
         if box and not exec_target:                  # 10-24 沙箱接線：只關函數本身；檢查程式就是判準，不關

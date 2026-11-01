@@ -1,6 +1,6 @@
 """round_common - test_round_*.py 共用的常數與底座（10-31 自 test_round.py 拆出，行為不變）：
 EXEC／FAKE／OPENAI／ACT／CLOCK 路徑、CLEAR、err_code、parts_json、Base（tmp agent／ws、env、cell、lines）、req、user；
-ROUND、AGENT_LIB 與 AgentCase（RoundFsm 與 AosRound 共用）。"""
+ROUND、AGENT_LIB 與 AgentCase（RoundFsm 與 RoundLoop 共用）。"""
 import json, os, re, subprocess, tempfile, unittest
 from pathlib import Path
 
@@ -12,7 +12,7 @@ OPENAI = str(ROOT / "lib" / "endpoint" / "openai")
 ACT = str(ROOT / "lib" / "agent" / "act")
 CLOCK = str(ROOT / "lib" / "base" / "clock")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL",
-         "AOS_BRAIN_KEY", "AOS_KERNEL_REPORT", "AOS_ENDPOINT_TIMEOUT_MS", "AOS_ENDPOINT_NAME", "AOS_ACT_MAX_PARALLEL", "AOS_ROUND_MAX_RETRIES")
+         "AOS_BRAIN_KEY", "AOS_KERNEL_REPORT")
 
 
 def err_code(prog, stderr):

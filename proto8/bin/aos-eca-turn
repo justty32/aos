@@ -5,7 +5,7 @@
 
     aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] <定義資料夾絕對路徑>
 
-  旗標在位置參數前（aos_flags.parse）。定義的 loop.json 直接叫它（跟 aos-round 同形）：
+  旗標在位置參數前（aos_flags.parse）。定義的 loop.json 直接叫它：
     {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000}}
   --on-empty（10-31 取代環境變數 ECA_ON_EMPTY，不再讀它）：queue 空時 stop（沒給；退 10＝loop 收工＝射後不理）｜idle（退 0＝loop 隔 interval_ms 再來）。
   --on-busy（10-31，SessionBad 退讓的開關）：yield（沒給）＝有人佔著就這輪退讓（見下）｜answer＝照常答、不因畫面被佔而退讓

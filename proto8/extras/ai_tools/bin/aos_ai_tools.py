@@ -8,15 +8,15 @@ from aos_ai_base import Fail, IMPLS, NAME_RE, child_env, clip, need, opt1, out, 
 
 
 def cmd_edit(root, o, pos):
-    """JSON 編輯只留接口：交給 $AOS_AI_JSON_EDITOR（另一套「JSON 修改工具集」），aos-ai 只管邊界。"""
-    need(pos, 2, "edit NAME 檔（相對 agents/NAME/）[給編輯器的參數...]")
+    """JSON 編輯只留接口：交給 --editor 命令（另一套「JSON 修改工具集」；11-01 起旗標取代環境變數），aos-ai 只管邊界。"""
+    need(pos, 2, "edit NAME 檔（相對 agents/NAME/）--editor 命令 [給編輯器的參數...]")
     a = root.agent(pos[0])
     target = Path(root.inside(a.base / pos[1], "要改的檔"))
     if a.base.resolve() not in target.parents:
         raise Fail("PathBad", "只能改 agents/%s/ 底下的檔：%s" % (a.name, target))
-    editor = os.environ.get("AOS_AI_JSON_EDITOR")
+    editor = opt1(o, "editor")
     if not editor:
-        raise Fail("EditorMissing", "還沒接 JSON 修改工具（環境變數 AOS_AI_JSON_EDITOR 沒設）",
+        raise Fail("EditorMissing", "還沒接 JSON 修改工具（沒給 --editor 命令）",
                    "先直接改檔：%s；之後接上 JSON 修改工具集" % target)
     r = subprocess.run(shlex.split(editor) + [str(target)] + pos[2:], capture_output=True, text=True, env=child_env())
     out({"ok": r.returncode == 0, "code": r.returncode, "path": str(target), "stdout": clip(r.stdout),

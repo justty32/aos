@@ -40,7 +40,7 @@ aos-ai --root ~/code/try/x answer helper <信號>          # 讀答案（不給�
 | `wait 名 信號 [--timeout 秒]` | 等背景做完那封、回答案 |
 | `stop 名`／`daemon down`／`daemon status` | 停一隻／停整個背景／看背景 |
 | `exec [--ws WS] 目標 [參數...]` | 直接 `aos-exec` 跑一次任何資料夾程式，回 `code`、`stdout`、`errors` |
-| `edit 名 檔 ...` | 改設定檔的接口（交給 `$AOS_AI_JSON_EDITOR`；沒接時直接用你的編輯工具改 `status` 給的路徑） |
+| `edit 名 檔 --editor 命令 ...` | 改設定檔的接口（交給 `--editor` 的命令；沒有編輯器時直接用你的編輯工具改 `status` 給的路徑） |
 | `doctor` | 檢查程式建好沒、腦連不連得到 |
 | `make …`／`explain …` | 見上面兩節 |
 

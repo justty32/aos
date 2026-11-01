@@ -60,6 +60,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 
 [root/setup.sh](root/setup.sh)：預設乾跑（只印指令），`sudo sh proto8/extras/sandbox/root/setup.sh --apply` 才做——把 s6 四支放進 `/usr/local/bin`、建系統帳號 `aos-run`、開 `/srv/aos-run`、加一條 sudoers（只准「換成 aos-run」）。
 `setup.sh --mailbox 信箱 [--apply]`：只做讓 aos-run 寫得到某個 kernel 信箱——擁有者＝我（跑 kernel 的人）、群組 `aos-run`、2770，四格加預設 ACL（閘門建的信、kernel 寫的回信兩邊都讀寫得到，不看 umask）；信箱要放在 aos-run 走得到的地方（例 `/srv/aos-run/mailbox`）。不讓寫＝`chmod 700 信箱`。這段在假 root 裡有測（`tests/test_sandbox.py` 的 `MailboxPermTest`）。
+另外三個旗標換預設值（11-01 起取代環境變數）：`--me 名`（我＝跑 kernel 的人，預設 `$SUDO_USER` 或自己；測試在假 root 裡給數字）、`--s6-bin 路徑`（s6 的 bin，預設試驗場 `/home/<我>/code/try/sandbox/s6-root/bin`）、`--runner 名`（跑不信任函數的帳號與群組，預設 `aos-run`）；乾跑的旗標測試在 `SetupFlagsTest`。
 
 ## 需要
 

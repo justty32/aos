@@ -45,11 +45,12 @@ class Base(unittest.TestCase):
         self.agent = self.nia(t / "nia")
 
     def nia(self, where, brain=None, idle=False):
-        """agent-nia 的一份拷貝：註冊檔改成絕對路徑；brain＝openai 的網址（腦壞用）；idle＝loop.json 的 aos-round --on-empty idle＋常駐的 loop。"""
+        """agent-nia 的一份拷貝：註冊檔改成絕對路徑；brain＝openai 的網址（腦壞用）；idle＝loop.json 改指 fsm-idle.json＋常駐的 loop。"""
         where.mkdir()
         for f in ("_entry", "system.txt"):
             (where / f).write_bytes((NIA / f).read_bytes())
         loop = json.loads((NIA / "loop.json").read_text())
+        loop["exec"]["cwd"] = os.path.normpath(os.path.join(NIA, loop["exec"]["cwd"]))   # lib/agent/round
         parts = json.loads((NIA / "parts.json").read_text())
         tools = json.loads((NIA / "tools.json").read_text())
         parts = absolute(parts, NIA)
@@ -59,7 +60,7 @@ class Base(unittest.TestCase):
             parts["endpoint"]["default"] = {".env": {"AOS_BRAIN_URL": brain, "AOS_BRAIN_MODEL": "m"},
                                             "_entry": str(ROOT / "lib" / "endpoint" / "openai")}
         if idle:
-            loop["exec"]["argv"] = ["aos-round", "--on-empty", "idle", {"$env": "AOS_CD"}]
+            loop["exec"]["argv"] = ["aos-fsm", "fsm-idle.json"]
             del loop["max"]
             loop["interval_ms"] = 100
         (where / "loop.json").write_text(json.dumps(loop))
@@ -146,7 +147,7 @@ class ListenTest(Base):
         self.assertTrue(out.startswith("FAKE ANSWER to: 等我"), out)
         self.assertIn("還在 queue 的 new/，但目前沒有程式在跑", err)
         self.assertIn("[叫工具 clock {}]", err)                # --trace：工具呼叫與每格一行
-        self.assertRegex(err, r"· idle \d+ms")                   # 10-30 aos-round 起 trace 是 fsm 的一格一行（state）
+        self.assertRegex(err, r"· idle \d+ms")                   # 10-30 起 trace 是 fsm 的一格一行（state）
 
     def test_old_protocol_agent_unclaimed(self):
         """say 之後拿舊協議的 agent（agent-dan）跑：退 0、信原封留在 new/；listen 不一直等，說「沒人認領、可能是舊協議」就退（LetterUnclaimed）。

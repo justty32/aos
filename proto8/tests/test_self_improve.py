@@ -211,7 +211,8 @@ class T(unittest.TestCase):
         self.put("judge/check/_entry", json.dumps({"argv": ["python3", "check.py"]}))
         self.put("judge/check/check.py", (
             "import os, subprocess, sys\n"
-            "out = subprocess.run(['aos-exec', os.environ['AOS_IMPROVE_TARGET']], input='hello', capture_output=True,"
+            "assert 'AOS_IMPROVE_TARGET' not in os.environ, '舊的環境變數不該再設'\n"
+            "out = subprocess.run(['aos-exec', sys.argv[1]], input='hello', capture_output=True,"
             " text=True).stdout\n"
             "print('沒給 N 時拿到 %r' % out)\n"
             "sys.exit(0 if out == 'HEL' else 1)\n"))

@@ -48,13 +48,20 @@ def absolutize_parts(src, node):
 
 def absolutize(src, reg, key):
     """複製來的註冊檔：指出範本的相對路徑從範本資料夾算、改成絕對路徑；指在範本裡面的（例 tools/clock，跟著複製了）照舊相對；
-    沒有要改的就不寫檔。tools.json＝{"tools": {名: {"path"}}}；parts.json（key None）＝aos-exec 格式的槽表，整份往下走。"""
+    沒有要改的就不寫檔。tools.json＝{"tools": {名: {"path"}}}；parts.json（key None）＝aos-exec 格式的槽表，整份往下走；
+    loop.json（key "exec"）＝只看 exec 單子的 cwd。"""
     if not reg.is_file():
         return
     data = read_json(reg)
     if not isinstance(data, dict) or "$ref" in data or "$env" in data:
         return
-    if key is None:
+    if key == "exec":                                 # loop.json 的單子 cwd（agent-nia 的 ../../lib/agent/round）
+        ex = data.get("exec")
+        target = outside(src, ex.get("cwd")) if isinstance(ex, dict) else None
+        changed = bool(target)
+        if changed:
+            ex["cwd"] = target
+    elif key is None:
         changed = absolutize_parts(src, data)
     else:
         table = data.get(key)
@@ -88,7 +95,7 @@ def cmd_spawn(root, o, pos):
             if orig.exists():
                 link.unlink()
                 link.symlink_to(orig.resolve())
-    for reg, key in (("parts.json", None), ("tools.json", "tools")):  # 註冊檔裡指出範本的相對路徑（例：agent-nia 的 ../../lib/agent/queue）
+    for reg, key in (("parts.json", None), ("tools.json", "tools"), ("loop.json", "exec")):  # 指出範本的相對路徑（例：agent-nia 的 ../../lib/agent/queue）
         absolutize(src, a.agent / reg, key)                            # 搬家會斷：改成絕對（同 aos-tools add）
     for t in tools:
         shutil.copytree(t, a.agent / "tools" / t.name, symlinks=True, ignore=ignore)

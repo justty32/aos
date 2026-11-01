@@ -13,9 +13,8 @@ GUS = str(ROOT / "demo" / "agent-gus")
 REAL_URL = "http://localhost:4000/v1"
 CODES = ("BrainFailed", "ReplyBad", "ToolUnknown", "ArgumentsBad", "ToolFailed", "StackMissing", "QuestionMissing",
          "HistoryBad", "PlanBad", "ThoughtFailed", "StepBad")
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_THOUGHT_DEPTH",
-         "AOS_THOUGHT_BUDGET", "AOS_THOUGHT_MAX_STEPS", "AOS_THOUGHT_MAX_DEPTH", "AOS_THOUGHT_MAX_TOTAL", "AOS_THOUGHT_PARALLEL",
-         "AOS_THOUGHT_TIMEOUT_S", "AOS_THOUGHT_MAX_CHARS")
+CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
+# 小念頭的上限寫死在 shared.py（4 步、2 層、整棵樹 10 個、同時 3 個、900 秒、結論 1500 字）：測試靠假腦規劃多一點、結論做長一點碰到它們。
 
 
 def run(*args, env=None, **kw):
@@ -124,8 +123,8 @@ class T(unittest.TestCase):
     def ask(self, question="比較甲乙"):
         (self.ws / "new" / "q1.txt").write_text(question)
 
-    def gus(self, url=None, timeout=120, **env):
-        e = dict(env)
+    def gus(self, url=None, timeout=120):
+        e = {}
         if url:
             e["AOS_BRAIN_URL"] = url
         return run(EXEC, "--ws", "ws", GUS, env=e, cwd=self.tmp, timeout=timeout)
@@ -169,6 +168,12 @@ class T(unittest.TestCase):
         self.assertIn("- a（甲）：結論:甲", b_task["messages"][1]["content"])
         self.assertEqual(len(b.plans()), 3)        # 母體一次、兩個小念頭各一次
         self.assertEqual(len(self.history(self.stack / "thoughts" / "a" / "stack")), 2)
+        # 深度與額度資料夾寫在小念頭自己的 stack 裡（不靠環境變數往下帶）
+        a = self.stack / "thoughts" / "a" / "stack"
+        self.assertEqual((a / "thought_depth.txt").read_text(), "1\n")
+        budget = (a / "thought_budget.txt").read_text().strip()
+        self.assertEqual(Path(budget).parent.name, "budgets")
+        self.assertFalse((self.stack / "thought_depth.txt").exists())     # 母體沒有＝第 0 層
 
     def test_direct(self):
         """腦說不拆：不開 thoughts/，就是 agent-dan 的想 → 答。"""
@@ -181,41 +186,54 @@ class T(unittest.TestCase):
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant"])
 
     def test_depth_limit_skips_planning(self):
-        """AOS_THOUGHT_MAX_DEPTH=1：小念頭（第 1 層）不再問腦規劃，直接做。"""
-        b = self.brain(two_steps)
-        self.ask()
-        r = self.gus(b.url, AOS_THOUGHT_MAX_DEPTH="1")
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual([depth_of(x) for x in b.plans()], [0])
-        plan = json.loads(next((self.stack / "thoughts" / "a" / "stack" / "plans").iterdir()).read_text())
-        self.assertEqual(plan["direct"], "depth")
-
-    def test_recursive_and_budget(self):
-        """小念頭還能再拆（遞迴）；整棵樹額度用完，下一層就不拆（不問腦規劃）。"""
+        """最多 2 層：第 0、1 層都拆兩步，第 2 層的小念頭不再問腦規劃，直接做。"""
         def route(body):
             if is_plan(body):
                 d = depth_of(body)
-                if d < 2:
-                    return plan_reply([{"id": "x%d" % d, "goal": "x%d" % d}, {"id": "y%d" % d, "goal": "y%d" % d}])
+                return plan_reply([{"id": "p%d" % d, "goal": "p%d" % d}, {"id": "q%d" % d, "goal": "q%d" % d}])
+            g = goal_of(body)
+            return answer("結論:" + g if g else "總結")
+        b = self.brain(route)
+        self.ask()
+        r = self.gus(b.url)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(sorted(depth_of(x) for x in b.plans()), [0, 1, 1])
+        deep = self.stack / "thoughts" / "p0" / "stack" / "thoughts" / "p1" / "stack"
+        self.assertEqual((deep / "thought_depth.txt").read_text(), "2\n")
+        plan = json.loads(next((deep / "plans").iterdir()).read_text())
+        self.assertEqual(plan["direct"], "depth")
+
+    def test_recursive_and_budget(self):
+        """小念頭還能再拆（遞迴）；整棵樹額度（10 個）用完，下一層就不拆（不問腦規劃）。"""
+        ids0 = ["w0", "x0", "y0", "z0"]
+
+        def route(body):
+            if is_plan(body):
+                d = depth_of(body)
+                if d == 0:
+                    return plan_reply([{"id": i, "goal": i} for i in ids0])
+                if d == 1:
+                    g = goal_of(body)
+                    return plan_reply([{"id": "a_" + g, "goal": "a" + g}, {"id": "b_" + g, "goal": "b" + g}])
                 return plan_reply([])
             g = goal_of(body)
             return answer("結論:" + g if g else "總結")
         b = self.brain(route)
         self.ask()
-        r = self.gus(b.url, AOS_THOUGHT_MAX_TOTAL="4")
+        r = self.gus(b.url)
         self.assertEqual(r.returncode, 0, r.stderr)
-        # 第 0 層用 2、x0 那棵再用 2；y0 輪到時剩 0 → 不拆、不問腦規劃（x0 先起或 y0 先起都一樣：兩個第 1 層只有一個能拆）
+        # 第 0 層用 4、剩 6；第 1 層 4 個各要 2 → 只有 3 個拆得到，最後一個剩 0 → 不拆
         reasons = []
-        for s in ("x0", "y0"):
+        for s in ids0:
             p = json.loads(next((self.stack / "thoughts" / s / "stack" / "plans").iterdir()).read_text())
             reasons.append(p["direct"])
-        self.assertEqual(sorted(reasons, key=str), sorted([None, "budget"], key=str))
+        self.assertEqual(sorted(reasons, key=str), sorted([None, None, None, "budget"], key=str))
         budget = next((self.stack / "budgets").iterdir())
-        self.assertEqual(len([f for f in budget.iterdir() if not f.name.startswith(".")]), 4)
-        # 兩個第 1 層同時規劃時，兩個都可能先問了腦、搶額度時才有一個落空（白問一次）；依序時只問一次
-        self.assertIn([depth_of(x) for x in b.plans()].count(1), (1, 2))
+        self.assertEqual(len([f for f in budget.iterdir() if not f.name.startswith(".")]), 10)
+        # 第 1 層同時規劃時，可能先問了腦、搶額度時才落空（白問一次）；依序時只問 3 次
+        self.assertIn([depth_of(x) for x in b.plans()].count(1), (3, 4))
         deep = [p for p in self.stack.glob("thoughts/*/stack/thoughts/*/stack/history.jsonl")]
-        self.assertEqual(len(deep), 2)
+        self.assertEqual(len(deep), 6)
 
     def test_plan_bad_then_rerun(self):
         """規劃繞圈＝PlanBad、退 1、steps.json 不寫；修好再跑，題目不重接。"""
@@ -304,36 +322,20 @@ class T(unittest.TestCase):
         self.assertTrue(concl[0].startswith("小念頭 a 失敗了"), concl)
         self.assertEqual(concl[1], "小念頭 b 失敗了（目標：乙）：\n沒起：要先拿到 a 的結論，但它失敗了")
 
-    def test_thought_timeout(self):
-        """小念頭超過 AOS_THOUGHT_TIMEOUT_S：整群收掉、那步當失敗回給母體的腦。"""
-        def route(body):
-            if is_plan(body):
-                return two_steps(body)
-            return ("sleep", 4, answer("慢")) if goal_of(body) == "甲" else two_steps(body)
-        b = self.brain(route)
-        self.ask()
-        t0 = time.time()
-        r = self.gus(b.url, AOS_THOUGHT_TIMEOUT_S="1")
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("ThoughtFailed", gus_errors(r.stderr))
-        self.assertIn("逾時", r.stderr)
-        self.assertTrue(any(str(m["content"]).startswith("小念頭 a 失敗了（目標：甲）：\n逾時")
-                            for m in self.history()))
-        self.assertLess(time.time() - t0, 15)
-
     def test_conclusion_capped(self):
-        """結論超過 AOS_THOUGHT_MAX_CHARS 截斷，全文留在小念頭的 out/。"""
+        """結論超過 1500 字截斷，全文留在小念頭的 out/。"""
         def route(body):
             if not is_plan(body) and goal_of(body):
-                return answer("長" * 50)
+                return answer("長" * 1600)
             return two_steps(body)
         b = self.brain(route)
         self.ask()
-        r = self.gus(b.url, AOS_THOUGHT_MAX_CHARS="10")
+        r = self.gus(b.url)
         self.assertEqual(r.returncode, 0, r.stderr)
         c = [m["content"] for m in self.history() if str(m["content"]).startswith("小念頭 a")][0]
-        self.assertIn("長" * 10 + "…（截斷", c)
-        self.assertNotIn("長" * 11, c)
+        self.assertIn("長" * 1500 + "…（截斷", c)
+        self.assertNotIn("長" * 1501, c)
+        self.assertEqual((self.stack / "thoughts" / "a" / "ws" / "out" / "a.txt").read_text().strip(), "長" * 1600)
 
     def test_thought_entry(self):
         """別的程式叫一個小念頭：stdin {goal, context, needs} → stdout 只有結論；每次新的 runs/NNN/。"""
@@ -349,8 +351,27 @@ class T(unittest.TestCase):
         r = run(EXEC, GUS + "/thought.json", input=json.dumps(step),
                 env={"AOS_STACK": str(st) + "/", "AOS_BRAIN_URL": b.url}, cwd=self.tmp, timeout=60)
         self.assertTrue((st / "runs" / "002").is_dir())
+        self.assertEqual((st / "runs" / "001" / "stack" / "thought_depth.txt").read_text(), "1\n")   # 沒給＝自己是第 0 層
+        self.assertEqual((st / "runs" / "001" / "stack" / "thought_budget.txt").read_text().strip(),
+                         str(st / "runs" / "001" / "budget"))
         r = run(EXEC, GUS + "/thought.json", input="{}", env={"AOS_STACK": str(st) + "/"}, cwd=self.tmp)
         self.assertEqual((r.returncode, gus_errors(r.stderr)), (1, ["StepBad"]))
+
+    def test_thought_entry_depth_from_stack(self):
+        """叫的人在給的 stack 裡放 thought_depth.txt（例：2）：起的小念頭是第 3 層，到上限、不問腦規劃，直接做。"""
+        b = self.brain(two_steps)
+        st = self.tmp / "cell"
+        st.mkdir()
+        (st / "thought_depth.txt").write_text("2\n")
+        r = run(EXEC, GUS + "/thought.json", input=json.dumps({"goal": "甲"}),
+                env={"AOS_STACK": str(st) + "/", "AOS_BRAIN_URL": b.url}, cwd=self.tmp, timeout=60)
+        self.assertEqual((r.returncode, r.stdout), (0, "結論:甲\n"), r.stderr)
+        self.assertEqual(b.plans(), [])
+        self.assertEqual((st / "runs" / "001" / "stack" / "thought_depth.txt").read_text(), "3\n")
+        (st / "thought_depth.txt").write_text("x\n")
+        r = run(EXEC, GUS + "/thought.json", input=json.dumps({"goal": "甲"}),
+                env={"AOS_STACK": str(st) + "/", "AOS_BRAIN_URL": b.url}, cwd=self.tmp, timeout=60)
+        self.assertEqual((r.returncode, gus_errors(r.stderr)), (1, ["ArgumentsBad"]))
 
     def test_real_model(self):
         """真模型（本機 LiteLLM）：連不上就 skip。"""

@@ -101,7 +101,7 @@ class T(unittest.TestCase):
         self.assertEqual((self.s / "job" / "runs").read_text().count("\n"), 1)
 
     def test_add_loop_runs_its_loop_json(self):
-        # 有 loop.json＝loop 型：子 loop 直接跑 XXX 的 loop.json（相對 exec 照 XXX 轉絕對、單子補 cwd＝XXX）；--name 改名
+        # 有 loop.json＝loop 型：子 loop 直接跑 XXX 的 loop.json（相對 exec 照 XXX 轉絕對、單子指回 XXX/loop.json#/exec＝cwd 是 XXX）；--name 改名
         d = self.prog("ag", "exit 0\n", loop={"exec": "loop.json#/b", "max": 2, "_entry": ["x"],
                                               "b": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/runs"']}})
         d2 = self.prog("ag2", "exit 0\n", loop={"exec": {"argv": ["sh", "-c", 'pwd > "$AOS_STACK/pwd"']}, "max": 1})
@@ -192,22 +192,28 @@ class T(unittest.TestCase):
         self.assertEqual((self.ctl("rm", "a").returncode, self.ctl("rm", "b").returncode), (0, 0))
         self.assertEqual(((w1 / ".stack").is_dir(), os.readlink(w2 / ".stack")), (True, str(self.t / "elsewhere")))
 
-    def test_add_pins_aos_cd(self):
-        # 10-30 eca 代定：loop 型的 exec 裡剛好等於 {"$env": "AOS_CD"} 的值換成 XXX 的絕對路徑（搬進小格後 AOS_CD 是小格）；
-        # 帶 $path 等其他 key 的不動。demo/agent-nia（aos-round $AOS_CD）掛上去，小格的 loop.json 指回定義資料夾
+    def test_add_inst_points_back(self):
+        # 11-01：loop 型的 exec 是內嵌單子＝小格的 exec 換成 <XXX>/loop.json#/exec，跑的時候 AOS_CD 是 XXX
+        # （{"$env": "AOS_CD"}、帶 $path 的都照原地解）。demo/agent-nia（aos-fsm 表在 lib/agent/round）掛上去也一樣指回定義資料夾、
+        # 小格裡先放的一題答得出來（表的 {"$env": "AOS_CD"}＝nia）
         nia = Path(__file__).resolve().parent.parent / "demo" / "agent-nia"
         d = self.prog("odd", "exit 0\n", loop={"exec": {"argv": ["sh", "-c", 'echo "$0 $1" > "$AOS_STACK/args"',
                                                                  {"$env": "AOS_CD"}, {"$env": "AOS_CD", "$path": "x"}]},
                                                "max": 1})
+        (self.s / "nia").mkdir()
+        r = subprocess.run([tool("aos-exec"), str(nia / "parts.json") + "#/queue", str(nia), "push"], input='{"role": "user", "content": "幾點？"}',
+                           env=env_of({"AOS_STACK": str(self.s / "nia") + "/", "AOS_WS": str(self.t)}), capture_output=True, text=True, timeout=30)
+        self.assertEqual(r.returncode, 0, r.stderr)
         self.start()
         self.assertEqual(self.ctl("add", "--name", "nia", str(nia)).returncode, 0)
         self.assertEqual(self.ctl("add", "odd").returncode, 0)
         self.assertTrue(until(lambda: (self.s / "nia" / "loop.json").is_file() and (self.s / "odd" / "args").is_file()))
-        argv = json.loads((self.s / "nia" / "loop.json").read_text())["exec"]["argv"]
-        self.assertEqual(argv, ["aos-round", "--on-empty", "stop", str(nia)])
-        odd = json.loads((self.s / "odd" / "loop.json").read_text())["exec"]["argv"]
-        self.assertEqual(odd[3:], [os.path.realpath(d), {"$env": "AOS_CD", "$path": "x"}])
-        self.assertEqual((self.s / "odd" / "args").read_text().split()[0], os.path.realpath(d))
+        self.assertEqual(json.loads((self.s / "nia" / "loop.json").read_text())["exec"], str(nia) + "/loop.json#/exec")
+        self.assertEqual(json.loads((self.s / "odd" / "loop.json").read_text())["exec"], os.path.realpath(d) + "/loop.json#/exec")
+        self.assertEqual((self.s / "odd" / "args").read_text().split(), [os.path.realpath(d), os.path.join(os.path.realpath(d), "x")])
+        self.assertTrue(until(lambda: self.tables()["loops"]["nia"]["phase"] == "done", secs=60), (self.s / "nia" / "stderr.txt").read_text())
+        last = json.loads((self.s / "nia" / "history.jsonl").read_text().splitlines()[-1])
+        self.assertTrue(last["content"].startswith("FAKE ANSWER to: 幾點？"), last)
 
 
 if __name__ == "__main__":

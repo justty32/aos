@@ -1,7 +1,9 @@
 # ask.py - compact 問腦：OpenAI 相容 {url}/chat/completions，回 (content, usage)；沒設網址＝假腦（照字面拼，demo／測試用）
-# 網址：AOS_COMPACT_URL，沒設就沿用 AOS_BRAIN_URL（agent 的腦在哪，compact 就問哪）；key：AOS_BRAIN_KEY 有設才帶。
+# 網址：AOS_BRAIN_URL（agent 的腦在哪，compact 就問哪）；key：AOS_BRAIN_KEY 有設才帶；一次最多等 120 秒（TIMEOUT_S）。
 # usage 取回覆的 usage.prompt_tokens／completion_tokens；回覆沒帶（或假腦）就用字數粗估，標 estimated。
 import json, os, re, sys, urllib.error, urllib.request
+
+TIMEOUT_S = 120                 # 一次問腦最多等幾秒
 
 
 def die(code, reason):
@@ -17,7 +19,7 @@ def estimate(s):
 
 
 def url():
-    return os.environ.get("AOS_COMPACT_URL") or os.environ.get("AOS_BRAIN_URL") or ""
+    return os.environ.get("AOS_BRAIN_URL") or ""
 
 
 def ask(model, system, user, data, fake):
@@ -34,7 +36,7 @@ def ask(model, system, user, data, fake):
     req = urllib.request.Request(base.rstrip("/") + "/chat/completions",
                                  json.dumps(body, ensure_ascii=False).encode("utf-8"), headers)
     try:
-        with urllib.request.urlopen(req, timeout=int(os.environ.get("AOS_COMPACT_TIMEOUT_S") or 120)) as r:
+        with urllib.request.urlopen(req, timeout=TIMEOUT_S) as r:
             raw = r.read()
     except urllib.error.HTTPError as e:
         die("BrainFailed", "HTTP %d：%s" % (e.code, e.read()[:200].decode("utf-8", "replace")))

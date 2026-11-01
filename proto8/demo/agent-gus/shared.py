@@ -1,4 +1,4 @@
-# shared.py - agent-gus 各格共用的小函式：報錯、讀寫 history、認領題目、組 tools、問腦（C-50「程式可以擠在一坨，共用一些 lib」）
+# shared.py - agent-gus 各格共用的小函式與常數：報錯、讀寫 history、認領題目、組 tools、問腦、小念頭的上限與起法（C-50「程式可以擠在一坨，共用一些 lib」）
 # 各格的身體是 plan.py、fork.py、brain.py、act.py；這支不是格，只被它們 import。
 import json, os, subprocess, sys, urllib.error, urllib.request
 
@@ -17,11 +17,31 @@ HISTORY = os.path.join(STACK, "history.jsonl")
 STEPS = os.path.join(STACK, "steps.json")          # 這題的規劃與各步結論（fork 格的帳）
 
 
-def env_int(name, default):
+# 小念頭的上限（寫死；demo，要換就改這裡）
+MAX_STEPS = 4         # 一次規劃最多幾步
+MAX_DEPTH = 2         # 最多套幾層：深度到這個數的小念頭不再規劃、直接做（母體是第 0 層）
+MAX_TOTAL = 10        # 整棵念頭樹（一道題）最多 fork 幾個小念頭（不含母體）
+PARALLEL = 3          # 一個 fork 格同時跑幾個小念頭
+TIMEOUT_S = 900       # 一個小念頭最多跑幾秒（到時整群收掉＝這個小念頭失敗）
+MAX_CHARS = 1500      # 結論最多幾個字（超過就截斷，原文留在小念頭自己的 out/）
+DEPTH_FILE, BUDGET_FILE = "thought_depth.txt", "thought_budget.txt"
+
+
+def read_line(path):
     try:
-        return int(os.environ.get(name, default))
-    except ValueError:
-        die("ArgumentsBad", "%s 不是整數：%r" % (name, os.environ.get(name)))
+        with open(path, encoding="utf-8") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return ""
+
+
+def tree():
+    """自己在念頭樹的哪裡：回 (深度, 額度資料夾或 None)。launch 起小念頭時寫在小念頭 stack 裡
+    （$AOS_STACK/thought_depth.txt、thought_budget.txt，一個檔一個值）；沒有這兩個檔＝母體（深度 0、額度由呼叫的人決定）。"""
+    d = read_line(os.path.join(STACK, DEPTH_FILE)) or "0"
+    if not d.isdigit():
+        die("ArgumentsBad", "%s 不是整數：%r" % (DEPTH_FILE, d))
+    return int(d), read_line(os.path.join(STACK, BUDGET_FILE)) or None
 
 
 def ls(d):
@@ -145,7 +165,7 @@ def ask(cell, messages, tools=None):
 
 # ---- 小念頭：fork.py（一次多個）與 thought.py（別的程式叫一個）共用 ----
 
-def task_text(goal, context="", needs=(), max_chars=1500):
+def task_text(goal, context="", needs=()):
     """給小念頭的題目：背景摘要＋前面幾步的結論（[(id, goal, conclusion)]）＋這一步的目標＋規矩（只回結論）。"""
     lines = ["（你是一個小念頭：母體把一件事拆成幾步，你負責其中一步。你看不到母體的對話。）", ""]
     if context:
@@ -155,29 +175,32 @@ def task_text(goal, context="", needs=(), max_chars=1500):
         lines += ["- %s（%s）：%s" % n for n in needs]
         lines.append("")
     lines += ["你的目標：" + goal, "",
-              "做完只回結論：直接寫結果與要點（數字、判斷），不寫過程，%d 字以內。" % max_chars]
+              "做完只回結論：直接寫結果與要點（數字、判斷），不寫過程，%d 字以內。" % MAX_CHARS]
     return "\n".join(lines) + "\n"
 
 
 def launch(cell, qname, task, depth, budget):
     """在小格 cell/ 開 ws/、stack/，題目放 ws/new/<qname>.txt（小格已存在＝重跑，不重放題目），
+    深度與額度資料夾寫進 stack/ 的 thought_depth.txt、thought_budget.txt（小念頭的 plan 格用 tree() 讀），
     背景起「同一隻 agent」（aos-exec --ws cell/ws .，cwd 是本資料夾），自成一個行程群組；回 Popen。"""
     ws = os.path.join(cell, "ws")
     fresh = not os.path.isdir(ws)
     for d in ("new", "out"):
         os.makedirs(os.path.join(ws, d), exist_ok=True)
-    os.makedirs(os.path.join(cell, "stack"), exist_ok=True)
+    stack = os.path.join(cell, "stack")
+    os.makedirs(stack, exist_ok=True)
+    write_atomic(os.path.join(stack, DEPTH_FILE), "%d\n" % depth)
+    write_atomic(os.path.join(stack, BUDGET_FILE), budget + "\n")
     if fresh:
         write_atomic(os.path.join(ws, "new", qname + ".txt"), task)
-    env = dict(os.environ, AOS_STACK=os.path.join(cell, "stack") + "/", AOS_WS=ws,
-               AOS_THOUGHT_DEPTH=str(depth), AOS_THOUGHT_BUDGET=budget)
+    env = dict(os.environ, AOS_STACK=stack + "/", AOS_WS=ws)
     with open(os.path.join(cell, "log.txt"), "a", encoding="utf-8") as log:
         return subprocess.Popen(["aos-exec", "--ws", ws, "."], cwd=os.getcwd(), env=env, stdin=subprocess.DEVNULL,
                                 stdout=log, stderr=log, start_new_session=True)
 
 
-def conclusion(cell, qname, code, max_chars):
-    """小念頭結束後：回 (結論, None) 或 (None, 失敗原因)。結論＝它 out/ 裡那一段答案，超過 max_chars 截斷。"""
+def conclusion(cell, qname, code):
+    """小念頭結束後：回 (結論, None) 或 (None, 失敗原因)。結論＝它 out/ 裡那一段答案，超過 MAX_CHARS 截斷。"""
     if code != 0:
         return None, "結束碼 %d（現場在 %s，log.txt）" % (code, cell)
     path = os.path.join(cell, "ws", "out", qname + ".txt")
@@ -186,6 +209,6 @@ def conclusion(cell, qname, code, max_chars):
             text = f.read().strip()
     except FileNotFoundError:
         return None, "跑完沒有答案（%s）" % path
-    if len(text) > max_chars:
-        text = text[:max_chars] + "…（截斷；全文在 %s）" % path
+    if len(text) > MAX_CHARS:
+        text = text[:MAX_CHARS] + "…（截斷；全文在 %s）" % path
     return text, None

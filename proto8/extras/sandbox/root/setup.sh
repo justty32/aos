@@ -3,6 +3,8 @@
 #
 #   sh setup.sh [--apply]                  帳號那一套（下面 1～4）
 #   sh setup.sh --mailbox 信箱 [--apply]   只做一件：讓 aos-run 寫得到這個 LLM kernel 信箱（帳號要先建好）
+#   另外三個旗標換預設值（11-01 起取代環境變數）：--me 名（我＝跑 kernel 的人；預設 $SUDO_USER 或自己，測試在假 root 裡給數字）、
+#   --s6-bin 路徑（s6 的 bin；預設試驗場 /home/<我>/code/try/sandbox/s6-root/bin）、--runner 名（跑不信任函數的帳號與群組；預設 aos-run）
 # 預設乾跑：只把要做的指令印出來，什麼都不動。看過沒問題再用 root 跑一次：
 #   sudo sh proto8/extras/sandbox/root/setup.sh --apply
 # 設計與為什麼：proto8/thinking/2026-10-24-sandbox.md（「要 root 的步驟」、S17）。
@@ -12,17 +14,23 @@ set -eu
 
 APPLY=0
 MAILBOX=
+ME=
+BIN=
+RUNNER=
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--apply) APPLY=1 ;;
-	--mailbox) [ $# -ge 2 ] || { echo "setup.sh: ArgumentsBad --mailbox 後面要有信箱資料夾" >&2; exit 1; }; MAILBOX="$2"; shift ;;
-	*) echo "setup.sh: FlagUnknown $1（用法：setup.sh [--mailbox 信箱] [--apply]）" >&2; exit 1 ;;
+	--mailbox|--me|--s6-bin|--runner)
+		[ $# -ge 2 ] || { echo "setup.sh: ArgumentsBad $1 後面要有值" >&2; exit 1; }
+		case "$1" in --mailbox) MAILBOX="$2" ;; --me) ME="$2" ;; --s6-bin) BIN="$2" ;; --runner) RUNNER="$2" ;; esac
+		shift ;;
+	*) echo "setup.sh: FlagUnknown $1（用法：setup.sh [--mailbox 信箱] [--me 名] [--s6-bin 路徑] [--runner 名] [--apply]）" >&2; exit 1 ;;
 	esac
 	shift
 done
-ME="${AOS_ME:-${SUDO_USER:-$(id -un)}}"            # 我（跑 kernel 的人）；AOS_ME 給測試在假 root 裡用數字
-BIN="${AOS_S6_BIN:-/home/$ME/code/try/sandbox/s6-root/bin}"   # 試驗場編好的 s6（靜態連 skalibs，只靠 libc）
-RUNNER="${AOS_RUNNER:-aos-run}"                     # 跑「不信任的函數」用的帳號與它的群組（沒有家目錄、不能登入）
+ME="${ME:-${SUDO_USER:-$(id -un)}}"                 # 我（跑 kernel 的人）；--me 給測試在假 root 裡用數字
+BIN="${BIN:-/home/$ME/code/try/sandbox/s6-root/bin}"   # 試驗場編好的 s6（靜態連 skalibs，只靠 libc）
+RUNNER="${RUNNER:-aos-run}"                         # 跑「不信任的函數」用的帳號與它的群組（沒有家目錄、不能登入）
 AREA=/srv/aos-run                                   # 它能寫的地方：放函數複本與暫時工作區
 
 run() {

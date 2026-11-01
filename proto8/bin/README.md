@@ -1,10 +1,10 @@
-# bin — aos-tick、aos-tools、aos-daemon-ctl、aos-round、aos-eca-turn（Python）
+# bin — aos-tick、aos-tools、aos-daemon-ctl、aos-eca-turn（Python）
 
 ← [proto8](../README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)｜demo：[demo](../demo/README.md)｜C++ 實作：[impls](../impls/README.md)｜測試：`python3 -m unittest discover -s proto8/tests`（先建 impls，見 [testing](../../wf/workflows/testing.md)）
 
 > **C++（[proto8/impls](../impls/README.md)）是唯一實作**（使用者 10-23：「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；fsm 和 tick，使用者選「fsm 也改用 C++、tick 先留 Python」）：
 > `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 的說明在各自的 README：[aos-exec](../impls/aos-exec/README.md)、[aos-loop](../impls/aos-loop/README.md)、[aos-fsm](../impls/aos-fsm/README.md)、[aos-daemon](../impls/aos-daemon/README.md)；inst 是 C lib [inst](../impls/inst/README.md)。
-> 這裡是 `aos-tick` 與 10-28 加的 `aos-tools`（同天的 `aos-parts` 11-01 刪了）、10-30 加的 `aos-daemon-ctl`、`aos-round`、10-31 加的 `aos-eca-turn`（Python，都用 `aos_flags.py` 的旗標解析 `parse`）。
+> 這裡是 `aos-tick` 與 10-28 加的 `aos-tools`（同天的 `aos-parts` 11-01 刪了）、10-30 加的 `aos-daemon-ctl`（同天的 `aos-round` 11-01 刪了）、10-31 加的 `aos-eca-turn`（Python，都用 `aos_flags.py` 的旗標解析 `parse`）。
 > 刪掉的 bin 版各支逐支說明在 git 歷史：`git show 60d677cc:proto8/bin/README.md`。
 
 ```
@@ -12,7 +12,7 @@ sh proto8/demo/run.sh                                  # 建暫時工作區、�
 python3 -m unittest discover -s proto8/tests           # 四支 C++ 在 impls/<名>/bin/、aos-tick 在這裡（tests/aos_bins.py 放 PATH）
 ```
 
-aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<名>/bin/`（四支）與這個 `bin/`（aos-tick、aos-tools、aos-round…）放進 PATH，`demo/run.sh` 就是這樣做。
+aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<名>/bin/`（四支）與這個 `bin/`（aos-tick、aos-tools…）放進 PATH，`demo/run.sh` 就是這樣做。
 
 ## 逐支說明
 
@@ -34,12 +34,12 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
   | `aos-parts add／rm` | 手寫，或 `aos-json set --parents <agent>/parts.json#/槽 '"路徑"'`／`aos-json del <agent>/parts.json#/槽` |
   沒留薄殼：人在 shell 裡要問「這隻 agent 的 queue 在哪」，上面兩行就答得出來，沒有非程式不可的情境。測試 `proto8/tests/test_round_parts.py`。
 
-- **`aos-round - 把 agent 的「一輪」跑一格：拿 lib/agent/round/ 的 fsm 表交給 aos-fsm`**（10-30；使用者「整個框架則化作 aos-round」；設計 [thinking 10-30 aos-round](../thinking/2026-10-30-aos-round.md) § B 第 1 點、實作步驟第 3 步；完整說明在檔頭 docstring）
-  用法 `aos-round [--on-empty stop|idle] <agent 資料夾絕對路徑>`（沒給／多給 `ArgumentsBad`、不是存在的絕對路徑 `AgentBad`、不認得的旗標 `FlagUnknown`）。**`--on-empty`**（11-01 取代環境變數 `AOS_ROUND_ON_EMPTY` 與 parts.json 的 round 槽，不再讀它們；跟 aos-eca-turn 對稱）＝`stop`（沒給，表 `fsm-stop.json`：queue 空 fsm 退 10、loop 收工）｜`idle`（表 `fsm-idle.json`：idle 退 10 被表接住、fsm 退 0、loop 隔 `interval_ms` 再來），其他＝`ArgumentsBad`。
-  設 `AOS_ROUND_AGENT=<agent>`、相對的 `AOS_STACK`／`AOS_WS` 先以 cwd 轉絕對，cd 到 `lib/agent/round/`（從自己的實際位置找），exec 成 `aos-fsm 表檔`——結束碼就是 aos-fsm 的。沒設 `AOS_STACK` 交給 aos-fsm 說。不開窗、不寫檔。agent 的 `loop.json` 這樣叫：`{"exec": {"argv": ["aos-round", "--on-empty", "stop", {"$env": "AOS_CD"}], "timeout_ms": 600000}}`（`timeout_ms` 管一格）。
-  **錯**：stderr 一行 `aos-round: 代號 原因`、退 1（`ArgumentsBad`、`FlagUnknown`、`AgentBad`、`CommandMissing`）。要 PATH 上有 aos-fsm（格還要 aos-exec、aos-tools、aos-post）。測試 `proto8/tests/test_round_bin.py` 的 `AosRound`。
+- **`aos-round`**：11-01 刪了（使用者「aos round這東西還沒刪掉嗎」「刪掉」）。agent 的 `loop.json` 直接叫 aos-fsm 跑 `lib/agent/round/` 的表：
+  `{"exec": {"argv": ["aos-fsm", "fsm-stop.json"], "cwd": "../../lib/agent/round", "timeout_ms": 600000}}`（demo/agent-nia；repo 外的 agent 寫絕對 cwd）——
+  `cwd` 讓表裡的格名從 round 資料夾找，表的 `{"$env": "AOS_CD"}`＝loop 跑那張單子時的 `AOS_CD`＝agent；queue 空的停法＝指哪張表（`fsm-stop.json` 退 10 收工／`fsm-idle.json` 退 0 再來）。
+  單走一格＝`aos-exec <agent>/loop.json#/exec`（lib/aos/ask_round 這樣叫）。說明在 [lib/README round](../lib/README.md)；測試 `proto8/tests/test_round_loop.py`。
 
-- **`aos-eca-turn - 外部 coding agent（claude／codex）的一輪：從 stack 的 queue 認領一則、交給 CLI 答、回答接進 history`**（10-31 改名、升成 bin 指令；使用者「aos eca turn」、C-54 R13 `aos-<領域>-<功能>`，跟 `aos-round` 對稱；前身 10-30 的 `lib/eca/turn` 格；設計 [thinking 10-30 eca](../thinking/2026-10-30-eca.md)；完整說明在檔頭 docstring）
+- **`aos-eca-turn - 外部 coding agent（claude／codex）的一輪：從 stack 的 queue 認領一則、交給 CLI 答、回答接進 history`**（10-31 改名、升成 bin 指令；使用者「aos eca turn」、C-54 R13 `aos-<領域>-<功能>`；前身 10-30 的 `lib/eca/turn` 格；設計 [thinking 10-30 eca](../thinking/2026-10-30-eca.md)；完整說明在檔頭 docstring）
   用法 `aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] <定義資料夾絕對路徑>`（旗標在位置參數前）。定義＝`demo/eca-claude` 那種（頂層 `cli.json`、選填 `prompt.txt`），定義不被寫、寫的都在 `$AOS_STACK`。一次答一則：`queue/cur/` 有信先接、否則 `aos-post claim` 一封 → user 接進 `history.jsonl` → 經 `lib/agent/cli_session.py` 的 `ask` 問 CLI（畫面開著貼字、沒開 `--resume`）→ assistant 接進 history → 收信；壞信丟掉、trace 記 `letter_warning`；trace 一行 `unit: "aos-eca-turn"`；`$AOS_STACK/eca.json` 記 kind、ws、template。
   **`--on-empty`**（10-31 取代環境變數 `ECA_ON_EMPTY`，不再讀它）：queue 空時 `stop`（沒給；退 10＝loop 收工）｜`idle`（退 0＝loop 隔 `interval_ms` 再來）；壞值、跟 `--one` 一起給＝`ArgumentsBad`。**`--on-busy`**（10-31）：`yield`（沒給）＝lock 拿不到、有人接在 tmux 畫面上、`busy.txt` 在＝這輪退 0、信留 `cur/`、不寫 trace（`--one` 照錯退 1）｜`answer`＝照常答不退讓（lock 等、有人接著照樣貼、`busy.txt` 等它消失，共用 `timeout_ms` 期限，逾時 `ReplyMissing`）。`--one`＝工具形（stdin `{"prompt"}` → stdout，同 `lib/agent/claude` 的 `call_main`）。定義的 `loop.json` 這樣叫：`{"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000}}`。
   **錯**：stderr 一行 `aos-eca-turn: 代號 原因`、退 1（`ArgumentsBad`、`FlagUnknown`、`AgentBad`、`StackMissing`、`HistoryBad`、`PostFailed`、`WriteFailed`，加 cli_session 的 `CfgMissing`、`CfgBad`、`CliMissing`、`CliFailed`、`ReplyMissing`）；10-30 的 `SettingBad` 拿掉了。要 PATH 上有 aos-post。測試 `proto8/tests/test_eca_turn.py`（範本 `test_eca.py`）。
@@ -47,7 +47,7 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
 - **`aos-tick - 把時鐘檔的回合數往前走一格`**（NAME，C-54 R1）
   用法 `aos-tick [旗標] FILE`（Python）：時鐘往前走一格（C-44：只是時鐘，不包任務、不保證什麼）。FILE 裡是回合數（十進位＋換行），讀出 n、寫回 n＋1 就退 0；FILE 不在＝0（第一次寫 1）；寫進 n＋1＝第 n 回合結束、第 n＋1 回合開始，mtime＝這回合從什麼時候開始。先寫同資料夾的 `.名字` 再改名蓋過去（N-05），不 fsync，stdout 不吐東西。**命令列**：唯一的位置參數就是 FILE（必給、只能一個、相對路徑從 cwd 算）；FILE 照字面用，`#` 不切指標（它是時鐘檔不是設定檔）；目前沒有旗標（旗標表是空的、走 `aos_flags`，`--` 結束旗標）。**自己的錯**退 1、stderr 一行 `aos-tick: 代號 原因`、FILE 不動：`ArgumentsBad usage: aos-tick [旗標] FILE（原因）`（跟 aos-loop、aos-fsm 同一個寫法）（沒給、多給；不認得的旗標是 `FlagUnknown usage: …`）、`ClockBad 時鐘檔讀不到：`（例：它是資料夾）、`ClockBad 時鐘檔壞：`（內容不是 `[0-9]+` 加可有可無的一個 `\n`；空檔、`\r\n`、空白、負號、全形數字都算壞）、`WriteFailed 時鐘檔寫不了：`（資料夾不在或沒寫入權限；不替人建資料夾，暫存檔會清掉）。節奏、停、只走 N 回合交給 loop（`max`、`interval_ms`、ctl 的 `paused`）；同一個 FILE 兩個人同時 tick 不管。
 
-- `aos_flags.py`：命令列旗標解析 `parse(argv, 旗標表)` 回 `(opts, [XXX, args...])`（`--x V`／`--x=V`、重複給最後一個算、`--` 結束旗標、第一個不是旗標的參數起原樣；不認得＝`FlagUnknown`、缺值＝`ArgumentsBad`）。aos-tick、aos-tools、aos-round（11-01 起）、aos-eca-turn 用（10-28～11-01 aos-parts 也用）。
+- `aos_flags.py`：命令列旗標解析 `parse(argv, 旗標表)` 回 `(opts, [XXX, args...])`（`--x V`／`--x=V`、重複給最後一個算、`--` 結束旗標、第一個不是旗標的參數起原樣；不認得＝`FlagUnknown`、缺值＝`ArgumentsBad`）。aos-tick、aos-tools、aos-eca-turn 用（10-28～11-01 aos-parts 也用）。
 
 執行中狀態（`state.txt`、`trace.jsonl`、`plan.txt`、`current.txt`）在 `$AOS_STACK`（預設 `$AOS_WS/.stack/`）；工作區只放交辦的東西與成果（題目 `new/` → 認領 `cur/` → `done/`，答案 `out/`）；定義資料夾不被寫，所以同一個 agent 可同時被兩個工作區跑。結果＝工作區內容；沒有別的結果通道。
 
@@ -65,7 +65,7 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
   用法 `aos-daemon-ctl [--daemon D] add [--name N] [--kind loop|exec|max1] [--ws WS] XXX｜rm 名字｜ls [--json]`。
   **哪個 daemon**（N-63 hub 型變數）：`--daemon` ＞ `$AOS_DAEMON`，值＝那個 daemon 的 `$AOS_STACK`（它的窗用預設名字：信箱 `loops_mailbox/`、`loops_state.json`）；都沒有或不是資料夾＝`DaemonMissing`；子 proc 照常繼承。
   **add／rm＝投信**（信箱模式，N-28 的 10-29 補、N-54）：daemon.json 要寫 `"loops_mailbox": "loops_mailbox"`，沒有 `new/`＝`MailboxMissing`；stdout 印 aos-post 的信號；daemon 下一圈才套，結果看 ls（壞信在 `letter_warning`）。rm＝`loops_removed`＋`execs_removed` 都寫那個名字。
-  **自動識別**：XXX 是有 `loop.json` 的資料夾＝loop 子項，設定＝它的 loop.json（去掉 `_entry`；相對 exec 照 XXX 轉絕對、單子沒寫 cwd＝補 XXX；exec 裡剛好等於 `{"$env": "AOS_CD"}` 的值換成 XXX 的絕對路徑——搬進小格後 `AOS_CD` 會變成小格，agent-nia 的 `aos-round --on-empty stop {"$env": "AOS_CD"}`、eca 定義的 `aos-eca-turn … {"$env": "AOS_CD"}` 靠這條掛得上 daemon；帶 `$path` 等其他 key 的不動；10-30 eca 代定）——子 loop 直接跑它的 loop，ctl／state 落在小格；其他＝`execs`（XXX 的絕對路徑）。`--kind max1`＝`{"exec": XXX, "max": 1}` 的 loop（使用者的底線）。名字＝`--name` ＞ XXX 的資料夾名。XXX 的 `.env`、loop.json 裡的指示詞不處理。
+  **自動識別**：XXX 是有 `loop.json` 的資料夾＝loop 子項，設定＝它的 loop.json（去掉 `_entry`；相對 exec 照 XXX 轉絕對；exec 是內嵌單子＝換成 `<XXX>/loop.json#/exec`，子 loop 每次 aos-exec 指回原檔那張單子，`AOS_CD`＝XXX、相對的 cwd／argv 照原地算——agent-nia 的表用 `{"$env": "AOS_CD"}` 認 agent、eca 定義的 `aos-eca-turn … {"$env": "AOS_CD"}` 靠這條掛得上 daemon；11-01 刪 aos-round 時取代原本的「複製單子補 cwd、把 `{"$env": "AOS_CD"}` 釘成 XXX」）——子 loop 直接跑它的 loop，ctl／state 落在小格；其他＝`execs`（XXX 的絕對路徑）。`--kind max1`＝`{"exec": XXX, "max": 1}` 的 loop（使用者的底線）。名字＝`--name` ＞ XXX 的資料夾名。XXX 的 `.env`、loop.json 裡的指示詞不處理。
   **`--ws WS`**（10-30 eca 第 2 步，[thinking 10-30 eca](../thinking/2026-10-30-eca.md) 衝突 1、3，使用者「都照建議」）：這一隻的工作區。WS 從呼叫當下的 cwd 轉絕對（不是資料夾＝`PathMissing`、空＝`ArgumentsBad`），寫進子項物件的 `ws`（loop／max1＝子項設定多一個 `ws`；exec＝`{"exec": XXX, "ws": WS}`），daemon 起它時設 `AOS_WS`（[aos-daemon「子項的工作區 ws」](../impls/aos-daemon/README.md)）。
   信送出之後：`<WS>/.stack` 不在（`lexists`，壞掉的 symlink 也算在）＝建一個 symlink 指到這一隻在 daemon 的小格 `<D>/<名字>`（小格還沒建也先建），cd 到 WS 打 aos-say 就接上這一隻；已經在（例如直接 aos-exec 跑過留下的真 `.stack/`）＝不建、stderr 一句「`aos-daemon-ctl: 注意 工作區已有 .stack（…），沒建捷徑到小格 …；要接上請先搬開（或用 --stack …）`」，add 照樣成功、退 0（10-30 代定：照「注意」慣例，不另設 `StackExists`）。
   rm（代定）：信送出之後，`loops_state.json` 那一列有 `ws`、而且 `<ws>/.stack` 是指到 `<D>/<名字>` 的 symlink＝順手拿掉；拿不到 ws、不是 symlink、指到別處＝不動、不報。

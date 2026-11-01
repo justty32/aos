@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-# compact - history.jsonl 超過 AOS_COMPACT_MAX_BYTES 就壓成短版（三步：工具呼叫各一句 → 逐段總結＋保留行 → 最後修飾），交給 history 格換上
-"""叫法：aos-exec <compact 格> <agent 資料夾> [--force]；掛在 hook/pre_think（掛勾只收 agent 資料夾這一個參數）。
+# compact - history.jsonl 超過 --max-bytes（預設 65536）就壓成短版（三步：工具呼叫各一句 → 逐段總結＋保留行 → 最後修飾），交給 history 格換上
+"""叫法：aos-exec <compact 格> [--max-bytes N] [--force] <agent 資料夾>（旗標放 agent 前後都收）；掛在 hook/pre_think（掛勾只收 agent 資料夾這一個參數，
+  要改門檻就把 parts.json 那槽寫成 argv 陣列，例 "pre_think": ["../../lib/agent/compact", "--max-bytes", "32768"]，agent 接在後面）。
 
-觸發（agent-round § 4 history）：$AOS_STACK/history.jsonl 沒超過 AOS_COMPACT_MAX_BYTES（沒設＝65536）＝什麼都不動、退 0；--force＝不看門檻。
+觸發（agent-round § 4 history）：$AOS_STACK/history.jsonl 沒超過 --max-bytes（沒給＝65536）＝什麼都不動、退 0；--force＝不看門檻。
 「壓」的實際內容在這格（實作時代定，見 agent-round 文末）：history 格的 compact 只負責「舊的整份收進 history_archive/、
 換上給它的短版」，壓成什麼樣是這格的事。三步土法從 demo/agent-hal/compact 搬來（thinking 2026-10-24-compact）：
   第 1 步 note：每次叫工具（assistant 的 tool_calls＋對應的 tool 結果）交給腦，一個呼叫一句「在幹嘛，結果如何」。
-  第 2 步 segment：第 1 步後的紀錄每 AOS_COMPACT_SEG_KB 切一段，各段產總結，並挑幾行原樣保留（keep，打標記＋理由）。
+  第 2 步 segment：第 1 步後的紀錄每 8 KB（SEG_KB）切一段，各段產總結，並挑幾行原樣保留（keep，打標記＋理由）。
   第 3 步 final：各段總結＋候選保留行串起來修成一份摘要、選最後要留的 keep。
-  最近 AOS_COMPACT_KEEP_TURNS 題與還沒答完的那題原樣不動；更早的換成一則 user（摘要＋保留原文）＋一則 assistant（讀過了）。
-問腦走 endpoint 格：AOS_COMPACT_ENDPOINT（這格的設定）＞ $AOS_STACK/endpoint.txt ＞ default，槽名 endpoint/<名>；
-  AOS_COMPACT_MODEL_NOTE／AOS_COMPACT_MODEL_SEG／AOS_COMPACT_MODEL_FINAL 有設才在請求裡帶 model（沒設＝用 endpoint 自己的）。腦回的不是 JSON 就走退路（照字面拼／整段當摘要）。
+  最近 2 題（KEEP_TURNS）與還沒答完的那題原樣不動；更早的換成一則 user（摘要＋保留原文）＋一則 assistant（讀過了）。
+問腦走 endpoint 格、跟 think 同一個腦：$AOS_STACK/endpoint.txt ＞ default，槽名 endpoint/<名>；請求不帶 model（用 endpoint 自己的）。
+  腦回的不是 JSON 就走退路（照字面拼／整段當摘要）。
 history 與 endpoint 怎麼找：lib/agent/parts.py 的 find（parts.json 有＝<agent>/parts.json#/<槽>、沒寫＝固定名字；沒掛＝PartMissing），
   aos-exec 它，env 交給 aos-exec（不疊，N-58）。
 做到一半的產物落在 $AOS_STACK/compact/run/（失敗重跑從斷的那步接著做）；換上之後改名成 compact/<run>/（report.json、log.jsonl）。
 壓了沒變小＝不換（收成 compact/nosave-<run>/，同一份 history 不再壓）。同一個 stack 一次只壓一個（flock）。
-設定（這格的 env；parts.json 那槽的 .env key 或這格的 .env 檔，環境裡已有的不蓋）：AOS_COMPACT_MAX_BYTES、AOS_COMPACT_SEG_KB（8）、AOS_COMPACT_KEEP_TURNS（2）、AOS_COMPACT_KEEP_MAX（3）、AOS_COMPACT_KEEP_FINAL_MAX（12）、
-  AOS_COMPACT_KEEP_LINE_MAX（1500）、AOS_COMPACT_RESULT_CUT（2000）、AOS_COMPACT_ENDPOINT、AOS_COMPACT_MODEL_NOTE、AOS_COMPACT_MODEL_SEG、AOS_COMPACT_MODEL_FINAL。
-錯：stderr 一行「compact: 代號 原因」、退 1（N-43）。代號：ArgumentsBad、AgentMissing、StackMissing、SettingBad、PartMissing、
+設定只有 argv 的 --max-bytes（11-01 起不讀環境變數）；其他寫死在下面的常數：SEG_KB 8、KEEP_TURNS 2、KEEP_MAX 3、KEEP_FINAL_MAX 12、KEEP_LINE_MAX 1500、RESULT_CUT 2000。
+錯：stderr 一行「compact: 代號 原因」、退 1（N-43）。代號：ArgumentsBad（沒給 agent、多給、不認得的旗標、--max-bytes 缺值或不是 ≥0 的整數）、AgentMissing、StackMissing、PartMissing、
 PartsBad、HistoryFailed、HistoryChanged、EndpointFailed、SummaryEmpty。"""
 import datetime, fcntl, hashlib, json, os, subprocess, sys, time
 sys.path[:0] = [os.path.dirname(os.path.realpath(__file__)), os.path.dirname(os.path.dirname(os.path.realpath(__file__)))]   # 這格（ask.py）、lib/agent（parts.py）
@@ -30,35 +30,36 @@ MARK = "【compact】"
 ACK = "好，我已讀過先前對話的摘要與保留的原文，接著往下。"
 
 
-def env_int(name, default):
-    v = os.environ.get(name)
-    if v in (None, ""):
-        return default
-    try:
-        n = int(v)
-    except ValueError:
-        die("SettingBad", "%s 不是整數：%r" % (name, v))
-    if n < 0:
-        die("SettingBad", "%s 不能是負的：%r" % (name, v))
-    return n
+SEG_KB = 8                 # 第 2 步一段幾 KB
+KEEP_TURNS = 2             # 最近幾題原樣不動
+KEEP_MAX = 3               # 每段最多挑幾行保留
+KEEP_FINAL_MAX = 12        # 最後最多留幾行
+KEEP_LINE_MAX = 1500       # 保留行一行最多幾字
+RESULT_CUT = 2000          # 工具結果給腦看最多幾字
+USAGE = "usage: compact [--max-bytes N] [--force] <agent 資料夾>"
 
-
-MAX_BYTES = env_int("AOS_COMPACT_MAX_BYTES", 65536)
-SEG_KB = max(1, env_int("AOS_COMPACT_SEG_KB", 8))
-KEEP_TURNS = env_int("AOS_COMPACT_KEEP_TURNS", 2)
-KEEP_MAX = env_int("AOS_COMPACT_KEEP_MAX", 3)
-KEEP_FINAL_MAX = env_int("AOS_COMPACT_KEEP_FINAL_MAX", 12)
-KEEP_LINE_MAX = env_int("AOS_COMPACT_KEEP_LINE_MAX", 1500)
-RESULT_CUT = env_int("AOS_COMPACT_RESULT_CUT", 2000)
-MODEL_NOTE, MODEL_SEG, MODEL_FINAL = (os.environ.get(k) or "" for k in ("AOS_COMPACT_MODEL_NOTE", "AOS_COMPACT_MODEL_SEG", "AOS_COMPACT_MODEL_FINAL"))
-
-args = sys.argv[1:]
-if not args or any(a != "--force" for a in args[1:]):
-    die("ArgumentsBad", "usage: compact <agent 資料夾> [--force]")
-AGENT = os.path.abspath(args[0])
+MAX_BYTES, FORCE, rest, args = 65536, False, [], sys.argv[1:]
+while args:                                    # 旗標放 agent 前後都收（parts.json 的 argv 陣列會把旗標放在 agent 前面）
+    a = args.pop(0)
+    if a == "--force":
+        FORCE = True
+    elif a == "--max-bytes":
+        v = args.pop(0) if args else None
+        try:
+            MAX_BYTES = int(v)
+            if MAX_BYTES < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            die("ArgumentsBad", "--max-bytes 要接 ≥0 的整數，收到 %r" % v)
+    elif a.startswith("--"):
+        die("ArgumentsBad", "不認得的旗標 %r；%s" % (a, USAGE))
+    else:
+        rest.append(a)
+if len(rest) != 1:
+    die("ArgumentsBad", USAGE)
+AGENT = os.path.abspath(rest[0])
 if not os.path.isdir(AGENT):
-    die("AgentMissing", "agent 資料夾不存在：%s" % args[0])
-FORCE = "--force" in args[1:]
+    die("AgentMissing", "agent 資料夾不存在：%s" % rest[0])
 STACK = os.environ.get("AOS_STACK")
 if not STACK:
     die("StackMissing", "沒設定 AOS_STACK")
@@ -92,13 +93,12 @@ def history(sub, extra=(), stdin_text=""):
 
 
 def endpoint():
-    name = os.environ.get("AOS_COMPACT_ENDPOINT") or ""
-    if not name:
-        try:
-            with open(os.path.join(STACK, "endpoint.txt"), encoding="utf-8") as f:
-                name = f.read().strip()
-        except FileNotFoundError:
-            pass
+    name = ""
+    try:
+        with open(os.path.join(STACK, "endpoint.txt"), encoding="utf-8") as f:
+            name = f.read().strip()
+    except FileNotFoundError:
+        pass
     return part("endpoint/" + (name or "default"))
 
 
@@ -239,7 +239,7 @@ def stage_note(body, report, ep):
                 it["id"], it["name"], flat(it["arguments"] if isinstance(it["arguments"], str)
                                            else json.dumps(it["arguments"], ensure_ascii=False), 1000),
                 it["result"] if it["result"] is not None else "（沒有結果：中途停了）") for it in items)
-            got = ask.parse_json(ask.ask(ep, AGENT, MODEL_NOTE, prompt("note"), user))
+            got = ask.parse_json(ask.ask(ep, AGENT, prompt("note"), user))
             notes = {}
             if got and isinstance(got.get("notes"), list):
                 notes = {x.get("id"): x for x in got["notes"] if isinstance(x, dict) and isinstance(x.get("line"), str)}
@@ -329,7 +329,7 @@ def stage_segment(lines, report, ep):
         if got is None or got.get("lines") != nums:
             by_n = {first_n(ln): ln for ln in seg}
             user = "\n".join(render(ln, SEG_KB * 1024) for ln in seg)
-            content = ask.ask(ep, AGENT, MODEL_SEG, prompt("segment", KEEP_MAX), user)
+            content = ask.ask(ep, AGENT, prompt("segment", KEEP_MAX), user)
             reply = ask.parse_json(content)
             fallback = not (reply and isinstance(reply.get("summary"), str))
             summary = content.strip() if fallback else reply["summary"].strip()
@@ -387,7 +387,7 @@ def stage_final(segs, old, report, ep):
     for i, s in enumerate(segs, 1):
         user += "### 第 %d 段（L%d～L%d）\n%s\n\n" % (i, s["lines"][0], s["lines"][-1], s["summary"])
     user += "## 候選保留行\n" + ("\n".join(keep_entry(k) for k in cands) or "（沒有）")
-    content = ask.ask(ep, AGENT, MODEL_FINAL, prompt("final", KEEP_FINAL_MAX), user)
+    content = ask.ask(ep, AGENT, prompt("final", KEEP_FINAL_MAX), user)
     reply = ask.parse_json(content)
     fallback = not (reply and isinstance(reply.get("summary"), str))
     count(st, int(fallback))
@@ -478,7 +478,7 @@ def main():
     new_text = "".join(x + "\n" for x in new_lines)
     after = len(new_text.encode("utf-8"))
     report.update({"run": run_id, "round": rnd, "seconds": round(time.time() - t0, 2),
-                   "endpoint": ep[0], "models": {"note": MODEL_NOTE, "segment": MODEL_SEG, "final": MODEL_FINAL},
+                   "endpoint": ep[0],
                    "settings": {"max_bytes": MAX_BYTES, "seg_kb": SEG_KB, "keep_turns": KEEP_TURNS, "keep_max": KEEP_MAX,
                                 "keep_final_max": KEEP_FINAL_MAX, "keep_line_max": KEEP_LINE_MAX},
                    "before": {"bytes": before, "counter_messages": len(rows)},

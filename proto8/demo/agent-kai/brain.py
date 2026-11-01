@@ -2,7 +2,7 @@
 # 但問腦時不送整份 history，而是按這題的意圖組一份「工作 context」：
 #   system.txt ＋ 先前對話的目錄（一題一行）＋〔有記憶庫就附相關幾筆〕＋ 挑出來的舊題（只有問題與結論，過程不帶）＋ 這題到目前為止的完整訊息。
 # 挑哪幾題由程式照字面決定（上一題、指代詞→上兩題、「第 N 題」、字面重疊最多的兩題）；不夠時腦自己用 recall 工具找、展開（漸進展開）。
-# 整份 history 還很短（粗估 ≤ AOS_KAI_FULL_UNDER，預設 1500 token）時直接全送，跟 agent-dan 一樣。
+# 整份 history 還很短（粗估 ≤ FULL_UNDER＝1500 token，寫死）時直接全送，跟 agent-dan 一樣。
 # history.jsonl 照舊是完整紀錄、只附加；每次組了什麼記一行到 $AOS_STACK/context.jsonl（可追查）。
 # 沒設 AOS_BRAIN_URL＝假腦；有設就問 OpenAI 相容的 {url}/chat/completions。失敗時 history 不接任何東西、退 1（P-20）。
 import datetime, json, os, subprocess, sys, urllib.error, urllib.request
@@ -113,12 +113,9 @@ work = opened + [{k: m[k] for k in keep if k in m} for m in current]
 full_text = "\n\n".join(p for p in (system_text.rstrip("\n"), memory) if p)
 full_system = [{"role": "system", "content": full_text}] if full_text else []
 full = [{k: m[k] for k in keep if k in m} for m in history]
-try:
-    full_under = int(os.environ.get("AOS_KAI_FULL_UNDER") or 1500)
-except ValueError:
-    full_under = 1500
+FULL_UNDER = 1500                # 整份粗估幾 token 以內就全送
 mode = "intent"
-if turns.estimate(full_system + full) <= full_under:   # 整份還很短：直接全送（不會比挑過的貴，也不會漏）
+if turns.estimate(full_system + full) <= FULL_UNDER:   # 整份還很短：直接全送（不會比挑過的貴，也不會漏）
     system, work, picked, mode = full_system, full, [], "full"
 with open(os.path.join(stack, "context.jsonl"), "a", encoding="utf-8") as f:
     f.write(json.dumps({"sent_at": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds"),

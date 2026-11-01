@@ -1,10 +1,10 @@
-"""roundlib - aos-round 五個格（idle、think、act、more、finish）共用的函數：找格、叫格、讀 history／current、endpoint 選換、on_error、問腦。
+"""roundlib - lib/agent/round 五個格（idle、think、act、more、finish）共用的函數：找格、叫格、讀 history／current、endpoint 選換、on_error、問腦。
 
 設計：proto8/thinking/2026-10-30-aos-round.md § B（第 2 步；函數從舊的 `_entry` 搬來，trace 那段拿掉——trace 只留 fsm 的一格一行，衝突 5）。
 每格開頭 `roundlib.main("<格>", 那格的函數)`：解 argv（agent 資料夾絕對路徑）、要 AOS_STACK、設下面幾個模組變數，
 跑那格的函數（回結束碼），抓 Exit、自己這層的錯印一行「round/<格>: 代號 原因」，以碼退出。
 叫格：lib/agent/parts.py 的 find（parts.json 有這槽＝`<agent>/parts.json#/槽`，沒寫＝固定名字 `<agent>/<槽>`；11-01 起不經 aos-parts），
-  沒掛＝None（queue、history、act、endpoint/<名> 是必要的＝PartMissing）；拿到就 `aos-exec 目標 <agent> [子命令]`，
+  沒掛＝None（queue、history、act、endpoint/<名> 是必要的＝PartMissing）；拿到就 `aos-exec 目標 <agent> [子命令]`（endpoint 的「子命令」＝它的名字），
   env 交給 aos-exec（`.env` 預設不蓋，N-58；這裡不疊），AOS_STACK、AOS_WS 原樣傳（P-16）。
 格失敗（非 0）＝以那個碼退，stderr 不轉述；格退了它不該退的 10＝UnitFailed、退 1。"""
 import json, os, subprocess, sys
@@ -13,6 +13,7 @@ import parts  # noqa: E402
 
 NOT_FOUND = 10
 REQUIRED = ("queue", "history", "act")
+MAX_RETRIES = 3                   # think 問腦失敗、on_error 說 retry／switch 時最多重來幾次（11-01 起寫死、不是設定）
 NAME = "round"                    # main() 設成 round/<格>
 AGENT = STACK = None              # main() 設
 
@@ -52,19 +53,6 @@ def main(cell, body):
         if e.err:
             print("%s: %s %s" % (NAME, e.err, str(e.reason).replace("\n", " ")), file=sys.stderr)
         sys.exit(e.code)
-
-
-def max_retries():
-    v = os.environ.get("AOS_ROUND_MAX_RETRIES")
-    if v in (None, ""):
-        return 3
-    try:
-        n = int(v)
-        if n < 0:
-            raise ValueError
-    except ValueError:
-        fail("SettingBad", "AOS_ROUND_MAX_RETRIES 要是 ≥0 的整數，收到 %r" % v)
-    return n
 
 
 # ---- 叫格 ----
@@ -248,8 +236,8 @@ def on_error(err_line):
     return word if r.returncode == 0 and word in ("retry", "switch") else "stop"
 
 
-def ask(rows, retries):
-    """pre_think → endpoint/<目前的>（失敗問 on_error：retry／switch 最多重來 retries 次）→ 一則 assistant。"""
+def ask(rows):
+    """pre_think → endpoint/<目前的>（`aos-exec 那格 <agent> <名>`；失敗問 on_error：retry／switch 最多重來 MAX_RETRIES 次）→ 一則 assistant。"""
     if hook("pre_think") is not None:
         rows = history()                                # pre_think（compact）可能換了 history
     body = {"messages": system() + rows, "tools": tools()}
@@ -257,7 +245,7 @@ def ask(rows, retries):
     while True:
         name = endpoint_name()
         slot = "endpoint/" + name
-        r = run(slot, which(slot), (), dumps(body) + "\n", {"AOS_ENDPOINT_NAME": name}, keep_err=True)
+        r = run(slot, which(slot), (name,), dumps(body) + "\n", keep_err=True)   # 名字給 endpoint 寫 usage.jsonl
         if r.returncode == 0:
             return one_json(r.stdout.strip().splitlines()[-1] if r.stdout.strip() else "", slot)
         lines = [l for l in (r.stderr or "").splitlines() if l.strip()]
@@ -265,7 +253,7 @@ def ask(rows, retries):
         if word == "stop":
             raise Exit(r.returncode if r.returncode != NOT_FOUND else 1)
         tries += 1
-        if tries > retries:
-            fail("EndpointFailed", "on_error 說 %s，但這次問腦已經重來 %d 次（AOS_ROUND_MAX_RETRIES=%d）" % (word, retries, retries))
+        if tries > MAX_RETRIES:
+            fail("EndpointFailed", "on_error 說 %s，但這次問腦已經重來 %d 次（最多 %d 次）" % (word, MAX_RETRIES, MAX_RETRIES))
         if word == "switch":
             switch(name)

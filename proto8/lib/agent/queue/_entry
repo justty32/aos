@@ -27,7 +27,7 @@ claim 的順序（任何一步當掉重跑都接得上；current.txt＝「已接
   （current.txt 已有別封＝那次是 --more，照 --more 的規則）。cur/ 有信、都列了、不是 --more＝只重寫 current.txt、印 cur/ 全部。
   壞信（aos-post check 不過、名字不是有序的 <12 位序號>.<信號>、body 不是有 role 的物件）＝aos-post finish 丟掉、認領下一封；
   不寫 stderr（N-43）；原因寫進 $AOS_STACK/letter_warning.txt 一行「信 <信號> 不採用：原因」（N-16 壞信記 letter_warning；
-  只留最後一封壞信的，好信不清掉；10-30 agent-lifecycle Q-4 的補，aos-round 的 idle、more 格叫 claim 時就記到了）。
+  只留最後一封壞信的，好信不清掉；10-30 agent-lifecycle Q-4 的補，lib/agent/round 的 idle、more 格叫 claim 時就記到了）。
 history 格怎麼找：lib/agent/parts.py 的 find（parts.json 有＝<agent>/parts.json#/history、沒寫＝固定名字 <agent>/history；沒掛＝PartMissing），
   aos-exec 它，env 交給 aos-exec（不疊，N-58）。
 . 開頭的名字不算信（N-05）。寫檔一律先寫 . 開頭暫存再改名（N-05）。

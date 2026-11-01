@@ -12,8 +12,7 @@ from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒�
 
 AI = str(ROOT / "extras" / "ai_tools" / "bin" / "aos-ai")
 SIG = re.compile(r"^\d{12}\.\d{20}\.\d+\.\d+$")
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_AI_ROOT",
-         "AOS_AI_JSON_EDITOR")
+CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_AI_ROOT")
 
 
 def ai(root, *args, env=None, stdin=None, timeout=60):
@@ -129,7 +128,7 @@ class AiToolsTest(unittest.TestCase):
         self.assertEqual(len(res["answers"]), 1)
         self.assertIn("FAKE ANSWER to: 幾點了", res["answers"][0]["text"])
         code, res, _ = ai(self.root, "status", "nia")
-        self.assertEqual((res["fsm_state"], res["new"], res["cur"], res["counter_answers"]), ("idle", [], [], 1))   # nia 走 aos-round（fsm）、答完停在 idle
+        self.assertEqual((res["fsm_state"], res["new"], res["cur"], res["counter_answers"]), ("idle", [], [], 1))   # nia 走 fsm 表、答完停在 idle
         self.assertEqual(res["last_run"]["code"], 0)
         self.assertIn("finished_at", res["last_run"])                      # 跑完的時間（10-25 前叫 at）
         code, res, _ = ai(self.root, "answer", "nia", qid)
@@ -137,7 +136,7 @@ class AiToolsTest(unittest.TestCase):
         code, res, _ = ai(self.root, "answer", "nia")
         self.assertEqual(res["answers"][0]["asked"], ["幾點了"])
         code, res, _ = ai(self.root, "trace", "nia", "-n", "1")
-        self.assertEqual((res["fsm_state"], res["trace"][0]["state"], res["trace"][0]["code"]), ("idle", "idle", 10))   # aos-round：最後一格 idle 沒信退 10
+        self.assertEqual((res["fsm_state"], res["trace"][0]["state"], res["trace"][0]["code"]), ("idle", "idle", 10))   # fsm 表：最後一格 idle 沒信退 10
 
     def test_question_from_stdin_and_no_id(self):
         ai(self.root, "spawn", "nia")
@@ -162,7 +161,13 @@ class AiToolsTest(unittest.TestCase):
         code, _, err = ai(self.root, "edit", "dan", "../../../etc/passwd")
         self.assertTrue(err.startswith("aos-ai: PathBad "), err)
         code, _, err = ai(self.root, "edit", "dan", "agent/loop.json")
-        self.assertTrue(err.startswith("aos-ai: EditorMissing "), err)
+        self.assertTrue(err.startswith("aos-ai: EditorMissing ") and "--editor" in err, err)
+        code, _, err = ai(self.root, "edit", "dan", "agent/loop.json", env={"AOS_AI_JSON_EDITOR": "true"})
+        self.assertTrue(err.startswith("aos-ai: EditorMissing "), err)            # 11-01 起環境變數不再讀
+        code, res, err = ai(self.root, "edit", "dan", "agent/loop.json", "--editor", "sh -c 'printf \"%s|%s\" \"$0\" \"$1\"'", "x")
+        self.assertEqual(code, 0, err)
+        loop = str((Path(self.root) / "agents" / "dan" / "agent" / "loop.json").resolve())
+        self.assertEqual((res["ok"], res["path"], res["stdout"]), (True, loop, "%s|x" % loop))
 
     def test_failure_is_data_with_hint(self):
         ai(self.root, "spawn", "nia")

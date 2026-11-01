@@ -1,13 +1,14 @@
 # plan.py - plan 格：認領題目、題目接進 history、請腦把這件事拆成幾步（steps），寫進 $AOS_STACK/steps.json。
 # 已經為這題規劃過（steps.json 的 question 是這題）＝什麼都不做、退 0（重跑、或 act 跑完工具繞回來時）。
 # 不拆（steps 是空的）＝這題由自己直接做：fork 格跳過、think／act 照 agent-dan 做。
-# 深度到上限、或整棵樹的小念頭額度不夠，不問腦、直接不拆（省一次腦）。
+# 深度到上限、或整棵樹的小念頭額度不夠，不問腦、直接不拆（省一次腦）。上限寫死在 shared.py（MAX_STEPS 4、MAX_DEPTH 2、MAX_TOTAL 10）；
+# 自己的深度與額度資料夾從自己 stack 的 thought_depth.txt、thought_budget.txt 讀（fork 起小念頭時寫的；沒有＝母體）。
 # 腦的回覆不是規劃（解不出帶 steps 的 JSON 物件：直接回答了、或說做不到）＝當不拆（direct "prose"），不算 PlanBad：
 # 規劃時不送 tools，真模型（10-24 實測）常回「沒有 Python 工具可用」的散文；think 格會帶 tools 再問一次。
 # 是規劃但寫錯（steps 不是陣列、id、needs、步數不對）＝照舊 PlanBad。
 import fcntl, json, os, re, sys, uuid
-from shared import (STACK, STEPS, append_history, ask, claim, die, env_int, read_history, read_json, system,
-                    write_atomic)
+from shared import (MAX_DEPTH, MAX_STEPS, MAX_TOTAL, STACK, STEPS, append_history, ask, claim, die, read_history,
+                    read_json, system, tree, write_atomic)
 
 PROMPT = """【規劃】先別回答，先想這件事要不要拆成幾步、交給幾個「小念頭」分頭去做。
 小念頭看不到這段對話，只看到你給的 context（背景摘要）和它自己那一步的 goal，做完只帶回一段結論。
@@ -90,15 +91,14 @@ if not history or history[-1].get("role") not in ("user", "tool"):
     append_history({"role": "user", "content": question})
     history.append({"role": "user", "content": question})
 
-depth, max_depth = env_int("AOS_THOUGHT_DEPTH", 0), env_int("AOS_THOUGHT_MAX_DEPTH", 2)
-max_steps, total = env_int("AOS_THOUGHT_MAX_STEPS", 4), env_int("AOS_THOUGHT_MAX_TOTAL", 10)
+depth, budget = tree()
 plan_id = uuid.uuid4().hex[:8]
-budget = os.environ.get("AOS_THOUGHT_BUDGET") or os.path.join(STACK, "budgets", plan_id)   # 母體：一題一份額度
+budget = budget or os.path.join(STACK, "budgets", plan_id)   # 母體：一題一份額度
 os.makedirs(budget, exist_ok=True)
-remaining = total - len([n for n in os.listdir(budget) if not n.startswith(".")])
+remaining = MAX_TOTAL - len([n for n in os.listdir(budget) if not n.startswith(".")])
 
 context, steps, why, reply = "", [], None, None
-if depth >= max_depth:
+if depth >= MAX_DEPTH:
     why = "depth"                                   # 到底了，直接做
 elif remaining < 2:
     why = "budget"
@@ -109,16 +109,16 @@ elif not os.environ.get("AOS_BRAIN_URL"):          # 假腦：第 0 層拆兩步
                  {"id": "s2", "goal": "根據重點給一個答案", "needs": ["s1"], "status": "todo"}]
     why = None if steps else "brain"
 else:
-    msg = ask("plan", system() + [{"role": "system", "content": PROMPT % (min(max_steps, remaining), depth)}] + history)
+    msg = ask("plan", system() + [{"role": "system", "content": PROMPT % (min(MAX_STEPS, remaining), depth)}] + history)
     reply = msg.get("content")
-    context, steps = parse(reply, min(max_steps, remaining))
+    context, steps = parse(reply, min(MAX_STEPS, remaining))
     if context is None:                             # 回的是散文、不是規劃：自己做（think 會帶 tools 再問一次）
         context, why = "", "prose"
     elif len(steps) == 1:                             # 只拆一步＝白 fork 一次，當成不拆
         steps, why = [], "one"
     elif not steps:
         why = "brain"
-if steps and not reserve(budget, plan_id, [s["id"] for s in steps], total):
+if steps and not reserve(budget, plan_id, [s["id"] for s in steps], MAX_TOTAL):
     steps, why = [], "budget"                       # 同時有別的念頭搶走額度：不拆、自己做
 
 write_atomic(STEPS, json.dumps({"question": name, "plan_id": plan_id, "depth": depth, "budget": budget,

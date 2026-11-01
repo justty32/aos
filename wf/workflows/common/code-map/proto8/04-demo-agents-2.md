@@ -10,10 +10,10 @@
 |---|---|
 | `_entry`、`loop.json`、`fsm.json`、`.env`、`idle/` | 同 agent-dan |
 | `tools/math`、`tools/clock` | 符號連結 → `../../../lib/base/<名>`（10-24 遷移前是 agent-dan 的複本） |
-| `brain.py` | 組 context：system＋先前對話目錄＋〔有 `tools/memory` 就附記憶〕＋挑出的舊題（只有問與結論）＋這題完整；整份 ≤ `AOS_KAI_FULL_UNDER`（1500 token）就全送；每次記一行 `$AOS_STACK/context.jsonl` |
-| `act.py` | 同 agent-dan，多給工具 `AOS_RECALL_HISTORY`＝自己的 `history.jsonl` |
+| `brain.py` | 組 context：system＋先前對話目錄＋〔有 `tools/memory` 就附記憶〕＋挑出的舊題（只有問與結論）＋這題完整；整份 ≤ 1500 token（寫死）就全送；每次記一行 `$AOS_STACK/context.jsonl` |
+| `act.py` | 同 agent-dan（工具的 stack＝`$AOS_STACK/<名>/`，P-17） |
 | `system.txt` | 告訴腦看到的不是全部、不夠就 recall 或重查、回答把關鍵寫完整 |
-| `tools/recall/_entry`、`_tooldef.json` | `op`＝search（關鍵字找舊題）／read（展開一題，`detail` 連工具原始輸出）；錯 `HistoryMissing`、`HistoryBad` |
+| `tools/recall/_entry`、`_tooldef.json` | `op`＝search（關鍵字找舊題）／read（展開一題，`detail` 連工具原始輸出）；讀 `$AOS_STACK/../history.jsonl`（靠 P-17）；錯 `HistoryMissing`（沒 `AOS_STACK` 或那份檔不在）、`HistoryBad` |
 | `tools/recall/turns.py` | 把 history 切成題、照意圖挑（上一題、指代詞、「第 N 題」、字面重疊）；brain 也 import |
 | `tools/read` | 符號連結 → `../../../lib/base/read`（10-24 遷移前指 demo/pi-tools/read） |
 

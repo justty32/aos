@@ -1,6 +1,7 @@
 """test_round_act - agent-round 落地第 4 步：lib/agent/act（跑工具的格）（10-31 自 test_round.py 拆出，行為不變）。
 
-act：兩個 tool_calls 吐兩則、順序對；AOS_ACT_MAX_PARALLEL=2 真的一起跑、順序仍對；pre_tool 退 10＝不跑、stdout 當 content；post_tool 取代；
+act：兩個 tool_calls 吐兩則、順序對；--max-parallel 2 真的一起跑、順序仍對（直接給 argv、或 parts.json 的 act 槽寫成 argv 陣列）、
+  壞值＝ParallelBad、舊環境變數不再有作用；pre_tool 退 10＝不跑、stdout 當 content；post_tool 取代；
   ToolUnknown／ArgumentsBad／工具退非 0 接成 tool 訊息；插話（queue 的 new/ 有信＋on_interrupt 說 interrupt）剩下的不跑、退 10；aos-tools 壞＝ToolsBad。
 設計：proto8/thinking/2026-10-28-agent-round.md § 3、§ 4、文末「實作時代定」；2026-10-30-agent-lifecycle 結論 A、B-11。"""
 import json, os, unittest
@@ -72,7 +73,7 @@ class Act(Base):
 
     def test_parallel_runs_together_order_kept(self):
         calls = assistant(call("a", "say", wait_for="mark", text="A\n"), call("b", "say", touch="mark", text="B\n"))
-        r = self.act(calls, {"AOS_ACT_MAX_PARALLEL": "2"})
+        r = self.cell(ACT, calls, args=["--max-parallel", "2", str(self.agent)])
         self.assertEqual(r.returncode, 0, r.stderr)
         out = self.lines(r.stdout)
         self.assertEqual([m["tool_call_id"] for m in out], ["a", "b"])
@@ -80,8 +81,23 @@ class Act(Base):
         os.unlink(self.ws / "mark")
         r = self.act(calls)                                                     # 依序：a 先跑、等不到
         self.assertTrue(self.lines(r.stdout)[0]["content"].startswith("no\nA\n"))
-        r = self.act(calls, {"AOS_ACT_MAX_PARALLEL": "x"})
-        self.assertEqual((r.returncode, r.stdout, err_code("act", r.stderr)), (1, "", "ParallelBad"))
+        os.unlink(self.ws / "mark")
+        r = self.act(calls, {"AOS_ACT_MAX_PARALLEL": "2"})                       # 11-01 起不讀環境變數：照樣依序
+        self.assertTrue(self.lines(r.stdout)[0]["content"].startswith("no\nA\n"))
+        for bad in (["--max-parallel", "x", str(self.agent)], ["--max-parallel", "0", str(self.agent)], [str(self.agent), "--max-parallel"]):
+            r = self.cell(ACT, calls, args=bad)
+            self.assertEqual((r.returncode, r.stdout, err_code("act", r.stderr)), (1, "", "ParallelBad"), bad)
+        for bad in (["--nope", str(self.agent)], [], [str(self.agent), str(self.agent)]):
+            r = self.cell(ACT, calls, args=bad)
+            self.assertEqual((r.returncode, r.stdout, err_code("act", r.stderr)), (1, "", "ArgumentsBad"), bad)
+
+    def test_parallel_from_parts_argv(self):
+        """parts.json 的 act 槽寫成 argv 陣列（相對路徑從 parts.json 的資料夾算）：aos-exec 插 aos-exec、agent 接在後面。"""
+        (self.agent / "parts.json").write_text(json.dumps({"act": [os.path.relpath(ACT, self.agent), "--max-parallel", "2"]}))
+        calls = assistant(call("a", "say", wait_for="mark", text="A\n"), call("b", "say", touch="mark", text="B\n"))
+        r = self.cell(str(self.agent / "parts.json") + "#/act", calls)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.lines(r.stdout)[0]["content"].startswith("saw\nA\n"))
 
     def test_tool_problems_go_back_to_brain(self):
         r = self.act(assistant(call("a", "nope"), {"id": "b", "type": "function", "function": {"name": "say", "arguments": "{x"}},

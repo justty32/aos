@@ -1,6 +1,6 @@
 """test_round_endpoint - agent-round 落地第 1 步：lib/endpoint/fake、lib/endpoint/openai（問腦的格）（10-31 自 test_round.py 拆出，行為不變）。
 
-endpoint：fake 照規則吐一則；openai 接假的 OpenAI 相容 server 吐真的、usage.jsonl 多一行、經 parts.json 的 .env key 帶 env（11-01 起預設不蓋環境、--dotenv-override 才蓋）；
+endpoint：fake 照規則吐一則（第二個參數＝名字收下不用）；openai 接假的 OpenAI 相容 server 吐真的、usage.jsonl 多一行（endpoint 名＝第二個參數、沒給＝資料夾名）、經 parts.json 的 .env key 帶 env（11-01 起預設不蓋環境、--dotenv-override 才蓋）；
   401／403 KeyBad、連不上（dead_brain.DEAD）與 5xx BrainFailed、404 ModelUnknown、其他 4xx RequestBad、壞回覆 ReplyBad，失敗時 stdout 與 usage.jsonl 都不動。
 設計：proto8/thinking/2026-10-28-agent-round.md § 3、§ 4、文末「實作時代定」；2026-10-30-agent-lifecycle 結論 A、B-11。
 LiteLLM（localhost:4000）實跑那案連不上就 skip。"""
@@ -66,6 +66,12 @@ class EndpointFake(Base):
         r = self.cell(FAKE, req({"role": "system", "content": "s"}, user("一"), {"role": "assistant", "content": "a"}, user("二")))
         self.assertEqual(self.lines(r.stdout), [{"role": "assistant", "content": "FAKE ANSWER to: 二"}])
 
+    def test_name_argument_taken_unused(self):
+        r = self.cell(FAKE, req(user("一")), args=[str(self.agent), "default"])           # roundlib 的叫法：第二個參數＝名字，收下不用
+        self.assertEqual(self.lines(r.stdout), [{"role": "assistant", "content": "FAKE ANSWER to: 一"}], r.stderr)
+        r = self.cell(FAKE, req(user("一")), args=[str(self.agent), "a", "b"])
+        self.assertEqual((r.returncode, err_code("endpoint", r.stderr)), (1, "ArgumentsBad"))
+
     def test_request_bad(self):
         for stdin in ("not json", "[]", req({"role": "system", "content": "s"})):
             with self.subTest(stdin=stdin):
@@ -80,10 +86,10 @@ class EndpointOpenai(Base):
         self.addCleanup(b.close)
         return b
 
-    def ask(self, url, extra=None, stdin=None):
+    def ask(self, url, extra=None, stdin=None, args=None):
         env = {"AOS_BRAIN_URL": url, "AOS_BRAIN_MODEL": "m1"}
         env.update(extra or {})
-        return self.cell(OPENAI, stdin or req(user("hi"), tools=[CLOCK_TOOL]), env)
+        return self.cell(OPENAI, stdin or req(user("hi"), tools=[CLOCK_TOOL]), env, args)
 
     def usage(self):
         p = self.stack / "usage.jsonl"
@@ -94,7 +100,7 @@ class EndpointOpenai(Base):
                                           "tool_calls": [{"id": "c1", "type": "function", "index": 0,
                                                           "function": {"name": "clock", "arguments": "{}"}}]}}],
                  "usage": {"prompt_tokens": 5, "completion_tokens": 2, "total_tokens": 7}}
-        b = self.brain(reply, {"choices": [{"message": {"role": "assistant", "content": "好"}}]})
+        b = self.brain(reply, *[{"choices": [{"message": {"role": "assistant", "content": "好"}}]}] * 2)
         report = self.tmp / "report.json"
         r = self.ask(b.url, {"AOS_BRAIN_KEY": "sk-1", "AOS_KERNEL_REPORT": str(report)})
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -107,21 +113,26 @@ class EndpointOpenai(Base):
         self.assertEqual((u[0]["endpoint"], u[0]["model"], u[0]["usage"]["total_tokens"]), ("openai", "m1", 7))
         self.assertRegex(u[0]["answered_at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$")
         self.assertEqual(json.loads(report.read_text())["total_tokens"], 7)
-        # 第二次：stdin 給的 model 優先、空 tools 不送、沒 usage 也記一行（usage＝null）、AOS_ENDPOINT_NAME 改名
-        r = self.ask(b.url, {"AOS_ENDPOINT_NAME": "litellm"}, stdin=json.dumps({"messages": [user("x")], "tools": [], "model": "m2"}))
+        # 第二次：stdin 給的 model 優先、空 tools 不送、沒 usage 也記一行（usage＝null）、第二個參數＝usage 的 endpoint 名
+        r = self.ask(b.url, stdin=json.dumps({"messages": [user("x")], "tools": [], "model": "m2"}), args=[str(self.agent), "litellm"])
         self.assertEqual(self.lines(r.stdout), [{"role": "assistant", "content": "好"}])
         self.assertEqual(b.requests[1], {"messages": [user("x")], "model": "m2"})
         self.assertIsNone(b.auth[1])
-        self.assertEqual([(x["endpoint"], x["model"], x["usage"]) for x in self.usage()[1:]], [("litellm", "m2", None)])
+        # 第三次：舊環境變數不再有作用（11-01 起改位置參數）＝沒給名字照舊用資料夾名
+        r = self.ask(b.url, {"AOS_ENDPOINT_NAME": "env_name"}, stdin=req(user("y")))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual([(x["endpoint"], x["model"], x["usage"]) for x in self.usage()[1:]], [("litellm", "m2", None), ("openai", "m1", None)])
+        r = self.ask(b.url, args=[str(self.agent), "a", "b"])
+        self.assertEqual((r.returncode, r.stdout, err_code("endpoint", r.stderr), len(self.usage())), (1, "", "ArgumentsBad", 3))
 
     def test_via_parts_registry_env(self):
         b = self.brain(*[{"choices": [{"message": {"role": "assistant", "content": "經註冊檔"}}]}] * 3)
         (self.agent / "parts.json").write_text(json.dumps({"endpoint": {"main": {
-            ".env": {"AOS_BRAIN_URL": b.url, "AOS_BRAIN_MODEL": "reg", "AOS_ENDPOINT_NAME": "main"}, "_entry": OPENAI}}}))
+            ".env": {"AOS_BRAIN_URL": b.url, "AOS_BRAIN_MODEL": "reg"}, "_entry": OPENAI}}}))
         target = str(self.agent / "parts.json") + "#/endpoint/main"
 
         def go(env=None, flags=()):
-            return subprocess.run([EXEC] + list(flags) + [target, str(self.agent)], input=req(user("q")),
+            return subprocess.run([EXEC] + list(flags) + [target, str(self.agent), "main"], input=req(user("q")),
                                   capture_output=True, text=True, env=self.env(env), timeout=60)
         r = go()
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -158,7 +169,6 @@ class EndpointOpenai(Base):
     def test_config_errors(self):
         self.assert_fails("UrlMissing", self.cell(OPENAI, req(user("q"))))
         self.assert_fails("ModelUnknown", self.cell(OPENAI, req(user("q")), {"AOS_BRAIN_URL": DEAD}))
-        self.assert_fails("TimeoutBad", self.ask(DEAD, {"AOS_ENDPOINT_TIMEOUT_MS": "0"}))
         self.assert_fails("RequestBad", self.ask(DEAD, stdin='{"messages": "x"}'))
 
     @unittest.skipUnless(os.environ.get("AOS_TEST_REAL", "1") != "0", "")
@@ -168,7 +178,7 @@ class EndpointOpenai(Base):
         except OSError:
             self.skipTest("localhost:4000 連不上")
         model = os.environ.get("AOS_REAL_MODEL", "fast")
-        r = self.ask(REAL_URL, {"AOS_BRAIN_MODEL": model, "AOS_ENDPOINT_TIMEOUT_MS": "120000"}, stdin=req(user("只回一個字：好")))
+        r = self.ask(REAL_URL, {"AOS_BRAIN_MODEL": model}, stdin=req(user("只回一個字：好")))
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.lines(r.stdout)[0]["role"], "assistant")
         self.assertEqual(len(self.usage()), 1)

@@ -28,7 +28,7 @@ from aos_ai_tools import cmd_doctor, cmd_edit, cmd_explain, cmd_make  # noqa: E4
 COMMANDS = {"make": cmd_make, "explain": cmd_explain, "templates": cmd_templates, "spawn": cmd_spawn, "ask": cmd_ask, "run": cmd_run, "status": cmd_status,
             "answer": cmd_answer, "wait": cmd_wait, "trace": cmd_trace, "history": cmd_history, "exec": cmd_exec,
             "daemon": cmd_daemon, "start": cmd_start, "stop": cmd_stop, "edit": cmd_edit, "doctor": cmd_doctor}
-VALUED = {"root", "from", "tool", "timeout", "env", "n", "ws", "interval-ms", "out", "spec", "set", "argv", "cwd",
+VALUED = {"root", "editor", "from", "tool", "timeout", "env", "n", "ws", "interval-ms", "out", "spec", "set", "argv", "cwd",
           "stdin", "stdout", "stderr", "timeout-ms", "grace-ms", "envs", "exec", "max", "ctl", "state", "entry", "cell",
           "start", "next", "loop", "summary", "time-ms", "mem-mb", "gpu-mem-mb", "llm-calls", "llm-tokens", "cost",
           "side-effect", "idempotent", "deterministic", "parallel", "resource", "interrupt", "description", "param",
@@ -38,7 +38,7 @@ USAGE = ("usage: aos-ai [--root DIR] 命令 ...；命令：templates | spawn NAM
          "ask NAME 文字|- | run NAME [--timeout 秒] [--env K=V]... | status [NAME] | answer NAME [信號] | "
          "wait NAME 信號 [--timeout 秒] | trace NAME [-n N] | history NAME [-n N] | "
          "exec [--ws WS] 目標 [參數...] | daemon up|down|status | start NAME [--interval-ms N] | stop NAME | "
-         "edit NAME 檔 ... | doctor | make inst|loop|fsm|daemon|metainfo|tool_json [--out 檔] | make tool NAME 工具 | "
+         "edit NAME 檔 [--editor 命令] ... | doctor | make inst|loop|fsm|daemon|metainfo|tool_json [--out 檔] | make tool NAME 工具 | "
          "make cell NAME 格 | make func 資料夾 | explain [概念] | explain --here [目標] [--ws WS]")
 
 

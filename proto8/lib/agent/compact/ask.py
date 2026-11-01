@@ -21,12 +21,10 @@ def first_line(s, cut):
     return "（沒有輸出）"
 
 
-def ask(endpoint, agent, model, system, user):
-    """問一次腦，回 content 字串。endpoint＝給 aos-exec 的目標（parts.find 回的）。model 是空的就不帶（用 endpoint 格自己的設定）。
+def ask(endpoint, agent, system, user):
+    """問一次腦，回 content 字串。endpoint＝給 aos-exec 的目標（parts.find 回的）。不帶 model（用 endpoint 格自己的設定）。
     endpoint 退非 0＝EndpointFailed（endpoint 自己已在 stderr 說了原因，這裡不轉述，P-21）。"""
     body = {"messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
-    if model:
-        body["model"] = model
     try:
         r = subprocess.run(["aos-exec", endpoint, agent], input=json.dumps(body, ensure_ascii=False),
                            stdout=subprocess.PIPE, text=True)
