@@ -12,6 +12,7 @@
 
 ## 最新進度
 
+- **open｜整體瘦身（11-01 晚使用者定方向：「就是整體要瘦身」「這塊等明天再說」）**：明天由使用者定範圍再開工；今晚先做的是環境變數旋鈕那 42 個（隊長在 worktree 改中）→ [02 § 整體要瘦身](../proto8/thinking/2026-11-01-playground-bob/02-環境變數要使用者裁的問題.md#整體要瘦身11-01-晚使用者定方向明天再說)
 - **open｜試驗場現場：使用者邊說邊做 agents/bob（11-01 下午，進行中）**：`~/code/playground/ws` 空、`agents/bob` 兩個檔（`_entry.json`＋`system.txt`）實跑過；使用者原則「環境變數像 Janet dyn、只在必要時用」待展開——**盤點表已備**（59 個 `AOS_*` 分五類、五題待使用者裁，→ [盤點](../proto8/thinking/2026-11-01-playground-bob/01-環境變數盤點.md)、[問題](../proto8/thinking/2026-11-01-playground-bob/02-環境變數要使用者裁的問題.md)）；下一步等使用者說 → [thinking 11-01 playground-bob](../proto8/thinking/2026-11-01-playground-bob.md)
 - **open｜round 重切／五格收不收：使用者要深思，等他**（11-01「3.先這樣，這塊之後我要深思。」；到時比的是這套技術棧的優缺點，門檻只當參考） → [05 § 方向性問題](../proto8/thinking/2026-10-31-parts-round/05-方向題與實作計畫.md#方向性問題)
 - **open｜介質：規劃已照「都照建議」定案、條文已落、實作八步做完（10-29）**（10-30 晚回信改走 `reply_to`、重複的代號與信號產生法下放 aos-util 也做了，見實作時代定 14、15），剩：10-29 傍晚又定 agent 的輸入是 queue、接單以後放 tools（agent 做完事自己用 tool 看信箱，決定 32），晚上在試驗場做了最小版（見下 playground 條），看完後兩個使用場景都用不到看信箱、那兩題先擱著 → [10-28 medium 決定 32](../proto8/thinking/2026-10-28-medium.md)、 [thinking 10-29 medium-plan § 實作時代定](../proto8/thinking/2026-10-29-medium-plan.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
