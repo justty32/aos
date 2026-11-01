@@ -13,6 +13,7 @@
 
 ## 待使用者項
 
+- 親手試 agents/amy 兩個視窗（11-01 晚原型，指令見 `~/code/playground/agents/amy/README.md`：視窗一 `aos-exec ../agents/amy -- "題"` 進 claude 畫面、視窗二 `aos-say … && aos-listen`），並說 11-01 晚「整個都怪怪」指的是哪裡 → [thinking 11-01 playground-bob](../proto8/thinking/2026-11-01-playground-bob.md)
 - 公司那台 WSL 的 aos clone 下次 pull 會撞歷史（11-01 晚使用者要求把 thinking 裡幾句情緒話連 git 歷史一起抹掉，main 自 80786461 之後五個 commit 改寫、強制推上 origin）：回公司時在那份 clone 裡 `git fetch origin && git reset --hard origin/main`（先確認沒有未 commit 的本機改動）即可 → [02 § 使用者裁定](../proto8/thinking/2026-11-01-playground-bob/02-環境變數要使用者裁的問題.md)
 - tidy 拆檔題一（10-31，不急）：條文大檔 NORMS/04、NORMS/10、CONCEPTS/01 沒拆——單條條文就超 8 KB（N-28 約 22 KB、N-59 約 11 KB、C-54 約 8 KB），要不要允許把一條的子項切到不同分檔，還是接受單條超標 → [STRUCTURE § 膨脹即拆](STRUCTURE.md#結構整理原則膨脹即拆--雜亂即分類)
 - tidy 拆檔題二（10-31，不急）：thinking 三份沒拆（10-28-medium、10-25-top-down、10-24-sandbox）——單段超 8 KB 又沒有下一級標題，要不要允許在段落／條列中間切 → [STRUCTURE § 膨脹即拆](STRUCTURE.md#結構整理原則膨脹即拆--雜亂即分類)

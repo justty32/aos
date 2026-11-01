@@ -24,6 +24,14 @@
 
 （原型見下「做了什麼」amy 那條。）
 
+（11-01 晚收工前）
+
+> 好煩，整個都怪怪
+
+> 算了，今天先這樣，明天再說
+
+頂層問哪裡怪，使用者未答；明天再說。
+
 ## 做了什麼（頂層代做，可翻案）
 
 - `agents/bob/`＝兩個檔、沒有程式碼：`_entry.json`（argv 陣列：`claude -p --model haiku --tools Read,Write,Edit,Glob,Grep --permission-mode acceptEdits --strict-mcp-config --max-budget-usd 0.3 --add-dir {$env AOS_WS} --append-system-prompt {$env BOB_SYSTEM}`）與 `.env`（一行 `BOB_SYSTEM="…AOS_WS=${AOS_WS}…AOS_CD=${AOS_CD}…"`，值由 aos-exec 讀 `.env` 時用 `${…}` 填進去——所以 bob 不用 shell 也知道各環境變數的值）。
@@ -56,4 +64,4 @@
 | [01-環境變數盤點](2026-11-01-playground-bob/01-環境變數盤點.md) | 怎麼核的、欄位、判準、分類小計、留意的幾點（每個變數一列在 [env-vars.json](2026-11-01-playground-bob/env-vars.json)） |
 | [02-環境變數要使用者裁的問題](2026-11-01-playground-bob/02-環境變數要使用者裁的問題.md) | 五題：hub 型算不算必要、腦三個變數、格自己的旋鈕要不要一次性全改、傳話筒要不要加機制、`AOS_ENTRY` 要不要拿掉 |
 
-使用者 11-01 晚裁了 1、2、5 → [02 § 使用者裁定](2026-11-01-playground-bob/02-環境變數要使用者裁的問題.md#使用者裁定11-01-晚)（1 不用、2 到時候再說、5 不拿掉；3、4 待重講）。
+使用者 11-01 晚裁了 1、2、5 → [02 § 使用者裁定](2026-11-01-playground-bob/02-環境變數要使用者裁的問題.md#使用者裁定11-01-晚)（1 不用、2 到時候再說、5 不拿掉；3 後來裁「改」；4 傳話筒仍待裁，`AOS_ROUND_AGENT` 隨刪 aos-round 消失、剩 `AOS_IVY_BRAIN`、`AOS_IMPROVE_RUN`）。
