@@ -12,6 +12,10 @@
 
 > 老實說，我覺得我們一直在濫用環境變數。環境變數在我們這個aos體系下，有點類似janet中的dyn，最好要謹慎，只在必要的時候使用。
 
+（11-01 晚，接著玩；話沒說完、「然後...」之後待補）
+
+> 我要繼續playground，我會開兩個視窗，一個跑aos-exec ../agents/amy -- "在env:WS寫一首詩，詠白銀"，他會直接進入claude code cli界面開始跑，就跟我們平時使用一樣，我也可以接着用平時的方法使用，他會一直持續着直到我打/exit。然後我另一個視窗會輸入aos-say "現在狀況" && aos-listen，然後...
+
 ## 做了什麼（頂層代做，可翻案）
 
 - `agents/bob/`＝兩個檔、沒有程式碼：`_entry.json`（argv 陣列：`claude -p --model haiku --tools Read,Write,Edit,Glob,Grep --permission-mode acceptEdits --strict-mcp-config --max-budget-usd 0.3 --add-dir {$env AOS_WS} --append-system-prompt {$env BOB_SYSTEM}`）與 `.env`（一行 `BOB_SYSTEM="…AOS_WS=${AOS_WS}…AOS_CD=${AOS_CD}…"`，值由 aos-exec 讀 `.env` 時用 `${…}` 填進去——所以 bob 不用 shell 也知道各環境變數的值）。
@@ -19,6 +23,8 @@
 - aos-exec 會 cd 進 `agents/bob/`（AOS_CD），所以要 `--add-dir $AOS_WS` 讓 claude 的檔案工具能寫到工作區；system prompt 叫它別往自己的資料夾寫。
 - `aos-exec ../agents/bob -- "題"`：`--` 與題目都原樣給入口，claude 認 `--` 當分隔（實測）。
 - 實測：`aos-exec ../agents/bob -- "測試：在 env:AOS_WS 建一個 hello.txt，內容只寫 hi。"` 結束碼 0、檔案在 ws；之後清回空的。
+- （11-01 晚）`agents/amy/`＝bob 的互動版：`_entry.json` 同 bob 但拿掉 `-p`（進一般 Claude Code 畫面、直到 /exit）、沒有 `--max-budget-usd`；`system.txt` 說明 `env:WS`／`env:AOS_WS` 都指工作區、每做完一件事報一句再等下一句。
+- 頂層核過的現況：`aos-say` 只把信寄進 `<ws>/.stack/queue/`，`aos-listen` 不給信號＝跟著看 history（像 tail -f）；但 amy 是直接在使用者終端機裡開的互動 claude，沒有人會把 queue 的信送進她的畫面——現有能做到「畫面開著時 say 打進畫面」的是 aos-eca-hub／aos-eca-turn（畫面跑在 tmux 裡、cli_session 貼進畫面）。使用者的「然後...」還沒說完，頂層先攤這個落差、不代擬做法。
 
 ## 環境變數要謹慎（11-01 使用者，待展開）
 
