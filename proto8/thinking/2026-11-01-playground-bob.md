@@ -16,6 +16,14 @@
 
 > 我要繼續playground，我會開兩個視窗，一個跑aos-exec ../agents/amy -- "在env:WS寫一首詩，詠白銀"，他會直接進入claude code cli界面開始跑，就跟我們平時使用一樣，我也可以接着用平時的方法使用，他會一直持續着直到我打/exit。然後我另一個視窗會輸入aos-say "現在狀況" && aos-listen，然後...
 
+> 視窗二這塊，我就是要實現這個效果，你幫我想
+
+頂層攤了組法（cli_session 畫面＋aos-eca-turn＋aos-loop＋aos-say／listen 四個現成零件，缺的只是沒人跑 loop，amy 的 `_entry` 換成二十行小殼）與邊角後，使用者原文：
+
+> 做出來讓我試
+
+（原型見下「做了什麼」amy 那條。）
+
 ## 做了什麼（頂層代做，可翻案）
 
 - `agents/bob/`＝兩個檔、沒有程式碼：`_entry.json`（argv 陣列：`claude -p --model haiku --tools Read,Write,Edit,Glob,Grep --permission-mode acceptEdits --strict-mcp-config --max-budget-usd 0.3 --add-dir {$env AOS_WS} --append-system-prompt {$env BOB_SYSTEM}`）與 `.env`（一行 `BOB_SYSTEM="…AOS_WS=${AOS_WS}…AOS_CD=${AOS_CD}…"`，值由 aos-exec 讀 `.env` 時用 `${…}` 填進去——所以 bob 不用 shell 也知道各環境變數的值）。
