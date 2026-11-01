@@ -25,6 +25,13 @@
 - 實測：`aos-exec ../agents/bob -- "測試：在 env:AOS_WS 建一個 hello.txt，內容只寫 hi。"` 結束碼 0、檔案在 ws；之後清回空的。
 - （11-01 晚）`agents/amy/`＝bob 的互動版：`_entry.json` 同 bob 但拿掉 `-p`（進一般 Claude Code 畫面、直到 /exit）、沒有 `--max-budget-usd`；`system.txt` 說明 `env:WS`／`env:AOS_WS` 都指工作區、每做完一件事報一句再等下一句。
 - 頂層核過的現況：`aos-say` 只把信寄進 `<ws>/.stack/queue/`，`aos-listen` 不給信號＝跟著看 history（像 tail -f）；但 amy 是直接在使用者終端機裡開的互動 claude，沒有人會把 queue 的信送進她的畫面——現有能做到「畫面開著時 say 打進畫面」的是 aos-eca-hub／aos-eca-turn（畫面跑在 tmux 裡、cli_session 貼進畫面）。使用者的「然後...」還沒說完，頂層先攤這個落差、不代擬做法。
+- （11-01 晚，隊長做原型讓使用者試）`agents/amy/` 改成 eca 那種定義，**只組合現成程式、沒加機制、repo 程式碼沒動**：`_entry` 換成一支二十幾行的 Python 小殼，四個動作——① `--` 後那句用 `aos-post init`＋`aos-post send --ordered <stack>/queue`（跟 aos-say 同一條路）寄成第一封，沒給題不寄；② 用 `cli_session.open_cell` 開 claude 畫面（tmux、detached；有 `session.txt` 就 `--resume`）；③ 背景起 `aos-loop loop.json`（`aos-eca-turn --on-empty idle --on-busy answer {$env AOS_CD}`，同 demo/eca-claude）；④ `tmux -S <stack>/claude/tty.sock attach`，回來（Ctrl-] 或 /exit）寫 `<stack>/ctl.json` `{"stopped": true}`、等 loop 收工。`cli.json`＝kind claude、flags 同 bob 拿掉 `-p` 與 `--add-dir`、print_flags `--max-budget-usd 0.3`。
+  - 代定 1：**on-busy 改 `answer`（不是原先講的 yield）**。實測 yield 時人接在畫面上，`aos-eca-turn` 每輪都 SessionBad 退讓——連題目那封都不答、視窗二 say 也要等人跳出才答，使用者的兩視窗情境整個不成立；answer＝人看著時也貼進畫面答。翻案改 loop.json 一個字。
+  - 代定 2：cli_session 開畫面的 cwd 是工作區，所以拿掉 `--add-dir`、`--append-system-prompt-file` 寫 system.txt 的絕對路徑，system.txt 兩行改成「工作區就是你的 cwd」（原本寫 cwd 是自己的資料夾，會叫它別往工作區寫）。
+  - 代定 3：Ctrl-] 只跳出、畫面留著、loop 收工（say 會排著沒人答）；再跑一次 `aos-exec ../agents/amy`（不給題）接回同一個畫面、排著的信接著答。/exit 時畫面跟 claude 一起關，不用另外 close。
+  - 邊角：使用者自己在畫面打的話不進 history（不經 queue，同 eca 方向題 2）；say 會打進他正在看的畫面（打到一半沒送出時會接在他的字後面）；`aos-say 話 && aos-listen` 不給信號會一直跟著看、不結束，要 `N=$(aos-say …); aos-listen "$N"`；畫面那條路不走 `-p`，`--max-budget-usd` 不生效；`--strict-mcp-config` 跟 cli_session 自己加的 `--settings` hooks 沒打架。
+  - 第一次信任提問：`~/code` 已信任，底下的工作區沒問；換到沒信任過的資料夾，第一次開畫面要按 Yes，題目那句可能先被貼進提問裡。
+  - 實測（haiku、另開 `ws-amy-test`、外層 tmux 模擬視窗一真的 attach）：開跑到題目答完 14.7 秒（檔寫進工作區）；畫面開著、人接著時視窗二 say→listen 2.5 秒拿到回答、畫面上看得到那句；人在畫面打的一輪沒進 history；Ctrl-] 後結束碼 0、loop stopped、畫面留著，此時 say 沒人答（`AnswerMissing`），再跑一次接回、2.7 秒答出；/exit 後結束碼 0、沒殘留程序。測完 `ws-amy-test` 刪掉。玩法在 `~/code/playground/agents/amy/README.md`。
 
 ## 環境變數要謹慎（11-01 使用者，待展開）
 
