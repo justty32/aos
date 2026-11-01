@@ -4,6 +4,8 @@
 
 規矩見 [thinking/README](README.md)。這份**全部是照原則代定、可翻案**，使用者定的在 agent-ops 的「決定」；文末原本要使用者看的七條，使用者 10-28 回「照新做法」，已定（agent-ops 決定 11）；之後再定粒度看 `_entry`、round 是零件庫的語法糖、aos 歸 aos、round 列入外部接口（決定 12～15）、格全部走註冊檔、捷徑只是方便用（決定 16），對應的結論已改。只寫文件、程式沒改、這次不動手做。
 
+**11-01 已改**（[10-31 parts-round § 決定](2026-10-31-parts-round.md#決定11-01-使用者)、[05 § 實作計畫](2026-10-31-parts-round/05-方向題與實作計畫.md#實作計畫) A 題）：下文講 `parts.json` 形狀 `{"parts": {"槽": {"path", "env"}}}`、`aos-parts`（add／rm／ls／get／which／run）與「註冊檔的 env 蓋過環境」的地方都是當時的現況——11-01 起 `parts.json` 換成 aos-exec 格式（槽值＝路徑字串或 `{".env", "_entry"}`、`endpoint`／`hook` 巢狀、頂層不包 `parts`）、`aos-parts` 刪了（器官共用 `lib/agent/parts.py` 找格，查找順序照舊「註冊檔 → 固定名字」）、env 改成 aos-exec 的預設不蓋（N-58）；`round` 槽與 `AOS_ROUND_ON_EMPTY` 拿掉，改 `aos-round --on-empty stop|idle`。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../wf/STRUCTURE.md) 按 `##` 標題拆開（單段仍超標的再按 `###` 切）；本檔留前言與表，各段逐字在下列分檔（2026-10-31 tidy）。
