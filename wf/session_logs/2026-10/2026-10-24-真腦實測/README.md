@@ -1,6 +1,6 @@
 # 交接：開 LiteLLM 後實測、打磨 10-24 的嘗試
 
-← [session log 10-24](../2026-10-24.md)｜[SESSION-LOG](../../../SESSION-LOG.md)｜[HANDOFF](../../../HANDOFF.md)
+← [session log 10-24](../../2026-10-parts/12-10-24.md#2026-10-24)｜[SESSION-LOG](../../../SESSION-LOG.md)｜[HANDOFF](../../../HANDOFF.md)
 
 使用者 10-24 收工時說（原話）：「都做好後，按照wf/規矩，整理收尾。然後我要重開session，到時候我會開litellm，然後實際測試，開始打磨這些想法，讓他們可用」
 

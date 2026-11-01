@@ -1,6 +1,6 @@
 # 10-30 晚 真腦實測（WAIT_USER 親手試，頂層代跑）
 
-← [session log 10-30](../2026-10-30.md)｜[WAIT_USER](../../../WAIT_USER.md)｜[SESSION-LOG](../../../SESSION-LOG.md)
+← [session log 10-30](../../2026-10-parts/16-10-30.md#2026-10-30)｜[WAIT_USER](../../../WAIT_USER.md)｜[SESSION-LOG](../../../SESSION-LOG.md)
 
 使用者打遊戲沒空親手試：「你能繼續推進嗎」「litellm 我開了，盡量都用 gpt 的」。由一個 opus agent 在家機 Manjaro 照 [WAIT_USER](../../../WAIT_USER.md) 各條代跑；腦一律 GPT（`chatgpt-gpt-6-sol`，範本原樣跑時是範本寫的 `chatgpt-gpt-6-luna-low`），工作區都在 scratchpad、跑完不進 git。叫 claude 的那層（第 6、8 項）用 `claude -p --model haiku`。impls 是當晚重建的（全套 788／0 fail）。
 

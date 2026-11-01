@@ -2,7 +2,7 @@
 
 ## 1. Python 版 aos-inst 刪掉、寬鬆度與錯誤代號照 C++ 版（10-22）
 
-背景：impls（C++）與 bin（Python）「刻意沒對齊」的五處與兩條寬鬆度差別（[session log 10-21](../../../wf/session_logs/2026-10/2026-10-21.md)）。
+背景：impls（C++）與 bin（Python）「刻意沒對齊」的五處與兩條寬鬆度差別（[session log 10-21](../../../wf/session_logs/2026-10-parts/09-10-21之三.md#刻意沒對齊)）。
 
 使用者原話：
 

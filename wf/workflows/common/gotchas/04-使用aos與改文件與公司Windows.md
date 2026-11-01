@@ -22,7 +22,7 @@
 - **git bash 的 `python3` 是 Microsoft Store 假捷徑**：`command -v python3` 找得到、一執行就失敗，
   `wf-lint.sh` 裡靠 python 的檢查（BIGLIST、錨點）因此**默默沒跑**、照樣印 `biglist=0`。
   跑 python、wf-lint、unittest 一律走 WSL：`wsl -e bash -lc 'cd /mnt/c/code/mine/simple_tools/aos && …'`
-  （2026-10-20 撞到，見 [session log 10-20](../../../session_logs/2026-10/2026-10-20.md)）。
+  （2026-10-20 撞到，見 [session log 10-20](../../../session_logs/2026-10-parts/06-10-20.md#2026-10-20)）。
 - **Windows 檔案系統不分大小寫**：`wf/WORKFLOWS/` 跟 `wf/workflows/` 會疊成同一個資料夾，
   git 卻當兩條路徑，檔案就被記到錯的大小寫底下（10-20 有 5 個檔這樣，9a62818d 修回）。
   `git add` 一律寫 `git -c core.ignorecase=false add <正確路徑>`，commit 前用

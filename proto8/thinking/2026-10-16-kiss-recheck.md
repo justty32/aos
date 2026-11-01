@@ -16,7 +16,7 @@
 
 ### 頂層自定的細節與現況
 
-- 開關名 `adopt`、旗標 `--adopt`；`signal` 欄照 Fable 推薦留；3.7（`ctl_seq` 回音）撤回、列[待定](../docs/NORMS/08-待定.md)；3.15 demo 隨 3.1（[session log 10-16](../../wf/session_logs/2026-10/2026-10-16.md#kiss-重審五件拍板寫進概念與規範10-16)）。
+- 開關名 `adopt`、旗標 `--adopt`；`signal` 欄照 Fable 推薦留；3.7（`ctl_seq` 回音）撤回、列[待定](../docs/NORMS/08-待定.md)；3.15 demo 隨 3.1（[session log 10-16](../../wf/session_logs/2026-10-parts/04-10-16.md#kiss-重審五件拍板寫進概念與規範10-16)）。
 - 舊 lib 整套刪（git 歷史 5546be29）；N-52、N-44 作廢（loop 靠停止碼 10 停）（使用者「都按照建議」，[ideas § 11](2026-10-19-ideas.md)）。
 
 ## 未決（使用者沒拍板，10-16 起暫停）
