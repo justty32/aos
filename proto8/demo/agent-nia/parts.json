@@ -1,6 +1,5 @@
 {
  "parts": {
-  "round": {"path": "../../lib/agent/round", "env": {"AOS_ROUND_ON_EMPTY": "stop"}},
   "queue": {"path": "../../lib/agent/queue"},
   "history": {"path": "../../lib/agent/history"},
   "act": {"path": "../../lib/agent/act"},

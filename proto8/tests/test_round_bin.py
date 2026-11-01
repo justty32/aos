@@ -2,20 +2,21 @@
 
 一輪（10-30 起 aos-round：lib/agent/round 的 fsm 表＋五格；舊骨架 round/_entry 與它的 Round 類、--step、hook/pause 第 6 步刪了）：
   題目經 queue push 進 $AOS_STACK/queue/，答案看 history 最新那則 assistant。
-AosRound（第 3 步）：bin/aos-round 單次叫、loop.json 用它整隻跑（stop、idle＋ctl paused／stopped、單子逾時殺在 think）、自己的錯。
+AosRound（第 3 步）：bin/aos-round 單次叫、loop.json 用它整隻跑（stop、idle＋ctl paused／stopped、單子逾時殺在 think）、自己的錯；
+  11-01 起 queue 空的停法是 argv `--on-empty stop|idle`（不再讀 AOS_ROUND_ON_EMPTY／parts.json 的 round 槽）。
 設計：proto8/thinking/2026-10-28-agent-round.md § 3、§ 4、文末「實作時代定」；2026-10-30-agent-lifecycle 結論 A、B-11。"""
-import json, os, subprocess, time, unittest
+import json, os, shutil, subprocess, time, unittest
 
 from aos_bins import ROOT, tool  # noqa: E402
-from round_common import AgentCase, ROUND, EXEC, err_code  # noqa: E402
+from round_common import AgentCase, EXEC, err_code  # noqa: E402
 
 
 class AosRound(AgentCase):
-    """bin/aos-round（10-30 aos-round 第 3 步）：挑表（AOS_ROUND_ON_EMPTY）、設 AOS_ROUND_AGENT、cd lib/agent/round、換成 aos-fsm；
+    """bin/aos-round（10-30 aos-round 第 3 步）：挑表（--on-empty）、設 AOS_ROUND_AGENT、cd lib/agent/round、換成 aos-fsm；
     agent 的 loop.json 用 aos-round、aos-exec <agent> 整隻跑；驗 fsm trace 的 state／next 序列。"""
 
-    def loop(self, **cfg):
-        cfg = dict({"exec": {"argv": ["aos-round", {"$env": "AOS_CD"}]}}, **cfg)
+    def loop(self, on_empty=(), **cfg):
+        cfg = dict({"exec": {"argv": ["aos-round"] + list(on_empty) + [{"$env": "AOS_CD"}]}}, **cfg)
         (self.agent / "loop.json").write_text(json.dumps(cfg))
         (self.agent / "_entry").write_text('["aos-loop", "loop.json"]')
 
@@ -44,7 +45,17 @@ class AosRound(AgentCase):
         self.assertEqual(self.state(), "think")
 
     def test_stop_under_loop(self):
-        self.loop(max=50)
+        for on_empty in ((), ("--on-empty", "stop")):                    # 沒給＝stop
+            with self.subTest(on_empty=on_empty):
+                self.reset_stack()
+                self.loop(on_empty=on_empty, max=50)
+                self.stop_once()
+
+    def reset_stack(self):
+        shutil.rmtree(self.stack, ignore_errors=True)
+        self.q1 = self.put("幾點？")
+
+    def stop_once(self):
         r = self.whole()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual([x for x, _, _ in self.states()], ["idle", "think", "act", "think", "finish", "idle"])
@@ -53,10 +64,8 @@ class AosRound(AgentCase):
         self.assertEqual((self.ls("new"), self.ls("cur")), ([], []))
 
     def test_idle_under_loop_with_ctl(self):
-        """AOS_ROUND_ON_EMPTY=idle（round 槽的 env）＋interval_ms：答完後 idle 一行一行（next 都是 idle）；paused 時新信留在 new/，放行後答出；stopped 收工。"""
-        self.parts["round"] = {"path": ROUND, "env": {"AOS_ROUND_ON_EMPTY": "idle"}}
-        self.save()
-        self.loop(interval_ms=100, ctl="ctl.json", state="state.json")
+        """--on-empty idle（11-01 前是 round 槽的 env AOS_ROUND_ON_EMPTY）＋interval_ms：答完後 idle 一行一行（next 都是 idle）；paused 時新信留在 new/，放行後答出；stopped 收工。"""
+        self.loop(on_empty=("--on-empty", "idle"), interval_ms=100, ctl="ctl.json", state="state.json")
         p = subprocess.Popen([EXEC, str(self.agent)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                              env=self.env(), cwd=self.tmp)
         self.addCleanup(lambda: (p.poll() is None and p.kill(), p.communicate()))
@@ -114,19 +123,21 @@ class AosRound(AgentCase):
         self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "ArgumentsBad"))
         r = self.aos_round("agent")
         self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "AgentBad"))
-        self.parts["round"] = {"path": ROUND, "env": {"AOS_ROUND_ON_EMPTY": "wait"}}
-        self.save()
-        r = self.aos_round(str(self.agent))
-        self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "SettingBad"))
-        self.parts["round"] = {"path": str(self.tmp / "nope")}
-        self.save()
-        r = self.aos_round(str(self.agent))
-        self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "PartsBad"))
-        self.assertFalse((self.stack / "state.txt").exists())
+        r = self.aos_round("--on-empty", "wait", str(self.agent))                 # 11-01 前是 SettingBad（環境變數）
+        self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "ArgumentsBad"))
+        r = self.aos_round("--on-empty", str(self.agent))                         # 吃掉 agent 當值：沒給 agent
+        self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "ArgumentsBad"))
+        r = self.aos_round(str(self.agent), "--on-empty", "idle")                 # 旗標要在 agent 前面
+        self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "ArgumentsBad"))
+        r = self.aos_round("--nope", str(self.agent))
+        self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "FlagUnknown"))
+        r = self.aos_round(str(self.agent), env={"AOS_ROUND_ON_EMPTY": "wait"})   # 環境變數不再讀
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(self.state(), "think")
 
     def test_fsm_not_on_path(self):
         """PATH 上沒有 aos-fsm：CommandMissing、說「PATH 上找不到」，不印 PATH 最後一格的路徑（10-30 晚真腦實測發現 1）。"""
-        path = os.pathsep.join([str(ROOT / "bin"), "/usr/bin", "/bin"])        # 有 aos-parts、沒有 aos-fsm
+        path = os.pathsep.join([str(ROOT / "bin"), "/usr/bin", "/bin"])        # 有 aos-round、沒有 aos-fsm
         r = self.aos_round(str(self.agent), env={"PATH": path})
         self.assertEqual((r.returncode, err_code("aos-round", r.stderr)), (1, "CommandMissing"))
         self.assertIn("PATH 上找不到可執行的 aos-fsm", r.stderr)

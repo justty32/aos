@@ -13,7 +13,7 @@ OPENAI = str(ROOT / "lib" / "endpoint" / "openai")
 ACT = str(ROOT / "lib" / "agent" / "act")
 CLOCK = str(ROOT / "lib" / "base" / "clock")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL",
-         "AOS_BRAIN_KEY", "AOS_KERNEL_REPORT", "AOS_ENDPOINT_TIMEOUT_MS", "AOS_ENDPOINT_NAME", "AOS_ACT_MAX_PARALLEL", "AOS_ROUND_MAX_RETRIES", "AOS_ROUND_ON_EMPTY")
+         "AOS_BRAIN_KEY", "AOS_KERNEL_REPORT", "AOS_ENDPOINT_TIMEOUT_MS", "AOS_ENDPOINT_NAME", "AOS_ACT_MAX_PARALLEL", "AOS_ROUND_MAX_RETRIES")
 
 
 def err_code(prog, stderr):

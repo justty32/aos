@@ -204,7 +204,7 @@ class T(unittest.TestCase):
         self.assertEqual(self.ctl("add", "odd").returncode, 0)
         self.assertTrue(until(lambda: (self.s / "nia" / "loop.json").is_file() and (self.s / "odd" / "args").is_file()))
         argv = json.loads((self.s / "nia" / "loop.json").read_text())["exec"]["argv"]
-        self.assertEqual(argv, ["aos-round", str(nia)])
+        self.assertEqual(argv, ["aos-round", "--on-empty", "stop", str(nia)])
         odd = json.loads((self.s / "odd" / "loop.json").read_text())["exec"]["argv"]
         self.assertEqual(odd[3:], [os.path.realpath(d), {"$env": "AOS_CD", "$path": "x"}])
         self.assertEqual((self.s / "odd" / "args").read_text().split()[0], os.path.realpath(d))

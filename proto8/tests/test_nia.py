@@ -3,7 +3,7 @@
 範本（10-30 起題目經 queue 格 push 進 $AOS_STACK/queue/、答案看 history，agent-lifecycle 第 3 步）：aos-exec 跑一題（假腦叫 clock 再答）、
   § 5 的檔在 stack、loop 的 state 窗收工是 done；10-30 起 loop.json 叫 aos-round（aos-round 第 4 步），trace 是 fsm 的一格一行
   （idle → think → act → think → finish → idle 退 10）；兩題＝finish 兩次、最後 idle 退 10 正常停；
-  沒題＝loop 第一次就停、結束碼 0；parts.json 的 round 給 AOS_ROUND_ON_EMPTY=stop、loop.json 開 ctl／state 窗；
+  沒題＝loop 第一次就停、結束碼 0；loop.json 叫 aos-round --on-empty stop（11-01 前是 parts.json 的 round 槽 env）、開 ctl／state 窗；
   parts.json／tools.json 只用相對路徑、每格 aos-parts which 找得到。
 spawn：--from agent-nia 後 parts.json、tools.json 指出範本的相對路徑改成絕對、搬到 agents/<名>/agent/ 後經 queue 放一題、
   aos-exec 跑起來答得出來（10-30 起不經 aos-ai ask／run：那兩個還照舊協議放 new/、等 out/）；
@@ -11,7 +11,7 @@ spawn：--from agent-nia 後 parts.json、tools.json 指出範本的相對路徑
 ask_round（lib/aos，第 11 步：round 當外部接口；10-30 起放進 queue、答案看 history，agent-lifecycle 第 5 步）：
   登記進 tools.json、aos-tools call 拿到假腦答案、agent 不常駐（工作區在工具小格、只有 .stack、queue 收乾淨）；
   工具小資料夾 .env 固定 AOS_ASK_AGENT；10-30 起一格一格叫 aos-round（aos-round 第 5 步）：AOS_ASK_MAX_STEPS 用完＝AnswerMissing、再叫接著做；
-  被問的 agent 設 AOS_ROUND_ON_EMPTY=idle 也答完就停；aos-round 失敗＝RoundFailed；參數錯。
+  被問的 agent 的 loop.json 是 --on-empty idle 也答完就停（ask_round 自己叫 aos-round、沒給＝stop）；aos-round 失敗＝RoundFailed；參數錯。
 設計：proto8/thinking/2026-10-28-agent-round.md § 1、§ 6、§ 7 第 6、7、11 步、文末 39～。"""
 import json, os, subprocess, tempfile, unittest
 from pathlib import Path
@@ -22,7 +22,7 @@ from test_ai_tools import ai  # noqa: E402
 NIA = ROOT / "demo" / "agent-nia"
 PARTS = str(ROOT / "bin" / "aos-parts")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL",
-         "AOS_BRAIN_KEY", "AOS_AI_ROOT", "AOS_COMPACT_MAX_BYTES", "AOS_ROUND_MAX_RETRIES", "AOS_ACT_MAX_PARALLEL", "AOS_ENDPOINT_NAME", "AOS_ROUND_ON_EMPTY")
+         "AOS_BRAIN_KEY", "AOS_AI_ROOT", "AOS_COMPACT_MAX_BYTES", "AOS_ROUND_MAX_RETRIES", "AOS_ACT_MAX_PARALLEL", "AOS_ENDPOINT_NAME")
 
 
 def env():
@@ -111,10 +111,10 @@ class Template(unittest.TestCase):
         for row in list(parts.values()) + list(tools.values()):
             self.assertFalse(os.path.isabs(row["path"]), row)                    # 手寫相對路徑：repo 搬家不斷
         self.assertEqual(parts["endpoint/default"]["path"], "../../lib/endpoint/fake")
-        self.assertEqual(parts["round"]["env"], {"AOS_ROUND_ON_EMPTY": "stop"})        # 範本預設射後不理
+        self.assertNotIn("round", parts)                                              # 11-01 起 round 槽沒了：停法走 argv
         loop = json.loads((NIA / "loop.json").read_text())
         self.assertEqual((loop["ctl"], loop["state"]), ("ctl.json", "state.json"))   # 窗開在 $AOS_STACK
-        self.assertEqual(loop["exec"], {"argv": ["aos-round", {"$env": "AOS_CD"}], "timeout_ms": 600000})   # timeout_ms 管一格
+        self.assertEqual(loop["exec"], {"argv": ["aos-round", "--on-empty", "stop", {"$env": "AOS_CD"}], "timeout_ms": 600000})   # 射後不理；timeout_ms 管一格
         self.assertEqual(parts["hook/pre_think"]["path"], "../../lib/agent/compact")   # compact 預設掛在 pre_think
         for slot in parts:
             r = subprocess.run([PARTS, "--file", str(NIA / "parts.json"), "which", slot], capture_output=True, text=True,
@@ -237,11 +237,11 @@ class AskRound(unittest.TestCase):
                          (1, "SettingBad"))
 
     def test_idle_agent_does_not_hang(self):
-        """被問的 agent 設 AOS_ROUND_ON_EMPTY=idle（aos-round 用 fsm-idle.json、queue 空也退 0）：答完就停手，不叫到次數用完。"""
+        """被問的 agent 的 loop.json 是 --on-empty idle（常駐用）：ask_round 自己叫 aos-round（沒給＝stop），答完就停手、不叫到次數用完。
+        （11-01 前是 round 槽的 env AOS_ROUND_ON_EMPTY=idle，蓋過環境、aos-round queue 空也退 0。）"""
         agent = self.own_agent()
-        parts = json.loads((agent / "parts.json").read_text())
-        parts["parts"]["round"]["env"] = {"AOS_ROUND_ON_EMPTY": "idle"}
-        (agent / "parts.json").write_text(json.dumps(parts))
+        (agent / "loop.json").write_text(json.dumps({"exec": {"argv": ["aos-round", "--on-empty", "idle", {"$env": "AOS_CD"}]},
+                                                     "interval_ms": 100}))
         self.add(ASK)
         r = self.call("ask_round", {"question": "幾點？", "agent": str(agent)}, {"AOS_ASK_MAX_STEPS": "8"})
         self.assertEqual((r.returncode, r.stderr), (0, ""))

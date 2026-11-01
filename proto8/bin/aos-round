@@ -3,22 +3,25 @@
 
 設計：proto8/thinking/2026-10-30-aos-round.md § B 第 1 點、實作步驟第 3 步。白話：一輪＝idle → think → (act → think)* → finish → idle，
 這張表與五個薄格在 lib/agent/round/（fsm-stop.json、fsm-idle.json、idle/ think/ act/ more/ finish/）；aos-round 只挑表、設變數、換成 aos-fsm。
-外面由 agent 的 loop.json（aos-loop）一次一次叫它：{"exec": {"argv": ["aos-round", {"$env": "AOS_CD"}], "timeout_ms": 600000}}（timeout_ms 管一格）。
+外面由 agent 的 loop.json（aos-loop）一次一次叫它：{"exec": {"argv": ["aos-round", "--on-empty", "stop", {"$env": "AOS_CD"}], "timeout_ms": 600000}}（timeout_ms 管一格）。
 
-    aos-round <agent 資料夾絕對路徑>
+    aos-round [--on-empty stop|idle] <agent 資料夾絕對路徑>
 
-設定：`aos-parts --file <agent>/parts.json which --json round` 拿 round 槽的 env（退 10＝沒登記也沒有同名資料夾＝用預設；path 不用），
-  疊在自己的環境上（同名以註冊檔為準，同 aos-parts run）。AOS_ROUND_ON_EMPTY＝queue 空時：stop（沒設或空；表 fsm-stop.json，
-  fsm 退 10 → loop 收工）｜idle（表 fsm-idle.json，idle 退 10 被表接住 → fsm 退 0 → loop 隔 interval_ms 再來）。AOS_ROUND_MAX_RETRIES 照樣往下傳給 think 格。
+--on-empty（11-01 起，取代環境變數 AOS_ROUND_ON_EMPTY 與 parts.json 的 round 槽，不再讀它們；跟 aos-eca-turn 對稱）＝queue 空時：
+  stop（沒給；表 fsm-stop.json，fsm 退 10 → loop 收工）｜idle（表 fsm-idle.json，idle 退 10 被表接住 → fsm 退 0 → loop 隔 interval_ms 再來）。
+  AOS_ROUND_MAX_RETRIES 照樣往下傳給 think 格。
 跑法：設 AOS_ROUND_AGENT＝<agent>（表的 exec 用 {"$env": "AOS_ROUND_AGENT"} 帶給每一格）；AOS_STACK、AOS_WS 是相對路徑就先以目前 cwd 轉絕對；
   cd 到 lib/agent/round/（從自己的實際位置找 ../lib/agent/round，格的相對路徑從這裡算）；exec 成 `aos-fsm 表檔`。
   結束碼就是 aos-fsm 的（換過去、透明）。沒設 AOS_STACK 不自己擋，交給 aos-fsm 說。沒有旗標、不開窗、不寫檔。
-錯（自己這層的）：stderr 一行「aos-round: 代號 原因」、退 1——ArgumentsBad（沒給、多給）、AgentBad（不是存在的絕對路徑）、
-  PartsBad（aos-parts 起不來、退 0／10 以外、印的不是 {path, env}）、SettingBad（AOS_ROUND_ON_EMPTY 不是 stop／idle）、CommandMissing（PATH 上找不到 aos-fsm、或起不來）。
+錯（自己這層的）：stderr 一行「aos-round: 代號 原因」、退 1——ArgumentsBad（沒給、多給、--on-empty 缺值或不是 stop／idle）、
+  FlagUnknown（不認得的旗標）、AgentBad（不是存在的絕對路徑）、CommandMissing（PATH 上找不到 aos-fsm、或起不來）。
 """
-import json, os, shutil, subprocess, sys
+import os, shutil, sys
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import aos_flags  # noqa: E402
 
 NAME = "aos-round"
+USAGE = "aos-round [--on-empty stop|idle] <agent 資料夾絕對路徑>"
 ROUND = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "lib", "agent", "round")
 
 
@@ -27,35 +30,20 @@ def die(code, reason):
     sys.exit(1)
 
 
-def round_env(agent):
-    try:
-        r = subprocess.run(["aos-parts", "--file", os.path.join(agent, "parts.json"), "which", "--json", "round"],
-                           stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)   # stderr 不吞：aos-parts 自己說
-    except OSError as e:
-        die("PartsBad", "aos-parts 起不來：%s" % e)
-    if r.returncode == 10:
-        return {}
-    if r.returncode != 0:
-        die("PartsBad", "aos-parts which round 退 %d" % r.returncode)
-    try:
-        got = json.loads(r.stdout)
-        got["path"]
-        return {k: str(v) for k, v in (got.get("env") or {}).items()}
-    except (ValueError, KeyError, TypeError, AttributeError) as e:
-        die("PartsBad", "aos-parts which --json 印的不是 {path, env}：%s" % e)
-
-
 def main():
-    if len(sys.argv) != 2:
-        die("ArgumentsBad", "usage: aos-round <agent 資料夾絕對路徑>")
-    agent = sys.argv[1]
+    try:
+        opts, rest = aos_flags.parse(sys.argv[1:], {"--on-empty": "on_empty"})
+    except aos_flags.Error as e:
+        die(e.code, "%s（usage: %s）" % (e, USAGE))
+    if len(rest) != 1:
+        die("ArgumentsBad", "usage: %s" % USAGE)
+    empty = opts.get("on_empty", "stop")
+    if empty not in ("stop", "idle"):
+        die("ArgumentsBad", "--on-empty 要是 stop 或 idle，收到 %r（usage: %s）" % (empty, USAGE))
+    agent = rest[0]
     if not os.path.isabs(agent) or not os.path.isdir(agent):
         die("AgentBad", "agent 資料夾要是存在的絕對路徑，收到 %r" % agent)
     env = dict(os.environ)
-    env.update(round_env(agent))
-    empty = env.get("AOS_ROUND_ON_EMPTY") or "stop"
-    if empty not in ("stop", "idle"):
-        die("SettingBad", "AOS_ROUND_ON_EMPTY 要是 stop 或 idle，收到 %r" % empty)
     env["AOS_ROUND_AGENT"] = agent
     for k in ("AOS_STACK", "AOS_WS"):
         if env.get(k) and not os.path.isabs(env[k]):
