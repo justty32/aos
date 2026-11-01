@@ -28,7 +28,7 @@ def openai_brain(root, name):
     """spawn 出來的 nia 改問 OpenAI 相容的腦（網址從 AOS_BRAIN_URL 來，ai(..., env=) 給）。"""
     p = Path(root) / "agents" / name / "agent" / "parts.json"
     reg = json.loads(p.read_text())
-    reg["parts"]["endpoint/default"] = {"path": str(ROOT / "lib" / "endpoint" / "openai"), "env": {"AOS_BRAIN_MODEL": "m"}}
+    reg["endpoint"]["default"] = {".env": {"AOS_BRAIN_MODEL": "m"}, "_entry": str(ROOT / "lib" / "endpoint" / "openai")}
     p.write_text(json.dumps(reg))
 
 

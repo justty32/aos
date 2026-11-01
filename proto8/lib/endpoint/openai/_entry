@@ -5,7 +5,7 @@
 # stdout：一行 JSON＝assistant message，只留 role、content、tool_calls（模型想的內容不收，P-23）。
 # usage：每次問完追加一行進 $AOS_STACK/usage.jsonl：{"answered_at", "endpoint", "model", "usage"}（usage＝API 回的原樣，沒回＝null）；
 #   有 AOS_KERNEL_REPORT 就把 usage 寫成那份檔（照 agent-dan 的 brain.py，P-23 註）。usage 不進 stdout。
-# 設定（環境變數；註冊檔 parts.json 的 env 或固定名字那格的 .env 給）：
+# 設定（環境變數；註冊檔 parts.json 那槽的 .env key 或固定名字那格的 .env 給，環境裡已有的不蓋）：
 #   AOS_BRAIN_URL（必給，例 http://localhost:4000/v1）、AOS_BRAIN_MODEL（stdin 沒給 model 時用；兩邊都沒有＝ModelUnknown）、
 #   AOS_BRAIN_KEY（有才帶 Authorization: Bearer）、AOS_ENDPOINT_TIMEOUT_MS（這一次請求的逾時，預設 120000）、
 #   AOS_ENDPOINT_NAME（寫進 usage.jsonl 的名字；沒設＝這支 _entry 實際所在的資料夾名，例 openai）。

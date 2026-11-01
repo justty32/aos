@@ -1,6 +1,6 @@
 """test_round_queue - proto8/lib/agent 的 queue、history、compact 三格（agent-round § 7 第 2、3 步；queue 10-30 改 agent-lifecycle 第 1 步）。
 
-每格照共通介面叫：aos-exec <格> <agent 資料夾> <子命令>；格靠 agent 資料夾的 parts.json（aos-parts which --json）找別的格。
+每格照共通介面叫：aos-exec <格> <agent 資料夾> <子命令>；格靠 agent 資料夾的 parts.json（11-01 起 aos-exec 格式，lib/agent/parts.py 找）找別的格。
 queue（10-30 起＝$AOS_STACK/queue/，N-16 有順序的信箱，底下叫 aos-post）：push 之後 queue/new/ 有一封（body＝message、有序號）
 → claim（信在 cur/、current.txt、history 多一則）→ finish（信不見、--keep 進 done/）；pop 等信不見後印 history 最新 assistant；
 沒有 queue/ 就建；push 壞 message；非有序的信與 body 壞＝壞信丟掉；withdraw 已認領報錯；claim 各步之間當掉重跑接得上（含 --more）；
@@ -12,6 +12,7 @@ import json, os, re, subprocess, tempfile, time, unittest
 from pathlib import Path
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
+from round_common import parts_json  # noqa: E402
 
 EXEC = tool("aos-exec")
 POST = tool("aos-post")
@@ -53,7 +54,7 @@ class Base(unittest.TestCase):
         self.stack.mkdir()
 
     def write_parts(self):
-        (self.agent / "parts.json").write_text(json.dumps({"parts": self.parts}))
+        (self.agent / "parts.json").write_text(json.dumps(parts_json(self.parts)))
 
     def part(self, slot, *args, stdin="", env=None):
         p = self.parts[slot]

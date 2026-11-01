@@ -22,21 +22,18 @@ def first_line(s, cut):
 
 
 def ask(endpoint, agent, model, system, user):
-    """問一次腦，回 content 字串。endpoint＝(路徑, env)。model 是空的就不帶（用 endpoint 格自己的設定）。
+    """問一次腦，回 content 字串。endpoint＝給 aos-exec 的目標（parts.find 回的）。model 是空的就不帶（用 endpoint 格自己的設定）。
     endpoint 退非 0＝EndpointFailed（endpoint 自己已在 stderr 說了原因，這裡不轉述，P-21）。"""
-    path, env = endpoint
     body = {"messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
     if model:
         body["model"] = model
-    e = dict(os.environ)
-    e.update(env)
     try:
-        r = subprocess.run(["aos-exec", path, agent], input=json.dumps(body, ensure_ascii=False),
-                           stdout=subprocess.PIPE, text=True, env=e)
+        r = subprocess.run(["aos-exec", endpoint, agent], input=json.dumps(body, ensure_ascii=False),
+                           stdout=subprocess.PIPE, text=True)
     except OSError as ex:
         die("EndpointFailed", "aos-exec 起不來：%s" % ex)
     if r.returncode != 0:
-        die("EndpointFailed", "endpoint %s 退 %d" % (path, r.returncode))
+        die("EndpointFailed", "endpoint %s 退 %d" % (endpoint, r.returncode))
     lines = [l for l in r.stdout.splitlines() if l.strip()]
     try:
         msg = json.loads(lines[-1])

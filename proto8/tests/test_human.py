@@ -10,6 +10,7 @@ import json, os, re, subprocess, tempfile, time, unittest
 from pathlib import Path
 
 from aos_bins import ROOT, path_with  # noqa: E402
+from round_common import absolute  # noqa: E402
 
 HUMAN = ROOT / "extras" / "human" / "bin"
 SAY, LISTEN, CHAT = (str(HUMAN / n) for n in ("aos-say", "aos-listen", "aos-chat"))
@@ -51,12 +52,12 @@ class Base(unittest.TestCase):
         loop = json.loads((NIA / "loop.json").read_text())
         parts = json.loads((NIA / "parts.json").read_text())
         tools = json.loads((NIA / "tools.json").read_text())
-        for reg in (parts["parts"], tools["tools"]):
-            for row in reg.values():
-                row["path"] = os.path.normpath(os.path.join(NIA, row["path"]))
+        parts = absolute(parts, NIA)
+        for row in tools["tools"].values():
+            row["path"] = os.path.normpath(os.path.join(NIA, row["path"]))
         if brain:
-            parts["parts"]["endpoint/default"] = {"path": str(ROOT / "lib" / "endpoint" / "openai"),
-                                                  "env": {"AOS_BRAIN_URL": brain, "AOS_BRAIN_MODEL": "m"}}
+            parts["endpoint"]["default"] = {".env": {"AOS_BRAIN_URL": brain, "AOS_BRAIN_MODEL": "m"},
+                                            "_entry": str(ROOT / "lib" / "endpoint" / "openai")}
         if idle:
             loop["exec"]["argv"] = ["aos-round", "--on-empty", "idle", {"$env": "AOS_CD"}]
             del loop["max"]

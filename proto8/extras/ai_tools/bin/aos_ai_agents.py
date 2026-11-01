@@ -23,23 +23,48 @@ def resolve_src(spec, home, what):
     return p.resolve()
 
 
+def outside(src, path):
+    """相對路徑 path 從範本資料夾 src 算、指到範本外面的＝那個絕對路徑（不解開捷徑，同 aos-tools add 存 abspath）；否則 None。"""
+    if not isinstance(path, str) or os.path.isabs(path):
+        return None
+    target = os.path.normpath(os.path.join(src, path))
+    return target if target != str(src) and not target.startswith(str(src) + os.sep) else None
+
+
+def absolutize_parts(src, node):
+    """parts.json（aos-exec 格式，11-01 起）的一層：字串槽值與 _entry 是路徑；.env 的值、指示詞（$ref／$env）、argv 陣列不碰。回有沒有改。"""
+    changed = False
+    for k, v in node.items():
+        if k == ".env":
+            continue
+        if isinstance(v, str):
+            target = outside(src, v)
+            if target:
+                node[k], changed = target, True
+        elif isinstance(v, dict) and "$ref" not in v and "$env" not in v:
+            changed = absolutize_parts(src, v) or changed
+    return changed
+
+
 def absolutize(src, reg, key):
-    """複製來的註冊檔（parts.json／tools.json）：每一格 {"path": 相對路徑} 從範本資料夾算、指到範本外面的，改成絕對路徑。
-    指在範本裡面的（例 tools/clock，跟著複製了）照舊相對；指示詞（$ref／$env）與不是字串的不碰；沒有要改的就不寫檔。"""
+    """複製來的註冊檔：指出範本的相對路徑從範本資料夾算、改成絕對路徑；指在範本裡面的（例 tools/clock，跟著複製了）照舊相對；
+    沒有要改的就不寫檔。tools.json＝{"tools": {名: {"path"}}}；parts.json（key None）＝aos-exec 格式的槽表，整份往下走。"""
     if not reg.is_file():
         return
     data = read_json(reg)
-    table = data.get(key) if isinstance(data, dict) else None
-    if not isinstance(table, dict) or "$ref" in table or "$env" in table:
+    if not isinstance(data, dict) or "$ref" in data or "$env" in data:
         return
-    changed = False
-    for row in table.values():
-        path = row.get("path") if isinstance(row, dict) else None
-        if not isinstance(path, str) or os.path.isabs(path):
-            continue
-        target = os.path.normpath(os.path.join(src, path))           # 不解開捷徑（同 add 存 abspath）
-        if target != str(src) and not target.startswith(str(src) + os.sep):
-            row["path"], changed = target, True
+    if key is None:
+        changed = absolutize_parts(src, data)
+    else:
+        table = data.get(key)
+        if not isinstance(table, dict) or "$ref" in table or "$env" in table:
+            return
+        changed = False
+        for row in table.values():
+            target = outside(src, row.get("path")) if isinstance(row, dict) else None
+            if target:
+                row["path"], changed = target, True
     if changed:
         write_atomic(reg, json.dumps(data, ensure_ascii=False, indent=1) + "\n")
 
@@ -63,8 +88,8 @@ def cmd_spawn(root, o, pos):
             if orig.exists():
                 link.unlink()
                 link.symlink_to(orig.resolve())
-    for reg in ("parts.json", "tools.json"):                           # 註冊檔裡指出範本的相對路徑（例：agent-nia 的 ../../lib/agent/round）
-        absolutize(src, a.agent / reg, "parts" if reg == "parts.json" else "tools")   # 搬家會斷：改成絕對（同 aos-parts／aos-tools add）
+    for reg, key in (("parts.json", None), ("tools.json", "tools")):  # 註冊檔裡指出範本的相對路徑（例：agent-nia 的 ../../lib/agent/queue）
+        absolutize(src, a.agent / reg, key)                            # 搬家會斷：改成絕對（同 aos-tools add）
     for t in tools:
         shutil.copytree(t, a.agent / "tools" / t.name, symlinks=True, ignore=ignore)
         register_tool(a.agent, a.agent / "tools" / t.name)             # 範本的 tools.json 是相對路徑、複製後照用；加的工具登記絕對路徑

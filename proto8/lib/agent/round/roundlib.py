@@ -3,15 +3,18 @@
 設計：proto8/thinking/2026-10-30-aos-round.md § B（第 2 步；函數從舊的 `_entry` 搬來，trace 那段拿掉——trace 只留 fsm 的一格一行，衝突 5）。
 每格開頭 `roundlib.main("<格>", 那格的函數)`：解 argv（agent 資料夾絕對路徑）、要 AOS_STACK、設下面幾個模組變數，
 跑那格的函數（回結束碼），抓 Exit、自己這層的錯印一行「round/<格>: 代號 原因」，以碼退出。
-叫格：`aos-parts --file <agent>/parts.json which --json 槽`，退 10＝沒掛（queue、history、act、endpoint/<名> 是必要的＝PartMissing）；
-  拿到就 `aos-exec 路徑 <agent> [子命令]`，註冊檔的 env 疊上去，AOS_STACK、AOS_WS 原樣傳（P-16）。
+叫格：lib/agent/parts.py 的 find（parts.json 有這槽＝`<agent>/parts.json#/槽`，沒寫＝固定名字 `<agent>/<槽>`；11-01 起不經 aos-parts），
+  沒掛＝None（queue、history、act、endpoint/<名> 是必要的＝PartMissing）；拿到就 `aos-exec 目標 <agent> [子命令]`，
+  env 交給 aos-exec（`.env` 預設不蓋，N-58；這裡不疊），AOS_STACK、AOS_WS 原樣傳（P-16）。
 格失敗（非 0）＝以那個碼退，stderr 不轉述；格退了它不該退的 10＝UnitFailed、退 1。"""
 import json, os, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # lib/agent（parts.py）
+import parts  # noqa: E402
 
 NOT_FOUND = 10
 REQUIRED = ("queue", "history", "act")
 NAME = "round"                    # main() 設成 round/<格>
-AGENT = STACK = PARTS = None      # main() 設
+AGENT = STACK = None              # main() 設
 
 
 class Exit(Exception):
@@ -27,7 +30,7 @@ def fail(err, reason):
 
 
 def start(cell):
-    global NAME, AGENT, STACK, PARTS
+    global NAME, AGENT, STACK
     NAME = "round/" + cell
     args = sys.argv[1:]
     if len(args) != 1:
@@ -38,7 +41,6 @@ def start(cell):
     STACK = os.environ.get("AOS_STACK")
     if not STACK:
         fail("StackMissing", "沒設定 AOS_STACK")
-    PARTS = os.path.join(AGENT, "parts.json")
 
 
 def main(cell, body):
@@ -68,32 +70,22 @@ def max_retries():
 # ---- 叫格 ----
 
 def which(slot):
-    """槽 → {"path", "env"}；沒掛＝None（必要的格＝PartMissing）。"""
+    """槽 → 給 aos-exec 的目標；沒掛＝None（必要的格＝PartMissing）。"""
     try:
-        r = subprocess.run(["aos-parts", "--file", PARTS, "which", "--json", slot],
-                           stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)   # stderr 不吞：aos-parts 自己說哪裡壞
-    except OSError as e:
-        fail("PartsBad", "aos-parts 起不來：%s" % e)
-    if r.returncode == NOT_FOUND:
-        if slot in REQUIRED or slot.startswith("endpoint/"):
-            fail("PartMissing", "沒掛 %s 格（%s 沒登記、%s 也沒有）" % (slot, PARTS, os.path.join(AGENT, slot)))
-        return None
-    if r.returncode != 0:
-        fail("PartsBad", "aos-parts which %s 退 %d" % (slot, r.returncode))
-    try:
-        got = json.loads(r.stdout)
-        return {"path": got["path"], "env": {k: str(v) for k, v in (got.get("env") or {}).items()}}
-    except (ValueError, KeyError, TypeError, AttributeError) as e:
-        fail("PartsBad", "aos-parts which --json 印的不是 {path, env}：%s" % e)
+        got = parts.find(AGENT, slot)
+    except parts.Bad as e:
+        fail("PartsBad", e)
+    if got is None and (slot in REQUIRED or slot.startswith("endpoint/")):
+        fail("PartMissing", "沒掛 %s 格（%s 沒登記、%s 也沒有）" % (slot, os.path.join(AGENT, parts.FILE), os.path.join(AGENT, slot)))
+    return got
 
 
 def run(slot, got, sub=(), stdin="", extra_env=None, keep_err=False):
     """aos-exec 那格；回 CompletedProcess。keep_err＝把 stderr 收下（endpoint：要給 on_error），收下的照樣印出去。"""
     env = dict(os.environ)
     env.update(extra_env or {})
-    env.update(got["env"])
     try:
-        r = subprocess.run(["aos-exec", got["path"], AGENT] + list(sub), input=stdin, stdout=subprocess.PIPE,
+        r = subprocess.run(["aos-exec", got, AGENT] + list(sub), input=stdin, stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE if keep_err else None, text=True, env=env)
     except OSError as e:
         fail("UnitFailed", "%s 起不來（aos-exec）：%s" % (" ".join((slot,) + tuple(sub)), e))
@@ -228,29 +220,11 @@ def endpoint_name():
 
 
 def candidates():
-    """parts.json 的 endpoint/<名> 與 <agent>/endpoint/ 底下的名字聯集，排序。"""
-    found = set()
+    """parts.json 的 endpoint 底下與 <agent>/endpoint/ 底下的名字聯集，排序。"""
     try:
-        with open(PARTS, encoding="utf-8") as f:
-            parts = json.load(f).get("parts")
-    except FileNotFoundError:
-        parts = {}
-    except (OSError, ValueError, AttributeError) as e:
-        fail("PartsBad", "%s 讀不了：%s" % (PARTS, e))
-    if isinstance(parts, dict) and "$ref" not in parts and "$env" not in parts:
-        slots = parts.keys()
-    else:                                               # parts 是指示詞：交給 aos-parts 整份解
-        r = subprocess.run(["aos-parts", "--file", PARTS, "ls", "--json"], stdin=subprocess.DEVNULL,
-                           stdout=subprocess.PIPE, text=True)
-        if r.returncode != 0:
-            fail("PartsBad", "aos-parts ls 退 %d" % r.returncode)
-        slots = [p["slot"] for p in json.loads(r.stdout)]
-    found.update(s.split("/", 1)[1] for s in slots if s.startswith("endpoint/"))
-    try:
-        found.update(n for n in os.listdir(os.path.join(AGENT, "endpoint")) if not n.startswith("."))
-    except (FileNotFoundError, NotADirectoryError):
-        pass
-    return sorted(found)
+        return parts.endpoints(AGENT)
+    except parts.Bad as e:
+        fail("PartsBad", e)
 
 
 def switch(current):

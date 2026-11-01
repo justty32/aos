@@ -11,16 +11,18 @@
   最近 AOS_COMPACT_KEEP_TURNS 題與還沒答完的那題原樣不動；更早的換成一則 user（摘要＋保留原文）＋一則 assistant（讀過了）。
 問腦走 endpoint 格：AOS_COMPACT_ENDPOINT（這格的設定）＞ $AOS_STACK/endpoint.txt ＞ default，槽名 endpoint/<名>；
   AOS_COMPACT_MODEL_NOTE／AOS_COMPACT_MODEL_SEG／AOS_COMPACT_MODEL_FINAL 有設才在請求裡帶 model（沒設＝用 endpoint 自己的）。腦回的不是 JSON 就走退路（照字面拼／整段當摘要）。
-history 與 endpoint 怎麼找：aos-parts --file <agent>/parts.json which --json <槽>（沒掛＝PartMissing），env 疊上去、aos-exec 它。
+history 與 endpoint 怎麼找：lib/agent/parts.py 的 find（parts.json 有＝<agent>/parts.json#/<槽>、沒寫＝固定名字；沒掛＝PartMissing），
+  aos-exec 它，env 交給 aos-exec（不疊，N-58）。
 做到一半的產物落在 $AOS_STACK/compact/run/（失敗重跑從斷的那步接著做）；換上之後改名成 compact/<run>/（report.json、log.jsonl）。
 壓了沒變小＝不換（收成 compact/nosave-<run>/，同一份 history 不再壓）。同一個 stack 一次只壓一個（flock）。
-設定（這格的 env；parts.json 的 env 或這格的 .env）：AOS_COMPACT_MAX_BYTES、AOS_COMPACT_SEG_KB（8）、AOS_COMPACT_KEEP_TURNS（2）、AOS_COMPACT_KEEP_MAX（3）、AOS_COMPACT_KEEP_FINAL_MAX（12）、
+設定（這格的 env；parts.json 那槽的 .env key 或這格的 .env 檔，環境裡已有的不蓋）：AOS_COMPACT_MAX_BYTES、AOS_COMPACT_SEG_KB（8）、AOS_COMPACT_KEEP_TURNS（2）、AOS_COMPACT_KEEP_MAX（3）、AOS_COMPACT_KEEP_FINAL_MAX（12）、
   AOS_COMPACT_KEEP_LINE_MAX（1500）、AOS_COMPACT_RESULT_CUT（2000）、AOS_COMPACT_ENDPOINT、AOS_COMPACT_MODEL_NOTE、AOS_COMPACT_MODEL_SEG、AOS_COMPACT_MODEL_FINAL。
 錯：stderr 一行「compact: 代號 原因」、退 1（N-43）。代號：ArgumentsBad、AgentMissing、StackMissing、SettingBad、PartMissing、
-PartsFailed、HistoryFailed、HistoryChanged、EndpointFailed、SummaryEmpty。"""
+PartsBad、HistoryFailed、HistoryChanged、EndpointFailed、SummaryEmpty。"""
 import datetime, fcntl, hashlib, json, os, subprocess, sys, time
-sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+sys.path[:0] = [os.path.dirname(os.path.realpath(__file__)), os.path.dirname(os.path.dirname(os.path.realpath(__file__)))]   # 這格（ask.py）、lib/agent（parts.py）
 import ask
+import parts
 from ask import die, flat
 
 KEEP_TAGS = ("user_words", "decision", "number", "open", "other")
@@ -70,28 +72,18 @@ HERE = os.path.dirname(os.path.realpath(__file__))
 
 def part(slot):
     try:
-        r = subprocess.run(["aos-parts", "--file", os.path.join(AGENT, "parts.json"), "which", "--json", slot],
-                           stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
-    except OSError as e:
-        die("PartsFailed", "aos-parts 起不來：%s" % e)
-    if r.returncode == 10:
+        got = parts.find(AGENT, slot)
+    except parts.Bad as e:
+        die("PartsBad", e)
+    if got is None:
         die("PartMissing", "沒掛 %s 格（%s/parts.json 沒登記、也沒有固定名字）" % (slot, AGENT))
-    if r.returncode != 0:
-        die("PartsFailed", "aos-parts which %s 退 %d" % (slot, r.returncode))
-    try:
-        p = json.loads(r.stdout)
-        return p["path"], {k: str(v) for k, v in (p.get("env") or {}).items()}
-    except (ValueError, KeyError, TypeError, AttributeError) as e:
-        die("PartsFailed", "aos-parts which --json 印的不是 {path, env}：%s" % e)
+    return got
 
 
 def history(sub, extra=(), stdin_text=""):
-    path, env = part("history")
-    e = dict(os.environ)
-    e.update(env)
     try:
-        r = subprocess.run(["aos-exec", path, AGENT, sub] + list(extra), input=stdin_text,
-                           stdout=subprocess.PIPE, text=True, env=e)
+        r = subprocess.run(["aos-exec", part("history"), AGENT, sub] + list(extra), input=stdin_text,
+                           stdout=subprocess.PIPE, text=True)
     except OSError as ex:
         die("HistoryFailed", "aos-exec 起不來：%s" % ex)
     if r.returncode != 0:                      # history 自己已說了原因（P-21）

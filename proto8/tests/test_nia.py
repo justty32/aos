@@ -4,7 +4,7 @@
   § 5 的檔在 stack、loop 的 state 窗收工是 done；10-30 起 loop.json 叫 aos-round（aos-round 第 4 步），trace 是 fsm 的一格一行
   （idle → think → act → think → finish → idle 退 10）；兩題＝finish 兩次、最後 idle 退 10 正常停；
   沒題＝loop 第一次就停、結束碼 0；loop.json 叫 aos-round --on-empty stop（11-01 前是 parts.json 的 round 槽 env）、開 ctl／state 窗；
-  parts.json／tools.json 只用相對路徑、每格 aos-parts which 找得到。
+  parts.json（11-01 起 aos-exec 格式）／tools.json 只用相對路徑、每格 lib/agent/parts.py 找得到。
 spawn：--from agent-nia 後 parts.json、tools.json 指出範本的相對路徑改成絕對、搬到 agents/<名>/agent/ 後經 queue 放一題、
   aos-exec 跑起來答得出來（10-30 起不經 aos-ai ask／run：那兩個還照舊協議放 new/、等 out/）；
   沒有 parts.json 的範本（agent-dan）tools.json 一個字不動。
@@ -13,14 +13,16 @@ ask_round（lib/aos，第 11 步：round 當外部接口；10-30 起放進 queue
   工具小資料夾 .env 固定 AOS_ASK_AGENT；10-30 起一格一格叫 aos-round（aos-round 第 5 步）：AOS_ASK_MAX_STEPS 用完＝AnswerMissing、再叫接著做；
   被問的 agent 的 loop.json 是 --on-empty idle 也答完就停（ask_round 自己叫 aos-round、沒給＝stop）；aos-round 失敗＝RoundFailed；參數錯。
 設計：proto8/thinking/2026-10-28-agent-round.md § 1、§ 6、§ 7 第 6、7、11 步、文末 39～。"""
-import json, os, subprocess, tempfile, unittest
+import json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
 from aos_bins import ROOT, EXEC, path_with  # noqa: E402
 from test_ai_tools import ai  # noqa: E402
+from round_common import absolute  # noqa: E402
+sys.path.insert(0, str(ROOT / "lib" / "agent"))
+import parts as lib_parts  # noqa: E402
 
 NIA = ROOT / "demo" / "agent-nia"
-PARTS = str(ROOT / "bin" / "aos-parts")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL",
          "AOS_BRAIN_KEY", "AOS_AI_ROOT", "AOS_COMPACT_MAX_BYTES", "AOS_ROUND_MAX_RETRIES", "AOS_ACT_MAX_PARALLEL", "AOS_ENDPOINT_NAME")
 
@@ -32,13 +34,20 @@ def env():
 
 
 def push(agent, ws, text):
-    """經 agent 的 queue 格（aos-parts run queue）放一則 user 進 <ws>/.stack/queue/；回信號。"""
+    """經 agent 的 queue 格（aos-exec <agent>/parts.json#/queue）放一則 user 進 <ws>/.stack/queue/；回信號。"""
     e = dict(env(), AOS_WS=str(ws))
-    r = subprocess.run([PARTS, "--file", str(Path(agent) / "parts.json"), "run", "queue", str(agent), "push"],
+    r = subprocess.run([EXEC, str(Path(agent) / "parts.json") + "#/queue", str(agent), "push"],
                        input=json.dumps({"role": "user", "content": text}, ensure_ascii=False),
                        capture_output=True, text=True, env=e, timeout=60)
     assert r.returncode == 0, r.stderr
     return r.stdout.strip()
+
+
+def leaves(table):
+    """parts.json（aos-exec 格式）裡的路徑：字串槽值與 _entry（.env 不算）。"""
+    if isinstance(table, str):
+        return [table]
+    return [p for k, v in table.items() if k != ".env" for p in leaves(v)] if isinstance(table, dict) else []
 
 
 def history(ws):
@@ -106,21 +115,22 @@ class Template(unittest.TestCase):
         self.assertEqual(self.states(), [("idle", 10)])
 
     def test_registries_relative_and_found(self):
-        parts = json.loads((NIA / "parts.json").read_text())["parts"]
+        parts = json.loads((NIA / "parts.json").read_text())
         tools = json.loads((NIA / "tools.json").read_text())["tools"]
-        for row in list(parts.values()) + list(tools.values()):
-            self.assertFalse(os.path.isabs(row["path"]), row)                    # 手寫相對路徑：repo 搬家不斷
-        self.assertEqual(parts["endpoint/default"]["path"], "../../lib/endpoint/fake")
+        for path in leaves(parts) + [row["path"] for row in tools.values()]:
+            self.assertFalse(os.path.isabs(path), path)                         # 手寫相對路徑：repo 搬家不斷
+        self.assertNotIn("parts", parts)                                         # 11-01 起整份就是槽表
+        self.assertEqual(parts["endpoint"]["default"], "../../lib/endpoint/fake")
         self.assertNotIn("round", parts)                                              # 11-01 起 round 槽沒了：停法走 argv
         loop = json.loads((NIA / "loop.json").read_text())
         self.assertEqual((loop["ctl"], loop["state"]), ("ctl.json", "state.json"))   # 窗開在 $AOS_STACK
         self.assertEqual(loop["exec"], {"argv": ["aos-round", "--on-empty", "stop", {"$env": "AOS_CD"}], "timeout_ms": 600000})   # 射後不理；timeout_ms 管一格
-        self.assertEqual(parts["hook/pre_think"]["path"], "../../lib/agent/compact")   # compact 預設掛在 pre_think
-        for slot in parts:
-            r = subprocess.run([PARTS, "--file", str(NIA / "parts.json"), "which", slot], capture_output=True, text=True,
-                               env=env(), cwd=self.ws)
-            self.assertEqual(r.returncode, 0, (slot, r.stderr))
-            self.assertTrue(os.path.isdir(r.stdout.strip()), slot)
+        self.assertEqual(parts["hook"]["pre_think"], {".env": {"AOS_COMPACT_MAX_BYTES": "65536"},
+                                                      "_entry": "../../lib/agent/compact"})   # compact 預設掛在 pre_think
+        for slot in ("queue", "history", "act", "hook/pre_think", "endpoint/default", "endpoint/litellm"):
+            self.assertEqual(lib_parts.find(str(NIA), slot), "%s/parts.json#/%s" % (NIA, slot))
+        for path in leaves(absolute(parts, NIA)):
+            self.assertTrue(os.path.isdir(path), path)
 
 
 class Spawn(unittest.TestCase):
@@ -134,11 +144,11 @@ class Spawn(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertEqual(res["tools"], ["clock", "math"])
         agent = Path(res["agent"])
-        for reg, key in (("parts.json", "parts"), ("tools.json", "tools")):
-            for name, row in json.loads((agent / reg).read_text())[key].items():
-                self.assertTrue(os.path.isabs(row["path"]), (reg, name, row))
-                self.assertTrue(os.path.isdir(row["path"]), (reg, name, row))
-        env_litellm = json.loads((agent / "parts.json").read_text())["parts"]["endpoint/litellm"]["env"]
+        paths = leaves(json.loads((agent / "parts.json").read_text()))
+        paths += [row["path"] for row in json.loads((agent / "tools.json").read_text())["tools"].values()]
+        for path in paths:
+            self.assertTrue(os.path.isabs(path) and os.path.isdir(path), path)
+        env_litellm = json.loads((agent / "parts.json").read_text())["endpoint"]["litellm"][".env"]
         self.assertEqual(env_litellm["AOS_BRAIN_URL"], "http://localhost:4000/v1")   # env 照抄
         ws = Path(res["ws"])
         push(agent, ws, "現在幾點？")
@@ -191,10 +201,7 @@ class AskRound(unittest.TestCase):
         """agent-nia 的格（絕對路徑）。"""
         a = self.tmp / "agent"
         a.mkdir()
-        parts = json.loads((NIA / "parts.json").read_text())["parts"]
-        for row in parts.values():
-            row["path"] = os.path.normpath(os.path.join(NIA, row["path"]))
-        (a / "parts.json").write_text(json.dumps({"parts": parts}))
+        (a / "parts.json").write_text(json.dumps(absolute(json.loads((NIA / "parts.json").read_text()), NIA)))
         (a / "tools.json").write_text(json.dumps({"tools": {"clock": {"path": str(ROOT / "lib" / "base" / "clock")}}}))
         return a
 
@@ -252,7 +259,7 @@ class AskRound(unittest.TestCase):
     def test_round_failed_and_argument_errors(self):
         agent = self.own_agent()
         parts = json.loads((agent / "parts.json").read_text())
-        parts["parts"]["endpoint/default"] = {"path": str(ROOT / "lib" / "endpoint" / "openai")}   # 沒 AOS_BRAIN_URL＝UrlMissing
+        parts["endpoint"]["default"] = str(ROOT / "lib" / "endpoint" / "openai")   # 沒 AOS_BRAIN_URL＝UrlMissing
         (agent / "parts.json").write_text(json.dumps(parts))
         self.add(ASK)
         r = self.call("ask_round", {"question": "q", "agent": str(agent)})

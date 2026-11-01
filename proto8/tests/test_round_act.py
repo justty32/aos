@@ -51,8 +51,8 @@ class Act(Base):
         (d / "_entry").chmod(0o755)
         if registered:
             p = self.agent / "parts.json"
-            reg = json.loads(p.read_text()) if p.exists() else {"parts": {}}
-            reg["parts"]["hook/" + point] = {"path": str(d), "env": {"HOOK_SAYS": "註冊檔的 env"}}
+            reg = json.loads(p.read_text()) if p.exists() else {}
+            reg.setdefault("hook", {})[point] = {".env": {"HOOK_SAYS": "註冊檔的 env"}, "_entry": str(d)}
             p.write_text(json.dumps(reg, ensure_ascii=False))
 
     def act(self, stdin, env=None):
@@ -145,10 +145,14 @@ class Act(Base):
             self.assertEqual((r.returncode, err_code("act", r.stderr)), (1, code))
         r = self.cell(ACT, assistant(call("a", "say")), args=["agent"])          # 相對路徑不收
         self.assertEqual((r.returncode, err_code("act", r.stderr)), (1, "AgentBad"))
-        (self.agent / "parts.json").write_text(json.dumps({"parts": {"hook/pre_tool": {"path": str(self.tmp / "nope")}}}))
+        (self.agent / "parts.json").write_text(json.dumps({"hook": {"pre_tool": str(self.tmp / "nope")}}))
         (self.agent / "tools.json").write_text("{}")
         r = self.act(assistant(call("a", "say")))
-        self.assertEqual((r.returncode, err_code("act", r.stderr)), (1, "PartsBad"))   # 登記了但壞＝不當沒掛
+        self.assertEqual((r.returncode, err_code("act", r.stderr)), (1, "HookFailed"))  # 登記了但壞＝不當沒掛（11-01 起 aos-exec 自己說）
+        self.assertIn("aos-exec: ", r.stderr)
+        (self.agent / "parts.json").write_text("[]")
+        r = self.act(assistant(call("a", "say")))
+        self.assertEqual((r.returncode, err_code("act", r.stderr)), (1, "PartsBad"))   # parts.json 不是物件
 
 
 if __name__ == "__main__":

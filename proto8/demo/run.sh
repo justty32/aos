@@ -4,7 +4,7 @@
 # 再跑 daemon：一個 daemon 同時管 bob、ann 兩個子 loop（各自的工作區在 bob/、ann/）；
 # 再跑 tick：aos-loop 跑 5 次 aos-tick，時鐘檔 $AOS_STACK/tick.txt 走到 5（10-21 計畫第 4 段）；
 # 再跑 llm-kernel：一個 daemon 同時管 LLM kernel 與三隻走 kernel 的 agent（c 是 high），看服務順序（thinking 2026-10-24-llm-kernel）；
-# 再跑 agent-nia：照 agent-round 的格組起來（parts.json 指 lib 的 round／queue／history／act／endpoint），假腦叫 clock 再答（thinking 2026-10-28-agent-round）；題目經 queue 格放進 stack、答案看 history（10-30 agent-lifecycle）；
+# 再跑 agent-nia：照 agent-round 的格組起來（parts.json 指 lib 的 queue／history／act／endpoint，11-01 起 aos-exec 格式），假腦叫 clock 再答（thinking 2026-10-28-agent-round）；題目經 queue 格放進 stack、答案看 history（10-30 agent-lifecycle）；
 # 再跑 daemon-2：信箱模式的 daemon，agent 格 sam 寄信加 tick、人手寫 aos-post send 加 tock（帶 --reply-to 收回信）（10-29 medium-plan 實作第 8 步）；
 # 最後跑 daemon-3：同一支 demo/tick 掛兩次——loops 的 tick_loop（包成 max: 1 的子 loop）、execs 的 tick_exec（直接 aos-exec 一次），看 loops_state 兩張表（10-30 agent-lifecycle 實作第 8 步）
 here=$(cd "$(dirname "$0")" && pwd)
@@ -57,7 +57,7 @@ show "$ws"; rm -rf "$ws"
 echo "######## agent-nia"   # 格組起來的 agent：aos-loop 反覆叫 aos-round（一次一格：idle → think → act → think → finish → idle），queue 空 idle 退 10（loop.json 的 aos-round --on-empty stop）、loop 停
 ws=$(mktemp -d)
 # 題目經 queue 格放進 $AOS_STACK/queue/（N-16 有順序的信箱，一則 OpenAI message；10-30 agent-lifecycle 第 3 步，原本放 $ws/new/q1.txt）
-echo '{"role": "user", "content": "現在幾點？"}' | AOS_WS="$ws" aos-parts --file "$here/agent-nia/parts.json" run queue "$here/agent-nia" push
+echo '{"role": "user", "content": "現在幾點？"}' | AOS_WS="$ws" aos-exec "$here/agent-nia/parts.json#/queue" "$here/agent-nia" push
 (cd "$ws" && aos-exec "$here/agent-nia"); echo "結束碼 $?"
 show "$ws"; rm -rf "$ws"
 echo "######## daemon-2"   # 信箱模式：daemon 放背景跑 25 圈（約 5 秒）；信箱建好後人寄一封加 tock、收回信；sam（agent 格）自己寄一封加 tick

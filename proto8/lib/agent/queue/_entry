@@ -28,12 +28,15 @@ claim 的順序（任何一步當掉重跑都接得上；current.txt＝「已接
   壞信（aos-post check 不過、名字不是有序的 <12 位序號>.<信號>、body 不是有 role 的物件）＝aos-post finish 丟掉、認領下一封；
   不寫 stderr（N-43）；原因寫進 $AOS_STACK/letter_warning.txt 一行「信 <信號> 不採用：原因」（N-16 壞信記 letter_warning；
   只留最後一封壞信的，好信不清掉；10-30 agent-lifecycle Q-4 的補，aos-round 的 idle、more 格叫 claim 時就記到了）。
-history 格怎麼找：aos-parts --file <agent>/parts.json which --json history（沒掛＝PartMissing），拿到的 env 疊上去、aos-exec 它。
+history 格怎麼找：lib/agent/parts.py 的 find（parts.json 有＝<agent>/parts.json#/history、沒寫＝固定名字 <agent>/history；沒掛＝PartMissing），
+  aos-exec 它，env 交給 aos-exec（不疊，N-58）。
 . 開頭的名字不算信（N-05）。寫檔一律先寫 . 開頭暫存再改名（N-05）。
 錯：stderr 一行「queue: 代號 原因」、退 1（N-43；aos-post、history 自己的錯它們自己先說一行）。代號：ArgumentsBad、AgentMissing、
-StackMissing、MessageBad、LetterUnknown、LetterClaimed、LetterMissing、AnswerMissing、PartMissing、PartsFailed、HistoryFailed、
+StackMissing、MessageBad、LetterUnknown、LetterClaimed、LetterMissing、AnswerMissing、PartMissing、PartsBad、HistoryFailed、
 PostFailed、WriteFailed。退 10＝pop 逾時、claim 沒信（正常停，P-19）。"""
 import json, os, re, subprocess, sys, time
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # lib/agent（parts.py）
+import parts  # noqa: E402
 
 NAME = "queue"
 USAGE = ("queue <agent 資料夾> push [--wait] [--timeout-s N] | pop [--timeout-s N] 信號 | claim [--more] | "
@@ -101,27 +104,17 @@ def must_post(args, stdin_text=None, ok=(0,)):
 
 def history_part(agent):
     try:
-        r = subprocess.run(["aos-parts", "--file", os.path.join(agent, "parts.json"), "which", "--json", "history"],
-                           stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
-    except OSError as e:
-        die("PartsFailed", "aos-parts 起不來：%s" % e)
-    if r.returncode == 10:
+        got = parts.find(agent, "history")
+    except parts.Bad as e:
+        die("PartsBad", e)
+    if got is None:
         die("PartMissing", "沒掛 history 格（%s/parts.json 沒登記、也沒有 %s/history）" % (agent, agent))
-    if r.returncode != 0:
-        die("PartsFailed", "aos-parts which history 退 %d" % r.returncode)
-    try:
-        part = json.loads(r.stdout)
-        return part["path"], {k: str(v) for k, v in (part.get("env") or {}).items()}
-    except (ValueError, KeyError, TypeError, AttributeError) as e:
-        die("PartsFailed", "aos-parts which --json 印的不是 {path, env}：%s" % e)
+    return got
 
 
 def history(agent, part, sub, stdin_text=""):
-    path, env = part
-    e = dict(os.environ)
-    e.update(env)
     try:
-        r = subprocess.run(["aos-exec", path, agent, sub], input=stdin_text, stdout=subprocess.PIPE, text=True, env=e)
+        r = subprocess.run(["aos-exec", part, agent, sub], input=stdin_text, stdout=subprocess.PIPE, text=True)
     except OSError as ex:
         die("HistoryFailed", "aos-exec 起不來：%s" % ex)
     if r.returncode != 0:                                   # history 自己已在 stderr 說了原因（P-21），這裡只說自己這層

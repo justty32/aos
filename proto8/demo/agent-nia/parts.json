@@ -1,12 +1,14 @@
 {
- "parts": {
-  "queue": {"path": "../../lib/agent/queue"},
-  "history": {"path": "../../lib/agent/history"},
-  "act": {"path": "../../lib/agent/act"},
-  "hook/pre_think": {"path": "../../lib/agent/compact", "env": {"AOS_COMPACT_MAX_BYTES": "65536"}},
-  "endpoint/default": {"path": "../../lib/endpoint/fake"},
-  "endpoint/litellm": {"path": "../../lib/endpoint/openai",
-                       "env": {"AOS_BRAIN_URL": "http://localhost:4000/v1", "AOS_BRAIN_MODEL": "chatgpt-gpt-6-luna-low",
-                               "AOS_ENDPOINT_TIMEOUT_MS": "120000"}}
+ "queue": "../../lib/agent/queue",
+ "history": "../../lib/agent/history",
+ "act": "../../lib/agent/act",
+ "hook": {
+  "pre_think": {".env": {"AOS_COMPACT_MAX_BYTES": "65536"}, "_entry": "../../lib/agent/compact"}
+ },
+ "endpoint": {
+  "default": "../../lib/endpoint/fake",
+  "litellm": {".env": {"AOS_BRAIN_URL": "http://localhost:4000/v1", "AOS_BRAIN_MODEL": "chatgpt-gpt-6-luna-low",
+                       "AOS_ENDPOINT_TIMEOUT_MS": "120000"},
+              "_entry": "../../lib/endpoint/openai"}
  }
 }

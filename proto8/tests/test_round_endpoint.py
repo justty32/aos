@@ -1,12 +1,12 @@
 """test_round_endpoint - agent-round 落地第 1 步：lib/endpoint/fake、lib/endpoint/openai（問腦的格）（10-31 自 test_round.py 拆出，行為不變）。
 
-endpoint：fake 照規則吐一則；openai 接假的 OpenAI 相容 server 吐真的、usage.jsonl 多一行、經 aos-parts run 帶註冊檔的 env；
+endpoint：fake 照規則吐一則；openai 接假的 OpenAI 相容 server 吐真的、usage.jsonl 多一行、經 parts.json 的 .env key 帶 env（11-01 起預設不蓋環境、--dotenv-override 才蓋）；
   401／403 KeyBad、連不上（dead_brain.DEAD）與 5xx BrainFailed、404 ModelUnknown、其他 4xx RequestBad、壞回覆 ReplyBad，失敗時 stdout 與 usage.jsonl 都不動。
 設計：proto8/thinking/2026-10-28-agent-round.md § 3、§ 4、文末「實作時代定」；2026-10-30-agent-lifecycle 結論 A、B-11。
 LiteLLM（localhost:4000）實跑那案連不上就 skip。"""
 import http.server, json, os, subprocess, threading, unittest, urllib.request
 
-from round_common import req, Base, FAKE, user, err_code, OPENAI, PARTS  # noqa: E402
+from round_common import req, Base, FAKE, user, err_code, OPENAI, EXEC  # noqa: E402
 from dead_brain import DEAD  # noqa: E402
 
 REAL_URL = "http://localhost:4000/v1"
@@ -115,14 +115,22 @@ class EndpointOpenai(Base):
         self.assertEqual([(x["endpoint"], x["model"], x["usage"]) for x in self.usage()[1:]], [("litellm", "m2", None)])
 
     def test_via_parts_registry_env(self):
-        b = self.brain({"choices": [{"message": {"role": "assistant", "content": "經註冊檔"}}]})
-        (self.agent / "parts.json").write_text(json.dumps({"parts": {"endpoint/main": {
-            "path": OPENAI, "env": {"AOS_BRAIN_URL": b.url, "AOS_BRAIN_MODEL": "reg", "AOS_ENDPOINT_NAME": "main"}}}}))
-        r = subprocess.run([PARTS, "--file", str(self.agent / "parts.json"), "run", "endpoint/main", str(self.agent)],
-                           input=req(user("q")), capture_output=True, text=True, env=self.env(), timeout=60)
+        b = self.brain(*[{"choices": [{"message": {"role": "assistant", "content": "經註冊檔"}}]}] * 3)
+        (self.agent / "parts.json").write_text(json.dumps({"endpoint": {"main": {
+            ".env": {"AOS_BRAIN_URL": b.url, "AOS_BRAIN_MODEL": "reg", "AOS_ENDPOINT_NAME": "main"}, "_entry": OPENAI}}}))
+        target = str(self.agent / "parts.json") + "#/endpoint/main"
+
+        def go(env=None, flags=()):
+            return subprocess.run([EXEC] + list(flags) + [target, str(self.agent)], input=req(user("q")),
+                                  capture_output=True, text=True, env=self.env(env), timeout=60)
+        r = go()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.lines(r.stdout), [{"role": "assistant", "content": "經註冊檔"}])
         self.assertEqual(b.requests[0]["model"], "reg")
+        r = go({"AOS_BRAIN_MODEL": "outer"})                                      # 環境裡已有的不蓋（N-58）
+        self.assertEqual((r.returncode, b.requests[1]["model"]), (0, "outer"), r.stderr)
+        r = go({"AOS_BRAIN_MODEL": "outer"}, ("--dotenv-override",))              # 要蓋：那一跳加 --dotenv-override
+        self.assertEqual((r.returncode, b.requests[2]["model"]), (0, "reg"), r.stderr)
         self.assertEqual(self.usage()[0]["endpoint"], "main")
 
     def assert_fails(self, code, r):

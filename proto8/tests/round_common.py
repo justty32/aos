@@ -1,5 +1,5 @@
 """round_common - test_round_*.py 共用的常數與底座（10-31 自 test_round.py 拆出，行為不變）：
-EXEC／PARTS／FAKE／OPENAI／ACT／CLOCK 路徑、CLEAR、err_code、Base（tmp agent／ws、env、cell、lines）、req、user；
+EXEC／FAKE／OPENAI／ACT／CLOCK 路徑、CLEAR、err_code、parts_json、Base（tmp agent／ws、env、cell、lines）、req、user；
 ROUND、AGENT_LIB 與 AgentCase（RoundFsm 與 AosRound 共用）。"""
 import json, os, re, subprocess, tempfile, unittest
 from pathlib import Path
@@ -7,7 +7,6 @@ from pathlib import Path
 from aos_bins import ROOT, tool, path_with  # noqa: E402
 
 EXEC = tool("aos-exec")
-PARTS = str(ROOT / "bin" / "aos-parts")
 FAKE = str(ROOT / "lib" / "endpoint" / "fake")
 OPENAI = str(ROOT / "lib" / "endpoint" / "openai")
 ACT = str(ROOT / "lib" / "agent" / "act")
@@ -23,6 +22,26 @@ def err_code(prog, stderr):
     assert m, "錯誤行格式不對：%r" % stderr
     return m.group(1)
 
+
+def parts_json(flat):
+    """測試裡好寫的扁平表 {"槽": {"path", "env"?}}（槽可帶一層 /）→ parts.json 的 aos-exec 格式（11-01 起）：
+    沒 env＝路徑字串、有 env＝{".env", "_entry"}；endpoint/<名>、hook/<點> 變巢狀。"""
+    out = {}
+    for slot, row in flat.items():
+        node, keys = out, slot.split("/")
+        for k in keys[:-1]:
+            node = node.setdefault(k, {})
+        node[keys[-1]] = {".env": row["env"], "_entry": row["path"]} if row.get("env") else row["path"]
+    return out
+
+
+def absolute(table, base):
+    """parts.json（aos-exec 格式）裡的相對路徑從 base 算、換成絕對（.env 的值與指示詞不碰）；回新的一份。"""
+    if isinstance(table, str):
+        return os.path.normpath(os.path.join(base, table))
+    if isinstance(table, dict) and "$ref" not in table and "$env" not in table:
+        return {k: (v if k == ".env" else absolute(v, base)) for k, v in table.items()}
+    return table
 
 
 class Base(unittest.TestCase):
@@ -82,7 +101,7 @@ class AgentCase(Base):
         self.q1 = self.put("幾點？")
 
     def save(self):
-        (self.agent / "parts.json").write_text(json.dumps({"parts": self.parts}, ensure_ascii=False))
+        (self.agent / "parts.json").write_text(json.dumps(parts_json(self.parts), ensure_ascii=False))
 
     def put(self, text):
         """經 queue 格放一則 user（同 aos-say）；回信號。"""

@@ -6,7 +6,8 @@
 #   hook/pre_tool  stdin＝那個 tool_call（一行 JSON）；0＝跑、10＝不跑（stdout 當那次 tool 訊息的 content）、其他＝act 失敗（HookFailed）
 #   工具           aos-tools --file <agent>/tools.json call 名，arguments 從 stdin 進、AOS_STACK＝$AOS_STACK/<名>/（P-17）
 #   hook/post_tool stdin＝那則 tool 訊息；0 且 stdout 非空＝那一行 JSON 取代它（不是 JSON 物件＝HookFailed）；非 0＝HookFailed
-#   掛勾經 `aos-parts --file <agent>/parts.json which --json hook/<點>` 找：退 10＝沒掛（照 § 3 表的預設）；拿到就 `aos-exec 路徑 <agent>`，註冊檔的 env 疊上去。
+#   掛勾經 lib/agent/parts.py 的 find 找（parts.json 有＝<agent>/parts.json#/hook/<點>、沒寫＝固定名字 <agent>/hook/<點>）：沒掛＝照 § 3 表的預設；
+#   拿到就 `aos-exec 目標 <agent>`，env 交給 aos-exec（不疊，N-58）。
 # 叫工具出的問題回給腦、不停（P-41 現狀，照 demo/agent-dan/act.py）：叫了 tools.json 沒登記的＝ToolUnknown、arguments 不是 JSON 字串＝ArgumentsBad、
 #   工具退非 0（stdout 照收、尾巴加結束碼）——都接成一則 tool 訊息。工具與掛勾的 stderr 不讀不吞（C-52）。
 # 平行：AOS_ACT_MAX_PARALLEL（沒設或 1＝依序；N＝一批最多 N 個一起跑），吐出來仍照原順序。
@@ -14,8 +15,10 @@
 #   有就問 hook/on_interrupt（stdin＝信號一行一個；stdout「interrupt」＝打斷，其他字、非 0、沒掛＝wait）。打斷＝剩下的 call 不跑、各接一則「act: Interrupted …」的 tool 訊息，
 #   照樣全部吐完、退 10（「正常、但到此為止」，同 pre_tool 的 10）；新題怎麼接進來是 round 的事，act 不認領。
 # 錯（自己這層的）：stderr 一行「act: 代號 原因」、退 1、stdout 什麼都不吐——ArgumentsBad、AgentBad、StackMissing、MessageBad、
-#   ToolsBad（aos-tools 起不來或 ls 退非 0）、PartsBad（aos-parts 起不來或退 0／10 以外）、HookFailed、ParallelBad（AOS_ACT_MAX_PARALLEL 不是正整數）。
+#   ToolsBad（aos-tools 起不來或 ls 退非 0）、PartsBad（parts.json 讀不了、不是物件）、HookFailed、ParallelBad（AOS_ACT_MAX_PARALLEL 不是正整數）。
 import concurrent.futures, json, os, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # lib/agent（parts.py）
+import parts  # noqa: E402
 
 NAME = "act"
 NOT_FOUND = 10
@@ -47,7 +50,6 @@ try:
 except ValueError:
     die("ParallelBad", "AOS_ACT_MAX_PARALLEL 要是正整數，收到 %r" % os.environ.get("AOS_ACT_MAX_PARALLEL"))
 tools_json = os.path.join(agent, "tools.json")
-parts_json = os.path.join(agent, "parts.json")
 
 try:
     said = json.loads(sys.stdin.read())
@@ -69,27 +71,18 @@ hooks = {}
 
 
 def hook(point):
-    """hook/<點> → {"path", "env"}；沒掛＝None。只問一次。"""
+    """hook/<點> → 給 aos-exec 的目標；沒掛＝None。只問一次。"""
     if point not in hooks:
         try:
-            r = subprocess.run(["aos-parts", "--file", parts_json, "which", "--json", "hook/" + point],
-                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)   # stderr 不吞：aos-parts 自己說哪裡壞
-        except OSError as e:
-            raise Fail("PartsBad", "aos-parts 起不來：%s" % e)
-        if r.returncode == NOT_FOUND:
-            hooks[point] = None
-        elif r.returncode == 0:
-            hooks[point] = json.loads(r.stdout)
-        else:
-            raise Fail("PartsBad", "aos-parts which hook/%s 退 %d" % (point, r.returncode))
+            hooks[point] = parts.find(agent, "hook/" + point)
+        except parts.Bad as e:
+            raise Fail("PartsBad", str(e))
     return hooks[point]
 
 
 def call_hook(point, got, stdin):
-    env = dict(os.environ)
-    env.update(got.get("env") or {})
     try:
-        return subprocess.run(["aos-exec", got["path"], agent], input=stdin, stdout=subprocess.PIPE, text=True, env=env)
+        return subprocess.run(["aos-exec", got, agent], input=stdin, stdout=subprocess.PIPE, text=True)
     except OSError as e:
         raise Fail("HookFailed", "hook/%s 起不來：%s" % (point, e))
 
