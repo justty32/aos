@@ -1,0 +1,607 @@
+{
+ "contract": "wf-table/1",
+ "source": "01-環境變數盤點.md",
+ "extracted": "2026-11-01",
+ "columns": [
+  "name",
+  "group",
+  "readers",
+  "setters",
+  "purpose",
+  "category",
+  "proposal",
+  "cost"
+ ],
+ "rows": [
+  {
+   "name": "AOS_WS",
+   "group": "aos-exec 那組",
+   "readers": "幾乎每格：lib/base 16、lib/aos 11、lib/agent、全部 demo agent、extras/human…（112 檔）",
+   "setters": "aos-exec 每跳設（--ws ＞ 外面的 ＞ .env ＞ .）；aos-daemon child、demo/run.sh、aos-mcp 也設",
+   "purpose": "工作區在哪",
+   "category": "必要",
+   "proposal": "不動",
+   "cost": "P-39 叫別人時明給；動它等於動全系統"
+  },
+  {
+   "name": "AOS_STACK",
+   "group": "aos-exec 那組",
+   "readers": "幾乎每格：lib/agent 12、aos-daemon、aos-llm-kernel、aos-loop、aos-fsm、全部 demo agent…（107 檔）",
+   "setters": "aos-exec（沒設＝$AOS_WS/.stack/）；各 agent 的 act 叫工具前改成小格（28 檔）",
+   "purpose": "執行中狀態放哪（也是 N-63 hub 實例）",
+   "category": "必要",
+   "proposal": "不動",
+   "cost": "P-39 叫別人時明給"
+  },
+  {
+   "name": "AOS_CD",
+   "group": "aos-exec 那組",
+   "readers": "bin/aos-daemon-ctl、bin/aos-eca-turn、bin/aos-round、demo/agent-ann/.env、demo/agent-nia/loop.json、demo/eca-claude/loop.json 等 10 檔",
+   "setters": "aos-exec、aos-llm-send 每跳覆寫",
+   "purpose": "cd 進去的資料夾＝入口所在處",
+   "category": "必要",
+   "proposal": "不動",
+   "cost": "P-39 每層覆寫；loop.json 用 {\"$env\": \"AOS_CD\"} 指自己"
+  },
+  {
+   "name": "AOS_CF",
+   "group": "aos-exec 那組",
+   "readers": "demo/agent-ann/loop.json、demo/agent-bob/act/tools/cathy/fsm.json、demo/agent-bob/fsm.json、demo/agent-dan-q/fsm.json、demo/agent-dan/fsm.json、demo/agent-eve/fsm.json 等 20 檔",
+   "setters": "aos-exec、aos-llm-send 每跳覆寫",
+   "purpose": "實際被執行的檔",
+   "category": "必要",
+   "proposal": "不動",
+   "cost": "P-39 每層覆寫；demo 的 fsm.json 用它找同資料夾的格"
+  },
+  {
+   "name": "AOS_CO",
+   "group": "aos-exec 那組",
+   "readers": "程式碼裡沒有真正讀它的格（extras/ai_tools/bin/aos_ai_explain.py 只是模擬顯示）；測試 9 檔",
+   "setters": "aos-exec、aos-llm-send 每跳覆寫",
+   "purpose": "入口在 JSON 檔裡的位置（JSON 指標）",
+   "category": "必要",
+   "proposal": "不動（或問要不要留）",
+   "cost": "現在沒有格讀；留著是因為「執行事實」本身"
+  },
+  {
+   "name": "AOS_ENTRY",
+   "group": "aos-exec 那組",
+   "readers": "extras/ai_tools/bin/aos_ai_explain.py、extras/grow/aos-grow、impls/aos-daemon/src/child/child.cpp、impls/aos-exec/src/common/common.hpp、impls/aos-exec/src/find/classify.cpp、impls/aos-exec/src/find/find.cpp 等 7 檔",
+   "setters": "沒有程式設；只有使用者或 .env 會設",
+   "purpose": "入口檔名（沒設＝_entry），一路繼承",
+   "category": "邊界",
+   "proposal": "不動，或拿掉、入口名固定 _entry",
+   "cost": "拿掉要改 aos-exec C++ 4 檔、aos-daemon child、aos_ai_explain、aos-grow；測試 6 檔；P-39 已說巢狀裡不改它"
+  },
+  {
+   "name": "AOS_BRAIN_URL",
+   "group": "腦",
+   "readers": "demo/agent-ann/brain.py、demo/agent-bob/act/tools/cathy/brain.py、demo/agent-bob/brain.py、demo/agent-dan-q/brain.py、demo/agent-dan/brain.py、demo/agent-eve/brain.py 等 23 檔",
+   "setters": "demo/agent-dan-q/.env、demo/agent-dan/.env、demo/agent-eve/.env、demo/agent-fay/.env、demo/agent-gus/.env、demo/agent-hal/.env 等 13 檔",
+   "purpose": "腦（LLM 端點）的網址，一路繼承",
+   "category": "邊界",
+   "proposal": "不動，或改成一個腦設定檔（例 $AOS_WS/brain.json）由 endpoint 格讀",
+   "cost": "讀的有 23 檔（每隻 demo 的 brain.py、lib/endpoint/openai、json_edit、pyfix、ai_tools）；14 份 .env 設；測試 4 檔"
+  },
+  {
+   "name": "AOS_BRAIN_MODEL",
+   "group": "腦",
+   "readers": "demo/agent-ann/brain.py、demo/agent-bob/act/tools/cathy/brain.py、demo/agent-bob/brain.py、demo/agent-dan-q/brain.py、demo/agent-dan/brain.py、demo/agent-eve/brain.py 等 19 檔",
+   "setters": "demo/agent-dan-q/.env、demo/agent-dan/.env、demo/agent-eve/.env、demo/agent-fay/.env、demo/agent-gus/.env、demo/agent-hal/.env 等 15 檔",
+   "purpose": "用哪個模型，一路繼承",
+   "category": "邊界",
+   "proposal": "同 AOS_BRAIN_URL",
+   "cost": "讀 19 檔、15 份 .env／parts.json 設；測試 8 檔"
+  },
+  {
+   "name": "AOS_BRAIN_KEY",
+   "group": "腦",
+   "readers": "demo/agent-ann/brain.py、demo/agent-bob/act/tools/cathy/brain.py、demo/agent-bob/brain.py、demo/agent-dan-q/brain.py、demo/agent-dan/brain.py、demo/agent-eve/brain.py 等 20 檔",
+   "setters": "demo/agent-ann/.env",
+   "purpose": "API 金鑰（有設才帶 Authorization）",
+   "category": "邊界",
+   "proposal": "不動（金鑰放 argv 會在 ps 看到；放檔要管權限）",
+   "cost": "讀 20 檔；測試 1 檔"
+  },
+  {
+   "name": "AOS_KERNEL",
+   "group": "kernel／daemon",
+   "readers": "demo/llm-kernel/_entry、demo/llm-kernel/kernel.json、extras/sandbox/bin/aos-sandbox、extras/sandbox/examples/agent.json、impls/aos-llm-send/src/main.cpp、impls/aos-llm-send/src/send/send.cpp 等 7 檔",
+   "setters": "demo/llm-kernel/_entry、extras/sandbox/root/setup.sh",
+   "purpose": "kernel 信箱資料夾（N-63 hub 實例），aos-llm-send 讀",
+   "category": "邊界",
+   "proposal": "不動（N-63 定的 hub）",
+   "cost": "aos-llm-send C++、sandbox、demo/llm-kernel；測試 2 檔"
+  },
+  {
+   "name": "AOS_DAEMON",
+   "group": "kernel／daemon",
+   "readers": "bin/aos-daemon-ctl、extras/eca_hub/bin/aos-eca-hub",
+   "setters": "沒有程式設；使用者 export，或 --daemon 旗標",
+   "purpose": "要掛到哪個 daemon（N-63 hub 實例）；已有 --daemon",
+   "category": "邊界",
+   "proposal": "不動（N-63）；或只留 --daemon",
+   "cost": "aos-daemon-ctl、aos-eca-hub 2 檔；測試 1 檔"
+  },
+  {
+   "name": "AOS_KERNEL_REPORT",
+   "group": "kernel／daemon",
+   "readers": "demo/agent-dan-q/brain.py、demo/agent-dan/brain.py、demo/agent-eve/brain.py、demo/agent-fay/brain.py、demo/agent-hal/brain.py、demo/agent-kai/brain.py 等 14 檔",
+   "setters": "impls/aos-llm-kernel/src/serve/serve.cpp（每封信設給它叫的腦）",
+   "purpose": "腦把 usage 寫到哪個檔（每封信一個）",
+   "category": "邊界",
+   "proposal": "改固定檔名（例 $AOS_STACK/report.json 或 cwd 的 report.json），或不動",
+   "cost": "kernel C++ 1 檔＋14 個 brain.py／endpoint；測試 1 檔"
+  },
+  {
+   "name": "AOS_HEAP",
+   "group": "lib 工具／extras ai_tools",
+   "readers": "demo/agent-kai/brain.py、demo/agent-meg/brain.py、lib/aos/memory/_entry、lib/aos/memory/heap.py",
+   "setters": "demo/agent-kai/brain.py",
+   "purpose": "記憶庫放哪（沒設＝$AOS_WS/.heap/，C-67「像 stack」）",
+   "category": "邊界",
+   "proposal": "不動（hub 型），或改工具 argv",
+   "cost": "memory 工具 2 檔、kai／meg brain；沒測試"
+  },
+  {
+   "name": "AOS_ROSTER",
+   "group": "demo",
+   "readers": "demo/talk/member/brain.py、demo/talk/team/quiet.py、lib/aos/send_message/_entry",
+   "setters": "demo/talk/team/daemon.json（envs）",
+   "purpose": "團隊名冊檔在哪；member 的 brain、quiet.py、send_message 工具（深一層）都讀",
+   "category": "邊界",
+   "proposal": "不動，或改固定檔名 $AOS_WS/roster.json",
+   "cost": "4 檔；沒測試"
+  },
+  {
+   "name": "AOS_AI_ROOT",
+   "group": "lib 工具／extras ai_tools",
+   "readers": "extras/ai_tools/bin/aos-ai、extras/ai_tools/bin/aos_ai_base.py、lib/aos/agent_status/_entry、lib/aos/ask_agent/_entry、lib/aos/explain_aos/_entry、lib/aos/make_json/_entry 等 8 檔",
+   "setters": "沒有程式設；aos-ai 使用者設（沒設＝$AOS_WS）",
+   "purpose": "aos-ai 子 agent 放哪；lib/aos 六支工具都讀",
+   "category": "邊界",
+   "proposal": "不動，或改固定 $AOS_WS/agents/",
+   "cost": "8 檔；沒測試"
+  },
+  {
+   "name": "AOS_IMPROVE_SANDBOX",
+   "group": "demo",
+   "readers": "lib/aos/try_run/_entry",
+   "setters": "demo/self-improve/improve.py",
+   "purpose": "self-improve 頂層開關：try_run 工具（深好幾層）要不要關進沙箱",
+   "category": "邊界",
+   "proposal": "不動（真的是「上面設、底下深處讀」），或改 try_run 的 argv",
+   "cost": "2 檔；沒測試"
+  },
+  {
+   "name": "AOS_ROUND_AGENT",
+   "group": "lib/agent 器官",
+   "readers": "bin/aos-round、lib/agent/round/fsm-idle.json、lib/agent/round/fsm-stop.json",
+   "setters": "bin/aos-round",
+   "purpose": "aos-round 設給自己的 fsm 表，表再用 {\"$env\"} 塞回每格的 argv",
+   "category": "不必要→改 argv",
+   "proposal": "傳話筒：aos-fsm 若能吃參數（或 aos-round 把 agent 路徑寫進一份臨時表），就不用環境變數",
+   "cost": "bin/aos-round、fsm-idle.json、fsm-stop.json；要動 aos-fsm 或 aos-round 的做法；沒專門測試"
+  },
+  {
+   "name": "AOS_ROUND_MAX_RETRIES",
+   "group": "lib/agent 器官",
+   "readers": "lib/agent/round/roundlib.py",
+   "setters": "沒有程式設（demo 沒用到）；要設只能 parts.json 槽的 .env 或外面 export",
+   "purpose": "think 格問腦重來幾次（預設 3）",
+   "category": "不必要→改 argv",
+   "proposal": "aos-round --max-retries（跟 11-01 的 --on-empty 一樣），再由表帶給 think 格",
+   "cost": "roundlib.py＋aos-round；測試 1 檔；帶給 think 格會碰到 AOS_ROUND_AGENT 同一個問題"
+  },
+  {
+   "name": "AOS_ENDPOINT_NAME",
+   "group": "lib/agent 器官",
+   "readers": "lib/endpoint/openai/_entry",
+   "setters": "lib/agent/round/roundlib.py（叫 endpoint 時設）",
+   "purpose": "usage.jsonl 記哪個 endpoint 名",
+   "category": "不必要→改 argv",
+   "proposal": "roundlib 叫 endpoint 時多給一個 argv（或放進 stdin 那份 body）",
+   "cost": "endpoint/openai＋roundlib 2 檔；測試 1 檔"
+  },
+  {
+   "name": "AOS_ENDPOINT_TIMEOUT_MS",
+   "group": "lib/agent 器官",
+   "readers": "lib/endpoint/openai/_entry",
+   "setters": "demo/agent-nia/parts.json",
+   "purpose": "endpoint/openai 一次請求的逾時",
+   "category": "不必要→改 argv",
+   "proposal": "parts.json 那槽改寫成 argv 陣列帶 --timeout-ms",
+   "cost": "endpoint/openai、agent-nia/parts.json；測試 1 檔"
+  },
+  {
+   "name": "AOS_COMPACT_MAX_BYTES",
+   "group": "lib/agent 器官",
+   "readers": "lib/agent/compact/_entry",
+   "setters": "demo/agent-nia/parts.json",
+   "purpose": "lib compact：history 超過多少才壓",
+   "category": "不必要→改檔",
+   "proposal": "lib compact 的 11 個旋鈕併成格資料夾或 agent 資料夾裡一份 compact.json",
+   "cost": "lib/agent/compact/_entry 1 檔＋agent-nia/parts.json；測試 2 檔"
+  },
+  {
+   "name": "AOS_COMPACT_SEG_KB",
+   "group": "lib/agent 器官",
+   "readers": "demo/agent-hal/compact/compact.py、lib/agent/compact/_entry",
+   "setters": "demo/agent-hal/compact/.env",
+   "purpose": "compact：每段幾 KB",
+   "category": "不必要→改檔",
+   "proposal": "同 AOS_COMPACT_MAX_BYTES（compact.json）",
+   "cost": "lib compact、hal compact；測試 1 檔"
+  },
+  {
+   "name": "AOS_COMPACT_KEEP_TURNS",
+   "group": "lib/agent 器官",
+   "readers": "demo/agent-hal/compact/compact.py、lib/agent/compact/_entry",
+   "setters": "demo/agent-hal/compact/.env",
+   "purpose": "compact：最近幾題不壓",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "lib compact、hal compact；測試 1 檔"
+  },
+  {
+   "name": "AOS_COMPACT_KEEP_MAX",
+   "group": "lib/agent 器官",
+   "readers": "demo/agent-hal/compact/compact.py、lib/agent/compact/_entry",
+   "setters": "demo/agent-hal/compact/.env",
+   "purpose": "compact：每段最多保留幾行",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "lib compact、hal compact；測試 1 檔"
+  },
+  {
+   "name": "AOS_COMPACT_KEEP_FINAL_MAX",
+   "group": "lib/agent 器官",
+   "readers": "demo/agent-hal/compact/compact.py、lib/agent/compact/_entry",
+   "setters": "demo/agent-hal/compact/.env",
+   "purpose": "compact：最後最多保留幾行",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "lib compact、hal compact；沒測試"
+  },
+  {
+   "name": "AOS_COMPACT_KEEP_LINE_MAX",
+   "group": "lib/agent 器官",
+   "readers": "demo/agent-hal/compact/compact.py、lib/agent/compact/_entry",
+   "setters": "demo/agent-hal/compact/.env",
+   "purpose": "compact：保留行的長度上限",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "lib compact、hal compact；測試 1 檔"
+  },
+  {
+   "name": "AOS_COMPACT_RESULT_CUT",
+   "group": "lib/agent 器官",
+   "readers": "demo/agent-hal/compact/compact.py、lib/agent/compact/_entry",
+   "setters": "demo/agent-hal/compact/.env",
+   "purpose": "compact：工具結果截多長",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "lib compact、hal compact；沒測試"
+  },
+  {
+   "name": "AOS_COMPACT_ENDPOINT",
+   "group": "lib/agent 器官",
+   "readers": "lib/agent/compact/_entry",
+   "setters": "沒有程式設",
+   "purpose": "compact 問腦走哪個 endpoint 槽",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "1 檔；沒測試"
+  },
+  {
+   "name": "AOS_COMPACT_MODEL_NOTE",
+   "group": "lib/agent 器官",
+   "readers": "lib/agent/compact/_entry、demo/agent-hal/compact/compact.py",
+   "setters": "demo/agent-hal/compact/.env",
+   "purpose": "compact 第 1 步用哪個模型",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "2 檔；沒測試"
+  },
+  {
+   "name": "AOS_COMPACT_MODEL_SEG",
+   "group": "lib/agent 器官",
+   "readers": "lib/agent/compact/_entry、demo/agent-hal/compact/compact.py",
+   "setters": "demo/agent-hal/compact/.env",
+   "purpose": "compact 第 2 步用哪個模型",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "2 檔；沒測試"
+  },
+  {
+   "name": "AOS_COMPACT_MODEL_FINAL",
+   "group": "lib/agent 器官",
+   "readers": "lib/agent/compact/_entry、demo/agent-hal/compact/compact.py",
+   "setters": "demo/agent-hal/compact/.env",
+   "purpose": "compact 第 3 步用哪個模型",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "2 檔；沒測試"
+  },
+  {
+   "name": "AOS_COMPACT_URL",
+   "group": "demo",
+   "readers": "demo/agent-hal/compact/ask.py",
+   "setters": "沒有程式設",
+   "purpose": "agent-hal 的 compact 問腦的網址（只 hal）",
+   "category": "不必要→改檔",
+   "proposal": "併進 hal compact 自己的設定檔",
+   "cost": "1 檔；沒測試"
+  },
+  {
+   "name": "AOS_COMPACT_TIMEOUT_S",
+   "group": "demo",
+   "readers": "demo/agent-hal/compact/ask.py",
+   "setters": "demo/agent-hal/compact/.env",
+   "purpose": "agent-hal compact 問腦逾時",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "2 檔；沒測試"
+  },
+  {
+   "name": "AOS_COMPACT_OVER_KB",
+   "group": "demo",
+   "readers": "demo/agent-hal/compact/compact.py",
+   "setters": "demo/agent-hal/compact/.env",
+   "purpose": "agent-hal compact 超過幾 KB 才壓",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "2 檔；測試 1 檔"
+  },
+  {
+   "name": "AOS_ACT_MAX_PARALLEL",
+   "group": "lib/agent 器官",
+   "readers": "lib/agent/act/_entry",
+   "setters": "沒有程式設",
+   "purpose": "act 格最多同時跑幾個工具",
+   "category": "不必要→改 argv",
+   "proposal": "act 那槽的 argv 帶 --max-parallel，或 compact.json 那樣的格設定檔",
+   "cost": "1 檔；測試 1 檔"
+  },
+  {
+   "name": "AOS_ASK_AGENT",
+   "group": "lib 工具／extras ai_tools",
+   "readers": "lib/aos/ask_round/_entry",
+   "setters": "沒有程式設（要設寫在工具入口的 .env）",
+   "purpose": "ask_round 工具要問哪隻 agent",
+   "category": "不必要→改 argv",
+   "proposal": "工具入口寫成 argv 陣列帶 --agent",
+   "cost": "1 檔；測試 1 檔"
+  },
+  {
+   "name": "AOS_ASK_MAX_STEPS",
+   "group": "lib 工具／extras ai_tools",
+   "readers": "lib/aos/ask_round/_entry",
+   "setters": "同上",
+   "purpose": "ask_round 最多走幾步",
+   "category": "不必要→改 argv",
+   "proposal": "同上 --max-steps",
+   "cost": "1 檔；測試 1 檔"
+  },
+  {
+   "name": "AOS_ASK_WS",
+   "group": "lib 工具／extras ai_tools",
+   "readers": "lib/aos/ask_round/_entry",
+   "setters": "同上",
+   "purpose": "ask_round 讓被問的 agent 用哪個工作區",
+   "category": "不必要→改 argv",
+   "proposal": "同上 --ws",
+   "cost": "1 檔；沒測試"
+  },
+  {
+   "name": "AOS_AI_JSON_EDITOR",
+   "group": "lib 工具／extras ai_tools",
+   "readers": "extras/ai_tools/bin/aos_ai_tools.py",
+   "setters": "沒有程式設；使用者 export",
+   "purpose": "aos-ai 的 JSON 編輯要交給哪支程式（只留接口）",
+   "category": "不必要→改檔",
+   "proposal": "aos-ai 的設定檔或旗標",
+   "cost": "1 檔；沒測試"
+  },
+  {
+   "name": "AOS_AI_ASK_TIMEOUT",
+   "group": "lib 工具／extras ai_tools",
+   "readers": "lib/aos/ask_agent/_entry",
+   "setters": "沒有程式設",
+   "purpose": "ask_agent 工具前景等子 agent 幾秒",
+   "category": "不必要→改 argv",
+   "proposal": "工具入口 argv 帶 --timeout-s",
+   "cost": "1 檔；沒測試"
+  },
+  {
+   "name": "AOS_JSON_EDIT_MAX_ROUNDS",
+   "group": "lib 工具／extras ai_tools",
+   "readers": "impls/aos-json/tools/json_edit/_entry",
+   "setters": "沒有程式設",
+   "purpose": "json_edit 工具最多改幾輪",
+   "category": "不必要→改 argv",
+   "proposal": "工具入口 argv 帶 --max-rounds",
+   "cost": "1 檔；測試 1 檔"
+  },
+  {
+   "name": "AOS_PYFIX_DIR",
+   "group": "lib 工具／extras ai_tools",
+   "readers": "lib/agent/pyfix/_entry、lib/agent/pyfix/agent/act.py",
+   "setters": "lib/agent/pyfix/_entry（設給自己叫的子 agent）",
+   "purpose": "pyfix 子 agent 能碰的資料夾",
+   "category": "不必要→改 argv",
+   "proposal": "子 agent 直接用 --ws（它的 act 本來就是 aos-exec --ws $AOS_PYFIX_DIR）",
+   "cost": "pyfix 2 檔；測試 1 檔"
+  },
+  {
+   "name": "AOS_RECALL_HISTORY",
+   "group": "demo",
+   "readers": "demo/agent-kai/tools/recall/_entry",
+   "setters": "demo/agent-kai/act.py",
+   "purpose": "agent-kai 的 act 告訴 recall 工具 history 在哪",
+   "category": "不必要→改 argv",
+   "proposal": "act 叫 recall 時明給路徑（或 recall 自己從 $AOS_STACK 推）",
+   "cost": "2 檔；沒測試"
+  },
+  {
+   "name": "AOS_KAI_FULL_UNDER",
+   "group": "demo",
+   "readers": "demo/agent-kai/brain.py",
+   "setters": "沒有程式設",
+   "purpose": "agent-kai 腦：history 短於多少 token 就全送",
+   "category": "不必要→改檔",
+   "proposal": "agent-kai 資料夾裡的設定檔",
+   "cost": "1 檔；沒測試"
+  },
+  {
+   "name": "AOS_IVY_BRAIN",
+   "group": "demo",
+   "readers": "demo/llm-kernel/agent-ivy/brain.py、demo/llm-kernel/agent-ivy/fsm.json",
+   "setters": "demo/llm-kernel/daemon.json",
+   "purpose": "llm-kernel demo：每隻 ivy 用哪份腦設定（daemon.json 設、fsm.json 用 $env 塞回 argv）",
+   "category": "不必要→改 argv",
+   "proposal": "daemon.json 叫 agent-ivy 時把腦檔當 args 給",
+   "cost": "demo/llm-kernel 3 檔；沒測試"
+  },
+  {
+   "name": "AOS_IMPROVE_RUN",
+   "group": "demo",
+   "readers": "demo/self-improve/common.py、demo/self-improve/sandbox.json、extras/sandbox/examples/self-improve.json",
+   "setters": "demo/self-improve/common.py、lib/aos/try_run/_entry",
+   "purpose": "self-improve 這次的暫時資料夾；sandbox.json 用 {\"$env\"} 指它",
+   "category": "不必要→改 argv",
+   "proposal": "叫 aos-sandbox 時明給路徑",
+   "cost": "4 檔；測試 1 檔"
+  },
+  {
+   "name": "AOS_IMPROVE_TARGET",
+   "group": "demo",
+   "readers": "使用者寫的判準檢查程式（demo/self-improve/run.py 說明；repo 裡沒有現成的讀者）",
+   "setters": "demo/self-improve/common.py",
+   "purpose": "self-improve 判準 check 要檢查的複本路徑",
+   "category": "不必要→改 argv",
+   "proposal": "叫 check 時當 args 給",
+   "cost": "1 檔設、讀的是判準程式；測試 1 檔"
+  },
+  {
+   "name": "AOS_THOUGHT_MAX_CHARS",
+   "group": "demo",
+   "readers": "demo/agent-gus/fork.py、demo/agent-gus/thought.py",
+   "setters": "demo/agent-gus/.env",
+   "purpose": "agent-gus：一個念頭最多幾字",
+   "category": "不必要→改檔",
+   "proposal": "agent-gus 資料夾裡一份 thought.json（MAX_* 六個併在一起）",
+   "cost": "gus 2 檔＋.env；測試 1 檔"
+  },
+  {
+   "name": "AOS_THOUGHT_MAX_DEPTH",
+   "group": "demo",
+   "readers": "demo/agent-gus/plan.py",
+   "setters": "demo/agent-gus/.env",
+   "purpose": "agent-gus：最多分岔幾層",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "gus 1 檔＋.env；測試 1 檔"
+  },
+  {
+   "name": "AOS_THOUGHT_MAX_STEPS",
+   "group": "demo",
+   "readers": "demo/agent-gus/plan.py",
+   "setters": "demo/agent-gus/.env",
+   "purpose": "agent-gus：最多幾步",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "gus 1 檔＋.env；沒測試"
+  },
+  {
+   "name": "AOS_THOUGHT_MAX_TOTAL",
+   "group": "demo",
+   "readers": "demo/agent-gus/plan.py",
+   "setters": "demo/agent-gus/.env",
+   "purpose": "agent-gus：念頭總數上限",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "gus 1 檔＋.env；測試 1 檔"
+  },
+  {
+   "name": "AOS_THOUGHT_PARALLEL",
+   "group": "demo",
+   "readers": "demo/agent-gus/fork.py",
+   "setters": "demo/agent-gus/.env",
+   "purpose": "agent-gus：同時分岔幾個",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "gus 1 檔＋.env；沒測試"
+  },
+  {
+   "name": "AOS_THOUGHT_TIMEOUT_S",
+   "group": "demo",
+   "readers": "demo/agent-gus/fork.py、demo/agent-gus/thought.py",
+   "setters": "demo/agent-gus/.env",
+   "purpose": "agent-gus：一個念頭逾時",
+   "category": "不必要→改檔",
+   "proposal": "同上",
+   "cost": "gus 2 檔＋.env；測試 1 檔"
+  },
+  {
+   "name": "AOS_THOUGHT_DEPTH",
+   "group": "demo",
+   "readers": "demo/agent-gus/plan.py、demo/agent-gus/thought.py",
+   "setters": "demo/agent-gus/shared.py",
+   "purpose": "agent-gus：分岔時把「現在第幾層」帶給子念頭",
+   "category": "不必要→改 argv",
+   "proposal": "fork 子念頭時當 argv 給（這是 dyn 最典型的用法：遞迴深度）",
+   "cost": "gus 3 檔；沒測試"
+  },
+  {
+   "name": "AOS_THOUGHT_BUDGET",
+   "group": "demo",
+   "readers": "demo/agent-gus/plan.py、demo/agent-gus/thought.py",
+   "setters": "demo/agent-gus/shared.py",
+   "purpose": "agent-gus：分岔時把剩下預算帶給子念頭",
+   "category": "不必要→改 argv",
+   "proposal": "同 AOS_THOUGHT_DEPTH",
+   "cost": "gus 3 檔；沒測試"
+  },
+  {
+   "name": "AOS_S6_BIN",
+   "group": "extras/sandbox",
+   "readers": "extras/sandbox/root/setup.sh",
+   "setters": "沒有程式設；跑 setup.sh 的人",
+   "purpose": "sandbox 安裝腳本：s6 在哪",
+   "category": "不必要→改 argv",
+   "proposal": "setup.sh 的參數",
+   "cost": "1 檔；沒測試"
+  },
+  {
+   "name": "AOS_ME",
+   "group": "extras/sandbox",
+   "readers": "extras/sandbox/root/setup.sh",
+   "setters": "測試設",
+   "purpose": "sandbox 安裝腳本：跑 kernel 的人（測試給數字）",
+   "category": "不必要→改 argv",
+   "proposal": "setup.sh 的參數",
+   "cost": "1 檔；測試 1 檔"
+  },
+  {
+   "name": "AOS_RUNNER",
+   "group": "extras/sandbox",
+   "readers": "extras/sandbox/root/setup.sh",
+   "setters": "測試設",
+   "purpose": "sandbox 安裝腳本：跑不信任函數的帳號",
+   "category": "不必要→改 argv",
+   "proposal": "setup.sh 的參數",
+   "cost": "1 檔；測試 1 檔"
+  },
+  {
+   "name": "AOS_HUB",
+   "group": "已刪的 hub",
+   "readers": "沒有：只剩 lib/agent/cli_session.py、demo/agent-fay/cli_session.py 的註解",
+   "setters": "沒有",
+   "purpose": "10-30 前送登記給 aos-hub-kernel，已刪",
+   "category": "沒人讀",
+   "proposal": "刪註解裡的名字就好",
+   "cost": "2 檔註解；沒測試"
+  }
+ ]
+}
