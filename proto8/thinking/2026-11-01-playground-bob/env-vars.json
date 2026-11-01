@@ -10,7 +10,8 @@
   "purpose",
   "category",
   "proposal",
-  "cost"
+  "cost",
+  "done"
  ],
  "rows": [
   {
@@ -21,7 +22,8 @@
    "purpose": "工作區在哪",
    "category": "必要",
    "proposal": "不動",
-   "cost": "P-39 叫別人時明給；動它等於動全系統"
+   "cost": "P-39 叫別人時明給；動它等於動全系統",
+   "done": "不動（必要）"
   },
   {
    "name": "AOS_STACK",
@@ -31,7 +33,8 @@
    "purpose": "執行中狀態放哪（也是 N-63 hub 實例）",
    "category": "必要",
    "proposal": "不動",
-   "cost": "P-39 叫別人時明給"
+   "cost": "P-39 叫別人時明給",
+   "done": "不動（必要）"
   },
   {
    "name": "AOS_CD",
@@ -41,7 +44,8 @@
    "purpose": "cd 進去的資料夾＝入口所在處",
    "category": "必要",
    "proposal": "不動",
-   "cost": "P-39 每層覆寫；loop.json 用 {\"$env\": \"AOS_CD\"} 指自己"
+   "cost": "P-39 每層覆寫；loop.json 用 {\"$env\": \"AOS_CD\"} 指自己",
+   "done": "不動（必要）"
   },
   {
    "name": "AOS_CF",
@@ -51,7 +55,8 @@
    "purpose": "實際被執行的檔",
    "category": "必要",
    "proposal": "不動",
-   "cost": "P-39 每層覆寫；demo 的 fsm.json 用它找同資料夾的格"
+   "cost": "P-39 每層覆寫；demo 的 fsm.json 用它找同資料夾的格",
+   "done": "不動（必要）"
   },
   {
    "name": "AOS_CO",
@@ -61,7 +66,8 @@
    "purpose": "入口在 JSON 檔裡的位置（JSON 指標）",
    "category": "必要",
    "proposal": "不動（或問要不要留）",
-   "cost": "現在沒有格讀；留著是因為「執行事實」本身"
+   "cost": "現在沒有格讀；留著是因為「執行事實」本身",
+   "done": "不動（必要）"
   },
   {
    "name": "AOS_ENTRY",
@@ -71,7 +77,8 @@
    "purpose": "入口檔名（沒設＝_entry），一路繼承",
    "category": "邊界",
    "proposal": "不動，或拿掉、入口名固定 _entry",
-   "cost": "拿掉要改 aos-exec C++ 4 檔、aos-daemon child、aos_ai_explain、aos-grow；測試 6 檔；P-39 已說巢狀裡不改它"
+   "cost": "拿掉要改 aos-exec C++ 4 檔、aos-daemon child、aos_ai_explain、aos-grow；測試 6 檔；P-39 已說巢狀裡不改它",
+   "done": "不動（邊界）"
   },
   {
    "name": "AOS_BRAIN_URL",
@@ -81,7 +88,8 @@
    "purpose": "腦（LLM 端點）的網址，一路繼承",
    "category": "邊界",
    "proposal": "不動，或改成一個腦設定檔（例 $AOS_WS/brain.json）由 endpoint 格讀",
-   "cost": "讀的有 23 檔（每隻 demo 的 brain.py、lib/endpoint/openai、json_edit、pyfix、ai_tools）；14 份 .env 設；測試 4 檔"
+   "cost": "讀的有 23 檔（每隻 demo 的 brain.py、lib/endpoint/openai、json_edit、pyfix、ai_tools）；14 份 .env 設；測試 4 檔",
+   "done": "不動（邊界）"
   },
   {
    "name": "AOS_BRAIN_MODEL",
@@ -91,7 +99,8 @@
    "purpose": "用哪個模型，一路繼承",
    "category": "邊界",
    "proposal": "同 AOS_BRAIN_URL",
-   "cost": "讀 19 檔、15 份 .env／parts.json 設；測試 8 檔"
+   "cost": "讀 19 檔、15 份 .env／parts.json 設；測試 8 檔",
+   "done": "不動（邊界）"
   },
   {
    "name": "AOS_BRAIN_KEY",
@@ -101,7 +110,8 @@
    "purpose": "API 金鑰（有設才帶 Authorization）",
    "category": "邊界",
    "proposal": "不動（金鑰放 argv 會在 ps 看到；放檔要管權限）",
-   "cost": "讀 20 檔；測試 1 檔"
+   "cost": "讀 20 檔；測試 1 檔",
+   "done": "不動（邊界）"
   },
   {
    "name": "AOS_KERNEL",
@@ -111,7 +121,8 @@
    "purpose": "kernel 信箱資料夾（N-63 hub 實例），aos-llm-send 讀",
    "category": "邊界",
    "proposal": "不動（N-63 定的 hub）",
-   "cost": "aos-llm-send C++、sandbox、demo/llm-kernel；測試 2 檔"
+   "cost": "aos-llm-send C++、sandbox、demo/llm-kernel；測試 2 檔",
+   "done": "不動（邊界）"
   },
   {
    "name": "AOS_DAEMON",
@@ -121,7 +132,8 @@
    "purpose": "要掛到哪個 daemon（N-63 hub 實例）；已有 --daemon",
    "category": "邊界",
    "proposal": "不動（N-63）；或只留 --daemon",
-   "cost": "aos-daemon-ctl、aos-eca-hub 2 檔；測試 1 檔"
+   "cost": "aos-daemon-ctl、aos-eca-hub 2 檔；測試 1 檔",
+   "done": "不動（邊界）"
   },
   {
    "name": "AOS_KERNEL_REPORT",
@@ -131,7 +143,8 @@
    "purpose": "腦把 usage 寫到哪個檔（每封信一個）",
    "category": "邊界",
    "proposal": "改固定檔名（例 $AOS_STACK/report.json 或 cwd 的 report.json），或不動",
-   "cost": "kernel C++ 1 檔＋14 個 brain.py／endpoint；測試 1 檔"
+   "cost": "kernel C++ 1 檔＋14 個 brain.py／endpoint；測試 1 檔",
+   "done": "不動（邊界）"
   },
   {
    "name": "AOS_HEAP",
@@ -141,7 +154,8 @@
    "purpose": "記憶庫放哪（沒設＝$AOS_WS/.heap/，C-67「像 stack」）",
    "category": "邊界",
    "proposal": "不動（hub 型），或改工具 argv",
-   "cost": "memory 工具 2 檔、kai／meg brain；沒測試"
+   "cost": "memory 工具 2 檔、kai／meg brain；沒測試",
+   "done": "不動（邊界）"
   },
   {
    "name": "AOS_ROSTER",
@@ -151,7 +165,8 @@
    "purpose": "團隊名冊檔在哪；member 的 brain、quiet.py、send_message 工具（深一層）都讀",
    "category": "邊界",
    "proposal": "不動，或改固定檔名 $AOS_WS/roster.json",
-   "cost": "4 檔；沒測試"
+   "cost": "4 檔；沒測試",
+   "done": "不動（邊界）"
   },
   {
    "name": "AOS_AI_ROOT",
@@ -161,7 +176,8 @@
    "purpose": "aos-ai 子 agent 放哪；lib/aos 六支工具都讀",
    "category": "邊界",
    "proposal": "不動，或改固定 $AOS_WS/agents/",
-   "cost": "8 檔；沒測試"
+   "cost": "8 檔；沒測試",
+   "done": "不動（邊界）"
   },
   {
    "name": "AOS_IMPROVE_SANDBOX",
@@ -171,7 +187,8 @@
    "purpose": "self-improve 頂層開關：try_run 工具（深好幾層）要不要關進沙箱",
    "category": "邊界",
    "proposal": "不動（真的是「上面設、底下深處讀」），或改 try_run 的 argv",
-   "cost": "2 檔；沒測試"
+   "cost": "2 檔；沒測試",
+   "done": "不動（邊界）"
   },
   {
    "name": "AOS_ROUND_AGENT",
@@ -181,7 +198,8 @@
    "purpose": "aos-round 設給自己的 fsm 表，表再用 {\"$env\"} 塞回每格的 argv",
    "category": "不必要→改 argv",
    "proposal": "傳話筒：aos-fsm 若能吃參數（或 aos-round 把 agent 路徑寫進一份臨時表），就不用環境變數",
-   "cost": "bin/aos-round、fsm-idle.json、fsm-stop.json；要動 aos-fsm 或 aos-round 的做法；沒專門測試"
+   "cost": "bin/aos-round、fsm-idle.json、fsm-stop.json；要動 aos-fsm 或 aos-round 的做法；沒專門測試",
+   "done": "11-01 刪：aos-round 整支刪掉，表的五格改拿 AOS_CD（loop.json 直接叫 aos-fsm）"
   },
   {
    "name": "AOS_ROUND_MAX_RETRIES",
@@ -191,7 +209,8 @@
    "purpose": "think 格問腦重來幾次（預設 3）",
    "category": "不必要→改 argv",
    "proposal": "aos-round --max-retries（跟 11-01 的 --on-empty 一樣），再由表帶給 think 格",
-   "cost": "roundlib.py＋aos-round；測試 1 檔；帶給 think 格會碰到 AOS_ROUND_AGENT 同一個問題"
+   "cost": "roundlib.py＋aos-round；測試 1 檔；帶給 think 格會碰到 AOS_ROUND_AGENT 同一個問題",
+   "done": "11-01 刪：think 寫死重來 3 次"
   },
   {
    "name": "AOS_ENDPOINT_NAME",
@@ -201,7 +220,8 @@
    "purpose": "usage.jsonl 記哪個 endpoint 名",
    "category": "不必要→改 argv",
    "proposal": "roundlib 叫 endpoint 時多給一個 argv（或放進 stdin 那份 body）",
-   "cost": "endpoint/openai＋roundlib 2 檔；測試 1 檔"
+   "cost": "endpoint/openai＋roundlib 2 檔；測試 1 檔",
+   "done": "11-01 改 argv：roundlib 叫 endpoint 時給第 2 個位置參數＝槽名（aos-exec <endpoint> <agent> <名>）"
   },
   {
    "name": "AOS_ENDPOINT_TIMEOUT_MS",
@@ -211,7 +231,8 @@
    "purpose": "endpoint/openai 一次請求的逾時",
    "category": "不必要→改 argv",
    "proposal": "parts.json 那槽改寫成 argv 陣列帶 --timeout-ms",
-   "cost": "endpoint/openai、agent-nia/parts.json；測試 1 檔"
+   "cost": "endpoint/openai、agent-nia/parts.json；測試 1 檔",
+   "done": "11-01 刪：openai 寫死 120000 毫秒"
   },
   {
    "name": "AOS_COMPACT_MAX_BYTES",
@@ -221,7 +242,8 @@
    "purpose": "lib compact：history 超過多少才壓",
    "category": "不必要→改檔",
    "proposal": "lib compact 的 11 個旋鈕併成格資料夾或 agent 資料夾裡一份 compact.json",
-   "cost": "lib/agent/compact/_entry 1 檔＋agent-nia/parts.json；測試 2 檔"
+   "cost": "lib/agent/compact/_entry 1 檔＋agent-nia/parts.json；測試 2 檔",
+   "done": "11-01 改 argv：lib compact --max-bytes N（沒給＝65536）"
   },
   {
    "name": "AOS_COMPACT_SEG_KB",
@@ -231,7 +253,8 @@
    "purpose": "compact：每段幾 KB",
    "category": "不必要→改檔",
    "proposal": "同 AOS_COMPACT_MAX_BYTES（compact.json）",
-   "cost": "lib compact、hal compact；測試 1 檔"
+   "cost": "lib compact、hal compact；測試 1 檔",
+   "done": "11-01 刪：lib 與 hal 寫死 8"
   },
   {
    "name": "AOS_COMPACT_KEEP_TURNS",
@@ -241,7 +264,8 @@
    "purpose": "compact：最近幾題不壓",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "lib compact、hal compact；測試 1 檔"
+   "cost": "lib compact、hal compact；測試 1 檔",
+   "done": "11-01 刪：lib 與 hal 寫死 2"
   },
   {
    "name": "AOS_COMPACT_KEEP_MAX",
@@ -251,7 +275,8 @@
    "purpose": "compact：每段最多保留幾行",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "lib compact、hal compact；測試 1 檔"
+   "cost": "lib compact、hal compact；測試 1 檔",
+   "done": "11-01 刪：lib 與 hal 寫死 3"
   },
   {
    "name": "AOS_COMPACT_KEEP_FINAL_MAX",
@@ -261,7 +286,8 @@
    "purpose": "compact：最後最多保留幾行",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "lib compact、hal compact；沒測試"
+   "cost": "lib compact、hal compact；沒測試",
+   "done": "11-01 刪：lib 與 hal 寫死 12"
   },
   {
    "name": "AOS_COMPACT_KEEP_LINE_MAX",
@@ -271,7 +297,8 @@
    "purpose": "compact：保留行的長度上限",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "lib compact、hal compact；測試 1 檔"
+   "cost": "lib compact、hal compact；測試 1 檔",
+   "done": "11-01 刪：lib 與 hal 寫死 1500"
   },
   {
    "name": "AOS_COMPACT_RESULT_CUT",
@@ -281,7 +308,8 @@
    "purpose": "compact：工具結果截多長",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "lib compact、hal compact；沒測試"
+   "cost": "lib compact、hal compact；沒測試",
+   "done": "11-01 刪：lib 與 hal 寫死 2000"
   },
   {
    "name": "AOS_COMPACT_ENDPOINT",
@@ -291,7 +319,8 @@
    "purpose": "compact 問腦走哪個 endpoint 槽",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "1 檔；沒測試"
+   "cost": "1 檔；沒測試",
+   "done": "11-01 刪：lib compact 照 $AOS_STACK/endpoint.txt ＞ default，跟 think 同一個腦"
   },
   {
    "name": "AOS_COMPACT_MODEL_NOTE",
@@ -301,7 +330,8 @@
    "purpose": "compact 第 1 步用哪個模型",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "2 檔；沒測試"
+   "cost": "2 檔；沒測試",
+   "done": "11-01 刪：lib 不帶 model（用 endpoint 自己的）；hal 寫死 chatgpt-gpt-6-luna-low"
   },
   {
    "name": "AOS_COMPACT_MODEL_SEG",
@@ -311,7 +341,8 @@
    "purpose": "compact 第 2 步用哪個模型",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "2 檔；沒測試"
+   "cost": "2 檔；沒測試",
+   "done": "11-01 刪：lib 不帶 model；hal 寫死 chatgpt-gpt-6-luna-low"
   },
   {
    "name": "AOS_COMPACT_MODEL_FINAL",
@@ -321,7 +352,8 @@
    "purpose": "compact 第 3 步用哪個模型",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "2 檔；沒測試"
+   "cost": "2 檔；沒測試",
+   "done": "11-01 刪：lib 不帶 model；hal 寫死 chatgpt-gpt-6-sol"
   },
   {
    "name": "AOS_COMPACT_URL",
@@ -331,7 +363,8 @@
    "purpose": "agent-hal 的 compact 問腦的網址（只 hal）",
    "category": "不必要→改檔",
    "proposal": "併進 hal compact 自己的設定檔",
-   "cost": "1 檔；沒測試"
+   "cost": "1 檔；沒測試",
+   "done": "11-01 刪：hal compact 只看 AOS_BRAIN_URL"
   },
   {
    "name": "AOS_COMPACT_TIMEOUT_S",
@@ -341,7 +374,8 @@
    "purpose": "agent-hal compact 問腦逾時",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "2 檔；沒測試"
+   "cost": "2 檔；沒測試",
+   "done": "11-01 刪：hal 寫死 120 秒"
   },
   {
    "name": "AOS_COMPACT_OVER_KB",
@@ -351,7 +385,8 @@
    "purpose": "agent-hal compact 超過幾 KB 才壓",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "2 檔；測試 1 檔"
+   "cost": "2 檔；測試 1 檔",
+   "done": "11-01 刪：hal 寫死 32 KB"
   },
   {
    "name": "AOS_ACT_MAX_PARALLEL",
@@ -361,7 +396,8 @@
    "purpose": "act 格最多同時跑幾個工具",
    "category": "不必要→改 argv",
    "proposal": "act 那槽的 argv 帶 --max-parallel，或 compact.json 那樣的格設定檔",
-   "cost": "1 檔；測試 1 檔"
+   "cost": "1 檔；測試 1 檔",
+   "done": "11-01 改 argv：act [--max-parallel N] <agent>；要設就把 parts.json 的 act 槽寫成 argv 陣列"
   },
   {
    "name": "AOS_ASK_AGENT",
@@ -371,7 +407,8 @@
    "purpose": "ask_round 工具要問哪隻 agent",
    "category": "不必要→改 argv",
    "proposal": "工具入口寫成 argv 陣列帶 --agent",
-   "cost": "1 檔；測試 1 檔"
+   "cost": "1 檔；測試 1 檔",
+   "done": "11-01 改 argv：ask_round --agent 路徑（固定問一隻＝工具小資料夾的 _entry 寫成 JSON argv 陣列）"
   },
   {
    "name": "AOS_ASK_MAX_STEPS",
@@ -381,7 +418,8 @@
    "purpose": "ask_round 最多走幾步",
    "category": "不必要→改 argv",
    "proposal": "同上 --max-steps",
-   "cost": "1 檔；測試 1 檔"
+   "cost": "1 檔；測試 1 檔",
+   "done": "11-01 改 argv：ask_round --max-steps N（沒給＝200）"
   },
   {
    "name": "AOS_ASK_WS",
@@ -391,7 +429,8 @@
    "purpose": "ask_round 讓被問的 agent 用哪個工作區",
    "category": "不必要→改 argv",
    "proposal": "同上 --ws",
-   "cost": "1 檔；沒測試"
+   "cost": "1 檔；沒測試",
+   "done": "11-01 改 argv：ask_round --ws 路徑"
   },
   {
    "name": "AOS_AI_JSON_EDITOR",
@@ -401,7 +440,8 @@
    "purpose": "aos-ai 的 JSON 編輯要交給哪支程式（只留接口）",
    "category": "不必要→改檔",
    "proposal": "aos-ai 的設定檔或旗標",
-   "cost": "1 檔；沒測試"
+   "cost": "1 檔；沒測試",
+   "done": "11-01 改 argv：aos-ai edit 名 檔 --editor 命令"
   },
   {
    "name": "AOS_AI_ASK_TIMEOUT",
@@ -411,7 +451,8 @@
    "purpose": "ask_agent 工具前景等子 agent 幾秒",
    "category": "不必要→改 argv",
    "proposal": "工具入口 argv 帶 --timeout-s",
-   "cost": "1 檔；沒測試"
+   "cost": "1 檔；沒測試",
+   "done": "11-01 刪：ask_agent 寫死 50 秒"
   },
   {
    "name": "AOS_JSON_EDIT_MAX_ROUNDS",
@@ -421,7 +462,8 @@
    "purpose": "json_edit 工具最多改幾輪",
    "category": "不必要→改 argv",
    "proposal": "工具入口 argv 帶 --max-rounds",
-   "cost": "1 檔；測試 1 檔"
+   "cost": "1 檔；測試 1 檔",
+   "done": "11-01 刪：json_edit 寫死 12 輪"
   },
   {
    "name": "AOS_PYFIX_DIR",
@@ -431,7 +473,8 @@
    "purpose": "pyfix 子 agent 能碰的資料夾",
    "category": "不必要→改 argv",
    "proposal": "子 agent 直接用 --ws（它的 act 本來就是 aos-exec --ws $AOS_PYFIX_DIR）",
-   "cost": "pyfix 2 檔；測試 1 檔"
+   "cost": "pyfix 2 檔；測試 1 檔",
+   "done": "11-01 改檔：pyfix 寫子 agent 的 stack/pyfix_dir.txt（一行絕對路徑），act 讀 $AOS_STACK/pyfix_dir.txt"
   },
   {
    "name": "AOS_RECALL_HISTORY",
@@ -441,7 +484,8 @@
    "purpose": "agent-kai 的 act 告訴 recall 工具 history 在哪",
    "category": "不必要→改 argv",
    "proposal": "act 叫 recall 時明給路徑（或 recall 自己從 $AOS_STACK 推）",
-   "cost": "2 檔；沒測試"
+   "cost": "2 檔；沒測試",
+   "done": "11-01 刪：recall 讀 $AOS_STACK/../history.jsonl（P-17 的工具小格佈局），act 不再設"
   },
   {
    "name": "AOS_KAI_FULL_UNDER",
@@ -451,7 +495,8 @@
    "purpose": "agent-kai 腦：history 短於多少 token 就全送",
    "category": "不必要→改檔",
    "proposal": "agent-kai 資料夾裡的設定檔",
-   "cost": "1 檔；沒測試"
+   "cost": "1 檔；沒測試",
+   "done": "11-01 刪：kai brain 寫死 1500 token"
   },
   {
    "name": "AOS_IVY_BRAIN",
@@ -461,7 +506,8 @@
    "purpose": "llm-kernel demo：每隻 ivy 用哪份腦設定（daemon.json 設、fsm.json 用 $env 塞回 argv）",
    "category": "不必要→改 argv",
    "proposal": "daemon.json 叫 agent-ivy 時把腦檔當 args 給",
-   "cost": "demo/llm-kernel 3 檔；沒測試"
+   "cost": "demo/llm-kernel 3 檔；沒測試",
+   "done": "不動：傳話筒，第 4 題使用者還沒裁"
   },
   {
    "name": "AOS_IMPROVE_RUN",
@@ -471,7 +517,8 @@
    "purpose": "self-improve 這次的暫時資料夾；sandbox.json 用 {\"$env\"} 指它",
    "category": "不必要→改 argv",
    "proposal": "叫 aos-sandbox 時明給路徑",
-   "cost": "4 檔；測試 1 檔"
+   "cost": "4 檔；測試 1 檔",
+   "done": "不動：傳話筒，第 4 題使用者還沒裁"
   },
   {
    "name": "AOS_IMPROVE_TARGET",
@@ -481,7 +528,8 @@
    "purpose": "self-improve 判準 check 要檢查的複本路徑",
    "category": "不必要→改 argv",
    "proposal": "叫 check 時當 args 給",
-   "cost": "1 檔設、讀的是判準程式；測試 1 檔"
+   "cost": "1 檔設、讀的是判準程式；測試 1 檔",
+   "done": "11-01 改 argv：判準檢查程式 aos-exec <check> <函數複本路徑>（最後一個參數）"
   },
   {
    "name": "AOS_THOUGHT_MAX_CHARS",
@@ -491,7 +539,8 @@
    "purpose": "agent-gus：一個念頭最多幾字",
    "category": "不必要→改檔",
    "proposal": "agent-gus 資料夾裡一份 thought.json（MAX_* 六個併在一起）",
-   "cost": "gus 2 檔＋.env；測試 1 檔"
+   "cost": "gus 2 檔＋.env；測試 1 檔",
+   "done": "11-01 刪：gus 寫死 1500 字"
   },
   {
    "name": "AOS_THOUGHT_MAX_DEPTH",
@@ -501,7 +550,8 @@
    "purpose": "agent-gus：最多分岔幾層",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "gus 1 檔＋.env；測試 1 檔"
+   "cost": "gus 1 檔＋.env；測試 1 檔",
+   "done": "11-01 刪：gus 寫死 2 層"
   },
   {
    "name": "AOS_THOUGHT_MAX_STEPS",
@@ -511,7 +561,8 @@
    "purpose": "agent-gus：最多幾步",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "gus 1 檔＋.env；沒測試"
+   "cost": "gus 1 檔＋.env；沒測試",
+   "done": "11-01 刪：gus 寫死 4 步"
   },
   {
    "name": "AOS_THOUGHT_MAX_TOTAL",
@@ -521,7 +572,8 @@
    "purpose": "agent-gus：念頭總數上限",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "gus 1 檔＋.env；測試 1 檔"
+   "cost": "gus 1 檔＋.env；測試 1 檔",
+   "done": "11-01 刪：gus 寫死 10 個"
   },
   {
    "name": "AOS_THOUGHT_PARALLEL",
@@ -531,7 +583,8 @@
    "purpose": "agent-gus：同時分岔幾個",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "gus 1 檔＋.env；沒測試"
+   "cost": "gus 1 檔＋.env；沒測試",
+   "done": "11-01 刪：gus 寫死 3 個"
   },
   {
    "name": "AOS_THOUGHT_TIMEOUT_S",
@@ -541,7 +594,8 @@
    "purpose": "agent-gus：一個念頭逾時",
    "category": "不必要→改檔",
    "proposal": "同上",
-   "cost": "gus 2 檔＋.env；測試 1 檔"
+   "cost": "gus 2 檔＋.env；測試 1 檔",
+   "done": "11-01 刪：gus 寫死 900 秒"
   },
   {
    "name": "AOS_THOUGHT_DEPTH",
@@ -551,7 +605,8 @@
    "purpose": "agent-gus：分岔時把「現在第幾層」帶給子念頭",
    "category": "不必要→改 argv",
    "proposal": "fork 子念頭時當 argv 給（這是 dyn 最典型的用法：遞迴深度）",
-   "cost": "gus 3 檔；沒測試"
+   "cost": "gus 3 檔；沒測試",
+   "done": "11-01 改檔：launch 寫小念頭 stack 的 thought_depth.txt（一行數字）"
   },
   {
    "name": "AOS_THOUGHT_BUDGET",
@@ -561,7 +616,8 @@
    "purpose": "agent-gus：分岔時把剩下預算帶給子念頭",
    "category": "不必要→改 argv",
    "proposal": "同 AOS_THOUGHT_DEPTH",
-   "cost": "gus 3 檔；沒測試"
+   "cost": "gus 3 檔；沒測試",
+   "done": "11-01 改檔：launch 寫小念頭 stack 的 thought_budget.txt（一行路徑）"
   },
   {
    "name": "AOS_S6_BIN",
@@ -571,7 +627,8 @@
    "purpose": "sandbox 安裝腳本：s6 在哪",
    "category": "不必要→改 argv",
    "proposal": "setup.sh 的參數",
-   "cost": "1 檔；沒測試"
+   "cost": "1 檔；沒測試",
+   "done": "11-01 改 argv：setup.sh --s6-bin 路徑"
   },
   {
    "name": "AOS_ME",
@@ -581,7 +638,8 @@
    "purpose": "sandbox 安裝腳本：跑 kernel 的人（測試給數字）",
    "category": "不必要→改 argv",
    "proposal": "setup.sh 的參數",
-   "cost": "1 檔；測試 1 檔"
+   "cost": "1 檔；測試 1 檔",
+   "done": "11-01 改 argv：setup.sh --me 名"
   },
   {
    "name": "AOS_RUNNER",
@@ -591,7 +649,8 @@
    "purpose": "sandbox 安裝腳本：跑不信任函數的帳號",
    "category": "不必要→改 argv",
    "proposal": "setup.sh 的參數",
-   "cost": "1 檔；測試 1 檔"
+   "cost": "1 檔；測試 1 檔",
+   "done": "11-01 改 argv：setup.sh --runner 名"
   },
   {
    "name": "AOS_HUB",
@@ -601,7 +660,8 @@
    "purpose": "10-30 前送登記給 aos-hub-kernel，已刪",
    "category": "沒人讀",
    "proposal": "刪註解裡的名字就好",
-   "cost": "2 檔註解；沒測試"
+   "cost": "2 檔註解；沒測試",
+   "done": "不動（沒人讀）"
   }
  ]
 }
