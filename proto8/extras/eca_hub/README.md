@@ -11,7 +11,7 @@
 | `bin/aos-eca-hub` | 給人用的指令（Python）：每個子命令都是「叫 aos-daemon-ctl ＋ 動小格裡 cli_session 的東西」 |
 | `reap.json` | 自動收起：aos-loop 每分鐘跑 `aos-eca-hub close --idle 30` |
 
-**沒有自己的常駐 kernel**（衝突 2）：常駐的是 aos-daemon（信箱模式，`daemon.json` 寫 `"loops_mailbox": "loops_mailbox"`），誰掛著以它的 `loops_state.json` 為準；10-28 的 aos-hub-kernel、`kernel.sock`、`hub_ipc.py` 刪了。**不另設 hub 的環境變數**（10-28 那個退場，衝突 4）：哪個 daemon＝`--daemon` ＞ `$AOS_DAEMON`，跟 aos-daemon-ctl 同一套；沒設、不是資料夾、daemon 沒在跑（`loops_state.json` 的心跳行程不在）＝`DaemonMissing`。
+**沒有自己的常駐 kernel**（衝突 2）：常駐的是 aos-daemon（信箱模式，`daemon.json` 寫 `"loops_ctl_mailbox": "loops_ctl_mailbox"`，11-02 前叫 `loops_mailbox`），誰掛著以它的 `loops_state.json` 為準；10-28 的 aos-hub-kernel、`kernel.sock`、`hub_ipc.py` 刪了。**不另設 hub 的環境變數**（10-28 那個退場，衝突 4）：哪個 daemon＝`--daemon` ＞ `$AOS_DAEMON`，跟 aos-daemon-ctl 同一套；沒設、不是資料夾、daemon 沒在跑（`loops_state.json` 的 `pid`＋`started_at_ticks` 對不上）＝`DaemonMissing`。
 
 | 指令 | 做什麼 | 底下是 |
 |---|---|---|
@@ -26,14 +26,14 @@
 - **小格**：daemon 的 `$AOS_DAEMON/loops/<名字>/`（11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../../thinking/2026-11-02-stack-tools.md)）就是這隻的 stack（`queue/`、`history.jsonl`、`ctl.json`、`state.json`、`trace.jsonl`、`eca.json`），CLI 的小格是它底下的 `<kind>/`（`session.txt`、`tty.sock`、`live.jsonl`、`transcripts/`…）。
 - **`.stack` symlink**（衝突 3）：add 時工作區沒有 `.stack`，aos-daemon-ctl 就建一個捷徑指到小格，cd 進去 `aos-say`、`aos-listen` 直接接上；已經有（例如直接 `aos-exec` 跑過留下的真 `.stack/`）＝不建、stderr 一句「工作區已有 .stack，沒建捷徑…要接上請先搬開（或用 `--stack $AOS_DAEMON/loops/<名字>`〔11-02 改〕）」，add 照樣退 0。rm／stop 時指到小格的那條會拿掉，工作區不留東西。
 - **歸檔放哪**（使用者 10-30「A」，翻 10-28 hub-kernel 決定 6）：放 daemon 小格那邊 `$AOS_DAEMON/eca_archive/<名字>-<UTC>/`；工作區永遠只有 `.stack` 捷徑，stop 時捷徑拿掉就好（aos-daemon-ctl rm 會拿；萬一還指著小格或小格裡面，這支補拿），不在工作區建真的 `.stack/`。之後再 add 同一個資料夾，捷徑照樣建得起來。
-- **狀態**：`收起了`、`畫面開著`、`出錯停了`，或 daemon 的 `phase`（`stopping`、`done`…）。「暫停」只有一種：寫小格的 `ctl.json` `{"paused": true}`（aos-loop 的窗，不餵下一則），這裡不另做 pause（10-28 的 `pause` 改名 `close`）。
+- **狀態**：`收起了`、`畫面開著`、`出錯停了`，或 daemon 的 `phase`（`stopping`…）。11-02 起 daemon 不留結束的子項：表上沒有、小格的 `state.json` 是 `done` 而且結束碼非 0＝`出錯停了`（照樣列、close 重新掛上）；其他表上沒有的＝收掉了、不列。「暫停」只有一種：寫小格的 `ctl.json` `{"paused": true}`（aos-loop 的窗，不餵下一則），這裡不另做 pause（10-28 的 `pause` 改名 `close`）。
 - 畫面裡 **Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束**。人在畫面上自己打的話不進 history（方向題 2），全貌看 `transcripts/`。
 - 定義＝頂層有 `cli.json` 的資料夾（`kind`、`flags`、`print_flags`、`timeout_ms`），要別的模型、權限就複製一份 `demo/eca-claude` 改 `cli.json`，用 `--template` 指。
 
 ## 對它說話
 
 ```sh
-export AOS_DAEMON=~/aos-daemon/.stack            # 一個信箱模式的 aos-daemon 在跑（daemon.json 寫 loops_mailbox）
+export AOS_DAEMON=~/aos-daemon/.stack            # 一個信箱模式的 aos-daemon 在跑（daemon.json 寫 loops_ctl_mailbox）
 aos-eca-hub add ~/code/myproj                    # 掛上：~/code/myproj/.stack → $AOS_DAEMON/myproj/
 cd ~/code/myproj
 N=$(aos-say 讀 src/calc.py 說說裡面有什麼)

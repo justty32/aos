@@ -6,11 +6,12 @@
 從 proto8/tests/test_daemon.py（bin 版）逐案移植（10-21 傍晚重新照抄一次：命令列 `aos-daemon [旗標] 設定檔`、exec 陣列、
 子 loop 經 aos-exec 起、收工時剛死的子項標 done）：daemon.json＝loop.json 的超集、loops 表、ctl 增減、不自動重起、
 收工收子項、接回（N-28、N-54、P-36）。10-29 拆窗（medium-plan § 四）：名單的手把在 loops_ctl.json、子項表在 loops_state.json，
-ctl.json／state.json 只管 loop 面向（H 段）；信箱模式 loops_mailbox（I 段，實作步驟 5）；exec 型子項 execs（J 段）；子項的工作區 ws（K 段，10-30 eca）。差別只有：PATH 放 impls 的 aos-exec、aos-loop 兩支的 bin/（子 loop 經 aos-exec
+ctl.json／state.json 只管 loop 面向（H 段）；信箱 loops_ctl_mailbox（I 段，實作步驟 5；11-02 晚原 loops_mailbox，M 段跟 loops_ctl 共存）；exec 型子項 execs（J 段）；子項的工作區 ws（K 段，10-30 eca）。差別只有：PATH 放 impls 的 aos-exec、aos-loop 兩支的 bin/（子 loop 經 aos-exec
 exec 成 PATH 上的 aos-loop，10-21 傍晚起同 bin 版）、usage 一行多了代號（「aos-daemon: ArgumentsBad usage: …」）、
-自己的錯多驗代號（E 段）。
+自己的錯多驗代號（E 段）。11-02（L 段）：log 印到 stdout（11-02 晚改預設不印、--enable-logs 才印；這裡 run_d／start 一律帶 --enable-logs），子項結束後不留名單（結束的 phase／code 看 log 那行：ended）、
+兩扇窗有變才寫（心跳拿掉）。
 """
-import ctypes, datetime, json, os, re, struct, signal, subprocess, sys, tempfile, time, unittest
+import ctypes, datetime, json, os, re, shutil, struct, signal, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
 
 DAEMON = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), "..", "bin",
@@ -107,16 +108,16 @@ class T(unittest.TestCase):
     def cfg(self, doc):
         (self.t / "daemon.json").write_text(json.dumps(doc))
 
-    def run_d(self, doc, timeout=30, env=None, argv=("daemon.json",)):
+    def run_d(self, doc, timeout=30, env=None, argv=("daemon.json",), log=True):
         if doc is not None:
             self.cfg(doc)
-        return subprocess.run([DAEMON, *argv], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)} if env is None else env),
+        return subprocess.run([DAEMON, *(["--enable-logs"] if log else []), *argv], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)} if env is None else env),
                               capture_output=True, text=True, timeout=timeout)
 
     def start(self, doc=None):
         if doc is not None:
             self.cfg(doc)
-        p = subprocess.Popen([DAEMON, "daemon.json"], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)}),
+        p = subprocess.Popen([DAEMON, "--enable-logs", "daemon.json"], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)}),
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         self.procs.append(p)
         return p
@@ -140,6 +141,20 @@ class T(unittest.TestCase):
 
     def long(self, mx=1):
         return {"exec": "long", "max": mx}
+
+    # 11-02：子項結束後不留名單（loops_state 看不到它），結束的 phase／code／signal 看 daemon 的 log（stdout，預設開）
+    @staticmethod
+    def logs(out):
+        """daemon 的 stdout 裡子項的那幾行（有 name 的），照印的順序。"""
+        return [x for x in map(json.loads, out.splitlines()) if "name" in x]
+
+    def ended(self, out, table="loops"):
+        """{名字: 結束那行}（照結束的順序；同名結束過好幾次＝最後一次）。"""
+        return {x["name"]: x for x in self.logs(out) if x["table"] == table and x["phase"] != "running"}
+
+    def upped(self, out, table="loops"):
+        """起來那幾行的名字（照起的順序，重起的會出現好幾次）。"""
+        return [x["name"] for x in self.logs(out) if x["table"] == table and x["phase"] == "running"]
 
     def test_loop_json_runs_as_is(self):
         # 合法的 loop.json 直接丟給 daemon 也能跑（N-28）
@@ -178,14 +193,21 @@ class T(unittest.TestCase):
         st = self.state()
         self.assertEqual((p.returncode, err, st["phase"], st["ctl_seq"]), (0, "", "stopped", 1))
         self.assertNotIn("loops", st)   # 10-29 拆窗：子項表在 loops_state.json
+        self.assertEqual(list(k["a"]), ["pid", "started_at_ticks", "phase", "code", "signal"])
         ls = self.lstate()
-        self.assertEqual({r["phase"] for r in ls["loops"].values()}, {"stopped"})   # daemon 收掉的＝stopped（10-23 命名統合）
-        self.assertEqual(list(ls["loops"]["a"]), ["pid", "started_at_ticks", "phase", "code", "signal"])
-        self.assertEqual(list(ls), ["kind", "ctl_seq", "ctl_warning", "loops", "execs", "pid", "started_at_ticks", "boot_id",
-                                    "recorded_at"])   # execs＝exec 型子項那張表（10-30；沒有就是 {}）
-        self.assertEqual(ls["execs"], {})
-        self.assertEqual([ls[k] for k in ("kind", "ctl_seq", "ctl_warning", "pid", "started_at_ticks", "boot_id")],
-                         ["state", None, None] + [st[k] for k in ("pid", "started_at_ticks", "boot_id")])   # 心跳同一個行程的值
+        self.assertEqual((ls["loops"], ls["execs"]), ({}, {}))   # 11-02：結束的子項不留在表上（收工收掉的也是）
+        self.assertEqual(list(ls), ["ctl_seq", "ctl_warning", "loops", "execs", "pid", "started_at_ticks", "boot_id",
+                                    "updated_at"])   # 11-02：kind、recorded_at 拿掉；execs＝exec 型子項那張表（10-30；沒有就是 {}）
+        self.assertEqual([ls[k] for k in ("ctl_seq", "ctl_warning", "pid", "started_at_ticks", "boot_id")],
+                         [None, None] + [st[k] for k in ("pid", "started_at_ticks", "boot_id")])   # 同一個行程的值
+        # log：起來各一行、收掉各一行（daemon 收掉的＝stopped，10-23 命名統合）
+        lines = self.logs(out)
+        self.assertEqual([(x["name"], x["phase"]) for x in lines[:2]], [("a", "running"), ("b", "running")])
+        self.assertEqual(sorted((x["name"], x["phase"]) for x in lines[2:]), [("a", "stopped"), ("b", "stopped")])
+        self.assertEqual([list(x) for x in lines], [["at", "name", "table", "phase", "pid", "code", "signal"]] * 4)
+        self.assertEqual([(x["table"], x["pid"]) for x in lines[:2]], [("loops", k["a"]["pid"]), ("loops", k["b"]["pid"])])
+        self.assertEqual([(x["code"], x["signal"]) for x in lines[:2]], [(None, None)] * 2)
+        self.assertTrue(all(isinstance(x["code"], int) for x in lines[2:]), lines)
         self.assertEqual([alive(x) for x in pids], [False, False])
 
     def test_done_child_not_restarted(self):
@@ -193,9 +215,10 @@ class T(unittest.TestCase):
                         "loops": {"once": {"exec": "daemon.json#/loops/once/body", "max": 1,   # D4：內嵌單子
                                               "body": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/starts"']}}}})
         out, err = p.communicate(timeout=30)
-        k = self.kids()
-        self.assertEqual((p.returncode, err, k["once"]["phase"], k["once"]["code"]), (0, "", "done", 0))   # 子 loop 自己結束＝done
-        self.assertEqual(len((self.s / "loops" / "once" / "starts").read_text().split()), 1)
+        e = self.ended(out)
+        self.assertEqual((p.returncode, err, e["once"]["phase"], e["once"]["code"]), (0, "", "done", 0))   # 子 loop 自己結束＝done
+        # 11-02：結束後不留在表上，本次執行也不再起（ctl 模式：daemon.json 的名單照舊有它）
+        self.assertEqual((self.kids(), self.upped(out), len((self.s / "loops" / "once" / "starts").read_text().split())), ({}, ["once"], 1))
 
     def test_failing_child_stderr_in_cell(self):
         p = self.start({"state": "state.json", "max": 10, "interval_ms": 100,
@@ -203,7 +226,7 @@ class T(unittest.TestCase):
                                              "body": {"argv": ["sh", "-c", "exit 3"]}},
                                      "obj": {"exec": {"argv": "true"}}}})   # 10-24 起物件＝內嵌單子；形狀壞＝子 loop 自己的錯（10-21～10-23 物件本身就是錯）
         out, err = p.communicate(timeout=30)
-        k = self.kids()
+        k = self.ended(out)
         self.assertEqual((p.returncode, err, k["bad"]["phase"], k["bad"]["code"], k["obj"]["phase"], k["obj"]["code"]),
                          (0, "", "done", 3, "done", 1))
         self.assertIn("aos-loop: ", (self.s / "loops" / "bad" / "stderr.txt").read_text())
@@ -229,7 +252,7 @@ class T(unittest.TestCase):
         st = self.state()
         self.assertEqual((p.returncode, err, st["phase"], st["code"]), (143, "", "stopped", 143))
         self.assertEqual([alive(r["pid"]) for r in k.values()], [False, False])
-        self.assertEqual({r["phase"] for r in self.kids().values()}, {"stopped"})
+        self.assertEqual(({n: r["phase"] for n, r in self.ended(out).items()}, self.kids()), ({"a": "stopped", "b": "stopped"}, {}))
 
     # ---- 10-21 計畫第 2 段：命令列（D1，共用 aos_loop.cli）、字串子項（D2）、收工時剛死的子項（D7）
 
@@ -277,7 +300,7 @@ class T(unittest.TestCase):
                         "loops": {"s": "daemon.json#/kids/s"},
                         "kids": {"s": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/starts"; exit 10']}}})
         out, err = p.communicate(timeout=30)
-        k = self.kids()
+        k = self.ended(out)
         self.assertEqual((p.returncode, err, k["s"]["phase"], k["s"]["code"]), (0, "", "done", 0))
         self.assertEqual(json.loads((self.s / "loops" / "s" / "loop.json").read_text()),
                          {"exec": os.path.join(os.path.realpath(self.t), "daemon.json#/kids/s"), "ctl": "ctl.json",
@@ -291,9 +314,9 @@ class T(unittest.TestCase):
                         "loops": {"q": "daemon.json#/kids/q"},
                         "kids": {"q": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/starts"; exit 10']}}})
         out, err = p.communicate(timeout=30)
-        q = self.kids()["q"]
+        q = self.ended(out)["q"]
         self.assertEqual((p.returncode, err, len((self.s / "loops" / "q" / "starts").read_text().split())), (0, "", 1))
-        self.assertEqual((q["phase"], q["code"], q["signal"]), ("done", 0, None))
+        self.assertEqual((q["phase"], q["code"], q["signal"], self.kids()), ("done", 0, None, {}))
 
     def test_adopt_after_crash(self):
         doc = {"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}}
@@ -357,7 +380,7 @@ class T(unittest.TestCase):
             r = self.run_d(dict(win, loops={name: {"exec": "daemon.json#/b", "max": 1}}, b={"argv": ["true"]}, max=3,
                                 interval_ms=100), argv=argv or ("daemon.json",))
             self.assertEqual((r.returncode, r.stderr, (self.s / "loops" / name / "loop.json").exists(),
-                              list(self.kids())), (0, "", True, [name]), (win, name))
+                              list(self.ended(r.stdout))), (0, "", True, [name]), (win, name))
         for f in ("state.json", "s.json", "st.json", "s2.json"):
             self.assertEqual(json.loads((self.s / f).read_text())["phase"], "done", f)   # 窗照寫
 
@@ -391,7 +414,7 @@ class T(unittest.TestCase):
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})
         k = until(lambda: (self.s / "loops" / "a" / "starts").exists() and self.kids())
         st = until(lambda: json.loads((self.s / "loops" / "a" / "state.json").read_text()))
-        self.assertEqual((st["pid"], st["kind"]), (k["a"]["pid"], "state"))
+        self.assertEqual(st["pid"], k["a"]["pid"])
         self.lctl({"loops": {"a": self.long(), "b": self.long()}})   # 後來才起的也是自己的 pid
         kb = until(lambda: (self.s / "loops" / "b" / "starts").exists() and "b" in self.kids() and self.kids())
         sb = until(lambda: json.loads((self.s / "loops" / "b" / "state.json").read_text()))
@@ -403,27 +426,23 @@ class T(unittest.TestCase):
     # ---- 10-23 壓測後（使用者「都修都處理」）
 
     def watch(self, secs):
-        """secs 秒內每 10 毫秒讀一次 state，回看到的每一份（recorded_at 不同才算一份）。"""
+        """secs 秒內每 10 毫秒讀一次 state，回看到的每一份（updated_at 不同才算一份）。"""
         seen, end = [], time.monotonic() + secs
         while time.monotonic() < end:
             try:
                 st = self.state()
-                if not seen or st["recorded_at"] != seen[-1]["recorded_at"]:
+                if not seen or st["updated_at"] != seen[-1]["updated_at"]:
                     seen.append(st)
             except (OSError, ValueError):
                 pass
             time.sleep(0.01)
         return seen
 
-    @staticmethod
-    def gaps(seen):
-        ts = [datetime.datetime.fromisoformat(s["recorded_at"]).timestamp() for s in seen]
-        return [b - a for a, b in zip(ts, ts[1:])]
-
     def test_stubborn_child_does_not_block(self):
-        # 第 1 點：不肯退的子 loop（那次不理 SIGTERM）不會卡住 daemon——送了 SIGTERM 照常巡（state 照寫、ctl 照讀、別的子項照起），
+        # 第 1 點：不肯退的子 loop（那次不理 SIGTERM）不會卡住 daemon——送了 SIGTERM 照常巡（ctl 照讀、別的子項照起），
         # 收的途中那列是 stopping，滿 10 秒才 SIGKILL 整群。第 2 點：被 SIGKILL 的子 loop 自己的 state 停在 running（只有它自己寫，
-        # N-09），看死活照 pid＋started_at_ticks（N-17）；daemon 自己的 state 那列寫 stopped、signal 9
+        # N-09），看死活照 pid＋started_at_ticks（N-17）；daemon 的 log 那行寫 stopped、signal 9（11-02 起列不留在表上）。
+        # 11-02 心跳拿掉：收的途中、收工等子項時 state 不再每秒寫（有變才寫），只看 loops_state 的列變
         stub = self.t / "stub"
         stub.mkdir()
         (stub / "_entry").write_text('#!/bin/sh\ntrap "" TERM\necho x >> "$AOS_STACK/starts"\nwhile :; do sleep 0.05; done\n')
@@ -436,45 +455,45 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: json.loads((self.s / "loops" / "s2" / "state.json").read_text())["phase"] == "running"))
         t0 = time.monotonic()
         self.lctl({"loops": {"s2": s2, "a": self.long()}})
-        seen = self.watch(1.0)
-        self.assertEqual(self.kids()["s1"]["phase"], "stopping")
+        self.assertTrue(until(lambda: self.kids()["s1"]["phase"] == "stopping", 3))
         self.assertTrue(alive(k["s1"]["pid"]))
         self.lctl({"loops": {"s2": s2, "a": self.long(), "b": self.long()}})   # 收 s1 的途中照樣起別的
         kb = until(lambda: (self.s / "loops" / "b" / "starts").exists() and self.kids()["b"]["phase"] == "running" and self.kids(), 3)
         self.assertTrue(kb)
         self.assertLess(time.monotonic() - t0, 5)
-        seen += self.watch(0.5)
-        self.assertLess(max(self.gaps(seen)), 0.5, "收子項的途中 state 照寫")
-        p.send_signal(signal.SIGTERM)   # 收工：s2 也不肯退，等它的時候 state 照樣每秒寫（phase stopping）
+        p.send_signal(signal.SIGTERM)   # 收工：s2 也不肯退，等它的時候 state 停在 stopping（寫一份，之後有變才寫）
         fin = self.watch(3)
         self.assertEqual(fin[-1]["phase"], "stopping")
-        self.assertLess(max(self.gaps(fin)), 1.5)
+        self.assertTrue(until(lambda: set(self.kids()) <= {"s1", "s2"}, 3))   # 肯退的 a、b 一退就拿掉（loops_state 照寫）
         out, err = p.communicate(timeout=30)
         took = time.monotonic() - t0
         st = self.state()
         self.assertEqual((p.returncode, err, st["phase"]), (143, "", "stopped"))
         self.assertGreater(took, 9)
-        rows = self.kids()
-        self.assertEqual(sorted(rows), ["a", "b", "s2"])   # s1 是 loops_ctl 要拿掉的，收完照樣拿掉
-        r2 = rows["s2"]
-        self.assertEqual((r2["phase"], r2["code"], r2["signal"]), ("stopped", 137, 9))
+        rows = self.ended(out)
+        self.assertEqual((sorted(rows), self.kids()), (["a", "b", "s1", "s2"], {}))   # s1 是 loops_ctl 要拿掉的，收完照樣拿掉
+        for n in ("s1", "s2"):
+            self.assertEqual((rows[n]["phase"], rows[n]["code"], rows[n]["signal"]), ("stopped", 137, 9), n)
         self.assertEqual({rows[n]["phase"] for n in ("a", "b")}, {"stopped"})
         for n in ("s1", "s2"):
             cs = json.loads((self.s / "loops" / n / "state.json").read_text())
             self.assertEqual(cs["phase"], "running", n)   # 來不及寫最後一份
             self.assertFalse(alive(cs["pid"]), n)          # 讀的人看 pid（＋started_at_ticks）判斷：已經不在了
 
-    def test_one_state_per_cycle(self):
-        # 第 3、4 點：沒有 exec 的 daemon 一輪只 tend 一次、只寫一份 state（不寫 running），recorded_at 的間隔穩定在 interval_ms 上下
-        p = self.start({"state": "state.json", "ctl": "ctl.json", "interval_ms": 300, "loops": {"a": self.long()}})
-        self.assertTrue(until(lambda: (self.s / "loops" / "a" / "starts").exists()))
-        # 數 state.json 被改名蓋過幾次（inotify IN_MOVED_TO）；只靠輪詢讀會漏掉連著的兩份。也聽 IN_CREATE（每份先建 .state.json），
-        # 不然連著的 IN_MOVED_TO 會被 kernel 併成一個
+    def test_quiet_while_sleeping(self):
+        # 11-02（原 10-23 的「一輪只寫一份」）：沒有 exec 的 daemon 睡著時兩扇窗都不動——心跳拿掉、counter_runs 不算變動，
+        # 每圈組好的那份跟上一份一樣就不碰檔：1.5 秒內 updated_at、mtime 都不變，也沒有任何改名（inotify IN_MOVED_TO／IN_CREATE）
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "interval_ms": 100, "loops": {"a": self.long()}})
+        self.assertTrue(until(lambda: (self.s / "loops" / "a" / "starts").exists() and self.kids()))
+        time.sleep(0.5)
         libc = ctypes.CDLL(None, use_errno=True)
         fd = libc.inotify_init1(os.O_NONBLOCK)
         self.assertGreaterEqual(libc.inotify_add_watch(fd, str(self.s).encode(), 0x180), 0)
-        seen = self.watch(3.0)
-        writes, buf = 0, b""
+        names = ("state.json", "loops_state.json")
+        before = [((self.s / n).read_text(), os.stat(self.s / n).st_mtime_ns) for n in names]
+        time.sleep(1.5)
+        after = [((self.s / n).read_text(), os.stat(self.s / n).st_mtime_ns) for n in names]
+        events, buf = [], b""
         while True:
             try:
                 buf += os.read(fd, 65536)
@@ -483,28 +502,26 @@ class T(unittest.TestCase):
         os.close(fd)
         while buf:
             _, mask, _, n = struct.unpack_from("iIII", buf)
-            writes += bool(mask & 0x80) and buf[16:16 + n].rstrip(b"\0") == b"state.json"
+            events.append(buf[16:16 + n].rstrip(b"\0"))
             buf = buf[16 + n:]
-        self.assertTrue(3.0 / 0.3 - 3 <= writes <= 3.0 / 0.3 + 2, writes)   # 一輪只寫一份（原本一輪兩份，約 20）
-        self.ctl({"stopped": True})
+        self.assertEqual((before == after, events), (True, []))
+        st = json.loads(after[0][0])
+        self.assertEqual((st["phase"], st["counter_runs"] >= 1), ("waiting", True))   # counter_runs 是寫那一刻的快照
+        self.ctl({"stopped": True})   # ctl 變了（stopped）：寫
         p.communicate(timeout=30)
-        self.assertEqual(p.returncode, 0)
-        self.assertGreater(len(seen), 5)
-        self.assertEqual({s["phase"] for s in seen}, {"waiting"})
-        self.assertEqual(len({s["counter_runs"] for s in seen}), len(seen), "一次只寫一份")
-        g = self.gaps(seen)
-        self.assertTrue(all(0.25 < x < 0.5 for x in g), g)
+        self.assertEqual((p.returncode, self.state()["phase"]), (0, "stopped"))
+        self.assertNotEqual(self.state()["updated_at"], st["updated_at"])
 
     def test_state_written_before_spawning(self):
-        # 第 5 點：起子項之前就先寫一份 state（起一大批要好一陣子）。小格的 stderr.txt 先放一個 FIFO，daemon 開它時會卡住，
-        # 卡住的這段 state.json 已經在了
+        # 第 5 點：起子項之前就先寫一份（起一大批要好一陣子）。小格的 stderr.txt 先放一個 FIFO，daemon 開它時會卡住，
+        # 卡住的這段 loops_state.json 已經在了（11-02：原本 beat 連 state.json 也寫；現在對表時起子項之前寫 loops_state、每起一個再寫）
         cell = self.s / "loops" / "x"
         cell.mkdir(parents=True)
         os.mkfifo(cell / "stderr.txt")
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"x": self.long()}})
-        st = until(lambda: self.state(), 5)
-        self.assertTrue(st, "起子項之前沒寫 state")
-        self.assertEqual((st["phase"], st["counter_runs"], self.lstate()["loops"]), ("waiting", 0, {}))
+        st = until(lambda: self.lstate(), 5)
+        self.assertTrue(st, "起子項之前沒寫 loops_state")
+        self.assertEqual((st["loops"], st["execs"]), ({}, {}))
         fd = os.open(cell / "stderr.txt", os.O_RDONLY | os.O_NONBLOCK)
         try:
             self.assertTrue(until(lambda: (cell / "starts").exists() and self.kids()["x"]["phase"] == "running"))
@@ -545,8 +562,8 @@ class T(unittest.TestCase):
         r = self.run_d({"state": "state.json", "max": 3, "interval_ms": 100, "b": {"argv": ["true"]},
                         "loops": {"$ref": ["loops-1.json", "sub/loops-2.json"]}})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
-        self.assertEqual(list(self.kids()), ["a", "b", "c"])   # 兩份都有 a：後面的蓋前面的、位置留在第一次
-        self.assertEqual({n: k["phase"] for n, k in self.kids().items()}, {"a": "done", "b": "done", "c": "stopped"})   # c 是目標（沒 max＝不限），收工時收掉
+        self.assertEqual(self.upped(r.stdout), ["a", "b", "c"])   # 兩份都有 a：後面的蓋前面的、位置留在第一次
+        self.assertEqual({n: k["phase"] for n, k in self.ended(r.stdout).items()}, {"a": "done", "b": "done", "c": "stopped"})   # c 是目標（沒 max＝不限），收工時收掉
         b = json.loads((self.s / "loops" / "b" / "loop.json").read_text())
         self.assertEqual((b["max"], b["body"]), (1, {"stdout": {"$env": "NOPE_XYZ"}}))
         # loops 整個是一個 $ref；adopt 也解（解成 1＝不是布林）
@@ -556,7 +573,7 @@ class T(unittest.TestCase):
         self.assertTrue(r.returncode == 1 and r.stderr.startswith("aos-daemon: CfgBad ") and "adopt" in r.stderr, r.stderr)
         r = self.run_d({"max": 3, "interval_ms": 100, "state": "state.json", "b": {"argv": ["true"]},
                         "loops": {"$ref": "all.json"}})
-        self.assertEqual((r.returncode, r.stderr, list(self.kids())), (0, "", ["d"]))
+        self.assertEqual((r.returncode, r.stderr, self.upped(r.stdout)), (0, "", ["d"]))
 
     def test_loops_split_bad(self):
         (self.t / "p.json").write_text(json.dumps({"a": "x"}))
@@ -625,23 +642,26 @@ class T(unittest.TestCase):
         self.assertEqual(p.returncode, 0)
 
     def test_state_split(self):
-        # loops_state 的 loops 表超過 100 列就切檔：loops＝{"$ref": ["loops_state_loops/<雜湊>.json", …]}，每份最多 100 列
+        # loops_state 的 loops 表超過 100 列就切檔：loops＝{"$ref": ["loops_state_loops/<雜湊>.json", …]}，每份最多 100 列。
+        # 11-02 起結束的子項不留在表上：要長壽的才看得到 101 列；收工後表空了、loops 變回物件
         names = ["k%03d" % i for i in range(101)]
-        r = self.run_d({"state": "state.json", "max": 4, "interval_ms": 100, "b": {"argv": ["true"]},
-                        "loops": {n: self.quick() for n in names}}, timeout=60)
-        self.assertEqual((r.returncode, r.stderr), (0, ""))
-        st = self.lstate()
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {n: ["/bin/sleep", "1000"] for n in names}})
+        st = until(lambda: len(rows_of(self.s, self.lstate())) == 101 and self.lstate(), secs=60)
+        self.assertTrue(st)
         self.assertEqual(list(st["loops"]), ["$ref"])
         refs = st["loops"]["$ref"]
         self.assertTrue(all(re.fullmatch(r"loops_state_loops/[0-9a-f]{16}\.json", x) for x in refs), refs)
         pages = [json.loads((self.s / x).read_text()) for x in refs]
         self.assertEqual([len(x) for x in pages], [100, 1])
         rows = rows_of(self.s, st)
-        self.assertEqual((list(rows), {x["phase"] for x in rows.values()}), (names, {"done"}))
+        self.assertEqual((list(rows), {x["phase"] for x in rows.values()}), (names, {"running"}))
         self.assertEqual(directive(st, self.s)["loops"], rows)   # 讀 loops_state 的人用 aos-directive 解就拿回整張表
         left = sorted(x.name for x in (self.s / "loops_state_loops").iterdir())
         self.assertTrue(set(x.split("/")[1] for x in refs) <= set(left) and len(left) <= 4, left)   # 只留這次與上一次的
         self.assertFalse(any(x.startswith(".") for x in left), left)
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=60)
+        self.assertEqual((p.returncode, err, self.lstate()["loops"], len(self.ended(out))), (0, "", {}, 101))
         # 子項名字跟分檔資料夾同名也照起（11-02 拿掉撞名：小格在 loops/<名字>/，分檔資料夾在頂層）
         (self.s / "loops_state.json").unlink()
         r = self.run_d({"state": "state.json", "max": 3, "interval_ms": 100, "b": {"argv": ["true"]},
@@ -702,10 +722,13 @@ class T(unittest.TestCase):
             "a": {"exec": {"argv": ["sh", "-c", self.SHOW]}, "max": 1},
             "b": {"exec": {"argv": ["sh", "-c", 'pwd > "$AOS_STACK/pwd"'], "cwd": "sub"}, "max": 1},
             "c": {"exec": {"argv": ["echo", {"$ref": "data.json#/m"}], "stdout": {"$env": "AOS_STACK", "$path": "out"}}, "max": 1}}})
-        k = until(lambda: len(self.kids()) == 3 and all(r["phase"] == "done" for r in self.kids().values()) and self.kids())
+        self.assertTrue(until(lambda: all((self.s / "loops" / n / f).exists() for n, f in (("a", "seen"), ("b", "pwd"), ("c", "out")))
+                              and self.kids() == {}))   # 11-02：結束的不留在表上
         self.ctl({"stopped": True})
         out, err = p.communicate(timeout=30)
-        self.assertEqual((p.returncode, err, {n: r["code"] for n, r in k.items()}), (0, "", {"a": 0, "b": 0, "c": 0}))
+        k = self.ended(out)
+        self.assertEqual((p.returncode, err, {n: (r["phase"], r["code"]) for n, r in k.items()}),
+                         (0, "", {"a": ("done", 0), "b": ("done", 0), "c": ("done", 0)}))
         real = os.path.realpath(self.t)
         cell = os.path.realpath(self.s / "loops" / "a")
         self.assertEqual((self.s / "loops" / "a" / "seen").read_text(), "%s/loop.json|%s|/exec|%s\n" % (cell, cell, real))
@@ -719,16 +742,17 @@ class T(unittest.TestCase):
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {}})
         until(lambda: self.state())
         self.lctl({"loops_added": {"x": {"exec": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/ran"; exit 3']}, "max": 2}}})
-        k = until(lambda: self.kids().get("x", {}).get("phase") == "done" and self.kids())
+        self.assertTrue(until(lambda: (self.s / "loops" / "x" / "ran").exists() and "x" not in self.kids()))
         self.ctl({"stopped": True})
         out, err = p.communicate(timeout=30)
+        k = self.ended(out)
         self.assertEqual((p.returncode, err, k["x"]["code"], (self.s / "loops" / "x" / "ran").read_text()), (0, "", 3, "x\n"))
         self.assertIn("aos-loop: 第 1 次 loop.json#/exec 失敗，結束碼 3", (self.s / "loops" / "x" / "stderr.txt").read_text())
 
     # ---- 10-24 審後補：還原、訊號、abs_refs 邊界、收不肯退的單子
 
     def popen_env(self, extra):
-        p = subprocess.Popen([DAEMON, "daemon.json"], cwd=str(self.t), env=env_of(extra),
+        p = subprocess.Popen([DAEMON, "--enable-logs", "daemon.json"], cwd=str(self.t), env=env_of(extra),
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         self.procs.append(p)
         return p
@@ -746,11 +770,11 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: self.state()["counter_runs"] >= 1))
         self.lctl({"loops": {"a": {"exec": {"$env": "AOS_CF"}, "max": 1}, "b": {"exec": {"$env": "AOS_CD", "$path": "p2"}, "max": 1},
                              "c": {"exec": {"$env": "AOS_CO"}, "max": 1}}})
-        k = until(lambda: len(self.kids()) == 3 and all(r["phase"] == "done" for r in self.kids().values()) and self.kids())
+        self.assertTrue(until(lambda: all((self.s / "loops" / n / "ran").exists() for n in "abc") and self.kids() == {}))
         self.ctl({"stopped": True})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err), (0, ""))
-        self.assertEqual({n: r["code"] for n, r in k.items()}, {"a": 0, "b": 0, "c": 0})
+        self.assertEqual({n: r["code"] for n, r in self.ended(out).items()}, {"a": 0, "b": 0, "c": 0})
         self.assertEqual({n: (self.s / "loops" / n / "ran").read_text() for n in "abc"}, {n: "x\n" for n in "abc"})
 
     # 內嵌單子收的是整群的 SIGTERM，sleep 也被殺；sh（dash／bash）有時會在自己的 stderr 報一行「Terminated」
@@ -763,7 +787,7 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: (self.s / "loops" / "a" / "up").exists()))
         p.send_signal(signal.SIGTERM)
         out, err = p.communicate(timeout=30)
-        r = self.kids()["a"]
+        r = self.ended(out)["a"]
         self.assertEqual((p.returncode, err, (self.s / "loops" / "a" / "got").read_text(), r["phase"], r["code"]), (143, "", "got\n", "stopped", 143))
 
     def test_inline_own_exec_sigterm(self):
@@ -782,7 +806,7 @@ class T(unittest.TestCase):
             {"$ref": 5}, {"$ref": ["d1.json", 7]}, {"$ref": "d.json", "$path": {"$ref": "in.json"}},
             {"deep": {"$ref": "sub/d4.json"}}, {"$env": "HOME"}]}
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": {"exec": unit, "max": 1}}})
-        until(lambda: self.kids().get("a", {}).get("phase") == "done")
+        until(lambda: (self.s / "loops" / "a" / "loop.json").exists() and "a" not in self.kids())
         self.ctl({"stopped": True})
         p.communicate(timeout=30)
         real = os.path.realpath(self.t)
@@ -866,7 +890,7 @@ class T(unittest.TestCase):
         self.assertTrue(ls)
         time.sleep(1.5)
         ls2 = self.lstate()
-        self.assertNotEqual(ls2["recorded_at"], ls["recorded_at"])   # 暫停中照寫
+        self.assertEqual(ls2["updated_at"], ls["updated_at"])   # 暫停中照讀 loops_ctl、seq 變了寫一次；之後沒變就不寫（11-02）
         self.assertEqual((list(ls2["loops"]), ls2["loops"]["a"]["phase"], alive(k["a"]["pid"]), (self.s / "loops" / "b").exists()),
                          (["a"], "running", True, False))
         self.ctl({"seq": 3})   # 解除暫停：b 起、a 收掉
@@ -905,7 +929,7 @@ class T(unittest.TestCase):
                         "interval_ms": 100})
         self.assertEqual((r.returncode, r.stderr, (self.s / "loops" / "state_loops" / "loop.json").exists()), (0, "", True))
 
-    # ───── I. 10-29 信箱模式（medium-plan § 四 3、實作步驟 5）：daemon.json 寫 loops_mailbox，名單的增減改成一封封信 ─────
+    # ───── I. 10-29 信箱模式（medium-plan § 四 3、實作步驟 5）：daemon.json 寫 loops_ctl_mailbox（11-02 晚原 loops_mailbox），名單的增減改成一封封信 ─────
 
     def box(self):
         return self.s / "box"
@@ -930,7 +954,7 @@ class T(unittest.TestCase):
         return rb
 
     def mstart(self):
-        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops_mailbox": "box", "loops": {"a": self.long()}})
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops_ctl_mailbox": "box", "loops": {"a": self.long()}})
         self.assertTrue(until(lambda: (self.s / "loops" / "a" / "starts").exists() and self.kids()))
         return p
 
@@ -964,7 +988,7 @@ class T(unittest.TestCase):
         self.ctl({"seq": 4})
         self.assertTrue(until(lambda: (self.s / "loops" / "bob" / "starts").exists() and set(self.kids()) == {"a", "bob"}))
         self.assertTrue(until(self.drained))
-        self.assertEqual(((self.box() / "done").exists(), self.lstate()["letter_warning"]), (False, None))   # 預設收掉、不留 done/
+        self.assertEqual(((self.box() / "done").exists(), self.lstate()["mailbox_warning"]), (False, None))   # 預設收掉、不留 done/
         self.mstop(p)
 
     def test_mailbox_adopted_stays_until_removed(self):
@@ -988,7 +1012,7 @@ class T(unittest.TestCase):
         self.mstop(p2)
 
     def test_mailbox_bad_letters_dont_block_good(self):
-        # 壞信丟掉、不影響同一圈的好信；letter_warning＝最後一封壞信的原因（沒有壞信的圈維持原值）；壞信有 reply_to 也不回（決定 27）
+        # 壞信丟掉、不影響同一圈的好信；mailbox_warning（11-02 晚原 letter_warning）＝最後一封壞信的原因（沒有壞信的圈維持原值）；壞信有 reply_to 也不回（決定 27）
         rb = self.reply_box()
         p = self.mstart()
         self.pause(1)
@@ -1000,12 +1024,12 @@ class T(unittest.TestCase):
         self.ctl({"seq": 2})
         self.assertTrue(until(lambda: (self.s / "loops" / "bob" / "starts").exists() and set(self.kids()) == {"a", "bob"}))
         self.assertTrue(until(self.drained))
-        w = until(lambda: self.lstate()["letter_warning"])
+        w = until(lambda: self.lstate()["mailbox_warning"])
         self.assertTrue(w and w.startswith("信 0005 不採用：") and "letter.json" in w, w)
         self.assertEqual(list((rb / "new").iterdir()), [])
-        self.post("0006", {"loops_removed": ["bob"]})   # 只有好信的圈：letter_warning 維持
+        self.post("0006", {"loops_removed": ["bob"]})   # 只有好信的圈：mailbox_warning 維持
         self.assertTrue(until(lambda: list(self.kids()) == ["a"]))
-        self.assertEqual(self.lstate()["letter_warning"], w)
+        self.assertEqual(self.lstate()["mailbox_warning"], w)
         self.mstop(p)
 
     def test_mailbox_reply_to_applied(self):
@@ -1024,20 +1048,27 @@ class T(unittest.TestCase):
         self.mstop(p)
 
     def test_mailbox_cfg_rules(self):
-        # loops_ctl 明寫（非 null）＋loops_mailbox＝CfgBad；loops_ctl 寫 null 或沒寫＝不開、不報錯；型別錯＝CfgBad（11-02 起子項跟信箱同名不算撞：小格在 loops/）
-        for doc in ({"loops_mailbox": "box", "loops_ctl": "loops_ctl.json"}, {"loops_mailbox": "box", "loops_ctl": "x.json"},
-                    {"loops_mailbox": 3}, {"loops_mailbox": ""}, {"loops_mailbox": ["box"]}):
+        # 11-02 晚：key 改名 loops_ctl_mailbox；跟 loops_ctl 可以同時開（沒寫 loops_ctl＝預設 loops_ctl.json 照開、照讀），寫 null＝不開；
+        # 型別錯＝CfgBad；舊名 loops_mailbox 不認（其他 key 忽略：不開信箱）
+        for doc in ({"loops_ctl_mailbox": 3}, {"loops_ctl_mailbox": ""}, {"loops_ctl_mailbox": ["box"]}):
             r = self.run_d(dict(doc, max=1))
             self.assertEqual((r.returncode, r.stderr.split(" ")[1], r.stderr.count("\n")), (1, "CfgBad", 1), (doc, r.stderr))
             self.assertFalse((self.s / "box").exists(), doc)
         (self.s / "loops_ctl.json").write_text(json.dumps({"loops_added": {"x": self.quick()}}))
-        for lc in ({}, {"loops_ctl": None}):
-            r = self.run_d(dict(lc, loops_mailbox="box", state="state.json", max=3, interval_ms=100))
+        for lc, ran in (({}, True), ({"loops_ctl": None}, False)):
+            shutil.rmtree(self.s / "loops", ignore_errors=True)
+            r = self.run_d(dict(lc, loops_ctl_mailbox="box", b={"argv": ["true"]}, state="state.json", max=3, interval_ms=100))
             self.assertEqual((r.returncode, r.stderr, (self.s / "loops" / "x").exists(), (self.box() / "new").is_dir()),
-                             (0, "", False, True), lc)
+                             (0, "", ran, True), lc)
+        shutil.rmtree(self.box())
+        r = self.run_d({"loops_mailbox": "box", "loops_ctl": None, "max": 1})
+        self.assertEqual((r.returncode, r.stderr, self.box().exists(), "mailbox_warning" in self.lstate()), (0, "", False, False))
+        r = self.run_d({"loops_ctl_mailbox": None, "loops_ctl": None, "b": {"argv": ["true"]}, "loops": {"y": self.quick()}, "max": 3,
+                        "interval_ms": 100})   # 兩個都不開＝名單只看 daemon.json
+        self.assertEqual((r.returncode, r.stderr, list(self.ended(r.stdout))), (0, "", ["y"]))
         # $AOS_STACK 不在＝不替人建（信箱的 init 是 mkdir -p）
         gone = self.t / "no" / "stack"
-        r = self.run_d({"loops_mailbox": "box", "loops_state": None, "max": 1}, env={"AOS_STACK": str(gone)})
+        r = self.run_d({"loops_ctl_mailbox": "box", "loops_state": None, "max": 1}, env={"AOS_STACK": str(gone)})
         self.assertEqual((r.returncode, r.stderr.split(" ")[1], gone.exists()), (1, "MkdirFailed", False), r.stderr)
 
     def test_mailbox_cur_leftovers_redone_first(self):
@@ -1076,12 +1107,12 @@ class T(unittest.TestCase):
                         "execs": {"j": "job", "k": ["job", "a", "b"], "o": {"exec": ["job", "c"], "max": 5}}})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         st = self.lstate()
-        self.assertEqual(st["loops"], {})
-        x = self.xkids()
-        self.assertEqual(list(x), ["j", "k", "o"])
+        self.assertEqual((st["loops"], st["execs"]), ({}, {}))   # 11-02：結束後不留在表上
+        self.assertEqual((self.upped(r.stdout, "execs"), self.upped(r.stdout)), (["j", "k", "o"], []))   # 各起一次、不重起
+        x = self.ended(r.stdout, "execs")
         self.assertEqual({n: (r["phase"], r["code"], r["signal"]) for n, r in x.items()},
                          {n: ("done", 3, None) for n in "jko"})
-        self.assertEqual({frozenset(r) for r in x.values()}, {frozenset({"pid", "started_at_ticks", "phase", "code", "signal"})})
+        self.assertEqual({tuple(r) for r in x.values()}, {("at", "name", "table", "phase", "pid", "code", "signal")})
         for n, args in (("j", ""), ("k", "a b"), ("o", "c")):
             cell = self.s / "loops" / n
             self.assertEqual((cell / "runs").read_text(), args + "\n", n)   # 只跑一次
@@ -1117,7 +1148,7 @@ class T(unittest.TestCase):
     def test_execs_cfg_rules_and_clash(self):
         # daemon.json：execs 跟 loops 同名、寫法不合＝CfgBad 退 1、一行、不建小格（跟自己的窗同名 11-02 起不擋）
         for doc in ({"loops": {"x": self.long()}, "execs": {"x": "long"}},
-                    {"execs": [1]}, {"execs": {"a": 3}}, {"execs": {"a": {"exec": {"argv": ["true"]}}}}, {"execs": {"a": {"max": 1}}},
+                    {"execs": [1]}, {"execs": {"a": 3}}, {"execs": {"a": {"max": 1}}},
                     {"execs": {"a": []}}, {"execs": {"a": ["long", 1]}}, {"execs": {"a/b": "long"}}):
             r = self.run_d(dict(doc, max=1))
             self.assertEqual((r.returncode, r.stderr.split(" ")[1], r.stderr.count("\n")), (1, "CfgBad", 1), (doc, r.stderr))
@@ -1136,7 +1167,8 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: len((self.s / "loops" / "a" / "starts").read_text().split()) == 2))
         self.ctl({"stopped": True})
         out, err = p.communicate(timeout=30)
-        self.assertEqual((p.returncode, err, self.xkids()["a"]["phase"], alive(x["a"]["pid"])), (0, "", "stopped", False))
+        self.assertEqual((p.returncode, err, self.ended(out, "execs")["a"]["phase"], self.ended(out)["a"]["phase"], alive(x["a"]["pid"])),
+                         (0, "", "stopped", "stopped", False))   # loop 型的 a 被收掉、exec 型的 a 收工時收掉（log 各一行）
 
     def test_execs_adopt(self):
         # adopt 兩張表都接：exec 型子項接回、不重起；收工時照收
@@ -1154,7 +1186,10 @@ class T(unittest.TestCase):
                          (pid, lpid, 1))
         self.ctl({"stopped": True})
         out, err = p2.communicate(timeout=30)
-        self.assertEqual((p2.returncode, err, self.xkids()["a"]["phase"], alive(pid), alive(lpid)), (0, "", "stopped", False, False))
+        e = self.ended(out, "execs")["a"]
+        self.assertEqual((p2.returncode, err, e["phase"], e["pid"], alive(pid), alive(lpid)), (0, "", "stopped", pid, False, False))
+        # 接回的也印起來那一行；不是自己的子行程（拿不到結束碼），結束那行 code／signal 是 null
+        self.assertEqual((self.upped(out, "execs"), self.upped(out), e["code"], e["signal"]), (["a"], ["l"], None, None))
 
     def test_max1_loop_still_runs_beside_execs(self):
         # ①（使用者 10-30「包成max:1也是可以」）：{"exec": X, "max": 1} 的 loop 型照舊——小格有 loop.json／ctl／state、列在 loops 表；
@@ -1163,9 +1198,8 @@ class T(unittest.TestCase):
         r = self.run_d({"state": "state.json", "max": 15, "interval_ms": 100,
                         "loops": {"bob": {"exec": "job", "max": 1}}, "execs": {"carl": "job"}})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
-        st = self.lstate()
-        self.assertEqual(({n: (r["phase"], r["code"]) for n, r in st["loops"].items()},
-                          {n: (r["phase"], r["code"]) for n, r in st["execs"].items()}),
+        self.assertEqual(({n: (r["phase"], r["code"]) for n, r in self.ended(r.stdout).items()},
+                          {n: (r["phase"], r["code"]) for n, r in self.ended(r.stdout, "execs").items()}),
                          ({"bob": ("done", 3)}, {"carl": ("done", 3)}))
         self.assertEqual(((self.s / "loops" / "bob" / "runs").read_text(), (self.s / "loops" / "carl" / "runs").read_text()), ("\n", "\n"))
         self.assertTrue(all((self.s / "loops" / "bob" / f).is_file() for f in ("loop.json", "state.json")))
@@ -1173,33 +1207,105 @@ class T(unittest.TestCase):
         self.assertIn("aos-loop: 第 1 次", (self.s / "loops" / "bob" / "stderr.txt").read_text())   # 多一層 aos-loop：它自己的那行
 
     def test_execs_mailbox(self):
-        # 信箱模式的信多認 execs_added／execs_removed；套完 loops 與 execs 同名＝壞信、不套；done 的列留著，execs_removed 才拿掉（方向題 2）
+        # 信箱模式的信多認 execs_added／execs_removed；套完 loops 與 execs 同名＝壞信、不套。
+        # 11-02：結束（done）的不留在表上、從期望表拿掉（不重起）；之後再有信同名 execs_added＝重新起
         self.prog("job", self.JOB)
         p = self.mstart()
         self.post("0001", {"execs_added": {"j": "job"}})
-        self.assertTrue(until(lambda: self.xkids().get("j", {}).get("phase") == "done"))
+        self.assertTrue(until(lambda: (self.s / "loops" / "j" / "runs").exists() and self.xkids() == {}))
         time.sleep(0.6)
-        self.assertEqual(((self.s / "loops" / "j" / "runs").read_text(), self.xkids()["j"]["code"]), ("\n", 3))   # 不重起
+        self.assertEqual(((self.s / "loops" / "j" / "runs").read_text(), self.xkids()), ("\n", {}))   # 不重起
         self.post("0002", {"execs_added": {"a": "long"}})   # a 已是 loop＝撞名
-        w = until(lambda: self.lstate()["letter_warning"])
+        w = until(lambda: self.lstate()["mailbox_warning"])
         self.assertTrue(w.startswith("信 0002 不採用：") and "同時在 loops 與 execs" in w, w)
-        self.assertEqual(set(self.xkids()), {"j"})
-        self.post("0003", {"execs_removed": ["j"]})
-        self.assertTrue(until(lambda: self.xkids() == {}))
-        self.mstop(p)
+        self.assertEqual(self.xkids(), {})
+        self.post("0003", {"execs_added": {"j": "job"}})   # 同名再加＝重新起（不用先 execs_removed）
+        self.assertTrue(until(lambda: (self.s / "loops" / "j" / "runs").read_text() == "\n\n" and self.xkids() == {}))
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err, self.upped(out, "execs"), [x["code"] for x in self.logs(out) if x["name"] == "j"]),
+                         (0, "", ["j", "j"], [None, 3, None, 3]))
 
     def test_execs_state_split(self):
-        # execs 表超過 100 列一樣切檔（同一個分檔資料夾）；loops 表照舊是物件
+        # execs 表超過 100 列一樣切檔（同一個分檔資料夾）；loops 表照舊是物件（11-02：結束的不留，要長壽的才看得到 101 列）
         names = ["x%03d" % i for i in range(101)]
-        r = self.run_d({"state": "state.json", "max": 4, "interval_ms": 100, "b": {"argv": ["true"]},
-                        "loops": {"l": self.quick()}, "execs": {n: "daemon.json#/b" for n in names}}, timeout=60)
-        self.assertEqual((r.returncode, r.stderr), (0, ""))
-        st = self.lstate()
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"l": self.long()},
+                        "execs": {n: ["/bin/sleep", "1000"] for n in names}})
+        st = until(lambda: len(rows_of(self.s, self.lstate(), "execs")) == 101 and "l" in self.lstate()["loops"] and self.lstate(), secs=60)
+        self.assertTrue(st)
         self.assertEqual((list(st["execs"]), list(st["loops"])), (["$ref"], ["l"]))
         self.assertTrue(all(re.fullmatch(r"loops_state_loops/[0-9a-f]{16}\.json", x) for x in st["execs"]["$ref"]))
-        rows = self.xkids()
-        self.assertEqual((list(rows), {(x["phase"], x["code"]) for x in rows.values()}), (names, {("done", 0)}))
+        rows = rows_of(self.s, st, "execs")
+        self.assertEqual((list(rows), {x["phase"] for x in rows.values()}), (names, {"running"}))
         self.assertEqual(directive(st, self.s)["execs"], rows)
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=60)
+        self.assertEqual((p.returncode, err, self.lstate()["execs"], len(self.ended(out, "execs"))), (0, "", {}, 101))
+
+    # ───── L. 11-02：log（stdout；11-02 晚預設不印、--enable-logs 才印）、子項結束後不留名單、窗有變才寫 ─────
+
+    def test_log_off_and_no_body_quiet(self):
+        # 沒給 --enable-logs：什麼都不印；沒有身體的 daemon 不印每圈的行（只有子項的起、退）；有身體的每跑完一次一行（同 aos-loop）
+        r = self.run_d({"max": 5, "interval_ms": 0})
+        self.assertEqual((r.returncode, r.stdout, r.stderr), (0, "", ""))
+        r = self.run_d({"max": 3, "interval_ms": 100, "b": {"argv": ["true"]}, "loops": {"a": self.quick()}}, log=False)
+        self.assertEqual((r.returncode, r.stdout, r.stderr, (self.s / "loops" / "a" / "loop.json").exists()), (0, "", "", True))
+        r = self.run_d({"exec": {"argv": ["true"]}, "max": 2, "interval_ms": 0})
+        lines = [json.loads(x) for x in r.stdout.splitlines()]
+        self.assertEqual((r.returncode, [list(x) for x in lines], [x["counter_runs"] for x in lines]),
+                         (0, [["started_at", "counter_runs", "code", "signal", "elapsed_ms"]] * 2, [1, 2]))
+
+    def test_log_ws_field(self):
+        # 子項給了 ws：log 兩行都帶 ws（最後一欄）
+        (self.t / "w").mkdir()
+        r = self.run_d({"max": 3, "interval_ms": 100, "b": {"argv": ["true"]},
+                        "loops": {"a": dict(self.quick(), ws="w")}})
+        lines = self.logs(r.stdout)
+        self.assertEqual((r.returncode, [(x["phase"], list(x)[-1], x["ws"]) for x in lines]),
+                         (0, [("running", "ws", str(self.t / "w")), ("done", "ws", str(self.t / "w"))]))
+
+    def test_ctl_done_child_not_restarted_until_list_drops_it(self):
+        # ctl 模式：自己結束的子項本次執行不再起（名單照舊有它）；某一圈名單裡沒有它了（daemon 看過，ctl_seq 回音），
+        # 之後名單再有它就照常起
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "interval_ms": 50, "b": {"argv": ["true"]}, "loops": {}})
+        self.assertTrue(until(lambda: self.lstate()))
+        self.lctl({"loops_added": {"x": self.quick()}, "seq": 1})
+        self.assertTrue(until(lambda: (self.s / "loops" / "x" / "loop.json").exists() and self.lstate()["ctl_seq"] == 1 and self.kids() == {}))
+        time.sleep(0.6)
+        self.assertEqual(self.kids(), {})   # 名單上還有 x：不重起
+        self.lctl({"seq": 2})               # 名單裡沒有 x 了
+        self.assertTrue(until(lambda: self.lstate()["ctl_seq"] == 2))
+        self.lctl({"loops_added": {"x": self.quick()}, "seq": 3})   # 再放回＝照常起
+        self.assertTrue(until(lambda: self.lstate()["ctl_seq"] == 3))
+        time.sleep(0.6)
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err, self.upped(out), [x["phase"] for x in self.logs(out)]),
+                         (0, "", ["x", "x"], ["running", "done", "running", "done"]))
+
+    def test_mailbox_done_child_readded(self):
+        # 信箱模式：自己結束的子 loop 從表上、期望表拿掉（不重起）；同名再寄一封 loops_added＝重新起（不用先 rm、先 loops_removed）
+        p = self.mstart()
+        self.post("0001", {"loops_added": {"x": {"exec": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/ran"']}, "max": 1}}})
+        self.assertTrue(until(lambda: (self.s / "loops" / "x" / "ran").exists() and set(self.kids()) == {"a"}))
+        time.sleep(0.6)
+        self.assertEqual(((self.s / "loops" / "x" / "ran").read_text(), set(self.kids())), ("x\n", {"a"}))
+        self.post("0002", {"loops_added": {"x": {"exec": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/ran"']}, "max": 1}}})
+        self.assertTrue(until(lambda: (self.s / "loops" / "x" / "ran").read_text() == "x\nx\n" and set(self.kids()) == {"a"}))
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err, self.upped(out), {n: r["phase"] for n, r in self.ended(out).items()}),
+                         (0, "", ["a", "x", "x"], {"x": "done", "a": "stopped"}))
+
+    def test_closed_stdout_keeps_running(self):
+        # stdout 是關掉的管子：log 印不了就靜靜停掉，daemon 照跑、照起子項（不被 SIGPIPE 打死）
+        self.cfg({"state": "state.json", "max": 4, "interval_ms": 100, "b": {"argv": ["true"]}, "loops": {"a": self.quick()}})
+        p = subprocess.Popen([DAEMON, "--enable-logs", "daemon.json"], cwd=str(self.t), env=env_of({"AOS_STACK": str(self.s)}),
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.procs.append(p)
+        p.stdout.close()
+        err = p.communicate(timeout=30)[1]
+        self.assertEqual((p.returncode, err, self.state()["phase"], (self.s / "loops" / "a" / "loop.json").exists()), (0, b"", "done", True))
 
 
     # ───── K. 10-30 eca 子項的工作區 ws（thinking 2026-10-30-eca 衝突 1、實作步驟 1；N-28／N-54 補草稿）─────
@@ -1225,7 +1331,7 @@ class T(unittest.TestCase):
         time.sleep(0.5)
         self.assertEqual((self.kids()["b"]["pid"], self.kids()["b"]["ws"]), (bpid, w1))
         self.post("0003", {"execs_added": {"y": {"exec": "lw", "ws": ["rel/w3"]}}})
-        w = until(lambda: self.lstate()["letter_warning"])
+        w = until(lambda: self.lstate()["mailbox_warning"])
         self.assertTrue(w.startswith("信 0003 不採用：") and "ws" in w, w)
         p.kill()
         p.wait()
@@ -1233,6 +1339,109 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: self.lstate()["pid"] == p2.pid))
         self.assertEqual((self.kids()["b"]["pid"], self.kids()["b"]["ws"], self.xkids()["x"]["ws"]), (bpid, w1, w2))
         self.mstop(p2)
+
+
+    # ───── M. 11-02 晚：信箱與 loops_ctl 共存、loops_ctl 的整份 execs、execs 收內嵌單子、ctl／state 寫 null、`-- 參數`、running／waiting ─────
+
+    def test_mailbox_and_loops_ctl_together(self):
+        # 信改的是底（daemon.json＋信），loops_ctl 每圈疊在底上：loops_added 加在底上、拿掉 loops_ctl 的變動＝回到底（信加的還在）
+        p = self.mstart()   # 底：a
+        self.post("0001", {"loops_added": {"bob": self.long()}})
+        self.assertTrue(until(lambda: set(self.kids()) == {"a", "bob"}))
+        self.lctl({"loops_added": {"carl": self.long()}, "loops_removed": ["a"], "seq": 1})
+        self.assertTrue(until(lambda: self.lstate()["ctl_seq"] == 1 and set(self.kids()) == {"bob", "carl"}))
+        self.post("0002", {"loops_added": {"dan": self.long()}})   # 信照樣改底，疊上 loops_ctl 之後還在
+        self.assertTrue(until(lambda: set(self.kids()) == {"bob", "carl", "dan"}))
+        self.lctl({"seq": 2})   # loops_ctl 不加不減＝期望表就是底：a 回來、carl 收掉
+        self.assertTrue(until(lambda: self.lstate()["ctl_seq"] == 2 and set(self.kids()) == {"a", "bob", "dan"}))
+        self.post("0003", {"execs_added": {"a": "long"}})   # 疊上去之後 loops 與 execs 同名＝壞信
+        w = until(lambda: self.lstate()["mailbox_warning"])
+        self.assertIn("同時在 loops 與 execs", w)
+        self.lctl({"loops": {"zed": self.long()}, "seq": 3})   # 整份 loops＝蓋過底
+        self.assertTrue(until(lambda: self.lstate()["ctl_seq"] == 3 and set(self.kids()) == {"zed"}))
+        self.mstop(p)
+
+    def test_mailbox_and_ctl_done_child_readded_by_letter(self):
+        # 兩個都開：底來的子項自己結束＝不重起；同名再寄一封＝重新起（下一圈就能起）
+        p = self.mstart()
+        quick = {"exec": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/ran"']}, "max": 1}
+        self.post("0001", {"loops_added": {"x": quick}})
+        self.assertTrue(until(lambda: (self.s / "loops" / "x" / "ran").exists() and set(self.kids()) == {"a"}))
+        self.post("0002", {"loops_added": {"x": quick}})
+        self.assertTrue(until(lambda: (self.s / "loops" / "x" / "ran").read_text() == "x\nx\n" and set(self.kids()) == {"a"}))
+        self.lctl({"loops_added": {"y": quick}, "seq": 1})   # loops_ctl 疊的照 ended_ 規則：結束後名單還有它＝不重起
+        self.assertTrue(until(lambda: (self.s / "loops" / "y" / "ran").exists() and self.lstate()["ctl_seq"] == 1 and set(self.kids()) == {"a"}))
+        time.sleep(0.6)
+        self.assertEqual((self.s / "loops" / "y" / "ran").read_text(), "x\n")
+        self.mstop(p)
+
+    def test_loops_ctl_whole_execs(self):
+        # loops_ctl 的 execs＝整份取代底的 execs，再＋execs_added－execs_removed；壞了整份不採用；跟 loops 同名不採用
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "execs": {"e1": "long"}})
+        self.assertTrue(until(lambda: set(self.xkids()) == {"e1"}))
+        self.lctl({"execs": {"e2": "long", "e3": "long"}, "execs_removed": ["e3"], "seq": 1})
+        self.assertTrue(until(lambda: self.lstate()["ctl_seq"] == 1 and set(self.xkids()) == {"e2"}))
+        self.lctl({"execs": {"e2": 3}, "seq": 2})
+        w = until(lambda: self.lstate()["ctl_warning"])
+        self.assertTrue(w and "execs" in w, w)
+        self.assertEqual(set(self.xkids()), {"e2"})   # 維持上一份好的
+        self.lctl({"execs": {"e2": "long"}, "loops": {"e2": self.long()}, "seq": 3})
+        w = until(lambda: "同時在 loops 與 execs" in (self.lstate()["ctl_warning"] or ""))
+        self.assertTrue(w)
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err, sorted(self.ended(out, "execs"))), (0, "", ["e1", "e2"]))
+
+    def test_execs_inline_inst(self):
+        # execs 收 {"exec": 內嵌單子}（daemon.json、loops_ctl 的 execs_added、信）：跑一次、小格多一份 exec.json、cwd＝daemon 的 cwd；
+        # 單子沒寫 stdout＝/dev/null，寫了照它；相對 $ref 從寫著它的檔算
+        (self.t / "data.json").write_text('{"m": "hi"}')
+        body = 'echo "$AOS_CF|$AOS_CO|$PWD|$1" > "$AOS_STACK/seen"; echo out; exit 4'
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "loops_ctl_mailbox": "box",
+                        "execs": {"i": {"exec": {"argv": ["sh", "-c", body, "x", {"$ref": "data.json#/m"}]}}}})
+        self.assertTrue(until(lambda: (self.s / "loops" / "i" / "seen").exists() and self.xkids() == {}))
+        cell = os.path.realpath(self.s / "loops" / "i")
+        real = os.path.realpath(self.t)
+        self.assertEqual((self.s / "loops" / "i" / "seen").read_text(), "%s/exec.json|/exec|%s|hi\n" % (cell, real))
+        self.assertEqual(sorted(f.name for f in (self.s / "loops" / "i").iterdir()), ["exec.json", "seen", "stderr.txt"])
+        self.lctl({"execs_added": {"j": {"exec": {"argv": ["sh", "-c", "echo hey"], "stdout": "j.out"}}}, "seq": 1})
+        self.assertTrue(until(lambda: (self.t / "j.out").exists() and self.lstate()["ctl_seq"] == 1 and self.xkids() == {}))
+        self.post("0001", {"execs_added": {"k": {"exec": {"argv": ["true"]}, "ws": "."}}})
+        self.assertTrue(until(lambda: (self.s / "loops" / "k" / "exec.json").exists() and self.drained() and self.xkids() == {}))
+        self.ctl({"stopped": True})
+        out, err = p.communicate(timeout=30)
+        e = self.ended(out, "execs")
+        self.assertEqual((p.returncode, err, (self.t / "j.out").read_text(), {n: x["code"] for n, x in e.items()}),
+                         (0, "", "hey\n", {"i": 4, "j": 0, "k": 0}))
+        self.assertEqual(e["k"]["ws"], str(self.t))
+
+    def test_daemon_windows_null(self):
+        # daemon.json 的 ctl、state 寫 null＝不開（同沒寫）；loops_ctl、loops_state、loops_ctl_mailbox 寫 null 也不開
+        r = self.run_d({"ctl": None, "state": None, "loops_ctl": None, "loops_state": None, "loops_ctl_mailbox": None, "max": 2})
+        self.assertEqual((r.returncode, r.stderr, list(self.s.iterdir())), (0, "", []))
+
+    def test_extra_args_to_own_exec(self):
+        # `daemon.json -- 參數...` 只接在 daemon 自己的 exec 後面（子項不受影響）；沒有 exec 卻給了＝ArgumentsBad
+        r = self.run_d({"exec": {"argv": ["sh", "-c", 'echo "$1" >> "$AOS_STACK/got"', "x"]}, "max": 2, "interval_ms": 0,
+                        "b": {"argv": ["sh", "-c", 'echo "[$1]" > "$AOS_STACK/kid"', "x"]}, "loops": {"k": self.quick()}},
+                       argv=("daemon.json", "--", "題"), log=False)
+        self.assertEqual((r.returncode, r.stderr, (self.s / "got").read_text()), (0, "", "題\n題\n"))
+        r = self.run_d({"max": 1}, argv=("daemon.json", "--", "題"))
+        self.assertEqual((r.returncode, r.stderr.split(" ")[1]), (1, "ArgumentsBad"), r.stderr)
+        r = self.run_d({"max": 1}, argv=("daemon.json", "題"))
+        self.assertEqual((r.returncode, r.stderr.split(" ")[1]), (1, "ArgumentsBad"), r.stderr)
+
+    def test_running_waiting_not_a_change(self):
+        # 有身體的 daemon 跑著／睡著來回（running ⇄ waiting）不算變動：1 秒多 daemon 自己的 state 不動
+        p = self.start({"exec": {"argv": ["true"]}, "interval_ms": 100, "state": "state.json", "ctl": "ctl.json"})
+        self.assertTrue(until(lambda: self.state()))
+        time.sleep(0.3)
+        a = (self.s / "state.json").read_text()
+        time.sleep(1.2)
+        self.assertEqual((self.s / "state.json").read_text(), a)
+        self.ctl({"stopped": True})
+        p.communicate(timeout=30)
+        self.assertEqual(p.returncode, 0)
 
 
 if __name__ == "__main__":

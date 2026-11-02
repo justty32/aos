@@ -1,13 +1,16 @@
-// mailbox.cpp：【daemon】信箱模式（10-29，medium-plan § 二 4、§ 四 3、實作第 5 步；NORMS N-28 的 10-29 補、N-16；說明見 daemon.hpp）。
+// mailbox.cpp：【daemon】信箱（10-29，medium-plan § 二 4、§ 四 3、實作第 5 步；NORMS N-28 的 10-29 補、N-16；說明見 daemon.hpp）。
+// 11-02 晚：daemon.json 的 key 改名 loops_ctl_mailbox、跟 loops_ctl 可以同時開；信改的是「底」want_／want_execs_，loops_ctl 每圈疊在底上（tend）。
 //
 //   open_mailbox   起來時（建構子最後、adopt 之後）：aos::post::init 建四格（已在就沿用；$AOS_STACK 不在＝不建、MkdirFailed）、
-//                  期望表 want_＝daemon.json 的 loops（want_execs_＝execs，10-30）＋adopt 接回、不在上面的（設定記 null：只留名，不會被重起）、
+//                  底 want_（建構子已設成 daemon.json 的 loops；want_execs_＝execs，10-30）再加 adopt 接回、不在上面的（設定記 null：只留名，不會被重起；
+//                  它結束時 drop 從 want_ 拿掉，11-02）、
 //                  cur/ 裡的殘骸（上次認領了、還沒收完就死掉）記進 redo_——宣告式片段、重做無害，所以照建議重做
 //   take_letters   每圈（stopped／paused 那圈不呼叫）：redo_（照名字順序）＋claim_all 認領到的（照名字順序），逐封 check 驗信封、
-//                  apply_letter 驗 body 並套進 want_；壞信的原因記進 letter_warning_（最後一封壞信；沒有壞信的圈維持原值）
+//                  apply_letter 驗 body 並套進 want_；壞信的原因記進 mailbox_warning_（11-02 晚原 letter_warning_；最後一封壞信；沒有壞信的圈維持原值）
 //   apply_letter   body 要是物件，只認 loops_added（物件，寫法同 loops_ctl）、loops_removed（名字的陣列）、execs_added、execs_removed（10-30，同上；套完 loops 與 execs 同名＝壞信），其他 key 忽略；
 //                  檢查照 loops_ctl（check_lists：read_loops；相對 $ref 從 daemon 的 cwd 算——信收完就刪了，不能從信的資料夾算）。
-//                  好的才套：先加（已在名單上的換設定、不在的接在尾巴）後減，後面的信蓋前面的
+//                  好的才套：先加（已在名單上的換設定、不在的接在尾巴）後減，後面的信蓋前面的；loops_ctl 也開著時，疊上它之後同名也算壞信（11-02 晚）。
+//                  execs_added 的子項可以是 {"exec": 內嵌單子}（11-02 晚，read_execs）
 //   done_letters   對完表之後：好信有 reply_to 的回 {"applied": true}（壞信不回，決定 27）；全部 finish 收掉（不留 done/）。
 //                  回信寄不出去、收不掉（信被別人拿走、寫不了）都不管：不另外通知（決定 27），也不讓 daemon 因此結束
 #include "daemon/daemon.hpp"
@@ -26,9 +29,7 @@ void Daemon::open_mailbox() {
     }
     aos::post::init(mbox_path_);
     mbox_ = aos::post::open(mbox_path_);
-    want_ = loops_;
-    want_execs_ = execs_;
-    for (auto& [n, c] : table_) {   // adopt 接回、daemon.json 沒有的：留在名單上，直到有信把它 loops_removed／execs_removed（方向題 1）
+    for (auto& [n, c] : table_) {   // adopt 接回、daemon.json 沒有的：留在名單上，直到有信把它 loops_removed／execs_removed、或它結束（方向題 1；11-02）
         if (!want_.contains(n) && !want_execs_.contains(n)) {
             (c.once ? want_execs_ : want_)[n] = nullptr;
         }
@@ -58,7 +59,7 @@ Daemon::Letters Daemon::take_letters() {
             continue;   // 不在 cur/ 了（被人拿走、刪掉）：沒有這封
         }
         if (bad) {
-            letter_warning_ = "信 " + id + " 不採用：" + *bad;
+            mailbox_warning_ = "信 " + id + " 不採用：" + *bad;
         }
         got.push_back({id, !bad});
     }
@@ -106,6 +107,17 @@ std::optional<std::string> Daemon::apply_letter(const Json& body) {
         }
     }
     bad = check_apart(wl, we);
+    if (!bad && !lctl_path_.empty()) {   // 11-02 晚：loops_ctl 也開著＝疊上它之後也不能同名（期望表兩半共用名字空間）
+        Json lm;
+        Json em;
+        const Json& lb = lctl_good_.contains("loops") ? lctl_good_["loops"] : wl;
+        const Json& eb = lctl_good_.contains("execs") ? lctl_good_["execs"] : we;
+        bad = check_apart(merge_want(lb, lctl_good_, "loops_added", "loops_removed", lm),
+                          merge_want(eb, lctl_good_, "execs_added", "execs_removed", em));
+        if (bad) {
+            bad = "疊上 loops_ctl 之後" + *bad;
+        }
+    }
     if (bad) {
         return bad;
     }

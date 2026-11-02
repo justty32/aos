@@ -10,7 +10,7 @@ root 的樣子：
   沒有 --id（信號由 aos-post 給）。舊協議的 fsm 範本（agent-dan／bob／ann…讀工作區的 new/、寫 out/）ask 說不到，
   要用就手放 ws/new/<題名>；run 照樣跑、答案照樣從 history 拿（dan 也寫 history）。
   agents/<名>/runs.jsonl  aos-ai run 每跑一次記一行（結束碼、錯誤、答案）
-  daemon/                 背景用的 aos-daemon：daemon.json、.stack/（ctl.json、state.json、loops_ctl.json、loops_state.json、各 agent 的小格 loops/<名>/〔11-02 改〕）
+  daemon/                 背景用的 aos-daemon：daemon.json、.stack/（daemon_ctl.json、daemon_state.json、loops_ctl.json、loops_state.json、各 agent 的小格 loops/<名>/〔11-02 改〕）
 錯：stderr 一行「aos-ai: 代號 原因（下一步：…）」、退 1。跑的結果（agent 失敗也算）是資料，照樣退 0、看 JSON 的 ok／code。
 設計與代定見 proto8/thinking/2026-10-24-ai-tools.md。"""
 import sys

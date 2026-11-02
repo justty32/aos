@@ -2,13 +2,15 @@
 //
 // 每次（Loop 讀完 ctl.json 之後的 tend）：先讀 loops_ctl.json（10-29 拆窗）；ctl 是 stopped／paused 就只看一眼（收已送 SIGTERM 的、記自己結束的），不調表。
 // 不然期望表＝loops_ctl 的 loops（有寫）或 daemon.json 的 loops，加上 loops_ctl 的 loops_added、減掉 loops_removed（10-23 晚）→
-//   表上多出來的送 SIGTERM（phase stopping）就往下走、不等；之後每次 tend 看一眼，退了標 stopped 並移除、滿 10 秒還在就
+//   表上多出來的送 SIGTERM（phase stopping）就往下走、不等；之後每次 tend 看一眼，退了標 stopped（印 log）並移除、滿 10 秒還在就
 //   SIGKILL 整群——子 loop 那群，加上它底下自成一群的（inst 起的單子，leaders_below；10-24 審後補，原本打不到）（10-23 壓測後改：原本原地等滿 10 秒，那段 state 不寫、ctl 不讀、別的子 loop 沒人顧）→
-//   看誰自己結束了（phase done，記 code／signal）→ 起表上少掉的（起之前先寫一份 state、起很久時每秒一份）。子 loop 結束後不自動重起（使用者 10-20「照預設」）：停在表上 done；要再起就從 loops 拿掉再放回。
+//   看誰自己結束了（phase done，記 code／signal，印 log、從表上拿掉）→ 起表上少掉的（每起一個印 log、寫一次 loops_state，有變才寫）。
+//   子 loop 結束後不自動重起（使用者 10-20「照預設」）；11-02 起也不留在表上（「改成子項結束後不留名單」）：本次執行不再起它
+//   （ctl 模式記進 ended_、信箱模式從 want_ 拿掉；規則見 daemon.hpp），要再起：ctl 模式從名單拿掉（daemon 看過一圈）再放回，信箱模式再寄一封 *_added。
 // phase：running＝還在跑、stopping＝送了 SIGTERM 還沒退、done＝子 loop 自己結束、stopped＝daemon 收掉它（送了 SIGTERM／SIGKILL；
-// 10-23 命名統合前兩個都叫 exited）。
+// 10-23 命名統合前兩個都叫 exited）。done／stopped 11-02 起只出現在 log 那一行（loops_state 上看不到：印完就拿掉）。
 // 不論為什麼結束都先 finish()（收掉全部子 loop），Loop 再寫好 state。
-// 信箱模式（loops_mailbox，10-29）：期望表改成記憶體裡的 want_，每圈先 take_letters 套信、reconcile 對表、done_letters 回信收信（mailbox.cpp）。
+// 信箱（loops_ctl_mailbox，10-29；11-02 晚改名、跟 loops_ctl 共存）：底 want_ 在記憶體裡，每圈先 take_letters 套信、再疊 loops_ctl、reconcile 對表、done_letters 回信收信（mailbox.cpp）。
 // adopt：起來時讀自己上次的 loops_state（10-29 前是 state），phase running、pid＋started_at_ticks 對得上的子 loop 直接放回表上、不重起（N-17）。
 // execs（10-30）：exec 型子項跟子 loop 同一張表（Child::once）、同一套對表與收法（SIGTERM 直接打那支程式、10 秒 SIGKILL 整群），
 // 只是起的時候 spawn_exec；期望表兩份（loops、execs），loops_state 寫成兩張表、adopt 兩張都接。
@@ -186,9 +188,17 @@ Json read_loops(const Json& v, const std::string& base, const std::string& key) 
 }
 
 Json read_execs(const Json& v, const std::string& base, const std::string& key) {
-    Json out = read_loops(v, base, key);   // 名字規則、指示詞同 loops（物件的 exec 已整個解；是單子就只換了一層——下面擋掉）
+    Json out = read_loops(v, base, key);   // 名字規則、指示詞同 loops（物件的 exec 已整個解；是單子就只換了一層、相對 $ref 轉成絕對）
     for (auto& [name, c] : out.items()) {
         Json t = c.is_object() ? c.value("exec", Json()) : c;
+        if (c.is_object() && t.is_object()) {   // 11-02 晚（使用者「6.要」）：{"exec": 內嵌單子}——收成 {"exec": 單子, "ws"?}，spawn_exec 照單子跑一次
+            Json k = Json::object({{"exec", std::move(t)}});
+            if (c.contains("ws")) {
+                k["ws"] = c["ws"];
+            }
+            c = std::move(k);
+            continue;
+        }
         bool ok = t.is_string() || (t.is_array() && !t.empty());
         if (t.is_array()) {
             for (const Json& a : t) {
@@ -196,7 +206,7 @@ Json read_execs(const Json& v, const std::string& base, const std::string& key) 
             }
         }
         if (!ok) {
-            throw Error{code::CfgBad, key + "[" + name + "] 要是 aos-exec 的目標（字串或 [目標, 參數...]）或 {\"exec\": 目標}（單子物件不收）"};
+            throw Error{code::CfgBad, key + "[" + name + "] 要是 aos-exec 的目標（字串或 [目標, 參數...]）或 {\"exec\": 目標或單子}"};
         }
         if (c.is_object() && c.contains("ws")) {   // eca 10-30：寫了 ws（read_loops 已轉絕對）＝收成 {"exec": 目標, "ws": 它}，其他 key 照舊忽略
             c = Json::object({{"exec", std::move(t)}, {"ws", c["ws"]}});
@@ -261,8 +271,8 @@ std::optional<std::string> check_apart(const Json& loops, const Json& execs) {
     return std::nullopt;
 }
 
-Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string& spec)
-    : Loop(opts, spec, daemon_defaults()) {
+Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string& spec, const std::vector<std::string>& args)
+    : Loop(opts, spec, daemon_defaults(), args) {
     if (stack_.empty()) {
         throw Error{code::StackMissing, "沒設定 AOS_STACK"};
     }
@@ -274,7 +284,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         if (cfg_.contains("execs")) {   // 10-30：一次性的子項，形狀同 loops
             execs_ = read_execs(cfg_["execs"], cfg_dirs_.dir_of("execs"), "execs");
         }
-        for (const char* k : {"adopt", "loops_ctl", "loops_state", "loops_mailbox"}) {
+        for (const char* k : {"adopt", "loops_ctl", "loops_state", "loops_ctl_mailbox"}) {
             if (cfg_.contains(k)) {
                 cfg_[k] = aos::resolve(cfg_[k], cfg_dirs_.dir_of(k));
             }
@@ -285,23 +295,18 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         }
         throw;
     }
-    // 信箱模式（10-29 medium-plan § 四 3）：loops_mailbox 寫了（非 null）＝信箱模式、loops_ctl 不開；loops_ctl 也明寫了（非 null）＝CfgBad
-    Json mb = cfg_.value("loops_mailbox", Json());
+    // 信箱（10-29 medium-plan § 四 3；11-02 晚改名 loops_ctl_mailbox、跟 loops_ctl 共存）：寫了（非 null）＝開信箱；沒寫、null＝不開。
+    // 舊名 loops_mailbox 不認（照「其他 key 忽略」，11-02 晚代定）
+    Json mb = cfg_.value("loops_ctl_mailbox", Json());
     if (!mb.is_null()) {
         if (!mb.is_string() || mb.get<std::string>().empty()) {
-            throw Error{code::CfgBad, "loops_mailbox 要是信箱的路徑或 null"};
-        }
-        if (cfg_.contains("loops_ctl") && !cfg_["loops_ctl"].is_null()) {
-            throw Error{code::CfgBad, "loops_ctl 與 loops_mailbox 只能寫一個（信箱模式不開 loops_ctl）"};
+            throw Error{code::CfgBad, "loops_ctl_mailbox 要是信箱的路徑或 null"};
         }
         mbox_path_ = aos::join(stack_, mb.get<std::string>());
     }
-    // 管轄那一對窗（10-29 拆窗）：沒寫＝預設檔名、null＝不開；路徑同 ctl／state 接在 $AOS_STACK 後面
+    // 管轄那一對窗（10-29 拆窗）：沒寫＝預設檔名、null＝不開；路徑同 ctl／state 接在 $AOS_STACK 後面。11-02 晚起開了信箱也照開 loops_ctl
     std::pair<const char*, std::string*> wins[2] = {{"loops_ctl", &lctl_path_}, {"loops_state", &lstate_path_}};
     for (auto& [k, path] : wins) {
-        if (!mbox_path_.empty() && path == &lctl_path_) {
-            continue;   // 信箱模式：loops_ctl 沒寫（走預設）也不開
-        }
         Json v = cfg_.contains(k) ? cfg_[k] : Json(std::string(k) + ".json");
         if (v.is_null()) {
             continue;
@@ -332,8 +337,10 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     if (a.get<bool>()) {
         adopt();
     }
+    want_ = loops_;   // 底（11-02 晚）：daemon.json 的 loops／execs；信改它、loops_ctl 每圈疊在它上面
+    want_execs_ = execs_;
     if (!mbox_path_.empty()) {
-        open_mailbox();
+        open_mailbox();   // 開了信箱：adopt 接回、daemon.json 沒有的也放進底（只留名）
     }
 }
 
@@ -395,6 +402,46 @@ void Daemon::adopt() {
 void Daemon::add(const std::string& name, const Child& c) {
     table_.push_back({name, c});
     index_[name] = std::prev(table_.end());
+    log_child(name, c);   // 起來（或 adopt 接回）一行
+}
+
+void Daemon::log_child(const std::string& name, const Child& c) {
+    Json line = Json::object();
+    line["at"] = aos::utc_now_ms();
+    line["name"] = name;
+    line["table"] = c.once ? "execs" : "loops";
+    line["phase"] = c.phase;
+    line["pid"] = (long long)c.pid;
+    line["code"] = c.code;
+    line["signal"] = c.signal;
+    if (!c.ws.is_null()) {
+        line["ws"] = c.ws;
+    }
+    log_line(line);
+}
+
+Daemon::Table::iterator Daemon::drop(Table::iterator it) {
+    auto& [n, c] = *it;
+    log_child(n, c);   // 結束一行（done／stopped，帶 code、signal）
+    if (c.phase == "done") {   // 自己結束的：本次執行不再起（11-02；被收掉的本來就不在期望表上，或換了種類要起新的）
+        // 一律記進 ended_（期望表扣掉它，直到某一圈期望表裡沒有它；這一圈後面起少的也不會再起它）。
+        // 11-02 晚（信箱與 loops_ctl 共存）：開了信箱再從底拿掉——下一圈套信之前，不是 loops_ctl 疊上去的那些就從 ended_ 放掉，
+        // 所以之後再有信同名 *_added＝重新起；loops_ctl 疊上去的（它的 loops／execs 或 *_added 裡有）照 ended_ 的規則
+        if (!mbox_path_.empty()) {
+            (c.once ? want_execs_ : want_).erase(n);
+        }
+        ended_.insert({n, c.once});
+    }
+    index_.erase(n);
+    return table_.erase(it);   // 小格 loops/<名字>/ 留著
+}
+
+void Daemon::flush_table() {
+    try {
+        write_more(aos::loop::proc_fields());
+    } catch (const Error& e) {
+        throw aos::loop::StateError{e};
+    }
 }
 
 std::optional<std::string> Daemon::check_ctl(Json& doc, const aos::Resolved&) {
@@ -413,9 +460,8 @@ std::optional<std::string> Daemon::check_ctl(Json& doc, const aos::Resolved&) {
     return std::nullopt;
 }
 
-void Daemon::term(Child& c, bool removing) {
+void Daemon::term(Child& c) {
     c.phase = "stopping";
-    c.removing = removing;
     c.deadline = Clock::now() + std::chrono::milliseconds(GRACE_MS);
     kill(c.pid, SIGTERM);   // 給那支子 loop（它自己轉給它的那次）；已經沒了就算了
 }
@@ -439,7 +485,7 @@ bool Daemon::settle(Child& c) {
 void Daemon::tend(const Json& loop_ctl) {
     read_loops_ctl();   // 每圈先讀 ctl.json（Loop）、再讀 loops_ctl.json；停著、暫停也照讀
     if (loop_ctl.value("stopped", false) || loop_ctl.value("paused", false)) {
-        // 這圈收工／整圈暫停（10-29 medium-plan § 四 2）：不調表，只看一眼——自己結束的記 done、收的途中的照收、早就要拿掉的收完拿掉
+        // 這圈收工／整圈暫停（10-29 medium-plan § 四 2）：不調表，只看一眼——自己結束的記 done、收的途中的照收；結束的印 log、拿掉（11-02）
         for (auto it = table_.begin(); it != table_.end();) {
             auto& [n, c] = *it;
             if (c.phase == "running" && !alive(c)) {
@@ -447,32 +493,59 @@ void Daemon::tend(const Json& loop_ctl) {
             } else if (c.phase == "stopping") {
                 settle(c);
             }
-            if (c.phase != "running" && c.phase != "stopping" && c.removing) {
-                index_.erase(n);
-                it = table_.erase(it);
+            if (c.phase == "done" || c.phase == "stopped") {
+                it = drop(it);
             } else {
                 ++it;
             }
         }
-        return;
+        return;   // 接著 Loop 寫 paused／stopped 的 state（連 loops_state），不必另寫
     }
-    if (mbox_path_.empty()) {
-        Json lm;
-        Json em;
-        auto [lw, ew] = ctl_want(lctl_good_, lm, em);
-        reconcile(*lw, *ew);
-        return;
+    // 11-02 晚：信箱與 loops_ctl 共存——先套信（一次性的改動，改的是底 want_／want_execs_），再把 loops_ctl（宣告）疊在底上算期望表
+    Letters got;
+    if (!mbox_path_.empty()) {
+        for (auto it = ended_.begin(); it != ended_.end();) {   // 底來的已經從底拿掉了：放掉，信再加同名就起（loops_ctl 疊的留著）
+            if (from_ctl(it->first, it->second)) {
+                ++it;
+            } else {
+                it = ended_.erase(it);
+            }
+        }
+        got = take_letters();   // 全部認領、照順序套進底，套完才對一次表、再回信收信
     }
-    Letters got = take_letters();   // 信箱模式：全部認領、照順序套進 want_／want_execs_，套完才對一次表、再回信收信
-    reconcile(want_, want_execs_);
-    done_letters(got);
+    Json lm;
+    Json em;
+    auto [lw, ew] = ctl_want(lctl_good_, lm, em);   // 沒開 loops_ctl：lctl_good_ 一直是 {}＝期望表就是底
+    for (auto it = ended_.begin(); it != ended_.end();) {   // 期望表裡（同種類）沒有它了＝之後名單再有它就照常起（11-02）
+        const Json& w = it->second ? *ew : *lw;
+        if (w.contains(it->first)) {
+            ++it;
+        } else {
+            it = ended_.erase(it);
+        }
+    }
+    reconcile(*lw, *ew);
+    if (!mbox_path_.empty()) {
+        done_letters(got);
+    }
+}
+
+bool Daemon::from_ctl(const std::string& name, bool once) const {
+    if (lctl_path_.empty()) {
+        return false;
+    }
+    const Json& c = lctl_good_;
+    const char* whole = once ? "execs" : "loops";
+    const char* added = once ? "execs_added" : "loops_added";
+    return (c.contains(whole) && c[whole].contains(name)) || (c.contains(added) && c[added].contains(name));
 }
 
 std::pair<const Json*, const Json*> Daemon::ctl_want(const Json& ctl, Json& lm, Json& em) const {
-    // 期望表（N-06：整份 loops_ctl 就是期望，沒寫的回 daemon.json）＝（loops_ctl 的 loops，沒寫＝daemon.json 的）＋loops_added－loops_removed（10-23 晚）；
-    // execs 那半＝daemon.json 的 execs＋execs_added－execs_removed（10-30；loops_ctl 沒有整份的 execs）
-    const Json& base = ctl.contains("loops") ? ctl["loops"] : loops_;
-    return {&merge_want(base, ctl, "loops_added", "loops_removed", lm), &merge_want(execs_, ctl, "execs_added", "execs_removed", em)};
+    // 期望表（N-06：整份 loops_ctl 就是期望，沒寫的回底）＝（loops_ctl 的 loops，沒寫＝底的）＋loops_added－loops_removed（10-23 晚）；
+    // execs 那半同理（10-30；11-02 晚 loops_ctl 多認整份的 execs）。底＝want_／want_execs_（daemon.json＋adopt 接回的＋信改過的，11-02 晚）
+    const Json& base = ctl.contains("loops") ? ctl["loops"] : want_;
+    const Json& ebase = ctl.contains("execs") ? ctl["execs"] : want_execs_;
+    return {&merge_want(base, ctl, "loops_added", "loops_removed", lm), &merge_want(ebase, ctl, "execs_added", "execs_removed", em)};
 }
 
 void Daemon::reconcile(const Json& want, const Json& want_execs) {
@@ -494,66 +567,76 @@ void Daemon::reconcile(const Json& want, const Json& want_execs) {
             if (!alive(c)) {
                 c.phase = "done";   // 子項自己結束
             } else if (!keep(n, c)) {
-                term(c, true);      // 表上多出來的：送 SIGTERM 就往下走，不等（10-23 壓測後改）
+                term(c);            // 表上多出來的：送 SIGTERM 就往下走，不等（10-23 壓測後改）
             }
         } else if (c.phase == "stopping") {
             settle(c);
         }
-        if (c.phase != "running" && c.phase != "stopping" && (c.removing || !keep(n, c))) {
-            index_.erase(n);        // 收完了（或早就結束了）的多出來那列：拿掉（小格留著）
-            it = table_.erase(it);
+        if (c.phase == "done" || c.phase == "stopped") {
+            it = drop(it);          // 結束了：印 log、拿掉（小格留著；11-02 子項結束後不留名單）
         } else {
             ++it;
         }
     }
-    // null＝信箱模式接回的（只留名、沒有設定），不會起；收的途中（stopping）的同名項還在表上：等它退了、下一次才起新的
+    flush_table();   // 起之前先寫一份（退掉的、ctl_seq 變了的；起一大批要好一陣子，10-23 第 5 點），沒變就不寫
+    // null＝信箱模式接回的（只留名、沒有設定），不會起；收的途中（stopping）的同名項還在表上：等它退了、下一次才起新的；
+    // 本次執行已自己結束的（ended_，ctl 模式）不起。信箱模式的已在 drop 從 want_ 拿掉——want 就是 want_，這裡已經看不到
     for (auto& [n, spec] : want.items()) {
-        if (index_.count(n) == 0 && !spec.is_null()) {
-            beat();                   // 起一大批要好一陣子：起之前先寫一份、之後每秒一份（10-23 壓測後加）
+        if (index_.count(n) == 0 && !spec.is_null() && ended_.count({n, false}) == 0) {
             add(n, spawn(n, aos::join(aos::join(stack_, "loops"), n), spec, cwd_));   // 11-02：子項的小格在 loops/<名字>/
+            flush_table();          // 每起一個表就變了：寫一次（起一大批要好一陣子，讓人看得到進度；10-23 原本每秒一份）
         }
     }
     for (auto& [n, target] : want_execs.items()) {
-        if (index_.count(n) == 0 && !target.is_null()) {
-            beat();
+        if (index_.count(n) == 0 && !target.is_null() && ended_.count({n, true}) == 0) {
             add(n, spawn_exec(n, aos::join(aos::join(stack_, "loops"), n), target, cwd_));   // 10-30：直接 aos-exec 一次，不包 aos-loop
+            flush_table();
         }
     }
 }
 
 void Daemon::finish() {
+    bool any = false;
     for (auto& [n, c] : table_) {
         if (c.phase == "running" && alive(c)) {
-            term(c, false);
+            term(c);
         }
+        any = any || c.phase == "stopping";
     }
-    while (true) {
-        bool any = false;
-        for (auto& [n, c] : table_) {
-            if (c.phase == "stopping" && !settle(c)) {
-                any = true;
-            }
-        }
-        if (!any) {
-            break;
-        }
+    if (any) {
         try {
-            beat("stopping");   // 等子項退的時候心跳照跳（N-17）；寫不了就算了，收子項要緊
+            write_state("stopping", Json());   // 等子項退：state 寫一份 stopping（連 loops_state）；寫不了就算了，收子項要緊
         } catch (const Error&) {
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    for (auto it = table_.begin(); it != table_.end();) {
-        auto& [n, c] = *it;
-        if (c.phase == "running" && !alive(c)) {
-            c.phase = "done";   // 最後一次 tend 之後才自己結束的（沒送 SIGTERM）標 done、記 code（10-21 plan D7）
+    while (true) {   // 11-02：結束的印 log、拿掉，每退一批寫一次 loops_state（不再每秒一份心跳）
+        bool waiting = false;
+        bool dropped = false;
+        for (auto it = table_.begin(); it != table_.end();) {
+            auto& [n, c] = *it;
+            if (c.phase == "running" && !alive(c)) {
+                c.phase = "done";   // 最後一次 tend 之後才自己結束的（沒送 SIGTERM）標 done、記 code（10-21 plan D7）
+            } else if (c.phase == "stopping") {
+                settle(c);
+            }
+            if (c.phase == "done" || c.phase == "stopped") {
+                it = drop(it);
+                dropped = true;
+            } else {
+                waiting = true;
+                ++it;
+            }
         }
-        if (c.removing) {       // loops_ctl 早就要拿掉、收工時才退的：照樣拿掉
-            index_.erase(n);
-            it = table_.erase(it);
-        } else {
-            ++it;
+        if (dropped) {
+            try {
+                flush_table();
+            } catch (const Error&) {
+            }
         }
+        if (!waiting) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }
 

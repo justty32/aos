@@ -8,7 +8,10 @@
 A 段從 proto8/tests/test_exec.py 裡 aos-loop 的案例移植（那邊經 aos-exec 叫；行為應一致，錯誤一行多了代號）；
 B 段是 exec／max 的細節、字串 exec 走 aos-exec 的規則、不寫 stdout；C 段是訊號（轉給那次、收完以 128＋N 結束）；
 D 段是窗（interval_ms、ctl、state）；E 段是 10-21 傍晚的命令列（旗標、設定檔 檔#/指標、exec 陣列；ideas § 9）；
-F 段是 10-23 壓測後的修正；G 段是設定檔與 ctl 的指示詞（10-23 晚）；H 段是 exec 直接放內嵌單子（10-24）；H2 段是 10-24 審後補的（相對 AOS_WS／AOS_STACK、捷徑設定檔）。
+F 段是 10-23 壓測後的修正；G 段是設定檔與 ctl 的指示詞（10-23 晚）；H 段是 exec 直接放內嵌單子（10-24）；H2 段是 10-24 審後補的（相對 AOS_WS／AOS_STACK、捷徑設定檔）；
+I 段是 11-02 的 log（stdout；11-02 晚改預設不印、--enable-logs 才印）與「有變才寫」的 state 窗（11-02 晚 running／waiting 互換不算變動）；
+J 段是 11-02 晚的 `設定檔 -- 參數...`（附加參數接到 exec 後面）與 ctl／state 寫 null＝不開。
+看 log 的案例 run／start／run_loop 給 log=True（加 --enable-logs）。
 10-21～10-23 exec 不收內嵌單子，A～D 段寫內嵌單子的案例由 loop() 換成 `loop.json#/body`（見 loop）；10-24 起 exec 又收物件，
 這些案例照留（走 aos-exec 那條），直接寫物件的在 H 段。
 """
@@ -40,10 +43,10 @@ def env_of(env):
     return e
 
 
-def run(*args, env=None, cwd=None, input=None):
-    """跑 aos-loop，回 (退出碼, stdout, 錯誤代號或 None, stderr)。"""
-    r = subprocess.run([BIN, *args], capture_output=True, text=True, env=env_of(env), cwd=cwd, input=input,
-                       timeout=60)
+def run(*args, env=None, cwd=None, input=None, log=False):
+    """跑 aos-loop，回 (退出碼, stdout, 錯誤代號或 None, stderr)。log=True＝加 --enable-logs（11-02 晚）。"""
+    r = subprocess.run([BIN, *(["--enable-logs"] if log else []), *args], capture_output=True, text=True, env=env_of(env), cwd=cwd,
+                       input=input, timeout=60)
     err = None
     if r.returncode == 1 and r.stderr.startswith("aos-loop: ") and len(r.stderr.splitlines()) == 1:
         err = r.stderr[len("aos-loop: "):].split(" ", 1)[0]   # 自己的錯：一行「aos-loop: 代號 原因」
@@ -232,7 +235,7 @@ def entry_reread_each_lap(t):
 
 @case
 def does_not_write_stdout(t):
-    # loop 自己不寫 stdout；那次的 stdout 接呼叫者的（loop 不讀）
+    # 沒給 --enable-logs 時 loop 自己不寫 stdout；那次的 stdout 接呼叫者的（loop 不讀）
     prog(t, "cell", "echo hi\n")
     loop(t, {"exec": "cell", "max": 2})
     check("字串 exec 的 stdout 原樣過", run("loop.json", cwd=t)[:2], (0, "hi\nhi\n"))
@@ -282,8 +285,8 @@ def string_run_path_as_is(t):
 
 # ───────── C. 訊號：轉給那次、收完以 128＋N 結束 ─────────
 
-def start(t, env=None):
-    p = subprocess.Popen([BIN, "loop.json"], cwd=t, env=env_of(env), stdout=subprocess.PIPE,
+def start(t, env=None, log=False):
+    p = subprocess.Popen([BIN, *(["--enable-logs"] if log else []), "loop.json"], cwd=t, env=env_of(env), stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, text=True)
     return p
 
@@ -341,25 +344,27 @@ def count():
     return {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"']}
 
 
-def run_loop(t, cfg, env=None):
+def run_loop(t, cfg, env=None, log=False):
     loop(t, cfg)
-    return subprocess.run([BIN, "loop.json"], cwd=t, env=env_of(env), capture_output=True, text=True, timeout=30)
+    return subprocess.run([BIN, *(["--enable-logs"] if log else []), "loop.json"], cwd=t, env=env_of(env), capture_output=True,
+                          text=True, timeout=30)
 
 
 @case
-def state_written_with_heartbeat(t):
+def state_written_with_proc_fields(t):
     s = stack(t)
     r = run_loop(t, {"exec": count(), "max": 3, "state": "state.json"}, {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
-    check("state 寫好、結束碼", (r.returncode, r.stderr, st["kind"], st["phase"], st["counter_runs"], st["code"], st["max"],
-                             st["ctl_seq"]), (0, "", "state", "done", 3, 0, 3, None))
-    check("state 欄位順序（同 bin 版）", list(st), ["kind", "phase", "counter_runs", "max", "interval_ms", "paused", "ctl_seq",
-                                             "ctl_warning", "code", "pid", "started_at_ticks", "boot_id", "recorded_at"])
-    check("心跳欄位", (isinstance(st["pid"], int), isinstance(st["started_at_ticks"], int), isinstance(st["recorded_at"], str),
+    check("state 寫好、結束碼", (r.returncode, r.stderr, st["phase"], st["counter_runs"], st["code"], st["max"],
+                             st["ctl_seq"]), (0, "", "done", 3, 0, 3, None))
+    # 11-02：kind、recorded_at 拿掉，updated_at 最後一欄
+    check("state 欄位順序", list(st), ["phase", "counter_runs", "max", "interval_ms", "paused", "ctl_seq",
+                                    "ctl_warning", "code", "pid", "started_at_ticks", "boot_id", "updated_at"])
+    check("pid 那幾欄", (isinstance(st["pid"], int), isinstance(st["started_at_ticks"], int), isinstance(st["updated_at"], str),
                      (s / ".state.json").exists()), (True, True, True, False))
-    # recorded_at（10-25 原 at）＝ISO 8601 UTC 到毫秒，同 Python datetime.now(timezone.utc).isoformat(timespec="milliseconds")（10-23 命名統合）
-    at = datetime.datetime.fromisoformat(st["recorded_at"])
-    check("心跳 recorded_at 的寫法", (re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00", st["recorded_at"]) is not None,
+    # updated_at＝ISO 8601 UTC 到毫秒，同 Python datetime.now(timezone.utc).isoformat(timespec="milliseconds")（10-23 命名統合）
+    at = datetime.datetime.fromisoformat(st["updated_at"])
+    check("updated_at 的寫法", (re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00", st["updated_at"]) is not None,
                          abs((datetime.datetime.now(datetime.timezone.utc) - at).total_seconds()) < 60), (True, True))
 
 
@@ -788,6 +793,207 @@ def inline_symlink_cfg(t):
     real = os.path.realpath(Path(t, "real"))
     check("捷徑設定檔：相對基準一律是實際的資料夾", (rc, stderr, (s / "seen").read_text().splitlines()),
           (0, "", ["real|%s|%s" % (real, real)]))
+
+
+# ───────── I. 11-02：log（stdout；11-02 晚預設不印、--enable-logs 才印）、state 窗有變才寫 ─────────
+
+LOG_KEYS = ["started_at", "counter_runs", "code", "signal", "elapsed_ms"]
+
+
+@case
+def log_one_line_per_run(t):
+    # 有身體：每跑完一次一行 JSON（欄位名同 N-39 fsm 的 trace、P-38），不論那次怎麼結束；結束不另印
+    loop(t, {"exec": {"argv": ["sh", "-c", '[ -e n ] && exit 10; touch n']}, "max": 5})
+    rc, out, _, stderr = run("loop.json", cwd=t, log=True)
+    lines = [json.loads(x) for x in out.splitlines()]
+    check("log 兩行（第二次退 10 也印）", (rc, stderr, len(lines), [list(x) for x in lines]), (0, "", 2, [LOG_KEYS, LOG_KEYS]))
+    check("log 的值", [(x["counter_runs"], x["code"], x["signal"], isinstance(x["elapsed_ms"], int)) for x in lines],
+          [(1, 0, None, True), (2, 10, None, True)])
+    ok = re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00", lines[0]["started_at"]) is not None
+    check("started_at 的寫法、先後", (ok, lines[0]["started_at"] <= lines[1]["started_at"]), (True, True))
+
+
+@case
+def log_mixes_with_body_stdout(t):
+    # 身體繼承同一個 stdout：--enable-logs 時身體的輸出跟 log 交錯（使用者 11-02 晚：混在一起由使用者自己處理）；沒給就只剩身體的
+    loop(t, {"exec": {"argv": ["echo", "yo"]}, "max": 2})
+    rc, out, _, _ = run("loop.json", cwd=t, log=True)
+    got = [x if x == "yo" else list(json.loads(x)) for x in out.splitlines()]
+    check("身體的 stdout 跟 log 交錯", (rc, got), (0, ["yo", LOG_KEYS, "yo", LOG_KEYS]))
+    check("沒給 --enable-logs：只剩身體的", run("loop.json", cwd=t)[:2], (0, "yo\nyo\n"))
+
+
+@case
+def log_signal_and_failure(t):
+    # 失敗那次也印一行（code 原碼）；被訊號停掉的 signal 是數字
+    loop(t, {"exec": {"argv": ["sh", "-c", "exit 7"]}, "max": 3})
+    rc, out, _, _ = run("loop.json", cwd=t, log=True)
+    check("失敗那次印一行", (rc, [(x["code"], x["signal"]) for x in map(json.loads, out.splitlines())]), (7, [(7, None)]))
+    prog(t, "k", "kill -9 $$\n")   # 字串目標：aos-exec 的子行程 exec 成它、被 SIGKILL
+    loop(t, {"exec": "k", "max": 1})
+    rc, out, _, _ = run("loop.json", cwd=t, log=True)
+    check("被訊號停掉：signal", (rc, [(x["code"], x["signal"]) for x in map(json.loads, out.splitlines())]), (137, [(137, 9)]))
+
+
+@case
+def enable_logs_switch(t):
+    loop(t, {"exec": {"argv": ["true"]}, "max": 3})
+    check("預設不印 log", run("loop.json", cwd=t)[:2], (0, ""))
+    check("--enable-logs 不帶值", run("--enable-logs=1", "loop.json", cwd=t)[:3:2], (1, "ArgumentsBad"))
+    check("--no-log 拿掉了", run("--no-log", "loop.json", cwd=t)[:3:2], (1, "FlagUnknown"))
+    rc, _, err, stderr = run("--nope", "loop.json", cwd=t)
+    check("usage 有 --enable-logs 與 -- 參數", (rc, err, "[--enable-logs]" in stderr, "[-- 參數...]" in stderr), (1, "FlagUnknown", True, True))
+
+
+@case
+def log_closed_pipe_keeps_running(t):
+    # stdout 是關掉的管子：印不了就靜靜停掉 log、照跑（不被 SIGPIPE 打死）；身體照舊收到預設的 SIGPIPE 處置（沒被改成忽略）
+    s = stack(t)
+    loop(t, {"exec": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"; grep SigIgn /proc/$$/status >> "$AOS_STACK/ign"']}, "max": 3})
+    p = subprocess.Popen([BIN, "--enable-logs", "loop.json"], cwd=t, env=env_of({"AOS_STACK": str(s)}), stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+    p.stdout.close()
+    err = p.communicate(timeout=30)[1]
+    ign = [int(x.split()[1], 16) & (1 << (signal.SIGPIPE - 1)) for x in (s / "ign").read_text().splitlines()]
+    check("管子關了照跑完、身體的 SIGPIPE 沒被忽略", (p.returncode, err, len((s / "laps").read_text().split()), ign), (0, b"", 3, [0, 0, 0]))
+
+
+@case
+def no_log_without_body(t):
+    # 沒有身體的不會在這裡（aos-loop 要 exec）；daemon 的見 aos-daemon test_cli。這裡驗 stdout 只有跑的那幾行
+    loop(t, {"exec": {"argv": ["true"]}, "max": 0})
+    check("max 0：一次都沒跑、沒有 log", run("loop.json", cwd=t, log=True)[:2], (0, ""))
+
+
+@case
+def state_quiet_while_sleeping(t):
+    # 心跳拿掉（11-02）：睡 interval 的時候 state 不動（updated_at、mtime 都不變）；counter_runs 不算變動
+    s = stack(t)
+    loop(t, {"exec": count(), "max": 3, "interval_ms": 60000, "state": "state.json"})
+    p = start(t, {"AOS_STACK": str(s)})
+    ok = wait_file(s / "laps")
+    time.sleep(0.3)
+    a = (s / "state.json").read_text()
+    m = os.stat(s / "state.json").st_mtime_ns
+    time.sleep(1.5)
+    b = (s / "state.json").read_text()
+    m2 = os.stat(s / "state.json").st_mtime_ns
+    p.send_signal(signal.SIGTERM)
+    p.communicate(timeout=20)
+    st = json.loads(a)
+    # 11-02 晚：running ⇄ waiting 不算變動——第一份 running 之後睡著那份不寫，窗停在 running
+    check("睡著 1.5 秒 state 不動", (ok, st["phase"], a == b, m == m2), (True, "running", True, True))
+
+
+@case
+def state_written_on_change_only(t):
+    # 有變才寫：interval 0、跑好幾次——每次都是 running（counter_runs 不算變動），所以只寫第一份 running 與結束那份
+    s = stack(t)
+    seen = set()
+    loop(t, {"exec": {"argv": ["sh", "-c", 'cat "$AOS_STACK/state.json" >> "$AOS_STACK/seen"; echo >> "$AOS_STACK/seen"']},
+             "max": 4, "state": "state.json"})
+    rc = run("loop.json", cwd=t, env={"AOS_STACK": str(s)})[0]
+    for x in (s / "seen").read_text().split("\n"):
+        if x.strip():
+            st = json.loads(x)
+            seen.add((st["phase"], st["counter_runs"], st["updated_at"]))
+    end = json.loads((s / "state.json").read_text())
+    check("跑的期間只有一份 running（counter_runs 停在 1 的快照）", (rc, sorted((a, b) for a, b, _ in seen), end["phase"], end["counter_runs"]),
+          (0, [("running", 1)], "done", 4))
+
+
+@case
+def state_running_waiting_not_a_change(t):
+    # 11-02 晚（使用者「running/waiting確實不該算變動」）：有身體、有 interval 的 loop 跑著／睡著來回，窗只有第一份；
+    # 暫停（ctl paused）才算變動
+    s = stack(t)
+    loop(t, {"exec": {"argv": ["sh", "-c", 'cat "$AOS_STACK/state.json" >> "$AOS_STACK/seen"; echo >> "$AOS_STACK/seen"']},
+             "max": 4, "interval_ms": 50, "state": "state.json"})
+    rc = run("loop.json", cwd=t, env={"AOS_STACK": str(s)})[0]
+    seen = {json.loads(x)["updated_at"] for x in (s / "seen").read_text().split("\n") if x.strip()}
+    check("跑著睡著來回只有一份", (rc, len(seen), json.loads((s / "state.json").read_text())["phase"]), (0, 1, "done"))
+    (s / "ctl.json").write_text(json.dumps({"paused": True}))
+    loop(t, {"exec": count(), "max": 2, "ctl": "ctl.json", "state": "state.json"})
+    p = start(t, {"AOS_STACK": str(s)})
+    ok = wait_file(s / "state.json")
+    got = until_phase(s / "state.json", "paused")
+    (s / "ctl.json").write_text(json.dumps({"paused": False}))
+    p.communicate(timeout=20)
+    check("paused 照寫", (ok, got, p.returncode), (True, True, 0))
+
+
+def until_phase(path, phase, secs=10):
+    end = time.monotonic() + secs
+    while time.monotonic() < end:
+        try:
+            if json.loads(Path(path).read_text())["phase"] == phase:
+                return True
+        except (OSError, ValueError):
+            pass
+        time.sleep(0.02)
+    return False
+
+
+# ───────── J. 11-02 晚：`設定檔 -- 參數...`、ctl／state 寫 null＝不開 ─────────
+
+@case
+def extra_args_string_and_array(t):
+    # 字串目標＝[目標, 參數...]、陣列＝接在最後；每次都帶
+    prog(t, "c", 'echo "$*" >> "$AOS_STACK/got"\n')
+    loop(t, {"exec": "c", "max": 2})
+    rc, _, _, stderr = run("loop.json", "--", "題 一", "-x", cwd=t)
+    check("字串目標接參數", (rc, stderr, Path(t, ".stack", "got").read_text()), (0, "", "題 一 -x\n題 一 -x\n"))
+    Path(t, ".stack", "got").unlink()
+    loop(t, {"exec": ["c", "a"], "max": 1})
+    rc, _, _, stderr = run("loop.json", "--", "b", cwd=t)
+    check("陣列接在最後", (rc, stderr, Path(t, ".stack", "got").read_text()), (0, "", "a b\n"))
+    check("設定檔後面接的不是 --", run("loop.json", "b", cwd=t)[:3:2], (1, "ArgumentsBad"))
+    check("-- 後面沒東西＝沒有參數", run("loop.json", "--", cwd=t)[:3:2], (0, None))
+
+
+@case
+def extra_args_inline(t):
+    # 內嵌單子：接在單子 argv 的最後；argv 不是陣列（指示詞）＝CfgBad
+    s = stack(t)
+    put(Path(t, "loop.json"), {"exec": {"argv": ["sh", "-c", 'echo "$1|$2" >> "$AOS_STACK/got"', "x"]}, "max": 1})
+    rc, _, _, stderr = run("loop.json", "--", "p1", "p2", cwd=t, env={"AOS_STACK": str(s)})
+    check("單子 argv 接參數", (rc, stderr, (s / "got").read_text()), (0, "", "p1|p2\n"))
+    put(Path(t, "a.json"), ["true"])
+    put(Path(t, "loop.json"), {"exec": {"argv": {"$ref": "a.json"}}, "max": 1})
+    check("argv 是指示詞＝CfgBad", run("loop.json", "--", "p", cwd=t)[:3:2], (1, "CfgBad"))
+    check("沒給參數照跑", run("loop.json", cwd=t)[:3:2], (0, None))
+
+
+@case
+def extra_args_odd_config_name(t):
+    # 設定檔之前的 -- 照舊是「旗標結束」：-odd.json 也能當設定檔，後面再接 -- 參數
+    prog(t, "c", 'echo "$*" >> "$AOS_STACK/got"\n')
+    put(Path(t, "-odd.json"), {"exec": "c", "max": 1})
+    rc, _, _, stderr = run("--", "-odd.json", "--", "q", cwd=t)
+    check("-- -odd.json -- q", (rc, stderr, Path(t, ".stack", "got").read_text()), (0, "", "q\n"))
+
+
+@case
+def extra_args_through_aos_exec(t):
+    # 端到端：aos-exec <loop 資料夾> -- "題"——資料夾的 _entry 是 loop 設定（帶 "_entry": ["aos-loop", {"$env": "AOS_CF"}]），
+    # aos-exec 把 `-- 題` 原樣接在 aos-loop 的命令列後面，身體收到「題」
+    exe = Path(BIN).resolve().parent.parent.parent / "aos-exec" / "bin" / "aos-exec"
+    d = Path(t, "agent")
+    put(d / "_entry", {"_entry": ["aos-loop", {"$env": "AOS_CF"}],
+                       "exec": {"argv": ["sh", "-c", 'echo "$1" >> "$AOS_STACK/got"', "x"]}, "max": 1})
+    e = env_of({"PATH": os.pathsep.join([str(Path(BIN).parent), str(exe.parent), os.environ.get("PATH", "")])})
+    r = subprocess.run([str(exe), "agent", "--", "題"], cwd=t, env=e, capture_output=True, text=True, timeout=30)
+    check("aos-exec 資料夾 -- 題", (r.returncode, r.stderr, Path(t, ".stack", "got").read_text()), (0, "", "題\n"))
+
+
+@case
+def windows_null_not_opened(t):
+    # ctl、state 寫 null＝不開（同沒寫；N-09）
+    s = stack(t)
+    r = run_loop(t, {"exec": count(), "max": 2, "ctl": None, "state": None}, {"AOS_STACK": str(s)})
+    check("ctl／state 寫 null＝不開", (r.returncode, r.stderr, sorted(p.name for p in s.iterdir())), (0, "", ["laps"]))
+    r = run_loop(t, {"exec": {"argv": ["true"]}, "max": 1, "ctl": None, "state": None})
+    check("null 不要 AOS_STACK", (r.returncode, r.stderr), (0, ""))
 
 
 for fn in cases:

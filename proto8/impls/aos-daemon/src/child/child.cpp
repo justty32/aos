@@ -109,6 +109,18 @@ static Child launch(const std::string& name, const std::string& cell, const std:
     return c;
 }
 
+// 內嵌單子搬進小格之前（10-24；11-02 晚 exec 型子項也用）：跑它時相對路徑的基準是小格（AOS_CD），所以 cwd 照 daemon 的 cwd 定死——
+// 沒寫＝daemon 的 cwd、相對的字串＝接在 daemon 的 cwd 後面（argv[0]、stdin／stdout／stderr 都從 cwd 算，跟著對）；
+// cwd 是指示詞就不動（解出來若是相對的，從小格算）。裡面相對的 $ref 已在 read_loops 轉成絕對。
+static void pin_cwd(Json& inst, const std::string& cwd) {
+    Json c = inst.value("cwd", Json());
+    if (c.is_null()) {
+        inst["cwd"] = cwd;
+    } else if (c.is_string()) {
+        inst["cwd"] = aos::join(cwd, c.get<std::string>());
+    }
+}
+
 Child spawn(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd) {
     Json cfg;
     if (spec.is_object()) {
@@ -125,15 +137,7 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
     } else if (ex.is_array() && !ex.empty() && ex[0].is_string()) {
         cfg["exec"][0] = aos::join(cwd, ex[0].get<std::string>());
     } else if (ex.is_object()) {
-        // 內嵌單子（10-24）：子 loop 跑它時相對路徑的基準是小格（AOS_CD），所以 cwd 照 daemon 的 cwd 定死——
-        // 沒寫＝daemon 的 cwd、相對的字串＝接在 daemon 的 cwd 後面（argv[0]、stdin／stdout／stderr 都從 cwd 算，跟著對）；
-        // cwd 是指示詞就不動（解出來若是相對的，從小格算）。裡面相對的 $ref 已在 read_loops 轉成絕對。
-        Json c = ex.value("cwd", Json());
-        if (c.is_null()) {
-            cfg["exec"]["cwd"] = cwd;
-        } else if (c.is_string()) {
-            cfg["exec"]["cwd"] = aos::join(cwd, c.get<std::string>());
-        }
+        pin_cwd(cfg["exec"], cwd);   // 內嵌單子（10-24）
     }
     if (!cfg.contains("ctl")) {
         cfg["ctl"] = "ctl.json";
@@ -159,6 +163,22 @@ Child spawn_exec(const std::string& name, const std::string& cell, const Json& s
     const Json& target = spec.is_object() ? spec["exec"] : spec;
     Json ws = spec.is_object() ? spec.value("ws", Json()) : Json();
     std::vector<std::string> argv{"--"};   // 相對的目標不轉：子行程 cd 到 daemon 的 cwd 才叫 aos-exec，本來就從那裡算
+    if (target.is_object()) {
+        // 內嵌單子（11-02 晚，使用者「6.要」）：同子 loop 的單子搬進小格——寫成小格的 exec.json {"exec": 單子}（cwd 定成 daemon 的 cwd），
+        // 子行程 `aos-exec -- 小格/exec.json#/exec` 跑它一次：AOS_CF＝小格的 exec.json、AOS_CO＝/exec（同 loop 型的小格 loop.json#/exec）。
+        // 單子沒寫 stdin／stdout＝照舊接 daemon 給的 /dev/null、stderr 是小格的 stderr.txt；寫了就照它
+        Json inst = target;
+        pin_cwd(inst, cwd);
+        make_cell(name, cell);
+        try {
+            aos::loop::write_window(aos::join(cell, "exec.json"), Json::object({{"exec", inst}}));
+        } catch (const Error& e) {
+            throw Error{e.code, "起不了子項 " + name + "：" + e.msg};
+        }
+        Child c = launch(name, cell, cwd, {"--", aos::join(cell, "exec.json") + "#/exec"}, ws);
+        c.once = true;
+        return c;
+    }
     if (target.is_string()) {
         argv.push_back(target.get<std::string>());
     } else {

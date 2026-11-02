@@ -1,4 +1,4 @@
-{"max": 25, "interval_ms": 200, "state": "state.json",
+{"max": 25, "interval_ms": 200, "state": "daemon_state.json",
  "loops": {
   "kernel": {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300},
   "a": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "a"}, "agent-ivy"], "envs": {"AOS_IVY_BRAIN": "brains/plain.json"}}, "max": 1},

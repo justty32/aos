@@ -113,19 +113,19 @@ class Windows(T):
     def count(self):
         return "loop.json#/body"
 
-    def test_state_written_with_heartbeat(self):
+    def test_state_written(self):
         s = self.stack()
         r = self.run_loop({"exec": self.count(), "max": 3, "state": "state.json"}, {"AOS_STACK": str(s)})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         st = json.loads((s / "state.json").read_text())
-        self.assertEqual((st["kind"], st["phase"], st["counter_runs"], st["code"], st["max"], st["ctl_seq"]),
-                         ("state", "done", 3, 0, 3, None))
+        self.assertEqual((st["phase"], st["counter_runs"], st["code"], st["max"], st["ctl_seq"]), ("done", 3, 0, 3, None))
         self.assertIsInstance(st["pid"], int)
-        # 10-23 命名統合：phase、started_at_ticks（10-23 統合前叫 state、started）；10-25 改名：runs → counter、at → recorded_at（ISO 8601 UTC 到毫秒；更早叫 lap、beat）
-        self.assertEqual(list(st), ["kind", "phase", "counter_runs", "max", "interval_ms", "paused", "ctl_seq", "ctl_warning",
-                                    "code", "pid", "started_at_ticks", "boot_id", "recorded_at"])
-        self.assertRegex(st["recorded_at"], r"\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00\Z")
-        datetime.datetime.fromisoformat(st["recorded_at"])
+        # 10-23 命名統合：phase、started_at_ticks（10-23 統合前叫 state、started）；10-25 改名：runs → counter；
+        # 11-02（thinking 2026-11-02-state-window）：kind、recorded_at 拿掉，最後一欄 updated_at（ISO 8601 UTC 到毫秒）、有變才寫（沒心跳）
+        self.assertEqual(list(st), ["phase", "counter_runs", "max", "interval_ms", "paused", "ctl_seq", "ctl_warning",
+                                    "code", "pid", "started_at_ticks", "boot_id", "updated_at"])
+        self.assertRegex(st["updated_at"], r"\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00\Z")
+        datetime.datetime.fromisoformat(st["updated_at"])
         self.assertFalse((s / ".state.json").exists())
 
     def test_no_windows_no_files(self):
@@ -248,6 +248,26 @@ class Cli(Base):
         self.loop({"exec": ["b", "x", "--max", "y"], "max": 2})
         r = self.loop_cli("loop.json", env={"AOS_STACK": str(s)})
         self.assertEqual((r.returncode, r.stderr, self.runs(s)), (0, "", ["b x --max y"] * 2))
+
+    def test_cli_args_appended_each_beat(self):
+        # 11-02：aos-loop [旗標] 設定檔 [-- 參數...]：參數每次接在 exec 後面（字串、陣列都接；參數照字面）
+        s = self.stack()
+        self.mark("b")
+        self.loop({"exec": ["b", "x"], "max": 2, "s": {"exec": "b", "max": 1}})
+        r = self.loop_cli("loop.json", "--", "p", "--max", env={"AOS_STACK": str(s)})
+        r2 = self.loop_cli("loop.json#/s", "--", "q", env={"AOS_STACK": str(s)})
+        self.assertEqual((r.returncode, r.stderr, r2.returncode, r2.stderr, self.runs(s)),
+                         (0, "", 0, "", ["b x p --max"] * 2 + ["b q"]))
+
+    def test_logs_off_by_default(self):
+        # 11-02：log 預設不印；--enable-logs 才每跑完一次在 stdout 印一行 JSON（counter_runs、code…）
+        s = self.stack()
+        self.mark("a")
+        self.loop({"exec": "a", "max": 2})
+        r = self.loop_cli("loop.json", env={"AOS_STACK": str(s)})
+        r2 = self.loop_cli("--enable-logs", "loop.json", env={"AOS_STACK": str(s)})
+        self.assertEqual((r.returncode, r.stdout, r2.returncode, r2.stderr), (0, "", 0, ""))
+        self.assertEqual([(d["counter_runs"], d["code"]) for d in map(json.loads, r2.stdout.splitlines())], [(1, 0), (2, 0)])
 
     def test_cfg_with_pointer(self):
         # 設定檔可寫 檔#/指標＝那份檔裡那個位置的物件（~0、~1 照 JSON pointer）

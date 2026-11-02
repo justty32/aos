@@ -12,7 +12,7 @@ def daemon_up(root):
         return pid, True
     d.stack.mkdir(parents=True, exist_ok=True)       # aos-daemon 不自己建 stack（N-59 第 1 件）
     if not d.cfg.exists():
-        write_atomic(d.cfg, json.dumps({"interval_ms": 500, "ctl": "ctl.json", "state": "state.json", "loops": {}},
+        write_atomic(d.cfg, json.dumps({"interval_ms": 500, "ctl": "daemon_ctl.json", "state": "daemon_state.json", "loops": {}},
                                        indent=1) + "\n")
     d.write_ctl(lambda c: c.pop("stopped", None))    # 上次 down 留下的 stopped 拿掉；loops_ctl 的 loops_added 照留＝上次在跑的照起
     prog = which("aos-daemon")
@@ -55,7 +55,7 @@ def cmd_daemon(root, o, pos):
         out({"ok": True, "running": bool(d.running()), "pid": d.running(), "phase": st.get("phase"),
              "loops": ls.get("loops") or {}, "ctl_seq": st.get("ctl_seq"), "ctl_warning": st.get("ctl_warning"),
              "loops_ctl_seq": ls.get("ctl_seq"), "loops_ctl_warning": ls.get("ctl_warning"),
-             "recorded_at": st.get("recorded_at"), "stderr_tail": (read_text(d.dir / "stderr.txt") or "")[-500:] or None})
+             "updated_at": st.get("updated_at"), "stderr_tail": (read_text(d.dir / "stderr.txt") or "")[-500:] or None})
     else:
         raise Fail("ArgumentsBad", "daemon 只認 up、down、status：%s" % pos[0])
 
@@ -76,14 +76,20 @@ def cmd_start(root, o, pos):
     if row and row.get("phase") in ("running", "stopping"):
         out({"ok": True, "name": a.name, "already_running": True, "background": row})
         return
-    if row:                                            # done／stopped 還在表上：拿掉、等它下表，再放回（daemon 不自己重起）
-        seq = d.write_ctl(lambda c: (c.setdefault("loops_added", {}).pop(a.name, None)), d.lctl)
-        d.wait_seq(seq, until=lambda st: a.name not in (st.get("loops") or {}))
+    # 11-02 起子項結束就從表上拿掉、本次執行不再起（記在 daemon 的「已結束」裡）：不在跑就一律先從 loops_added 拿掉、
+    # 等 daemon 讀到（ctl_seq 回音＝那一圈的名單沒有它，「已結束」也清掉），再放回去並等回音
+    seq = d.write_ctl(lambda c: (c.setdefault("loops_added", {}).pop(a.name, None)), d.lctl)
+    d.wait_seq(seq, until=lambda st: a.name not in (st.get("loops") or {}))
+    before = d.cell_run(a.name)
     seq = d.write_ctl(lambda c: c.setdefault("loops_added", {}).__setitem__(a.name, spec), d.lctl)
-    st, acked = d.wait_seq(seq, until=lambda st: a.name in (st.get("loops") or {}))
+    # 起來了＝表上有它，或（一次就跑完、還沒被看到就下表）小格的 state.json 換了一個行程寫
+    st, acked = d.wait_seq(seq, until=lambda st: a.name in (st.get("loops") or {}) or d.cell_run(a.name) != before)
     row = (st.get("loops") or {}).get(a.name)
-    res = {"ok": acked and bool(row), "name": a.name, "background": row, "ctl_warning": st.get("ctl_warning"),
+    ran = bool(row) or d.cell_run(a.name) != before
+    res = {"ok": acked and ran, "name": a.name, "background": row, "ctl_warning": st.get("ctl_warning"),
            "next": "aos-ai ask %s …，再 aos-ai wait %s <信號>" % (a.name, a.name)}
+    if acked and ran and not row:
+        res["note"] = "起來後已經跑完下表（daemon 不留結束的子項）；有題要做再 aos-ai start 一次"
     if not res["ok"]:
         res["hint"] = "daemon 沒接到（ctl_warning 或 aos-ai daemon status 看）"
     out(res)

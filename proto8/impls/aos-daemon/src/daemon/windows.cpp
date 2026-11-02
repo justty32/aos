@@ -1,16 +1,19 @@
 // windows.cpp：【daemon】管轄那一對窗——loops_ctl.json（手把）、loops_state.json（狀態窗）（10-29 拆窗，medium-plan § 四 1；說明見 daemon.hpp）。
 //
-//   read_loops_ctl  每圈讀一次（tend 開頭）。同 aos-loop 的 read_ctl（N-06～N-08）：認 loops、loops_added、loops_removed、execs_added、execs_removed（10-30）、seq，其他 key 忽略；
+//   read_loops_ctl  每圈讀一次（tend 開頭）。同 aos-loop 的 read_ctl（N-06～N-08）：認 loops、loops_added、loops_removed、execs（11-02 晚）、execs_added、execs_removed（10-30）、seq，其他 key 忽略；
 //                   讀到壞的（讀不了、不是 JSON 物件、seq 不是非負整數、名單壞、指示詞解不開）整份不採用、維持上一份好的，
 //                   原因記 lctl_warning_（loops_state 的 ctl_warning）；讀到好的清回 null；檔不在＝還沒人寫，維持上一份好的、不算問題
 //   check_lists     loops、loops_added（read_loops；跟窗撞名的檢查 11-02 拿掉）、loops_removed（名字的陣列）；10-29 前是 ctl.json 的 check_ctl；
-//                   10-30 多 execs_added（read_execs）、execs_removed。read_loops_ctl 另外驗合出來的 loops 與 execs 不同名（check_apart）
-//   write_more      loops_state 一份：{kind, ctl_seq, ctl_warning, letter_warning（信箱模式才有，10-29）, loops, execs（10-30）, 心跳四欄}；
-//                   Loop 每寫一份 state 就呼叫（心跳同一份值）
+//                   10-30 多 execs_added（read_execs）、execs_removed；11-02 晚多整份的 execs（read_execs，跟 loops 對稱）。read_loops_ctl 另外驗合出來的 loops 與 execs 不同名（check_apart）
+//   write_more      loops_state 一份：{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有，10-29；11-02 晚原 letter_warning）, loops, execs（10-30）, pid, started_at_ticks, boot_id, updated_at}
+//                   （11-02：kind、recorded_at 拿掉、updated_at 最後一欄）。Loop 每次 write_state 都呼叫、daemon 表變了也呼叫（flush_table）；
+//                   有變才寫（11-02）：先組好分檔前的那份（不含 proc_fields、updated_at）跟上一份寫出去的比，一樣就不碰檔，
+//                   不一樣才寫分檔→清舊分檔→寫主檔（提交順序同以前：主檔改名是唯一的提交點）
 //   write_parts     loops、execs 表各自超過 PART_ROWS 列就切檔（10-23 晚；10-30 兩張表共用分檔資料夾）；clean_parts 兩張都寫好才清舊分檔
 #include "daemon/daemon.hpp"
 
 #include "aos/files.hpp"
+#include "aos/proc.hpp"
 
 #include <cerrno>
 #include <cstdio>
@@ -71,12 +74,12 @@ void Daemon::read_loops_ctl() {
 std::optional<std::string> Daemon::check_lists(Json& doc, const aos::Resolved& where) {
     // loops_ctl 改名單寫壞＝整份不採用（N-08；原因進 loops_state 的 ctl_warning）。指示詞解不開丟 DirectiveBad，read_loops_ctl 一樣當不採用。
     // 10-30 多 execs_added（read_execs）、execs_removed（同 loops_removed）。
-    const char* lists[3] = {"loops", "loops_added", "execs_added"};
+    const char* lists[4] = {"loops", "loops_added", "execs", "execs_added"};
     for (const char* k : lists) {
         if (!doc.contains(k)) {
             continue;
         }
-        bool execs = std::string(k) == "execs_added";
+        bool execs = std::string(k).rfind("execs", 0) == 0;   // execs（11-02 晚）、execs_added
         try {
             doc[k] = execs ? read_execs(doc[k], where.dir_of(k), k) : read_loops(doc[k], where.dir_of(k), k);
         } catch (const Error& e) {
@@ -177,7 +180,7 @@ void Daemon::clean_parts(const std::set<std::string>& now) {
     parts_wrote_ = true;
 }
 
-void Daemon::write_more(const Json& hb) {
+void Daemon::write_more(const Json& me) {
     if (lstate_path_.empty()) {
         return;
     }
@@ -191,20 +194,36 @@ void Daemon::write_more(const Json& hb) {
         (c.once ? evec : vec).emplace_back(n, row(c));
     }
     Json doc = Json::object();
-    doc["kind"] = "state";
     doc["ctl_seq"] = lctl_good_.contains("seq") ? lctl_good_["seq"] : Json();
     doc["ctl_warning"] = lctl_warning_;
     if (!mbox_path_.empty()) {
-        doc["letter_warning"] = letter_warning_;   // 信箱模式才有：最後一封壞信（ctl 模式不寫這欄）
+        doc["mailbox_warning"] = mailbox_warning_;   // 開了信箱才有：最後一封壞信（11-02 晚原 letter_warning）
     }
+    doc["loops"] = rows;
+    doc["execs"] = exec_rows;
+    if (more_wrote_ && doc == last_more_) {
+        // 有變才寫（11-02）：表、ctl_seq、ctl_warning、mailbox_warning 都一樣＝不碰檔。上一次寫時留著的「再上一次」的分檔
+        // （讀的人可能剛讀了舊主檔）等到這一下（主檔已換過、隔了一次）才清——原本靠下一份心跳清，心跳拿掉後改在這裡
+        if (parts_stale_) {
+            std::set<std::string> keep = parts_prev_;
+            clean_parts(keep);
+            parts_stale_ = false;
+        }
+        return;
+    }
+    Json key = doc;
     std::set<std::string> now;
     doc["loops"] = write_parts(std::move(rows), now);   // 分檔都寫好才寫主檔（主檔改名是唯一的提交點）
     doc["execs"] = write_parts(std::move(exec_rows), now);
     clean_parts(now);
-    for (auto& [k, v] : hb.items()) {
+    for (auto& [k, v] : me.items()) {
         doc[k] = v;
     }
+    doc["updated_at"] = aos::utc_now_ms();
     aos::loop::write_window(lstate_path_, doc);
+    more_wrote_ = true;
+    parts_stale_ = true;
+    last_more_ = std::move(key);
 }
 
 }  // namespace aos::daemon

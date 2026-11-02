@@ -1,5 +1,6 @@
 // config.cpp：【engine】Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、解指示詞（resolve_keys，10-23 晚）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）；
-// 還有 parse_target（exec 的寫法）、resolve_exec、place_inline（內嵌單子在哪，10-24）、loop_cli（命令列）
+// 還有 parse_target（exec 的寫法）、resolve_exec、place_inline（內嵌單子在哪，10-24）、loop_cli（命令列；11-02 加開關 --enable-logs〔原 --no-log〕、
+// 設定檔後面的 `-- 參數...`）、add_args（附加參數接到 exec 後面）
 // （10-21 傍晚 ideas § 9）；錯誤分代號。
 #include "engine/engine.hpp"
 
@@ -107,18 +108,24 @@ std::string config_file(const std::string& spec) {
 }
 
 aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog) {
-    std::string usage = "usage: " + prog + " [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] 設定檔.json";
+    std::string usage = "usage: " + prog + " [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] 設定檔.json [-- 參數...]";
     aos::Cli cli;
     try {
-        cli = aos::parse_cli(argv, {{"--max", "max"}, {"--interval-ms", "interval_ms"}, {"--ctl", "ctl"}, {"--state", "state"}});
+        cli = aos::parse_cli(argv, {{"--max", "max"}, {"--interval-ms", "interval_ms"}, {"--ctl", "ctl"}, {"--state", "state"}},
+                             {{"--enable-logs", "enable_logs"}});   // 11-02 晚：不帶值的開關，給了才印 log（同 aos-mcp；原 --no-log）
     } catch (const Error& e) {
         throw Error{e.code, usage + "（" + e.msg + "）"};   // FlagUnknown／ArgumentsBad
     }
     if (cli.rest.empty()) {
         throw Error{code::ArgumentsBad, usage + "（沒有設定檔）"};
     }
+    // 11-02 晚（使用者「aos-XXX ... ... -- ...」）：設定檔之後接 `--`＝後面全是附加參數（rest＝[設定檔, 參數...]，`--` 剝掉）；
+    // 接別的＝照舊 ArgumentsBad。設定檔之前的 `--` 是 parse_cli 的「旗標結束」，不受影響。
+    if (cli.rest.size() > 1 && cli.rest[1] != "--") {
+        throw Error{code::ArgumentsBad, usage + "（設定檔只能一個，多給了 " + cli.rest[1] + "；附加參數要寫在 -- 後面）"};
+    }
     if (cli.rest.size() > 1) {
-        throw Error{code::ArgumentsBad, usage + "（設定檔只能一個，多給了 " + cli.rest[1] + "）"};
+        cli.rest.erase(cli.rest.begin() + 1);
     }
     return cli;
 }
@@ -155,7 +162,27 @@ aos::Resolved resolve_keys(const Json& doc, const std::string& base_dir, const s
     return r;
 }
 
-Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& spec, const Defaults& d) : d_(d) {
+void add_args(Target& t, const std::vector<std::string>& args) {
+    if (args.empty()) {
+        return;
+    }
+    if (!t.inst) {   // 字串＝[目標, 參數...]、陣列＝接在最後
+        t.args.insert(t.args.end(), args.begin(), args.end());
+        return;
+    }
+    // 內嵌單子：接在單子 argv 的最後（argv 要是陣列；是指示詞或沒寫＝CfgBad，跑之前接不上）。字串不是指示詞，原樣接
+    Json& inst = *t.inst;
+    if (!inst.is_object() || !inst.contains("argv") || !inst["argv"].is_array()) {
+        throw Error{code::CfgBad, "有 -- 附加參數時，exec 的單子 argv 要直接寫成陣列（才接得上）"};
+    }
+    for (const std::string& a : args) {
+        inst["argv"].push_back(a);
+    }
+}
+
+Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& spec, const Defaults& d,
+           const std::vector<std::string>& args) : d_(d) {
+    log_ = opts.count("enable_logs") > 0;   // 11-02 晚：log 預設不印（使用者「應該要改成默認不印」），--enable-logs 才印到 stdout
     cfg_ = aos::load_cfg(spec);
     std::string exec_base;   // exec 那格裡相對 $ref 的起點（內嵌單子用）
     try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45；捷徑解開，10-24 審後，config_file）
@@ -203,8 +230,11 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
         exec_ = parse_target(ex, "exec");
         place_inline(exec_, spec, "/exec", exec_base);
         has_exec_ = true;
+        add_args(exec_, args);
     } else if (d_.need_exec) {
         throw Error{code::CfgBad, "沒有東西可跑（設定檔沒有 exec）"};
+    } else if (!args.empty()) {
+        throw Error{code::ArgumentsBad, "沒有 exec（身體），-- 後面的附加參數沒地方接"};   // daemon 純監工（11-02 晚代定）
     }
     max_ = d_.max;
     if (cfg_.contains("max")) {

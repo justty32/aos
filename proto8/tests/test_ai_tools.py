@@ -197,11 +197,22 @@ class AiToolsTest(unittest.TestCase):
         code, q, err = ai(self.root, "ask", "bg", "hello")
         code, res, err = ai(self.root, "wait", "bg", q["id"], "--timeout", "20")
         self.assertTrue(res and "FAKE ANSWER to: hello" in res["text"], err)
+        # 11-02：子項自己結束（這裡叫它小格的 ctl 停）＝從 daemon 的表上拿掉、本次不再起；aos-ai start 要能再把它起來
+        cell = Path(self.root) / "daemon" / ".stack" / "loops" / "bg"
+        (cell / "ctl.json").write_text(json.dumps({"stopped": True}))
+        lst = Path(self.root) / "daemon" / ".stack" / "loops_state.json"
+        end = time.monotonic() + 20
+        while "bg" in json.loads(lst.read_text())["loops"] and time.monotonic() < end:
+            time.sleep(0.1)
+        self.assertNotIn("bg", json.loads(lst.read_text())["loops"])
+        (cell / "ctl.json").unlink()
+        code, res, err = ai(self.root, "start", "bg", "--interval-ms", "200")
+        self.assertTrue(res and res["ok"] and res["background"]["phase"] == "running", (res, err))
         code, res, _ = ai(self.root, "stop", "bg")
         self.assertTrue(res["ok"])
         code, res, _ = ai(self.root, "daemon", "down")
         self.assertFalse(res["running"])
-        ctl = json.loads((Path(self.root) / "daemon" / ".stack" / "ctl.json").read_text())
+        ctl = json.loads((Path(self.root) / "daemon" / ".stack" / "daemon_ctl.json").read_text())   # 11-02 原 ctl.json
         lctl = json.loads((Path(self.root) / "daemon" / ".stack" / "loops_ctl.json").read_text())   # 10-29 daemon 拆窗
         self.assertEqual((lctl["loops_added"], ctl["stopped"], "loops_added" in ctl), ({}, True, False))
 

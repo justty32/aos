@@ -415,10 +415,11 @@ class External(Base):
         ds = Path(self._tmp.name) / "dstack"
         ds.mkdir()
         dj = Path(self._tmp.name) / "daemon.json"
-        dj.write_text(json.dumps({"interval_ms": 100, "ctl": "ctl.json", "state": "state.json", "loops_mailbox": "loops_mailbox"}))
+        dj.write_text(json.dumps({"interval_ms": 100, "ctl": "daemon_ctl.json", "state": "daemon_state.json",
+                                  "loops_ctl_mailbox": "loops_ctl_mailbox"}))
         d = self.popen(["aos-daemon", str(dj)], AOS_STACK=str(ds))
         end = time.time() + 20
-        while not (ds / "loops_mailbox" / "new").is_dir():
+        while not (ds / "loops_ctl_mailbox" / "new").is_dir():
             self.assertLess(time.time(), end)
             time.sleep(0.05)
         r = self.xrun(str(ROOT / "bin" / "aos-daemon-ctl"), "--daemon", str(ds), "add", "--ws", str(self.ws), "--name", "bob",
@@ -433,7 +434,7 @@ class External(Base):
         r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
         self.assertRegex(r.stdout, r"在跑     .*aos-loop")
         self.assertRegex(r.stdout, r"loop     phase (waiting|running)")
-        (ds / "ctl.json").write_text('{"stopped": true}')
+        (ds / "daemon_ctl.json").write_text('{"stopped": true}')
         self.assertEqual(d.wait(timeout=30), 0)
 
 

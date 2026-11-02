@@ -187,7 +187,8 @@ class Daemon:
     def __init__(self, root):
         self.dir = root.dir / "daemon"
         self.stack = self.dir / ".stack"
-        self.cfg, self.ctl, self.state = self.dir / "daemon.json", self.stack / "ctl.json", self.stack / "state.json"
+        # 11-02：daemon 自己的窗慣用名 daemon_ctl.json／daemon_state.json（原 ctl.json／state.json；子 loop 小格裡的照舊）
+        self.cfg, self.ctl, self.state = self.dir / "daemon.json", self.stack / "daemon_ctl.json", self.stack / "daemon_state.json"
         # 10-29 aos-daemon 拆窗：名單的手把、子項表另外一對（daemon.json 沒寫＝這兩個預設檔名）
         self.lctl, self.lstate = self.stack / "loops_ctl.json", self.stack / "loops_state.json"
 
@@ -219,12 +220,18 @@ class Daemon:
         return None
 
     def row(self, name):
+        """表上那一列；11-02 起只有還在跑的（running、stopping）在表上，結束的看 daemon 的 log。daemon 沒在跑＝None。"""
         st = self.read_lstate() or {}
         return (st.get("loops") or {}).get(name) if self.running() else None
 
+    def cell_run(self, name):
+        """子 loop 小格的 state.json 是哪個行程寫的：(pid, started_at_ticks)，沒有＝None（start 拿來看「一次就跑完」的有沒有起過）。"""
+        st = read_json(self.stack / "loops" / name / "state.json")
+        return (st.get("pid"), st.get("started_at_ticks")) if isinstance(st, dict) else None
+
     def write_ctl(self, change, path=None):
         """ctl 是宣告（N-06）：讀現在那份、改、seq＋1、整份換掉；同時只一個 aos-ai 寫（flock）。回 seq。
-        path 沒給＝ctl.json（stopped 這類 loop 面向）；名單寫 self.lctl（loops_ctl.json，10-29 拆窗）。"""
+        path 沒給＝daemon_ctl.json（stopped 這類 loop 面向）；名單寫 self.lctl（loops_ctl.json，10-29 拆窗）。"""
         path = path or self.ctl
         self.stack.mkdir(parents=True, exist_ok=True)
         with open(self.dir / ".ctl.flock", "w") as lock:

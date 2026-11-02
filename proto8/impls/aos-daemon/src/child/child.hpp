@@ -27,14 +27,13 @@ struct Child {
     bool own = true;                    // 自己 fork 的（false＝adopt 接回來的，不是我們的子行程）
     bool once = false;                  // exec 型子項（execs，10-30）：直接 aos-exec 一次、不包 aos-loop；loops_state 裡在 execs 表
     bool reaped = false;
-    std::string phase = "running";      // running／stopping（送了 SIGTERM、還沒退）／done（自己結束）／stopped（daemon 收掉）
+    std::string phase = "running";      // running／stopping（送了 SIGTERM、還沒退）／done（自己結束）／stopped（daemon 收掉）；
+                                        // 11-02 起 done／stopped 只是印 log 那一刻的值，印完就從表上拿掉（子項結束後不留名單）
     Json code;                          // null 或結束碼（被訊號停掉＝128＋N）
     Json signal;                        // null 或停掉它的訊號
-    // 收的途中（phase stopping）：SIGTERM 之後到這一刻還沒退就 SIGKILL 整群（連底下自成一群的單子，10-24 審後）；killed＝已經送過 SIGKILL；
-    // removing＝收完要從表上拿掉（ctl 的 loops 少了它；收工時全部收、不拿掉）
+    // 收的途中（phase stopping）：SIGTERM 之後到這一刻還沒退就 SIGKILL 整群（連底下自成一群的單子，10-24 審後）；killed＝已經送過 SIGKILL
     std::chrono::steady_clock::time_point deadline;
     bool killed = false;
-    bool removing = false;
     Json ws;                            // null 或起它時給的工作區（絕對路徑；子行程的 AOS_WS）——起的那一刻的值，名單後來改了 ws 也不變（已在跑的不重起，N-54）
 };
 
@@ -48,7 +47,8 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
 // 起一個 exec 型子項（execs，10-30）。spec＝aos-exec 的目標：字串或 [目標, 參數...]（read_execs 驗過），
 // 或 {"exec": 上面兩種, "ws": 絕對路徑}（子項寫了 ws，read_execs 收成這樣；子行程設 AOS_WS，eca 10-30）；相對路徑從 cwd（daemon 的 cwd）算——
 // 子行程 cd 到 cwd 才叫 aos-exec，所以不轉。小格建不了 MkdirFailed、stderr 開不了／fork 失敗 LaunchFailed；aos-exec 自己的錯寫在小格的
-// stderr.txt、子項以 1 結束（phase done、code 1）。它退了＝done、不重起（同子 loop）。
+// stderr.txt、子項以 1 結束（phase done、code 1）。它退了＝done、從表上拿掉、本次執行不再起（同子 loop，11-02）。
+// 11-02 晚：spec 的 exec 是內嵌單子（物件）＝寫成小格的 exec.json {"exec": 單子}（cwd 定成 daemon 的 cwd，pin_cwd），子行程跑 `aos-exec -- 小格/exec.json#/exec`。
 Child spawn_exec(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd);
 
 // 還活著嗎（自己生的：結束了就收屍、記 code／signal）。

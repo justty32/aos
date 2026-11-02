@@ -104,14 +104,14 @@
 ## daemon
 
 一句：`aos-daemon daemon.json`＝顧一群子 loop（`loops`），每個子項一個小格 `$AOS_STACK/loops/<名>/`（11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../../../../thinking/2026-11-02-stack-tools.md)）；daemon.json 是 loop.json 的超集。
-範例：`{"interval_ms": 500, "ctl": "ctl.json", "state": "state.json", "loops": {"bob": {"exec": {"argv": ["aos-exec", "--ws", "/w/bob", "/agents/bob"]}, "interval_ms": 2000}}}`
-名單的手把與子項表另有一對窗（10-29）：`loops_ctl.json`（`loops`、`loops_added`、`loops_removed`、`seq`）、`loops_state.json`（`loops` 表、`ctl_seq`、`ctl_warning`、心跳）；daemon.json 的 `loops_ctl`／`loops_state` 沒寫＝這兩個檔名、`null`＝不開。
-常見錯：子 loop 結束後**不自動重起**（停在表上 `done`；要再起就從 loops_ctl 拿掉再放回）；名單寫在 `ctl.json` 不生效（只在 state 的 `ctl_warning` 提醒）；ctl `paused` 時名單也不調；（子項名字跟自己的窗同名 11-02 起不擋：小格在 `loops/<名字>/`）；PATH 上要有 aos-loop 和 aos-exec。
+範例：`{"interval_ms": 500, "ctl": "daemon_ctl.json", "state": "daemon_state.json", "loops": {"bob": {"exec": {"argv": ["aos-exec", "--ws", "/w/bob", "/agents/bob"]}, "interval_ms": 2000}}}`
+daemon 自己的窗慣用名 `daemon_ctl.json`／`daemon_state.json`（11-02；子 loop 小格裡的照舊 `ctl.json`／`state.json`）。名單的手把與子項表另有一對窗（10-29）：`loops_ctl.json`（`loops`、`loops_added`、`loops_removed`、`execs`、`execs_added`、`execs_removed`、`seq`）、`loops_state.json`（`loops`、`execs` 兩張表〔只有還在跑的〕、`ctl_seq`、`ctl_warning`、`pid`、`started_at_ticks`、`boot_id`、`updated_at`）；daemon.json 的 `loops_ctl`／`loops_state` 沒寫＝這兩個檔名、`null`＝不開。另可開信箱 `"loops_ctl_mailbox": "loops_ctl_mailbox"`（aos-daemon-ctl 投信用）。
+常見錯：子 loop 結束後**不自動重起**，而且**從表上拿掉**（11-02；結束碼看 daemon 的 log：`aos-daemon --enable-logs` 時 stdout 每個子項起來一行、結束一行）；本次執行要再起＝先讓 loops_ctl 某一圈沒有它（拿掉、等 `ctl_seq` 回音）再放回，信箱模式再投一封同名 `loops_added` 就好；名單寫在 `ctl.json` 不生效（只在 state 的 `ctl_warning` 提醒）；ctl `paused` 時名單也不調；（子項名字跟自己的窗同名 11-02 起不擋：小格在 `loops/<名字>/`）；PATH 上要有 aos-loop 和 aos-exec。
 出處：N-28、N-54、impls/aos-daemon。
 
 ## window
 
-一句：**ctl／state 兩扇窗**（`$AOS_STACK` 底下的檔）：ctl 誰都能寫、loop 只讀（宣告式：`paused`、`stopped`、`max`、`interval_ms`、`seq`；daemon 的名單另寫在 `loops_ctl.json`：`loops`、`loops_added`、`loops_removed`、`seq`）；state 只有 loop 自己寫（`phase`、`counter_runs`（跑過幾次；計數一律 `counter_<被數的東西>`）、`ctl_seq` 回音、`ctl_warning`、`pid`、`started_at_ticks`、`recorded_at`）。
+一句：**ctl／state 兩扇窗**（`$AOS_STACK` 底下的檔）：ctl 誰都能寫、loop 只讀（宣告式：`paused`、`stopped`、`max`、`interval_ms`、`seq`；daemon 的名單另寫在 `loops_ctl.json`：`loops`、`loops_added`、`loops_removed`、`seq`）；state 只有 loop 自己寫（`phase`、`counter_runs`（跑過幾次；計數一律 `counter_<被數的東西>`）、`ctl_seq` 回音、`ctl_warning`、`pid`、`started_at_ticks`、`boot_id`、`updated_at`）；state **有變才寫**（`counter_runs` 不算變動，沒有心跳），判活著＝`pid`＋`started_at_ticks`（＋`boot_id`）對 /proc，不看檔案新不新（11-02）。
 範例：叫停 `{"stopped": true, "seq": 2}`；daemon 加一隻寫 `loops_ctl.json`：`{"seq": 3, "loops_added": {"carl": "agent-carl"}}`，等 `loops_state.json` 的 `ctl_seq` 變 3＝讀到了。
 常見錯：寫 ctl 沒先寫暫存再改名（N-05）；壞的 ctl 整份不採用、原因在 `ctl_warning`；拿掉 `loops_added`＝加進來的會被收掉（宣告，不是指令）。
 出處：N-06～N-09、N-13、N-17、N-32、N-54。

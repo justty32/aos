@@ -18,6 +18,8 @@ daemon 沒在跑〔loops_state.json 的 pid＋started_at_ticks 對不上〕＝Da
   add＝aos-daemon-ctl add --ws 資料夾 --name 名字 定義（名字沒給＝資料夾名）；資料夾沒有 .stack 就由 aos-daemon-ctl 建 symlink 指到小格
   （衝突 3），cd 進去 aos-say／aos-listen 就接上；已經有＝不建、它在 stderr 說一句。
 「掛著的外部 agent」＝daemon 的 loops 表上、小格裡有 eca.json 的（aos-eca-turn 每次跑都寫：kind、ws、template）；add 之後子 loop 跑第一次才有。
+  11-02 起子項結束 daemon 就從表上拿掉（不留 done 列）：表上沒有、小格在、小格的 state.json（子 loop 自己的窗）是 done 而且結束碼不是 0
+  ＝「出錯停了」也算掛著（列得到、close 重新掛上；結束碼取自那份 state.json）；其他表上沒有的＝收掉了、不列。
 CLI 的小格＝<daemon>/loops/<名字>/<kind>/（cli_session 的 session.txt、tty.sock、live.jsonl、transcripts/）。
 畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。「暫停」只有 ctl.json 的 paused 一種（寫 <小格>/ctl.json），這裡不另做。
 錯：stderr 一行 `aos-eca-hub: 代號 原因`、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、
@@ -85,7 +87,7 @@ def daemon_dir():
     except (OSError, ValueError, KeyError, TypeError, IndexError):
         alive = False
     if not alive:
-        die("DaemonMissing", "%s 的 aos-daemon 沒在跑（loops_state.json 不在或心跳的行程不在）" % d)
+        die("DaemonMissing", "%s 的 aos-daemon 沒在跑（loops_state.json 不在或寫它的行程不在）" % d)
     return d
 
 
@@ -104,10 +106,31 @@ def ctl(*args):
     return r.stdout
 
 
+def ended_failed(d, rows):
+    """表上沒有、小格的 state.json 是 done＋結束碼非 0 的（11-02 起 daemon 不留結束的列）：{名字: 那份 state 當列}（照名字排）。"""
+    out = {}
+    try:
+        names = sorted(os.listdir(os.path.join(d, "loops")))
+    except OSError:
+        return out
+    for name in names:
+        if name in rows:
+            continue
+        try:
+            with open(os.path.join(d, "loops", name, "state.json"), encoding="utf-8") as f:
+                st = json.load(f)
+        except (OSError, ValueError):
+            continue
+        if isinstance(st, dict) and st.get("phase") == "done" and st.get("code") not in (0, None):
+            out[name] = {"phase": "done", "code": st["code"], "pid": None}
+    return out
+
+
 def instances():
-    """daemon 的 loops 表上、小格有 eca.json 的：[{name, cell, phase, code, pid, kind, ws, template}]（照表的順序）。"""
+    """daemon 的 loops 表上（＋出錯停了下表的）、小格有 eca.json 的：[{name, cell, phase, code, pid, kind, ws, template}]（照表的順序）。"""
     d = daemon_dir()
     rows = json.loads(ctl("ls", "--json") or "{}").get("loops", {})
+    rows = dict(rows, **ended_failed(d, rows))
     out = []
     for name, r in rows.items():
         cell = os.path.join(d, "loops", name)          # 11-02：子項的小格在 <daemon>/loops/<名字>/
@@ -196,7 +219,7 @@ def rows_named(name):
 
 
 def gone(name):
-    """daemon 收掉它了：表上沒有這列，或那列是 done／stopped（不會再動）。"""
+    """daemon 收掉它了：表上沒有這列（11-02 起結束的就下表），或那列是 done／stopped（不會再動）。"""
     rows = rows_named(name)
     return not rows or all(r.get("phase") in ("done", "stopped") for r in rows)
 

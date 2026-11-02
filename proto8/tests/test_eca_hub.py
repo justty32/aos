@@ -63,11 +63,11 @@ class EcaHub(unittest.TestCase):
         return e
 
     def start_daemon(self):
-        (self.tmp / "daemon.json").write_text(json.dumps({"interval_ms": 100, "ctl": "ctl.json", "state": "state.json",
-                                                          "loops_mailbox": "loops_mailbox"}))
+        (self.tmp / "daemon.json").write_text(json.dumps({"interval_ms": 100, "ctl": "daemon_ctl.json", "state": "daemon_state.json",
+                                                          "loops_ctl_mailbox": "loops_ctl_mailbox"}))
         self.daemon = subprocess.Popen([DAEMON, str(self.tmp / "daemon.json")], cwd=str(self.tmp), env=self.env({"AOS_STACK": str(self.ds)}),
                                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
-        self.assertTrue(self.until(lambda: (self.ds / "loops_mailbox" / "new").is_dir() and (self.ds / "loops_state.json").is_file()))
+        self.assertTrue(self.until(lambda: (self.ds / "loops_ctl_mailbox" / "new").is_dir() and (self.ds / "loops_state.json").is_file()))
 
     def until(self, f, secs=20):
         end = time.time() + secs
@@ -127,7 +127,7 @@ class EcaHub(unittest.TestCase):
         """AOS_DAEMON 沒設＝DaemonMissing；資料夾在、daemon 沒在跑（沒有 loops_state、或心跳的行程不在）＝同。"""
         self.assertEqual(self.code(self.hub("ls", env=self.env(daemon=False))), (1, "DaemonMissing"))
         self.assertEqual(self.code(self.hub("ls")), (1, "DaemonMissing"))
-        (self.ds / "loops_state.json").write_text(json.dumps({"kind": "state", "loops": {}, "pid": 999999999,
+        (self.ds / "loops_state.json").write_text(json.dumps({"loops": {}, "pid": 999999999,
                                                               "started_at_ticks": 1}))
         r = self.hub("add", "--template", self.tpl, self.ws())
         self.assertEqual(self.code(r), (1, "DaemonMissing"))
@@ -207,13 +207,15 @@ class EcaHub(unittest.TestCase):
         self.assertTrue((d / ".stack").is_dir() and not (d / ".stack").is_symlink())
 
     def test_failed_close_readds(self):
-        """CLI 失敗＝子 loop 停（P-20）、ls 標「出錯停了」、信留 cur/；修好後 close 一次＝拿掉再掛回去，接著答那封。"""
+        """CLI 失敗＝子 loop 停（P-20）、ls 標「出錯停了」、信留 cur/；修好後 close 一次＝拿掉再掛回去，接著答那封。
+        11-02 起停了的子項不在 daemon 的表上：hub 看小格的 state.json（done＋結束碼非 0）認它。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
         self.broken.write_text("")
         sig = self.say(w, "會壞的一句")
         self.assertTrue(self.until(lambda: self.ls()[0]["state"] == "出錯停了"), self.ls())
+        self.assertNotIn(name, self.daemon_rows())
         self.assertEqual(os.listdir(self.ds / "loops" / name / "queue" / "cur"), [sig])
         self.broken.unlink()
         r = self.hub("close", name)

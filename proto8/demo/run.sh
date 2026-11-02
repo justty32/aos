@@ -64,9 +64,9 @@ echo "######## daemon-2"   # 信箱模式：daemon 放背景跑 25 圈（約 5 �
 ws=$(mktemp -d)
 aos-post init "$ws/inbox"
 (cd "$ws" && aos-exec "$here/daemon-2" --max 25) & d=$!
-i=0; while [ ! -d "$ws/.stack/loops_mailbox/new" ] && [ $i -lt 100 ]; do sleep 0.1; i=$((i+1)); done
+i=0; while [ ! -d "$ws/.stack/loops_ctl_mailbox/new" ] && [ $i -lt 100 ]; do sleep 0.1; i=$((i+1)); done
 echo '{"loops_added": {"tock": {"exec": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tock.txt"}]}, "interval_ms": 500}}}' |
-  aos-post send --reply-to "$ws/inbox" "$ws/.stack/loops_mailbox" >/dev/null
+  aos-post send --reply-to "$ws/inbox" "$ws/.stack/loops_ctl_mailbox" >/dev/null
 wait $d; echo "結束碼 $?"
 echo "--- 回信"; cat "$ws"/inbox/new/*/letter.json; echo
 show "$ws"; rm -rf "$ws"
