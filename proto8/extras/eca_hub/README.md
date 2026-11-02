@@ -19,21 +19,22 @@
 | `aos-eca-hub ls [--json]` | 列掛著的：名字、狀態、種類、工作區、對話 id 前 8 碼 | `aos-daemon-ctl ls --json` 的 loops 表，只留小格裡有 `eca.json` 的（aos-eca-turn 每次寫：`kind`、`ws`、`template`） |
 | `aos-eca-hub state [資料夾\|名字]` | 這裡是不是掛著的外部 agent；不是＝`InstanceMissing`、退 1 | 同一張表 |
 | `aos-eca-hub open [-d] [--kind …\|--template …] [--name N] [資料夾\|名字]` | 接進畫面；沒開就開（有對話就 `--resume` 叫回）；還沒掛就先 add。`-d` 只開不接 | cli_session 的 `open_cell`（agent-fay 的 attach 同一段）；只有人開畫面，aos-eca-turn 從不自己開 |
-| `aos-eca-hub close [資料夾\|名字]`／`close --idle 分` | 收起：關畫面、對話留著，aos-eca-turn 照樣用 `--resume` 答；**出錯停了的**（子 loop 以非 0 結束，P-20）close 一次＝拿掉再掛回去、重新收（信還在 `cur/`，aos-eca-turn 接著做） | `tmux kill-server`；正在答題＝`SessionBad` |
+| `aos-eca-hub close [資料夾\|名字]`／`close --idle 分` | 收起：關畫面、對話留著，aos-eca-turn 照樣用 `--resume` 答；**出錯停了的**（子 loop 以非 0 結束，P-20）、**收工了的**（子 loop 自己以 0 結束，例如 ctl.json 寫了 stopped）close 一次＝拿掉再掛回去、重新收（信還在 `cur/`，aos-eca-turn 接著做） | `tmux kill-server`；正在答題＝`SessionBad` |
 | `aos-eca-hub stop [資料夾\|名字]` | 結束：關畫面、從 daemon 拿掉、拿掉工作區的 `.stack` 捷徑、小格搬到 `$AOS_DAEMON_STACK/eca_archive/<名字>-<UTC>/`、`transcripts/` 的 symlink 換成真的複製 | `aos-daemon-ctl rm` → 等那列 `done`／`stopped` 或不見 → 捷徑還在就拿掉 → 搬小格 → `freeze_transcripts` |
 | `aos-eca-hub watch [資料夾\|名字]` | 跟著看非互動那次在做什麼（讀了哪個檔、說了什麼、花多少），一次回答結束就走 | 讀 CLI 小格的 `live.jsonl` |
 
 - **小格**：daemon 的 `$AOS_DAEMON_STACK/loops/<名字>/`（11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../../thinking/2026-11-02-stack-tools.md)）就是這隻的 stack（`queue/`、`history.jsonl`、`ctl.json`、`state.json`、`trace.jsonl`、`eca.json`），CLI 的小格是它底下的 `<kind>/`（`session.txt`、`tty.sock`、`live.jsonl`、`transcripts/`…）。
 - **`.stack` symlink**（衝突 3）：add 時工作區沒有 `.stack`，aos-daemon-ctl 就建一個捷徑指到小格，cd 進去 `aos-say`、`aos-listen` 直接接上；已經有（例如直接 `aos-exec` 跑過留下的真 `.stack/`）＝不建、stderr 一句「工作區已有 .stack，沒建捷徑…要接上請先搬開（或用 `--stack $AOS_DAEMON_STACK/loops/<名字>`〔11-02 改〕）」，add 照樣退 0。rm／stop 時指到小格的那條會拿掉，工作區不留東西。
 - **歸檔放哪**（使用者 10-30「A」，翻 10-28 hub-kernel 決定 6）：放 daemon 小格那邊 `$AOS_DAEMON_STACK/eca_archive/<名字>-<UTC>/`；工作區永遠只有 `.stack` 捷徑，stop 時捷徑拿掉就好（aos-daemon-ctl rm 會拿；萬一還指著小格或小格裡面，這支補拿），不在工作區建真的 `.stack/`。之後再 add 同一個資料夾，捷徑照樣建得起來。
-- **狀態**：`收起了`、`畫面開著`、`出錯停了`，或 daemon 的 `phase`（`stopping`…）。11-02 起 daemon 不留結束的子項：表上沒有、小格的 `state.json` 是 `done` 而且結束碼非 0＝`出錯停了`（照樣列、close 重新掛上）；其他表上沒有的＝收掉了、不列。「暫停」只有一種：寫小格的 `ctl.json` `{"paused": true}`（aos-loop 的窗，不餵下一則），這裡不另做 pause（10-28 的 `pause` 改名 `close`）。
+- **狀態**：`收起了`、`畫面開著`、`出錯停了`、`收工了`，或 daemon 的 `phase`（`stopping`…）。11-02 起 daemon 不留結束的子項：表上沒有、小格的 `state.json` 是 `done` 而且結束碼非 0＝`出錯停了`；是 `done`／`stopped` 而且結束碼 0（例如外部寫小格 `ctl.json` `{"stopped": true}` 收工，11-02 晚）＝`收工了`；這兩種照樣列、stop 能歸檔、close 重新掛上。其他表上沒有的（被 rm 收掉、退非 0）＝收掉了、不列。
+- **重新掛上前清殘留 `stopped`**（11-02 晚）：add、open（還沒掛時）、close 重新掛上走到 aos-daemon-ctl add 之前，小格 ctl 窗（定義 `loop.json` 的 `ctl`）有 `stopped` 就只拿掉這個 key（沒別的 key＝刪檔），免得新的子 loop 一起來就收工；其他 key（`paused`…）照留。工作區 `.stack` 已經是指到同一小格的捷徑時，aos-daemon-ctl 當作已接上、不警告。「暫停」只有一種：寫小格的 `ctl.json` `{"paused": true}`（aos-loop 的窗，不餵下一則），這裡不另做 pause（10-28 的 `pause` 改名 `close`）。
 - 畫面裡 **Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束**。人在畫面上自己打的話不進 history（方向題 2），全貌看 `transcripts/`。
 - 定義＝頂層有 `cli.json` 的資料夾（`kind`、`flags`、`print_flags`、`timeout_ms`），要別的模型、權限就複製一份 `demo/eca-claude` 改 `cli.json`，用 `--template` 指。
 
 ## 對它說話
 
 ```sh
-export AOS_DAEMON_STACK=~/aos-daemon/.stack      # 一個信箱模式的 aos-daemon 在跑（daemon.json 寫 loops_ctl_mailbox）
+export AOS_DAEMON_STACK=~/aos-daemon/.stack      # 一個信箱模式的 aos-daemon 在跑（daemon.json 寫 loops_ctl_mailbox）；要絕對路徑，相對路徑 cd 之後就對不上
 aos-eca-hub add ~/code/myproj                    # 掛上：~/code/myproj/.stack → $AOS_DAEMON_STACK/loops/myproj/
 cd ~/code/myproj
 aos-say 讀 src/calc.py 說說裡面有什麼 && aos-listen   # 畫面開著＝打進畫面、沒開＝--resume 問一次
@@ -47,9 +48,12 @@ aos-eca-hub stop                                 # 結束：看 $AOS_DAEMON_STAC
 
 ## 已知限制
 
+- **`AOS_DAEMON_STACK` 要給絕對路徑**，相對路徑 cd 之後就對不上：在 A 資料夾 add 得上，cd 到工作區後 open／ls／close／stop 都是 `DaemonMissing`（say／listen 走工作區的 `.stack` 捷徑，不受影響）。使用者 11-02 晚選「3」：維持、只寫清楚（[eca 09 § 決定 11-02 晚](../../thinking/2026-10-30-eca/09-方向題.md#決定11-02-晚使用者)）。
+- **`reap.json` 目前沒人跑**（11-02 晚盤點發現、沒改）：add 不會起它、試驗場也沒掛，裡面又是相對路徑 `bin/aos-eca-hub`；所以「畫面閒 30 分自動收」實際上沒在運作。
 - **daemon 的 PATH**：子 loop 用 daemon 啟動時的環境叫 claude／codex、aos-eca-turn、aos-post。從沒有 `~/.local/bin` 的 shell 起 daemon，每則都 `CliMissing`。
 - **新資料夾第一次開畫面，claude 會先問「信任這個資料夾嗎」**：人 `open` 接進去回答就好；`open -d` 之後馬上 say，那句會被貼進這個提問。非互動（`-p`）沒有這個提問。
 - **ls 要等子 loop 跑第一次**：`eca.json` 是 aos-eca-turn 寫的，add 之後一個 `interval_ms` 內才列得到。
+- **收工了的（ctl.json `stopped`）在 daemon 表上沒有**：`aos-daemon-ctl rm` 拿不到它的 `ws`，捷徑不會被 ctl 拆；用 `aos-eca-hub stop`（這支補拿）或 close／add 重新掛上。直接寫 `stopped` 又馬上 add，可能把那次收工取消（aos-loop 每 interval 讀一次 ctl），不另處理。
 - **直接 `aos-exec` 跑過的工作區留著真的 `.stack/`**：之後再 add 這個資料夾，aos-daemon-ctl 看到 `.stack` 已在就不建捷徑、印一行警告（add 照樣退 0），cd 進去 aos-say 接到的是舊的那個；要接上就先搬開（例如 `mv .stack .stack-direct`）再 add，或用 `--stack $AOS_DAEMON_STACK/loops/<名字>`（11-02 改）。
 - codex 沒有「正在跑一輪」的訊號：人在畫面上送出、還沒講完就跳出，aos-eca-turn 這時送字會插進去（10-24 舊坑）。
 - `watch` 只讀 `live.jsonl`（非互動那條路）；畫面上那幾輪看不到，要 `open` 進去看。`live.jsonl` 只接不重寫，會一直長。

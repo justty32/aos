@@ -31,7 +31,8 @@ add 的自動識別（11-02 拿掉 --kind，使用者「把--kind刪掉」）：
 --ws WS（10-30 eca 第 2 步，thinking 2026-10-30-eca 衝突 1、3）：這個子項的工作區。WS 從呼叫當下的 cwd 轉絕對（不是資料夾＝PathMissing），
   寫進子項物件的 ws（loop＝子項設定多一個 ws；exec＝{"exec": XXX 或 [XXX, 參數...], "ws": WS}），daemon 起它時設 AOS_WS＝WS（沒給＝繼承 daemon 的）。
   另外：<WS>/.stack 不在（連壞掉的 symlink 都沒有）就建一個 symlink 指到這個子項在 daemon 的小格 <D>/loops/<名字>（11-02 改；小格還沒建也先建），
-  cd 到 WS 打 aos-say 等就接上這一隻；已經在（例如直接 aos-exec 跑過留下的真 .stack/）＝不建、
+  cd 到 WS 打 aos-say 等就接上這一隻；已經是指到這個小格的 symlink（realpath 相同；例如子項自己收工、rm 拿不到 ws 沒拆的那條）＝當作已接上、
+  不說話（11-02 晚代定）；其他已經在的（例如直接 aos-exec 跑過留下的真 .stack/、指到別處）＝不建、
   stderr 一句「aos-daemon-ctl: 注意 工作區已有 .stack…；要接上請先搬開（或用 --stack …）」，add 照樣送出、退 0（10-30 代定：照「注意」慣例，不報 StackExists）。
   ls 多一欄 ws（列上沒有＝-；--json 照 loops_state 原樣，有給 ws 的列帶 ws）。
   rm：信送出之後，loops_state 那一列有 ws、而且 <ws>/.stack 是指到 <D>/loops/<名字> 的 symlink＝順手拿掉（代定）；拿不到 ws、不是 symlink、指到別處＝不動。
@@ -117,8 +118,11 @@ def send(d, body):
 
 
 def link_stack(ws, cell):
-    """<ws>/.stack 不在就建 symlink 指到小格（衝突 3）；在（含壞掉的 symlink）＝不建、stderr 一句。"""
+    """<ws>/.stack 不在就建 symlink 指到小格（衝突 3）；已經是指到這個小格的 symlink（realpath 相同）＝已接上、不說話；
+    其他（真資料夾、指到別處、壞掉的 symlink）＝不建、stderr 一句。"""
     link = os.path.join(ws, ".stack")
+    if os.path.islink(link) and os.path.realpath(link) == os.path.realpath(cell):
+        return
     if os.path.lexists(link):
         sys.stderr.write("%s: 注意 工作區已有 .stack（%s），沒建捷徑到小格 %s；要接上請先搬開（或用 --stack %s）\n"
                          % (NAME, link, cell, cell))

@@ -129,7 +129,7 @@ class EcaHub(unittest.TestCase):
         return (r.returncode, (r.stderr.split() + ["", ""])[1])
 
     def test_daemon_missing(self):
-        """AOS_DAEMON_STACK 沒設＝DaemonMissing；資料夾在、daemon 沒在跑（沒有 loops_state、或心跳的行程不在）＝同。
+        """AOS_DAEMON_STACK 沒設＝DaemonMissing；資料夾在、daemon 沒在跑（沒有 loops_state、或它的 pid＋started_at_ticks 對不上；11-02 起沒有心跳）＝同。
         11-02 改名：只設舊的 AOS_DAEMON＝DaemonMissing、訊息提示 AOS_DAEMON_STACK；給舊旗標 --daemon＝FlagUnknown。"""
         self.assertEqual(self.code(self.hub("ls", env=self.env(daemon=False))), (1, "DaemonMissing"))
         r = self.hub("ls", env=self.env({"AOS_DAEMON": str(self.ds)}, daemon=False))
@@ -233,6 +233,54 @@ class EcaHub(unittest.TestCase):
         self.assertIn("重新掛上", r.stdout)
         self.assertIn("會壞的一句", self.listen(w))
         self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
+
+    def stopped_by_ctl(self, w, name, ctl=None):
+        """外部寫小格 ctl.json 的 stopped 收工：子 loop 以 0 結束、daemon 表上不留它；hub 列「收工了」。"""
+        self.say_listen(w, "一")
+        (self.ds / "loops" / name / "ctl.json").write_text(json.dumps(ctl or {"stopped": True}))
+        self.assertTrue(self.until(lambda: [x["state"] for x in self.ls()] == ["收工了"]), (self.ls(), self.daemon_rows()))
+        self.assertNotIn(name, self.daemon_rows())
+
+    def test_finished_listed_and_stop_archives(self):
+        """11-02 晚：ctl.json stopped 收工的（下了表、退 0）ls／state 照列「收工了」；stop 拿掉 .stack 捷徑、小格歸檔。"""
+        self.start_daemon()
+        w = self.ws()
+        name = self.add(w)
+        self.stopped_by_ctl(w, name)
+        r = self.hub("state", cwd=w)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("收工了", r.stdout)
+        r = self.hub("stop", name)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse(os.path.lexists(w / ".stack"))
+        self.assertFalse((self.ds / "loops" / name).exists())
+        self.assertEqual(len(list((self.ds / "eca_archive").iterdir())), 1)
+        self.assertEqual(self.ls(), [])
+
+    def test_finished_add_again_clears_stopped(self):
+        """收工了的再 add 同一資料夾：殘留的 stopped 拿掉（其他 key 照留）、.stack 已指著這個小格＝不警告，子 loop 重新收、答得出。"""
+        self.start_daemon()
+        w = self.ws()
+        name = self.add(w)
+        self.stopped_by_ctl(w, name, {"stopped": True, "paused": False})
+        r = self.hub("add", "--template", self.tpl, w)
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(json.loads((self.ds / "loops" / name / "ctl.json").read_text()), {"paused": False})
+        self.assertTrue(self.until(lambda: [x["state"] for x in self.ls()] == ["收起了"]), self.ls())
+        self.assertIn("第二輪", self.say_listen(w, "第二輪"))
+
+    def test_finished_close_readds(self):
+        """收工了的 close 一次＝跟出錯停了一樣重新掛上；ctl.json 只有 stopped＝整個檔拿掉。"""
+        self.start_daemon()
+        w = self.ws()
+        name = self.add(w)
+        self.stopped_by_ctl(w, name)
+        r = self.hub("close", name)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("重新掛上", r.stdout)
+        self.assertFalse((self.ds / "loops" / name / "ctl.json").exists())
+        self.assertIn("再來", self.say_listen(w, "再來"))
+        self.assertEqual(self.ls()[0]["state"], "收起了")
 
     def test_default_template(self):
         """不給 --template＝proto8/demo/eca-claude（方向題 3）：掛 daemon 時 aos-daemon-ctl 把 {"$env": "AOS_CD"} 換成定義路徑，

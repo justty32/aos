@@ -264,6 +264,18 @@ class T(unittest.TestCase):
         self.assertEqual((self.ctl("rm", "a").returncode, self.ctl("rm", "b").returncode), (0, 0))
         self.assertEqual(((w1 / ".stack").is_dir(), os.readlink(w2 / ".stack")), (True, str(self.t / "elsewhere")))
 
+    def test_add_ws_stack_already_to_cell(self):
+        # 11-02 晚代定：<WS>/.stack 已經是指到這個小格的 symlink（realpath 相同，例如寫成相對路徑）＝當作已接上、不說話、不動它
+        self.wsprog("job")
+        w = self.t / "p"
+        w.mkdir()
+        rel = os.path.relpath(str(self.s / "loops" / "job"), str(w))
+        os.symlink(rel, w / ".stack")
+        self.start()
+        r = self.ctl("add", "--ws", str(w), "job")
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(os.readlink(w / ".stack"), rel)
+
     def test_add_inst_points_back(self):
         # 11-01：loop 型的 exec 是內嵌單子＝小格的 exec 換成 <XXX>/loop.json#/exec，跑的時候 AOS_CD 是 XXX
         # （{"$env": "AOS_CD"}、帶 $path 的都照原地解）。demo/agent-nia（aos-fsm 表在 lib/agent/round）掛上去也一樣指回定義資料夾、

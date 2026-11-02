@@ -5,7 +5,7 @@
     aos-eca-hub ls    [--json]                         列掛著的外部 agent：名字、phase、畫面、種類、工作區、對話 id 前 8 碼
     aos-eca-hub state [資料夾|名字]                    這裡是不是掛著的外部 agent（不是＝InstanceMissing、退 1）
     aos-eca-hub open  [-d] [--kind …|--template …] [--name N] [資料夾|名字]   接進畫面（沒開就開、有對話就 --resume；還沒掛就先 add）
-    aos-eca-hub close [資料夾|名字]                    收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）；出錯停了的＝重新掛一次
+    aos-eca-hub close [資料夾|名字]                    收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）；出錯停了、收工了的＝重新掛一次
     aos-eca-hub close --idle 分                        收起所有畫面開著、閒了這麼多分的（reap.json 每分鐘叫一次）
     aos-eca-hub stop  [資料夾|名字]                    結束：關畫面、從 daemon 拿掉、拿掉工作區的 .stack 捷徑、小格搬到 <daemon>/eca_archive/<名字>-<UTC>/
     aos-eca-hub watch [資料夾|名字]                    跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走
@@ -19,7 +19,9 @@ daemon 沒在跑〔loops_state.json 的 pid＋started_at_ticks 對不上〕＝Da
   （衝突 3），cd 進去 aos-say／aos-listen 就接上；已經有＝不建、它在 stderr 說一句。
 「掛著的外部 agent」＝daemon 的 loops 表上、小格裡有 eca.json 的（aos-eca-turn 每次跑都寫：kind、ws、template）；add 之後子 loop 跑第一次才有。
   11-02 起子項結束 daemon 就從表上拿掉（不留 done 列）：表上沒有、小格在、小格的 state.json（子 loop 自己的窗）是 done 而且結束碼不是 0
-  ＝「出錯停了」也算掛著（列得到、close 重新掛上；結束碼取自那份 state.json）；其他表上沒有的＝收掉了、不列。
+  ＝「出錯停了」也算掛著（列得到、close 重新掛上；結束碼取自那份 state.json）；是 done／stopped 而且結束碼 0（例如外部寫了小格 ctl.json
+  {"stopped": true} 收工）＝「收工了」，也列（stop 能歸檔、close 重新掛上；11-02 晚）；其他表上沒有的（被 rm 收掉的退非 0）＝收掉了、不列。
+  掛上（add、open 還沒掛時、close 重新掛上）之前，小格 ctl 窗裡殘留的 stopped 先拿掉（只拿這個 key），免得新的子 loop 一起來就收工。
 CLI 的小格＝<daemon>/loops/<名字>/<kind>/（cli_session 的 session.txt、tty.sock、live.jsonl、transcripts/）。
 畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。「暫停」只有 ctl.json 的 paused 一種（寫 <小格>/ctl.json），這裡不另做。
 錯：stderr 一行 `aos-eca-hub: 代號 原因`、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、
@@ -108,8 +110,9 @@ def ctl(*args):
     return r.stdout
 
 
-def ended_failed(d, rows):
-    """表上沒有、小格的 state.json 是 done＋結束碼非 0 的（11-02 起 daemon 不留結束的列）：{名字: 那份 state 當列}（照名字排）。"""
+def ended(d, rows):
+    """表上沒有、小格的 state.json 是自己結束的（11-02 起 daemon 不留結束的列）：done＋結束碼非 0（出錯停了）、
+    done／stopped＋結束碼 0（收工了）。{名字: 那份 state 當列}（照名字排）。被收掉的（stopped＋非 0）不算。"""
     out = {}
     try:
         names = sorted(os.listdir(os.path.join(d, "loops")))
@@ -123,16 +126,18 @@ def ended_failed(d, rows):
                 st = json.load(f)
         except (OSError, ValueError):
             continue
-        if isinstance(st, dict) and st.get("phase") == "done" and st.get("code") not in (0, None):
-            out[name] = {"phase": "done", "code": st["code"], "pid": None}
+        if not isinstance(st, dict) or isinstance(st.get("code"), bool) or not isinstance(st.get("code"), int):
+            continue
+        if (st.get("phase") == "done" and st["code"] != 0) or (st.get("phase") in ("done", "stopped") and st["code"] == 0):
+            out[name] = {"phase": st["phase"], "code": st["code"], "pid": None, "ended": True}
     return out
 
 
 def instances():
-    """daemon 的 loops 表上（＋出錯停了下表的）、小格有 eca.json 的：[{name, cell, phase, code, pid, kind, ws, template}]（照表的順序）。"""
+    """daemon 的 loops 表上（＋出錯停了、收工了下表的）、小格有 eca.json 的：[{name, cell, phase, code, pid, ended, kind, ws, template}]（照表的順序）。"""
     d = daemon_dir()
     rows = json.loads(ctl("ls", "--json") or "{}").get("loops", {})
-    rows = dict(rows, **ended_failed(d, rows))
+    rows = dict(rows, **ended(d, rows))
     out = []
     for name, r in rows.items():
         cell = os.path.join(d, "loops", name)          # 11-02：子項的小格在 <daemon>/loops/<名字>/
@@ -144,6 +149,7 @@ def instances():
         if not isinstance(eca, dict) or eca.get("kind") not in ("claude", "codex"):
             continue
         out.append(dict(name=name, cell=cell, phase=r.get("phase"), code=r.get("code"), pid=r.get("pid"),
+                        ended=bool(r.get("ended")),
                         kind=eca["kind"], ws=eca.get("ws") or r.get("ws") or "", template=eca.get("template") or ""))
     return out
 
@@ -169,9 +175,16 @@ def failed(it):
     return it["phase"] == "done" and it["code"] not in (0, None)
 
 
+def finished(it):
+    """收工了：下了表、自己以 0 結束（例如小格 ctl.json 寫了 stopped）。"""
+    return it["ended"] and it["code"] == 0
+
+
 def label(it):
     if failed(it):
         return "出錯停了"
+    if finished(it):
+        return "收工了"
     if it["phase"] != "running":
         return it["phase"] or "-"
     return "畫面開著" if has_screen(it) else "收起了"
@@ -226,13 +239,48 @@ def gone(name):
     return not rows or all(r.get("phase") in ("done", "stopped") for r in rows)
 
 
+def clear_stopped(cell, template):
+    """小格的 ctl 窗（定義 loop.json 的 ctl，相對小格）有 stopped 就只拿掉這個 key（常駐 bob install 那條代定）：
+    沒別的 key＝刪檔，有＝先寫 .名字 再改名。檔不在、讀不懂、定義沒寫 ctl＝不動。"""
+    try:
+        with open(os.path.join(template, "loop.json"), encoding="utf-8") as f:
+            text = f.read()
+        if text.startswith("#!"):
+            text = text.split("\n", 1)[1] if "\n" in text else ""
+        name = json.loads(text).get("ctl")
+        if not isinstance(name, str) or not name:
+            return
+        p = os.path.join(cell, name)
+        with open(p, encoding="utf-8") as f:
+            c = json.load(f)
+        if not isinstance(c, dict) or "stopped" not in c:
+            return
+        del c["stopped"]
+        if not c:
+            os.unlink(p)
+            return
+        tmp = os.path.join(os.path.dirname(p), "." + os.path.basename(p))
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(c, f, ensure_ascii=False)
+        os.replace(tmp, p)
+    except (OSError, ValueError, AttributeError):
+        pass
+
+
+def hang(ws, name, template):
+    """掛上（aos-daemon-ctl add）；之前先拿掉小格殘留的 stopped。回小格。"""
+    cell = os.path.join(daemon_dir(), "loops", name)
+    clear_stopped(cell, template)
+    ctl("add", "--ws", ws, "--name", name, template)
+    return cell
+
+
 def do_add(opts, arg):
     ws = os.path.abspath(arg or ".")
     if not os.path.isdir(ws):
         die("WsMissing", "%s 不是資料夾" % ws)
     name = opts.get("--name") or os.path.basename(ws.rstrip("/"))
-    ctl("add", "--ws", ws, "--name", name, template_of(opts))
-    return name, os.path.join(daemon_dir(), "loops", name)
+    return name, hang(ws, name, template_of(opts))
 
 
 # ---------------------------------------------------------------- 子命令
@@ -325,11 +373,11 @@ def cmd_close(argv):
         closed = close_screen(r)
     except Busy as e:
         die("SessionBad", e)
-    if failed(r):                                        # 出錯停了（P-20）：拿掉再掛回去＝重新收（信還在 cur/，aos-eca-turn 接著做）
+    if failed(r) or finished(r):                         # 出錯停了（P-20）／收工了：拿掉再掛回去＝重新收（信還在 cur/，aos-eca-turn 接著做）
         ctl("rm", r["name"])
         wait_for(lambda: not rows_named(r["name"]), "daemon 還沒把 %s 拿掉" % r["name"])
-        ctl("add", "--ws", r["ws"], "--name", r["name"], r["template"])
-        print("收起了，重新掛上（上次停在結束碼 %s）" % r["code"])
+        hang(r["ws"], r["name"], r["template"])
+        print("收起了，重新掛上（上次%s，結束碼 %s）" % ("收工了" if finished(r) else "停在出錯", r["code"]))
         return
     print("收起了" if closed else "本來就沒畫面（已收起）")
 
