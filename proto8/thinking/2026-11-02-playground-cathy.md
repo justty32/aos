@@ -19,7 +19,7 @@
 - `agents/cathy/`：跟 bob 同一種的 agent——`_entry.json`（`claude -p --model haiku --tools "" --strict-mcp-config --max-budget-usd 0.1 --append-system-prompt-file system.txt`）＋`system.txt`（題目是一句話或 `{"text": …}`，沒有工具、直接用自己的話答，開頭寫「cathy：」）。單獨叫：`aos-exec ../agents/cathy -- "題"`。
 - `agents/bob-cathy/`：bob 的複本＋串 MCP。
   - `_entry.json`＝bob 那串 argv 多兩組：`--mcp-config mcp.json`、`--allowedTools mcp__aos__cathy`。
-  - `mcp.json`＝`{"mcpServers": {"aos": {"command": "aos-mcp", "args": ["aos-tools.json"]}}}`——相對路徑從 claude 的 cwd＝這隻 agent 的資料夾算（aos-exec 會 cd 進來）；工作區與 stack 從 aos-exec 給的 `AOS_WS`／`AOS_STACK` 繼承，不另寫。
+  - `mcp.json`＝`{"mcpServers": {"aos": {"command": "aos-mcp", "args": ["aos-tools.json"]}}}`——相對路徑從 claude 的 cwd＝這隻 agent 的資料夾算（aos-exec 會 cd 進來）；工作區與 stack 從 aos-exec 給的 `AOS_WS`／`AOS_STACK` 繼承，不另寫。**11-02 改 `"args": ["--enable-logs"]`**（不帶登記檔＝預設 `./aos-tools.json`；加 `--enable-logs` 才記 `ws/.stack/aos-mcp-logs.jsonl`，[stack-tools](2026-11-02-stack-tools.md)）。
   - `system.txt`＝bob 的那份，cwd 改成 `agents/bob-cathy`，加一段「cathy 是另一隻 agent，會自己想、回以『cathy：』開頭的回答，可能要等十幾秒；照實用、不要自己編」。
   - `aos-tools.json`＝在 `agents/bob-cathy/` 裡跑 `aos-tools --file aos-tools.json add tools/cathy` 產生（寫絕對路徑）；原本的 `tools.json` 刪了。
   - `tools/cathy/`＝工具小資料夾：`_entry.json`＝`["/home/guanyu/code/playground/agents/cathy"]`（argv[0] 是資料夾＝前面插 aos-exec，N-61；arguments 的 JSON 從 stdin 一路接到 `claude -p`，claude 沒給題目參數時讀 stdin）、`_tooldef.json`（`{"text"}`）、`_metainfo`（`time_ms` `{"val": 15000, "max": 120000}`、`resource` `llm`）。原本的 `cathy.py` 刪了。
@@ -50,7 +50,7 @@ aos-exec ../agents/bob-cathy -- "請問 cathy：「為什麼天空是藍色的�
 4. **登記用 `aos-tools add`**，所以登記檔裡是絕對路徑，整個試驗場搬家要重新 add；手寫相對路徑 `tools/cathy` 也行（10-28 結論 6）。11-02 第二段起給 `--file aos-tools.json`。
 5. ~~cathy 的入口用 JSON argv `["python3", "cathy.py"]`~~——改成 agent 後見 10。
 6. **`mcp.json` 寫 `"command": "aos-mcp"`、靠 PATH 找**，所以 `env.sh` 加了 ai_tools/bin；不寫死 aos-mcp 的絕對路徑。
-7. **aos-mcp 的 stack 跟 bob 共用 `ws/.stack/`**（aos-mcp 預設：`$AOS_STACK`），cathy 每次叫的小格在 `ws/.stack/cathy/`。
+7. **aos-mcp 的 stack 跟 bob 共用 `ws/.stack/`**（aos-mcp 預設：`$AOS_STACK`），cathy 每次叫的小格在 `ws/.stack/cathy/`。**11-02 改 `ws/.stack/tools/cathy/`**（[stack-tools](2026-11-02-stack-tools.md) 選 B）。
 8. **`--allowedTools mcp__aos__cathy`**：`-p` 加 `acceptEdits` 不會自動放行 MCP 工具，要明列。
 9. **cathy agent 放 `agents/cathy/`，跟 bob 並排**（使用者「跟bob類似」）；bob-cathy 裡只放工具小資料夾（照 `lib/aos/ask_round` 那種「`_entry` 是 JSON argv、`_tooldef.json`／`_metainfo` 在小資料夾」的接法），所以 cathy 本身也能單獨叫。不把 agent 整份搬進 `tools/cathy/`。
 10. **工具小資料夾的 `_entry.json` 只寫 `["<agents/cathy 的絕對路徑>"]`**：argv[0] 是資料夾＝前面插 aos-exec（N-61）；寫絕對路徑是為了不出現 `..`（C-61／P-25）。不給 `--ws`：cathy 吃 stdin 吐 stdout、不需要工作區，照 P-32「不需要工作區的工具不給 `--ws`（沿用），只給 stack」——stack 由 aos-mcp 給 `ws/.stack/cathy/`。

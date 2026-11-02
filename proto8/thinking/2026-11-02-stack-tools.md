@@ -140,4 +140,6 @@ fable 照「誰給的名字」這把尺把它算成固定名、留頂層。但�
 - **步驟 3 ask_round**（`edc2a9dc`）：只改前綴：被問 agent 的工作區＝`$AOS_STACK/tools/<agent 名>/`，stack 照舊在它底下的 `.stack/`（方向題 1 使用者「先不管」）。
 - **步驟 4 daemon**（`0b0e6089`）：子項小格 `$AOS_STACK/loops/<名字>/`；`make_cell` 建 `loops/` 與小格兩層（`$AOS_STACK` 不在照舊建不了）；aos-daemon-ctl 的 `.stack` 捷徑、aos-eca-hub、talk 的 quiet.py、daemon-2 的信箱路徑（`$AOS_STACK/../../loops_mailbox`）跟著改。llm-kernel、human、lua 範例的測試也看子項小格，一併改。
 - **步驟 6 擋名字拿掉**（`5e4a0858`）：衝突 1 使用者「那兩題中的1.，可以」——aos-daemon 的 `taken_names`／`check_names` 與那條 `CfgBad`／loops_ctl 不採用的錯誤路徑拿掉；`loops` 與 `execs` 同名照擋、名字本身的規則（空、含 `/`、`.` 開頭…）照留。撞名測試改驗「同名照起、窗照寫」。
-- **步驟 5 條文**：照「條文那步」表改路徑、加日期註（P-17 主註含衝突 3「`tools` 是 stack 頂層保留名」；N-28 的擋名字寫成「11-02 翻案拿掉」，[10-22 ideas § 6](2026-10-22-ideas/03-5-loop.md) 加翻案註）；N-28 兩處「小格只建一層」照步驟 4 實作補成 `loops/` 與小格兩層。claude_skill 的 concepts.md 那句擋名字一起改。
+- **步驟 5 條文**（`60ef844d`）：照「條文那步」表改路徑、加日期註（P-17 主註含衝突 3「`tools` 是 stack 頂層保留名」；N-28 的擋名字寫成「11-02 翻案拿掉」，[10-22 ideas § 6](2026-10-22-ideas/03-5-loop.md) 加翻案註）；N-28 兩處「小格只建一層」照步驟 4 實作補成 `loops/` 與小格兩層。claude_skill 的 concepts.md 那句擋名字一起改。
+- **試驗場實跑（11-02 中午，WSL `~/code/playground`，impls 重建到 `60ef844d`）**：bob-cathy 的 `mcp.json` 改 `"args": ["--enable-logs"]`，真 haiku 跑一題過（結束碼 0、`cathy.txt` 寫好）：`ws/.stack/tools/cathy/` 長出來、`ws/.stack/aos-mcp-logs.jsonl` 一行（name cathy、code 0）。daemon 那組因為使用者自己的 daemon 正在 `ws/.stack` 跑（舊程式），改在一份拷貝的同樣佈局跑：clock 在 `.stack/loops/clock/`、投 bob 一題 `exec done 0`、小格 `.stack/loops/bob/`、`peach.txt` 寫好；停掉、拷貝刪掉。使用者那隻 daemon 重起後才會用新路徑，舊的 `.stack/clock/` 留在原地（衝突 2）。
+- **方向題 1**：使用者「先不管」（見「決定」），步驟 3 只改前綴。

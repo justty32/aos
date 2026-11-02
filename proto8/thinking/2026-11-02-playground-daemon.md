@@ -40,13 +40,13 @@ aos-exec ../daemons/main
 cd ~/code/playground && source env.sh && cd ws
 export AOS_DAEMON=$PWD/.stack
 aos-daemon-ctl ls                       # 名單：名字、loop/exec、phase、pid、結束碼
-tail -f .stack/clock/clock.txt          # clock 每 5 秒一行（隊長那輪落地後小格會變成 .stack/loops/clock/）
+tail -f .stack/loops/clock/clock.txt    # clock 每 5 秒一行（11-02 起小格在 .stack/loops/<名字>/）
 
 # 給 bob 題目（掛上）
 echo '{"execs_added": {"bob": ["../../agents/bob", "--", "在 env:AOS_WS 寫一首詩，詠桃花，檔名 peach.txt。"]}}' | aos-post send .stack/loops_mailbox
 aos-daemon-ctl ls                       # bob exec running → done 0（約幾秒到十幾秒）
 cat peach.txt                           # 結果
-cat .stack/bob/stderr.txt               # 出錯時看這裡（同上，之後是 .stack/loops/bob/）
+cat .stack/loops/bob/stderr.txt         # 出錯時看這裡
 
 # 拿掉／再問一題
 aos-daemon-ctl rm bob                   # 等 ls 看不到 bob 再投下一封（或換名字 bob2）
