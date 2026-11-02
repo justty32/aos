@@ -345,41 +345,33 @@ class T(unittest.TestCase):
         p2.communicate(timeout=30)
         self.assertEqual((p2.returncode, alive(k2["a"]["pid"])), (0, False))
 
-    def test_child_name_clashes_with_own_windows(self):
-        # 使用者 10-22「子項名字擋掉跟 ctl／state 同名」：小格 $AOS_STACK/<名字>/ 會跟 daemon 自己的 ctl、state 撞的名字，
-        # 起來時退 1（代號 CfgBad）
+    def test_child_name_same_as_own_windows(self):
+        # 11-02 拿掉 10-22 的「子項名字擋掉跟 ctl／state 同名」（使用者 11-02 答衝突 1「那兩題中的1.，可以」）：
+        # 小格在 $AOS_STACK/loops/<名字>/，跟 daemon 自己放在 stack 頂層的窗撞不到——同名照起、窗照寫
         absst = str(self.s / "st.json")
-        for win, name in (({"state": "state.json"}, "state.json"), ({"ctl": "ctl.json"}, "ctl.json"),
-                          ({"ctl": "w/c.json"}, "w"), ({"state": "./x/../s.json"}, "s.json"), ({"state": absst}, "st.json")):
-            r = self.run_d(dict(win, loops={name: self.long()}, max=1))
-            self.assertEqual(r.returncode, 1, (win, name))
-            self.assertTrue(r.stderr.startswith("aos-daemon: CfgBad ") and "撞名" in r.stderr
-                            and r.stderr.count("\n") == 1, r.stderr)
-            self.assertFalse((self.s / "loops" / name).exists(), name)
-        # 旗標給的 --state 也算
-        r = self.run_d({"loops": {"s2.json": self.long()}, "max": 1}, argv=("--state", "s2.json", "daemon.json"))
-        self.assertTrue(r.returncode == 1 and r.stderr.startswith("aos-daemon: CfgBad "), r.stderr)
-        # 不撞的照起：沒開 state 時 "state.json" 只是普通名字；ctl 在 stack 外面也不算
-        for win, name in (({}, "state.json"), ({"ctl": str(self.t / "ctl.json")}, "ctl.json")):
-            r = self.run_d(dict(win, loops={name: {"exec": "daemon.json#/b", "max": 1}},
-                                b={"argv": ["true"]}, max=3, interval_ms=100))
-            self.assertEqual((r.returncode, r.stderr, (self.s / "loops" / name / "loop.json").exists()), (0, "", True), (win, name))
+        (self.s / "x").mkdir()   # state 的路徑照字面寫（./x/../s.json 要 x 在）；11-02 前撞名在寫之前就擋了
+        for win, name, argv in (({"state": "state.json"}, "state.json", None), ({"ctl": "ctl.json"}, "ctl.json", None),
+                                ({"ctl": "w/c.json"}, "w", None), ({"state": "./x/../s.json"}, "s.json", None),
+                                ({"state": absst}, "st.json", None), ({}, "s2.json", ("--state", "s2.json", "daemon.json"))):
+            (self.s / "loops_state.json").unlink(missing_ok=True)
+            r = self.run_d(dict(win, loops={name: {"exec": "daemon.json#/b", "max": 1}}, b={"argv": ["true"]}, max=3,
+                                interval_ms=100), argv=argv or ("daemon.json",))
+            self.assertEqual((r.returncode, r.stderr, (self.s / "loops" / name / "loop.json").exists(),
+                              list(self.kids())), (0, "", True, [name]), (win, name))
+        for f in ("state.json", "s.json", "st.json", "s2.json"):
+            self.assertEqual(json.loads((self.s / f).read_text())["phase"], "done", f)   # 窗照寫
 
-    def test_ctl_loops_clash_not_adopted(self):
-        # loops_ctl 改 loops 撞名＝那份 loops_ctl 整份不採用、維持上一份好的，原因進 loops_state 的 ctl_warning（N-08）
+    def test_ctl_loops_same_name_as_windows_adopted(self):
+        # 11-02 起 loops_ctl 改名單用到跟窗同名的名字也照採用（10-22 的撞名不採用拿掉；小格在 loops/<名字>/）
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})
         k = until(lambda: (self.s / "loops" / "a" / "starts").exists() and self.kids())
-        for name in ("state.json", "loops_state.json"):
-            self.lctl({"loops": {name: self.long()}, "seq": 5})
-            ls = until(lambda: "撞名" in (self.lstate()["ctl_warning"] or "") and name in self.lstate()["ctl_warning"]
-                       and self.lstate())
-            self.assertTrue(ls, name)
-            self.assertEqual((list(ls["loops"]), ls["loops"]["a"]["pid"], alive(k["a"]["pid"]), ls["ctl_seq"]),
-                             (["a"], k["a"]["pid"], True, None), name)
+        self.lctl({"loops": {"a": self.long(), "state.json": self.long(), "loops_state.json": self.long()}, "seq": 5})
+        ls = until(lambda: self.lstate()["ctl_seq"] == 5 and set(self.kids()) == {"a", "state.json", "loops_state.json"}
+                   and self.lstate())
+        self.assertTrue(ls)
+        self.assertTrue(until(lambda: all((self.s / "loops" / n / "starts").exists() for n in ("state.json", "loops_state.json"))))
+        self.assertEqual((self.kids()["a"]["pid"], alive(k["a"]["pid"]), ls["ctl_warning"]), (k["a"]["pid"], True, None))
         self.assertTrue((self.s / "state.json").is_file() and (self.s / "loops_state.json").is_file())
-        self.assertIsNone(self.state()["ctl_warning"])   # 壞的是 loops_ctl：state.json 不提
-        self.lctl({"seq": 6})
-        self.assertTrue(until(lambda: self.lstate()["ctl_seq"] == 6 and self.lstate()["ctl_warning"] is None))
         self.ctl({"stopped": True})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err, self.state()["ctl_warning"]), (0, "", None))
@@ -614,7 +606,7 @@ class T(unittest.TestCase):
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})
         until(lambda: (self.s / "loops" / "a" / "starts").exists() and self.kids())
         for bad, why in (({"loops_removed": "a"}, "loops_removed"), ({"loops_removed": [1]}, "loops_removed"),
-                         ({"loops_added": {"x/y": "long"}}, "資料夾名"), ({"loops_added": {"state.json": "long"}}, "撞名"),
+                         ({"loops_added": {"x/y": "long"}}, "資料夾名"),
                          ({"loops_added": [{"b": "long"}]}, "要是 {名字"),
                          ({"loops_added": {"$ref": "nope.json"}}, "指示詞解不開")):
             self.lctl(dict(bad, loops_removed=bad.get("loops_removed", ["a"])))
@@ -650,9 +642,11 @@ class T(unittest.TestCase):
         left = sorted(x.name for x in (self.s / "loops_state_loops").iterdir())
         self.assertTrue(set(x.split("/")[1] for x in refs) <= set(left) and len(left) <= 4, left)   # 只留這次與上一次的
         self.assertFalse(any(x.startswith(".") for x in left), left)
-        # 子項名字不能跟分檔資料夾撞名
-        r = self.run_d({"state": "state.json", "max": 1, "loops": {"loops_state_loops": self.long()}})
-        self.assertTrue(r.returncode == 1 and "撞名" in r.stderr, r.stderr)
+        # 子項名字跟分檔資料夾同名也照起（11-02 拿掉撞名：小格在 loops/<名字>/，分檔資料夾在頂層）
+        (self.s / "loops_state.json").unlink()
+        r = self.run_d({"state": "state.json", "max": 3, "interval_ms": 100, "b": {"argv": ["true"]},
+                        "loops": {"loops_state_loops": self.quick()}})
+        self.assertEqual((r.returncode, r.stderr, (self.s / "loops" / "loops_state_loops" / "loop.json").exists()), (0, "", True))
 
     def test_state_split_adopt_and_shrink(self):
         # 切了檔的 loops_state 照樣接回；名單縮回 100 以內，loops 變回物件、分檔清掉
@@ -883,7 +877,7 @@ class T(unittest.TestCase):
         self.assertEqual(p.returncode, 0)
 
     def test_loops_windows_null_and_bad(self):
-        # loops_state／loops_ctl 寫 null＝不開：不寫 loops_state.json、不讀 loops_ctl.json，那兩個名字也就不撞名
+        # loops_state／loops_ctl 寫 null＝不開：不寫 loops_state.json、不讀 loops_ctl.json（11-02 起子項同名本來就不撞：小格在 loops/）
         (self.s / "loops_ctl.json").write_text(json.dumps({"loops_added": {"x": self.quick()}}))
         r = self.run_d({"state": "state.json", "loops_state": None, "loops_ctl": None, "max": 3, "interval_ms": 100,
                         "b": {"argv": ["true"]}, "loops": {"loops_state.json": self.quick()}})
@@ -899,15 +893,13 @@ class T(unittest.TestCase):
                 r = self.run_d({k: bad, "max": 1})
                 self.assertEqual((r.returncode, r.stderr.split(" ")[1], k in r.stderr), (1, "CfgBad", True), (k, bad, r.stderr))
 
-    def test_child_name_clashes_with_loops_windows(self):
-        # 撞名跟著多兩扇窗與分檔資料夾：預設 loops_ctl.json、loops_state.json、loops_state_loops；改了名照實際的第一段
+    def test_child_name_same_as_loops_windows(self):
+        # 跟 loops_ctl.json、loops_state.json、分檔資料夾（改了名的也一樣）同名的子項照起（11-02 拿掉 10-22 的撞名；小格在 loops/<名字>/）
         for win, name in (({}, "loops_ctl.json"), ({}, "loops_state.json"), ({}, "loops_state_loops"),
                           ({"loops_ctl": "lc/x.json"}, "lc"), ({"loops_state": "ls.json"}, "ls_loops")):
-            r = self.run_d(dict(win, loops={name: self.long()}, max=1))
-            self.assertEqual(r.returncode, 1, (win, name))
-            self.assertTrue(r.stderr.startswith("aos-daemon: CfgBad ") and "撞名" in r.stderr
-                            and r.stderr.count("\n") == 1, r.stderr)
-            self.assertFalse((self.s / "loops" / name).exists(), name)
+            r = self.run_d(dict(win, loops={name: self.quick()}, b={"argv": ["true"]}, max=3, interval_ms=100))
+            self.assertEqual((r.returncode, r.stderr, (self.s / "loops" / name / "loop.json").exists()), (0, "", True), (win, name))
+        self.assertTrue((self.s / "loops_state.json").is_file() and (self.s / "ls.json").is_file())
         # state.json 不再有 loops 表，原本的 state_loops 就只是普通名字
         r = self.run_d({"state": "state.json", "loops": {"state_loops": self.quick()}, "b": {"argv": ["true"]}, "max": 3,
                         "interval_ms": 100})
@@ -1001,7 +993,7 @@ class T(unittest.TestCase):
         p = self.mstart()
         self.pause(1)
         self.post("0001", [1], reply_to=rb)                                   # body 不是物件
-        self.post("0002", {"loops_added": {"box": self.long()}})              # 跟信箱撞名
+        self.post("0002", {"loops_added": {"x/y": self.long()}})              # 名字含 /（11-02 前這裡是跟信箱撞名的 box）
         self.post("0003", {"loops_added": {"bob": self.long()}, "x": 1})      # 好信（不認得的 key 忽略）
         self.post("0004", {"loops_removed": "bob"})                           # 型別錯
         self.post("0005", None, raw="{not json")                              # letter.json 壞
@@ -1010,7 +1002,7 @@ class T(unittest.TestCase):
         self.assertTrue(until(self.drained))
         w = until(lambda: self.lstate()["letter_warning"])
         self.assertTrue(w and w.startswith("信 0005 不採用：") and "letter.json" in w, w)
-        self.assertEqual((list((rb / "new").iterdir()), (self.box() / "loop.json").exists()), ([], False))
+        self.assertEqual(list((rb / "new").iterdir()), [])
         self.post("0006", {"loops_removed": ["bob"]})   # 只有好信的圈：letter_warning 維持
         self.assertTrue(until(lambda: list(self.kids()) == ["a"]))
         self.assertEqual(self.lstate()["letter_warning"], w)
@@ -1032,13 +1024,12 @@ class T(unittest.TestCase):
         self.mstop(p)
 
     def test_mailbox_cfg_rules(self):
-        # loops_ctl 明寫（非 null）＋loops_mailbox＝CfgBad；loops_ctl 寫 null 或沒寫＝不開、不報錯；型別錯、撞名＝CfgBad
+        # loops_ctl 明寫（非 null）＋loops_mailbox＝CfgBad；loops_ctl 寫 null 或沒寫＝不開、不報錯；型別錯＝CfgBad（11-02 起子項跟信箱同名不算撞：小格在 loops/）
         for doc in ({"loops_mailbox": "box", "loops_ctl": "loops_ctl.json"}, {"loops_mailbox": "box", "loops_ctl": "x.json"},
-                    {"loops_mailbox": 3}, {"loops_mailbox": ""}, {"loops_mailbox": ["box"]},
-                    {"loops_mailbox": "m/box", "loops": {"m": self.long()}}):
+                    {"loops_mailbox": 3}, {"loops_mailbox": ""}, {"loops_mailbox": ["box"]}):
             r = self.run_d(dict(doc, max=1))
             self.assertEqual((r.returncode, r.stderr.split(" ")[1], r.stderr.count("\n")), (1, "CfgBad", 1), (doc, r.stderr))
-            self.assertFalse((self.s / "box").exists() or (self.s / "loops" / "m").exists(), doc)
+            self.assertFalse((self.s / "box").exists(), doc)
         (self.s / "loops_ctl.json").write_text(json.dumps({"loops_added": {"x": self.quick()}}))
         for lc in ({}, {"loops_ctl": None}):
             r = self.run_d(dict(lc, loops_mailbox="box", state="state.json", max=3, interval_ms=100))
@@ -1124,8 +1115,8 @@ class T(unittest.TestCase):
         self.assertEqual((p.returncode, err), (0, ""))
 
     def test_execs_cfg_rules_and_clash(self):
-        # daemon.json：execs 跟 loops 同名、跟自己的窗撞名、寫法不合＝CfgBad 退 1、一行、不建小格
-        for doc in ({"loops": {"x": self.long()}, "execs": {"x": "long"}}, {"state": "state.json", "execs": {"state.json": "long"}},
+        # daemon.json：execs 跟 loops 同名、寫法不合＝CfgBad 退 1、一行、不建小格（跟自己的窗同名 11-02 起不擋）
+        for doc in ({"loops": {"x": self.long()}, "execs": {"x": "long"}},
                     {"execs": [1]}, {"execs": {"a": 3}}, {"execs": {"a": {"exec": {"argv": ["true"]}}}}, {"execs": {"a": {"max": 1}}},
                     {"execs": {"a": []}}, {"execs": {"a": ["long", 1]}}, {"execs": {"a/b": "long"}}):
             r = self.run_d(dict(doc, max=1))

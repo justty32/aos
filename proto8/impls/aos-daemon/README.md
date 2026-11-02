@@ -51,9 +51,9 @@ daemon.json＝loop.json 的超集（N-28）：
 | `adopt` | 布林 | true | 起來時讀自己上次的 loops_state，把還活著的子 loop（與 exec 型子項）接回、不重起 |
 
 - 要 `$AOS_STACK`（沒設＝`StackMissing`）。名字不能當資料夾名或會被 aos-exec 誤認（空、`.`、`..`、含 `/`、含 `#`、以 `.` 開頭）＝`CfgBad`。
-- **名字不能跟自己的窗撞名**（使用者 10-22，ideas 10-22 § 6；`taken_names`／`check_names`）：會撞的名字＝ctl、state（含旗標 `--ctl`／`--state` 給的）、loops_ctl、loops_state、
-  loops_state 的分檔資料夾、loops_mailbox（信箱模式）落在 `$AOS_STACK` 底下時相對路徑的第一段（`state.json`、`ctl.json`、預設的 `loops_ctl.json`、`loops_state.json`、`loops_state_loops`；`"w/c.json"` 的 `w`；
-  `./x/../s.json` 整理成 `s.json`；在 stack 外面的、沒開的不算）。起來時撞＝`CfgBad`、退 1；loops_ctl 改名單撞＝那份 loops_ctl 整份不採用、維持上一份好的、原因進 loops_state 的 `ctl_warning`。
+- **跟自己的窗同名不擋**（**11-02 拿掉**，使用者 11-02 答衝突 1「那兩題中的1.，可以」，[thinking 11-02 stack-tools](../../thinking/2026-11-02-stack-tools.md) 衝突 1）：
+  10-22 起（使用者 10-22，ideas 10-22 § 6）子項名字跟 ctl、state、loops_ctl、loops_state、分檔資料夾、loops_mailbox 落在 `$AOS_STACK` 底下的第一段同名＝起來時 `CfgBad`、loops_ctl 撞＝整份不採用（`taken_names`／`check_names`）；
+  11-02 小格改進 `loops/<名字>/` 之後撞不到了，這條檢查與那條錯誤路徑一起拿掉——例如 `loops: {"state.json": …}` 照起、小格是 `$AOS_STACK/loops/state.json/`，跟 `$AOS_STACK/state.json` 不相干。`loops` 與 `execs` 同名照舊擋（下「名字空間」）。
 - **起子 loop**（經 aos-exec，同 bin 版）：小格 `$AOS_STACK/loops/<名字>/`（11-02 改）mkdir（只建 `loops/` 與小格這兩層，`loops/` 有就沿用；`$AOS_STACK` 不在＝開了 state 或 loops_state 窗就 `WriteFailed`〔loops_state 沒寫＝開著〕、兩扇都沒開才 `MkdirFailed`，都退 1——建 stack 只在 aos-exec 做，N-59 第 1 件）；設定補上 `"ctl": "ctl.json"`、`"state": "state.json"`（沒寫才補），
   **一律蓋上 `"_entry": ["aos-loop", {"$env": "AOS_CF"}]`**，相對的 `exec`（字串，或陣列的第一個元素）照 daemon 的 cwd 轉成絕對路徑（子 loop 的 cwd 會是小格），
   先寫 `.loop.json` 再改名成 `loop.json`；fork 一個子行程：`setsid` 自成 session、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`、`AOS_STACK=小格/`、
@@ -100,7 +100,7 @@ daemon.json＝loop.json 的超集（N-28）：
 - **怎麼起**（`spawn_exec`）：小格 `$AOS_STACK/loops/<名字>/`（11-02 改；只建 `loops/` 與小格兩層）、`AOS_STACK`＝小格/、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`、`setsid` 自成群組、cd 到 daemon 的 cwd——跟起子 loop 一樣，**只是不包 aos-loop、不寫 `loop.json`、不補 `ctl`／`state`**：子行程直接 `run_cli({"--", 目標, 參數...})`（aos-exec），所以表上的 pid 就是那支程式；相對路徑從 daemon 的 cwd 算（不轉絕對，子行程本來就在那裡叫）。
 - **退了**＝`phase: done`、記 `code`／`signal`，**不重起**；列留在 `execs` 表上，直到名單拿掉（跟 loop 型同一條規則，方向題 2）。要再跑一次＝從名單拿掉再放回。
 - **收**：同子 loop——名單少了它或 daemon 收工＝SIGTERM（直接給那支程式，少一跳）、`stopping`，滿 10 秒還在就 SIGKILL 整群（連底下自成一群的）；收掉的標 `stopped`。
-- **名字空間**：`execs` 與 `loops` 共用（小格同一個資料夾）。daemon.json 兩邊同名＝`CfgBad` 退 1；loops_ctl 合出來同名＝整份不採用（`ctl_warning`）；信箱模式的信套完同名＝壞信（`letter_warning`）。撞自己的窗同 `loops`。
+- **名字空間**：`execs` 與 `loops` 共用（小格同一個資料夾）。daemon.json 兩邊同名＝`CfgBad` 退 1；loops_ctl 合出來同名＝整份不採用（`ctl_warning`）；信箱模式的信套完同名＝壞信（`letter_warning`）。跟自己的窗同名不擋（11-02 拿掉，同 `loops`）。
 - **換種類**：表上的種類跟期望表的不一樣（例：loops_ctl 寫 `{"loops_removed": ["bob"], "execs_added": {"bob": "agent-bob"}}`）＝當成不在期望表上：舊的收掉（`stopped`、拿掉），下一次起新的（同「收的途中同名放回來」那條）。
 - **狀態**：`loops_state.json` 多一張 `execs` 表（沒有就是 `{}`），列的形狀同 `loops`（`pid`、`started_at_ticks`、`phase`、`code`、`signal`）；超過 100 列一樣切檔，分檔跟 `loops` 放同一個 `loops_state_loops/`（檔名是內容的雜湊，不會撞）。`adopt` 兩張表都接（10-30 前的 loops_state 沒有 `execs`＝沒東西接）。
 - **手把**：`loops_ctl.json` 與信箱模式的信多認 `execs_added`／`execs_removed`（語意同 `loops_added`／`loops_removed`；loops_ctl 沒有整份的 `execs`，`execs` 那半的底永遠是 daemon.json 的 `execs`）。
@@ -134,7 +134,7 @@ daemon.json＝loop.json 的超集（N-28）：
 - **期望表＝（loops_ctl 的 `loops`，沒寫＝daemon.json 的 `loops`）＋`loops_added`－`loops_removed`**，先加後減：同一個名字兩邊都寫＝不要；`loops_removed` 裡名單上沒有的名字不管；
   名單上已有的名字寫進 `loops_added`＝設定換成這份，已在跑的不重起。
 - 還是宣告（N-06）：只看這一份 loops_ctl 與 daemon.json，讀幾次都一樣；**loops_ctl 拿掉 `loops_added`＝加進來的收掉**、拿掉 `loops_removed`＝減掉的照 daemon.json 重新起。要一直加著就一直寫著。
-- 壞（不是 JSON 物件、`seq` 不是非負整數、`loops_removed` 不是字串陣列、`loops_added` 名字不合或撞名、指示詞解不開）＝整份不採用、記 loops_state 的 `ctl_warning`。daemon.json 不認這兩個 key。
+- 壞（不是 JSON 物件、`seq` 不是非負整數、`loops_removed` 不是字串陣列、`loops_added` 名字不合、指示詞解不開〔跟窗撞名那條 11-02 拿掉〕）＝整份不採用、記 loops_state 的 `ctl_warning`。daemon.json 不認這兩個 key。
 - **10-30 多認 `execs_added`／`execs_removed`**（exec 型子項，語意同 `loops_added`／`loops_removed`；見下「exec 型子項 execs」）：`execs` 那半的期望表＝daemon.json 的 `execs`＋`execs_added`－`execs_removed`（loops_ctl **沒有整份的 `execs`**）。合出來 `loops` 與 `execs` 同名＝整份不採用（`ctl_warning`「同時在 loops 與 execs」）。
 
 ### 信箱模式（10-29，[medium-plan § 四 3](../../thinking/2026-10-29-medium-plan.md)、NORMS N-28 的 10-29 補、N-16）
@@ -146,7 +146,7 @@ echo '{"loops_added": {"bob": "../agent-bob"}}' | aos-post send "$AOS_STACK/loop
 echo '{"loops_removed": ["bob"]}' | aos-post send --reply-to 我的信箱 "$AOS_STACK/loops_mailbox"   # 刪 bob，套用完回一封 {"applied": true}
 ```
 
-- **起來時**：`aos::post::init` 建好 `tmp/`、`new/`、`cur/`（已在就沿用；`$AOS_STACK` 不在＝`MkdirFailed`、不替人建）；`loops_ctl` 不開（不讀 `loops_ctl.json`，那個名字也不擋撞名）。
+- **起來時**：`aos::post::init` 建好 `tmp/`、`new/`、`cur/`（已在就沿用；`$AOS_STACK` 不在＝`MkdirFailed`、不替人建）；`loops_ctl` 不開（不讀 `loops_ctl.json`）。
 - **期望表**＝daemon.json 的 `loops`＋重起時 adopt 接回、不在 daemon.json 裡的子項＋依序套用的每封信。期望表只在記憶體裡（重起時從 daemon.json＋adopt 重建）；
   **接回的子項留在名單上，直到有信把它 `loops_removed`**（方向題 1）——它的設定 daemon 不知道（只留名），所以它自己結束了也只會停在 `done`。
 - **每圈**（`stopped`／`paused` 那圈不認領，信留在 `new/`，解除暫停那圈才套）：`new/` 全部認領（照名字排序）→ 逐封驗、好的依序套進期望表（後面的蓋前面的）→ **全部套完才對一次表** →
@@ -154,7 +154,7 @@ echo '{"loops_removed": ["bob"]}' | aos-post send --reply-to 我的信箱 "$AOS_
   起來時 `cur/` 不空（上次認領了、沒收完就死）＝當成第一個認領的圈的信，排在 `new/` 的前面重做（信是宣告式的增減，重做無害）。
 - **信的 `body`**：物件，只認 `loops_added`（寫法同 `loops`）、`loops_removed`（名字的陣列）、`execs_added`、`execs_removed`（10-30，同 loops_ctl；先在副本上套，`loops` 與 `execs` 同名＝壞信、不套），其他 key 忽略；同一封先加後減（同 loops_ctl）。沒有整份的 `loops`（信是增減，整份宣告留給 ctl 模式）。
   相對的 `exec` 與相對的 `$ref` 都從 daemon 的 cwd 算（信收完就刪了，不能從信的資料夾算）。
-- **壞信**＝信封壞（`aos::post::check`：`letter.json` 讀不了、`kind` 不是 `"letter"`、缺 `sender`／`sent_at`／`body`…）、`body` 不是物件、那兩個 key 型別錯、`loops_added` 的子項不合格（同 loops_ctl 的檢查，含撞名）、指示詞解不開：
+- **壞信**＝信封壞（`aos::post::check`：`letter.json` 讀不了、`kind` 不是 `"letter"`、缺 `sender`／`sent_at`／`body`…）、`body` 不是物件、那兩個 key 型別錯、`loops_added` 的子項不合格（同 loops_ctl 的檢查；跟窗撞名 11-02 拿掉）、指示詞解不開：
   **丟掉、不套、不回信**（決定 27 不通知寄信人），原因寫進 `loops_state.json` 的 `letter_warning`（`"信 <信號> 不採用：原因"`，最後一封壞信的；之後的圈沒有壞信就維持原值）；不影響同一圈的好信。
 - 回信寄不出去（`reply_to` 不是信箱）、收信失敗都不管，照樣往下走。要知道「加進去了沒」的標準做法是讀 `loops_state.json`。
 - 誰能寄：純靠 Linux 檔案權限（`new/`、`tmp/` 開給誰寫，誰就能寄；N-54 末）。`loops_state.json` 在信箱模式照寫（`ctl_seq`、`ctl_warning` 是 `null`）。
@@ -179,7 +179,7 @@ echo '{"loops_removed": ["bob"]}' | aos-post send --reply-to 我的信箱 "$AOS_
   {"kind": "state", "ctl_seq": null, "ctl_warning": null, "loops": {"$ref": ["loops_state_loops/3f9a2c1e07d45b6a.json", "loops_state_loops/<雜湊>.json", ...]}, "pid": ..., "recorded_at": ...}
   ```
 
-  分檔資料夾＝loops_state 檔名去副檔名＋`_loops`、跟它同一層（預設 `loops_state_loops/`；也算子項撞名；10-29 前跟著 state 叫 `state_loops/`）；檔名＝內容的 FNV-1a 64 雜湊。每份先寫 `.` 開頭暫存再改名，內容沒變的沿用不重寫；
+  分檔資料夾＝loops_state 檔名去副檔名＋`_loops`、跟它同一層（預設 `loops_state_loops/`；11-02 前也算子項撞名；10-29 前跟著 state 叫 `state_loops/`）；檔名＝內容的 FNV-1a 64 雜湊。每份先寫 `.` 開頭暫存再改名，內容沒變的沿用不重寫；
   分檔都寫好才寫主檔（**主檔改名是唯一的提交點**）；寫完清掉這次與上一次主檔都沒用到的分檔（行程第一次寫時不清）；縮回 100 以內、清空後拿掉資料夾。
   讀的人用 aos-directive 解主檔（`aos-directive < loops_state.json`，cwd＝它的資料夾）就拿回整張 `loops` 物件，一定是同一次寫的表；讀得比兩次寫入還慢時分檔可能已清掉、`$ref` 讀不到，重讀主檔即可。`adopt` 也是這樣解。
 
@@ -208,7 +208,7 @@ echo '{"loops_removed": ["bob"]}' | aos-post send --reply-to 我的信箱 "$AOS_
 |---|---|
 | `src/common/common.hpp` | `using`、代號（全沿用 aos-loop 的） |
 | `src/child/child.hpp`、`child.cpp` | 10-30 晚 `ws`：`spawn` 從設定拿掉 `ws`、`spawn_exec` 認 `{"exec", "ws"}`，`launch` 記進 `Child::ws`、`run_child` 設 `AOS_WS`；`row` 有才寫 `ws`。10-30 起 `spawn_exec`（exec 型子項：小格、`launch` 同下，不寫 loop.json、`run_cli({"--", 目標, 參數...})`；`Child::once`）。一支子 loop：`spawn`（小格、loop.json（補 ctl／state、蓋 `_entry`、相對 exec 轉絕對；exec 是單子＝補／接 `cwd`）、fork＋子行程 `run_child` 呼叫 aos-exec 的 `run_cli`）、`alive`、`row` |
-| `src/daemon/daemon.hpp`、`daemon.cpp` | 10-30 晚 `fix_ws`（`read_loops` 解 `ws`、驗、轉絕對；`read_execs` 有 `ws` 收成 `{"exec", "ws"}`）、`adopt` 照留列上的 `ws`。10-30：`read_execs`（`execs` 每項收成目標）、`merge_want`（期望表的一半，loops、execs 共用）、`check_apart`（兩邊同名）、`reconcile` 收兩份期望表、`adopt` 接兩張表。`Daemon`（`aos::loop::Loop` 的子類別）：`read_loops`（`loops` 的指示詞：本身、每個子項各從它來自的檔算；子項 `exec` 是單子＝只換一層、`abs_refs` 把相對 `$ref` 轉絕對）；建構子（含 `loops_ctl`／`loops_state` 的路徑）、`adopt`（讀 loops_state）、`tend`（期望表＝loops_ctl＋增減；ctl stopped／paused 不調表）、`term`／`settle`（收子項不等：送 SIGTERM、之後每次看一眼、滿 10 秒 SIGKILL，連 `leaders_below` 掃到的、子 loop 底下自成一群的單子）、`finish`（收全部、等的時候每秒寫 state，標 stopped、剛死的標 done）、表＝串列＋名字的雜湊表、`check_ctl`（ctl.json 的 `loops*` 不採用、過渡期進 `ctl_warning`）；名字不能帶 `/`、`#`、不能 `.` 開頭（`read_loops`）；`taken_names`、`check_names`（跟自己的窗撞名） |
+| `src/daemon/daemon.hpp`、`daemon.cpp` | 10-30 晚 `fix_ws`（`read_loops` 解 `ws`、驗、轉絕對；`read_execs` 有 `ws` 收成 `{"exec", "ws"}`）、`adopt` 照留列上的 `ws`。10-30：`read_execs`（`execs` 每項收成目標）、`merge_want`（期望表的一半，loops、execs 共用）、`check_apart`（兩邊同名）、`reconcile` 收兩份期望表、`adopt` 接兩張表。`Daemon`（`aos::loop::Loop` 的子類別）：`read_loops`（`loops` 的指示詞：本身、每個子項各從它來自的檔算；子項 `exec` 是單子＝只換一層、`abs_refs` 把相對 `$ref` 轉絕對）；建構子（含 `loops_ctl`／`loops_state` 的路徑）、`adopt`（讀 loops_state）、`tend`（期望表＝loops_ctl＋增減；ctl stopped／paused 不調表）、`term`／`settle`（收子項不等：送 SIGTERM、之後每次看一眼、滿 10 秒 SIGKILL，連 `leaders_below` 掃到的、子 loop 底下自成一群的單子）、`finish`（收全部、等的時候每秒寫 state，標 stopped、剛死的標 done）、表＝串列＋名字的雜湊表、`check_ctl`（ctl.json 的 `loops*` 不採用、過渡期進 `ctl_warning`）；名字不能帶 `/`、`#`、不能 `.` 開頭（`read_loops`）；`taken_names`、`check_names`（跟自己的窗撞名）11-02 拿掉 |
 | `src/daemon/windows.cpp` | 管轄那一對窗（10-29）：`read_loops_ctl`（每圈讀 loops_ctl.json，同 read_ctl 的不採用規則）、`check_lists`（`loops`／`loops_added`／`loops_removed`）、`write_more`（loops_state.json：`kind`、`ctl_seq`、`ctl_warning`、`letter_warning`、`loops`、心跳）、`write_parts`（切檔：`{"$ref": [分檔, …]}`） |
 | `src/daemon/mailbox.cpp` | 信箱模式（10-29）：`open_mailbox`（建四格、期望表＝daemon.json＋接回的、記下 `cur/` 的殘骸）、`take_letters`（認領、`check` 驗信封、逐封套進期望表、壞信記 `letter_warning`）、`apply_letter`（驗 body：`check_lists`）、`done_letters`（回 `applied`、收信）；連 aos-post 的庫 |
 | `src/main.cpp` | 命令列：`block_signals` → `loop_cli` → `Daemon` → `serve`；出錯印「aos-daemon: 代號 原因」 |
@@ -240,18 +240,18 @@ cmake -B build && cmake --build build && ctest --test-dir build
 - `test_cli`（`tests/test_cli.py`，59 案、unittest，約 80 秒）：
   照 `proto8/tests/test_daemon.py` 逐案抄的 15 案（loop.json 直接丟給 daemon、要 AOS_STACK、loops 壞、小格與窗、
   不自動重起、子項 stderr 在小格、ctl 增減、SIGTERM 收子項 143、旗標蓋過設定、exec 陣列與設定檔規則、子 loop 經 aos-exec 起、字串子項是 aos-exec 的目標、
-  收工時剛死的子項標 done、收掉的標 stopped、adopt、`adopt: false`），加錯誤代號、子 loop 的 state 心跳是自己的 pid；抄 bin 10-22 的 3 案（daemon 重開照名單起停機期間死掉的子項、子項撞名起來時退 1〔另驗 `--state` 旗標也算〕、ctl 撞名不採用）；
+  收工時剛死的子項標 done、收掉的標 stopped、adopt、`adopt: false`），加錯誤代號、子 loop 的 state 心跳是自己的 pid；抄 bin 10-22 的 3 案（daemon 重開照名單起停機期間死掉的子項、子項跟窗同名〔11-02 起改驗照起、窗照寫；原本驗起來時退 1、`--state` 旗標也算〕、ctl 撞名不採用）；
   效能 4 案：不肯退的子 loop 不卡住 daemon（收的途中照寫 state、照起別的、那列 `stopping`，收工也等、每秒寫；被 SIGKILL 的那列 `stopped`／signal 9，
   它自己的 state 停在 `running`、pid 已不在）、一圈一份 state（inotify 數改名次數）與 `recorded_at` 間隔、起子項之前先有 state（小格放 FIFO 讓起子項卡住）、`$AOS_STACK` 不在不建；
   G 段 6 案：`loops` 用 `$ref` 陣列拆檔與每層的 `$ref`（兩份同名後蓋前、各份從自己的資料夾算、子項 loop key 先解、body 原樣、`adopt` 也解）、拆檔與指示詞寫壞（物件陣列不收、物件與陣列混著、一份讀不到、合成陣列、解不開＝`DirectiveBad`）、
   ctl 的 `loops_added`／`loops_removed`（加、減、拿掉回 daemon.json、跟 ctl 的 `loops` 一起、兩邊都寫＝不要）、寫壞不採用與 ctl 的相對 `$ref`（`$ref` 陣列、兩份在不同資料夾）、
-  state 超過 100 列切檔（`{"$ref": [...]}`、每份 100＋1、檔名是雜湊、aos-directive 解回整張表、只留兩代、分檔資料夾撞名）、切了檔照樣 adopt、縮回 100 以內變回物件並清掉分檔；
+  state 超過 100 列切檔（`{"$ref": [...]}`、每份 100＋1、檔名是雜湊、aos-directive 解回整張表、只留兩代、跟分檔資料夾同名照起〔11-02 前驗撞名〕）、切了檔照樣 adopt、縮回 100 以內變回物件並清掉分檔；
   exec 直接放單子 4 案：daemon 自己的 exec（`AOS_CF`＝daemon.json、`/exec`、cwd）、非 0／逾時 143／形狀壞 `EntryBad`、子項的單子（`AOS_CF`＝小格、cwd 補成 daemon 的 cwd、相對 `cwd` 接上、相對 `$ref` 轉絕對）、ctl 半路加的子項是單子；
   5 案：子項跑內嵌單子後 `AOS_CF`／`AOS_CD`／`AOS_CO` 還原成原本的值（loops_ctl 的 loops 用 `$env` 讀）、daemon 收 SIGTERM 時子 loop 轉給單子、daemon 自己的單子跑一半收 SIGTERM、`abs_refs` 邊界（絕對、`$ref` 陣列、只有 `#/`、寫法不合、往裡走）、不理 SIGTERM 的單子隨子 loop 一起被 SIGKILL；
   H 段 6 案（10-29 拆窗）：`ctl.json` 寫 `loops_added` 不採用、`ctl_warning` 提醒搬家、寫進 `loops_ctl.json` 才起；同一圈 `ctl.json` 改 `interval_ms`、`loops_ctl.json` 加子項兩邊都生效（各回各的 `seq`）；
-  `ctl.json` 壞、`loops_ctl.json` 好＝只有 `state.json` 有 `ctl_warning`；`paused` 時 `loops_ctl` 的變動不生效（照讀、照寫）、解除後生效；`loops_state`／`loops_ctl` 寫 `null` 不開與型別壞；撞名多兩扇窗與分檔資料夾。
-  I 段 6 案（10-29 信箱模式）：兩封信同一圈（一加一刪）照名字順序後面的贏、`paused` 時信留在 `new/`、解除後才套；重起後接回的子項留著、有信 `loops_removed` 才收；壞信（body 不是物件、撞名、型別錯、`letter.json` 壞）不影響同一圈的好信、`letter_warning` 記最後一封、只有好信的圈維持、壞信不回；`reply_to` 收到 `{"applied": true}`；`loops_ctl`＋`loops_mailbox`＝`CfgBad`、型別錯、撞名、`` 不在不建；`cur/` 的殘骸排在 `new/` 前面重做。
-  J 段 7 案（10-30 exec 型子項 `execs`）：三種寫法各跑一次、退 3＝`done`／`code` 3、不重起、小格只有 `stderr.txt` 與程式自己的檔、`AOS_STACK`＝小格/、stdin 空、pgrp＝pid＝表上的 pid；`execs_removed` 的 SIGTERM 直接打那支程式（cmdline 不是 aos-loop）、不理的 10 秒後連它的 sleep 整群 SIGKILL；daemon.json 的同名／撞窗／寫法不合＝`CfgBad`，loops_ctl 合出來同名不採用、`loops_removed`＋`execs_added` 同名＝收掉舊 loop 起 exec 型；adopt 兩張表；`{"exec": X, "max": 1}` 的 loop 型照舊（小格有 loop.json、stderr 有 aos-loop 那行）；信箱的 `execs_added`／`execs_removed` 與同名壞信；`execs` 超過 100 列切檔。
+  `ctl.json` 壞、`loops_ctl.json` 好＝只有 `state.json` 有 `ctl_warning`；`paused` 時 `loops_ctl` 的變動不生效（照讀、照寫）、解除後生效；`loops_state`／`loops_ctl` 寫 `null` 不開與型別壞；跟兩扇窗與分檔資料夾同名照起（11-02 前驗撞名）。
+  I 段 6 案（10-29 信箱模式）：兩封信同一圈（一加一刪）照名字順序後面的贏、`paused` 時信留在 `new/`、解除後才套；重起後接回的子項留著、有信 `loops_removed` 才收；壞信（body 不是物件、名字含 `/`〔11-02 前是撞名〕、型別錯、`letter.json` 壞）不影響同一圈的好信、`letter_warning` 記最後一封、只有好信的圈維持、壞信不回；`reply_to` 收到 `{"applied": true}`；`loops_ctl`＋`loops_mailbox`＝`CfgBad`、型別錯、撞名、`` 不在不建；`cur/` 的殘骸排在 `new/` 前面重做。
+  J 段 7 案（10-30 exec 型子項 `execs`）：三種寫法各跑一次、退 3＝`done`／`code` 3、不重起、小格只有 `stderr.txt` 與程式自己的檔、`AOS_STACK`＝小格/、stdin 空、pgrp＝pid＝表上的 pid；`execs_removed` 的 SIGTERM 直接打那支程式（cmdline 不是 aos-loop）、不理的 10 秒後連它的 sleep 整群 SIGKILL；daemon.json 的同名／寫法不合＝`CfgBad`（撞窗 11-02 拿掉），loops_ctl 合出來同名不採用、`loops_removed`＋`execs_added` 同名＝收掉舊 loop 起 exec 型；adopt 兩張表；`{"exec": X, "max": 1}` 的 loop 型照舊（小格有 loop.json、stderr 有 aos-loop 那行）；信箱的 `execs_added`／`execs_removed` 與同名壞信；`execs` 超過 100 列切檔。
   K 段 1 案（10-30 eca 子項的 `ws`）：信的 `loops_added`／`execs_added` 帶相對 `ws`（從 daemon 的 cwd 算）、子項看到的 `AOS_WS`、列上的 `ws`、沒寫的列沒有這欄、`loop.json` 裡沒有 `ws`、`execs` 物件的其他 key 照舊忽略；
   改了 `ws` 不重起（列上仍是起它時的）；`ws` 型別錯＝壞信；重起 adopt 列上的 `ws` 照留。（`proto8/tests/test_daemon.py` 另有 4 案：exec 型、loop 型、沒寫＝繼承、相對路徑＋型別錯。）
   前面各段讀名單、改名單的地方 10-29 起改讀 `loops_state.json`、改寫 `loops_ctl.json`。

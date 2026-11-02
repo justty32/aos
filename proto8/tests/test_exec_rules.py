@@ -114,7 +114,7 @@ class T(unittest.TestCase):
         d = prog(self.t, "p", "echo hi\n")
         put(Path(d, "loop.json"), {"exec": 3})
         put(Path(d, "fsm.json"), {"start": "a", "states": {"a": {"exec": "p", "next": "zz"}}})
-        put(Path(d, "daemon.json"), {"state": "state.json", "loops": {"state.json": "p"}})
+        put(Path(d, "daemon.json"), {"state": "state.json", "loops": {"a/b": "p"}})   # 11-02 前是跟 state 撞名的 "state.json"（撞名拿掉、現在照起），改用不能當資料夾名的
         Path(d, "bad.json").write_text("{nope")
         dot = prog(self.t, "dot", "echo hi\n")
         Path(dot, ".env").write_text("no-equals\n")

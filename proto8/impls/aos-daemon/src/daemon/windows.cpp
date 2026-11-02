@@ -1,10 +1,10 @@
 // windows.cpp：【daemon】管轄那一對窗——loops_ctl.json（手把）、loops_state.json（狀態窗）（10-29 拆窗，medium-plan § 四 1；說明見 daemon.hpp）。
 //
 //   read_loops_ctl  每圈讀一次（tend 開頭）。同 aos-loop 的 read_ctl（N-06～N-08）：認 loops、loops_added、loops_removed、execs_added、execs_removed（10-30）、seq，其他 key 忽略；
-//                   讀到壞的（讀不了、不是 JSON 物件、seq 不是非負整數、名單壞或撞名、指示詞解不開）整份不採用、維持上一份好的，
+//                   讀到壞的（讀不了、不是 JSON 物件、seq 不是非負整數、名單壞、指示詞解不開）整份不採用、維持上一份好的，
 //                   原因記 lctl_warning_（loops_state 的 ctl_warning）；讀到好的清回 null；檔不在＝還沒人寫，維持上一份好的、不算問題
-//   check_lists     loops、loops_added（read_loops＋撞名）、loops_removed（名字的陣列）；10-29 前是 ctl.json 的 check_ctl；
-//                   10-30 多 execs_added（read_execs＋撞名）、execs_removed。read_loops_ctl 另外驗合出來的 loops 與 execs 不同名（check_apart）
+//   check_lists     loops、loops_added（read_loops；跟窗撞名的檢查 11-02 拿掉）、loops_removed（名字的陣列）；10-29 前是 ctl.json 的 check_ctl；
+//                   10-30 多 execs_added（read_execs）、execs_removed。read_loops_ctl 另外驗合出來的 loops 與 execs 不同名（check_apart）
 //   write_more      loops_state 一份：{kind, ctl_seq, ctl_warning, letter_warning（信箱模式才有，10-29）, loops, execs（10-30）, 心跳四欄}；
 //                   Loop 每寫一份 state 就呼叫（心跳同一份值）
 //   write_parts     loops、execs 表各自超過 PART_ROWS 列就切檔（10-23 晚；10-30 兩張表共用分檔資料夾）；clean_parts 兩張都寫好才清舊分檔
@@ -69,7 +69,7 @@ void Daemon::read_loops_ctl() {
 }
 
 std::optional<std::string> Daemon::check_lists(Json& doc, const aos::Resolved& where) {
-    // loops_ctl 改名單撞名、寫壞＝整份不採用（N-08；原因進 loops_state 的 ctl_warning）。指示詞解不開丟 DirectiveBad，read_loops_ctl 一樣當不採用。
+    // loops_ctl 改名單寫壞＝整份不採用（N-08；原因進 loops_state 的 ctl_warning）。指示詞解不開丟 DirectiveBad，read_loops_ctl 一樣當不採用。
     // 10-30 多 execs_added（read_execs）、execs_removed（同 loops_removed）。
     const char* lists[3] = {"loops", "loops_added", "execs_added"};
     for (const char* k : lists) {
@@ -84,10 +84,6 @@ std::optional<std::string> Daemon::check_lists(Json& doc, const aos::Resolved& w
                 throw;
             }
             return e.msg;
-        }
-        std::optional<std::string> bad = check_names(doc[k], taken_, execs ? "execs" : "loops");
-        if (bad) {
-            return bad;
         }
     }
     for (const char* k : {"loops_removed", "execs_removed"}) {

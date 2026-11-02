@@ -6,7 +6,7 @@
 //   take_letters   每圈（stopped／paused 那圈不呼叫）：redo_（照名字順序）＋claim_all 認領到的（照名字順序），逐封 check 驗信封、
 //                  apply_letter 驗 body 並套進 want_；壞信的原因記進 letter_warning_（最後一封壞信；沒有壞信的圈維持原值）
 //   apply_letter   body 要是物件，只認 loops_added（物件，寫法同 loops_ctl）、loops_removed（名字的陣列）、execs_added、execs_removed（10-30，同上；套完 loops 與 execs 同名＝壞信），其他 key 忽略；
-//                  檢查照 loops_ctl（check_lists：read_loops、撞名；相對 $ref 從 daemon 的 cwd 算——信收完就刪了，不能從信的資料夾算）。
+//                  檢查照 loops_ctl（check_lists：read_loops；相對 $ref 從 daemon 的 cwd 算——信收完就刪了，不能從信的資料夾算）。
 //                  好的才套：先加（已在名單上的換設定、不在的接在尾巴）後減，後面的信蓋前面的
 //   done_letters   對完表之後：好信有 reply_to 的回 {"applied": true}（壞信不回，決定 27）；全部 finish 收掉（不留 done/）。
 //                  回信寄不出去、收不掉（信被別人拿走、寫不了）都不管：不另外通知（決定 27），也不讓 daemon 因此結束

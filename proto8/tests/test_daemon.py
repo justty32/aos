@@ -292,30 +292,30 @@ class T(unittest.TestCase):
         p2.communicate(timeout=30)
         self.assertEqual((p2.returncode, alive(k2["a"]["pid"])), (0, False))
 
-    def test_child_name_clashes_with_own_windows(self):
-        # 使用者 10-22「子項名字擋掉跟 ctl／state 同名」：小格 $AOS_STACK/<名字>/ 會跟 daemon 自己的 ctl、state 撞的名字，起來時退 1
+    def test_child_name_same_as_own_windows(self):
+        # 11-02 拿掉 10-22 的「子項名字擋掉跟 ctl／state 同名」（使用者 11-02 答衝突 1「那兩題中的1.，可以」）：
+        # 小格在 $AOS_STACK/loops/<名字>/，跟 daemon 自己放在 stack 頂層的窗撞不到——同名照起、窗照寫
         absst = str(self.s / "st.json")
+        (self.s / "x").mkdir()   # state 的路徑照字面寫（./x/../s.json 要 x 在）；11-02 前撞名在寫之前就擋了
         for win, name in (({"state": "state.json"}, "state.json"), ({"ctl": "ctl.json"}, "ctl.json"),
                           ({"ctl": "w/c.json"}, "w"), ({"state": "./x/../s.json"}, "s.json"), ({"state": absst}, "st.json")):
-            r = self.run_d(dict(win, loops={name: self.long()}, max=1))
-            self.assertEqual(r.returncode, 1, (win, name))
-            self.assertTrue(r.stderr.startswith("aos-daemon: ") and "撞名" in r.stderr
-                            and r.stderr.count("\n") == 1, r.stderr)
-            self.assertFalse((self.s / "loops" / name).exists(), name)
-        # 不撞的照起：沒開 state 時 "state.json" 只是普通名字；ctl 在 stack 外面也不算
-        for win, name in (({}, "state.json"), ({"ctl": str(self.t / "ctl.json")}, "ctl.json")):
+            (self.s / "loops_state.json").unlink(missing_ok=True)
             r = self.run_d(dict(win, loops={name: {"exec": "daemon.json#/b", "max": 1}},
                                 b={"argv": ["true"]}, max=3, interval_ms=100))
-            self.assertEqual((r.returncode, r.stderr, (self.s / "loops" / name / "loop.json").exists()), (0, "", True), (win, name))
+            self.assertEqual((r.returncode, r.stderr, (self.s / "loops" / name / "loop.json").exists(), list(self.kids())),
+                             (0, "", True, [name]), (win, name))
+        for f in ("state.json", "s.json", "st.json"):
+            self.assertEqual(json.loads((self.s / f).read_text())["phase"], "done", f)   # 窗照寫
 
-    def test_ctl_loops_clash_not_adopted(self):
-        # loops_ctl 改 loops 撞名＝那份 loops_ctl 整份不採用、維持上一份好的，原因進 loops_state 的 ctl_warning（N-08）
+    def test_ctl_loops_same_name_as_windows_adopted(self):
+        # 11-02 起 loops_ctl 改名單用到跟窗同名的名字也照採用（10-22 的撞名不採用拿掉；小格在 loops/<名字>/）
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})
         k = until(lambda: (self.s / "loops" / "a" / "starts").exists() and self.kids())
-        self.lctl({"loops": {"state.json": self.long()}})
-        st = until(lambda: "撞名" in (self.lstate()["ctl_warning"] or "") and self.lstate())
+        self.lctl({"loops": {"a": self.long(), "state.json": self.long()}})
+        st = until(lambda: set(self.kids()) == {"a", "state.json"} and self.lstate())
         self.assertTrue(st)
-        self.assertEqual((list(st["loops"]), st["loops"]["a"]["pid"], alive(k["a"]["pid"])), (["a"], k["a"]["pid"], True))
+        self.assertTrue(until(lambda: (self.s / "loops" / "state.json" / "starts").exists()))
+        self.assertEqual((self.kids()["a"]["pid"], alive(k["a"]["pid"]), st["ctl_warning"]), (k["a"]["pid"], True, None))
         self.assertTrue((self.s / "state.json").is_file())
         self.ctl({"stopped": True})
         out, err = p.communicate(timeout=30)

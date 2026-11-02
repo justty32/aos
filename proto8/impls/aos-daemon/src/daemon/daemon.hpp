@@ -4,7 +4,7 @@
 //                term／settle（收子項不等：SIGTERM 後照常巡，每次 tend 看一眼，退了標 stopped、滿 10 秒還在就 SIGKILL 整群＋它底下自成一群的單子；
 //                10-23 壓測後改，原本原地等滿 10 秒）、finish（收掉全部、等它們退，等的時候每秒寫一份 phase stopping 的 state；
 //                最後一次之後才自己結束的標 done，D7）、
-//                check_ctl（ctl.json 的 loops* 不採用、過渡期提醒）、taken_names／check_names（子項名字跟自己的窗撞名，10-22）、
+//                check_ctl（ctl.json 的 loops* 不採用、過渡期提醒；10-22 的 taken_names／check_names〔子項名字跟自己的窗撞名〕11-02 拿掉：小格在 loops/<名字>/、撞不到）、
 //                read_execs、merge_want、check_apart（10-30 execs）
 //   windows.cpp  管轄那一對窗（10-29）：read_loops_ctl（loops_ctl.json）、check_lists、write_more（loops_state.json）、write_parts／clean_parts（切檔）
 //   mailbox.cpp  信箱模式（10-29，medium-plan § 四 3、實作第 5 步）：open_mailbox（建四格、記下 cur/ 的殘骸）、take_letters（認領、
@@ -68,13 +68,6 @@ Json read_loops(const Json& v, const std::string& base, const std::string& key);
 // 不解任何指示詞。給 read_loops 處理內嵌單子用（10-24）。
 Json abs_refs(const Json& v, const std::string& base);
 
-// 小格 $AOS_STACK/<名字>/ 會撞到的名字（使用者 10-22）：ctl、state、loops_ctl、loops_state、分檔資料夾（paths，空＝沒開）落在 $AOS_STACK 底下時相對路徑的第一段
-// （"state.json"、"w/c.json" 的 "w"）；落在外面的不算。照 bin 的 taken_names（abspath 整理 `.`、`..`，不解捷徑）。
-std::set<std::string> taken_names(const std::string& stack, const std::vector<std::string>& paths);
-
-// loops（read_loops 讀好的）的名字在 taken 裡＝回原因。起來時撞＝CfgBad、退 1；loops_ctl 撞＝那份 loops_ctl 不採用。what＝訊息裡叫它什麼（loops、execs）。
-std::optional<std::string> check_names(const Json& v, const std::set<std::string>& taken, const std::string& what = "loops");
-
 // 讀一份 execs（daemon.json 的 execs，loops_ctl 與信的 execs_added 共用；10-30）：同 read_loops（名字規則、指示詞），再把每項收成目標——
 // 字串、[目標, 參數...]（非空字串陣列）原樣；物件＝取它的 exec（要是上面兩種；其他 key 忽略）。單子物件、其他型別＝Error{CfgBad}。
 // 例外（eca 10-30）：物件寫了 ws＝收成 {"exec": 目標, "ws": 絕對路徑}（spawn_exec 認這個形狀）。
@@ -128,7 +121,6 @@ private:
     std::string lstate_path_;                            // loops_state.json（空＝不開）
     Json lctl_good_ = Json::object();                    // 最後一份好的 loops_ctl（一份都沒讀到過＝{}）
     Json lctl_warning_;                                  // null 或字串（loops_state 的 ctl_warning）
-    std::set<std::string> taken_;                        // 自己的窗／分檔資料夾用掉的名字（taken_names）
     std::string parts_dir_;                              // loops_state 分檔的資料夾（沒開 loops_state＝空）
     std::set<std::string> parts_prev_;                   // 上一次寫的 state 用到的分檔檔名（清舊分檔時留著）
     bool parts_wrote_ = false;                           // 這個行程寫過 state 了沒（第一次不清：磁碟上的主檔可能還指著舊的）

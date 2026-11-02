@@ -185,36 +185,6 @@ Json read_loops(const Json& v, const std::string& base, const std::string& key) 
     return out;
 }
 
-std::set<std::string> taken_names(const std::string& stack, const std::vector<std::string>& paths) {
-    std::set<std::string> out;
-    std::string base = aos::abspath(stack);
-    std::string prefix = base;
-    if (!prefix.ends_with('/')) {
-        prefix += "/";
-    }
-    for (const std::string& p : paths) {
-        if (p.empty()) {
-            continue;   // 沒開
-        }
-        std::string a = aos::abspath(p);
-        if (!a.starts_with(prefix) || a.size() == prefix.size()) {
-            continue;   // 在 $AOS_STACK 外面（或就是它）不算
-        }
-        std::string rel = a.substr(prefix.size());
-        out.insert(rel.substr(0, rel.find('/')));
-    }
-    return out;
-}
-
-std::optional<std::string> check_names(const Json& v, const std::set<std::string>& taken, const std::string& what) {
-    for (auto& [name, c] : v.items()) {
-        if (taken.count(name) > 0) {
-            return what + " 的名字 " + aos::dumps(Json(name)) + " 跟 daemon 自己的 ctl／state／loops_ctl／loops_state／loops_mailbox 撞名";
-        }
-    }
-    return std::nullopt;
-}
-
 Json read_execs(const Json& v, const std::string& base, const std::string& key) {
     Json out = read_loops(v, base, key);   // 名字規則、指示詞同 loops（物件的 exec 已整個解；是單子就只換了一層——下面擋掉）
     for (auto& [name, c] : out.items()) {
@@ -349,16 +319,10 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         }
         parts_dir_ = aos::join(aos::dirname(lstate_path_), name + "_loops");
     }
-    taken_ = taken_names(stack_, {ctl_path_, state_path_, lctl_path_, lstate_path_, parts_dir_, mbox_path_});
-    std::optional<std::string> bad = check_names(loops_, taken_);
-    if (!bad) {
-        bad = check_names(execs_, taken_, "execs");
-    }
-    if (!bad) {
-        bad = check_apart(loops_, execs_);   // 10-30：execs 與 loops 共用名字空間
-    }
+    // 11-02 拿掉「子項名字跟自己的窗撞名」（taken_names／check_names，10-22）：子項小格在 loops/<名字>/，撞不到 stack 頂層的窗
+    std::optional<std::string> bad = check_apart(loops_, execs_);   // 10-30：execs 與 loops 共用名字空間
     if (bad) {
-        throw Error{code::CfgBad, *bad};   // 使用者 10-22「子項名字擋掉跟 ctl／state 同名」
+        throw Error{code::CfgBad, *bad};
     }
     Json a = cfg_.value("adopt", Json(true));
     if (!a.is_boolean()) {
