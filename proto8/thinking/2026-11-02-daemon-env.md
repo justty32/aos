@@ -32,6 +32,29 @@
 - **沒寫＝照舊跟 stack 放在一起**。
 - 命名仍未定（使用者「命名這塊還得再想想」）；其餘衝突 1～3、方向題 1～2 待使用者。
 
+再一輪（11-02，逐字；頂層重新編號問三題：第 1 題＝控制口變數叫什麼；第 2 題 a／b／c＝下面衝突 1／2／3；第 3 題＝[工人提的三點](#工人提的三點11-02使用者)）：
+
+> 1. 先看看具體會切啥出去。3.a.那就是後續使用者要自己小心。b.自己小心。c.不用測試。2.a.那就不用定這三個名字了...喔我們先等第一題搞定。b.hub以後再說。c.不，最好明講，也就是--daemon-stack，但具體還是等第一題搞定。
+
+- **控制口命名**：先看具體會切出哪些東西再定（頂層另外列給使用者）。
+- **衝突 1**：傾向不定三個名字（定義／stack／ws），但等控制口那題定了再說。
+- **衝突 2**：hub（N-63「一個 hub 一個變數」）以後再說。
+- **衝突 3**：旗標名要明講，傾向 `--daemon-stack`；具體等控制口那題定案。
+- 方向題 1～2 仍待使用者。
+
+再一輪（11-02，逐字；頂層先把方案 C 會切出去的列給使用者：信箱 `loops_ctl_mailbox/`、`loops_state.json`、`daemon_state.json`、`daemon_ctl.json`、`loops_ctl.json` 切出，`loops/<名>/` 小格與 `eca_archive` 留 stack，另加 `loops_state` 多一欄 `stack` 補洞）：
+
+> 先不要討論eca-hub。然後就算把STACK整個開出去，或許我們也可以利用檔案權限來阻擋？但那樣比較麻煩就是。不過這還是麻煩，在我們目前來說，因為還在初期，沒有權限問題，所以直接把整個STACK公開出去反而是最方便的。就AOS_DAEMON_STACK吧
+
+> 或者說，反正大家都是走包裝後的aos-daemon-ctl
+
+- **命名定案**：變數叫 `AOS_DAEMON_STACK`，值＝daemon 的 stack（方案 B）。現階段**不切控制口**，整個 stack 公開給外人（理由：還在初期沒有權限問題、大家都走包裝後的 aos-daemon-ctl）；權限以後要時可用檔案權限擋（使用者說較麻煩，先不做）。daemon.json 用 `$env` 明寫切出的能力照舊在（上面已定），只是現在不用。
+- **衝突 1 定**：不定三個名字（使用者前一則「那就不用定這三個名字了」）。
+- **衝突 3 定**：旗標 `--daemon-stack`（使用者前一則「最好明講，也就是--daemon-stack」）。
+- **方向題 1 頂層代定（可翻案）**：舊名 `AOS_DAEMON` 退場——不定三名，就沒有「定義資料夾」那個意思要留。
+- **方向題 2**：照 fable 建議先不做，等常駐 bob 用到再說。
+- eca-hub 先不討論（它也讀這個變數，實作時跟著改名即可）。
+
 ## `AOS_DAEMON` 現況（查清的，不是規劃）
 
 - **來歷**：10-30 使用者看 aos-daemon-ctl 的規劃時說「關於那個aos-daemon-ctl，他應該是要吃環境變數+argv來確定daemon home在哪裡的(要用哪個daemon)。」（[map-review 第 10 點](2026-10-30-map-review/01-使用者原文.md#決定10-30)）。變數名 `AOS_DAEMON`、`--daemon` 蓋過它、**值＝那個 daemon 的 `$AOS_STACK` 資料夾**，三件都是實作隊長照 N-63 代定、條文明寫「可翻案」。使用者原話說的是「daemon home」，沒說是 stack——隊長把 home 落成 stack，因為 aos-daemon-ctl 要碰的三樣東西（信箱 `loops_mailbox/`、名單窗 `loops_state.json`、小格 `<名字>/`）全在 stack 裡。
@@ -197,6 +220,14 @@ fable 的推薦（只是推薦，使用者 11-02 第四句說命名還要再想�
 | 10 | 收尾 | `grep -rn 'AOS_DAEMON\b' proto8 wf --include=* \| grep -v thinking \| grep -v digest \| grep -v session_logs` 應只剩 N-63 說明舊名那幾行；session log 一行；一個 commit（程式＋測試＋README＋條文＋code map 同一個） | ctest 全綠（repo 根）、`python3 -m unittest discover -s proto8/tests` 在 WSL 全綠、`/wf-lint` |
 
 不動的：wf/digest 兩處（歷史快照）、`wf/session_logs/archive`、proto2／舊 playground 的 `AOS_DAEMON_DIR`／`AOS_DAEMON_HOME`（凍結的舊 proto）、10-30 以前的 thinking。
+
+## 工人提的三點（11-02，使用者）
+
+小格改 `loops/<名>/` 時（[11-02 stack-tools § 實作結論](2026-11-02-stack-tools.md#實作結論11-02隊長代定可翻案)）工人提的三點；使用者原文在上面[決定](#決定11-02使用者)那段（「3.a.那就是後續使用者要自己小心。b.自己小心。c.不用測試。」）。
+
+- **(a) `loops` 成了 daemon stack 的保留名**（子項小格在 `.stack/loops/<名>/`，窗或信箱路徑取名 `loops` 會撞、程式不檢查）：使用者自己小心，不加檢查。
+- **(b) 路徑 `./x/../s.json` 在 x 不存在時 `WriteFailed`**（沒先化簡路徑）：使用者自己小心，不改。
+- **(c) 子項與信箱同名缺正向測試**：不補測試。
 
 ## aos-daemon-ctl 的定位（11-02，使用者）
 
