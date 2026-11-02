@@ -154,5 +154,11 @@ def unit_of(t):
 
 
 def failed(t):
-    """trace 那一行是不是失敗（非 0、非 10，或被訊號停掉）。"""
-    return bool(t) and (t.get("code") not in (0, 10) or t.get("signal") is not None)
+    """trace 那一行是不是失敗。fsm 的行 next 不是 null＝表上接住、照表往下走了一步，不算失敗（例：分岔表用 "*"、"1" 接住的錯碼）；
+    next 是 null（表上沒接住，state 不動）與沒有 next 的 unit 行（aos-eca-turn、10-30 前的舊 round）才看碼：非 0、非 10，或被訊號停掉＝失敗。
+    （11-02 使用者裁「改」；thinking 2026-10-30-aos-round 07-決定「要使用者裁（第 1 步發現）」）"""
+    if not t:
+        return False
+    if t.get("next") is not None:
+        return False
+    return t.get("code") not in (0, 10) or t.get("signal") is not None

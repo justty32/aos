@@ -268,6 +268,27 @@ class TailNewlineTest(Base):
         self.assertEqual(t.lines(), ["[工具 回 391]", "[工具 回 a ⏎ b]"])
 
 
+class FailedTest(unittest.TestCase):
+    """aos_ws.failed（aos_human.failure 照它）：fsm 行 next 不是 null＝表上接住、不算失敗；null 才看碼（11-02 使用者裁）。"""
+    def setUp(self):
+        import sys
+        sys.path.insert(0, str(HUMAN))
+        import aos_human as h
+        self.h = h
+
+    def test_next_set_is_not_failure(self):
+        t = {"state": "think", "code": 1, "signal": None, "next": "repair"}
+        self.assertFalse(self.h.aos_ws.failed(t))
+        self.assertIsNone(self.h.failure(t))
+
+    def test_next_null_code_1_is_failure(self):
+        t = {"state": "think", "code": 1, "signal": None, "next": None}
+        self.assertTrue(self.h.aos_ws.failed(t))
+        self.assertEqual(self.h.failure(t), "停在 think 那格、結束碼 1")
+        self.assertFalse(self.h.aos_ws.failed({"state": "idle", "code": 10, "signal": None, "next": None}))
+        self.assertTrue(self.h.aos_ws.failed({"unit": "turn", "code": 1}))     # 沒有 next 的 unit 行照舊
+
+
 class ChatTest(Base):
     def test_two_questions_keep_history(self):
         r = run(CHAT, "--ws", str(self.ws), self.agent, input="你好\n/status\n第二句\n//斜線開頭\n/bogus\n")
