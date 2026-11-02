@@ -4,14 +4,17 @@
 # 外面的 agent 只會講 MCP；櫃台把「有哪些工具」交給 `aos-tools ls --json`、「叫一次」交給 `aos-tools call 名`，
 # 自己不懂任何一個工具在做什麼、也不管工具是資料夾、JSON 還是可執行檔（C-52）。設計：proto8/thinking/2026-10-28-aos-tools.md。
 #
-# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] REGISTRY...
-#   每個 REGISTRY 是一份登記檔的路徑（相對路徑從啟動時的 cwd 算；不是檔＝ToolMissing）；檔名不限，不預設去找 tools.json
-#   （11-02 使用者「改成指定檔案」，以前給的是 agent 資料夾、讀它的 tools.json）。好幾份的工具合在一起，撞名＝ToolsBad。
+# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [REGISTRY...]
+#   每個 REGISTRY 是一份登記檔的路徑（相對路徑從啟動時的 cwd 算；不是檔＝ToolMissing）；檔名不限
+#   （11-02 使用者「改成指定檔案」，以前給的是 agent 資料夾、讀它的 tools.json）。一份都沒給＝./aos-tools.json
+#   （11-02 使用者「不接，就是默認aos-tools.json」；不存在＝ToolMissing）。好幾份的工具合在一起，撞名＝ToolsBad。
 #   清單每次 tools/list、tools/call 都重讀（登記檔變了，下次列就看得到；不主動通知 listChanged）。
 #   工作區＝--ws ＞ $AOS_WS；stack＝--stack ＞ $AOS_STACK ＞ $WS/.stack/。每次叫工具：
-#   AOS_WS=WS AOS_STACK=<stack>/<名>/ aos-tools --file REGISTRY call 名（aos-tools、aos-exec 由 PATH 找，呼叫者放好），
+#   AOS_WS=WS AOS_STACK=<stack>/tools/<名>/ aos-tools --file REGISTRY call 名（aos-tools、aos-exec 由 PATH 找，呼叫者放好），
 #   arguments 進 stdin、stdout 整段回去，退非 0＝isError；逾時＝工具 _metainfo 的 time_ms.max，沒寫用 --timeout-s（預設 60），
-#   到了整群 TERM、2 秒後 KILL。每次叫完在 <stack>/calls.jsonl 記一行（名字、arguments、結束碼、花多久）。
+#   到了整群 TERM、2 秒後 KILL。呼叫紀錄預設不記（11-02 使用者「默認不留」）：給 --enable-logs＝每次叫完在
+#   <stack>/aos-mcp-logs.jsonl 記一行（名字、arguments、結束碼、花多久），再加 --logs-path FILE＝記在 FILE（相對路徑從啟動時的 cwd 算）；
+#   只給 --logs-path、沒給 --enable-logs＝ArgumentsBad。
 # 只做 initialize、ping、tools/list、tools/call；沒有 progress、resources、prompts、HTTP。
 # 錯：自己的錯 stderr 一行「aos-mcp: 代號 原因」、退 1（ArgumentsBad、WsMissing、ToolMissing、ToolsBad）。
 #   啟動時 aos-tools ls 失敗＝ToolsBad（aos-tools 自己那行照樣在 stderr）；跑起來之後重讀失敗＝那一則 JSON-RPC 回錯誤、不退。
@@ -19,7 +22,10 @@ import json, os, signal, subprocess, sys, time
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
-USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] REGISTRY..."
+USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [REGISTRY...]"
+DEFAULT_REGISTRY = "aos-tools.json"           # 一份都沒給時讀 ./aos-tools.json（11-02）
+LOGS_NAME = "aos-mcp-logs.jsonl"         # --enable-logs 沒給 --logs-path 時記在 <stack>/ 底下的這個檔（11-02）
+LOGS_PATH = None                               # 記呼叫紀錄的檔（絕對路徑）；None＝不記（預設）
 
 
 class ToolsBad(Exception):
@@ -32,12 +38,13 @@ def die(code, reason):
 
 
 def parse_args(argv):
-    """命令列 → (ws, stack, timeout_s, registries)。"""
-    ws, stack, timeout_s, files = os.environ.get("AOS_WS"), os.environ.get("AOS_STACK"), 60.0, []
+    """命令列 → (ws, stack, timeout_s, registries)；--enable-logs／--logs-path 設進 LOGS_PATH。"""
+    global LOGS_PATH
+    ws, stack, timeout_s, files, enable, log = os.environ.get("AOS_WS"), os.environ.get("AOS_STACK"), 60.0, [], False, None
     i = 0
     while i < len(argv):
         a = argv[i]
-        if a in ("--ws", "--stack", "--timeout-s"):
+        if a in ("--ws", "--stack", "--timeout-s", "--logs-path"):
             if i + 1 >= len(argv):
                 die("ArgumentsBad", "%s 後面要接值" % a)
             v = argv[i + 1]
@@ -45,19 +52,27 @@ def parse_args(argv):
                 ws = v
             elif a == "--stack":
                 stack = v
+            elif a == "--logs-path":
+                log = v
             else:
                 try:
                     timeout_s = float(v)
                 except ValueError:
                     die("ArgumentsBad", "--timeout-s 要是數字")
             i += 2
+        elif a == "--enable-logs":
+            enable, i = True, i + 1
         elif a.startswith("--"):
             die("ArgumentsBad", "不認得的旗標 %s（usage: %s）" % (a, USAGE))
         else:
             files.append(a)
             i += 1
+    if log is not None and not enable:
+        die("ArgumentsBad", "給了 --logs-path 卻沒給 --enable-logs（要記就兩個都給；預設不記）")
+    if log == "":
+        die("ArgumentsBad", "--logs-path 要接檔名")
     if not files:
-        die("ArgumentsBad", "至少給一份登記檔（usage: %s）" % USAGE)
+        files = [DEFAULT_REGISTRY]
     if not ws or not os.path.isdir(ws):
         die("WsMissing", "沒給 --ws、也沒設 AOS_WS，或不是資料夾")
     regs = []
@@ -67,6 +82,8 @@ def parse_args(argv):
         regs.append(os.path.abspath(f))
     ws = os.path.abspath(ws)
     stack = os.path.abspath(stack) if stack else os.path.join(ws, ".stack")
+    if enable:
+        LOGS_PATH = os.path.abspath(log) if log else os.path.join(stack, LOGS_NAME)
     return ws, stack, timeout_s, regs
 
 
@@ -113,7 +130,7 @@ def load_tools(regs):
 
 def call(name, tool, args, ws, stack, timeout_s):
     """跑一次工具 → (結束碼, stdout, 花幾毫秒, 逾時秒數)。結束碼 None＝逾時被收掉。"""
-    env = dict(os.environ, AOS_WS=ws, AOS_STACK=os.path.join(stack, name) + "/")
+    env = dict(os.environ, AOS_WS=ws, AOS_STACK=os.path.join(stack, "tools", name) + "/")
     env.pop("AOS_ENTRY", None)                  # 讓 aos-exec 用預設入口 _entry，不吃外面殘留的
     limit = tool["max_s"] or timeout_s
     t0 = time.monotonic()
@@ -137,9 +154,11 @@ def call(name, tool, args, ws, stack, timeout_s):
     return code, out.decode("utf-8", "replace"), int((time.monotonic() - t0) * 1000), limit
 
 
-def record(stack, line):
-    os.makedirs(stack, exist_ok=True)
-    with open(os.path.join(stack, "calls.jsonl"), "a", encoding="utf-8") as f:
+def record(line):
+    if LOGS_PATH is None:                       # 預設不記
+        return
+    os.makedirs(os.path.dirname(LOGS_PATH), exist_ok=True)
+    with open(LOGS_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps(line, ensure_ascii=False) + "\n")
 
 
@@ -148,7 +167,7 @@ def tools_call(params, tools, ws, stack, timeout_s):
     if name not in tools:
         return None, (-32602, "沒有這個工具：%s" % name)
     code, out, ms, limit = call(name, tools[name], args, ws, stack, timeout_s)
-    record(stack, {"name": name, "arguments": args, "code": code, "elapsed_ms": ms,
+    record({"name": name, "arguments": args, "code": code, "elapsed_ms": ms,
                    "called_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
     if code is None:
         text = "%s: CommandFailed %s 逾時（%g 秒），整群收掉了" % (NAME, name, limit)

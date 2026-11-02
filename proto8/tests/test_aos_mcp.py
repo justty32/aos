@@ -18,10 +18,11 @@ def env_for(**extra):
     return e
 
 
-def session(args, msgs, env=None):
+def session(args, msgs, env=None, cwd=None):
     """起 aos-mcp、送一串訊息 → (結束碼, 回覆陣列, stderr)。"""
     inp = "".join(json.dumps(m) + "\n" for m in msgs)
-    r = subprocess.run([MCP] + args, input=inp, capture_output=True, text=True, env=env or env_for(), timeout=60)
+    r = subprocess.run([MCP] + args, input=inp, capture_output=True, text=True, env=env or env_for(), timeout=60,
+                       cwd=cwd)
     return r.returncode, [json.loads(l) for l in r.stdout.splitlines() if l.strip()], r.stderr
 
 
@@ -86,7 +87,7 @@ class AosMcp(unittest.TestCase):
         self.assertEqual(out[1]["result"]["tools"][0]["inputSchema"], {"type": "object", "properties": {}})
         self.assertEqual(json.loads(out[2]["result"]["content"][0]["text"]), {"k": 1})
         self.assertEqual(out[3]["result"]["content"][0]["text"].strip(), "42")
-        self.assertTrue((self.stack / "add" / "tool_call.json").is_file())
+        self.assertTrue((self.stack / "tools" / "add" / "tool_call.json").is_file())
         Path(a).write_text('{"tools": {}}')                         # 每次 tools/list 重讀
         _, out, _ = session(self.base + [a], INIT + [req(2, "tools/list")])
         self.assertEqual(out[1]["result"]["tools"], [])
@@ -108,14 +109,39 @@ class AosMcp(unittest.TestCase):
         self.assertTrue(err.splitlines()[-1].startswith("aos-mcp: ToolsBad"), err)
 
     def test_call_ok_and_record(self):
-        code, out, _ = session(self.base + [self.agent(BASE / "math")],
+        code, out, _ = session(self.base + ["--enable-logs", self.agent(BASE / "math")],
                                INIT + [req(2, "tools/call", {"name": "math", "arguments": {"expr": "123456789*987654321"}})])
         res = out[1]["result"]
         self.assertFalse(res["isError"])
         self.assertEqual(res["content"][0]["text"].strip(), str(123456789 * 987654321))
-        rec = [json.loads(l) for l in (self.stack / "calls.jsonl").read_text().splitlines()]
+        rec = [json.loads(l) for l in (self.stack / "aos-mcp-logs.jsonl").read_text().splitlines()]
         self.assertEqual((rec[0]["name"], rec[0]["code"]), ("math", 0))
-        self.assertTrue((self.stack / "math").is_dir())     # 小格 <stack>/<名>/
+        self.assertTrue((self.stack / "tools" / "math").is_dir())     # 小格 <stack>/tools/<名>/（11-02 改進 tools/）
+        self.assertFalse((self.stack / "math").exists())
+
+    def test_calls_log_off_by_default_and_to_file(self):
+        """呼叫紀錄預設不記；--enable-logs --logs-path FILE 記在 FILE（相對路徑從啟動時的 cwd 算）（11-02）。"""
+        a = self.agent(BASE / "clock")
+        call_clock = INIT + [req(2, "tools/call", {"name": "clock"})]
+        _, out, _ = session(self.base + [a], call_clock)
+        self.assertFalse(out[1]["result"]["isError"])
+        self.assertFalse((self.stack / "aos-mcp-logs.jsonl").exists())
+        self.assertFalse((self.stack / "calls.jsonl").exists())
+        _, out, _ = session(self.base + ["--enable-logs", "--logs-path", "log/mine.jsonl", a], call_clock, cwd=self.tmp.name)
+        rec = [json.loads(l) for l in (Path(self.tmp.name) / "log" / "mine.jsonl").read_text().splitlines()]
+        self.assertEqual((rec[0]["name"], rec[0]["code"]), ("clock", 0))
+        self.assertFalse((self.stack / "aos-mcp-logs.jsonl").exists())
+
+    def test_default_registry(self):
+        """一份登記檔都沒給＝讀啟動時 cwd 的 ./aos-tools.json（11-02）；不存在＝ToolMissing。"""
+        a = Path(self.agent(BASE / "clock")).parent              # 裡面有 aos-tools.json
+        _, out, _ = session(self.base, INIT + [req(2, "tools/list")], cwd=a)
+        self.assertEqual([t["name"] for t in out[1]["result"]["tools"]], ["clock"])
+        (a / "tools.json").write_text((a / "aos-tools.json").read_text())
+        (a / "aos-tools.json").unlink()                         # 只有 tools.json＝不去找它
+        rc, _, err = session(self.base, [], cwd=a)
+        self.assertEqual(rc, 1)
+        self.assertTrue(err.splitlines()[-1].startswith("aos-mcp: ToolMissing aos-tools.json"), err)
 
     def test_call_error_is_iserror(self):
         code, out, _ = session(self.base + [self.agent(BASE / "math")],
@@ -132,9 +158,9 @@ class AosMcp(unittest.TestCase):
 
     def test_ws_and_stack_from_env(self):
         e = env_for(AOS_WS=str(self.ws), AOS_STACK=str(self.stack))
-        _, out, _ = session([self.agent(BASE / "clock")], INIT + [req(2, "tools/call", {"name": "clock"})], env=e)
+        _, out, _ = session(["--enable-logs", self.agent(BASE / "clock")], INIT + [req(2, "tools/call", {"name": "clock"})], env=e)
         self.assertFalse(out[1]["result"]["isError"])
-        self.assertTrue((self.stack / "calls.jsonl").exists())
+        self.assertTrue((self.stack / "aos-mcp-logs.jsonl").exists())
 
     def test_timeout_kills(self):
         slow = Path(self.tmp.name) / "slow"
@@ -159,7 +185,7 @@ class AosMcp(unittest.TestCase):
         broken = Path(self.tmp.name) / "broken"
         broken.mkdir()
         (broken / "tools.json").write_text('{"tools": {"gone": {"path": "nope"}}}')
-        for args, code in (([], "ArgumentsBad"), (["--ws", "/nonexistent", self.agent(BASE / "clock")], "WsMissing"),
+        for args, code in ((["--bogus"], "ArgumentsBad"), (self.base + ["--logs-path", "x.jsonl"], "ArgumentsBad"), (self.base + ["--enable-logs", "--logs-path"], "ArgumentsBad"), (["--ws", "/nonexistent", self.agent(BASE / "clock")], "WsMissing"),
                            (self.base + [str(self.ws)], "ToolMissing"),             # 給資料夾＝不收（11-02 起只收檔）
                            (self.base + [str(broken)], "ToolMissing"),              # 資料夾裡有 tools.json 也不去找
                            (self.base + [str(self.ws / "nope.json")], "ToolMissing"),
