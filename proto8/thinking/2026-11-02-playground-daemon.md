@@ -24,9 +24,9 @@
 
 ### 用的時候會碰到的四件事（實測）
 
-1. **bob 的 stdout 看不到**：daemon 把子項的 stdout 丟掉（N-28），bob 最後那句「我做了什麼」不會出現；結果只看他寫進工作區的檔、`aos-daemon-ctl ls` 的 `done`／結束碼、小格的 `stderr.txt`。所以題目要叫他寫成檔。
-2. **同一個名字要再問一題，得先拿掉、等一下再投**：做完的子項停在 `done`、不重起；`rm` 跟新的信若在同一圈被收到，daemon 看到名單上還是有 bob、不會重起（實測連著下兩個指令就是這樣，新題沒跑）。等 `ls` 看不到 bob（約 1 秒）再投就會跑；或每題換個名字（bob2、bob3），之後再 `rm` 清掉。
-3. **用 ctl 停 daemon 之後，`ctl.json` 會留著**：下次起來第一圈就讀到 `stopped`、馬上結束（實測結束碼 0、什麼都沒做）。要嘛停完刪掉 `.stack/ctl.json`，要嘛用 Ctrl-C 停（不留檔）。
+1. **bob 的 stdout 看不到**：daemon 把子項的 stdout 丟掉（N-28），bob 最後那句「我做了什麼」不會出現；結果只看他寫進工作區的檔、小格的 `stderr.txt`；結束碼 11-02 起看 daemon 的 log（`aos-daemon --enable-logs`，子項起來、結束各一行），`ls` 只列還在跑的。所以題目要叫他寫成檔。
+2. **（11-02 晚起不用了：子項結束後不留名單、從期望表拿掉，同名直接再 `add` 就會重跑——[state 窗](2026-11-02-state-window.md#決定11-02-晚使用者實作中陸續裁的)；試驗場拷貝實跑過）**原本：同一個名字要再問一題，得先拿掉、等一下再投：做完的子項停在 `done`、不重起；`rm` 跟新的信若在同一圈被收到，daemon 看到名單上還是有 bob、不會重起（實測連著下兩個指令就是這樣，新題沒跑）。等 `ls` 看不到 bob（約 1 秒）再投就會跑；或每題換個名字（bob2、bob3），之後再 `rm` 清掉。
+3. **用 ctl 停 daemon 之後，`daemon_ctl.json` 會留著**（11-02 起 daemon 自己的窗慣用名 `daemon_ctl.json`／`daemon_state.json`，試驗場的 daemon.json 已改）：下次起來第一圈就讀到 `stopped`、馬上結束（實測結束碼 0、什麼都沒做）。要嘛停完刪掉 `.stack/daemon_ctl.json`，要嘛用 Ctrl-C 停（不留檔）。
 4. daemon 重起時，做完的 bob 不會回到表上（他不在 daemon.json 裡、`adopt` 只接還活著的）；clock 照 daemon.json 重新起，`clock.txt` 接著附加。
 
 ### 給使用者的指令
@@ -43,18 +43,18 @@ aos-daemon-ctl ls                       # 名單：名字、loop/exec、phase、
 tail -f .stack/loops/clock/clock.txt    # clock 每 5 秒一行（11-02 起小格在 .stack/loops/<名字>/）
 
 # 給 bob 題目（掛上）
-echo '{"execs_added": {"bob": ["../../agents/bob", "--", "在 env:AOS_WS 寫一首詩，詠桃花，檔名 peach.txt。"]}}' | aos-post send .stack/loops_mailbox
-aos-daemon-ctl ls                       # bob exec running → done 0（約幾秒到十幾秒）
+aos-daemon-ctl add ../agents/bob -- "在 env:AOS_WS 寫一首詩，詠桃花，檔名 peach.txt。"   # 11-02 起 add 收 -- 參數（XXX 從這裡的 cwd 轉絕對）
+aos-daemon-ctl ls                       # bob exec running；跑完（幾秒到十幾秒）就從表上消失
 cat peach.txt                           # 結果
 cat .stack/loops/bob/stderr.txt         # 出錯時看這裡
 
 # 拿掉／再問一題
-aos-daemon-ctl rm bob                   # 等 ls 看不到 bob 再投下一封（或換名字 bob2）
+aos-daemon-ctl add ../agents/bob -- "下一題"   # 11-02 起做完的同名可直接再 add；rm 只用來停還在跑的
 aos-daemon-ctl rm clock                 # 拿掉 clock；放回：
-echo '{"loops_added": {"clock": {"exec": "daemon.json#/loops/clock/body", "interval_ms": 5000}}}' | aos-post send .stack/loops_mailbox
+echo '{"loops_added": {"clock": {"exec": "daemon.json#/loops/clock/body", "interval_ms": 5000}}}' | aos-post send .stack/loops_ctl_mailbox
 
 # 停 daemon：視窗一 Ctrl-C；或
-echo '{"stopped": true}' > .stack/ctl.json   # 停完記得 rm .stack/ctl.json，不然下次一起來就停
+echo '{"stopped": true}' > .stack/daemon_ctl.json   # 停完記得 rm .stack/daemon_ctl.json，不然下次一起來就停
 ```
 
 ### 代定清單

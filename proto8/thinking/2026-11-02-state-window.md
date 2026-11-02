@@ -2,7 +2,7 @@
 
 ← [thinking README](README.md)｜月份表 [2026-11](months/2026-11.md)｜出發點：使用者 11-02 看試驗場 daemon 的 `.stack/`（[11-02 試驗場 daemon](2026-11-02-playground-daemon.md)）｜條文：[N-09、N-13、N-14、N-17、N-32、N-33](../docs/NORMS/05-基礎設施-窗.md)、[N-28](../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-39](../docs/NORMS/07-基礎設施-組合子.md)（fsm 的 `trace.jsonl`）、[P-38](../docs/CONVENTION/06-巢狀.md)｜實作：[impls/aos-loop](../impls/aos-loop/README.md)（`src/engine/window.cpp`、`loop.cpp`）、[impls/aos-daemon](../impls/aos-daemon/README.md)（`src/daemon/windows.cpp`）｜同天的另兩份規劃：[11-02 stack-tools](2026-11-02-stack-tools.md)（隊長正在落地）、[11-02 daemon-env](2026-11-02-daemon-env.md)（控制口，命名未定）
 
-本檔只記使用者原文（逐字）、決定、fable 照原則定的規劃（可翻案）、要使用者看的衝突與方向題（[user/03](../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。**只規劃，程式與條文都還沒動**；步驟表在最後。
+本檔只記使用者原文（逐字）、決定、fable 照原則定的規劃（可翻案）、要使用者看的衝突與方向題（[user/03](../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。規劃節是 fable 的原規劃，**以決定節為準**（log 檔、心跳進 log 等沒做）；11-02 已實作，結論在文末「實作結論」。
 
 ## 使用者原文（11-02，逐字）
 
@@ -22,6 +22,45 @@
 - **方向題 3**：`recorded_at` 收掉，只留 `updated_at`。
 - **方向題 4**：見上 log（stdout、預設開）。
 - 前綴原則見 [exec 像繼承 § 結論](2026-11-02-exec-inheritance.md#結論11-02跟使用者討論後)：daemon 自己的東西用 `daemon_*`、loop 的用 `loop_*`。
+
+## 決定（11-02 晚，使用者；實作中陸續裁的）
+
+使用者原文（11-02，逐字，依先後）：
+
+> 把--kind刪掉，XXX後面可以接-- ... 也就是附加argv參數。改成子項結束後不留名單。然後跟我說說aos-daemon-ctl ls,rm兩個指令。
+
+> running/waiting確實不該算變動。loops_ctl這邊，可以收斂成added/removed，不區分loops/exec。loops這塊保留，但裡面兼容execs。loops_state.json這邊，kind刪掉，loops/execs仍分開，letter_warning改成mailbox_warning，然後告訴我daemon.json如何指定信箱模式...我希望信箱和loops_ctl共存，或者說兩者都可以在daemon.json中設定
+
+> 喔等等，那還是不要合併了
+
+> 信件也不要跟著改
+
+> loops這塊...也弄個execs吧
+
+> loops_mailbox改名為loops_ctl_mailbox。寫null就是不開窗，ctl/ctl_mailbox可以一起不開
+
+> daemon.json中的ctl/state，如果指定null，那就是不開窗
+
+> aos體系下，stdin/out/err都可以任意指定，混在一起就是使用者自己要處理的，不用管太多。
+
+> aos-loop XXX -- ...應該是可以這樣用的，代表後面的argv轉給裡面的exec？這樣可以嗎？
+
+> 1. 是的，就應該這樣，也就是aos-XXX ... ... -- ...，第一個...就是aos-XXX本身的旗標，大多都是--aaa bbb或-c，第二個...就是目標檔案，或是目標字串陣列，後面就是純參數。
+
+> aos-loop和aos-daemon他們印出的log感覺都沒啥用，應該要改成默認不印。
+
+（daemon 的 execs 要不要也收內嵌單子）「6.要。」——原文與決定記在 [loop-stdio](2026-11-02-loop-stdio.md)。
+
+決定：
+- **aos-daemon-ctl `add`**：`--kind`（含 `max1`）拿掉，只剩自動識別；`add [--name N] [--ws WS] XXX -- 參數...`，`--` 後面當附加 argv。
+- **子項結束後不留名單**（loop 型、exec 型都是）：退了就從 `loops_state` 的表拿掉，小格照留。
+- **running ⇄ waiting 不算變動**。
+- `loops_state`：`kind` 刪、`loops`／`execs` 兩張表照舊分開、`letter_warning` 改名 `mailbox_warning`。
+- loops_ctl **不**收斂成 added／removed（使用者撤回）；信的 body 也不改；loops_ctl 多認一個 **`execs`**（跟 `loops` 對稱，整份取代）。
+- daemon.json 的 `loops_mailbox` 改名 **`loops_ctl_mailbox`**；它跟 `loops_ctl` **可以同時開**，寫 null＝不開，兩個都不開也行。
+- `ctl`／`state`（以及 `loops_ctl`、`loops_state`、`loops_ctl_mailbox`）寫 null＝不開窗。
+- log 跟身體的 stdout 混在一起是使用者自己的事，不另外分；log **改成預設不印**（翻掉同日稍早的「預設開」）。
+- 命令列 **`aos-XXX [旗標...] 目標 -- 參數...`**：aos-loop／aos-daemon 的 `設定檔 -- 參數...` 每次接到 exec 後面。通則只記原文，其他指令這輪不改。
 
 ## 現況（查清的，不是規劃）
 
@@ -146,3 +185,32 @@
 | 7 | code map：`wf/workflows/common/code-map/proto8/14-aos-daemon.md`（`write_more`、`finish` 那兩格）、`code-map/proto8/01-impls與舊lib.md`（aos-loop `window.cpp`／`loop.cpp`／`config.cpp` 那幾格加 `log`）、`code-map/proto8/02-tests*.md`（案數） | 跟程式對一遍 | — |
 | 8 | 使用者親手試（`wf/WAIT_USER.md` 一條） | 在試驗場起 daemon，`watch -n1 ls -l --time-style=full-iso .stack/`：睡著時 `daemon_state.json`、`loops_state.json` 的 mtime 不動；`aos-daemon-ctl add` 一個子項後兩扇窗各動一次；`cat .stack/daemon_state.json | jq .updated_at`；有身體的 loop `tail -3 .stack/log.jsonl` | 使用者回報 |
 | 9 | 收尾 | 本檔「決定」補使用者對衝突 1、方向題 1～4 的答案；[months/2026-11](months/2026-11.md) 那列由頂層加；日誌一行；repo 根 `cmake --build --preset default && ctest --preset default` 全綠（鐵律 1）；一個 commit（程式＋測試＋demo＋README＋條文＋code map 同一個） | — |
+
+## 實作結論（11-02）
+
+照兩個「決定」節做完（commit `278b7bd1` 程式＋測試＋demo＋code map；條文另一個 commit）。驗證：impls ctest 全過（aos-loop 72 組、aos-daemon 71＋demo）、repo 根 ctest 8/8、proto8 pytest 812 案（只剩已知的 `test_eca_turn.test_one_on_busy` error；`test_human` 負載下偶紅、單跑 22 案過）、`demo/run.sh` 0。
+
+- **窗**：aos-loop 的 state、daemon 的 `daemon_state.json` 與 `loops_state.json` 拿掉 `kind`、`recorded_at`，最後一欄 `updated_at`；組好的內容（不含 `updated_at`、`counter_runs`，running⇄waiting 當同一個）跟上一份一樣就不寫；第一份、結束那份一定寫。心跳（`beat`）拿掉。
+- **判活**：pid＋`started_at_ticks`＋`boot_id`；`aos-daemon-ctl ls` 另外對 /proc 判，daemon 不在跑時 stderr 一句「注意 daemon 沒在跑（pid N）；表是它最後寫的」，照樣列、退 0。
+- **log**：`--enable-logs` 才印到 stdout。有身體：每跑完一次一行 `{started_at, counter_runs, code, signal, elapsed_ms}`；daemon：子項起來一行、結束一行 `{at, name, table, phase, pid, code, signal(, ws)}`。stdout 寫不了就停印、不退出（寫的那一下擋 SIGPIPE，不改處置、子行程不受影響）。
+- **子項結束後不留名單**，本次執行不再起；再起的路：信箱同名再 add（或信）、ctl 模式讓名單有一圈沒有它。
+- 信箱 key `loops_ctl_mailbox`、可與 `loops_ctl` 共存；loops_ctl 認整份 `execs`；execs 收內嵌單子；窗寫 null＝不開；`設定檔 -- 參數`。
+- **試驗場**（WSL `~/code/playground`）：`daemons/main/daemon.json` 改 `daemon_ctl.json`／`daemon_state.json`／`loops_ctl_mailbox`。在拷貝 `~/.cache/aos-c8a7-f-tools/pg-daemon` 實跑：睡著 3 秒 `daemon_state.json`、`loops_state.json` mtime 都不動；`aos-daemon-ctl add --name nap /bin/sleep -- 2` 後 loops_state 動了、跑完從表上消失；同名再 add 照樣重跑；整段 daemon_state 不動；`--enable-logs` 的 stdout 有 clock／nap 起退共 6 行；不帶旗標 stdout 0 bytes；SIGINT 後 ls 印出「注意 daemon 沒在跑」；沒有殘留程序。使用者 11:38 起的那隻 daemon（pid 266490）13:22 已經結束（它最後的 state：`stopped`、code 130＝Ctrl-C），不是這輪碰的。
+
+### 代定（可翻案）
+
+1. 開關名 `--enable-logs`（跟 aos-mcp 一致；不帶值）。旗標要放在設定檔前，所以經 `aos-exec 資料夾` 起的 daemon 要開 log 得把旗標寫進 `_entry`（例 `["aos-daemon", "--enable-logs", "daemon.json"]`），或直接叫 aos-daemon。
+2. `heartbeat()` 改名 `proc_fields()`（不帶時間欄）；`beat` 整個拿掉，daemon 表變了自己寫。
+3. running⇄waiting 不算變動的結果：有身體的 loop 窗會停在第一份 running，直到 paused／stopped／done 或 ctl 有變。
+4. ctl 模式「本次已結束」集合 `ended_`：只記自己結束（done）的；某圈算出的名單裡沒有它才放掉。被收掉（stopped）的不記。
+5. 信箱與 loops_ctl 共存：信改「底」（起來時＝daemon.json＋只開信箱時 adopt 接回的名字）、loops_ctl 每圈疊在底上（有 `loops`／`execs` 就整份取代底的那張，再＋added－removed）；同一圈先套信再疊；疊完 loops 與 execs 同名＝那封是壞信。
+6. 舊 key `loops_mailbox` 照「其他 key 忽略」：不開信箱、不報錯。
+7. `設定檔 -- 參數`：設定檔後的 `--` 剝掉（aos-exec 則原樣交給入口，所以 `aos-exec 資料夾 -- 題` 接得起來）；單子 exec 的 argv 要直接是陣列，否則 CfgBad；沒有 exec 卻給參數＝ArgumentsBad。
+8. execs 的單子只能寫成 `{"exec": 單子}`，daemon 寫進小格 `exec.json` 再 `aos-exec 小格/exec.json#/exec`（AOS_CF 指小格，不指回 daemon.json 或 ctl）。
+9. aos-daemon-ctl：loop 型帶 `-- 參數`＝ArgumentsBad（「loop 型不收參數；參數寫進 loop.json 的 exec」）；判活注意句 `--json` 時也印（只在 stderr）。
+10. aos-eca-hub：表上沒有、小格的子 loop `state.json` 是 done 且結束碼非 0＝「出錯停了」；aos_ai `start` 不在跑就先從 loops_added 拿掉、等回音、再加回。
+
+### 帶給使用者的（條文工人列的，沒自己定）
+
+- N-14 通則「窗內自述 `kind`」、N-16 通稱 `letter_warning`（agent queue 那支照舊）、C-54 R1 範例「state.json 每跑一次寫一次」、附錄 1 N-31 作廢說明「loop 不吐 stdout」、N-11「設定檔是唯一的位置參數」：這輪只加註，要不要改通則待使用者。
+- 使用者通則 `aos-XXX [旗標] 目標 -- 參數` 跟現有指令的差異：aos-exec 目標後面原樣全收（不剝 `--`）；aos-fsm、aos-llm-kernel、aos-llm-send 沒有附加參數；aos-daemon-ctl `add` 照通則；這輪只改了 aos-loop／aos-daemon。
