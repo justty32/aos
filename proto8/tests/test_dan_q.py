@@ -89,7 +89,7 @@ class DanQ(unittest.TestCase):
         sig = self.say("現在幾點？")
         r = self.dan()
         self.assertEqual(r.returncode, 0, r.stderr)
-        r = self.listen("--timeout", "10", sig)
+        r = self.listen("--timeout", "10")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertRegex(r.stdout, r"^FAKE ANSWER to: 現在幾點？（clock said: \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ）\n$")
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant", "tool", "assistant"])
@@ -111,8 +111,7 @@ class DanQ(unittest.TestCase):
         users = [m["content"] for m in self.history() if m["role"] == "user"]
         self.assertEqual(users, ["第一句", "第二句"])
         self.assertEqual((self.stage("new"), self.stage("cur")), ([], []))
-        self.assertIn("第二句", self.listen("--timeout", "10", second).stdout)
-        self.assertEqual(self.listen("--timeout", "10", first).returncode, 0)
+        self.assertIn("第二句", self.listen("--timeout", "10").stdout)     # 不帶信號＝最新那封（second）的回答
 
     def test_pause_between_think_and_act(self):
         """場景二：think 問完腦（送回答之前就寫 paused）→ loop 停在 think 與 act 之間、信還在 cur/ →
@@ -146,7 +145,7 @@ class DanQ(unittest.TestCase):
         (agent / "system.txt").write_text("改過的 system：答案只給數字。\n")
         (self.stack / "ctl.json").write_text('{"paused": false}')
         self.assertEqual(p.wait(timeout=30), 0, p.stderr.read())
-        self.assertEqual(self.listen("--timeout", "10", sig).stdout, "391\n")
+        self.assertEqual(self.listen("--timeout", "10").stdout, "391\n")
         first, second = b.requests
         self.assertEqual(first["messages"][0]["content"], (DANQ / "system.txt").read_text())
         self.assertEqual(second["messages"][0]["content"], "改過的 system：答案只給數字。\n")

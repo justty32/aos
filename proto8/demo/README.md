@@ -77,7 +77,7 @@ agent-dan-q/
 ```sh
 aos-say --ws <工作區> 17*23 是多少？         # 印信號
 aos-exec --ws <工作區> proto8/demo/agent-dan-q  # PATH：impls 的 aos-exec／aos-loop／aos-fsm／aos-post、proto8/bin 的 aos-tools
-aos-listen --ws <工作區> <信號>                # 或 --last 1
+aos-listen --ws <工作區>                       # 等最新那封的回答（或 --last 1）
 ```
 
 錯同 agent-dan（開頭改 `agent-dan-q:`），多一個 `PostFailed`（aos-post 起不來或退非 0）。測試 `test_dan_q.py`（假腦與假 server：say／run／listen、兩封加一封壞信、think 與 act 之間暫停改 system.txt）。
@@ -380,7 +380,7 @@ eca-claude/
 
 ```sh
 aos-exec --ws ~/code/myproj proto8/demo/eca-claude &     # PATH 要有 impls 的 aos-exec／aos-loop／aos-post、proto8/bin 的 aos-eca-turn、claude
-aos-listen --ws ~/code/myproj "$(aos-say --ws ~/code/myproj 看一下 README 在講什麼)"
+aos-say --ws ~/code/myproj 看一下 README 在講什麼 && aos-listen --ws ~/code/myproj
 echo '{"paused": true}' > ~/code/myproj/.stack/ctl.json     # 暫停：不餵下一則（新信留 queue/new/），粒度＝一則訊息
 echo '{"stopped": true}' > ~/code/myproj/.stack/ctl.json    # 收工
 ```

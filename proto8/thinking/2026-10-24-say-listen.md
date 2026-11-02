@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜程式 [proto8/human](../extras/human/README.md)｜測試 `proto8/tests/test_human.py`
 
-11-01 晚翻案：`aos-listen 信號` 拿掉，見下「11-01 晚使用者」一節。
+11-01 晚翻案：`aos-listen 信號` 拿掉，見下「11-01 晚使用者」一節（11-02 晚已實作）。
 
 ## 使用者原文（整理版，10-24）
 
@@ -66,6 +66,16 @@
 - `aos-listen 信號` 這個位置參數拿掉（少一種機制）；aos-chat 內部要對應信號是函式庫的事，不露在命令列。
 - 原本「不帶參數＝跟著看（tail -f）」改成明寫 `--follow`；`--last N`、`--status`、`--timeout`、`--trace` 不動。
 - 實作排在 11-01 晚 worktree（刪 aos-round、改旋鈕）併入 main 之後做，避免同時改 `extras/human/bin/aos-listen`。連帶：extras/human/README、test_human、demo／playground／amy README 裡的 `aos-listen "$N"` 寫法全改。
+
+### 實作時代定（11-02 晚，照上面的決定與原則定的細節；都可翻案）
+
+1. **「最新那封」怎麼挑**：開始等的那一刻，取 queue `new/`、`cur/` 裡信號最大的一封（信號前面是 12 位序號，照名字排＝寄的順序），之後就盯這一封；**不管是誰寄的**——別人在你之後又寄一封，你等到的是他那封的回答。`done/` 不看：`new/`、`cur/` 都空＝答案已經到了，直接印 history 最新那則回答（先 say 後 listen 不漏，跟以前一樣）。
+2. **什麼都沒有**：`new/`、`cur/` 空、history 也沒有回答＝`QuestionUnknown`（沿用舊代號），不等「之後才寄的信」——先開 listen 再 say 的用法不支援（正規用法是 say 在前）。反過來，沒寄新信就 `aos-listen`＝立刻印上一則回答。
+3. **還給信號**：`aos-listen 信號`＝`ArgumentsBad`，訊息提示「不收位置參數；要等剛寄的那封就 aos-say 話 && aos-listen」。不留舊用法當別名（決定「少一種機制」）。
+4. **旗標組合**：不帶 `--last`／`--follow`／`--status`＝等最新那封，`--timeout` 只在這時收（跟 `--last`／`--follow` 一起＝`ArgumentsBad`）；`--last N` 不帶 `--follow`＝印完就走（不變）；`--last N --follow`＝先印再跟著看；`--trace` 兩種都收。Ctrl-C：等的時候退 130、跟著看退 0（不變）。
+5. **aos-say 照舊在 stdout 印信號一行**：決定沒說要拿掉；`aos-say 話 && aos-listen` 在終端機上會先看到那行信號、再看到回答。程式對帳（測試、aos-chat 結束時的提醒）還用得到。要安靜就再議。
+6. **aos-chat 離開時的提醒**改成「之後 `aos-listen --stack S` 看（等最新那封）」；nvim 外掛 `use_say=true` 那條改成不帶信號。
+7. **thinking 舊檔裡的 `aos-listen 信號`／`N=$(aos-say …); aos-listen "$N"` 不回頭改**（當時的結論）；有在用的說明與例子（human／demo／eca_hub README、resident-bob 的試驗場指令、WAIT_USER、code map、digest）改成新寫法。試驗場 `~/code/playground` 不在 git、這輪沒碰，由頂層轉給在那邊的 agent。
 
 ## 未決
 

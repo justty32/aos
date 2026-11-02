@@ -90,7 +90,7 @@
 - **`claude -p` 有「一直跑」的模式**：`--input-format stream-json`（stdin 一行一則 `{"type": "user", "message": {"role": "user", "content": "…"}}`，讀到 EOF 才結束；同一個行程、同一段對話），要配 `--output-format stream-json --verbose`（cli_session 已在用 stream-json 輸出）；stdout 一行一事件（`system`／`assistant`／`result`…）。**要實測**（步驟 0）：這是 fable 憑 Claude Code 文件的記憶，沒在試驗場跑過。11-02 已實測，見[結論](#結論11-02-實測)。
 - **inst 單子的 `stdin`／`stdout`**：`inst_exec.c` 在 fork 之前、aos-exec 自己的行程裡 `open()` 路徑（stdin `O_RDONLY`；stdout `O_WRONLY|O_CREAT|O_TRUNC`，`stdout_append` 改 `O_APPEND`），上層資料夾要已存在。路徑是 FIFO 時就是 Linux 的 FIFO 語意：開讀端等到有寫端、開寫端等到有讀端；**讀端在所有寫端關掉後讀到 EOF**。
 - **daemon 的子項**：loop 型＝daemon 自己起 `aos-loop <小格>/loop.json`，**行程本身的 stdin／stdout 接 `/dev/null`**（身體可以用單子另外指）；exec 型（`execs`）＝直接 `aos-exec 目標` 一次，stdin／stdout 同樣 `/dev/null`、stderr 到小格 `stderr.txt`，目標是資料夾時入口可以是 inst 單子（C-73），單子裡的 `stdin`／`stdout` 由 aos-exec 開。兩種子項各有自己的小格 `$AOS_STACK/loops/<名字>/`，環境只繼承 daemon 的（`AOS_WS` 可用 `ws` 另給）；**daemon 不給子項任何指到自己的變數**（daemon-env 方向題 2 留著）。`aos-daemon-ctl add [--name N] [--ws WS] XXX [-- 參數...]`（11-02 晚使用者拿掉 `--kind`、加 `-- 參數`）：XXX 是有 `loop.json` 的資料夾＝loop 型，其他（含單子檔）＝exec 型；`--` 之後的參數原樣接給 aos-exec（loop 型帶參數＝錯）。11-02 晚起 `execs` 也收 `{"exec": 內嵌單子}`；子項結束就從表上拿掉、同名再 add＝重新起。
-- **aos-say／aos-listen**：只碰一個 stack——`aos-say [--stack S] 話`＝`aos-post send --ordered S/queue`（body `{"role": "user", "content": 話}`，沒 queue 就建）；`aos-listen [--stack S] 信號`＝信還在 `queue/new/`／`cur/` 就等，不見了印 `S/history.jsonl` 最新那則 assistant；`--follow`／`--last N`；`--status` 讀 `S/state.json` 的 `phase`（沒有就不印）。
+- **aos-say／aos-listen**：只碰一個 stack——`aos-say [--stack S] 話`＝`aos-post send --ordered S/queue`（body `{"role": "user", "content": 話}`，沒 queue 就建）；`aos-listen [--stack S]`＝等最新那封（11-02 晚起不收信號，[say-listen「11-01 晚」](2026-10-24-say-listen.md#11-01-晚使用者aos-say---aos-listen-才是正規用法)；之前是 `aos-listen [--stack S] 信號`）：信還在 `queue/new/`／`cur/` 就等，不見了印 `S/history.jsonl` 最新那則 assistant；`--follow`／`--last N`；`--status` 讀 `S/state.json` 的 `phase`（沒有就不印）。
 
 ## 規劃（fable 11-02 晚第二版，照使用者決定與實測改寫；可翻案）
 
@@ -205,8 +205,7 @@ aos-exec ../agents/resident_bob                # 掛上：mkfifo、add bob（有
 aos-daemon-ctl ls                              # bob exec running、bob_ctl exec running（兩個都 running 才算掛好）
 
 S=$AOS_DAEMON_STACK/loops/bob_ctl              # 之後都對控制器的小格說話
-N=$(aos-say --stack $S "在 env:AOS_WS 寫一首詩，詠桃花，檔名 peach.txt。")
-aos-listen --stack $S "$N"                     # 等這題答完、印 bob 的回答
+aos-say --stack $S "在 env:AOS_WS 寫一首詩，詠桃花，檔名 peach.txt。" && aos-listen --stack $S   # 等這題答完、印 bob 的回答（11-02 晚起 listen 不收信號、等最新那封）
 aos-say --stack $S "再把它改成七言。"; aos-say --stack $S "加個標題。"   # 連丟兩句：忙時會被併成一題、一個回答回兩封（正常）
 aos-listen --stack $S --last 3                 # 最近三段（幾則 user＋一則回答）
 aos-listen --stack $S --follow                 # 像 tail -f 跟著看

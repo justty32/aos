@@ -131,14 +131,14 @@ class ListenTest(Base):
         r = self.go()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.queue("new") + self.queue("cur"), [])
-        r = run(LISTEN, "--ws", str(self.ws), sig)
+        r = run(LISTEN, "--ws", str(self.ws))                    # 不帶信號：new/ cur/ 空＝印最新那則回答
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 現在幾點（clock said:"), r.stdout)
         self.assertEqual(r.stdout.count("\n"), 1)
 
     def test_waits_while_agent_runs_later(self):
         sig = self.say("等我")
-        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--trace", "--timeout", "30", sig],
+        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--trace", "--timeout", "30"],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env())
         time.sleep(1.5)                                       # listen 先開：這時沒人在跑，會提醒一次
         self.assertEqual(self.go().returncode, 0)
@@ -156,13 +156,13 @@ class ListenTest(Base):
         self.assertEqual(self.go(DAN).returncode, 0)
         self.assertEqual(self.queue("new"), [sig])
         t0 = time.time()
-        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "30", sig)
+        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "30")
         self.assertLess(time.time() - t0, 10)
         self.assertEqual(r.returncode, 1)
         self.assertRegex(r.stderr.splitlines()[-1], r"^aos-listen: LetterUnclaimed %s 還在 queue 的 new/ 沒人認領" % re.escape(sig))
         self.assertIn("舊協議", r.stderr)
         sig2 = self.say("先開 listen")
-        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "30", sig2], stdout=subprocess.PIPE,
+        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "30"], stdout=subprocess.PIPE,   # 最新那封＝sig2
                              stderr=subprocess.PIPE, text=True, env=env())
         time.sleep(1.5)                                        # 這時還沒人跑過：提醒一次、照等
         self.assertEqual(self.go(DAN).returncode, 0)
@@ -171,7 +171,7 @@ class ListenTest(Base):
         self.assertIn("還在 queue 的 new/，但目前沒有程式在跑", err)
         self.assertIn("aos-listen: LetterUnclaimed", err)
         self.assertEqual(self.go().returncode, 0)                # 換走 queue 的 agent-nia：兩封都答
-        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "5", sig2)
+        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "5")
         self.assertEqual(r.returncode, 0, r.stderr)
 
     def test_waits_while_letter_in_cur(self):
@@ -181,7 +181,7 @@ class ListenTest(Base):
         r = self.go(bad)
         self.assertNotEqual(r.returncode, 0)
         self.assertEqual(self.queue("cur"), [sig])
-        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "1", sig)
+        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "1")
         self.assertEqual(r.returncode, 1)
         self.assertIn("做到一半停了：上次停在 think 那格、結束碼 1", r.stderr)
         self.assertRegex(r.stderr.splitlines()[-1], r"^aos-listen: AnswerMissing 等了 1 秒.*（信在 queue 的 cur/）")
@@ -190,7 +190,7 @@ class ListenTest(Base):
         self.assertIn("最後一格 think 退 1", r.stdout)
         self.assertIn("← 卡住了", r.stdout)
         self.assertIn("loop     phase done", r.stdout)                 # aos-loop 的 state 窗（失敗也是 done、帶 code）
-        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "30", sig], stdout=subprocess.PIPE,
+        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "30"], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, text=True, env=env())
         time.sleep(0.5)
         self.assertEqual(self.go().returncode, 0)                        # 換回假腦：接著做同一封
@@ -219,18 +219,34 @@ class ListenTest(Base):
         self.assertIn("queue    new 1、cur 0、done 0", r.stdout)
         self.assertEqual(self.queue("new"), [sig])
         (self.stack / "ctl.json").write_text('{"paused": false}')
-        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "20", sig)
+        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "20")
         self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 暫停中"), r.stdout + r.stderr)
         (self.stack / "ctl.json").write_text('{"stopped": true}')
         self.assertEqual(p.wait(timeout=20), 0)
 
     def test_unknown_and_usage(self):
-        r = run(LISTEN, "--ws", str(self.ws), "000000000001.nope")
+        r = run(LISTEN, "--ws", str(self.ws))                           # 沒寄過、也沒回答
         self.assertRegex(r.stderr, r"^aos-listen: QuestionUnknown ")
+        r = run(LISTEN, "--ws", str(self.ws), "000000000001.nope")     # 11-01 晚翻案：信號參數拿掉
+        self.assertRegex(r.stderr, r"^aos-listen: ArgumentsBad usage: .*不收位置參數")
         r = run(LISTEN, "--ws", str(self.ws), "--last", "2", "x")
         self.assertRegex(r.stderr, r"^aos-listen: ArgumentsBad usage: ")
-        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "abc", "x")
+        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "abc")
         self.assertRegex(r.stderr, r"^aos-listen: ArgumentsBad usage: ")
+        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "1", "--follow")
+        self.assertRegex(r.stderr, r"^aos-listen: ArgumentsBad usage: ")
+
+    def test_waits_for_latest_letter(self):
+        """aos-say 話 && aos-listen：連寄兩封，listen 等的是最新那封；答完印最新的回答。"""
+        self.say("第一封")
+        self.say("第二封")
+        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "30"], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True, env=env())
+        time.sleep(0.5)
+        self.assertEqual(self.go().returncode, 0)
+        out, err = p.communicate(timeout=30)
+        self.assertEqual(p.returncode, 0, err)
+        self.assertTrue(out.startswith("FAKE ANSWER to: 第二封"), out)
 
     def test_last_prints_question_and_answer(self):
         self.say("一")
@@ -243,7 +259,7 @@ class ListenTest(Base):
         self.assertTrue(r.stdout.startswith("== #2\n> 二\n"), r.stdout)
 
     def test_follow_prints_new_answers(self):
-        p = subprocess.Popen([LISTEN, "--ws", str(self.ws)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--follow"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                              text=True, env=env())
         time.sleep(0.5)
         self.say("跟著看")
@@ -402,7 +418,7 @@ class External(Base):
         p = self.popen(["aos-exec", "--ws", str(self.ws), str(self.eca)])
         self.assertTrue(self.phase(self.stack, ("waiting", "running")))
         sig = self.say("你好", **self.xenv)
-        r = self.xrun(LISTEN, "--ws", str(self.ws), "--timeout", "30", sig)
+        r = self.xrun(LISTEN, "--ws", str(self.ws), "--timeout", "30")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(r.stdout.startswith("fake claude[") and r.stdout.rstrip().endswith(": 你好"), r.stdout)
         r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
@@ -439,7 +455,7 @@ class External(Base):
         self.assertEqual(os.readlink(self.stack), str(ds / "loops" / "bob"))
         self.assertTrue(self.phase(ds / "loops" / "bob", ("waiting", "running")))
         sig = self.say("在 daemon 底下", **self.xenv)
-        r = self.xrun(LISTEN, "--ws", str(self.ws), "--timeout", "30", sig)
+        r = self.xrun(LISTEN, "--ws", str(self.ws), "--timeout", "30")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(r.stdout.rstrip().endswith(": 在 daemon 底下"), r.stdout)
         r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")

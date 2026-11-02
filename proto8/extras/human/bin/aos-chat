@@ -11,7 +11,7 @@
 - **沒給**：chat 只寄信、等回答，要別人跑（另一個終端機的 aos-exec，或常駐的 loop）；沒人在跑時提醒一次怎麼跑、繼續等。
 對話記憶就是 stack 的 history.jsonl：同一個 stack 連問就接著聊。舊協議的 fsm 範本（agent-bob／dan…，讀工作區的 new/）說不到（P-11 的 10-30 改口）。
 指令（/ 開頭不送出；要送 / 開頭的話打兩個 //）：/status 一份快照、/run 再跑一次（只在給了 agent 時）、/trace 開關 trace、/help、/quit。
-空行不送。Ctrl-C、Ctrl-D、/quit 都退 0；離開時 queue 裡還有沒答的，提醒一行（信已寄進去，之後 aos-listen 信號 看）。
+空行不送。Ctrl-C、Ctrl-D、/quit 都退 0；離開時 queue 裡還有沒答的，提醒一行（信已寄進去，之後 aos-listen 看最新那封）。
 stdout 只有回答；提示符在 stdin、stdout 都是終端機時才印。stack＝--stack ＞ $AOS_STACK ＞ <工作區>/.stack/；工作區＝--ws ＞ $AOS_WS ＞ cwd。
 錯（進入前）：stderr 一行 `aos-chat: 代號 原因`、退 1（ArgumentsBad、FlagUnknown、WsMissing、AgentMissing〔agent 資料夾不在〕）；
 寄不出去（PostFailed）印一行、不離開。"""
@@ -188,8 +188,8 @@ def main():
     chat.print_ready()
     left = chat.pending()
     if left:
-        h.note("queue 裡還有 %d 封沒答（%s）：信已經寄進去了，不用再說一次；之後 aos-listen --stack %s %s 看"
-               % (len(left), "、".join(left), w.stack, left[-1]))
+        h.note("queue 裡還有 %d 封沒答（%s）：信已經寄進去了，不用再說一次；之後 aos-listen --stack %s 看（等最新那封）"
+               % (len(left), "、".join(left), w.stack))
 
 
 main()

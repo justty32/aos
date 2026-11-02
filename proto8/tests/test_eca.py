@@ -91,7 +91,7 @@ class Eca(unittest.TestCase):
             sig = self.say("%s 你好" % kind)
             r = self.run_([EXEC, "--ws", self.ws, self.fire_and_forget(kind)])
             self.assertEqual(r.returncode, 0, r.stderr)
-            r = self.listen("--timeout", "10", sig)
+            r = self.listen("--timeout", "10")
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertEqual(r.stdout, "fake %s[%s]: %s 你好\n" % (kind, self.sid(kind)[:8], kind))
             state = json.loads((self.stack / "state.json").read_text())
@@ -110,7 +110,8 @@ class Eca(unittest.TestCase):
         self.addCleanup(lambda: (p.poll() is None and p.kill(), p.communicate()))
         answers = []
         for text in ("第一句", "第二句"):
-            r = self.listen("--timeout", "20", self.say(text))
+            self.say(text)                                                   # aos-say 話 && aos-listen
+            r = self.listen("--timeout", "20")
             self.assertEqual(r.returncode, 0, r.stderr)
             answers.append(r.stdout)
         sid = self.sid("claude")
@@ -123,7 +124,7 @@ class Eca(unittest.TestCase):
         r = self.listen("--status")
         self.assertIn("phase paused", r.stdout, r.stdout + r.stderr)
         (self.stack / "ctl.json").write_text('{"paused": false}')
-        r = self.listen("--timeout", "20", sig)
+        r = self.listen("--timeout", "20")
         self.assertEqual(r.stdout, "fake claude[%s]: 第三句\n" % sid[:8], r.stderr)
         (self.stack / "ctl.json").write_text('{"stopped": true}')
         self.assertEqual(p.wait(timeout=20), 0)

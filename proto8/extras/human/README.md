@@ -7,14 +7,14 @@
 | 程式 | NAME |
 |---|---|
 | `bin/aos-say` | aos-say - 對一隻 agent 說一句話：寄進它 stack 的 queue |
-| `bin/aos-listen` | aos-listen - 看一隻 agent 回了什麼（等一封的回答／跟著看／快照） |
+| `bin/aos-listen` | aos-listen - 看一隻 agent 回了什麼（等最新那封的回答／跟著看／快照） |
 | `bin/aos-chat` | aos-chat - 跟一隻 agent 一問一答（say＋listen 串起來，可以替你跑 agent） |
 | `bin/aos_human.py` | 三支共用：工作區與 stack、誰在跑、trace 短行、快照；寄信、看回答、讀 stack 那幾樣在 [`proto8/lib/aos/aos_ws.py`](../../lib/aos/aos_ws.py)（跟 aos-ai 共用） |
 
 ```
 aos-say    [--ws WS] [--stack STACK] [話...]                       stdout 印信號
-aos-listen [--ws WS] [--stack STACK] [--timeout 秒] [--trace] 信號  等這封的回答
-aos-listen [--ws WS] [--stack STACK] [--last N] [--trace] [--follow] 跟著看（像 tail -f）
+aos-listen [--ws WS] [--stack STACK] [--timeout 秒] [--trace]      等最新那封的回答（正規用法：aos-say 話 && aos-listen）
+aos-listen [--ws WS] [--stack STACK] [--last N] [--trace] [--follow] 最後 N 段；--follow＝接著跟著看（像 tail -f）
 aos-listen [--ws WS] [--stack STACK] --status                      誰在跑、loop 的 phase、最後一格、queue 幾封
 aos-chat   [--ws WS] [--stack STACK] [--trace] [agent 資料夾]      /status /run /trace /help /quit
 ```
@@ -24,7 +24,7 @@ stack＝`--stack` ＞ `$AOS_STACK` ＞ `<工作區>/.stack/`（N-57）；工作�
 **agent 對話協議＝[CONVENTION P-42](../../docs/CONVENTION/02-題目stack停錯腦.md)**（10-30；之前是 P-11～P-14 的工作區信箱）：
 
 - **說**：`aos-say 話`＝`aos-post send --ordered <stack>/queue`，一封信的 body＝`{"role": "user", "content": 話}`（N-16 有順序的信箱；queue 還沒有就先建，可以先說、再跑 agent）。印的信號就是 `new/` 裡那封的名字（`<12 位序號>.<信號>`）。
-- **聽**：`aos-listen 信號`——信還在 `queue/new/` 或 `cur/` 就等；不見了就印 history 最新那則回答（先 say 後 listen 不會漏）。queue 沒這封、history 也沒回答＝`QuestionUnknown`；等的時候看到過、信不見了卻沒有回答＝`AnswerMissing`；信還在 `new/`、沒人在跑、可是 stack 的 `trace.jsonl` 比這封新（寄出之後有程式跑過又停了、卻沒認領它，多半是舊協議的 agent）＝`LetterUnclaimed`，說一句就退、不等（10-30 晚）。`--follow`／`--last N` 直接跟 history（一段＝問的話＋回答）。
+- **聽**：`aos-say 話 && aos-listen`（11-01 晚使用者定的正規用法，[thinking say-listen「11-01 晚」](../../thinking/2026-10-24-say-listen.md#11-01-晚使用者aos-say---aos-listen-才是正規用法)；不收信號參數）——等**最新那封**＝queue 的 `new/`、`cur/` 裡序號最大的（最後寄出的、或剛被認領的，不管誰寄的）：還在就等；不見了就印 history 最新那則回答（先 say 後 listen 不會漏）。`new/`、`cur/` 都空＝答案已經到了，直接印最新那則回答；history 也沒回答＝`QuestionUnknown`；信不見了卻沒有回答＝`AnswerMissing`；信還在 `new/`、沒人在跑、可是 stack 的 `trace.jsonl` 比這封新（寄出之後有程式跑過又停了、卻沒認領它，多半是舊協議的 agent）＝`LetterUnclaimed`，說一句就退、不等（10-30 晚）。`--last N` 印最後 N 段就走、`--follow` 接著跟著看（一段＝問的話＋回答；11-01 晚起「跟著看」要明寫 `--follow`）。
 - **看**：`aos-listen --status` 印誰在服務（只靠 `/proc` 掃 `AOS_STACK`／`AOS_WS`）、**aos-loop `state.json` 的 `phase`**（看得出 `paused`；沒有 `state.json` 就看 `loop_state.json`——11-02 常駐 bob 的控制器跟身體共用 stack、窗加前綴 `loop_`，[thinking 11-02 resident-bob](../../thinking/2026-11-02-resident-bob.md#實作時代定11-02)）、認領中的信（`current.txt`）、queue 各格幾封、trace 最後一格（fsm〔含 agent-nia 的表〕寫 `state`、aos-eca-turn 與 10-30 前的舊 round 寫 `unit`；失敗＝「停在 X 那格、結束碼 N」）、有壞信（stack 有 `letter_warning.txt`）時多印一行「壞信」、history 幾則。
 - **停**：寫 `<stack>/ctl.json`（aos-loop 的窗，N-07）：`{"paused": true}` 不起下一輪、`{"stopped": true}` 收工。
 
@@ -44,9 +44,10 @@ mkdir -p ~/code/try/say-listen/ws && cd ~/code/try/say-listen/ws
 aos-chat $R/demo/agent-nia                              # 一問一答，chat 每句之後替你跑一次 agent（假腦）
 
 # 或分開：
-N=$(aos-say 現在幾點？)                                 # 寄一封
+aos-say 現在幾點？                                      # 寄一封
 aos-exec --ws . $R/demo/agent-nia                       # 跑（別的終端機也行；queue 空了自己停）
-aos-listen "$N"                                         # 拿這封的回答
+aos-listen                                              # 拿最新那封的回答
+aos-say 再說一次 && aos-listen                          # 正規用法：說完就等（agent 另有人跑時）
 aos-listen --last 5                                     # 最近五段一問一答
 aos-listen --status                                     # 快照
 ```

@@ -36,8 +36,7 @@
 export AOS_DAEMON_STACK=~/aos-daemon/.stack      # 一個信箱模式的 aos-daemon 在跑（daemon.json 寫 loops_ctl_mailbox）
 aos-eca-hub add ~/code/myproj                    # 掛上：~/code/myproj/.stack → $AOS_DAEMON_STACK/loops/myproj/
 cd ~/code/myproj
-N=$(aos-say 讀 src/calc.py 說說裡面有什麼)
-aos-listen "$N"                                  # 畫面開著＝打進畫面、沒開＝--resume 問一次
+aos-say 讀 src/calc.py 說說裡面有什麼 && aos-listen   # 畫面開著＝打進畫面、沒開＝--resume 問一次
 aos-listen --status                              # 「在跑 aos-loop」：daemon 底下的子 loop，經 .stack 捷徑認得
 aos-eca-hub open                                 # 接進畫面（第一次會問信任這個資料夾，選 Yes）；Ctrl-] 跳出
 aos-eca-hub close && aos-eca-hub ls              # 收起；再問一句照樣答（--resume）

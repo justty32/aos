@@ -244,7 +244,7 @@ local function wait_answer(name, done)
     if done then done(text) end
   end
   if listen then
-    spawn({ listen, "--ws", M.ws(), "--timeout", tostring(M.config.listen_timeout), name }, { quiet = true },
+    spawn({ listen, "--ws", M.ws(), "--timeout", tostring(M.config.listen_timeout) }, { quiet = true },   -- 不帶信號＝等最新那封（11-01 晚翻案）
       function(r)
         if r.code == 0 then finish(r.stdout or "") else panel_add({ "== aos-listen 結束碼 " .. r.code }) if done then done(nil) end end
       end)

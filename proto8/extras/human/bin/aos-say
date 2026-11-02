@@ -6,7 +6,7 @@
 話＝其餘的參數用空白接起來；沒給就整段讀 stdin。說話＝`aos-post send --ordered <stack>/queue`（CONVENTION P-42、NORMS N-16），
 一封信的 body＝一則 {"role": "user", "content": 話}（結尾的換行去掉）；queue 還沒有就先 aos-post init（可以先說、再跑 agent）。
 stack＝--stack ＞ $AOS_STACK ＞ <工作區>/.stack/；工作區＝--ws ＞ $AOS_WS ＞ cwd（同 aos-exec）。
-stdout 只印信號一行（給 aos-listen 用：aos-listen "$(aos-say 你好)"）。PATH 上要有 aos-post（proto8/impls/aos-post/bin）。
+stdout 只印信號一行（給程式對帳；人用的正規寫法是 aos-say 你好 && aos-listen，listen 等的就是最新那封，11-01 晚使用者定）。PATH 上要有 aos-post（proto8/impls/aos-post/bin）。
 只寄信、不叫醒誰：agent 要有人跑（aos-exec --ws WS <agent>，或 aos-chat）；寄完看到沒人在跑，stderr 提醒一行。
 10-30 起不認工作區的 new/（舊協議的 fsm 範本，P-11 的 10-30 改口），也沒有 --name（信號由 aos-post 給）。
 錯：stderr 一行 `aos-say: 代號 原因`、退 1（ArgumentsBad、FlagUnknown、WsMissing、PostFailed）。"""

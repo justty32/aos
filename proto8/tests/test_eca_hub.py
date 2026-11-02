@@ -115,10 +115,15 @@ class EcaHub(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         return r.stdout.strip()
 
-    def listen(self, w, sig):
-        r = self.run_([HUMAN / "aos-listen", "--timeout", "20", sig], cwd=w)
+    def listen(self, w):
+        r = self.run_([HUMAN / "aos-listen", "--timeout", "20"], cwd=w)   # 不帶信號＝等最新那封（11-01 晚翻案）
         self.assertEqual(r.returncode, 0, r.stderr)
         return r.stdout
+
+    def say_listen(self, w, text):
+        """aos-say 話 && aos-listen。"""
+        self.say(w, text)
+        return self.listen(w)
 
     def code(self, r):
         return (r.returncode, (r.stderr.split() + ["", ""])[1])
@@ -154,10 +159,10 @@ class EcaHub(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn("工作區 %s" % w, r.stdout)
         self.assertEqual(self.code(self.hub("state", cwd=self.tmp)), (1, "InstanceMissing"))
-        a1 = self.listen(w, self.say(w, "你好"))
+        a1 = self.say_listen(w, "你好")
         self.assertTrue(a1.startswith("fake claude[") and a1.rstrip().endswith(": 你好"), a1)
         sid = (self.ds / "loops" / name / "claude" / "session.txt").read_text().strip()
-        self.assertTrue(self.listen(w, self.say(w, "再一句")).startswith("fake claude[%s]" % sid[:8]))
+        self.assertTrue(self.say_listen(w, "再一句").startswith("fake claude[%s]" % sid[:8]))
         r = self.hub("ls")
         self.assertIn("對話 %s" % sid[:8], r.stdout)
         self.assertEqual(self.code(self.hub("add", "--template", self.tmp, self.ws("other"))), (1, "TemplateUnknown"))
@@ -169,10 +174,10 @@ class EcaHub(unittest.TestCase):
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
-        self.listen(w, self.say(w, "第一句"))
+        self.say_listen(w, "第一句")
         r = self.hub("close", cwd=w)
         self.assertEqual((r.returncode, r.stdout.strip()), (0, "本來就沒畫面（已收起）"), r.stderr)
-        self.assertIn("第二句", self.listen(w, self.say(w, "第二句")))
+        self.assertIn("第二句", self.say_listen(w, "第二句"))
         sid = (self.ds / "loops" / name / "claude" / "session.txt").read_text().strip()
         r = self.hub("stop", name)
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -195,13 +200,13 @@ class EcaHub(unittest.TestCase):
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
-        self.listen(w, self.say(w, "第一輪"))
+        self.say_listen(w, "第一輪")
         r = self.hub("stop", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse(os.path.lexists(w / ".stack"))
         name = self.add(w)
         self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
-        self.assertIn("第二輪", self.listen(w, self.say(w, "第二輪")))
+        self.assertIn("第二輪", self.say_listen(w, "第二輪"))
         self.assertEqual(len(list((self.ds / "eca_archive").iterdir())), 1)
         d = self.ws("direct")
         (d / ".stack").mkdir()
@@ -226,7 +231,7 @@ class EcaHub(unittest.TestCase):
         r = self.hub("close", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("重新掛上", r.stdout)
-        self.assertIn("會壞的一句", self.listen(w, sig))
+        self.assertIn("會壞的一句", self.listen(w))
         self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
 
     def test_default_template(self):
@@ -239,7 +244,7 @@ class EcaHub(unittest.TestCase):
         self.assertTrue(self.until(lambda: self.ls()), (self.ds / "loops" / "proj" / "stderr.txt").read_text()
                         if (self.ds / "loops" / "proj" / "stderr.txt").exists() else self.daemon_rows())
         self.assertEqual(self.ls()[0]["template"], str(ROOT / "demo" / "eca-claude"))
-        a = self.listen(w, self.say(w, "預設範本"))
+        a = self.say_listen(w, "預設範本")
         self.assertTrue(a.rstrip().endswith(": 預設範本"), a)
 
     @unittest.skipUnless(HAS_TMUX, "沒有 tmux")
@@ -256,7 +261,7 @@ class EcaHub(unittest.TestCase):
         keys = subprocess.run(["tmux", "-S", str(cell / "tty.sock"), "list-keys", "-T", "root"],
                               capture_output=True, text=True).stdout
         self.assertIn("C-]", keys)
-        self.assertEqual(self.listen(w, self.say(w, "畫面上的一句")), "fake live: 畫面上的一句\n")
+        self.assertEqual(self.say_listen(w, "畫面上的一句"), "fake live: 畫面上的一句\n")
         r = self.hub("close", "--idle", "60")
         self.assertEqual((r.returncode, r.stdout, self.ls()[0]["state"]), (0, "", "畫面開著"), r.stderr)
         r = self.hub("close", cwd=w)
@@ -264,7 +269,7 @@ class EcaHub(unittest.TestCase):
         alive = subprocess.run(["tmux", "-S", str(cell / "tty.sock"), "has-session"], capture_output=True).returncode == 0
         self.assertFalse(alive)
         self.assertEqual(self.ls()[0]["state"], "收起了")
-        self.assertIn("又一句", self.listen(w, self.say(w, "又一句")))
+        self.assertIn("又一句", self.say_listen(w, "又一句"))
 
 
 if __name__ == "__main__":
