@@ -106,7 +106,7 @@
 一句：`aos-daemon daemon.json`＝顧一群子 loop（`loops`），每個子項一個小格 `$AOS_STACK/loops/<名>/`（11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../../../../thinking/2026-11-02-stack-tools.md)）；daemon.json 是 loop.json 的超集。
 範例：`{"interval_ms": 500, "ctl": "ctl.json", "state": "state.json", "loops": {"bob": {"exec": {"argv": ["aos-exec", "--ws", "/w/bob", "/agents/bob"]}, "interval_ms": 2000}}}`
 名單的手把與子項表另有一對窗（10-29）：`loops_ctl.json`（`loops`、`loops_added`、`loops_removed`、`seq`）、`loops_state.json`（`loops` 表、`ctl_seq`、`ctl_warning`、心跳）；daemon.json 的 `loops_ctl`／`loops_state` 沒寫＝這兩個檔名、`null`＝不開。
-常見錯：子 loop 結束後**不自動重起**（停在表上 `done`；要再起就從 loops_ctl 拿掉再放回）；名單寫在 `ctl.json` 不生效（只在 state 的 `ctl_warning` 提醒）；ctl `paused` 時名單也不調；子項名字不能跟自己的窗撞名；PATH 上要有 aos-loop 和 aos-exec。
+常見錯：子 loop 結束後**不自動重起**（停在表上 `done`；要再起就從 loops_ctl 拿掉再放回）；名單寫在 `ctl.json` 不生效（只在 state 的 `ctl_warning` 提醒）；ctl `paused` 時名單也不調；（子項名字跟自己的窗同名 11-02 起不擋：小格在 `loops/<名字>/`）；PATH 上要有 aos-loop 和 aos-exec。
 出處：N-28、N-54、impls/aos-daemon。
 
 ## window

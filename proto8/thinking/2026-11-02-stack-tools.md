@@ -2,7 +2,7 @@
 
 ← [thinking README](README.md)｜月份表 [2026-11](months/2026-11.md)｜出發點：[11-02 playground-cathy § 使用者原文第二段](2026-11-02-playground-cathy.md#使用者原文11-02-第二段逐字)（「.stack/<名稱>…這其實不太好，應該要改成.stack/tools/<名稱>…讓fable幫我去研究一下」）｜條文：[P-17、P-25](../docs/CONVENTION/02-題目stack停錯腦.md)、[P-32、P-34、P-38](../docs/CONVENTION/06-巢狀.md)、[N-50](../docs/NORMS/10-基礎設施-定義與工作區.md)、[N-28](../docs/NORMS/04-基礎設施-loop與daemon.md)、[C-54](../docs/CONCEPTS/01-設計理念.md)、[C-52／C-70](../docs/CONCEPTS/01-設計理念.md)、[C-61](../docs/CONCEPTS/05-agent.md)、[附錄1 名詞](../docs/CONCEPTS/附錄1-名詞.md)
 
-本檔只記使用者原文（逐字）、決定、fable 照原則定的規劃（可翻案）、要使用者看的衝突與方向題（[user/03](../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。**還沒動程式、沒動條文**；步驟表在下面。
+本檔只記使用者原文（逐字）、決定、fable 照原則定的規劃（可翻案）、要使用者看的衝突與方向題（[user/03](../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。**11-02 已照步驟表落地**（結論在文末「實作結論」）；步驟表在下面。
 
 ## 使用者原文（11-02，逐字）
 
@@ -132,3 +132,12 @@ ask_round 現在把被問的 agent 放成「`$AOS_STACK/<agent 名>/` 是它的�
 
 **方向題 2（不急，先記著）：eca-turn 的 `claude/`、`codex/` 留在頂層對不對？**（細節 6）
 fable 照「誰給的名字」這把尺把它算成固定名、留頂層。但它確實是「叫別的東西時開的小格」，以後若 kind 不再只有兩個（例如 kind 從設定檔讀），就該搬進一個複數資料夾。現在不改；要是你覺得「反正遲早」想一次搬，fable 建議的名字是 `clis/<kind>/`（它叫的是 CLI，不是 P-17 的工具）。
+
+## 實作結論（11-02，隊長；代定可翻案）
+
+- **步驟 1 工具小格**（`9dbad331`）：`lib/agent/act`、pyfix 的 act、`cli_session` 的 attach、demo 裡各 agent 的 `act.py`（dan、dan-q、eve、fay、hal、kai、liv、meg、pip、self-improve、talk member——表上只列 bob，這些是同一個「叫工具給小格」的寫法，一起改）、agent-bob／cathy 的 shell act，一律 `$AOS_STACK/tools/<名>/`。連帶：agent-kai 的 `recall` 工具讀「上一層」的 `history.jsonl`，改成上兩層（它靠 P-17 的擺法找 agent 的 stack）。`demo/run.sh` 印的樹是 `.stack/tools/cathy/tools/stamp/`。
+- **步驟 2 aos-mcp**（`c97f56ac`）：小格 `<stack>/tools/<名>/`；不給登記檔＝`./aos-tools.json`（aos-tools 自己的預設仍是 `./tools.json`，兩邊預設名不同）；呼叫紀錄預設不記，`--enable-logs` 打開（`<stack>/aos-mcp-logs.jsonl`）、`--logs-path FILE` 指定；只給 `--logs-path`＝`ArgumentsBad`（代定）。test_aos_mcp 12 案（commit 訊息誤寫 13）。
+- **步驟 3 ask_round**（`edc2a9dc`）：只改前綴：被問 agent 的工作區＝`$AOS_STACK/tools/<agent 名>/`，stack 照舊在它底下的 `.stack/`（方向題 1 使用者「先不管」）。
+- **步驟 4 daemon**（`0b0e6089`）：子項小格 `$AOS_STACK/loops/<名字>/`；`make_cell` 建 `loops/` 與小格兩層（`$AOS_STACK` 不在照舊建不了）；aos-daemon-ctl 的 `.stack` 捷徑、aos-eca-hub、talk 的 quiet.py、daemon-2 的信箱路徑（`$AOS_STACK/../../loops_mailbox`）跟著改。llm-kernel、human、lua 範例的測試也看子項小格，一併改。
+- **步驟 6 擋名字拿掉**（`5e4a0858`）：衝突 1 使用者「那兩題中的1.，可以」——aos-daemon 的 `taken_names`／`check_names` 與那條 `CfgBad`／loops_ctl 不採用的錯誤路徑拿掉；`loops` 與 `execs` 同名照擋、名字本身的規則（空、含 `/`、`.` 開頭…）照留。撞名測試改驗「同名照起、窗照寫」。
+- **步驟 5 條文**：照「條文那步」表改路徑、加日期註（P-17 主註含衝突 3「`tools` 是 stack 頂層保留名」；N-28 的擋名字寫成「11-02 翻案拿掉」，[10-22 ideas § 6](2026-10-22-ideas/03-5-loop.md) 加翻案註）；N-28 兩處「小格只建一層」照步驟 4 實作補成 `loops/` 與小格兩層。claude_skill 的 concepts.md 那句擋名字一起改。
