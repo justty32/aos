@@ -12,6 +12,14 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-02 下午（公司 Windows＋WSL；compact 前）
+
+1. **授權**：可隨意 push（只 `git add <明確的檔>`、不 `-A`、不 force／reset、不碰 stash）。分工：普通事 opus、簡單與雜活 sonnet、規劃 fable；做事的 agent（簡單／雜活除外）先讀 wf 規矩；agent 可再派 agent；工人不 commit、隊長審 diff 後 commit。**WSL 測試副本 `~/.cache/aos-c8a7-e` 使用者說先別動**；測試改用拋棄式 `~/.cache/aos-c8a7-f`（同步腳本 `~/.cache/aos-c8a7-f-tools/sync.sh`）。試驗場 WSL `~/code/playground`（不在 git），`ws/.stack` 裡有使用者自己開的舊版 daemon（11:38 起），不要停它。
+2. **今天已完成並 push**：試驗場 bob、bob-cathy（aos-mcp＋aos-tools）、cathy 改 agent、daemons/main；aos-mcp 收登記檔路徑（不給＝`./aos-tools.json`、`--enable-logs`／`--logs-path`）；小格改 `$AOS_STACK/tools/<名>/`、daemon 子項 `loops/<名>/`、拿掉 daemon 擋名字（`9c6a18ed` 收尾）。thinking 今天六份：[playground-cathy](../proto8/thinking/2026-11-02-playground-cathy.md)、[stack-tools](../proto8/thinking/2026-11-02-stack-tools.md)、[playground-daemon](../proto8/thinking/2026-11-02-playground-daemon.md)、[daemon-env](../proto8/thinking/2026-11-02-daemon-env.md)、[state-window](../proto8/thinking/2026-11-02-state-window.md)、[exec-inheritance](../proto8/thinking/2026-11-02-exec-inheritance.md)。
+3. **還在跑**：Opus 隊長做 state 窗＋一串追加（裁定逐字都在 [state-window](../proto8/thinking/2026-11-02-state-window.md) 決定節，隊長會補）：有變動才寫（running⇄waiting、counter_runs 不算）、`updated_at`、刪 `kind`／`recorded_at`、拿掉心跳（判活看 pid＋aos-daemon-ctl 問詢）、log 印 stdout 預設開旗標可關（混在一起使用者自理）、daemon 窗慣用名 `daemon_ctl.json`／`daemon_state.json`、`ctl`／`state` 寫 null＝不開；loops_state 刪 `kind`、`letter_warning`→`mailbox_warning`、子項結束後不留名單（daemon.json 裡的本次執行不再起、頂層代定）；loops_ctl 照舊（**不合併 added/removed、信不改**）但多認整份 `execs`；`loops_mailbox`→`loops_ctl_mailbox`、與 loops_ctl 可共存或都不開；aos-daemon-ctl `add` 拿掉 `--kind`、可接 `-- 參數`；aos-loop／daemon `設定檔 -- 參數` 每次接到 exec 後面。隊長回報後：核對 commit、報給使用者，並要隊長列出不符「`aos-XXX [旗標] 目標 -- 參數`」通則的 aos-* 指令。
+4. **未定、等使用者**：daemon 對外「控制口」變數的命名（使用者要再想；已定 daemon.json 明寫 `$env` 才切、沒寫跟 stack 一起；aos-daemon-ctl 定位＝管子項，管 daemon 本身以後再說）；daemon-env 衝突 1～3、方向題 1～2；工人提的三點（`loops` 成保留名無檢查、`./x/../s.json` x 不在會 WriteFailed、子項與信箱同名缺正向測試）；aos-tools 預設仍 `./tools.json`（與 aos-mcp 的 `aos-tools.json` 不同）；`bob 可以掛著` 要不要做常駐版。
+5. **新規**：使用者原則——共用 stack 不做隱性命名空間，各格常見名字加自己前綴（`daemon_*`、`loop_*`）或開資料夾；CLI 通則 `aos-XXX [旗標] 目標 -- 參數`（只記原文）。條文 P-17、N-28、N-50 等已加 11-02 註。
+
 ## 2026-11-01 晚收工（家中 Manjaro；明天開新 session 接）
 
 1. **授權**：今晚是隨意 push、普通事 opus、簡單與雜活 sonnet、做事的 agent（雜活除外）先讀 wf 規矩、可再派 agent。**明天開新 session**：照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問一次 push 與模型分配。頂層 Bash 裡 `ls` 要寫 `/bin/ls`（eza 會掛住，gotchas 04）。工人只 `git add <明確的檔>`、不 `-A`、不 force／reset、不碰 stash。
