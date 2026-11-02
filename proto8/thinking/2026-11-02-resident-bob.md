@@ -49,6 +49,30 @@
 - **起來時續接殘留的對話**：bob 起來時若 stack 裡有先前留下的 session（例如記下的 `session_id`），就用 `--resume <id>` 續接；沒有就開新的（推翻方向題 4 的 fable 定案「重掛第一版不接」；實測支撐見結論 ⑩，存放處建議見結論末段）。
 - **多封併成一題是正常、可接受的行為**，不是要避免的 bug（11-02 晚；換行有加，見結論 ⑥ 補）：queue 對帳要做成「**一個 `result` 可以結掉好幾封信**」，不為了一封一答刻意等 `result` 才送下一封；aos-listen 看到的回答可能同時回好幾封。併進去的某句被忽略（結論 ⑥ 第三句）算模型的事，不另外補救（覺得原則上該處理就列方向題，見[方向題 4](#方向題-4併題時被忽略的那句6-第三句要不要補救)）。
 
+### 衝突與方向題的裁定（11-02 晚，使用者）
+
+頂層把第二版的衝突 8 條、方向題 5 題白話摘要給使用者後，使用者回（11-02，逐字）：
+
+> 照建議走
+
+所以[衝突與方向題](#要使用者看的衝突與方向題11-02-晚第二版)每條都照檔內的建議定案；規劃第 0～6 節就是定案後的樣子（兩條頂層代定標在各自那條）：
+
+- [衝突 1](#衝突-1用-fifo-接兩個兄弟aos-標準沒有的交流方式)：bob 與控制器之間用 FIFO，由 inst 單子的 `stdin`／`stdout` 指定，算「proc 自己定」那一類，不立條文、不改 C-75，只在 resident_bob 的 README 說明。
+- [衝突 2](#衝突-2兄弟要共用位置--daemon-得把-aos_daemon_stack-設給子項)：daemon 起子項（loop 型、exec 型）時 `setenv AOS_DAEMON_STACK`，只設這一個（步驟表第 1 步）。
+- [衝突 3](#衝突-3歷史兩份原汁-outjsonl-跟-openai-形的-historyjsonl)：歷史兩份都留——`out.jsonl` 原汁、`history.jsonl` 由 `relay` 轉成 OpenAI 形給 aos-listen；決定 35 的 symlink 本題不做。
+- [衝突 4](#衝突-4n-28子項結束不重起vs常駐)：照 N-28 不自動重起；bob 或控制器死了看 `stderr.txt`，人再跑一次 install（會 `--resume` 接回）。
+- [衝突 5](#衝突-5控制器用-exec-型包一支-aos-loop掛的目標指到-_entryjson-檔)：不改程式，控制器以 exec 型掛 `ctl/_entry.json` 這個檔（不掛資料夾），README 說明這個眉角；daemon 的 loop 型子項認 `stdout` 等第二個用到的再做。
+- [衝突 6](#衝突-6exec-就是我們現有的-bob但要加旗標處理預算)：另開 `agents/resident_bob/bob/`，`agents/bob` 原封不動。**預算（頂層代定、可翻案）**：檔內只寫「使用者定」、沒給建議值，頂層代定保留 `--max-budget-usd`，從現有 bob 的 0.3 改成 **2**（整個 session 的總額，`--resume` 重起後從頭算 ⑩）；超了 bob 不退、每題回 `error_max_budget_usd`（⑦），`relay` 照規劃第 1 節 3 `rm bob`、退 1。實作時規劃第 2 節那張 `bob/_entry.json` 的 `argv` 加 `"--max-budget-usd", "2"`。
+- [衝突 7](#衝突-7控制器建-bob-小格裡的-fifo讀-bob-小格的-outjsonl)：FIFO 與 `out.jsonl` 放 bob 自己的小格，控制器當 P-17 的呼叫方替它建 FIFO（只在 bob 起來之前寫這一個檔）、之後只讀 `out.jsonl`。
+- [衝突 8](#衝突-8使用者結束不是靠關管子vs-規劃仍用-eof-當控制器沒了--bob-跟著走的保險)：留 EOF 當「控制器沒了 → bob 跟著走」的保險；控制器主動要 bob 停（超預算、睡）才用 `aos-daemon-ctl rm bob`（SIGTERM）。
+- [方向題 1](#方向題-1控制器自己被停時bob-走-eof答完退還是先-rm-bob立刻退)：控制器自己被停時 bob 走 EOF（答完手上那題退 0），不先 `rm bob`；history 少的最後一則由下次 install 續接時 `relay` 從 `out_offset` 補讀。
+- [方向題 2](#方向題-2-開頭的訊息拒收還是轉義送進去控制器自己的指令用什麼字頭)：`/` 開頭的訊息拒收（當壞信收掉、警告檔記一行），不轉義送進去；控制器自己的指令照規劃第 3 節第 2 步用同一個 `/` 字頭——認得的自己吃（第二版 `/sleep`）、不認得的擋掉。
+- [方向題 3](#方向題-3relay-放哪叫什麼)：`relay` 先放試驗場 `agents/resident_bob/ctl/relay/`、身體名就叫 `relay`；跑順了再升成 `proto8/bin/aos-claude-relay`（步驟表第 5 步那時才做），不做成 aos-eca-turn 的模式。
+- [方向題 4](#方向題-4併題時被忽略的那句6-第三句要不要補救)：控制器不補救；`system.txt` 加一句「一則訊息裡有好幾個要求時每個都要回」，其餘不做。
+- [方向題 5](#方向題-5閒置多久睡要不要有睡的指令第二版)：照規劃第 3 節第 4 步——睡是第二版；`relay` 收 `--idle-ms`（沒給＝不睡，例 `600000`＝10 分鐘）＋ `/sleep` 指令。
+- **壞信警告檔改名（頂層代定、可翻案）**：規劃原寫 `letter_warning.txt`；使用者 11-02 已把 daemon 的 `letter_warning` 改名 `mailbox_warning`（[state 窗 § 決定（11-02 晚）](2026-11-02-state-window.md#決定11-02-晚使用者實作中陸續裁的)），所以 relay 的警告檔跟著叫 **`mailbox_warning.txt`**；規劃節與方向題 2 內文已一併改成新名。
+- **什麼時候開工**：實作要等 state 窗隊長那一輪（aos-daemon-ctl 拿掉 `--kind`、`-- 參數`、`execs` 收單子、`AOS_DAEMON`→`AOS_DAEMON_STACK`、`--daemon-stack`）commit 進 main、`git pull` 之後才開工（同規劃第 6 節「前提」）。11-02 寫這條時：前三項已在 `278b7bd1`，改名 `AOS_DAEMON_STACK`／`--daemon-stack` 還在隊長的工作區、沒 commit。
+
 ## 現況（查清的，不是規劃）
 
 - **現有 bob**（`~/code/playground/agents/bob/`，兩個檔、沒程式碼）：`_entry.json`＝argv 陣列 `claude -p --model haiku --tools Read,Write,Edit,Glob,Grep --permission-mode acceptEdits --strict-mcp-config --max-budget-usd 0.3 --add-dir {$env AOS_WS} --append-system-prompt-file system.txt`；`system.txt` 說明 `AOS_WS`／`AOS_CD`／`AOS_STACK` 各指什麼、`env:XXX` 寫法、做完說一兩句。**怎麼收題**：題目是 `aos-exec ../agents/bob -- "題"` 的參數（`--` 與題原樣到 claude）。**怎麼跑**：aos-exec cd 進 `agents/bob/`、exec 成 claude；一題答完 claude 自己退出。**歷史放哪**：aos 這邊沒有——bob 沒開窗、沒寫 stack；claude 自己把 session 存在 `~/.claude/projects/<cwd 雜湊>/`（決定 35 說這類要 symlink 或複製過來管，還沒做）。stdout 那句「我做了什麼」在手動叫時印到終端機；掛在 daemon 底下時被丟掉（N-28）。
@@ -113,18 +137,18 @@
   ```
 
   log 預設不印（loop-stdio 決定），fd 1 上只有 `relay` 寫的東西。`relay` 繼承 fd 1（aos-loop 跑資料夾目標＝fork＋`run_cli`，不另開串流），往 stdout 寫一行＝送進 bob 的 stdin。**`ctl/` 裡有 `loop.json`，`aos-daemon-ctl add <ctl 資料夾>` 會自動認成 loop 型**（它看「資料夾有 `loop.json`」）、單子的 `stdout` 就沒了——所以掛的目標指到**檔** `ctl/_entry.json`（C-73 入口可以是單子檔；XXX 不是帶 `loop.json` 的資料夾＝exec 型），`--name bob_ctl`。
-- **控制器的小格 `$AOS_DAEMON_STACK/loops/bob_ctl/`**＝`relay` 的 `$AOS_STACK`，裡面：`queue/`（aos-say 建，N-16 有順序）、`history.jsonl`（`relay` 寫，OpenAI 形，P-41／P-42）、`loop_ctl.json`／`loop_state.json`（aos-loop 的窗）、`relay_state.json`（`relay` 自己的，前綴 `relay_`）、`letter_warning.txt`（壞信，同 agent 範本）、`stderr.txt`。**人對話的 stack 就是這一格**：`aos-say --stack $AOS_DAEMON_STACK/loops/bob_ctl 話`。
+- **控制器的小格 `$AOS_DAEMON_STACK/loops/bob_ctl/`**＝`relay` 的 `$AOS_STACK`，裡面：`queue/`（aos-say 建，N-16 有順序）、`history.jsonl`（`relay` 寫，OpenAI 形，P-41／P-42）、`loop_ctl.json`／`loop_state.json`（aos-loop 的窗）、`relay_state.json`（`relay` 自己的，前綴 `relay_`）、`mailbox_warning.txt`（壞信，同 agent 範本）、`stderr.txt`。**人對話的 stack 就是這一格**：`aos-say --stack $AOS_DAEMON_STACK/loops/bob_ctl 話`。
 - **`relay` 每輪的身體**（Python；`ctl/relay/_entry`；一輪＝下面五步，有沒有事都退 0，失敗退 1、stderr 一行〔P-20、P-21〕）：
   1. **看 bob**：讀 `$AOS_DAEMON_STACK/loops_state.json`（分檔的 `$ref` 解回來，表 >100 列才會有）→ `execs` 表有沒有 `bob`。`relay_state.json` 的 `bob` 欄＝`up`／`asleep`／`waking`（第二版）；`up` 卻不在表上＝死了 → 退 1（第 1 節 2）。第一輪 `bob` 欄還沒有：控制器的 aos-exec 要等 bob 開了 FIFO 讀端才起得來，所以 `relay` 跑到時 bob 一定在表上（或剛死）→ 在就記 `up`。
   2. **送信**（一直丟，不等 `result`）：bob 在表上才做。先探針 `os.open(in.fifo, O_WRONLY|O_NONBLOCK)`——沒有讀端＝`ENXIO`（bob 的 aos-exec 還沒開到 stdin）＝這輪不送；探到就關掉探針。然後 `aos-post claim-all` 把 `new/` 全認領進 `cur/`，每封 `aos-post check` 讀 body：
-     - body 不是 `{"role": "user", "content": 非空字串}`＝壞信：`finish` 收掉、`letter_warning.txt` 寫原因（同 aos-eca-turn）。
-     - `content` 去掉開頭空白後以 `/` 開頭＝**不轉送**（⑪：`/clear` 會清對話、`/cost` 會吐帳號用量、`/compact` 多半真的執行）：第一版沒有控制器自己認的指令，一律當壞信收掉、`letter_warning.txt` 記「以 / 開頭的訊息不轉送」；第二版認 `/sleep`（第 4 步）；要不要改成轉義後照送見[方向題 2](#方向題-2-開頭的訊息拒收還是轉義送進去控制器自己的指令用什麼字頭)。
+     - body 不是 `{"role": "user", "content": 非空字串}`＝壞信：`finish` 收掉、`mailbox_warning.txt` 寫原因（同 aos-eca-turn）。
+     - `content` 去掉開頭空白後以 `/` 開頭＝**不轉送**（⑪：`/clear` 會清對話、`/cost` 會吐帳號用量、`/compact` 多半真的執行）：第一版沒有控制器自己認的指令，一律當壞信收掉、`mailbox_warning.txt` 記「以 / 開頭的訊息不轉送」；第二版認 `/sleep`（第 4 步）；要不要改成轉義後照送見[方向題 2](#方向題-2-開頭的訊息拒收還是轉義送進去控制器自己的指令用什麼字頭)。
      - 好信：`{"role": "user", "content": …}` 原樣追加 `history.jsonl`（agent-lifecycle A-3：一封信＝一行），再寫一行 `{"type": "user", "message": {"role": "user", "content": …}}` 到 stdout＝FIFO（實測的輸入形狀，`content` 字串就行）、flush。信**留在 `cur/`**，信號記進 `relay_state.json` 的 `sent`（寫到管子裡、還沒被 `result` 結掉的）。寫 stdout `BrokenPipeError`（探針到寫之間 bob 剛好沒了）＝這封留 `cur/`、不記 `sent`，下一輪重送（`cur/` 裡不在 `sent` 的＝沒送成的）；bob 真死了下一輪第 1 步會退 1。
   3. **同步輸出**：從 `relay_state.json` 的 `out_offset` 讀 `loops/bob/out.jsonl` 新的整行（每行都是完整的 JSON，⑧；讀到沒有換行結尾的半行就留到下輪），逐行：
      - `system`／`init`（每題一次，④）：**把 `sent` 裡現在的信號快照成這題的 `answering`**——claude 開一題時把到那一刻為止排在 stdin 的訊息併成一則（⑥），之後進來的歸下一題；記下 `session_id`。
      - `assistant`：`message.content` 是 Anthropic 區塊陣列（⑤）→ 轉成一則 OpenAI message 追加 history：`text` 區塊接成 `content` 字串；`tool_use` 區塊→`tool_calls: [{"id", "type": "function", "function": {"name", "arguments": JSON 字串}}]`（有 tool_calls 時 aos-listen 不當回答，正好）；`thinking` 區塊丟掉。
      - `user`（用工具時 claude 回吐的 `tool_result` 區塊；形狀沒測）→ 每個區塊一行 `{"role": "tool", "tool_call_id", "content"}`；不是 tool_result 的 `user` 行（`--replay-user-messages` 沒開，應該不會有）略過。
-     - `result`：`answering` 裡的信全部 `aos-post finish`（**一個 result 結掉好幾封**，使用者決定「併題正常」）、從 `sent` 拿掉；`subtype` 是 `error_max_budget_usd` → 第 1 節 3（`rm bob`、退 1）；`error_during_execution`（被 `interrupt` 打斷，⑨）→ 信照樣結掉、`letter_warning.txt` 記一行；`session_id` 寫進 `relay_state.json`（以**最後一行**為準——`/clear` 過 id 會換 ⑪，雖然 `/` 已經擋掉）。
+     - `result`：`answering` 裡的信全部 `aos-post finish`（**一個 result 結掉好幾封**，使用者決定「併題正常」）、從 `sent` 拿掉；`subtype` 是 `error_max_budget_usd` → 第 1 節 3（`rm bob`、退 1）；`error_during_execution`（被 `interrupt` 打斷，⑨）→ 信照樣結掉、`mailbox_warning.txt` 記一行；`session_id` 寫進 `relay_state.json`（以**最後一行**為準——`/clear` 過 id 會換 ⑪，雖然 `/` 已經擋掉）。
      - `rate_limit_event`、`system`／其他 subtype、`conversation_reset`：略過。
      - 寫完 `out_offset`。history 於是「幾則 user、一則 assistant」一段段——`aos_ws.exchanges` 本來就把一則回答前的所有 user 收成一段，aos-listen `--last N` 直接對；`aos-listen 信號`「信不在 `new/`／`cur/` 了就印最新那則回答」照樣成立，只是那則回答可能同時回了好幾封（使用者決定接受）。
   4. **睡／醒**（**第二版**，第一版只預留 `relay_state.json` 的欄位與第 1 步的 `asleep`／`waking` 分支）：`relay_state.json` 記 `last_activity_at`（最後一次送信或 `result`）；閒置超過 `--idle-ms`（`loop.json` 的 `exec` 寫成 `["relay", "--idle-ms", "600000"]`；11-01 使用者「旋鈕走 argv」；沒給＝不睡）、或收到 `/sleep`（第 2 步攔下、不進 bob）→ `aos-daemon-ctl rm bob`、`bob`＝`asleep`。之後每輪：`asleep` 而 `new/` 有信 → `aos-daemon-ctl add --name bob <abs>/bob -- --resume <session_id>`、`bob`＝`waking`；`waking` 而 bob 在表上 → `up`、照第 2 步送（探針擋住「進程在了、stdin 還沒開」那幾毫秒）；`waking` 滿 10 秒還不在表上＝起不來 → 退 1。睡著時信在 `new/` 排著、`history.jsonl` 不動、aos-listen 照等。
@@ -202,7 +226,7 @@ rm $S/relay_state.json && aos-exec ../agents/resident_bob     # 要開新對話�
 |---|---|---|---|
 | 0 | 試驗場（已做） | 實測 claude 一直跑模式 | 見[結論](#結論11-02-實測) |
 | 1 | `proto8/impls/aos-daemon/src/child/child.cpp`（`run_child`）、`daemon.hpp` 把 stack 傳進去、impls README「子項的環境」一段、N-64 ④ 加 daemon 例子、N-63 實例補一句「daemon 起子項時設給它」、code map `code-map/proto8/14-aos-daemon.md` | 起子項（loop 型、exec 型都設）時 `setenv("AOS_DAEMON_STACK", stack_)`，只這一個 | `tests/test_daemon.py` 加 1 案：exec 子項把 `env` 寫進檔、驗值＝daemon 的 stack；`impls/aos-daemon` ctest、repo 根 ctest 全綠（鐵律 1） |
-| 2 | 試驗場 `~/code/playground/agents/resident_bob/`（第 4 節的樹） | 寫 `bob/_entry.json`、`bob/system.txt`、`ctl/_entry.json`、`ctl/loop.json`、`ctl/relay/_entry`（第 3 節 1～3、5；4 只留欄位）、`_entry`（install）、README | 第 5 節從頭跑（haiku）：掛上→兩個 running→say／listen 兩題同一段對話→連丟三句看併題與對帳（`cur/` 清空、history 幾則 user 一則回答）→`paused` 時信排著→`/cost` 不轉送（`letter_warning.txt`）→`stopped` 後 bob 答完 `done 0`、bob_ctl `done 0`→`rm bob` 時 bob_ctl 下一輪退 1→`--max-budget-usd 0.001` 跑兩題看 `rm bob`＋退 1→再 install 續接（問「我剛才叫你做什麼」）；驗完 `ws/` 只剩使用者原本的檔 |
+| 2 | 試驗場 `~/code/playground/agents/resident_bob/`（第 4 節的樹） | 寫 `bob/_entry.json`、`bob/system.txt`、`ctl/_entry.json`、`ctl/loop.json`、`ctl/relay/_entry`（第 3 節 1～3、5；4 只留欄位）、`_entry`（install）、README | 第 5 節從頭跑（haiku）：掛上→兩個 running→say／listen 兩題同一段對話→連丟三句看併題與對帳（`cur/` 清空、history 幾則 user 一則回答）→`paused` 時信排著→`/cost` 不轉送（`mailbox_warning.txt`）→`stopped` 後 bob 答完 `done 0`、bob_ctl `done 0`→`rm bob` 時 bob_ctl 下一輪退 1→`--max-budget-usd 0.001` 跑兩題看 `rm bob`＋退 1→再 install 續接（問「我剛才叫你做什麼」）；驗完 `ws/` 只剩使用者原本的檔 |
 | 3 | 同上 `ctl/relay/_entry`、`ctl/loop.json` | **第二版**：`--idle-ms`、`/sleep`、`asleep`→`waking`→`up` | 設 `--idle-ms 15000`：閒 15 秒後 `ls` 沒有 bob、`relay_state` `asleep`；再 say 一句→bob 回來（`--resume`）、答得出前文；`/sleep` 同 |
 | 4 | `proto8/thinking/2026-11-02-playground-daemon.md` 方向題、[11-02 daemon-env 方向題 2](2026-11-02-daemon-env.md) | 補「常駐版見本檔」「方向題 2 已用到、做了」；本檔「決定」補使用者對衝突／方向題的裁定 | — |
 | 5 | （[方向題 3](#方向題-3relay-放哪叫什麼) 選「進 repo」才做）`proto8/bin/aos-claude-relay`、bin README、`tests/test_aos_claude_relay.py`、code map | 把試驗場的 `relay` 升成 bin 指令、`ctl/loop.json` 改指它 | unittest 用假的 `out.jsonl`、假 FIFO、假 `loops_state.json` 驗一輪 |
@@ -330,7 +354,7 @@ echo '{"type":"user","message":{"role":"user","content":"回答 1+1，只回數�
 ### 方向題 2：`/` 開頭的訊息——拒收，還是轉義送進去；控制器自己的指令用什麼字頭
 
 - 原則推不出：⑪ 證明 `/` 開頭會被 claude 當 slash command 執行（`/clear`、`/cost`），一定要在控制器擋；怎麼擋是取捨。
-- 例子：使用者說「/tmp 底下有什麼」。**拒收**（fable 第一版）：當壞信收掉、`letter_warning.txt` 記一行，aos-listen 會印到上一則回答（跟 aos-eca-turn 壞信同一種不完美）；優點是不猜 claude 怎麼判 slash。**轉義送進去**：前面加一個空白或「請看：」再送——claude 會不會先 trim 再判沒測，要測。**控制器自己的指令**（第二版 `/sleep`、以後的 `/stop`）跟 claude 的 slash 撞同一個字頭：認得的自己吃、不認得的擋掉，或換字頭（例 `!sleep`、`@ctl sleep`）——使用者偏好哪種字頭。
+- 例子：使用者說「/tmp 底下有什麼」。**拒收**（fable 第一版）：當壞信收掉、`mailbox_warning.txt` 記一行，aos-listen 會印到上一則回答（跟 aos-eca-turn 壞信同一種不完美）；優點是不猜 claude 怎麼判 slash。**轉義送進去**：前面加一個空白或「請看：」再送——claude 會不會先 trim 再判沒測，要測。**控制器自己的指令**（第二版 `/sleep`、以後的 `/stop`）跟 claude 的 slash 撞同一個字頭：認得的自己吃、不認得的擋掉，或換字頭（例 `!sleep`、`@ctl sleep`）——使用者偏好哪種字頭。
 
 ### 方向題 3：`relay` 放哪、叫什麼
 
