@@ -197,3 +197,13 @@ fable 的推薦（只是推薦，使用者 11-02 第四句說命名還要再想�
 | 10 | 收尾 | `grep -rn 'AOS_DAEMON\b' proto8 wf --include=* \| grep -v thinking \| grep -v digest \| grep -v session_logs` 應只剩 N-63 說明舊名那幾行；session log 一行；一個 commit（程式＋測試＋README＋條文＋code map 同一個） | ctest 全綠（repo 根）、`python3 -m unittest discover -s proto8/tests` 在 WSL 全綠、`/wf-lint` |
 
 不動的：wf/digest 兩處（歷史快照）、`wf/session_logs/archive`、proto2／舊 playground 的 `AOS_DAEMON_DIR`／`AOS_DAEMON_HOME`（凍結的舊 proto）、10-30 以前的 thinking。
+
+## aos-daemon-ctl 的定位（11-02，使用者）
+
+使用者原文（逐字）：
+
+> 對的，aos-daemon-ctl目前主要是對daemon底下的procs進行操作，對daemon本身操作這塊目前還是繼承於loop那樣，用ctl/state.json，往後可以給aos-daemon-ctl添加一些相關指令，但那是以後的事情
+
+- aos-daemon-ctl 現在管 daemon **底下的子項**（add／rm／ls）。
+- 對 daemon **本身**的操作（停、暫停、節奏）照 loop 的做法，寫它的 ctl 窗、讀它的 state 窗。
+- 給 aos-daemon-ctl 加管 daemon 本身的指令：以後再說。
