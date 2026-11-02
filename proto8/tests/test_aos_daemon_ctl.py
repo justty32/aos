@@ -1,5 +1,5 @@
 """aos-daemon-ctl：把東西掛到 aos-daemon 上（10-30，使用者「或許是aos-daemon-ctl add XXX這樣，然後會自動識別XXX是否為loop」）。
-哪個 daemon＝--daemon ＞ $AOS_DAEMON（N-63），值＝daemon 的 $AOS_STACK；投信進 <D>/loops_ctl_mailbox/（信箱，11-02 前叫 loops_mailbox）；
+哪個 daemon＝--daemon-stack ＞ $AOS_DAEMON_STACK（N-63；11-02 從 --daemon／AOS_DAEMON 改名、不留別名），值＝daemon 的 $AOS_STACK；投信進 <D>/loops_ctl_mailbox/（信箱，11-02 前叫 loops_mailbox）；
 ls 讀 loops_state.json 兩張表。
 10-30 eca 第 2 步：add --ws（子項的 ws、<WS>/.stack symlink 到小格、rm 拿掉）、ls 多一欄 ws。
 11-02（使用者「把--kind刪掉，XXX後面可以接-- ... 也就是附加argv參數。改成子項結束後不留名單」）：--kind 拿掉（＝FlagUnknown）、
@@ -77,7 +77,7 @@ class T(unittest.TestCase):
         return {d["name"]: d for d in self.logs() if d["phase"] in ("done", "stopped")}
 
     def ctl(self, *args, env=None, cwd=None):
-        e = env_of({"AOS_DAEMON": str(self.s)} if env is None else env)
+        e = env_of({"AOS_DAEMON_STACK": str(self.s)} if env is None else env)
         return subprocess.run([CTL, *args], cwd=str(cwd or self.t), env=e, capture_output=True, text=True, timeout=30)
 
     def tables(self):
@@ -96,7 +96,9 @@ class T(unittest.TestCase):
     def test_errors(self):
         self.prog("job", "exit 0\n")
         self.prog("ag", "exit 0\n", loop={"exec": "x", "max": 1})
-        for args, env, code in ((("ls",), {}, "DaemonMissing"), (("--daemon", str(self.t / "no"), "ls"), None, "DaemonMissing"),
+        for args, env, code in ((("ls",), {}, "DaemonMissing"), (("--daemon-stack", str(self.t / "no"), "ls"), None, "DaemonMissing"),
+                                (("--daemon", str(self.s), "ls"), None, "FlagUnknown"),       # 11-02 舊旗標不留別名
+                                (("ls",), {"AOS_DAEMON": str(self.s)}, "DaemonMissing"),     # 11-02 只設舊名
                                 (("add", "x"), None, "PathMissing"), (("ls",), None, "StateMissing"),
                                 (("frob",), None, "CommandUnknown"), ((), None, "ArgumentsBad"), (("rm",), None, "ArgumentsBad"),
                                 (("add", "--kind", "loop", "job"), None, "FlagUnknown"),     # 11-02 --kind 拿掉
@@ -107,6 +109,8 @@ class T(unittest.TestCase):
             self.assertEqual((r.returncode, r.stdout, r.stderr.count("\n")), (1, "", 1), (args, r.stderr))
             self.assertTrue(r.stderr.startswith("aos-daemon-ctl: %s " % code), (args, r.stderr))
         self.assertIn("loop.json 的 exec", self.ctl("add", "ag", "--", "a").stderr)
+        self.assertIn("AOS_DAEMON_STACK", self.ctl("ls", env={"AOS_DAEMON": str(self.s)}).stderr)   # 提示改名
+        self.assertNotIn("改名", self.ctl("ls", env={}).stderr)
         r = self.ctl("add", "job")   # stack 在、但沒開信箱
         self.assertEqual(r.returncode, 1)
         self.assertIn('"loops_ctl_mailbox": "loops_ctl_mailbox"', r.stderr)
@@ -164,10 +168,10 @@ class T(unittest.TestCase):
         self.assertEqual((self.s / "loops" / "two" / "pwd").read_text().strip(), os.path.realpath(d2))
 
     def test_flag_over_env(self):
-        # --daemon 蓋過 AOS_DAEMON
+        # --daemon-stack 蓋過 AOS_DAEMON_STACK
         self.prog("job", 'echo x >> "$AOS_STACK/runs"\n')
         self.start()
-        r = self.ctl("--daemon", str(self.s), "add", "job", env={"AOS_DAEMON": str(self.t / "nowhere")})
+        r = self.ctl("--daemon-stack", str(self.s), "add", "job", env={"AOS_DAEMON_STACK": str(self.t / "nowhere")})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertTrue(until(lambda: self.ended().get("job", {}).get("phase") == "done"))
         self.assertEqual((self.s / "loops" / "job" / "runs").read_text(), "x\n")

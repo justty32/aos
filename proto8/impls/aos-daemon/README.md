@@ -121,7 +121,7 @@ daemon.json＝loop.json 的超集（N-28）：
 - **換種類**：表上的種類跟期望表的不一樣（例：loops_ctl 寫 `{"loops_removed": ["bob"], "execs_added": {"bob": "agent-bob"}}`）＝當成不在期望表上：舊的收掉（`stopped`、拿掉），下一次起新的（同「收的途中同名放回來」那條）。
 - **狀態**：`loops_state.json` 多一張 `execs` 表（沒有就是 `{}`），列的形狀同 `loops`（`pid`、`started_at_ticks`、`phase`、`code`、`signal`）；超過 100 列一樣切檔，分檔跟 `loops` 放同一個 `loops_state_loops/`（檔名是內容的雜湊，不會撞）。`adopt` 兩張表都接（10-30 前的 loops_state 沒有 `execs`＝沒東西接）。
 - **手把**：`loops_ctl.json` 與信多認 `execs_added`／`execs_removed`（語意同 `loops_added`／`loops_removed`）；loops_ctl 另認整份的 `execs`（11-02 晚，跟 `loops` 對稱：寫了就取代底的 execs）。
-- **命令列**：要從外面掛上去、拿下來，可以用 [aos-daemon-ctl](../../bin/README.md)（`add XXX`＝投一封 `loops_added`／`execs_added` 的信進信箱 `loops_ctl_mailbox/`（11-02 晚改名，aos-daemon-ctl 已跟著改；11-02 起 `add XXX -- 參數...` 給 exec 型附加參數、`--kind` 拿掉），有 `loop.json`＝loop 子項、沒有＝`execs`；`rm`、`ls`；哪個 daemon＝`--daemon` ＞ `$AOS_DAEMON`）。
+- **命令列**：要從外面掛上去、拿下來，可以用 [aos-daemon-ctl](../../bin/README.md)（`add XXX`＝投一封 `loops_added`／`execs_added` 的信進信箱 `loops_ctl_mailbox/`（11-02 晚改名，aos-daemon-ctl 已跟著改；11-02 起 `add XXX -- 參數...` 給 exec 型附加參數、`--kind` 拿掉），有 `loop.json`＝loop 子項、沒有＝`execs`；`rm`、`ls`；哪個 daemon＝`--daemon-stack` ＞ `$AOS_DAEMON_STACK`）。
 
 ### 子項的工作區 ws（10-30 eca，[thinking 10-30 eca](../../thinking/2026-10-30-eca.md) 衝突 1、實作第 1 步）
 

@@ -16,7 +16,7 @@ HUB = ROOT / "extras" / "eca_hub" / "bin" / "aos-eca-hub"
 HUMAN = ROOT / "extras" / "human" / "bin"
 TURN = ROOT / "bin" / "aos-eca-turn"
 DAEMON = tool("aos-daemon")
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CD", "AOS_CF", "AOS_CO", "AOS_DAEMON", "TMUX",
+CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CD", "AOS_CF", "AOS_CO", "AOS_DAEMON", "AOS_DAEMON_STACK", "TMUX",
          "CLAUDE_CONFIG_DIR", "CODEX_HOME", "FAKE_TRANSCRIPTS")
 WRAP = '#!/bin/sh\nif [ -e "$BROKEN" ]; then echo \'{"is_error": true, "result": "壞了"}\'; exit 1; fi\nexec "$(dirname "$0")/claude-real" "$@"\n'
 
@@ -39,7 +39,7 @@ class EcaHub(unittest.TestCase):
         (self.tpl / "loop.json").write_text(json.dumps({"exec": [str(TURN), "--on-empty", "idle", str(self.tpl)], "interval_ms": 100,
                                                         "ctl": "ctl.json", "state": "state.json"}))
         (self.tpl / "_entry").write_text(json.dumps(["aos-loop", "loop.json"]))
-        self.ds = self.tmp / "dstack"                                # daemon 的 $AOS_STACK＝AOS_DAEMON
+        self.ds = self.tmp / "dstack"                                # daemon 的 $AOS_STACK＝AOS_DAEMON_STACK
         self.ds.mkdir()
         self.daemon = None
         self.socks = []
@@ -58,7 +58,7 @@ class EcaHub(unittest.TestCase):
                  CLAUDE_CONFIG_DIR=str(self.tmp / "claude-home"), FAKE_TRANSCRIPTS="1",
                  BROKEN=str(self.broken))
         if daemon:
-            e["AOS_DAEMON"] = str(self.ds)
+            e["AOS_DAEMON_STACK"] = str(self.ds)
         e.update(extra or {})
         return e
 
@@ -124,8 +124,13 @@ class EcaHub(unittest.TestCase):
         return (r.returncode, (r.stderr.split() + ["", ""])[1])
 
     def test_daemon_missing(self):
-        """AOS_DAEMON 沒設＝DaemonMissing；資料夾在、daemon 沒在跑（沒有 loops_state、或心跳的行程不在）＝同。"""
+        """AOS_DAEMON_STACK 沒設＝DaemonMissing；資料夾在、daemon 沒在跑（沒有 loops_state、或心跳的行程不在）＝同。
+        11-02 改名：只設舊的 AOS_DAEMON＝DaemonMissing、訊息提示 AOS_DAEMON_STACK；給舊旗標 --daemon＝FlagUnknown。"""
         self.assertEqual(self.code(self.hub("ls", env=self.env(daemon=False))), (1, "DaemonMissing"))
+        r = self.hub("ls", env=self.env({"AOS_DAEMON": str(self.ds)}, daemon=False))
+        self.assertEqual(self.code(r), (1, "DaemonMissing"))
+        self.assertIn("AOS_DAEMON_STACK", r.stderr)
+        self.assertEqual(self.code(self.hub("--daemon", str(self.ds), "ls")), (1, "FlagUnknown"))
         self.assertEqual(self.code(self.hub("ls")), (1, "DaemonMissing"))
         (self.ds / "loops_state.json").write_text(json.dumps({"loops": {}, "pid": 999999999,
                                                               "started_at_ticks": 1}))

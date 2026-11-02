@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""aos-daemon-ctl [--daemon D] add|rm|ls … — 把東西掛到一個 aos-daemon 上（10-30，使用者「或許是aos-daemon-ctl add XXX這樣」）。
+"""aos-daemon-ctl [--daemon-stack D] add|rm|ls … — 把東西掛到一個 aos-daemon 上（10-30，使用者「或許是aos-daemon-ctl add XXX這樣」）。
 
 `aos-exec XXX`＝掛到 Linux 的 proc 管理；`aos-daemon-ctl add XXX`＝掛到 daemon 上。本質是 N-54 的管轄手把：
 往 daemon 的信箱（信箱模式，N-28 的 10-29 補）投一封 `loops_added`／`execs_added` 的信。設計與代定見
 proto8/thinking/2026-10-30-agent-lifecycle.md（實作第 7 步的補）與 bin/README.md。
 
-    aos-daemon-ctl [--daemon D] add [--name N] [--ws WS] XXX [-- 參數...]   掛上去；stdout 印信號（aos-post 給的）
-    aos-daemon-ctl [--daemon D] rm 名字                                      拿下來（loops_removed＋execs_removed 都寫）；印信號
-    aos-daemon-ctl [--daemon D] ls [--json]                                  列 loops_state.json 兩張表：一行「名字 TAB loop|exec TAB phase TAB pid TAB code TAB ws」
+    aos-daemon-ctl [--daemon-stack D] add [--name N] [--ws WS] XXX [-- 參數...]   掛上去；stdout 印信號（aos-post 給的）
+    aos-daemon-ctl [--daemon-stack D] rm 名字                                      拿下來（loops_removed＋execs_removed 都寫）；印信號
+    aos-daemon-ctl [--daemon-stack D] ls [--json]                                  列 loops_state.json 兩張表：一行「名字 TAB loop|exec TAB phase TAB pid TAB code TAB ws」
 
-哪個 daemon（N-63 hub 型變數）：--daemon ＞ $AOS_DAEMON；值＝那個 daemon 的 $AOS_STACK 資料夾（它的窗都在這：
-  loops_ctl_mailbox/、loops_state.json，用預設名字）。都沒有＝DaemonMissing；不是資料夾＝DaemonMissing。子 proc 照常繼承 AOS_DAEMON。
+哪個 daemon（N-63 hub 型變數）：--daemon-stack ＞ $AOS_DAEMON_STACK；值＝那個 daemon 的 $AOS_STACK 資料夾（它的窗都在這：
+  loops_ctl_mailbox/、loops_state.json，用預設名字）。都沒有＝DaemonMissing；不是資料夾＝DaemonMissing。子 proc 照常繼承 AOS_DAEMON_STACK。
+  11-02 改名（使用者「就AOS_DAEMON_STACK吧」「最好明講，也就是--daemon-stack」）：舊的 AOS_DAEMON／--daemon 不認、不留別名
+  （--daemon＝FlagUnknown；只設了 AOS_DAEMON＝DaemonMissing，訊息提示改設 AOS_DAEMON_STACK）。
   信箱固定是 <D>/loops_ctl_mailbox/（daemon.json 要寫 "loops_ctl_mailbox": "loops_ctl_mailbox"，11-02 前叫 loops_mailbox）；
   沒有 new/＝MailboxMissing（daemon 沒開信箱或還沒起）。
 add 的自動識別（11-02 拿掉 --kind，使用者「把--kind刪掉」）：XXX 是資料夾、裡面有 loop.json＝loop 型（daemon 的子 loop 直接跑 XXX 的 loop.json）；
@@ -49,7 +51,7 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
 NAME = "aos-daemon-ctl"
-USAGE = ("aos-daemon-ctl [--daemon D] add [--name N] [--ws WS] XXX [-- 參數...] | rm 名字 | ls [--json]")
+USAGE = ("aos-daemon-ctl [--daemon-stack D] add [--name N] [--ws WS] XXX [-- 參數...] | rm 名字 | ls [--json]")
 MAILBOX = "loops_ctl_mailbox"
 
 
@@ -60,9 +62,11 @@ class Fail(Exception):
 
 
 def daemon_dir(opts):
-    d = opts.get("daemon") or os.environ.get("AOS_DAEMON", "")
+    d = opts.get("daemon_stack") or os.environ.get("AOS_DAEMON_STACK", "")
     if not d:
-        raise Fail("DaemonMissing", "沒給 --daemon、也沒設 AOS_DAEMON（要指到 daemon 的 $AOS_STACK 資料夾）")
+        hint = ("；AOS_DAEMON 11-02 起改名，請改設 AOS_DAEMON_STACK（或 --daemon-stack）"
+                if os.environ.get("AOS_DAEMON") else "")
+        raise Fail("DaemonMissing", "沒給 --daemon-stack、也沒設 AOS_DAEMON_STACK（要指到 daemon 的 $AOS_STACK 資料夾）" + hint)
     if not os.path.isdir(d):
         raise Fail("DaemonMissing", "daemon 的資料夾不在：%s" % d)
     return os.path.abspath(d)
@@ -248,7 +252,7 @@ COMMANDS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls}
 def main():
     try:
         try:
-            opts, rest = aos_flags.parse(sys.argv[1:], {"--daemon": "daemon"})
+            opts, rest = aos_flags.parse(sys.argv[1:], {"--daemon-stack": "daemon_stack"})
             if not rest:
                 raise Fail("ArgumentsBad", "usage: %s" % USAGE)
             if rest[0] not in COMMANDS:

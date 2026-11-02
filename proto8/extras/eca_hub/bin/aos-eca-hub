@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """aos-eca-hub - 管掛在 aos-daemon 底下的外部 coding agent（claude／codex）：掛上、列出、接進畫面、收起、結束歸檔（10-30 eca）。
 
-    aos-eca-hub [--daemon D] add   [--kind claude|codex | --template 定義] [--name N] [資料夾]   掛到 daemon（aos-daemon-ctl add --ws）；印小格
+    aos-eca-hub [--daemon-stack D] add   [--kind claude|codex | --template 定義] [--name N] [資料夾]   掛到 daemon（aos-daemon-ctl add --ws）；印小格
     aos-eca-hub ls    [--json]                         列掛著的外部 agent：名字、phase、畫面、種類、工作區、對話 id 前 8 碼
     aos-eca-hub state [資料夾|名字]                    這裡是不是掛著的外部 agent（不是＝InstanceMissing、退 1）
     aos-eca-hub open  [-d] [--kind …|--template …] [--name N] [資料夾|名字]   接進畫面（沒開就開、有對話就 --resume；還沒掛就先 add）
@@ -12,7 +12,7 @@
 
 設計：proto8/thinking/2026-10-30-eca.md C 結論 7～10（daemon＋三件 daemon 做不到的事：畫面、對話接回、CLI 自己的 session 檔）。
 沒有自己的常駐 kernel：常駐的是 aos-daemon（信箱模式），以它的 loops_state.json 為準（衝突 2）；每個子命令都是
-「叫 aos-daemon-ctl ＋ 動小格裡 cli_session 的東西」。哪個 daemon＝--daemon ＞ $AOS_DAEMON（同 aos-daemon-ctl；沒設、不是資料夾、
+「叫 aos-daemon-ctl ＋ 動小格裡 cli_session 的東西」。哪個 daemon＝--daemon-stack ＞ $AOS_DAEMON_STACK（同 aos-daemon-ctl，11-02 從 --daemon／AOS_DAEMON 改名；沒設、不是資料夾、
 daemon 沒在跑〔loops_state.json 的 pid＋started_at_ticks 對不上〕＝DaemonMissing）。不另設 hub 的環境變數（10-28 那個退場，衝突 4）。
 一隻＝「定義 × 資料夾」：定義＝--template ＞ proto8/demo/eca-<--kind，沒給＝claude>（頂層要有 cli.json）；資料夾沒給＝cwd，就是 claude 的 cwd。
   add＝aos-daemon-ctl add --ws 資料夾 --name 名字 定義（名字沒給＝資料夾名）；資料夾沒有 .stack 就由 aos-daemon-ctl 建 symlink 指到小格
@@ -68,13 +68,15 @@ def parse(argv, flags=(), switches=()):
 
 # ---------------------------------------------------------------- daemon（經 aos-daemon-ctl）
 
-DAEMON = None                                   # main 裡從 --daemon／$AOS_DAEMON 定
+DAEMON = None                                   # main 裡從 --daemon-stack／$AOS_DAEMON_STACK 定
 
 
 def daemon_dir():
-    d = DAEMON or os.environ.get("AOS_DAEMON", "")
+    d = DAEMON or os.environ.get("AOS_DAEMON_STACK", "")
     if not d:
-        die("DaemonMissing", "沒給 --daemon、也沒設 AOS_DAEMON（要指到 aos-daemon 的 $AOS_STACK 資料夾）")
+        hint = ("；AOS_DAEMON 11-02 起改名，請改設 AOS_DAEMON_STACK（或 --daemon-stack）"
+                if os.environ.get("AOS_DAEMON") else "")
+        die("DaemonMissing", "沒給 --daemon-stack、也沒設 AOS_DAEMON_STACK（要指到 aos-daemon 的 $AOS_STACK 資料夾）" + hint)
     if not os.path.isdir(d):
         die("DaemonMissing", "daemon 的資料夾不在：%s" % d)
     d = os.path.abspath(d)
@@ -94,7 +96,7 @@ def daemon_dir():
 def ctl(*args):
     """叫 aos-daemon-ctl；錯＝把它那一行換成這支的名字、退 1。回 stdout。stderr 的提醒照轉。"""
     try:
-        r = subprocess.run([sys.executable, CTL, "--daemon", daemon_dir()] + list(args), capture_output=True, text=True)
+        r = subprocess.run([sys.executable, CTL, "--daemon-stack", daemon_dir()] + list(args), capture_output=True, text=True)
     except OSError as e:
         die("CommandMissing", "叫不了 aos-daemon-ctl：%s" % e)
     if r.returncode != 0:
@@ -420,16 +422,18 @@ CMDS = {"add": cmd_add, "ls": cmd_ls, "state": cmd_state, "open": cmd_open, "clo
 def main():
     global DAEMON
     a = sys.argv[1:]
-    while a and (a[0] == "--daemon" or a[0].startswith("--daemon=")):
-        if a[0] == "--daemon":
+    while a and (a[0] == "--daemon-stack" or a[0].startswith("--daemon-stack=")):
+        if a[0] == "--daemon-stack":
             if len(a) < 2:
-                die("ArgumentsBad", "--daemon 要一個值")
+                die("ArgumentsBad", "--daemon-stack 要一個值")
             DAEMON, a = a[1], a[2:]
         else:
-            DAEMON, a = a[0][len("--daemon="):], a[1:]
+            DAEMON, a = a[0][len("--daemon-stack="):], a[1:]
     if not a or a[0] in ("-h", "--help"):
         print(__doc__)
         return
+    if a[0].startswith("-"):
+        die("FlagUnknown", "不認得的旗標 %s（子命令前只認 --daemon-stack）" % a[0])
     if a[0] not in CMDS:
         die("CommandUnknown", "不認得的子命令 %s（%s）" % (a[0], "、".join(CMDS)))
     CMDS[a[0]](a[1:])

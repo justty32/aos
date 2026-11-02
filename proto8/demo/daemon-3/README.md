@@ -63,12 +63,12 @@ find .stack -type f | sort
 
 ## 半路加一個（aos-daemon-ctl）
 
-`aos-exec XXX`＝掛到 Linux 的 proc 管理；`aos-daemon-ctl add XXX`＝掛到 daemon 上（[bin/README](../../bin/README.md)）。它往 daemon 的信箱投一封 `loops_added`／`execs_added` 的信（N-54 的手把；所以這份 daemon.json 開了信箱 `loops_ctl_mailbox`）。哪個 daemon＝`--daemon` ＞ `$AOS_DAEMON`（daemon 的 `$AOS_STACK`）。XXX 有 `loop.json`＝掛成 loop 子項（子 loop 直接跑它的 loop.json）、沒有＝掛成 `execs`（11-02 `--kind` 拿掉，使用者「把--kind刪掉」；exec 型可接 `XXX -- 參數...`，loop 型帶參數＝ArgumentsBad）。
+`aos-exec XXX`＝掛到 Linux 的 proc 管理；`aos-daemon-ctl add XXX`＝掛到 daemon 上（[bin/README](../../bin/README.md)）。它往 daemon 的信箱投一封 `loops_added`／`execs_added` 的信（N-54 的手把；所以這份 daemon.json 開了信箱 `loops_ctl_mailbox`）。哪個 daemon＝`--daemon-stack` ＞ `$AOS_DAEMON_STACK`（daemon 的 `$AOS_STACK`）。XXX 有 `loop.json`＝掛成 loop 子項（子 loop 直接跑它的 loop.json）、沒有＝掛成 `execs`（11-02 `--kind` 拿掉，使用者「把--kind刪掉」；exec 型可接 `XXX -- 參數...`，loop 型帶參數＝ArgumentsBad）。
 
 ```sh
 aos-exec $R/demo/daemon-3 --max 50 &       # 約 10 秒
-export AOS_DAEMON=$ws/.stack
-until [ -d $AOS_DAEMON/loops_ctl_mailbox/new ]; do sleep 0.1; done
+export AOS_DAEMON_STACK=$ws/.stack
+until [ -d $AOS_DAEMON_STACK/loops_ctl_mailbox/new ]; do sleep 0.1; done
 aos-daemon-ctl add $R/demo/tick                               # tick 有 loop.json＝loop 型、名字 tick；印信號
 aos-daemon-ctl add --name tick2 $R/demo/tick                  # 同一個再掛一隻、換名字
 sleep 1; aos-daemon-ctl ls

@@ -38,7 +38,7 @@ aos-exec ../daemons/main
 
 # 視窗二：看、掛、拿
 cd ~/code/playground && source env.sh && cd ws
-export AOS_DAEMON=$PWD/.stack
+export AOS_DAEMON_STACK=$PWD/.stack
 aos-daemon-ctl ls                       # 名單：名字、loop/exec、phase、pid、結束碼
 tail -f .stack/loops/clock/clock.txt    # clock 每 5 秒一行（11-02 起小格在 .stack/loops/<名字>/）
 

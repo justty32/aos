@@ -422,7 +422,7 @@ class External(Base):
         while not (ds / "loops_ctl_mailbox" / "new").is_dir():
             self.assertLess(time.time(), end)
             time.sleep(0.05)
-        r = self.xrun(str(ROOT / "bin" / "aos-daemon-ctl"), "--daemon", str(ds), "add", "--ws", str(self.ws), "--name", "bob",
+        r = self.xrun(str(ROOT / "bin" / "aos-daemon-ctl"), "--daemon-stack", str(ds), "add", "--ws", str(self.ws), "--name", "bob",
                       str(self.eca))
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertEqual(os.readlink(self.stack), str(ds / "loops" / "bob"))
