@@ -114,13 +114,22 @@ def exchanges(stack):
     return out
 
 
+LOOP_STATE_NAMES = ("state.json", "loop_state.json")
+
+
 def loop_state(stack):
-    """aos-loop 的 state 窗（<stack>/state.json）；沒有或讀不懂＝None。"""
-    try:
-        st = json.loads(read(os.path.join(stack, "state.json"), "") or "null")
-    except ValueError:
-        return None
-    return st if isinstance(st, dict) else None
+    """aos-loop 的 state 窗：<stack>/state.json，沒有就 <stack>/loop_state.json（11-02 常駐 bob：跟身體共用 stack 時窗加前綴 loop_，
+    thinking 2026-11-02-resident-bob 實作時代定）；先找到的那份算數，沒有或讀不懂＝None。"""
+    for name in LOOP_STATE_NAMES:
+        text = read(os.path.join(stack, name))
+        if text is None:
+            continue
+        try:
+            st = json.loads(text or "null")
+        except ValueError:
+            return None
+        return st if isinstance(st, dict) else None
+    return None
 
 
 def tail_jsonl(path, n):

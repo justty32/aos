@@ -2,7 +2,7 @@
 
 ← [thinking README](README.md)｜月份表 [2026-11](months/2026-11.md)｜前情：[11-01 試驗場 bob](2026-11-01-playground-bob.md)（bob＝`claude -p` 一次跑完）、[11-02 試驗場 daemon](2026-11-02-playground-daemon.md)（bob 用 `execs` 射後不理地掛上去；方向題「常駐的掛法」就是本題）、[10-29 agent-bob 決定 33～35](2026-10-29-agent-bob/04-頂層對八題的再想.md#決定10-30)、[10-30 agent-lifecycle A（queue）、B（納管外部 agent）](2026-10-30-agent-lifecycle.md)｜同日裁定（規劃以裁定後的樣子為準）：[state 窗](2026-11-02-state-window.md)（`daemon_ctl.json`／`daemon_state.json`、log 預設不印）、[loop-stdio](2026-11-02-loop-stdio.md)（身體寫成單子就能指定 stdin／stdout）、[daemon-env](2026-11-02-daemon-env.md)（`AOS_DAEMON_STACK`、`--daemon-stack`；方向題 2「daemon 要不要把變數設給子項」說等常駐 bob 用到）、[exec 像繼承](2026-11-02-exec-inheritance.md)（呼叫＝給小格、變成＝共用 stack；共用時加前綴）｜條文：[N-13、N-14、N-16](../docs/NORMS/05-基礎設施-窗.md)、[N-28、N-54](../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-55、N-57～N-64](../docs/NORMS/10-基礎設施-定義與工作區.md)、[P-11、P-15、P-17、P-19、P-20](../docs/CONVENTION/02-題目stack停錯腦.md)、[P-32～P-38](../docs/CONVENTION/06-巢狀.md)、[C-52、C-56、C-65、C-75](../docs/CONCEPTS.md)｜程式：[aos-daemon](../impls/aos-daemon/README.md)、[aos-loop](../impls/aos-loop/README.md)、[aos-exec／inst](../impls/aos-exec/README.md)、[aos-post](../impls/aos-post/README.md)、[aos-daemon-ctl](../bin/README.md)、[aos-say／listen](../extras/human/README.md)｜場地 `~/code/playground/`（WSL，不在 git）
 
-本檔只記使用者原文（逐字）、決定、實測結論、fable 照原則定的規劃（可翻案）、要使用者看的衝突與方向題（[user/03](../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。規劃 11-02 晚依決定與實測改寫成第二版；**程式與試驗場的 resident_bob 都還沒動**（只做了實測）；步驟表在規劃第 6 節。
+本檔只記使用者原文（逐字）、決定、實測結論、fable 照原則定的規劃（可翻案）、要使用者看的衝突與方向題（[user/03](../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。規劃 11-02 晚依決定與實測改寫成第二版；步驟表在規劃第 6 節。**現況**：第 1 步（daemon 給子項 `AOS_DAEMON_STACK`）在 `1934574e`；第 2 步（試驗場 `agents/resident_bob/` 第一版，不含睡／醒）寫好、在拷貝試驗場實跑過，見[實作時代定](#實作時代定11-02)與[實作結論](#實作結論11-02)；第 3 步（睡／醒）以後的還沒做。
 
 ## 使用者原文（11-02，逐字）
 
@@ -35,6 +35,14 @@
 頂層回報「連續丟會被併成一題、第三句沒被答到」後（11-02，逐字）：
 
 > 連續丟會被併，正常，我使用的時候也是，他是會一起處理的。你要隔一段時間丟，他才會分開。不過我也擔心是不是你丟進stdin的時候沒有加上換行。
+
+實作進行中（第 1 步已 commit、試驗場第一版已實跑完），使用者叫停（11-02，逐字；頂層轉述：說「照建議走」時在忙、沒細看，想先弄清楚規劃再動工）：
+
+> 先讓他停下來吧
+
+看完隊長的停下報告（做到哪、四件要帶給他的事）後（11-02，逐字）：
+
+> 收尾
 
 ## 決定（11-02，使用者）
 
@@ -71,6 +79,7 @@
 - [方向題 4](#方向題-4併題時被忽略的那句6-第三句要不要補救)：控制器不補救；`system.txt` 加一句「一則訊息裡有好幾個要求時每個都要回」，其餘不做。
 - [方向題 5](#方向題-5閒置多久睡要不要有睡的指令第二版)：照規劃第 3 節第 4 步——睡是第二版；`relay` 收 `--idle-ms`（沒給＝不睡，例 `600000`＝10 分鐘）＋ `/sleep` 指令。
 - **壞信警告檔改名（頂層代定、可翻案）**：規劃原寫 `letter_warning.txt`；使用者 11-02 已把 daemon 的 `letter_warning` 改名 `mailbox_warning`（[state 窗 § 決定（11-02 晚）](2026-11-02-state-window.md#決定11-02-晚使用者實作中陸續裁的)），所以 relay 的警告檔跟著叫 **`mailbox_warning.txt`**；規劃節與方向題 2 內文已一併改成新名。
+- **收尾（11-02，使用者「收尾」）**：停下時已做的保留（第 1 步 `1934574e`、試驗場第一版），不往第二版走；停下報告列的四件由頂層代定（可翻案），見[實作時代定](#實作時代定11-02)最後四條。
 - **什麼時候開工**：實作要等 state 窗隊長那一輪（aos-daemon-ctl 拿掉 `--kind`、`-- 參數`、`execs` 收單子、`AOS_DAEMON`→`AOS_DAEMON_STACK`、`--daemon-stack`）commit 進 main、`git pull` 之後才開工（同規劃第 6 節「前提」）。11-02 寫這條時：前三項已在 `278b7bd1`，改名 `AOS_DAEMON_STACK`／`--daemon-stack` 還在隊長的工作區、沒 commit。
 
 ## 現況（查清的，不是規劃）
@@ -270,7 +279,7 @@ echo '{"type":"user","message":{"role":"user","content":"回答 1+1，只回數�
 7. **`--max-budget-usd` 是整個 session 的總額**：`total_cost_usd` 是累計（0.00069、0.00085、0.00094），這題自己的在 `model_usage_since_last_result.<模型>.costUSD`。上限設 0.00025 跑四題：第一題 `success`；第二題答案照樣吐出，但 `result` 變 `subtype: "error_max_budget_usd"`、`is_error: true`、沒有 `result`、`errors: ["Reached maximum budget ($0.00025)"]`（答完才檢查，會超一點）；之後每題**立刻**回同樣的錯誤 `result`、不花錢、沒有 `assistant`。**超預算時 claude 不退出**（規劃第 1 節與衝突 6 寫「撞到、claude 自己退出」不對），寫端關掉時才退、**結束碼 1**。所以預算用完時 bob 變成活著卻沒用，控制器要自己看 `result` 的 `subtype`。
 8. **SIGTERM**：閒著時送＝立刻退、**結束碼 143**（claude 自己接住訊號以 128+15 結束，不是被殺）。正在答時送（「從 1 數到 1500」答到一半）＝**也立刻退 143，手上那題直接丟掉**：沒有 `assistant`、沒有 `result`，輸出檔最後一行是那題的 `system`/`init`。**輸出檔每一行都是完整的**（沒有寫一半的行）。
 9. **`/exit` 不能用**：stream-json 裡送 `/exit`，claude 回一則 `result`「/exit isn't available in this environment.」、**不退**，之後照常答題。stream-json 有對應的**控制訊息** `{"type":"control_request","request_id":"r1","request":{"subtype":"interrupt"}}`：實測它**中斷正在答的題**（輸出 `control_response` success、已吐的半截 `assistant`、一則 `result` `subtype: "error_during_execution"`），**行程不退**、對話記得（下一題問「我剛才叫你做什麼」答「…你只寫到 13 就被我中斷了」）。它是「打斷這題」，不是「收工」。
-10. **停掉後 `--resume` 叫回來**：「記住暗號 9」→ SIGTERM（退 143）→ 用第一行事件（`system`/`init`；每行都有、哪行都一樣）的 `session_id` 跑 `claude -p --resume <id> --input-format stream-json --output-format stream-json --verbose …`（其餘旗標同上）→ 問「我剛才叫你記住什麼」答「暗號 9」。**重起後 `session_id` 不變**，`result_index` 從 0 重數，`total_cost_usd` 也從新行程重算。（`/clear` 之後 `session_id` 會換，見 ⑪。）
+10. **停掉後 `--resume` 叫回來**：「記住暗號 9」→ SIGTERM（退 143）→ 用第一行事件（`system`/`init`；每行都有、哪行都一樣）的 `session_id` 跑 `claude -p --resume <id> --input-format stream-json --output-format stream-json --verbose …`（其餘旗標同上）→ 問「我剛才叫你記住什麼」答「暗號 9」。**重起後 `session_id` 不變**，`result_index` 從 0 重數；`total_cost_usd` **接著同一個 session 的累計**（11-02 實作時實跑改正：0.00195 → 重掛後第一題 0.00206；步驟 0 當時寫成「從新行程重算」不對），但 `--max-budget-usd` 是照這一支行程算的，所以重起後預算從頭算。（`/clear` 之後 `session_id` 會換，見 ⑪。）
 11. **slash command 會被執行，要小心**（使用者「要小心slash command」成立）：
     - `/help`：被 claude 攔下、不給模型，回「/help isn't available in this environment.」，不花錢。
     - `/cost`：**真的執行**，回訂閱用量（「Current session: 3% used · resets …」），不花錢——會把帳號用量吐進輸出。
@@ -294,6 +303,55 @@ echo '{"type":"user","message":{"role":"user","content":"回答 1+1，只回數�
 - **身體改名**：`turn` 換名字（使用者決定），名字待定。
 
 **沒測的**：用工具時的事件形狀；`/compact`；超過一個寫端時的行為。花費：十三輪合計約 0.0043 美元（各輪最後的 `total_cost_usd` 加總；SIGTERM 打斷的那題沒記到帳，量很小）。
+
+## 實作時代定（11-02）
+
+工人照原則定的小決定，每條可翻案。
+
+- **bob 多開 `--replay-user-messages`，對帳靠回吐的那行**（規劃第 2 節只寫三個旗標、第 3 節是「`init` 時把 `sent` 快照成 `answering`」）：實測三封同時在管子裡時，第一個 `init` 出來那刻三封都已寫進去、但第一題只答第一封，快照會把三封都算進第一題。回吐的 user 行（`isReplay: true`，緊接在 `init` 後面）內容＝這題併進去的訊息以 `\n` 接起來，照 `sent` 的順序比前綴就知道是哪幾封；對不上＝當成只答第一封、`mailbox_warning.txt` 記一行。
+- **每輪順序是 看 bob → 同步輸出 → 送信**（規劃是 ①②③：先送再同步），縮小「送進去的新信跟正在開的那題」交錯的窗口。
+- **user 行等回吐時才寫進 `history.jsonl`**（規劃：送出時寫）：送出時寫，連丟三句會變成「user user user、assistant assistant」，`aos-listen --last` 把三句都配給第一個回答（實跑第一次就這樣）；回吐時寫才是「幾則 user＋一則回答」一段段。
+- **同一個 `message.id` 的 `assistant` 事件合成一則**；`out.jsonl` 最後一行是 `assistant` 時先不寫、等下一行出現（同一則可能還沒吐完；不另存狀態）。只有 `tool_use` 的那則 `content` 是 `null`＋`tool_calls`；`tool_result` 的內容是陣列時只接 `text` 區塊。
+- **bob 在不在：直接讀 `loops_state.json`**（`$ref` 陣列照 aos-daemon-ctl 的讀法合回來），不叫 `aos-daemon-ctl ls --json`（每 300 ms 少起一支 Python）；不在表上一律退 1 `BobGone`（第一版沒有 `asleep`，不看 `bob` 欄）。
+- **`relay_state.json` 多一欄 `bob_pid`**：表上 bob 的 pid 跟上次記的不同＝換了一支 bob（重跑 install）→ 先把舊輸出同步完，還沒結掉的 `sent` 全當沒送過、這輪重送。為的是 `rm bob`／超預算之後重掛時，卡在 `cur/` 的信會被答到。
+- **超預算那個 `result` 照樣結掉 `answering`**（那題答案有吐，⑦），再 `aos-daemon-ctl rm bob`、退 1 `BudgetOut`；之後才送進去的信留在 `cur/`、重掛時重送。第一版寫成不結掉，實跑看到重掛後同一題答兩次才改。其他不是 `success` 的 `result`（`error_during_execution`）照樣結掉、警告檔記一行。
+- **`mailbox_warning.txt` 照 agent 範本 queue 的 `letter_warning.txt`**：一行「信 <信號> 不採用：原因」、只留最後一封、暫存改名。
+- **錯誤代號**：relay `ArgumentsBad`（給了任何參數，含 `--idle-ms`）、`DaemonMissing`、`BobGone`、`BudgetOut`、`PostFailed`；install `DaemonMissing`、`ArgumentsBad`（不收參數）、`SendFailed`（aos-daemon-ctl 的 stderr 照轉）。
+- **寫管子斷了**（`BrokenPipeError`）：把 fd 1 `dup2` 成 `/dev/null` 再結束這輪，不然 Python 結束時 flush 緩衝會再炸、退 120。
+- install 的位置用 `__file__`（realpath）算；`system.txt` 的 AOS_STACK 那句改成「執行中的狀態，不要動它」（掛在 daemon 底下時不在 `ws/.stack/`）。
+
+以下四條是使用者「收尾」後**頂層代定、可翻案**（停下報告帶給他的四件）：
+
+- **install 自己清掉殘留的 `stopped`**：add bob_ctl 之前讀控制器小格的 `loop_ctl.json`，有 `stopped` 這個 key 就只拿掉它（其他 key 如 `paused`、`interval_ms` 照留——`paused` 不會讓新控制器收工，留著是使用者自己的意思）；拿掉後沒東西就刪檔（N-06 沒寫＝回初始值），否則照 N-05 先寫 `.loop_ctl.json` 再改名。檔不在、讀不懂＝不動。理由：最小做法，只動「會讓新控制器一起來就收工」那一格；不改 N-28「daemon 不清小格」——清的是 install（掛它的那一方），不是 daemon。眉角：控制器還在跑時寫了 `stopped` 又立刻跑 install，可能把那次收工取消（aos-loop 每 300 ms 讀一次 ctl，實際上碰不到），不另處理。README 的「先 `rm -f $S/loop_ctl.json`」那步拿掉。
+- **`aos-listen --status` 看得到控制器的 phase：讓讀的那一方也認 `loop_state.json`**（不把控制器的窗改回 `state.json`）。改回 `state.json` 跟「共用 stack 時名字加前綴」（[exec 像繼承 § 結論](2026-11-02-exec-inheritance.md#結論11-02跟使用者討論後)）衝突——控制器小格是 aos-loop 跟 relay 共用的 stack；讓 aos-listen 認前綴名不違背它，而且改動最小（`proto8/lib/aos/aos_ws.py` 的 `loop_state` 先找 `state.json`、沒有再找 `loop_state.json`，先找到的算數；aos-listen `--status` 那行標出讀的是哪份；ai_tools 的 `loop_phase` 用同一個函式，跟著認）。壞信那行 aos-listen 仍只讀 agent queue 的 `letter_warning.txt`，relay 的 `mailbox_warning.txt` 看不到——這輪沒動（N-16 agent queue 照舊叫 `letter_warning`），README 寫「`cat $S/mailbox_warning.txt`」。
+- **N-28 補一句**「子項的環境多 `AOS_DAEMON_STACK`」（11-02 補），連 N-63 的 11-02 補與 N-64 ④。
+- **結論 ⑩ 的 `total_cost_usd` 改正**：接著 session 的累計，不是從新行程重算（預算從頭算仍成立）。
+
+## 實作結論（11-02）
+
+**試驗場 `~/code/playground/agents/resident_bob/`**（照規劃第 4 節的樹，`agents/bob` 沒動）：`_entry`（install，Python 60 多行）、`README.md`（玩法＋眉角：掛 `ctl/_entry.json` 檔、FIFO 是 proc 自己定的、先 add bob、install 會拿掉殘留的 `stopped`）、`bob/_entry.json`（第 2 節的單子＋`--replay-user-messages`＋`--max-budget-usd 2`）、`bob/system.txt`、`ctl/_entry.json`、`ctl/loop.json`（照第 3 節）、`ctl/relay/_entry`（Python 約 290 行）。**relay 一輪**：讀 daemon 的表看 bob → 從 `out_offset` 讀 `out.jsonl` 新的整行，回吐的 user 行對 `sent` 定出這題答哪幾封、寫 user 行，`assistant`／`tool_result` 轉 OpenAI 形寫 history，`result` 把那幾封 `finish` → 探針開得到 FIFO 才 `claim-all`、逐封 `check`，`/` 開頭與壞信收掉記警告，好信寫一行 stream-json 到 stdout（只有這一行進 stdout，子程式全 `capture_output`）。
+
+**實跑**（拷貝試驗場 `~/.cache/aos-c8a7-f-tools/pg-rbob/`，P8 指 `~/.cache/aos-c8a7-f/proto8`、daemon 加 `--enable-logs`；haiku；daemon 的 log 在 `pg-rbob/daemon.log`，bob 的原汁在 `pg-rbob/ws/.stack/loops/bob/out.jsonl`）：
+
+1. **掛上**：install 印兩個信號，`aos-daemon-ctl ls` 有 `bob exec running`、`bob_ctl exec running`。
+2. **兩題接前文、併題**：「回答 1+1」→`2`，「記住暗號 7」→`好`，「我第一題問你什麼」答得出。連丟三句（5+5、6+6、7+7）：第一句單獨答 `10`，後兩句併成一題答 `12\n14`；`cur/`、`new/` 清空；history「user、assistant、user、user、assistant」；三封 aos-listen 各拿到 `10`、`12 14`、`12 14`；`--last 2` 分段對。
+3. **用工具寫檔**：`a.txt` 內容 `hi` 寫進 ws；history 是 user → `{"role": "assistant", "content": null, "tool_calls": [{"id": "toolu_…", "type": "function", "function": {"name": "Write", "arguments": "{…}"}}]}` → `{"role": "tool", "tool_call_id": "toolu_…", "content": "File created successfully…"}` → 最後的文字回答。claude 的工具事件：`assistant`（`tool_use` 區塊）、`user`（`tool_result` 區塊，沒有 `isReplay`）、`assistant`（文字），一則一個 `message.id`。
+4. **paused**：信停在 `queue/new/`、`cur/` 空；改回 `false` 後送出、答到。
+5. **`/cost`、`  /clear`**：沒進 bob（`out.jsonl` 沒有這兩個字），`mailbox_warning.txt` 一行「…以 / 開頭的訊息不轉送…」；aos-listen 那封印到上一則回答（規劃預料的不完美）。
+6. **stopped**：送一題後立刻 `{"stopped": true}`：daemon log `bob_ctl done 0`、約 1.4 秒後 `bob done 0`，bob 答完那題（`20` 在 `out.jsonl`），信留在 `cur/`。
+7. **重掛續接**：install 印「續接 session …」，bob 的 argv 尾巴是 `--resume ebcc…`，`out.jsonl` 全部只有這一個 `session_id`；第一輪就從 `out_offset` 補讀上次答完的 `20`、把留在 `cur/` 那封結掉；問「我剛才叫你記住什麼暗號」答 `暗號是 7。`。
+8. **`rm bob`**：log `bob stopped 143`、0.4 秒後 `bob_ctl done 1`；`bob_ctl/stderr.txt` 是 relay 一行「`relay: BobGone bob 不在 daemon 的表上…`」加 aos-loop 自己一行「第 76 次 relay 失敗，結束碼 1」。
+9. **超預算**：拷貝裡改 `0.0003`、重掛：前兩題 `31`、`32`，第三題答 `33` 後 `result` 是 `error_max_budget_usd` → 那封結掉、aos-listen 拿到 `33`，`relay: BudgetOut …`、`bob_ctl done 1`、bob 被收掉 `stopped 1`（超過預算的 session 收 SIGTERM 退 1，不是 143）；`cur/` 空。改回 2、重掛、問「第一個暗號」答 `7`，`stopped` 收工兩個都 `done 0`。修正前那一輪（`0.001`）還驗到：卡在 `cur/` 的信重掛後會重送並答到（`bob_pid` 那條）。
+
+收尾那輪又花約 0.0003 美元（兩題）。驗完 daemon 收工、沒有殘留的 aos-／claude 行程；使用者試驗場的 `ws/`、`daemons/` 沒動。**花費**：這段對話共 26 個 `result`，最後的 `total_cost_usd` 約 0.0038 美元；另外先單獨實測回吐與工具事件一次約 0.0012 美元。
+
+**跟規劃或先前結論不同的**：
+
+- 對帳改用 `--replay-user-messages`、user 行回吐時才進 history、每輪先同步再送（見代定）。
+- **`--resume` 之後 `total_cost_usd` 接著舊的累計**（0.00195 → 重掛後第一題 0.00206），跟結論 ⑩「從新行程重算」不同；但 `--max-budget-usd` 是照**這一支行程**算的（第三支行程設 0.0003，在累計 0.0037 時才撞到）——所以「重跑 install 預算從頭算」仍成立，只是 `total_cost_usd` 不能拿來看這一支花了多少。
+- **`stopped` 會留在 `loop_ctl.json`**：規劃第 5 節「`stopped` 之後再 `aos-exec ../agents/resident_bob` 就續接」少一步——小格不清（N-28），新的控制器第一次就讀到 `stopped`、立刻收工、bob 跟著 EOF 退。**收尾時改成 install 自己拿掉殘留的 `stopped`**（代定）；實跑：`stopped` 收工（`bob_ctl done 0`、`bob done 0`）後 `loop_ctl.json` 還是 `{"stopped": true}`，直接再跑 install → 檔被拿掉、兩個 running、續接同一個 session，問「剛才叫你記住什麼暗號」答 `42`；再 `stopped` 兩個都 `done 0`。
+- `aos-listen --status` 讀 `state.json`，控制器的窗叫 `loop_state.json`（規劃的前綴），所以 status 看不到 loop 的 `phase`。**收尾時改成 aos-listen 也認 `loop_state.json`**（代定）；實跑 `--status` 印 `loop     phase running（loop_state.json）`。test_human 加 1 案。
+- 「控制器下一輪退 1（stderr 一行）」實際 `stderr.txt` 是兩行：relay 一行、aos-loop 自己一行。
 
 ## 要使用者看的衝突與方向題（11-02 晚第二版）
 

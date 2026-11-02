@@ -254,6 +254,17 @@ class ListenTest(Base):
         self.assertIn("== #1\n> 跟著看\nFAKE ANSWER to: 跟著看", out)
 
 
+    def test_status_reads_prefixed_loop_state(self):
+        """stack 裡沒有 state.json、只有 loop_state.json（11-02 常駐 bob：跟身體共用 stack 時窗加前綴）：--status 照樣印 phase；兩份都在＝state.json 算數。"""
+        self.stack.mkdir()
+        (self.stack / "loop_state.json").write_text(json.dumps({"phase": "paused"}))
+        r = run(LISTEN, "--ws", str(self.ws), "--status")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("loop     phase paused（loop_state.json）", r.stdout)
+        (self.stack / "state.json").write_text(json.dumps({"phase": "waiting"}))
+        r = run(LISTEN, "--ws", str(self.ws), "--status")
+        self.assertIn("loop     phase waiting（state.json）", r.stdout)
+
 class TailNewlineTest(Base):
     def test_tool_result_newlines_not_literal(self):
         import sys
