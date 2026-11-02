@@ -10,7 +10,18 @@
 
 ## 決定（11-02，使用者）
 
-（還沒有；衝突與方向題見下。）
+使用者原文（11-02，逐字）：
+
+> 然後log這塊，要給argv讓使用者選擇是否要印出。kind沒人在用，那就拿掉。心跳這塊就直接看pid就好，從檔案判斷...檔案的更新本來就會受到多方面因素影響，這其實不太好，應該說，要看一個proc是否還活著，除去linux底層proc機制外，我們的aos-daemon-ctl問詢也是一個方式，兩者並存。2.要。3.對。4.收掉。5.log...daemon和loop他們就是把log輸出到stdout，默認是開著的
+
+- **log**：daemon 與 loop 把 log **印到 stdout**，**預設開著**；給 argv 讓使用者選擇關掉（取代規劃裡的 `log` key 與 `log.jsonl` 檔）。旗標名實作時照慣例定。
+- **`kind` 拿掉**（沒人在用）。
+- **衝突 1（心跳）**：拿掉心跳。判斷 proc 活著＝看 pid（Linux 的 proc 機制），**另外**用 aos-daemon-ctl 問詢，兩者並存；不從檔案的更新時間判斷（「檔案的更新本來就會受到多方面因素影響」）。
+- **方向題 1**：daemon 的 `ctl.json` 也改名 `daemon_ctl.json`（要）。
+- **方向題 2**：`counter_runs` 不算變動（對）。
+- **方向題 3**：`recorded_at` 收掉，只留 `updated_at`。
+- **方向題 4**：見上 log（stdout、預設開）。
+- 前綴原則見 [exec 像繼承 § 結論](2026-11-02-exec-inheritance.md#結論11-02跟使用者討論後)：daemon 自己的東西用 `daemon_*`、loop 的用 `loop_*`。
 
 ## 現況（查清的，不是規劃）
 
