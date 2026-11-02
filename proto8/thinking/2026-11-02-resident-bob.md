@@ -14,19 +14,42 @@
 
 > 這應該會是一個aos資料夾函數，需要配合daemon進行exec和loop的掛起，同時loop所執行的各種東西也會需要另外定義。
 
-## 決定（11-02，使用者）
+頂層問「要先照建議走、先實測 claude 的一直跑模式嗎？」，使用者（11-02，逐字）：
 
-目前只有上面兩句的意圖，還沒有裁定：
+> 照建議先實測
+
+實測進行中陸續補的（11-02，逐字）：
+
+> claude code cli這塊，其實是可以不斷往他的stdin丟東西的，claude code cli自己會處理。
+
+> 然後要小心slash command
+
+> 然後所謂「讀一行題目、答一題、再等下一行」，其實不用，我們就是一直丟，claude code cli會自己一直處理。就是loop那邊要每隔一段時間去取claude code cli的輸出，並同步各種東西。我是希望bob答完手上這道題後仍能繼續做，控制器控制bob結不結束，應該是要用sigterm，或是/exit的。
+
+> 兩邊一起活一起死，我確實想要這個效果，得再想想是否有啥機制可以達到這樣。turn這個指令...turn應該還有別的意思，換個名字吧。
+
+> 主要是後續我想要這麼一個功能：長時間沒有動作，或是使用特定指令後，loop仍會持續運行，但是它會讓bob停掉，等下次有指令了，再用resume把他叫回來，節省負載
+
+> 除此之外，我也會想要能夠resume對話，也就是偵測到stack有先前的殘留時就續接，用--resume這個flag。
+
+## 決定（11-02，使用者）
 
 - 常駐 bob＝**一個 exec**（現有 bob，一直跑、不自己結束）＋**一個 loop**（外部控制器：管 bob 結束與否、把訊息丟進去、把歷史拉出來）。
 - 整體是**一個 aos 資料夾函數**，要**配合 daemon** 把 exec 與 loop 掛起來；**loop 每次跑的東西另外定義**。
+- **不做一次一題**：控制器有信就直接丟進 bob 的 stdin（方向題 1 定案；推翻規劃第 2 節「等 `result` 才送下一封、信留 `cur/` 直到答完」與方向題 1 的 fable 定案）。
+- **控制器 loop 每隔一段時間去取 claude 的輸出、同步歷史等**，不是等 `result` 才動（推翻規劃第 2 節「看到 `result`＝這題答完 → finish 那封信」的對應方式；信跟 `result` 怎麼對，之後規劃再定）。
+- **bob 答完手上的題仍繼續活著做事**；**結束由控制器明確送 SIGTERM 或 `/exit`**，不是靠關管子（推翻規劃第 0 節與第 2 節「控制器收工 → FIFO 寫端關 → bob 讀到 EOF 自己退」那條收尾路；`/exit` 實測不可用，見[結論](#結論11-02-實測) ⑨）。
+- **同生共死是使用者要的效果**，機制待規劃（規劃第 2 節的「bob 先死→控制器 EPIPE」只蓋一半，實測也發現超預算時 bob 不死，見結論 ③）。
+- **控制器每輪的身體不叫 `turn`**（eca 已有 turn 的意思），名字待定。
+- **後續功能（不是第一版），規劃要預留**：控制器 loop 一直活著；bob 閒置太久或收到特定指令時被停掉；有新信再以 `--resume <session_id>` 起回來接同一段對話（實測可行，見結論 ⑩）。
+- **起來時續接殘留的對話**：bob 起來時若 stack 裡有先前留下的 session（例如記下的 `session_id`），就用 `--resume <id>` 續接；沒有就開新的（推翻方向題 4 的 fable 定案「重掛第一版不接」；實測支撐見結論 ⑩，存放處建議見結論末段）。
 
 ## 現況（查清的，不是規劃）
 
 - **現有 bob**（`~/code/playground/agents/bob/`，兩個檔、沒程式碼）：`_entry.json`＝argv 陣列 `claude -p --model haiku --tools Read,Write,Edit,Glob,Grep --permission-mode acceptEdits --strict-mcp-config --max-budget-usd 0.3 --add-dir {$env AOS_WS} --append-system-prompt-file system.txt`；`system.txt` 說明 `AOS_WS`／`AOS_CD`／`AOS_STACK` 各指什麼、`env:XXX` 寫法、做完說一兩句。**怎麼收題**：題目是 `aos-exec ../agents/bob -- "題"` 的參數（`--` 與題原樣到 claude）。**怎麼跑**：aos-exec cd 進 `agents/bob/`、exec 成 claude；一題答完 claude 自己退出。**歷史放哪**：aos 這邊沒有——bob 沒開窗、沒寫 stack；claude 自己把 session 存在 `~/.claude/projects/<cwd 雜湊>/`（決定 35 說這類要 symlink 或複製過來管，還沒做）。stdout 那句「我做了什麼」在手動叫時印到終端機；掛在 daemon 底下時被丟掉（N-28）。
 - **掛在 daemons/main 底下的射後不理版**（11-02 已做）：`execs_added: {"bob": ["../../agents/bob", "--", "題"]}` 一封信一題，做完 `done`、不重起；同名再問要先 `rm`。
 - **「停著等」已有兩條現成路**，都不是「claude 一直跑」：① aos agent 範本＝agent 是函數、停著等交給 aos-loop（決定 34；round 的 `--on-empty idle`）；② 外部 CLI＝aos-eca-turn 每輪 `claude -p --resume <id>`（每題起一支新的 claude 行程、靠 session 接回），畫面版在 eca-hub（使用者說先不討論，本題不綁它）。
-- **`claude -p` 有「一直跑」的模式**：`--input-format stream-json`（stdin 一行一則 `{"type": "user", "message": {"role": "user", "content": "…"}}`，讀到 EOF 才結束；同一個行程、同一段對話），要配 `--output-format stream-json --verbose`（cli_session 已在用 stream-json 輸出）；stdout 一行一事件（`system`／`assistant`／`result`…）。**要實測**（步驟 0）：這是 fable 憑 Claude Code 文件的記憶，沒在試驗場跑過。
+- **`claude -p` 有「一直跑」的模式**：`--input-format stream-json`（stdin 一行一則 `{"type": "user", "message": {"role": "user", "content": "…"}}`，讀到 EOF 才結束；同一個行程、同一段對話），要配 `--output-format stream-json --verbose`（cli_session 已在用 stream-json 輸出）；stdout 一行一事件（`system`／`assistant`／`result`…）。**要實測**（步驟 0）：這是 fable 憑 Claude Code 文件的記憶，沒在試驗場跑過。11-02 已實測，見[結論](#結論11-02-實測)。
 - **inst 單子的 `stdin`／`stdout`**：`inst_exec.c` 在 fork 之前、aos-exec 自己的行程裡 `open()` 路徑（stdin `O_RDONLY`；stdout `O_WRONLY|O_CREAT|O_TRUNC`，`stdout_append` 改 `O_APPEND`），上層資料夾要已存在。路徑是 FIFO 時就是 Linux 的 FIFO 語意：開讀端等到有寫端、開寫端等到有讀端；**讀端在所有寫端關掉後讀到 EOF**。
 - **daemon 的子項**：loop 型＝daemon 自己起 `aos-loop <小格>/loop.json`，**行程本身的 stdin／stdout 接 `/dev/null`**（身體可以用單子另外指）；exec 型（`execs`）＝直接 `aos-exec 目標` 一次，stdin／stdout 同樣 `/dev/null`、stderr 到小格 `stderr.txt`，目標是資料夾時入口可以是 inst 單子（C-73），單子裡的 `stdin`／`stdout` 由 aos-exec 開。兩種子項各有自己的小格 `$AOS_STACK/loops/<名字>/`，環境只繼承 daemon 的（`AOS_WS` 可用 `ws` 另給）；**daemon 不給子項任何指到自己的變數**（daemon-env 方向題 2 留著）。`aos-daemon-ctl add [--kind loop|exec|max1] [--name N] [--ws WS] XXX`：`--kind` 沒給、XXX 有 `loop.json`＝loop 型；給 `--kind exec` 就是 exec 型。
 - **aos-say／aos-listen**：只碰一個 stack——`aos-say [--stack S] 話`＝`aos-post send --ordered S/queue`（body `{"role": "user", "content": 話}`，沒 queue 就建）；`aos-listen [--stack S] 信號`＝信還在 `queue/new/`／`cur/` 就等，不見了印 `S/history.jsonl` 最新那則 assistant；`--follow`／`--last N`；`--status` 讀 `S/state.json` 的 `phase`（沒有就不印）。
@@ -165,6 +188,67 @@ daemon.json 要是想**開機就掛**（不用 install），可以寫死（路�
 | 4 | （方向題 3 選「進 repo」才做）`proto8/bin/aos-claude-turn`（名字待定）、bin README、`tests/test_aos_claude_turn.py`、code map | 把試驗場的 `turn` 升成 bin 指令、`ctl/loop.json` 改指它 | unittest 用假的 `bob_out.jsonl` 與 FIFO 驗一輪 |
 | 5 | `wf/WAIT_USER.md` 一條 | 使用者在試驗場親手跑第 4 節 | 使用者回報 |
 | 6 | 收尾 | 日誌一行、months 那列補結果；一個 commit（程式＋測試＋README＋條文＋code map 同一個） | `/wf-lint` |
+
+## 結論（11-02 實測）
+
+步驟 0 做完（claude 2.1.316、haiku；場地 `~/code/playground/tmp-stream-test/`，腳本 `t1.sh`／`t2.sh`／`run.sh`／`seq.py` 與每輪的 `out_*.jsonl` 都留著）。**「一支 claude 一直跑、從 stdin 收話」成立，不用翻案成每題 `--resume`**；但幾個細節跟規劃不同，加上使用者實測中的新決定（見[決定](#決定11-02使用者)），規劃要跟著改的地方列在最後。
+
+**實際指令**（現有 bob 的旗標，拿掉 `--max-budget-usd`，`--add-dir` 改指測試用的 `ws/`；system prompt 直接讀 `agents/bob/system.txt`，沒改它）：
+
+```sh
+mkfifo in.fifo
+claude -p --input-format stream-json --output-format stream-json --verbose \
+  --model haiku --tools Read,Write,Edit,Glob,Grep --permission-mode acceptEdits \
+  --strict-mcp-config --add-dir "$PWD/ws" \
+  --append-system-prompt-file ../agents/bob/system.txt \
+  < in.fifo > out1.jsonl 2> err1.txt &
+exec 3> in.fifo                     # 寫端一直開著
+echo '{"type":"user","message":{"role":"user","content":"回答 1+1，只回數字"}}' >&3
+```
+
+**輸入形狀**：一行一則 `{"type":"user","message":{"role":"user","content":"…"}}`，`content` 給字串就行（規劃第 1 節寫的形狀對）。加 `--replay-user-messages` 時，claude 會把它真的拿去答的那則 user 訊息回吐一行 `type:"user"`（看得出幾則被合成一題，見 ⑥）。
+
+### 實測到的行為
+
+1. **連答多題、記得前文**：「回答 1+1」答 `2`；閒 8 秒後「我剛才問你什麼？」答「你剛才問我 1+1 等於多少，要求只回數字。」；同一個 `session_id`。stderr 全空。
+2. **寫端開著就一直等**：答完一題後行程還在、不花錢、不退；送下一行就接著答（第一題約 4 秒、之後每題 1 秒左右）。
+3. **stdout 每題吐的事件**（一行一個）：`system`/`init` → `assistant` → （偶爾 `rate_limit_event`、`system`/`thinking_tokens`）→ `result`。`result` 一題一行：`subtype: "success"`、`is_error: false`、`result`＝回答純文字、`result_index` 從 0 起逐題加一、`terminal_reason: "completed"`。`session_id` 每一行事件上都有，同一段對話不變。節錄（第二題，欄位刪減）：
+   ```
+   {"type":"system","subtype":"init","session_id":"532e…","cwd":"…/tmp-stream-test","model":"claude-haiku-5-5",…}
+   {"type":"assistant","session_id":"532e…","message":{"type":"message","role":"assistant","id":"msg_…","content":[{"type":"text","text":"你剛才問我 1+1 等於多少，要求只回數字。"}],"stop_reason":"end_turn","usage":{…}},…}
+   {"type":"result","subtype":"success","is_error":false,"result":"你剛才問我 1+1 等於多少，要求只回數字。","result_index":1,"total_cost_usd":0.00084608,"session_id":"532e…","terminal_reason":"completed",…}
+   ```
+4. **`system`/`init` 每題都吐一次**（不只開頭），讀輸出時跳過即可。
+5. **`assistant` 的 `message` 是 Anthropic Messages 形、不是 OpenAI 形**（規劃第 2 節寫「已經是 OpenAI 形」不對）：`content` 是區塊陣列（`text`、`thinking`，用工具時有 `tool_use`；被中斷時有一行 `type:"user"` 帶 `[Request interrupted by user]`），還帶 `id`／`model`／`usage`。aos-listen 認的 `history.jsonl` 是 OpenAI 形（`content` 字串、`tool_calls`、`role:"tool"`），控制器要轉。工具事件的實際形狀沒測（題目都沒用工具）。
+6. **一直丟、不等 `result`**：開頭一口氣寫三行（「1+1」「2+2」「把前兩個答案相加」）。claude **不插話、不打斷**；第一行先被拿去答（`2`），**答的時候進來的第二、三行被合成一則**（replay 出來是 `"回答 2+2，只回數字\n把你前兩個答案相加，只回數字"`）、只答一次、**只有一個 `result`**——三則話兩個 `result`。而且這一次 haiku 只答了 `4`，合併進來的第三句被忽略。順序沒亂、對話記憶沒壞。
+   → **控制器可以有信就直接倒進管子**（使用者「一直丟，claude 會自己處理」成立：不會丟、不會亂序、不會打斷）；但**信跟 `result` 不是一對一**，忙的時候進來的幾封會併成一題，所以「一封信等一個 `result` 才 finish」對不起來，也看不出合併裡哪句有被理會。要靠 `--replay-user-messages` 那行（合併後的原文）或別的方式對帳，留給規劃。
+7. **`--max-budget-usd` 是整個 session 的總額**：`total_cost_usd` 是累計（0.00069、0.00085、0.00094），這題自己的在 `model_usage_since_last_result.<模型>.costUSD`。上限設 0.00025 跑四題：第一題 `success`；第二題答案照樣吐出，但 `result` 變 `subtype: "error_max_budget_usd"`、`is_error: true`、沒有 `result`、`errors: ["Reached maximum budget ($0.00025)"]`（答完才檢查，會超一點）；之後每題**立刻**回同樣的錯誤 `result`、不花錢、沒有 `assistant`。**超預算時 claude 不退出**（規劃第 1 節與衝突 6 寫「撞到、claude 自己退出」不對），寫端關掉時才退、**結束碼 1**。所以預算用完時 bob 變成活著卻沒用，控制器要自己看 `result` 的 `subtype`。
+8. **SIGTERM**：閒著時送＝立刻退、**結束碼 143**（claude 自己接住訊號以 128+15 結束，不是被殺）。正在答時送（「從 1 數到 1500」答到一半）＝**也立刻退 143，手上那題直接丟掉**：沒有 `assistant`、沒有 `result`，輸出檔最後一行是那題的 `system`/`init`。**輸出檔每一行都是完整的**（沒有寫一半的行）。
+9. **`/exit` 不能用**：stream-json 裡送 `/exit`，claude 回一則 `result`「/exit isn't available in this environment.」、**不退**，之後照常答題。stream-json 有對應的**控制訊息** `{"type":"control_request","request_id":"r1","request":{"subtype":"interrupt"}}`：實測它**中斷正在答的題**（輸出 `control_response` success、已吐的半截 `assistant`、一則 `result` `subtype: "error_during_execution"`），**行程不退**、對話記得（下一題問「我剛才叫你做什麼」答「…你只寫到 13 就被我中斷了」）。它是「打斷這題」，不是「收工」。
+10. **停掉後 `--resume` 叫回來**：「記住暗號 9」→ SIGTERM（退 143）→ 用第一行事件（`system`/`init`；每行都有、哪行都一樣）的 `session_id` 跑 `claude -p --resume <id> --input-format stream-json --output-format stream-json --verbose …`（其餘旗標同上）→ 問「我剛才叫你記住什麼」答「暗號 9」。**重起後 `session_id` 不變**，`result_index` 從 0 重數，`total_cost_usd` 也從新行程重算。（`/clear` 之後 `session_id` 會換，見 ⑪。）
+11. **slash command 會被執行，要小心**（使用者「要小心slash command」成立）：
+    - `/help`：被 claude 攔下、不給模型，回「/help isn't available in this environment.」，不花錢。
+    - `/cost`：**真的執行**，回訂閱用量（「Current session: 3% used · resets …」），不花錢——會把帳號用量吐進輸出。
+    - `/clear`（在丟棄的 session 測）：**真的清掉對話**——吐一行 `{"type":"conversation_reset","trigger":"clear","new_conversation_id":…}`、一則空的 `result`，之後 **`session_id` 換成新的**、問「暗號是多少」答「不知道」。
+    - `/foo`（不存在）：當一般文字給模型，模型答「`/foo` 在這個 session 裡不存在…」。
+    - 句子中間有 `/`（「a/b.txt 的副檔名」）：正常答 `txt`，不受影響。之後問暗號仍答 `7`（`/help`、`/cost`、`/foo` 都沒清記憶）。
+    - `/compact` 沒測（會花錢、會改對話）；照 `/clear` 的樣子推，它多半也會真的執行。
+    → **控制器丟進去前要擋或轉義開頭的 `/`**（例如前面加一個空白或全形字，或直接拒收）：不然任何能 `aos-say` 的人都能清掉 bob 的對話（`/clear`）、看到帳號用量（`/cost`）。對**方向題 5**（`aos-say /stop` 當收工）的影響：用 `/` 開頭當給控制器的約定正好跟 claude 自己的 slash command 撞在同一個字頭——控制器認得的（`/stop`）自己吃掉、認不得的一律轉義，或約定改用別的字頭，兩種都要在控制器那層做，不能直接漏進 claude。
+12. **寫端關掉（EOF）＝非主要收工方式**（使用者定 SIGTERM 才是）：第三題送出後立刻關寫端，claude **照樣答完手上那題**、約 2 秒後退出，**結束碼 0**（超過預算過的 session 則退 1）；閒著時關也直接退 0。
+
+### 規劃要跟著改的地方（本次只列，不改上面各節）
+
+- **收尾路**（第 0、2、4 節）：「控制器收工 → FIFO 寫端關 → bob 自己退」改成**控制器送 SIGTERM 給 bob**（`/exit` 不可用；要「只打斷這題」才用 `interrupt` 控制訊息）。SIGTERM 會丟掉正在答的那題（⑧），要先等到手上沒題、或接受丟題。
+- **控制器怎麼拿到 bob 的 pid**：bob 與控制器是 daemon 的兄弟子項，控制器自己沒有 bob 的 pid。現成可能的路：① 讀 daemon 的狀態窗（`$AOS_DAEMON_STACK/…/daemon_state.json`，若表上有子項 pid）；② 改請 daemon 收（控制器 `aos-daemon-ctl rm bob`＝daemon 送 SIGTERM，不用知道 pid）；③ 讓 bob 的入口把自己的 pid 寫進公用資料夾。哪條合原則留給規劃。
+- **一次一題 → 一直丟**（第 2 節 `turn` 的 ②、方向題 1）：照使用者決定改成有信就倒；同時要處理 ⑥「忙時多封併成一題、`result` 少於信數」——`aos-listen 信號` 的「信在 `cur/`＝還沒答」契約要重想。
+- **同步方式**（第 2 節 `turn` 的 ①）：改成每隔一段時間讀 `bob_out.jsonl` 新行同步；轉成 OpenAI 形時要處理 ⑤ 的區塊陣列、跳過 ④ 的 `system`/`init`、看 ⑦ 的 `error_max_budget_usd` 與 ⑨ 的 `error_during_execution`。
+- **slash command 過濾**（新加）：控制器倒進管子前擋／轉義開頭的 `/`（⑪）。
+- **同生共死**：EPIPE 那條只在 bob 真的死了才成立；超預算（⑦）bob 不死，要另找機制（使用者決定：機制待規劃）。
+- **起來時續接殘留的對話**（使用者決定，推翻方向題 4「第一版不接」）與**停掉再叫回**（後續功能預留）：⑩ 直接支撐這兩條——`--resume <session_id>` 重起記得前文、id 不變。`session_id` 從 `bob_out.jsonl` 任一行事件都拿得到；但 bob 若被 `/clear` 過 id 會換（⑪），要以**最後一行**的為準。**建議存放處**：控制器每次同步時把最新的 `session_id` 寫成公用資料夾裡的一個小窗，例如 `$AOS_DAEMON_STACK/resident_bob/bob_session.json`（`{"session_id": "…"}`，前綴 `bob_`、主題前置）；起 bob 時「有這個檔＝殘留，用 `--resume`；沒有＝開新的」。不直接從 `bob_out.jsonl` 撈，是因為那檔會長、還可能被人清掉；兩者都在 stack 裡，偵測「有沒有殘留」看小窗最便宜。`bob/_entry.json` 是靜態單子，塞不進 id——bob 的入口要變成能讀這個檔的小殼（或由控制器組 argv 起 bob），由規劃定。
+- **衝突 6 (c)**：預算是 session 總額、超了不退只報錯（⑦），設不設、設多少仍是使用者定。
+- **身體改名**：`turn` 換名字（使用者決定），名字待定。
+
+**沒測的**：用工具時的事件形狀；`/compact`；超過一個寫端時的行為。花費：十三輪合計約 0.0043 美元（各輪最後的 `total_cost_usd` 加總；SIGTERM 打斷的那題沒記到帳，量很小）。
 
 ## 要使用者看的衝突與方向題
 
