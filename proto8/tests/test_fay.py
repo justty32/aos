@@ -2,9 +2,9 @@
 
 驗：非互動模式續同一段對話（session.txt）、attach -d 開畫面後改從 tmux 送字、hook 把回答接進 turns.jsonl、
 人用 attach 接進去打字再 Ctrl-\\ 跳出（pty 模擬）、有人接著時 agent 叫＝SessionBad、各種錯的代號、
-小格的 transcripts/ symlink 與 freeze_transcripts（10-30 eca 第 3 步）。
+小格的 transcripts/ symlink（10-30 eca 第 3 步；freeze_transcripts 11-02 晚跟著 aos-eca-hub 歸檔一起拿掉）。
 設計：proto8/thinking/2026-10-24-cli-tools.md。需要 tmux（沒有就 skip 畫面那幾個）。"""
-import json, os, pty, re, select, shutil, subprocess, sys, tempfile, time, unittest
+import json, os, pty, re, select, shutil, subprocess, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()
@@ -192,17 +192,9 @@ class Fay(unittest.TestCase):
         return dict(FAKE_TRANSCRIPTS="1", CLAUDE_CONFIG_DIR=str(self.tmp / "claude-home"),
                     CODEX_HOME=str(self.tmp / "codex-home"))
 
-    def cli_session(self):
-        """在測試程序裡 import lib 的 cli_session（freeze_transcripts 是給 aos-eca-hub 叫的函式，沒有命令列）。"""
-        sys.path.insert(0, str(ROOT / "lib" / "agent"))
-        self.addCleanup(sys.path.remove, str(ROOT / "lib" / "agent"))
-        import cli_session
-        return cli_session
-
-    def test_transcripts_link_then_freeze(self):
-        """工具形叫一次＝小格有 transcripts/<kind>-<id>.jsonl symlink 指到 CLI 自己的檔；freeze 後是真檔、內容一樣；
+    def test_transcripts_link(self):
+        """工具形叫一次＝小格有 transcripts/<kind>-<id>.jsonl symlink 指到 CLI 自己的檔；
         再叫一次 symlink 不重建（已有就不動）。claude、codex 各一次。"""
-        cs = self.cli_session()
         for kind in ("claude", "codex"):
             r = self.tool(kind, {"prompt": "第一句"}, self.transcript_env())
             self.assertEqual(r.returncode, 0, r.stderr)
@@ -219,26 +211,6 @@ class Fay(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertEqual(Path(os.readlink(link)), target)
             self.assertEqual(len(link.read_text().splitlines()), 2)           # 指到的是 CLI 正在接的那份
-            copied = cs.freeze_transcripts(cs.Cell(cell), kind)
-            self.assertEqual(copied, [str(target)])
-            self.assertFalse(link.is_symlink())
-            self.assertEqual(link.read_text(), target.read_text())
-            self.assertEqual(cs.freeze_transcripts(cs.Cell(cell), kind), [])  # 已經是真檔：不再拷
-
-    def test_transcripts_freeze_target_gone(self):
-        """CLI 自己把對話檔清掉了：freeze 不報錯、不拷，symlink 留著（看得出原本指哪）；沒有 transcripts/ 的格也不報錯。"""
-        cs = self.cli_session()
-        r = self.tool("claude", {"prompt": "講完就清"}, self.transcript_env())
-        self.assertEqual(r.returncode, 0, r.stderr)
-        cell = self.stack / "tools" / "claude"
-        sid = (cell / "session.txt").read_text().strip()
-        link = cell / "transcripts" / ("claude-%s.jsonl" % sid)
-        os.remove(os.readlink(link))
-        self.assertEqual(cs.freeze_transcripts(cs.Cell(cell), "claude"), [])
-        self.assertTrue(link.is_symlink() and not link.exists())
-        empty = self.tmp / "empty-cell"
-        self.assertEqual(cs.freeze_transcripts(cs.Cell(empty), "claude"), [])  # 還沒有對話的格
-        self.assertFalse((empty / "transcripts").exists())
 
     def test_no_transcript_no_link(self):
         """CLI 沒存對話檔（找不到）：照答、不建 symlink，也不建空的 transcripts/。"""

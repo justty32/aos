@@ -11,7 +11,8 @@
 #   tool.txt、ws.txt  這格屬於哪個工具資料夾、哪個工作區（open_cell 叫回畫面時用）（10-27）
 #   transcripts/<kind>-<id>.jsonl  指到 CLI 自己存的這段對話的 symlink（claude ~/.claude/projects/*/<id>.jsonl、
 #                 codex ~/.codex/sessions/**/*<id>.jsonl）：拿到 session id 就建（10-30 agent-lifecycle C-15～C-17；
-#                 agent 叫的工具格也建，方向題 3）；歸檔時 freeze_transcripts 換成真的複製（CLI 會自己清舊對話）
+#                 agent 叫的工具格也建，方向題 3）；一直是 symlink（11-02 晚 aos-eca-hub 不再歸檔，freeze_transcripts 拿掉；
+#                 CLI 會自己清舊對話，要留的人自己複製）
 #
 # 不再登記（10-30 eca 衝突 6）：10-28 起每用到一格就送一行 register 給 $AOS_HUB 的 aos-hub-kernel，現在刪了——
 # 沒有 kernel，「只登記的實例」這個分類消失；工具叫的格是那隻 agent 的事（C-52），要看去看那隻 agent 的 trace。
@@ -25,7 +26,7 @@
 # 放哪（10-24 遷移）：proto8/lib/agent/cli_session.py，lib/agent 的 claude、codex 兩個工具共用（用 realpath 找到這層再 import）；
 # agent-fay 根目錄的 cli_session.py 是捷徑指過來（給 attach 用）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
-import datetime, fcntl, glob, json, os, shlex, shutil, subprocess, sys, threading, time, uuid
+import datetime, fcntl, glob, json, os, shlex, subprocess, sys, threading, time, uuid
 
 TMUX_SESSION = "cli"
 PROG, ECHO = "cli_session", False                    # 錯誤行開頭、要不要也印到 stdout（call_main 改成工具名、True）
@@ -172,34 +173,6 @@ def link_transcript(cell, kind):
         os.replace(tmp, link)
     except OSError:
         pass
-
-
-def freeze_transcripts(cell, kind):
-    """歸檔時：小格 transcripts/ 裡的 symlink 換成真的複製（CLI 會自己清舊對話，複製才留得住；10-30 C-16）。
-    還沒建 symlink 的先補一次；指不到的 symlink 留著、不報錯（看得出原本指哪）。回複製了哪些來源路徑。"""
-    link_transcript(cell, kind)
-    d, copied = cell.file("transcripts"), []
-    try:
-        names = sorted(os.listdir(d))
-    except OSError:
-        return copied
-    for n in names:
-        p = os.path.join(d, n)
-        if n.startswith(".") or not os.path.islink(p):
-            continue
-        src = os.path.realpath(p)
-        if not os.path.isfile(src):
-            continue
-        tmp = os.path.join(d, "." + n + ".tmp")
-        try:
-            shutil.copy2(src, tmp)
-            os.replace(tmp, p)
-        except OSError:                              # 拷到一半來源被清掉：當作指不到，symlink 留著
-            if os.path.lexists(tmp):
-                os.remove(tmp)
-            continue
-        copied.append(src)
-    return copied
 
 
 # ---------------------------------------------------------------- 非互動（畫面沒開）

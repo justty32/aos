@@ -1,6 +1,6 @@
 """test_eca_hub - proto8/extras/eca_hub（10-30 eca 第 6 步，取代 10-28 的 test_hub）：aos-eca-hub 把外部 coding agent 掛到
-信箱模式的 aos-daemon 底下（aos-daemon-ctl add --ws），add／ls／state／open／close／stop，以及 aos-say／aos-listen 經工作區的
-.stack 捷徑對它說話。
+信箱模式的 aos-daemon 底下（aos-daemon-ctl add --ws），三對指令 open／close、start／stop、add／remove（使用者 11-02 晚）與 ls／state，
+以及 aos-say／aos-listen 經工作區的 .stack 捷徑對它說話。
 
 定義在測試裡臨時組（cli.json＋loop.json 叫 bin/aos-eca-turn --on-empty idle＋_entry 轉 aos-loop），用 --template 指；CLI 用 test_fay 的假 claude
 （外面包一層：有 BROKEN 這個檔就退 1，測「出錯停了」），不花額度。要 tmux 的只有 open -d 那案（沒有就 skip）。
@@ -145,14 +145,17 @@ class EcaHub(unittest.TestCase):
         self.assertEqual(self.code(self.hub("frob")), (1, "CommandUnknown"))
 
     def test_add_ls_state_say_listen(self):
-        """add 後 daemon 表上有它、工作區多一個 .stack 捷徑指到小格；ls 列得到、state 認得（資料夾或名字）；
+        """add 後 daemon 表上有它、也有 eca_reap（只掛一次）、工作區多一個 .stack 捷徑指到小格；ls 列得到、state 認得（資料夾或名字）；
         cd 到工作區 say／listen 經 daemon 底下的實例答得出（假 claude，第二句 --resume 同一段）；定義不對＝TemplateUnknown。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
         self.assertIn(name, self.daemon_rows())
+        self.assertTrue(self.until(lambda: "eca_reap" in self.daemon_rows()), self.daemon_rows())   # 11-02 晚：add 順手掛上自動收畫面
+        self.add(self.ws("second"))
+        self.assertEqual(sorted(self.daemon_rows()), ["eca_reap", name, "second"])                 # 已掛著就不再掛
         self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
-        it = self.ls()[0]
+        it = next(x for x in self.ls() if x["name"] == name)
         self.assertEqual((it["name"], it["kind"], it["ws"], it["state"], it["phase"]), (name, "claude", str(w), "收起了", "running"))
         for arg in ((), ("proj",)):
             r = self.hub("state", *arg, cwd=w)
@@ -167,10 +170,10 @@ class EcaHub(unittest.TestCase):
         self.assertIn("對話 %s" % sid[:8], r.stdout)
         self.assertEqual(self.code(self.hub("add", "--template", self.tmp, self.ws("other"))), (1, "TemplateUnknown"))
 
-    def test_close_and_stop_archive(self):
-        """close（畫面沒開）＝本來就沒畫面、再 say 照答；stop 後 daemon 表上沒它、.stack 捷徑拿掉、
-        小格搬到 <daemon>/eca_archive/<名字>-<UTC>/（10-30 使用者「A」），transcripts/ 是真檔、工作區不留真的 .stack/；
-        之後 state＝InstanceMissing。"""
+    def test_close_stop_start(self):
+        """close（畫面沒開）＝本來就沒畫面、再 say 照答；stop＝daemon 表上沒它、小格與 .stack 捷徑原樣留、ls「停了」，
+        這期間 say 的信排在 queue、沒人答；start＝同名掛回、接著答那封（同一段對話）。已掛著再 start、已停再 stop＝說一句、退 0。
+        沒有 eca_archive（11-02 晚：不封存）。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
@@ -178,36 +181,71 @@ class EcaHub(unittest.TestCase):
         r = self.hub("close", cwd=w)
         self.assertEqual((r.returncode, r.stdout.strip()), (0, "本來就沒畫面（已收起）"), r.stderr)
         self.assertIn("第二句", self.say_listen(w, "第二句"))
-        sid = (self.ds / "loops" / name / "claude" / "session.txt").read_text().strip()
+        cell = self.ds / "loops" / name
+        sid = (cell / "claude" / "session.txt").read_text().strip()
         r = self.hub("stop", name)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("小格留著", r.stdout)
+        self.assertNotIn(name, self.daemon_rows())
+        self.assertEqual(os.readlink(w / ".stack"), str(cell))
+        self.assertEqual([x["state"] for x in self.ls()], ["停了"])
+        self.assertEqual(self.hub("stop", name).stdout.strip(), "本來就沒掛在 daemon 上（停了）")
+        sig = self.say(w, "停著時的一句")
+        time.sleep(0.5)                                              # 子 loop 在的話 100 ms 就會認領
+        self.assertEqual(os.listdir(cell / "queue" / "new"), [sig])
+        self.assertEqual(len((cell / "history.jsonl").read_text().splitlines()), 4)
+        r = self.hub("start", cwd=w)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("掛回 daemon 了（上次停了），queue 裡 1 封", r.stdout)
+        a = self.listen(w)
+        self.assertTrue(a.startswith("fake claude[%s]" % sid[:8]) and "停著時的一句" in a, a)
+        self.assertEqual(self.ls()[0]["state"], "收起了")
+        self.assertEqual(self.hub("start", name).stdout.strip(), "本來就掛著（收起了）")
+        self.assertFalse((self.ds / "eca_archive").exists())
+
+    def test_remove(self):
+        """remove＝從 daemon 拿掉、.stack 捷徑拆掉、小格刪掉（不封存）；之後 ls 空、state＝InstanceMissing；
+        停了的也 remove 得掉；remove 後再 add 同一資料夾＝從頭來（新的小格、捷徑又建得起來）。"""
+        self.start_daemon()
+        w = self.ws()
+        name = self.add(w)
+        self.say_listen(w, "第一句")
+        r = self.hub("remove", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertNotIn(name, self.daemon_rows())
         self.assertFalse((self.ds / "loops" / name).exists())
         self.assertFalse(os.path.lexists(w / ".stack"))
-        arch = list((self.ds / "eca_archive").iterdir())
-        self.assertEqual(len(arch), 1)
-        self.assertTrue(arch[0].name.startswith(name + "-"), arch)
-        self.assertEqual((arch[0] / "claude" / "session.txt").read_text().strip(), sid)
-        t = arch[0] / "claude" / "transcripts" / ("claude-%s.jsonl" % sid)
-        self.assertTrue(t.is_file() and not t.is_symlink(), list((arch[0] / "claude").iterdir()))
-        self.assertEqual(len((arch[0] / "history.jsonl").read_text().splitlines()), 4)
+        self.assertFalse((self.ds / "eca_archive").exists())
         self.assertEqual(self.ls(), [])
+        self.assertIn("eca_reap", self.daemon_rows())                # 最後一隻 remove 了 eca_reap 照樣留（代定）
         self.assertEqual(self.code(self.hub("state", cwd=w)), (1, "InstanceMissing"))
+        self.assertEqual(self.code(self.hub("remove", cwd=w)), (1, "InstanceMissing"))
+        name = self.add(w)
+        self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
+        self.assertEqual(len((self.ds / "loops" / name / "history.jsonl").read_text().splitlines()), 0) \
+            if (self.ds / "loops" / name / "history.jsonl").exists() else None
+        self.say_listen(w, "第二輪")
+        self.assertEqual(self.hub("stop", cwd=w).returncode, 0)
+        r = self.hub("remove", cwd=w)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertFalse((self.ds / "loops" / name).exists())
+        self.assertFalse(os.path.lexists(w / ".stack"))
 
-    def test_stop_then_add_again(self):
-        """stop 後再 add 同一工作區：.stack 又是捷徑指到新小格、say／listen 答得出；歸檔留在 daemon 那邊不受影響。
+    def test_add_again(self):
+        """停了的同名再 add＝daemon 用回小格（前文、queue 照舊）、stderr 一句「小格還在…要從頭來先 remove」、捷徑已指著小格不警告。
         工作區已有真的 .stack/（例如直接 aos-exec 跑過）＝add 照樣成功、stderr 一句「工作區已有 .stack…請先搬開」、不建捷徑。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
         self.say_listen(w, "第一輪")
-        r = self.hub("stop", name)
+        sid = (self.ds / "loops" / name / "claude" / "session.txt").read_text().strip()
+        self.assertEqual(self.hub("stop", name).returncode, 0)
+        r = self.hub("add", "--template", self.tpl, w)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertFalse(os.path.lexists(w / ".stack"))
-        name = self.add(w)
-        self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
-        self.assertIn("第二輪", self.say_listen(w, "第二輪"))
-        self.assertEqual(len(list((self.ds / "eca_archive").iterdir())), 1)
+        self.assertIn("小格還在（停了）", r.stderr)
+        self.assertNotIn("工作區已有 .stack", r.stderr)
+        self.assertTrue(self.until(lambda: [x["state"] for x in self.ls()] == ["收起了"]), self.ls())
+        self.assertTrue(self.say_listen(w, "第二輪").startswith("fake claude[%s]" % sid[:8]))
         d = self.ws("direct")
         (d / ".stack").mkdir()
         r = self.hub("add", "--template", self.tpl, d)
@@ -216,9 +254,9 @@ class EcaHub(unittest.TestCase):
         self.assertIn("請先搬開", r.stderr)
         self.assertTrue((d / ".stack").is_dir() and not (d / ".stack").is_symlink())
 
-    def test_failed_close_readds(self):
-        """CLI 失敗＝子 loop 停（P-20）、ls 標「出錯停了」、信留 cur/；修好後 close 一次＝拿掉再掛回去，接著答那封。
-        11-02 起停了的子項不在 daemon 的表上：hub 看小格的 state.json（done＋結束碼非 0）認它。"""
+    def test_failed_start_readds(self):
+        """CLI 失敗＝子 loop 停（P-20）、ls 標「出錯停了」、信留 cur/；close 只管畫面（說一句要用 start）；
+        修好後 start＝掛回去，接著答那封。11-02 起停了的子項不在 daemon 的表上：hub 看小格的 state.json（done＋結束碼非 0）認它。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
@@ -229,8 +267,12 @@ class EcaHub(unittest.TestCase):
         self.assertEqual(os.listdir(self.ds / "loops" / name / "queue" / "cur"), [sig])
         self.broken.unlink()
         r = self.hub("close", name)
+        self.assertEqual((r.returncode, r.stdout.strip()), (0, "本來就沒畫面（已收起）"), r.stderr)
+        self.assertIn("aos-eca-hub start", r.stderr)
+        self.assertNotIn(name, self.daemon_rows())
+        r = self.hub("start", name)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("重新掛上", r.stdout)
+        self.assertIn("上次出錯停了", r.stdout)
         self.assertIn("會壞的一句", self.listen(w))
         self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
 
@@ -241,8 +283,8 @@ class EcaHub(unittest.TestCase):
         self.assertTrue(self.until(lambda: [x["state"] for x in self.ls()] == ["收工了"]), (self.ls(), self.daemon_rows()))
         self.assertNotIn(name, self.daemon_rows())
 
-    def test_finished_listed_and_stop_archives(self):
-        """11-02 晚：ctl.json stopped 收工的（下了表、退 0）ls／state 照列「收工了」；stop 拿掉 .stack 捷徑、小格歸檔。"""
+    def test_finished_listed_and_remove(self):
+        """11-02 晚：ctl.json stopped 收工的（下了表、退 0）ls／state 照列「收工了」；stop＝本來就沒掛；remove 拆 .stack 捷徑、刪小格。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
@@ -250,11 +292,11 @@ class EcaHub(unittest.TestCase):
         r = self.hub("state", cwd=w)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("收工了", r.stdout)
-        r = self.hub("stop", name)
+        self.assertEqual(self.hub("stop", name).stdout.strip(), "本來就沒掛在 daemon 上（收工了）")
+        r = self.hub("remove", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse(os.path.lexists(w / ".stack"))
         self.assertFalse((self.ds / "loops" / name).exists())
-        self.assertEqual(len(list((self.ds / "eca_archive").iterdir())), 1)
         self.assertEqual(self.ls(), [])
 
     def test_finished_add_again_clears_stopped(self):
@@ -264,20 +306,22 @@ class EcaHub(unittest.TestCase):
         name = self.add(w)
         self.stopped_by_ctl(w, name, {"stopped": True, "paused": False})
         r = self.hub("add", "--template", self.tpl, w)
-        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("小格還在（收工了）", r.stderr)
+        self.assertNotIn("工作區已有 .stack", r.stderr)
         self.assertEqual(json.loads((self.ds / "loops" / name / "ctl.json").read_text()), {"paused": False})
         self.assertTrue(self.until(lambda: [x["state"] for x in self.ls()] == ["收起了"]), self.ls())
         self.assertIn("第二輪", self.say_listen(w, "第二輪"))
 
-    def test_finished_close_readds(self):
-        """收工了的 close 一次＝跟出錯停了一樣重新掛上；ctl.json 只有 stopped＝整個檔拿掉。"""
+    def test_finished_start_readds(self):
+        """收工了的 start＝跟出錯停了一樣掛回；ctl.json 只有 stopped＝整個檔拿掉。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
         self.stopped_by_ctl(w, name)
-        r = self.hub("close", name)
+        r = self.hub("start", name)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("重新掛上", r.stdout)
+        self.assertIn("掛回 daemon 了（上次收工了）", r.stdout)
         self.assertFalse((self.ds / "loops" / name / "ctl.json").exists())
         self.assertIn("再來", self.say_listen(w, "再來"))
         self.assertEqual(self.ls()[0]["state"], "收起了")
