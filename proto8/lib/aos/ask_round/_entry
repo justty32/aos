@@ -7,7 +7,7 @@
 #   10-30 改走 queue（thinking 2026-10-30-agent-lifecycle 第 5 步）：題目＝一則 user message、放進 <工作區>/.stack/queue/，答案看 history。
 #   agent＝參數 agent（絕對路徑）＞ --agent（「問 agent-xxx」固定一隻：工具小資料夾的 _entry 是不加 +x 的 JSON argv 陣列
 #     ["<lib>/aos/ask_round", "--agent", "<agent 絕對路徑>"]，aos-exec 在前面插 aos-exec、stdin 照接）。
-#   被問的 agent 的工作區＝--ws（有給）＞ $AOS_STACK/<agent 資料夾名>/（這個工具自己的小格，P-17）；它的 stack＝<工作區>/.stack/。
+#   被問的 agent 的工作區＝--ws（有給）＞ $AOS_STACK/tools/<agent 資料夾名>/（11-02 起進 tools/；P-17）；它的 stack＝<工作區>/.stack/。
 #   做法：queue 格照 lib/agent/parts.py 的 find 找（parts.json 有＝<agent>/parts.json#/queue、沒寫＝固定名字 <agent>/queue；11-01 起不經 aos-parts）；
 #         aos-exec <queue> <agent> push（stdin 一則 {"role": "user", "content": 題文}，拿信號）
 #         → aos-exec <agent>/loop.json#/exec 反覆叫（＝照那隻 agent 自己的 loop.json 走一格；nia 的單子是 aos-fsm 一張表，
@@ -113,7 +113,7 @@ ws = opts.get("ws")
 if not ws:
     if not os.environ.get("AOS_STACK"):
         die("StackMissing", "沒給 --ws，也沒有 AOS_STACK（工具的小格）可以放被問的 agent 的工作區")
-    ws = os.path.join(os.environ["AOS_STACK"], os.path.basename(agent))
+    ws = os.path.join(os.environ["AOS_STACK"], "tools", os.path.basename(agent))   # 11-02 小格進 tools/（工作區與 .stack 擺法照舊）
 ws = os.path.abspath(ws)
 stack = os.path.join(ws, ".stack")
 try:

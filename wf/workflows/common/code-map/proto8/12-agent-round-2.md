@@ -15,7 +15,7 @@
 
 | 哪裡 | 負責什麼 |
 |---|---|
-| `lib/aos/ask_round/_entry` | 工具（照 lib 契約）：stdin `{"question", "agent"?, "timeout_s"?}`；queue 格（11-01 起經 `lib/agent/parts.py` 找、`aos-exec` 它；之前是 `aos-parts run queue`）`push` 放一則 user message（10-30 起，agent-lifecycle 第 5 步）→ `aos-exec <agent>/loop.json#/exec` 一格一格反覆叫（11-01 起；之前 `aos-round <agent>`、再之前 `aos-parts run round`；沒有 loop.json＝RoundFailed），每格後 `queue pop --timeout-s 0 <信號>`：信不見了（finish 格交卷了）就印 history 最新的 assistant；停手不看那格的 10（被問的 agent 的表是 `fsm-idle.json` 也不卡）（`--max-steps` 預設 200、`timeout_s` 預設 120）；工作區只建 `.stack/`；agent＝參數 ＞ `--agent`，工作區＝`--ws` ＞ `$AOS_STACK/<agent 名>/`、stack＝`<工作區>/.stack/`（11-01 起是旗標）；錯 `AgentMissing`／`AgentBad`／`StackMissing`／`ArgumentsBad`／`FlagUnknown`／`QueueFailed`／`RoundFailed`／`AnswerMissing`… |
+| `lib/aos/ask_round/_entry` | 工具（照 lib 契約）：stdin `{"question", "agent"?, "timeout_s"?}`；queue 格（11-01 起經 `lib/agent/parts.py` 找、`aos-exec` 它；之前是 `aos-parts run queue`）`push` 放一則 user message（10-30 起，agent-lifecycle 第 5 步）→ `aos-exec <agent>/loop.json#/exec` 一格一格反覆叫（11-01 起；之前 `aos-round <agent>`、再之前 `aos-parts run round`；沒有 loop.json＝RoundFailed），每格後 `queue pop --timeout-s 0 <信號>`：信不見了（finish 格交卷了）就印 history 最新的 assistant；停手不看那格的 10（被問的 agent 的表是 `fsm-idle.json` 也不卡）（`--max-steps` 預設 200、`timeout_s` 預設 120）；工作區只建 `.stack/`；agent＝參數 ＞ `--agent`，工作區＝`--ws` ＞ `$AOS_STACK/tools/<agent 名>/`（11-02 進 `tools/`）、stack＝`<工作區>/.stack/`（11-01 起是旗標）；錯 `AgentMissing`／`AgentBad`／`StackMissing`／`ArgumentsBad`／`FlagUnknown`／`QueueFailed`／`RoundFailed`／`AnswerMissing`… |
 | `lib/aos/ask_round/_tooldef.json`、`_metainfo` | 給模型的說明（question 必給、agent／timeout_s 選填）；特性（`time_ms.max` 600000，aos-mcp 拿它當逾時） |
 
 ### 測試

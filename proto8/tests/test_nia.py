@@ -227,7 +227,7 @@ class AskRound(unittest.TestCase):
         r = self.call("ask_round", {"question": "現在幾點？", "agent": str(NIA)})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertRegex(r.stdout, r"^FAKE ANSWER to: 現在幾點？（clock said: \d{4}-.*Z）\n$")
-        ws = self.stack / "ask_round" / "agent-nia"                                   # 工作區＝工具的小格（P-17）
+        ws = self.stack / "ask_round" / "tools" / "agent-nia"                                   # 工作區＝工具的小格（P-17）
         self.assertEqual(sorted(p.name for p in ws.iterdir()), [".stack"])            # 不長 new/ out/
         self.assertEqual([m["role"] for m in history(ws)], ["user", "assistant", "tool", "assistant"])
         self.assertEqual((queue_ls(ws, "new"), queue_ls(ws, "cur")), ([], []))        # 答完就停、不常駐
@@ -236,7 +236,7 @@ class AskRound(unittest.TestCase):
         r = self.call(self.cell("ask_nia", "--agent", str(NIA)), {"question": "1+1？"})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 1+1？"), r.stdout)
-        self.assertTrue((self.stack / "ask_nia" / "agent-nia" / ".stack").is_dir())
+        self.assertTrue((self.stack / "ask_nia" / "tools" / "agent-nia" / ".stack").is_dir())
 
     def test_old_env_ignored(self):
         """11-01 起舊的三個環境變數不再讀：沒給 agent＝AgentMissing；上限 0、別的工作區都不作用（照樣答、工作區在工具小格）。"""
@@ -247,7 +247,7 @@ class AskRound(unittest.TestCase):
                       {"AOS_ASK_MAX_STEPS": "0", "AOS_ASK_WS": str(other)})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertFalse(other.exists())
-        self.assertTrue((self.stack / "ask_round" / "agent-nia" / ".stack").is_dir())
+        self.assertTrue((self.stack / "ask_round" / "tools" / "agent-nia" / ".stack").is_dir())
 
     def test_step_limit_then_resume(self):
         """--max-steps 1：只走一格（idle 認領）就 AnswerMissing、信留在 cur/；再叫一次（同一個 --ws、不設上限）從 state.txt 接著做、答得出來。"""
@@ -275,7 +275,7 @@ class AskRound(unittest.TestCase):
         r = self.call(self.cell("ask8", "--max-steps", "8"), {"question": "幾點？", "agent": str(agent)})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 幾點？"), r.stdout)
-        trace = (self.stack / "ask8" / "agent" / ".stack" / "trace.jsonl").read_text().splitlines()
+        trace = (self.stack / "ask8" / "tools" / "agent" / ".stack" / "trace.jsonl").read_text().splitlines()
         self.assertEqual([json.loads(l)["state"] for l in trace], ["idle", "think", "act", "think", "finish"])
 
     def test_round_failed_and_argument_errors(self):
