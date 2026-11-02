@@ -7,7 +7,7 @@
   parts.json（11-01 起 aos-exec 格式）／tools.json 只用相對路徑、每格 lib/agent/parts.py 找得到。
 spawn：--from agent-nia 後 parts.json、tools.json、loop.json 的 cwd 指出範本的相對路徑改成絕對、搬到 agents/<名>/agent/ 後經 queue 放一題、
   aos-exec 跑起來答得出來（10-30 起不經 aos-ai ask／run：那兩個還照舊協議放 new/、等 out/）；
-  沒有 parts.json 的範本（agent-dan）tools.json 一個字不動。
+  沒有 parts.json 的範本（agent-eve；11-02 晚前是 agent-dan）tools.json 一個字不動。
 ask_round（lib/aos，第 11 步：round 當外部接口；10-30 起放進 queue、答案看 history，agent-lifecycle 第 5 步）：
   登記進 tools.json、aos-tools call 拿到假腦答案、agent 不常駐（工作區在工具小格、只有 .stack、queue 收乾淨）；
   工具小資料夾的 _entry 是 JSON argv 陣列 [ask_round, --agent …] 固定一隻（11-01 起旗標取代環境變數，舊的不再讀）；
@@ -162,10 +162,10 @@ class Spawn(unittest.TestCase):
         self.assertTrue(got[0].startswith("FAKE ANSWER to: 現在幾點？（clock said:"), got)
 
     def test_spawn_without_parts_unchanged(self):
-        code, res, err = ai(self.root, "spawn", "d1", "--from", "agent-dan")
+        code, res, err = ai(self.root, "spawn", "d1", "--from", "agent-eve")
         self.assertEqual(code, 0, err)
         agent = Path(res["agent"])
-        self.assertEqual((agent / "tools.json").read_bytes(), (ROOT / "demo" / "agent-dan" / "tools.json").read_bytes())
+        self.assertEqual((agent / "tools.json").read_bytes(), (ROOT / "demo" / "agent-eve" / "tools.json").read_bytes())
         self.assertFalse((agent / "parts.json").exists())
 
 

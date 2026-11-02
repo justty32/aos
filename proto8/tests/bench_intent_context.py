@@ -1,4 +1,4 @@
-"""bench_intent_context - 同一段 15 題、主題跳來跳去又回頭引用的對話，各跑 agent-dan（整份 history）、agent-kai（按意圖組 context）與 kai0（同 kai 但腦沒有 recall、只靠程式挑），比每題送出的 token 與答對率。
+"""bench_intent_context - 同一段 15 題、主題跳來跳去又回頭引用的對話，各跑 agent-dan（整份 history；11-02 晚 agent-dan 刪了，改從 agent-eve 組回同形）、agent-kai（按意圖組 context）與 kai0（同 kai 但腦沒有 recall、只靠程式挑），比每題送出的 token 與答對率。
 
 用法：python3 proto8/tests/bench_intent_context.py [--out DIR] [--upstream URL] [--model M] [--only dan|kai|kai0]
   --upstream 給了（例 http://localhost:4000/v1）＝真腦：中間夾一個記錄用的轉送 server，token 取回覆的 usage.prompt_tokens；
@@ -160,15 +160,19 @@ def oracle(q, body):
 
 
 def setup(out):
-    """兩隻 agent 的快照：kai 照抄 repo 的；dan 照抄後多一個 read 工具（同 kai 用的 lib/base/read），system 也加「讀檔」。"""
+    """兩隻 agent 的快照：kai 照抄 repo 的；dan 照抄後多一個 read 工具（同 kai 用的 lib/base/read），system 也加「讀檔」。
+    11-02 晚 demo/agent-dan 刪了：dan 改從它的複本 agent-eve 照抄（brain.py、act.py 同 dan），拿掉 pyfix、
+    工具換成 lib/base 的 clock、math（＝原本 agent-dan 那兩個）再加 read。"""
     agents = out / "agents"
     ign = shutil.ignore_patterns("__pycache__")
     shutil.copytree(ROOT / "demo" / "agent-kai", agents / "agent-kai", ignore=ign)
     dan = agents / "agent-dan-read"
-    shutil.copytree(ROOT / "demo" / "agent-dan", dan, ignore=ign)
-    shutil.copytree(ROOT / "lib" / "base" / "read", dan / "tools" / "read", ignore=ign)
-    reg = json.loads((dan / "tools.json").read_text(encoding="utf-8"))           # 登記進 tools.json 才算工具
-    reg["tools"]["read"] = {"path": "tools/read"}
+    shutil.copytree(ROOT / "demo" / "agent-eve", dan, ignore=ign)
+    shutil.rmtree(dan / "tools" / "pyfix")
+    reg = {"tools": {}}                                                            # 登記進 tools.json 才算工具
+    for name in ("clock", "math", "read"):
+        shutil.copytree(ROOT / "lib" / "base" / name, dan / "tools" / name, ignore=ign)
+        reg["tools"][name] = {"path": "tools/" + name}
     (dan / "tools.json").write_text(json.dumps(reg), encoding="utf-8")
     (dan / "system.txt").write_text("你是一個問答助手。\n需要計算、查時間、讀檔時，先用提供的工具，不要自己猜。\n"
                                     "拿到工具的結果後，用純文字給出最後的回答，不要再叫工具。\n", encoding="utf-8")

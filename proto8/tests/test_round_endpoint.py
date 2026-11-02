@@ -14,7 +14,7 @@ CLOCK_TOOL = {"type": "function", "function": {"name": "clock", "parameters": {"
 
 
 class FakeBrain:
-    """假的 OpenAI 相容 server（同 test_dan）：每次 POST 回劇本的下一個；記下 request body 與 Authorization。
+    """假的 OpenAI 相容 server（同 fake_brain.py）：每次 POST 回劇本的下一個；記下 request body 與 Authorization。
     劇本一項＝dict（200 回 JSON）或 (狀態碼, 字串)。"""
 
     def __init__(self, script):

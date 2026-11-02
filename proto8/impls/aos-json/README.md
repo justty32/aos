@@ -60,7 +60,7 @@ check 印的問題代號：`DirectiveBad`、`DirectiveFormBad`（帶 `$ref`／`$
 
 ## 給腦用的兩個工具（`tools/`）
 
-照 agent-dan 的慣例（P-41：工具名＝資料夾名、`_tooldef.json` 給模型看、arguments 從 stdin 進、stdout 是結果）。掛法：把資料夾複製或捷徑到範本的 `tools/` 底下、登記進範本的 `tools.json`（`aos-tools add`）、`aos-json` 放進 PATH（aos 的程式都不動 PATH，N-50）。
+照 P-41 的慣例（工具名＝資料夾名、`_tooldef.json` 給模型看、arguments 從 stdin 進、stdout 是結果）。掛法：把資料夾複製或捷徑到範本的 `tools/` 底下、登記進範本的 `tools.json`（`aos-tools add`）、`aos-json` 放進 PATH（aos 的程式都不動 PATH，N-50）。
 檔名只收工作區（`$AOS_WS`）裡的相對路徑（不收絕對路徑、不收 `..`；`--follow` 穿過的 `$ref` 不在這個限制裡）。
 
 - **`tools/json/`**：一次一個動作——`{"cmd": peek|get|where|set|batch|del|append|merge|check, "target": "檔#/指標", "value": JSON, "depth": N}`。
@@ -70,11 +70,11 @@ check 印的問題代號：`DirectiveBad`、`DirectiveFormBad`（帶 `$ref`／`$
   一、**找到要修改的 key**：腦只看到頂層 peek，用 `peek` 一層層往下，`found` 交出一個或多個指標（最多 12 輪，寫死）；
   二、**提供值**：每個指標各開一次新對話（不帶第一步），只給要做的事、那個位置現在的值、上一層的摘要，腦用 `give` 交出新值的 JSON 文字（解不開讓它重給，最多 3 次）；
   最後 `aos-json batch --check --follow` 一次寫進去。stdout：`看過：/ → /states → …`、`找到：…`、`改：檔#/指標 = 值`；寫不進去印 `沒改：…` 退 0。
-  腦＝OpenAI 相容端點（`AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`（預設 `chatgpt-gpt-6-luna-low`）、`AOS_BRAIN_KEY`，同 agent-dan）；沒設 URL＝`BrainMissing`。
+  腦＝OpenAI 相容端點（`AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`（預設 `chatgpt-gpt-6-luna-low`）、`AOS_BRAIN_KEY`，同 P-23）；沒設 URL＝`BrainMissing`。
 
 真腦跑一次（LiteLLM 開著時）：
 ```sh
-cd proto8/impls/aos-json && mkdir -p /tmp/ws && cp ../../demo/agent-dan/fsm.json /tmp/ws/
+cd proto8/impls/aos-json && mkdir -p /tmp/ws && cp ../../demo/agent-eve/fsm.json /tmp/ws/
 echo '{"file": "fsm.json", "want": "把 think 那格的逾時改成 30 秒"}' | \
   PATH=$PWD/bin:$PWD/../aos-exec/bin:$PATH AOS_WS=/tmp/ws AOS_STACK=/tmp/ws/ AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec tools/json_edit
 ```

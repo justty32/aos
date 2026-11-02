@@ -103,7 +103,7 @@ def failure(t):
     return "停在 %s 那格、%s" % (aos_ws.unit_of(t), how)
 
 
-OLD_PROTOCOL = ("這隻 agent 可能還是舊協議（讀工作區的 new/*.txt、不收 queue，例 demo/agent-dan；改用走 queue 的版本，例 agent-dan-q），"
+OLD_PROTOCOL = ("這隻 agent 可能還是舊協議（讀工作區的 new/*.txt、不收 queue，例 demo/agent-eve；改用走 queue 的，例 demo/agent-nia），"
                 "或 loop 的 max 先到了")
 
 

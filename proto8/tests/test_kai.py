@@ -8,7 +8,7 @@ import own_error  # noqa: E402
 own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
-from test_dan import FakeBrain, answer, call, tool_reply  # noqa: E402
+from fake_brain import FakeBrain, answer, call, tool_reply  # noqa: E402
 
 EXEC = tool("aos-exec")
 KAI = ROOT / "demo" / "agent-kai"

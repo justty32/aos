@@ -7,7 +7,7 @@
 ## overview
 
 一句：**資料夾＝程式**。aos 本身只保證六個環境變數和一支 `aos-exec`，其他（loop、fsm、daemon、agent 的形狀）都是在這上面疊出來的（C-68～C-70、N-57）。
-範例：`cd 工作區 && aos-exec ../agent-dan`＝在這個工作區跑 agent-dan 這個資料夾程式。
+範例：`cd 工作區 && aos-exec ../agent-eve`＝在這個工作區跑 agent-eve 這個資料夾程式。
 常見錯：以為 aos 有 `aos run`、`.aos/` 世界——那是更早的一代（repo 根的 core/），proto8 不用。
 出處：C-68～C-73、N-57～N-62。
 
@@ -22,7 +22,7 @@
 
 一句：入口在資料夾（或 JSON 物件）裡叫什麼名字，**預設 `_entry`**。資料夾裡是檔 `_entry`，JSON 裡是 key `"_entry"`（同一個名字）。
 誰設：呼叫者或 `.env`；aos-exec **讀完那一層的 `.env` 才挑入口**，所以 `.env` 設的有效（沒被外面設過時）。aos-exec 不 export 它。
-範例：`agent-dan/_entry`（shell 小殼 `exec aos-loop loop.json`）；`fsm.json` 裡 `"_entry": ["aos-fsm", {"$env": "AOS_CF"}]`。
+範例：`agent-eve/_entry`（shell 小殼 `exec aos-loop loop.json`）；`fsm.json` 裡 `"_entry": ["aos-fsm", {"$env": "AOS_CF"}]`。
 常見錯：寫成 `_exec`、`.aos/exec`（舊名）；以為入口一定要 `+x`——沒 `+x` 的會當 JSON 讀（N-61）。
 出處：N-57、N-59 第 4 件、N-61、C-73。
 
@@ -30,7 +30,7 @@
 
 一句：**工作區**＝使用者的檔與成品在哪（題目 `new/`、答案 `out/`…）。
 誰設：`aos-exec --ws WS` ＞ 外面已有的 `$AOS_WS` ＞ `.env`（預設不蓋）＞ cwd；aos-exec 轉成絕對路徑、export，之後原樣往下傳（巢狀多深都同一個）。
-範例：`aos-exec --ws ~/try/w ../agent-dan` → 入口裡 `$AOS_WS=/home/me/try/w`。
+範例：`aos-exec --ws ~/try/w ../agent-eve` → 入口裡 `$AOS_WS=/home/me/try/w`。
 常見錯：在程式裡寫死相對路徑當工作區（起跑 cwd 是入口的資料夾，不是工作區）；以為子程式的 `--ws` 會穿過字串轉向——旗標只管那一跳（N-58）。
 出處：N-55、N-58、C-65。
 
@@ -38,7 +38,7 @@
 
 一句：**被叫的程式自己放執行中狀態的地方**（state、草稿、紀錄、小格），預設 `$AOS_WS/.stack/`。定義資料夾不被寫（P-15）。
 誰設：沒設＝aos-exec 設預設值並建資料夾；有設就沿用（所以叫別人時要自己給它一個**小格** `AOS_STACK=$AOS_STACK/tools/<名>/`，P-17；11-02 改進 `tools/`）。
-範例：agent-dan 的 `$AOS_STACK/state.txt`（fsm 現在在哪格）、`trace.jsonl`、`history.jsonl`；叫工具 `AOS_STACK=$AOS_STACK/math/ aos-exec tools/math`。
+範例：agent-eve 的 `$AOS_STACK/state.txt`（fsm 現在在哪格）、`trace.jsonl`、`history.jsonl`；叫工具 `AOS_STACK=$AOS_STACK/pyfix/ aos-exec tools/pyfix`。
 常見錯：叫工具時沒給小格（工具的檔會跟你的混在一起）；aos-loop／aos-daemon **不自己建** stack（不在＝`WriteFailed`），經 aos-exec 跑才會被建。
 出處：N-57、N-59 第 1 件、P-15～P-18、C-67、C-70。
 
@@ -69,14 +69,14 @@
 1. XXX 是資料夾 → cd 進去、讀 `.env` → 找 `XXX/$AOS_ENTRY`（是資料夾就再走進去）→ 沒有再找 `XXX/$AOS_ENTRY.json`。
 2. XXX 是檔（或 `檔#/指標`）→ cd 到它的資料夾、讀 `.env`；不在又沒副檔名 → 試 `XXX.json`。
 3. 找到的檔：有 `+x`＝可執行檔、直接 exec；沒 `+x` 當 JSON 讀：有 `argv`＝**單子**（行程內跑）、非空陣列＝**argv**（exec）、字串＝**轉向**（全新的一跳 aos-exec）、沒 `argv` 的物件＝當資料夾、取 `js[$AOS_ENTRY]` 一路往下。
-範例：`aos-exec agent-dan`（資料夾）、`aos-exec loop.json`（JSON 帶 `_entry`）、`aos-exec cfg.json#/tools/stamp`（指標）。
+範例：`aos-exec agent-eve`（資料夾）、`aos-exec loop.json`（JSON 帶 `_entry`）、`aos-exec cfg.json#/tools/stamp`（指標）。
 常見錯：`aos-exec loop.json` 但 loop.json 沒有 `_entry`——aos-exec 不認 loop 設定，要寫 `"_entry": ["aos-loop", {"$env": "AOS_CF"}]`；`#` 後面不是 `/`＝入口壞；資料夾帶 `#/`＝入口壞。
 出處：N-58、N-59、N-61、N-62、C-73。
 
 ## dotenv
 
 一句：aos-exec 每走進一個資料夾（或沒 `argv` 的 JSON 物件的 `.env` key）就讀那裡的 `.env`，有效到真正開跑；**預設不蓋環境裡已有的名字**，`--dotenv-override` 才蓋（只管那一跳）。
-範例：agent-dan 的 `.env`：`AOS_BRAIN_MODEL=chatgpt-gpt-6-luna-low`（外面設過就用外面的）。
+範例：agent-eve 的 `.env`：`AOS_BRAIN_MODEL=chatgpt-gpt-6-luna-low`（外面設過就用外面的）。
 常見錯：在 `.env` 設 `AOS_WS`（有旗標的變數，風險自負，建議別碰）；以為 loop／fsm 行程內跑的單子會讀 `.env`——不會。
 出處：N-58、N-59 第 4 件、N-60。
 
@@ -147,9 +147,9 @@ daemon 自己的窗慣用名 `daemon_ctl.json`／`daemon_state.json`（11-02；�
 ## agent
 
 一句：aos 的 agent＝一個資料夾程式＋一台被 loop 一次次驅動的狀態機（三態 `idle → think → act → idle`）。定義資料夾不被寫；跑的東西都在工作區與 stack。
-範例（agent-dan）：
+範例（agent-eve；11-02 晚 agent-dan 刪除前用它）：
 ```
-agent-dan/  _entry（exec aos-loop loop.json）、loop.json、fsm.json、.env、system.txt、idle/_entry、brain.py、act.py、tools.json（工具通訊錄）、tools/<名>/{_tooldef.json,_entry}
+agent-eve/  _entry（exec aos-loop loop.json）、loop.json、fsm.json、.env、system.txt、idle/_entry、brain.py、act.py、tools.json（工具通訊錄）、tools/<名>/{_tooldef.json,_entry}
 工作區      new/<題名>（題目）→ cur/（認領）→ out/<題名>（答案）、done/（做完的題目）
 $AOS_STACK  state.txt、current.txt、trace.jsonl、history.jsonl（一行一則 OpenAI message）、<工具名>/（工具的小格）
 ```
@@ -160,7 +160,7 @@ $AOS_STACK  state.txt、current.txt、trace.jsonl、history.jsonl（一行一則
 
 一句：給腦叫的工具＝`tools/<名>/` 資料夾程式，裡面多一份 `_tooldef.json`（OpenAI function 物件去掉 `name`：`{"description", "parameters"}`），再登記進 agent 資料夾的 `tools.json`（`{"tools": {名: {"path": …}}}`，`aos-tools add`）；**工具名＝登記的名字**（預設資料夾名）；模型給的 `arguments` 從 stdin 進、stdout 整段是結果。
 範例：`tools/math/_tooldef.json`＝`{"description": "算一個算術式子", "parameters": {"type": "object", "properties": {"expr": {"type": "string"}}, "required": ["expr"]}}`。
-常見錯：在 `_tooldef.json` 寫 `name`（不用，程式填）；沒登記進 `tools.json` 的不算工具（資料夾放進 `tools/` 不夠）；登記了但壞掉（沒 `_tooldef.json`）＝brain 停下（ToolsBad）；工具退非 0：agent-dan 範本把 stdout 那行加上結束碼回給腦、不停（所以錯要印在 stdout，腦才看得到原因）。
+常見錯：在 `_tooldef.json` 寫 `name`（不用，程式填）；沒登記進 `tools.json` 的不算工具（資料夾放進 `tools/` 不夠）；登記了但壞掉（沒 `_tooldef.json`）＝brain 停下（ToolsBad）；工具退非 0：agent-eve 範本把 stdout 那行加上結束碼回給腦、不停（所以錯要印在 stdout，腦才看得到原因）。
 出處：P-41、N-50、C-61。
 
 ## heap

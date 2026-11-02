@@ -13,7 +13,7 @@ description: 操作 aos（proto8 的資料夾程式）的工具 aos-ai，含概�
 - **只在一個工作資料夾（root）裡動**：`--root DIR`（放在命令前面），沒給用 `$AOS_AI_ROOT`，再沒有用 cwd。root 外面的東西不寫。
 - **agent＝資料夾**：`spawn` 把範本（預設 `agent-nia`：格組起來、會用工具的問答 agent）複製到 `root/agents/<名>/agent/`，
   工作區是 `root/agents/<名>/ws/`（成品檔）；題目與回答都在 `ws/.stack/`：`ask` 寄進 `queue/`，回答是 `history.jsonl` 最新那則 assistant
-  （10-30 起；舊範本 agent-dan 讀工作區的 `new/`，`ask` 說不到它）。
+  （10-30 起；舊範本（agent-bob、agent-eve 等）讀工作區的 `new/`，`ask` 說不到它）。
 - **腦**：沒設 `AOS_BRAIN_URL`＝假腦（回 `FAKE ANSWER to: …`，測流程用）。真腦：`AOS_BRAIN_URL=http://localhost:4000/v1`（家機 LiteLLM）。
 
 ## 最常用的一串

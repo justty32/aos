@@ -182,8 +182,8 @@ class UsageServer:
 
 
 class ReportCase(unittest.TestCase):
-    """10-24 token 回報與額度：agent-dan 的 brain.py 經閘門、kernel 跑，把假 server 回的 usage 寫進 AOS_KERNEL_REPORT。"""
-    DAN = ROOT / "demo" / "agent-dan"
+    """10-24 token 回報與額度：agent-eve 的 brain.py（11-02 晚前是 agent-dan 的；eve 照抄它） 經閘門、kernel 跑，把假 server 回的 usage 寫進 AOS_KERNEL_REPORT。"""
+    DAN = ROOT / "demo" / "agent-eve"
     setUp, tearDown, kernel_loop = KernelCase.setUp, KernelCase.tearDown, KernelCase.kernel_loop   # 借 KernelCase 的架子，不重跑它的案例
 
     def dan_brain(self, n, url):

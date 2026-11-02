@@ -71,7 +71,7 @@ def run_agent(agent, question):
     trace = ws / ".stack" / "trace.jsonl"
     states = [json.loads(l)["state"] for l in trace.read_text().splitlines()] if trace.exists() else []
     answer = out.read_text() if out.exists() else None
-    if answer:   # agent-dan 的假腦叫 clock，答案裡有當下時間：抹掉才比得了
+    if answer:   # agent-dan（11-02 晚刪了）的假腦叫 clock，答案裡有當下時間：抹掉才比得了
         answer = re.sub(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", "<時間>", answer)
     shutil.rmtree(ws)
     return r, answer, states
@@ -94,23 +94,24 @@ class TestBuild(unittest.TestCase):
     def test_ann_same_as_demo(self):
         same_tree(self, self.build("agent_ann.lua"), ROOT / "demo" / "agent-ann")
 
+    @unittest.skip("demo/agent-dan 11-02 晚刪了；examples/agent_dan.lua 讀它的 brain.py 等檔、編不出來——留不留等使用者")
     def test_dan_same_as_demo(self):
         same_tree(self, self.build("agent_dan.lua"), ROOT / "demo" / "agent-dan")
 
     def test_runners_agree(self):
-        """lua、luajit、nvim -l 編出來逐位元組一樣。"""
+        """lua、luajit、nvim -l 編出來逐位元組一樣（11-02 晚前拿 agent_dan.lua 編，agent-dan 刪了改 agent_ann.lua）。"""
         outs = []
         for i, runner in enumerate(RUNNERS):
             out = self.tmp / ("r%d" % i)
-            r = aos_lua("build", str(EX / "agent_dan.lua"), str(out), runner=runner)
+            r = aos_lua("build", str(EX / "agent_ann.lua"), str(out), runner=runner)
             self.assertEqual(r.returncode, 0, (runner, r.stderr))
             outs.append(files(out))
         for o in outs[1:]:
             self.assertEqual(o, outs[0])
 
     def test_run_same_as_demo(self):
-        """假腦下，編出來的 ann、dan 跟手寫的跑出一樣的答案與 trace。"""
-        for src, hand in (("agent_ann.lua", "agent-ann"), ("agent_dan.lua", "agent-dan")):
+        """假腦下，編出來的 ann 跟手寫的跑出一樣的答案與 trace（dan 那份 11-02 晚隨 demo/agent-dan 刪除拿掉）。"""
+        for src, hand in (("agent_ann.lua", "agent-ann"),):
             built = self.build(src)
             r1, a1, s1 = run_agent(built, "17*23 是多少？\n")
             r2, a2, s2 = run_agent(ROOT / "demo" / hand, "17*23 是多少？\n")
@@ -129,10 +130,12 @@ class TestBuild(unittest.TestCase):
             self.assertEqual((ws / ".stack" / "loops" / ("clock_%d" % n) / "tick.txt").read_text().strip(), str(n))
 
     def test_json_pointer(self):
-        r = aos_lua("json", str(EX / "agent_dan.lua"), "fsm.json#/states/think/exec")
+        # 11-02 晚前拿 agent_dan.lua；demo/agent-dan 刪了（agent_dan.lua 編不出來），改 agent_ann.lua
+        r = aos_lua("json", str(EX / "agent_ann.lua"), "fsm.json#/states/think/exec")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(json.loads(r.stdout), {"argv": ["python3", "brain.py"], "timeout_ms": 120000})
-        r = aos_lua("json", str(EX / "agent_dan.lua"), "fsm.json#/states/nope")
+        self.assertEqual(json.loads(r.stdout), {"argv": ["python3", "brain.py"], "timeout_ms": 120000,
+                                                "stdout": {"$env": "AOS_STACK", "$path": "plan.txt"}})
+        r = aos_lua("json", str(EX / "agent_ann.lua"), "fsm.json#/states/nope")
         self.assertEqual((r.returncode, r.stderr.split(" ")[1]), (1, "PathMissing"))
 
     def test_ls(self):
@@ -173,6 +176,7 @@ class TestBuild(unittest.TestCase):
         self.assertLess(r.stdout.index('"z"'), r.stdout.index('"y"'))   # aos.obj 照寫的順序
 
 
+@unittest.skip("demo/agent-dan 11-02 晚刪了；smoke.lua 編 examples/agent_dan.lua（讀 agent-dan 的檔）、編不出來——留不留等使用者")
 @unittest.skipUnless(shutil.which("nvim"), "沒有 nvim")
 class TestNvim(unittest.TestCase):
     def test_headless_smoke(self):

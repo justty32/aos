@@ -10,7 +10,7 @@ JANET = shutil.which("janet")
 LANG = ROOT / "extras" / "langs" / "janet"
 COMPILER = str(LANG / "bin" / "aos-janet")
 EXAMPLES = LANG / "examples"
-DAN = ROOT / "demo" / "agent-dan"
+DAN = ROOT / "demo" / "agent-dan"   # 11-02 晚刪了；用到它的兩案 skip
 EXEC = tool("aos-exec")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO",
          "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
@@ -53,6 +53,7 @@ class JanetCompile(unittest.TestCase):
         trace = [json.loads(line)["state"] for line in (ws / ".stack" / "trace.jsonl").read_text().splitlines()]
         return files(ws), history, answer, trace, (ws / ".stack" / "state.txt").read_text()
 
+    @unittest.skip("demo/agent-dan 11-02 晚刪了；examples/agent_dan.janet 讀它的檔、編不出來——留不留等使用者")
     def test_agent_dan_same_shape(self):
         """編出來的檔跟手寫的一樣多；JSON 檔內容相同（順序、空白可以不同）；Python 葉子位元組相同。"""
         out = self.compile("agent_dan")
@@ -67,6 +68,7 @@ class JanetCompile(unittest.TestCase):
         for f in ("idle/_entry", "tools/clock/_entry", "tools/math/_entry"):
             self.assertTrue(os.access(out / f, os.X_OK), f)
 
+    @unittest.skip("demo/agent-dan 11-02 晚刪了；examples/agent_dan.janet 讀它的檔、編不出來——留不留等使用者")
     def test_agent_dan_runs_same(self):
         """假腦（叫 clock 再答）：兩版跑完的工作區、history、答案、走過的格都一樣（時間換掉）。"""
         out = self.compile("agent_dan")

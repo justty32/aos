@@ -1,6 +1,6 @@
 """test_meg - 跑 demo/agent-meg（有長期記憶庫的問答 agent）：第一題存、換 stack 後第二題靠記憶庫答。
 
-假 server 照劇本回（劇本與假 server 借 test_dan 的）；記憶庫工具 tools/memory 另外直接測。
+假 server 照劇本回（劇本與假 server 借 fake_brain.py 的）；記憶庫工具 tools/memory 另外直接測。
 設計：proto8/thinking/2026-10-24-memory.md。連真模型的那個 localhost:4000 連不上就 skip。"""
 import json, os, re, subprocess, sys, tempfile, unittest, urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -9,7 +9,7 @@ import own_error  # noqa: E402
 own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
-from test_dan import FakeBrain, call, tool_reply, answer, REAL_URL  # noqa: E402
+from fake_brain import FakeBrain, call, tool_reply, answer, REAL_URL  # noqa: E402
 EXEC = tool("aos-exec")
 MEG = ROOT / "demo" / "agent-meg"
 MEMORY = MEG / "tools" / "memory" / "_entry"

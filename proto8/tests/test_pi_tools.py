@@ -1,6 +1,6 @@
 """test_pi_tools - 仿 pi coding agent 的 read、write、edit、bash（原 demo/pi-tools，10-24 遷移進 proto8/lib/base）與掛上它們的 demo/agent-pip。
 
-工具一支一支用 aos-exec 叫（arguments 從 stdin 進、stdout 是結果）；agent-pip 用 test_dan 的假 server 照劇本跑「讀 → 改錯 → 改對 → 跑 → 答」。
+工具一支一支用 aos-exec 叫（arguments 從 stdin 進、stdout 是結果）；agent-pip 用 fake_brain.py 的假 server 照劇本跑「讀 → 改錯 → 改對 → 跑 → 答」。
 不連真模型。設計：proto8/thinking/2026-10-24-pi-tools.md。"""
 import json, os, re, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
@@ -8,7 +8,7 @@ import own_error  # noqa: E402
 own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
-from test_dan import FakeBrain, call, tool_reply, answer  # noqa: E402
+from fake_brain import FakeBrain, call, tool_reply, answer  # noqa: E402
 
 EXEC = tool("aos-exec")
 TOOLS = ROOT / "lib" / "base"                       # 10-24 遷移前是 demo/pi-tools

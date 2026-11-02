@@ -1,6 +1,6 @@
 """test_grow - grow/aos-grow（函數往上長一級／縮回一級，呼叫方跟著改、行為不變）。
 
-設計：proto8/thinking/2026-10-24-fn-grow.md。核心那個測試把 demo/agent-dan 複製兩份、只長其中一份，
+設計：proto8/thinking/2026-10-24-fn-grow.md。核心那個測試把 demo/agent-liv（11-02 晚前是 agent-dan；liv 抄它、fsm 同、工具是 lib 捷徑沒有巢狀 agent）複製兩份、只長其中一份，
 用假腦（沒設 AOS_BRAIN_URL）各跑兩題，抹掉時間後工作區與 stack 每個檔都要一樣。"""
 import json, os, re, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
@@ -11,7 +11,7 @@ from aos_bins import ROOT, tool, path_with  # noqa: E402
 from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 EXEC = tool("aos-exec")
 GROW = str(ROOT / "extras" / "grow" / "aos-grow")
-DAN = ROOT / "demo" / "agent-dan"
+DAN = ROOT / "demo" / "agent-liv"
 CODES = ("ArgumentsBad", "FlagUnknown", "CfgMissing", "CfgBad", "TargetBad", "NameBad", "WriteFailed")
 TS = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(Z|[+-]\d\d:\d\d)")
 

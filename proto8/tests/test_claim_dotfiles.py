@@ -1,6 +1,6 @@
 """test_claim_dotfiles.py：demo 各 agent 認領題目時不撿 new/ 裡 . 開頭的檔（10-24 審後）。
 
-N-05：寫檔的人先寫同資料夾 . 開頭的暫存檔再改名，所以 new/ 裡 . 開頭的是還沒寫完的題。agent-dan 範本（與從它、從 agent-bob
+N-05：寫檔的人先寫同資料夾 . 開頭的暫存檔再改名，所以 new/ 裡 . 開頭的是還沒寫完的題。agent-dan 範本（11-02 晚刪了；與從它、從 agent-bob
 抄出來的各隻）原本 os.listdir 照單全收、排序後 . 開頭的排最前，會先把寫到一半的檔搬進 cur/。
 這裡不列名單：掃 demo/ 底下所有寫著 ls("new") 的 brain.py 與 for d in ("cur", "new") 的 idle.py，新抄出來的一隻自動算進來。
 """
@@ -52,7 +52,7 @@ class T(unittest.TestCase):
     def test_found_all(self):
         # 找得到範本與幾隻代表（掃描本身壞掉時不會靜靜地什麼都不測）
         rel = {str(p.relative_to(DEMO)) for p in BRAINS}
-        for want in ("agent-dan/brain.py", "agent-bob/brain.py", "agent-pip/brain.py", "self-improve/improver/brain.py"):
+        for want in ("agent-eve/brain.py", "agent-bob/brain.py", "agent-pip/brain.py", "self-improve/improver/brain.py"):
             self.assertIn(want, rel)
         self.assertIn("agent-ann/idle.py", {str(p.relative_to(DEMO)) for p in IDLES})
 

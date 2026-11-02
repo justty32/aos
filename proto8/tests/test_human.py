@@ -15,7 +15,7 @@ from round_common import absolute  # noqa: E402
 HUMAN = ROOT / "extras" / "human" / "bin"
 SAY, LISTEN, CHAT = (str(HUMAN / n) for n in ("aos-say", "aos-listen", "aos-chat"))
 NIA = ROOT / "demo" / "agent-nia"
-DAN = str(ROOT / "demo" / "agent-dan")              # 舊協議（讀工作區 new/、不收 queue）：10-30 晚真腦實測發現 2
+DAN = str(ROOT / "demo" / "agent-eve")              # 舊協議（讀工作區 new/、不收 queue）：10-30 晚真腦實測發現 2；11-02 晚 agent-dan 刪除，改用它的複本 agent-eve
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
 from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 SIG = re.compile(r"^\d{12}\.\d{20}\.\d+\.\d+$")
@@ -150,7 +150,7 @@ class ListenTest(Base):
         self.assertRegex(err, r"· idle \d+ms")                   # 10-30 起 trace 是 fsm 的一格一行（state）
 
     def test_old_protocol_agent_unclaimed(self):
-        """say 之後拿舊協議的 agent（agent-dan）跑：退 0、信原封留在 new/；listen 不一直等，說「沒人認領、可能是舊協議」就退（LetterUnclaimed）。
+        """say 之後拿舊協議的 agent（agent-eve；11-02 晚前是 agent-dan）跑：退 0、信原封留在 new/；listen 不一直等，說「沒人認領、可能是舊協議」就退（LetterUnclaimed）。
         先開 listen、後跑也一樣；之後換走 queue 的 agent 跑就答得出。"""
         sig = self.say("舊協議")
         self.assertEqual(self.go(DAN).returncode, 0)

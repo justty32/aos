@@ -18,7 +18,7 @@
 
 ### `proto8/demo/`
 
-逐字下放到 [proto8/13-demo](proto8/13-demo.md)（本檔超過 8 KB）：agent-bob、ann、dan、eve、daemon、daemon-2、daemon-3、llm-kernel、tick 的逐檔說明；說明另在 [proto8/demo/README.md](../../../../proto8/demo/README.md)。
+逐字下放到 [proto8/13-demo](proto8/13-demo.md)（本檔超過 8 KB）：agent-bob、ann、eve、daemon、daemon-2、daemon-3、llm-kernel、tick 的逐檔說明；說明另在 [proto8/demo/README.md](../../../../proto8/demo/README.md)。
 
 ### `proto8/tests/`
 

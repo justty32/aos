@@ -2,7 +2,7 @@
 
 不叫真模型、不叫 claude：腦一律是假腦（agent-nia 的 endpoint/fake）或下面照規則回的假 server（把 spawn 出來的 nia 的
 endpoint/default 換成 lib/endpoint/openai）。10-30 起 aos-ai 走 queue（ask＝寄信進 ws/.stack/queue/、答案看 history；
-thinking 2026-10-30-agent-lifecycle 第 4 步、隊長代定甲）：預設範本 agent-nia；舊協議的 agent-dan 只剩「生成 fsm 格」那案，
+thinking 2026-10-30-agent-lifecycle 第 4 步、隊長代定甲）：預設範本 agent-nia；舊協議的範本只剩「生成 fsm 格」那案（11-02 晚 agent-dan 刪除，改用 agent-eve），
 題目手放 ws/new/。設計：proto8/thinking/2026-10-24-ai-tools.md。"""
 import http.server, json, os, re, subprocess, tempfile, threading, time, unittest
 from pathlib import Path
@@ -317,9 +317,9 @@ class AiToolsTest(unittest.TestCase):
         self.assertEqual(json.loads(Path(self.root, "l.json").read_text())["exec"], "y")
 
     def test_make_tool_and_cell_end_to_end(self):
-        """生成一個工具＋一個 fsm 格掛進 agent-dan，腦（假 server）叫那個工具、新格每輪都跑。
-        agent-dan 是舊協議（讀工作區的 new/）：題目手放 ws/new/（P-11 的 10-30 改口），aos-ai run 照樣從 history 拿答案。"""
-        ai(self.root, "spawn", "dan", "--from", "agent-dan")
+        """生成一個工具＋一個 fsm 格掛進 agent-eve（11-02 晚前是 agent-dan），腦（假 server）叫那個工具、新格每輪都跑。
+        agent-eve 是舊協議（讀工作區的 new/）：題目手放 ws/new/（P-11 的 10-30 改口），aos-ai run 照樣從 history 拿答案。"""
+        ai(self.root, "spawn", "dan", "--from", "agent-eve")
         code, res, err = ai(self.root, "make", "tool", "dan", "shout", "--description", "轉大寫",
                             "--param", "text:string:要轉的字:required", "--summary", "轉大寫", "--resource", "cpu")
         self.assertEqual(res["files"], ["_tooldef.json", "_entry", "_metainfo"], err)

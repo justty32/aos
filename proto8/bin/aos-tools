@@ -2,7 +2,7 @@
 """aos-tools [--file F] add|rm|ls|get|call … — 一個 agent 資料夾一份工具註冊檔（tools.json），登記這隻 agent 能叫哪些工具。
 
 設計與代定：proto8/thinking/2026-10-28-aos-tools.md。白話：tools.json 是「這隻 agent 的工具通訊錄」，
-aos agent（agent-dan 等範本）想問腦之前先 `aos-tools ls --json` 拿工具清單，腦要叫工具時 `aos-tools call 名`；
+aos agent（agent-eve 等範本）想問腦之前先 `aos-tools ls --json` 拿工具清單，腦要叫工具時 `aos-tools call 名`；
 claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的翻譯櫃台）。
 
     aos-tools [--file F] add [--override] [--name N] XXX   登記 XXX（檔或資料夾；相對路徑從 cwd 算），存絕對路徑

@@ -54,7 +54,7 @@ aos-llm-kernel [旗標] kernel.json
 
 - **回報**：kernel 跑每封信時，在信裡帶來的環境上**加一個** `AOS_KERNEL_REPORT`＝這封信小格裡的 `cur/<信號>/report.json`（信裡原本有同名的也蓋掉）。腦願意就把 API 回覆的 `usage` 物件**原樣**寫進去（先寫 `.report.json` 再改名）；
   kernel 跑完讀它：`total_tokens`（非負整數）就是這封的 token 數；沒有 `total_tokens` 就 `prompt_tokens`＋`completion_tokens`；檔不在＝沒回報（`counter_tokens` null，只算次數）；讀不懂、不是物件、數字不對＝`report_bad: true`（也只算次數，照樣交回信）。
-  一封信問了好幾次腦，由腦自己加總再寫（kernel 只讀最後那份）。範本 [agent-dan 的 brain.py](../../demo/agent-dan/brain.py) 與 demo 的 agent-ivy 有寫（P-23 註）。
+  一封信問了好幾次腦，由腦自己加總再寫（kernel 只讀最後那份）。範本 [agent-eve 的 brain.py](../../demo/agent-eve/brain.py)（11-02 晚前指 agent-dan 的，eve 照抄它）與 demo 的 agent-ivy 有寫（P-23 註）。
 - **算什麼**：子行程起來過（`runner.json` 在）的信才算一次、才讀回報——`LetterBad`、`DeadlineMissed`、`BudgetMissing` 不算；kernel 死了、下一次回 `RunFailed` 的那封算（腦可能已經花了錢）。
 - **額度**（kernel.json 的 `budget`，都選填）：`max_calls`、`max_tokens`＝每窗上限（非負整數；沒寫＝那一種不限；上限一律 `max_*`，寫 `calls`、`tokens`＝`CfgBad`，免得以為有上限）；`window`＝`"hour"`／`"day"`／`"all"`（沒寫＝`day`，10-15 定「一天一期歸零」；窗的起點用 kernel 的本地時間〔`TZ`〕的整點／午夜，`all`＝不歸零）；
   `spent`＝到頂時排著的信怎麼辦：`"refuse"`（沒寫＝這個，10-15「見底就擋」）回 `BudgetMissing`、不跑；`"wait"` 留在 `new/` 等下一窗（閘門一直等，由包它那格的 `timeout_ms` 守）。
@@ -143,7 +143,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
   E 收拾（寄信人不在〔`sender.flock` 沒人鎖或沒有〕的 new／tmp／done、`tmp/` 裡 `.` 開頭正在寫的〔還沒寫信或鎖著〕不碰、名字裡 pid 是死的但鎖著照跑、cur/ 留下的回 `RunFailed` 或照現成回信、跑信的子行程還活著就讓它跑完並佔格、子行程死了＝`RunFailed`）；F 鎖（`.flock`；舊名 `.lock` 被鎖著不算）、環境與 cwd 照信、`timeout_ms`、SIGTERM 轉給單子、早到的訊號不留半套；G `_metainfo`（同級時宣告短的後寄也先跑、有寫的在沒寫的前面、level 與 deadline 照樣壓過它、三種寫壞照樣跑並記 `metainfo_bad`）；
   J reply_to（10-30：寄回信〔信封、body、附 stdout／stderr、`reply_letter.txt`〕、被拒的信也回、沒寫不寄、信箱不在記 `reply_error` 不算 kernel 的錯、接手時不寄第二封、寄信的人不在了撤回沒人拿的回信、別人的信不碰）；H token 回報與額度（`AOS_KERNEL_REPORT` 指進信小格並蓋掉信裡的、回報有寫／只有 prompt＋completion／沒寫／三種寫壞、沒跑的不算、`max_calls` 到頂回 `BudgetMissing`、`max_tokens` 到頂排著的全回錯、`wait` 留著等換窗後跑、`all` 不歸零與改窗歸零、`budget`〔含 `calls`／`tokens`〕與 `used.json` 壞）；I accept（名單裡的才跑、`cat` 祕密檔與換了 `cwd`、自帶 `stdout`、`envs` 的回 `InstUnknown`，環境用 kernel 的 `PATH` 與 key、只疊信裡的 `AOS_*`；`accept` 寫壞＝`CfgBad`）。
   信是測試自己寫的（假裝閘門；測試自己 flock 住 `sender.flock`＝寄信的人還在，沒人鎖＝不在；名字裡 pid 是死的、鎖著的照跑）。
-- llm-send＋kernel＋loop／daemon 一起跑的在 `proto8/tests/test_llm_kernel.py`（含 agent-dan 的 brain.py 經閘門、kernel 跑、假 server 回 usage → served 記到 token）。
+- llm-send＋kernel＋loop／daemon 一起跑的在 `proto8/tests/test_llm_kernel.py`（含 agent-eve 的 brain.py〔11-02 晚前是 agent-dan 的〕經閘門、kernel 跑、假 server 回 usage → served 記到 token）。
 
 ## 已知限制
 

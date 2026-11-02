@@ -1,7 +1,7 @@
 """test_file_tools - 資料夾與檔案的漸進工具：ls、stat、view、json_edit、mkdir、move、copy、trash（原 demo/file-tools，10-24 遷移進 proto8/lib/base），結果一律 JSON。
 
 工具一支一支用 aos-exec 叫；錯照 lib 契約：stderr 一行、stdout 最後一行同一行、退 1（遷移前 stdout 是 {"error": 那行}）。
-agent-pip（tools/ 全部掛 lib/base）用 test_dan 的假 server 照劇本逐層看一個 aos agent 資料夾、改 loop.json。
+agent-pip（tools/ 全部掛 lib/base）用 fake_brain.py 的假 server 照劇本逐層看一個 aos agent 資料夾、改 loop.json。
 json_edit 經 aos-json（proto8/impls/aos-json）寫檔。不連真模型。設計：proto8/thinking/2026-10-24-pi-tools.md、2026-10-24-tool-lib.md。"""
 import json, os, re, shutil, subprocess, tempfile, unittest
 from pathlib import Path
@@ -9,7 +9,7 @@ import own_error  # noqa: E402
 own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
-from test_dan import FakeBrain, call, tool_reply, answer  # noqa: E402
+from fake_brain import FakeBrain, call, tool_reply, answer  # noqa: E402
 
 EXEC = tool("aos-exec")
 TOOLS = ROOT / "lib" / "base"                       # 10-24 遷移前是 demo/file-tools
@@ -32,7 +32,7 @@ class Tools(unittest.TestCase):
         self.tmp = Path(self._t.name)
         self.addCleanup(self._t.cleanup)
         self.ws = self.tmp / "ws"
-        shutil.copytree(ROOT / "demo" / "agent-dan", self.ws / "agent-dan", ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copytree(ROOT / "demo" / "agent-eve", self.ws / "agent-eve", ignore=shutil.ignore_patterns("__pycache__"))
 
     def tool(self, name, args):
         """回 (結束碼, stdout 解開的 JSON 或 None, 錯誤代號或 None)；成功時 stdout 是一份 JSON，錯時最後一行＝stderr 那行。"""
@@ -50,9 +50,9 @@ class Tools(unittest.TestCase):
 
     def test_ls(self):
         _, res, _ = self.tool("ls", {})
-        self.assertEqual(res["items"][0]["name"], "agent-dan")
+        self.assertEqual(res["items"][0]["name"], "agent-eve")
         self.assertEqual(res["items"][0]["aos"], ["_entry", ".env", "tools.json", "loop.json", "fsm.json"])
-        _, res, _ = self.tool("ls", {"path": "agent-dan"})
+        _, res, _ = self.tool("ls", {"path": "agent-eve"})
         items = {i["name"]: i for i in res["items"]}
         self.assertEqual([i["type"] for i in res["items"][:2]], ["dir", "dir"])          # 資料夾在前
         self.assertEqual(items["fsm.json"]["keys"], ["_entry", "start", "states"])
@@ -60,7 +60,7 @@ class Tools(unittest.TestCase):
         self.assertTrue(items["_entry"]["exec"])
         self.assertNotIn(".env", items)
         self.assertEqual(res["counter_hidden"], 1)
-        _, res, _ = self.tool("ls", {"path": "agent-dan", "hidden": True})
+        _, res, _ = self.tool("ls", {"path": "agent-eve", "hidden": True})
         self.assertIn(".env", [i["name"] for i in res["items"]])
 
     def test_ls_pages(self):
@@ -76,17 +76,17 @@ class Tools(unittest.TestCase):
         self.assertEqual(self.tool("ls", {"path": "many", "max_items": 0})[2], "ArgumentsBad")
 
     def test_stat(self):
-        _, res, _ = self.tool("stat", {"path": "agent-dan/fsm.json"})
+        _, res, _ = self.tool("stat", {"path": "agent-eve/fsm.json"})
         self.assertEqual((res["format"], res["top"]), ("json", {"type": "object", "counter_keys": 3}))
-        _, res, _ = self.tool("stat", {"path": "agent-dan/brain.py"})
+        _, res, _ = self.tool("stat", {"path": "agent-eve/brain.py"})
         self.assertEqual((res["format"], res["text"], res["exec"]), ("python", True, False))
-        _, res, _ = self.tool("stat", {"path": "agent-dan/idle"})
+        _, res, _ = self.tool("stat", {"path": "agent-eve/idle"})
         self.assertEqual((res["type"], res["aos"]), ("dir", ["_entry"]))
         # mtime 跟 ls 同一種寫法（UTC、帶 +00:00），10-24 真腦實測前 stat 印本地時間、沒標時區
-        ls_items = {i["name"]: i for i in self.tool("ls", {"path": "agent-dan"})[1]["items"]}
+        ls_items = {i["name"]: i for i in self.tool("ls", {"path": "agent-eve"})[1]["items"]}
         self.assertEqual(res["mtime"], ls_items["idle"]["mtime"])
-        (self.ws / "l").symlink_to("agent-dan/loop.json")
-        self.assertEqual(self.tool("stat", {"path": "l"})[1]["link_to"], "agent-dan/loop.json")
+        (self.ws / "l").symlink_to("agent-eve/loop.json")
+        self.assertEqual(self.tool("stat", {"path": "l"})[1]["link_to"], "agent-eve/loop.json")
         self.assertEqual(self.tool("stat", {"path": "nope"})[2], "FileMissing")
 
     def test_view_json_layers(self):
@@ -101,7 +101,7 @@ class Tools(unittest.TestCase):
         _, res, _ = self.tool("view", {"path": "big.json", "pointer": "/states/s3/next"})
         self.assertEqual(res["value"], "s4")
         self.assertEqual(self.tool("view", {"path": "big.json", "pointer": "/states/zz"})[2], "PointerMissing")
-        self.assertEqual(self.tool("view", {"path": "agent-dan/brain.py", "pointer": "/a"})[2], "FileBad")
+        self.assertEqual(self.tool("view", {"path": "agent-eve/brain.py", "pointer": "/a"})[2], "FileBad")
         _, res, _ = self.tool("view", {"path": "big.json", "start": 1, "end": 1})   # 給行號＝當文字看
         self.assertEqual(res["format"], "text")
 
@@ -119,28 +119,28 @@ class Tools(unittest.TestCase):
         self.assertEqual(self.tool("view", {"path": "m.py", "start": 999})[2], "ArgumentsBad")
 
     def test_json_edit(self):
-        f = self.ws / "agent-dan" / "loop.json"
-        _, res, _ = self.tool("json_edit", {"path": "agent-dan/loop.json", "set": {"/max": 80, "/note/who": "pip"}})
-        self.assertEqual(res, {"path": "agent-dan/loop.json", "counter_set": 2, "counter_del": 0, "top": ["exec", "max", "note"]})
+        f = self.ws / "agent-eve" / "loop.json"
+        _, res, _ = self.tool("json_edit", {"path": "agent-eve/loop.json", "set": {"/max": 80, "/note/who": "pip"}})
+        self.assertEqual(res, {"path": "agent-eve/loop.json", "counter_set": 2, "counter_del": 0, "top": ["exec", "max", "note"]})
         self.assertEqual(json.loads(f.read_text()), {"exec": "fsm.json", "max": 80, "note": {"who": "pip"}})
         before = f.read_text()
-        self.assertEqual(self.tool("json_edit", {"path": "agent-dan/loop.json", "del": ["/note", "/nope"]})[2],
+        self.assertEqual(self.tool("json_edit", {"path": "agent-eve/loop.json", "del": ["/note", "/nope"]})[2],
                          "PointerMissing")
         self.assertEqual(f.read_text(), before)                         # 一個指不到＝都不改
-        self.tool("json_edit", {"path": "agent-dan/loop.json", "del": ["/note"]})
+        self.tool("json_edit", {"path": "agent-eve/loop.json", "del": ["/note"]})
         self.assertEqual(json.loads(f.read_text()), {"exec": "fsm.json", "max": 80})
-        self.assertEqual(self.tool("json_edit", {"path": "agent-dan/brain.py", "set": {"/a": 1}})[2], "FileBad")
-        self.assertEqual(self.tool("json_edit", {"path": "agent-dan/loop.json"})[2], "ArgumentsBad")
-        self.assertEqual(self.tool("json_edit", {"path": "agent-dan/loop.json", "del": [""]})[2], "PointerBad")
+        self.assertEqual(self.tool("json_edit", {"path": "agent-eve/brain.py", "set": {"/a": 1}})[2], "FileBad")
+        self.assertEqual(self.tool("json_edit", {"path": "agent-eve/loop.json"})[2], "ArgumentsBad")
+        self.assertEqual(self.tool("json_edit", {"path": "agent-eve/loop.json", "del": [""]})[2], "PointerBad")
 
     def test_folder_changes(self):
         self.assertEqual(self.tool("mkdir", {"path": "a/b"})[1], {"path": "a/b", "created": True})
         self.assertEqual(self.tool("mkdir", {"path": "a/b"})[1]["created"], False)
-        self.assertEqual(self.tool("mkdir", {"path": "agent-dan/loop.json"})[2], "FileBad")
-        _, res, _ = self.tool("copy", {"from": "agent-dan", "to": "a/agent-x"})
-        self.assertEqual(res["counter_files"], len([p for p in (self.ws / "agent-dan").rglob("*") if p.is_file()]))
-        self.assertEqual(self.tool("copy", {"from": "agent-dan", "to": "a/agent-x"})[2], "FileBad")    # 不蓋
-        self.assertEqual(self.tool("copy", {"from": "agent-dan", "to": "agent-dan/in"})[2], "PathBad")
+        self.assertEqual(self.tool("mkdir", {"path": "agent-eve/loop.json"})[2], "FileBad")
+        _, res, _ = self.tool("copy", {"from": "agent-eve", "to": "a/agent-x"})
+        self.assertEqual(res["counter_files"], len([p for p in (self.ws / "agent-eve").rglob("*") if p.is_file()]))
+        self.assertEqual(self.tool("copy", {"from": "agent-eve", "to": "a/agent-x"})[2], "FileBad")    # 不蓋
+        self.assertEqual(self.tool("copy", {"from": "agent-eve", "to": "agent-eve/in"})[2], "PathBad")
         self.tool("move", {"from": "a/agent-x/system.txt", "to": "a/agent-x/sys/system.txt"})
         self.assertTrue((self.ws / "a/agent-x/sys/system.txt").exists())
         self.assertEqual(self.tool("move", {"from": "a/agent-x/act.py", "to": "a/agent-x/brain.py"})[2], "FileBad")
@@ -148,16 +148,16 @@ class Tools(unittest.TestCase):
         self.assertEqual(sorted(p.name for p in (self.ws / "a").iterdir()), ["agent-x", "b"])     # 沒留暫存
 
     def test_trash_is_recoverable(self):
-        _, res, _ = self.tool("trash", {"path": "agent-dan/system.txt"})
-        self.assertFalse((self.ws / "agent-dan/system.txt").exists())
-        self.assertTrue(res["to"].startswith(".trash/") and res["to"].endswith("/agent-dan/system.txt"), res)
+        _, res, _ = self.tool("trash", {"path": "agent-eve/system.txt"})
+        self.assertFalse((self.ws / "agent-eve/system.txt").exists())
+        self.assertTrue(res["to"].startswith(".trash/") and res["to"].endswith("/agent-eve/system.txt"), res)
         self.assertTrue((self.ws / res["to"]).exists())
         self.assertEqual(self.tool("trash", {"path": res["to"]})[2], "PathBad")          # 垃圾桶裡的不再丟
-        (self.ws / "agent-dan/system.txt").write_text("新的\n")
-        _, res2, _ = self.tool("trash", {"path": "agent-dan/system.txt"})                 # 同一秒再丟也不撞
+        (self.ws / "agent-eve/system.txt").write_text("新的\n")
+        _, res2, _ = self.tool("trash", {"path": "agent-eve/system.txt"})                 # 同一秒再丟也不撞
         self.assertNotEqual(res["to"], res2["to"])
-        self.tool("move", {"from": res["to"], "to": "agent-dan/system.txt"})              # 救回來
-        self.assertTrue((self.ws / "agent-dan/system.txt").read_text().startswith("你是"))
+        self.tool("move", {"from": res["to"], "to": "agent-eve/system.txt"})              # 救回來
+        self.assertTrue((self.ws / "agent-eve/system.txt").read_text().startswith("你是"))
         self.assertEqual(self.tool("trash", {"path": "."})[2], "PathBad")
 
     def test_path_escape_blocked(self):
@@ -165,9 +165,9 @@ class Tools(unittest.TestCase):
         (self.ws / "out").symlink_to(self.tmp)
         cases = [("ls", {"path": ".."}), ("ls", {"path": "out"}), ("stat", {"path": "../secret.txt"}),
                  ("view", {"path": "out/secret.txt"}), ("view", {"path": str(self.tmp / "secret.txt")}),
-                 ("mkdir", {"path": "../x"}), ("move", {"from": "agent-dan", "to": "../x"}),
+                 ("mkdir", {"path": "../x"}), ("move", {"from": "agent-eve", "to": "../x"}),
                  ("move", {"from": "out/secret.txt", "to": "s.txt"}), ("copy", {"from": "out/secret.txt", "to": "s"}),
-                 ("copy", {"from": "agent-dan", "to": "out/x"}), ("trash", {"path": "out/secret.txt"}),
+                 ("copy", {"from": "agent-eve", "to": "out/x"}), ("trash", {"path": "out/secret.txt"}),
                  ("trash", {"path": "../secret.txt"}), ("json_edit", {"path": "out/x.json", "set": {"/a": 1}})]
         for name, a in cases:
             with self.subTest(tool=name, args=a):
@@ -191,20 +191,20 @@ class AgentPipExplores(unittest.TestCase):
         with tempfile.TemporaryDirectory() as t:
             tmp = Path(t)
             ws = tmp / "ws"
-            shutil.copytree(ROOT / "demo" / "agent-dan", ws / "proj" / "agent-dan",
+            shutil.copytree(ROOT / "demo" / "agent-eve", ws / "proj" / "agent-eve",
                             ignore=shutil.ignore_patterns("__pycache__"))
             (ws / "new").mkdir()
             (ws / "new" / "q1.txt").write_text("把 proj 底下那隻 agent 的 loop 次數上限改成 80。\n")
             b = FakeBrain([
                 tool_reply(call("c1", "ls", {"path": "proj"})),
-                tool_reply(call("c2", "view", {"path": "proj/agent-dan/loop.json"})),
-                tool_reply(call("c3", "json_edit", {"path": "proj/agent-dan/loop.json", "set": {"/max": 80}})),
-                answer("proj/agent-dan/loop.json 的 max 改成 80 了。")])
+                tool_reply(call("c2", "view", {"path": "proj/agent-eve/loop.json"})),
+                tool_reply(call("c3", "json_edit", {"path": "proj/agent-eve/loop.json", "set": {"/max": 80}})),
+                answer("proj/agent-eve/loop.json 的 max 改成 80 了。")])
             self.addCleanup(b.close)
             r = subprocess.run([EXEC, "--ws", "ws", PIP], capture_output=True, text=True, cwd=tmp, timeout=120,
                                env=env_with({"AOS_BRAIN_URL": b.url, "AOS_STACK": str(tmp / "stack") + "/"}))
             self.assertEqual(r.returncode, 0, r.stderr)
-            self.assertEqual(json.loads((ws / "proj/agent-dan/loop.json").read_text())["max"], 80)
+            self.assertEqual(json.loads((ws / "proj/agent-eve/loop.json").read_text())["max"], 80)
             h = [json.loads(l) for l in (tmp / "stack" / "history.jsonl").read_text().splitlines()]
             tools = {m["tool_call_id"]: json.loads(m["content"]) for m in h if m["role"] == "tool"}
             self.assertEqual(tools["c1"]["items"][0]["aos"], ["_entry", ".env", "tools.json", "loop.json", "fsm.json"])
