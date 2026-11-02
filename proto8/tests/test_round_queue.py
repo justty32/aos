@@ -393,6 +393,7 @@ class Compact(Base):
         self.assertEqual(len(runs), 1)
         report = json.loads((runs[0] / "report.json").read_text())
         self.assertEqual(report["archive"], "history_archive/" + archives[0].name)
+        self.assertEqual(report["endpoint"], "%s#/endpoint/default" % (self.agent / "parts.json"))   # 整個目標，不是第一個字元
 
     def test_under_max_bytes_does_nothing(self):
         old = big_history(6, 1500)

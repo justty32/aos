@@ -478,7 +478,7 @@ def main():
     new_text = "".join(x + "\n" for x in new_lines)
     after = len(new_text.encode("utf-8"))
     report.update({"run": run_id, "round": rnd, "seconds": round(time.time() - t0, 2),
-                   "endpoint": ep[0],
+                   "endpoint": ep,
                    "settings": {"max_bytes": MAX_BYTES, "seg_kb": SEG_KB, "keep_turns": KEEP_TURNS, "keep_max": KEEP_MAX,
                                 "keep_final_max": KEEP_FINAL_MAX, "keep_line_max": KEEP_LINE_MAX},
                    "before": {"bytes": before, "counter_messages": len(rows)},
