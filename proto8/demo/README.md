@@ -12,9 +12,9 @@ sh proto8/demo/run.sh      # 在 WSL／Linux 跑
 
 入口 `_entry`（預設 `$AOS_ENTRY`）＝`exec aos-loop loop.json`（設定檔是 aos-loop 唯一的位置參數）；`loop.json`＝`{"exec": "fsm.json", "max": 20}`（`exec` 是 aos-exec 的目標；使用者「exec，loop／daemon 的 run 也一起改 exec」）；`fsm.json` 帶 `"_entry": ["aos-fsm", {"$env": "AOS_CF"}]`（`AOS_CF`＝aos-exec 實際跑的那份檔），所以它本身就是 aos-exec 的入口、每次 `aos-exec -- fsm.json`；表一份看完：idle／act 是子資料夾 `idle/`、`act/`（shell），think 是內嵌單子，直接寫在 `exec`：`"exec": {"argv": ["python3", "brain.py"], "stdout": …, "timeout_ms": 120000}`（`python3 brain.py`、stdout 導到 `$AOS_STACK/plan.txt`、逾時 120 秒，aos-fsm 在自己行程內當監工；使用者 10-24「不過exec本來就應該要可以直接放內嵌單子吧」，[thinking 2026-10-24](../thinking/2026-10-24-exec-relative.md#10-24-exec-直接放單子)）。idle 在 `new/` 空時回 10 讓 loop 停。`brain.py` 挑 `new/` 第一題、搬到 `cur/` 認領（Maildir 的 new → cur）、題名寫 `current.txt`、答案印到 stdout。
 
-act 把 `plan.txt` 當題目交給 `act/tools/cathy/`（另一隻完整 agent，同一套範本；P-32、P-33）：在她的小格 `$AOS_STACK/cathy/` 裡備 `ws/new/<題名>`、`AOS_STACK=$sub aos-exec --ws "$sub/ws" tools/cathy`、從 `$sub/ws/out/<題名>` 拿答案寫進 `$AOS_WS/out/`、題目從 `cur/` 搬 `done/`；cathy 失敗（非 0）bob 的 act 說「cathy 失敗」並退 1。cathy 的 act 再經 `act/tools/cathy/act/tools/stamp`（工具，自己的 stack 在 `$AOS_STACK/stamp/`，前面加一行 UTC 時間戳、`runs.txt` 計次）寫她的 out。一次跑完是四層：bob 的 loop／fsm → act → cathy 的 loop／fsm → 她的 act → stamp；`aos-exec --ws <工作區> proto8/demo/agent-bob/act/tools/cathy` 也能單獨跑 cathy。
+act 把 `plan.txt` 當題目交給 `act/tools/cathy/`（另一隻完整 agent，同一套範本；P-32、P-33）：在她的小格 `$AOS_STACK/tools/cathy/` 裡備 `ws/new/<題名>`、`AOS_STACK=$sub aos-exec --ws "$sub/ws" tools/cathy`、從 `$sub/ws/out/<題名>` 拿答案寫進 `$AOS_WS/out/`、題目從 `cur/` 搬 `done/`；cathy 失敗（非 0）bob 的 act 說「cathy 失敗」並退 1。cathy 的 act 再經 `act/tools/cathy/act/tools/stamp`（工具，自己的 stack 在 `$AOS_STACK/tools/stamp/`，前面加一行 UTC 時間戳、`runs.txt` 計次）寫她的 out。一次跑完是四層：bob 的 loop／fsm → act → cathy 的 loop／fsm → 她的 act → stamp；`aos-exec --ws <工作區> proto8/demo/agent-bob/act/tools/cathy` 也能單獨跑 cathy。
 
-stack 樹＝呼叫樹：`.stack/{state.txt,current.txt,plan.txt,trace.jsonl}`、`.stack/cathy/{…,ws/{out,done}/q1.txt,stamp/runs.txt}`（P-38）。
+stack 樹＝呼叫樹：`.stack/{state.txt,current.txt,plan.txt,trace.jsonl}`、`.stack/tools/cathy/{…,ws/{out,done}/q1.txt,tools/stamp/runs.txt}`（P-38）。
 
 ## agent-ann（全內嵌對照）
 
@@ -40,7 +40,7 @@ agent-dan/
   tools/*/_tooldef.json  給模型看的說明（OpenAI function 物件去掉 name；工具名＝tools.json 登記的名字，範本裡＝資料夾名）
 ```
 
-一題的流程：think 把題目接成一則 user、問腦；腦要叫工具，act 就跑工具（`arguments` 從 stdin 進、stdout 整段是結果，小格 `$AOS_STACK/<名>/`）、把結果接回 history、退 0 回 idle；題目還在 `cur/`，所以 think 帶著 history 再問一次；腦不叫工具了，act 才把回答寫進 `out/<題名>`、題目搬 `done/`。trace 是 `idle think act idle think act idle`。對話在 `$AOS_STACK/history.jsonl`（一行一則 OpenAI message，只附加）。
+一題的流程：think 把題目接成一則 user、問腦；腦要叫工具，act 就跑工具（`arguments` 從 stdin 進、stdout 整段是結果，小格 `$AOS_STACK/tools/<名>/`）、把結果接回 history、退 0 回 idle；題目還在 `cur/`，所以 think 帶著 history 再問一次；腦不叫工具了，act 才把回答寫進 `out/<題名>`、題目搬 `done/`。trace 是 `idle think act idle think act idle`。對話在 `$AOS_STACK/history.jsonl`（一行一則 OpenAI message，只附加）。
 
 think、act 兩格的 `exec` 直接寫單子：`{"argv": ["python3", "brain.py"], "timeout_ms": 120000}`（act 同理），aos-fsm 在自己行程內跑、跑的期間 `AOS_CF`＝這份 `fsm.json`、`AOS_CO`＝`/states/think/exec`，不寫死檔名、不必指回自己（使用者「先改成不寫死檔名的寫法」「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」，[thinking 2026-10-24](../thinking/2026-10-24-exec-relative.md#10-24-exec-直接放單子)）。
 
@@ -97,7 +97,7 @@ agent-eve/                主 agent：照抄 agent-dan（brain.py、act.py 只�
       tools/              ls、read、write、edit、bash → lib/base 的捷徑（bash 逾時預設 30 秒、上限 300）
 ```
 
-每次呼叫 pyfix 開一個新小格 `$AOS_STACK/pyfix/runs/<三位數>/`：`ws/`（子 agent 收題、交答案）、`stack/`（它的 history、trace）、`before/`（改之前的備份）；子 agent 要改的程式碼是 `$AOS_WS/<dir>`，絕對路徑寫在 `stack/pyfix_dir.txt`（一行，pyfix 開子 agent 前寫；11-01 起取代環境變數）。子 agent 用 `aos-exec --dotenv-override` 叫，所以模型用它自己 `.env` 的。子 agent 失敗＝`pyfix: AgentFailed …`、退 1，eve 的 act 把那行接成 tool 訊息回給腦、不停（同 agent-dan）；其他代號 `AnswerMissing`、`DirBad`、`ArgumentsBad`、`StackMissing`；子 agent 的 stack 沒有 `pyfix_dir.txt`（或寫的不是資料夾）＝它的 act 停在 `pyfix-agent: DirMissing`（路徑跑出去、edit 對不上這類模型的錯，庫的工具退 1、子 agent 的 act 把那行回給模型、不算失敗）。子 agent 自己的逾時：think 180 秒、act 300 秒（`agent/fsm.json`）、最多 60 次（`agent/loop.json`）；eve 的 act 等它 30 分鐘。
+每次呼叫 pyfix 開一個新小格 `$AOS_STACK/tools/pyfix/runs/<三位數>/`：`ws/`（子 agent 收題、交答案）、`stack/`（它的 history、trace）、`before/`（改之前的備份）；子 agent 要改的程式碼是 `$AOS_WS/<dir>`，絕對路徑寫在 `stack/pyfix_dir.txt`（一行，pyfix 開子 agent 前寫；11-01 起取代環境變數）。子 agent 用 `aos-exec --dotenv-override` 叫，所以模型用它自己 `.env` 的。子 agent 失敗＝`pyfix: AgentFailed …`、退 1，eve 的 act 把那行接成 tool 訊息回給腦、不停（同 agent-dan）；其他代號 `AnswerMissing`、`DirBad`、`ArgumentsBad`、`StackMissing`；子 agent 的 stack 沒有 `pyfix_dir.txt`（或寫的不是資料夾）＝它的 act 停在 `pyfix-agent: DirMissing`（路徑跑出去、edit 對不上這類模型的錯，庫的工具退 1、子 agent 的 act 把那行回給模型、不算失敗）。子 agent 自己的逾時：think 180 秒、act 300 秒（`agent/fsm.json`）、最多 60 次（`agent/loop.json`）；eve 的 act 等它 30 分鐘。
 
 真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-eve`；試驗場 `~/code/try/agent-as-tool/`（`setup_ws.py` 建一個有 bug 的 `proj/`，LiteLLM 沒開時用 `fake_brains.py` 劇本）。沒設 `AOS_BRAIN_URL`＝假腦，eve 沒有 clock 工具、會直接答 `FAKE ANSWER`，不會叫 pyfix。測試 `test_eve.py`。
 
@@ -208,9 +208,9 @@ $AOS_STACK/budgets/<plan_id>/  整棵念頭樹的額度（一個檔＝一個小�
 agent-kai/
   brain.py            組 context：system.txt ＋ 先前對話的目錄（一題一行）＋〔有記憶庫就附幾筆〕＋ 挑出來的舊題（只有問題與結論）＋ 這題的完整訊息
                       挑：上一題、指代詞（剛剛、那個…）再加一題、「第 N 題」、字面重疊最多兩題；整份粗估 ≤ 1500 token（寫死）就全送
-  act.py              同 agent-dan（工具的 stack＝$AOS_STACK/<名>/，P-17）
+  act.py              同 agent-dan（工具的 stack＝$AOS_STACK/tools/<名>/，P-17）
   system.txt          告訴腦它看到的不是全部、不夠就 recall 或重查、回答把關鍵寫完整
-  tools/recall/       op＝search（關鍵字找舊題）／read（展開一題；detail=true 連當時的工具原始輸出）；讀 $AOS_STACK/../history.jsonl（靠 P-17：上一層是 agent 的 stack）
+  tools/recall/       op＝search（關鍵字找舊題）／read（展開一題；detail=true 連當時的工具原始輸出）；讀 $AOS_STACK/../../history.jsonl（靠 P-17：上兩層是 agent 的 stack）
     turns.py          把 history 切成題、照意圖挑（brain.py 也用它）
   tools/read、math、clock → ../../../lib/base/<名>（符號連結）
   （選配）tools/memory → ../../../lib/aos/memory：放了就每題自動 search 記憶庫 3 筆附進 system
@@ -255,7 +255,7 @@ agent-liv/
   tools/clock/                               自己的工具（真資料夾）：庫裡也有 clock，同名自己的贏（示範覆寫）
 ```
 
-brain 照舊從 `tools.json`（`aos-tools ls --json`）組 tools、act 照舊 `aos-tools call <名>`——叫工具那段跟 agent-dan 一樣，tools.json 登記的是 `tools/<名>` 這條捷徑，aos-exec 走進捷徑指到的真資料夾（cwd、`AOS_CD` 是庫的位置），agent 不知道這是庫的（C-52）。跑：`aos-exec --ws <工作區> proto8/demo/agent-liv`（沒設 `AOS_BRAIN_URL`＝假腦：`idle think act idle think act idle(10)`，答 `FAKE ANSWER to: …（ls said: N items）`，小格 `.stack/ls/`）。錯同 agent-dan（`agent-liv: 代號 原因`）；庫的工具出錯、叫了沒有的工具、arguments 不是 JSON 照 agent-pip **回給腦、不停**。測試 `test_lib.py`。
+brain 照舊從 `tools.json`（`aos-tools ls --json`）組 tools、act 照舊 `aos-tools call <名>`——叫工具那段跟 agent-dan 一樣，tools.json 登記的是 `tools/<名>` 這條捷徑，aos-exec 走進捷徑指到的真資料夾（cwd、`AOS_CD` 是庫的位置），agent 不知道這是庫的（C-52）。跑：`aos-exec --ws <工作區> proto8/demo/agent-liv`（沒設 `AOS_BRAIN_URL`＝假腦：`idle think act idle think act idle(10)`，答 `FAKE ANSWER to: …（ls said: N items）`，小格 `.stack/tools/ls/`）。錯同 agent-dan（`agent-liv: 代號 原因`）；庫的工具出錯、叫了沒有的工具、arguments 不是 JSON 照 agent-pip **回給腦、不停**。測試 `test_lib.py`。
 
 ## agent-hal（土法 compact，10-24）
 

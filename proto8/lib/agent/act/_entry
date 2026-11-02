@@ -122,7 +122,7 @@ def run_tool(cid, name, arguments, tools):
         json.loads(arguments)
     except ValueError as e:
         return tool_message(cid, "act: ArgumentsBad %s：%s\n" % (name, e))
-    env = dict(os.environ, AOS_STACK=os.path.join(stack, name) + "/")
+    env = dict(os.environ, AOS_STACK=os.path.join(stack, "tools", name) + "/")
     try:
         r = subprocess.run(["aos-tools", "--file", tools_json, "call", name], input=arguments,
                            stdout=subprocess.PIPE, text=True, env=env)

@@ -277,7 +277,7 @@ class Liv(unittest.TestCase):
             self.assertEqual([m["role"] for m in history], ["user", "assistant", "tool", "assistant"])
             listed = json.loads(history[2]["content"])
             self.assertIn("x.txt", [i["name"] for i in listed["items"]])
-            self.assertTrue((ws / ".stack" / "ls").is_dir())                 # 工具的小格（P-17）
+            self.assertTrue((ws / ".stack" / "tools" / "ls").is_dir())                 # 工具的小格（P-17）
             self.assertEqual(list((ws / "new").iterdir()), [])
             self.assertEqual(sorted(p.name for p in (ws / "done").iterdir()), ["q1.txt"])
 

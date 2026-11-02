@@ -66,7 +66,7 @@ if calls:
         except ValueError as e:
             append({"role": "tool", "tool_call_id": cid, "content": "act: ArgumentsBad %s：%s\n" % (name, e)})
             continue
-        env = dict(os.environ, AOS_STACK=os.path.join(stack, name) + "/")
+        env = dict(os.environ, AOS_STACK=os.path.join(stack, "tools", name) + "/")
         try:
             r = subprocess.run(["aos-tools", "call", name], input=arguments, stdout=subprocess.PIPE,
                                text=True, env=env)      # stderr 不吞：工具自己的錯原樣往上

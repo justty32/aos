@@ -133,7 +133,7 @@ class T(unittest.TestCase):
         self.assertNotIn("今天星期幾？", msgs)                                            # 無關的只在目錄裡
 
     def test_recall_through_act(self):
-        """腦用 recall 看舊題的工具原始輸出：recall 的 stack＝<agent 的 stack>/recall/（P-17），往上一層讀 history.jsonl。"""
+        """腦用 recall 看舊題的工具原始輸出：recall 的 stack＝<agent 的 stack>/tools/recall/（P-17，11-02 進 tools/），往上兩層讀 history.jsonl。"""
         b = self.brain(tool_reply(call("c1", "math", {"expr": "2**40"})), answer("算好了"),
                        answer("嗯"),
                        tool_reply(call("c2", "recall", {"op": "read", "no": 2, "detail": True})), answer("1099511627776"))
@@ -145,10 +145,10 @@ class T(unittest.TestCase):
         self.assertEqual(tool_msg["role"], "tool")
         self.assertIn("〔叫工具 math", tool_msg["content"])
         self.assertIn("1099511627776", tool_msg["content"])
-        self.assertTrue((self.stack / "recall").is_dir())                                 # 工具自己的小格
+        self.assertTrue((self.stack / "tools" / "recall").is_dir())                                 # 工具自己的小格
 
     def test_recall_tool_direct(self):
-        """recall 直接叫：AOS_STACK＝<某個 stack>/recall/（資料夾不必存在），讀的是 <某個 stack>/history.jsonl。"""
+        """recall 直接叫：AOS_STACK＝<某個 stack>/tools/recall/（資料夾不必存在），讀的是 <某個 stack>/history.jsonl。"""
         st = self.tmp / "st"
         st.mkdir()
         h = st / "history.jsonl"
@@ -161,7 +161,7 @@ class T(unittest.TestCase):
             {"role": "user", "content": "還沒答完的題"}]) + "\n")
 
         def recall(args, env=None):
-            return run(str(RECALL), input=json.dumps(args), env=env if env is not None else {"AOS_STACK": str(st / "recall") + "/"})
+            return run(str(RECALL), input=json.dumps(args), env=env if env is not None else {"AOS_STACK": str(st / "tools" / "recall") + "/"})
         r = recall({"op": "search", "query": "docs 讀"})
         self.assertEqual(r.stdout.strip(), "#1 問：讀 docs/a.md → 答：讀完了（用了 read）")
         r = recall({"op": "read", "no": 1})
@@ -172,7 +172,7 @@ class T(unittest.TestCase):
         self.assertIn("沒有找到（共 2 題）", recall({"op": "search", "query": "天氣"}).stdout)
         r = recall({"op": "search"}, env={})
         self.assertEqual((r.returncode, r.stderr.strip()), (1, "recall: HistoryMissing 沒設定 AOS_STACK"))
-        r = recall({"op": "search"}, env={"AOS_STACK": str(self.tmp / "nowhere" / "recall") + "/"})
+        r = recall({"op": "search"}, env={"AOS_STACK": str(self.tmp / "nowhere" / "tools" / "recall") + "/"})
         self.assertEqual((r.returncode, r.stderr.strip()), (1, "recall: HistoryMissing 沒有 %s" % (self.tmp / "nowhere" / "history.jsonl")))
 
     def test_short_history_sent_whole(self):

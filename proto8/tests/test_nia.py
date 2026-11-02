@@ -89,7 +89,7 @@ class Template(unittest.TestCase):
         self.assertEqual(len(answers(self.ws)), 1)
         self.assertRegex(answers(self.ws)[0], r"^FAKE ANSWER to: 現在幾點？（clock said: \d{4}-.*Z）$")
         self.assertEqual(sorted(p.name for p in (self.ws / ".stack").iterdir()),
-                         ["clock", "history.jsonl", "live.jsonl", "queue", "state.json", "state.txt", "trace.jsonl"])   # clock＝工具的小格（P-17）；state.txt＝fsm 的
+                         ["history.jsonl", "live.jsonl", "queue", "state.json", "state.txt", "tools", "trace.jsonl"])   # tools/clock＝工具的小格（P-17；11-02 進 tools/）；state.txt＝fsm 的
         self.assertEqual(sorted(p.name for p in self.ws.iterdir()), [".stack"])           # 工作區不長 new/ out/ 這些
         self.assertEqual((queue_ls(self.ws, "new"), queue_ls(self.ws, "cur")), ([], []))
         self.assertEqual(json.loads((self.ws / ".stack" / "state.json").read_text())["phase"], "done")   # loop 的 state 窗

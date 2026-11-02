@@ -40,7 +40,7 @@ impls/                     基礎層與標準庫（C-74）：aos-exec 把工具�
 5. **逾時**：會跑東西的工具一定有逾時（`timeout_s`，預設與上限寫在 `_tooldef.json`），到時整群先 TERM 再 KILL、算 `CommandFailed`；工具自己被外面 TERM（act 格逾時）時先收掉自己起的那一群再走，不留孤兒（P-36）。
 6. **寫檔**：先寫 `.` 開頭的暫存檔再改名（N-05）、留住原檔權限；幾處一起改的全有或全無。
 7. **上限與漸進展開**：讀最多 2000 行或 50KB、列最多 500 項、JSON 檔最多 4MB；超過就截，並在結果裡說怎麼接著拿（`offset`、`next_offset`、`pointer` 往下一層）。
-8. **stack**：工具的 stack＝呼叫者給的小格 `$AOS_STACK/<名>/`（P-17）；base 層是純函數、不用 stack，要跨呼叫留東西的工具（中層以上）才寫那裡。
+8. **stack**：工具的 stack＝呼叫者給的小格 `$AOS_STACK/tools/<名>/`（P-17；11-02 改進 `tools/`）；base 層是純函數、不用 stack，要跨呼叫留東西的工具（中層以上）才寫那裡。
 9. **自成一格**：一個工具資料夾裡的東西只靠自己，不 `import` 隔壁或上層的檔——搬到哪、被捷徑掛到哪都跑得動（C-61「兩份一起搬也不斷」）。同樣的十幾行開頭（讀 stdin、查工作區、報錯）每個工具各留一份；長到第三份一樣的大段再抽成共用庫（STRUCTURE 膨脹即拆）。
 10. **命名**：工具名＝資料夾名，一個動詞（`read`、`ls`）或「主題_動詞」（`json_read`、`json_edit`，C-54 主題在前）；縮寫照 [abbr.json](../docs/CONCEPTS/abbr.json)；錯誤代號主詞在前。
 
@@ -149,7 +149,7 @@ claude code、codex 這類外部 coding agent 包成跟 aos agent 範本同形�
 
 ## 範例：demo/agent-liv
 
-agent-dan 的複本（錯誤訊息開頭與假腦不同；act 照 agent-pip：工具的錯回給腦、不停），`tools/` 裡七條捷徑掛上面七個，加一個自己的 `clock/`（真資料夾，示範並存）；`_metainfo` 寫這隻 agent 的特性。假腦叫一次 `ls`、拿 `counter_items` 答題，證明捷徑掛進來的工具經 aos-exec 跑得動、小格落在 `$AOS_STACK/ls/`。跑法同 agent-dan：`aos-exec --ws <工作區> proto8/demo/agent-liv`（PATH 放好 impls 三支；設 `AOS_BRAIN_URL` 才用真腦）。
+agent-dan 的複本（錯誤訊息開頭與假腦不同；act 照 agent-pip：工具的錯回給腦、不停），`tools/` 裡七條捷徑掛上面七個，加一個自己的 `clock/`（真資料夾，示範並存）；`_metainfo` 寫這隻 agent 的特性。假腦叫一次 `ls`、拿 `counter_items` 答題，證明捷徑掛進來的工具經 aos-exec 跑得動、小格落在 `$AOS_STACK/tools/ls/`。跑法同 agent-dan：`aos-exec --ws <工作區> proto8/demo/agent-liv`（PATH 放好 impls 三支；設 `AOS_BRAIN_URL` 才用真腦）。
 
 ## 測試
 

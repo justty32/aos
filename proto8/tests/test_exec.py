@@ -338,10 +338,10 @@ class T(unittest.TestCase):
         st = ws / ".stack"
         for f in ("state.txt", "current.txt", "plan.txt", "trace.jsonl"):
             self.assertTrue((st / f).is_file(), f)
-            self.assertTrue((st / "cathy" / f).is_file(), "cathy/" + f)
-        self.assertTrue((st / "cathy/ws/done/q.txt").exists())
-        self.assertTrue((st / "cathy/ws/out/q.txt").exists())
-        self.assertEqual((st / "cathy/stamp/runs.txt").read_text().strip(), "1")
+            self.assertTrue((st / "tools" / "cathy" / f).is_file(), "tools/cathy/" + f)
+        self.assertTrue((st / "tools/cathy/ws/done/q.txt").exists())
+        self.assertTrue((st / "tools/cathy/ws/out/q.txt").exists())
+        self.assertEqual((st / "tools/cathy/tools/stamp/runs.txt").read_text().strip(), "1")
         self.assertFalse((st / "runs.txt").exists())      # 子 stack 分開
         self.assertFalse((st / "ws").exists())
         self.assertEqual(list(Path(BOB).rglob("runs.txt")), [])    # 定義資料夾乾淨
@@ -354,7 +354,7 @@ class T(unittest.TestCase):
         self.assertTrue((ws / "done" / "q.txt").exists())
         self.assertEqual([p.name for p in (ws / "out").iterdir()], ["q.txt"])
         self.assertEqual(sorted(p.name for p in ws.iterdir()), [".stack", "cur", "done", "new", "out"])
-        self.assertTrue((ws / ".stack/cathy/trace.jsonl").exists())
+        self.assertTrue((ws / ".stack/tools/cathy/trace.jsonl").exists())
         self.assertEqual(len((ws / ".stack/trace.jsonl").read_text().splitlines()), 4)
 
     def test_two_questions_substack_reused_not_leaking(self):
@@ -366,7 +366,7 @@ class T(unittest.TestCase):
         a, b = (ws / "out" / "q1.txt").read_text(), (ws / "out" / "q2.txt").read_text()
         self.assertIn("AAA", a); self.assertNotIn("BBB", a)
         self.assertIn("BBB", b); self.assertNotIn("AAA", b)
-        c = ws / ".stack" / "cathy"
+        c = ws / ".stack" / "tools" / "cathy"
         self.assertEqual((c / "state.txt").read_text(), "idle\n")
         self.assertEqual(len((c / "trace.jsonl").read_text().splitlines()), 8)
         self.assertEqual(sorted(p.name for p in (c / "ws" / "done").iterdir()), ["q1.txt", "q2.txt"])
@@ -379,7 +379,7 @@ class T(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("hello", (ws / "out" / "q.txt").read_text())
         self.assertTrue((ws / "done" / "q.txt").exists())
-        self.assertEqual((ws / ".stack" / "stamp" / "runs.txt").read_text().strip(), "1")
+        self.assertEqual((ws / ".stack" / "tools" / "stamp" / "runs.txt").read_text().strip(), "1")
 
     def test_sub_agent_stop_code_not_leaking(self):
         outer = prog(self.tmp, "outer", "exec aos-loop loop.json\n")
@@ -409,8 +409,8 @@ class T(unittest.TestCase):
 
     def test_cathy_failure_stops_bob(self):
         ws = workspace(self.tmp, "ws", "hello")
-        (ws / ".stack" / "cathy").mkdir(parents=True)
-        (ws / ".stack" / "cathy" / "state.txt").write_text("act\n")      # 停在半路、沒有 current.txt
+        (ws / ".stack" / "tools" / "cathy").mkdir(parents=True)
+        (ws / ".stack" / "tools" / "cathy" / "state.txt").write_text("act\n")      # 停在半路、沒有 current.txt
         r = run(EXEC, "--ws", str(ws), BOB)
         self.assertEqual(r.returncode, 1)
         self.assertEqual((ws / ".stack" / "state.txt").read_text(), "act\n")

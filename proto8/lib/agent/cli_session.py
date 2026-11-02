@@ -527,7 +527,7 @@ def attach_main(argv, agent_dir):
     known = sorted(t for t in os.listdir(tools_dir) if os.path.isfile(os.path.join(tools_dir, t, "cli.json")))
     if not names:
         for t in known:
-            cell = Cell(os.path.join(stack, t))
+            cell = Cell(os.path.join(stack, "tools", t))
             state = "畫面開著" if cell.alive() else "畫面沒開"
             if cell.alive() and cell.clients():
                 state += "、有人接著"
@@ -537,7 +537,7 @@ def attach_main(argv, agent_dir):
         die("ArgumentsBad", "一次只接一個工具")
     if names[0] not in known:
         die("ToolUnknown", "%s（有：%s）" % (names[0], ", ".join(known)))
-    cell = Cell(os.path.join(stack, names[0]))
+    cell = Cell(os.path.join(stack, "tools", names[0]))
     note_cell(cell, os.path.realpath(os.path.join(tools_dir, names[0])), ws)
     opened = open_cell(cell)
     if detached:

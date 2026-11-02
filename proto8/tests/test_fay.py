@@ -117,8 +117,8 @@ class Fay(unittest.TestCase):
         return [json.loads(l) for l in self.log.read_text().splitlines()] if self.log.exists() else []
 
     def tool(self, name, args, extra=None):
-        """像 act 那樣叫工具：AOS_STACK＝<stack>/<名>/、arguments 從 stdin 進。"""
-        env = self.env(dict(AOS_WS=str(self.ws), AOS_STACK=str(self.stack / name) + "/", **(extra or {})))
+        """像 act 那樣叫工具：AOS_STACK＝<stack>/tools/<名>/（11-02 進 tools/）、arguments 從 stdin 進。"""
+        env = self.env(dict(AOS_WS=str(self.ws), AOS_STACK=str(self.stack / "tools" / name) + "/", **(extra or {})))
         return subprocess.run([EXEC, "tools/" + name], input=json.dumps(args), capture_output=True, text=True,
                               env=env, cwd=self.agent, timeout=60)
 
@@ -127,7 +127,7 @@ class Fay(unittest.TestCase):
                               capture_output=True, text=True, env=self.env(), timeout=60)
 
     def kill_tmux(self, name):
-        sock = self.stack / name / "tty.sock"
+        sock = self.stack / "tools" / name / "tty.sock"
         subprocess.run(["tmux", "-S", str(sock), "kill-server"], capture_output=True)
 
     def codes(self, stderr):
@@ -141,7 +141,7 @@ class Fay(unittest.TestCase):
         r = subprocess.run([EXEC, "--ws", str(self.ws), str(self.agent)], capture_output=True, text=True,
                            env=self.env(), timeout=60)
         self.assertEqual(r.returncode, 0, r.stderr)
-        sid = (self.stack / "claude" / "session.txt").read_text().strip()
+        sid = (self.stack / "tools" / "claude" / "session.txt").read_text().strip()
         self.assertEqual((self.ws / "out" / "q1.txt").read_text(),
                          "FAKE ANSWER to: 列出檔案（claude said: fake claude[%s]: 列出檔案）\n" % sid[:8])
         (self.ws / "new" / "q2.txt").write_text("再一次")
@@ -159,7 +159,7 @@ class Fay(unittest.TestCase):
     def test_codex_exec_then_resume(self):
         r = self.tool("codex", {"prompt": "第一句"})
         self.assertEqual(r.returncode, 0, r.stderr)
-        thread = (self.stack / "codex" / "session.txt").read_text().strip()
+        thread = (self.stack / "tools" / "codex" / "session.txt").read_text().strip()
         self.assertEqual(r.stdout, "fake codex[%s]: 第一句\n" % thread[:8])
         r = self.tool("codex", {"prompt": "第二句"})
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -175,7 +175,7 @@ class Fay(unittest.TestCase):
         self.assertTrue(r.stderr.startswith("claude: ArgumentsBad "), r.stderr)
         r = self.tool("claude", {"prompt": "boom"})
         self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["CliFailed"]))
-        self.assertFalse((self.stack / "claude" / "session.txt").exists())   # 失敗不記 id，下次重開
+        self.assertFalse((self.stack / "tools" / "claude" / "session.txt").exists())   # 失敗不記 id，下次重開
         if not shutil.which("claude", path=SYS_PATH):                     # 系統裡也沒有 claude 才測得到「找不到」
             (self.bin / "claude").unlink()
             r = self.tool("claude", {"prompt": "hi"})
@@ -206,7 +206,7 @@ class Fay(unittest.TestCase):
         for kind in ("claude", "codex"):
             r = self.tool(kind, {"prompt": "第一句"}, self.transcript_env())
             self.assertEqual(r.returncode, 0, r.stderr)
-            cell = self.stack / kind
+            cell = self.stack / "tools" / kind
             sid = (cell / "session.txt").read_text().strip()
             link = cell / "transcripts" / ("%s-%s.jsonl" % (kind, sid))
             self.assertTrue(link.is_symlink(), sorted(os.listdir(cell)))
@@ -230,7 +230,7 @@ class Fay(unittest.TestCase):
         cs = self.cli_session()
         r = self.tool("claude", {"prompt": "講完就清"}, self.transcript_env())
         self.assertEqual(r.returncode, 0, r.stderr)
-        cell = self.stack / "claude"
+        cell = self.stack / "tools" / "claude"
         sid = (cell / "session.txt").read_text().strip()
         link = cell / "transcripts" / ("claude-%s.jsonl" % sid)
         os.remove(os.readlink(link))
@@ -244,7 +244,7 @@ class Fay(unittest.TestCase):
         """CLI 沒存對話檔（找不到）：照答、不建 symlink，也不建空的 transcripts/。"""
         r = self.tool("claude", {"prompt": "不存檔"}, dict(CLAUDE_CONFIG_DIR=str(self.tmp / "claude-home")))
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertFalse((self.stack / "claude" / "transcripts").exists())
+        self.assertFalse((self.stack / "tools" / "claude" / "transcripts").exists())
 
     # ------------------------------------------------------------ 畫面（tmux）
 
@@ -261,7 +261,7 @@ class Fay(unittest.TestCase):
         """先非互動講一句（有了 session id）→ attach -d 開畫面（--resume 同一個 id）→ 工具改從畫面送字、回答從 hook 拿。"""
         self.addCleanup(self.kill_tmux, "claude")
         self.assertEqual(self.tool("claude", {"prompt": "先講一句"}).returncode, 0)
-        sid = (self.stack / "claude" / "session.txt").read_text().strip()
+        sid = (self.stack / "tools" / "claude" / "session.txt").read_text().strip()
         r = self.attach("-d", "claude")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("開好了", r.stdout)
@@ -271,10 +271,10 @@ class Fay(unittest.TestCase):
         r = self.tool("claude", {"prompt": "畫面上的一句"})
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(r.stdout, "fake live: 畫面上的一句\n")
-        turns = [json.loads(l) for l in (self.stack / "claude" / "turns.jsonl").read_text().splitlines()]
+        turns = [json.loads(l) for l in (self.stack / "tools" / "claude" / "turns.jsonl").read_text().splitlines()]
         self.assertEqual([t["text"] for t in turns], ["fake live: 畫面上的一句"])
         self.assertEqual(set(turns[0]), {"answered_at", "text"})          # 講完的時間（10-25 前叫 at）
-        self.assertFalse((self.stack / "claude" / "busy.txt").exists())
+        self.assertFalse((self.stack / "tools" / "claude" / "busy.txt").exists())
         self.assertEqual(len(self.calls()), 2)                             # 第二句沒有再起一次 claude
         self.assertIn("本來就開著", self.attach("-d", "claude").stdout)
 
@@ -285,7 +285,7 @@ class Fay(unittest.TestCase):
         self.assertEqual(self.attach("-d", "codex").returncode, 0)
         r = self.tool("codex", {"prompt": "你好"})
         self.assertEqual((r.returncode, r.stdout), (0, "fake live: 你好\n"), r.stderr)
-        thread = (self.stack / "codex" / "session.txt").read_text().strip()
+        thread = (self.stack / "tools" / "codex" / "session.txt").read_text().strip()
         self.assertTrue(thread)
         self.kill_tmux("codex")
         r = self.tool("codex", {"prompt": "畫面關了"})
@@ -328,7 +328,7 @@ class Fay(unittest.TestCase):
                                       "有人接著" not in self.attach().stdout))
         r = self.tool("claude", {"prompt": "跳出後"})
         self.assertEqual((r.returncode, r.stdout), (0, "fake live: 跳出後\n"), r.stderr)
-        texts = [json.loads(l)["text"] for l in (self.stack / "claude" / "turns.jsonl").read_text().splitlines()]
+        texts = [json.loads(l)["text"] for l in (self.stack / "tools" / "claude" / "turns.jsonl").read_text().splitlines()]
         self.assertEqual(texts, ["fake live: 人打的一句", "fake live: 跳出後"])
 
     @unittest.skipUnless(HAS_TMUX, "沒有 tmux")
@@ -341,7 +341,7 @@ class Fay(unittest.TestCase):
         self.assertEqual(self.attach("-d", "claude").returncode, 0)
         r = self.tool("claude", {"prompt": "沒人回"})
         self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["ReplyMissing"]))
-        (self.stack / "claude" / "busy.txt").write_text("x\n")
+        (self.stack / "tools" / "claude" / "busy.txt").write_text("x\n")
         r = self.tool("claude", {"prompt": "正在跑"})
         self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["SessionBad"]))
 

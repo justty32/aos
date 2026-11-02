@@ -332,7 +332,7 @@ class AiToolsTest(unittest.TestCase):
         self.assertIn('tool said {"ok": true, "args": {"text": "hi"}}', res["answers"][0]["text"])  # 骨架照實回 args
         stack = Path(self.root) / "agents/dan/ws/.stack"
         self.assertEqual((stack / "log.txt").read_text(), "logged\nlogged\n")   # act 跑兩次（叫工具、交答案）
-        self.assertTrue((stack / "shout").is_dir())                               # 工具有自己的小格
+        self.assertTrue((stack / "tools" / "shout").is_dir())                               # 工具有自己的小格
 
     def test_explain_concepts(self):
         code, res, _ = ai(self.root, "explain")

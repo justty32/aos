@@ -64,7 +64,7 @@ class Act(Base):
         self.assertEqual(r.returncode, 0, r.stderr)
         out = self.lines(r.stdout)
         self.assertEqual([(m["role"], m["tool_call_id"]) for m in out], [("tool", "a"), ("tool", "b")])
-        self.assertEqual(out[0]["content"], "一\n|%s/say/\n" % self.stack)           # 工具的小格＝$AOS_STACK/<名>/
+        self.assertEqual(out[0]["content"], "一\n|%s/tools/say/\n" % self.stack)           # 工具的小格＝$AOS_STACK/tools/<名>/
         self.assertRegex(out[1]["content"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ\n$")
 
     def test_no_tool_calls(self):
@@ -106,14 +106,14 @@ class Act(Base):
         out = [m["content"] for m in self.lines(r.stdout)]
         self.assertTrue(out[0].startswith("act: ToolUnknown nope（能叫的：clock、say）"), out[0])
         self.assertTrue(out[1].startswith("act: ArgumentsBad say："), out[1])
-        self.assertEqual(out[2], "壞了|%s/say/\n(工具 say 結束碼 3)\n" % self.stack)
+        self.assertEqual(out[2], "壞了|%s/tools/say/\n(工具 say 結束碼 3)\n" % self.stack)
 
     def test_pre_tool_10_skips(self):
         self.hook("pre_tool", 'read c; case "$c" in *\\"b\\"*) echo "policy 不准"; exit 10;; esac; exit 0\n')
         r = self.act(assistant(call("a", "say", text="A\n"), call("b", "say", touch="ran_b", text="B\n")))
         self.assertEqual(r.returncode, 0, r.stderr)
         out = self.lines(r.stdout)
-        self.assertEqual(out[0]["content"], "A\n|%s/say/\n" % self.stack)
+        self.assertEqual(out[0]["content"], "A\n|%s/tools/say/\n" % self.stack)
         self.assertEqual(out[1], {"role": "tool", "tool_call_id": "b", "content": "policy 不准\n"})
         self.assertFalse((self.ws / "ran_b").exists())                          # 真的沒跑
 
@@ -130,7 +130,7 @@ class Act(Base):
         self.assertEqual(r.returncode, 0, r.stderr)
         out = self.lines(r.stdout)
         self.assertEqual(out[0], {"role": "tool", "tool_call_id": "a", "content": "註冊檔的 env"})   # 取代，且拿到註冊檔的 env
-        self.assertEqual(out[1]["content"], "B|%s/say/\n" % self.stack)          # stdout 空＝原樣
+        self.assertEqual(out[1]["content"], "B|%s/tools/say/\n" % self.stack)          # stdout 空＝原樣
 
     def test_interrupt(self):
         new = self.stack / "queue" / "new"
@@ -145,7 +145,7 @@ class Act(Base):
         self.assertEqual(r.returncode, 10, r.stderr)
         out = self.lines(r.stdout)
         self.assertEqual([m["tool_call_id"] for m in out], ["a", "b", "c"])
-        self.assertEqual(out[0]["content"], "A|%s/say/\n" % self.stack)
+        self.assertEqual(out[0]["content"], "A|%s/tools/say/\n" % self.stack)
         self.assertEqual(out[1]["content"], "act: Interrupted 有新題（000000000009.x），這個工具沒跑\n")
         self.assertFalse((self.ws / "ran_b").exists())
         os.rmdir(new / "000000000009.x")                                        # new/ 空了＝不問、全跑

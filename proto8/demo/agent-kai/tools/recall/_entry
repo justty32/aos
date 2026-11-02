@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # recall - 查先前的題目：stdin 收 {"op": "search", "query": "…"} 或 {"op": "read", "no": 3, "detail": true}，stdout 印給模型看的文字
-# 讀的是 agent 自己的紀錄 $AOS_STACK/../history.jsonl：靠 P-17（工具的 stack＝<agent 的 stack>/<工具名>/，agent-kai 的 act 這樣給），
-# 所以上一層就是 agent 的 stack。沒設 AOS_STACK、或那份檔不在＝HistoryMissing。
+# 讀的是 agent 自己的紀錄 $AOS_STACK/../../history.jsonl：靠 P-17（工具的 stack＝<agent 的 stack>/tools/<工具名>/，agent-kai 的 act 這樣給；11-02 前是上一層），
+# 所以上兩層就是 agent 的 stack。沒設 AOS_STACK、或那份檔不在＝HistoryMissing。
 # 模型的錯（op 不認得、沒這題）照實回給它、退 0；紀錄本身壞了或沒指才 recall: 代號、退 1。
 import json, os, sys
 
@@ -24,7 +24,7 @@ def die(code, reason):
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("HistoryMissing", "沒設定 AOS_STACK")
-path = os.path.normpath(os.path.join(stack, "..", "history.jsonl"))   # 照字面往上一層（工具自己的 stack 資料夾不必存在）
+path = os.path.normpath(os.path.join(stack, "..", "..", "history.jsonl"))   # 照字面往上兩層（<agent 的 stack>/tools/recall/；11-02 小格進 tools/；工具自己的 stack 資料夾不必存在）
 if not os.path.isfile(path):
     die("HistoryMissing", "沒有 %s" % path)
 try:

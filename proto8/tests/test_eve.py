@@ -121,7 +121,7 @@ class T(unittest.TestCase):
         self.assertIn("--- 實際改動（diff）---\n--- a/calc.py\n+++ b/calc.py\n", result)
         self.assertIn("-    return a - b\n+    return a + b\n", result)
         # 子 agent 的現場：小格 runs/001，裡面它自己的工作區、stack、改之前的備份
-        run1 = self.stack / "pyfix" / "runs" / "001"
+        run1 = self.stack / "tools" / "pyfix" / "runs" / "001"
         self.assertEqual((run1 / "before" / "calc.py").read_text(), BUGGY)
         self.assertEqual(os.listdir(run1 / "ws" / "done"), ["task.txt"])
         self.assertEqual((run1 / "stack" / "pyfix_dir.txt").read_text(), "%s\n" % (self.ws / "proj").resolve())   # 要改的資料夾給子 agent
@@ -151,7 +151,7 @@ class T(unittest.TestCase):
                         [answer("第一件好了"), answer("第二件好了")])
         r = self.eve(b.url)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(sorted(os.listdir(self.stack / "pyfix" / "runs")), ["001", "002"])
+        self.assertEqual(sorted(os.listdir(self.stack / "tools" / "pyfix" / "runs")), ["001", "002"])
         second = b.requests["inner"][1]["messages"]
         self.assertEqual([m["role"] for m in second], ["system", "user"])
         self.assertEqual(second[1]["content"], "第二件")

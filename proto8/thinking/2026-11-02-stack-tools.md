@@ -12,10 +12,32 @@
 
 > .stack底下就是會有一大堆東西，這個避免不了。
 
+補答衝突與方向題（11-02，逐字）：
+
+> aos-mcp後面應該要可以不接東西，不接，就是默認aos-tools.json。那兩題中的1.，可以。2.先不管。
+
+再補一件（11-02，逐字）：
+
+> aos-mcp留下的calls.jsonl，這好像也是固定的。我希望能改一下，改成可以透過aos-mcp的argv來切換是否要留紀錄，默認不留，要留的話可以指定留在哪裡(默認是AOS_STACK的aos-mcp-calls.jsonl)
+
+旗標形狀（11-02，逐字，依序三句）：
+
+> 所以要兩個旗標，比如--enable-log --log-path aos-mcp-logs.jsonl，這樣子。對，還是logs好
+
+> --logs-path
+
+> --enable-logs
+
 ## 決定（11-02，使用者）
 
 - **選 B**：叫別的資料夾程式時給它的小格，從 `$AOS_STACK/<名>/` 改成 **`$AOS_STACK/tools/<名>/`**。選項 A（照舊＋擋名字）不採。
 - 研究員原建議等 C-51「後續想法」追究完再動；使用者選**現在就走 B**（知道要改約 10 處程式、25～30 處條文）。
+- **aos-mcp 不給登記檔＝讀 `./aos-tools.json`**（啟動時的 cwd；不存在＝`ToolMissing`）；給了就照給的。aos-tools 自己沒給 `--file` 時照舊 `./tools.json`（不改），兩邊預設名不同。
+- **衝突 1（daemon 擋名字）：拿掉**（「那兩題中的1.，可以」）。步驟 6 照做。
+- **方向題 1（ask_round 對齊 P-32）：先不管**（「2.先不管」——「兩題」指要使用者答的衝突 1 與方向題 1，第 2 題即方向題 1）。ask_round 只做最小改：小格前綴改進 `tools/`，工作區與 `.stack` 擺法照舊。
+- **方向題 2（eca-turn 的 `claude/`、`codex/`）**：照規劃不動。
+- **aos-mcp 的呼叫紀錄預設不記**；`--enable-logs` 打開，沒給 `--logs-path FILE`＝`<stack>/aos-mcp-logs.jsonl`（stack 照 aos-mcp 原本的順序：`--stack` ＞ `$AOS_STACK` ＞ `$WS/.stack/`），給了就記在 FILE（相對路徑從啟動時的 cwd 算）。
+  - 隊長代定（可翻案）：只給 `--logs-path`、沒給 `--enable-logs`＝`ArgumentsBad`（不偷偷當成打開——KISS「寫什麼就做什麼」；也不默默丟掉使用者給的路徑）。
 
 ## 規劃（fable，照原則定的細節，可翻案）
 

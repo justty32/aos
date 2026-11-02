@@ -140,7 +140,7 @@ class T(unittest.TestCase):
         self.assertEqual([m["role"] for m in second["messages"]].count("tool"), 2)
         self.assertEqual(second["messages"][1:], h[:4])                 # system 不進 history
         self.assertEqual(self.states(), ["idle", "think", "act", "idle", "think", "act", "idle"])
-        self.assertTrue((self.stack / "math").is_dir() and (self.stack / "clock").is_dir())
+        self.assertTrue((self.stack / "tools" / "math").is_dir() and (self.stack / "tools" / "clock").is_dir())
 
     def test_answer_without_tools(self):
         """(b) 不叫工具：一輪就答。"""
