@@ -334,6 +334,12 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         throw Error{code::CfgBad, "adopt 要是 true／false"};
     }
     cwd_ = std::filesystem::current_path().string();
+    // 給子項的 AOS_DAEMON_STACK（11-02，resident-bob 衝突 2、daemon-env 方向題 2，使用者「照建議走」）：stack_ 轉絕對、結尾 /，
+    // 跟 aos-exec 給的 AOS_STACK 同形（經 aos-exec 起的 stack_ 本來就是這樣；直接跑 daemon 時 $AOS_STACK 可能是相對的，子項會 cd 走、要絕對）
+    dstack_ = aos::abspath(stack_);
+    if (dstack_ != "/") {
+        dstack_ += "/";
+    }
     if (a.get<bool>()) {
         adopt();
     }
@@ -583,13 +589,13 @@ void Daemon::reconcile(const Json& want, const Json& want_execs) {
     // 本次執行已自己結束的（ended_，ctl 模式）不起。信箱模式的已在 drop 從 want_ 拿掉——want 就是 want_，這裡已經看不到
     for (auto& [n, spec] : want.items()) {
         if (index_.count(n) == 0 && !spec.is_null() && ended_.count({n, false}) == 0) {
-            add(n, spawn(n, aos::join(aos::join(stack_, "loops"), n), spec, cwd_));   // 11-02：子項的小格在 loops/<名字>/
+            add(n, spawn(n, aos::join(aos::join(stack_, "loops"), n), spec, cwd_, dstack_));   // 11-02：子項的小格在 loops/<名字>/
             flush_table();          // 每起一個表就變了：寫一次（起一大批要好一陣子，讓人看得到進度；10-23 原本每秒一份）
         }
     }
     for (auto& [n, target] : want_execs.items()) {
         if (index_.count(n) == 0 && !target.is_null() && ended_.count({n, true}) == 0) {
-            add(n, spawn_exec(n, aos::join(aos::join(stack_, "loops"), n), target, cwd_));   // 10-30：直接 aos-exec 一次，不包 aos-loop
+            add(n, spawn_exec(n, aos::join(aos::join(stack_, "loops"), n), target, cwd_, dstack_));   // 10-30：直接 aos-exec 一次，不包 aos-loop
             flush_table();
         }
     }

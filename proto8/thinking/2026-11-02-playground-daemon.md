@@ -73,3 +73,4 @@ echo '{"stopped": true}' > .stack/daemon_ctl.json   # 停完記得 rm .stack/dae
 ### 方向題（沒做，待使用者）
 
 - 「把 agents/bob 改成可以掛著的」若是指**一直開著、一題一題等**（像 amy 那樣用 aos-say 丟題、aos-listen 看回答），那是另一種掛法：要一個 loop 讀 queue（eca 那條，`aos-eca-turn`）。這次照「不用改」那半做，只做了射後不理的掛法；要不要再做常駐的，等使用者說。
+  - 常駐版見 [2026-11-02-resident-bob](2026-11-02-resident-bob.md)。

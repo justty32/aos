@@ -9,6 +9,8 @@
 //               row：寫進 loops_state 的那一列
 //               ws（eca 10-30，thinking 2026-10-30-eca 衝突 1、N-28／N-54 補草稿）：子項物件寫了 ws（read_loops 已轉絕對）＝子行程的環境多設 AOS_WS＝它；
 //               沒寫＝照舊繼承 daemon 的環境。loop 型的 ws 不寫進小格的 loop.json（不是 loop 的 key），只進環境
+//               AOS_DAEMON_STACK（11-02，resident-bob 衝突 2、daemon-env 方向題 2）：兩種子項一律設成 daemon 的 stack
+//               （dstack：絕對、結尾 /，daemon 建構時算好），只設這一個
 #pragma once
 
 #include "common/common.hpp"
@@ -42,14 +44,17 @@ struct Child {
 // spec 是物件且有 ws（字串，read_loops 已轉絕對）＝拿掉它再寫 loop.json，子行程設 AOS_WS＝它（eca 10-30）。
 // 小格建不了 MkdirFailed、loop.json 寫不了 WriteFailed、stderr 開不了／fork 失敗 LaunchFailed。
 // aos-exec 自己的錯（PATH 上沒有 aos-loop…）寫在小格的 stderr.txt、子 loop 以 1 結束（phase done、code 1）。
-Child spawn(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd);
+// dstack＝daemon 的 stack（絕對、結尾 /）：子行程設成 AOS_DAEMON_STACK（11-02）。spawn_exec 同。
+Child spawn(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd,
+            const std::string& dstack);
 
 // 起一個 exec 型子項（execs，10-30）。spec＝aos-exec 的目標：字串或 [目標, 參數...]（read_execs 驗過），
 // 或 {"exec": 上面兩種, "ws": 絕對路徑}（子項寫了 ws，read_execs 收成這樣；子行程設 AOS_WS，eca 10-30）；相對路徑從 cwd（daemon 的 cwd）算——
 // 子行程 cd 到 cwd 才叫 aos-exec，所以不轉。小格建不了 MkdirFailed、stderr 開不了／fork 失敗 LaunchFailed；aos-exec 自己的錯寫在小格的
 // stderr.txt、子項以 1 結束（phase done、code 1）。它退了＝done、從表上拿掉、本次執行不再起（同子 loop，11-02）。
 // 11-02 晚：spec 的 exec 是內嵌單子（物件）＝寫成小格的 exec.json {"exec": 單子}（cwd 定成 daemon 的 cwd，pin_cwd），子行程跑 `aos-exec -- 小格/exec.json#/exec`。
-Child spawn_exec(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd);
+Child spawn_exec(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd,
+                 const std::string& dstack);
 
 // 還活著嗎（自己生的：結束了就收屍、記 code／signal）。
 bool alive(Child& c);

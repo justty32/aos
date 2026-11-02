@@ -135,6 +135,7 @@ private:
     Json loops_;                                         // daemon.json 的 loops
     Json execs_ = Json::object();                        // daemon.json 的 execs（10-30；{名字: 目標}，read_execs 收好的）
     std::string cwd_;                                    // 子 loop 的 cwd＝daemon 起來時的 cwd
+    std::string dstack_;                                 // 給子項的 AOS_DAEMON_STACK＝stack_ 轉絕對、結尾 /（11-02 resident-bob 衝突 2）
     std::string lctl_path_;                              // loops_ctl.json（空＝不開）
     std::string lstate_path_;                            // loops_state.json（空＝不開）
     Json lctl_good_ = Json::object();                    // 最後一份好的 loops_ctl（一份都沒讀到過＝{}）

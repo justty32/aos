@@ -3,7 +3,8 @@
 10-30 exec 型子項 execs（thinking 2026-10-30-agent-lifecycle B-12 ②）：直接 aos-exec 一次、不包 aos-loop，loops_state.json 多一張 execs 表。
 10-30 eca 子項的工作區 ws（thinking 2026-10-30-eca 衝突 1）：子項物件寫 ws＝起它時設 AOS_WS，沒寫＝繼承 daemon 的。
 11-02（thinking 2026-11-02-state-window）：daemon 自己的窗慣用名 daemon_ctl.json／daemon_state.json；子項結束（done／stopped）就從
-loops_state 的表上拿掉，結束的 phase／code 改看 daemon 的 log（--enable-logs 時 stdout 一行一個 JSON，ended()）。"""
+loops_state 的表上拿掉，結束的 phase／code 改看 daemon 的 log（--enable-logs 時 stdout 一行一個 JSON，ended()）。
+11-02（thinking 2026-11-02-resident-bob 衝突 2）：子項的環境多 AOS_DAEMON_STACK＝daemon 的 stack（絕對、結尾 /）。"""
 import json, os, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402
@@ -502,6 +503,19 @@ class T(unittest.TestCase):
         r = self.run_d({"max": 1, "execs": {"b": {"exec": "pw", "ws": 3}}})
         self.assertEqual(r.returncode, 1)
         self.assertTrue(r.stderr.startswith("aos-daemon: ") and "ws" in r.stderr, r.stderr)
+
+    # ---- 11-02 子項的 AOS_DAEMON_STACK（thinking 2026-11-02-resident-bob 衝突 2、2026-11-02-daemon-env 方向題 2；N-63 11-02 補）
+
+    def test_children_get_daemon_stack(self):
+        # loop 型（身體）、exec 型子項都看到 AOS_DAEMON_STACK＝daemon 的 stack（絕對、結尾 /）；AOS_DAEMON 開頭的只有這一個。
+        # daemon 自己的環境沒設它（env_of 濾掉 AOS_）；daemon 的 $AOS_STACK 是相對的也轉成絕對（子項會 cd 走）
+        self.prog("pe", 'env | grep "^AOS_DAEMON" > "$AOS_STACK/denv"\n')
+        for st in (str(self.s), "stack"):
+            r = self.run_d({"max": 15, "interval_ms": 100, "loops": {"bob": {"exec": "pe", "max": 1}}, "execs": {"j": "pe"}},
+                           env={"AOS_STACK": st})
+            self.assertEqual((r.returncode, r.stderr), (0, ""))
+            for n in ("bob", "j"):
+                self.assertEqual((self.s / "loops" / n / "denv").read_text(), "AOS_DAEMON_STACK=%s/\n" % self.s, (st, n))
 
 
 if __name__ == "__main__":

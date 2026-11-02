@@ -10,6 +10,8 @@
 // （小格、stderr.txt、setsid、/dev/null、AOS_STACK、cd 到 daemon 的 cwd），只是不寫 loop.json、run_cli 直接拿 {"--", 目標, 參數...}——中間沒有 aos-loop。
 // 10-30 eca（thinking 2026-10-30-eca 衝突 1，使用者「都照建議」；N-55 工作區由呼叫方設，daemon 是呼叫方）：子項寫了 ws＝run_child 多設 AOS_WS；
 // 沒寫＝不碰（繼承 daemon 的）。
+// 11-02（resident-bob 衝突 2、daemon-env 方向題 2，使用者「照建議走」）：兩種子項一律多設 AOS_DAEMON_STACK＝daemon 的 stack（絕對、結尾 /），
+// 兄弟（控制器與 bob）靠它找到共同的 stack；只設這一個（定義資料夾、ws 那兩名不設）。
 #include "child/child.hpp"
 
 #include "aos/files.hpp"
@@ -34,8 +36,9 @@ namespace aos::daemon {
 // 子行程：自成 session、接好三個串流、設 AOS_STACK、cd 到 daemon 的 cwd，呼叫 aos-exec 的 run_cli(argv)。不回來。
 // argv：子 loop＝{"--", 小格/loop.json#/_entry}；exec 型子項＝{"--", 目標, 參數...}（10-30）。fork 之前就備好。
 // ws：空＝AOS_WS 不碰（繼承 daemon 的）；不空＝設成它（eca 10-30）。
+// dstack：daemon 的 stack（絕對、結尾 /），一律設成 AOS_DAEMON_STACK（11-02，resident-bob 衝突 2：兄弟要共用位置；只設這一個）。
 [[noreturn]] static void run_child(const std::string& cell, const std::string& cwd, int err_fd,
-                                   const std::vector<std::string>& argv, const std::string& ws) {
+                                   const std::vector<std::string>& argv, const std::string& ws, const std::string& dstack) {
     setsid();
     int null_fd = open("/dev/null", O_RDWR);
     if (null_fd >= 0) {
@@ -57,6 +60,7 @@ namespace aos::daemon {
     sigprocmask(SIG_UNBLOCK, &set, nullptr);
     int rc = 1;
     setenv("AOS_STACK", (cell + "/").c_str(), 1);
+    setenv("AOS_DAEMON_STACK", dstack.c_str(), 1);
     if (!ws.empty()) {
         setenv("AOS_WS", ws.c_str(), 1);
     }
@@ -82,9 +86,9 @@ static void make_cell(const std::string& name, const std::string& cell) {
     }
 }
 
-// 小格建好之後：開小格的 stderr.txt（附加）、fork、子行程 run_child(argv, ws)。spawn 與 spawn_exec 共用。ws＝null 或絕對路徑（記進 Child）。
+// 小格建好之後：開小格的 stderr.txt（附加）、fork、子行程 run_child(argv, ws, dstack)。spawn 與 spawn_exec 共用。ws＝null 或絕對路徑（記進 Child）。
 static Child launch(const std::string& name, const std::string& cell, const std::string& cwd,
-                    const std::vector<std::string>& argv, const Json& ws) {
+                    const std::vector<std::string>& argv, const Json& ws, const std::string& dstack) {
     std::string ws_s = ws.is_string() ? ws.get<std::string>() : std::string();   // fork 之前備好
     std::string err_path = aos::join(cell, "stderr.txt");
     int err_fd = open(err_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
@@ -99,7 +103,7 @@ static Child launch(const std::string& name, const std::string& cell, const std:
         throw Error{code::LaunchFailed, "起不了子項 " + name + "：fork 失敗（" + std::strerror(e) + "）"};
     }
     if (pid == 0) {
-        run_child(cell, cwd, err_fd, argv, ws_s);
+        run_child(cell, cwd, err_fd, argv, ws_s, dstack);
     }
     close(err_fd);
     Child c;
@@ -121,7 +125,8 @@ static void pin_cwd(Json& inst, const std::string& cwd) {
     }
 }
 
-Child spawn(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd) {
+Child spawn(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd,
+            const std::string& dstack) {
     Json cfg;
     if (spec.is_object()) {
         cfg = spec;
@@ -155,10 +160,11 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
     } catch (const Error& e) {
         throw Error{e.code, "起不了子項 " + name + "：" + e.msg};
     }
-    return launch(name, cell, cwd, {"--", aos::join(cell, "loop.json") + "#/_entry"}, ws);
+    return launch(name, cell, cwd, {"--", aos::join(cell, "loop.json") + "#/_entry"}, ws, dstack);
 }
 
-Child spawn_exec(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd) {
+Child spawn_exec(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd,
+                 const std::string& dstack) {
     // 寫了 ws 的子項，read_execs 收成 {"exec": 目標, "ws": 絕對路徑}（eca 10-30）；沒寫＝目標本身
     const Json& target = spec.is_object() ? spec["exec"] : spec;
     Json ws = spec.is_object() ? spec.value("ws", Json()) : Json();
@@ -175,7 +181,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, const Json& s
         } catch (const Error& e) {
             throw Error{e.code, "起不了子項 " + name + "：" + e.msg};
         }
-        Child c = launch(name, cell, cwd, {"--", aos::join(cell, "exec.json") + "#/exec"}, ws);
+        Child c = launch(name, cell, cwd, {"--", aos::join(cell, "exec.json") + "#/exec"}, ws, dstack);
         c.once = true;
         return c;
     }
@@ -187,7 +193,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, const Json& s
         }
     }
     make_cell(name, cell);
-    Child c = launch(name, cell, cwd, argv, ws);
+    Child c = launch(name, cell, cwd, argv, ws, dstack);
     c.once = true;
     return c;
 }

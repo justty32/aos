@@ -60,7 +60,7 @@ daemon.json＝loop.json 的超集（N-28）：
   11-02 小格改進 `loops/<名字>/` 之後撞不到了，這條檢查與那條錯誤路徑一起拿掉——例如 `loops: {"state.json": …}` 照起、小格是 `$AOS_STACK/loops/state.json/`，跟 `$AOS_STACK/state.json` 不相干。`loops` 與 `execs` 同名照舊擋（下「名字空間」）。
 - **起子 loop**（經 aos-exec，同 bin 版）：小格 `$AOS_STACK/loops/<名字>/`（11-02 改）mkdir（只建 `loops/` 與小格這兩層，`loops/` 有就沿用；`$AOS_STACK` 不在＝開了 state 或 loops_state 窗就 `WriteFailed`〔loops_state 沒寫＝開著〕、兩扇都沒開才 `MkdirFailed`，都退 1——建 stack 只在 aos-exec 做，N-59 第 1 件）；設定補上 `"ctl": "ctl.json"`、`"state": "state.json"`（沒寫才補），
   **一律蓋上 `"_entry": ["aos-loop", {"$env": "AOS_CF"}]`**，相對的 `exec`（字串，或陣列的第一個元素）照 daemon 的 cwd 轉成絕對路徑（子 loop 的 cwd 會是小格），
-  先寫 `.loop.json` 再改名成 `loop.json`；fork 一個子行程：`setsid` 自成 session、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`、`AOS_STACK=小格/`、
+  先寫 `.loop.json` 再改名成 `loop.json`；fork 一個子行程：`setsid` 自成 session、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`、`AOS_STACK=小格/`、`AOS_DAEMON_STACK=daemon 的 stack`（11-02，見下「子項的 AOS_DAEMON_STACK」）、
   解開三個訊號、cd 到 daemon 的 cwd，呼叫 aos-exec 的 `run_cli({"--", "小格/loop.json#/_entry"})`——它 cd 進小格、讀小格的 `.env`（若有）、
   設好 `AOS_CF`＝小格的 loop.json，再 **exec 成 PATH 上的 aos-loop**（pid 不變；指到 `#/_entry` 不受 `$AOS_ENTRY` 影響）。
   所以 **PATH 上要有 aos-loop 和 aos-exec**（`_entry` 的 `aos-loop` 照 PATH 找；子項裡要叫的 aos-exec 也是）；沒有＝子 loop 以 1 結束、原因寫在小格的 `stderr.txt`。
@@ -114,7 +114,7 @@ daemon.json＝loop.json 的超集（N-28）：
 ```
 
 - **寫法**：形狀同 `loops`——`{名字: 目標}` 或 `{名字: {"exec": 目標}}`（物件只看 `exec`，其他 key 忽略——**唯一的例外是 `ws`**，10-30 eca，見下「子項的工作區 ws」）；目標＝aos-exec 的目標（字串或 `[目標, 參數...]`，非空字串陣列），11-02 晚（使用者「6.要」）起**也收 `{"exec": 內嵌單子}`**（daemon.json 的 `execs`、loops_ctl 的 `execs`／`execs_added`、信的 `execs_added`）：daemon 把它寫成小格的 `exec.json`＝`{"exec": 單子}`（單子沒寫 `cwd`＝補上 daemon 的 cwd、相對的接在 daemon 的 cwd 後面；單子裡相對的 `$ref` 已照它來自的檔轉成絕對），子行程 `aos-exec -- 小格/exec.json#/exec` 跑一次——`AOS_CF`＝小格的 `exec.json`、`AOS_CO`＝`/exec`（同 loop 型的單子搬進小格 `loop.json`；代定）；單子沒寫 stdin／stdout＝照舊 `/dev/null`、stderr 是小格的 `stderr.txt`，寫了就照它。直接寫單子（`{名字: {"argv": …}}`）不收（物件一律當 `{"exec": …}` 讀）。名字規則、指示詞（`$ref` 拆檔、每層的起點）同 `loops`（`read_execs` 先走 `read_loops`）。
-- **怎麼起**（`spawn_exec`）：小格 `$AOS_STACK/loops/<名字>/`（11-02 改；只建 `loops/` 與小格兩層）、`AOS_STACK`＝小格/、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`、`setsid` 自成群組、cd 到 daemon 的 cwd——跟起子 loop 一樣，**只是不包 aos-loop、不寫 `loop.json`、不補 `ctl`／`state`**：子行程直接 `run_cli({"--", 目標, 參數...})`（aos-exec），所以表上的 pid 就是那支程式；相對路徑從 daemon 的 cwd 算（不轉絕對，子行程本來就在那裡叫）。
+- **怎麼起**（`spawn_exec`）：小格 `$AOS_STACK/loops/<名字>/`（11-02 改；只建 `loops/` 與小格兩層）、`AOS_STACK`＝小格/、`AOS_DAEMON_STACK`＝daemon 的 stack（11-02，同子 loop）、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`、`setsid` 自成群組、cd 到 daemon 的 cwd——跟起子 loop 一樣，**只是不包 aos-loop、不寫 `loop.json`、不補 `ctl`／`state`**：子行程直接 `run_cli({"--", 目標, 參數...})`（aos-exec），所以表上的 pid 就是那支程式；相對路徑從 daemon 的 cwd 算（不轉絕對，子行程本來就在那裡叫）。
 - **退了**＝`phase: done`、記 `code`／`signal`（log 那一行），**不重起**；11-02 起從 `execs` 表上拿掉、本次執行不再起（跟 loop 型同一條規則；原本「列留著，直到名單拿掉」＝方向題 2，11-02 使用者改）。要再跑一次＝loops_ctl 從名單拿掉（daemon 看過一圈）再放回，或再寄一封 `execs_added`。
 - **收**：同子 loop——名單少了它或 daemon 收工＝SIGTERM（直接給那支程式，少一跳）、`stopping`，滿 10 秒還在就 SIGKILL 整群（連底下自成一群的）；收掉的標 `stopped`。
 - **名字空間**：`execs` 與 `loops` 共用（小格同一個資料夾）。daemon.json 兩邊同名＝`CfgBad` 退 1；loops_ctl 合出來同名＝整份不採用（`ctl_warning`）；信套完（疊上 loops_ctl 之後）同名＝壞信（`mailbox_warning`）。跟自己的窗同名不擋（11-02 拿掉，同 `loops`）。
@@ -138,6 +138,14 @@ daemon.json＝loop.json 的超集（N-28）：
 - **改了 ws**＝子項設定變了，照現有規則（N-54「名單上已有的名字寫進 `loops_added`＝設定換成這份，已在跑的不重起」）：已在跑的不重起、環境不變；下一次起它（它結束後：ctl 模式從名單拿掉再放回、信箱模式再寄一封；或 daemon 重起）才用新的。
 - **狀態**：`loops_state.json` 的列（`loops`、`execs` 兩張表）與 log 那兩行，起它時給了 `ws` 就多一欄 `"ws": 絕對路徑`（**起的那一刻的值**，名單後來改了也不變）；沒給**不寫這欄**（列的形狀跟 10-30 前一樣）。`adopt` 接回時照舊列的 `ws` 留著（10-30 前的列沒有＝不寫）。
 - **跟「物件裡其他 key 忽略」**（agent-lifecycle 實作時代定 D-2）：`execs` 的物件原本只看 `exec`、其他 key 忽略，`ws` 是第一個例外；`loops` 的物件原本是「loop key 以外原樣交給子 loop」，`ws` 也是例外（daemon 拿走、不交）。
+- **`AOS_DAEMON_STACK` 不受 `ws` 影響**：寫不寫 `ws`，子項看到的 `AOS_DAEMON_STACK` 都是 daemon 的 stack（下一段）。
+
+### 子項的 AOS_DAEMON_STACK（11-02，[thinking 11-02 resident-bob](../../thinking/2026-11-02-resident-bob.md#衝突與方向題的裁定11-02-晚使用者) 衝突 2、[daemon-env](../../thinking/2026-11-02-daemon-env.md#方向題-2要不要現在就讓-daemon-把這些變數設給子項) 方向題 2）
+
+使用者 11-02 對常駐 bob 的衝突與方向題回「照建議走」：daemon 起子項（loop 型、exec 型都算）時，子行程的環境多設 **`AOS_DAEMON_STACK`＝daemon 自己的 stack**，**只設這一個**（不設「定義資料夾」「daemon 的 ws」那兩名，daemon-env 使用者「那就不用定這三個名字了」）。用處：兄弟（常駐 bob 的控制器與 bob）沒有父子交代，靠共同的上一代告訴他們 stack 在哪——控制器找 bob 的小格 `loops/bob/`、讀 `loops_state.json`、叫 `aos-daemon-ctl`（它本來就認 `$AOS_DAEMON_STACK`，子項裡不用另給 `--daemon-stack`）。條文在 [N-63 的 11-02 補、N-64 ④](../../docs/NORMS/10-基礎設施-定義與工作區.md)。
+
+- **值**：daemon 的 `$AOS_STACK` 轉成絕對路徑（`abspath`）、結尾補 `/`——跟 aos-exec 給的 `AOS_STACK` 同形（頂層代定）。經 aos-exec 起的 daemon 本來就是這樣；直接跑 daemon 時 `$AOS_STACK` 可以是相對的，子項會 cd 走（aos-exec 進資料夾），所以 daemon 建構時就轉好（`dstack_`）。
+- **一律設**：daemon 自己的環境裡原本有沒有 `AOS_DAEMON_STACK` 都蓋過去（daemon 自己不讀它）；跟 `AOS_STACK` 同一處（setsid 之後、叫 aos-exec 之前）。子 loop 每次叫身體時環境照傳，身體看到的也是它；子項再往下起的照 Linux 預設繼承（N-63 ③）。
 
 ### loops_ctl 只寫變動（N-54）
 
@@ -228,8 +236,8 @@ echo '{"loops_removed": ["bob"]}' | aos-post send --reply-to 我的信箱 "$AOS_
 | 檔 | 做什麼 |
 |---|---|
 | `src/common/common.hpp` | `using`、代號（全沿用 aos-loop 的） |
-| `src/child/child.hpp`、`child.cpp` | 10-30 晚 `ws`：`spawn` 從設定拿掉 `ws`、`spawn_exec` 認 `{"exec", "ws"}`，`launch` 記進 `Child::ws`、`run_child` 設 `AOS_WS`；`row` 有才寫 `ws`。10-30 起 `spawn_exec`（exec 型子項：小格、`launch` 同下，不寫 loop.json、`run_cli({"--", 目標, 參數...})`；`Child::once`）。一支子 loop：`spawn`（小格、loop.json（補 ctl／state、蓋 `_entry`、相對 exec 轉絕對；exec 是單子＝補／接 `cwd`）、fork＋子行程 `run_child` 呼叫 aos-exec 的 `run_cli`）、`alive`、`row` |
-| `src/daemon/daemon.hpp`、`daemon.cpp` | 10-30 晚 `fix_ws`（`read_loops` 解 `ws`、驗、轉絕對；`read_execs` 有 `ws` 收成 `{"exec", "ws"}`）、`adopt` 照留列上的 `ws`。10-30：`read_execs`（`execs` 每項收成目標）、`merge_want`（期望表的一半，loops、execs 共用）、`check_apart`（兩邊同名）、`reconcile` 收兩份期望表、`adopt` 接兩張表。`Daemon`（`aos::loop::Loop` 的子類別）：`read_loops`（`loops` 的指示詞：本身、每個子項各從它來自的檔算；子項 `exec` 是單子＝只換一層、`abs_refs` 把相對 `$ref` 轉絕對）；建構子（含 `loops_ctl`／`loops_state` 的路徑）、`adopt`（讀 loops_state）、`tend`（期望表＝loops_ctl＋增減；ctl stopped／paused 不調表）、`term`／`settle`（收子項不等：送 SIGTERM、之後每次看一眼、滿 10 秒 SIGKILL，連 `leaders_below` 掃到的、子 loop 底下自成一群的單子）、`finish`（收全部、等的時候退一批寫一次 loops_state，標 stopped、剛死的標 done；11-02 前每秒 beat）、`drop`／`log_child`／`flush_table`（11-02：子項結束印 log、從表上拿掉、done 的本次不再起〔ctl 模式 `ended_`、信箱模式從 `want_` 拿掉〕；起來也印一行；表變了寫 loops_state）、表＝串列＋名字的雜湊表、`check_ctl`（ctl.json 的 `loops*` 不採用、過渡期進 `ctl_warning`）；名字不能帶 `/`、`#`、不能 `.` 開頭（`read_loops`）；`taken_names`、`check_names`（跟自己的窗撞名）11-02 拿掉 |
+| `src/child/child.hpp`、`child.cpp` | 11-02：`spawn`／`spawn_exec`／`launch` 多收 `dstack`，`run_child` 設 `AOS_DAEMON_STACK`（兩種子項都設）。10-30 晚 `ws`：`spawn` 從設定拿掉 `ws`、`spawn_exec` 認 `{"exec", "ws"}`，`launch` 記進 `Child::ws`、`run_child` 設 `AOS_WS`；`row` 有才寫 `ws`。10-30 起 `spawn_exec`（exec 型子項：小格、`launch` 同下，不寫 loop.json、`run_cli({"--", 目標, 參數...})`；`Child::once`）。一支子 loop：`spawn`（小格、loop.json（補 ctl／state、蓋 `_entry`、相對 exec 轉絕對；exec 是單子＝補／接 `cwd`）、fork＋子行程 `run_child` 呼叫 aos-exec 的 `run_cli`）、`alive`、`row` |
+| `src/daemon/daemon.hpp`、`daemon.cpp` | 11-02：建構子算 `dstack_`（`stack_` 轉絕對、結尾 `/`），起子項時傳給 `spawn`／`spawn_exec`。10-30 晚 `fix_ws`（`read_loops` 解 `ws`、驗、轉絕對；`read_execs` 有 `ws` 收成 `{"exec", "ws"}`）、`adopt` 照留列上的 `ws`。10-30：`read_execs`（`execs` 每項收成目標）、`merge_want`（期望表的一半，loops、execs 共用）、`check_apart`（兩邊同名）、`reconcile` 收兩份期望表、`adopt` 接兩張表。`Daemon`（`aos::loop::Loop` 的子類別）：`read_loops`（`loops` 的指示詞：本身、每個子項各從它來自的檔算；子項 `exec` 是單子＝只換一層、`abs_refs` 把相對 `$ref` 轉絕對）；建構子（含 `loops_ctl`／`loops_state` 的路徑）、`adopt`（讀 loops_state）、`tend`（期望表＝loops_ctl＋增減；ctl stopped／paused 不調表）、`term`／`settle`（收子項不等：送 SIGTERM、之後每次看一眼、滿 10 秒 SIGKILL，連 `leaders_below` 掃到的、子 loop 底下自成一群的單子）、`finish`（收全部、等的時候退一批寫一次 loops_state，標 stopped、剛死的標 done；11-02 前每秒 beat）、`drop`／`log_child`／`flush_table`（11-02：子項結束印 log、從表上拿掉、done 的本次不再起〔ctl 模式 `ended_`、信箱模式從 `want_` 拿掉〕；起來也印一行；表變了寫 loops_state）、表＝串列＋名字的雜湊表、`check_ctl`（ctl.json 的 `loops*` 不採用、過渡期進 `ctl_warning`）；名字不能帶 `/`、`#`、不能 `.` 開頭（`read_loops`）；`taken_names`、`check_names`（跟自己的窗撞名）11-02 拿掉 |
 | `src/daemon/windows.cpp` | 管轄那一對窗（10-29）：`read_loops_ctl`（每圈讀 loops_ctl.json，同 read_ctl 的不採用規則）、`check_lists`（`loops`／`loops_added`／`loops_removed`／`execs`〔11-02 晚〕／`execs_added`／`execs_removed`）、`write_more`（loops_state.json：`ctl_seq`、`ctl_warning`、`mailbox_warning`、`loops`、`execs`、pid 那三欄、`updated_at`；11-02 有變才寫、kind 與 recorded_at 拿掉）、`write_parts`（切檔：`{"$ref": [分檔, …]}`）、`clean_parts` |
 | `src/daemon/mailbox.cpp` | 信箱（10-29；11-02 晚 `loops_ctl_mailbox`、跟 loops_ctl 共存）：`open_mailbox`（建四格、底多接回的、記下 `cur/` 的殘骸）、`take_letters`（認領、`check` 驗信封、逐封套進底、壞信記 `mailbox_warning`）、`apply_letter`（驗 body：`check_lists`；疊上 loops_ctl 之後同名＝壞信）、`done_letters`（回 `applied`、收信）；連 aos-post 的庫 |
 | `src/main.cpp` | 命令列：`block_signals` → `loop_cli` → `Daemon` → `serve`；出錯印「aos-daemon: 代號 原因」 |
@@ -258,7 +266,7 @@ echo '{"loops_removed": ["bob"]}' | aos-post send --reply-to 我的信箱 "$AOS_
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-- `test_cli`（`tests/test_cli.py`，71 案、unittest，約 95 秒；11-02 晚起 log 預設不印，`run_d`／`start` 一律帶 `--enable-logs`）：11-02 起子項結束後不留在 loops_state 上，各案結束的 phase／code 改看 daemon 的 log（stdout；`ended`、`upped`、`logs`）；
+- `test_cli`（`tests/test_cli.py`，72 案、unittest，約 95 秒；11-02 晚起 log 預設不印，`run_d`／`start` 一律帶 `--enable-logs`）：11-02 起子項結束後不留在 loops_state 上，各案結束的 phase／code 改看 daemon 的 log（stdout；`ended`、`upped`、`logs`）；
   照 `proto8/tests/test_daemon.py` 逐案抄的 15 案（loop.json 直接丟給 daemon、要 AOS_STACK、loops 壞、小格與窗、
   不自動重起、子項 stderr 在小格、ctl 增減、SIGTERM 收子項 143、旗標蓋過設定、exec 陣列與設定檔規則、子 loop 經 aos-exec 起、字串子項是 aos-exec 的目標、
   收工時剛死的子項標 done、收掉的標 stopped、adopt、`adopt: false`），加錯誤代號、子 loop 的 state 是自己的 pid；抄 bin 10-22 的 3 案（daemon 重開照名單起停機期間死掉的子項、子項跟窗同名〔11-02 起改驗照起、窗照寫；原本驗起來時退 1、`--state` 旗標也算〕、ctl 撞名不採用）；
@@ -277,6 +285,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
   改了 `ws` 不重起（列上仍是起它時的）；`ws` 型別錯＝壞信；重起 adopt 列上的 `ws` 照留。（`proto8/tests/test_daemon.py` 另有 4 案：exec 型、loop 型、沒寫＝繼承、相對路徑＋型別錯。）
   L 段 5 案（11-02）：沒給 `--enable-logs` 沒輸出、沒身體的 daemon 不印每圈行、有身體的每次一行；log 帶 `ws`；ctl 模式 done 的子項本次不再起、名單拿掉一圈再放回才起；信箱模式 done 的子項同名再寄＝重新起；stdout 是關掉的管子照跑。
   M 段 7 案（11-02 晚）：信箱與 loops_ctl 共存（信改底、loops_ctl 疊上去、拿掉 loops_ctl 的增減回到底、疊上去之後同名＝壞信、整份 loops 蓋過底）、共存時底來的 done 子項同名再寄＝重新起而 loops_ctl 疊的不重起、loops_ctl 的整份 `execs`（取代底、壞了不採用、跟 loops 同名不採用）、`execs` 收內嵌單子（daemon.json、loops_ctl、信三個來源；`AOS_CF`＝小格的 exec.json、`AOS_CO`、cwd、`$ref`、`stdout` 照單子、結束碼）、窗全寫 null＝什麼都不寫、`-- 參數`接在 daemon 自己的 exec（子項不受影響；沒 exec＝`ArgumentsBad`；設定檔後面不是 `--`＝`ArgumentsBad`）、有身體的 daemon running ⇄ waiting 時 state 不動。
+  N 段 1 案（11-02，resident-bob 衝突 2）：loop 型（身體）、exec 型子項看到的 `AOS_DAEMON` 開頭變數只有 `AOS_DAEMON_STACK`＝daemon 的 stack（絕對、結尾 `/`），daemon 的 `$AOS_STACK` 給相對的也一樣（`proto8/tests/test_daemon.py` 同一案）。
   前面各段讀名單、改名單的地方 10-29 起改讀 `loops_state.json`、改寫 `loops_ctl.json`。
   PATH 放 impls 的 aos-exec、aos-loop 兩支的 `bin/`（子 loop 要 exec 成 PATH 上的 aos-loop）。
 - `test_demo`（`tests/test_demo.py`）：`proto8/demo/daemon`、`daemon-2`（信箱，10-29；11-02 晚 `loops_ctl_mailbox`）、`daemon-3`（同一支 tick 用 `max: 1` 的 loop 與 `execs` 各掛一次、看兩張表，10-30）在 impls 線（PATH 只放 impls 四支的 `bin/`）跑，看結束碼 0、stderr 空、答案寫出來（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，沒有 bin 線可比）；11-02 起結束的子項看 daemon 的 log（`ended`）、收工後 loops_state 的表是空的。

@@ -9,7 +9,7 @@
 ctl.json／state.json 只管 loop 面向（H 段）；信箱 loops_ctl_mailbox（I 段，實作步驟 5；11-02 晚原 loops_mailbox，M 段跟 loops_ctl 共存）；exec 型子項 execs（J 段）；子項的工作區 ws（K 段，10-30 eca）。差別只有：PATH 放 impls 的 aos-exec、aos-loop 兩支的 bin/（子 loop 經 aos-exec
 exec 成 PATH 上的 aos-loop，10-21 傍晚起同 bin 版）、usage 一行多了代號（「aos-daemon: ArgumentsBad usage: …」）、
 自己的錯多驗代號（E 段）。11-02（L 段）：log 印到 stdout（11-02 晚改預設不印、--enable-logs 才印；這裡 run_d／start 一律帶 --enable-logs），子項結束後不留名單（結束的 phase／code 看 log 那行：ended）、
-兩扇窗有變才寫（心跳拿掉）。
+兩扇窗有變才寫（心跳拿掉）。N 段（11-02）：子項的環境多 AOS_DAEMON_STACK＝daemon 的 stack（resident-bob 衝突 2）。
 """
 import ctypes, datetime, json, os, re, shutil, struct, signal, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
@@ -1442,6 +1442,19 @@ class T(unittest.TestCase):
         self.ctl({"stopped": True})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
+
+    # ───── N. 11-02 子項的 AOS_DAEMON_STACK（thinking 2026-11-02-resident-bob 衝突 2、2026-11-02-daemon-env 方向題 2）─────
+
+    def test_children_get_daemon_stack(self):
+        # loop 型（身體）、exec 型子項都看到 AOS_DAEMON_STACK＝daemon 的 stack（絕對、結尾 /）；AOS_DAEMON 開頭的只有這一個。
+        # daemon 自己的環境沒設它（env_of 濾掉 AOS_）；daemon 的 $AOS_STACK 是相對的也轉成絕對（子項會 cd 走）
+        self.prog("pe", 'env | grep "^AOS_DAEMON" > "$AOS_STACK/denv"\n')
+        for st in (str(self.s), "stack"):
+            r = self.run_d({"max": 15, "interval_ms": 100, "loops": {"bob": {"exec": "pe", "max": 1}}, "execs": {"j": "pe"}},
+                           env={"AOS_STACK": st})
+            self.assertEqual((r.returncode, r.stderr), (0, ""))
+            for n in ("bob", "j"):
+                self.assertEqual((self.s / "loops" / n / "denv").read_text(), "AOS_DAEMON_STACK=%s/\n" % self.s, (st, n))
 
 
 if __name__ == "__main__":
