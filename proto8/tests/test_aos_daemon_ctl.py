@@ -93,12 +93,12 @@ class T(unittest.TestCase):
         x = until(lambda: self.tables()["execs"].get("job", {}).get("phase") == "done" and self.tables())
         self.assertTrue(x)
         self.assertEqual((x["loops"], x["execs"]["job"]["code"]), ({}, 3))
-        self.assertFalse((self.s / "job" / "loop.json").exists())
+        self.assertFalse((self.s / "loops" / "job" / "loop.json").exists())
         r = self.ctl("ls")
         self.assertEqual(r.stdout, "job\texec\tdone\t%d\t3\t-\n" % x["execs"]["job"]["pid"])   # 最後一欄 ws（沒給＝-，10-30 eca）
         self.assertEqual(self.ctl("rm", "job").returncode, 0)
         self.assertTrue(until(lambda: self.tables()["execs"] == {}))
-        self.assertEqual((self.s / "job" / "runs").read_text().count("\n"), 1)
+        self.assertEqual((self.s / "loops" / "job" / "runs").read_text().count("\n"), 1)
 
     def test_add_loop_runs_its_loop_json(self):
         # 有 loop.json＝loop 型：子 loop 直接跑 XXX 的 loop.json（相對 exec 照 XXX 轉絕對、單子指回 XXX/loop.json#/exec＝cwd 是 XXX）；--name 改名
@@ -112,10 +112,10 @@ class T(unittest.TestCase):
                   and self.tables())
         self.assertTrue(x, self.tables())
         self.assertEqual(({n: r["code"] for n, r in x["loops"].items()}, x["execs"]), ({"ag": 0, "two": 0}, {}))
-        self.assertEqual((self.s / "ag" / "runs").read_text(), "x\nx\n")
-        cell = json.loads((self.s / "ag" / "loop.json").read_text())
+        self.assertEqual((self.s / "loops" / "ag" / "runs").read_text(), "x\nx\n")
+        cell = json.loads((self.s / "loops" / "ag" / "loop.json").read_text())
         self.assertEqual((cell["exec"], cell["max"], cell["_entry"][0]), (os.path.realpath(d) + "/loop.json#/b", 2, "aos-loop"))
-        self.assertEqual((self.s / "two" / "pwd").read_text().strip(), os.path.realpath(d2))
+        self.assertEqual((self.s / "loops" / "two" / "pwd").read_text().strip(), os.path.realpath(d2))
 
     def test_kind_max1_and_flag_over_env(self):
         # --kind max1＝{"exec": XXX, "max": 1} 的 loop（使用者的底線）；--daemon 蓋過 AOS_DAEMON
@@ -124,8 +124,8 @@ class T(unittest.TestCase):
         r = self.ctl("--daemon", str(self.s), "add", "--kind", "max1", "job", env={"AOS_DAEMON": str(self.t / "nowhere")})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertTrue(until(lambda: self.tables()["loops"].get("job", {}).get("phase") == "done"))
-        self.assertEqual(json.loads((self.s / "job" / "loop.json").read_text())["exec"], os.path.realpath(self.t / "job"))
-        self.assertEqual((self.s / "job" / "runs").read_text(), "x\n")
+        self.assertEqual(json.loads((self.s / "loops" / "job" / "loop.json").read_text())["exec"], os.path.realpath(self.t / "job"))
+        self.assertEqual((self.s / "loops" / "job" / "runs").read_text(), "x\n")
 
 
     # ---- 10-30 eca 第 2 步：--ws（thinking 2026-10-30-eca 衝突 1、3）
@@ -150,7 +150,7 @@ class T(unittest.TestCase):
         self.assertTrue(x, self.tables())
         self.assertEqual((x["execs"]["job"]["ws"], x["loops"]["ag"]["ws"], x["loops"]["m"]["ws"]), tuple(map(str, ws)))
         for n, w in (("job", ws[0]), ("ag", ws[1]), ("m", ws[2])):
-            self.assertEqual((self.s / n / "ws").read_text(), str(w), n)
+            self.assertEqual((self.s / "loops" / n / "ws").read_text(), str(w), n)
         lines = {l.split("\t")[0]: l.split("\t") for l in self.ctl("ls").stdout.splitlines()}
         self.assertEqual((lines["job"][5], lines["ag"][5], len(lines["m"])), (str(ws[0]), str(ws[1]), 6))
         r = self.ctl("add", "--ws", str(self.t / "nope"), "job")
@@ -167,7 +167,7 @@ class T(unittest.TestCase):
         self.start()
         r = self.ctl("add", "--ws", str(w), "job")
         self.assertEqual((r.returncode, r.stderr), (0, ""))
-        self.assertEqual(os.readlink(w / ".stack"), str(self.s / "job"))
+        self.assertEqual(os.readlink(w / ".stack"), str(self.s / "loops" / "job"))
         self.assertTrue(until(lambda: (w / ".stack" / "ws").exists()))
         self.assertEqual((w / ".stack" / "ws").read_text().strip(), str(w))
         self.assertEqual(self.ctl("rm", "job").returncode, 0)
@@ -188,7 +188,7 @@ class T(unittest.TestCase):
             self.assertTrue(r.stderr.startswith("aos-daemon-ctl: 注意 工作區已有 .stack") and "請先搬開" in r.stderr
                             and "--stack" in r.stderr, r.stderr)
         self.assertTrue(until(lambda: {r.get("ws") for r in self.tables()["execs"].values()} == {str(w1), str(w2)}))
-        self.assertEqual(((self.s / "a" / "ws").read_text(), os.readlink(w2 / ".stack")), (str(w1), str(self.t / "elsewhere")))
+        self.assertEqual(((self.s / "loops" / "a" / "ws").read_text(), os.readlink(w2 / ".stack")), (str(w1), str(self.t / "elsewhere")))
         self.assertEqual((self.ctl("rm", "a").returncode, self.ctl("rm", "b").returncode), (0, 0))
         self.assertEqual(((w1 / ".stack").is_dir(), os.readlink(w2 / ".stack")), (True, str(self.t / "elsewhere")))
 
@@ -200,19 +200,19 @@ class T(unittest.TestCase):
         d = self.prog("odd", "exit 0\n", loop={"exec": {"argv": ["sh", "-c", 'echo "$0 $1" > "$AOS_STACK/args"',
                                                                  {"$env": "AOS_CD"}, {"$env": "AOS_CD", "$path": "x"}]},
                                                "max": 1})
-        (self.s / "nia").mkdir()
+        (self.s / "loops" / "nia").mkdir(parents=True)
         r = subprocess.run([tool("aos-exec"), str(nia / "parts.json") + "#/queue", str(nia), "push"], input='{"role": "user", "content": "幾點？"}',
-                           env=env_of({"AOS_STACK": str(self.s / "nia") + "/", "AOS_WS": str(self.t)}), capture_output=True, text=True, timeout=30)
+                           env=env_of({"AOS_STACK": str(self.s / "loops" / "nia") + "/", "AOS_WS": str(self.t)}), capture_output=True, text=True, timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.start()
         self.assertEqual(self.ctl("add", "--name", "nia", str(nia)).returncode, 0)
         self.assertEqual(self.ctl("add", "odd").returncode, 0)
-        self.assertTrue(until(lambda: (self.s / "nia" / "loop.json").is_file() and (self.s / "odd" / "args").is_file()))
-        self.assertEqual(json.loads((self.s / "nia" / "loop.json").read_text())["exec"], str(nia) + "/loop.json#/exec")
-        self.assertEqual(json.loads((self.s / "odd" / "loop.json").read_text())["exec"], os.path.realpath(d) + "/loop.json#/exec")
-        self.assertEqual((self.s / "odd" / "args").read_text().split(), [os.path.realpath(d), os.path.join(os.path.realpath(d), "x")])
-        self.assertTrue(until(lambda: self.tables()["loops"]["nia"]["phase"] == "done", secs=60), (self.s / "nia" / "stderr.txt").read_text())
-        last = json.loads((self.s / "nia" / "history.jsonl").read_text().splitlines()[-1])
+        self.assertTrue(until(lambda: (self.s / "loops" / "nia" / "loop.json").is_file() and (self.s / "loops" / "odd" / "args").is_file()))
+        self.assertEqual(json.loads((self.s / "loops" / "nia" / "loop.json").read_text())["exec"], str(nia) + "/loop.json#/exec")
+        self.assertEqual(json.loads((self.s / "loops" / "odd" / "loop.json").read_text())["exec"], os.path.realpath(d) + "/loop.json#/exec")
+        self.assertEqual((self.s / "loops" / "odd" / "args").read_text().split(), [os.path.realpath(d), os.path.join(os.path.realpath(d), "x")])
+        self.assertTrue(until(lambda: self.tables()["loops"]["nia"]["phase"] == "done", secs=60), (self.s / "loops" / "nia" / "stderr.txt").read_text())
+        last = json.loads((self.s / "loops" / "nia" / "history.jsonl").read_text().splitlines()[-1])
         self.assertTrue(last["content"].startswith("FAKE ANSWER to: 幾點？"), last)
 
 

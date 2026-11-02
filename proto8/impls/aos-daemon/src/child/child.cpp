@@ -69,10 +69,14 @@ namespace aos::daemon {
     _exit(rc);
 }
 
-// 只建小格這一層：$AOS_STACK 不在＝建不了（建 stack 只在 aos-exec 做，N-59 第 1 件；10-23 前是 mkdir -p）。spawn 與 spawn_exec 共用。
+// 只建 loops/ 與小格這兩層：$AOS_STACK 不在＝建不了（建 stack 只在 aos-exec 做，N-59 第 1 件；10-23 前是 mkdir -p）。spawn 與 spawn_exec 共用。
+// 11-02 小格從 $AOS_STACK/<名字>/ 改成 $AOS_STACK/loops/<名字>/（thinking 2026-11-02-stack-tools 細節 5）：loops/ 是 daemon 自己的固定名，有就沿用。
 static void make_cell(const std::string& name, const std::string& cell) {
     std::error_code ec;
-    std::filesystem::create_directory(cell, ec);
+    std::filesystem::create_directory(std::filesystem::path(cell).parent_path(), ec);
+    if (!ec) {
+        std::filesystem::create_directory(cell, ec);
+    }
     if (ec) {
         throw Error{code::MkdirFailed, "起不了子項 " + name + "：建不了 " + cell + "（" + ec.message() + "）"};
     }

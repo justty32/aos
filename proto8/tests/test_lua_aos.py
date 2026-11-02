@@ -126,7 +126,7 @@ class TestBuild(unittest.TestCase):
         r = subprocess.run([EXEC, "--ws", str(ws), str(out)], capture_output=True, text=True, env=env(), timeout=60)
         self.assertEqual(r.returncode, 0, r.stderr)
         for n in (1, 2, 3):
-            self.assertEqual((ws / ".stack" / ("clock_%d" % n) / "tick.txt").read_text().strip(), str(n))
+            self.assertEqual((ws / ".stack" / "loops" / ("clock_%d" % n) / "tick.txt").read_text().strip(), str(n))
 
     def test_json_pointer(self):
         r = aos_lua("json", str(EX / "agent_dan.lua"), "fsm.json#/states/think/exec")

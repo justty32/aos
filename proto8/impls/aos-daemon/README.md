@@ -13,7 +13,7 @@
 10-30 起另有 **exec 型子項**（`execs`）：一次性的，daemon 直接 `aos-exec` 它一次、中間不包 aos-loop（見下「exec 型子項 execs」）。
 10-30 晚起子項物件可以寫 **`ws`**（這隻的工作區）：daemon 起它時設 `AOS_WS`（見下「子項的工作區 ws」）。
 
-像一個領班：手上一張名單（`loops`），名單上每個人各有一個小隔間（`$AOS_STACK/<名字>/`）。他每隔一會兒（`interval_ms`）看一眼兩塊佈告欄：
+像一個領班：手上一張名單（`loops`），名單上每個人各有一個小隔間（`$AOS_STACK/loops/<名字>/`；11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../../thinking/2026-11-02-stack-tools.md)）。他每隔一會兒（`interval_ms`）看一眼兩塊佈告欄：
 一塊管他自己（ctl 窗：暫停、收工、節奏），一塊管名單（loops_ctl 窗）。名單改了就把多的請走、少的叫來；誰自己下班了就在名單白板（loops_state 窗）上記「done、結束碼幾」
 （被他請走的記「stopped」），**不會再叫他回來**；他自己的狀況寫在另一塊白板（state 窗）。他自己收工時（不論為什麼）先把每個人都請走、寫好白板，才走人。
 
@@ -54,7 +54,7 @@ daemon.json＝loop.json 的超集（N-28）：
 - **名字不能跟自己的窗撞名**（使用者 10-22，ideas 10-22 § 6；`taken_names`／`check_names`）：會撞的名字＝ctl、state（含旗標 `--ctl`／`--state` 給的）、loops_ctl、loops_state、
   loops_state 的分檔資料夾、loops_mailbox（信箱模式）落在 `$AOS_STACK` 底下時相對路徑的第一段（`state.json`、`ctl.json`、預設的 `loops_ctl.json`、`loops_state.json`、`loops_state_loops`；`"w/c.json"` 的 `w`；
   `./x/../s.json` 整理成 `s.json`；在 stack 外面的、沒開的不算）。起來時撞＝`CfgBad`、退 1；loops_ctl 改名單撞＝那份 loops_ctl 整份不採用、維持上一份好的、原因進 loops_state 的 `ctl_warning`。
-- **起子 loop**（經 aos-exec，同 bin 版）：小格 `$AOS_STACK/<名字>/` mkdir（只建這一層；`$AOS_STACK` 不在＝開了 state 或 loops_state 窗就 `WriteFailed`〔loops_state 沒寫＝開著〕、兩扇都沒開才 `MkdirFailed`，都退 1——建 stack 只在 aos-exec 做，N-59 第 1 件）；設定補上 `"ctl": "ctl.json"`、`"state": "state.json"`（沒寫才補），
+- **起子 loop**（經 aos-exec，同 bin 版）：小格 `$AOS_STACK/loops/<名字>/`（11-02 改）mkdir（只建 `loops/` 與小格這兩層，`loops/` 有就沿用；`$AOS_STACK` 不在＝開了 state 或 loops_state 窗就 `WriteFailed`〔loops_state 沒寫＝開著〕、兩扇都沒開才 `MkdirFailed`，都退 1——建 stack 只在 aos-exec 做，N-59 第 1 件）；設定補上 `"ctl": "ctl.json"`、`"state": "state.json"`（沒寫才補），
   **一律蓋上 `"_entry": ["aos-loop", {"$env": "AOS_CF"}]`**，相對的 `exec`（字串，或陣列的第一個元素）照 daemon 的 cwd 轉成絕對路徑（子 loop 的 cwd 會是小格），
   先寫 `.loop.json` 再改名成 `loop.json`；fork 一個子行程：`setsid` 自成 session、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`、`AOS_STACK=小格/`、
   解開三個訊號、cd 到 daemon 的 cwd，呼叫 aos-exec 的 `run_cli({"--", "小格/loop.json#/_entry"})`——它 cd 進小格、讀小格的 `.env`（若有）、
@@ -97,7 +97,7 @@ daemon.json＝loop.json 的超集（N-28）：
 ```
 
 - **寫法**：形狀同 `loops`——`{名字: 目標}` 或 `{名字: {"exec": 目標}}`（物件只看 `exec`，其他 key 忽略——**唯一的例外是 `ws`**，10-30 eca，見下「子項的工作區 ws」）；目標＝aos-exec 的目標（字串或 `[目標, 參數...]`，非空字串陣列），**單子物件不收**（`CfgBad`；要跑單子就寫 `"daemon.json#/…"` 指進去）。名字規則、指示詞（`$ref` 拆檔、每層的起點）同 `loops`（`read_execs` 先走 `read_loops`）。
-- **怎麼起**（`spawn_exec`）：小格 `$AOS_STACK/<名字>/`（只建一層）、`AOS_STACK`＝小格/、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`、`setsid` 自成群組、cd 到 daemon 的 cwd——跟起子 loop 一樣，**只是不包 aos-loop、不寫 `loop.json`、不補 `ctl`／`state`**：子行程直接 `run_cli({"--", 目標, 參數...})`（aos-exec），所以表上的 pid 就是那支程式；相對路徑從 daemon 的 cwd 算（不轉絕對，子行程本來就在那裡叫）。
+- **怎麼起**（`spawn_exec`）：小格 `$AOS_STACK/loops/<名字>/`（11-02 改；只建 `loops/` 與小格兩層）、`AOS_STACK`＝小格/、stdin／stdout 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`、`setsid` 自成群組、cd 到 daemon 的 cwd——跟起子 loop 一樣，**只是不包 aos-loop、不寫 `loop.json`、不補 `ctl`／`state`**：子行程直接 `run_cli({"--", 目標, 參數...})`（aos-exec），所以表上的 pid 就是那支程式；相對路徑從 daemon 的 cwd 算（不轉絕對，子行程本來就在那裡叫）。
 - **退了**＝`phase: done`、記 `code`／`signal`，**不重起**；列留在 `execs` 表上，直到名單拿掉（跟 loop 型同一條規則，方向題 2）。要再跑一次＝從名單拿掉再放回。
 - **收**：同子 loop——名單少了它或 daemon 收工＝SIGTERM（直接給那支程式，少一跳）、`stopping`，滿 10 秒還在就 SIGKILL 整群（連底下自成一群的）；收掉的標 `stopped`。
 - **名字空間**：`execs` 與 `loops` 共用（小格同一個資料夾）。daemon.json 兩邊同名＝`CfgBad` 退 1；loops_ctl 合出來同名＝整份不採用（`ctl_warning`）；信箱模式的信套完同名＝壞信（`letter_warning`）。撞自己的窗同 `loops`。
@@ -117,7 +117,7 @@ daemon.json＝loop.json 的超集（N-28）：
 
 - **寫在哪**：`loops`、`execs` 子項的**物件**多一個選填 key `ws`（字串或目標寫法沒地方寫，要 ws 就寫成物件）。daemon.json、`loops_ctl.json` 的整份 `loops`、`loops_added`／`execs_added`、信箱模式的信都認，同一套。
 - **值**：非空字串（指示詞照解，例 `{"$env": "HOME", "$path": "code/x"}`）；**相對路徑從 daemon 的 cwd 算**（同相對的 `exec`；寫在 daemon.json、loops_ctl、信裡都一樣），轉成整理過的絕對路徑（`abspath`，`.`、`..` 收掉、捷徑不解）存進期望表。寫 `null`＝當沒寫。其他型別、空字串＝壞：daemon.json＝`CfgBad` 退 1；loops_ctl＝整份不採用（`ctl_warning`）；信＝壞信（`letter_warning`）。在不在不驗——不在的話子項經 aos-exec 時報 `WsMissing`（寫在小格的 `stderr.txt`）、以 1 結束。
-- **起子項時**：子行程的環境多設 `AOS_WS=<ws>`（跟 `AOS_STACK` 同一處，setsid 之後、叫 aos-exec 之前）；**沒寫＝照舊繼承 daemon 的環境**（daemon 的 `AOS_WS` 有就是它，沒有就不設）。loop 型子項的 `ws` **不寫進小格的 `loop.json`**（它不是 loop 的 key），只進環境；子 loop 每次叫身體時環境照傳，所以身體看到的也是它。小格（stack）照舊是 `$AOS_STACK/<名字>/`，不因 `ws` 搬家。
+- **起子項時**：子行程的環境多設 `AOS_WS=<ws>`（跟 `AOS_STACK` 同一處，setsid 之後、叫 aos-exec 之前）；**沒寫＝照舊繼承 daemon 的環境**（daemon 的 `AOS_WS` 有就是它，沒有就不設）。loop 型子項的 `ws` **不寫進小格的 `loop.json`**（它不是 loop 的 key），只進環境；子 loop 每次叫身體時環境照傳，所以身體看到的也是它。小格（stack）照舊是 `$AOS_STACK/loops/<名字>/`（11-02 改），不因 `ws` 搬家。
 - **改了 ws**＝子項設定變了，照現有規則（N-54「名單上已有的名字寫進 `loops_added`＝設定換成這份，已在跑的不重起」）：已在跑的不重起、環境不變；下一次起它（它結束後從名單拿掉再放回、或 daemon 重起）才用新的。
 - **狀態**：`loops_state.json` 的列（`loops`、`execs` 兩張表）起它時給了 `ws` 就多一欄 `"ws": 絕對路徑`（**起的那一刻的值**，名單後來改了也不變）；沒給**不寫這欄**（列的形狀跟 10-30 前一樣）。`adopt` 接回時照舊列的 `ws` 留著（10-30 前的列沒有＝不寫）。
 - **跟「物件裡其他 key 忽略」**（agent-lifecycle 實作時代定 D-2）：`execs` 的物件原本只看 `exec`、其他 key 忽略，`ws` 是第一個例外；`loops` 的物件原本是「loop key 以外原樣交給子 loop」，`ws` 也是例外（daemon 拿走、不交）。

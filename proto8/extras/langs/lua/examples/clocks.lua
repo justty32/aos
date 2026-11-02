@@ -1,6 +1,6 @@
 -- clocks.lua - 一個 daemon 顧幾個時鐘 loop（for 迴圈產生子項）
 -- 編：aos-lua build clocks.lua <輸出>；跑：aos-exec --ws <工作區> <輸出>（PATH 要有 aos-daemon、aos-loop、aos-exec、aos-tick）
--- 每個子 loop 跑 n 次 aos-tick，跑完工作區的 .stack/clock_<n>/tick.txt 就是 n。
+-- 每個子 loop 跑 n 次 aos-tick，跑完工作區的 .stack/loops/clock_<n>/tick.txt 就是 n（11-02 起 daemon 的子項小格在 loops/<名字>/）。
 local aos = require("aos")
 
 local loops = {}

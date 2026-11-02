@@ -15,7 +15,7 @@
 | ① 包成 `max: 1` 的子 loop（使用者 10-30「包成max:1也是可以」；現況就能用） | `"loops": {"名字": {"exec": 目標, "max": 1}}`（**一定要寫 `max: 1`**，沒寫＝退 0 就再跑一次） | 起一支 aos-loop，它再 `aos-exec 目標` 一次 | `loop.json`（daemon 寫的）、`state.json`（外層 aos-loop 的窗）、`stderr.txt`、程式自己的檔 | `loops_state.json` 的 `loops` |
 | ② exec 型子項（使用者 10-30「讓daemon可以掛aos-exec，也是不錯的」） | `"execs": {"名字": 目標}` 或 `{"名字": {"exec": 目標}}`；目標＝aos-exec 的目標（字串或 `[目標, 參數...]`），單子物件不收（要跑單子就寫 `"daemon.json#/…"` 指進去） | 直接 `aos-exec 目標` 一次，不包 aos-loop | `stderr.txt`、程式自己的檔（沒有 `loop.json`、`ctl.json`、`state.json`） | `loops_state.json` 的 `execs` |
 
-兩種都是：小格 `$AOS_STACK/<名字>/`、`AOS_STACK`＝小格、stdin 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`、自成一個行程群組；退了＝`done`、記 `code`／`signal`、**不重起**，列留著直到名單拿掉（方向題 2，[決定（10-30）](../../thinking/2026-10-30-agent-lifecycle.md#決定10-30)）；停＝名單拿掉（`loops_removed`／`execs_removed`）或 daemon 收工：SIGTERM，10 秒不退 SIGKILL 整群。差別：① 多一層 aos-loop（`ps` 看得到它），而且外層 loop 的 `state.json` 在小格裡——掛進去的程式自己也開 `state.json` 窗的話兩個 loop 寫同一份檔（N-28 開頭 ②），得把裡面那層的窗改名或不開；② 少一層行程，SIGTERM 直接打到那支程式。`execs` 與 `loops` 共用名字空間（同一個名字兩邊都寫＝`CfgBad`）。
+兩種都是：小格 `$AOS_STACK/loops/<名字>/`（11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../../thinking/2026-11-02-stack-tools.md)）、`AOS_STACK`＝小格、stdin 接 `/dev/null`、stderr 附加到小格的 `stderr.txt`、自成一個行程群組；退了＝`done`、記 `code`／`signal`、**不重起**，列留著直到名單拿掉（方向題 2，[決定（10-30）](../../thinking/2026-10-30-agent-lifecycle.md#決定10-30)）；停＝名單拿掉（`loops_removed`／`execs_removed`）或 daemon 收工：SIGTERM，10 秒不退 SIGKILL 整群。差別：① 多一層 aos-loop（`ps` 看得到它），而且外層 loop 的 `state.json` 在小格裡——掛進去的程式自己也開 `state.json` 窗的話兩個 loop 寫同一份檔（N-28 開頭 ②），得把裡面那層的窗改名或不開；② 少一層行程，SIGTERM 直接打到那支程式。`execs` 與 `loops` 共用名字空間（同一個名字兩邊都寫＝`CfgBad`）。
 
 | 檔 | 做什麼 |
 |---|---|
@@ -46,17 +46,17 @@ find .stack -type f | sort
  "pid": 135520, "started_at_ticks": 778245, "boot_id": "…", "recorded_at": "2026-10-30T02:03:32.502+00:00"}
 ```
 
-`find .stack -type f | sort`：
+`find .stack -type f | sort`（11-02 起子項小格在 `.stack/loops/<名字>/`，下面照新路徑改了；10-30 那次是 `.stack/<名字>/`）：
 
 ```
+.stack/loops/tick_exec/stderr.txt
+.stack/loops/tick_exec/tick.txt
+.stack/loops/tick_loop/loop.json
+.stack/loops/tick_loop/state.json
+.stack/loops/tick_loop/stderr.txt
+.stack/loops/tick_loop/tick.txt
 .stack/loops_state.json
 .stack/state.json
-.stack/tick_exec/stderr.txt
-.stack/tick_exec/tick.txt
-.stack/tick_loop/loop.json
-.stack/tick_loop/state.json
-.stack/tick_loop/stderr.txt
-.stack/tick_loop/tick.txt
 ```
 
 兩格的 `tick.txt` 都是 `5`、`stderr.txt` 都是空的；`tick_loop/loop.json`＝`{"exec": "<絕對路徑>/demo/daemon-3/../tick", "max": 1, "ctl": "ctl.json", "state": "state.json", "_entry": ["aos-loop", {"$env": "AOS_CF"}]}`（daemon 補的 ctl／state 與 `_entry`）。`tick_exec/` 只有 stderr 與程式自己的時鐘檔。

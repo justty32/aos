@@ -37,7 +37,7 @@
 ## AOS_STACK
 
 一句：**被叫的程式自己放執行中狀態的地方**（state、草稿、紀錄、小格），預設 `$AOS_WS/.stack/`。定義資料夾不被寫（P-15）。
-誰設：沒設＝aos-exec 設預設值並建資料夾；有設就沿用（所以叫別人時要自己給它一個**小格** `AOS_STACK=$AOS_STACK/<名>/`，P-17）。
+誰設：沒設＝aos-exec 設預設值並建資料夾；有設就沿用（所以叫別人時要自己給它一個**小格** `AOS_STACK=$AOS_STACK/tools/<名>/`，P-17；11-02 改進 `tools/`）。
 範例：agent-dan 的 `$AOS_STACK/state.txt`（fsm 現在在哪格）、`trace.jsonl`、`history.jsonl`；叫工具 `AOS_STACK=$AOS_STACK/math/ aos-exec tools/math`。
 常見錯：叫工具時沒給小格（工具的檔會跟你的混在一起）；aos-loop／aos-daemon **不自己建** stack（不在＝`WriteFailed`），經 aos-exec 跑才會被建。
 出處：N-57、N-59 第 1 件、P-15～P-18、C-67、C-70。
@@ -103,7 +103,7 @@
 
 ## daemon
 
-一句：`aos-daemon daemon.json`＝顧一群子 loop（`loops`），每個子項一個小格 `$AOS_STACK/<名>/`；daemon.json 是 loop.json 的超集。
+一句：`aos-daemon daemon.json`＝顧一群子 loop（`loops`），每個子項一個小格 `$AOS_STACK/loops/<名>/`（11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../../../../thinking/2026-11-02-stack-tools.md)）；daemon.json 是 loop.json 的超集。
 範例：`{"interval_ms": 500, "ctl": "ctl.json", "state": "state.json", "loops": {"bob": {"exec": {"argv": ["aos-exec", "--ws", "/w/bob", "/agents/bob"]}, "interval_ms": 2000}}}`
 名單的手把與子項表另有一對窗（10-29）：`loops_ctl.json`（`loops`、`loops_added`、`loops_removed`、`seq`）、`loops_state.json`（`loops` 表、`ctl_seq`、`ctl_warning`、心跳）；daemon.json 的 `loops_ctl`／`loops_state` 沒寫＝這兩個檔名、`null`＝不開。
 常見錯：子 loop 結束後**不自動重起**（停在表上 `done`；要再起就從 loops_ctl 拿掉再放回）；名單寫在 `ctl.json` 不生效（只在 state 的 `ctl_warning` 提醒）；ctl `paused` 時名單也不調；子項名字不能跟自己的窗撞名；PATH 上要有 aos-loop 和 aos-exec。

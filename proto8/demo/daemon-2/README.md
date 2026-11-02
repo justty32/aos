@@ -11,7 +11,7 @@
 |---|---|
 | `_entry` | `exec aos-daemon "$@" daemon.json`（後面的參數原樣給 daemon，例 `--max 25`） |
 | `daemon.json` | `loops_mailbox: "loops_mailbox"`（信箱模式；不開 `loops_ctl`）、`ctl`、`state`、`interval_ms` 200、沒寫 `max`＝一直跑；`loops` 只有 `sam` |
-| `agent-sam/_entry` | `$1`＝信箱（daemon.json 給 `$AOS_STACK/../loops_mailbox`：sam 的 `AOS_STACK` 是自己的小格）；寄一封 `{"loops_added": {"tick": …}}` |
+| `agent-sam/_entry` | `$1`＝信箱（daemon.json 給 `$AOS_STACK/../../loops_mailbox`：sam 的 `AOS_STACK` 是自己的小格 `loops/sam/`，11-02 前是上一層，[thinking 11-02 stack-tools](../../thinking/2026-11-02-stack-tools.md)）；寄一封 `{"loops_added": {"tick": …}}` |
 
 ## 怎麼起
 
@@ -44,7 +44,7 @@ echo '{"loops_removed": ["tick"]}' | aos-post send $ws/.stack/loops_mailbox   # 
 
 ```sh
 cat $ws/.stack/loops_state.json       # loops：sam（done）、tick、tock（running）…；letter_warning：最後一封壞信
-cat $ws/.stack/tick/tick.txt          # tick 走到幾了
+cat $ws/.stack/loops/tick/tick.txt    # tick 走到幾了（11-02 改：子項小格在 loops/<名字>/）
 cat $ws/.stack/state.json             # daemon 自己（phase、counter_runs、心跳）
 ```
 

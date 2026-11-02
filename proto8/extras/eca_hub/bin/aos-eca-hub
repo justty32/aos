@@ -18,7 +18,7 @@ daemon 沒在跑〔loops_state.json 的 pid＋started_at_ticks 對不上〕＝Da
   add＝aos-daemon-ctl add --ws 資料夾 --name 名字 定義（名字沒給＝資料夾名）；資料夾沒有 .stack 就由 aos-daemon-ctl 建 symlink 指到小格
   （衝突 3），cd 進去 aos-say／aos-listen 就接上；已經有＝不建、它在 stderr 說一句。
 「掛著的外部 agent」＝daemon 的 loops 表上、小格裡有 eca.json 的（aos-eca-turn 每次跑都寫：kind、ws、template）；add 之後子 loop 跑第一次才有。
-CLI 的小格＝<daemon>/<名字>/<kind>/（cli_session 的 session.txt、tty.sock、live.jsonl、transcripts/）。
+CLI 的小格＝<daemon>/loops/<名字>/<kind>/（cli_session 的 session.txt、tty.sock、live.jsonl、transcripts/）。
 畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。「暫停」只有 ctl.json 的 paused 一種（寫 <小格>/ctl.json），這裡不另做。
 錯：stderr 一行 `aos-eca-hub: 代號 原因`、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、
   TemplateUnknown、WsMissing、SessionBad（正在答題時 close）、Timeout（等 daemon 收掉逾時），加 aos-daemon-ctl 與 cli_session 的。"""
@@ -110,7 +110,7 @@ def instances():
     rows = json.loads(ctl("ls", "--json") or "{}").get("loops", {})
     out = []
     for name, r in rows.items():
-        cell = os.path.join(d, name)
+        cell = os.path.join(d, "loops", name)          # 11-02：子項的小格在 <daemon>/loops/<名字>/
         try:
             with open(os.path.join(cell, "eca.json"), encoding="utf-8") as f:
                 eca = json.load(f)
@@ -207,7 +207,7 @@ def do_add(opts, arg):
         die("WsMissing", "%s 不是資料夾" % ws)
     name = opts.get("--name") or os.path.basename(ws.rstrip("/"))
     ctl("add", "--ws", ws, "--name", name, template_of(opts))
-    return name, os.path.join(daemon_dir(), name)
+    return name, os.path.join(daemon_dir(), "loops", name)
 
 
 # ---------------------------------------------------------------- 子命令

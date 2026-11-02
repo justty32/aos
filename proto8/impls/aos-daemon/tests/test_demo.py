@@ -106,7 +106,7 @@ def run_daemon2():
         check("daemon-2 名單", {n: r["phase"] for n, r in ls["loops"].items()}, {"sam": "done", "tick": "stopped", "tock": "stopped"})
         check("daemon-2 letter_warning", ls["letter_warning"], None)
         check("daemon-2 信都收完", [x.name for x in box.iterdir() if any((box / x.name).iterdir())], [])
-        ticks = [int((ws / ".stack" / n / (n + ".txt")).read_text()) for n in ("tick", "tock")]
+        ticks = [int((ws / ".stack" / "loops" / n / (n + ".txt")).read_text()) for n in ("tick", "tock")]
         check("daemon-2 tick、tock 都走了", all(n > 0 for n in ticks), True)
         replies = list((ws / "inbox" / "new").iterdir())
         r = json.loads((replies[0] / "letter.json").read_text()) if len(replies) == 1 else {}
@@ -129,10 +129,10 @@ def run_daemon3():
         check("daemon-3 兩張表", ({n: (x["phase"], x["code"]) for n, x in ls["loops"].items()},
                                  {n: (x["phase"], x["code"]) for n, x in ls["execs"].items()}),
               ({"tick_loop": ("done", 0)}, {"tick_exec": ("done", 0)}))
-        files = {n: sorted(f.name for f in (ws / ".stack" / n).iterdir()) for n in ("tick_loop", "tick_exec")}
+        files = {n: sorted(f.name for f in (ws / ".stack" / "loops" / n).iterdir()) for n in ("tick_loop", "tick_exec")}
         check("daemon-3 小格", files, {"tick_loop": ["loop.json", "state.json", "stderr.txt", "tick.txt"],
                                       "tick_exec": ["stderr.txt", "tick.txt"]})
-        ticks = [(ws / ".stack" / n / "tick.txt").read_text().strip() for n in ("tick_loop", "tick_exec")]
+        ticks = [(ws / ".stack" / "loops" / n / "tick.txt").read_text().strip() for n in ("tick_loop", "tick_exec")]
         check("daemon-3 tick 都走到 5", ticks, ["5", "5"])
         print("daemon-3：結束碼 %d、loops %s、execs %s" % (r.returncode, list(ls["loops"]), list(ls["execs"])))
 

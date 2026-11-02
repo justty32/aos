@@ -546,13 +546,13 @@ void Daemon::reconcile(const Json& want, const Json& want_execs) {
     for (auto& [n, spec] : want.items()) {
         if (index_.count(n) == 0 && !spec.is_null()) {
             beat();                   // 起一大批要好一陣子：起之前先寫一份、之後每秒一份（10-23 壓測後加）
-            add(n, spawn(n, aos::join(stack_, n), spec, cwd_));
+            add(n, spawn(n, aos::join(aos::join(stack_, "loops"), n), spec, cwd_));   // 11-02：子項的小格在 loops/<名字>/
         }
     }
     for (auto& [n, target] : want_execs.items()) {
         if (index_.count(n) == 0 && !target.is_null()) {
             beat();
-            add(n, spawn_exec(n, aos::join(stack_, n), target, cwd_));   // 10-30：直接 aos-exec 一次，不包 aos-loop
+            add(n, spawn_exec(n, aos::join(aos::join(stack_, "loops"), n), target, cwd_));   // 10-30：直接 aos-exec 一次，不包 aos-loop
         }
     }
 }

@@ -100,7 +100,7 @@ class EcaHub(unittest.TestCase):
     def ws(self, name="proj"):
         w = self.tmp / name
         w.mkdir()
-        self.socks.append(self.ds / name / "claude" / "tty.sock")
+        self.socks.append(self.ds / "loops" / name / "claude" / "tty.sock")
         return w
 
     def add(self, w, *more):
@@ -141,7 +141,7 @@ class EcaHub(unittest.TestCase):
         w = self.ws()
         name = self.add(w)
         self.assertIn(name, self.daemon_rows())
-        self.assertEqual(os.readlink(w / ".stack"), str(self.ds / name))
+        self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
         it = self.ls()[0]
         self.assertEqual((it["name"], it["kind"], it["ws"], it["state"], it["phase"]), (name, "claude", str(w), "收起了", "running"))
         for arg in ((), ("proj",)):
@@ -151,7 +151,7 @@ class EcaHub(unittest.TestCase):
         self.assertEqual(self.code(self.hub("state", cwd=self.tmp)), (1, "InstanceMissing"))
         a1 = self.listen(w, self.say(w, "你好"))
         self.assertTrue(a1.startswith("fake claude[") and a1.rstrip().endswith(": 你好"), a1)
-        sid = (self.ds / name / "claude" / "session.txt").read_text().strip()
+        sid = (self.ds / "loops" / name / "claude" / "session.txt").read_text().strip()
         self.assertTrue(self.listen(w, self.say(w, "再一句")).startswith("fake claude[%s]" % sid[:8]))
         r = self.hub("ls")
         self.assertIn("對話 %s" % sid[:8], r.stdout)
@@ -168,11 +168,11 @@ class EcaHub(unittest.TestCase):
         r = self.hub("close", cwd=w)
         self.assertEqual((r.returncode, r.stdout.strip()), (0, "本來就沒畫面（已收起）"), r.stderr)
         self.assertIn("第二句", self.listen(w, self.say(w, "第二句")))
-        sid = (self.ds / name / "claude" / "session.txt").read_text().strip()
+        sid = (self.ds / "loops" / name / "claude" / "session.txt").read_text().strip()
         r = self.hub("stop", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertNotIn(name, self.daemon_rows())
-        self.assertFalse((self.ds / name).exists())
+        self.assertFalse((self.ds / "loops" / name).exists())
         self.assertFalse(os.path.lexists(w / ".stack"))
         arch = list((self.ds / "eca_archive").iterdir())
         self.assertEqual(len(arch), 1)
@@ -195,7 +195,7 @@ class EcaHub(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse(os.path.lexists(w / ".stack"))
         name = self.add(w)
-        self.assertEqual(os.readlink(w / ".stack"), str(self.ds / name))
+        self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
         self.assertIn("第二輪", self.listen(w, self.say(w, "第二輪")))
         self.assertEqual(len(list((self.ds / "eca_archive").iterdir())), 1)
         d = self.ws("direct")
@@ -214,13 +214,13 @@ class EcaHub(unittest.TestCase):
         self.broken.write_text("")
         sig = self.say(w, "會壞的一句")
         self.assertTrue(self.until(lambda: self.ls()[0]["state"] == "出錯停了"), self.ls())
-        self.assertEqual(os.listdir(self.ds / name / "queue" / "cur"), [sig])
+        self.assertEqual(os.listdir(self.ds / "loops" / name / "queue" / "cur"), [sig])
         self.broken.unlink()
         r = self.hub("close", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("重新掛上", r.stdout)
         self.assertIn("會壞的一句", self.listen(w, sig))
-        self.assertEqual(os.readlink(w / ".stack"), str(self.ds / name))
+        self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
 
     def test_default_template(self):
         """不給 --template＝proto8/demo/eca-claude（方向題 3）：掛 daemon 時 aos-daemon-ctl 把 {"$env": "AOS_CD"} 換成定義路徑，
@@ -229,8 +229,8 @@ class EcaHub(unittest.TestCase):
         w = self.ws()
         r = self.hub("add", w)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertTrue(self.until(lambda: self.ls()), (self.ds / "proj" / "stderr.txt").read_text()
-                        if (self.ds / "proj" / "stderr.txt").exists() else self.daemon_rows())
+        self.assertTrue(self.until(lambda: self.ls()), (self.ds / "loops" / "proj" / "stderr.txt").read_text()
+                        if (self.ds / "loops" / "proj" / "stderr.txt").exists() else self.daemon_rows())
         self.assertEqual(self.ls()[0]["template"], str(ROOT / "demo" / "eca-claude"))
         a = self.listen(w, self.say(w, "預設範本"))
         self.assertTrue(a.rstrip().endswith(": 預設範本"), a)
@@ -243,7 +243,7 @@ class EcaHub(unittest.TestCase):
         w = self.ws()
         r = self.hub("open", "-d", "--template", self.tpl, cwd=w)
         self.assertEqual(r.returncode, 0, r.stderr)
-        cell = self.ds / "proj" / "claude"
+        cell = self.ds / "loops" / "proj" / "claude"
         self.assertTrue((cell / "tty.sock").exists())
         self.assertEqual(self.ls()[0]["state"], "畫面開著")
         keys = subprocess.run(["tmux", "-S", str(cell / "tty.sock"), "list-keys", "-T", "root"],

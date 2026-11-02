@@ -22,7 +22,7 @@
 | `team/` | 整個團隊 |
 | `team/_entry` | `exec aos-daemon daemon.json` |
 | `team/daemon.json` | 每 500 毫秒：ann、bob、cat 各一個子 loop（`aos-exec --ws $AOS_WS/<名> ../member`，`AOS_ROSTER` 指 `$AOS_WS/roster.json`）；daemon 本體跑 `quiet.py` |
-| `team/quiet.py` | 名冊上非人的成員信箱 `tmp/`、`new/`、`cur/` 都空＝退 10 收工；有成員的 loop 失敗結束＝`team: MemberFailed <名>` 退 1 |
+| `team/quiet.py` | 名冊上非人的成員信箱 `tmp/`、`new/`、`cur/` 都空＝退 10 收工；有成員的 loop 失敗結束（讀 `$AOS_STACK/loops/<名>/state.json`，11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../../../../../proto8/thinking/2026-11-02-stack-tools.md)）＝`team: MemberFailed <名>` 退 1 |
 | `team/roster.json` | 名冊範例（放進團隊工作區）：`members`（`mailbox`、`role`、`human`）、`groups`、`max_hops` 8、`max_sends` 4、`max_body_bytes` 16000 |
 
 ### `proto8/demo/self-improve/`（自我改進流程）

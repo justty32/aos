@@ -403,8 +403,8 @@ class External(Base):
         r = self.xrun(str(ROOT / "bin" / "aos-daemon-ctl"), "--daemon", str(ds), "add", "--ws", str(self.ws), "--name", "bob",
                       str(self.eca))
         self.assertEqual((r.returncode, r.stderr), (0, ""))
-        self.assertEqual(os.readlink(self.stack), str(ds / "bob"))
-        self.assertTrue(self.phase(ds / "bob", ("waiting", "running")))
+        self.assertEqual(os.readlink(self.stack), str(ds / "loops" / "bob"))
+        self.assertTrue(self.phase(ds / "loops" / "bob", ("waiting", "running")))
         sig = self.say("在 daemon 底下", **self.xenv)
         r = self.xrun(LISTEN, "--ws", str(self.ws), "--timeout", "30", sig)
         self.assertEqual(r.returncode, 0, r.stderr)

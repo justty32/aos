@@ -283,7 +283,7 @@ class AiToolsTest(unittest.TestCase):
                             "--interval-ms", "100", "--out", r + "/d/daemon.json")
         p = aos_exec(r + "/d/daemon.json", r, env={"AOS_STACK": r + "/dstack/"})
         self.assertEqual(p.returncode, 0, p.stderr)
-        self.assertEqual(json.loads((Path(r) / "dstack" / "x" / "state.json").read_text())["phase"], "done")
+        self.assertEqual(json.loads((Path(r) / "dstack" / "loops" / "x" / "state.json").read_text())["phase"], "done")
 
     def test_make_metainfo_tool_json_and_bad(self):
         code, res, _ = ai(self.root, "make", "metainfo", "--summary", "s", "--time-ms", '{"val": 1, "max": 9}',

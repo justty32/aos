@@ -271,7 +271,7 @@ class Team(TalkCase):
         self.send("user", {"to": "ann", "body": "x", "expect_reply": True})
         r = self.run_team(DEAD)          # 連不上：ann 的腦 BrainFailed、她的 loop 退 1
         self.assertNotEqual(r.returncode, 0)
-        self.assertIn("talk-member: BrainFailed", r.stderr + (self.ws / ".stack" / "ann" / "stderr.txt").read_text())
+        self.assertIn("talk-member: BrainFailed", r.stderr + (self.ws / ".stack" / "loops" / "ann" / "stderr.txt").read_text())
         self.assertIn("team: MemberFailed ann", r.stderr)
         self.assertEqual(len(letters(self.ws / "ann" / "cur")), 1)                 # 信留在 cur/，修好再跑會接著做
 

@@ -38,7 +38,7 @@ struct Child {
     Json ws;                            // null 或起它時給的工作區（絕對路徑；子行程的 AOS_WS）——起的那一刻的值，名單後來改了 ws 也不變（已在跑的不重起，N-54）
 };
 
-// 起一支子 loop。cell＝小格（$AOS_STACK/<名字>）、spec＝字串或陣列（aos-exec 的目標，包成 {"exec": 它}）或 loop 設定物件、
+// 起一支子 loop。cell＝小格（$AOS_STACK/loops/<名字>，11-02 起進 loops/）、spec＝字串或陣列（aos-exec 的目標，包成 {"exec": 它}）或 loop 設定物件、
 // cwd＝daemon 的 cwd（子項 exec 的相對路徑從這裡算：字串、陣列的第一個元素轉成絕對路徑，其他不動、不驗）。
 // spec 是物件且有 ws（字串，read_loops 已轉絕對）＝拿掉它再寫 loop.json，子行程設 AOS_WS＝它（eca 10-30）。
 // 小格建不了 MkdirFailed、loop.json 寫不了 WriteFailed、stderr 開不了／fork 失敗 LaunchFailed。

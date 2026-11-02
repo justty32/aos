@@ -37,7 +37,7 @@ ai_tools/
 agents/<名>/agent/        agent 定義（範本的複本；定義資料夾不被寫，P-15）
 agents/<名>/ws/           工作區（成品檔）；stack 在 ws/.stack/：queue/（題目，N-16 有序信箱）、history.jsonl（回答）、trace.jsonl、state.json（aos-loop 的窗）…
 agents/<名>/runs.jsonl    aos-ai run 每次一行：finished_at（跑完的時間）、code、signal、timed_out、elapsed_ms、errors、answered（這次答完的信號）、counter_answers
-daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.stack/ctl.json、.stack/state.json、各 agent 的小格
+daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.stack/ctl.json、.stack/state.json、各 agent 的小格 .stack/loops/<名>/（11-02 改 loops/<名字>/，見 proto8/thinking/2026-11-02-stack-tools.md）
 ```
 
 | 命令 | 做什麼 |
