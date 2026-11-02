@@ -32,7 +32,7 @@ aos-post finish box 信號                            # 收掉（--keep 進 done
 - **信箱**：拿得到＝信箱與 `tmp/`、`new/`、`cur/` 都是資料夾，少一個＝`MailboxMissing`（`init` 以外的子命令都不替人建）。位置由擁有者定（N-16）。
 - **信號**：`<UTC 奈秒 20 位>.<pid>.<started_at_ticks>`（同 aos-llm-kernel 的產生法；`sent_at` 取自同一刻）。命令列給的信號要是單純的名字（不空、不含 `/`、不以 `.` 開頭），不是＝`ArgumentsBad`。
 - **`letter.json`**：`{"kind": "letter", "sender", "sent_at", "reply_to"?, "in_reply_to"?, "body"}`。`sender`＝`$AOS_WS`（轉絕對），沒設或空＝`$HOME`（轉絕對；`HOME` 也沒有＝`/`），人也一樣。`sent_at`＝ISO 8601 UTC 到毫秒（同全家的 `recorded_at`，`…+00:00`）。`reply_to`＝`--reply-to` 給的路徑轉絕對（不驗在不在）。
-- **壞信**（`check` 退 1、`finish` 丟掉）：`letter.json` 讀不了或不是 JSON 物件、`kind` 不是 `"letter"`、`sender`／`sent_at` 不是字串、沒有 `body`、`reply_to`／`in_reply_to` 不是字串。`body` 的形狀由收信的程式自己驗。不通知寄信人（決定 27）；記 `letter_warning` 是處理者的事（拿 `check` 的原因）。
+- **壞信**（`check` 退 1、`finish` 丟掉）：`letter.json` 讀不了或不是 JSON 物件、`kind` 不是 `"letter"`、`sender`／`sent_at` 不是字串、沒有 `body`、`reply_to`／`in_reply_to` 不是字串。`body` 的形狀由收信的程式自己驗。不通知寄信人（決定 27）；記 `mailbox_warning` 是處理者的事（拿 `check` 的原因）。
 - **回信寄不出去**（`reply_to` 不是信箱等）：退 1，原信**留在 `cur/`**，可以再 `finish` 一次。
 - **有順序的投遞**（`send --ordered`，N-16、[medium-plan § 三](../../thinking/2026-10-29-medium-plan.md)）：信箱多兩樣——`order.lock/`（[aos-lock](../aos-lock/README.md) 的鎖，持有者＝這個 aos-post 行程）與 `order.json`（`{"counter_letters": N}`，沒有＝0）。步驟：信照常先在 `tmp/<信號>` 寫好 → 拿 `order.lock/`（拿不到每 20 毫秒再試、**一直等**；持有者死了照 aos-lock 收屍）→ 讀 N → `order.json` 寫 N+1（暫存改名）→ rename 成 `new/<N+1 零填 12 位>.<信號>` → 放鎖。鎖握到 rename 完，所以到 `new/` 的順序＝取號順序，處理者照名字排序（`claim`／`claim-all` 本來就是）就是有順序的。`order.json` 讀不懂＝`OrderBad`（放鎖、信丟掉）。
   - **會缺號、不會重號**：寄信人死在「寫完 N+1、還沒 rename」之間，那個號就缺了（信留在 `tmp/`）。plan 原本是先 rename 再寫 N+1，死在中間時下一個人會拿到同一個號，所以兩步對調。

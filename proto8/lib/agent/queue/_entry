@@ -26,7 +26,7 @@ claim 的順序（任何一步當掉重跑都接得上；current.txt＝「已接
   cur/ 有信卻沒列在 current.txt（上次死在 ①、② 之後）＝先把這幾封照 ②、③ 補完、印出來，不再認領新的
   （current.txt 已有別封＝那次是 --more，照 --more 的規則）。cur/ 有信、都列了、不是 --more＝只重寫 current.txt、印 cur/ 全部。
   壞信（aos-post check 不過、名字不是有序的 <12 位序號>.<信號>、body 不是有 role 的物件）＝aos-post finish 丟掉、認領下一封；
-  不寫 stderr（N-43）；原因寫進 $AOS_STACK/letter_warning.txt 一行「信 <信號> 不採用：原因」（N-16 壞信記 letter_warning；
+  不寫 stderr（N-43）；原因寫進 $AOS_STACK/mailbox_warning.txt 一行「信 <信號> 不採用：原因」（N-16 壞信記 mailbox_warning；
   只留最後一封壞信的，好信不清掉；10-30 agent-lifecycle Q-4 的補，lib/agent/round 的 idle、more 格叫 claim 時就記到了）。
 history 格怎麼找：lib/agent/parts.py 的 find（parts.json 有＝<agent>/parts.json#/history、沒寫＝固定名字 <agent>/history；沒掛＝PartMissing），
   aos-exec 它，env 交給 aos-exec（不疊，N-58）。
@@ -207,12 +207,12 @@ def letter_body(box, sig):
 
 
 def warn(stack, sig, why):
-    """N-16 壞信記 letter_warning：$AOS_STACK/letter_warning.txt 一行，只留最後一封的（N-05 暫存改名）。"""
-    write_atomic(os.path.join(stack, "letter_warning.txt"), "信 %s 不採用：%s\n" % (sig, why.replace("\n", " ")))
+    """N-16 壞信記 mailbox_warning：$AOS_STACK/mailbox_warning.txt 一行，只留最後一封的（N-05 暫存改名；11-02 晚原 letter_warning.txt，不讀舊名）。"""
+    write_atomic(os.path.join(stack, "mailbox_warning.txt"), "信 %s 不採用：%s\n" % (sig, why.replace("\n", " ")))
 
 
 def register(agent, part, box, stack, listed, sig, more):
-    """② body 接進 history、③ current.txt；壞信丟掉、記 letter_warning.txt，回 False。"""
+    """② body 接進 history、③ current.txt；壞信丟掉、記 mailbox_warning.txt，回 False。"""
     body, why = letter_body(box, sig)
     if body is None:
         post(["finish", box, sig], quiet=True)              # 壞信一律丟（aos-post finish 不管 --keep）

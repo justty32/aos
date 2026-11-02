@@ -167,7 +167,7 @@ class Turn(unittest.TestCase):
         self.assertEqual([x["question"] for x in self.trace()], [sig, sig2])
 
     def test_bad_letter_dropped(self):
-        """body 不是 {"role": "user", "content": 非空字串}＝壞信：丟掉、trace 記 letter_warning、退 0、不問 CLI。"""
+        """body 不是 {"role": "user", "content": 非空字串}＝壞信：丟掉、trace 記 mailbox_warning、退 0、不問 CLI。"""
         self.post("init", str(self.box))
         bad = []
         for body in ({"text": "沒有 role"}, "純文字", {"role": "user", "content": ""}, {"role": "assistant", "content": "x"}):
@@ -180,7 +180,7 @@ class Turn(unittest.TestCase):
         self.assertEqual(self.calls(), [])
         t = self.trace()
         self.assertEqual([x["question"] for x in t], bad)
-        self.assertTrue(all(x["code"] == 0 and x["letter_warning"] for x in t), t)
+        self.assertTrue(all(x["code"] == 0 and x["mailbox_warning"] for x in t), t)
 
     def test_empty_stop_idle(self):
         """queue 空：--on-empty 沒給／stop＝退 10、idle＝退 0，都不寫 trace（10-31 從 ECA_ON_EMPTY 改 argv）。"""

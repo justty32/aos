@@ -62,6 +62,12 @@
 - log 跟身體的 stdout 混在一起是使用者自己的事，不另外分；log **改成預設不印**（翻掉同日稍早的「預設開」）。
 - 命令列 **`aos-XXX [旗標...] 目標 -- 參數...`**：aos-loop／aos-daemon 的 `設定檔 -- 參數...` 每次接到 exec 後面。通則只記原文，其他指令這輪不改。
 
+## 通稱統一 mailbox_warning（11-02 晚，使用者）
+
+頂層問：「要不要統一成 mailbox_warning？」（daemon 的 `letter_warning` 白天已改 `mailbox_warning`，agent queue 與 eca 那側還是舊名。）使用者：「要」。
+
+決定：壞信警告一律叫 `mailbox_warning`——agent queue 的 `$AOS_STACK/letter_warning.txt` → `mailbox_warning.txt`（`lib/agent/queue`、`aos-listen --status`）、aos-eca-turn 的 trace 欄位 `letter_warning` → `mailbox_warning`；N-16 通稱跟著改（上面「帶給使用者的」那條的 N-16 就此結案）。代定（可翻案）：舊名不留別名、`aos-listen --status` 不讀舊的 `letter_warning.txt`（同 AOS_DAEMON 改名的原則；舊 stack 裡殘留的舊檔只是不再顯示，下一封壞信就寫新名）。
+
 ## 現況（查清的，不是規劃）
 
 ### 誰在寫、寫什麼、多久寫一次
