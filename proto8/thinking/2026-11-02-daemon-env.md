@@ -22,6 +22,16 @@
 
 同一天另一句，只當參考、不延伸成條文（[11-02 cathy](2026-11-02-playground-cathy.md#使用者原文11-02逐字)）：「AOS_CF/CD/CO就像是現在執行到哪個指令，而STACK/WS就是最重要的兩個暫存器。」
 
+## 決定（11-02，使用者）
+
+使用者原文（逐字）：
+
+> 可以明寫，沒寫就默認跟STACK攪在一起
+
+- 衝突 4 定案：daemon 要把對外的東西（信箱、窗）切到控制口，**由 daemon.json 作者明寫**（用 `$env` 指示詞），aos-daemon 程式不內建讀固定變數名。
+- **沒寫＝照舊跟 stack 放在一起**。
+- 命名仍未定（使用者「命名這塊還得再想想」）；其餘衝突 1～3、方向題 1～2 待使用者。
+
 ## `AOS_DAEMON` 現況（查清的，不是規劃）
 
 - **來歷**：10-30 使用者看 aos-daemon-ctl 的規劃時說「關於那個aos-daemon-ctl，他應該是要吃環境變數+argv來確定daemon home在哪裡的(要用哪個daemon)。」（[map-review 第 10 點](2026-10-30-map-review/01-使用者原文.md#決定10-30)）。變數名 `AOS_DAEMON`、`--daemon` 蓋過它、**值＝那個 daemon 的 `$AOS_STACK` 資料夾**，三件都是實作隊長照 N-63 代定、條文明寫「可翻案」。使用者原話說的是「daemon home」，沒說是 stack——隊長把 home 落成 stack，因為 aos-daemon-ctl 要碰的三樣東西（信箱 `loops_mailbox/`、名單窗 `loops_state.json`、小格 `<名字>/`）全在 stack 裡。
