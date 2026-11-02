@@ -28,11 +28,16 @@
 
 > --enable-logs
 
+預設登記檔再改（11-02，逐字；前文是問 aos-mcp 與 aos-tools 的登記檔）：
+
+> 4.兩邊的json格式是一樣的嗎？是同一份嗎？是的話，那就全部改回預設tools.json。
+
 ## 決定（11-02，使用者）
 
 - **選 B**：叫別的資料夾程式時給它的小格，從 `$AOS_STACK/<名>/` 改成 **`$AOS_STACK/tools/<名>/`**。選項 A（照舊＋擋名字）不採。
 - 研究員原建議等 C-51「後續想法」追究完再動；使用者選**現在就走 B**（知道要改約 10 處程式、25～30 處條文）。
 - **aos-mcp 不給登記檔＝讀 `./aos-tools.json`**（啟動時的 cwd；不存在＝`ToolMissing`）；給了就照給的。aos-tools 自己沒給 `--file` 時照舊 `./tools.json`（不改），兩邊預設名不同。
+  - **11-02 再改：預設改回 `./tools.json`**，跟 aos-tools 一致（「是的話，那就全部改回預設tools.json」）。條件成立：aos-mcp 是包在 aos-tools 上的小包裝，讀的就是 aos-tools 的登記檔，格式同一種（`{"tools": {名: {"path": …}}}`），試驗場 bob-cathy 也是兩邊共用同一份。不存在＝`ToolMissing` 照舊；試驗場的 `agents/bob-cathy/aos-tools.json` 改名 `tools.json`。
 - **衝突 1（daemon 擋名字）：拿掉**（「那兩題中的1.，可以」）。步驟 6 照做。
 - **方向題 1（ask_round 對齊 P-32）：先不管**（「2.先不管」——「兩題」指要使用者答的衝突 1 與方向題 1，第 2 題即方向題 1）。ask_round 只做最小改：小格前綴改進 `tools/`，工作區與 `.stack` 擺法照舊。
 - **方向題 2（eca-turn 的 `claude/`、`codex/`）**：照規劃不動。

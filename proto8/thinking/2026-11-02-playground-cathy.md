@@ -21,7 +21,7 @@
   - `_entry.json`＝bob 那串 argv 多兩組：`--mcp-config mcp.json`、`--allowedTools mcp__aos__cathy`。
   - `mcp.json`＝`{"mcpServers": {"aos": {"command": "aos-mcp", "args": ["aos-tools.json"]}}}`——相對路徑從 claude 的 cwd＝這隻 agent 的資料夾算（aos-exec 會 cd 進來）；工作區與 stack 從 aos-exec 給的 `AOS_WS`／`AOS_STACK` 繼承，不另寫。**11-02 改 `"args": ["--enable-logs"]`**（不帶登記檔＝預設 `./aos-tools.json`；加 `--enable-logs` 才記 `ws/.stack/aos-mcp-logs.jsonl`，[stack-tools](2026-11-02-stack-tools.md)）。
   - `system.txt`＝bob 的那份，cwd 改成 `agents/bob-cathy`，加一段「cathy 是另一隻 agent，會自己想、回以『cathy：』開頭的回答，可能要等十幾秒；照實用、不要自己編」。
-  - `aos-tools.json`＝在 `agents/bob-cathy/` 裡跑 `aos-tools --file aos-tools.json add tools/cathy` 產生（寫絕對路徑）；原本的 `tools.json` 刪了。
+  - `aos-tools.json`＝在 `agents/bob-cathy/` 裡跑 `aos-tools --file aos-tools.json add tools/cathy` 產生（寫絕對路徑）；原本的 `tools.json` 刪了。**11-02 再改名回 `tools.json`**（aos-mcp 預設改回 `./tools.json`、跟 aos-tools 一致，[stack-tools 決定](2026-11-02-stack-tools.md#決定11-02使用者)），`mcp.json` 照舊 `"args": ["--enable-logs"]`，aos-tools 也不必再帶 `--file`。
   - `tools/cathy/`＝工具小資料夾：`_entry.json`＝`["/home/guanyu/code/playground/agents/cathy"]`（argv[0] 是資料夾＝前面插 aos-exec，N-61；arguments 的 JSON 從 stdin 一路接到 `claude -p`，claude 沒給題目參數時讀 stdin）、`_tooldef.json`（`{"text"}`）、`_metainfo`（`time_ms` `{"val": 15000, "max": 120000}`、`resource` `llm`）。原本的 `cathy.py` 刪了。
 - `env.sh`：PATH 多放 `proto8/extras/ai_tools/bin`（aos-mcp 在那裡）。
 

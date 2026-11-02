@@ -133,15 +133,17 @@ class AosMcp(unittest.TestCase):
         self.assertFalse((self.stack / "aos-mcp-logs.jsonl").exists())
 
     def test_default_registry(self):
-        """一份登記檔都沒給＝讀啟動時 cwd 的 ./aos-tools.json（11-02）；不存在＝ToolMissing。"""
+        """一份登記檔都沒給＝讀啟動時 cwd 的 ./tools.json（跟 aos-tools 一致；11-02 改回）；不存在＝ToolMissing。"""
         a = Path(self.agent(BASE / "clock")).parent              # 裡面有 aos-tools.json
+        (a / "tools.json").write_text((a / "aos-tools.json").read_text())
+        (a / "aos-tools.json").unlink()
         _, out, _ = session(self.base, INIT + [req(2, "tools/list")], cwd=a)
         self.assertEqual([t["name"] for t in out[1]["result"]["tools"]], ["clock"])
-        (a / "tools.json").write_text((a / "aos-tools.json").read_text())
-        (a / "aos-tools.json").unlink()                         # 只有 tools.json＝不去找它
+        (a / "aos-tools.json").write_text((a / "tools.json").read_text())
+        (a / "tools.json").unlink()                             # 只有 aos-tools.json＝不去找它
         rc, _, err = session(self.base, [], cwd=a)
         self.assertEqual(rc, 1)
-        self.assertTrue(err.splitlines()[-1].startswith("aos-mcp: ToolMissing aos-tools.json"), err)
+        self.assertTrue(err.splitlines()[-1].startswith("aos-mcp: ToolMissing tools.json"), err)
 
     def test_call_error_is_iserror(self):
         code, out, _ = session(self.base + [self.agent(BASE / "math")],

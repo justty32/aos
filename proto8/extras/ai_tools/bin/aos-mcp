@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
-# aos-mcp - 把 aos-tools 的工具註冊檔（登記檔，例 aos-tools.json）登記的工具當 MCP tools 給外部 agent（Claude Code、pi coding agent 等）叫；stdio JSON-RPC
+# aos-mcp - 把 aos-tools 的工具註冊檔（登記檔，例 tools.json）登記的工具當 MCP tools 給外部 agent（Claude Code、pi coding agent 等）叫；stdio JSON-RPC
 # 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。
 # 外面的 agent 只會講 MCP；櫃台把「有哪些工具」交給 `aos-tools ls --json`、「叫一次」交給 `aos-tools call 名`，
 # 自己不懂任何一個工具在做什麼、也不管工具是資料夾、JSON 還是可執行檔（C-52）。設計：proto8/thinking/2026-10-28-aos-tools.md。
 #
 # 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [REGISTRY...]
 #   每個 REGISTRY 是一份登記檔的路徑（相對路徑從啟動時的 cwd 算；不是檔＝ToolMissing）；檔名不限
-#   （11-02 使用者「改成指定檔案」，以前給的是 agent 資料夾、讀它的 tools.json）。一份都沒給＝./aos-tools.json
-#   （11-02 使用者「不接，就是默認aos-tools.json」；不存在＝ToolMissing）。好幾份的工具合在一起，撞名＝ToolsBad。
+#   （11-02 使用者「改成指定檔案」，以前給的是 agent 資料夾、讀它的 tools.json）。一份都沒給＝./tools.json
+#   （11-02 使用者「不接，就是默認aos-tools.json」先改成 ./aos-tools.json；11-02 再改回 ./tools.json、跟 aos-tools 一致：
+#   使用者「兩邊的json格式是一樣的嗎？是同一份嗎？是的話，那就全部改回預設tools.json。」；不存在＝ToolMissing）。好幾份的工具合在一起，撞名＝ToolsBad。
 #   清單每次 tools/list、tools/call 都重讀（登記檔變了，下次列就看得到；不主動通知 listChanged）。
 #   工作區＝--ws ＞ $AOS_WS；stack＝--stack ＞ $AOS_STACK ＞ $WS/.stack/。每次叫工具：
 #   AOS_WS=WS AOS_STACK=<stack>/tools/<名>/ aos-tools --file REGISTRY call 名（aos-tools、aos-exec 由 PATH 找，呼叫者放好），
@@ -23,7 +24,7 @@ import json, os, signal, subprocess, sys, time
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
 USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [REGISTRY...]"
-DEFAULT_REGISTRY = "aos-tools.json"           # 一份都沒給時讀 ./aos-tools.json（11-02）
+DEFAULT_REGISTRY = "tools.json"               # 一份都沒給時讀 ./tools.json（跟 aos-tools 一致；11-02 改回）
 LOGS_NAME = "aos-mcp-logs.jsonl"         # --enable-logs 沒給 --logs-path 時記在 <stack>/ 底下的這個檔（11-02）
 LOGS_PATH = None                               # 記呼叫紀錄的檔（絕對路徑）；None＝不記（預設）
 
@@ -78,7 +79,7 @@ def parse_args(argv):
     regs = []
     for f in files:
         if not os.path.isfile(f):
-            die("ToolMissing", "%s 不是檔（給登記檔的路徑，例 aos-tools.json；用 aos-tools --file 它 add 登記工具）" % f)
+            die("ToolMissing", "%s 不是檔（給登記檔的路徑，例 tools.json；用 aos-tools --file 它 add 登記工具）" % f)
         regs.append(os.path.abspath(f))
     ws = os.path.abspath(ws)
     stack = os.path.abspath(stack) if stack else os.path.join(ws, ".stack")
