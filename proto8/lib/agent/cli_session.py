@@ -1,6 +1,6 @@
 # cli_session.py - 把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 attach 接進互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字
 #
-# 一個工具的小格（$AOS_STACK，act 給的是 $AOS_STACK/<工具名>/）裡放：
+# 一個工具的小格（$AOS_STACK，act 給的是 $AOS_STACK/tools/<工具名>/，11-02 起）裡放：
 #   session.txt   這段對話的 id（claude 的 session id／codex 的 thread id）；第一次講完話才有
 #   tty.sock      tmux 的 socket：互動畫面活著時，CLI 的終端就接在這裡（attach＝tmux -S tty.sock attach）
 #   tmux.conf     attach 開畫面時寫的 tmux 設定（Ctrl-] 或 Ctrl-\ 跳出、不用 prefix）
@@ -251,7 +251,7 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path):
 def print_claude(cfg, cell, ws, prompt):
     sid = cell.read("session.txt")
     new = "" if sid else str(uuid.uuid4())
-    # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-hub watch 看得到它正在做什麼；
+    # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-eca-hub watch 看得到它正在做什麼；
     # 回答取最後一個帶 result 的那行（type: result）
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
     argv += ["--resume", sid] if sid else ["--session-id", new]
