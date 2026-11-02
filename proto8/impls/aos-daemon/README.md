@@ -21,7 +21,7 @@
 
 ```sh
 cat daemon.json
-# {"max": 10, "interval_ms": 200, "ctl": "daemon_ctl.json", "state": "daemon_state.json",
+# {"max": 10, "interval_ms": 200, "ctl": "ctl.json", "state": "state.json",
 #  "loops": {"bob": {"exec": "daemon.json#/loops/bob/body", "max": 1,
 #                    "body": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}},
 #            "ann": {"exec": "daemon.json#/loops/ann/body", "max": 1,
@@ -47,7 +47,7 @@ daemon.json＝loop.json 的超集（N-28）：
 | `exec` | 字串、`[目標, 參數...]` 或單子物件 | 不跑 | 自己每次的身體（同 aos-loop：每次 `aos-exec -- 目標 參數...`；物件＝單子、行程內 `run_inst`，`AOS_CF`＝daemon.json、`AOS_CO`＝`/exec`；使用者「exec，loop／daemon 的 run 也一起改 exec」）；純監工不寫 |
 | `max` | 非負整數 | 不限 | 跑幾次就收工（寫 `null` 不行，同 bin 版） |
 | `interval_ms` | 非負整數 | 200 | 兩次之間至少隔幾毫秒 |
-| `ctl`、`state` | 檔名或 `null` | 不開 | loop 面向的兩扇窗，在 `$AOS_STACK` 底下（同 aos-loop；10-29 起不放名單，見下「兩個手把、兩扇狀態窗」）。程式沒有預設名；慣用 `daemon_ctl.json`、`daemon_state.json`（11-02，前綴 `daemon_*`，[thinking 11-02 exec 像繼承](../../thinking/2026-11-02-exec-inheritance.md)） |
+| `ctl`、`state` | 檔名或 `null` | 不開 | loop 面向的兩扇窗，在 `$AOS_STACK` 底下（同 aos-loop；10-29 起不放名單，見下「兩個手把、兩扇狀態窗」）。程式沒有預設名；慣用 `ctl.json`、`state.json`（控制自身的窗不加前綴；11-02 白天改 `daemon_*`、11-02 晚改回，使用者「控制自身的 ctl/state 檔案，那就是 ctl/state，不加前綴」，[thinking 11-02 ctl-state-names](../../thinking/2026-11-02-ctl-state-names.md)） |
 | `loops_ctl`、`loops_state` | 檔名或 `null` | `loops_ctl.json`、`loops_state.json` | 管轄（名單）的手把與狀態窗，在 `$AOS_STACK` 底下（10-29 拆窗）；寫 `null`＝不開 |
 | `loops_ctl_mailbox` | 路徑或 `null` | 不開 | 信箱（10-29；11-02 晚原 `loops_mailbox`，舊名不認＝照「其他 key 忽略」）：管轄的增減也可以一封封信投進這個信箱（在 `$AOS_STACK` 底下，絕對路徑照寫；慣用名 `loops_ctl_mailbox`）；**跟 `loops_ctl` 可以同時開**（11-02 晚），都不開＝名單只看 daemon.json。見下「信箱」 |
 | `loops` | `{名字: 字串、陣列或物件}` | `{}` | 字串或陣列＝aos-exec 的目標（包成 `{"exec": 它}`）；物件＝一份 loop.json 的內容（不驗，原樣交給子 loop，寫錯了子 loop 自己退 1）。子項要內嵌單子直接寫 `{"exec": 單子}`（使用者「不過exec本來就應該要可以直接放內嵌單子吧」，[thinking 10-24](../../thinking/2026-10-24-exec-relative.md#10-24-exec-直接放單子)）：子 loop 在自己行程內跑，`AOS_CF`＝小格的 `loop.json`、`AOS_CO`＝`/exec`；daemon 寫小格時單子沒寫 `cwd`＝補上 daemon 的 cwd、相對的 `cwd` 接在 daemon 的 cwd 後面（指示詞不動），單子裡相對的 `$ref` 檔名照它來自的檔轉成絕對（`abs_refs`，不解）——相對路徑從 daemon 的 cwd 算；ctl 加的子項同一套。也可寫 `{"exec": "daemon.json#/loops/<名字>/body", "body": 單子}`。物件多認一個 `ws`（工作區，不寫進小格，見下「子項的工作區 ws」）。拆成好幾份檔寫 `{"$ref": ["loops-1.json", "loops-2.json"]}`（見下「指示詞與切檔」） |
@@ -94,10 +94,10 @@ daemon.json＝loop.json 的超集（N-28）：
 
 | 面向 | 手把（人寫） | 狀態窗（daemon 寫） |
 |---|---|---|
-| loop 面向與自身 | `daemon_ctl.json`（慣用名，11-02 原 `ctl.json`）：`paused`、`stopped`、`max`、`interval_ms`、`seq`（同 aos-loop） | `daemon_state.json`（慣用名，11-02 原 `state.json`）：同 aos-loop（`phase`、`counter_runs`、`max`、`interval_ms`、`paused`、`ctl_seq`、`ctl_warning`、收尾的 `code`、`pid`、`started_at_ticks`、`boot_id`、`updated_at`），**沒有 `loops`** |
+| loop 面向與自身 | `ctl.json`（慣用名；11-02 白天改 `daemon_ctl.json`、晚上改回）：`paused`、`stopped`、`max`、`interval_ms`、`seq`（同 aos-loop） | `state.json`（慣用名；11-02 白天改 `daemon_state.json`、晚上改回）：同 aos-loop（`phase`、`counter_runs`、`max`、`interval_ms`、`paused`、`ctl_seq`、`ctl_warning`、收尾的 `code`、`pid`、`started_at_ticks`、`boot_id`、`updated_at`），**沒有 `loops`** |
 | 管轄（名單） | `loops_ctl.json`：`loops`、`loops_added`、`loops_removed`、`execs`（11-02 晚）、`execs_added`、`execs_removed`（10-30）、`seq`；另可同時開信箱 `loops_ctl_mailbox`（見下） | `loops_state.json`：`{"ctl_seq", "ctl_warning", "mailbox_warning"（開了信箱才有；11-02 晚原 `letter_warning`）, "loops", "execs"（10-30）, "pid", "started_at_ticks", "boot_id", "updated_at"}`（11-02：`kind`、`recorded_at` 拿掉） |
 
-- 每圈先讀 ctl（`daemon_ctl.json`）、再讀 `loops_ctl.json`，**各自**採用或不採用（一份壞不影響另一份；壞的原因進各自那扇狀態窗的 `ctl_warning`、`ctl_seq` 回各自的 `seq`）。
+- 每圈先讀 ctl（`ctl.json`）、再讀 `loops_ctl.json`，**各自**採用或不採用（一份壞不影響另一份；壞的原因進各自那扇狀態窗的 `ctl_warning`、`ctl_seq` 回各自的 `seq`）。
 - `loops_state.json` 跟 state 一起看（`Loop::write_more`，每次要寫 state 都呼叫；沒開 state 也照呼叫），**有變才寫**（11-02）：組好的那份（分檔前的表、`ctl_seq`、`ctl_warning`、`mailbox_warning`，不含 pid 那幾欄與 `updated_at`）跟上一份寫出去的一樣就不碰檔（分檔也不碰），不一樣才寫分檔→清舊分檔→寫主檔；daemon 對表時起一個、退一個也各寫一次。`pid`、`started_at_ticks`、`boot_id` 同一個行程的值——只讀這扇也能判 daemon 死活（N-17；心跳拿掉，不看 `updated_at` 新不新）。
 - **`stopped`**＝這圈收工（收子項照 P-36），不再看名單。**`paused`**＝整圈暫停：不跑 `exec`、**也不調表**（不收多的、不起少的；`loops_ctl` 的變動等解除暫停那圈才生效），
   但照讀兩份 ctl（`ctl_seq` 照回）、兩扇 state 照規則寫（有變才寫）、照收已送 SIGTERM 的、照記自己結束的（`done`：印 log、拿掉、本次不再起）。10-29 前暫停時照樣對表。
@@ -195,7 +195,7 @@ echo '{"loops_removed": ["bob"]}' | aos-post send --reply-to 我的信箱 "$AOS_
 - **`loops` 拆成好幾份**（使用者「當loop太多的時候，json超大，我會希望他會自動用$ref切，每個檔案一百個」）：用 `$ref` 陣列（aos-directive，N-45）——幾份照順序合成一份物件，同名後面的蓋前面的：
 
   ```json
-  {"interval_ms": 200, "ctl": "daemon_ctl.json", "state": "daemon_state.json",
+  {"interval_ms": 200, "ctl": "ctl.json", "state": "state.json",
    "loops": {"$ref": ["loops-1.json", "loops-2.json"]}}
   ```
 

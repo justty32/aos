@@ -146,6 +146,7 @@
   // ctl/loop.json —— 每 300 ms 跑一次 relay；窗加前綴 loop_（exec 像繼承：共用 stack 的名字各自加前綴）
   {"exec": "relay", "interval_ms": 300, "ctl": "loop_ctl.json", "state": "loop_state.json"}
   ```
+  （11-02 晚推翻：控制器改用 `ctl.json`／`state.json`，試驗場已改，見 [ctl-state-names](2026-11-02-ctl-state-names.md)。）
 
   log 預設不印（loop-stdio 決定），fd 1 上只有 `relay` 寫的東西。`relay` 繼承 fd 1（aos-loop 跑資料夾目標＝fork＋`run_cli`，不另開串流），往 stdout 寫一行＝送進 bob 的 stdin。**`ctl/` 裡有 `loop.json`，`aos-daemon-ctl add <ctl 資料夾>` 會自動認成 loop 型**（它看「資料夾有 `loop.json`」）、單子的 `stdout` 就沒了——所以掛的目標指到**檔** `ctl/_entry.json`（C-73 入口可以是單子檔；XXX 不是帶 `loop.json` 的資料夾＝exec 型），`--name bob_ctl`。
 - **控制器的小格 `$AOS_DAEMON_STACK/loops/bob_ctl/`**＝`relay` 的 `$AOS_STACK`，裡面：`queue/`（aos-say 建，N-16 有順序）、`history.jsonl`（`relay` 寫，OpenAI 形，P-41／P-42）、`loop_ctl.json`／`loop_state.json`（aos-loop 的窗）、`relay_state.json`（`relay` 自己的，前綴 `relay_`）、`mailbox_warning.txt`（壞信，同 agent 範本）、`stderr.txt`。**人對話的 stack 就是這一格**：`aos-say --stack $AOS_DAEMON_STACK/loops/bob_ctl 話`。

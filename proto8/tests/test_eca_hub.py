@@ -63,7 +63,7 @@ class EcaHub(unittest.TestCase):
         return e
 
     def start_daemon(self):
-        (self.tmp / "daemon.json").write_text(json.dumps({"interval_ms": 100, "ctl": "daemon_ctl.json", "state": "daemon_state.json",
+        (self.tmp / "daemon.json").write_text(json.dumps({"interval_ms": 100, "ctl": "ctl.json", "state": "state.json",
                                                           "loops_ctl_mailbox": "loops_ctl_mailbox"}))
         self.daemon = subprocess.Popen([DAEMON, str(self.tmp / "daemon.json")], cwd=str(self.tmp), env=self.env({"AOS_STACK": str(self.ds)}),
                                        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)

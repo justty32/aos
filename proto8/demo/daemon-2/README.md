@@ -46,13 +46,13 @@ echo '{"loops_removed": ["tick"]}' | aos-post send $ws/.stack/loops_ctl_mailbox 
 ```sh
 cat $ws/.stack/loops_state.json       # loops：還在跑的 tick、tock…（sam 跑完就拿掉了，11-02）；mailbox_warning：最後一封壞信
 cat $ws/.stack/loops/tick/tick.txt    # tick 走到幾了（11-02 改：子項小格在 loops/<名字>/）
-cat $ws/.stack/daemon_state.json      # daemon 自己（phase、counter_runs；11-02 起有變才寫）
+cat $ws/.stack/state.json      # daemon 自己（phase、counter_runs；11-02 起有變才寫）
 ```
 
 ## 怎麼停
 
 ```sh
-echo '{"stopped": true}' > $ws/.stack/daemon_ctl.json   # 收掉全部子項、寫好 state 才走（收掉的 tick、tock 從 loops_state 拿掉；要看結束碼就加 --enable-logs 看 stdout 的 log）
+echo '{"stopped": true}' > $ws/.stack/ctl.json   # 收掉全部子項、寫好 state 才走（收掉的 tick、tock 從 loops_state 拿掉；要看結束碼就加 --enable-logs 看 stdout 的 log）
 wait; rm -rf $ws
 ```
 

@@ -15,7 +15,7 @@
 // （要拆成好幾份檔就寫 {"$ref": ["loops-1.json", …]}，aos-directive 照順序合起來，read_loops）、adopt（布林，沒寫＝true）、
 // loops_ctl、loops_state（10-29 拆窗：管轄的手把與狀態窗的檔名，在 $AOS_STACK 底下；沒寫＝loops_ctl.json、loops_state.json，寫 null＝不開）、
 // loops_ctl_mailbox（11-02 晚原 loops_mailbox；沒寫、null＝不開）、execs（10-30）。命令列 `-- 參數...` 只接在 daemon 自己的 exec（Loop；沒 exec＝ArgumentsBad）。
-// 兩個手把、兩扇狀態窗（10-29 medium-plan § 四）：ctl／state（慣用名 daemon_ctl.json／daemon_state.json，11-02；程式沒有預設名）只管 loop 面向（同 aos-loop：paused、stopped、max、interval_ms、seq）；
+// 兩個手把、兩扇狀態窗（10-29 medium-plan § 四）：ctl／state（慣用名 ctl.json／state.json，11-02 晚改回（白天曾改 daemon_*）；程式沒有預設名）只管 loop 面向（同 aos-loop：paused、stopped、max、interval_ms、seq）；
 // loops_ctl.json 認（N-54；10-23 晚加 *_added／*_removed）：loops＝整份名單、loops_added＝名單上要多這些（寫法同 loops）、
 // loops_removed＝名單上要少這些（名字的陣列）、execs（11-02 晚，整份的 execs，跟 loops 對稱）、execs_added、execs_removed、seq；
 // 期望表＝（loops_ctl 的 loops，沒寫＝底的）＋loops_added－loops_removed，execs 同理。

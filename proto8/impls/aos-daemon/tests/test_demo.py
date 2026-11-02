@@ -13,7 +13,7 @@ stamp 印的「# <UTC 時間>」那行。要先建好 impls 的四支。
 不再跟 bin 線比，只跑 impls 線、看結束碼 0、stderr 空、答案寫出來了。
 10-29 加 proto8/demo/daemon-2（信箱模式；run_daemon2）：要多建 impls 的 aos-post，aos-tick 用 proto8/bin 的。
 10-30 加 proto8/demo/daemon-3（同一支 tick 用 loops 的 max: 1 與 execs 各掛一次；run_daemon3）。
-11-02：demo 的 daemon 自己的窗改名 daemon_state.json／daemon_ctl.json；子項結束後不留名單（loops_state 看不到），
+11-02：demo 的 daemon 自己的窗改名 daemon_state.json／daemon_ctl.json（11-02 晚改回 state.json／ctl.json，thinking 2026-11-02-ctl-state-names）；子項結束後不留名單（loops_state 看不到），
 結束的 phase／code 改看 daemon 的 log（stdout 一行一個子項的起、退；ended；11-02 晚起 log 預設不印，這裡給 --enable-logs）。
 11-02 晚：daemon-2／3 的信箱改名 loops_ctl_mailbox、loops_state 的 letter_warning 改名 mailbox_warning。
 """
@@ -113,7 +113,7 @@ def run_daemon2():
         check("daemon-2 結束碼／stderr", (p.returncode, err, s.returncode), (0, "", 0))
         ls = json.loads((ws / ".stack" / "loops_state.json").read_text())
         check("daemon-2 結束的子項（log）", {n: p for n, (p, c) in ended(out).items()}, {"sam": "done", "tick": "stopped", "tock": "stopped"})
-        check("daemon-2 名單收工後是空的", (ls["loops"], (ws / ".stack" / "daemon_state.json").is_file()), ({}, True))
+        check("daemon-2 名單收工後是空的", (ls["loops"], (ws / ".stack" / "state.json").is_file()), ({}, True))
         check("daemon-2 mailbox_warning", ls["mailbox_warning"], None)
         check("daemon-2 信都收完", [x.name for x in box.iterdir() if any((box / x.name).iterdir())], [])
         ticks = [int((ws / ".stack" / "loops" / n / (n + ".txt")).read_text()) for n in ("tick", "tock")]

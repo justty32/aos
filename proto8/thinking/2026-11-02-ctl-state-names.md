@@ -21,6 +21,12 @@
   - 11-02 [exec 像繼承 § 結論](2026-11-02-exec-inheritance.md#結論11-02跟使用者討論後)「共用 stack 的常見名字加自己前綴（`daemon_*`、`loop_*`）」**在 ctl／state 這件事上**由本條取代；其他固定名（信箱、紀錄檔、`relay_state.json` 這類）是不是也不管了見[方向題 2](#方向題-2exec-像繼承的前綴原則對-ctlstate-以外的固定名還適用嗎)。
   - 11-02 [常駐 bob](2026-11-02-resident-bob.md) 規劃的控制器窗 `loop_ctl.json`／`loop_state.json`，與頂層代定「aos-listen `--status` 也認 `loop_state.json`」（`lib/aos/aos_ws.py` 的 `LOOP_STATE_NAMES`）→ 控制器改用 `ctl.json`／`state.json`，認兩個名字的程式收回（見規劃）。
 
+### 方向題的答案（11-02 晚，使用者逐字）
+
+- **方向題 1**（`loops_ctl`／`loops_state` 留不留名）：「hmmm，是這樣的，剛剛下班通勤的時候有個想法，就是說，exec和loops，其實都屬於proc，所以...改名？可是我又擔心和linux的proc撞名...不過好像撞名也沒差。就是說，exec是基石，loop是另一種基本形式，搞不好以後還會有更多形式。」→ 頂層判讀：使用者在想把 `execs`／`loops` 統稱 proc 並改名，**未定**；今晚 `loops_ctl`／`loops_state` 等**不動**，**待明天跟使用者談**。
+- **方向題 2**：「2.好。」→ 前綴原則對 ctl／state 以外的固定名照舊（選 a）。
+- **方向題 3**：「3.對。」→ 只有帶 ctl 的才算 ctl／state 對；`relay_state.json` 照舊（選 a）。
+
 ## 現況（查清的，不是規劃）
 
 ### daemon 的 ctl／state 跟 loop 的格式一樣嗎（決定原則怎麼套）
@@ -144,3 +150,14 @@
 - **測試**：約 13 個測試檔、35 行字串改回（`daemon_*`）＋`test_human` 1 案；沒有新案要加（名字是設定給的，行為沒變）。
 - **文件**：aos-daemon README、bin README、ai_tools 三份文件、lib／human README、demo 三份 README、NORMS 四處、三份 thinking 補註、code map 六處。
 - **大小**：一個 commit 做得完（跟 11-02 白天把 `state.json`→`daemon_state.json` 那輪同量、方向相反）。
+
+## 實作（11-02 晚，隊長派的 agent；時間到 22:55 硬期限，跟另一輪「刪 agent-dan」的未 commit 改動重疊的先不碰）
+
+**做了**：步驟 1（demo 五份 daemon.json、daemon-2／3 README、`clocks.lua`）、步驟 4 的不重疊部分（`test_daemon`、`test_aos_daemon_ctl`、`test_eca_hub`、`test_exec_rules`、`test_talk`、`impls/aos-daemon/tests/test_demo.py`）、步驟 5（aos-daemon README、`daemon.hpp` 註解；C++ 行為零改動）、步驟 6（N-13 補一句含例子、N-28 改回、`NORMS.md` 命名段加一條、附錄 1；附錄 2 是當時出處照舊）、步驟 7（三份 thinking 補註、本檔「方向題的答案」）、步驟 8（試驗場 `daemons/main/daemon.json`、`agents/resident_bob` 的 `ctl/loop.json`／`_entry`／README、試驗場 README；沒有舊名殘檔；`daemon_ws` 沒碰、當時沒有 aos-daemon 在跑）。
+
+**還沒做（明天；檔案跟另一輪未 commit 的改動重疊，照指示不碰）**：
+- 步驟 2：`extras/ai_tools/bin/aos_ai_base.py:190-191`、`aos_ai_daemon.py:15`、`aos-ai` 檔頭、`extras/ai_tools/README.md`、`claude_skill/aos/concepts.md`、`aos_ai_agents.py` 註——要跟 `tests/test_ai_tools.py:215`（重疊）一起改，所以 ai_tools 這邊整組留著（現在 `aos-ai daemon up` 生的仍是 `daemon_ctl.json`／`daemon_state.json`，自己讀寫一致、不壞）。
+- 步驟 3：`lib/aos/aos_ws.py` 收回 `LOOP_STATE_NAMES` 的 `loop_state.json` 備案、`extras/human/bin/aos_human.py:211-216`、`tests/test_human.py` 的 `test_status_reads_prefixed_loop_state`、`lib/README.md`、`extras/human/README.md`——`aos_human.py`、`test_human.py`、兩份 README 重疊，整組留著（備案留著不壞事：先找 `state.json`）。
+- `demo/README.md:224` 一帶的 daemon 窗名、code map `02-tests.md`、`08-tests-10-24-a.md`、`09-lib.md`、`13-demo.md`（重疊）與 `06-周邊工具-3.md`（ai_tools 那兩列，跟步驟 2 一起改）。
+- 步驟 10：`wf/WAIT_USER.md`（重疊）。
+- 方向題 1（`loops_ctl`／`loops_state`、execs／loops 統稱 proc）待明天跟使用者談。

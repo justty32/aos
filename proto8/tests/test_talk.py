@@ -229,7 +229,7 @@ class Team(TalkCase):
         [l] = letters(self.ws / "user" / "new")
         self.assertEqual((l["from"], l["subject"], l["counter_hops"], l["expect_reply"]), ("ann", "Re: 問", 2, False))
         self.assertIn("FAKE ANSWER to: 1+1？", l["body"])
-        self.assertEqual(json.loads((self.ws / ".stack" / "daemon_state.json").read_text())["phase"], "done")
+        self.assertEqual(json.loads((self.ws / ".stack" / "state.json").read_text())["phase"], "done")
 
     def test_three_agents_study_group(self):
         brain = RoleBrain(study_group)

@@ -18,6 +18,7 @@
 - **`kind` 拿掉**（沒人在用）。
 - **衝突 1（心跳）**：拿掉心跳。判斷 proc 活著＝看 pid（Linux 的 proc 機制），**另外**用 aos-daemon-ctl 問詢，兩者並存；不從檔案的更新時間判斷（「檔案的更新本來就會受到多方面因素影響」）。
 - **方向題 1**：daemon 的 `ctl.json` 也改名 `daemon_ctl.json`（要）。
+  - **11-02 晚推翻**：控制自身的窗不加前綴，daemon 自己的改回 `ctl.json`／`state.json`，見 [ctl-state-names](2026-11-02-ctl-state-names.md)。
 - **方向題 2**：`counter_runs` 不算變動（對）。
 - **方向題 3**：`recorded_at` 收掉，只留 `updated_at`。
 - **方向題 4**：見上 log（stdout、預設開）。

@@ -53,7 +53,7 @@ class T(unittest.TestCase):
             self.p.communicate(timeout=30)
 
     def start(self):
-        (self.t / "daemon.json").write_text(json.dumps({"interval_ms": 100, "ctl": "daemon_ctl.json", "state": "daemon_state.json",
+        (self.t / "daemon.json").write_text(json.dumps({"interval_ms": 100, "ctl": "ctl.json", "state": "state.json",
                                                         "loops_ctl_mailbox": "loops_ctl_mailbox"}))
         with open(self.t / "log", "w") as out:   # daemon 的 log（--enable-logs）：子項起來一行、結束一行
             self.p = subprocess.Popen([DAEMON, "--enable-logs", "daemon.json"], cwd=str(self.t),

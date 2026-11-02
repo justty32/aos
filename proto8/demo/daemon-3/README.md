@@ -5,7 +5,7 @@
 要跑一次就結束的東西（例：一隻射後不理的 agent、`claude -p` 的腳本）想讓 daemon 管著（看得到死活、收得掉），有兩種寫法。這個 demo 用同一支小程式 [`demo/tick`](../tick/)（aos-loop 跑 5 次 aos-tick，時鐘檔 `$AOS_STACK/tick.txt` 走到 5；離線、不接腦）各掛一次：
 
 ```json
-{"interval_ms": 200, "max": 10, "ctl": "daemon_ctl.json", "state": "daemon_state.json", "loops_ctl_mailbox": "loops_ctl_mailbox",
+{"interval_ms": 200, "max": 10, "ctl": "ctl.json", "state": "state.json", "loops_ctl_mailbox": "loops_ctl_mailbox",
  "loops": {"tick_loop": {"exec": "../tick", "max": 1}},
  "execs": {"tick_exec": "../tick"}}
 ```
@@ -49,7 +49,7 @@ find .stack -type f | sort
 `find .stack -type f | sort`（11-02 起子項小格在 `.stack/loops/<名字>/`，下面照新路徑改了；10-30 那次是 `.stack/<名字>/`）：
 
 ```
-.stack/daemon_state.json
+.stack/state.json
 .stack/loops/tick_exec/stderr.txt
 .stack/loops/tick_exec/tick.txt
 .stack/loops/tick_loop/loop.json
