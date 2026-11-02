@@ -155,9 +155,7 @@
 
 **做了**：步驟 1（demo 五份 daemon.json、daemon-2／3 README、`clocks.lua`）、步驟 4 的不重疊部分（`test_daemon`、`test_aos_daemon_ctl`、`test_eca_hub`、`test_exec_rules`、`test_talk`、`impls/aos-daemon/tests/test_demo.py`）、步驟 5（aos-daemon README、`daemon.hpp` 註解；C++ 行為零改動）、步驟 6（N-13 補一句含例子、N-28 改回、`NORMS.md` 命名段加一條、附錄 1；附錄 2 是當時出處照舊）、步驟 7（三份 thinking 補註、本檔「方向題的答案」）、步驟 8（試驗場 `daemons/main/daemon.json`、`agents/resident_bob` 的 `ctl/loop.json`／`_entry`／README、試驗場 README；沒有舊名殘檔；`daemon_ws` 沒碰、當時沒有 aos-daemon 在跑）。
 
-**還沒做（明天；檔案跟另一輪未 commit 的改動重疊，照指示不碰）**：
-- 步驟 2：`extras/ai_tools/bin/aos_ai_base.py:190-191`、`aos_ai_daemon.py:15`、`aos-ai` 檔頭、`extras/ai_tools/README.md`、`claude_skill/aos/concepts.md`、`aos_ai_agents.py` 註——要跟 `tests/test_ai_tools.py:215`（重疊）一起改，所以 ai_tools 這邊整組留著（現在 `aos-ai daemon up` 生的仍是 `daemon_ctl.json`／`daemon_state.json`，自己讀寫一致、不壞）。
-- 步驟 3：`lib/aos/aos_ws.py` 收回 `LOOP_STATE_NAMES` 的 `loop_state.json` 備案、`extras/human/bin/aos_human.py:211-216`、`tests/test_human.py` 的 `test_status_reads_prefixed_loop_state`、`lib/README.md`、`extras/human/README.md`——`aos_human.py`、`test_human.py`、兩份 README 重疊，整組留著（備案留著不壞事：先找 `state.json`）。
-- `demo/README.md:224` 一帶的 daemon 窗名、code map `02-tests.md`、`08-tests-10-24-a.md`、`09-lib.md`、`13-demo.md`（重疊）與 `06-周邊工具-3.md`（ai_tools 那兩列，跟步驟 2 一起改）。
-- 步驟 10：`wf/WAIT_USER.md`（重疊）。
+**22:35 另一輪 commit（7dcc3dc6）後接著做**（第一批 25 檔被頂層的 HANDOFF commit 971811ce 一起帶進去了，其餘另開 commit）：步驟 2（ai_tools：`aos_ai_base.py`、`aos_ai_daemon.py`、`aos-ai` 檔頭、README、`concepts.md`；`test_ai_tools`）、步驟 3（`aos_ws.loop_state` 只認 `state.json`、`LOOP_STATE_NAMES` 拿掉、`aos-listen --status` 不再印「（哪份）」；`test_human` 那案改成 `test_status_reads_only_state_json`、另一案的 regex 跟上；human README）、`demo/README.md`、code map 02-tests／06-3／08-a／09-lib／13-demo、`WAIT_USER` 那行。
+
+**還沒做**：
 - 方向題 1（`loops_ctl`／`loops_state`、execs／loops 統稱 proc）待明天跟使用者談。

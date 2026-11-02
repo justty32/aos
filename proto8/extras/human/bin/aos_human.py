@@ -209,11 +209,10 @@ def status_lines(w):
     run = runners(w)
     t = last_trace(w)
     loop = aos_ws.loop_state(st)
-    lname = next((n for n in aos_ws.LOOP_STATE_NAMES if os.path.exists(os.path.join(st, n))), "state.json")
     out = ["工作區   %s" % w.ws,
            "stack    %s" % st,
            "在跑     %s" % ("、".join("%s（pid %d）" % (p, i) for i, p in run) if run else "沒有（%s）" % run_hint(w)),
-           "loop     %s" % ("phase %s（%s）" % (loop.get("phase"), lname) if loop else "-（沒有 state.json、loop_state.json：沒開 aos-loop 的 state 窗）"),
+           "loop     %s" % ("phase %s" % loop.get("phase") if loop else "-（沒有 state.json：沒開 aos-loop 的 state 窗）"),
            "認領中   %s" % ("、".join(l.strip() for l in (read(os.path.join(st, "current.txt")) or "").splitlines() if l.strip()) or "-"),
            "queue    new %d、cur %d、done %d" % tuple(len(names(st, s)) for s in STAGES)]
     if t:

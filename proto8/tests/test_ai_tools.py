@@ -212,7 +212,7 @@ class AiToolsTest(unittest.TestCase):
         self.assertTrue(res["ok"])
         code, res, _ = ai(self.root, "daemon", "down")
         self.assertFalse(res["running"])
-        ctl = json.loads((Path(self.root) / "daemon" / ".stack" / "daemon_ctl.json").read_text())   # 11-02 原 ctl.json
+        ctl = json.loads((Path(self.root) / "daemon" / ".stack" / "ctl.json").read_text())   # 11-02 白天曾改 daemon_ctl.json、晚上改回
         lctl = json.loads((Path(self.root) / "daemon" / ".stack" / "loops_ctl.json").read_text())   # 10-29 daemon 拆窗
         self.assertEqual((lctl["loops_added"], ctl["stopped"], "loops_added" in ctl), ({}, True, False))
 

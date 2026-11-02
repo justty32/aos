@@ -187,8 +187,8 @@ class Daemon:
     def __init__(self, root):
         self.dir = root.dir / "daemon"
         self.stack = self.dir / ".stack"
-        # 11-02：daemon 自己的窗慣用名 daemon_ctl.json／daemon_state.json（原 ctl.json／state.json；子 loop 小格裡的照舊）
-        self.cfg, self.ctl, self.state = self.dir / "daemon.json", self.stack / "daemon_ctl.json", self.stack / "daemon_state.json"
+        # daemon 自己的窗慣用名 ctl.json／state.json（11-02 白天曾改 daemon_*，晚上改回：控制自身的窗不加前綴，thinking 2026-11-02-ctl-state-names）
+        self.cfg, self.ctl, self.state = self.dir / "daemon.json", self.stack / "ctl.json", self.stack / "state.json"
         # 10-29 aos-daemon 拆窗：名單的手把、子項表另外一對（daemon.json 沒寫＝這兩個預設檔名）
         self.lctl, self.lstate = self.stack / "loops_ctl.json", self.stack / "loops_state.json"
 
@@ -231,7 +231,7 @@ class Daemon:
 
     def write_ctl(self, change, path=None):
         """ctl 是宣告（N-06）：讀現在那份、改、seq＋1、整份換掉；同時只一個 aos-ai 寫（flock）。回 seq。
-        path 沒給＝daemon_ctl.json（stopped 這類 loop 面向）；名單寫 self.lctl（loops_ctl.json，10-29 拆窗）。"""
+        path 沒給＝ctl.json（stopped 這類 loop 面向）；名單寫 self.lctl（loops_ctl.json，10-29 拆窗）。"""
         path = path or self.ctl
         self.stack.mkdir(parents=True, exist_ok=True)
         with open(self.dir / ".ctl.flock", "w") as lock:

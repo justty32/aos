@@ -104,8 +104,8 @@
 ## daemon
 
 一句：`aos-daemon daemon.json`＝顧一群子 loop（`loops`），每個子項一個小格 `$AOS_STACK/loops/<名>/`（11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../../../../thinking/2026-11-02-stack-tools.md)）；daemon.json 是 loop.json 的超集。
-範例：`{"interval_ms": 500, "ctl": "daemon_ctl.json", "state": "daemon_state.json", "loops": {"bob": {"exec": {"argv": ["aos-exec", "--ws", "/w/bob", "/agents/bob"]}, "interval_ms": 2000}}}`
-daemon 自己的窗慣用名 `daemon_ctl.json`／`daemon_state.json`（11-02；子 loop 小格裡的照舊 `ctl.json`／`state.json`）。名單的手把與子項表另有一對窗（10-29）：`loops_ctl.json`（`loops`、`loops_added`、`loops_removed`、`execs`、`execs_added`、`execs_removed`、`seq`）、`loops_state.json`（`loops`、`execs` 兩張表〔只有還在跑的〕、`ctl_seq`、`ctl_warning`、`pid`、`started_at_ticks`、`boot_id`、`updated_at`）；daemon.json 的 `loops_ctl`／`loops_state` 沒寫＝這兩個檔名、`null`＝不開。另可開信箱 `"loops_ctl_mailbox": "loops_ctl_mailbox"`（aos-daemon-ctl 投信用）。
+範例：`{"interval_ms": 500, "ctl": "ctl.json", "state": "state.json", "loops": {"bob": {"exec": {"argv": ["aos-exec", "--ws", "/w/bob", "/agents/bob"]}, "interval_ms": 2000}}}`
+daemon 自己的窗慣用名 `ctl.json`／`state.json`（控制自身的窗不加前綴；11-02 白天曾改 `daemon_*`、晚上改回；子 loop 小格裡的也是 `ctl.json`／`state.json`）。名單的手把與子項表另有一對窗（10-29）：`loops_ctl.json`（`loops`、`loops_added`、`loops_removed`、`execs`、`execs_added`、`execs_removed`、`seq`）、`loops_state.json`（`loops`、`execs` 兩張表〔只有還在跑的〕、`ctl_seq`、`ctl_warning`、`pid`、`started_at_ticks`、`boot_id`、`updated_at`）；daemon.json 的 `loops_ctl`／`loops_state` 沒寫＝這兩個檔名、`null`＝不開。另可開信箱 `"loops_ctl_mailbox": "loops_ctl_mailbox"`（aos-daemon-ctl 投信用）。
 常見錯：子 loop 結束後**不自動重起**，而且**從表上拿掉**（11-02；結束碼看 daemon 的 log：`aos-daemon --enable-logs` 時 stdout 每個子項起來一行、結束一行）；本次執行要再起＝先讓 loops_ctl 某一圈沒有它（拿掉、等 `ctl_seq` 回音）再放回，信箱模式再投一封同名 `loops_added` 就好；名單寫在 `ctl.json` 不生效（只在 state 的 `ctl_warning` 提醒）；ctl `paused` 時名單也不調；（子項名字跟自己的窗同名 11-02 起不擋：小格在 `loops/<名字>/`）；PATH 上要有 aos-loop 和 aos-exec。
 出處：N-28、N-54、impls/aos-daemon。
 

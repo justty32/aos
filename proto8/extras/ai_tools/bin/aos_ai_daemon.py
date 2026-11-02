@@ -12,7 +12,7 @@ def daemon_up(root):
         return pid, True
     d.stack.mkdir(parents=True, exist_ok=True)       # aos-daemon 不自己建 stack（N-59 第 1 件）
     if not d.cfg.exists():
-        write_atomic(d.cfg, json.dumps({"interval_ms": 500, "ctl": "daemon_ctl.json", "state": "daemon_state.json", "loops": {}},
+        write_atomic(d.cfg, json.dumps({"interval_ms": 500, "ctl": "ctl.json", "state": "state.json", "loops": {}},
                                        indent=1) + "\n")
     d.write_ctl(lambda c: c.pop("stopped", None))    # 上次 down 留下的 stopped 拿掉；loops_ctl 的 loops_added 照留＝上次在跑的照起
     prog = which("aos-daemon")

@@ -270,16 +270,16 @@ class ListenTest(Base):
         self.assertIn("== #1\n> 跟著看\nFAKE ANSWER to: 跟著看", out)
 
 
-    def test_status_reads_prefixed_loop_state(self):
-        """stack 裡沒有 state.json、只有 loop_state.json（11-02 常駐 bob：跟身體共用 stack 時窗加前綴）：--status 照樣印 phase；兩份都在＝state.json 算數。"""
+    def test_status_reads_only_state_json(self):
+        """--status 只認 state.json（11-02 晚 ctl-state-names：白天的 loop_state.json 備案收回）：只有 loop_state.json＝沒開窗；有 state.json 就印 phase。"""
         self.stack.mkdir()
         (self.stack / "loop_state.json").write_text(json.dumps({"phase": "paused"}))
         r = run(LISTEN, "--ws", str(self.ws), "--status")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("loop     phase paused（loop_state.json）", r.stdout)
+        self.assertIn("loop     -（沒有 state.json", r.stdout)
         (self.stack / "state.json").write_text(json.dumps({"phase": "waiting"}))
         r = run(LISTEN, "--ws", str(self.ws), "--status")
-        self.assertIn("loop     phase waiting（state.json）", r.stdout)
+        self.assertIn("loop     phase waiting\n", r.stdout)
 
 class TailNewlineTest(Base):
     def test_tool_result_newlines_not_literal(self):
@@ -423,7 +423,7 @@ class External(Base):
         self.assertTrue(r.stdout.startswith("fake claude[") and r.stdout.rstrip().endswith(": 你好"), r.stdout)
         r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
         self.assertRegex(r.stdout, r"在跑     .*aos-loop（pid %d）" % p.pid)
-        self.assertRegex(r.stdout, r"loop     phase (waiting|running)（state\.json）")
+        self.assertRegex(r.stdout, r"loop     phase (waiting|running)\n")
         self.assertRegex(r.stdout, r"最後一格 aos-eca-turn 退 0")
         self.assertFalse((self.stack / "server.txt").exists())
         (self.stack / "ctl.json").write_text('{"paused": true}')
@@ -442,7 +442,7 @@ class External(Base):
         ds = Path(self._tmp.name) / "dstack"
         ds.mkdir()
         dj = Path(self._tmp.name) / "daemon.json"
-        dj.write_text(json.dumps({"interval_ms": 100, "ctl": "daemon_ctl.json", "state": "daemon_state.json",
+        dj.write_text(json.dumps({"interval_ms": 100, "ctl": "ctl.json", "state": "state.json",
                                   "loops_ctl_mailbox": "loops_ctl_mailbox"}))
         d = self.popen(["aos-daemon", str(dj)], AOS_STACK=str(ds))
         end = time.time() + 20
@@ -461,7 +461,7 @@ class External(Base):
         r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
         self.assertRegex(r.stdout, r"在跑     .*aos-loop")
         self.assertRegex(r.stdout, r"loop     phase (waiting|running)")
-        (ds / "daemon_ctl.json").write_text('{"stopped": true}')
+        (ds / "ctl.json").write_text('{"stopped": true}')
         self.assertEqual(d.wait(timeout=30), 0)
 
 
