@@ -1,4 +1,4 @@
-"""test_aos_mcp - proto8/extras/ai_tools/bin/aos-mcp：把 agent 資料夾 tools.json 登記的工具當 MCP tools（stdio JSON-RPC，包在 aos-tools 上）。
+"""test_aos_mcp - proto8/extras/ai_tools/bin/aos-mcp：把登記檔（aos-tools 的工具註冊檔，11-02 起給檔、不給資料夾）登記的工具當 MCP tools（stdio JSON-RPC，包在 aos-tools 上）。
 
 不叫 claude：測試自己當 MCP client，一行一則送 JSON-RPC。設計：proto8/topdown/galtxt-a/plan/side-mcp.md。"""
 import json, os, subprocess, tempfile, unittest
@@ -25,13 +25,14 @@ def session(args, msgs, env=None):
     return r.returncode, [json.loads(l) for l in r.stdout.splitlines() if l.strip()], r.stderr
 
 
-def agent_with(root, *tools):
-    """在 root 建一個 agent 資料夾，用 aos-tools add 登記 tools（路徑）→ agent 資料夾。"""
+def registry_with(root, *tools):
+    """在 root/agent/ 用 aos-tools --file aos-tools.json add 登記 tools（路徑）→ 登記檔路徑（故意不叫 tools.json：檔名不限）。"""
     a = Path(root) / "agent"
     a.mkdir(exist_ok=True)
     for t in tools:
-        subprocess.run(["aos-tools", "add", str(t)], cwd=a, check=True, env=env_for(), stdout=subprocess.DEVNULL)
-    return a
+        subprocess.run(["aos-tools", "--file", "aos-tools.json", "add", str(t)], cwd=a, check=True, env=env_for(),
+                       stdout=subprocess.DEVNULL)
+    return a / "aos-tools.json"
 
 
 def req(i, method, params=None):
@@ -54,7 +55,7 @@ class AosMcp(unittest.TestCase):
         self.tmp.cleanup()
 
     def agent(self, *tools):
-        return str(agent_with(self.tmp.name, *tools))
+        return str(registry_with(self.tmp.name, *tools))
 
     def test_list_matches_tooldef_and_metainfo(self):
         code, out, _ = session(self.base + [self.agent(BASE / "clock", BASE / "math")], INIT + [req(2, "tools/list")])
@@ -86,9 +87,25 @@ class AosMcp(unittest.TestCase):
         self.assertEqual(json.loads(out[2]["result"]["content"][0]["text"]), {"k": 1})
         self.assertEqual(out[3]["result"]["content"][0]["text"].strip(), "42")
         self.assertTrue((self.stack / "add" / "tool_call.json").is_file())
-        (Path(a) / "tools.json").write_text('{"tools": {}}')        # 每次 tools/list 重讀
+        Path(a).write_text('{"tools": {}}')                         # 每次 tools/list 重讀
         _, out, _ = session(self.base + [a], INIT + [req(2, "tools/list")])
         self.assertEqual(out[1]["result"]["tools"], [])
+
+    def test_several_registries_merge(self):
+        """給好幾份登記檔：工具合在一起；撞名＝ToolsBad。"""
+        a = self.agent(BASE / "clock")
+        other = Path(self.tmp.name) / "other"
+        other.mkdir()
+        for t in ("math", "clock"):
+            subprocess.run(["aos-tools", "--file", "more.json", "add", str(BASE / t)], cwd=other, check=True,
+                           env=env_for(), stdout=subprocess.DEVNULL)
+        subprocess.run(["aos-tools", "--file", "only_math.json", "add", str(BASE / "math")], cwd=other, check=True,
+                       env=env_for(), stdout=subprocess.DEVNULL)
+        _, out, _ = session(self.base + [a, str(other / "only_math.json")], INIT + [req(2, "tools/list")])
+        self.assertEqual(sorted(t["name"] for t in out[1]["result"]["tools"]), ["clock", "math"])
+        rc, _, err = session(self.base + [a, str(other / "more.json")], [])
+        self.assertEqual(rc, 1)
+        self.assertTrue(err.splitlines()[-1].startswith("aos-mcp: ToolsBad"), err)
 
     def test_call_ok_and_record(self):
         code, out, _ = session(self.base + [self.agent(BASE / "math")],
@@ -143,7 +160,10 @@ class AosMcp(unittest.TestCase):
         broken.mkdir()
         (broken / "tools.json").write_text('{"tools": {"gone": {"path": "nope"}}}')
         for args, code in (([], "ArgumentsBad"), (["--ws", "/nonexistent", self.agent(BASE / "clock")], "WsMissing"),
-                           (self.base + [str(self.ws)], "ToolMissing"), (self.base + [str(broken)], "ToolsBad")):
+                           (self.base + [str(self.ws)], "ToolMissing"),             # 給資料夾＝不收（11-02 起只收檔）
+                           (self.base + [str(broken)], "ToolMissing"),              # 資料夾裡有 tools.json 也不去找
+                           (self.base + [str(self.ws / "nope.json")], "ToolMissing"),
+                           (self.base + [str(broken / "tools.json")], "ToolsBad")):
             rc, _, err = session(args, [])
             self.assertEqual(rc, 1)
             self.assertTrue(err.splitlines()[-1].startswith("aos-mcp: " + code), err)   # ToolsBad 前面是 aos-tools 自己那行

@@ -17,7 +17,7 @@ ai_tools/
   bin/aos_ai_tools.py        make、explain、edit、doctor 的命令本體
   bin/aos_ai_make.py         make：生成 JSON（驗形狀、欄位說明 notes）與骨架（工具、fsm 格、函數資料夾）
   bin/aos_ai_explain.py      explain：印概念一節；--here 照 N-58／N-59／N-61 模擬 aos-exec 會給的值
-  bin/aos-mcp                MCP server（stdio）：包在 aos-tools 上，agent 資料夾 tools.json 登記的工具＝MCP tools，見下「aos-mcp」
+  bin/aos-mcp                MCP server（stdio）：包在 aos-tools 上，給的登記檔（例 aos-tools.json）登記的工具＝MCP tools，見下「aos-mcp」
   （給 agent 掛的六個工具在 proto8/lib/aos/，見下「給 agent 的工具」）
     spawn_agent/             {"name", "template"?} → aos-ai spawn
     ask_agent/               {"name", "question", "template"?} → 沒有就 spawn，再 ask＋run，回答案
@@ -69,17 +69,19 @@ daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.sta
 
 `aos-ai spawn boss --tool ask_agent --tool agent_status` 就掛上（生成與查概念：`--tool make_json --tool make_tool --tool explain_aos`）。照 P-41：`arguments` 從 stdin 進、stdout 整段是結果。子 agent 放 `$AOS_AI_ROOT`（沒設＝老闆的 `$AOS_WS`）的 `agents/<名>/`。`ask_agent` 前景跑子 agent，上限 50 秒（寫死，要小於叫它那格的逾時；11-01 前可用環境變數調）；`spawn_agent`／`ask_agent` 的 `template` 沒給＝agent-nia（10-30 起），答案＝那次 `run` 的 `answered` 有這封時最後一則回答。PATH 上要有 `aos-ai`——經 `aos-ai run` 跑的 agent 已放好。
 
-## aos-mcp（10-27；10-28 改成包在 aos-tools 上）
+## aos-mcp（10-27；10-28 改成包在 aos-tools 上；11-02 改成給登記檔）
 
-`bin/aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] AGENT_DIR...`：把 **agent 資料夾的 `tools.json`**（[aos-tools](../../bin/README.md) 的工具註冊檔）登記的工具當 MCP tools 給外部 agent（Claude Code、pi coding agent 等）叫，stdio JSON-RPC、只用標準庫。給不了外部 agent Bash 時用這條（能給 Bash 就繼續用 aos-ai＋skill）。決定 [thinking 10-28 aos-tools](../../thinking/2026-10-28-aos-tools.md)（使用者「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。
+`bin/aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] REGISTRY...`：把**給的登記檔**（[aos-tools](../../bin/README.md) 的工具註冊檔，檔名不限，例 `aos-tools.json`）登記的工具當 MCP tools 給外部 agent（Claude Code、pi coding agent 等）叫，stdio JSON-RPC、只用標準庫。給不了外部 agent Bash 時用這條（能給 Bash 就繼續用 aos-ai＋skill）。決定 [thinking 10-28 aos-tools](../../thinking/2026-10-28-aos-tools.md)（使用者「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。
 
 > **10-28 介面改了**：以前給的是工具資料夾（掃 `tool.json`，或 `DIR/tools/*/tool.json`）；現在給的是 **agent 資料夾**，讀它的 `tools.json`，沒有就 `ToolMissing`。工具先用 `aos-tools add` 登記進去（資料夾、JSON 檔、可執行檔三種都行）。舊寫法 `aos-mcp lib/base/clock` 改成：建一個 agent 資料夾、`cd` 進去 `aos-tools add <路徑>/lib/base/clock`，再 `aos-mcp 那個資料夾`。
+>
+> **11-02 又改了**（使用者 11-02「我希望能改成aos-mcp tools.json，也就是改成指定檔案，這樣我們可以改名為aos-mcp aos-tools.json，這樣能解放一些名稱」，[thinking 11-02 試驗場 cathy](../../thinking/2026-11-02-playground-cathy.md)）：位置參數改成**登記檔的路徑**（相對路徑從啟動時的 cwd 算），不再給 agent 資料夾、不再預設去找 `tools.json`；給資料夾或不存在的檔＝`ToolMissing`。舊寫法 `aos-mcp AGENT_DIR` 改成 `aos-mcp AGENT_DIR/tools.json`。登記用 `aos-tools --file aos-tools.json add …`（aos-tools 自己沒給 `--file` 時照舊用 `./tools.json`）。
 
-- **清單**：每個 AGENT_DIR 跑 `aos-tools --file AGENT_DIR/tools.json ls --json`；名字＝登記名、`description`／`inputSchema`＝工具定義的 `description`／`parameters`（沒寫 parameters 給空物件 schema）。`_metainfo`（資料夾的檔、JSON 檔的 key；可執行檔沒有）搬成 annotations：`side_effect`→`readOnlyHint`（反）、`idempotent`→`idempotentHint`、`resource` 含 llm／net→`openWorldHint`。好幾個 AGENT_DIR 的工具合在一起，撞名＝`ToolsBad`。**每次 `tools/list`、`tools/call` 都重讀**：tools.json 改了，下次列就看得到（不主動送 listChanged 通知；代定）。
-- **叫一次**：`AOS_WS=WS AOS_STACK=<stack>/<名>/ aos-tools --file AGENT_DIR/tools.json call 名`（aos-tools、aos-exec、有指示詞時 aos-json 都從 PATH 找），arguments 進 stdin、stdout 整段回 text、退非 0＝`isError`（stdout 空就回一行 `aos-mcp: CommandFailed …`）；逾時＝`_metainfo` 的 `time_ms.max`，沒寫用 `--timeout-s`（預設 60），整群 TERM、2 秒後 KILL。每次叫完在 `<stack>/calls.jsonl` 記一行（`name`、`arguments`、`code`、`elapsed_ms`、`called_at`）。
-- 工作區＝`--ws` ＞ `$AOS_WS`；stack＝`--stack` ＞ `$AOS_STACK` ＞ `$WS/.stack/`。自己的錯 stderr 一行 `aos-mcp: 代號 原因` 退 1（`ArgumentsBad`、`WsMissing`、`ToolMissing`〔AGENT_DIR 沒有 tools.json〕、`ToolsBad`〔啟動時 aos-tools ls 失敗，aos-tools 自己那行在前面〕）；跑起來之後 tools.json 壞了＝那一則回 JSON-RPC 錯誤（-32603）、不退。
+- **清單**：每份 REGISTRY 跑 `aos-tools --file REGISTRY ls --json`；名字＝登記名、`description`／`inputSchema`＝工具定義的 `description`／`parameters`（沒寫 parameters 給空物件 schema）。`_metainfo`（資料夾的檔、JSON 檔的 key；可執行檔沒有）搬成 annotations：`side_effect`→`readOnlyHint`（反）、`idempotent`→`idempotentHint`、`resource` 含 llm／net→`openWorldHint`。好幾份登記檔的工具合在一起，撞名＝`ToolsBad`。**每次 `tools/list`、`tools/call` 都重讀**：登記檔改了，下次列就看得到（不主動送 listChanged 通知；代定）。
+- **叫一次**：`AOS_WS=WS AOS_STACK=<stack>/<名>/ aos-tools --file REGISTRY call 名`（aos-tools、aos-exec、有指示詞時 aos-json 都從 PATH 找），arguments 進 stdin、stdout 整段回 text、退非 0＝`isError`（stdout 空就回一行 `aos-mcp: CommandFailed …`）；逾時＝`_metainfo` 的 `time_ms.max`，沒寫用 `--timeout-s`（預設 60），整群 TERM、2 秒後 KILL。每次叫完在 `<stack>/calls.jsonl` 記一行（`name`、`arguments`、`code`、`elapsed_ms`、`called_at`）。
+- 工作區＝`--ws` ＞ `$AOS_WS`；stack＝`--stack` ＞ `$AOS_STACK` ＞ `$WS/.stack/`。自己的錯 stderr 一行 `aos-mcp: 代號 原因` 退 1（`ArgumentsBad`、`WsMissing`、`ToolMissing`〔REGISTRY 不是檔〕、`ToolsBad`〔啟動時 aos-tools ls 失敗，aos-tools 自己那行在前面〕）；跑起來之後登記檔壞了＝那一則回 JSON-RPC 錯誤（-32603）、不退。
 - 只做 `initialize`、`ping`、`tools/list`、`tools/call`；沒有 progress、resources、prompts、HTTP。
-- 掛法（Claude Code，WSL 裡）：`--mcp-config` 一份 `{"mcpServers": {"aos": {"command": ".../proto8/extras/ai_tools/bin/aos-mcp", "args": ["--ws", WS, AGENT_DIR], "env": {"PATH": "proto8/bin、impls 的 aos-exec／aos-json 的 bin:…"}}}}`，`--allowedTools mcp__aos__<名>`；例子在試驗場 `~/code/try/aos-tools/mcp.json`（不在 git）。**問一隻格組起來的 agent**（agent-round § 6 round 當外部接口）：登記 [`lib/aos/ask_round`](../../lib/README.md)（或一個工具小資料夾：`_entry` 是不加 +x 的 JSON argv 陣列 `["<proto8>/lib/aos/ask_round", "--agent", "<agent 資料夾絕對路徑>"]`、`_tooldef.json`／`_metainfo` 捷徑指 ask_round 的），Claude Code 叫它＝放題、照那隻 agent 的 loop.json 一格一格跑到答完（`aos-exec <agent>/loop.json#/exec`）、回答案，agent 不必常駐；被問的 agent 的工作區預設在 `<stack>/<工具名>/<agent 名>/`。測試 `proto8/tests/test_aos_mcp.py`。
+- 掛法（Claude Code，WSL 裡）：`--mcp-config` 一份 `{"mcpServers": {"aos": {"command": ".../proto8/extras/ai_tools/bin/aos-mcp", "args": ["--ws", WS, "<登記檔>"], "env": {"PATH": "proto8/bin、impls 的 aos-exec／aos-json 的 bin:…"}}}}`，`--allowedTools mcp__aos__<名>`；例子在試驗場 `~/code/playground/agents/bob-cathy/mcp.json`（不在 git；`"args": ["aos-tools.json"]`，cwd＝那隻 agent 的資料夾，工作區與 stack 從 aos-exec 給的 `AOS_WS`／`AOS_STACK` 繼承）。**問一隻格組起來的 agent**（agent-round § 6 round 當外部接口）：登記 [`lib/aos/ask_round`](../../lib/README.md)（或一個工具小資料夾：`_entry` 是不加 +x 的 JSON argv 陣列 `["<proto8>/lib/aos/ask_round", "--agent", "<agent 資料夾絕對路徑>"]`、`_tooldef.json`／`_metainfo` 捷徑指 ask_round 的），登記進登記檔，Claude Code 叫它＝放題、照那隻 agent 的 loop.json 一格一格跑到答完（`aos-exec <agent>/loop.json#/exec`）、回答案，agent 不必常駐；被問的 agent 的工作區預設在 `<stack>/<工具名>/<agent 名>/`。測試 `proto8/tests/test_aos_mcp.py`。
 
 ## Claude Code skill（claude_skill/aos）
 

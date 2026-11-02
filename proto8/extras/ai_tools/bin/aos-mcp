@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-# aos-mcp - 把 agent 資料夾的 tools.json（aos-tools 的工具註冊檔）當 MCP tools 給外部 agent（Claude Code、pi coding agent 等）叫；stdio JSON-RPC
+# aos-mcp - 把 aos-tools 的工具註冊檔（登記檔，例 aos-tools.json）登記的工具當 MCP tools 給外部 agent（Claude Code、pi coding agent 等）叫；stdio JSON-RPC
 # 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。
 # 外面的 agent 只會講 MCP；櫃台把「有哪些工具」交給 `aos-tools ls --json`、「叫一次」交給 `aos-tools call 名`，
 # 自己不懂任何一個工具在做什麼、也不管工具是資料夾、JSON 還是可執行檔（C-52）。設計：proto8/thinking/2026-10-28-aos-tools.md。
 #
-# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] AGENT_DIR...
-#   每個 AGENT_DIR 讀它的 AGENT_DIR/tools.json（沒有這份檔＝ToolMissing）；好幾個的工具合在一起，撞名＝ToolsBad。
-#   清單每次 tools/list、tools/call 都重讀（tools.json 變了，下次列就看得到；不主動通知 listChanged）。
+# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] REGISTRY...
+#   每個 REGISTRY 是一份登記檔的路徑（相對路徑從啟動時的 cwd 算；不是檔＝ToolMissing）；檔名不限，不預設去找 tools.json
+#   （11-02 使用者「改成指定檔案」，以前給的是 agent 資料夾、讀它的 tools.json）。好幾份的工具合在一起，撞名＝ToolsBad。
+#   清單每次 tools/list、tools/call 都重讀（登記檔變了，下次列就看得到；不主動通知 listChanged）。
 #   工作區＝--ws ＞ $AOS_WS；stack＝--stack ＞ $AOS_STACK ＞ $WS/.stack/。每次叫工具：
-#   AOS_WS=WS AOS_STACK=<stack>/<名>/ aos-tools --file AGENT_DIR/tools.json call 名（aos-tools、aos-exec 由 PATH 找，呼叫者放好），
+#   AOS_WS=WS AOS_STACK=<stack>/<名>/ aos-tools --file REGISTRY call 名（aos-tools、aos-exec 由 PATH 找，呼叫者放好），
 #   arguments 進 stdin、stdout 整段回去，退非 0＝isError；逾時＝工具 _metainfo 的 time_ms.max，沒寫用 --timeout-s（預設 60），
 #   到了整群 TERM、2 秒後 KILL。每次叫完在 <stack>/calls.jsonl 記一行（名字、arguments、結束碼、花多久）。
 # 只做 initialize、ping、tools/list、tools/call；沒有 progress、resources、prompts、HTTP。
@@ -18,6 +19,7 @@ import json, os, signal, subprocess, sys, time
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
+USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] REGISTRY..."
 
 
 class ToolsBad(Exception):
@@ -31,7 +33,7 @@ def die(code, reason):
 
 def parse_args(argv):
     """命令列 → (ws, stack, timeout_s, registries)。"""
-    ws, stack, timeout_s, dirs = os.environ.get("AOS_WS"), os.environ.get("AOS_STACK"), 60.0, []
+    ws, stack, timeout_s, files = os.environ.get("AOS_WS"), os.environ.get("AOS_STACK"), 60.0, []
     i = 0
     while i < len(argv):
         a = argv[i]
@@ -50,20 +52,19 @@ def parse_args(argv):
                     die("ArgumentsBad", "--timeout-s 要是數字")
             i += 2
         elif a.startswith("--"):
-            die("ArgumentsBad", "不認得的旗標 %s（usage: aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] AGENT_DIR...）" % a)
+            die("ArgumentsBad", "不認得的旗標 %s（usage: %s）" % (a, USAGE))
         else:
-            dirs.append(a)
+            files.append(a)
             i += 1
-    if not dirs:
-        die("ArgumentsBad", "至少給一個 AGENT_DIR（usage: aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] AGENT_DIR...）")
+    if not files:
+        die("ArgumentsBad", "至少給一份登記檔（usage: %s）" % USAGE)
     if not ws or not os.path.isdir(ws):
         die("WsMissing", "沒給 --ws、也沒設 AOS_WS，或不是資料夾")
     regs = []
-    for d in dirs:
-        reg = os.path.join(os.path.abspath(d), "tools.json")
-        if not os.path.isfile(reg):
-            die("ToolMissing", "%s 沒有 tools.json（用 aos-tools add 登記工具）" % d)
-        regs.append(reg)
+    for f in files:
+        if not os.path.isfile(f):
+            die("ToolMissing", "%s 不是檔（給登記檔的路徑，例 aos-tools.json；用 aos-tools --file 它 add 登記工具）" % f)
+        regs.append(os.path.abspath(f))
     ws = os.path.abspath(ws)
     stack = os.path.abspath(stack) if stack else os.path.join(ws, ".stack")
     return ws, stack, timeout_s, regs
@@ -176,7 +177,7 @@ def handle(msg, regs, ws, stack, timeout_s):
             result, err = tools_call(params, load_tools(regs), ws, stack, timeout_s)
         else:
             err = (-32601, "不支援的方法：%s" % method)
-    except ToolsBad as e:                       # 跑起來之後 tools.json 壞了：這一則回錯，不退
+    except ToolsBad as e:                       # 跑起來之後登記檔壞了：這一則回錯，不退
         err = (-32603, "%s: ToolsBad %s" % (NAME, e))
     if err:
         return {"jsonrpc": "2.0", "id": mid, "error": {"code": err[0], "message": err[1]}}
