@@ -12,13 +12,12 @@
 
 ## 決定
 
-- aos-loop／aos-daemon 的 log **預設不印**，旗標打開才印到 stdout（翻掉同日稍早的「預設開」；旗標名由 state 窗那輪實作時定）。
+- aos-loop／aos-daemon 的 log **預設不印**，旗標打開才印到 stdout（旗標名由 [state 窗](2026-11-02-state-window.md)那輪實作時定）。
 - stdout 跟身體的輸出混在一起是使用者自己的事，程式不另外分。
-- **daemon 的 `execs` 也收內嵌單子**（11-02，使用者回「daemon 的 execs 要不要也收內嵌單子」：「6.要。」）——翻掉下面結論最後一點的「不收單子」。單子沒寫 stdin／stdout 時照舊：子項 stdin／stdout 接 `/dev/null`、stderr 附加到小格 `stderr.txt`。實作在 [state 窗](2026-11-02-state-window.md#決定11-02-晚使用者實作中陸續裁的)那輪。
+- **daemon 的 `execs` 也收內嵌單子**（11-02，使用者回「daemon 的 execs 要不要也收內嵌單子」：「6.要。」）。單子沒寫 stdin／stdout 時：子項 stdin／stdout 接 `/dev/null`、stderr 附加到小格 `stderr.txt`。實作在 [state 窗](2026-11-02-state-window.md#決定11-02-晚使用者實作中陸續裁的)那輪。
 
 ## 結論（11-02，頂層查現行程式與 README）
 
-- **現況**：aos-loop／aos-daemon 自己不讀 stdin、不寫 stdout，只在出錯時往 stderr 寫一行；每次跑的身體**繼承** loop／daemon 的 fd 0／1／2。daemon 起子項時把子項的 stdin／stdout 接 `/dev/null`、stderr 附加到小格 `stderr.txt`。
-- **身體要自己指定 stdin／stdout：現在就做得到**——`exec` 寫成**內嵌單子**（inst），用單子的 `stdin`／`stdout`／`stderr`（＋`stdout_append`／`stderr_append`）key，例 `"stdout": {"$env": "AOS_STACK", "$path": "clock.txt"}`（試驗場 daemons/main 的 clock 就是這樣寫）。`exec` 寫成字串或陣列（aos-exec 目標）＝照舊繼承，要指定就改寫成單子 `{"argv": [...], "stdout": ...}`。
-- **daemon 的子 loop**：子 loop 的設定就是一份 loop.json，它的 `exec` 寫成單子就能指定那個子 loop 每次身體的 stdin／stdout；子 loop **程序本身**的 fd 仍是 daemon 定的（`/dev/null`／`stderr.txt`），子 loop 自己不讀不寫所以影響不到。
-- **daemon 的 exec 型子項（`execs`）**：只收 aos-exec 目標（字串或陣列）、**不收單子**，所以目前**不能**指定 stdin／stdout（stdout 一律丟掉）。要指定得讓 `execs` 也收單子——要不要做留給使用者。
+- aos-loop／aos-daemon 自己不讀 stdin、不寫 stdout；每次跑的身體**繼承** loop／daemon 的 fd 0／1／2。
+- **身體要自己指定 stdin／stdout**：`exec` 寫成**內嵌單子**（inst），用單子的 `stdin`／`stdout`／`stderr`（＋`stdout_append`／`stderr_append`）key，例 `"stdout": {"$env": "AOS_STACK", "$path": "clock.txt"}`。`exec` 寫成字串或陣列（aos-exec 目標）＝繼承，要指定就改寫成單子 `{"argv": [...], "stdout": ...}`。
+- **daemon 的子 loop**：子 loop 的設定就是一份 loop.json，它的 `exec` 寫成單子就能指定那個子 loop 每次身體的 stdin／stdout；子 loop **程序本身**的 fd 由 daemon 定（`/dev/null`／`stderr.txt`），子 loop 自己不讀不寫所以影響不到。
