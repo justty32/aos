@@ -5,7 +5,7 @@
 - **每一圈**：等暫停解除 → 跑一次 → `runs` 加一 → 等間隔；inst 自己出錯那次至少隔 `error_wait_ms`。
 - **`times` 是總數**：`runs < times` 才再起一次；跑到 `times` 就結束、退出（有 ctl 也一樣），想再跑就重新起；save 存 `times`。
 - **ctl.json 定期讀**：每 `ctl_poll_ms` 看一次，跑的途中、等間隔途中都看。loop 從不寫 ctl.json。誰都能寫：人手、agent、daemon、kernel；兩個 loop 共用一個也不擋。
-- **狀態物件**：`id`、`state`（waiting／running／paused／done／stopping／stopped）、`times`、`runs`、`last_code`、`last_error`、`ctl_mtime`、`pid`、`skipped`（叫 `stopping`／`stopped` 不叫 removing／removed：「移除」是表的事）。有給 `state` 就有變時整份寫（格式見 ctl 規範 §3.5）。
+- **狀態物件**：`id`、`state`（waiting／running／paused／done／stopping／stopped）、`times`、`runs`、`last_code`、`last_error`、`ctl_mtime`、`pid`、`skipped`。有給 `state` 就有變時整份寫（格式見 ctl 規範 §3.5）。
 - **`last_code`**：每次跑完讀 inst.json 的 `exit` 檔；沒寫 `exit`＝null。
 - **`run(path)`**：正常跑完回 None；loop 自己出錯丟 `LoopError`（含繼承 inst 的）。
 - **收到 SIGINT／SIGTERM／SIGHUP**：收掉正在跑的子程式（SIGTERM，過 grace 再 SIGKILL）、不再起新的，退出碼 128＋N（參考）。

@@ -12,9 +12,7 @@
 
 ## 23. 研究結論
 
-- aos 像**只有特殊形式（fexpr）的 Lisp**：引數是 quote 住的 TARGET，何時求值由運算子決定。form 頭＝argv[0] 程式、引數＝JSON（map）、巢狀＝某格的值是另一個 TARGET。
-- 最準類比是 **tagbody／go**：fsm＝tagbody、格＝標籤、`next`＝go、state 窗＝存檔的 continuation、巢狀 `end`＝return-from；巢狀 fsm 沒吐 next＝yield。loop／daemon 比較像求值器（trampoline／排程器）。
-- 破的地方：值是 stdout 串流不是單值；每拍重生，沒落檔的全丟；轉移圖在 stdout 的 `next`，不在 form 裡，看式子看不出控制流。
+- aos 像**只有特殊形式（fexpr）的 Lisp**：form 頭＝argv[0] 程式、引數＝JSON（map）、巢狀＝某格的值是另一個 TARGET。最準類比是 **tagbody／go**：fsm＝tagbody、格＝標籤、`next`＝go。
 - 使用者式子的正規形：`(loop (fsm idle (idle) (thinking (fsm ask wait)) (tool (fsm tool tool-result))))`。
 
 ## 24. 拍板

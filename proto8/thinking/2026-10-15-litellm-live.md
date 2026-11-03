@@ -6,13 +6,7 @@
 
 **結論（AI 整理）**：fsm demo、報時員兩層真腦、同 frame 續跑、boss 叫 clerk、腦連錯、kernel agent 判官都跑通；tool_calls 形狀全對、全程繁體中文，比 LM Studio Qwen3-1.7B 快且穩（clerk 真的叫 clock、沒編時間）。GPT 類判官合法、照規則（human 先、8 封全服務完）。
 
-**挖到的問題**（5 題，拍板見下節）
-
-1. **綁定不往下傳**：外層 frame 換了腦，叫出去的子 agent 還是用定義裡的腦；「工具在子 frame 放什麼」牽涉 C-46 綁定語意。
-2. **判官腳本寫死 `parent` 是 judge/**，換腦只能改定義或抄一份腳本。
-3. **平行 tool_calls 第二個被 `Skipped`**，GPT 類很常一次發多個；模型看到 Skipped 只會說「沒成功」，不會自己重叫。
-4. **halted 時 loop 退出碼 0、state `done`**，呼叫方只能看 `ret.json` 有沒有 `error`。
-5. proxy 每次多塞約 1600 prompt tokens（codex 後端），LLM kernel 的 token 額度會被放大。
+挖到 5 題（綁定不往下傳、判官腳本寫死 `parent`、平行 tool_calls 第二個被 `Skipped`、halted 時 loop 退 0、proxy 多塞 token），拍板見下節。
 
 ## 拍板（10-15）
 

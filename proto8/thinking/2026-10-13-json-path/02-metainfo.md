@@ -13,7 +13,6 @@
 
 - inst.json 加 `_metainfo` key。意思＝「關於這個 inst 跑下去會是什麼樣子」的描述：九軸（C-13：I/O 型態、生命週期、跨呼叫狀態、資源特性、可中斷性、執行保證、組合模式、環境模式、確定性）、資源特性、乃至其他特性。這就是 `_metainfo` 的由來：檔案有 `ls -l` 那排屬性，函數沒有；`_metainfo` 就是函數的那排屬性。
 - **aos inst 與所有標準實作一律當它不存在**（N-04 那個抽屜的固定名字）；它是給之後 kernel 做規劃時參考用的。
-- **還沒動工**（使用者說先記筆記）。
 - 10-12 說「不做 _metainfo」指的是 proto7-2 那個「這份 inst 是哪種格式、第幾版」（`_type`／`_version`）的 `_metainfo`，那個不做；這裡的 `_metainfo` 是另一個意思。
 - 來源：CONCEPTS C-13、C-14、C-42b；九軸逐軸套到 aos 的表在 [proto7 axes-astra](../../../proto7/notes/thinking/2026-10-04-axes-astra.md)；ai_core 原文 `~/repo/ai_core/docs/kb/kb-ss/doc_05_axes_metadata.md`（repo 外）。
 

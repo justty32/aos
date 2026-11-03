@@ -45,9 +45,9 @@ AI 自己定的、等使用者看：
 
 ## 實跑：LM Studio 真腦包閘門（10-15）
 
-使用者 10-15「把 LM Studio 的真腦包上閘門實跑一次」。報時員巢狀（boss 閘門 `normal` → clerk 閘門 `high` → clock），兩個同時問、`slots` 1。
+使用者 10-15「把 LM Studio 的真腦包上閘門實跑一次」。
 
-- 端到端通了；服務順序照 level 與先來後到，**不搶佔跑到一半的**。小模型仍會不叫 clock 編時間（同 [clerk-live](2026-10-15-clerk-live.md)）。
+- 服務順序照 level 與先來後到，**不搶佔跑到一半的**。
 - `slots` 1 時 tick 只在服務時才走，aging 以拍計，慢腦＋一格下幾乎不觸發；看排隊要看 `sent` 與回信時間。
 - **token 額度要腦回 `usage`**（使用者「都隨意」→ 照做）：腦在 assistant 訊息頂層帶 `usage`（stdout 仍一份＝N-12 最後一份），think 接進 history 前拿掉；kernel 不用改。
 - **閘門 `target` 的相對路徑從呼叫者的 cwd 算**（不是從 gate.json）。

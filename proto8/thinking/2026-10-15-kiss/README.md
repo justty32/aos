@@ -12,12 +12,12 @@
 
 欄位：編號｜區｜現況 → KISS 版（一句）｜翻案？（★＝推翻使用者親定，附日期與原話出處）。
 
-### 批次 1：純刪、彼此不相依、不碰第四版的形狀（**已做**，10-15 深夜四個 commit；自定點見 [10-15 session log](../../../wf/session_logs/2026-10-parts/03-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)）
+### 批次 1：純刪、彼此不相依、不碰第四版的形狀（**已做**；自定點見 [10-15 session log](../../../wf/session_logs/2026-10-parts/03-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)）
 
 | 編號 | 區 | 現況 → KISS 版 | 翻案？ |
 |---|---|---|---|
 | 1.1 | inst | `exit`／`exit_append`／`exit_mkdir`、`read_exit()`、N-30／N-12「exit 檔出現也算」、demo once／tick、test_tick 的 exit 檔 → 全刪，子程式的碼只在結果的 `code` | ★ 10-12「子程式的碼進 exit 檔」（[inst 進 json](../2026-10-12-inst-json.md)）、10-14 深夜「exit 檔出現也算跑完」（N-12） |
-| 1.2 | inst | 12 個布林 → **只砍 `stdin_inherit`／`stdout_inherit`／`stderr_inherit`**（寫 `/dev/stdin`／`/dev/stdout`／`/dev/stderr` 路徑就是繼承；N-26 整條與三條 Conflict 檢查消失，第四版 D 說的「`stdin_inline` 與 `stdin_inherit` 同時寫＝Conflict」也跟著不用）；`*_append`、`*_mkdir`、`cwd_mkdir`、`stderr_merge`、`envs_clear` **留**，第四版的 `stdin_inline` 加進來。風險：原稿要全砍換 `>>`／`2>&1`／`mkdir -p`，使用者偏好少用 sh，不採 | **10-16 使用者翻案、已還原**（「不要用這種方式添加規則，不直觀，這等同於埋雷……所以還是把inherit帶回來。」→ C-56 補「寫什麼就做什麼」、N-26 還原，[10-16 稿](../2026-10-16-kiss-last.md#原文寫什麼就做什麼10-16)） |
+| 1.2 | inst | 12 個布林 → **只砍 `stdin_inherit`／`stdout_inherit`／`stderr_inherit`**（寫 `/dev/stdin`／`/dev/stdout`／`/dev/stderr` 路徑就是繼承；N-26 整條與三條 Conflict 檢查消失，第四版 D 說的「`stdin_inline` 與 `stdin_inherit` 同時寫＝Conflict」也跟著不用）；`*_append`、`*_mkdir`、`cwd_mkdir`、`stderr_merge`、`envs_clear` **留**，第四版的 `stdin_inline` 加進來 | **10-16 使用者翻案、已還原**（「不要用這種方式添加規則，不直觀，這等同於埋雷……所以還是把inherit帶回來。」→ C-56 補「寫什麼就做什麼」、N-26 還原，[10-16 稿](../2026-10-16-kiss-last.md#原文寫什麼就做什麼10-16)） |
 | 1.3 | loop | `interval_mode: fixed`＋`skipped`、`error_wait_ms`、`ctl_poll_ms`、loop 自己的 `grace_ms` → 只留 `interval_ms`：跑完隔一段再起、ctl 每圈讀、出錯不另算、收身體＝SIGTERM 後等 aos_inst 自己收（它保證過 `grace_ms`） | — |
 | 1.4 | ctl | `paused`／`stop` 的 `{"val", "now"}` 雙形 → 只收布林；當場停＝送訊號 | ★ N-07 10-12（[ctl 規範](../2026-10-12-ctl-norms.md)） |
 | 1.5 | agent | `aos_brain_ollama.py`、`brain ollama`、7 個測試、demo/fsm/brains/ollama → 刪，只留 OpenAI 相容一顆 | — |

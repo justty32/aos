@@ -19,9 +19,7 @@
 
 ## 14. 連帶的改動
 
-- 規劃頁 §3／§4 agent.json 加 `start`、`states`（值＝TARGET）、選填 `end`；aos_agent.py 改為通用 aos_fsm.py＋預設表資料夾。
-- §7 四態從寫死變成預設表；思考拆成子 fsm（ask → waiting），加選填 `error` 格。
-- §4 steps.jsonl 每行改成 fsm 通用的 `{step, from, to, code, ms}`＋方法 ret 的 `data`。
+- steps.jsonl 每行＝fsm 通用的 `{step, from, to, code, ms}`＋方法 ret 的 `data`。
 - Q5 保險絲拆家：10 分鐘掛在 aos-llm 單子的 `timeout_ms`＋waiting 格自己的期限；loop 單子的 `timeout_ms` 變外層（≥ 最長方法）；`max_steps` 歸 fsm（自上次回 `start` 起算）；retries 歸 ask／waiting 方法；8000 字歸 tool 方法。
 - Q4 問模型＝通用規則的特例：fsm 偵測沒 ret 就以 `prev.interrupted` 重進，tool 方法再決定問模型。
 - Q8 agent-ctl.json、Q11 agent.lock/、Q12 心跳可選：上移為 fsm 的窗與設定 key。

@@ -42,7 +42,7 @@ N-28、N-06、N-07 用 `times`（跑幾次）和 `inst`（身體），aos-loop�
 
 ## 順序（一行）
 
-tick → 腦的工具呼叫 → tasks → daemon → LLM kernel → 通用 kernel。前兩塊只靠現有的 bin、各自幾十行、各有能跑的 demo，使用者最快能試；tasks 跟 daemon 共用「整群收」那段程式；兩種 kernel 要 daemon 把 agent 和 kernel 同時跑起來才有東西看，所以最後。①②④⑤ 已做。
+tick → 腦的工具呼叫 → tasks → daemon → LLM kernel → 通用 kernel。①②④⑤ 已做。
 
 ## 各塊
 

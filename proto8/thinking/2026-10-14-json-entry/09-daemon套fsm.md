@@ -8,7 +8,7 @@
 
 ## 18. 研究結論
 
-daemon 借 fsm 的紀律，但不變成一張 fsm 表。真正多狀態的是**每個子 loop 的生命週期**（像 supervisord／systemd：容器＋每子項一台小狀態機＋可換的 on-exit 策略）。daemon 留長壽程式，因 Popen／waitid 收屍／整群訊號是單次執行程式做不到的。Lisp 視角：daemon 是唯一的「並行」組合子，`(daemon :on-exit restart (loop A) (loop (fsm …)))`。
+daemon 借 fsm 的紀律，但不變成一張 fsm 表：真正多狀態的是**每個子 loop 的生命週期**；daemon 留長壽程式，因 Popen／waitid 收屍／整群訊號是單次執行程式做不到的。
 
 ## 19. 五題拍板（全照推薦）
 
