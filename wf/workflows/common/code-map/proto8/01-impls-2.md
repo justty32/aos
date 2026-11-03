@@ -41,16 +41,16 @@
 | `src/common/common.hpp` | 內部共用標頭 |
 | `tests/test_cli.py`、`tests/test_demo.py` | 命令列黑箱；跑 demo daemon-2、daemon-3 |
 
-## `impls/aos-post/`（投遞：信箱四格）
+## `impls/aos-post/`（投遞：信箱，IPC 的語法糖）
 
 | 檔 | 負責什麼 |
 |---|---|
-| `include/aos/post.hpp` | 公開介面：`Mailbox`、`SendOpts`、`init`／`open`／`sender`／`send`／`claim`／`claim_all`／`check`／`reply`／`finish`／`withdraw`／`check_id`；aos-daemon、aos-llm-kernel、aos-llm-send 連它 |
-| `src/main.cpp` | 命令列 `aos-post 子命令 [旗標] 信箱 [信號]`；沒東西退 10 |
-| `src/mailbox/mailbox.cpp` | 四格路徑、`init`、`open`、`check_id`；common 小工具的實作 |
-| `src/send/send.cpp` | `sender`、`send`（`tmp/` 寫好 rename 進 `new/`）、`--ordered`（經 aos-lock 拿 `order.lock/` 編序號） |
-| `src/take/take.cpp` | `claim`／`claim_all`、`check`、`reply`、`finish`、`withdraw` |
-| `src/common/common.hpp` | 內部標頭：`is_dir`、`names_in`、`drop`、`move` |
+| `include/aos/post.hpp` | 公開介面：`Mailbox`（`tmp`／`fresh`／`cur`／`archive`）、`SendOpts`、`Seen`、`init`／`open`／`send`／`take`／`take_all`／`first_in_cur`／`see`／`reply`／`done`／`regret`、`check_name`／`is_ordered`／`sort_letters`（處理順序：有序在前）；aos-daemon、aos-llm-kernel、aos-llm-send 連它 |
+| `src/main.cpp` | 命令列 `aos-post init\|send\|take\|take-all\|see\|done\|regret [旗標] 信箱 [信件名稱]`；沒東西退 10 |
+| `src/mailbox/mailbox.cpp` | 信箱路徑、`init`、`open`；信件名稱規則 `check_name`、`is_ordered`、`sort_letters`；common 小工具的實作 |
+| `src/send/send.cpp` | `send`（入口檢查：`tmp/`、`new/` 可寫、`reply_to`、自己給的名字；`tmp/` 寫好 rename 進 `new/`；sender 用 aos-util 的 `identity`）、`--ordered`（經 aos-lock 拿 `order.lock/` 編序號） |
+| `src/take/take.cpp` | `take`／`take_all`（`cur/` 沒有就建）、`first_in_cur`、`see`、`reply`、`done`（`--keep` 進 `archive/`）、`regret` |
+| `src/common/common.hpp` | 內部標頭：`is_dir`、`need_dir`、`make_dir`、`names_in`、`drop`、`move` |
 | `tests/test_cli.py` | 命令列黑箱 |
 
 ## `impls/aos-lock/`（鎖資料夾＋名牌）
@@ -59,7 +59,7 @@
 |---|---|
 | `include/aos/lock.hpp` | 公開介面：`Holder`、`Seen`、`STALE_MS`、`try_acquire`／`acquire`／`release`、`look`、`reapable`；aos-post 連它 |
 | `src/main.cpp` | 命令列 `aos-lock acquire\|release\|show [旗標] 目標`；拿不到／沒有鎖退 10 |
-| `src/holder/holder.cpp` | 名牌：`identity`、`holder_of`、`to_json`、`look`、`reapable`（boot_id、pid＋ticks、殭屍、租約、名牌壞） |
+| `src/holder/holder.cpp` | 名牌：`holder_of`（身分用 aos-util 的 `identity`）、`to_json`、`look`、`reapable`（boot_id、pid＋ticks、殭屍、租約、名牌壞） |
 | `src/lock/lock.cpp` | `lock_dir_of`、寫名牌、收屍 `reap`、`try_acquire`、`acquire`（每 20 毫秒）、`release` |
 | `src/common/common.hpp` | 內部標頭：`now_ms`、`parse_at` |
 | `tests/test_cli.py` | 命令列黑箱 |

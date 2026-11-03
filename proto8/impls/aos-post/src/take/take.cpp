@@ -1,9 +1,10 @@
 // take.cpp：【take】處理者這一半——認領、讀信、回信、處理完；加上寄信人的撤回（說明見 aos/post.hpp）。
 //
-//   認領＝rename new/<信號> → cur/<信號>，成功的那個人才算（被撤、被別人拿走＝跳過）
-//   處理完＝rename cur→tmp 再刪（cur/ 裡永遠不會出現刪一半的），keep＝rename cur→done
+//   認領＝new/ 照處理順序（sort_letters），rename new/<名> → cur/<名>，成功的那個人才算（被撤、被別人拿走、cur/ 已有同名＝跳過）
+//   處理完＝rename cur→tmp 再刪（cur/ 裡永遠不會出現刪一半的），keep＝rename cur→archive
 //   撤回＝rename new→tmp 再刪；進了 cur/ 就撤不了（認領是界線）
-//   壞信＝letter.json 不是 JSON 物件、缺必填（kind／sender／sent_at／body）、型別不對：finish 時丟掉，不通知寄信人（決定 27）
+//   壞信＝letter.json 不是 JSON 物件、sender／sent_at 不是字串、沒有 body、reply_to／in_reply_to 不是字串：
+//     done 時丟掉，不通知寄信人（決定 27）。kind 不看（11-03 拿掉；讀到＝不認得的 key、忽略）；名字有序無序都不算壞
 #include "common/common.hpp"
 
 #include "aos/files.hpp"
@@ -12,29 +13,46 @@
 
 namespace aos::post {
 
-std::optional<std::string> claim(const Mailbox& mb) {
-    for (const std::string& id : names_in(mb.fresh())) {
-        if (move(aos::join(mb.fresh(), id), aos::join(mb.cur(), id))) {
-            return id;
+// take／take_all 的入口：new/ 是資料夾；cur/ 沒有就建。
+static void ready_to_take(const Mailbox& mb) {
+    need_dir(mb.fresh());
+    make_dir(mb.cur());
+}
+
+std::optional<std::string> take(const Mailbox& mb) {
+    ready_to_take(mb);
+    for (const std::string& name : names_in(mb.fresh())) {
+        if (move(aos::join(mb.fresh(), name), aos::join(mb.cur(), name))) {
+            return name;
         }
     }
     return std::nullopt;
 }
 
-std::vector<std::string> claim_all(const Mailbox& mb) {
+std::vector<std::string> take_all(const Mailbox& mb) {
+    ready_to_take(mb);
     std::vector<std::string> got;
-    for (const std::string& id : names_in(mb.fresh())) {
-        if (move(aos::join(mb.fresh(), id), aos::join(mb.cur(), id))) {
-            got.push_back(id);
+    for (const std::string& name : names_in(mb.fresh())) {
+        if (move(aos::join(mb.fresh(), name), aos::join(mb.cur(), name))) {
+            got.push_back(name);
         }
     }
     return got;
 }
 
-static std::string in_cur(const Mailbox& mb, const std::string& id) {
-    std::string c = aos::join(mb.cur(), id);
+std::optional<std::string> first_in_cur(const Mailbox& mb) {
+    need_dir(mb.cur());
+    std::vector<std::string> names = names_in(mb.cur());
+    if (names.empty()) {
+        return std::nullopt;
+    }
+    return names.front();
+}
+
+static std::string in_cur(const Mailbox& mb, const std::string& name) {
+    std::string c = aos::join(mb.cur(), name);
     std::error_code ec;
-    if (!std::filesystem::exists(std::filesystem::symlink_status(c, ec))) {   // 不是資料夾也算在（讀不到 letter.json＝壞信，finish 丟掉）
+    if (!std::filesystem::exists(std::filesystem::symlink_status(c, ec))) {   // 不是資料夾也算在（讀不到 letter.json＝壞信，done 丟掉）
         throw Error{code::LetterMissing, "信不在 cur/：" + c};
     }
     return c;
@@ -47,9 +65,6 @@ static std::string why_bad(const std::optional<Json>& doc) {
     }
     if (!doc->is_object()) {
         return "letter.json 要是物件";
-    }
-    if (!doc->contains("kind") || !(*doc)["kind"].is_string() || (*doc)["kind"].get<std::string>() != "letter") {
-        return "kind 要是 \"letter\"";
     }
     const char* strings[] = {"sender", "sent_at"};
     for (const char* k : strings) {
@@ -69,10 +84,11 @@ static std::string why_bad(const std::optional<Json>& doc) {
     return "";
 }
 
-Checked check(const Mailbox& mb, const std::string& id) {
-    std::string c = in_cur(mb, id);
+Seen see(const Mailbox& mb, const std::string& name) {
+    need_dir(mb.cur());
+    std::string c = in_cur(mb, name);
     std::optional<Json> doc = aos::read_json(aos::join(c, "letter.json"));
-    Checked r;
+    Seen r;
     r.reason = why_bad(doc);
     r.ok = r.reason.empty();
     if (r.ok) {
@@ -81,41 +97,40 @@ Checked check(const Mailbox& mb, const std::string& id) {
     return r;
 }
 
-std::optional<std::string> reply(const Mailbox& mb, const std::string& id, const Json& body) {
-    Checked c = check(mb, id);
+std::optional<std::string> reply(const Mailbox& mb, const std::string& name, const Json& body) {
+    Seen c = see(mb, name);
     if (!c.ok || !c.letter.contains("reply_to")) {
         return std::nullopt;
     }
     Mailbox to = open(c.letter["reply_to"].get<std::string>());
     SendOpts opts;
-    opts.in_reply_to = id;
+    opts.in_reply_to = name;
     return send(to, body, opts);
 }
 
-void finish(const Mailbox& mb, const std::string& id, bool keep) {
-    Checked c = check(mb, id);
-    std::string from = aos::join(mb.cur(), id);
+void done(const Mailbox& mb, const std::string& name, bool keep) {
+    need_dir(mb.tmp());
+    Seen c = see(mb, name);
+    std::string from = aos::join(mb.cur(), name);
     if (keep && c.ok) {
-        std::error_code ec;
-        std::filesystem::create_directories(mb.done(), ec);
-        if (!is_dir(mb.done())) {
-            throw Error{code::MkdirFailed, "建不了 " + mb.done() + (ec ? "：" + ec.message() : "")};
-        }
-        if (!move(from, aos::join(mb.done(), id))) {
-            throw Error{code::WriteFailed, "搬不進 done/（同名的已經在、或信不見了）：" + from};
+        make_dir(mb.archive());
+        if (!move(from, aos::join(mb.archive(), name))) {
+            throw Error{code::WriteFailed, "搬不進 archive/（同名的已經在、或信不見了）：" + from};
         }
         return;
     }
-    std::string t = aos::join(mb.tmp(), id);
+    std::string t = aos::join(mb.tmp(), name);
     if (!move(from, t)) {
         throw Error{code::LetterMissing, "信不在 cur/：" + from};
     }
     drop(t);
 }
 
-bool withdraw(const Mailbox& mb, const std::string& id) {
-    std::string t = aos::join(mb.tmp(), id);
-    if (!move(aos::join(mb.fresh(), id), t)) {
+bool regret(const Mailbox& mb, const std::string& name) {
+    need_dir(mb.fresh());
+    need_dir(mb.tmp());
+    std::string t = aos::join(mb.tmp(), name);
+    if (!move(aos::join(mb.fresh(), name), t)) {
         return false;
     }
     drop(t);
