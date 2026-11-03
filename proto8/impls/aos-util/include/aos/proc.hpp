@@ -62,7 +62,7 @@ std::string utc_now_ms();
 // 現在（UTC epoch 奈秒，system_clock）。
 long long utc_now_ns();
 
-// 一個時間點（UTC epoch 奈秒）的 ISO 8601 UTC 到毫秒，寫法同 utc_now_ms（aos-post 讓信號與 sent_at 取自同一刻）。
+// 一個時間點（UTC epoch 奈秒）的 ISO 8601 UTC 到毫秒，寫法同 utc_now_ms（aos-post 讓預設的信件名稱與 sent_at 取自同一刻）。
 std::string utc_ms_at(long long ns);
 
 // 獨一無二的名字：<UTC 奈秒 20 位>.<pid>.<started_at_ticks>（讀不到 ticks＝-1）；ns 省略＝現在。

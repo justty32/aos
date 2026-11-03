@@ -31,18 +31,6 @@ Mailbox mailbox() {
     return Mailbox{aos::abspath(k)};
 }
 
-std::string sender() {
-    const char* ws = std::getenv("AOS_WS");
-    if (ws != nullptr && ws[0] != '\0') {
-        return aos::abspath(ws);
-    }
-    const char* home = std::getenv("HOME");
-    if (home != nullptr && home[0] != '\0') {
-        return aos::abspath(home);
-    }
-    return "/";   // HOME 也沒設（不查 getpwuid：靜態連結的執行檔用它要帶 glibc 的 NSS）
-}
-
 static void make_dir(const std::string& dir) {
     std::error_code ec;
     fs::create_directories(dir, ec);
@@ -52,6 +40,8 @@ static void make_dir(const std::string& dir) {
 }
 
 std::string post(const Mailbox& mb, const std::string& spec) {
+    // 0. 寄信人身分：在 1 把 AOS_CF 改成單子的位置之前取（叫閘門的那一方；cwd 拿不到丟 Internal）
+    std::string who = aos::identity();
     // 1. 單子在哪
     aos::Spec s = aos::split_hash(spec);
     std::error_code ec;
@@ -91,8 +81,7 @@ std::string post(const Mailbox& mb, const std::string& spec) {
         }
     }
     Json letter = Json::object();
-    letter["kind"] = "letter";   // 信封三欄（N-16 10-29）；inst／env／priority 過渡期照舊在頂層
-    letter["sender"] = sender();
+    letter["sender"] = who;   // 信封（N-16 10-29；11-03 起沒有 kind）；inst／env／priority 過渡期照舊在頂層
     letter["sent_at"] = aos::utc_now_ms();
     aos::post::init(reply_box(mb));   // 5. 回信信箱（10-30 回信改走 reply_to；建不了丟 MkdirFailed）
     letter["reply_to"] = reply_box(mb);

@@ -39,7 +39,7 @@ inline constexpr const char* LaunchFailed = "LaunchFailed"; // 子程序起不�
 inline constexpr const char* CommandUnknown = "CommandUnknown"; // 命令列：不認得的子命令（aos-json、aos-post、aos-lock）
 inline constexpr const char* MailboxMissing = "MailboxMissing"; // 信箱不在、或 tmp/ new/ cur/ 沒建好（aos-post、aos-llm-send）
 inline constexpr const char* LetterMissing = "LetterMissing";   // 指名的信不在該在的格（aos-post 的 check、finish；aos-llm-send 等的信不見了）
-inline constexpr const char* LetterBad = "LetterBad";           // 信壞了：letter.json 讀不懂、缺必填、型別不對（aos-post check；aos-llm-kernel 的回信）
+inline constexpr const char* LetterBad = "LetterBad";           // 信壞了：letter.json 讀不懂、缺必填、型別不對（aos-post see；aos-llm-kernel 的回信）
 // 其他
 inline constexpr const char* Internal = "Internal";         // 照理不會發生的例外（記憶體不夠、cwd 被刪）
 }  // namespace code

@@ -142,7 +142,7 @@ struct Served {
 };
 
 // 回信走 reply_to（10-30，medium 決定 3、N-16）：信裡寫了 reply_to＝照 N-16 寄一封回信進去（body＝reply.json 那份、
-// in_reply_to＝原信號、stdout.txt／stderr.txt 有就附上），寄出的信號記在 <信>/reply_letter.txt（已經有＝上一次寄過了，不寄第二封）。
+// in_reply_to＝原信的信件名稱、stdout.txt／stderr.txt 有就附上），寄出的信件名稱記在 <信>/reply_letter.txt（已經有＝上一次寄過了，不寄第二封）。
 // 寄不出去（信箱不在、寫不進）不是 kernel 的錯：回「代號 原因」記進 served 的 reply_error，信照搬 done/。沒寫 reply_to＝null。
 Json post_reply(const std::string& dir, const std::string& id, const Json& reply) {
     std::optional<Json> letter = aos::read_json(aos::join(dir, "letter.json"));
@@ -176,7 +176,7 @@ Json post_reply(const std::string& dir, const std::string& id, const Json& reply
 }
 
 // done/<id> 被收拾前：它寄過的回信還在 reply_to 的 new/（寄信的人不在了，沒人會拿）＝撤回自己寄的那封（N-16 撤回；在 cur/ 以後的不碰）。
-void withdraw_reply(const std::string& dir) {
+void regret_reply(const std::string& dir) {
     std::optional<Json> letter = aos::read_json(aos::join(dir, "letter.json"));
     int err = 0;
     std::optional<std::string> sig = aos::read_file(aos::join(dir, "reply_letter.txt"), err);
@@ -191,7 +191,7 @@ void withdraw_reply(const std::string& dir) {
         return;
     }
     try {
-        aos::post::withdraw(aos::post::open((*letter)["reply_to"].get<std::string>()), name);
+        aos::post::regret(aos::post::open((*letter)["reply_to"].get<std::string>()), name);
     } catch (const Error&) {
     }
 }
@@ -383,7 +383,7 @@ void Server::sweep() {
     for (const std::string& id : names_in(mb_.done())) {
         std::string dir = aos::join(mb_.done(), id);
         if (!sender_alive(dir)) {
-            withdraw_reply(dir);   // 它寄過、沒人拿的回信撤回（10-30）
+            regret_reply(dir);   // 它寄過、沒人拿的回信撤回（10-30；aos-post regret）
             remove_tree(dir);
         }
     }

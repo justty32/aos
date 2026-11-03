@@ -4,7 +4,7 @@
     python3 tests/test_cli.py bin/aos-llm-kernel
 
 每個案例一個暫存資料夾：stack/（AOS_STACK）、mb/（信箱）、kernel.json。信是測試自己寫的（假裝是閘門寄的）：
-信號照 aos-llm-send 的格式 <奈秒>.<pid>.<started_at_ticks>；「寄信的人還在」＝測試自己 flock 住信裡的 sender.flock（同閘門），
+信件名稱照 aos-llm-send 的格式 <奈秒>.<pid>.<started_at_ticks>；「寄信的人還在」＝測試自己 flock 住信裡的 sender.flock（同閘門），
 要「寄信的人不在了」就留一個沒人鎖的 sender.flock（或乾脆沒有）。
 A 段：命令列與設定；B 段：排隊（level、deadline、等了幾次、先來先上、aging）；C 段：slots；D 段：回信的各種錯
 （DeadlineMissed、LetterBad、單子壞）；E 段：收拾（寄信的人不在、上一次 kernel 死了留在 cur/）；F 段：鎖、訊號、環境與 cwd、逾時；
@@ -274,10 +274,10 @@ class D_Replies(Case):
         self.assertEqual(self.marks(), [])
 
     def test_envelope_not_checked(self):
-        """10-29 信封（kind、sender、sent_at）不檢查也不擋：寫了、寫怪、沒寫都照跑；不認得的 key 忽略（N-16）。"""
+        """10-29 信封（sender、sent_at）不檢查也不擋：寫了、寫怪、沒寫都照跑；不認得的 key（含 11-03 拿掉的 kind）忽略（N-16）。"""
         env = {"PATH": os.environ["PATH"]}
         inst = {"argv": self.mark("a"), "cwd": str(self.t)}
-        i = self.post(raw=json.dumps({"kind": "letter", "sender": "/home/u/ws", "sent_at": "2026-10-29T08:12:33.123+00:00",
+        i = self.post(raw=json.dumps({"sender": "/home/u/ws", "sent_at": "2026-10-29T08:12:33.123+00:00",
                                       "inst": inst, "env": env}))
         j = self.post(raw=json.dumps({"kind": 3, "sender": None, "sent_at": [], "body": {"x": 1}, "whatever": True,
                                       "inst": {"argv": self.mark("b"), "cwd": str(self.t)}, "env": env}))
@@ -631,7 +631,7 @@ class I_Accept(Case):
 
 class J_ReplyTo(Case):
     """10-30 回信改走 reply_to（medium 決定 3、N-16）：信封寫了 reply_to＝kernel 照 N-16 另寄一封回信進那個信箱
-    （in_reply_to＝原信號、body＝reply.json 那份、stdout.txt／stderr.txt 附上），寄出的信號記在 <信>/reply_letter.txt；
+    （in_reply_to＝原信的信件名稱、body＝reply.json 那份、stdout.txt／stderr.txt 附上），寄出的信件名稱記在 <信>/reply_letter.txt；
     reply.json 照寫、信照搬 done/。寄不出去記 served 的 reply_error；寄信的人不在了，收拾 done/ 時撤回沒人拿的回信。"""
 
     def box(self, name="rb"):
@@ -654,8 +654,9 @@ class J_ReplyTo(Case):
         r = self.run_k(extra={"AOS_WS": str(self.t)})
         self.assertEqual(r.returncode, 0, r.stderr)
         (n, letter, files), = self.replies(b)
-        self.assertEqual((letter["kind"], letter["sender"], letter["in_reply_to"], letter["body"]),
-                         ("letter", str(self.t), a, {"code": 4, "signal": None}))
+        self.assertEqual((letter["sender"], letter["in_reply_to"], letter["body"]),
+                         (str(self.t), a, {"code": 4, "signal": None}))
+        self.assertNotIn("kind", letter)
         self.assertEqual(files, {"stdout.txt": "答\n", "stderr.txt": "警\n"})
         self.assertEqual((self.mb / "done" / a / "reply_letter.txt").read_text(), n + "\n")
         self.assertEqual(self.reply(a), {"code": 4, "signal": None})   # reply.json 照寫、信在 done/ 當紀錄
@@ -691,7 +692,7 @@ class J_ReplyTo(Case):
         self.assertEqual(self.replies(b), [])
         self.assertTrue((self.mb / "done" / a).exists())
 
-    def test_sweep_withdraws_unclaimed_reply(self):
+    def test_sweep_regrets_unclaimed_reply(self):
         b = self.box()
         lock = self.post(["true"], reply_to=str(b))
         self.run_k()

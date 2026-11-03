@@ -1,23 +1,23 @@
 // aos/llm_kernel.hpp：aos-llm-kernel 的公開介面——LLM kernel 的信箱與信（aos-llm-send 寄信、aos-llm-kernel 收信都用這組）。
 //
-//   信箱（N-16 資料夾式，Maildir）：一個資料夾，底下四格、一封信＝一個資料夾（名字＝信號 id）：
+//   信箱（N-16 資料夾式，Maildir）：一個資料夾，底下四格、一封信＝一個資料夾（名字＝信件名稱，下面寫 id）：
 //     tmp/.<id>/   閘門正在寫（. 開頭 kernel 不碰；寫好 letter.json 才改名進 new/<id>）
 //     tmp/<id>/    撤信、丟信先改名回這裡再刪
 //     new/<id>/    排隊中（kernel 認領＝改名進 cur/；閘門撤信＝改名回 tmp/，兩邊只有一個改得成）
 //     cur/<id>/    kernel 正在跑（stdout.txt、stderr.txt、跑完寫 reply.json）
 //     done/<id>/   有回信了（reply.json 寫好才改名進來），閘門讀完刪掉
 //     .flock       kernel 跑一次的期間 flock 住（同一個信箱同時只有一個 kernel；10-29 原叫 .lock，改名把 .lock/ 留給 N-15 的資料夾鎖）
-//   信：letter.json＝{"kind": "letter", "sender": 寄信人身分路徑（$AOS_WS，沒設＝$HOME）, "sent_at": ISO 8601 UTC 到毫秒,
+//   信：letter.json＝{"sender": 寄信人身分路徑（aos-util 的 aos::identity）, "sent_at": ISO 8601 UTC 到毫秒, "reply_to": 回信信箱,
 //                    "inst": 單子（指示詞已解、cwd 是絕對路徑）, "env": 寄信那一刻閘門的整份環境, "priority": 原樣}
-//       信封三欄（N-16 10-29）閘門會寫、kernel 不檢查也不擋（舊信沒有也照收）；inst／env／priority 過渡期照舊在頂層（還沒包進 body）；
+//       信封（N-16 10-29；11-03 起沒有 kind）閘門會寫、kernel 不檢查也不擋（舊信沒有、或帶著舊的 kind 也照收）；inst／env／priority 過渡期照舊在頂層（還沒包進 body）；
 //       其他不認得的 key 一律忽略（C-48）
 //   回信：reply.json＝{"code": 結束碼, "signal": 訊號或 null}，或 {"error": {"code": 代號, "msg": 原因}}（kernel 沒跑或跑不起來）
-//       信裡寫了 reply_to（信箱路徑，N-16 信封）：kernel 另把同一份當 body、照 N-16 寄一封回信進那個信箱（in_reply_to＝原信號、
-//       stdout.txt／stderr.txt 有就附在信裡），寄出的信號記在 <信>/reply_letter.txt；reply.json 照寫、信照搬 done/ 當紀錄（10-30，medium 決定 3）
+//       信裡寫了 reply_to（信箱路徑，N-16 信封）：kernel 另把同一份當 body、照 N-16 寄一封回信進那個信箱（in_reply_to＝原信的信件名稱、
+//       stdout.txt／stderr.txt 有就附在信裡），寄出的信件名稱記在 <信>/reply_letter.txt；reply.json 照寫、信照搬 done/ 當紀錄（10-30，medium 決定 3）
 //   回報：report.json＝腦自願寫的 API 回覆 usage（kernel 跑信時給環境變數 AOS_KERNEL_REPORT 指向 cur/<id>/report.json；10-24）
 //   寄信的人：sender.flock＝閘門建好信就 flock（LOCK_EX）住、拿到行程結束（10-24 改：原本看名字裡的 pid，沙箱有自己的行程編號就對不上）
 //
-//   信號＝aos-util 的 aos::unique_id()：<UTC 奈秒 20 位>.<閘門 pid>.<閘門 started_at_ticks>——照字典序排＝照寄的先後；pid、ticks 只讓名字不撞
+//   信件名稱＝aos-util 的 aos::unique_id()：<UTC 奈秒 20 位>.<閘門 pid>.<閘門 started_at_ticks>——照字典序排＝照寄的先後；pid、ticks 只讓名字不撞
 //          （10-30 起全家一份；原本這裡的 letter_id 與 aos-post、aos-lock 各一份）
 //   hold_sender    閘門：開 <信>/sender.flock（0666，權限照信箱的 umask／ACL）、flock 住；回 fd，一直開著到行程結束。失敗丟 WriteFailed
 //   sender_alive   寄這封信的閘門還在不在：<信>/sender.flock 有人鎖著＝在；檔不在、開不了、鎖得到＝不在

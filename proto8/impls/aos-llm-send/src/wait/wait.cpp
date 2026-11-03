@@ -78,7 +78,7 @@ static int relay(const aos::post::Mailbox& rb, const std::string& n) {
         reply = aos::llm_kernel::reply_of((*l)["body"]);
     }
     try {
-        aos::post::finish(rb, n, false);
+        aos::post::done(rb, n, false);
     } catch (const Error&) {
     }
     if (!reply) {
@@ -91,7 +91,7 @@ static int relay(const aos::post::Mailbox& rb, const std::string& n) {
     return (*reply)["code"].get<int>();
 }
 
-static void withdraw(const Mailbox& mb, const aos::post::Mailbox& rb, const std::string& id,
+static void regret(const Mailbox& mb, const aos::post::Mailbox& rb, const std::string& id,
                      std::set<std::string>& seen) {
     std::error_code ec;
     std::string t = aos::join(mb.tmp(), id);
@@ -103,7 +103,7 @@ static void withdraw(const Mailbox& mb, const aos::post::Mailbox& rb, const std:
     std::optional<std::string> n = find_reply(rb, id, seen);
     if (n && take(rb, *n)) {
         try {
-            aos::post::finish(rb, *n, false);
+            aos::post::done(rb, *n, false);
         } catch (const Error&) {
         }
     }
@@ -129,7 +129,7 @@ int wait_reply(const Mailbox& mb, const std::string& id) {
         timespec ts{0, 20 * 1000 * 1000};
         int sig = sigtimedwait(&set, nullptr, &ts);
         if (sig > 0) {
-            withdraw(mb, rb, id, seen);
+            regret(mb, rb, id, seen);
             return 128 + sig;
         }
     }

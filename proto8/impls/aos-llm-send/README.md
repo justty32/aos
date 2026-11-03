@@ -31,12 +31,12 @@ aos-llm-send [旗標] 單子.json
   3. `priority` 先驗（形狀見 aos-llm-kernel），壞＝`PriorityBad`、不寄。
   4. `cwd` 轉絕對：沒寫＝單子檔的資料夾（同 aos-exec），相對的接在它後面。
   5. **回信信箱** `<信箱>/reply/`（N-16 信箱：`tmp/`、`new/`、`cur/`）沒有就建（aos-post 的 `init`；建不了＝`MkdirFailed`）。放在 kernel 的信箱底下、不放寄信人自己的 stack：kernel（可能是別的帳號、在沙箱外）要寫得進去，沙箱裡也不一定有 `AOS_STACK`（[medium 決定 3](../../thinking/2026-10-28-medium.md)）。
-  6. 信＝`{"kind": "letter", "sender": 寄信人, "sent_at": 寄出時間, "reply_to": 回信信箱, "inst": 單子, "env": 閘門這一刻的整份環境, "priority": 原樣}`（前三個＝N-16 的信封：`sender`＝`$AOS_WS`、沒設或空＝`$HOME`〔都轉絕對路徑；`HOME` 也沒有＝`/`〕，`sent_at`＝ISO 8601 UTC 到毫秒；`reply_to`＝回信信箱的絕對路徑；`inst`／`env`／`priority` 過渡期在頂層、還沒包進 `body`），寫進 `tmp/.<信號>/letter.json`（先建 `sender.flock`、flock 住，拿到行程結束：kernel 靠它認寄信的人還在、不看 pid，所以關在沙箱裡也行）再改名進 `new/<信號>/`。
-- **等**：每 20 毫秒看一次回信信箱的 `new/`，`letter.json` 的 `in_reply_to`＝自己的信號就是回信（別人的不碰；中間收到訊號馬上醒）。**等多久不歸閘門管**：由包它那格的 `timeout_ms` 守（10-15 KISS 1.8）；kernel 不在＝信堆在 `new/`、一直等，kernel 起來就接著做。
+  6. 信＝`{"sender": 寄信人, "sent_at": 寄出時間, "reply_to": 回信信箱, "inst": 單子, "env": 閘門這一刻的整份環境, "priority": 原樣}`（前三個＝N-16 的信封，11-03 起沒有 `kind`：`sender`＝aos-util 的 `aos::identity()`——`$AOS_WS` ＞ `$AOS_STACK` ＞ `$AOS_CF` ＞ cwd〔空字串算沒設、轉絕對路徑；在第 1 步改 `AOS_CF` 之前取，是叫閘門那一方的〕，`sent_at`＝ISO 8601 UTC 到毫秒；`reply_to`＝回信信箱的絕對路徑；`inst`／`env`／`priority` 過渡期在頂層、還沒包進 `body`），寫進 `tmp/.<信件名稱>/letter.json`（先建 `sender.flock`、flock 住，拿到行程結束：kernel 靠它認寄信的人還在、不看 pid，所以關在沙箱裡也行）再改名進 `new/<信件名稱>/`。
+- **等**：每 20 毫秒看一次回信信箱的 `new/`，`letter.json` 的 `in_reply_to`＝自己的信件名稱就是回信（別人的不碰；中間收到訊號馬上醒）。**等多久不歸閘門管**：由包它那格的 `timeout_ms` 守（10-15 KISS 1.8）；kernel 不在＝信堆在 `new/`、一直等，kernel 起來就接著做。
   原信在 `new/`、`cur/`、`done/` 都找不到、也沒有回信（照信走的方向依序看，不會看漏）＝`LetterMissing`。
-- **交回**：認領回信（`new/` → `cur/`），信裡的 `stdout.txt` 原樣寫到自己的 stdout、`stderr.txt` 寫到 stderr（單子自己導到別處的就沒有這兩個檔），收掉回信（刪）；`done/<信號>/` 是 kernel 的紀錄、閘門不碰（閘門結束後 kernel 收拾）。
+- **交回**：認領回信（`new/` → `cur/`），信裡的 `stdout.txt` 原樣寫到自己的 stdout、`stderr.txt` 寫到 stderr（單子自己導到別處的就沒有這兩個檔），收掉回信（刪）；`done/<信件名稱>/` 是 kernel 的紀錄、閘門不碰（閘門結束後 kernel 收拾）。
   回信的 `body` 是 `{"code", "signal"}`＝以那個碼結束（被訊號停掉的單子是 128＋N）；`{"error": {"code", "msg"}}`（kernel 沒跑或跑不起來）＝印一行 `aos-llm-send: 代號 原因`、退 1；讀不懂＝`ReplyBad`。
-- **訊號**（SIGINT／SIGTERM／SIGHUP，例如包它那格逾時）：撤信——`new/<信號>` 改名回 `tmp/` 再刪（改得成＝還沒被認領）；已經在 `cur/`（正在跑）就讓它跑完；回信已經到了就收掉，還沒到的由 kernel 之後撤回（寄信的人不在了）。以 128＋N 結束。
+- **訊號**（SIGINT／SIGTERM／SIGHUP，例如包它那格逾時）：撤信——`new/<信件名稱>` 改名回 `tmp/` 再刪（改得成＝還沒被認領）；已經在 `cur/`（正在跑）就讓它跑完；回信已經到了就收掉，還沒到的由 kernel 之後撤回（寄信的人不在了）。以 128＋N 結束。
 
 ## 元素
 
@@ -47,7 +47,7 @@ aos-llm-send [旗標] 單子.json
 | 檔 | 做什麼 |
 |---|---|
 | `src/send/send.hpp`、`send.cpp` | `mailbox`、`post` |
-| `src/wait/wait.hpp`、`wait.cpp` | `wait_reply`（看回信信箱 `find_reply`、`take`、`withdraw`、`relay`） |
+| `src/wait/wait.hpp`、`wait.cpp` | `wait_reply`（看回信信箱 `find_reply`、`take`、`regret`（撤信）、`relay`（收掉回信用 aos-post 的 `done`）） |
 | `src/common/common.hpp` | `using`；代號沿用 aos-llm-kernel 的；`reply_box`（`<信箱>/reply`） |
 | `src/main.cpp` | 命令列：串上面；出錯印「aos-llm-send: 代號 原因」 |
 
@@ -72,7 +72,7 @@ stderr 一行 **`aos-llm-send: 代號 原因`**、退 1。
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-- `test_cli`（`tests/test_cli.py`，unittest 20 案，約 1 秒）：測試自己當 kernel（搬信、照 `reply_to` 寄回信），只測閘門這一半——A 命令列、信箱不在、單子檔的錯、priority 壞不寄；B 信的內容（指示詞在閘門的環境解、`AOS_CF`／`AOS_CD`／`AOS_CO`、cwd 轉絕對、整份環境、priority 原樣、信號照寄的先後；信封：`kind`、`sent_at` 的格式與時間、`sender` 有設 `AOS_WS`〔含相對的〕／沒設或空＝`HOME` 各一案）；
+- `test_cli`（`tests/test_cli.py`，unittest 20 案，約 1 秒）：測試自己當 kernel（搬信、照 `reply_to` 寄回信），只測閘門這一半——A 命令列、信箱不在、單子檔的錯、priority 壞不寄；B 信的內容（指示詞在閘門的環境解、`AOS_CF`／`AOS_CD`／`AOS_CO`、cwd 轉絕對、整份環境、priority 原樣、信件名稱照寄的先後；信封：沒有 `kind`、`sent_at` 的格式與時間、`sender` 有設 `AOS_WS`〔含相對的〕／四級順序〔不看 `HOME`、單子的 `AOS_CF` 不算〕各一案）；
   `reply_to`＝`<信箱>/reply` 且三格先建好；C 交回（stdout／stderr／碼、128＋N、kernel 回的錯、回信讀不懂四種、交回後回信信箱是空的而 `done/` 留著、別人的回信不碰）；D 訊號撤信（在 `new/` 撤掉、在 `cur/` 留著、回信已到就收掉）、信不見了、沒有 kernel 時一直等、等的時候一直鎖著 `sender.flock`（被 SIGKILL 就放掉）。
 - 跟真 kernel 一起跑的在 `proto8/tests/test_llm_kernel.py`。
 

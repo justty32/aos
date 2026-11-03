@@ -19,7 +19,7 @@ impls 是唯一實作；`proto8/bin` 只剩 Python 的 `aos-tick`。`proto8/test
 | aos-llm-kernel | `aos-llm-kernel [旗標] kernel.json`：LLM kernel 跑一次（挑信、跑、回信）；公開標頭 `aos/llm_kernel.hpp`（信箱與信） | `lib/libaos-llm-kernel.a`、`bin/aos-llm-kernel` | **提供** | [aos-llm-kernel](aos-llm-kernel/README.md) |
 | aos-llm-send | `aos-llm-send [旗標] 單子.json`：把單子寄給 kernel、等回信、原樣交回 | `lib/libaos-llm-send.a`、`bin/aos-llm-send` | **提供** | [aos-llm-send](aos-llm-send/README.md) |
 | aos-json | `aos-json 子命令 [旗標...] 檔#/指標 [值]`：讀、改 aos 的 JSON 設定（認得 `$ref`／`$env`）；另有給腦掛的工具 `tools/json/`、`tools/json_edit/`；庫沒有公開標頭 | `lib/libaos-json.a`、`bin/aos-json` | **提供**（嘗試） | [aos-json](aos-json/README.md) |
-| aos-post | `aos-post 子命令 [旗標...] 信箱 [信號]`：N-16 投遞（含有順序的投遞）；公開標頭 `aos/post.hpp` | `lib/libaos-post.a`、`bin/aos-post` | **提供** | [aos-post](aos-post/README.md) |
+| aos-post | `aos-post 子命令 [旗標...] 信箱 [信件名稱]`：N-16 投遞（IPC 的語法糖；有序、無序同箱）；公開標頭 `aos/post.hpp` | `lib/libaos-post.a`、`bin/aos-post` | **提供** | [aos-post](aos-post/README.md) |
 | aos-lock | `aos-lock 子命令 [旗標...] 目標`：N-15 的鎖；公開標頭 `aos/lock.hpp` | `lib/libaos-lock.a`、`bin/aos-lock` | **提供** | [aos-lock](aos-lock/README.md) |
 | inst | C 函式庫 libaos：起一個程式、等它結束、告訴你結果 | `lib/libinst.so`（FFI）、`lib/libinst.a` | 庫（不讀 JSON、沒有命令列） | [inst](inst/README.md) |
 | aos-util | 全家共用的 C++ 函式庫 | `lib/libaos-util.a` | 庫 | [aos-util](aos-util/README.md) |
@@ -52,7 +52,7 @@ impls 是唯一實作；`proto8/bin` 只剩 Python 的 `aos-tick`。`proto8/test
  aos-directive  解 JSON 裡的 {"$ref": 檔[#/指標]}、{"$env": 變數}，可帶 $path（字串拼接）、$prefix（lib＋bin） ← aos-exec 連它（單子、argv 陣列、JSON .env key 的指示詞）；aos-loop 也連（設定檔與 ctl）
  aos-schema     用 JSON Schema（draft-07）驗 JSON（lib＋bin）                  ← 獨立，只連 aos-util
  aos-json       讀、改 aos 的 JSON 設定：檔#/指標、穿 $ref、只重寫變的那塊、check（lib＋bin＋tools/）  ← 連 aos-directive、aos-util；test_tool 要 aos-exec 的 bin/
- aos-post       投遞（N-16 信箱）：寄、認領、check、finish（--reply）、撤回；send --ordered（lib＋bin，公開 aos/post.hpp）  ← 連 aos-lock、aos-util；aos-daemon 的信箱模式連它
+ aos-post       投遞（N-16 信箱）：send、take、see、done（--reply）、regret；send --ordered（lib＋bin，公開 aos/post.hpp）  ← 連 aos-lock、aos-util；aos-daemon 的信箱模式連它
  aos-lock       鎖（N-15）：mkdir .lock/、名牌 holder.json、判死活、收屍（lib＋bin，公開 aos/lock.hpp）  ← 只連 aos-util
 ```
 
@@ -126,11 +126,11 @@ impls 是唯一實作；`proto8/bin` 只剩 Python 的 `aos-tick`。`proto8/test
 | `StackMissing` | aos-loop（定義在 `aos/loop.hpp`）、aos-fsm、aos-daemon | 要 `AOS_STACK` 卻沒設（loop 開了窗、fsm、daemon） |
 | `StateUnknown` | aos-fsm | state 檔裡的狀態不在表上。見 [aos-fsm](aos-fsm/README.md) |
 | `PriorityBad`、`ReplyBad` | aos-llm-send（定義在 `aos/llm_kernel.hpp`） | priority 寫壞；回信讀不懂 |
-| `MailboxMissing`、`LetterMissing`、`LetterBad`、`CommandUnknown` | aos-post、aos-llm-send、aos-llm-kernel（回信）；`CommandUnknown`＝aos-json、aos-post、aos-lock（定義在 aos-util 的 `aos::code`） | 信箱或四格不在、沒設 `AOS_KERNEL`；信不在該在的格（aos-post 的 `cur/`、aos-llm-send 等的信不見了）；信壞了（aos-post `check`、kernel 回信）；不認得的子命令 |
+| `MailboxMissing`、`LetterMissing`、`LetterBad`、`CommandUnknown` | aos-post、aos-llm-send、aos-llm-kernel（回信）；`CommandUnknown`＝aos-json、aos-post、aos-lock（定義在 aos-util 的 `aos::code`） | 信箱或用到的格不在、沒設 `AOS_KERNEL`；信不在該在的格（aos-post 的 `cur/`、aos-llm-send 等的信不見了）；信壞了（aos-post `see`、kernel 回信）；不認得的子命令 |
 | `LockFailed`、`QueueBad`、`UsedBad` | aos-llm-kernel | 信箱被另一個 kernel 鎖著；`$AOS_STACK/queue.json` 讀不懂；`$AOS_STACK/used.json`（用量帳）讀不懂 |
 | `LetterBad`、`DeadlineMissed`、`BudgetMissing`、`RunFailed` | aos-llm-kernel 寫進回信、aos-llm-send 印出來 | 信讀不懂或 priority 壞；輪到之前時限已過；這一窗額度用完；上一次 kernel 跑到一半死了沒回信 |
 | `FileMissing`、`FileBad`、`SpecBad`、`PointerMissing`、`ValueMissing`、`ValueBad`、`TargetBad`、`FollowMissing`、`CheckFailed` | aos-json（`src/common/common.hpp`；印法同 aos-exec：`aos-json: 代號 原因`） | 見 [aos-json](aos-json/README.md)；它也吐全家共用的 `ArgumentsBad`、`FlagUnknown`、`WriteFailed`、`Internal` 與 `DirectiveBad` |
-| `WithdrawFailed`、`OrderBad` | aos-post（`aos/post.hpp`；印法 `aos-post: 代號 原因`；它也吐上面那列的四個） | 撤不了（不在 `new/`）；`order.json` 讀不懂。見 [aos-post](aos-post/README.md) |
+| `RegretFailed`、`OrderBad`、`LetterExists`、`MailboxBad` | aos-post（`aos/post.hpp`；印法 `aos-post: 代號 原因`；它也吐上面那列的四個） | 撤不了（不在 `new/`）；`order.json` 讀不懂；`send` 自己給的信件名稱已有同名的；信箱的 `tmp/`／`new/` 不可寫。見 [aos-post](aos-post/README.md) |
 | `LockMissing`、`HolderBad` | aos-lock（`aos/lock.hpp`；印法 `aos-lock: 代號 原因`） | `release` 的鎖不在；`show` 的名牌不在或讀不懂；不認得的子命令。見 [aos-lock](aos-lock/README.md) |
 | `DirectiveFormBad`、`ExecBad` | aos-json 的 `check` 印在 stdout（問題，不是 aos-json 自己的錯） | 帶 `$ref`／`$env` 但寫法不合（aos 會原封不動留著）；`exec` 形狀不對 |
 | `SchemaBad` | aos-schema | schema 不合 draft-07、`$ref` 指不到 |
@@ -201,7 +201,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
 
 | 檔 | 做什麼 | ctest 名 | 誰有 |
 |---|---|---|---|
-| `tests/test_cli.py` | 命令列黑箱：餵 stdin 或設定檔、看退出碼與輸出 | `test_cli` | aos-util、aos-directive（57 組）、aos-schema（12 案）、aos-exec（56 組）、aos-loop（40 組）、aos-fsm（29 組）、aos-daemon（51 案，unittest）、aos-llm-kernel（42 案，unittest）、aos-llm-send（18 案，unittest；測試自己當 kernel）、aos-json（126 個）、aos-post（unittest，含 20 寄信人並發、有順序的投遞 50 寄信人與收屍）、aos-lock（unittest，含搶鎖、kill -9 後收屍、boot_id、lease） |
+| `tests/test_cli.py` | 命令列黑箱：餵 stdin 或設定檔、看退出碼與輸出 | `test_cli` | aos-util、aos-directive（57 組）、aos-schema（12 案）、aos-exec（56 組）、aos-loop（40 組）、aos-fsm（29 組）、aos-daemon（84 案，unittest）、aos-llm-kernel（42 案，unittest）、aos-llm-send（18 案，unittest；測試自己當 kernel）、aos-json（126 個）、aos-post（45 案，unittest，含 20 寄信人並發、有順序的投遞 50 寄信人與收屍、有序無序同箱）、aos-lock（unittest，含搶鎖、kill -9 後收屍、boot_id、lease） |
 | `tests/test_demo.py` | 整合：proto8/demo 在 impls 線跑，看結束碼 0、stderr 空、答案寫出來 | `test_demo` | aos-fsm（agent-bob、agent-ann）、aos-daemon（demo/daemon、demo/daemon-2） |
 | `tests/test_tool.py` | 給腦掛的工具經 aos-exec 跑（假 OpenAI 端點） | `test_tool` | aos-json（30 個；aos-exec 的 `bin/` 沒建＝跳過） |
 | `tests/test_lib.*` | 函式庫 | `test_lib`、`test_lib_*` | inst（C；另一份 `test_lib_nopidfd` 走輪詢退路）、aos-schema、aos-util（7 條，含代號 `cli`） |

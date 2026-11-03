@@ -9,7 +9,7 @@
 | `include/aos/llm_kernel.hpp` | 公開標頭（aos-llm-send 連它）：信箱、信、優先序、代號 |
 | `src/letter/letter.cpp` | 信箱四格、寄信人存活（`sender.flock`）、`parse_priority`、`priority_of`、`read_reply` |
 | `src/queue/queue.cpp`、`src/queue/queue.hpp` | `queue.json` 讀寫、`effective`、`order`（級數 → deadline → `time_ms` → 等得久 → 先寄） |
-| `src/serve/serve.cpp`、`src/serve/serve.hpp` | `Server`：讀設定（`slots`、`budget`、`accept`）、`recover`、`sweep`、`scan`、`start_runner`、`wait_runners`、`finish`（`served.jsonl`、`used.json`）、回信 `post_reply`／`withdraw_reply` |
+| `src/serve/serve.cpp`、`src/serve/serve.hpp` | `Server`：讀設定（`slots`、`budget`、`accept`）、`recover`、`sweep`、`scan`、`start_runner`、`wait_runners`、`finish`（`served.jsonl`、`used.json`）、回信 `post_reply`／`regret_reply`（撤回沒人拿的回信，aos-post 的 `regret`） |
 | `src/budget/budget.cpp`、`src/budget/budget.hpp` | token 回報與額度：`parse_budget`、`window_since`、`read_used`／`add_used`、`spent`、`read_report` |
 | `src/main.cpp` | 命令列 `aos-llm-kernel [旗標] kernel.json`（要 `AOS_STACK`） |
 | `src/common/common.hpp` | 內部共用標頭 |
@@ -19,7 +19,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| `src/send/send.cpp`、`src/send/send.hpp` | `mailbox`（`$AOS_KERNEL`）、`sender`、`post`（解指示詞、驗 priority、信封、先鎖 `sender.flock` 再寫信、回信信箱 `reply_to`） |
+| `src/send/send.cpp`、`src/send/send.hpp` | `mailbox`（`$AOS_KERNEL`）、`post`（寄信人身分用 aos-util 的 `identity`、解指示詞、驗 priority、信封〔沒有 `kind`〕、先鎖 `sender.flock` 再寫信、回信信箱 `reply_to`） |
 | `src/wait/wait.cpp`、`src/wait/wait.hpp` | `wait_reply`（看回信信箱、訊號＝撤信）、`relay`（stdout／stderr 原樣、結束碼） |
 | `src/main.cpp` | 命令列 `aos-llm-send [旗標] 單子.json` |
 | `src/common/common.hpp` | 內部標頭：`reply_box` |

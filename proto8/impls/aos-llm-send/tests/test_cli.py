@@ -4,10 +4,10 @@
     python3 tests/test_cli.py bin/aos-llm-send
 
 不需要真的 kernel：測試自己當 kernel（看 new/ 裡的信、搬到 cur/、照信封的 reply_to 寄回信、搬 done/），所以只測閘門這一半。
-10-30 回信改走 reply_to：閘門建回信信箱 <信箱>/reply/（tmp／new／cur），信封寫 reply_to；回信是一封 N-16 的信（in_reply_to＝原信號、
+10-30 回信改走 reply_to：閘門建回信信箱 <信箱>/reply/（tmp／new／cur），信封寫 reply_to；回信是一封 N-16 的信（in_reply_to＝原信的信件名稱、
 body＝{"code", "signal"} 或 {"error"}、stdout.txt／stderr.txt 附在信裡），閘門認領、交回、收掉；done/ 是 kernel 的紀錄，閘門不碰。
 A 段：命令列、信箱、單子檔的錯；B 段：信的內容（指示詞在閘門的環境解、AOS_CF／AOS_CD／AOS_CO、cwd 轉絕對、整份環境、priority 原樣；
-10-29 信封 kind、sender〔$AOS_WS，沒設＝$HOME〕、sent_at）；
+10-29 信封 sender〔11-03 起 aos::identity：AOS_WS ＞ AOS_STACK ＞ AOS_CF ＞ cwd〕、sent_at，11-03 起沒有 kind）；
 C 段：回信原樣交回（stdout、stderr、碼、kernel 回的錯、讀不懂的回信）；D 段：訊號撤信、信不見了、kernel 不在時一直等、
 等的時候一直鎖著信裡的 sender.flock（kernel 靠它認寄信的人還在，10-24）。
 llm-send＋kernel 一起跑的在 proto8/tests/test_llm_kernel.py。
@@ -93,7 +93,7 @@ class Case(unittest.TestCase):
             (r / "stdout.txt").write_text(out)
         if err is not None:
             (r / "stderr.txt").write_text(err)
-        (r / "letter.json").write_text(json.dumps({"kind": "letter", "sender": "/k", "sent_at": "2026-10-30T00:00:00.000+00:00",
+        (r / "letter.json").write_text(json.dumps({"sender": "/k", "sent_at": "2026-10-30T00:00:00.000+00:00",
                                                    "in_reply_to": id, "body": reply}))
         os.rename(r, box / "new" / r.name)
         (self.mb / "done").mkdir(exist_ok=True)
@@ -178,7 +178,7 @@ class B_Letter(Case):
         id, letter = self.letter()
         self.answer(id, {"code": 0, "signal": None})
         p.communicate(timeout=10)
-        self.assertEqual(letter["kind"], "letter")
+        self.assertNotIn("kind", letter)   # 11-03 拿掉
         self.assertRegex(letter["sent_at"], r"^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00$")   # 同 aos::utc_now_ms
         at = datetime.datetime.fromisoformat(letter["sent_at"])
         self.assertTrue(before <= at <= datetime.datetime.now(datetime.timezone.utc), letter["sent_at"])
@@ -192,11 +192,14 @@ class B_Letter(Case):
         self.assertEqual(self.envelope({"AOS_WS": str(self.t / "ws"), "HOME": "/nope"}), str(self.t / "ws"))
         self.assertEqual(self.envelope({"AOS_WS": "ws/../ws", "HOME": "/nope"}), str((self.t / "ws").resolve()))   # 相對的從閘門的 cwd 算
 
-    def test_envelope_sender_falls_back_to_home(self):
-        """10-29 信封：沒設 AOS_WS（或空）＝$HOME 的絕對路徑。"""
-        home = str(self.t / "home")
-        self.assertEqual(self.envelope({"HOME": home}), home)
-        self.assertEqual(self.envelope({"HOME": home, "AOS_WS": ""}), home)
+    def test_envelope_sender_order(self):
+        """11-03 信封：sender＝aos::identity()——AOS_WS ＞ AOS_STACK ＞ AOS_CF ＞ cwd（空字串算沒設，HOME 不看）；
+        閘門自己把 AOS_CF 改成單子的位置之前取，所以呼叫方沒設 AOS_CF 時是 cwd、不是單子。"""
+        cwd = os.path.realpath(self.t)
+        self.assertEqual(self.envelope({"HOME": "/nope"}), cwd)
+        self.assertEqual(self.envelope({"HOME": "/nope", "AOS_WS": "", "AOS_CF": "/cf"}), "/cf")
+        self.assertEqual(self.envelope({"AOS_CF": "/cf", "AOS_STACK": "/st"}), "/st")
+        self.assertEqual(self.envelope({"AOS_CF": "/cf", "AOS_STACK": "/st", "AOS_WS": "/w"}), "/w")
 
     def test_ids_in_order(self):
         self.inst({"argv": ["true"]})
@@ -224,13 +227,13 @@ class C_Relay(Case):
         self.assertTrue((self.mb / "done" / id).exists())     # done/ 是 kernel 的紀錄，閘門不碰（寄信的人不在了 kernel 收拾）
 
     def test_other_replies_left_alone(self):
-        """回信信箱裡不是回我的信（別的閘門的）不碰，只拿 in_reply_to＝自己信號的那封。"""
+        """回信信箱裡不是回我的信（別的閘門的）不碰，只拿 in_reply_to＝自己信件名稱的那封。"""
         self.inst({"argv": ["true"]})
         p = self.start()
         id, _ = self.letter()
         other = self.mb / "reply" / "new" / "00000000000000000001.1.1"
         other.mkdir()
-        (other / "letter.json").write_text(json.dumps({"kind": "letter", "sender": "/k", "sent_at": "x",
+        (other / "letter.json").write_text(json.dumps({"sender": "/k", "sent_at": "x",
                                                        "in_reply_to": "別人的", "body": {"code": 3, "signal": None}}))
         time.sleep(0.1)
         self.assertIsNone(p.poll())
@@ -268,7 +271,7 @@ class C_Relay(Case):
 
 
 class D_Wait(Case):
-    def test_withdraw_in_new(self):
+    def test_regret_in_new(self):
         self.inst({"argv": ["true"]})
         p = self.start()
         self.letter()

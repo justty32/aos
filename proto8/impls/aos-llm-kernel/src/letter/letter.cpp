@@ -1,4 +1,4 @@
-// letter.cpp：【letter】信箱的路徑、信號、寄信的人還在不在（sender.flock）、priority、回信（說明見 aos/llm_kernel.hpp）。
+// letter.cpp：【letter】信箱的路徑、信件名稱、寄信的人還在不在（sender.flock）、priority、回信（說明見 aos/llm_kernel.hpp）。
 #include "aos/llm_kernel.hpp"
 
 #include "aos/files.hpp"

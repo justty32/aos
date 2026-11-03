@@ -9,7 +9,7 @@ include(../cmake/settings.cmake)
 project(aos-llm-send C CXX)
 
 # 用到的兄弟專案（包一層 if(NOT TARGET)，全家都這樣寫）。
-#   aos-llm-kernel  公開 API（aos/llm_kernel.hpp）：信箱與信的格式（信號、priority、回信）；
+#   aos-llm-kernel  公開 API（aos/llm_kernel.hpp）：信箱與信的格式（信件名稱、priority、回信）；
 #                   它又帶進 aos-loop（擋訊號）、aos-exec、inst、aos-util、aos-directive（解指示詞）
 if(NOT TARGET aos-llm-kernel)
   add_subdirectory(../aos-llm-kernel aos-llm-kernel-build)
