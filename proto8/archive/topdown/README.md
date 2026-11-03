@@ -1,3 +1,5 @@
+> 封存 2026-11-03：trace.jsonl 拿掉後量法失效，使用者「封存 topdown」；整個資料夾、測試（`tests/`）與 code map 兩檔（`code-map/`）一起搬來，只作歷史，測試不再跑，內部路徑與連結不維護。
+
 # proto8/topdown — 由上而下拆的試驗
 
 ← [proto8](../README.md)｜題目與使用者原文：[thinking 2026-10-25 top-down](../thinking/2026-10-25-top-down.md)

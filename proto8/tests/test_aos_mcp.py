@@ -1,6 +1,6 @@
 """test_aos_mcp - proto8/extras/ai_tools/bin/aos-mcp：把登記檔（aos-tools 的工具註冊檔，11-02 起給檔、不給資料夾）登記的工具當 MCP tools（stdio JSON-RPC，包在 aos-tools 上）。
 
-不叫 claude：測試自己當 MCP client，一行一則送 JSON-RPC。設計：proto8/topdown/galtxt-a/plan/side-mcp.md。"""
+不叫 claude：測試自己當 MCP client，一行一則送 JSON-RPC。設計：封存的 galtxt-a plan/side-mcp.md。"""
 import json, os, subprocess, tempfile, unittest
 from pathlib import Path
 

@@ -14,7 +14,7 @@
 | [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），demo 用相對捷徑引用 |
 | [extras/](extras/README.md) | 周邊工具：給人用的 say／listen、給 AI 用的 aos-ai、aos-grow、Janet／Lua 寫 aos、nvim 外掛、aos-sandbox |
 | [demo/](demo/README.md) | 範例 agent 與 `run.sh` |
-| [topdown/](topdown/README.md) | 10-25 由上而下拆的試驗（甲隊 galtxt-a、乙隊 galtxt-b） |
+| [archive/](archive/README.md) | 封存（目前只有 10-25 由上而下拆的 topdown 試驗，11-03 封存） |
 | `tests/` | `python3 -m unittest discover -s proto8/tests`（先建 impls） |
 | [thinking/](thinking/README.md) | 討論紀錄（使用者原文、決定、結論） |
 | [notes/](notes/README.md) | AI 寫的參考筆記（不算數） |
