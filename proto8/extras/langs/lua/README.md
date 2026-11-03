@@ -1,8 +1,8 @@
 # proto8/extras/langs/lua — 用 Lua 寫 aos
 
-aos-lua - 把一份 Lua 原始檔編成 aos 的資料夾＋JSON（嘗試，2026-10-24）
+aos-lua - 把一份 Lua 原始檔編成 aos 的資料夾＋JSON（嘗試）
 
-← [proto8](../../../README.md)｜設計、對照表、代定：[thinking 2026-10-24-lua-nvim](../../../thinking/2026-10-24-lua-nvim.md)｜nvim 外掛 11-03 封存（`proto8/archive/nvim/`）｜測試 `proto8/tests/test_lua_aos.py`
+← [proto8](../../../README.md)｜設計、對照表、代定：[thinking 2026-10-24-lua-nvim](../../../thinking/2026-10-24-lua-nvim.md)｜nvim 外掛封存在 `proto8/archive/nvim/`｜測試 `proto8/tests/test_lua_aos.py`
 
 使用者 10-24：「再來是lisp/lua編譯成我們這套的方式。……但其實lua也不錯，可以的話接入nvim也挺好」。aos 把資料夾當成 Lua 的 table（C-71），所以「Lua 寫 aos」就是：寫一個 table，編成資料夾。編完就只剩檔案，跑的時候照舊 `aos-exec`，跟 Lua 無關。
 
@@ -67,7 +67,7 @@ return aos.dir {
 
 - 資料夾裡的值：`aos.dir{}`＝子資料夾、`aos.script(文字)`＝可執行檔（755）、`aos.file(文字)` 或一般字串＝純文字檔（644）、一般 table 或建構子＝JSON 檔。檔名照字面，不補 `.json`。
 - 建構子回的就是原樣的物件，只在寫的當下查形狀，錯了指到原始檔那一行：`aos.inst` 要非空 `argv`；`aos.loop` 要 `exec`；`aos.fsm` 查 `start`、每格的 `exec`、`next` 在表上、`next` 頭尾沒空白（同 aos-fsm 開跑時的查法，N-36）；`aos.env`／`aos.ref` 只收 `path`、`prefix` 兩個修飾。
-- `aos.daemon { procs = {...} }`（11-03 起 daemon 的名單叫 `procs`，舊的 `loops`／`execs` aos-daemon 不認，[thinking 11-03 procs](../../../thinking/2026-11-03-procs.md)）：每項看寫法——字串、陣列、只有 `exec`（＋`ws`、`stack`）的 table＝aos-exec 跑一次，多了別的 key（`max`、`interval_ms`…）＝包成子 aos-loop；所以 `aos.loop { exec = … }` 只寫 exec 的放進 `procs` 會被當成跑一次，要一直跑就加一個 loop 的 key。每項可寫 `stack`（沒寫＝`$AOS_STACK/procs/<名字>/`）。
+- `aos.daemon { procs = {...} }`（名單照 [aos-daemon](../../../impls/aos-daemon/README.md)）：每項看寫法——字串、陣列、只有 `exec`（＋`ws`、`stack`）的 table＝aos-exec 跑一次，多了別的 key（`max`、`interval_ms`…）＝包成子 aos-loop；所以 `aos.loop { exec = … }` 只寫 exec 的放進 `procs` 會被當成跑一次，要一直跑就加一個 loop 的 key。每項可寫 `stack`（沒寫＝`$AOS_STACK/procs/<名字>/`）。
 - JSON 的 key 順序：`_entry`、`start`、`states`、`exec`、`next`、`argv`… 這些常用的在前，其餘字母序；`aos.obj{{k, v}, ...}` 或 fsm 的陣列寫法照寫的順序。空 table＝`{}`，空陣列寫 `aos.array()`，`null` 寫 `aos.null`。
 - `build` 的輸出已經在：清單上的檔覆寫、權限照設，清單外的不動不刪。
 - 錯：stderr 一行 `aos-lua: 代號 原因`、退 1；代號 `ArgumentsBad`、`SourceBad`、`PathMissing`、`WriteFailed`。

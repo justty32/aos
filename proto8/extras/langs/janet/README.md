@@ -40,7 +40,7 @@ aos-janet [--force] 原始檔.janet 輸出資料夾
 | `(text s)`、`(script s)`、`(sh 行 …)` | 文字檔（644）、可執行檔（755）、`#!/bin/sh` 加上每一行 |
 | `(copy "路徑")` | 照抄那個檔（相對路徑從原始檔所在的資料夾算），權限照原檔 |
 | `(dotenv "# 註解" ["名" "值"])` | `.env` |
-| `(tool :description … :parameters … :entry …)` | 工具資料夾：`_tooldef.json`＋`_entry`（agent-dan 範例另外生 `tools.json` 登記它們） |
+| `(tool :description … :parameters … :entry …)` | 工具資料夾：`_tooldef.json`＋`_entry` |
 | `(janet-main [_ & args] 程式…)` | `#!/usr/bin/env janet` 的可執行檔，內容 `(defn main [_ & args] 程式…)` |
 | `(aos-seq a b c)`、`(aos-par a b)`、`(aos-if c t e)` | 一個資料夾：`_entry` 是短 shell 腳本，每一步 `aos-exec` 一次、各給一個小格 `$AOS_STACK/<步名>`；單子放 `steps.json`、資料夾長成 `s1/`、`p1/`、`cond/`… |
 
@@ -48,7 +48,7 @@ key 照寫的字面用（`:timeout_ms` 就是 `timeout_ms`，不換 `-`）。一
 
 ## 例子（[examples/](examples)）
 
-- `agent_dan.janet`（agent-dan 的 Janet 版）11-03 封存在 `proto8/archive/agent-dan-langs/`：它讀的 demo/agent-dan 11-02 晚刪了、編不出來。
+- `agent_dan.janet` 封存在 `proto8/archive/agent-dan-langs/`。
 - `count.janet`：loop＋fsm，葉子用 Janet 寫（`janet-main`）。
 - `steps.janet`：seq／par／if。
 

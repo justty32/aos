@@ -4,7 +4,7 @@
 
 `aos-grow - 把一個函數往上長一級或縮回一級，呼叫方跟著改、跑起來一樣`
 
-10-24 嘗試性質（使用者「我隨便說，你隨便做，反正只是嘗試」）。Python、只用標準庫，不進 impls。
+嘗試性質（使用者 10-24「我隨便說，你隨便做，反正只是嘗試」）。Python、只用標準庫，不進 impls。
 
 ```
 aos-grow [--dry-run] up   設定檔#/指標 --to file|dir [--name NAME] [--take PATH]...
@@ -26,4 +26,4 @@ NAME 沒給＝那格的名字（`…/states/think/exec` → `think`）。那格�
 
 **錯**：stderr 一行 `aos-grow: 代號 原因`、退 1、什麼都不寫。代號：`ArgumentsBad`、`FlagUnknown`、`CfgMissing`（檔或指標指不到）、`CfgBad`（JSON 壞）、`TargetBad`（那格不是能搬的東西、或搬了會改行為）、`NameBad`（名字被佔、名字不合、縮回時別處還在叫）、`WriteFailed`。
 
-**不保證一樣的地方**（細節在 thinking）：錯誤訊息的「誰」會從 `loop.json#/exec` 變成 `NAME`；單子被 `timeout_ms` 收掉時 fsm 的 trace `signal` 從 15 變 null（`code` 都是 143）；程式自己讀 `AOS_CF`／`AOS_CD`／`AOS_CO` 環境變數的話值會變（工具看不到程式碼裡面）；假設呼叫方跑字串目標時 cwd＝設定檔的資料夾（慣例下成立；daemon.json 的子項沒試過）；呼叫方那份 JSON 的排版會換成工具的排版（內容不變）。
+**不保證一樣的地方**（細節在 thinking）：錯誤訊息的「誰」會從 `loop.json#/exec` 變成 `NAME`；程式自己讀 `AOS_CF`／`AOS_CD`／`AOS_CO` 環境變數的話值會變（工具看不到程式碼裡面）；假設呼叫方跑字串目標時 cwd＝設定檔的資料夾（慣例下成立；daemon.json 的子項沒試過）；呼叫方那份 JSON 的排版會換成工具的排版（內容不變）。

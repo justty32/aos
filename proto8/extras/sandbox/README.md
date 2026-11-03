@@ -30,7 +30,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 | `rw` | 路徑陣列 | 可寫看得到（最後綁，可以蓋在 `ro` 裡面） | 沒有 |
 | `net` | 布林 | 能不能連網 | `false`（只有沙箱自己的 loopback） |
 | `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files` | 正整數 | `s6-softlimit` 的 `-a`＋`-d`（`mem_mb`；不用 `-m`：它連堆疊上限一起設，aos-exec 一開執行緒就失敗）、`-t`、`-p`、`-f`、`-o` | 不限 |
-| `env` | 環境變數名陣列 | 只帶這幾個進去（外面有設的才帶；bwrap `--clearenv`＋`--setenv`）；寫了就只照它，不再加預設那幾個 | `PATH`、`LANG`、`LC_ALL`、`LC_CTYPE`、`TZ`、`PYTHONDONTWRITEBYTECODE`、`PYTHONIOENCODING` 與 aos 的六個（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`）；API key 一律不帶，要就明寫（10-24） |
+| `env` | 環境變數名陣列 | 只帶這幾個進去（外面有設的才帶；bwrap `--clearenv`＋`--setenv`）；寫了就只照它，不再加預設那幾個 | `PATH`、`LANG`、`LC_ALL`、`LC_CTYPE`、`TZ`、`PYTHONDONTWRITEBYTECODE`、`PYTHONIOENCODING` 與 aos 的六個（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`）；API key 一律不帶，要就明寫 |
 
 - **沒列到的路徑一律看不到**（白名單）；`/proc`、`/dev`、空的 `/tmp` 一定有。綁進來的路徑在沙箱裡是同一個位置；相對路徑從 cwd 算。路徑是符號連結的，沙箱裡做同一條連結再綁它指到的地方。
 - 設定檔可以寫 `檔#/指標`（例 `_metainfo#/sandbox`）；值可以用 `{"$env": 名, "$path": 接後面, "$prefix": 接前面}`（不解 `$ref`）。
@@ -59,7 +59,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 
 [root/setup.sh](root/setup.sh)：預設乾跑（只印指令），`sudo sh proto8/extras/sandbox/root/setup.sh --apply` 才做——把 s6 四支放進 `/usr/local/bin`、建系統帳號 `aos-run`、開 `/srv/aos-run`、加一條 sudoers（只准「換成 aos-run」）。
 `setup.sh --mailbox 信箱 [--apply]`：只做讓 aos-run 寫得到某個 kernel 信箱——擁有者＝我（跑 kernel 的人）、群組 `aos-run`、2770，四格加預設 ACL（閘門建的信、kernel 寫的回信兩邊都讀寫得到，不看 umask）；信箱要放在 aos-run 走得到的地方（例 `/srv/aos-run/mailbox`）。不讓寫＝`chmod 700 信箱`。這段在假 root 裡有測（`tests/test_sandbox.py` 的 `MailboxPermTest`）。
-另外三個旗標換預設值（11-01 起取代環境變數）：`--me 名`（我＝跑 kernel 的人，預設 `$SUDO_USER` 或自己；測試在假 root 裡給數字）、`--s6-bin 路徑`（s6 的 bin，預設試驗場 `/home/<我>/code/try/sandbox/s6-root/bin`）、`--runner 名`（跑不信任函數的帳號與群組，預設 `aos-run`）；乾跑的旗標測試在 `SetupFlagsTest`。
+另外三個旗標換預設值（不讀環境變數）：`--me 名`（我＝跑 kernel 的人，預設 `$SUDO_USER` 或自己；測試在假 root 裡給數字）、`--s6-bin 路徑`（s6 的 bin，預設試驗場 `/home/<我>/code/try/sandbox/s6-root/bin`）、`--runner 名`（跑不信任函數的帳號與群組，預設 `aos-run`）；乾跑的旗標測試在 `SetupFlagsTest`。
 
 ## 需要
 
