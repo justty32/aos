@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""aos-listen - 看一隻 agent 回了什麼：等最新那封信的回答、跟著看對話（給人用，2026-10-24；10-30 改看 stack；11-02 拿掉信號參數）。
+"""aos-listen - 看一隻 agent 回了什麼：等最新那封信的回答、跟著看對話（給人用，2026-10-24；10-30 改看 stack；11-02 拿掉信件名稱參數）。
 
     aos-listen [--ws WS] [--stack STACK] [--timeout 秒]              等最新那封信的回答，印出來就退 0（正規用法：aos-say 話 && aos-listen）
     aos-listen [--ws WS] [--stack STACK] [--last N] [--follow]       --last N＝印最後 N 段一問一答就走；--follow＝之後每多一則回答就印一段（像 tail -f）
@@ -8,8 +8,9 @@
 thinking 2026-11-03-trace）：給 --status／--trace＝FlagUnknown。
 
 只看 stack（CONVENTION P-42；thinking 2026-10-30-agent-lifecycle A-8）：
-- 等（不帶旗標）：「最新那封」＝queue 的 new/、cur/ 裡信號最大的一封（最後寄出的、或剛被認領的；不管誰寄的），開始時挑一次；
-  new/ cur/ 都空＝答案已經到了，直接印 history 最新那則回答（都沒有＝QuestionUnknown）。11-01 晚使用者翻案：信號參數拿掉
+- 等（不帶旗標）：「最新那封」＝queue 的 new/、cur/ 裡照處理順序排最後的一封（aos_ws.letter_key 取 max：有序在前、無序在後，各照名字；
+  aos-say 寄的都是有序＝最後寄出的、或剛被認領的；不管誰寄的；11-03 aos-post 改版），開始時挑一次；
+  new/ cur/ 都空＝答案已經到了，直接印 history 最新那則回答（都沒有＝QuestionUnknown）。11-01 晚使用者翻案：信件名稱參數拿掉
   （thinking 2026-10-24-say-listen「11-01 晚」一節）。信還在 <stack>/queue/new/ 或 cur/ 就等；不見了就印 history.jsonl 最新那則沒有 tool_calls 的
   assistant 的 content（回答就是它，沒有 out/；先 say、後 listen 不會漏）。信不見了 history 卻沒有回答＝AnswerMissing。
   11-03 外部 coding agent（aos-eca-turn）交給 CLI 就收信、答完才接回答（thinking 2026-10-30-eca/20-11-03-交出去就收.md）：信不見了、
@@ -35,9 +36,9 @@ USAGE = "aos-listen [--ws WS] [--stack STACK] [--timeout 秒] | [--last N] [--fo
 
 
 def latest(w):
-    """最新那封：queue 的 new/、cur/ 裡信號最大的（照名字排序＝寄的順序）；都空＝None。"""
+    """最新那封：queue 的 new/、cur/ 裡照處理順序排最後的（letter_key 取 max；11-03 aos-post 改版：有序先、無序後）；都空＝None。"""
     sigs = h.names(w.stack, "new") + h.names(w.stack, "cur")
-    return max(sigs) if sigs else None
+    return max(sigs, key=h.letter_key) if sigs else None
 
 
 def print_answer(w, sig):
@@ -146,7 +147,7 @@ def main():
     opts, rest = h.parse(PROG, USAGE, sys.argv[1:], {"--ws": "ws", "--stack": "stack", "--timeout": "timeout", "--last": "last"},
                          {"--follow": "follow"})
     timeout, last = number(opts, "timeout", "--timeout"), number(opts, "last", "--last")
-    if rest:                                          # 11-01 晚翻案：不收信號，等的永遠是最新那封
+    if rest:                                          # 11-01 晚翻案：不收信件名稱，等的永遠是最新那封
         h.die(PROG, "ArgumentsBad", "usage: %s（不收位置參數：%s；要等剛寄的那封就 aos-say 話 && aos-listen）" % (USAGE, rest[0]))
     waits = last is None and not opts.get("follow")
     if not waits and timeout is not None:

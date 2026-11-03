@@ -11,7 +11,7 @@
 | `bin/aos_human.py` | 兩支共用：工作區與 stack、誰在跑、沒人在跑時的提醒；寄信、看回答、讀 stack 那幾樣在 [`proto8/lib/aos/aos_ws.py`](../../lib/aos/aos_ws.py) |
 
 ```
-aos-say    [--ws WS] [--stack STACK] [話...]                       stdout 印信號
+aos-say    [--ws WS] [--stack STACK] [話...]                       stdout 印信件名稱
 aos-listen [--ws WS] [--stack STACK] [--timeout 秒]                等最新那封的回答（正規用法：aos-say 話 && aos-listen）
 aos-listen [--ws WS] [--stack STACK] [--last N] [--follow]         最後 N 段；--follow＝接著跟著看（像 tail -f）
 ```
@@ -22,8 +22,8 @@ stack＝`--stack` ＞ `$AOS_STACK` ＞ `<工作區>/.stack/`（N-57）；工作�
 
 **agent 對話協議＝[CONVENTION P-42](../../docs/CONVENTION/02-題目stack停錯腦.md)**：
 
-- **說**：`aos-say 話`＝`aos-post send --ordered <stack>/queue`，一封信的 body＝`{"role": "user", "content": 話}`（N-16 有順序的信箱；queue 還沒有就先建，可以先說、再跑 agent）。印的信號就是 `new/` 裡那封的名字（`<12 位序號>.<信號>`）。
-- **聽**：`aos-say 話 && aos-listen`（正規用法，[thinking say-listen「11-01 晚」](../../thinking/2026-10-24-say-listen.md#11-01-晚使用者aos-say---aos-listen-才是正規用法)；不收信號參數）——等**最新那封**＝queue 的 `new/`、`cur/` 裡序號最大的（最後寄出的、或剛被認領的，不管誰寄的）：還在就等；不見了就印 history 最新那則回答（先 say 後 listen 不會漏）。`new/`、`cur/` 都空＝答案已經到了，直接印最新那則回答；history 也沒回答＝`QuestionUnknown`；信不見了卻沒有回答＝`AnswerMissing`；沒人在跑＝提醒一次信在 queue 的哪裡、怎麼跑，繼續等。`--last N` 印最後 N 段就走、`--follow` 接著跟著看（一段＝問的話＋回答）。
+- **說**：`aos-say 話`＝`aos-post send --ordered <stack>/queue`，一封信的 body＝`{"role": "user", "content": 話}`（N-16 有順序的信箱；queue 還沒有就先建，可以先說、再跑 agent）。印的信件名稱就是 `new/` 裡那封的名字（`<12 位序號>.<尾名>`）。
+- **聽**：`aos-say 話 && aos-listen`（正規用法，[thinking say-listen「11-01 晚」](../../thinking/2026-10-24-say-listen.md#11-01-晚使用者aos-say---aos-listen-才是正規用法)；不收信件名稱參數）——等**最新那封**＝queue 的 `new/`、`cur/` 裡照處理順序排最後的（`aos_ws.letter_key` 取 max：有序在前、無序在後，各照名字；aos-say 寄的都是有序＝最後寄出的、或剛被認領的，不管誰寄的）：還在就等；不見了就印 history 最新那則回答（先 say 後 listen 不會漏）。`new/`、`cur/` 都空＝答案已經到了，直接印最新那則回答；history 也沒回答＝`QuestionUnknown`；信不見了卻沒有回答＝`AnswerMissing`；沒人在跑＝提醒一次信在 queue 的哪裡、怎麼跑，繼續等。`--last N` 印最後 N 段就走、`--follow` 接著跟著看（一段＝問的話＋回答）。
 - **看**：沒有快照指令；外部 coding agent 用 `aos-eca status`，aos agent 直接看 stack 的 `state.json`（aos-loop 的窗，`phase`）、`queue/`、`mailbox_warning.txt`。
 - **停**：寫 `<stack>/ctl.json`（aos-loop 的窗，N-07）：`{"cmd": "pause"}` 不起下一輪、`{"cmd": "resume"}` 接著跑、`{"cmd": "stop"}` 收工（ctl 是一道指令，見 [aos-loop](../../impls/aos-loop/README.md)；起來前就在的那份不算）。
 

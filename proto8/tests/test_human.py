@@ -152,7 +152,7 @@ class SayTest(Base):
         self.assertRegex(r.stderr, r"^aos-say: ArgumentsBad usage: ")
         r = run(SAY, "--bogus", "x")
         self.assertRegex(r.stderr, r"^aos-say: FlagUnknown usage: ")
-        r = run(SAY, "--ws", str(self.ws), "--name", "q1.txt", "x")       # --name 拿掉了（信號由 aos-post 給）
+        r = run(SAY, "--ws", str(self.ws), "--name", "q1.txt", "x")       # --name 拿掉了（信件名稱由 aos-post 給）
         self.assertRegex(r.stderr, r"^aos-say: FlagUnknown usage: ")
 
 
@@ -163,7 +163,7 @@ class ListenTest(Base):
         r = self.go()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.queue("new") + self.queue("cur"), [])
-        r = run(LISTEN, "--ws", str(self.ws))                    # 不帶信號：new/ cur/ 空＝印最新那則回答
+        r = run(LISTEN, "--ws", str(self.ws))                    # 不帶信件名稱：new/ cur/ 空＝印最新那則回答
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertRegex(r.stdout, FAKE)
         self.assertTrue(r.stdout.endswith(": 現在幾點\n"), r.stdout)
@@ -262,7 +262,7 @@ class ListenTest(Base):
     def test_unknown_and_usage(self):
         r = run(LISTEN, "--ws", str(self.ws))                           # 沒寄過、也沒回答
         self.assertRegex(r.stderr, r"^aos-listen: QuestionUnknown ")
-        r = run(LISTEN, "--ws", str(self.ws), "000000000001.nope")     # 11-01 晚翻案：信號參數拿掉
+        r = run(LISTEN, "--ws", str(self.ws), "000000000001.nope")     # 11-01 晚翻案：信件名稱參數拿掉
         self.assertRegex(r.stderr, r"^aos-listen: ArgumentsBad usage: .*不收位置參數")
         r = run(LISTEN, "--ws", str(self.ws), "--last", "2", "x")
         self.assertRegex(r.stderr, r"^aos-listen: ArgumentsBad usage: ")
@@ -285,6 +285,31 @@ class ListenTest(Base):
         out, err = p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0, err)
         self.assertTrue(FAKE.match(out) and out.endswith(": 第一封\n\n第二封\n"), out)
+
+    def test_latest_is_last_in_processing_order(self):
+        """11-03 aos-post 改版：有序、無序同箱，處理順序＝有序先（照名字）、無序後（照名字）；「最新那封」＝處理順序最後那封
+        （aos_ws.letter_key 取 max）——無序那封的名字照字面比還比有序的小（"0-…" 對 "00…"）時，照樣等無序那封。"""
+        self.say("有序的")
+        box = str(self.stack / "queue")
+        r = run("aos-post", "send", box, "0-unordered", input="{}")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.say("又一封有序的")
+        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "0.5")
+        self.assertRegex(r.stderr.splitlines()[-1], r"^aos-listen: AnswerMissing 等了 0.5 秒，0-unordered 還沒答")
+
+    def test_letter_key_order(self):
+        """aos_ws.letter_key／names：有序（^[0-9]{12}\\.）在前照名字、無序在後照名字；不靠 sorted() 碰巧。"""
+        import sys
+        sys.path.insert(0, str(ROOT / "lib" / "aos"))
+        import aos_ws
+        new = self.stack / "queue" / "new"
+        new.mkdir(parents=True)
+        for n in ("000000000002.b", "000.x", "000000000001.a", ".hidden", "0a"):
+            (new / n).mkdir()
+        self.assertEqual(aos_ws.names(str(self.stack), "new"),
+                         ["000000000001.a", "000000000002.b", "000.x", "0a"])
+        self.assertEqual(max(aos_ws.names(str(self.stack), "new"), key=aos_ws.letter_key), "0a")
+        self.assertEqual(aos_ws.STAGES, ("new", "cur", "archive"))
 
     def test_last_prints_question_and_answer(self):
         self.say("一")

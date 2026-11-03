@@ -12,7 +12,7 @@ import aos_flags  # noqa: E402  旗標規則同 aos-exec（proto8/bin/aos_flags.
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "lib", "aos"))
 import aos_ws  # noqa: E402  放訊息、等答案、讀 stack（proto8/lib/aos/aos_ws.py）
-from aos_ws import STAGES, Error, names, where, read  # noqa: E402,F401
+from aos_ws import STAGES, Error, letter_key, names, where, read  # noqa: E402,F401
 
 POLL = 0.2                                     # 看一次的間隔（秒）
 RUNNERS = ("aos-loop", "aos-fsm", "aos-exec", "aos-daemon")   # 算「有人在跑」的程式名
@@ -47,7 +47,7 @@ class Where:
 
 
 def say(w, text):
-    """把一句話寄進 queue（aos_ws.put：一則 user message、aos-post send --ordered）。回信號。"""
+    """把一句話寄進 queue（aos_ws.put：一則 user message、aos-post send --ordered）。回信件名稱。"""
     return aos_ws.put(w.stack, text)
 
 
