@@ -49,8 +49,8 @@ def logs(out):
 
 
 def ended(out):
-    """{名字: 結束那一行}（phase done／stopped；同名多次＝最後一次）。"""
-    return {d["name"]: d for d in logs(out) if d["phase"] in ("done", "stopped")}
+    """{名字: 結束那一行}（phase done／stopped／sleeping〔11-03 收工時收的 loop 型〕；同名多次＝最後一次）。"""
+    return {d["name"]: d for d in logs(out) if d["phase"] in ("done", "stopped", "sleeping")}
 
 
 def until(f, secs=15):
@@ -171,9 +171,9 @@ class T(unittest.TestCase):
         # 10-23 命名統合：daemon 收掉的子項＝stopped（統合前叫 exited）；每列 {pid, started_at_ticks, phase, code, signal, stack}（11-03 多 stack）
         self.assertNotIn("procs", st)   # 10-29 拆窗：子項表在 procs_state.json
         self.assertEqual({frozenset(r) for r in k.values()}, {frozenset({"pid", "started_at_ticks", "phase", "code", "signal", "stack"})})
-        # 11-02：收掉的從表上拿掉，log 記一行 stopped
-        self.assertEqual((self.kids(), {n: (d["phase"], d["pid"]) for n, d in ended(out).items()}),
-                         ({}, {n: ("stopped", r["pid"]) for n, r in k.items()}))
+        # 11-02 收掉的從表上拿掉；11-03 sleep／wake 起收工時還在跑的 loop 型列留成 sleeping（pid null），log 記一行 sleeping
+        self.assertEqual(({n: (r["phase"], r["pid"]) for n, r in self.kids().items()}, {n: (d["phase"], d["pid"]) for n, d in ended(out).items()}),
+                         ({n: ("sleeping", None) for n in k}, {n: ("sleeping", r["pid"]) for n, r in k.items()}))
         self.assertEqual([alive(x) for x in pids], [False, False])
 
     def test_done_child_not_restarted(self):
@@ -218,7 +218,8 @@ class T(unittest.TestCase):
         st = self.state()
         self.assertEqual((p.returncode, err, st["phase"], st["code"]), (143, "", "stopped", 143))
         self.assertEqual([alive(r["pid"]) for r in k.values()], [False, False])
-        self.assertEqual((self.kids(), {n: d["phase"] for n, d in ended(out).items()}), ({}, {"a": "stopped", "b": "stopped"}))
+        self.assertEqual(({n: r["phase"] for n, r in self.kids().items()}, {n: d["phase"] for n, d in ended(out).items()}),
+                         ({"a": "sleeping", "b": "sleeping"}, {"a": "sleeping", "b": "sleeping"}))   # 11-03 sleep／wake
 
     # ---- 10-21 計畫第 2 段：命令列（D1，跟 aos-loop 共用；10-23 前 Python 版是 aos_loop.cli）、字串子項（D2）、收工時剛死的子項（D7）
 

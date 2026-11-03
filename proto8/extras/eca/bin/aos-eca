@@ -9,7 +9,7 @@ add／rm＝建立與刪除（rm＝aos-daemon-ctl rm＋刪它的 stack、不封�
     aos-eca [--daemon-stack D] add [--name N] [--ws WS] [--stack S] XXX   建立：XXX＝eca 資料夾（頂層有 cli.json，例 proto8/demo/eca-claude）；
                                                    掛到 daemon（aos-daemon-ctl add --ws WS --name N [--stack S] XXX）；印它的 stack
     aos-eca ls    [--json]                         列外部 agent（掛著的、停了的）：名字、狀態、畫面、種類、工作區、session（對話 id 前 8 碼）；
-                                                   狀態 running／paused／stopping／stopped、畫面 open／closed（11-03 起英文，procs § 0 名詞表）
+                                                   狀態 running／paused／stopping／stopped／sleeping、畫面 open／closed（11-03 起英文，procs § 0 名詞表）
     aos-eca state [資料夾|名字]                    這裡有沒有外部 agent（掛著或停了；沒有＝InstanceMissing、退 1）；11-03 起多印一行工具箱（登記檔）
     aos-eca status [資料夾|名字]                   同 state（別名、行為一樣；11-03 使用者「status和state兩個指令都可以」）
     aos-eca open  [-d] [--name N] [--ws WS] [--stack S] [名字|資料夾|XXX]   接進畫面（沒開就開、有對話就 --resume）；認不出、是 eca 資料夾＝先 add 再開
@@ -32,7 +32,8 @@ add：名字沒給＝XXX 的資料夾名；--ws 沒給＝cwd（就是 claude 的
 「一隻外部 agent」＝daemon 的 procs 表上、它的 stack（那一列的 stack，11-03 procs）裡有 eca.json 的（aos-eca-turn 每次跑都寫：kind、ws、template〔＝eca 資料夾〕）；
   add 之後子 loop 跑第一次才有。stack 一律從表上那一列拿，不自己拼 <daemon>/procs/<名字>。
   狀態（ls、state 印的；11-03 起英文）：表上的 phase running＝running（子 loop 的 state.json 是 paused＝paused，aos-daemon-ctl pause 的；讀不到當 running）、
-  stopping、stopped（aos-eca stop／aos-daemon-ctl stop 停的，start 叫得回）。畫面另一欄：open／closed（aos-eca open／close）。
+  stopping、stopped（aos-eca stop／aos-daemon-ctl stop 停的，start 叫得回）、sleeping（11-03 procs § 8：daemon 收工時還在跑的，daemon 再開自動 wake；
+  daemon 沒在跑時這裡的子命令都是 DaemonMissing，所以平常看不到）。畫面另一欄：open／closed（aos-eca open／close）。
   自己結束的（CLI 出錯退 1、外部直接寫它 ctl.json 的 {"cmd": "stop"}）daemon 照 11-02 從表上拿掉＝對 daemon、對這支都不在了（procs 衝突 2
   使用者「照舊拿掉」）：ls 不列、state／start／rm＝InstanceMissing；它的 stack 資料夾留著，要接著用＝同名再 add（同一個 --stack 或預設小格，前文、queue 都在），
   不要了自己 rm -r。所以掛在 daemon 下要停就用 aos-eca stop。
@@ -190,8 +191,8 @@ def loop_paused(it):
 
 
 def label(it):
-    """狀態（11-03 使用者「能不能改成用英文，就用我們先前的名詞表」＝procs § 0）：running／paused／stopping／stopped。
-    paused＝表上 running、子 loop 的 state.json 是 paused（讀不到當 running）；其他 phase 照印。畫面是另一欄（screen_word）。"""
+    """狀態（11-03 使用者「能不能改成用英文，就用我們先前的名詞表」＝procs § 0）：running／paused／stopping／stopped／sleeping。
+    paused＝表上 running、子 loop 的 state.json 是 paused（讀不到當 running）；其他 phase（stopping、stopped、11-03 的 sleeping）照印。畫面是另一欄（screen_word）。"""
     if it["phase"] == "running":
         return "paused" if loop_paused(it) else "running"
     return it["phase"] or "-"

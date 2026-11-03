@@ -3,7 +3,8 @@
 //   daemon.cpp   read_procs（名單：名字規則、指示詞、看寫法分兩種、ws／stack 轉絕對）、建構子（AOS_STACK、procs、adopt、procs_ctl／procs_state／信箱的路徑）、
 //                adopt（running 的對得上 pid 才接；stopped 的列接成 stopped）、tend（對表）、reconcile、term／settle（收不等：SIGTERM 後每圈看一眼、
 //                滿 10 秒 SIGKILL 整群＋它底下自成一群的單子）、halt（daemon 的 stop：往子 loop 的 ctl.json 寫 {"cmd": "stop", "seq": N}）、
-//                hold（daemon 要停的退了：列留成 stopped）、finish（收掉活著的、等它們退；stopped 的列照寫進最後一份 state）、drop、log_child
+//                hold（daemon 要停的退了：列留成 stopped；收工時收的 loop 型退了：列留成 sleeping）、finish（收掉活著的、等它們退；
+//                還在跑的 loop 型留成 sleeping、stopped 的列照寫進最後一份 state）、drop、log_child
 //   windows.cpp  管轄那一對窗：read_procs_ctl（procs_ctl.json）、check_lists、check_once、write_more（procs_state.json）、write_parts／clean_parts（切檔）
 //   mailbox.cpp  信箱（procs_ctl_mailbox）：open_mailbox、take_letters、apply_letter、done_letters
 //
@@ -19,16 +20,19 @@
 // 底（記憶體）：want_＝daemon.json 的 procs（開了信箱再加 adopt 接回、不在上面的，設定記 null）＋信改過的；stopped_＝adopt 接回的 stopped 列＋信改過的。
 // 信（procs_ctl_mailbox）body 認 procs_added、procs_removed、procs_stopped、procs_started，改的是底；壞信原因進 procs_state 的 mailbox_warning。
 // procs_stopped／procs_started 裡有 exec 型（exec 型只有跑和拔）＝procs_ctl 整份不採用（ctl_warning）／壞信；不在期望表的名字＝不管。
-// 四態（procs § 0、§ 2c；ctl-commands § 5）：running（表上、活著）、stopping（收的途中）、stopped（表上、行程不在、stack 留著）、表上沒有。
+// 四態（procs § 0、§ 2c；ctl-commands § 5）：running（表上、活著）、stopping（收的途中）、stopped（表上、行程不在、stack 留著）、表上沒有；
+//   11-03 多一態 sleeping（procs § 8 sleep／wake）：daemon 收工（ctl 的 stop、SIGTERM／SIGINT）時還在跑的 loop 型＝SIGTERM 收掉、列留成 sleeping
+//   （pid null、stack 留著）；daemon 再開 adopt 接回、不進 stopped 集合＝第一圈用列上的 stack 再起（wake；暫停中的照它自己 state.json 的 paused 接著暫停）。
+//   收工時 stopped 的照舊 stopped、exec 型照舊拿掉；睡著時收到 stop（procs_stopped）＝改成 stopped、不 wake。kill -9 的 daemon 沒走收工，不在此列。
 //   stop（名字在期望表又在 stopped 集合）＝往子 loop 的 ctl.json 寫 {"cmd": "stop", "seq": N}，等它跑完這次自己退（沒有時間上限）→列留成 stopped
 //   （pid null）；add＋stop 同時＝直接一列 stopped、不起、stack 不建。start（拿出 stopped 集合）＝下一圈用列上的 stack 再起（不清 ctl：子 loop 起來第一次讀的當基準線）。
 //   只有指令叫起：信來、procs_added 同名都不會把 stopped 的拉起來（同名 add＝設定換掉、停照停）。
 //   其他退出（跑滿、退 10、訊號、別人直接往子 loop 的 ctl 寫 stop）照 11-02 從表上拿掉（使用者 11-03「照舊拿掉」）；自己結束（done）的本次執行不再起（ended_）。
 //   同名改寫法：已在跑的不重起（N-54）。
 // procs_state.json＝{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫；
-// 每列 {pid, started_at_ticks, phase（running／stopping／stopped）, code, signal, stack, ws?}；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
+// 每列 {pid, started_at_ticks, phase（running／stopping／stopped／sleeping）, code, signal, stack, ws?}；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
 // ctl 的 stop（這圈收工）或 pause（整圈暫停）時不調表：不收多的、不起少的、起停也等解除，但照讀兩份 ctl、照寫兩扇 state、照收已在收的、照記自己結束的。
-// log（--enable-logs 才印到 stdout）：行程起來一行、結束一行 {"at", "name", "phase"（running／done／stopped）, "pid", "code", "signal", "ws"?}。
+// log（--enable-logs 才印到 stdout）：行程起來一行、結束一行 {"at", "name", "phase"（running／done／stopped／sleeping）, "pid", "code", "signal", "ws"?}。
 #pragma once
 
 #include "child/child.hpp"
@@ -86,7 +90,7 @@ private:
     void flush_table();                                   // 表變了：寫 procs_state（有變才寫）；寫不了丟 StateError
     void term(Child& c);                  // 送 SIGTERM、phase stopping、記期限（不等）
     void halt(const std::string& name, Child& c);   // daemon 的 stop：往子 loop 的 ctl 寫 {"cmd": "stop", "seq": N}、phase stopping（沒 ctl＝term）
-    void hold(const std::string& name, Child& c);   // daemon 要停的退了：印 log、列留成 stopped（pid 0、held）
+    void hold(const std::string& name, Child& c, const char* phase = "stopped");   // 要留列的退了：印 log、列留成 phase（stopped／sleeping；pid 0、held）
     bool settle(Child& c);                // 收的途中看一眼：退了＝phase stopped、回 true；SIGTERM 過了期限還在＝SIGKILL 整群＋底下自成一群的（只送一次）
     bool look(const std::string& name, Child& c, bool stop);   // 不調表地看一眼（見 daemon.cpp）；回 true＝結束了、要拿掉
     Child start(const std::string& name, const Json& spec, const std::string& cell);   // 照寫法起（spawn／spawn_exec）

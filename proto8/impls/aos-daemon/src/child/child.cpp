@@ -229,7 +229,7 @@ bool alive(Child& c) {
 
 Json row(const Child& c) {
     Json r = Json::object();
-    r["pid"] = c.held ? Json() : Json((long long)c.pid);   // stopped 的列：行程不在（11-03）
+    r["pid"] = c.held ? Json() : Json((long long)c.pid);   // stopped／sleeping 的列：行程不在（11-03）
     r["started_at_ticks"] = nullptr;
     if (c.started_at_ticks) {
         r["started_at_ticks"] = *c.started_at_ticks;

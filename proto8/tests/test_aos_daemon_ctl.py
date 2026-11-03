@@ -426,6 +426,29 @@ class T(unittest.TestCase):
         self.assertEqual(self.ctl("where", "--stack", "lp").stderr.split()[1], "ProcMissing")
         self.assertTrue((st / "loop.json").is_file())                        # rm 不清 stack
 
+    def test_sleep_wake(self):
+        # 11-03 sleep／wake（procs § 8）：daemon 收工時還在跑的 loop 型＝表上 sleeping（ls 的 pid 印 -、where 照找得到），exec 型拿掉；
+        # daemon 再開＝用同一個 stack 自動起來接著跑
+        self.prog("lp", "exit 0\n", loop={"exec": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/runs"; sleep 0.05']}, "interval_ms": 50})
+        self.prog("job", WAIT_GO)
+        self.addCleanup(lambda: self.go.write_text(""))
+        self.start()
+        st = self.t / "c"
+        self.assertEqual(self.ctl("add", "--stack", "c", "lp").returncode, 0)
+        self.assertEqual(self.ctl("add", "job").returncode, 0)
+        self.assertTrue(until(lambda: {"lp", "job"} <= set(self.tables()["procs"])))
+        runs = lambda: (st / "runs").read_text().count("\n")
+        self.assertTrue(until(lambda: runs() >= 1))
+        self.stop()                                                          # SIGTERM 收工
+        r = self.ctl("ls")
+        self.assertEqual(r.stdout.split("\t")[:3], ["lp", "sleeping", "-"])
+        self.assertEqual((len(r.stdout.splitlines()), "沒在跑" in r.stderr), (1, True))
+        self.assertEqual(self.ctl("where", "--stack", "lp").stdout, str(st) + "\n")
+        n = runs()
+        self.start()
+        self.assertTrue(until(lambda: self.tables()["procs"]["lp"]["phase"] == "running" and runs() > n))
+        self.assertEqual((set(self.tables()["procs"]), self.tables()["procs"]["lp"]["stack"]), ({"lp"}, str(st)))
+
 
 if __name__ == "__main__":
     unittest.main()

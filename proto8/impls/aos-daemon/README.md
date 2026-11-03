@@ -9,13 +9,13 @@
 照新做法寫（使用者 10-19 晚「daemon也用新做法重寫吧」、10-20「照預設」，[ideas § 25](../../thinking/2026-10-19-ideas.md)；計畫 [PLAN-2026-10-19.md](PLAN-2026-10-19.md)）。
 **11-03 起 loops／execs 統稱 procs**（[thinking 11-03 procs](../../thinking/2026-11-03-procs.md)，照 [11-03 ctl-commands § 5](../../thinking/2026-11-03-ctl-commands.md#5-跟-daemon-的關係procs-規劃--2c-照本檔改) 改）：
 daemon 管的子項不論包在 aos-loop 裡一直跑的（loop 型）還是 aos-exec 跑一次的（exec 型）都叫 **proc**；**一份名單 `procs`**、**看寫法決定怎麼起**（沒有 `kind`）、**每項可寫自己的 `stack`**、
-多了 daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `stopped`、用同一個 stack 再起）；手把 `procs_ctl.json`、窗 `procs_state.json`（一張表）、信箱 `procs_ctl_mailbox/`、小格 `procs/<名字>/`。
+多了 daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `stopped`、用同一個 stack 再起）、收工時的 **sleep／開門的 wake**（還在跑的 loop 型列留成 `sleeping`、再開自動起，[下「收工與開門」](#收工與開門sleepwake11-03procs--8)）；手把 `procs_ctl.json`、窗 `procs_state.json`（一張表）、信箱 `procs_ctl_mailbox/`、小格 `procs/<名字>/`。
 舊名 `loops`、`execs`、`loops_ctl`、`loops_state`、`loops_ctl_mailbox`、`loops_added`……**當沒看到**（C-48，使用者「1. 當沒看到。」）：不報錯、不提醒、不做過渡期。
 
 像一個領班：手上一張名單（`procs`），名單上每個人各有一個小隔間（`$AOS_STACK/procs/<名字>/`，或他自己指定的 `stack`）。他每隔一會兒（`interval_ms`）看一眼兩塊佈告欄：
 一塊管他自己（ctl 窗：暫停、收工、節奏），一塊管名單（procs_ctl 窗）。名單改了就把多的請走、少的叫來、要停的請他做完手上這件就下班（**留在名單上**，叫得回來）；
 誰自己下班了（`done`）或被他請走了（`stopped`）就在工作日誌（stdout 的 log）記一行「誰、結束碼幾」、從名單白板（procs_state 窗）上擦掉，**這一班不會再叫他回來**（11-02）；
-他自己的狀況寫在另一塊白板（state 窗）。他自己收工時（不論為什麼）先把每個人都請走、寫好白板，才走人。
+他自己的狀況寫在另一塊白板（state 窗）。他自己收工時（不論為什麼）先把每個人都請走、寫好白板，才走人——11-03 起還在做事的不擦名字，白板上改寫「休息中」（`sleeping`），他下次開門就把這些人叫回同一個隔間接著做（被他請下班的 `stopped` 照舊不叫）。
 
 ```sh
 cat daemon.json
@@ -46,7 +46,7 @@ daemon.json＝loop.json 的超集（N-28）：
 | `procs_ctl`、`procs_state` | 檔名或 `null` | `procs_ctl.json`、`procs_state.json` | 管轄（名單）的手把與狀態窗，在 `$AOS_STACK` 底下；寫 `null`＝不開 |
 | `procs_ctl_mailbox` | 路徑或 `null` | 不開 | 信箱：名單的增減也可以一封封信投進來（在 `$AOS_STACK` 底下；慣用名 `procs_ctl_mailbox`）；跟 `procs_ctl` 可以同時開，都不開＝名單只看 daemon.json。見下「信箱」 |
 | `procs` | `{名字: proc}` | `{}` | 名單；每項怎麼起看寫法（下「看寫法決定怎麼起」）；物件可多寫 `ws`、`stack`。拆成好幾份檔寫 `{"$ref": ["procs-1.json", "procs-2.json"]}`（下「指示詞與切檔」） |
-| `adopt` | 布林 | true | 起來時讀自己上次的 procs_state，把還活著的接回、不重起；`stopped` 的列接成 `stopped` |
+| `adopt` | 布林 | true | 起來時讀自己上次的 procs_state，把還活著的接回、不重起；`stopped` 的列接成 `stopped`、`sleeping` 的列接回後自動 wake（11-03） |
 
 - 要 `$AOS_STACK`（沒設＝`StackMissing`）。名字不能當資料夾名或會被 aos-exec 誤認（空、含 `/`、含 `#`、以 `.` 開頭）＝`CfgBad`「procs 的名字 … 不能當資料夾名」。跟自己的窗同名不擋（小格在 `procs/<名字>/`，撞不到 stack 頂層的窗；11-02 拿掉 10-22 的撞名檢查）。
 - **每次**（Loop 讀完 ctl 之後）：讀 procs_ctl →（開了信箱：套信、改底）→ 期望表＝procs_ctl 的 `procs`（有寫）或底，＋`procs_added`－`procs_removed`；stopped 集合＝底＋`procs_stopped`－`procs_started` →
@@ -59,7 +59,7 @@ daemon.json＝loop.json 的超集（N-28）：
   只要不是 daemon 自己下的 stop，退了就印 log、從表上拿掉（＝對 daemon 不存在），小格照留。自己結束（`done`）的**本次執行不再起**：記進 `ended_`（名字），期望表扣掉它；某一圈的期望表裡沒有它了才從 `ended_` 拿掉（之後名單再有它就照常起）。
   開了信箱再從底拿掉，而且下一圈套信之前，不是 procs_ctl 疊上去的就從 `ended_` 放掉（之後再有信同名 `procs_added`＝重新起）。daemon 重起時 `ended_` 是空的（照 daemon.json 再起）。
 - **adopt**：讀上次的 procs_state（沒開 procs_state 窗＝沒東西可接；舊的 `loops_state.json` 不讀），`phase` 是 `running`、pid＋`started_at_ticks`（/proc 第 22 欄）對得上的放回表上、不重起（log 也印一行 `running`；接回的 `stack` 照列上的，哪一型看小格有沒有 daemon 寫的 `loop.json`）；
-  `phase` 是 `stopped` 的列接成 `stopped`（不起、不判活）、名字進底的 stopped 集合；其他列（`stopping`）不接。接回的不是自己的子行程，之後看 /proc 判斷活不活，結束那行 `code`／`signal` 是 null。
+  `phase` 是 `stopped` 的列接成 `stopped`（不起、不判活）、名字進底的 stopped 集合；`phase` 是 `sleeping` 的列接成 `sleeping`、**不**進 stopped 集合＝第一圈 wake（下「收工與開門」）；其他列（`stopping`）不接。接回的不是自己的子行程，之後看 /proc 判斷活不活，結束那行 `code`／`signal` 是 null。
 - **子 loop 被 SIGKILL 時**來不及寫最後一份，它小格裡的 `state.json` 停在最後那份（多半 `running`）：daemon 不替它改（N-09 只有它自己寫）。看死活照 N-17 用 pid＋`started_at_ticks`；daemon 的 log 那一行是準的（`stopped`、`signal` 9、`code` 137）。
 - 效能（使用者「都修都處理」，[thinking](../../thinking/2026-10-23-daemon-bench.md)）：收子項不原地等；表＝「照加入順序的串列＋名字→那一列的雜湊表」；
   沒有 `exec` 時一圈只讀一次 ctl、只對一次表、最多寫一份 state（`waiting`；有變才寫，睡著時兩扇窗都不動）；對表時起子項之前先寫一份 procs_state、之後每起一個寫一次（有變才寫）。
@@ -112,14 +112,26 @@ daemon.json＝loop.json 的超集（N-28）：
 - **stopped 的被 rm**：列與集合都拿掉、stack 不碰；它 ctl 裡的 `{"cmd": "stop"}` 留著沒事。
 - **繞過 daemon 自己往子 loop 的 ctl 寫 `{"cmd": "stop"}`**：子 loop 退 0，daemon 看到的是「退了」→照 11-02 從表上拿掉（＝拔掉，不是 stop；使用者「照舊拿掉」）。掛在 daemon 下要停就走 daemon。
 - **pause／resume**：不是 daemon 的事——寫子 loop 自己的 ctl `{"cmd": "pause"}`／`{"cmd": "resume"}`（`aos-daemon-ctl pause`／`resume` 就是這樣做）；daemon 不轉述 paused（不讀子項的 state，C-52），要看讀它的 `state.json`。
-- **daemon 自己暫停中**：起停也等解除（不寫子 loop 的 ctl）；daemon 收工＝收掉活著的（等它自己退的那些改送 SIGTERM，退了照樣留成 `stopped`）、`stopped` 的列照寫進最後一份 procs_state；再起 adopt 接回 `stopped` 的、照名單起其他的。
+- **daemon 自己暫停中**：起停也等解除（不寫子 loop 的 ctl）；daemon 收工＝收掉活著的（等它自己退的那些改送 SIGTERM，退了照樣留成 `stopped`；還在跑的 loop 型留成 `sleeping`，下一段）、`stopped` 的列照寫進最後一份 procs_state；再起 adopt 接回 `stopped` 的、wake `sleeping` 的、照名單起其他的。
+
+### 收工與開門：sleep／wake（11-03，[procs § 8](../../thinking/2026-11-03-procs.md#8-收工時改寫成休息中sleepwake11-03-晚)）
+
+使用者「改寫成休息中」「我們有start/stop, sleep/wake, pause/resume，我們缺了sleep/wake」：daemon 收工時還在跑的不從表上擦掉，改寫成第五個字 **`sleeping`**（表上、行程不在、stack 留著），daemon 再開時**自動 wake**。
+
+- **sleep**：daemon 收工（自己 ctl 的 `{"cmd": "stop"}`、SIGTERM／SIGINT／SIGHUP，或出錯退出——都走 `finish`）時，還在跑的 **loop 型**照舊 SIGTERM（10 秒 SIGKILL），退了列留成 `{"pid": null, "started_at_ticks": null, "phase": "sleeping", "code", "signal", "stack", "ws"?}`，log 一行 `sleeping`。
+  **exec 型**照舊拿掉（「他停下來就是沒了」）；收工前已是 `stopped` 的、等 daemon 的 stop 退的途中的＝`stopped`；被 rm 收的途中的＝拿掉。
+- **wake**：daemon 再開 adopt 時，`sleeping` 的列接回、不進 stopped 集合；第一圈 reconcile 跟 start 走同一條：**用列上的 `stack`** 再起（設定照期望表；信箱接回的沒有設定＝照小格裡現有的 `loop.json`），log 一行 `running`。
+  收工時本來暫停中的：子 loop 被 SIGTERM 時最後一份 `state.json` 記著 `paused: true`，用同一個 stack 起來照它自己的 state 先暫停（aos-loop 11-03 代定），`resume` 才接著跑。
+- **睡著時收到的指令**（daemon 沒在跑時 `aos-daemon-ctl` 寄的信，開門後先套信再對表）：`procs_stopped`＝改成 `stopped`、不 wake（要 `start`）；`procs_removed`＝列拿掉；名單（daemon.json／procs_ctl）上已經沒有它＝列拿掉。
+- daemon 開門時自己是暫停中（它的 state.json 記著 `paused`）＝跟起停一樣等解除才 wake。`adopt: false`＝不讀舊表，`sleeping` 的列就不認了（照 daemon.json 重新起）。
+- **不在範圍**：`kill -9` 的 daemon 沒走收工，子項還活著，照舊 adopt 接回；`sleep`／`wake` 先不開放成 `aos-daemon-ctl` 的子命令（只有 daemon 收工／開門自己用；代定）。
 
 ### log（11-02）
 
 使用者 11-02「daemon和loop他們就是把log輸出到stdout」，11-02 晚「應該要改成默認不印」：`--enable-logs` 才印到 **stdout**（同 aos-loop；不寫 log 檔）。一行一個 JSON：
 
-- **行程起來一行、結束一行**：`{"at": ISO 8601 UTC 毫秒, "name": 名字, "phase": "running"|"done"|"stopped", "pid", "code", "signal"}`，起它時給了 `ws` 的多一欄 `"ws"`（最後一欄）。11-03 拿掉 `table`。起來那行 `code`／`signal` 是 null；adopt 接回的也印一行 `running`；
-  daemon 停掉的退了也是 `stopped` 那一行（列留在表上）；`stopped` 的列被 rm、add＋stop 直接成的 `stopped` 列沒有行程起落，不印。
+- **行程起來一行、結束一行**：`{"at": ISO 8601 UTC 毫秒, "name": 名字, "phase": "running"|"done"|"stopped"|"sleeping", "pid", "code", "signal"}`，起它時給了 `ws` 的多一欄 `"ws"`（最後一欄）。11-03 拿掉 `table`。起來那行 `code`／`signal` 是 null；adopt 接回的也印一行 `running`；
+  daemon 停掉的退了也是 `stopped` 那一行（列留在表上）；收工時收掉的 loop 型是 `sleeping` 那一行（11-03，列留在表上）、wake 起來印 `running`；`stopped` 的列被 rm、add＋stop 直接成的 `stopped` 列沒有行程起落，不印。
 - daemon 自己有 `exec`（身體）時同 aos-loop 每跑完一次一行 `{"started_at", "counter_runs", "code", "signal", "elapsed_ms"}`；沒有身體不印每圈的行。
 - 子項的 stdout 照舊接 `/dev/null`（N-28），不會混進來；daemon 自己的身體繼承 daemon 的 stdout，會跟 log 交錯。印不了（關掉的管子）＝之後不印、照跑。
 
@@ -131,7 +143,7 @@ daemon.json＝loop.json 的超集（N-28）：
 | 管轄（名單） | `procs_ctl.json`：`procs`、`procs_added`、`procs_removed`、`procs_stopped`、`procs_started`、`seq`；另可同時開信箱 `procs_ctl_mailbox`（見下） | `procs_state.json`：`{"ctl_seq", "ctl_warning", "mailbox_warning"（開了信箱才有）, "procs", "pid", "started_at_ticks", "boot_id", "updated_at"}` |
 
 - 每圈先讀 ctl（`ctl.json`）、再讀 `procs_ctl.json`，**各自**採用或不採用（一份壞不影響另一份；壞的原因進各自那扇狀態窗的 `ctl_warning`、`ctl_seq` 回各自的 `seq`）。ctl.json 裡的名單 key（舊的 `loops*`、或 `procs*`）一律不認、不提醒（10-29 的過渡提醒 11-03 拿掉）。
-- `procs_state.json` 的 `procs`：`{名字: {"pid", "started_at_ticks", "phase", "code", "signal", "stack", "ws"?}}`，`phase`∈`running`／`stopping`／`stopped`；`stopped` 的列 `pid`、`started_at_ticks` 是 null。
+- `procs_state.json` 的 `procs`：`{名字: {"pid", "started_at_ticks", "phase", "code", "signal", "stack", "ws"?}}`，`phase`∈`running`／`stopping`／`stopped`／`sleeping`（11-03）；`stopped`、`sleeping` 的列 `pid`、`started_at_ticks` 是 null。
 - `procs_state.json` 跟 state 一起看（`Loop::write_more`，每次要寫 state 都呼叫；沒開 state 也照呼叫），**有變才寫**（11-02）：組好的那份（分檔前的表、`ctl_seq`、`ctl_warning`、`mailbox_warning`，不含 pid 那幾欄與 `updated_at`）跟上一份寫出去的一樣就不碰檔，不一樣才寫分檔→清舊分檔→寫主檔；daemon 對表時起一個、退一個也各寫一次。`pid`、`started_at_ticks`、`boot_id` 同一個行程的值——只讀這扇也能判 daemon 死活（N-17）。
 - **`stop`**＝這圈收工（收子項照 P-36），不再看名單。**`pause`**（`resume` 解除）＝整圈暫停：不跑 `exec`、**也不調表**（不收多的、不起少的、起停也等；procs_ctl 的變動與信等解除暫停那圈才生效），
   但照讀兩份 ctl（`ctl_seq` 照回）、兩扇 state 照規則寫（有變才寫）、照收已在收的、照記自己結束的（`done`：印 log、拿掉、本次不再起）、daemon 要停的退了照樣留成 `stopped`。
@@ -212,7 +224,7 @@ daemon 起子項（loop 型、exec 型都算）時，子行程的環境多設 **
 | 自己的錯（設定壞、沒 AOS_STACK、子項起不來、子 loop 的 ctl 寫不了、state／procs_state 寫不了、信箱建不了、沒有 exec 卻給了 `-- 參數`） | 1 | 一行 `aos-daemon: 代號 原因` |
 
 不論哪一種，都先收掉所有活著的 proc（全部送 SIGTERM，等它們退；等的這段 state 寫一份 `phase` `stopping`、之後每退一批寫一次 procs_state；滿 10 秒還在的 SIGKILL 整群，連底下自成一群的單子）、寫好 state 再結束（P-36）：
-收掉的 log 記 `stopped`、從表上拿掉；最後一次之後才自己結束的記 `done`、`code`（計畫 D7）；daemon 停掉的（`stopped` 的列、等它自己退的那些）留在最後一份 procs_state 上。子項的結束碼不影響 daemon 的。
+收掉的 log 記 `stopped`、從表上拿掉——11-03 起還在跑的 loop 型例外：log 記 `sleeping`、列留成 `sleeping`，下次開門自動 wake（上「收工與開門」）；最後一次之後才自己結束的記 `done`、`code`（計畫 D7）；daemon 停掉的（`stopped` 的列、等它自己退的那些）留在最後一份 procs_state 上。子項的結束碼不影響 daemon 的。
 
 ## 元素
 
@@ -227,8 +239,8 @@ daemon 起子項（loop 型、exec 型都算）時，子行程的環境多設 **
 | 檔 | 做什麼 |
 |---|---|
 | `src/common/common.hpp` | `using`、代號（全沿用 aos-loop 的） |
-| `src/child/child.hpp`、`child.cpp` | 一個 proc：`Child`（`pid`、`phase`、`once`、`held`〔stopped 的列〕、`soft`〔daemon 下的 stop〕、`termed`、`stack`、`ws`…）；`spawn`（loop 型：小格、`loop.json`〔補 ctl／state、蓋 `_entry`、相對 exec 轉絕對、單子補 `cwd`、拿掉 `ws`／`stack`〕；設定 null＝照現有的 `loop.json`）、`spawn_exec`（exec 型：不寫 loop.json、單子寫 `exec.json`）、`make_cell`（預設小格兩層、自己的 stack `mkdir -p`）、`launch`／`run_child`（stderr.txt、fork、setsid、`/dev/null`、`AOS_STACK`、`AOS_DAEMON_STACK`、`AOS_WS`、cd、aos-exec 的 `run_cli`）、`alive`、`row`（多 `stack`；stopped 的 pid null） |
-| `src/daemon/daemon.hpp`、`daemon.cpp` | `read_procs`（名單：名字規則、指示詞〔本身、每項各從它來自的檔算；單子只換一層、`abs_refs`〕、`fix_path` 處理 `ws`／`stack`、exec 型物件驗 `exec`）、`is_once`（看寫法）、`merge_want`；`Daemon`（`aos::loop::Loop` 的子類別）：建構子（`procs`、`procs_ctl`／`procs_state`／信箱的路徑、`dstack_`）、`adopt`（running 對得上才接、stopped 的列接成 stopped 並進 `stopped_`）、`tend`（ctl stop／pause 不調表）、`ctl_want`／`ctl_stopped`、`reconcile`、`look`、`term`／`settle`（收不等、10 秒 SIGKILL，連 `leaders_below`）、`halt`（寫子 loop 的 ctl `{"cmd": "stop", "seq": N}`）、`hold`、`start`／`cell_of`、`finish`、`add`／`drop`／`log_child`／`flush_table` |
+| `src/child/child.hpp`、`child.cpp` | 一個 proc：`Child`（`pid`、`phase`、`once`、`held`〔stopped／sleeping 的列〕、`soft`〔daemon 下的 stop〕、`nap`〔收工時收的 loop 型，11-03〕、`termed`、`stack`、`ws`…）；`spawn`（loop 型：小格、`loop.json`〔補 ctl／state、蓋 `_entry`、相對 exec 轉絕對、單子補 `cwd`、拿掉 `ws`／`stack`〕；設定 null＝照現有的 `loop.json`）、`spawn_exec`（exec 型：不寫 loop.json、單子寫 `exec.json`）、`make_cell`（預設小格兩層、自己的 stack `mkdir -p`）、`launch`／`run_child`（stderr.txt、fork、setsid、`/dev/null`、`AOS_STACK`、`AOS_DAEMON_STACK`、`AOS_WS`、cd、aos-exec 的 `run_cli`）、`alive`、`row`（多 `stack`；stopped 的 pid null） |
+| `src/daemon/daemon.hpp`、`daemon.cpp` | `read_procs`（名單：名字規則、指示詞〔本身、每項各從它來自的檔算；單子只換一層、`abs_refs`〕、`fix_path` 處理 `ws`／`stack`、exec 型物件驗 `exec`）、`is_once`（看寫法）、`merge_want`；`Daemon`（`aos::loop::Loop` 的子類別）：建構子（`procs`、`procs_ctl`／`procs_state`／信箱的路徑、`dstack_`）、`adopt`（running 對得上才接、stopped 的列接成 stopped 並進 `stopped_`、sleeping 的列接成 sleeping 不進）、`tend`（ctl stop／pause 不調表）、`ctl_want`／`ctl_stopped`、`reconcile`、`look`、`term`／`settle`（收不等、10 秒 SIGKILL，連 `leaders_below`）、`halt`（寫子 loop 的 ctl `{"cmd": "stop", "seq": N}`）、`hold`、`start`／`cell_of`、`finish`、`add`／`drop`／`log_child`／`flush_table` |
 | `src/daemon/windows.cpp` | 管轄那一對窗：`read_procs_ctl`（每圈讀 procs_ctl.json，同 read_ctl 的不採用規則）、`check_lists`（`procs`／`procs_added`／三個名字陣列）、`check_once`（exec 型沒有 stop／start）、`write_more`（procs_state.json：一張 `procs` 表；有變才寫）、`write_parts`（切檔）、`clean_parts` |
 | `src/daemon/mailbox.cpp` | 信箱：`open_mailbox`（建四格、底多接回的、記下 `cur/` 的殘骸）、`take_letters`（認領、`check` 驗信封、逐封套進底、壞信記 `mailbox_warning`）、`apply_letter`（驗 body：`check_lists`、`check_once`；先在副本上套 `want_`／`stopped_`）、`done_letters`（回 `applied`、收信）；連 aos-post 的庫 |
 | `src/main.cpp` | 命令列：`block_signals` → `loop_cli` → `Daemon` → `serve`；出錯印「aos-daemon: 代號 原因」 |

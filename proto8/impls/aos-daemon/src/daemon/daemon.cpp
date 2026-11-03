@@ -7,8 +7,9 @@
 //   在 stopped 集合裡、還在跑的：往它的 ctl.json 寫 {"cmd": "stop", "seq": N}（halt），等它跑完這次自己退（沒有時間上限）→退了列留成 stopped（hold）→
 //   看誰自己結束了（phase done，記 code／signal，印 log、從表上拿掉、本次執行不再起，11-02）→
 //   起表上少掉的（在 stopped 集合裡的＝直接一列 stopped、不起），stopped 的列拿出 stopped 集合了＝用列上的 stack 再起（start）。
-// 不論為什麼結束都先 finish()（收掉活著的子項；stopped 的列留著），Loop 再寫好 state。
-// adopt：起來時讀自己上次的 procs_state，phase running、pid＋started_at_ticks 對得上的直接放回表上、不重起（N-17）；phase stopped 的列接成 stopped（不起、不判活）、名字進底的 stopped 集合。
+// 不論為什麼結束都先 finish()（收掉活著的子項；stopped 的列留著；還在跑的 loop 型退了列留成 sleeping，11-03 sleep／wake），Loop 再寫好 state。
+// adopt：起來時讀自己上次的 procs_state，phase running、pid＋started_at_ticks 對得上的直接放回表上、不重起（N-17）；phase stopped 的列接成 stopped（不起、不判活）、名字進底的 stopped 集合；
+//   phase sleeping 的列接成 sleeping（不判活）、不進 stopped 集合＝第一次 reconcile 照 start 那條用列上的 stack 再起（wake）。
 #include "daemon/daemon.hpp"
 
 #include "aos/files.hpp"
@@ -356,12 +357,14 @@ void Daemon::adopt() {
         if (r.value("ws", Json()).is_string()) {
             c.ws = r["ws"];
         }
-        if (phase == "stopped") {   // stopped 的列（11-03 procs § 2c 第 7 條）：接成 stopped、不起、不判活；名字進底的 stopped 集合
-            c.phase = "stopped";
+        if (phase == "stopped" || phase == "sleeping") {   // stopped 的列（11-03 procs § 2c 第 7 條）：接成 stopped、不起、不判活；名字進底的 stopped 集合
+            c.phase = phase.get<std::string>();            // sleeping 的列（11-03 sleep／wake）：同樣接成列、不判活，但不進 stopped 集合＝reconcile 第一圈就 wake
             c.held = true;
             c.code = r.value("code", Json());
             c.signal = r.value("signal", Json());
-            stopped_.insert(name);
+            if (phase == "stopped") {
+                stopped_.insert(name);
+            }
             add(name, c);
             continue;
         }
@@ -466,11 +469,12 @@ void Daemon::halt(const std::string& name, Child& c) {
     c.phase = "stopping";
 }
 
-void Daemon::hold(const std::string& name, Child& c) {
-    c.phase = "stopped";
+void Daemon::hold(const std::string& name, Child& c, const char* phase) {
+    c.phase = phase;      // stopped（daemon 下的 stop）或 sleeping（daemon 收工時收的 loop 型，11-03 sleep／wake）
     log_child(name, c);   // 行程結束一行
     c.held = true;        // 列留在表上（procs § 2c 第 2 條）：pid null、stack 不碰
     c.soft = false;
+    c.nap = false;
     c.termed = false;
     c.killed = false;
     c.pid = 0;
@@ -493,8 +497,8 @@ bool Daemon::settle(Child& c) {
     return false;
 }
 
-// 不調表地看一眼：stopped 的列不動；running 的退了＝done（stop＝daemon 正要停它＝留成 stopped 的列）；收的途中的照收，
-// 退了：daemon 下的 stop（soft）＝留成 stopped 的列，其他（被收掉的）＝拿掉。回 true＝這列結束了、要拿掉。
+// 不調表地看一眼：stopped／sleeping 的列不動；running 的退了＝done（stop＝daemon 正要停它＝留成 stopped 的列）；收的途中的照收，
+// 退了：daemon 下的 stop（soft）＝留成 stopped 的列、收工時收的 loop 型（nap）＝留成 sleeping 的列，其他（被收掉的）＝拿掉。回 true＝這列結束了、要拿掉。
 bool Daemon::look(const std::string& name, Child& c, bool stop) {
     if (c.held) {
         return false;
@@ -513,6 +517,10 @@ bool Daemon::look(const std::string& name, Child& c, bool stop) {
     if (c.phase == "stopping" && settle(c)) {
         if (c.soft) {
             hold(name, c);
+            return false;
+        }
+        if (c.nap) {
+            hold(name, c, "sleeping");
             return false;
         }
         return true;
@@ -617,8 +625,11 @@ void Daemon::reconcile(const Json& want, const Names& stopped) {
         }
         if (c.held) {
             if (!in) {
-                it = drop(it);   // stopped 的被 rm：列與集合都拿掉（stack 不碰）
+                it = drop(it);   // stopped／sleeping 的被 rm（或名單上沒有了）：列與集合都拿掉（stack 不碰）
                 continue;
+            }
+            if (stop && c.phase == "sleeping") {
+                c.phase = "stopped";   // 睡著的被 stop（例：daemon 沒在跑時寄的 procs_stopped）：不 wake，改成 stopped、要 start 才起
             }
         } else if (c.phase == "running") {
             if (!in) {
@@ -638,7 +649,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped) {
         auto at = index_.find(n);
         if (at != index_.end()) {
             Child& c = at->second->second;
-            if (c.held && stopped.count(n) == 0) {   // start（procs § 2c 第 3 條）：用列上的 stack 再起，ctl 不清（基準線）
+            if (c.held && stopped.count(n) == 0) {   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（基準線）
                 Child nc = start(n, spec, c.stack);
                 c = nc;
                 log_child(n, c);
@@ -667,9 +678,12 @@ void Daemon::finish() {
     bool any = false;
     for (auto& [n, c] : table_) {
         if (c.held) {
-            continue;   // stopped 的列：照寫進最後一份 state（procs § 2c 第 9 條）
+            continue;   // stopped／sleeping 的列：照寫進最後一份 state（procs § 2c 第 9 條）
         }
-        if ((c.phase == "running" && alive(c)) || (c.phase == "stopping" && !c.termed)) {
+        if (c.phase == "running" && alive(c)) {
+            c.nap = !c.once;   // 收工時還在跑的 loop 型（11-03 sleep／wake）：退了列留成 sleeping，再開時自動 wake；exec 型照舊拿掉
+            term(c);
+        } else if (c.phase == "stopping" && !c.termed) {
             term(c);   // 等它自己退的（soft）也改送 SIGTERM；退了照樣留成 stopped 的列
         }
         any = any || c.phase == "stopping";

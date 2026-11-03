@@ -106,8 +106,10 @@ def run_daemon2():
         out, err = p.communicate(timeout=60)
         check("daemon-2 結束碼／stderr", (p.returncode, err, s.returncode), (0, "", 0))
         ls = json.loads((ws / ".stack" / "procs_state.json").read_text())
-        check("daemon-2 結束的子項（log）", {n: p for n, (p, c) in ended(out).items()}, {"sam": "done", "tick": "stopped", "tock": "stopped"})
-        check("daemon-2 名單收工後是空的", (ls["procs"], (ws / ".stack" / "state.json").is_file()), ({}, True))
+        # 11-03 sleep／wake：收工時還在跑的 loop 型 tick、tock 列留成 sleeping（下次開門自動 wake）；自己結束的 sam 照舊拿掉
+        check("daemon-2 結束的子項（log）", {n: p for n, (p, c) in ended(out).items()}, {"sam": "done", "tick": "sleeping", "tock": "sleeping"})
+        check("daemon-2 名單收工後只剩睡著的", ({n: r["phase"] for n, r in ls["procs"].items()}, (ws / ".stack" / "state.json").is_file()),
+              ({"tick": "sleeping", "tock": "sleeping"}, True))
         check("daemon-2 mailbox_warning", ls["mailbox_warning"], None)
         check("daemon-2 信都收完", [x.name for x in box.iterdir() if any((box / x.name).iterdir())], [])
         ticks = [int((ws / ".stack" / "procs" / n / (n + ".txt")).read_text()) for n in ("tick", "tock")]

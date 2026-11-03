@@ -198,15 +198,17 @@ class T(unittest.TestCase):
         self.assertEqual(list(k["a"]), ["pid", "started_at_ticks", "phase", "code", "signal", "stack"])   # 11-03 多 stack（一律寫）
         self.assertEqual(k["a"]["stack"], str(self.s / "procs" / "a"))
         ls = self.lstate()
-        self.assertEqual(ls["procs"], {})   # 11-02：結束的子項不留在表上（收工收掉的也是）
+        # 11-02 結束的子項不留在表上；11-03 sleep／wake 起收工時還在跑的 loop 型例外：列留成 sleeping（pid null、stack 留著）
+        self.assertEqual(ls["procs"], {n: {"pid": None, "started_at_ticks": None, "phase": "sleeping", "code": ls["procs"][n]["code"], "signal": ls["procs"][n]["signal"],
+                                           "stack": str(self.s / "procs" / n)} for n in ("a", "b")})
         self.assertEqual(list(ls), ["ctl_seq", "ctl_warning", "procs", "pid", "started_at_ticks", "boot_id",
                                     "updated_at"])   # 11-02：kind、recorded_at 拿掉；11-03 一張表 procs
         self.assertEqual([ls[k] for k in ("ctl_seq", "ctl_warning", "pid", "started_at_ticks", "boot_id")],
                          [None, None] + [st[k] for k in ("pid", "started_at_ticks", "boot_id")])   # 同一個行程的值
-        # log：起來各一行、收掉各一行（daemon 收掉的＝stopped，10-23 命名統合）
+        # log：起來各一行、收掉各一行（收工時收掉的 loop 型＝sleeping，11-03；10-23 命名統合時是 stopped）
         lines = self.logs(out)
         self.assertEqual([(x["name"], x["phase"]) for x in lines[:2]], [("a", "running"), ("b", "running")])
-        self.assertEqual(sorted((x["name"], x["phase"]) for x in lines[2:]), [("a", "stopped"), ("b", "stopped")])
+        self.assertEqual(sorted((x["name"], x["phase"]) for x in lines[2:]), [("a", "sleeping"), ("b", "sleeping")])
         self.assertEqual([list(x) for x in lines], [["at", "name", "phase", "pid", "code", "signal"]] * 4)   # 11-03 拿掉 table
         self.assertEqual([x["pid"] for x in lines[:2]], [k["a"]["pid"], k["b"]["pid"]])
         self.assertEqual([(x["code"], x["signal"]) for x in lines[:2]], [(None, None)] * 2)
@@ -255,7 +257,9 @@ class T(unittest.TestCase):
         st = self.state()
         self.assertEqual((p.returncode, err, st["phase"], st["code"]), (143, "", "stopped", 143))
         self.assertEqual([alive(r["pid"]) for r in k.values()], [False, False])
-        self.assertEqual(({n: r["phase"] for n, r in self.ended(out).items()}, self.kids()), ({"a": "stopped", "b": "stopped"}, {}))
+        # 11-03 sleep／wake：收工時還在跑的 loop 型＝列留成 sleeping（pid null、stack 留著），log 那行也是 sleeping
+        self.assertEqual(({n: r["phase"] for n, r in self.ended(out).items()}, {n: (r["phase"], r["pid"]) for n, r in self.kids().items()}),
+                         ({"a": "sleeping", "b": "sleeping"}, {"a": ("sleeping", None), "b": ("sleeping", None)}))
 
     # ---- 10-21 計畫第 2 段：命令列（D1，共用 aos_loop.cli）、字串子項（D2）、收工時剛死的子項（D7）
 
@@ -466,17 +470,19 @@ class T(unittest.TestCase):
         p.send_signal(signal.SIGTERM)   # 收工：s2 也不肯退，等它的時候 state 停在 stopping（寫一份，之後有變才寫）
         fin = self.watch(3)
         self.assertEqual(fin[-1]["phase"], "stopping")
-        self.assertTrue(until(lambda: set(self.kids()) <= {"s1", "s2"}, 3))   # 肯退的 a、b 一退就拿掉（loops_state 照寫）
+        # 肯退的 a、b 一退就留成 sleeping 的列（procs_state 照寫；11-03 sleep／wake：收工時還在跑的 loop 型不拿掉）
+        self.assertTrue(until(lambda: {self.kids()[n]["phase"] for n in ("a", "b")} == {"sleeping"}, 3))
         out, err = p.communicate(timeout=30)
         took = time.monotonic() - t0
         st = self.state()
         self.assertEqual((p.returncode, err, st["phase"]), (143, "", "stopped"))
         self.assertGreater(took, 9)
         rows = self.ended(out)
-        self.assertEqual((sorted(rows), self.kids()), (["a", "b", "s1", "s2"], {}))   # s1 是 loops_ctl 要拿掉的，收完照樣拿掉
-        for n in ("s1", "s2"):
-            self.assertEqual((rows[n]["phase"], rows[n]["code"], rows[n]["signal"]), ("stopped", 137, 9), n)
-        self.assertEqual({rows[n]["phase"] for n in ("a", "b")}, {"stopped"})
+        # s1 是 procs_ctl 要拿掉的，收完照樣拿掉；s2、a、b 是收工時還在跑的 loop 型＝留成 sleeping（11-03）
+        self.assertEqual((sorted(rows), {n: r["phase"] for n, r in self.kids().items()}), (["a", "b", "s1", "s2"], {n: "sleeping" for n in ("s2", "a", "b")}))
+        self.assertEqual((rows["s1"]["phase"], rows["s1"]["code"], rows["s1"]["signal"]), ("stopped", 137, 9))
+        self.assertEqual((rows["s2"]["phase"], rows["s2"]["code"], rows["s2"]["signal"]), ("sleeping", 137, 9))
+        self.assertEqual({rows[n]["phase"] for n in ("a", "b")}, {"sleeping"})
         for n in ("s1", "s2"):
             cs = json.loads((self.s / "procs" / n / "state.json").read_text())
             self.assertEqual(cs["phase"], "running", n)   # 來不及寫最後一份
@@ -790,7 +796,7 @@ class T(unittest.TestCase):
         p.send_signal(signal.SIGTERM)
         out, err = p.communicate(timeout=30)
         r = self.ended(out)["a"]
-        self.assertEqual((p.returncode, err, (self.s / "procs" / "a" / "got").read_text(), r["phase"], r["code"]), (143, "", "got\n", "stopped", 143))
+        self.assertEqual((p.returncode, err, (self.s / "procs" / "a" / "got").read_text(), r["phase"], r["code"]), (143, "", "got\n", "sleeping", 143))
 
     def test_inline_own_exec_sigterm(self):
         # daemon 自己的 exec 是內嵌單子、跑一半收 SIGTERM：轉給單子、等它收完，以 143 結束
@@ -1242,7 +1248,8 @@ class T(unittest.TestCase):
         self.assertEqual(directive(st, self.s)["procs"], rows)
         self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=60)
-        self.assertEqual((p.returncode, err, self.lstate()["procs"], len(self.ended(out))), (0, "", {}, 102))
+        # 收工：exec 型照舊拿掉，loop 型 l 留成 sleeping（11-03）
+        self.assertEqual((p.returncode, err, {n: r["phase"] for n, r in self.lstate()["procs"].items()}, len(self.ended(out))), (0, "", {"l": "sleeping"}, 102))
 
     # ───── L. 11-02：log（stdout；11-02 晚預設不印、--enable-logs 才印）、子項結束後不留名單、窗有變才寫 ─────
 
@@ -1297,7 +1304,7 @@ class T(unittest.TestCase):
         self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err, self.upped(out), {n: r["phase"] for n, r in self.ended(out).items()}),
-                         (0, "", ["a", "x", "x"], {"x": "done", "a": "stopped"}))
+                         (0, "", ["a", "x", "x"], {"x": "done", "a": "sleeping"}))
 
     def test_closed_stdout_keeps_running(self):
         # stdout 是關掉的管子：log 印不了就靜靜停掉，daemon 照跑、照起子項（不被 SIGPIPE 打死）
@@ -1540,8 +1547,8 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: self.kids()["c"]["phase"] == "running"))
         self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
-        self.assertEqual((p.returncode, err, self.upped(out), [x["phase"] for x in self.logs(out)], self.lstate()["procs"]),
-                         (0, "", ["c", "c", "c"], ["running", "stopped", "running", "stopped", "running", "stopped"], {}))
+        self.assertEqual((p.returncode, err, self.upped(out), [x["phase"] for x in self.logs(out)], self.kids()["c"]["phase"]),
+                         (0, "", ["c", "c", "c"], ["running", "stopped", "running", "stopped", "running", "sleeping"], "sleeping"))
 
     def test_start_comes_back_paused(self):
         # 暫停中被 stop 的子 loop，start 之後照它自己 state.json 的 paused 起來先暫停（ctl-commands § 4）；直接寫它的 ctl resume 才接著跑
@@ -1663,6 +1670,88 @@ class T(unittest.TestCase):
         self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err, (self.ended(out)["c"]["phase"], self.ended(out)["c"]["code"])), (0, "", ("done", 0)))
+
+    # ───── Q. 11-03 sleep／wake：daemon 收工時還在跑的 loop 型留成 sleeping，再開自動 wake（procs § 8） ─────
+
+    def test_sleep_wake(self):
+        # ctl 的 stop 收工：跑著的 loop 型 c＝SIGTERM、列留成 sleeping（pid null、stack 留著）；daemon 下 stop 的 s 照舊 stopped；
+        # exec 型 e 照舊拿掉。再開：c 用列上的 stack 自動 wake（log 一行 running、ticks 接著長），s 照停，e 照 daemon.json 重新起
+        c, sc = self.s / "procs" / "c", self.s / "procs" / "s"
+        doc = {"state": "state.json", "ctl": "ctl.json", "procs": {"c": self.clock(), "s": self.clock(), "e": "long"}}
+        p = self.start(doc)
+        self.assertTrue(until(lambda: self.ticks(c) >= 1 and self.ticks(sc) >= 1 and set(self.kids()) == {"c", "s", "e"}))
+        self.lctl({"procs_stopped": ["s"], "seq": 1})
+        self.assertTrue(until(lambda: self.kids()["s"]["phase"] == "stopped"))
+        old = self.kids()["c"]["pid"]
+        self.ctl({"cmd": "stop", "seq": 1})
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err), (0, ""))
+        k = self.kids()
+        self.assertEqual({n: (r["phase"], r["pid"], r["stack"]) for n, r in k.items()},
+                         {"c": ("sleeping", None, str(c)), "s": ("stopped", None, str(sc))})
+        self.assertEqual({n: x["phase"] for n, x in self.ended(out).items()}, {"s": "stopped", "c": "sleeping", "e": "stopped"})
+        self.assertFalse(alive(old))
+        n, ns = self.ticks(c), self.ticks(sc)
+        p2 = self.start()
+        k2 = until(lambda: self.kids()["c"]["phase"] == "running" and "e" in self.kids() and self.kids())
+        self.assertTrue(k2)
+        self.assertEqual((k2["c"]["stack"], k2["s"]["phase"], k2["c"]["pid"] != old), (str(c), "stopped", True))
+        self.assertTrue(until(lambda: self.ticks(c) > n))
+        time.sleep(0.5)
+        self.assertEqual((self.ticks(sc), self.kids()["s"]["phase"]), (ns, "stopped"))
+        self.lctl({"procs_started": ["s"], "seq": 2})   # stopped 的照舊要 start 才起
+        self.assertTrue(until(lambda: self.kids()["s"]["phase"] == "running" and self.ticks(sc) > ns))
+        self.ctl({"cmd": "stop", "seq": 2})
+        out2, err2 = p2.communicate(timeout=30)
+        self.assertEqual((p2.returncode, err2, self.upped(out2)[:2]), (0, "", ["c", "e"]))
+
+    def test_sleep_wake_paused_and_sigint(self):
+        # Ctrl+C（SIGINT）收工一樣睡；收工時本來暫停中的：醒來照它自己 state.json 的 paused 接著暫停（ctl-commands § 4），寫它的 ctl resume 才接著跑
+        c = self.s / "procs" / "c"
+        p = self.start({"state": "state.json", "ctl": "ctl.json", "procs": {"c": self.clock()}})
+        self.assertTrue(until(lambda: self.ticks(c) >= 1))
+        self.cctl(c, {"cmd": "pause"})
+        self.assertTrue(until(lambda: json.loads((c / "state.json").read_text())["phase"] == "paused"))
+        p.send_signal(signal.SIGINT)
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, err, self.kids()["c"]["phase"]), (130, "", "sleeping"))
+        cs = json.loads((c / "state.json").read_text())
+        self.assertEqual((cs["phase"], cs["paused"]), ("stopped", True))
+        p2 = self.start()
+        self.assertTrue(until(lambda: self.kids()["c"]["phase"] == "running"
+                              and json.loads((c / "state.json").read_text())["pid"] == self.kids()["c"]["pid"]
+                              and json.loads((c / "state.json").read_text())["phase"] == "paused"))
+        n = self.ticks(c)
+        time.sleep(0.6)
+        self.assertEqual(self.ticks(c), n)
+        self.cctl(c, {"cmd": "resume"})
+        self.assertTrue(until(lambda: self.ticks(c) > n))
+        self.ctl({"cmd": "stop"})
+        p2.communicate(timeout=30)
+        self.assertEqual(p2.returncode, 0)
+
+    def test_sleep_wake_mailbox(self):
+        # 信箱模式（aos-daemon-ctl add 的路）：信加的 z、y、x 收工時都睡；daemon 沒在跑時寄的信下次開門先套再 wake——
+        # y 被 procs_stopped＝改成 stopped、不 wake；x 被 procs_removed＝列拿掉；z（設定只在記憶體，接回記 null）照它 stack 裡的 loop.json wake
+        p = self.mstart()
+        z, y = self.s / "procs" / "z", self.s / "procs" / "y"
+        self.post("0001", {"procs_added": {"z": self.clock(), "y": self.clock(), "x": self.clock()}})
+        self.assertTrue(until(lambda: all(self.ticks(self.s / "procs" / q) >= 1 for q in "zyx")))
+        self.mstop(p)
+        self.assertEqual({q: r["phase"] for q, r in self.kids().items()}, {q: "sleeping" for q in "azyx"})
+        self.post("0002", {"procs_stopped": ["y"]})
+        self.post("0003", {"procs_removed": ["x"]})
+        n, ny = self.ticks(z), self.ticks(y)
+        p2 = self.start()
+        self.assertTrue(until(lambda: self.drained() and self.kids()["z"]["phase"] == "running" and self.ticks(z) > n))
+        time.sleep(0.5)
+        self.assertEqual(({q: r["phase"] for q, r in self.kids().items()}, self.ticks(y), self.lstate()["mailbox_warning"]),
+                         ({"a": "running", "z": "running", "y": "stopped"}, ny, None))
+        self.post("0004", {"procs_started": ["y"]})
+        self.assertTrue(until(lambda: self.kids()["y"]["phase"] == "running" and self.ticks(y) > ny))
+        self.ctl({"cmd": "stop", "seq": 2})   # 上一個行程的 {"cmd": "stop"} 是這個行程的基準線：內容要不一樣才算新的
+        out, err = p2.communicate(timeout=30)
+        self.assertEqual((p2.returncode, err), (0, ""))
 
 
 if __name__ == "__main__":
