@@ -94,12 +94,12 @@ daemon.json＝loop.json 的超集（N-28）：
 
 | 面向 | 手把（人寫） | 狀態窗（daemon 寫） |
 |---|---|---|
-| loop 面向與自身 | `ctl.json`（慣用名；11-02 白天改 `daemon_ctl.json`、晚上改回）：`paused`、`stopped`、`max`、`interval_ms`、`seq`（同 aos-loop） | `state.json`（慣用名；11-02 白天改 `daemon_state.json`、晚上改回）：同 aos-loop（`phase`、`counter_runs`、`max`、`interval_ms`、`paused`、`ctl_seq`、`ctl_warning`、收尾的 `code`、`pid`、`started_at_ticks`、`boot_id`、`updated_at`），**沒有 `loops`** |
+| loop 面向與自身 | `ctl.json`（慣用名；11-02 白天改 `daemon_ctl.json`、晚上改回）：11-03 起一道指令 `cmd`（`pause`／`resume`／`stop`）、`max`、`interval_ms`、`seq`（同 aos-loop，起來第一次讀的當基準線） | `state.json`（慣用名；11-02 白天改 `daemon_state.json`、晚上改回）：同 aos-loop（`phase`、`counter_runs`、`max`、`interval_ms`、`paused`、`ctl_seq`、`ctl_warning`、收尾的 `code`、`pid`、`started_at_ticks`、`boot_id`、`updated_at`），**沒有 `loops`** |
 | 管轄（名單） | `loops_ctl.json`：`loops`、`loops_added`、`loops_removed`、`execs`（11-02 晚）、`execs_added`、`execs_removed`（10-30）、`seq`；另可同時開信箱 `loops_ctl_mailbox`（見下） | `loops_state.json`：`{"ctl_seq", "ctl_warning", "mailbox_warning"（開了信箱才有；11-02 晚原 `letter_warning`）, "loops", "execs"（10-30）, "pid", "started_at_ticks", "boot_id", "updated_at"}`（11-02：`kind`、`recorded_at` 拿掉） |
 
 - 每圈先讀 ctl（`ctl.json`）、再讀 `loops_ctl.json`，**各自**採用或不採用（一份壞不影響另一份；壞的原因進各自那扇狀態窗的 `ctl_warning`、`ctl_seq` 回各自的 `seq`）。
 - `loops_state.json` 跟 state 一起看（`Loop::write_more`，每次要寫 state 都呼叫；沒開 state 也照呼叫），**有變才寫**（11-02）：組好的那份（分檔前的表、`ctl_seq`、`ctl_warning`、`mailbox_warning`，不含 pid 那幾欄與 `updated_at`）跟上一份寫出去的一樣就不碰檔（分檔也不碰），不一樣才寫分檔→清舊分檔→寫主檔；daemon 對表時起一個、退一個也各寫一次。`pid`、`started_at_ticks`、`boot_id` 同一個行程的值——只讀這扇也能判 daemon 死活（N-17；心跳拿掉，不看 `updated_at` 新不新）。
-- **`stopped`**＝這圈收工（收子項照 P-36），不再看名單。**`paused`**＝整圈暫停：不跑 `exec`、**也不調表**（不收多的、不起少的；`loops_ctl` 的變動等解除暫停那圈才生效），
+- **`stop`**（11-03 前 `stopped`）＝這圈收工（收子項照 P-36），不再看名單。**`pause`**（11-03 前 `paused`；`resume` 解除）＝整圈暫停：不跑 `exec`、**也不調表**（不收多的、不起少的；`loops_ctl` 的變動等解除暫停那圈才生效），
   但照讀兩份 ctl（`ctl_seq` 照回）、兩扇 state 照規則寫（有變才寫）、照收已送 SIGTERM 的、照記自己結束的（`done`：印 log、拿掉、本次不再起）。10-29 前暫停時照樣對表。
 - **過渡期**（衝突 5，使用者 10-29「都照建議」）：`ctl.json` 寫了 `loops`／`loops_added`／`loops_removed`＝那幾個 key 不採用（其他照採），`state.json` 的 `ctl_warning`
   寫一句「已搬到 loops_ctl.json」；之後會拿掉這句、回到不認得的 key 一律忽略。
@@ -216,7 +216,7 @@ echo '{"loops_removed": ["bob"]}' | aos-post send --reply-to 我的信箱 "$AOS_
 
 | 怎麼結束 | 結束碼 | stderr |
 |---|---|---|
-| 跑滿 `max`、ctl `stopped`、身體退 10 | 0 | 不寫 |
+| 跑滿 `max`、ctl `stop`、身體退 10 | 0 | 不寫 |
 | 身體退其他非 0 | 那個碼 | 一行 `aos-daemon: 第 N 次 誰 失敗，結束碼 C` |
 | 收到 SIGINT／SIGTERM／SIGHUP | 128＋N | 不寫 |
 | 自己的錯（設定壞、沒 AOS_STACK、子項起不來、state／loops_state 寫不了、信箱建不了、沒有 exec 卻給了 `-- 參數`） | 1 | 一行 `aos-daemon: 代號 原因` |

@@ -113,6 +113,13 @@ class Windows(T):
     def count(self):
         return "loop.json#/body"
 
+    def count_then(self, s, plan):
+        # 11-03 ctl 是指令、起來前就在的當基準線：第 n 次跑的時候把 plan[n] 寫進 ctl.json（跑完那次讀到、照做）
+        for n, doc in plan.items():
+            (s / ("at_%d.json" % n)).write_text(json.dumps(doc))
+        return {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/runs"; n=$(wc -l < "$AOS_STACK/runs"); '
+                                     'if [ -f "$AOS_STACK/at_$n.json" ]; then cp "$AOS_STACK/at_$n.json" "$AOS_STACK/ctl.json"; fi']}
+
     def test_state_written(self):
         s = self.stack()
         r = self.run_loop({"exec": self.count(), "max": 3, "state": "state.json"}, {"AOS_STACK": str(s)})
@@ -153,23 +160,28 @@ class Windows(T):
 
     def test_ctl_stopped_and_seq(self):
         s = self.stack()
-        (s / "ctl.json").write_text(json.dumps({"stopped": True, "seq": 7}))
-        r = self.run_loop({"exec": self.count(), "max": 3, "ctl": "ctl.json", "state": "state.json"},
-                          {"AOS_STACK": str(s)})
+        r = self.run_loop({"exec": self.count_then(s, {1: {"cmd": "stop", "seq": 7}}), "max": 3, "ctl": "ctl.json",
+                           "state": "state.json"}, {"AOS_STACK": str(s)})
         st = json.loads((s / "state.json").read_text())
-        self.assertEqual((r.returncode, r.stderr, st["phase"], st["counter_runs"], st["ctl_seq"], (s / "runs").exists()),
-                         (0, "", "stopped", 0, 7, False))
+        self.assertEqual((r.returncode, r.stderr, st["phase"], st["counter_runs"], st["ctl_seq"],
+                          len((s / "runs").read_text().split())), (0, "", "stopped", 1, 7, 1))
 
     def test_ctl_max_overrides(self):
         s = self.stack()
-        (s / "ctl.json").write_text(json.dumps({"max": 1}))
-        r = self.run_loop({"exec": self.count(), "max": 5, "ctl": "ctl.json"}, {"AOS_STACK": str(s)})
-        self.assertEqual((r.returncode, len((s / "runs").read_text().split())), (0, 1))
+        r = self.run_loop({"exec": self.count_then(s, {1: {"max": 2}}), "max": 5, "ctl": "ctl.json"}, {"AOS_STACK": str(s)})
+        self.assertEqual((r.returncode, len((s / "runs").read_text().split())), (0, 2))
+
+    def test_ctl_leftover_is_baseline(self):
+        # 起來前就在的 ctl 當基準線、不執行（殘留的 stop 不會讓新起的馬上退）
+        s = self.stack()
+        (s / "ctl.json").write_text(json.dumps({"cmd": "stop"}))
+        r = self.run_loop({"exec": self.count(), "max": 2, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
+        st = json.loads((s / "state.json").read_text())
+        self.assertEqual((r.returncode, st["phase"], len((s / "runs").read_text().split())), (0, "done", 2))
 
     def test_bad_ctl_kept_last_good_and_warned(self):
         s = self.stack()
-        (s / "ctl.json").write_text(json.dumps({"max": "two"}))
-        r = self.run_loop({"exec": self.count(), "max": 2, "ctl": "ctl.json", "state": "state.json"},
+        r = self.run_loop({"exec": self.count_then(s, {1: {"max": "two"}}), "max": 2, "ctl": "ctl.json", "state": "state.json"},
                           {"AOS_STACK": str(s)})
         st = json.loads((s / "state.json").read_text())
         self.assertEqual((r.returncode, r.stderr, len((s / "runs").read_text().split())), (0, "", 2))
@@ -177,14 +189,13 @@ class Windows(T):
 
     def test_ctl_pause_then_resume(self):
         s = self.stack()
-        (s / "ctl.json").write_text(json.dumps({"paused": True}))
-        self.loop({"exec": self.count(), "max": 2, "ctl": "ctl.json", "state": "state.json"})
+        self.loop({"exec": self.count_then(s, {1: {"cmd": "pause"}}), "max": 2, "ctl": "ctl.json", "state": "state.json"})
         p = self.start({"AOS_STACK": str(s)})
-        ok = wait_file(s / "state.json")
+        ok = wait_file(s / "runs")
         time.sleep(0.5)
         paused = json.loads((s / "state.json").read_text())["phase"]
-        self.assertFalse((s / "runs").exists())
-        (s / "ctl.json").write_text(json.dumps({"paused": False}))
+        self.assertEqual(len((s / "runs").read_text().split()), 1)
+        (s / "ctl.json").write_text(json.dumps({"cmd": "resume"}))
         out, err = p.communicate(timeout=20)
         self.assertEqual((ok, paused, p.returncode, err, len((s / "runs").read_text().split())),
                          (True, "paused", 0, "", 2))
@@ -235,11 +246,11 @@ class Cli(Base):
     def test_flag_windows(self):
         s = self.stack()
         self.mark("a")
-        (s / "c.json").write_text(json.dumps({"stopped": True, "seq": 3}))
+        self.prog("a", 'echo "a $*" >> "$AOS_STACK/runs"\necho \'{"cmd": "stop", "seq": 3}\' > "$AOS_STACK/c.json"\n')
         self.loop({"exec": "a", "max": 2})
         r = self.loop_cli("--ctl", "c.json", "--state=st.json", "loop.json", env={"AOS_STACK": str(s)})
         st = json.loads((s / "st.json").read_text())
-        self.assertEqual((r.returncode, r.stderr, st["phase"], st["ctl_seq"], self.runs(s)), (0, "", "stopped", 3, []))
+        self.assertEqual((r.returncode, r.stderr, st["phase"], st["ctl_seq"], self.runs(s)), (0, "", "stopped", 3, ["a "]))
 
     def test_val_array_args_each_beat(self):
         # exec＝[目標, 參數...]：每次 aos-exec -- 目標 參數...（參數照字面，--max 也只是參數）

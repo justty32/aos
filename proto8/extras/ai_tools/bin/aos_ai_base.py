@@ -230,8 +230,8 @@ class Daemon:
         return (st.get("pid"), st.get("started_at_ticks")) if isinstance(st, dict) else None
 
     def write_ctl(self, change, path=None):
-        """ctl 是宣告（N-06）：讀現在那份、改、seq＋1、整份換掉；同時只一個 aos-ai 寫（flock）。回 seq。
-        path 沒給＝ctl.json（stopped 這類 loop 面向）；名單寫 self.lctl（loops_ctl.json，10-29 拆窗）。"""
+        """讀現在那份、改、seq＋1、整份換掉；同時只一個 aos-ai 寫（flock）。回 seq。
+        path 沒給＝ctl.json（loop 面向；11-03 起是一道指令，用 send_cmd）；名單寫 self.lctl（loops_ctl.json，宣告，10-29 拆窗）。"""
         path = path or self.ctl
         self.stack.mkdir(parents=True, exist_ok=True)
         with open(self.dir / ".ctl.flock", "w") as lock:
@@ -242,6 +242,15 @@ class Daemon:
             ctl["seq"] = int(ctl.get("seq") or 0) + 1
             write_atomic(path, json.dumps(ctl, ensure_ascii=False, indent=1) + "\n")
             return ctl["seq"]
+
+    def send_cmd(self, cmd):
+        """daemon 自己的 ctl.json 下一道指令 {"cmd": cmd, "seq": 上一份＋1}（11-03 ctl 改指令：新舊比內容，seq 一直往上加，
+        同一個動詞再下一次也算新的）。回 seq。"""
+        def change(c):
+            for k in [k for k in c if k != "seq"]:
+                del c[k]
+            c["cmd"] = cmd
+        return self.write_ctl(change)
 
     def wait_seq(self, seq, until=None, timeout=8.0):
         """等 daemon 讀到這份 loops_ctl（loops_state 的 ctl_seq 回音）；until(loops_state) 另給條件。回 (loops_state, 是否等到)。"""

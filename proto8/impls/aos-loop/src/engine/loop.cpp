@@ -19,7 +19,7 @@ namespace aos::loop {
 
 using Clock = std::chrono::steady_clock;
 
-void Loop::tend(const Json&) {}
+void Loop::tend() {}
 void Loop::finish() {}
 Json Loop::info() { return Json::object(); }
 std::optional<std::string> Loop::check_ctl(Json&, const aos::Resolved&) { return std::nullopt; }
@@ -61,30 +61,26 @@ int Loop::end(int code, const std::string& phase) {
 
 int Loop::main_loop() {
     Clock::time_point next_at = Clock::now();
+    max_base_ = max_;               // ctl 寫 null 回這兩個（11-03）
+    interval_base_ = interval_ms_;
+    read_old_paused();              // 起來先暫停？（11-03 代定：舊 state 的 paused 是 true）
     while (true) {
         if (signal_got() != 0) {
             return end(128 + signal_got(), "stopped");
         }
-        ctl_now_ = read_ctl();
-        const Json& c = ctl_now_;
+        read_ctl();                 // 新的指令才照做（11-03）
         std::optional<long long> mx = max_;
-        if (c.contains("max")) {
-            mx = c["max"].get<long long>();
-        }
         long long iv = interval_ms_;
-        if (c.contains("interval_ms")) {
-            iv = c["interval_ms"].get<long long>();
-        }
-        bool paused = c.value("paused", false);
+        bool paused = paused_;
         try {
-            tend(c);
+            tend();
         } catch (const StateError&) {
             throw;   // tend 裡寫狀態窗寫不了：交給 serve 印一行、收尾（不再走 end 寫 state）
         } catch (const Error& e) {
             say(e.code + " " + e.msg);
             return end(1, "stopped");
         }
-        if (c.value("stopped", false)) {
+        if (stopping_) {
             return end(0, "stopped");
         }
         if (mx && runs_ >= *mx) {

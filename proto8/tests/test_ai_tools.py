@@ -200,7 +200,7 @@ class AiToolsTest(unittest.TestCase):
         self.assertTrue(res and "FAKE ANSWER to: hello" in res["text"], err)
         # 11-02：子項自己結束（這裡叫它小格的 ctl 停）＝從 daemon 的表上拿掉、本次不再起；aos-ai start 要能再把它起來
         cell = Path(self.root) / "daemon" / ".stack" / "loops" / "bg"
-        (cell / "ctl.json").write_text(json.dumps({"stopped": True}))
+        (cell / "ctl.json").write_text(json.dumps({"cmd": "stop"}))
         lst = Path(self.root) / "daemon" / ".stack" / "loops_state.json"
         end = time.monotonic() + 20
         while "bg" in json.loads(lst.read_text())["loops"] and time.monotonic() < end:
@@ -215,7 +215,7 @@ class AiToolsTest(unittest.TestCase):
         self.assertFalse(res["running"])
         ctl = json.loads((Path(self.root) / "daemon" / ".stack" / "ctl.json").read_text())   # 11-02 白天曾改 daemon_ctl.json、晚上改回
         lctl = json.loads((Path(self.root) / "daemon" / ".stack" / "loops_ctl.json").read_text())   # 10-29 daemon 拆窗
-        self.assertEqual((lctl["loops_added"], ctl["stopped"], "loops_added" in ctl), ({}, True, False))
+        self.assertEqual((lctl["loops_added"], ctl["cmd"], "loops_added" in ctl), ({}, "stop", False))
 
     def test_dan_tools_ask_agent(self):
         """② 老闆 agent 掛 ask_agent，腦叫它 → 起一隻 helper、問、拿答案，再交答案。"""

@@ -48,7 +48,7 @@ daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.sta
 | `run 名 [--timeout 秒] [--env K=V]...` | 前景 `aos-exec --ws ws agent`（`AOS_STACK` 明寫成 `ws/.stack/`），nia 跑到 queue 空 loop 收工；回 `answers`（這次 history 新長出來的回答，`[{"text"}]`）、`answered`（跑之前在 queue、跑完不見了的信號）、`waiting`（queue 裡還沒答的）、`loop_phase`、錯誤、hint |
 | `status [名]`、`answer 名 [信號]`、`history 名 [-n N]` | 看（11-03 拿掉 `trace` 子命令與 status 的 `trace_tail`：fsm 不寫 `trace.jsonl` 了，[thinking 11-03 trace](../../thinking/2026-11-03-trace.md)）：status 有 queue 各格（`new`、`cur`、`done`）、`loop_phase`（state.json；11-02 晚收回 loop_state.json 備案）、`counter_answers`；answer 沒給信號＝每段一問一答（`asked`、`text`），給了＝那封還在 queue＝`AnswerMissing`、不見了＝history 最新的回答（A-8） |
 | `start 名 [--interval-ms N]`、`stop 名`、`wait 名 信號 [--timeout 秒]` | 背景：寫 daemon 的 `loops_ctl.json` 的 `loops_added`（N-54；10-29 拆窗前寫在 ctl），等 `loops_state.json` 的 `ctl_seq` 回音才回。11-02 起子項結束就從 daemon 的表上拿掉、本次執行不再起（要先讓某一圈的名單沒有它）：`start` 不在跑時一律先從 `loops_added` 拿掉、等回音，再放回、等回音；一次就跑完、還沒被看到就下表的＝看小格 `loops/<名>/state.json` 換了行程寫，照樣 `ok`（多一句 `note`） |
-| `daemon up｜down｜status` | 起／停（daemon_ctl `stopped`）／看背景的 aos-daemon（status 的 `updated_at`＝daemon_state 最後一次寫的時間，11-02 原 `recorded_at`；有變才寫，不拿它判活著） |
+| `daemon up｜down｜status` | 起／停（daemon 的 ctl 寫一道 `{"cmd": "stop", "seq": n}`，11-03 起 ctl 是指令；up 不再清殘留）／看背景的 aos-daemon（status 的 `updated_at`＝daemon_state 最後一次寫的時間，11-02 原 `recorded_at`；有變才寫，不拿它判活著） |
 | `exec [--ws WS] 目標 [參數...]` | 直接 `aos-exec` 跑一次，回 `code`、`stdout`、`errors`；WS 要在 root 裡 |
 | `edit 名 檔 --editor 命令 [參數...]` | JSON 編輯的接口：交給 `--editor` 的命令（照 shell 斷詞成 argv＋檔的絕對路徑＋參數；沒給＝`EditorMissing`）；檔要在 `agents/<名>/` 裡 |
 | `doctor` | 程式在不在、`AOS_BRAIN_URL` 連不連得到 |

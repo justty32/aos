@@ -14,7 +14,7 @@ def daemon_up(root):
     if not d.cfg.exists():
         write_atomic(d.cfg, json.dumps({"interval_ms": 500, "ctl": "ctl.json", "state": "state.json", "loops": {}},
                                        indent=1) + "\n")
-    d.write_ctl(lambda c: c.pop("stopped", None))    # 上次 down 留下的 stopped 拿掉；loops_ctl 的 loops_added 照留＝上次在跑的照起
+    # 上次 down 留下的 {"cmd": "stop"} 不用清（11-03：起來第一次讀的 ctl 當基準線、不執行）；loops_ctl 的 loops_added 照留＝上次在跑的照起
     prog = which("aos-daemon")
     if not prog:
         raise Fail("CommandMissing", "PATH 上沒有 aos-daemon", HINTS["CommandMissing"])
@@ -43,7 +43,7 @@ def cmd_daemon(root, o, pos):
         if not pid:
             out({"ok": True, "running": False})
             return
-        d.write_ctl(lambda c: c.__setitem__("stopped", True))
+        d.send_cmd("stop")
         end = time.monotonic() + 20
         while d.running() and time.monotonic() < end:
             time.sleep(0.2)

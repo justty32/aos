@@ -197,7 +197,7 @@ class ListenTest(Base):
         """常駐（idle）的 aos-loop 被 ctl 暫停：state.json 的 phase paused、runners 認得有人在跑；寄的信留在 new/。"""
         agent = self.nia(Path(self._tmp.name) / "idle", idle=True)
         self.stack.mkdir()
-        (self.stack / "ctl.json").write_text('{"paused": true}')
+        (self.stack / "ctl.json").write_text('{"cmd": "pause"}')
         p = subprocess.Popen(["aos-exec", "--ws", str(self.ws), agent], stdout=subprocess.DEVNULL,
                              stderr=subprocess.PIPE, text=True, env=env())
         self.addCleanup(lambda: (p.poll() is None and p.kill(), p.communicate()))
@@ -210,10 +210,10 @@ class ListenTest(Base):
         sig = self.say("暫停中")
         self.assertIn("aos-loop", [n for _, n in runners(self.ws)])
         self.assertEqual(self.queue("new"), [sig])
-        (self.stack / "ctl.json").write_text('{"paused": false}')
+        (self.stack / "ctl.json").write_text('{"cmd": "resume"}')
         r = run(LISTEN, "--ws", str(self.ws), "--timeout", "20")
         self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 暫停中"), r.stdout + r.stderr)
-        (self.stack / "ctl.json").write_text('{"stopped": true}')
+        (self.stack / "ctl.json").write_text('{"cmd": "stop"}')
         self.assertEqual(p.wait(timeout=20), 0)
 
     def test_unknown_and_usage(self):
@@ -375,10 +375,10 @@ class External(Base):
         self.assertIn((p.pid, "aos-loop"), runners(self.ws))
         self.assertFalse((self.stack / "server.txt").exists())
         self.assertFalse((self.stack / "trace.jsonl").exists())
-        (self.stack / "ctl.json").write_text('{"paused": true}')
+        (self.stack / "ctl.json").write_text('{"cmd": "pause"}')
         self.assertTrue(self.phase(self.stack, ("paused",)))
         self.assertIn("aos-loop", [n for _, n in runners(self.ws)])
-        (self.stack / "ctl.json").write_text('{"stopped": true}')
+        (self.stack / "ctl.json").write_text('{"cmd": "stop"}')
         self.assertEqual(p.wait(timeout=20), 0)
         self.assertEqual(runners(self.ws), [])
 
@@ -412,7 +412,7 @@ class External(Base):
         sys.path.insert(0, str(HUMAN))
         import aos_human
         self.assertIn("aos-loop", [n for _, n in aos_human.runners(aos_human.Where(str(self.ws), stack))])
-        (ds / "ctl.json").write_text('{"stopped": true}')
+        (ds / "ctl.json").write_text('{"cmd": "stop"}')
         self.assertEqual(d.wait(timeout=30), 0)
 
 

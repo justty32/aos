@@ -112,7 +112,7 @@ daemon 自己的窗慣用名 `ctl.json`／`state.json`（控制自身的窗不�
 ## window
 
 一句：**ctl／state 兩扇窗**（`$AOS_STACK` 底下的檔）：ctl 誰都能寫、loop 只讀（宣告式：`paused`、`stopped`、`max`、`interval_ms`、`seq`；daemon 的名單另寫在 `loops_ctl.json`：`loops`、`loops_added`、`loops_removed`、`seq`）；state 只有 loop 自己寫（`phase`、`counter_runs`（跑過幾次；計數一律 `counter_<被數的東西>`）、`ctl_seq` 回音、`ctl_warning`、`pid`、`started_at_ticks`、`boot_id`、`updated_at`）；state **有變才寫**（`counter_runs` 不算變動，沒有心跳），判活著＝`pid`＋`started_at_ticks`（＋`boot_id`）對 /proc，不看檔案新不新（11-02）。
-範例：叫停 `{"stopped": true, "seq": 2}`；daemon 加一隻寫 `loops_ctl.json`：`{"seq": 3, "loops_added": {"carl": "agent-carl"}}`，等 `loops_state.json` 的 `ctl_seq` 變 3＝讀到了。
+範例：叫停 `{"cmd": "stop", "seq": 2}`（11-03 起 loop 的 ctl 是一道指令，`cmd`＝`pause`／`resume`／`stop`；新舊比內容、起來前就在的不算）；daemon 加一隻寫 `loops_ctl.json`：`{"seq": 3, "loops_added": {"carl": "agent-carl"}}`，等 `loops_state.json` 的 `ctl_seq` 變 3＝讀到了。
 常見錯：寫 ctl 沒先寫暫存再改名（N-05）；壞的 ctl 整份不採用、原因在 `ctl_warning`；拿掉 `loops_added`＝加進來的會被收掉（宣告，不是指令）。
 出處：N-06～N-09、N-13、N-17、N-32、N-54。
 

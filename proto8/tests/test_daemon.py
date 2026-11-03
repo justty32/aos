@@ -162,7 +162,7 @@ class T(unittest.TestCase):
                              "_entry": ["aos-loop", {"$env": "AOS_CF"}]})
         self.assertTrue(until(lambda: json.loads((self.s / "loops" / "b" / "state.json").read_text())["phase"] == "running"))
         pids = [r["pid"] for r in k.values()]
-        self.ctl({"stopped": True, "seq": 1})
+        self.ctl({"cmd": "stop", "seq": 1})
         out, err = p.communicate(timeout=30)
         st = self.state()
         self.assertEqual((p.returncode, err, st["phase"], st["ctl_seq"]), (0, "", "stopped", 1))
@@ -204,7 +204,7 @@ class T(unittest.TestCase):
         k = until(lambda: (self.s / "loops" / "b" / "starts").exists() and "a" not in self.kids() and self.kids())
         self.assertEqual(list(k), ["b"])
         self.assertFalse(alive(a_pid))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -254,7 +254,7 @@ class T(unittest.TestCase):
                          (os.path.join(cell, "loop.json"), cell, "/_entry"))
         self.assertEqual(json.loads((self.s / "loops" / "a" / "loop.json").read_text())["exec"],
                          [os.path.join(os.path.realpath(self.t), "long")])
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -293,7 +293,7 @@ class T(unittest.TestCase):
         p2 = self.start()
         time.sleep(1)
         self.assertEqual((self.kids()["a"]["pid"], len((self.s / "loops" / "a" / "starts").read_text().split())), (pid, 1))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p2.communicate(timeout=30)
         self.assertEqual((p2.returncode, alive(pid)), (0, False))
 
@@ -310,7 +310,7 @@ class T(unittest.TestCase):
         k2 = until(lambda: self.kids()["a"]["pid"] != old and self.kids())
         self.assertTrue(k2)
         self.assertTrue(until(lambda: len((self.s / "loops" / "a" / "starts").read_text().split()) == 2))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p2.communicate(timeout=30)
         self.assertEqual((p2.returncode, alive(k2["a"]["pid"])), (0, False))
 
@@ -339,7 +339,7 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: (self.s / "loops" / "state.json" / "starts").exists()))
         self.assertEqual((self.kids()["a"]["pid"], alive(k["a"]["pid"]), st["ctl_warning"]), (k["a"]["pid"], True, None))
         self.assertTrue((self.s / "state.json").is_file())
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err, self.state()["ctl_warning"]), (0, "", None))
 
@@ -355,7 +355,7 @@ class T(unittest.TestCase):
         self.lctl({"loops_added": {"b": self.long()}, "seq": 1})
         self.assertTrue(until(lambda: (self.s / "loops" / "b" / "starts").exists() and set(self.kids()) == {"a", "b"}))
         self.assertEqual(self.lstate()["ctl_seq"], 1)
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -415,7 +415,7 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: self.xkids() == {}, 20))
         self.assertGreater(time.monotonic() - t0, 9)
         self.assertEqual((alive(bpid), alive(bsleep)), (False, False))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -437,7 +437,7 @@ class T(unittest.TestCase):
         p2 = self.start()
         time.sleep(1)
         self.assertEqual((self.xkids()["a"]["pid"], len((self.s / "loops" / "a" / "starts").read_text().split())), (pid, 1))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p2.communicate(timeout=30)
         a = [(d["phase"], d["pid"], d["code"], d["signal"]) for d in logs(out)]
         # 接回的也印一行 running；不是自己的子行程，結束那行 code／signal 是 null（11-02）

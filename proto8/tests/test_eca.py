@@ -116,15 +116,15 @@ class Eca(unittest.TestCase):
             answers.append(r.stdout)
         sid = self.sid("claude")
         self.assertEqual(answers, ["fake claude[%s]: 第一句\n" % sid[:8], "fake claude[%s]: 第二句\n" % sid[:8]])
-        (self.stack / "ctl.json").write_text('{"paused": true}')
+        (self.stack / "ctl.json").write_text('{"cmd": "pause"}')
         self.assertTrue(self.wait_phase("paused"))
         sig = self.say("第三句")
         time.sleep(1)
         self.assertEqual(sorted(os.listdir(self.stack / "queue" / "new")), [sig])
-        (self.stack / "ctl.json").write_text('{"paused": false}')
+        (self.stack / "ctl.json").write_text('{"cmd": "resume"}')
         r = self.listen("--timeout", "20")
         self.assertEqual(r.stdout, "fake claude[%s]: 第三句\n" % sid[:8], r.stderr)
-        (self.stack / "ctl.json").write_text('{"stopped": true}')
+        (self.stack / "ctl.json").write_text('{"cmd": "stop"}')
         self.assertEqual(p.wait(timeout=20), 0)
         self.assertEqual([m["role"] for m in
                           (json.loads(l) for l in (self.stack / "history.jsonl").read_text().splitlines())],

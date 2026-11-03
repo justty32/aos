@@ -87,14 +87,14 @@ class RoundLoop(AgentCase):
             return n
 
         until("第一題答完、idle 空轉兩次", lambda: self.answer() is not None and idles() >= 2)
-        (self.stack / "ctl.json").write_text('{"paused": true}')
+        (self.stack / "ctl.json").write_text('{"cmd": "pause"}')
         until("loop 暫停", lambda: phase() == "paused")
         q2 = self.put("第二題")
         time.sleep(1)
         self.assertEqual(self.ls("new"), [q2])                                                   # 暫停：兩格之間不再起
-        (self.stack / "ctl.json").write_text('{"paused": false}')
+        (self.stack / "ctl.json").write_text('{"cmd": "resume"}')
         until("第二題答完", lambda: (self.answer() or "").startswith("FAKE ANSWER to: 第二題") and not self.ls("cur") and not self.ls("new"))
-        (self.stack / "ctl.json").write_text('{"stopped": true}')
+        (self.stack / "ctl.json").write_text('{"cmd": "stop"}')
         self.assertEqual(p.wait(timeout=30), 0)
         self.assertEqual(self.state(), "idle")
 

@@ -233,7 +233,7 @@ agent-hal/                 照抄 agent-dan（brain.py、act.py 只改錯誤訊�
 
 ## tick（時鐘，10-21 晚）
 
-`tick/_entry`＝`exec aos-loop loop.json`；`loop.json`＝`{"exec": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tick.txt"}]}, "max": 5}`——loop 跑 5 次，每次在自己行程內跑那張單子 `aos-tick $AOS_STACK/tick.txt`，所以跑完工作區的 `.stack/tick.txt` 是 `5`（C-44：tick-tock 就是一個時鐘；N-01 大家抬頭讀這個檔）。節奏、停交給 loop：要隔多久走一格就在 loop.json 加 `interval_ms`，要能暫停就加 `ctl`、寫 `{"paused": true}`。程式見 [bin/README 的 aos-tick](../bin/README.md)。
+`tick/_entry`＝`exec aos-loop loop.json`；`loop.json`＝`{"exec": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tick.txt"}]}, "max": 5}`——loop 跑 5 次，每次在自己行程內跑那張單子 `aos-tick $AOS_STACK/tick.txt`，所以跑完工作區的 `.stack/tick.txt` 是 `5`（C-44：tick-tock 就是一個時鐘；N-01 大家抬頭讀這個檔）。節奏、停交給 loop：要隔多久走一格就在 loop.json 加 `interval_ms`，要能暫停就加 `ctl`、寫 `{"cmd": "pause"}`（11-03 起 ctl 是一道指令）。程式見 [bin/README 的 aos-tick](../bin/README.md)。
 
 ## llm-kernel（問腦變成請求、LLM kernel 排隊跑，10-24）
 
@@ -293,7 +293,7 @@ aos-exec --ws <工作區> proto8/demo/agent-nia        # PATH 照上面放好（
    "ctl": "ctl.json", "state": "state.json"}
   ```
 
-  queue 空＝idle 退 10 被表接住（`"10": "idle"`）、fsm 退 0、什麼都不做，loop 隔 300 毫秒再叫；agent 自己仍是函數，停著等是 aos-loop 提供的。放題照上面那行 push，答案照樣看 history。暫停＝`echo '{"paused": true}' > <工作區>/.stack/ctl.json`（不起下一格，新信留在 `queue/new/`；`state.json` 的 `phase` 變 `paused`），放行寫 `{"paused": false}`，收工寫 `{"stopped": true}`（N-07；反應時間最多一個 `interval_ms`；格與格之間就看，一格跑到一半不打斷）。
+  queue 空＝idle 退 10 被表接住（`"10": "idle"`）、fsm 退 0、什麼都不做，loop 隔 300 毫秒再叫；agent 自己仍是函數，停著等是 aos-loop 提供的。放題照上面那行 push，答案照樣看 history。暫停＝`echo '{"cmd": "pause"}' > <工作區>/.stack/ctl.json`（不起下一格，新信留在 `queue/new/`；`state.json` 的 `phase` 變 `paused`），放行寫 `{"cmd": "resume"}`，收工寫 `{"cmd": "stop"}`（N-07；反應時間最多一個 `interval_ms`；格與格之間就看，一格跑到一半不打斷）。
 
 **換成 LiteLLM**：在那個工作區的 stack 寫一行名字，下次問腦就用它（agent-round § 4 endpoint）：
 
@@ -323,8 +323,8 @@ eca-claude/
 ```sh
 aos-exec --ws ~/code/myproj proto8/demo/eca-claude &     # PATH 要有 impls 的 aos-exec／aos-loop／aos-post、proto8/bin 的 aos-eca-turn、claude
 aos-say --ws ~/code/myproj 看一下 README 在講什麼 && aos-listen --ws ~/code/myproj
-echo '{"paused": true}' > ~/code/myproj/.stack/ctl.json     # 暫停：不餵下一則（新信留 queue/new/），粒度＝一則訊息
-echo '{"stopped": true}' > ~/code/myproj/.stack/ctl.json    # 收工
+echo '{"cmd": "pause"}' > ~/code/myproj/.stack/ctl.json      # 暫停：不餵下一則（新信留 queue/new/），粒度＝一則訊息
+echo '{"cmd": "stop"}' > ~/code/myproj/.stack/ctl.json       # 收工
 ```
 
 `aos-eca-turn` 一次答一批（11-03 起；原本一次一則）：`cur/` 沒答完的加上 `new/` 全部、照順序 → 每封一則 user 接進 history → 各封 content 用一個空行接起來、問 CLI 一次（畫面開著＝貼進 tmux 畫面等 hook；沒開＝`claude -p --resume <id>`，第一次開新的）→ assistant 接進 history → 收信；壞信丟掉、記進 `mailbox_warning.txt`（11-03 前記在 trace）；有人接在畫面上（`SessionBad`）＝這次不動、信留著下次再試（`--on-busy yield`；改 `answer`＝照常答、不退讓）。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就在定義放 `prompt.txt`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。接進畫面與歸檔（aos-eca）是第 6 步。測試 `test_eca.py`（範本）、`test_eca_turn.py`（aos-eca-turn）。

@@ -99,7 +99,7 @@ public:
     Daemon(const std::map<std::string, std::string>& opts, const std::string& spec, const std::vector<std::string>& args = {});
 
 protected:
-    void tend(const Json& ctl) override;
+    void tend() override;
     void finish() override;
     std::optional<std::string> check_ctl(Json& doc, const aos::Resolved& where) override;
     void write_more(const Json& me) override;   // loops_state.json（沒開＝不寫；有變才寫，11-02）

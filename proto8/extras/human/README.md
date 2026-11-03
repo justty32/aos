@@ -27,7 +27,7 @@ stack＝`--stack` ＞ `$AOS_STACK` ＞ `<工作區>/.stack/`（N-57）；工作�
 - **說**：`aos-say 話`＝`aos-post send --ordered <stack>/queue`，一封信的 body＝`{"role": "user", "content": 話}`（N-16 有順序的信箱；queue 還沒有就先建，可以先說、再跑 agent）。印的信號就是 `new/` 裡那封的名字（`<12 位序號>.<信號>`）。
 - **聽**：`aos-say 話 && aos-listen`（11-01 晚使用者定的正規用法，[thinking say-listen「11-01 晚」](../../thinking/2026-10-24-say-listen.md#11-01-晚使用者aos-say---aos-listen-才是正規用法)；不收信號參數）——等**最新那封**＝queue 的 `new/`、`cur/` 裡序號最大的（最後寄出的、或剛被認領的，不管誰寄的）：還在就等；不見了就印 history 最新那則回答（先 say 後 listen 不會漏）。`new/`、`cur/` 都空＝答案已經到了，直接印最新那則回答；history 也沒回答＝`QuestionUnknown`；信不見了卻沒有回答＝`AnswerMissing`；沒人在跑＝提醒一次信在 queue 的哪裡、怎麼跑，繼續等（10-30 晚的 `LetterUnclaimed` 靠 trace，11-03 隨它拿掉）。`--last N` 印最後 N 段就走、`--follow` 接著跟著看（一段＝問的話＋回答；11-01 晚起「跟著看」要明寫 `--follow`）。
 - **看**：11-03 起沒有快照指令（`aos-listen --status` 拿掉）；外部 coding agent 用 `aos-eca status`，aos agent 直接看 stack 的 `state.json`（aos-loop 的窗，`phase`）、`queue/`、`mailbox_warning.txt`。
-- **停**：寫 `<stack>/ctl.json`（aos-loop 的窗，N-07）：`{"paused": true}` 不起下一輪、`{"stopped": true}` 收工。
+- **停**：寫 `<stack>/ctl.json`（aos-loop 的窗，N-07）：`{"cmd": "pause"}` 不起下一輪、`{"cmd": "resume"}` 接著跑、`{"cmd": "stop"}` 收工（11-03 起 ctl 是一道指令；起來前就在的那份不算）。
 
 **舊協議的範本說不到**：agent-bob／ann／eve、topdown 這些 fsm 範本讀工作區的 `new/`、寫 `out/`（P-11 的 10-30 改口標「舊協議」），say／listen 不再認它們（say 之後拿它們跑，listen 會一直等、chat 會提醒「可能是舊協議」）；要用就手放 `<工作區>/new/<題名>`、`aos-exec` 跑、看 `out/`。走 queue、say／listen 說得到的範本是 [agent-nia](../../demo/README.md#agent-nia照-agent-round-的格組起來10-2810-30-改走-queue)（agent-dan 搬到 queue 的 agent-dan-q 11-02 晚隨 agent-dan 刪了）。
 

@@ -188,7 +188,7 @@ class T(unittest.TestCase):
                              "_entry": ["aos-loop", {"$env": "AOS_CF"}]})
         self.assertTrue(until(lambda: json.loads((self.s / "loops" / "b" / "state.json").read_text())["phase"] == "running"))
         pids = [r["pid"] for r in k.values()]
-        self.ctl({"stopped": True, "seq": 1})
+        self.ctl({"cmd": "stop", "seq": 1})
         out, err = p.communicate(timeout=30)
         st = self.state()
         self.assertEqual((p.returncode, err, st["phase"], st["ctl_seq"]), (0, "", "stopped", 1))
@@ -240,7 +240,7 @@ class T(unittest.TestCase):
         k = until(lambda: (self.s / "loops" / "b" / "starts").exists() and "a" not in self.kids() and self.kids())
         self.assertEqual(list(k), ["b"])
         self.assertFalse(alive(a_pid))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -290,7 +290,7 @@ class T(unittest.TestCase):
                          (os.path.join(cell, "loop.json"), cell, "/_entry"))
         self.assertEqual(json.loads((self.s / "loops" / "a" / "loop.json").read_text())["exec"],
                          [os.path.join(os.path.realpath(self.t), "long")])
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -329,7 +329,7 @@ class T(unittest.TestCase):
         p2 = self.start()
         time.sleep(1)
         self.assertEqual((self.kids()["a"]["pid"], len((self.s / "loops" / "a" / "starts").read_text().split())), (pid, 1))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p2.communicate(timeout=30)
         self.assertEqual((p2.returncode, alive(pid)), (0, False))
 
@@ -364,7 +364,7 @@ class T(unittest.TestCase):
         k2 = until(lambda: self.kids()["a"]["pid"] != old and self.kids())
         self.assertTrue(k2)
         self.assertTrue(until(lambda: len((self.s / "loops" / "a" / "starts").read_text().split()) == 2))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p2.communicate(timeout=30)
         self.assertEqual((p2.returncode, alive(k2["a"]["pid"])), (0, False))
 
@@ -395,7 +395,7 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: all((self.s / "loops" / n / "starts").exists() for n in ("state.json", "loops_state.json"))))
         self.assertEqual((self.kids()["a"]["pid"], alive(k["a"]["pid"]), ls["ctl_warning"]), (k["a"]["pid"], True, None))
         self.assertTrue((self.s / "state.json").is_file() and (self.s / "loops_state.json").is_file())
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err, self.state()["ctl_warning"]), (0, "", None))
 
@@ -419,7 +419,7 @@ class T(unittest.TestCase):
         kb = until(lambda: (self.s / "loops" / "b" / "starts").exists() and "b" in self.kids() and self.kids())
         sb = until(lambda: json.loads((self.s / "loops" / "b" / "state.json").read_text()))
         self.assertEqual(sb["pid"], kb["b"]["pid"])
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -507,7 +507,7 @@ class T(unittest.TestCase):
         self.assertEqual((before == after, events), (True, []))
         st = json.loads(after[0][0])
         self.assertEqual((st["phase"], st["counter_runs"] >= 1), ("waiting", True))   # counter_runs 是寫那一刻的快照
-        self.ctl({"stopped": True})   # ctl 變了（stopped）：寫
+        self.ctl({"cmd": "stop"})   # ctl 變了（stopped）：寫
         p.communicate(timeout=30)
         self.assertEqual((p.returncode, self.state()["phase"]), (0, "stopped"))
         self.assertNotEqual(self.state()["updated_at"], st["updated_at"])
@@ -525,7 +525,7 @@ class T(unittest.TestCase):
         fd = os.open(cell / "stderr.txt", os.O_RDONLY | os.O_NONBLOCK)
         try:
             self.assertTrue(until(lambda: (cell / "starts").exists() and self.kids()["x"]["phase"] == "running"))
-            self.ctl({"stopped": True})
+            self.ctl({"cmd": "stop"})
             p.communicate(timeout=30)
         finally:
             os.close(fd)
@@ -613,7 +613,7 @@ class T(unittest.TestCase):
         k = until(lambda: set(self.kids()) == {"a", "d"} and (self.s / "loops" / "d" / "starts").exists() and self.kids())
         self.assertTrue(k)
         self.assertEqual((k["a"]["pid"], (self.s / "loops" / "c").exists(), (self.s / "loops" / "e").exists()), (a2, False, False))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err), (0, ""))
         self.assertEqual([alive(x["pid"]) for x in k.values()], [False, False])
@@ -637,7 +637,7 @@ class T(unittest.TestCase):
         k = until(lambda: (self.s / "loops" / "c" / "starts").exists() and set(self.kids()) == {"a", "b", "c"} and self.kids())
         self.assertTrue(k)
         self.assertIsNone(self.lstate()["ctl_warning"])
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -659,7 +659,7 @@ class T(unittest.TestCase):
         left = sorted(x.name for x in (self.s / "loops_state_loops").iterdir())
         self.assertTrue(set(x.split("/")[1] for x in refs) <= set(left) and len(left) <= 4, left)   # 只留這次與上一次的
         self.assertFalse(any(x.startswith(".") for x in left), left)
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=60)
         self.assertEqual((p.returncode, err, self.lstate()["loops"], len(self.ended(out))), (0, "", {}, 101))
         # 子項名字跟分檔資料夾同名也照起（11-02 拿掉撞名：小格在 loops/<名字>/，分檔資料夾在頂層）
@@ -687,7 +687,7 @@ class T(unittest.TestCase):
         st = until(lambda: "$ref" not in self.lstate()["loops"] and len(self.lstate()["loops"]) == 99 and self.lstate())
         self.assertTrue(st)
         self.assertTrue(until(lambda: not (self.s / "loops_state_loops").exists()))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p2.communicate(timeout=60)
         self.assertEqual((p2.returncode, err), (0, ""))
         self.assertEqual([n for n, r in k.items() if alive(r["pid"])], [])
@@ -724,7 +724,7 @@ class T(unittest.TestCase):
             "c": {"exec": {"argv": ["echo", {"$ref": "data.json#/m"}], "stdout": {"$env": "AOS_STACK", "$path": "out"}}, "max": 1}}})
         self.assertTrue(until(lambda: all((self.s / "loops" / n / f).exists() for n, f in (("a", "seen"), ("b", "pwd"), ("c", "out")))
                               and self.kids() == {}))   # 11-02：結束的不留在表上
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         k = self.ended(out)
         self.assertEqual((p.returncode, err, {n: (r["phase"], r["code"]) for n, r in k.items()}),
@@ -743,7 +743,7 @@ class T(unittest.TestCase):
         until(lambda: self.state())
         self.lctl({"loops_added": {"x": {"exec": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/ran"; exit 3']}, "max": 2}}})
         self.assertTrue(until(lambda: (self.s / "loops" / "x" / "ran").exists() and "x" not in self.kids()))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         k = self.ended(out)
         self.assertEqual((p.returncode, err, k["x"]["code"], (self.s / "loops" / "x" / "ran").read_text()), (0, "", 3, "x\n"))
@@ -771,7 +771,7 @@ class T(unittest.TestCase):
         self.lctl({"loops": {"a": {"exec": {"$env": "AOS_CF"}, "max": 1}, "b": {"exec": {"$env": "AOS_CD", "$path": "p2"}, "max": 1},
                              "c": {"exec": {"$env": "AOS_CO"}, "max": 1}}})
         self.assertTrue(until(lambda: all((self.s / "loops" / n / "ran").exists() for n in "abc") and self.kids() == {}))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err), (0, ""))
         self.assertEqual({n: r["code"] for n, r in self.ended(out).items()}, {"a": 0, "b": 0, "c": 0})
@@ -807,7 +807,7 @@ class T(unittest.TestCase):
             {"deep": {"$ref": "sub/d4.json"}}, {"$env": "HOME"}]}
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": {"exec": unit, "max": 1}}})
         until(lambda: (self.s / "loops" / "a" / "loop.json").exists() and "a" not in self.kids())
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         real = os.path.realpath(self.t)
         x = json.loads((self.s / "loops" / "a" / "loop.json").read_text())["exec"]["x"]
@@ -847,7 +847,7 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: (self.s / "loops" / "b" / "starts").exists() and set(self.kids()) == {"a", "b"}))
         self.ctl({"seq": 2})   # 拿掉 loops* 的 ctl：提醒清掉
         self.assertTrue(until(lambda: self.state()["ctl_seq"] == 2 and self.state()["ctl_warning"] is None))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err), (0, ""))
 
@@ -862,7 +862,7 @@ class T(unittest.TestCase):
         self.assertTrue(st)
         ls = self.lstate()
         self.assertEqual((st["ctl_seq"], st["ctl_warning"], ls["ctl_seq"], ls["ctl_warning"]), (7, None, 3, None))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -875,7 +875,7 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: (self.s / "loops" / "b" / "starts").exists() and set(self.kids()) == {"a", "b"}))
         self.assertTrue(until(lambda: "不是 JSON" in (self.state()["ctl_warning"] or "")))
         self.assertEqual((self.lstate()["ctl_seq"], self.lstate()["ctl_warning"]), (1, None))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -883,7 +883,7 @@ class T(unittest.TestCase):
         # ctl.json paused＝整圈暫停：loops_ctl 的變動不生效（照讀、ctl_seq 照回），兩扇 state 照寫；解除暫停那圈才生效
         p = self.start({"state": "state.json", "ctl": "ctl.json", "loops": {"a": self.long()}})
         k = until(lambda: (self.s / "loops" / "a" / "starts").exists() and self.kids())
-        self.ctl({"paused": True, "seq": 1})
+        self.ctl({"cmd": "pause", "seq": 1})
         self.assertTrue(until(lambda: self.state()["phase"] == "paused"))
         self.lctl({"loops_added": {"b": self.long()}, "loops_removed": ["a"], "seq": 2})
         ls = until(lambda: self.lstate()["ctl_seq"] == 2 and self.lstate())
@@ -893,10 +893,10 @@ class T(unittest.TestCase):
         self.assertEqual(ls2["updated_at"], ls["updated_at"])   # 暫停中照讀 loops_ctl、seq 變了寫一次；之後沒變就不寫（11-02）
         self.assertEqual((list(ls2["loops"]), ls2["loops"]["a"]["phase"], alive(k["a"]["pid"]), (self.s / "loops" / "b").exists()),
                          (["a"], "running", True, False))
-        self.ctl({"seq": 3})   # 解除暫停：b 起、a 收掉
+        self.ctl({"cmd": "resume", "seq": 3})   # 解除暫停：b 起、a 收掉
         self.assertTrue(until(lambda: (self.s / "loops" / "b" / "starts").exists() and list(self.kids()) == ["b"]))
         self.assertFalse(alive(k["a"]["pid"]))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
@@ -959,11 +959,11 @@ class T(unittest.TestCase):
         return p
 
     def pause(self, seq):
-        self.ctl({"paused": True, "seq": seq})
+        self.ctl({"cmd": "pause", "seq": seq})
         self.assertTrue(until(lambda: self.state()["phase"] == "paused" and self.state()["ctl_seq"] == seq))
 
     def mstop(self, p):
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err), (0, ""))
 
@@ -978,14 +978,14 @@ class T(unittest.TestCase):
         time.sleep(1)
         self.assertEqual((sorted(x.name for x in (self.box() / "new").iterdir()), (self.s / "loops" / "bob").exists()),
                          (["0001", "0002"], False))
-        self.ctl({"seq": 2})   # 解除暫停：同一圈認領兩封，加了又刪＝bob 沒起
+        self.ctl({"cmd": "resume", "seq": 2})   # 解除暫停：同一圈認領兩封，加了又刪＝bob 沒起
         self.assertTrue(until(self.drained))
         time.sleep(0.6)
         self.assertEqual((list(self.kids()), (self.s / "loops" / "bob").exists()), (["a"], False))
         self.pause(3)
         self.post("0003", {"loops_removed": ["bob"]})   # 反過來：先刪後加＝bob 起
         self.post("0004", {"loops_added": {"bob": self.long()}})
-        self.ctl({"seq": 4})
+        self.ctl({"cmd": "resume", "seq": 4})
         self.assertTrue(until(lambda: (self.s / "loops" / "bob" / "starts").exists() and set(self.kids()) == {"a", "bob"}))
         self.assertTrue(until(self.drained))
         self.assertEqual(((self.box() / "done").exists(), self.lstate()["mailbox_warning"]), (False, None))   # 預設收掉、不留 done/
@@ -1021,7 +1021,7 @@ class T(unittest.TestCase):
         self.post("0003", {"loops_added": {"bob": self.long()}, "x": 1})      # 好信（不認得的 key 忽略）
         self.post("0004", {"loops_removed": "bob"})                           # 型別錯
         self.post("0005", None, raw="{not json")                              # letter.json 壞
-        self.ctl({"seq": 2})
+        self.ctl({"cmd": "resume", "seq": 2})
         self.assertTrue(until(lambda: (self.s / "loops" / "bob" / "starts").exists() and set(self.kids()) == {"a", "bob"}))
         self.assertTrue(until(self.drained))
         w = until(lambda: self.lstate()["mailbox_warning"])
@@ -1141,7 +1141,7 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: self.xkids() == {}, 20))
         self.assertGreater(time.monotonic() - t0, 9)
         self.assertEqual((alive(bpid), alive(bsleep)), (False, False))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err), (0, ""))
 
@@ -1165,7 +1165,7 @@ class T(unittest.TestCase):
         self.assertTrue(x)
         self.assertEqual((self.kids(), alive(k["a"]["pid"]), self.lstate()["ctl_warning"], self.lstate()["ctl_seq"]), ({}, False, None, 2))
         self.assertTrue(until(lambda: len((self.s / "loops" / "a" / "starts").read_text().split()) == 2))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err, self.ended(out, "execs")["a"]["phase"], self.ended(out)["a"]["phase"], alive(x["a"]["pid"])),
                          (0, "", "stopped", "stopped", False))   # loop 型的 a 被收掉、exec 型的 a 收工時收掉（log 各一行）
@@ -1184,7 +1184,7 @@ class T(unittest.TestCase):
         time.sleep(1)
         self.assertEqual((self.xkids()["a"]["pid"], self.kids()["l"]["pid"], len((self.s / "loops" / "a" / "starts").read_text().split())),
                          (pid, lpid, 1))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p2.communicate(timeout=30)
         e = self.ended(out, "execs")["a"]
         self.assertEqual((p2.returncode, err, e["phase"], e["pid"], alive(pid), alive(lpid)), (0, "", "stopped", pid, False, False))
@@ -1221,7 +1221,7 @@ class T(unittest.TestCase):
         self.assertEqual(self.xkids(), {})
         self.post("0003", {"execs_added": {"j": "job"}})   # 同名再加＝重新起（不用先 execs_removed）
         self.assertTrue(until(lambda: (self.s / "loops" / "j" / "runs").read_text() == "\n\n" and self.xkids() == {}))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err, self.upped(out, "execs"), [x["code"] for x in self.logs(out) if x["name"] == "j"]),
                          (0, "", ["j", "j"], [None, 3, None, 3]))
@@ -1238,7 +1238,7 @@ class T(unittest.TestCase):
         rows = rows_of(self.s, st, "execs")
         self.assertEqual((list(rows), {x["phase"] for x in rows.values()}), (names, {"running"}))
         self.assertEqual(directive(st, self.s)["execs"], rows)
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=60)
         self.assertEqual((p.returncode, err, self.lstate()["execs"], len(self.ended(out, "execs"))), (0, "", {}, 101))
 
@@ -1278,7 +1278,7 @@ class T(unittest.TestCase):
         self.lctl({"loops_added": {"x": self.quick()}, "seq": 3})   # 再放回＝照常起
         self.assertTrue(until(lambda: self.lstate()["ctl_seq"] == 3))
         time.sleep(0.6)
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err, self.upped(out), [x["phase"] for x in self.logs(out)]),
                          (0, "", ["x", "x"], ["running", "done", "running", "done"]))
@@ -1292,7 +1292,7 @@ class T(unittest.TestCase):
         self.assertEqual(((self.s / "loops" / "x" / "ran").read_text(), set(self.kids())), ("x\n", {"a"}))
         self.post("0002", {"loops_added": {"x": {"exec": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/ran"']}, "max": 1}}})
         self.assertTrue(until(lambda: (self.s / "loops" / "x" / "ran").read_text() == "x\nx\n" and set(self.kids()) == {"a"}))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err, self.upped(out), {n: r["phase"] for n, r in self.ended(out).items()}),
                          (0, "", ["a", "x", "x"], {"x": "done", "a": "stopped"}))
@@ -1388,7 +1388,7 @@ class T(unittest.TestCase):
         self.lctl({"execs": {"e2": "long"}, "loops": {"e2": self.long()}, "seq": 3})
         w = until(lambda: "同時在 loops 與 execs" in (self.lstate()["ctl_warning"] or ""))
         self.assertTrue(w)
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         self.assertEqual((p.returncode, err, sorted(self.ended(out, "execs"))), (0, "", ["e1", "e2"]))
 
@@ -1408,7 +1408,7 @@ class T(unittest.TestCase):
         self.assertTrue(until(lambda: (self.t / "j.out").exists() and self.lstate()["ctl_seq"] == 1 and self.xkids() == {}))
         self.post("0001", {"execs_added": {"k": {"exec": {"argv": ["true"]}, "ws": "."}}})
         self.assertTrue(until(lambda: (self.s / "loops" / "k" / "exec.json").exists() and self.drained() and self.xkids() == {}))
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         out, err = p.communicate(timeout=30)
         e = self.ended(out, "execs")
         self.assertEqual((p.returncode, err, (self.t / "j.out").read_text(), {n: x["code"] for n, x in e.items()}),
@@ -1439,7 +1439,7 @@ class T(unittest.TestCase):
         a = (self.s / "state.json").read_text()
         time.sleep(1.2)
         self.assertEqual((self.s / "state.json").read_text(), a)
-        self.ctl({"stopped": True})
+        self.ctl({"cmd": "stop"})
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 

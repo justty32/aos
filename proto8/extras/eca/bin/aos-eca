@@ -27,7 +27,7 @@ add：名字沒給＝XXX 的資料夾名；--ws 沒給＝cwd（就是 claude 的
   這個名字，或小格 <daemon>/loops/<名字>/ 還在（停了、收工了、出錯停了的）——換 --name，或先 aos-eca rm；要接著用停了的那隻＝aos-eca start。
 「一隻外部 agent」＝daemon 的 loops 表上、小格裡有 eca.json 的（aos-eca-turn 每次跑都寫：kind、ws、template〔＝eca 資料夾〕）；add 之後子 loop 跑第一次才有。
   11-02 起子項結束 daemon 就從表上拿掉（不留 done 列）：表上沒有、小格在（有 eca.json）的照樣列，狀態看小格的 state.json（子 loop 自己的窗）：
-  done 而且結束碼不是 0＝「出錯停了」；done／stopped 而且結束碼 0（例如外部寫了小格 ctl.json {"stopped": true} 收工，11-02 晚）＝「收工了」；
+  done 而且結束碼不是 0＝「出錯停了」；done／stopped 而且結束碼 0（例如外部寫了小格 ctl.json {"cmd": "stop"} 收工，11-02 晚；11-03 起 ctl 是指令）＝「收工了」；
   其他（stop 或 aos-daemon-ctl rm 拿掉的，stopped＋非 0；state.json 不在）＝「停了」（11-02 晚第二輪）。這三種都用 start 掛回。
   start 掛回之前，小格 ctl 窗裡殘留的 stopped 先拿掉（只拿這個 key），免得新的子 loop 一起來就收工。
 CLI 的小格＝<daemon>/loops/<名字>/<kind>/（cli_session 的 session.txt、tty.sock、live.jsonl、transcripts/）。
@@ -255,40 +255,12 @@ def gone(name):
     return not rows or all(r.get("phase") in ("done", "stopped") for r in rows)
 
 
-def clear_stopped(cell, template):
-    """小格的 ctl 窗（定義 loop.json 的 ctl，相對小格）有 stopped 就只拿掉這個 key（常駐 bob install 那條代定）：
-    沒別的 key＝刪檔，有＝先寫 .名字 再改名。檔不在、讀不懂、定義沒寫 ctl＝不動。"""
-    try:
-        with open(os.path.join(template, "loop.json"), encoding="utf-8") as f:
-            text = f.read()
-        if text.startswith("#!"):
-            text = text.split("\n", 1)[1] if "\n" in text else ""
-        name = json.loads(text).get("ctl")
-        if not isinstance(name, str) or not name:
-            return
-        p = os.path.join(cell, name)
-        with open(p, encoding="utf-8") as f:
-            c = json.load(f)
-        if not isinstance(c, dict) or "stopped" not in c:
-            return
-        del c["stopped"]
-        if not c:
-            os.unlink(p)
-            return
-        tmp = os.path.join(os.path.dirname(p), "." + os.path.basename(p))
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(c, f, ensure_ascii=False)
-        os.replace(tmp, p)
-    except (OSError, ValueError, AttributeError):
-        pass
-
-
 def hang(ws, name, xxx):
-    """掛上（aos-daemon-ctl add）；之前先拿掉小格殘留的 stopped（start 掛回時才會有）。
+    """掛上（aos-daemon-ctl add）。小格殘留的 {"cmd": "stop"} 不用清（11-03 ctl 改指令：子 loop 起來第一次讀的 ctl 當基準線、不執行；
+    原本的 clear_stopped 拿掉）。
     之後等 daemon 把它放上表（信是下一圈才套；11-03 起對它說話要 aos-daemon-ctl where，只認表上的）——
     或小格的 state.json 在這之後動過（起來又馬上結束、已經下表）。回小格。"""
     cell = os.path.join(daemon_dir(), "loops", name)
-    clear_stopped(cell, xxx)
     t0 = time.time()
     ctl("add", "--ws", ws, "--name", name, xxx)
 

@@ -1,11 +1,13 @@
 // window.cpp：【engine】ctl／state 兩扇窗（NORMS N-06～N-09、N-17、N-32、N-33）。
 //
-//   read_ctl      回最後一份好的 ctl（一份都沒讀到過＝{}）。認 paused、stopped（布林）、max、interval_ms、seq（非負整數），
-//                 加上子類別的 check_ctl；其他 key 忽略。指示詞先解（resolve_keys；10-23 晚）。讀到壞的（讀不了、不是 JSON 物件、
-//                 型別不對、指示詞解不開）整份不採用、
-//                 維持上一份好的，原因記 ctl_warning（N-08）；讀到好的清回 null（check_ctl 填了 ctl_note_＝那一句）。檔不在＝還沒人寫，維持上一份好的、
-//                 不算問題（ctl_warning 不動）
-//   write_state   state 一份：phase、counter_runs（跑過幾次；10-25 原 runs、同日再改 counter_runs）、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 蓋過設定檔之後）
+//   read_ctl      ctl＝一道指令（11-03，thinking 2026-11-03-ctl-commands）：認 cmd（"pause"／"resume"／"stop"）、max、interval_ms（非負整數或 null）、
+//                 seq（非負整數），加上子類別的 check_ctl；其他 key 忽略。指示詞先解（resolve_keys；10-23 晚）。
+//                 新舊比內容：這次讀到的跟上一次讀到的一樣＝同一道、不再做；不一樣才照做一次（pause／resume 改 paused_、stop 設 stopping_、
+//                 max／interval_ms 寫了才改、null 回設定檔的值；ctl_seq 回音這道的 seq）。起來第一次讀到的＝基準線、不執行（殘留的 stop 不會讓新起的退）。
+//                 讀到新的壞的（讀不了、不是 JSON 物件、型別不對、cmd 不認得、指示詞解不開）整份不採用、維持原狀，原因記 ctl_warning（N-08）；
+//                 照做了一道好的清回 null（check_ctl 填了 ctl_note_＝那一句）。檔不在＝沒有新指令、維持原狀（之後再寫的一律算新的）。讀的人不刪不改 ctl
+//   read_old_paused  起來時：開了 state 窗、舊的 state.json 是物件而且 paused 是 true＝起來先暫停（11-03 代定，使用者四態「繼續暫停」）；其他欄位不接
+//   write_state   state 一份：phase、counter_runs（跑過幾次；10-25 原 runs、同日再改 counter_runs）、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 的指令改過之後）
 //                 ＋info()＋code（結束時）＋proc_fields＋updated_at（11-02：kind、recorded_at 拿掉，updated_at 最後一欄）；沒開 state 窗就不寫；
 //                 有變才寫（11-02）：組好的這份（不含 updated_at、counter_runs；running／waiting 互換當沒變，11-02 晚）跟上一份寫出去的一樣就不碰檔；第一份、帶 code 的一定寫；
 //                 接著呼叫 write_more（子類別的窗，自己比有沒有變；10-29）。11-02 拿掉 beat（每秒的心跳）
@@ -107,57 +109,107 @@ static std::optional<std::string> check_base(const Json& doc) {
     if (!doc.is_object()) {
         return "要是 JSON 物件";
     }
-    const char* bools[2] = {"paused", "stopped"};
-    for (const char* k : bools) {
-        if (doc.contains(k) && !doc[k].is_boolean()) {
-            return std::string(k) + " 要是 true／false";
+    if (doc.contains("cmd")) {
+        const Json& c = doc["cmd"];
+        if (!c.is_string() || (c != "pause" && c != "resume" && c != "stop")) {
+            return "cmd 要是 \"pause\"、\"resume\" 或 \"stop\"";
         }
     }
-    const char* nats[3] = {"max", "interval_ms", "seq"};
+    const char* nats[2] = {"max", "interval_ms"};   // null＝回設定檔的值（11-03）
     for (const char* k : nats) {
-        if (doc.contains(k) && !is_nat(doc[k])) {
-            return std::string(k) + " 要是非負整數";
+        if (doc.contains(k) && !doc[k].is_null() && !is_nat(doc[k])) {
+            return std::string(k) + " 要是非負整數或 null";
         }
+    }
+    if (doc.contains("seq") && !is_nat(doc["seq"])) {
+        return "seq 要是非負整數";
     }
     return std::nullopt;
 }
 
-Json Loop::read_ctl() {
+void Loop::read_ctl() {
     if (ctl_path_.empty()) {
-        return ctl_good_;
+        return;
     }
+    // 新舊比內容（11-03）：seen＝這次讀到的（好的＝解完那份的字串；壞的＝"!"＋原文；檔不在＝空）。
+    // 第一次讀＝基準線：記下來、不執行、不提醒。
+    bool first = !ctl_seen_;
+    ctl_seen_ = true;
     int err = 0;
     std::optional<std::string> text = aos::read_file(ctl_path_, err);
     if (!text) {
-        if (err != ENOENT) {
+        std::string seen = err == ENOENT ? std::string() : "!" + std::to_string(err);
+        bool fresh = seen != ctl_last_;
+        ctl_last_ = seen;
+        if (!first && fresh && err != ENOENT) {
             ctl_warning_ = std::string("ctl 讀不了或不是 JSON：") + std::strerror(err);
         }
-        return ctl_good_;
+        return;   // 檔不在＝沒有新指令（之後再寫的都算新的）
     }
     Json doc = Json::parse(*text, nullptr, false);
-    if (doc.is_discarded()) {
-        ctl_warning_ = "ctl 讀不了或不是 JSON：" + ctl_path_;
-        return ctl_good_;
-    }
     std::optional<std::string> bad;
-    try {   // 指示詞（10-23 晚）：相對 $ref 從 ctl 所在的資料夾算；解不開＝整份不採用（N-08）
-        aos::Resolved r = resolve_keys(doc, aos::dirname(ctl_path_), {"paused", "stopped", "max", "interval_ms", "seq"});
-        doc = std::move(r.value);
-        bad = check_base(doc);
-        if (!bad) {
-            ctl_note_.clear();
-            bad = check_ctl(doc, r);
+    std::string seen = "!" + *text;
+    if (doc.is_discarded()) {
+        bad = "讀不了或不是 JSON：" + ctl_path_;
+    } else {
+        try {   // 指示詞（10-23 晚）：相對 $ref 從 ctl 所在的資料夾算；解不開＝整份不採用（N-08）
+            aos::Resolved r = resolve_keys(doc, aos::dirname(ctl_path_), {"cmd", "max", "interval_ms", "seq"});
+            doc = std::move(r.value);
+            bad = check_base(doc);
+            if (!bad) {
+                ctl_note_.clear();
+                bad = check_ctl(doc, r);
+            }
+        } catch (const Error& e) {
+            bad = "指示詞解不開：" + e.msg;
         }
-    } catch (const Error& e) {
-        bad = "指示詞解不開：" + e.msg;
+        if (!bad) {
+            seen = aos::dumps(doc);
+        }
+    }
+    if (seen == ctl_last_) {
+        return;   // 同一道（或同一份壞的）：不再做
+    }
+    ctl_last_ = seen;
+    if (first) {
+        return;   // 基準線：起來前就在的那份當已經看過
     }
     if (bad) {
-        ctl_warning_ = "ctl 不採用：" + *bad;
-        return ctl_good_;
+        ctl_warning_ = (doc.is_discarded() ? "ctl " : "ctl 不採用：") + *bad;
+        return;
     }
-    ctl_good_ = doc;
-    ctl_warning_ = ctl_note_.empty() ? Json() : Json(ctl_note_);   // 採用了但子類別要提醒的（10-29 daemon 過渡期）
-    return ctl_good_;
+    // 照做一次。stop 壓過同一道裡的其他東西（N-07 stopped 壓過 paused，11-03 照舊）
+    std::string cmd = doc.contains("cmd") ? doc["cmd"].get<std::string>() : "";
+    if (cmd == "stop") {
+        stopping_ = true;
+    } else if (cmd == "pause") {
+        paused_ = true;
+    } else if (cmd == "resume") {
+        paused_ = false;
+    }
+    if (doc.contains("max")) {
+        max_ = doc["max"].is_null() ? max_base_ : std::optional<long long>(doc["max"].get<long long>());
+    }
+    if (doc.contains("interval_ms")) {
+        interval_ms_ = doc["interval_ms"].is_null() ? interval_base_ : doc["interval_ms"].get<long long>();
+    }
+    ctl_seq_ = doc.contains("seq") ? doc["seq"] : Json();
+    ctl_warning_ = ctl_note_.empty() ? Json() : Json(ctl_note_);   // 照做了但子類別要提醒的（10-29 daemon 過渡期）
+}
+
+void Loop::read_old_paused() {
+    if (state_path_.empty()) {
+        return;
+    }
+    int err = 0;
+    std::optional<std::string> text = aos::read_file(state_path_, err);
+    if (!text) {
+        return;
+    }
+    Json old = Json::parse(*text, nullptr, false);
+    if (old.is_object() && old.contains("paused") && old["paused"] == true) {
+        paused_ = true;
+    }
 }
 
 void Loop::write_state(const std::string& phase, const Json& code) {
@@ -175,20 +227,13 @@ void Loop::write_state(const std::string& phase, const Json& code) {
 }
 
 void Loop::write_main(const std::string& phase, const Json& code, const Json& me) {
-    const Json& c = ctl_now_;
     Json doc = Json::object();
     doc["phase"] = phase;
     doc["counter_runs"] = runs_;
-    if (c.contains("max")) {
-        doc["max"] = c["max"];
-    } else if (max_) {
-        doc["max"] = *max_;
-    } else {
-        doc["max"] = nullptr;
-    }
-    doc["interval_ms"] = c.contains("interval_ms") ? c["interval_ms"] : Json(interval_ms_);
-    doc["paused"] = c.contains("paused") ? c["paused"] : Json(false);
-    doc["ctl_seq"] = c.contains("seq") ? c["seq"] : Json();
+    doc["max"] = max_ ? Json(*max_) : Json();
+    doc["interval_ms"] = interval_ms_;
+    doc["paused"] = paused_;
+    doc["ctl_seq"] = ctl_seq_;
     doc["ctl_warning"] = ctl_warning_;
     Json more = info();
     for (auto& [k, v] : more.items()) {

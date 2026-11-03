@@ -11,7 +11,7 @@
 //   loop_cli        命令列 `程式 [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] 設定檔 [-- 參數...]`（aos-loop、aos-daemon 共用）
 //   add_args        `-- 參數...` 接到 exec 後面（11-02 晚）
 //   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；10-21 傍晚）：
-//                   讀設定（旗標 ＞ 設定檔 ＞ 預設：exec／max／interval_ms／ctl／state）、每次讀 ctl 窗 → tend() → 跑一次 → 寫 state 窗（＋write_more；11-02 起有變才寫）、
+//                   讀設定（旗標 ＞ 設定檔 ＞ 預設：exec／max／interval_ms／ctl／state）、每次讀 ctl 窗（11-03 起一道指令、新的才照做）→ tend() → 跑一次 → 寫 state 窗（＋write_more；11-02 起有變才寫）、
 //                   --enable-logs 時每跑完一次在 stdout 印一行 log（11-02；11-02 晚改預設不印）
 //   write_window    窗的寫法：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
 //   proc_fields     state 裡「這支程式是誰」的欄位 {pid, started_at_ticks, boot_id}（11-02 原 heartbeat：心跳拿掉、recorded_at 收掉）
@@ -148,9 +148,13 @@ struct Defaults {
 // ctl、state 寫 null＝不開（同沒寫）。
 // 其他 key 忽略（body、_entry…）。設定壞丟 Error（CfgMissing、CfgBad、StackMissing；指示詞解不開 DirectiveBad）。
 // 指示詞（10-23 晚）：設定檔整份先換一層，上面五格整個解（resolve_keys，起點＝設定檔的資料夾；exec 走 resolve_exec，單子裡面不解）；ctl 整份先換一層，
-// paused／stopped／max／interval_ms／seq 整個解（起點＝ctl 的資料夾），子類別多認的 key 在 check_ctl 裡自己解；ctl 解不開＝整份不採用。
-// 每次：有排著的訊號 → 結束 128＋N；讀 ctl（認 paused、stopped、max、interval_ms、seq＋子類別多認的）→ tend() →
-// stopped 就結束（0）、跑滿就結束（0）→ paused 或還沒到時間就睡一下（最多 1 秒，收到訊號就醒）回頭再看 →
+// cmd／max／interval_ms／seq 整個解（起點＝ctl 的資料夾），子類別多認的 key 在 check_ctl 裡自己解；ctl 解不開＝整份不採用。
+// ctl＝一道指令（11-03 使用者「還是用指令吧」，thinking 2026-11-03-ctl-commands）：{"cmd": "pause"／"resume"／"stop", "max", "interval_ms", "seq"}，
+// 都選填；max／interval_ms 寫了＝從現在起用它、null＝回設定檔（旗標）的值、沒寫＝不動；seq 只回音（state 的 ctl_seq）。
+// 新舊比內容：解完的那份跟上一次讀到的不一樣才照做一次；起來第一次讀到的（含檔不在）當基準線、不執行；檔不見了＝之後寫的都算新的。
+// 暫停中記在 paused_（state 的 paused）；起來時開了 state 窗、舊的 state.json 的 paused 是 true＝起來先暫停（11-03 代定「繼續暫停」）。
+// 每次：有排著的訊號 → 結束 128＋N；讀 ctl（新的指令才照做）→ tend() →
+// stop 過就結束（0）、跑滿就結束（0）→ 暫停中或還沒到時間就睡一下（最多 1 秒，收到訊號就醒）回頭再看 →
 // 跑一次：0＝下一次、10＝結束（0）、其他非 0＝stderr 一行、以那個碼結束；跑的期間收到訊號＝收完以 128＋N 結束。
 // 沒有身體（exec 沒寫，daemon 純監工）：一輪＝讀 ctl → tend → 算一次 → 寫一份 waiting → 睡到下一次，一輪只讀一次 ctl、
 // 只 tend 一次、最多寫一次 state、不寫 running（那一刻沒東西在跑）；11-02 起 counter_runs 不算變動，所以睡著的 daemon 窗不動（10-23 壓測）。
@@ -179,7 +183,7 @@ public:
 
 protected:
     // 子類別蓋這五個
-    virtual void tend(const Json& ctl);                              // 每次讀完 ctl 後
+    virtual void tend();                                             // 每次讀完 ctl 後（這時 paused_／stopping_ 已照新指令改好）
     virtual void finish();                                           // 結束前（不論為什麼結束）
     virtual Json info();                                             // 寫進 state 的額外欄位（物件）
     // ctl 多認的 key：解自己那幾格的指示詞（起點 base＝ctl 換完一層後的起點）、驗證，可以就地改寫 doc（回原因＝不採用；
@@ -213,18 +217,24 @@ protected:
     std::string state_path_;      // 空＝不開
     std::string ctl_note_;        // check_ctl 填：採用了但要提醒的一句（空＝沒有；read_ctl 每次呼叫 check_ctl 前清掉）
     bool log_ = false;            // 印 log（--enable-logs＝true；印不了變回 false）
+    bool paused_ = false;         // 暫停中（ctl 的 pause／resume 改它；起來時可能從舊 state 接，11-03）
+    bool stopping_ = false;       // 收到過 stop（這次跑完以 0 結束，11-03）
 
 private:
     int main_loop();
     int end(int code, const std::string& phase);
-    Json read_ctl();
+    void read_ctl();              // 讀 ctl：新的指令才照做（改 paused_、stopping_、max_、interval_ms_、ctl_seq_）
+    void read_old_paused();       // 起來時：舊 state.json 的 paused 是 true＝先暫停（11-03 代定）
     void write_main(const std::string& phase, const Json& code, const Json& me);   // write_state 的 state 窗那份（有變才寫）
     int signal_got();             // 第一個收到的訊號（記住；0＝沒有）
     void nap(double secs);        // 睡 secs 秒（最多 1 秒），收到訊號就提早醒
 
     long long runs_ = 0;
-    Json ctl_now_ = Json::object();
-    Json ctl_good_ = Json::object();
+    std::optional<long long> max_base_;   // 設定檔（旗標）的 max：ctl 寫 null 回這個
+    long long interval_base_ = 0;         // 設定檔（旗標）的 interval_ms：ctl 寫 null 回這個
+    bool ctl_seen_ = false;       // 讀過第一次 ctl 沒（第一次＝基準線、不執行）
+    std::string ctl_last_;        // 上一次讀到的 ctl（比新舊用：好的＝解完那份的字串、壞的＝"!"＋原文、檔不在＝空）
+    Json ctl_seq_;                // 最後一道照做的指令的 seq（null＝沒帶或還沒有）
     Json ctl_warning_;           // null 或字串
     int got_ = 0;
     bool wrote_ = false;          // 寫過 state 窗沒（啟動後第一份一定寫）

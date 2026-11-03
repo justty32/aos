@@ -488,9 +488,9 @@ bool Daemon::settle(Child& c) {
     return false;
 }
 
-void Daemon::tend(const Json& loop_ctl) {
+void Daemon::tend() {
     read_loops_ctl();   // 每圈先讀 ctl.json（Loop）、再讀 loops_ctl.json；停著、暫停也照讀
-    if (loop_ctl.value("stopped", false) || loop_ctl.value("paused", false)) {
+    if (stopping_ || paused_) {   // ctl 的 stop／pause（11-03 起是指令，Loop 照做完放在這兩格）
         // 這圈收工／整圈暫停（10-29 medium-plan § 四 2）：不調表，只看一眼——自己結束的記 done、收的途中的照收；結束的印 log、拿掉（11-02）
         for (auto it = table_.begin(); it != table_.end();) {
             auto& [n, c] = *it;

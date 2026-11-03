@@ -344,6 +344,26 @@ def count():
     return {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"']}
 
 
+def count_then(s, plan):
+    """跟 count() 一樣每次記一筆 laps；第 n 次跑的時候把 plan[n] 寫進 $AOS_STACK/ctl.json（11-03 ctl 是指令、起來前就在的當基準線不執行，
+    所以要在跑的途中寫：loop 每跑完一次讀一次 ctl，第 n 次寫的在第 n＋1 次之前照做）。plan 的值是 dict（寫成 JSON）或字串（原樣）。"""
+    for n, doc in plan.items():
+        (s / ("at_%d.json" % n)).write_text(doc if isinstance(doc, str) else json.dumps(doc))
+    return {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/laps"; n=$(wc -l < "$AOS_STACK/laps"); '
+                                 'if [ -f "$AOS_STACK/at_$n.json" ]; then cp "$AOS_STACK/at_$n.json" "$AOS_STACK/ctl.json"; fi']}
+
+
+def laps(s):
+    return len((s / "laps").read_text().split()) if (s / "laps").exists() else 0
+
+
+def put_ctl(s, doc):
+    """跑的途中從外面寫 ctl（先寫暫存再改名，N-05）。"""
+    tmp = s / ".ctl.json"
+    tmp.write_text(json.dumps(doc))
+    os.replace(tmp, s / "ctl.json")
+
+
 def run_loop(t, cfg, env=None, log=False):
     loop(t, cfg)
     return subprocess.run([BIN, *(["--enable-logs"] if log else []), "loop.json"], cwd=t, env=env_of(env), capture_output=True,
@@ -400,51 +420,163 @@ def interval_spaces_laps(t):
 
 
 @case
-def ctl_stopped_and_seq(t):
+def ctl_stop_and_seq(t):
+    # 11-03 ctl 是指令：第 1 次跑的時候寫 {"cmd": "stop", "seq": 7}＝不起下一次、以 0 結束、ctl_seq 回音 7
     s = stack(t)
-    (s / "ctl.json").write_text(json.dumps({"stopped": True, "seq": 7}))
-    r = run_loop(t, {"exec": count(), "max": 3, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
+    r = run_loop(t, {"exec": count_then(s, {1: {"cmd": "stop", "seq": 7}}), "max": 3, "ctl": "ctl.json", "state": "state.json"},
+                 {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
-    check("ctl stopped＋seq", (r.returncode, r.stderr, st["phase"], st["counter_runs"], st["ctl_seq"], (s / "laps").exists()),
-          (0, "", "stopped", 0, 7, False))
+    check("ctl stop＋seq", (r.returncode, r.stderr, st["phase"], st["counter_runs"], st["ctl_seq"], st["code"], laps(s)),
+          (0, "", "stopped", 1, 7, 0, 1))
+
+
+@case
+def ctl_stop_wins(t):
+    # stop 壓過同一道裡的其他東西（N-07）
+    s = stack(t)
+    r = run_loop(t, {"exec": count_then(s, {1: {"cmd": "stop", "max": 5}}), "max": 3, "ctl": "ctl.json", "state": "state.json"},
+                 {"AOS_STACK": str(s)})
+    st = json.loads((s / "state.json").read_text())
+    check("stop 壓過 max", (r.returncode, st["phase"], laps(s)), (0, "stopped", 1))
 
 
 @case
 def ctl_max_overrides(t):
     s = stack(t)
-    (s / "ctl.json").write_text(json.dumps({"max": 1}))
-    r = run_loop(t, {"exec": count(), "max": 5, "ctl": "ctl.json"}, {"AOS_STACK": str(s)})
-    check("ctl 的 max 蓋過設定", (r.returncode, len((s / "laps").read_text().split())), (0, 1))
+    r = run_loop(t, {"exec": count_then(s, {1: {"max": 2}}), "max": 5, "ctl": "ctl.json"}, {"AOS_STACK": str(s)})
+    check("ctl 的 max 蓋過設定", (r.returncode, laps(s)), (0, 2))
+
+
+@case
+def ctl_max_null_back_to_cfg(t):
+    # 11-03：max 寫了才動、寫 null＝回設定檔的值；沒寫＝不動（第 2 道只帶 seq，max 照第 1 道的 10）
+    s = stack(t)
+    r = run_loop(t, {"exec": count_then(s, {1: {"max": 10}, 2: {"seq": 1}, 4: {"max": None, "seq": 2}}), "max": 3,
+                     "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
+    st = json.loads((s / "state.json").read_text())
+    check("max null 回設定、沒寫不動", (r.returncode, laps(s), st["max"], st["ctl_seq"], st["phase"]), (0, 4, 3, 2, "done"))
+    b = Path(t, "b")
+    b.mkdir()
+    s2 = stack(b)
+    r = run_loop(b, {"exec": count_then(s2, {1: {"interval_ms": 0}, 2: {"interval_ms": None}}), "max": 3,
+                     "interval_ms": 7, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s2)})
+    st = json.loads((s2 / "state.json").read_text())
+    check("interval_ms null 回設定", (r.returncode, laps(s2), st["interval_ms"]), (0, 3, 7))
+
+
+@case
+def ctl_leftover_is_baseline(t):
+    # 起來前就在的 ctl＝基準線、不執行：殘留的 stop 不會讓新起的馬上退、殘留的 pause 不會讓它暫停（舊的 stopped 照 C-48 忽略）
+    s = stack(t)
+    for doc in ({"cmd": "stop", "seq": 3}, {"cmd": "pause"}, {"stopped": True}):
+        (s / "ctl.json").write_text(json.dumps(doc))
+        if (s / "laps").exists():
+            (s / "laps").unlink()
+        r = run_loop(t, {"exec": count(), "max": 2, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
+        st = json.loads((s / "state.json").read_text())
+        check("殘留 %r 當基準線" % doc, (r.returncode, r.stderr, st["phase"], laps(s), st["ctl_seq"], st["paused"]),
+              (0, "", "done", 2, None, False))
 
 
 @case
 def bad_ctl_kept_last_good(t):
     s = stack(t)
-    (s / "ctl.json").write_text(json.dumps({"max": "two"}))
-    r = run_loop(t, {"exec": count(), "max": 2, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
+    r = run_loop(t, {"exec": count_then(s, {1: {"max": "two"}}), "max": 2, "ctl": "ctl.json", "state": "state.json"},
+                 {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
-    check("壞 ctl 不採用、記 ctl_warning", (r.returncode, r.stderr, len((s / "laps").read_text().split()),
-                                       "max" in (st["ctl_warning"] or "")), (0, "", 2, True))
-    (s / "ctl.json").write_text("{nope")
-    r = run_loop(t, {"exec": count(), "max": 1, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
+    check("壞 ctl 不採用、記 ctl_warning", (r.returncode, r.stderr, laps(s), "max" in (st["ctl_warning"] or "")), (0, "", 2, True))
+    (s / "laps").unlink()
+    r = run_loop(t, {"exec": count_then(s, {1: "{nope"}), "max": 2, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
-    check("ctl 不是 JSON", (r.returncode, "JSON" in (st["ctl_warning"] or "")), (0, True))
+    check("ctl 不是 JSON", (r.returncode, laps(s), "JSON" in (st["ctl_warning"] or "")), (0, 2, True))
+    (s / "laps").unlink()
+    r = run_loop(t, {"exec": count_then(s, {1: {"cmd": "sleep"}}), "max": 2, "ctl": "ctl.json", "state": "state.json"},
+                 {"AOS_STACK": str(s)})
+    st = json.loads((s / "state.json").read_text())
+    check("cmd 不認得＝不採用", (r.returncode, laps(s), "cmd" in (st["ctl_warning"] or "")), (0, 2, True))
+    (s / "laps").unlink()
+    r = run_loop(t, {"exec": count_then(s, {1: {"cmd": "sleep"}, 2: {"cmd": "resume", "seq": 1}}), "max": 3, "ctl": "ctl.json",
+                     "state": "state.json"}, {"AOS_STACK": str(s)})
+    st = json.loads((s / "state.json").read_text())
+    check("下一道好的清掉 ctl_warning", (r.returncode, laps(s), st["ctl_warning"], st["ctl_seq"]), (0, 3, None, 1))
 
 
 @case
 def ctl_pause_then_resume(t):
     s = stack(t)
-    (s / "ctl.json").write_text(json.dumps({"paused": True}))
+    loop(t, {"exec": count_then(s, {1: {"cmd": "pause"}}), "max": 2, "ctl": "ctl.json", "state": "state.json"})
+    p = start(t, {"AOS_STACK": str(s)})
+    got = until_phase(s / "state.json", "paused")
+    time.sleep(0.3)
+    st = json.loads((s / "state.json").read_text())
+    ran = laps(s)
+    put_ctl(s, {"cmd": "resume", "seq": 2})
+    out, err = p.communicate(timeout=20)
+    end = json.loads((s / "state.json").read_text())
+    check("ctl pause 再 resume", (got, st["paused"], ran, p.returncode, err, laps(s), end["paused"], end["ctl_seq"]),
+          (True, True, 1, 0, "", 2, False, 2))
+
+
+@case
+def ctl_same_command_not_redone(t):
+    # 同一道（內容一樣）不再做、改了內容才是新的：暫停中把 ctl 重寫成一模一樣的 pause（不動）再改成 resume（動）；
+    # 之後身體在第 2 次又寫一份一模一樣的 resume，照常跑完
+    s = stack(t)
+    loop(t, {"exec": count_then(s, {1: {"cmd": "pause"}, 2: {"cmd": "resume", "seq": 5}}), "max": 3, "ctl": "ctl.json",
+             "state": "state.json"})
+    p = start(t, {"AOS_STACK": str(s)})
+    got = until_phase(s / "state.json", "paused")
+    put_ctl(s, {"cmd": "pause"})
+    time.sleep(1.3)
+    still = json.loads((s / "state.json").read_text())["phase"]
+    put_ctl(s, {"cmd": "resume", "seq": 5})
+    out, err = p.communicate(timeout=20)
+    end = json.loads((s / "state.json").read_text())
+    check("同一道不重做、改內容才做", (got, still, p.returncode, laps(s), end["phase"], end["ctl_seq"]),
+          (True, "paused", 0, 3, "done", 5))
+
+
+@case
+def ctl_later_writer_wins(t):
+    # 兩個人先後寫、loop 還沒讀：後寫的蓋掉前寫的，前一道就沒了（使用者「誰能寫 ctl.json 就能控制」）
+    s = stack(t)
+    loop(t, {"exec": count_then(s, {1: {"cmd": "pause"}}), "max": 2, "ctl": "ctl.json", "state": "state.json"})
+    p = start(t, {"AOS_STACK": str(s)})
+    got = until_phase(s / "state.json", "paused")
+    put_ctl(s, {"cmd": "resume", "seq": 1})
+    put_ctl(s, {"cmd": "pause", "seq": 2})
+    time.sleep(1.5)
+    st = json.loads((s / "state.json").read_text())
+    p.send_signal(signal.SIGTERM)
+    p.communicate(timeout=20)
+    check("後寫的算", (got, st["phase"], st["ctl_seq"], laps(s)), (True, "paused", 2, 1))
+
+
+@case
+def old_state_paused_starts_paused(t):
+    # 11-03 代定（使用者四態「繼續暫停」）：開了 state 窗、舊 state.json 的 paused 是 true＝起來先暫停，等 resume；
+    # 其他欄位不接（counter_runs 從 0）。舊的 paused 是 false、沒開 state 窗＝照跑
+    s = stack(t)
+    (s / "state.json").write_text(json.dumps({"phase": "stopped", "counter_runs": 9, "paused": True, "code": 0}))
     loop(t, {"exec": count(), "max": 2, "ctl": "ctl.json", "state": "state.json"})
     p = start(t, {"AOS_STACK": str(s)})
-    ok = wait_file(s / "state.json")
-    time.sleep(0.5)
-    paused = json.loads((s / "state.json").read_text())["phase"]
-    ran = (s / "laps").exists()
-    (s / "ctl.json").write_text(json.dumps({"paused": False}))
+    got = until_phase(s / "state.json", "paused")
+    time.sleep(0.3)
+    st = json.loads((s / "state.json").read_text())
+    ran = laps(s)
+    put_ctl(s, {"cmd": "resume"})
     out, err = p.communicate(timeout=20)
-    check("ctl paused 再放開", (ok, paused, ran, p.returncode, err, len((s / "laps").read_text().split())),
-          (True, "paused", False, 0, "", 2))
+    end = json.loads((s / "state.json").read_text())
+    check("舊 state paused＝起來先暫停", (got, st["counter_runs"], st["paused"], ran, laps(s), p.returncode, end["phase"],
+                                    end["paused"]), (True, 0, True, 0, 2, 0, "done", False))
+    (s / "laps").unlink()
+    (s / "state.json").write_text(json.dumps({"phase": "paused", "paused": False}))
+    r = run_loop(t, {"exec": count(), "max": 2, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
+    check("舊 state paused false＝照跑", (r.returncode, laps(s)), (0, 2))
+    (s / "laps").unlink()
+    (s / "state.json").write_text(json.dumps({"paused": True}))
+    r = run_loop(t, {"exec": count(), "max": 2, "ctl": "ctl.json"}, {"AOS_STACK": str(s)})
+    check("沒開 state 窗＝照跑", (r.returncode, laps(s)), (0, 2))
 
 
 @case
@@ -620,26 +752,25 @@ def cfg_unread_keys_not_resolved(t):
 def ctl_directives(t):
     # ctl 讀的五格整個解；相對 $ref 從 ctl 的資料夾（$AOS_STACK）算
     s = stack(t)
-    put(s / "parts" / "stop.json", {"yes": True, "seq": 4})
-    (s / "ctl.json").write_text(json.dumps({"stopped": {"$ref": "parts/stop.json#/yes"},
-                                            "seq": {"$ref": "parts/stop.json#/seq"}}))
-    r = run_loop(t, {"exec": count(), "max": 3, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
+    put(s / "parts" / "stop.json", {"cmd": "stop", "seq": 4})
+    exe = count_then(s, {1: {"cmd": {"$ref": "parts/stop.json#/cmd"}, "seq": {"$ref": "parts/stop.json#/seq"}}})
+    r = run_loop(t, {"exec": exe, "max": 3, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
     check("ctl 的 $ref", (r.returncode, st["phase"], st["counter_runs"], st["ctl_seq"], st["ctl_warning"]),
-          (0, "stopped", 0, 4, None))
+          (0, "stopped", 1, 4, None))
     # ctl 整份是 $ref
-    (s / "ctl.json").write_text(json.dumps({"$ref": "parts/max.json"}))
+    (s / "laps").unlink()
     put(s / "parts" / "max.json", {"max": 1})
-    r = run_loop(t, {"exec": count(), "max": 3, "ctl": "ctl.json"}, {"AOS_STACK": str(s)})
-    check("ctl 整份 $ref", (r.returncode, len((s / "laps").read_text().split())), (0, 1))
+    r = run_loop(t, {"exec": count_then(s, {1: {"$ref": "parts/max.json"}}), "max": 3, "ctl": "ctl.json"}, {"AOS_STACK": str(s)})
+    check("ctl 整份 $ref", (r.returncode, laps(s)), (0, 1))
 
 
 @case
 def ctl_directive_bad_not_adopted(t):
     # 解不開＝整份不採用、維持上一份好的、原因進 ctl_warning（N-08），不退出
     s = stack(t)
-    (s / "ctl.json").write_text(json.dumps({"stopped": True, "max": {"$env": "NOPE_XYZ"}}))
-    r = run_loop(t, {"exec": count(), "max": 2, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
+    exe = count_then(s, {1: {"cmd": "stop", "max": {"$env": "NOPE_XYZ"}}})
+    r = run_loop(t, {"exec": exe, "max": 2, "ctl": "ctl.json", "state": "state.json"}, {"AOS_STACK": str(s)})
     st = json.loads((s / "state.json").read_text())
     check("ctl 指示詞解不開不採用", (r.returncode, r.stderr, st["phase"], st["counter_runs"], "NOPE_XYZ" in (st["ctl_warning"] or "")),
           (0, "", "done", 2, True))
@@ -741,10 +872,12 @@ def inline_sigterm_forwarded(t):
 @case
 def inline_env_restored(t):
     # 跑完還原：loop 自己的環境裡 AOS_CO 沒被留成 /exec。原本沒設 AOS_CO：ctl 的 max 寫 {"$env": "AOS_CO"}，
-    # 還原了＝解不開（沒設）；沒還原＝解成 "/exec"（不是整數）。兩種都不採用，看 ctl_warning 的原因分辨（最後一次讀 ctl 在跑過之後）
+    # 還原了＝解不開（沒設）；沒還原＝解成 "/exec"（不是整數）。兩種都不採用，看 ctl_warning 的原因分辨（讀 ctl 在跑過之後）。
+    # 11-03 起起來前就在的 ctl 是基準線：改成單子自己在跑的時候把那份寫進 ctl
     s = stack(t)
-    (s / "ctl.json").write_text(json.dumps({"max": {"$env": "AOS_CO"}}))
-    put(Path(t, "loop.json"), {"exec": {"argv": ["true"]}, "max": 2, "ctl": "ctl.json", "state": "state.json"})
+    (s / "at.json").write_text(json.dumps({"max": {"$env": "AOS_CO"}}))
+    put(Path(t, "loop.json"), {"exec": {"argv": ["sh", "-c", 'cp "$AOS_STACK/at.json" "$AOS_STACK/ctl.json"']}, "max": 2,
+                               "ctl": "ctl.json", "state": "state.json"})
     r = subprocess.run([BIN, "loop.json"], cwd=t, env=env_of({"AOS_STACK": str(s)}), capture_output=True, text=True, timeout=30)
     st = json.loads((s / "state.json").read_text())
     w = st["ctl_warning"] or ""
@@ -912,12 +1045,11 @@ def state_running_waiting_not_a_change(t):
     rc = run("loop.json", cwd=t, env={"AOS_STACK": str(s)})[0]
     seen = {json.loads(x)["updated_at"] for x in (s / "seen").read_text().split("\n") if x.strip()}
     check("跑著睡著來回只有一份", (rc, len(seen), json.loads((s / "state.json").read_text())["phase"]), (0, 1, "done"))
-    (s / "ctl.json").write_text(json.dumps({"paused": True}))
-    loop(t, {"exec": count(), "max": 2, "ctl": "ctl.json", "state": "state.json"})
+    loop(t, {"exec": count_then(s, {1: {"cmd": "pause"}}), "max": 2, "ctl": "ctl.json", "state": "state.json"})
     p = start(t, {"AOS_STACK": str(s)})
     ok = wait_file(s / "state.json")
     got = until_phase(s / "state.json", "paused")
-    (s / "ctl.json").write_text(json.dumps({"paused": False}))
+    put_ctl(s, {"cmd": "resume"})
     p.communicate(timeout=20)
     check("paused 照寫", (ok, got, p.returncode), (True, True, 0))
 

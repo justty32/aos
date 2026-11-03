@@ -311,9 +311,9 @@ class EcaCtl(unittest.TestCase):
         self.assertIn("會壞的一句", self.listen(w))
 
     def stopped_by_ctl(self, w, name, ctl=None):
-        """外部寫小格 ctl.json 的 stopped 收工：子 loop 以 0 結束、daemon 表上不留它；ctl 列「收工了」。"""
+        """外部寫小格 ctl.json 的 {"cmd": "stop"} 收工（11-03 ctl 改指令）：子 loop 以 0 結束、daemon 表上不留它；ctl 列「收工了」。"""
         self.say_listen(w, "一")
-        (self.ds / "loops" / name / "ctl.json").write_text(json.dumps(ctl or {"stopped": True}))
+        (self.ds / "loops" / name / "ctl.json").write_text(json.dumps(ctl or {"cmd": "stop"}))
         self.assertTrue(self.until(lambda: [x["state"] for x in self.ls()] == ["收工了"]), (self.ls(), self.daemon_rows()))
         self.assertNotIn(name, self.daemon_rows())
 
@@ -333,22 +333,22 @@ class EcaCtl(unittest.TestCase):
         self.assertFalse((self.ds / "loops" / name).exists())
         self.assertEqual(self.ls(), [])
 
-    def test_finished_add_again_start_clears_stopped(self):
-        """收工了的再 add 同名＝InstanceExists（11-03 撞名報錯）；start 掛回：殘留的 stopped 拿掉（其他 key 照留），子 loop 重新收、答得出。"""
+    def test_finished_add_again_start_leaves_ctl(self):
+        """收工了的再 add 同名＝InstanceExists（11-03 撞名報錯）；start 掛回：殘留的 stop 指令不清（11-03 基準線），子 loop 照樣重新收、答得出。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
-        self.stopped_by_ctl(w, name, {"stopped": True, "paused": False})
+        self.stopped_by_ctl(w, name, {"cmd": "stop", "seq": 4})
         r = self.ctl("add", "--name", name, "--ws", w, self.tpl)
         self.assertEqual(self.code(r), (1, "InstanceExists"))
         r = self.ctl("start", name)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(json.loads((self.ds / "loops" / name / "ctl.json").read_text()), {"paused": False})
+        self.assertEqual(json.loads((self.ds / "loops" / name / "ctl.json").read_text()), {"cmd": "stop", "seq": 4})
         self.assertTrue(self.until(lambda: [x["state"] for x in self.ls()] == ["收起了"]), self.ls())
         self.assertIn("第二輪", self.say_listen(w, "第二輪"))
 
     def test_finished_start_readds(self):
-        """收工了的 start＝跟出錯停了一樣掛回；ctl.json 只有 stopped＝整個檔拿掉。"""
+        """收工了的 start＝跟出錯停了一樣掛回；殘留的 ctl.json 不動（11-03 基準線）。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
@@ -356,7 +356,7 @@ class EcaCtl(unittest.TestCase):
         r = self.ctl("start", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("掛回 daemon 了（上次收工了）", r.stdout)
-        self.assertFalse((self.ds / "loops" / name / "ctl.json").exists())
+        self.assertEqual(json.loads((self.ds / "loops" / name / "ctl.json").read_text()), {"cmd": "stop"})
         self.assertIn("再來", self.say_listen(w, "再來"))
         self.assertEqual(self.ls()[0]["state"], "收起了")
 

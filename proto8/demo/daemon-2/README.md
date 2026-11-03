@@ -52,10 +52,10 @@ cat $ws/.stack/state.json      # daemon 自己（phase、counter_runs；11-02 �
 ## 怎麼停
 
 ```sh
-echo '{"stopped": true}' > $ws/.stack/ctl.json   # 收掉全部子項、寫好 state 才走（收掉的 tick、tock 從 loops_state 拿掉；要看結束碼就加 --enable-logs 看 stdout 的 log）
+echo '{"cmd": "stop"}' > $ws/.stack/ctl.json   # 收掉全部子項、寫好 state 才走（收掉的 tick、tock 從 loops_state 拿掉；要看結束碼就加 --enable-logs 看 stdout 的 log）
 wait; rm -rf $ws
 ```
 
-暫停用 `{"paused": true}`：暫停時信留在 `new/` 不收，寫 `{}` 解除那圈才套。daemon 重起（例 `kill -9` 後再 `aos-exec`）時，信加進來、還活著的子項會被接回、**留在名單上**，直到有信 `loops_removed` 它或它自己結束。
+暫停用 `{"cmd": "pause"}`：暫停時信留在 `new/` 不收，寫 `{"cmd": "resume"}` 解除那圈才套（11-03 起 ctl 是一道指令）。daemon 重起（例 `kill -9` 後再 `aos-exec`）時，信加進來、還活著的子項會被接回、**留在名單上**，直到有信 `loops_removed` 它或它自己結束。
 
 `run.sh` 的 daemon-2 段：`--max 25`（約 5 秒）跑一次、中途人寄一封加 `tock`（帶 `--reply-to`），印工作區、回信與 stack 樹。自動測：`impls/aos-daemon/tests/test_demo.py`。
