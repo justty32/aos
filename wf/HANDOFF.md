@@ -18,7 +18,7 @@
 2. **今晚做完並 push（main）**：三 commit 合跑全套已驗；daemon 收工 sleeping／開門 wake（`68c4e258`，不開放 sleep／wake 指令）；wake 後 ws 欄修好、`--enable-logs` 與 Ctrl-C 收工寫進 README（`6d42a264`）；封存瘦身候選到 `proto8/archive/`、刪 agent-fay（`c3cbf617`）；刪 round 那套 agent 與 aos-ai 只留概念（`cb6b49e0`，`proto8/archive/agent-round-concepts/`；aos-mcp、aos_ws、aos-say／listen 留著，使用者選「先留著」等 aos-agent）；tidy 收斂多批（W0～W4、P5、N-28 與 P1-1 摺 NORMS、P4-A～C thinking 精簡，狀態全在[收斂報告](workflows/tidy/reports/2026-11-03-收斂.md)）；家機試驗場 `~/code/playground` 清空重建成只玩 eca（daemon＋bob〔claude haiku、clock 工具〕，README 一步步）；aos-eca-turn 手冊頁 https://claude.ai/artifact/GsAZQHDCN7wHDUP3vvS78h 。
 3. **明天要接**：
    - **aos-post 改版**（使用者「都照建議」，[thinking](../proto8/thinking/2026-11-03-aos-post.md) 檔末「實作進度（11-03 晚收工）」）：步驟 1～8 已在 main（`5e2fe35e`，已 push）。**併進 main 時沒跑驗證**（使用者「不用測試，總之先弄進去」），明天補跑全套與主工作樹 impls 重建（試驗場用的 bin 還是舊版）；剩步驟 9 條文加註（N-14～16、C-48、C-54 `…Exists`、P-42／P-43）、10 的舊名 grep 檢查。
-   - **tidy 收斂**：照報告接；P4-D／P4-E 12 份 thinking 精簡做到一半，存在分支 `tidy-p4-wip`（`8f4e7377`，未對讀未驗，已 push）；P2 CONVENTION 的心得已記報告；NORMS 05（N-14～17）與 C-54 等 aos-post 加註完再摺；round 已刪後沒實作對應的條文清單在 SESSION-LOG，要給使用者看。
+   - **tidy 收斂**：照報告接；P4-D／P4-E 12 份 thinking 精簡未對讀就進了 main（`6c960429`，使用者「不對讀，直接進 main」「反正有需要的話再去翻舊的commit」），明天補對讀；P2 CONVENTION 的心得已記報告；NORMS 05（N-14～17）與 C-54 等 aos-post 加註完再摺；round 已刪後沒實作對應的條文清單在 SESSION-LOG，要給使用者看。
    - 使用者說「明天我通勤時候看」：aos-eca-turn 手冊頁。
 4. **雜項**：試驗場兩個 daemon 同資料夾＝使用者「這是使用者自己要承擔的風險」；寫 ctl.json stop 同內容第二次不生效＝使用者選收工用 Ctrl-C。公司那邊：WSL clone 裡 `ask_round/_tooldef.json` 的改動直接丟（ask_round 已刪）、Windows 兩檔舊改動丟掉、`agents/amy` 刪。
 
