@@ -1,4 +1,4 @@
-"""test_eca_hub - proto8/extras/eca_hub（10-30 eca 第 6 步，取代 10-28 的 test_hub）：aos-eca-hub 把外部 coding agent 掛到
+"""test_eca_ctl - proto8/extras/eca_ctl（10-30 eca 第 6 步，取代 10-28 的 test_hub）：aos-eca-ctl 把外部 coding agent 掛到
 信箱模式的 aos-daemon 底下（aos-daemon-ctl add --ws），三對指令 open／close、start／stop、add／remove（使用者 11-02 晚）與 ls／state，
 以及 aos-say／aos-listen 經工作區的 .stack 捷徑對它說話。
 
@@ -12,7 +12,7 @@ own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
 from test_fay import FAKE_CLAUDE, SYS_PATH, HAS_TMUX  # noqa: E402
-HUB = ROOT / "extras" / "eca_hub" / "bin" / "aos-eca-hub"
+CTL = ROOT / "extras" / "eca_ctl" / "bin" / "aos-eca-ctl"
 HUMAN = ROOT / "extras" / "human" / "bin"
 TURN = ROOT / "bin" / "aos-eca-turn"
 DAEMON = tool("aos-daemon")
@@ -21,9 +21,9 @@ CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CD", "AOS_CF", "AOS_CO", "AOS_
 WRAP = '#!/bin/sh\nif [ -e "$BROKEN" ]; then echo \'{"is_error": true, "result": "壞了"}\'; exit 1; fi\nexec "$(dirname "$0")/claude-real" "$@"\n'
 
 
-class EcaHub(unittest.TestCase):
+class EcaCtl(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="eca-hub-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="eca-ctl-"))
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.bin = self.tmp / "bin"
         self.bin.mkdir()
@@ -85,11 +85,11 @@ class EcaHub(unittest.TestCase):
         return subprocess.run([str(a) for a in argv], capture_output=True, text=True, env=env or self.env(), cwd=cwd,
                               stdin=subprocess.DEVNULL, timeout=timeout)
 
-    def hub(self, *args, cwd=None, env=None):
-        return self.run_([HUB, *args], cwd=cwd, env=env)
+    def ctl(self, *args, cwd=None, env=None):
+        return self.run_([CTL, *args], cwd=cwd, env=env)
 
     def ls(self):
-        r = self.hub("ls", "--json")
+        r = self.ctl("ls", "--json")
         self.assertEqual(r.returncode, 0, r.stderr)
         return json.loads(r.stdout)
 
@@ -104,7 +104,7 @@ class EcaHub(unittest.TestCase):
         return w
 
     def add(self, w, *more):
-        r = self.hub("add", "--template", self.tpl, *more, w)
+        r = self.ctl("add", "--template", self.tpl, *more, w)
         self.assertEqual(r.returncode, 0, r.stderr)
         name = more[more.index("--name") + 1] if "--name" in more else w.name
         self.assertTrue(self.until(lambda: any(x["name"] == name for x in self.ls())), self.daemon_rows())
@@ -131,18 +131,18 @@ class EcaHub(unittest.TestCase):
     def test_daemon_missing(self):
         """AOS_DAEMON_STACK 沒設＝DaemonMissing；資料夾在、daemon 沒在跑（沒有 loops_state、或它的 pid＋started_at_ticks 對不上；11-02 起沒有心跳）＝同。
         11-02 改名：只設舊的 AOS_DAEMON＝DaemonMissing、訊息提示 AOS_DAEMON_STACK；給舊旗標 --daemon＝FlagUnknown。"""
-        self.assertEqual(self.code(self.hub("ls", env=self.env(daemon=False))), (1, "DaemonMissing"))
-        r = self.hub("ls", env=self.env({"AOS_DAEMON": str(self.ds)}, daemon=False))
+        self.assertEqual(self.code(self.ctl("ls", env=self.env(daemon=False))), (1, "DaemonMissing"))
+        r = self.ctl("ls", env=self.env({"AOS_DAEMON": str(self.ds)}, daemon=False))
         self.assertEqual(self.code(r), (1, "DaemonMissing"))
         self.assertIn("AOS_DAEMON_STACK", r.stderr)
-        self.assertEqual(self.code(self.hub("--daemon", str(self.ds), "ls")), (1, "FlagUnknown"))
-        self.assertEqual(self.code(self.hub("ls")), (1, "DaemonMissing"))
+        self.assertEqual(self.code(self.ctl("--daemon", str(self.ds), "ls")), (1, "FlagUnknown"))
+        self.assertEqual(self.code(self.ctl("ls")), (1, "DaemonMissing"))
         (self.ds / "loops_state.json").write_text(json.dumps({"loops": {}, "pid": 999999999,
                                                               "started_at_ticks": 1}))
-        r = self.hub("add", "--template", self.tpl, self.ws())
+        r = self.ctl("add", "--template", self.tpl, self.ws())
         self.assertEqual(self.code(r), (1, "DaemonMissing"))
-        self.assertTrue(r.stderr.startswith("aos-eca-hub: DaemonMissing "), r.stderr)
-        self.assertEqual(self.code(self.hub("frob")), (1, "CommandUnknown"))
+        self.assertTrue(r.stderr.startswith("aos-eca-ctl: DaemonMissing "), r.stderr)
+        self.assertEqual(self.code(self.ctl("frob")), (1, "CommandUnknown"))
 
     def test_add_ls_state_say_listen(self):
         """add 後 daemon 表上有它、也有 eca_reap（只掛一次）、工作區多一個 .stack 捷徑指到小格；ls 列得到、state 認得（資料夾或名字）；
@@ -158,17 +158,17 @@ class EcaHub(unittest.TestCase):
         it = next(x for x in self.ls() if x["name"] == name)
         self.assertEqual((it["name"], it["kind"], it["ws"], it["state"], it["phase"]), (name, "claude", str(w), "收起了", "running"))
         for arg in ((), ("proj",)):
-            r = self.hub("state", *arg, cwd=w)
+            r = self.ctl("state", *arg, cwd=w)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn("工作區 %s" % w, r.stdout)
-        self.assertEqual(self.code(self.hub("state", cwd=self.tmp)), (1, "InstanceMissing"))
+        self.assertEqual(self.code(self.ctl("state", cwd=self.tmp)), (1, "InstanceMissing"))
         a1 = self.say_listen(w, "你好")
         self.assertTrue(a1.startswith("fake claude[") and a1.rstrip().endswith(": 你好"), a1)
         sid = (self.ds / "loops" / name / "claude" / "session.txt").read_text().strip()
         self.assertTrue(self.say_listen(w, "再一句").startswith("fake claude[%s]" % sid[:8]))
-        r = self.hub("ls")
+        r = self.ctl("ls")
         self.assertIn("對話 %s" % sid[:8], r.stdout)
-        self.assertEqual(self.code(self.hub("add", "--template", self.tmp, self.ws("other"))), (1, "TemplateUnknown"))
+        self.assertEqual(self.code(self.ctl("add", "--template", self.tmp, self.ws("other"))), (1, "TemplateUnknown"))
 
     def test_close_stop_start(self):
         """close（畫面沒開）＝本來就沒畫面、再 say 照答；stop＝daemon 表上沒它、小格與 .stack 捷徑原樣留、ls「停了」，
@@ -178,29 +178,29 @@ class EcaHub(unittest.TestCase):
         w = self.ws()
         name = self.add(w)
         self.say_listen(w, "第一句")
-        r = self.hub("close", cwd=w)
+        r = self.ctl("close", cwd=w)
         self.assertEqual((r.returncode, r.stdout.strip()), (0, "本來就沒畫面（已收起）"), r.stderr)
         self.assertIn("第二句", self.say_listen(w, "第二句"))
         cell = self.ds / "loops" / name
         sid = (cell / "claude" / "session.txt").read_text().strip()
-        r = self.hub("stop", name)
+        r = self.ctl("stop", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("小格留著", r.stdout)
         self.assertNotIn(name, self.daemon_rows())
         self.assertEqual(os.readlink(w / ".stack"), str(cell))
         self.assertEqual([x["state"] for x in self.ls()], ["停了"])
-        self.assertEqual(self.hub("stop", name).stdout.strip(), "本來就沒掛在 daemon 上（停了）")
+        self.assertEqual(self.ctl("stop", name).stdout.strip(), "本來就沒掛在 daemon 上（停了）")
         sig = self.say(w, "停著時的一句")
         time.sleep(0.5)                                              # 子 loop 在的話 100 ms 就會認領
         self.assertEqual(os.listdir(cell / "queue" / "new"), [sig])
         self.assertEqual(len((cell / "history.jsonl").read_text().splitlines()), 4)
-        r = self.hub("start", cwd=w)
+        r = self.ctl("start", cwd=w)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("掛回 daemon 了（上次停了），queue 裡 1 封", r.stdout)
         a = self.listen(w)
         self.assertTrue(a.startswith("fake claude[%s]" % sid[:8]) and "停著時的一句" in a, a)
         self.assertEqual(self.ls()[0]["state"], "收起了")
-        self.assertEqual(self.hub("start", name).stdout.strip(), "本來就掛著（收起了）")
+        self.assertEqual(self.ctl("start", name).stdout.strip(), "本來就掛著（收起了）")
         self.assertFalse((self.ds / "eca_archive").exists())
 
     def test_remove(self):
@@ -210,7 +210,7 @@ class EcaHub(unittest.TestCase):
         w = self.ws()
         name = self.add(w)
         self.say_listen(w, "第一句")
-        r = self.hub("remove", name)
+        r = self.ctl("remove", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertNotIn(name, self.daemon_rows())
         self.assertFalse((self.ds / "loops" / name).exists())
@@ -218,15 +218,15 @@ class EcaHub(unittest.TestCase):
         self.assertFalse((self.ds / "eca_archive").exists())
         self.assertEqual(self.ls(), [])
         self.assertIn("eca_reap", self.daemon_rows())                # 最後一隻 remove 了 eca_reap 照樣留（代定）
-        self.assertEqual(self.code(self.hub("state", cwd=w)), (1, "InstanceMissing"))
-        self.assertEqual(self.code(self.hub("remove", cwd=w)), (1, "InstanceMissing"))
+        self.assertEqual(self.code(self.ctl("state", cwd=w)), (1, "InstanceMissing"))
+        self.assertEqual(self.code(self.ctl("remove", cwd=w)), (1, "InstanceMissing"))
         name = self.add(w)
         self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
         self.assertEqual(len((self.ds / "loops" / name / "history.jsonl").read_text().splitlines()), 0) \
             if (self.ds / "loops" / name / "history.jsonl").exists() else None
         self.say_listen(w, "第二輪")
-        self.assertEqual(self.hub("stop", cwd=w).returncode, 0)
-        r = self.hub("remove", cwd=w)
+        self.assertEqual(self.ctl("stop", cwd=w).returncode, 0)
+        r = self.ctl("remove", cwd=w)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse((self.ds / "loops" / name).exists())
         self.assertFalse(os.path.lexists(w / ".stack"))
@@ -239,8 +239,8 @@ class EcaHub(unittest.TestCase):
         name = self.add(w)
         self.say_listen(w, "第一輪")
         sid = (self.ds / "loops" / name / "claude" / "session.txt").read_text().strip()
-        self.assertEqual(self.hub("stop", name).returncode, 0)
-        r = self.hub("add", "--template", self.tpl, w)
+        self.assertEqual(self.ctl("stop", name).returncode, 0)
+        r = self.ctl("add", "--template", self.tpl, w)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("小格還在（停了）", r.stderr)
         self.assertNotIn("工作區已有 .stack", r.stderr)
@@ -248,7 +248,7 @@ class EcaHub(unittest.TestCase):
         self.assertTrue(self.say_listen(w, "第二輪").startswith("fake claude[%s]" % sid[:8]))
         d = self.ws("direct")
         (d / ".stack").mkdir()
-        r = self.hub("add", "--template", self.tpl, d)
+        r = self.ctl("add", "--template", self.tpl, d)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("工作區已有 .stack", r.stderr)
         self.assertIn("請先搬開", r.stderr)
@@ -256,7 +256,7 @@ class EcaHub(unittest.TestCase):
 
     def test_failed_start_readds(self):
         """CLI 失敗＝子 loop 停（P-20）、ls 標「出錯停了」、信留 cur/；close 只管畫面（說一句要用 start）；
-        修好後 start＝掛回去，接著答那封。11-02 起停了的子項不在 daemon 的表上：hub 看小格的 state.json（done＋結束碼非 0）認它。"""
+        修好後 start＝掛回去，接著答那封。11-02 起停了的子項不在 daemon 的表上：ctl 看小格的 state.json（done＋結束碼非 0）認它。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
@@ -266,18 +266,18 @@ class EcaHub(unittest.TestCase):
         self.assertNotIn(name, self.daemon_rows())
         self.assertEqual(os.listdir(self.ds / "loops" / name / "queue" / "cur"), [sig])
         self.broken.unlink()
-        r = self.hub("close", name)
+        r = self.ctl("close", name)
         self.assertEqual((r.returncode, r.stdout.strip()), (0, "本來就沒畫面（已收起）"), r.stderr)
-        self.assertIn("aos-eca-hub start", r.stderr)
+        self.assertIn("aos-eca-ctl start", r.stderr)
         self.assertNotIn(name, self.daemon_rows())
-        r = self.hub("start", name)
+        r = self.ctl("start", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("上次出錯停了", r.stdout)
         self.assertIn("會壞的一句", self.listen(w))
         self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
 
     def stopped_by_ctl(self, w, name, ctl=None):
-        """外部寫小格 ctl.json 的 stopped 收工：子 loop 以 0 結束、daemon 表上不留它；hub 列「收工了」。"""
+        """外部寫小格 ctl.json 的 stopped 收工：子 loop 以 0 結束、daemon 表上不留它；ctl 列「收工了」。"""
         self.say_listen(w, "一")
         (self.ds / "loops" / name / "ctl.json").write_text(json.dumps(ctl or {"stopped": True}))
         self.assertTrue(self.until(lambda: [x["state"] for x in self.ls()] == ["收工了"]), (self.ls(), self.daemon_rows()))
@@ -289,11 +289,11 @@ class EcaHub(unittest.TestCase):
         w = self.ws()
         name = self.add(w)
         self.stopped_by_ctl(w, name)
-        r = self.hub("state", cwd=w)
+        r = self.ctl("state", cwd=w)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("收工了", r.stdout)
-        self.assertEqual(self.hub("stop", name).stdout.strip(), "本來就沒掛在 daemon 上（收工了）")
-        r = self.hub("remove", name)
+        self.assertEqual(self.ctl("stop", name).stdout.strip(), "本來就沒掛在 daemon 上（收工了）")
+        r = self.ctl("remove", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse(os.path.lexists(w / ".stack"))
         self.assertFalse((self.ds / "loops" / name).exists())
@@ -305,7 +305,7 @@ class EcaHub(unittest.TestCase):
         w = self.ws()
         name = self.add(w)
         self.stopped_by_ctl(w, name, {"stopped": True, "paused": False})
-        r = self.hub("add", "--template", self.tpl, w)
+        r = self.ctl("add", "--template", self.tpl, w)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("小格還在（收工了）", r.stderr)
         self.assertNotIn("工作區已有 .stack", r.stderr)
@@ -319,7 +319,7 @@ class EcaHub(unittest.TestCase):
         w = self.ws()
         name = self.add(w)
         self.stopped_by_ctl(w, name)
-        r = self.hub("start", name)
+        r = self.ctl("start", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("掛回 daemon 了（上次收工了）", r.stdout)
         self.assertFalse((self.ds / "loops" / name / "ctl.json").exists())
@@ -331,7 +331,7 @@ class EcaHub(unittest.TestCase):
         aos-eca-turn 拿得到 cli.json；say／listen 答得出、ls 的 template 是 demo/eca-claude。"""
         self.start_daemon()
         w = self.ws()
-        r = self.hub("add", w)
+        r = self.ctl("add", w)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(self.until(lambda: self.ls()), (self.ds / "loops" / "proj" / "stderr.txt").read_text()
                         if (self.ds / "loops" / "proj" / "stderr.txt").exists() else self.daemon_rows())
@@ -345,7 +345,7 @@ class EcaHub(unittest.TestCase):
         close 後 tty.sock 那個 tmux 不在、再 say 照答（--resume）；close --idle 60 不收還沒閒的。"""
         self.start_daemon()
         w = self.ws()
-        r = self.hub("open", "-d", "--template", self.tpl, cwd=w)
+        r = self.ctl("open", "-d", "--template", self.tpl, cwd=w)
         self.assertEqual(r.returncode, 0, r.stderr)
         cell = self.ds / "loops" / "proj" / "claude"
         self.assertTrue((cell / "tty.sock").exists())
@@ -354,9 +354,9 @@ class EcaHub(unittest.TestCase):
                               capture_output=True, text=True).stdout
         self.assertIn("C-]", keys)
         self.assertEqual(self.say_listen(w, "畫面上的一句"), "fake live: 畫面上的一句\n")
-        r = self.hub("close", "--idle", "60")
+        r = self.ctl("close", "--idle", "60")
         self.assertEqual((r.returncode, r.stdout, self.ls()[0]["state"]), (0, "", "畫面開著"), r.stderr)
-        r = self.hub("close", cwd=w)
+        r = self.ctl("close", cwd=w)
         self.assertEqual((r.returncode, r.stdout.strip()), (0, "收起了"), r.stderr)
         alive = subprocess.run(["tmux", "-S", str(cell / "tty.sock"), "has-session"], capture_output=True).returncode == 0
         self.assertFalse(alive)

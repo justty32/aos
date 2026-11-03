@@ -1,6 +1,6 @@
 # 2026-10-28 aos-hub 實作：say／listen 對 claude 說話（agent 對話協議）、每種 CLI 一張適配表、副產物留著
 
-← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-28 hub-kernel](2026-10-28-hub-kernel.md)（今天定的 14 條決定）、[10-24 say／listen](2026-10-24-say-listen.md)、[10-24 claude／codex 當工具](2026-10-24-cli-tools.md)｜程式：[extras/cli_hub](../extras/eca_hub/README.md)，測試 `proto8/tests/test_hub.py`
+← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜前情：[10-28 hub-kernel](2026-10-28-hub-kernel.md)（今天定的 14 條決定）、[10-24 say／listen](2026-10-24-say-listen.md)、[10-24 claude／codex 當工具](2026-10-24-cli-tools.md)｜程式：[extras/cli_hub](../extras/eca_ctl/README.md)，測試 `proto8/tests/test_hub.py`
 
 > 10-30 起 aos-hub 改做 aos-eca-hub，見 [eca](2026-10-30-eca.md)。
 

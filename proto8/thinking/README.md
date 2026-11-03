@@ -10,6 +10,8 @@
 
 > **10-30 夜改名**：aos-hub 改做 aos-eca-hub（`extras/cli_hub/` → `extras/eca_hub/`、`bin/aos-hub` → `bin/aos-eca-hub`；`aos-hub-kernel` 與 `AOS_HUB` 退場，`aos-hub` 這個名字留給以後；[eca](2026-10-30-eca/09-方向題.md#決定10-30) 衝突 2、4，[map-review 第 5 點](2026-10-30-map-review/01-使用者原文.md#決定10-30)）。舊紀錄照舊名。
 
+> **11-03 改名**：aos-eca-hub 改名 aos-eca-ctl（`extras/eca_hub/` → `extras/eca_ctl/`、`bin/aos-eca-hub` → `bin/aos-eca-ctl`、`tests/test_eca_hub.py` → `tests/test_eca_ctl.py`；使用者 11-03「aos-eca-hub應該改名為aos-eca-ctl」，[eca 16](2026-10-30-eca/16-11-03-改名-aos-eca-ctl.md)）。舊紀錄照舊名，連到資料夾的連結改指新路徑。
+
 | 月份 | 份數 | 範圍 |
 |---|---|---|
 | [2026-11](months/2026-11.md) | 11 | 11-01 試驗場現場（agents/bob、環境變數要謹慎）；11-02 試驗場 [bob 串 aos-mcp／aos-tools、資料夾工具 cathy](2026-11-02-playground-cathy.md)（使用者 CPU 類比原文）、stack-tools、daemon 試驗場、daemon-env、exec 像繼承、state 窗、loop-stdio、常駐 bob、[晚 loop 這一系的窗檔名](2026-11-02-ctl-state-names.md)（控制自身的 ctl／state 就叫 `ctl.json`／`state.json`，推翻白天的 `daemon_*`／`loop_*`）；[11-03 execs／loops 統稱 procs](2026-11-03-procs.md)（名單合一成 `procs`、每項帶 `kind`，手把／窗／信箱／小格全改 `procs_*`；只規劃） |

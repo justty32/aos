@@ -11,7 +11,7 @@
 #   tool.txt、ws.txt  這格屬於哪個工具資料夾、哪個工作區（open_cell 叫回畫面時用）（10-27）
 #   transcripts/<kind>-<id>.jsonl  指到 CLI 自己存的這段對話的 symlink（claude ~/.claude/projects/*/<id>.jsonl、
 #                 codex ~/.codex/sessions/**/*<id>.jsonl）：拿到 session id 就建（10-30 agent-lifecycle C-15～C-17；
-#                 agent 叫的工具格也建，方向題 3）；一直是 symlink（11-02 晚 aos-eca-hub 不再歸檔，freeze_transcripts 拿掉；
+#                 agent 叫的工具格也建，方向題 3）；一直是 symlink（11-02 晚 aos-eca-ctl 不再歸檔，freeze_transcripts 拿掉；
 #                 CLI 會自己清舊對話，要留的人自己複製）
 #
 # 不再登記（10-30 eca 衝突 6）：10-28 起每用到一格就送一行 register 給 $AOS_HUB 的 aos-hub-kernel，現在刪了——
@@ -224,7 +224,7 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path):
 def print_claude(cfg, cell, ws, prompt):
     sid = cell.read("session.txt")
     new = "" if sid else str(uuid.uuid4())
-    # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-eca-hub watch 看得到它正在做什麼；
+    # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-eca-ctl watch 看得到它正在做什麼；
     # 回答取最後一個帶 result 的那行（type: result）
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
     argv += ["--resume", sid] if sid else ["--session-id", new]
