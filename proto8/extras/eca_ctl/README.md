@@ -22,7 +22,7 @@
 | `aos-eca-ctl start [資料夾\|名字]` | 掛回 daemon：停了、收工了、出錯停了的照小格 `eca.json` 記的工作區與定義同名掛回，接著答 queue 裡排著的信（同一段對話 `--resume`）；本來就掛著＝說一句、退 0 | 清殘留 `stopped` → `aos-daemon-ctl add --ws ws --name 名字 定義`（aos-daemon 用回既有小格、只重寫 `loop.json`） |
 | `aos-eca-ctl stop [資料夾\|名字]` | 從 daemon 拿掉、關畫面；**小格與工作區 `.stack` 捷徑原樣留**，這期間 `aos-say` 的信照收在 queue、沒人答，`start` 才答；本來就沒掛＝說一句、退 0 | `aos-daemon-ctl rm`（它會拆捷徑）→ 等下表 → 捷徑補回來 |
 | `aos-eca-ctl ls [--json]` | 列掛著的與停了的：名字、狀態、種類、工作區、對話 id 前 8 碼 | `aos-daemon-ctl ls --json` 的 loops 表，只留小格裡有 `eca.json` 的（aos-eca-turn 每次寫：`kind`、`ws`、`template`） |
-| `aos-eca-ctl state [資料夾\|名字]` | 這裡有沒有外部 agent（掛著或停了）；沒有＝`InstanceMissing`、退 1 | 同一張表 |
+| `aos-eca-ctl state [資料夾\|名字]`（或 `status`） | 這裡有沒有外部 agent（掛著或停了）；沒有＝`InstanceMissing`、退 1。`status` 是 `state` 的別名、行為一樣（11-03 使用者「那就兩個都支援，status和state兩個指令都可以，檔案照舊」；小格的 `state.json` 不改名） | 同一張表 |
 | `aos-eca-ctl open [-d] [--kind …\|--template …] [--name N] [資料夾\|名字]` | 接進畫面；沒開就開（有對話就 `--resume` 叫回）；還沒掛就先 add；停了的只開畫面、不替人 start（stderr 提醒）。`-d` 只開不接 | cli_session 的 `open_cell`（agent-fay 的 attach 同一段）；只有人開畫面，aos-eca-turn 從不自己開 |
 | `aos-eca-ctl close [資料夾\|名字]`／`close --idle 分` | 收起：關畫面、對話留著，aos-eca-turn 照樣用 `--resume` 答。**只管畫面**（11-02 晚第二輪）：沒掛在 daemon 上的（停了、收工了、出錯停了）不再替它重新掛上，stderr 提醒用 `start` | `tmux kill-server`；正在答題＝`SessionBad` |
 | `aos-eca-ctl watch [資料夾\|名字]` | 跟著看非互動那次在做什麼（讀了哪個檔、說了什麼、花多少），一次回答結束就走 | 讀 CLI 小格的 `live.jsonl` |

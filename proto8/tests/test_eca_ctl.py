@@ -161,7 +161,9 @@ class EcaCtl(unittest.TestCase):
             r = self.ctl("state", *arg, cwd=w)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn("工作區 %s" % w, r.stdout)
+            self.assertEqual(self.ctl("status", *arg, cwd=w).stdout, r.stdout)    # 11-03：status＝state 的別名
         self.assertEqual(self.code(self.ctl("state", cwd=self.tmp)), (1, "InstanceMissing"))
+        self.assertEqual(self.code(self.ctl("status", cwd=self.tmp)), (1, "InstanceMissing"))
         a1 = self.say_listen(w, "你好")
         self.assertTrue(a1.startswith("fake claude[") and a1.rstrip().endswith(": 你好"), a1)
         sid = (self.ds / "loops" / name / "claude" / "session.txt").read_text().strip()
