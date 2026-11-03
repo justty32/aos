@@ -12,7 +12,7 @@
 | [impls/](impls/README.md) | 主實作：aos-exec、aos-loop、aos-fsm、aos-daemon 等 C++ 專案（各自 CMake；`build/`、`bin/`、`lib/` 是建置產物、不進 git） |
 | [bin/](bin/README.md) | Python 的 aos-tick、aos-tools、aos-daemon-ctl、aos-eca-turn |
 | [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），demo 用相對捷徑引用 |
-| [extras/](extras/README.md) | 周邊工具：給人用的 say／listen、給 AI 用的 aos-ai、aos-eca、aos-grow、Janet／Lua 寫 aos、aos-sandbox |
+| [extras/](extras/README.md) | 周邊工具：給人用的 say／listen、aos-mcp、aos-eca、aos-grow、Janet／Lua 寫 aos、aos-sandbox |
 | [demo/](demo/README.md) | 範例 agent 與 `run.sh` |
 | [archive/](archive/README.md) | 封存（topdown 試驗、llm-kernel 示範、self-improve、nvim 外掛、Lua／Janet agent_dan、aos-chat；清單在它的 README） |
 | `tests/` | `python3 -m unittest discover -s proto8/tests`（先建 impls） |
@@ -35,8 +35,8 @@
 - **[CONCEPTS.md](docs/CONCEPTS.md)**：概念——aos 怎麼看世界（C-01～C-73）。
 - **[NORMS.md](docs/NORMS.md)**：規範——從概念推出來、大家都要守的（比實作重要，C-45）；程式符合規範但不強制。底在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62：六個環境變數、`aos-exec XXX`、找入口、`#/` 尋址）。
 - **[CONVENTION.md](docs/CONVENTION.md)**：aos agent 慣例（P-05～P-41）——我們自己人寫 agent 時照抄的標準形狀，不要求別人守。
-- **[demo/](demo/README.md)**：`sh proto8/demo/run.sh`，跑 agent-bob、agent-ann 與 daemon、tick、agent-nia（假腦叫一次 clock 工具）等段。
-- **10-24 一天的嘗試**（使用者「我隨便說，你隨便做，反正只是嘗試」；代定都可翻案，一覽在 [session log 10-24](../wf/session_logs/2026-10-parts/12-10-24.md#2026-10-24)）：[lib/](lib/README.md)（工具＝函式庫）、[human/](extras/human/README.md)（給人用的 say／listen）、[ai_tools/](extras/ai_tools/README.md)（給 AI 用的 aos-ai）、[grow/](extras/grow/README.md)（函數成長 aos-grow）、[langs/](extras/langs/README.md)（Janet、Lua 寫 aos）、[sandbox/](extras/sandbox/README.md)（Linux 權限與沙箱）；demo 多了十幾隻 agent 與 talk 等，見 [demo/](demo/README.md)（nvim 外掛、self-improve、llm-kernel 示範封存在 proto8/archive/）。
+- **[demo/](demo/README.md)**：`sh proto8/demo/run.sh`，跑 agent-bob、agent-ann 與 daemon、tick、daemon-2、daemon-3 等段。
+- **10-24 一天的嘗試**（使用者「我隨便說，你隨便做，反正只是嘗試」；代定都可翻案，一覽在 [session log 10-24](../wf/session_logs/2026-10-parts/12-10-24.md#2026-10-24)）：[lib/](lib/README.md)（工具＝函式庫）、[human/](extras/human/README.md)（給人用的 say／listen）、[ai_tools/](extras/ai_tools/README.md)（當時是給 AI 用的 aos-ai，11-03 刪了、只剩 aos-mcp）、[grow/](extras/grow/README.md)（函數成長 aos-grow）、[langs/](extras/langs/README.md)（Janet、Lua 寫 aos）、[sandbox/](extras/sandbox/README.md)（Linux 權限與沙箱）；demo 多了十幾隻 agent 與 talk 等，見 [demo/](demo/README.md)（nvim 外掛、self-improve、llm-kernel 示範封存在 proto8/archive/）。
 - **tests/**：`python3 -m unittest discover -s proto8/tests`。
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
 - **[notes/](notes/README.md)**：AI 寫的參考筆記（不是規範、不算數）：拿外面現成的東西跟 aos 對照，例如 [跟 s6、runit 的對照](notes/s6-runit.md)。

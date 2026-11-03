@@ -1,6 +1,0 @@
-{
- "tools": {
-  "clock": {"path": "../../lib/base/clock"},
-  "math": {"path": "../../lib/base/math"}
- }
-}

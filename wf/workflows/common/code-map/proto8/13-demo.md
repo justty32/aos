@@ -10,15 +10,6 @@
 |---|---|
 | `run.sh` | 各建暫時工作區把幾個 demo 跑一遍，印整棵 stack 樹 |
 
-## `demo/agent-nia/`（格組起來的 agent 範本：一輪走 `lib/agent/round`）
-
-| 檔 | 負責什麼 |
-|---|---|
-| `_entry` | JSON 入口 `["aos-loop", "loop.json"]` |
-| `loop.json` | 單子 `["aos-fsm", "fsm-stop.json"]`、`cwd` 指 `lib/agent/round`（停著等＝改指 `fsm-idle.json`） |
-| `parts.json` | 格的通訊錄（aos-exec 格式）：queue、history、act、`hook/pre_think`＝compact、endpoint |
-| `tools.json`、`system.txt` | 腦的工具（clock、math）、system 訊息 |
-
 ## `demo/agent-bob/`（混合範本：子資料夾＋單子；agent 當工具）
 
 | 檔 | 負責什麼 |

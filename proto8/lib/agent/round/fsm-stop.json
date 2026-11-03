@@ -1,7 +1,0 @@
-{"start": "idle",
- "states": {
-  "idle": {"exec": ["idle", {"$env": "AOS_CD"}], "next": {"0": "think"}},
-  "think": {"exec": ["think", {"$env": "AOS_CD"}], "next": {"0": "act", "10": "finish"}},
-  "act": {"exec": ["act", {"$env": "AOS_CD"}], "next": {"0": "think", "10": "more"}},
-  "more": {"exec": ["more", {"$env": "AOS_CD"}], "next": {"0": "act", "10": "act"}},
-  "finish": {"exec": ["finish", {"$env": "AOS_CD"}], "next": "idle"}}}

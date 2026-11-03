@@ -10,3 +10,4 @@
 | [nvim/](nvim/README.md) | 2026-11-03 | 原 `proto8/extras/editors/nvim`（aos_nvim 外掛）與 test_lua_aos 的 headless smoke；同上瘦身候選 |
 | [agent-dan-langs/](agent-dan-langs/README.md) | 2026-11-03 | Lua／Janet 的 `agent_dan` 範例與三個 skip 中的測試案（demo/agent-dan 11-02 晚已刪）；同上瘦身候選 |
 | [aos-chat/](aos-chat/README.md) | 2026-11-03 | 原 `proto8/extras/human/bin/aos-chat` 與 test_human 的 ChatTest；同上瘦身候選 |
+| [agent-round-concepts/](agent-round-concepts/README.md) | 2026-11-03 | **程式刪除、只留概念**：round 那套用格組起來的 agent（`lib/agent/round`、parts、queue／history／act／compact、`lib/endpoint`、`lib/aos/ask_round`、`demo/agent-nia`）與 aos-ai（`extras/ai_tools/bin/aos-ai`、`aos_ai_*.py`、lib/aos 六個工具、Claude skill）；使用者 11-03 晚「該刪的都刪光刪乾淨」「一起刪……只需要留下他們的概念就好」。aos-mcp、aos_ws、aos-say／listen 留著 |

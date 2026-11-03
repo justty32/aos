@@ -1,7 +1,8 @@
-"""aos_ws - 「放一則訊息、等答案、讀 stack」的共用小零件：給人用的 aos-say／aos-listen（proto8/extras/human）與給 AI 用的 aos-ai（proto8/extras/ai_tools）一起用。
+"""aos_ws - 「放一則訊息、等答案、讀 stack」的共用小零件：給人用的 aos-say／aos-listen（proto8/extras/human）用。
 
 10-24 遷移（tool-lib 遷移清單「human、aos-ai 的放題、等答案合成一份」）：兩邊各寫了一份同樣的事，收到這裡；不是工具（沒有 _entry），
-是 lib/aos 的共用模組，兩支命令列用 realpath 找到這個資料夾再 import。純標準庫（寄信叫 PATH 上的 aos-post）。
+是 lib/aos 的共用模組，命令列用 realpath 找到這個資料夾再 import。
+11-03 aos-ai 刪了（使用者「一起刪」），只服務它的 loop_state、tail_jsonl 跟著拿掉。純標準庫（寄信叫 PATH 上的 aos-post）。
 10-30 改走 agent 對話協議（CONVENTION P-42；thinking 2026-10-30-agent-lifecycle 結論 A-7、A-8、第 4 步）：只碰 agent 的 stack——
   ① queue＝<stack>/queue/（N-16 有順序的信箱；寄＝aos-post send --ordered，一封信的 body＝一則 OpenAI message）；
   ② history＝<stack>/history.jsonl（回答＝最新那則沒有 tool_calls 的 assistant，沒有 out/）；
@@ -112,32 +113,3 @@ def exchanges(stack):
             out.append((asked, text_of(m)))
             asked = []
     return out
-
-
-def loop_state(stack):
-    """aos-loop 的 state 窗：<stack>/state.json（控制自身的窗就叫 state.json，11-02 晚 thinking 2026-11-02-ctl-state-names；
-    白天為常駐 bob 加的 loop_state.json 備案收回）；沒有或讀不懂＝None。"""
-    text = read(os.path.join(stack, "state.json"))
-    if text is None:
-        return None
-    try:
-        st = json.loads(text or "null")
-    except ValueError:
-        return None
-    return st if isinstance(st, dict) else None
-
-
-def tail_jsonl(path, n):
-    """一份 .jsonl 最後 n 行（解不開的那行放 {"bad_line": 前 200 字}）；檔不在＝[]。"""
-    text = read(path)
-    if text is None:
-        return []
-    lines = [l for l in text.splitlines() if l.strip()]
-    rows = []
-    for l in lines[-n:] if n > 0 else []:
-        try:
-            rows.append(json.loads(l))
-        except ValueError:
-            rows.append({"bad_line": l[:200]})
-    return rows
-

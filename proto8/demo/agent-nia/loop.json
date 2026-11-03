@@ -1,2 +1,0 @@
-{"exec": {"argv": ["aos-fsm", "fsm-stop.json"], "cwd": "../../lib/agent/round", "timeout_ms": 600000}, "max": 40,
- "ctl": "ctl.json", "state": "state.json"}

@@ -20,7 +20,7 @@
      照名字＝寄的順序，幾封都行、沒有上限；CLI 跑的期間才寄來的信留在 new/，下一輪再答。
      history 空、queue 也空、定義有非空的 prompt.txt＝先把它當一則 user 投進 queue（aos-post send --ordered）再認領。
   ② 讀信（aos-post check）：body 不是 {"role": "user", "content": 非空字串}＝壞信，aos-post finish 丟掉、原因寫進
-     $AOS_STACK/mailbox_warning.txt 一行（只留最後一封，同 lib/agent/queue；N-16），跳過它、其他封照答（衝突 5、Q-4；11-03 前記在 trace、退 0）。
+     $AOS_STACK/mailbox_warning.txt 一行（只留最後一封；N-16），跳過它、其他封照答（衝突 5、Q-4；11-03 前記在 trace、退 0）。
      整批都是壞信＝不問 CLI、退 0。
   ③ 好信的 content 照順序用一個空行（"\n\n"）接成一段，交給 cli_session 問一次（小格＝$AOS_STACK/<kind>/）：畫面開著＝貼進畫面等 hook；
      沒開＝claude -p --resume／codex exec resume（第一次開新的）——兩條路照 10-24，跟工具形是同一段（cli_session.ask）。
@@ -141,7 +141,7 @@ def append_history(stack, msg):
 # ---- mailbox_warning.txt、eca.json ----
 
 def warn(stack, sig, why):
-    """N-16 壞信記 mailbox_warning：$AOS_STACK/mailbox_warning.txt 一行、只留最後一封（同 lib/agent/queue；11-03 前記在 trace）。"""
+    """N-16 壞信記 mailbox_warning：$AOS_STACK/mailbox_warning.txt 一行、只留最後一封（11-03 前記在 trace）。"""
     write_atomic(os.path.join(stack, "mailbox_warning.txt"), "信 %s 不採用：%s\n" % (sig, why.replace("\n", " ")))
 
 

@@ -29,10 +29,9 @@ def env_with(extra=None):
     return e
 
 
-# agent 自己的格（10-28 agent-round）不是給腦叫的工具，沒有 _tooldef.json／_metainfo：lib/endpoint/ 整層、lib/agent/ 底下這幾個
-# （lib/eca/ 那層 10-31 拿掉了：turn 格改名 aos-eca-turn、搬到 proto8/bin）
-PARTS = {"agent": ("act", "queue", "history", "round", "compact")}
-PART_LAYERS = ("endpoint",)
+# 不是給腦叫的工具、沒有 _tooldef.json／_metainfo 的格（11-03 round 那套 agent 連同 lib/endpoint、lib/agent 的 act／queue／history／round／compact 刪了，目前沒有）
+PARTS = {}
+PART_LAYERS = ()
 
 
 def lib_tools():

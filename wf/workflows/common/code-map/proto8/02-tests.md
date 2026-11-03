@@ -10,7 +10,6 @@
 | `own_error.py` | import 時 `install()`：subprocess 拿回的 stderr 每行對一次錯誤代號再拿掉 |
 | `fake_brain.py` | 假 OpenAI 相容 server 與劇本小幫手 |
 | `dead_brain.py` | 「腦壞了」的網址（連上去馬上被拒） |
-| `round_common.py` | round 測試共用的暫存 agent `AgentCase` 與小工具 |
 | `spy_bin/aos-fsm` | 旁觀者：放在 PATH 最前面，記下呼叫再轉給真的 aos-fsm |
 | `bench_intent_context.py` | 手動跑的對比（不是測試）：整份 history vs 按意圖組 context 的 token 與答對率 |
 
@@ -33,18 +32,11 @@
 | `test_llm_kernel.py` | aos-llm-send＋aos-llm-kernel 經 aos-loop 端到端：撤信、排隊、slots、重起、額度 |
 | `test_claim_dotfiles.py` | demo 的認領題目跳過 `.` 開頭的暫存檔 |
 
-## `tests/`（agent 的格與 lib）
+## `tests/`（lib）
 
 | 檔 | 涵蓋 |
 |---|---|
-| `test_round_parts.py` | `lib/agent/parts.py` 的查找順序 |
-| `test_round_endpoint.py` | endpoint 格 fake、openai |
-| `test_round_act.py` | act 格：順序、平行、掛勾、工具的問題回給腦 |
-| `test_round_fsm.py` | `fsm-stop.json`／`fsm-idle.json` 一次一格 |
-| `test_round_loop.py` | agent 的 `loop.json` 整隻跑 |
-| `test_round_queue.py` | queue 格：push、claim、finish、順序、壞信 |
-| `test_nia.py` | 範本 agent-nia、ask_round |
-| `test_lib.py` | `lib/` 每個工具的形狀（跳過 agent 的格）、base 的行為、agent-liv 經捷徑用庫 |
+| `test_lib.py` | `lib/` 每個工具的形狀、base 的行為、agent-liv 經捷徑用庫 |
 | `test_pi_tools.py` | `lib/base` 的 read、write、edit、bash 與 agent-pip |
 | `test_file_tools.py` | `lib/base` 的 ls、stat、view、json_edit、mkdir、move、copy、trash 與 agent-pip |
 | `test_cli_tools.py` | `lib/agent/claude`、`codex` 與 `cli_session.py`（假的 claude／codex） |
@@ -64,8 +56,7 @@
 
 | 檔 | 涵蓋 |
 |---|---|
-| `test_human.py` | `aos-say`、`aos-listen`（對 agent-nia 的拷貝、外部範本） |
-| `test_ai_tools.py` | `aos-ai` 命令列與 `lib/aos` 轉叫它的工具 |
+| `test_human.py` | `aos-say`、`aos-listen`（對臨時組的 eca 定義＋假 claude） |
 | `test_aos_mcp.py` | `aos-mcp`：測試自己當 MCP client |
 | `test_grow.py` | `aos-grow`：長上去再縮回、行為不變 |
 | `test_janet.py` | Janet 編成 aos |

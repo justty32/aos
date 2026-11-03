@@ -19,12 +19,12 @@
    - **已驗（11-03 晚家機 Manjaro 暫存 clone）**：三個 commit 合跑全套 unittest 646 OK（9 skip）、demo 0、ctest 8/8、wf-lint broken=0。
 3. **daemon 收工 sleep／wake：已實作、使用者 11-03 晚看過定案**（不開放 sleep／wake 指令；出錯退出走同一條收工路、再開自己醒＝合他「輕鬆回復原本狀態、收斂錯誤處理路徑」）（[procs § 8](../proto8/thinking/2026-11-03-procs.md#8-收工時改寫成休息中sleepwake11-03-晚)）。使用者「改寫成休息中」「還記得嗎？我們有start/stop, sleep/wake, pause/resume，我們缺了sleep/wake」。照頂層代定做：收工（ctl stop／Ctrl+C／任何走 finish 的退出）時還在跑的 loop 型＝表上 `sleeping`、stack 留著；daemon 再開 adopt 後第一圈用列上的 stack 自動 wake；你 stop 的照舊 `stopped`；收工時暫停中的醒來仍暫停（已實測）；exec 型照舊拿掉；`kill -9` 不在範圍；`aos-daemon-ctl sleep／wake` **先不開放**（原本待他答的 (a)，代定「不開」）、(b) 照建議「醒來仍暫停」。睡著時寄來的 stop＝開門改 stopped 不 wake、rm＝拿掉。
 4. **雜項**：
-   - WSL `~/repo/simple_tools/aos` 在 `dcca4a8c`，有一個不知誰改的追蹤檔改動 `proto8/lib/aos/ask_round/_tooldef.json`——使用者 11-03 晚「看狀況，隨你」：回公司時看 diff，是工具重產的快取就丟掉再 ff，像有人手改的再問。
+   - WSL `~/repo/simple_tools/aos` 在 `dcca4a8c`，有一個不知誰改的追蹤檔改動 `proto8/lib/aos/ask_round/_tooldef.json`——使用者 11-03 晚「看狀況，隨你」：回公司時看 diff，是工具重產的快取就丟掉再 ff，像有人手改的再問。（11-03 晚 ask_round 整個刪了：ff 前直接丟掉那個改動即可。）
    - Windows 工作樹 `proto8/thinking/README.md`、`months/2026-11.md` 兩檔舊未 commit 改動：使用者 11-03 晚「丟掉」——回公司時 `git checkout -- 那兩檔`（只這兩檔）。
    - 試驗場 `daemons/main` 的 stack 在 `ws/.stack`：使用者 11-03 晚「我以爲daemon本身也可以指定stack？不用移出去」——不移，結案。
    - WSL `~/.codex/config.toml` 預設模型 `gpt-6.1-sol` 這帳號不能用（model_not_found），使用者的設定、沒改。
    - 常駐 bob：使用者「感覺之後會被蛋雕」「先不用管吧」；11-03 晚「B5.封存吧，eca是他的全面強化版，真的沒必要了。」——已結（git 裡只有 thinking，加註；WAIT_USER 那條拿掉）。
-   - **11-03 晚開著的事已答並做完**：A2 proc 改名結案（「以後相關的稱呼/慣例等也要變」）；A3 round 的 on_error 緊張「不管」（注意：11-01 刪的是 `bin/aos-round`，`lib/agent/round/` 兩張表與五格仍在、agent-nia 等在用）；瘦身候選「先封存，等之後我們進展到那塊的時候可以拉出來看看」→ demo/llm-kernel、demo/self-improve（連 lib/aos/try_run）、nvim 外掛、Lua／Janet agent_dan、aos-chat 進 `proto8/archive/`，環境變數第 4 題結案；`aos_ws.loop_state` 不動：使用者「aos_ws,aos-say/listen,aos-ai這些之後都會整合進aos-agent」（[aos-agent](../proto8/thinking/2026-11-03-aos-agent.md)）；demo/agent-fay 刪（「我沒聽過這東西，刪掉。」），test_fay→test_cli_tools。B4 使用者「等等」。
+   - **11-03 晚開著的事已答並做完**：A2 proc 改名結案（「以後相關的稱呼/慣例等也要變」）；A3 round 的 on_error 緊張「不管」（之後使用者「封存這條線，1.該刪的都刪光刪乾淨」「一起刪……只需要留下他們的概念就好」：`lib/agent/round/`、parts、queue／history／act／compact、`lib/endpoint/`、ask_round、agent-nia、aos-ai〔含 lib/aos 六個工具、Claude skill、`aos_ws.loop_state`〕連程式刪了，概念在 `proto8/archive/agent-round-concepts/`；aos-mcp、aos_ws、aos-say／listen 留著，say／listen 去留頂層另問；NORMS／CONVENTION 只講 round 的條文列在 SESSION-LOG 待收斂）；瘦身候選「先封存，等之後我們進展到那塊的時候可以拉出來看看」→ demo/llm-kernel、demo/self-improve（連 lib/aos/try_run）、nvim 外掛、Lua／Janet agent_dan、aos-chat 進 `proto8/archive/`，環境變數第 4 題結案；`aos_ws.loop_state` 不動：使用者「aos_ws,aos-say/listen,aos-ai這些之後都會整合進aos-agent」（[aos-agent](../proto8/thinking/2026-11-03-aos-agent.md)）；demo/agent-fay 刪（「我沒聽過這東西，刪掉。」），test_fay→test_cli_tools。B4 使用者「等等」。
    - 使用者之後要看 aos-post（impls/aos-post）。
 
 ## 2026-11-03 13:30 出門前（公司 Windows；下次開 session 接）

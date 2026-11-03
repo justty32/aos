@@ -12,7 +12,7 @@ sh proto8/demo/run.sh                            # 結束碼 0、各段都「結
 
 impls 各專案自己的 ctest（`test_cli`、`test_demo`…）說明在 [proto8/impls/README.md](../../../proto8/impls/README.md)。
 
-10-23 起 `proto8/tests/test_dan.py`（agent-dan）裡連真模型的案例，在 `localhost:4000/v1/models` 連不上時 skip（其餘用假 server，離線也跑）。11-02 晚 test_dan.py 隨 agent-dan 刪了；test_meg、test_kai、test_nia 等連真模型的案例照同一規則 skip。
+10-23 起 `proto8/tests/test_dan.py`（agent-dan）裡連真模型的案例，在 `localhost:4000/v1/models` 連不上時 skip（其餘用假 server，離線也跑）。11-02 晚 test_dan.py 隨 agent-dan 刪了；test_meg、test_kai 等連真模型的案例（test_nia 11-03 隨 round 那套 agent 刪了）照同一規則 skip。
 
 10-28 Windows 機的 WSL（`networkingMode=mirrored`）：連 `127.0.0.1` 低號的空埠（原本測試拿 `http://127.0.0.1:9/v1` 當腦壞了）會**等到逾時**而不是馬上被拒，test_dan、test_human、test_ai_tools、test_talk、test_grow 等（當時還有 topdown 的測試，11-03 封存）那 7 案因此逾時失敗——是環境，不是程式壞。**已解（10-28）**：改從 `proto8/tests/dead_brain.py` 拿 `DEAD`（本行程 bind 一個埠、不 listen、一直拿著，連上去一定馬上被拒）；WSL 上 `python3 -m unittest discover -s proto8/tests` 全過（657 案、31 skip），`sh proto8/demo/run.sh` 結束碼 0。
 

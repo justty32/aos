@@ -6,7 +6,7 @@
 sh proto8/demo/run.sh      # 在 WSL／Linux 跑
 ```
 
-`run.sh` 每段各建一個暫時工作區、`cd` 進去跑（慣例用法 `aos-exec <agent資料夾>`），共七段：agent-bob、agent-ann（各放一題 `new/q1.txt`）、daemon、tick、agent-nia（題目經 queue 格放進 `$AOS_WS/.stack/queue/`、答案看 history，不用 `new/`、`out/`）、daemon-2、daemon-3（見下）；印工作區內容（`out/`、`done/`；跑完 `new/`、`cur/` 是空的）與整棵 stack 樹（`$AOS_WS/.stack/`，每檔印內容），最後把暫時資料夾刪掉，repo 裡不留東西。
+`run.sh` 每段各建一個暫時工作區、`cd` 進去跑（慣例用法 `aos-exec <agent資料夾>`），共六段：agent-bob、agent-ann（各放一題 `new/q1.txt`）、daemon、tick、daemon-2、daemon-3（見下；agent-nia 那段 11-03 隨 round 那套 agent 刪了）；印工作區內容（`out/`、`done/`；跑完 `new/`、`cur/` 是空的）與整棵 stack 樹（`$AOS_WS/.stack/`，每檔印內容），最後把暫時資料夾刪掉，repo 裡不留東西。
 
 **PATH 由 `run.sh` 自己放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），agent 裡寫的 `aos-loop`、`aos-fsm`、`aos-exec`、`aos-daemon`、`aos-tick` 要呼叫端事先放進 PATH。`run.sh` 開頭放 C++ 的 `proto8/impls/<名>/bin/`（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；aos-exec、aos-loop、aos-fsm、aos-daemon、aos-json、aos-post；要先建，見 [testing](../../wf/workflows/testing.md#proto8不在-ctest-裡)；沒建好會先停、說要先建）與 Python 的 `proto8/bin/`（aos-tick、aos-tools…）。自己手動跑也一樣（例：`PATH=$PWD/proto8/impls/aos-exec/bin:$PWD/proto8/impls/aos-loop/bin:$PWD/proto8/impls/aos-fsm/bin:$PATH aos-exec --ws <工作區> proto8/demo/agent-bob`）。預設假腦；`AOS_BRAIN_URL`（OpenAI 相容 base URL，另可設 `AOS_BRAIN_MODEL`、`AOS_BRAIN_KEY`）指到遠端才用真腦；帶 `.env` 的 agent（例 agent-gus）模型名在自己的 `.env`（`AOS_BRAIN_MODEL`），只要給 `AOS_BRAIN_URL`。**這台電腦不要跑本機模型**（使用者定「放棄跑本機模型」，[ideas § 6](../thinking/2026-10-19-ideas.md)）。
 
@@ -26,7 +26,7 @@ stack 樹＝呼叫樹：`.stack/{state.txt,current.txt,plan.txt}`、`.stack/tool
 <a id="agent-eveagent-當工具10-24"></a>
 ## agent-eve（agent 當工具；真腦＋工具的問答範本）
 
-agent-eve 也是下面各隻「照抄 agent-eve」的範本：讀舊協議 `new/*.txt`、寫 `out/`，腦的工具呼叫照 P-41；走 queue、say／listen 說得到的是 [agent-nia](#agent-nia照-agent-round-的格組起來10-2810-30-改走-queue)。
+agent-eve 也是下面各隻「照抄 agent-eve」的範本：讀舊協議 `new/*.txt`、寫 `out/`，腦的工具呼叫照 P-41；走 queue、say／listen 說得到的是 [eca-claude／eca-codex](#eca-templates)。
 
 把一隻 agent 包成另一隻 agent 的腦可以叫的工具（嘗試性質；使用者 10-24「把agent當做工具拿去給agent呼叫，比如一個專精於修改python程式的agent」）。設計、代定、邊緣狀況在 [thinking 2026-10-24-agent-as-tool](../thinking/2026-10-24-agent-as-tool.md)。
 
@@ -197,66 +197,14 @@ stack 樹：`.stack/state.json`（daemon 自己的 state）、`.stack/procs_stat
 
 `tick/_entry`＝`exec aos-loop loop.json`；`loop.json`＝`{"exec": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tick.txt"}]}, "max": 5}`——loop 跑 5 次，每次在自己行程內跑那張單子 `aos-tick $AOS_STACK/tick.txt`，所以跑完工作區的 `.stack/tick.txt` 是 `5`（C-44、N-01）。節奏、停交給 loop：要隔多久走一格就在 loop.json 加 `interval_ms`，要能暫停就加 `ctl`、寫 `{"cmd": "pause"}`。程式見 [bin/README 的 aos-tick](../bin/README.md)。
 
-<a id="agent-nia照-agent-round-的格組起來10-2810-30-改走-queue"></a>
-## agent-nia（照 agent-round 的格組起來、走 queue）
-
-一隻 agent 不寫自己的 brain／act，而是**把 [lib](../lib/README.md) 的格登記進 `parts.json`**，由 aos-fsm 照 `lib/agent/round/` 的表一格一格叫（loop.json 直接叫 aos-fsm；格與表見 [lib/README agent 自己的格](../lib/README.md#agent-自己的格不是工具沒有-_tooldefjson)；設計：[thinking 2026-10-28 agent-round](../thinking/2026-10-28-agent-round.md)、[thinking 2026-10-30 agent-lifecycle](../thinking/2026-10-30-agent-lifecycle.md)）。
-
-```
-agent-nia/
-  _entry       ["aos-loop", "loop.json"]（JSON 入口）
-  loop.json    {"exec": {"argv": ["aos-fsm", "fsm-stop.json"], "cwd": "../../lib/agent/round", "timeout_ms": 600000}, "max": 40,
-                "ctl": "ctl.json", "state": "state.json"}（aos-loop 的兩扇窗，落在 $AOS_STACK；timeout_ms 管一格、max 數的也是格；
-                cwd＝表與五格所在，表的 {"$env": "AOS_CD"}＝這張單子跑時的 AOS_CD＝agent-nia）
-  system.txt   system 訊息（每次問腦從檔讀、不進 history）
-  tools.json   腦能叫的工具：clock、math，手寫相對路徑指 ../../lib/base/
-  parts.json   格的通訊錄（aos-exec 格式：槽值＝路徑字串或 {".env", "_entry"}，hook／endpoint 巢狀），
-               手寫相對路徑（從 parts.json 所在資料夾算，整個 repo 搬家不斷）：
-               queue、history、act → "../../lib/agent/<名>"
-               hook.pre_think → "../../lib/agent/compact"（history 超過 65536 bytes 才壓；改門檻寫 argv 陣列 [路徑, "--max-bytes", "N"]）
-               endpoint.default → "../../lib/endpoint/fake"（假腦）
-               endpoint.litellm → {".env": localhost:4000、chatgpt-gpt-6-luna-low, "_entry": "../../lib/endpoint/openai"}
-               （queue 空停不停不在這裡：loop.json 指哪張表；表與五格在 lib/agent/round）
-```
-
-沒有捷徑、沒有 `.env`。**輸入是 queue**：`$AOS_STACK/queue/`（N-16 有順序的信箱，一封信的 body＝一則 OpenAI message），經 queue 格放：
-
-```sh
-echo '{"role": "user", "content": "現在幾點？"}' | AOS_WS=<工作區> aos-exec "$PWD/proto8/demo/agent-nia/parts.json#/queue" "$PWD/proto8/demo/agent-nia" push   # 印信號；agent 資料夾要給絕對路徑（格的共通介面）
-aos-exec --ws <工作區> proto8/demo/agent-nia        # PATH 照上面放好（含 proto8/bin 的 aos-tools，impls 的 aos-fsm、aos-post）
-```
-
-**答案就是 `<工作區>/.stack/history.jsonl` 最新那則沒有 `tool_calls` 的 assistant**，沒有 `out/`；工作區本身不長 `new/`、`out/` 這些。loop 每次跑一張單子＝aos-fsm 照 `lib/agent/round/fsm-stop.json` 跑一格：idle（認領）→ think（問腦）→ act（跑工具）→ think → finish（交卷）→ idle，格退 0／10 照表換狀態、fsm 退 0，loop 再叫；queue 空了 idle 退 10、表沒接，fsm 退 10，loop 正常停、結束碼 0（P-19）。`timeout_ms` 管的是一格（think 那格含問腦），要整輪上限在外面再包一層。`run.sh` 那段：假腦先叫 clock 再答 `FAKE ANSWER to: 現在幾點？（clock said: …）`；stack 有 `history.jsonl`、`live.jsonl`（queue emit）、`state.txt`（fsm 現在在哪，答完停在 `idle`）、`state.json`（loop 的窗，收工時 `phase` 是 `done`）、`queue/`（信收掉了，只剩 `order.json` 的計數）。假腦不寫 `usage.jsonl`、沒 switch 不會有 `endpoint.txt`、交卷後 `current.txt` 清掉。
-
-**兩種定義：跑完要不要結束寫在定義裡**：
-
-- **射後不理（範本預設）**：loop.json 照上面（`fsm-stop.json`、`max` 40）。queue 空＝idle 退 10＝fsm 退 10＝loop 收工；想再問就先放題再跑一次。
-- **射後有理（停著等）**：loop.json 改指 `fsm-idle.json`、拿掉 `max`、加 `"interval_ms": 300`：
-
-  ```
-  {"exec": {"argv": ["aos-fsm", "fsm-idle.json"], "cwd": "../../lib/agent/round", "timeout_ms": 600000}, "interval_ms": 300,
-   "ctl": "ctl.json", "state": "state.json"}
-  ```
-
-  queue 空＝idle 退 10 被表接住（`"10": "idle"`）、fsm 退 0、什麼都不做，loop 隔 300 毫秒再叫；agent 自己仍是函數，停著等是 aos-loop 提供的。放題照上面那行 push，答案照樣看 history。暫停＝`echo '{"cmd": "pause"}' > <工作區>/.stack/ctl.json`（不起下一格，新信留在 `queue/new/`；`state.json` 的 `phase` 變 `paused`），放行寫 `{"cmd": "resume"}`，收工寫 `{"cmd": "stop"}`（N-07；反應時間最多一個 `interval_ms`；格與格之間就看，一格跑到一半不打斷）。
-
-**換成 LiteLLM**：在那個工作區的 stack 寫一行名字，下次問腦就用它：
-
-```sh
-mkdir -p <工作區>/.stack && echo litellm > <工作區>/.stack/endpoint.txt
-aos-exec --ws <工作區> proto8/demo/agent-nia        # PATH 照上面放好（含 proto8/bin 的 aos-tools）
-```
-
-`usage.jsonl` 會多一行。要換模型或網址，改 `parts.json` 裡 `endpoint.litellm` 的 `.env`；要讓 litellm 當預設，把 `endpoint.default` 換成跟 `litellm` 一樣的 `{".env", "_entry"}`。要多一隻：`aos-ai spawn <名> --from agent-nia`（parts.json、tools.json、loop.json 的 cwd 指出範本的相對路徑會改成絕對，見 [ai_tools](../extras/ai_tools/README.md)；放題照上面經 queue 格，`aos-ai ask` 走 queue、`run` 照跑；舊協議的 fsm 範本〔agent-eve 等，讀 `new/`、寫 `out/`〕`ask` 說不到）。測試 `test_nia.py`。
-
 <a id="eca-templates"></a>
 ## 外部 coding agent 範本（eca-claude、eca-codex）
 
-claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 agent-nia 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../bin/README.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。設計：[thinking 2026-10-30 eca](../thinking/2026-10-30-eca.md)；條文草稿 P-43。兩份只差 `cli.json`。
+claude code／codex **整隻當成一隻平級的 agent**（不是腦、不是工具）：包成跟 aos agent 同形的定義資料夾，`loop.json` 直接叫 [`aos-eca-turn`](../bin/README.md)，aos 只碰它 stack 裡的 queue／history／ctl（P-42）。設計：[thinking 2026-10-30 eca](../thinking/2026-10-30-eca.md)；條文草稿 P-43。兩份只差 `cli.json`。
 
 ```
 eca-claude/
-  _entry      ["aos-loop", "loop.json"]（JSON 入口，同 agent-nia）
+  _entry      ["aos-loop", "loop.json"]（JSON 入口）
   loop.json   {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000},
                "interval_ms": 300, "ctl": "ctl.json", "state": "state.json"}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；兩扇窗落在 $AOS_STACK）
   cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms），抄 lib/agent/claude 的保守旗標；eca-codex 抄 lib/agent/codex 的

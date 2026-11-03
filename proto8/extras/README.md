@@ -7,7 +7,7 @@ aos 主體（[impls/](../impls/README.md) 的四支 C++、[bin/](../bin/README.m
 | 資料夾 | 是什麼 | 測試 |
 |---|---|---|
 | [human/](human/README.md) | 給人用的 aos-say／aos-listen（aos-chat 封存在 proto8/archive/aos-chat/）：對 agent 丟題、等答案 | `tests/test_human.py` |
-| [ai_tools/](ai_tools/README.md) | 給 AI 用的 aos-ai（起 agent、丟題、跑、看狀態、生成 JSON 與骨架、查概念）與 Claude skill | `tests/test_ai_tools.py` |
+| [ai_tools/](ai_tools/README.md) | aos-mcp：把 aos-tools 登記的工具當 MCP tools（eca 接 aos 工具用的；aos-ai 與 Claude skill 11-03 刪了） | `tests/test_aos_mcp.py` |
 | [grow/](grow/README.md) | aos-grow：把一個函數往上長一級／縮回一級，呼叫方跟著改 | `tests/test_grow.py` |
 | [langs/](langs/README.md) | 用 Janet、Lua 寫 aos 程式，編成資料夾＋JSON | `tests/test_janet.py`、`tests/test_lua_aos.py` |
 | [sandbox/](sandbox/README.md) | aos-sandbox：照一份設定把程式關進沙箱（s6＋bwrap）再跑 | `tests/test_sandbox.py` |

@@ -2,12 +2,11 @@
 # 各建一個暫時工作區、放一題、cd 進去跑 agent-bob（含它叫的 cathy）與 agent-ann（慣例用法）、印出工作區與整棵 stack 樹；
 # 再跑 daemon：一個 daemon 同時管 bob、ann 兩個子 loop（各自的工作區在 bob/、ann/）；
 # 再跑 tick：aos-loop 跑 5 次 aos-tick，時鐘檔 $AOS_STACK/tick.txt 走到 5（10-21 計畫第 4 段）；
-# 再跑 agent-nia：照 agent-round 的格組起來（parts.json 指 lib 的 queue／history／act／endpoint，11-01 起 aos-exec 格式），假腦叫 clock 再答（thinking 2026-10-28-agent-round）；題目經 queue 格放進 stack、答案看 history（10-30 agent-lifecycle）；
 # 再跑 daemon-2：信箱模式的 daemon，agent 格 sam 寄信加 tick、人手寫 aos-post send 加 tock（帶 --reply-to 收回信）（10-29 medium-plan 實作第 8 步）；
 # 最後跑 daemon-3：同一支 demo/tick 在同一份名單 procs 裡掛兩次——tick_loop（包成 max: 1 的子 loop）、tick_exec（字串＝直接 aos-exec 一次）（10-30 agent-lifecycle 實作第 8 步；11-03 名單合一）
 here=$(cd "$(dirname "$0")" && pwd)
 # aos 的程式都不動 PATH（ideas § 24）：agent 裡叫的 aos-exec、aos-loop、aos-fsm、aos-daemon、aos-tick 由這裡（呼叫端）放進 PATH。
-# 10-23 起前四支是 C++（10-24 加 aos-llm-kernel、aos-llm-send 兩支，11-03 隨 demo/llm-kernel 封存不再要；10-28 加 aos-json：aos-tools 解指示詞、改 tools.json 要它；10-29 加 aos-post：daemon-2 寄信；10-30 起 agent-nia 的 queue 格也經它）（proto8/impls/<名>/bin/，要先建，見 wf/workflows/testing.md）；aos-tick 還是 Python（proto8/bin/，aos agent 讀工具清單的 aos-tools 也在這）
+# 10-23 起前四支是 C++（10-24 加 aos-llm-kernel、aos-llm-send 兩支，11-03 隨 demo/llm-kernel 封存不再要；10-28 加 aos-json：aos-tools 解指示詞、改 tools.json 要它；10-29 加 aos-post：daemon-2 寄信）（proto8/impls/<名>/bin/，要先建，見 wf/workflows/testing.md）；aos-tick 還是 Python（proto8/bin/，aos agent 讀工具清單的 aos-tools 也在這）
 impls=$(cd "$here/../impls" && pwd)
 for p in aos-exec aos-loop aos-fsm aos-daemon aos-json aos-post; do
   [ -x "$impls/$p/bin/$p" ] || { echo "run.sh：$impls/$p/bin/$p 還沒建（先建 proto8/impls，見 wf/workflows/testing.md）" >&2; exit 1; }
@@ -41,12 +40,6 @@ show "$ws"; rm -rf "$ws"
 echo "######## tick"
 ws=$(mktemp -d)
 (cd "$ws" && aos-exec "$here/tick"); echo "結束碼 $?"
-show "$ws"; rm -rf "$ws"
-echo "######## agent-nia"   # 格組起來的 agent：aos-loop 反覆叫 aos-fsm 跑 lib/agent/round/fsm-stop.json（一次一格：idle → think → act → think → finish → idle），queue 空 idle 退 10、loop 停
-ws=$(mktemp -d)
-# 題目經 queue 格放進 $AOS_STACK/queue/（N-16 有順序的信箱，一則 OpenAI message；10-30 agent-lifecycle 第 3 步，原本放 $ws/new/q1.txt）
-echo '{"role": "user", "content": "現在幾點？"}' | AOS_WS="$ws" aos-exec "$here/agent-nia/parts.json#/queue" "$here/agent-nia" push
-(cd "$ws" && aos-exec "$here/agent-nia"); echo "結束碼 $?"
 show "$ws"; rm -rf "$ws"
 echo "######## daemon-2"   # 信箱模式：daemon 放背景跑 25 圈（約 5 秒）；信箱建好後人寄一封加 tock、收回信；sam（agent 格）自己寄一封加 tick
 ws=$(mktemp -d)

@@ -276,26 +276,22 @@ class T(unittest.TestCase):
 
     def test_add_inst_points_back(self):
         # 11-01：loop 型的 exec 是內嵌單子＝小格的 exec 換成 <XXX>/loop.json#/exec，跑的時候 AOS_CD 是 XXX
-        # （{"$env": "AOS_CD"}、帶 $path 的都照原地解）。demo/agent-nia（aos-fsm 表在 lib/agent/round）掛上去也一樣指回定義資料夾、
-        # 小格裡先放的一題答得出來（表的 {"$env": "AOS_CD"}＝nia）
-        nia = Path(__file__).resolve().parent.parent / "demo" / "agent-nia"
+        # （{"$env": "AOS_CD"}、帶 $path 的都照原地解）。單子的相對 cwd（例：表與格放在定義底下的子資料夾）也照原地算
+        # （11-03 前用 demo/agent-nia 測這條，它隨 round 一起刪了，改用這裡的 far）
         d = self.prog("odd", "exit 0\n", loop={"exec": {"argv": ["sh", "-c", 'echo "$0 $1" > "$AOS_STACK/args"',
                                                                  {"$env": "AOS_CD"}, {"$env": "AOS_CD", "$path": "x"}]},
                                                "max": 1})
-        (self.s / "procs" / "nia").mkdir(parents=True)
-        r = subprocess.run([tool("aos-exec"), str(nia / "parts.json") + "#/queue", str(nia), "push"], input='{"role": "user", "content": "幾點？"}',
-                           env=env_of({"AOS_STACK": str(self.s / "procs" / "nia") + "/", "AOS_WS": str(self.t)}), capture_output=True, text=True, timeout=30)
-        self.assertEqual(r.returncode, 0, r.stderr)
+        far = self.prog("far", "exit 0\n", loop={"exec": {"argv": ["sh", "run.sh", {"$env": "AOS_CD"}], "cwd": "tbl"}, "max": 1})
+        (far / "tbl").mkdir()
+        (far / "tbl" / "run.sh").write_text('echo "$1 $(pwd)" > "$AOS_STACK/args"\n')
         self.start()
-        self.assertEqual(self.ctl("add", "--name", "nia", str(nia)).returncode, 0)
         self.assertEqual(self.ctl("add", "odd").returncode, 0)
-        self.assertTrue(until(lambda: (self.s / "procs" / "nia" / "loop.json").is_file() and (self.s / "procs" / "odd" / "args").is_file()))
-        self.assertEqual(json.loads((self.s / "procs" / "nia" / "loop.json").read_text())["exec"], str(nia) + "/loop.json#/exec")
+        self.assertEqual(self.ctl("add", "far").returncode, 0)
+        self.assertTrue(until(lambda: (self.s / "procs" / "far" / "args").is_file() and (self.s / "procs" / "odd" / "args").is_file()))
         self.assertEqual(json.loads((self.s / "procs" / "odd" / "loop.json").read_text())["exec"], os.path.realpath(d) + "/loop.json#/exec")
         self.assertEqual((self.s / "procs" / "odd" / "args").read_text().split(), [os.path.realpath(d), os.path.join(os.path.realpath(d), "x")])
-        self.assertTrue(until(lambda: self.ended().get("nia", {}).get("phase") == "done", secs=60), (self.s / "procs" / "nia" / "stderr.txt").read_text())
-        last = json.loads((self.s / "procs" / "nia" / "history.jsonl").read_text().splitlines()[-1])
-        self.assertTrue(last["content"].startswith("FAKE ANSWER to: 幾點？"), last)
+        self.assertEqual(json.loads((self.s / "procs" / "far" / "loop.json").read_text())["exec"], os.path.realpath(far) + "/loop.json#/exec")
+        self.assertEqual((self.s / "procs" / "far" / "args").read_text().split(), [os.path.realpath(far), os.path.join(os.path.realpath(far), "tbl")])
 
     # ---- 11-03 procs（thinking 2026-11-03-procs § 2、2b、2c、§ 6 第一列）
 

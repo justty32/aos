@@ -8,6 +8,8 @@
 
 **11-03 晚使用者**（頂層列開著的事，問的是代定 33「on_error 讀 endpoint 的 stderr」跟 C-52／P-21「不讀下層 stderr」字面上的緊張，逐字）：「A3.round我記得已經說要刪掉了，不管。」→ 這條緊張不再追、結案。現況對照：11-01 刪的是 `bin/aos-round` 那支（[11-01 playground-bob 03](2026-11-01-playground-bob/03-旋鈕改-argv-與檔-實作.md)）；`lib/agent/round/` 的兩張表、五格與 `roundlib.py`（含 on_error 收 endpoint stderr 那段）照當時決定留著，demo/agent-nia、`lib/aos/ask_round`、extras/human 的測試等仍在用。
 
+**11-03 晚使用者刪掉整條線**（頂層說 `lib/agent/round/` 還在、被 agent-nia、ask_round、測試用到之後，逐字）：「封存這條線，1.該刪的都刪光刪乾淨」；再問到 aos-ai 也靠 agent-nia 時：「一起刪，剛剛那些說會整合到aos-agent的，也都可以刪一刪。只需要留下他們的概念就好，也就是不用留程式碼，留文檔就好。我沒有要用他們」→ `lib/agent/round/`、parts、queue、history、act、compact、`lib/endpoint/`、`lib/aos/ask_round`、`demo/agent-nia`、aos-ai 與它們的測試都刪了；下文講到的程式都已不存在，概念收在 proto8/archive/agent-round-concepts/。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../wf/STRUCTURE.md) 按 `##` 標題拆開（單段仍超標的再按 `###` 切）；本檔留前言與表，各段逐字在下列分檔（2026-10-31 tidy）。

@@ -1,27 +1,27 @@
-"""test_human - 給人用的 aos-say／aos-listen（aos-chat 11-03 封存到 proto8/archive/aos-chat/，案例一起搬）（proto8/extras/human，2026-10-24）：對 agent-nia 那種走 queue 的 agent 用假腦問答。
+"""test_human - 給人用的 aos-say／aos-listen（aos-chat 11-03 封存到 proto8/archive/aos-chat/，案例一起搬）（proto8/extras/human，2026-10-24）：對走 queue 的 agent 問答。
 
 10-30 起照 agent 對話協議（CONVENTION P-42；thinking 2026-10-30-agent-lifecycle A-7、A-8、第 4 步）：say＝aos-post send --ordered
 <stack>/queue、listen 只看 stack（信還在 queue 就等、不見了就印 history 最新的回答）。
 11-03 拿掉 aos-listen 的 --status／--trace／LetterUnclaimed、aos-chat 的 --trace／/trace／/status（trace.jsonl 整個拿掉，thinking 2026-11-03-trace）：
 原本看快照的案例改看 stack 的 state.json 與 aos_human.runners（listen 提醒「沒人在跑」用的同一個判法）。
-agent＝demo/agent-nia 的格（註冊檔改成絕對路徑放在暫存資料夾，腦壞＝endpoint 換 openai 指到 dead_brain.DEAD）。
-10-30 eca 第 7 步（去 hub 化）：External 段＝外部 coding agent（aos-loop 包 bin/aos-eca-turn、假 claude）跑著時 say／listen 照用、
+agent＝這裡臨時組的 eca 定義（aos-loop 包 bin/aos-eca-turn、CLI 是 test_cli_tools 的假 claude，回 `fake claude[<id>]: <題目>`；
+11-03 前是 demo/agent-nia，它隨 round 那套 agent 刪了，案例改用 eca）；CLI 壞＝PATH 上沒有 claude（CliMissing，信留在 cur/）。
+10-30 eca 第 7 步（去 hub 化）：External 段＝外部 coding agent 常駐（--on-empty idle）時 say／listen 照用、
 runners 只靠 /proc 認得服務者（直接跑、掛 daemon〔11-03 起經 where 拿 stack〕兩種）；stack 的 server.txt 那招刪了。
 設計：proto8/thinking/2026-10-24-say-listen.md。不連網。"""
 import json, os, re, subprocess, tempfile, time, unittest
 from pathlib import Path
 
 from aos_bins import ROOT, path_with  # noqa: E402
-from round_common import absolute  # noqa: E402
 
 HUMAN = ROOT / "extras" / "human" / "bin"
 SAY, LISTEN = (str(HUMAN / n) for n in ("aos-say", "aos-listen"))
-NIA = ROOT / "demo" / "agent-nia"
 DAN = str(ROOT / "demo" / "agent-eve")              # 舊協議（讀工作區 new/、不收 queue）：10-30 晚真腦實測發現 2；11-02 晚 agent-dan 刪除，改用它的複本 agent-eve
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_DAEMON_STACK")
-from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
+CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_DAEMON_STACK",
+         "TMUX", "CODEX_HOME", "FAKE_TRANSCRIPTS")
 SIG = re.compile(r"^\d{12}\.\d{20}\.\d+\.\d+$")
-TURN = ROOT / "bin" / "aos-eca-turn"                # 10-30 eca：外部 coding agent 的一輪（External 段；10-31 前是 lib/eca/turn 格）
+TURN = ROOT / "bin" / "aos-eca-turn"                # 10-30 eca：外部 coding agent 的一輪（10-31 前是 lib/eca/turn 格）
+FAKE = re.compile(r"^fake claude\[\w+\]: ")          # 假 claude 的回答開頭
 from test_cli_tools import FAKE_CLAUDE, SYS_PATH  # noqa: E402  假 claude（不花額度）
 
 
@@ -52,31 +52,25 @@ class Base(unittest.TestCase):
         self.ws = t / "ws"
         self.ws.mkdir()
         self.stack = self.ws / ".stack"
-        self.agent = self.nia(t / "nia")
+        self.bin = t / "fakebin"
+        self.bin.mkdir()
+        (self.bin / "claude").write_text(FAKE_CLAUDE)
+        (self.bin / "claude").chmod(0o755)
+        self.xenv = dict(PATH=path_with(str(self.bin) + os.pathsep + str(ROOT / "bin") + os.pathsep + SYS_PATH),
+                         FAKE_LOG=str(t / "cli.log"), CLAUDE_CONFIG_DIR=str(t / "claude-home"))
+        self.agent = self.eca_def(t / "eca-stop")                      # 射後不理：queue 空 aos-eca-turn 退 10、loop 收工
+        self.eca = self.eca_def(t / "eca-claude", idle=True)            # 常駐：queue 空隔 interval_ms 再來
 
-    def nia(self, where, brain=None, idle=False):
-        """agent-nia 的一份拷貝：註冊檔改成絕對路徑；brain＝openai 的網址（腦壞用）；idle＝loop.json 改指 fsm-idle.json＋常駐的 loop。"""
+    def eca_def(self, where, idle=False):
+        """eca 定義：cli.json（lib/agent/claude 的）＋loop.json（叫 aos-eca-turn）＋_entry 轉 aos-loop。"""
         where.mkdir()
-        for f in ("_entry", "system.txt"):
-            (where / f).write_bytes((NIA / f).read_bytes())
-        loop = json.loads((NIA / "loop.json").read_text())
-        loop["exec"]["cwd"] = os.path.normpath(os.path.join(NIA, loop["exec"]["cwd"]))   # lib/agent/round
-        parts = json.loads((NIA / "parts.json").read_text())
-        tools = json.loads((NIA / "tools.json").read_text())
-        parts = absolute(parts, NIA)
-        for row in tools["tools"].values():
-            row["path"] = os.path.normpath(os.path.join(NIA, row["path"]))
-        if brain:
-            parts["endpoint"]["default"] = {".env": {"AOS_BRAIN_URL": brain, "AOS_BRAIN_MODEL": "m"},
-                                            "_entry": str(ROOT / "lib" / "endpoint" / "openai")}
-        if idle:
-            loop["exec"]["argv"] = ["aos-fsm", "fsm-idle.json"]
-            del loop["max"]
-            loop["interval_ms"] = 100
+        cfg = json.loads((ROOT / "lib" / "agent" / "claude" / "cli.json").read_text())
+        (where / "cli.json").write_text(json.dumps(dict(cfg, timeout_ms=15000)))
+        loop = {"exec": [str(TURN), "--on-empty", "idle" if idle else "stop", str(where)], "ctl": "ctl.json", "state": "state.json"}
+        loop.update({"interval_ms": 100} if idle else {"max": 40})
         (where / "loop.json").write_text(json.dumps(loop))
-        (where / "parts.json").write_text(json.dumps(parts))
-        (where / "tools.json").write_text(json.dumps(tools))
-        return str(where)
+        (where / "_entry").write_text(json.dumps(["aos-loop", "loop.json"]))
+        return where
 
     def say(self, *words, **kw):
         r = run(SAY, "--ws", str(self.ws), *words, **kw)
@@ -84,7 +78,7 @@ class Base(unittest.TestCase):
         return r.stdout.strip()
 
     def go(self, agent=None, **kw):
-        return run("aos-exec", "--ws", str(self.ws), agent or self.agent, **kw)
+        return run("aos-exec", "--ws", str(self.ws), str(agent or self.agent), **dict(self.xenv, **kw))
 
     def queue(self, stage):
         d = self.stack / "queue" / stage
@@ -171,7 +165,8 @@ class ListenTest(Base):
         self.assertEqual(self.queue("new") + self.queue("cur"), [])
         r = run(LISTEN, "--ws", str(self.ws))                    # 不帶信號：new/ cur/ 空＝印最新那則回答
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 現在幾點（clock said:"), r.stdout)
+        self.assertRegex(r.stdout, FAKE)
+        self.assertTrue(r.stdout.endswith(": 現在幾點\n"), r.stdout)
         self.assertEqual(r.stdout.count("\n"), 1)
 
     def test_waits_while_agent_runs_later(self):
@@ -182,7 +177,7 @@ class ListenTest(Base):
         self.assertEqual(self.go().returncode, 0)
         out, err = p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0, err)
-        self.assertTrue(out.startswith("FAKE ANSWER to: 等我"), out)
+        self.assertTrue(FAKE.match(out) and out.endswith(": 等我\n"), out)
         self.assertIn("還在 queue 的 new/，但目前沒有程式在跑", err)
 
     def test_old_protocol_agent_waits(self):
@@ -195,7 +190,7 @@ class ListenTest(Base):
         self.assertEqual(r.returncode, 1)
         self.assertRegex(r.stderr.splitlines()[-1], r"^aos-listen: AnswerMissing 等了 1 秒")
         self.assertIn("還在 queue 的 new/，但目前沒有程式在跑", r.stderr)
-        self.assertEqual(self.go().returncode, 0)                # 換走 queue 的 agent-nia：答得出
+        self.assertEqual(self.go().returncode, 0)                # 換走 queue 的 agent（eca）：答得出
         r = run(LISTEN, "--ws", str(self.ws), "--timeout", "5")
         self.assertEqual(r.returncode, 0, r.stderr)
 
@@ -221,33 +216,33 @@ class ListenTest(Base):
         self.assertEqual((p.returncode, out), (0, "新回答\n"), err)
 
     def test_waits_while_letter_in_cur(self):
-        """信在 cur/（認領了、腦壞停住）：listen 照等、說信在 cur/ 沒人在跑；修好再跑就答出。"""
+        """信在 cur/（認領了、還沒交出去：CLI 不在 PATH 上〔CliMissing〕停住）：listen 照等、說信在 cur/ 沒人在跑；修好再跑就答出。"""
         sig = self.say("壞腦")
-        bad = self.nia(Path(self._tmp.name) / "bad", brain=DEAD)
-        r = self.go(bad)
+        r = self.go(PATH=path_with(str(ROOT / "bin") + os.pathsep + SYS_PATH))     # PATH 上沒有 claude
         self.assertNotEqual(r.returncode, 0)
+        self.assertIn("CliMissing", r.stderr)
         self.assertEqual(self.queue("cur"), [sig])
         r = run(LISTEN, "--ws", str(self.ws), "--timeout", "1")
         self.assertEqual(r.returncode, 1)
         self.assertIn("在 queue 的 cur/（認領了、還沒答完），但目前沒有程式在跑", r.stderr)
         self.assertRegex(r.stderr.splitlines()[-1], r"^aos-listen: AnswerMissing 等了 1 秒.*（信在 queue 的 cur/）")
-        self.assertFalse((self.stack / "trace.jsonl").exists())               # 11-03：fsm 不寫 trace
+        self.assertFalse((self.stack / "trace.jsonl").exists())               # 11-03：不寫 trace
         self.assertEqual(json.loads((self.stack / "state.json").read_text())["phase"], "done")   # aos-loop 的 state 窗（失敗也是 done）
         p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "30"], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, text=True, env=env())
         time.sleep(0.5)
-        self.assertEqual(self.go().returncode, 0)                        # 換回假腦：接著做同一封
+        self.assertEqual(self.go().returncode, 0)                        # CLI 回來了：cur/ 那封照問
         out, err = p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0, err)
-        self.assertTrue(out.startswith("FAKE ANSWER to: 壞腦"), out)
+        self.assertTrue(FAKE.match(out) and out.endswith(": 壞腦\n"), out)
 
     def test_paused_letter_waits(self):
         """常駐（idle）的 aos-loop 被 ctl 暫停：state.json 的 phase paused、runners 認得有人在跑；寄的信留在 new/。"""
-        agent = self.nia(Path(self._tmp.name) / "idle", idle=True)
+        agent = self.eca
         self.stack.mkdir()
         (self.stack / "ctl.json").write_text('{"cmd": "pause"}')
-        p = subprocess.Popen(["aos-exec", "--ws", str(self.ws), agent], stdout=subprocess.DEVNULL,
-                             stderr=subprocess.PIPE, text=True, env=env())
+        p = subprocess.Popen(["aos-exec", "--ws", str(self.ws), str(agent)], stdout=subprocess.DEVNULL,
+                             stderr=subprocess.PIPE, text=True, env=env(**self.xenv))
         self.addCleanup(lambda: (p.poll() is None and p.kill(), p.communicate()))
         end = time.time() + 20
         while time.time() < end:
@@ -260,7 +255,7 @@ class ListenTest(Base):
         self.assertEqual(self.queue("new"), [sig])
         (self.stack / "ctl.json").write_text('{"cmd": "resume"}')
         r = run(LISTEN, "--ws", str(self.ws), "--timeout", "20")
-        self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 暫停中"), r.stdout + r.stderr)
+        self.assertTrue(FAKE.match(r.stdout) and r.stdout.endswith(": 暫停中\n"), r.stdout + r.stderr)
         (self.stack / "ctl.json").write_text('{"cmd": "stop"}')
         self.assertEqual(p.wait(timeout=20), 0)
 
@@ -280,7 +275,7 @@ class ListenTest(Base):
             self.assertRegex(r.stderr, r"^aos-listen: FlagUnknown ")
 
     def test_waits_for_latest_letter(self):
-        """aos-say 話 && aos-listen：連寄兩封，listen 等的是最新那封；答完印最新的回答。"""
+        """aos-say 話 && aos-listen：連寄兩封，listen 等的是最新那封；答完印最新的回答（aos-eca-turn 兩封一批、一則回答）。"""
         self.say("第一封")
         self.say("第二封")
         p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "30"], stdout=subprocess.PIPE,
@@ -289,15 +284,16 @@ class ListenTest(Base):
         self.assertEqual(self.go().returncode, 0)
         out, err = p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0, err)
-        self.assertTrue(out.startswith("FAKE ANSWER to: 第二封"), out)
+        self.assertTrue(FAKE.match(out) and out.endswith(": 第一封\n\n第二封\n"), out)
 
     def test_last_prints_question_and_answer(self):
         self.say("一")
+        self.assertEqual(self.go().returncode, 0)                        # 一封一輪（同一批會合成一則回答）
         self.say("二")
         self.assertEqual(self.go().returncode, 0)
         r = run(LISTEN, "--ws", str(self.ws), "--last", "5")
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertRegex(r.stdout, r"(?s)^== #1\n> 一\nFAKE ANSWER to: 一.*\n== #2\n> 二\nFAKE ANSWER to: 二")
+        self.assertRegex(r.stdout, r"(?s)^== #1\n> 一\nfake claude\[\w+\]: 一\n== #2\n> 二\nfake claude\[\w+\]: 二")
         r = run(LISTEN, "--ws", str(self.ws), "--last", "1")
         self.assertTrue(r.stdout.startswith("== #2\n> 二\n"), r.stdout)
 
@@ -310,30 +306,13 @@ class ListenTest(Base):
         time.sleep(1)
         p.terminate()
         out, _ = p.communicate(timeout=10)
-        self.assertIn("== #1\n> 跟著看\nFAKE ANSWER to: 跟著看", out)
+        self.assertRegex(out, r"== #1\n> 跟著看\nfake claude\[\w+\]: 跟著看")
 
 
 
 class External(Base):
     """10-30 eca 第 7 步（C 結論 9、F 結論 18；衝突 6 刪 server.txt）：外部 coding agent＝aos-loop 包著 aos-eca-turn 的定義（P-43 草稿），
-    say／listen 不用改；服務者（aos_human.runners）只靠 /proc。定義在這裡臨時組（demo/eca-claude 還沒有），CLI 用 test_cli_tools 的假 claude。"""
-
-    def setUp(self):
-        super().setUp()
-        t = Path(self._tmp.name)
-        self.bin = t / "fakebin"
-        self.bin.mkdir()
-        (self.bin / "claude").write_text(FAKE_CLAUDE)
-        (self.bin / "claude").chmod(0o755)
-        self.eca = t / "eca-claude"                     # 定義：cli.json＋loop.json（叫 aos-eca-turn）＋_entry 轉 aos-loop
-        self.eca.mkdir()
-        cfg = json.loads((ROOT / "lib" / "agent" / "claude" / "cli.json").read_text())
-        (self.eca / "cli.json").write_text(json.dumps(dict(cfg, timeout_ms=15000)))
-        (self.eca / "loop.json").write_text(json.dumps({"exec": [str(TURN), "--on-empty", "idle", str(self.eca)], "interval_ms": 100,
-                                                        "ctl": "ctl.json", "state": "state.json"}))
-        (self.eca / "_entry").write_text(json.dumps(["aos-loop", "loop.json"]))
-        self.xenv = dict(PATH=path_with(str(self.bin) + os.pathsep + str(ROOT / "bin") + os.pathsep + SYS_PATH),
-                         FAKE_LOG=str(t / "cli.log"), CLAUDE_CONFIG_DIR=str(t / "claude-home"))
+    常駐（--on-empty idle）時 say／listen 不用改；服務者（aos_human.runners）只靠 /proc。定義是 Base 的 self.eca。"""
 
     def xrun(self, *args, **kw):
         return run(*args, **dict(self.xenv, **kw))
