@@ -9,9 +9,10 @@
   ③ ctl／state＝aos-loop 開在 <stack>/ctl.json、state.json 的窗（state 的 phase 看得出 paused）。
 舊協議（工作區的 new/ cur/ out/ done/，P-11 的 10-30 改口：agent-bob／ann／dan、topdown 這些 fsm 範本）這裡不再認。
 11-03 起不讀 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）：fsm、aos-eca-turn 都不寫了，last_jsonl／unit_of／failed 跟著拿掉。"""
-import json, os, subprocess
+import json, os, re, subprocess
 
-STAGES = ("new", "cur", "done")              # queue 的格；tmp/ 是寄到一半的，不看
+STAGES = ("new", "cur", "archive")           # queue 的格（11-03 aos-post 歸檔格 done/ 改名 archive/）；tmp/ 是寄到一半的，不看
+ORDERED = re.compile(r"^[0-9]{12}\.")        # 有序信的名字：<12 位序號>.<尾名>（N-16）
 
 
 class Error(Exception):
@@ -29,19 +30,25 @@ def box_of(stack):
     return os.path.join(stack, "queue")
 
 
+def letter_key(name):
+    """信件名稱的處理順序（同 aos-post sort_letters，thinking 2026-11-03-aos-post § 2）：有序（^[0-9]{12}\\.）全部在前、照名字；
+    無序全部在後、照名字（預設名時間開頭＝寄出先後）。給 sorted(key=)／max(key=) 用。"""
+    return (0 if ORDERED.match(name) else 1, name)
+
+
 def names(stack, stage):
-    """queue 某一格裡的信號（. 開頭的不算，N-05）；照名字排序＝寄的順序。"""
+    """queue 某一格裡的信件名稱（. 開頭的不算，N-05）；照處理順序（letter_key）排。"""
     try:
-        return sorted(n for n in os.listdir(os.path.join(box_of(stack), stage)) if not n.startswith("."))
+        return sorted((n for n in os.listdir(os.path.join(box_of(stack), stage)) if not n.startswith(".")), key=letter_key)
     except (FileNotFoundError, NotADirectoryError):
         return []
 
 
-def where(stack, sig):
+def where(stack, name):
     """這封信現在在 queue 的哪幾格。"""
-    if not sig or "/" in sig or sig.startswith("."):
+    if not name or "/" in name or name.startswith("."):
         return []
-    return [s for s in STAGES if os.path.lexists(os.path.join(box_of(stack), s, sig))]
+    return [s for s in STAGES if os.path.lexists(os.path.join(box_of(stack), s, name))]
 
 
 def waiting(stack):
@@ -69,7 +76,7 @@ def post(args, stdin_text=""):
 
 def put(stack, text):
     """把一段文字變成一則 user message 寄進 <stack>/queue/（沒有 queue 就 aos-post init，寄信人先建信箱＝可以先說再跑 agent）；
-    content＝文字去掉結尾的換行。回信號（new/ 裡的名字，帶序號）。錯＝Error("PostFailed")。"""
+    content＝文字去掉結尾的換行。回信件名稱（new/ 裡的名字，帶序號）。錯＝Error("PostFailed")。"""
     box = box_of(stack)
     if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
         post(["init", box])

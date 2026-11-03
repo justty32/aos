@@ -5,10 +5,10 @@
 往 daemon 的信箱（信箱模式，N-28 的 10-29 補）投一封 `procs_added`／`procs_removed`／`procs_stopped`／`procs_started` 的信。設計與代定見
 proto8/thinking/2026-10-30-agent-lifecycle.md（實作第 7 步的補）、2026-11-03-procs.md（11-03 loops／execs 統稱 procs）與 bin/README.md。
 
-    aos-daemon-ctl [--daemon-stack D] add [--name N] [--ws WS] [--stack S] XXX [-- 參數...]   掛上去（add＝登記＋起）；stdout 印信號（aos-post 給的）
-    aos-daemon-ctl [--daemon-stack D] rm 名字                                      拿下來（procs_removed；先停再拿掉，stack 留著）；印信號
-    aos-daemon-ctl [--daemon-stack D] stop 名字                                    停（procs_stopped：跑完這次退、列留成 stopped、stack 留著）；印信號
-    aos-daemon-ctl [--daemon-stack D] start 名字                                   起（procs_started：stopped 的用同一個 stack 再起）；印信號
+    aos-daemon-ctl [--daemon-stack D] add [--name N] [--ws WS] [--stack S] XXX [-- 參數...]   掛上去（add＝登記＋起）；stdout 印信件名稱（aos-post 給的）
+    aos-daemon-ctl [--daemon-stack D] rm 名字                                      拿下來（procs_removed；先停再拿掉，stack 留著）；印信件名稱
+    aos-daemon-ctl [--daemon-stack D] stop 名字                                    停（procs_stopped：跑完這次退、列留成 stopped、stack 留著）；印信件名稱
+    aos-daemon-ctl [--daemon-stack D] start 名字                                   起（procs_started：stopped 的用同一個 stack 再起）；印信件名稱
     aos-daemon-ctl [--daemon-stack D] pause 名字                                   暫停（直接寫它的 ctl.json {"cmd": "pause", "seq": N}）；印 N
     aos-daemon-ctl [--daemon-stack D] resume 名字                                  解除暫停（{"cmd": "resume", "seq": N}）；印 N
     aos-daemon-ctl [--daemon-stack D] ls [--json]                                  列 procs_state.json 的表：一行「名字 TAB phase TAB pid TAB code TAB ws」

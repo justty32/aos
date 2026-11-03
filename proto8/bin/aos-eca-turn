@@ -16,17 +16,18 @@
   就用它，接上 aos-mcp，工作區＝$AOS_WS、stack＝$AOS_STACK；11-03 eca-tools）。定義不被寫（P-15）；寫的都在 $AOS_STACK。
 
 平級形（沒有 --one）——一次替它答一批（11-03 起：使用者 11-03「每次aos-eca-turn就是把所有信一起丟進去(當然，是有順序的)」「一批幾封無上限」，thinking 2026-10-30-eca/17-11-03-批次-status.md；原本一次一則）：
-  ① 這一批＝queue 的 cur/ 全部（認領了、還沒交出去的：上次 --on-busy yield 退讓、或 CLI 沒起來）＋ new/ 全部（一封一封 aos-post claim 到沒有），
-     照名字＝寄的順序，幾封都行、沒有上限；CLI 跑的期間才寄來的信留在 new/，下一輪再答。
+  ① 這一批＝queue 的 cur/ 全部（認領了、還沒交出去的：上次 --on-busy yield 退讓、或 CLI 沒起來）＋ new/ 全部（aos-post take-all），
+     照處理順序（aos_ws.letter_key：有序在前照名字＝寄的順序、無序在後照名字；11-03 aos-post 改版，同 aos-post），幾封都行、沒有上限；CLI 跑的期間才寄來的信留在 new/，下一輪再答。
      history 空、queue 也空、定義有非空的 prompt.txt＝先把它當一則 user 投進 queue（aos-post send --ordered）再認領。
-  ② 讀信（aos-post check）：body 不是 {"role": "user", "content": 非空字串}＝壞信，aos-post finish 丟掉、原因寫進
+  ② 讀信（aos-post see）：body 不是 {"role": "user", "content": 非空字串}＝壞信，aos-post done 丟掉、原因寫進
      $AOS_STACK/mailbox_warning.txt 一行（只留最後一封；N-16），跳過它、其他封照答（衝突 5、Q-4；11-03 前記在 trace、退 0）。
+     名字不是有序的不再算壞信（11-03 aos-post 改版：有序、無序同箱，無序的排在最後、照樣答）。
      整批都是壞信＝不問 CLI、退 0。
   ③ 好信的 content 照順序用一個空行（"\n\n"）接成一段，交給 cli_session 問一次（小格＝$AOS_STACK/<kind>/）：畫面開著＝貼進畫面等 hook；
      沒開＝claude -p --resume／codex exec resume（第一次開新的）——兩條路照 10-24，跟工具形是同一段（cli_session.ask）。
   ④ 交出去就算完成（11-03，使用者「對於eca來說，他收到信後，丟給claude之類的，然後這封信就算是完成了」，thinking 2026-10-30-eca/20-11-03-交出去就收.md）：
      題目交給 CLI 的那一刻（非互動＝CLI 起來、題目寫進 stdin；畫面＝貼上按 Enter；cli_session.ask 的 handed）、等回答之前，
-     好信 body 照順序各接一則 user 進 history，再 aos-post finish 這批每一封（刪掉）。之後 CLI 的輸出就是結果（沒有「回信」，
+     好信 body 照順序各接一則 user 進 history，再 aos-post done 這批每一封（刪掉）。之後 CLI 的輸出就是結果（沒有「回信」，
      使用者 11-03「沒有回信。claude的輸出結果就是這樣」）：接成一則 {"role": "assistant", "content": 輸出} 進 history。
      CLI 中途掛掉（CliFailed、ReplyMissing、這支被殺）＝邊緣狀況：信已經收了、不自動重答，要重答由人再 say
      （使用者 11-03「中途掛掉就是邊緣狀況，不要讓邊緣狀況影響他的原本意思」；P-12 在 eca 的例外，見 P-43 的 11-03 註）。
@@ -47,17 +48,16 @@ PATH 上要有 aos-post（平級形）。
   代號：ArgumentsBad、FlagUnknown、AgentBad、StackMissing、HistoryBad、PostFailed、WriteFailed，
   加 cli_session 的 CfgMissing、CfgBad、ToolsMissing（11-03 eca-tools：cli.json 的 tools 指的登記檔不在）、CliMissing（含 aos-mcp 不在 PATH 上）、
   CliFailed、ReplyMissing（yield 時的 SessionBad 不算錯，見上）。"""
-import json, os, re, subprocess, sys
+import json, os, subprocess, sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
-sys.path[:0] = [HERE, os.path.join(HERE, "..", "lib", "agent")]   # bin/aos_flags.py、lib/agent/cli_session.py
-import aos_flags, cli_session  # noqa: E402
+sys.path[:0] = [HERE, os.path.join(HERE, "..", "lib", "agent"), os.path.join(HERE, "..", "lib", "aos")]   # bin/aos_flags.py、lib/agent/cli_session.py、lib/aos/aos_ws.py
+import aos_flags, aos_ws, cli_session  # noqa: E402
 
 NAME = "aos-eca-turn"
 NOT_FOUND = 10
 USAGE = "usage: aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] <定義資料夾絕對路徑>"
-ORDERED = re.compile(r"^[0-9]{12}\.")      # 有序信的名字：<N 零填 12 位>.<信號>（N-16）
 
 
 class Fail(Exception):
@@ -74,8 +74,9 @@ def die(code, reason):
 
 
 def names(box, stage):
+    """某一格裡的信件名稱（. 開頭的不算，N-05），照處理順序（aos_ws.letter_key）排。"""
     try:
-        return sorted(n for n in os.listdir(os.path.join(box, stage)) if not n.startswith("."))
+        return sorted((n for n in os.listdir(os.path.join(box, stage)) if not n.startswith(".")), key=aos_ws.letter_key)
     except (FileNotFoundError, NotADirectoryError):
         return []
 
@@ -160,15 +161,13 @@ def note_instance(stack, kind, ws, template):
 
 def letter_body(box, sig):
     """好信回 (body, None)；壞信回 (None, 原因)。"""
-    if not ORDERED.match(sig):
-        return None, "名字不是有序的 <12 位序號>.<信號>"
-    code, out, err = post(["check", box, sig])
+    code, out, err = post(["see", box, sig])
     if code != 0:
         return None, err
     try:
         body = json.loads(out).get("body")
     except (ValueError, AttributeError):
-        return None, "aos-post check 印的不是 JSON 物件"
+        return None, "aos-post see 印的不是 JSON 物件"
     if not (isinstance(body, dict) and body.get("role") == "user" and isinstance(body.get("content"), str)
             and body["content"].strip()):
         return None, "body 要是 {\"role\": \"user\", \"content\": 非空字串}"
@@ -194,15 +193,13 @@ def opening(stack, box, template):
 SEP = "\n\n"                                   # 一批好幾封時，各封 content 照順序用一個空行接起來（11-03 代定）
 
 
-def claim_all(stack, box, template):
-    """new/ 裡的信全部認領到 cur/（照名字＝寄的順序，一封一封 aos-post claim 到 NOT_FOUND）；一批幾封沒有上限（11-03）。
+def take_all(stack, box, template):
+    """new/ 裡的信全部認領到 cur/（aos-post take-all；沒信退 NOT_FOUND＝剛好被撤回，不算錯）；一批幾封沒有上限（11-03）。
     history 空、queue 也空、定義有 prompt.txt＝先投開場白再認領。"""
     if not names(box, "new") and not names(box, "cur") and not opening(stack, box, template):
         return
-    while names(box, "new"):
-        code, _ = must_post(["claim", box], ok=(0, NOT_FOUND))    # new/ → cur/
-        if code == NOT_FOUND:                                      # 剛好被撤回
-            return
+    if names(box, "new"):
+        must_post(["take-all", box], ok=(0, NOT_FOUND))            # new/ → cur/
 
 
 def one_turn(template, stack, ws, empty_code, on_busy):
@@ -212,7 +209,7 @@ def one_turn(template, stack, ws, empty_code, on_busy):
     cfg = cli_session.load_cfg(template)
     cell = cli_session.Cell(os.path.join(stack, cfg["kind"]))
     note_instance(stack, cfg["kind"], ws, template)
-    claim_all(stack, box, template)                                # 這輪要答的＝cur/ 全部（上次沒交出去的＋剛認領的）
+    take_all(stack, box, template)                                 # 這輪要答的＝cur/ 全部（上次沒交出去的＋剛認領的）
     batch = names(box, "cur")
     if not batch:
         return empty_code
@@ -220,7 +217,7 @@ def one_turn(template, stack, ws, empty_code, on_busy):
     for sig in batch:                                               # ② 照順序讀信
         body, why = letter_body(box, sig)
         if body is None:                                            # 壞信一律丟（N-16、決定 27 不通知寄信人）
-            post(["finish", box, sig])
+            post(["done", box, sig])
             warn(stack, sig, why)
             continue
         bodies.append(body)
@@ -234,7 +231,7 @@ def one_turn(template, stack, ws, empty_code, on_busy):
             for body in bodies:
                 append_history(stack, body)
             for sig in good:
-                must_post(["finish", box, sig])
+                must_post(["done", box, sig])
         except Fail as e:
             late.append(e)
     try:

@@ -93,7 +93,7 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 這幾個的「模型的錯」也照規則 3 退 1；用它們的 agent（agent-meg、talk 的 member）的 act 把工具退非 0 回給腦、不停（同 agent-pip）。
 `memory` 的 `$AOS_HEAP`、`send_message` 的 `$AOS_ROSTER`是規則 4「只碰 `$AOS_WS`」的例外，照原樣留著（放哪由叫的人決定，像 stack）。
 
-**共用模組 [aos_ws.py](aos/aos_ws.py)**（不是工具、沒有 `_entry`）：「寄信、等答案、讀 stack」；照 agent 對話協議（[CONVENTION P-42](../docs/CONVENTION/02-題目stack停錯腦.md)）只碰 stack——`stack_of`、`names`／`where`／`waiting`（queue 的 new／cur／done）、`put`（一則 user message，`aos-post init`＋`send --ordered`，PATH 上要有 aos-post）、`history`／`answers`／`exchanges`（回答＝沒有 tool_calls 的 assistant）；不認舊協議的工作區 `new/`／`out/`。給人用的 [proto8/extras/human](../extras/human/README.md)（aos-say／listen）用 realpath 找到這個資料夾 import（11-03 aos-ai 刪了，只服務它的 `loop_state`、`tail_jsonl` 跟著拿掉）。
+**共用模組 [aos_ws.py](aos/aos_ws.py)**（不是工具、沒有 `_entry`）：「寄信、等答案、讀 stack」；照 agent 對話協議（[CONVENTION P-42](../docs/CONVENTION/02-題目stack停錯腦.md)）只碰 stack——`stack_of`、`letter_key`（信件名稱的處理順序：有序 `^[0-9]{12}\.` 在前照名字、無序在後照名字，同 aos-post；11-03）、`names`（照 `letter_key` 排）／`where`／`waiting`（queue 的 new／cur／archive）、`put`（一則 user message，`aos-post init`＋`send --ordered`，PATH 上要有 aos-post）、`history`／`answers`／`exchanges`（回答＝沒有 tool_calls 的 assistant）；不認舊協議的工作區 `new/`／`out/`。給人用的 [proto8/extras/human](../extras/human/README.md)（aos-say／listen）用 realpath 找到這個資料夾 import（11-03 aos-ai 刪了，只服務它的 `loop_state`、`tail_jsonl` 跟著拿掉）。
 
 ## 索引：agent
 

@@ -122,7 +122,7 @@ class T(unittest.TestCase):
         self.prog("job", 'echo "$$" >> "$AOS_STACK/runs"\n' + WAIT_GO + "exit 3\n")
         self.start()
         r = self.ctl("add", "job")
-        self.assertEqual((r.returncode, r.stderr, r.stdout.count("\n")), (0, "", 1))   # 印信號
+        self.assertEqual((r.returncode, r.stderr, r.stdout.count("\n")), (0, "", 1))   # 印信件名稱
         x = until(lambda: self.tables()["procs"].get("job", {}).get("phase") == "running" and self.tables())
         self.assertTrue(x)
         self.assertFalse((self.s / "procs" / "job" / "loop.json").exists())
@@ -367,7 +367,7 @@ class T(unittest.TestCase):
         self.assertEqual(self.letters(), [])
         for cmd in ("stop", "start"):
             r = self.ctl(cmd, "lp")
-            self.assertEqual((r.returncode, r.stderr, r.stdout.count("\n")), (0, "", 1), cmd)   # 印信號
+            self.assertEqual((r.returncode, r.stderr, r.stdout.count("\n")), (0, "", 1), cmd)   # 印信件名稱
         self.assertEqual(self.ctl("start", "zz").returncode, 0)
         self.assertEqual(self.letters(), [{"procs_stopped": ["lp"]}, {"procs_started": ["lp"]}, {"procs_started": ["zz"]}])
         r = self.ctl("pause", "lp")

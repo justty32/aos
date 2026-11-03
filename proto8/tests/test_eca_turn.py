@@ -179,7 +179,7 @@ class Turn(unittest.TestCase):
         first = self.say("第一封")
         self.say("第二封")
         self.post("init", str(self.box))
-        self.assertEqual(self.post("claim", str(self.box)), first)
+        self.assertEqual(self.post("take", str(self.box)), first)
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual([m["role"] for m in self.history()], ["user", "user", "assistant"])
@@ -240,6 +240,22 @@ class Turn(unittest.TestCase):
         self.assertEqual((self.stage("new"), self.stage("cur")), ([], []))
         self.assertIn("不採用", (self.stack / "mailbox_warning.txt").read_text())
         self.assertEqual(self.turn().returncode, 10)
+
+    def test_unordered_last(self):
+        """11-03 aos-post 改版（有序、無序同箱）：名字不是有序的不再是壞信——無序的排在這批最後（aos_ws.letter_key：有序先、無序後，
+        各照名字；名字照字面比比有序的小也一樣），照樣答。"""
+        self.post("init", str(self.box))
+        self.post("send", str(self.box), "0-unordered", input=json.dumps({"role": "user", "content": "無序"}))
+        self.say("一")
+        self.say("二")
+        r = self.turn()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(len(self.calls()), 1)
+        h = self.history()
+        self.assertEqual([m["content"] for m in h[:3]], ["一", "二", "無序"])
+        self.assertTrue(h[3]["content"].endswith(": 一\n\n二\n\n無序"), h[3])
+        self.assertEqual((self.stage("new"), self.stage("cur")), ([], []))
+        self.assertFalse((self.stack / "mailbox_warning.txt").exists())
 
     def test_empty_stop_idle(self):
         """queue 空：--on-empty 沒給／stop＝退 10、idle＝退 0，（10-31 從 ECA_ON_EMPTY 改 argv）。"""
