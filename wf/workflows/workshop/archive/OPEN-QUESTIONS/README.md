@@ -1,3 +1,5 @@
+> 封存 2026-11-03，proto5～7 年代的舊紀錄，使用者 11-03 收斂時決定整批封存（「照建議」）
+
 # 待答問題 — 結構索引
 
 ← [workshop](../README.md)｜[BACKGROUND](../BACKGROUND.md)｜[原路徑指標](../OPEN-QUESTIONS.md)

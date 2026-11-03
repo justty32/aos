@@ -1,6 +1,6 @@
 # 研討會的 codex session 一覽
 
-← [workshop](README.md)｜[紀錄](records/)｜[待答問題](OPEN-QUESTIONS.md)
+← [workshop](README.md)
 
 2026-08-25 這一天所有 `codex exec` session 的 id。**要接回同一個人格、同一份記憶，
 就用這些 id `resume`。**

@@ -1,3 +1,5 @@
+> 封存 2026-11-03，proto5～7 年代的舊紀錄，使用者 11-03 收斂時決定整批封存（「照建議」）
+
 # workshop／records — 研討會紀錄索引
 
 ← [workshop INDEX](../INDEX.md)｜[workshop README](../README.md)

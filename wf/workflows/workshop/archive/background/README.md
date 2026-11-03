@@ -1,3 +1,5 @@
+> 封存 2026-11-03，proto5～7 年代的舊紀錄，使用者 11-03 收斂時決定整批封存（「照建議」）
+
 # workshop／background — 研討會背景資料索引
 
 ← [BACKGROUND（原路徑入口）](../BACKGROUND.md)｜[workshop](../README.md)｜[待答問題](../OPEN-QUESTIONS/README.md)

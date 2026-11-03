@@ -31,9 +31,9 @@
 
 ## 題目哪裡來
 
-**優先挑 [workshop/BACKGROUND.md](../workshop/BACKGROUND.md) 的「最小的驗證方式」**——
+**優先挑 workshop/BACKGROUND.md 的「最小的驗證方式」**（8～9 月的舊紀錄已封存，2026-11-03）——
 `background/` 那 17 檔裡每題結尾都有一條，共 20 條，**每條祕書都明寫「一小時內做得完」**，
-是現成的題目卡。其次是 [OPEN-QUESTIONS](../workshop/OPEN-QUESTIONS.md) 的阻塞題
+是現成的題目卡。其次是 OPEN-QUESTIONS 的阻塞題
 （使用者不想用想的拍板的，改成用做的），再來是使用者臨時起意。
 
 資料包通常是：對應那場的 `records/*.md` ＋ 該題的 `background/*.md` ＋
