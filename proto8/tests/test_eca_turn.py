@@ -1,5 +1,5 @@
 """test_eca_turn - proto8/bin/aos-eca-turn（10-31 前是 lib/eca/turn 格）：外部 coding agent（claude／codex）的一輪——從 stack 的
-queue 認領全部（11-03 起一批一次：cur/ 與 new/ 的信照順序一起丟進一次 CLI）、交給 CLI、回答接進 history、收信（eca B 結論 2 的 ①～⑦、實作第 4 步）；--one 工具形（stdin {"prompt"} → stdout）；
+queue 認領全部（11-03 起一批一次：cur/ 與 new/ 的信照順序一起丟進一次 CLI）、交給 CLI 就收信（11-03，eca 20）、回答接進 history（eca B 結論 2 的 ①～⑦、實作第 4 步）；--one 工具形（stdin {"prompt"} → stdout）；
 10-31 的 --on-empty（取代 ECA_ON_EMPTY）與 --on-busy（yield｜answer）。
 
 用 test_fay 的假 claude／codex，不花額度；畫面那條路大多是 cli_session 的、test_fay 測，這裡只測 --on-busy answer 碰畫面的兩案
@@ -16,6 +16,21 @@ TURN = ROOT / "bin" / "aos-eca-turn"
 CLI_SESSION = ROOT / "lib" / "agent" / "cli_session.py"
 SAY = ROOT / "extras" / "human" / "bin" / "aos-say"
 POST = tool("aos-post")
+# 探針 CLI（test_finished_when_handed）：題目讀完之後（交出去的那一刻起）等這批信被收掉，記下當時的 queue 與 history，
+# 再把題目原樣交給真的假 CLI 答
+PROBE = r'''#!/usr/bin/env python3
+import json, os, subprocess, sys, time
+prompt = sys.stdin.read()
+box, end = %(box)r, time.time() + 10
+ls = lambda s: sorted(n for n in os.listdir(os.path.join(box, s)) if not n.startswith("."))
+while (ls("cur") or ls("new")) and time.time() < end:
+    time.sleep(0.05)
+with open(%(hist)r) as f:
+    roles = [json.loads(l)["role"] for l in f if l.strip()]
+with open(%(out)r, "w") as f:
+    json.dump({"cur": ls("cur"), "new": ls("new"), "roles": roles}, f)
+sys.exit(subprocess.run([%(real)r] + sys.argv[1:], input=prompt, text=True).returncode)
+'''
 CLEAR = ("AOS_HUB", "AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CD", "AOS_CF", "AOS_CO", "TMUX", "ECA_ON_EMPTY",
          "CLAUDE_CONFIG_DIR", "CODEX_HOME", "FAKE_TRANSCRIPTS")
 
@@ -159,14 +174,12 @@ class Turn(unittest.TestCase):
         self.assertEqual(json.loads((self.stack / "eca.json").read_text())["kind"], "codex")
 
     def test_cur_first(self):
-        """cur/ 有沒答完的先接：認領了、接進 history、列在 current.txt（當掉在問 CLI 之前）＝不再接一次 user；
-        new/ 那封 11-03 起同一批一起答（一次 CLI），下一次 queue 空退 10。"""
+        """cur/ 有認領了、還沒交出去的（上次 yield 退讓或 CLI 沒起來；history 沒動）＝跟 new/ 那封同一批一起答（一次 CLI），
+        user 各接一次；下一次 queue 空退 10。"""
         first = self.say("第一封")
         self.say("第二封")
         self.post("init", str(self.box))
         self.assertEqual(self.post("claim", str(self.box)), first)
-        (self.stack / "history.jsonl").write_text(json.dumps({"role": "user", "content": "第一封"}) + "\n")
-        (self.stack / "current.txt").write_text(first + "\n")
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual([m["role"] for m in self.history()], ["user", "user", "assistant"])
@@ -174,28 +187,27 @@ class Turn(unittest.TestCase):
         self.assertTrue(self.history()[-1]["content"].endswith(": 第一封\n\n第二封"), self.history()[-1])
         self.assertEqual(len(self.calls()), 1)
         self.assertEqual((self.stage("new"), self.stage("cur")), ([], []))
-        self.assertFalse((self.stack / "current.txt").exists())
         self.assertEqual(self.turn().returncode, 10)
 
-    def test_cur_not_listed_and_answered_not_finished(self):
-        """cur/ 有信沒列在 current.txt（死在 claim 之後）＝補接 user 一次；history 已有回答（死在收信之前）＝不再問 CLI、只收信。"""
-        self.say("補接")
-        self.post("claim", str(self.box))
-        self.assertEqual(self.turn().returncode, 0)
-        self.assertEqual([m["role"] for m in self.history()], ["user", "assistant"])
-        sig2 = self.say("答完沒收")
-        self.post("claim", str(self.box))
-        with open(self.stack / "history.jsonl", "a") as f:
-            f.write(json.dumps({"role": "user", "content": "答完沒收"}) + "\n")
-            f.write(json.dumps({"role": "assistant", "content": "早就答了"}) + "\n")
-        (self.stack / "current.txt").write_text(sig2 + "\n")
-        n = len(self.calls())
-        r = self.turn()
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual(len(self.calls()), n)                               # 沒再問 CLI
-        self.assertEqual(self.history()[-1]["content"], "早就答了")
-        self.assertEqual(len(self.history()), 4)
-        self.assertEqual(self.stage("cur"), [])
+    def test_finished_when_handed(self):
+        """11-03（使用者「對於eca來說，他收到信後，丟給claude之類的，然後這封信就算是完成了」）：CLI 還在跑的時候
+        這批信已經收掉（cur/、new/ 都空）、user 已接進 history、還沒有 assistant；答完才接 assistant。claude、codex 都一樣。"""
+        probe = self.tmp / "probe.json"
+        for kind in ("claude", "codex"):
+            real = self.bin / ("real-" + kind)
+            os.replace(self.bin / kind, real)
+            (self.bin / kind).write_text(PROBE % {"real": str(real), "box": str(self.box), "hist": str(self.stack / "history.jsonl"),
+                                                  "out": str(probe)})
+            (self.bin / kind).chmod(0o755)
+            self.say(kind + " 一")
+            self.say(kind + " 二")
+            n = len(self.history())
+            r = self.turn(kind)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            seen = json.loads(probe.read_text())
+            self.assertEqual((seen["cur"], seen["new"]), ([], []), kind)
+            self.assertEqual(seen["roles"][n:], ["user", "user"], kind)
+            self.assertEqual([m["role"] for m in self.history()][n:], ["user", "user", "assistant"], kind)
 
     def test_bad_letter_dropped(self):
         """body 不是 {"role": "user", "content": 非空字串}＝壞信：丟掉、mailbox_warning.txt 記最後一封（11-03 前記在 trace）、退 0、不問 CLI；
@@ -279,24 +291,42 @@ class Turn(unittest.TestCase):
             r = self.turn()
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertEqual(self.stage("cur"), [sig])
-            self.assertEqual(self.history(), [{"role": "user", "content": "等一下"}])
+            self.assertEqual(self.history(), [])                                # 還沒交出去：history 不動
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant"])
         self.assertEqual(self.stage("cur"), [])
 
     def test_cli_failure_stops(self):
-        """CLI 失敗：退 1、stderr「turn: CliFailed」、整批信留 cur/（停下等人）、user 不接兩次。"""
-        sig = self.say("boom")
-        sig2 = self.say("一起的")
+        """CLI 交出去之後失敗（11-03 起）：退 1、stderr「aos-eca-turn: CliFailed」（停下等人）；信已經收了、user 已接、沒有 assistant，
+        不自動重答（使用者「中途掛掉就是邊緣狀況，不要讓邊緣狀況影響他的原本意思」）——下一次 queue 空退 10，要重答由人再 say。"""
+        self.say("boom")
+        self.say("一起的")
         r = self.turn()
         self.assertEqual(r.returncode, 1)
         self.assertTrue(r.stderr.startswith("aos-eca-turn: CliFailed "), r.stderr)
-        self.assertEqual(self.stage("cur"), [sig, sig2])
+        self.assertEqual((self.stage("new"), self.stage("cur")), ([], []))
         self.assertEqual(self.history(), [{"role": "user", "content": "boom"}, {"role": "user", "content": "一起的"}])
-        self.assertEqual((self.stack / "current.txt").read_text(), "%s\n%s\n" % (sig, sig2))
-        self.assertEqual(self.turn().returncode, 1)                                  # 再一次照舊失敗：不接兩次
-        self.assertEqual(len(self.history()), 2)
+        self.assertFalse((self.stack / "current.txt").exists())
+        self.assertEqual(self.turn().returncode, 10)
+        self.assertEqual(len(self.calls()), 1)
+        self.say("再問一次")
+        self.assertEqual(self.turn().returncode, 0)
+        self.assertEqual([m["role"] for m in self.history()], ["user", "user", "user", "assistant"])
+
+    def test_cli_missing_keeps_batch(self):
+        """還沒交出去就錯（CLI 不在 PATH＝CliMissing）：退 1、整批留 cur/、history 不動；裝回來再跑＝整批照問、user 各接一次。"""
+        sig = self.say("一")
+        sig2 = self.say("二")
+        os.replace(self.bin / "claude", self.tmp / "claude.away")
+        r = self.turn()
+        self.assertEqual((r.returncode, r.stderr.split()[:2]), (1, ["aos-eca-turn:", "CliMissing"]), r.stderr)
+        self.assertEqual(self.stage("cur"), [sig, sig2])
+        self.assertEqual(self.history(), [])
+        os.replace(self.tmp / "claude.away", self.bin / "claude")
+        self.assertEqual(self.turn().returncode, 0)
+        self.assertEqual([m["role"] for m in self.history()], ["user", "user", "assistant"])
+        self.assertEqual(self.stage("cur"), [])
 
     def test_args(self):
         r = subprocess.run([str(TURN), "relative/def"], capture_output=True, text=True, env=self.env(),
@@ -359,7 +389,7 @@ class Turn(unittest.TestCase):
         n = len(self.history())
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.stage("cur"), len(self.history())), ([sig], n + 1))
+        self.assertEqual((self.stage("cur"), len(self.history())), ([sig], n))     # 沒交出去：history 不動
         p = self.turn_bg(["--on-busy", "answer"])
         time.sleep(1.5)
         self.assertIsNone(p.poll())                                       # 還在等 busy.txt

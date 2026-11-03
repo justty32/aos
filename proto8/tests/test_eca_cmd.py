@@ -309,7 +309,9 @@ class EcaCtl(unittest.TestCase):
 
     def test_failed_gone_readd(self):
         """CLI 失敗＝子 loop 停（P-20）、自己結束＝daemon 照 11-02 從表上拿掉（procs 衝突 2「照舊拿掉」）：ls 不列、state／start／stop／rm＝InstanceMissing；
-        信留在 stack 的 cur/。修好後同名再 add（名字不在表上＝不算撞名）＝用回同一個 stack，接著答那封、同一段對話。"""
+        11-03 起交給 CLI 就收信（使用者「中途掛掉就是邊緣狀況，不要讓邊緣狀況影響他的原本意思」，eca 20）：那封不在 queue 了、
+        history 最後一則是它的 user、沒有回答，不自動重答。修好後同名再 add（名字不在表上＝不算撞名）＝用回同一個 stack、同一段對話，
+        要重答由人再 say。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
@@ -317,16 +319,17 @@ class EcaCtl(unittest.TestCase):
         cell = self.ds / "procs" / name
         sid = (cell / "claude" / "session.txt").read_text().strip()
         self.broken.write_text("")
-        sig = self.say(w, "會壞的一句")
+        self.say(w, "會壞的一句")
         self.assertTrue(self.until(lambda: name not in self.daemon_rows()), self.daemon_rows())
         self.assertEqual(self.ls(), [])
         for cmd in ("state", "start", "stop", "rm"):
             self.assertEqual(self.code(self.ctl(cmd, name)), (1, "InstanceMissing"), cmd)
-        self.assertEqual(os.listdir(cell / "queue" / "cur"), [sig])
+        self.assertEqual((os.listdir(cell / "queue" / "new"), os.listdir(cell / "queue" / "cur")), ([], []))
+        self.assertEqual(json.loads((cell / "history.jsonl").read_text().splitlines()[-1]), {"role": "user", "content": "會壞的一句"})
         self.broken.unlink()
         self.add(w, name)
-        a = self.listen(w)
-        self.assertTrue(a.startswith("fake claude[%s]" % sid[:8]) and "會壞的一句" in a, a)
+        a = self.say_listen(w, "再說一次")
+        self.assertTrue(a.startswith("fake claude[%s]" % sid[:8]) and a.rstrip().endswith(": 再說一次"), a)
 
     def test_ctl_stop_bypass_gone_readd(self):
         """繞過 daemon 直接寫它 ctl.json 的 {"cmd": "stop"}：子 loop 退 0、daemon 從表上拿掉＝不在了（不是 stop；procs 衝突 2）：

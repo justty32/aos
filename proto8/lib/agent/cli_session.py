@@ -225,22 +225,31 @@ def link_transcript(cell, kind):
 
 # ---------------------------------------------------------------- 非互動（畫面沒開）
 
-def run_cli(argv, prompt, ws, timeout_ms):
+def run_cli(argv, prompt, ws, timeout_ms, handed=None):
+    """起 CLI、題目從 stdin 給、等它做完；起來了就叫 handed（交出去了，11-03 aos-eca-turn 在這一刻收信）。"""
     try:
-        return subprocess.run(argv, input=prompt, capture_output=True, text=True, cwd=ws,
-                              timeout=timeout_ms / 1000, start_new_session=False)
+        p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             text=True, cwd=ws)
     except FileNotFoundError:
         die("CliMissing", "%s 不在 PATH 上" % argv[0])
+    if handed:
+        handed()
+    try:
+        out, err = p.communicate(prompt, timeout=timeout_ms / 1000)
     except subprocess.TimeoutExpired:
+        p.kill()
+        p.communicate()
         die("CliFailed", "%s 超過 %d 秒沒做完" % (argv[0], timeout_ms // 1000))
+    return subprocess.CompletedProcess(argv, p.returncode, out, err)
 
 
 def tail(text, n=300):
     return (text or "").strip()[-n:]
 
 
-def run_claude_stream(argv, prompt, ws, timeout_ms, live_path):
-    """claude -p --output-format stream-json：每行一邊寫進 live.jsonl（人可以 tail 著看），一邊收起來；回 (結束碼, 全部行, stderr)。"""
+def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None):
+    """claude -p --output-format stream-json：每行一邊寫進 live.jsonl（人可以 tail 著看），一邊收起來；回 (結束碼, 全部行, stderr)。
+    題目寫進 stdin、關掉之後叫 handed（交出去了，11-03）。"""
     try:
         p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                              text=True, cwd=ws)
@@ -248,6 +257,8 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path):
         die("CliMissing", "%s 不在 PATH 上" % argv[0])
     p.stdin.write(prompt)
     p.stdin.close()
+    if handed:
+        handed()
     deadline, lines = time.time() + timeout_ms / 1000, []
     err = []
     t = threading.Thread(target=lambda: err.append(p.stderr.read()), daemon=True)
@@ -269,7 +280,7 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path):
     return p.returncode, lines, "".join(err)
 
 
-def print_claude(cfg, cell, ws, stack, prompt):
+def print_claude(cfg, cell, ws, stack, prompt, handed=None):
     sid = cell.read("session.txt")
     new = "" if sid else str(uuid.uuid4())
     # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-eca watch 看得到它正在做什麼；
@@ -277,7 +288,7 @@ def print_claude(cfg, cell, ws, stack, prompt):
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
     argv += mcp_argv(cfg, cell, ws, stack)
     argv += ["--resume", sid] if sid else ["--session-id", new]
-    code, lines, err = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"))
+    code, lines, err = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"), handed)
     out = None
     for line in lines:
         try:
@@ -296,7 +307,7 @@ def print_claude(cfg, cell, ws, stack, prompt):
     return out.get("result") or ""
 
 
-def print_codex(cfg, cell, ws, stack, prompt):
+def print_codex(cfg, cell, ws, stack, prompt, handed=None):
     sid = cell.read("session.txt")
     last = cell.file("last.txt")
     argv = ["codex", "exec"] + (["resume", sid] if sid else []) + cfg.get("flags", []) + cfg.get("print_flags", [])
@@ -304,7 +315,7 @@ def print_codex(cfg, cell, ws, stack, prompt):
     argv += ["--skip-git-repo-check", "--json", "-o", last, "-"]     # 題目從 stdin 進（"-"）
     if os.path.exists(last):
         os.remove(last)
-    r = run_cli(argv, prompt, ws, cfg.get("timeout_ms", 600000))
+    r = run_cli(argv, prompt, ws, cfg.get("timeout_ms", 600000), handed)
     try:                                         # 10-28：--json 的事件（中間訊息、跑過的指令）也接進 live.jsonl 留著
         with open(cell.file("live.jsonl"), "a", encoding="utf-8") as live:
             live.write(r.stdout if not r.stdout or r.stdout.endswith("\n") else r.stdout + "\n")
@@ -328,9 +339,9 @@ def print_codex(cfg, cell, ws, stack, prompt):
 
 # ---------------------------------------------------------------- 從畫面送字（畫面開著）
 
-def live(cfg, cell, prompt, on_busy="yield"):
+def live(cfg, cell, prompt, on_busy="yield", handed=None):
     """on_busy＝yield（預設）：有人接在畫面上、或 busy.txt 在＝SessionBad；answer（10-31 eca --on-busy）：有人接著照樣貼，
-    busy.txt 在就等它消失再貼——等它跟等回答共用 timeout_ms 的期限，逾時 ReplyMissing。"""
+    busy.txt 在就等它消失再貼——等它跟等回答共用 timeout_ms 的期限，逾時 ReplyMissing。貼上、按 Enter 之後叫 handed（交出去了，11-03）。"""
     deadline = time.time() + cfg.get("timeout_ms", 600000) / 1000
     if on_busy == "yield":
         who = cell.clients()
@@ -351,6 +362,8 @@ def live(cfg, cell, prompt, on_busy="yield"):
     cell.tmux("paste-buffer", "-p", "-d", "-b", "aos", "-t", TMUX_SESSION)   # -p：程式要的話包成 bracketed paste，多行不會半路送出
     time.sleep(0.3)
     cell.tmux("send-keys", "-t", TMUX_SESSION, "Enter")
+    if handed:
+        handed()
     while time.time() < deadline:
         turns = cell.turns()
         if len(turns) > seen:
@@ -362,12 +375,13 @@ def live(cfg, cell, prompt, on_busy="yield"):
         % (cfg.get("timeout_ms", 600000) // 1000))
 
 
-def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield"):
+def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None):
     """問 CLI 一句 → 回答文字：記下這格（note_cell）→ 拿格的 lock（拿不到：on_busy＝yield（預設）＝SessionBad、
     answer＝等到拿到，同 open_cell）→ 畫面開著走 live（on_busy 照傳）、沒開走非互動
     → 建 transcripts symlink。工具形（call_main）與 aos-eca-turn 共用這一段（10-30 eca 第 5 步抽出來）。
     tool_dir＝cli.json 所在的資料夾（工具資料夾或 eca 定義）；ws＝CLI 的 cwd（絕對路徑）；stack＝給 aos-mcp 的 --stack
-    （平級形＝那隻 eca 的 $AOS_STACK、工具形＝這格本身；11-03 eca-tools）。錯一律走 die
+    （平級形＝那隻 eca 的 $AOS_STACK、工具形＝這格本身；11-03 eca-tools）。handed＝選填、不帶參數的函式：題目交給 CLI 的那一刻叫一次
+    （非互動＝CLI 起來、題目寫進去；畫面＝貼上按 Enter），在等回答之前（11-03 aos-eca-turn 在這一刻收信；工具形不給）。錯一律走 die
     （工具形印一行退 1；aos-eca-turn 把 die 換成丟例外）。"""
     note_cell(cell, tool_dir, ws, stack)
     f, ok = cell.lock()
@@ -377,11 +391,11 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield"):
         fcntl.flock(f, fcntl.LOCK_EX)
     with f:
         if cell.alive():
-            text = live(cfg, cell, prompt, on_busy)
+            text = live(cfg, cell, prompt, on_busy, handed)
         elif cfg["kind"] == "claude":
-            text = print_claude(cfg, cell, ws, stack, prompt)
+            text = print_claude(cfg, cell, ws, stack, prompt, handed)
         else:
-            text = print_codex(cfg, cell, ws, stack, prompt)
+            text = print_codex(cfg, cell, ws, stack, prompt, handed)
         link_transcript(cell, cfg["kind"])               # 工具形也留（方向題 3）
     return text
 

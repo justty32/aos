@@ -41,7 +41,7 @@
   eca_bob      running  closed claude /home/guanyu/code/playground/ws  session 154bb4f3
   ```
 
-  `state` 印兩行：`狀態   running（daemon phase running）`、`畫面   closed`。11-03 前另有「出錯停了」「收工了」（看下了表的小格 `state.json`），**11-03 拿掉**：自己結束的（CLI 出錯退 1、外部直接寫它 `ctl.json` 的 `{"cmd": "stop"}`）daemon 照 11-02 從表上拿掉＝對 daemon、對 aos-eca 都不在了（procs 衝突 2 使用者「照舊拿掉」），`ls` 不列、`state`／`start`／`stop`／`rm`＝`InstanceMissing`；stack 資料夾留著——要接著用就**同名再 add**（同一個 `--stack` 或預設小格：前文、`cur/` 裡沒答完的信都接著），不要了自己 `rm -r`。所以掛在 daemon 下要停就用 `aos-eca stop`。
+  `state` 印兩行：`狀態   running（daemon phase running）`、`畫面   closed`。11-03 前另有「出錯停了」「收工了」（看下了表的小格 `state.json`），**11-03 拿掉**：自己結束的（CLI 出錯退 1、外部直接寫它 `ctl.json` 的 `{"cmd": "stop"}`）daemon 照 11-02 從表上拿掉＝對 daemon、對 aos-eca 都不在了（procs 衝突 2 使用者「照舊拿掉」），`ls` 不列、`state`／`start`／`stop`／`rm`＝`InstanceMissing`；stack 資料夾留著——要接著用就**同名再 add**（同一個 `--stack` 或預設小格：前文、`cur/` 裡還沒交出去的信都接著〔交出去之後才掛的那批不重答，見下方已知限制〕），不要了自己 `rm -r`。所以掛在 daemon 下要停就用 `aos-eca stop`。
 - **重新掛上前清殘留 `stopped`**（11-02 晚；**11-03 拿掉**：ctl 改成指令後子 loop 起來第一次讀的 ctl 當基準線、不執行，殘留的 `{"cmd": "stop"}` 不用清，[thinking 11-03 ctl-commands](../../thinking/2026-11-03-ctl-commands.md)；下面是原文）：start 走到 aos-daemon-ctl add 之前（11-03 起 add、open 新建時小格一定不在〔在＝撞名〕，只剩 start 會碰到），小格 ctl 窗（eca 資料夾 `loop.json` 的 `ctl`）有 `stopped` 就只拿掉這個 key（沒別的 key＝刪檔），免得新的子 loop 一起來就收工；其他 key（`paused`…）照留。「暫停」只有一種：寫小格的 `ctl.json` `{"paused": true}`（11-03 起 `{"cmd": "pause"}`，用 `aos-daemon-ctl pause 名字`／`resume 名字`）（aos-loop 的窗，不餵下一則），這裡不另做 pause（10-28 的 `pause` 改名 `close`）。
 - 畫面裡 **Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束**。人在畫面上自己打的話不進 history（方向題 2），全貌看 `transcripts/`。
 - **eca 資料夾**＝頂層有 `cli.json` 的資料夾（`kind`、`flags`、`print_flags`、`timeout_ms`），`add` 的 XXX 就給它；要別的模型、權限就複製一份 `demo/eca-claude` 改 `cli.json`、add 那份。小格 `eca.json` 的 `template` 那格記的就是它（aos-eca-turn 寫的 key，名字沒改）。
@@ -75,6 +75,7 @@ aos-eca rm                                   # 刪掉：stack 沒了（要留先
 - **新資料夾第一次開畫面，claude 會先問「信任這個資料夾嗎」**：人 `open` 接進去回答就好——游標預設停在「No, exit」，直接按 Enter 會讓 claude 退出，要先用方向鍵移到「Yes」再按 Enter；`open -d` 之後馬上 say，那句會被貼進這個提問。非互動（`-p`）沒有這個提問。
 - **ls 要等子 loop 跑第一次**：`eca.json` 是 aos-eca-turn 寫的，add 之後一個 `interval_ms` 內才列得到。
 - **自己結束的（CLI 出錯、直接寫它 `ctl.json` 的 `{"cmd": "stop"}`）在 daemon 表上沒有、aos-eca 也找不到**（11-03 procs）：`ls` 不列、`rm` 刪不了（stack 資料夾自己 `rm -r`），要接著用就同名再 `add`。用自訂 `--stack` 的要記得當初給的 S（daemon 不再記得它）。
+- **信交給 CLI 就算答了，中途掛掉的那批不重答**（11-03，使用者「對於eca來說，他收到信後，丟給claude之類的，然後這封信就算是完成了」「中途掛掉就是邊緣狀況，不要讓邊緣狀況影響他的原本意思」，[eca 20](../../thinking/2026-10-30-eca/20-11-03-交出去就收.md)）：aos-eca-turn 把題目交給 claude／codex 的那一刻就收信、user 接進 history，答完才接回答。CLI 出錯（`CliFailed`、等太久 `ReplyMissing`、被殺）＝那批信已經不在 queue、history 停在 user、沒有回答；修好再 add／start 不會自己重答，要重答就再 `aos-say` 一次。`aos-listen` 這時說 `AnswerMissing`（沒人在跑時）。還沒交出去就出錯（CLI 不在 PATH、人接在畫面上退讓）的信照舊留在 `cur/`，下一輪照答。
 - codex 沒有「正在跑一輪」的訊號：人在畫面上送出、還沒講完就跳出，aos-eca-turn 這時送字會插進去（10-24 舊坑）。
 - `watch` 只讀 `live.jsonl`（非互動那條路）；畫面上那幾輪看不到，要 `open` 進去看。`live.jsonl` 只接不重寫，會一直長。
 - 收起＝`tmux kill-server`：人打到一半沒送出的字會丟。

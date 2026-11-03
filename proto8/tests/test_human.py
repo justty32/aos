@@ -199,6 +199,27 @@ class ListenTest(Base):
         r = run(LISTEN, "--ws", str(self.ws), "--timeout", "5")
         self.assertEqual(r.returncode, 0, r.stderr)
 
+    def test_handed_waits_for_answer(self):
+        """11-03 外部 coding agent（aos-eca-turn）交給 CLI 就收信：queue 空、history 最後一則是 user＝還在答——listen 等新回答出來、
+        不印上一則舊回答；沒有程式在跑它＝AnswerMissing（中途掛掉的那批不會自動重答）。"""
+        self.stack.mkdir()
+        rows = [{"role": "user", "content": "舊的"}, {"role": "assistant", "content": "舊回答"}, {"role": "user", "content": "交出去了"}]
+        (self.stack / "history.jsonl").write_text("".join(json.dumps(m, ensure_ascii=False) + "\n" for m in rows))
+        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "5")
+        self.assertEqual(r.returncode, 1)
+        self.assertRegex(r.stderr.splitlines()[-1], r"^aos-listen: AnswerMissing 最新那封 已經交出去了")
+        self.assertEqual(r.stdout, "")
+        fake = subprocess.Popen(["aos-loop", "30"], executable="/bin/sleep", env=env(AOS_STACK=str(self.stack) + "/"))   # 假裝有人在跑
+        self.addCleanup(lambda: (fake.kill(), fake.wait()))
+        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "20"], stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, text=True, env=env())
+        time.sleep(1.5)
+        self.assertIsNone(p.poll())                                     # 還在等，沒印舊回答
+        with open(self.stack / "history.jsonl", "a") as f:
+            f.write(json.dumps({"role": "assistant", "content": "新回答"}, ensure_ascii=False) + "\n")
+        out, err = p.communicate(timeout=30)
+        self.assertEqual((p.returncode, out), (0, "新回答\n"), err)
+
     def test_waits_while_letter_in_cur(self):
         """信在 cur/（認領了、腦壞停住）：listen 照等、說信在 cur/ 沒人在跑；修好再跑就答出。"""
         sig = self.say("壞腦")
