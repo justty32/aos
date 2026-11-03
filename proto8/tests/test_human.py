@@ -18,7 +18,7 @@ HUMAN = ROOT / "extras" / "human" / "bin"
 SAY, LISTEN, CHAT = (str(HUMAN / n) for n in ("aos-say", "aos-listen", "aos-chat"))
 NIA = ROOT / "demo" / "agent-nia"
 DAN = str(ROOT / "demo" / "agent-eve")              # 舊協議（讀工作區 new/、不收 queue）：10-30 晚真腦實測發現 2；11-02 晚 agent-dan 刪除，改用它的複本 agent-eve
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
+CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_DAEMON_STACK")
 from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 SIG = re.compile(r"^\d{12}\.\d{20}\.\d+\.\d+$")
 TURN = ROOT / "bin" / "aos-eca-turn"                # 10-30 eca：外部 coding agent 的一輪（External 段；10-31 前是 lib/eca/turn 格）
@@ -118,6 +118,33 @@ class SayTest(Base):
         self.assertEqual(os.listdir(other / "queue" / "new"), [r.stdout.strip()])
         r = run(SAY, "--ws", str(self.ws), "環境變數的 stack", AOS_STACK=str(other))
         self.assertEqual(len(os.listdir(other / "queue" / "new")), 2)
+
+    def test_stopped_on_daemon_hint(self):
+        """11-03 procs：stack 是 daemon 表上 stopped 的那一列＝提醒 aos-daemon-ctl start 名字（eca＝aos-eca start）、不說另開終端機。"""
+        d = self.ws / "dstack"
+        cell, other = d / "procs" / "bob", self.ws / "custom"
+        def table(**rows):
+            d.mkdir(exist_ok=True)
+            (d / "procs_state.json").write_text(json.dumps({"procs": rows}))
+        table(bob={"phase": "stopped", "pid": None, "stack": str(cell)})
+        r = run(SAY, "--ws", str(self.ws), "--stack", str(cell), "x")       # 預設小格：不用 AOS_DAEMON_STACK 也認得
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("bob 是 stopped", r.stderr)
+        self.assertIn("aos-daemon-ctl start bob", r.stderr)
+        self.assertNotIn("另開一個終端機", r.stderr)
+        self.assertNotIn("where --stack", r.stderr)
+        (cell / "eca.json").write_text(json.dumps({"kind": "claude"}))
+        r = run(SAY, "--ws", str(self.ws), "--stack", str(cell), "x")
+        self.assertIn("aos-eca start bob", r.stderr)
+        table(c2={"phase": "stopped", "pid": None, "stack": str(other) + "/"})   # 別處的 stack：看 AOS_DAEMON_STACK
+        r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x")
+        self.assertIn("另開一個終端機", r.stderr)                            # 沒設：認不出，照舊提醒
+        r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x", AOS_DAEMON_STACK=str(d))
+        self.assertIn("aos-daemon-ctl start c2", r.stderr)
+        table(c2={"phase": "running", "pid": 1, "stack": str(other)})           # 表上不是 stopped：照舊
+        r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x", AOS_DAEMON_STACK=str(d))
+        self.assertIn("另開一個終端機", r.stderr)
+        self.assertIn("where --stack", r.stderr)
 
     def test_order(self):
         sigs = [self.say("q%d" % i) for i in range(5)]

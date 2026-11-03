@@ -49,7 +49,7 @@ S=$(aos-daemon-ctl where --stack myproj)       # 它的 stack（11-03 起工作�
 cd ~/code/myproj
 aos-say --stack $S 讀 src/calc.py 說說裡面有什麼 && aos-listen --stack $S   # 畫面開著＝打進畫面、沒開＝--resume 問一次
 aos-eca status                                   # 這隻的狀態（11-03 起 aos-listen --status 拿掉了）
-aos-eca open                                 # 接進畫面（第一次會問信任這個資料夾，選 Yes）；Ctrl-] 跳出
+aos-eca open                                 # 接進畫面（第一次會問信任這個資料夾：游標預設在 No, exit，先移游標到 Yes 再 Enter）；Ctrl-] 跳出
 aos-eca close && aos-eca ls              # 收起；再問一句照樣答（--resume）
 aos-eca stop                                 # 停：還在 daemon 表上（stopped）、ls 顯示「停了」，where 照找得到，aos-say --stack $S 的信排著
 aos-eca start                                # 再起：同一個 stack，接著答排著的信、記得前文
@@ -63,7 +63,7 @@ aos-eca rm                                   # 刪掉：stack 沒了（要留先
 - **`AOS_DAEMON_STACK` 要給絕對路徑**，相對路徑 cd 之後就對不上：在 A 資料夾 add 得上，cd 到工作區後 open／ls／close／stop 都是 `DaemonMissing`（`aos-daemon-ctl where` 也一樣）。使用者 11-02 晚選「3」：維持、只寫清楚（[eca 09 § 決定 11-02 晚](../../thinking/2026-10-30-eca/09-方向題.md#決定11-02-晚使用者)）。
 - **短時間多封信**（11-02 晚記；**11-03 改了**：aos-eca-turn 一次把 queue 的信全部、照順序丟進一次 CLI，N 封排著＝一次起退，見 [eca 17](../../thinking/2026-10-30-eca/17-11-03-批次-status.md)；下面是之前的樣子）：子 loop 每 `interval_ms`（300 ms）跑一次 aos-eca-turn、一次只認領一封，所以 N 封＝claude 起退 N 次、每次 `--resume` 重讀整段對話；畫面開著＝逐封貼進畫面；人接在畫面上時信排著等人跳出（`--on-busy yield`）；`aos-listen` 等的是最新那封，前面的要 `--last N` 看。start 之後排著的那些也是這樣一封一封答。
 - **daemon 的 PATH**：子 loop 用 daemon 啟動時的環境叫 claude／codex、aos-eca-turn、aos-post。從沒有 `~/.local/bin` 的 shell 起 daemon，每則都 `CliMissing`。
-- **新資料夾第一次開畫面，claude 會先問「信任這個資料夾嗎」**：人 `open` 接進去回答就好；`open -d` 之後馬上 say，那句會被貼進這個提問。非互動（`-p`）沒有這個提問。
+- **新資料夾第一次開畫面，claude 會先問「信任這個資料夾嗎」**：人 `open` 接進去回答就好——游標預設停在「No, exit」，直接按 Enter 會讓 claude 退出，要先用方向鍵移到「Yes」再按 Enter；`open -d` 之後馬上 say，那句會被貼進這個提問。非互動（`-p`）沒有這個提問。
 - **ls 要等子 loop 跑第一次**：`eca.json` 是 aos-eca-turn 寫的，add 之後一個 `interval_ms` 內才列得到。
 - **自己結束的（CLI 出錯、直接寫它 `ctl.json` 的 `{"cmd": "stop"}`）在 daemon 表上沒有、aos-eca 也找不到**（11-03 procs）：`ls` 不列、`rm` 刪不了（stack 資料夾自己 `rm -r`），要接著用就同名再 `add`。用自訂 `--stack` 的要記得當初給的 S（daemon 不再記得它）。
 - codex 沒有「正在跑一輪」的訊號：人在畫面上送出、還沒講完就跳出，aos-eca-turn 這時送字會插進去（10-24 舊坑）。

@@ -5,7 +5,7 @@ queue＝<stack>/queue/（說話＝寄一封有序的信）、history＝<stack>/h
 aos-loop 的 ctl／state 窗。stack＝--stack ＞ $AOS_STACK ＞ <工作區>/.stack/（N-57）；工作區＝--ws ＞ $AOS_WS ＞ cwd（同 aos-exec）。
 工作區的 new/ cur/ out/ done/（舊協議，P-11 的 10-30 改口）不再認。這裡不碰 agent 的定義資料夾、不改 stack 裡的東西（寄信除外）。
 設計與代定：proto8/thinking/2026-10-24-say-listen.md、2026-10-30-agent-lifecycle.md。"""
-import os, sys
+import json, os, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "bin"))
 import aos_flags  # noqa: E402  旗標規則同 aos-exec（proto8/bin/aos_flags.py）
@@ -86,7 +86,31 @@ def runners(w):
     return found
 
 
+def daemon_stopped(w):
+    """這個 stack 是不是 daemon 表上停著（phase stopped）的那一列：回 (名字, 是不是 eca)，不是就 None（11-03 procs）。
+    看哪個 daemon：$AOS_DAEMON_STACK，加上 stack 在預設小格 <D>/procs/<名字>/ 時的那個 <D>；讀它的 procs_state.json，
+    列上的 stack 跟這個 stack 是同一個（samefile）才算。eca＝那個 stack 裡有 eca.json（同 aos-eca 認的）。讀不到就當不是。"""
+    ds = [os.environ.get("AOS_DAEMON_STACK") or ""]
+    if os.path.basename(os.path.dirname(w.stack.rstrip("/"))) == "procs":
+        ds.append(os.path.dirname(os.path.dirname(w.stack.rstrip("/"))))
+    for d in ds:
+        try:
+            with open(os.path.join(d, "procs_state.json"), encoding="utf-8") as f:
+                procs = json.load(f).get("procs") or {}
+        except (OSError, ValueError, AttributeError):
+            continue
+        for name, r in procs.items() if isinstance(procs, dict) else ():
+            if isinstance(r, dict) and r.get("phase") == "stopped" and isinstance(r.get("stack"), str) \
+                    and _same(r["stack"], w.stack):
+                return name, os.path.isfile(os.path.join(w.stack, "eca.json"))
+    return None
+
+
 def run_hint(w):
+    hit = daemon_stopped(w)
+    if hit:
+        name, eca = hit
+        return "它在 daemon 表上停著（%s 是 stopped），叫它起來：%s %s" % (name, "aos-eca start" if eca else "aos-daemon-ctl start", name)
     return "另開一個終端機跑它：aos-exec --ws %s <agent 資料夾>（或用 aos-chat <agent 資料夾>，由 chat 幫你跑）" % w.ws
 
 
