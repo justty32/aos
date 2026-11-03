@@ -17,7 +17,7 @@ cat fsm.json   # think 格不直接跑腦，跑閘門；腦那張單子放在同
 AOS_KERNEL=/path/to/mailbox aos-exec --ws ws agent    # 信箱位置由叫它的人綁（像 AOS_BRAIN_*，P-39）
 ```
 
-完整例子是 [demo/llm-kernel](../../demo/README.md)；設計與決定見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10-24-llm-kernel.md)。
+完整例子原本是 demo/llm-kernel（11-03 封存在 `proto8/archive/llm-kernel-demo/`）；設計與決定見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10-24-llm-kernel.md)。
 
 ## 用法
 

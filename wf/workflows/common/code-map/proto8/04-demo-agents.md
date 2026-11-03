@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 agent-eve、agent-fay、agent-gus、agent-hal（10-24）｜下一份：[04-demo-agents-2](04-demo-agents-2.md)（agent-kai、liv、meg、pip、llm-kernel/agent-ivy）
+← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 agent-eve、agent-gus（agent-fay 11-03 晚刪了）、agent-hal（10-24）｜下一份：[04-demo-agents-2](04-demo-agents-2.md)（agent-kai、liv、meg、pip、llm-kernel/agent-ivy）
 
 > 10-28 起 demo／lib 的 agent 範本：工具清單＝範本的 `tools.json`〔手寫相對路徑〕，brain `aos-tools ls --json`、act `aos-tools call`。
 
@@ -14,20 +14,6 @@ agent 當工具：主 agent 照抄 agent-dan，唯一的工具 `pyfix` 是另一
 | `fsm.json` | 同 agent-dan，act 逾時放寬到 30 分鐘（等子 agent） |
 | `.env`、`system.txt` | 模型名（會往下傳，但子 agent 用自己的）；人格：改 Python 交給 pyfix、task 寫清楚、回答前看 diff |
 | `tools/pyfix` | 符號連結 → `../../../lib/agent/pyfix`（10-24 遷移；轉接、子 agent pyfix-agent、它掛的 lib/base 工具都在庫裡，見 [09-lib](09-lib.md)） |
-
-### agent-fay
-
-claude／codex CLI 當工具，人可以 `attach` 接進同一段對話。[thinking](../../../../../proto8/thinking/2026-10-24-cli-tools.md)
-
-| 哪裡 | 負責什麼 |
-|---|---|
-| `_entry`、`loop.json`、`idle/`、`.env`、`act.py` | 同 agent-dan |
-| `fsm.json` | act 逾時 15 分鐘 |
-| `brain.py` | 同 agent-dan，假腦改成把題目原樣交給 `claude` 工具 |
-| `system.txt` | 腦有 claude、codex 兩個幫手，看檔或判斷程式就交代給它們 |
-| `cli_session.py` | 符號連結 → `../../lib/agent/cli_session.py`（10-24 遷移；給 `attach` import，做法見 [09-lib](09-lib.md)） |
-| `attach` | 人用的入口（python3、沒副檔名）：`attach claude`／`attach -d codex`／`attach` 列狀態；Ctrl-\ 跳出、畫面留著；把自己的資料夾傳給 `cli_session.attach_main` 列 `tools/` |
-| `tools/claude`、`tools/codex` | 符號連結 → `../../../lib/agent/<名>`（10-24 遷移） |
 
 ### agent-gus
 

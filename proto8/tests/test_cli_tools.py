@@ -1,4 +1,8 @@
-"""test_fay - 跑 demo/agent-fay（claude／codex CLI 當工具、可接入）：用假的 claude／codex，不花額度。
+"""test_cli_tools - lib/agent/claude、codex（claude／codex CLI 當工具、可接入；eca 的工具形）與 lib/agent/cli_session：用假的 claude／codex，不花額度。
+
+11-03 晚 demo/agent-fay 刪了（使用者「我沒聽過這東西，刪掉。」）：本檔原叫 test_fay，原本複製 agent-fay 來測；
+改成在暫存資料夾組一個最小的掛法（tools/claude、tools/codex 複製自 lib/agent，根放 cli_session.py 與一支 attach），
+測整隻 agent-fay（假腦把題目交給 claude）的那一案跟著刪，其餘照舊。
 
 驗：非互動模式續同一段對話（session.txt）、attach -d 開畫面後改從 tmux 送字、hook 把回答接進 turns.jsonl、
 人用 attach 接進去打字再 Ctrl-\\ 跳出（pty 模擬）、有人接著時 agent 叫＝SessionBad、各種錯的代號、
@@ -11,7 +15,15 @@ own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
 EXEC = tool("aos-exec")
-FAY = ROOT / "demo" / "agent-fay"
+LIB_AGENT = ROOT / "lib" / "agent"
+# 原 demo/agent-fay/attach：接進某個 CLI 工具的畫面（cli_session.attach_main 列這個資料夾的 tools/）
+ATTACH = """#!/usr/bin/env python3
+import os, sys
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import cli_session  # noqa: E402
+cli_session.attach_main(sys.argv[1:], os.path.dirname(os.path.abspath(__file__)))
+"""
 CLEAR = ("AOS_HUB", "AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "TMUX",
          "CLAUDE_CONFIG_DIR", "CODEX_HOME", "FAKE_TRANSCRIPTS")    # 後三個：CLI 自己的對話檔放哪，測試自己給
 HAS_TMUX = shutil.which("tmux") is not None
@@ -87,12 +99,16 @@ for line in sys.stdin:
 '''
 
 
-class Fay(unittest.TestCase):
+class CliTools(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="fay-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="cli-tools-"))
         self.addCleanup(shutil.rmtree, self.tmp, True)
-        self.agent = self.tmp / "agent-fay"                     # 複製一份，測試可以改 cli.json
-        shutil.copytree(FAY, self.agent, ignore=shutil.ignore_patterns("__pycache__"))
+        self.agent = self.tmp / "agent"                         # 掛工具的那一方：tools/ 放 lib 的複製（測試可以改 cli.json）
+        for name in ("claude", "codex"):
+            shutil.copytree(LIB_AGENT / name, self.agent / "tools" / name, ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copy(LIB_AGENT / "cli_session.py", self.agent / "cli_session.py")   # 複製進 tools/ 時，_entry 找掛它的根的 cli_session.py
+        (self.agent / "attach").write_text(ATTACH)
+        (self.agent / "attach").chmod(0o755)
         for name in ("claude", "codex"):                                 # 等回答最多 15 秒（原 600 秒），壞了快點紅
             cfg_path = self.agent / "tools" / name / "cli.json"
             cfg_path.write_text(json.dumps(dict(json.loads(cfg_path.read_text()), timeout_ms=15000)))
@@ -134,27 +150,6 @@ class Fay(unittest.TestCase):
         return re.findall(r"^(?:cli_session|claude|codex): ([A-Z][A-Za-z]+) ", stderr, re.M)   # 工具叫的錯開頭是工具名（10-24 遷移進 lib/agent）
 
     # ------------------------------------------------------------ 非互動
-
-    def test_agent_asks_claude_twice_same_session(self):
-        """整隻 agent（假腦）：題目交給 claude 工具；第二題續同一段對話（--resume 同一個 id）。"""
-        (self.ws / "new" / "q1.txt").write_text("列出檔案")
-        r = subprocess.run([EXEC, "--ws", str(self.ws), str(self.agent)], capture_output=True, text=True,
-                           env=self.env(), timeout=60)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        sid = (self.stack / "tools" / "claude" / "session.txt").read_text().strip()
-        self.assertEqual((self.ws / "out" / "q1.txt").read_text(),
-                         "FAKE ANSWER to: 列出檔案（claude said: fake claude[%s]: 列出檔案）\n" % sid[:8])
-        (self.ws / "new" / "q2.txt").write_text("再一次")
-        r = subprocess.run([EXEC, "--ws", str(self.ws), str(self.agent)], capture_output=True, text=True,
-                           env=self.env(), timeout=60)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        first, second = self.calls()
-        self.assertIn("--session-id", first["argv"])
-        self.assertEqual(second["argv"][second["argv"].index("--resume") + 1], sid)
-        self.assertEqual(first["cwd"], str(self.ws))                     # CLI 在工作區裡跑
-        for c in (first, second):                                          # 保守旗標都有帶
-            self.assertIn("--tools", c["argv"])
-            self.assertIn("dontAsk", c["argv"])
 
     def test_codex_exec_then_resume(self):
         r = self.tool("codex", {"prompt": "第一句"})

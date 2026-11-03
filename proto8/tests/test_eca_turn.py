@@ -2,7 +2,7 @@
 queue 認領全部（11-03 起一批一次：cur/ 與 new/ 的信照順序一起丟進一次 CLI）、交給 CLI 就收信（11-03，eca 20）、回答接進 history（eca B 結論 2 的 ①～⑦、實作第 4 步）；--one 工具形（stdin {"prompt"} → stdout）；
 10-31 的 --on-empty（取代 ECA_ON_EMPTY）與 --on-busy（yield｜answer）。
 
-用 test_fay 的假 claude／codex，不花額度；畫面那條路大多是 cli_session 的、test_fay 測，這裡只測 --on-busy answer 碰畫面的兩案
+用 test_cli_tools 的假 claude／codex，不花額度；畫面那條路大多是 cli_session 的、test_cli_tools 測，這裡只測 --on-busy answer 碰畫面的兩案
 （真 tmux＋假 claude；沒 tmux 就 skip）。
 設計：proto8/thinking/2026-10-30-eca.md。"""
 import fcntl, json, os, pty, select, shutil, subprocess, sys, tempfile, time, unittest
@@ -11,7 +11,7 @@ import own_error  # noqa: E402
 own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
-from test_fay import FAKE_CLAUDE, FAKE_CODEX, SYS_PATH, HAS_TMUX  # noqa: E402
+from test_cli_tools import FAKE_CLAUDE, FAKE_CODEX, SYS_PATH, HAS_TMUX  # noqa: E402
 TURN = ROOT / "bin" / "aos-eca-turn"
 CLI_SESSION = ROOT / "lib" / "agent" / "cli_session.py"
 SAY = ROOT / "extras" / "human" / "bin" / "aos-say"

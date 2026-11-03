@@ -1,6 +1,6 @@
-"""test_lua_aos - Lua 寫 aos（proto8/extras/langs/lua）：編出來跟手寫的 demo 一樣、真跑結果一樣；nvim 外掛 headless 走一遍。
+"""test_lua_aos - Lua 寫 aos（proto8/extras/langs/lua）：編出來跟手寫的 demo 一樣、真跑結果一樣（nvim 外掛與 agent_dan.lua 那幾案 11-03 封存到 proto8/archive/nvim、agent-dan-langs）。
 
-設計：proto8/thinking/2026-10-24-lua-nvim.md。lua／luajit／nvim 都沒有就整份 skip；nvim 那段沒有 nvim 才 skip。"""
+設計：proto8/thinking/2026-10-24-lua-nvim.md。lua／luajit／nvim 都沒有就整份 skip。"""
 import json, os, re, shutil, subprocess, tempfile, unittest
 from pathlib import Path
 
@@ -9,7 +9,6 @@ from aos_bins import ROOT, tool, path_with, fsm_steps  # noqa: E402
 LUA_DIR = ROOT / "extras" / "langs" / "lua"
 AOS_LUA = str(LUA_DIR / "bin" / "aos-lua")
 EX = LUA_DIR / "examples"
-NVIM_DIR = ROOT / "extras" / "editors" / "nvim"
 EXEC = tool("aos-exec")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO",
          "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
@@ -93,10 +92,6 @@ class TestBuild(unittest.TestCase):
     def test_ann_same_as_demo(self):
         same_tree(self, self.build("agent_ann.lua"), ROOT / "demo" / "agent-ann")
 
-    @unittest.skip("demo/agent-dan 11-02 晚刪了；examples/agent_dan.lua 讀它的 brain.py 等檔、編不出來——留不留等使用者")
-    def test_dan_same_as_demo(self):
-        same_tree(self, self.build("agent_dan.lua"), ROOT / "demo" / "agent-dan")
-
     def test_runners_agree(self):
         """lua、luajit、nvim -l 編出來逐位元組一樣（11-02 晚前拿 agent_dan.lua 編，agent-dan 刪了改 agent_ann.lua）。"""
         outs = []
@@ -173,17 +168,6 @@ class TestBuild(unittest.TestCase):
         v = json.loads(r.stdout)
         self.assertEqual(v, {"a": [], "b": {}, "c": 1.5, "d": "引號\"\n", "e": None, "f": {"z": 1, "y": 2}, "g": 120000})
         self.assertLess(r.stdout.index('"z"'), r.stdout.index('"y"'))   # aos.obj 照寫的順序
-
-
-@unittest.skip("demo/agent-dan 11-02 晚刪了；smoke.lua 編 examples/agent_dan.lua（讀 agent-dan 的檔）、編不出來——留不留等使用者")
-@unittest.skipUnless(shutil.which("nvim"), "沒有 nvim")
-class TestNvim(unittest.TestCase):
-    def test_headless_smoke(self):
-        """editors/nvim/tests/smoke.lua：在 nvim --clean --headless 裡把外掛的指令都走一遍。"""
-        r = subprocess.run(["nvim", "--clean", "--headless", "-l", str(NVIM_DIR / "tests" / "smoke.lua")],
-                           capture_output=True, text=True, env=env(), timeout=120)
-        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("smoke: 全部通過", r.stdout + r.stderr)
 
 
 if __name__ == "__main__":

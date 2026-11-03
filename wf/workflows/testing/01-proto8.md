@@ -7,7 +7,7 @@
 ```sh
 (cd proto8/impls && for p in inst aos-util aos-directive aos-schema aos-exec aos-json aos-loop aos-fsm aos-lock aos-post aos-daemon aos-llm-kernel aos-llm-send; do (cd $p && cmake -B build && cmake --build build && ctest --test-dir build) || break; done)
 python3 -m unittest discover -s proto8/tests      # 全過（python-dotenv 沒裝時 1 個 skip）
-sh proto8/demo/run.sh                            # 結束碼 0、各段都「結束碼 0」（10-23 加 agent-dan 後五段；10-24 加 llm-kernel 後六段；11-02 晚 agent-dan 那段隨它刪了）
+sh proto8/demo/run.sh                            # 結束碼 0、各段都「結束碼 0」（10-23 加 agent-dan 後五段；10-24 加 llm-kernel 後六段；11-02 晚 agent-dan 那段隨它刪了；11-03 llm-kernel 那段隨它封存）
 ```
 
 impls 各專案自己的 ctest（`test_cli`、`test_demo`…）說明在 [proto8/impls/README.md](../../../proto8/impls/README.md)。

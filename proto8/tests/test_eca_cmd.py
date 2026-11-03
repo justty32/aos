@@ -4,7 +4,7 @@
 11-03 procs：daemon 的窗是 procs_ctl_mailbox／procs_state.json、一張表 procs；stack 一律拿表上那一列的；stop／start＝aos-daemon-ctl stop／start
 （停著還在表上、where 找得到、信排在 queue）；自己結束的（CLI 出錯、直接寫 ctl 的 stop）下了表＝不在了，同名再 add 接著用；add --stack S。
 
-eca 資料夾在測試裡臨時組（cli.json＋loop.json 叫 bin/aos-eca-turn --on-empty idle＋_entry 轉 aos-loop），add 的 XXX 就給它（11-03：沒有 --kind／--template）；CLI 用 test_fay 的假 claude
+eca 資料夾在測試裡臨時組（cli.json＋loop.json 叫 bin/aos-eca-turn --on-empty idle＋_entry 轉 aos-loop），add 的 XXX 就給它（11-03：沒有 --kind／--template）；CLI 用 test_cli_tools 的假 claude
 （外面包一層：有 BROKEN 這個檔就退 1，測 CLI 出錯），不花額度。要 tmux 的只有 open -d 那案（沒有就 skip）。
 設計：proto8/thinking/2026-10-30-eca.md C 結論 7～10。"""
 import json, os, shutil, subprocess, tempfile, time, unittest
@@ -13,7 +13,7 @@ import own_error  # noqa: E402
 own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
-from test_fay import FAKE_CLAUDE, SYS_PATH, HAS_TMUX  # noqa: E402
+from test_cli_tools import FAKE_CLAUDE, SYS_PATH, HAS_TMUX  # noqa: E402
 CTL = ROOT / "extras" / "eca" / "bin" / "aos-eca"
 HUMAN = ROOT / "extras" / "human" / "bin"
 TURN = ROOT / "bin" / "aos-eca-turn"

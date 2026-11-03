@@ -1,4 +1,4 @@
-"""test_human - 給人用的 aos-say／aos-listen／aos-chat（proto8/extras/human，2026-10-24）：對 agent-nia 那種走 queue 的 agent 用假腦問答。
+"""test_human - 給人用的 aos-say／aos-listen（aos-chat 11-03 封存到 proto8/archive/aos-chat/，案例一起搬）（proto8/extras/human，2026-10-24）：對 agent-nia 那種走 queue 的 agent 用假腦問答。
 
 10-30 起照 agent 對話協議（CONVENTION P-42；thinking 2026-10-30-agent-lifecycle A-7、A-8、第 4 步）：say＝aos-post send --ordered
 <stack>/queue、listen 只看 stack（信還在 queue 就等、不見了就印 history 最新的回答）。
@@ -15,14 +15,14 @@ from aos_bins import ROOT, path_with  # noqa: E402
 from round_common import absolute  # noqa: E402
 
 HUMAN = ROOT / "extras" / "human" / "bin"
-SAY, LISTEN, CHAT = (str(HUMAN / n) for n in ("aos-say", "aos-listen", "aos-chat"))
+SAY, LISTEN = (str(HUMAN / n) for n in ("aos-say", "aos-listen"))
 NIA = ROOT / "demo" / "agent-nia"
 DAN = str(ROOT / "demo" / "agent-eve")              # 舊協議（讀工作區 new/、不收 queue）：10-30 晚真腦實測發現 2；11-02 晚 agent-dan 刪除，改用它的複本 agent-eve
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_DAEMON_STACK")
 from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 SIG = re.compile(r"^\d{12}\.\d{20}\.\d+\.\d+$")
 TURN = ROOT / "bin" / "aos-eca-turn"                # 10-30 eca：外部 coding agent 的一輪（External 段；10-31 前是 lib/eca/turn 格）
-from test_fay import FAKE_CLAUDE, SYS_PATH  # noqa: E402  假 claude（不花額度）
+from test_cli_tools import FAKE_CLAUDE, SYS_PATH  # noqa: E402  假 claude（不花額度）
 
 
 def env(**kw):
@@ -314,63 +314,9 @@ class ListenTest(Base):
 
 
 
-class ChatTest(Base):
-    def test_two_questions_keep_history(self):
-        r = run(CHAT, "--ws", str(self.ws), self.agent, input="你好\n/status\n第二句\n//斜線開頭\n/bogus\n")   # /status 11-03 拿掉＝沒有這個指令
-        self.assertEqual(r.returncode, 0, r.stderr)
-        lines = r.stdout.splitlines()
-        self.assertEqual(len(lines), 3, r.stdout)              # stdout 只有三個回答
-        self.assertTrue(lines[0].startswith("FAKE ANSWER to: 你好"))
-        self.assertTrue(lines[1].startswith("FAKE ANSWER to: 第二句"))
-        self.assertTrue(lines[2].startswith("FAKE ANSWER to: /斜線開頭"))
-        self.assertEqual(r.stderr.count("沒有這個指令"), 2)       # /status、/bogus
-        self.assertEqual([m["content"] for m in self.history() if m["role"] == "user"], ["你好", "第二句", "/斜線開頭"])
-        self.assertEqual(self.queue("new") + self.queue("cur"), [])
-
-    def test_agent_fails_then_run_resumes(self):
-        bad = self.nia(Path(self._tmp.name) / "bad", brain=DEAD)
-        r = run(CHAT, "--ws", str(self.ws), bad, input="壞腦那題\n")
-        self.assertEqual((r.returncode, r.stdout), (0, ""))
-        self.assertIn("endpoint: BrainFailed", r.stderr)       # agent 的錯誤一行原樣看得到
-        self.assertIn("agent 停了（agent 結束碼 1）", r.stderr)
-        self.assertIn("queue 裡還有 1 封沒答", r.stderr)
-        r = run(CHAT, "--ws", str(self.ws), self.agent, input="/run\n")   # 新開一個 chat（假腦）：認得還沒答的那封，/run 接著做
-        self.assertIn("queue 裡已經有 1 封還沒答", r.stderr)
-        self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 壞腦那題"), r.stdout + r.stderr)
-
-    def test_old_protocol_agent_hint(self):
-        """chat 替你跑舊協議的 agent：跑完信還在 new/，提醒可能是舊協議（10-30 晚真腦實測發現 2）。"""
-        r = run(CHAT, "--ws", str(self.ws), DAN, input="你好\n")
-        self.assertEqual((r.returncode, r.stdout), (0, ""), r.stderr)
-        self.assertIn("agent 跑完了，但 queue 裡還有 1 封沒答", r.stderr)
-        self.assertIn("舊協議", r.stderr)
-
-    def test_without_agent_waits_for_other_runner(self):
-        p = subprocess.Popen([CHAT, "--ws", str(self.ws)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE, text=True, env=env())
-        p.stdin.write("別人跑\n")
-        p.stdin.flush()
-        deadline = time.time() + 10
-        while not self.queue("new"):
-            self.assertLess(time.time(), deadline)
-            time.sleep(0.1)
-        time.sleep(1.5)
-        self.assertEqual(self.go().returncode, 0)
-        out, err = p.communicate("", timeout=30)
-        self.assertEqual(p.returncode, 0, err)
-        self.assertTrue(out.startswith("FAKE ANSWER to: 別人跑"), out + err)
-        self.assertIn("目前沒有程式在跑這隻 agent", err)
-
-    def test_agent_missing(self):
-        r = run(CHAT, "--ws", str(self.ws), str(self.ws / "nope"), input="")
-        self.assertRegex(r.stderr, r"^aos-chat: AgentMissing ")
-        r = run(CHAT, "--ws", str(self.ws), "--trace", input="")      # 11-03 拿掉
-        self.assertRegex(r.stderr, r"^aos-chat: FlagUnknown ")
-
-
 class External(Base):
     """10-30 eca 第 7 步（C 結論 9、F 結論 18；衝突 6 刪 server.txt）：外部 coding agent＝aos-loop 包著 aos-eca-turn 的定義（P-43 草稿），
-    say／listen 不用改；服務者（aos_human.runners）只靠 /proc。定義在這裡臨時組（demo/eca-claude 還沒有），CLI 用 test_fay 的假 claude。"""
+    say／listen 不用改；服務者（aos_human.runners）只靠 /proc。定義在這裡臨時組（demo/eca-claude 還沒有），CLI 用 test_cli_tools 的假 claude。"""
 
     def setUp(self):
         super().setUp()

@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 talk、self-improve（10-24）｜下一份 [05-demo-其他-2](05-demo-其他-2.md)（llm-kernel；pi-tools、file-tools 已遷進 lib）
+← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 talk（10-24；self-improve 11-03 封存到 proto8/archive/self-improve/）｜下一份 [05-demo-其他-2](05-demo-其他-2.md)（pi-tools、file-tools 已遷進 lib）
 
 > 2026-10-24 收尾補：這幾個 demo 各作者做的時候沒改 code map。怎麼跑、錯誤代號見 [demo README](../../../../../proto8/demo/README.md) 各節。
 
@@ -24,27 +24,3 @@
 | `team/daemon.json` | 每 500 毫秒：名單 `procs`（11-03 原 `loops`）裡 ann、bob、cat 各一個子 loop（`aos-exec --ws $AOS_WS/<名> ../member`，`AOS_ROSTER` 指 `$AOS_WS/roster.json`）；daemon 本體跑 `quiet.py` |
 | `team/quiet.py` | 名冊上非人的成員信箱 `tmp/`、`new/`、`cur/` 都空＝退 10 收工；有成員的 loop 失敗結束（讀 `$AOS_STACK/loops/<名>/state.json`，11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../../../../../proto8/thinking/2026-11-02-stack-tools.md)；11-03 改 `procs/<名字>/`，錯誤訊息指 `.stack/procs/<名>/stderr.txt`）＝`team: MemberFailed <名>` 退 1 |
 | `team/roster.json` | 名冊範例（放進團隊工作區）：`members`（`mailbox`、`role`、`human`）、`groups`、`max_hops` 8、`max_sends` 4、`max_body_bytes` 16000 |
-
-### `proto8/demo/self-improve/`（自我改進流程）
-
-給目標和判準，跑函數 → 判定 → 沒達到就讓改進者（一隻 agent）改，直到達成或預算用完。設計在 [thinking 2026-10-24-self-improve](../../../../../proto8/thinking/2026-10-24-self-improve.md)。
-
-| 哪裡 | 負責什麼 |
-|---|---|
-| `_entry` | `exec aos-loop loop.json` |
-| `loop.json` | `{"exec": "fsm.json"}`，不設 max（預算由 judge 管） |
-| `fsm.json` | run（15 分）→ judge（1 分）→ improve（30 分）→ run，三格都是內嵌單子 |
-| `common.py` | 三格共用：工作區與 stack 佈局、版本（`versions/vNNN/`）、`best`、預算（`budget.json`，預設 5 輪／30 分／50 萬 token）、`run_target`（在暫時複本上跑函數）、`criteria`；10-24 沙箱接線 `sandbox()`（預設用本資料夾的 `sandbox.json` 以 `aos-sandbox` 包著跑；工作區的 `sandbox.json` 優先、`false`＝不關；找不到 aos-sandbox／bwrap＝`SandboxMissing`） |
-| `sandbox.json` | 預設的沙箱設定（10-24 真腦實測前定）：`commands` aos-exec、只寫得到 `$AOS_IMPROVE_RUN`、斷網、`env` 只帶 `PATH` 與語系幾個 |
-| `run.py` | 第一次把 `target/`（或 `target.json`）拍成 v000；跑這一版，結果寫 `runs.jsonl` |
-| `judge.py` | 比判準寫 `verdict.json`：達成退 10（放 `out/best/`、寫報告）、預算用完 `BudgetSpent` 退 2、沒達成退 0 |
-| `improve.py` | 從最好那版開新一版，工作區只給 `new/task.txt`＋`target/` 叫改進者，改完只收 `target/`；失敗 `ImproverFailed` 退 1；有沙箱就傳 `AOS_IMPROVE_SANDBOX` |
-| `improver/` | 改進者：從 agent-pip 照抄（工具出錯回給腦、不停） |
-| `improver/_entry`、`loop.json`、`fsm.json` | `exec aos-loop loop.json`；max 120；idle → think（180 秒）→ act（120 秒） |
-| `improver/idle/_entry` | 同 talk 的 member |
-| `improver/.env` | `AOS_BRAIN_MODEL`（`chatgpt-gpt-6-luna-low`）；沒給網址＝假腦，直接答、不改檔 |
-| `improver/system.txt` | 改進者的 system：只能改 `target/`、有哪些工具 |
-| `improver/brain.py` | 同 agent-pip，多記 usage 到 `$AOS_STACK/usage.jsonl`（給外面算 token 預算）；假腦不叫工具 |
-| `improver/act.py` | 同 agent-pip，只改錯誤行的名字（`improver:`） |
-| `improver/tools/read`、`write`、`edit` | 符號連結到 `../../../../lib/base/<名>`（10-24 遷移前指 demo/pi-tools） |
-| `improver/tools/try_run` | 符號連結 → `../../../../lib/aos/try_run`（10-24 遷移；參數 `timeout` 改名 `timeout_s`、逾時算錯） |

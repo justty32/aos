@@ -28,7 +28,7 @@
 | `aos-eca stop [資料夾\|名字]` | 停：關畫面、答完手上這題就停；**還在 daemon 表上**（`stopped`）、stack 原樣留，`where` 照找得到，這期間 `aos-say` 的信照收在 queue、沒人答，`start` 才答；本來就停著＝說一句、退 0 | `aos-daemon-ctl stop 名字` → 等列變 `stopped`（11-03 前是 `rm`、下表） |
 | `aos-eca ls [--json]` | 列在跑的與停著的，一隻一行：名字、狀態、畫面、種類、工作區、`session` 對話 id 前 8 碼（11-03 起英文，見下方「狀態」）；`--json` 的 `state` 同一個字、`screen` 是 `open`／`closed` | `aos-daemon-ctl ls --json` 的 procs 表，只留列上 `stack` 裡有 `eca.json` 的（aos-eca-turn 每次寫：`kind`、`ws`、`template`）；`--json` 每隻的 `cell`＝那個 stack |
 | `aos-eca state [資料夾\|名字]`（或 `status`） | 這裡有沒有外部 agent（掛著或停了）；沒有＝`InstanceMissing`、退 1。`status` 是 `state` 的別名、行為一樣（11-03 使用者「那就兩個都支援，status和state兩個指令都可以，檔案照舊」；小格的 `state.json` 不改名） | 同一張表 |
-| `aos-eca open [-d] [--name N] [--ws WS] [--stack S] [名字\|資料夾\|XXX]` | 接進畫面；沒開就開（有對話就 `--resume` 叫回）；停著的只開畫面、不替人 start（stderr 提醒）。先比名字、再比工作區（或在它的 stack 裡）；都認不出而給的是 eca 資料夾（有 `cli.json`）＝先照 add 建（`--name`、`--ws`、`--stack` 照 add）再開；也不是 eca 資料夾＝`InstanceMissing`。已經有的再給 `--name`／`--ws`／`--stack`＝`ArgumentsBad`。`-d` 只開不接 | cli_session 的 `open_cell`（agent-fay 的 attach 同一段）；只有人開畫面，aos-eca-turn 從不自己開 |
+| `aos-eca open [-d] [--name N] [--ws WS] [--stack S] [名字\|資料夾\|XXX]` | 接進畫面；沒開就開（有對話就 `--resume` 叫回）；停著的只開畫面、不替人 start（stderr 提醒）。先比名字、再比工作區（或在它的 stack 裡）；都認不出而給的是 eca 資料夾（有 `cli.json`）＝先照 add 建（`--name`、`--ws`、`--stack` 照 add）再開；也不是 eca 資料夾＝`InstanceMissing`。已經有的再給 `--name`／`--ws`／`--stack`＝`ArgumentsBad`。`-d` 只開不接 | cli_session 的 `open_cell`（工具形的 `attach_main` 同一段）；只有人開畫面，aos-eca-turn 從不自己開 |
 | `aos-eca close [資料夾\|名字]` | 收起：關畫面、對話留著，aos-eca-turn 照樣用 `--resume` 答。**只管畫面**（11-02 晚第二輪）：停著的不替它起來，stderr 提醒用 `start` | `tmux kill-server`；正在答題＝`SessionBad` |
 | `aos-eca watch [資料夾\|名字]` | 跟著看非互動那次在做什麼（讀了哪個檔、說了什麼、花多少），一次回答結束就走 | 讀 CLI 小格的 `live.jsonl` |
 

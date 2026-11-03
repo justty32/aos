@@ -31,7 +31,7 @@
 # 錯：當工具叫（call_main）時照 lib 契約 stderr 與 stdout 各一行「工具名: 代號 原因」、退 1；attach 與 hook 是 stderr 一行「cli_session: 代號 原因」、退 1。
 #
 # 放哪（10-24 遷移）：proto8/lib/agent/cli_session.py，lib/agent 的 claude、codex 兩個工具共用（用 realpath 找到這層再 import）；
-# agent-fay 根目錄的 cli_session.py 是捷徑指過來（給 attach 用）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
+# 掛它的 agent 根目錄可以放一份 cli_session.py（或捷徑）給 attach 用（原本的例子 demo/agent-fay 11-03 晚刪了；測試 tests/test_cli_tools.py 這樣組）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
 import datetime, fcntl, glob, json, os, shlex, shutil, subprocess, sys, threading, time, uuid
 

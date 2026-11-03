@@ -52,7 +52,7 @@ class T(unittest.TestCase):
     def test_found_all(self):
         # 找得到範本與幾隻代表（掃描本身壞掉時不會靜靜地什麼都不測）
         rel = {str(p.relative_to(DEMO)) for p in BRAINS}
-        for want in ("agent-eve/brain.py", "agent-bob/brain.py", "agent-pip/brain.py", "self-improve/improver/brain.py"):
+        for want in ("agent-eve/brain.py", "agent-bob/brain.py", "agent-pip/brain.py"):   # self-improve 11-03 封存
             self.assertIn(want, rel)
         self.assertIn("agent-ann/idle.py", {str(p.relative_to(DEMO)) for p in IDLES})
 

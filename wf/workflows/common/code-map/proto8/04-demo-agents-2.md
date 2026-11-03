@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 agent-kai、agent-liv、agent-meg、agent-pip、`llm-kernel/agent-ivy`（10-24）｜上一份：[04-demo-agents](04-demo-agents.md)（agent-eve、fay、gus、hal）
+← [入口](../proto8.md)｜涵蓋：`proto8/demo/` 的 agent-kai、agent-liv、agent-meg、agent-pip（10-24；`llm-kernel/agent-ivy` 11-03 隨 demo/llm-kernel 封存到 proto8/archive/llm-kernel-demo/）｜上一份：[04-demo-agents](04-demo-agents.md)（agent-eve、fay、gus、hal）
 
 > 2026-10-24 收尾補（各 agent 做的時候沒改 code map）。「同 agent-dan」的意思、babdaad2 那一行，見上一份開頭。
 
@@ -56,17 +56,3 @@ coding agent，工具全部掛 [proto8/lib](../../../../../proto8/lib/README.md)
 | `act.py` | 工具退非 0、沒有這個工具、arguments 不是 JSON，都接成一則 tool 訊息回給腦、不停（原本跟 agent-dan 差這一條，10-24 晚起 agent-dan 也這樣） |
 | `system.txt` | 照 pi 的精神寫的短版，列各工具看／改的用途 |
 | `tools/*` | 十二條符號連結 → `../../../lib/base/<名>`：`read`、`write`、`edit`、`bash`、`ls`、`stat`、`view`、`json_edit`、`mkdir`、`move`、`copy`、`trash` |
-
-### llm-kernel/agent-ivy
-
-走 LLM kernel 的 ann 式 agent（零子資料夾的全內嵌寫法）；`llm-kernel/` 本身見入口那句。[thinking](../../../../../proto8/thinking/2026-10-24-llm-kernel.md)
-
-| 哪裡 | 負責什麼 |
-|---|---|
-| `_entry`、`loop.json` | `exec aos-loop loop.json`；`loop.json` 的 `exec` 是單子 `aos-fsm fsm.json`、max 20 |
-| `.env` | `AOS_BRAIN_MODEL=chatgpt-gpt-6-luna-low`（同 agent-dan，不蓋外面的；10-24 真腦實測加，沒這份時送 `default`） |
-| `fsm.json` | 沒有 `_entry`；idle／act 跑 python，think 的 `exec`＝`aos-llm-send $AOS_IVY_BRAIN`、stdout 導到 `$AOS_STACK/plan.txt`、120 秒 |
-| `idle.py` | `cur/` 或 `new/` 有題退 0，沒有退 10 |
-| `brain.py` | 經 kernel 才跑：認領題目、答案草稿印 stdout；假腦睡 1 秒；有 `AOS_KERNEL_REPORT` 就寫 usage（假腦用字數編） |
-| `act.py` | `plan.txt` 寫成 `out/<題名>`、題目搬 `done/` |
-| `brains/plain.json`、`quick.json`、`urgent.json` | 腦的單子（`cwd` ..）：normal；normal＋`_metainfo.time_ms` 800；high＋5000 |

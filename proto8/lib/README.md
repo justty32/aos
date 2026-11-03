@@ -14,7 +14,7 @@ demo/agent-*/              最上層：agent 本身（也是函數）
 lib/agent/                 高層：裡面是一整隻 agent（或外部 agent CLI）的工具（pyfix、claude、codex）＋共用模組 agent_tool.py、cli_session.py
                            ＋agent 自己的格（round、queue、history、compact、act；不是工具，見下「agent 自己的格」）
 lib/endpoint/              腦（endpoint 格）：fake、openai——round 問腦叫的，不是工具
-lib/aos/                   中層：動 aos 自己東西的工具（記憶 heap、寄信、spawn／ask／status、try_run）＋共用模組 aos_ws.py
+lib/aos/                   中層：動 aos 自己東西的工具（記憶 heap、寄信、spawn／ask／status；try_run 11-03 隨 demo/self-improve 封存）＋共用模組 aos_ws.py
 lib/base/                  底層原語：檔案、資料夾、JSON、行程（bash）、小工具——Linux＋Python 標準庫（json_edit 另叫 aos-json）、只碰 $AOS_WS
 impls/                     基礎層與標準庫（C-74）：aos-exec 把工具叫起來，loop／fsm 跑 agent
 ```
@@ -98,7 +98,6 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 | [make_json](aos/make_json/) | 生成一份 aos 的 JSON、先驗形狀 | `kind`、`spec`、`out` | aos-ai 那行 JSON（含 notes） | ai_tools/dan_tools |
 | [make_tool](aos/make_tool/) | 在 agent 的 `tools/` 下起工具骨架 | `name`、`tool`、`description`、`params`、`lang` | aos-ai 那行 JSON | ai_tools/dan_tools |
 | [explain_aos](aos/explain_aos/) | 查 aos 的概念 | `concept` | aos-ai 那行 JSON | ai_tools/dan_tools |
-| [try_run](aos/try_run/) | 在工作區 `target/` 的暫時複本上跑一次 | `args`、`stdin`、`timeout_s`（10／60） | 結束碼、stdout、stderr | demo/self-improve 的改進者 |
 
 這幾個的「模型的錯」也照規則 3 退 1；用它們的 agent（agent-meg、talk 的 member）的 act 把工具退非 0 回給腦、不停（同 agent-pip）。
 `memory` 的 `$AOS_HEAP`、`send_message` 的 `$AOS_ROSTER`、ai 那六個的 `$AOS_AI_ROOT` 是規則 4「只碰 `$AOS_WS`」的例外，照原樣留著（放哪由叫的人決定，像 stack）。
@@ -111,8 +110,8 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 | 工具 | 一句話 | 參數 | 回什麼 | 來源 |
 |---|---|---|---|---|
 | [pyfix](agent/pyfix/) | 把改 Python 的事交給子 agent pyfix-agent（`agent/`，它的工具是 base 的 ls、read、write、edit、bash） | `task`、`dir` | 子 agent 的報告＋實際 diff | demo/agent-eve |
-| [claude](agent/claude/) | 交給 Claude Code CLI 做、同一段對話續著講（人可以 attach 進去） | `prompt` | CLI 的回答 | demo/agent-fay |
-| [codex](agent/codex/) | 交給 Codex CLI 做、同上 | `prompt` | CLI 的回答 | demo/agent-fay |
+| [claude](agent/claude/) | 交給 Claude Code CLI 做、同一段對話續著講（人可以 attach 進去） | `prompt` | CLI 的回答 | eca 的工具形（agent-fay 11-03 晚刪了） |
+| [codex](agent/codex/) | 交給 Codex CLI 做、同上 | `prompt` | CLI 的回答 | 同上 |
 
 **共用模組**（不是工具、沒有 `_entry`；工具用 realpath 找到 `lib/agent/` 再 import）：
 - [agent_tool.py](agent/agent_tool.py)：「把一隻 agent 包成工具」的轉接，共用一支——每次呼叫開新小格 `$AOS_STACK/runs/NNN/`、題目寫進子 agent 的 `ws/new/`、`aos-exec --dotenv-override --ws` 跑、拿 `ws/out/` 的答案（錯 `AgentFailed`、`AnswerMissing`）。要把另一隻 agent 包成工具：資料夾裡放 `agent/`、`_entry` 叫 `agent_tool.run_agent`（pyfix 是範例）。
@@ -153,4 +152,4 @@ agent-dan 的複本（錯誤訊息開頭與假腦不同；act 照 agent-pip：�
 
 ## 測試
 
-`python3 -m unittest discover -s proto8/tests -p test_lib.py`：形狀檢查跑過 `lib/` 底下每個工具（三個檔、NAME 行、`_tooldef.json` 與 `_metainfo` 的形、壞 stdin 的錯誤行格式與 stdout 同一行），base 上午那七個各自的行為（截斷、全有或全無、逾時整群停、路徑出不去、沒 `AOS_WS`；不碰工作區的 math、clock、run_python 不驗這條），agent-liv 經捷徑用庫的工具跑完一題。其他工具的行為案例在這幾份：`test_pi_tools.py`、`test_file_tools.py`（base）、`test_meg.py`、`test_talk.py`、`test_ai_tools.py`、`test_self_improve.py`（aos）、`test_eve.py`、`test_fay.py`（agent）、`test_gus.py`（run_python）。
+`python3 -m unittest discover -s proto8/tests -p test_lib.py`：形狀檢查跑過 `lib/` 底下每個工具（三個檔、NAME 行、`_tooldef.json` 與 `_metainfo` 的形、壞 stdin 的錯誤行格式與 stdout 同一行），base 上午那七個各自的行為（截斷、全有或全無、逾時整群停、路徑出不去、沒 `AOS_WS`；不碰工作區的 math、clock、run_python 不驗這條），agent-liv 經捷徑用庫的工具跑完一題。其他工具的行為案例在這幾份：`test_pi_tools.py`、`test_file_tools.py`（base）、`test_meg.py`、`test_talk.py`、`test_ai_tools.py`（aos）、`test_eve.py`、`test_cli_tools.py`（agent）、`test_gus.py`（run_python）。

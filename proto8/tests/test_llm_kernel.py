@@ -1,7 +1,7 @@
 """LLM kernel 整合（10-24，thinking 2026-10-24-llm-kernel）：aos-llm-send 寄信、aos-llm-kernel 被 aos-loop／aos-daemon 一次次拍、回信原樣交回。
 
 單元（排序、slots、回信的錯、收拾、鎖）在 impls/aos-llm-kernel、impls/aos-llm-send 各自的 tests/test_cli.py；這裡只測兩支接起來、
-跟 loop／fsm／daemon 一起跑的樣子：端到端、包它那格的 timeout_ms 收掉閘門（撤信）、kernel 不在時信堆著、kernel 死掉後重起、demo/llm-kernel。"""
+跟 loop／fsm／daemon 一起跑的樣子：端到端、包它那格的 timeout_ms 收掉閘門（撤信）、kernel 不在時信堆著、kernel 死掉後重起（demo/llm-kernel 那案 11-03 隨 demo 封存到 proto8/archive/llm-kernel-demo/）。"""
 import http.server, json, os, signal, subprocess, tempfile, threading, time, unittest
 from pathlib import Path
 
@@ -239,26 +239,6 @@ class ReportCase(unittest.TestCase):
         out, err = g.communicate(timeout=20)
         self.assertEqual((g.returncode, out), (1, ""))
         self.assertTrue(err.startswith("aos-llm-send: BudgetMissing "), err)
-
-
-class DemoCase(unittest.TestCase):
-    def test_demo_llm_kernel(self):
-        with tempfile.TemporaryDirectory() as ws:
-            for a in "abc":
-                Path(ws, a, "new").mkdir(parents=True)
-                Path(ws, a, "new", "q1.txt").write_text("%s 問：2+2？\n" % a)
-            r = subprocess.run([tool("aos-exec"), str(ROOT / "demo" / "llm-kernel")], cwd=ws, env=env_of(),
-                               capture_output=True, text=True, timeout=60)
-            self.assertEqual(r.returncode, 0, r.stderr)
-            for a in "abc":
-                self.assertEqual(Path(ws, a, "out", "q1.txt").read_text(), "FAKE ANSWER to: %s 問：2+2？\n" % a)
-            served = [json.loads(l) for l in Path(ws, ".stack", "procs", "kernel", "served.jsonl").read_text().splitlines()]
-            self.assertEqual([s["level"] for s in served], ["high", "normal", "normal"])
-            self.assertEqual([s["time_ms"] for s in served], [5000, 800, None])   # 同級：宣告短的（b）先、沒寫的（a）最後
-            self.assertEqual([s["code"] for s in served], [0, 0, 0])
-            self.assertEqual([s["counter_tokens"] for s in served], [33, 33, 33])   # 假腦編的 usage（字數）經 AOS_KERNEL_REPORT 交回
-            used = json.loads(Path(ws, ".stack", "procs", "kernel", "used.json").read_text())
-            self.assertEqual((used["window"], used["counter_calls"], used["counter_tokens"]), ("day", 3, 99))
 
 
 if __name__ == "__main__":

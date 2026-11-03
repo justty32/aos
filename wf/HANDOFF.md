@@ -23,7 +23,8 @@
    - Windows 工作樹 `proto8/thinking/README.md`、`months/2026-11.md` 兩檔舊未 commit 改動：使用者 11-03 晚「丟掉」——回公司時 `git checkout -- 那兩檔`（只這兩檔）。
    - 試驗場 `daemons/main` 的 stack 在 `ws/.stack`：使用者 11-03 晚「我以爲daemon本身也可以指定stack？不用移出去」——不移，結案。
    - WSL `~/.codex/config.toml` 預設模型 `gpt-6.1-sol` 這帳號不能用（model_not_found），使用者的設定、沒改。
-   - 常駐 bob：使用者「感覺之後會被蛋雕」「先不用管吧」。
+   - 常駐 bob：使用者「感覺之後會被蛋雕」「先不用管吧」；11-03 晚「B5.封存吧，eca是他的全面強化版，真的沒必要了。」——已結（git 裡只有 thinking，加註；WAIT_USER 那條拿掉）。
+   - **11-03 晚開著的事已答並做完**：A2 proc 改名結案（「以後相關的稱呼/慣例等也要變」）；A3 round 的 on_error 緊張「不管」（注意：11-01 刪的是 `bin/aos-round`，`lib/agent/round/` 兩張表與五格仍在、agent-nia 等在用）；瘦身候選「先封存，等之後我們進展到那塊的時候可以拉出來看看」→ demo/llm-kernel、demo/self-improve（連 lib/aos/try_run）、nvim 外掛、Lua／Janet agent_dan、aos-chat 進 `proto8/archive/`，環境變數第 4 題結案；`aos_ws.loop_state` 沒封存（aos-ai status 在用），待問；demo/agent-fay 刪（「我沒聽過這東西，刪掉。」），test_fay→test_cli_tools。B4 使用者「等等」。
    - 使用者之後要看 aos-post（impls/aos-post）。
 
 ## 2026-11-03 13:30 出門前（公司 Windows；下次開 session 接）

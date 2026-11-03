@@ -30,7 +30,7 @@ add 的自動識別（11-02 拿掉 --kind，使用者「把--kind刪掉」；11-
         aos-exec XXX 一樣；11-01 刪 aos-round 時改，取代原本「複製單子、補 cwd、把 {"$env": "AOS_CD"} 釘成 XXX」——agent-nia 的表
         lib/agent/round/fsm-*.json 用 {"$env": "AOS_CD"} 認 agent、eca 定義的 `aos-eca-turn … {"$env": "AOS_CD"}` 都靠這條掛得上 daemon）。
         **一定帶 ctl／state**（沒寫補 "ctl.json"／"state.json"，跟 daemon 補的一樣；procs § 2 第 6 條）：只有 {"exec": …} 的 loop.json
-        （例 demo/self-improve）才不會被 daemon 當成跑一次。ctl／state 原樣（相對 $AOS_STACK，落在它的 stack）。
+        （例：只寫 exec、靠預算自己停的 loop）才不會被 daemon 當成跑一次。ctl／state 原樣（相對 $AOS_STACK，落在它的 stack）。
         XXX 的 .env、loop.json 裡的 $ref／$env 不處理（照 daemon 的規則從它的 cwd 算）。
         **不收參數**：`-- 參數...` 給 loop 型＝ArgumentsBad（子項設定是 XXX 的 loop.json，參數沒地方放；要參數寫進 loop.json 的 exec；11-02 代定）。
   exec：procs_added {名字: XXX 的絕對路徑}（`檔#/指標` 只轉 # 前面）；有 `-- 參數...`（11-02，使用者「XXX後面可以接-- ... 也就是附加argv參數」）

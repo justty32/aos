@@ -8,8 +8,8 @@
 編出來的就是普通的資料夾＋JSON＋短腳本，跟手寫的一樣，可以直接看、直接手改、直接 `aos-exec`。設計與代定在 [thinking 2026-10-24-janet-compile](../../../thinking/2026-10-24-janet-compile.md)。嘗試性質。
 
 ```sh
-proto8/extras/langs/janet/bin/aos-janet proto8/extras/langs/janet/examples/agent_dan.janet /tmp/dan   # 編
-aos-exec --ws 工作區 /tmp/dan                                                            # 跑（PATH 照 demo/README 放好 aos-*）
+proto8/extras/langs/janet/bin/aos-janet proto8/extras/langs/janet/examples/count.janet /tmp/count   # 編
+aos-exec --ws 工作區 /tmp/count                                                          # 跑（PATH 照 demo/README 放好 aos-*）
 ```
 
 要裝 Janet（這台在 `~/.local/bin/janet`，1.41.2）；不用 spork、不用 jpm。
@@ -48,7 +48,7 @@ key 照寫的字面用（`:timeout_ms` 就是 `timeout_ms`，不換 `-`）。一
 
 ## 例子（[examples/](examples)）
 
-- `agent_dan.janet`：agent-dan 的 Janet 版。`agent` 是一個普通的 Janet 函數（範本），給 system、工具、腦，回一個資料夾。編出來跟 [demo/agent-dan](../../../demo/README.md) 的檔一樣多、JSON 內容相同，假腦跑出來一樣；差別只在 `_entry` 寫成 argv 陣列（手寫版是 sh）、幾行註解。Python 的葉子照抄手寫版。
+- `agent_dan.janet`（agent-dan 的 Janet 版）11-03 封存在 `proto8/archive/agent-dan-langs/`：它讀的 demo/agent-dan 11-02 晚刪了、編不出來。
 - `count.janet`：loop＋fsm，葉子用 Janet 寫（`janet-main`）。
 - `steps.janet`：seq／par／if。
 

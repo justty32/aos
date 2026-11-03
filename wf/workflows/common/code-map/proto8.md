@@ -18,7 +18,7 @@
 
 ### `proto8/demo/`
 
-逐字下放到 [proto8/13-demo](proto8/13-demo.md)（本檔超過 8 KB）：agent-bob、ann、eve、daemon、daemon-2、daemon-3、llm-kernel、tick 的逐檔說明；說明另在 [proto8/demo/README.md](../../../../proto8/demo/README.md)。
+逐字下放到 [proto8/13-demo](proto8/13-demo.md)（本檔超過 8 KB）：agent-bob、ann、eve、daemon、daemon-2、daemon-3、tick 的逐檔說明；說明另在 [proto8/demo/README.md](../../../../proto8/demo/README.md)。
 
 ### `proto8/tests/`
 
@@ -42,9 +42,9 @@ LLM kernel 兩支（`aos-llm-kernel`、`aos-llm-send`，10-24）的逐檔表另�
 
 各作者做的時候沒改 code map，10-24 下午收尾一次補成幾份分檔：
 
-- demo 的 agent（eve、fay、gus、hal、kai、liv、meg、pip、llm-kernel/agent-ivy）逐檔：[proto8/04-demo-agents](proto8/04-demo-agents.md)、[04-demo-agents-2](proto8/04-demo-agents-2.md)。
-- demo 的 talk、self-improve、pi-tools、file-tools、llm-kernel 頂層：[proto8/05-demo-其他](proto8/05-demo-其他.md)、[05-demo-其他-2](proto8/05-demo-其他-2.md)。
-- `proto8/extras/` 周邊工具 human、ai_tools、grow、langs/janet、langs/lua、editors/nvim、sandbox（10-26 從頂層收進）、eca（10-30 aos-eca，11-03 前叫 eca_ctl，前身 10-27 的 cli_hub，在 -3）：[proto8/06-周邊工具](proto8/06-周邊工具.md)、[06-周邊工具-2](proto8/06-周邊工具-2.md)、[06-周邊工具-3](proto8/06-周邊工具-3.md)；`proto8/lib`（函式庫，10-24 下午遷移後三層）：[proto8/09-lib](proto8/09-lib.md)。
+- demo 的 agent（eve、gus、hal、kai、liv、meg、pip；fay 11-03 晚刪、llm-kernel/agent-ivy 11-03 封存）逐檔：[proto8/04-demo-agents](proto8/04-demo-agents.md)、[04-demo-agents-2](proto8/04-demo-agents-2.md)。
+- demo 的 talk、pi-tools、file-tools（self-improve、llm-kernel 11-03 封存到 proto8/archive/）：[proto8/05-demo-其他](proto8/05-demo-其他.md)、[05-demo-其他-2](proto8/05-demo-其他-2.md)。
+- `proto8/extras/` 周邊工具 human、ai_tools、grow、langs/janet、langs/lua、sandbox（editors/nvim 11-03 封存）（10-26 從頂層收進）、eca（10-30 aos-eca，11-03 前叫 eca_ctl，前身 10-27 的 cli_hub，在 -3）：[proto8/06-周邊工具](proto8/06-周邊工具.md)、[06-周邊工具-2](proto8/06-周邊工具-2.md)、[06-周邊工具-3](proto8/06-周邊工具-3.md)；`proto8/lib`（函式庫，10-24 下午遷移後三層）：[proto8/09-lib](proto8/09-lib.md)。
 - 10-24 新增的測試檔：[proto8/08-tests-10-24](proto8/08-tests-10-24.md)。
 
 改 proto8 的檔就同步那份。

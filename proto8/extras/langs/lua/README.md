@@ -2,7 +2,7 @@
 
 aos-lua - 把一份 Lua 原始檔編成 aos 的資料夾＋JSON（嘗試，2026-10-24）
 
-← [proto8](../../../README.md)｜設計、對照表、代定：[thinking 2026-10-24-lua-nvim](../../../thinking/2026-10-24-lua-nvim.md)｜nvim 外掛 [editors/nvim](../../editors/nvim/README.md)｜測試 `proto8/tests/test_lua_aos.py`
+← [proto8](../../../README.md)｜設計、對照表、代定：[thinking 2026-10-24-lua-nvim](../../../thinking/2026-10-24-lua-nvim.md)｜nvim 外掛 11-03 封存（`proto8/archive/nvim/`）｜測試 `proto8/tests/test_lua_aos.py`
 
 使用者 10-24：「再來是lisp/lua編譯成我們這套的方式。……但其實lua也不錯，可以的話接入nvim也挺好」。aos 把資料夾當成 Lua 的 table（C-71），所以「Lua 寫 aos」就是：寫一個 table，編成資料夾。編完就只剩檔案，跑的時候照舊 `aos-exec`，跟 Lua 無關。
 
@@ -11,15 +11,14 @@ aos-lua - 把一份 Lua 原始檔編成 aos 的資料夾＋JSON（嘗試，2026-
 | `aos.lua` | aos - 建構子（dir、file、script、inst、loop、fsm、daemon、env、ref…）＋JSON 編碼＋攤平成檔案清單 |
 | `bin/aos-lua` | aos-lua - 命令列：`build`（寫出來）、`json`（印一個檔或一段 `#/指標`）、`ls`（列出會寫哪些檔） |
 | `examples/agent_ann.lua` | 全內嵌的 agent-ann（loop＋fsm＋三張單子），編出來跟 [demo/agent-ann](../../../demo/README.md) 一樣 |
-| `examples/agent_dan.lua` | 會用工具的 agent-dan，工具與 agent 都是 Lua 函數，編出來跟 demo/agent-dan 一樣 |
 | `examples/clocks.lua` | 一個 daemon 顧三個時鐘 loop，子項用 `for` 迴圈產生 |
 
 ## 用法
 
 ```sh
 R=~/repo/simple_tools/aos/proto8
-$R/extras/langs/lua/bin/aos-lua build $R/extras/langs/lua/examples/agent_dan.lua /tmp/dan   # 寫成資料夾
-$R/extras/langs/lua/bin/aos-lua json  $R/extras/langs/lua/examples/agent_dan.lua 'fsm.json#/states/think'
+$R/extras/langs/lua/bin/aos-lua build $R/extras/langs/lua/examples/agent_ann.lua /tmp/ann   # 寫成資料夾
+$R/extras/langs/lua/bin/aos-lua json  $R/extras/langs/lua/examples/agent_ann.lua 'fsm.json#/states/think'
 nvim -l $R/extras/langs/lua/bin/aos-lua ls $R/extras/langs/lua/examples/clocks.lua          # 沒有 lua 時用 nvim 跑
 ```
 

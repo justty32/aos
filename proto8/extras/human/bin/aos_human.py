@@ -1,4 +1,4 @@
-"""aos_human - aos-say／aos-listen／aos-chat 共用的小零件（給人用的 CLI，2026-10-24）。純標準庫、只在 Linux 上（讀 /proc）。
+"""aos_human - aos-say／aos-listen 共用的小零件（aos-chat 11-03 封存）（給人用的 CLI，2026-10-24）。純標準庫、只在 Linux 上（讀 /proc）。
 
 10-30 起照 agent 對話協議（CONVENTION P-42；thinking 2026-10-30-agent-lifecycle A-7、A-8）：只碰 agent 的 stack——
 queue＝<stack>/queue/（說話＝寄一封有序的信）、history＝<stack>/history.jsonl（回答＝最新那則沒有 tool_calls 的 assistant）、
@@ -111,7 +111,7 @@ def run_hint(w):
     if hit:
         name, eca = hit
         return "它在 daemon 表上停著（%s 是 stopped），叫它起來：%s %s" % (name, "aos-eca start" if eca else "aos-daemon-ctl start", name)
-    return "另開一個終端機跑它：aos-exec --ws %s <agent 資料夾>（或用 aos-chat <agent 資料夾>，由 chat 幫你跑）" % w.ws
+    return "另開一個終端機跑它：aos-exec --ws %s <agent 資料夾>" % w.ws
 
 
 def stuck_hint(w, sig):
