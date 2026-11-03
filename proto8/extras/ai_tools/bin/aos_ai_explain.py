@@ -62,6 +62,7 @@ class Sim:
     def __init__(self, env, override):
         self.env, self.override = dict(env), override
         self.steps, self.dotenvs = [], []
+        self.flag_stack = None                   # --stack 給的（絕對、結尾 /）：每讀完一份 .env 蓋回 AOS_STACK（同 aos-exec）
 
     def note(self, text):
         self.steps.append(text)
@@ -75,6 +76,8 @@ class Sim:
             else:
                 self.env[k] = v
                 took.append(k)
+        if self.flag_stack:
+            self.env["AOS_STACK"] = self.flag_stack
         self.dotenvs.append({"from": where, "set": took, "skipped_already_set": skipped})
 
     def enter_dir(self, d):
@@ -166,14 +169,18 @@ def from_dir(sim, d, seen):
     return {"kind": "missing", "why": "%s 裡沒有 %s，也沒有 %s.json" % (d, name, name)}
 
 
-def here(target, ws_flag, env, override=False):
+def here(target, ws_flag, env, override=False, stack_flag=None):
     sim = Sim(env, override)
     ws = Path(ws_flag if ws_flag not in (None, "-") else env.get("AOS_WS") or os.getcwd()).resolve()
     sim.env["AOS_WS"] = str(ws)
-    stack = env.get("AOS_STACK") or str(ws / ".stack")
+    given = stack_flag not in (None, "-", "")                    # --stack ＞ $AOS_STACK ＞ $AOS_WS/.stack/（11-03 aos-exec --stack；- 或空＝沿用外面的）
+    stack = stack_flag if given else env.get("AOS_STACK") or str(ws / ".stack")
     sim.env["AOS_STACK"] = str(Path(stack).resolve()) + "/"
+    if given:
+        sim.flag_stack = sim.env["AOS_STACK"]
     sim.note("工作區＝%s（%s）" % (ws, "--ws" if ws_flag not in (None, "-") else "沿用 $AOS_WS" if env.get("AOS_WS") else "cwd"))
-    sim.note("stack＝%s（%s）" % (sim.env["AOS_STACK"], "沿用 $AOS_STACK" if env.get("AOS_STACK") else "預設 $AOS_WS/.stack/，aos-exec 會建"))
+    sim.note("stack＝%s（%s）" % (sim.env["AOS_STACK"], "--stack，.env 蓋不掉" if given else "沿用 $AOS_STACK" if env.get("AOS_STACK")
+                                 else "預設 $AOS_WS/.stack/，aos-exec 會建"))
     file, _, ptr = target.partition("#")
     if _ and not ptr.startswith("/"):
         res = {"kind": "bad", "why": "# 後面要是 /"}

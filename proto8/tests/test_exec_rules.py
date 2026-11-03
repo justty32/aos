@@ -114,7 +114,7 @@ class T(unittest.TestCase):
         d = prog(self.t, "p", "echo hi\n")
         put(Path(d, "loop.json"), {"exec": 3})
         put(Path(d, "fsm.json"), {"start": "a", "states": {"a": {"exec": "p", "next": "zz"}}})
-        put(Path(d, "daemon.json"), {"state": "state.json", "loops": {"a/b": "p"}})   # 子項名 a/b 不能當資料夾名（11-02 晚 state 改回 state.json，子項在 loops/ 底下不撞）
+        put(Path(d, "daemon.json"), {"state": "state.json", "procs": {"a/b": "p"}})   # 子項名 a/b 不能當資料夾名（11-02 晚 state 改回 state.json；11-03 loops 改名 procs，子項在 procs/ 底下不撞）
         Path(d, "bad.json").write_text("{nope")
         dot = prog(self.t, "dot", "echo hi\n")
         Path(dot, ".env").write_text("no-equals\n")
@@ -139,7 +139,7 @@ class T(unittest.TestCase):
                            ([loop, str(Path(d, "loop.json")) + "#exec"], "aos-loop: CfgBad 設定檔 "),
                            ([fsm, str(Path(d, "fsm.json"))], "aos-fsm: CfgBad 狀態 a 的 next zz 不在表上"),
                            ([fsm, str(Path(d, "ok.json"))], "aos-fsm: StateBad 讀不了 "),
-                           ([daemon, str(Path(d, "daemon.json"))], "aos-daemon: CfgBad loops 的名字")):
+                           ([daemon, str(Path(d, "daemon.json"))], "aos-daemon: CfgBad procs 的名字")):
             r = subprocess.run(argv, capture_output=True, text=True, env=e, cwd=self.t)
             self.assertEqual((r.returncode, r.raw_stderr.count("\n")), (1, 1), (argv, r.raw_stderr))
             self.assertTrue(r.raw_stderr.startswith(head), (head, r.raw_stderr))

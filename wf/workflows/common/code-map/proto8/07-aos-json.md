@@ -18,7 +18,7 @@
 | `src/cmd/read.cpp` | `get`（`--follow`、`--resolve` 交給 aos-directive 解、`--str`）、`where`（一站一行，最後一站＝值實際寫的地方） |
 | `src/cmd/peek.cpp` | `peek`：漸進展開，第一行位置＋形狀、每個孩子一行摘要（字串截 80 位元組、物件 `{N}`、陣列 `[N]`）；`--follow`、`--depth N` |
 | `src/cmd/write.cpp` | `set`、`batch`（全部成功才寫）、`del`、`append`、`merge`、`env`、`ref`（`--move` 先寫新檔再改原檔）；共用 `Edit`：找位置 → 改 → `--check` 比原本多出問題才擋 → 有變的檔才寫 |
-| `src/cmd/check.cpp` | `check`：`$ref` 指得到（一路驗進被參照的檔、繞圈、陣列合得起來）、指示詞寫法、`exec` 形狀（最上層、`states/<名>/exec`、`loops/<名>/exec`）；問題一行一個印 stdout、退 1 |
+| `src/cmd/check.cpp` | `check`：`$ref` 指得到（一路驗進被參照的檔、繞圈、陣列合得起來）、指示詞寫法、`exec` 形狀（最上層、`states/<名>/exec`、`procs/<名>/exec`〔11-03 原 `loops/<名>/exec`，daemon 名單合成 `procs`〕）；問題一行一個印 stdout、退 1 |
 | `tools/json/` | 腦用（P-41）：`_tooldef.json`＋`_entry`（python3）——`{"cmd", "target", "value"?, "depth"?}` 一次一個動作，寫一律帶 `--check --follow`；aos-json 的錯印 stdout `錯：…`、退 0 |
 | `tools/json_edit/` | 腦用、自己問腦（`AOS_BRAIN_URL`）：「小念頭」兩步——peek 一層層找出指標（最多 12 輪，寫死）→ 每個指標各問一次新值 → `aos-json batch --check --follow` 一次寫 |
 | `tests/test_cli.py` | ctest `test_cli`：命令列黑箱 126 個 |

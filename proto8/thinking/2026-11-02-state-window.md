@@ -56,7 +56,9 @@
 - **aos-daemon-ctl `add`**：`--kind`（含 `max1`）拿掉，只剩自動識別；`add [--name N] [--ws WS] XXX -- 參數...`，`--` 後面當附加 argv。
 - **子項結束後不留名單**（loop 型、exec 型都是）：退了就從 `loops_state` 的表拿掉，小格照留。
 - **running ⇄ waiting 不算變動**。
+  - **11-03 補**：loop 的 ctl.json 11-03 改成一道指令（`cmd`），「ctl 有變才算變動」照舊、只是形狀換了，見 [11-03 ctl-commands](2026-11-03-ctl-commands.md)。
 - `loops_state`：`kind` 刪、`loops`／`execs` 兩張表照舊分開、`letter_warning` 改名 `mailbox_warning`。
+  - **11-03 推翻**（[11-03 procs](2026-11-03-procs.md)，使用者 11-03「連名單也合一」）：上面「喔等等，那還是不要合併了」與這句「兩張表照舊分開」→ `loops`／`execs` 合成一份 `procs`，窗改 `procs_ctl`／`procs_state`／`procs_ctl_mailbox`。「子項結束後不留名單」**照舊**（使用者 11-03「照舊拿掉」），只多一個例外：daemon 自己下的 stop 退了的列留成 `stopped`。
 - loops_ctl **不**收斂成 added／removed（使用者撤回）；信的 body 也不改；loops_ctl 多認一個 **`execs`**（跟 `loops` 對稱，整份取代）。
 - daemon.json 的 `loops_mailbox` 改名 **`loops_ctl_mailbox`**；它跟 `loops_ctl` **可以同時開**，寫 null＝不開，兩個都不開也行。
 - `ctl`／`state`（以及 `loops_ctl`、`loops_state`、`loops_ctl_mailbox`）寫 null＝不開窗。

@@ -189,8 +189,8 @@ class Daemon:
         self.stack = self.dir / ".stack"
         # daemon 自己的窗慣用名 ctl.json／state.json（11-02 白天曾改 daemon_*，晚上改回：控制自身的窗不加前綴，thinking 2026-11-02-ctl-state-names）
         self.cfg, self.ctl, self.state = self.dir / "daemon.json", self.stack / "ctl.json", self.stack / "state.json"
-        # 10-29 aos-daemon 拆窗：名單的手把、子項表另外一對（daemon.json 沒寫＝這兩個預設檔名）
-        self.lctl, self.lstate = self.stack / "loops_ctl.json", self.stack / "loops_state.json"
+        # 10-29 aos-daemon 拆窗：名單的手把、子項表另外一對（daemon.json 沒寫＝這兩個預設檔名；11-03 loops／execs 統稱 procs）
+        self.lctl, self.lstate = self.stack / "procs_ctl.json", self.stack / "procs_state.json"
 
     def read_state(self):
         st = read_json(self.state)
@@ -200,8 +200,8 @@ class Daemon:
         st = read_json(self.lstate)
         if not isinstance(st, dict):
             return None
-        loops = st.get("loops")
-        if isinstance(loops, dict) and "$ref" in loops:   # 超過 100 列會切檔：交給 aos-directive 解
+        procs = st.get("procs")
+        if isinstance(procs, dict) and "$ref" in procs:   # 超過 100 列會切檔：交給 aos-directive 解
             d = which("aos-directive")
             if d:
                 r = subprocess.run([d], input=self.lstate.read_text(encoding="utf-8"), capture_output=True,
@@ -220,18 +220,24 @@ class Daemon:
         return None
 
     def row(self, name):
-        """表上那一列；11-02 起只有還在跑的（running、stopping）在表上，結束的看 daemon 的 log。daemon 沒在跑＝None。"""
+        """表上那一列；11-02 起自己結束的就不在表上，結束的看 daemon 的 log。daemon 沒在跑＝None。"""
         st = self.read_lstate() or {}
-        return (st.get("loops") or {}).get(name) if self.running() else None
+        return (st.get("procs") or {}).get(name) if self.running() else None
 
-    def cell_run(self, name):
-        """子 loop 小格的 state.json 是哪個行程寫的：(pid, started_at_ticks)，沒有＝None（start 拿來看「一次就跑完」的有沒有起過）。"""
-        st = read_json(self.stack / "loops" / name / "state.json")
+    def cell(self, name):
+        """aos-ai 掛上去的 agent 的 stack：aos-ai 自己在 procs_added 裡寫明的 stack（11-03 procs § 2b；跟 daemon 的預設小格同一處）。"""
+        return self.stack / "procs" / name
+
+    def cell_run(self, name, row=None):
+        """子 loop 的 stack（表上那一列的 stack；不在表上＝aos-ai 自己寫明的 cell）裡 state.json 是哪個行程寫的：
+        (pid, started_at_ticks)，沒有＝None（start 拿來看「一次就跑完」的有沒有起過）。"""
+        stack = row.get("stack") if isinstance(row, dict) and isinstance(row.get("stack"), str) else self.cell(name)
+        st = read_json(Path(stack) / "state.json")
         return (st.get("pid"), st.get("started_at_ticks")) if isinstance(st, dict) else None
 
     def write_ctl(self, change, path=None):
         """讀現在那份、改、seq＋1、整份換掉；同時只一個 aos-ai 寫（flock）。回 seq。
-        path 沒給＝ctl.json（loop 面向；11-03 起是一道指令，用 send_cmd）；名單寫 self.lctl（loops_ctl.json，宣告，10-29 拆窗）。"""
+        path 沒給＝ctl.json（loop 面向；11-03 起是一道指令，用 send_cmd）；名單寫 self.lctl（procs_ctl.json，宣告，10-29 拆窗）。"""
         path = path or self.ctl
         self.stack.mkdir(parents=True, exist_ok=True)
         with open(self.dir / ".ctl.flock", "w") as lock:
@@ -253,7 +259,7 @@ class Daemon:
         return self.write_ctl(change)
 
     def wait_seq(self, seq, until=None, timeout=8.0):
-        """等 daemon 讀到這份 loops_ctl（loops_state 的 ctl_seq 回音）；until(loops_state) 另給條件。回 (loops_state, 是否等到)。"""
+        """等 daemon 讀到這份 procs_ctl（procs_state 的 ctl_seq 回音）；until(procs_state) 另給條件。回 (procs_state, 是否等到)。"""
         end = time.monotonic() + timeout
         while True:
             st = self.read_lstate() or {}

@@ -3,7 +3,7 @@
 //     aos-daemon [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] daemon.json [-- 參數...]
 //
 // 命令列同 aos-loop（loop_cli；唯一的位置參數＝設定檔，可寫 `檔#/指標`；10-21 傍晚 ideas § 9）。
-// 管一群長壽的子 loop（C-36、N-28）；每個子項的小格是 $AOS_STACK/loops/<名字>/（P-17）。規則見 README 與 daemon/daemon.hpp。
+// 管一群 proc（C-36、N-28；11-03 起 loops／execs 統稱 procs）；每個 proc 的小格是它寫的 stack，沒寫＝$AOS_STACK/procs/<名字>/（P-17）。規則見 README 與 daemon/daemon.hpp。
 // log（11-02；11-02 晚改預設不印）：--enable-logs 才印到 stdout——子項起來一行、結束一行；daemon 自己有身體時同 aos-loop 每跑完一次一行。
 // `-- 參數...`（11-02 晚）：只接在 daemon 自己的 exec 後面（沒有 exec＝ArgumentsBad），不影響子項。
 // 不論為什麼結束都先收掉所有子 loop、寫好 state 再結束；收到 SIGINT／SIGTERM／SIGHUP 以 128＋N 結束（P-36）。

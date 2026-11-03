@@ -126,16 +126,16 @@ def check_daemon(x):
         nonneg(x, k, "daemon.json")
     if "exec" in x:
         check_exec(x["exec"], "daemon.json#/exec")
-    loops = x.get("loops", {})
-    if not isinstance(loops, dict):
-        bad("daemon.json：loops 要是物件")
-    for name, sub in loops.items():
+    procs = x.get("procs", {})
+    if not isinstance(procs, dict):
+        bad("daemon.json：procs 要是物件")
+    for name, sub in procs.items():
         if not name or name.startswith(".") or "/" in name or "#" in name:
             bad("daemon.json：子項名字不合：%r" % name)
-        if isinstance(sub, dict) and not is_directive(sub):
-            check_loop(sub, "daemon.json#/loops/" + name)
+        if isinstance(sub, dict) and not is_directive(sub) and set(sub) - {"exec", "ws", "stack"}:   # 11-03 看寫法：多了別的 key＝loop 型
+            check_loop({k: v for k, v in sub.items() if k not in ("ws", "stack")}, "daemon.json#/procs/" + name)
         else:
-            check_exec(sub, "daemon.json#/loops/" + name)
+            check_exec(sub.get("exec") if isinstance(sub, dict) and not is_directive(sub) else sub, "daemon.json#/procs/" + name)
 
 
 def check_metainfo(x):
@@ -236,12 +236,12 @@ def gen_fsm(o):
 
 def gen_daemon(o):
     x = base_spec(o)
-    loops = x.setdefault("loops", {})
-    for c in o.get("loop", []):
+    procs = x.setdefault("procs", {})
+    for c in o.get("proc", []):
         if "=" not in c:
-            bad("--loop 要寫 名=exec 或 名={loop.json 的內容}：%s" % c)
+            bad("--proc 要寫 名=exec（跑一次）或 名={loop.json 的內容}（loop 型）：%s" % c)
         name, rest = c.split("=", 1)
-        loops[name.strip()] = value(rest)
+        procs[name.strip()] = value(rest)
     for k in ("max", "interval-ms"):
         if opt(o, k):
             x[k.replace("-", "_")] = int(opt(o, k))
@@ -444,11 +444,10 @@ NOTES = {
     "state": "state 窗的檔名，在 $AOS_STACK 底下；只有 loop 自己寫（explain window）",
     "start": "fsm 的起始格；$AOS_STACK/state.txt 沒有時從這格開始（explain fsm）",
     "states": "fsm 的整張表：每格 {exec, next}，格退 0 才換到 next（explain fsm）",
-    "loops": "daemon 顧的子 loop：名字→目標或一份 loop.json；小格＝$AOS_STACK/loops/<名字>/（11-02 改；explain daemon）",
-    "loops_ctl": "daemon 名單的手把檔名（loops、loops_added、loops_removed、execs、execs_added、execs_removed），在 $AOS_STACK 底下；沒寫＝loops_ctl.json、null＝不開（explain daemon）",
-    "loops_state": "daemon 子項表的狀態窗檔名，在 $AOS_STACK 底下；沒寫＝loops_state.json、null＝不開；表上只有還在跑的，子項結束就拿掉、結束碼看 daemon 的 log（--enable-logs）（explain daemon）",
-    "loops_ctl_mailbox": "daemon 名單的信箱（一封封 loops_added／execs_added／…的信，aos-daemon-ctl 投這裡），在 $AOS_STACK 底下；慣用 loops_ctl_mailbox、null＝不開；可以跟 loops_ctl 同時開（explain daemon）",
-    "execs": "daemon 的一次性子項：名字→aos-exec 的目標（字串、[目標, 參數...]、內嵌單子）；跑一次、結束就從表上拿掉（explain daemon）",
+    "procs": "daemon 顧的 proc（11-03 loops／execs 統稱）：名字→看寫法——字串、[目標, 參數...]、只有 exec（＋ws、stack）的物件＝aos-exec 跑一次；多了別的 key（max、interval_ms、ctl…）＝包成子 aos-loop；stack 沒寫＝$AOS_STACK/procs/<名字>/（explain daemon）",
+    "procs_ctl": "daemon 名單的手把檔名（procs、procs_added、procs_removed、procs_stopped、procs_started），在 $AOS_STACK 底下；沒寫＝procs_ctl.json、null＝不開（explain daemon）",
+    "procs_state": "daemon proc 表的狀態窗檔名，在 $AOS_STACK 底下；沒寫＝procs_state.json、null＝不開；表上是 running／stopping／stopped（daemon 停掉的），自己結束的就拿掉、結束碼看 daemon 的 log（--enable-logs）（explain daemon）",
+    "procs_ctl_mailbox": "daemon 名單的信箱（一封封 procs_added／procs_removed／procs_stopped／procs_started 的信，aos-daemon-ctl 投這裡），在 $AOS_STACK 底下；慣用 procs_ctl_mailbox、null＝不開；可以跟 procs_ctl 同時開（explain daemon）",
     "argv": "單子要跑的程式與參數；argv[0] 沒 / 照 PATH 找（explain inst）",
     "cwd": "單子的工作資料夾，相對路徑從入口所在的資料夾算",
     "envs": "疊在現有環境上的環境變數",

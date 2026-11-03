@@ -12,9 +12,9 @@ def daemon_up(root):
         return pid, True
     d.stack.mkdir(parents=True, exist_ok=True)       # aos-daemon 不自己建 stack（N-59 第 1 件）
     if not d.cfg.exists():
-        write_atomic(d.cfg, json.dumps({"interval_ms": 500, "ctl": "ctl.json", "state": "state.json", "loops": {}},
+        write_atomic(d.cfg, json.dumps({"interval_ms": 500, "ctl": "ctl.json", "state": "state.json", "procs": {}},
                                        indent=1) + "\n")
-    # 上次 down 留下的 {"cmd": "stop"} 不用清（11-03：起來第一次讀的 ctl 當基準線、不執行）；loops_ctl 的 loops_added 照留＝上次在跑的照起
+    # 上次 down 留下的 {"cmd": "stop"} 不用清（11-03：起來第一次讀的 ctl 當基準線、不執行）；procs_ctl 的 procs_added 照留＝上次在跑的照起
     prog = which("aos-daemon")
     if not prog:
         raise Fail("CommandMissing", "PATH 上沒有 aos-daemon", HINTS["CommandMissing"])
@@ -53,8 +53,8 @@ def cmd_daemon(root, o, pos):
         st = d.read_state() or {}
         ls = d.read_lstate() or {}
         out({"ok": True, "running": bool(d.running()), "pid": d.running(), "phase": st.get("phase"),
-             "loops": ls.get("loops") or {}, "ctl_seq": st.get("ctl_seq"), "ctl_warning": st.get("ctl_warning"),
-             "loops_ctl_seq": ls.get("ctl_seq"), "loops_ctl_warning": ls.get("ctl_warning"),
+             "procs": ls.get("procs") or {}, "ctl_seq": st.get("ctl_seq"), "ctl_warning": st.get("ctl_warning"),
+             "procs_ctl_seq": ls.get("ctl_seq"), "procs_ctl_warning": ls.get("ctl_warning"),
              "updated_at": st.get("updated_at"), "stderr_tail": (read_text(d.dir / "stderr.txt") or "")[-500:] or None})
     else:
         raise Fail("ArgumentsBad", "daemon 只認 up、down、status：%s" % pos[0])
@@ -71,21 +71,21 @@ def cmd_start(root, o, pos):
     daemon_up(root)
     d = Daemon(root)
     spec = {"exec": {"argv": ["aos-exec", "--ws", str(a.ws), str(a.agent)], "envs": {"AOS_STACK": str(a.stack) + "/"}},
-            "interval_ms": int(o.get("interval-ms", ["2000"])[-1])}
+            "interval_ms": int(o.get("interval-ms", ["2000"])[-1]), "stack": str(d.cell(a.name))}   # 有 interval_ms＝loop 型（11-03 看寫法）
     row = d.row(a.name)
     if row and row.get("phase") in ("running", "stopping"):
         out({"ok": True, "name": a.name, "already_running": True, "background": row})
         return
-    # 11-02 起子項結束就從表上拿掉、本次執行不再起（記在 daemon 的「已結束」裡）：不在跑就一律先從 loops_added 拿掉、
+    # 11-02 起子項結束就從表上拿掉、本次執行不再起（記在 daemon 的「已結束」裡）：不在跑就一律先從 procs_added 拿掉、
     # 等 daemon 讀到（ctl_seq 回音＝那一圈的名單沒有它，「已結束」也清掉），再放回去並等回音
-    seq = d.write_ctl(lambda c: (c.setdefault("loops_added", {}).pop(a.name, None)), d.lctl)
-    d.wait_seq(seq, until=lambda st: a.name not in (st.get("loops") or {}))
+    seq = d.write_ctl(lambda c: (c.setdefault("procs_added", {}).pop(a.name, None)), d.lctl)
+    d.wait_seq(seq, until=lambda st: a.name not in (st.get("procs") or {}))
     before = d.cell_run(a.name)
-    seq = d.write_ctl(lambda c: c.setdefault("loops_added", {}).__setitem__(a.name, spec), d.lctl)
-    # 起來了＝表上有它，或（一次就跑完、還沒被看到就下表）小格的 state.json 換了一個行程寫
-    st, acked = d.wait_seq(seq, until=lambda st: a.name in (st.get("loops") or {}) or d.cell_run(a.name) != before)
-    row = (st.get("loops") or {}).get(a.name)
-    ran = bool(row) or d.cell_run(a.name) != before
+    seq = d.write_ctl(lambda c: c.setdefault("procs_added", {}).__setitem__(a.name, spec), d.lctl)
+    # 起來了＝表上有它，或（一次就跑完、還沒被看到就下表）它 stack 裡的 state.json 換了一個行程寫
+    st, acked = d.wait_seq(seq, until=lambda st: a.name in (st.get("procs") or {}) or d.cell_run(a.name) != before)
+    row = (st.get("procs") or {}).get(a.name)
+    ran = bool(row) or d.cell_run(a.name, row) != before
     res = {"ok": acked and ran, "name": a.name, "background": row, "ctl_warning": st.get("ctl_warning"),
            "next": "aos-ai ask %s …，再 aos-ai wait %s <信號>" % (a.name, a.name)}
     if acked and ran and not row:
@@ -102,7 +102,7 @@ def cmd_stop(root, o, pos):
     if not d.running():
         out({"ok": True, "name": a.name, "background": None, "note": "daemon 沒在跑"})
         return
-    seq = d.write_ctl(lambda c: c.setdefault("loops_added", {}).pop(a.name, None), d.lctl)
-    st, acked = d.wait_seq(seq, until=lambda st: (st.get("loops") or {}).get(a.name, {}).get("phase") != "running")
-    out({"ok": acked, "name": a.name, "background": (st.get("loops") or {}).get(a.name),
+    seq = d.write_ctl(lambda c: c.setdefault("procs_added", {}).pop(a.name, None), d.lctl)
+    st, acked = d.wait_seq(seq, until=lambda st: (st.get("procs") or {}).get(a.name, {}).get("phase") != "running")
+    out({"ok": acked, "name": a.name, "background": (st.get("procs") or {}).get(a.name),
          "note": "已叫停；正在跑的那次收完才真的停（stopping → 下表）"})

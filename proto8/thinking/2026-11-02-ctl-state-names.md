@@ -4,6 +4,8 @@
 
 本檔只記使用者原文（逐字）、決定、查清的現況、fable 照原則定的規劃（可翻案）、原則沒講清楚要使用者一句話的方向題（[user/03](../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。**只規劃、沒實作。**
 
+> **11-03 補**：loop 的 ctl.json 11-03 改成一道指令（`{"cmd": "stop"}` 取代 `{"stopped": true}`；起來第一次讀到的那份當基準線，殘留的 stop 不用再清，常駐 bob `_entry` 的 `clear_stopped` 拿掉），見 [11-03 ctl-commands](2026-11-03-ctl-commands.md)。
+
 ## 使用者原文（11-02 晚，逐字）
 
 > hmmm，就是說，eca本身繼承於daemon，daemon又繼承於loop，他們吃的都是同份ctl/state檔案，就是這份檔案內有額外的key，對於這種控制自己的ctl/state檔案，其實直接用ctl.json/state.json就好，沒必要費心用loop_*，所以改成統一用ctl/state吧，你懂得，就是loop這一系。就是說一個原則：控制自身的ctl/state檔案，那就是ctl/state，不加前綴。至於如果和base class的ctl/state分屬不同格式，那就是把base class的ctl/state增加前綴，畢竟你是末尾，你要負責處理。
@@ -24,6 +26,7 @@
 ### 方向題的答案（11-02 晚，使用者逐字）
 
 - **方向題 1**（`loops_ctl`／`loops_state` 留不留名）：「hmmm，是這樣的，剛剛下班通勤的時候有個想法，就是說，exec和loops，其實都屬於proc，所以...改名？可是我又擔心和linux的proc撞名...不過好像撞名也沒差。就是說，exec是基石，loop是另一種基本形式，搞不好以後還會有更多形式。」→ 頂層判讀：使用者在想把 `execs`／`loops` 統稱 proc 並改名，**未定**；今晚 `loops_ctl`／`loops_state` 等**不動**，**待明天跟使用者談**。
+  - **11-03 定案**（[11-03 procs](2026-11-03-procs.md)）：統稱 proc、名單合一成 `procs`；`loops_ctl`／`loops_state` 改 `procs_ctl`／`procs_state`（照本檔方向題 1 (a) 那句通則「管別人的窗＝`<被管的東西>_ctl`／`_state`」，N-13 的 11-03 補）。
 - **方向題 2**：「2.好。」→ 前綴原則對 ctl／state 以外的固定名照舊（選 a）。
 - **方向題 3**：「3.對。」→ 只有帶 ctl 的才算 ctl／state 對；`relay_state.json` 照舊（選 a）。
 
@@ -159,3 +162,4 @@
 
 **還沒做**：
 - 方向題 1（`loops_ctl`／`loops_state`、execs／loops 統稱 proc）待明天跟使用者談。
+  - 11-03 定案，見 [11-03 procs](2026-11-03-procs.md)。

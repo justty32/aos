@@ -31,11 +31,11 @@ def openai_brain(root, name):
     p.write_text(json.dumps(reg))
 
 
-def aos_exec(target, ws, env=None):
+def aos_exec(target, ws, env=None, flags=()):
     e = {k: v for k, v in os.environ.items() if k not in CLEAR}
     e["PATH"] = path_with(e.get("PATH", ""))
     e.update(env or {})
-    return subprocess.run([EXEC, "--ws", ws, target], capture_output=True, text=True, env=e, timeout=60)
+    return subprocess.run([EXEC, "--ws", ws, *flags, target], capture_output=True, text=True, env=e, timeout=60)
 
 
 class ToolBrain:
@@ -199,13 +199,14 @@ class AiToolsTest(unittest.TestCase):
         code, res, err = ai(self.root, "wait", "bg", q["id"], "--timeout", "20")
         self.assertTrue(res and "FAKE ANSWER to: hello" in res["text"], err)
         # 11-02：子項自己結束（這裡叫它小格的 ctl 停）＝從 daemon 的表上拿掉、本次不再起；aos-ai start 要能再把它起來
-        cell = Path(self.root) / "daemon" / ".stack" / "loops" / "bg"
+        cell = Path(self.root) / "daemon" / ".stack" / "procs" / "bg"   # 11-03 procs：aos-ai 在 procs_added 寫明的 stack
+        lst = Path(self.root) / "daemon" / ".stack" / "procs_state.json"
+        self.assertEqual(json.loads(lst.read_text())["procs"]["bg"]["stack"], str(cell))
         (cell / "ctl.json").write_text(json.dumps({"cmd": "stop"}))
-        lst = Path(self.root) / "daemon" / ".stack" / "loops_state.json"
         end = time.monotonic() + 20
-        while "bg" in json.loads(lst.read_text())["loops"] and time.monotonic() < end:
+        while "bg" in json.loads(lst.read_text())["procs"] and time.monotonic() < end:
             time.sleep(0.1)
-        self.assertNotIn("bg", json.loads(lst.read_text())["loops"])
+        self.assertNotIn("bg", json.loads(lst.read_text())["procs"])
         (cell / "ctl.json").unlink()
         code, res, err = ai(self.root, "start", "bg", "--interval-ms", "200")
         self.assertTrue(res and res["ok"] and res["background"]["phase"] == "running", (res, err))
@@ -214,8 +215,8 @@ class AiToolsTest(unittest.TestCase):
         code, res, _ = ai(self.root, "daemon", "down")
         self.assertFalse(res["running"])
         ctl = json.loads((Path(self.root) / "daemon" / ".stack" / "ctl.json").read_text())   # 11-02 白天曾改 daemon_ctl.json、晚上改回
-        lctl = json.loads((Path(self.root) / "daemon" / ".stack" / "loops_ctl.json").read_text())   # 10-29 daemon 拆窗
-        self.assertEqual((lctl["loops_added"], ctl["cmd"], "loops_added" in ctl), ({}, "stop", False))
+        lctl = json.loads((Path(self.root) / "daemon" / ".stack" / "procs_ctl.json").read_text())   # 10-29 daemon 拆窗；11-03 procs
+        self.assertEqual((lctl["procs_added"], ctl["cmd"], "procs_added" in ctl), ({}, "stop", False))
 
     def test_dan_tools_ask_agent(self):
         """② 老闆 agent 掛 ask_agent，腦叫它 → 起一隻 helper、問、拿答案，再交答案。"""
@@ -291,11 +292,15 @@ class AiToolsTest(unittest.TestCase):
         code, res, err = ai(r, "make", "func", r + "/funcs/hello", "--summary", "打招呼", "--time-ms", "5")
         self.assertEqual(res["metainfo"], {"summary": "打招呼", "time_ms": 5}, err)
         self.assertIn("hello: hello from", aos_exec(r + "/funcs/hello", r).stdout)
-        code, res, err = ai(r, "make", "daemon", "--loop", 'x={"exec": {"argv": ["true"]}, "max": 1}', "--max", "3",
-                            "--interval-ms", "100", "--out", r + "/d/daemon.json")
+        code, res, err = ai(r, "make", "daemon", "--proc", 'x={"exec": {"argv": ["true"]}, "max": 1}', "--proc", "y=/bin/true",
+                            "--max", "3", "--interval-ms", "100", "--out", r + "/d/daemon.json")
+        self.assertEqual(set(res["json"]["procs"]), {"x", "y"}, err)                       # 11-03 procs（--loop 拿掉）
         p = aos_exec(r + "/d/daemon.json", r, env={"AOS_STACK": r + "/dstack/"})
         self.assertEqual(p.returncode, 0, p.stderr)
-        self.assertEqual(json.loads((Path(r) / "dstack" / "loops" / "x" / "state.json").read_text())["phase"], "done")
+        self.assertEqual(json.loads((Path(r) / "dstack" / "procs" / "x" / "state.json").read_text())["phase"], "done")
+        self.assertFalse((Path(r) / "dstack" / "procs" / "y" / "loop.json").exists())      # 字串＝exec 型、跑一次
+        code, res, err = ai(r, "make", "daemon", "--loop", "x=/bin/true")
+        self.assertEqual(code, 1, (res, err))
 
     def test_make_metainfo_tool_json_and_bad(self):
         code, res, _ = ai(self.root, "make", "metainfo", "--summary", "s", "--time-ms", '{"val": 1, "max": 9}',
@@ -380,6 +385,12 @@ class AiToolsTest(unittest.TestCase):
                 self.assertEqual(res["env_at_start"][k], real[k], (target, k))
             if "AOS_ENTRY" in real:
                 self.assertEqual(res["env_at_start"]["AOS_ENTRY"], real["AOS_ENTRY"])
+        # 11-03 aos-exec --stack：--here 也收，.env 裡的 AOS_STACK 蓋不掉它
+        (r / "p" / "_entry" / ".env").write_text("AOS_ENTRY=run\nAOS_STACK=/nowhere/\n")
+        p = aos_exec(str(r / "p"), str(r / "ws"), flags=("--stack", str(r / "st")))
+        real = dict(l.split("=", 1) for l in p.stdout.splitlines())
+        code, res, err = ai(self.root, "explain", "--here", str(r / "p"), "--ws", str(r / "ws"), "--stack", str(r / "st"))
+        self.assertEqual((res["env_at_start"]["AOS_STACK"], real["AOS_STACK"]), (str(r / "st") + "/",) * 2, (res, err))
 
     def test_dan_tools_make_and_explain(self):
         ai(self.root, "spawn", "boss", "--tool", "make_json", "--tool", "make_tool", "--tool", "explain_aos")

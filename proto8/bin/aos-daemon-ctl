@@ -1,51 +1,68 @@
 #!/usr/bin/env python3
-"""aos-daemon-ctl [--daemon-stack D] add|rm|ls|where … — 把東西掛到一個 aos-daemon 上（10-30，使用者「或許是aos-daemon-ctl add XXX這樣」）。
+"""aos-daemon-ctl [--daemon-stack D] add|rm|start|stop|pause|resume|ls|where … — 把 proc 掛到一個 aos-daemon 上、起停、暫停（10-30，使用者「或許是aos-daemon-ctl add XXX這樣」）。
 
 `aos-exec XXX`＝掛到 Linux 的 proc 管理；`aos-daemon-ctl add XXX`＝掛到 daemon 上。本質是 N-54 的管轄手把：
-往 daemon 的信箱（信箱模式，N-28 的 10-29 補）投一封 `loops_added`／`execs_added` 的信。設計與代定見
-proto8/thinking/2026-10-30-agent-lifecycle.md（實作第 7 步的補）與 bin/README.md。
+往 daemon 的信箱（信箱模式，N-28 的 10-29 補）投一封 `procs_added`／`procs_removed`／`procs_stopped`／`procs_started` 的信。設計與代定見
+proto8/thinking/2026-10-30-agent-lifecycle.md（實作第 7 步的補）、2026-11-03-procs.md（11-03 loops／execs 統稱 procs）與 bin/README.md。
 
-    aos-daemon-ctl [--daemon-stack D] add [--name N] [--ws WS] XXX [-- 參數...]   掛上去；stdout 印信號（aos-post 給的）
-    aos-daemon-ctl [--daemon-stack D] rm 名字                                      拿下來（loops_removed＋execs_removed 都寫）；印信號
-    aos-daemon-ctl [--daemon-stack D] ls [--json]                                  列 loops_state.json 兩張表：一行「名字 TAB loop|exec TAB phase TAB pid TAB code TAB ws」
-    aos-daemon-ctl [--daemon-stack D] where --stack 名字                           印這個子項的 stack（絕對路徑一行）；只認表上的
+    aos-daemon-ctl [--daemon-stack D] add [--name N] [--ws WS] [--stack S] XXX [-- 參數...]   掛上去（add＝登記＋起）；stdout 印信號（aos-post 給的）
+    aos-daemon-ctl [--daemon-stack D] rm 名字                                      拿下來（procs_removed；先停再拿掉，stack 留著）；印信號
+    aos-daemon-ctl [--daemon-stack D] stop 名字                                    停（procs_stopped：跑完這次退、列留成 stopped、stack 留著）；印信號
+    aos-daemon-ctl [--daemon-stack D] start 名字                                   起（procs_started：stopped 的用同一個 stack 再起）；印信號
+    aos-daemon-ctl [--daemon-stack D] pause 名字                                   暫停（直接寫它的 ctl.json {"cmd": "pause", "seq": N}）；印 N
+    aos-daemon-ctl [--daemon-stack D] resume 名字                                  解除暫停（{"cmd": "resume", "seq": N}）；印 N
+    aos-daemon-ctl [--daemon-stack D] ls [--json]                                  列 procs_state.json 的表：一行「名字 TAB phase TAB pid TAB code TAB ws」
+    aos-daemon-ctl [--daemon-stack D] where --stack 名字                           印這個 proc 的 stack（絕對路徑一行）；只認表上的
 
+名詞（11-03 procs § 0）：add／rm＝插拔、start／stop＝起停（stack 留著）、pause／resume＝暫停；daemon 表上的 phase 只有
+  running、stopping（收的途中）、stopped（daemon 下的 stop：行程不在、表上還在）。暫停中是子 loop 自己的事（它的 state.json），表上不轉述。
 哪個 daemon（N-63 hub 型變數）：--daemon-stack ＞ $AOS_DAEMON_STACK；值＝那個 daemon 的 $AOS_STACK 資料夾（它的窗都在這：
-  loops_ctl_mailbox/、loops_state.json，用預設名字）。都沒有＝DaemonMissing；不是資料夾＝DaemonMissing。子 proc 照常繼承 AOS_DAEMON_STACK。
+  procs_ctl_mailbox/、procs_state.json，用預設名字）。都沒有＝DaemonMissing；不是資料夾＝DaemonMissing。子 proc 照常繼承 AOS_DAEMON_STACK。
   11-02 改名（使用者「就AOS_DAEMON_STACK吧」「最好明講，也就是--daemon-stack」）：舊的 AOS_DAEMON／--daemon 不認、不留別名
   （--daemon＝FlagUnknown；只設了 AOS_DAEMON＝DaemonMissing，訊息提示改設 AOS_DAEMON_STACK）。
-  信箱固定是 <D>/loops_ctl_mailbox/（daemon.json 要寫 "loops_ctl_mailbox": "loops_ctl_mailbox"，11-02 前叫 loops_mailbox）；
+  信箱固定是 <D>/procs_ctl_mailbox/（daemon.json 要寫 "procs_ctl_mailbox": "procs_ctl_mailbox"；11-03 前叫 loops_ctl_mailbox，舊名不認）；
   沒有 new/＝MailboxMissing（daemon 沒開信箱或還沒起）。
-add 的自動識別（11-02 拿掉 --kind，使用者「把--kind刪掉」）：XXX 是資料夾、裡面有 loop.json＝loop 型（daemon 的子 loop 直接跑 XXX 的 loop.json）；
-  其他＝exec 型（execs）。
+add 的自動識別（11-02 拿掉 --kind，使用者「把--kind刪掉」；11-03 起 daemon 看寫法決定怎麼起，procs § 2）：XXX 是資料夾、裡面有 loop.json＝loop 型
+  （daemon 的子 loop 直接跑 XXX 的 loop.json）；其他＝exec 型（跑一次）。
   loop：子項設定＝XXX/loop.json 的內容（去掉 _entry），exec 的相對目標照 XXX 轉絕對；exec 是內嵌單子＝換成字串目標
         `<XXX 絕對路徑>/loop.json#/exec`（子 loop 每次 aos-exec 指回原檔那張單子：AOS_CD＝XXX、相對的 cwd／argv 從 XXX 算，跟直接
         aos-exec XXX 一樣；11-01 刪 aos-round 時改，取代原本「複製單子、補 cwd、把 {"$env": "AOS_CD"} 釘成 XXX」——agent-nia 的表
         lib/agent/round/fsm-*.json 用 {"$env": "AOS_CD"} 認 agent、eca 定義的 `aos-eca-turn … {"$env": "AOS_CD"}` 都靠這條掛得上 daemon）。
-        ctl／state 原樣（相對 $AOS_STACK，落在小格）。XXX 的 .env、loop.json 裡的 $ref／$env 不處理（照 daemon 的規則從它的 cwd 算）。
+        **一定帶 ctl／state**（沒寫補 "ctl.json"／"state.json"，跟 daemon 補的一樣；procs § 2 第 6 條）：只有 {"exec": …} 的 loop.json
+        （例 demo/self-improve）才不會被 daemon 當成跑一次。ctl／state 原樣（相對 $AOS_STACK，落在它的 stack）。
+        XXX 的 .env、loop.json 裡的 $ref／$env 不處理（照 daemon 的規則從它的 cwd 算）。
         **不收參數**：`-- 參數...` 給 loop 型＝ArgumentsBad（子項設定是 XXX 的 loop.json，參數沒地方放；要參數寫進 loop.json 的 exec；11-02 代定）。
-  exec：execs_added {名字: XXX 的絕對路徑}（`檔#/指標` 只轉 # 前面）；有 `-- 參數...`（11-02，使用者「XXX後面可以接-- ... 也就是附加argv參數」）
-        ＝{名字: [XXX 絕對路徑, 參數...]}（daemon 起它＝aos-exec XXX 參數...），參數原樣、不轉路徑。
+  exec：procs_added {名字: XXX 的絕對路徑}（`檔#/指標` 只轉 # 前面）；有 `-- 參數...`（11-02，使用者「XXX後面可以接-- ... 也就是附加argv參數」）
+        ＝{名字: [XXX 絕對路徑, 參數...]}（daemon 起它＝aos-exec XXX 參數...），參數原樣、不轉路徑。有 --ws／--stack＝{"exec": 上面那個, "ws"?, "stack"?}。
   XXX 後面只能接 `--`：接別的＝ArgumentsBad（add 只收一個 XXX）；`XXX --` 後面沒東西＝沒參數。
-  名字：--name ＞ XXX 的資料夾名（# 前面那段的 basename）。名字合不合格、撞不撞名由 daemon 驗（壞信記在 loops_state.json 的 mailbox_warning）。
+  名字：--name ＞ XXX 的資料夾名（# 前面那段的 basename）。名字合不合格由 daemon 驗（壞信記在 procs_state.json 的 mailbox_warning）。
   信只說「要」，daemon 下一圈才套；結果看 ls。做完（done）的子項 daemon 會從期望表拿掉（11-02），同名再 add＝重新起，不用先 rm。
 --ws WS（10-30 eca 第 2 步，thinking 2026-10-30-eca 衝突 1、3）：這個子項的工作區。WS 從呼叫當下的 cwd 轉絕對（不是資料夾＝PathMissing），
-  寫進子項物件的 ws（loop＝子項設定多一個 ws；exec＝{"exec": XXX 或 [XXX, 參數...], "ws": WS}），daemon 起它時設 AOS_WS＝WS（沒給＝繼承 daemon 的）。
-  ls 多一欄 ws（列上沒有＝-；--json 照 loops_state 原樣，有給 ws 的列帶 ws）。
-  11-03 起不碰 <WS>/.stack（使用者「那其實.stack根本不需要放到ws那邊」，thinking 2026-11-03-stack-where）：add 不再建指到小格的 symlink、
-  rm 不再拆；daemon＝硬體、子項的 stack＝暫存器，歸 daemon 管，AOS_WS 只是一個位址。要對它 aos-say／aos-listen＝
-  `aos-say --stack $(aos-daemon-ctl where --stack 名字) …`。
-where --stack 名字（11-03）：印這個子項的 stack＝<D>/loops/<名字>（絕對路徑、結尾不帶 /）。只認 daemon 表上的（loops、execs 兩張表，
-  running、stopping 都算；使用者「一個proc在daemon中的狀態，包括運行中、暫停中，除此之外就是不存在於daemon了」「拿下名單後，對於daemon來說他就不存在了，
-  自然找不到」）：表上沒有＝ProcMissing、退 1，不看小格資料夾還在不在。daemon 沒在跑＝同 ls 那句注意、照表印。只認 --stack（沒給＝ArgumentsBad）。
-ls：表上只有還在跑的（running、stopping）——11-02 起子項結束（done／stopped）daemon 就從表上拿掉，結束碼看 daemon 的 log
-  （aos-daemon --enable-logs 時 stdout 每個子項結束一行）。所以 code 那欄平常是 -。
+  寫進子項物件的 ws，daemon 起它時設 AOS_WS＝WS（沒給＝繼承 daemon 的）。ls 多一欄 ws（列上沒有＝-）。
+  11-03 起不碰 <WS>/.stack（使用者「那其實.stack根本不需要放到ws那邊」，thinking 2026-11-03-stack-where）：daemon＝硬體、子項的 stack＝暫存器，
+  歸 daemon 管，AOS_WS 只是一個位址。要對它 aos-say／aos-listen＝`aos-say --stack $(aos-daemon-ctl where --stack 名字) …`。
+--stack S（11-03 procs § 2b）：這個子項的 stack（沒給＝daemon 的預設小格 <D>/procs/<名字>/）。S 從呼叫當下的 cwd 轉絕對、不驗在不在
+  （daemon 起它時 mkdir -p；S 裡有別的東西使用者自己承擔）；空＝ArgumentsBad。寫進子項物件的 stack。
+rm／stop／start（11-03 procs § 2c）：rm＝procs_removed（先停再拿掉；stack 不清）；stop＝procs_stopped（loop 型跑完這次自己退 0、列留成 stopped、
+  where 照找得到）；start＝procs_started（stopped 的用列上的 stack 再起；起來是跑還是暫停看它自己的 state.json）。
+pause／resume（11-03 procs § 2c 第 4 條、ctl-commands § 5）：不經 daemon，直接往它的 ctl（stack 裡 daemon 寫的 loop.json 的 ctl 那格，
+  慣用 ctl.json）寫一道 {"cmd": "pause"|"resume", "seq": N}（先寫 .ctl.json 暫存再改名，N-05；N＝ctl 裡現有的 seq＋1，內容一定跟上一道不同）；
+  stdout 印 N（它 state.json 的 ctl_seq 追上 N＝看到了）。誰都不清 ctl（指令留在檔裡，loop 起來第一次讀的當基準線）。
+  stop、pause、resume 先看它的 stack 裡有沒有 daemon 寫的 loop.json：沒有＝CtlMissing「X 沒有 ctl（exec 型只有跑和拔）」、退 1、不送信
+  （start 的列是 stopped 就不看——只有 loop 型會是 stopped；add＋stop 同一圈的 stack 還沒建）；loop.json 的 ctl 是 null＝CtlMissing。daemon 再驗一次。
+where --stack 名字（11-03）：印這個 proc 的 stack＝procs_state 那一列的 stack（絕對路徑、結尾不帶 /；拼路徑只在 cell_of 一處）。
+  只認 daemon 表上的（running、stopping、stopped 都算；使用者「一個proc在daemon中的狀態，包括運行中、暫停中，除此之外就是不存在於daemon了」
+  「拿下名單後，對於daemon來說他就不存在了，自然找不到」）：表上沒有＝ProcMissing、退 1，不看小格資料夾還在不在。daemon 沒在跑＝同 ls 那句注意、照表印。
+  只認 --stack（沒給＝ArgumentsBad）。
+ls：一張表 procs（11-03 起沒有種類欄）；stopped 的列 pid 印 -。自己結束的（done、訊號、別人直接寫它 ctl 的 stop）daemon 就從表上拿掉（11-02），
+  結束碼看 daemon 的 log（aos-daemon --enable-logs 時 stdout 每個子項結束一行）。所以 code 那欄平常是 -（daemon 停掉的 stopped 是 0）。
+  --json＝一行 {"procs": 表}（列照 procs_state 原樣）。
   另外看 daemon 還活不活（11-02，使用者「要看一個proc是否還活著，除去linux底層proc機制外，我們的aos-daemon-ctl問詢也是一個方式，兩者並存」）：
-  loops_state 頂層的 pid＋started_at_ticks（＋boot_id）對 /proc；對不上＝stderr 一句「aos-daemon-ctl: 注意 daemon 沒在跑（pid N）；表是它最後寫的」，
+  procs_state 頂層的 pid＋started_at_ticks（＋boot_id）對 /proc；對不上＝stderr 一句「aos-daemon-ctl: 注意 daemon 沒在跑（pid N）；表是它最後寫的」，
   照樣列、退 0（--json 也一樣；輸出不加欄）。不看檔案的更新時間（使用者：檔案的更新受多方面影響）。
 錯：stderr 一行「aos-daemon-ctl: 代號 原因」、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、MailboxMissing、
-  PathMissing、LoopBad（loop.json 讀不了或不是物件）、StateMissing（ls、where：loops_state.json 不在）、StateBad、ProcMissing（where：表上沒有）、
-  CommandMissing（PATH 沒 aos-post）、
+  PathMissing、LoopBad（loop.json 讀不了或不是物件）、StateMissing（procs_state.json 不在）、StateBad、ProcMissing（表上沒有）、
+  CtlMissing（stop／start／pause／resume：沒有 ctl＝exec 型）、WriteFailed（pause／resume 寫不了 ctl）、CommandMissing（PATH 沒 aos-post）、
   SendFailed（aos-post 退非 0，它的 stderr 照轉）。（KindBad 11-02 跟 --kind 一起拿掉；給 --kind＝FlagUnknown。）
 要 PATH 上有 aos-post。
 """
@@ -54,8 +71,10 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
 NAME = "aos-daemon-ctl"
-USAGE = ("aos-daemon-ctl [--daemon-stack D] add [--name N] [--ws WS] XXX [-- 參數...] | rm 名字 | ls [--json] | where --stack 名字")
-MAILBOX = "loops_ctl_mailbox"
+USAGE = ("aos-daemon-ctl [--daemon-stack D] add [--name N] [--ws WS] [--stack S] XXX [-- 參數...] | rm 名字 | stop 名字 | start 名字"
+         " | pause 名字 | resume 名字 | ls [--json] | where --stack 名字")
+MAILBOX = "procs_ctl_mailbox"
+STATE = "procs_state.json"
 
 
 class Fail(Exception):
@@ -83,17 +102,23 @@ def abs_target(t, base):
     return f + h + p
 
 
-def loop_spec(xxx):
+def read_loop(path):
+    """讀一份 loop.json（第一行 #! 跳過）→ 物件；讀不了、不是 JSON＝LoopBad。"""
     try:
-        with open(os.path.join(xxx, "loop.json"), encoding="utf-8") as fh:
+        with open(path, encoding="utf-8") as fh:
             text = fh.read()
         if text.startswith("#!"):
             text = text.split("\n", 1)[1] if "\n" in text else ""
         cfg = json.loads(text)
     except (OSError, ValueError) as e:
-        raise Fail("LoopBad", "%s/loop.json 讀不了或不是 JSON：%s" % (xxx, e))
+        raise Fail("LoopBad", "%s 讀不了或不是 JSON：%s" % (path, e))
     if not isinstance(cfg, dict):
-        raise Fail("LoopBad", "%s/loop.json 要是 JSON 物件" % xxx)
+        raise Fail("LoopBad", "%s 要是 JSON 物件" % path)
+    return cfg
+
+
+def loop_spec(xxx):
+    cfg = read_loop(os.path.join(xxx, "loop.json"))
     cfg.pop("_entry", None)
     ex = cfg.get("exec")
     if isinstance(ex, str):
@@ -102,6 +127,8 @@ def loop_spec(xxx):
         cfg["exec"] = [abs_target(ex[0], xxx)] + ex[1:]
     elif isinstance(ex, dict) and "$ref" not in ex and "$env" not in ex:   # 內嵌單子：指回原檔，AOS_CD 與相對路徑照原地
         cfg["exec"] = os.path.join(xxx, "loop.json") + "#/exec"
+    cfg.setdefault("ctl", "ctl.json")      # 一定帶 ctl／state：daemon 才認它是 loop 型（procs § 2 第 6 條）
+    cfg.setdefault("state", "state.json")
     return cfg
 
 
@@ -119,56 +146,8 @@ def send(d, body):
     sys.stdout.write(r.stdout)
 
 
-def cell_of(d, name):
-    """子項在 daemon 的 stack（小格）：<D>/loops/<名字>（11-02 起；daemon 照這個規則開）。拼小格路徑只在這裡。"""
-    return os.path.join(d, "loops", name)
-
-
-def cmd_add(opts, args):
-    o, rest = aos_flags.parse(args, {"--name": "name", "--ws": "ws"})
-    if not rest:
-        raise Fail("ArgumentsBad", "add 要一個 XXX（usage: %s）" % USAGE)
-    extra = rest[1:]
-    if extra:
-        if extra[0] != "--":
-            raise Fail("ArgumentsBad", "add 只收一個 XXX；要給參數寫 XXX -- 參數...（usage: %s）" % USAGE)
-        extra = extra[1:]
-    d = daemon_dir(opts)
-    xxx = abs_target(rest[0], os.getcwd())
-    path = xxx.partition("#")[0]
-    if not os.path.exists(path):
-        raise Fail("PathMissing", "沒有 %s" % path)
-    is_loop = os.path.isdir(path) and os.path.isfile(os.path.join(path, "loop.json"))
-    if is_loop and extra:
-        raise Fail("ArgumentsBad", "loop 型（%s 有 loop.json）不收參數；參數寫進 loop.json 的 exec" % path)
-    ws = None
-    if o.get("ws") is not None:
-        if not o["ws"]:
-            raise Fail("ArgumentsBad", "--ws 不能是空的（usage: %s）" % USAGE)
-        ws = os.path.abspath(o["ws"])   # 從呼叫當下的 cwd 算（daemon 會從它自己的 cwd 算，所以這裡先轉）
-        if not os.path.isdir(ws):
-            raise Fail("PathMissing", "--ws 不是資料夾：%s" % ws)
-    name = o.get("name") or os.path.basename(path.rstrip("/"))
-    if is_loop:
-        spec = loop_spec(path)
-        if ws:
-            spec["ws"] = ws
-    else:
-        target = [xxx] + extra if extra else xxx
-        spec = {"exec": target, "ws": ws} if ws else target
-    send(d, {("loops_added" if is_loop else "execs_added"): {name: spec}})
-
-
-def cmd_rm(opts, args):
-    o, rest = aos_flags.parse(args, {})
-    if len(rest) != 1:
-        raise Fail("ArgumentsBad", "rm 要一個名字（usage: %s）" % USAGE)
-    d = daemon_dir(opts)
-    send(d, {"loops_removed": [rest[0]], "execs_removed": [rest[0]]})
-
-
 def table(d, v):
-    """loops_state 的一張表：物件原樣；切檔（{"$ref": [分檔, …]}）照順序讀回來合起來。"""
+    """procs_state 的表：物件原樣；切檔（{"$ref": [分檔, …]}）照順序讀回來合起來。"""
     if isinstance(v, dict) and isinstance(v.get("$ref"), list):
         out = {}
         for ref in v["$ref"]:
@@ -195,33 +174,160 @@ def proc_alive(pid, ticks, boot_id=None):
 
 
 def read_state(d):
-    """loops_state.json → (loops, execs)；不在＝StateMissing、讀不懂＝StateBad；daemon 沒在跑＝stderr 一句注意（照表回）。"""
-    p = os.path.join(d, "loops_state.json")
+    """procs_state.json → procs 表；不在＝StateMissing、讀不懂＝StateBad；daemon 沒在跑＝stderr 一句注意（照表回）。"""
+    p = os.path.join(d, STATE)
     if not os.path.isfile(p):
-        raise Fail("StateMissing", "沒有 %s（daemon 還沒起，或 loops_state 沒開）" % p)
+        raise Fail("StateMissing", "沒有 %s（daemon 還沒起，或 procs_state 沒開）" % p)
     try:
         with open(p, encoding="utf-8") as fh:
             st = json.load(fh)
-        loops, execs = table(d, st.get("loops", {})), table(d, st.get("execs", {}))
+        procs = table(d, st.get("procs", {}))
     except (OSError, ValueError, AttributeError) as e:
         raise Fail("StateBad", "%s 讀不懂：%s" % (p, e))
     if not proc_alive(st.get("pid"), st.get("started_at_ticks"), st.get("boot_id")):
         sys.stderr.write("%s: 注意 daemon 沒在跑（pid %s）；表是它最後寫的\n" % (NAME, st.get("pid")))
-    return loops, execs
+    return procs
+
+
+def row_of(d, name):
+    """表上那一列；表上沒有＝ProcMissing（不看小格資料夾在不在）。"""
+    r = read_state(d).get(name)
+    if not isinstance(r, dict):
+        raise Fail("ProcMissing", "daemon 表上沒有 %s（只認表上的：running、stopping、stopped；拿下來的就不在了，看 aos-daemon-ctl ls）" % name)
+    return r
+
+
+def cell_of(d, name, row=None):
+    """proc 的 stack：procs_state 那一列的 stack（11-03 procs § 2b；預設小格 <D>/procs/<名字> 也是 daemon 寫在列上的）。拿 stack 只在這裡。"""
+    r = row_of(d, name) if row is None else row
+    s = r.get("stack")
+    if not isinstance(s, str) or not s:
+        raise Fail("StateBad", "%s 那一列沒有 stack" % name)
+    return s.rstrip("/") or "/"
+
+
+def name_arg(cmd, args):
+    o, rest = aos_flags.parse(args, {})
+    if len(rest) != 1:
+        raise Fail("ArgumentsBad", "%s 要一個名字（usage: %s）" % (cmd, USAGE))
+    return rest[0]
+
+
+def cmd_add(opts, args):
+    o, rest = aos_flags.parse(args, {"--name": "name", "--ws": "ws", "--stack": "stack"})
+    if not rest:
+        raise Fail("ArgumentsBad", "add 要一個 XXX（usage: %s）" % USAGE)
+    extra = rest[1:]
+    if extra:
+        if extra[0] != "--":
+            raise Fail("ArgumentsBad", "add 只收一個 XXX；要給參數寫 XXX -- 參數...（usage: %s）" % USAGE)
+        extra = extra[1:]
+    d = daemon_dir(opts)
+    xxx = abs_target(rest[0], os.getcwd())
+    path = xxx.partition("#")[0]
+    if not os.path.exists(path):
+        raise Fail("PathMissing", "沒有 %s" % path)
+    is_loop = os.path.isdir(path) and os.path.isfile(os.path.join(path, "loop.json"))
+    if is_loop and extra:
+        raise Fail("ArgumentsBad", "loop 型（%s 有 loop.json）不收參數；參數寫進 loop.json 的 exec" % path)
+    ws = None
+    if o.get("ws") is not None:
+        if not o["ws"]:
+            raise Fail("ArgumentsBad", "--ws 不能是空的（usage: %s）" % USAGE)
+        ws = os.path.abspath(o["ws"])   # 從呼叫當下的 cwd 算（daemon 會從它自己的 cwd 算，所以這裡先轉）
+        if not os.path.isdir(ws):
+            raise Fail("PathMissing", "--ws 不是資料夾：%s" % ws)
+    stack = None
+    if o.get("stack") is not None:
+        if not o["stack"]:
+            raise Fail("ArgumentsBad", "--stack 不能是空的（usage: %s）" % USAGE)
+        stack = os.path.abspath(o["stack"])   # 同 --ws 從呼叫當下的 cwd 算；在不在不驗（daemon 起它時建）
+    name = o.get("name") or os.path.basename(path.rstrip("/"))
+    if is_loop:
+        spec = loop_spec(path)
+    else:
+        spec = {"exec": [xxx] + extra if extra else xxx}
+    if ws:
+        spec["ws"] = ws
+    if stack:
+        spec["stack"] = stack
+    if not is_loop and len(spec) == 1:
+        spec = spec["exec"]             # 沒有 ws／stack：照舊送裸目標
+    send(d, {"procs_added": {name: spec}})
+
+
+def cmd_rm(opts, args):
+    name = name_arg("rm", args)
+    send(daemon_dir(opts), {"procs_removed": [name]})
+
+
+def need_ctl(d, name, row=None):
+    """它的 stack 裡 daemon 寫的 loop.json → (stack, ctl 檔的路徑)；沒有 loop.json（exec 型）或 ctl 是 null＝CtlMissing。"""
+    stack = cell_of(d, name, row)
+    lj = os.path.join(stack, "loop.json")
+    if not os.path.isfile(lj):
+        raise Fail("CtlMissing", "%s 沒有 ctl（exec 型只有跑和拔）" % name)
+    c = read_loop(lj).get("ctl")
+    if not isinstance(c, str) or not c:
+        raise Fail("CtlMissing", "%s 沒有 ctl（它的 loop.json 的 ctl 是 %s）" % (name, json.dumps(c)))
+    return stack, os.path.join(stack, c)
+
+
+def cmd_stop(opts, args):
+    name = name_arg("stop", args)
+    d = daemon_dir(opts)
+    need_ctl(d, name)
+    send(d, {"procs_stopped": [name]})
+
+
+def cmd_start(opts, args):
+    name = name_arg("start", args)
+    d = daemon_dir(opts)
+    row = row_of(d, name)
+    if row.get("phase") != "stopped":   # stopped 的只會是 loop 型（exec 型 daemon 不讓停）；add＋stop 同一圈的 stack 還沒建
+        need_ctl(d, name, row)
+    send(d, {"procs_started": [name]})
+
+
+def write_cmd(opts, args, cmd):
+    name = name_arg(cmd, args)
+    _, path = need_ctl(daemon_dir(opts), name)
+    try:
+        with open(path, encoding="utf-8") as fh:
+            old = json.load(fh)
+        seq = old.get("seq") if isinstance(old, dict) else None
+    except (OSError, ValueError):
+        seq = None
+    seq = seq + 1 if isinstance(seq, int) and not isinstance(seq, bool) and seq >= 0 else 1
+    tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write(json.dumps({"cmd": cmd, "seq": seq}) + "\n")
+        os.replace(tmp, path)
+    except OSError as e:
+        raise Fail("WriteFailed", "寫不了 %s：%s" % (path, e))
+    print(seq)
+
+
+def cmd_pause(opts, args):
+    write_cmd(opts, args, "pause")
+
+
+def cmd_resume(opts, args):
+    write_cmd(opts, args, "resume")
 
 
 def cmd_ls(opts, args):
     o, rest = aos_flags.parse(args, {}, {"--json": "json"})
     if rest:
         raise Fail("ArgumentsBad", "ls 不收參數（usage: %s）" % USAGE)
-    loops, execs = read_state(daemon_dir(opts))
+    procs = read_state(daemon_dir(opts))
     if o.get("json"):
-        print(json.dumps({"loops": loops, "execs": execs}, ensure_ascii=False))
+        print(json.dumps({"procs": procs}, ensure_ascii=False))
         return
-    for kind, rows in (("loop", loops), ("exec", execs)):
-        for n, r in rows.items():
-            print("\t".join([n, kind, str(r.get("phase")), str(r.get("pid")), "-" if r.get("code") is None else str(r["code"]),
-                             r.get("ws") or "-"]))
+    for n, r in procs.items():
+        print("\t".join([n, str(r.get("phase")), "-" if r.get("pid") is None else str(r["pid"]),
+                         "-" if r.get("code") is None else str(r["code"]), r.get("ws") or "-"]))
 
 
 def cmd_where(opts, args):
@@ -229,15 +335,11 @@ def cmd_where(opts, args):
     o, rest = aos_flags.parse(args, {"--stack": "stack"})
     if rest or not o.get("stack"):
         raise Fail("ArgumentsBad", "where 要 --stack 名字（usage: %s）" % USAGE)
-    d = daemon_dir(opts)
-    loops, execs = read_state(d)
-    name = o["stack"]
-    if name not in loops and name not in execs:
-        raise Fail("ProcMissing", "daemon 表上沒有 %s（只認表上的：running、stopping；拿下來的就不在了，看 aos-daemon-ctl ls）" % name)
-    print(cell_of(d, name))
+    print(cell_of(daemon_dir(opts), o["stack"]))
 
 
-COMMANDS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls, "where": cmd_where}
+COMMANDS = {"add": cmd_add, "rm": cmd_rm, "stop": cmd_stop, "start": cmd_start, "pause": cmd_pause, "resume": cmd_resume,
+            "ls": cmd_ls, "where": cmd_where}
 
 
 def main():

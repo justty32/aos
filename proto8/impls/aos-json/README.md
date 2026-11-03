@@ -13,7 +13,7 @@ aos-json get --resolve fsm.json#/states/think/exec       # 解開指示詞（跟
 aos-json where fsm.json#/states/think/next               # 這個值實際寫在哪份檔的哪裡（一站一行）
 aos-json set --follow fsm.json#/states/think/next '"act"'    # 改被 $ref 的那份檔
 echo '{"/max": 5, "/interval_ms": 100}' | aos-json batch loop.json   # 一次改很多個（全部成功才寫）
-aos-json ref --move daemon.json#/loops daemon_loops.json # 把一塊拆成另一份檔，原地換成 $ref
+aos-json ref --move daemon.json#/procs daemon_procs.json # 把一塊拆成另一份檔，原地換成 $ref
 aos-json check fsm.json                                  # $ref 指得到、寫法對、exec 形狀對
 ```
 
@@ -35,7 +35,7 @@ aos-json check fsm.json                                  # $ref 指得到、寫�
 | `merge` | 物件淺層合 key（同 `$ref` 陣列：後蓋前、不往下合；`null` 照字面放） | `--follow`、`--check` |
 | `env` | 換成 `{"$env": 名字}` | `--path`、`--prefix`、`--parents` |
 | `ref` | 換成 `{"$ref": 目標}`（目標從這份檔的資料夾算） | `--move`：先把原本的值搬到目標（整份檔＝檔不能已在；`檔#/指標`＝那裡要還沒有），裡面的相對 `$ref` 跟著改；`--parents` |
-| `check` | 驗：`$ref` 指得到（一路驗進被參照的檔）、繞圈、`$ref` 陣列合得起來、指示詞寫法不合、`exec` 形狀（最上層 `exec`、`states/<名>/exec`、`loops/<名>/exec`：非空字串、非空陣列、單子要有非空 `argv`）。問題每個一行 `位置: 代號 原因` 印 stdout、退 1；沒問題退 0 | `--env`：`$env` 現在沒設也報 |
+| `check` | 驗：`$ref` 指得到（一路驗進被參照的檔）、繞圈、`$ref` 陣列合得起來、指示詞寫法不合、`exec` 形狀（最上層 `exec`、`states/<名>/exec`、`procs/<名>/exec`（11-03 原 `loops`）：非空字串、非空陣列、單子要有非空 `argv`）。問題每個一行 `位置: 代號 原因` 印 stdout、退 1；沒問題退 0 | `--env`：`$env` 現在沒設也報 |
 
 **`--follow` 的規則**：沒加時，寫入的路上經過指示詞＝`FollowMissing`（往指示詞物件裡加 key，aos 不會看，是陷阱）；直接指著指示詞改＝原地換掉它。
 加了＝穿過 `$ref` 改被參照的檔；`$ref` 陣列（幾份合成一份）：物件看「最後一份有這個 key 的」（生效的就是它），都沒有＝寫進最後一份；陣列照索引換算是哪一份；

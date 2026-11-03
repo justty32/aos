@@ -389,19 +389,19 @@ class External(Base):
         ds.mkdir()
         dj = Path(self._tmp.name) / "daemon.json"
         dj.write_text(json.dumps({"interval_ms": 100, "ctl": "ctl.json", "state": "state.json",
-                                  "loops_ctl_mailbox": "loops_ctl_mailbox"}))
+                                  "procs_ctl_mailbox": "procs_ctl_mailbox"}))
         d = self.popen(["aos-daemon", str(dj)], AOS_STACK=str(ds))
         end = time.time() + 20
-        while not (ds / "loops_ctl_mailbox" / "new").is_dir():
+        while not (ds / "procs_ctl_mailbox" / "new").is_dir():
             self.assertLess(time.time(), end)
             time.sleep(0.05)
         ctl = str(ROOT / "bin" / "aos-daemon-ctl")
         r = self.xrun(ctl, "--daemon-stack", str(ds), "add", "--ws", str(self.ws), "--name", "bob", str(self.eca))
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertFalse(os.path.lexists(self.stack))
-        self.assertTrue(self.phase(ds / "loops" / "bob", ("waiting", "running")))
+        self.assertTrue(self.phase(ds / "procs" / "bob", ("waiting", "running")))
         r = self.xrun(ctl, "--daemon-stack", str(ds), "where", "--stack", "bob")
-        self.assertEqual((r.returncode, r.stdout), (0, str(ds / "loops" / "bob") + "\n"), r.stderr)
+        self.assertEqual((r.returncode, r.stdout), (0, str(ds / "procs" / "bob") + "\n"), r.stderr)
         stack = r.stdout.strip()
         r = self.xrun(SAY, "--stack", stack, "在 daemon 底下")
         self.assertEqual(r.returncode, 0, r.stderr)

@@ -188,7 +188,7 @@
    "abbr": "proc",
    "full": "process",
    "meaning": "行程",
-   "example": "/proc/<pid>/stat（N-32 啟動時間）"
+   "example": "/proc/<pid>/stat（N-32 啟動時間）；procs（daemon 管的子項名單，11-03，thinking 2026-11-03-procs）"
   },
   {
    "abbr": "lib",

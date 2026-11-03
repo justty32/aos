@@ -124,7 +124,7 @@ def cmd_make(root, o, pos):
 
 def cmd_explain(root, o, pos):
     if "here" in o:
-        out(ex.here(pos[0] if pos else ".", opt1(o, "ws"), os.environ, override="dotenv-override" in o))
+        out(ex.here(pos[0] if pos else ".", opt1(o, "ws"), os.environ, override="dotenv-override" in o, stack_flag=opt1(o, "stack")))
         return
     if not pos:
         secs = ex.sections()

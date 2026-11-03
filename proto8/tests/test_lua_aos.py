@@ -126,7 +126,7 @@ class TestBuild(unittest.TestCase):
         r = subprocess.run([EXEC, "--ws", str(ws), str(out)], capture_output=True, text=True, env=env(), timeout=60)
         self.assertEqual(r.returncode, 0, r.stderr)
         for n in (1, 2, 3):
-            self.assertEqual((ws / ".stack" / "loops" / ("clock_%d" % n) / "tick.txt").read_text().strip(), str(n))
+            self.assertEqual((ws / ".stack" / "procs" / ("clock_%d" % n) / "tick.txt").read_text().strip(), str(n))
 
     def test_json_pointer(self):
         # 11-02 晚前拿 agent_dan.lua；demo/agent-dan 刪了（agent_dan.lua 編不出來），改 agent_ann.lua

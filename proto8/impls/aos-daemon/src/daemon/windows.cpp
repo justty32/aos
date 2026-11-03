@@ -1,15 +1,15 @@
-// windows.cpp：【daemon】管轄那一對窗——loops_ctl.json（手把）、loops_state.json（狀態窗）（10-29 拆窗，medium-plan § 四 1；說明見 daemon.hpp）。
+// windows.cpp：【daemon】管轄那一對窗——procs_ctl.json（手把）、procs_state.json（狀態窗）（10-29 拆窗，medium-plan § 四 1；11-03 loops_* 改名 procs_*；說明見 daemon.hpp）。
 //
-//   read_loops_ctl  每圈讀一次（tend 開頭）。同 aos-loop 的 read_ctl（N-06～N-08）：認 loops、loops_added、loops_removed、execs（11-02 晚）、execs_added、execs_removed（10-30）、seq，其他 key 忽略；
-//                   讀到壞的（讀不了、不是 JSON 物件、seq 不是非負整數、名單壞、指示詞解不開）整份不採用、維持上一份好的，
-//                   原因記 lctl_warning_（loops_state 的 ctl_warning）；讀到好的清回 null；檔不在＝還沒人寫，維持上一份好的、不算問題
-//   check_lists     loops、loops_added（read_loops；跟窗撞名的檢查 11-02 拿掉）、loops_removed（名字的陣列）；10-29 前是 ctl.json 的 check_ctl；
-//                   10-30 多 execs_added（read_execs）、execs_removed；11-02 晚多整份的 execs（read_execs，跟 loops 對稱）。read_loops_ctl 另外驗合出來的 loops 與 execs 不同名（check_apart）
-//   write_more      loops_state 一份：{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有，10-29；11-02 晚原 letter_warning）, loops, execs（10-30）, pid, started_at_ticks, boot_id, updated_at}
-//                   （11-02：kind、recorded_at 拿掉、updated_at 最後一欄）。Loop 每次 write_state 都呼叫、daemon 表變了也呼叫（flush_table）；
-//                   有變才寫（11-02）：先組好分檔前的那份（不含 proc_fields、updated_at）跟上一份寫出去的比，一樣就不碰檔，
-//                   不一樣才寫分檔→清舊分檔→寫主檔（提交順序同以前：主檔改名是唯一的提交點）
-//   write_parts     loops、execs 表各自超過 PART_ROWS 列就切檔（10-23 晚；10-30 兩張表共用分檔資料夾）；clean_parts 兩張都寫好才清舊分檔
+//   read_procs_ctl  每圈讀一次（tend 開頭）。同 aos-loop 的 read_ctl 的不採用規則（N-06～N-08）：認 procs、procs_added、procs_removed、procs_stopped、procs_started、seq，
+//                   其他 key 忽略（舊名 loops*／execs* 也是，C-48）；讀到壞的（讀不了、不是 JSON 物件、seq 不是非負整數、名單壞、指示詞解不開、
+//                   procs_stopped／procs_started 有 exec 型）整份不採用、維持上一份好的，原因記 pctl_warning_（procs_state 的 ctl_warning）；
+//                   讀到好的清回 null；檔不在＝還沒人寫，維持上一份好的、不算問題
+//   check_lists     procs、procs_added（read_procs）、procs_removed／procs_stopped／procs_started（名字的陣列）；信也用
+//   check_once      procs_stopped／procs_started 的名字是 exec 型（exec 型只有跑和拔，procs § 2c 第 5 條）＝回原因；信也用
+//   write_more      procs_state 一份：{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs, pid, started_at_ticks, boot_id, updated_at}。
+//                   Loop 每次 write_state 都呼叫、daemon 表變了也呼叫（flush_table）；有變才寫（11-02）：先組好分檔前的那份（不含 proc_fields、updated_at）
+//                   跟上一份寫出去的比，一樣就不碰檔，不一樣才寫分檔→清舊分檔→寫主檔（主檔改名是唯一的提交點）
+//   write_parts     procs 表超過 PART_ROWS 列就切檔（10-23 晚）；clean_parts 寫好才清舊分檔
 #include "daemon/daemon.hpp"
 
 #include "aos/files.hpp"
@@ -26,26 +26,26 @@ static bool is_nat(const Json& v) {   // 非負整數（true／false、小數不
     return v.is_number_unsigned() || (v.is_number_integer() && v.get<long long>() >= 0);
 }
 
-void Daemon::read_loops_ctl() {
-    if (lctl_path_.empty()) {
+void Daemon::read_procs_ctl() {
+    if (pctl_path_.empty()) {
         return;
     }
     int err = 0;
-    std::optional<std::string> text = aos::read_file(lctl_path_, err);
+    std::optional<std::string> text = aos::read_file(pctl_path_, err);
     if (!text) {
         if (err != ENOENT) {
-            lctl_warning_ = std::string("loops_ctl 讀不了或不是 JSON：") + std::strerror(err);
+            pctl_warning_ = std::string("procs_ctl 讀不了或不是 JSON：") + std::strerror(err);
         }
         return;
     }
     Json doc = Json::parse(*text, nullptr, false);
     if (doc.is_discarded()) {
-        lctl_warning_ = "loops_ctl 讀不了或不是 JSON：" + lctl_path_;
+        pctl_warning_ = "procs_ctl 讀不了或不是 JSON：" + pctl_path_;
         return;
     }
     std::optional<std::string> bad;
-    try {   // 指示詞：相對 $ref 從 loops_ctl 所在的資料夾算；解不開＝整份不採用（N-08）
-        aos::Resolved r = aos::loop::resolve_keys(doc, aos::dirname(lctl_path_), {"seq"});
+    try {   // 指示詞：相對 $ref 從 procs_ctl 所在的資料夾算；解不開＝整份不採用（N-08）
+        aos::Resolved r = aos::loop::resolve_keys(doc, aos::dirname(pctl_path_), {"seq"});
         doc = std::move(r.value);
         if (!doc.is_object()) {
             bad = "要是 JSON 物件";
@@ -54,34 +54,29 @@ void Daemon::read_loops_ctl() {
         } else {
             bad = check_lists(doc, r);
         }
-        if (!bad) {   // 10-30：合出來的期望表 loops 與 execs 同名＝撞名（共用名字空間），整份不採用
-            Json lm;
-            Json em;
-            auto [lw, ew] = ctl_want(doc, lm, em);
-            bad = check_apart(*lw, *ew);
+        if (!bad) {   // exec 型只有跑和拔：procs_stopped／procs_started 裡有 exec 型＝整份不採用（procs § 2c 第 5 條）
+            Json merged;
+            bad = check_once(doc, ctl_want(doc, merged));
         }
     } catch (const Error& e) {
         bad = "指示詞解不開：" + e.msg;
     }
     if (bad) {
-        lctl_warning_ = "loops_ctl 不採用：" + *bad;
+        pctl_warning_ = "procs_ctl 不採用：" + *bad;
         return;
     }
-    lctl_good_ = doc;
-    lctl_warning_ = nullptr;
+    pctl_good_ = doc;
+    pctl_warning_ = nullptr;
 }
 
 std::optional<std::string> Daemon::check_lists(Json& doc, const aos::Resolved& where) {
-    // loops_ctl 改名單寫壞＝整份不採用（N-08；原因進 loops_state 的 ctl_warning）。指示詞解不開丟 DirectiveBad，read_loops_ctl 一樣當不採用。
-    // 10-30 多 execs_added（read_execs）、execs_removed（同 loops_removed）。
-    const char* lists[4] = {"loops", "loops_added", "execs", "execs_added"};
-    for (const char* k : lists) {
+    // procs_ctl 改名單寫壞＝整份不採用（N-08；原因進 procs_state 的 ctl_warning）；信寫壞＝壞信。指示詞解不開丟 DirectiveBad（呼叫者當不採用）。
+    for (const char* k : {"procs", "procs_added"}) {
         if (!doc.contains(k)) {
             continue;
         }
-        bool execs = std::string(k).rfind("execs", 0) == 0;   // execs（11-02 晚）、execs_added
         try {
-            doc[k] = execs ? read_execs(doc[k], where.dir_of(k), k) : read_loops(doc[k], where.dir_of(k), k);
+            doc[k] = read_procs(doc[k], where.dir_of(k), k);
         } catch (const Error& e) {
             if (e.code == code::DirectiveBad) {
                 throw;
@@ -89,7 +84,7 @@ std::optional<std::string> Daemon::check_lists(Json& doc, const aos::Resolved& w
             return e.msg;
         }
     }
-    for (const char* k : {"loops_removed", "execs_removed"}) {
+    for (const char* k : {"procs_removed", "procs_stopped", "procs_started"}) {
         if (!doc.contains(k)) {
             continue;
         }
@@ -106,8 +101,28 @@ std::optional<std::string> Daemon::check_lists(Json& doc, const aos::Resolved& w
     return std::nullopt;
 }
 
+std::optional<std::string> Daemon::check_once(const Json& doc, const Json& want) const {
+    for (const char* k : {"procs_stopped", "procs_started"}) {
+        if (!doc.contains(k)) {
+            continue;
+        }
+        for (const Json& j : doc[k]) {
+            const std::string& n = j.get_ref<const std::string&>();
+            if (!want.contains(n)) {
+                continue;   // 不在期望表的名字＝不管（procs § 2c 第 6 條）
+            }
+            auto at = index_.find(n);   // 表上有＝看那列（跑著的是哪種）；不在表上＝看寫法
+            bool once = at != index_.end() ? at->second->second.once : is_once(want[n]);
+            if (once) {
+                return "exec 型 " + aos::dumps(Json(n)) + " 沒有 stop／start（exec 型只有跑和拔）";
+            }
+        }
+    }
+    return std::nullopt;
+}
 
-static const size_t PART_ROWS = 100;   // loops_state 的 loops 表一份最多幾列（使用者 10-23「每個檔案一百個」；不開 key，C-56）
+
+static const size_t PART_ROWS = 100;   // procs_state 的 procs 表一份最多幾列（使用者 10-23「每個檔案一百個」；不開 key，C-56）
 
 // FNV-1a 64 位元，16 個十六進位字：分檔檔名＝內容的雜湊（內容不變就沿用同一份、不重寫）。
 static std::string fnv64(const std::string& text) {
@@ -149,7 +164,7 @@ Json Daemon::write_parts(Json rows, std::set<std::string>& now) {
                 vec = &static_cast<std::vector<std::pair<const std::string, Json>>&>(page.get_ref<Json::object_t&>());
             }
         }
-        out = Json::object({{"$ref", refs}});   // {"$ref": ["loops_state_loops/<雜湊>.json", …]}：aos-directive 照順序合回整張表
+        out = Json::object({{"$ref", refs}});   // {"$ref": ["procs_state_procs/<雜湊>.json", …]}：aos-directive 照順序合回整張表
     }
     if (out.is_null()) {
         return rows;   // 沒超過：原樣
@@ -159,7 +174,6 @@ Json Daemon::write_parts(Json rows, std::set<std::string>& now) {
 
 void Daemon::clean_parts(const std::set<std::string>& now) {
     // 清舊分檔：留這次與上一次的（磁碟上的主檔現在還指著上一次的）；這個行程第一次寫時不清（上一個行程的主檔可能還指著）。
-    // 10-30 起 loops、execs 兩張表的分檔都在這個資料夾（檔名＝內容的雜湊，兩張表的名字不重複、內容不會撞），now 是兩張的合起來。
     if (parts_wrote_ && !parts_dir_.empty()) {
         std::error_code ec;
         std::vector<std::filesystem::path> old;
@@ -181,26 +195,23 @@ void Daemon::clean_parts(const std::set<std::string>& now) {
 }
 
 void Daemon::write_more(const Json& me) {
-    if (lstate_path_.empty()) {
+    if (pstate_path_.empty()) {
         return;
     }
-    Json rows = Json::object();
-    Json exec_rows = Json::object();   // 10-30：exec 型子項另一張表，列的形狀同 loops
+    Json rows = Json::object();   // 11-03：一張表（loop 型、exec 型不分）
     // ordered_json 的 rows[n] 每次都逐個比對 key（N 個就 N×N）；名字在表上本來就不重複，直接接在尾巴
     auto& vec = static_cast<std::vector<std::pair<const std::string, Json>>&>(rows.get_ref<Json::object_t&>());
-    auto& evec = static_cast<std::vector<std::pair<const std::string, Json>>&>(exec_rows.get_ref<Json::object_t&>());
     vec.reserve(table_.size());
     for (auto& [n, c] : table_) {
-        (c.once ? evec : vec).emplace_back(n, row(c));
+        vec.emplace_back(n, row(c));
     }
     Json doc = Json::object();
-    doc["ctl_seq"] = lctl_good_.contains("seq") ? lctl_good_["seq"] : Json();
-    doc["ctl_warning"] = lctl_warning_;
+    doc["ctl_seq"] = pctl_good_.contains("seq") ? pctl_good_["seq"] : Json();
+    doc["ctl_warning"] = pctl_warning_;
     if (!mbox_path_.empty()) {
         doc["mailbox_warning"] = mailbox_warning_;   // 開了信箱才有：最後一封壞信（11-02 晚原 letter_warning）
     }
-    doc["loops"] = rows;
-    doc["execs"] = exec_rows;
+    doc["procs"] = rows;
     if (more_wrote_ && doc == last_more_) {
         // 有變才寫（11-02）：表、ctl_seq、ctl_warning、mailbox_warning 都一樣＝不碰檔。上一次寫時留著的「再上一次」的分檔
         // （讀的人可能剛讀了舊主檔）等到這一下（主檔已換過、隔了一次）才清——原本靠下一份心跳清，心跳拿掉後改在這裡
@@ -213,14 +224,13 @@ void Daemon::write_more(const Json& me) {
     }
     Json key = doc;
     std::set<std::string> now;
-    doc["loops"] = write_parts(std::move(rows), now);   // 分檔都寫好才寫主檔（主檔改名是唯一的提交點）
-    doc["execs"] = write_parts(std::move(exec_rows), now);
+    doc["procs"] = write_parts(std::move(rows), now);   // 分檔都寫好才寫主檔（主檔改名是唯一的提交點）
     clean_parts(now);
     for (auto& [k, v] : me.items()) {
         doc[k] = v;
     }
     doc["updated_at"] = aos::utc_now_ms();
-    aos::loop::write_window(lstate_path_, doc);
+    aos::loop::write_window(pstate_path_, doc);
     more_wrote_ = true;
     parts_stale_ = true;
     last_more_ = std::move(key);

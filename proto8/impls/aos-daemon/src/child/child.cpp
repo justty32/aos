@@ -6,6 +6,7 @@
 // 所以 ps 看到的子 loop 叫 aos-loop（原本 fork 後在子行程裡直接跑 aos-loop 的 Loop、名字是 aos-daemon，那是 10-20 頂層代定的做法，換掉）。
 // fork 時 daemon 只有一條執行緒，子行程裡做 C++ 配置、setenv 不會撞鎖。三個訊號 daemon 一開始就擋著（block_signals），
 // 子行程 exec 之前解開（遮罩會跨 exec 繼承；子行程不擋）。
+// 11-03（thinking 2026-11-03-procs）：loops／execs 統稱 procs；小格＝proc 的 stack（寫了 stack＝它，沒寫＝$AOS_STACK/procs/<名字>/）。
 // 10-30 execs（thinking 2026-10-30-agent-lifecycle B-12 ②、使用者「讓daemon可以掛aos-exec，也是不錯的」）：exec 型子項走同一條 launch
 // （小格、stderr.txt、setsid、/dev/null、AOS_STACK、cd 到 daemon 的 cwd），只是不寫 loop.json、run_cli 直接拿 {"--", 目標, 參數...}——中間沒有 aos-loop。
 // 10-30 eca（thinking 2026-10-30-eca 衝突 1，使用者「都照建議」；N-55 工作區由呼叫方設，daemon 是呼叫方）：子項寫了 ws＝run_child 多設 AOS_WS；
@@ -73,13 +74,17 @@ namespace aos::daemon {
     _exit(rc);
 }
 
-// 只建 loops/ 與小格這兩層：$AOS_STACK 不在＝建不了（建 stack 只在 aos-exec 做，N-59 第 1 件；10-23 前是 mkdir -p）。spawn 與 spawn_exec 共用。
-// 11-02 小格從 $AOS_STACK/<名字>/ 改成 $AOS_STACK/loops/<名字>/（thinking 2026-11-02-stack-tools 細節 5）：loops/ 是 daemon 自己的固定名，有就沿用。
-static void make_cell(const std::string& name, const std::string& cell) {
+// 預設小格（deep＝false）只建 procs/ 與小格這兩層：$AOS_STACK 不在＝建不了（建 stack 只在 aos-exec 做，N-59 第 1 件）；procs/ 是 daemon 自己的固定名，有就沿用。
+// proc 自己寫了 stack（deep＝true，11-03 procs § 2b）＝mkdir -p（不在就建，同 aos-exec --stack）。spawn 與 spawn_exec 共用。
+static void make_cell(const std::string& name, const std::string& cell, bool deep) {
     std::error_code ec;
-    std::filesystem::create_directory(std::filesystem::path(cell).parent_path(), ec);
-    if (!ec) {
-        std::filesystem::create_directory(cell, ec);
+    if (deep) {
+        std::filesystem::create_directories(cell, ec);
+    } else {
+        std::filesystem::create_directory(std::filesystem::path(cell).parent_path(), ec);
+        if (!ec) {
+            std::filesystem::create_directory(cell, ec);
+        }
     }
     if (ec) {
         throw Error{code::MkdirFailed, "起不了子項 " + name + "：建不了 " + cell + "（" + ec.message() + "）"};
@@ -110,12 +115,13 @@ static Child launch(const std::string& name, const std::string& cell, const std:
     c.pid = pid;
     c.started_at_ticks = aos::proc_started_at_ticks(pid);
     c.ws = ws_s.empty() ? Json() : Json(ws_s);
+    c.stack = cell;
     return c;
 }
 
 // 內嵌單子搬進小格之前（10-24；11-02 晚 exec 型子項也用）：跑它時相對路徑的基準是小格（AOS_CD），所以 cwd 照 daemon 的 cwd 定死——
 // 沒寫＝daemon 的 cwd、相對的字串＝接在 daemon 的 cwd 後面（argv[0]、stdin／stdout／stderr 都從 cwd 算，跟著對）；
-// cwd 是指示詞就不動（解出來若是相對的，從小格算）。裡面相對的 $ref 已在 read_loops 轉成絕對。
+// cwd 是指示詞就不動（解出來若是相對的，從小格算）。裡面相對的 $ref 已在 read_procs 轉成絕對。
 static void pin_cwd(Json& inst, const std::string& cwd) {
     Json c = inst.value("cwd", Json());
     if (c.is_null()) {
@@ -125,17 +131,16 @@ static void pin_cwd(Json& inst, const std::string& cwd) {
     }
 }
 
-Child spawn(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd,
+Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
             const std::string& dstack) {
-    Json cfg;
-    if (spec.is_object()) {
-        cfg = spec;
-    } else {
-        cfg = Json::object();
-        cfg["exec"] = spec;
+    if (spec.is_null()) {   // 信箱接回的 stopped 列（只留名、沒有設定）再 start：照小格裡現有的 loop.json（11-03）
+        make_cell(name, cell, deep);
+        return launch(name, cell, cwd, {"--", aos::join(cell, "loop.json") + "#/_entry"}, Json(), dstack);
     }
-    Json ws = cfg.value("ws", Json());   // eca 10-30：不是 loop 的 key，不灌進小格的 loop.json，只進子行程的環境（AOS_WS）
+    Json cfg = spec;
+    Json ws = cfg.value("ws", Json());   // ws、stack 是 daemon 的 key（不是 loop 的）：不灌進小格的 loop.json；ws 只進子行程的環境（AOS_WS）
     cfg.erase("ws");
+    cfg.erase("stack");
     Json ex = cfg.value("exec", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗；單子見下）
     if (ex.is_string()) {
         cfg["exec"] = aos::join(cwd, ex.get<std::string>());
@@ -154,7 +159,7 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
     exec_entry.push_back("aos-loop");
     exec_entry.push_back(Json::object({{"$env", "AOS_CF"}}));
     cfg["_entry"] = exec_entry;   // 一律蓋上
-    make_cell(name, cell);
+    make_cell(name, cell, deep);
     try {
         aos::loop::write_window(aos::join(cell, "loop.json"), cfg);
     } catch (const Error& e) {
@@ -163,9 +168,9 @@ Child spawn(const std::string& name, const std::string& cell, const Json& spec, 
     return launch(name, cell, cwd, {"--", aos::join(cell, "loop.json") + "#/_entry"}, ws, dstack);
 }
 
-Child spawn_exec(const std::string& name, const std::string& cell, const Json& spec, const std::string& cwd,
+Child spawn_exec(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
                  const std::string& dstack) {
-    // 寫了 ws 的子項，read_execs 收成 {"exec": 目標, "ws": 絕對路徑}（eca 10-30）；沒寫＝目標本身
+    // 字串、陣列＝目標本身；物件＝{"exec": 目標或單子, "ws"?, "stack"?}（read_procs 驗過）
     const Json& target = spec.is_object() ? spec["exec"] : spec;
     Json ws = spec.is_object() ? spec.value("ws", Json()) : Json();
     std::vector<std::string> argv{"--"};   // 相對的目標不轉：子行程 cd 到 daemon 的 cwd 才叫 aos-exec，本來就從那裡算
@@ -175,7 +180,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, const Json& s
         // 單子沒寫 stdin／stdout＝照舊接 daemon 給的 /dev/null、stderr 是小格的 stderr.txt；寫了就照它
         Json inst = target;
         pin_cwd(inst, cwd);
-        make_cell(name, cell);
+        make_cell(name, cell, deep);
         try {
             aos::loop::write_window(aos::join(cell, "exec.json"), Json::object({{"exec", inst}}));
         } catch (const Error& e) {
@@ -192,7 +197,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, const Json& s
             argv.push_back(a.get<std::string>());
         }
     }
-    make_cell(name, cell);
+    make_cell(name, cell, deep);
     Child c = launch(name, cell, cwd, argv, ws, dstack);
     c.once = true;
     return c;
@@ -224,7 +229,7 @@ bool alive(Child& c) {
 
 Json row(const Child& c) {
     Json r = Json::object();
-    r["pid"] = (long long)c.pid;
+    r["pid"] = c.held ? Json() : Json((long long)c.pid);   // stopped 的列：行程不在（11-03）
     r["started_at_ticks"] = nullptr;
     if (c.started_at_ticks) {
         r["started_at_ticks"] = *c.started_at_ticks;
@@ -232,8 +237,9 @@ Json row(const Child& c) {
     r["phase"] = c.phase;
     r["code"] = c.code;
     r["signal"] = c.signal;
+    r["stack"] = c.stack;   // 11-03 procs § 2b：一律寫（adopt、start、aos-daemon-ctl where 靠它）
     if (!c.ws.is_null()) {
-        r["ws"] = c.ws;   // eca 10-30：有給才寫（沒給不寫這欄：列的形狀跟 10-30 前一樣，舊的讀者不受影響）
+        r["ws"] = c.ws;   // eca 10-30：有給才寫
     }
     return r;
 }

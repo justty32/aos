@@ -17,10 +17,10 @@ for name, m in members.items():
     if m.get("human"):
         continue
     try:
-        with open(os.path.join(stack, "loops", name, "state.json"), encoding="utf-8") as f:   # 11-02：子項小格在 loops/
+        with open(os.path.join(stack, "procs", name, "state.json"), encoding="utf-8") as f:   # 11-03：子項小格在 procs/（11-02 loops/；daemon.json 沒寫 stack）
             st = json.load(f)
         if st.get("phase") in ("done", "stopped") and st.get("code") not in (0, None):
-            print("team: MemberFailed %s 的 loop 以 %s 結束（看 .stack/loops/%s/stderr.txt）" % (name, st.get("code"), name), file=sys.stderr)
+            print("team: MemberFailed %s 的 loop 以 %s 結束（看 .stack/procs/%s/stderr.txt）" % (name, st.get("code"), name), file=sys.stderr)
             sys.exit(1)
     except (OSError, ValueError):
         pass

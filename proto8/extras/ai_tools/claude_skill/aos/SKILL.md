@@ -48,7 +48,7 @@ aos-ai --root ~/code/try/x answer helper <信號>          # 讀答案（不給�
 
 **不懂 aos 的詞先查，別猜**：同資料夾的 [concepts.md](concepts.md) 是概念速成（每節一句白話、最小範例、常見錯、條號），
 也能 `aos-ai explain <概念>` 印一節（`aos-ai explain` 列節名：env、AOS_ENTRY、AOS_WS、AOS_STACK、AOS_CF、AOS_CD、AOS_CO、entry、dotenv、inst、loop、fsm、daemon、window、exit、directive、inline、metainfo、agent、tool、heap）。
-**要具體值**：`aos-ai explain --here [目標] [--ws WS]` 算出「現在 `aos-exec 目標`」會讀哪些 `.env`、挑到哪個入口、是哪一種（可執行檔／單子／argv／轉向）、
+**要具體值**：`aos-ai explain --here [目標] [--ws WS] [--stack S]` 算出「現在 `aos-exec 目標`」會讀哪些 `.env`、挑到哪個入口、是哪一種（可執行檔／單子／argv／轉向）、
 入口看到的 `AOS_WS`／`AOS_STACK`／`AOS_ENTRY`／`AOS_CF`／`AOS_CD`／`AOS_CO`（照規則模擬、不真的跑）。
 
 ## 生成 JSON 與骨架
@@ -61,7 +61,7 @@ aos-ai make inst --argv 'python3 brain.py' --timeout-ms 120000 --stdout '{"$env"
 aos-ai make loop --exec fsm.json --max 40 --out w/loop.json            # 自動帶 _entry，aos-exec w/loop.json 就能跑
 aos-ai make fsm --cell 'idle=idle' --cell 'think={"argv":["python3","brain.py"]}' --cell 'act=act' --out w/fsm.json
 #   --cell 名=exec（JSON 或字串）照順序接成環，--next 名=下一格 改；--start 改起點
-aos-ai make daemon --loop 'bob={"exec":"agent-bob","max":1}' --interval-ms 500
+aos-ai make daemon --proc 'bob={"exec":"agent-bob","max":1}' --interval-ms 500
 aos-ai make metainfo --summary '排版 .py' --time-ms '{"val":300,"max":5000}' --resource cpu --side-effect true
 aos-ai make tool_json --description '算算式' --param 'expr:string:要算的式子:required'
 aos-ai make tool helper shout --description '轉大寫' --param 'text:string::required'   # agents/helper/agent/tools/shout/

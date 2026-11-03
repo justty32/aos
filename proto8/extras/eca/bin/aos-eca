@@ -3,40 +3,44 @@
 每個子命令只管一隻（使用者 11-03「我預期aos-eca xxx這條指令，就是針對單個eca」）；管所有 eca 的事等以後的 aos-eca-hub（ls 暫時留著）。
 
 三對指令（使用者 11-02 晚「很好，所以三個對應：open/close, start/stop, add/remove」，11-03「統一成add/rm吧」）：open／close＝畫面，
-start／stop＝掛不掛在 daemon 上（stop 留小格），add／rm＝建立與刪除（rm 刪小格、不封存）。
+start／stop＝daemon 的起停（11-03 procs 起＝aos-daemon-ctl start／stop：stop 後還在 daemon 表上、phase stopped、stack 留著），
+add／rm＝建立與刪除（rm＝aos-daemon-ctl rm＋刪它的 stack、不封存）。
 
-    aos-eca [--daemon-stack D] add [--name N] [--ws WS] XXX   建立：XXX＝eca 資料夾（頂層有 cli.json，例 proto8/demo/eca-claude）；
-                                                   掛到 daemon（aos-daemon-ctl add --ws WS --name N XXX）；印小格
+    aos-eca [--daemon-stack D] add [--name N] [--ws WS] [--stack S] XXX   建立：XXX＝eca 資料夾（頂層有 cli.json，例 proto8/demo/eca-claude）；
+                                                   掛到 daemon（aos-daemon-ctl add --ws WS --name N [--stack S] XXX）；印它的 stack
     aos-eca ls    [--json]                         列外部 agent（掛著的、停了的）：名字、狀態、種類、工作區、對話 id 前 8 碼
     aos-eca state [資料夾|名字]                    這裡有沒有外部 agent（掛著或停了；沒有＝InstanceMissing、退 1）
     aos-eca status [資料夾|名字]                   同 state（別名、行為一樣；11-03 使用者「status和state兩個指令都可以」）
-    aos-eca open  [-d] [--name N] [--ws WS] [名字|資料夾|XXX]   接進畫面（沒開就開、有對話就 --resume）；認不出、是 eca 資料夾＝先 add 再開
+    aos-eca open  [-d] [--name N] [--ws WS] [--stack S] [名字|資料夾|XXX]   接進畫面（沒開就開、有對話就 --resume）；認不出、是 eca 資料夾＝先 add 再開
     aos-eca close [資料夾|名字]                    收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）；只管畫面、不碰 daemon
-    aos-eca start [資料夾|名字]                    掛回 daemon：停了、收工了、出錯停了的照 eca.json 的工作區與 eca 資料夾同名掛回，接著答 queue 裡的信
-    aos-eca stop  [資料夾|名字]                    從 daemon 拿掉（aos-daemon-ctl rm）、關畫面；小格原樣留（11-03 起工作區沒有 .stack 捷徑）
-    aos-eca rm    [資料夾|名字]                    刪除：關畫面、從 daemon 拿掉、刪小格（不封存；要留的先自己複製）
+    aos-eca start [資料夾|名字]                    再起（aos-daemon-ctl start）：停了的用同一個 stack 起來，接著答 queue 裡的信
+    aos-eca stop  [資料夾|名字]                    停（aos-daemon-ctl stop）、關畫面：答完手上這題就停，還在 daemon 表上（stopped）、stack 原樣留
+    aos-eca rm    [資料夾|名字]                    刪除：關畫面、從 daemon 拿掉（aos-daemon-ctl rm）、刪它的 stack（不封存；要留的先自己複製）
     aos-eca watch [資料夾|名字]                    跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走
 
 資料夾的意思：add（和 open 新建的那條）的 XXX＝eca 本身（同 aos-daemon-ctl add XXX）；其他子命令的資料夾＝工作區（或小格裡面）。
   名字、資料夾都認時先比名字；都沒給＝cwd 當資料夾。
 設計：proto8/thinking/2026-10-30-eca.md C 結論 7～10（daemon＋三件 daemon 做不到的事：畫面、對話接回、CLI 自己的 session 檔）；11-03 改動見 eca 18。
-沒有自己的常駐 kernel：常駐的是 aos-daemon（信箱模式），以它的 loops_state.json 為準（衝突 2）；每個子命令都是
-「叫 aos-daemon-ctl ＋ 動小格裡 cli_session 的東西」。哪個 daemon＝--daemon-stack ＞ $AOS_DAEMON_STACK（同 aos-daemon-ctl，11-02 從 --daemon／AOS_DAEMON 改名；沒設、不是資料夾、
-daemon 沒在跑〔loops_state.json 的 pid＋started_at_ticks 對不上〕＝DaemonMissing）。不另設 hub 的環境變數（10-28 那個退場，衝突 4）。
-add：名字沒給＝XXX 的資料夾名；--ws 沒給＝cwd（就是 claude 的 cwd）。撞名＝InstanceExists、退 1、不送信：daemon 表上（loops／execs）已有
-  這個名字，或小格 <daemon>/loops/<名字>/ 還在（停了、收工了、出錯停了的）——換 --name，或先 aos-eca rm；要接著用停了的那隻＝aos-eca start。
-「一隻外部 agent」＝daemon 的 loops 表上、小格裡有 eca.json 的（aos-eca-turn 每次跑都寫：kind、ws、template〔＝eca 資料夾〕）；add 之後子 loop 跑第一次才有。
-  11-02 起子項結束 daemon 就從表上拿掉（不留 done 列）：表上沒有、小格在（有 eca.json）的照樣列，狀態看小格的 state.json（子 loop 自己的窗）：
-  done 而且結束碼不是 0＝「出錯停了」；done／stopped 而且結束碼 0（例如外部寫了小格 ctl.json {"cmd": "stop"} 收工，11-02 晚；11-03 起 ctl 是指令）＝「收工了」；
-  其他（stop 或 aos-daemon-ctl rm 拿掉的，stopped＋非 0；state.json 不在）＝「停了」（11-02 晚第二輪）。這三種都用 start 掛回。
-  start 掛回之前，小格 ctl 窗裡殘留的 stopped 先拿掉（只拿這個 key），免得新的子 loop 一起來就收工。
-CLI 的小格＝<daemon>/loops/<名字>/<kind>/（cli_session 的 session.txt、tty.sock、live.jsonl、transcripts/）。
+沒有自己的常駐 kernel：常駐的是 aos-daemon（信箱模式），以它的 procs_state.json 為準（衝突 2）；每個子命令都是
+「叫 aos-daemon-ctl ＋ 動它 stack 裡 cli_session 的東西」。哪個 daemon＝--daemon-stack ＞ $AOS_DAEMON_STACK（同 aos-daemon-ctl，11-02 從 --daemon／AOS_DAEMON 改名；沒設、不是資料夾、
+daemon 沒在跑〔procs_state.json 的 pid＋started_at_ticks 對不上〕＝DaemonMissing）。不另設 hub 的環境變數（10-28 那個退場，衝突 4）。
+add：名字沒給＝XXX 的資料夾名；--ws 沒給＝cwd（就是 claude 的 cwd）；--stack 沒給＝daemon 的預設小格 <daemon>/procs/<名字>/，給了＝從呼叫的 cwd
+  轉絕對、照傳給 aos-daemon-ctl add --stack（不驗在不在，daemon 起它時建；空＝ArgumentsBad；11-03 使用者「aos-eca add沒辦法指定stack嗎？」）。
+  撞名＝InstanceExists、退 1、不送信：daemon 表上已有這個名字（不論是不是 eca、running／stopping／stopped）——換 --name，或先 aos-eca rm；
+  表上是停了的 eca＝要接著用就 aos-eca start。表上沒有的不算撞名（舊 stack 資料夾還在也不擋：照用，前文接著，使用者自己承擔）。
+「一隻外部 agent」＝daemon 的 procs 表上、它的 stack（那一列的 stack，11-03 procs）裡有 eca.json 的（aos-eca-turn 每次跑都寫：kind、ws、template〔＝eca 資料夾〕）；
+  add 之後子 loop 跑第一次才有。stack 一律從表上那一列拿，不自己拼 <daemon>/procs/<名字>。
+  表上的 phase：running＝收起了／畫面開著、stopping＝停下中、stopped＝停了（aos-eca stop／aos-daemon-ctl stop 停的，start 叫得回）。
+  自己結束的（CLI 出錯退 1、外部直接寫它 ctl.json 的 {"cmd": "stop"}）daemon 照 11-02 從表上拿掉＝對 daemon、對這支都不在了（procs 衝突 2
+  使用者「照舊拿掉」）：ls 不列、state／start／rm＝InstanceMissing；它的 stack 資料夾留著，要接著用＝同名再 add（同一個 --stack 或預設小格，前文、queue 都在），
+  不要了自己 rm -r。所以掛在 daemon 下要停就用 aos-eca stop。
+CLI 的小格＝<stack>/<kind>/（cli_session 的 session.txt、tty.sock、live.jsonl、transcripts/）。
 對它說話（11-03 起工作區不建 .stack 捷徑，thinking 2026-11-03-stack-where）：aos-say --stack $(aos-daemon-ctl where --stack 名字) 話 && aos-listen --stack …；
-  停著（stop 後不在 daemon 表上、where 找不到）時直接給小格 <daemon>/loops/<名字>。
-畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。「暫停」只有 ctl.json 的 paused 一種（寫 <小格>/ctl.json），這裡不另做。
+  停著（stopped）時 where 照找得到，信排在 queue，start 後接著答。
+畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。「暫停」＝aos-daemon-ctl pause／resume（寫它 stack 裡的 ctl.json），這裡不另做。
 錯：stderr 一行 `aos-eca: 代號 原因`、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、
   InstanceExists（add 撞名）、PathMissing（XXX、--ws 不在或不是資料夾）、EcaBad（XXX 沒有 cli.json）、SessionBad（正在答題時 close、stop、rm）、
-  Timeout（等 daemon 收掉逾時），加 aos-daemon-ctl 與 cli_session 的。"""
+  Timeout（等 daemon 放上表、停好、收掉逾時），加 aos-daemon-ctl 與 cli_session 的。"""
 import json, os, shutil, subprocess, sys, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -47,7 +51,7 @@ sys.path.insert(0, os.path.join(ROOT, "lib", "agent"))
 import cli_session  # noqa: E402
 
 PROG = "aos-eca"
-WAIT_S = 30                                     # stop／rm／start 等 daemon 收掉的上限（daemon 的 grace 是 10 秒）
+WAIT_S = 30                                     # add／stop／rm／start 等 daemon 的上限（daemon 的 grace 是 10 秒）
 
 
 def die(code, msg):
@@ -93,7 +97,7 @@ def daemon_dir():
         die("DaemonMissing", "daemon 的資料夾不在：%s" % d)
     d = os.path.abspath(d)
     try:
-        with open(os.path.join(d, "loops_state.json"), encoding="utf-8") as f:
+        with open(os.path.join(d, "procs_state.json"), encoding="utf-8") as f:
             st = json.load(f)
         pid, ticks = int(st["pid"]), st["started_at_ticks"]
         with open("/proc/%d/stat" % pid, encoding="utf-8") as f:
@@ -101,7 +105,7 @@ def daemon_dir():
     except (OSError, ValueError, KeyError, TypeError, IndexError):
         alive = False
     if not alive:
-        die("DaemonMissing", "%s 的 aos-daemon 沒在跑（loops_state.json 不在或寫它的行程不在）" % d)
+        die("DaemonMissing", "%s 的 aos-daemon 沒在跑（procs_state.json 不在或寫它的行程不在）" % d)
     return d
 
 
@@ -120,37 +124,20 @@ def ctl(*args):
     return r.stdout
 
 
-def ended(d, rows):
-    """表上沒有、小格在的（11-02 起 daemon 不留結束的列）：{名字: 小格 state.json 的 phase、code 當列}（照名字排）。
-    state.json 不在、讀不懂＝phase、code 都 None（label 算「停了」）。有沒有 eca.json 由 instances 篩。"""
-    out = {}
-    try:
-        names = sorted(os.listdir(os.path.join(d, "loops")))
-    except OSError:
-        return out
-    for name in names:
-        if name in rows or not os.path.isdir(os.path.join(d, "loops", name)):
-            continue
-        try:
-            with open(os.path.join(d, "loops", name, "state.json"), encoding="utf-8") as f:
-                st = json.load(f)
-        except (OSError, ValueError):
-            st = None
-        st = st if isinstance(st, dict) else {}
-        code = st.get("code")
-        code = code if isinstance(code, int) and not isinstance(code, bool) else None
-        out[name] = {"phase": st.get("phase") if isinstance(st.get("phase"), str) else None, "code": code, "pid": None, "ended": True}
-    return out
+def table():
+    """daemon 的 procs 表（aos-daemon-ctl ls --json）：{名字: 列}。"""
+    return json.loads(ctl("ls", "--json") or "{}").get("procs") or {}
 
 
 def instances():
-    """daemon 的 loops 表上（＋下了表、小格還在的）、小格有 eca.json 的：[{name, cell, phase, code, pid, ended, kind, ws, template}]（照表的順序）。"""
-    d = daemon_dir()
-    rows = json.loads(ctl("ls", "--json") or "{}").get("loops", {})
-    rows = dict(rows, **ended(d, rows))
+    """daemon 的 procs 表上、那一列的 stack 裡有 eca.json 的：[{name, cell, phase, code, pid, kind, ws, template}]（照表的順序）。
+    cell＝列上的 stack（11-03 procs；不自己拼 <daemon>/procs/<名字>）。自己結束、下了表的就不在（procs 衝突 2「照舊拿掉」）。"""
     out = []
-    for name, r in rows.items():
-        cell = os.path.join(d, "loops", name)          # 11-02：子項的小格在 <daemon>/loops/<名字>/
+    for name, r in table().items():
+        cell = r.get("stack") if isinstance(r, dict) else None
+        if not isinstance(cell, str) or not cell:
+            continue
+        cell = cell.rstrip("/") or "/"
         try:
             with open(os.path.join(cell, "eca.json"), encoding="utf-8") as f:
                 eca = json.load(f)
@@ -159,7 +146,6 @@ def instances():
         if not isinstance(eca, dict) or eca.get("kind") not in ("claude", "codex"):
             continue
         out.append(dict(name=name, cell=cell, phase=r.get("phase"), code=r.get("code"), pid=r.get("pid"),
-                        ended=bool(r.get("ended")),
                         kind=eca["kind"], ws=eca.get("ws") or r.get("ws") or "", template=eca.get("template") or ""))
     return out
 
@@ -181,22 +167,16 @@ def session_of(it):
         return ""
 
 
-def failed(it):
-    return it["ended"] and it["phase"] == "done" and it["code"] not in (0, None)
-
-
-def finished(it):
-    """收工了：下了表、自己以 0 結束（例如小格 ctl.json 寫了 stopped）。"""
-    return it["ended"] and it["code"] == 0
+def stopped(it):
+    """daemon 停掉的（表上 phase stopped；aos-eca stop／aos-daemon-ctl stop）：行程不在、stack 留著，start 叫得回。"""
+    return it["phase"] == "stopped"
 
 
 def label(it):
-    if failed(it):
-        return "出錯停了"
-    if finished(it):
-        return "收工了"
-    if it["ended"]:
-        return "停了"                                   # stop（或 aos-daemon-ctl rm）拿掉的：小格原樣留，start 掛回
+    if stopped(it):
+        return "停了"
+    if it["phase"] == "stopping":
+        return "停下中"
     if it["phase"] != "running":
         return it["phase"] or "-"
     return "畫面開著" if has_screen(it) else "收起了"
@@ -218,7 +198,7 @@ def find(arg, rows=None):
 def resolve(arg):
     r = find(arg)
     if r is None:
-        die("InstanceMissing", "%s 不是外部 agent（aos-eca add 或 open 建立；rm 過的就沒了）" % (arg or os.getcwd()))
+        die("InstanceMissing", "%s 不是外部 agent（不在 daemon 表上：aos-eca add 或 open 建立；rm 過的、自己結束下了表的就沒了）" % (arg or os.getcwd()))
     return r
 
 
@@ -245,57 +225,49 @@ def wait_for(cond, what, secs=WAIT_S):
     die("Timeout", "等了 %d 秒，%s" % (secs, what))
 
 
-def rows_named(name):
-    return [r for t in json.loads(ctl("ls", "--json") or "{}").values() for n, r in t.items() if n == name]
+def row_named(name):
+    """daemon 表上這個名字的那一列；沒有＝None。"""
+    return table().get(name)
 
 
-def gone(name):
-    """daemon 收掉它了：表上沒有這列（11-02 起結束的就下表），或那列是 done／stopped（不會再動）。"""
-    rows = rows_named(name)
-    return not rows or all(r.get("phase") in ("done", "stopped") for r in rows)
+def stack_of(row):
+    return row["stack"].rstrip("/") or "/"
 
 
-def hang(ws, name, xxx):
-    """掛上（aos-daemon-ctl add）。小格殘留的 {"cmd": "stop"} 不用清（11-03 ctl 改指令：子 loop 起來第一次讀的 ctl 當基準線、不執行；
-    原本的 clear_stopped 拿掉）。
-    之後等 daemon 把它放上表（信是下一圈才套；11-03 起對它說話要 aos-daemon-ctl where，只認表上的）——
-    或小格的 state.json 在這之後動過（起來又馬上結束、已經下表）。回小格。"""
-    cell = os.path.join(daemon_dir(), "loops", name)
-    t0 = time.time()
-    ctl("add", "--ws", ws, "--name", name, xxx)
-
-    def up():
-        try:
-            ran = os.path.getmtime(os.path.join(cell, "state.json")) >= t0
-        except OSError:
-            ran = False
-        return bool(rows_named(name)) or ran
-    wait_for(up, "daemon 還沒把 %s 放上表" % name)
-    return cell
+def hang(ws, name, xxx, stack=None):
+    """掛上（aos-daemon-ctl add [--stack S]），等 daemon 把它放上表（信是下一圈才套；對它說話要 aos-daemon-ctl where，只認表上的）。
+    回它的 stack（列上的）。小格殘留的 {"cmd": "stop"} 不用清（11-03 ctl 改指令：子 loop 起來第一次讀的 ctl 當基準線、不執行）。"""
+    ctl("add", "--ws", ws, "--name", name, *(["--stack", stack] if stack else []), xxx)
+    row = wait_for(lambda: row_named(name), "daemon 還沒把 %s 放上表（或起來就結束、下了表；看 daemon 的 log）" % name)
+    return stack_of(row)
 
 
 def do_add(opts, xxx):
-    """add：XXX＝eca 資料夾；--name 沒給＝XXX 的資料夾名，--ws 沒給＝cwd。撞名（daemon 表上有、或小格還在）＝InstanceExists、不送信。"""
+    """add：XXX＝eca 資料夾；--name 沒給＝XXX 的資料夾名，--ws 沒給＝cwd，--stack 沒給＝daemon 的預設小格（給了從 cwd 轉絕對）。
+    撞名（daemon 表上已有這個名字，不論是不是 eca）＝InstanceExists、不送信。"""
     if not xxx:
-        die("ArgumentsBad", "add 要一個 eca 資料夾 XXX（aos-eca add [--name N] [--ws WS] XXX）")
+        die("ArgumentsBad", "add 要一個 eca 資料夾 XXX（aos-eca add [--name N] [--ws WS] [--stack S] XXX）")
     xxx = eca_dir(xxx)
     ws = os.path.abspath(opts.get("--ws") or ".")
     if not os.path.isdir(ws):
         die("PathMissing", "--ws 不是資料夾：%s" % ws)
+    stack = opts.get("--stack")
+    if stack is not None:
+        if not stack:
+            die("ArgumentsBad", "--stack 不能是空的")
+        stack = os.path.abspath(stack)                   # 從呼叫當下的 cwd 算（同 --ws）；在不在不驗，daemon 起它時建
     name = opts.get("--name") or os.path.basename(xxx.rstrip("/"))
-    if rows_named(name):
-        die("InstanceExists", "daemon 上已經有 %s 了；換個名字（--name），或先 aos-eca rm %s" % (name, name))
-    cell = os.path.join(daemon_dir(), "loops", name)
-    if os.path.lexists(cell):
-        die("InstanceExists", "%s 的小格還在（%s）；換個名字（--name）、先 aos-eca rm %s，或用 aos-eca start %s 接著用"
-            % (name, cell, name, name))
-    return name, hang(ws, name, xxx)
+    row = row_named(name)
+    if row is not None:
+        hint = "；它停著，要接著用就 aos-eca start %s" % name if isinstance(row, dict) and row.get("phase") == "stopped" else ""
+        die("InstanceExists", "daemon 上已經有 %s 了；換個名字（--name），或先 aos-eca rm %s%s" % (name, name, hint))
+    return name, hang(ws, name, xxx, stack)
 
 
 # ---------------------------------------------------------------- 子命令
 
 def cmd_add(argv):
-    opts, arg = parse(argv, flags=("--name", "--ws"))
+    opts, arg = parse(argv, flags=("--name", "--ws", "--stack"))
     print(do_add(opts, arg)[1])
 
 
@@ -313,22 +285,22 @@ def cmd_ls(argv):
 def cmd_state(argv):
     _, arg = parse(argv)
     r = resolve(arg)
-    print("名字   %s\n狀態   %s（daemon phase %s）\n種類   %s（eca 資料夾 %s）\n工作區 %s\n小格   %s\n對話   %s" % (
+    print("名字   %s\n狀態   %s（daemon phase %s）\n種類   %s（eca 資料夾 %s）\n工作區 %s\nstack  %s\n對話   %s" % (
         r["name"], label(r), r["phase"], r["kind"], r["template"], r["ws"], r["cell"], session_of(r) or "（還沒有）"))
 
 
 def cmd_open(argv):
-    opts, arg = parse(argv, flags=("--name", "--ws"), switches=("-d",))
+    opts, arg = parse(argv, flags=("--name", "--ws", "--stack"), switches=("-d",))
     r = find(arg)
-    if r is not None and ("--name" in opts or "--ws" in opts):
-        die("ArgumentsBad", "%s 已經有了；--name、--ws 只在 open 新建（給 eca 資料夾）時用" % r["name"])
+    if r is not None and ("--name" in opts or "--ws" in opts or "--stack" in opts):
+        die("ArgumentsBad", "%s 已經有了；--name、--ws、--stack 只在 open 新建（給 eca 資料夾）時用" % r["name"])
     if r is None:                                        # 認不出：是 eca 資料夾就先 add，等子 loop 跑第一次（寫 eca.json）
         if not is_eca(arg):
             die("InstanceMissing", "%s 不是外部 agent 的名字或工作區，也不是 eca 資料夾（沒有 cli.json）" % (arg or os.getcwd()))
         name, _ = do_add(opts, arg)
         r = wait_for(lambda: next((x for x in instances() if x["name"] == name), None), "%s 的子 loop 還沒跑起來" % name)
-    if r["ended"]:                                       # 有小格、沒掛在 daemon 上：只開畫面，不替人 start
-        print("%s: 注意 %s 沒掛在 daemon 上（%s），aos-say 的信不會有人答；要接著答用 aos-eca start" % (
+    if stopped(r):                                       # 停著：只開畫面，不替人 start
+        print("%s: 注意 %s 停著（%s），aos-say 的信不會有人答；要接著答用 aos-eca start" % (
             PROG, r["name"], label(r)), file=sys.stderr)
     cell = cli_session.Cell(cli_cell(r))
     cli_session.note_cell(cell, r["template"], r["ws"])  # open_cell 照 tool.txt（定義）、ws.txt 開
@@ -364,8 +336,8 @@ def cmd_close(argv):
     except Busy as e:
         die("SessionBad", e)
     print("收起了" if closed else "本來就沒畫面（已收起）")
-    if r["ended"]:                                       # close 只管畫面（11-02 晚第二輪）；掛回 daemon 是 start 的事
-        print("%s: 注意 %s 沒掛在 daemon 上（%s）；要接著答用 aos-eca start" % (PROG, r["name"], label(r)), file=sys.stderr)
+    if stopped(r):                                       # close 只管畫面（11-02 晚第二輪）；再起是 start 的事
+        print("%s: 注意 %s 停著（%s）；要接著答用 aos-eca start" % (PROG, r["name"], label(r)), file=sys.stderr)
 
 
 def queued(it):
@@ -379,49 +351,53 @@ def queued(it):
     return n
 
 
-def take_down(it):
-    """關畫面（正在答題＝SessionBad）；還掛在 daemon 上就 aos-daemon-ctl rm、等它收掉。"""
+def shut_screen(it):
+    """關畫面；正在答題（格的 lock 被拿著）＝SessionBad。"""
     try:
         close_screen(it)
     except Busy as e:
         die("SessionBad", e)
-    if it["ended"]:
-        return False
-    ctl("rm", it["name"])
-    wait_for(lambda: gone(it["name"]), "daemon 還沒收掉 %s" % it["name"])
-    return True
 
 
 def cmd_start(argv):
+    """start＝aos-daemon-ctl start（11-03 procs）：停了的用同一個 stack 再起（daemon 照原本 add 的設定，前文、queue 都在）。"""
     _, arg = parse(argv)
     r = resolve(arg)
-    if not r["ended"]:
-        print("本來就掛著（%s）" % label(r))
+    if r["phase"] == "stopping":                         # 還在停的途中：等它停好再起
+        wait_for(lambda: (row_named(r["name"]) or {}).get("phase") != "stopping", "daemon 還沒把 %s 停好" % r["name"])
+        r = resolve(r["name"])
+    if not stopped(r):
+        print("本來就在跑（%s）" % label(r))
         return
-    if not os.path.isfile(os.path.join(r["template"], "cli.json")):
-        die("EcaBad", "%s 沒有 cli.json（eca.json 記的 eca 資料夾不在了）" % (r["template"] or "（eca.json 沒記 eca 資料夾）"))
-    if rows_named(r["name"]):                            # 還在收的途中（stopping）：等它下表
-        wait_for(lambda: not rows_named(r["name"]), "daemon 還沒把 %s 拿掉" % r["name"])
-    was, n = label(r), queued(r)                         # 掛上之前數（hang 等它上表時可能已經答起來了）
-    hang(r["ws"], r["name"], r["template"])              # aos-daemon 用回既有小格（只重寫 loop.json），前文、queue 都在
-    print("掛回 daemon 了（上次%s），queue 裡 %d 封接著答" % (was, n))
+    n = queued(r)                                        # 起來之前數（等它起來時可能已經答起來了）
+    ctl("start", r["name"])
+    wait_for(lambda: (row_named(r["name"]) or {}).get("phase") != "stopped", "daemon 還沒把 %s 起來" % r["name"])
+    print("起來了（同一個 stack），queue 裡 %d 封接著答" % n)
 
 
 def cmd_stop(argv):
+    """stop＝關畫面＋aos-daemon-ctl stop（11-03 procs）：答完手上這題就停，還在 daemon 表上（stopped），where 找得到、aos-say 照收。"""
     _, arg = parse(argv)
     r = resolve(arg)
-    if not take_down(r):
-        print("本來就沒掛在 daemon 上（%s）" % label(r))
+    shut_screen(r)
+    if stopped(r):
+        print("本來就停著（%s）" % label(r))
         return
-    print("從 daemon 拿掉了，小格留著（%s）；這期間 aos-say --stack 這個小格的信照收，aos-eca start 接著答" % r["cell"])
+    if r["phase"] != "stopping":
+        ctl("stop", r["name"])
+    wait_for(lambda: (row_named(r["name"]) or {"phase": "stopped"}).get("phase") == "stopped", "daemon 還沒把 %s 停好" % r["name"])
+    print("停了，stack 留著（%s）；這期間 aos-say --stack $(aos-daemon-ctl where --stack %s) 的信照收，aos-eca start 接著答" % (r["cell"], r["name"]))
 
 
 def cmd_rm(argv):
+    """rm＝關畫面＋aos-daemon-ctl rm（先停再拿掉）、等它下表，再刪它的 stack（列上的；不封存）。"""
     _, arg = parse(argv)
     r = resolve(arg)
-    take_down(r)
+    shut_screen(r)
+    ctl("rm", r["name"])
+    wait_for(lambda: row_named(r["name"]) is None, "daemon 還沒收掉 %s" % r["name"])
     shutil.rmtree(r["cell"])                             # 不封存（使用者 11-02 晚）；CLI 自己存的對話檔（~/.claude/projects…）不動
-    print("刪了 %s（小格 %s）" % (r["name"], r["cell"]))
+    print("刪了 %s（stack %s）" % (r["name"], r["cell"]))
 
 
 def describe(ev):

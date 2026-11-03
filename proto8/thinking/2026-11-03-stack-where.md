@@ -27,7 +27,7 @@
 ## 決定（11-03，使用者）
 
 1. **工作區不放子項的 stack**：`aos-daemon-ctl add --ws` 不再在 `<WS>/.stack` 建指到小格的 symlink，`rm` 也不再拆；aos-eca 的 stop／rm 跟著不碰捷徑。
-2. **`aos-daemon-ctl where --stack 名字`**：印那個子項的 stack 路徑；只認目前在 daemon 表上的，表上沒有＝錯。今天的表是 `loops`／`execs`，小格在 `<D>/loops/<名字>/`（procs 改名在下一批）。
+2. **`aos-daemon-ctl where --stack 名字`**：印那個子項的 stack 路徑；只認目前在 daemon 表上的，表上沒有＝錯。今天的表是 `loops`／`execs`，小格在 `<D>/loops/<名字>/`（procs 改名在下一批）。〔11-03 procs 實作：表是一張 `procs`、印列上的 `stack`（含 `stopped` 的列）〕
 3. **aos-say／aos-listen 這次只加一行提示**：aos-say 說「目前沒有程式在跑」時，多一句「掛在 daemon 上的用 `--stack $(aos-daemon-ctl where --stack 名字)`」；其他不動，使用者之後重做。
 4. **`aos-exec --stack S`**：順序 `--stack` ＞ `$AOS_STACK` ＞ `$AOS_WS/.stack/`（預設照舊放工作區）；相對路徑從呼叫者的 cwd 算、絕對也行、結尾 `/` 可有可無；不在就建；`--stack -`＝沿用外面的值（跟 `--ws -` 對稱）；跟 `--ws` 一樣在讀 `.env` 之前定。
 
@@ -45,7 +45,7 @@
 ### 捷徑拿掉
 
 7. **工作區原本有什麼都不動、不說話**：以前「工作區已有 .stack…請先搬開」那句注意一起拿掉（已經不建，就沒有撞到的事）；10-30～11-02 留在工作區的舊捷徑不替人清，要清自己 `rm <WS>/.stack`。
-8. **aos-eca**：stop 不再補回捷徑、rm 不再拆捷徑。stop 之後那隻不在 daemon 表上，`where` 找不到——要在停著時寄信，直接 `--stack $AOS_DAEMON_STACK/loops/<名字>`（小格路徑）；procs 那批的 stop 會留在表上，到時就能用 `where`。
+8. **aos-eca**：stop 不再補回捷徑、rm 不再拆捷徑。stop 之後那隻不在 daemon 表上，`where` 找不到——要在停著時寄信，直接 `--stack $AOS_DAEMON_STACK/loops/<名字>`（小格路徑）；procs 那批的 stop 會留在表上，到時就能用 `where`。〔11-03 procs 實作：aos-eca stop 改走 `aos-daemon-ctl stop`，列留在表上（`stopped`），`where --stack` 找得到、`aos-say` 投得進；小格改讀列上的 `stack`（預設 `<D>/procs/<名字>/`），[procs 實作時代定](2026-11-03-procs.md#實作時代定11-03實作者照原則定的可翻案)〕
 9. **aos-eca add／start 等它上表才回**：信是 daemon 下一圈才套，以前 add 完馬上 cd 進工作區說話靠的是捷徑；現在要 `where`，而 `where` 只認表上的，所以 aos-eca 掛上之後等到 daemon 表上有它（或小格的 `state.json` 在這之後動過＝起來又馬上結束）才回，最多等 30 秒（`Timeout`）。start 印的「queue 裡幾封」改在掛上之前數。
 10. **測試與說明**：原本「cd 進工作區就說得到」的測試改成先 `where` 拿 stack、再 `aos-say --stack`／`aos-listen --stack`；README 的例子同。
 

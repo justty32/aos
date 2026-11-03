@@ -5,7 +5,7 @@
 # 再跑 llm-kernel：一個 daemon 同時管 LLM kernel 與三隻走 kernel 的 agent（c 是 high），看服務順序（thinking 2026-10-24-llm-kernel）；
 # 再跑 agent-nia：照 agent-round 的格組起來（parts.json 指 lib 的 queue／history／act／endpoint，11-01 起 aos-exec 格式），假腦叫 clock 再答（thinking 2026-10-28-agent-round）；題目經 queue 格放進 stack、答案看 history（10-30 agent-lifecycle）；
 # 再跑 daemon-2：信箱模式的 daemon，agent 格 sam 寄信加 tick、人手寫 aos-post send 加 tock（帶 --reply-to 收回信）（10-29 medium-plan 實作第 8 步）；
-# 最後跑 daemon-3：同一支 demo/tick 掛兩次——loops 的 tick_loop（包成 max: 1 的子 loop）、execs 的 tick_exec（直接 aos-exec 一次），看 loops_state 兩張表（10-30 agent-lifecycle 實作第 8 步）
+# 最後跑 daemon-3：同一支 demo/tick 在同一份名單 procs 裡掛兩次——tick_loop（包成 max: 1 的子 loop）、tick_exec（字串＝直接 aos-exec 一次）（10-30 agent-lifecycle 實作第 8 步；11-03 名單合一）
 here=$(cd "$(dirname "$0")" && pwd)
 # aos 的程式都不動 PATH（ideas § 24）：agent 裡叫的 aos-exec、aos-loop、aos-fsm、aos-daemon、aos-tick 由這裡（呼叫端）放進 PATH。
 # 10-23 起前四支是 C++（10-24 加 aos-llm-kernel、aos-llm-send 兩支；10-28 加 aos-json：aos-tools 解指示詞、改 tools.json 要它；10-29 加 aos-post：daemon-2 寄信；10-30 起 agent-nia 的 queue 格也經它）（proto8/impls/<名>/bin/，要先建，見 wf/workflows/testing.md）；aos-tick 還是 Python（proto8/bin/，aos agent 讀工具清單的 aos-tools 也在這）
@@ -58,13 +58,13 @@ echo "######## daemon-2"   # 信箱模式：daemon 放背景跑 25 圈（約 5 �
 ws=$(mktemp -d)
 aos-post init "$ws/inbox"
 (cd "$ws" && aos-exec "$here/daemon-2" --max 25) & d=$!
-i=0; while [ ! -d "$ws/.stack/loops_ctl_mailbox/new" ] && [ $i -lt 100 ]; do sleep 0.1; i=$((i+1)); done
-echo '{"loops_added": {"tock": {"exec": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tock.txt"}]}, "interval_ms": 500}}}' |
-  aos-post send --reply-to "$ws/inbox" "$ws/.stack/loops_ctl_mailbox" >/dev/null
+i=0; while [ ! -d "$ws/.stack/procs_ctl_mailbox/new" ] && [ $i -lt 100 ]; do sleep 0.1; i=$((i+1)); done
+echo '{"procs_added": {"tock": {"exec": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tock.txt"}]}, "interval_ms": 500}}}' |
+  aos-post send --reply-to "$ws/inbox" "$ws/.stack/procs_ctl_mailbox" >/dev/null
 wait $d; echo "結束碼 $?"
 echo "--- 回信"; cat "$ws"/inbox/new/*/letter.json; echo
 show "$ws"; rm -rf "$ws"
-echo "######## daemon-3"   # 一次性的東西掛 daemon 的兩種寫法：loops_state.json 的 loops 有 tick_loop、execs 有 tick_exec，都 done；約 2 秒
+echo "######## daemon-3"   # 一次性的東西掛 daemon 的兩種寫法：procs 的 tick_loop（loop 型）、tick_exec（exec 型），都 done；約 2 秒
 ws=$(mktemp -d)
 (cd "$ws" && aos-exec "$here/daemon-3"); echo "結束碼 $?"
 show "$ws"; rm -rf "$ws"

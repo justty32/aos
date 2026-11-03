@@ -3,7 +3,7 @@
 // 驗三件：
 //   1. 每個 $ref 指得到（檔在、是 JSON、指標指得到、不繞圈；陣列的幾份合得起來）——被參照的檔也一路往下驗
 //   2. 指示詞的寫法：帶 $ref／$env 但寫法不合（aos 會原封不動留著，多半是寫錯）＝DirectiveFormBad
-//   3. exec 的形狀（只看 aos 設定檔裡的那幾格：最上層的 exec、states/<名>/exec、loops/<名>/exec——位置照 $ref 合好之後算）：
+//   3. exec 的形狀（只看 aos 設定檔裡的那幾格：最上層的 exec、states/<名>/exec、procs/<名>/exec（11-03 原 loops，統稱 procs）——位置照 $ref 合好之後算）：
 //      非空字串、非空陣列（元素是字串或指示詞）、或單子物件（argv 是非空陣列、元素是字串或指示詞；argv 本身是指示詞也算）
 // $env 現在沒設不算問題（AOS_* 是跑的時候才有）；加 --env 才報。
 // 每行：`位置: 代號 原因`（位置＝檔#/指標，檔在 cwd 底下印相對路徑）。代號：DirectiveBad（同 aos 跑的時候的錯）、DirectiveFormBad、ExecBad。
@@ -35,7 +35,7 @@ struct Checker {
         if (at.size() == 1) {
             return at[0] == "exec";
         }
-        return at.size() == 3 && at[2] == "exec" && (at[0] == "states" || at[0] == "loops");
+        return at.size() == 3 && at[2] == "exec" && (at[0] == "states" || at[0] == "procs");
     }
 
     static bool item_ok(const Json& x) {

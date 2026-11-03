@@ -1,55 +1,34 @@
-// daemon.hpp：【daemon】Daemon＝aos-loop 的 Loop 子類別＋一張子 loop 的表（10-21 傍晚）。內部標頭。
+// daemon.hpp：【daemon】Daemon＝aos-loop 的 Loop 子類別＋一張 proc 的表（10-21 傍晚；11-03 loops／execs 統稱 procs，thinking 2026-11-03-procs）。內部標頭。
 //
-//   daemon.cpp   建構子（AOS_STACK、loops、adopt、loops_ctl／loops_state 的檢查）、adopt、tend（對表：收多的、看誰結束、起少的）、
-//                term／settle（收子項不等：SIGTERM 後照常巡，每次 tend 看一眼，退了標 stopped、滿 10 秒還在就 SIGKILL 整群＋它底下自成一群的單子；
-//                10-23 壓測後改，原本原地等滿 10 秒）、finish（收掉全部、等它們退：先寫一份 phase stopping 的 state，之後每退一個寫一次 loops_state；
-//                最後一次之後才自己結束的標 done，D7）、drop（子項結束：印 log 一行、從表上拿掉、本次執行不再起，11-02）、log_child、
-//                check_ctl（ctl.json 的 loops* 不採用、過渡期提醒；10-22 的 taken_names／check_names〔子項名字跟自己的窗撞名〕11-02 拿掉：小格在 loops/<名字>/、撞不到）、
-//                read_execs、merge_want、check_apart（10-30 execs）
-//   windows.cpp  管轄那一對窗（10-29）：read_loops_ctl（loops_ctl.json）、check_lists、write_more（loops_state.json）、write_parts／clean_parts（切檔）
-//   mailbox.cpp  信箱模式（10-29，medium-plan § 四 3、實作第 5 步）：open_mailbox（建四格、記下 cur/ 的殘骸）、take_letters（認領、
-//                逐封驗、套進期望表）、apply_letter、done_letters（回信、收掉）
+//   daemon.cpp   read_procs（名單：名字規則、指示詞、看寫法分兩種、ws／stack 轉絕對）、建構子（AOS_STACK、procs、adopt、procs_ctl／procs_state／信箱的路徑）、
+//                adopt（running 的對得上 pid 才接；stopped 的列接成 stopped）、tend（對表）、reconcile、term／settle（收不等：SIGTERM 後每圈看一眼、
+//                滿 10 秒 SIGKILL 整群＋它底下自成一群的單子）、halt（daemon 的 stop：往子 loop 的 ctl.json 寫 {"cmd": "stop", "seq": N}）、
+//                hold（daemon 要停的退了：列留成 stopped）、finish（收掉活著的、等它們退；stopped 的列照寫進最後一份 state）、drop、log_child
+//   windows.cpp  管轄那一對窗：read_procs_ctl（procs_ctl.json）、check_lists、check_once、write_more（procs_state.json）、write_parts／clean_parts（切檔）
+//   mailbox.cpp  信箱（procs_ctl_mailbox）：open_mailbox、take_letters、apply_letter、done_letters
 //
-// daemon.json＝loop.json 的超集：exec、max、interval_ms、ctl、state 同 aos-loop，但 exec 選填、max 沒寫＝不限、
-// interval_ms 沒寫＝200（ctl、state 寫 null＝不開，同沒寫）；多幾個 key——loops＝{名字: aos-exec 的目標（字串或 [目標, 參數...]）或 loop 設定（物件）}
-// （要拆成好幾份檔就寫 {"$ref": ["loops-1.json", …]}，aos-directive 照順序合起來，read_loops）、adopt（布林，沒寫＝true）、
-// loops_ctl、loops_state（10-29 拆窗：管轄的手把與狀態窗的檔名，在 $AOS_STACK 底下；沒寫＝loops_ctl.json、loops_state.json，寫 null＝不開）、
-// loops_ctl_mailbox（11-02 晚原 loops_mailbox；沒寫、null＝不開）、execs（10-30）。命令列 `-- 參數...` 只接在 daemon 自己的 exec（Loop；沒 exec＝ArgumentsBad）。
-// 兩個手把、兩扇狀態窗（10-29 medium-plan § 四）：ctl／state（慣用名 ctl.json／state.json，11-02 晚改回（白天曾改 daemon_*）；程式沒有預設名）只管 loop 面向（同 aos-loop：paused、stopped、max、interval_ms、seq）；
-// loops_ctl.json 認（N-54；10-23 晚加 *_added／*_removed）：loops＝整份名單、loops_added＝名單上要多這些（寫法同 loops）、
-// loops_removed＝名單上要少這些（名字的陣列）、execs（11-02 晚，整份的 execs，跟 loops 對稱）、execs_added、execs_removed、seq；
-// 期望表＝（loops_ctl 的 loops，沒寫＝底的）＋loops_added－loops_removed，execs 同理。
-// 底（11-02 晚，want_／want_execs_，記憶體裡）＝起來時 daemon.json 的 loops／execs（開了信箱再加 adopt 接回、不在上面的）＋信改過的。
-// loops_state.json＝{ctl_seq（loops_ctl 的 seq）, ctl_warning（壞的 loops_ctl）, loops 表, execs 表（10-30）, pid, started_at_ticks, boot_id, updated_at}
-// （11-02：kind、recorded_at 拿掉；有變才寫——表、ctl_seq、ctl_warning、mailbox_warning 跟上一份寫出去的一樣就不碰檔）；
-// 信箱（10-29；11-02 晚 key 改名 loops_ctl_mailbox、跟 loops_ctl 共存，兩個都開、只開一個、都不開都行；都不開＝名單只看 daemon.json）：
-// 每圈（stopped／paused 那圈不認領）把 new/ 的信全部認領（起來時 cur/ 的殘骸排在前面重做），照名字順序逐封套進底 want_
-// （body 的 loops_added／loops_removed／execs_added／execs_removed，寫法同 loops_ctl；壞信丟掉、原因進 loops_state 的 mailbox_warning〔11-02 晚原 letter_warning〕），
-// 全部套完再疊 loops_ctl、才對一次表；信收掉（不留 done/），有 reply_to 的好信回 {"applied": true}。開了信箱時底多 adopt 接回、不在 daemon.json 上的
-// （設定記 null，留在名單上直到有信 loops_removed 它、或它結束；方向題 1）。信套完（疊上 loops_ctl 之後）loops 與 execs 同名＝壞信。
-// loops 表超過 PART_ROWS（100）列就切檔：loops 寫成 {"$ref": ["<loops_state 檔名去副檔名>_loops/<雜湊>.json", …]}（write_parts）。
-// 每圈先讀 ctl.json（Loop）、再讀 loops_ctl.json（tend 開頭），各自採用或不採用。ctl 的 stopped（這圈收工）或 paused（整圈暫停）時
-// 不調表：不收多的、不起少的（loops_ctl 的變動等解除暫停那圈才生效），但照讀兩份 ctl、照寫兩扇 state、照收已送 SIGTERM 的、照記自己結束的。
-// exec 型子項（10-30，thinking 2026-10-30-agent-lifecycle B-12 ②、N-28／N-54 的 10-30 補草稿）：daemon.json 多一個選填 key execs＝一次性的子項，
-// 形狀同 loops（{名字: 目標} 或 {名字: {"exec": 目標}}；目標＝aos-exec 的目標，字串或 [目標, 參數...]），daemon 直接 aos-exec 它一次
-// （spawn_exec：不包 aos-loop、不寫 loop.json、不補 ctl／state），退了＝done、不重起（同子 loop）。
-// 11-02 晚（使用者「6.要」）：{"exec": 內嵌單子} 也收——寫成小格的 exec.json、`aos-exec -- 小格/exec.json#/exec` 跑一次（cwd 定成 daemon 的 cwd）。
-// 子項結束後不留名單（11-02 使用者「改成子項結束後不留名單」；取代 10-30 方向題 2 的「列留著，名單拿掉才消失」）：loop 型、exec 型都一樣，
-// 退了（自己結束 done、被收 stopped）印完 log 那行就從表上拿掉（loops_state 看不到它），小格 loops/<名字>/ 照留。自己結束（done）的
-// 本次執行不再起（不然下一圈對表又起它，變成自動重起）：一律記進 ended_（名字＋種類），期望表扣掉它們，某一圈算出的期望表裡沒有它了
-//（同種類）才從 ended_ 拿掉（之後名單再有它就照常起）。開了信箱再從底拿掉，而且下一圈套信之前不是 loops_ctl 疊上去的（from_ctl）就從 ended_ 放掉
-//（之後再有信同名 *_added＝重新起；11-02 晚共存時的規則）。
-// daemon 重起時 ended_ 是空的（照 daemon.json 再起），adopt 只接回活著的。被收掉（stopped）的不記：它本來就不在期望表上（或換了種類）。
-// log（11-02，stdout；11-02 晚起同 aos-loop 預設不印、--enable-logs 才印）：子項起來一行、結束一行 {"at", "name", "table"（loops／execs）, "phase"（running／done／stopped）,
-// "pid", "code", "signal", "ws"（有給才有）}（起來那行 code／signal 是 null；adopt 接回的也印一行 running；接回的不是自己的子行程，結束那行 code／signal 是 null）。
-// 子項的 stdout 照舊丟掉（N-28），不會混進來；daemon 自己有身體時同 aos-loop 每跑完一次一行。
-// execs 與 loops 共用名字空間（小格同一個資料夾）：同一個名字兩邊都在期望表上＝撞名（daemon.json＝CfgBad；loops_ctl＝不採用；信＝壞信）。
-// loops_ctl 與信多認 execs_added／execs_removed（語意同 loops_added／loops_removed）；loops_ctl 另認整份的 execs（11-02 晚；信沒有整份的）。
-// 表只有一張（table_，Child::once 分兩種），loops_state.json 寫成兩張：loops、execs；adopt 兩張都接。表上的種類跟期望表的不一樣
-// （例 loops_removed bob＋execs_added bob）＝當成不在期望表上：收掉舊的、下一次起新的。
-// 子項的工作區 ws（eca 10-30，thinking 2026-10-30-eca 衝突 1、N-28／N-54 補草稿）：loops、execs（daemon.json、loops_ctl 的 loops、*_added、信）的子項物件
-// 多認選填 ws——解指示詞、從 daemon 的 cwd 轉絕對、留在期望表上；起子項時子行程設 AOS_WS（沒寫＝繼承 daemon 的）。loop 型的 ws 不寫進小格 loop.json。
-// ws 改了＝設定變了，照 N-54「已在跑的不重起」；loops_state 的列起它時給了 ws 才多一欄 ws（起的那一刻的值；沒給不寫）。
+// daemon.json＝loop.json 的超集：exec、max、interval_ms、ctl、state 同 aos-loop，但 exec 選填、max 沒寫＝不限、interval_ms 沒寫＝200
+// （ctl、state 寫 null＝不開）；多幾個 key——procs＝{名字: proc}（拆檔＝{"$ref": [檔, …]}）、adopt（布林，沒寫＝true）、
+// procs_ctl、procs_state（在 $AOS_STACK 底下的檔名；沒寫＝procs_ctl.json、procs_state.json，null＝不開）、procs_ctl_mailbox（沒寫、null＝不開）。
+// 舊名 loops、execs、loops_ctl、loops_state、loops_ctl_mailbox 不認（C-48，使用者 11-03「當沒看到」）。命令列 `-- 參數...` 只接在 daemon 自己的 exec。
+// 每個 proc 怎麼起看寫法（沒有 kind，procs § 2）：字串、陣列、或 key 只有 exec（＋ws、stack）的物件＝exec 型（aos-exec 一次）；其他物件＝loop 型（包成子 aos-loop）。
+// 物件的 stack（procs § 2b）：proc 的 stack（從 daemon 的 cwd 轉絕對、不在就 mkdir -p、不查不擋）；沒寫＝$AOS_STACK/procs/<名字>/。ws＝子行程的 AOS_WS。
+// 兩個手把、兩扇狀態窗：ctl／state 只管 loop 面向（同 aos-loop：11-03 起 ctl 是一道指令 cmd＝pause／resume／stop）；
+// procs_ctl.json 認（N-54）：procs＝整份名單、procs_added、procs_removed、procs_stopped（要停的名字）、procs_started（要起的名字）、seq。
+// 期望表＝（procs_ctl 的 procs，沒寫＝底 want_）＋procs_added－procs_removed；stopped 集合＝底 stopped_＋procs_stopped－procs_started（同名兩邊都寫＝起）。
+// 底（記憶體）：want_＝daemon.json 的 procs（開了信箱再加 adopt 接回、不在上面的，設定記 null）＋信改過的；stopped_＝adopt 接回的 stopped 列＋信改過的。
+// 信（procs_ctl_mailbox）body 認 procs_added、procs_removed、procs_stopped、procs_started，改的是底；壞信原因進 procs_state 的 mailbox_warning。
+// procs_stopped／procs_started 裡有 exec 型（exec 型只有跑和拔）＝procs_ctl 整份不採用（ctl_warning）／壞信；不在期望表的名字＝不管。
+// 四態（procs § 0、§ 2c；ctl-commands § 5）：running（表上、活著）、stopping（收的途中）、stopped（表上、行程不在、stack 留著）、表上沒有。
+//   stop（名字在期望表又在 stopped 集合）＝往子 loop 的 ctl.json 寫 {"cmd": "stop", "seq": N}，等它跑完這次自己退（沒有時間上限）→列留成 stopped
+//   （pid null）；add＋stop 同時＝直接一列 stopped、不起、stack 不建。start（拿出 stopped 集合）＝下一圈用列上的 stack 再起（不清 ctl：子 loop 起來第一次讀的當基準線）。
+//   只有指令叫起：信來、procs_added 同名都不會把 stopped 的拉起來（同名 add＝設定換掉、停照停）。
+//   其他退出（跑滿、退 10、訊號、別人直接往子 loop 的 ctl 寫 stop）照 11-02 從表上拿掉（使用者 11-03「照舊拿掉」）；自己結束（done）的本次執行不再起（ended_）。
+//   同名改寫法：已在跑的不重起（N-54）。
+// procs_state.json＝{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫；
+// 每列 {pid, started_at_ticks, phase（running／stopping／stopped）, code, signal, stack, ws?}；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
+// ctl 的 stop（這圈收工）或 pause（整圈暫停）時不調表：不收多的、不起少的、起停也等解除，但照讀兩份 ctl、照寫兩扇 state、照收已在收的、照記自己結束的。
+// log（--enable-logs 才印到 stdout）：行程起來一行、結束一行 {"at", "name", "phase"（running／done／stopped）, "pid", "code", "signal", "ws"?}。
 #pragma once
 
 #include "child/child.hpp"
@@ -65,34 +44,28 @@
 
 namespace aos::daemon {
 
-// 讀一份 loops（daemon.json 的 loops，ctl 的 loops、loops_added 共用；10-23 晚）：回 {名字: 子項}（照寫的順序）。
-//   寫法：物件 {名字: 子項}（拆成好幾份檔＝{"$ref": [檔, …]}，aos-directive 合物件、同名後面的蓋前面的；10-23 使用者，
-//   取代原本的「物件的陣列＝分檔」）。
-//   指示詞（base＝v 裡相對 $ref 的起點）：loops 本身、每個子項本身先換一層（resolve_shallow；子項的起點＝它來自的那份檔的）；子項是字串或陣列
-//   （aos-exec 的目標）就整個解；是物件（loop 設定）就只解 daemon 要寫進小格的 loop key（exec、max、interval_ms、ctl、state），
-//   其他 key（body…）原樣交給子 loop——相對 $ref 搬進小格就會從小格算，所以 loop key 由 daemon 先解。
-//   exec 是單子（物件，10-24）：只換一層、裡面不解（留給子 loop 跑的時候解，那時 AOS_CF／AOS_CO 設好了），
-//   裡面相對的 $ref 檔名照它來自的那份檔轉成絕對（abs_refs）——搬進小格之後才不會從小格算。
-//   名字非空、不含 /、不含 #（會被 aos-exec 當成指標的開頭）、不以 . 開頭；子項是字串、陣列或物件（loop key 以外不驗）。
-//   物件的 ws（eca 10-30）：解指示詞、要是非空字串（null＝拿掉）、從 daemon 的 cwd 轉絕對（fix_ws）。
+// 讀一份 procs（daemon.json 的 procs，procs_ctl 的 procs、procs_added，信的 procs_added 共用）：回 {名字: proc}（照寫的順序）。
+//   寫法：物件 {名字: proc}（拆成好幾份檔＝{"$ref": [檔, …]}，aos-directive 合物件、同名後面的蓋前面的）。
+//   指示詞（base＝v 裡相對 $ref 的起點）：procs 本身、每個 proc 本身先換一層（子項的起點＝它來自的那份檔的）；字串或陣列（aos-exec 的目標）
+//   就整個解、要是字串或非空字串陣列；物件只解 daemon 認的格（exec、max、interval_ms、ctl、state、ws、stack），其他 key（body…）原樣交給子 loop。
+//   exec 是單子（物件）：只換一層、裡面不解，相對的 $ref 檔名照它來自的那份檔轉成絕對（abs_refs）。
+//   名字非空、不含 /、不含 #、不以 . 開頭。物件的 ws、stack：要是非空字串（null＝拿掉）、從 daemon 的 cwd 轉絕對（stack 結尾不帶 /）。
+//   exec 型的物件（is_once）的 exec 要是目標或單子。
 // 壞丟 Error{CfgBad, 原因}（key＝訊息裡的名字）；指示詞解不開丟 DirectiveBad。
-Json read_loops(const Json& v, const std::string& base, const std::string& key);
+Json read_procs(const Json& v, const std::string& base, const std::string& key);
+
+// 這個 proc 是 exec 型嗎（procs § 2）：字串、陣列，或 key 只有 exec（＋ws、stack）的物件＝是；其他（loop 設定、null）＝不是。
+bool is_once(const Json& spec);
 
 // 把 v 裡每個 $ref 指示詞的相對檔名接在 base 後面（`檔#/…` 只動 `#` 前面；$ref 陣列每個元素都轉；絕對的、只有 `#/…` 的不動）。
-// 不解任何指示詞。給 read_loops 處理內嵌單子用（10-24）。
+// 不解任何指示詞。給 read_procs 處理內嵌單子用（10-24）。
 Json abs_refs(const Json& v, const std::string& base);
 
-// 讀一份 execs（daemon.json 的 execs，loops_ctl 與信的 execs_added 共用；10-30）：同 read_loops（名字規則、指示詞），再把每項收成目標——
-// 字串、[目標, 參數...]（非空字串陣列）原樣；物件＝取它的 exec（要是上面兩種；其他 key 忽略）。單子物件、其他型別＝Error{CfgBad}。
-// 例外（eca 10-30）：物件寫了 ws＝收成 {"exec": 目標, "ws": 絕對路徑}（spawn_exec 認這個形狀）。
-Json read_execs(const Json& v, const std::string& base, const std::string& key);
-
-// 期望表的一半（10-23 晚，10-30 抽出來給 loops、execs 共用）：base＋ctl[added]－ctl[removed]，先加後減（同一個名字兩邊都寫＝不要；
+// 期望表（10-23 晚）：base＋ctl[added]－ctl[removed]，先加後減（同一個名字兩邊都寫＝不要；
 // 已在 base 上的換成 added 的設定、不在的接在尾巴）。ctl 兩個 key 都沒寫＝回 base 本身（不複製）；不然結果寫進 merged、回 merged。
 const Json& merge_want(const Json& base, const Json& ctl, const char* added, const char* removed, Json& merged);
 
-// loops 與 execs 兩份期望表有同一個名字＝回原因（共用名字空間，10-30）。
-std::optional<std::string> check_apart(const Json& loops, const Json& execs);
+using Names = std::set<std::string>;
 
 class Daemon : public aos::loop::Loop {
 public:
@@ -101,60 +74,66 @@ public:
 protected:
     void tend() override;
     void finish() override;
-    std::optional<std::string> check_ctl(Json& doc, const aos::Resolved& where) override;
-    void write_more(const Json& me) override;   // loops_state.json（沒開＝不寫；有變才寫，11-02）
+    void write_more(const Json& me) override;   // procs_state.json（沒開＝不寫；有變才寫，11-02）
 
 private:
     using Table = std::list<std::pair<std::string, Child>>;
 
     void adopt();
-    void add(const std::string& name, const Child& c);   // 放上表＋印 log 一行（running）
-    Table::iterator drop(Table::iterator it);             // 子項結束（done／stopped）：印 log 一行、done 的記成本次不再起（forget）、從表上拿掉；回下一列
+    void add(const std::string& name, const Child& c);   // 放上表＋印 log 一行（running；stopped 的列不印）
+    Table::iterator drop(Table::iterator it);             // 從表上拿掉：行程結束的印 log 一行、done 的記成本次不再起；回下一列
     void log_child(const std::string& name, const Child& c);   // log 一行（見檔頭）
-    void flush_table();                                   // 表變了：寫 loops_state（有變才寫）；寫不了丟 StateError
+    void flush_table();                                   // 表變了：寫 procs_state（有變才寫）；寫不了丟 StateError
     void term(Child& c);                  // 送 SIGTERM、phase stopping、記期限（不等）
-    bool settle(Child& c);                // 收的途中看一眼：退了＝stopped、回 true；過了期限還在＝SIGKILL 整群＋底下自成一群的（只送一次）
-    void read_loops_ctl();                // 讀 loops_ctl.json：好的進 lctl_good_、清 lctl_warning_；壞的不採用、原因進 lctl_warning_；檔不在＝不動
-    std::optional<std::string> check_lists(Json& doc, const aos::Resolved& where);   // loops_ctl 的 loops／loops_added／loops_removed／execs_added／execs_removed
-    // loops_state 的 loops、execs 欄：≤ PART_ROWS 列原樣；多了就寫分檔、回 {"$ref": [分檔, …]}；用到的分檔名記進 now（兩張表同一個分檔資料夾）
+    void halt(const std::string& name, Child& c);   // daemon 的 stop：往子 loop 的 ctl 寫 {"cmd": "stop", "seq": N}、phase stopping（沒 ctl＝term）
+    void hold(const std::string& name, Child& c);   // daemon 要停的退了：印 log、列留成 stopped（pid 0、held）
+    bool settle(Child& c);                // 收的途中看一眼：退了＝phase stopped、回 true；SIGTERM 過了期限還在＝SIGKILL 整群＋底下自成一群的（只送一次）
+    bool look(const std::string& name, Child& c, bool stop);   // 不調表地看一眼（見 daemon.cpp）；回 true＝結束了、要拿掉
+    Child start(const std::string& name, const Json& spec, const std::string& cell);   // 照寫法起（spawn／spawn_exec）
+    std::string cell_of(const std::string& name, const Json& spec) const;   // proc 的 stack：寫了 stack＝它，沒寫＝$AOS_STACK/procs/<名字>
+    void read_procs_ctl();                // 讀 procs_ctl.json：好的進 pctl_good_、清 pctl_warning_；壞的不採用、原因進 pctl_warning_；檔不在＝不動
+    std::optional<std::string> check_lists(Json& doc, const aos::Resolved& where);   // procs、procs_added、三個名字陣列
+    // procs_stopped／procs_started（doc 裡的）有 exec 型（want＝合好的期望表；在表上的看那列、不在的看寫法）＝回原因
+    std::optional<std::string> check_once(const Json& doc, const Json& want) const;
+    // procs_state 的 procs 欄：≤ PART_ROWS 列原樣；多了就寫分檔、回 {"$ref": [分檔, …]}；用到的分檔名記進 now
     Json write_parts(Json rows, std::set<std::string>& now);
-    void clean_parts(const std::set<std::string>& now);   // 兩張表都寫好之後：清掉這次與上一次都沒用到的分檔
-    // ctl 模式的期望表（ctl＝一份驗過的 loops_ctl）：loops＝（ctl 的 loops，沒寫＝daemon.json 的）＋loops_added－loops_removed；
-    // execs＝daemon.json 的 execs＋execs_added－execs_removed（10-30）。回的參照指向 base 或 lm／em。
-    std::pair<const Json*, const Json*> ctl_want(const Json& ctl, Json& lm, Json& em) const;
-    bool from_ctl(const std::string& name, bool once) const;   // 名字是 loops_ctl 疊上去的（它的 loops／execs 或 *_added 裡有；沒開 loops_ctl＝false）
-    void reconcile(const Json& want, const Json& want_execs);   // 對表：收多的、看誰結束、起少的（10-30 起兩份：子 loop、exec 型子項）
+    void clean_parts(const std::set<std::string>& now);   // 寫好之後：清掉這次與上一次都沒用到的分檔
+    // 期望表＝（ctl 的 procs，沒寫＝底 want_）＋procs_added－procs_removed（ctl＝一份驗過的 procs_ctl）；回的參照指向底、ctl 或 merged
+    const Json& ctl_want(const Json& ctl, Json& merged) const;
+    Names ctl_stopped(const Json& ctl) const;   // stopped 集合＝底 stopped_＋ctl 的 procs_stopped－procs_started
+    bool from_ctl(const std::string& name) const;   // 名字是 procs_ctl 疊上去的（它的 procs 或 procs_added 裡有；沒開 procs_ctl＝false）
+    void reconcile(const Json& want, const Names& stopped);   // 對表：收多的、停要停的、看誰結束、起少的與要 start 的
 
     // 信箱（mailbox.cpp）
     using Letters = std::vector<std::pair<std::string, bool>>;   // 這圈的信（照處理順序）：{信號, 好信}
     void open_mailbox();                                     // 建四格（已在就沿用）、cur/ 的殘骸記進 redo_
-    Letters take_letters();                                  // 認領、逐封驗；好信依序套進 want_
-    std::optional<std::string> apply_letter(const Json& body);   // 驗 body、套進 want_；壞＝回原因、want_ 不動
+    Letters take_letters();                                  // 認領、逐封驗；好信依序套進底
+    std::optional<std::string> apply_letter(const Json& body);   // 驗 body、套進 want_／stopped_；壞＝回原因、底不動
     void done_letters(const Letters& got);                   // 好信有 reply_to 的回 applied；全部收掉
 
-    Json loops_;                                         // daemon.json 的 loops
-    Json execs_ = Json::object();                        // daemon.json 的 execs（10-30；{名字: 目標}，read_execs 收好的）
-    std::string cwd_;                                    // 子 loop 的 cwd＝daemon 起來時的 cwd
-    std::string dstack_;                                 // 給子項的 AOS_DAEMON_STACK＝stack_ 轉絕對、結尾 /（11-02 resident-bob 衝突 2）
-    std::string lctl_path_;                              // loops_ctl.json（空＝不開）
-    std::string lstate_path_;                            // loops_state.json（空＝不開）
-    Json lctl_good_ = Json::object();                    // 最後一份好的 loops_ctl（一份都沒讀到過＝{}）
-    Json lctl_warning_;                                  // null 或字串（loops_state 的 ctl_warning）
-    std::string parts_dir_;                              // loops_state 分檔的資料夾（沒開 loops_state＝空）
+    Json procs_ = Json::object();                        // daemon.json 的 procs
+    std::string cwd_;                                    // 子項的 cwd＝daemon 起來時的 cwd
+    std::string dstack_;                                 // 給子項的 AOS_DAEMON_STACK＝stack_ 轉絕對、結尾 /；預設小格也從它拼
+    std::string pctl_path_;                              // procs_ctl.json（空＝不開）
+    std::string pstate_path_;                            // procs_state.json（空＝不開）
+    Json pctl_good_ = Json::object();                    // 最後一份好的 procs_ctl（一份都沒讀到過＝{}）
+    Json pctl_warning_;                                  // null 或字串（procs_state 的 ctl_warning）
+    std::string parts_dir_;                              // procs_state 分檔的資料夾（沒開 procs_state＝空）
     std::set<std::string> parts_prev_;                   // 上一次寫的 state 用到的分檔檔名（清舊分檔時留著）
     bool parts_wrote_ = false;                           // 這個行程寫過 state 了沒（第一次不清：磁碟上的主檔可能還指著舊的）
-    std::string mbox_path_;                              // loops_ctl_mailbox（空＝不開；11-02 晚原 loops_mailbox）
+    std::string mbox_path_;                              // procs_ctl_mailbox（空＝不開）
     aos::post::Mailbox mbox_;
     std::vector<std::string> redo_;                      // 起來時 cur/ 裡的（上次做到一半死掉），第一個認領的圈排在 new/ 前面重做
-    Json want_ = Json::object();                         // 底的 loops（11-02 晚；記憶體裡；重起時從 daemon.json＋adopt 重建；信改它）
-    Json want_execs_ = Json::object();                   // 底的 execs（10-30；同 want_）
-    Json mailbox_warning_;                               // null 或字串（loops_state 的 mailbox_warning：最後一封壞信；11-02 晚原 letter_warning）
-    std::set<std::pair<std::string, bool>> ended_;       // 本次執行已自己結束的 {名字, 是不是 exec 型}（11-02，見檔頭）
-    bool more_wrote_ = false;                            // 寫過 loops_state 沒（這個行程第一份一定寫）
+    Json want_ = Json::object();                         // 底的期望表（記憶體裡；重起時從 daemon.json＋adopt 重建；信改它）
+    Names stopped_;                                      // 底的 stopped 集合（11-03；起來時＝adopt 接回的 stopped 列；信改它）
+    long long stop_seq_ = 0;                             // 寫給子 loop 的 stop 指令的 seq（自己數、遞增，也比它 ctl 裡現有的大）
+    Json mailbox_warning_;                               // null 或字串（procs_state 的 mailbox_warning：最後一封壞信）
+    Names ended_;                                        // 本次執行已自己結束的名字（11-02，見檔頭）
+    bool more_wrote_ = false;                            // 寫過 procs_state 沒（這個行程第一份一定寫）
     bool parts_stale_ = false;                           // 上一次寫完還留著「再上一次」的分檔：下一次沒變的那一下清（11-02）
-    Json last_more_;                                     // 上一份寫出去的 loops_state（分檔前的表、不含 proc_fields／updated_at；比有沒有變用）
-    Table table_;                                        // 照加入的順序（loops_state 的 loops 也照這個順序）
-    std::unordered_map<std::string, Table::iterator> index_;   // 名字 → 表上那一列（10-23 壓測：原本逐列找，N 個名字 N×N）
+    Json last_more_;                                     // 上一份寫出去的 procs_state（分檔前的表、不含 proc_fields／updated_at；比有沒有變用）
+    Table table_;                                        // 照加入的順序（procs_state 的 procs 也照這個順序）
+    std::unordered_map<std::string, Table::iterator> index_;   // 名字 → 表上那一列
 };
 
 }  // namespace aos::daemon

@@ -9,7 +9,7 @@
 
 ```sh
 aos-post init box                                   # 建 box/tmp new cur
-echo '{"loops_added": {"bob": "../agent-bob"}}' | aos-post send box      # 印信號
+echo '{"procs_added": {"bob": "../agent-bob"}}' | aos-post send box      # 印信號
 aos-post claim-all box                              # 一行一個信號（照名字排序）；沒有退 10
 aos-post check box 信號                             # 好信印 letter.json；壞信退 1
 aos-post finish box 信號                            # 收掉（--keep 進 done/）

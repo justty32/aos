@@ -7,7 +7,7 @@
 照 proto8/demo/run.sh 的 daemon 那段：暫存工作區、bob/new、ann/new 各放一題、cd 進去 `aos-exec <demo/daemon>`。
 impls 線：PATH 最前面放 impls 的 aos-exec、aos-loop、aos-fsm、aos-daemon 的 bin/（不放 proto8/bin）；bin 線：PATH 最前面放 proto8/bin。
 兩條線各跑一次，比：結束碼、stderr、工作區裡（含 .stack/ stack 整棵樹）有哪些檔、每個檔的內容。
-會變的東西先抹掉（11-03 起 fsm 不寫 trace.jsonl，那段抹法拿掉）：*state.json 的 pid、started_at_ticks、boot_id、updated_at（11-02 原 recorded_at；含 loops 每列的 pid、started_at_ticks）；
+會變的東西先抹掉（11-03 起 fsm 不寫 trace.jsonl，那段抹法拿掉）：*state.json 的 pid、started_at_ticks、boot_id、updated_at（11-02 原 recorded_at；含 procs（11-03 前 loops）每列的 pid、started_at_ticks）；
 stamp 印的「# <UTC 時間>」那行。要先建好 impls 的四支。
 10-23 起 proto8/bin 的 Python 版 aos-exec／aos-loop／aos-fsm／aos-daemon 刪了（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也改 C++）：
 不再跟 bin 線比，只跑 impls 線、看結束碼 0、stderr 空、答案寫出來了。
@@ -16,6 +16,8 @@ stamp 印的「# <UTC 時間>」那行。要先建好 impls 的四支。
 11-02：demo 的 daemon 自己的窗改名 daemon_state.json／daemon_ctl.json（11-02 晚改回 state.json／ctl.json，thinking 2026-11-02-ctl-state-names）；子項結束後不留名單（loops_state 看不到），
 結束的 phase／code 改看 daemon 的 log（stdout 一行一個子項的起、退；ended；11-02 晚起 log 預設不印，這裡給 --enable-logs）。
 11-02 晚：daemon-2／3 的信箱改名 loops_ctl_mailbox、loops_state 的 letter_warning 改名 mailbox_warning。
+11-03（thinking 2026-11-03-procs）：loops／execs 統稱 procs——信箱 procs_ctl_mailbox、狀態窗 procs_state.json（一張表 procs）、小格 procs/<名字>/、
+log 沒有 table；daemon-3 的兩種寫法在同一份名單裡（字串＝exec 型）。
 """
 import json
 import os
@@ -51,16 +53,16 @@ def normalize(rel, text):
         d = json.loads(text)
         for k in ("pid", "started_at_ticks", "boot_id", "updated_at"):
             d[k] = k.upper()
-        for r in d.get("loops", {}).values():
+        for r in d.get("procs", {}).values():
             r["pid"] = r["started_at_ticks"] = "X"
         return d
     return re.sub(r"^# \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$", "# TIME", text, flags=re.M)
 
 
-def ended(out, table="loops"):
-    """daemon 的 log（stdout）裡子項結束那幾行：{名字: (phase, code)}（11-02）。"""
+def ended(out):
+    """daemon 的 log（stdout）裡子項結束那幾行：{名字: (phase, code)}（11-02；11-03 起沒有 table）。"""
     rows = [json.loads(x) for x in out.splitlines() if x.startswith("{")]
-    return {x["name"]: (x["phase"], x["code"]) for x in rows if x.get("table") == table and x["phase"] != "running"}
+    return {x["name"]: (x["phase"], x["code"]) for x in rows if "name" in x and x["phase"] != "running"}
 
 
 def run_line(agent, bins):
@@ -93,22 +95,22 @@ def run_daemon2():
         subprocess.run([post, "init", str(ws / "inbox")], env=env, check=True)
         p = subprocess.Popen([str(IMPLS_BINS[0] / "aos-exec"), str(DEMO / "daemon-2"), "--enable-logs", "--max", "25"], cwd=str(ws), env=env,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        box = ws / ".stack" / "loops_ctl_mailbox"
+        box = ws / ".stack" / "procs_ctl_mailbox"
         end = time.monotonic() + 10
         while not (box / "new").is_dir() and time.monotonic() < end:
             time.sleep(0.05)
-        body = {"loops_added": {"tock": {"exec": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tock.txt"}]},
+        body = {"procs_added": {"tock": {"exec": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tock.txt"}]},
                                          "interval_ms": 500}}}
         s = subprocess.run([post, "send", "--reply-to", str(ws / "inbox"), str(box)], input=json.dumps(body), env=env,
                            capture_output=True, text=True)
         out, err = p.communicate(timeout=60)
         check("daemon-2 結束碼／stderr", (p.returncode, err, s.returncode), (0, "", 0))
-        ls = json.loads((ws / ".stack" / "loops_state.json").read_text())
+        ls = json.loads((ws / ".stack" / "procs_state.json").read_text())
         check("daemon-2 結束的子項（log）", {n: p for n, (p, c) in ended(out).items()}, {"sam": "done", "tick": "stopped", "tock": "stopped"})
-        check("daemon-2 名單收工後是空的", (ls["loops"], (ws / ".stack" / "state.json").is_file()), ({}, True))
+        check("daemon-2 名單收工後是空的", (ls["procs"], (ws / ".stack" / "state.json").is_file()), ({}, True))
         check("daemon-2 mailbox_warning", ls["mailbox_warning"], None)
         check("daemon-2 信都收完", [x.name for x in box.iterdir() if any((box / x.name).iterdir())], [])
-        ticks = [int((ws / ".stack" / "loops" / n / (n + ".txt")).read_text()) for n in ("tick", "tock")]
+        ticks = [int((ws / ".stack" / "procs" / n / (n + ".txt")).read_text()) for n in ("tick", "tock")]
         check("daemon-2 tick、tock 都走了", all(n > 0 for n in ticks), True)
         replies = list((ws / "inbox" / "new").iterdir())
         r = json.loads((replies[0] / "letter.json").read_text()) if len(replies) == 1 else {}
@@ -117,8 +119,8 @@ def run_daemon2():
 
 
 def run_daemon3():
-    """proto8/demo/daemon-3（10-30，execs）：同一支 demo/tick 掛兩次——loops 的 tick_loop（max: 1 的子 loop）、
-    execs 的 tick_exec（直接 aos-exec 一次）。看 loops_state 兩張表、兩格的檔。PATH 多 proto8/bin（aos-tick）。"""
+    """proto8/demo/daemon-3（10-30）：同一支 demo/tick 在同一份名單 procs 裡掛兩次——tick_loop（max: 1 的子 loop）、
+    tick_exec（字串＝直接 aos-exec 一次；11-03 前在 execs）。看 log、兩格的檔。PATH 多 proto8/bin（aos-tick）。"""
     bins = IMPLS_BINS + [PY_BIN]
     env = {k: v for k, v in os.environ.items() if not k.startswith("AOS_")}
     env["PATH"] = os.pathsep.join([str(b) for b in bins] + path_without(*bins))
@@ -127,16 +129,15 @@ def run_daemon3():
         r = subprocess.run([str(IMPLS_BINS[0] / "aos-exec"), str(DEMO / "daemon-3"), "--enable-logs"], cwd=str(ws), env=env,
                            capture_output=True, text=True, timeout=60)
         check("daemon-3 結束碼／stderr", (r.returncode, r.stderr), (0, ""))
-        ls = json.loads((ws / ".stack" / "loops_state.json").read_text())
-        check("daemon-3 兩張表（log）", (ended(r.stdout), ended(r.stdout, "execs")),
-              ({"tick_loop": ("done", 0)}, {"tick_exec": ("done", 0)}))
-        check("daemon-3 結束後不留名單", (ls["loops"], ls["execs"]), ({}, {}))
-        files = {n: sorted(f.name for f in (ws / ".stack" / "loops" / n).iterdir()) for n in ("tick_loop", "tick_exec")}
+        ls = json.loads((ws / ".stack" / "procs_state.json").read_text())
+        check("daemon-3 兩個都 done（log）", ended(r.stdout), {"tick_loop": ("done", 0), "tick_exec": ("done", 0)})
+        check("daemon-3 結束後不留名單", ls["procs"], {})
+        files = {n: sorted(f.name for f in (ws / ".stack" / "procs" / n).iterdir()) for n in ("tick_loop", "tick_exec")}
         check("daemon-3 小格", files, {"tick_loop": ["loop.json", "state.json", "stderr.txt", "tick.txt"],
                                       "tick_exec": ["stderr.txt", "tick.txt"]})
-        ticks = [(ws / ".stack" / "loops" / n / "tick.txt").read_text().strip() for n in ("tick_loop", "tick_exec")]
+        ticks = [(ws / ".stack" / "procs" / n / "tick.txt").read_text().strip() for n in ("tick_loop", "tick_exec")]
         check("daemon-3 tick 都走到 5", ticks, ["5", "5"])
-        print("daemon-3：結束碼 %d、loops %s、execs %s" % (r.returncode, list(ended(r.stdout)), list(ended(r.stdout, "execs"))))
+        print("daemon-3：結束碼 %d、procs %s" % (r.returncode, list(ended(r.stdout))))
 
 
 def main():

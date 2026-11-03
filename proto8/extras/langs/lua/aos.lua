@@ -184,8 +184,9 @@ end
 
 function M.daemon(t)
   if type(t) ~= "table" then fail("aos.daemon 要一個 table", 2) end
-  if t.loops ~= nil and type(t.loops) ~= "table" then fail("aos.daemon 的 loops 要是 table", 2) end
-  for name, sub in pairs(t.loops or {}) do
+  -- 11-03 loops／execs 統稱 procs：一份名單，每項看寫法（字串、陣列、只有 exec〔＋ws、stack〕＝跑一次；其他＝loop 型）
+  if t.procs ~= nil and type(t.procs) ~= "table" then fail("aos.daemon 的 procs 要是 table", 2) end
+  for name, sub in pairs(t.procs or {}) do
     if type(sub) == "table" and kind(sub) ~= "loop" and not is_directive(sub) and sub.exec == nil and sub.argv == nil then
       fail("aos.daemon 的子項 " .. tostring(name) .. " 要是一份 loop 設定或目標", 2)
     end
@@ -197,7 +198,7 @@ end
 
 local FIRST = {
   "_entry", "kind", "start", "states", "exec", "next", "argv", "cwd", "env", "stdin", "stdout", "stderr",
-  "timeout_ms", "grace_ms", "max", "interval_ms", "ctl", "state", "loops",
+  "timeout_ms", "grace_ms", "max", "interval_ms", "ctl", "state", "procs", "stack",
   "$env", "$ref", "$path", "$prefix", "description", "type", "properties", "required",
 }
 local RANK = {}

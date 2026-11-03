@@ -243,7 +243,7 @@ check("ref 原地", v.run("ref", "y.json#/a", "z.json")[0], 0)
 # ---- check、--check ----
 c = Box({"loop.json": '{"exec": "", "max": 1}', "fsm.json": FSM, "states.json": STATES,
          "bad.json": '{"states": {"$ref": "nope.json"}, "x": {"$ref": "#/a"}, "e": {"$env": "NOPE_NOT_SET"}}',
-         "daemon.json": '{"loops": {"a": {"exec": {"cwd": "x"}}, "b": {"exec": ["aos-loop", {"$env": "X"}]}}}'})
+         "daemon.json": '{"procs": {"a": {"exec": {"cwd": "x"}}, "b": {"exec": ["aos-loop", {"$env": "X"}]}}}'})
 check("check 乾淨", c.run("check", "fsm.json"), (0, "", None))
 check("check exec 空字串", c.run("check", "loop.json")[1].split(": ")[1].split()[0], "ExecBad")
 out = c.run("check", "bad.json")[1]
@@ -251,7 +251,7 @@ check("check $ref 讀不到、寫法不合", ("bad.json#/states: DirectiveBad" i
 check("check $env 沒設預設不報", "NOPE_NOT_SET" in out, False)
 check("check --env 才報", "NOPE_NOT_SET" in c.run("check", "--env", "bad.json")[1], True)
 out = c.run("check", "daemon.json")[1]
-check("check daemon 單子沒 argv", ("daemon.json#/loops/a/exec: ExecBad" in out, "loops/b" in out), (True, False))
+check("check daemon 單子沒 argv", ("daemon.json#/procs/a/exec: ExecBad" in out, "procs/b" in out), (True, False))
 check("check 多份一起", c.run("check", "fsm.json", "loop.json")[0], 1)
 check("set --check 擋下形狀不對", c.run("set", "--check", "--follow", "fsm.json#/states/think/exec", "[]")[2], "CheckFailed")
 check("  沒寫", json.loads(c.read("states.json"))["think"]["exec"]["timeout_ms"], 120000)

@@ -37,7 +37,7 @@ ai_tools/
 agents/<名>/agent/        agent 定義（範本的複本；定義資料夾不被寫，P-15）
 agents/<名>/ws/           工作區（成品檔）；stack 在 ws/.stack/：queue/（題目，N-16 有序信箱）、history.jsonl（回答）、state.json（aos-loop 的窗）…（11-03 起沒有 trace.jsonl）
 agents/<名>/runs.jsonl    aos-ai run 每次一行：finished_at（跑完的時間）、code、signal、timed_out、elapsed_ms、errors、answered（這次答完的信號）、counter_answers
-daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.stack/ctl.json、.stack/state.json（11-02 白天曾改 daemon_*、晚上改回）、各 agent 的小格 .stack/loops/<名>/（11-02 改 loops/<名字>/，見 proto8/thinking/2026-11-02-stack-tools.md）
+daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.stack/ctl.json、.stack/state.json（11-02 白天曾改 daemon_*、晚上改回）、各 agent 的小格 .stack/procs/<名>/（11-02 改 loops/<名字>/，見 proto8/thinking/2026-11-02-stack-tools.md；11-03 loops／execs 統稱 procs，aos-ai 在 procs_added 裡寫明 stack＝這一格）
 ```
 
 | 命令 | 做什麼 |
@@ -47,16 +47,16 @@ daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.sta
 | `ask 名 文字…｜- ` | 寄一封有序的信進 `ws/.stack/queue/`（`{"role": "user", "content": 文字}`；沒有 queue 就先 `aos-post init`）；回 `id`＝信號、`path`＝那封信 |
 | `run 名 [--timeout 秒] [--env K=V]...` | 前景 `aos-exec --ws ws agent`（`AOS_STACK` 明寫成 `ws/.stack/`），nia 跑到 queue 空 loop 收工；回 `answers`（這次 history 新長出來的回答，`[{"text"}]`）、`answered`（跑之前在 queue、跑完不見了的信號）、`waiting`（queue 裡還沒答的）、`loop_phase`、錯誤、hint |
 | `status [名]`、`answer 名 [信號]`、`history 名 [-n N]` | 看（11-03 拿掉 `trace` 子命令與 status 的 `trace_tail`：fsm 不寫 `trace.jsonl` 了，[thinking 11-03 trace](../../thinking/2026-11-03-trace.md)）：status 有 queue 各格（`new`、`cur`、`done`）、`loop_phase`（state.json；11-02 晚收回 loop_state.json 備案）、`counter_answers`；answer 沒給信號＝每段一問一答（`asked`、`text`），給了＝那封還在 queue＝`AnswerMissing`、不見了＝history 最新的回答（A-8） |
-| `start 名 [--interval-ms N]`、`stop 名`、`wait 名 信號 [--timeout 秒]` | 背景：寫 daemon 的 `loops_ctl.json` 的 `loops_added`（N-54；10-29 拆窗前寫在 ctl），等 `loops_state.json` 的 `ctl_seq` 回音才回。11-02 起子項結束就從 daemon 的表上拿掉、本次執行不再起（要先讓某一圈的名單沒有它）：`start` 不在跑時一律先從 `loops_added` 拿掉、等回音，再放回、等回音；一次就跑完、還沒被看到就下表的＝看小格 `loops/<名>/state.json` 換了行程寫，照樣 `ok`（多一句 `note`） |
-| `daemon up｜down｜status` | 起／停（daemon 的 ctl 寫一道 `{"cmd": "stop", "seq": n}`，11-03 起 ctl 是指令；up 不再清殘留）／看背景的 aos-daemon（status 的 `updated_at`＝daemon_state 最後一次寫的時間，11-02 原 `recorded_at`；有變才寫，不拿它判活著） |
+| `start 名 [--interval-ms N]`、`stop 名`、`wait 名 信號 [--timeout 秒]` | 背景：寫 daemon 的 `procs_ctl.json` 的 `procs_added`（N-54；10-29 拆窗前寫在 ctl；11-03 前叫 `loops_ctl.json`／`loops_added`），等 `procs_state.json` 的 `ctl_seq` 回音才回；寫進去的項有 `interval_ms`（＝loop 型）與 `stack`（`daemon/.stack/procs/<名>`）。11-02 起子項結束就從 daemon 的表上拿掉、本次執行不再起（要先讓某一圈的名單沒有它）：`start` 不在跑時一律先從 `procs_added` 拿掉、等回音，再放回、等回音；一次就跑完、還沒被看到就下表的＝看它 stack（表上那一列的 `stack`，不在表上＝aos-ai 寫明的那格）裡的 `state.json` 換了行程寫，照樣 `ok`（多一句 `note`） |
+| `daemon up｜down｜status` | 起／停（daemon 的 ctl 寫一道 `{"cmd": "stop", "seq": n}`，11-03 起 ctl 是指令；up 不再清殘留）／看背景的 aos-daemon（status 的 `updated_at`＝daemon_state 最後一次寫的時間，11-02 原 `recorded_at`；有變才寫，不拿它判活著；proc 表在 `procs`、名單手把的回音在 `procs_ctl_seq`／`procs_ctl_warning`，11-03 前叫 `loops`／`loops_ctl_seq`／`loops_ctl_warning`） |
 | `exec [--ws WS] 目標 [參數...]` | 直接 `aos-exec` 跑一次，回 `code`、`stdout`、`errors`；WS 要在 root 裡 |
 | `edit 名 檔 --editor 命令 [參數...]` | JSON 編輯的接口：交給 `--editor` 的命令（照 shell 斷詞成 argv＋檔的絕對路徑＋參數；沒給＝`EditorMissing`）；檔要在 `agents/<名>/` 裡 |
 | `doctor` | 程式在不在、`AOS_BRAIN_URL` 連不連得到 |
-| `make inst｜loop｜fsm｜daemon｜metainfo｜tool_json [旗標] [--out 檔] [--force] [--no-notes]` | 生成一份 JSON：先驗形狀（`SpecBad`），`--out` 原子寫入（root 裡、已有＝`FileExists`），有 aos-json 就跑 `aos-json check`；loop／fsm／daemon 自動帶 `_entry`（`--entry no` 不帶）；每種都收 `--spec '{整份}'`、`--set key=值` |
+| `make inst｜loop｜fsm｜daemon｜metainfo｜tool_json [旗標] [--out 檔] [--force] [--no-notes]` | 生成一份 JSON：先驗形狀（`SpecBad`），`--out` 原子寫入（root 裡、已有＝`FileExists`），有 aos-json 就跑 `aos-json check`；loop／fsm／daemon 自動帶 `_entry`（`--entry no` 不帶）；每種都收 `--spec '{整份}'`、`--set key=值`；daemon 的名單用 `--proc 名=exec`（字串＝跑一次）或 `--proc '名={loop.json 的內容}'`（loop 型），寫進 `procs`（11-03 前是 `--loop`、`loops`，不留別名） |
 | `make tool 名 工具 --description … [--param 名:型別[:說明][:required]]... [--lang python｜sh]` | 在 `agents/<名>/agent/tools/` 起工具骨架（`_tooldef.json`＋`_entry`，給了 `--summary` 等再加 `_metainfo`），並登記進那隻 agent 的 `tools.json`（`aos-tools add`） |
 | `make cell 名 格 (--exec …｜--dir) [--after 前一格] [--next 下一格]` | fsm 加一格（`--dir` 另起格資料夾）；先驗整張表，改 fsm.json 交給 `aos-json set`（沒有 aos-json 才自己寫） |
 | `make func 資料夾 [--summary …] [--argv …｜--inst 單子]` | 函數資料夾：`_entry`（sh 骨架或單子）＋`_metainfo` |
-| `explain [概念]`、`explain --here [目標] [--ws WS] [--dotenv-override]` | 概念速成一節；或算出「現在 aos-exec 目標」會讀哪些 `.env`、挑到哪個入口、六個變數的值（模擬，以 aos-exec 為準） |
+| `explain [概念]`、`explain --here [目標] [--ws WS] [--stack S] [--dotenv-override]` | 概念速成一節；或算出「現在 aos-exec 目標」會讀哪些 `.env`、挑到哪個入口、六個變數的值（模擬，以 aos-exec 為準） |
 
 - **輸出**：stdout 一行 JSON，`ok` 一定有。下層 stderr 的每一行拆成 `errors[{prog, code, reason}]`（認不出的放 `raw`），失敗時加一句 `hint`（下一步）。答案文字超過 4000 字截斷、給 `path`。
 - **錯**：aos-ai 自己的錯 stderr 一行 `aos-ai: 代號 原因（下一步：…）`、退 1。代號：`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`RootMissing`、`PathBad`、`NameBad`、`AgentMissing`、`AgentExists`、`AgentBusy`、`TemplateMissing`、`ToolMissing`、`ToolExists`、`SpecBad`、`FileExists`、`CellExists`、`CellMissing`、`CfgBad`、`EditFailed`、`ConceptUnknown`、`QuestionBad`、`PostFailed`（寄不進 queue：PATH 上沒有 aos-post 等）、`AnswerMissing`、`WaitFailed`、`EditorMissing`、`CommandMissing`、`DaemonFailed`、`Internal`。**agent 跑失敗不是 aos-ai 的錯**：退 0，看 JSON 的 `ok`／`code`。
