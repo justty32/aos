@@ -26,7 +26,7 @@
 | `aos-eca rm [資料夾\|名字]` | 刪除：關畫面、從 daemon 拿掉、刪它的 stack（queue、history、session.txt 都沒了；`--stack` 給的那個資料夾也整個刪；**不封存**，要留先自己複製；claude 自己 `~/.claude/projects` 的對話檔不動）。11-03 前叫 `remove` | `aos-daemon-ctl rm` → 等它下表 → `rm -r` 列上的 stack |
 | `aos-eca start [資料夾\|名字]` | 再起：停著的用**同一個 stack** 起來（daemon 照原本 add 的設定），接著答 queue 裡排著的信（同一段對話 `--resume`）；本來就在跑＝說一句、退 0 | `aos-daemon-ctl start 名字` → 等列不再是 `stopped`（11-03 前是重新 `add`） |
 | `aos-eca stop [資料夾\|名字]` | 停：關畫面、答完手上這題就停；**還在 daemon 表上**（`stopped`）、stack 原樣留，`where` 照找得到，這期間 `aos-say` 的信照收在 queue、沒人答，`start` 才答；本來就停著＝說一句、退 0 | `aos-daemon-ctl stop 名字` → 等列變 `stopped`（11-03 前是 `rm`、下表） |
-| `aos-eca ls [--json]` | 列在跑的與停著的：名字、狀態、種類、工作區、對話 id 前 8 碼 | `aos-daemon-ctl ls --json` 的 procs 表，只留列上 `stack` 裡有 `eca.json` 的（aos-eca-turn 每次寫：`kind`、`ws`、`template`）；`--json` 每隻的 `cell`＝那個 stack |
+| `aos-eca ls [--json]` | 列在跑的與停著的，一隻一行：名字、狀態、畫面、種類、工作區、`session` 對話 id 前 8 碼（11-03 起英文，見下方「狀態」）；`--json` 的 `state` 同一個字、`screen` 是 `open`／`closed` | `aos-daemon-ctl ls --json` 的 procs 表，只留列上 `stack` 裡有 `eca.json` 的（aos-eca-turn 每次寫：`kind`、`ws`、`template`）；`--json` 每隻的 `cell`＝那個 stack |
 | `aos-eca state [資料夾\|名字]`（或 `status`） | 這裡有沒有外部 agent（掛著或停了）；沒有＝`InstanceMissing`、退 1。`status` 是 `state` 的別名、行為一樣（11-03 使用者「那就兩個都支援，status和state兩個指令都可以，檔案照舊」；小格的 `state.json` 不改名） | 同一張表 |
 | `aos-eca open [-d] [--name N] [--ws WS] [--stack S] [名字\|資料夾\|XXX]` | 接進畫面；沒開就開（有對話就 `--resume` 叫回）；停著的只開畫面、不替人 start（stderr 提醒）。先比名字、再比工作區（或在它的 stack 裡）；都認不出而給的是 eca 資料夾（有 `cli.json`）＝先照 add 建（`--name`、`--ws`、`--stack` 照 add）再開；也不是 eca 資料夾＝`InstanceMissing`。已經有的再給 `--name`／`--ws`／`--stack`＝`ArgumentsBad`。`-d` 只開不接 | cli_session 的 `open_cell`（agent-fay 的 attach 同一段）；只有人開畫面，aos-eca-turn 從不自己開 |
 | `aos-eca close [資料夾\|名字]` | 收起：關畫面、對話留著，aos-eca-turn 照樣用 `--resume` 答。**只管畫面**（11-02 晚第二輪）：停著的不替它起來，stderr 提醒用 `start` | `tmux kill-server`；正在答題＝`SessionBad` |
@@ -35,7 +35,13 @@
 - **它的 stack**：daemon 表上那一列的 `stack`（11-03 procs；預設小格 `$AOS_DAEMON_STACK/procs/<名字>/`，11-03 前 `loops/<名字>/`；`add --stack S` 給的就是 S）——aos-eca 一律從表上拿、不自己拼路徑。裡面是 `queue/`、`history.jsonl`、`ctl.json`、`state.json`、`eca.json`，CLI 的小格是它底下的 `<kind>/`（`session.txt`、`tty.sock`、`live.jsonl`、`transcripts/`…）；`<kind>` 是 eca 的 claude／codex，跟 daemon 的 proc 是哪一型無關（eca 一律是 loop 型）。
 - **對它說話＝`--stack $(aos-daemon-ctl where --stack 名字)`**（11-03，[thinking 11-03 stack-where](../../thinking/2026-11-03-stack-where.md)；使用者「那其實.stack根本不需要放到ws那邊」）：工作區**不再**有指到小格的 `.stack` 捷徑（10-30 衝突 3 那套拿掉），add 不碰工作區、原本有的 `.stack/` 也不動不說話。`where` 只認 daemon 表上的；11-03 procs 起 stop 之後還在表上，照樣 `where`。
 - **不封存**（使用者 11-02 晚「我覺得不要封存，封存了放在那邊也沒人要用，要用的，結束前自己複製就是了」）：10-30 的 `eca_archive/`（stop 時把小格搬到 `$AOS_DAEMON_STACK/eca_archive/<名字>-<UTC>/`、transcripts 換成複製）拿掉了。stop 的 stack 原樣留，rm 直接刪。
-- **狀態**：`收起了`、`畫面開著`、`停了`（daemon 表上 `stopped`）、`停下中`（`stopping`），或 daemon 的其他 `phase`。11-03 前另有「出錯停了」「收工了」（看下了表的小格 `state.json`），**11-03 拿掉**：自己結束的（CLI 出錯退 1、外部直接寫它 `ctl.json` 的 `{"cmd": "stop"}`）daemon 照 11-02 從表上拿掉＝對 daemon、對 aos-eca 都不在了（procs 衝突 2 使用者「照舊拿掉」），`ls` 不列、`state`／`start`／`stop`／`rm`＝`InstanceMissing`；stack 資料夾留著——要接著用就**同名再 add**（同一個 `--stack` 或預設小格：前文、`cur/` 裡沒答完的信都接著），不要了自己 `rm -r`。所以掛在 daemon 下要停就用 `aos-eca stop`。
+- **狀態**（11-03 起用英文、照 procs 名詞表，使用者「能不能改成用英文，就用我們先前的名詞表」；[eca 19](../../thinking/2026-10-30-eca/19-11-03-ls英文.md)）：`running`、`paused`（表上 `running`、它的 stack 裡子 loop 的 `state.json` 是 `paused`＝`aos-daemon-ctl pause` 停的，讀不到當 `running`）、`stopping`（收的途中）、`stopped`（daemon 表上 `stopped`），或 daemon 的其他 `phase`。**畫面另一欄**：`open`／`closed`（對應 `open`／`close`）。11-03 前狀態跟畫面混在一欄：`收起了`、`畫面開著`、`停了`、`停下中`。例：
+
+  ```
+  eca_bob      running  closed claude /home/guanyu/code/playground/ws  session 154bb4f3
+  ```
+
+  `state` 印兩行：`狀態   running（daemon phase running）`、`畫面   closed`。11-03 前另有「出錯停了」「收工了」（看下了表的小格 `state.json`），**11-03 拿掉**：自己結束的（CLI 出錯退 1、外部直接寫它 `ctl.json` 的 `{"cmd": "stop"}`）daemon 照 11-02 從表上拿掉＝對 daemon、對 aos-eca 都不在了（procs 衝突 2 使用者「照舊拿掉」），`ls` 不列、`state`／`start`／`stop`／`rm`＝`InstanceMissing`；stack 資料夾留著——要接著用就**同名再 add**（同一個 `--stack` 或預設小格：前文、`cur/` 裡沒答完的信都接著），不要了自己 `rm -r`。所以掛在 daemon 下要停就用 `aos-eca stop`。
 - **重新掛上前清殘留 `stopped`**（11-02 晚；**11-03 拿掉**：ctl 改成指令後子 loop 起來第一次讀的 ctl 當基準線、不執行，殘留的 `{"cmd": "stop"}` 不用清，[thinking 11-03 ctl-commands](../../thinking/2026-11-03-ctl-commands.md)；下面是原文）：start 走到 aos-daemon-ctl add 之前（11-03 起 add、open 新建時小格一定不在〔在＝撞名〕，只剩 start 會碰到），小格 ctl 窗（eca 資料夾 `loop.json` 的 `ctl`）有 `stopped` 就只拿掉這個 key（沒別的 key＝刪檔），免得新的子 loop 一起來就收工；其他 key（`paused`…）照留。「暫停」只有一種：寫小格的 `ctl.json` `{"paused": true}`（11-03 起 `{"cmd": "pause"}`，用 `aos-daemon-ctl pause 名字`／`resume 名字`）（aos-loop 的窗，不餵下一則），這裡不另做 pause（10-28 的 `pause` 改名 `close`）。
 - 畫面裡 **Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束**。人在畫面上自己打的話不進 history（方向題 2），全貌看 `transcripts/`。
 - **eca 資料夾**＝頂層有 `cli.json` 的資料夾（`kind`、`flags`、`print_flags`、`timeout_ms`），`add` 的 XXX 就給它；要別的模型、權限就複製一份 `demo/eca-claude` 改 `cli.json`、add 那份。小格 `eca.json` 的 `template` 那格記的就是它（aos-eca-turn 寫的 key，名字沒改）。
@@ -53,7 +59,7 @@ aos-tools --file proto8/demo/eca-claude/tools.json ls    # 它的工具箱（範
 aos-eca status                                   # 這隻的狀態（11-03 起 aos-listen --status 拿掉了）
 aos-eca open                                 # 接進畫面（第一次會問信任這個資料夾：游標預設在 No, exit，先移游標到 Yes 再 Enter）；Ctrl-] 跳出
 aos-eca close && aos-eca ls              # 收起；再問一句照樣答（--resume）
-aos-eca stop                                 # 停：還在 daemon 表上（stopped）、ls 顯示「停了」，where 照找得到，aos-say --stack $S 的信排著
+aos-eca stop                                 # 停：還在 daemon 表上（stopped）、ls 的狀態 stopped，where 照找得到，aos-say --stack $S 的信排著
 aos-eca start                                # 再起：同一個 stack，接著答排著的信、記得前文
 aos-eca rm                                   # 刪掉：stack 沒了（要留先複製 $S）
 ```
