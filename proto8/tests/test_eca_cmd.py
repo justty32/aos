@@ -1,4 +1,4 @@
-"""test_eca_ctl - proto8/extras/eca_ctl（10-30 eca 第 6 步，取代 10-28 的 test_hub）：aos-eca-ctl 把外部 coding agent 掛到
+"""test_eca_cmd - proto8/extras/eca（10-30 eca 第 6 步，取代 10-28 的 test_hub）：aos-eca 把外部 coding agent 掛到
 信箱模式的 aos-daemon 底下（aos-daemon-ctl add --ws），三對指令 open／close、start／stop、add／remove（使用者 11-02 晚）與 ls／state，
 以及 aos-say／aos-listen 經工作區的 .stack 捷徑對它說話。
 
@@ -12,7 +12,7 @@ own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
 from test_fay import FAKE_CLAUDE, SYS_PATH, HAS_TMUX  # noqa: E402
-CTL = ROOT / "extras" / "eca_ctl" / "bin" / "aos-eca-ctl"
+CTL = ROOT / "extras" / "eca" / "bin" / "aos-eca"
 HUMAN = ROOT / "extras" / "human" / "bin"
 TURN = ROOT / "bin" / "aos-eca-turn"
 DAEMON = tool("aos-daemon")
@@ -23,7 +23,7 @@ WRAP = '#!/bin/sh\nif [ -e "$BROKEN" ]; then echo \'{"is_error": true, "result":
 
 class EcaCtl(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="eca-ctl-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="eca-cmd-"))
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.bin = self.tmp / "bin"
         self.bin.mkdir()
@@ -141,7 +141,7 @@ class EcaCtl(unittest.TestCase):
                                                               "started_at_ticks": 1}))
         r = self.ctl("add", "--template", self.tpl, self.ws())
         self.assertEqual(self.code(r), (1, "DaemonMissing"))
-        self.assertTrue(r.stderr.startswith("aos-eca-ctl: DaemonMissing "), r.stderr)
+        self.assertTrue(r.stderr.startswith("aos-eca: DaemonMissing "), r.stderr)
         self.assertEqual(self.code(self.ctl("frob")), (1, "CommandUnknown"))
 
     def test_add_ls_state_say_listen(self):
@@ -270,7 +270,7 @@ class EcaCtl(unittest.TestCase):
         self.broken.unlink()
         r = self.ctl("close", name)
         self.assertEqual((r.returncode, r.stdout.strip()), (0, "本來就沒畫面（已收起）"), r.stderr)
-        self.assertIn("aos-eca-ctl start", r.stderr)
+        self.assertIn("aos-eca start", r.stderr)
         self.assertNotIn(name, self.daemon_rows())
         r = self.ctl("start", name)
         self.assertEqual(r.returncode, 0, r.stderr)

@@ -93,7 +93,7 @@ def run_hint(w):
 def stuck_hint(w, sig):
     """這封還沒答、又沒人在跑時，說一句它在 queue 的哪裡、怎麼跑起來。
     11-03 起不看 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）：不再說「停在哪格」、也不再判「沒人認領」（LetterUnclaimed）；
-    錯誤一行在跑它的那個終端機（P-20），外部 coding agent 看 aos-eca-ctl status。"""
+    錯誤一行在跑它的那個終端機（P-20），外部 coding agent 看 aos-eca status。"""
     if "cur" in where(w.stack, sig):
         return "%s 在 queue 的 cur/（認領了、還沒答完），但目前沒有程式在跑這隻 agent（停了的話錯誤一行在跑它的那個終端機）。%s" % (sig, run_hint(w))
     return "%s 還在 queue 的 new/，但目前沒有程式在跑這隻 agent。%s" % (sig, run_hint(w))

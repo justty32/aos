@@ -4,7 +4,7 @@
     aos-listen [--ws WS] [--stack STACK] [--timeout 秒]              等最新那封信的回答，印出來就退 0（正規用法：aos-say 話 && aos-listen）
     aos-listen [--ws WS] [--stack STACK] [--last N] [--follow]       --last N＝印最後 N 段一問一答就走；--follow＝之後每多一則回答就印一段（像 tail -f）
 
-11-03 拿掉 --status、--trace 與 LetterUnclaimed（使用者「trace.jsonl……整個拿掉」「aos-listen --status其實也是沒必要的，要看他的狀態，應該是用aos-eca-ctl status」，
+11-03 拿掉 --status、--trace 與 LetterUnclaimed（使用者「trace.jsonl……整個拿掉」「aos-listen --status其實也是沒必要的，要看他的狀態，應該是用aos-eca status」，
 thinking 2026-11-03-trace）：給 --status／--trace＝FlagUnknown。
 
 只看 stack（CONVENTION P-42；thinking 2026-10-30-agent-lifecycle A-8）：

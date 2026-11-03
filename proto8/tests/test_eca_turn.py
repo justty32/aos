@@ -306,7 +306,7 @@ class Turn(unittest.TestCase):
         subprocess.run(["tmux", "-S", str(self.stack / "claude" / "tty.sock"), "kill-server"], capture_output=True)
 
     def open_screen(self):
-        """先非互動答一則（有 session id、tool.txt、ws.txt），再用 cli_session.open_cell 開畫面（同 aos-eca-ctl open -d）。"""
+        """先非互動答一則（有 session id、tool.txt、ws.txt），再用 cli_session.open_cell 開畫面（同 aos-eca open -d）。"""
         self.say("先講一句")
         self.assertEqual(self.turn().returncode, 0)
         self.addCleanup(self.kill_screen)

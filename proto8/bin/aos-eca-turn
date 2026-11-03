@@ -27,7 +27,7 @@
      進 history，才 aos-post finish 這批每一封（刪掉）、清掉 current.txt。重跑時 current.txt 列著、最後一則已是 assistant
      （死在 ④ 接完、收信之前）＝不再問 CLI，只收那幾封、退 0（new/ 的留給下一輪）。
   ⑤ queue 空（cur/、new/ 都沒信）：照 --on-empty——stop 退 10、idle 退 0（Q-9）。
-  ⑥ 11-03 起不寫 $AOS_STACK/trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）；要看狀態用 aos-eca-ctl status。
+  ⑥ 11-03 起不寫 $AOS_STACK/trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）；要看狀態用 aos-eca status。
   ⑦ 拿到 session id 就在小格建 transcripts/<kind>-<id>.jsonl symlink（cli_session.link_transcript，C-15～17）。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝這次退 0 不動、整批信留在 cur/，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。

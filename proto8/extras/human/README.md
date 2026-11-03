@@ -18,7 +18,7 @@ aos-listen [--ws WS] [--stack STACK] [--last N] [--follow]         最後 N 段�
 aos-chat   [--ws WS] [--stack STACK] [agent 資料夾]                /run /help /quit
 ```
 
-**11-03 拿掉** `aos-listen --status`、`--trace`、`LetterUnclaimed` 與 `aos-chat` 的 `--trace`、`/trace`、`/status`（使用者「trace.jsonl會無限累加...老實說我覺得這個檔案沒啥必要。」「整個拿掉。……aos-listen --status其實也是沒必要的，要看他的狀態，應該是用aos-eca-ctl status。」，[thinking 11-03 trace](../../thinking/2026-11-03-trace.md)）：fsm、aos-eca-turn 不再寫 `trace.jsonl`，靠它的「停在哪格」「沒人認領」都沒了；外部 coding agent 的狀態看 `aos-eca-ctl status`。
+**11-03 拿掉** `aos-listen --status`、`--trace`、`LetterUnclaimed` 與 `aos-chat` 的 `--trace`、`/trace`、`/status`（使用者「trace.jsonl會無限累加...老實說我覺得這個檔案沒啥必要。」「整個拿掉。……aos-listen --status其實也是沒必要的，要看他的狀態，應該是用aos-eca status。」，[thinking 11-03 trace](../../thinking/2026-11-03-trace.md)）：fsm、aos-eca-turn 不再寫 `trace.jsonl`，靠它的「停在哪格」「沒人認領」都沒了；外部 coding agent 的狀態看 `aos-eca status`。
 
 stack＝`--stack` ＞ `$AOS_STACK` ＞ `<工作區>/.stack/`（N-57）；工作區＝`--ws` ＞ `$AOS_WS` ＞ cwd（同 aos-exec）。每支開頭的說明寫了全部規則。
 
@@ -26,12 +26,12 @@ stack＝`--stack` ＞ `$AOS_STACK` ＞ `<工作區>/.stack/`（N-57）；工作�
 
 - **說**：`aos-say 話`＝`aos-post send --ordered <stack>/queue`，一封信的 body＝`{"role": "user", "content": 話}`（N-16 有順序的信箱；queue 還沒有就先建，可以先說、再跑 agent）。印的信號就是 `new/` 裡那封的名字（`<12 位序號>.<信號>`）。
 - **聽**：`aos-say 話 && aos-listen`（11-01 晚使用者定的正規用法，[thinking say-listen「11-01 晚」](../../thinking/2026-10-24-say-listen.md#11-01-晚使用者aos-say---aos-listen-才是正規用法)；不收信號參數）——等**最新那封**＝queue 的 `new/`、`cur/` 裡序號最大的（最後寄出的、或剛被認領的，不管誰寄的）：還在就等；不見了就印 history 最新那則回答（先 say 後 listen 不會漏）。`new/`、`cur/` 都空＝答案已經到了，直接印最新那則回答；history 也沒回答＝`QuestionUnknown`；信不見了卻沒有回答＝`AnswerMissing`；沒人在跑＝提醒一次信在 queue 的哪裡、怎麼跑，繼續等（10-30 晚的 `LetterUnclaimed` 靠 trace，11-03 隨它拿掉）。`--last N` 印最後 N 段就走、`--follow` 接著跟著看（一段＝問的話＋回答；11-01 晚起「跟著看」要明寫 `--follow`）。
-- **看**：11-03 起沒有快照指令（`aos-listen --status` 拿掉）；外部 coding agent 用 `aos-eca-ctl status`，aos agent 直接看 stack 的 `state.json`（aos-loop 的窗，`phase`）、`queue/`、`mailbox_warning.txt`。
+- **看**：11-03 起沒有快照指令（`aos-listen --status` 拿掉）；外部 coding agent 用 `aos-eca status`，aos agent 直接看 stack 的 `state.json`（aos-loop 的窗，`phase`）、`queue/`、`mailbox_warning.txt`。
 - **停**：寫 `<stack>/ctl.json`（aos-loop 的窗，N-07）：`{"paused": true}` 不起下一輪、`{"stopped": true}` 收工。
 
 **舊協議的範本說不到**：agent-bob／ann／eve、topdown 這些 fsm 範本讀工作區的 `new/`、寫 `out/`（P-11 的 10-30 改口標「舊協議」），say／listen 不再認它們（say 之後拿它們跑，listen 會一直等、chat 會提醒「可能是舊協議」）；要用就手放 `<工作區>/new/<題名>`、`aos-exec` 跑、看 `out/`。走 queue、say／listen 說得到的範本是 [agent-nia](../../demo/README.md#agent-nia照-agent-round-的格組起來10-2810-30-改走-queue)（agent-dan 搬到 queue 的 agent-dan-q 11-02 晚隨 agent-dan 刪了）。
 
-**外部 coding agent（claude／codex）一樣說得到**（[thinking 10-30 eca](../../thinking/2026-10-30-eca.md) P-43 草稿、C 結論 9）：它的定義跟 aos agent 同形（`_entry` 是 aos-loop、`loop.json` 叫 [`aos-eca-turn`](../../bin/aos-eca-turn)，10-31 前是 `lib/eca/turn` 格），由 aos-eca-turn 收 queue、把回答寫進 history，所以 say／listen／chat 一行不用改、不分是誰在答。「有沒有人在跑」只看 `/proc`（10-30 刪了 stack 裡 `server.txt` 自己報名那招，eca 衝突 6）：直接 `aos-exec` 跑的，aos-loop 的 `AOS_STACK` 就是這個 stack；掛在 daemon 底下的，子 loop 的 `AOS_STACK` 是 daemon 的小格、工作區的 `.stack` 是指過去的 symlink（`aos-daemon-ctl add --ws`），也認得。aos-eca-turn 答失敗時錯誤一行在 stderr（掛在 daemon 底下的看 `aos-eca-ctl status`），信留在 cur/。
+**外部 coding agent（claude／codex）一樣說得到**（[thinking 10-30 eca](../../thinking/2026-10-30-eca.md) P-43 草稿、C 結論 9）：它的定義跟 aos agent 同形（`_entry` 是 aos-loop、`loop.json` 叫 [`aos-eca-turn`](../../bin/aos-eca-turn)，10-31 前是 `lib/eca/turn` 格），由 aos-eca-turn 收 queue、把回答寫進 history，所以 say／listen／chat 一行不用改、不分是誰在答。「有沒有人在跑」只看 `/proc`（10-30 刪了 stack 裡 `server.txt` 自己報名那招，eca 衝突 6）：直接 `aos-exec` 跑的，aos-loop 的 `AOS_STACK` 就是這個 stack；掛在 daemon 底下的，子 loop 的 `AOS_STACK` 是 daemon 的小格、工作區的 `.stack` 是指過去的 symlink（`aos-daemon-ctl add --ws`），也認得。aos-eca-turn 答失敗時錯誤一行在 stderr（掛在 daemon 底下的看 `aos-eca status`），信留在 cur/。
 
 ## 怎麼用
 

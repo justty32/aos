@@ -327,7 +327,7 @@ echo '{"paused": true}' > ~/code/myproj/.stack/ctl.json     # 暫停：不餵下
 echo '{"stopped": true}' > ~/code/myproj/.stack/ctl.json    # 收工
 ```
 
-`aos-eca-turn` 一次答一批（11-03 起；原本一次一則）：`cur/` 沒答完的加上 `new/` 全部、照順序 → 每封一則 user 接進 history → 各封 content 用一個空行接起來、問 CLI 一次（畫面開著＝貼進 tmux 畫面等 hook；沒開＝`claude -p --resume <id>`，第一次開新的）→ assistant 接進 history → 收信；壞信丟掉、記進 `mailbox_warning.txt`（11-03 前記在 trace）；有人接在畫面上（`SessionBad`）＝這次不動、信留著下次再試（`--on-busy yield`；改 `answer`＝照常答、不退讓）。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就在定義放 `prompt.txt`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。接進畫面與歸檔（aos-eca-ctl）是第 6 步。測試 `test_eca.py`（範本）、`test_eca_turn.py`（aos-eca-turn）。
+`aos-eca-turn` 一次答一批（11-03 起；原本一次一則）：`cur/` 沒答完的加上 `new/` 全部、照順序 → 每封一則 user 接進 history → 各封 content 用一個空行接起來、問 CLI 一次（畫面開著＝貼進 tmux 畫面等 hook；沒開＝`claude -p --resume <id>`，第一次開新的）→ assistant 接進 history → 收信；壞信丟掉、記進 `mailbox_warning.txt`（11-03 前記在 trace）；有人接在畫面上（`SessionBad`）＝這次不動、信留著下次再試（`--on-busy yield`；改 `answer`＝照常答、不退讓）。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就在定義放 `prompt.txt`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。接進畫面與歸檔（aos-eca）是第 6 步。測試 `test_eca.py`（範本）、`test_eca_turn.py`（aos-eca-turn）。
 
 ## 測試
 
