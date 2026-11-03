@@ -12,6 +12,20 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-03 傍晚下班（公司 Windows；回家開新 session 接）
+
+1. **授權**：同 13:30 那條（隨意 push、opus／sonnet／fable 分工、agent 先讀 wf 規矩）；新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問。多個 agent 同一工作樹時，各自用 GIT_INDEX_FILE 暫存 index 只 commit 自己的段，今天沒再出事。
+2. **13:30 之後做完並 push**：WSL 試驗場 `~/code/playground` 重建（clock、bob、cathy、bob-cathy、resident_bob、eca_bob、eca_kit、kit 工具箱、README 一步步實跑）；說明頁 https://claude.ai/artifact/9k9ssEvEQiKDBcUFmrAZJ9 （第 3 版；舊親手試指南沒覆蓋）；收尾四件 `c7475734`；eca 接 aos 工具（`c024c974` 規劃、`7f363fd4` 實作：eca 資料夾的 tools.json，cli.json `tools` 可改指，使用者「如果cli.json沒有指定，那就去找默認的tools.json」）；aos-eca ls／state 英文名詞＋畫面欄 open／closed（`04b0f33d`，eca 19）；eca 信交給 CLI 就收（`a0bbb2ac`，eca 20；使用者「對於eca來說，他收到信後，丟給claude之類的，然後這封信就算是完成了」「中途掛掉就是邊緣狀況，不要讓邊緣狀況影響他的原本意思」；current.txt 拿掉；P-12／P-43 加註）；`aos-tools add --no-cache`（`dcca4a8c`，aos-tools 04）。
+   - **還沒驗**：這三個 commit 合起來的全套 unittest 沒在同一次跑過（各自跑過相關＋大半全套）→ 開工先在 WSL 暫存 clone 跑一次全套。
+3. **正在討論、未定：daemon 收工（ctl stop／Ctrl+C）時子項怎麼辦**。現況：收工時跑著的子項被 drop（從表上消失），只有原本 stopped 的留下；重起只起 daemon.json 寫的。使用者已定「改寫成休息中」（不擦名字），接著要用 **sleep／wake**：「還記得嗎？我們有start/stop, sleep/wake, pause/resume，我們缺了sleep/wake」——我提的版本：收工時跑著的＝`sleeping`、開門自動 wake；你 stop 的＝`stopped` 繼續停。**待他答**：(a) sleep／wake 要不要也開放成 `aos-daemon-ctl sleep／wake` 給人用；(b) 收工時 paused 的，我建議醒來仍暫停（loop 自己記 paused）。讀碼結論（agent 回報）：finish() 對 running 送 SIGTERM、look() 非 soft 就 drop；adopt 接 stopped 進 stopped 集合、reconcile 不起；改法＝finish 留 sleeping 列、adopt 認 sleeping 放進「起來要 wake」集合、reconcile 第一圈用列上 stack 再起、ls／README 加一態；exec 型收工照舊拿掉較順（待定）。尚未寫進 thinking——定案時記進 [procs](../proto8/thinking/2026-11-03-procs.md) 新段。
+4. **雜項**：
+   - WSL `~/repo/simple_tools/aos` 在 `dcca4a8c`，但有一個不知誰改的追蹤檔改動 `proto8/lib/aos/ask_round/_tooldef.json`——問使用者，之後 ff 前先處理。
+   - Windows 工作樹 `proto8/thinking/README.md`、`months/2026-11.md` 兩檔舊未 commit 改動（比 HEAD 舊）等使用者確認丟掉。
+   - 試驗場 `daemons/main` 的 stack 在 `ws/.stack`，eca 在 ws 裡看得到整個 daemon 內部；提議移出工作區，使用者還沒回。
+   - WSL `~/.codex/config.toml` 預設模型 `gpt-6.1-sol` 這帳號不能用（model_not_found），使用者的設定、沒改。
+   - 常駐 bob：使用者「感覺之後會被蛋雕」「先不用管吧」。
+   - 使用者之後要看 aos-post（impls/aos-post）。
+
 ## 2026-11-03 13:30 出門前（公司 Windows；下次開 session 接）
 
 1. **授權**：本 session 隨意 push、普通事 opus、簡單與雜活 sonnet、規劃 fable、做事的 agent（雜活除外）先讀 wf 規矩、可再派 agent。下次開新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問。工人只 `git add <明確的檔>`，不 checkout --／restore／stash／reset／-A（今天有 agent 用 checkout -- 抹掉別人未 commit 的改動）。
