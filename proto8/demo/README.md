@@ -187,7 +187,7 @@ stack 樹：`.stack/state.json`（daemon 自己的 state）、`.stack/procs_stat
 
 ## daemon-2（信箱模式的 daemon）
 
-一頁說明在 [daemon-2/README.md](daemon-2/README.md)（怎麼起、人怎麼寄、怎麼看、怎麼停）；程式見 [aos-daemon § 信箱](../impls/aos-daemon/README.md)、[aos-post](../impls/aos-post/README.md)。兩個寄信人：agent 格 `agent-sam/`（daemon 照 `procs` 起它、跑一次：`aos-post send` 一封加子項 `tick` 的信，不接腦）與人（命令列手寫 `aos-post send`）。`run.sh` 這段：先 `aos-post init` 一個收回信的 `inbox/`、`aos-exec daemon-2 --max 25` 放背景（約 5 秒），信箱建好就寄一封加 `tock`（`--reply-to inbox`），等 daemon 收工；印回信（`body: {"applied": true}`、`in_reply_to`＝那封的信號）與 stack 樹：`.stack/procs_state.json` 的 `procs` 收工後是空的、多一欄 `mailbox_warning: null`（開了信箱才有）；`.stack/procs/tick/tick.txt`、`.stack/procs/tock/tock.txt` 是各自走到的數；`.stack/procs_ctl_mailbox/` 的三格是空的（信收完就刪）。自動測：`impls/aos-daemon/tests/test_demo.py`（`run_daemon2`）。
+一頁說明在 [daemon-2/README.md](daemon-2/README.md)（怎麼起、人怎麼寄、怎麼看、怎麼停）；程式見 [aos-daemon § 信箱](../impls/aos-daemon/README.md)、[aos-post](../impls/aos-post/README.md)。兩個寄信人：agent 格 `agent-sam/`（daemon 照 `procs` 起它、跑一次：`aos-post send` 一封加子項 `tick` 的信，不接腦）與人（命令列手寫 `aos-post send`）。`run.sh` 這段：先 `aos-post init` 一個收回信的 `inbox/`、`aos-exec daemon-2 --max 25` 放背景（約 5 秒），信箱建好就寄一封加 `tock`（`--reply-to inbox`），等 daemon 收工；印回信（`body: {"applied": true}`、`in_reply_to`＝那封的信件名稱）與 stack 樹：`.stack/procs_state.json` 的 `procs` 收工後是空的、多一欄 `mailbox_warning: null`（開了信箱才有）；`.stack/procs/tick/tick.txt`、`.stack/procs/tock/tock.txt` 是各自走到的數；`.stack/procs_ctl_mailbox/` 的三格是空的（信收完就刪）。自動測：`impls/aos-daemon/tests/test_demo.py`（`run_daemon2`）。
 
 ## daemon-3（一次性的東西掛 daemon 的兩種寫法）
 

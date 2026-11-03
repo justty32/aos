@@ -85,7 +85,7 @@ class KernelCase(unittest.TestCase):
         self.assertTrue((self.mb / ".flock").is_file())      # 10-29：kernel 的 flock 檔改名（.lock/ 留給 N-15 資料夾鎖）
         self.assertFalse((self.mb / ".lock").exists())
 
-    def test_cell_timeout_withdraws(self):
+    def test_cell_timeout_regrets(self):
         """包閘門的那格逾時（這裡沒有 kernel，信一直排著）：閘門被 SIGTERM、撤信、那格非 0。"""
         (self.t / "q.json").write_text(json.dumps({"argv": ["true"]}))
         (self.t / "cell.json").write_text(json.dumps({"exec": {"argv": ["aos-llm-send", "q.json"], "timeout_ms": 400},

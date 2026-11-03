@@ -31,14 +31,14 @@ aos-exec $R/demo/daemon-2 &          # 一直跑；stack 在 $ws/.stack/
 ```sh
 aos-post init $ws/inbox               # 想收回信就先開一個自己的小信箱
 echo '{"procs_added": {"tock": {"exec": {"argv": ["aos-tick", {"$env": "AOS_STACK", "$path": "tock.txt"}]}, "interval_ms": 500}}}' \
-  | aos-post send --reply-to $ws/inbox $ws/.stack/procs_ctl_mailbox  # 印信號
-cat $ws/inbox/new/*/letter.json       # daemon 套用完回的：body {"applied": true}、in_reply_to＝上面的信號
+  | aos-post send --reply-to $ws/inbox $ws/.stack/procs_ctl_mailbox  # 印信件名稱
+cat $ws/inbox/new/*/letter.json       # daemon 套用完回的：body {"applied": true}、in_reply_to＝上面的信件名稱
 echo '{"procs_removed": ["tick"]}' | aos-post send $ws/.stack/procs_ctl_mailbox   # 刪 tick（沒寫 --reply-to＝不回）
 echo '{"procs_stopped": ["tock"]}' | aos-post send $ws/.stack/procs_ctl_mailbox   # 停 tock：它跑完這次退了、列留成 stopped；procs_started＝再起
 ```
 
 - 信的 `body` 只認 `procs_added`（寫法同 daemon.json 的 `procs`）、`procs_removed`、`procs_stopped`、`procs_started`（名字的陣列）；相對路徑從 daemon 的 cwd（`demo/daemon-2/`）算。
-- 同一圈好幾封：照名字（信號是時間開頭）順序套，後面的蓋前面的。
+- 同一圈好幾封：照處理順序套（aos-post 的 sort_letters：有序在前照序號、無序在後照名字；預設名時間開頭＝寄出先後），後面的蓋前面的。
 - 壞信（body 不是物件、型別錯、名字不合格、exec 型被 stop／start…）丟掉、不回信，原因在 `procs_state.json` 的 `mailbox_warning`。
 - 子項自己結束了＝從名單拿掉、不重起；同名再寄一封 `procs_added`＝重新起。daemon 停掉的（`procs_stopped`）留在表上、`phase` 是 `stopped`，只有 `procs_started` 叫得起來。
 

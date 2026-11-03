@@ -56,7 +56,7 @@
 
 | 檔 | 涵蓋 |
 |---|---|
-| `test_human.py` | `aos-say`、`aos-listen`（對臨時組的 eca 定義＋假 claude） |
+| `test_human.py` | `aos-say`、`aos-listen`（對臨時組的 eca 定義＋假 claude）；`aos_ws.letter_key`／「最新那封」照處理順序 |
 | `test_aos_mcp.py` | `aos-mcp`：測試自己當 MCP client |
 | `test_grow.py` | `aos-grow`：長上去再縮回、行為不變 |
 | `test_janet.py` | Janet 編成 aos |
@@ -67,6 +67,6 @@
 
 | 檔 | 涵蓋 |
 |---|---|
-| `test_eca_turn.py` | `bin/aos-eca-turn`：`--one`、`--on-empty`、`--on-busy` |
+| `test_eca_turn.py` | `bin/aos-eca-turn`：`--one`、`--on-empty`、`--on-busy`；批次順序（無序排最後、照樣答） |
 | `test_eca.py` | 範本 `demo/eca-claude`、`eca-codex`：say → 跑 → listen、停著等 |
 | `test_eca_cmd.py` | `extras/eca` 的 `aos-eca`：open／close、start／stop、add／rm、ls／state |

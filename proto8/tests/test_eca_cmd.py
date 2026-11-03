@@ -128,7 +128,7 @@ class EcaCtl(unittest.TestCase):
         return r.stdout.strip()
 
     def listen(self, w):
-        r = self.run_([HUMAN / "aos-listen", "--stack", self.where(w), "--timeout", "20"], cwd=w)   # 不帶信號＝等最新那封（11-01 晚翻案）
+        r = self.run_([HUMAN / "aos-listen", "--stack", self.where(w), "--timeout", "20"], cwd=w)   # 不帶信件名稱＝等最新那封（11-01 晚翻案）
         self.assertEqual(r.returncode, 0, r.stderr)
         return r.stdout
 

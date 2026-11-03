@@ -69,7 +69,7 @@ find .stack -type f | sort
 aos-exec $R/demo/daemon-3 --max 50 &       # 約 10 秒
 export AOS_DAEMON_STACK=$ws/.stack
 until [ -d $AOS_DAEMON_STACK/procs_ctl_mailbox/new ]; do sleep 0.1; done
-aos-daemon-ctl add $R/demo/tick                               # tick 有 loop.json＝loop 型、名字 tick；印信號
+aos-daemon-ctl add $R/demo/tick                               # tick 有 loop.json＝loop 型、名字 tick；印信件名稱
 aos-daemon-ctl add --name tick2 $R/demo/tick                  # 同一個再掛一隻、換名字
 sleep 1; aos-daemon-ctl ls
 aos-daemon-ctl rm tick2; sleep 1; aos-daemon-ctl ls
