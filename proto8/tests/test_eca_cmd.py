@@ -1,8 +1,8 @@
 """test_eca_cmd - proto8/extras/eca（10-30 eca 第 6 步，取代 10-28 的 test_hub）：aos-eca 把外部 coding agent 掛到
-信箱模式的 aos-daemon 底下（aos-daemon-ctl add --ws），三對指令 open／close、start／stop、add／remove（使用者 11-02 晚）與 ls／state，
+信箱模式的 aos-daemon 底下（aos-daemon-ctl add --ws），三對指令 open／close、start／stop、add／rm（使用者 11-02 晚；11-03 remove 改 rm）與 ls／state，
 以及 aos-say／aos-listen 經工作區的 .stack 捷徑對它說話。
 
-定義在測試裡臨時組（cli.json＋loop.json 叫 bin/aos-eca-turn --on-empty idle＋_entry 轉 aos-loop），用 --template 指；CLI 用 test_fay 的假 claude
+eca 資料夾在測試裡臨時組（cli.json＋loop.json 叫 bin/aos-eca-turn --on-empty idle＋_entry 轉 aos-loop），add 的 XXX 就給它（11-03：沒有 --kind／--template）；CLI 用 test_fay 的假 claude
 （外面包一層：有 BROKEN 這個檔就退 1，測「出錯停了」），不花額度。要 tmux 的只有 open -d 那案（沒有就 skip）。
 設計：proto8/thinking/2026-10-30-eca.md C 結論 7～10。"""
 import json, os, shutil, subprocess, tempfile, time, unittest
@@ -103,10 +103,11 @@ class EcaCtl(unittest.TestCase):
         self.socks.append(self.ds / "loops" / name / "claude" / "tty.sock")
         return w
 
-    def add(self, w, *more):
-        r = self.ctl("add", "--template", self.tpl, *more, w)
+    def add(self, w, name=None):
+        """aos-eca add --name 名字 --ws w eca 資料夾（名字沒給＝工作區名，測試裡好認）。"""
+        name = name or w.name
+        r = self.ctl("add", "--name", name, "--ws", w, self.tpl)
         self.assertEqual(r.returncode, 0, r.stderr)
-        name = more[more.index("--name") + 1] if "--name" in more else w.name
         self.assertTrue(self.until(lambda: any(x["name"] == name for x in self.ls())), self.daemon_rows())
         return name
 
@@ -139,21 +140,21 @@ class EcaCtl(unittest.TestCase):
         self.assertEqual(self.code(self.ctl("ls")), (1, "DaemonMissing"))
         (self.ds / "loops_state.json").write_text(json.dumps({"loops": {}, "pid": 999999999,
                                                               "started_at_ticks": 1}))
-        r = self.ctl("add", "--template", self.tpl, self.ws())
+        r = self.ctl("add", "--ws", self.ws(), self.tpl)
         self.assertEqual(self.code(r), (1, "DaemonMissing"))
         self.assertTrue(r.stderr.startswith("aos-eca: DaemonMissing "), r.stderr)
         self.assertEqual(self.code(self.ctl("frob")), (1, "CommandUnknown"))
 
     def test_add_ls_state_say_listen(self):
-        """add 後 daemon 表上有它、也有 eca_reap（只掛一次）、工作區多一個 .stack 捷徑指到小格；ls 列得到、state 認得（資料夾或名字）；
-        cd 到工作區 say／listen 經 daemon 底下的實例答得出（假 claude，第二句 --resume 同一段）；定義不對＝TemplateUnknown。"""
+        """add 後 daemon 表上有它（11-03 起不再順手掛 eca_reap）、工作區多一個 .stack 捷徑指到小格；ls 列得到、state 認得（資料夾或名字）；
+        cd 到工作區 say／listen 經 daemon 底下的實例答得出（假 claude，第二句 --resume 同一段）；
+        XXX 沒有 cli.json＝EcaBad、不在＝PathMissing、沒給＝ArgumentsBad、--ws 不在＝PathMissing、舊旗標 --template／--kind＝FlagUnknown。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
         self.assertIn(name, self.daemon_rows())
-        self.assertTrue(self.until(lambda: "eca_reap" in self.daemon_rows()), self.daemon_rows())   # 11-02 晚：add 順手掛上自動收畫面
         self.add(self.ws("second"))
-        self.assertEqual(sorted(self.daemon_rows()), ["eca_reap", name, "second"])                 # 已掛著就不再掛
+        self.assertEqual(sorted(self.daemon_rows()), [name, "second"])
         self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
         it = next(x for x in self.ls() if x["name"] == name)
         self.assertEqual((it["name"], it["kind"], it["ws"], it["state"], it["phase"]), (name, "claude", str(w), "收起了", "running"))
@@ -170,7 +171,14 @@ class EcaCtl(unittest.TestCase):
         self.assertTrue(self.say_listen(w, "再一句").startswith("fake claude[%s]" % sid[:8]))
         r = self.ctl("ls")
         self.assertIn("對話 %s" % sid[:8], r.stdout)
-        self.assertEqual(self.code(self.ctl("add", "--template", self.tmp, self.ws("other"))), (1, "TemplateUnknown"))
+        other = self.ws("other")
+        self.assertEqual(self.code(self.ctl("add", "--ws", other, self.tmp)), (1, "EcaBad"))
+        self.assertEqual(self.code(self.ctl("add", "--ws", other, self.tmp / "nope")), (1, "PathMissing"))
+        self.assertEqual(self.code(self.ctl("add", cwd=other)), (1, "ArgumentsBad"))
+        self.assertEqual(self.code(self.ctl("add", "--ws", self.tmp / "nope", self.tpl)), (1, "PathMissing"))
+        for old in ("--template", "--kind"):
+            self.assertEqual(self.code(self.ctl("add", old, "claude", self.tpl, cwd=other)), (1, "FlagUnknown"))
+        self.assertNotIn("other", self.daemon_rows())
 
     def test_close_stop_start(self):
         """close（畫面沒開）＝本來就沒畫面、再 say 照答；stop＝daemon 表上沒它、小格與 .stack 捷徑原樣留、ls「停了」，
@@ -205,52 +213,68 @@ class EcaCtl(unittest.TestCase):
         self.assertEqual(self.ctl("start", name).stdout.strip(), "本來就掛著（收起了）")
         self.assertFalse((self.ds / "eca_archive").exists())
 
-    def test_remove(self):
-        """remove＝從 daemon 拿掉、.stack 捷徑拆掉、小格刪掉（不封存）；之後 ls 空、state＝InstanceMissing；
-        停了的也 remove 得掉；remove 後再 add 同一資料夾＝從頭來（新的小格、捷徑又建得起來）。"""
+    def test_rm(self):
+        """rm＝從 daemon 拿掉、.stack 捷徑拆掉、小格刪掉（不封存）；之後 ls 空、state＝InstanceMissing；
+        停了的也 rm 得掉；rm 後再 add 同一資料夾＝從頭來（新的小格、捷徑又建得起來）。舊名 remove＝CommandUnknown（11-03 不留別名）。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
         self.say_listen(w, "第一句")
-        r = self.ctl("remove", name)
+        self.assertEqual(self.code(self.ctl("remove", name)), (1, "CommandUnknown"))
+        r = self.ctl("rm", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertNotIn(name, self.daemon_rows())
         self.assertFalse((self.ds / "loops" / name).exists())
         self.assertFalse(os.path.lexists(w / ".stack"))
         self.assertFalse((self.ds / "eca_archive").exists())
         self.assertEqual(self.ls(), [])
-        self.assertIn("eca_reap", self.daemon_rows())                # 最後一隻 remove 了 eca_reap 照樣留（代定）
+        self.assertEqual(self.daemon_rows(), {})
         self.assertEqual(self.code(self.ctl("state", cwd=w)), (1, "InstanceMissing"))
-        self.assertEqual(self.code(self.ctl("remove", cwd=w)), (1, "InstanceMissing"))
+        self.assertEqual(self.code(self.ctl("rm", cwd=w)), (1, "InstanceMissing"))
         name = self.add(w)
         self.assertEqual(os.readlink(w / ".stack"), str(self.ds / "loops" / name))
         self.assertEqual(len((self.ds / "loops" / name / "history.jsonl").read_text().splitlines()), 0) \
             if (self.ds / "loops" / name / "history.jsonl").exists() else None
         self.say_listen(w, "第二輪")
         self.assertEqual(self.ctl("stop", cwd=w).returncode, 0)
-        r = self.ctl("remove", cwd=w)
+        r = self.ctl("rm", cwd=w)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse((self.ds / "loops" / name).exists())
         self.assertFalse(os.path.lexists(w / ".stack"))
 
-    def test_add_again(self):
-        """停了的同名再 add＝daemon 用回小格（前文、queue 照舊）、stderr 一句「小格還在…要從頭來先 remove」、捷徑已指著小格不警告。
-        工作區已有真的 .stack/（例如直接 aos-exec 跑過）＝add 照樣成功、stderr 一句「工作區已有 .stack…請先搬開」、不建捷徑。"""
+    def test_add_name_taken(self):
+        """11-03 撞名＝InstanceExists、退 1、不送信（使用者「撞名的話就報錯，也就是add的時候就會檢查了」）：掛著的同名、
+        停了的同名（小格還在；訊息指 start）、daemon 表上別的子項同名都算；換 --name 就掛得上。名字沒給＝eca 資料夾名。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
+        r = self.ctl("add", "--name", name, "--ws", w, self.tpl)
+        self.assertEqual(self.code(r), (1, "InstanceExists"))
+        self.assertIn("--name", r.stderr)
         self.say_listen(w, "第一輪")
         sid = (self.ds / "loops" / name / "claude" / "session.txt").read_text().strip()
         self.assertEqual(self.ctl("stop", name).returncode, 0)
-        r = self.ctl("add", "--template", self.tpl, w)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("小格還在（停了）", r.stderr)
-        self.assertNotIn("工作區已有 .stack", r.stderr)
-        self.assertTrue(self.until(lambda: [x["state"] for x in self.ls()] == ["收起了"]), self.ls())
+        r = self.ctl("add", "--name", name, "--ws", w, self.tpl)
+        self.assertEqual(self.code(r), (1, "InstanceExists"))
+        self.assertIn("aos-eca start %s" % name, r.stderr)
+        self.assertEqual([x["state"] for x in self.ls()], ["停了"])
+        self.assertEqual(self.ctl("start", name).returncode, 0)
         self.assertTrue(self.say_listen(w, "第二輪").startswith("fake claude[%s]" % sid[:8]))
+        r = self.run_([ROOT / "bin" / "aos-daemon-ctl", "add", "--name", "nap", "/bin/sleep", "--", "30"])
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.until(lambda: "nap" in self.run_([ROOT / "bin" / "aos-daemon-ctl", "ls"]).stdout))
+        self.assertEqual(self.code(self.ctl("add", "--name", "nap", "--ws", w, self.tpl)), (1, "InstanceExists"))
+        d = self.ws("third")                                        # 預設名字＝eca 資料夾名（self.tpl 叫 eca-claude），不是工作區名
+        r = self.ctl("add", "--ws", d, self.tpl)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("eca-claude", self.daemon_rows())
+
+    def test_add_direct_stack(self):
+        """工作區已有真的 .stack/（例如直接 aos-exec 跑過）＝add 照樣成功、stderr 一句「工作區已有 .stack…請先搬開」、不建捷徑。"""
+        self.start_daemon()
         d = self.ws("direct")
         (d / ".stack").mkdir()
-        r = self.ctl("add", "--template", self.tpl, d)
+        r = self.ctl("add", "--name", "direct", "--ws", d, self.tpl)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("工作區已有 .stack", r.stderr)
         self.assertIn("請先搬開", r.stderr)
@@ -285,8 +309,8 @@ class EcaCtl(unittest.TestCase):
         self.assertTrue(self.until(lambda: [x["state"] for x in self.ls()] == ["收工了"]), (self.ls(), self.daemon_rows()))
         self.assertNotIn(name, self.daemon_rows())
 
-    def test_finished_listed_and_remove(self):
-        """11-02 晚：ctl.json stopped 收工的（下了表、退 0）ls／state 照列「收工了」；stop＝本來就沒掛；remove 拆 .stack 捷徑、刪小格。"""
+    def test_finished_listed_and_rm(self):
+        """11-02 晚：ctl.json stopped 收工的（下了表、退 0）ls／state 照列「收工了」；stop＝本來就沒掛；rm 拆 .stack 捷徑、刪小格。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
@@ -295,22 +319,22 @@ class EcaCtl(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("收工了", r.stdout)
         self.assertEqual(self.ctl("stop", name).stdout.strip(), "本來就沒掛在 daemon 上（收工了）")
-        r = self.ctl("remove", name)
+        r = self.ctl("rm", name)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertFalse(os.path.lexists(w / ".stack"))
         self.assertFalse((self.ds / "loops" / name).exists())
         self.assertEqual(self.ls(), [])
 
-    def test_finished_add_again_clears_stopped(self):
-        """收工了的再 add 同一資料夾：殘留的 stopped 拿掉（其他 key 照留）、.stack 已指著這個小格＝不警告，子 loop 重新收、答得出。"""
+    def test_finished_add_again_start_clears_stopped(self):
+        """收工了的再 add 同名＝InstanceExists（11-03 撞名報錯）；start 掛回：殘留的 stopped 拿掉（其他 key 照留），子 loop 重新收、答得出。"""
         self.start_daemon()
         w = self.ws()
         name = self.add(w)
         self.stopped_by_ctl(w, name, {"stopped": True, "paused": False})
-        r = self.ctl("add", "--template", self.tpl, w)
+        r = self.ctl("add", "--name", name, "--ws", w, self.tpl)
+        self.assertEqual(self.code(r), (1, "InstanceExists"))
+        r = self.ctl("start", name)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("小格還在（收工了）", r.stderr)
-        self.assertNotIn("工作區已有 .stack", r.stderr)
         self.assertEqual(json.loads((self.ds / "loops" / name / "ctl.json").read_text()), {"paused": False})
         self.assertTrue(self.until(lambda: [x["state"] for x in self.ls()] == ["收起了"]), self.ls())
         self.assertIn("第二輪", self.say_listen(w, "第二輪"))
@@ -328,26 +352,28 @@ class EcaCtl(unittest.TestCase):
         self.assertIn("再來", self.say_listen(w, "再來"))
         self.assertEqual(self.ls()[0]["state"], "收起了")
 
-    def test_default_template(self):
-        """不給 --template＝proto8/demo/eca-claude（方向題 3）：掛 daemon 時 aos-daemon-ctl 把 {"$env": "AOS_CD"} 換成定義路徑，
-        aos-eca-turn 拿得到 cli.json；say／listen 答得出、ls 的 template 是 demo/eca-claude。"""
+    def test_add_demo(self):
+        """add 給 proto8/demo/eca-claude（11-03 起沒有預設，要明給 XXX）：掛 daemon 時 aos-daemon-ctl 把 {"$env": "AOS_CD"} 換成 eca 資料夾路徑，
+        aos-eca-turn 拿得到 cli.json；say／listen 答得出、ls 的 template 是 demo/eca-claude、名字＝eca-claude。"""
         self.start_daemon()
         w = self.ws()
-        r = self.ctl("add", w)
+        r = self.ctl("add", ROOT / "demo" / "eca-claude", cwd=w)
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertTrue(self.until(lambda: self.ls()), (self.ds / "loops" / "proj" / "stderr.txt").read_text()
-                        if (self.ds / "loops" / "proj" / "stderr.txt").exists() else self.daemon_rows())
-        self.assertEqual(self.ls()[0]["template"], str(ROOT / "demo" / "eca-claude"))
+        self.assertTrue(self.until(lambda: self.ls()), self.daemon_rows())
+        self.assertEqual((self.ls()[0]["name"], self.ls()[0]["template"], self.ls()[0]["ws"]),
+                         ("eca-claude", str(ROOT / "demo" / "eca-claude"), str(w)))
         a = self.say_listen(w, "預設範本")
         self.assertTrue(a.rstrip().endswith(": 預設範本"), a)
 
     @unittest.skipUnless(HAS_TMUX, "沒有 tmux")
     def test_open_close(self):
-        """open -d：還沒掛就先 add、開畫面（tty.sock、ls 畫面開著、Ctrl-] 只跳出）；畫面開著時 say＝打進畫面；
-        close 後 tty.sock 那個 tmux 不在、再 say 照答（--resume）；close --idle 60 不收還沒閒的。"""
+        """open -d XXX：認不出、是 eca 資料夾＝先 add（--name、--ws 照 add）、開畫面（tty.sock、ls 畫面開著、Ctrl-] 只跳出）；畫面開著時 say＝打進畫面；
+        已有的再 open（名字）＝本來就開著，帶 --name＝ArgumentsBad；不是名字、工作區、eca 資料夾＝InstanceMissing；
+        close 後 tty.sock 那個 tmux 不在、再 say 照答（--resume）；close --idle 拿掉了（11-03）＝FlagUnknown。"""
         self.start_daemon()
         w = self.ws()
-        r = self.ctl("open", "-d", "--template", self.tpl, cwd=w)
+        self.assertEqual(self.code(self.ctl("open", "-d", cwd=w)), (1, "InstanceMissing"))
+        r = self.ctl("open", "-d", "--name", "proj", self.tpl, cwd=w)
         self.assertEqual(r.returncode, 0, r.stderr)
         cell = self.ds / "loops" / "proj" / "claude"
         self.assertTrue((cell / "tty.sock").exists())
@@ -355,9 +381,11 @@ class EcaCtl(unittest.TestCase):
         keys = subprocess.run(["tmux", "-S", str(cell / "tty.sock"), "list-keys", "-T", "root"],
                               capture_output=True, text=True).stdout
         self.assertIn("C-]", keys)
+        r = self.ctl("open", "-d", "proj")
+        self.assertEqual((r.returncode, r.stdout.split("：")[0]), (0, "畫面本來就開著"), r.stderr)
+        self.assertEqual(self.code(self.ctl("open", "-d", "--name", "x", "proj")), (1, "ArgumentsBad"))
         self.assertEqual(self.say_listen(w, "畫面上的一句"), "fake live: 畫面上的一句\n")
-        r = self.ctl("close", "--idle", "60")
-        self.assertEqual((r.returncode, r.stdout, self.ls()[0]["state"]), (0, "", "畫面開著"), r.stderr)
+        self.assertEqual(self.code(self.ctl("close", "--idle", "60")), (1, "FlagUnknown"))
         r = self.ctl("close", cwd=w)
         self.assertEqual((r.returncode, r.stdout.strip()), (0, "收起了"), r.stderr)
         alive = subprocess.run(["tmux", "-S", str(cell / "tty.sock"), "has-session"], capture_output=True).returncode == 0
