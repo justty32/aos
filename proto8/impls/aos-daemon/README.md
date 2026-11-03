@@ -180,12 +180,12 @@ echo '{"procs_removed": ["bob"]}' | aos-post send --reply-to 我的信箱 "$AOS_
 - **起來時**：`aos::post::init` 建好 `tmp/`、`new/`、`cur/`（已在就沿用；`$AOS_STACK` 不在＝`MkdirFailed`、不替人建）。
 - **底**＝daemon.json 的 `procs`＋重起時 adopt 接回、不在 daemon.json 裡的（只留名、設定記 null，不會被重起；`stopped` 的列 start 時照小格裡的 `loop.json` 起）＋依序套用的每封信；
   **接回的留在名單上，直到有信把它 `procs_removed`、或它結束**。自己結束（`done`）的從底一併拿掉；之後再有信同名 `procs_added`＝重新起。
-- **每圈**（`stop`／`pause` 那圈不認領，信留在 `new/`，解除暫停那圈才套）：`new/` 全部認領（照名字排序）→ 逐封驗、好的依序套進底（後面的蓋前面的）→ **全部套完、疊上 procs_ctl 才對一次表** →
-  有 `reply_to` 的好信回一封 `body: {"applied": true}`（`in_reply_to`＝原信號）→ 信收掉（不留 `done/`）。起來時 `cur/` 不空（上次認領了、沒收完就死）＝排在 `new/` 的前面重做。
+- **每圈**（`stop`／`pause` 那圈不認領，信留在 `new/`，解除暫停那圈才套）：`new/` 全部認領（`aos-post take-all`，照處理順序：有序在前、照名字）→ 逐封驗、好的依序套進底（後面的蓋前面的）→ **全部套完、疊上 procs_ctl 才對一次表** →
+  有 `reply_to` 的好信回一封 `body: {"applied": true}`（`in_reply_to`＝原信的信件名稱）→ 信收掉（`aos-post done`，不留 `archive/`）。起來時 `cur/` 不空（上次認領了、沒收完就死）＝照處理順序排在 `new/` 的前面重做。
 - **信的 `body`**：物件，只認 `procs_added`（寫法同 `procs`）、`procs_removed`、`procs_stopped`、`procs_started`（名字的陣列），其他 key 忽略（舊名 `loops_added`、`execs_added`…也是）；
   一封裡的套法：`procs_added`→`procs_removed`（名單與 stopped 集合都拿掉）→`procs_stopped` 加進集合→`procs_started` 從集合拿掉。沒有整份的 `procs`（整份宣告留給 procs_ctl）。相對的 `exec`、`ws`、`stack`、`$ref` 都從 daemon 的 cwd 算。
-- **壞信**＝信封壞（`aos::post::check`）、`body` 不是物件、型別錯、`procs_added` 的項不合格、指示詞解不開、`procs_stopped`／`procs_started` 有 exec 型（套完的底上看）：
-  **丟掉、不套、不回信**，原因寫進 `procs_state.json` 的 `mailbox_warning`（`"信 <信號> 不採用：原因"`，最後一封壞信的；之後的圈沒有壞信就維持原值）；不影響同一圈的好信。
+- **壞信**＝信封壞（`aos::post::see`）、`body` 不是物件、型別錯、`procs_added` 的項不合格、指示詞解不開、`procs_stopped`／`procs_started` 有 exec 型（套完的底上看）：
+  **丟掉、不套、不回信**，原因寫進 `procs_state.json` 的 `mailbox_warning`（`"信 <信件名稱> 不採用：原因"`，最後一封壞信的；之後的圈沒有壞信就維持原值）；不影響同一圈的好信。
 - 回信寄不出去、收信失敗都不管，照樣往下走。要知道「加進去了沒」的標準做法是讀 `procs_state.json`。誰能寄：純靠 Linux 檔案權限（N-54 末）。
 
 ### 子項的工作區 ws
@@ -246,7 +246,7 @@ daemon 起子項（loop 型、exec 型都算）時，子行程的環境多設 **
 | `src/child/child.hpp`、`child.cpp` | 一個 proc：`Child`（`pid`、`phase`、`once`、`held`〔stopped／sleeping 的列〕、`soft`〔daemon 下的 stop〕、`nap`〔收工時收的 loop 型〕、`termed`、`stack`、`ws`…）；`spawn`（loop 型：小格、`loop.json`〔補 ctl／state、蓋 `_entry`、相對 exec 轉絕對、單子補 `cwd`、拿掉 `ws`／`stack`〕；設定 null＝照現有的 `loop.json`）、`spawn_exec`（exec 型：不寫 loop.json、單子寫 `exec.json`）、`make_cell`（預設小格兩層、自己的 stack `mkdir -p`）、`launch`／`run_child`（stderr.txt、fork、setsid、`/dev/null`、`AOS_STACK`、`AOS_DAEMON_STACK`、`AOS_WS`、cd、aos-exec 的 `run_cli`）、`alive`、`row`（多 `stack`；stopped 的 pid null） |
 | `src/daemon/daemon.hpp`、`daemon.cpp` | `read_procs`（名單：名字規則、指示詞〔本身、每項各從它來自的檔算；單子只換一層、`abs_refs`〕、`fix_path` 處理 `ws`／`stack`、exec 型物件驗 `exec`）、`is_once`（看寫法）、`merge_want`；`Daemon`（`aos::loop::Loop` 的子類別）：建構子（`procs`、`procs_ctl`／`procs_state`／信箱的路徑、`dstack_`）、`adopt`（running 對得上才接、stopped 的列接成 stopped 並進 `stopped_`、sleeping 的列接成 sleeping 不進）、`tend`（ctl stop／pause 不調表）、`ctl_want`／`ctl_stopped`、`reconcile`、`look`、`term`／`settle`（收不等、10 秒 SIGKILL，連 `leaders_below`）、`halt`（寫子 loop 的 ctl `{"cmd": "stop", "seq": N}`）、`hold`、`start`／`cell_of`、`finish`、`add`／`drop`／`log_child`／`flush_table` |
 | `src/daemon/windows.cpp` | 管轄那一對窗：`read_procs_ctl`（每圈讀 procs_ctl.json，同 read_ctl 的不採用規則）、`check_lists`（`procs`／`procs_added`／三個名字陣列）、`check_once`（exec 型沒有 stop／start）、`write_more`（procs_state.json：一張 `procs` 表；有變才寫）、`write_parts`（切檔）、`clean_parts` |
-| `src/daemon/mailbox.cpp` | 信箱：`open_mailbox`（建四格、底多接回的、記下 `cur/` 的殘骸）、`take_letters`（認領、`check` 驗信封、逐封套進底、壞信記 `mailbox_warning`）、`apply_letter`（驗 body：`check_lists`、`check_once`；先在副本上套 `want_`／`stopped_`）、`done_letters`（回 `applied`、收信）；連 aos-post 的庫 |
+| `src/daemon/mailbox.cpp` | 信箱：`open_mailbox`（建 `tmp/`、`new/`、`cur/`，底多接回的、記下 `cur/` 的殘骸並照 `sort_letters` 排）、`take_letters`（`take_all` 認領、`see` 驗信封、逐封套進底、壞信記 `mailbox_warning`）、`apply_letter`（驗 body：`check_lists`、`check_once`；先在副本上套 `want_`／`stopped_`）、`done_letters`（回 `applied`、`done` 收信）；連 aos-post 的庫 |
 | `src/main.cpp` | 命令列：`block_signals` → `loop_cli` → `Daemon` → `serve`；出錯印「aos-daemon: 代號 原因」 |
 
 ## 實作注意
@@ -264,13 +264,13 @@ daemon 起子項（loop 型、exec 型都算）時，子行程的環境多設 **
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-- `test_cli`（`tests/test_cli.py`，83 案、unittest，約 2 分鐘；`run_d`／`start` 一律帶 `--enable-logs`；結束的 phase／code 看 daemon 的 log：`ended`、`upped`、`logs`）：
+- `test_cli`（`tests/test_cli.py`，84 案、unittest，約 2 分鐘；`run_d`／`start` 一律帶 `--enable-logs`；結束的 phase／code 看 daemon 的 log：`ended`、`upped`、`logs`）：
   基本案（loop.json 直接丟給 daemon、要 AOS_STACK、名單壞、小格與窗、不自動重起、子項 stderr 在小格、ctl 增減、SIGTERM 收子項 143、旗標蓋過設定、exec 陣列與設定檔規則、子 loop 經 aos-exec 起、
   **字串子項＝exec 型跑一次**、收工時剛死的子項標 done、adopt、`adopt: false`）、錯誤代號、子 loop 的 state 是自己的 pid、daemon 重開照名單起、子項跟窗同名照起；
   效能 4 案（不肯退的子 loop 不卡住 daemon、睡著時兩扇窗不動、起子項之前先有 procs_state、`$AOS_STACK` 不在不建）；G 段（`procs` 用 `$ref` 陣列拆檔、寫壞、procs_ctl 的 `procs_added`／`procs_removed`、相對 `$ref`、切檔、切了檔照樣 adopt、縮回物件）；
   exec 直接放單子與還原、訊號、`abs_refs` 邊界、不理 SIGTERM 的單子隨子 loop 一起被 SIGKILL；
   H 段（**舊 key 不認**〔daemon.json 的 `loops`／`execs`／`loops_*`、ctl.json 與 procs_ctl 的 `loops_added`、信的 `loops_added`／`execs_added`：不起、不提醒〕、兩份 ctl 同一圈、ctl 壞 procs_ctl 好、`pause` 時 procs_ctl 的變動不生效、窗 `null` 與型別壞、跟窗同名照起）；
-  I 段（信箱：同一圈照名字順序、`pause` 時信留著、接回的留到 `procs_removed`、壞信、`reply_to`、設定規則〔舊名 `loops_ctl_mailbox` 不認〕、`cur/` 殘骸重做）；
+  I 段（信箱：同一圈照處理順序、`pause` 時信留著、接回的留到 `procs_removed`、壞信、`reply_to`、設定規則〔舊名 `loops_ctl_mailbox` 不認〕、`cur/` 殘骸重做、殘骸也照 aos-post 的處理順序〔有序名在前〕）；
   J 段（exec 型：三種寫法各跑一次、`procs_removed` 的 SIGTERM 直接打那支程式、**寫法規則與同名改寫法不重起**〔loop 型→exec 型不重起；拿掉再放回才照新寫法〕、adopt、`max: 1` 的 loop 跟 exec 型並排、信箱的 exec 型與 **exec 型的 stop／start＝壞信**、loop 型與 exec 型同一張表切檔）；
   K 段（`ws`）；L 段（log、done 的不再起、關掉的 stdout）；M 段（信箱與 procs_ctl 共存、procs_ctl 的整份 `procs`、exec 型收內嵌單子、窗全 null、`-- 參數`、running ⇄ waiting）；N 段（`AOS_DAEMON_STACK`）；
   **O 段**（`stack`：相對／絕對／結尾 `/`／`$env`、不在就建、`loop.json` 與 `stderr.txt` 都在 S、不建預設小格、兩個 proc 同一個 S 不擋、`null`＝預設、列上有 `stack`、`kill -9` 再起照列上接回、型別壞＝`CfgBad`）；

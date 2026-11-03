@@ -36,7 +36,7 @@
 | `src/main.cpp` | 命令列 `aos-daemon [旗標] daemon.json [-- 參數...]` |
 | `src/daemon/daemon.cpp`、`src/daemon/daemon.hpp` | 名單 `procs`：`read_procs`、`is_once`（看寫法判 exec 型）、`adopt`（接回）、`tend`、`reconcile`、`halt`／`term`／`hold`／`look`／`start`、`cell_of`、`finish`（收工；還在跑的 loop 型留成 `sleeping`） |
 | `src/daemon/windows.cpp` | `procs_ctl.json` 的讀與驗（`read_procs_ctl`、`check_lists`、`check_once`）、`procs_state.json` 的寫（`write_more`、超過 100 列切 `write_parts`、`clean_parts`） |
-| `src/daemon/mailbox.cpp` | 信箱 `procs_ctl_mailbox`：`open_mailbox`、`take_letters`、`apply_letter`（`procs_added`／`removed`／`stopped`／`started`）、`done_letters` |
+| `src/daemon/mailbox.cpp` | 信箱 `procs_ctl_mailbox`：`open_mailbox`（`cur/` 殘骸照 aos-post 的 `sort_letters` 排）、`take_letters`（`take_all`、`see`）、`apply_letter`（`procs_added`／`removed`／`stopped`／`started`）、`done_letters`（`reply`、`done`） |
 | `src/child/child.cpp`、`src/child/child.hpp` | 子項：建小格、寫小格的 `loop.json`、`spawn`／`spawn_exec`、`launch`（setsid、`AOS_STACK`、`AOS_WS`、`AOS_DAEMON_STACK`）、`Child` 與狀態列 |
 | `src/common/common.hpp` | 內部共用標頭 |
 | `tests/test_cli.py`、`tests/test_demo.py` | 命令列黑箱；跑 demo daemon-2、daemon-3 |

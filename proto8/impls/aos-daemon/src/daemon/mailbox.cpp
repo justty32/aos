@@ -1,22 +1,21 @@
 // mailbox.cpp：【daemon】信箱 procs_ctl_mailbox（10-29，medium-plan § 二 4、§ 四 3；NORMS N-28 的 10-29 補、N-16；11-03 改名 procs、多 stop／start；說明見 daemon.hpp）。
 // 跟 procs_ctl 可以同時開；信改的是「底」want_／stopped_，procs_ctl 每圈疊在底上（tend）。
 //
-//   open_mailbox   起來時（建構子最後、adopt 之後）：aos::post::init 建四格（已在就沿用；$AOS_STACK 不在＝不建、MkdirFailed）、
+//   open_mailbox   起來時（建構子最後、adopt 之後）：aos::post::init 建 tmp/ new/ cur/（已在就沿用；$AOS_STACK 不在＝不建、MkdirFailed）、
 //                  底 want_（建構子已設成 daemon.json 的 procs）再加 adopt 接回、不在上面的（設定記 null：只留名，不會被重起；它結束時 drop 從 want_ 拿掉）、
 //                  cur/ 裡的殘骸（上次認領了、還沒收完就死掉）記進 redo_——片段、重做無害，所以照建議重做
-//   take_letters   每圈（stop／pause 那圈不呼叫）：redo_（照名字順序）＋claim_all 認領到的（照名字順序），逐封 check 驗信封、
+//   take_letters   每圈（stop／pause 那圈不呼叫）：redo_（照處理順序）＋take_all 認領到的（照處理順序），逐封 see 驗信封、
 //                  apply_letter 驗 body 並套進底；壞信的原因記進 mailbox_warning_（最後一封壞信；沒有壞信的圈維持原值）
 //   apply_letter   body 要是物件，只認 procs_added（物件，寫法同 procs_ctl）、procs_removed、procs_stopped、procs_started（名字的陣列），其他 key 忽略；
 //                  檢查照 procs_ctl（check_lists；相對 $ref 從 daemon 的 cwd 算——信收完就刪了，不能從信的資料夾算）、procs_stopped／procs_started 有 exec 型＝壞信（check_once）。
 //                  好的才套：procs_added（已在名單上的換設定、不在的接在尾巴）→procs_removed（名單與 stopped 集合都拿掉）→procs_stopped 加進 stopped 集合→
 //                  procs_started 從 stopped 集合拿掉（同名兩邊都寫＝起）；後面的信蓋前面的
-//   done_letters   對完表之後：好信有 reply_to 的回 {"applied": true}（壞信不回，決定 27）；全部 finish 收掉（不留 done/）。
+//   done_letters   對完表之後：好信有 reply_to 的回 {"applied": true}（壞信不回，決定 27）；全部 done 收掉（不留 archive/）。
 //                  回信寄不出去、收不掉（信被別人拿走、寫不了）都不管：不另外通知（決定 27），也不讓 daemon 因此結束
 #include "daemon/daemon.hpp"
 
 #include "aos/files.hpp"
 
-#include <algorithm>
 #include <filesystem>
 
 namespace aos::daemon {
@@ -34,25 +33,25 @@ void Daemon::open_mailbox() {
         }
     }
     for (const auto& e : std::filesystem::directory_iterator(mbox_.cur(), ec)) {
-        std::string id = e.path().filename().string();
-        if (!id.empty() && id[0] != '.') {   // . 開頭不算信（N-05，同 aos-post）
-            redo_.push_back(id);
+        std::string name = e.path().filename().string();
+        if (!name.empty() && name[0] != '.') {   // . 開頭不算信（N-05，同 aos-post）
+            redo_.push_back(name);
         }
     }
-    std::sort(redo_.begin(), redo_.end());
+    aos::post::sort_letters(redo_);   // 處理順序同 aos-post 的 take（有序在前）
 }
 
 Daemon::Letters Daemon::take_letters() {
-    std::vector<std::string> ids;
-    ids.swap(redo_);
-    for (std::string& id : aos::post::claim_all(mbox_)) {
-        ids.push_back(std::move(id));
+    std::vector<std::string> names;
+    names.swap(redo_);
+    for (std::string& name : aos::post::take_all(mbox_)) {
+        names.push_back(std::move(name));
     }
     Letters got;
-    for (const std::string& id : ids) {
+    for (const std::string& id : names) {
         std::optional<std::string> bad;
         try {
-            aos::post::Checked c = aos::post::check(mbox_, id);
+            aos::post::Seen c = aos::post::see(mbox_, id);
             bad = c.ok ? apply_letter(c.letter["body"]) : std::optional<std::string>(c.reason);
         } catch (const Error&) {
             continue;   // 不在 cur/ 了（被人拿走、刪掉）：沒有這封
@@ -129,7 +128,7 @@ void Daemon::done_letters(const Letters& got) {
         } catch (const Error&) {
         }
         try {
-            aos::post::finish(mbox_, id, false);
+            aos::post::done(mbox_, id, false);
         } catch (const Error&) {
         }
     }

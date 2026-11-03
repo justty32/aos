@@ -943,10 +943,10 @@ class T(unittest.TestCase):
         return self.s / "box"
 
     def post(self, name, body, reply_to=None, raw=None):
-        """照 N-16 寄一封（tmp/ 寫好再 rename 進 new/）；信號自己取，好控制名字順序。"""
+        """照 N-16 寄一封（tmp/ 寫好再 rename 進 new/）；信件名稱自己取，好控制處理順序。"""
         d = self.box() / "tmp" / name
         d.mkdir()
-        letter = {"kind": "letter", "sender": str(self.t), "sent_at": "2026-10-29T00:00:00.000+00:00", "body": body}
+        letter = {"sender": str(self.t), "sent_at": "2026-10-29T00:00:00.000+00:00", "body": body}
         if reply_to is not None:
             letter["reply_to"] = str(reply_to)
         (d / "letter.json").write_text(raw if raw is not None else json.dumps(letter))
@@ -996,7 +996,7 @@ class T(unittest.TestCase):
         self.ctl({"cmd": "resume", "seq": 4})
         self.assertTrue(until(lambda: (self.s / "procs" / "bob" / "starts").exists() and set(self.kids()) == {"a", "bob"}))
         self.assertTrue(until(self.drained))
-        self.assertEqual(((self.box() / "done").exists(), self.lstate()["mailbox_warning"]), (False, None))   # 預設收掉、不留 done/
+        self.assertEqual(((self.box() / "archive").exists(), self.lstate()["mailbox_warning"]), (False, None))   # 預設收掉、不留 archive/
         self.mstop(p)
 
     def test_mailbox_adopted_stays_until_removed(self):
@@ -1041,7 +1041,7 @@ class T(unittest.TestCase):
         self.mstop(p)
 
     def test_mailbox_reply_to_applied(self):
-        # 寫了 reply_to 的好信：對完表才回一封 body {"applied": true}、in_reply_to＝原信號；沒寫 reply_to 的不回
+        # 寫了 reply_to 的好信：對完表才回一封 body {"applied": true}、in_reply_to＝原信的信件名稱；沒寫 reply_to 的不回
         rb = self.reply_box()
         p = self.mstart()
         self.post("0001", {"procs_added": {"bob": self.long()}}, reply_to=rb)
@@ -1052,7 +1052,8 @@ class T(unittest.TestCase):
         time.sleep(0.6)
         self.assertEqual(len(list((rb / "new").iterdir())), 1)
         r = json.loads((got[0] / "letter.json").read_text())
-        self.assertEqual((r["kind"], r["in_reply_to"], r["body"]), ("letter", "0001", {"applied": True}))
+        self.assertEqual((r["in_reply_to"], r["body"]), ("0001", {"applied": True}))
+        self.assertNotIn("kind", r)
         self.mstop(p)
 
     def test_mailbox_cfg_rules(self):
@@ -1091,6 +1092,21 @@ class T(unittest.TestCase):
         self.assertTrue(until(self.drained))
         time.sleep(0.6)
         self.assertEqual((set(self.kids()), (self.s / "procs" / "carl").exists()), ({"a", "bob"}, False))
+        self.mstop(p)
+
+    def test_mailbox_cur_leftovers_processing_order(self):
+        # cur/ 的殘骸也照 aos-post 的處理順序（sort_letters，11-03）：有序名在前，不靠字典序碰巧
+        for x in ("tmp", "new", "cur"):
+            (self.box() / x).mkdir(parents=True)
+        self.post("00000", {"procs_removed": ["carl"]})                                       # 無序：字典序在前，處理順序在後
+        self.post("000000000005.x", {"procs_added": {"bob": self.long(), "carl": self.long()}})   # 有序
+        for n in ("00000", "000000000005.x"):
+            os.rename(self.box() / "new" / n, self.box() / "cur" / n)
+        p = self.mstart()
+        self.assertTrue(until(lambda: (self.s / "procs" / "bob" / "starts").exists() and set(self.kids()) == {"a", "bob"}))
+        self.assertTrue(until(self.drained))
+        time.sleep(0.6)
+        self.assertEqual((set(self.kids()), (self.s / "procs" / "carl" / "starts").exists()), ({"a", "bob"}, False))
         self.mstop(p)
 
     # ───── J. 10-30 exec 型子項 execs（thinking 2026-10-30-agent-lifecycle B-12 ②、實作步驟 7）：直接 aos-exec 一次、不包 aos-loop ─────

@@ -109,8 +109,8 @@ private:
     void reconcile(const Json& want, const Names& stopped);   // 對表：收多的、停要停的、看誰結束、起少的與要 start 的
 
     // 信箱（mailbox.cpp）
-    using Letters = std::vector<std::pair<std::string, bool>>;   // 這圈的信（照處理順序）：{信號, 好信}
-    void open_mailbox();                                     // 建四格（已在就沿用）、cur/ 的殘骸記進 redo_
+    using Letters = std::vector<std::pair<std::string, bool>>;   // 這圈的信（照處理順序）：{信件名稱, 好信}
+    void open_mailbox();                                     // 建 tmp/ new/ cur/（已在就沿用）、cur/ 的殘骸記進 redo_
     Letters take_letters();                                  // 認領、逐封驗；好信依序套進底
     std::optional<std::string> apply_letter(const Json& body);   // 驗 body、套進 want_／stopped_；壞＝回原因、底不動
     void done_letters(const Letters& got);                   // 好信有 reply_to 的回 applied；全部收掉
