@@ -19,9 +19,9 @@
    - **已驗（11-03 晚家機 Manjaro 暫存 clone）**：三個 commit 合跑全套 unittest 646 OK（9 skip）、demo 0、ctest 8/8、wf-lint broken=0。
 3. **daemon 收工 sleep／wake：已實作、使用者 11-03 晚看過定案**（不開放 sleep／wake 指令；出錯退出走同一條收工路、再開自己醒＝合他「輕鬆回復原本狀態、收斂錯誤處理路徑」）（[procs § 8](../proto8/thinking/2026-11-03-procs.md#8-收工時改寫成休息中sleepwake11-03-晚)）。使用者「改寫成休息中」「還記得嗎？我們有start/stop, sleep/wake, pause/resume，我們缺了sleep/wake」。照頂層代定做：收工（ctl stop／Ctrl+C／任何走 finish 的退出）時還在跑的 loop 型＝表上 `sleeping`、stack 留著；daemon 再開 adopt 後第一圈用列上的 stack 自動 wake；你 stop 的照舊 `stopped`；收工時暫停中的醒來仍暫停（已實測）；exec 型照舊拿掉；`kill -9` 不在範圍；`aos-daemon-ctl sleep／wake` **先不開放**（原本待他答的 (a)，代定「不開」）、(b) 照建議「醒來仍暫停」。睡著時寄來的 stop＝開門改 stopped 不 wake、rm＝拿掉。
 4. **雜項**：
-   - WSL `~/repo/simple_tools/aos` 在 `dcca4a8c`，但有一個不知誰改的追蹤檔改動 `proto8/lib/aos/ask_round/_tooldef.json`——問使用者，之後 ff 前先處理。
-   - Windows 工作樹 `proto8/thinking/README.md`、`months/2026-11.md` 兩檔舊未 commit 改動（比 HEAD 舊）等使用者確認丟掉。
-   - 試驗場 `daemons/main` 的 stack 在 `ws/.stack`，eca 在 ws 裡看得到整個 daemon 內部；提議移出工作區，使用者還沒回。
+   - WSL `~/repo/simple_tools/aos` 在 `dcca4a8c`，有一個不知誰改的追蹤檔改動 `proto8/lib/aos/ask_round/_tooldef.json`——使用者 11-03 晚「看狀況，隨你」：回公司時看 diff，是工具重產的快取就丟掉再 ff，像有人手改的再問。
+   - Windows 工作樹 `proto8/thinking/README.md`、`months/2026-11.md` 兩檔舊未 commit 改動：使用者 11-03 晚「丟掉」——回公司時 `git checkout -- 那兩檔`（只這兩檔）。
+   - 試驗場 `daemons/main` 的 stack 在 `ws/.stack`：使用者 11-03 晚「我以爲daemon本身也可以指定stack？不用移出去」——不移，結案。
    - WSL `~/.codex/config.toml` 預設模型 `gpt-6.1-sol` 這帳號不能用（model_not_found），使用者的設定、沒改。
    - 常駐 bob：使用者「感覺之後會被蛋雕」「先不用管吧」。
    - 使用者之後要看 aos-post（impls/aos-post）。
