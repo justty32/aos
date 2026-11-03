@@ -144,15 +144,24 @@ class Case(unittest.TestCase):
         self.assertEqual((out.returncode, json.loads(out.stdout)), (0, h))
         self.assertEqual(os.listdir(self.lock), ["holder.json"])
 
-    def test_c2_holder_home_and_pid_flag(self):
+    def test_c2_holder_cwd_and_pid_flag(self):
         p = subprocess.Popen(["sleep", "60"])
         self.procs.append(p)
-        self.assertEqual(self.code("acquire", "--pid", p.pid, self.target), 0)
+        self.assertEqual(self.code("acquire", "--pid", p.pid, self.target), 0)   # AOS_* 都沒設：cwd（HOME 有設也不看）
         h = self.holder()
-        self.assertEqual(h["holder"], str(self.home))
+        self.assertEqual(h["holder"], os.path.realpath(self.t))
         self.assertEqual((h["pid"], h["started_at_ticks"]), (p.pid, ticks(p.pid)))
         self.assertNotIn("lease_ms", h)
         self.assertNotIn("note", h)
+
+    def test_c2b_holder_order(self):
+        """holder＝aos-util 的 identity：AOS_WS ＞ AOS_STACK ＞ AOS_CF ＞ cwd，空字串算沒設、相對的轉絕對。"""
+        for extra, want in (({"AOS_CF": "cf", "AOS_STACK": "/st"}, "/st"),
+                            ({"AOS_CF": "cf", "AOS_WS": ""}, os.path.join(os.path.realpath(self.t), "cf")),
+                            ({"AOS_WS": "/w", "AOS_STACK": "/st", "AOS_CF": "/cf"}, "/w")):
+            self.assertEqual(self.code("acquire", self.target, extra=extra), 0)
+            self.assertEqual(self.holder()["holder"], want, extra)
+            self.assertEqual(self.code("release", self.target), 0)
 
     def test_c3_show_none_and_bad(self):
         r = self.run_l("show", self.target)

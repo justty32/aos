@@ -3,9 +3,9 @@
 //
 //   鎖＝一個資料夾，mkdir 成功＝拿到（只有一種獨佔鎖、不分讀寫、不檢查上下層）：
 //     資料夾的鎖 <資料夾>/.lock/、檔的鎖 <檔>.lock/（lock_dir_of 照目標算；也可以直接給鎖資料夾的路徑，例 <信箱>/order.lock）
-//   名牌 <鎖>/holder.json：{"holder": 身分路徑（$AOS_WS，沒設才 $HOME）, "pid", "started_at_ticks", "boot_id",
+//   名牌 <鎖>/holder.json：{"holder": 身分路徑（aos-util 的 aos::identity）， "pid", "started_at_ticks", "boot_id",
 //                          "acquired_at": ISO 8601 UTC 到毫秒, "lease_ms"?, "note"?}——先寫 .holder.json.tmp 再改名（N-05）
-//   放鎖＝先把鎖資料夾改名成 <鎖>.releasing.<信號> 再刪：別人不會 mkdir 到一個正在被刪的資料夾；殘骸名字不同，不擋人
+//   放鎖＝先把鎖資料夾改名成 <鎖>.releasing.<獨一無二的名字> 再刪：別人不會 mkdir 到一個正在被刪的資料夾；殘骸名字不同，不擋人
 //   收屍：mkdir 失敗就讀名牌——
 //     boot_id 跟現在的不同、或 pid＋started_at_ticks 對不上（行程不在、pid 被重用）＝持有者死了；
 //     started_at_ticks 是 null（非 Linux 寫的）＝只看 pid 在不在；寫了 lease_ms 且 acquired_at＋lease_ms 已過＝租約到期；
@@ -14,7 +14,6 @@
 //     跟判的那份不同（牌子掛進了別人剛拿到的新鎖）＝拔掉牌子、不收 → 照放鎖的步驟改名再刪
 //
 //   lock_dir_of   目標 → 鎖資料夾：結尾是 / 或是現有的資料夾＝<目標>/.lock，否則（檔、還不存在的名字）＝<目標>.lock
-//   identity      身分路徑：$AOS_WS（絕對），沒設或空＝$HOME（絕對），都沒有＝/
 //   holder_of     替一個行程填名牌（pid 0＝自己）：started_at_ticks、boot_id 讀 /proc、acquired_at＝現在
 //   to_json       名牌 → holder.json 的內容（lease_ms、note 沒有就不寫）
 //   look          看一把鎖：held＝鎖資料夾在不在、raw＝holder.json 原文（沒有＝nullopt）、holder＝解得出的物件、age_ms＝鎖資料夾多久沒動
@@ -62,7 +61,6 @@ struct Seen {
 };
 
 std::string lock_dir_of(const std::string& target);
-std::string identity();
 Holder holder_of(pid_t pid);
 Json to_json(const Holder& h);
 Seen look(const std::string& lock_dir);

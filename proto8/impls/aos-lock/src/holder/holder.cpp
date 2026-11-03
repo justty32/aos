@@ -42,21 +42,9 @@ std::optional<long long> parse_at(const std::string& at) {
     return (long long)timegm(&tm) * 1000LL + ms;
 }
 
-std::string identity() {
-    const char* ws = std::getenv("AOS_WS");
-    if (ws != nullptr && ws[0] != '\0') {
-        return aos::abspath(ws);
-    }
-    const char* home = std::getenv("HOME");
-    if (home != nullptr && home[0] != '\0') {
-        return aos::abspath(home);
-    }
-    return "/";
-}
-
 Holder holder_of(pid_t pid) {
     Holder h;
-    h.holder = identity();
+    h.holder = aos::identity();   // aos-util：$AOS_WS ＞ $AOS_STACK ＞ $AOS_CF ＞ cwd（同 aos-post 的 sender）
     h.pid = pid == 0 ? (long long)getpid() : (long long)pid;
     h.started_at_ticks = aos::proc_started_at_ticks(pid);
     h.boot_id = aos::boot_id();

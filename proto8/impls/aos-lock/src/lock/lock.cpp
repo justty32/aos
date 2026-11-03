@@ -68,7 +68,7 @@ static bool write_holder(const std::string& lock_dir, const Json& doc, std::stri
     return true;
 }
 
-// 改名成 <鎖>.releasing.<信號>：成功回新名字，鎖不在回空字串。
+// 改名成 <鎖>.releasing.<獨一無二的名字>：成功回新名字，鎖不在回空字串。
 static std::string move_away(const std::string& lock_dir) {
     std::string gone = lock_dir + ".releasing." + aos::unique_id();
     if (std::rename(lock_dir.c_str(), gone.c_str()) == 0) {
@@ -85,7 +85,7 @@ static std::string move_away(const std::string& lock_dir) {
 // C 搬走的是 B 的活鎖（10-29 實測：20 個人同時收，B 寫名牌時資料夾不見了）。所以先在鎖裡 mkdir 收屍牌 .reaping：
 //   1. mkdir <鎖>/.reaping：只有一個人建得成（這一把歸他收）；建不成＝別人在收（牌子 10 秒沒動＝收的人也死了，拔掉、下次再來）
 //   2. 再讀一次名牌：跟判的那份不同（牌子掛進了別人剛拿到的新鎖）＝拔掉牌子、不收；名牌本來就不在的，還要是同一個資料夾（inode）
-//   3. 改名成 <鎖>.releasing.<信號> 再刪
+//   3. 改名成 <鎖>.releasing.<獨一無二的名字> 再刪
 static void reap(const std::string& lock_dir, const Seen& judged) {
     std::string token = aos::join(lock_dir, ".reaping");
     if (::mkdir(token.c_str(), 0777) != 0) {

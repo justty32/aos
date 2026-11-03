@@ -1,4 +1,4 @@
-// test_lib.cpp：aos-util 函式庫的測試（入口尋址：split_hash、read_json_at；10-23 起加 aos/cli.hpp 的 parse_cli、load_cfg 的代號；10-22 起加 aos/text.hpp 的空白與 UTF-8）。
+// test_lib.cpp：aos-util 函式庫的測試（入口尋址：split_hash、read_json_at；10-23 起加 aos/cli.hpp 的 parse_cli、load_cfg 的代號；10-22 起加 aos/text.hpp 的空白與 UTF-8；11-03 加 aos/proc.hpp 的 identity）。
 //
 //   test_lib 條名
 //
@@ -6,6 +6,7 @@
 // 不靠測試框架：CHECK 不過就印出哪一行、退 1。要用的檔自己在暫存資料夾裡寫。
 #include "aos/cli.hpp"
 #include "aos/files.hpp"
+#include "aos/proc.hpp"
 #include "aos/text.hpp"
 
 #include <cstdio>
@@ -150,6 +151,42 @@ void test_text() {
     CHECK(!aos::is_utf8("\xed\xa0\x80"));  // 代理區
 }
 
+// identity：$AOS_WS ＞ $AOS_STACK ＞ $AOS_CF ＞ cwd；空字串算沒設；相對的照 cwd 轉絕對；cwd 拿不到＝Internal。
+void test_identity() {
+    for (const char* k : {"AOS_WS", "AOS_STACK", "AOS_CF", "HOME"}) {
+        unsetenv(k);
+    }
+    CHECK(chdir(tmp.c_str()) == 0);
+    CHECK(aos::identity() == aos::abspath(tmp));        // 都沒設＝cwd（HOME 不看）
+    setenv("HOME", "/home/x", 1);
+    CHECK(aos::identity() == aos::abspath(tmp));
+    setenv("AOS_CF", "cf/./x/..", 1);
+    CHECK(aos::identity() == aos::abspath(tmp) + "/cf");
+    setenv("AOS_STACK", "/s//t/", 1);
+    CHECK(aos::identity() == "/s/t");
+    setenv("AOS_WS", "", 1);                             // 空字串算沒設
+    CHECK(aos::identity() == "/s/t");
+    setenv("AOS_WS", "/w", 1);
+    CHECK(aos::identity() == "/w");
+    for (const char* k : {"AOS_WS", "AOS_STACK", "AOS_CF"}) {
+        unsetenv(k);
+    }
+    std::string gone = tmp + "/gone";
+    CHECK(std::filesystem::create_directory(gone));
+    CHECK(chdir(gone.c_str()) == 0);
+    CHECK(rmdir(gone.c_str()) == 0);
+    bool thrown = false;
+    try {
+        aos::identity();
+    } catch (const aos::Error& e) {
+        thrown = std::string(e.code) == "Internal";
+    }
+    CHECK(thrown);
+    setenv("AOS_WS", "/w", 1);                           // 絕對路徑不用 cwd
+    CHECK(aos::identity() == "/w");
+    CHECK(chdir("/") == 0);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -178,6 +215,8 @@ int main(int argc, char** argv) {
         test_cli();
     } else if (name == "text") {
         test_text();
+    } else if (name == "identity") {
+        test_identity();
     } else {
         std::fprintf(stderr, "沒有這條：%s\n", argv[1]);
         return 2;

@@ -31,7 +31,7 @@
 | `include/aos/error.hpp` | 共用錯誤型別 `aos::Error` 與多支工具都會吐的錯誤代號 `aos::code` |
 | `include/aos/io.hpp`、`src/io.cpp` | 三扇門：stdin 讀 JSON（串流）、stdout 印一行 JSON、stderr 印一行錯誤 |
 | `include/aos/files.hpp`、`src/files.cpp` | 路徑、讀檔、原子寫入（暫存檔再改名） |
-| `include/aos/proc.hpp`、`src/proc.cpp` | 子程序（起、看、整群送訊號、收屍）、`/proc`、memfd、`utc_now_ms`／`utc_now_ns`、信號 `unique_id` |
+| `include/aos/proc.hpp`、`src/proc.cpp` | 子程序（起、看、整群送訊號、收屍）、`/proc`、memfd、`utc_now_ms`／`utc_now_ns`、獨一無二的名字 `unique_id`、身分 `identity`（`AOS_WS` ＞ `AOS_STACK` ＞ `AOS_CF` ＞ cwd） |
 | `include/aos/signals.hpp`、`src/signals.cpp` | 擋 SIGINT／SIGTERM／SIGHUP、經 signalfd 讓呼叫者每次去看 |
 | `include/aos/text.hpp`、`src/text.cpp` | UTF-8 檢查、照 Python `str.isspace` 去頭尾空白 |
 | `tests/test_lib.cpp`、`tests/test_cli.py`、`tests/util_cli.cpp` | 單元測試；`util_cli.cpp` 是測三扇門用的小程式 |

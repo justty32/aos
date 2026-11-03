@@ -7,10 +7,12 @@
 #include <chrono>
 #include <cstdio>
 #include <ctime>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include <vector>
 
 #include <signal.h>
 #include <spawn.h>
@@ -154,6 +156,30 @@ std::string utc_ms_at(long long ns) {
     char buf[80];
     std::snprintf(buf, sizeof buf, "%s.%03ld+00:00", day, ms);
     return buf;
+}
+
+std::string identity() {
+    std::string cwd;
+    auto get_cwd = [&cwd]() -> const std::string& {
+        if (cwd.empty()) {
+            std::vector<char> buf(4096);
+            while (getcwd(buf.data(), buf.size()) == nullptr) {
+                if (errno != ERANGE) {
+                    throw Error{code::Internal, std::string("拿不到 cwd：") + std::strerror(errno)};
+                }
+                buf.resize(buf.size() * 2);
+            }
+            cwd = buf.data();
+        }
+        return cwd;
+    };
+    for (const char* key : {"AOS_WS", "AOS_STACK", "AOS_CF"}) {
+        const char* v = std::getenv(key);
+        if (v != nullptr && v[0] != '\0') {
+            return abspath(v[0] == '/' ? std::string(v) : get_cwd() + "/" + v);
+        }
+    }
+    return abspath(get_cwd());
 }
 
 std::string unique_id() {

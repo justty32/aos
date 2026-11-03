@@ -20,11 +20,11 @@ aos-lock show data.json                                                         
 | 子命令 | 做什麼 |
 |---|---|
 | `acquire [--lease-ms N] [--note 字] [--wait-ms N] [--pid N] 目標` | 拿鎖：拿到退 0（不印東西）；被活人拿著退 10。`--wait-ms`＝拿不到每 20 毫秒再試、最多等 N 毫秒（沒給＝只試一次）。`--lease-ms`、`--note` 寫進名牌 |
-| `release 目標` | 放鎖：改名成 `<鎖>.releasing.<信號>` 再刪。不看是誰的鎖（約定）。鎖不在退 1 `LockMissing` |
+| `release 目標` | 放鎖：改名成 `<鎖>.releasing.<獨一無二的名字>` 再刪。不看是誰的鎖（約定）。鎖不在退 1 `LockMissing` |
 | `show 目標` | 名牌 stdout 印一行；沒有鎖退 10；鎖在但名牌不在或讀不懂退 1 `HolderBad` |
 
 - **目標 → 鎖**：結尾是 `/` 或是現有的資料夾＝`<目標>/.lock/`；其他（檔、還不存在的名字）＝`<目標>.lock/`。相對路徑從 cwd 算。鎖的上一層不在＝`MkdirFailed`（不替人建）。不檢查上下層（鎖了資料夾不等於鎖了裡面的檔）。
-- **名牌 `holder.json`**：`{"holder", "pid", "started_at_ticks", "boot_id", "acquired_at", "lease_ms"?, "note"?}`。`holder`＝`$AOS_WS`（轉絕對），沒設或空＝`$HOME`，都沒有＝`/`（同 aos-post 的 `sender`）。**`pid` 預設是叫 aos-lock 的那個行程**（getppid）——aos-lock 拿完就退，寫它自己等於一拿到就算死了；要寫別的行程用 `--pid`（那個行程要在，不在＝`ArgumentsBad`）。`started_at_ticks`、`boot_id` 讀 `/proc`（讀不到＝null）；`acquired_at`＝ISO 8601 UTC 到毫秒。先寫 `.holder.json.tmp` 再改名。
+- **名牌 `holder.json`**：`{"holder", "pid", "started_at_ticks", "boot_id", "acquired_at", "lease_ms"?, "note"?}`。`holder`＝aos-util 的 `aos::identity()`：`$AOS_WS` ＞ `$AOS_STACK` ＞ `$AOS_CF` ＞ cwd，空字串算沒設、轉絕對路徑（同 aos-post 的 `sender`；11-03 拿掉 `$HOME`）。**`pid` 預設是叫 aos-lock 的那個行程**（getppid）——aos-lock 拿完就退，寫它自己等於一拿到就算死了；要寫別的行程用 `--pid`（那個行程要在，不在＝`ArgumentsBad`）。`started_at_ticks`、`boot_id` 讀 `/proc`（讀不到＝null）；`acquired_at`＝ISO 8601 UTC 到毫秒。先寫 `.holder.json.tmp` 再改名。
 - **收屍**（mkdir 失敗時）：讀名牌，下面任一條成立就照放鎖的步驟替它收、再 mkdir（改名只有一個人會成功，兩人同時收也沒事）——
   ① `boot_id` 跟現在的不同；② `pid`＋`started_at_ticks` 對不上（行程不在、pid 被重用；`started_at_ticks` 是 null＝只看 pid 在不在）；③ 行程是殭屍（結束了、父行程還沒收屍）；④ 有 `lease_ms` 且 `acquired_at`＋`lease_ms` 已過（持有者活著也收）；⑤ 名牌不在或讀不懂、且鎖資料夾 10 秒沒動過（持有者 mkdir 完還沒寫好名牌就死了；10 秒不開 key）。
   好幾個人同時判到同一把死鎖時，直接改名會搬走別人剛拿到的新鎖，所以收之前先在鎖裡 `mkdir .reaping`（收屍牌，只有一個人建得成；牌子 10 秒沒動＝收的人也死了，拔掉再來），再讀一次名牌：跟判的那份不同（牌子掛進了別人的新鎖）＝拔掉牌子、不收；名牌本來就不在的還要是同一個資料夾（inode）。
@@ -38,8 +38,8 @@ aos-lock show data.json                                                         
 
 | 檔 | 做什麼 |
 |---|---|
-| `include/aos/lock.hpp` | 公開介面：`Holder`、`Seen`、`STALE_MS`；`lock_dir_of`、`identity`、`holder_of`、`to_json`、`look`、`reapable`、`try_acquire`、`acquire`、`release`；自己的代號 |
-| `src/holder/holder.cpp` | 名牌：`identity`、`holder_of`、`to_json`、`look`、`reapable`（判死活、殭屍、租約）；common 的 `now_ms`、`parse_at`（獨一無二的名字用 aos-util 的 `aos::unique_id`） |
+| `include/aos/lock.hpp` | 公開介面：`Holder`、`Seen`、`STALE_MS`；`lock_dir_of`、`holder_of`、`to_json`、`look`、`reapable`、`try_acquire`、`acquire`、`release`；自己的代號 |
+| `src/holder/holder.cpp` | 名牌：`holder_of`（身分用 aos-util 的 `aos::identity`）、`to_json`、`look`、`reapable`（判死活、殭屍、租約）；common 的 `now_ms`、`parse_at`（獨一無二的名字用 aos-util 的 `aos::unique_id`） |
 | `src/lock/lock.cpp` | 鎖：`lock_dir_of`、寫名牌（暫存改名、不建資料夾）、`try_acquire`、`reap`（收屍牌 `.reaping` → 再讀名牌確認 → 改名再刪）、`acquire`（steady_clock 計時）、`release` |
 | `src/common/common.hpp` | 內部標頭：`using`、時間與名字小工具的宣告 |
 | `src/main.cpp` | 命令列：子命令表、旗標、持有者預設 getppid；出錯印「aos-lock: 代號 原因」 |
