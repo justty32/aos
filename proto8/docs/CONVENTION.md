@@ -11,7 +11,7 @@
 **命名**（[thinking 2026-10-23-naming](../thinking/2026-10-23-naming.md)，使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」；條文裡的使用者原話不動）：
 
 - loop.json 與 fsm 格要跑的東西都叫 `exec`（使用者：「fsm.json，現在是用val，幫我改成exec」；「exec，loop／daemon 的 run 也一起改 exec」）。
-- fsm trace 一行是 `{"started_at","state","code","signal","elapsed_ms","next"}`（`next`＝這次寫進 state 的狀態名、沒換＝`null`，10-30 N-39 加註），`started_at` 是 ISO 8601 到毫秒（P-07、P-38）。**11-03 起 fsm 不寫 trace**（使用者「整個拿掉」，N-39 的 11-03 加註），這條只剩紀錄。時間點＝C-54 命名方法 R6「時間點＝`<發生了什麼>_at`」（使用者 10-25「state.json中，runs改counter，at改成recorded_at」，回頂層兩題「都好」，頂層代定、可翻案）；其他 JSON 的命名見 [NORMS.md](NORMS.md)。
+- fsm trace 一行是 `{"started_at","state","code","signal","elapsed_ms","next"}`（`next`＝這次寫進 state 的狀態名、沒換＝`null`，10-30 N-39 加註），`started_at` 是 ISO 8601 到毫秒（P-07、P-38）。**11-03 起 fsm 不寫 trace**（使用者「整個拿掉」，N-39），這條只剩紀錄。時間點＝C-54 命名方法 R6「時間點＝`<發生了什麼>_at`」（使用者 10-25「state.json中，runs改counter，at改成recorded_at」，回頂層兩題「都好」，頂層代定、可翻案）；其他 JSON 的命名見 [NORMS.md](NORMS.md)。
 - 指示詞的檔內位置只認 `#/`。計數說「次」（使用者「我們都是說"次"」）。
 - 純文字檔帶 `.txt`（fsm 的 `state.txt`、daemon 小格的 `stderr.txt`、demo 的 `current.txt`／`plan.txt`、P-13 的 `prompt.txt`／`answer.txt`）；`AOS_STACK` 預設 `$AOS_WS/.stack/`；題目資料夾 `new/`（認領搬 `cur/`、做完 `done/`，答案 `out/`）；10-30 起新 agent 的輸入是 `$AOS_STACK/queue/`，題目資料夾留給舊協議（P-11 的 10-30 改口、P-42）。
 - 入口預設名 `_entry`（`AOS_ENTRY` 預設值、入口檔、JSON 的 key；使用者「改。然後_開頭=附註這個概念刪掉。」，原話裡的 `_exec` 照留）；不認得的 key 一律忽略（「不認得的key就是忽略」，C-48），`_` 開頭沒有特別意思。
