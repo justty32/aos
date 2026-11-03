@@ -62,7 +62,7 @@ def runners(w):
     """有哪些行程在跑這隻 agent：/proc 裡 argv[0] 是 aos-loop／aos-fsm／aos-exec／aos-daemon、
     環境變數 AOS_STACK＝這個 stack 或 AOS_WS＝這個工作區（沒設 AOS_STACK 時）的。只靠 /proc（eca 10-30 C 結論 9、F 結論 18：
     server.txt 自己報名那招刪了——外部 coding agent 也是 aos-loop 包著 aos-eca-turn 在跑，掃得到；掛在 daemon 底下的，子 loop 的
-    AOS_STACK 是 daemon 的小格，工作區的 .stack 是指過去的 symlink，samefile 認得出來）。
+    AOS_STACK 是 daemon 的小格，給 --stack 那個小格〔aos-daemon-ctl where --stack 名字，11-03 起工作區不建 .stack 捷徑〕就認得出來；samefile 比）。
     回 [(pid, 程式名)]。讀不到的行程（別的使用者的）跳過。"""
     found, me = [], os.getpid()
     for d in os.listdir("/proc"):

@@ -13,7 +13,7 @@ start／stop＝掛不掛在 daemon 上（stop 留小格），add／rm＝建立�
     aos-eca open  [-d] [--name N] [--ws WS] [名字|資料夾|XXX]   接進畫面（沒開就開、有對話就 --resume）；認不出、是 eca 資料夾＝先 add 再開
     aos-eca close [資料夾|名字]                    收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）；只管畫面、不碰 daemon
     aos-eca start [資料夾|名字]                    掛回 daemon：停了、收工了、出錯停了的照 eca.json 的工作區與 eca 資料夾同名掛回，接著答 queue 裡的信
-    aos-eca stop  [資料夾|名字]                    從 daemon 拿掉（aos-daemon-ctl rm）、關畫面；小格原樣留
+    aos-eca stop  [資料夾|名字]                    從 daemon 拿掉（aos-daemon-ctl rm）、關畫面；小格原樣留（11-03 起工作區沒有 .stack 捷徑）
     aos-eca rm    [資料夾|名字]                    刪除：關畫面、從 daemon 拿掉、刪小格（不封存；要留的先自己複製）
     aos-eca watch [資料夾|名字]                    跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走
 
@@ -31,6 +31,8 @@ add：名字沒給＝XXX 的資料夾名；--ws 沒給＝cwd（就是 claude 的
   其他（stop 或 aos-daemon-ctl rm 拿掉的，stopped＋非 0；state.json 不在）＝「停了」（11-02 晚第二輪）。這三種都用 start 掛回。
   start 掛回之前，小格 ctl 窗裡殘留的 stopped 先拿掉（只拿這個 key），免得新的子 loop 一起來就收工。
 CLI 的小格＝<daemon>/loops/<名字>/<kind>/（cli_session 的 session.txt、tty.sock、live.jsonl、transcripts/）。
+對它說話（11-03 起工作區不建 .stack 捷徑，thinking 2026-11-03-stack-where）：aos-say --stack $(aos-daemon-ctl where --stack 名字) 話 && aos-listen --stack …；
+  停著（stop 後不在 daemon 表上、where 找不到）時直接給小格 <daemon>/loops/<名字>。
 畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。「暫停」只有 ctl.json 的 paused 一種（寫 <小格>/ctl.json），這裡不另做。
 錯：stderr 一行 `aos-eca: 代號 原因`、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、
   InstanceExists（add 撞名）、PathMissing（XXX、--ws 不在或不是資料夾）、EcaBad（XXX 沒有 cli.json）、SessionBad（正在答題時 close、stop、rm）、
@@ -282,10 +284,21 @@ def clear_stopped(cell, template):
 
 
 def hang(ws, name, xxx):
-    """掛上（aos-daemon-ctl add）；之前先拿掉小格殘留的 stopped（start 掛回時才會有）。回小格。"""
+    """掛上（aos-daemon-ctl add）；之前先拿掉小格殘留的 stopped（start 掛回時才會有）。
+    之後等 daemon 把它放上表（信是下一圈才套；11-03 起對它說話要 aos-daemon-ctl where，只認表上的）——
+    或小格的 state.json 在這之後動過（起來又馬上結束、已經下表）。回小格。"""
     cell = os.path.join(daemon_dir(), "loops", name)
     clear_stopped(cell, xxx)
+    t0 = time.time()
     ctl("add", "--ws", ws, "--name", name, xxx)
+
+    def up():
+        try:
+            ran = os.path.getmtime(os.path.join(cell, "state.json")) >= t0
+        except OSError:
+            ran = False
+        return bool(rows_named(name)) or ran
+    wait_for(up, "daemon 還沒把 %s 放上表" % name)
     return cell
 
 
@@ -402,15 +415,9 @@ def take_down(it):
         die("SessionBad", e)
     if it["ended"]:
         return False
-    ctl("rm", it["name"])                                # aos-daemon-ctl 順手拿掉指到小格的 <ws>/.stack symlink
+    ctl("rm", it["name"])
     wait_for(lambda: gone(it["name"]), "daemon 還沒收掉 %s" % it["name"])
     return True
-
-
-def points_into(link, cell):
-    """link 是 symlink、指到 cell 或 cell 裡面。"""
-    cell = os.path.realpath(cell)
-    return os.path.islink(link) and (os.path.realpath(link) + os.sep).startswith(cell + os.sep)
 
 
 def cmd_start(argv):
@@ -423,9 +430,9 @@ def cmd_start(argv):
         die("EcaBad", "%s 沒有 cli.json（eca.json 記的 eca 資料夾不在了）" % (r["template"] or "（eca.json 沒記 eca 資料夾）"))
     if rows_named(r["name"]):                            # 還在收的途中（stopping）：等它下表
         wait_for(lambda: not rows_named(r["name"]), "daemon 還沒把 %s 拿掉" % r["name"])
-    was = label(r)
+    was, n = label(r), queued(r)                         # 掛上之前數（hang 等它上表時可能已經答起來了）
     hang(r["ws"], r["name"], r["template"])              # aos-daemon 用回既有小格（只重寫 loop.json），前文、queue 都在
-    print("掛回 daemon 了（上次%s），queue 裡 %d 封接著答" % (was, queued(r)))
+    print("掛回 daemon 了（上次%s），queue 裡 %d 封接著答" % (was, n))
 
 
 def cmd_stop(argv):
@@ -434,24 +441,15 @@ def cmd_stop(argv):
     if not take_down(r):
         print("本來就沒掛在 daemon 上（%s）" % label(r))
         return
-    link = os.path.join(r["ws"], ".stack")
-    if r["ws"] and os.path.isdir(r["ws"]) and not os.path.lexists(link):
-        try:                                             # ctl rm 拆了捷徑：補回來，cd 進去 aos-say 的信照收在小格的 queue
-            os.symlink(r["cell"], link)
-        except OSError:
-            pass
-    print("從 daemon 拿掉了，小格留著（%s）；aos-say 的信照收，aos-eca start 接著答" % r["cell"])
+    print("從 daemon 拿掉了，小格留著（%s）；這期間 aos-say --stack 這個小格的信照收，aos-eca start 接著答" % r["cell"])
 
 
 def cmd_rm(argv):
     _, arg = parse(argv)
     r = resolve(arg)
     take_down(r)
-    link = os.path.join(r["ws"], ".stack") if r["ws"] else ""
-    if link and points_into(link, r["cell"]):
-        os.unlink(link)                                  # 還指著小格（或小格裡面；ctl 沒拿掉，例如本來就沒掛著）
     shutil.rmtree(r["cell"])                             # 不封存（使用者 11-02 晚）；CLI 自己存的對話檔（~/.claude/projects…）不動
-    print("刪了 %s（小格 %s、工作區的 .stack 捷徑）" % (r["name"], r["cell"]))
+    print("刪了 %s（小格 %s）" % (r["name"], r["cell"]))
 
 
 def describe(ev):

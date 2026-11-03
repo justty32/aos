@@ -6,7 +6,7 @@
 原本看快照的案例改看 stack 的 state.json 與 aos_human.runners（listen 提醒「沒人在跑」用的同一個判法）。
 agent＝demo/agent-nia 的格（註冊檔改成絕對路徑放在暫存資料夾，腦壞＝endpoint 換 openai 指到 dead_brain.DEAD）。
 10-30 eca 第 7 步（去 hub 化）：External 段＝外部 coding agent（aos-loop 包 bin/aos-eca-turn、假 claude）跑著時 say／listen 照用、
-runners 只靠 /proc 認得服務者（直接跑、掛 daemon 經 .stack symlink 兩種）；stack 的 server.txt 那招刪了。
+runners 只靠 /proc 認得服務者（直接跑、掛 daemon〔11-03 起經 where 拿 stack〕兩種）；stack 的 server.txt 那招刪了。
 設計：proto8/thinking/2026-10-24-say-listen.md。不連網。"""
 import json, os, re, subprocess, tempfile, time, unittest
 from pathlib import Path
@@ -111,6 +111,7 @@ class SayTest(Base):
         body = json.loads((self.stack / "queue" / "new" / r.stdout.strip() / "letter.json").read_text())["body"]
         self.assertEqual(body["content"], "第一行\n第二行")              # 結尾換行去掉
         self.assertIn("目前沒有程式在跑這隻 agent", r.stderr)            # 沒人跑：提醒、不算錯
+        self.assertIn("--stack $(aos-daemon-ctl where --stack 名字)", r.stderr)   # 11-03：掛在 daemon 上的怎麼指
         other = self.ws / "elsewhere"
         r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "到別的 stack")
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -382,8 +383,8 @@ class External(Base):
         self.assertEqual(runners(self.ws), [])
 
     def test_status_sees_runner_under_daemon(self):
-        """掛在 daemon 底下（aos-daemon-ctl add --ws）：子 loop 的 AOS_STACK 是 daemon 的小格、工作區的 .stack 是指過去的 symlink，
-        runners 照樣認得服務者；say／listen 經 symlink 答得出。"""
+        """掛在 daemon 底下（aos-daemon-ctl add --ws）：子 loop 的 AOS_STACK 是 daemon 的小格；11-03 起工作區不建 .stack 捷徑，
+        stack 用 aos-daemon-ctl where --stack 名字 拿；runners 照樣認得服務者；say／listen 帶 --stack 答得出。"""
         ds = Path(self._tmp.name) / "dstack"
         ds.mkdir()
         dj = Path(self._tmp.name) / "daemon.json"
@@ -394,17 +395,23 @@ class External(Base):
         while not (ds / "loops_ctl_mailbox" / "new").is_dir():
             self.assertLess(time.time(), end)
             time.sleep(0.05)
-        r = self.xrun(str(ROOT / "bin" / "aos-daemon-ctl"), "--daemon-stack", str(ds), "add", "--ws", str(self.ws), "--name", "bob",
-                      str(self.eca))
+        ctl = str(ROOT / "bin" / "aos-daemon-ctl")
+        r = self.xrun(ctl, "--daemon-stack", str(ds), "add", "--ws", str(self.ws), "--name", "bob", str(self.eca))
         self.assertEqual((r.returncode, r.stderr), (0, ""))
-        self.assertEqual(os.readlink(self.stack), str(ds / "loops" / "bob"))
+        self.assertFalse(os.path.lexists(self.stack))
         self.assertTrue(self.phase(ds / "loops" / "bob", ("waiting", "running")))
-        sig = self.say("在 daemon 底下", **self.xenv)
-        r = self.xrun(LISTEN, "--ws", str(self.ws), "--timeout", "30")
+        r = self.xrun(ctl, "--daemon-stack", str(ds), "where", "--stack", "bob")
+        self.assertEqual((r.returncode, r.stdout), (0, str(ds / "loops" / "bob") + "\n"), r.stderr)
+        stack = r.stdout.strip()
+        r = self.xrun(SAY, "--stack", stack, "在 daemon 底下")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.xrun(LISTEN, "--stack", stack, "--timeout", "30")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(r.stdout.rstrip().endswith(": 在 daemon 底下"), r.stdout)
-        self.assertIn("aos-loop", [n for _, n in runners(self.ws)])
-        self.assertTrue(self.phase(self.stack, ("waiting", "running")))
+        import sys
+        sys.path.insert(0, str(HUMAN))
+        import aos_human
+        self.assertIn("aos-loop", [n for _, n in aos_human.runners(aos_human.Where(str(self.ws), stack))])
         (ds / "ctl.json").write_text('{"stopped": true}')
         self.assertEqual(d.wait(timeout=30), 0)
 

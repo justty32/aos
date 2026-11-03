@@ -30,6 +30,7 @@ def main():
     print(sig, flush=True)
     if not h.runners(w):
         h.note("已寄進 %s/queue/new/；目前沒有程式在跑這隻 agent，%s" % (w.stack, h.run_hint(w)))
+        h.note("掛在 daemon 上的用 --stack $(aos-daemon-ctl where --stack 名字)")   # 11-03：工作區不再有 .stack 捷徑
 
 
 main()
