@@ -5,7 +5,7 @@
 **一句話：解 JSON 裡的指示詞——`{"$ref": "檔#/指標"}` 換成那份檔裡那個位置的值、`{"$env": "名字"}` 換成環境變數的值（可帶 `$path`、`$prefix`）。** 一個 lib（`lib/libaos-directive.a`）加一支命令列（`bin/aos-directive`，不對外提供）。
 aos-exec 連這個 lib 解單子、argv 陣列入口與 JSON `.env` key 裡的指示詞（loop／fsm／daemon 的每一次都經 aos-exec）；
 aos-loop、aos-daemon、aos-fsm 讀設定檔與 ctl 時也用它（使用者「aos 讀的 JSON 全部支援」，N-45；每支程式只解自己讀的格，用 `resolve_shallow` 一層層往下）。全家慣例見 [impls/README.md](../README.md)。
-行為照 `proto8/bin/aos_inst.py` 的 resolve（ideas D1、D7、D9～D15；N-45）。
+規範在 [N-45](../../docs/NORMS/06-基礎設施-命令列與指示詞.md)（`$ref` 的細則以本檔為準）。
 
 ```sh
 echo '{"argv": {"$ref": "cfg.json#/tools/stamp"}, "out": {"$env": "AOS_STACK", "$path": "out", "$prefix": "--o="}}' | aos-directive
@@ -85,10 +85,6 @@ Resolved resolve_shallow(const Json& v, const std::filesystem::path& base_dir);
 `resolve_shallow`＝**只換這一格**：`v` 本身是指示詞就換成它指到的值（換來的又是指示詞就再換），**不往物件、陣列裡面走**；回換好的值與「它裡面相對 `$ref` 的起點」
 （換過 `$ref`＝最後那份檔解開捷徑後的資料夾；沒換或換的是 `$env`＝`base_dir`）。給「只解自己讀的格」的程式用：讀到哪一層就對那一層呼叫一次，讀的 key 的值再交給 `resolve`。
 錯與寬容同 `resolve`。`$ref` 陣列合出來的值，每個 key／元素各自來自不同的檔，**往下解某一格時用 `dir_of(key)`／`dir_of(i)` 拿它的起點**（不是 `base_dir`）。
-
-## 跟 Python 版的差異
-
-照 `proto8/bin/aos_inst.py` 的 `resolve`（`$path` 照它的 `join`）寫，行為一樣；錯誤訊息字面不同、代號一律 `DirectiveBad`。
 
 ## 建置與測試
 

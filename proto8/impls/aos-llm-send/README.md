@@ -2,8 +2,6 @@
 
 `aos-llm-send - 把一張單子寄進 kernel 的信箱，等回信，結果原樣交回`（NAME，C-54 R1）
 
-10-30 改名，舊名 aos-gate（照 `aos-<領域>-<功能>`、跟 aos-llm-kernel 成對；[thinking 10-30 map-review 第 11 點](../../thinking/2026-10-30-map-review.md#決定10-30)）。
-
 **一句話：`aos-llm-send [旗標] 單子.json`——不直接跑那張單子，而是寫成一封信丟進 `$AOS_KERNEL` 信箱的 `new/`，等 kernel（[aos-llm-kernel](../aos-llm-kernel/README.md)）輪到它、跑完照信封的 `reply_to` 寄一封回信，再把 stdout、stderr 原樣吐出來、以單子的碼結束。**
 叫它的那一格看到的跟直接跑那張單子一樣，不知道有 kernel（C-20）。一個 lib（`lib/libaos-llm-send.a`，沒有公開標頭）加一支薄命令列（`bin/aos-llm-send`）。連 aos-llm-kernel 的公開標頭（信箱與信的格式）。全家慣例見 [impls/README.md](../README.md)。
 
@@ -17,7 +15,7 @@ cat fsm.json   # think 格不直接跑腦，跑閘門；腦那張單子放在同
 AOS_KERNEL=/path/to/mailbox aos-exec --ws ws agent    # 信箱位置由叫它的人綁（像 AOS_BRAIN_*，P-39）
 ```
 
-完整例子原本是 demo/llm-kernel（11-03 封存在 `proto8/archive/llm-kernel-demo/`）；設計與決定見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10-24-llm-kernel.md)。
+設計與決定見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10-24-llm-kernel.md)。
 
 ## 用法
 
@@ -32,8 +30,8 @@ aos-llm-send [旗標] 單子.json
   2. 讀單子、**在閘門的環境解整份指示詞**（＝叫它那一刻的值；`$ref` 從單子檔的資料夾算）。不是物件＝`CfgBad`；解不開＝`DirectiveBad`。
   3. `priority` 先驗（形狀見 aos-llm-kernel），壞＝`PriorityBad`、不寄。
   4. `cwd` 轉絕對：沒寫＝單子檔的資料夾（同 aos-exec），相對的接在它後面。
-  5. **回信信箱** `<信箱>/reply/`（N-16 信箱：`tmp/`、`new/`、`cur/`）沒有就建（aos-post 的 `init`；建不了＝`MkdirFailed`）。10-30 回信改走 `reply_to`（[medium 決定 3](../../thinking/2026-10-28-medium.md)）：放在 kernel 的信箱底下、不放寄信人自己的 stack——kernel（可能是別的帳號、在沙箱外）要寫得進去，kernel 的信箱本來就是兩邊都寫得到的地方（沙箱綁它、[root/setup.sh](../../extras/sandbox/root/setup.sh) `--mailbox` 給它權限），沙箱裡也不一定有 `AOS_STACK`。
-  6. 信＝`{"kind": "letter", "sender": 寄信人, "sent_at": 寄出時間, "reply_to": 回信信箱, "inst": 單子, "env": 閘門這一刻的整份環境, "priority": 原樣}`（前三個＝N-16 的信封，10-29 補：`sender`＝`$AOS_WS`、沒設或空＝`$HOME`〔都轉絕對路徑；`HOME` 也沒有＝`/`〕，`sent_at`＝ISO 8601 UTC 到毫秒〔同全家的 `recorded_at`〕；`reply_to`＝回信信箱的絕對路徑〔10-30〕；`inst`／`env`／`priority` 過渡期照舊在頂層、還沒包進 `body`），寫進 `tmp/.<信號>/letter.json`（先建 `sender.flock`、flock 住，拿到行程結束：kernel 靠它認寄信的人還在、不看 pid，所以關在沙箱裡也行）再改名進 `new/<信號>/`。
+  5. **回信信箱** `<信箱>/reply/`（N-16 信箱：`tmp/`、`new/`、`cur/`）沒有就建（aos-post 的 `init`；建不了＝`MkdirFailed`）。放在 kernel 的信箱底下、不放寄信人自己的 stack：kernel（可能是別的帳號、在沙箱外）要寫得進去，沙箱裡也不一定有 `AOS_STACK`（[medium 決定 3](../../thinking/2026-10-28-medium.md)）。
+  6. 信＝`{"kind": "letter", "sender": 寄信人, "sent_at": 寄出時間, "reply_to": 回信信箱, "inst": 單子, "env": 閘門這一刻的整份環境, "priority": 原樣}`（前三個＝N-16 的信封：`sender`＝`$AOS_WS`、沒設或空＝`$HOME`〔都轉絕對路徑；`HOME` 也沒有＝`/`〕，`sent_at`＝ISO 8601 UTC 到毫秒；`reply_to`＝回信信箱的絕對路徑；`inst`／`env`／`priority` 過渡期在頂層、還沒包進 `body`），寫進 `tmp/.<信號>/letter.json`（先建 `sender.flock`、flock 住，拿到行程結束：kernel 靠它認寄信的人還在、不看 pid，所以關在沙箱裡也行）再改名進 `new/<信號>/`。
 - **等**：每 20 毫秒看一次回信信箱的 `new/`，`letter.json` 的 `in_reply_to`＝自己的信號就是回信（別人的不碰；中間收到訊號馬上醒）。**等多久不歸閘門管**：由包它那格的 `timeout_ms` 守（10-15 KISS 1.8）；kernel 不在＝信堆在 `new/`、一直等，kernel 起來就接著做。
   原信在 `new/`、`cur/`、`done/` 都找不到、也沒有回信（照信走的方向依序看，不會看漏）＝`LetterMissing`。
 - **交回**：認領回信（`new/` → `cur/`），信裡的 `stdout.txt` 原樣寫到自己的 stdout、`stderr.txt` 寫到 stderr（單子自己導到別處的就沒有這兩個檔），收掉回信（刪）；`done/<信號>/` 是 kernel 的紀錄、閘門不碰（閘門結束後 kernel 收拾）。
@@ -74,8 +72,8 @@ stderr 一行 **`aos-llm-send: 代號 原因`**、退 1。
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-- `test_cli`（`tests/test_cli.py`，unittest 20 案，約 1 秒）：測試自己當 kernel（搬信、照 `reply_to` 寄回信），只測閘門這一半——A 命令列、信箱不在、單子檔的錯、priority 壞不寄；B 信的內容（指示詞在閘門的環境解、`AOS_CF`／`AOS_CD`／`AOS_CO`、cwd 轉絕對、整份環境、priority 原樣、信號照寄的先後；10-29 信封：`kind`、`sent_at` 的格式與時間、`sender` 有設 `AOS_WS`〔含相對的〕／沒設或空＝`HOME` 各一案）；
-  10-30 `reply_to`＝`<信箱>/reply` 且三格先建好；C 交回（stdout／stderr／碼、128＋N、kernel 回的錯、回信讀不懂四種、交回後回信信箱是空的而 `done/` 留著、別人的回信不碰）；D 訊號撤信（在 `new/` 撤掉、在 `cur/` 留著、回信已到就收掉）、信不見了、沒有 kernel 時一直等、等的時候一直鎖著 `sender.flock`（被 SIGKILL 就放掉）。
+- `test_cli`（`tests/test_cli.py`，unittest 20 案，約 1 秒）：測試自己當 kernel（搬信、照 `reply_to` 寄回信），只測閘門這一半——A 命令列、信箱不在、單子檔的錯、priority 壞不寄；B 信的內容（指示詞在閘門的環境解、`AOS_CF`／`AOS_CD`／`AOS_CO`、cwd 轉絕對、整份環境、priority 原樣、信號照寄的先後；信封：`kind`、`sent_at` 的格式與時間、`sender` 有設 `AOS_WS`〔含相對的〕／沒設或空＝`HOME` 各一案）；
+  `reply_to`＝`<信箱>/reply` 且三格先建好；C 交回（stdout／stderr／碼、128＋N、kernel 回的錯、回信讀不懂四種、交回後回信信箱是空的而 `done/` 留著、別人的回信不碰）；D 訊號撤信（在 `new/` 撤掉、在 `cur/` 留著、回信已到就收掉）、信不見了、沒有 kernel 時一直等、等的時候一直鎖著 `sender.flock`（被 SIGKILL 就放掉）。
 - 跟真 kernel 一起跑的在 `proto8/tests/test_llm_kernel.py`。
 
 ## 已知限制

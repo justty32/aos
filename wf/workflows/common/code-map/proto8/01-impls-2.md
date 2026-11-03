@@ -1,0 +1,65 @@
+← [入口](../proto8.md)｜涵蓋：`proto8/impls/` 的 `aos-loop`、`aos-fsm`、`aos-daemon`、`aos-post`、`aos-lock`｜上一份：[01-impls](01-impls.md)｜下一份：[01-impls-3](01-impls-3.md)
+
+行為細節以各專案 README 為準。路徑相對於該段標題的資料夾。建置檔（`CMakeLists.txt`、`vcpkg.json`、`.gitignore`）見 [01-impls](01-impls.md) 的共通段。
+
+## `impls/aos-loop/`（一次次跑；骨架 `aos::loop::Loop` 是公開的，aos-daemon 繼承它）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `include/aos/loop.hpp` | 公開介面：擋訊號、兩次之間取訊號、`parse_target`（`exec` 是字串、`[目標, 參數...]` 或單子物件）、`Loop` |
+| `src/main.cpp` | 命令列 `aos-loop [旗標] loop.json [-- 參數...]` |
+| `src/engine/loop.cpp` | 每次怎麼走、`log_line`（`--enable-logs`） |
+| `src/engine/window.cpp` | 窗：`read_ctl`（ctl 指令 `cmd`／`max`／`interval_ms`／`seq`，比內容判新舊）、`write_state`（有變才寫）＋子類別的 `write_more` |
+| `src/engine/config.cpp` | `resolve_keys`（設定檔與 ctl 的指示詞，daemon、fsm 共用）、`Loop` 建構子（旗標 ＞ 設定檔 ＞ 預設）、`parse_target`、`resolve_exec`、`place_inline`、`loop_cli`、`add_args` |
+| `src/engine/engine.hpp` | engine 的內部標頭 |
+| `src/run/run.cpp`、`src/run/run.hpp` | `run_once`：目標交給 `run_folder`、單子交給 `run_inline` |
+| `src/run/folder.cpp` | fork 子行程呼叫 aos-exec 的 `run_cli`、轉訊號 |
+| `src/run/inline.cpp` | 行程內跑單子：設 `AOS_CF`／`AOS_CD`／`AOS_CO`、相對 `AOS_WS`／`AOS_STACK` 轉絕對、`run_inst` |
+| `src/run/signals.cpp` | 整支程式壽命擋訊號、兩次之間取出 |
+| `src/common/common.hpp` | 內部共用標頭 |
+| `tests/test_cli.py` | 命令列黑箱 |
+
+## `impls/aos-fsm/`（一次跑一格）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `src/main.cpp` | 跑一格：`run_once` → `next_for` 查表 → 查到寫 state 退 0、查不到以格的碼退；訊號照表寫完再 128＋N |
+| `src/table/table.cpp`、`src/table/table.hpp` | `read_table`（解指示詞、單子記 `exec_bases`）、`check`（開跑查整張表，壞＝`CfgBad`）、`pick`、`next_for`（`next` 是字串或 `{結束碼: 狀態名}`） |
+| `src/state/state.cpp`、`src/state/state.hpp` | `state.txt` 的讀（去頭尾 Unicode 空白、`StateBad`）與原子寫 |
+| `src/common/common.hpp` | 內部共用標頭 |
+| `tests/test_cli.py`、`tests/test_demo.py` | 命令列黑箱、跑 demo |
+
+## `impls/aos-daemon/`（顧一群 proc）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `src/main.cpp` | 命令列 `aos-daemon [旗標] daemon.json [-- 參數...]` |
+| `src/daemon/daemon.cpp`、`src/daemon/daemon.hpp` | 名單 `procs`：`read_procs`、`is_once`（看寫法判 exec 型）、`adopt`（接回）、`tend`、`reconcile`、`halt`／`term`／`hold`／`look`／`start`、`cell_of`、`finish`（收工；還在跑的 loop 型留成 `sleeping`） |
+| `src/daemon/windows.cpp` | `procs_ctl.json` 的讀與驗（`read_procs_ctl`、`check_lists`、`check_once`）、`procs_state.json` 的寫（`write_more`、超過 100 列切 `write_parts`、`clean_parts`） |
+| `src/daemon/mailbox.cpp` | 信箱 `procs_ctl_mailbox`：`open_mailbox`、`take_letters`、`apply_letter`（`procs_added`／`removed`／`stopped`／`started`）、`done_letters` |
+| `src/child/child.cpp`、`src/child/child.hpp` | 子項：建小格、寫小格的 `loop.json`、`spawn`／`spawn_exec`、`launch`（setsid、`AOS_STACK`、`AOS_WS`、`AOS_DAEMON_STACK`）、`Child` 與狀態列 |
+| `src/common/common.hpp` | 內部共用標頭 |
+| `tests/test_cli.py`、`tests/test_demo.py` | 命令列黑箱；跑 demo daemon-2、daemon-3 |
+
+## `impls/aos-post/`（投遞：信箱四格）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `include/aos/post.hpp` | 公開介面：`Mailbox`、`SendOpts`、`init`／`open`／`sender`／`send`／`claim`／`claim_all`／`check`／`reply`／`finish`／`withdraw`／`check_id`；aos-daemon、aos-llm-kernel、aos-llm-send 連它 |
+| `src/main.cpp` | 命令列 `aos-post 子命令 [旗標] 信箱 [信號]`；沒東西退 10 |
+| `src/mailbox/mailbox.cpp` | 四格路徑、`init`、`open`、`check_id`；common 小工具的實作 |
+| `src/send/send.cpp` | `sender`、`send`（`tmp/` 寫好 rename 進 `new/`）、`--ordered`（經 aos-lock 拿 `order.lock/` 編序號） |
+| `src/take/take.cpp` | `claim`／`claim_all`、`check`、`reply`、`finish`、`withdraw` |
+| `src/common/common.hpp` | 內部標頭：`is_dir`、`names_in`、`drop`、`move` |
+| `tests/test_cli.py` | 命令列黑箱 |
+
+## `impls/aos-lock/`（鎖資料夾＋名牌）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `include/aos/lock.hpp` | 公開介面：`Holder`、`Seen`、`STALE_MS`、`try_acquire`／`acquire`／`release`、`look`、`reapable`；aos-post 連它 |
+| `src/main.cpp` | 命令列 `aos-lock acquire\|release\|show [旗標] 目標`；拿不到／沒有鎖退 10 |
+| `src/holder/holder.cpp` | 名牌：`identity`、`holder_of`、`to_json`、`look`、`reapable`（boot_id、pid＋ticks、殭屍、租約、名牌壞） |
+| `src/lock/lock.cpp` | `lock_dir_of`、寫名牌、收屍 `reap`、`try_acquire`、`acquire`（每 20 毫秒）、`release` |
+| `src/common/common.hpp` | 內部標頭：`now_ms`、`parse_at` |
+| `tests/test_cli.py` | 命令列黑箱 |

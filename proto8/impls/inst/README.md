@@ -5,6 +5,7 @@
 **一句話：一個很小的純 C 函式庫，只做一件事——起一個程式、等它結束、告訴你結果。**
 沒有命令列、不讀 JSON，給其他語言用 C FFI 呼叫（Python ctypes、Rust、Go、Zig…）；[aos-exec](../aos-exec/README.md) 遇到 inst 單子時在行程內呼叫它（單子 JSON 的解析在 aos-exec 的 C++ 庫，不在這裡）。
 全家慣例見 [impls/README.md](../README.md)（這個專案是純 C，名字沿用 dcap 的 C 模板：資料夾 `inst`、標頭 `aos.h`、函數 `aos_inst_*`）。
+inst 的語意以 [NORMS inst](../../docs/NORMS/03-基礎設施-inst.md)（N-04、N-25、N-27、N-30）為準；本頁只寫 C 介面與實作。
 
 就像你請人幫忙跑腿：你填一張單子（`aos_inst_input_t`）寫清楚「做什麼（argv）、去哪（cwd）、帶什麼（envs、stdin）、
 東西放哪（stdout／stderr）、最晚幾點回來（timeout_ms）」，他回來時在回條（`aos_inst_result_t`）上寫「辦完了，結果是幾號；
@@ -180,24 +181,6 @@ else:
 ```
 
 `argv` 這類陣列要自己留著參照（像上面的變數 `argv`），呼叫途中被回收就會讀到垃圾。完整一點的寫法看 `tests/test_ffi.py`。
-
-## 跟 Python 版（aos_inst.py）的差異
-
-| | aos_inst.py | libaos |
-|---|---|---|
-| 輸入 | JSON／命令列旗標／TARGET 檔、指示詞 | 一個 C 結構體 |
-| envs | `{名字: 值}`，同名的由 envs 蓋過 | `"KEY=VALUE"` 陣列＝完整環境（NULL＝沿用呼叫者的），不接不去重 |
-| 路徑 | 相對路徑從 cwd 算 | 一律絕對路徑，否則 `PathNotAbsolute` |
-| 找程式 | 照子程式那份環境的 PATH 找 | `execvp`：一樣照子程式那份環境的 PATH 找 |
-| 建資料夾 | `cwd_mkdir`、`stdout_mkdir`… | 都不建 |
-| timeout | `timeout_ms` null＝不限 | `timeout_ms` 0＝不限 |
-| grace_ms | 沒寫＝2000 | 沒寫（0）＝直接 SIGKILL |
-| 訊號 | 收到 INT／TERM／HUP 轉給子程式，過 grace 再 SIGKILL | 完全不管 |
-| 串流沒寫 | 接呼叫者的 | `/dev/null`；要接呼叫者的設 `inherits[i]` |
-| 行程群組 | 子程式自成群組（`start_new_session`），逾時 `killpg` 整群 | 預設同群組、只收直接子程式；`new_session` 時同 Python 版 |
-| 結果 | `{"id", "code", "signal", ...}`，signal 沒有＝null | 結構體，沒有 `id`；signal 沒有＝0 |
-| 錯誤 | 丟 `InstError(code, msg)` | 回 int 代號，只有名字沒有訊息；多 `PathNotAbsolute`、`WaitFailed` |
-| 記憶體 | — | 不 malloc |
 
 ## 建置與測試
 

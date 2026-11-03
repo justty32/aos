@@ -2,7 +2,7 @@
 
 `aos-post - 投遞：把一封信寄進信箱、處理者一封封認領`（NAME，C-54 R1）
 
-**一句話：`aos-post 子命令 [旗標...] 信箱 [信號]`——NORMS [N-16](../../docs/NORMS/05-基礎設施-窗.md)（10-29 改口＋補）的標準投遞：寄信人 `send` 把一封信放進信箱的 `new/`，處理者 `claim`／`claim-all` 一封封拿進 `cur/`、`check` 讀信、`finish` 收掉（要回信就照信裡的 `reply_to` 投一封回去），還沒被拿走的寄信人可以 `withdraw` 撤回。**
+**一句話：`aos-post 子命令 [旗標...] 信箱 [信號]`——NORMS [N-16](../../docs/NORMS/05-基礎設施-窗.md)的標準投遞：寄信人 `send` 把一封信放進信箱的 `new/`，處理者 `claim`／`claim-all` 一封封拿進 `cur/`、`check` 讀信、`finish` 收掉（要回信就照信裡的 `reply_to` 投一封回去），還沒被拿走的寄信人可以 `withdraw` 撤回。**
 一個 lib（`lib/libaos-post.a`，公開標頭 `include/aos/post.hpp`，aos-daemon 的信箱模式要連）加一支薄命令列（`bin/aos-post`）。連 aos-util、aos-lock（有順序的投遞）。全家慣例見 [impls/README.md](../README.md)；設計見 [thinking 10-29 medium-plan § 二](../../thinking/2026-10-29-medium-plan.md)。
 
 像公司的收發室：寄件人在後面的桌上（`tmp/`）把信封好，封好才放進待收籃（`new/`）；收件人把信從籃子拿到自己桌上（`cur/`）就算簽收，簽收了寄件人就抽不回來；辦完撕掉，或歸檔（`done/`）。
@@ -35,7 +35,7 @@ aos-post finish box 信號                            # 收掉（--keep 進 done
 - **壞信**（`check` 退 1、`finish` 丟掉）：`letter.json` 讀不了或不是 JSON 物件、`kind` 不是 `"letter"`、`sender`／`sent_at` 不是字串、沒有 `body`、`reply_to`／`in_reply_to` 不是字串。`body` 的形狀由收信的程式自己驗。不通知寄信人（決定 27）；記 `mailbox_warning` 是處理者的事（拿 `check` 的原因）。
 - **回信寄不出去**（`reply_to` 不是信箱等）：退 1，原信**留在 `cur/`**，可以再 `finish` 一次。
 - **有順序的投遞**（`send --ordered`，N-16、[medium-plan § 三](../../thinking/2026-10-29-medium-plan.md)）：信箱多兩樣——`order.lock/`（[aos-lock](../aos-lock/README.md) 的鎖，持有者＝這個 aos-post 行程）與 `order.json`（`{"counter_letters": N}`，沒有＝0）。步驟：信照常先在 `tmp/<信號>` 寫好 → 拿 `order.lock/`（拿不到每 20 毫秒再試、**一直等**；持有者死了照 aos-lock 收屍）→ 讀 N → `order.json` 寫 N+1（暫存改名）→ rename 成 `new/<N+1 零填 12 位>.<信號>` → 放鎖。鎖握到 rename 完，所以到 `new/` 的順序＝取號順序，處理者照名字排序（`claim`／`claim-all` 本來就是）就是有順序的。`order.json` 讀不懂＝`OrderBad`（放鎖、信丟掉）。
-  - **會缺號、不會重號**：寄信人死在「寫完 N+1、還沒 rename」之間，那個號就缺了（信留在 `tmp/`）。plan 原本是先 rename 再寫 N+1，死在中間時下一個人會拿到同一個號，所以兩步對調。
+  - **會缺號、不會重號**：寄信人死在「寫完 N+1、還沒 rename」之間，那個號就缺了（信留在 `tmp/`）。
   - 一個有序信箱只收 `--ordered` 的信：混著寄，沒序號的信號（20 位數字開頭）跟帶序號的（12 位）照名字排會亂。
 - `tmp/` 處理者永遠不看；`new/`、`cur/` 裡 `.` 開頭的名字不算信（N-05）。不是資料夾的東西出現在 `new/` 也認領得到，`check` 算壞信、`finish` 丟掉。
 

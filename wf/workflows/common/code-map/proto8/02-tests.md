@@ -1,12 +1,81 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/tests/`（自動測試）｜下一份：[02-tests-2](02-tests-2.md)（後半段的測試檔，從 `test_aos_daemon_ctl.py` 起）
+← [入口](../proto8.md)｜涵蓋：`proto8/tests/`（共用模組、impls 與 bin、agent 的格、demo agent、extras、eca）
 
-> 2026-10-21 晚從 [proto8.md](../proto8.md) 逐字下放（那份超過 8 KB，照 [STRUCTURE](../../../../STRUCTURE.md)）；同時補上 `test_tick.py`、總數改 223。
+跑法：`python3 -m unittest discover -s proto8/tests`（先建 impls，見 [testing](../../../testing.md)）。各 impls 專案自己的 `tests/` 列在 01-impls 各段。真模型的案例連不上就 skip；沒裝的外部程式（janet、bwrap、tmux…）整份或那幾案 skip。路徑相對於該段標題的資料夾。
 
-### `proto8/tests/`（233 個）
+## `tests/`（共用模組，不是測試）
 
-> 10-24 新增的測試檔（test_talk、test_lib、test_sandbox…十六份）另列在 [08-tests-10-24](08-tests-10-24.md)；那天收尾實跑全部 452 個。
+| 檔 | 負責什麼 |
+|---|---|
+| `aos_bins.py` | 定程式在哪（各 `impls/<名>/bin/`、`proto8/bin/`、`extras/ai_tools/bin`）：`tool(名)`、`path_with()`；沒建就停 |
+| `own_error.py` | import 時 `install()`：subprocess 拿回的 stderr 每行對一次錯誤代號再拿掉 |
+| `fake_brain.py` | 假 OpenAI 相容 server 與劇本小幫手 |
+| `dead_brain.py` | 「腦壞了」的網址（連上去馬上被拒） |
+| `round_common.py` | round 測試共用的暫存 agent `AgentCase` 與小工具 |
+| `spy_bin/aos-fsm` | 旁觀者：放在 PATH 最前面，記下呼叫再轉給真的 aos-fsm |
+| `bench_intent_context.py` | 手動跑的對比（不是測試）：整份 history vs 按意圖組 context 的 token 與答對率 |
 
-> **10-23 起跑 C++ 版**（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也改 C++、tick 先留 Python）：`aos_bins.py`（不是測試；11-03 eca-tools 起 `BINS` 尾端多 `extras/ai_tools/bin`＝aos-mcp）定程式在哪——aos-exec、aos-loop、aos-fsm、aos-daemon＝`proto8/impls/<名>/bin/`（要先建，見 [testing](../../../testing.md)）、aos-tick＝`proto8/bin/`；`tool(名)` 給完整路徑、`path_with()` 把這幾個 `bin/` 放 PATH 最前面，各測試檔都從它拿。`dead_brain.py`（不是測試，10-28）給 `DEAD`：當「腦壞了」的網址，本行程 bind 一個 127.0.0.1 的埠、不 listen、一直拿著，連上去保證馬上被拒（原本寫死 `127.0.0.1:9`，WSL mirrored 網路下會等到逾時）；test_human、test_ai_tools、test_talk、test_grow 從它拿（test_topdown_galtxt_a 11-03 隨 topdown 封存）。`fake_brain.py`（不是測試，11-02 晚從刪掉的 `test_dan.py` 原樣搬出）給 `FakeBrain`（假的 OpenAI 相容 server，照劇本回）、`call`／`tool_reply`／`answer`（劇本小幫手）、`REAL_URL`；test_kai、test_meg、test_pi_tools、test_file_tools、test_self_improve 從它拿（`test_dan.py`、`test_dan_q.py` 隨 demo/agent-dan、agent-dan-q 刪了，11-02 晚）。直接叫 Python 庫 `aos_inst` 的案例刪了或改成經 aos-exec 看行為（`test_inst` 16→15、`test_directive_lenient` 只留命令列 1 個，逐條的指示詞案例在 `impls/aos-directive/tests/test_cli.py`）；使用者原本說照現狀留的兩個 inst 錯誤字面差別，改成照 C++ 的字面（`test_inst` 認「單子的 <key> …」、`test_directive_argv` D1 認 `OpenFailed 串流開不了`）。 **11-03**：`BINS` 最前面加 `tests/spy_bin/`（測試用的 aos-fsm 旁觀者：跑真的 fsm、把每次的 `{stack, state, code, next}` 記到 `$FSM_SPY_LOG`；`tool("aos-fsm")` 也給它），`fsm_steps(stack)` 讀回某個 stack 跑了哪幾格——fsm 不寫 trace.jsonl 之後，原本讀 trace 的測試改用它。
+## `tests/`（impls 與 bin）
 
+| 檔 | 涵蓋 |
+|---|---|
+| `test_inst.py` | inst 單子經 aos-exec 跑、單子欄位與錯誤代號 |
+| `test_exec.py` | aos-exec、aos-loop、兩隻 agent 與巢狀 |
+| `test_exec_rules.py` | aos-exec 的進階規則與四支的錯誤代號 |
+| `test_exec_env.py` | `.env`：設值、`${}`、優先順序、轉向、沿路 `.env`、JSON `.env` key |
+| `test_exec_dotenv.py` | `.env` 的 dotenv 基礎子集與 `--dotenv-override` |
+| `test_directive_argv.py`、`test_directive_lenient.py` | 指示詞 `$ref`／`$env`／`$path` 的寫法與寬容規則 |
+| `test_loop.py` | aos-loop：訊號、`interval_ms`、ctl 指令、state 窗 |
+| `test_fsm.py` | aos-fsm：表、`next` 分岔、state 檔、訊號 |
+| `test_daemon.py` | aos-daemon：procs、ctl 增減、不重起、收工、接回 |
+| `test_aos_daemon_ctl.py` | `bin/aos-daemon-ctl`：add／rm／start／stop／pause／resume／ls／where、sleep／wake |
+| `test_aos_tools.py` | `bin/aos-tools`：三種登記對象、撞名、路徑、`--tooldef` 快取與 `--no-cache` |
+| `test_tick.py` | `bin/aos-tick` 與 demo tick |
+| `test_llm_kernel.py` | aos-llm-send＋aos-llm-kernel 經 aos-loop 端到端：撤信、排隊、slots、重起、額度 |
+| `test_claim_dotfiles.py` | demo 的認領題目跳過 `.` 開頭的暫存檔 |
 
-`test_exec.py`（aos-exec、aos-loop、兩隻 agent 與巢狀、N-05／N-43 的寫法）、`own_error.py`（不是測試：10-23 起各測試檔 import 時 `install()`，把 subprocess 拿回的 stderr 每一行的錯誤代號對一次〔對照表 `CODES`：原因開頭 → 代號，照 10-23 命名統合；五支，含 aos-tick〕再拿掉，既有斷言照舊認「程式名: 原因」；10-24 加 aos-loop／aos-daemon／aos-fsm 的「單子跑不起來：」＝`EntryBad`／`DirectiveBad`／`LaunchFailed`；`subprocess.run` 的結果另留 `raw_stderr`）、`test_exec_rules.py`（aos-exec 的 § 14～§ 20 新規則，33 個，移植自 impls/aos-exec 的 test_cli.py；10-23 加 `test_raw_codes` 直接看四支的代號〔10-23 命名統合後也蓋 `FlagUnknown`、`CfgMissing`、`CfgBad`、`DotenvBad`、`StateBad`〕，34 個）、`test_inst.py`（inst 單子：10-22 aos-inst 命令列刪後，原本叫 aos-inst 的案例改經 aos-exec 跑同一張單子，另直接叫 aos_inst 庫驗錯丟 `InstError`〔單子檔不在 `EntryMissing`、不是 JSON `EntryBad`；起不來原因字 `CommandMissing`／`CommandBad`〕；16 個；10-23 庫沒了，改經 aos-exec 看錯誤一行的代號、限時與孫程式，拿掉只驗庫回傳形狀的 1 個，15 個）、`test_tick.py`（aos-tick：從 0 起、加一、改名不就地寫、壞內容／讀不到／寫不了都退 1 一行且檔不動〔10-23 起帶代號 `ClockBad`／`WriteFailed`／`ArgumentsBad`／`FlagUnknown`〕、usage、`--` 與 `#` 照字面、demo/tick 跑 5 次＝5；10-21 晚，10 個）、`test_fsm.py`（aos-fsm，含訊號與 PATH 原樣；10-21 body 格、物件 val＝錯；傍晚設定檔是唯一的位置參數、val 陣列，19 個；10-22 加 3 個：state 在但讀不了、開跑時查整張表、state 裡的狀態不在表上，22 個；10-23 trace 的 `elapsed_ms` 與 `at` 到毫秒）、`test_loop.py`（直接叫 aos-loop：訊號、PATH 原樣，§ 24；interval_ms、ctl、state 窗〔10-23 命名統合：state.json 的 key 順序與 `at` 到毫秒；10-25 改名 `counter`（同日再改 `counter_runs`）、`recorded_at`；11-02 `kind`、`recorded_at` 拿掉、最後一欄 `updated_at`〕；`Cli` 13 個：旗標蓋設定檔、run 陣列、`檔#/指標`、設定檔第一行 `#!` 跳過〔10-22〕、沒 max 不限、run 物件＝錯、`-` 開頭目標、usage 錯、`aos-exec loop.json` 與大 JSON 經 `_entry`、11-02 `設定檔 -- 參數` 每次接在 exec 後面、log 預設不印與 `--enable-logs`）、`test_daemon.py`（aos-daemon：loops、ctl 增減、不重起、收工、接回〔11-02 起 run_d 帶 `--enable-logs`、結束的子項看 log、慣用名 `daemon_ctl.json`，11-02 晚改回 `ctl.json`／`state.json`〕；10-21 加旗標、run 陣列、字串子項、D7、經 aos-exec 起子 loop；10-23 子項 phase 分 `done`〔自己結束〕／`stopped`〔daemon 收掉〕；10-29 拆窗：名單寫 `loops_ctl.json`、子項表讀 `loops_state.json`，加 ctl.json 的 `loops_added` 不採用、過渡期提醒 1 案；10-30 exec 型子項 `execs` 5 案：跑完 `done`、記 `code`、不重起、小格沒有 `loop.json`，`execs_removed` 送 SIGTERM、不理的 10 秒 SIGKILL 整群，跟 `loops` 同名＝退 1，adopt 接回 `execs` 列，`{"exec": X, "max": 1}` 的 loop 型照舊能跑；10-30 晚 eca 子項的工作區 `ws` 4 案：exec 型與 loop 型子項看到的 `AOS_WS` 等於 `ws`〔loop.json 裡沒有 `ws`、列上記著〕、沒寫＝繼承 daemon 的〔列上沒這欄〕、相對路徑從 daemon 的 cwd 算〔daemon.json 與 loops_ctl 的 `loops_added`〕與型別錯退 1；11-02 子項的 `AOS_DAEMON_STACK` 1 案：loop 型〔身體〕、exec 型子項看到的 `AOS_DAEMON` 開頭變數只有它、值＝daemon 的 stack〔絕對、結尾 `/`；daemon 的 `$AOS_STACK` 給相對的也一樣〕，impls 的 `test_cli.py` N 段同一案；**11-03 procs** 共 29 案：全改 `procs`／`procs_ctl.json`／`procs_state.json`／小格 `procs/<名字>/`，`test_ctl_loops_moved_to_loops_ctl`→`test_old_keys_ignored`〔舊 key 當沒看到〕、`test_execs_removed_sigterm_then_kill_group`→`test_procs_removed_sigterm_then_kill_group`、`test_execs_loops_same_name_is_cfg_bad`→`test_same_name_rewrite_not_restarted`〔一份名單撞不到；同名改寫法不重起〕）、（11-03：trace 拿掉，`test_fsm.py` 改看結束碼與 state.txt、`test_no_trace_file` 查不再出現；其他測試看「跑了哪幾格」改用 `tests/spy_bin/aos-fsm` 旁觀者＋`aos_bins.fsm_steps`）
+## `tests/`（agent 的格與 lib）
+
+| 檔 | 涵蓋 |
+|---|---|
+| `test_round_parts.py` | `lib/agent/parts.py` 的查找順序 |
+| `test_round_endpoint.py` | endpoint 格 fake、openai |
+| `test_round_act.py` | act 格：順序、平行、掛勾、工具的問題回給腦 |
+| `test_round_fsm.py` | `fsm-stop.json`／`fsm-idle.json` 一次一格 |
+| `test_round_loop.py` | agent 的 `loop.json` 整隻跑 |
+| `test_round_queue.py` | queue 格：push、claim、finish、順序、壞信 |
+| `test_nia.py` | 範本 agent-nia、ask_round |
+| `test_lib.py` | `lib/` 每個工具的形狀（跳過 agent 的格）、base 的行為、agent-liv 經捷徑用庫 |
+| `test_pi_tools.py` | `lib/base` 的 read、write、edit、bash 與 agent-pip |
+| `test_file_tools.py` | `lib/base` 的 ls、stat、view、json_edit、mkdir、move、copy、trash 與 agent-pip |
+| `test_cli_tools.py` | `lib/agent/claude`、`codex` 與 `cli_session.py`（假的 claude／codex） |
+
+## `tests/`（demo 的 agent）
+
+| 檔 | 涵蓋 |
+|---|---|
+| `test_eve.py` | agent-eve 叫 pyfix：委派修好與 diff、子 agent 用自己的模型 |
+| `test_gus.py` | agent-gus：規劃、fork、只帶結論、深度與額度、`PlanBad` |
+| `test_compact.py` | agent-hal 的土法 compact |
+| `test_kai.py` | agent-kai：按意圖挑題、recall 工具 |
+| `test_meg.py` | agent-meg：記憶庫、`HeapBad`、同時寫不互蓋 |
+| `test_talk.py` | demo/talk：send_message、團隊三隻分工、手數上限 |
+
+## `tests/`（extras）
+
+| 檔 | 涵蓋 |
+|---|---|
+| `test_human.py` | `aos-say`、`aos-listen`（對 agent-nia 的拷貝、外部範本） |
+| `test_ai_tools.py` | `aos-ai` 命令列與 `lib/aos` 轉叫它的工具 |
+| `test_aos_mcp.py` | `aos-mcp`：測試自己當 MCP client |
+| `test_grow.py` | `aos-grow`：長上去再縮回、行為不變 |
+| `test_janet.py` | Janet 編成 aos |
+| `test_lua_aos.py` | Lua 編成 aos：lua／luajit／`nvim -l` 產物一樣、真跑 |
+| `test_sandbox.py` | `aos-sandbox`：路徑、ro／rw、斷網、上限、`setup.sh` |
+
+## `tests/`（外部 coding agent）
+
+| 檔 | 涵蓋 |
+|---|---|
+| `test_eca_turn.py` | `bin/aos-eca-turn`：`--one`、`--on-empty`、`--on-busy` |
+| `test_eca.py` | 範本 `demo/eca-claude`、`eca-codex`：say → 跑 → listen、停著等 |
+| `test_eca_cmd.py` | `extras/eca` 的 `aos-eca`：open／close、start／stop、add／rm、ls／state |

@@ -1,14 +1,126 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/demo/`（agent-bob、ann、eve、daemon、daemon-2、daemon-3、tick（llm-kernel 11-03 封存到 proto8/archive/llm-kernel-demo/）；外部 coding agent 範本 eca-claude／eca-codex 見 [17-eca](17-eca.md)）｜`proto8/bin/` 見入口
+← [入口](../proto8.md)｜涵蓋：`proto8/demo/`（agent 範本、daemon、talk、eca、tick、`run.sh`）
 
-### `proto8/demo/`
+用法、跑法與錯誤代號以 [demo/README](../../../../../proto8/demo/README.md) 為準。路徑相對於該段標題的資料夾。
 
-說明在 [proto8/demo/README.md](../../../../../proto8/demo/README.md)；`run.sh` 各建暫時工作區（題目 `new/` → `cur/` → `done/`、答案 `out/`）跑一遍並印整棵 stack 樹（`.stack/`）。
+**agent 骨架**（下面說「骨架」就是這組）：`_entry`（`exec aos-loop loop.json`）、`loop.json`（`exec` 指 `fsm.json`、`max`）、`fsm.json`（idle → think → act）、`idle/_entry`（`cur/` 或 `new/` 有題目退 0、沒有退 10）、`brain.py`（think：認領題目、問腦、接進 history；沒設 `AOS_BRAIN_URL`＝假腦）、`act.py`（跑工具，工具的問題回給腦不停）、`.env`（模型名）、`system.txt`（人格）、`tools.json`（工具註冊檔）、`tools/<名>`（捷徑到 `lib/`）。
 
-- `agent-bob/`（混合範本）：`_entry`＝`exec aos-loop loop.json`、`loop.json`＝`{"exec": "fsm.json", "max": 20}`；`fsm.json` 帶 `_entry`（本身是 aos-exec 入口，10-21）、idle／act 是子資料夾、think 是那格 `body` 裡的單子〔10-24 起單子直接寫在 `exec`〕；`act/tools/cathy/` 是另一隻完整 agent（同一套範本），她的 `act/tools/stamp/` 是最底層的工具——一次跑完四層巢狀。
-- `agent-ann/`（全內嵌對照）：零子資料夾，`_entry`＝`exec aos-exec loop.json`（loop.json 帶 `_entry`），`fsm.json` 三格全是 `body` 裡的單子〔10-24 起直接寫在 `exec`，loop.json 的 `exec` 也是單子〕，各指 `idle.py`／`brain.py`／`act.py`。`.env`（10-22）是 demo 唯一的 `.env` 範例，全是註解（API key 與 `PATH=${AOS_CD}/bin:${PATH}` 的寫法；PATH 那行要最外層加 `--dotenv-override` 才生效、只多一份），不設任何東西。
-- `agent-dan/`、`agent-dan-q/`：**11-02 晚刪了**（使用者 11-02 晚「4.都刪掉，過時了」；10-23 真腦＋工具範本、讀舊協議 `new/*.txt`，與 10-30 搬到 queue 的版本）。最後一版看 `git show 983a2632:proto8/demo/agent-dan/<檔>`（dan-q 同理）。別份 code map 表裡的「同 agent-dan」照 `agent-eve/` 讀（eve 是它的複本，只改錯誤訊息開頭與 act 逾時）；測試 `test_dan.py`、`test_dan_q.py` 一起刪，`test_dan.py` 的假 server 與劇本小幫手搬到 `tests/fake_brain.py`。
-- `agent-eve/`（10-24，agent 當工具；[thinking](../../../../../proto8/thinking/2026-10-24-agent-as-tool.md)）：主 agent 照抄 agent-dan（11-02 晚刪了；`brain.py`、`act.py` 只改錯誤訊息開頭；act 逾時 30 分鐘），唯一的工具 `tools/pyfix/`：`_tooldef.json`（task、dir）、`_entry`（python3 轉接：開小格 `$AOS_STACK/runs/NNN/`、備份 `before/`、task 寫進子 agent 的 `ws/new/task.txt`、`aos-exec --dotenv-override --ws … agent`、印 `out/task.txt`＋實際 diff）、`agent/`（子 agent pyfix-agent，也是 agent-dan 範本：自己的 `system.txt`、`.env`、`loop.json` max 60；`tools/list_files`、`read_file`、`write_file`、`edit_file`、`run_python` 只碰 `$AOS_STACK/pyfix_dir.txt` 寫的資料夾，11-01 起取代環境變數）。
-- `daemon/`（10-20）：`_entry`＝`exec aos-daemon daemon.json`、子項 `exec`＝`daemon.json#/loops/<名字>/body`（10-21；10-23 深夜改名，原 `run`）〔10-24 起子項 `exec` 直接是單子〕〔11-03 名單改叫 `procs`〕；一個 daemon 同時管 bob、ann 兩個子 loop（工作區 `$AOS_WS/bob`、`$AOS_WS/ann`，stack 在 daemon 的小格裡）。
-- `daemon-2/`（10-29，[medium-plan](../../../../../proto8/thinking/2026-10-29-medium-plan.md) 實作第 8 步）：信箱模式的 daemon。`_entry`＝`exec aos-daemon "$@" daemon.json`；`daemon.json` 寫 `loops_ctl_mailbox`（11-03 改 `procs_ctl_mailbox`、名單 `procs`；11-02 晚原 `loops_mailbox`；慣用名 `ctl.json`／`state.json`（11-02 白天曾改 `daemon_*`、晚上改回））、沒寫 `max`（`run.sh` 給 `--max 25`）、`loops` 只有 `sam`；`agent-sam/_entry`（shell，agent 格）：`$1`＝daemon 的信箱（daemon.json 給 `$AOS_STACK/../../loops_ctl_mailbox`：sam 的小格在 `loops/sam/`，11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../../../../../proto8/thinking/2026-11-02-stack-tools.md)；11-03 改 `procs_ctl_mailbox`、`procs/sam/`），`aos-post send` 一封加子項 `tick`〔11-03 起信是 `procs_added`〕（每 300 毫秒 `aos-tick`）的信；`README.md`（怎麼起、人怎麼寄、怎麼看 loops_state、怎麼停）。自動測在 `impls/aos-daemon/tests/test_demo.py` 的 `run_daemon2`。
-- `daemon-3/`（10-30，[agent-lifecycle](../../../../../proto8/thinking/2026-10-30-agent-lifecycle.md) 實作第 8 步）：一次性的東西掛 daemon 的兩種寫法。`_entry`＝`exec aos-daemon "$@" daemon.json`；`daemon.json`（`max` 10、`interval_ms` 200）同一支 `../tick` 掛兩次（11-03 起同一份名單 `procs`、看寫法決定怎麼起；以下 `loops`／`execs`／`loops_ctl_mailbox`／`loops_state` 是 11-03 前的名字，現在是 `procs`／`procs_ctl_mailbox`／`procs_state`）：`loops` 的 `tick_loop`＝`{"exec": "../tick", "max": 1}`（① 包成跑一次的子 loop）、`execs` 的 `tick_exec`＝`"../tick"`（② exec 型子項，直接 aos-exec 一次）；`README.md`（兩種寫法對照、怎麼跑、跑一次的 loops_state 兩張表、半路用 `aos-daemon-ctl add` 加一個；所以 daemon.json 也寫 `loops_ctl_mailbox`）。自動測在 `impls/aos-daemon/tests/test_demo.py` 的 `run_daemon3`。
-- `tick/`（10-21 晚）：`_entry`＝`exec aos-loop loop.json`、`loop.json` 跑 5 次 `loop.json#/body`〔10-24 起單子直接寫在 `exec`〕（`aos-tick $AOS_STACK/tick.txt`），跑完時鐘檔是 5。
+## `demo/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| `run.sh` | 各建暫時工作區把幾個 demo 跑一遍，印整棵 stack 樹 |
+
+## `demo/agent-nia/`（格組起來的 agent 範本：一輪走 `lib/agent/round`）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `_entry` | JSON 入口 `["aos-loop", "loop.json"]` |
+| `loop.json` | 單子 `["aos-fsm", "fsm-stop.json"]`、`cwd` 指 `lib/agent/round`（停著等＝改指 `fsm-idle.json`） |
+| `parts.json` | 格的通訊錄（aos-exec 格式）：queue、history、act、`hook/pre_think`＝compact、endpoint |
+| `tools.json`、`system.txt` | 腦的工具（clock、math）、system 訊息 |
+
+## `demo/agent-bob/`（混合範本：子資料夾＋單子；agent 當工具）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `_entry`、`loop.json`、`fsm.json`、`idle/_entry`、`brain.py` | 骨架；think 是 `fsm.json` 裡的單子 |
+| `act/_entry` | 把 `plan.txt` 當題目交給 `tools/cathy`，答案寫 `out/` |
+| `act/tools/cathy/*` | 另一隻 agent（自己的骨架＋`act/tools/stamp/_entry`：加時間戳、計次） |
+
+## `demo/agent-ann/`（全內嵌對照：零子資料夾）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `_entry`、`loop.json`、`fsm.json`、`brain.py`、`act.py`、`.env` | 骨架；`_entry`＝`exec aos-exec loop.json`，三格全是單子 |
+| `idle.py` | idle 格（單子叫它） |
+
+## `demo/agent-eve/`（agent 當工具）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `_entry`、`loop.json`、`fsm.json`、`idle/_entry`、`brain.py`、`act.py`、`.env`、`system.txt`、`tools.json` | 骨架；act 逾時 30 分鐘（等子 agent） |
+| `tools/pyfix` | 捷徑 → `lib/agent/pyfix`（改 Python 的子 agent） |
+
+## `demo/agent-gus/`（小念頭：規劃、fork、只帶結論回來）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `_entry`、`loop.json`、`fsm.json`、`idle/_entry`、`brain.py`、`act.py`、`.env`、`system.txt`、`tools.json` | 骨架；fsm 多 plan、fork 兩格 |
+| `shared.py` | 各格共用：認領、history、問腦、`launch`／`conclusion`；上限寫死 |
+| `plan.py` | 請腦回 `{context, steps}` → `steps.json`；`PlanBad` |
+| `fork.py` | 每步起一個小念頭（同一隻 agent），全到齊接進 history |
+| `thought.json`、`thought.py` | 給別的程式叫一個小念頭：stdin 一步 → stdout 只有結論 |
+| `tools/run_python` | 捷徑 → `lib/base/run_python` |
+
+## `demo/agent-hal/`（土法 compact）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `_entry`、`loop.json`、`fsm.json`、`idle/_entry`、`brain.py`、`act.py`、`.env`、`system.txt`、`tools.json` | 骨架；fsm 在 think 前多 compact 格 |
+| `compact/_entry`、`compact/compact.py` | history 超過門檻才三步壓縮，原檔與報告留在 `compact/<run>/` |
+| `compact/ask.py`、`compact/prompts/*` | 問腦；三步的 system 訊息 |
+| `tools/math`、`tools/clock` | 捷徑 → `lib/base` |
+
+## `demo/agent-kai/`（按意圖組 context）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `_entry`、`loop.json`、`fsm.json`、`idle/_entry`、`act.py`、`.env`、`system.txt`、`tools.json` | 骨架 |
+| `brain.py` | 組 context：目錄＋挑出的舊題＋這題完整；記 `context.jsonl` |
+| `tools/recall/_entry`、`tools/recall/_tooldef.json` | 搜舊題、展開一題 |
+| `tools/recall/turns.py` | 把 history 切成題、照意圖挑（brain 也 import） |
+| `tools/math`、`tools/clock`、`tools/read` | 捷徑 → `lib/base` |
+
+## `demo/agent-liv/`（工具引用 lib、同名自己的贏）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `_entry`、`loop.json`、`fsm.json`、`idle/_entry`、`brain.py`、`act.py`、`.env`、`system.txt`、`tools.json` | 骨架；假腦叫一次 `ls` |
+| `_metainfo` | 這隻 agent 的特性範例 |
+| `tools/clock/_entry`、`tools/clock/_tooldef.json` | 自己的真資料夾，示範覆寫庫裡的 clock |
+| `tools/read`、`tools/write`、`tools/edit`、`tools/bash`、`tools/ls`、`tools/json_read`、`tools/json_edit` | 捷徑 → `lib/base` |
+
+## `demo/agent-meg/`（長期記憶庫）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `_entry`、`loop.json`、`fsm.json`、`idle/_entry`、`act.py`、`.env`、`system.txt`、`tools.json` | 骨架；`.env` 說明 `AOS_HEAP` |
+| `brain.py` | 問腦前附上相關記憶；庫壞＝`HeapBad` |
+| `tools/memory` | 捷徑 → `lib/aos/memory` |
+
+## `demo/agent-pip/`（coding agent）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `_entry`、`loop.json`、`fsm.json`、`idle/_entry`、`brain.py`、`act.py`、`.env`、`system.txt`、`tools.json` | 骨架；max 200、act 15 分鐘 |
+| `tools/*` | 十二條捷徑 → `lib/base`（read、write、edit、bash、ls、stat、view、json_edit、mkdir、move、copy、trash） |
+
+## `demo/talk/`（agent 之間寄信）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `member/_entry`、`member/loop.json`、`member/fsm.json`、`member/idle/_entry`、`member/.env`、`member/system.txt`、`member/tools.json` | 一隻成員的骨架 |
+| `member/brain.py` | 信翻成「[來信] …」、system 加名冊 |
+| `member/act.py` | 要回的信經 `send_message` 自動寄回 |
+| `member/tools/*` | 捷徑 → `lib/aos`（send_message、check_inbox）、`lib/base`（math、clock） |
+| `team/_entry`、`team/daemon.json` | 團隊：一個 daemon 顧 ann、bob、cat 三個子 loop |
+| `team/quiet.py` | 成員信箱都空＝退 10 收工；有成員失敗＝停 |
+| `team/roster.json` | 名冊範例：成員、群組、手數與大小上限 |
+
+## `demo/` 的 eca-claude、eca-codex（外部 coding agent 範本，兩份同形）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `eca-*/_entry` | `["aos-loop", "loop.json"]` |
+| `eca-*/loop.json` | 停著等版：`aos-eca-turn --on-empty idle --on-busy yield` |
+| `eca-*/cli.json`、`eca-*/tools.json` | CLI 種類與旗標；工具註冊檔 |
+
+## `demo/` 的 daemon、daemon-2、daemon-3、tick
+
+| 檔 | 負責什麼 |
+|---|---|
+| `daemon/_entry`、`daemon/daemon.json` | 一個 daemon 同時顧 bob、ann 兩個子 loop |
+| `daemon-2/_entry`、`daemon-2/daemon.json` | 信箱模式的 daemon |
+| `daemon-2/agent-sam/_entry` | 跑一次就寄信請 daemon 加一個子項 tick |
+| `daemon-3/_entry`、`daemon-3/daemon.json` | 同一份 `procs` 兩種寫法各掛一次 tick（子 loop／aos-exec 一次） |
+| `tick/_entry`、`tick/loop.json` | loop 跑 5 次 `aos-tick`，時鐘檔是 5 |

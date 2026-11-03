@@ -1,3 +1,5 @@
+> 封存 2026-11-03，原因：`core/inst` 已於 2026-08-30 刪除，本冊只剩歷史價值
+
 # code map — core/inst/
 
 ← [code map 總圖](../code-map.md)｜[code-map 各分冊導覽](README.md)｜[本冊各檔導覽](inst/README.md)

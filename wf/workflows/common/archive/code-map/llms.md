@@ -1,3 +1,5 @@
+> 封存 2026-11-03，原因：`core/llms` 已於 2026-08-30 刪除，本冊只剩歷史價值
+
 # code map — core/llms/
 
 ← [code map 總圖](../code-map.md)｜[本資料夾導覽](README.md)
