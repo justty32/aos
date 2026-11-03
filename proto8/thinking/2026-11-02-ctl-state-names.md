@@ -27,6 +27,7 @@
 
 - **方向題 1**（`loops_ctl`／`loops_state` 留不留名）：「hmmm，是這樣的，剛剛下班通勤的時候有個想法，就是說，exec和loops，其實都屬於proc，所以...改名？可是我又擔心和linux的proc撞名...不過好像撞名也沒差。就是說，exec是基石，loop是另一種基本形式，搞不好以後還會有更多形式。」→ 頂層判讀：使用者在想把 `execs`／`loops` 統稱 proc 並改名，**未定**；今晚 `loops_ctl`／`loops_state` 等**不動**，**待明天跟使用者談**。
   - **11-03 定案**（[11-03 procs](2026-11-03-procs.md)）：統稱 proc、名單合一成 `procs`；`loops_ctl`／`loops_state` 改 `procs_ctl`／`procs_state`（照本檔方向題 1 (a) 那句通則「管別人的窗＝`<被管的東西>_ctl`／`_state`」，N-13 的 11-03 補）。
+  - **11-03 晚結案**（頂層列開著的事，使用者逐字）：「A2.解決了，以後相關的稱呼/慣例等也要變就是了。」→ 決定：本題已由 11-03 procs 合一解決；**以後相關的稱呼與慣例也跟著改成 proc 這一套**（說 exec／loop 是 proc 的兩種形式，名單、窗、說明一律用 proc 的叫法），遇到舊叫法順手改。
 - **方向題 2**：「2.好。」→ 前綴原則對 ctl／state 以外的固定名照舊（選 a）。
 - **方向題 3**：「3.對。」→ 只有帶 ctl 的才算 ctl／state 對；`relay_state.json` 照舊（選 a）。
 
@@ -161,5 +162,5 @@
 **22:35 另一輪 commit（7dcc3dc6）後接著做**（第一批 25 檔被頂層的 HANDOFF commit 971811ce 一起帶進去了，其餘另開 commit）：步驟 2（ai_tools：`aos_ai_base.py`、`aos_ai_daemon.py`、`aos-ai` 檔頭、README、`concepts.md`；`test_ai_tools`）、步驟 3（`aos_ws.loop_state` 只認 `state.json`、`LOOP_STATE_NAMES` 拿掉、`aos-listen --status` 不再印「（哪份）」；`test_human` 那案改成 `test_status_reads_only_state_json`、另一案的 regex 跟上；human README）、`demo/README.md`、code map 02-tests／06-3／08-a／09-lib／13-demo、`WAIT_USER` 那行。
 
 **還沒做**：
-- 方向題 1（`loops_ctl`／`loops_state`、execs／loops 統稱 proc）待明天跟使用者談。
+- 方向題 1（`loops_ctl`／`loops_state`、execs／loops 統稱 proc）待明天跟使用者談。（11-03 已定案、11-03 晚使用者說「解決了」，見上方「方向題的答案」）
   - 11-03 定案，見 [11-03 procs](2026-11-03-procs.md)。
