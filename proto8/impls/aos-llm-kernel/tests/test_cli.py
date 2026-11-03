@@ -692,7 +692,7 @@ class J_ReplyTo(Case):
         self.assertEqual(self.replies(b), [])
         self.assertTrue((self.mb / "done" / a).exists())
 
-    def test_sweep_regrets_unclaimed_reply(self):
+    def test_sweep_regrets_untaken_reply(self):
         b = self.box()
         lock = self.post(["true"], reply_to=str(b))
         self.run_k()
