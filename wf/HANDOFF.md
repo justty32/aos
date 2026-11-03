@@ -12,6 +12,16 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-03 晚收工（家機 Manjaro；明天開新 session 接）
+
+1. **授權**：今晚隨意 push、普通事 opus、簡單與雜活 sonnet、規劃 fable、做事的 agent（雜活除外）先讀 wf 規矩、可再派 agent；新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問。commit 一律 `git commit --only -- 路徑` 或 GIT_INDEX_FILE 暫存 index（今晚頂層一次不帶路徑的 commit 把 tidy 兩批包走：eb4dea91）。
+2. **今晚做完並 push（main）**：三 commit 合跑全套已驗；daemon 收工 sleeping／開門 wake（`68c4e258`，不開放 sleep／wake 指令）；wake 後 ws 欄修好、`--enable-logs` 與 Ctrl-C 收工寫進 README（`6d42a264`）；封存瘦身候選到 `proto8/archive/`、刪 agent-fay（`c3cbf617`）；刪 round 那套 agent 與 aos-ai 只留概念（`cb6b49e0`，`proto8/archive/agent-round-concepts/`；aos-mcp、aos_ws、aos-say／listen 留著，使用者選「先留著」等 aos-agent）；tidy 收斂多批（W0～W4、P5、N-28 與 P1-1 摺 NORMS、P4-A～C thinking 精簡，狀態全在[收斂報告](workflows/tidy/reports/2026-11-03-收斂.md)）；家機試驗場 `~/code/playground` 清空重建成只玩 eca（daemon＋bob〔claude haiku、clock 工具〕，README 一步步）；aos-eca-turn 手冊頁 https://claude.ai/artifact/GsAZQHDCN7wHDUP3vvS78h 。
+3. **明天要接**：
+   - **aos-post 改版**（使用者「都照建議」，[thinking](../proto8/thinking/2026-11-03-aos-post.md) 檔末「實作進度（11-03 晚收工）」）：步驟 1～8 做完、unittest 520 OK，在分支 `aos-post-rework`（已 push，worktree `.claude/worktrees/aos-post` 只在家機）；剩步驟 9 條文加註（N-14～16、C-48、C-54 `…Exists`、P-42／P-43）、10 收尾驗證（repo 根 ctest、wf-lint、舊名 grep），然後 rebase main、ff 進 main、push、刪分支。
+   - **tidy 收斂**：照報告接；P4-D／P4-E 12 份 thinking 精簡做到一半，存在分支 `tidy-p4-wip`（`8f4e7377`，未對讀未驗，已 push）；P2 CONVENTION 的心得已記報告；NORMS 05（N-14～17）與 C-54 等 aos-post 加註完再摺；round 已刪後沒實作對應的條文清單在 SESSION-LOG，要給使用者看。
+   - 使用者說「明天我通勤時候看」：aos-eca-turn 手冊頁。
+4. **雜項**：試驗場兩個 daemon 同資料夾＝使用者「這是使用者自己要承擔的風險」；寫 ctl.json stop 同內容第二次不生效＝使用者選收工用 Ctrl-C。公司那邊：WSL clone 裡 `ask_round/_tooldef.json` 的改動直接丟（ask_round 已刪）、Windows 兩檔舊改動丟掉、`agents/amy` 刪。
+
 ## 2026-11-03 傍晚下班（公司 Windows；回家開新 session 接）
 
 1. **授權**：同 13:30 那條（隨意 push、opus／sonnet／fable 分工、agent 先讀 wf 規矩）；新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問。多個 agent 同一工作樹時，各自用 GIT_INDEX_FILE 暫存 index 只 commit 自己的段，今天沒再出事。
@@ -26,27 +36,3 @@
    - 常駐 bob：使用者「感覺之後會被蛋雕」「先不用管吧」；11-03 晚「B5.封存吧，eca是他的全面強化版，真的沒必要了。」——已結（git 裡只有 thinking，加註；WAIT_USER 那條拿掉）。
    - **11-03 晚開著的事已答並做完**：A2 proc 改名結案（「以後相關的稱呼/慣例等也要變」）；A3 round 的 on_error 緊張「不管」（之後使用者「封存這條線，1.該刪的都刪光刪乾淨」「一起刪……只需要留下他們的概念就好」：`lib/agent/round/`、parts、queue／history／act／compact、`lib/endpoint/`、ask_round、agent-nia、aos-ai〔含 lib/aos 六個工具、Claude skill、`aos_ws.loop_state`〕連程式刪了，概念在 `proto8/archive/agent-round-concepts/`；aos-mcp、aos_ws、aos-say／listen 留著，say／listen 去留頂層另問；NORMS／CONVENTION 只講 round 的條文列在 SESSION-LOG 待收斂）；瘦身候選「先封存，等之後我們進展到那塊的時候可以拉出來看看」→ demo/llm-kernel、demo/self-improve（連 lib/aos/try_run）、nvim 外掛、Lua／Janet agent_dan、aos-chat 進 `proto8/archive/`，環境變數第 4 題結案；`aos_ws.loop_state` 不動：使用者「aos_ws,aos-say/listen,aos-ai這些之後都會整合進aos-agent」（[aos-agent](../proto8/thinking/2026-11-03-aos-agent.md)）；demo/agent-fay 刪（「我沒聽過這東西，刪掉。」），test_fay→test_cli_tools。B4 使用者「等等」。
    - 使用者之後要看 aos-post（impls/aos-post）。
-
-## 2026-11-03 13:30 出門前（公司 Windows；下次開 session 接）
-
-1. **授權**：本 session 隨意 push、普通事 opus、簡單與雜活 sonnet、規劃 fable、做事的 agent（雜活除外）先讀 wf 規矩、可再派 agent。下次開新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問。工人只 `git add <明確的檔>`，不 checkout --／restore／stash／reset／-A（今天有 agent 用 checkout -- 抹掉別人未 commit 的改動）。
-2. **今天做完並 push**（細節看各 thinking 檔末「實作時代定」）：aos-eca-hub→aos-eca（單隻、`add [--name N] [--ws WS] [--stack S] XXX`、rm、撞名報錯、ls 暫留）；trace.jsonl 整個拿掉；state／status 兩個指令都收；eca-turn 一批信一起丟；topdown 封存；ws 不放 `.stack` 捷徑、`aos-daemon-ctl where --stack 名字`；`aos-exec --stack`；loop ctl.json 改下指令 `{"cmd": pause|resume|stop}`（`4b2d6d86`）；execs／loops 合成 `procs`，每項可寫 `stack`，aos-daemon-ctl 有 add／rm／start／stop／pause／resume（`b248ed02`）。全綠：unittest 634 OK／13 skip、ctest 8/8、demo 0、wf-lint broken=0。
-   - **要跟使用者講的行為改變**：eca 自己出錯結束或有人直接寫 stop 到它的 ctl，會從 daemon 表與 `aos-eca ls` 消失（procs 衝突 2「照舊拿掉」）；要接著用就同名再 add、同一個 stack，對話接得上。
-3. **下次要接的**：
-   - 整理 WSL `~/code/playground`（11-03 已清空）照新設計重建：手改清單在 WAIT_USER；刪 amy；然後做「玩 playground」說明頁（使用者：「在去幫我弄artifact吧，這樣我之後玩playground時更舒服」），可更新親手試指南 https://claude.ai/artifact/WSrwpLQqibw2QC2tfwwM3m 。
-   - 工作樹留著 `proto8/thinking/README.md`、`proto8/thinking/months/2026-11.md` 兩檔未 commit 的舊版文字（比 HEAD 舊、非今天改的），請使用者確認後丟掉。
-   - 小事：aos-loop `ctl_note_` 沒人用；`demo/talk/team/quiet.py` 自拼 `procs/<名>/state.json`；`aos-ai exec --stack` 沒傳給 aos-exec；6 個 code map 檔 >8 KB（開發期先不拆）。
-   - 以後：say／listen 改成 `aos-agent` 體系、agent 在工作區建 `.aos/agent/`（使用者「之後還要再改」）；aos-eca-hub（繼承 daemon）管多隻 eca；瘦身候選 aos-chat、aos_ws.loop_state、nvim 外掛。
-4. **artifact**：eca 圖解 https://claude.ai/artifact/1DW3vC6ENR4VWUfGs7qXco 與其他 11-02 的頁都已過時。
-
-## 2026-11-02 晚收工（家中 Manjaro；明早開新 session 接）
-
-1. **授權**：今晚隨意 push、普通事 opus、簡單與雜活 sonnet、規劃 fable、做事的 agent（雜活除外）先讀 wf 規矩、可再派 agent。**明早開新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問一次**。頂層 Bash 裡 `ls` 寫 `/bin/ls`。工人只 `git add <明確的檔>`、不 `-A`、不 force／reset、不碰 stash——今晚多個 agent 同一工作樹 commit 時兩度把別人 staged 的檔帶進去，commit 前一定 `git diff --cached --stat`；子 agent 的完成通知會送到頂層、不送給派它的隊長，頂層要轉。家機試驗場 `~/code/playground`（不在 git）今晚重建：env.sh、agents/bob、agents/resident_bob、agents/eca_bob、daemons/main；`daemon_ws/` 是使用者自己開的 daemon，別碰。
-2. **今晚做完並 push**：公司 33 個 commit 快轉；digest 舊字樣（`721bdc46`）；aos-listen 翻案（`4fcc483f`，只留 `aos-say … && aos-listen`）；compact `endpoint` bug（`e31f7921`）；eca 盤點與「收工了」（`53f1d6b6`、`b11987f0`、`983a2632`）；**aos-eca-hub（11-03 改名 aos-eca-ctl（同日再改 aos-eca））三對指令** open／close、start／stop（stop 留小格）、add／remove（remove 刪小格、不封存），reap 自動掛 `eca_reap`（`bd0f3d4a`，代定 11 條在 [eca 15](../proto8/thinking/2026-10-30-eca/)）；`letter_warning`→`mailbox_warning`（`c8ac6bfc`）；刪 demo agent-dan、agent-dan-q（`7dcc3dc6`，假腦小幫手搬 `tests/fake_brain.py`）；ctl/state 規劃（`bdf9283a`，[ctl-state-names](../proto8/thinking/2026-11-02-ctl-state-names.md)）與實作（`971811ce`＋`5a6b600f`：daemon 自己的窗改回 `ctl.json`／`state.json`、常駐 bob 控制器同、aos_ws 只認 `state.json`；全套 800 OK／11 skip、ctest 8/8）。使用者親手玩 hub 畫面：「體驗不錯」；常駐 bob「等之後有空」。eca 圖解 https://claude.ai/artifact/1DW3vC6ENR4VWUfGs7qXco （第 2 版；三對指令已實作、reap 已會自動掛，頁面還寫「還沒實作」，要更新）。
-3. **明早要接的**：
-   - **整體瘦身**（使用者：「明天早上再說，或者我們這樣子一點一點的，也算是了」）。候選清單：`demo/llm-kernel`、`demo/self-improve`（使用者「完全沒有印象」「明天應該會刪掉」；刪了環境變數第 4 題的 `AOS_IVY_BRAIN`、`AOS_IMPROVE_RUN` 就消失）；Lua／Janet 的 `agent_dan` 範例與 nvim 外掛的 smoke（讀已刪的 agent-dan，測試先 skip，待使用者定）；10-23 agent-dan artifact。
-   - **proc 改名想法**（ctl/state 方向題 1，未定）：使用者「exec和loops，其實都屬於proc，所以...改名？…exec是基石，loop是另一種基本形式，搞不好以後還會有更多形式」；今晚 `loops_ctl`／`loops_state` 不動 → [ctl-state-names](../proto8/thinking/2026-11-02-ctl-state-names.md)。
-   - **amy 刪掉**（使用者「刪掉」）：公司 WSL `~/code/playground/agents/amy`，WAIT_USER／SESSION-LOG 相關條目若今晚沒清就清。
-   - eca 以後再優化：每封信 `--resume` 起退、依資源縮短閒置（使用者「以後再說」）→ eca 14。
-4. **artifact**：現況地圖 https://claude.ai/artifact/Cjgx6VAwCvMYirsMHdNrji 、親手試指南 https://claude.ai/artifact/WSrwpLQqibw2QC2tfwwM3m 、proto8 概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、proto8 實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm 、aos 指令與格式參考 https://claude.ai/artifact/XFA2HA5WbeBpkJyC7wGSCn 、proto8 入口與 demo https://claude.ai/artifact/TVnjc4gvpgWjQnU3WJujtt （11-01 版，今天 11-02 的改動還沒回寫）。
-
