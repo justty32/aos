@@ -2,8 +2,6 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜程式 [proto8/human](../extras/human/README.md)｜測試 `proto8/tests/test_human.py`
 
-11-01 晚翻案：`aos-listen 信號` 拿掉，見下「11-01 晚使用者」一節（11-02 晚已實作）。
-
 ## 使用者原文（整理版，10-24）
 
 - 前文：「然後我這邊有不少想法，都麻煩你試着去思考去實作。我隨便說，你隨便做，反正只是嘗試」
@@ -15,7 +13,7 @@
 - proto5（09-24）talk：「來一個 `aos-agent talk` 指令。這就只是來回 say/listen，類似 repl。沒有說要達到 claude code cli 那樣的體驗，我要的是極簡版，ctrl+c 就退出那種。啊，要加一些 slash command，比如 /status、/context 之類，看著加上。相關 flag 你也自己看著辦。」
 - proto5（09-24）listen：「比如 `--last 10`，就是讀最後十筆訊息。然後 `--last` 不要是預設。然後有 `--show-calls`，連同工具呼叫一起印出來（但是簡化版，就是說明呼叫了啥工具）」
 
-沿用的：說／聽／聊三件事、話從參數或 stdin、時間戳題名排先後、`--last N` 不是預設、`--trace` 簡化版工具呼叫、聊天極簡＋少數 slash 指令、Ctrl-C 就走、等之前先看答案在不在、沒人在跑就提醒「已放進去、不要再說一次」、話放進去就不收回。proto5 踩過、這次照著擋的坑：回話在開始等之前就到了會乾等（「開始聽之後才算」）、沒人在跑時人會再說一次（「已投入，不要再說一次」）、L1 試用最痛的「失敗會把使用者的話吃掉」。
+沿用 proto5 的：`--last N` 不是預設、`--trace` 簡化版工具呼叫、聊天極簡＋少數 slash 指令、Ctrl-C 就走；proto5 踩過、這次照著擋的坑：回話在開始等之前就到了會乾等（「開始聽之後才算」）、沒人在跑時人會再說一次（「已投入，不要再說一次」；沒人在跑就提醒「已放進去、不要再說一次」）、L1 試用最痛的「失敗會把使用者的話吃掉」。
 
 ## 決定（照推薦定、可翻案；使用者 10-24「都按建議做」）
 
@@ -23,7 +21,7 @@
 2. **對的是工作區，不是 agent 資料夾**：題目＝`$AOS_WS/new/<題名>` 純文字一題一檔、答案＝`out/<題名>`（P-11、P-15 定義資料夾不被寫），所以 say／listen 收 `--ws`（＞ `$AOS_WS` ＞ cwd，同 aos-exec，N-58）。只有 chat 另收 agent 資料夾，因為它可以替你跑。
 3. **題名**：預設＝UTC 時間，ISO 8601 基本格式到毫秒（`20261024T031500.123Z.txt`，沒有冒號、帶 `.txt`）；排序＝先後，agent 照檔名排序取題（P-12）。`--name` 自己取；在 new/cur/out/done 任一處用過＝`NameBad`（免得拿到舊答案）。
 4. **原子寫入**（N-05）：暫存檔寫在工作區頂層 `.say-<pid>.tmp`、再 `link` 進 `new/`（不蓋已有的檔）。暫存檔不放 `new/` 裡：agent-dan／bob 的 brain 列 `new/` 不濾 `.` 開頭的檔。
-5. **對應「我剛問的那一題」**：say 的 stdout 只印題名；`aos-listen 題名` 等 `out/<題名>`；chat 自己記。答案已經到了就立刻印（先 say 後 listen 不漏）。
+5. **對應「我剛問的那一題」**：照下面 11-01 晚，正規用法是 `aos-say 話 && aos-listen`；chat 自己記。答案已經到了就立刻印（先 say 後 listen 不漏）。
 6. **「有沒有人在跑」**：看 `/proc`——環境變數 `AOS_WS` 是這個工作區、`argv[0]` 是 aos-loop／aos-fsm／aos-exec／aos-daemon 的行程。沒人跑時**提醒一次、繼續等**（可以先開 listen 再去跑 agent）；題目在 `cur/` 而 trace 最後一格非 0，就說「停在哪格、結束碼幾、錯誤一行在跑它的終端機、修好再跑會接著做」。
 7. **chat 兩種**：給 agent 資料夾＝chat 每句之後自己 `aos-exec --ws WS <agent>` 跑一次（loop 跑到 new/ 空自己停，P-19），agent 的 stderr 原樣在你眼前；沒給＝只放題等答案，要別人跑。開 chat 時工作區裡已有沒答的題，一起認下來，答案到了一起印（上次 agent 停在半路，`/run` 接著做）。
 8. **slash 指令**只留 `/status`、`/run`、`/trace`、`/help`、`/quit`；`//` 開頭送出 `/` 開頭的話。stdout 只有答案，其餘都在 stderr。
@@ -58,14 +56,11 @@
 
 > aos-listen "..."這種使用方式是誰定的，我不喜歡。aos-say "..." && aos-listen才是正規用法。
 
-誰定的：10-24 隊長照推薦代定（上面「決定」第 5 點「對應我剛問的那一題：say 的 stdout 只印題名、`aos-listen 題名` 等它」），使用者當時「都按建議做」整批點頭；今天翻案。
-
 決定（11-01 晚，使用者定；實作細節頂層代定、可翻案）：
 
 - 正規用法只有一種：`aos-say 話 && aos-listen`。`aos-listen` 不帶參數＝等**最新那封**（queue 裡最後寄出的、或剛被認領的）的回答，印出來就退 0；答案已經到了就立刻印。
 - `aos-listen 信號` 這個位置參數拿掉（少一種機制）；aos-chat 內部要對應信號是函式庫的事，不露在命令列。
-- 原本「不帶參數＝跟著看（tail -f）」改成明寫 `--follow`；`--last N`、`--status`、`--timeout`、`--trace` 不動。
-- 實作排在 11-01 晚 worktree（刪 aos-round、改旋鈕）併入 main 之後做，避免同時改 `extras/human/bin/aos-listen`。連帶：extras/human/README、test_human、demo／playground／amy README 裡的 `aos-listen "$N"` 寫法全改。
+- 跟著看（tail -f）要明寫 `--follow`；`--last N`、`--status`、`--timeout`、`--trace` 不動。
 
 ### 實作時代定（11-02 晚，照上面的決定與原則定的細節；都可翻案）
 
@@ -75,7 +70,7 @@
 4. **旗標組合**：不帶 `--last`／`--follow`／`--status`＝等最新那封，`--timeout` 只在這時收（跟 `--last`／`--follow` 一起＝`ArgumentsBad`）；`--last N` 不帶 `--follow`＝印完就走（不變）；`--last N --follow`＝先印再跟著看；`--trace` 兩種都收。Ctrl-C：等的時候退 130、跟著看退 0（不變）。
 5. **aos-say 照舊在 stdout 印信號一行**：決定沒說要拿掉；`aos-say 話 && aos-listen` 在終端機上會先看到那行信號、再看到回答。程式對帳（測試、aos-chat 結束時的提醒）還用得到。要安靜就再議。
 6. **aos-chat 離開時的提醒**改成「之後 `aos-listen --stack S` 看（等最新那封）」；nvim 外掛 `use_say=true` 那條改成不帶信號。
-7. **thinking 舊檔裡的 `aos-listen 信號`／`N=$(aos-say …); aos-listen "$N"` 不回頭改**（當時的結論）；有在用的說明與例子（human／demo／eca_hub README、resident-bob 的試驗場指令、WAIT_USER、code map、digest）改成新寫法。試驗場 `~/code/playground` 不在 git、這輪沒碰，由頂層轉給在那邊的 agent。
+7. **thinking 舊檔裡的 `aos-listen 信號`／`N=$(aos-say …); aos-listen "$N"` 不回頭改**（當時的結論）；有在用的說明與例子改成新寫法。
 
 ## 未決
 

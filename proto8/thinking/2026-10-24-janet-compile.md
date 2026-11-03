@@ -10,7 +10,7 @@
 
 ## 決定（照推薦定、可翻案；使用者 10-24「都按建議做」）
 
-1. **編譯＝在 Janet 裡把整套資料夾描述成一個值，再寫到磁碟**：原始檔是普通 Janet，最後 `(def program (dir …))`；`aos-janet [--force] 原始檔.janet 輸出資料夾` 把它寫出來。Janet 的函數就是範本（`agent` 是一個普通函數，回一個資料夾）；巨集只用在要把名字當字面的地方（`aos-fsm` 的狀態名、`janet-main` 的程式碼）。編譯器直接用 Janet 寫（`~/.local` 已裝 Janet、jpm）；janet-lab 裡上一代的 `modules/aos/` 綁定跟 proto8 對不上，不用。
+1. **編譯＝在 Janet 裡把整套資料夾描述成一個值，再寫到磁碟**：原始檔是普通 Janet，最後 `(def program (dir …))`；`aos-janet [--force] 原始檔.janet 輸出資料夾` 把它寫出來。Janet 的函數就是範本（`agent` 是一個普通函數，回一個資料夾）；巨集只用在要把名字當字面的地方（`aos-fsm` 的狀態名、`janet-main` 的程式碼）。編譯器直接用 Janet 寫；janet-lab 裡上一代的 `modules/aos/` 綁定跟 proto8 對不上，不用。
 2. **輸出就是手寫會寫的那套**（資料夾、JSON、短腳本），可以直接看、手改、`aos-exec`；不另加標記檔或中間格式。JSON 中文不跳脫、短的擠一行（100 位元組）、key 有固定順序（`obj` 照寫的順序；一般 struct 照 `_entry`、`argv`…、`exec`、`max`、`start`、`states`、`next`… 再照字母）。
 3. **key 照字面**（`:timeout_ms` 就是 `timeout_ms`，不偷偷把 `-` 換 `_`；C-56 寫什麼就做什麼）。Janet 的 table 存不了 nil，所以 `obj` 裡值 `nil`＝不寫那個 key，要 JSON 的 null 寫 `null`。
 4. **長大成資料夾**（接 C-55）：JSON 裡某格寫成 `(dir …)`，就長成同一層的子資料夾，那格換成它的名字（名字取那格的 key；key 是 `exec` 取上一層，所以 fsm 的 `idle` 格→`idle/`）。單子留在原地（內嵌）。

@@ -20,12 +20,11 @@
 
 決定：
 
-1. **程式不改**：「不自動重起」管的是 daemon 開著的時候；daemon 重開＝重新開始，照名單起表上缺的（含停機期間死掉的），活著且對得上的照 `adopt` 接回。測試釘住（`test_restart_starts_children_died_while_down`）。
-2. **擋撞名**：會撞的名字＝daemon 的 ctl、state 落在 `$AOS_STACK` 底下時相對路徑的第一段（`state.json`、`ctl.json`、`"w/c.json"` 的 `w`；在外面的、沒開的不算；頂層照程式定）。起來時撞＝一行錯誤、退 1；ctl 的 `children` 撞＝那份 ctl 不採用、維持上一份好的、原因進 state 的 `last_warning`。
-   - **11-02 翻案**（使用者 11-02「那兩題中的1.，可以」——[thinking 11-02 stack-tools](../2026-11-02-stack-tools.md) 衝突 1 選拿掉）：子項改進 `loops/<名字>/` 後不會再跟 daemon 自己的窗撞名，擋名字的檢查拿掉；名字本身的檢查（不能空、不能含 `/`、不能 `.` 開頭）照留。
+1. **程式不改**：「不自動重起」管的是 daemon 開著的時候；daemon 重開＝重新開始，照名單起表上缺的（含停機期間死掉的），活著且對得上的照 `adopt` 接回。
+2. **撞名不用擋**：子項在 `loops/<名字>/` 底下，不會跟 daemon 自己的窗撞名，沒有撞名檢查；名字本身的檢查（不能空、不能含 `/`、不能 `.` 開頭）照留（使用者 11-02「那兩題中的1.，可以」，[thinking 11-02 stack-tools](../2026-11-02-stack-tools.md) 衝突 1）。
 3. **N-28 沒做的從規範拿掉**：`policies.child_exit`、`backoff` 隨「不自動重起」不做；輸出的選填路徑、輪替、清舊小格不做，要的話自己在鏈上接工具（拍的單子用 `stderr` key 導走接 s6-log／svlogd、外面 logrotate；舊小格自己在起 daemon 前刪）；「沒 `run` 有 `argv` 就包成跑一次」不做，要跑一次單子寫 `{"run": "daemon.json#/children/<名字>/body", "body": 單子, "max": 1}`。
 
-結論：bin 與 impls 的 aos-daemon 都擋撞名（測試 `tests/test_daemon.py`；起來時撞名的代號 `Conflict`，10-23 使用者認可）；N-17 六態不含 `backoff`。`.env` 預設不蓋，所以 daemon 環境裡已有的變數會壓過子項 `.env` 同名的值。
+結論：N-17 六態不含 `backoff`。`.env` 預設不蓋，所以 daemon 環境裡已有的變數會壓過子項 `.env` 同名的值。
 
 舊小格的 `ctl.json`（daemon 重新起子項、非接回時，舊的還寫著 `stop` 就一起來就停）使用者 10-22 原話：
 
@@ -46,4 +45,4 @@
 3. **其餘使用者自行承擔**，不改程式，寫在 [NORMS/07](../../docs/NORMS/07-基礎設施-組合子.md) 開頭：每格沒有時間上限（自己接 `timeout` 或用單子的 `timeout_ms`）；兩隻 fsm 共用同一個 stack 會撞暫存檔；state／trace 寫不了吐 traceback、下一拍重跑同一格；`trace.jsonl` 不設上限；loop／fsm 被 SIGKILL 時格變孤兒、重開時可能重疊；無窮轉移只有 loop 的 `max` 擋；`val` 的相對路徑從 cwd 算；`.env` 外層贏，`val` 陣列傳不了 `--dotenv-override`（要寫成 body 單子）。
 4. **條文定稿**：fsm 的 N-20、N-36、N-38、N-39、N-41 照 bin 程式定稿（程式 > 文件）；a、b、c 寫進 N-36、N-38。NORMS/07 開頭補「fsm 屬標準庫」（C-74）。tasks 的 N-34 現無實作、沒有程式可對，照舊標草稿。
 
-結論：bin 與 impls 都照這樣做（`tests/test_fsm.py`；表壞的代號 `FieldType`、state 讀不了 `ReadFailed`、state 裡的狀態不在表上 `StateUnknown`；`FieldType`、`ReadFailed` 10-23 使用者認可）。
+結論：錯誤代號：表壞 `FieldType`、state 讀不了 `ReadFailed`、state 裡的狀態不在表上 `StateUnknown`（`FieldType`、`ReadFailed` 10-23 使用者認可）。

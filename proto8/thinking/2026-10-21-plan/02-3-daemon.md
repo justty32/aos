@@ -1,4 +1,4 @@
-← [入口](../2026-10-21-plan.md)｜涵蓋：3. daemon、4. fsm、5. agent、6. 實作順序與切段、7. impls（使用者自己的 C++ 版）｜上一份 [01-1-使用者回來要看的](01-1-使用者回來要看的.md)
+← [入口](../2026-10-21-plan.md)｜涵蓋：3. daemon、4. fsm、5. agent｜上一份 [01-1-使用者回來要看的](01-1-使用者回來要看的.md)
 
 ## 3. daemon
 
@@ -56,16 +56,6 @@
 
 ### 5.2 兩種 kernel、tasks、tick、`tool_calls`
 
-- tick：做了（第 4 段；10-12 你已把規格定死：`aos-tick FILE`：讀 n 寫 n＋1、先暫存再改名、沒檔＝0、內容壞退 1，說「做吧」）。
-- `tool_calls`：10-23 做了（§ 1.2 第 2 題）。
-- tasks：**未決**（§ 1.2 第 1 題）。
-- LLM kernel：10-24 做了（§ 1.2 第 3 題）。
-- 通用 kernel：**未決**（在 LLM kernel 之後；判官形狀沒定）。
-
-## 6. 實作順序與切段
-
-第 1～4 段（loop＋daemon 最小跟上、daemon 收尾、fsm、tick）都已做；各段採用的代定與自定點見 session log 10-21（[第 1 段](../../../wf/session_logs/2026-10-parts/08-10-21之二.md#使用者不在時代定aos-loop-收旗標計畫第-1-段10-21-下午)、[第 2 段](../../../wf/session_logs/2026-10-parts/08-10-21之二.md#使用者不在時代定daemon-收尾計畫第-2-段10-21-下午)、[第 3 段](../../../wf/session_logs/2026-10-parts/08-10-21之二.md#使用者不在時代定fsm計畫第-3-段10-21-下午)、[第 4 段](../../../wf/session_logs/2026-10-parts/09-10-21之三.md#使用者不在時代定aos-tick計畫第-4-段10-21-晚)）。
-
-## 7. impls（使用者自己的 C++ 版）
-
-impls 是唯一實作（`proto8/bin` 只剩 Python 的 `aos-tick`），現行行為見 [impls README](../../impls/README.md)。
+- tick：規格 10-12 使用者已定（說「做吧」）：`aos-tick FILE`：讀 n 寫 n＋1、先暫存再改名、沒檔＝0、內容壞退 1。
+- `tool_calls`、LLM kernel：見 § 1.2 第 2、3 題。
+- tasks、通用 kernel：**未決**（§ 1.2 第 1、3 題；通用 kernel 在 LLM kernel 之後，判官形狀沒定）。

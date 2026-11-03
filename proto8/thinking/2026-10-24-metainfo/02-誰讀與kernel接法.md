@@ -5,7 +5,7 @@
 <a id="1-誰讀"></a>
 ## 1. 誰讀
 
-- **aos-exec 不讀**：10-13 D4「aos inst 與所有標準實作一律當它不存在」；現況 `run_inst` 只驗 10 個 key、其他忽略（N-04）。寫了 `_metainfo` 不改任何執行行為（C-56 寫什麼就做什麼：該強制的寫在 `timeout_ms` 這種 inst key 裡）。
+- **aos-exec 不讀**：10-13 D4「aos inst 與所有標準實作一律當它不存在」；`run_inst` 只驗 10 個 key、其他忽略（N-04）。寫了 `_metainfo` 不改任何執行行為（C-56 寫什麼就做什麼：該強制的寫在 `timeout_ms` 這種 inst key 裡）。
 - **loop、fsm、daemon 不讀**：它們只管跑（N-36 fsm 不碰格的內容），格的特性跟它們無關。
 - **閘門（aos-gate）只搬不看**：`_metainfo` 是單子的一個 key，閘門寄的信本來就帶整張單子，不用多做事。
 - **kernel 讀**：LLM kernel 拿來排順序（§ 5）；通用 kernel 照 `resource` 佔 `slots`、把 `summary` 等交給判官看（10-15）；要不要跑、怎麼排，是 kernel 自己的演算法（10-13「隨便」）。
@@ -49,7 +49,6 @@
 1. **讀**：在 `priority_of` 讀 `letter["inst"]["_metainfo"]`。只認兩個 key：`time_ms`（數字＝`val`；物件取 `val`、`max`）、`llm_tokens`（同）。不是物件、key 形狀不對＝那個 key 當沒寫，**不回 `LetterBad`**（M8）。指示詞閘門已經解過了，kernel 不用再解。
 2. **排**：在 `order` 裡、「時限近的先」之後、「等得久的先」之前，加一層「`time_ms.val` 小的先；有寫的排在沒寫的前面」。級數與時限照舊壓過它（10-15：`_metainfo` 從不蓋過 `level`）。aging 不動，所以宣告短的插隊有上限。
 3. **記**：`served.jsonl` 每行有兩個欄位：`elapsed_ms`（`run_inst` 回的 `Result.ms`）、`time_ms`（宣告的 `val`，沒寫＝`null`）。不寫任何使用者的檔。
-4. **測**：兩封同級、沒時限、`time_ms` 一短一長且長的先寄 → 短的先跑；`_metainfo` 形狀壞的信照樣跑完；拿掉第 2 步那層比較 → 測試要紅。
 
 **不要做**：kernel 照 `time_ms.max` 殺人（M4）；為了 `_metainfo` 去讀單子以外的檔（資料夾的 `_metainfo`、子葉）；把 `_metainfo` 塞進給腦的 prompt。
 
