@@ -22,8 +22,11 @@ cat daemon.json
 # {"max": 10, "interval_ms": 200, "ctl": "ctl.json", "state": "state.json",
 #  "procs": {"bob": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}, "max": 1},
 #            "tick": "../tick"}}
-AOS_STACK=$PWD/.stack/ aos-daemon daemon.json     # 慣例用法是 aos-exec 它（proto8/demo/daemon）；PATH 上要有 aos-exec、aos-loop
+AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法是 aos-exec 它（proto8/demo/daemon）；PATH 上要有 aos-exec、aos-loop
 ```
+
+**起 daemon 要看 log 就加 `--enable-logs`**：不加的話 daemon 什麼都不印（stdout、stderr 都安靜，只有出錯時 stderr 一行），看起來像卡住，其實照常在跑；子項起落要看就加它（見下「log」），或看 `aos-daemon-ctl ls`。
+**收工：在 daemon 的視窗按 Ctrl-C**（使用者 11-03 晚定）——SIGINT 走正常收工（`finish`），還在跑的 loop 型睡下（`sleeping`），下次開門自己醒（見下「收工與開門」）。
 
 ## 用法
 
@@ -120,7 +123,7 @@ daemon.json＝loop.json 的超集（N-28）：
 
 - **sleep**：daemon 收工（自己 ctl 的 `{"cmd": "stop"}`、SIGTERM／SIGINT／SIGHUP，或出錯退出——都走 `finish`）時，還在跑的 **loop 型**照舊 SIGTERM（10 秒 SIGKILL），退了列留成 `{"pid": null, "started_at_ticks": null, "phase": "sleeping", "code", "signal", "stack", "ws"?}`，log 一行 `sleeping`。
   **exec 型**拿掉（「他停下來就是沒了」）；收工前已是 `stopped` 的、等 daemon 的 stop 退的途中的＝`stopped`；被 rm 收的途中的＝拿掉。
-- **wake**：daemon 再開 adopt 時，`sleeping` 的列接回、不進 stopped 集合；第一圈 reconcile 跟 start 走同一條：**用列上的 `stack`** 再起（設定照期望表；信箱接回的沒有設定＝照小格裡現有的 `loop.json`），log 一行 `running`。
+- **wake**：daemon 再開 adopt 時，`sleeping` 的列接回、不進 stopped 集合；第一圈 reconcile 跟 start 走同一條：**用列上的 `stack`** 再起（設定照期望表；信箱接回的沒有設定＝照小格裡現有的 `loop.json`、`ws` 照列上記的），log 一行 `running`。
   收工時本來暫停中的：子 loop 被 SIGTERM 時最後一份 `state.json` 記著 `paused: true`，用同一個 stack 起來照它自己的 state 先暫停（代定），`resume` 才接著跑。
 - **睡著時收到的指令**（daemon 沒在跑時 `aos-daemon-ctl` 寄的信，開門後先套信再對表）：`procs_stopped`＝改成 `stopped`、不 wake（要 `start`）；`procs_removed`＝列拿掉；名單（daemon.json／procs_ctl）上已經沒有它＝列拿掉。
 - daemon 開門時自己是暫停中（它的 state.json 記著 `paused`）＝跟起停一樣等解除才 wake。`adopt: false`＝不讀舊表，`sleeping` 的列就不認了（照 daemon.json 重新起）。
@@ -261,7 +264,7 @@ daemon 起子項（loop 型、exec 型都算）時，子行程的環境多設 **
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-- `test_cli`（`tests/test_cli.py`，80 案、unittest，約 2 分鐘；`run_d`／`start` 一律帶 `--enable-logs`；結束的 phase／code 看 daemon 的 log：`ended`、`upped`、`logs`）：
+- `test_cli`（`tests/test_cli.py`，83 案、unittest，約 2 分鐘；`run_d`／`start` 一律帶 `--enable-logs`；結束的 phase／code 看 daemon 的 log：`ended`、`upped`、`logs`）：
   基本案（loop.json 直接丟給 daemon、要 AOS_STACK、名單壞、小格與窗、不自動重起、子項 stderr 在小格、ctl 增減、SIGTERM 收子項 143、旗標蓋過設定、exec 陣列與設定檔規則、子 loop 經 aos-exec 起、
   **字串子項＝exec 型跑一次**、收工時剛死的子項標 done、adopt、`adopt: false`）、錯誤代號、子 loop 的 state 是自己的 pid、daemon 重開照名單起、子項跟窗同名照起；
   效能 4 案（不肯退的子 loop 不卡住 daemon、睡著時兩扇窗不動、起子項之前先有 procs_state、`$AOS_STACK` 不在不建）；G 段（`procs` 用 `$ref` 陣列拆檔、寫壞、procs_ctl 的 `procs_added`／`procs_removed`、相對 `$ref`、切檔、切了檔照樣 adopt、縮回物件）；
@@ -273,7 +276,9 @@ cmake -B build && cmake --build build && ctest --test-dir build
   **O 段**（`stack`：相對／絕對／結尾 `/`／`$env`、不在就建、`loop.json` 與 `stderr.txt` 都在 S、不建預設小格、兩個 proc 同一個 S 不擋、`null`＝預設、列上有 `stack`、`kill -9` 再起照列上接回、型別壞＝`CfgBad`）；
   **P 段**（stop／start：stop＝寫子 loop 的 ctl `{"cmd": "stop", "seq": N}`、跑完退 0、列 `stopped`／pid null、不重起；拿掉名字＝start、同一個 stack、ctl 不清；再停 seq 往上；同名兩邊都寫＝起；
   暫停中被停的 start 後起來先暫停、寫它的 ctl resume 才跑；信的 add＋stop＝列 `stopped`、stack 不建、同名 add 不叫起、`procs_started` 起、stopped 的 `procs_removed`；`kill -9` daemon 再起 stopped 的照停、要 `procs_started`；
-  exec 型的 stop／start＝`ctl_warning`；daemon 暫停中起停等解除；繞過 daemon 寫子 loop 的 ctl stop＝列消失）。
+  exec 型的 stop／start＝`ctl_warning`；daemon 暫停中起停等解除；繞過 daemon 寫子 loop 的 ctl stop＝列消失）；
+  **Q 段**（sleep／wake：收工時跑著的 loop 型留 `sleeping`、再開自動 wake、`stopped` 照停、exec 型拿掉；Ctrl-C 收工、暫停中的醒來照暫停；信箱模式睡著時的信先套；
+  醒來後與 stopped→start 後表上、log 的 `ws` 照舊，信箱接回只留名的子行程 `AOS_WS` 也照舊〔11-03 晚修〕）。
   PATH 放 impls 的 aos-exec、aos-loop 兩支的 `bin/`（子 loop 要 exec 成 PATH 上的 aos-loop）。
 - `test_demo`（`tests/test_demo.py`）：`proto8/demo/daemon`、`daemon-2`（信箱 `procs_ctl_mailbox`）、`daemon-3`（同一支 tick 在同一份名單裡用 `max: 1` 的 loop 與字串各掛一次）在 impls 線（PATH 只放 impls 四支的 `bin/`）跑，看結束碼 0、stderr 空、答案寫出來；結束的子項看 daemon 的 log（`ended`）、收工後 procs_state 的表是空的。
   要先建好 ../aos-exec、../aos-loop、../aos-fsm 的 `bin/`（`test_cli` 也要前兩支）。

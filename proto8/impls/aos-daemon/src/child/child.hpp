@@ -46,14 +46,14 @@ struct Child {
 };
 
 // 起一支子 loop。cell＝小格（proc 的 stack，絕對、結尾不帶 /；deep＝mkdir -p，不然只建 cell 與上一層）、spec＝loop 設定物件
-// （null＝不寫 loop.json、照小格裡現有的起；11-03）、
+// （null＝不寫 loop.json、照小格裡現有的起；11-03——這時 ws 用 kept_ws＝列上記的，11-03 晚：不然 wake／start 後表上與子行程的 AOS_WS 都掉了）、
 // cwd＝daemon 的 cwd（子項 exec 的相對路徑從這裡算：字串、陣列的第一個元素轉成絕對路徑，其他不動、不驗）。
 // spec 有 ws（read_procs 已轉絕對）＝子行程設 AOS_WS＝它；ws、stack 都不寫進 loop.json（daemon 的 key，不是 loop 的）。
 // 小格建不了 MkdirFailed、loop.json 寫不了 WriteFailed、stderr 開不了／fork 失敗 LaunchFailed。
 // aos-exec 自己的錯（PATH 上沒有 aos-loop…）寫在小格的 stderr.txt、子 loop 以 1 結束（phase done、code 1）。
 // dstack＝daemon 的 stack（絕對、結尾 /）：子行程設成 AOS_DAEMON_STACK（11-02）。spawn_exec 同。
 Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-            const std::string& dstack);
+            const std::string& dstack, const Json& kept_ws = Json());
 
 // 起一個 exec 型 proc。spec＝aos-exec 的目標：字串或 [目標, 參數...]（read_procs 驗過），
 // 或 {"exec": 上面兩種或單子, "ws"?, "stack"?}（子行程設 AOS_WS＝ws）；cell、deep 同 spawn；相對路徑從 cwd（daemon 的 cwd）算——

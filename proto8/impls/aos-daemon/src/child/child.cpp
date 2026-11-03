@@ -132,10 +132,10 @@ static void pin_cwd(Json& inst, const std::string& cwd) {
 }
 
 Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-            const std::string& dstack) {
-    if (spec.is_null()) {   // 信箱接回的 stopped 列（只留名、沒有設定）再 start：照小格裡現有的 loop.json（11-03）
+            const std::string& dstack, const Json& kept_ws) {
+    if (spec.is_null()) {   // 信箱接回的 stopped／sleeping 列（只留名、沒有設定）再 start／wake：照小格裡現有的 loop.json（11-03），ws 照列上記的（11-03 晚）
         make_cell(name, cell, deep);
-        return launch(name, cell, cwd, {"--", aos::join(cell, "loop.json") + "#/_entry"}, Json(), dstack);
+        return launch(name, cell, cwd, {"--", aos::join(cell, "loop.json") + "#/_entry"}, kept_ws, dstack);
     }
     Json cfg = spec;
     Json ws = cfg.value("ws", Json());   // ws、stack 是 daemon 的 key（不是 loop 的）：不灌進小格的 loop.json；ws 只進子行程的環境（AOS_WS）

@@ -604,9 +604,9 @@ std::string Daemon::cell_of(const std::string& name, const Json& spec) const {
     return dstack_ + "procs/" + name;   // 預設小格（11-03 原 loops/<名字>/）
 }
 
-Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell) {
+Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws) {
     bool deep = cell != dstack_ + "procs/" + name;   // 不是預設小格＝proc 自己的 stack：不在就 mkdir -p
-    return is_once(spec) ? spawn_exec(name, cell, deep, spec, cwd_, dstack_) : spawn(name, cell, deep, spec, cwd_, dstack_);
+    return is_once(spec) ? spawn_exec(name, cell, deep, spec, cwd_, dstack_) : spawn(name, cell, deep, spec, cwd_, dstack_, kept_ws);
 }
 
 void Daemon::reconcile(const Json& want, const Names& stopped) {
@@ -650,7 +650,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped) {
         if (at != index_.end()) {
             Child& c = at->second->second;
             if (c.held && stopped.count(n) == 0) {   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（基準線）
-                Child nc = start(n, spec, c.stack);
+                Child nc = start(n, spec, c.stack, c.ws);   // 信箱接回只留名的（spec null）：ws 照列上的（11-03 晚：不然 wake 後表上 ws 變空）
                 c = nc;
                 log_child(n, c);
                 flush_table();

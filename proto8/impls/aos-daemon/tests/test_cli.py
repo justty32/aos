@@ -1677,7 +1677,9 @@ class T(unittest.TestCase):
         # ctl 的 stop 收工：跑著的 loop 型 c＝SIGTERM、列留成 sleeping（pid null、stack 留著）；daemon 下 stop 的 s 照舊 stopped；
         # exec 型 e 照舊拿掉。再開：c 用列上的 stack 自動 wake（log 一行 running、ticks 接著長），s 照停，e 照 daemon.json 重新起
         c, sc = self.s / "procs" / "c", self.s / "procs" / "s"
-        doc = {"state": "state.json", "ctl": "ctl.json", "procs": {"c": self.clock(), "s": self.clock(), "e": "long"}}
+        ws = self.t / "ws"
+        ws.mkdir()
+        doc = {"state": "state.json", "ctl": "ctl.json", "procs": {"c": dict(self.clock(), ws=str(ws)), "s": self.clock(), "e": "long"}}
         p = self.start(doc)
         self.assertTrue(until(lambda: self.ticks(c) >= 1 and self.ticks(sc) >= 1 and set(self.kids()) == {"c", "s", "e"}))
         self.lctl({"procs_stopped": ["s"], "seq": 1})
@@ -1696,6 +1698,7 @@ class T(unittest.TestCase):
         k2 = until(lambda: self.kids()["c"]["phase"] == "running" and "e" in self.kids() and self.kids())
         self.assertTrue(k2)
         self.assertEqual((k2["c"]["stack"], k2["s"]["phase"], k2["c"]["pid"] != old), (str(c), "stopped", True))
+        self.assertEqual((k["c"]["ws"], k2["c"]["ws"]), (str(ws), str(ws)))   # 醒來後 ws 欄照舊（11-03 晚）
         self.assertTrue(until(lambda: self.ticks(c) > n))
         time.sleep(0.5)
         self.assertEqual((self.ticks(sc), self.kids()["s"]["phase"]), (ns, "stopped"))
@@ -1704,6 +1707,7 @@ class T(unittest.TestCase):
         self.ctl({"cmd": "stop", "seq": 2})
         out2, err2 = p2.communicate(timeout=30)
         self.assertEqual((p2.returncode, err2, self.upped(out2)[:2]), (0, "", ["c", "e"]))
+        self.assertEqual([x.get("ws") for x in self.logs(out2) if x["name"] == "c"], [str(ws), str(ws)])   # log 的起來、收掉兩行也帶 ws
 
     def test_sleep_wake_paused_and_sigint(self):
         # Ctrl+C（SIGINT）收工一樣睡；收工時本來暫停中的：醒來照它自己 state.json 的 paused 接著暫停（ctl-commands § 4），寫它的 ctl resume 才接著跑
@@ -1735,23 +1739,30 @@ class T(unittest.TestCase):
         # y 被 procs_stopped＝改成 stopped、不 wake；x 被 procs_removed＝列拿掉；z（設定只在記憶體，接回記 null）照它 stack 裡的 loop.json wake
         p = self.mstart()
         z, y = self.s / "procs" / "z", self.s / "procs" / "y"
-        self.post("0001", {"procs_added": {"z": self.clock(), "y": self.clock(), "x": self.clock()}})
-        self.assertTrue(until(lambda: all(self.ticks(self.s / "procs" / q) >= 1 for q in "zyx")))
+        ws = self.t / "ws"
+        ws.mkdir()
+        self.prog("wsclk", 'echo "$AOS_WS" >> "$AOS_STACK/ws_seen"\n')   # 子行程看到的 AOS_WS 也要照舊
+        self.post("0001", {"procs_added": {"z": {"exec": "wsclk", "interval_ms": 100, "ws": str(ws)}, "y": dict(self.clock(), ws=str(ws)), "x": self.clock()}})
+        self.assertTrue(until(lambda: (z / "ws_seen").exists() and all(self.ticks(self.s / "procs" / q) >= 1 for q in "yx")))
         self.mstop(p)
         self.assertEqual({q: r["phase"] for q, r in self.kids().items()}, {q: "sleeping" for q in "azyx"})
         self.post("0002", {"procs_stopped": ["y"]})
         self.post("0003", {"procs_removed": ["x"]})
-        n, ny = self.ticks(z), self.ticks(y)
+        seen = lambda: (z / "ws_seen").read_text().split()
+        n, ny = len(seen()), self.ticks(y)
         p2 = self.start()
-        self.assertTrue(until(lambda: self.drained() and self.kids()["z"]["phase"] == "running" and self.ticks(z) > n))
+        self.assertTrue(until(lambda: self.drained() and self.kids()["z"]["phase"] == "running" and len(seen()) > n))
         time.sleep(0.5)
         self.assertEqual(({q: r["phase"] for q, r in self.kids().items()}, self.ticks(y), self.lstate()["mailbox_warning"]),
                          ({"a": "running", "z": "running", "y": "stopped"}, ny, None))
         self.post("0004", {"procs_started": ["y"]})
         self.assertTrue(until(lambda: self.kids()["y"]["phase"] == "running" and self.ticks(y) > ny))
+        # 接回只留名的（設定 null）wake（z）、stopped→start（y）：表上 ws 欄照舊、子行程的 AOS_WS 也照舊（11-03 晚修）
+        self.assertEqual(({q: self.kids()[q].get("ws") for q in "zy"}, set(seen())), ({"z": str(ws), "y": str(ws)}, {str(ws)}))
         self.ctl({"cmd": "stop", "seq": 2})   # 上一個行程的 {"cmd": "stop"} 是這個行程的基準線：內容要不一樣才算新的
         out, err = p2.communicate(timeout=30)
         self.assertEqual((p2.returncode, err), (0, ""))
+        self.assertEqual({x["name"]: x.get("ws") for x in self.logs(out) if x["name"] in ("z", "y")}, {"z": str(ws), "y": str(ws)})
 
 
 if __name__ == "__main__":
