@@ -363,6 +363,33 @@ class EcaCtl(unittest.TestCase):
         self.assertFalse(st.exists())
         self.assertEqual(self.daemon_rows(), {})
 
+    def test_add_tools(self):
+        """11-03 eca-tools：add 先驗 cli.json 與登記檔——tools 指的不在＝ToolsMissing、cli.json 壞＝CfgBad，都不送信（表上沒有）；
+        state 印「工具箱」（沒有＝（沒有））；放了 tools.json 的 eca 答一題後，CLI 小格 claude/mcp.json 的 --stack＝where 印的、--ws＝工作區。"""
+        self.start_daemon()
+        w = self.ws()
+        bad = self.tmp / "eca-bad"
+        shutil.copytree(self.tpl, bad)
+        cfg = json.loads((bad / "cli.json").read_text())
+        (bad / "cli.json").write_text(json.dumps(dict(cfg, tools="nope.json")))
+        r = self.ctl("add", "--name", "bad", "--ws", w, bad)
+        self.assertEqual(self.code(r), (1, "ToolsMissing"))
+        self.assertTrue(r.stderr.startswith("aos-eca: ToolsMissing "), r.stderr)
+        (bad / "cli.json").write_text(json.dumps(dict(cfg, tools_flags="--enable-logs")))
+        self.assertEqual(self.code(self.ctl("add", "--name", "bad", "--ws", w, bad)), (1, "CfgBad"))
+        self.assertEqual(self.daemon_rows(), {})
+        name = self.add(w)
+        self.assertIn("工具箱 （沒有）", self.ctl("state", name).stdout)
+        self.assertEqual(self.ctl("rm", name).returncode, 0)
+        reg = self.tpl / "tools.json"
+        reg.write_text(json.dumps({"tools": {"clock": {"path": str(ROOT / "lib" / "base" / "clock")}}}))
+        name = self.add(w)
+        self.assertIn("答一題", self.say_listen(w, "答一題"))
+        st = self.where(w)
+        args = json.loads((Path(st) / "claude" / "mcp.json").read_text())["mcpServers"]["aos"]["args"]
+        self.assertEqual(args, ["--ws", str(w), "--stack", st, str(reg)])
+        self.assertIn("工具箱 %s" % reg, self.ctl("state", name).stdout)
+
     def test_add_demo(self):
         """add 給 proto8/demo/eca-claude（11-03 起沒有預設，要明給 XXX）：掛 daemon 時 aos-daemon-ctl 把 {"$env": "AOS_CD"} 換成 eca 資料夾路徑，
         aos-eca-turn 拿得到 cli.json；say／listen 答得出、ls 的 template 是 demo/eca-claude、名字＝eca-claude。"""

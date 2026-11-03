@@ -84,6 +84,11 @@ class Eca(unittest.TestCase):
                                             "timeout_ms": 900000})
             self.assertFalse((d / "parts.json").exists())
             self.assertEqual(json.loads((d / "cli.json").read_text())["kind"], kind)
+            self.assertNotIn("tools", json.loads((d / "cli.json").read_text()))         # 11-03 eca-tools：走預設 tools.json
+            r = self.run_([ROOT / "bin" / "aos-tools", "--file", d / "tools.json", "ls"])
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual([l.split("\t")[:3] for l in r.stdout.splitlines()],
+                             [["clock", "dir", str(ROOT / "lib" / "base" / "clock")]])
 
     def test_fire_and_forget(self):
         """射後不理：say 一句 → aos-exec 跑到 queue 空就收工（aos-eca-turn 退 10、aos-loop 以 0 結束）→ listen 拿到回答。"""
@@ -97,6 +102,13 @@ class Eca(unittest.TestCase):
             state = json.loads((self.stack / "state.json").read_text())
             self.assertEqual(state["phase"], "done")
             self.assertTrue((self.stack / kind / "transcripts" / ("%s-%s.jsonl" % (kind, self.sid(kind)))).is_symlink())
+            reg = str(self.tmp / ("eca-%s-once" % kind) / "tools.json")              # 11-03 eca-tools：範本的 tools.json 自動接上
+            if kind == "claude":
+                mcp = json.loads((self.stack / "claude" / "mcp.json").read_text())["mcpServers"]["aos"]
+                self.assertEqual(mcp, {"command": "aos-mcp", "args": ["--ws", str(self.ws), "--stack", str(self.stack), reg]})
+            else:
+                argv = [json.loads(l) for l in self.log.read_text().splitlines()][-1]["argv"]
+                self.assertIn("mcp_servers.aos.args=" + json.dumps(["--ws", str(self.ws), "--stack", str(self.stack), reg]), argv)
             for f in ("state.json", "ctl.json", "eca.json"):                     # 下一隻從乾淨的 stack 開始
                 if (self.stack / f).exists():
                     (self.stack / f).unlink()

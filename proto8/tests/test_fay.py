@@ -186,6 +186,89 @@ class Fay(unittest.TestCase):
         r = self.attach("nope")
         self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["ToolUnknown"]))
 
+    # ------------------------------------------------------------ 接 aos 工具（cli.json 的 tools、tools_flags；11-03 eca-tools）
+
+    def set_cfg(self, name, **kw):
+        """改工具資料夾的 cli.json（值是 None＝拿掉那個 key）。"""
+        p = self.agent / "tools" / name / "cli.json"
+        cfg = json.loads(p.read_text())
+        cfg.update(kw)
+        p.write_text(json.dumps({k: v for k, v in cfg.items() if v is not None}))
+
+    def registry(self, name, fname="tools.json"):
+        p = self.agent / "tools" / name / fname
+        p.write_text(json.dumps({"tools": {"clock": {"path": str(ROOT / "lib" / "base" / "clock")}}}))
+        return p
+
+    def opt_after(self, argv, flag):
+        return argv[argv.index(flag) + 1] if flag in argv else None
+
+    def test_tools_claude(self):
+        """工具形 claude：cli.json 的 tools 指一份登記檔＝argv 多 --mcp-config <小格>/mcp.json --allowedTools mcp__aos；
+        mcp.json 是 aos-mcp --ws <工作區> --stack <這格> [tools_flags] <登記檔絕對路徑>；stack.txt 記這格。定義資料夾沒被寫。"""
+        reg = self.registry("claude", "mine.json")
+        self.set_cfg("claude", tools="mine.json", tools_flags=["--enable-logs"])
+        before = sorted(os.listdir(self.agent / "tools" / "claude"))
+        r = self.tool("claude", {"prompt": "幾點"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        cell = self.stack / "tools" / "claude"
+        argv = self.calls()[-1]["argv"]
+        self.assertEqual(self.opt_after(argv, "--mcp-config"), str(cell / "mcp.json"))
+        self.assertEqual(self.opt_after(argv, "--allowedTools"), "mcp__aos")
+        self.assertEqual(json.loads((cell / "mcp.json").read_text()),
+                         {"mcpServers": {"aos": {"command": "aos-mcp", "args": [
+                             "--ws", str(self.ws), "--stack", str(cell), "--enable-logs", str(reg)]}}})
+        self.assertEqual((cell / "stack.txt").read_text().strip(), str(cell))
+        self.assertEqual(sorted(os.listdir(self.agent / "tools" / "claude")), before)   # P-15：定義不被寫
+
+    def test_tools_default_and_none(self):
+        """沒寫 tools：同層有 tools.json＝自動接（使用者 11-03「如果cli.json沒有指定，那就去找默認的tools.json」）；
+        沒有 tools.json＝argv 跟以前一樣、不寫 mcp.json。"""
+        r = self.tool("claude", {"prompt": "沒工具"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        argv = self.calls()[-1]["argv"]
+        self.assertNotIn("--mcp-config", argv)
+        self.assertNotIn("--allowedTools", argv)
+        self.assertFalse((self.stack / "tools" / "claude" / "mcp.json").exists())
+        reg = self.registry("claude")
+        r = self.tool("claude", {"prompt": "有預設的"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        argv = self.calls()[-1]["argv"]
+        self.assertEqual(self.opt_after(argv, "--allowedTools"), "mcp__aos")
+        args = json.loads((self.stack / "tools" / "claude" / "mcp.json").read_text())["mcpServers"]["aos"]["args"]
+        self.assertEqual(args[-1], str(reg))
+
+    def test_tools_codex(self):
+        """codex：不寫檔，兩個 -c mcp_servers.aos.command／args（值是 JSON＝合法 TOML）。"""
+        reg = self.registry("codex")
+        r = self.tool("codex", {"prompt": "幾點"})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        cell = self.stack / "tools" / "codex"
+        argv = self.calls()[-1]["argv"]
+        self.assertIn('mcp_servers.aos.command="aos-mcp"', argv)
+        args = next(a for a in argv if a.startswith("mcp_servers.aos.args="))
+        self.assertEqual(json.loads(args[len("mcp_servers.aos.args="):]), ["--ws", str(self.ws), "--stack", str(cell), str(reg)])
+        self.assertEqual(argv[argv.index('mcp_servers.aos.command="aos-mcp"') - 1], "-c")
+        self.assertFalse((cell / "mcp.json").exists())
+
+    def test_tools_errors(self):
+        """tools 指的檔不在＝ToolsMissing；tools 不是字串、tools_flags 不是字串陣列、有 tools_flags 沒登記檔＝CfgBad；
+        aos-mcp 不在 PATH 上＝CliMissing。都不起 CLI。"""
+        self.set_cfg("claude", tools="nope.json")
+        r = self.tool("claude", {"prompt": "hi"})
+        self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["ToolsMissing"]))
+        for bad in (dict(tools=3), dict(tools=None, tools_flags="--enable-logs"), dict(tools=None, tools_flags=["--enable-logs"])):
+            self.set_cfg("claude", **bad)
+            r = self.tool("claude", {"prompt": "hi"})
+            self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["CfgBad"]), bad)
+        self.set_cfg("claude", tools_flags=None)
+        self.registry("claude")
+        no_mcp = os.pathsep.join(p for p in self.env()["PATH"].split(os.pathsep) if not p.endswith(os.path.join("ai_tools", "bin")))
+        r = self.tool("claude", {"prompt": "hi"}, dict(PATH=no_mcp))
+        self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["CliMissing"]))
+        self.assertIn("aos-mcp", r.stderr)
+        self.assertEqual(self.calls(), [])
+
     # ------------------------------------------------------------ CLI 自己的對話檔（transcripts/，10-30）
 
     def transcript_env(self):
@@ -249,6 +332,28 @@ class Fay(unittest.TestCase):
         self.assertFalse((self.stack / "tools" / "claude" / "busy.txt").exists())
         self.assertEqual(len(self.calls()), 2)                             # 第二句沒有再起一次 claude
         self.assertIn("本來就開著", self.attach("-d", "claude").stdout)
+
+    @unittest.skipUnless(HAS_TMUX, "沒有 tmux")
+    def test_attach_with_tools(self):
+        """attach -d 開畫面：接了工具的 claude 畫面 argv 也有 --mcp-config <小格>/mcp.json --allowedTools mcp__aos（11-03 eca-tools）；
+        格裡 stack.txt 沒了又接了工具＝CellBad（open_cell 不知道給 aos-mcp 哪個 stack）。"""
+        self.addCleanup(self.kill_tmux, "claude")
+        self.registry("claude")
+        r = self.attach("-d", "claude")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        cell = self.stack / "tools" / "claude"
+        tui = self.calls()[-1]["argv"]
+        self.assertNotIn("-p", tui)
+        self.assertEqual((self.opt_after(tui, "--mcp-config"), self.opt_after(tui, "--allowedTools")),
+                         (str(cell / "mcp.json"), "mcp__aos"))
+        self.assertEqual(json.loads((cell / "mcp.json").read_text())["mcpServers"]["aos"]["args"][:4],
+                         ["--ws", str(self.ws), "--stack", str(cell)])
+        self.kill_tmux("claude")
+        (cell / "stack.txt").unlink()
+        r = subprocess.run(["python3", "-c", "import sys; sys.path.insert(0, %r); import cli_session; "
+                            "cli_session.open_cell(cli_session.Cell(%r))" % (str(ROOT / "lib" / "agent"), str(cell))],
+                           capture_output=True, text=True, env=self.env(), timeout=60)
+        self.assertEqual((r.returncode, self.codes(r.stderr)), (1, ["CellBad"]), r.stderr)
 
     @unittest.skipUnless(HAS_TMUX, "沒有 tmux")
     def test_live_codex_new_session_from_notify(self):

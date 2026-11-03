@@ -117,6 +117,39 @@ class Turn(unittest.TestCase):
         self.assertEqual(argv[argv.index("--resume") + 1], sid)
         self.assertEqual(len(self.history()), 4)
 
+    def test_tools(self):
+        """11-03 eca-tools 平級形：定義放 tools.json（cli.json 沒寫 tools＝用它）＝claude argv 多 --mcp-config <stack>/claude/mcp.json
+        --allowedTools mcp__aos，mcp.json 的 --ws＝$AOS_WS、--stack＝$AOS_STACK（那隻 eca 的 stack，不是 CLI 小格）、tools_flags 原樣夾在中間；
+        codex＝兩個 -c。tools 指的檔不在＝ToolsMissing 退 1、信留著。"""
+        reg = self.defs["claude"] / "tools.json"
+        reg.write_text(json.dumps({"tools": {"clock": {"path": str(ROOT / "lib" / "base" / "clock")}}}))
+        cfg = json.loads((self.defs["claude"] / "cli.json").read_text())
+        (self.defs["claude"] / "cli.json").write_text(json.dumps(dict(cfg, tools_flags=["--timeout-s", "120"])))
+        self.say("幾點")
+        r = self.turn()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        argv = self.calls()[-1]["argv"]
+        mcp = self.stack / "claude" / "mcp.json"
+        self.assertEqual(argv[argv.index("--mcp-config") + 1], str(mcp))
+        self.assertEqual(argv[argv.index("--allowedTools") + 1], "mcp__aos")
+        self.assertEqual(json.loads(mcp.read_text())["mcpServers"]["aos"]["args"],
+                         ["--ws", str(self.ws), "--stack", str(self.stack), "--timeout-s", "120", str(reg)])
+        self.assertEqual((self.stack / "claude" / "stack.txt").read_text().strip(), str(self.stack))
+        creg = self.defs["codex"] / "tools.json"
+        creg.write_text(reg.read_text())
+        self.say("codex 幾點")
+        r = self.turn("codex")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        argv = self.calls()[-1]["argv"]
+        args = next(a for a in argv if a.startswith("mcp_servers.aos.args="))
+        self.assertEqual(json.loads(args.partition("=")[2]), ["--ws", str(self.ws), "--stack", str(self.stack), str(creg)])
+        self.assertIn('mcp_servers.aos.command="aos-mcp"', argv)
+        (self.defs["claude"] / "cli.json").write_text(json.dumps(dict(cfg, tools="gone.json")))
+        sig = self.say("登記檔不在")
+        r = self.turn()
+        self.assertEqual((r.returncode, r.stderr.split()[:2]), (1, ["aos-eca-turn:", "ToolsMissing"]), r.stderr)
+        self.assertEqual(self.stage("new"), [sig])
+
     def test_codex(self):
         self.say("codex 你好")
         r = self.turn("codex")

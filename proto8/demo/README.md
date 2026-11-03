@@ -316,12 +316,14 @@ eca-claude/
                "interval_ms": 300, "ctl": "ctl.json", "state": "state.json"}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；兩扇窗落在 $AOS_STACK）
   cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms），抄 lib/agent/claude 的保守旗標；eca-codex 抄 lib/agent/codex 的
   prompt.txt  （選填，範本沒有）開場白：history 與 queue 都空時當第一則 user 投進 queue
+  tools.json  （11-03）aos-tools 的登記檔，只登記 clock（"../../lib/base/clock"，相對路徑從這份檔的資料夾算）；cli.json 沒寫 tools＝用它，
+              cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__clock）；不要工具就刪掉它
 ```
 
 **實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`，裡面長 `queue/`、`history.jsonl`、`ctl.json`、`state.json`、`eca.json`（kind、ws、template）與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）。
 
 ```sh
-aos-exec --ws ~/code/myproj proto8/demo/eca-claude &     # PATH 要有 impls 的 aos-exec／aos-loop／aos-post、proto8/bin 的 aos-eca-turn、claude
+aos-exec --ws ~/code/myproj proto8/demo/eca-claude &     # PATH 要有 impls 的 aos-exec／aos-loop／aos-post、proto8/bin 的 aos-eca-turn 與 aos-tools、extras/ai_tools/bin 的 aos-mcp、claude
 aos-say --ws ~/code/myproj 看一下 README 在講什麼 && aos-listen --ws ~/code/myproj
 echo '{"cmd": "pause"}' > ~/code/myproj/.stack/ctl.json      # 暫停：不餵下一則（新信留 queue/new/），粒度＝一則訊息
 echo '{"cmd": "stop"}' > ~/code/myproj/.stack/ctl.json       # 收工

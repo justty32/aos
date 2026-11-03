@@ -39,6 +39,7 @@
 - **重新掛上前清殘留 `stopped`**（11-02 晚；**11-03 拿掉**：ctl 改成指令後子 loop 起來第一次讀的 ctl 當基準線、不執行，殘留的 `{"cmd": "stop"}` 不用清，[thinking 11-03 ctl-commands](../../thinking/2026-11-03-ctl-commands.md)；下面是原文）：start 走到 aos-daemon-ctl add 之前（11-03 起 add、open 新建時小格一定不在〔在＝撞名〕，只剩 start 會碰到），小格 ctl 窗（eca 資料夾 `loop.json` 的 `ctl`）有 `stopped` 就只拿掉這個 key（沒別的 key＝刪檔），免得新的子 loop 一起來就收工；其他 key（`paused`…）照留。「暫停」只有一種：寫小格的 `ctl.json` `{"paused": true}`（11-03 起 `{"cmd": "pause"}`，用 `aos-daemon-ctl pause 名字`／`resume 名字`）（aos-loop 的窗，不餵下一則），這裡不另做 pause（10-28 的 `pause` 改名 `close`）。
 - 畫面裡 **Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束**。人在畫面上自己打的話不進 history（方向題 2），全貌看 `transcripts/`。
 - **eca 資料夾**＝頂層有 `cli.json` 的資料夾（`kind`、`flags`、`print_flags`、`timeout_ms`），`add` 的 XXX 就給它；要別的模型、權限就複製一份 `demo/eca-claude` 改 `cli.json`、add 那份。小格 `eca.json` 的 `template` 那格記的就是它（aos-eca-turn 寫的 key，名字沒改）。
+- **工具箱（11-03，[thinking 11-03 eca-tools](../../thinking/2026-11-03-eca-tools.md)）**：eca 資料夾裡放一份 aos-tools 的登記檔（格式 `{"tools": {名: {"path": …}}}`，用 `aos-tools --file 它 add …` 登記，或手寫相對路徑＝從登記檔的資料夾算），claude／codex 就叫得到那些工具（工具名 `mcp__aos__<登記名>`）。**`cli.json` 沒寫 `tools`＝用同層的 `tools.json`**（使用者 11-03「如果cli.json沒有指定，那就去找默認的tools.json」；沒有就不接工具）；寫了 `"tools": "別的.json"`＝用那份（相對路徑從 `cli.json` 的資料夾算）。選填 **`tools_flags`**＝字串陣列，原樣交給 aos-mcp（例 `["--enable-logs"]` 記呼叫紀錄到 `<它的 stack>/aos-mcp-logs.jsonl`、`["--timeout-s", "120"]`）；預設不記。不用自己在 `flags` 寫 `--mcp-config`：每次起 CLI 前，cli_session 把 `aos-mcp --ws <工作區> --stack <這隻的 stack> [tools_flags…] <登記檔絕對路徑>` 寫成 CLI 小格的 `mcp.json`、加 `--mcp-config <小格>/mcp.json --allowedTools mcp__aos`（codex 改成兩個 `-c mcp_servers.aos.command／args`），非互動與 `open` 的畫面都接；定義資料夾不被寫。工具在 `<這隻的 stack>/tools/<名>/` 跑，`rm` 時一起走。**白名單＝登記檔本身**：能叫哪些就是登記的那幾個，要收窄換一份小一點的登記檔。`add`／`open` 新建時先檢查：`tools` 指的檔不在＝`ToolsMissing`、`cli.json` 壞（`tools` 不是字串、`tools_flags` 不是字串陣列、有 `tools_flags` 卻沒有登記檔）＝`CfgBad`，都不送信；登記檔的內容壞了不在這裡查（aos-mcp 起不來，`watch` 看得到 claude 說 MCP 連不上）。`state` 多印一行「工具箱」。
 
 ## 對它說話
 
@@ -48,6 +49,7 @@ aos-eca add --ws ~/code/myproj --name myproj proto8/demo/eca-claude   # 掛上�
 S=$(aos-daemon-ctl where --stack myproj)       # 它的 stack（11-03 起工作區沒有 .stack 捷徑；where 只認 daemon 表上的）
 cd ~/code/myproj
 aos-say --stack $S 讀 src/calc.py 說說裡面有什麼 && aos-listen --stack $S   # 畫面開著＝打進畫面、沒開＝--resume 問一次
+aos-tools --file proto8/demo/eca-claude/tools.json ls    # 它的工具箱（範本只登記 clock）；aos-say --stack $S 用 clock 查現在時間 → 叫得到
 aos-eca status                                   # 這隻的狀態（11-03 起 aos-listen --status 拿掉了）
 aos-eca open                                 # 接進畫面（第一次會問信任這個資料夾：游標預設在 No, exit，先移游標到 Yes 再 Enter）；Ctrl-] 跳出
 aos-eca close && aos-eca ls              # 收起；再問一句照樣答（--resume）
@@ -62,7 +64,8 @@ aos-eca rm                                   # 刪掉：stack 沒了（要留先
 
 - **`AOS_DAEMON_STACK` 要給絕對路徑**，相對路徑 cd 之後就對不上：在 A 資料夾 add 得上，cd 到工作區後 open／ls／close／stop 都是 `DaemonMissing`（`aos-daemon-ctl where` 也一樣）。使用者 11-02 晚選「3」：維持、只寫清楚（[eca 09 § 決定 11-02 晚](../../thinking/2026-10-30-eca/09-方向題.md#決定11-02-晚使用者)）。
 - **短時間多封信**（11-02 晚記；**11-03 改了**：aos-eca-turn 一次把 queue 的信全部、照順序丟進一次 CLI，N 封排著＝一次起退，見 [eca 17](../../thinking/2026-10-30-eca/17-11-03-批次-status.md)；下面是之前的樣子）：子 loop 每 `interval_ms`（300 ms）跑一次 aos-eca-turn、一次只認領一封，所以 N 封＝claude 起退 N 次、每次 `--resume` 重讀整段對話；畫面開著＝逐封貼進畫面；人接在畫面上時信排著等人跳出（`--on-busy yield`）；`aos-listen` 等的是最新那封，前面的要 `--last N` 看。start 之後排著的那些也是這樣一封一封答。
-- **daemon 的 PATH**：子 loop 用 daemon 啟動時的環境叫 claude／codex、aos-eca-turn、aos-post。從沒有 `~/.local/bin` 的 shell 起 daemon，每則都 `CliMissing`。
+- **daemon 的 PATH**：子 loop 用 daemon 啟動時的環境叫 claude／codex、aos-eca-turn、aos-post。從沒有 `~/.local/bin` 的 shell 起 daemon，每則都 `CliMissing`。接了工具（11-03）還要 `proto8/extras/ai_tools/bin`（aos-mcp）與 `proto8/bin`（aos-tools）、impls 的 aos-exec：沒有 aos-mcp＝每則 `CliMissing`（「aos-mcp 不在 PATH 上」）。
+- **`tools_flags` 的 `--logs-path` 給相對路徑會寫進工作區**：aos-mcp 的 cwd＝claude 的 cwd＝工作區。要嘛給絕對路徑，要嘛不給（預設記在它的 stack）。
 - **新資料夾第一次開畫面，claude 會先問「信任這個資料夾嗎」**：人 `open` 接進去回答就好——游標預設停在「No, exit」，直接按 Enter 會讓 claude 退出，要先用方向鍵移到「Yes」再按 Enter；`open -d` 之後馬上 say，那句會被貼進這個提問。非互動（`-p`）沒有這個提問。
 - **ls 要等子 loop 跑第一次**：`eca.json` 是 aos-eca-turn 寫的，add 之後一個 `interval_ms` 內才列得到。
 - **自己結束的（CLI 出錯、直接寫它 `ctl.json` 的 `{"cmd": "stop"}`）在 daemon 表上沒有、aos-eca 也找不到**（11-03 procs）：`ls` 不列、`rm` 刪不了（stack 資料夾自己 `rm -r`），要接著用就同名再 `add`。用自訂 `--stack` 的要記得當初給的 S（daemon 不再記得它）。

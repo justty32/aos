@@ -9,6 +9,8 @@
 #   lock          同一時間只有一個人用這段對話（agent 的一次呼叫、attach 開畫面）
 #   live.jsonl    非互動的即時紀錄兼副產物：claude 的 stream-json、codex 的 --json 事件，一行一事件、只接不重寫（10-28；10-27 是每次重寫）
 #   tool.txt、ws.txt  這格屬於哪個工具資料夾、哪個工作區（open_cell 叫回畫面時用）（10-27）
+#   stack.txt     給 aos-mcp 的 stack（11-03 eca-tools：平級形＝那隻 eca 的 $AOS_STACK、工具形＝這格本身；open_cell 叫回畫面時用）
+#   mcp.json      claude 的 MCP 設定（11-03 eca-tools）：有登記檔才寫，每次起 claude 前重寫；codex 不寫檔、走 -c
 #   transcripts/<kind>-<id>.jsonl  指到 CLI 自己存的這段對話的 symlink（claude ~/.claude/projects/*/<id>.jsonl、
 #                 codex ~/.codex/sessions/**/*<id>.jsonl）：拿到 session id 就建（10-30 agent-lifecycle C-15～C-17；
 #                 agent 叫的工具格也建，方向題 3）；一直是 symlink（11-02 晚 aos-eca 不再歸檔，freeze_transcripts 拿掉；
@@ -21,12 +23,17 @@
 #   畫面沒開 → 非互動：claude -p --resume <id>（第一次 --session-id <新 id>）、codex exec resume <id> -（第一次 codex exec -）
 #   畫面開著 → 從 pty 送字：tmux paste-buffer 貼上＋Enter，等 hook 在 turns.jsonl 接一行（有人接著看、或 claude 正在跑一輪＝SessionBad；
 #             on_busy="answer" 時不退讓：照樣貼、busy.txt 等它消失，10-31）
+# 工具（11-03 eca-tools，thinking 2026-11-03-eca-tools）：cli.json 選填 tools＝aos-tools 的登記檔（相對路徑從 cli.json 的資料夾算），
+#   沒寫＝cli.json 同層有 tools.json 就用它（使用者 11-03「如果cli.json沒有指定，那就去找默認的tools.json」）、沒有＝不接工具；
+#   選填 tools_flags＝字串陣列，原樣插在 aos-mcp 的 args 裡（例 ["--enable-logs"]）。有登記檔時每次起 CLI 前接上
+#   aos-mcp --ws <工作區> --stack <stack> [tools_flags…] <登記檔絕對路徑>：claude＝寫小格 mcp.json、加 --mcp-config 它 --allowedTools mcp__aos；
+#   codex＝兩個 -c mcp_servers.aos.command／args。aos-mcp 靠 PATH 找（N-50）；定義資料夾一個字都不寫（P-15）。
 # 錯：當工具叫（call_main）時照 lib 契約 stderr 與 stdout 各一行「工具名: 代號 原因」、退 1；attach 與 hook 是 stderr 一行「cli_session: 代號 原因」、退 1。
 #
 # 放哪（10-24 遷移）：proto8/lib/agent/cli_session.py，lib/agent 的 claude、codex 兩個工具共用（用 realpath 找到這層再 import）；
 # agent-fay 根目錄的 cli_session.py 是捷徑指過來（給 attach 用）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
-import datetime, fcntl, glob, json, os, shlex, subprocess, sys, threading, time, uuid
+import datetime, fcntl, glob, json, os, shlex, shutil, subprocess, sys, threading, time, uuid
 
 TMUX_SESSION = "cli"
 PROG, ECHO = "cli_session", False                    # 錯誤行開頭、要不要也印到 stdout（call_main 改成工具名、True）
@@ -55,10 +62,52 @@ def load_cfg(tool_dir):
         die("CfgBad", "%s：%s" % (path, e))
     if not isinstance(cfg, dict) or cfg.get("kind") not in ("claude", "codex"):
         die("CfgBad", "%s：kind 要是 claude 或 codex" % path)
-    for k in ("flags", "print_flags"):
+    for k in ("flags", "print_flags", "tools_flags"):
         if not isinstance(cfg.get(k, []), list) or not all(isinstance(a, str) for a in cfg.get(k, [])):
             die("CfgBad", "%s：%s 要是字串陣列" % (path, k))
+    cfg["registry"] = registry(cfg, tool_dir, path)
     return cfg
+
+
+def registry(cfg, tool_dir, path):
+    """這份定義的 aos-tools 登記檔（絕對路徑）；沒有＝None（11-03 eca-tools）。
+    tools 有寫＝它（相對路徑從 cli.json 的資料夾算），不是檔＝ToolsMissing；沒寫＝同層 tools.json，有才用。
+    給了 tools_flags 卻沒有登記檔＝CfgBad（寫什麼就做什麼，不靜靜吞掉）。"""
+    base = os.path.abspath(tool_dir)
+    if "tools" in cfg:
+        if not isinstance(cfg["tools"], str) or not cfg["tools"]:
+            die("CfgBad", "%s：tools 要是登記檔的路徑（非空字串）" % path)
+        reg = os.path.normpath(os.path.join(base, cfg["tools"]))
+        if not os.path.isfile(reg):
+            die("ToolsMissing", "%s：tools 指的登記檔不在：%s" % (path, reg))
+        return reg
+    reg = os.path.join(base, "tools.json")
+    if os.path.isfile(reg):
+        return reg
+    if "tools_flags" in cfg:
+        die("CfgBad", "%s：有 tools_flags 但沒有登記檔（沒寫 tools、同層也沒有 tools.json）" % path)
+    return None
+
+
+def mcp_argv(cfg, cell, ws, stack):
+    """有登記檔＝接上 aos-mcp 要加給 CLI 的旗標；沒有＝[]（11-03 eca-tools）。每次起 CLI 前叫（claude 的 mcp.json 每次重寫）。
+    ws＝CLI 的 cwd、stack＝給 aos-mcp 的 --stack（工具叫的小格在 <stack>/tools/<名>/）。"""
+    reg = cfg.get("registry")
+    if not reg:
+        return []
+    if not os.path.isfile(reg):                          # load_cfg 之後才被刪掉
+        die("ToolsMissing", "登記檔不在：%s" % reg)
+    if shutil.which("aos-mcp") is None:
+        die("CliMissing", "aos-mcp 不在 PATH 上（接了工具，要把 proto8/extras/ai_tools/bin 放進 PATH）")
+    args = ["--ws", ws, "--stack", stack] + cfg.get("tools_flags", []) + [reg]
+    if cfg["kind"] == "codex":                           # JSON 字串與字串陣列同時是合法的 TOML（-c 的值照 TOML 解）
+        return ["-c", "mcp_servers.aos.command=" + json.dumps("aos-mcp"), "-c", "mcp_servers.aos.args=" + json.dumps(args)]
+    try:
+        cell.write("mcp.json", json.dumps({"mcpServers": {"aos": {"command": "aos-mcp", "args": args}}},
+                                          ensure_ascii=False) + "\n")
+    except OSError as e:
+        die("WriteFailed", "寫不了 %s：%s" % (cell.file("mcp.json"), e))
+    return ["--mcp-config", cell.file("mcp.json"), "--allowedTools", "mcp__aos"]
 
 
 class Cell:
@@ -115,14 +164,13 @@ class Cell:
         return [l for l in r.stdout.splitlines() if l.strip()] if r.returncode == 0 else []
 
 
-def note_cell(cell, tool_dir, ws):
-    """記下這格是哪個工具、哪個工作區（tool.txt、ws.txt；open_cell 叫回畫面要）。寫不成不擋正事。
+def note_cell(cell, tool_dir, ws, stack):
+    """記下這格是哪個工具、哪個工作區、哪個 stack（tool.txt、ws.txt、stack.txt〔11-03 eca-tools〕；open_cell 叫回畫面要）。寫不成不擋正事。
     10-30 前叫 register，還會送一行給 $AOS_HUB 的 kernel；那段刪了（eca 衝突 6）。"""
     try:
-        if cell.read("tool.txt") != tool_dir:
-            cell.write("tool.txt", tool_dir + "\n")
-        if cell.read("ws.txt") != ws:
-            cell.write("ws.txt", ws + "\n")
+        for name, value in (("tool.txt", tool_dir), ("ws.txt", ws), ("stack.txt", stack)):
+            if cell.read(name) != value:
+                cell.write(name, value + "\n")
     except OSError:
         pass
 
@@ -221,12 +269,13 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path):
     return p.returncode, lines, "".join(err)
 
 
-def print_claude(cfg, cell, ws, prompt):
+def print_claude(cfg, cell, ws, stack, prompt):
     sid = cell.read("session.txt")
     new = "" if sid else str(uuid.uuid4())
     # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-eca watch 看得到它正在做什麼；
     # 回答取最後一個帶 result 的那行（type: result）
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
+    argv += mcp_argv(cfg, cell, ws, stack)
     argv += ["--resume", sid] if sid else ["--session-id", new]
     code, lines, err = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"))
     out = None
@@ -247,10 +296,11 @@ def print_claude(cfg, cell, ws, prompt):
     return out.get("result") or ""
 
 
-def print_codex(cfg, cell, ws, prompt):
+def print_codex(cfg, cell, ws, stack, prompt):
     sid = cell.read("session.txt")
     last = cell.file("last.txt")
     argv = ["codex", "exec"] + (["resume", sid] if sid else []) + cfg.get("flags", []) + cfg.get("print_flags", [])
+    argv += mcp_argv(cfg, cell, ws, stack)
     argv += ["--skip-git-repo-check", "--json", "-o", last, "-"]     # 題目從 stdin 進（"-"）
     if os.path.exists(last):
         os.remove(last)
@@ -312,13 +362,14 @@ def live(cfg, cell, prompt, on_busy="yield"):
         % (cfg.get("timeout_ms", 600000) // 1000))
 
 
-def ask(cfg, cell, tool_dir, ws, prompt, on_busy="yield"):
+def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield"):
     """問 CLI 一句 → 回答文字：記下這格（note_cell）→ 拿格的 lock（拿不到：on_busy＝yield（預設）＝SessionBad、
     answer＝等到拿到，同 open_cell）→ 畫面開著走 live（on_busy 照傳）、沒開走非互動
     → 建 transcripts symlink。工具形（call_main）與 aos-eca-turn 共用這一段（10-30 eca 第 5 步抽出來）。
-    tool_dir＝cli.json 所在的資料夾（工具資料夾或 eca 定義）；ws＝CLI 的 cwd（絕對路徑）。錯一律走 die
+    tool_dir＝cli.json 所在的資料夾（工具資料夾或 eca 定義）；ws＝CLI 的 cwd（絕對路徑）；stack＝給 aos-mcp 的 --stack
+    （平級形＝那隻 eca 的 $AOS_STACK、工具形＝這格本身；11-03 eca-tools）。錯一律走 die
     （工具形印一行退 1；aos-eca-turn 把 die 換成丟例外）。"""
-    note_cell(cell, tool_dir, ws)
+    note_cell(cell, tool_dir, ws, stack)
     f, ok = cell.lock()
     if not ok:
         if on_busy == "yield":
@@ -328,9 +379,9 @@ def ask(cfg, cell, tool_dir, ws, prompt, on_busy="yield"):
         if cell.alive():
             text = live(cfg, cell, prompt, on_busy)
         elif cfg["kind"] == "claude":
-            text = print_claude(cfg, cell, ws, prompt)
+            text = print_claude(cfg, cell, ws, stack, prompt)
         else:
-            text = print_codex(cfg, cell, ws, prompt)
+            text = print_codex(cfg, cell, ws, stack, prompt)
         link_transcript(cell, cfg["kind"])               # 工具形也留（方向題 3）
     return text
 
@@ -350,7 +401,8 @@ def call_main(tool_dir, on_busy="yield"):
         die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
     if not isinstance(args, dict) or not isinstance(args.get("prompt"), str) or not args["prompt"].strip():
         die("ArgumentsBad", "缺 prompt（要一個非空字串）")
-    text = ask(cfg, Cell(stack), os.path.abspath(tool_dir), os.path.abspath(ws), args["prompt"], on_busy)
+    cell = Cell(stack)                                   # 工具形：對話在這格本身，aos-mcp 的 stack 也是它（它叫的工具再疊 tools/<名>/）
+    text = ask(cfg, cell, os.path.abspath(tool_dir), os.path.abspath(ws), cell.path, args["prompt"], on_busy)
     sys.stdout.write(text if text.endswith("\n") else text + "\n")
 
 
@@ -432,8 +484,8 @@ def hook_cmd(kind, cell):
     return [sys.executable, os.path.abspath(__file__), "hook", kind, cell.path]
 
 
-def start(cfg, cell, ws):
-    """畫面沒開就開一個（在 tmux 裡、背景）；有對話就接著那段，沒有就開新的。"""
+def start(cfg, cell, ws, stack):
+    """畫面沒開就開一個（在 tmux 裡、背景）；有對話就接著那段，沒有就開新的。有登記檔＝跟非互動同一段接上 aos-mcp（11-03 eca-tools）。"""
     if cell.alive():
         return False
     sid = cell.read("session.txt")
@@ -442,10 +494,10 @@ def start(cfg, cell, ws):
         cmd = " ".join(shlex.quote(a) for a in hook_cmd("claude", cell))
         hooks = {"hooks": {e: [{"hooks": [{"type": "command", "command": cmd}]}]
                            for e in ("UserPromptSubmit", "Stop")}}
-        argv = ["claude"] + cfg.get("flags", []) + ["--settings", json.dumps(hooks)]
+        argv = ["claude"] + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack) + ["--settings", json.dumps(hooks)]
         argv += ["--resume", sid] if sid else []
     else:
-        argv = ["codex"] + (["resume", sid] if sid else []) + cfg.get("flags", [])
+        argv = ["codex"] + (["resume", sid] if sid else []) + cfg.get("flags", []) + mcp_argv(cfg, cell, ws, stack)
         argv += ["-c", "notify=" + json.dumps(hook_cmd("codex", cell))]
     with open(cell.file("tmux.conf"), "w", encoding="utf-8") as f:
         f.write(TMUX_CONF)
@@ -511,7 +563,7 @@ def attach_main(argv, agent_dir):
     if names[0] not in known:
         die("ToolUnknown", "%s（有：%s）" % (names[0], ", ".join(known)))
     cell = Cell(os.path.join(stack, "tools", names[0]))
-    note_cell(cell, os.path.realpath(os.path.join(tools_dir, names[0])), ws)
+    note_cell(cell, os.path.realpath(os.path.join(tools_dir, names[0])), ws, cell.path)   # 工具形：stack＝這格（同 call_main）
     opened = open_cell(cell)
     if detached:
         print("%s 的畫面%s：%s" % (names[0], "開好了" if opened else "本來就開著", cell.file("tty.sock")))
@@ -521,17 +573,20 @@ def attach_main(argv, agent_dir):
 
 
 def open_cell(cell):
-    """畫面沒開就開（有 session.txt 就 --resume 接回那段＝叫回）；工具與工作區照格裡的 tool.txt、ws.txt。回 True＝這次才開的。"""
-    tool_dir, ws = cell.read("tool.txt"), cell.read("ws.txt")
+    """畫面沒開就開（有 session.txt 就 --resume 接回那段＝叫回）；工具、工作區、stack 照格裡的 tool.txt、ws.txt、stack.txt。回 True＝這次才開的。
+    stack.txt 只在接了工具時要（沒有＝CellBad；11-03 eca-tools）。"""
+    tool_dir, ws, stack = cell.read("tool.txt"), cell.read("ws.txt"), cell.read("stack.txt")
     if not tool_dir or not ws:
         die("CellBad", "%s 沒有 tool.txt／ws.txt（不是 cli_session 用過的格）" % cell.path)
     cfg = load_cfg(tool_dir)
+    if cfg.get("registry") and not stack:
+        die("CellBad", "%s 沒有 stack.txt（接了工具，要知道給 aos-mcp 哪個 stack）" % cell.path)
     f, ok = cell.lock()
     if not ok:
         print("agent 正在用這段對話，等它這次講完…", file=sys.stderr)
         fcntl.flock(f, fcntl.LOCK_EX)
     with f:
-        return start(cfg, cell, ws)
+        return start(cfg, cell, ws, stack)
 
 
 if __name__ == "__main__":

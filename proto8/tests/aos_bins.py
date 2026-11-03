@@ -14,7 +14,8 @@ CXX = ("aos-exec", "aos-loop", "aos-fsm", "aos-daemon", "aos-llm-kernel", "aos-l
        "aos-json",                                     # 10-24 遷移：lib/base/json_edit 經 aos-json 寫檔
        "aos-post")                                     # 10-30 lib/agent/queue 經 aos-post 投遞（agent-lifecycle 第 1 步）
 SPY = Path(__file__).resolve().parent / "spy_bin"   # 11-03：測試用的 aos-fsm 旁觀者（fsm 不寫 trace.jsonl 了，跑了哪幾格由它記；見 spy_bin/aos-fsm）
-BINS = [SPY] + [IMPLS / n / "bin" for n in CXX] + [ROOT / "bin"]   # 最後一個是 proto8/bin（只剩 aos-tick）
+BINS = [SPY] + [IMPLS / n / "bin" for n in CXX] + [ROOT / "bin"]   # proto8/bin（aos-tick、aos-tools、aos-eca-turn…）
+BINS.append(ROOT / "extras" / "ai_tools" / "bin")   # 11-03 eca-tools：aos-mcp（eca 的 cli_session 接了工具時靠 PATH 找它）
 BIN_DIRS = [str(b) for b in BINS]
 
 for _n in CXX:

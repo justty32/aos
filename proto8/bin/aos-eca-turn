@@ -12,7 +12,8 @@
     （lock 拿不到就等、有人接在畫面上照樣貼進畫面答、busy.txt 在就等它消失再貼，期限照 cli.json 的 timeout_ms，逾時 ReplyMissing）。
 
 定義資料夾＝eca 的定義（demo/eca-claude 那種）：頂層 cli.json（kind claude｜codex、flags、print_flags、timeout_ms；
-  cli_session 讀的同一份）、選填 prompt.txt（開場白）。定義不被寫（P-15）；寫的都在 $AOS_STACK。
+  cli_session 讀的同一份；11-03 起選填 tools、tools_flags）、選填 prompt.txt（開場白）、選填 tools.json（aos-tools 的登記檔：cli.json 沒寫 tools
+  就用它，接上 aos-mcp，工作區＝$AOS_WS、stack＝$AOS_STACK；11-03 eca-tools）。定義不被寫（P-15）；寫的都在 $AOS_STACK。
 
 平級形（沒有 --one）——一次替它答一批（11-03 起：使用者 11-03「每次aos-eca-turn就是把所有信一起丟進去(當然，是有順序的)」「一批幾封無上限」，thinking 2026-10-30-eca/17-11-03-批次-status.md；原本一次一則）：
   ① 這一批＝queue 的 cur/ 全部（上次沒答完的，P-12；Q-1 當掉重跑接得上）＋ new/ 全部（一封一封 aos-post claim 到沒有），照名字＝寄的順序，
@@ -39,7 +40,8 @@
 PATH 上要有 aos-post（平級形）。
 錯（平級形與 argv）：stderr 一行「aos-eca-turn: 代號 原因」、退 1；CLI 那層的錯整批信留在 cur/、已接的 user 不再接（P-20 停下等人；修好重跑整批再問一次）。
   代號：ArgumentsBad、FlagUnknown、AgentBad、StackMissing、HistoryBad、PostFailed、WriteFailed，
-  加 cli_session 的 CfgMissing、CfgBad、CliMissing、CliFailed、ReplyMissing（yield 時的 SessionBad 不算錯，見上）。"""
+  加 cli_session 的 CfgMissing、CfgBad、ToolsMissing（11-03 eca-tools：cli.json 的 tools 指的登記檔不在）、CliMissing（含 aos-mcp 不在 PATH 上）、
+  CliFailed、ReplyMissing（yield 時的 SessionBad 不算錯，見上）。"""
 import json, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -257,7 +259,7 @@ def one_turn(template, stack, ws, empty_code, on_busy):
         clear_current(stack)
         return 0
     try:
-        text = cli_session.ask(cfg, cell, template, ws, SEP.join(prompts), on_busy)   # 一批一次（11-03）；跟工具形同一段
+        text = cli_session.ask(cfg, cell, template, ws, stack, SEP.join(prompts), on_busy)   # 一批一次（11-03）；跟工具形同一段；stack 給 aos-mcp（11-03 eca-tools）
     except Fail as e:
         if e.code == "SessionBad":                                  # 只有 --on-busy yield 會丟
             return 0                                                # 整批留 cur/，下一次再試

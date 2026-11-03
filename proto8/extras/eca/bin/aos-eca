@@ -9,7 +9,7 @@ add／rm＝建立與刪除（rm＝aos-daemon-ctl rm＋刪它的 stack、不封�
     aos-eca [--daemon-stack D] add [--name N] [--ws WS] [--stack S] XXX   建立：XXX＝eca 資料夾（頂層有 cli.json，例 proto8/demo/eca-claude）；
                                                    掛到 daemon（aos-daemon-ctl add --ws WS --name N [--stack S] XXX）；印它的 stack
     aos-eca ls    [--json]                         列外部 agent（掛著的、停了的）：名字、狀態、種類、工作區、對話 id 前 8 碼
-    aos-eca state [資料夾|名字]                    這裡有沒有外部 agent（掛著或停了；沒有＝InstanceMissing、退 1）
+    aos-eca state [資料夾|名字]                    這裡有沒有外部 agent（掛著或停了；沒有＝InstanceMissing、退 1）；11-03 起多印一行工具箱（登記檔）
     aos-eca status [資料夾|名字]                   同 state（別名、行為一樣；11-03 使用者「status和state兩個指令都可以」）
     aos-eca open  [-d] [--name N] [--ws WS] [--stack S] [名字|資料夾|XXX]   接進畫面（沒開就開、有對話就 --resume）；認不出、是 eca 資料夾＝先 add 再開
     aos-eca close [資料夾|名字]                    收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）；只管畫面、不碰 daemon
@@ -39,7 +39,8 @@ CLI 的小格＝<stack>/<kind>/（cli_session 的 session.txt、tty.sock、live.
   停著（stopped）時 where 照找得到，信排在 queue，start 後接著答。
 畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。「暫停」＝aos-daemon-ctl pause／resume（寫它 stack 裡的 ctl.json），這裡不另做。
 錯：stderr 一行 `aos-eca: 代號 原因`、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、
-  InstanceExists（add 撞名）、PathMissing（XXX、--ws 不在或不是資料夾）、EcaBad（XXX 沒有 cli.json）、SessionBad（正在答題時 close、stop、rm）、
+  InstanceExists（add 撞名）、PathMissing（XXX、--ws 不在或不是資料夾）、EcaBad（XXX 沒有 cli.json）、
+  CfgBad／ToolsMissing（add、open 新建時 XXX 的 cli.json 壞、tools 指的登記檔不在；11-03 eca-tools，不送信）、SessionBad（正在答題時 close、stop、rm）、
   Timeout（等 daemon 放上表、停好、收掉逾時），加 aos-daemon-ctl 與 cli_session 的。"""
 import json, os, shutil, subprocess, sys, time
 
@@ -207,12 +208,28 @@ def is_eca(xxx):
 
 
 def eca_dir(xxx):
-    """add 的 XXX：eca 資料夾（頂層有 cli.json）→ 絕對路徑。不在＝PathMissing、沒有 cli.json＝EcaBad。"""
+    """add 的 XXX：eca 資料夾（頂層有 cli.json）→ 絕對路徑。不在＝PathMissing、沒有 cli.json＝EcaBad；
+    cli.json 讀不懂、tools 指的登記檔不在＝cli_session 的 CfgBad／ToolsMissing（11-03 eca-tools：入口先檢查、不送信，
+    免得要等 daemon 起子 loop、aos-eca-turn 退 1 才看得到）。登記檔的內容不在這裡查（aos-mcp 起來時的事）。"""
     if not os.path.isdir(xxx):
         die("PathMissing", "沒有 %s（add 要一個 eca 資料夾，例 proto8/demo/eca-claude）" % xxx)
     if not is_eca(xxx):
         die("EcaBad", "%s 沒有 cli.json（不是外部 coding agent）" % xxx)
+    cli_session.load_cfg(xxx)
     return os.path.abspath(xxx)
+
+
+def toolbox(template):
+    """state 印的工具箱：eca 資料夾的登記檔絕對路徑；沒有＝（沒有）；cli.json 壞了＝括號裡寫 cli_session 的那一行（state 不因此退 1）。"""
+    def soft(code, reason):
+        raise RuntimeError("%s %s" % (code, str(reason).replace("\n", " ")))
+    old, cli_session.die = cli_session.die, soft
+    try:
+        return cli_session.load_cfg(template).get("registry") or "（沒有）"
+    except RuntimeError as e:
+        return "（%s）" % e
+    finally:
+        cli_session.die = old
 
 
 def wait_for(cond, what, secs=WAIT_S):
@@ -285,8 +302,9 @@ def cmd_ls(argv):
 def cmd_state(argv):
     _, arg = parse(argv)
     r = resolve(arg)
-    print("名字   %s\n狀態   %s（daemon phase %s）\n種類   %s（eca 資料夾 %s）\n工作區 %s\nstack  %s\n對話   %s" % (
-        r["name"], label(r), r["phase"], r["kind"], r["template"], r["ws"], r["cell"], session_of(r) or "（還沒有）"))
+    print("名字   %s\n狀態   %s（daemon phase %s）\n種類   %s（eca 資料夾 %s）\n工作區 %s\nstack  %s\n工具箱 %s\n對話   %s" % (
+        r["name"], label(r), r["phase"], r["kind"], r["template"], r["ws"], r["cell"], toolbox(r["template"]),
+        session_of(r) or "（還沒有）"))
 
 
 def cmd_open(argv):
@@ -303,7 +321,7 @@ def cmd_open(argv):
         print("%s: 注意 %s 停著（%s），aos-say 的信不會有人答；要接著答用 aos-eca start" % (
             PROG, r["name"], label(r)), file=sys.stderr)
     cell = cli_session.Cell(cli_cell(r))
-    cli_session.note_cell(cell, r["template"], r["ws"])  # open_cell 照 tool.txt（定義）、ws.txt 開
+    cli_session.note_cell(cell, r["template"], r["ws"], r["cell"])   # open_cell 照 tool.txt（定義）、ws.txt、stack.txt（給 aos-mcp，11-03 eca-tools）開
     opened = cli_session.open_cell(cell)                 # 正在答題就等它答完（格的 lock）、等畫面穩
     if opts.get("-d"):
         print("畫面%s：%s" % ("開好了（有對話就是 --resume 叫回）" if opened else "本來就開著", cell.file("tty.sock")))
