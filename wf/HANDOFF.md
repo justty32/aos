@@ -12,6 +12,18 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-03 13:30 出門前（公司 Windows；下次開 session 接）
+
+1. **授權**：本 session 隨意 push、普通事 opus、簡單與雜活 sonnet、規劃 fable、做事的 agent（雜活除外）先讀 wf 規矩、可再派 agent。下次開新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問。工人只 `git add <明確的檔>`，不 checkout --／restore／stash／reset／-A（今天有 agent 用 checkout -- 抹掉別人未 commit 的改動）。
+2. **今天做完並 push**（細節看各 thinking 檔末「實作時代定」）：aos-eca-hub→aos-eca（單隻、`add [--name N] [--ws WS] [--stack S] XXX`、rm、撞名報錯、ls 暫留）；trace.jsonl 整個拿掉；state／status 兩個指令都收；eca-turn 一批信一起丟；topdown 封存；ws 不放 `.stack` 捷徑、`aos-daemon-ctl where --stack 名字`；`aos-exec --stack`；loop ctl.json 改下指令 `{"cmd": pause|resume|stop}`（`4b2d6d86`）；execs／loops 合成 `procs`，每項可寫 `stack`，aos-daemon-ctl 有 add／rm／start／stop／pause／resume（`b248ed02`）。全綠：unittest 634 OK／13 skip、ctest 8/8、demo 0、wf-lint broken=0。
+   - **要跟使用者講的行為改變**：eca 自己出錯結束或有人直接寫 stop 到它的 ctl，會從 daemon 表與 `aos-eca ls` 消失（procs 衝突 2「照舊拿掉」）；要接著用就同名再 add、同一個 stack，對話接得上。
+3. **下次要接的**：
+   - 整理 WSL `~/code/playground`（11-03 已清空）照新設計重建：手改清單在 WAIT_USER；刪 amy；然後做「玩 playground」說明頁（使用者：「在去幫我弄artifact吧，這樣我之後玩playground時更舒服」），可更新親手試指南 https://claude.ai/artifact/WSrwpLQqibw2QC2tfwwM3m 。
+   - 工作樹留著 `proto8/thinking/README.md`、`proto8/thinking/months/2026-11.md` 兩檔未 commit 的舊版文字（比 HEAD 舊、非今天改的），請使用者確認後丟掉。
+   - 小事：aos-loop `ctl_note_` 沒人用；`demo/talk/team/quiet.py` 自拼 `procs/<名>/state.json`；`aos-ai exec --stack` 沒傳給 aos-exec；6 個 code map 檔 >8 KB（開發期先不拆）。
+   - 以後：say／listen 改成 `aos-agent` 體系、agent 在工作區建 `.aos/agent/`（使用者「之後還要再改」）；aos-eca-hub（繼承 daemon）管多隻 eca；瘦身候選 aos-chat、aos_ws.loop_state、nvim 外掛。
+4. **artifact**：eca 圖解 https://claude.ai/artifact/1DW3vC6ENR4VWUfGs7qXco 與其他 11-02 的頁都已過時。
+
 ## 2026-11-02 晚收工（家中 Manjaro；明早開新 session 接）
 
 1. **授權**：今晚隨意 push、普通事 opus、簡單與雜活 sonnet、規劃 fable、做事的 agent（雜活除外）先讀 wf 規矩、可再派 agent。**明早開新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問一次**。頂層 Bash 裡 `ls` 寫 `/bin/ls`。工人只 `git add <明確的檔>`、不 `-A`、不 force／reset、不碰 stash——今晚多個 agent 同一工作樹 commit 時兩度把別人 staged 的檔帶進去，commit 前一定 `git diff --cached --stat`；子 agent 的完成通知會送到頂層、不送給派它的隊長，頂層要轉。家機試驗場 `~/code/playground`（不在 git）今晚重建：env.sh、agents/bob、agents/resident_bob、agents/eca_bob、daemons/main；`daemon_ws/` 是使用者自己開的 daemon，別碰。
