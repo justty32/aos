@@ -2,7 +2,7 @@
 
 ← [thinking](README.md)｜月份表 [2026-10](months/2026-10.md)｜出發點：[10-28 medium 決定 32](2026-10-28-medium.md)（第十七段）｜前一個試驗場：[10-26 playground](2026-10-26-playground.md)｜history 的格式：[agent-round § 4](2026-10-28-agent-round/02-2-round-一輪本身.md#4-單位介面)｜信箱：[N-16](../docs/NORMS/05-基礎設施-窗.md)、[aos-post](../impls/aos-post/README.md)
 
-> **10-29 晚看完實跑後方向改了**：兩個使用場景都用不到「agent 自己用 tool 看信箱」，這份的 inbox tool 解錯題；下面的代定與「要帶給使用者的題」先擱著，見文末[看完 A 之後](2026-10-29-playground-queue/02-要帶給使用者的題.md#結論10-29-晚看完-a-之後)。
+> **10-29 晚看完實跑後**：兩個使用場景都用不到「agent 自己用 tool 看信箱」，這份的 inbox tool 解錯題；「要帶給使用者的題」擱著，見[看完 A 之後](2026-10-29-playground-queue/02-要帶給使用者的題.md#結論10-29-晚看完-a-之後)。
 
 ## 分檔目錄
 

@@ -21,4 +21,4 @@
 5. **手寫也行**：`aos-json set tools.json#/tools/名/cache false`（有 `$ref` 拆檔就加 `--follow`）；改回有快取＝`add --override` 重登記（只 `aos-json del …#/tools/名/cache` 的話沒有快取物件，ls／get 照樣每次重跑，因為讀的時候不寫回）。
 6. aos-mcp 零改動（它只轉叫 `aos-tools ls --json`／`call`）。
 
-實作：[proto8/bin/aos-tools](../../bin/README.md)（檔頭與 USAGE）、測試 `proto8/tests/test_aos_tools.py` 兩案。
+實作：[proto8/bin/aos-tools](../../bin/README.md)。
