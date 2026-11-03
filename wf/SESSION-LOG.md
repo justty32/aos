@@ -12,7 +12,6 @@
 
 ## 最新進度
 
-- **open｜整體瘦身**：候選已封存（11-03 晚，[索引](../proto8/archive/README.md)）；剩 `aos_ws.loop_state`（extras/ai_tools 的 aos-ai status 還在用）待使用者看要不要一起動 → [02 § 整體要瘦身](../proto8/thinking/2026-11-01-playground-bob/02-環境變數要使用者裁的問題.md#整體要瘦身11-01-晚使用者定方向明天再說)
 - **open｜tidy 收斂（11-03 晚起）**：批次與狀態 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)
 - **open｜公司 WSL 試驗場 `agents/amy` 待刪**（使用者「刪掉」；不在 git，回公司刪資料夾）
 - **open｜介質**：實作八步已做；agent 的輸入是 queue、接單後放 tools（決定 32）那兩題先擱著 → [10-28 medium](../proto8/thinking/2026-10-28-medium.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10-29-medium-plan.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
