@@ -4,7 +4,7 @@
 import json, os, re, shutil, subprocess, tempfile, unittest
 from pathlib import Path
 
-from aos_bins import ROOT, tool, path_with  # noqa: E402
+from aos_bins import ROOT, tool, path_with, fsm_steps  # noqa: E402
 
 JANET = shutil.which("janet")
 LANG = ROOT / "extras" / "langs" / "janet"
@@ -50,7 +50,7 @@ class JanetCompile(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         history = TIME.sub("<時間>", (ws / ".stack" / "history.jsonl").read_text(encoding="utf-8"))
         answer = TIME.sub("<時間>", (ws / "out" / "q1.txt").read_text(encoding="utf-8"))
-        trace = [json.loads(line)["state"] for line in (ws / ".stack" / "trace.jsonl").read_text().splitlines()]
+        trace = [t["state"] for t in fsm_steps(ws / ".stack")]  # 11-03：fsm 不寫 trace.jsonl，跑了哪幾格看 tests/spy_bin 的旁觀者（code＝aos-fsm 的結束碼，分岔接住＝0）
         return files(ws), history, answer, trace, (ws / ".stack" / "state.txt").read_text()
 
     @unittest.skip("demo/agent-dan 11-02 晚刪了；examples/agent_dan.janet 讀它的檔、編不出來——留不留等使用者")

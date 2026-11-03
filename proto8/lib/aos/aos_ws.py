@@ -7,7 +7,7 @@
   ② history＝<stack>/history.jsonl（回答＝最新那則沒有 tool_calls 的 assistant，沒有 out/）；
   ③ ctl／state＝aos-loop 開在 <stack>/ctl.json、state.json 的窗（state 的 phase 看得出 paused）。
 舊協議（工作區的 new/ cur/ out/ done/，P-11 的 10-30 改口：agent-bob／ann／dan、topdown 這些 fsm 範本）這裡不再認。
-stack 裡 fsm 每格一行 trace.jsonl（P-07；agent-nia 的表也是這種）、aos-eca-turn 與 10-30 前的舊 round 每格一行（unit）這裡只讀不改。"""
+11-03 起不讀 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）：fsm、aos-eca-turn 都不寫了，last_jsonl／unit_of／failed 跟著拿掉。"""
 import json, os, subprocess
 
 STAGES = ("new", "cur", "done")              # queue 的格；tmp/ 是寄到一半的，不看
@@ -141,28 +141,3 @@ def tail_jsonl(path, n):
             rows.append({"bad_line": l[:200]})
     return rows
 
-
-def last_jsonl(path):
-    """一份 .jsonl 最後一行解得開的；沒有＝None（stack 的 trace.jsonl 看最後一格用）。"""
-    for line in reversed((read(path, "") or "").splitlines()):
-        try:
-            return json.loads(line)
-        except ValueError:
-            continue
-    return None
-
-
-def unit_of(t):
-    """trace 一行是哪一格：fsm（含 lib/agent/round 的表）寫 state；aos-eca-turn 與 10-30 前的舊 round 寫 unit（舊 stack 還讀得到）。"""
-    return t.get("unit") or t.get("state") or "?"
-
-
-def failed(t):
-    """trace 那一行是不是失敗。fsm 的行 next 不是 null＝表上接住、照表往下走了一步，不算失敗（例：分岔表用 "*"、"1" 接住的錯碼）；
-    next 是 null（表上沒接住，state 不動）與沒有 next 的 unit 行（aos-eca-turn、10-30 前的舊 round）才看碼：非 0、非 10，或被訊號停掉＝失敗。
-    （11-02 使用者裁「改」；thinking 2026-10-30-aos-round 07-決定「要使用者裁（第 1 步發現）」）"""
-    if not t:
-        return False
-    if t.get("next") is not None:
-        return False
-    return t.get("code") not in (0, 10) or t.get("signal") is not None

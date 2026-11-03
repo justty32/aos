@@ -1,6 +1,7 @@
-// state.hpp：【state】$AOS_STACK 裡 fsm 自己的兩個檔：state（現在狀態）與 trace.jsonl（每次一行）。內部標頭。
+// state.hpp：【state】$AOS_STACK 裡 fsm 自己的檔：state.txt（現在狀態）。內部標頭。
+// 11-03 起不寫 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）。
 //
-//   state.cpp   read_state、write_state（先寫 .state.txt 再改名成 state.txt，N-05）、append_trace（時間用 aos-util 的 utc_now_ms）
+//   state.cpp   read_state、write_state（先寫 .state.txt 再改名成 state.txt，N-05）
 //
 // state 是純文字一行狀態名，跟 shell 版 fsm 同格式（P-07、N-39）；只有 fsm 自己寫。
 #pragma once
@@ -17,9 +18,5 @@ std::string read_state(const std::string& stack, const std::string& start);
 
 // stack/.state.txt 寫 "名\n"，再改名成 stack/state.txt。寫不了 WriteFailed。
 void write_state(const std::string& stack, const std::string& name);
-
-// stack/trace.jsonl 追加一行（dumps，排版同 Python json.dumps）。寫不了 WriteFailed。
-// 那一行由 main 組：{"started_at","state","code","signal","elapsed_ms","next"}（next＝這次寫進 state 的狀態名、沒換＝null，10-30）。
-void append_trace(const std::string& stack, const Json& line);
 
 }  // namespace aos::fsm

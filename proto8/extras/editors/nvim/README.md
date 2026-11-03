@@ -1,6 +1,6 @@
 # proto8/extras/editors/nvim — 在 nvim 裡用 aos
 
-aos_nvim - 在 nvim 裡跑 aos 程式、看 trace、對 agent 丟題、跳到 `檔#/指標`、預覽 Lua 編出的 JSON（嘗試，2026-10-24）
+aos_nvim - 在 nvim 裡跑 aos 程式、對 agent 丟題、跳到 `檔#/指標`、預覽 Lua 編出的 JSON（嘗試，2026-10-24）
 
 ← [proto8](../../../README.md)｜設計與代定：[thinking 2026-10-24-lua-nvim](../../../thinking/2026-10-24-lua-nvim.md)｜Lua 寫 aos：[langs/lua](../../langs/lua/README.md)｜測試 `tests/smoke.lua`（`proto8/tests/test_lua_aos.py` 叫它）
 
@@ -13,12 +13,13 @@ aos_nvim - 在 nvim 裡跑 aos 程式、看 trace、對 agent 丟題、跳到 `�
 
 ## 指令
 
+11-03 拿掉 `:AosTrace`（fsm 不寫 `trace.jsonl` 了，使用者「整個拿掉」，[thinking 11-03 trace](../../../thinking/2026-11-03-trace.md)）。
+
 | 指令 | 做什麼 |
 |---|---|
 | `:AosWs [資料夾]` | 看／設工作區（`setup{ws=}` ＞ `vim.g.aos_ws` ＞ nvim 的 cwd；`init_min.lua` 拿 `$AOS_WS` 當 `ws`） |
-| `:AosExec [目標 args...]` | `aos-exec --ws 工作區 目標`，輸出一行行進下方面板，跑完印結束碼和 trace 最後 20 格。沒給目標＝目前檔案往上找、第一個有 `_entry` 的資料夾 |
+| `:AosExec [目標 args...]` | `aos-exec --ws 工作區 目標`，輸出一行行進下方面板，跑完印結束碼和 stack 的 `state.txt`（11-03 前印 trace 最後 20 格）。沒給目標＝目前檔案往上找、第一個有 `_entry` 的資料夾 |
 | `:AosExec!` | 跑目前這個檔本身（例 `fsm.json` 帶 `_entry`＝fsm 只走一格，一步一步看） |
-| `:AosTrace` | 看 `工作區/.stack/trace.jsonl`，一格一行（時間、格名、結束碼、毫秒） |
 | `:AosSay 話` | 放一題到 `工作區/new/`、等 `out/` 的答案印在面板（舊協議，外掛編的 fsm agent 走這條）；`setup{use_say=true}` 才改用 `aos-say`／`aos-listen`（[proto8/extras/human](../../human/README.md)）——10-30 起它們走 queue（CONVENTION P-42），只對 agent-nia 這種 queue 的 agent、說不到 fsm 範本，所以預設 false |
 | `:AosSay! 話` | 同上，放完順便替你跑一次目前的 agent（同 `:AosExec`） |
 | `:AosGoto [檔#/指標]` | 跳過去：資料夾＝它的 `_entry`、沒副檔名又不在＝補 `.json`（同 aos-exec）、`#/…` 開頭＝目前這個檔。沒給＝游標下那串字 |
@@ -39,7 +40,7 @@ return {
 }
 ```
 
-鍵要不要綁、綁哪個自己定；`init_min.lua` 裡有一組試用的（`,ax` 跑、`,a1` 走一格、`,at` trace、`,ag` 跳、`,ap` 預覽、`,ab` 編）。
+鍵要不要綁、綁哪個自己定；`init_min.lua` 裡有一組試用的（`,ax` 跑、`,a1` 走一格、`,ag` 跳、`,ap` 預覽、`,ab` 編）。
 
 ## 先不動設定試
 

@@ -103,7 +103,7 @@ class Eca(unittest.TestCase):
         self.assertEqual(sorted(os.listdir(self.ws)), [".stack"])              # 工作區本身不長東西
 
     def test_idle_template_pause(self):
-        """範本本身（停著等）背景跑：say 兩句答兩句（同一段對話）；ctl.json paused 後第三句留在 new/、--status 印 paused；
+        """範本本身（停著等）背景跑：say 兩句答兩句（同一段對話）；ctl.json paused 後第三句留在 new/（11-03 起沒有 aos-listen --status，phase 由 wait_phase 看 state.json）；
         恢復後答第三句；stopped 收工、退 0。"""
         p = subprocess.Popen([EXEC, "--ws", str(self.ws), str(TEMPLATES["claude"])], stdout=subprocess.DEVNULL,
                              stderr=subprocess.PIPE, text=True, env=self.env())
@@ -121,8 +121,6 @@ class Eca(unittest.TestCase):
         sig = self.say("第三句")
         time.sleep(1)
         self.assertEqual(sorted(os.listdir(self.stack / "queue" / "new")), [sig])
-        r = self.listen("--status")
-        self.assertIn("phase paused", r.stdout, r.stdout + r.stderr)
         (self.stack / "ctl.json").write_text('{"paused": false}')
         r = self.listen("--timeout", "20")
         self.assertEqual(r.stdout, "fake claude[%s]: 第三句\n" % sid[:8], r.stderr)

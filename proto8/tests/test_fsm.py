@@ -1,10 +1,12 @@
-import datetime, json, os, signal, subprocess, tempfile, time, unittest
+import json, os, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
-from aos_bins import ROOT, tool, path_with  # noqa: E402  四支 C++ 在 impls/<名>/bin/、aos-tick 在 proto8/bin/（10-23）
-FSM = tool("aos-fsm")
+from aos_bins import ROOT, IMPLS, tool, path_with  # noqa: E402  四支 C++ 在 impls/<名>/bin/、aos-tick 在 proto8/bin/（10-23）
+FSM = str(IMPLS / "aos-fsm" / "bin" / "aos-fsm")   # 直接測真的那支（不經 tests/spy_bin 的旁觀者）
+# 11-03 起 aos-fsm 不寫 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）：原本看 trace 的改看結束碼與 state.txt，
+# test_no_trace_file 查它不再出現。
 
 
 def run(*args, stack=None, env=None, **kw):
@@ -44,9 +46,6 @@ class T(unittest.TestCase):
 
     def state(self):
         return (self.stack / "state.txt").read_text()
-
-    def trace(self):
-        return [json.loads(l) for l in (self.stack / "trace.jsonl").read_text().splitlines()]
 
     def test_state_in_stack_and_advances(self):
         self.cell("a", "exit 0\n"); self.cell("b", "exit 0\n")
@@ -94,11 +93,6 @@ class T(unittest.TestCase):
         self.table({"a": self.body("a", {"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 300})})
         r = self.beat()
         self.assertEqual(r.returncode, 143, r.stderr)
-        t = self.trace()[0]
-        self.assertNotIn("timed_out", t)
-        self.assertEqual(t["code"], 143)
-        self.assertIsNone(t["signal"])   # 格（aos-exec）自己以 143 結束，不是被訊號殺掉（10-22 檔頭更正）
-        self.assertLess(t["elapsed_ms"], 5000)
         self.assertFalse((self.stack / "state.txt").exists())
 
     def test_body_cell_exit_code_and_env_resolved(self):
@@ -117,16 +111,15 @@ class T(unittest.TestCase):
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         cf, co, pwd = (self.stack / "ran").read_text().split(" ")
         self.assertEqual((Path(cf).name, co, Path(pwd).resolve()), ("fsm.json", "/states/a/exec", Path(cf).parent.resolve()))
-        self.assertEqual(json.loads((self.stack / "trace.jsonl").read_text())["code"], 0)
 
     def test_object_exec_bad_shape_is_own_error(self):
-        # 10-24：單子形狀壞＝fsm 自己的錯（同 aos-exec 跑壞單子：EntryBad），退 1、一行、不寫 trace、state 不動
+        # 10-24：單子形狀壞＝fsm 自己的錯（同 aos-exec 跑壞單子：EntryBad），退 1、一行、state 不動
         self.table({"a": {"exec": {"argv": "not-a-list"}, "next": "a"}})
         r = self.beat()
         self.assertEqual(r.returncode, 1)
         self.assertEqual(len(r.stderr.strip().splitlines()), 1, r.stderr)
         self.assertTrue(r.raw_stderr.startswith("aos-fsm: EntryBad 狀態 a：單子跑不起來："), r.raw_stderr)
-        self.assertFalse((self.stack / "trace.jsonl").exists())
+        self.assertFalse((self.stack / "state.txt").exists())
 
     def test_cfg_is_only_positional(self):
         # 10-21 傍晚 ideas § 9：aos-fsm [旗標] 設定檔（原 --cfg 拿掉）；可寫 檔#/指標；沒給、多給、--cfg、不認得的旗標＝usage 錯
@@ -174,20 +167,14 @@ class T(unittest.TestCase):
         self.assertTrue((self.stack / "ran").exists())
         r = run(tool("aos-exec"), f, stack=self.stack, cwd=str(other), env=e)
         self.assertEqual(r.returncode, 10, r.stderr)
-        self.assertEqual([(t["state"], t["code"]) for t in self.trace()], [("a", 0), ("b", 10)])
+        self.assertEqual(self.state(), "b\n")
 
-    def test_trace_jsonl_one_line_per_beat(self):
+    def test_no_trace_file(self):
         self.cell("a", "exit 0\n"); self.cell("b", "exit 5\n")
         self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "b", "next": "a"}})
-        for _ in range(3):
-            self.beat()
-        tr = self.trace()
-        self.assertEqual([(t["state"], t["code"]) for t in tr], [("a", 0), ("b", 5), ("b", 5)])
-        self.assertEqual(list(tr[0]), ["started_at", "state", "code", "signal", "elapsed_ms", "next"])   # F4：沒有 timed_out；10-30 加 next
-        self.assertEqual([t["next"] for t in tr], ["b", None, None])   # 字串 next 也記：退 0 是名字、其他 null
-        for t in tr:   # at＝ISO 8601 UTC 到毫秒（10-23 命名統合，統合前到秒）
-            self.assertRegex(t["started_at"], r"\A\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00\Z")
-            datetime.datetime.fromisoformat(t["started_at"])
+        self.assertEqual([self.beat().returncode for _ in range(3)], [0, 5, 5])
+        self.assertEqual(self.state(), "b\n")
+        self.assertEqual(sorted(os.listdir(self.stack)), ["state.txt"])   # 11-03：沒有 trace.jsonl
 
     def test_requires_stack(self):
         self.table({"a": {"exec": "a", "next": "a"}})
@@ -211,7 +198,6 @@ class T(unittest.TestCase):
         self.assertTrue(r.stderr.startswith("aos-fsm: "), (what, r.stderr))
         self.assertNotIn("Traceback", r.stderr, what)
         self.assertFalse((self.stack / "ran").exists(), what)   # 不跑格
-        self.assertFalse((self.stack / "trace.jsonl").exists(), what)
 
     def test_state_exists_but_unreadable_is_own_error(self):
         # 10-22 a：state 在但讀不了（是資料夾、不是 UTF-8、沒權限）＝自己的錯，退 1、一行、不跑格（原本前兩種當沒有檔從 start 跑、
@@ -271,7 +257,6 @@ class T(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertTrue(r.stderr.startswith("aos-exec: "), r.stderr)
         self.assertNotIn("aos-fsm", r.stderr)
-        self.assertEqual(self.trace()[0]["code"], 1)
 
     def test_outer_timeout_kills_nested_tree(self):
         self.cell("slow/inner", 'echo $$ > "$AOS_STACK/pid"\nexec sleep 30\n')
@@ -281,7 +266,6 @@ class T(unittest.TestCase):
         r = self.beat()
         self.assertLess(time.monotonic() - t0, 10)   # 孤兒 sleep 會握著 pipe 拖滿 30 秒
         self.assertNotEqual(r.returncode, 0)
-        self.assertNotIn("timed_out", self.trace()[0])
         self.assertFalse((self.stack / "state.txt").exists())
         pid = int((self.stack / "pid").read_text())
         gone = False
@@ -319,14 +303,14 @@ class T(unittest.TestCase):
         return False
 
     def test_sigterm_cell_finishes_then_143(self):
-        # 格收到轉來的 SIGTERM 收好、退 0：trace 有一行、state 照樣換，fsm 再以 143 結束（P-36）
+        # 格收到轉來的 SIGTERM 收好、退 0：state 照樣換，fsm 再以 143 結束（P-36）
         self.cell("a", 'trap \'exit 0\' TERM\ntouch "$AOS_STACK/up"\nwhile :; do sleep 0.05; done\n')
         self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "a", "next": "a"}})
         p = self.start()
         ok = self.wait_file(self.stack / "up")
         p.send_signal(signal.SIGTERM)
         out, err = p.communicate(timeout=20)
-        self.assertEqual((ok, p.returncode, err, self.state(), self.trace()[0]["code"]), (True, 143, "", "b\n", 0))
+        self.assertEqual((ok, p.returncode, err, self.state()), (True, 143, "", "b\n"))
 
     def test_sigint_body_cell(self):
         # 格是單子：fsm 把 SIGINT 轉給 aos-exec、aos-exec 轉給整群；aos-exec 以子程式的碼 130 正常結束（signal 是 null）
@@ -335,9 +319,7 @@ class T(unittest.TestCase):
         ok = self.wait_file(self.stack / "up")
         p.send_signal(signal.SIGINT)
         out, err = p.communicate(timeout=20)
-        x = self.trace()[0]
-        self.assertEqual((ok, p.returncode, x["code"], x["signal"], (self.stack / "state.txt").exists()),
-                         (True, 130, 130, None, False))
+        self.assertEqual((ok, p.returncode, (self.stack / "state.txt").exists()), (True, 130, False))
 
     # ───── 10-30 N-36 改口：next 是 {結束碼: 狀態名}（thinking 10-30 aos-round § A）─────
 
@@ -350,14 +332,13 @@ class T(unittest.TestCase):
         (self.stack / "code").write_text("10")
         r = self.beat()
         self.assertEqual((r.returncode, r.stderr, self.state()), (0, "", "c\n"))
-        self.assertEqual((self.trace()[-1]["code"], self.trace()[-1]["next"]), (10, "c"))
 
     def test_branch_10_not_caught(self):
         self.three({"0": "b"})
         (self.stack / "state.txt").write_text("a\n")
         (self.stack / "code").write_text("10")
         self.assertEqual(self.beat().returncode, 10)
-        self.assertEqual((self.state(), self.trace()[-1]["next"]), ("a\n", None))
+        self.assertEqual(self.state(), "a\n")
 
     def test_branch_star_catches_1(self):
         self.three({"0": "b", "*": "c"})
@@ -372,7 +353,6 @@ class T(unittest.TestCase):
             r = self.beat()
             self.assertEqual((r.returncode, r.raw_stderr.startswith("aos-fsm: CfgBad 狀態 b 的 next")), (1, True), (nxt, r.raw_stderr))
             self.assertFalse((self.stack / "ran").exists())
-            self.assertFalse((self.stack / "trace.jsonl").exists())
 
     def test_branch_sigterm_then_143(self):
         self.cell("a", 'trap \'exit 10\' TERM\ntouch "$AOS_STACK/up"\nwhile :; do sleep 0.05; done\n')
@@ -382,8 +362,7 @@ class T(unittest.TestCase):
         ok = self.wait_file(self.stack / "up")
         p.send_signal(signal.SIGTERM)
         out, err = p.communicate(timeout=20)
-        x = self.trace()[0]
-        self.assertEqual((ok, p.returncode, err, self.state(), x["code"], x["next"]), (True, 143, "", "c\n", 10, "c"))
+        self.assertEqual((ok, p.returncode, err, self.state()), (True, 143, "", "c\n"))
 
 
 if __name__ == "__main__":

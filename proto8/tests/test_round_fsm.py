@@ -2,13 +2,13 @@
 
 一輪（10-30 起：lib/agent/round 的 fsm 表＋五格；舊骨架 round/_entry 與它的 Round 類、--step、hook/pause 第 6 步刪了）：
   題目經 queue push 進 $AOS_STACK/queue/，答案看 history 最新那則 assistant。
-RoundFsm（第 2 步）：aos-fsm 一次一格、驗 state.txt 與 trace 的 (state, code, next)；system.txt 與 tools 帶進請求、
+RoundFsm（第 2 步）：aos-fsm 一次一格、驗 state.txt 與每格的 (state, code, next)（11-03 起看 tests/spy_bin 的旁觀者、code＝aos-fsm 的結束碼）；system.txt 與 tools 帶進請求、
   第一題答完後 claim 死在搬進 cur/ 之後的補認領（這兩案第 6 步從舊 Round 類搬來）。
 設計：proto8/thinking/2026-10-28-agent-round.md § 3、§ 4、文末「實作時代定」；2026-10-30-agent-lifecycle 結論 A、B-11。"""
 import subprocess, unittest
 from pathlib import Path
 
-from aos_bins import tool  # noqa: E402
+from aos_bins import tool, fsm_steps  # noqa: E402
 from round_common import AgentCase, ROUND, FAKE, OPENAI, err_code, EXEC  # noqa: E402
 from dead_brain import DEAD  # noqa: E402
 
@@ -28,7 +28,7 @@ else:
 
 class RoundFsm(AgentCase):
     """lib/agent/round 的表＋五格（thinking 2026-10-30-aos-round § B、實作步驟第 2 步）：aos-fsm 一次一格（cwd＝round 資料夾、AOS_CD＝agent，表的格參數從它來），
-    驗 state.txt、history 與 fsm trace 的 (state, code, next) 序列；格對 state 與資料對不上要自保（crash 接續）。"""
+    驗 state.txt、history 與 fsm 每格的 (state, code, next) 序列（11-03 起 code 是 fsm 的結束碼：分岔接住＝0）；格對 state 與資料對不上要自保（crash 接續）。"""
 
     def step(self, table="fsm-stop.json", env=None):
         """aos-fsm 跑一格；回 (碼, stderr)。"""
@@ -40,7 +40,7 @@ class RoundFsm(AgentCase):
         return [self.step(**kw)[0] for _ in range(n)]
 
     def states(self):
-        return [(t["state"], t["code"], t["next"]) for t in self.lines((self.stack / "trace.jsonl").read_text())]
+        return [(t["state"], t["code"], t["next"]) for t in fsm_steps(self.stack)]  # 11-03：fsm 不寫 trace.jsonl，跑了哪幾格看 tests/spy_bin 的旁觀者（code＝aos-fsm 的結束碼，分岔接住＝0）
 
     def state(self):
         """state.txt 的狀態；沒有＝""（fsm 當 start）。"""
@@ -50,7 +50,7 @@ class RoundFsm(AgentCase):
     def test_no_tools(self):
         (self.agent / "tools.json").write_text('{"tools": {}}')
         self.assertEqual(self.steps(4), [0, 0, 0, 10])
-        self.assertEqual(self.states(), [("idle", 0, "think"), ("think", 10, "finish"), ("finish", 0, "idle"), ("idle", 10, None)])
+        self.assertEqual(self.states(), [("idle", 0, "think"), ("think", 0, "finish"), ("finish", 0, "idle"), ("idle", 10, None)])
         self.assertEqual(self.state(), "idle")
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant"])
         self.assertEqual(self.answer(), "FAKE ANSWER to: 幾點？")
@@ -64,16 +64,15 @@ class RoundFsm(AgentCase):
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant", "tool", "assistant"])
         self.assertRegex(self.answer(), r"^FAKE ANSWER to: 幾點？（clock said: \d{4}-.*Z）$")
         self.assertEqual((self.ls("new"), self.ls("cur")), ([], []))
-        self.assertEqual(set(self.lines((self.stack / "trace.jsonl").read_text())[0]),
-                         {"started_at", "state", "code", "signal", "elapsed_ms", "next"})        # 格不寫自己的 unit 行
+        self.assertFalse((self.stack / "trace.jsonl").exists())                              # 11-03：fsm 不寫 trace
 
     def test_interrupt(self):
         self.parts["endpoint/default"] = {"path": self.script("two", TWO_CLOCKS, sh=False)}
         q2 = self.put("插話")
         self.hook("on_interrupt", 'read n; [ "$n" = %s ] && echo interrupt\n' % q2)
         self.assertEqual(self.steps(8), [0, 0, 0, 0, 0, 0, 0, 10])
-        self.assertEqual(self.states(), [("idle", 0, "think"), ("think", 0, "act"), ("act", 10, "more"), ("more", 0, "act"),
-                                         ("act", 0, "think"), ("think", 10, "finish"), ("finish", 0, "idle"), ("idle", 10, None)])
+        self.assertEqual(self.states(), [("idle", 0, "think"), ("think", 0, "act"), ("act", 0, "more"), ("more", 0, "act"),
+                                         ("act", 0, "think"), ("think", 0, "finish"), ("finish", 0, "idle"), ("idle", 10, None)])
         h = self.history()
         self.assertEqual([m["role"] for m in h], ["user", "assistant", "tool", "tool", "user", "assistant"])
         self.assertTrue(h[3]["content"].startswith("act: Interrupted 有新題（%s）" % q2), h[3])
@@ -131,7 +130,7 @@ class RoundFsm(AgentCase):
         self.assertEqual(self.steps(3), [0, 0, 0])
         before = (self.stack / "history.jsonl").read_text()
         self.assertEqual(self.step(table="fsm-idle.json"), (0, ""))
-        self.assertEqual((self.state(), self.states()[-1]), ("idle", ("idle", 10, "idle")))
+        self.assertEqual((self.state(), self.states()[-1]), ("idle", ("idle", 0, "idle")))
         self.assertEqual((self.stack / "history.jsonl").read_text(), before)
         q2 = self.put("第二題")
         self.assertEqual(self.steps(3, table="fsm-idle.json"), [0, 0, 0])

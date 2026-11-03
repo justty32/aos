@@ -140,7 +140,7 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] �
   aos-exec 在挑入口之前讀 `.env`、每走一層都 cd 和 setenv，所以整段都在子行程裡做；子行程等同那一層 aos-exec，它的錯照 aos-exec 的格式說（`aos-exec: 代號 原因`）、碼 1。
   fork 時 aos-loop 只有一條執行緒，子行程裡做 C++ 配置、setenv 不會撞鎖。
 - **單子物件在行程內 `run_inst`**：逾時、整群收、轉訊號由 `run_inst` 做，跟 aos-exec 跑單子同一套。在行程內 setenv 三個 `AOS_*` 再還原是安全的：aos-loop 單執行緒，`run_inst` 的工人執行緒在它回來前就 join 了。
-- **`Run` 的欄位同 fsm 的 trace 一行**：aos-fsm 也用 `run_once` 跑一格（格的 `exec` 跟 loop.json 的 `exec` 同一套寫法、同名），所以是公開 API；
+- **`Run` 的欄位同 fsm 的 trace 一行**（11-03 起 fsm 不寫 trace，名字照舊）：aos-fsm 也用 `run_once` 跑一格（格的 `exec` 跟 loop.json 的 `exec` 同一套寫法、同名），所以是公開 API；
   沒有 `timed_out`（loop 看不到格裡有沒有逾時；字串目標的單子逾時＝那次的 aos-exec 以 143 正常結束；單子物件行程內跑時 `code` 143、`signal` 15）；`received` 給「收完這次再以 128＋N 結束」用。
 - **整支程式擋著三個訊號**：不擋的話 SIGTERM 一來 aos-loop 先死、那次變孤兒繼續跑（§ 24 兩版一樣轉訊號）。
 

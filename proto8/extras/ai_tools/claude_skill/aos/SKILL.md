@@ -1,6 +1,6 @@
 ---
 name: aos
-description: 操作 aos（proto8 的資料夾程式）的工具 aos-ai，含概念速成。Use when the user asks to spawn/create an aos agent, give an aos agent a question/task, run aos-exec or an agent once, check aos loop/daemon/fsm state or trace, start/stop a background agent, read an aos agent's answer or error line, generate aos JSON (inst/loop.json/fsm.json/daemon.json/_metainfo/_tooldef.json/tools.json) or scaffold a tool/fsm cell/function folder, or explain aos concepts like AOS_WS/AOS_ENTRY/AOS_STACK/AOS_CF/AOS_CD/AOS_CO（「起一隻 agent」「丟題給 agent」「aos-exec 跑一次」「看 agent 狀態」「生成 loop.json」「加一個工具」「WS／STACK 是什麼」）。
+description: 操作 aos（proto8 的資料夾程式）的工具 aos-ai，含概念速成。Use when the user asks to spawn/create an aos agent, give an aos agent a question/task, run aos-exec or an agent once, check aos loop/daemon/fsm state, start/stop a background agent, read an aos agent's answer or error line, generate aos JSON (inst/loop.json/fsm.json/daemon.json/_metainfo/_tooldef.json/tools.json) or scaffold a tool/fsm cell/function folder, or explain aos concepts like AOS_WS/AOS_ENTRY/AOS_STACK/AOS_CF/AOS_CD/AOS_CO（「起一隻 agent」「丟題給 agent」「aos-exec 跑一次」「看 agent 狀態」「生成 loop.json」「加一個工具」「WS／STACK 是什麼」）。
 ---
 
 # aos：用 aos-ai 操作 agent
@@ -27,15 +27,15 @@ aos-ai --root ~/code/try/x answer helper <信號>          # 讀答案（不給�
 
 `run` 的 JSON：`ok`、`code`（0＝好）、`answers[{text}]`（這次新的回答）、`answered`（這次答完的信號）、`waiting`（queue 裡還沒答的）、
 `loop_phase`、`errors[{prog,code,reason}]`（各層 stderr 的 `程式名: 代號 原因` 拆好的）、`hint`。**agent 失敗 aos-ai 照樣退 0**，看 `ok`。
-失敗後信留在 queue 的 `cur/`（`trace` 看停在哪一格）；修好原因再 `run` 一次就從同一封接著做。
+失敗後信留在 queue 的 `cur/`（`status` 的 `fsm_state` 看停在哪一格、錯誤一行在 `run` 的輸出）；修好原因再 `run` 一次就從同一封接著做。
 
 ## 其他命令
 
 | 命令 | 做什麼 |
 |---|---|
 | `templates` | 列範本與可加的工具 |
-| `status [名]` | 一隻的詳細狀態（queue 各格的信、loop_phase、最近一次 run、背景列、trace 尾巴、可改的設定檔）；不給名字＝列全部 |
-| `trace 名 [-n N]`／`history 名 [-n N]` | 每格紀錄／跟腦的對話（工具呼叫、回答看這裡） |
+| `status [名]` | 一隻的詳細狀態（queue 各格的信、loop_phase、最近一次 run、背景列、可改的設定檔）；不給名字＝列全部 |
+| `history 名 [-n N]` | 跟腦的對話（工具呼叫、回答看這裡；11-03 起沒有 `trace`） |
 | `start 名 [--interval-ms N]` | 交給背景（root 一個 aos-daemon，沒起就起），之後 `ask` 的題它會自己做 |
 | `wait 名 信號 [--timeout 秒]` | 等背景做完那封、回答案 |
 | `stop 名`／`daemon down`／`daemon status` | 停一隻／停整個背景／看背景 |

@@ -1,6 +1,6 @@
-"""aos_ai_agents - aos-ai 對單隻 agent 的命令：templates、spawn、ask、run、status、answer、wait、trace、history、exec（前景跑、讀 stack）。
+"""aos_ai_agents - aos-ai 對單隻 agent 的命令：templates、spawn、ask、run、status、answer、wait、history、exec（前景跑、讀 stack）。
 
-10-31 自 bin/aos-ai 拆出（行為不變）。"""
+10-31 自 bin/aos-ai 拆出（行為不變）。11-03 拿掉 trace 子命令與 status 的 trace_tail（fsm 不寫 trace.jsonl 了，使用者「整個拿掉」，thinking 2026-11-03-trace）。"""
 import fcntl, json, os, shutil, signal, subprocess, sys, time
 from pathlib import Path
 from aos_ai_base import AGAIN, DAN_TOOLS, Daemon, Fail, HINTS, TEMPLATE, TEMPLATES, aos_ws, child_env, clip, env_pairs, hint_for, need, now, out, parse_errors, read_json, read_text, register_tool, tail_jsonl, tool_rows, write_atomic
@@ -182,7 +182,6 @@ def agent_status(root, a, brief=False):
          "new": a.ls("new"), "cur": a.ls("cur"), "done": a.ls("done"), "counter_answers": len(a.answers()),
          "background": d.row(a.name), "last_run": (tail_jsonl(a.base / "runs.jsonl", 1) or [None])[0]}
     if not brief:
-        s["trace_tail"] = tail_jsonl(a.stack / "trace.jsonl", 5)
         s["paths"] = {"agent": str(a.agent), "ws": str(a.ws), "stack": str(a.stack),
                       "cfgs": sorted(str(p.relative_to(a.agent)) for p in a.agent.rglob("*.json")
                                      if "__pycache__" not in p.parts),
@@ -240,13 +239,6 @@ def cmd_wait(root, o, pos):
         if time.monotonic() > end:
             raise Fail("WaitFailed", "等了 %s 秒還沒有答案" % o.get("timeout", ["120"])[-1], "aos-ai status %s 看卡在哪" % a.name)
         time.sleep(0.3)
-
-
-def cmd_trace(root, o, pos):
-    need(pos, 1, "trace NAME [-n 行數]")
-    a = root.agent(pos[0])
-    out({"ok": True, "name": a.name, "fsm_state": read_text(a.stack / "state.txt"),
-         "trace": tail_jsonl(a.stack / "trace.jsonl", int(o.get("n", ["10"])[-1]))})
 
 
 def cmd_history(root, o, pos):

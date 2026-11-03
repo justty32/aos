@@ -14,7 +14,7 @@ sh proto8/demo/run.sh      # 在 WSL／Linux 跑
 
 act 把 `plan.txt` 當題目交給 `act/tools/cathy/`（另一隻完整 agent，同一套範本；P-32、P-33）：在她的小格 `$AOS_STACK/tools/cathy/` 裡備 `ws/new/<題名>`、`AOS_STACK=$sub aos-exec --ws "$sub/ws" tools/cathy`、從 `$sub/ws/out/<題名>` 拿答案寫進 `$AOS_WS/out/`、題目從 `cur/` 搬 `done/`；cathy 失敗（非 0）bob 的 act 說「cathy 失敗」並退 1。cathy 的 act 再經 `act/tools/cathy/act/tools/stamp`（工具，自己的 stack 在 `$AOS_STACK/tools/stamp/`，前面加一行 UTC 時間戳、`runs.txt` 計次）寫她的 out。一次跑完是四層：bob 的 loop／fsm → act → cathy 的 loop／fsm → 她的 act → stamp；`aos-exec --ws <工作區> proto8/demo/agent-bob/act/tools/cathy` 也能單獨跑 cathy。
 
-stack 樹＝呼叫樹：`.stack/{state.txt,current.txt,plan.txt,trace.jsonl}`、`.stack/tools/cathy/{…,ws/{out,done}/q1.txt,tools/stamp/runs.txt}`（P-38）。
+stack 樹＝呼叫樹：`.stack/{state.txt,current.txt,plan.txt}`（11-03 起沒有 `trace.jsonl`）、`.stack/tools/cathy/{…,ws/{out,done}/q1.txt,tools/stamp/runs.txt}`（P-38）。
 
 ## agent-ann（全內嵌對照）
 
@@ -39,7 +39,7 @@ agent-eve/                主 agent：照抄 agent-dan（brain.py、act.py 只�
       tools/              ls、read、write、edit、bash → lib/base 的捷徑（bash 逾時預設 30 秒、上限 300）
 ```
 
-每次呼叫 pyfix 開一個新小格 `$AOS_STACK/tools/pyfix/runs/<三位數>/`：`ws/`（子 agent 收題、交答案）、`stack/`（它的 history、trace）、`before/`（改之前的備份）；子 agent 要改的程式碼是 `$AOS_WS/<dir>`，絕對路徑寫在 `stack/pyfix_dir.txt`（一行，pyfix 開子 agent 前寫；11-01 起取代環境變數）。子 agent 用 `aos-exec --dotenv-override` 叫，所以模型用它自己 `.env` 的。子 agent 失敗＝`pyfix: AgentFailed …`、退 1，eve 的 act 把那行接成 tool 訊息回給腦、不停（同 agent-dan）；其他代號 `AnswerMissing`、`DirBad`、`ArgumentsBad`、`StackMissing`；子 agent 的 stack 沒有 `pyfix_dir.txt`（或寫的不是資料夾）＝它的 act 停在 `pyfix-agent: DirMissing`（路徑跑出去、edit 對不上這類模型的錯，庫的工具退 1、子 agent 的 act 把那行回給模型、不算失敗）。子 agent 自己的逾時：think 180 秒、act 300 秒（`agent/fsm.json`）、最多 60 次（`agent/loop.json`）；eve 的 act 等它 30 分鐘。
+每次呼叫 pyfix 開一個新小格 `$AOS_STACK/tools/pyfix/runs/<三位數>/`：`ws/`（子 agent 收題、交答案）、`stack/`（它的 history）、`before/`（改之前的備份）；子 agent 要改的程式碼是 `$AOS_WS/<dir>`，絕對路徑寫在 `stack/pyfix_dir.txt`（一行，pyfix 開子 agent 前寫；11-01 起取代環境變數）。子 agent 用 `aos-exec --dotenv-override` 叫，所以模型用它自己 `.env` 的。子 agent 失敗＝`pyfix: AgentFailed …`、退 1，eve 的 act 把那行接成 tool 訊息回給腦、不停（同 agent-dan）；其他代號 `AnswerMissing`、`DirBad`、`ArgumentsBad`、`StackMissing`；子 agent 的 stack 沒有 `pyfix_dir.txt`（或寫的不是資料夾）＝它的 act 停在 `pyfix-agent: DirMissing`（路徑跑出去、edit 對不上這類模型的錯，庫的工具退 1、子 agent 的 act 把那行回給模型、不算失敗）。子 agent 自己的逾時：think 180 秒、act 300 秒（`agent/fsm.json`）、最多 60 次（`agent/loop.json`）；eve 的 act 等它 30 分鐘。
 
 真腦：`AOS_BRAIN_URL=http://localhost:4000/v1 aos-exec --ws <工作區> proto8/demo/agent-eve`；試驗場 `~/code/try/agent-as-tool/`（`setup_ws.py` 建一個有 bug 的 `proj/`，LiteLLM 沒開時用 `fake_brains.py` 劇本）。沒設 `AOS_BRAIN_URL`＝假腦，eve 沒有 clock 工具、會直接答 `FAKE ANSWER`，不會叫 pyfix。測試 `test_eve.py`。
 
@@ -221,7 +221,7 @@ agent-hal/                 照抄 agent-dan（brain.py、act.py 只改錯誤訊�
 
 ## daemon（一個 daemon 同時管 bob、ann，10-20）
 
-`daemon/_entry`＝`exec aos-daemon daemon.json`；`daemon.json` 是 `{"max": 10, "interval_ms": 200, "ctl", "state", "loops": {"bob": …, "ann": …}}`，每個子項是一份 loop 設定：`{"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}, "max": 1}`（ann 同樣；單子直接寫在子項的 `exec`，子 loop 在自己行程內跑它。相對路徑從 daemon 的 cwd＝`demo/daemon/` 算：子 loop 經 aos-exec 起、cwd 是小格，所以 daemon 寫小格時給單子補上 `"cwd": <daemon 的 cwd>`（相對的 `$ref` 也轉成絕對））——子 loop 跑一次那隻 agent，工作區是 `$AOS_WS/bob`、`$AOS_WS/ann`。`run.sh` 這段建暫時工作區、在 `bob/new/`、`ann/new/` 各放一題、`aos-exec` daemon：它跑 10 次（約 2 秒）就結束、結束前收掉子項。stack 樹：`.stack/state.json`（daemon 自己的 state；daemon 自己的窗慣用名 `state.json`／`ctl.json`，11-02 白天曾改 `daemon_*`、晚上改回）、`.stack/loops_state.json`（子項表 `loops`；10-29 拆窗前在 state.json 裡）、`.stack/loops/bob/`、`.stack/loops/ann/`（11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../thinking/2026-11-02-stack-tools.md)；各子項的小格：daemon 寫的 `loop.json`（單子補了 `cwd`、帶 `_entry`）、子 loop 的 `state.json`、`stderr.txt`，以及那隻 agent 自己的 `state.txt`、`current.txt`、`plan.txt`、`trace.jsonl`…——agent 的 stack 就是小格，因為 `AOS_STACK` 已經有值、aos-exec 沿用）。子 loop 結束後不重起，11-02 起也不留在表上（使用者「改成子項結束後不留名單」）：兩項跑完就從 loops_state 拿掉，結束碼（`done`＝子 loop 自己結束、daemon 收掉的才是 `stopped`；`code` 0）要加 `--enable-logs` 看 daemon 的 stdout（一個子項起來一行、結束一行）。兩扇窗有變才寫（11-02，心跳拿掉）。state.json 長這樣：`{"phase": "done", "counter_runs": 10, "max": 10, …, "code": 0, "pid", "started_at_ticks", "boot_id", "updated_at": "2026-10-23T02:46:30.317+00:00"}`，loops_state.json：`{"ctl_seq": null, "ctl_warning": null, "loops": {}, "execs": {}, "pid", "started_at_ticks", "boot_id", "updated_at"}`（11-02 kind 拿掉、recorded_at 改 updated_at）（計數欄一律 `counter_*`，使用者「計數這塊，幫我改成counter_*」）；各 agent 的 `trace.jsonl` 一行 `{"started_at": "…T02:46:27.633+00:00", "state": "idle", "code": 0, "signal": null, "elapsed_ms": 14, "next": "think"}`。
+`daemon/_entry`＝`exec aos-daemon daemon.json`；`daemon.json` 是 `{"max": 10, "interval_ms": 200, "ctl", "state", "loops": {"bob": …, "ann": …}}`，每個子項是一份 loop 設定：`{"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}, "max": 1}`（ann 同樣；單子直接寫在子項的 `exec`，子 loop 在自己行程內跑它。相對路徑從 daemon 的 cwd＝`demo/daemon/` 算：子 loop 經 aos-exec 起、cwd 是小格，所以 daemon 寫小格時給單子補上 `"cwd": <daemon 的 cwd>`（相對的 `$ref` 也轉成絕對））——子 loop 跑一次那隻 agent，工作區是 `$AOS_WS/bob`、`$AOS_WS/ann`。`run.sh` 這段建暫時工作區、在 `bob/new/`、`ann/new/` 各放一題、`aos-exec` daemon：它跑 10 次（約 2 秒）就結束、結束前收掉子項。stack 樹：`.stack/state.json`（daemon 自己的 state；daemon 自己的窗慣用名 `state.json`／`ctl.json`，11-02 白天曾改 `daemon_*`、晚上改回）、`.stack/loops_state.json`（子項表 `loops`；10-29 拆窗前在 state.json 裡）、`.stack/loops/bob/`、`.stack/loops/ann/`（11-02 改 `loops/<名字>/`，[thinking 11-02 stack-tools](../thinking/2026-11-02-stack-tools.md)；各子項的小格：daemon 寫的 `loop.json`（單子補了 `cwd`、帶 `_entry`）、子 loop 的 `state.json`、`stderr.txt`，以及那隻 agent 自己的 `state.txt`、`current.txt`、`plan.txt`…——agent 的 stack 就是小格，因為 `AOS_STACK` 已經有值、aos-exec 沿用）。子 loop 結束後不重起，11-02 起也不留在表上（使用者「改成子項結束後不留名單」）：兩項跑完就從 loops_state 拿掉，結束碼（`done`＝子 loop 自己結束、daemon 收掉的才是 `stopped`；`code` 0）要加 `--enable-logs` 看 daemon 的 stdout（一個子項起來一行、結束一行）。兩扇窗有變才寫（11-02，心跳拿掉）。state.json 長這樣：`{"phase": "done", "counter_runs": 10, "max": 10, …, "code": 0, "pid", "started_at_ticks", "boot_id", "updated_at": "2026-10-23T02:46:30.317+00:00"}`，loops_state.json：`{"ctl_seq": null, "ctl_warning": null, "loops": {}, "execs": {}, "pid", "started_at_ticks", "boot_id", "updated_at"}`（11-02 kind 拿掉、recorded_at 改 updated_at）（計數欄一律 `counter_*`，使用者「計數這塊，幫我改成counter_*」）；各 agent 的 `trace.jsonl` 一行 `{"started_at": "…T02:46:27.633+00:00", "state": "idle", "code": 0, "signal": null, "elapsed_ms": 14, "next": "think"}`。
 
 ## daemon-2（信箱模式的 daemon，10-29）
 
@@ -281,7 +281,7 @@ echo '{"role": "user", "content": "現在幾點？"}' | AOS_WS=<工作區> aos-e
 aos-exec --ws <工作區> proto8/demo/agent-nia        # PATH 照上面放好（含 proto8/bin 的 aos-tools，impls 的 aos-fsm、aos-post）
 ```
 
-**答案就是 `<工作區>/.stack/history.jsonl` 最新那則沒有 `tool_calls` 的 assistant**，沒有 `out/`；工作區本身不長 `new/`、`out/` 這些。loop 每次跑一張單子＝aos-fsm 照 `lib/agent/round/fsm-stop.json` 跑一格（fsm 本來就一次一格）：idle（認領）→ think（問腦）→ act（跑工具）→ think → finish（交卷）→ idle，格退 0／10 照表換狀態、fsm 退 0，loop 再叫；queue 空了 idle 退 10、表沒接，fsm 退 10，loop 正常停、結束碼 0（P-19）。`timeout_ms` 管的是一格（think 那格含問腦），要整輪上限在外面再包一層。`run.sh` 那段：假腦先叫 clock 再答 `FAKE ANSWER to: 現在幾點？（clock said: …）`；stack 有 `history.jsonl`、`live.jsonl`（queue emit）、`trace.jsonl`（fsm 的一格一行：`state` idle、think、act、think、finish、idle，`next` 是換到哪）、`state.txt`（fsm 現在在哪，答完停在 `idle`）、`state.json`（loop 的窗，收工時 `phase` 是 `done`）、`queue/`（信收掉了，只剩 `order.json` 的計數）。假腦不寫 `usage.jsonl`、沒 switch 不會有 `endpoint.txt`、交卷後 `current.txt` 清掉。
+**答案就是 `<工作區>/.stack/history.jsonl` 最新那則沒有 `tool_calls` 的 assistant**，沒有 `out/`；工作區本身不長 `new/`、`out/` 這些。loop 每次跑一張單子＝aos-fsm 照 `lib/agent/round/fsm-stop.json` 跑一格（fsm 本來就一次一格）：idle（認領）→ think（問腦）→ act（跑工具）→ think → finish（交卷）→ idle，格退 0／10 照表換狀態、fsm 退 0，loop 再叫；queue 空了 idle 退 10、表沒接，fsm 退 10，loop 正常停、結束碼 0（P-19）。`timeout_ms` 管的是一格（think 那格含問腦），要整輪上限在外面再包一層。`run.sh` 那段：假腦先叫 clock 再答 `FAKE ANSWER to: 現在幾點？（clock said: …）`；stack 有 `history.jsonl`、`live.jsonl`（queue emit）、`state.txt`（fsm 現在在哪，答完停在 `idle`）、`state.json`（loop 的窗，收工時 `phase` 是 `done`）、`queue/`（信收掉了，只剩 `order.json` 的計數）。假腦不寫 `usage.jsonl`、沒 switch 不會有 `endpoint.txt`、交卷後 `current.txt` 清掉。
 
 **兩種定義：跑完要不要結束寫在定義裡**（playground-queue 結論 2；agent-lifecycle B-11）：
 
@@ -318,7 +318,7 @@ eca-claude/
   prompt.txt  （選填，範本沒有）開場白：history 與 queue 都空時當第一則 user 投進 queue
 ```
 
-**實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`，裡面長 `queue/`、`history.jsonl`、`trace.jsonl`、`ctl.json`、`state.json`、`eca.json`（kind、ws、template）與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）。
+**實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`，裡面長 `queue/`、`history.jsonl`、`ctl.json`、`state.json`、`eca.json`（kind、ws、template）與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）。
 
 ```sh
 aos-exec --ws ~/code/myproj proto8/demo/eca-claude &     # PATH 要有 impls 的 aos-exec／aos-loop／aos-post、proto8/bin 的 aos-eca-turn、claude
@@ -327,7 +327,7 @@ echo '{"paused": true}' > ~/code/myproj/.stack/ctl.json     # 暫停：不餵下
 echo '{"stopped": true}' > ~/code/myproj/.stack/ctl.json    # 收工
 ```
 
-`aos-eca-turn` 一次答一則：`cur/` 有沒答完的先接、否則認領一封 → user 接進 history → 問 CLI（畫面開著＝貼進 tmux 畫面等 hook；沒開＝`claude -p --resume <id>`，第一次開新的）→ assistant 接進 history → 收信；壞信丟掉、trace 記 `mailbox_warning`；有人接在畫面上（`SessionBad`）＝這次不動、信留著下次再試（`--on-busy yield`；改 `answer`＝照常答、不退讓）。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就在定義放 `prompt.txt`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。接進畫面與歸檔（aos-eca-ctl）是第 6 步。測試 `test_eca.py`（範本）、`test_eca_turn.py`（aos-eca-turn）。
+`aos-eca-turn` 一次答一則：`cur/` 有沒答完的先接、否則認領一封 → user 接進 history → 問 CLI（畫面開著＝貼進 tmux 畫面等 hook；沒開＝`claude -p --resume <id>`，第一次開新的）→ assistant 接進 history → 收信；壞信丟掉、記進 `mailbox_warning.txt`（11-03 前記在 trace）；有人接在畫面上（`SessionBad`）＝這次不動、信留著下次再試（`--on-busy yield`；改 `answer`＝照常答、不退讓）。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就在定義放 `prompt.txt`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。接進畫面與歸檔（aos-eca-ctl）是第 6 步。測試 `test_eca.py`（範本）、`test_eca_turn.py`（aos-eca-turn）。
 
 ## 測試
 

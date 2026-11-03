@@ -3,7 +3,7 @@ from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢查對得上原因開頭再拿掉
 
-from aos_bins import ROOT, tool, path_with  # noqa: E402  四支 C++ 在 impls/<名>/bin/、aos-tick 在 proto8/bin/（10-23）
+from aos_bins import ROOT, tool, path_with, fsm_steps  # noqa: E402  四支 C++ 在 impls/<名>/bin/、aos-tick 在 proto8/bin/（10-23）
 EXEC = tool("aos-exec")
 BOB = str(ROOT / "demo" / "agent-bob")
 ANN = str(ROOT / "demo" / "agent-ann")
@@ -144,7 +144,7 @@ class T(unittest.TestCase):
         ws = workspace(self.tmp, "ws", "hello")
         r = run(EXEC, "--ws", str(ws), BOB)
         self.assertEqual(r.returncode, 0, r.stderr)
-        tr = [json.loads(l) for l in (ws / ".stack" / "trace.jsonl").read_text().splitlines()]
+        tr = fsm_steps(ws / ".stack")
         self.assertEqual([(t["state"], t["code"]) for t in tr],
                          [("idle", 0), ("think", 0), ("act", 0), ("idle", 10)])
         self.assertIn("hello", (ws / "out" / "q.txt").read_text())
@@ -162,7 +162,7 @@ class T(unittest.TestCase):
             self.assertIn(tag, out)
         self.assertNotIn("BBB", (a / "out" / "q.txt").read_text())
         self.assertEqual(list(Path(BOB).rglob("state.txt")), [])  # 定義資料夾保持乾淨
-        self.assertEqual(list(Path(BOB).rglob("trace.jsonl")), [])
+        self.assertEqual(list(Path(BOB).rglob("trace.jsonl")), [])   # 11-03 起哪裡都沒有
         self.assertNotEqual((a / ".stack" / "plan.txt").read_text(), (b / ".stack" / "plan.txt").read_text())
 
     def test_stack_default_and_override(self):
@@ -186,7 +186,7 @@ class T(unittest.TestCase):
     def test_bob_state_in_stack_not_ws_or_def(self):
         ws = workspace(self.tmp, "ws", "hello")
         self.assertEqual(run(EXEC, "--ws", str(ws), BOB).returncode, 0)
-        for n in ("state.txt", "trace.jsonl", "plan.txt", "current.txt"):
+        for n in ("state.txt", "plan.txt", "current.txt"):
             self.assertTrue((ws / ".stack" / n).exists(), n)
             self.assertFalse((ws / n).exists(), n)
             self.assertEqual(list(Path(BOB).rglob(n)), [])
@@ -253,7 +253,7 @@ class T(unittest.TestCase):
         self.assertEqual((ws / ".stack" / "n").read_text().split(), ["x", "x", "x"])
 
     def test_loop_reaching_max_exits_0_with_empty_stderr(self):
-        # N-43：正常退出不寫 stderr（要知道有沒有跑滿看 trace.jsonl 行數）
+        # N-43：正常退出不寫 stderr（要知道有沒有跑滿看 loop 的 state 窗）
         agent = prog(self.tmp, "agent", "aos-loop loop.json\n")
         Path(agent, "loop.json").write_text(json.dumps({"exec": "loop.json#/body", "body": {"argv": ["true"]}, "max": 2}))
         ws = Path(self.tmp, "ws"); ws.mkdir()
@@ -302,10 +302,10 @@ class T(unittest.TestCase):
         self.assertTrue((ws / "done" / "q.txt").exists())
         self.assertFalse((ws / "new" / "q.txt").exists())
         self.assertEqual((ws / ".stack" / "state.txt").read_text(), "idle\n")
-        tr = [json.loads(l) for l in (ws / ".stack" / "trace.jsonl").read_text().splitlines()]
+        tr = fsm_steps(ws / ".stack")
         self.assertEqual([(t["state"], t["code"]) for t in tr],
                          [("idle", 0), ("think", 0), ("act", 0), ("idle", 10)])
-        for n in ("state.txt", "trace.jsonl", "plan.txt", "current.txt"):
+        for n in ("state.txt", "plan.txt", "current.txt"):
             self.assertEqual(list(Path(ANN).rglob(n)), [], n)   # 定義資料夾乾淨
 
     def test_ann_has_no_cell_folders(self):
@@ -336,7 +336,7 @@ class T(unittest.TestCase):
         self.assertTrue(out[0].startswith("# "))
         self.assertIn("FAKE ANSWER to: FAKE ANSWER to: hello", out[1])   # 兩層假腦疊出來
         st = ws / ".stack"
-        for f in ("state.txt", "current.txt", "plan.txt", "trace.jsonl"):
+        for f in ("state.txt", "current.txt", "plan.txt"):
             self.assertTrue((st / f).is_file(), f)
             self.assertTrue((st / "tools" / "cathy" / f).is_file(), "tools/cathy/" + f)
         self.assertTrue((st / "tools/cathy/ws/done/q.txt").exists())
@@ -354,8 +354,8 @@ class T(unittest.TestCase):
         self.assertTrue((ws / "done" / "q.txt").exists())
         self.assertEqual([p.name for p in (ws / "out").iterdir()], ["q.txt"])
         self.assertEqual(sorted(p.name for p in ws.iterdir()), [".stack", "cur", "done", "new", "out"])
-        self.assertTrue((ws / ".stack/tools/cathy/trace.jsonl").exists())
-        self.assertEqual(len((ws / ".stack/trace.jsonl").read_text().splitlines()), 4)
+        self.assertEqual(len(fsm_steps(ws / ".stack/tools/cathy")), 4)
+        self.assertEqual(len(fsm_steps(ws / ".stack")), 4)
 
     def test_two_questions_substack_reused_not_leaking(self):
         ws = Path(self.tmp, "ws"); (ws / "new").mkdir(parents=True)
@@ -368,10 +368,10 @@ class T(unittest.TestCase):
         self.assertIn("BBB", b); self.assertNotIn("AAA", b)
         c = ws / ".stack" / "tools" / "cathy"
         self.assertEqual((c / "state.txt").read_text(), "idle\n")
-        self.assertEqual(len((c / "trace.jsonl").read_text().splitlines()), 8)
+        self.assertEqual(len(fsm_steps(c)), 8)
         self.assertEqual(sorted(p.name for p in (c / "ws" / "done").iterdir()), ["q1.txt", "q2.txt"])
         self.assertEqual((c / "current.txt").read_text().strip(), "q2.txt")
-        self.assertEqual(len((ws / ".stack" / "trace.jsonl").read_text().splitlines()), 7)
+        self.assertEqual(len(fsm_steps(ws / ".stack")), 7)
 
     def test_cathy_standalone(self):
         ws = workspace(self.tmp, "ws", "hello")
@@ -393,7 +393,7 @@ class T(unittest.TestCase):
         ws = Path(self.tmp, "ws"); ws.mkdir()
         r = run(EXEC, "--ws", str(ws), outer)
         self.assertEqual(r.returncode, 0, r.stderr)
-        tr = [json.loads(l) for l in (ws / ".stack" / "trace.jsonl").read_text().splitlines()]
+        tr = fsm_steps(ws / ".stack")
         self.assertEqual([(t["state"], t["code"]) for t in tr], [("s", 0), ("t", 0)])   # 外層沒被誤停
         self.assertEqual((ws / ".stack" / "state.txt").read_text(), "s\n")
 

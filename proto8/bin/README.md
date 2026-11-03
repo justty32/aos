@@ -40,7 +40,7 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
   單走一格＝`aos-exec <agent>/loop.json#/exec`（lib/aos/ask_round 這樣叫）。說明在 [lib/README round](../lib/README.md)；測試 `proto8/tests/test_round_loop.py`。
 
 - **`aos-eca-turn - 外部 coding agent（claude／codex）的一輪：從 stack 的 queue 認領一則、交給 CLI 答、回答接進 history`**（10-31 改名、升成 bin 指令；使用者「aos eca turn」、C-54 R13 `aos-<領域>-<功能>`；前身 10-30 的 `lib/eca/turn` 格；設計 [thinking 10-30 eca](../thinking/2026-10-30-eca.md)；完整說明在檔頭 docstring）
-  用法 `aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] <定義資料夾絕對路徑>`（旗標在位置參數前）。定義＝`demo/eca-claude` 那種（頂層 `cli.json`、選填 `prompt.txt`），定義不被寫、寫的都在 `$AOS_STACK`。一次答一則：`queue/cur/` 有信先接、否則 `aos-post claim` 一封 → user 接進 `history.jsonl` → 經 `lib/agent/cli_session.py` 的 `ask` 問 CLI（畫面開著貼字、沒開 `--resume`）→ assistant 接進 history → 收信；壞信丟掉、trace 記 `mailbox_warning`；trace 一行 `unit: "aos-eca-turn"`；`$AOS_STACK/eca.json` 記 kind、ws、template。
+  用法 `aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] <定義資料夾絕對路徑>`（旗標在位置參數前）。定義＝`demo/eca-claude` 那種（頂層 `cli.json`、選填 `prompt.txt`），定義不被寫、寫的都在 `$AOS_STACK`。一次答一則：`queue/cur/` 有信先接、否則 `aos-post claim` 一封 → user 接進 `history.jsonl` → 經 `lib/agent/cli_session.py` 的 `ask` 問 CLI（畫面開著貼字、沒開 `--resume`）→ assistant 接進 history → 收信；壞信丟掉、記進 `$AOS_STACK/mailbox_warning.txt`（11-03 起不寫 trace）；`$AOS_STACK/eca.json` 記 kind、ws、template。
   **`--on-empty`**（10-31 取代環境變數 `ECA_ON_EMPTY`，不再讀它）：queue 空時 `stop`（沒給；退 10＝loop 收工）｜`idle`（退 0＝loop 隔 `interval_ms` 再來）；壞值、跟 `--one` 一起給＝`ArgumentsBad`。**`--on-busy`**（10-31）：`yield`（沒給）＝lock 拿不到、有人接在 tmux 畫面上、`busy.txt` 在＝這輪退 0、信留 `cur/`、不寫 trace（`--one` 照錯退 1）｜`answer`＝照常答不退讓（lock 等、有人接著照樣貼、`busy.txt` 等它消失，共用 `timeout_ms` 期限，逾時 `ReplyMissing`）。`--one`＝工具形（stdin `{"prompt"}` → stdout，同 `lib/agent/claude` 的 `call_main`）。定義的 `loop.json` 這樣叫：`{"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000}}`。
   **錯**：stderr 一行 `aos-eca-turn: 代號 原因`、退 1（`ArgumentsBad`、`FlagUnknown`、`AgentBad`、`StackMissing`、`HistoryBad`、`PostFailed`、`WriteFailed`，加 cli_session 的 `CfgMissing`、`CfgBad`、`CliMissing`、`CliFailed`、`ReplyMissing`）；10-30 的 `SettingBad` 拿掉了。要 PATH 上有 aos-post。測試 `proto8/tests/test_eca_turn.py`（範本 `test_eca.py`）。
 
@@ -49,7 +49,7 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
 
 - `aos_flags.py`：命令列旗標解析 `parse(argv, 旗標表)` 回 `(opts, [XXX, args...])`（`--x V`／`--x=V`、重複給最後一個算、`--` 結束旗標、第一個不是旗標的參數起原樣；不認得＝`FlagUnknown`、缺值＝`ArgumentsBad`）。aos-tick、aos-tools、aos-eca-turn 用（10-28～11-01 aos-parts 也用）。
 
-執行中狀態（`state.txt`、`trace.jsonl`、`plan.txt`、`current.txt`）在 `$AOS_STACK`（預設 `$AOS_WS/.stack/`）；工作區只放交辦的東西與成果（題目 `new/` → 認領 `cur/` → `done/`，答案 `out/`）；定義資料夾不被寫，所以同一個 agent 可同時被兩個工作區跑。結果＝工作區內容；沒有別的結果通道。
+執行中狀態（`state.txt`、`plan.txt`、`current.txt`；11-03 起沒有 `trace.jsonl`）在 `$AOS_STACK`（預設 `$AOS_WS/.stack/`）；工作區只放交辦的東西與成果（題目 `new/` → 認領 `cur/` → `done/`，答案 `out/`）；定義資料夾不被寫，所以同一個 agent 可同時被兩個工作區跑。結果＝工作區內容；沒有別的結果通道。
 
 ## 已定值
 

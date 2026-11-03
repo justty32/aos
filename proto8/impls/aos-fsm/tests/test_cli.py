@@ -5,17 +5,16 @@
 
 每個案例一個空的暫存資料夾（tempfile，結束就清掉）、環境先清掉 AOS_*、cwd＝那個資料夾、AOS_STACK＝裡面的 stack/。
 A 段從 proto8/tests/test_fsm.py 移植（行為應一致，錯誤一行多了代號）；B 段是條文與 bin 版推得出、那邊沒測的細節；
-C 段是訊號（轉給那格、trace 與 state 照常寫完，再以 128＋N 結束）；D 段是 10-21 傍晚的命令列（ideas § 9）；
+C 段是訊號（轉給那格、state 照常寫完，再以 128＋N 結束）；D 段是 10-21 傍晚的命令列（ideas § 9）；
 E 段是 fsm.json 的指示詞（10-23 晚）；F 段是 exec 直接放內嵌單子（10-24）；F2 段是 10-24 審後補的（檔#/指標、相對 AOS_STACK、捷徑）。
-10-21～10-23 exec 不收內嵌單子、trace 沒有 timed_out：寫內嵌單子的案例由 table() 換成 `fsm.json#/states/<名>/body`（見 table；
+10-21～10-23 exec 不收內嵌單子：寫內嵌單子的案例由 table() 換成 `fsm.json#/states/<名>/body`（見 table；
 10-24 起 exec 又收物件，這些案例照留、走 aos-exec 那條，直接寫物件的在 F 段）；
 格被逾時收掉＝那格的 aos-exec 以 128＋N 結束（fsm 看不到格裡有沒有逾時，C-52）。
+11-03 起 fsm 不寫 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）：原本看 trace 的案例改看結束碼、state；no_trace_file 那案查它不再出現。
 巢狀逾時那案要 aos-exec 在 PATH 上：用兄弟專案 ../aos-exec/bin/aos-exec（沒建就那案算失敗）。
 """
-import datetime
 import json
 import os
-import re
 import signal
 import subprocess
 import sys
@@ -86,10 +85,6 @@ def state(t):
     return (st(t) / "state.txt").read_text()
 
 
-def trace(t):
-    return [json.loads(l) for l in (st(t) / "trace.jsonl").read_text().splitlines()]
-
-
 def check(name, got, want):
     global failures
     if got != want:
@@ -155,9 +150,9 @@ def string_cell_goes_through_aos_exec(t):
 def object_cell_in_process_with_timeout(t):
     st(t).mkdir()
     table(t, {"a": {"exec": {"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 300}, "next": "a"}})
+    t0 = time.monotonic()
     rc = run(t)[0]
-    tr = trace(t)[0]
-    check("單子逾時", (rc, tr["code"], tr["elapsed_ms"] < 5000, (st(t) / "state.txt").exists()), (143, 143, True, False))
+    check("單子逾時", (rc, time.monotonic() - t0 < 5, (st(t) / "state.txt").exists()), (143, True, False))
 
 
 @case
@@ -170,17 +165,13 @@ def object_cell_exit_code_and_env_resolved(t):
 
 
 @case
-def trace_jsonl_one_line_per_beat(t):
+def no_trace_file(t):
+    # 11-03：fsm 不寫 trace.jsonl（使用者「整個拿掉」）；stack 裡只有 state.txt（和格自己寫的）
     cell(t, "a", "exit 0\n"); cell(t, "b", "exit 5\n")
     table(t, AB)
-    for _ in range(3):
-        run(t)
-    tr = trace(t)
-    check("每次一行", [(x["state"], x["code"]) for x in tr], [("a", 0), ("b", 5), ("b", 5)])
-    check("欄位（沒有 timed_out；10-30 加 next）", list(tr[0]), ["started_at", "state", "code", "signal", "elapsed_ms", "next"])
-    check("next：換了是名字、沒換 null（字串 next）", [x["next"] for x in tr], ["b", None, None])
-    for x in tr:
-        datetime.datetime.fromisoformat(x["started_at"])
+    rcs = [run(t)[0] for _ in range(3)]
+    check("每次的碼、state", (rcs, state(t)), ([0, 5, 5], "b\n"))
+    check("沒有 trace.jsonl", sorted(os.listdir(st(t))), ["state.txt"])
 
 
 @case
@@ -223,8 +214,8 @@ def outer_timeout_kills_nested_tree(t):
             gone = True
             break
         time.sleep(0.05)
-    check("外層逾時整棵收掉", (fast, rc != 0, trace(t)[0]["code"] != 0, (st(t) / "state.txt").exists(), gone),
-          (True, True, True, False, True))
+    check("外層逾時整棵收掉", (fast, rc != 0, (st(t) / "state.txt").exists(), gone),
+          (True, True, False, True))
 
 
 # ───────── B. 細節 ─────────
@@ -249,49 +240,35 @@ def bad_cells(t):
                     ({"exec": ["a", 1], "next": "a"}, "CfgBad")):   # 10-24 起 {"exec": {"argv": [...]}} 不算壞（F 段）
         put(Path(t, "fsm.json"), {"start": "a", "states": {"a": c}})
         check("格壞 %r" % (c,), run(t)[:3:2], (1, code))
-    check("格壞不留 trace", (st(t) / "trace.jsonl").exists(), False)
 
 
 @case
 def empty_state_file_means_start(t):
-    cell(t, "a", "exit 0\n"); cell(t, "b", "exit 0\n")
+    cell(t, "a", 'echo a >> "$AOS_STACK/ran"\n'); cell(t, "b", 'echo b >> "$AOS_STACK/ran"\n')
     table(t, AB)
     put(st(t) / "state.txt", "  \n")
     run(t)
     put(st(t) / "state.txt", "  b \n")   # 前後空白去掉
     run(t)
-    check("空的 state＝start；去空白", [x["state"] for x in trace(t)], ["a", "b"])
+    check("空的 state＝start；去空白", (st(t) / "ran").read_text(), "a\nb\n")
 
 
 @case
-def trace_line_format(t):
-    # 排版同 Python json.dumps：", "、": "、key 順序固定、signal null、started_at 是 UTC +00:00、到毫秒
-    cell(t, "a", "exit 0\n")
-    table(t, {"a": {"exec": "a", "next": "a"}})
-    run(t)
-    line = (st(t) / "trace.jsonl").read_text()
-    ok = re.fullmatch(r'\{"started_at": "\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}\+00:00", "state": "a", "code": 0, "signal": null, '
-                      r'"elapsed_ms": \d+, "next": "a"\}\n', line)   # started_at＝ISO 8601 UTC 到毫秒（10-23 命名統合；10-25 前叫 at）；10-30 加 next
-    check("trace 一行的排版", (ok is not None, line), (True, line))
-
-
-@case
-def string_cell_killed_signal_in_trace(t):
+def string_cell_killed_by_signal(t):
     cell(t, "a", "kill -9 $$\n")
     table(t, {"a": {"exec": "a", "next": "a"}})
     rc = run(t)[0]
-    x = trace(t)[0]
-    check("字串格被訊號停掉", (rc, x["code"], x["signal"], "timed_out" in x), (137, 137, 9, False))
+    check("字串格被訊號停掉", (rc, (st(t) / "state.txt").exists()), (137, False))
 
 
 @case
 def string_cell_entry_missing(t):
-    # 等同 `aos-exec nope` 退 1：那層 aos-exec 說自己的錯，fsm 不說話、以 1 結束、trace 有一行
+    # 等同 `aos-exec nope` 退 1：那層 aos-exec 說自己的錯，fsm 不說話、以 1 結束
     table(t, {"a": {"exec": "nope", "next": "a"}})
     st(t).mkdir()   # aos-exec 在找入口時就失敗、還沒建 AOS_STACK
     rc, _, _, stderr = run(t)
-    check("格的入口不在", (rc, stderr.startswith("aos-exec: EntryMissing "), len(stderr.splitlines()), trace(t)[0]["code"]),
-          (1, True, 1, 1))
+    check("格的入口不在", (rc, stderr.startswith("aos-exec: EntryMissing "), len(stderr.splitlines())),
+          (1, True, 1))
 
 
 @case
@@ -340,7 +317,7 @@ def wait_file(path, secs=10):
 
 @case
 def sigterm_cell_finishes_then_143(t):
-    # 格收到轉來的 SIGTERM 收好、退 0：trace 有一行、state 照樣換，fsm 再以 143 結束（P-36）
+    # 格收到轉來的 SIGTERM 收好、退 0：state 照樣換，fsm 再以 143 結束（P-36）
     cell(t, "a", 'trap \'exit 0\' TERM\ntouch "$AOS_STACK/up"\nwhile :; do sleep 0.05; done\n')
     table(t, {"a": {"exec": "a", "next": "b"}, "b": {"exec": "a", "next": "a"}})
     st(t).mkdir()
@@ -349,8 +326,8 @@ def sigterm_cell_finishes_then_143(t):
     ok = wait_file(st(t) / "up")
     p.send_signal(signal.SIGTERM)
     out, err = p.communicate(timeout=20)
-    check("SIGTERM：收完 143、trace 與 state 寫完", (ok, p.returncode, err, state(t), trace(t)[0]["code"]),
-          (True, 143, "", "b\n", 0))
+    check("SIGTERM：收完 143、state 寫完", (ok, p.returncode, err, state(t)),
+          (True, 143, "", "b\n"))
 
 
 @case
@@ -362,10 +339,9 @@ def sigint_inst_cell(t):
     ok = wait_file(st(t) / "up")
     p.send_signal(signal.SIGINT)
     out, err = p.communicate(timeout=20)
-    x = trace(t)[0]
-    # 單子由那格的 aos-exec 跑、它當監工：子程式被 SIGINT 停掉，aos-exec 以 130 結束（signal 不是 fsm 看到的，null）
-    check("單子格被轉來的 SIGINT 停掉", (ok, p.returncode, x["code"], x["signal"], (st(t) / "state.txt").exists()),
-          (True, 130, 130, None, False))
+    # 單子由那格的 aos-exec 跑、它當監工：子程式被 SIGINT 停掉，aos-exec 以 130 結束；state 不動
+    check("單子格被轉來的 SIGINT 停掉", (ok, p.returncode, (st(t) / "state.txt").exists()),
+          (True, 130, False))
 
 
 @case
@@ -426,8 +402,8 @@ def cell_val_array(t):
 
 def own_error_no_beat(t, name, r):
     rc, _, err, stderr = r
-    check(name, (rc, err, len(stderr.splitlines()), (st(t) / "ran").exists(), (st(t) / "trace.jsonl").exists()),
-          (1, err if err in ("StateBad", "CfgBad", "StateUnknown", "DirectiveBad") else "?", 1, False, False))
+    check(name, (rc, err, len(stderr.splitlines()), (st(t) / "ran").exists()),
+          (1, err if err in ("StateBad", "CfgBad", "StateUnknown", "DirectiveBad") else "?", 1, False))
     return err
 
 
@@ -533,7 +509,6 @@ def inline_cell_runs(t):
     check("內嵌單子格：AOS_CF／CD／CO、cwd、換 next",
           (r1[0], r1[3], r2[0], (st(t) / "seen").read_text(), (st(t) / "seen2").read_text(), state(t)),
           (0, "", 0, "%s/fsm.json|%s|/states/a/exec|%s" % (real, real, real), "/states/b~1c/exec", "a\n"))
-    check("trace 一格一行", [(x["state"], x["code"], x["signal"]) for x in trace(t)], [("a", 0, None), ("b/c", 0, None)])
 
 
 @case
@@ -542,8 +517,8 @@ def inline_cell_nonzero(t):
     put(Path(t, "fsm.json"), table_raw)
     st(t).mkdir()
     rc, _, _, stderr = run(t)
-    check("內嵌單子格非 0：原碼往上、state 不動、trace 有一行", (rc, stderr, (st(t) / "state.txt").exists(), trace(t)[0]["code"]),
-          (4, "", False, 4))
+    check("內嵌單子格非 0：原碼往上、state 不動", (rc, stderr, (st(t) / "state.txt").exists()),
+          (4, "", False))
 
 
 @case
@@ -553,25 +528,23 @@ def inline_cell_timeout(t):
     st(t).mkdir()
     t0 = time.monotonic()
     rc = run(t)[0]
-    tr = trace(t)[0]
-    check("內嵌單子格逾時：143、trace signal 15、state 不動", (rc, tr["code"], tr["signal"], (st(t) / "state.txt").exists(),
-                                                     time.monotonic() - t0 < 10), (143, 143, 15, False, True))
+    check("內嵌單子格逾時：143、state 不動", (rc, (st(t) / "state.txt").exists(), time.monotonic() - t0 < 10), (143, False, True))
 
 
 @case
 def inline_cell_bad_shape(t):
-    # 形狀壞＝fsm 自己的錯（同 aos-exec 跑壞單子）：一行、退 1、不寫 trace、state 不動
+    # 形狀壞＝fsm 自己的錯（同 aos-exec 跑壞單子）：一行、退 1、state 不動
     for unit, code in (({"argv": "true"}, "EntryBad"), ({"argv": ["true"], "grace_ms": -1}, "EntryBad"),
                        ({"argv": ["true"], "stdout": {"$env": "NOPE_XYZ"}}, "DirectiveBad")):
         put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"exec": unit, "next": "a"}}})
         rc, _, err, stderr = run(t)
-        check("單子壞 %r" % (unit,), (rc, err, "狀態 a：單子跑不起來：" in stderr, (st(t) / "trace.jsonl").exists()),
+        check("單子壞 %r" % (unit,), (rc, err, "狀態 a：單子跑不起來：" in stderr, (st(t) / "state.txt").exists()),
               (1, code, True, False))
 
 
 @case
 def inline_cell_sigterm(t):
-    # 跑的期間收到 SIGTERM：轉給單子、等它收完（退 0）、trace 與 state 照寫，再以 143 結束
+    # 跑的期間收到 SIGTERM：轉給單子、等它收完（退 0）、state 照寫，再以 143 結束
     # 內嵌單子收的是整群的 SIGTERM，sleep 也被殺；sh（dash／bash）有時會在自己的 stderr 報一行「Terminated」
     # （看時序，10-28 WSL 撞到）——那是測試小程式自己說的、不是被測程式；開頭 exec 2>/dev/null 讓 err 只剩被測程式自己的。
     put(Path(t, "fsm.json"), {"start": "a", "states": {
@@ -584,7 +557,7 @@ def inline_cell_sigterm(t):
     ok = wait_file(st(t) / "up")
     p.send_signal(signal.SIGTERM)
     out, err = p.communicate(timeout=20)
-    check("內嵌單子格收到 SIGTERM", (ok, p.returncode, err, state(t), trace(t)[0]["code"]), (True, 143, "", "b\n", 0))
+    check("內嵌單子格收到 SIGTERM", (ok, p.returncode, err, state(t)), (True, 143, "", "b\n"))
 
 
 @case
@@ -616,15 +589,15 @@ def inline_cell_pointer_spec(t):
 
 @case
 def inline_cell_relative_stack(t):
-    # 直接叫 aos-fsm、AOS_STACK 寫相對路徑（從 cfg 上一層跑）：單子看到轉好的絕對路徑，跟 fsm 自己的 state、trace 落在同一處
+    # 直接叫 aos-fsm、AOS_STACK 寫相對路徑（從 cfg 上一層跑）：單子看到轉好的絕對路徑，跟 fsm 自己的 state 落在同一處
     put(Path(t, "cfg", "fsm.json"), {"start": "a", "states": {
         "a": {"exec": {"argv": ["sh", "-c", 'printf "%s" "$AOS_STACK"'], "stdout": {"$env": "AOS_STACK", "$path": "out"}},
               "next": "a"}}})
     st(t).mkdir()
     rc, _, _, stderr = run(t, "cfg/fsm.json", env={"AOS_STACK": "stack"})
     out = st(t) / "out"
-    check("相對 AOS_STACK 轉成絕對", (rc, stderr, out.read_text() if out.exists() else None, state(t), len(trace(t))),
-          (0, "", os.path.realpath(t) + "/stack/", "a\n", 1))
+    check("相對 AOS_STACK 轉成絕對", (rc, stderr, out.read_text() if out.exists() else None, state(t)),
+          (0, "", os.path.realpath(t) + "/stack/", "a\n"))
 
 
 @case
@@ -654,10 +627,10 @@ def branch_10_caught(t):
     branch_table(t, {"0": "b", "10": "c"})
     put(st(t) / "code", "10")
     rc, _, _, stderr = run(t)
-    check("10 接住：state 換、fsm 退 0", (rc, stderr, state(t), trace(t)[-1]["code"], trace(t)[-1]["next"]), (0, "", "c\n", 10, "c"))
+    check("10 接住：state 換、fsm 退 0", (rc, stderr, state(t)), (0, "", "c\n"))
     put(st(t) / "state.txt", "a\n")
     put(st(t) / "code", "0")
-    check("0 照表", (run(t)[0], state(t), trace(t)[-1]["next"]), (0, "b\n", "b"))
+    check("0 照表", (run(t)[0], state(t)), (0, "b\n"))
 
 
 @case
@@ -666,15 +639,14 @@ def branch_10_not_caught(t):
     put(st(t) / "state.txt", "a\n")
     put(st(t) / "code", "10")
     rc = run(t)[0]
-    check("10 沒接：退 10、state 不換、trace next null", (rc, state(t), trace(t)[-1]["code"], trace(t)[-1]["next"]),
-          (10, "a\n", 10, None))
+    check("10 沒接：退 10、state 不換", (rc, state(t)), (10, "a\n"))
 
 
 @case
 def branch_star(t):
     branch_table(t, {"0": "b", "*": "c"})
     put(st(t) / "code", "1")
-    check("* 接 1", (run(t)[0], state(t), trace(t)[-1]["next"]), (0, "c\n", "c"))
+    check("* 接 1", (run(t)[0], state(t)), (0, "c\n"))
     put(st(t) / "state.txt", "a\n")
     put(st(t) / "code", "0")
     check("有 \"0\" 就不走 *", (run(t)[0], state(t)), (0, "b\n"))
@@ -690,7 +662,7 @@ def branch_killed_by_signal_caught(t):
     put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"exec": "a", "next": {"0": "b", "137": "b"}},
                                                        "b": {"exec": "b", "next": "a"}}})
     rc = run(t)[0]
-    check("137 寫在表上就接住", (rc, state(t), trace(t)[0]["code"], trace(t)[0]["signal"]), (0, "b\n", 137, 9))
+    check("137 寫在表上就接住", (rc, state(t)), (0, "b\n"))
 
 
 @case
@@ -721,7 +693,7 @@ def branch_directive_in_next(t):
 
 @case
 def branch_sigterm_writes_branch_then_143(t):
-    # fsm 自己收到 SIGTERM（N-38）：格收好退 10、表上 10 → c：state 照表換 c、trace next c、fsm 仍以 143 結束
+    # fsm 自己收到 SIGTERM（N-38）：格收好退 10、表上 10 → c：state 照表換 c、fsm 仍以 143 結束
     cell(t, "a", 'trap \'exit 10\' TERM\ntouch "$AOS_STACK/up"\nwhile :; do sleep 0.05; done\n')
     put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"exec": "a", "next": {"0": "b", "10": "c"}},
                                                        "b": {"exec": "a", "next": "a"}, "c": {"exec": "a", "next": "a"}}})
@@ -731,18 +703,8 @@ def branch_sigterm_writes_branch_then_143(t):
     ok = wait_file(st(t) / "up")
     p.send_signal(signal.SIGTERM)
     out, err = p.communicate(timeout=20)
-    x = trace(t)[0]
-    check("SIGTERM＋分岔：state 照表、143", (ok, p.returncode, err, state(t), x["code"], x["next"]),
-          (True, 143, "", "c\n", 10, "c"))
-
-
-@case
-def branch_trace_line_format(t):
-    cell(t, "a", "exit 10\n")
-    put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"exec": "a", "next": {"0": "a"}}}})
-    run(t)
-    line = (st(t) / "trace.jsonl").read_text()
-    check("沒換：next null、在最後", line.endswith('"signal": null, "elapsed_ms": %d, "next": null}\n' % trace(t)[0]["elapsed_ms"]), True)
+    check("SIGTERM＋分岔：state 照表、143", (ok, p.returncode, err, state(t)),
+          (True, 143, "", "c\n"))
 
 
 for fn in cases:

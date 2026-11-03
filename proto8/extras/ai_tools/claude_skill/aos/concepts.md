@@ -38,7 +38,7 @@
 
 一句：**被叫的程式自己放執行中狀態的地方**（state、草稿、紀錄、小格），預設 `$AOS_WS/.stack/`。定義資料夾不被寫（P-15）。
 誰設：沒設＝aos-exec 設預設值並建資料夾；有設就沿用（所以叫別人時要自己給它一個**小格** `AOS_STACK=$AOS_STACK/tools/<名>/`，P-17；11-02 改進 `tools/`）。
-範例：agent-eve 的 `$AOS_STACK/state.txt`（fsm 現在在哪格）、`trace.jsonl`、`history.jsonl`；叫工具 `AOS_STACK=$AOS_STACK/pyfix/ aos-exec tools/pyfix`。
+範例：agent-eve 的 `$AOS_STACK/state.txt`（fsm 現在在哪格）、`history.jsonl`；叫工具 `AOS_STACK=$AOS_STACK/pyfix/ aos-exec tools/pyfix`。
 常見錯：叫工具時沒給小格（工具的檔會跟你的混在一起）；aos-loop／aos-daemon **不自己建** stack（不在＝`WriteFailed`），經 aos-exec 跑才會被建。
 出處：N-57、N-59 第 1 件、P-15～P-18、C-67、C-70。
 
@@ -97,7 +97,7 @@
 ## fsm
 
 一句：`aos-fsm fsm.json`＝**一次只跑一格**：讀 `$AOS_STACK/state.txt`（沒有＝`start`），跑那格，`next` 是字串＝格退 0 才把狀態換成它、以格的碼結束；`next` 也可以是 `{結束碼: 狀態名}`（key `"0"`～`"255"` 或 `"*"`，至少要有 `"0"` 或 `"*"`）＝照格的碼查表、查到就換過去並以 0 結束、查不到照舊（10-30 N-36）。外面靠 loop 一次一次驅動（N-53）。
-範例：`{"_entry": ["aos-fsm", {"$env": "AOS_CF"}], "start": "idle", "states": {"idle": {"exec": "idle", "next": "think"}, "think": {"exec": {"argv": ["python3", "brain.py"]}, "next": "idle"}}}`；每次在 `$AOS_STACK/trace.jsonl` 追加一行 `{"started_at","state","code","signal","elapsed_ms","next"}`（`started_at`＝這格開始跑的時間；`next`＝這次換到的狀態、沒換＝`null`）。
+範例：`{"_entry": ["aos-fsm", {"$env": "AOS_CF"}], "start": "idle", "states": {"idle": {"exec": "idle", "next": "think"}, "think": {"exec": {"argv": ["python3", "brain.py"]}, "next": "idle"}}}`；每次只動 `$AOS_STACK/state.txt`（11-03 起不寫 `trace.jsonl`）。
 常見錯：每一格都要有 `next`（開跑時查整張表，缺了＝`CfgBad`）；格失敗時 state 不動、下一次重跑同一格（P-20）；格之間傳東西寫 stack 裡的檔、不走 stdout（P-10）。
 出處：N-36、N-38、N-41、P-07～P-10、impls/aos-fsm。
 
@@ -151,7 +151,7 @@ daemon 自己的窗慣用名 `ctl.json`／`state.json`（控制自身的窗不�
 ```
 agent-eve/  _entry（exec aos-loop loop.json）、loop.json、fsm.json、.env、system.txt、idle/_entry、brain.py、act.py、tools.json（工具通訊錄）、tools/<名>/{_tooldef.json,_entry}
 工作區      new/<題名>（題目）→ cur/（認領）→ out/<題名>（答案）、done/（做完的題目）
-$AOS_STACK  state.txt、current.txt、trace.jsonl、history.jsonl（一行一則 OpenAI message）、<工具名>/（工具的小格）
+$AOS_STACK  state.txt、current.txt、history.jsonl（一行一則 OpenAI message）、<工具名>/（工具的小格）
 ```
 常見錯：答案找 stdout（結果只在工作區，P-11）；任一格失敗＝整隻停下等人，修好再跑一次從同一格接著做（P-20）；工具不靠 PATH，act 用 `aos-tools call <名>` 叫 tools.json 登記的工具（N-50、P-25）。
 出處：N-53、P-05～P-26、P-41。

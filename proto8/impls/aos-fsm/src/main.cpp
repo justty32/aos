@@ -4,17 +4,15 @@
 //
 //   block_signals → 命令列（目前沒有旗標；唯一的位置參數＝設定檔，可寫 `檔#/指標`；10-21 傍晚 ideas § 9）→ 要 AOS_STACK →
 //   read_table → check（開跑時查整張表，10-22）→ read_state（在但讀不了＝StateBad，10-22）→ pick → run_once（aos-loop 的公開 API：目標＝子行程 `aos-exec -- 目標 參數...`；單子＝行程內 run_inst，10-24）
-//   → next_for（照格的碼查表）→ append_trace → 查到才 write_state → 查到退 0、沒查到以格的碼結束
+//   → next_for（照格的碼查表）→ 查到才 write_state → 查到退 0、沒查到以格的碼結束（11-03 起不寫 trace.jsonl，使用者「整個拿掉」）
 //
 // next 兩種寫法（10-30 N-36 改口）：字串＝格退 0 才換（其他碼 state 不動、以那個碼退）；物件 {結束碼: 狀態名}＝格退 c，表上有 "c"
 // （或沒有但有 "*"）就寫進 state、fsm 退 0；查不到＝state 不動、以 c 退。
 // exec＝字串或 [目標, 參數...]（相對路徑從 cwd 算，fsm 不轉）；物件＝內嵌單子（10-24 恢復；行程內 aos-exec 的 run_inst，
-// 跑的期間 AOS_CF＝fsm.json、AOS_CO＝/states/<名>/exec，相對路徑從 fsm.json 的資料夾算；單子壞＝「aos-fsm: EntryBad 狀態 X：單子跑不起來：…」退 1、不寫 trace）。
-// 單子被逾時收掉：code 128＋N、signal N（目標那條是跑它的 aos-exec 以 128＋N 正常結束，signal null）。
+// 跑的期間 AOS_CF＝fsm.json、AOS_CO＝/states/<名>/exec，相對路徑從 fsm.json 的資料夾算；單子壞＝「aos-fsm: EntryBad 狀態 X：單子跑不起來：…」退 1、state 不動）。
+// 單子被逾時收掉：格的碼 128＋N。
 // 只看格的結束碼：不讀格的 stdout、不轉述格的 stderr（N-38）。表上沒接住的碼（字串 next 的非 0，含 10）＝state 不動、原碼往上。
-// trace 一行 {"started_at","state","code","signal","elapsed_ms","next"}（started_at＝這格開始跑的時間，ISO 8601 UTC 到毫秒；10-25 前叫 at；
-// next＝這次寫進 state 的狀態名、沒換＝null，10-30），沒有 timed_out（fsm 看不到格裡有沒有逾時，C-52；10-21 plan F4）。
-// 收到 SIGINT／SIGTERM／SIGHUP：轉給那格、等它結束，trace 與 state 照表寫完（含分岔），再以 128＋N 結束（P-36、N-38）。
+// 收到 SIGINT／SIGTERM／SIGHUP：轉給那格、等它結束，state 照表寫完（含分岔），再以 128＋N 結束（P-36、N-38）。
 // 自己出錯：stderr 一行「aos-fsm: 代號 原因」、退 1（N-38、N-60）。
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
@@ -67,7 +65,6 @@ int main(int argc, char** argv) {
         if (sig != 0) {
             return 128 + sig;
         }
-        std::string started_at = aos::utc_now_ms();
         aos::loop::Run b;
         try {
             b = aos::loop::run_once(cell.exec);
@@ -75,21 +72,7 @@ int main(int argc, char** argv) {
             throw aos::Error{e.code, "狀態 " + state + "：" + e.msg};
         }
 
-        aos::Json line = aos::Json::object();
-        line["started_at"] = started_at;
-        line["state"] = state;
-        line["code"] = b.code;
-        line["signal"] = nullptr;
-        if (b.signal != 0) {
-            line["signal"] = b.signal;
-        }
-        line["elapsed_ms"] = b.elapsed_ms;
         std::optional<std::string> next = fsm::next_for(cell, b.code);   // 10-30 N-36：照表查，查不到＝state 不動
-        line["next"] = nullptr;
-        if (next) {
-            line["next"] = *next;
-        }
-        fsm::append_trace(stack, line);
         if (next) {
             fsm::write_state(stack, *next);
         }

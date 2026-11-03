@@ -1,9 +1,9 @@
--- aos_nvim - 在 nvim 裡用 aos：跑資料夾程式、看 trace、對 agent 丟題、跳到 檔#/指標、預覽 Lua 編出的 JSON（嘗試，2026-10-24）
+-- aos_nvim - 在 nvim 裡用 aos：跑資料夾程式、對 agent 丟題、跳到 檔#/指標、預覽 Lua 編出的 JSON（嘗試，2026-10-24）
 --
 --   :AosWs [資料夾]          看／設工作區（預設 nvim 的 cwd）
 --   :AosExec [目標 args...]  aos-exec --ws 工作區 目標；沒給目標＝目前檔案所在的 aos 程式（往上找有 _entry 的資料夾）
 --   :AosExec!               跑目前這個檔本身（例 fsm.json 帶 _entry＝只走一格）
---   :AosTrace               看工作區 stack 的 trace.jsonl（每格一行）
+--   （11-03 拿掉 :AosTrace：fsm 不寫 trace.jsonl 了，使用者「整個拿掉」；:AosExec 跑完改印 stack 的 state.txt）
 --   :AosSay[!] 話           放一題到工作區 new/、等 out/ 的答案；加 ! 順便替你跑目前的 agent 一次
 --   :AosGoto [檔#/指標]      跳過去；沒給＝游標下的那串字（例 fsm.json#/states/think/exec、"#/states/act"）
 --   :AosLuaPreview [路徑]    把目前的 .lua 用 aos-lua 編一次、在面板看 JSON（給路徑＝只看那個檔，可接 #/指標）
@@ -18,7 +18,7 @@ local PROTO8 = vim.fn.fnamemodify(here .. "/../../..", ":p"):gsub("/$", "")
 
 M.config = {
   ws = nil,            -- 工作區；nil＝vim.g.aos_ws，再沒有＝nvim 的 cwd
-  stack = nil,         -- 看 trace 用的 stack；nil＝工作區/.stack
+  stack = nil,         -- 看 state.txt 用的 stack；nil＝工作區/.stack
   bins = nil,          -- 叫子行程時接在 PATH 前面的資料夾；nil＝這個 repo 的 impls/*/bin、bin、extras/human/bin、extras/langs/lua/bin
   lua_cmd = nil,       -- 跑 aos-lua 的方式；nil＝有 lua 用 lua、沒有用 nvim -l
   listen_timeout = 300, -- :AosSay 等答案最多幾秒
@@ -162,25 +162,10 @@ end
 
 -- ---------- 指令 ----------
 
-local function show_trace(max)
-  local s = read(stack() .. "/trace.jsonl")
-  if not s then
-    panel_add({ "（沒有 " .. stack() .. "/trace.jsonl）" })
-    return
-  end
-  local lines = {}
-  for line in s:gmatch("[^\n]+") do
-    local ok, t = pcall(vim.json.decode, line)
-    if ok and type(t) == "table" then
-      lines[#lines + 1] = string.format("%s  %-8s code %s%s  %sms", tostring(t.started_at or ""), tostring(t.state),
-        tostring(t.code), t.signal ~= nil and t.signal ~= vim.NIL and (" signal " .. tostring(t.signal)) or "",
-        tostring(t.elapsed_ms or "?"))
-    else
-      lines[#lines + 1] = line
-    end
-  end
-  if max and #lines > max then lines = vim.list_slice(lines, #lines - max + 1) end
-  panel_add(lines)
+-- 跑完印 stack 的 state.txt（fsm 現在在哪格；11-03 前印 trace.jsonl 最後 20 格）
+local function show_state()
+  local s = read(stack() .. "/state.txt")
+  panel_add({ "== state " .. (s and vim.trim(s) or "（沒有 " .. stack() .. "/state.txt）") })
 end
 
 -- this_file＝跑目前這個檔本身（例 fsm.json 帶 _entry＝只走一格）
@@ -202,15 +187,10 @@ function M.exec(args, done, this_file)
   end
   panel_show(table.concat(cmd, " "), {})
   spawn(cmd, {}, function(r)
-    panel_add({ "== 結束碼 " .. r.code .. (r.signal ~= 0 and (" 訊號 " .. r.signal) or ""), "== trace（最後 20 格）" })
-    show_trace(20)
+    panel_add({ "== 結束碼 " .. r.code .. (r.signal ~= 0 and (" 訊號 " .. r.signal) or "") })
+    show_state()
     if done then done(r) end
   end)
-end
-
-function M.trace()
-  panel_show("trace " .. stack() .. "/trace.jsonl", {})
-  show_trace()
 end
 
 local function utc_name()
@@ -415,7 +395,6 @@ function M.setup(opts)
   local function files(lead) return vim.fn.getcompletion(lead, "file") end
   cmd("AosExec", function(o) M.exec(o.fargs, nil, o.bang) end,
     { nargs = "*", bang = true, complete = files, desc = "aos：aos-exec 跑一次（! 跑目前這個檔）" })
-  cmd("AosTrace", function() M.trace() end, { desc = "aos：看 trace" })
   cmd("AosSay", function(o) M.say(o.args, o.bang) end, { nargs = "+", bang = true, desc = "aos：丟一題、等答案（! 順便跑 agent）" })
   cmd("AosGoto", function(o) M.jump(o.args) end, { nargs = "?", complete = files, desc = "aos：跳到 檔#/指標" })
   cmd("AosLuaPreview", function(o) M.lua_preview(o.args) end, { nargs = "?", desc = "aos：預覽 Lua 編出的 JSON" })

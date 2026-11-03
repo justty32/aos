@@ -80,9 +80,9 @@ class Turn(unittest.TestCase):
         p = self.stack / "history.jsonl"
         return [json.loads(l) for l in p.read_text().splitlines() if l.strip()] if p.exists() else []
 
-    def trace(self):
-        p = self.stack / "trace.jsonl"
-        return [json.loads(l) for l in p.read_text().splitlines()] if p.exists() else []
+    def no_trace(self):
+        """11-03 起不寫 trace.jsonl（使用者「整個拿掉」）。"""
+        self.assertFalse((self.stack / "trace.jsonl").exists())
 
     def stage(self, s):
         d = self.box / s
@@ -97,8 +97,8 @@ class Turn(unittest.TestCase):
     # ------------------------------------------------------------ 平級形
 
     def test_say_then_turn(self):
-        """say 一封、turn 一次：history 多 user＋assistant 兩則、信不見、trace 一行、eca.json、transcripts symlink；再一封續同一段對話。"""
-        sig = self.say("你好")
+        """say 一封、turn 一次：history 多 user＋assistant 兩則、信不見、沒有 trace.jsonl、eca.json、transcripts symlink；再一封續同一段對話。"""
+        self.say("你好")
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
         sid = self.sid()
@@ -106,9 +106,7 @@ class Turn(unittest.TestCase):
                                           {"role": "assistant", "content": "fake claude[%s]: 你好" % sid[:8]}])
         self.assertEqual((self.stage("new"), self.stage("cur")), ([], []))
         self.assertFalse((self.stack / "current.txt").exists())
-        t = self.trace()
-        self.assertEqual([(x["unit"], x["question"], x["code"]) for x in t], [("aos-eca-turn", sig, 0)])
-        self.assertEqual(set(t[0]), {"started_at", "unit", "question", "code", "elapsed_ms"})
+        self.no_trace()
         self.assertEqual(json.loads((self.stack / "eca.json").read_text()),
                          {"kind": "claude", "ws": str(self.ws), "template": str(self.defs["claude"])})
         self.assertEqual(self.calls()[0]["cwd"], str(self.ws))                 # CLI 在工作區裡跑
@@ -147,7 +145,7 @@ class Turn(unittest.TestCase):
 
     def test_cur_not_listed_and_answered_not_finished(self):
         """cur/ 有信沒列在 current.txt（死在 claim 之後）＝補接 user 一次；history 已有回答（死在收信之前）＝不再問 CLI、只收信。"""
-        sig = self.say("補接")
+        self.say("補接")
         self.post("claim", str(self.box))
         self.assertEqual(self.turn().returncode, 0)
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant"])
@@ -164,10 +162,9 @@ class Turn(unittest.TestCase):
         self.assertEqual(self.history()[-1]["content"], "早就答了")
         self.assertEqual(len(self.history()), 4)
         self.assertEqual(self.stage("cur"), [])
-        self.assertEqual([x["question"] for x in self.trace()], [sig, sig2])
 
     def test_bad_letter_dropped(self):
-        """body 不是 {"role": "user", "content": 非空字串}＝壞信：丟掉、trace 記 mailbox_warning、退 0、不問 CLI。"""
+        """body 不是 {"role": "user", "content": 非空字串}＝壞信：丟掉、mailbox_warning.txt 記最後一封（11-03 前記在 trace）、退 0、不問 CLI。"""
         self.post("init", str(self.box))
         bad = []
         for body in ({"text": "沒有 role"}, "純文字", {"role": "user", "content": ""}, {"role": "assistant", "content": "x"}):
@@ -178,16 +175,14 @@ class Turn(unittest.TestCase):
         self.assertEqual((self.stage("new"), self.stage("cur")), ([], []))
         self.assertEqual(self.history(), [])
         self.assertEqual(self.calls(), [])
-        t = self.trace()
-        self.assertEqual([x["question"] for x in t], bad)
-        self.assertTrue(all(x["code"] == 0 and x["mailbox_warning"] for x in t), t)
+        self.assertTrue((self.stack / "mailbox_warning.txt").read_text().startswith("信 %s 不採用：" % bad[-1]))
+        self.no_trace()
 
     def test_empty_stop_idle(self):
-        """queue 空：--on-empty 沒給／stop＝退 10、idle＝退 0，都不寫 trace（10-31 從 ECA_ON_EMPTY 改 argv）。"""
+        """queue 空：--on-empty 沒給／stop＝退 10、idle＝退 0，（10-31 從 ECA_ON_EMPTY 改 argv）。"""
         self.assertEqual(self.turn().returncode, 10)
         self.assertEqual(self.turn(flags=["--on-empty", "stop"]).returncode, 10)
         self.assertEqual(self.turn(flags=["--on-empty=idle"]).returncode, 0)
-        self.assertEqual(self.trace(), [])
         self.assertTrue(all((self.box / s).is_dir() for s in ("tmp", "new", "cur")))   # queue 先建好，say／listen 認得
 
     def test_eca_on_empty_env_ignored(self):
@@ -222,7 +217,7 @@ class Turn(unittest.TestCase):
         self.assertEqual(len(self.calls()), 1)
 
     def test_session_bad_keeps_letter(self):
-        """這段對話有人在用（小格的 lock 被拿著）＝SessionBad：--on-busy 沒給／yield 都退 0、信留 cur/、不寫 trace；
+        """這段對話有人在用（小格的 lock 被拿著）＝SessionBad：--on-busy 沒給／yield 都退 0、信留 cur/；
         放開後再一次就答，user 不接兩次。"""
         sig = self.say("等一下")
         (self.stack / "claude").mkdir(parents=True)
@@ -234,21 +229,17 @@ class Turn(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertEqual(self.stage("cur"), [sig])
             self.assertEqual(self.history(), [{"role": "user", "content": "等一下"}])
-            self.assertEqual(self.trace(), [])
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant"])
         self.assertEqual(self.stage("cur"), [])
 
     def test_cli_failure_stops(self):
-        """CLI 失敗：退 1、stderr「turn: CliFailed」、trace 記 code 1 與 error、信留 cur/（停下等人）。"""
+        """CLI 失敗：退 1、stderr「turn: CliFailed」、信留 cur/（停下等人）。"""
         sig = self.say("boom")
         r = self.turn()
         self.assertEqual(r.returncode, 1)
         self.assertTrue(r.stderr.startswith("aos-eca-turn: CliFailed "), r.stderr)
-        t = self.trace()[-1]
-        self.assertEqual((t["question"], t["code"]), (sig, 1))
-        self.assertTrue(t["error"].startswith("CliFailed "), t)
         self.assertEqual(self.stage("cur"), [sig])
         self.assertEqual(self.history(), [{"role": "user", "content": "boom"}])
 
@@ -272,7 +263,7 @@ class Turn(unittest.TestCase):
         return False
 
     def test_answer_waits_for_lock(self):
-        """--on-busy answer：lock 被別人拿著＝等著（不退、不寫 trace、信在 cur/），放開後照常答。"""
+        """--on-busy answer：lock 被別人拿著＝等著（不退、信在 cur/），放開後照常答。"""
         sig = self.say("等你放開")
         (self.stack / "claude").mkdir(parents=True)
         held = open(self.stack / "claude" / "lock", "w")
@@ -281,12 +272,12 @@ class Turn(unittest.TestCase):
         self.assertTrue(self.until(lambda: self.stage("cur") == [sig]))
         time.sleep(1)
         self.assertIsNone(p.poll())                                       # 還在等 lock
-        self.assertEqual((self.trace(), self.calls()), ([], []))
+        self.assertEqual(self.calls(), [])
         held.close()                                                      # 放開
         out, err = p.communicate(timeout=60)
         self.assertEqual(p.returncode, 0, err)
         self.assertEqual([m["role"] for m in self.history()], ["user", "assistant"])
-        self.assertEqual((self.stage("cur"), [x["question"] for x in self.trace()]), ([], [sig]))
+        self.assertEqual(self.stage("cur"), [])
 
     def kill_screen(self):
         subprocess.run(["tmux", "-S", str(self.stack / "claude" / "tty.sock"), "kill-server"], capture_output=True)
@@ -304,15 +295,15 @@ class Turn(unittest.TestCase):
 
     @unittest.skipUnless(HAS_TMUX, "沒有 tmux")
     def test_answer_waits_for_busy(self):
-        """畫面開著、busy.txt 在（畫面上正在跑一輪）：yield＝退 0、信留 cur/、不寫 trace；answer＝等 busy.txt 消失才貼進畫面答。"""
+        """畫面開著、busy.txt 在（畫面上正在跑一輪）：yield＝退 0、信留 cur/；answer＝等 busy.txt 消失才貼進畫面答。"""
         self.open_screen()
         busy = self.stack / "claude" / "busy.txt"
         busy.write_text("x\n")
         sig = self.say("畫面忙完再說")
-        n = len(self.trace())
+        n = len(self.history())
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.stage("cur"), len(self.trace())), ([sig], n))
+        self.assertEqual((self.stage("cur"), len(self.history())), ([sig], n + 1))
         p = self.turn_bg(["--on-busy", "answer"])
         time.sleep(1.5)
         self.assertIsNone(p.poll())                                       # 還在等 busy.txt
@@ -321,7 +312,7 @@ class Turn(unittest.TestCase):
         out, err = p.communicate(timeout=60)
         self.assertEqual(p.returncode, 0, err)
         self.assertEqual(self.history()[-1], {"role": "assistant", "content": "fake live: 畫面忙完再說"})
-        self.assertEqual((self.stage("cur"), self.trace()[-1]["question"]), ([], sig))
+        self.assertEqual(self.stage("cur"), [])
 
     @unittest.skipUnless(HAS_TMUX, "沒有 tmux")
     def test_answer_with_client_attached(self):

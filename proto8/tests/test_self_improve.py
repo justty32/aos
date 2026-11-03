@@ -8,7 +8,7 @@ from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()
 
-from aos_bins import ROOT, tool, path_with  # noqa: E402
+from aos_bins import ROOT, tool, path_with, fsm_steps  # noqa: E402
 from fake_brain import FakeBrain, call, answer  # noqa: E402
 
 EXEC = tool("aos-exec")
@@ -88,7 +88,7 @@ class T(unittest.TestCase):
         return json.loads((self.stack / "versions" / v / "verdict.json").read_text())
 
     def states(self):
-        return [(json.loads(l)["state"], json.loads(l)["code"]) for l in (self.stack / "trace.jsonl").read_text().splitlines()]
+        return [(t["state"], t["code"]) for t in fsm_steps(self.stack)]  # 11-03：fsm 不寫 trace.jsonl，跑了哪幾格看 tests/spy_bin 的旁觀者（code＝aos-fsm 的結束碼，分岔接住＝0）
 
     def result(self):
         return json.loads((self.ws / "out" / "result.json").read_text())

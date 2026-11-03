@@ -7,7 +7,7 @@ from pathlib import Path
 import own_error  # noqa: E402
 own_error.install()
 
-from aos_bins import ROOT, tool, path_with  # noqa: E402
+from aos_bins import ROOT, tool, path_with, fsm_steps  # noqa: E402
 EXEC = tool("aos-exec")
 GUS = str(ROOT / "demo" / "agent-gus")
 REAL_URL = "http://localhost:4000/v1"
@@ -134,7 +134,7 @@ class T(unittest.TestCase):
         return [json.loads(l) for l in p.read_text().splitlines()]
 
     def states(self, stack=None):
-        return [json.loads(l)["state"] for l in ((stack or self.stack) / "trace.jsonl").read_text().splitlines()]
+        return [t["state"] for t in fsm_steps((stack or self.stack))]
 
     def test_fake_brain(self):
         """沒設 URL＝假腦：第 0 層拆兩步、b 的題目帶 a 的結論；母體 history＝題目＋兩則結論＋回答。"""

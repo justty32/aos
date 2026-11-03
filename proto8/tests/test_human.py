@@ -1,10 +1,12 @@
 """test_human - 給人用的 aos-say／aos-listen／aos-chat（proto8/extras/human，2026-10-24）：對 agent-nia 那種走 queue 的 agent 用假腦問答。
 
 10-30 起照 agent 對話協議（CONVENTION P-42；thinking 2026-10-30-agent-lifecycle A-7、A-8、第 4 步）：say＝aos-post send --ordered
-<stack>/queue、listen 只看 stack（信還在 queue 就等、不見了就印 history 最新的回答；--status 看 aos-loop state.json 的 phase）。
+<stack>/queue、listen 只看 stack（信還在 queue 就等、不見了就印 history 最新的回答）。
+11-03 拿掉 aos-listen 的 --status／--trace／LetterUnclaimed、aos-chat 的 --trace／/trace／/status（trace.jsonl 整個拿掉，thinking 2026-11-03-trace）：
+原本看快照的案例改看 stack 的 state.json 與 aos_human.runners（listen 提醒「沒人在跑」用的同一個判法）。
 agent＝demo/agent-nia 的格（註冊檔改成絕對路徑放在暫存資料夾，腦壞＝endpoint 換 openai 指到 dead_brain.DEAD）。
 10-30 eca 第 7 步（去 hub 化）：External 段＝外部 coding agent（aos-loop 包 bin/aos-eca-turn、假 claude）跑著時 say／listen 照用、
---status 只靠 /proc 認得服務者（直接跑、掛 daemon 經 .stack symlink 兩種）；stack 的 server.txt 那招刪了。
+runners 只靠 /proc 認得服務者（直接跑、掛 daemon 經 .stack symlink 兩種）；stack 的 server.txt 那招刪了。
 設計：proto8/thinking/2026-10-24-say-listen.md。不連網。"""
 import json, os, re, subprocess, tempfile, time, unittest
 from pathlib import Path
@@ -32,6 +34,14 @@ def env(**kw):
 
 def run(*args, cwd=None, input=None, timeout=60, **kw):
     return subprocess.run(args, capture_output=True, text=True, env=env(**kw), cwd=cwd, input=input, timeout=timeout)
+
+
+def runners(ws):
+    """誰在跑這個工作區的 agent（aos_human.runners，listen 提醒「沒人在跑」用的同一套；11-03 起取代 --status 那行）：[(pid, 程式名)]。"""
+    import sys
+    sys.path.insert(0, str(HUMAN))
+    import aos_human
+    return aos_human.runners(aos_human.Where(str(ws), None))
 
 
 class Base(unittest.TestCase):
@@ -138,7 +148,7 @@ class ListenTest(Base):
 
     def test_waits_while_agent_runs_later(self):
         sig = self.say("等我")
-        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--trace", "--timeout", "30"],
+        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "30"],
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env())
         time.sleep(1.5)                                       # listen 先開：這時沒人在跑，會提醒一次
         self.assertEqual(self.go().returncode, 0)
@@ -146,36 +156,23 @@ class ListenTest(Base):
         self.assertEqual(p.returncode, 0, err)
         self.assertTrue(out.startswith("FAKE ANSWER to: 等我"), out)
         self.assertIn("還在 queue 的 new/，但目前沒有程式在跑", err)
-        self.assertIn("[叫工具 clock {}]", err)                # --trace：工具呼叫與每格一行
-        self.assertRegex(err, r"· idle \d+ms")                   # 10-30 起 trace 是 fsm 的一格一行（state）
 
-    def test_old_protocol_agent_unclaimed(self):
-        """say 之後拿舊協議的 agent（agent-eve；11-02 晚前是 agent-dan）跑：退 0、信原封留在 new/；listen 不一直等，說「沒人認領、可能是舊協議」就退（LetterUnclaimed）。
-        先開 listen、後跑也一樣；之後換走 queue 的 agent 跑就答得出。"""
+    def test_old_protocol_agent_waits(self):
+        """say 之後拿舊協議的 agent（agent-eve；11-02 晚前是 agent-dan）跑：退 0、信原封留在 new/；listen 照等到逾時（11-03 起沒有
+        LetterUnclaimed：那是靠 trace.jsonl 的時間判的）；之後換走 queue 的 agent 跑就答得出。"""
         sig = self.say("舊協議")
         self.assertEqual(self.go(DAN).returncode, 0)
         self.assertEqual(self.queue("new"), [sig])
-        t0 = time.time()
-        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "30")
-        self.assertLess(time.time() - t0, 10)
+        r = run(LISTEN, "--ws", str(self.ws), "--timeout", "1")
         self.assertEqual(r.returncode, 1)
-        self.assertRegex(r.stderr.splitlines()[-1], r"^aos-listen: LetterUnclaimed %s 還在 queue 的 new/ 沒人認領" % re.escape(sig))
-        self.assertIn("舊協議", r.stderr)
-        sig2 = self.say("先開 listen")
-        p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "30"], stdout=subprocess.PIPE,   # 最新那封＝sig2
-                             stderr=subprocess.PIPE, text=True, env=env())
-        time.sleep(1.5)                                        # 這時還沒人跑過：提醒一次、照等
-        self.assertEqual(self.go(DAN).returncode, 0)
-        out, err = p.communicate(timeout=30)
-        self.assertEqual((p.returncode, out), (1, ""))
-        self.assertIn("還在 queue 的 new/，但目前沒有程式在跑", err)
-        self.assertIn("aos-listen: LetterUnclaimed", err)
-        self.assertEqual(self.go().returncode, 0)                # 換走 queue 的 agent-nia：兩封都答
+        self.assertRegex(r.stderr.splitlines()[-1], r"^aos-listen: AnswerMissing 等了 1 秒")
+        self.assertIn("還在 queue 的 new/，但目前沒有程式在跑", r.stderr)
+        self.assertEqual(self.go().returncode, 0)                # 換走 queue 的 agent-nia：答得出
         r = run(LISTEN, "--ws", str(self.ws), "--timeout", "5")
         self.assertEqual(r.returncode, 0, r.stderr)
 
     def test_waits_while_letter_in_cur(self):
-        """信在 cur/（認領了、腦壞停住）：listen 照等、說停在哪一格；修好再跑就答出。"""
+        """信在 cur/（認領了、腦壞停住）：listen 照等、說信在 cur/ 沒人在跑；修好再跑就答出。"""
         sig = self.say("壞腦")
         bad = self.nia(Path(self._tmp.name) / "bad", brain=DEAD)
         r = self.go(bad)
@@ -183,13 +180,10 @@ class ListenTest(Base):
         self.assertEqual(self.queue("cur"), [sig])
         r = run(LISTEN, "--ws", str(self.ws), "--timeout", "1")
         self.assertEqual(r.returncode, 1)
-        self.assertIn("做到一半停了：上次停在 think 那格、結束碼 1", r.stderr)
+        self.assertIn("在 queue 的 cur/（認領了、還沒答完），但目前沒有程式在跑", r.stderr)
         self.assertRegex(r.stderr.splitlines()[-1], r"^aos-listen: AnswerMissing 等了 1 秒.*（信在 queue 的 cur/）")
-        r = run(LISTEN, "--ws", str(self.ws), "--status")
-        self.assertIn("queue    new 0、cur 1、done 0", r.stdout)
-        self.assertIn("最後一格 think 退 1", r.stdout)
-        self.assertIn("← 卡住了", r.stdout)
-        self.assertIn("loop     phase done", r.stdout)                 # aos-loop 的 state 窗（失敗也是 done、帶 code）
+        self.assertFalse((self.stack / "trace.jsonl").exists())               # 11-03：fsm 不寫 trace
+        self.assertEqual(json.loads((self.stack / "state.json").read_text())["phase"], "done")   # aos-loop 的 state 窗（失敗也是 done）
         p = subprocess.Popen([LISTEN, "--ws", str(self.ws), "--timeout", "30"], stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE, text=True, env=env())
         time.sleep(0.5)
@@ -198,8 +192,8 @@ class ListenTest(Base):
         self.assertEqual(p.returncode, 0, err)
         self.assertTrue(out.startswith("FAKE ANSWER to: 壞腦"), out)
 
-    def test_status_shows_paused(self):
-        """常駐（idle）的 aos-loop 被 ctl 暫停：--status 看得到 phase paused、有人在跑；寄的信留在 new/。"""
+    def test_paused_letter_waits(self):
+        """常駐（idle）的 aos-loop 被 ctl 暫停：state.json 的 phase paused、runners 認得有人在跑；寄的信留在 new/。"""
         agent = self.nia(Path(self._tmp.name) / "idle", idle=True)
         self.stack.mkdir()
         (self.stack / "ctl.json").write_text('{"paused": true}')
@@ -213,10 +207,7 @@ class ListenTest(Base):
                 break
             time.sleep(0.05)
         sig = self.say("暫停中")
-        r = run(LISTEN, "--ws", str(self.ws), "--status")
-        self.assertIn("loop     phase paused", r.stdout)
-        self.assertRegex(r.stdout, r"在跑     .*aos-loop")
-        self.assertIn("queue    new 1、cur 0、done 0", r.stdout)
+        self.assertIn("aos-loop", [n for _, n in runners(self.ws)])
         self.assertEqual(self.queue("new"), [sig])
         (self.stack / "ctl.json").write_text('{"paused": false}')
         r = run(LISTEN, "--ws", str(self.ws), "--timeout", "20")
@@ -235,6 +226,9 @@ class ListenTest(Base):
         self.assertRegex(r.stderr, r"^aos-listen: ArgumentsBad usage: ")
         r = run(LISTEN, "--ws", str(self.ws), "--timeout", "1", "--follow")
         self.assertRegex(r.stderr, r"^aos-listen: ArgumentsBad usage: ")
+        for gone in ("--status", "--trace"):                            # 11-03 拿掉
+            r = run(LISTEN, "--ws", str(self.ws), gone)
+            self.assertRegex(r.stderr, r"^aos-listen: FlagUnknown ")
 
     def test_waits_for_latest_letter(self):
         """aos-say 話 && aos-listen：連寄兩封，listen 等的是最新那封；答完印最新的回答。"""
@@ -270,63 +264,17 @@ class ListenTest(Base):
         self.assertIn("== #1\n> 跟著看\nFAKE ANSWER to: 跟著看", out)
 
 
-    def test_status_reads_only_state_json(self):
-        """--status 只認 state.json（11-02 晚 ctl-state-names：白天的 loop_state.json 備案收回）：只有 loop_state.json＝沒開窗；有 state.json 就印 phase。"""
-        self.stack.mkdir()
-        (self.stack / "loop_state.json").write_text(json.dumps({"phase": "paused"}))
-        r = run(LISTEN, "--ws", str(self.ws), "--status")
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertIn("loop     -（沒有 state.json", r.stdout)
-        (self.stack / "state.json").write_text(json.dumps({"phase": "waiting"}))
-        r = run(LISTEN, "--ws", str(self.ws), "--status")
-        self.assertIn("loop     phase waiting\n", r.stdout)
-
-class TailNewlineTest(Base):
-    def test_tool_result_newlines_not_literal(self):
-        import sys
-        sys.path.insert(0, str(HUMAN))
-        import aos_human as h
-        w = h.Where(str(self.ws), None)
-        Path(w.stack).mkdir(parents=True, exist_ok=True)
-        t = h.Tail(w)
-        with open(Path(w.stack) / "history.jsonl", "a", encoding="utf-8") as f:
-            f.write(json.dumps({"role": "tool", "tool_call_id": "x", "content": "391\n"}) + "\n")
-            f.write(json.dumps({"role": "tool", "tool_call_id": "y", "content": "a\nb\n"}) + "\n")
-        self.assertEqual(t.lines(), ["[工具 回 391]", "[工具 回 a ⏎ b]"])
-
-
-class FailedTest(unittest.TestCase):
-    """aos_ws.failed（aos_human.failure 照它）：fsm 行 next 不是 null＝表上接住、不算失敗；null 才看碼（11-02 使用者裁）。"""
-    def setUp(self):
-        import sys
-        sys.path.insert(0, str(HUMAN))
-        import aos_human as h
-        self.h = h
-
-    def test_next_set_is_not_failure(self):
-        t = {"state": "think", "code": 1, "signal": None, "next": "repair"}
-        self.assertFalse(self.h.aos_ws.failed(t))
-        self.assertIsNone(self.h.failure(t))
-
-    def test_next_null_code_1_is_failure(self):
-        t = {"state": "think", "code": 1, "signal": None, "next": None}
-        self.assertTrue(self.h.aos_ws.failed(t))
-        self.assertEqual(self.h.failure(t), "停在 think 那格、結束碼 1")
-        self.assertFalse(self.h.aos_ws.failed({"state": "idle", "code": 10, "signal": None, "next": None}))
-        self.assertTrue(self.h.aos_ws.failed({"unit": "turn", "code": 1}))     # 沒有 next 的 unit 行照舊
-
 
 class ChatTest(Base):
     def test_two_questions_keep_history(self):
-        r = run(CHAT, "--ws", str(self.ws), self.agent, input="你好\n/status\n第二句\n//斜線開頭\n/bogus\n")
+        r = run(CHAT, "--ws", str(self.ws), self.agent, input="你好\n/status\n第二句\n//斜線開頭\n/bogus\n")   # /status 11-03 拿掉＝沒有這個指令
         self.assertEqual(r.returncode, 0, r.stderr)
         lines = r.stdout.splitlines()
         self.assertEqual(len(lines), 3, r.stdout)              # stdout 只有三個回答
         self.assertTrue(lines[0].startswith("FAKE ANSWER to: 你好"))
         self.assertTrue(lines[1].startswith("FAKE ANSWER to: 第二句"))
         self.assertTrue(lines[2].startswith("FAKE ANSWER to: /斜線開頭"))
-        self.assertIn("沒有這個指令", r.stderr)
-        self.assertIn("loop     phase done", r.stderr)          # /status 印在 stderr
+        self.assertEqual(r.stderr.count("沒有這個指令"), 2)       # /status、/bogus
         self.assertEqual([m["content"] for m in self.history() if m["role"] == "user"], ["你好", "第二句", "/斜線開頭"])
         self.assertEqual(self.queue("new") + self.queue("cur"), [])
 
@@ -335,7 +283,7 @@ class ChatTest(Base):
         r = run(CHAT, "--ws", str(self.ws), bad, input="壞腦那題\n")
         self.assertEqual((r.returncode, r.stdout), (0, ""))
         self.assertIn("endpoint: BrainFailed", r.stderr)       # agent 的錯誤一行原樣看得到
-        self.assertIn("agent 停了（停在 think 那格、結束碼 1、agent 結束碼 1）", r.stderr)
+        self.assertIn("agent 停了（agent 結束碼 1）", r.stderr)
         self.assertIn("queue 裡還有 1 封沒答", r.stderr)
         r = run(CHAT, "--ws", str(self.ws), self.agent, input="/run\n")   # 新開一個 chat（假腦）：認得還沒答的那封，/run 接著做
         self.assertIn("queue 裡已經有 1 封還沒答", r.stderr)
@@ -367,11 +315,13 @@ class ChatTest(Base):
     def test_agent_missing(self):
         r = run(CHAT, "--ws", str(self.ws), str(self.ws / "nope"), input="")
         self.assertRegex(r.stderr, r"^aos-chat: AgentMissing ")
+        r = run(CHAT, "--ws", str(self.ws), "--trace", input="")      # 11-03 拿掉
+        self.assertRegex(r.stderr, r"^aos-chat: FlagUnknown ")
 
 
 class External(Base):
     """10-30 eca 第 7 步（C 結論 9、F 結論 18；衝突 6 刪 server.txt）：外部 coding agent＝aos-loop 包著 aos-eca-turn 的定義（P-43 草稿），
-    say／listen 不用改；--status 的服務者只靠 /proc。定義在這裡臨時組（demo/eca-claude 還沒有），CLI 用 test_fay 的假 claude。"""
+    say／listen 不用改；服務者（aos_human.runners）只靠 /proc。定義在這裡臨時組（demo/eca-claude 還沒有），CLI 用 test_fay 的假 claude。"""
 
     def setUp(self):
         super().setUp()
@@ -412,33 +362,28 @@ class External(Base):
             time.sleep(0.05)
         return False
 
-    def test_status_shows_external_runner_and_phase(self):
-        """aos-exec 直接跑外部範本（idle）：say／listen 答得出；--status 印得出服務者（aos-loop）、phase、最後一格 aos-eca-turn；
-        暫停時 phase paused；stack 裡沒有 server.txt。"""
+    def test_external_runner_and_phase(self):
+        """aos-exec 直接跑外部範本（idle）：say／listen 答得出；runners 認得服務者（aos-loop）；暫停時 phase paused；
+        stack 裡沒有 server.txt、trace.jsonl（11-03）。"""
         p = self.popen(["aos-exec", "--ws", str(self.ws), str(self.eca)])
         self.assertTrue(self.phase(self.stack, ("waiting", "running")))
         sig = self.say("你好", **self.xenv)
         r = self.xrun(LISTEN, "--ws", str(self.ws), "--timeout", "30")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(r.stdout.startswith("fake claude[") and r.stdout.rstrip().endswith(": 你好"), r.stdout)
-        r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
-        self.assertRegex(r.stdout, r"在跑     .*aos-loop（pid %d）" % p.pid)
-        self.assertRegex(r.stdout, r"loop     phase (waiting|running)\n")
-        self.assertRegex(r.stdout, r"最後一格 aos-eca-turn 退 0")
+        self.assertIn((p.pid, "aos-loop"), runners(self.ws))
         self.assertFalse((self.stack / "server.txt").exists())
+        self.assertFalse((self.stack / "trace.jsonl").exists())
         (self.stack / "ctl.json").write_text('{"paused": true}')
         self.assertTrue(self.phase(self.stack, ("paused",)))
-        r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
-        self.assertIn("loop     phase paused", r.stdout)
-        self.assertRegex(r.stdout, r"在跑     .*aos-loop")
+        self.assertIn("aos-loop", [n for _, n in runners(self.ws)])
         (self.stack / "ctl.json").write_text('{"stopped": true}')
         self.assertEqual(p.wait(timeout=20), 0)
-        r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
-        self.assertIn("在跑     沒有", r.stdout)
+        self.assertEqual(runners(self.ws), [])
 
     def test_status_sees_runner_under_daemon(self):
         """掛在 daemon 底下（aos-daemon-ctl add --ws）：子 loop 的 AOS_STACK 是 daemon 的小格、工作區的 .stack 是指過去的 symlink，
-        --status 照樣認得服務者；say／listen 經 symlink 答得出。"""
+        runners 照樣認得服務者；say／listen 經 symlink 答得出。"""
         ds = Path(self._tmp.name) / "dstack"
         ds.mkdir()
         dj = Path(self._tmp.name) / "daemon.json"
@@ -458,9 +403,8 @@ class External(Base):
         r = self.xrun(LISTEN, "--ws", str(self.ws), "--timeout", "30")
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(r.stdout.rstrip().endswith(": 在 daemon 底下"), r.stdout)
-        r = self.xrun(LISTEN, "--ws", str(self.ws), "--status")
-        self.assertRegex(r.stdout, r"在跑     .*aos-loop")
-        self.assertRegex(r.stdout, r"loop     phase (waiting|running)")
+        self.assertIn("aos-loop", [n for _, n in runners(self.ws)])
+        self.assertTrue(self.phase(self.stack, ("waiting", "running")))
         (ds / "ctl.json").write_text('{"stopped": true}')
         self.assertEqual(d.wait(timeout=30), 0)
 

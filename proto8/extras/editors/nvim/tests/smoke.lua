@@ -68,25 +68,15 @@ f:close()
 vim.cmd("AosExec")
 wait()
 check("AosExec 結束碼 0", panel_has("== 結束碼 0"), table.concat(aos.panel_lines(), "\n"))
-check("AosExec 面板有 trace", panel_has("think") and panel_has("act"))
+check("AosExec 面板有 state", panel_has("== state idle"), table.concat(aos.panel_lines(), "\n"))
 check("AosExec 寫了答案", vim.fn.filereadable(ws .. "/out/q1.txt") == 1)
 
 -- 4b. :AosExec!：跑目前這個檔本身（fsm.json 帶 _entry＝只走一格）
-local function trace_n()
-  local t = io.open(ws .. "/.stack/trace.jsonl")
-  if not t then return 0 end
-  local n = select(2, t:read("*a"):gsub("\n", ""))
-  t:close()
-  return n
-end
-local before = trace_n()
 vim.cmd("AosExec!")
 wait()
-check("AosExec! 只走一格", trace_n() == before + 1 and panel_has("dan/fsm.json"), before .. " → " .. trace_n())
-
--- 5. :AosTrace
-vim.cmd("AosTrace")
-check("AosTrace 有 idle", panel_has("idle"))
+check("AosExec! 只走一格", panel_has("dan/fsm.json") and panel_has("== state "), table.concat(aos.panel_lines(), "\n"))
+check("沒有 trace.jsonl（11-03）", vim.fn.filereadable(ws .. "/.stack/trace.jsonl") == 0)
+check("沒有 :AosTrace（11-03）", vim.fn.exists(":AosTrace") == 0)
 
 -- 6. :AosSay!：預設外掛自己寫 new/、輪詢 out/（舊協議；10-30 起 aos-say／aos-listen 走 queue、說不到 fsm 範本，use_say 預設 false）
 local answer

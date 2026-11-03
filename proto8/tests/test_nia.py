@@ -1,7 +1,7 @@
 """test_nia - agent-round 落地第 6、7 步：範本 demo/agent-nia（parts.json 手寫相對路徑指 lib 的格）與 aos-ai spawn 的 parts.json 範本。
 
 範本（10-30 起題目經 queue 格 push 進 $AOS_STACK/queue/、答案看 history，agent-lifecycle 第 3 步）：aos-exec 跑一題（假腦叫 clock 再答）、
-  § 5 的檔在 stack、loop 的 state 窗收工是 done；loop.json 叫 aos-fsm 跑 lib/agent/round 的表，trace 是 fsm 的一格一行
+  § 5 的檔在 stack、loop 的 state 窗收工是 done；loop.json 叫 aos-fsm 跑 lib/agent/round 的表（11-03 起 fsm 不寫 trace，跑了哪幾格看 tests/spy_bin 的旁觀者）
   （idle → think → act → think → finish → idle 退 10）；兩題＝finish 兩次、最後 idle 退 10 正常停；
   沒題＝loop 第一次就停、結束碼 0；loop.json 是 aos-fsm fsm-stop.json、cwd 指 lib/agent/round、開 ctl／state 窗；
   parts.json（11-01 起 aos-exec 格式）／tools.json 只用相對路徑、每格 lib/agent/parts.py 找得到。
@@ -17,7 +17,7 @@ ask_round（lib/aos，第 11 步：round 當外部接口；10-30 起放進 queue
 import json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path
 
-from aos_bins import ROOT, EXEC, path_with  # noqa: E402
+from aos_bins import ROOT, EXEC, path_with, fsm_steps  # noqa: E402
 from test_ai_tools import ai  # noqa: E402
 from round_common import absolute  # noqa: E402
 sys.path.insert(0, str(ROOT / "lib" / "agent"))
@@ -79,8 +79,8 @@ class Template(unittest.TestCase):
         return subprocess.run([EXEC, str(NIA)], capture_output=True, text=True, env=env(), cwd=self.ws, timeout=120)
 
     def states(self):
-        """fsm trace 的 (state, code)：一格一行（10-30 起，原本看 round 的 unit 行）。"""
-        return [(t["state"], t["code"]) for t in map(json.loads, (self.ws / ".stack" / "trace.jsonl").read_text().splitlines())]
+        """fsm 每格的 (state, code)（11-03 起看旁觀者；code＝aos-fsm 的結束碼，分岔接住＝0）。"""
+        return [(t["state"], t["code"]) for t in fsm_steps(self.ws / ".stack")]
 
     def test_one_question(self):
         self.put("現在幾點？")
@@ -89,12 +89,12 @@ class Template(unittest.TestCase):
         self.assertEqual(len(answers(self.ws)), 1)
         self.assertRegex(answers(self.ws)[0], r"^FAKE ANSWER to: 現在幾點？（clock said: \d{4}-.*Z）$")
         self.assertEqual(sorted(p.name for p in (self.ws / ".stack").iterdir()),
-                         ["history.jsonl", "live.jsonl", "queue", "state.json", "state.txt", "tools", "trace.jsonl"])   # tools/clock＝工具的小格（P-17；11-02 進 tools/）；state.txt＝fsm 的
+                         ["history.jsonl", "live.jsonl", "queue", "state.json", "state.txt", "tools"])   # tools/clock＝工具的小格（P-17；11-02 進 tools/）；state.txt＝fsm 的
         self.assertEqual(sorted(p.name for p in self.ws.iterdir()), [".stack"])           # 工作區不長 new/ out/ 這些
         self.assertEqual((queue_ls(self.ws, "new"), queue_ls(self.ws, "cur")), ([], []))
         self.assertEqual(json.loads((self.ws / ".stack" / "state.json").read_text())["phase"], "done")   # loop 的 state 窗
         self.assertEqual([m["role"] for m in history(self.ws)], ["user", "assistant", "tool", "assistant"])
-        self.assertEqual(self.states(), [("idle", 0), ("think", 0), ("act", 0), ("think", 10), ("finish", 0), ("idle", 10)])
+        self.assertEqual(self.states(), [("idle", 0), ("think", 0), ("act", 0), ("think", 0), ("finish", 0), ("idle", 10)])
         self.assertEqual((self.ws / ".stack" / "state.txt").read_text().strip(), "idle")   # 一題答完、停在起點
 
     def test_two_questions_loop_calls_round_again(self):
@@ -275,8 +275,8 @@ class AskRound(unittest.TestCase):
         r = self.call(self.cell("ask8", "--max-steps", "8"), {"question": "幾點？", "agent": str(agent)})
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertTrue(r.stdout.startswith("FAKE ANSWER to: 幾點？"), r.stdout)
-        trace = (self.stack / "ask8" / "tools" / "agent" / ".stack" / "trace.jsonl").read_text().splitlines()
-        self.assertEqual([json.loads(l)["state"] for l in trace], ["idle", "think", "act", "think", "finish"])
+        steps = fsm_steps(self.stack / "ask8" / "tools" / "agent" / ".stack")
+        self.assertEqual([t["state"] for t in steps], ["idle", "think", "act", "think", "finish"])
 
     def test_round_failed_and_argument_errors(self):
         agent = self.own_agent()

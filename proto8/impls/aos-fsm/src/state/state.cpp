@@ -1,4 +1,4 @@
-// state.cpp：【state】state 與 trace.jsonl（說明見 state.hpp）。
+// state.cpp：【state】state.txt（說明見 state.hpp）。
 #include "state/state.hpp"
 
 #include "aos/files.hpp"
@@ -30,7 +30,7 @@ std::string read_state(const std::string& stack, const std::string& start) {
     return s;
 }
 
-// 寫整份字串；mode "w" 或 "a"。失敗丟 WriteFailed。
+// 寫整份字串；mode "w"。失敗丟 WriteFailed。
 static void write_text(const std::string& path, const std::string& text, const char* mode) {
     std::FILE* f = std::fopen(path.c_str(), mode);
     if (f == nullptr) {
@@ -54,10 +54,6 @@ void write_state(const std::string& stack, const std::string& name) {
         std::remove(tmp.c_str());
         throw Error{code::WriteFailed, "改名不了 " + tmp + " → " + dst + "：" + std::strerror(e)};
     }
-}
-
-void append_trace(const std::string& stack, const Json& line) {
-    write_text(aos::join(stack, "trace.jsonl"), aos::dumps(line) + "\n", "a");
 }
 
 }  // namespace aos::fsm

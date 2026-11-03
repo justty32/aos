@@ -10,10 +10,11 @@ RoundLoop：aos-exec <agent>/loop.json#/exec 單次走一格（ask_round 的叫�
 import json, shutil, subprocess, time, unittest
 
 from round_common import AgentCase, EXEC, ROUND  # noqa: E402
+from aos_bins import fsm_steps  # noqa: E402
 
 
 class RoundLoop(AgentCase):
-    """agent 的 loop.json → aos-fsm 表：驗 fsm trace 的 state／next 序列。"""
+    """agent 的 loop.json → aos-fsm 表：驗 fsm 每格的 state／next 序列（11-03 起看 tests/spy_bin 的旁觀者）。"""
 
     def loop(self, table="fsm-stop.json", **cfg):
         cfg = dict({"exec": {"argv": ["aos-fsm", table], "cwd": ROUND}}, **cfg)
@@ -29,7 +30,7 @@ class RoundLoop(AgentCase):
                               env=self.env(env), cwd=self.tmp, timeout=120)
 
     def states(self):
-        return [(t["state"], t["code"], t["next"]) for t in self.lines((self.stack / "trace.jsonl").read_text())]
+        return [(t["state"], t["code"], t["next"]) for t in fsm_steps(self.stack)]  # 11-03：fsm 不寫 trace.jsonl，跑了哪幾格看 tests/spy_bin 的旁觀者（code＝aos-fsm 的結束碼，分岔接住＝0）
 
     def state(self):
         return (self.stack / "state.txt").read_text().strip()
@@ -80,7 +81,7 @@ class RoundLoop(AgentCase):
         def idles():
             n = 0
             for x in reversed(self.states()):
-                if x != ("idle", 10, "idle"):
+                if x != ("idle", 0, "idle"):                 # 11-03：旁觀者記 fsm 的碼，idle 表接住 10＝0
                     break
                 n += 1
             return n

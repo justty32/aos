@@ -39,12 +39,12 @@ using namespace aos::exec::code;   // ArgumentsBad、FlagUnknown、CfgMissing、
 inline constexpr const char* StackMissing = "StackMissing";   // 要 $AOS_STACK 卻沒設（開了窗、fsm、daemon）
 }  // namespace code
 
-// 一次的結果（欄位同 fsm 的 trace.jsonl 那一行，再多一個 received；aos-loop 的 log 那一行也用 code、signal、elapsed_ms，11-02）。沒有 timed_out（10-21：loop 看不到格裡有沒有逾時，C-52；
+// 一次的結果（欄位名同 11-03 前 fsm 的 trace.jsonl 那一行，再多一個 received；aos-loop 的 log 那一行也用 code、signal、elapsed_ms，11-02）。沒有 timed_out（10-21：loop 看不到格裡有沒有逾時，C-52；
 // 單子被逾時收掉＝跑它的 aos-exec 以 128＋N 正常結束：code 143、signal 0）。
 struct Run {
     int code = 0;              // 那次的結束碼（被訊號停掉＝128＋N）
-    int signal = 0;            // 停掉它的訊號（0＝不是被訊號停掉；trace 裡寫 null）
-    unsigned long long elapsed_ms = 0; // 花了幾毫秒（trace 的 elapsed_ms）
+    int signal = 0;            // 停掉它的訊號（0＝不是被訊號停掉；log 裡寫 null）
+    unsigned long long elapsed_ms = 0; // 花了幾毫秒（log 的 elapsed_ms）
     int received = 0;          // 跑的期間自己收到、轉給那次的第一個訊號（0＝沒有）；呼叫者收完這次要以 128＋它結束
 };
 

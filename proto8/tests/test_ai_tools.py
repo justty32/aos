@@ -135,8 +135,9 @@ class AiToolsTest(unittest.TestCase):
         self.assertIn("FAKE ANSWER", res["text"])
         code, res, _ = ai(self.root, "answer", "nia")
         self.assertEqual(res["answers"][0]["asked"], ["幾點了"])
-        code, res, _ = ai(self.root, "trace", "nia", "-n", "1")
-        self.assertEqual((res["fsm_state"], res["trace"][0]["state"], res["trace"][0]["code"]), ("idle", "idle", 10))   # fsm 表：最後一格 idle 沒信退 10
+        self.assertNotIn("trace_tail", ai(self.root, "status", "nia")[1])          # 11-03：沒有 trace.jsonl
+        code, res, _ = ai(self.root, "trace", "nia")
+        self.assertEqual(code, 1)                                                    # 11-03 拿掉 trace 子命令
 
     def test_question_from_stdin_and_no_id(self):
         ai(self.root, "spawn", "nia")
@@ -281,7 +282,7 @@ class AiToolsTest(unittest.TestCase):
         p = aos_exec(r + "/w/loop.json", r)
         self.assertEqual(p.returncode, 0, p.stderr)
         self.assertEqual((Path(r) / ".stack" / "log.txt").read_text(), "A\n")
-        self.assertEqual([json.loads(l)["state"] for l in (Path(r) / ".stack" / "trace.jsonl").read_text().splitlines()], ["a", "b"])
+        self.assertEqual((Path(r) / ".stack" / "state.txt").read_text(), "b\n")   # a 退 0 換 b、b 退 10 停（11-03 前看 trace.jsonl）
         code, res, err = ai(r, "make", "inst", "--argv", "sh -c 'echo x'", "--out", r + "/i.json")
         self.assertEqual(res["json"]["argv"], ["sh", "-c", "'echo", "x'"], err)  # 字串照空白切；要精確寫 JSON 陣列
         code, res, err = ai(r, "make", "inst", "--argv", '["sh", "-c", "echo inst-ok"]', "--timeout-ms", "5000",

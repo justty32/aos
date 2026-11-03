@@ -12,7 +12,7 @@
 ai_tools/
   bin/aos-ai                 命令列（Python，只用標準庫）。PATH 自己放好 impls 各支（含 aos-json）、proto8/bin、自己
   bin/aos_ai_base.py         各命令共用的底（Fail、PATH、Root／Agent／Daemon）；10-31 從 aos-ai 拆出，行為不變
-  bin/aos_ai_agents.py       對單隻 agent 的命令：templates、spawn、ask、run、status、answer、wait、trace、history、exec
+  bin/aos_ai_agents.py       對單隻 agent 的命令：templates、spawn、ask、run、status、answer、wait、history、exec（11-03 拿掉 trace）
   bin/aos_ai_daemon.py       背景命令：daemon、start、stop
   bin/aos_ai_tools.py        make、explain、edit、doctor 的命令本體
   bin/aos_ai_make.py         make：生成 JSON（驗形狀、欄位說明 notes）與骨架（工具、fsm 格、函數資料夾）
@@ -35,7 +35,7 @@ ai_tools/
 
 ```
 agents/<名>/agent/        agent 定義（範本的複本；定義資料夾不被寫，P-15）
-agents/<名>/ws/           工作區（成品檔）；stack 在 ws/.stack/：queue/（題目，N-16 有序信箱）、history.jsonl（回答）、trace.jsonl、state.json（aos-loop 的窗）…
+agents/<名>/ws/           工作區（成品檔）；stack 在 ws/.stack/：queue/（題目，N-16 有序信箱）、history.jsonl（回答）、state.json（aos-loop 的窗）…（11-03 起沒有 trace.jsonl）
 agents/<名>/runs.jsonl    aos-ai run 每次一行：finished_at（跑完的時間）、code、signal、timed_out、elapsed_ms、errors、answered（這次答完的信號）、counter_answers
 daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.stack/ctl.json、.stack/state.json（11-02 白天曾改 daemon_*、晚上改回）、各 agent 的小格 .stack/loops/<名>/（11-02 改 loops/<名字>/，見 proto8/thinking/2026-11-02-stack-tools.md）
 ```
@@ -46,7 +46,7 @@ daemon/daemon.json        背景用的 aos-daemon（一個 root 一個）；.sta
 | `spawn 名 [--from 範本] [--tool 工具]...` | 範本（名字或路徑，預設 agent-nia；10-30 前 agent-dan）原樣複製到 `agents/<名>/agent/`，加工具，建工作區（只建 `ws/.stack/`）；範本的 `parts.json`（格的通訊錄，例 `agent-nia`）與 `tools.json` 裡指出範本的相對路徑改成絕對（指在範本裡面的照舊相對；沒有 parts.json 的範本不受影響）；工具出錯停不停照範本自己的 act（agent-nia 的 lib/agent/act、agent-dan 都回給腦） |
 | `ask 名 文字…｜- ` | 寄一封有序的信進 `ws/.stack/queue/`（`{"role": "user", "content": 文字}`；沒有 queue 就先 `aos-post init`）；回 `id`＝信號、`path`＝那封信 |
 | `run 名 [--timeout 秒] [--env K=V]...` | 前景 `aos-exec --ws ws agent`（`AOS_STACK` 明寫成 `ws/.stack/`），nia 跑到 queue 空 loop 收工；回 `answers`（這次 history 新長出來的回答，`[{"text"}]`）、`answered`（跑之前在 queue、跑完不見了的信號）、`waiting`（queue 裡還沒答的）、`loop_phase`、錯誤、hint |
-| `status [名]`、`answer 名 [信號]`、`trace 名 [-n N]`、`history 名 [-n N]` | 看：status 有 queue 各格（`new`、`cur`、`done`）、`loop_phase`（state.json；11-02 晚收回 loop_state.json 備案）、`counter_answers`；answer 沒給信號＝每段一問一答（`asked`、`text`），給了＝那封還在 queue＝`AnswerMissing`、不見了＝history 最新的回答（A-8） |
+| `status [名]`、`answer 名 [信號]`、`history 名 [-n N]` | 看（11-03 拿掉 `trace` 子命令與 status 的 `trace_tail`：fsm 不寫 `trace.jsonl` 了，[thinking 11-03 trace](../../thinking/2026-11-03-trace.md)）：status 有 queue 各格（`new`、`cur`、`done`）、`loop_phase`（state.json；11-02 晚收回 loop_state.json 備案）、`counter_answers`；answer 沒給信號＝每段一問一答（`asked`、`text`），給了＝那封還在 queue＝`AnswerMissing`、不見了＝history 最新的回答（A-8） |
 | `start 名 [--interval-ms N]`、`stop 名`、`wait 名 信號 [--timeout 秒]` | 背景：寫 daemon 的 `loops_ctl.json` 的 `loops_added`（N-54；10-29 拆窗前寫在 ctl），等 `loops_state.json` 的 `ctl_seq` 回音才回。11-02 起子項結束就從 daemon 的表上拿掉、本次執行不再起（要先讓某一圈的名單沒有它）：`start` 不在跑時一律先從 `loops_added` 拿掉、等回音，再放回、等回音；一次就跑完、還沒被看到就下表的＝看小格 `loops/<名>/state.json` 換了行程寫，照樣 `ok`（多一句 `note`） |
 | `daemon up｜down｜status` | 起／停（daemon_ctl `stopped`）／看背景的 aos-daemon（status 的 `updated_at`＝daemon_state 最後一次寫的時間，11-02 原 `recorded_at`；有變才寫，不拿它判活著） |
 | `exec [--ws WS] 目標 [參數...]` | 直接 `aos-exec` 跑一次，回 `code`、`stdout`、`errors`；WS 要在 root 裡 |

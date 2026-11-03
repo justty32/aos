@@ -4,7 +4,7 @@
 import http.server, json, os, subprocess, tempfile, threading, unittest
 from pathlib import Path
 
-from aos_bins import ROOT, tool, path_with  # noqa: E402
+from aos_bins import ROOT, tool, path_with, fsm_steps  # noqa: E402
 EXEC = tool("aos-exec")
 HAL = ROOT / "demo" / "agent-hal"
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
@@ -337,7 +337,7 @@ class T(unittest.TestCase):
         f = self.fake()
         r = self.hal(f.url)
         self.assertEqual(r.returncode, 0, r.stderr)
-        states = [json.loads(l)["state"] for l in (self.stack / "trace.jsonl").read_text().splitlines()]
+        states = [t["state"] for t in fsm_steps(self.stack)]
         self.assertEqual(states, ["idle", "compact", "think", "act", "idle"])
         self.assertEqual((self.ws / "out" / "q9.txt").read_text(), "ANSWER\n")
         agent = [b for k, b in f.requests if k == "agent"]

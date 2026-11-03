@@ -13,7 +13,8 @@ IMPLS = ROOT / "impls"
 CXX = ("aos-exec", "aos-loop", "aos-fsm", "aos-daemon", "aos-llm-kernel", "aos-llm-send",   # 10-24 加 llm-kernel、llm-send（LLM kernel）
        "aos-json",                                     # 10-24 遷移：lib/base/json_edit 經 aos-json 寫檔
        "aos-post")                                     # 10-30 lib/agent/queue 經 aos-post 投遞（agent-lifecycle 第 1 步）
-BINS = [IMPLS / n / "bin" for n in CXX] + [ROOT / "bin"]   # 最後一個是 proto8/bin（只剩 aos-tick）
+SPY = Path(__file__).resolve().parent / "spy_bin"   # 11-03：測試用的 aos-fsm 旁觀者（fsm 不寫 trace.jsonl 了，跑了哪幾格由它記；見 spy_bin/aos-fsm）
+BINS = [SPY] + [IMPLS / n / "bin" for n in CXX] + [ROOT / "bin"]   # 最後一個是 proto8/bin（只剩 aos-tick）
 BIN_DIRS = [str(b) for b in BINS]
 
 for _n in CXX:
@@ -23,7 +24,7 @@ for _n in CXX:
 
 
 def tool(name):
-    """程式的完整路徑：四支 C++ 在 impls/<名>/bin/，aos-tick 在 proto8/bin/。"""
+    """程式的完整路徑：四支 C++ 在 impls/<名>/bin/，aos-tick 在 proto8/bin/；aos-fsm 給旁觀者 spy_bin/aos-fsm（它再叫 impls 的）。"""
     for b in BINS:
         if (b / name).exists():
             return str(b / name)
@@ -37,3 +38,32 @@ def path_with(rest=None):
 
 
 EXEC = tool("aos-exec")
+
+# 11-03：旁觀者記在哪（整個測試行程一份，子行程從 os.environ 繼承；每行帶 stack 的實際路徑，各案照自己的 stack 篩）
+if not os.environ.get("FSM_SPY_LOG"):
+    import tempfile as _tempfile
+    _fd, _log = _tempfile.mkstemp(prefix="aos-test-fsm-", suffix=".jsonl")
+    os.close(_fd)
+    os.environ["FSM_SPY_LOG"] = _log
+    import atexit as _atexit
+    _atexit.register(lambda: os.path.exists(_log) and os.unlink(_log))
+
+
+def fsm_steps(stack):
+    """這個 stack 上 aos-fsm 跑過的每一次（照順序）：[{"state", "code"〔aos-fsm 的結束碼〕, "next"〔寫進 state 的、沒寫＝None〕}]。
+    11-03 前測試讀 stack 的 trace.jsonl（code 是格的碼）；現在由 spy_bin/aos-fsm 從外面看，code 是 fsm 自己的結束碼（分岔接住＝0）。"""
+    import json
+    want = os.path.realpath(str(stack))
+    out = []
+    try:
+        with open(os.environ["FSM_SPY_LOG"], encoding="utf-8") as f:
+            for line in f:
+                try:
+                    d = json.loads(line)
+                except ValueError:
+                    continue
+                if d.get("stack") == want:
+                    out.append({k: d[k] for k in ("state", "code", "next")})
+    except OSError:
+        pass
+    return out

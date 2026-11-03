@@ -4,7 +4,7 @@
 import json, os, re, shutil, subprocess, tempfile, unittest
 from pathlib import Path
 
-from aos_bins import ROOT, tool, path_with  # noqa: E402
+from aos_bins import ROOT, tool, path_with, fsm_steps  # noqa: E402
 
 LUA_DIR = ROOT / "extras" / "langs" / "lua"
 AOS_LUA = str(LUA_DIR / "bin" / "aos-lua")
@@ -62,14 +62,13 @@ def same_tree(test, built, hand):
 
 
 def run_agent(agent, question):
-    """在新工作區放一題、aos-exec 跑到停；回 (結果, 答案, trace 的格名)。"""
+    """在新工作區放一題、aos-exec 跑到停；回 (結果, 答案, 跑過的格名)。"""
     ws = Path(tempfile.mkdtemp(prefix="lua-aos-ws-"))
     (ws / "new").mkdir()
     (ws / "new" / "q1.txt").write_text(question)
     r = subprocess.run([EXEC, "--ws", str(ws), str(agent)], capture_output=True, text=True, env=env(), timeout=60)
     out = ws / "out" / "q1.txt"
-    trace = ws / ".stack" / "trace.jsonl"
-    states = [json.loads(l)["state"] for l in trace.read_text().splitlines()] if trace.exists() else []
+    states = [t["state"] for t in fsm_steps(ws / ".stack")]  # 11-03：fsm 不寫 trace.jsonl，跑了哪幾格看 tests/spy_bin 的旁觀者（code＝aos-fsm 的結束碼，分岔接住＝0）
     answer = out.read_text() if out.exists() else None
     if answer:   # agent-dan（11-02 晚刪了）的假腦叫 clock，答案裡有當下時間：抹掉才比得了
         answer = re.sub(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", "<時間>", answer)
@@ -110,7 +109,7 @@ class TestBuild(unittest.TestCase):
             self.assertEqual(o, outs[0])
 
     def test_run_same_as_demo(self):
-        """假腦下，編出來的 ann 跟手寫的跑出一樣的答案與 trace（dan 那份 11-02 晚隨 demo/agent-dan 刪除拿掉）。"""
+        """假腦下，編出來的 ann 跟手寫的跑出一樣的答案與格序（dan 那份 11-02 晚隨 demo/agent-dan 刪除拿掉）。"""
         for src, hand in (("agent_ann.lua", "agent-ann"),):
             built = self.build(src)
             r1, a1, s1 = run_agent(built, "17*23 是多少？\n")
