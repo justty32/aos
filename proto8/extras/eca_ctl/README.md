@@ -57,7 +57,7 @@ aos-eca-ctl remove                               # 刪掉：小格、.stack 捷�
 - **`AOS_DAEMON_STACK` 要給絕對路徑**，相對路徑 cd 之後就對不上：在 A 資料夾 add 得上，cd 到工作區後 open／ls／close／stop 都是 `DaemonMissing`（say／listen 走工作區的 `.stack` 捷徑，不受影響）。使用者 11-02 晚選「3」：維持、只寫清楚（[eca 09 § 決定 11-02 晚](../../thinking/2026-10-30-eca/09-方向題.md#決定11-02-晚使用者)）。
 - **`eca_reap` 掛上後不拿下**（11-02 晚代定）：最後一隻 remove 了也留著，閒著只是每分鐘起一次 `aos-eca-ctl close --idle 30`；要拿掉 `aos-daemon-ctl rm eca_reap`（下次 add／start 又會掛回）。它的錯（例如 daemon 沒在跑）看 `$AOS_DAEMON_STACK/loops/eca_reap/stderr.txt`；子 loop 出錯停了也會在下次 add／start 時重新掛上。閒置門檻固定 30 分（使用者：以後依資源調）。
 - **stop 的那一瞬間捷徑不在**：aos-daemon-ctl rm 會拆 `.stack` 捷徑，aos-eca-ctl 等 daemon 收掉後才補回；這中間在工作區 aos-say，會落到新建的真 `.stack/`。stop 期間 aos-say 印的提示是「另開終端機 aos-exec 跑它」（aos-say 不知道 aos-eca-ctl），對 eca 要看成 `aos-eca-ctl start`。
-- **短時間多封信**（11-02 晚記、沒改）：子 loop 每 `interval_ms`（300 ms）跑一次 aos-eca-turn、一次只認領一封，所以 N 封＝claude 起退 N 次、每次 `--resume` 重讀整段對話；畫面開著＝逐封貼進畫面；人接在畫面上時信排著等人跳出（`--on-busy yield`）；`aos-listen` 等的是最新那封，前面的要 `--last N` 看。start 之後排著的那些也是這樣一封一封答。
+- **短時間多封信**（11-02 晚記；**11-03 改了**：aos-eca-turn 一次把 queue 的信全部、照順序丟進一次 CLI，N 封排著＝一次起退，見 [eca 17](../../thinking/2026-10-30-eca/17-11-03-批次-status.md)；下面是之前的樣子）：子 loop 每 `interval_ms`（300 ms）跑一次 aos-eca-turn、一次只認領一封，所以 N 封＝claude 起退 N 次、每次 `--resume` 重讀整段對話；畫面開著＝逐封貼進畫面；人接在畫面上時信排著等人跳出（`--on-busy yield`）；`aos-listen` 等的是最新那封，前面的要 `--last N` 看。start 之後排著的那些也是這樣一封一封答。
 - **daemon 的 PATH**：子 loop 用 daemon 啟動時的環境叫 claude／codex、aos-eca-turn、aos-post。從沒有 `~/.local/bin` 的 shell 起 daemon，每則都 `CliMissing`。
 - **新資料夾第一次開畫面，claude 會先問「信任這個資料夾嗎」**：人 `open` 接進去回答就好；`open -d` 之後馬上 say，那句會被貼進這個提問。非互動（`-p`）沒有這個提問。
 - **ls 要等子 loop 跑第一次**：`eca.json` 是 aos-eca-turn 寫的，add 之後一個 `interval_ms` 內才列得到。
