@@ -12,9 +12,9 @@
 | `aos-util/include/aos/text.hpp`、`src/text.cpp` | 10-22 起：`is_utf8`、`space_at`、`lstrip`／`rstrip`／`strip`（照 Python `str.isspace` 認 Unicode 空白）；aos-exec 的 `.env`、aos-fsm 的 state 與 `next` 檢查用 |
 | `aos-util/include/aos/error.hpp`、`proc.hpp`（`src/proc.cpp`） | 全家共用的錯誤代號 `aos::code`（10-30 加投遞的 `CommandUnknown`、`MailboxMissing`、`LetterMissing`、`LetterBad`，原本 aos-post、aos-lock、aos-json、aos-llm-kernel 各定一份）；子程序與 /proc、`utc_now_ms`；10-30 加 `utc_now_ns`、`utc_ms_at` 與**信號** `unique_id`（`<UTC 奈秒 20 位>.<pid>.<started_at_ticks>`，原本 kernel、aos-post、aos-lock 三份；medium-plan 實作時代定 12） |
 | `aos-exec/include/aos/exec.hpp` | 公開 API 只剩 `run_cli`（等同命令列；會 chdir／setenv）、`run_inst`、`argv0`、`Result`、代號（含 `DotenvBad`、`WsMissing`；10-23 統合前叫 `EnvBad`／`EnvReadFailed`、`WorkspaceMissing`） |
-| `aos-exec/src/cli/` | `run_cli`：解旗標（`--ws`、10-22 起不帶值的 `--dotenv-override`，只管這一跳、轉向時清掉）→ 一跳跳走（字串轉向＝全新的一跳）→ `launch` |
+| `aos-exec/src/cli/` | `run_cli`：解旗標（`--ws`、11-03 起 `--stack`、10-22 起不帶值的 `--dotenv-override`，只管這一跳、轉向時清掉）→ 一跳跳走（字串轉向＝全新的一跳）→ `launch` |
 | `aos-exec/src/find/find.cpp`、`classify.cpp` | `hop`（定工作區 → `locate` → 建 stack → `enter`：cd、讀 `.env`、旗標蓋回 → 照當下 `$AOS_ENTRY` 一路往下挑入口 → 重設 `AOS_CF`／`AOS_CD`／`AOS_CO`）；`classify`（種類、沒 argv 的 JSON 物件當資料夾、`AOS_CO`、轉向繞圈） |
-| `aos-exec/src/env/env.cpp`、`dotenv.cpp` | `check_ws`、`setup_stack`；`.env` 檔（`load_env`；10-22 起 dotenv 基礎子集：`export_prefix`、`env_value` 管引號／註解／去空白，預設不蓋＝`set_env` 的 `keep`）與 JSON `.env` key（`json_env`，只套蓋不蓋）、`set_env`（只展開 `${名字}`、錯不印值） |
+| `aos-exec/src/env/env.cpp`、`dotenv.cpp` | `check_ws`、`setup_stack`（11-03 起收 `--stack`：旗標 ＞ `$AOS_STACK` ＞ `$AOS_WS/.stack/`，回值給 hop 蓋回）；`.env` 檔（`load_env`；10-22 起 dotenv 基礎子集：`export_prefix`、`env_value` 管引號／註解／去空白，預設不蓋＝`set_env` 的 `keep`）與 JSON `.env` key（`json_env`，只套蓋不蓋）、`set_env`（只展開 `${名字}`、錯不印值） |
 | `aos-exec/src/launch/launch.cpp`、`src/inst/` | exec 可執行檔／argv 陣列（指示詞、argv[0] 交給 aos-exec）；inst 單子行程內交給 libaos（`run_inst`） |
 | `aos-loop/src/run/folder.cpp` | 每次 fork 子行程呼叫 aos-exec 的 `run_cli({"--", 目標, 參數...})`、轉訊號 |
 | `aos-loop/src/run/inline.cpp`、`run.cpp` | 10-24：`run_once(Target)` 分流——目標交給 `run_folder`；單子物件交給 `run_inline`：`AOS_CF`／`AOS_CD`／`AOS_CO` 設成單子的位置、相對 `AOS_WS`／`AOS_STACK` 轉絕對（跑完還原）、行程內 aos-exec 的 `run_inst`（[thinking 10-24](../../../../../proto8/thinking/2026-10-24-exec-relative/01-使用者原文.md#10-24-exec-直接放單子)）；捷徑設定檔＝`config_file` |

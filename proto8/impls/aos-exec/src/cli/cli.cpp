@@ -12,7 +12,7 @@
 
 namespace aos::exec {
 
-static const char* USAGE = "aos-exec [--ws WS] [--dotenv-override] XXX [args...]";
+static const char* USAGE = "aos-exec [--ws WS] [--stack S] [--dotenv-override] XXX [args...]";
 
 static int fail(const std::string& code, const std::string& msg) {
     std::fprintf(stderr, "aos-exec: %s %s\n", code.c_str(), msg.c_str());
@@ -25,7 +25,8 @@ int run_cli(const std::vector<std::string>& argv) {
         Cli cli;
         try {
             // 以後加旗標就在這裡加一列；--dotenv-override（10-22）不帶值：.env 蓋掉已有的，只管這一次 aos-exec
-            cli = parse_cli(argv, {{"--ws", "ws"}}, {{"--dotenv-override", "dotenv_override"}});
+            // --stack S（11-03）：stack 放哪，同 --ws（"-"／空＝沿用外面的）
+            cli = parse_cli(argv, {{"--ws", "ws"}, {"--stack", "stack"}}, {{"--dotenv-override", "dotenv_override"}});
         } catch (const Error& e) {
             throw Error{e.code, std::string("usage: ") + USAGE + "（" + e.msg + "）"};   // FlagUnknown／ArgumentsBad
         }
@@ -38,11 +39,15 @@ int run_cli(const std::vector<std::string>& argv) {
         if (cli.opts.count("ws") > 0) {
             ws = cli.opts["ws"];
         }
+        std::string stack = "-";
+        if (cli.opts.count("stack") > 0) {
+            stack = cli.opts["stack"];
+        }
         bool dotenv_override = cli.opts.count("dotenv_override") > 0;
         std::string base = std::filesystem::current_path().string();
         Chain chain;
         while (true) {
-            Found found = hop(spec, base, ws, dotenv_override, chain);
+            Found found = hop(spec, base, ws, stack, dotenv_override, chain);
             if (found.kind != Kind::Redirect) {
                 return launch(found, args);
             }
@@ -52,6 +57,7 @@ int run_cli(const std::vector<std::string>& argv) {
             spec = found.doc.get<std::string>();
             base = dirname(found.file);
             ws = "-";
+            stack = "-";   // --stack 也不帶過去（同 --ws）；這一層 export 的 AOS_STACK（已是絕對路徑）留在環境裡
             dotenv_override = false;
         }
     } catch (const Error& e) {

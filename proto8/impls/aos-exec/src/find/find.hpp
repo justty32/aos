@@ -1,6 +1,7 @@
 // find.hpp：【find】一跳（hop）——XXX → 走進去、讀 .env、挑入口、判種類（10-21 ideas § 4～§ 7；N-59、N-61、N-62）。內部標頭。
 //
-//   find.cpp      hop：定工作區 → 認出 XXX（locate：資料夾、檔、檔#/指標、補 .json）→ 建 stack、export AOS_WS／AOS_STACK →
+//   find.cpp      hop：定工作區 → 認出 XXX（locate：資料夾、檔、檔#/指標、補 .json）→ 建 stack（--stack ＞ $AOS_STACK ＞
+//                 ws/.stack/）、export AOS_WS／AOS_STACK →
 //                 走進資料夾（或檔所在的資料夾）：設 AOS_CF／AOS_CD／AOS_CO、cd、讀那裡的 .env、旗標蓋回 →
 //                 資料夾：照「當下的」$AOS_ENTRY 一段段走、沿路的資料夾都走進去，挑到資料夾就再走進去、一路往下，
 //                 挑到檔（或補 .json）為止（走回走過的資料夾＝EntryBad）→ 交給 classify 判種類 → 重設 AOS_CF／AOS_CD／AOS_CO
@@ -23,19 +24,21 @@ struct Chain {
     std::vector<std::string> keys;
 };
 
-// 這一跳的旗標。apply＝每讀完一份 .env（檔或 JSON 的 .env key）就把旗標給的值蓋回去（旗標 ＞ .env，N-58）：目前只有 --ws。
+// 這一跳的旗標。apply＝每讀完一份 .env（檔或 JSON 的 .env key）就把旗標給的值蓋回去（旗標 ＞ .env，N-58）：--ws 與 --stack（11-03）。
 // dotenv_override＝--dotenv-override（10-22）：這一跳讀的每份 .env 都蓋掉已有的；不往下傳。
 struct Layer {
     bool flag_ws = false;
     std::string ws;
+    bool flag_stack = false;
+    std::string stack;   // 轉好的絕對路徑、結尾 /
     bool dotenv_override = false;
     void apply() const;
 };
 
-// 一跳。spec 的相對路徑從 base 算；ws_flag＝這一跳的 --ws（沒給＝"-"）、dotenv_override＝這一跳的 --dotenv-override
-// （轉向後的跳一律 "-"、false）。
-Found hop(const std::string& spec, const std::string& base, const std::string& ws_flag, bool dotenv_override,
-          Chain& chain);
+// 一跳。spec 的相對路徑從 base 算；ws_flag／stack_flag＝這一跳的 --ws／--stack（沒給＝"-"）、dotenv_override＝這一跳的
+// --dotenv-override（轉向後的跳一律 "-"、"-"、false）。
+Found hop(const std::string& spec, const std::string& base, const std::string& ws_flag, const std::string& stack_flag,
+          bool dotenv_override, Chain& chain);
 
 // classify 的結果：種類＋值、入口在檔裡的指標（AOS_CO）、最後讀的那份 JSON .env key 設過的名字（一份都沒讀＝沒有）。
 struct Classified {

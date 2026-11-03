@@ -2,7 +2,7 @@
 
 `aos-exec - 在工作區裡執行一個資料夾程式`（NAME，C-54 R1）
 
-**一句話：`aos-exec [--ws WS] [--dotenv-override] XXX [args...]`——在工作區 WS 執行 XXX 這個程式：定好工作區、走進 XXX（cd、讀那裡的 `.env`）、挑出入口、備好環境變數、開跑。**
+**一句話：`aos-exec [--ws WS] [--stack S] [--dotenv-override] XXX [args...]`——在工作區 WS 執行 XXX 這個程式：定好工作區、走進 XXX（cd、讀那裡的 `.env`）、挑出入口、備好環境變數、開跑。**
 一個 lib（`lib/libaos-exec.a`，公開標頭 `aos/exec.hpp`）加一支薄薄的命令列（`bin/aos-exec`，只叫 `run_cli`）。連 aos-util、aos-directive（解單子、argv 陣列與 JSON `.env` key 的指示詞）、inst（C 的 libaos，靜態版 `inst-static`）。全家慣例見 [impls/README.md](../README.md)。
 inst 是 C lib、沒有命令列，inst 單子由 aos-exec 在行程內跑（ideas § 20）。[aos-loop](../aos-loop/README.md)、[aos-fsm](../aos-fsm/README.md) 的每一次、[aos-daemon](../aos-daemon/README.md) 的子 loop，都是在 fork 出來的子行程裡呼叫這個庫的 `run_cli`（等同起一支 `aos-exec -- 目標 參數...`）。
 
@@ -20,21 +20,24 @@ echo hi | aos-exec tool              # tool/_entry.json 是 {"argv": ["cat"]}：
 ## 用法
 
 ```
-aos-exec [--ws WS] [--dotenv-override] XXX [args...]
+aos-exec [--ws WS] [--stack S] [--dotenv-override] XXX [args...]
 ```
 
 - **旗標**寫在 XXX 前面；**第一個不是旗標的參數**（不以 `-` 開頭，或就是 `-`）就是 XXX，之後全部**原樣**給入口（XXX 後面的 `--ws`、`--` 也是 args）。
   `--` 結束旗標（XXX 可以 `-` 開頭：`aos-exec -- -p`）。帶值的旗標寫 `--ws V` 或 `--ws=V`；重複給＝最後一個算。
-  不認得的旗標＝`FlagUnknown`；旗標缺值、沒給 XXX、不帶值的旗標寫成 `--dotenv-override=V`＝`ArgumentsBad`，stderr 一行 `aos-exec: ArgumentsBad usage: aos-exec [--ws WS] [--dotenv-override] XXX [args...]（原因）`。
-  旗標解析在 aos-util 的 `aos/cli.hpp`（`parse_cli`，loop／fsm／daemon 共用）；aos-exec 的旗標表有 `--ws`（10-21 ideas § 3）與不帶值的 `--dotenv-override`。
+  不認得的旗標＝`FlagUnknown`；旗標缺值、沒給 XXX、不帶值的旗標寫成 `--dotenv-override=V`＝`ArgumentsBad`，stderr 一行 `aos-exec: ArgumentsBad usage: aos-exec [--ws WS] [--stack S] [--dotenv-override] XXX [args...]（原因）`。
+  旗標解析在 aos-util 的 `aos/cli.hpp`（`parse_cli`，loop／fsm／daemon 共用）；aos-exec 的旗標表有 `--ws`（10-21 ideas § 3）、`--stack`（11-03）與不帶值的 `--dotenv-override`。
 - **`--dotenv-override`**（10-22 ideas § 3，不帶值、重複給＝一樣）：`.env` 蓋掉已有的環境變數。只管這一次起來的 aos-exec：這一跳一路往下讀的每份 `.env`
   （資料夾、`$AOS_ENTRY` 沿路、JSON 物件的 `.env` key）都吃；字串轉向（全新一跳）、argv 陣列插進去的 aos-exec、loop／fsm／daemon 每次叫的 aos-exec 都不吃，要的人自己在 argv 寫。
 - **`--ws WS`**：沒給、`-` 或空＝沿用 `$AOS_WS`，沒設用 `.`；給路徑就用那個（相對於呼叫當下的 cwd）；不是資料夾＝`WsMissing`。
   XXX 後面的都是 args（`aos-exec XXX WS args...` 的 WS 也是 args）。
+- **`--stack S`**（11-03，使用者「預設還是要放工作區。要自動建。要沿用外面的。」）：stack 放哪。沒給、`-` 或空＝沿用 `$AOS_STACK`，沒設＝`$AOS_WS/.stack/`；
+  給路徑就用那個（相對於呼叫當下的 cwd、絕對也行、結尾 `/` 可有可無）；mkdir -p、轉絕對、結尾 `/`，export 成 `AOS_STACK`；建不了＝`MkdirFailed`。
+  跟 `--ws` 一樣每讀完一份 `.env` 蓋回去（`.env` 的 `AOS_STACK` 加 `--dotenv-override` 也蓋不過）、只管這一跳（字串轉向的下一跳不吃，沿用這一跳 export 好的絕對路徑）。
 - **XXX**：資料夾、檔、或 `檔#/指標`；相對路徑從呼叫當下的 cwd 算。
 - **args** 原樣接在入口後面；stdin 不讀，原樣給入口。
 - **優先順序**：沒 `--dotenv-override`＝旗標 ＞ 原本的環境 ＞ `.env` ＞ 預設；有＝旗標 ＞ `.env` ＞ 原本的環境 ＞ 預設
-  （例：工作區＝`--ws` ＞ 外面的 `$AOS_WS` ＞ `.env` 的 `AOS_WS` ＞ `.`；`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO` 在讀 `.env` 前已設好，不加旗標 `.env` 改不了）。
+  （例：工作區＝`--ws` ＞ 外面的 `$AOS_WS` ＞ `.env` 的 `AOS_WS` ＞ `.`；stack＝`--stack` ＞ 外面的 `$AOS_STACK` ＞ `$AOS_WS/.stack/`；`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO` 在讀 `.env` 前已設好，不加旗標 `.env` 改不了）。
 
 ### 一跳（hop）：走進去、讀 `.env`、挑入口
 
@@ -45,10 +48,10 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
    - **資料夾** → 記下來，入口**這時還不挑**（要等讀完 `.env`）。資料夾帶 `#/`＝`EntryBad`。
    - **檔** → 就用它。
    - **不在、basename 沒有 `.`** → 補找 `XXX.json`；都沒有＝`EntryMissing`。
-3. **建 stack**（`setup_stack`）：`AOS_STACK` 沒設＝`$AOS_WS/.stack/`，有設沿用（相對於呼叫當下的 cwd）；mkdir -p、轉絕對、結尾 `/`；export `AOS_WS`、`AOS_STACK`。
+3. **建 stack**（`setup_stack`）：`--stack` 給了就用它；沒給（或 `-`、空）時 `AOS_STACK` 沒設＝`$AOS_WS/.stack/`，有設沿用（兩種相對路徑都從呼叫當下的 cwd 算）；mkdir -p、轉絕對、結尾 `/`；export `AOS_WS`、`AOS_STACK`。
    只有這一步算出來的會建、會轉絕對；之後 `.env` 設的 `AOS_*` 照字面用（`.env` 改 `AOS_WS` 時 `AOS_STACK` 不跟著搬，風險自擔，ideas § 6 J8）。
 4. **走進去**（`enter`）：資料夾（或檔所在的資料夾）——`AOS_CF`、`AOS_CD` 先設成它（XXX 是檔時 `AOS_CF`＝那個檔）、`AOS_CO` 設空、**cd 進去**、
-   **讀那裡的 `.env`**（見下面）、**旗標蓋回**（`--ws` 給的值再寫回 `AOS_WS`）。走進去那一刻 `$AOS_ENTRY` 是 `.env`＝那份 `.env` 不讀成環境（它就是入口）。
+   **讀那裡的 `.env`**（見下面）、**旗標蓋回**（`--ws` 給的值再寫回 `AOS_WS`、`--stack` 給的再寫回 `AOS_STACK`）。走進去那一刻 `$AOS_ENTRY` 是 `.env`＝那份 `.env` 不讀成環境（它就是入口）。
 5. **資料夾：讀完 `.env` 才照「當下的」`$AOS_ENTRY` 挑入口**（沒設或空＝`_entry`；所以 `.env` 設 `AOS_ENTRY` 有用）：
    - `$AOS_ENTRY` **一段段走**：`sub/run`＝走進 `sub/`（cd、讀它的 `.env`、旗標蓋回）再挑 `run`；沿路的資料夾都走進去（由外到內），中間某段不是資料夾＝`EntryMissing`。
      空的段不算一段（尾巴的 `/`、`//`；`_entry/`＝`_entry`，全是 `/`＝`.`）；`.` 不算走進新資料夾、不重讀 `.env`。
@@ -107,7 +110,7 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
 |---|---|---|
 | `AOS_ENTRY` | aos-exec 自己只讀、不設；沒設（或空）＝`_entry`。資料夾裡與 JSON 裡用同一個名字；每次挑入口都重讀（`.env` 可能剛改過它） | 繼承 |
 | `AOS_WS` | 每跳設：WS 的絕對路徑（`--ws` 給的，每讀完一份 `.env` 都蓋回去） | 叫別人時明給 |
-| `AOS_STACK` | 沒設＝`$AOS_WS/.stack/`；有設沿用（相對於呼叫當下的 cwd）；都 mkdir -p、轉絕對、結尾 `/` | 叫別人時明給 |
+| `AOS_STACK` | `--stack` 給的（每讀完一份 `.env` 都蓋回去）＞ 有設沿用 ＞ `$AOS_WS/.stack/`；相對的從呼叫當下的 cwd 算；都 mkdir -p、轉絕對、結尾 `/` | 叫別人時明給 |
 | `AOS_CF` | 每跳覆寫：實際被執行的檔（解開捷徑的絕對路徑，不帶 `#/…`；往下走進 JSON 物件時不變；字串轉向後＝最後那個檔）。走進資料夾時先＝那個資料夾 | 每層覆寫 |
 | `AOS_CD` | 每跳覆寫：`AOS_CF` 所在的資料夾＝cd 進去的地方 | 每層覆寫 |
 | `AOS_CO` | 每跳覆寫（aos current obj）：入口在那份 JSON 檔裡的位置，JSON 指標、不帶 `#`（例 `/a/_entry`；`檔#/指標` 也算在內，之後每挑一格接 `/` 加照 `~0`／`~1` 跳脫的 key）；整份檔就是入口、或可執行檔＝空。走進資料夾時先設空 | 每層覆寫 |
@@ -175,7 +178,7 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
   拆不成「先純計算、最後才動全域」的幾步，所以 `check_ws`／`setup_stack`／`hop`／`launch` 都是內部函數、只公開 `run_cli`。
   所以長命的呼叫者不在自己的行程裡叫它：aos-loop、aos-fsm 的每一次、aos-daemon 的子 loop 都是 **fork 出來的子行程**裡呼叫 `run_cli`，
   效果等同起一支 `aos-exec -- 目標 參數...`，父行程的 cwd 與環境不受影響。
-- **AOS_STACK 在 chdir 之前算**：有設的相對路徑要從呼叫當下的 cwd 算。WS 的檢查在認出 XXX 之前、建 stack 在認出 XXX 之後（錯誤先後同 bin 版），所以拆成 `check_ws`、`setup_stack` 兩個。
+- **AOS_STACK 在 chdir 之前算**：`--stack` 與有設的 `$AOS_STACK` 的相對路徑要從呼叫當下的 cwd 算。WS 的檢查在認出 XXX 之前、建 stack 在認出 XXX 之後（錯誤先後同 bin 版），所以拆成 `check_ws`、`setup_stack` 兩個。
 - **字串轉向是全新的一跳**：C-52「每層只管自己」——下一層自己定工作區、cd、讀 `.env`；這一層的旗標不帶過去。唯一的例外是繞圈偵測沿用同一條鏈，當安全網（ideas § 7 K2）。
 - **`.env` 的錯不印值**：`.env` 常放 API key，錯誤訊息只說哪個檔第幾行、什麼原因。
 - **可執行檔、argv 陣列都用 glibc 的 `execvp`**：`+x` 沒 `#!`（ENOEXEC）由它改用 `/bin/sh` 跑，三種入口（含 inst 單子的 `argv[0]`）一致（ideas § 22）。
@@ -194,14 +197,14 @@ aos-exec [--ws WS] [--dotenv-override] XXX [args...]
 
 | 代號 | 什麼時候 |
 |---|---|
-| `ArgumentsBad`（共用） | 沒給 XXX、旗標缺值、不帶值的旗標帶了值（原因 `usage: aos-exec [--ws WS] [--dotenv-override] XXX [args...]（原因）`） |
+| `ArgumentsBad`（共用） | 沒給 XXX、旗標缺值、不帶值的旗標帶了值（原因 `usage: aos-exec [--ws WS] [--stack S] [--dotenv-override] XXX [args...]（原因）`） |
 | `FlagUnknown`（共用） | 不認得的旗標 |
 | `WsMissing` | WS 不是資料夾 |
 | `EntryMissing` | 資料夾／檔／`.json` 補找都沒有；多段 `$AOS_ENTRY` 中間某段不是資料夾；`#/` 指標指不到 |
 | `EntryBad` | 既不可執行也不是 JSON；JSON 種類不對（沒 argv 的物件裡沒有 `[$AOS_ENTRY]`、數字、空陣列…）；`#` 後面不是 `/`；資料夾或可執行檔帶 `#/`；字串轉向繞圈；資料夾繞圈；argv 陣列的指示詞解不開或解完不是全字串；inst 單子欄位型別不對 |
 | `DotenvBad` | `.env` 在但讀不到（權限、是資料夾、壞掉的捷徑）；`.env` 壞：沒有 `=`、名字不合、`${` 寫法不對、`${名字}` 沒設、值有 NUL、不是 UTF-8（含 BOM）；JSON `.env` key 的指示詞解不開、名字不合、`${名字}` 沒設。只印位置、不印值 |
 | `DirectiveBad`（aos-directive 透傳） | 單子裡的指示詞解不開：`$env` 沒設、`$ref` 讀不到／不是 JSON、指不到、繞圈（寫法不合不算錯，物件原封不動，之後照欄位規則判） |
-| `MkdirFailed`（共用） | AOS_STACK 建不了 |
+| `MkdirFailed`（共用） | AOS_STACK 建不了（`--stack` 給的也一樣） |
 | `LaunchFailed`（共用） | exec 失敗（ENOENT、EACCES…；原因 `起不來：X（原因）`）；inst 單子 libaos 起不來（原因 `單子跑不起來：` 接 libaos 的名字） |
 | `Internal`（共用） | 照理不會發生的例外；inst 單子收不到結果（libaos 的 `WaitFailed`／`KillFailed`）、準備轉訊號失敗 |
 

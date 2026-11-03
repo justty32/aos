@@ -27,6 +27,9 @@ void Layer::apply() const {
     if (flag_ws) {
         setenv("AOS_WS", ws.c_str(), 1);
     }
+    if (flag_stack) {
+        setenv("AOS_STACK", stack.c_str(), 1);
+    }
 }
 
 namespace {
@@ -127,15 +130,16 @@ void mark(std::set<std::string>& visited, const std::string& dir) {
 
 }  // namespace
 
-Found hop(const std::string& spec, const std::string& base, const std::string& ws_flag, bool dotenv_override,
-          Chain& chain) {
+Found hop(const std::string& spec, const std::string& base, const std::string& ws_flag, const std::string& stack_flag,
+          bool dotenv_override, Chain& chain) {
     Layer layer;
     layer.dotenv_override = dotenv_override;
     layer.flag_ws = !(ws_flag == "-" || ws_flag.empty());
     std::string ws = check_ws(ws_flag);
     layer.ws = ws;
     Located loc = locate(spec, base);
-    setup_stack(ws);
+    layer.flag_stack = !(stack_flag == "-" || stack_flag.empty());
+    layer.stack = setup_stack(ws, stack_flag);   // 還沒 cd：相對的 --stack／$AOS_STACK 從呼叫當下的 cwd 算
 
     std::string f = loc.file;
     std::set<std::string> names;

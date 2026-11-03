@@ -6,7 +6,7 @@
 每個案例一個空的暫存資料夾、環境先清掉 AOS_*；自己造小程式（不靠 demo）。
 A 段從 proto8/tests/test_exec.py（sh 版）移植，行為應一致（錯誤格式也是「aos-exec: …」，多了代號）；B 段是 ideas 10-19 § 14～§ 19 的新規則；
 C 段是 inst 單子（§ 20：aos-exec 行程內交給 libaos 跑、留在行程裡當監工）；D 段是 10-20 的指示詞與 argv；
-E 段是 10-21 的命令列旗標、.env、入口順序、資料夾與 JSON 物件一路往下、AOS_CO（對照 proto8/tests/test_exec_rules.py、test_exec_env.py）。
+E 段是 10-21 的命令列旗標（11-03 加 --stack）、.env、入口順序、資料夾與 JSON 物件一路往下、AOS_CO（對照 proto8/tests/test_exec_rules.py、test_exec_env.py）。
 A～D 段的 run(XXX, WS, args...) 已換成新命令列 `aos-exec --ws WS XXX args...`（見 run）。
 """
 import json
@@ -689,7 +689,45 @@ def e_flags(t):
     rc, _, _, stderr = raw("--nope")
     check("usage 一行（不認得的旗標）", stderr.startswith("aos-exec: FlagUnknown usage: aos-exec "), True)
     rc, _, _, stderr = raw("--ws")
-    check("usage 一行", stderr.startswith("aos-exec: ArgumentsBad usage: aos-exec [--ws WS] [--dotenv-override] XXX [args...]"), True)
+    check("usage 一行", stderr.startswith("aos-exec: ArgumentsBad usage: aos-exec [--ws WS] [--stack S] [--dotenv-override] XXX [args...]"), True)
+
+
+@case
+def e_stack_flag(t):
+    # 11-03 --stack S（使用者「預設還是要放工作區。要自動建。要沿用外面的。」）：--stack ＞ $AOS_STACK ＞ $AOS_WS/.stack/
+    d = prog(t, "p", 'echo "$AOS_STACK"\n')
+    ws = Path(t, "ws"); ws.mkdir()
+    rt = Path(t).resolve()
+    mine, env_s = Path(t, "mine"), Path(t, "env_s")
+    check("--stack 蓋過 $AOS_STACK", raw("--ws", str(ws), "--stack", str(mine), d, env={"AOS_STACK": str(env_s)})[:2],
+          (0, "%s/\n" % mine.resolve()))
+    check("--stack 自動建", (mine.is_dir(), env_s.exists()), (True, False))
+    check("--stack 相對從 cwd 算", raw("--ws", str(ws), "--stack", "rel", d, cwd=t)[:2], (0, "%s/rel/\n" % rt))
+    check("--stack 相對建在 cwd", (Path(t, "rel").is_dir(), Path(d, "rel").exists()), (True, False))
+    check("--stack 結尾 / 只留一個", raw("--ws", str(ws), "--stack", str(mine) + "/", d)[:2], (0, "%s/\n" % mine.resolve()))
+    check("--stack 多層 mkdir -p", raw("--ws", str(ws), "--stack", str(Path(t, "x", "y")), d)[:2],
+          (0, "%s/x/y/\n" % rt))
+    check("--stack=S", raw("--ws", str(ws), "--stack=%s" % mine, d)[:2], (0, "%s/\n" % mine.resolve()))
+    check("--stack - 沿用 $AOS_STACK", raw("--ws", str(ws), "--stack", "-", d, env={"AOS_STACK": str(env_s)})[:2],
+          (0, "%s/\n" % env_s.resolve()))
+    check("--stack - 沒設＝工作區/.stack/", raw("--ws", str(ws), "--stack", "-", d)[:2], (0, "%s/.stack/\n" % ws.resolve()))
+    check("--stack= 空＝沿用", raw("--ws", str(ws), "--stack=", d, env={"AOS_STACK": str(env_s)})[:2],
+          (0, "%s/\n" % env_s.resolve()))
+    check("--stack 缺值", raw("--stack")[:3:2], (1, "ArgumentsBad"))
+    put(Path(t, "file"), "x")
+    check("--stack 建不了", raw("--ws", str(ws), "--stack", str(Path(t, "file", "s")), d)[:3:2], (1, "MkdirFailed"))
+    # 旗標 ＞ .env（同 --ws：每讀完一份 .env 蓋回去）；不加旗標時 .env 的 AOS_STACK 照 --dotenv-override 規則
+    e = prog(t, "e", 'echo "$AOS_STACK"\n')
+    put(Path(e, ".env"), "AOS_STACK=/from-env/\n")
+    check("--stack ＞ .env（--dotenv-override 也一樣）", raw("--dotenv-override", "--ws", str(ws), "--stack", str(mine), e)[:2],
+          (0, "%s/\n" % mine.resolve()))
+    check("沒 --stack：.env 不蓋已 export 的", raw("--ws", str(ws), e)[:2], (0, "%s/.stack/\n" % ws.resolve()))
+    check("沒 --stack 加 --dotenv-override：.env 照字面", raw("--dotenv-override", "--ws", str(ws), e)[:2], (0, "/from-env/\n"))
+    # 旗標只管這一跳：字串轉向的下一跳不吃 --stack（不會從下一跳的 cwd 重算），沿用這一跳 export 的絕對路徑
+    r = Path(t, "r")
+    put(r / "_entry.json", json.dumps("../p"))
+    check("轉向不帶 --stack、沿用已 export 的", raw("--ws", str(ws), "--stack", "rs", str(r), cwd=t)[:2], (0, "%s/rs/\n" % rt))
+    check("轉向不從下一跳的 cwd 重算", (r / "rs").exists(), False)
 
 
 @case

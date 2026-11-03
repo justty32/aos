@@ -29,11 +29,14 @@ std::string check_ws(const std::string& ws_flag) {
     return abspath(ws);
 }
 
-void setup_stack(const std::string& ws) {
-    std::string stack = join(ws, ".stack");
-    const char* s = std::getenv("AOS_STACK");
-    if (s != nullptr && s[0] != '\0') {
-        stack = s;
+std::string setup_stack(const std::string& ws, const std::string& stack_flag) {
+    std::string stack = stack_flag;
+    if (stack.empty() || stack == "-") {
+        stack = join(ws, ".stack");
+        const char* s = std::getenv("AOS_STACK");
+        if (s != nullptr && s[0] != '\0') {
+            stack = s;
+        }
     }
     std::error_code ec;
     fs::create_directories(stack, ec);
@@ -46,6 +49,7 @@ void setup_stack(const std::string& ws) {
     }
     setenv("AOS_WS", ws.c_str(), 1);
     setenv("AOS_STACK", abs.c_str(), 1);
+    return abs;
 }
 
 }  // namespace aos::exec
