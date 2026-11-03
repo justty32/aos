@@ -1,7 +1,7 @@
 """test_aos_tools - proto8/bin/aos-tools：一個 agent 資料夾一份工具註冊檔（tools.json），add／rm／ls／get／call。
 
 三種登記對象（資料夾＋_tooldef、JSON＋_tooldef、可執行檔＋--tooldef／--tool-call）、不合就報錯、撞名與 --override、
-存絕對路徑（相對從 cwd 算）、手寫相對路徑從 tools.json 的資料夾算、--tooldef 快取、指示詞拆檔（$ref 陣列）。
+存絕對路徑（相對從 cwd 算）、手寫相對路徑從 tools.json 的資料夾算、--tooldef 快取與 --no-cache（11-03）、指示詞拆檔（$ref 陣列）。
 設計：proto8/thinking/2026-10-28-aos-tools.md。"""
 import json, os, subprocess, tempfile, unittest
 from pathlib import Path
@@ -148,6 +148,49 @@ class AosTools(unittest.TestCase):
         self.ok("ls")
         self.assertEqual(count.read_text(), "xx")
         self.assertEqual((self.agent / "tools.json").read_text(), before)
+
+    def test_no_cache(self):
+        """add --no-cache（11-03）：那一項記 "cache": false、不存快取；ls／get 每次重跑 --tooldef、不寫回；call 照叫；
+        --override 沒帶 --no-cache＝回到有快取；dir／json 給 --no-cache＝ArgumentsBad、手寫 false＝RegistryBad。"""
+        count = self.lib / "add.py.count"
+        self.assertEqual(json.loads(self.ok("add", "--no-cache", "../lib/add.py")), {"name": "add", "kind": "exe",
+                                                                                     "path": str(self.lib / "add.py")})
+        self.assertEqual(count.read_text(), "x")                             # add 時照樣跑一次（驗定義）
+        self.assertIs(self.reg()["add"]["cache"], False)
+        before = (self.agent / "tools.json").read_text()
+        self.assertEqual(json.loads(self.ok("ls", "--json"))[0]["tooldef"]["description"], "加法")
+        self.ok("ls")
+        self.assertEqual(json.loads(self.ok("get", "add"))["kind"], "exe")
+        self.assertEqual(count.read_text(), "xxxx")                          # 檔沒變也每次重跑
+        self.assertEqual((self.agent / "tools.json").read_text(), before)    # 不寫快取
+        self.assertEqual(self.ok("call", "add", stdin='{"x": 2, "y": 3}'), "5\n")
+        self.ok("add", "--override", "../lib/add.py")                        # 沒帶 --no-cache：回到有快取
+        self.assertEqual(self.reg()["add"]["cache"]["tooldef"]["description"], "加法")
+        n = len(count.read_text())
+        self.ok("ls")
+        self.assertEqual(len(count.read_text()), n)                          # 用快取、沒重跑
+        self.ok("add", "--override", "--no-cache", "../lib/add.py")         # 有快取的項 --override --no-cache：快取拿掉
+        self.assertIs(self.reg()["add"]["cache"], False)
+        self.bad("ArgumentsBad", "add", "--no-cache", "../lib/clock")
+        self.bad("ArgumentsBad", "add", "--no-cache", "../lib/echo.json")
+        self.assertEqual(sorted(self.reg()), ["add"])                        # 報錯了什麼都不寫
+        self.bad("PathMissing", "add", "--no-cache", "../lib/nope")
+
+    def test_no_cache_hand_written(self):
+        """手寫 "cache": false 也算（aos-json set 改得到）；dir／json 寫 false、cache 寫 true＝RegistryBad。"""
+        self.ok("add", "../lib/add.py")
+        count = self.lib / "add.py.count"
+        r = subprocess.run(["aos-json", "set", "%s#/tools/add/cache" % (self.agent / "tools.json"), "false"],
+                           capture_output=True, text=True, env=self.env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.ok("ls")
+        self.ok("get", "add")
+        self.assertEqual(count.read_text(), "xxx")
+        (self.agent / "tools.json").write_text(json.dumps({"tools": {"clock": {"path": "../lib/clock", "cache": False}}}))
+        self.assertIn("工具 clock", self.bad("RegistryBad", "ls"))
+        self.bad("RegistryBad", "get", "clock")
+        (self.agent / "tools.json").write_text(json.dumps({"tools": {"add": {"path": "../lib/add.py", "cache": True}}}))
+        self.bad("RegistryBad", "ls")
 
     def test_ls_json_and_broken_entry(self):
         self.assertEqual(json.loads(self.ok("ls", "--json")), [])           # 沒有 tools.json＝沒有工具

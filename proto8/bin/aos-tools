@@ -5,7 +5,7 @@
 aos agent（agent-eve 等範本）想問腦之前先 `aos-tools ls --json` 拿工具清單，腦要叫工具時 `aos-tools call 名`；
 claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的翻譯櫃台）。
 
-    aos-tools [--file F] add [--override] [--name N] XXX   登記 XXX（檔或資料夾；相對路徑從 cwd 算），存絕對路徑
+    aos-tools [--file F] add [--override] [--name N] [--no-cache] XXX   登記 XXX（檔或資料夾；相對路徑從 cwd 算），存絕對路徑
     aos-tools [--file F] rm XXX                            拿掉（XXX＝工具名；不是登記過的名字就當路徑，拿掉指到那裡的）
     aos-tools [--file F] ls [--json]                       列：一行一個「名字 TAB 種類 TAB 路徑」；--json＝一行 JSON 陣列
     aos-tools [--file F] get XXX                           一個工具一行 JSON：name、kind、path、tooldef、metainfo（有才給）
@@ -19,6 +19,10 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   json  JSON 檔（aos-exec 跑得動的那種）頂層要有 _tooldef 物件；_metainfo key 有就一起給。叫＝aos-exec 檔，arguments 進 stdin。
   exe   python 或其他可執行檔：`XXX --tooldef` 在 stdout 吐工具定義（JSON 物件，10 秒內、退 0）；結果快取在註冊檔裡
         （檔的 mtime 與大小沒變就用快取；變了就重跑、不寫回——跑起來時不寫定義資料夾，P-15）。
+        add --no-cache（11-03）＝那一項記 "cache": false、不存快取：之後 ls／get 每次都重跑 --tooldef、不讀不寫快取
+        （快取有時候礙事，例如定義是工具 import 的別的檔算出來的、檔本身沒變）。手寫也行（aos-json set …#/tools/名/cache false）。
+        cache 只收 false 或物件，別的＝RegistryBad；dir／json 項寫 false＝RegistryBad、add --no-cache 給 dir／json＝ArgumentsBad。
+        --override 重登記時沒帶 --no-cache＝回到有快取（整項重寫）。
         叫＝aos-exec 檔 --tool-call 任務檔：arguments 先寫成 $AOS_STACK/tool_call.json（沒設 AOS_STACK＝暫存檔、用完刪），stdin 不給。
 工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收不管。
 工具名：--name ＞ 檔名去掉副檔名（資料夾＝資料夾名），只收 [A-Za-z0-9_-]、最多 64 字（OpenAI／MCP 的限制）。撞名＝ToolExists，--override 蓋掉。
@@ -31,7 +35,7 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
 NAME = "aos-tools"
-USAGE = "aos-tools [--file F] add [--override] [--name N] XXX | rm XXX | ls [--json] | get XXX | call 名"
+USAGE = "aos-tools [--file F] add [--override] [--name N] [--no-cache] XXX | rm XXX | ls [--json] | get XXX | call 名"
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 TOOLDEF_TIMEOUT_S = 10
 
@@ -122,8 +126,11 @@ def first_file(d, names):
 
 
 def inspect(path, cache=None):
-    """登記對象 → {kind, tooldef, metainfo?, cache?}；不符合要求丟 Fail。cache＝註冊檔裡存的 exe 快取。"""
+    """登記對象 → {kind, tooldef, metainfo?, cache?}；不符合要求丟 Fail。cache＝註冊檔裡存的 exe 快取；
+    False＝不用快取（11-03 --no-cache）：exe 每次重跑 --tooldef、不給 cache；dir／json 碰到 False＝RegistryBad。"""
     kind = kind_of(path)
+    if cache is False and kind != "exe":
+        raise Fail("RegistryBad", "%s 是 %s，\"cache\": false 只給可執行檔（exe）" % (path, kind))
     out = {"kind": kind}
     if kind == "dir":
         p = first_file(path, ("_tooldef", "_tooldef.json"))   # 同 _entry 的找法：不帶副檔名的先（N-61）
@@ -144,13 +151,16 @@ def inspect(path, cache=None):
         out["tooldef"] = check_tooldef(td, path + "#/_tooldef")
         meta = read_json(path, "_metainfo", "ToolDefBad")[1] if "_metainfo" in raw else None
     else:
-        s = stamp(path)
-        if isinstance(cache, dict) and cache.get("stamp") == s and isinstance(cache.get("tooldef"), dict):
-            td = cache["tooldef"]
+        if cache is False:
+            out["tooldef"] = check_tooldef(run_tooldef(path), path + " --tooldef")
         else:
-            td = run_tooldef(path)
-        out["tooldef"] = check_tooldef(td, path + " --tooldef")
-        out["cache"] = {"stamp": s, "tooldef": td}
+            s = stamp(path)
+            if isinstance(cache, dict) and cache.get("stamp") == s and isinstance(cache.get("tooldef"), dict):
+                td = cache["tooldef"]
+            else:
+                td = run_tooldef(path)
+            out["tooldef"] = check_tooldef(td, path + " --tooldef")
+            out["cache"] = {"stamp": s, "tooldef": td}
         meta = None
     if isinstance(meta, dict):
         out["metainfo"] = meta
@@ -173,6 +183,8 @@ def load_registry(reg):
     for name, e in tools.items():
         if not isinstance(e, dict) or not isinstance(e.get("path"), str) or not e["path"]:
             raise Fail("RegistryBad", "%s 的 tools/%s 要是 {\"path\": 非空字串}" % (reg, name))
+        if "cache" in e and e["cache"] is not False and not isinstance(e["cache"], dict):
+            raise Fail("RegistryBad", "%s 的 tools/%s/cache 只收 false（不用快取）或物件（快取）" % (reg, name))
         out[name] = {"path": os.path.normpath(os.path.join(base, e["path"])), "entry": e}
     return out
 
@@ -223,11 +235,13 @@ def write_new(reg, obj):
 
 
 def cmd_add(reg, args):
-    opts, rest = aos_flags.parse(args, {"--name": "name"}, {"--override": "override"})
+    opts, rest = aos_flags.parse(args, {"--name": "name"}, {"--override": "override", "--no-cache": "no_cache"})
     if len(rest) != 1:
-        raise Fail("ArgumentsBad", "usage: aos-tools [--file F] add [--override] [--name N] XXX")
+        raise Fail("ArgumentsBad", "usage: aos-tools [--file F] add [--override] [--name N] [--no-cache] XXX")
     path = os.path.normpath(os.path.abspath(rest[0]))
-    info = inspect(path)
+    if opts.get("no_cache") and kind_of(path) != "exe":
+        raise Fail("ArgumentsBad", "--no-cache 只給可執行檔（exe）；%s 是 %s，本來就沒有快取" % (path, kind_of(path)))
+    info = inspect(path, False if opts.get("no_cache") else None)
     name = opts.get("name") or (os.path.basename(path) if info["kind"] == "dir"
                                 else os.path.splitext(os.path.basename(path))[0])
     if not NAME_RE.match(name):
@@ -237,7 +251,7 @@ def cmd_add(reg, args):
         raise Fail("ToolExists", "%s 已經登記了（指到 %s）；要蓋掉加 --override" % (name, tools[name]["path"]))
     entry = {"path": path}
     if info["kind"] == "exe":
-        entry["cache"] = info["cache"]
+        entry["cache"] = False if opts.get("no_cache") else info["cache"]
     if os.path.exists(reg):
         aos_json(["set", "--follow", "--parents", "%s#/tools/%s" % (reg, name), json.dumps(entry, ensure_ascii=False)])
     else:
