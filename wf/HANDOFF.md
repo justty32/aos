@@ -16,7 +16,7 @@
 
 1. **授權**：同 13:30 那條（隨意 push、opus／sonnet／fable 分工、agent 先讀 wf 規矩）；新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問。多個 agent 同一工作樹時，各自用 GIT_INDEX_FILE 暫存 index 只 commit 自己的段，今天沒再出事。
 2. **13:30 之後做完並 push**：WSL 試驗場 `~/code/playground` 重建（clock、bob、cathy、bob-cathy、resident_bob、eca_bob、eca_kit、kit 工具箱、README 一步步實跑）；說明頁 https://claude.ai/artifact/9k9ssEvEQiKDBcUFmrAZJ9 （第 3 版；舊親手試指南沒覆蓋）；收尾四件 `c7475734`；eca 接 aos 工具（`c024c974` 規劃、`7f363fd4` 實作：eca 資料夾的 tools.json，cli.json `tools` 可改指，使用者「如果cli.json沒有指定，那就去找默認的tools.json」）；aos-eca ls／state 英文名詞＋畫面欄 open／closed（`04b0f33d`，eca 19）；eca 信交給 CLI 就收（`a0bbb2ac`，eca 20；使用者「對於eca來說，他收到信後，丟給claude之類的，然後這封信就算是完成了」「中途掛掉就是邊緣狀況，不要讓邊緣狀況影響他的原本意思」；current.txt 拿掉；P-12／P-43 加註）；`aos-tools add --no-cache`（`dcca4a8c`，aos-tools 04）。
-   - **還沒驗**：這三個 commit 合起來的全套 unittest 沒在同一次跑過（各自跑過相關＋大半全套）→ 開工先在 WSL 暫存 clone 跑一次全套。
+   - **已驗（11-03 晚家機 Manjaro 暫存 clone）**：三個 commit 合跑全套 unittest 646 OK（9 skip）、demo 0、ctest 8/8、wf-lint broken=0。
 3. **daemon 收工 sleep／wake：已照代定實作，待使用者看**（[procs § 8](../proto8/thinking/2026-11-03-procs.md#8-收工時改寫成休息中sleepwake11-03-晚)）。使用者「改寫成休息中」「還記得嗎？我們有start/stop, sleep/wake, pause/resume，我們缺了sleep/wake」。照頂層代定做：收工（ctl stop／Ctrl+C／任何走 finish 的退出）時還在跑的 loop 型＝表上 `sleeping`、stack 留著；daemon 再開 adopt 後第一圈用列上的 stack 自動 wake；你 stop 的照舊 `stopped`；收工時暫停中的醒來仍暫停（已實測）；exec 型照舊拿掉；`kill -9` 不在範圍；`aos-daemon-ctl sleep／wake` **先不開放**（原本待他答的 (a)，代定「不開」）、(b) 照建議「醒來仍暫停」。睡著時寄來的 stop＝開門改 stopped 不 wake、rm＝拿掉。
 4. **雜項**：
    - WSL `~/repo/simple_tools/aos` 在 `dcca4a8c`，但有一個不知誰改的追蹤檔改動 `proto8/lib/aos/ask_round/_tooldef.json`——問使用者，之後 ff 前先處理。
