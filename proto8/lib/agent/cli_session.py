@@ -342,8 +342,9 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None):
     stdout = "".join(lines)
     if out is None:
         die("CliFailed", "claude 結束碼 %d、輸出沒有 result：%s %s" % (code, tail(stdout), tail(err)))
-    if code != 0 or out.get("is_error"):
-        die("CliFailed", "claude 結束碼 %d：%s %s" % (code, tail(stdout), tail(err)))
+    if code != 0 or out.get("is_error"):   # result 行自己帶原因（例 模型不存在）就印它；stdout 尾巴會切在 JSON 中間
+        why = out.get("result") if isinstance(out.get("result"), str) and out.get("result") else tail(stdout)
+        die("CliFailed", "claude 結束碼 %d：%s %s" % (code, tail(why), tail(err)))
     if not sid:
         cell.write("session.txt", (out.get("session_id") or new) + "\n")
     return out.get("result") or ""
