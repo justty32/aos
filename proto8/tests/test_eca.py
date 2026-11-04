@@ -128,13 +128,15 @@ class Eca(unittest.TestCase):
         self.assertEqual(sorted(os.listdir(self.ws)), [".stack"])              # 工作區本身不長東西
 
     def test_fire_and_forget_prompt(self):
-        """11-04：射後不理的範本在 cli.json 寫 "prompt": "tasks/open.txt"（相對 cli.json 的資料夾）＝不用 say，開場白就是那份；
-        aos-exec 答完收工、listen 拿到回答。"""
+        """11-04 翻案：射後不理的範本在 loop.json 給 aos-eca-turn --prompt tasks/open.txt（相對定義資料夾＝AOS_CD）＝不用 say，
+        開場白就是那份；aos-exec 答完收工、listen 拿到回答。"""
         d = self.fire_and_forget("claude")
         (d / "tasks").mkdir()
         (d / "tasks" / "open.txt").write_text("開場白在別的檔\n")
-        cfg = json.loads((d / "cli.json").read_text())
-        (d / "cli.json").write_text(json.dumps(dict(cfg, prompt="tasks/open.txt")))
+        loop = json.loads((d / "loop.json").read_text())
+        argv = loop["exec"]["argv"]
+        argv[-1:-1] = ["--prompt", "tasks/open.txt"]                          # 插在定義資料夾 {"$env": "AOS_CD"} 前
+        (d / "loop.json").write_text(json.dumps(loop))
         r = self.run_([EXEC, "--ws", self.ws, d])
         self.assertEqual(r.returncode, 0, r.stderr)
         r = self.listen("--timeout", "10")

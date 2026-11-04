@@ -3,23 +3,25 @@
 
 10-31 改名、升成 bin 指令（使用者「aos eca turn」；C-54 R13 aos-<領域>-<功能>；前身 lib/eca/turn 格的 turn.py，叫法 aos-exec <turn 格>）：
 
-    aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] <定義資料夾絕對路徑>
+    aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] [--prompt FILE] <定義資料夾絕對路徑>
 
   旗標在位置參數前（aos_flags.parse）。定義的 loop.json 直接叫它：
     {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000}}
   --on-empty（10-31 取代環境變數 ECA_ON_EMPTY，不再讀它）：queue 空時 stop（沒給；退 10＝loop 收工＝射後不理）｜idle（退 0＝loop 隔 interval_ms 再來）。
   --on-busy（10-31，SessionBad 退讓的開關）：yield（沒給）＝有人佔著就這輪退讓（見下）｜answer＝照常答、不因畫面被佔而退讓
     （lock 拿不到就等、有人接在畫面上照樣貼進畫面答、busy.txt 在就等它消失再貼，期限照 cli.json 的 timeout_ms，逾時 ReplyMissing）。
+  --prompt FILE（11-04，開場白檔；使用者「不該在json中指定檔案名稱，應該改成用旗標指定」，thinking 2026-10-30-eca/21）：
+    相對路徑從定義資料夾算；給了但不是檔＝PromptMissing、空字串＝ArgumentsBad、跟 --one 一起給＝ArgumentsBad（工具形沒有 queue）；
+    沒給＝沒有開場白（不找 prompt.txt）。例：["aos-eca-turn", "--on-empty", "stop", "--prompt", "prompt.txt", {"$env": "AOS_CD"}]。
 
 定義資料夾＝eca 的定義（demo/eca-claude 那種）：頂層 cli.json（kind claude｜codex、flags、print_flags、timeout_ms；
-  cli_session 讀的同一份；11-03 起選填 tools、tools_flags；11-04 起選填 prompt）、選填 prompt.txt（開場白：cli.json 沒寫 prompt 就用它，
-  寫了 "prompt": "別的.txt"＝用那份，相對路徑從 cli.json 的資料夾算；11-04 使用者「能改嗎？可以的話就改吧」）、選填 tools.json（aos-tools 的登記檔：cli.json 沒寫 tools
+  cli_session 讀的同一份；11-03 起選填 tools、tools_flags；寫了 prompt 不看，開場白走 --prompt）、選填 tools.json（aos-tools 的登記檔：cli.json 沒寫 tools
   就用它，接上 aos-mcp，工作區＝$AOS_WS、stack＝$AOS_STACK；11-03 eca-tools）。定義不被寫（P-15）；寫的都在 $AOS_STACK。
 
 平級形（沒有 --one）——一次替它答一批（11-03 起：使用者 11-03「每次aos-eca-turn就是把所有信一起丟進去(當然，是有順序的)」「一批幾封無上限」，thinking 2026-10-30-eca/17-11-03-批次-status.md；原本一次一則）：
   ① 這一批＝queue 的 cur/ 全部（認領了、還沒交出去的：上次 --on-busy yield 退讓、或 CLI 沒起來）＋ new/ 全部（aos-post take-all），
      照處理順序（aos_ws.letter_key：有序在前照名字＝寄的順序、無序在後照名字；11-03 aos-post 改版，同 aos-post），幾封都行、沒有上限；CLI 跑的期間才寄來的信留在 new/，下一輪再答。
-     history 空、queue 也空、定義有非空的開場白（prompt 指的檔、沒寫＝prompt.txt）＝先把它當一則 user 投進 queue（aos-post send --ordered）再認領。
+     history 空、queue 也空、--prompt 給的開場白檔非空＝先把它當一則 user 投進 queue（aos-post send --ordered）再認領。
   ② 讀信（aos-post see）：body 不是 {"role": "user", "content": 非空字串}＝壞信，aos-post done 丟掉、原因寫進
      $AOS_STACK/mailbox_warning.txt 一行（只留最後一封；N-16），跳過它、其他封照答（衝突 5、Q-4；11-03 前記在 trace、退 0）。
      名字不是有序的不再算壞信（11-03 aos-post 改版：有序、無序同箱，無序的排在最後、照樣答）。
@@ -46,9 +48,8 @@ PATH 上要有 aos-post（平級形）。
 錯（平級形與 argv）：stderr 一行「aos-eca-turn: 代號 原因」、退 1（P-20 停下等人）。交出去之前的錯（CliMissing、ToolsMissing、
   畫面等 busy.txt 逾時的 ReplyMissing…）＝整批信留在 cur/（或還在 new/）、history 不動，修好重跑整批照問；交出去之後的錯＝信已收、user 已接、
   沒有 assistant，不重答（④）。
-  代號：ArgumentsBad、FlagUnknown、AgentBad、StackMissing、HistoryBad、PostFailed、WriteFailed，
-  加 cli_session 的 CfgMissing、CfgBad、ToolsMissing（11-03 eca-tools：cli.json 的 tools 指的登記檔不在）、
-  PromptMissing（11-04：cli.json 的 prompt 指的開場白檔不在）、CliMissing（含 aos-mcp 不在 PATH 上）、
+  代號：ArgumentsBad、FlagUnknown、AgentBad、StackMissing、PromptMissing（11-04：--prompt 給的開場白檔不在）、HistoryBad、PostFailed、WriteFailed，
+  加 cli_session 的 CfgMissing、CfgBad、ToolsMissing（11-03 eca-tools：cli.json 的 tools 指的登記檔不在）、CliMissing（含 aos-mcp 不在 PATH 上）、
   CliFailed、ReplyMissing（yield 時的 SessionBad 不算錯，見上）。"""
 import json, os, subprocess, sys
 
@@ -59,7 +60,7 @@ import aos_flags, aos_ws, cli_session  # noqa: E402
 
 NAME = "aos-eca-turn"
 NOT_FOUND = 10
-USAGE = "usage: aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] <定義資料夾絕對路徑>"
+USAGE = "usage: aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] [--prompt FILE] <定義資料夾絕對路徑>"
 
 
 class Fail(Exception):
@@ -176,19 +177,16 @@ def letter_body(box, sig):
     return body, None
 
 
-def opening(stack, box, cfg):
+def opening(stack, box, path):
     """history 空、queue 也空、有開場白檔＝把開場白投進 queue（射後不理那種的第一則）。回 True＝投了。
-    開場白檔＝cli.json 的 prompt 指的、沒寫＝同層 prompt.txt（11-04；cli_session.load_cfg 算好放在 cfg["prompt_file"]）。"""
-    path = cfg.get("prompt_file")
+    開場白檔＝--prompt 給的（main 已轉成絕對路徑）；沒給（None）＝沒有開場白，不找 prompt.txt（11-04 翻案）。"""
     if not path:
         return False
     try:
         with open(path, encoding="utf-8") as f:
             text = f.read()
-    except FileNotFoundError:
-        if "prompt" in cfg:                                         # load_cfg 之後才被刪掉；寫了就要有（同 ToolsMissing）
-            raise Fail("PromptMissing", "開場白檔不在：%s" % path)
-        return False
+    except FileNotFoundError:                                       # main 驗過之後才被刪掉；給了就要有
+        raise Fail("PromptMissing", "開場白檔不在：%s" % path)
     except OSError as e:
         raise Fail("AgentBad", "讀不了 %s：%s" % (path, e))
     text = text[:-1] if text.endswith("\n") else text           # 同 aos-say：結尾一個換行不算
@@ -201,23 +199,23 @@ def opening(stack, box, cfg):
 SEP = "\n\n"                                   # 一批好幾封時，各封 content 照順序用一個空行接起來（11-03 代定）
 
 
-def take_all(stack, box, cfg):
+def take_all(stack, box, prompt):
     """new/ 裡的信全部認領到 cur/（aos-post take-all；沒信退 NOT_FOUND＝剛好被撤回，不算錯）；一批幾封沒有上限（11-03）。
-    history 空、queue 也空、定義有開場白檔＝先投開場白再認領。"""
-    if not names(box, "new") and not names(box, "cur") and not opening(stack, box, cfg):
+    history 空、queue 也空、給了開場白檔（--prompt）＝先投開場白再認領。"""
+    if not names(box, "new") and not names(box, "cur") and not opening(stack, box, prompt):
         return
     if names(box, "new"):
         must_post(["take-all", box], ok=(0, NOT_FOUND))            # new/ → cur/
 
 
-def one_turn(template, stack, ws, empty_code, on_busy):
+def one_turn(template, stack, ws, empty_code, on_busy, prompt):
     box = os.path.join(stack, "queue")
     if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
         must_post(["init", box])                                   # 先建好，aos-say／listen 認得
     cfg = cli_session.load_cfg(template)
     cell = cli_session.Cell(os.path.join(stack, cfg["kind"]))
     note_instance(stack, cfg["kind"], ws, template)
-    take_all(stack, box, cfg)                                      # 這輪要答的＝cur/ 全部（上次沒交出去的＋剛認領的）
+    take_all(stack, box, prompt)                                   # 這輪要答的＝cur/ 全部（上次沒交出去的＋剛認領的）
     batch = names(box, "cur")
     if not batch:
         return empty_code
@@ -261,7 +259,8 @@ def _cli_die(code, reason):                    # cli_session 出錯時本來 exi
 
 def main():
     try:
-        opts, args = aos_flags.parse(sys.argv[1:], {"--on-empty": "on_empty", "--on-busy": "on_busy"}, {"--one": "one"})
+        opts, args = aos_flags.parse(sys.argv[1:], {"--on-empty": "on_empty", "--on-busy": "on_busy", "--prompt": "prompt"},
+                                     {"--one": "one"})
     except aos_flags.Error as e:
         die(e.code, "%s（%s）" % (USAGE, e))
     if len(args) != 1:
@@ -273,10 +272,19 @@ def main():
         die("ArgumentsBad", "--on-busy 要是 yield 或 answer，收到 %r" % busy)
     if opts.get("one") and "on_empty" in opts:
         die("ArgumentsBad", "--one（工具形）沒有 queue，不收 --on-empty")
+    if opts.get("one") and "prompt" in opts:
+        die("ArgumentsBad", "--one（工具形）沒有 queue，不收 --prompt")
+    if opts.get("prompt") == "":
+        die("ArgumentsBad", "--prompt 要給開場白檔的路徑")
     template = args[0]
     if not os.path.isabs(template) or not os.path.isdir(template):
         die("AgentBad", "定義資料夾要是存在的絕對路徑，收到 %r" % template)
     template = os.path.normpath(template)
+    prompt = None
+    if "prompt" in opts:                                           # 相對路徑從定義資料夾算（11-04）
+        prompt = os.path.normpath(os.path.join(template, opts["prompt"]))
+        if not os.path.isfile(prompt):
+            die("PromptMissing", "--prompt 給的開場白檔不在：%s" % prompt)
     if opts.get("one"):
         cli_session.call_main(template, busy)                      # 工具形：跟 lib/agent/claude、codex 同一條路
         return
@@ -287,7 +295,7 @@ def main():
     ws = os.path.abspath(os.environ.get("AOS_WS") or ".")
     cli_session.die = _cli_die
     try:
-        code = one_turn(template, stack, ws, NOT_FOUND if empty == "stop" else 0, busy)
+        code = one_turn(template, stack, ws, NOT_FOUND if empty == "stop" else 0, busy, prompt)
     except Fail as e:
         die(e.code, e)
     sys.exit(code)

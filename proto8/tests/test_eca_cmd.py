@@ -404,23 +404,26 @@ class EcaCtl(unittest.TestCase):
         self.assertIn("工具箱 %s" % reg, self.ctl("state", name).stdout)
 
     def test_add_prompt(self):
-        """11-04：add／open 新建先驗 cli.json 的 prompt——指的不是檔＝PromptMissing、空字串＝CfgBad，都不送信（表上沒有）；
-        指得到的（相對路徑從 cli.json 的資料夾算）照常 add。"""
+        """11-04 翻案：開場白是 aos-eca-turn 的 --prompt（寫在 XXX 的 loop.json 裡）。add／open 新建先驗：指的不是檔（相對路徑從
+        aos-eca-turn 的定義資料夾算：寫死的絕對路徑、或 {"$env": "AOS_CD"}＝XXX）＝PromptMissing、不送信（表上沒有）；
+        cli.json 寫了 prompt 不看；指得到的照常 add。"""
         self.start_daemon()
         w = self.ws()
         bad = self.tmp / "eca-bad"
         shutil.copytree(self.tpl, bad)
         cfg = json.loads((bad / "cli.json").read_text())
-        (bad / "cli.json").write_text(json.dumps(dict(cfg, prompt="nope.txt")))
-        r = self.ctl("add", "--name", "bad", "--ws", w, bad)
-        self.assertEqual(self.code(r), (1, "PromptMissing"))
-        self.assertTrue(r.stderr.startswith("aos-eca: PromptMissing "), r.stderr)
-        self.assertEqual(self.code(self.ctl("open", "-d", "--name", "bad", "--ws", w, bad)), (1, "PromptMissing"))
-        (bad / "cli.json").write_text(json.dumps(dict(cfg, prompt="")))
-        self.assertEqual(self.code(self.ctl("add", "--name", "bad", "--ws", w, bad)), (1, "CfgBad"))
+        (bad / "cli.json").write_text(json.dumps(dict(cfg, prompt="nope.txt")))       # 沒認的鍵：不是 PromptMissing
+        loop = json.loads((bad / "loop.json").read_text())
+        for ex in ([str(TURN), "--on-empty", "idle", "--prompt", "nope.txt", str(bad)],
+                   {"argv": [str(TURN), "--prompt=nope.txt", {"$env": "AOS_CD"}]}):
+            (bad / "loop.json").write_text(json.dumps(dict(loop, exec=ex)))
+            r = self.ctl("add", "--name", "bad", "--ws", w, bad)
+            self.assertEqual(self.code(r), (1, "PromptMissing"))
+            self.assertTrue(r.stderr.startswith("aos-eca: PromptMissing "), r.stderr)
+            self.assertEqual(self.code(self.ctl("open", "-d", "--name", "bad", "--ws", w, bad)), (1, "PromptMissing"))
         self.assertEqual(self.daemon_rows(), {})
         (bad / "open.txt").write_text("開場白\n")
-        (bad / "cli.json").write_text(json.dumps(dict(cfg, prompt="open.txt")))
+        (bad / "loop.json").write_text(json.dumps(dict(loop, exec=[str(TURN), "--on-empty", "idle", "--prompt", "open.txt", str(bad)])))
         r = self.ctl("add", "--name", "good", "--ws", w, bad)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue(self.until(lambda: any(x["name"] == "good" for x in self.ls())), self.daemon_rows())

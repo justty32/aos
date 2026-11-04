@@ -28,8 +28,8 @@
 #   選填 tools_flags＝字串陣列，原樣插在 aos-mcp 的 args 裡（例 ["--enable-logs"]）。有登記檔時每次起 CLI 前接上
 #   aos-mcp --ws <工作區> --stack <stack> [tools_flags…] <登記檔絕對路徑>：claude＝寫小格 mcp.json、加 --mcp-config 它 --allowedTools mcp__aos；
 #   codex＝兩個 -c mcp_servers.aos.command／args。aos-mcp 靠 PATH 找（N-50）；定義資料夾一個字都不寫（P-15）。
-# 開場白（11-04）：cli.json 選填 prompt＝開場白檔（相對路徑從 cli.json 的資料夾算），沒寫＝同層 prompt.txt、有才用；
-#   load_cfg 只算出路徑放進 cfg["prompt_file"]（指的不是檔＝PromptMissing），讀它的是 aos-eca-turn。
+# 開場白不歸這層（11-04 翻案，使用者「不該在json中指定檔案名稱，應該改成用旗標指定」）：是 aos-eca-turn 的 --prompt FILE；
+#   cli.json 寫了 prompt 跟其他沒認的鍵一樣不看。
 # 錯：當工具叫（call_main）時照 lib 契約 stderr 與 stdout 各一行「工具名: 代號 原因」、退 1；attach 與 hook 是 stderr 一行「cli_session: 代號 原因」、退 1。
 #
 # 放哪（10-24 遷移）：proto8/lib/agent/cli_session.py，lib/agent 的 claude、codex 兩個工具共用（用 realpath 找到這層再 import）；
@@ -68,24 +68,7 @@ def load_cfg(tool_dir):
         if not isinstance(cfg.get(k, []), list) or not all(isinstance(a, str) for a in cfg.get(k, [])):
             die("CfgBad", "%s：%s 要是字串陣列" % (path, k))
     cfg["registry"] = registry(cfg, tool_dir, path)
-    cfg["prompt_file"] = prompt_file(cfg, tool_dir, path)
     return cfg
-
-
-def prompt_file(cfg, tool_dir, path):
-    """這份定義的開場白檔（絕對路徑）；沒有＝None（11-04，使用者「他仍然是吃固定的prompt.txt對吧，能改嗎？」）。
-    prompt 有寫＝它（相對路徑從 cli.json 的資料夾算），不是檔＝PromptMissing；沒寫＝同層 prompt.txt，有才用（同 tools）。
-    這層只找檔、不讀內容：讀它、投進 queue 的是 aos-eca-turn（工具形不用開場白）。"""
-    base = os.path.abspath(tool_dir)
-    if "prompt" in cfg:
-        if not isinstance(cfg["prompt"], str) or not cfg["prompt"]:
-            die("CfgBad", "%s：prompt 要是開場白檔的路徑（非空字串）" % path)
-        f = os.path.normpath(os.path.join(base, cfg["prompt"]))
-        if not os.path.isfile(f):
-            die("PromptMissing", "%s：prompt 指的開場白檔不在：%s" % (path, f))
-        return f
-    f = os.path.join(base, "prompt.txt")
-    return f if os.path.isfile(f) else None
 
 
 def registry(cfg, tool_dir, path):

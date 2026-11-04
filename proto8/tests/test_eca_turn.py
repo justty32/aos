@@ -273,12 +273,14 @@ class Turn(unittest.TestCase):
 
     def test_flags_bad(self):
         """argv 錯＝ArgumentsBad（不認得的旗標 FlagUnknown）、退 1、不碰 stack：--on-empty／--on-busy 壞值或缺值、--one 帶 --on-empty、
-        旗標放在定義資料夾後面、多給位置參數。"""
+        旗標放在定義資料夾後面、多給位置參數；11-04 --prompt 空字串、--one 帶 --prompt＝ArgumentsBad，指的不是檔＝PromptMissing。"""
         d = str(self.defs["claude"])
         for argv, code in ((["--on-empty", "maybe", d], "ArgumentsBad"), (["--on-busy", "skip", d], "ArgumentsBad"),
                            (["--one", "--on-empty", "stop", d], "ArgumentsBad"), ([d, "--one"], "ArgumentsBad"),
                            ([d, d], "ArgumentsBad"), ([], "ArgumentsBad"), (["--on-busy"], "ArgumentsBad"),
-                           (["--maybe", d], "FlagUnknown")):
+                           (["--maybe", d], "FlagUnknown"), (["--prompt", "", d], "ArgumentsBad"),
+                           (["--one", "--prompt", "cli.json", d], "ArgumentsBad"), (["--prompt", "gone.txt", d], "PromptMissing"),
+                           (["--prompt", ".", d], "PromptMissing")):
             r = subprocess.run([str(TURN)] + argv, capture_output=True, text=True, env=self.env(), timeout=30,
                                input=json.dumps({"prompt": "x"}))
             self.assertEqual((r.returncode, r.stderr.split()[:2]), (1, ["aos-eca-turn:", code]), argv)
@@ -286,37 +288,38 @@ class Turn(unittest.TestCase):
         self.assertEqual(self.calls(), [])
 
     def test_opening_prompt(self):
-        """history 空、queue 空、定義有 prompt.txt＝先投開場白再答；答過了（history 不空）就不再投，queue 空退 10。"""
+        """--prompt prompt.txt（11-04 起開場白走旗標）：history 空、queue 空＝先投開場白再答；答過了（history 不空）就不再投，queue 空退 10。"""
         (self.defs["claude"] / "prompt.txt").write_text("先讀 task.md，照做\n")
-        r = self.turn()
+        r = self.turn(flags=["--prompt", "prompt.txt"])
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.history()[0], {"role": "user", "content": "先讀 task.md，照做"})
         self.assertEqual(self.history()[1]["role"], "assistant")
-        self.assertEqual(self.turn().returncode, 10)
+        self.assertEqual(self.turn(flags=["--prompt", "prompt.txt"]).returncode, 10)
         self.assertEqual(len(self.calls()), 1)
 
-    def test_opening_prompt_key(self):
-        """11-04：cli.json 的 prompt 指開場白檔（相對路徑從 cli.json 的資料夾算）＝用那份、同層 prompt.txt 不看；
-        指的不是檔＝PromptMissing 退 1、不問 CLI；空字串、不是字串＝CfgBad。"""
+    def test_opening_prompt_flag(self):
+        """11-04 翻案：--prompt FILE 的相對路徑從定義資料夾算（不看 cwd）、絕對路徑照用；cli.json 寫了 prompt 不看（照沒認的鍵）；
+        給了不是檔＝PromptMissing 見 test_flags_bad。"""
         d = self.defs["claude"]
         cfg = json.loads((d / "cli.json").read_text())
-        (d / "prompt.txt").write_text("不該用這份\n")
-        (d / "cli.json").write_text(json.dumps(dict(cfg, prompt="gone.txt")))
-        r = self.turn()
-        self.assertEqual((r.returncode, r.stderr.split()[:2]), (1, ["aos-eca-turn:", "PromptMissing"]), r.stderr)
-        self.assertEqual(self.calls(), [])
-        for bad in ("", 3):
-            (d / "cli.json").write_text(json.dumps(dict(cfg, prompt=bad)))
-            r = self.turn()
-            self.assertEqual((r.returncode, r.stderr.split()[:2]), (1, ["aos-eca-turn:", "CfgBad"]), r.stderr)
+        (d / "cli.json").write_text(json.dumps(dict(cfg, prompt="cli-key.txt")))       # 不看：不是 PromptMissing
         (d / "tasks").mkdir()
         (d / "tasks" / "open.txt").write_text("照 tasks/open.txt 做\n")
-        (d / "cli.json").write_text(json.dumps(dict(cfg, prompt="tasks/open.txt")))
-        r = self.turn()
+        r = subprocess.run(self.argv(flags=["--prompt", "tasks/open.txt"]), capture_output=True, text=True, env=self.env(),
+                           cwd=str(self.tmp), timeout=30)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(self.history()[0], {"role": "user", "content": "照 tasks/open.txt 做"})
-        self.assertEqual(self.turn().returncode, 10)
+        self.assertEqual(self.turn(flags=["--prompt", "tasks/open.txt"]).returncode, 10)
         self.assertEqual(len(self.calls()), 1)
+        shutil.rmtree(self.stack)
+        r = self.turn(flags=["--prompt", str(d / "tasks" / "open.txt")])
+        self.assertEqual((r.returncode, self.history()[0]["content"]), (0, "照 tasks/open.txt 做"), r.stderr)
+
+    def test_opening_no_flag(self):
+        """11-04 翻案：沒給 --prompt＝沒有開場白，定義資料夾裡有 prompt.txt 也不找（10-31「只有一個檔案固定」）：queue 空照 --on-empty 退 10、不問 CLI。"""
+        (self.defs["claude"] / "prompt.txt").write_text("不該投這份\n")
+        self.assertEqual(self.turn().returncode, 10)
+        self.assertEqual((self.history(), self.calls()), ([], []))
 
     def test_session_bad_keeps_letter(self):
         """這段對話有人在用（小格的 lock 被拿著）＝SessionBad：--on-busy 沒給／yield 都退 0、信留 cur/；
