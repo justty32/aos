@@ -32,7 +32,7 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
 錯：stderr 一行「aos-tools: 代號 原因」、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、RegistryBad、PathMissing、
   ToolDefMissing、ToolDefBad、NameBad、ToolExists、ToolMissing、StackMissing、DirectiveBad、CommandMissing、WriteFailed。call 自己沒錯時結束碼是工具的。
 """
-import json, os, re, shutil, subprocess, sys
+import json, os, re, shutil, signal, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
@@ -97,17 +97,25 @@ def stamp(path):
 
 
 def run_tooldef(path):
+    # 自成行程群組：逾時整群收掉（只殺直接的子行程會把它起的孫行程留著繼續跑，11-04 夜 C 線）
     try:
-        r = subprocess.run([path, "--tooldef"], cwd=os.path.dirname(path), stdin=subprocess.DEVNULL,
-                           stdout=subprocess.PIPE, timeout=TOOLDEF_TIMEOUT_S)
-    except subprocess.TimeoutExpired:
-        raise Fail("ToolDefBad", "%s --tooldef 超過 %d 秒沒結束" % (path, TOOLDEF_TIMEOUT_S))
+        p = subprocess.Popen([path, "--tooldef"], cwd=os.path.dirname(path), stdin=subprocess.DEVNULL,
+                             stdout=subprocess.PIPE, start_new_session=True)
     except OSError as e:
         raise Fail("ToolDefBad", "%s --tooldef 跑不起來（可執行檔要有 #! 開頭）：%s" % (path, e))
-    if r.returncode != 0:
-        raise Fail("ToolDefBad", "%s --tooldef 退 %d（不支援 --tooldef？）" % (path, r.returncode))
     try:
-        return json.loads(r.stdout.decode("utf-8"))
+        out, _ = p.communicate(timeout=TOOLDEF_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except OSError:
+            pass
+        p.wait()
+        raise Fail("ToolDefBad", "%s --tooldef 超過 %d 秒沒結束（整群收掉了）" % (path, TOOLDEF_TIMEOUT_S))
+    if p.returncode != 0:
+        raise Fail("ToolDefBad", "%s --tooldef 退 %d（不支援 --tooldef？）" % (path, p.returncode))
+    try:
+        return json.loads(out.decode("utf-8"))
     except ValueError as e:
         raise Fail("ToolDefBad", "%s --tooldef 吐的不是 JSON：%s" % (path, e))
 
