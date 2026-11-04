@@ -94,6 +94,12 @@ void check_name(const std::string& name) {
     if (name.empty() || name[0] == '.' || name.find('/') != std::string::npos) {
         throw Error{code::ArgumentsBad, "信件名稱要是一個單純的名字（不空、不含 /、不以 . 開頭）：" + name};
     }
+    // take-all 一行一個名字：名字裡有換行等控制字元會被拆成兩個不存在的名字（11-04 夜 C 線）
+    for (unsigned char ch : name) {
+        if (ch < 0x20 || ch == 0x7f) {
+            throw Error{code::ArgumentsBad, "信件名稱不能有換行、tab 等控制字元"};
+        }
+    }
 }
 
 // ^[0-9]{12}\.——明寫的規則，不靠字典序碰巧（thinking 11-03 aos-post § 2）。

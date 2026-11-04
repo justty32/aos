@@ -102,10 +102,15 @@ std::optional<std::string> reply(const Mailbox& mb, const std::string& name, con
     if (!c.ok || !c.letter.contains("reply_to")) {
         return std::nullopt;
     }
-    Mailbox to = open(c.letter["reply_to"].get<std::string>());
-    SendOpts opts;
-    opts.in_reply_to = name;
-    return send(to, body, opts);
+    // 回信寄不出去時說清楚是「回信」、原信還在（不然只看到一個陌生信箱不在）
+    try {
+        Mailbox to = open(c.letter["reply_to"].get<std::string>());
+        SendOpts opts;
+        opts.in_reply_to = name;
+        return send(to, body, opts);
+    } catch (const Error& e) {
+        throw Error{e.code, "回信寄不出去（" + name + " 的 reply_to），原信留在 cur/：" + e.msg};
+    }
 }
 
 void done(const Mailbox& mb, const std::string& name, bool keep) {
