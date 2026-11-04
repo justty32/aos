@@ -13,7 +13,6 @@
 ## 最新進度
 
 - **open｜tidy 收斂（11-03 晚起）**：批次與狀態 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)；P4-D／E 已補對讀（補回 4 處），剩其餘 thinking 與 P1-2、P1-3、P2、P3、P4-F
-- **open｜aos-post 改版**：步驟 1～8 已在 main（併入時沒跑驗證，使用者「不用測試，總之先弄進去」，明天補跑全套與 impls 重建），剩步驟 9 條文加註、10 的舊名 grep 檢查 → [thinking](../proto8/thinking/2026-11-03-aos-post.md)
 - **open｜公司 WSL 試驗場 `agents/amy` 待刪**（使用者「刪掉」；不在 git，回公司刪資料夾）
 - **open｜介質**：實作八步已做；agent 的輸入是 queue、接單後放 tools（決定 32）那兩題先擱著 → [10-28 medium](../proto8/thinking/2026-10-28-medium.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10-29-medium-plan.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - **open｜現況地圖十一點**：剩第 1 點（plan 9 式檔案串流）、第 7 點（post／lock 補指令），使用者「之後有遇到再說」 → [map-review § 結論](../proto8/thinking/2026-10-30-map-review.md#結論10-31-補)
