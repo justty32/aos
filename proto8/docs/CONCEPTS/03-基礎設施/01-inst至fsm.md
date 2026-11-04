@@ -12,7 +12,7 @@
 
 實作：loop＝[aos-loop](../../../impls/aos-loop/README.md)；daemon＝[aos-daemon](../../../impls/aos-daemon/README.md)。
 
-> **daemon 兩義**：①[C-04](../01-設計理念.md) 說的 daemon＝aos 與 Linux 之間的借階層（Linux 那邊的事全在這層）；②這裡的 daemon＝管一群 loop 的程式（`aos-daemon`，C-36）。[名詞表](../附錄1-名詞.md)兩列都留。
+> **daemon 兩義**：①[C-04](../01-設計理念/01-C-01～C-48.md) 說的 daemon＝aos 與 Linux 之間的借階層（Linux 那邊的事全在這層）；②這裡的 daemon＝管一群 loop 的程式（`aos-daemon`，C-36）。[名詞表](../附錄1-名詞.md)兩列都留。
 
 - **C-36** 層層遞進：inst（求值一次）→ loop（持續求值）→ node（loop 服務的資料夾）→ daemon（統管 loop）；daemon 跑的 inst 可以是另一個 daemon。（3f.2）落實：inst＝單子＝入口的一種、由 aos-exec 行程內跑（沒有 aos-inst 命令列，C-73、N-59）；loop＝`aos-loop [旗標...] loop.json`（`{"exec", "max"}`；設定檔是唯一的位置參數，[ideas 10-21 § 9](../../../thinking/2026-10/21/ideas/05-7-審後的五個細縫與修正.md#9-設定檔是唯一的位置參數path-改字串拼接10-21-傍晚)；`exec` 收 aos-exec 的目標（字串或陣列，每次 `aos-exec` 它；`loop.json#/body` 也是目標），也可以直接放單子物件、行程內跑〔[thinking 10-24](../../../thinking/2026-10/24/exec-relative/01-使用者原文.md#10-24-exec-直接放單子)〕，[ideas 10-21 § 8](../../../thinking/2026-10/21/ideas/05-7-審後的五個細縫與修正.md#8-aos-loop10-21-下午)；子程式退 10 就停，P-06、P-19）；一次一格的 fsm＝`aos-fsm fsm.json`（P-07；設定檔是唯一的位置參數；格的 `exec` 收 aos-exec 的目標（每次 `aos-exec` 它；`fsm.json#/states/<名>/body` 也是目標），也可以直接放單子物件、行程內跑，[計畫 10-21](../../../thinking/2026-10/21/plan/README.md) F1、F2）；node＝被 loop 反覆跑的那個資料夾程式；daemon＝管一群 loop 的 `aos-daemon`（[N-28、N-54](../../NORMS/04-基礎設施-loop與daemon.md)）。只有 impls 的 C++ 版（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」）。「要跑什麼」叫 `exec`：使用者先選「只有 loop、daemon 用 run」，再「fsm.json，現在是用val，幫我改成exec」、選「exec，loop／daemon 的 run 也一起改 exec」（[thinking](../../../thinking/2026-10/23/naming.md)）。
 
@@ -34,5 +34,5 @@
 
 - **C-18** agent 是狀態機、是函式、也是計算任務；直接接進核心，不特別處理。（2.13、2.14）〔這裡的「核心」＝名詞表的「系統本體」，不是 C-74 分層裡的核心 aos-exec〕
 - **C-25** 大操作（問模型、跑久的工具）丟到另一個資料夾讓另一個行程處理；agent 自己每次 eval 短促。（9/19）aos 的 agent 每次被叫只走一次、由外面的 loop 驅動（C-62、[N-53](../../NORMS/10-基礎設施-定義與工作區/06-N-50～N-53.md)；做法是 P-07 一次一格）。
-- **C-39** agent 是一個資料夾、一個 node、一條很長的 list（模型、context、工具、記憶……各占一個元素），持續被求值。最普通的 agent＝狀態機，在等待、思考、行動之間切換，需要思考就丟 LLM。（3f.7、3g.8、3g.9）「list」用 table 比喻（[C-71](../01-設計理念.md#資料夾程式與環境變數10-19-使用者定)）：各占一個元素、靠名字找，意思不變。
+- **C-39** agent 是一個資料夾、一個 node、一條很長的 list（模型、context、工具、記憶……各占一個元素），持續被求值。最普通的 agent＝狀態機，在等待、思考、行動之間切換，需要思考就丟 LLM。（3f.7、3g.8、3g.9）「list」用 table 比喻（[C-71](../01-設計理念/06-C-68～C-72.md#資料夾程式與環境變數10-19-使用者定)）：各占一個元素、靠名字找，意思不變。
 - **C-49** fsm 要很單純：「當現在是A狀態的時候，執行指定inst，就這樣，那個狀態內部、inst內部的東西，fsm不該管。」所以 fsm 只留表與記現在狀態的 state 檔；錯誤處理、計數、暫停、格之間傳資料都歸格自己或跑它的 loop。（10-15 收工後，[thinking 意見 1～4](../../../thinking/2026-10/15/opinions-1-4.md)；規範 N-36、N-38、N-39、N-41；慣例 P-07～P-10）

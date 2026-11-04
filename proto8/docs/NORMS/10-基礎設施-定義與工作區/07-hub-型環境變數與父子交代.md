@@ -10,7 +10,7 @@
   - **跟實作對不上的**（只列、程式沒改）：
     - `AOS_STACK` 沒設時 **aos-exec 自己退回預設** `$AOS_WS/.stack/`（N-57、C-69，impls aos-exec `setup_ws_stack`），跟 ② 不合；aos-loop（開了窗才要）、aos-fsm、aos-daemon、aos-llm-kernel 沒設就報 `StackMissing`，合。
     - `AOS_KERNEL` 沒設時 aos-llm-send 報錯、不猜位置，合 ②；但代號是 `MailboxMissing`、不是 `KernelMissing`（impls aos-llm-send `send.cpp`）。kernel 那一邊（aos-llm-kernel）不讀 `AOS_KERNEL`，信箱位置讀 kernel.json 的 `mailbox`（封存在 proto8/archive/llm-kernel-demo/ 的 demo，`_entry` 再把同一個路徑設給 `AOS_KERNEL`）。
-    - ③ 跟 [CONVENTION P-39](../../CONVENTION/06-巢狀.md) 的寫法不同：P-39 把 `AOS_STACK` 歸「叫別人時明給」（每層開小格、重設），不是一路繼承；繼承是預設，P-39 是 agent 範本在叫別人時的做法。
+    - ③ 跟 [CONVENTION P-39](../../CONVENTION/06-巢狀/03-P-37～P-40.md) 的寫法不同：P-39 把 `AOS_STACK` 歸「叫別人時明給」（每層開小格、重設），不是一路繼承；繼承是預設，P-39 是 agent 範本在叫別人時的做法。
   - **實例 `AOS_DAEMON_STACK`**（使用者 10-30「關於那個aos-daemon-ctl，他應該是要吃環境變數+argv來確定daemon home在哪裡的(要用哪個daemon)。」，[thinking 10-30 map-review](../../../thinking/2026-10/30/map-review/01-使用者原文.md#決定10-30) 第 10 點；名字：使用者 11-02「就AOS_DAEMON_STACK吧」「最好明講，也就是--daemon-stack」，[thinking 11-02 daemon-env](../../../thinking/2026-11/02/daemon-env/01-使用者原文-11-02-逐字.md#決定11-02使用者)；優先順序是實作代定、可翻案；照實作寫，[aos-daemon-ctl](../../../bin/README.md)、[aos-eca](../../../extras/eca/README.md)）：aos-daemon-ctl、aos-eca 找「掛到哪個 daemon」用 `--daemon-stack` ＞ `$AOS_DAEMON_STACK`，值＝那個 daemon 的 `$AOS_STACK` 資料夾；都沒有或不是資料夾＝`DaemonMissing`；子 process 照常繼承——三件都合。
     - **舊名退場**（頂層代定、可翻案）：`AOS_DAEMON`、`--daemon` 不留別名——給 `--daemon`＝`FlagUnknown`；只設了 `AOS_DAEMON`、沒設新的＝`DaemonMissing`，訊息提示改設 `AOS_DAEMON_STACK`（或 `--daemon-stack`）。
     - **不定三名**（使用者 11-02「那就不用定這三個名字了」）：不另設「daemon 的定義所在」「daemon 的工作區」的變數。

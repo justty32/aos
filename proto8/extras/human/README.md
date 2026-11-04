@@ -20,7 +20,7 @@ aos-chat 封存在 `proto8/archive/aos-chat/`（使用者 11-03 晚：瘦身候�
 
 stack＝`--stack` ＞ `$AOS_STACK` ＞ `<工作區>/.stack/`（N-57）；工作區＝`--ws` ＞ `$AOS_WS` ＞ cwd（同 aos-exec）。每支開頭的說明寫了全部規則。
 
-**agent 對話協議＝[CONVENTION P-42](../../docs/CONVENTION/02-題目stack停錯腦.md)**：
+**agent 對話協議＝[CONVENTION P-42](../../docs/CONVENTION/02-題目stack停錯腦/02-P-42.md)**：
 
 - **說**：`aos-say 話`＝`aos-post send --ordered <stack>/queue`，一封信的 body＝`{"role": "user", "content": 話}`（N-16 有順序的信箱；queue 還沒有就先建，可以先說、再跑 agent）。印的信件名稱就是 `new/` 裡那封的名字（`<12 位序號>.<尾名>`）。
 - **聽**：`aos-say 話 && aos-listen`（正規用法，[thinking say-listen「11-01 晚」](../../thinking/2026-10/24/say-listen.md#11-01-晚使用者aos-say---aos-listen-才是正規用法)；不收信件名稱參數）——等**最新那封**＝queue 的 `new/`、`cur/` 裡照處理順序排最後的（`aos_ws.letter_key` 取 max：有序在前、無序在後，各照名字；aos-say 寄的都是有序＝最後寄出的、或剛被認領的，不管誰寄的）：還在就等；不見了就印 history 最新那則回答（先 say 後 listen 不會漏）。`new/`、`cur/` 都空＝答案已經到了，直接印最新那則回答；history 也沒回答＝`QuestionUnknown`；信不見了卻沒有回答＝`AnswerMissing`；沒人在跑＝提醒一次信在 queue 的哪裡、怎麼跑，繼續等。`--last N` 印最後 N 段就走、`--follow` 接著跟著看（一段＝問的話＋回答）。

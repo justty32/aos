@@ -23,7 +23,7 @@
 
 ## 命名統合的使用者原話（10-23～10-25）
 
-細則都在 [C-54](CONCEPTS/01-設計理念.md#命名10-15-使用者說原文) 與 [C-54 命名方法](CONCEPTS/01-設計理念/C-54-命名方法.md)；這裡只留原話與出處。不留舊名。
+細則都在 [C-54](CONCEPTS/01-設計理念/04-C-54.md#命名10-15-使用者說原文) 與 [C-54 命名方法](CONCEPTS/01-設計理念/C-54-命名方法.md)；這裡只留原話與出處。不留舊名。
 
 - **10-23 命名統合**（[thinking 2026-10-23-naming](../thinking/2026-10/23/naming.md)）：使用者「都先幫我統合。統合好後更新文件和artifact，我等一下重看」；逐條看過頂層的統合，其餘認可，三條改選：純文字也帶 `.txt`、stack 預設位置 `.stack/`（C-65）、題目資料夾 `new/`＋照 Maildir 認領 `cur/`（C-65）。C-54 錯誤代號一律四種結尾＋`Internal`；[縮寫表](CONCEPTS/abbr.json)有 `co`、`dotenv`。
 - **10-23 晚「要跑什麼」**：使用者「改，beats改runs，然後val寫要跑啥，通常不會用val，應該用run。」，衝突時選「只有 loop、daemon 用 run」；深夜使用者「fsm.json，現在是用val，幫我改成exec」，再選「exec，loop／daemon 的 run 也一起改 exec」——「要跑什麼」全體系一律叫 `exec`（loop／daemon、fsm 的每一格），C-55 的 `val` 只留給值的展開形；條文與訊息裡說「次」，不說「拍」。
