@@ -38,7 +38,10 @@ class Base(unittest.TestCase):
         (d / "_entry").write_text("#!/bin/sh\n" + body)
         (d / "_entry").chmod(0o755)
 
-    def loop(self, cfg):
+    def loop(self, cfg, windows=False):
+        # 11-04 起 ctl／state 沒寫＝預設名（使用者題 5）：沒寫的那格補 null＝不開（同 11-04 前沒寫）；windows=True＝原樣
+        if isinstance(cfg, dict) and not windows:
+            cfg = {"ctl": None, "state": None, **cfg}
         (self.t / "loop.json").write_text(json.dumps(cfg))
 
     def start(self, env=None):
@@ -101,12 +104,12 @@ class Windows(T):
         s.mkdir(exist_ok=True)
         return s
 
-    def loop(self, cfg):
+    def loop(self, cfg, windows=False):
         # count() 指到 loop.json 裡的 body：每次數一下（10-21 起 exec 只收字串，內嵌單子走 loop.json#/body）
-        super().loop(dict({"body": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/runs"']}}, **cfg))
+        super().loop(dict({"body": {"argv": ["sh", "-c", 'echo x >> "$AOS_STACK/runs"']}}, **cfg), windows)
 
-    def run_loop(self, cfg, env=None, timeout=20):
-        self.loop(cfg)
+    def run_loop(self, cfg, env=None, timeout=20, windows=False):
+        self.loop(cfg, windows)
         return subprocess.run([LOOP, "loop.json"], cwd=str(self.t), env=env_of(env), capture_output=True,
                               text=True, timeout=timeout)
 
@@ -139,6 +142,14 @@ class Windows(T):
         s = self.stack()
         r = self.run_loop({"exec": self.count(), "max": 2}, {"AOS_STACK": str(s)})
         self.assertEqual((r.returncode, sorted(p.name for p in s.iterdir())), (0, ["runs"]))
+
+    def test_windows_default_names(self):
+        # 11-04（使用者題 5「留 key、沒寫時預設就是這兩個名」）：沒寫＝state.json 有寫出來；沒 AOS_STACK＝StackMissing
+        s = self.stack()
+        r = self.run_loop({"exec": self.count(), "max": 2}, {"AOS_STACK": str(s)}, windows=True)
+        self.assertEqual((r.returncode, sorted(p.name for p in s.iterdir())), (0, ["runs", "state.json"]))
+        r = self.run_loop({"exec": self.count(), "max": 1}, windows=True)
+        self.assertEqual((r.returncode, "AOS_STACK" in r.stderr), (1, True), r.stderr)
 
     def test_window_without_stack_is_own_error(self):
         r = self.run_loop({"exec": self.count(), "max": 1, "ctl": "ctl.json"})

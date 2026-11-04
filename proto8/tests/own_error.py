@@ -19,7 +19,7 @@ _CFG = [
     (r"設定檔指不到", {"CfgMissing"}),
 ]
 _LOOP = _USAGE + _CFG + [
-    (r"(寫了 \S+ 卻)?沒設定 AOS_STACK", {"StackMissing"}),
+    (r"(寫了 \S+ 卻|要開 \S+ 窗卻)?沒設定 AOS_STACK", {"StackMissing"}),   # 11-04 起 ctl／state 沒寫也開窗（預設名）
     (r"起不了 aos-exec", {"LaunchFailed"}),
     (r"起不了子項", {"MkdirFailed", "WriteFailed", "LaunchFailed"}),
     (r"第 \d+ 次 ", None),   # 那次失敗：不是自己的錯

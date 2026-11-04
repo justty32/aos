@@ -548,7 +548,7 @@ class T(unittest.TestCase):
         gone = self.t / "no" / "stack"
         for doc, code in (({"state": "state.json", "procs": {"a": self.long()}}, "WriteFailed"),
                           ({"procs": {"a": self.long()}}, "WriteFailed"),
-                          ({"procs": {"a": self.long()}, "procs_state": None}, "MkdirFailed")):
+                          ({"procs": {"a": self.long()}, "procs_state": None, "state": None}, "MkdirFailed")):   # 11-04 起 state 沒寫＝開
             r = self.run_d(dict(doc, max=1), env={"AOS_STACK": str(gone) + "/"})
             self.assertEqual((r.returncode, r.stderr.split(" ")[1], r.stderr.count("\n"), gone.exists()), (1, code, 1, False),
                              r.stderr)

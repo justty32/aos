@@ -89,7 +89,7 @@ class KernelCase(unittest.TestCase):
         """包閘門的那格逾時（這裡沒有 kernel，信一直排著）：閘門被 SIGTERM、撤信、那格非 0。"""
         (self.t / "q.json").write_text(json.dumps({"argv": ["true"]}))
         (self.t / "cell.json").write_text(json.dumps({"exec": {"argv": ["aos-llm-send", "q.json"], "timeout_ms": 400},
-                                                       "max": 1}))
+                                                       "max": 1, "ctl": None, "state": None}))   # 不經 aos-exec、沒 AOS_STACK：窗關掉（11-04 起沒寫＝開）
         t0 = time.monotonic()
         r = subprocess.run([LOOP, "cell.json"], cwd=self.t, env=env_of({"AOS_KERNEL": str(self.mb)}),
                            capture_output=True, text=True, timeout=30)

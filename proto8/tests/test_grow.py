@@ -50,6 +50,8 @@ def run_agent(agent, extra=None):
     files = {}
     for base, _, fs in os.walk(ws):
         for f in fs:
+            if f == "state.json" and ".stack" in base:   # 11-04 起 aos-loop 沒寫也開 state 窗：pid、時刻每次不同，不比
+                continue
             p = os.path.join(base, f)
             s = TS.sub("<T>", Path(p).read_text(encoding="utf-8"))
             files[os.path.relpath(p, ws)] = re.sub(r'"elapsed_ms": \d+', '"elapsed_ms": N', s)

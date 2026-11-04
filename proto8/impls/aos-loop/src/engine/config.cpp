@@ -254,10 +254,12 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
     if (s != nullptr) {
         stack_ = s;
     }
+    // 11-04（使用者題 5「留 key、沒寫時預設就是這兩個名」）：沒寫＝ctl.json／state.json；寫 null＝不開
     const char* keys[2] = {"ctl", "state"};
+    const char* default_names[2] = {"ctl.json", "state.json"};
     std::string* paths[2] = {&ctl_path_, &state_path_};
     for (int i = 0; i < 2; ++i) {
-        Json v = cfg_.value(keys[i], Json());
+        Json v = cfg_.contains(keys[i]) ? cfg_[keys[i]] : Json(default_names[i]);
         if (v.is_null()) {
             continue;
         }
@@ -265,7 +267,7 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
             throw Error{code::CfgBad, std::string(keys[i]) + " 要是檔名"};
         }
         if (stack_.empty()) {
-            throw Error{code::StackMissing, std::string("寫了 ") + keys[i] + " 卻沒設定 AOS_STACK"};
+            throw Error{code::StackMissing, std::string("要開 ") + keys[i] + " 窗卻沒設定 AOS_STACK（不要窗就寫 null）"};
         }
         *paths[i] = aos::join(stack_, v.get<std::string>());
     }

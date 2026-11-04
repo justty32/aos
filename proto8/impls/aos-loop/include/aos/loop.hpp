@@ -143,9 +143,9 @@ struct Defaults {
 //                 need_exec 時必填（沒寫＝CfgBad「沒有東西可跑」）
 //   max           最多幾次（非負整數；沒寫＝Defaults::max；寫 null 不行）
 //   interval_ms   一次結束到下一次開始至少隔幾毫秒（非負整數；沒寫＝Defaults::interval_ms）
-//   ctl, state    兩扇窗的檔名，在 $AOS_STACK 底下（沒寫或 null＝不開；寫了卻沒設 AOS_STACK＝StackMissing）
+//   ctl, state    兩扇窗的檔名，在 $AOS_STACK 底下（11-04 起沒寫＝ctl.json／state.json、寫 null＝不開；要開卻沒設 AOS_STACK＝StackMissing）
 // log 不是 key（11-02 使用者「把log輸出到stdout」；11-02 晚「應該要改成默認不印」）：預設不印，命令列 --enable-logs 才印到 stdout；不寫任何 log 檔。
-// ctl、state 寫 null＝不開（同沒寫）。
+// ctl、state 寫 null＝不開（11-04 前沒寫也是不開，現在沒寫＝預設名）。
 // 其他 key 忽略（body、_entry…）。設定壞丟 Error（CfgMissing、CfgBad、StackMissing；指示詞解不開 DirectiveBad）。
 // 指示詞（10-23 晚）：設定檔整份先換一層，上面五格整個解（resolve_keys，起點＝設定檔的資料夾；exec 走 resolve_exec，單子裡面不解）；ctl 整份先換一層，
 // cmd／max／interval_ms／seq 整個解（起點＝ctl 的資料夾），子類別多認的 key 在 check_ctl 裡自己解；ctl 解不開＝整份不採用。

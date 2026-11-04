@@ -67,9 +67,16 @@ def prog(parent, name, body, entry="_entry"):
     return str(Path(parent) / name)
 
 
-def loop(t, cfg):
+NO_WIN = {"ctl": None, "state": None}   # 11-04：寫原樣 loop.json 的案例補這兩格＝不開窗（同 11-04 前沒寫）
+
+
+def loop(t, cfg, windows=False):
     """寫 t/loop.json。10-21～10-23 exec 只收 aos-exec 的目標（10-21 plan L11；10-24 起又收物件，見 H 段）：cfg 的 exec 是物件（內嵌單子）時，
-    照新寫法搬到 body、exec 改成 "loop.json#/body"（相對 cwd；案例都在 t 裡跑）。要原樣寫進去就用 put。"""
+    照新寫法搬到 body、exec 改成 "loop.json#/body"（相對 cwd；案例都在 t 裡跑）。要原樣寫進去就用 put。
+    11-04 起 ctl／state 沒寫＝預設名（題 5）：cfg 沒寫的那格補 null（＝不開，同 11-04 前沒寫），舊案例照舊不開窗、不要 AOS_STACK；
+    windows=True＝原樣不補（測預設名的案例用）。"""
+    if isinstance(cfg, dict) and not windows:
+        cfg = {"ctl": None, "state": None, **cfg}
     if isinstance(cfg, dict) and isinstance(cfg.get("exec"), dict):
         cfg = dict(cfg, exec="loop.json#/body", body=cfg["exec"])
     return put(Path(t, "loop.json"), cfg)
@@ -125,7 +132,7 @@ def embedded_inst_stop_and_failure_codes(t):
 @case
 def own_errors_exit_1_one_line(t):
     want = {None: "CfgMissing", "{nope": "CfgBad", '{"max": 2}': "CfgBad",
-            '{"exec": {"argv": ["no-such-cmd-xyz"]}}': "LaunchFailed"}   # 10-24 起 exec 是物件＝行程內跑（10-21～10-23 是 CfgBad）
+            '{"ctl": null, "state": null, "exec": {"argv": ["no-such-cmd-xyz"]}}': "LaunchFailed"}   # 10-24 起 exec 是物件＝行程內跑（10-21～10-23 是 CfgBad）
     for text, code in want.items():
         if text is not None:
             put(Path(t, "loop.json"), text)
@@ -364,8 +371,8 @@ def put_ctl(s, doc):
     os.replace(tmp, s / "ctl.json")
 
 
-def run_loop(t, cfg, env=None, log=False):
-    loop(t, cfg)
+def run_loop(t, cfg, env=None, log=False, windows=False):
+    loop(t, cfg, windows)
     return subprocess.run([BIN, *(["--enable-logs"] if log else []), "loop.json"], cwd=t, env=env_of(env), capture_output=True,
                           text=True, timeout=30)
 
@@ -391,8 +398,21 @@ def state_written_with_proc_fields(t):
 @case
 def no_windows_no_files(t):
     s = stack(t)
-    r = run_loop(t, {"exec": count(), "max": 2}, {"AOS_STACK": str(s)})
+    r = run_loop(t, {"exec": count(), "max": 2, "ctl": None, "state": None}, {"AOS_STACK": str(s)})
     check("沒開窗就不寫檔", (r.returncode, sorted(p.name for p in s.iterdir())), (0, ["laps"]))
+
+
+@case
+def windows_default_names(t):
+    # 11-04（使用者題 5「留 key、沒寫時預設就是這兩個名」）：沒寫 ctl／state＝ctl.json／state.json
+    s = stack(t)
+    put(s / "ctl.json", {"cmd": "stop"})   # 基準線：起來第一次讀到的不執行
+    r = run_loop(t, {"exec": count(), "max": 2}, {"AOS_STACK": str(s)}, windows=True)
+    st = json.loads((s / "state.json").read_text())
+    check("沒寫 key 也有窗（state.json）", (r.returncode, sorted(p.name for p in s.iterdir()), st["phase"]),
+          (0, ["ctl.json", "laps", "state.json"], "done"))
+    r = run_loop(t, {"exec": count(), "max": 1}, windows=True)
+    check("沒寫 key、沒 AOS_STACK＝StackMissing", (r.returncode, r.stderr.startswith("aos-loop: StackMissing ")), (1, True))
 
 
 @case
@@ -742,7 +762,7 @@ def cfg_directive_bad_is_own_error(t):
 @case
 def cfg_unread_keys_not_resolved(t):
     # loop 不讀的 key（body、_entry…）不解：body 裡 $env 沒設，起來不算 loop 的錯，是那次 aos-exec 的錯（C-52）
-    put(Path(t, "loop.json"), {"exec": "loop.json#/body", "max": 1, "other": {"$env": "NOPE_XYZ"},
+    put(Path(t, "loop.json"), {**NO_WIN, "exec": "loop.json#/body", "max": 1, "other": {"$env": "NOPE_XYZ"},
                                "body": {"argv": ["true"], "stdout": {"$env": "NOPE_XYZ"}}})
     rc, _, err, stderr = run("loop.json", cwd=t)
     check("body 的指示詞留給那次", (rc, err, stderr.startswith("aos-exec: DirectiveBad ")), (1, None, True))
@@ -820,7 +840,7 @@ def inline_exec_is_ref(t):
     s = stack(t)
     put(Path(t, "lib", "unit.json"), {"u": {"argv": ["echo", {"$ref": "data.json#/msg"}], "stdout": {"$env": "AOS_STACK", "$path": "out"}}})
     put(Path(t, "lib", "data.json"), {"msg": "far"})
-    put(Path(t, "loop.json"), {"exec": {"$ref": "lib/unit.json#/u"}, "max": 1})
+    put(Path(t, "loop.json"), {**NO_WIN, "exec": {"$ref": "lib/unit.json#/u"}, "max": 1})
     rc, _, _, stderr = run("loop.json", cwd=t, env={"AOS_STACK": str(s)})
     check("exec 是 $ref 到單子", (rc, stderr, (s / "out").read_text()), (0, "", "far\n"))
 
@@ -828,7 +848,7 @@ def inline_exec_is_ref(t):
 @case
 def inline_codes(t):
     for code, want in ((0, 0), (10, 0), (7, 7)):
-        put(Path(t, "loop.json"), {"exec": {"argv": ["sh", "-c", "exit %d" % code]}, "max": 2})
+        put(Path(t, "loop.json"), {**NO_WIN, "exec": {"argv": ["sh", "-c", "exit %d" % code]}, "max": 2})
         rc, _, _, stderr = run("loop.json", cwd=t)
         check("內嵌單子退 %d" % code, rc, want)
     check("非 0 那行的「誰」＝loop.json#/exec", stderr, "aos-loop: 第 1 次 loop.json#/exec 失敗，結束碼 7\n")
@@ -836,7 +856,7 @@ def inline_codes(t):
 
 @case
 def inline_timeout(t):
-    put(Path(t, "loop.json"), {"exec": {"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 200}, "max": 3})
+    put(Path(t, "loop.json"), {**NO_WIN, "exec": {"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 200}, "max": 3})
     t0 = time.monotonic()
     rc, _, _, stderr = run("loop.json", cwd=t)
     check("內嵌單子逾時＝失敗（143）", (rc, stderr, time.monotonic() - t0 < 10),
@@ -849,7 +869,7 @@ def inline_bad_shape(t):
     for unit, code in (({"argv": "true"}, "EntryBad"), ({"argv": []}, "EntryBad"), ({"argv": ["true"], "timeout_ms": 0}, "EntryBad"),
                        ({"cwd": "x"}, "EntryBad"), ({"argv": ["true"], "stdout": {"$env": "NOPE_XYZ"}}, "DirectiveBad"),
                        ({"argv": ["no-such-cmd-xyz"]}, "LaunchFailed")):
-        put(Path(t, "loop.json"), {"exec": unit, "max": 2})
+        put(Path(t, "loop.json"), {**NO_WIN, "exec": unit, "max": 2})
         rc, _, err, stderr = run("loop.json", cwd=t)
         check("單子壞 %r" % (unit,), (rc, err, "單子跑不起來：" in stderr), (1, code, True))
 
@@ -860,7 +880,7 @@ def inline_sigterm_forwarded(t):
     s = stack(t)
     # 內嵌單子收的是整群的 SIGTERM，sleep 也被殺；sh（dash／bash）有時會在自己的 stderr 報一行「Terminated」
     # （看時序，10-28 WSL 撞到）——那是測試小程式自己說的、不是被測程式；開頭 exec 2>/dev/null 讓 err 只剩被測程式自己的。
-    put(Path(t, "loop.json"), {"exec": {"argv": ["sh", "-c", 'exec 2>/dev/null; trap \'echo got > "$AOS_STACK/got"; exit 0\' TERM; '
+    put(Path(t, "loop.json"), {**NO_WIN, "exec": {"argv": ["sh", "-c", 'exec 2>/dev/null; trap \'echo got > "$AOS_STACK/got"; exit 0\' TERM; '
                                                     'touch "$AOS_STACK/up"; while :; do sleep 0.05; done']}, "max": 5})
     p = start(t, {"AOS_STACK": str(s)})
     ok = wait_file(s / "up")
@@ -876,7 +896,7 @@ def inline_env_restored(t):
     # 11-03 起起來前就在的 ctl 是基準線：改成單子自己在跑的時候把那份寫進 ctl
     s = stack(t)
     (s / "at.json").write_text(json.dumps({"max": {"$env": "AOS_CO"}}))
-    put(Path(t, "loop.json"), {"exec": {"argv": ["sh", "-c", 'cp "$AOS_STACK/at.json" "$AOS_STACK/ctl.json"']}, "max": 2,
+    put(Path(t, "loop.json"), {**NO_WIN, "exec": {"argv": ["sh", "-c", 'cp "$AOS_STACK/at.json" "$AOS_STACK/ctl.json"']}, "max": 2,
                                "ctl": "ctl.json", "state": "state.json"})
     r = subprocess.run([BIN, "loop.json"], cwd=t, env=env_of({"AOS_STACK": str(s)}), capture_output=True, text=True, timeout=30)
     st = json.loads((s / "state.json").read_text())
@@ -907,7 +927,7 @@ def inline_relative_stack_ws(t):
 def inline_absolute_stack_untouched(t):
     # 本來就是絕對路徑的照原樣（不補 /、不整理）
     s = stack(t)
-    put(Path(t, "loop.json"), {"exec": {"argv": ["sh", "-c", 'printf "%s" "$AOS_STACK" > "$AOS_STACK/out"']}, "max": 1})
+    put(Path(t, "loop.json"), {**NO_WIN, "exec": {"argv": ["sh", "-c", 'printf "%s" "$AOS_STACK" > "$AOS_STACK/out"']}, "max": 1})
     rc, _, _, stderr = run("loop.json", cwd=t, env={"AOS_STACK": str(s) + "//"})
     check("絕對的 AOS_STACK 不動", (rc, stderr, (s / "out").read_text()), (0, "", str(s) + "//"))
 
@@ -1087,11 +1107,11 @@ def extra_args_string_and_array(t):
 def extra_args_inline(t):
     # 內嵌單子：接在單子 argv 的最後；argv 不是陣列（指示詞）＝CfgBad
     s = stack(t)
-    put(Path(t, "loop.json"), {"exec": {"argv": ["sh", "-c", 'echo "$1|$2" >> "$AOS_STACK/got"', "x"]}, "max": 1})
+    put(Path(t, "loop.json"), {**NO_WIN, "exec": {"argv": ["sh", "-c", 'echo "$1|$2" >> "$AOS_STACK/got"', "x"]}, "max": 1})
     rc, _, _, stderr = run("loop.json", "--", "p1", "p2", cwd=t, env={"AOS_STACK": str(s)})
     check("單子 argv 接參數", (rc, stderr, (s / "got").read_text()), (0, "", "p1|p2\n"))
     put(Path(t, "a.json"), ["true"])
-    put(Path(t, "loop.json"), {"exec": {"argv": {"$ref": "a.json"}}, "max": 1})
+    put(Path(t, "loop.json"), {**NO_WIN, "exec": {"argv": {"$ref": "a.json"}}, "max": 1})
     check("argv 是指示詞＝CfgBad", run("loop.json", "--", "p", cwd=t)[:3:2], (1, "CfgBad"))
     check("沒給參數照跑", run("loop.json", cwd=t)[:3:2], (0, None))
 
@@ -1100,7 +1120,7 @@ def extra_args_inline(t):
 def extra_args_odd_config_name(t):
     # 設定檔之前的 -- 照舊是「旗標結束」：-odd.json 也能當設定檔，後面再接 -- 參數
     prog(t, "c", 'echo "$*" >> "$AOS_STACK/got"\n')
-    put(Path(t, "-odd.json"), {"exec": "c", "max": 1})
+    put(Path(t, "-odd.json"), {**NO_WIN, "exec": "c", "max": 1})
     rc, _, _, stderr = run("--", "-odd.json", "--", "q", cwd=t)
     check("-- -odd.json -- q", (rc, stderr, Path(t, ".stack", "got").read_text()), (0, "", "q\n"))
 
