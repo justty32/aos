@@ -32,3 +32,9 @@
 > 不跟。風險自行處理。但我們可以給reset。
 
 決定：副本建了就不跟定義變（風險使用者自行處理）；給 `aos-agent tools／llm --target 名字 reset` 刪副本、回去用定義的。
+
+## 使用者原文（11-04 下班後，逐字）：AOS_BRAIN_URL
+
+> AOS_BRAIN_URL，我不喜歡這個環境變數
+
+頂層問「腦設定（url／model／key）不用 `AOS_BRAIN_*` 的話改放哪」，選項：定義裡一份 llm.json（跟 stack 副本同格式，`.env` 與 `AOS_BRAIN_*` 全拿掉；頂層建議）／brain.py 的旗標（寫在 fsm.json）。使用者選「我再想想」。**未定**，現狀照舊。
