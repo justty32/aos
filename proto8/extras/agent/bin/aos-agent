@@ -795,10 +795,17 @@ def cmd_tools(argv):
         targs = ["rm", args[0]]
     else:
         raise Fail("CommandUnknown", "tools 不認得 %s（ls、get、add、rm、reset）" % act)
-    if not os.path.isfile(copy):
+    made = not os.path.isfile(copy)
+    if made:
         make_copy(orig, copy)
+    try:
+        aos_tools(a, copy, targs)
+    except SystemExit:
+        if made:                                      # 11-04 夜邊緣實測：add／rm 失敗不留副本（不然這隻從此不跟定義）
+            os.unlink(copy)
+        raise
+    if made:
         note("建了副本 %s（從 %s 複製；之後不跟定義變，回去跟用 tools reset）" % (copy, orig))
-    aos_tools(a, copy, targs)
     warn_shared(a, folder)
 
 
