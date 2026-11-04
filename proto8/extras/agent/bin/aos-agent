@@ -535,7 +535,11 @@ def cmd_where(argv):
 
 def cmd_say(argv):
     opts, rest = parse(argv, {"--target": "target"})
-    text = " ".join(rest) if rest else sys.stdin.read()
+    try:                                            # 11-04 夜邊緣實測：不是 UTF-8 的話（argv 或 stdin）原本噴 traceback
+        text = " ".join(rest) if rest else sys.stdin.read()
+        text.encode("utf-8")
+    except UnicodeError:
+        raise Fail("ArgumentsBad", "話不是 UTF-8")
     if not text.strip():
         raise Fail("ArgumentsBad", "話是空的（aos-agent say [--target 名字] 話...）")
     a = target(opts)
@@ -576,7 +580,11 @@ def cmd_chat(argv):
             sent = False
             sys.stderr.write("> ")
             sys.stderr.flush()
-            line = sys.stdin.readline()
+            try:
+                line = sys.stdin.buffer.readline().decode("utf-8")   # 一行一行解碼：壞一行不連累前後
+            except UnicodeDecodeError:                  # 11-04 夜：這行不是 UTF-8＝印一行、不寄、回提示符
+                print("%s: ArgumentsBad 這行不是 UTF-8，沒寄" % PROG, file=sys.stderr, flush=True)
+                continue
             if not line:
                 sys.stderr.write("\n")
                 return
