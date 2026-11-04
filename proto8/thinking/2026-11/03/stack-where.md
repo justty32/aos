@@ -28,31 +28,29 @@
 
 1. **工作區不放子項的 stack**：`aos-daemon-ctl add --ws` 不再在 `<WS>/.stack` 建指到小格的 symlink，`rm` 也不再拆；aos-eca 的 stop／rm 跟著不碰捷徑。
 2. **`aos-daemon-ctl where --stack 名字`**：印那個子項的 stack 路徑；只認目前在 daemon 表上的，表上沒有＝錯。今天的表是 `loops`／`execs`，小格在 `<D>/loops/<名字>/`（procs 改名在下一批）。〔11-03 procs 實作：表是一張 `procs`、印列上的 `stack`（含 `stopped` 的列）〕
-3. **aos-say／aos-listen 這次只加一行提示**：aos-say 說「目前沒有程式在跑」時，多一句「掛在 daemon 上的用 `--stack $(aos-daemon-ctl where --stack 名字)`」；其他不動，使用者之後重做。
+3. **aos-say／aos-listen 這次只加一行提示**：aos-say 說「目前沒有程式在跑」時，多一句「掛在 daemon 上的用 `--stack $(aos-daemon-ctl where --stack 名字)`」；其他不動，使用者之後重做。（11-04 已改：aos-say／aos-listen 併進 `aos-agent say`／`listen`，對象用 `--target 名字`，見 [11-04 aos-agent](../04/aos-agent/README.md)）
 4. **`aos-exec --stack S`**：順序 `--stack` ＞ `$AOS_STACK` ＞ `$AOS_WS/.stack/`（預設照舊放工作區）；相對路徑從呼叫者的 cwd 算、絕對也行、結尾 `/` 可有可無；不在就建；`--stack -`＝沿用外面的值（跟 `--ws -` 對稱）；跟 `--ws` 一樣在讀 `.env` 之前定。
 
 ## 頂層代定（11-03，可翻案）
 
 ### where
 
-1. **代號**：表上沒有＝`ProcMissing`（「proc」是使用者在 procs 那段用的詞；跟 `DaemonMissing` 同一個造法，C-54）。`loops_state.json` 不在＝`StateMissing`、讀不懂＝`StateBad`，跟 `ls` 同一套。
-2. **只認 `--stack`**：`where` 沒給 `--stack`、多給位置參數＝`ArgumentsBad`；別的旗標（例 `--ws`）＝`FlagUnknown`。旗標的值就是名字（`--stack 名字`＝「我要它的 stack」）。
-3. **印什麼**：一行絕對路徑、結尾不帶 `/`（方便接 `$(…)`；`aos-say --stack` 收兩種）。相對的 `--daemon-stack` 照樣印絕對路徑。
-4. **表上的就算**：`loops`、`execs` 兩張表都認，`running`、`stopping` 都算；子項做完下表、小格資料夾還在也是 `ProcMissing`（不看資料夾在不在）。
-5. **daemon 沒在跑**：照 `ls`，stderr 一句「注意 daemon 沒在跑」、照表印、退 0（表是它最後寫的）。
-6. **路徑只在一處拼**：`cell_of(D, 名字)`；procs 那批改成讀列上的 `stack` 時只改這裡。
+1. **代號**：表上沒有＝`ProcMissing`。daemon 的 state 窗不在＝`StateMissing`、讀不懂＝`StateBad`，跟 `ls` 同一套。
+2. **只認 `--stack`**：`where` 沒給 `--stack`、多給位置參數＝`ArgumentsBad`；別的旗標＝`FlagUnknown`。
+3. **印什麼**：一行絕對路徑、結尾不帶 `/`（方便接 `$(…)`）。相對的 daemon stack 照樣印絕對路徑。
+4. **表上的就算**；子項做完下表、小格資料夾還在也是 `ProcMissing`（不看資料夾在不在）。
+5. **daemon 沒在跑**：照 `ls`，stderr 一句「注意 daemon 沒在跑」、照表印、退 0。
+6. **路徑只在一處拼**：`cell_of(D, 名字)`。
 
 ### 捷徑拿掉
 
-7. **工作區原本有什麼都不動、不說話**：以前「工作區已有 .stack…請先搬開」那句注意一起拿掉（已經不建，就沒有撞到的事）；10-30～11-02 留在工作區的舊捷徑不替人清，要清自己 `rm <WS>/.stack`。
-8. **aos-eca**：stop 不再補回捷徑、rm 不再拆捷徑。stop 之後那隻不在 daemon 表上，`where` 找不到——要在停著時寄信，直接 `--stack $AOS_DAEMON_STACK/loops/<名字>`（小格路徑）；procs 那批的 stop 會留在表上，到時就能用 `where`。〔11-03 procs 實作：aos-eca stop 改走 `aos-daemon-ctl stop`，列留在表上（`stopped`），`where --stack` 找得到、`aos-say` 投得進；小格改讀列上的 `stack`（預設 `<D>/procs/<名字>/`），[procs 實作時代定](procs/10-實作時代定-11-03-實作者照原則定的.md#實作時代定11-03實作者照原則定的可翻案)〕
-9. **aos-eca add／start 等它上表才回**：信是 daemon 下一圈才套，以前 add 完馬上 cd 進工作區說話靠的是捷徑；現在要 `where`，而 `where` 只認表上的，所以 aos-eca 掛上之後等到 daemon 表上有它（或小格的 `state.json` 在這之後動過＝起來又馬上結束）才回，最多等 30 秒（`Timeout`）。start 印的「queue 裡幾封」改在掛上之前數。
-10. **測試與說明**：原本「cd 進工作區就說得到」的測試改成先 `where` 拿 stack、再 `aos-say --stack`／`aos-listen --stack`；README 的例子同。
+7. **工作區原本有什麼都不動、不說話**；留在工作區的舊 `.stack` 捷徑不替人清，要清自己 `rm <WS>/.stack`。
+8. **aos-eca**：stop 不再補回捷徑、rm 不再拆捷徑。〔11-03 procs 實作：aos-eca stop 改走 `aos-daemon-ctl stop`，列留在表上（`stopped`），`where --stack` 找得到；小格讀列上的 `stack`（預設 `<D>/procs/<名字>/`），[procs 實作時代定](procs/10-實作時代定-11-03-實作者照原則定的.md#實作時代定11-03實作者照原則定的可翻案)〕（11-04 已改：aos-eca 併進 `aos-agent`；`AOS_DAEMON_STACK` 改名 `AOS_DAEMON`，使用者 11-04 晚「AOS_DAEMON_STACK實在太醜，還是直接簡化成AOS_DAEMON就好了」，見 [11-04 aos-agent 找 agent](../04/aos-agent/02-找-agent.md)）
+9. **aos-eca add／start 等它上表才回**：掛上之後等到 daemon 表上有它（或小格的 `state.json` 在這之後動過＝起來又馬上結束）才回，最多等 30 秒（`Timeout`）。
 
 ### aos-exec --stack
 
-11. **跟 `.env` 的關係**：跟 `--ws` 一樣每讀完一份 `.env` 就把旗標的值蓋回 `AOS_STACK`，所以給了 `--stack`，`.env` 的 `AOS_STACK`（加 `--dotenv-override` 也一樣）改不了這一跳；沒給旗標照舊。
-12. **空值**：`--stack=`（空）跟 `-` 一樣當沒給（照 `--ws` 現有的寫法，對稱）。
-13. **轉向**：字串轉向的下一跳不帶 `--stack`（同 `--ws`），但這一跳已經 export 的絕對 `AOS_STACK` 還在環境裡，下一跳就沿用它，不從下一跳的 cwd 重算。
-14. **建不了**：沿用原本的 `MkdirFailed`「建不了 AOS_STACK：路徑」，不另分是旗標給的。
-15. **N-58 正文**「旗標有兩個」不改寫，只在條末加 11-03 補註說多了 `--stack`。
+10. **跟 `.env` 的關係**：跟 `--ws` 一樣每讀完一份 `.env` 就把旗標的值蓋回 `AOS_STACK`，給了 `--stack`，`.env` 的 `AOS_STACK`（加 `--dotenv-override` 也一樣）改不了這一跳；沒給旗標照舊。
+11. **空值**：`--stack=`（空）跟 `-` 一樣當沒給。
+12. **轉向**：字串轉向的下一跳不帶 `--stack`（同 `--ws`），但這一跳已經 export 的絕對 `AOS_STACK` 還在環境裡，下一跳就沿用它。
+13. **建不了**：沿用 `MkdirFailed`「建不了 AOS_STACK：路徑」。
