@@ -26,7 +26,7 @@
 
 ## 決定
 
-1. **`proto8/tests/` 整個刪**（39 支 test_*.py、4 支共用小程式 aos_bins／dead_brain／own_error／stack_talk、`spy_bin/`、`fixtures/` 四份）。不出溫和版。
+1. **`proto8/tests/` 整個刪**（35 支 test_*.py、4 支共用小程式 aos_bins／dead_brain／own_error／stack_talk、`spy_bin/`、`fixtures/` 四份）。不出溫和版。
 2. **C++ 的 ctest 也全刪**：repo 根 `core/*/tests`、`aos_add_test`／`enable_testing`／Catch2；`proto8/impls/*/tests` 與各 CMakeLists 的測試段；`CMakePresets.json` 的 test preset。
 3. 刪完之後的驗證只剩「**build 得過**」（repo 根 `cmake --build --preset default`、proto8 照順序建 impls）。
 4. 執行排在 aos-agent 實作（它會新增／改 test_agent_cmd、test_aos_llm、test_eca_*、test_agent_fsm，刪 extras/human、eca 與其測試）與 four-elements 07（aos-exec、aos-loop、fsm `stage.txt`、ai_tools 解析，改 test_exec*、test_loop、test_fsm、test_cli_tools、test_aos_mcp、test_grow、test_sandbox、test_janet 與 impls 的 test_cli）**之後**——現在刪，它們的 commit 會把檔帶回來或撞衝突。
@@ -37,7 +37,7 @@
 
 | 範圍 | 進 git 的檔 | 行數 | 跑多久（WSL） |
 |---|---|---|---|
-| `proto8/tests/`（含 fixtures、spy_bin） | 71 | 10,653（test_*.py 10,153） | 見下表「秒」欄 |
+| `proto8/tests/`（含 fixtures、spy_bin） | 71 | 10,653（test_*.py 10,153） | 約 300 秒（510 案）|
 | `proto8/impls/*/tests`（13 專案的 test_cli.py 等） | 約 30 | 8,433 | 各專案 ctest 合計數十秒 |
 | `core/*/tests`（7 個小專案，Catch2＋1 支 Python） | 約 44 | 5,686 | repo 根 ctest 8 項 |
 | **合計** | **約 145** | **約 24,800** | |
@@ -86,7 +86,7 @@
 | test_memory.py | 114／6 | 記憶庫 save／search／forget | lib/aos/memory | |
 | test_send_message.py | 138／7 | 寄信工具名冊、群組 | lib/aos/send_message | |
 
-各檔跑多久：WSL 暫存 clone（`/tmp/aos-trim-*`，沒碰 `~/repo/simple_tools/aos`）逐檔計時的結果見下方「計時」段（若空白＝當天沒跑完，不影響決定）。
+各檔跑多久見檔末「計時」（WSL 暫存 clone `/tmp/aos-trim-*`，沒碰 `~/repo/simple_tools/aos`）。
 
 ### fixtures 跟誰走
 
@@ -167,4 +167,4 @@ proto8：
 
 ## 計時
 
-（WSL 暫存 clone 逐檔跑 `python3 -m unittest <檔>` 的秒數；跑完補在這裡。）
+WSL 暫存 clone（HEAD 129a1a52，impls 用 Release 建）逐檔 `python3 -m unittest <檔>`：35 支全過，**510 案、9 skip（janet 沒裝 4、s6 沒裝 4、python-dotenv 1），合計約 300 秒**。最慢五支 test_agent_cmd 43 秒、test_daemon 38、test_agent_fsm 37、test_human 33、test_eca_cmd 31，佔六成；其餘多在 1～8 秒，test_cli_tools 24、test_eca_turn 18。impls 各自的 ctest 與 core 的 ctest 這次沒計時。
