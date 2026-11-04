@@ -36,6 +36,8 @@ add 的自動識別（11-02 拿掉 --kind，使用者「把--kind刪掉」；11-
         **不收參數**：`-- 參數...` 給 loop 型＝ArgumentsBad（子項設定是 XXX 的 loop.json，參數沒地方放；要參數寫進 loop.json 的 exec；11-02 代定）。
   exec：procs_added {名字: XXX 的絕對路徑}（`檔#/指標` 只轉 # 前面）；有 `-- 參數...`（11-02，使用者「XXX後面可以接-- ... 也就是附加argv參數」）
         ＝{名字: [XXX 絕對路徑, 參數...]}（daemon 起它＝aos-exec XXX 參數...），參數原樣、不轉路徑。有 --ws／--stack＝{"exec": 上面那個, "ws"?, "stack"?}。
+  def（11-04，aos-agent，使用者「那就b。」）：loop 型、exec 型都在子項物件多帶 "def"＝XXX 的絕對路徑（`#` 後面不帶）＝定義資料夾，
+        daemon 只記進表的 def 欄（aos-agent 靠它找定義，不再從 exec 欄倒推）。所以 exec 型一律送物件 {"exec": …, "def": …, "ws"?, "stack"?}。
   XXX 後面只能接 `--`：接別的＝ArgumentsBad（add 只收一個 XXX）；`XXX --` 後面沒東西＝沒參數。
   名字：--name ＞ XXX 的資料夾名（# 前面那段的 basename）。名字合不合格由 daemon 驗（壞信記在 procs_state.json 的 mailbox_warning）。
   信只說「要」，daemon 下一圈才套；結果看 ls。做完（done）的子項 daemon 會從期望表拿掉（11-02），同名再 add＝重新起，不用先 rm。
@@ -250,12 +252,11 @@ def cmd_add(opts, args):
         spec = loop_spec(path)
     else:
         spec = {"exec": [xxx] + extra if extra else xxx}
+    spec["def"] = os.path.abspath(path)   # 11-04（使用者「那就b。」）：定義資料夾，daemon 記進表的 def 欄
     if ws:
         spec["ws"] = ws
     if stack:
         spec["stack"] = stack
-    if not is_loop and len(spec) == 1:
-        spec = spec["exec"]             # 沒有 ws／stack：照舊送裸目標
     send(d, {"procs_added": {name: spec}})
 
 

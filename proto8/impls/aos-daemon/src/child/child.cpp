@@ -142,6 +142,7 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
     Json ws = cfg.value("ws", Json());   // ws、stack 是 daemon 的 key（不是 loop 的）：不灌進小格的 loop.json；ws 只進子行程的環境（AOS_WS）
     cfg.erase("ws");
     cfg.erase("stack");
+    cfg.erase("def");   // def 同（11-04）：只記進表
     Json ex = cfg.value("exec", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗；單子見下）
     if (ex.is_string()) {
         cfg["exec"] = aos::join(cwd, ex.get<std::string>());
@@ -243,6 +244,7 @@ Json row(const Child& c) {
         r["ws"] = c.ws;   // eca 10-30：有給才寫
     }
     r["exec"] = c.exec;   // 11-04 晚（aos-agent 方向題 1）：一律寫，目標（絕對）或 null
+    r["def"] = c.def;     // 11-04（使用者「那就b。」）：一律寫，定義資料夾（絕對）或 null
     return r;
 }
 

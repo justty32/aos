@@ -176,6 +176,10 @@ Json exec_of(const Json& spec, const std::string& cwd) {
     return v.empty() || v[0] == '#' ? Json(v) : Json(aos::join(cwd, v));
 }
 
+Json def_of(const Json& spec) {
+    return spec.is_object() ? spec.value("def", Json()) : Json();   // read_procs 已轉絕對（fix_path）；不驗在不在
+}
+
 bool is_once(const Json& spec) {
     if (spec.is_string() || spec.is_array()) {
         return true;
@@ -184,7 +188,7 @@ bool is_once(const Json& spec) {
         return false;
     }
     for (auto& [k, v] : spec.items()) {
-        if (k != "exec" && k != "ws" && k != "stack") {
+        if (k != "exec" && k != "ws" && k != "stack" && k != "def") {
             return false;   // 多了任何一個 key＝loop 設定（procs § 2 第 3 條）
         }
     }
@@ -210,7 +214,7 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             }
             vec.emplace_back(name, std::move(t));
         } else if (it.value.is_object()) {
-            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", "ctl", "state", "ws", "stack"});
+            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", "ctl", "state", "ws", "stack", "def"});
             if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解、相對 $ref 轉成絕對（10-24）
                 aos::Resolved ex = aos::loop::resolve_exec(r.value["exec"], r.dir_of("exec"));
                 if (ex.value.is_object()) {
@@ -223,6 +227,7 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             }
             fix_path(r.value, name, key, "ws", "工作區");
             fix_path(r.value, name, key, "stack", " stack ");
+            fix_path(r.value, name, key, "def", "定義資料夾");   // 11-04（aos-agent，使用者「那就b。」）：只記、不驗在不在
             if (is_once(r.value) && !is_target(r.value["exec"]) && !r.value["exec"].is_object()) {   // exec 型的物件（procs § 2 第 2 條）
                 throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
             }
@@ -371,6 +376,9 @@ void Daemon::adopt() {
         }
         if (r.value("exec", Json()).is_string()) {
             c.exec = r["exec"];   // 11-04 晚：照舊表帶過來（信箱模式接回的列沒有設定，exec 欄只能從這裡來）
+        }
+        if (r.value("def", Json()).is_string()) {
+            c.def = r["def"];   // 11-04（使用者「那就b。」）：同 exec 欄
         }
         if (phase == "stopped" || phase == "sleeping") {   // stopped 的列（11-03 procs § 2c 第 7 條）：接成 stopped、不起、不判活；名字進底的 stopped 集合
             c.phase = phase.get<std::string>();            // sleeping 的列（11-03 sleep／wake）：同樣接成列、不判活，但不進 stopped 集合＝reconcile 第一圈就 wake
@@ -619,10 +627,12 @@ std::string Daemon::cell_of(const std::string& name, const Json& spec) const {
     return dstack_ + "procs/" + name;   // 預設小格（11-03 原 loops/<名字>/）
 }
 
-Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws, const Json& kept_exec) {
+Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws, const Json& kept_exec,
+                    const Json& kept_def) {
     bool deep = cell != dstack_ + "procs/" + name;   // 不是預設小格＝proc 自己的 stack：不在就 mkdir -p
     Child c = is_once(spec) ? spawn_exec(name, cell, deep, spec, cwd_, dstack_) : spawn(name, cell, deep, spec, cwd_, dstack_, kept_ws);
     c.exec = spec.is_null() ? kept_exec : exec_of(spec, cwd_);   // 11-04 晚：列上的 exec 欄
+    c.def = spec.is_null() ? kept_def : def_of(spec);              // 11-04：列上的 def 欄
     return c;
 }
 
@@ -667,7 +677,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped) {
         if (at != index_.end()) {
             Child& c = at->second->second;
             if (c.held && stopped.count(n) == 0) {   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（基準線）
-                Child nc = start(n, spec, c.stack, c.ws, c.exec);   // 信箱接回只留名的（spec null）：ws 照列上的（11-03 晚：不然 wake 後表上 ws 變空）
+                Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def);   // 信箱接回只留名的（spec null）：ws 照列上的（11-03 晚：不然 wake 後表上 ws 變空）
                 c = nc;
                 log_child(n, c);
                 flush_table();
@@ -684,6 +694,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped) {
             c.own = false;
             c.stack = cell_of(n, spec);
             c.exec = exec_of(spec, cwd_);
+            c.def = def_of(spec);
             add(n, c);
         } else {
             add(n, start(n, spec, cell_of(n, spec)));

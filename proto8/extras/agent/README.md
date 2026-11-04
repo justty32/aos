@@ -34,7 +34,7 @@ aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
 {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm"}}
 ```
 
-- `screen`、`llm`＝定義裡一個資料夾程式，它自己的 `interfaces.json` 宣告 `{"aos-agent/screen": {}}`／`{"aos-agent/llm": {}}`（沒宣告＝`ScreenBad`／`LlmBad`）。aos-agent 從 daemon 表那一列的 `exec` 欄找回定義，叫 `aos-exec --ws <ws> --stack <stack> <定義>/<入口> 動作…`（llm 的第一個 arg 是對象 `stack`）。沒宣告＝`ScreenMissing`（看回答改用 `listen --follow`）／`LlmMissing`。
+- `screen`、`llm`＝定義裡一個資料夾程式，它自己的 `interfaces.json` 宣告 `{"aos-agent/screen": {}}`／`{"aos-agent/llm": {}}`（沒宣告＝`ScreenBad`／`LlmBad`）。aos-agent 從 daemon 表那一列的 `def` 欄找回定義（aos-daemon-ctl add 送、daemon 記；使用者 11-04「那就b。」；沒這欄＝舊 daemon 掛的，`InterfaceMissing`，`rm` 再 `add` 一次），叫 `aos-exec --ws <ws> --stack <stack> <定義>/<入口> 動作…`（llm 的第一個 arg 是對象 `stack`）。沒宣告＝`ScreenMissing`（看回答改用 `listen --follow`）／`LlmMissing`。
 - `tools`＝登記檔。`aos-agent tools` 改的是**這一隻 stack 裡的副本** `<stack>/tools.json`：第一次 `add`／`rm` 才從定義複製（`path` 一律改成絕對）、之後**不跟定義變**（使用者 11-04「不跟。風險自行處理。但我們可以給reset。」）、`reset` 刪副本回去用定義的；改定義用 `aos-tools --file <定義>/tools.json …`。`llm` 同理：副本 `<stack>/llm.json`，改定義用 `aos-llm`。同一份定義掛了好幾隻時，改副本會在 stderr 提醒「X 也用這份定義」。
 
 ## 用法例子

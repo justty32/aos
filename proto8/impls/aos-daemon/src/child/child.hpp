@@ -45,12 +45,13 @@ struct Child {
     Json ws;                            // null 或起它時給的工作區（絕對路徑；子行程的 AOS_WS）——起的那一刻的值，名單後來改了 ws 也不變（已在跑的不重起，N-54）
     Json exec;                          // null 或起它時的目標（11-04 晚，aos-agent 方向題 1「daemon表多一欄記下來」）：Daemon 填（exec_of）；
                                         // adopt 接回的照舊表帶過來；名單後來改了也不變（同 ws）
+    Json def;                           // null 或起它時給的定義資料夾（11-04，aos-agent，使用者「那就b。」）：Daemon 填（def_of）；接回、不變同 exec
 };
 
 // 起一支子 loop。cell＝小格（proc 的 stack，絕對、結尾不帶 /；deep＝mkdir -p，不然只建 cell 與上一層）、spec＝loop 設定物件
 // （null＝不寫 loop.json、照小格裡現有的起；11-03——這時 ws 用 kept_ws＝列上記的，11-03 晚：不然 wake／start 後表上與子行程的 AOS_WS 都掉了）、
 // cwd＝daemon 的 cwd（子項 exec 的相對路徑從這裡算：字串、陣列的第一個元素轉成絕對路徑，其他不動、不驗）。
-// spec 有 ws（read_procs 已轉絕對）＝子行程設 AOS_WS＝它；ws、stack 都不寫進 loop.json（daemon 的 key，不是 loop 的）。
+// spec 有 ws（read_procs 已轉絕對）＝子行程設 AOS_WS＝它；ws、stack、def 都不寫進 loop.json（daemon 的 key，不是 loop 的）。
 // 小格建不了 MkdirFailed、loop.json 寫不了 WriteFailed、stderr 開不了／fork 失敗 LaunchFailed。
 // aos-exec 自己的錯（PATH 上沒有 aos-loop…）寫在小格的 stderr.txt、子 loop 以 1 結束（phase done、code 1）。
 // dstack＝daemon 的 stack（絕對、結尾 /）：子行程設成 AOS_DAEMON（11-02；11-04 晚改名，舊名不認）。spawn_exec 同。
@@ -58,7 +59,7 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
             const std::string& dstack, const Json& kept_ws = Json());
 
 // 起一個 exec 型 proc。spec＝aos-exec 的目標：字串或 [目標, 參數...]（read_procs 驗過），
-// 或 {"exec": 上面兩種或單子, "ws"?, "stack"?}（子行程設 AOS_WS＝ws）；cell、deep 同 spawn；相對路徑從 cwd（daemon 的 cwd）算——
+// 或 {"exec": 上面兩種或單子, "ws"?, "stack"?, "def"?}（子行程設 AOS_WS＝ws；def 只記進表）；cell、deep 同 spawn；相對路徑從 cwd（daemon 的 cwd）算——
 // 子行程 cd 到 cwd 才叫 aos-exec，所以不轉。小格建不了 MkdirFailed、stderr 開不了／fork 失敗 LaunchFailed；aos-exec 自己的錯寫在小格的
 // stderr.txt、子項以 1 結束（phase done、code 1）。它退了＝done、從表上拿掉、本次執行不再起（同子 loop，11-02）。
 // 11-02 晚：spec 的 exec 是內嵌單子（物件）＝寫成小格的 exec.json {"exec": 單子}（cwd 定成 daemon 的 cwd，pin_cwd），子行程跑 `aos-exec -- 小格/exec.json#/exec`。
@@ -68,8 +69,8 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
 // 還活著嗎（自己生的：結束了就收屍、記 code／signal）。
 bool alive(Child& c);
 
-// procs_state 裡的一列：{"pid", "started_at_ticks", "phase", "code", "signal", "stack", "exec"}，起它時給了工作區才多一欄 "ws"。
-// exec（11-04 晚）一律寫：起它時的目標（絕對）或 null。
+// procs_state 裡的一列：{"pid", "started_at_ticks", "phase", "code", "signal", "stack", "exec", "def"}，起它時給了工作區才多一欄 "ws"。
+// exec（11-04 晚）一律寫：起它時的目標（絕對）或 null。def（11-04）一律寫：起它時給的定義資料夾或 null。
 // held（stopped 的列）的 pid、started_at_ticks 是 null。
 Json row(const Child& c);
 

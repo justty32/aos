@@ -21,7 +21,7 @@
 對象：--target 名字 ＞ $AOS_AGENT（add、rm、ls 不吃）；都沒有＝TargetMissing。名字查 daemon 表（aos-daemon-ctl ls --json），
   表上沒有＝InstanceMissing。哪個 daemon：--daemon D ＞ $AOS_DAEMON（那個 daemon 的 $AOS_STACK）；都沒有＝DaemonMissing。沒有 --stack。
 介面（03）：只碰 daemon 表與那隻的 stack（queue/、history.jsonl、ctl／state 窗）；定義資料夾只讀 interfaces.json 宣告
-  （表上那一列的 exec 欄找回定義）。子介面 screen、llm＝定義裡自己宣告 aos-agent/screen、aos-agent/llm 的資料夾程式，
+  （表上那一列的 def 欄＝定義資料夾，aos-daemon-ctl add 送、daemon 記；11-04 使用者「那就b。」）。子介面 screen、llm＝定義裡自己宣告 aos-agent/screen、aos-agent/llm 的資料夾程式，
   用 aos-exec --ws <ws> --stack <stack> <定義>/<入口> 動作… 叫；tools＝登記檔，副本在 <stack>/tools.json（第一次改才建、不跟定義、reset 刪）。
 stdout 只有結果；提醒在 stderr（括號一行）。錯：stderr 一行 `aos-agent: 代號 原因`、退 1（chat 被 Ctrl-C 退 130）。
   代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、InstanceExists、PathMissing、SessionBad、
@@ -373,16 +373,12 @@ def read_decl(folder, iface):
 
 
 def def_of(a):
-    """表那一列的 exec 欄（add 時的目標，可能帶 #/…）→ 定義資料夾。沒有這欄＝InterfaceMissing（舊 daemon 掛的）。"""
-    ex = a.row.get("exec")
-    if isinstance(ex, list) and ex and isinstance(ex[0], str):
-        ex = ex[0]
-    if isinstance(ex, dict):
-        ex = ex.get("exec")
-    if not isinstance(ex, str) or not ex:
-        raise Fail("InterfaceMissing", "daemon 表上 %s 那一列沒有 exec 欄，找不回定義（daemon 要 11-04 以後的版本，再 rm／add 一次）" % a.name)
-    f = ex.partition("#")[0]
-    return f if os.path.isdir(f) else os.path.dirname(f)
+    """表那一列的 def 欄（aos-daemon-ctl add 送的 XXX 絕對路徑）＝定義資料夾。沒有這欄＝InterfaceMissing（舊 daemon 或舊 aos-daemon-ctl 掛的）。
+    11-04 使用者「那就b。」：不再從 exec 欄倒推（loop.json 的 exec 是陣列或指到別的資料夾會推錯）。"""
+    d = a.row.get("def")
+    if not isinstance(d, str) or not d:
+        raise Fail("InterfaceMissing", "daemon 表上 %s 那一列沒有 def 欄，找不回定義（daemon、aos-daemon-ctl 要 11-04 以後的版本；aos-agent rm %s 再 add 一次）" % (a.name, a.name))
+    return d
 
 
 def agent_decl(a):
@@ -394,7 +390,7 @@ def agent_decl(a):
 
 
 def same_def(a, folder):
-    """同一份定義掛出來的其他名字（表上 exec 欄的資料夾跟 folder 是同一個）。"""
+    """同一份定義掛出來的其他名字（表上 def 欄跟 folder 是同一個）。"""
     out = []
     for n, r in table(quiet=True).items():
         if n == a.name:
