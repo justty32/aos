@@ -10,7 +10,7 @@
 //               檔不在 CfgMissing、其他讀不了或不是 JSON CfgBad、`#` 後不是 `/` CfgBad、`#/` 指不到 CfgMissing（10-23 命名統合）。第一行 `#!` 跳過（同 read_json_at）。
 //
 // 對應 proto8/bin/aos_flags.py 的 parse、load_cfg（10-21 ideas § 3、10-21 傍晚 § 9）。
-// 跟 aos/flags.hpp（10-16～17 那代：旗標＝key 原名、值當 JSON 解、設定從 stdin）是兩套（那套目前沒有程式在用，留著）。
+// 較早一代的 aos/flags.hpp（旗標＝key 原名、值當 JSON 解）11-04 已刪（沒人叫）。
 #pragma once
 
 #include "aos/io.hpp"

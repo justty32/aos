@@ -124,9 +124,19 @@ class AosTools(unittest.TestCase):
         env = dict(self.env, AOS_STACK=str(stack) + "/")
         self.assertEqual(self.ok("call", "add", stdin='{"x": 2, "y": 3}', env=env), "5\n")
         self.assertEqual(json.loads((stack / "tool_call.json").read_text()), {"x": 2, "y": 3})
-        r = self.run_tools("call", "add", stdin='{"x": 1, "y": 1, "code": 7}')   # 沒 AOS_STACK：暫存檔
+        r = self.run_tools("call", "add", stdin='{"x": 1, "y": 1, "code": 7}', env=dict(self.env, AOS_STACK=str(stack)))
         self.assertEqual((r.returncode, r.stdout), (7, "2\n"))                     # 結束碼是工具的
         self.bad("ToolMissing", "call", "nope")
+
+    def test_call_exe_needs_stack(self):
+        """call 可執行檔工具沒 AOS_STACK＝StackMissing（11-04 起不再偷用暫存資料夾）；不需要 stack 的子命令照跑。"""
+        self.add3()
+        r = self.run_tools("call", "add", stdin='{"x": 1, "y": 1}')
+        self.assertEqual((r.returncode, r.stdout), (1, ""))
+        self.assertTrue(r.stderr.startswith("aos-tools: StackMissing "), r.stderr)
+        self.assertEqual(len(r.stderr.strip().splitlines()), 1)
+        self.assertEqual(self.ok("call", "clock"), "tick\n")                       # dir／json 不需要 stack
+        self.assertIn("add", self.ok("ls"))                                        # ls 也不需要
 
     def test_call_exec_not_on_path(self):
         """call 資料夾／JSON 工具時 PATH 上沒有 aos-exec：CommandMissing、說「PATH 上找不到」（10-30 晚）。"""
@@ -163,7 +173,7 @@ class AosTools(unittest.TestCase):
         self.assertEqual(json.loads(self.ok("get", "add"))["kind"], "exe")
         self.assertEqual(count.read_text(), "xxxx")                          # 檔沒變也每次重跑
         self.assertEqual((self.agent / "tools.json").read_text(), before)    # 不寫快取
-        self.assertEqual(self.ok("call", "add", stdin='{"x": 2, "y": 3}'), "5\n")
+        self.assertEqual(self.ok("call", "add", stdin='{"x": 2, "y": 3}', env=dict(self.env, AOS_STACK=str(self.t / "st"))), "5\n")
         self.ok("add", "--override", "../lib/add.py")                        # 沒帶 --no-cache：回到有快取
         self.assertEqual(self.reg()["add"]["cache"]["tooldef"]["description"], "加法")
         n = len(count.read_text())

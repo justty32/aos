@@ -27,7 +27,6 @@
 | 檔 | 負責什麼 |
 |---|---|
 | `include/aos/cli.hpp`、`src/cli.cpp` | 命令列 `parse_cli`（旗標在位置參數前、`--x V`／`--x=V`、`--` 結束、開關表 `switches`）、`load_cfg`（`檔` 或 `檔#/指標`） |
-| `include/aos/flags.hpp`、`src/flags.cpp` | 較早一代的旗標規則（旗標名＝設定 JSON 的 key） |
 | `include/aos/error.hpp` | 共用錯誤型別 `aos::Error` 與多支工具都會吐的錯誤代號 `aos::code` |
 | `include/aos/io.hpp`、`src/io.cpp` | 三扇門：stdin 讀 JSON（串流）、stdout 印一行 JSON、stderr 印一行錯誤 |
 | `include/aos/files.hpp`、`src/files.cpp` | 路徑、讀檔、原子寫入（暫存檔再改名） |
@@ -72,8 +71,8 @@
 | `src/env/dotenv.cpp` | `.env` 檔的 dotenv 基礎子集（引號、註解、`export`） |
 | `src/launch/launch.cpp`、`src/launch/launch.hpp` | 執行可執行檔／argv 陣列；inst 單子交給 `run_inst` |
 | `src/inst/run.cpp`、`src/inst/inst.hpp` | `run_inst`：解指示詞 → 驗欄位 → 轉成 libaos 單子 → 跑 |
-| `src/inst/fields.cpp` | 單子的 10 個 key 與型別檢查 |
-| `src/inst/lib_input.cpp` | Inst → libaos 的 `aos_inst_input_t`（絕對路徑、完整環境） |
+| `src/inst/fields.cpp` | 單子的 16 個 key 與型別檢查（11-04 補 `id`、`envs_clear`、`*_mkdir`、`stderr_merge`） |
+| `src/inst/lib_input.cpp` | Inst → libaos 的 `aos_inst_input_t`（絕對路徑、`*_mkdir` 建資料夾、完整環境／`envs_clear`、`stderr_merge`→`merge`） |
 | `src/inst/signals.cpp` | 跑單子期間轉訊號給子程式整群，逾 grace_ms 再 SIGKILL |
 | `src/common/common.hpp` | 內部共用標頭 |
 | `tests/test_cli.py` | 命令列黑箱 |

@@ -23,14 +23,15 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
         （快取有時候礙事，例如定義是工具 import 的別的檔算出來的、檔本身沒變）。手寫也行（aos-json set …#/tools/名/cache false）。
         cache 只收 false 或物件，別的＝RegistryBad；dir／json 項寫 false＝RegistryBad、add --no-cache 給 dir／json＝ArgumentsBad。
         --override 重登記時沒帶 --no-cache＝回到有快取（整項重寫）。
-        叫＝aos-exec 檔 --tool-call 任務檔：arguments 先寫成 $AOS_STACK/tool_call.json（沒設 AOS_STACK＝暫存檔、用完刪），stdin 不給。
+        叫＝aos-exec 檔 --tool-call 任務檔：arguments 先寫成 $AOS_STACK/tool_call.json，stdin 不給。沒設 AOS_STACK＝StackMissing
+        （11-04 起不再偷用暫存資料夾；只有 call exe 需要 stack，add／rm／ls／get 與 call dir／json 都不需要）。
 工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收不管。
 工具名：--name ＞ 檔名去掉副檔名（資料夾＝資料夾名），只收 [A-Za-z0-9_-]、最多 64 字（OpenAI／MCP 的限制）。撞名＝ToolExists，--override 蓋掉。
 不符合要求一律報錯、不猜不跳過（ls／get 碰到登記了但壞掉的工具也報錯，訊息帶工具名）。
 錯：stderr 一行「aos-tools: 代號 原因」、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、RegistryBad、PathMissing、
-  ToolDefMissing、ToolDefBad、NameBad、ToolExists、ToolMissing、DirectiveBad、CommandMissing、WriteFailed。call 自己沒錯時結束碼是工具的。
+  ToolDefMissing、ToolDefBad、NameBad、ToolExists、ToolMissing、StackMissing、DirectiveBad、CommandMissing、WriteFailed。call 自己沒錯時結束碼是工具的。
 """
-import json, os, re, shutil, subprocess, sys, tempfile
+import json, os, re, shutil, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
@@ -307,31 +308,24 @@ def cmd_call(reg, args):
             os.execv(exe, ["aos-exec", path])          # 資料夾、JSON：arguments 原樣從 stdin 進（P-41）
         except OSError as e:
             raise Fail("CommandMissing", "%s 起不來：%s" % (exe, e.strerror or e))
+    stack = os.environ.get("AOS_STACK")
+    if not stack:
+        raise Fail("StackMissing", "叫可執行檔工具要把 arguments 寫成 $AOS_STACK/tool_call.json，但沒設 AOS_STACK（不再偷用暫存資料夾）")
     data = sys.stdin.buffer.read()
-    stack, tmpdir = os.environ.get("AOS_STACK"), None
-    if stack:
-        d = os.path.abspath(stack)
-    else:
-        d = tmpdir = tempfile.mkdtemp(prefix="aos-tools-")
+    d = os.path.abspath(stack)
     task = os.path.join(d, "tool_call.json")
     try:
-        try:
-            os.makedirs(d, exist_ok=True)
-            tmp = os.path.join(d, ".tool_call.json.%d" % os.getpid())
-            with open(tmp, "wb") as f:
-                f.write(data)
-            os.replace(tmp, task)
-        except OSError as e:
-            raise Fail("WriteFailed", "任務檔 %s 寫不了：%s" % (task, e))
-        try:
-            r = subprocess.run(["aos-exec", path, "--tool-call", task], stdin=subprocess.DEVNULL)
-        except OSError as e:
-            raise Fail("CommandMissing", "aos-exec 起不來：%s" % e)
-    finally:
-        if tmpdir:
-            for f in os.listdir(tmpdir):
-                os.unlink(os.path.join(tmpdir, f))
-            os.rmdir(tmpdir)
+        os.makedirs(d, exist_ok=True)
+        tmp = os.path.join(d, ".tool_call.json.%d" % os.getpid())
+        with open(tmp, "wb") as f:
+            f.write(data)
+        os.replace(tmp, task)
+    except OSError as e:
+        raise Fail("WriteFailed", "任務檔 %s 寫不了：%s" % (task, e))
+    try:
+        r = subprocess.run(["aos-exec", path, "--tool-call", task], stdin=subprocess.DEVNULL)
+    except OSError as e:
+        raise Fail("CommandMissing", "aos-exec 起不來：%s" % e)
     sys.exit(r.returncode if r.returncode >= 0 else 128 - r.returncode)
 
 
