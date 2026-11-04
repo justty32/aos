@@ -120,7 +120,7 @@ class T(unittest.TestCase):
         Path(dot, ".env").write_text("no-equals\n")
         st = Path(self.t, "st")
         st.mkdir()
-        Path(st, "state.txt").mkdir()   # fsm 的 state.txt 在但讀不了（是資料夾）
+        Path(st, "stage.txt").mkdir()   # fsm 的 stage.txt 在但讀不了（是資料夾）
         put(Path(d, "ok.json"), {"start": "a", "states": {"a": {"exec": "p", "next": "a"}}})
         loop, fsm, daemon = (tool(n) for n in ("aos-loop", "aos-fsm", "aos-daemon"))
         e = env_of({"AOS_STACK": str(st)})

@@ -162,7 +162,7 @@ class T(unittest.TestCase):
             out = (w / "out" / "q.txt").read_text()
             self.assertIn(tag, out)
         self.assertNotIn("BBB", (a / "out" / "q.txt").read_text())
-        self.assertEqual(list(Path(BOB).rglob("state.txt")), [])  # 定義資料夾保持乾淨
+        self.assertEqual(list(Path(BOB).rglob("stage.txt")), [])  # 定義資料夾保持乾淨
         self.assertEqual(list(Path(BOB).rglob("trace.jsonl")), [])   # 11-03 起哪裡都沒有
         self.assertNotEqual((a / ".stack" / "plan.txt").read_text(), (b / ".stack" / "plan.txt").read_text())
 
@@ -187,7 +187,7 @@ class T(unittest.TestCase):
     def test_bob_state_in_stack_not_ws_or_def(self):
         ws = workspace(self.tmp, "ws", "hello")
         self.assertEqual(run(EXEC, "--ws", str(ws), BOB).returncode, 0)
-        for n in ("state.txt", "plan.txt", "current.txt"):
+        for n in ("stage.txt", "plan.txt", "current.txt"):
             self.assertTrue((ws / ".stack" / n).exists(), n)
             self.assertFalse((ws / n).exists(), n)
             self.assertEqual(list(Path(BOB).rglob(n)), [])
@@ -302,11 +302,11 @@ class T(unittest.TestCase):
         self.assertIn("hello", (ws / "out" / "q.txt").read_text())
         self.assertTrue((ws / "done" / "q.txt").exists())
         self.assertFalse((ws / "new" / "q.txt").exists())
-        self.assertEqual((ws / ".stack" / "state.txt").read_text(), "idle\n")
+        self.assertEqual((ws / ".stack" / "stage.txt").read_text(), "idle\n")
         tr = fsm_steps(ws / ".stack")
         self.assertEqual([(t["state"], t["code"]) for t in tr],
                          [("idle", 0), ("think", 0), ("act", 0), ("idle", 10)])
-        for n in ("state.txt", "plan.txt", "current.txt"):
+        for n in ("stage.txt", "plan.txt", "current.txt"):
             self.assertEqual(list(Path(ANN).rglob(n)), [], n)   # 定義資料夾乾淨
 
     def test_ann_has_no_cell_folders(self):
@@ -337,7 +337,7 @@ class T(unittest.TestCase):
         self.assertTrue(out[0].startswith("# "))
         self.assertIn("FAKE ANSWER to: FAKE ANSWER to: hello", out[1])   # 兩層假腦疊出來
         st = ws / ".stack"
-        for f in ("state.txt", "current.txt", "plan.txt"):
+        for f in ("stage.txt", "current.txt", "plan.txt"):
             self.assertTrue((st / f).is_file(), f)
             self.assertTrue((st / "tools" / "cathy" / f).is_file(), "tools/cathy/" + f)
         self.assertTrue((st / "tools/cathy/ws/done/q.txt").exists())
@@ -368,7 +368,7 @@ class T(unittest.TestCase):
         self.assertIn("AAA", a); self.assertNotIn("BBB", a)
         self.assertIn("BBB", b); self.assertNotIn("AAA", b)
         c = ws / ".stack" / "tools" / "cathy"
-        self.assertEqual((c / "state.txt").read_text(), "idle\n")
+        self.assertEqual((c / "stage.txt").read_text(), "idle\n")
         self.assertEqual(len(fsm_steps(c)), 8)
         self.assertEqual(sorted(p.name for p in (c / "ws" / "done").iterdir()), ["q1.txt", "q2.txt"])
         self.assertEqual((c / "current.txt").read_text().strip(), "q2.txt")
@@ -396,7 +396,7 @@ class T(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         tr = fsm_steps(ws / ".stack")
         self.assertEqual([(t["state"], t["code"]) for t in tr], [("s", 0), ("t", 0)])   # 外層沒被誤停
-        self.assertEqual((ws / ".stack" / "state.txt").read_text(), "s\n")
+        self.assertEqual((ws / ".stack" / "stage.txt").read_text(), "s\n")
 
     def test_claimed_but_unfinished_is_resumed(self):
         # 10-23：認領（new/ → cur/）之後腦失敗、題目停在 cur/；重跑時 think 先接 cur/ 的、idle 也把 cur/ 算成還有題目
@@ -411,10 +411,10 @@ class T(unittest.TestCase):
     def test_cathy_failure_stops_bob(self):
         ws = workspace(self.tmp, "ws", "hello")
         (ws / ".stack" / "tools" / "cathy").mkdir(parents=True)
-        (ws / ".stack" / "tools" / "cathy" / "state.txt").write_text("act\n")      # 停在半路、沒有 current.txt
+        (ws / ".stack" / "tools" / "cathy" / "stage.txt").write_text("act\n")      # 停在半路、沒有 current.txt
         r = run(EXEC, "--ws", str(ws), BOB)
         self.assertEqual(r.returncode, 1)
-        self.assertEqual((ws / ".stack" / "state.txt").read_text(), "act\n")
+        self.assertEqual((ws / ".stack" / "stage.txt").read_text(), "act\n")
         self.assertIn("cathy 失敗", r.stderr)
         self.assertIn("agent-cathy act", r.stderr)      # cathy 自己那層的一行
         self.assertTrue((ws / "cur" / "q.txt").exists())   # 認領了、沒做完：留在 cur/（10-23 起 think 先把題目 new/ → cur/）

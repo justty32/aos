@@ -82,7 +82,7 @@ def st(t):
 
 
 def state(t):
-    return (st(t) / "state.txt").read_text()
+    return (st(t) / "stage.txt").read_text()
 
 
 def check(name, got, want):
@@ -105,18 +105,18 @@ def state_in_stack_and_advances(t):
     check("第一次 0、state＝b", (rc, state(t)), (0, "b\n"))   # 純文字一行狀態名，跟 shell 版同格式
     run(t)
     check("第二次 state＝a", state(t), "a\n")
-    check("cwd 不留 state", list(Path(t).glob("state.txt")), [])
+    check("cwd 不留 state", list(Path(t).glob("stage.txt")), [])
 
 
 @case
 def state_written_by_rename_not_in_place(t):
-    # N-05：先寫 .state.txt 再改名蓋過去——蓋完 inode 換了、不留暫存檔
+    # N-05：先寫 .stage.txt 再改名蓋過去——蓋完 inode 換了、不留暫存檔
     cell(t, "a", "exit 0\n"); cell(t, "b", "exit 0\n")
     table(t, AB)
-    put(st(t) / "state.txt", "a\n")
-    before = os.stat(st(t) / "state.txt").st_ino
+    put(st(t) / "stage.txt", "a\n")
+    before = os.stat(st(t) / "stage.txt").st_ino
     rc = run(t)[0]
-    check("改名寫入", (rc, state(t), os.stat(st(t) / "state.txt").st_ino != before, (st(t) / ".state.txt").exists()),
+    check("改名寫入", (rc, state(t), os.stat(st(t) / "stage.txt").st_ino != before, (st(t) / ".stage.txt").exists()),
           (0, "b\n", True, False))
 
 
@@ -124,7 +124,7 @@ def state_written_by_rename_not_in_place(t):
 def cell_10_passes_up_and_state_unchanged(t):
     cell(t, "a", "exit 10\n"); cell(t, "b", "exit 0\n")
     table(t, AB)
-    put(st(t) / "state.txt", "a\n")
+    put(st(t) / "stage.txt", "a\n")
     check("格退 10：原樣往上、state 不動", (run(t)[0], state(t)), (10, "a\n"))
 
 
@@ -132,7 +132,7 @@ def cell_10_passes_up_and_state_unchanged(t):
 def cell_failure_code_state_unchanged(t):
     cell(t, "a", "exit 3\n")
     table(t, {"a": {"exec": "a", "next": "a"}, "b": {"exec": "a", "next": "a"}})
-    put(st(t) / "state.txt", "b\n")
+    put(st(t) / "stage.txt", "b\n")
     rc, out, _, stderr = run(t)
     check("格失敗：原碼、state 不動、fsm 不說話", (rc, state(t), stderr), (3, "b\n", ""))
 
@@ -152,7 +152,7 @@ def object_cell_in_process_with_timeout(t):
     table(t, {"a": {"exec": {"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 300}, "next": "a"}})
     t0 = time.monotonic()
     rc = run(t)[0]
-    check("單子逾時", (rc, time.monotonic() - t0 < 5, (st(t) / "state.txt").exists()), (143, True, False))
+    check("單子逾時", (rc, time.monotonic() - t0 < 5, (st(t) / "stage.txt").exists()), (143, True, False))
 
 
 @case
@@ -161,17 +161,17 @@ def object_cell_exit_code_and_env_resolved(t):
     table(t, {"a": {"exec": {"argv": ["sh", "-c", "echo hi; exit 4"],
                             "stdout": {"$env": "AOS_STACK", "$path": "out.txt"}}, "next": "a"}})
     rc = run(t)[0]
-    check("單子的碼、$env 解開", (rc, (st(t) / "out.txt").read_text(), (st(t) / "state.txt").exists()), (4, "hi\n", False))
+    check("單子的碼、$env 解開", (rc, (st(t) / "out.txt").read_text(), (st(t) / "stage.txt").exists()), (4, "hi\n", False))
 
 
 @case
 def no_trace_file(t):
-    # 11-03：fsm 不寫 trace.jsonl（使用者「整個拿掉」）；stack 裡只有 state.txt（和格自己寫的）
+    # 11-03：fsm 不寫 trace.jsonl（使用者「整個拿掉」）；stack 裡只有 stage.txt（和格自己寫的）
     cell(t, "a", "exit 0\n"); cell(t, "b", "exit 5\n")
     table(t, AB)
     rcs = [run(t)[0] for _ in range(3)]
     check("每次的碼、state", (rcs, state(t)), ([0, 5, 5], "b\n"))
-    check("沒有 trace.jsonl", sorted(os.listdir(st(t))), ["state.txt"])
+    check("沒有 trace.jsonl", sorted(os.listdir(st(t))), ["stage.txt"])
 
 
 @case
@@ -184,14 +184,14 @@ def requires_stack(t):
 @case
 def own_errors_exit_1_one_line(t):
     table(t, {"a": {"exec": {"argv": ["true"]}, "next": "a"}})
-    put(st(t) / "state.txt", "zzz\n")
+    put(st(t) / "stage.txt", "zzz\n")
     put(Path(t, "bad.json"), "{nope")
     put(Path(t, "objval.json"), {"start": "a", "states": {"a": {"exec": {"argv": ["no-such-cmd-xyz"]}, "next": "a"}}})
     want = {"fsm.json": "StateUnknown", "bad.json": "CfgBad", "absent.json": "CfgMissing",
             "objval.json": "LaunchFailed"}   # 10-24 起物件＝內嵌單子、跑的時候起不來（10-21～10-23 是 CfgBad）
     for f, code in want.items():
         if f == "objval.json":
-            put(st(t) / "state.txt", "a\n")
+            put(st(t) / "stage.txt", "a\n")
         rc, _, err, stderr = run(t, f)
         check("自己的錯 %s" % f, (rc, err, len(stderr.splitlines())), (1, code, 1))
 
@@ -214,7 +214,7 @@ def outer_timeout_kills_nested_tree(t):
             gone = True
             break
         time.sleep(0.05)
-    check("外層逾時整棵收掉", (fast, rc != 0, (st(t) / "state.txt").exists(), gone),
+    check("外層逾時整棵收掉", (fast, rc != 0, (st(t) / "stage.txt").exists(), gone),
           (True, True, False, True))
 
 
@@ -246,9 +246,9 @@ def bad_cells(t):
 def empty_state_file_means_start(t):
     cell(t, "a", 'echo a >> "$AOS_STACK/ran"\n'); cell(t, "b", 'echo b >> "$AOS_STACK/ran"\n')
     table(t, AB)
-    put(st(t) / "state.txt", "  \n")
+    put(st(t) / "stage.txt", "  \n")
     run(t)
-    put(st(t) / "state.txt", "  b \n")   # 前後空白去掉
+    put(st(t) / "stage.txt", "  b \n")   # 前後空白去掉
     run(t)
     check("空的 state＝start；去空白", (st(t) / "ran").read_text(), "a\nb\n")
 
@@ -258,7 +258,7 @@ def string_cell_killed_by_signal(t):
     cell(t, "a", "kill -9 $$\n")
     table(t, {"a": {"exec": "a", "next": "a"}})
     rc = run(t)[0]
-    check("字串格被訊號停掉", (rc, (st(t) / "state.txt").exists()), (137, False))
+    check("字串格被訊號停掉", (rc, (st(t) / "stage.txt").exists()), (137, False))
 
 
 @case
@@ -340,7 +340,7 @@ def sigint_inst_cell(t):
     p.send_signal(signal.SIGINT)
     out, err = p.communicate(timeout=20)
     # 單子由那格的 aos-exec 跑、它當監工：子程式被 SIGINT 停掉，aos-exec 以 130 結束；state 不動
-    check("單子格被轉來的 SIGINT 停掉", (ok, p.returncode, (st(t) / "state.txt").exists()),
+    check("單子格被轉來的 SIGINT 停掉", (ok, p.returncode, (st(t) / "stage.txt").exists()),
           (True, 130, False))
 
 
@@ -411,7 +411,7 @@ def own_error_no_beat(t, name, r):
 def state_exists_but_unreadable(t):
     cell(t, "a", 'touch "$AOS_STACK/ran"\n')
     table(t, {"a": {"exec": "a", "next": "b"}, "b": {"exec": "a", "next": "a"}})
-    sf = st(t) / "state.txt"
+    sf = st(t) / "stage.txt"
     sf.mkdir(parents=True)
     check("state 是資料夾", own_error_no_beat(t, "state 是資料夾：不跑", run(t)), "StateBad")
     sf.rmdir()
@@ -517,7 +517,7 @@ def inline_cell_nonzero(t):
     put(Path(t, "fsm.json"), table_raw)
     st(t).mkdir()
     rc, _, _, stderr = run(t)
-    check("內嵌單子格非 0：原碼往上、state 不動", (rc, stderr, (st(t) / "state.txt").exists()),
+    check("內嵌單子格非 0：原碼往上、state 不動", (rc, stderr, (st(t) / "stage.txt").exists()),
           (4, "", False))
 
 
@@ -528,7 +528,7 @@ def inline_cell_timeout(t):
     st(t).mkdir()
     t0 = time.monotonic()
     rc = run(t)[0]
-    check("內嵌單子格逾時：143、state 不動", (rc, (st(t) / "state.txt").exists(), time.monotonic() - t0 < 10), (143, False, True))
+    check("內嵌單子格逾時：143、state 不動", (rc, (st(t) / "stage.txt").exists(), time.monotonic() - t0 < 10), (143, False, True))
 
 
 @case
@@ -538,7 +538,7 @@ def inline_cell_bad_shape(t):
                        ({"argv": ["true"], "stdout": {"$env": "NOPE_XYZ"}}, "DirectiveBad")):
         put(Path(t, "fsm.json"), {"start": "a", "states": {"a": {"exec": unit, "next": "a"}}})
         rc, _, err, stderr = run(t)
-        check("單子壞 %r" % (unit,), (rc, err, "狀態 a：單子跑不起來：" in stderr, (st(t) / "state.txt").exists()),
+        check("單子壞 %r" % (unit,), (rc, err, "狀態 a：單子跑不起來：" in stderr, (st(t) / "stage.txt").exists()),
               (1, code, True, False))
 
 
@@ -628,7 +628,7 @@ def branch_10_caught(t):
     put(st(t) / "code", "10")
     rc, _, _, stderr = run(t)
     check("10 接住：state 換、fsm 退 0", (rc, stderr, state(t)), (0, "", "c\n"))
-    put(st(t) / "state.txt", "a\n")
+    put(st(t) / "stage.txt", "a\n")
     put(st(t) / "code", "0")
     check("0 照表", (run(t)[0], state(t)), (0, "b\n"))
 
@@ -636,7 +636,7 @@ def branch_10_caught(t):
 @case
 def branch_10_not_caught(t):
     branch_table(t, {"0": "b", "1": "c"})
-    put(st(t) / "state.txt", "a\n")
+    put(st(t) / "stage.txt", "a\n")
     put(st(t) / "code", "10")
     rc = run(t)[0]
     check("10 沒接：退 10、state 不換", (rc, state(t)), (10, "a\n"))
@@ -647,11 +647,11 @@ def branch_star(t):
     branch_table(t, {"0": "b", "*": "c"})
     put(st(t) / "code", "1")
     check("* 接 1", (run(t)[0], state(t)), (0, "c\n"))
-    put(st(t) / "state.txt", "a\n")
+    put(st(t) / "stage.txt", "a\n")
     put(st(t) / "code", "0")
     check("有 \"0\" 就不走 *", (run(t)[0], state(t)), (0, "b\n"))
     branch_table(t, {"*": "c"})
-    put(st(t) / "state.txt", "a\n")
+    put(st(t) / "stage.txt", "a\n")
     check("只有 * 也接 0", (run(t)[0], state(t)), (0, "c\n"))
 
 

@@ -74,7 +74,7 @@ aos-daemon-ctl resume fsm1   # 也有 stop／start（同一個 stack 接著對�
 
 - **停著等 vs 射後不理**寫在表上：範本 idle 的 `next` 接住 10＝queue 空就停著等（loop 隔 `interval_ms` 再看）。射後不理＝複製一份，idle 的 `next` 改成字串 `"think"`（10 到 loop＝收工）、`loop.json` 拿掉 `interval_ms`；要開場白就在 idle 的 argv 加 `"--prompt", "prompt.txt"`（相對這個資料夾；history 空、queue 沒好信時投一次）。
 - **思考中來的信**留在 `queue/new/`，答完回 idle 才收、跟那批一起答（使用者 11-04「等答完回 idle 再收」）。
-- **暫停時改 history**：`pause` 之後改 `history.jsonl`（例：刪掉最後一則答案），要它重答就把 `state.txt` 寫成 `think` 再 `resume`；brain 每次從頭讀，改了就生效。最後一則已是答案時 brain 不問腦、退 10 回 idle。
+- **暫停時改 history**：`pause` 之後改 `history.jsonl`（例：刪掉最後一則答案），要它重答就把 `stage.txt` 寫成 `think` 再 `resume`；brain 每次從頭讀，改了就生效。最後一則已是答案時 brain 不問腦、退 10 回 idle。
 - **錯**：stderr 一行 `agent-fsm: 代號 原因`、退 1、loop 停下等人（P-20）——`BrainFailed`、`ReplyBad`、`HistoryBad`、`ToolsBad`、`ToolFailed`、`PostFailed`、`StackMissing`、`WriteFailed`、`ArgumentsBad`，旗標指的檔不在＝`PromptMissing`／`SystemMissing`／`ToolsMissing`。修好再起（`aos-exec` 同一個工作區、或 daemon `start`）從停的那格接著做。壞信（body 不是 `{"role": "user", "content": 非空字串}`）丟掉、`$AOS_STACK/mailbox_warning.txt` 一行。
 - 掛 daemon 卻沒給 `AOS_BRAIN_URL`＝假腦照跑（daemon 的環境或範本 `.env` 要給）。
 

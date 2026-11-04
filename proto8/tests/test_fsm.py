@@ -5,7 +5,7 @@ own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢�
 
 from aos_bins import ROOT, IMPLS, tool, path_with  # noqa: E402  四支 C++ 在 impls/<名>/bin/、aos-tick 在 proto8/bin/（10-23）
 FSM = str(IMPLS / "aos-fsm" / "bin" / "aos-fsm")   # 直接測真的那支（不經 tests/spy_bin 的旁觀者）
-# 11-03 起 aos-fsm 不寫 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）：原本看 trace 的改看結束碼與 state.txt，
+# 11-03 起 aos-fsm 不寫 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）：原本看 trace 的改看結束碼與 stage.txt，
 # test_no_trace_file 查它不再出現。
 
 
@@ -45,7 +45,7 @@ class T(unittest.TestCase):
         return run(FSM, fsm or str(self.tmp / "fsm.json"), stack=self.stack, cwd=str(self.tmp), **kw)
 
     def state(self):
-        return (self.stack / "state.txt").read_text()
+        return (self.stack / "stage.txt").read_text()
 
     def test_state_in_stack_and_advances(self):
         self.cell("a", "exit 0\n"); self.cell("b", "exit 0\n")
@@ -55,30 +55,30 @@ class T(unittest.TestCase):
         self.assertEqual(self.state(), "b\n")   # 純文字一行狀態名，跟 shell 版同格式
         self.beat()
         self.assertEqual(self.state(), "a\n")
-        self.assertEqual(list(self.tmp.glob("state.txt")), [])
+        self.assertEqual(list(self.tmp.glob("stage.txt")), [])
 
     def test_state_written_by_rename_not_in_place(self):
-        # N-05：先寫 .state.txt 再改名蓋過去——蓋完 inode 換了、不留暫存檔
+        # N-05：先寫 .stage.txt 再改名蓋過去——蓋完 inode 換了、不留暫存檔
         self.cell("a", "exit 0\n"); self.cell("b", "exit 0\n")
         self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "b", "next": "a"}})
-        (self.stack / "state.txt").write_text("a\n")
-        before = os.stat(self.stack / "state.txt").st_ino
+        (self.stack / "stage.txt").write_text("a\n")
+        before = os.stat(self.stack / "stage.txt").st_ino
         self.assertEqual(self.beat().returncode, 0)
         self.assertEqual(self.state(), "b\n")
-        self.assertNotEqual(os.stat(self.stack / "state.txt").st_ino, before)
-        self.assertFalse((self.stack / ".state.txt").exists())
+        self.assertNotEqual(os.stat(self.stack / "stage.txt").st_ino, before)
+        self.assertFalse((self.stack / ".stage.txt").exists())
 
     def test_cell_10_passes_up_and_state_unchanged(self):
         self.cell("a", "exit 10\n"); self.cell("b", "exit 0\n")
         self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "b", "next": "a"}})
-        (self.stack / "state.txt").write_text("a\n")
+        (self.stack / "stage.txt").write_text("a\n")
         self.assertEqual(self.beat().returncode, 10)
         self.assertEqual(self.state(), "a\n")
 
     def test_cell_failure_code_state_unchanged(self):
         self.cell("a", "exit 3\n")
         self.table({"a": {"exec": "a", "next": "a"}, "b": {"exec": "a", "next": "a"}})
-        (self.stack / "state.txt").write_text("b\n")
+        (self.stack / "stage.txt").write_text("b\n")
         self.assertEqual(self.beat().returncode, 3)
         self.assertEqual(self.state(), "b\n")
 
@@ -93,14 +93,14 @@ class T(unittest.TestCase):
         self.table({"a": self.body("a", {"argv": ["sleep", "30"], "timeout_ms": 200, "grace_ms": 300})})
         r = self.beat()
         self.assertEqual(r.returncode, 143, r.stderr)
-        self.assertFalse((self.stack / "state.txt").exists())
+        self.assertFalse((self.stack / "stage.txt").exists())
 
     def test_body_cell_exit_code_and_env_resolved(self):
         self.table({"a": self.body("a", {"argv": ["sh", "-c", "echo hi; exit 4"],
                                          "stdout": {"$env": "AOS_STACK", "$path": "out.txt"}})})
         self.assertEqual(self.beat().returncode, 4)
         self.assertEqual((self.stack / "out.txt").read_text(), "hi\n")
-        self.assertFalse((self.stack / "state.txt").exists())
+        self.assertFalse((self.stack / "stage.txt").exists())
 
     def test_object_exec_is_inline_inst(self):
         # 10-24（使用者「exec本來就應該要可以直接放內嵌單子吧」；10-21 F2「物件＝表壞」撤回）：物件＝內嵌單子，fsm 行程內跑，
@@ -119,7 +119,7 @@ class T(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertEqual(len(r.stderr.strip().splitlines()), 1, r.stderr)
         self.assertTrue(r.raw_stderr.startswith("aos-fsm: EntryBad 狀態 a：單子跑不起來："), r.raw_stderr)
-        self.assertFalse((self.stack / "state.txt").exists())
+        self.assertFalse((self.stack / "stage.txt").exists())
 
     def test_cfg_is_only_positional(self):
         # 10-21 傍晚 ideas § 9：aos-fsm [旗標] 設定檔（原 --cfg 拿掉）；可寫 檔#/指標；沒給、多給、--cfg、不認得的旗標＝usage 錯
@@ -129,7 +129,7 @@ class T(unittest.TestCase):
         self.assertEqual((r.returncode, r.stderr, self.state()), (0, "", "b\n"))
         (self.tmp / "big.json").write_text(json.dumps({"fsms": {"x": {"start": "a", "states": {
             "a": {"exec": "a", "next": "c"}, "c": {"exec": "a", "next": "a"}}}}}))
-        (self.stack / "state.txt").unlink()
+        (self.stack / "stage.txt").unlink()
         r = run(FSM, str(self.tmp / "big.json") + "#/fsms/x", stack=self.stack, cwd=str(self.tmp))
         self.assertEqual((r.returncode, r.stderr, self.state()), (0, "", "c\n"))
         for argv in ([], ["--cfg", f], ["--cfg=" + f], [f, "extra"], ["--max", "1", f]):
@@ -174,7 +174,7 @@ class T(unittest.TestCase):
         self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "b", "next": "a"}})
         self.assertEqual([self.beat().returncode for _ in range(3)], [0, 5, 5])
         self.assertEqual(self.state(), "b\n")
-        self.assertEqual(sorted(os.listdir(self.stack)), ["state.txt"])   # 11-03：沒有 trace.jsonl
+        self.assertEqual(sorted(os.listdir(self.stack)), ["stage.txt"])   # 11-03：沒有 trace.jsonl
 
     def test_requires_stack(self):
         self.table({"a": {"exec": "a", "next": "a"}})
@@ -184,7 +184,7 @@ class T(unittest.TestCase):
 
     def test_own_errors_exit_1_one_line(self):
         self.table({"a": {"exec": "a", "next": "a"}})
-        (self.stack / "state.txt").write_text("zzz\n")
+        (self.stack / "stage.txt").write_text("zzz\n")
         bad = self.tmp / "bad.json"; bad.write_text("{nope")
         for f in (self.tmp / "fsm.json", bad, self.tmp / "absent.json"):
             r = self.beat(str(f))
@@ -204,7 +204,7 @@ class T(unittest.TestCase):
         # 不是 UTF-8 吐 traceback）；沒有檔照舊＝start
         self.cell("a", 'touch "$AOS_STACK/ran"\n')
         self.table({"a": {"exec": "a", "next": "b"}, "b": {"exec": "a", "next": "a"}})
-        sf = self.stack / "state.txt"
+        sf = self.stack / "stage.txt"
         sf.mkdir()
         self.assert_own_error_no_beat(self.beat(), "是資料夾")
         sf.rmdir()
@@ -245,7 +245,7 @@ class T(unittest.TestCase):
         # state 檔裡的狀態不在表上：照舊是自己的錯、退 1、不跑格（10-22 寫清楚）
         self.cell("a", 'touch "$AOS_STACK/ran"\n')
         self.table({"a": {"exec": "a", "next": "a"}})
-        (self.stack / "state.txt").write_text("zzz\n")
+        (self.stack / "stage.txt").write_text("zzz\n")
         r = self.beat()
         self.assert_own_error_no_beat(r, "state 不在表上")
         self.assertIn("zzz", r.stderr)
@@ -266,7 +266,7 @@ class T(unittest.TestCase):
         r = self.beat()
         self.assertLess(time.monotonic() - t0, 10)   # 孤兒 sleep 會握著 pipe 拖滿 30 秒
         self.assertNotEqual(r.returncode, 0)
-        self.assertFalse((self.stack / "state.txt").exists())
+        self.assertFalse((self.stack / "stage.txt").exists())
         pid = int((self.stack / "pid").read_text())
         gone = False
         for _ in range(20):
@@ -319,7 +319,7 @@ class T(unittest.TestCase):
         ok = self.wait_file(self.stack / "up")
         p.send_signal(signal.SIGINT)
         out, err = p.communicate(timeout=20)
-        self.assertEqual((ok, p.returncode, (self.stack / "state.txt").exists()), (True, 130, False))
+        self.assertEqual((ok, p.returncode, (self.stack / "stage.txt").exists()), (True, 130, False))
 
     # ───── 10-30 N-36 改口：next 是 {結束碼: 狀態名}（thinking 10-30 aos-round § A）─────
 
@@ -335,7 +335,7 @@ class T(unittest.TestCase):
 
     def test_branch_10_not_caught(self):
         self.three({"0": "b"})
-        (self.stack / "state.txt").write_text("a\n")
+        (self.stack / "stage.txt").write_text("a\n")
         (self.stack / "code").write_text("10")
         self.assertEqual(self.beat().returncode, 10)
         self.assertEqual(self.state(), "a\n")

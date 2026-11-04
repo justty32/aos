@@ -159,7 +159,7 @@ class AgentFsm(unittest.TestCase):
         return None
 
     def state_txt(self, stack=None):
-        return ((stack or self.stack) / "state.txt").read_text().strip()
+        return ((stack or self.stack) / "stage.txt").read_text().strip()
 
     def phase(self, stack=None):
         return json.loads(((stack or self.stack) / "state.json").read_text() or "{}").get("phase")
@@ -203,7 +203,7 @@ class AgentFsm(unittest.TestCase):
 
     def test_02_one_exchange(self):
         """假腦一問一答：aos-say → history 四則（user、assistant 帶 clock、tool、assistant）、aos-listen 拿到答案；
-        tools/clock/ 在、信已收掉、state.txt 回 idle、沒有 mailbox_warning；工作區只有 .stack（13）；stop 後 loop 退 0、stderr 空。"""
+        tools/clock/ 在、信已收掉、stage.txt 回 idle、沒有 mailbox_warning；工作區只有 .stack（13）；stop 後 loop 退 0、stderr 空。"""
         self.say("現在幾點")
         p = self.start()
         out = self.listen()
@@ -311,7 +311,7 @@ class AgentFsm(unittest.TestCase):
     # ---- 8 腦失敗停下等人 ----
 
     def test_08_brain_fails(self):
-        """AOS_BRAIN_URL 指到馬上被拒的埠：brain 退 1 BrainFailed、loop 退 1、state.txt＝think、history 尾巴是 user；
+        """AOS_BRAIN_URL 指到馬上被拒的埠：brain 退 1 BrainFailed、loop 退 1、stage.txt＝think、history 尾巴是 user；
         拿掉 URL 用同一個 stack 再起＝從 think 接著答、user 不重複。"""
         self.say("問")
         r = self.run_([EXEC, "--ws", self.ws, TEMPLATE], env=self.env({"AOS_BRAIN_URL": DEAD}))
@@ -396,8 +396,8 @@ class AgentFsm(unittest.TestCase):
     # ---- 11 人改 history 再跑 ----
 
     def test_11_edit_history(self):
-        """暫停時刪掉最後一則 assistant、state.txt 寫 think 再 resume＝brain 重問（用剩下的 history）；
-        停下後把 state.txt 寫 think（最後一則已是答案）再起＝brain 退 10 回 idle、不多答；act 遇到沒 tool_calls＝HistoryBad。"""
+        """暫停時刪掉最後一則 assistant、stage.txt 寫 think 再 resume＝brain 重問（用剩下的 history）；
+        停下後把 stage.txt 寫 think（最後一則已是答案）再起＝brain 退 10 回 idle、不多答；act 遇到沒 tool_calls＝HistoryBad。"""
         self.say("改我")
         p = self.start()
         self.assertTrue(self.until(self.answers))
@@ -406,12 +406,12 @@ class AgentFsm(unittest.TestCase):
         self.assertTrue(self.until(lambda: self.phase() == "paused"))
         lines = (self.stack / "history.jsonl").read_text().splitlines()
         (self.stack / "history.jsonl").write_text("\n".join(lines[:-1]) + "\n")   # 刪掉答案；最後一則是 tool
-        (self.stack / "state.txt").write_text("think\n")
+        (self.stack / "stage.txt").write_text("think\n")
         self.ctl("resume")
         self.assertTrue(self.until(lambda: len(self.history()) == 4 and self.answers()))
         self.assertTrue(self.until(lambda: self.state_txt() == "idle"))
         self.assertEqual(self.stop(p)[0], 0)
-        (self.stack / "state.txt").write_text("think\n")
+        (self.stack / "stage.txt").write_text("think\n")
         p = self.start()
         self.assertTrue(self.until(lambda: self.state_txt() == "idle"))
         time.sleep(0.8)
