@@ -69,6 +69,9 @@
 
 | 檔 | 涵蓋 |
 |---|---|
+| `test_eca_screen.py` | eca 的 screen 子介面（`aos-exec … demo/eca-claude/screen open -d／close／watch`，11-04） |
+| `test_eca_llm.py` | eca 的 llm 子介面（def／stack show／set／reset）、cli_session 讀 stack 的 `llm.json`／`tools.json`（11-04） |
+| `test_aos_llm.py` | `bin/aos-llm`（兩個範本、宣告錯）、agent-fsm 的 `llm/llm.py`、brain.py 讀 stack 副本（11-04） |
 | `test_eca_turn.py` | `bin/aos-eca-turn`：`--one`、`--on-empty`、`--on-busy`；批次順序（無序排最後、照樣答） |
 | `test_agent_fsm.py` | 範本 `demo/agent-fsm`（11-04）：形狀、一問一答、整批、壞信、無序排後、`--prompt`、停著等 vs 收工、腦失敗接著答、工具錯回給腦、`--system`／`--tools`（本機假端點）、暫停改 history、掛 daemon（add／pause／resume／stop／start／rm） |
 | `test_eca.py` | 範本 `demo/eca-claude`（codex 版由它複製換 `cli.json`）：say → 跑 → listen、停著等 |

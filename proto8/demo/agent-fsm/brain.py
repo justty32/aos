@@ -34,6 +34,8 @@ system_file = here(opts["--system"]) if "--system" in opts else None
 if system_file and not os.path.isfile(system_file):
     die("SystemMissing", "system 檔不在：%s" % system_file)
 tools_file = here(opts.get("--tools", "tools.json"))
+if "--tools" not in opts and os.path.isfile(os.path.join(os.environ.get("AOS_STACK") or "", "tools.json")):
+    tools_file = os.path.join(os.environ["AOS_STACK"], "tools.json")   # 子介面 tools：stack 有副本就用它（aos-agent tools，11-04）
 if "--tools" in opts and not os.path.isfile(tools_file):
     die("ToolsMissing", "工具登記檔不在：%s" % tools_file)
 stack = os.environ.get("AOS_STACK")
@@ -138,6 +140,19 @@ def ask(url):
     return out                                       # 只留 role、content、tool_calls（模型想的內容不收，P-23）
 
 
+# 子介面 llm（11-04）：stack 有副本 llm.json 就用它的鍵蓋過 AOS_BRAIN_*（aos-agent llm set 寫的；每格重讀＝下一題生效）
+try:
+    with open(os.path.join(stack, "llm.json"), encoding="utf-8") as f:
+        brain_copy = json.load(f)
+except FileNotFoundError:
+    brain_copy = {}
+except (OSError, ValueError) as e:
+    die("CfgBad", "llm.json 讀不懂：%s" % e)
+if not isinstance(brain_copy, dict):
+    die("CfgBad", "llm.json 要是一層物件")
+for k, var in (("url", "AOS_BRAIN_URL"), ("model", "AOS_BRAIN_MODEL"), ("key", "AOS_BRAIN_KEY")):
+    if isinstance(brain_copy.get(k), str):
+        os.environ[var] = brain_copy[k]
 url = os.environ.get("AOS_BRAIN_URL")
 said = fake() if not url else ask(url)
 try:

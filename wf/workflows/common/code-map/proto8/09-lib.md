@@ -31,5 +31,5 @@
 | `agent_tool.py` | 不是工具：把一隻 agent 包成工具的轉接（`fresh_cell`、`run_agent`） |
 | `pyfix/_entry`、`pyfix/_tooldef.json`、`pyfix/_metainfo` | 把改 Python 的事交給子 agent pyfix-agent，印答案＋實際 diff |
 | `pyfix/agent/*` | 子 agent pyfix-agent：`_entry`、`loop.json`、`fsm.json`、`idle/`、`brain.py`、`act.py`、`.env`、`system.txt`、`tools.json`、`tools/`（捷徑到 `lib/base`） |
-| `cli_session.py` | 不是工具：claude／codex CLI 接成工具（非互動續對話，或 tmux 貼字等 hook）；`call_main`、`attach_main`、`hook` |
+| `cli_session.py` | 不是工具：claude／codex CLI 接成工具（非互動續對話，或 tmux 貼字等 hook）；`call_main`、`attach_main`、`hook`；`stack_copies`＝`$AOS_STACK` 的 `tools.json`／`llm.json` 副本優先（11-04） |
 | `claude/`、`codex/` | claude／codex CLI 當工具：`_entry`、`_tooldef.json`、`_metainfo`、`cli.json`（CLI 旗標） |

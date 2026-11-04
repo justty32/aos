@@ -11,6 +11,9 @@
 | `_entry` | `["aos-loop", "loop.json"]` |
 | `loop.json` | 停著等版：`aos-eca-turn --on-empty idle --on-busy yield` |
 | `cli.json`、`tools.json` | CLI 種類與旗標；工具註冊檔 |
+| `interfaces.json` | 宣告遵守 `aos-agent` 介面，選配 `screen`、`tools`、`llm`（11-04） |
+| `screen/`（`_entry`、`interfaces.json`） | 子介面 screen：`_entry`＝`["aos-eca-screen", ".."]`、宣告 `aos-agent/screen` |
+| `llm/`（`_entry`、`interfaces.json`） | 子介面 llm：`_entry`＝`["aos-eca-llm", ".."]`、宣告 `aos-agent/llm` |
 
 ## `demo/agent-fsm/`（aos 自己的 loop／fsm agent 範本；11-04）
 
@@ -25,3 +28,5 @@
 | `brain.py` | think 格：history＋`--system`＋`--tools` 問 OpenAI 相容端點（沒設 `AOS_BRAIN_URL`＝假腦），接一則 assistant；有 `tool_calls` 退 0、沒有退 10 |
 | `act.py` | act 格：最後一則 assistant 的 `tool_calls` 逐個 `aos-tools --file … call`，結果各接一則 tool；工具的錯回給腦 |
 | `system.txt`、`tools.json`、`.env` | system 訊息；工具登記檔（clock）；`AOS_BRAIN_MODEL` |
+| `interfaces.json` | 宣告遵守 `aos-agent` 介面，選配 `tools`、`llm`（11-04） |
+| `llm/`（`_entry`、`interfaces.json`、`llm.py`） | 子介面 llm：`llm.py def\|stack show\|set\|reset`（def＝`../.env` 的 `AOS_BRAIN_*`、stack＝`$AOS_STACK/llm.json`）；brain.py 讀 `llm.json` 蓋過、brain.py／act.py 先看 `$AOS_STACK/tools.json`（11-04） |

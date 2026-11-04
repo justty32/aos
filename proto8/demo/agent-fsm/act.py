@@ -27,6 +27,8 @@ def flags(argv, known):
 
 opts = flags(sys.argv[1:], ("--tools",))
 tools_file = os.path.join(os.environ.get("AOS_CD") or ".", opts.get("--tools", "tools.json"))
+if "--tools" not in opts and os.path.isfile(os.path.join(os.environ.get("AOS_STACK") or "", "tools.json")):
+    tools_file = os.path.join(os.environ["AOS_STACK"], "tools.json")   # 子介面 tools：stack 有副本就用它（aos-agent tools，11-04）
 if "--tools" in opts and not os.path.isfile(tools_file):
     die("ToolsMissing", "工具登記檔不在：%s" % tools_file)
 stack = os.environ.get("AOS_STACK")
