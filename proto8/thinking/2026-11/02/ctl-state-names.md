@@ -1,6 +1,6 @@
 # 2026-11-02 晚 loop 這一系的窗檔名：控制自身的 ctl／state 就叫 `ctl.json`／`state.json`，不加前綴
 
-← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜出發點：頂層向使用者說明「eca 範本用 `ctl.json`／`state.json`，常駐 bob 用 `loop_ctl.json`／`loop_state.json`；全統一加 `loop_` 是大工程」｜被本條推翻的同日決定：[11-02 state 窗](state-window.md)（白天：daemon 窗慣用名 `daemon_ctl.json`／`daemon_state.json`）、[11-02 exec 像繼承 § 結論](exec-inheritance.md#結論11-02跟使用者討論後)（共用 stack 常見名字加前綴 `daemon_*`、`loop_*`）在 ctl／state 這件事上、[11-02 常駐 bob](resident-bob.md)（控制器窗 `loop_ctl.json`／`loop_state.json`、代定「aos-listen 也認 `loop_state.json`」）｜條文：[N-09、N-11、N-13、N-14、N-17](../../../docs/NORMS/05-基礎設施-窗.md)、[N-28、N-54](../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[P-17](../../../docs/CONVENTION/02-題目stack停錯腦.md)、[C-54](../../../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)｜程式：[aos-loop](../../../impls/aos-loop/README.md)、[aos-daemon](../../../impls/aos-daemon/README.md)、[aos-daemon-ctl](../../../bin/README.md)、[aos-eca-hub](../../../extras/eca/README.md)、[aos-say／listen](../../../extras/human/README.md)、[ai_tools](../../../extras/ai_tools/README.md)｜場地 `~/code/playground/`（不在 git）
+← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜出發點：頂層向使用者說明「eca 範本用 `ctl.json`／`state.json`，常駐 bob 用 `loop_ctl.json`／`loop_state.json`；全統一加 `loop_` 是大工程」｜被本條推翻的同日決定：[11-02 state 窗](state-window.md)（白天：daemon 窗慣用名 `daemon_ctl.json`／`daemon_state.json`）、[11-02 exec 像繼承 § 結論](exec-inheritance.md#結論11-02跟使用者討論後)（共用 stack 常見名字加前綴 `daemon_*`、`loop_*`）在 ctl／state 這件事上、[11-02 常駐 bob](resident-bob/README.md)（控制器窗 `loop_ctl.json`／`loop_state.json`、代定「aos-listen 也認 `loop_state.json`」）｜條文：[N-09、N-11、N-13、N-14、N-17](../../../docs/NORMS/05-基礎設施-窗.md)、[N-28、N-54](../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[P-17](../../../docs/CONVENTION/02-題目stack停錯腦.md)、[C-54](../../../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)｜程式：[aos-loop](../../../impls/aos-loop/README.md)、[aos-daemon](../../../impls/aos-daemon/README.md)、[aos-daemon-ctl](../../../bin/README.md)、[aos-eca-hub](../../../extras/eca/README.md)、[aos-say／listen](../../../extras/human/README.md)、[ai_tools](../../../extras/ai_tools/README.md)｜場地 `~/code/playground/`（不在 git）
 
 本檔只記使用者原文（逐字）、決定、查清的現況、fable 照原則定的規劃（可翻案）、原則沒講清楚要使用者一句話的方向題（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。**只規劃、沒實作。**
 
@@ -21,7 +21,7 @@
 - **被推翻（已定、不再是待裁衝突）**：
   - 11-02 白天 [state 窗](state-window.md) 的「daemon 窗慣用名 `daemon_ctl.json`／`daemon_state.json`」（含那份的方向題 1「ctl 一起改」）→ 改回 `ctl.json`／`state.json`。
   - 11-02 [exec 像繼承 § 結論](exec-inheritance.md#結論11-02跟使用者討論後)「共用 stack 的常見名字加自己前綴（`daemon_*`、`loop_*`）」**在 ctl／state 這件事上**由本條取代；其他固定名（信箱、紀錄檔、`relay_state.json` 這類）是不是也不管了見[方向題 2](#方向題-2exec-像繼承的前綴原則對-ctlstate-以外的固定名還適用嗎)。
-  - 11-02 [常駐 bob](resident-bob.md) 規劃的控制器窗 `loop_ctl.json`／`loop_state.json`，與頂層代定「aos-listen `--status` 也認 `loop_state.json`」（`lib/aos/aos_ws.py` 的 `LOOP_STATE_NAMES`）→ 控制器改用 `ctl.json`／`state.json`，認兩個名字的程式收回（見規劃）。
+  - 11-02 [常駐 bob](resident-bob/README.md) 規劃的控制器窗 `loop_ctl.json`／`loop_state.json`，與頂層代定「aos-listen `--status` 也認 `loop_state.json`」（`lib/aos/aos_ws.py` 的 `LOOP_STATE_NAMES`）→ 控制器改用 `ctl.json`／`state.json`，認兩個名字的程式收回（見規劃）。
 
 ### 方向題的答案（11-02 晚，使用者逐字）
 
@@ -95,7 +95,7 @@
 - **N-13**（或 N-09）補 11-02 晚一句：「程式**控制自身**的 ctl／state 窗，慣用名 `ctl.json`／`state.json`、不加前綴（使用者 11-02 晚；loop 這一系全照此）。共用 stack 時末端（derived）的 ctl／state 跟 base 的格式不同，由末端把 base 那對改名加前綴（aos-loop 的 `ctl`／`state` key、`--ctl`／`--state` 旗標就是給這個用的），自己的用 `ctl.json`／`state.json`。」連回本檔。
 - **N-28** 10-29／11-02 落實段與範例的 `daemon_ctl.json`／`daemon_state.json` 改回 `ctl.json`／`state.json`，標「11-02 晚改回」。`NORMS.md` 命名段、附錄 1、附錄 2 同步。
 - [exec 像繼承 § 結論](exec-inheritance.md#結論11-02跟使用者討論後) 補一句「11-02 晚：ctl／state 這一組例外——控制自身的不加前綴，見本檔」；其他固定名怎麼辦等[方向題 2](#方向題-2exec-像繼承的前綴原則對-ctlstate-以外的固定名還適用嗎)。
-- [state 窗](state-window.md) 決定節的「方向題 1：daemon 的 ctl 也改 `daemon_ctl.json`（要）」與規劃 1 補「11-02 晚推翻，見本檔」；[常駐 bob](resident-bob.md) 規劃 3／4 節與代定「aos-listen 認 `loop_state.json`」同樣補註。**不改寫原文**，只加註。
+- [state 窗](state-window.md) 決定節的「方向題 1：daemon 的 ctl 也改 `daemon_ctl.json`（要）」與規劃 1 補「11-02 晚推翻，見本檔」；[常駐 bob](resident-bob/README.md) 規劃 3／4 節與代定「aos-listen 認 `loop_state.json`」同樣補註。**不改寫原文**，只加註。
 
 ### 3. 代定的小事（實作者照做，可翻案）
 
@@ -142,7 +142,7 @@
 | 4 | 測試：`tests/test_daemon.py`、`test_aos_daemon_ctl.py`、`test_eca_hub.py`、`test_exec_rules.py`、`test_talk.py`、`test_human.py`、`test_ai_tools.py`、`impls/aos-daemon/tests/test_demo.py`（白天 `daemon_*` 共 35 行、13 檔） | `"ctl": "daemon_ctl.json"`／`"state": "daemon_state.json"` 改回；`test_cli.py`（aos-daemon）本來就用 `ctl.json`／`state.json`，不動 | proto8 pytest 全套（11-02 基準 815 OK／8 skip）；`impls/aos-daemon` ctest |
 | 5 | `impls/aos-daemon/README.md`（第 24、50、97、100、198 行一帶）、`src/daemon/daemon.hpp:18` 註解、`bin/README.md`（aos-daemon-ctl） | 「慣用名 `daemon_ctl.json`／`daemon_state.json`」改回、標 11-02 晚；**C++ 行為零改動**（只動註解） | `impls/aos-daemon` ctest；repo 根 `cmake --build --preset default && ctest --preset default` |
 | 6 | 條文：`NORMS/05` N-13（或 N-09）補原則一句、`NORMS/04` N-28 範例與落實段、`NORMS.md` 命名段、附錄 1、附錄 2；`CONCEPTS/01-設計理念/C-54` R1 例子不動 | 照本檔「規劃 2」，連回本檔 | `/wf-lint` broken=0 |
-| 7 | thinking 補註：[state 窗](state-window.md)（方向題 1 答案、規劃 1）、[exec 像繼承 § 結論](exec-inheritance.md#結論11-02跟使用者討論後)、[常駐 bob](resident-bob.md)（規劃 3／4 節、代定 aos-listen 那條、實跑段）；本檔「決定」補方向題 1～3 答案 | 只加「11-02 晚推翻，見 [ctl-state-names]」，不改原文 | `/wf-lint` |
+| 7 | thinking 補註：[state 窗](state-window.md)（方向題 1 答案、規劃 1）、[exec 像繼承 § 結論](exec-inheritance.md#結論11-02跟使用者討論後)、[常駐 bob](resident-bob/README.md)（規劃 3／4 節、代定 aos-listen 那條、實跑段）；本檔「決定」補方向題 1～3 答案 | 只加「11-02 晚推翻，見 [ctl-state-names]」，不改原文 | `/wf-lint` |
 | 8 | 試驗場（不在 git）：`~/code/playground/daemons/main/daemon.json`、`agents/resident_bob/ctl/loop.json`、`agents/resident_bob/_entry`（`clear_stopped` 路徑、檔頭說明）、`agents/resident_bob/README.md`、`~/code/playground/README.md:32`；`rm` 控制器小格的舊名窗 | 改回 `ctl.json`／`state.json` | 重跑 `aos-exec ../agents/resident_bob`：`aos-listen --stack $S --status` 印 `phase running（state.json）`→改成不印括號；`echo '{"stopped": true}' > $S/ctl.json` 收工；daemon 睡著時 `.stack/state.json` 不動 |
 | 9 | code map：`wf/workflows/common/code-map/proto8.md`、`proto8/02-tests*.md`、`06-周邊工具-3.md`、`09-lib.md`、`13-demo.md`、`14-aos-daemon.md` | 檔名字串同步 | 跟程式對一遍 |
 | 10 | `wf/WAIT_USER.md`（「aos-listen 認 `loop_state.json`」那條若還在就拿掉或改）、日誌一行、[months/2026-11](../README.md) 那列（頂層加） | — | `/wf-lint` |

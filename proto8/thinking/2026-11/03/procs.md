@@ -234,7 +234,7 @@ aos-daemon-ctl 的子命令：
 - **C-75**／[附錄1 名詞](../../../docs/CONCEPTS/附錄1-名詞.md)：加 **proc** 一列（會跑、會交流的東西；daemon 底下不論包成 loop 還是跑一次都是 proc）、加名詞表的連結。[縮寫表](../../../docs/CONCEPTS/abbr.json) `proc` example 加 `procs`。
 - **NORMS.md** 命名段加一條、主題表補一句、[附錄1 條號表](../../../docs/NORMS/附錄1-條號表.md) N-28／N-54 補「11-03 改口」、[附錄2 各批出處](../../../docs/NORMS/附錄2-各批出處.md)加一批。
 - 其他提到舊名的（[CONVENTION/01](../../../docs/CONVENTION/01-保證佈局入口.md)、[NORMS/06](../../../docs/NORMS/06-基礎設施-命令列與指示詞.md)、[NORMS/10](../../../docs/NORMS/10-基礎設施-定義與工作區.md) N-64 ④）：旁邊加「（11-03 起 `procs`）」。
-- thinking 補註：[ctl-state-names](../02/ctl-state-names.md)「還沒做」與方向題 1→「11-03 定案」；[state 窗](../02/state-window.md#決定11-02-晚使用者實作中陸續裁的)「不要合併了」「仍分開」（「結束後不留名單」照舊，11-03 使用者「照舊拿掉」，只補 stop 例外）；[10-29 § 四 1](../../2026-10/29/medium-plan/03-四-aos-daemon-的兩個手把-兩扇狀態窗.md)「窗名 11-03 改 `procs_*`」；[10-30 agent-lifecycle](../../2026-10/30/agent-lifecycle/README.md) `execs` 段；[11-02 常駐 bob](../02/resident-bob.md) 規劃裡 `loops_state.json`／`aos-daemon-ctl` 片段、「閒置停掉再 `--resume` 叫回」可改成 stop／start。10 月紀錄照舊名。
+- thinking 補註：[ctl-state-names](../02/ctl-state-names.md)「還沒做」與方向題 1→「11-03 定案」；[state 窗](../02/state-window.md#決定11-02-晚使用者實作中陸續裁的)「不要合併了」「仍分開」（「結束後不留名單」照舊，11-03 使用者「照舊拿掉」，只補 stop 例外）；[10-29 § 四 1](../../2026-10/29/medium-plan/03-四-aos-daemon-的兩個手把-兩扇狀態窗.md)「窗名 11-03 改 `procs_*`」；[10-30 agent-lifecycle](../../2026-10/30/agent-lifecycle/README.md) `execs` 段；[11-02 常駐 bob](../02/resident-bob/README.md) 規劃裡 `loops_state.json`／`aos-daemon-ctl` 片段、「閒置停掉再 `--resume` 叫回」可改成 stop／start。10 月紀錄照舊名。
 
 ### 6. Python、Lua、demo 改哪
 

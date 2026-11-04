@@ -1,6 +1,6 @@
 # 2026-11-02 aos-exec 一環套一環、共用 stack＝像繼承
 
-← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜同日：[小格改 tools/](stack-tools.md)、[state 窗](state-window.md)、[daemon 環境變數](daemon-env.md)
+← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜同日：[小格改 tools/](stack-tools.md)、[state 窗](state-window.md)、[daemon 環境變數](daemon-env/README.md)
 
 本檔只記使用者原文（逐字）、決定、跟 AI 討論後的結論（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
 

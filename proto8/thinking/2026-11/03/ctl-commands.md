@@ -95,7 +95,7 @@ ctl.json＝**一個 JSON 物件＝一道指令**（不是陣列、不是一行�
 - **N-14**：補例子「loop 的 ctl 用『比內容』判新舊、`seq` 只回音」。
 - **C-54 R4**（ctl 的 key 用狀態詞）：補「11-03：loop 的 ctl 改成指令，key 是 `cmd`、值是動詞（名詞表的動作欄）；daemon 的 `procs_ctl.json` 仍是狀態詞（`procs_stopped`、`procs_started`）」。
 - **N-28**／**N-54**：daemon 停子 loop＝寫 `{"cmd": "stop"}`；「ctl／state 沒寫就自己放」照舊。
-- [11-02 state 窗](../02/state-window.md)、[11-02 ctl-state-names](../02/ctl-state-names.md)（`echo '{"stopped": true}' > ctl.json` 的例子）、[11-02 resident-bob](../02/resident-bob.md)（`clear_stopped`）、[11-03 procs § 2c](procs.md#2c-起停暫停代定)：各補一句「11-03 ctl 改指令，見本檔」。10 月紀錄照舊。
+- [11-02 state 窗](../02/state-window.md)、[11-02 ctl-state-names](../02/ctl-state-names.md)（`echo '{"stopped": true}' > ctl.json` 的例子）、[11-02 resident-bob](../02/resident-bob/README.md)（`clear_stopped`）、[11-03 procs § 2c](procs.md#2c-起停暫停代定)：各補一句「11-03 ctl 改指令，見本檔」。10 月紀錄照舊。
 
 ### 7. 改哪
 

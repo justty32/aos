@@ -41,5 +41,5 @@ aos-exec 開跑那一步是 **exec**（N-59 第 5 件），而 s6／runit／daem
 - **方向題與使用者的回覆**（10-22，[ideas 10-22 § 2](../thinking/2026-10/22/ideas/README.md)）：「這份報告很有價值，這會減少我們以後的工作量，等於說我們想要的很多功能都有現成輪子，不必重新造。然後方向題這塊，a.我覺得OK，aos-exec先維持只用標準庫。b.看看工作量、看看大家都是怎麼做的。cde.都先不要討論agent」
   - (a) aos-exec 只用標準庫、不 exec 外部程式替自己做事——**定**。
   - (b) `.env` 補不補 unset／多行／引號——**定**：格式做 python-dotenv 的基礎子集（引號、註解、去空白），unset、多行、跳脫不做（[dotenv-格式比較](dotenv-格式比較.md)、[ideas 10-22 § 3](../thinking/2026-10/22/ideas/README.md#3-env-基礎子集與---dotenv-override10-22)）。
-  - (c) 一個 agent 一個 Linux 使用者、(d) agent 資料夾依賴 execline／s6、(e) 單子長 `limits`／`lock` key——10-22 先不討論；(c) 10-24 起以 `aos-sandbox` 試做（[thinking 10-24 sandbox](../thinking/2026-10/24/sandbox.md)）。
+  - (c) 一個 agent 一個 Linux 使用者、(d) agent 資料夾依賴 execline／s6、(e) 單子長 `limits`／`lock` key——10-22 先不討論；(c) 10-24 起以 `aos-sandbox` 試做（[thinking 10-24 sandbox](../thinking/2026-10/24/sandbox/README.md)）。
   - (f) 旗標表的邊界判準要不要寫進 N-58——未決。

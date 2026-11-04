@@ -1,6 +1,6 @@
 # 2026-11-02 state 窗改「啟動寫一次、有變動才更新」、daemon 的 state 改名 `daemon_state.json`、每次的紀錄進 log
 
-← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜出發點：使用者 11-02 看試驗場 daemon 的 `.stack/`（[11-02 試驗場 daemon](playground-daemon.md)）｜條文：[N-09、N-13、N-14、N-17、N-32、N-33](../../../docs/NORMS/05-基礎設施-窗.md)、[N-28](../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-39](../../../docs/NORMS/07-基礎設施-組合子.md)（fsm 的 `trace.jsonl`）、[P-38](../../../docs/CONVENTION/06-巢狀.md)｜實作：[impls/aos-loop](../../../impls/aos-loop/README.md)（`src/engine/window.cpp`、`loop.cpp`）、[impls/aos-daemon](../../../impls/aos-daemon/README.md)（`src/daemon/windows.cpp`）｜同天的另兩份規劃：[11-02 stack-tools](stack-tools.md)（隊長正在落地）、[11-02 daemon-env](daemon-env.md)（控制口，命名未定）
+← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜出發點：使用者 11-02 看試驗場 daemon 的 `.stack/`（[11-02 試驗場 daemon](playground-daemon.md)）｜條文：[N-09、N-13、N-14、N-17、N-32、N-33](../../../docs/NORMS/05-基礎設施-窗.md)、[N-28](../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-39](../../../docs/NORMS/07-基礎設施-組合子.md)（fsm 的 `trace.jsonl`）、[P-38](../../../docs/CONVENTION/06-巢狀.md)｜實作：[impls/aos-loop](../../../impls/aos-loop/README.md)（`src/engine/window.cpp`、`loop.cpp`）、[impls/aos-daemon](../../../impls/aos-daemon/README.md)（`src/daemon/windows.cpp`）｜同天的另兩份規劃：[11-02 stack-tools](stack-tools.md)（隊長正在落地）、[11-02 daemon-env](daemon-env/README.md)（控制口，命名未定）
 
 本檔只記使用者原文（逐字）、決定、fable 照原則定的規劃（可翻案）、要使用者看的衝突與方向題（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。規劃節是 fable 的原規劃，**以決定節為準**（log 檔、心跳進 log 等沒做）；11-02 已實作，結論在文末「實作結論」。
 
@@ -181,7 +181,7 @@
 
 **前提與交集**：
 - 另一位 Opus 隊長**正在落地** [11-02 stack-tools](stack-tools.md) 步驟 6（拿掉擋名字；working tree 裡 `daemon.cpp`／`daemon.hpp`／`windows.cpp`／`test_cli.py`／`test_daemon.py`／README／N-28 都有未 commit 的改動）。**實作者等那輪 commit 進 main、`git pull` 之後再開工**，否則 `windows.cpp` `write_more`、`daemon.cpp` `finish`／`reconcile`、兩份 test、README 的「兩個手把兩扇窗」段會打架。
-- [11-02 daemon-env](daemon-env.md)（控制口；使用者已定「daemon.json 明寫才切到控制口，沒寫照舊跟 stack 一起」，命名未定）：它的步驟 1～2 改 `aos-daemon-ctl`／`aos-eca-hub`（本題不碰）、步驟 3 改同一批 README、步驟 4 改 N-28 同一段、步驟 9（方案 C）寫新的 demo daemon.json。**建議本題先做**（檔名定了，daemon-env 的新 demo 直接用 `daemon_state.json`／`daemon_ctl.json`）；若 daemon-env 先落，本題步驟 3、6 多改它新加的那份 demo 與 README 段落。兩題 C++ 不重疊（daemon-env 只動 `child.cpp run_child`）。
+- [11-02 daemon-env](daemon-env/README.md)（控制口；使用者已定「daemon.json 明寫才切到控制口，沒寫照舊跟 stack 一起」，命名未定）：它的步驟 1～2 改 `aos-daemon-ctl`／`aos-eca-hub`（本題不碰）、步驟 3 改同一批 README、步驟 4 改 N-28 同一段、步驟 9（方案 C）寫新的 demo daemon.json。**建議本題先做**（檔名定了，daemon-env 的新 demo 直接用 `daemon_state.json`／`daemon_ctl.json`）；若 daemon-env 先落，本題步驟 3、6 多改它新加的那份 demo 與 README 段落。兩題 C++ 不重疊（daemon-env 只動 `child.cpp run_child`）。
 
 | # | 改哪 | 做什麼 | 驗證 |
 |---|---|---|---|

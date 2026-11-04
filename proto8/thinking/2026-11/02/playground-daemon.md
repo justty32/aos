@@ -1,6 +1,6 @@
 # 2026-11-02 試驗場：daemons/main（普通 daemon 掛 loop）＋ bob 直接掛上去（execs）
 
-← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜前情：[11-01 試驗場 bob](../01/playground-bob/README.md)、[11-02 試驗場 cathy](playground-cathy.md)｜程式：[aos-daemon](../../../impls/aos-daemon/README.md)（`execs`、信箱模式）、[aos-daemon-ctl](../../../bin/README.md)｜條文：[N-28、N-54](../../../docs/NORMS/04-基礎設施-loop與daemon.md)｜場地 `~/code/playground/`（WSL，不在 git）
+← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜前情：[11-01 試驗場 bob](../01/playground-bob/README.md)、[11-02 試驗場 cathy](playground-cathy/README.md)｜程式：[aos-daemon](../../../impls/aos-daemon/README.md)（`execs`、信箱模式）、[aos-daemon-ctl](../../../bin/README.md)｜條文：[N-28、N-54](../../../docs/NORMS/04-基礎設施-loop與daemon.md)｜場地 `~/code/playground/`（WSL，不在 git）
 
 本檔只記使用者原文（逐字）、決定、跟 AI 討論後的結論（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
 
@@ -70,4 +70,4 @@ echo '{"stopped": true}' > .stack/daemon_ctl.json   # 停完記得 rm .stack/dae
 
 ### 方向題
 
-- 「把 agents/bob 改成可以掛著的」若是指**一直開著、一題一題等**，那是另一種掛法：常駐版見 [2026-11-02-resident-bob](resident-bob.md)。
+- 「把 agents/bob 改成可以掛著的」若是指**一直開著、一題一題等**，那是另一種掛法：常駐版見 [2026-11-02-resident-bob](resident-bob/README.md)。
