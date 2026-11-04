@@ -26,6 +26,8 @@ request = args.get("request") if isinstance(args, dict) else None
 if not isinstance(request, dict) or not isinstance(request.get("messages"), list) or not request["messages"]:
     die("ArgumentsBad", "stdin 要是 {\"endpoint\": {...}, \"request\": {\"messages\": [至少一則]}}")
 messages, tools = request["messages"], request.get("tools") or []
+if not isinstance(tools, list):
+    die("ArgumentsBad", "request.tools 要是陣列")
 last = messages[-1] if isinstance(messages[-1], dict) else {}
 if last.get("role") == "user" and tools:
     name = (tools[0].get("function") or {}).get("name") if isinstance(tools[0], dict) else None
