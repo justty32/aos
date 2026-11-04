@@ -13,7 +13,8 @@
 aos-agent [--daemon D] add [--name N] [--ws WS] [--stack S] XXX     掛一隻；等上表、印 stack
 aos-agent [--daemon D] rm 名字                                        拔掉並刪它的 stack（名字要明講）
 aos-agent [--daemon D] ls [--json]                                    列 daemon 表上全部：名字 狀態 工作區 queue 幾封
-aos-agent [--daemon D] state|status|where|start|stop|pause|resume [--target 名字]
+aos-agent [--daemon D] state|status|start|stop|pause|resume [--target 名字]
+aos-agent [--daemon D] where [--stack|--ws] [--target 名字]            印 stack（預設）／工作區（--ws）
 aos-agent [--daemon D] say [--target 名字] [話...]                    stdout 印信件名稱
 aos-agent [--daemon D] listen [--target 名字] [--timeout-s 秒] | [--last N] [--follow]
 aos-agent [--daemon D] chat [--target 名字]                           一行一句；Ctrl-C 退出
@@ -22,7 +23,8 @@ aos-agent [--daemon D] tools [--target 名字] [ls|get 名|add 名 路徑|rm 名
 aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
 ```
 
-- **對象**：`--target 名字` ＞ `$AOS_AGENT`；都沒有＝`TargetMissing`。名字查 daemon 表，沒有＝`InstanceMissing`。`add`（名字＝`--name`，沒給＝資料夾名）、`rm`（位置參數）、`ls` 不吃 `AOS_AGENT`。不再比工作區、沒有 `--stack`。
+- **對象**：`--target 名字` ＞ `$AOS_AGENT`；都沒有＝`TargetMissing`。名字查 daemon 表，沒有＝`InstanceMissing`。`add`（名字＝`--name`，沒給＝資料夾名）、`rm`（位置參數）、`ls` 不吃 `AOS_AGENT`。不再比工作區、沒有用來指對象的 `--stack`。
+- **where**：不帶旗標＝`--stack`，印那隻的 stack 一行（`aos-daemon-ctl where --stack 名字` 轉述）；`--ws` 印它的工作區（表上那列的 `ws`；沒記＝`WsMissing`，那隻是沒給 `--ws` 直接用 aos-daemon-ctl 掛的）；兩個一起給＝`ArgumentsBad`（使用者 11-04 晚「aos agent的where，我希望默認是--stack，有需要再另外指定--ws。」）。
 - **哪個 daemon**：`--daemon D` ＞ `$AOS_DAEMON`（那個 daemon 的 `$AOS_STACK`，絕對路徑）；都沒有＝`DaemonMissing`（只設舊名 `AOS_DAEMON_STACK` 也是，訊息提示新名）。daemon 沒在跑：`ls`／`state`／`where` 照表印＋注意；`add`／`rm`／`start`／`stop`＝`DaemonMissing`；`say` 照寄＋提醒。
 - **錯**：stderr 一行 `aos-agent: 代號 原因`、退 1；等 daemon 逾時＝`WaitFailed`。子介面入口（screen／llm）與 aos-tools 自己報的錯原樣轉。
 

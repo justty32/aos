@@ -9,7 +9,7 @@
     aos-agent [--daemon D] rm 名字                     拔掉並刪它的 stack（有畫面先關；不吃 AOS_AGENT）
     aos-agent [--daemon D] ls [--json]                 列 daemon 表上全部的 proc：名字 狀態 工作區 queue 排幾封
     aos-agent [--daemon D] state|status [--target 名字]   這隻的狀態幾行
-    aos-agent [--daemon D] where [--target 名字]       印它的 stack
+    aos-agent [--daemon D] where [--stack|--ws] [--target 名字]   印它的 stack（預設＝--stack）／工作區（--ws）
     aos-agent [--daemon D] start|stop|pause|resume [--target 名字]
     aos-agent [--daemon D] say [--target 名字] [話...]    寄一句進它的 queue；stdout 印信件名稱（話沒給＝讀 stdin）
     aos-agent [--daemon D] listen [--target 名字] [--timeout-s 秒] | [--last N] [--follow]
@@ -19,13 +19,13 @@
     aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]                         這隻的腦設定副本
 
 對象：--target 名字 ＞ $AOS_AGENT（add、rm、ls 不吃）；都沒有＝TargetMissing。名字查 daemon 表（aos-daemon-ctl ls --json），
-  表上沒有＝InstanceMissing。哪個 daemon：--daemon D ＞ $AOS_DAEMON（那個 daemon 的 $AOS_STACK）；都沒有＝DaemonMissing。沒有 --stack。
+  表上沒有＝InstanceMissing。哪個 daemon：--daemon D ＞ $AOS_DAEMON（那個 daemon 的 $AOS_STACK）；都沒有＝DaemonMissing。沒有用來指對象的 --stack（where 的 --stack／--ws 只選印哪個）。
 介面（03）：只碰 daemon 表與那隻的 stack（queue/、history.jsonl、ctl／state 窗）；定義資料夾只讀 interfaces.json 宣告
   （表上那一列的 def 欄＝定義資料夾，aos-daemon-ctl add 送、daemon 記；11-04 使用者「那就b。」）。子介面 screen、llm＝定義裡自己宣告 aos-agent/screen、aos-agent/llm 的資料夾程式，
   用 aos-exec --ws <ws> --stack <stack> <定義>/<入口> 動作… 叫；tools＝登記檔，副本在 <stack>/tools.json（第一次改才建、不跟定義、reset 刪）。
 stdout 只有結果；提醒在 stderr（括號一行）。錯：stderr 一行 `aos-agent: 代號 原因`、退 1（chat 被 Ctrl-C 退 130）。
   代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、InstanceExists、PathMissing、SessionBad、
-  SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、TargetMissing、InterfaceMissing、InterfaceBad、
+  SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、TargetMissing、WsMissing、InterfaceMissing、InterfaceBad、
   ScreenMissing、ScreenBad、ToolsMissing、LlmMissing、LlmBad。下層（aos-daemon-ctl）的錯換成這支的名字轉述（ProcMissing→InstanceMissing）；
   子介面入口（screen／llm）與 aos-tools 自己報的錯原樣轉（C-53 各層只說自己的錯）。
 只在 Linux（讀 /proc）。PATH 上要有 aos-post、aos-exec（tools 還要 aos-tools，在 proto8/bin）。"""
@@ -514,13 +514,22 @@ def cmd_state(argv):
 
 
 def cmd_where(argv):
-    opts, rest = parse(argv, {"--target": "target"})
+    """預設（＝--stack）印它的 stack；--ws 印它的工作區（使用者 11-04 晚「aos agent的where，我希望默認是--stack，有需要再另外指定--ws。」）。"""
+    opts, rest = parse(argv, {"--target": "target"}, {"--stack": "stack", "--ws": "ws"})
     if rest:
         raise Fail("ArgumentsBad", "where 不收位置參數：%s（對象用 --target）" % rest[0])
+    if opts.get("stack") and opts.get("ws"):
+        raise Fail("ArgumentsBad", "where 的 --stack、--ws 只能挑一個（不給＝--stack）")
     name = opts.get("target") or os.environ.get("AOS_AGENT", "")
     if not name:
         target(opts)                                    # TargetMissing
-    sys.stdout.write(ctl("where", "--stack", name))
+    if not opts.get("ws"):
+        sys.stdout.write(ctl("where", "--stack", name))
+        return
+    ws = find(name).row.get("ws")
+    if not ws:
+        raise Fail("WsMissing", "表上的 %s 沒記工作區（不是用 aos-agent add／aos-daemon-ctl add --ws 掛的，跑在 daemon 自己的 AOS_WS）" % name)
+    print(ws)
 
 
 def cmd_say(argv):
