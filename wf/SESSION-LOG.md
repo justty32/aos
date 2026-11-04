@@ -12,7 +12,6 @@
 
 ## 最新進度
 
-- **open｜四元素審查 08 步 5～8**（aos-tools `_metainfo.json`、daemon 三名可設＋信箱預設名＋型別寫清楚、daemon-ctl add 看 json、N-63 `AOS_` 四類表）：可開工，使用者「明天再說」 → [four-elements 08](../proto8/thinking/2026-11/04/four-elements/08-實作步驟-等aos-agent後.md)
 - **open｜`AOS_BRAIN_*` 改放哪**：使用者「AOS_BRAIN_URL，我不喜歡這個環境變數」「我再想想」 → [aos-agent 06/03](../proto8/thinking/2026-11/04/aos-agent/06-衝突與方向題/03-新題-tools-llm.md)
 - **open｜tidy 收斂（11-03 晚起）**：批次與狀態 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)；剩 P1-2、P1-3（NORMS）、P2 尾巴、P3 的 C-52／C-54（[05](workflows/tidy/reports/2026-11-03-收斂/05-11-04晚-P2-P3-P4續.md)）
 - **open｜介質**：實作八步已做；agent 的輸入是 queue、接單後放 tools（決定 32）那兩題先擱著 → [10-28 medium](../proto8/thinking/2026-10/28/medium/README.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10/29/medium-plan/README.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
