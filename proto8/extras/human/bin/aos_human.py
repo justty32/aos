@@ -86,8 +86,9 @@ def runners(w):
     return found
 
 
-def daemon_stopped(w):
-    """這個 stack 是不是 daemon 表上停著（phase stopped）的那一列：回 (名字, 是不是 eca)，不是就 None（11-03 procs）。
+def daemon_held(w):
+    """這個 stack 是不是 daemon 表上留著、行程不在的那一列（phase stopped 或 sleeping）：回 (名字, phase, 是不是 eca, daemon 的 stack)，
+    不是就 None（11-03 procs；sleeping＝daemon 收工時還在跑、睡下的，11-04 加）。
     看哪個 daemon：$AOS_DAEMON_STACK，加上 stack 在預設小格 <D>/procs/<名字>/ 時的那個 <D>；讀它的 procs_state.json，
     列上的 stack 跟這個 stack 是同一個（samefile）才算。eca＝那個 stack 裡有 eca.json（同 aos-eca 認的）。讀不到就當不是。"""
     ds = [os.environ.get("AOS_DAEMON_STACK") or ""]
@@ -100,16 +101,18 @@ def daemon_stopped(w):
         except (OSError, ValueError, AttributeError):
             continue
         for name, r in procs.items() if isinstance(procs, dict) else ():
-            if isinstance(r, dict) and r.get("phase") == "stopped" and isinstance(r.get("stack"), str) \
-                    and _same(r["stack"], w.stack):
-                return name, os.path.isfile(os.path.join(w.stack, "eca.json"))
+            if isinstance(r, dict) and r.get("phase") in ("stopped", "sleeping") and isinstance(r.get("stack"), str)                     and _same(r["stack"], w.stack):
+                return name, r["phase"], os.path.isfile(os.path.join(w.stack, "eca.json")), os.path.abspath(d)
     return None
 
 
 def run_hint(w):
-    hit = daemon_stopped(w)
+    hit = daemon_held(w)
+    if hit and hit[1] == "sleeping":   # daemon 收工時睡下的：daemon 再開（adopt）第一圈自己 wake，不用 start（11-04）
+        name, _, _, d = hit
+        return "它掛在 daemon 上睡著（%s 是 sleeping：daemon 收工時睡下的），重開 daemon 它會自己醒：aos-exec <daemon 資料夾>（那個 daemon 的 stack 是 %s）" % (name, d)
     if hit:
-        name, eca = hit
+        name, _, eca, _ = hit
         return "它在 daemon 表上停著（%s 是 stopped），叫它起來：%s %s" % (name, "aos-eca start" if eca else "aos-daemon-ctl start", name)
     return "另開一個終端機跑它：aos-exec --ws %s <agent 資料夾>" % w.ws
 

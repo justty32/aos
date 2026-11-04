@@ -140,6 +140,33 @@ class SayTest(Base):
         self.assertIn("另開一個終端機", r.stderr)
         self.assertIn("where --stack", r.stderr)
 
+    def test_sleeping_on_daemon_hint(self):
+        """11-04：stack 是 daemon 表上 sleeping 的那一列（daemon 收工時睡下的）＝提醒重開 daemon、它會自己醒，印 daemon 的 stack；
+        不說 start、不說另開終端機（試驗場實跑發現）。"""
+        d = self.ws / "dstack"
+        cell, other = d / "procs" / "bob", self.ws / "custom"
+        def table(**rows):
+            d.mkdir(exist_ok=True)
+            (d / "procs_state.json").write_text(json.dumps({"procs": rows}))
+        table(bob={"phase": "sleeping", "pid": None, "stack": str(cell)})
+        for eca in (False, True):                                            # eca 也一樣：daemon 再開自己 wake
+            if eca:
+                (cell / "eca.json").write_text(json.dumps({"kind": "claude"}))
+            r = run(SAY, "--ws", str(self.ws), "--stack", str(cell), "x")   # 預設小格：不用 AOS_DAEMON_STACK 也認得
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIn("bob 是 sleeping", r.stderr)
+            self.assertIn("重開 daemon 它會自己醒：aos-exec <daemon 資料夾>", r.stderr)
+            self.assertIn("daemon 的 stack 是 %s" % d, r.stderr)
+            self.assertNotIn("start bob", r.stderr)
+            self.assertNotIn("另開一個終端機", r.stderr)
+            self.assertNotIn("where --stack", r.stderr)
+        table(c2={"phase": "sleeping", "pid": None, "stack": str(other) + "/"})  # 別處的 stack：看 AOS_DAEMON_STACK
+        r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x")
+        self.assertIn("另開一個終端機", r.stderr)                            # 沒設：認不出，照舊提醒
+        r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x", AOS_DAEMON_STACK=str(d))
+        self.assertIn("c2 是 sleeping", r.stderr)
+        self.assertIn("重開 daemon", r.stderr)
+
     def test_order(self):
         sigs = [self.say("q%d" % i) for i in range(5)]
         self.assertEqual(sigs, sorted(sigs))
