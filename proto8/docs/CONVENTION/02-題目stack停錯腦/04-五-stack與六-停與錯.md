@@ -1,8 +1,8 @@
-← [回入口 02-題目stack停錯腦.md](../02-題目stack停錯腦.md)｜段落：五、stack、六、停與錯｜上一份：[03-P-43](03-P-43.md)｜下一份：[05-P-23～P-26](05-P-23～P-26.md)
+← [回入口 02-題目stack停錯腦.md](../02-題目stack停錯腦.md)｜段落：五、stack、六、停與錯｜上一份：[03-P-43續-11-04-aos-agent](03-P-43續-11-04-aos-agent.md)｜下一份：[05-P-23～P-26](05-P-23～P-26.md)
 
 ## 五、stack
 
-- **P-15** 執行中的一切（狀態、草稿、紀錄、小格）只寫 `$AOS_STACK`，**定義資料夾不被寫**；所以同一個 agent 可以同時被兩個工作區跑。（C-65；§ 2；原型測試已驗）
+- **P-15** 執行中的一切（狀態、草稿、紀錄、小格）只寫 `$AOS_STACK`，**定義資料夾不被寫**；所以同一個 agent 可以同時被兩個工作區跑。（C-65；§ 2；原型測試已驗） **11-04 加註**（aos-agent 的 tools／llm，使用者 11-04 晚「改副本。改定義那塊用aos-tools」「aos-agent llm改正在跑著的，aos-llm改定義」「不跟。風險自行處理。但我們可以給reset。」，[thinking 11-04 aos-agent 03/01](../../../thinking/2026-11/04/aos-agent/03-種類與契約/01-tools-llm-與兩個範本要改什麼.md)）：`aos-agent tools`／`llm` 改的是那一隻 stack 裡的副本（`$AOS_STACK/tools.json`、`$AOS_STACK/llm.json`；之後不跟定義變，`reset` 刪副本），定義仍不被寫；改定義用 `aos-tools`／`aos-llm`（那是人有意改定義，不是執行中寫）。
 - **P-16** agent 自己的格（idle／think／act）共用同一個 `$AOS_STACK`——它們是同一台狀態機。stack 裡放什麼、叫什麼，agent 自訂；agent-bob 的 `state.txt`、`current.txt`、`plan.txt`、`trace.jsonl`〔11-03 起 fsm 不寫〕是例子不是規範。（拍板點 1「stack 內部自由」；§ 2「剩下的你自己想」；§ 3）
 - **P-17** 叫**別的**資料夾程式（工具、另一個 agent）時，給它自己的 stack（**小格**）：`sub=$AOS_STACK/tools/<名>/`、`AOS_STACK=$sub aos-exec tools/<名>`（例：cathy 的 act 用 `AOS_STACK=$sub aos-exec tools/stamp`，工具的 `runs.txt` 落在 `$AOS_STACK/tools/stamp/`）。小格名＝工具資料夾名（P-38 靠這點）。**11-02 改**（使用者 11-02「未來，搞不好會出現agent+kernel的變體，.stack底下會有一大堆東西。擋名字會擋不過來。所以我覺得最好還是tools/<name>更好」，[thinking 11-02 stack-tools](../../../thinking/2026-11/02/stack-tools/README.md)）：小格由 `$AOS_STACK/<名>/` 改 `$AOS_STACK/tools/<名>/`，呼叫方給的名字跟格自己的固定名分開命名空間；`tools` 從此是 stack 頂層的保留名（格自己不能在 stack 頂層放叫 `tools` 的固定東西）。被叫的只看到自己的 stack、不知道上面有誰。叫完不自動收——留著給人看；要收由呼叫方自己 `rm`。巢狀時小格怎麼給、被叫者的工作區放哪，見第十二節 P-32。（§ 3「子程式的 stack 由 agent-bob 自己訂，有可能他會是 AOS_STACK/think, /act」；C-52 子 agent 只看自己的 stack；C-65 stack＝「叫工具時開的小格」；C-67 stack 放哪由呼叫方決定；拍板點 3「人來看」。這是原討論稿拍板點 4 的答案）
 - **P-18** 一個工作區同時跑兩個 agent 時，呼叫方給不同的 `AOS_STACK`（例 `$AOS_WS/.stack/bob/`）；預設值只保證「一個工作區一個 agent」不撞。（C-67；C-53 入口默認正常、誤用不歸組件管）

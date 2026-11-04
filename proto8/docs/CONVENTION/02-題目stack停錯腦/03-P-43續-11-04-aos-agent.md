@@ -1,0 +1,7 @@
+← [回入口 02-題目stack停錯腦.md](../02-題目stack停錯腦.md)｜段落：四、題目與答案（續）：P-43 的 11-04 aos-agent 加註｜上一份：[03-P-43](03-P-43.md)｜下一份：[04-五-stack與六-停與錯](04-五-stack與六-停與錯.md)
+
+- **P-43 的 11-04 加註：aos-agent**（03-P-43 那份已超過 8 KB，這則註放這裡；條文原字不動。使用者 11-03「aos_ws,aos-say/listen,aos-ai這些之後都會整合進aos-agent」、11-04 晚「幫我弄個aos-agent chat指令，ctrl-c退出」「aos-agent add --name bob ../agents/bob這樣」，舊指令「測試全綠就直接刪」，[thinking 11-04 aos-agent](../../../thinking/2026-11/04/aos-agent/README.md)、[03/01 兩個範本要改什麼](../../../thinking/2026-11/04/aos-agent/03-種類與契約/01-tools-llm-與兩個範本要改什麼.md)）：
+  - **名片拿掉**：「`$AOS_STACK/eca.json` 記 `kind`、`ws`、`template`」11-04 起不寫（沒人讀：aos-eca 刪了，aos-agent 從 daemon 表那一列的 `exec` 欄找定義，N-28 的 11-04 註）。
+  - **命令列換人**：「管畫面與 session 檔的命令列是 aos-eca」11-04 起是 [aos-agent](../../../extras/agent/README.md)——畫面 `aos-agent open`／`close`／`watch`，身體是 `bin/aos-eca-screen`（定義裡 `screen/` 子介面的入口）；掛／拔 `aos-agent add`／`rm`；說／看照 P-42 的 11-04 註（`say`／`listen`／`chat`）。仍是工具、不算規範。
+  - **範本多三樣**：定義頂層 `interfaces.json`（`{"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm"}}`，宣告遵守 aos-agent 介面；`add` 只看它）、`screen/`（`_entry`＝`["aos-eca-screen", ".."]`）、`llm/`（`_entry`＝`["aos-eca-llm", ".."]`：看／改 `cli.json` 的 `--model`，或那隻 stack 的副本 `llm.json`）。`aos-agent tools` 改的是 `$AOS_STACK/tools.json` 副本（P-15 的 11-04 註）；cli_session 在 `cli.json` 沒明寫 `tools` 時先用副本、再用定義同層的 `tools.json`，每題讀＝下一題生效。
+  - aos-eca 那幾條決定（[eca](../../../thinking/2026-10/30/eca/README.md) 14、18、19、20、eca-tools、21）由 [extras/agent](../../../extras/agent/README.md) 引用，上文照舊。
