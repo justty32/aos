@@ -1,4 +1,4 @@
-← [入口](README.md)｜涵蓋：找 agent（`--target`／`AOS_AGENT`）、哪個 daemon（`--daemon`／`AOS_DAEMON`）、`using-aos-agent.sh`、chat 怎麼運作｜上一份 [01-子命令](01-子命令.md)｜下一份 [03-種類與契約](03-種類與契約.md)
+← [入口](README.md)｜涵蓋：找 agent（`--target`／`AOS_AGENT`；沒有 `--stack`）、哪個 daemon（`--daemon`／`AOS_DAEMON`）、`using-aos-agent.sh`、chat 怎麼運作｜上一份 [01-子命令](01-子命令.md)｜下一份 [03-種類與契約](03-種類與契約.md)
 
 > 11-04 晚改寫。原本這份是「兩條路：名字查表／當前資料夾的 `.aos/agent.json`」加佔資料夾的衝突表；使用者 11-04「先不做擴充」、稍晚定 `--to`／`AOS_AGENT`、晚上改 `--target`——標記、`occupy`／`release`、「名字還是話」整段作廢。
 
@@ -14,7 +14,7 @@
 
 **不再比工作區**：aos-eca 會「表上 `ws` 跟 cwd 相同就算」，aos-agent 不做（第三條暗路；兩隻同工作區就猜不出來）。要「cd 進去就能說」＝在那個殼裡 `export AOS_AGENT=bob`（或 `source using-aos-agent.sh bob`，下節）；使用者 11-04 自己的話：「有點類似命名空間」。
 
-**`--stack S` 例外**（`say`／`listen`／`chat`／`state`）：給了就直接用那個 stack、不查表、不要 daemon——給直接 `aos-exec` 跑的留的（[方向題 2](06-衝突與方向題/02-新題-11-04-晚.md#方向題-2直接-aos-exec-跑的要不要留---stack)）。這時沒有名字：`start`／`stop`／`rm`／`pause`／`resume`／`open` 不收 `--stack`（給了＝`ArgumentsBad`「這隻不在 daemon 上」）。
+**沒有 `--stack`、不管直接跑的**（使用者 11-04 晚[方向題 2](06-衝突與方向題/02-新題-11-04-晚.md#方向題-2直接-aos-exec-跑的要不要留---stack)選「不留」）：aos-agent 只對 daemon 表上的 agent；`aos-exec --ws W demo/agent-fsm &` 這樣直接跑的，用 `aos-post send --ordered W/.stack/queue` 寫信（body 照介面第 4 條）、`tail -f W/.stack/history.jsonl` 看回答；demo README 與測試的手跑例子改成這樣。
 
 ## 哪個 daemon
 
