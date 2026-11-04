@@ -22,8 +22,10 @@
 | [math](../base/math/) | 算一個算術式子（不用 eval） | `expr` | 結果 |
 | [clock](../base/clock/) | 現在的 UTC 時間 | （無） | `2026-10-23T08:00:00Z` |
 | [run_python](../base/run_python/) | 跑一段 Python，回結束碼與輸出 | `code`、`timeout_s`（60／300） | 第一行「結束碼 N」、接著輸出 |
+| [llm_http](../base/llm_http/) | endpoint 函數：把一份請求 POST 到 OpenAI 相容端點（11-04 晚，[think-as-function](../../thinking/2026-11/04/think-as-function/README.md)；平常由 aos-llm-kernel 經 aos-exec 跑） | `endpoint{url, model, key?, body?}`、`request{messages, …}` | 一行 JSON：`message`（只留 role／content／tool_calls）、`usage`、`model` |
+| [llm_fake](../base/llm_fake/) | 假腦：同 llm_http 的形狀、不碰網路（有工具先叫第一個，否則答 FAKE ANSWER） | 同上（`endpoint` 不看） | 同上，`model`＝`fake` |
 
-不碰工作區的三個（`math`、`clock`、`run_python`）不收路徑、不看 `$AOS_WS`；`run_python` 把程式寫進自己的小格再跑（規則 8 的例外：拿小格當草稿區，不跨呼叫留東西）。
+不碰工作區的（`math`、`clock`、`run_python`、`llm_http`、`llm_fake`）不收路徑、不看 `$AOS_WS`；`run_python` 把程式寫進自己的小格再跑（規則 8 的例外：拿小格當草稿區，不跨呼叫留東西）。
 每個工具的細節看它 `_entry` 開頭的幾行說明與 `_tooldef.json`。
 
 ## 索引：aos

@@ -1,0 +1,5 @@
+{"description": "假腦：跟 llm_http 同形狀，不碰網路；有工具就先叫第一個，否則答一句 FAKE ANSWER。",
+ "parameters": {"type": "object",
+  "properties": {"endpoint": {"type": "object", "description": "不看"},
+                 "request": {"type": "object", "description": "messages 必有、tools 選填"}},
+  "required": ["request"]}}

@@ -15,6 +15,7 @@
 | `json_read/`、`json_edit/` | 照指標看 JSON；照指標改 JSON（經 PATH 上的 `aos-json`） |
 | `math/`、`clock/` | 四則運算、印 UTC 時間 |
 | `run_python/` | 跑一段 Python，回結束碼與輸出 |
+| `llm_http/`、`llm_fake/` | endpoint 函數（11-04 晚）：stdin `{endpoint, request}` → POST OpenAI 相容端點、印 `{message, usage, model}`；假腦同契約不碰網路。aos-llm-kernel 的 `kernel.json` `exec`／`endpoints.*.exec` 指它們 |
 
 ## `lib/aos/`（懂 aos 的工具）
 

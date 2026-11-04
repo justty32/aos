@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+# llm_fake - 假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4）
+# 介面：stdin {"endpoint": {...}（不看）, "request": {"messages", "tools"?}}；最後一則是 user 而且有 tools＝先叫第一個工具（arguments "{}"）；
+#   否則答一句「FAKE ANSWER to: <最後一則 user>」（最後一則是 tool 就附「（tool said: …）」）。
+#   stdout 一行 {"message", "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}, "model": "fake"}、退 0。
+# 錯：stderr 與 stdout 各一行「llm_fake: ArgumentsBad 原因」、退 1。
+# 用法：kernel.json 的 endpoints 登記一組 "fake": {"exec": "<到這個資料夾的路徑>"}，信寫 "endpoint": "fake"（或設成預設）。
+# 來源：demo/agent-fsm/brain.py 的 fake()（11-04 晚搬過來；不再用「URL 沒設＝假腦」的暗規則，C-56）。
+import json, sys
+
+NAME = "llm_fake"
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)
+    sys.exit(1)
+
+
+try:
+    args = json.loads(sys.stdin.read() or "null")
+except ValueError as e:
+    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+request = args.get("request") if isinstance(args, dict) else None
+if not isinstance(request, dict) or not isinstance(request.get("messages"), list) or not request["messages"]:
+    die("ArgumentsBad", "stdin 要是 {\"endpoint\": {...}, \"request\": {\"messages\": [至少一則]}}")
+messages, tools = request["messages"], request.get("tools") or []
+last = messages[-1] if isinstance(messages[-1], dict) else {}
+if last.get("role") == "user" and tools:
+    name = (tools[0].get("function") or {}).get("name") if isinstance(tools[0], dict) else None
+    said = {"role": "assistant", "content": None,
+            "tool_calls": [{"id": "call_fake_%d" % len(messages), "type": "function",
+                            "function": {"name": name or "unknown", "arguments": "{}"}}]}
+else:
+    question = next((m.get("content") or "" for m in reversed(messages)
+                     if isinstance(m, dict) and m.get("role") == "user"), "")
+    content = "FAKE ANSWER to: " + str(question).rstrip("\n")
+    if last.get("role") == "tool":
+        content += "（tool said: %s）" % str(last.get("content") or "").rstrip("\n")
+    said = {"role": "assistant", "content": content}
+print(json.dumps({"message": said, "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                  "model": "fake"}, ensure_ascii=False))
