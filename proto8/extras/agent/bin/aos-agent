@@ -638,7 +638,7 @@ def cmd_rm(argv):
     need_daemon()
     a = find(rest[0])
     close_screen_if_any(a)
-    ctl("rm", a.name)
+    ctl("rm", "--", a.name)
     wait_for(lambda: row_named(a.name) is None, "daemon 還沒收掉 %s" % a.name)
     shutil.rmtree(a.stack, ignore_errors=True)        # 不封存（使用者 11-02 晚）
     print("刪了 %s（stack %s）" % (a.name, a.stack))
@@ -657,7 +657,7 @@ def cmd_start(argv):
         print("本來就在跑（%s）" % label(a))
         return
     n = queued(a) or 0
-    ctl("start", a.name)
+    ctl("start", "--", a.name)
     wait_for(lambda: (row_named(a.name) or {}).get("phase") != "stopped", "daemon 還沒把 %s 起來" % a.name)
     print("起來了（同一個 stack），queue 裡 %d 封接著答" % n)
 
@@ -673,7 +673,7 @@ def cmd_stop(argv):
         return
     close_screen_if_any(a)
     if a.phase != "stopping":
-        ctl("stop", a.name)
+        ctl("stop", "--", a.name)
     wait_for(lambda: (row_named(a.name) or {"phase": "stopped"}).get("phase") == "stopped", "daemon 還沒把 %s 停好" % a.name)
     print("停了，stack 留著（%s）；這期間 say 的信照收，aos-agent start --target %s 接著答" % (a.stack, a.name))
 
@@ -684,7 +684,7 @@ def cmd_pause_resume(cmd):
         if rest:
             raise Fail("ArgumentsBad", "%s 不收位置參數：%s（對象用 --target）" % (cmd, rest[0]))
         a = target(opts)
-        sys.stdout.write(ctl(cmd, a.name))
+        sys.stdout.write(ctl(cmd, "--", a.name))
     return run
 
 
