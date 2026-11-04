@@ -635,7 +635,11 @@ def cmd_add(argv):
         hint = "；它停著，要接著用就 aos-agent start --target %s" % name if row.get("phase") == "stopped" else ""
         raise Fail("InstanceExists", "daemon 上已經有 %s 了；換個名字（--name），或先 aos-agent rm %s%s" % (name, name, hint))
     ctl("add", "--ws", ws, "--name", name, *(["--stack", stack] if stack else []), xxx)
-    row = wait_for(lambda: row_named(name), "daemon 還沒把 %s 放上表（或起來就結束、下了表；用 aos-agent ls 看、看 daemon 的 log）" % name)
+    try:
+        row = wait_for(lambda: row_named(name), "daemon 還沒把 %s 放上表（或起來就結束、下了表；用 aos-agent ls 看、看 daemon 的 log）" % name)
+    except KeyboardInterrupt:                         # 11-04 夜邊緣實測：信已寄出，Ctrl-C 不撤；原本安靜退 130，人以為沒掛上
+        note("add 的信已寄出，daemon 還是會把 %s 掛上；不要了就 aos-agent rm %s（用 aos-agent ls 看）" % (name, name))
+        raise
     print(Agent(name, row).stack)
 
 
