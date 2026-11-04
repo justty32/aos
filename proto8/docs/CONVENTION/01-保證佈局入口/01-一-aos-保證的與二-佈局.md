@@ -6,7 +6,7 @@ aos 保證的底——六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`�
 
 ## 二、佈局（每檔一句）
 
-混合寫法（§ 10 使用者「好主意」）：狀態表一律寫在 `fsm.json`；一行講完的格內嵌單子；有真邏輯的格 `exec` 寫子資料夾名；留 `trace.jsonl`〔11-03 起 fsm 不寫，N-39〕。程式已照這張做完（見第十節）。
+混合寫法（§ 10 使用者「好主意」）：狀態表一律寫在 `fsm.json`；一行講完的格內嵌單子；有真邏輯的格 `exec` 寫子資料夾名。fsm 停在哪格記在 stack 的 `stage.txt`（使用者 11-04 題 10「fsm改名，嘗試用同義詞」，[four-elements 07](../../../thinking/2026-11/04/four-elements/07-實作步驟.md) 步 3；fsm.json 的 `start`／`states` 不改），不寫 trace（N-39）。程式已照這張做完（見第十節）。
 
 ```
 agent-bob/                 一個 agent＝一個資料夾程式（§ 1）
@@ -27,12 +27,10 @@ workspace/                 ＝$AOS_WS，使用者的（§ 2）
   cur/<題名>               認領了、正在做的題目（think 從 new/ 搬來；Maildir 的 cur）
   out/<題名>               答案：跟題目同名
   done/<題名>              做完的題目從 cur/ 搬來這
-  .stack/                  預設 $AOS_STACK（§ 2）＝bob 的 stack：state.txt、current.txt、plan.txt、trace.jsonl（P-16）
-  .stack/tools/cathy/      cathy 的小格＝她的 stack（P-32）：state.txt、current.txt、plan.txt、trace.jsonl
+  .stack/                  預設 $AOS_STACK（§ 2）＝bob 的 stack：stage.txt、current.txt、plan.txt（P-16）
+  .stack/tools/cathy/      cathy 的小格＝她的 stack（P-32）：stage.txt、current.txt、plan.txt
   .stack/tools/cathy/ws/   cathy 的工作區（bob 備好題目、拿答案的地方）：new/ cur/ out/ done/
   .stack/tools/cathy/tools/stamp/runs.txt  stamp 的小格（P-17）
 ```
-
-> 11-04 加註：上面樹裡 fsm 的 `state.txt` 改名 `stage.txt`（使用者題 10「fsm改名，嘗試用同義詞」，[four-elements 07](../../../thinking/2026-11/04/four-elements/07-實作步驟.md) 步 3；fsm.json 的 `start`／`states` 不改）
 
 stack 樹就是呼叫樹：`.stack/tools/cathy/tools/stamp/` 一眼看出「bob 叫了 cathy、cathy 叫了 stamp」（P-38、P-17）。
