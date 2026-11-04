@@ -1,10 +1,10 @@
-// fields.cpp：【inst】單子（$env 已解）→ Inst：認得 10 個 key、驗型別。
+// fields.cpp：【inst】單子（$env 已解）→ Inst：認得 16 個 key、驗型別。
 //
-// 10 個 key 與檢查順序（10-19 版）：
+// 16 個 key 與檢查順序（10-19 版 10 個，11-04 補 6 個）：
 //   argv（非空字串陣列，必填）→ envs（{名: 字串}）→ cwd／stdin／stdout／stderr（字串或 null）→
-//   stdout_append／stderr_append（true／false）→ timeout_ms（正整數或 null）→ grace_ms（非負整數，沒寫 2000）
-// 其他 key 一律忽略（包括 impls/aos-inst 認得的 id、envs_clear、cwd_mkdir、stdout_mkdir、stderr_mkdir、stderr_merge）。
-// 驗不過一律 EntryBad（單子就是入口，寫壞＝入口壞）。
+//   stdout_append／stderr_append（true／false）→ timeout_ms（正整數或 null）→ grace_ms（非負整數，沒寫 2000）→
+//   envs_clear／cwd_mkdir／stdout_mkdir／stderr_mkdir／stderr_merge（true／false，沒寫 false）；id 是標籤，收下不看。
+// 其他 key 一律忽略。驗不過一律 EntryBad（單子就是入口，寫壞＝入口壞）。
 #include "inst/inst.hpp"
 
 namespace aos::exec {
@@ -98,6 +98,21 @@ Inst parse_inst(const Json& doc, const std::vector<std::string>& args) {
             bad("grace_ms", "非負整數", g);
         }
         inst.grace_ms = g.get<unsigned long long>();
+    }
+
+    // 11-04 補的 5 個開關（題 9「aos-exec 補認那 7 個」；id 收下不看）
+    struct {
+        const char* key;
+        bool* out;
+    } flags[5] = {{"envs_clear", &inst.envs_clear}, {"cwd_mkdir", &inst.mkdirs[0]},
+                  {"stdout_mkdir", &inst.mkdirs[1]}, {"stderr_mkdir", &inst.mkdirs[2]},
+                  {"stderr_merge", &inst.merge}};
+    for (auto& f : flags) {
+        Json v = doc.value(f.key, Json(false));
+        if (!v.is_boolean()) {
+            bad(f.key, " true／false", v);
+        }
+        *f.out = v.get<bool>();
     }
     return inst;
 }

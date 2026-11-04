@@ -569,13 +569,25 @@ def inst_bad(t):
 
 
 @case
-def inst_extra_keys_ignored(t):
-    # 10-19 的單子只認 10 個 key；impls/aos-inst 認得的 stderr_merge、cwd_mkdir 等在這裡跟不認得的 key 一樣被忽略
+def inst_extra_keys(t):
+    # 11-04 起認 id、envs_clear、cwd_mkdir、stdout_mkdir、stderr_mkdir、stderr_merge（題 9「aos-exec 補認那 7 個」）
     rc, out, _, stderr = inst(t, {"argv": ["sh", "-c", "echo o; echo e >&2"], "stderr_merge": True, "id": 3})
-    check("stderr_merge 被忽略（不合併）", (rc, out, stderr), (0, "o\n", "e\n"))
-    rc, _, err, _ = inst(t, {"argv": ["true"], "cwd": "made", "cwd_mkdir": True})
-    check("cwd_mkdir 被忽略（cwd 不在就 LaunchFailed）", (rc, err, Path(t, "q", "made").exists()),
-          (1, "LaunchFailed", False))
+    check("stderr_merge 兩路合一、id 寫了沒事", (rc, out, stderr), (0, "o\ne\n", ""))
+    rc, _, err, stderr = inst(t, {"argv": ["true"], "stderr": "e.txt", "stderr_merge": True})
+    check("stderr_merge 又寫 stderr＝PathConflict", (rc, err, "PathConflict" in stderr), (1, "LaunchFailed", True))
+    rc, _, err, _ = inst(t, {"argv": ["true"], "cwd": "made/deep", "cwd_mkdir": True})
+    check("cwd_mkdir 建好 cwd", (rc, err, Path(t, "q", "made", "deep").is_dir()), (0, None, True))
+    rc, _, _, _ = inst(t, {"argv": ["sh", "-c", "echo o; echo e >&2"], "stdout": "a/b/o.txt", "stdout_mkdir": True,
+                           "stderr": "c/e.txt", "stderr_mkdir": True})
+    check("stdout_mkdir／stderr_mkdir 寫進不存在的資料夾",
+          (rc, Path(t, "q", "a", "b", "o.txt").read_text(), Path(t, "q", "c", "e.txt").read_text()), (0, "o\n", "e\n"))
+    put(Path(t, "q", "file"), "x")
+    check("cwd_mkdir 建不了＝MkdirFailed",
+          inst(t, {"argv": ["true"], "cwd": "file/sub", "cwd_mkdir": True})[:3:2], (1, "MkdirFailed"))
+    rc, out, _, _ = inst(t, {"argv": ["/bin/sh", "-c", 'echo "${SECRET-none}:${KEEP-}:${AOS_WS:+ws}"'],
+                             "envs_clear": True, "envs": {"KEEP": "k"}}, env={"SECRET": "s"})
+    check("envs_clear 後 SECRET 看不到、envs 與 AOS_WS 還在", (rc, out), (0, "none:k:ws\n"))
+    check("envs_clear 不是 bool", inst(t, {"argv": ["true"], "envs_clear": 1})[:3:2], (1, "EntryBad"))
 
 
 

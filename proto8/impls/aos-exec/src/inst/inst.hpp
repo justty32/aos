@@ -1,16 +1,16 @@
 // inst.hpp：【inst】行程內跑一張 inst 單子（公開的 run_inst 在 aos/exec.hpp）。內部標頭，只給 src/ 自己用。
 //
-//   fields.cpp     單子（$env 已解）→ Inst：認 10 個 key、驗型別，其他 key 一律忽略
-//   lib_input.cpp  Inst → libaos 的單子（aos_inst_input_t）：相對路徑算成絕對、組環境、串流沒寫＝接呼叫者的（inherits）、
-//                  一律自成行程群組（new_session）
+//   fields.cpp     單子（$env 已解）→ Inst：認 16 個 key、驗型別，其他 key 一律忽略
+//   lib_input.cpp  Inst → libaos 的單子（aos_inst_input_t）：相對路徑算成絕對、*_mkdir 建資料夾、組環境（envs_clear）、
+//                  串流沒寫＝接呼叫者的（inherits）、stderr_merge→merge、一律自成行程群組（new_session）
 //   signals.cpp    訊號：run_inst 進來擋住 INT／TERM／HUP、出去還原；跑的期間收下來轉給子程式的整個群組（killpg），
 //                  第一次轉過之後過 grace_ms 還沒結束就 SIGKILL 整群
 //   run.cpp        run_inst：解 $env（aos-directive）→ parse_inst → aos_inst_start → 工人執行緒 aos_inst_wait、
 //                  主執行緒轉訊號 → Result；libaos 的錯換成 LaunchFailed／Internal
 //
 // 從 impls/aos-inst 的 src/json/fields.cpp、src/libaos/{lib_input,signals,run}.cpp 抄來改（aos-inst 本身不動）。
-// 跟 aos-inst 不同：key 只認 10-19 的 10 個（沒有 id、envs_clear、*_mkdir、stderr_merge）、串流沒寫＝接呼叫者的、
-// 整群送訊號、錯誤代號不一個個鏡射 libaos。
+// 跟 aos-inst 不同：串流沒寫＝接呼叫者的、整群送訊號、錯誤代號不一個個鏡射 libaos。
+// 11-04 起 id、envs_clear、*_mkdir、stderr_merge 也認（題 9「aos-exec 補認那 7 個」）。
 #pragma once
 
 #include "common/common.hpp"
@@ -36,6 +36,9 @@ struct Inst {
     bool appends[3] = {false, false, false};     // [1]stdout_append、[2]stderr_append
     unsigned long long timeout_ms = 0;           // 0＝不限（單子上是 null 或沒寫）
     unsigned long long grace_ms = 2000;
+    bool envs_clear = false;                     // 真＝不疊現有環境，只留 aos-exec 的六個 AOS_*＋envs
+    bool mkdirs[3] = {false, false, false};      // [0]cwd_mkdir、[1]stdout_mkdir、[2]stderr_mkdir：先 mkdir -p
+    bool merge = false;                          // stderr_merge：stderr 併進 stdout（libaos 的 merge）
 };
 
 // doc（$env 已解）→ Inst；args 接在 argv 後面。型別不對丟 EntryBad。
@@ -56,7 +59,7 @@ struct LibInput {
     LibInput& operator=(const LibInput&) = delete;
 };
 
-// 算絕對路徑、組環境、填好 out.in。inst 要活得比 out 久（out.argv 指到 inst 的字串）。
+// 算絕對路徑、照 *_mkdir 建資料夾（建不了 MkdirFailed）、組環境、填好 out.in。inst 要活得比 out 久（out.argv 指到 inst 的字串）。
 void build_lib_input(const Inst& inst, const std::string& base_dir, LibInput& out);
 
 // 那三個要轉的訊號（SIGINT、SIGTERM、SIGHUP）。

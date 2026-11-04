@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$comment": "一張 inst 的欄位，照 proto8/lib/aos_inst.py 的 parse()。只驗認得的 key，其他 key 不管（additionalProperties 不禁）。parse() 另有一條「stderr_merge 為 true 時不能再寫 stderr」，這裡沒放。",
+  "$comment": "一張 inst 的欄位，照 impls/aos-exec 的 src/inst/fields.cpp（11-04 起認這 16 個）。只驗認得的 key，其他 key 不管（additionalProperties 不禁）。aos-exec 另有一條「stderr_merge 為 true 時不能再寫 stderr」（libaos 報 PathConflict），這裡沒放。",
   "title": "inst",
   "type": "object",
   "required": ["argv"],

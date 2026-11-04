@@ -408,12 +408,18 @@ class T(unittest.TestCase):
                     {"argv": ["true"], "cwd": "nope"}, {"argv": ["true"], "stdout": "nodir/x"}):
             self.assertEqual(self.json_entry(doc)[:3:2], (1, "單子跑不起來"), doc)
 
-    def test_inst_extra_keys_ignored(self):
+    def test_inst_extra_keys(self):
+        # 11-04 起認 id、envs_clear、*_mkdir、stderr_merge（題 9「aos-exec 補認那 7 個」）
         rc, out, _, stderr = self.json_entry({"argv": ["sh", "-c", "echo o; echo e >&2"], "stderr_merge": True,
                                               "id": 3})
-        self.assertEqual((rc, out, stderr), (0, "o\n", "e\n"))
+        self.assertEqual((rc, out, stderr), (0, "o\ne\n", ""))
         rc, _, err, _ = self.json_entry({"argv": ["true"], "cwd": "made", "cwd_mkdir": True})
-        self.assertEqual((rc, err, Path(self.t, "q", "made").exists()), (1, "單子跑不起來", False))
+        self.assertEqual((rc, err, Path(self.t, "q", "made").is_dir()), (0, None, True))
+        rc, _, _, _ = self.json_entry({"argv": ["sh", "-c", "echo o"], "stdout": "n/o.txt", "stdout_mkdir": True})
+        self.assertEqual((rc, Path(self.t, "q", "n", "o.txt").read_text()), (0, "o\n"))
+        rc, out, _, _ = self.json_entry({"argv": ["/bin/sh", "-c", 'echo "${SECRET-none}"'], "envs_clear": True},
+                                        env={"SECRET": "s"})
+        self.assertEqual((rc, out), (0, "none\n"))
 
 
 if __name__ == "__main__":
