@@ -26,7 +26,7 @@ aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
 - **對象**：`--target 名字` ＞ `$AOS_AGENT`；都沒有＝`TargetMissing`。名字查 daemon 表，沒有＝`InstanceMissing`。`add`（名字＝`--name`，沒給＝資料夾名）、`rm`（位置參數）、`ls` 不吃 `AOS_AGENT`。不再比工作區、沒有用來指對象的 `--stack`。
 - **where**：不帶旗標＝`--stack`，印那隻的 stack 一行（`aos-daemon-ctl where --stack 名字` 轉述）；`--ws` 印它的工作區（表上那列的 `ws`；沒記＝`WsMissing`，那隻是沒給 `--ws` 直接用 aos-daemon-ctl 掛的）；兩個一起給＝`ArgumentsBad`（使用者 11-04 晚「aos agent的where，我希望默認是--stack，有需要再另外指定--ws。」）。
 - **哪個 daemon**：`--daemon D` ＞ `$AOS_DAEMON`（那個 daemon 的 `$AOS_STACK`，絕對路徑）；都沒有＝`DaemonMissing`（只設舊名 `AOS_DAEMON_STACK` 也是，訊息提示新名）。daemon 沒在跑：`ls`／`state`／`where` 照表印＋注意；`add`／`rm`／`start`／`stop`＝`DaemonMissing`；`say` 照寄＋提醒。
-- **錯**：stderr 一行 `aos-agent: 代號 原因`、退 1；等 daemon 逾時＝`WaitFailed`。子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉。
+- **錯**：stderr 一行 `aos-agent: 代號 原因`、退 1；等 daemon 逾時＝`WaitFailed`；`add` 的信被 daemon 拒收（名字像 `a/b`、`..`，或設定不合格；daemon 寫在 `procs_state.json` 的 `mailbox_warning`）＝立刻 `AddRejected`、原因原樣轉，不等滿 30 秒。子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉。
 
 ## 介面 `aos-agent`：add 只看宣告
 

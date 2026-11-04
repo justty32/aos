@@ -5,7 +5,7 @@
 「aos-agent add --name bob ../agents/bob這樣」「rm後面不用接--target」。規劃：proto8/thinking/2026-11/04/aos-agent/（01 子命令、02 找 agent、
 03 介面、04 邊緣）。說明與用法例子：proto8/extras/agent/README.md。
 
-    aos-agent [--daemon D] add [--name N] [--ws WS] [--stack S] XXX   掛一隻（XXX 要在 interfaces.json 宣告遵守 aos-agent）；等上表、印 stack
+    aos-agent [--daemon D] add [--name N] [--ws WS] [--stack S] XXX   掛一隻（XXX 要在 interfaces.json 宣告遵守 aos-agent）；等上表、印 stack（daemon 拒收＝AddRejected）
     aos-agent [--daemon D] rm 名字                     拔掉並刪它的 stack（有畫面先關；不吃 AOS_AGENT；stack 蓋住工作區／定義／daemon／cwd／家目錄／表上別隻的 stack 的不刪）
     aos-agent [--daemon D] ls [--json]                 列 daemon 表上全部的 proc：名字 狀態 工作區 queue 排幾封
     aos-agent [--daemon D] state|status [--target 名字]   這隻的狀態幾行
@@ -26,7 +26,7 @@
   llm＝腦設定檔（例 "llm.json"），副本在 stack 的同一個相對路徑（只放改過的鍵、reset 刪；set＝aos-json set --str，11-04 晚 think-as-function）。
 stdout 只有結果；提醒在 stderr（括號一行）。錯：stderr 一行 `aos-agent: 代號 原因`、退 1（chat 被 Ctrl-C 退 130）。
   代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、InstanceExists、PathMissing、SessionBad、
-  SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、TargetMissing、WsMissing、InterfaceMissing、InterfaceBad、
+  SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、AddRejected、TargetMissing、WsMissing、InterfaceMissing、InterfaceBad、
   ScreenMissing、ScreenBad、ToolsMissing、LlmMissing、LlmBad。下層（aos-daemon-ctl）的錯換成這支的名字轉述（ProcMissing→InstanceMissing）；
   子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉（C-53 各層只說自己的錯）。
 只在 Linux（讀 /proc）。PATH 上要有 aos-post、aos-exec（tools 還要 aos-tools，在 proto8/bin；llm set 還要 aos-json）。"""
@@ -634,13 +634,26 @@ def cmd_add(argv):
     if row is not None:
         hint = "；它停著，要接著用就 aos-agent start --target %s" % name if row.get("phase") == "stopped" else ""
         raise Fail("InstanceExists", "daemon 上已經有 %s 了；換個名字（--name），或先 aos-agent rm %s%s" % (name, name, hint))
-    ctl("add", "--ws", ws, "--name", name, *(["--stack", stack] if stack else []), xxx)
+    letter = ctl("add", "--ws", ws, "--name", name, *(["--stack", stack] if stack else []), xxx).strip()
     try:
-        row = wait_for(lambda: row_named(name), "daemon 還沒把 %s 放上表（或起來就結束、下了表；用 aos-agent ls 看、看 daemon 的 log）" % name)
+        row = wait_for(lambda: row_named(name) or rejected(letter), "daemon 還沒把 %s 放上表（或起來就結束、下了表；用 aos-agent ls 看、看 daemon 的 log）" % name)
     except KeyboardInterrupt:                         # 11-04 夜邊緣實測：信已寄出，Ctrl-C 不撤；原本安靜退 130，人以為沒掛上
         note("add 的信已寄出，daemon 還是會把 %s 掛上；不要了就 aos-agent rm %s（用 aos-agent ls 看）" % (name, name))
         raise
     print(Agent(name, row).stack)
+
+
+def rejected(letter):
+    """daemon 不收這封 add 信（11-04 夜 09 題 3，使用者「add被拒絕則應該按照推薦」）：procs_state.json 的 mailbox_warning
+    是「信 <信件名稱> 不採用：原因」（只留最後一封壞信）。是這封＝AddRejected、原因原樣轉；不是或讀不到＝None（照等）。"""
+    try:
+        with open(os.path.join(daemon_dir(), "procs_state.json"), encoding="utf-8") as f:
+            w = json.load(f).get("mailbox_warning")
+    except (OSError, ValueError, AttributeError):
+        return None
+    if letter and isinstance(w, str) and w.startswith("信 %s " % letter):
+        raise Fail("AddRejected", "daemon 不收：%s" % w)
+    return None
 
 
 def cmd_rm(argv):
