@@ -1,0 +1,8 @@
+{"mailbox": "mailbox", "slots": 2, "timeout_ms": 120000,
+ "exec": "../../lib/base/llm_http",
+ "endpoint": "fake",
+ "endpoints": {
+   "luna":       {"url": "http://localhost:4000/v1", "model": "chatgpt-gpt-6-luna-low"},
+   "sol":        {"url": "http://localhost:4000/v1", "model": "chatgpt-gpt-6-sol", "body": {"temperature": 0.2}},
+   "local-qwen": {"url": "http://localhost:1234/v1", "model": "qwen3-1.7b"},
+   "fake":       {"exec": "../../lib/base/llm_fake"}}}
