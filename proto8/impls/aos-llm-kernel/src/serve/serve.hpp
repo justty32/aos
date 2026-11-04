@@ -11,18 +11,19 @@
 //              （整張表可以 {"$ref": "endpoints.json#/"}），裡面每組到用的時候才解（解不開＝那封信回 DirectiveBad，kernel 照跑別封）。
 //              壞了 CfgMissing／CfgBad／DirectiveBad
 //   serve      跑一次（給 aos-loop／aos-daemon 一次次拍），回結束碼（0；跑的期間收到訊號＝收完 128＋N）：
-//                1. 建信箱四格（tmp／new／cur／done）、flock 住 .flock（鎖不到＝LockFailed）；queue.json 的 counter_runs＋1
+//                1. 建信箱三格（tmp／new／cur）、flock 住 .flock（鎖不到＝LockFailed）；queue.json 的 counter_runs＋1
 //                2. cur/ 裡還有信＝上一次 kernel 跑到一半死了：有 reply.json（讀得懂）就照它；跑信的子行程（cur/<id>/runner.json）還活著＝讓它跑完、
-//                   這次少一格；都不是＝回 RunFailed（10-15 六題 6「回錯」，不重跑）；有回信的搬 done/
-//                3. 收拾（只看有 sender.flock 的信；沒有＝非同步寄的，不判存活）：tmp/、done/ 裡寄信的人不在了（沒人鎖）的刪掉；
-//                   new/ 裡寄信的人不在了的先改名回 tmp/ 再刪（不白跑）
+//                   這次少一格；都不是＝回 RunFailed（10-15 六題 6「回錯」，不重跑）；有回信的寄回信、刪掉
+//                3. 收拾（只看有 sender.flock 的信；沒有＝非同步寄的，不判存活）：tmp/ 裡寄信的人不在了（沒人鎖）的刪掉；
+//                   new/ 裡寄信的人不在了的先改名回 tmp/ 再刪（不白跑）；舊 kernel 留下的 done/ 整個刪
 //                4. 看 new/：letter.json 讀不懂、body 不是物件、沒有 body.request（含頂層 inst／env 的舊閘門信）、endpoint 不是字串、priority 壞＝回 LetterBad；
 //                   request 不是物件、messages 不是陣列、stream 真＝RequestBad；代號：沒寫又沒預設＝EndpointMissing、表裡沒有＝EndpointUnknown；
 //                   那組解指示詞失敗＝DirectiveBad、不是物件或 exec 不是非空字串＝CfgBad；deadline 已過＝DeadlineMissed（都不佔格）
 //                5. 排隊（queue.hpp 的 order），取前 slots 封：這一窗額度到頂（budget.hpp 的 spent）＝spent "refuse" 時剩下的全回 BudgetMissing、
 //                   "wait" 時留在 new/ 等下一窗；沒到頂就認領（new → cur 改名；改不成＝寄信的剛撤信，換下一封）、
 //                   每封 fork 一個子行程跑（run_runner），全部跑完才往下（一次裡不補位）
-//                6. 每封寫一行 $AOS_STACK/served.jsonl（含 endpoint、model、counter_tokens）、跑過的記進 used.json、刪 request.json、cur → done；寫 queue.json
+//                6. 每封寄回信（寄信的 sender.flock 已沒人鎖＝馬上撤回）、寫一行 $AOS_STACK/served.jsonl（含 endpoint、model、counter_tokens）、
+//                   跑過的記進 used.json、整封刪掉（cur/<id>/；11-04 夜「舊信根本不用留，就是刪」）；寫 queue.json
 //   start_runner  先在信的資料夾寫 request.json＝{"endpoint": 那組（指示詞已解、去掉 exec）, "request": body.request}，再 fork 子行程：
 //              寫 cur/<id>/runner.json（自己的 pid＋started_at_ticks），交給 aos-exec 的 run_inst 跑
 //              {"argv": ["aos-exec", "--stack", "<信>/", exec], "cwd": "<信>", "stdin": request.json, "stdout": reply.json, "stderr": stderr.txt, "timeout_ms"}

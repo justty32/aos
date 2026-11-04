@@ -7,9 +7,9 @@
 | 檔 | 負責什麼 |
 |---|---|
 | `include/aos/llm_kernel.hpp` | 公開標頭（aos-llm 連它）：信箱、信（`body.endpoint`／`request`／`priority`）、優先序、回信形狀、代號（含 `Endpoint*`、`RequestBad`） |
-| `src/letter/letter.cpp` | 信箱四格、寄信人存活（`sender.flock`：`has_sender`／`sender_alive`）、`parse_priority`、`priority_of`（`body.priority`）、`reply_of`／`read_reply`（`{"message"}` 或 `{"error"}`） |
+| `src/letter/letter.cpp` | 信箱三格（`tmp`／`new`／`cur`）、寄信人存活（`sender.flock`：`has_sender`／`sender_alive`）、`parse_priority`、`priority_of`（`body.priority`）、`reply_of`／`read_reply`（`{"message"}` 或 `{"error"}`） |
 | `src/queue/queue.cpp`、`src/queue/queue.hpp` | `queue.json` 讀寫、`effective`、`order`（級數 → deadline → 等得久 → 先寄） |
-| `src/serve/serve.cpp`、`src/serve/serve.hpp` | `read_cfg`（`slots`、`budget`、`exec`、`endpoints`、`endpoint`、`timeout_ms`）；`Server`：`recover`、`sweep`（只看有 `sender.flock` 的信）、`scan`＋`pick`（查代號、解那組、定 exec）、`start_runner`（寫 `request.json`、fork、`run_inst` 跑 `aos-exec --stack <信>/ <exec>`、判結束碼與 stdout）、`wait_runners`、`finish`（`served.jsonl`、`used.json`、刪 `request.json`）、回信 `post_reply`／`regret_reply`（撤回沒人拿的回信，aos-post 的 `regret`） |
+| `src/serve/serve.cpp`、`src/serve/serve.hpp` | `read_cfg`（`slots`、`budget`、`exec`、`endpoints`、`endpoint`、`timeout_ms`）；`Server`：`recover`、`sweep`（只看有 `sender.flock` 的信）、`scan`＋`pick`（查代號、解那組、定 exec）、`start_runner`（寫 `request.json`、fork、`run_inst` 跑 `aos-exec --stack <信>/ <exec>`、判結束碼與 stdout）、`wait_runners`、`finish`（寄回信、`served.jsonl`、`used.json`、整封刪掉——沒有 `done/`，11-04 夜）、回信 `post_reply`／`regret_reply`（寄完時同步寄信的人已不在＝撤回沒人拿的回信，aos-post 的 `regret`） |
 | `src/budget/budget.cpp`、`src/budget/budget.hpp` | token 與額度：`parse_budget`、`window_since`、`read_used`／`add_used`、`spent`、`report_of`（回信的 `usage`） |
 | `src/main.cpp` | 命令列 `aos-llm-kernel [旗標] kernel.json`（要 `AOS_STACK`） |
 | `src/common/common.hpp` | 內部共用標頭 |

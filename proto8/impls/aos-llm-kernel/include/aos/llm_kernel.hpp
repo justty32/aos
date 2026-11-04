@@ -1,10 +1,10 @@
 // aos/llm_kernel.hpp：aos-llm-kernel 的公開介面——LLM kernel 的信箱與信（aos-llm 寄信收信、aos-llm-kernel 收信回信都用這組）。
 //
-//   信箱（N-16 資料夾式，Maildir）：一個資料夾，底下四格、一封信＝一個資料夾（名字＝信件名稱，下面寫 id）：
+//   信箱（N-16 資料夾式，Maildir）：一個資料夾，底下三格、一封信＝一個資料夾（名字＝信件名稱，下面寫 id）：
 //     tmp/<id>/、tmp/.<id>/   寄信的正在寫（aos-post 寫 tmp/<id>；aos-llm ask 寫 tmp/.<id>）；撤信、丟信先改名回這裡再刪
 //     new/<id>/    排隊中（kernel 認領＝改名進 cur/；寄信的撤信＝改名回 tmp/，兩邊只有一個改得成）
-//     cur/<id>/    kernel 正在跑（request.json、reply.json、stderr.txt；跑完刪 request.json）
-//     done/<id>/   有回信了（reply.json 寫好才改名進來），留著當紀錄（有 sender.flock 而寄信的人不在了才收拾）
+//     cur/<id>/    kernel 正在跑（request.json、reply.json、stderr.txt）；寄出回信、寫完 served.jsonl 那行就整封刪掉
+//                  （11-04 夜使用者「舊信根本不用留，就是刪」：沒有 done/，舊 kernel 留下的 done/ 下一次整個刪）
 //     .flock       kernel 跑一次的期間 flock 住（同一個信箱同時只有一個 kernel）
 //   信：letter.json＝N-16 的信（aos-post 寫）：{"sender", "sent_at", "reply_to": 回信信箱（必有，沒有就沒人收得到回信）,
 //                    "body": {"endpoint"?: 代號（kernel.json 的 endpoints 表；沒寫＝kernel 的預設）,
@@ -13,7 +13,7 @@
 //       （thinking 11-04 think-as-function 02 § 1；頂層 inst／env 的舊閘門信不再認＝LetterBad）；其他不認得的 key 一律忽略（C-48）
 //   回信：reply.json＝endpoint 函數 stdout 那份 {"message": {...}, "usage"?: {...}, "model"?: ...}，或 {"error": {"code": 代號, "msg": 原因}}
 //       （kernel 沒跑、跑不起來、endpoint 函數退非 0〔EndpointFailed〕、stdout 讀不懂〔ReplyBad〕）。
-//       kernel 另把同一份當 body、照 N-16 寄一封回信進信的 reply_to（in_reply_to＝原信的信件名稱），寄出的信件名稱記在 <信>/reply_letter.txt
+//       kernel 把同一份當 body、照 N-16 寄一封回信進信的 reply_to（沒寫 reply_to＝回信沒人收，信照刪）（in_reply_to＝原信的信件名稱），寄出的信件名稱記在 <信>/reply_letter.txt
 //   用量：reply.json 的 usage.total_tokens（沒有就 prompt_tokens＋completion_tokens）→ served.jsonl 的 counter_tokens、used.json（11-04 起取代 AOS_KERNEL_REPORT）
 //   寄信的人：sender.flock＝aos-llm ask（同步）建好信就 flock（LOCK_EX）住、拿到行程結束；aos-llm send（非同步）不建＝kernel 不判存活、照跑
 //
@@ -60,13 +60,12 @@ inline constexpr const char* EndpointFailed = "EndpointFailed";   // 回信：en
 inline constexpr const char* RequestBad = "RequestBad";           // 回信／aos-llm：request 不是物件、messages 不是陣列、stream 真（串流不做）
 }  // namespace code
 
-// 信箱四格的路徑。
+// 信箱三格的路徑。
 struct Mailbox {
     std::string root;
     std::string tmp() const;
     std::string fresh() const;   // new/（new 是 C++ 關鍵字）
     std::string cur() const;
-    std::string done() const;
 };
 
 inline constexpr const char* SENDER_FLOCK = "sender.flock";   // 10-29 原叫 sender.lock（.lock 留給 N-15 的資料夾鎖）

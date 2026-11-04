@@ -160,7 +160,7 @@ struct Served {
 
 // 回信走 reply_to（10-30，medium 決定 3、N-16）：信裡寫了 reply_to＝照 N-16 寄一封回信進去（body＝reply.json 那份、
 // in_reply_to＝原信的信件名稱；11-04 起不附檔），寄出的信件名稱記在 <信>/reply_letter.txt（已經有＝上一次寄過了，不寄第二封）。
-// 寄不出去（信箱不在、寫不進）不是 kernel 的錯：回「代號 原因」記進 served 的 reply_error，信照搬 done/。沒寫 reply_to＝null。
+// 寄不出去（信箱不在、寫不進）不是 kernel 的錯：回「代號 原因」記進 served 的 reply_error，信照刪（11-04 夜：舊信不留）。沒寫 reply_to＝null。
 Json post_reply(const std::string& dir, const std::string& id, const Json& reply) {
     std::optional<Json> letter = aos::read_json(aos::join(dir, "letter.json"));
     if (!letter || !letter->is_object() || !letter->value("reply_to", Json()).is_string()) {
@@ -187,7 +187,7 @@ Json post_reply(const std::string& dir, const std::string& id, const Json& reply
     }
 }
 
-// done/<id> 被收拾前：它寄過的回信還在 reply_to 的 new/（寄信的人不在了，沒人會拿）＝撤回自己寄的那封（N-16 撤回；在 cur/ 以後的不碰）。
+// 寄完回信時寄信的人已經不在了（有 sender.flock、沒人鎖）：它寄過的回信還在 reply_to 的 new/（沒人會拿）＝撤回自己寄的那封（N-16 撤回；在 cur/ 以後的不碰）。
 void regret_reply(const std::string& dir) {
     std::optional<Json> letter = aos::read_json(aos::join(dir, "letter.json"));
     int err = 0;
@@ -274,7 +274,7 @@ void Server::lock() {
     }
 }
 
-// served.jsonl 一行、刪 request.json（含金鑰，04 #13）、cur → done（reply.json 已在 cur/<id>/ 裡）。
+// 寄回信、served.jsonl 一行，然後整封刪掉（cur/<id>/ 連 reply.json；11-04 夜使用者「舊信根本不用留，就是刪」，08 題 3）。
 void Server::finish(const Served& s) {
     Json line = Json::object();
     line["served_at"] = s.served_at;
@@ -301,6 +301,9 @@ void Server::finish(const Served& s) {
     line["counter_tokens"] = rep.tokens;
     line["usage_bad"] = rep.bad;
     line["reply_error"] = post_reply(dir, s.id, s.reply);   // 回信走 reply_to（10-30）
+    if (has_sender(dir) && !sender_alive(dir)) {
+        regret_reply(dir);   // 同步寄的人已經走了（ask 被打斷）：回信沒人拿，撤回
+    }
     std::string path = aos::join(stack_, "served.jsonl");
     std::FILE* f = std::fopen(path.c_str(), "a");
     if (f == nullptr) {
@@ -314,13 +317,7 @@ void Server::finish(const Served& s) {
     if (counted) {
         add_used(stack_, used_, rep);
     }
-    std::error_code ec;
-    fs::remove(aos::join(dir, "request.json"), ec);
-    std::string from = aos::join(mb_.cur(), s.id);
-    std::string to = aos::join(mb_.done(), s.id);
-    if (!move(from, to)) {
-        throw Error{code::WriteFailed, "改名不了 " + from + " → " + to + "：" + std::strerror(errno)};
-    }
+    remove_tree(dir);   // 刪不掉（權限）不算錯：下一次 recover 會再看到它、回信已寄過（reply_letter.txt）不重寄
 }
 
 // cur/ 裡留下的＝上一次 kernel 跑到一半死了（一次跑完才結束，而且有鎖，所以這時 cur/ 不該有東西）。
@@ -347,9 +344,9 @@ void Server::recover() {
         }
         std::optional<Json> reply = read_reply(aos::join(dir, "reply.json"));
         if (reply) {
-            s.reply = *reply;   // 跑完、回信寫好了，只差搬 done/
+            s.reply = *reply;   // 跑完、回信寫好了，只差寄回信、刪掉
         } else if (runner_alive(dir)) {
-            ++busy_;   // 上一次 kernel 死了、跑信的子行程還活著：讓它跑完（佔一格），回信寫好後下一次再搬
+            ++busy_;   // 上一次 kernel 死了、跑信的子行程還活著：讓它跑完（佔一格），回信寫好後下一次再寄
             continue;
         } else {
             s.reply = error_reply(code::RunFailed, "上一次 kernel 跑這封信跑到一半停了，沒有回信（endpoint 函數可能還在跑或跑了一半）");
@@ -359,8 +356,9 @@ void Server::recover() {
     }
 }
 
-// 寄信的人不在了的（<信>/sender.flock 在、但沒人鎖著）：tmp/、done/ 直接刪；new/ 先改名回 tmp/ 再刪（跟撤信同一個做法，不會跟認領撞）。
+// 寄信的人不在了的（<信>/sender.flock 在、但沒人鎖著）：tmp/ 直接刪；new/ 先改名回 tmp/ 再刪（跟撤信同一個做法，不會跟認領撞）。
 // 沒有 sender.flock＝非同步寄的（aos-llm send、aos-post send）或還在建鎖檔：不判存活、不碰（11-04 衝突 2 (a)）。
+// 11-04 夜以前的 kernel 留下的 done/（跑完的信）整個刪（使用者「舊信根本不用留，就是刪」）。
 void Server::sweep() {
     std::vector<std::string> tmps;
     std::error_code ec;
@@ -377,13 +375,7 @@ void Server::sweep() {
             remove_tree(dir);
         }
     }
-    for (const std::string& id : names_in(mb_.done())) {
-        std::string dir = aos::join(mb_.done(), id);
-        if (has_sender(dir) && !sender_alive(dir)) {
-            regret_reply(dir);   // 它寄過、沒人拿的回信撤回（10-30；aos-post regret）
-            remove_tree(dir);
-        }
-    }
+    remove_tree(aos::join(mb_.root, "done"));
     for (const std::string& id : names_in(mb_.fresh())) {
         std::string dir = aos::join(mb_.fresh(), id);
         if (has_sender(dir) && !sender_alive(dir)) {
@@ -651,7 +643,7 @@ void Server::wait_runners(std::map<pid_t, Served>& running) {
 }
 
 int Server::run() {
-    for (const std::string& d : {mb_.root, mb_.tmp(), mb_.fresh(), mb_.cur(), mb_.done()}) {
+    for (const std::string& d : {mb_.root, mb_.tmp(), mb_.fresh(), mb_.cur()}) {
         make_dir(d);
     }
     lock();

@@ -11,7 +11,7 @@
    **環境是 kernel 自己的**（不換成寄信人的、不另加變數）；stack＝那封信的資料夾（函數的小格，P-17：函數要寫暫存、`stream.txt` 之類就寫在 `$AOS_STACK`）。
 4. 跑完：退非 0（含逾時、被訊號停）＝回信換成 `{"error": {"code": "EndpointFailed", "msg": "endpoint 函數退 N（逾時…）：stderr.txt 第一行"}}`；
    退 0 而 `reply.json` 不是 `{"message": 物件, …}`（或 error 形狀）＝`ReplyBad`；讀得懂＝原樣當回信。起不來（aos-exec 不在 PATH…）＝`EndpointFailed`「跑不起來」。
-5. kernel 收尾時刪掉 `request.json`（裡面有那組的金鑰，[04 #13](../../../thinking/2026-11/04/think-as-function/04-邊緣狀況.md)）；`done/` 留 `letter.json`、`reply.json`、`stderr.txt`、`runner.json`、`reply_letter.txt`。
+5. kernel 收尾時刪掉 `request.json`（裡面有那組的金鑰，[04 #13](../../../thinking/2026-11/04/think-as-function/04-邊緣狀況.md)）；寄完回信、寫完 served 那行，整封（`cur/<信>/`）刪掉，不留紀錄（11-04 夜使用者「舊信根本不用留，就是刪」，[think-as-function 08 題 3](../../../thinking/2026-11/04/think-as-function/08-邊緣狀況實測.md#留給你的題白話推薦放第一)）。
 
 endpoint 函數的契約（stdin `{"endpoint", "request"}` → stdout 一行 `{"message", "usage", "model"}`、退 0；錯退非 0、stderr 一行）是 [lib/base/llm_http、llm_fake](../../../lib/README.md) 定的，kernel 只看結束碼與 stdout 的形狀，不看內容（`message` 剪不剪是函數的事）。
 
@@ -26,13 +26,13 @@ endpoint 函數的契約（stdin `{"endpoint", "request"}` → stdout 一行 `{"
 
 ### 一次
 
-1. 建信箱四格、flock；`queue.json` 的 `counter_runs`＋1。
-2. **`cur/` 還有信**＝上一次 kernel 跑到一半死了：有讀得懂的 `reply.json` 就照它；跑信的子行程（`runner.json`）還活著＝讓它跑完、這次少一格；都不是＝回 `RunFailed`（不重跑）。有回信的寫一行 served、搬 `done/`。
-3. **收拾**（只看有 `sender.flock` 的信）：`tmp/`、`done/` 裡寄信的人不在了的刪掉（`done/` 的先撤回它寄過、還沒人拿的回信）；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑）。沒有 `sender.flock` 的一律不碰。
+1. 建信箱三格、flock；`queue.json` 的 `counter_runs`＋1。
+2. **`cur/` 還有信**＝上一次 kernel 跑到一半死了：有讀得懂的 `reply.json` 就照它；跑信的子行程（`runner.json`）還活著＝讓它跑完、這次少一格；都不是＝回 `RunFailed`（不重跑）。有回信的寄回信、寫一行 served、刪掉。
+3. **收拾**（只看有 `sender.flock` 的信）：`tmp/` 裡寄信的人不在了的刪掉；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑）。沒有 `sender.flock` 的一律不碰。舊 kernel 留下的 `done/` 整個刪。
 4. **看 `new/`**：`LetterBad`、`RequestBad`、`EndpointMissing`、`EndpointUnknown`、那組壞了（`DirectiveBad`、`CfgBad`）、deadline 已過（`DeadlineMissed`）＝直接回信（都不佔格、不跑）。
 5. **排隊**（`used.json` 先讀進來、換窗了先歸零）：`level`＋等了幾次÷10（每等 10 次升一級，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ 等得久的先 → 先寄的先。
 6. 跑之前看一眼訊號（有＝不認領、直接 128＋N）。照排好的順序一封封看：額度到頂＝`refuse` 回 `BudgetMissing`、`wait` 就停；沒到頂、`slots` 也還有空就認領（`new/` → `cur/` 改名；改不成＝寄信的剛撤信，換下一封），每封照上面「跑一封」fork 一個子行程。
-7. **全部跑完才往下**（一次裡不補位）：每封讀 usage、有 `reply_to` 就寄回信、寫一行 served、記進 `used.json`、刪 `request.json`、`cur/` → `done/`；寫 `queue.json`；結束碼 0。
+7. **全部跑完才往下**（一次裡不補位）：每封讀 usage、有 `reply_to` 就寄回信（有 `sender.flock` 而寄信的人已不在＝馬上撤回那封）、寫一行 served、記進 `used.json`、整封 `cur/<信>/` 刪掉；寫 `queue.json`；結束碼 0。
 
 ### 訊號
 

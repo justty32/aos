@@ -20,7 +20,6 @@ namespace aos::llm_kernel {
 std::string Mailbox::tmp() const { return aos::join(root, "tmp"); }
 std::string Mailbox::fresh() const { return aos::join(root, "new"); }
 std::string Mailbox::cur() const { return aos::join(root, "cur"); }
-std::string Mailbox::done() const { return aos::join(root, "done"); }
 
 int hold_sender(const std::string& letter_dir) {
     std::string path = aos::join(letter_dir, SENDER_FLOCK);

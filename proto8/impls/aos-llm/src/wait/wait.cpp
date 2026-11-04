@@ -91,7 +91,7 @@ static void withdraw(const Mailbox& mb, const aos::post::Mailbox& rb, const std:
         fs::remove_all(t, ec);
         return;
     }
-    // 在 cur/：正在跑，讓它跑完；回信已經到了就收掉，沒到的 kernel 之後看寄信的人不在了會撤回
+    // 在 cur/：正在跑，讓它跑完；回信已經到了就收掉，沒到的 kernel 寄回信時看寄信的人不在了會撤回
     std::optional<std::string> n = find_reply(rb, id, seen);
     if (n && take(rb, *n)) {
         try {
@@ -114,8 +114,8 @@ int ask_wait(const Mailbox& mb, const std::string& id) {
         if (n && take(rb, *n)) {
             return deliver(rb, *n);
         }
-        if (!exists(aos::join(mb.fresh(), id)) && !exists(aos::join(mb.cur(), id)) &&
-            !exists(aos::join(mb.done(), id)) && !find_reply(rb, id, seen)) {
+        // 照信走的方向看：new → cur（kernel 先寄回信才刪 cur/ 那封，所以 cur/ 沒了回信一定已經到了）
+        if (!exists(aos::join(mb.fresh(), id)) && !exists(aos::join(mb.cur(), id)) && !find_reply(rb, id, seen)) {
             throw Error{code::LetterMissing, "信 " + id + " 在信箱 " + mb.root + " 裡不見了"};
         }
         timespec ts{0, 20 * 1000 * 1000};
