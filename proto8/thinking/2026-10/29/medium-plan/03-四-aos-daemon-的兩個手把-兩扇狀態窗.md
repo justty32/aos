@@ -14,7 +14,7 @@
 - `state.json` 照 N-17／N-32：`kind`、`phase`、`counter_runs`、`max`、`interval_ms`、`paused`、`ctl_seq`、`ctl_warning`、心跳四欄（`pid`、`started_at_ticks`、`boot_id`、`recorded_at`）、收尾的 `code`。**拿掉 `loops` 表**。
 - `loops_state.json`：`kind: "state"`、`loops` 表（每列照現行：`pid`、`started_at_ticks`、`phase`、`code`、`signal`；超過 100 列照 N-28 切成 `loops_state_loops/<雜湊>.json`，分頁資料夾名跟著窗名）、`ctl_seq`（回的是 `loops_ctl.json` 的 seq）、`ctl_warning`（壞的 `loops_ctl`）、`letter_warning`（信箱模式的壞信，§ 二 4）、同一組心跳四欄（同一個行程、同一個值，N-17 每扇 state 都帶心跳）。
 - 撞名規則（N-28）跟著多兩個名字：子項不能叫 `loops_ctl`、`loops_state`、`loops_state_loops`。`adopt` 改讀 `loops_state.json`。
-- **11-03 改名**（[11-03 procs](../../../2026-11/03/procs.md)）：窗名 `loops_ctl.json`／`loops_state.json`、信箱 → `procs_ctl.json`／`procs_state.json`／`procs_ctl_mailbox/`，拆兩對窗這件事不動；`ctl.json` 那幾個 key 11-03 改成一道指令（`cmd`＋`max`／`interval_ms`／`seq`，[11-03 ctl-commands](../../../2026-11/03/ctl-commands.md)）。本節照 10 月的舊名。
+- **11-03 改名**（[11-03 procs](../../../2026-11/03/procs/README.md)）：窗名 `loops_ctl.json`／`loops_state.json`、信箱 → `procs_ctl.json`／`procs_state.json`／`procs_ctl_mailbox/`，拆兩對窗這件事不動；`ctl.json` 那幾個 key 11-03 改成一道指令（`cmd`＋`max`／`interval_ms`／`seq`，[11-03 ctl-commands](../../../2026-11/03/ctl-commands/README.md)）。本節照 10 月的舊名。
 
 ### 2. 同一圈兩邊都改了怎麼處理（決定 3「剩下都是細節」，這裡代定）
 

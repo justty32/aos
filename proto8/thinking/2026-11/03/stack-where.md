@@ -1,6 +1,6 @@
 # 2026-11-03 stack 不放工作區：拿掉 `.stack` 捷徑、`aos-daemon-ctl where --stack`、`aos-exec --stack`
 
-← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜同批：[eca 18](../../2026-10/30/eca/18-11-03-單隻-add-rm.md)（aos-eca 單隻、add XXX、rm）｜接著的：[11-03 procs](procs.md)（每項自己的 `stack`、`where` 改讀列上的 `stack`，在本批之後）｜被改的：[10-30 eca 衝突 3](../../2026-10/30/eca/08-衝突.md)（工作區 `.stack` 捷徑）、[N-54 10-30 夜補](../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-58](../../../docs/NORMS/10-基礎設施-定義與工作區.md)｜程式：[aos-daemon-ctl](../../../bin/README.md)、[aos-exec](../../../impls/aos-exec/README.md)、[aos-say](../../../extras/human/README.md)、[aos-eca](../../../extras/eca/README.md)
+← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜同批：[eca 18](../../2026-10/30/eca/18-11-03-單隻-add-rm.md)（aos-eca 單隻、add XXX、rm）｜接著的：[11-03 procs](procs/README.md)（每項自己的 `stack`、`where` 改讀列上的 `stack`，在本批之後）｜被改的：[10-30 eca 衝突 3](../../2026-10/30/eca/08-衝突.md)（工作區 `.stack` 捷徑）、[N-54 10-30 夜補](../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-58](../../../docs/NORMS/10-基礎設施-定義與工作區.md)｜程式：[aos-daemon-ctl](../../../bin/README.md)、[aos-exec](../../../impls/aos-exec/README.md)、[aos-say](../../../extras/human/README.md)、[aos-eca](../../../extras/eca/README.md)
 
 本檔只記使用者原文、決定、頂層照原則定的細節（可翻案）（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
 
@@ -45,7 +45,7 @@
 ### 捷徑拿掉
 
 7. **工作區原本有什麼都不動、不說話**：以前「工作區已有 .stack…請先搬開」那句注意一起拿掉（已經不建，就沒有撞到的事）；10-30～11-02 留在工作區的舊捷徑不替人清，要清自己 `rm <WS>/.stack`。
-8. **aos-eca**：stop 不再補回捷徑、rm 不再拆捷徑。stop 之後那隻不在 daemon 表上，`where` 找不到——要在停著時寄信，直接 `--stack $AOS_DAEMON_STACK/loops/<名字>`（小格路徑）；procs 那批的 stop 會留在表上，到時就能用 `where`。〔11-03 procs 實作：aos-eca stop 改走 `aos-daemon-ctl stop`，列留在表上（`stopped`），`where --stack` 找得到、`aos-say` 投得進；小格改讀列上的 `stack`（預設 `<D>/procs/<名字>/`），[procs 實作時代定](procs.md#實作時代定11-03實作者照原則定的可翻案)〕
+8. **aos-eca**：stop 不再補回捷徑、rm 不再拆捷徑。stop 之後那隻不在 daemon 表上，`where` 找不到——要在停著時寄信，直接 `--stack $AOS_DAEMON_STACK/loops/<名字>`（小格路徑）；procs 那批的 stop 會留在表上，到時就能用 `where`。〔11-03 procs 實作：aos-eca stop 改走 `aos-daemon-ctl stop`，列留在表上（`stopped`），`where --stack` 找得到、`aos-say` 投得進；小格改讀列上的 `stack`（預設 `<D>/procs/<名字>/`），[procs 實作時代定](procs/10-實作時代定-11-03-實作者照原則定的.md#實作時代定11-03實作者照原則定的可翻案)〕
 9. **aos-eca add／start 等它上表才回**：信是 daemon 下一圈才套，以前 add 完馬上 cd 進工作區說話靠的是捷徑；現在要 `where`，而 `where` 只認表上的，所以 aos-eca 掛上之後等到 daemon 表上有它（或小格的 `state.json` 在這之後動過＝起來又馬上結束）才回，最多等 30 秒（`Timeout`）。start 印的「queue 裡幾封」改在掛上之前數。
 10. **測試與說明**：原本「cd 進工作區就說得到」的測試改成先 `where` 拿 stack、再 `aos-say --stack`／`aos-listen --stack`；README 的例子同。
 

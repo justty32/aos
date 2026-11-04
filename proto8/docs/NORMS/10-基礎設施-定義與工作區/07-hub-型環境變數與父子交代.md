@@ -2,7 +2,7 @@
 
 ## hub 型環境變數（10-28）
 
-- **N-63**（10-28 定，草稿；使用者 10-28「hub 照你的建議定薄標準。」，[thinking 10-28 medium](../../../thinking/2026-10/28/medium.md) 決定 17）**hub（類 singleton、全樹共用的那一個東西）用環境變數指，只定三件事，其他不管**：
+- **N-63**（10-28 定，草稿；使用者 10-28「hub 照你的建議定薄標準。」，[thinking 10-28 medium](../../../thinking/2026-10/28/medium/README.md) 決定 17）**hub（類 singleton、全樹共用的那一個東西）用環境變數指，只定三件事，其他不管**：
   ① **命名 `AOS_<名字>`，值是一個資料夾的路徑**；
   ② **沒設定＝報錯、說缺什麼**：代號 `<名字>Missing`（C-54，例 `StackMissing`、`DaemonMissing`），不自己猜一個位置；
   ③ **子 process 預設繼承**（照 Linux 環境變數本來的樣子往下傳）。
@@ -19,9 +19,9 @@
 
 ## 父子交代（10-29）
 
-- **N-64**（10-29 定；使用者 10-29「父子交代...可以算基本概念，用不用都可以，用了的話我們也提供一些aos標準供人遵守」，看完衝突與方向題回「都照建議」，[thinking 10-29 medium-plan](../../../thinking/2026-10/29/medium-plan/README.md) § 六、條文草稿；[10-28 medium](../../../thinking/2026-10/28/medium.md) 決定 22、23、28；概念 [C-75](../../CONCEPTS/03-基礎設施/01-inst至fsm.md#proc-之間的交流10-29)）**父子交代（選用）**：上一代生下一代時給的、下一代結束時留下的，只在上下兩代之間。
+- **N-64**（10-29 定；使用者 10-29「父子交代...可以算基本概念，用不用都可以，用了的話我們也提供一些aos標準供人遵守」，看完衝突與方向題回「都照建議」，[thinking 10-29 medium-plan](../../../thinking/2026-10/29/medium-plan/README.md) § 六、條文草稿；[10-28 medium](../../../thinking/2026-10/28/medium/README.md) 決定 22、23、28；概念 [C-75](../../CONCEPTS/03-基礎設施/01-inst至fsm.md#proc-之間的交流10-29)）**父子交代（選用）**：上一代生下一代時給的、下一代結束時留下的，只在上下兩代之間。
   ① **上一代給下一代的**＝args、stdin、aos-exec 保證的六個環境變數（N-57）與 hub 型變數（N-63）；參數怎麼進由下一代自己說（[N-27](../03-基礎設施-inst.md)）。
   ② **下一代留給上一代的**＝結束碼（[N-43](../01-總則/02-N-43.md)）、stdout、stack 裡的檔（[N-13](../05-基礎設施-窗/03-N-13～N-14.md)）。
   ③ 下一代要自報身分就報 `$AOS_WS`：上一代給的工作區就是它的名字。
-  ④ 上一代要讓下一代找到自己的信箱或窗，用 hub 型變數（N-63）或 args 明給，不另加新的環境變數（C-69 aos 只訂那幾個）。例：daemon 起子項時設 `AOS_DAEMON_STACK`＝自己的 stack（N-63「daemon 起子項時把 `AOS_DAEMON_STACK` 設給它」），子項（與它的兄弟）照它找到 daemon 的信箱 `procs_ctl_mailbox/`、名單窗 `procs_state.json`、彼此的小格 `procs/<名字>/` 或列上的 `stack`（[N-28](../04-基礎設施-loop與daemon/02-N-28.md)「每項選填 `stack`」、[thinking 11-03 procs](../../../thinking/2026-11/03/procs.md)）。
+  ④ 上一代要讓下一代找到自己的信箱或窗，用 hub 型變數（N-63）或 args 明給，不另加新的環境變數（C-69 aos 只訂那幾個）。例：daemon 起子項時設 `AOS_DAEMON_STACK`＝自己的 stack（N-63「daemon 起子項時把 `AOS_DAEMON_STACK` 設給它」），子項（與它的兄弟）照它找到 daemon 的信箱 `procs_ctl_mailbox/`、名單窗 `procs_state.json`、彼此的小格 `procs/<名字>/` 或列上的 `stack`（[N-28](../04-基礎設施-loop與daemon/02-N-28.md)「每項選填 `stack`」、[thinking 11-03 procs](../../../thinking/2026-11/03/procs/README.md)）。
   這一條只是把散在 N-27、N-43、N-13、N-57、N-63 的東西集中點名；用不用都可以。daemon 起子 loop 就是一個實例（寫小格 `loop.json`、`AOS_STACK`＝小格、起 `aos-exec 小格/loop.json#/_entry`，N-28）。

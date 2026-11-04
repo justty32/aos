@@ -1,6 +1,6 @@
 # 2026-11-02 loop／daemon 的 stdin／stdout 與 log
 
-← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜同日：[state 窗](state-window.md)（log 的實作在那輪）
+← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜同日：[state 窗](state-window/README.md)（log 的實作在那輪）
 
 本檔只記使用者原文（逐字）、決定、跟 AI 討論後的結論（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
 
@@ -12,9 +12,9 @@
 
 ## 決定
 
-- aos-loop／aos-daemon 的 log **預設不印**，旗標打開才印到 stdout（旗標名由 [state 窗](state-window.md)那輪實作時定）。
+- aos-loop／aos-daemon 的 log **預設不印**，旗標打開才印到 stdout（旗標名由 [state 窗](state-window/README.md)那輪實作時定）。
 - stdout 跟身體的輸出混在一起是使用者自己的事，程式不另外分。
-- **daemon 的 `execs` 也收內嵌單子**（11-02，使用者回「daemon 的 execs 要不要也收內嵌單子」：「6.要。」）。單子沒寫 stdin／stdout 時：子項 stdin／stdout 接 `/dev/null`、stderr 附加到小格 `stderr.txt`。實作在 [state 窗](state-window.md#決定11-02-晚使用者實作中陸續裁的)那輪。
+- **daemon 的 `execs` 也收內嵌單子**（11-02，使用者回「daemon 的 execs 要不要也收內嵌單子」：「6.要。」）。單子沒寫 stdin／stdout 時：子項 stdin／stdout 接 `/dev/null`、stderr 附加到小格 `stderr.txt`。實作在 [state 窗](state-window/01-使用者原文-11-02-逐字.md#決定11-02-晚使用者實作中陸續裁的)那輪。
 
 ## 結論（11-02，頂層查現行程式與 README）
 

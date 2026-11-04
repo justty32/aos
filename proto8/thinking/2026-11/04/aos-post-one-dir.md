@@ -1,6 +1,6 @@
 # 2026-11-04 aos-post 的信箱要不要從 tmp/new/cur/archive 四格改成一個資料夾＋改名標狀態
 
-← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜前情：[11-03 aos-post 重新定位](../03/aos-post.md)（8 條決定不動）、[10-29 medium-plan § 二](../../2026-10/29/medium-plan/02-二-投遞.md)（四格佈局的來由）｜條文：[N-16、N-15、N-14](../../../docs/NORMS/05-基礎設施-窗.md)、[P-11、P-42、P-43](../../../docs/CONVENTION/02-題目stack停錯腦.md)、[C-64](../../../docs/CONCEPTS/01-設計理念.md)、[C-56](../../../docs/CONCEPTS/01-設計理念.md)｜程式：[aos-post](../../../impls/aos-post/README.md)
+← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜前情：[11-03 aos-post 重新定位](../03/aos-post/README.md)（8 條決定不動）、[10-29 medium-plan § 二](../../2026-10/29/medium-plan/02-二-投遞.md)（四格佈局的來由）｜條文：[N-16、N-15、N-14](../../../docs/NORMS/05-基礎設施-窗.md)、[P-11、P-42、P-43](../../../docs/CONVENTION/02-題目stack停錯腦.md)、[C-64](../../../docs/CONCEPTS/01-設計理念.md)、[C-56](../../../docs/CONCEPTS/01-設計理念.md)｜程式：[aos-post](../../../impls/aos-post/README.md)
 
 本檔只記使用者原文（逐字）、結論、要帶給使用者的衝突與方向題（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。**fable 11-04 規劃；使用者 11-04 裁「不換」（見檔末決定），不實作。**
 

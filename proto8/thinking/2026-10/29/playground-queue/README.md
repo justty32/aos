@@ -1,6 +1,6 @@
 # 2026-10-29 playground：agent 的輸入是對話簿、看信箱是一個 tool（「A」的最小版）
 
-← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜出發點：[10-28 medium 決定 32](../../28/medium.md)（第十七段）｜前一個試驗場：[10-26 playground](../../26/playground.md)｜history 的格式：[agent-round § 4](../../28/agent-round/02-2-round-一輪本身.md#4-單位介面)｜信箱：[N-16](../../../../docs/NORMS/05-基礎設施-窗.md)、[aos-post](../../../../impls/aos-post/README.md)
+← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜出發點：[10-28 medium 決定 32](../../28/medium/README.md)（第十七段）｜前一個試驗場：[10-26 playground](../../26/playground.md)｜history 的格式：[agent-round § 4](../../28/agent-round/02-2-round-一輪本身.md#4-單位介面)｜信箱：[N-16](../../../../docs/NORMS/05-基礎設施-窗.md)、[aos-post](../../../../impls/aos-post/README.md)
 
 > **10-29 晚看完實跑後**：兩個使用場景都用不到「agent 自己用 tool 看信箱」，這份的 inbox tool 解錯題；「要帶給使用者的題」擱著，見[看完 A 之後](02-要帶給使用者的題.md#結論10-29-晚看完-a-之後)。
 

@@ -1,6 +1,6 @@
 # 2026-10-24 claude／codex CLI 當工具，人可以接進去（agent-fay）
 
-← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜前情：[腦的工具呼叫](../../23/tool-calls/README.md)（agent-dan、P-41）、[agent 當工具](../agent-as-tool.md)、[say／listen](../say-listen.md)
+← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜前情：[腦的工具呼叫](../../23/tool-calls/README.md)（agent-dan、P-41）、[agent 當工具](../agent-as-tool.md)、[say／listen](../say-listen/README.md)
 
 規矩見 [thinking/README](../../../README.md)：只留使用者原文、決定、結論。程式：工具在 [lib/agent](../../../../lib/README.md) 的 claude、codex 與 `cli_session.py`，測試 `proto8/tests/test_cli_tools.py`（原 test_fay）。
 

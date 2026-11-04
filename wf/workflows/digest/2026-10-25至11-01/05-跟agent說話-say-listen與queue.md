@@ -85,4 +85,4 @@ say 會印出那張紙的名字，listen 拿這個名字去等它的回條，寫
 
 ---
 
-想看原文：[10-24 say／listen](../../../../proto8/thinking/2026-10/24/say-listen.md)（含 11-01 晚翻案）｜[10-28 hub-adapter](../../../../proto8/thinking/2026-10/28/hub-adapter/README.md)｜[10-29 playground-queue](../../../../proto8/thinking/2026-10/29/playground-queue/README.md)｜[10-29 agent-bob](../../../../proto8/thinking/2026-10/29/agent-bob/README.md)｜[10-30 agent-lifecycle](../../../../proto8/thinking/2026-10/30/agent-lifecycle/README.md)｜[11-01 試驗場](../../../../proto8/thinking/2026-11/01/playground-bob/README.md)
+想看原文：[10-24 say／listen](../../../../proto8/thinking/2026-10/24/say-listen/README.md)（含 11-01 晚翻案）｜[10-28 hub-adapter](../../../../proto8/thinking/2026-10/28/hub-adapter/README.md)｜[10-29 playground-queue](../../../../proto8/thinking/2026-10/29/playground-queue/README.md)｜[10-29 agent-bob](../../../../proto8/thinking/2026-10/29/agent-bob/README.md)｜[10-30 agent-lifecycle](../../../../proto8/thinking/2026-10/30/agent-lifecycle/README.md)｜[11-01 試驗場](../../../../proto8/thinking/2026-11/01/playground-bob/README.md)

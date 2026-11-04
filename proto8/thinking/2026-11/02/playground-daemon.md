@@ -24,7 +24,7 @@
 ### 用的時候會碰到的事（實測）
 
 1. **bob 的 stdout 看不到**：daemon 把子項的 stdout 丟掉（N-28），結果只看他寫進工作區的檔、小格的 `stderr.txt`；結束碼看 daemon 的 log（`aos-daemon --enable-logs`），`ls` 只列還在跑的。所以題目要叫他寫成檔。
-2. 子項結束後不留名單，同名直接再 `add` 就會重跑（[state 窗](state-window.md#決定11-02-晚使用者實作中陸續裁的)）。
+2. 子項結束後不留名單，同名直接再 `add` 就會重跑（[state 窗](state-window/01-使用者原文-11-02-逐字.md#決定11-02-晚使用者實作中陸續裁的)）。
 3. **用 ctl 停 daemon 之後，`daemon_ctl.json` 會留著**：下次起來第一圈就讀到 `stopped`、馬上結束。要嘛停完刪掉 `.stack/daemon_ctl.json`，要嘛用 Ctrl-C 停（不留檔）。
 4. daemon 重起時，做完的 bob 不會回到表上（他不在 daemon.json 裡、`adopt` 只接還活著的）；clock 照 daemon.json 重新起，`clock.txt` 接著附加。
 

@@ -1,6 +1,6 @@
 # 2026-11-02 aos-exec 一環套一環、共用 stack＝像繼承
 
-← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜同日：[小格改 tools/](stack-tools.md)、[state 窗](state-window.md)、[daemon 環境變數](daemon-env/README.md)
+← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜同日：[小格改 tools/](stack-tools/README.md)、[state 窗](state-window/README.md)、[daemon 環境變數](daemon-env/README.md)
 
 本檔只記使用者原文（逐字）、決定、跟 AI 討論後的結論（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
 
@@ -13,7 +13,7 @@
 ## 結論（11-02，跟使用者討論後）
 
 - aos-exec 往下「變成」另一套＝共用同一個 stack（像繼承）；「叫」另一個程式＝給它小格（像組合，P-17）。
-- 共用 stack 的撞名，aos **不做隱性的命名空間**（不像 C++ 自動各自分開）：各格自己管好，常見的名字加自己的前綴（`daemon_*`、`loop_*`），或自己開資料夾放。例外：控制自身的 ctl／state 不加前綴（`ctl.json`／`state.json`），見 [ctl-state-names](ctl-state-names.md)（方向題 2 使用者「好。」）。
+- 共用 stack 的撞名，aos **不做隱性的命名空間**（不像 C++ 自動各自分開）：各格自己管好，常見的名字加自己的前綴（`daemon_*`、`loop_*`），或自己開資料夾放。例外：控制自身的 ctl／state 不加前綴（`ctl.json`／`state.json`），見 [ctl-state-names](ctl-state-names/README.md)（方向題 2 使用者「好。」）。
 - 契約或機制以後再考慮，現在不做。
 - 繼承的比喻只用在**宣告時的撞名**；呼叫沒有 base／derived 之分（見下）。
 

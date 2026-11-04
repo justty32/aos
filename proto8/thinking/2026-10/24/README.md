@@ -8,7 +8,7 @@
 |---|---|
 | [2026-10-24 fsm 格的 exec 能不能相對於這格](exec-relative/README.md) | `AOS_CO` 是每跳重設的入口位置、指示詞不內插，拼不出「相對於這格」；loop／fsm／daemon 的 `exec` 可直接放單子物件、行程內跑（使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」），demo 全改內嵌；審後照建議：跑單子前相對的 `AOS_WS`／`AOS_STACK` 轉絕對、捷徑設定檔走實際的資料夾、daemon SIGKILL 連子 loop 底下的單子一起收、認領跳過 `.` 開頭的暫存檔 |
 | [2026-10-24 agent 當工具給 agent 叫](agent-as-tool.md) | demo/agent-eve：腦只有一個工具 pyfix，pyfix 的 `_entry` 把 task 轉成子 agent（agent-dan 範本、專修 Python）的一道題、回報告＋實際 diff；代定：轉接寫在工具自己的 `_entry`、每次新小格不帶記憶、`--dotenv-override` 讓子 agent 用自己的模型；未決：子 agent 要不要接著聊、要不要用更強的模型 |
-| [2026-10-24 給人用的 say／listen](say-listen.md) | 三支 `aos-say`／`aos-listen`／`aos-chat`：對工作區（`--ws`）不對 agent 資料夾、題名＝UTC ISO 8601 基本格式、看 /proc 判斷有沒有人在跑、chat 給了 agent 就替你跑、常駐用 aos-loop 包；連問接同一段 history；未決：只用假腦跑過 |
+| [2026-10-24 給人用的 say／listen](say-listen/README.md) | 三支 `aos-say`／`aos-listen`／`aos-chat`：對工作區（`--ws`）不對 agent 資料夾、題名＝UTC ISO 8601 基本格式、看 /proc 判斷有沒有人在跑、chat 給了 agent 就替你跑、常駐用 aos-loop 包；連問接同一段 history；未決：只用假腦跑過 |
 | [2026-10-24 仿 pi coding agent 的基本工具組](pi-tools/README.md) | 照 pi 只做 read、bash、edit、write 四個工具（demo/pi-tools）與 demo/agent-pip（工具出的問題回給腦）；資料夾與檔案的工具另做 file-tools（ls、stat、view、json_edit、mkdir、move、copy、trash，輸出一律 JSON、刪除＝搬進 .trash）；現收進 lib/base（見工具＝函式庫） |
 | [2026-10-24 claude／codex CLI 當工具、人可以接進去](cli-tools/README.md) | demo/agent-fay：工具 claude、codex 共用一段對話；平常走非互動續對話，人用 `attach` 開 tmux 互動畫面、跳出後畫面留著、agent 改從畫面送字；保守權限；未決：兩家有穩定的背景 session 機制時改走 CLI 自家的 |
 | [2026-10-24 `_metainfo`：函數的特性](metainfo/README.md) | 三處同名（資料夾 `_metainfo` 檔、JSON 物件與單子的 key）、走找入口同一條路取第一份、通用 key 全選填（數量寫數字或 `{val, max}`）、`time_ms` 是宣告、`timeout_ms` 才強制、`priority` 不進、實測寫 kernel 自己的 stack、寫壞當沒寫；附 LLM kernel 接法；條文待頂層統一落 |
