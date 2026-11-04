@@ -18,7 +18,6 @@
 - **open｜playground／eca**：開著停著改 history 再繼續（[eca § 之後再改](../proto8/thinking/2026-10-30-eca.md#之後再改停著時改-history-再繼續10-30使用者先記下)）、aos-eca-turn 定義檔只認固定名字（[eca § 10-31](../proto8/thinking/2026-10-30-eca.md#10-31-使用者原文turn-的定義檔只認固定名字先記之後處理)）、pi coding agent 只有適配表 → [playground](../proto8/thinking/2026-10-26-playground.md)、統整頁 https://claude.ai/artifact/W7aXZvCPTf1u2qExH6CEMM
 - **open｜固定名字判準（C-51 10-31 加註）**：使用者尚有後續想法 → [eca § 10-31 原則](../proto8/thinking/2026-10-30-eca.md#10-31-使用者原則固定名字可以但限縮範圍判準)
 - **open｜10-24 其餘下一步**（代定可翻案）：代定落條文、沙箱 `accept` 跟「純靠 Linux」衝突（[sandbox S18](../proto8/thinking/2026-10-24-sandbox.md)）、compact 與 P-41 → [10-24](session_logs/2026-10-parts/12-10-24.md#下一步open)
-- **open｜round 已刪後沒實作對應的條文 13 條**：每條白話與建議（留 4、加註 3、刪 6）待使用者裁 → [報告 § round 刪掉後](workflows/tidy/reports/2026-11-03-收斂.md#round-刪掉後沒實作撐的條文11-04給使用者裁)
 - **open｜還是草稿的條文**：N-34 tasks → [NORMS 待定](../proto8/docs/NORMS/08-待定.md)；tasks、seq、if 之後順便做 → [aos-round § 10-31](../proto8/thinking/2026-10-30-aos-round.md#10-31-使用者想法控制流不拉-seqif-拼整合成單檔tasksseqif-之後順便做先記之後處理)
 - **待照新做法重寫**：tasks、通用 kernel（10-30 停滯） → [plan § 1.2](../proto8/thinking/2026-10-21-plan.md)、[rewrite-order](../proto8/thinking/2026-10-19-rewrite-order.md)
 - **open｜LLM kernel 下一步**：`_metainfo` 第二步 → [10-24 § LLM kernel 下一步](session_logs/2026-10-parts/12-10-24.md#llm-kernel-下一步從-session-log-逐字搬來)
