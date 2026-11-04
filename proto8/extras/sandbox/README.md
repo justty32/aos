@@ -30,7 +30,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 | `rw` | 路徑陣列 | 可寫看得到（最後綁，可以蓋在 `ro` 裡面） | 沒有 |
 | `net` | 布林 | 能不能連網 | `false`（只有沙箱自己的 loopback） |
 | `mem_mb`、`cpu_s`、`procs`、`file_mb`、`files` | 正整數 | `s6-softlimit` 的 `-a`＋`-d`（`mem_mb`；不用 `-m`：它連堆疊上限一起設，aos-exec 一開執行緒就失敗）、`-t`、`-p`、`-f`、`-o` | 不限 |
-| `env` | 環境變數名陣列 | 只帶這幾個進去（外面有設的才帶；bwrap `--clearenv`＋`--setenv`）；寫了就只照它，不再加預設那幾個 | `PATH`、`LANG`、`LC_ALL`、`LC_CTYPE`、`TZ`、`PYTHONDONTWRITEBYTECODE`、`PYTHONIOENCODING` 與 aos 的六個（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`）；API key 一律不帶，要就明寫 |
+| `env` | 環境變數名陣列 | 只帶這幾個進去（外面有設的才帶；bwrap `--clearenv`＋`--setenv`）；寫了就只照它，不再加預設那幾個 | `PATH`、`LANG`、`LC_ALL`、`LC_CTYPE`、`TZ`、`PYTHONDONTWRITEBYTECODE`、`PYTHONIOENCODING` 與 aos 的六個（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`）、hub 型的 `AOS_DAEMON`、`AOS_KERNEL`（11-04 加，N-63 ③ 子 process 預設繼承）；API key 一律不帶，要就明寫 |
 
 - **沒列到的路徑一律看不到**（白名單）；`/proc`、`/dev`、空的 `/tmp` 一定有。綁進來的路徑在沙箱裡是同一個位置；相對路徑從 cwd 算。路徑是符號連結的，沙箱裡做同一條連結再綁它指到的地方。
 - 設定檔可以寫 `檔#/指標`（例 `_metainfo.json#/sandbox`）；值可以用 `{"$env": 名, "$path": 接後面, "$prefix": 接前面}`（不解 `$ref`）。

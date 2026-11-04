@@ -1,6 +1,6 @@
 // send.hpp：【send】寄信——找信箱、讀單子、寫成一封信丟進 new/。
 //
-//   mailbox   信箱＝$AOS_KERNEL（呼叫方在叫閘門的那一行綁，像 AOS_BRAIN_*，P-39）；沒設、不是資料夾＝MailboxMissing
+//   mailbox   信箱＝$AOS_KERNEL（呼叫方在叫閘門的那一行綁，像 AOS_BRAIN_*，P-39）；沒設、不是資料夾＝KernelMissing（11-04 原 MailboxMissing，N-63 ②）
 //   post      spec＝單子檔（`檔` 或 `檔#/指標`）：
 //               0. 寄信人身分＝aos-util 的 aos::identity()（$AOS_WS ＞ $AOS_STACK ＞ $AOS_CF ＞ cwd；N-16 信封 sender），在 1 改 AOS_CF 之前取＝叫閘門的那一方
 //               1. AOS_CF／AOS_CD／AOS_CO 設成單子的位置（同 aos-exec 跑 `檔#/指標` 的單子，10-24 代定 1）

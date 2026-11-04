@@ -121,7 +121,7 @@ def load_tools(regs):
 def call(name, tool, args, ws, stack, timeout_s):
     """跑一次工具 → (結束碼, stdout, 花幾毫秒, 逾時秒數)。結束碼 None＝逾時被收掉。"""
     env = dict(os.environ, AOS_WS=ws, AOS_STACK=os.path.join(stack, "tools", name) + "/")
-    env.pop("AOS_ENTRY", None)                  # 讓 aos-exec 用預設入口 _entry，不吃外面殘留的
+    # AOS_ENTRY 照常繼承（11-04 四元素審查：原本 pop 掉、怕外面殘留的值讓工具找錯入口；但 P-39 是一路繼承、使用者 11-01 裁留，外面設了＝要它）
     limit = tool["max_s"] or timeout_s
     t0 = time.monotonic()
     p = subprocess.Popen(["aos-tools", "--file", tool["reg"], "call", name], stdin=subprocess.PIPE,

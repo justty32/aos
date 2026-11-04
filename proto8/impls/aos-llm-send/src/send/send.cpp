@@ -22,11 +22,11 @@ namespace aos::llm_send {
 Mailbox mailbox() {
     const char* k = std::getenv("AOS_KERNEL");
     if (k == nullptr || k[0] == '\0') {
-        throw Error{code::MailboxMissing, "沒設定 AOS_KERNEL（kernel 的信箱資料夾）"};
+        throw Error{code::KernelMissing, "沒設定 AOS_KERNEL（kernel 的信箱資料夾）"};
     }
     std::error_code ec;
     if (!fs::is_directory(k, ec)) {
-        throw Error{code::MailboxMissing, std::string("AOS_KERNEL 指的信箱不在：") + k};
+        throw Error{code::KernelMissing, std::string("AOS_KERNEL 指的信箱不在：") + k};
     }
     return Mailbox{aos::abspath(k)};
 }

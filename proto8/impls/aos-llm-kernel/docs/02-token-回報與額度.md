@@ -2,7 +2,7 @@
 
 ### token 回報與額度（[thinking § token 回報與額度](../../../thinking/2026-10/24/llm-kernel/README.md#token-回報與額度10-24-下午)）
 
-- **回報**：kernel 跑每封信時，在信裡帶來的環境上**加一個** `AOS_KERNEL_REPORT`＝這封信小格裡的 `cur/<信件名稱>/report.json`（信裡原本有同名的也蓋掉）。腦願意就把 API 回覆的 `usage` 物件**原樣**寫進去（先寫 `.report.json` 再改名）；
+- **回報**（**11-04 註**：四元素審查建議 kernel 重寫時改成給腦的 `AOS_STACK`＝那封信的資料夾、腦寫 `$AOS_STACK/report.json`，少一個變數；現在照舊）：kernel 跑每封信時，在信裡帶來的環境上**加一個** `AOS_KERNEL_REPORT`＝這封信小格裡的 `cur/<信件名稱>/report.json`（信裡原本有同名的也蓋掉）。腦願意就把 API 回覆的 `usage` 物件**原樣**寫進去（先寫 `.report.json` 再改名）；
   kernel 跑完讀它：`total_tokens`（非負整數）就是這封的 token 數；沒有 `total_tokens` 就 `prompt_tokens`＋`completion_tokens`；檔不在＝沒回報（`counter_tokens` null，只算次數）；讀不懂、不是物件、數字不對＝`report_bad: true`（也只算次數，照樣交回信）。
   一封信問了好幾次腦，由腦自己加總再寫（kernel 只讀最後那份）。範本 [agent-fsm 的 brain.py](../../../demo/agent-fsm/brain.py) 有寫（P-23 註）。
 - **算什麼**：子行程起來過（`runner.json` 在）的信才算一次、才讀回報——`LetterBad`、`DeadlineMissed`、`BudgetMissing` 不算；kernel 死了、下一次回 `RunFailed` 的那封算（腦可能已經花了錢）。

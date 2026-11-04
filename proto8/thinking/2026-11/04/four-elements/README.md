@@ -2,7 +2,7 @@
 
 ← [thinking README](../../../README.md)｜日 [2026-11-04](../README.md)｜對照條文：[C-51、C-54、C-56、C-68～C-73](../../../../docs/CONCEPTS/01-設計理念.md)、[N-57～N-64](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[N-05](../../../../docs/NORMS/01-總則/01-N-05.md)、[N-45](../../../../docs/NORMS/06-基礎設施-命令列與指示詞.md)、[P-39～P-43](../../../../docs/CONVENTION.md)｜使用者之前的話：[11-01 環境變數瘦身](../../01/playground-bob/README.md)、[11-04 aos-agent 06 檔末兩段原則](../aos-agent/06-衝突與方向題.md#使用者原文11-04-晚逐字介面與-stack)
 
-狀態：**審查結論、沒改程式、沒改條文**；十題使用者 11-04 已裁（[06 檔末](06-要使用者裁的題.md#使用者裁定11-04選項原文或他的話逐字)），實作步驟在 [07](07-實作步驟.md)、[08](08-實作步驟-等aos-agent後.md)、未實作。範圍＝proto8 活著的東西（impls、bin、lib、extras、demo、tests/fixtures）＋ aos-agent 第二版規劃（未實作）。舊 proto 與 archive 不看。本檔只記使用者原文、結論、要帶給使用者的題（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
+狀態：**審查結論、沒改程式、沒改條文**；十題使用者 11-04 已裁（[06 檔末](06-要使用者裁的題.md#使用者裁定11-04選項原文或他的話逐字)），實作步驟在 [07](07-實作步驟.md)、[08](08-實作步驟-等aos-agent後.md)，**11-04 晚全部實作完**（08 檔末有實作時代定；剩 `send_message`／`memory` 封存不封存等使用者）。範圍＝proto8 活著的東西（impls、bin、lib、extras、demo、tests/fixtures）＋ aos-agent 第二版規劃（未實作）。舊 proto 與 archive 不看。本檔只記使用者原文、結論、要帶給使用者的題（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
 
 ## 使用者原文（11-04，逐字）
 
