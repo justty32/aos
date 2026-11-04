@@ -38,3 +38,23 @@
 > AOS_BRAIN_URL，我不喜歡這個環境變數
 
 頂層問「腦設定（url／model／key）不用 `AOS_BRAIN_*` 的話改放哪」，選項：定義裡一份 llm.json（跟 stack 副本同格式，`.env` 與 `AOS_BRAIN_*` 全拿掉；頂層建議）／brain.py 的旗標（寫在 fsm.json）。使用者選「我再想想」。**未定**，現狀照舊。
+
+## 使用者原文（11-04 晚，逐字）：方向——思考也是 aos 函數、寄給 llm kernel
+
+> brain url那塊我不喜歡，我希望llm呼叫，或者說思考，這本身也是用aos函數
+
+> 並且可以的話，考慮非同步呼叫，也就是正在跑的loop不停。
+
+> 然後aos llm,tool這兩個，我希望他們的定位是跟aos post一樣，作為基礎工具
+
+> llm呼叫這塊，我希望是把請求丟到llm kernel(一個loop)，處理好後收回信
+
+> 也可以是一個daemon，實際endpoint呼叫就是aos exec
+
+> 包起來的
+
+> 我是希望走2（「包起來的」兩個讀法選 ②：daemon 包在 kernel 的信箱介面後面）
+
+> 除此之外，各種llm設定也可以包裝，這樣寄信的時候只要寫簡單的代號就可以
+
+這是他給的方向，取代上面「我再想想」的未定：`AOS_BRAIN_*` 不要；問腦＝寄請求信給 llm kernel、收回信（非同步）；端點／模型／金鑰在 kernel 的定義、包成代號；`aos-llm`／`aos-tools` 是基礎工具。設計（fable，11-04 晚）在 [think-as-function](../../think-as-function/README.md)；本檔的 `llm` 子介面（入口程式 `aos-agent/llm`、`bin/aos-llm` 改定義）照那份 [03 § 4](../../think-as-function/03-呼叫端.md) 縮成設定檔宣告＋aos-json 語法糖（可翻案）。

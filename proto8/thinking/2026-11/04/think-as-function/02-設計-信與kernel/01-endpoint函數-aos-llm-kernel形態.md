@@ -1,0 +1,30 @@
+← [回入口 02-設計-信與kernel.md](../02-設計-信與kernel.md)｜段落：§ 4 endpoint 函數、§ 5 `aos-llm` 基礎工具、§ 6 kernel 當 loop／daemon、「包起來的」、跟現有 C++ kernel 的關係｜上一份：—｜下一份：—
+
+## 4 endpoint 函數：`lib/base/llm_http/`
+
+一個 lib 契約的資料夾程式（純標準庫 Python；`_entry`、`_tooldef.json`、`_metainfo.json`）：stdin `{"endpoint": {"url","model","key"?,"body"?}, "request": {...}}` → 送出的 body＝`endpoint.body`（那組的預設，例 `temperature`）疊上 `request`（信裡寫的蓋過預設）、再補 `model`（`request.model` 有就用它、沒有用 `endpoint.model`）→ POST `{url}/chat/completions`（`key` 有才帶 Bearer）→ stdout 一行 `{"message": 剪過的 choices[0].message, "usage", "model"}`、退 0。錯：stderr 與 stdout 各一行 `llm_http: 代號 原因`、退 1：`ArgumentsBad`（stdin 不是這形狀）、`EndpointFailed`（連不上、HTTP 非 2xx）、`ReplyBad`（不是 OpenAI 形狀）。沒有自己的逾時旗標（包它的單子守，10-15 KISS 1.8）。
+**假腦也是一個 endpoint 函數**：`lib/base/llm_fake/`（同一個 stdin／stdout 契約，不碰網路：有工具就先叫第一個、再答一句「FAKE ANSWER to: …」），`endpoints` 表裡登記一組 `"fake": {"exec": "../../lib/base/llm_fake"}`、信寫 `"endpoint": "fake"`（或把它設成預設）就是假腦——不再用「URL 沒設＝假腦」這種暗規則（C-56）。
+因為它就是個工具，agent 也可以直接 `tools.json` 登記它、不經 kernel（沒額度、沒排隊，自己承擔）；要換家（Anthropic 原生 API、本機 llama.cpp）＝再寫一個資料夾、`exec` 換指。
+
+## 5 `aos-llm`：寄單／收回信的基礎工具
+
+由 `impls/aos-llm-send/` 改名 `impls/aos-llm/`（C++，連 kernel 公開標頭與 aos-post 庫；旗標在位置參數前，P-44）。現在的 `bin/aos-llm`（Python 改定義）刪掉（它的事交給 aos-json，見 [03](../03-呼叫端.md) § 4）。
+
+| 子命令 | 做什麼 | stdout／結束碼 |
+|---|---|---|
+| `aos-llm send [--priority P] --reply-to BOX < request.json` | 寄一封請求信進 `$AOS_KERNEL`，**馬上回**（不建 `sender.flock`） | 印信件名稱；0。`--reply-to` 必給（C-56 寫什麼就做什麼；沒給＝`ArgumentsBad`） |
+| `aos-llm recv BOX 信件名稱` | 到 BOX 的 `new/` 找 `in_reply_to`＝那個名字的回信（別人的不碰），認領、印 `body.message`、收掉 | 到了：一行 JSON、0；沒到：10；回信是 `error`：stderr `aos-llm: 代號 原因`、收掉、1；壞信：`ReplyBad`、1 |
+| `aos-llm ask [--priority P] < request.json` | 同步語法糖＝今天的 aos-llm-send：寄（回信信箱＝`$AOS_KERNEL/reply/`、建 `sender.flock`）、等（20 ms 輪詢、訊號＝撤信）、印 `body.message` | 0；`error` 回信＝stderr 一行、1 |
+| `aos-llm regret 信件名稱` | 撤回還在 `new/` 的請求信（`aos-post regret`） | 0；已被認領＝`RegretFailed`、1 |
+
+- `$AOS_KERNEL` 沒設＝`KernelMissing`（N-63 ②，現成）。stdin 讀整份 JSON；不是物件或沒 `messages`＝`RequestBad`。
+- 跟 aos-post 的分工：aos-post 管「一封信怎麼寄、怎麼認領」，aos-llm 只多知道「請求信的 body 長怎樣、回信怎麼認、錯怎麼印」——同一層、各管一事，agent 自己拿它們組（11-03 aos-post 的定位）。
+- `aos-tools` 不動：它本來就是「一份登記檔的 add／rm／ls／get／call」、不認 agent。
+
+## 6 kernel 當 loop、當 daemon 的 proc；「包起來的」
+
+- **kernel＝一個資料夾程式** `demo/llm-kernel/`：`_entry`＝`["aos-loop", "loop.json"]`、`loop.json`＝`{"exec": ["aos-llm-kernel", "kernel.json"], "interval_ms": 300}`（ctl／state 窗 11-04 起預設開，pause／stop 現成）、`kernel.json` 如 § 3、`endpoint/` 不需要（函數在 lib）。直接跑：`AOS_KERNEL=$PWD/.stack/mailbox aos-exec --ws . demo/llm-kernel`；當 daemon 的 proc：`aos-daemon-ctl add --name llm demo/llm-kernel` → 信箱在 `$AOS_DAEMON/procs/llm/mailbox/`，人把它 export 成 `AOS_KERNEL` 給 agent 用（或寫進 daemon 的環境讓所有 proc 繼承，N-63 ③）。
+- **「包起來的」＝讀法 ②**（使用者 11-04 晚「我是希望走2」）：對外介面只有**信箱＋`aos-llm`**（寄請求、收回信）；kernel 裡面是 daemon 掛 loop 拍 C++、C++ 再用 aos-exec 跑 endpoint 函數（§ 3、§ 4），呼叫端一概不知道、也不該知道（C-52）。所以呼叫端的契約只有兩樣：`$AOS_KERNEL`（往哪寄）＋ § 1／§ 2 的信形狀。kernel 內部怎麼換（退化版、C++、別的語言）都不動呼叫端。
+- **退化版**（說明用、不做）：沒有 C++ kernel 也拼得出同一個介面——一個 loop 每拍 `aos-post take 信箱`→`aos-exec <endpoint 函數> < request`→`aos-post done --reply`；aos-llm-kernel 就是這十行再加排隊（優先序、deadline）、`slots` 並行、額度、死在半路的恢復、紀錄。所以**保留 C++ kernel、改它跑的東西**，不另寫 Python kernel（可翻案：要極簡就用退化版）。
+- **跟現有 C++ kernel 的關係＝取代其「跑信裡的單子」為「跑自己的 endpoint 函數」**；排隊、`slots`、`budget`、`recover`、`sweep`、`reply_to`、`done/`、`served.jsonl`、`used.json` 全留。`_metainfo.time_ms`／`llm_tokens` 排序依據：信裡沒單子就沒 `_metainfo`，那兩個排序依據拿掉（六條變四條：級數→deadline→等得久→先寄）。
+- **串流不做**：request 寫 `stream: true`＝`RequestBad`（kernel 回 `error`）。回信是一封信、一次到。以後要給人看即時字，是 endpoint 函數自己寫 `$AOS_STACK/stream.txt`（它的小格＝信資料夾）的事，介面不變。

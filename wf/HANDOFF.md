@@ -18,7 +18,7 @@
 2. **今天做完並 push**：aos-post 改版收尾與全套驗證；tidy 補對讀、round 條文 13 條照建議落；demo 只留 eca-claude、archive/topdown 刪；aos-eca-turn 開場白改 `--prompt`（沒給＝沒開場白）；thinking 改「月/日/子項」結構並拆大檔；proto8／wf 大檔拆分；舊 proto1～7 封存到根 `archive/`、活文件連結拿掉、code map 舊分冊移出；loop/fsm agent（`demo/agent-fsm`）；**aos-agent 統一介面**（`extras/agent/bin/aos-agent`、`interfaces.json` 宣告、screen／tools／llm 子介面、副本 vs 定義〔`aos-tools`／新 `aos-llm` 改定義〕、`--target`／`AOS_AGENT`、chat、`using-aos-agent.sh`、`AOS_DAEMON_STACK`→`AOS_DAEMON`、daemon 表多 `exec` 與 `def` 欄）；aos-say／aos-listen／aos-eca 刪；四元素審查（[four-elements](../proto8/thinking/2026-11/04/four-elements/README.md)）十題裁定、07 前 5 步做完；**全部測試與 ctest 刪光**（c90f8617）。說明頁 https://claude.ai/artifact/AqwFbS1gLPCwJriyjAdKNA （使用者通勤 review）。
 3. **明天要接**：
    - 四元素 08 步 5～8（4 步：aos-tools 題 1／8、daemon 題 6／5 後半／3、daemon-ctl add 看 json 題 4、N-63 表題 2）：aos-agent 已收工、可以做，使用者「明天再說」 → [08](../proto8/thinking/2026-11/04/four-elements/08-實作步驟-等aos-agent後.md)。
-   - `AOS_BRAIN_*` 改放哪：使用者「AOS_BRAIN_URL，我不喜歡這個環境變數」「我再想想」 → [aos-agent 06/03](../proto8/thinking/2026-11/04/aos-agent/06-衝突與方向題/03-新題-tools-llm.md)。
+   - `AOS_BRAIN_*` 改放哪：使用者 11-04 晚給了方向（問腦＝寄信給 llm kernel、非同步、aos-llm／aos-tools 當基礎工具），fable 設計與步驟在 [think-as-function](../proto8/thinking/2026-11/04/think-as-function/README.md)，等使用者看 05 的兩衝突兩方向題。
    - 使用者 review artifact（設計總覽 https://claude.ai/artifact/AqwFbS1gLPCwJriyjAdKNA 、指令參考 https://claude.ai/artifact/HLMpsX3T76ndC7E8VQ8Nit ）後的回饋；試驗場 `env.sh` 第 13 行使用者自己改成 `AOS_DAEMON`（WAIT_USER）。
 4. **雜項**：LM Studio 伺服器頂層用 `lms server start` 開在 localhost:1234（qwen3-1.7b），試驗場 `agents/fsm_ann` 用它；WSL clone 已到 f56635ab、aos-daemon 已重建。eca-claude-dir 調查使用者裁「全部都是自己要承擔的風險」。
 
