@@ -15,6 +15,8 @@
 | `letter_warning`（aos agent 的 `letter_warning.txt`） | `mailbox_warning`（`mailbox_warning.txt`） | 11-02 晚，使用者「letter_warning改成mailbox_warning」（N-16、N-28） |
 | 指示詞位置的修飾詞 `$at` | 拿掉，位置只認 `檔#/指標` | 10-23（N-45） |
 | trace 的 `ms`、`at` | `elapsed_ms`、`started_at`；trace.jsonl 11-03 整個拿掉（[trace](../../../thinking/2026-11/03/trace.md)） | 10-23、10-25 |
+| `interfaces.json` 的 `"llm": "llm"`（指子介面入口資料夾 `llm/`） | `"llm": "llm.json"`（定義裡的腦設定檔，跟 `"tools": "tools.json"` 同形；值不是檔＝`LlmBad`） | 11-04 晚，[think-as-function](../../../thinking/2026-11/04/think-as-function/README.md)（P-43（續）） |
+| aos-llm-kernel：kernel.json `accept`；信頂層的 `inst`／`env`／`priority`；排序依據 `_metainfo.time_ms`／`llm_tokens` | 拿掉（信裡沒單子）；信 body `{"endpoint"?, "request", "priority"?}`（舊信＝`LetterBad`）；kernel.json 新鍵 `exec`、`endpoints`、`endpoint`、`timeout_ms` | 11-04 晚，[think-as-function](../../../thinking/2026-11/04/think-as-function/README.md)（N-42 (1)、N-16） |
 
 ### 10-25 計數、時間點、上限（規則與原話在[命名](../命名.md)）
 

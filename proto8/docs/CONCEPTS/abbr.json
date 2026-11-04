@@ -158,7 +158,7 @@
    "abbr": "llm",
    "full": "large language model",
    "meaning": "大語言模型",
-   "example": "AOS_BRAIN_*（P-23）、LLM kernel（N-42）"
+   "example": "llm.json（定義裡的腦設定：llm kernel 的代號，P-23）、aos-llm（寄信收信的基礎工具）、LLM kernel（N-42）"
   },
   {
    "abbr": "cpu",

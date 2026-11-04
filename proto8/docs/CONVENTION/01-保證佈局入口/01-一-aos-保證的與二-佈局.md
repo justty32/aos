@@ -16,7 +16,7 @@ agent-bob/                 一個 agent＝一個資料夾程式（§ 1）
                            idle→"idle"（資料夾）、think→單子（直接寫在那格的 exec）、act→"act"（資料夾）
   idle/_entry               格：new/ 有題→0 往下走；沒題→10 請 loop 停（P-19）
   brain.py                 think 格的身體（單子 python3 brain.py，stdout 導到 $AOS_STACK/plan.txt、逾時 120 秒）：
-                           取一題、從 new/ 搬到 cur/ 認領（P-12）、題名寫 stack 的 current.txt、問腦（假腦或 OpenAI 相容端點，P-23），答案印 stdout
+                           取一題、從 new/ 搬到 cur/ 認領（P-12）、題名寫 stack 的 current.txt、問腦（假腦或 OpenAI 相容端點，P-23；11-04 晚起問腦＝寄信給 llm kernel），答案印 stdout
   act/_entry                格：把 plan.txt 當題目交給 tools/cathy，拿她的答案寫 $AOS_WS/out/、題目從 cur/ 搬 done/（P-24、P-32）
   act/tools/cathy/         act 的工具＝另一隻完整 agent，同一套範本（_entry、loop.json、fsm.json、idle/、brain.py、act/）；
                            act 裡寫 aos-exec tools/cathy（P-33）
