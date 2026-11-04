@@ -13,7 +13,6 @@
 ## 最新進度
 
 - **open｜tidy 收斂（11-03 晚起）**：批次與狀態 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)；P4-D／E 已補對讀（補回 4 處），剩其餘 thinking 與 P1-2、P1-3、P2、P3、P4-F
-- **open｜公司 WSL 試驗場 `agents/amy` 待刪**（使用者「刪掉」；不在 git，回公司刪資料夾）
 - **open｜介質**：實作八步已做；agent 的輸入是 queue、接單後放 tools（決定 32）那兩題先擱著 → [10-28 medium](../proto8/thinking/2026-10-28-medium.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10-29-medium-plan.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - **open｜現況地圖十一點**：剩第 1 點（plan 9 式檔案串流）、第 7 點（post／lock 補指令），使用者「之後有遇到再說」 → [map-review § 結論](../proto8/thinking/2026-10-30-map-review.md#結論10-31-補)
 - **open｜playground／eca**：開著停著改 history 再繼續（[eca § 之後再改](../proto8/thinking/2026-10-30-eca.md#之後再改停著時改-history-再繼續10-30使用者先記下)）、aos-eca-turn 定義檔只認固定名字（[eca § 10-31](../proto8/thinking/2026-10-30-eca.md#10-31-使用者原文turn-的定義檔只認固定名字先記之後處理)）、pi coding agent 只有適配表 → [playground](../proto8/thinking/2026-10-26-playground.md)、統整頁 https://claude.ai/artifact/W7aXZvCPTf1u2qExH6CEMM
