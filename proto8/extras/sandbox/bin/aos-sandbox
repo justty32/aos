@@ -2,7 +2,7 @@
 # aos-sandbox - 照一份設定把 prog 關進沙箱再跑：身分（s6-setuidgid）、上限（s6-softlimit）、看得到哪些路徑與能不能連網（bwrap）
 #
 # 用法：aos-sandbox [--dry-run] [--] 設定檔 prog [args...]（形狀照 CONVENTION P-44）
-#   設定檔可寫 `檔#/指標`（例 `_metainfo#/sandbox`）；裡面的 {"$env", "$path", "$prefix"} 先換掉。
+#   設定檔可寫 `檔#/指標`（例 `_metainfo.json#/sandbox`）；裡面的 {"$env", "$path", "$prefix"} 先換掉。
 #   做的事＝排好一條 chain-loading（s6 那套：每支改一下行程狀態就 exec 成剩下的），然後 exec 它，自己不留下來：
 #     [s6-softlimit 上限...] [s6-setuidgid 身分] bwrap 綁定... -- prog args...
 #   --dry-run：不跑，把那條 argv 印成一行 JSON（給 root 的人先看、測試看形狀）。

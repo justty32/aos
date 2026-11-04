@@ -2,7 +2,7 @@
 
 工具契約、分層與完整索引以 [lib/README](../../../../../proto8/lib/README.md) 為準。路徑相對於該段標題的資料夾。
 
-**工具**＝一個資料夾三個檔：`_entry`（第二行是 NAME）、`_tooldef.json`（給模型看）、`_metainfo`（給 kernel 與人）；agent 的 `tools/<名>` 用捷徑掛進來。（11-03 round 那套「格」——一輪的表與五格、parts、queue、history、compact、act、`lib/endpoint/`——與 aos-ai 的六個工具、ask_round 連程式刪了，概念在 proto8/archive/agent-round-concepts/。）
+**工具**＝一個資料夾三個檔：`_entry`（第二行是 NAME）、`_tooldef.json`（給模型看）、`_metainfo.json`（給 kernel 與人；11-04 前叫 `_metainfo`）；agent 的 `tools/<名>` 用捷徑掛進來。（11-03 round 那套「格」——一輪的表與五格、parts、queue、history、compact、act、`lib/endpoint/`——與 aos-ai 的六個工具、ask_round 連程式刪了，概念在 proto8/archive/agent-round-concepts/。）
 
 ## `lib/base/`（不懂 aos 的通用工具）
 
@@ -29,7 +29,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | `agent_tool.py` | 不是工具：把一隻 agent 包成工具的轉接（`fresh_cell`、`run_agent`） |
-| `pyfix/_entry`、`pyfix/_tooldef.json`、`pyfix/_metainfo` | 把改 Python 的事交給子 agent pyfix-agent，印答案＋實際 diff |
+| `pyfix/_entry`、`pyfix/_tooldef.json`、`pyfix/_metainfo.json` | 把改 Python 的事交給子 agent pyfix-agent，印答案＋實際 diff |
 | `pyfix/agent/*` | 子 agent pyfix-agent：`_entry`、`loop.json`、`fsm.json`、`idle/`、`brain.py`、`act.py`、`.env`、`system.txt`、`tools.json`、`tools/`（捷徑到 `lib/base`） |
 | `cli_session.py` | 不是工具：claude／codex CLI 接成工具（非互動續對話，或 tmux 貼字等 hook）；`call_main`、`attach_main`、`hook`；`stack_copies`＝`$AOS_STACK` 的 `tools.json`／`llm.json` 副本優先（11-04） |
-| `claude/`、`codex/` | claude／codex CLI 當工具：`_entry`、`_tooldef.json`、`_metainfo`、`cli.json`（CLI 旗標） |
+| `claude/`、`codex/` | claude／codex CLI 當工具：`_entry`、`_tooldef.json`、`_metainfo.json`、`cli.json`（CLI 旗標） |

@@ -12,7 +12,7 @@
 #   清單每次 tools/list、tools/call 都重讀（登記檔變了，下次列就看得到；不主動通知 listChanged）。
 #   工作區＝--ws ＞ $AOS_WS；stack＝--stack ＞ $AOS_STACK ＞ $WS/.stack/。每次叫工具：
 #   AOS_WS=WS AOS_STACK=<stack>/tools/<名>/ aos-tools --file REGISTRY call 名（aos-tools、aos-exec 由 PATH 找，呼叫者放好），
-#   arguments 進 stdin、stdout 整段回去，退非 0＝isError；逾時＝工具 _metainfo 的 time_ms.max，沒寫用 --timeout-s（預設 60），
+#   arguments 進 stdin、stdout 整段回去，退非 0＝isError；逾時＝工具 _metainfo（資料夾的 _metainfo.json 檔／JSON 檔的 _metainfo key）的 time_ms.max，沒寫用 --timeout-s（預設 60），
 #   到了整群 TERM、2 秒後 KILL。呼叫紀錄預設不記（11-02 使用者「默認不留」）：給 --enable-logs＝每次叫完在
 #   <stack>/aos-mcp-logs.jsonl 記一行（名字、arguments、結束碼、花多久），再加 --logs-path FILE＝記在 FILE（相對路徑從啟動時的 cwd 算）；
 #   只給 --logs-path、沒給 --enable-logs＝ArgumentsBad。

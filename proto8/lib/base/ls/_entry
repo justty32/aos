@@ -10,7 +10,7 @@ import json, os, sys, time
 
 NAME = "ls"
 LIMIT_DEFAULT, LIMIT_MAX = 100, 500
-AOS_MARKS = ("_entry", "_entry.json", "_metainfo", "_metainfo.json", ".env", "_tooldef", "_tooldef.json", "tools.json", "loop.json", "fsm.json")
+AOS_MARKS = ("_entry", "_entry.json", "_metainfo.json", ".env", "_tooldef.json", "tools.json", "loop.json", "fsm.json")
 JSON_KEYS_MAX = 12                  # JSON 檔最多給幾個頂層 key
 JSON_PEEK_MAX = 1024 * 1024         # 這麼大以下的 .json 才打開看頂層
 

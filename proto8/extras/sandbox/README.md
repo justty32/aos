@@ -33,7 +33,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 | `env` | 環境變數名陣列 | 只帶這幾個進去（外面有設的才帶；bwrap `--clearenv`＋`--setenv`）；寫了就只照它，不再加預設那幾個 | `PATH`、`LANG`、`LC_ALL`、`LC_CTYPE`、`TZ`、`PYTHONDONTWRITEBYTECODE`、`PYTHONIOENCODING` 與 aos 的六個（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`）；API key 一律不帶，要就明寫 |
 
 - **沒列到的路徑一律看不到**（白名單）；`/proc`、`/dev`、空的 `/tmp` 一定有。綁進來的路徑在沙箱裡是同一個位置；相對路徑從 cwd 算。路徑是符號連結的，沙箱裡做同一條連結再綁它指到的地方。
-- 設定檔可以寫 `檔#/指標`（例 `_metainfo#/sandbox`）；值可以用 `{"$env": 名, "$path": 接後面, "$prefix": 接前面}`（不解 `$ref`）。
+- 設定檔可以寫 `檔#/指標`（例 `_metainfo.json#/sandbox`）；值可以用 `{"$env": 名, "$path": 接後面, "$prefix": 接前面}`（不解 `$ref`）。
 - `--dry-run`：不跑，印出那一條 argv（一行 JSON）。
 - **`cpu_s` 是 CPU 時間**（`s6-softlimit -t`，到了收 SIGXCPU、退 152），跟單子的 `timeout_ms`、庫的 bash 的 `timeout_s` 那種**牆鐘時間**不同種：`sleep` 一整天不吃 CPU、`cpu_s` 擋不到；要限總時間用叫它那格的 `timeout_ms`。
 - **能不能用 LLM kernel＝看不看得到信箱**（使用者 10-24「就是看他能不能存取檔案啊」，[紀錄 S14、S17](../../thinking/2026-10/24/sandbox/README.md)）：不另設開關。預設看不到（信箱沒列進 `rw`、`AOS_KERNEL` 不在預設的 `env`）；要用就 `rw` 列 `{"$env": "AOS_KERNEL"}`、`env` 列 `AOS_KERNEL`。綁了信箱的上層資料夾也等於給了信箱（寫什麼就做什麼）。換帳號（`user`／身分層）跑時，寫不寫得進由信箱的擁有者、群組、權限位決定：[root/setup.sh](root/setup.sh) `--mailbox 信箱`。

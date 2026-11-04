@@ -71,7 +71,7 @@ def json_summary(v):
     return {"type": names[type(v)], "value": v}
 
 
-AOS_MARKS = ("_entry", "_entry.json", "_metainfo", "_metainfo.json", ".env", "_tooldef", "_tooldef.json", "tools.json", "loop.json", "fsm.json")
+AOS_MARKS = ("_entry", "_entry.json", "_metainfo.json", ".env", "_tooldef.json", "tools.json", "loop.json", "fsm.json")
 
 
 def aos_marks(d):
