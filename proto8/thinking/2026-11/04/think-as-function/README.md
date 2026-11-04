@@ -2,7 +2,7 @@
 
 ← [thinking README](../../../README.md)｜日 [2026-11-04](../README.md)｜前情：[aos-agent 06/03](../aos-agent/06-衝突與方向題/03-新題-tools-llm.md)（`AOS_BRAIN_URL`「我不喜歡」「我再想想」；`llm` 子介面）、[loop-fsm-agent](../loop-fsm-agent/README.md)（`demo/agent-fsm` 的 think 格直接打端點）、[10-24 llm-kernel](../../../2026-10/24/llm-kernel/README.md)（閘門＋信箱）、[11-03 aos-post](../../03/aos-post/README.md)、[11-01 playground-bob 02](../../01/playground-bob/02-環境變數要使用者裁的問題.md)（腦「未來會被統一管理」）、[four-elements](../four-elements/README.md)（N-63 四種性質表）｜程式（只翻、沒改）：[aos-llm-kernel](../../../../impls/aos-llm-kernel/README.md)、[aos-llm-send](../../../../impls/aos-llm/README.md)、[aos-post](../../../../impls/aos-post/README.md)、[aos-daemon](../../../../impls/aos-daemon/README.md)、`demo/agent-fsm`、`bin/aos-llm`、`bin/aos-tools`｜條文：[C-19、C-20、C-42、C-46](../../../../docs/CONCEPTS/05-agent.md)、[C-47](../../../../docs/CONCEPTS/04-kernel.md)、[C-52、C-56、C-68～C-70](../../../../docs/CONCEPTS/01-設計理念.md)、[N-16](../../../../docs/NORMS/05-基礎設施-窗.md)、[N-42](../../../../docs/NORMS/09-kernel.md)、[N-63、N-64](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[P-15、P-17、P-20、P-23](../../../../docs/CONVENTION/02-題目stack停錯腦.md)
 
-狀態：**11-04 晚已實作**（使用者在外，隊長照 [05](05-衝突與方向題.md) 推薦先做、可翻案；commit、手跑、實作時代定與改設計在 [07](07-實作結論.md)；條文已改）。原規劃時的狀態：規劃、沒改程式、沒改條文（當時另一個 opus 在 tidy 條文）。本檔只記使用者原文（逐字）、決定、fable 照原則定的結論（可翻案）、未決（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
+狀態：**11-04 晚已實作**（使用者在外，隊長照 [05](05-衝突與方向題.md) 推薦先做；四題 11-04 晚使用者都選推薦，已定案；commit、手跑、實作時代定與改設計在 [07](07-實作結論.md)；條文已改）。原規劃時的狀態：規劃、沒改程式、沒改條文（當時另一個 opus 在 tidy 條文）。本檔只記使用者原文（逐字）、決定、fable 照原則定的結論（可翻案）、未決（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
 
 ## 使用者原文（11-04 晚，逐字；給的方向）
 
