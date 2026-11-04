@@ -4,7 +4,7 @@
 #   沒有那個檔或不是資料夾＝DirMissing 停下。
 # 工具的介面：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的 stack＝$AOS_STACK/<名>/（P-17）。
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。
-# 叫工具出的問題回給腦、不停（10-24 起，同 agent-pip）：工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒有的工具、arguments 不是 JSON，
+# 叫工具出的問題回給腦、不停（10-24 起，同原本的 agent-pip，demo 11-04 刪了）：工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒有的工具、arguments 不是 JSON，
 # 都接成一則 tool 訊息讓腦自己決定（停下的話重跑會再叫同一個、永遠卡住）；工具的 stderr 不讀（C-52、C-53）。
 # 只有自己這層的錯（環境壞了：沒 stack、history 壞、aos-tools 起不來）才停：stderr 一行、退 1、history 不接（P-20）。
 import json, os, shutil, subprocess, sys

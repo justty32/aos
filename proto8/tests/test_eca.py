@@ -1,4 +1,4 @@
-"""test_eca - 外部 coding agent 範本 demo/eca-claude、demo/eca-codex（eca B 結論 1、實作第 5 步）：
+"""test_eca - 外部 coding agent 範本 demo/eca-claude（與 codex 版：11-04 前是 demo/eca-codex，只差 cli.json；demo 刪了，改在這裡由 eca-claude 複製再換 cli.json）（eca B 結論 1、實作第 5 步）：
 aos-say → aos-exec 跑範本（aos-loop 包 bin/aos-eca-turn，10-31 前是 lib/eca/turn）→ aos-listen 拿回答；射後不理（--on-empty stop）跑完就結束，
 停著等（範本本身，idle）背景跑、ctl.json paused 時信留 new/、aos-listen --status 看得到 paused。
 
@@ -11,7 +11,19 @@ own_error.install()
 from aos_bins import ROOT, EXEC, path_with  # noqa: E402
 from test_cli_tools import FAKE_CLAUDE, FAKE_CODEX, SYS_PATH  # noqa: E402
 HUMAN = ROOT / "extras" / "human" / "bin"
-TEMPLATES = {k: ROOT / "demo" / ("eca-" + k) for k in ("claude", "codex")}
+TEMPLATE = ROOT / "demo" / "eca-claude"
+CODEX_CLI = {"kind": "codex",                        # 11-04 前 demo/eca-codex/cli.json 原樣
+             "flags": ["-c", "sandbox_mode=\"read-only\"", "-c", "approval_policy=\"never\""],
+             "print_flags": [],
+             "timeout_ms": 600000}
+
+
+def copy_template(kind, d):
+    """範本複製到 d：claude＝demo/eca-claude 原樣；codex＝同一份換掉 cli.json。"""
+    shutil.copytree(TEMPLATE, d)
+    if kind == "codex":
+        (d / "cli.json").write_text(json.dumps(CODEX_CLI))
+    return d
 CLEAR = ("AOS_HUB", "AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CD", "AOS_CF", "AOS_CO", "TMUX",
          "CLAUDE_CONFIG_DIR", "CODEX_HOME", "FAKE_TRANSCRIPTS")
 
@@ -51,7 +63,7 @@ class Eca(unittest.TestCase):
     def fire_and_forget(self, kind):
         """範本複製一份改成射後不理：loop.json 的 --on-empty idle 換成 stop（aos-eca-turn 在 PATH 上、定義＝AOS_CD，搬家不斷）。"""
         d = self.tmp / ("eca-%s-once" % kind)
-        shutil.copytree(TEMPLATES[kind], d)
+        copy_template(kind, d)
         loop = json.loads((d / "loop.json").read_text())
         argv = loop["exec"]["argv"]
         argv[argv.index("--on-empty") + 1] = "stop"
@@ -75,7 +87,8 @@ class Eca(unittest.TestCase):
     def test_templates_shape(self):
         """兩份範本：_entry 是 aos-loop loop.json 的一行 argv（JSON、不給 +x）、loop.json 停著等版（exec 直接叫 aos-eca-turn，
         --on-empty idle、--on-busy yield 明寫；10-31 起沒有 parts.json）、cli.json 的 kind。"""
-        for kind, d in TEMPLATES.items():
+        for kind in ("claude", "codex"):
+            d = copy_template(kind, self.tmp / ("tpl-%s" % kind))
             self.assertEqual(json.loads((d / "_entry").read_text()), ["aos-loop", "loop.json"])
             self.assertFalse(os.stat(d / "_entry").st_mode & 0o111, "%s/_entry 不該有 +x" % d.name)
             loop = json.loads((d / "loop.json").read_text())
@@ -85,7 +98,7 @@ class Eca(unittest.TestCase):
             self.assertFalse((d / "parts.json").exists())
             self.assertEqual(json.loads((d / "cli.json").read_text())["kind"], kind)
             self.assertNotIn("tools", json.loads((d / "cli.json").read_text()))         # 11-03 eca-tools：走預設 tools.json
-            r = self.run_([ROOT / "bin" / "aos-tools", "--file", d / "tools.json", "ls"])
+            r = self.run_([ROOT / "bin" / "aos-tools", "--file", TEMPLATE / "tools.json", "ls"])   # 登記檔的相對路徑從範本原處算（複本搬家會斷）
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertEqual([l.split("\t")[:3] for l in r.stdout.splitlines()],
                              [["clock", "dir", str(ROOT / "lib" / "base" / "clock")]])
@@ -130,7 +143,7 @@ class Eca(unittest.TestCase):
     def test_idle_template_pause(self):
         """範本本身（停著等）背景跑：say 兩句答兩句（同一段對話）；ctl.json paused 後第三句留在 new/（11-03 起沒有 aos-listen --status，phase 由 wait_phase 看 state.json）；
         恢復後答第三句；stopped 收工、退 0。"""
-        p = subprocess.Popen([EXEC, "--ws", str(self.ws), str(TEMPLATES["claude"])], stdout=subprocess.DEVNULL,
+        p = subprocess.Popen([EXEC, "--ws", str(self.ws), str(TEMPLATE)], stdout=subprocess.DEVNULL,
                              stderr=subprocess.PIPE, text=True, env=self.env())
         self.addCleanup(lambda: (p.poll() is None and p.kill(), p.communicate()))
         answers = []

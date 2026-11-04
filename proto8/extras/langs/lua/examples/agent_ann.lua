@@ -1,8 +1,8 @@
--- agent_ann.lua - 用 Lua 寫 demo/agent-ann（全內嵌的一題一答 agent：loop 跑 fsm，fsm 三格都是單子）
+-- agent_ann.lua - 用 Lua 寫 agent-ann（proto8/tests/fixtures/agent-ann；11-04 前在 demo/，demo 刪了搬去當測試的固定資料）（全內嵌的一題一答 agent：loop 跑 fsm，fsm 三格都是單子）
 -- 編：aos-lua build agent_ann.lua <輸出>；跑：aos-exec --ws <工作區> <輸出>
--- 三支 .py 直接讀 demo/agent-ann 那份（只示範 loop／fsm／單子怎麼寫，程式本身不重寫）
+-- 三支 .py 直接讀 tests/fixtures/agent-ann 那份（只示範 loop／fsm／單子怎麼寫，程式本身不重寫）
 local aos = require("aos")
-local demo = "../../../../demo/agent-ann/"
+local demo = "../../../../tests/fixtures/agent-ann/"
 
 return aos.dir {
   -- loop.json 自己帶 _entry，所以入口只要叫 aos-exec loop.json

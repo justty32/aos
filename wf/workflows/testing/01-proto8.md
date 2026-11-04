@@ -2,15 +2,16 @@
 
 ## proto8（不在 ctest 裡）
 
-10-23 起 proto8 的 aos-exec、aos-loop、aos-fsm、aos-daemon 只剩 C++ 版（`proto8/impls/<名>/bin/`；使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也改 C++、tick 先留 Python），aos-tick 還是 `proto8/bin/` 的 Python。`proto8/tests` 與 `proto8/demo/run.sh` 都把這幾個 `bin/` 放進 PATH 跑（`proto8/tests/aos_bins.py`；沒建好會直接停、說要先建），所以**先建 impls**（各專案獨立的 CMake 專案，照依賴順序；`bin/`、`build/` 不進 git）：
+10-23 起 proto8 的 aos-exec、aos-loop、aos-fsm、aos-daemon 只剩 C++ 版（`proto8/impls/<名>/bin/`；使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也改 C++、tick 先留 Python），aos-tick 還是 `proto8/bin/` 的 Python。`proto8/tests` 把這幾個 `bin/` 放進 PATH 跑（`proto8/tests/aos_bins.py`；沒建好會直接停、說要先建），所以**先建 impls**（各專案獨立的 CMake 專案，照依賴順序；`bin/`、`build/` 不進 git）：
 
 ```sh
 (cd proto8/impls && for p in inst aos-util aos-directive aos-schema aos-exec aos-json aos-loop aos-fsm aos-lock aos-post aos-daemon aos-llm-kernel aos-llm-send; do (cd $p && cmake -B build && cmake --build build && ctest --test-dir build) || break; done)
 python3 -m unittest discover -s proto8/tests      # 全過（python-dotenv 沒裝時 1 個 skip）
-sh proto8/demo/run.sh                            # 結束碼 0、各段都「結束碼 0」（10-23 加 agent-dan 後五段；10-24 加 llm-kernel 後六段；11-02 晚 agent-dan 那段隨它刪了；11-03 llm-kernel 那段隨它封存）
 ```
 
-impls 各專案自己的 ctest（`test_cli`、`test_demo`…）說明在 [proto8/impls/README.md](../../../proto8/impls/README.md)。
+11-04 起沒有「跑 demo」這一步：`proto8/demo/run.sh` 與它跑的範例刪了（使用者「demo中的，用不到的全部刪掉，也不用封存了。」），demo 只剩 eca-claude；原本 run.sh 跑的 agent-bob、agent-ann、tick 搬到 `proto8/tests/fixtures/`，由上面的 unittest 跑（test_exec、test_tick）。
+
+impls 各專案自己的 ctest（`test_cli`、`test_tool`…；aos-fsm、aos-daemon 跑 demo 的 `test_demo` 11-04 刪了）說明在 [proto8/impls/README.md](../../../proto8/impls/README.md)。
 
 10-23 起 `proto8/tests/test_dan.py`（agent-dan）裡連真模型的案例，在 `localhost:4000/v1/models` 連不上時 skip（其餘用假 server，離線也跑）。11-02 晚 test_dan.py 隨 agent-dan 刪了；test_meg、test_kai 等連真模型的案例（test_nia 11-03 隨 round 那套 agent 刪了）照同一規則 skip。
 

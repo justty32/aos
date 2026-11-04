@@ -13,8 +13,8 @@
 | [bin/](bin/README.md) | Python 的 aos-tick、aos-tools、aos-daemon-ctl、aos-eca-turn |
 | [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），demo 用相對捷徑引用 |
 | [extras/](extras/README.md) | 周邊工具：給人用的 say／listen、aos-mcp、aos-eca、aos-grow、Janet／Lua 寫 aos、aos-sandbox |
-| [demo/](demo/README.md) | 範例 agent 與 `run.sh` |
-| [archive/](archive/README.md) | 封存（topdown 試驗、llm-kernel 示範、self-improve、nvim 外掛、Lua／Janet agent_dan、aos-chat；清單在它的 README） |
+| [demo/](demo/README.md) | 只剩 `eca-claude`（aos-eca 的預設範本；11-04 其餘範例 agent 與 `run.sh` 刪了，測試要用的幾隻搬到 `tests/fixtures/`） |
+| [archive/](archive/README.md) | 封存（llm-kernel 示範、self-improve、nvim 外掛、Lua／Janet agent_dan、aos-chat；清單在它的 README） |
 | `tests/` | `python3 -m unittest discover -s proto8/tests`（先建 impls） |
 | [thinking/](thinking/README.md) | 討論紀錄（使用者原文、決定、結論） |
 | [notes/](notes/README.md) | AI 寫的參考筆記（不算數） |
@@ -26,16 +26,16 @@
 
 ## 現況
 
-- **資料夾＝程式**（使用者 10-19 定）：aos 只訂六個環境變數和一支 `aos-exec [--ws WS] XXX [args...]`；入口四種、`XXX` 的找法、`#/` 尋址、`+x` 但沒 `#!` 的檔用 `/bin/sh` 跑（§ 21「不擋」、§ 22「乙」）都在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62）。巢狀由程式自己訂子 stack；這次要做啥隨意。10-16 那套作廢，原話與裁定在 [thinking/2026-10-19-ideas.md](thinking/2026-10-19-ideas.md)（使用者：「那是帶著鐐銬跳舞跳得很棒，終究不如我們現在直接把鐐銬拿掉」）。範例：agent-bob 叫 cathy 叫 stamp 四層、agent-ann 全內嵌對照。
+- **資料夾＝程式**（使用者 10-19 定）：aos 只訂六個環境變數和一支 `aos-exec [--ws WS] XXX [args...]`；入口四種、`XXX` 的找法、`#/` 尋址、`+x` 但沒 `#!` 的檔用 `/bin/sh` 跑（§ 21「不擋」、§ 22「乙」）都在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62）。巢狀由程式自己訂子 stack；這次要做啥隨意。10-16 那套作廢，原話與裁定在 [thinking/2026-10-19-ideas.md](thinking/2026-10-19-ideas.md)（使用者：「那是帶著鐐銬跳舞跳得很棒，終究不如我們現在直接把鐐銬拿掉」）。範例：agent-bob 叫 cathy 叫 stamp 四層、agent-ann 全內嵌對照（11-04 起在 `tests/fixtures/`，demo 刪了）。
 - **實作**：[impls/](impls/README.md) 是唯一實作（C／C++；使用者 10-23「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也用 C++、tick 先留 Python，[bin/](bin/README.md) 是 Python 的 aos-tick 等），命令列有 aos-exec、aos-loop、aos-fsm、aos-daemon 等（全表見它的 README）；刻意沒有 aos-inst 命令列。loop／daemon／fsm 格「要跑什麼」那一格叫 `exec`（使用者「exec，loop／daemon 的 run 也一起改 exec」，[thinking](thinking/2026-10-23-naming.md)）。
-- kernel、tasks 現在**沒有實作**，概念與規範留著、標「現無實作」，等照新做法重寫（[NORMS 待定](docs/NORMS/08-待定.md)）；daemon 是 impls 的 `aos-daemon`，tick 是 `bin/aos-tick`，腦的工具呼叫範本是 [demo/agent-eve](demo/README.md)、慣例 [P-41](docs/CONVENTION.md)。
+- kernel、tasks 現在**沒有實作**，概念與規範留著、標「現無實作」，等照新做法重寫（[NORMS 待定](docs/NORMS/08-待定.md)）；daemon 是 impls 的 `aos-daemon`，tick 是 `bin/aos-tick`，腦的工具呼叫範本是 `tests/fixtures/agent-eve`（11-04 前在 demo/）、慣例 [P-41](docs/CONVENTION.md)。
 
 ## 入口
 
 - **[CONCEPTS.md](docs/CONCEPTS.md)**：概念——aos 怎麼看世界（C-01～C-73）。
 - **[NORMS.md](docs/NORMS.md)**：規範——從概念推出來、大家都要守的（比實作重要，C-45）；程式符合規範但不強制。底在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62：六個環境變數、`aos-exec XXX`、找入口、`#/` 尋址）。
 - **[CONVENTION.md](docs/CONVENTION.md)**：aos agent 慣例（P-05～P-41）——我們自己人寫 agent 時照抄的標準形狀，不要求別人守。
-- **[demo/](demo/README.md)**：`sh proto8/demo/run.sh`，跑 agent-bob、agent-ann 與 daemon、tick、daemon-2、daemon-3 等段。
+- **[demo/](demo/README.md)**：只剩 `eca-claude`（外部 coding agent 範本，`aos-eca add` 給它）；11-04 前的 `run.sh` 與各段範例刪了。
 - **10-24 一天的嘗試**（使用者「我隨便說，你隨便做，反正只是嘗試」；代定都可翻案，一覽在 [session log 10-24](../wf/session_logs/2026-10-parts/12-10-24.md#2026-10-24)）：[lib/](lib/README.md)（工具＝函式庫）、[human/](extras/human/README.md)（給人用的 say／listen）、[ai_tools/](extras/ai_tools/README.md)（當時是給 AI 用的 aos-ai，11-03 刪了、只剩 aos-mcp）、[grow/](extras/grow/README.md)（函數成長 aos-grow）、[langs/](extras/langs/README.md)（Janet、Lua 寫 aos）、[sandbox/](extras/sandbox/README.md)（Linux 權限與沙箱）；demo 多了十幾隻 agent 與 talk 等，見 [demo/](demo/README.md)（nvim 外掛、self-improve、llm-kernel 示範封存在 proto8/archive/）。
 - **tests/**：`python3 -m unittest discover -s proto8/tests`。
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。

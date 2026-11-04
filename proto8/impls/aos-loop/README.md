@@ -187,4 +187,4 @@ cmake -B build && cmake --build build && ctest --test-dir build
 - I 段 9 組：log 一次一行（欄位、值、started_at 寫法）、跟身體的 stdout 交錯、失敗與被訊號停掉那次也印、`--enable-logs`（預設不印、不帶值、usage 有它）、stdout 是關掉的管子照跑完（身體的 SIGPIPE 沒被改成忽略）、max 0 沒有 log、睡 interval 時 state 不動（內容與 mtime；窗停在 running）、interval 0 時跑的期間只寫一份 running、running／waiting 來回只寫一份而 paused 照寫。
 - J 段 5 組：`-- 參數`（字串目標、陣列、設定檔後面接的不是 `--`＝`ArgumentsBad`、`--` 後面沒東西）、單子 argv 接參數與 argv 是指示詞＝`CfgBad`、`-- -odd.json -- q`、端到端 `aos-exec <資料夾> -- 題`（資料夾的 `_entry` 是 loop 設定）、ctl／state 寫 null＝不開。
 
-A～D 段寫內嵌單子的案例用 `{"exec": "loop.json#/body", "body": 單子}`。demo 的整合測試在 [aos-fsm](../aos-fsm/README.md) 的 `test_demo`。
+A～D 段寫內嵌單子的案例用 `{"exec": "loop.json#/body", "body": 單子}`。整合（agent-bob、agent-ann 真跑）在 `proto8/tests/test_exec.py`（11-04 前在 aos-fsm 的 `test_demo`）。

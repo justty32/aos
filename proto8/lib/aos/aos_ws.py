@@ -7,7 +7,7 @@
   ① queue＝<stack>/queue/（N-16 有順序的信箱；寄＝aos-post send --ordered，一封信的 body＝一則 OpenAI message）；
   ② history＝<stack>/history.jsonl（回答＝最新那則沒有 tool_calls 的 assistant，沒有 out/）；
   ③ ctl／state＝aos-loop 開在 <stack>/ctl.json、state.json 的窗（state 的 phase 看得出 paused）。
-舊協議（工作區的 new/ cur/ out/ done/，P-11 的 10-30 改口：agent-bob／ann／dan、topdown 這些 fsm 範本）這裡不再認。
+舊協議（工作區的 new/ cur/ out/ done/，P-11 的 10-30 改口：agent-bob／ann／dan、topdown 這些 fsm 範本；11-04 demo 刪了，bob、ann 搬到 tests/fixtures）這裡不再認。
 11-03 起不讀 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）：fsm、aos-eca-turn 都不寫了，last_jsonl／unit_of／failed 跟著拿掉。"""
 import json, os, re, subprocess
 

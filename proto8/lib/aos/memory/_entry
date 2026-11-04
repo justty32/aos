@@ -5,7 +5,7 @@
 # 讀寫做法在同資料夾的 heap.py（掛它的 agent 的 brain.py 也 import 它，把偏好與相關幾筆附在 system 後面）。
 # 錯：stderr 與 stdout 各一行「memory: 代號 原因」、退 1——ArgumentsBad（參數不對）、OpUnknown（op 不認得）、
 # MemoryMissing（沒有這一筆）、HeapBad（記憶庫本身壞了）。來源：demo/agent-meg/tools/memory（10-24；遷移前「模型的錯」印
-# 「錯誤：…」退 0，現在照 lib 契約一律退 1，回不回給腦由叫它的 agent 決定——agent-meg 回給腦）。
+# 「錯誤：…」退 0，現在照 lib 契約一律退 1，回不回給腦由叫它的 agent 決定——agent-meg 回給腦；demo/agent-meg 11-04 刪了）。
 import json, os, sys
 
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__

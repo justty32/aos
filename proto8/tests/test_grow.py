@@ -1,6 +1,6 @@
 """test_grow - grow/aos-grow（函數往上長一級／縮回一級，呼叫方跟著改、行為不變）。
 
-設計：proto8/thinking/2026-10-24-fn-grow.md。核心那個測試把 demo/agent-liv（11-02 晚前是 agent-dan；liv 抄它、fsm 同、工具是 lib 捷徑沒有巢狀 agent）複製兩份、只長其中一份，
+設計：proto8/thinking/2026-10-24-fn-grow.md。核心那個測試把 tests/fixtures/agent-eve（11-04 前是 demo/agent-liv，demo 刪了改用這份；11-02 晚前是 agent-dan，兩隻都抄它、fsm 只差 act 的 timeout_ms）複製兩份、只長其中一份，
 用假腦（沒設 AOS_BRAIN_URL）各跑兩題，抹掉時間後工作區與 stack 每個檔都要一樣。"""
 import json, os, re, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
@@ -11,7 +11,7 @@ from aos_bins import ROOT, tool, path_with  # noqa: E402
 from dead_brain import DEAD  # noqa: E402  （腦壞了＝連上去馬上被拒的網址）
 EXEC = tool("aos-exec")
 GROW = str(ROOT / "extras" / "grow" / "aos-grow")
-DAN = ROOT / "demo" / "agent-liv"
+DAN = Path(__file__).resolve().parent / "fixtures" / "agent-eve"
 CODES = ("ArgumentsBad", "FlagUnknown", "CfgMissing", "CfgBad", "TargetBad", "NameBad", "WriteFailed")
 TS = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?(Z|[+-]\d\d:\d\d)")
 
@@ -61,9 +61,12 @@ class GrowDan(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp(prefix="grow-")
         self.before, self.after = Path(self.tmp, "before"), Path(self.tmp, "after")
-        ign = shutil.ignore_patterns("__pycache__")
-        shutil.copytree(DAN, self.before, ignore=ign)
-        shutil.copytree(DAN, self.after, ignore=ign)
+        # 不帶 tools/（pyfix 捷徑會被複製成整隻子 agent，它的 fsm.json 也有 act 格，aos-grow 縮回時會當成別處在叫）；
+        # 工具清單清空，假腦就直接答（11-04 前用的 agent-liv 沒有巢狀 agent）
+        ign = shutil.ignore_patterns("__pycache__", "tools")
+        for d in (self.before, self.after):
+            shutil.copytree(DAN, d, ignore=ign)
+            (d / "tools.json").write_text('{"tools": {}}\n')
 
     def tearDown(self):
         shutil.rmtree(self.tmp)
@@ -84,7 +87,7 @@ class GrowDan(unittest.TestCase):
         states = json.loads(Path(fsm).read_text())["states"]
         self.assertEqual(states["think"]["exec"], "think")
         self.assertEqual(states["act"]["exec"], "act")
-        self.assertEqual(json.loads(Path(self.after, "act.json").read_text()), {"argv": ["python3", "act.py"], "timeout_ms": 60000})
+        self.assertEqual(json.loads(Path(self.after, "act.json").read_text()), {"argv": ["python3", "act.py"], "timeout_ms": 1800000})
         self.assertEqual(json.loads(Path(self.after, "think", "_entry").read_text()),
                          {"argv": ["python3", {"$env": "AOS_CD", "$path": "/brain.py"}], "timeout_ms": 120000, "cwd": ".."})
         self.assertFalse(Path(self.after, "brain.py").exists())

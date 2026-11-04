@@ -5,7 +5,7 @@
 # 不是沙盒：能碰到的跟這台機器的使用者一樣多。程式本身退非 0 是結果、不是錯（第一行寫結束碼）。
 # 逾時（預設 60 秒、上限 300）＝整群先 TERM、2 秒後 KILL、算 CommandFailed（已經印出來的照樣給）；這個工具被外面 TERM 時也先停掉那一群。
 # 錯：stderr 與 stdout 各一行「run_python: 代號 原因」、退 1。來源：demo/agent-gus/tools/run_python（10-24；遷移時錯誤照 lib 契約：
-# 以前「模型的錯、逾時」印「錯誤：…」退 0，現在一律退 1，回不回給腦由叫它的 agent 決定——agent-gus 回給腦）。
+# 以前「模型的錯、逾時」印「錯誤：…」退 0，現在一律退 1，回不回給腦由叫它的 agent 決定——agent-gus 回給腦；demo/agent-gus 11-04 刪了）。
 import json, os, signal, subprocess, sys
 
 NAME = "run_python"

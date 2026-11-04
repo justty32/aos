@@ -21,7 +21,7 @@
 | 只跑某個小專案的測試 | `ctest --preset default -R '^aos_exec'`（或該小專案登記的測試名稱前綴）| agent |
 | 完整驗證（commit 前）| 同快速驗證——目前沒有額外分出兩套，測試量還小 | agent |
 | 動過 `modules/` 之後 | `cmake -S . -B /tmp/aos-nomod -DAOS_BUILD_MODULES=OFF && cmake --build /tmp/aos-nomod`（確認關掉擴充仍建得起來）| agent |
-| proto8（現役主線）：先建 impls，再跑測試與 demo | 見下面「proto8」 | agent |
+| proto8（現役主線）：先建 impls，再跑測試 | 見下面「proto8」 | agent |
 | 要真模型、外部 CLI agent、跨機的（例：T5 agent loop 實測）| 照該實驗檔的步驟 | 使用者 → [WAIT_USER](../WAIT_USER.md)；本機 LM Studio 跑得動的部分我自己跑 |
 
 「誰跑」只有兩種值：**agent**（本機跑得動）、**使用者 → WAIT_USER**（要實機、外部服務、帳號、付費、目視）。判不準就當後者。

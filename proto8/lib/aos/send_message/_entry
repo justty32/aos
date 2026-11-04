@@ -8,8 +8,8 @@
 # 擋迴圈：counter_hops 超過名冊的 max_hops、或這一層已經寄了 max_sends 封，就不寄。
 # 錯（lib/README 的契約）：stderr 與 stdout 各一行「send_message: 代號 原因」、退 1——參數不對 ArgumentsBad、收件人不認得 RecipientUnknown、
 #   沒有收件人 RecipientMissing、信太大 BodyBad、到手數上限 HopsBad、到寄信數上限 SendsBad、一封都送不到 MailboxMissing（送到一部分＝結果、退 0）；
-#   環境沒設好：RosterMissing、RosterBad、SelfUnknown。回不回給腦由叫它的 agent 決定（talk 的 member 回給腦）。
-# 來源：demo/talk/member/tools/send_message（10-24；遷移前「模型的錯」印「錯誤：…」退 0，現在照 lib 契約一律退 1）。
+#   環境沒設好：RosterMissing、RosterBad、SelfUnknown。回不回給腦由叫它的 agent 決定（原本 demo/talk 的 member 回給腦）。
+# 來源：demo/talk/member/tools/send_message（10-24；遷移前「模型的錯」印「錯誤：…」退 0，現在照 lib 契約一律退 1；demo/talk 11-04 刪了）。
 import json, os, secrets, sys
 from datetime import datetime, timezone
 

@@ -10,7 +10,7 @@ aos-lua - 把一份 Lua 原始檔編成 aos 的資料夾＋JSON（嘗試）
 |---|---|
 | `aos.lua` | aos - 建構子（dir、file、script、inst、loop、fsm、daemon、env、ref…）＋JSON 編碼＋攤平成檔案清單 |
 | `bin/aos-lua` | aos-lua - 命令列：`build`（寫出來）、`json`（印一個檔或一段 `#/指標`）、`ls`（列出會寫哪些檔） |
-| `examples/agent_ann.lua` | 全內嵌的 agent-ann（loop＋fsm＋三張單子），編出來跟 [demo/agent-ann](../../../demo/README.md) 一樣 |
+| `examples/agent_ann.lua` | 全內嵌的 agent-ann（loop＋fsm＋三張單子），編出來跟 `proto8/tests/fixtures/agent-ann` 一樣（三支 .py 從那裡讀；11-04 前在 demo/） |
 | `examples/clocks.lua` | 一個 daemon 顧三個時鐘 loop，子項用 `for` 迴圈產生 |
 
 ## 用法

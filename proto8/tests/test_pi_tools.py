@@ -1,6 +1,6 @@
-"""test_pi_tools - 仿 pi coding agent 的 read、write、edit、bash（原 demo/pi-tools，10-24 遷移進 proto8/lib/base）與掛上它們的 demo/agent-pip。
+"""test_pi_tools - 仿 pi coding agent 的 read、write、edit、bash（原 demo/pi-tools，10-24 遷移進 proto8/lib/base）。
 
-工具一支一支用 aos-exec 叫（arguments 從 stdin 進、stdout 是結果）；agent-pip 用 fake_brain.py 的假 server 照劇本跑「讀 → 改錯 → 改對 → 跑 → 答」。
+工具一支一支用 aos-exec 叫（arguments 從 stdin 進、stdout 是結果）。掛上它們的 demo/agent-pip 與那兩案 11-04 隨 demo 刪了。
 不連真模型。設計：proto8/thinking/2026-10-24-pi-tools.md。"""
 import json, os, re, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
@@ -8,11 +8,9 @@ import own_error  # noqa: E402
 own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
-from fake_brain import FakeBrain, call, tool_reply, answer  # noqa: E402
 
 EXEC = tool("aos-exec")
 TOOLS = ROOT / "lib" / "base"                       # 10-24 遷移前是 demo/pi-tools
-PIP = str(ROOT / "demo" / "agent-pip")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
 CODES = ("ArgumentsBad", "WsMissing", "PathBad", "FileMissing", "FileBad", "ReadFailed", "WriteFailed",
          "MkdirFailed", "TextMissing", "TextBad", "CommandFailed", "LaunchFailed")
@@ -225,59 +223,6 @@ class Tools(unittest.TestCase):
             spec = json.loads((TOOLS / name / "_tooldef.json").read_text())
             self.assertEqual(set(spec), {"description", "parameters"})
             self.assertEqual(spec["parameters"]["type"], "object")
-
-
-class AgentPip(unittest.TestCase):
-    """agent-pip：工具出的問題回給腦、不停；腦照錯誤改，修好一個 bug。"""
-
-    def setUp(self):
-        self._t = tempfile.TemporaryDirectory()
-        self.tmp = Path(self._t.name)
-        self.addCleanup(self._t.cleanup)
-        self.ws = self.tmp / "ws"
-        (self.ws / "new").mkdir(parents=True)
-        self.stack = self.tmp / "stack"
-
-    def run_pip(self, *script):
-        b = FakeBrain(script)
-        self.addCleanup(b.close)
-        r = subprocess.run([EXEC, "--ws", "ws", PIP], capture_output=True, text=True, cwd=self.tmp, timeout=120,
-                           env=env_with({"AOS_BRAIN_URL": b.url, "AOS_STACK": str(self.stack) + "/"}))
-        return r, b
-
-    def history(self):
-        return [json.loads(l) for l in (self.stack / "history.jsonl").read_text().splitlines()]
-
-    def test_fix_bug_with_error_fed_back(self):
-        (self.ws / "calc.py").write_text("def add(a, b):\n    return a - b\n\nprint(add(2, 3))\n")
-        (self.ws / "new" / "q1.txt").write_text("calc.py 的 add 印出 -1，應該是 5，修好它。\n")
-        r, b = self.run_pip(
-            tool_reply(call("c1", "read", {"path": "calc.py"})),
-            tool_reply(call("c2", "edit", {"path": "calc.py", "edits": [{"old_text": "return a-b", "new_text": "x"}]})),
-            tool_reply(call("c3", "edit", {"path": "calc.py", "edits": [{"old_text": "a - b", "new_text": "a + b"}]}),
-                       call("c4", "weather", {})),
-            tool_reply(call("c5", "bash", {"command": "python3 calc.py"})),
-            answer("把 a - b 改成 a + b，現在印 5。"))
-        self.assertEqual(r.returncode, 0, r.stderr)
-        self.assertEqual((self.ws / "calc.py").read_text(), "def add(a, b):\n    return a + b\n\nprint(add(2, 3))\n")
-        self.assertEqual((self.ws / "out" / "q1.txt").read_text(), "把 a - b 改成 a + b，現在印 5。\n")
-        tools = {m["tool_call_id"]: m["content"] for m in self.history() if m["role"] == "tool"}
-        self.assertTrue(tools["c2"].startswith("edit: TextMissing "), tools["c2"])
-        self.assertTrue(tools["c2"].endswith("(工具 edit 結束碼 1)\n"), tools["c2"])
-        self.assertTrue(tools["c4"].startswith("act: ToolUnknown weather（能叫的：bash、copy、edit、json_edit、"), tools["c4"])
-        self.assertEqual(tools["c5"], "5\n")
-        self.assertIn("agent-pip: ToolFailed edit 結束碼 1（回給腦）", r.stderr)
-        self.assertTrue({"bash", "edit", "read", "write"} <= {t["function"]["name"] for t in b.requests[0]["tools"]})
-        self.assertEqual(b.requests[0]["messages"][0]["role"], "system")
-
-    def test_arguments_bad_fed_back(self):
-        (self.ws / "new" / "q1.txt").write_text("hi\n")
-        r, _ = self.run_pip(
-            tool_reply({"id": "c1", "type": "function", "function": {"name": "read", "arguments": ""}}),
-            answer("ok"))
-        self.assertEqual(r.returncode, 0, r.stderr)
-        tool_msg = [m for m in self.history() if m["role"] == "tool"][0]
-        self.assertTrue(tool_msg["content"].startswith("act: ArgumentsBad read："), tool_msg)
 
 
 if __name__ == "__main__":

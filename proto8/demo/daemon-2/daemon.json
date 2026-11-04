@@ -1,4 +1,0 @@
-{"interval_ms": 200, "ctl": "ctl.json", "state": "state.json", "procs_ctl_mailbox": "procs_ctl_mailbox",
- "procs": {
-  "sam": {"exec": {"argv": ["aos-exec", "./agent-sam", {"$env": "AOS_STACK", "$path": "../../procs_ctl_mailbox"}]}, "max": 1}
- }}

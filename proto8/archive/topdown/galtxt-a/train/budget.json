@@ -1,1 +1,0 @@
-{"max_epochs": 4, "max_calls": 250, "max_tokens": 650000, "max_elapsed_ms": 1500000, "min_gain": 0.25, "min_loss": 0.25}

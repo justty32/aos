@@ -1,4 +1,4 @@
-"""test_lua_aos - Lua 寫 aos（proto8/extras/langs/lua）：編出來跟手寫的 demo 一樣、真跑結果一樣（nvim 外掛與 agent_dan.lua 那幾案 11-03 封存到 proto8/archive/nvim、agent-dan-langs）。
+"""test_lua_aos - Lua 寫 aos（proto8/extras/langs/lua）：編出來跟手寫的 agent-ann（tests/fixtures，11-04 前在 demo/）一樣、真跑結果一樣（nvim 外掛與 agent_dan.lua 那幾案 11-03 封存到 proto8/archive/nvim、agent-dan-langs）。
 
 設計：proto8/thinking/2026-10-24-lua-nvim.md。lua／luajit／nvim 都沒有就整份 skip。"""
 import json, os, re, shutil, subprocess, tempfile, unittest
@@ -9,6 +9,7 @@ from aos_bins import ROOT, tool, path_with, fsm_steps  # noqa: E402
 LUA_DIR = ROOT / "extras" / "langs" / "lua"
 AOS_LUA = str(LUA_DIR / "bin" / "aos-lua")
 EX = LUA_DIR / "examples"
+FIXTURES = Path(__file__).resolve().parent / "fixtures"   # 手寫的 agent-ann（11-04 前在 proto8/demo/）
 EXEC = tool("aos-exec")
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO",
          "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
@@ -90,7 +91,7 @@ class TestBuild(unittest.TestCase):
         return out
 
     def test_ann_same_as_demo(self):
-        same_tree(self, self.build("agent_ann.lua"), ROOT / "demo" / "agent-ann")
+        same_tree(self, self.build("agent_ann.lua"), FIXTURES / "agent-ann")
 
     def test_runners_agree(self):
         """lua、luajit、nvim -l 編出來逐位元組一樣（11-02 晚前拿 agent_dan.lua 編，agent-dan 刪了改 agent_ann.lua）。"""
@@ -108,7 +109,7 @@ class TestBuild(unittest.TestCase):
         for src, hand in (("agent_ann.lua", "agent-ann"),):
             built = self.build(src)
             r1, a1, s1 = run_agent(built, "17*23 是多少？\n")
-            r2, a2, s2 = run_agent(ROOT / "demo" / hand, "17*23 是多少？\n")
+            r2, a2, s2 = run_agent(FIXTURES / hand, "17*23 是多少？\n")
             self.assertEqual(r1.returncode, 0, r1.stderr)
             self.assertEqual((r1.returncode, a1, s1), (r2.returncode, a2, s2), src)
             self.assertIn("FAKE ANSWER", a1)

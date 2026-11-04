@@ -1,5 +1,0 @@
-#!/bin/sh
-# _entry - 一個 daemon 的同一份名單 procs 裡用兩種寫法各掛一次 demo/tick（10-30；11-03 起一份名單、看寫法決定怎麼起）：
-# tick_loop（① {"exec": …, "max": 1}＝包成跑一次的子 loop）、tick_exec（② 字串＝直接 aos-exec 一次）。
-# 後面的參數原樣給 aos-daemon（同 daemon-2）；daemon.json 寫了 max 10（約 2 秒就收工）。
-exec aos-daemon "$@" daemon.json

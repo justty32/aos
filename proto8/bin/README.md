@@ -7,11 +7,10 @@
 > 這裡是 Python 的 `aos-tick`、`aos-tools`、`aos-daemon-ctl`、`aos-eca-turn`（都用 `aos_flags.py` 的旗標解析 `parse`）；完整說明在各支的檔頭 docstring。
 
 ```
-sh proto8/demo/run.sh                                  # 跑 demo 各段（見 demo/README）；印工作區與 stack 樹
 python3 -m unittest discover -s proto8/tests           # C++ 的在 impls/<名>/bin/、Python 的在這裡（tests/aos_bins.py 放 PATH）
 ```
 
-aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<名>/bin/` 與這個 `bin/`（aos-tick、aos-tools…）放進 PATH，`demo/run.sh` 就是這樣做。
+aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<名>/bin/` 與這個 `bin/`（aos-tick、aos-tools…）放進 PATH，`tests/aos_bins.py` 就是這樣做（11-04 前 `demo/run.sh` 也是）。
 
 ## 逐支說明
 
@@ -44,7 +43,7 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
 
 ## aos-daemon-ctl
 
-**`aos-daemon-ctl - 把 proc 掛到一個 aos-daemon 上、起停、暫停（往它的信箱投 procs_added／procs_removed／procs_stopped／procs_started）`**（使用者「我們現在跑aos-exec XXX，等同於把這個proc掛到linux這個原生proc管理器上。假如我們想要掛在daemon上呢？或許是aos-daemon-ctl add XXX這樣，然後會自動識別XXX是否為loop，不是的話就max:1這樣？」；[thinking 10-30 agent-lifecycle](../thinking/2026-10-30-agent-lifecycle.md)、[thinking 11-03 procs](../thinking/2026-11-03-procs.md)；例子在 [demo/daemon-3](../demo/daemon-3/README.md)）
+**`aos-daemon-ctl - 把 proc 掛到一個 aos-daemon 上、起停、暫停（往它的信箱投 procs_added／procs_removed／procs_stopped／procs_started）`**（使用者「我們現在跑aos-exec XXX，等同於把這個proc掛到linux這個原生proc管理器上。假如我們想要掛在daemon上呢？或許是aos-daemon-ctl add XXX這樣，然後會自動識別XXX是否為loop，不是的話就max:1這樣？」；[thinking 10-30 agent-lifecycle](../thinking/2026-10-30-agent-lifecycle.md)、[thinking 11-03 procs](../thinking/2026-11-03-procs.md)；例子 demo/daemon-3 11-04 隨 demo 刪了）
 
 用法 `aos-daemon-ctl [--daemon-stack D] add [--name N] [--ws WS] [--stack S] XXX [-- 參數...]｜rm 名字｜stop 名字｜start 名字｜pause 名字｜resume 名字｜ls [--json]｜where --stack 名字`。名詞照 [procs § 0](../thinking/2026-11-03-procs.md#0-名詞表代定)：add／rm＝插拔、start／stop＝起停（stack 留著）、pause／resume＝暫停。表上的 `phase` 只有 `running`、`stopping`、`stopped`、`sleeping`（daemon 收工時還在跑的 loop 型、再開自動 wake，見 [aos-daemon](../impls/aos-daemon/README.md)；sleep／wake 不開放成子命令）；暫停中是子 loop 自己 state.json 的事，表上不轉述。沒有 `--kind`（給了＝`FlagUnknown`）；ls 只看得到還在跑的（使用者「把--kind刪掉，XXX後面可以接-- ... 也就是附加argv參數。改成子項結束後不留名單」）。
 

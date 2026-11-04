@@ -1,7 +1,7 @@
 """test_file_tools - 資料夾與檔案的漸進工具：ls、stat、view、json_edit、mkdir、move、copy、trash（原 demo/file-tools，10-24 遷移進 proto8/lib/base），結果一律 JSON。
 
 工具一支一支用 aos-exec 叫；錯照 lib 契約：stderr 一行、stdout 最後一行同一行、退 1（遷移前 stdout 是 {"error": 那行}）。
-agent-pip（tools/ 全部掛 lib/base）用 fake_brain.py 的假 server 照劇本逐層看一個 aos agent 資料夾、改 loop.json。
+被看、被改的 aos agent 資料夾是 tests/fixtures/agent-eve 的複本（11-04 前從 demo/agent-eve 複製；掛 lib/base 的 agent-pip 照劇本逐層看、改 loop.json 那案隨 demo 刪了）。
 json_edit 經 aos-json（proto8/impls/aos-json）寫檔。不連真模型。設計：proto8/thinking/2026-10-24-pi-tools.md、2026-10-24-tool-lib.md。"""
 import json, os, re, shutil, subprocess, tempfile, unittest
 from pathlib import Path
@@ -9,11 +9,10 @@ import own_error  # noqa: E402
 own_error.install()
 
 from aos_bins import ROOT, tool, path_with  # noqa: E402
-from fake_brain import FakeBrain, call, tool_reply, answer  # noqa: E402
 
 EXEC = tool("aos-exec")
 TOOLS = ROOT / "lib" / "base"                       # 10-24 遷移前是 demo/file-tools
-PIP = str(ROOT / "demo" / "agent-pip")
+EVE = Path(__file__).resolve().parent / "fixtures" / "agent-eve"   # 被看、被改的樣本（11-04 前是 demo/agent-eve）
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
 CODES = ("ArgumentsBad", "WsMissing", "PathBad", "FileMissing", "FileBad", "ReadFailed", "WriteFailed", "MkdirFailed",
          "MoveFailed", "CopyFailed", "PointerBad", "PointerMissing", "LaunchFailed")
@@ -32,7 +31,7 @@ class Tools(unittest.TestCase):
         self.tmp = Path(self._t.name)
         self.addCleanup(self._t.cleanup)
         self.ws = self.tmp / "ws"
-        shutil.copytree(ROOT / "demo" / "agent-eve", self.ws / "agent-eve", ignore=shutil.ignore_patterns("__pycache__"))
+        shutil.copytree(EVE, self.ws / "agent-eve", ignore=shutil.ignore_patterns("__pycache__"))
 
     def tool(self, name, args):
         """回 (結束碼, stdout 解開的 JSON 或 None, 錯誤代號或 None)；成功時 stdout 是一份 JSON，錯時最後一行＝stderr 那行。"""
@@ -182,36 +181,6 @@ class Tools(unittest.TestCase):
             if d.is_dir():
                 spec = json.loads((d / "_tooldef.json").read_text())
                 self.assertEqual(set(spec), {"description", "parameters"}, d.name)
-
-
-class AgentPipExplores(unittest.TestCase):
-    """agent-pip 逐層看一個 aos agent 資料夾、改它的 loop.json（假 server 照劇本）。"""
-
-    def test_explore_and_edit(self):
-        with tempfile.TemporaryDirectory() as t:
-            tmp = Path(t)
-            ws = tmp / "ws"
-            shutil.copytree(ROOT / "demo" / "agent-eve", ws / "proj" / "agent-eve",
-                            ignore=shutil.ignore_patterns("__pycache__"))
-            (ws / "new").mkdir()
-            (ws / "new" / "q1.txt").write_text("把 proj 底下那隻 agent 的 loop 次數上限改成 80。\n")
-            b = FakeBrain([
-                tool_reply(call("c1", "ls", {"path": "proj"})),
-                tool_reply(call("c2", "view", {"path": "proj/agent-eve/loop.json"})),
-                tool_reply(call("c3", "json_edit", {"path": "proj/agent-eve/loop.json", "set": {"/max": 80}})),
-                answer("proj/agent-eve/loop.json 的 max 改成 80 了。")])
-            self.addCleanup(b.close)
-            r = subprocess.run([EXEC, "--ws", "ws", PIP], capture_output=True, text=True, cwd=tmp, timeout=120,
-                               env=env_with({"AOS_BRAIN_URL": b.url, "AOS_STACK": str(tmp / "stack") + "/"}))
-            self.assertEqual(r.returncode, 0, r.stderr)
-            self.assertEqual(json.loads((ws / "proj/agent-eve/loop.json").read_text())["max"], 80)
-            h = [json.loads(l) for l in (tmp / "stack" / "history.jsonl").read_text().splitlines()]
-            tools = {m["tool_call_id"]: json.loads(m["content"]) for m in h if m["role"] == "tool"}
-            self.assertEqual(tools["c1"]["items"][0]["aos"], ["_entry", ".env", "tools.json", "loop.json", "fsm.json"])
-            self.assertEqual(tools["c2"]["value"], {"exec": "fsm.json", "max": 40})
-            names = [t["function"]["name"] for t in b.requests[0]["tools"]]
-            self.assertEqual(names, sorted(["read", "write", "edit", "bash", "ls", "stat", "view", "json_edit",
-                                            "mkdir", "move", "copy", "trash"]))
 
 
 if __name__ == "__main__":

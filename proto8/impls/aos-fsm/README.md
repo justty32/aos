@@ -123,6 +123,5 @@ cmake -B build && cmake --build build && ctest --test-dir build
   F 段 exec 直接放單子——`AOS_CF`／`AOS_CD`／`AOS_CO`（名字帶 `/` 跳脫）／cwd 與換 next、非 0、逾時（143）、形狀壞（`EntryBad`／`DirectiveBad`，state 不動）、SIGTERM、`states` 拆檔時 `$ref` 的起點；設定檔 `檔#/指標` 的 `AOS_CO`、相對 `AOS_STACK`、捷徑 fsm.json；
   G 段 `next` 分岔——10 接住→state 換、fsm 退 0；10 沒接→退 10 不換；`*` 接 1、只有 `*` 也接 0；137 寫在表上接得住；表壞 13 種（沒 `"0"` 也沒 `"*"`、空物件、key `abc`／`-1`／`010`／` 1`／`256`、值不在表上／空／頭尾空白／換行／不是字串）；`next` 的 `$ref` 解成物件；SIGTERM＋分岔→state 照表、143。
   外層逾時那案要 `../aos-exec/bin/aos-exec`。
-- `test_demo`（`tests/test_demo.py`）：**整合測試**。照 `proto8/demo/run.sh`，PATH 最前面放 impls 的 aos-exec、aos-loop、aos-fsm 的 `bin/`，把 `proto8/demo` 的 agent-bob（含它叫的 cathy、stamp）與 agent-ann 各跑一次，
-  看結束碼 0、stderr 空、答案寫出來（`out/q1.txt`、`done/q1.txt`）。要先建好 `../aos-exec`、`../aos-loop` 自己的 `bin/`。
+- `test_demo`（跑 `proto8/demo` 的 agent-bob、agent-ann）11-04 隨 demo 刪了；bob、ann 搬到 `proto8/tests/fixtures/`，由 `proto8/tests/test_exec.py` 跑。
 - `proto8/tests/test_fsm.py` 也拿這支跑。

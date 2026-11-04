@@ -22,7 +22,7 @@ cat daemon.json
 # {"max": 10, "interval_ms": 200, "ctl": "ctl.json", "state": "state.json",
 #  "procs": {"bob": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}, "max": 1},
 #            "tick": "../tick"}}
-AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法是 aos-exec 它（proto8/demo/daemon）；PATH 上要有 aos-exec、aos-loop
+AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法是 aos-exec 它（11-04 前的例子 proto8/demo/daemon 刪了）；PATH 上要有 aos-exec、aos-loop
 ```
 
 **起 daemon 要看 log 就加 `--enable-logs`**：不加的話 daemon 什麼都不印（stdout、stderr 都安靜，只有出錯時 stderr 一行），看起來像卡住，其實照常在跑；子項起落要看就加它（見下「log」），或看 `aos-daemon-ctl ls`。
@@ -280,5 +280,4 @@ cmake -B build && cmake --build build && ctest --test-dir build
   **Q 段**（sleep／wake：收工時跑著的 loop 型留 `sleeping`、再開自動 wake、`stopped` 照停、exec 型拿掉；Ctrl-C 收工、暫停中的醒來照暫停；信箱模式睡著時的信先套；
   醒來後與 stopped→start 後表上、log 的 `ws` 照舊，信箱接回只留名的子行程 `AOS_WS` 也照舊〔11-03 晚修〕）。
   PATH 放 impls 的 aos-exec、aos-loop 兩支的 `bin/`（子 loop 要 exec 成 PATH 上的 aos-loop）。
-- `test_demo`（`tests/test_demo.py`）：`proto8/demo/daemon`、`daemon-2`（信箱 `procs_ctl_mailbox`）、`daemon-3`（同一支 tick 在同一份名單裡用 `max: 1` 的 loop 與字串各掛一次）在 impls 線（PATH 只放 impls 四支的 `bin/`）跑，看結束碼 0、stderr 空、答案寫出來；結束的子項看 daemon 的 log（`ended`）、收工後 procs_state 的表是空的。
-  要先建好 ../aos-exec、../aos-loop、../aos-fsm 的 `bin/`（`test_cli` 也要前兩支）。
+- `test_demo`（跑 `proto8/demo` 的 daemon、daemon-2、daemon-3）11-04 隨 demo 刪了。`test_cli` 要先建好 ../aos-exec、../aos-loop 的 `bin/`。

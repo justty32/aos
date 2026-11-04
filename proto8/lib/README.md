@@ -2,14 +2,14 @@
 
 **lib - agent 跑的時候會呼叫的外部函數，收成一份標準版，掛捷徑引用、不複製**
 
-← [proto8](../README.md)｜設計、盤點、代定與遷移清單：[thinking 2026-10-24 工具＝函式庫](../thinking/2026-10-24-tool-lib.md)｜慣例：[P-41、P-25](../docs/CONVENTION/02-題目stack停錯腦.md)、[P-33](../docs/CONVENTION/06-巢狀.md)｜特性：[`_metainfo`](../thinking/2026-10-24-metainfo.md)｜範例 agent：[demo/agent-liv](../demo/README.md)｜測試：`proto8/tests/test_lib.py`
+← [proto8](../README.md)｜設計、盤點、代定與遷移清單：[thinking 2026-10-24 工具＝函式庫](../thinking/2026-10-24-tool-lib.md)｜慣例：[P-41、P-25](../docs/CONVENTION/02-題目stack停錯腦.md)、[P-33](../docs/CONVENTION/06-巢狀.md)｜特性：[`_metainfo`](../thinking/2026-10-24-metainfo.md)｜範例 agent：`tests/fixtures/agent-eve`（11-04 前是 demo/agent-liv）｜測試：`proto8/tests/test_lib.py`
 
 使用者 10-24：「我們在做工具集，這其實挺像是在做函式庫。因爲agent是函數，我們給他的工具就是他在內部自己跑的時候會呼叫的外部函數。既然是這樣，那我們就要把抽象做好，把函數庫做好」——agent 是函數（一個資料夾，C-46、C-68），它 `tools/<名>/` 裡的東西是它內部呼叫的外部函數（C-42、C-61）。這裡把那些外部函數收成一份。
 
 ## 分層（每層只依賴下層）
 
 ```
-demo/agent-*/              最上層：agent 本身（也是函數）
+<agent>/                   最上層：agent 本身（也是函數；例 tests/fixtures/agent-eve，11-04 前是 demo/agent-*）
   tools/<名> ─捷徑─▶ lib/<層>/<名>/        引用，不複製（見下「怎麼引用」）
 lib/agent/                 高層：裡面是一整隻 agent（或外部 agent CLI）的工具（pyfix、claude、codex）＋共用模組 agent_tool.py、cli_session.py
 lib/aos/                   中層：動 aos 自己東西的工具（記憶 heap、寄信）＋共用模組 aos_ws.py
@@ -47,7 +47,7 @@ impls/                     基礎層與標準庫（C-74）：aos-exec 把工具�
 agent 的 `tools/` 裡放**一條相對捷徑指到庫裡那個工具**，一個工具一條：
 
 ```sh
-cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
+cd proto8/tests/fixtures/agent-eve/tools && ln -s ../../../../lib/base/read read   # 11-04 前的例子是 demo/agent-liv/tools（demo 刪了）
 ```
 
 - 捷徑建好再**登記進 agent 的 `tools.json`**（範本手寫相對路徑 `"read": {"path": "tools/read"}`，或 `aos-tools --file ../tools.json add read` 寫絕對路徑）；沒登記＝腦看不到。
@@ -90,7 +90,7 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 | [send_message](aos/send_message/) | 寄信給名冊（`$AOS_ROSTER`）上的成員或群組 | `to`、`subject`、`body`、`expect_reply` | 一行：寄了幾封、對話串第幾手 |
 | [check_inbox](aos/check_inbox/) | 看自己信箱還沒處理的（只看不拿） | （無） | 一封一行摘要 |
 
-這幾個的「模型的錯」也照規則 3 退 1；用它們的 agent（agent-meg、talk 的 member）的 act 把工具退非 0 回給腦、不停（同 agent-pip）。
+這幾個的「模型的錯」也照規則 3 退 1；回不回給腦由用它們的 agent 的 act 決定（11-04 前的例子 agent-meg、talk 的 member 都回給腦、不停，同 agent-pip；隨 demo 刪了）。
 `memory` 的 `$AOS_HEAP`、`send_message` 的 `$AOS_ROSTER`是規則 4「只碰 `$AOS_WS`」的例外，照原樣留著（放哪由叫的人決定，像 stack）。
 
 **共用模組 [aos_ws.py](aos/aos_ws.py)**（不是工具、沒有 `_entry`）：「寄信、等答案、讀 stack」；照 agent 對話協議（[CONVENTION P-42](../docs/CONVENTION/02-題目stack停錯腦.md)）只碰 stack——`stack_of`、`letter_key`（信件名稱的處理順序：有序 `^[0-9]{12}\.` 在前照名字、無序在後照名字，同 aos-post；11-03）、`names`（照 `letter_key` 排）／`where`／`waiting`（queue 的 new／cur／archive）、`put`（一則 user message，`aos-post init`＋`send --ordered`，PATH 上要有 aos-post）、`history`／`answers`／`exchanges`（回答＝沒有 tool_calls 的 assistant）；不認舊協議的工作區 `new/`／`out/`。給人用的 [proto8/extras/human](../extras/human/README.md)（aos-say／listen）用 realpath 找到這個資料夾 import（11-03 aos-ai 刪了，只服務它的 `loop_state`、`tail_jsonl` 跟著拿掉）。
@@ -108,7 +108,7 @@ cd proto8/demo/agent-liv/tools && ln -s ../../../lib/base/read read
 - [cli_session.py](agent/cli_session.py)：claude／codex CLI 接成工具的做法（非互動續對話、或 tmux 畫面開著時從畫面送字）；工具資料夾由 `_entry` 傳進來（`cli.json` 在那裡）、agent 資料夾由 `attach` 傳進來。工具被整個複製進某隻 agent 的 `tools/`（覆寫）時，`_entry` 改找那隻 agent 根的 `cli_session.py`。拿到 session id 就在小格建 `transcripts/<kind>-<id>.jsonl`＝指到 CLI 自己存的對話檔（claude `~/.claude/projects/*/<id>.jsonl`、codex `~/.codex/sessions/**/*<id>.jsonl`）的 symlink，工具形（agent 叫的）也建；一直是 symlink，要留的人自己複製。問 CLI 那段（note_cell → lock → 畫面開著貼字／沒開非互動 → symlink）是 `ask(cfg, cell, tool_dir, ws, stack, prompt)`（`stack` 給 aos-mcp），工具形 `call_main` 與 eca 的 [`aos-eca-turn`](../bin/aos-eca-turn) 共用。`live`、`ask`、`call_main` 有參數 `on_busy`（預設 `"yield"`＝有人佔著就 `SessionBad`，lib/agent/claude、codex 照用預設；`"answer"`＝lock 等、有人接著照樣貼、`busy.txt` 等它消失，給 `aos-eca-turn --on-busy answer`）。格裡記 `tool.txt`／`ws.txt`／`stack.txt`（`note_cell`，叫回畫面用）。**接 aos 工具**（[thinking eca-tools](../thinking/2026-11-03-eca-tools.md)）：`cli.json` 選填 `tools`（aos-tools 登記檔，相對路徑從 cli.json 的資料夾算；沒寫＝同層 `tools.json` 有就用）與 `tools_flags`（原樣給 aos-mcp）；有登記檔時 `mcp_argv` 每次起 CLI 前接上 `aos-mcp --ws <工作區> --stack <stack> [tools_flags] <登記檔>`——claude 寫小格 `mcp.json`＋`--mcp-config`／`--allowedTools mcp__aos`，codex 兩個 `-c mcp_servers.aos.*`；stack 平級形＝那隻 eca 的 `$AOS_STACK`、工具形＝這格本身。錯 `ToolsMissing`（tools 指的不在）、`CfgBad`、`CliMissing`（aos-mcp 不在 PATH）、`WriteFailed`、`CellBad`（叫回畫面時沒 `stack.txt`）。lib/agent 的 `claude`、`codex` 兩個工具不附登記檔（要接自己加）。**開場白檔**（11-04，[eca 21](../thinking/2026-10-30-eca/21-11-04-開場白檔可指定.md)）：`cli.json` 選填 `prompt`（相對路徑從 cli.json 的資料夾算；沒寫＝同層 `prompt.txt` 有就用），`load_cfg` 只算出路徑放進 `cfg["prompt_file"]`、指的不是檔＝`PromptMissing`，讀它投進 queue 的是 aos-eca-turn。
 
 pyfix 的子 agent 要改的程式在 `$AOS_WS/<dir>`——pyfix 開子 agent 前把它的絕對路徑寫進子 agent 的 stack 的 `pyfix_dir.txt`（一行），自己的 `$AOS_WS` 是收題交答案的小格，所以它的 act 讀 `$AOS_STACK/pyfix_dir.txt`、把庫的工具的工作區換成那裡（`AOS_WS=<那個資料夾> aos-tools call <名>`）（規則 4：換根是呼叫者的事）；庫的工具錯一律退 1，子 agent 的 act 把那行回給腦。
-沒收進來的：agent-gus 的「小念頭」（`thought.json`／`thought.py`）——它是 agent-gus 自己的入口、遞迴起 agent-gus 本身（`shared.launch`），要收就得把整隻 agent-gus 搬進庫；也沒有給模型的 `_tooldef.json`。aos-json 自帶的 `tools/json`、`tools/json_edit`（小念頭式兩步改）留在 `impls/aos-json/`，跟它的測試在一起。
+沒收進來的：agent-gus（11-04 隨 demo 刪了）的「小念頭」（`thought.json`／`thought.py`）——它是 agent-gus 自己的入口、遞迴起 agent-gus 本身（`shared.launch`），要收就得把整隻 agent-gus 搬進庫；也沒有給模型的 `_tooldef.json`。aos-json 自帶的 `tools/json`、`tools/json_edit`（小念頭式兩步改）留在 `impls/aos-json/`，跟它的測試在一起。
 
 ## agent 自己的格（11-03 刪了）
 
@@ -119,10 +119,10 @@ round 那套用格組起來的 agent（一輪的 fsm 表與五格、parts、queu
 
 claude code、codex 這類外部 coding agent 的一輪是 bin 指令 [`aos-eca-turn`](../bin/README.md)（使用者「aos eca turn」；定義資料夾範本在 [demo eca-claude](../demo/README.md#eca-templates)），問 CLI 那段是這層的 [cli_session](agent/cli_session.py) `ask`。測試 `tests/test_eca_turn.py`。
 
-## 範例：demo/agent-liv
+## 範例（demo/agent-liv 11-04 刪了）
 
-照抄 agent-eve（錯誤訊息開頭與假腦不同；act 照 agent-pip：工具的錯回給腦、不停），`tools/` 裡七條捷徑掛上面七個，加一個自己的 `clock/`（真資料夾，示範並存）；`_metainfo` 寫這隻 agent 的特性。假腦叫一次 `ls`、拿 `counter_items` 答題，證明捷徑掛進來的工具經 aos-exec 跑得動、小格落在 `$AOS_STACK/tools/ls/`。跑法同 agent-eve：`aos-exec --ws <工作區> proto8/demo/agent-liv`（PATH 放好 impls 三支；設 `AOS_BRAIN_URL` 才用真腦）。
+原本的 demo/agent-liv（`tools/` 七條捷徑掛 lib/base）隨 demo 刪了。捷徑掛庫的工具的例子現在是 `proto8/tests/fixtures/agent-eve`：`tools/pyfix` 捷徑指到 lib/agent/pyfix，pyfix 的子 agent 的 `tools/` 再捷徑掛 lib/base 五個（read、write、edit、bash、ls）；`test_pyfix.py` 跑它。
 
 ## 測試
 
-`python3 -m unittest discover -s proto8/tests -p test_lib.py`：形狀檢查跑過 `lib/` 底下每個工具（三個檔、NAME 行、`_tooldef.json` 與 `_metainfo` 的形、壞 stdin 的錯誤行格式與 stdout 同一行），base 上午那七個各自的行為（截斷、全有或全無、逾時整群停、路徑出不去、沒 `AOS_WS`；不碰工作區的 math、clock、run_python 不驗這條），agent-liv 經捷徑用庫的工具跑完一題。其他工具的行為案例在這幾份：`test_pi_tools.py`、`test_file_tools.py`（base）、`test_meg.py`、`test_talk.py`（aos）、`test_eve.py`、`test_cli_tools.py`（agent）、`test_gus.py`（run_python）。
+`python3 -m unittest discover -s proto8/tests -p test_lib.py`：形狀檢查跑過 `lib/` 底下每個工具（三個檔、NAME 行、`_tooldef.json` 與 `_metainfo` 的形、壞 stdin 的錯誤行格式與 stdout 同一行），base 上午那七個各自的行為（截斷、全有或全無、逾時整群停、路徑出不去、沒 `AOS_WS`；不碰工作區的 math、clock、run_python 不驗這條）（agent-liv 經捷徑用庫的工具跑完一題那幾案 11-04 隨 demo 刪了）。其他工具的行為案例在這幾份：`test_pi_tools.py`、`test_file_tools.py`（base）、`test_memory.py`、`test_send_message.py`（aos；11-04 前叫 test_meg、test_talk）、`test_pyfix.py`（11-04 前叫 test_eve）、`test_cli_tools.py`（agent）；`check_inbox` 只有形狀檢查（行為案例原本在 test_talk 跑團隊那段，隨 demo/talk 刪了）。

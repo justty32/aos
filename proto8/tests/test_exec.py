@@ -5,9 +5,10 @@ own_error.install()   # 錯誤一行的代號（照 10-23 命名統合）：檢�
 
 from aos_bins import ROOT, tool, path_with, fsm_steps  # noqa: E402  四支 C++ 在 impls/<名>/bin/、aos-tick 在 proto8/bin/（10-23）
 EXEC = tool("aos-exec")
-BOB = str(ROOT / "demo" / "agent-bob")
-ANN = str(ROOT / "demo" / "agent-ann")
-CATHY = str(ROOT / "demo" / "agent-bob" / "act" / "tools" / "cathy")
+FIXTURES = Path(__file__).resolve().parent / "fixtures"   # 11-04 前是 proto8/demo 的 agent-bob、agent-ann（demo 刪了，搬來當固定資料）
+BOB = str(FIXTURES / "agent-bob")
+ANN = str(FIXTURES / "agent-ann")
+CATHY = str(FIXTURES / "agent-bob" / "act" / "tools" / "cathy")
 
 
 def run(*args, env=None, **kw):

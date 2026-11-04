@@ -1,3 +1,0 @@
-{"interval_ms": 200, "max": 10, "ctl": "ctl.json", "state": "state.json", "procs_ctl_mailbox": "procs_ctl_mailbox",
- "procs": {"tick_loop": {"exec": "../tick", "max": 1},
-           "tick_exec": "../tick"}}

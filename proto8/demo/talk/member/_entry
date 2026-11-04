@@ -1,3 +1,0 @@
-#!/bin/sh
-# _entry - 把 talk 的 member 的 loop 跑起來（loop 每次跑一格 fsm.json）
-exec aos-loop loop.json

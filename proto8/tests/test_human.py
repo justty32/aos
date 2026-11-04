@@ -16,7 +16,7 @@ from aos_bins import ROOT, path_with  # noqa: E402
 
 HUMAN = ROOT / "extras" / "human" / "bin"
 SAY, LISTEN = (str(HUMAN / n) for n in ("aos-say", "aos-listen"))
-DAN = str(ROOT / "demo" / "agent-eve")              # 舊協議（讀工作區 new/、不收 queue）：10-30 晚真腦實測發現 2；11-02 晚 agent-dan 刪除，改用它的複本 agent-eve
+DAN = str(Path(__file__).resolve().parent / "fixtures" / "agent-eve")   # 舊協議（讀工作區 new/、不收 queue）：10-30 晚真腦實測發現 2；11-02 晚 agent-dan 刪除，改用它的複本 agent-eve（11-04 demo 刪了，搬到 tests/fixtures）
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_DAEMON_STACK",
          "TMUX", "CODEX_HOME", "FAKE_TRANSCRIPTS")
 SIG = re.compile(r"^\d{12}\.\d{20}\.\d+\.\d+$")

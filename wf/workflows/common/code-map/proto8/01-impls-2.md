@@ -27,7 +27,7 @@
 | `src/table/table.cpp`、`src/table/table.hpp` | `read_table`（解指示詞、單子記 `exec_bases`）、`check`（開跑查整張表，壞＝`CfgBad`）、`pick`、`next_for`（`next` 是字串或 `{結束碼: 狀態名}`） |
 | `src/state/state.cpp`、`src/state/state.hpp` | `state.txt` 的讀（去頭尾 Unicode 空白、`StateBad`）與原子寫 |
 | `src/common/common.hpp` | 內部共用標頭 |
-| `tests/test_cli.py`、`tests/test_demo.py` | 命令列黑箱、跑 demo |
+| `tests/test_cli.py` | 命令列黑箱（跑 demo 的 `test_demo.py` 11-04 隨 demo 刪了） |
 
 ## `impls/aos-daemon/`（顧一群 proc）
 
@@ -39,7 +39,7 @@
 | `src/daemon/mailbox.cpp` | 信箱 `procs_ctl_mailbox`：`open_mailbox`（`cur/` 殘骸照 aos-post 的 `sort_letters` 排）、`take_letters`（`take_all`、`see`）、`apply_letter`（`procs_added`／`removed`／`stopped`／`started`）、`done_letters`（`reply`、`done`） |
 | `src/child/child.cpp`、`src/child/child.hpp` | 子項：建小格、寫小格的 `loop.json`、`spawn`／`spawn_exec`、`launch`（setsid、`AOS_STACK`、`AOS_WS`、`AOS_DAEMON_STACK`）、`Child` 與狀態列 |
 | `src/common/common.hpp` | 內部共用標頭 |
-| `tests/test_cli.py`、`tests/test_demo.py` | 命令列黑箱；跑 demo daemon-2、daemon-3 |
+| `tests/test_cli.py` | 命令列黑箱（跑 demo daemon、daemon-2、daemon-3 的 `test_demo.py` 11-04 隨 demo 刪了） |
 
 ## `impls/aos-post/`（投遞：信箱，IPC 的語法糖）
 

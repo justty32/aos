@@ -1,6 +1,6 @@
-"""test_lib - proto8/lib（agent 的函式庫）：每個工具的形狀照 lib/README 的契約檢查，base 七個各自的行為，demo/agent-liv 經捷徑用庫的工具。
+"""test_lib - proto8/lib（agent 的函式庫）：每個工具的形狀照 lib/README 的契約檢查，base 七個各自的行為（demo/agent-liv 經捷徑用庫的工具那三案 11-04 隨 demo 刪了；捷徑掛庫的工具照樣由 test_pyfix 的 tests/fixtures/agent-eve 跑到）。
 
-工具一支一支用 aos-exec 叫（arguments 從 stdin 進、stdout 是結果）；agent-liv 用內建假腦（不設 AOS_BRAIN_URL），不連真模型。
+工具一支一支用 aos-exec 叫（arguments 從 stdin 進、stdout 是結果），不連真模型。
 設計：proto8/thinking/2026-10-24-tool-lib.md。"""
 import json, os, re, stat, subprocess, tempfile, unittest
 from pathlib import Path
@@ -12,7 +12,6 @@ from aos_bins import ROOT, tool, path_with  # noqa: E402
 EXEC = tool("aos-exec")
 LIB = ROOT / "lib"
 BASE = LIB / "base"
-LIV = ROOT / "demo" / "agent-liv"
 CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY")
 CODES = ("ArgumentsBad", "WsMissing", "PathBad", "FileMissing", "FileBad", "ReadFailed", "WriteFailed",
          "MkdirFailed", "MoveFailed", "CopyFailed", "TextMissing", "TextBad", "PointerBad", "PointerMissing",
@@ -246,61 +245,6 @@ class Tools(unittest.TestCase):
                 self.assertEqual(self.tool(name, args)[2], "PathBad")
         self.assertEqual(outside.read_text(), "s")
         self.assertEqual(self.tool("read", {"path": str(self.ws / "link_out")})[2], "PathBad")     # 絕對路徑也一樣
-
-
-class Liv(unittest.TestCase):
-    """demo/agent-liv：tools/ 裡是捷徑、指到 lib/base；假腦叫一次 ls，答案帶 total；小格落在 $AOS_STACK/ls/。"""
-
-    def test_tools_are_relative_links_into_lib(self):
-        links = {p.name: p for p in (LIV / "tools").iterdir() if p.is_symlink()}
-        self.assertEqual(set(links), {"read", "write", "edit", "bash", "ls", "json_read", "json_edit"})
-        for name, p in links.items():
-            self.assertFalse(os.readlink(p).startswith("/"), "%s 要是相對捷徑" % name)
-            self.assertEqual(p.resolve(), (BASE / name).resolve())
-        self.assertTrue((LIV / "tools" / "clock").is_dir() and not (LIV / "tools" / "clock").is_symlink())
-        self.assertTrue((LIV / "_metainfo").exists())
-
-    def test_fake_brain_uses_library_ls_through_link(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            ws = Path(tmp) / "ws"
-            (ws / "new").mkdir(parents=True)
-            (ws / "new" / "q1.txt").write_text("工作區裡有幾個檔？\n", encoding="utf-8")
-            (ws / "x.txt").write_text("")
-            r = subprocess.run([EXEC, "--ws", str(ws), str(LIV)], capture_output=True, text=True, timeout=120,
-                               env=env_with())
-            self.assertEqual(r.returncode, 0, r.stderr)
-            self.assertEqual(r.stderr, "")
-            answer = (ws / "out" / "q1.txt").read_text(encoding="utf-8")
-            self.assertTrue(answer.startswith("FAKE ANSWER to: 工作區裡有幾個檔？（ls said: "), answer)
-            history = [json.loads(l) for l in (ws / ".stack" / "history.jsonl").read_text(encoding="utf-8").splitlines()]
-            self.assertEqual([m["role"] for m in history], ["user", "assistant", "tool", "assistant"])
-            listed = json.loads(history[2]["content"])
-            self.assertIn("x.txt", [i["name"] for i in listed["items"]])
-            self.assertTrue((ws / ".stack" / "tools" / "ls").is_dir())                 # 工具的小格（P-17）
-            self.assertEqual(list((ws / "new").iterdir()), [])
-            self.assertEqual(sorted(p.name for p in (ws / "done").iterdir()), ["q1.txt"])
-
-    def test_tool_error_goes_back_to_brain(self):
-        """庫的工具退非 0（edit 找不到原文）：act 不停，把 stdout 加結束碼接成 tool 訊息；叫了沒有的工具也一樣（10-24 真腦實測前是 ToolFailed 停下、重跑永遠卡同一個）。"""
-        with tempfile.TemporaryDirectory() as tmp:
-            ws, st = Path(tmp) / "ws", Path(tmp) / "st"
-            ws.mkdir(); st.mkdir()
-            (ws / "a.txt").write_text("hi\n")
-            calls = [{"id": "c1", "type": "function", "function": {"name": "edit", "arguments": json.dumps(
-                {"path": "a.txt", "edits": [{"old_text": "hello", "new_text": "bye"}]})}},
-                     {"id": "c2", "type": "function", "function": {"name": "nope", "arguments": "{}"}}]
-            (st / "history.jsonl").write_text(json.dumps({"role": "user", "content": "q"}) + "\n" + json.dumps(
-                {"role": "assistant", "content": None, "tool_calls": calls}) + "\n", encoding="utf-8")
-            r = subprocess.run(["python3", "act.py"], cwd=LIV, capture_output=True, text=True, timeout=60,
-                               env=env_with({"AOS_STACK": str(st) + "/", "AOS_WS": str(ws)}))
-            self.assertEqual(r.returncode, 0, r.stderr)
-            self.assertIn("agent-liv: ToolFailed edit 結束碼 1（回給腦）", r.stderr)
-            tools = [json.loads(l) for l in (st / "history.jsonl").read_text(encoding="utf-8").splitlines()][2:]
-            self.assertEqual([m["tool_call_id"] for m in tools], ["c1", "c2"])
-            self.assertTrue(tools[0]["content"].startswith("edit: TextMissing "), tools[0]["content"])
-            self.assertTrue(tools[0]["content"].endswith("(工具 edit 結束碼 1)\n"), tools[0]["content"])
-            self.assertTrue(tools[1]["content"].startswith("act: ToolUnknown nope（能叫的："), tools[1]["content"])
-            self.assertEqual((ws / "a.txt").read_text(), "hi\n")
 
 
 if __name__ == "__main__":

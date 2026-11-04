@@ -8,7 +8,7 @@
 
 ## 現況
 
-impls 是唯一實作；`proto8/bin` 只剩 Python 的 `aos-tick`。`proto8/tests`（`tests/aos_bins.py`）與 `proto8/demo/run.sh` 直接跑各支的 `bin/`（要先照下面「建置」建好）。對外提供九支命令列；`inst` 是 C 函式庫、沒有命令列（inst 單子的 JSON 解析在 aos-exec 的 `src/inst/`，沒有 `aos-inst`）；`aos-util`、`aos-directive`、`aos-schema` 是函式庫，aos-directive、aos-schema 的 `bin/` 不算對外提供。每個專案是一個獨立的 CMake 專案（照 [dcap](../../../dcap/README.md) 的慣例）。
+impls 是唯一實作；`proto8/bin` 只剩 Python 的 `aos-tick`。`proto8/tests`（`tests/aos_bins.py`）直接跑各支的 `bin/`（11-04 前 `proto8/demo/run.sh` 也是；demo 刪了）（要先照下面「建置」建好）。對外提供九支命令列；`inst` 是 C 函式庫、沒有命令列（inst 單子的 JSON 解析在 aos-exec 的 `src/inst/`，沒有 `aos-inst`）；`aos-util`、`aos-directive`、`aos-schema` 是函式庫，aos-directive、aos-schema 的 `bin/` 不算對外提供。每個專案是一個獨立的 CMake 專案（照 [dcap](../../../dcap/README.md) 的慣例）。
 
 | 專案 | 做什麼 | 產物 | 現況 | 去哪讀 |
 |---|---|---|---|---|
@@ -188,8 +188,8 @@ cmake -B build && cmake --build build && ctest --test-dir build
   endif()
   target_link_libraries(你的target PRIVATE aos-util)
   ```
-- 依賴順序：inst → aos-util → aos-directive → aos-exec → aos-loop → aos-fsm、aos-daemon、aos-llm-kernel → aos-llm-send；aos-schema 獨立（庫留著，沒人連）；aos-json 連 aos-util、aos-directive，它的 `test_tool` 要 aos-exec 的 `bin/`，所以排在 aos-exec 後面；aos-lock 只連 aos-util、aos-post 連 aos-lock、aos-daemon 連 aos-post（信箱模式；它的 `test_demo` 跑 demo/daemon-2 要 aos-post 的 `bin/`），所以 aos-lock、aos-post 排在 aos-daemon 前面。
-  一次全建（aos-fsm、aos-daemon 的 `test_demo` 要前面幾支的 `bin/` 先建好，所以照這個順序）：
+- 依賴順序：inst → aos-util → aos-directive → aos-exec → aos-loop → aos-fsm、aos-daemon、aos-llm-kernel → aos-llm-send；aos-schema 獨立（庫留著，沒人連）；aos-json 連 aos-util、aos-directive，它的 `test_tool` 要 aos-exec 的 `bin/`，所以排在 aos-exec 後面；aos-lock 只連 aos-util、aos-post 連 aos-lock、aos-daemon 連 aos-post（信箱模式），所以 aos-lock、aos-post 排在 aos-daemon 前面。
+  一次全建（aos-fsm 的 `test_cli` 巢狀逾時那案要 aos-exec 的 `bin/` 先建好，所以照這個順序；11-04 前 aos-fsm、aos-daemon 還有跑 demo 的 `test_demo`，隨 demo 刪了）：
   ```sh
   for p in inst aos-util aos-directive aos-schema aos-exec aos-json aos-loop aos-fsm aos-lock aos-post aos-daemon aos-llm-kernel aos-llm-send; do (cd $p && cmake -B build && cmake --build build && ctest --test-dir build) || break; done
   ```
@@ -202,7 +202,6 @@ cmake -B build && cmake --build build && ctest --test-dir build
 | 檔 | 做什麼 | ctest 名 | 誰有 |
 |---|---|---|---|
 | `tests/test_cli.py` | 命令列黑箱：餵 stdin 或設定檔、看退出碼與輸出 | `test_cli` | aos-util、aos-directive（57 組）、aos-schema（12 案）、aos-exec（56 組）、aos-loop（40 組）、aos-fsm（29 組）、aos-daemon（84 案，unittest）、aos-llm-kernel（42 案，unittest）、aos-llm-send（18 案，unittest；測試自己當 kernel）、aos-json（126 個）、aos-post（45 案，unittest，含 20 寄信人並發、有順序的投遞 50 寄信人與收屍、有序無序同箱）、aos-lock（unittest，含搶鎖、kill -9 後收屍、boot_id、lease） |
-| `tests/test_demo.py` | 整合：proto8/demo 在 impls 線跑，看結束碼 0、stderr 空、答案寫出來 | `test_demo` | aos-fsm（agent-bob、agent-ann）、aos-daemon（demo/daemon、demo/daemon-2） |
 | `tests/test_tool.py` | 給腦掛的工具經 aos-exec 跑（假 OpenAI 端點） | `test_tool` | aos-json（30 個；aos-exec 的 `bin/` 沒建＝跳過） |
 | `tests/test_lib.*` | 函式庫 | `test_lib`、`test_lib_*` | inst（C；另一份 `test_lib_nopidfd` 走輪詢退路）、aos-schema、aos-util（7 條，含代號 `cli`） |
 | `tests/test_ffi.py` | Python ctypes 載 `.so` | `test_ffi` | inst |
