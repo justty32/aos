@@ -49,7 +49,11 @@ bool good_name(const std::string& s) {
 bool set_env(const std::string& name, const std::string& val, const std::string& bad_prefix,
              const std::set<std::string>& keep, bool expand) {
     if (!good_name(name)) {
-        throw Error{code::DotenvBad, bad_prefix + "（名字要是英數字和底線、不以數字開頭）"};
+        std::string why = "名字要是英數字和底線、不以數字開頭";
+        if (name.starts_with("\xEF\xBB\xBF")) {
+            why += "；檔頭有 BOM（UTF-8 簽章），存成不帶 BOM 的 UTF-8";   // Windows 記事本常加，肉眼看不到
+        }
+        throw Error{code::DotenvBad, bad_prefix + "（" + why + "）"};
     }
     std::string out;
     size_t i = 0;

@@ -76,6 +76,9 @@ struct Located {
 };
 
 Located locate(const std::string& spec, const std::string& base) {
+    if (spec.empty()) {   // 字串轉向寫 ""：不當成「寫著它的那個資料夾」
+        throw Error{code::EntryBad, "入口壞：轉向的路徑是空字串"};
+    }
     Spec s;
     try {
         s = split_hash(spec);

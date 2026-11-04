@@ -66,7 +66,7 @@
 | `src/env/env.cpp`、`src/env/env.hpp` | `check_ws`、`setup_stack`、`set_env`（只展開 `${名字}`、錯不印值）、JSON `.env` key |
 | `src/env/dotenv.cpp` | `.env` 檔的 dotenv 基礎子集（引號、註解、`export`） |
 | `src/launch/launch.cpp`、`src/launch/launch.hpp` | 執行可執行檔／argv 陣列；inst 單子交給 `run_inst` |
-| `src/inst/run.cpp`、`src/inst/inst.hpp` | `run_inst`：解指示詞 → 驗欄位 → 轉成 libaos 單子 → 跑 |
+| `src/inst/run.cpp`、`src/inst/inst.hpp` | `run_inst`：解指示詞 → 驗欄位 → 轉成 libaos 單子 → 跑；libaos 起不來時換成 `LaunchFailed`（`OpenFailed` 由 `open_failed_why` 不動檔地查出是哪個串流、為什麼） |
 | `src/inst/fields.cpp` | 單子的 16 個 key 與型別檢查（11-04 補 `id`、`envs_clear`、`*_mkdir`、`stderr_merge`） |
 | `src/inst/lib_input.cpp` | Inst → libaos 的 `aos_inst_input_t`（絕對路徑、`*_mkdir` 建資料夾、完整環境／`envs_clear`、`stderr_merge`→`merge`） |
 | `src/inst/signals.cpp` | 跑單子期間轉訊號給子程式整群，逾 grace_ms 再 SIGKILL |

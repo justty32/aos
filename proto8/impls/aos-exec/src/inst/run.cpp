@@ -24,7 +24,9 @@
 #include <cstring>
 #include <thread>
 
+#include <fcntl.h>
 #include <pthread.h>
+#include <sys/stat.h>
 #include <sys/eventfd.h>
 #include <unistd.h>
 
@@ -57,6 +59,40 @@ struct Fd {
     Fd& operator=(const Fd&) = delete;
 };
 
+// libaos 只說「串流開不了」：這裡不動檔地再看一次是哪一個、為什麼（stdin 試開唯讀；stdout／stderr 檔在就試開寫、
+// 不在就看上層資料夾），說得出來就說，說不出來照舊。
+std::string open_failed_why(const LibInput& lib) {
+    static const char* names[3] = {"stdin", "stdout", "stderr"};
+    for (int i = 0; i < 3; ++i) {
+        if (!lib.paths[i]) {
+            continue;
+        }
+        const std::string& p = *lib.paths[i];
+        int fd = -1;
+        if (i == 0) {
+            fd = open(p.c_str(), O_RDONLY | O_CLOEXEC);
+        } else if (access(p.c_str(), F_OK) == 0) {
+            fd = open(p.c_str(), O_WRONLY | O_CLOEXEC);
+        } else {
+            std::string up = dirname(p);
+            struct stat st{};
+            if (stat(up.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)) {
+                std::string hint = std::string("（要自動建就加 ") + names[i] + "_mkdir: true）";
+                return std::string(names[i]) + " " + p + " 開不了：上層資料夾不在" + hint;
+            }
+            if (access(up.c_str(), W_OK | X_OK) != 0) {
+                return std::string(names[i]) + " " + p + " 開不了：上層資料夾不能寫（" + std::strerror(errno) + "）";
+            }
+            continue;
+        }
+        if (fd < 0) {
+            return std::string(names[i]) + " " + p + " 開不了（" + std::strerror(errno) + "）";
+        }
+        close(fd);
+    }
+    return "串流開不了（stdin／stdout／stderr 其中一個）";
+}
+
 // libaos 起不來的錯 → LaunchFailed（訊息開頭是 libaos 的名字，例「CommandMissing 找不到要跑的程式 x」）。
 Error start_error(int rc, const LibInput& lib) {
     std::string name = aos_inst_strerror(rc);
@@ -64,8 +100,10 @@ Error start_error(int rc, const LibInput& lib) {
     std::string why = "libaos 回報（" + prog + "）";
     if (rc == AOS_INST_ERR_CWD_MISSING) {
         why = "cwd " + lib.cwd + " 不是資料夾或進不去";
+    } else if (rc == AOS_INST_ERR_PATH_CONFLICT) {
+        why = "stderr_merge 是 true 又寫了 stderr（二選一）";
     } else if (rc == AOS_INST_ERR_OPEN_FAILED) {
-        why = "串流開不了（stdin／stdout／stderr 其中一個）";
+        why = open_failed_why(lib);
     } else if (rc == AOS_INST_ERR_COMMAND_MISSING) {
         why = "找不到要跑的程式 " + prog;
     } else if (rc == AOS_INST_ERR_COMMAND_BAD) {

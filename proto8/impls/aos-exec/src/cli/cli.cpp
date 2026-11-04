@@ -34,6 +34,9 @@ int run_cli(const std::vector<std::string>& argv) {
             throw Error{code::ArgumentsBad, std::string("usage: ") + USAGE + "（沒有 XXX）"};
         }
         std::string spec = cli.rest[0];
+        if (spec.empty()) {   // "" 不當成 .：`aos-exec "$X"` 的 X 沒設時不該默默跑 cwd 的入口
+            throw Error{code::ArgumentsBad, std::string("usage: ") + USAGE + "（XXX 是空字串）"};
+        }
         std::vector<std::string> args(cli.rest.begin() + 1, cli.rest.end());
         std::string ws = "-";
         if (cli.opts.count("ws") > 0) {

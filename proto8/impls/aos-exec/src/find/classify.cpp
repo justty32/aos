@@ -113,7 +113,11 @@ Classified classify(const std::string& file, const std::string& pointer, Chain& 
     } else if (doc.is_array() && !doc.empty()) {
         out.kind = Kind::Argv;
     } else {
-        throw Error{code::EntryBad, "入口壞：" + file + " 不是單子、argv 陣列或路徑"};
+        std::string here = file;
+        if (!out.at.empty()) {
+            here += "#" + out.at;
+        }
+        throw Error{code::EntryBad, "入口壞：" + here + " 不是單子、argv 陣列或路徑"};
     }
     out.doc = doc;
     return out;
