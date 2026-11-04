@@ -70,4 +70,4 @@ echo '{"stopped": true}' > .stack/daemon_ctl.json   # 停完記得 rm .stack/dae
 
 ### 方向題
 
-- 「把 agents/bob 改成可以掛著的」若是指**一直開著、一題一題等**，那是另一種掛法：常駐版見 [2026-11-02-resident-bob](resident-bob/README.md)。
+- 「把 agents/bob 改成可以掛著的」若是指**一直開著、一題一題等**，那是另一種掛法：常駐版見 2026-11-02-resident-bob。

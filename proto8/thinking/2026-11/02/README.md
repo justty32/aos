@@ -13,5 +13,4 @@
 | [2026-11-02 aos-exec 一環套一環＝像繼承](exec-inheritance.md) | 往下「變成」另一套＝共用 stack（像繼承）、「叫」＝給小格；共用 stack 不做隱性命名空間，常見名字加自己的前綴或開資料夾（控制自身的 ctl／state 例外）；呼叫沒有 base／derived 之分 |
 | [2026-11-02 state 窗改成有變動才寫](state-window/README.md) | daemon 的窗啟動寫一次、有變動才更新、加 `updated_at`，心跳拿掉（判活看 pid＋aos-daemon-ctl）、log 預設不印；晚上陸續裁的（`add XXX -- 參數`、子項結束不留名單、`mailbox_warning` 等）；已實作 |
 | [2026-11-02 loop／daemon 的 stdin／stdout 與 log](loop-stdio.md) | log 預設不印、stdout 混在一起使用者自理、`execs` 也收內嵌單子；身體與子 loop 寫成內嵌單子就能用 `stdin`／`stdout` key |
-| [2026-11-02 常駐版 bob：一個 exec＋一個 loop 掛在 daemon 底下](resident-bob/README.md) | 常駐 bob＝daemon 的 exec 型子項（stdin 是 FIFO）＋控制器 aos-loop（身體 `relay`），起停經 `aos-daemon-ctl add／rm`、daemon 給子項 `AOS_DAEMON_STACK`；衝突與方向題「照建議走」；第一版（不含睡／醒）已實作、實跑 9 項都過 |
 | [2026-11-02 晚 loop 這一系的窗檔名：控制自身的 ctl／state 就叫 `ctl.json`／`state.json`](ctl-state-names/README.md) | 控制自身的 ctl／state 就叫 `ctl.json`／`state.json`、不加前綴，白天的 `daemon_*`／`loop_*` 窗名推翻；已實作；方向題：1 由 11-03 procs 解決、2 前綴原則對其他固定名照舊、3 只有帶 ctl 的才算一對 |

@@ -21,8 +21,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | `aos_ws.py` | 不是工具：寄信、等答案、讀 stack 的共用模組（只碰 stack）；`letter_key`＝信件名稱的處理順序（有序先、無序後，同 aos-post），queue 的格 new／cur／archive |
-| `memory/` | 長期記憶庫 save／search／read／forget（`$AOS_HEAP`）；`heap.py` 是讀寫本體 |
-| `send_message/`、`check_inbox/` | agent 之間寄信（照 `$AOS_ROSTER` 名冊、手數上限）；看自己信箱 |
+| `check_inbox/` | 看自己信箱 |
 
 ## `lib/agent/`（agent 當工具）
 

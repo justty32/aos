@@ -1,4 +1,4 @@
-← [入口](README.md)｜涵蓋：題 A 結論｜上一份 [01-契約核對](01-契約核對.md)｜下一份 [03-題B-round](03-題B-round.md)
+← [入口](README.md)｜涵蓋：題 A 結論｜上一份：—｜下一份：[03-題B-round](03-題B-round.md)
 
 ## 題 A 結論：parts 退成「aos-exec 格式的約定」
 
@@ -6,7 +6,7 @@
 
 ### 逐項對照（parts 現在做的 → 誰已經能做）
 
-名字→路徑、每槽帶 env、env 值用 `$env`／`$ref`、相對路徑從註冊檔算、跑、改（`aos-json set／del／get`），aos-exec 都已能（C-72、N-59 第 4 件、N-61、N-62；[01](01-契約核對.md) 實跑 A、K、L）。只有 parts 程式做得到的是「註冊檔沒寫＝看固定名字」的查找順序與「沒掛」判定（aos-exec 找不到一律 `EntryMissing` 退 1）。使用者 10-31 早說 parts「相比 symlink，多了可以用 $env/$ref 指定東西」——這個能力是 aos-exec 的 `.env` key，不是 parts 的。
+名字→路徑、每槽帶 env、env 值用 `$env`／`$ref`、相對路徑從註冊檔算、跑、改（`aos-json set／del／get`），aos-exec 都已能（C-72、N-59 第 4 件、N-61、N-62；01 實跑 A、K、L）。只有 parts 程式做得到的是「註冊檔沒寫＝看固定名字」的查找順序與「沒掛」判定（aos-exec 找不到一律 `EntryMissing` 退 1）。使用者 10-31 早說 parts「相比 symlink，多了可以用 $env/$ref 指定東西」——這個能力是 aos-exec 的 `.env` key，不是 parts 的。
 
 ### 結論（照原則代定、可翻案）
 

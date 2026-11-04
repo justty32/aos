@@ -1,3 +1,5 @@
+> 封存 2026-11-04：沒有取代者。常駐 bob 使用者 11-03「B5.封存吧，eca是他的全面強化版，真的沒必要了。」；11-04 晚收斂報告 05 問「整個資料夾要不要封存」，使用者回「封存」。原在 `proto8/thinking/2026-11/02/resident-bob/`；同晚整份 AI 產出的 03、07、08、09、11、12、13 先刪掉（使用者「刪掉」）。
+
 # 2026-11-02 常駐版 bob：一個 exec（一直跑的 bob）＋一個 loop（外部控制器），掛在 daemon 底下
 
 ← [thinking README](../../../README.md)｜月份表 [2026-11](../../README.md)｜前情：[11-01 試驗場 bob](../../01/playground-bob/README.md)、[11-02 試驗場 daemon](../playground-daemon.md)（方向題「常駐的掛法」就是本題）、[10-29 agent-bob 決定 33～35](../../../2026-10/29/agent-bob/04-頂層對八題的再想.md#決定10-30)、[10-30 agent-lifecycle](../../../2026-10/30/agent-lifecycle/README.md)｜同日：[state 窗](../state-window/README.md)、[loop-stdio](../loop-stdio.md)、[daemon-env](../daemon-env/README.md)、[exec 像繼承](../exec-inheritance.md)、[ctl-state-names](../ctl-state-names/README.md)｜條文：[N-28、N-54](../../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-63、N-64](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[P-17、P-20](../../../../docs/CONVENTION/02-題目stack停錯腦.md)、[C-52、C-56、C-75](../../../../docs/CONCEPTS.md)｜場地 `~/code/playground/`（不在 git）
