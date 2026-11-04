@@ -35,4 +35,4 @@ workspace/                 ＝$AOS_WS，使用者的（§ 2）
 
 > 11-04 加註：上面樹裡 fsm 的 `state.txt` 改名 `stage.txt`（使用者題 10「fsm改名，嘗試用同義詞」，[four-elements 07](../../../thinking/2026-11/04/four-elements/07-實作步驟.md) 步 3；fsm.json 的 `start`／`states` 不改）
 
-stack 樹就是呼叫樹：`.stack/tools/cathy/tools/stamp/` 一眼看出「bob 叫了 cathy、cathy 叫了 stamp」（P-38）。（11-02 改 `tools/<名>/`，見 P-17）
+stack 樹就是呼叫樹：`.stack/tools/cathy/tools/stamp/` 一眼看出「bob 叫了 cathy、cathy 叫了 stamp」（P-38、P-17）。
