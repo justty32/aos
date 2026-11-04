@@ -285,7 +285,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         if (cfg_.contains("procs")) {
             procs_ = read_procs(cfg_["procs"], cfg_dirs_.dir_of("procs"), "procs");
         }
-        for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_ctl_mailbox"}) {
+        for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_ctl_mailbox", "procs_loop", "procs_exec", "procs_stderr"}) {
             if (cfg_.contains(k)) {
                 cfg_[k] = aos::resolve(cfg_[k], cfg_dirs_.dir_of(k));
             }
@@ -296,13 +296,27 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         }
         throw;
     }
-    // 信箱（10-29 medium-plan § 四 3）：寫了（非 null）＝開信箱；沒寫、null＝不開。跟 procs_ctl 可以同時開
-    Json mb = cfg_.value("procs_ctl_mailbox", Json());
+    // 信箱（10-29 medium-plan § 四 3）：11-04 起沒寫＝預設名 procs_ctl_mailbox、null＝不開（跟 procs_ctl 同形；four-elements 題 5 後半）。跟 procs_ctl 可以同時開
+    Json mb = cfg_.contains("procs_ctl_mailbox") ? cfg_["procs_ctl_mailbox"] : Json("procs_ctl_mailbox");
     if (!mb.is_null()) {
         if (!mb.is_string() || mb.get<std::string>().empty()) {
             throw Error{code::CfgBad, "procs_ctl_mailbox 要是信箱的路徑或 null"};
         }
-        mbox_path_ = aos::join(stack_, mb.get<std::string>());
+        mbox_name_ = mb.get<std::string>();
+        mbox_path_ = aos::join(stack_, mbox_name_);
+    }
+    // 小格裡三個檔名（11-04，four-elements 題 6「是否能在json中設置？但默認用這些名」）：沒寫＝預設；要是檔名（非空、不含 /、不以 . 開頭），不收 null
+    std::pair<const char*, std::string*> cells[3] = {{"procs_loop", &names_.loop}, {"procs_exec", &names_.exec}, {"procs_stderr", &names_.err}};
+    for (auto& [k, dst] : cells) {
+        if (!cfg_.contains(k)) {
+            continue;
+        }
+        const Json& v = cfg_[k];
+        if (!v.is_string() || v.get<std::string>().empty() || v.get<std::string>().find('/') != std::string::npos ||
+            v.get<std::string>()[0] == '.') {
+            throw Error{code::CfgBad, std::string(k) + " 要是檔名（非空、不含 /、不以 . 開頭）"};
+        }
+        *dst = v.get<std::string>();
     }
     // 管轄那一對窗（10-29 拆窗）：沒寫＝預設檔名、null＝不開；路徑同 ctl／state 接在 $AOS_STACK 後面
     std::pair<const char*, std::string*> wins[2] = {{"procs_ctl", &pctl_path_}, {"procs_state", &pstate_path_}};
@@ -404,7 +418,7 @@ void Daemon::adopt() {
             c.pid = (pid_t)pid.get<long long>();
             c.started_at_ticks = ticks.get<long long>();
             std::error_code ec;
-            c.once = !std::filesystem::exists(aos::join(c.stack, "loop.json"), ec);   // 小格有 daemon 寫的 loop.json＝loop 型（procs § 2 第 7 條）
+            c.once = !std::filesystem::exists(aos::join(c.stack, names_.loop), ec);   // 小格有 daemon 寫的 loop.json（procs_loop 的名字）＝loop 型（procs § 2 第 7 條）
             add(name, c);
         }
     }
@@ -469,11 +483,11 @@ static bool is_nat(const Json& v) {
 
 void Daemon::halt(const std::string& name, Child& c) {
     // daemon 的 stop（procs § 2c 第 2 條、ctl-commands § 5）：往子 loop 的 ctl.json 寫一道 {"cmd": "stop", "seq": N}，讓它跑完這次自己退 0（不 SIGTERM）。
-    // ctl 檔名看小格裡 daemon 自己寫的 loop.json 的 ctl（接回的也一樣）；N＝自己數的、也比 ctl 裡現有的 seq 大（內容一定跟上一道不一樣）。
-    // 讀不到 loop.json、ctl 不是檔名（寫了 null＝子 loop 沒開 ctl）＝改送 SIGTERM（同樣退了就留成 stopped）
+    // ctl 檔名看小格裡 daemon 自己寫的 loop.json（procs_loop 的名字）的 ctl（接回的也一樣）；N＝自己數的、也比 ctl 裡現有的 seq 大（內容一定跟上一道不一樣）。
+    // ctl 沒寫＝ctl.json（aos-loop 的預設名，11-04 起 daemon 不再替它補）；讀不到 loop.json、ctl 不是檔名（寫了 null＝子 loop 沒開 ctl）＝改送 SIGTERM（同樣退了就留成 stopped）
     c.soft = true;
-    std::optional<Json> cfg = aos::read_json(aos::join(c.stack, "loop.json"));
-    Json ctl = cfg && cfg->is_object() ? cfg->value("ctl", Json()) : Json();
+    std::optional<Json> cfg = aos::read_json(aos::join(c.stack, names_.loop));
+    Json ctl = cfg && cfg->is_object() ? cfg->value("ctl", Json("ctl.json")) : Json();
     if (!ctl.is_string() || ctl.get<std::string>().empty()) {
         term(c);
         return;
@@ -630,7 +644,7 @@ std::string Daemon::cell_of(const std::string& name, const Json& spec) const {
 Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws, const Json& kept_exec,
                     const Json& kept_def) {
     bool deep = cell != dstack_ + "procs/" + name;   // 不是預設小格＝proc 自己的 stack：不在就 mkdir -p
-    Child c = is_once(spec) ? spawn_exec(name, cell, deep, spec, cwd_, dstack_) : spawn(name, cell, deep, spec, cwd_, dstack_, kept_ws);
+    Child c = is_once(spec) ? spawn_exec(name, cell, deep, spec, cwd_, dstack_, names_) : spawn(name, cell, deep, spec, cwd_, dstack_, names_, kept_ws);
     c.exec = spec.is_null() ? kept_exec : exec_of(spec, cwd_);   // 11-04 晚：列上的 exec 欄
     c.def = spec.is_null() ? kept_def : def_of(spec);              // 11-04：列上的 def 欄
     return c;

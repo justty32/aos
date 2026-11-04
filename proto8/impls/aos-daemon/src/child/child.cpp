@@ -94,9 +94,9 @@ static void make_cell(const std::string& name, const std::string& cell, bool dee
 
 // 小格建好之後：開小格的 stderr.txt（附加）、fork、子行程 run_child(argv, ws, dstack)。spawn 與 spawn_exec 共用。ws＝null 或絕對路徑（記進 Child）。
 static Child launch(const std::string& name, const std::string& cell, const std::string& cwd,
-                    const std::vector<std::string>& argv, const Json& ws, const std::string& dstack) {
+                    const std::vector<std::string>& argv, const Json& ws, const std::string& dstack, const std::string& err_name) {
     std::string ws_s = ws.is_string() ? ws.get<std::string>() : std::string();   // fork 之前備好
-    std::string err_path = aos::join(cell, "stderr.txt");
+    std::string err_path = aos::join(cell, err_name);
     int err_fd = open(err_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
     if (err_fd < 0) {
         throw Error{code::LaunchFailed, "起不了子項 " + name + "：開不了 " + err_path + "（" + std::strerror(errno) + "）"};
@@ -133,10 +133,11 @@ static void pin_cwd(Json& inst, const std::string& cwd) {
 }
 
 Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-            const std::string& dstack, const Json& kept_ws) {
+            const std::string& dstack, const CellNames& names, const Json& kept_ws) {
+    std::string lj = aos::join(cell, names.loop);
     if (spec.is_null()) {   // 信箱接回的 stopped／sleeping 列（只留名、沒有設定）再 start／wake：照小格裡現有的 loop.json（11-03），ws 照列上記的（11-03 晚）
         make_cell(name, cell, deep);
-        return launch(name, cell, cwd, {"--", aos::join(cell, "loop.json") + "#/_entry"}, kept_ws, dstack);
+        return launch(name, cell, cwd, {"--", lj + "#/_entry"}, kept_ws, dstack, names.err);
     }
     Json cfg = spec;
     Json ws = cfg.value("ws", Json());   // ws、stack 是 daemon 的 key（不是 loop 的）：不灌進小格的 loop.json；ws 只進子行程的環境（AOS_WS）
@@ -151,27 +152,22 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
     } else if (ex.is_object()) {
         pin_cwd(cfg["exec"], cwd);   // 內嵌單子（10-24）
     }
-    if (!cfg.contains("ctl")) {
-        cfg["ctl"] = "ctl.json";
-    }
-    if (!cfg.contains("state")) {
-        cfg["state"] = "state.json";
-    }
+    // ctl／state 不補（11-04，four-elements 08 步 6「不補名」）：aos-loop 自己沒寫＝ctl.json／state.json、null＝不開
     Json exec_entry = Json::array();
     exec_entry.push_back("aos-loop");
     exec_entry.push_back(Json::object({{"$env", "AOS_CF"}}));
     cfg["_entry"] = exec_entry;   // 一律蓋上
     make_cell(name, cell, deep);
     try {
-        aos::loop::write_window(aos::join(cell, "loop.json"), cfg);
+        aos::loop::write_window(lj, cfg);
     } catch (const Error& e) {
         throw Error{e.code, "起不了子項 " + name + "：" + e.msg};
     }
-    return launch(name, cell, cwd, {"--", aos::join(cell, "loop.json") + "#/_entry"}, ws, dstack);
+    return launch(name, cell, cwd, {"--", lj + "#/_entry"}, ws, dstack, names.err);
 }
 
 Child spawn_exec(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-                 const std::string& dstack) {
+                 const std::string& dstack, const CellNames& names) {
     // 字串、陣列＝目標本身；物件＝{"exec": 目標或單子, "ws"?, "stack"?}（read_procs 驗過）
     const Json& target = spec.is_object() ? spec["exec"] : spec;
     Json ws = spec.is_object() ? spec.value("ws", Json()) : Json();
@@ -184,11 +180,11 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
         pin_cwd(inst, cwd);
         make_cell(name, cell, deep);
         try {
-            aos::loop::write_window(aos::join(cell, "exec.json"), Json::object({{"exec", inst}}));
+            aos::loop::write_window(aos::join(cell, names.exec), Json::object({{"exec", inst}}));
         } catch (const Error& e) {
             throw Error{e.code, "起不了子項 " + name + "：" + e.msg};
         }
-        Child c = launch(name, cell, cwd, {"--", aos::join(cell, "exec.json") + "#/exec"}, ws, dstack);
+        Child c = launch(name, cell, cwd, {"--", aos::join(cell, names.exec) + "#/exec"}, ws, dstack, names.err);
         c.once = true;
         return c;
     }
@@ -200,7 +196,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
         }
     }
     make_cell(name, cell, deep);
-    Child c = launch(name, cell, cwd, argv, ws, dstack);
+    Child c = launch(name, cell, cwd, argv, ws, dstack, names.err);
     c.once = true;
     return c;
 }

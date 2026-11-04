@@ -10,7 +10,8 @@
 //
 // daemon.json＝loop.json 的超集：exec、max、interval_ms、ctl、state 同 aos-loop，但 exec 選填、max 沒寫＝不限、interval_ms 沒寫＝200
 // （ctl、state 寫 null＝不開）；多幾個 key——procs＝{名字: proc}（拆檔＝{"$ref": [檔, …]}）、adopt（布林，沒寫＝true）、
-// procs_ctl、procs_state（在 $AOS_STACK 底下的檔名；沒寫＝procs_ctl.json、procs_state.json，null＝不開）、procs_ctl_mailbox（沒寫、null＝不開）。
+// procs_ctl、procs_state（在 $AOS_STACK 底下的檔名；沒寫＝procs_ctl.json、procs_state.json，null＝不開）、procs_ctl_mailbox（11-04 起沒寫＝procs_ctl_mailbox、null＝不開）、
+// procs_loop、procs_exec、procs_stderr（11-04：小格裡 daemon 寫的三個檔名，沒寫＝loop.json、exec.json、stderr.txt；見 child.hpp 的 CellNames）。
 // 舊名 loops、execs、loops_ctl、loops_state、loops_ctl_mailbox 不認（C-48，使用者 11-03「當沒看到」）。命令列 `-- 參數...` 只接在 daemon 自己的 exec。
 // 每個 proc 怎麼起看寫法（沒有 kind，procs § 2）：字串、陣列、或 key 只有 exec（＋ws、stack、def）的物件＝exec 型（aos-exec 一次）；其他物件＝loop 型（包成子 aos-loop）。
 // 物件的 stack（procs § 2b）：proc 的 stack（從 daemon 的 cwd 轉絕對、不在就 mkdir -p、不查不擋）；沒寫＝$AOS_STACK/procs/<名字>/。ws＝子行程的 AOS_WS。
@@ -30,7 +31,8 @@
 //   只有指令叫起：信來、procs_added 同名都不會把 stopped 的拉起來（同名 add＝設定換掉、停照停）。
 //   其他退出（跑滿、退 10、訊號、別人直接往子 loop 的 ctl 寫 stop）照 11-02 從表上拿掉（使用者 11-03「照舊拿掉」）；自己結束（done）的本次執行不再起（ended_）。
 //   同名改寫法：已在跑的不重起（N-54）。
-// procs_state.json＝{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫；
+// procs_state.json＝{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox（11-04：名字回報，沒開信箱＝null）,
+//   procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫；
 // 每列 {pid, started_at_ticks, phase（running／stopping／stopped／sleeping）, code, signal, stack, exec, def, ws?}（exec 11-04 晚：起它時的目標，見 exec_of；def 11-04：見 def_of）；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
 // ctl 的 stop（這圈收工）或 pause（整圈暫停）時不調表：不收多的、不起少的、起停也等解除，但照讀兩份 ctl、照寫兩扇 state、照收已在收的、照記自己結束的。
 // log（--enable-logs 才印到 stdout）：行程起來一行、結束一行 {"at", "name", "phase"（running／done／stopped／sleeping）, "pid", "code", "signal", "ws"?}。
@@ -138,6 +140,8 @@ private:
     std::set<std::string> parts_prev_;                   // 上一次寫的 state 用到的分檔檔名（清舊分檔時留著）
     bool parts_wrote_ = false;                           // 這個行程寫過 state 了沒（第一次不清：磁碟上的主檔可能還指著舊的）
     std::string mbox_path_;                              // procs_ctl_mailbox（空＝不開）
+    std::string mbox_name_;                              // daemon.json 寫的信箱名（沒寫＝procs_ctl_mailbox；procs_state 回報用）
+    CellNames names_;                                    // 小格裡三個檔名（procs_loop／procs_exec／procs_stderr，11-04）
     aos::post::Mailbox mbox_;
     std::vector<std::string> redo_;                      // 起來時 cur/ 裡的（上次做到一半死掉），第一個認領的圈排在 new/ 前面重做
     Json want_ = Json::object();                         // 底的期望表（記憶體裡；重起時從 daemon.json＋adopt 重建；信改它）

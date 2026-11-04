@@ -1,6 +1,7 @@
 // child.hpp：【child】表上的一個 proc（11-03 起 loops／execs 統稱 procs）＝一支子 loop（loop 型），或 aos-exec 跑一次（exec 型）。內部標頭。
 //
-//   child.cpp   spawn：小格（proc 的 stack）建好、寫 loop.json（設定補上 ctl／state、蓋 _entry、相對的 exec 轉絕對；ws、stack 不寫進去；先 .loop.json 再改名）、
+//   （下面的 loop.json、exec.json、stderr.txt 是預設名；11-04 起 daemon.json 的 procs_loop／procs_exec／procs_stderr 可改，見 CellNames）
+//   child.cpp   spawn：小格（proc 的 stack）建好、寫 loop.json（蓋 _entry、相對的 exec 轉絕對；ws、stack 不寫進去；先 .loop.json 再改名）、
 //               fork 一個子行程跑 `aos-exec -- 小格/loop.json#/_entry`（aos-exec 的 run_cli；它 cd 進小格、exec 成 PATH 上的
 //               aos-loop，pid 不變；setsid 自成一個行程群組、stdin／stdout 接 /dev/null、stderr 附加到小格的 stderr.txt、AOS_STACK＝小格/）；
 //               設定是 null（信箱接回的 stopped 列再 start，11-03）＝不重寫、照小格裡現有的 loop.json 起
@@ -22,6 +23,14 @@
 #include <sys/types.h>
 
 namespace aos::daemon {
+
+// 小格裡 daemon 自己寫的三個檔名（11-04，four-elements 題 6，使用者「是否能在json中設置？但默認用這些名」）：daemon.json 頂層
+// procs_loop／procs_exec／procs_stderr，沒寫＝下面的預設；daemon 在 procs_state.json 頂層回報同名欄，讀小格的人從窗拿、不寫死。暫存檔＝「.」＋名字。
+struct CellNames {
+    std::string loop = "loop.json";      // loop 型：子項設定寫成這份（蓋 _entry）、子 loop 跑 小格/<loop>#/_entry
+    std::string exec = "exec.json";      // exec 型的內嵌單子寫成這份 {"exec": 單子}
+    std::string err = "stderr.txt";      // 兩型的 stderr 都附加到這份
+};
 
 struct Child {
     pid_t pid = 0;
@@ -55,8 +64,9 @@ struct Child {
 // 小格建不了 MkdirFailed、loop.json 寫不了 WriteFailed、stderr 開不了／fork 失敗 LaunchFailed。
 // aos-exec 自己的錯（PATH 上沒有 aos-loop…）寫在小格的 stderr.txt、子 loop 以 1 結束（phase done、code 1）。
 // dstack＝daemon 的 stack（絕對、結尾 /）：子行程設成 AOS_DAEMON（11-02；11-04 晚改名，舊名不認）。spawn_exec 同。
+// names＝小格裡三個檔名（CellNames）。11-04 起不再替設定補 ctl／state（aos-loop 自己沒寫＝ctl.json／state.json，four-elements 07 步 4）。
 Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-            const std::string& dstack, const Json& kept_ws = Json());
+            const std::string& dstack, const CellNames& names, const Json& kept_ws = Json());
 
 // 起一個 exec 型 proc。spec＝aos-exec 的目標：字串或 [目標, 參數...]（read_procs 驗過），
 // 或 {"exec": 上面兩種或單子, "ws"?, "stack"?, "def"?}（子行程設 AOS_WS＝ws；def 只記進表）；cell、deep 同 spawn；相對路徑從 cwd（daemon 的 cwd）算——
@@ -64,7 +74,7 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
 // stderr.txt、子項以 1 結束（phase done、code 1）。它退了＝done、從表上拿掉、本次執行不再起（同子 loop，11-02）。
 // 11-02 晚：spec 的 exec 是內嵌單子（物件）＝寫成小格的 exec.json {"exec": 單子}（cwd 定成 daemon 的 cwd，pin_cwd），子行程跑 `aos-exec -- 小格/exec.json#/exec`。
 Child spawn_exec(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-                 const std::string& dstack);
+                 const std::string& dstack, const CellNames& names);
 
 // 還活著嗎（自己生的：結束了就收屍、記 code／signal）。
 bool alive(Child& c);

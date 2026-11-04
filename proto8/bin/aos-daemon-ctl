@@ -18,20 +18,21 @@ proto8/thinking/2026-10/30/agent-lifecycle/README.md（實作第 7 步的補）�
   running、stopping（收的途中）、stopped（daemon 下的 stop：行程不在、表上還在）、sleeping（11-03 procs § 8：daemon 收工〔ctl 的 stop、Ctrl+C〕時
   還在跑的 loop 型，行程不在、表上還在，daemon 再開自動 wake；sleep／wake 先不開放成子命令）。暫停中是子 loop 自己的事（它的 state.json），表上不轉述。
 哪個 daemon（N-63 hub 型變數）：--daemon ＞ $AOS_DAEMON；值＝那個 daemon 的 $AOS_STACK 資料夾（它的窗都在這：
-  procs_ctl_mailbox/、procs_state.json，用預設名字）。都沒有＝DaemonMissing；不是資料夾＝DaemonMissing。子 proc 照常繼承 AOS_DAEMON。
+  procs_state.json 用預設名字；信箱與小格裡 loop.json 的名字照 daemon 在 procs_state.json 頂層回報的 procs_ctl_mailbox、procs_loop，
+  11-04 起，沒回報＝預設 procs_ctl_mailbox、loop.json）。都沒有＝DaemonMissing；不是資料夾＝DaemonMissing。子 proc 照常繼承 AOS_DAEMON。
   11-04 晚改名（使用者「AOS_DAEMON_STACK實在太醜，還是直接簡化成AOS_DAEMON就好了」；11-02 曾從 AOS_DAEMON／--daemon 改成 AOS_DAEMON_STACK／
   --daemon-stack，這次倒回來）：舊的 AOS_DAEMON_STACK／--daemon-stack 不認、不留別名
   （--daemon-stack＝FlagUnknown；只設了 AOS_DAEMON_STACK＝DaemonMissing，訊息提示改設 AOS_DAEMON）。
-  信箱固定是 <D>/procs_ctl_mailbox/（daemon.json 要寫 "procs_ctl_mailbox": "procs_ctl_mailbox"；11-03 前叫 loops_ctl_mailbox，舊名不認）；
-  沒有 new/＝MailboxMissing（daemon 沒開信箱或還沒起）。
+  信箱＝<D>/<窗上的 procs_ctl_mailbox>/（11-04 起 daemon.json 沒寫也開、預設 procs_ctl_mailbox；寫 null＝沒開＝MailboxMissing；
+  11-03 前叫 loops_ctl_mailbox，舊名不認）；沒有 new/＝MailboxMissing（daemon 還沒起）。
 add 的自動識別（11-02 拿掉 --kind，使用者「把--kind刪掉」；11-03 起 daemon 看寫法決定怎麼起，procs § 2）：XXX 是資料夾、裡面有 loop.json＝loop 型
   （daemon 的子 loop 直接跑 XXX 的 loop.json）；其他＝exec 型（跑一次）。
   loop：子項設定＝XXX/loop.json 的內容（去掉 _entry），exec 的相對目標照 XXX 轉絕對；exec 是內嵌單子＝換成字串目標
         `<XXX 絕對路徑>/loop.json#/exec`（子 loop 每次 aos-exec 指回原檔那張單子：AOS_CD＝XXX、相對的 cwd／argv 從 XXX 算，跟直接
         aos-exec XXX 一樣；11-01 刪 aos-round 時改，取代原本「複製單子、補 cwd、把 {"$env": "AOS_CD"} 釘成 XXX」——
         eca 定義的 `aos-eca-turn … {"$env": "AOS_CD"}` 靠這條掛得上 daemon）。
-        **一定帶 ctl／state**（沒寫補 "ctl.json"／"state.json"，跟 daemon 補的一樣；procs § 2 第 6 條）：只有 {"exec": …} 的 loop.json
-        （例：只寫 exec、靠預算自己停的 loop）才不會被 daemon 當成跑一次。ctl／state 原樣（相對 $AOS_STACK，落在它的 stack）。
+        11-04 起不補 ctl／state（aos-loop 自己沒寫＝ctl.json／state.json）；loop.json 只有 exec＝補 "interval_ms": 0（aos-loop 的預設本來是 0），
+        不然 daemon 會把只有 {"exec": …} 的物件當成跑一次（N-28 型別判法）。ctl／state 寫了就原樣（相對 $AOS_STACK，落在它的 stack）。
         XXX 的 .env、loop.json 裡的 $ref／$env 不處理（照 daemon 的規則從它的 cwd 算）。
         **不收參數**：`-- 參數...` 給 loop 型＝ArgumentsBad（子項設定是 XXX 的 loop.json，參數沒地方放；要參數寫進 loop.json 的 exec；11-02 代定）。
   exec：procs_added {名字: XXX 的絕對路徑}（`檔#/指標` 只轉 # 前面）；有 `-- 參數...`（11-02，使用者「XXX後面可以接-- ... 也就是附加argv參數」）
@@ -49,8 +50,8 @@ add 的自動識別（11-02 拿掉 --kind，使用者「把--kind刪掉」；11-
   （daemon 起它時 mkdir -p；S 裡有別的東西使用者自己承擔）；空＝ArgumentsBad。寫進子項物件的 stack。
 rm／stop／start（11-03 procs § 2c）：rm＝procs_removed（先停再拿掉；stack 不清）；stop＝procs_stopped（loop 型跑完這次自己退 0、列留成 stopped、
   where 照找得到）；start＝procs_started（stopped 的用列上的 stack 再起；起來是跑還是暫停看它自己的 state.json）。
-pause／resume（11-03 procs § 2c 第 4 條、ctl-commands § 5）：不經 daemon，直接往它的 ctl（stack 裡 daemon 寫的 loop.json 的 ctl 那格，
-  慣用 ctl.json）寫一道 {"cmd": "pause"|"resume", "seq": N}（先寫 .ctl.json 暫存再改名，N-05；N＝ctl 裡現有的 seq＋1，內容一定跟上一道不同）；
+pause／resume（11-03 procs § 2c 第 4 條、ctl-commands § 5）：不經 daemon，直接往它的 ctl（stack 裡 daemon 寫的 loop.json〔名字照窗上的
+  procs_loop〕的 ctl 那格，沒寫＝ctl.json）寫一道 {"cmd": "pause"|"resume", "seq": N}（先寫 .ctl.json 暫存再改名，N-05；N＝ctl 裡現有的 seq＋1，內容一定跟上一道不同）；
   stdout 印 N（它 state.json 的 ctl_seq 追上 N＝看到了）。誰都不清 ctl（指令留在檔裡，loop 起來第一次讀的當基準線）。
   stop、pause、resume 先看它的 stack 裡有沒有 daemon 寫的 loop.json：沒有＝CtlMissing「X 沒有 ctl（exec 型只有跑和拔）」、退 1、不送信
   （start 的列是 stopped／sleeping 就不看——只有 loop 型會是 stopped／sleeping；add＋stop 同一圈的 stack 還沒建）；loop.json 的 ctl 是 null＝CtlMissing。daemon 再驗一次。
@@ -78,8 +79,8 @@ import aos_flags
 NAME = "aos-daemon-ctl"
 USAGE = ("aos-daemon-ctl [--daemon D] add [--name N] [--ws WS] [--stack S] XXX [-- 參數...] | rm 名字 | stop 名字 | start 名字"
          " | pause 名字 | resume 名字 | ls [--json] | where --stack 名字")
-MAILBOX = "procs_ctl_mailbox"
-STATE = "procs_state.json"
+STATE = "procs_state.json"   # daemon 的名單窗：找其他名字的起點，所以只能用預設名（daemon.json 改了 procs_state＝這支找不到，StateMissing）
+NAMES = {"procs_loop": "loop.json", "procs_ctl_mailbox": "procs_ctl_mailbox"}   # 窗上沒回報（11-04 前的 daemon、還沒起）時用的預設
 
 
 class Fail(Exception):
@@ -132,15 +133,36 @@ def loop_spec(xxx):
         cfg["exec"] = [abs_target(ex[0], xxx)] + ex[1:]
     elif isinstance(ex, dict) and "$ref" not in ex and "$env" not in ex:   # 內嵌單子：指回原檔，AOS_CD 與相對路徑照原地
         cfg["exec"] = os.path.join(xxx, "loop.json") + "#/exec"
-    cfg.setdefault("ctl", "ctl.json")      # 一定帶 ctl／state：daemon 才認它是 loop 型（procs § 2 第 6 條）
-    cfg.setdefault("state", "state.json")
+    # 11-04（four-elements 08 步 6「不補名」）：ctl／state 不補（aos-loop 自己沒寫＝ctl.json／state.json）。只有 exec 的 loop.json
+    # 交給 daemon 會被認成 exec 型（題 3：物件只有 exec＝跑一次），所以補一格 "interval_ms": 0——aos-loop 的預設本來就是 0，行為不變
+    if set(cfg) <= {"exec", "ws", "stack", "def"}:   # 同 daemon 的 is_once 認的那幾個 key
+        cfg["interval_ms"] = 0
     return cfg
 
 
+def names_of(d):
+    """daemon 在 procs_state.json 頂層回報的名字（11-04，four-elements 08 步 6）：procs_loop（小格裡 daemon 寫的 loop.json）、
+    procs_ctl_mailbox（信箱；null＝沒開）。窗不在、讀不懂、沒這欄＝用預設（NAMES）。"""
+    try:
+        with open(os.path.join(d, STATE), encoding="utf-8") as fh:
+            st = json.load(fh)
+    except (OSError, ValueError):
+        st = None
+    out = dict(NAMES)
+    if isinstance(st, dict):
+        for k in NAMES:
+            if k in st:
+                out[k] = st[k]
+    return out
+
+
 def send(d, body):
-    box = os.path.join(d, MAILBOX)
+    mb = names_of(d)["procs_ctl_mailbox"]
+    if not isinstance(mb, str) or not mb:
+        raise Fail("MailboxMissing", "%s 的 daemon 沒開信箱（procs_state.json 的 procs_ctl_mailbox 是 null；daemon.json 別把 procs_ctl_mailbox 寫成 null）" % d)
+    box = os.path.join(d, mb)
     if not os.path.isdir(os.path.join(box, "new")):
-        raise Fail("MailboxMissing", "%s 不是信箱（daemon.json 要寫 \"%s\": \"%s\"，或 daemon 還沒起）" % (box, MAILBOX, MAILBOX))
+        raise Fail("MailboxMissing", "%s 不是信箱（daemon 還沒起，或沒開信箱）" % box)
     try:
         r = subprocess.run(["aos-post", "send", box], input=json.dumps(body, ensure_ascii=False), capture_output=True, text=True)
     except FileNotFoundError:
@@ -266,12 +288,13 @@ def cmd_rm(opts, args):
 
 
 def need_ctl(d, name, row=None):
-    """它的 stack 裡 daemon 寫的 loop.json → (stack, ctl 檔的路徑)；沒有 loop.json（exec 型）或 ctl 是 null＝CtlMissing。"""
+    """它的 stack 裡 daemon 寫的 loop.json（名字照窗上的 procs_loop）→ (stack, ctl 檔的路徑)；沒有那份（exec 型）或 ctl 是 null＝CtlMissing。
+    ctl 沒寫＝ctl.json（aos-loop 的預設名，11-04 起 daemon 不再替它補）。"""
     stack = cell_of(d, name, row)
-    lj = os.path.join(stack, "loop.json")
+    lj = os.path.join(stack, names_of(d)["procs_loop"])
     if not os.path.isfile(lj):
         raise Fail("CtlMissing", "%s 沒有 ctl（exec 型只有跑和拔）" % name)
-    c = read_loop(lj).get("ctl")
+    c = read_loop(lj).get("ctl", "ctl.json")
     if not isinstance(c, str) or not c:
         raise Fail("CtlMissing", "%s 沒有 ctl（它的 loop.json 的 ctl 是 %s）" % (name, json.dumps(c)))
     return stack, os.path.join(stack, c)

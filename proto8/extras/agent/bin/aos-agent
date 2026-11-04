@@ -161,10 +161,20 @@ def target(opts, quiet=False):
     return find(name, quiet)
 
 
-def loop_paused(a):
-    """子 loop 自己的 state.json（stack 裡 loop.json 的 state 那格，沒寫＝state.json）phase 是 paused；讀不到＝False。"""
+def cell_name(key, default):
+    """daemon 在 procs_state.json 頂層回報的小格檔名（11-04，four-elements 08 步 6：procs_loop、procs_stderr）；讀不到、沒這欄＝預設。"""
     try:
-        with open(os.path.join(a.stack, "loop.json"), encoding="utf-8") as f:
+        with open(os.path.join(daemon_dir(), "procs_state.json"), encoding="utf-8") as f:
+            v = json.load(f).get(key)
+    except (OSError, ValueError, AttributeError, Fail):
+        v = None
+    return v if isinstance(v, str) and v else default
+
+
+def loop_paused(a):
+    """子 loop 自己的 state.json（stack 裡 loop.json〔窗上的 procs_loop〕的 state 那格，沒寫＝state.json）phase 是 paused；讀不到＝False。"""
+    try:
+        with open(os.path.join(a.stack, cell_name("procs_loop", "loop.json")), encoding="utf-8") as f:
             name = json.load(f).get("state")
     except (OSError, ValueError, AttributeError):
         name = None
@@ -231,7 +241,7 @@ def run_hint(a):
         return "它在 daemon 表上停著（%s 是 stopped），叫它起來：aos-agent start --target %s" % (a.name, a.name)
     if not daemon_alive(daemon_dir()):
         return "daemon 沒在跑（%s），重開 daemon：aos-exec <daemon 資料夾>" % daemon_dir()
-    return "看它的錯誤一行：%s/stderr.txt；或 aos-agent state --target %s" % (a.stack, a.name)
+    return "看它的錯誤一行：%s/%s；或 aos-agent state --target %s" % (a.stack, cell_name("procs_stderr", "stderr.txt"), a.name)
 
 
 def stuck_hint(a, sig):

@@ -211,6 +211,11 @@ void Daemon::write_more(const Json& me) {
     if (!mbox_path_.empty()) {
         doc["mailbox_warning"] = mailbox_warning_;   // 開了信箱才有：最後一封壞信（11-02 晚原 letter_warning）
     }
+    // 11-04（four-elements 題 6、題 5 後半）：回報小格裡三個檔名與信箱名（null＝沒開），讀小格的人（aos-daemon-ctl、aos-agent）從這裡拿、不寫死；欄名＝key 名
+    doc["procs_loop"] = names_.loop;
+    doc["procs_exec"] = names_.exec;
+    doc["procs_stderr"] = names_.err;
+    doc["procs_ctl_mailbox"] = mbox_path_.empty() ? Json() : Json(mbox_name_);
     doc["procs"] = rows;
     if (more_wrote_ && doc == last_more_) {
         // 有變才寫（11-02）：表、ctl_seq、ctl_warning、mailbox_warning 都一樣＝不碰檔。上一次寫時留著的「再上一次」的分檔
