@@ -2,9 +2,9 @@
 
 ← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)
 
-規矩見 [thinking/README](../../../README.md)。只留使用者原文、決定與跟 AI 討論後的整理；不寫方案、不替他選，條文與程式都沒動。
+規矩見 [thinking/README](../../../README.md)。
 
-**狀態：aos-var 已收回；待議改為 parts 組合化，收斂時交 fable 規劃、先對 aos-exec 契約核對**（見文末 [使用者後補](01-使用者原文-10-31-逐字.md#使用者後補10-31-傍晚逐字收回-aos-var改問-parts-能否組出來)）；另存 [round 重切草圖](01-使用者原文-10-31-逐字.md#round-重切草圖10-31-傍晚唯讀-session-推的設計素材待議非行動)（待議）。**→ 10-31 傍晚 fable 已收斂**：[parts-round 收斂](../parts-round/README.md)（parts 退成 aos-exec 格式的約定＋薄殼、round 不重切；衝突 3 條、方向題 2 題待使用者）。
+**狀態：aos-var 已收回**（[使用者後補](01-使用者原文-10-31-逐字.md#使用者後補10-31-傍晚逐字收回-aos-var改問-parts-能否組出來)）；parts 組合化與 [round 重切草圖](01-使用者原文-10-31-逐字.md#round-重切草圖10-31-傍晚唯讀-session-推的設計素材待議非行動) 已收斂到 [parts-round](../parts-round/README.md)。
 
 ## 分檔目錄
 
