@@ -130,7 +130,7 @@ def opening():
         die("PromptMissing", "開場白檔不在：%s" % prompt)
     except OSError as e:
         die("PromptBad", "讀不了 %s：%s" % (prompt, e))
-    text = text[:-1] if text.endswith("\n") else text          # 同 aos-say：結尾一個換行不算
+    text = text[:-1] if text.endswith("\n") else text          # 結尾一個換行不算
     if not text.strip():
         return False
     post(["send", "--ordered", box], json.dumps({"role": "user", "content": text}, ensure_ascii=False))

@@ -20,7 +20,7 @@ daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `sto
 ```sh
 cat daemon.json
 # {"max": 10, "interval_ms": 200, "ctl": "ctl.json", "state": "state.json",
-#  "procs": {"bob": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agent-bob"]}, "max": 1},
+#  "procs": {"bob": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agents/bob"]}, "max": 1},
 #            "tick": "../tick"}}
 AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法是 aos-exec 它（11-04 前的例子 proto8/demo/daemon 刪了）；PATH 上要有 aos-exec、aos-loop
 ```

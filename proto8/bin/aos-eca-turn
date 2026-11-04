@@ -178,7 +178,7 @@ def opening(stack, box, path):
         raise Fail("PromptMissing", "開場白檔不在：%s" % path)
     except OSError as e:
         raise Fail("AgentBad", "讀不了 %s：%s" % (path, e))
-    text = text[:-1] if text.endswith("\n") else text           # 同 aos-say：結尾一個換行不算
+    text = text[:-1] if text.endswith("\n") else text           # 結尾一個換行不算
     if not text.strip() or history_rows(stack):
         return False
     must_post(["send", "--ordered", box], json.dumps({"role": "user", "content": text}, ensure_ascii=False))
@@ -200,7 +200,7 @@ def take_all(stack, box, prompt):
 def one_turn(template, stack, ws, empty_code, on_busy, prompt):
     box = os.path.join(stack, "queue")
     if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
-        must_post(["init", box])                                   # 先建好，aos-say／listen 認得
+        must_post(["init", box])                                   # 先建好，aos-agent say／listen 認得
     cfg = cli_session.load_cfg(template)
     cell = cli_session.Cell(os.path.join(stack, cfg["kind"]))
     take_all(stack, box, prompt)                                   # 這輪要答的＝cur/ 全部（上次沒交出去的＋剛認領的）

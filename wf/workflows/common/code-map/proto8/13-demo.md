@@ -4,7 +4,7 @@
 
 11-04 使用者「demo中的，用不到的全部刪掉，也不用封存了」：`run.sh`、agent-gus、hal、kai、liv、meg、pip、talk、eca-codex、daemon、daemon-2、daemon-3 刪了；agent-bob、ann、eve 與 tick 先搬進 tests/fixtures，同天隨 proto8/tests 刪了。
 
-## `demo/eca-claude/`（外部 coding agent 範本；aos-eca add 的預設範本）
+## `demo/eca-claude/`（外部 coding agent 範本；當時 aos-eca add 的預設範本，11-04 晚 aos-eca 併進 aos-agent、`aos-agent add` 不給預設）
 
 | 檔 | 負責什麼 |
 |---|---|

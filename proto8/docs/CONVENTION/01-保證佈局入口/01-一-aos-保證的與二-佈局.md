@@ -6,7 +6,7 @@ aos 保證的底——六個環境變數（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`�
 
 ## 二、佈局（每檔一句）
 
-混合寫法（§ 10 使用者「好主意」）：狀態表一律寫在 `fsm.json`；一行講完的格內嵌單子；有真邏輯的格 `exec` 寫子資料夾名。fsm 停在哪格記在 stack 的 `stage.txt`（使用者 11-04 題 10「fsm改名，嘗試用同義詞」，[four-elements 07](../../../thinking/2026-11/04/four-elements/07-實作步驟.md) 步 3；fsm.json 的 `start`／`states` 不改），不寫 trace（N-39）。程式已照這張做完（見第十節）。
+混合寫法（§ 10 使用者「好主意」）：狀態表一律寫在 `fsm.json`；一行講完的格內嵌單子；有真邏輯的格 `exec` 寫子資料夾名。fsm 停在哪格記在 stack 的 `stage.txt`（使用者 11-04 題 10「fsm改名，嘗試用同義詞」，[four-elements 07](../../../thinking/2026-11/04/four-elements/07-實作步驟.md) 步 3；fsm.json 的 `start`／`states` 不改），不寫 trace（N-39）。程式已照這張做完（見第十節）。〔11-04 加註：下面這棵樹是 agent-bob（舊協議：工作區題目資料夾，P-11），11-04 隨 proto8/tests 刪了，「已照這張做完」說的是當時；現行標準範本是走 queue 的 [demo/agent-fsm](../../../demo/README.md#agent-fsm)（`_entry`＝JSON `["aos-loop", "loop.json"]`、四格 idle／think／wait／act 都是單子叫範本裡的 python，P-27、P-08 的 11-04 晚加註）；樹照留，條文改不改由使用者定〕
 
 ```
 agent-bob/                 一個 agent＝一個資料夾程式（§ 1）

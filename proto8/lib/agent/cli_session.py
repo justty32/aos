@@ -323,7 +323,7 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None):
 def print_claude(cfg, cell, ws, stack, prompt, handed=None):
     sid = cell.read("session.txt")
     new = "" if sid else str(uuid.uuid4())
-    # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-eca watch 看得到它正在做什麼；
+    # 10-27：改 stream-json（--verbose 是它要的），一行一事件寫進小格的 live.jsonl，人用 aos-agent watch 看得到它正在做什麼；
     # 回答取最後一個帶 result 的那行（type: result）
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
     argv += mcp_argv(cfg, cell, ws, stack)

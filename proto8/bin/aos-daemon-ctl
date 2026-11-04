@@ -46,7 +46,7 @@ add 的自動識別（11-02 拿掉 --kind；11-04 改看入口最終指到的 JS
 --ws WS（10-30 eca 第 2 步，thinking 2026-10-30-eca 衝突 1、3）：這個子項的工作區。WS 從呼叫當下的 cwd 轉絕對（不是資料夾＝PathMissing），
   寫進子項物件的 ws，daemon 起它時設 AOS_WS＝WS（沒給＝繼承 daemon 的）。ls 多一欄 ws（列上沒有＝-）。
   11-03 起不碰 <WS>/.stack（使用者「那其實.stack根本不需要放到ws那邊」，thinking 2026-11-03-stack-where）：daemon＝硬體、子項的 stack＝暫存器，
-  歸 daemon 管，AOS_WS 只是一個位址。要對它 aos-say／aos-listen＝`aos-say --stack $(aos-daemon-ctl where --stack 名字) …`。
+  歸 daemon 管，AOS_WS 只是一個位址。要對它說話＝`aos-agent say --target 名字 …`（11-04 起取代 aos-say／aos-listen）。
 --stack S（11-03 procs § 2b）：這個子項的 stack（沒給＝daemon 的預設小格 <D>/procs/<名字>/）。S 從呼叫當下的 cwd 轉絕對、不驗在不在
   （daemon 起它時 mkdir -p；S 裡有別的東西使用者自己承擔）；空＝ArgumentsBad。寫進子項物件的 stack。
 rm／stop／start（11-03 procs § 2c）：rm＝procs_removed（先停再拿掉；stack 不清）；stop＝procs_stopped（loop 型跑完這次自己退 0、列留成 stopped、

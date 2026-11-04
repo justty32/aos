@@ -26,7 +26,7 @@
    "abbr": "fsm",
    "full": "finite state machine",
    "meaning": "狀態機組合子",
-   "example": "fsm.json、aos-fsm、$AOS_STACK/state.txt（N-39）"
+   "example": "fsm.json、aos-fsm、$AOS_STACK/stage.txt（N-39；11-04 前叫 state.txt）"
   },
   {
    "abbr": "cfg",
@@ -98,7 +98,7 @@
    "abbr": "ms",
    "full": "millisecond",
    "meaning": "毫秒（單位後綴）",
-   "example": "timeout_ms、interval_ms、grace_ms、elapsed_ms（trace.jsonl，10-23 統合）"
+   "example": "timeout_ms、interval_ms、grace_ms、elapsed_ms（10-23 統合；當時在 trace.jsonl，11-03 拿掉）"
   },
   {
    "abbr": "seq",

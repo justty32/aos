@@ -10,7 +10,7 @@ aos-post 是 aos 體系跨行程交流（IPC）的語法糖、基底工具：跟
 
 ```sh
 aos-post init box                                   # 建 box/tmp new cur
-echo '{"procs_added": {"bob": "../agent-bob"}}' | aos-post send box      # 印信件名稱
+echo '{"procs_added": {"bob": "../agents/bob"}}' | aos-post send box      # 印信件名稱
 aos-post take-all box                               # 一行一個信件名稱（照處理順序）；沒有退 10
 aos-post see box                                    # 讀 cur/ 照處理順序第一封；好信印 letter.json、壞信退 1
 aos-post done box                                   # 收掉那一封（--keep 進 archive/）
