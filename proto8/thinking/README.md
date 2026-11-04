@@ -6,11 +6,7 @@
 
 > **10-12 夜使用者定**：thinking 只留「使用者原文整理、決策結果、跟 AI 討論後的結論、未決」，其餘 AI 產出拿掉（「今天 10/12 產出的那些 thinking 也是，留結論」）；整份都是 AI 產出的檔整份刪。
 
-> **10-30 改名**：aos-kernel-llm 改名 aos-llm-kernel（`demo/kernel-llm/` → `demo/llm-kernel/`、標頭 `aos/kernel_llm.hpp` → `aos/llm_kernel.hpp`、`tests/test_kernel_llm.py` → `tests/test_llm_kernel.py`；[map-review 第 9 點](2026-10/30/map-review/01-使用者原文.md#決定10-30)）；aos-gate 改名 aos-llm-send（[第 11 點](2026-10/30/map-review/01-使用者原文.md#決定10-30)）。舊紀錄照舊名。
-
-> **10-30 夜改名**：aos-hub 改做 aos-eca-hub（`extras/cli_hub/` → `extras/eca_hub/`、`bin/aos-hub` → `bin/aos-eca-hub`；`aos-hub-kernel` 與 `AOS_HUB` 退場，`aos-hub` 這個名字留給以後；[eca](2026-10/30/eca/09-方向題.md#決定10-30) 衝突 2、4，[map-review 第 5 點](2026-10/30/map-review/01-使用者原文.md#決定10-30)）。舊紀錄照舊名。
-
-> **11-03 改名**（同日再改名 aos-eca：`extras/eca_ctl/` → `extras/eca/`、`bin/aos-eca`、`tests/test_eca_cmd.py`，使用者「好像也不用aos-eca-ctl，改成aos-eca就好。」，[eca 16](2026-10/30/eca/16-11-03-改名-aos-eca-ctl.md#11-03-再改名aos-eca-ctl--aos-eca)）：aos-eca-hub 改名 aos-eca-ctl（`extras/eca_hub/` → `extras/eca_ctl/`、`bin/aos-eca-hub` → `bin/aos-eca-ctl`、`tests/test_eca_hub.py` → `tests/test_eca_ctl.py`；使用者 11-03「aos-eca-hub應該改名為aos-eca-ctl」，[eca 16](2026-10/30/eca/16-11-03-改名-aos-eca-ctl.md)）。舊紀錄照舊名，連到資料夾的連結改指新路徑。
+> **改名**：舊名 → 現名見 [NORMS 附錄3 舊名對照](../docs/NORMS/附錄3-舊名對照.md)。舊紀錄照舊名，連到資料夾的連結改指新路徑。
 
 | 月份 | 份數 | 範圍 |
 |---|---|---|
