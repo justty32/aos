@@ -2,7 +2,7 @@
 
 三種登記對象（資料夾＋_tooldef、JSON＋_tooldef、可執行檔＋--tooldef／--tool-call）、不合就報錯、撞名與 --override、
 存絕對路徑（相對從 cwd 算）、手寫相對路徑從 tools.json 的資料夾算、--tooldef 快取與 --no-cache（11-03）、指示詞拆檔（$ref 陣列）。
-設計：proto8/thinking/2026-10-28-aos-tools.md。"""
+設計：proto8/thinking/2026-10/28/aos-tools/README.md。"""
 import json, os, subprocess, tempfile, unittest
 from pathlib import Path
 

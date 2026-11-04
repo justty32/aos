@@ -1,6 +1,6 @@
 """test_janet - Janet 編成 aos（proto8/extras/langs/janet）：編例子、用 aos-exec 真的跑（agent_dan 那兩案 11-03 隨 examples/agent_dan.janet 封存到 proto8/archive/agent-dan-langs/）。
 
-設計：proto8/thinking/2026-10-24-janet-compile.md。沒裝 janet 就整個 skip。"""
+設計：proto8/thinking/2026-10/24/janet-compile.md。沒裝 janet 就整個 skip。"""
 import json, os, re, shutil, subprocess, tempfile, unittest
 from pathlib import Path
 

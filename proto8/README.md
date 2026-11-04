@@ -22,12 +22,12 @@
 
 舊紀錄裡 proto8 頂層的 CONCEPTS／NORMS／CONVENTION 現在在 `docs/`，human／ai_tools／grow／langs／editors／sandbox 現在在 `extras/`；讀舊紀錄時照這張表換路徑。
 
-**以 [CONCEPTS.md](docs/CONCEPTS.md) 為準**（概念層：名詞、規則 C-01～C-73，作廢的號只留在表上；只收使用者說過的）。圖解兩頁（10-20 的狀態）：概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm （HTML 源在 scratchpad/pages/proto8-concepts.html、proto8-impl.html）。實作上的想法在 [restart §3g](thinking/2026-10-11-restart.md)（10-11 晚口述：inst→loop→daemon→tick-tock→kernel→agent→閉環）。
+**以 [CONCEPTS.md](docs/CONCEPTS.md) 為準**（概念層：名詞、規則 C-01～C-73，作廢的號只留在表上；只收使用者說過的）。圖解兩頁（10-20 的狀態）：概念層 https://claude.ai/artifact/QJjGNnKFhKeS7r1f5bHzu7 、實作想法 https://claude.ai/artifact/ATizWpsmAa2qutXWZ2owjm （HTML 源在 scratchpad/pages/proto8-concepts.html、proto8-impl.html）。實作上的想法在 [restart §3g](thinking/2026-10/11/restart/README.md)（10-11 晚口述：inst→loop→daemon→tick-tock→kernel→agent→閉環）。
 
 ## 現況
 
-- **資料夾＝程式**（使用者 10-19 定）：aos 只訂六個環境變數和一支 `aos-exec [--ws WS] XXX [args...]`；入口四種、`XXX` 的找法、`#/` 尋址、`+x` 但沒 `#!` 的檔用 `/bin/sh` 跑（§ 21「不擋」、§ 22「乙」）都在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62）。巢狀由程式自己訂子 stack；這次要做啥隨意。10-16 那套作廢，原話與裁定在 [thinking/2026-10-19-ideas.md](thinking/2026-10-19-ideas.md)（使用者：「那是帶著鐐銬跳舞跳得很棒，終究不如我們現在直接把鐐銬拿掉」）。範例：agent-bob 叫 cathy 叫 stamp 四層、agent-ann 全內嵌對照（11-04 起在 `tests/fixtures/`，demo 刪了）。
-- **實作**：[impls/](impls/README.md) 是唯一實作（C／C++；使用者 10-23「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也用 C++、tick 先留 Python，[bin/](bin/README.md) 是 Python 的 aos-tick 等），命令列有 aos-exec、aos-loop、aos-fsm、aos-daemon 等（全表見它的 README）；刻意沒有 aos-inst 命令列。loop／daemon／fsm 格「要跑什麼」那一格叫 `exec`（使用者「exec，loop／daemon 的 run 也一起改 exec」，[thinking](thinking/2026-10-23-naming.md)）。
+- **資料夾＝程式**（使用者 10-19 定）：aos 只訂六個環境變數和一支 `aos-exec [--ws WS] XXX [args...]`；入口四種、`XXX` 的找法、`#/` 尋址、`+x` 但沒 `#!` 的檔用 `/bin/sh` 跑（§ 21「不擋」、§ 22「乙」）都在 [NORMS/10](docs/NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62）。巢狀由程式自己訂子 stack；這次要做啥隨意。10-16 那套作廢，原話與裁定在 [thinking/2026-10/19/ideas/README.md](thinking/2026-10/19/ideas/README.md)（使用者：「那是帶著鐐銬跳舞跳得很棒，終究不如我們現在直接把鐐銬拿掉」）。範例：agent-bob 叫 cathy 叫 stamp 四層、agent-ann 全內嵌對照（11-04 起在 `tests/fixtures/`，demo 刪了）。
+- **實作**：[impls/](impls/README.md) 是唯一實作（C／C++；使用者 10-23「python版本可以刪掉了。aos-exec/loop/daemon都用C++」，fsm 也用 C++、tick 先留 Python，[bin/](bin/README.md) 是 Python 的 aos-tick 等），命令列有 aos-exec、aos-loop、aos-fsm、aos-daemon 等（全表見它的 README）；刻意沒有 aos-inst 命令列。loop／daemon／fsm 格「要跑什麼」那一格叫 `exec`（使用者「exec，loop／daemon 的 run 也一起改 exec」，[thinking](thinking/2026-10/23/naming.md)）。
 - kernel、tasks 現在**沒有實作**，概念與規範留著、標「現無實作」，等照新做法重寫（[NORMS 待定](docs/NORMS/08-待定.md)）；daemon 是 impls 的 `aos-daemon`，tick 是 `bin/aos-tick`，腦的工具呼叫範本是 `tests/fixtures/agent-eve`（11-04 前在 demo/）、慣例 [P-41](docs/CONVENTION.md)。
 
 ## 入口
@@ -42,7 +42,7 @@
 - **[notes/](notes/README.md)**：AI 寫的參考筆記（不是規範、不算數）：拿外面現成的東西跟 aos 對照，例如 [跟 s6、runit 的對照](notes/s6-runit.md)。
 - 之前乾淨的兩個時刻，要回頭看的：九月初 [ideas 13 章](../wf/workflows/ideas/README.md)、十月初 [proto7 核心 spec](../proto7/spec/core.md) 與 [設計原則](../proto7/notes/principles.md)。
 - 使用者自己的草稿：[thinking/（repo 頂層）](../thinking/)（2026-09-19～24）。
-- 這兩個月做過什麼、每一代長什麼樣：[thinking/2026-10-11-restart.md](thinking/2026-10-11-restart.md) 第一節。
+- 這兩個月做過什麼、每一代長什麼樣：[thinking/2026-10/11/restart/README.md](thinking/2026-10/11/restart/README.md) 第一節。
 
 ## 規矩（使用者 10-11 定）
 

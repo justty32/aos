@@ -1,6 +1,6 @@
 """test_grow - grow/aos-grow（函數往上長一級／縮回一級，呼叫方跟著改、行為不變）。
 
-設計：proto8/thinking/2026-10-24-fn-grow.md。核心那個測試把 tests/fixtures/agent-eve（11-04 前是 demo/agent-liv，demo 刪了改用這份；11-02 晚前是 agent-dan，兩隻都抄它、fsm 只差 act 的 timeout_ms）複製兩份、只長其中一份，
+設計：proto8/thinking/2026-10/24/fn-grow/README.md。核心那個測試把 tests/fixtures/agent-eve（11-04 前是 demo/agent-liv，demo 刪了改用這份；11-02 晚前是 agent-dan，兩隻都抄它、fsm 只差 act 的 timeout_ms）複製兩份、只長其中一份，
 用假腦（沒設 AOS_BRAIN_URL）各跑兩題，抹掉時間後工作區與 stack 每個檔都要一樣。"""
 import json, os, re, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path

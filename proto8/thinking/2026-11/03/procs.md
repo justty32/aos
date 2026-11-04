@@ -1,0 +1,391 @@
+# 2026-11-03 execs／loops 統稱 procs：名單合一成 `procs`、看寫法決定怎麼起（沒有 `kind`）、每項可指定 `stack`、四態與名詞表（add／rm／start／stop／pause／resume）
+
+← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜出發點：[11-02 晚 ctl-state-names § 方向題 1](../02/ctl-state-names.md#方向題的答案11-02-晚使用者逐字)（使用者下班通勤時的想法）｜被本條推翻的：[11-02 state 窗 § 決定（晚）](../02/state-window.md#決定11-02-晚使用者實作中陸續裁的)「loops_state 的 `loops`／`execs` 仍分開」「喔等等，那還是不要合併了」（「子項結束後不留名單」**沒**被推翻：衝突 2 使用者「照舊拿掉」）、[10-29 medium-plan § 四 1](../../2026-10/29/medium-plan/03-四-aos-daemon-的兩個手把-兩扇狀態窗.md) 的窗名 `loops_ctl.json`／`loops_state.json`、[10-30 agent-lifecycle](../../2026-10/30/agent-lifecycle/README.md) 的 `execs` 這個 key 與「表上的種類跟期望表不一樣＝收掉重起」｜條文：[N-28、N-54](../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-06、N-07、N-09、N-13、N-14](../../../docs/NORMS/05-基礎設施-窗.md)、[C-48、C-52、C-54、C-55、C-56](../../../docs/CONCEPTS/01-設計理念.md)、[C-54 命名方法 R4、R7](../../../docs/CONCEPTS/01-設計理念/C-54-命名方法.md)、[C-75](../../../docs/CONCEPTS/03-基礎設施.md)、[縮寫表 proc](../../../docs/CONCEPTS/abbr.json)｜程式：[aos-loop](../../../impls/aos-loop/README.md)、[aos-daemon](../../../impls/aos-daemon/README.md)、[aos-daemon-ctl](../../../bin/README.md)、[aos-eca](../../../extras/eca/README.md)（11-03 原 aos-eca-ctl）、[ai_tools](../../../extras/ai_tools/README.md)、[lua](../../../extras/langs/lua/README.md)、[demo](../../../demo/README.md)｜場地 `~/code/playground/`（不在 git）
+
+本檔只記使用者原文（逐字）、決定、查清的現況、fable 照原則定的規劃（可翻案）、原則沒講清楚要使用者一句話的衝突與方向題（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。**只規劃、沒實作。** 11-03 一天改了五版：第一版有 `kind` 欄與「舊 key 報錯」→使用者兩題後拿掉；第三版加每項的 `stack`；第四版加四態；第五版名詞定成 add／rm／start／stop／pause／resume＋名詞表。舊題與答案留在文末。
+
+## 使用者原文（11-02 晚起，逐字，依先後）
+
+> hmmm，是這樣的，剛剛下班通勤的時候有個想法，就是說，exec和loops，其實都屬於proc，所以...改名？可是我又擔心和linux的proc撞名...不過好像撞名也沒差。就是說，exec是基石，loop是另一種基本形式，搞不好以後還會有更多形式。
+
+頂層列兩條路：(1) 只改統稱——`procs_ctl`／`procs_state`、小格 `.stack/procs/<名字>/`，名單仍分 `loops`／`execs` 兩份；(2) 名單也合成一份 `procs`，每項帶 `kind`。使用者（11-03）：
+
+> 連名單也合一
+
+看完第一版的衝突 1（舊 key 報錯 vs C-48）與方向題 1（`kind` 以後怎麼長）：
+
+> 1. 當沒看到。2.kind這東西沒用吧，刪掉
+
+頂層問「掛在 daemon 上的 proc，stack 能不能也由呼叫的人指定（像 aos-exec 的 `--stack`）」：
+
+> 掛在daemon上的歸daemon管...是否也可以倒反天罡，讓daemon底下的stack變成捷徑，或是改成由路徑指定？然後我們另外設定stack位置？
+
+頂層列兩條路（a. 名單上記路徑；b. 照舊小格、裡面放 symlink）：
+
+> 那就記錄在名單上。我是希望盡量不要用捷徑啦。然後S裡面有別的東西的話，使用者要自己承擔風險。拿下名單後，對於daemon來說他就不存在了，自然找不到。
+
+談到 `aos-daemon-ctl where`「表上沒有、但預設小格資料夾還在就印路徑」那條備案：
+
+> 等等，這個我要想想。或者說，一個proc在daemon中的狀態，包括運行中、暫停中，除此之外就是不存在於daemon了。
+
+頂層請他照 CPU 的狀態想一遍（兩句）：
+
+> 也就是持續跑指令、暫停不跑下個指令、休眠但是可以隨時叫醒繼續跑指令或繼續暫停、拔掉
+
+> 只有指令叫醒。然後loop就是原生支援暫停和休眠的，exec就是只有執行中和拔掉
+
+exec 型能不能睡：
+
+> 還是說exec可以休眠？不對，他停下來就是沒了，新開的就是新的CPU了
+
+aos-daemon-ctl 的子命令：
+
+> 所以相關指令就是start/stop/add/rm/pause/resume
+
+> 統一成add/rm吧。然後stop/start是否可以換成wake/sleep？
+
+> 好。然後ctl這塊可以的話也跟著這些名詞走，比如stopped改paused?
+
+> state也是
+
+重新框一次（像 docker）：
+
+> Hmmm，其實整個概念來說的話比較像是"add之後會把它start，remove後會先把他stop後再移除"
+
+> 所以add/rm是動作，相關的狀態就是started/stopped
+
+名詞怎麼用：
+
+> 名詞表我們先設計好，實際狀況中可能是同一種狀況能符合多個名詞，那就挑一個統一用這塊就好。不過實際狀況各有不同，至少我們現在遇到的是這樣。pause-paused,resume-running
+
+## 決定（11-03，使用者）
+
+- **統稱 `proc`**：daemon 管的子項，不論包在 aos-loop 裡一直跑的（loop 型）還是 aos-exec 跑一次的（exec 型），都是 proc；exec 是基石、loop 是另一種基本形式、以後可能更多。跟 Linux 的 proc 撞名「沒差」。
+- **名單合一**：`loops`＋`execs` 合成一份 **`procs`**；手把、狀態窗、信箱、小格資料夾跟著改名。
+- **沒有 `kind`**：每項怎麼起**看它自己的寫法**（同 `aos-daemon-ctl add` 今天的自動識別）。規則在[規劃 § 2](#2-看寫法決定怎麼起代定)。
+- **每個 proc 可以指定自己的 stack**（「記錄在名單上」「不要用捷徑」「S 裡有別的東西使用者自己承擔」「拿下名單後對 daemon 來說就不存在」）：每項選填 **`stack`**；沒寫＝`procs/<名字>/`。[規劃 § 2b](#2b-每個-proc-自己的-stack代定)。
+- **舊 key 當沒看到**：`loops`、`execs`、`loops_ctl`、`loops_added`……照 C-48 忽略；不報錯、不提醒、不做過渡期。
+- **四態＋動作**（CPU 類比；「add 之後會把它 start，remove 後會先把它 stop 再移除」「add/rm 是動作，相關的狀態就是 started/stopped」「pause-paused, resume-running」）：動作 **`add`／`rm`／`start`／`stop`／`pause`／`resume`**；一個 proc 在 daemon 裡：**running**（表上、活著、一直跑）、**paused**（表上、活著、不跑下一次；loop 原生、寫它自己的 `ctl.json`）、**stopped**（表上、**行程不在**、stack 留著；**只有指令叫起**：`start`＝用同一個 stack 再起，起來是跑還是暫停看它自己的 ctl）、**表上沒有**＝對 daemon 不存在（`rm`＝先 stop 再拿掉）。**loop 型支援 pause 與 stop；exec 型只有 running 和拔掉**（「他停下來就是沒了，新開的就是新的 CPU 了」）。sleep／wake 這對字只留在名詞表當同義詞，不當指令。（**11-03 晚翻案**：使用者「我們缺了sleep/wake」——sleep／wake 是獨立的一態 `sleeping`＝daemon 收工時還在跑的、開門自動叫醒，見 [§ 8](#8-收工時改寫成休息中sleepwake11-03-晚)。）
+- **衝突 2 的答案（11-03，逐字）：「照舊拿掉」**→ 選 (b)：只有 daemon 自己下的 stop（`procs_stopped`）會讓那列留成 `stopped`；其他任何退出——跑滿 `max`、身體退 10、訊號、它自己 ctl 裡被寫 `stopped`——照 11-02 從表上拿掉（＝對 daemon 不存在）。所以掛在 daemon 下的 proc 要停就走 daemon（`aos-daemon-ctl stop`），自己在 ctl 寫 `stopped`＝消失、叫不回。
+- **先設計名詞表，一種狀況挑一個字統一用**：[規劃 § 0](#0-名詞表代定)。ctl 的 key 與 state 的 `phase` 跟著名詞表走（「ctl 這塊可以的話也跟著這些名詞走」「state 也是」）——對過之後**今天的字已經在表上**（`paused`、`stopped`、`running`），不用換；使用者例子「stopped 改 paused」裡兩個字各管一態，不是同一件事（§ 2d）。
+- **`where` 只認表上的**（含 stopped 的）：表上沒有＝不存在、報錯；另一批原定「表上沒有但預設小格在就印」的備案拿掉。
+- **被推翻（已定、不再是待裁）**：
+  - [11-02 state 窗 § 決定（晚）](../02/state-window.md#決定11-02-晚使用者實作中陸續裁的)「不要合併了」「loops／execs 仍分開」→ 合一；同節「子項結束後不留名單」**照舊**（衝突 2 使用者「照舊拿掉」）：只有 daemon 自己下的 stop 留成 `stopped`，其他退出照 11-02 從表上拿掉。
+  - [10-29 medium-plan § 四 1](../../2026-10/29/medium-plan/03-四-aos-daemon-的兩個手把-兩扇狀態窗.md) 窗名 `loops_ctl.json`／`loops_state.json`、信箱 → `procs_*`；**拆兩對窗這件事本身不動**（照 [11-02 晚](../02/ctl-state-names.md)）。
+  - [10-30 agent-lifecycle](../../2026-10/30/agent-lifecycle/README.md) 的 `execs`、`execs_added`／`execs_removed`、「種類不一樣＝收掉重起」→ 併進 `procs_*`；同名改寫法照 N-54 不重起。
+  - [C-54](../../../docs/CONCEPTS/01-設計理念.md) 10-23「daemon 管的 loop 叫 `loops`」→ `procs`。
+  - [ctl-state-names 方向題 1](../02/ctl-state-names.md#方向題的答案11-02-晚使用者逐字) 結案：`procs_ctl`／`procs_state`。
+
+## 現況（查清的，不是規劃）
+
+### 兩份名單今天長什麼樣、誰在讀
+
+| 東西 | 現在 | 在哪 |
+|---|---|---|
+| daemon.json | `loops`＝`{名字: loop 設定或 aos-exec 目標}`（字串／陣列包成 `{"exec": 它}` 交給子 aos-loop；物件原樣交給子 loop、只解 `exec`／`max`／`interval_ms`／`ctl`／`state`／`ws`，其他 key 不驗不動）；`execs`＝`{名字: 目標 或 {"exec": 目標或單子, "ws"}}`（物件只看 `exec`、`ws`）；兩份共用名字空間（同名＝CfgBad，`check_apart`） | `impls/aos-daemon/src/daemon/daemon.cpp` `read_loops`／`read_execs`／`check_apart` |
+| 記憶體 | 一張 `table_`，每列 `Child::once`；底兩份 `want_`／`want_execs_`。`once` 用在：寫哪張表、log 的 `table`、`ended_`、信箱選底、`reconcile` 的「種類不一樣＝收掉重起」（`daemon.cpp:568`） | `daemon.hpp`、`daemon.cpp` |
+| 手把 `loops_ctl.json` | `loops`、`loops_added`、`loops_removed`、`execs`、`execs_added`、`execs_removed`、`seq` | `windows.cpp` `read_loops_ctl`／`check_lists` |
+| 狀態窗 `loops_state.json` | `{ctl_seq, ctl_warning, mailbox_warning?, loops 表, execs 表, pid, started_at_ticks, boot_id, updated_at}`；>100 列切檔 `loops_state_loops/`；`adopt` 兩張都接 | `windows.cpp` `write_more`／`write_parts`；`daemon.cpp` `adopt` |
+| 信箱 `loops_ctl_mailbox/` | body 只認四個 `*_added`／`*_removed`，其他 key 忽略（只有不認得的 key＝好信、什麼都不做） | `mailbox.cpp` `apply_letter` |
+| 小格 | `$AOS_STACK/loops/<名字>/`。loop 型：寫小格 `loop.json`（補 `ctl.json`／`state.json`、蓋 `_entry`）再 `aos-exec 小格/loop.json#/_entry`；exec 型：直接 `aos-exec 目標`（單子寫 `exec.json`）；`run_child` 設 `AOS_STACK=<小格>/`、`AOS_DAEMON_STACK`、有 `ws` 才設 `AOS_WS`；`make_cell` 只建兩層；`ws` 相對路徑從 daemon 的 cwd 轉絕對（`fix_ws`）、不灌進 `loop.json` | `child.cpp`、`daemon.cpp` `fix_ws` |
+| 子項退了 | 11-02 起不論 loop／exec、自己結束（done）或被收（stopped）：印 log 一行、**從表上拿掉**、記 `ended_`、本次不再起 | `daemon.cpp` `tend`／`reconcile` |
+| log 行 | `{"at", "name", "table", "phase", "pid", "code", "signal", "ws"?}` | `daemon.cpp` `log_line` |
+| aos-loop 的 ctl／state | ctl 認 `paused`（活著、不跑下一次）、`stopped`（跑完這次退 0、stack 留著）、`max`、`interval_ms`、`seq`；state `phase`＝`running`／`waiting`（兩次之間）／`paused`／`done`（跑滿 `max`、身體退 10）／`stopped`（ctl 叫停、訊號、自己出錯）；daemon 繼承這套 | `impls/aos-loop/src/engine/{window,loop}.cpp` |
+| 另一批正在規劃的（先於本題落地） | `aos-exec --stack S`（`--stack` ＞ `$AOS_STACK` ＞ `$AOS_WS/.stack/`、不在就建、`--stack -`＝繼承）；`aos-daemon-ctl where NAME`；`add --ws` 不再建 `<WS>/.stack` 捷徑 | 不在 git |
+| 舊 key 的先例 | 11-02 `loops_mailbox`→「照其他 key 忽略」；10-29 `ctl.json` 裡的 `loops` 曾有過渡提醒（`check_ctl` 的 `ctl_note_`）；10-25 kernel.json `budget.calls`＝CfgBad | `daemon.cpp:457-464` |
+
+讀寫這些名字的程式：`bin/aos-daemon-ctl`（`MAILBOX`、add 自動識別、rm 送兩個 `*_removed`、ls 兩張表印 `loop`／`exec` 欄、`--json`、小格 `<D>/loops/<名字>`、`link_stack`／`unlink_stack`）、`extras/eca/bin/aos-eca`（`loops_state.json` 判 daemon 活著、`ls --json` 的 `.loops`、小格 `<daemon>/loops/<名字>/<kind>/`、判子 loop `phase` 的 done／stopped、install 清殘留 `stopped`、`stop`＝`aos-daemon-ctl rm`）、`extras/ai_tools/bin/aos_ai_base.py`（`lctl`／`lstate`、`row`、`cell_run`、`running()` 看 `phase not in (done, stopped)`、`daemon down` 寫 `stopped`）、`aos_ai_daemon.py`、`demo/talk/team/quiet.py`、`lib/aos/aos_ws.py`＋`extras/human/bin/aos_human.py`（`aos-listen --status` 讀 `phase`）、`extras/langs/lua/aos.lua`＋`clocks.lua`、demo 五份 daemon.json 與 README、`impls/aos-daemon/README.md`、`bin/README.md`、`extras/ai_tools/README.md`、`claude_skill/aos/concepts.md`、`impls/aos-post/README.md`。試驗場（不在 git）：`daemons/main/daemon.json`、`agents/resident_bob` 的 `relay`／`_entry`（`clear_stopped`）。測試提到名單名字的 16 檔約 610 行（`impls/aos-daemon/tests/test_cli.py` 380、`tests/test_daemon.py` 106、`test_aos_daemon_ctl.py` 48、`test_eca.py` 24、`test_demo.py` 19、其餘零星）；寫 ctl `stopped`／讀 `phase` 的另有 aos-loop `test_cli.py`、`test_loop.py`、`test_human.py`、`test_ai_tools.py`、`test_talk.py`。
+
+### 「proc」這個字在 aos 裡已經是什麼
+
+[縮寫表](../../../docs/CONCEPTS/abbr.json)已有 `proc`＝process；[C-75](../../../docs/CONCEPTS/03-基礎設施.md)「proc 之間的交流」、[10-29 § 七](../../2026-10/29/medium-plan/04-七-身分-擁有與收屍-介質可套-人算-proc.md)「人算 proc」——aos 裡 proc 早就是「會跑、會交流的東西」的統稱，跟 Linux 同字同義、不是撞名。[附錄1 名詞](../../../docs/CONCEPTS/附錄1-名詞.md)還沒有 proc 這列（§ 5 補）。
+
+### 條文現在怎麼寫
+
+**N-28**「daemon 多的只有 `loops`、`adopt`」、10-20 落實 ①「字串包成 `{"exec": 它}`；物件＝loop 設定」——本來就是看寫法；10-29／10-30／11-02 補 `loops_ctl`、`execs`、`loops_ctl_mailbox`。**N-54**：名單在 `loops_ctl.json`；「要暫停、停掉某個子 loop＝直接寫它的 ctl（誰都可以寫）」；「名字已在表上的不看設定變了沒」。**N-06／N-07**：ctl 的 `paused`、`stopped`；**C-54 R4**：ctl 的 key 用狀態詞、state 有對應格時同一個字。**C-48** 不認得的 key 忽略。**C-52** 巢狀只管自己這一層。**C-55** 雙形都收。**C-56** 不藏暗規則。
+
+## 規劃（fable，照原則定的細節，可翻案）
+
+### 0. 名詞表（代定）
+
+使用者「名詞表先設計好，一種狀況能符合多個名詞就挑一個統一用」。表分三欄：**動作**（指令、信、ctl 的手）、**它帶到的狀態**、**proc 自己走到的狀態**。字夠一般，以後多一種形式（fsm 一次、常駐 agent……）也套得上。
+
+| 動作（人／daemon 做的） | 帶到的狀態 | 說明 |
+|---|---|---|
+| `add` | running | 插上＝登記＋起（「add 之後會把它 start」） |
+| `rm` | （表上沒有） | 拔掉＝先 stop 再拿掉（「remove 後會先把它 stop 後再移除」）；stack 留著 |
+| `start` | running（或 paused，看它自己的 ctl） | 把 stopped 的用**同一個 stack** 再起；「只有指令叫醒」 |
+| `stop` | stopped | 行程退了、表上還在、stack 留著（CPU 類比裡的「休眠」；sleep／wake 是這對的同義詞，不當指令——**11-03 晚翻案**，sleep／wake 另成一態，見 [§ 8](#8-收工時改寫成休息中sleepwake11-03-晚)） |
+| `pause` | paused | 活著、不跑下一次（使用者定「pause-paused」） |
+| `resume` | running | 解除暫停（使用者定「resume-running」） |
+
+| proc 自己走到的 | 字 | 說明 |
+|---|---|---|
+| 正在跑一次 | running | — |
+| 兩次之間睡 `interval_ms` | waiting | aos-loop 今天就有；是 running 的細分，表上不另列 |
+| 跑完了（滿 `max`、身體退 10） | done | 自己走完；不是 stop 也不是拔 |
+| 被訊號收掉、自己出錯退 1 | stopped | 行程不在、stack 留著——跟 stop 帶到的狀態是同一個字（「同一種狀況能符合多個名詞就挑一個」：都是 stopped，原因看 `code`／`signal`） |
+
+**一種場合挑一個字**（下面各節都照這張用）：
+
+| 場合 | 用哪些字 |
+|---|---|
+| daemon 的表（`procs_state` 的列、`ls`） | `running`、`stopping`（收的途中）、`stopped`；**不轉述** paused（那是子 loop 自己的 state，daemon 不讀，C-52）；自己退了的（done、訊號、自己寫 ctl）照 11-02 從表上拿掉，只有 daemon 下的 stop 留 `stopped`（衝突 2「照舊拿掉」） |
+| aos-loop 自己的 ctl（daemon 繼承） | `paused`、`cmd`＝`pause`／`resume`／`stop`（11-03 ctl 改成下指令，[ctl-commands](ctl-commands.md)；stop＝它跑完這次退 0 留 stack） |
+| aos-loop 自己的 state `phase` | `running`、`waiting`、`paused`、`done`、`stopped`（**今天的字，不動**） |
+| aos-daemon-ctl 子命令 | `add`、`rm`、`start`、`stop`、`pause`、`resume`（＋看的 `ls`、`where`） |
+| 手把 `procs_ctl.json`／信的 key | `procs`、`procs_added`、`procs_removed`、`procs_stopped`、`procs_started`（名字的陣列；§ 2c） |
+| eca（另一批） | `stop`→daemon 的 stop、`start`→start、`remove`→`rm`；字照這張 |
+
+### 1. 名字總表（改前 → 改後）
+
+| 面向 | 改前 | 改後 | 備註 |
+|---|---|---|---|
+| daemon.json 名單 | `loops`＋`execs` | **`procs`**＝`{名字: proc}` | 可照舊 `{"$ref": [檔, …]}` 拆檔 |
+| 每項怎麼起 | 看在哪份名單 | **看寫法**（§ 2）：字串／陣列、或只有 `exec`（＋`ws`、`stack`）的物件＝aos-exec 一次；其他物件＝包成子 aos-loop | 沒有 `kind` |
+| 每項的 stack | 一律小格 | 選填 **`stack`**（§ 2b）；沒寫＝`procs/<名字>/` | daemon 的 key，不灌進 `loop.json`，相對路徑從 daemon 的 cwd 算 |
+| 手把 | `loops_ctl.json` | **`procs_ctl.json`**（key `procs_ctl`；沒寫＝預設名、null＝不開） | 主題在前（R7） |
+| 手把認的 key | `loops`、`*_added`、`*_removed` ×2、`seq` | **`procs`**、**`procs_added`**、**`procs_removed`**、**`procs_stopped`**、**`procs_started`**、`seq` | 期望表＝（ctl 的 `procs`，沒寫＝底）＋added－removed，先加後減照 N-54；stopped 集合同一套（§ 2c） |
+| 狀態窗 | `loops_state.json` | **`procs_state.json`**（key `procs_state`） | — |
+| 狀態窗的表 | 兩張 | **`procs` 一張**，每列 `{pid, started_at_ticks, phase, code, signal, stack, ws?}`；`phase`∈ `running`／`stopping`／`stopped`；多一欄 **`stack`**（絕對路徑，一律寫） | adopt、`where` 靠它 |
+| 切檔資料夾 | `loops_state_loops/` | **`procs_state_procs/`** | 現成規則 |
+| 信箱 | `loops_ctl_mailbox/` | **`procs_ctl_mailbox/`**（key `procs_ctl_mailbox`） | body 認 `procs_added`、`procs_removed`、`procs_stopped`、`procs_started` |
+| 小格 | `loops/<名字>/` | **`procs/<名字>/`**（沒寫 `stack` 時） | loop 型小格有 daemon 寫的 `loop.json`，exec 型沒有——要分哪種看這個 |
+| log 行 | 有 `table` | **拿掉 `table`** | — |
+| aos-daemon-ctl | `add`／`rm`／`ls`（兩張表、`loop`／`exec` 欄）、捷徑 | `add [--name N] [--ws WS] [--stack S] XXX [-- 參數...]`、`rm`、**`start`／`stop`／`pause`／`resume`**、`ls`（一張表、沒種類欄：`名字 TAB phase TAB pid TAB code TAB ws`）、`--json` 印 `{"procs": …}`、`where`（只認表上的）；捷徑那套隨另一批拿掉 | § 2c 第 8 條 |
+| 錯誤訊息 | 「loops 的名字 …」 | 「procs 的名字 …」 | 代號不變；新代號 `CtlMissing`（§ 2c） |
+| 環境變數、旗標 | `AOS_DAEMON_STACK`、`--daemon-stack`、`--enable-logs` | 不動 | — |
+
+一句話：**daemon 管的東西叫 procs；一份名單，寫成「要跑什麼」就跑一次、寫成 loop 設定就包成 loop；每項可用 `stack` 換掉小格；add／rm 插拔、start／stop 起停（stack 留著）、pause／resume 暫停；手把 `procs_ctl.json`、窗 `procs_state.json`、信箱 `procs_ctl_mailbox/`。**
+
+### 2. 看寫法決定怎麼起（代定）
+
+1. **字串、陣列**（`"../tick"`、`["/bin/sleep", "2"]`）＝**aos-exec 一次**。跟全體系「字串＝aos-exec 的目標」（C-55、N-28）同義；使用者說的基石。（今天 `loops` 裡的字串會被包成子 loop，改掉。）
+2. **物件，key 只有 `exec`、或再加 `ws`／`stack`**＝**aos-exec 一次**。這就是今天 `execs` 物件的全部寫法（10-30 `ws`、11-02「6.要」的單子）加 `stack`。
+3. **其他物件**（多了任何一個 key：`max`、`interval_ms`、`ctl`、`state`、`body`、`envs`……）＝**loop 設定、包成子 aos-loop**；daemon 只解自己認得的幾格，其餘原樣交給子 loop、不驗。不必列清單——不是第 2 種的最小形狀就是給 aos-loop 的。
+4. **沒有 `exec` 的物件**＝第 3 種，交給子 loop 退 1「沒有東西可跑」（今天就這樣）。
+5. **同名改寫法**：已在跑的不重起（N-54「名字已在表上的不看設定變了沒」）；等它 stopped／被 rm 再放回才照新寫法。取代 10-30「種類不一樣＝收掉重起」。
+6. **`aos-daemon-ctl add` 的 loop 型一定帶 `ctl`／`state`**（沒寫就補 `ctl.json`／`state.json`，跟 daemon 補的一樣、語意零改變），所以只有 `{"exec": …}` 的 `loop.json`（例 `demo/self-improve`）不會被當成跑一次。
+7. **不標哪種**：要分看小格有沒有 `loop.json`。`Child::once` 留在記憶體（起的時候判）；adopt 接回的不知道也不需要（收法一樣）。
+8. **名字唯一**：一個 JSON 物件，同名只剩一個；`check_apart` 退場。
+9. **唯一的坑**：daemon.json 直接寫 `"x": {"exec": "fsm.json"}` 想要不停跑的 loop，會變跑一次；要 loop 就寫一個 loop 的 key（`"interval_ms": 0`），N-28 補例子。
+
+跟原則對過：C-55 雙形都收、N-28 既有讀法；C-56 管的是同一 key 的特定值偷換行為，這裡是形狀決定交給誰。**不列衝突。**
+
+### 2b. 每個 proc 自己的 `stack`（代定）
+
+1. **key 與值**：物件寫法選填 **`stack`**＝非空字串；`null`＝當沒寫（同 `ws`）；其他型別＝寫壞（daemon.json CfgBad、ctl 不採用、信壞信）。字串／陣列沒地方放，要指定就寫 `{"exec": 它, "stack": S}`。
+2. **相對路徑從 daemon 的 cwd 算**（同 `ws`、子項 `exec`），讀進來就轉絕對；`aos-daemon-ctl add --stack S` 送信前從**呼叫當下的 cwd** 轉絕對（同 `--ws`）。`$env`／`$ref` 照 N-45 解（列進 `resolve_keys`）。
+3. **daemon 怎麼用**：`AOS_STACK=<S>/`（取代小格）；`AOS_DAEMON_STACK` 照舊；loop 型 `loop.json`／`ctl.json`／`state.json`、單子的 `exec.json`、`stderr.txt` 都寫進 S。**S 不在就建**（`mkdir -p`；跟另一批 `aos-exec --stack` 同一條、今天 `make_cell` 建小格同一件事）；建不了＝MkdirFailed。
+4. **不查、不擋**（C-52、N-28）：S 裡有別的東西、兩個 proc 同一個 S、S 指到 daemon 自己的 stack、S 是 symlink——都不管，使用者自己承擔。**不用捷徑**：`procs/<名字>/` 根本不建。
+5. **`procs_state` 每列多 `stack`**（絕對路徑；預設小格也寫）。**adopt** 與 **start** 照列上的 `stack`——這是「記錄在名單上」在狀態窗的對應；沒有這欄 stopped 的就起不回原處。
+6. **`where NAME`**（另一批加的）：**只認表上的**（running、stopping、stopped 都在表上）→印列上的 `stack`；表上沒有＝錯（代號沿用另一批），不看 `procs/<名字>/` 在不在；另一批原定的備案拿掉。要「不跑但查得到」用 stop，不是 rm。**11-03 實作**：指令照另一批使用者的寫法是 `aos-daemon-ctl where --stack 名字`（[stack-where](stack-where.md)），本檔各處的 `where NAME` 都是指它；印列上的 `stack`。
+7. **拼小格路徑的讀者**（aos-eca-ctl、ai_tools `cell_run`、quiet.py、常駐 bob `relay`）改成先讀列上的 `stack`（或叫 `where`）。
+8. **`ws` 跟 `stack` 各管各的**（`AOS_WS`／`AOS_STACK`）。另一批拿掉捷徑後，「cd WS 打 aos-say」改成 `aos-exec --stack $(aos-daemon-ctl where NAME) …`——bin README 寫例子。
+9. **`rm`** 不拆捷徑、不清 S。
+
+### 2c. 起、停、暫停（代定）
+
+1. **手把與信多認 `procs_stopped`（要停的名字）、`procs_started`（要起的名字）**，名字的陣列（C-54 R4 狀態詞，同 `procs_added`／`procs_removed`）。stopped 集合跟期望表同一套：底（記憶體；起來時＝adopt 接回的 stopped 列）由信改（`procs_stopped` 加、`procs_started` 減）；ctl 每圈疊上去（先加後減；同名兩邊都寫＝起）。N-06「沒寫＝回初始值」：ctl 拿掉名字＝起，要一直停就一直寫。寫壞＝整份不採用／壞信。
+2. **stop（loop 型）**：名字在期望表又在 stopped 集合、行程活著→daemon 往它的 `ctl.json` 寫一道指令 `{"cmd": "stop", "seq": N}`（ctl 11-03 改成下指令，見 [ctl-commands](ctl-commands.md)；原規劃寫 `{"stopped": true}`）（讀改寫、`seq`＋1、N-05——N-54 原文「要暫停、停掉某個子 loop＝直接寫它的 ctl」），讓它**跑完這一次自己退 0**，不 SIGTERM、不殺半路的身體（「loop 原生支援休眠」）；等的這段列 `stopping`、沒有時間上限（N-28 ①）。退了之後**列留在表上**：`{"phase": "stopped", "pid": null, "started_at_ticks": null, "code": 0, "signal": null, "stack", "ws"?}`；stack 不碰。同一封信 add＋stop→列直接 `stopped`、stack 先不建。
+3. **start**：從 stopped 集合拿掉→下一圈（**不用先清 ctl**：ctl 改指令後起來第一次讀的那份當基準線、不執行，[ctl-commands § 2](ctl-commands.md#2-loop-怎麼知道這道是新的沒有信箱)；原規劃「先清 `stopped`」作廢）「表上要有、沒在跑」照常用**列上的 `stack`** 再起（重寫 `loop.json` 同一格）。起來是跑還是暫停看它自己 state.json 的 `paused`（[ctl-commands § 4](ctl-commands.md#4-現在暫停中記在哪再起時怎麼辦代定)）。**只有指令叫起**：信來、ctl 別的 key 變、`procs_added` 同名都不會把 stopped 的拉起來（同名 add＝設定換掉、停照停）。
+4. **pause／resume（loop 型）**：aos-daemon-ctl 不經 daemon，`where NAME` 拿 stack、往它的 `ctl.json` 寫 `{"cmd": "pause"}`／`{"cmd": "resume"}`（[ctl-commands](ctl-commands.md)；N-05 暫存改名）。daemon 不轉述 paused（不讀子項 state，C-52）；要看讀它的 `state.json`（`aos-listen --status`）。
+5. **exec 型只有跑和拔**：`procs_stopped`／`procs_started` 裡的名字是 exec 型→ctl 整份不採用、`ctl_warning`「exec 型 X 沒有 stop」；信＝壞信、`mailbox_warning` 同句、有 `reply_to` 回 `{"applied": false}`。aos-daemon-ctl 的 `start`／`stop`／`pause`／`resume` 先看 `where NAME` 的 stack 有沒有 daemon 寫的 `loop.json`：沒有→**`CtlMissing`** 退 1「X 沒有 ctl（exec 型只有跑和拔）」、不送信；有才動手（daemon 再驗一次）。要一次性的東西能停，寫成 `max: 1` 的 loop。
+6. **stopped 的被 rm**：列與集合都拿掉；它 `ctl.json` 裡的 `{"cmd": "stop"}` 留著沒事（基準線，ctl-commands § 2）。**繞過 daemon 自己往子 loop 的 ctl 寫 `{"cmd": "stop"}`**：子 loop 退 0，daemon 看到的是「退了」→照 11-02 從表上拿掉（＝拔掉，不是 stop；衝突 2 使用者「照舊拿掉」）；掛在 daemon 下要停就走 daemon。**不在期望表的名字出現在 `procs_stopped`／`procs_started`**→不管。
+7. **adopt**：`phase: stopped` 的列接回成 stopped（不起、不判活）、名字進底的集合；其他列照舊 pid＋`started_at_ticks` 對得上才接。持久化就是 state 窗（N-28「state 窗就是 save 檔」），不另開檔。
+8. **aos-daemon-ctl 子命令**：`add`／`rm` 照舊送信；`stop NAME`／`start NAME` 送 `{"procs_stopped": [NAME]}`／`{"procs_started": [NAME]}`、印信號；`pause`／`resume` 直接寫（第 4 條）；`ls` 的 `phase` 是 daemon 看到的三個字。
+9. **daemon 自己的 ctl `paused`／`stopped`**：daemon 暫停時照 10-29 § 四 2 不調表（起停也等解除）；daemon `stopped`＝收掉活著的子項（P-36）、stopped 的列照寫進最後一份 state、退 0；再起 adopt 接回 stopped 的、照名單起其他的。
+
+跟原則對過：「要不要起」記在 daemon 這層（表），「怎麼停下來」用 loop 自己的 ctl（N-54 原文）；暫停完全是子 loop 的事——各管一層（C-52）；key 形狀＝N-54 既有；持久化＝N-28。**沒有新的衝突**（衝突 2 已答：照舊拿掉）。
+
+### 2d. ctl 的 key 與 state 的 `phase`：對過名詞表，不用換字（代定）
+
+使用者「ctl 這塊可以的話也跟著這些名詞走，比如 stopped 改 paused」「state 也是」。對過 § 0 的表：aos-loop 的 ctl `paused`＝pause／resume 那態、`stopped`＝stop 那態（跑完這次退 0、stack 留著、再起 aos-loop 就接著）——**兩個字各管一態、今天就在表上**，使用者例子裡的「stopped 改 paused」會把兩態併成一個，不是他要的；`stopped` 不改。state 的 `phase` `running`／`waiting`／`paused`／`done`／`stopped` 五個字也都在表上（`waiting` 是 running 的細分、`done` 是「自己走完」、訊號與自己出錯併進 `stopped`——「同一種狀況挑一個字」）。所以 **aos-loop 的 C++ 不用為名詞改任何字**；要改的只有條文把這張表寫進去（N-06／N-07／N-09 加「11-03 名詞表」一句、C-54 R4 例子）。今天「ctl 的 `stopped` 會殘留、再起就馬上退」那個坑，由 [ctl-commands § 2](ctl-commands.md#2-loop-怎麼知道這道是新的沒有信箱) 的基準線拿掉（起來第一次讀的 ctl 當已看過）；ctl 的 key 從 `paused`／`stopped` 改成 `cmd`＋動詞，state 的五個 `phase` 不動。
+
+### 3. C++ 改哪（`impls/aos-daemon/src/`；aos-loop 零改動）
+
+| 檔 | 做什麼 |
+|---|---|
+| `daemon/daemon.hpp` | 檔頭說明改統稱；`loops_`／`execs_`→`procs_`；`want_`／`want_execs_`→`want_`＋`stopped_`（名字集合）；`read_loops`／`read_execs`／`check_apart`→**`read_procs`**（解指示詞、`check_name`、照 § 2 判、`fix_ws` 擴成 `fix_paths` 處理 `ws`／`stack`）；`reconcile(want)` 一個參數；`ended_` 只記名字；`Child` 多 `stack`；預設名註解 |
+| `daemon/daemon.cpp` | 建構子讀 `procs`（舊 key 不理）、預設名 `procs_ctl.json`／`procs_state.json`／`procs_state_procs/`；拿掉 `check_ctl` 的 `ctl_note_`；`adopt` 一張表、`stack` 從列上接、`stopped` 列接成 stopped；`log_line` 拿掉 `table`；`reconcile`：拿掉 `:568` 種類比對、小格＝`stack` 或 `procs/<名字>`、stopped 集合（寫子 loop ctl `stopped`、列 `stopping`→`stopped` 不拿掉、不起；拿掉集合→清子 loop ctl 的 `stopped` 再起）；子項自己退了照 11-02 從表上拿掉，只有在 stopped 集合裡的退了才留 `stopped`（衝突 2「照舊拿掉」）；`check_name` 訊息 |
+| `daemon/windows.cpp` | `read_procs_ctl` 認 `procs`、`procs_added`、`procs_removed`、`procs_stopped`、`procs_started`、`seq`；`check_lists` 名單走 `read_procs`、三個名字陣列同 `procs_removed` 的檢查、`procs_stopped` 有 exec 型＝不採用；`write_more` 一張表、列多 `stack`、`phase` 三個字；`write_parts` 一張 |
+| `daemon/mailbox.cpp` | `apply_letter` 認四個陣列 key＋`procs_added`；底多 `stopped_`；`procs_removed` 同時清集合；exec 型 stop＝壞信；「兩半同名」段刪 |
+| `child/child.cpp`／`child.hpp` | 小格＝給的路徑（預設 `procs/<名字>/`）；指定 `stack` 時 `mkdir -p`；`spawn`／`spawn_exec` 形狀照 § 2；`ws`／`stack` 不灌進 `loop.json`；`row()` 多 `stack` |
+| `README.md`、`bin/aos-daemon` 檔頭 | 名字同步；目錄樹；加「寫法決定怎麼起」「自己的 stack」「起停暫停」三段與 § 2 第 9 條那個坑 |
+| `tests/test_cli.py`、`tests/test_demo.py` | 字串改名（約 400 行）；新案：字串／最小物件＝跑一次、多一個 key＝loop、同名改寫法不重起、舊 key 不理、`--json`；`stack`（落在 S、不在就建、相對從 cwd、`$env`、列上有、adopt 接回、同一 S 不擋、null／非字串）；起停（stop 寫子 ctl `stopped` 跑完退、列 `stopped`、不重起；start 清 ctl 再起同一 stack、ctl 有 `paused` 起來是暫停；ctl 拿掉名字＝起；add＋stop＝列 stopped 不起；exec 型 stop＝不採用／壞信；stopped 被 rm；`kill -9` daemon 再起 stopped 的不被起；daemon paused 時等解除；信來不叫起）；刪 `check_apart`／種類重起那幾案 |
+
+行為上真正變的：名單一份、`loops` 裡的字串改跑一次、同名改寫法不重起、`ctl_note_` 拿掉、log 少 `table`、每項可指定 `stack`、多了 stop／start（stopped 的列）。期望表算法、信怎麼套、切檔、判活、log 開關不變。aos-loop、aos-exec、aos-fsm 零改動。
+
+### 4. 舊名怎麼辦（遷移；「當沒看到」）
+
+- 不留別名、不過渡、不報錯：舊 key 照 C-48 忽略；程式不留任何舊字串比對（含 `ctl_note_`）。daemon.json 只寫 `loops` 的舊檔起來＝純監工空跑；手把／信只有舊 key＝什麼都不做。
+- 在跑的舊 stack：先 `ctl.json` 寫 `{"stopped": true}` 讓舊 daemon 收掉子項、寫好 state 再走，再改 daemon.json、起新的。新 adopt 只讀 `procs_state.json`，舊 `loops_state.json` 上的子項不接——舊 daemon 若被 SIGKILL，它的子項會變孤兒、新 daemon 又起一份；一定讓舊的自己收工。升級後 `aos-daemon-ctl ls` 自己對一眼。
+- 舊檔殘留（`loops_*`、`loops/`）不再讀寫、自己 `rm -r`；eca 小格搬不搬使用者決定。
+- 試驗場 `daemons/main/daemon.json`、`agents/resident_bob`（`relay`、`_entry`、README）由實作者在試驗場改。
+
+### 5. 條文、名詞、縮寫表怎麼補（只加 11-03 註，不改寫原文）
+
+- **N-28**（[04](../../../docs/NORMS/04-基礎設施-loop與daemon.md)）：補「11-03 改口：`loops`／`execs` 統稱 `procs`」——daemon 多的 key 是 `procs`、`adopt`、`procs_ctl`、`procs_state`、`procs_ctl_mailbox`；每項看寫法（§ 2，含那個坑）；同名改寫法照 N-54；小格 `procs/<名字>/`、選填 `stack`（§ 2b）；`procs_state` 一張表、列多 `stack`、`phase` 三個字；切檔夾 `procs_state_procs/`；舊 key 照 C-48。段首一句舊名對新名；10-20 ①「字串包成 loop」11-03 起改跑一次；11-02「子項結束後不留名單」照舊、只補「daemon 自己下的 stop 例外」一句。
+- **N-54**：手把認 `procs`、`procs_added`、`procs_removed`、`procs_stopped`、`procs_started`、`seq`；信認後四個；stop＝daemon 寫子 loop 的 ctl `stopped`（N-54 原文那句就是這條）、列留 `stopped`；start 清 ctl 再起同一 stack；只有指令叫起；exec 型只有跑和拔（使用者原文）。
+- **N-06、N-07、N-09**（[05](../../../docs/NORMS/05-基礎設施-窗.md)）：加「11-03 名詞表」一句——動作 add／rm／start／stop／pause／resume，狀態 running／paused／stopped（＋自己走到的 waiting、done）；aos-loop 的 `paused`／`stopped` 與五個 `phase` 不改字；N-07 10-29「daemon 的 `paused`」旁加：子項的暫停是子 loop 自己的 ctl、stop 是 daemon 手把＋它替子 loop 寫的 `stopped`，兩層各管各的。N-43 不動。
+- **N-13**：補「管別人的窗叫 `<被管的東西>_ctl`／`_state`——daemon 管 procs，所以 `procs_ctl.json`／`procs_state.json`」。
+- **C-48**：加例子「程式改名後的舊 key 也是不認得的 key，一樣忽略（使用者 11-03『當沒看到』）」。
+- **C-54**：10-23「daemon 管的 loop 叫 `loops`」補「11-03 統稱 `procs`」；R4 例子加名詞表那組字；R7 例補 `procs_ctl`。
+- **C-75**／[附錄1 名詞](../../../docs/CONCEPTS/附錄1-名詞.md)：加 **proc** 一列（會跑、會交流的東西；daemon 底下不論包成 loop 還是跑一次都是 proc）、加名詞表的連結。[縮寫表](../../../docs/CONCEPTS/abbr.json) `proc` example 加 `procs`。
+- **NORMS.md** 命名段加一條、主題表補一句、[附錄1 條號表](../../../docs/NORMS/附錄1-條號表.md) N-28／N-54 補「11-03 改口」、[附錄2 各批出處](../../../docs/NORMS/附錄2-各批出處.md)加一批。
+- 其他提到舊名的（[CONVENTION/01](../../../docs/CONVENTION/01-保證佈局入口.md)、[NORMS/06](../../../docs/NORMS/06-基礎設施-命令列與指示詞.md)、[NORMS/10](../../../docs/NORMS/10-基礎設施-定義與工作區.md) N-64 ④）：旁邊加「（11-03 起 `procs`）」。
+- thinking 補註：[ctl-state-names](../02/ctl-state-names.md)「還沒做」與方向題 1→「11-03 定案」；[state 窗](../02/state-window.md#決定11-02-晚使用者實作中陸續裁的)「不要合併了」「仍分開」（「結束後不留名單」照舊，11-03 使用者「照舊拿掉」，只補 stop 例外）；[10-29 § 四 1](../../2026-10/29/medium-plan/03-四-aos-daemon-的兩個手把-兩扇狀態窗.md)「窗名 11-03 改 `procs_*`」；[10-30 agent-lifecycle](../../2026-10/30/agent-lifecycle/README.md) `execs` 段；[11-02 常駐 bob](../02/resident-bob.md) 規劃裡 `loops_state.json`／`aos-daemon-ctl` 片段、「閒置停掉再 `--resume` 叫回」可改成 stop／start。10 月紀錄照舊名。
+
+### 6. Python、Lua、demo 改哪
+
+| 檔 | 做什麼 |
+|---|---|
+| `bin/aos-daemon-ctl`、`bin/README.md` | `MAILBOX = "procs_ctl_mailbox"`；`cmd_add` 多 `--stack S`（呼叫 cwd 轉絕對、不驗在不在；空值＝ArgumentsBad），loop 型 `setdefault` `ctl`／`state`、有 `--stack` 多 `stack`；exec 型裸目標或 `{"exec","ws"?,"stack"?}`；`cmd_rm` 送 `{"procs_removed": [名字]}`；新 `cmd_stop`／`cmd_start` 送 `procs_stopped`／`procs_started`、`cmd_pause`／`cmd_resume` 直接改子 loop ctl 的 `paused`（四個先查 stack 有沒有 `loop.json`，沒有＝`CtlMissing`）；`cmd_ls` 一張表、沒種類欄、stopped 的 pid 印 `-`；`--json` 印 `{"procs": …}`；`where` 只認表上的、預設小格 `<D>/procs/<名字>`；捷徑那套隨另一批拿掉；檔頭說明（哪種看 `loop.json`、名詞表、暫停例子） |
+| `extras/eca/bin/aos-eca`、README | `procs_state.json`、`.procs`、小格先用列上的 `stack`；`<名字>/<kind>/` 的 `<kind>` 是 eca 的 claude／codex、跟本題無關（README 分清）；**後續（eca 自己一批，本題只點名）**：`stop`＝`aos-daemon-ctl stop`（留表上、`where` 查得到、`aos-say` 投得進）、`start`＝`start`、`remove`→`rm`＝`aos-daemon-ctl rm`＋刪 stack；判子 loop `phase` 的字不變 |
+| `extras/ai_tools/bin/aos_ai_base.py`、`aos_ai_daemon.py`、`aos_ai_make.py`、`aos-ai`、README、`concepts.md` | `lctl`／`lstate`→`procs_*`；`read_lstate` 解 `procs` 的 `$ref`；`row` 讀 `procs`；`cell_run` 先用列上的 `stack`；`loops_added`→`procs_added`（spec 已是第 3 種）；status 欄名 `procs_ctl_seq`／`procs_ctl_warning`；`running()`、`daemon down`／`up` 的字不變 |
+| `lib/aos/aos_ws.py`、`extras/human/bin/aos_human.py` | 讀 `phase` 的字不變；README 若寫到 daemon 名單名字同步 |
+| `demo/talk/team/quiet.py` | `procs/<名字>/state.json`（或讀列上 `stack`）、訊息 |
+| `extras/langs/lua/aos.lua`、`examples/clocks.lua`、lua README | `aos.daemon{procs = …}`、已知 key 表加 `procs`／`stack`；`clocks.lua` 路徑 `.stack/procs/clock_<n>/` |
+| demo 五份 daemon.json | `loops`→`procs`（每項已有 `max`／`interval_ms`）；`daemon-3` 的 `execs` 併進 `procs`（字串＝跑一次）；`daemon-2` 的 `loops_ctl_mailbox`→`procs_ctl_mailbox`（含 `agent-sam/_entry` 的路徑） |
+| `demo/README.md`、`daemon-2`／`daemon-3` README、`impls/aos-post/README.md` | 目錄樹、信的例子、`cat .stack/procs_state.json`；daemon-3 的「兩種寫法對照」改「同一份名單裡兩種寫法」 |
+| 測試 16 檔＋`test_aos_daemon_ctl` 新案 | 字串改名；`test_aos_daemon_ctl` 加 rm 一個 key、ls 沒種類欄、loop 型帶 `ctl`／`state`、`--stack` 轉絕對、`where` 表上的／表上沒有＝錯、`stop`→列 `stopped`→`start` 同一 stack、`pause`→子 loop state paused→`resume`、exec 型四個＝`CtlMissing`；`test_ai_tools`／`test_eca` 小格路徑改讀列上的 `stack`；原本 `loops` 裡寫字串的測試子項要它是 loop 就改成物件 |
+
+### 7. code map
+
+`wf/workflows/common/code-map/proto8.md`（aos-daemon-ctl 那行）、`proto8/14-aos-daemon.md`（`read_procs`、`read_procs_ctl`、一張表、`stopped_`、`procs/`、拿掉 `check_apart`／`ctl_note_`）、`02-tests.md`／`02-tests-2.md`、`05-demo-其他.md`、`06-周邊工具-3.md`、`13-demo.md`、`07-aos-json.md`（若提到 `loops`）；commit 前對一遍（鐵律 3）。
+
+## 要使用者看的
+
+第二～五版只有**一條新衝突**（衝突 2，已答「照舊拿掉」），其他都照原文定、沒有跟原則打架的地方（不查不擋＝C-52／N-28；不在就建＝另一批 `aos-exec --stack`；key 形狀＝N-54；daemon 寫子 loop 的 ctl＝N-54 原文；持久化＝N-28；名詞對過之後 aos-loop 不用換字）。舊題與答案留在後面。
+
+### 衝突 2（已答：「照舊拿掉」→ (b)）：loop 型自己退了（跑滿 `max`、身體退 10、或你直接在它的 ctl 寫 `stopped`），表上要留成 `stopped`，還是照 11-02 從表上拿掉
+
+- **大白話**：11-02 你定「子項結束後不留名單」——跑完就從 `ls` 消失。今天的四態說表上的 proc 只有 running／paused／stopped 三種，「停了但還在表上、stack 留著、`start` 叫得回」就是 stopped；像 docker 裡行程退了的 container 會留成 Exited、你 `rm` 它才消失。問題是 daemon **分不出**一支子 loop 是「自己跑完」還是「被誰在 ctl 寫了 stopped」——兩種都退 0，daemon 不讀子項的 state（C-52），只有它自己下的 stop 它知道。
+- **選項**：
+  - (a) **loop 型只要退了（不論為什麼）就留成 `stopped`，直到 `rm`**（fable 建議）：跟四態完全對上、跟「rm＝先 stop 再移除」對上；`start` 叫得回（它的 stack 都在）；一個 agent 自己 `{"stopped": true}` 收工＝stop，不是消失；`aos-eca-ctl` 的 stop／start 直接用。後果：`max: 1` 的 loop 跑完會留一列 `stopped` 直到你 `rm`（`ls` 會長、`demo/daemon` 跑完兩列都在）；11-02「結束後不留名單」在 loop 型上翻掉，exec 型照舊消失（「停下來就是沒了」）。同名再 add＝設定換掉、照停；要再跑用 `start`。
+  - (b) 照 11-02：只有 daemon 自己下的 stop 留成 `stopped`，其他退出（跑滿、退 10、訊號、自己寫 ctl）照舊從表上拿掉。後果：少改一條規矩、`ls` 乾淨；但「表上的狀態」多了一種看不見的區分（同樣退 0，daemon 下的留著、自己退的消失），一個 agent 自己收工就從 daemon 消失、叫不回，eca 的 stop 一定要走 daemon 不能自己停。
+- 兩種程式量差不多（都是 `reconcile` 看到子項退了那一段的分岔）。
+- **結果**：(b)「照舊拿掉」。只有 daemon 自己下的 stop 留成 `stopped`；其他退出照 11-02 拿掉。§ 2c 第 6 條、§ 3、步驟表、eca 後續已照改。
+
+### 衝突 1（已答：「1. 當沒看到。」→ (b)）：C-48「不認得的 key 一律忽略」vs 舊 key 報錯
+
+- **大白話**：舊 daemon.json 裡還寫 `loops`，照 C-48 忽略＝daemon 默默空跑；10-25 kernel.json 改名時是 CfgBad。兩個先例打架。
+- **選項**：(a) 舊 key 報錯；(b) 照 C-48 忽略。**結果**：(b)，§ 4 已照改、C-48 補例子。
+
+### 方向題 1（已答：「2.kind這東西沒用吧，刪掉」→ 兩個選項都不選）：`kind` 以後怎麼長
+
+- **結果**：沒有 `kind`，看寫法（§ 2）；以後多一種形式再看它長什麼樣。
+
+## 實作步驟表（不實作；給隊長）
+
+**前提**：① aos-eca-hub→aos-eca-ctl→aos-eca 兩次改名已進 main（`21d54ba5`、`ec2465d7`）。② 另一批「`aos-exec --stack`、`aos-daemon-ctl where`、拿掉 `add --ws` 捷徑」先落地；本題在它之後開工，步驟 3 直接改它的 `where`（只認表上的、預設小格 `procs/`）。③ 衝突 2 已答 (b)「照舊拿掉」：`reconcile` 只有在 stopped 集合裡的子項退了才留 `stopped`，其他退了照 11-02 拿掉。
+
+| # | 改哪 | 做什麼 | 驗證 |
+|---|---|---|---|
+| 0 | **aos-loop**（[ctl-commands § 7](ctl-commands.md#7-改哪)）：`read_ctl` 認 `cmd`／`max`／`interval_ms`／`seq`、比內容判新舊、基準線、起來讀舊 state 的 `paused`；aos-loop 測試 | 先做，§ 2c 的 stop／start／pause／resume 靠它 | `cd proto8/impls/aos-loop && cmake --build build && ctest --test-dir build` |
+| 1 | `impls/aos-daemon/src/daemon/{daemon.hpp,daemon.cpp,windows.cpp,mailbox.cpp}`、`src/child/{child.hpp,child.cpp}` | § 3：`read_procs`、一份 `want_`＋`stopped_`、`procs_*` 預設名、一張表＋列上 `stack`、小格＝`stack` 或 `procs/<名字>/`、adopt、log、起停、拿掉 `check_apart`／種類比對／`ctl_note_` | `cd proto8/impls/aos-daemon && cmake --build build && ctest --test-dir build` |
+| 2 | `impls/aos-daemon/tests/test_cli.py`、`tests/test_demo.py`、`impls/aos-daemon/README.md`、`bin/aos-daemon` 檔頭 | 字串改名＋§ 3 新案；README 三段 | 同上全綠 |
+| 3 | `bin/aos-daemon-ctl`、`bin/README.md`、`tests/test_aos_daemon_ctl.py` | § 6 第一列（`--stack`、`start`／`stop`／`pause`／`resume`、`CtlMissing`、`where`、`ls`） | `python3 -m pytest proto8/tests/test_aos_daemon_ctl.py` |
+| 4 | `extras/eca/bin/aos-eca`、README、`tests/test_eca.py` | `procs_state.json`、`.procs`、列上 `stack`；README 分清 eca 的 kind；stop／start／remove 改法另開一批 | `tests/test_eca.py`、`test_eca_turn.py` |
+| 5 | ai_tools 四支＋README＋`concepts.md`、`tests/test_ai_tools.py`；`lib/aos/aos_ws.py`、`extras/human/bin/aos_human.py` README 若提到 | § 6 | `tests/test_ai_tools.py`、`test_human.py` |
+| 6 | demo 五份 daemon.json、三份 README、`quiet.py`、`agent-sam/_entry`、`impls/aos-post/README.md` | § 6 | `bash proto8/demo/run.sh`；`test_demo.py` |
+| 7 | `extras/langs/lua/aos.lua`、`clocks.lua`、lua README、`tests/test_lua_aos.py` | `procs`、`stack` | `tests/test_lua_aos.py` |
+| 8 | 其餘測試（`test_daemon.py`、`test_loop.py`、`test_human.py`、`test_topdown_galtxt_a.py`、`test_llm_kernel.py`、`test_exec.py`、`test_exec_rules.py`、`test_talk.py`、aos-loop／aos-json 的 `test_cli.py`） | 字串改名；`loops` 裡寫字串的子項改成物件 | proto8 unittest 全套（基準 800 OK，[testing/01-proto8](../../../../wf/workflows/testing/01-proto8.md)）；repo 根 `cmake --build --preset default && ctest --preset default` 8/8 |
+| 9 | 條文：`NORMS/04` N-28、N-54；`NORMS/05` N-06、N-07、N-09、N-13；`CONCEPTS/01` C-48、C-54；`C-54-命名方法` R4、R7；`NORMS.md`；附錄 1、2；`CONCEPTS/附錄1-名詞` proc＋名詞表；`abbr.json`；`CONVENTION/01`、`NORMS/06`、`NORMS/10` 加註 | § 5，只加註，連回本檔 | `/wf-lint` broken=0 |
+| 10 | thinking 補註五份；本檔「決定」已補衝突 2 的答案 | 只加「11-03 推翻／定案，見 procs」 | `/wf-lint` |
+| 11 | code map 八處 | 跟程式對一遍 | — |
+| 12 | 試驗場（不在 git）：舊 daemon `{"stopped": true}` 收工；改 `daemons/main/daemon.json`、`agents/resident_bob`；`rm -r` 舊 `loops_*`、`loops/` | 重起 daemon：`ls`、`add --name nap /bin/sleep -- 2` 做完消失、同名再 add 重跑、常駐 bob 一題來回；`add` 一個只有 `{"exec"}` 的 loop 資料夾被包成 loop；`add --stack /tmp/x --name c ../agents/clock`→`/tmp/x/loop.json`、`where c` 印 `/tmp/x`、`kill -9` daemon 再起接得回；`stop c`→`ls` 是 `stopped`、`/tmp/x/ctl.json` 是 `{"cmd": "stop", "seq": N}`（ctl 11-03 改成下指令；原規劃寫 `stopped: true`）、`clock.txt` 不動、`where c` 印得出、`kill -9` daemon 再起它沒被起、`start c` 接著走（ctl 不清，那道 stop 當基準線，見 § 2c 第 3 條）；`pause c`→`aos-listen --stack /tmp/x --status` 是 paused、`resume c` 接著走；對 exec 型 `nap` 做 `pause`／`stop`＝`CtlMissing` | 使用者親手試一輪（`wf/WAIT_USER.md` 一條） |
+| 13 | 收尾：日誌、[months/2026-11](../README.md) 那列；三個 commit（C++＋impls 測試／周邊＋demo＋測試／條文＋code map＋thinking），每個都要全綠 | — | — |
+
+## 影響面
+
+- **程式行為**：名單一份；一項怎麼起看寫法（`loops` 裡的字串從包成 loop 變跑一次是唯一的語意翻轉）；同名改寫法不重起；每項可指定 `stack`（列多一欄、adopt 照它）；start／stop（stopped 的列、daemon 替子 loop 寫 ctl `stopped`）；pause／resume 走子 loop 自己的 ctl；手把／窗／信箱／小格改名；log 少 `table`；`ctl_note_` 拿掉；舊 key 忽略；`where` 只認表上的。aos-loop、aos-exec、aos-fsm **零改動**（名詞對過不用換字）。
+- **C++**：aos-daemon 六個檔。**Python／Lua**：aos-daemon-ctl（四個新子命令、`--stack`、`CtlMissing`）、aos-eca-ctl、ai_tools 三支、quiet.py、aos.lua＋clocks.lua；aos_ws／aos-listen 讀 `phase` 的字不變。**資料檔**：demo 五份、`agent-sam/_entry`、試驗場。**測試**：16 檔約 610 行改名＋約 15 個新案。**文件**：aos-daemon／bin／ai_tools／eca_ctl／lua／demo／aos-post README、NORMS 七處、CONCEPTS 五處、五份 thinking 補註、code map 八處。
+- **後續另開一批（不在本題）**：aos-eca-ctl 的 `stop`／`start`／`remove` 改走 daemon 的 stop／start／rm（今天 `stop` 是 rm，停著那段 `where` 找不到、`aos-say` 投不進 queue；而且照衝突 2 的答案，eca 自己在子 loop 的 ctl 寫 `stopped` 會從表上消失，所以 stop **一定**走 `aos-daemon-ctl stop`）；試驗場常駐 bob 的「閒置停掉再 `--resume` 叫回」改成 stop／start。
+- **大小**：比 11-02 晚那輪大兩號（C++ 合名單＋起停）；建議三個 commit。
+
+## 實作時代定（11-03，實作者照原則定的，可翻案）
+
+daemon（C++）：
+- **stop 寫的 `seq`**＝max(daemon 自己數的, 子 loop ctl 裡已有的 `seq`)＋1：daemon 重起後自己的號從頭數，不這樣做可能寫出跟子 loop 基準線一模一樣的內容、stop 被當成舊的。
+- 子 loop 的 `loop.json` 寫 `"ctl": null` 或讀不懂：daemon 的 stop 退回 SIGTERM（10 秒後 SIGKILL），一樣留成 `stopped` 列。寫子 loop 的 ctl 寫不了＝`WriteFailed`、daemon 退 1（同寫不了 `loop.json`）。
+- 名字已在 stopped 集合、daemon 還沒寫 ctl 它就自己退了＝照樣留成 `stopped`；等軟停的途中被 rm＝改送 SIGTERM，退了就拿掉。
+- **start 用列上的 `stack`**（就算同名 add 換了設定裡的 `stack`）；信箱接回、沒有設定的 stopped 列，start 照 `<stack>/loop.json` 原樣再起。
+- **起來時的底**＝adopt 接回的 stopped 列＋信；所以 daemon 重起後只把名字從 `procs_ctl` 拿掉不會起，要 `procs_started`。
+- adopt 接回的活著的列是不是 exec 型＝看它的 stack 裡有沒有 `loop.json`；`procs_stopped`／`procs_started` 檢查 exec 型時，表上有的看列、沒有的看寫法。
+- log 只記行程的事：add＋stop 直接成 stopped 列、rm 掉 stopped 列都不印；daemon 停的子 loop 退了印一行 `stopped`。任何一種從表上拿掉都會把名字從底的 stopped 集合拿掉（之後同名再 add 不是停著的）。沒起過的 stopped 列 `code` 是 null，退過的照收到的碼（多半 0）。
+- 錯誤訊息「procs 的名字 …」，key 名照它來自哪份（`procs` 或 `procs_added`）。
+
+aos-daemon-ctl／aos-eca／ai_tools：
+- `where` 照使用者的寫法是 `aos-daemon-ctl where --stack 名字`（§ 2b 第 6 條寫的 `where NAME` 指的是它）；小格只在 `cell_of` 算、讀列上的 `stack`。
+- `pause`／`resume` 寫的 `seq`＝子 loop ctl 裡原本的＋1（內容一定跟上一道不同）；子 loop 的 `loop.json` 寫 `"ctl": null`＝`CtlMissing`；`start` 對已經是 `stopped` 的列不查 `loop.json`（同一圈 add＋stop 的還沒建 stack）。
+- **eca 自己結束的會消失**：CLI 出錯 loop 退 1、或有人直接往它的 ctl 寫 `{"cmd": "stop"}`，daemon 照衝突 2「照舊拿掉」把它從表上拿掉，aos-eca 就找不到它（`ls` 不列、state／start／stop／rm＝InstanceMissing），原本的「出錯停了」「收工了」與掃小格的 `ended()` 拿掉；要接著用就同名再 `add`（同一個 stack，history、`cur/` 的信、session 都接著）。**這是看得見的少了一條路**（以前出錯停了可以 `start` 掛回）。
+- 撞名只看 daemon 表上的列（任何 proc，不只 eca）；留下來的 stack 資料夾不算撞名（§ 2b 第 4 條「S 裡有別的東西使用者自己承擔」）。aos-eca `rm` 刪整個列上的 stack（含使用者 `--stack` 給的）。aos-eca `add` 只等列出現在表上（拿掉看小格 state.json 的備案；起來馬上死的 30 秒後 Timeout）。
+- `aos-ai make daemon --loop` 改名 `--proc`、不留別名（字串值現在是跑一次，叫 loop 會誤導）。
+
+## 8. 收工時改寫成休息中：sleep／wake（11-03 晚）
+
+### 使用者原文（11-03 傍晚，逐字）
+
+頂層說明現況：daemon 收工（`aos-daemon-ctl` 對 daemon 寫 stop、或 Ctrl+C）時，還在跑的子項被收掉、從表上擦掉，只有本來 `stopped` 的留著；再開只起 daemon.json 寫的。使用者：
+
+> 改寫成休息中
+
+接著：
+
+> 還記得嗎？我們有start/stop, sleep/wake, pause/resume，我們缺了sleep/wake
+
+### 決定
+
+- daemon 收工時還在跑的**不擦名字**，表上改寫成「休息中」，用 **sleep／wake** 這對字：表上的 `phase` 多一個 **`sleeping`**，daemon 再開時把它叫醒（wake）。
+- 這推翻本檔 § 決定「sleep／wake 這對字只留在名詞表當同義詞，不當指令」與 § 0 名詞表 `stop` 那列的同一句：sleep／wake 不是 stop／start 的同義詞，是獨立的一態（stopped＝人叫停的、要 start；sleeping＝daemon 收工時順手睡的、開門自己醒）。
+
+### 頂層代定（使用者不在時頂層先定，可翻案）
+
+1. 收工時還在跑的 **loop 型**子項 → 表上記 `sleeping`（不從表上拿掉，stack 留著）；你親手 stop 的照舊 `stopped`。
+2. daemon 再開（adopt）時認得 `sleeping` 的列，第一圈 reconcile 用列上的 `stack` 再起它（wake）；`stopped` 照舊不起。
+3. 收工時本來暫停中的：一樣記 `sleeping`，醒來後仍是暫停（子 loop 自己的 state.json 記著 `paused`，用同一個 stack 起來就自然接回）。**已核對**：aos-loop 收到 SIGTERM 時最後一份 state.json 寫 `phase: stopped`、`paused: true`，起來時 `read_old_paused` 讀到就先暫停（測試 `test_sleep_wake_paused_and_sigint`）。
+4. 先**不開放** `aos-daemon-ctl sleep`／`wake` 給人用（只是 daemon 收工／開門自己用）；之後使用者要再加。
+5. exec 型（跑一次的）收工時照舊拿掉（「他停下來就是沒了」）。
+6. 被 `kill -9` 的 daemon（沒走收工）不在範圍內，照舊（子項還活著、adopt 接回）。
+7. `ls`／`state` 顯示 `sleeping`；`aos-eca ls` 的狀態欄也認得（`label` 照印 phase）。
+
+### 使用者回覆（11-03 晚，看完代定與實作後）
+
+頂層問：sleep／wake 要不要開放成指令？daemon 出錯退出也讓子項睡、開門自動起回來，可以嗎？使用者：
+
+> 1.先不用開放。2.出錯是邊緣情況，面對這樣子非正常流程會出現的狀況，我們最要緊的就是保障他能夠輕鬆回復原本狀態，以及收斂錯誤處理路徑，方便後續理解與處理。
+
+決定：代定 4（不開放 `aos-daemon-ctl sleep`／`wake`）定案。出錯退出照現在做法：跟正常收工走同一條 `finish`（錯誤處理路徑收斂成一條），子項睡下、再開自己醒（輕鬆回到原本狀態）——符合上面這句判準，不另開一條「出錯時」的路。
+
+### 實作時代定（11-03 晚，實作者照原則定的，可翻案）
+
+- **什麼算「收工」**：走 aos-loop `finish` 的都算——daemon 自己 ctl 的 `{"cmd": "stop"}`、SIGTERM／SIGINT／SIGHUP、跑滿自己的 `max`、身體出錯或 daemon 自己出錯退出（P-36「不論哪一種都先收掉子項」那條路）。睡的方法照舊是 SIGTERM（10 秒 SIGKILL），不改成往子 loop 的 ctl 寫 stop：收工要快，跟以前收掉子項同一條路。
+- **怎麼判「收工時還在跑」**：`finish` 開始那一刻表上 `running` 而且行程活著的 loop 型；送了 SIGTERM 之後不管它是因為訊號退、還是剛好自己跑完退，都記 `sleeping`（daemon 分不出，C-52 不讀子項 state）。已經自己結束的（`done`）照舊拿掉；收的途中（`stopping`）的：daemon 下 stop 等它退的＝`stopped`、被 rm 收的＝拿掉。
+- **列長什麼樣**：同 `stopped` 的列——`pid`、`started_at_ticks` 是 null，`code`／`signal` 是收到的（多半 `code` 143），`stack`、`ws` 照留。log 多一個 phase 字 `sleeping`（行程結束那行），wake 起來印一行 `running`。
+- **wake 走 start 那條路**：`sleeping` 的列 adopt 接回時**不進** stopped 集合，所以第一圈 reconcile 就「表上要有、沒在跑、不在 stopped 集合」→用**列上的 `stack`** 再起（設定照期望表的；信箱接回、只留名的＝照小格裡現有的 `loop.json` 起）。沒有另開一個「起來要 wake」的集合：跟 start 同一段程式，少一套機制（KISS）。
+- **睡著時收到的指令**：daemon 沒在跑時 aos-daemon-ctl 寄的信，開門第一圈先套信再對表——`procs_stopped`＝改成 `stopped`、不 wake（要 `start`）；`procs_removed`＝拿掉；名單（daemon.json＋procs_ctl，信箱模式再加 adopt 接回的）上沒有它了＝拿掉（同 `stopped` 的列）。`aos-daemon-ctl start` 對 `sleeping` 的列不查 `loop.json`（同 `stopped`）。
+- **daemon 開門時自己暫停中**（它的 state.json 記著 `paused`）：跟起停一樣，等 resume 那圈才 wake。`adopt: false`＝不讀舊表、不認 `sleeping`（照 daemon.json 重新起）。
+- **aos-eca**：daemon 沒在跑時它每個子命令都是 `DaemonMissing`，所以 `sleeping` 平常看不到；`label` 不用改程式（非 running 的 phase 照印），只改說明。
+- 實作：`impls/aos-daemon/src/child/child.hpp`（`Child::nap`）、`src/daemon/daemon.cpp`（`finish` 設 `nap`、`look`／`hold` 留 `sleeping`、`adopt` 接 `sleeping` 不進 `stopped_`、`reconcile` 睡著的被 stop 改 `stopped`）；`bin/aos-daemon-ctl` 只改說明與 `start` 的判斷；測試 `impls/aos-daemon/tests/test_cli.py` Q 段三案、`test_demo.py`、`tests/test_aos_daemon_ctl.py` `test_sleep_wake`。
+- **aos-say 對 sleeping 的提醒**（11-04，使用者「修吧」；試驗場實跑發現原本說「另開一個終端機跑它」）：stack 是 daemon 表上 `sleeping` 的列（認法同 `stopped`：`$AOS_DAEMON_STACK` 或預設小格的 `<D>`、samefile 比）＝提醒「重開 daemon 它會自己醒：`aos-exec <daemon 資料夾>`（那個 daemon 的 stack 是 `<D>`）」，不說 start、不多印 `where --stack` 那行；daemon 的定義資料夾哪裡都沒記，只印得出 daemon 的 stack，資料夾寫通用說法。`stopped` 照舊。`aos_human.daemon_stopped` 改名 `daemon_held`（回 phase 與 `<D>`）；aos-listen 的提醒共用 `run_hint`，一起變。測試 `test_human.py` `test_sleeping_on_daemon_hint`。
+
+**行為上真正變的**：以前收工後 `ls` 是空的（或只剩 `stopped`），再開只起 daemon.json 寫的——用 `aos-daemon-ctl add`／`aos-eca add` 掛上去的都不見了，要重新 add；現在收工後它們在表上是 `sleeping`，再開自己起回同一個 stack（eca 的對話、queue 接著）。
+
+
+### 試驗場發現的問題（11-03 晚）
+
+使用者在試驗場（`~/code/playground`）試 sleep／wake，頂層把發現的幾件攤給他。使用者（逐字）：
+
+> 這是使用者自己要承擔的風險
+
+（指同一個資料夾起兩個 daemon。）其餘幾件：
+
+> 剩下都按照建議去修
+
+決定：
+
+- **同一個資料夾兩個 daemon**：不擋，使用者自己承擔。
+- **wake 後 daemon 表上的 ws 欄變空**（`aos-daemon-ctl ls` 那一列、daemon 的 log 少了 `ws`；子項自己照常、`aos-eca ls` 照常）：修。原因：信箱接回只留名的列（設定記 null）wake／start 時照小格裡的 `loop.json` 起，起的那段沒把列上記的 `ws` 帶進去——表上、log 的 `ws` 掉了，子行程的 `AOS_WS` 也沒設（改成繼承 daemon 的）。改法：這條路改用列上的 `ws`（`Child spawn` 多一個 `kept_ws`、`Daemon::start` 帶 `c.ws`）；stopped→start 走同一段，一起修好。測試 `test_cli.py` Q 段 `test_sleep_wake`、`test_sleep_wake_mailbox` 加斷言。
+- **daemon 不加 `--enable-logs` 什麼都不印**：照舊（「應該要改成默認不印」），只補文件：[aos-daemon README](../../../impls/aos-daemon/README.md) 開頭的起法加上 `--enable-logs` 與說明。
+- **收 daemon 用 Ctrl-C**（在 daemon 的視窗按）：README 寫明。往 daemon 的 `ctl.json` 寫 `{"cmd": "stop"}`、上一個行程已經寫過同內容時第二次不生效（同內容＝基準線）那個坑先不處理，使用者選 Ctrl-C。

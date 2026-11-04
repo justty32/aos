@@ -7,7 +7,7 @@
 （骨架 `aos::loop::Loop`；它又帶進 aos-exec、inst、aos-util、aos-directive）與 [aos-post](../aos-post/README.md) 的庫（信箱；它再帶進 aos-lock）。全家慣例見 [impls/README.md](../README.md)。
 規範（語意以它為準）：[N-28、N-54](../../docs/NORMS/04-基礎設施-loop與daemon.md)；窗 [N-06～N-17](../../docs/NORMS/05-基礎設施-窗.md)；`AOS_DAEMON_STACK` [N-63、N-64](../../docs/NORMS/10-基礎設施-定義與工作區.md)。
 
-照「資料夾＝程式」的做法寫（使用者「daemon也用新做法重寫吧」、「照預設」，[ideas § 25](../../thinking/2026-10-19-ideas.md)）。名詞見 [thinking procs](../../thinking/2026-11-03-procs.md)：
+照「資料夾＝程式」的做法寫（使用者「daemon也用新做法重寫吧」、「照預設」，[ideas § 25](../../thinking/2026-10/19/ideas/README.md)）。名詞見 [thinking procs](../../thinking/2026-11/03/procs.md)：
 daemon 管的子項不論包在 aos-loop 裡一直跑的（loop 型）還是 aos-exec 跑一次的（exec 型）都叫 **proc**；**一份名單 `procs`**、**看寫法決定怎麼起**（沒有 `kind`）、**每項可寫自己的 `stack`**、
 daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `stopped`、用同一個 stack 再起）、收工時的 **sleep／開門的 wake**（還在跑的 loop 型列留成 `sleeping`、再開自動起，[下「收工與開門」](#收工與開門sleepwake)）；手把 `procs_ctl.json`、窗 `procs_state.json`（一張表）、信箱 `procs_ctl_mailbox/`、小格 `procs/<名字>/`。
 舊名 `loops`、`execs`、`loops_ctl`、`loops_state`、`loops_ctl_mailbox`、`loops_added`……**當沒看到**（C-48，使用者「1. 當沒看到。」）：不報錯、不提醒。
@@ -64,7 +64,7 @@ daemon.json＝loop.json 的超集（N-28）：
 - **adopt**：讀上次的 procs_state（沒開 procs_state 窗＝沒東西可接；舊的 `loops_state.json` 不讀），`phase` 是 `running`、pid＋`started_at_ticks`（/proc 第 22 欄）對得上的放回表上、不重起（log 也印一行 `running`；接回的 `stack` 照列上的，哪一型看小格有沒有 daemon 寫的 `loop.json`）；
   `phase` 是 `stopped` 的列接成 `stopped`（不起、不判活）、名字進底的 stopped 集合；`phase` 是 `sleeping` 的列接成 `sleeping`、**不**進 stopped 集合＝第一圈 wake（下「收工與開門」）；其他列（`stopping`）不接。接回的不是自己的子行程，之後看 /proc 判斷活不活，結束那行 `code`／`signal` 是 null。
 - **子 loop 被 SIGKILL 時**它小格裡的 `state.json` 停在最後那份（多半 `running`），daemon 不替它改（N-09）；看死活照 N-17。daemon 的 log 那一行是準的（`stopped`、`signal` 9、`code` 137）。
-- 效能（使用者「都修都處理」，[thinking](../../thinking/2026-10-23-daemon-bench.md)）：收子項不原地等；表＝「照加入順序的串列＋名字→那一列的雜湊表」；
+- 效能（使用者「都修都處理」，[thinking](../../thinking/2026-10/23/daemon-bench.md)）：收子項不原地等；表＝「照加入順序的串列＋名字→那一列的雜湊表」；
   沒有 `exec` 時一圈只讀一次 ctl、只對一次表、最多寫一份 state（`waiting`；有變才寫，睡著時兩扇窗都不動）；對表時起子項之前先寫一份 procs_state、之後每起一個寫一次（有變才寫）。
 
 ### 看寫法決定怎麼起
@@ -119,7 +119,7 @@ daemon.json＝loop.json 的超集（N-28）：
 
 ### 收工與開門：sleep／wake
 
-使用者「改寫成休息中」「我們有start/stop, sleep/wake, pause/resume，我們缺了sleep/wake」（[procs § 8](../../thinking/2026-11-03-procs.md#8-收工時改寫成休息中sleepwake11-03-晚)）：daemon 收工時還在跑的不從表上擦掉，改寫成 **`sleeping`**（表上、行程不在、stack 留著），daemon 再開時**自動 wake**。
+使用者「改寫成休息中」「我們有start/stop, sleep/wake, pause/resume，我們缺了sleep/wake」（[procs § 8](../../thinking/2026-11/03/procs.md#8-收工時改寫成休息中sleepwake11-03-晚)）：daemon 收工時還在跑的不從表上擦掉，改寫成 **`sleeping`**（表上、行程不在、stack 留著），daemon 再開時**自動 wake**。
 
 - **sleep**：daemon 收工（自己 ctl 的 `{"cmd": "stop"}`、SIGTERM／SIGINT／SIGHUP，或出錯退出——都走 `finish`）時，還在跑的 **loop 型**照舊 SIGTERM（10 秒 SIGKILL），退了列留成 `{"pid": null, "started_at_ticks": null, "phase": "sleeping", "code", "signal", "stack", "ws"?}`，log 一行 `sleeping`。
   **exec 型**拿掉（「他停下來就是沒了」）；收工前已是 `stopped` 的、等 daemon 的 stop 退的途中的＝`stopped`；被 rm 收的途中的＝拿掉。

@@ -1,6 +1,6 @@
 """test_lua_aos - Lua 寫 aos（proto8/extras/langs/lua）：編出來跟手寫的 agent-ann（tests/fixtures，11-04 前在 demo/）一樣、真跑結果一樣（nvim 外掛與 agent_dan.lua 那幾案 11-03 封存到 proto8/archive/nvim、agent-dan-langs）。
 
-設計：proto8/thinking/2026-10-24-lua-nvim.md。lua／luajit／nvim 都沒有就整份 skip。"""
+設計：proto8/thinking/2026-10/24/lua-nvim/README.md。lua／luajit／nvim 都沒有就整份 skip。"""
 import json, os, re, shutil, subprocess, tempfile, unittest
 from pathlib import Path
 

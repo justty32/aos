@@ -4,7 +4,7 @@
 queue＝<stack>/queue/（說話＝寄一封有序的信）、history＝<stack>/history.jsonl（回答＝最新那則沒有 tool_calls 的 assistant）、
 aos-loop 的 ctl／state 窗。stack＝--stack ＞ $AOS_STACK ＞ <工作區>/.stack/（N-57）；工作區＝--ws ＞ $AOS_WS ＞ cwd（同 aos-exec）。
 工作區的 new/ cur/ out/ done/（舊協議，P-11 的 10-30 改口）不再認。這裡不碰 agent 的定義資料夾、不改 stack 裡的東西（寄信除外）。
-設計與代定：proto8/thinking/2026-10-24-say-listen.md、2026-10-30-agent-lifecycle.md。"""
+設計與代定：proto8/thinking/2026-10/24/say-listen.md、2026-10-30-agent-lifecycle.md。"""
 import json, os, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "bin"))

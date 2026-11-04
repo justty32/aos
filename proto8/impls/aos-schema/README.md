@@ -33,7 +33,7 @@ stdin 讀一份 JSON（規則同全家：空的＝`{}`、多份＝`InputExtra`�
 | `SchemaBad` | SCHEMA檔 讀不了或不是合法 JSON、schema 不合 draft-07、或 `$ref` 指不到（只有這支會吐的代號） |
 | `Internal` | 照理不會發生的例外 |
 
-代號照 [10-23 命名統合](../../thinking/2026-10-23-naming.md)。
+代號照 [10-23 命名統合](../../thinking/2026-10/23/naming.md)。
 
 沒有其他旗標。
 

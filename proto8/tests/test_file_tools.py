@@ -2,7 +2,7 @@
 
 工具一支一支用 aos-exec 叫；錯照 lib 契約：stderr 一行、stdout 最後一行同一行、退 1（遷移前 stdout 是 {"error": 那行}）。
 被看、被改的 aos agent 資料夾是 tests/fixtures/agent-eve 的複本（11-04 前從 demo/agent-eve 複製；掛 lib/base 的 agent-pip 照劇本逐層看、改 loop.json 那案隨 demo 刪了）。
-json_edit 經 aos-json（proto8/impls/aos-json）寫檔。不連真模型。設計：proto8/thinking/2026-10-24-pi-tools.md、2026-10-24-tool-lib.md。"""
+json_edit 經 aos-json（proto8/impls/aos-json）寫檔。不連真模型。設計：proto8/thinking/2026-10/24/pi-tools/README.md、2026-10-24-tool-lib.md。"""
 import json, os, re, shutil, subprocess, tempfile, unittest
 from pathlib import Path
 import own_error  # noqa: E402

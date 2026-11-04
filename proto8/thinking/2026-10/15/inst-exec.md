@@ -1,0 +1,36 @@
+# 2026-10-15 inst 只吃 stdin、aos-exec 當語法糖、TARGET 全拿掉、`$ref` 從所在檔算
+
+← [討論紀錄](../../README.md)｜規範：[N-12、N-35](../../../docs/NORMS/01-總則.md)、[N-21～N-23](../../../docs/NORMS/06-基礎設施-命令列與指示詞.md)、[N-24～N-27、N-30](../../../docs/NORMS/03-基礎設施-inst.md)、[N-36 fsm 格](../../../docs/NORMS/07-基礎設施-組合子.md)｜概念：[C-46 frame](../../../docs/CONCEPTS/05-agent.md)、[C-48 指示詞只是便利](../../../docs/CONCEPTS/01-設計理念.md)、[JSON 格式族](json-families.md)
+
+> 使用者看完本檔未決 A 後要求「整套都給我重新思考」。本檔的約束、原文、決定是使用者拍板的，[第三版](inst-exec-v3.md)、[第四版](inst-exec-v4/README.md)照抄；呼叫機制以第四版為準。
+
+## 約束（放最前面，所有方案都要在這條下成立）
+
+使用者提醒回看 [JSON 格式族](json-families.md)與 C-48 的原文：「不要把指示詞納入正規設計，指示詞是用來拆分 json 檔案和讀 env 變數的，設計中對此的認知只要有『自己的一些檔案可以透過指示詞拆成小檔』這樣就好，不要依賴她。」
+
+所以：**「拿 bob 資料夾當函數、讓它在 workspace 工作」這套呼叫機制，不能依賴 `$ref` 或任何指示詞**（包括曾提議的 `$abs_path`）。`$ref` 的基準只關「拆小檔」好不好用，不是呼叫機制的一部分。呼叫機制只能靠檔案系統本身：cwd、資料夾、檔案。
+
+## 原文（10-15 晚，照貼）
+
+**場景**：「我現在有個 /home/a/workspace/ 資料夾，然後有 /home/a/agents/bob/ 資料夾，然後我會 cd 到 workspace 資料夾，然後跑 `aos-inst ../agents/bob`」「也就是我想要在這個資料夾跑 bob 這個函數，讓他在這個 workspace 工作」「拿 ../agent/bob 作爲函數呼叫，讓他在 ./ 工作，然後我又不想碰環境變數」。
+
+**規範重申**：「當初的規範定下來，就是說 stdin 作爲標準輸入，inst.json 的內容就是走 stdin 進去，這是標準使用，命令行是要空出來的」。
+
+**流程**：「aos-inst 從 stdin 讀到一份 json 後，他就是先按照 aos-inst 自己的 cwd，去解指示詞（$ref/$env），然後是根據解出來的東西，同樣根據 aos-inst 自己的 cwd 去把 stdin/out 等檔案路徑定下來，然後要真正執行之前，再去將 cwd 切到指定的 cwd 路徑。」
+
+**決定**：「首先 $ref 確實應該用該檔案所在的位置開始算」「從 stdin 來，其實更像是在 workspace 中創造一個叫做 inst.json 的檔案，然後將內容交給 aos-inst 這樣。然後 aos-inst TARGET 這樣的用法我覺得應該拿掉，就是完全從 stdin 來就好，要用 aos-exec TARGET 作爲語法糖。」「$ref 確實要改，改之前要派 agent 評估影響」。
+
+**對 `$ref` 影響評估的拍板**：symlink——「不，捷徑我覺得他更像是一個懶得每次都 copy 過去的方法，所以就是從 symlink 所在開始算。」；Python 傳 dict 的基準＝呼叫者 cwd（照推薦）；「TARGET 這東西都拿掉。」（JSON 裡寫的 TARGET 字串與命令列 TARGET 都是）；「aos-tree 我覺得可以先刪掉，這只是個無關緊要的小工具，用來驗証概念用的，看起來好看的東西。」
+
+**新指示詞**（AI 提 `$path`，使用者先改名再質疑）：「那應該改叫 $abs_path」「然後，其實 $abs_path 真的有必要嗎？我覺得不用吧，再想想」。
+
+## 決定
+
+1. **`$ref` 的相對檔名，從那個指示詞所在的檔的資料夾算**，基準＝`dirname(abspath(檔))`，**不解 symlink**（捷徑＝懶得 copy，從捷徑所在算）。stdin 那份＝當成 aos-inst 的 cwd 裡放了一份 inst.json，所以它裡面的 `$ref` 基準是 cwd；Python 直接傳 dict 的基準也是呼叫者的 cwd。`$ref` 取回來的東西裡再有 `$ref`，從被取的那份檔算。（結果的 `id` 另見[第四版](inst-exec-v4/README.md)未決 C。）
+2. **inst 的 `cwd`、`stdin`／`stdout`／`stderr`／`exit` 這些路徑，一律從 aos-inst 自己的 cwd 算**。`cwd` 這個 key 只決定子程式在哪跑，不影響別的路徑怎麼算。
+3. **沒寫 `cwd`＝子程式在呼叫者站的地方跑**。
+4. **aos-inst 拿掉 TARGET，設定只從 stdin 來**（N-12 的標準用法；命令列空出來）。
+5. **新增 `aos-exec TARGET`，給人用的語法糖**（細節見[第四版](inst-exec-v4/02-核心.md#aos-exec第三版照抄只改-a)）。
+6. **TARGET 全拿掉**：命令列的（aos-inst／loop／daemon／fsm／gate 都是）與 **JSON 裡寫的 TARGET 字串**（daemon 的 `children`、閘門的 `target`、kernel 設定裡 gates／judges 的路徑、fsm 的格、tasks 的 argv…）。替代＝**內嵌 inst 物件**（同像性，`(daemon (fsm b c))`）；要拆成小檔就用 `$ref`，那是拆檔便利、不是機制。各處怎麼換見[第四版](inst-exec-v4/02-核心.md#json-裡原本的-target-字串h)。
+7. **刪 aos_tree**（print／inline 小工具）。
+8. **指示詞的定位**照約束：`$ref`＝拆檔、`$env`＝讀環境變數，到此為止。**`$abs_path` 不做**：它唯一的用處就是讓呼叫機制靠它找檔，而呼叫機制不准靠指示詞；單純當拆檔工具它沒有用。

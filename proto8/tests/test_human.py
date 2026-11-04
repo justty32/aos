@@ -8,7 +8,7 @@ agent＝這裡臨時組的 eca 定義（aos-loop 包 bin/aos-eca-turn、CLI 是 
 11-03 前是 demo/agent-nia，它隨 round 那套 agent 刪了，案例改用 eca）；CLI 壞＝PATH 上沒有 claude（CliMissing，信留在 cur/）。
 10-30 eca 第 7 步（去 hub 化）：External 段＝外部 coding agent 常駐（--on-empty idle）時 say／listen 照用、
 runners 只靠 /proc 認得服務者（直接跑、掛 daemon〔11-03 起經 where 拿 stack〕兩種）；stack 的 server.txt 那招刪了。
-設計：proto8/thinking/2026-10-24-say-listen.md。不連網。"""
+設計：proto8/thinking/2026-10/24/say-listen.md。不連網。"""
 import json, os, re, subprocess, tempfile, time, unittest
 from pathlib import Path
 

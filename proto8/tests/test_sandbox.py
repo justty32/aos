@@ -1,6 +1,6 @@
 """test_sandbox - proto8/extras/sandbox 的 aos-sandbox（身分 s6-setuidgid、上限 s6-softlimit、看得到什麼與連網 bwrap）。
 
-設計：proto8/thinking/2026-10-24-sandbox.md。原本的主角「自我改進的被改函數讀不到判準檔」那組案例 11-03 隨 demo/self-improve 封存到 proto8/archive/self-improve/tests/。
+設計：proto8/thinking/2026-10/24/sandbox.md。原本的主角「自我改進的被改函數讀不到判準檔」那組案例 11-03 隨 demo/self-improve 封存到 proto8/archive/self-improve/tests/。
 要 bwrap（沒有整檔跳過）；s6 那幾支照 PATH 找，找不到再看試驗場 ~/code/try/sandbox/s6-root/bin（使用者自己編的，見紀錄），
 都沒有就只跳過用到 s6 的幾個。身分那層用 `unshare --user --map-root-user --map-auto` 當假 root 試（同 proto6 帳號模組的測法），拿不到就跳過。"""
 import json, os, shutil, socket, subprocess, tempfile, threading, time, unittest

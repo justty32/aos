@@ -1,7 +1,7 @@
 """test_memory - proto8/lib/aos/memory（長期記憶庫工具：save／search／read／forget、AOS_HEAP、HeapBad、flock）直接叫。
 
 11-04 前叫 test_meg、還跑 demo/agent-meg（第一題存、換 stack 後第二題靠記憶庫答，連真模型那案也在）；demo 刪了，跑 agent 的案一起刪，工具本體的案留下、改指 lib。
-設計：proto8/thinking/2026-10-24-memory.md。不連網。"""
+設計：proto8/thinking/2026-10/24/memory.md。不連網。"""
 import json, os, subprocess, sys, tempfile, unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path

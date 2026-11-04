@@ -2,7 +2,7 @@
 # aos-mcp - 把 aos-tools 的工具註冊檔（登記檔，例 tools.json）登記的工具當 MCP tools 給外部 agent（Claude Code、pi coding agent 等）叫；stdio JSON-RPC
 # 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。
 # 外面的 agent 只會講 MCP；櫃台把「有哪些工具」交給 `aos-tools ls --json`、「叫一次」交給 `aos-tools call 名`，
-# 自己不懂任何一個工具在做什麼、也不管工具是資料夾、JSON 還是可執行檔（C-52）。設計：proto8/thinking/2026-10-28-aos-tools.md。
+# 自己不懂任何一個工具在做什麼、也不管工具是資料夾、JSON 還是可執行檔（C-52）。設計：proto8/thinking/2026-10/28/aos-tools/README.md。
 #
 # 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [REGISTRY...]
 #   每個 REGISTRY 是一份登記檔的路徑（相對路徑從啟動時的 cwd 算；不是檔＝ToolMissing）；檔名不限

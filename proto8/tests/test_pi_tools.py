@@ -1,7 +1,7 @@
 """test_pi_tools - 仿 pi coding agent 的 read、write、edit、bash（原 demo/pi-tools，10-24 遷移進 proto8/lib/base）。
 
 工具一支一支用 aos-exec 叫（arguments 從 stdin 進、stdout 是結果）。掛上它們的 demo/agent-pip 與那兩案 11-04 隨 demo 刪了。
-不連真模型。設計：proto8/thinking/2026-10-24-pi-tools.md。"""
+不連真模型。設計：proto8/thinking/2026-10/24/pi-tools/README.md。"""
 import json, os, re, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402

@@ -93,8 +93,8 @@
 ---
 
 想看原文：
-[aos-tools](../../../../proto8/thinking/2026-10-28-aos-tools.md)｜
-[格怎麼找](../../../../proto8/thinking/2026-10-28-agent-round/01-白話版.md)｜
-[aos-var](../../../../proto8/thinking/2026-10-31-aos-var.md)｜
-[parts 收斂與 11-01 決定](../../../../proto8/thinking/2026-10-31-parts-round.md)｜
-[固定名字的判準](../../../../proto8/thinking/2026-10-30-eca/10-10-31-使用者原文-turn-的定義檔只認固.md)
+[aos-tools](../../../../proto8/thinking/2026-10/28/aos-tools/README.md)｜
+[格怎麼找](../../../../proto8/thinking/2026-10/28/agent-round/01-白話版.md)｜
+[aos-var](../../../../proto8/thinking/2026-10/31/aos-var.md)｜
+[parts 收斂與 11-01 決定](../../../../proto8/thinking/2026-10/31/parts-round/README.md)｜
+[固定名字的判準](../../../../proto8/thinking/2026-10/30/eca/10-10-31-使用者原文-turn-的定義檔只認固.md)

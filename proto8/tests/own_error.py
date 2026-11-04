@@ -1,4 +1,4 @@
-"""錯誤一行「程式名: 代號 原因」的代號檢查（代號照 10-23 命名統合（thinking/2026-10-23-naming）；使用者 10-22「錯誤訊息多代號也遵循」）。
+"""錯誤一行「程式名: 代號 原因」的代號檢查（代號照 10-23 命名統合（thinking/2026-10/23/naming）；使用者 10-22「錯誤訊息多代號也遵循」）。
 
 各測試檔 import 時呼叫 install()：之後 subprocess.run 與 Popen.communicate 拿回來的文字 stderr，每一行開頭是
 aos-exec／aos-loop／aos-fsm／aos-daemon／aos-tick 的「程式名: 」就檢查代號對不對得上原因開頭（對照表 CODES），再把代號拿掉，

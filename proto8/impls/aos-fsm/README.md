@@ -19,8 +19,8 @@ AOS_STACK=st/ aos-fsm fsm.json; echo $?   # 跑 idle 那格（aos-exec -- idle�
 ```
 
 語意以 [NORMS 組合子 § fsm](../../docs/NORMS/07-基礎設施-組合子.md)（N-36、N-38、N-39、N-41）為準，另照 N-05、N-43、N-60 與 CONVENTION P-07～P-10、P-20、P-21、P-36、P-38；本頁只寫用法與實作。本支是唯一實作（使用者「python版本可以刪掉了。aos-exec/loop/daemon都用C++」）。
-**不寫 `trace.jsonl`**（使用者「整個拿掉」，[thinking 11-03 trace](../../thinking/2026-11-03-trace.md)）：每次只動 `state.txt`。
-格的 `exec` 可以直接放單子（使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」，[thinking 10-24](../../thinking/2026-10-24-exec-relative.md#10-24-exec-直接放單子)）：物件＝aos-fsm 行程內 `run_inst`（aos-loop 的 `run_once`）。
+**不寫 `trace.jsonl`**（使用者「整個拿掉」，[thinking 11-03 trace](../../thinking/2026-11/03/trace.md)）：每次只動 `state.txt`。
+格的 `exec` 可以直接放單子（使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」，[thinking 10-24](../../thinking/2026-10/24/exec-relative/README.md#10-24-exec-直接放單子)）：物件＝aos-fsm 行程內 `run_inst`（aos-loop 的 `run_once`）。
 
 ## 用法
 
@@ -32,7 +32,7 @@ aos-fsm [旗標] 設定檔.json
   目前**沒有旗標**（旗標表是空的，規則同 aos-exec，aos-util 的 `parse_cli`）；`--` 結束旗標。不認得的旗標（含 `--cfg`）＝`FlagUnknown`；沒給、多給＝`ArgumentsBad`
   （原因 `usage: aos-fsm [旗標] 設定檔.json（原因）`）。
 - **fsm.json**：`{"start": 起始狀態名, "states": {狀態名: {"exec": 格, "next": 下一個狀態名}}}`（使用者「fsm.json，現在是用val，幫我改成exec」）。表一定明寫、`next` 只在表上（N-36）；其他 key 忽略（`body`、`_entry`…）。
-  - `next` 兩種寫法（使用者「fsm 的 next 可以按照結束碼分岔」；細節代定、可翻案，[thinking 10-30 aos-round § A](../../thinking/2026-10-30-aos-round.md#a-n-36-分岔的格式結論)）：
+  - `next` 兩種寫法（使用者「fsm 的 next 可以按照結束碼分岔」；細節代定、可翻案，[thinking 10-30 aos-round § A](../../thinking/2026-10/30/aos-round/README.md#a-n-36-分岔的格式結論)）：
     - **字串**＝一個狀態名：格退 0 才寫進 state、fsm 退 0；其他碼 state 不動、fsm 以那個碼退。
     - **物件 `{結束碼: 狀態名, …}`**＝照格的結束碼 c 查：有 `"c"`（沒有就看 `"*"`＝其餘全部，含被訊號停掉的 128＋N）＝把那個狀態名寫進 state、**fsm 退 0**（這一步照表走了，N-43 每層只說自己）；
       查不到＝state 不動、fsm 以 c 退（透明轉交）。例 `"next": {"0": "think", "10": "idle"}`。

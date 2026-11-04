@@ -1,0 +1,77 @@
+# 2026-10-15 意見 1～4：fsm 只管「狀態→inst」、agent＝fsm＋inst、binding 用 json＋資料夾（Lisp 式）
+
+← [討論紀錄](../../README.md)｜原文出處：[SESSION-LOG 最新進度](../../../../wf/SESSION-LOG.md#最新進度)｜相關：[同像性](homoiconic.md)、[JSON 格式族](json-families.md)、[topics/04 agent 當函數](topics/04-agent當函數.md)、姊妹稿 [意見 5～7](opinions-5-7.md)｜規範：[N-36～N-41](../../../docs/NORMS/07-基礎設施-組合子.md#fsm)、[C-46](../../../docs/CONCEPTS/05-agent.md#agent函數binding)、[C-48](../../../docs/CONCEPTS/01-設計理念.md)
+
+> frame 找名字、工具叫 agent、定義的正本現行以 [inst-exec 第四版](inst-exec-v4/README.md) 與 [agent-inherit](../16/agent-inherit/README.md) 為準。
+
+## 原文（10-15 收工後，照記）
+
+1. 「當現在是A狀態的時候，執行指定inst，就這樣，那個狀態內部、inst內部的東西，fsm不該管。」
+2. 「程式方面的實作可以擠在一坨，共用一些lib，但是在實際的資料夾布局和json那塊仍要保持單純」
+3. 「agent基於狀態機，在某狀態下跑某個inst，所以複雜度主要集中在那些inst。然後agent call,binding那塊，我也希望不要用程式去實作，而是應該用現有的這套json+資料夾+inst機制去實現」
+4. 「json加上資料夾，他就是lisp了，用lisp做binding更加舒服」
+
+拍板原文（看完 AI 提案的 15 題）：「fsm的end，我的認知中，就是如果進入這個state，那就執行完該state的inst之後就退出，並且可以多選。是這樣嗎？我希望是這樣。agent在呼叫時，可以選擇frame要放哪。剩下都按照推薦」
+
+## 決定
+
+**`end`**：使用者補充原文：「end那塊，如果表裏面沒有這個狀態也可以。通常來說，如果執行完某個state之後，他返回的狀態不在表裏，fsm會報錯，但如果不在表裏而在end裏，那就是退出。開始改吧」
+
+- `end` 是陣列，可以多個名字；名字可以在表裡、也可以不在。
+- 某格跑完回的 `next`：
+  - (a) 在表裡、不在 end → 照常進入那個狀態。
+  - (b) 在表裡、也在 end → 進入、跑完那格的 inst，然後這個 fsm 結束（巢狀時把那格的結果交給外層、自己回 `start`）。
+  - (c) 不在表裡、在 end → 直接結束，交出去的結果＝剛跑完那格的結果。
+  - (d) 不在表裡、也不在 end → 錯。
+
+**frame 放哪由呼叫方決定**：
+- 表達法：**frame＝被叫者跑的 cwd**，呼叫方用它跑那張 inst 時的 `cwd`（要新建就加 `cwd_mkdir: true`）指定——不新增任何 key。命令列直接叫＝`cd` 到那裡再跑。
+- 預設（使用者可改）：**工具呼叫**沒寫 `cwd`＝呼叫者 `work/` 下一個新號碼資料夾（`work/<n>/`，mkdir 搶號，每次一個新的）；**直接呼叫**（命令列、程式、kernel）沒指定＝當下的 cwd。
+- 指同一個 frame＝接著那裡的 history 繼續（同一段對話）；兩個呼叫同時指同一個 frame 不擋（Q13 拿掉 Busy，「卡死不防護」）。
+
+**其餘 15 題照推薦**（使用者「剩下都按照推薦」）：
+
+- **Q1 格出錯**：格非 0（或沒吐完整 JSON）＝phase 不動，fsm 把格的結果（N-30＋格 stderr 的錯）原樣往外報，fsm 結束碼非 0（使用者：「結束碼不要太依賴，我已經決定規範中只定下：0就是通用正常，非0就是有錯，沒了。」→ N-43）；`error` 變成普通狀態名，要優雅處理就格自己接錯、回 `{"next": "error"}`。
+- **Q2 stdin**：fsm 不給格 stdin，格照自己 inst 的 `stdin`；fsm 只另外接一份 stdout 看 `next`。
+- **Q3 `data`**：拿掉，格之間用 frame 裡的檔傳。
+- **Q4**：`step`／`max_steps` 交給拍它的 loop 的 `times`；`fails`／`max_fails`／`halted` 交給格自己（例 think 連錯 3 次回 `{"next": "halted"}`，halted 是表上普通狀態）；`running` 拿掉（被殺＝phase 沒變＝下一拍重跑，半成品由格自己認）。
+- **Q5**：fsm 不開 ctl、lock，交給 loop；state 窗照必填，只剩 `phase`。
+- **Q6**：`end` 保留（語意照上面改）；N-40「外層設定當預設」拿掉。
+- **Q7 相對路徑**：格的名字從 fsm.json 所在資料夾算；窗與資料從 cwd 算。
+- **Q8 葉子程式**：用指令名（`aos agent think`，在 PATH），不寫相對腳本路徑。
+- **Q10 tools**：資料夾逐項合併＝追加＋同名蓋過；「整份取代」先不支援。
+- **Q12 回傳**：frame 的 `ret.json`（錯＝N-29 `{"error": …}`；沒有＝沒跑完）。
+- **Q13**：TooDeep、Busy 都拿掉，深度靠各層 `timeout_ms`。
+
+## 結論
+
+### 瘦身後的 fsm
+
+設定只剩 `start`、`states`、`state`（窗）、選填 `end`；state 窗 `{"phase": "…"}`。一拍＝讀 phase → 跑那格（stdin／stdout 照那張 inst）→ 照 stdout 最後一份的 `next`＞表上靜態 next＞留原地 換 phase → 吐一行 `{"from", "to"}`＋格的 N-30 結果。結束照上面 end 的 (b)(c)：剛跑的是表裡的 end 狀態，或回的 next 是表外的 end 名字，就把那格結果交外層、phase 歸位 `start`。
+
+fsm 不管的：給格的 stdin 與外層設定繼承（沒有）、`data`／`running`／`fails`／`halted`（格自己）、`step`／ctl／lock（拍它的 loop）、error 格特例與 `error_from`／`last_error`（格自己接錯）。
+
+### agent 的資料夾
+
+定義資料夾（呼叫時不寫）放 `fsm.json`、`loop.json`、`cells/`（intake、think、route、tool、done）、`brain.json`、`system.md`、`tools/`。agent.json 的私有 key（`brain`／`tools`／`system`／`history`／`work`）各自是檔或資料夾；程式都在共用 lib。
+
+### call／binding（Lisp 式）
+
+| Lisp | aos |
+|---|---|
+| 函數本體 | 定義資料夾 `agents/clerk/` |
+| 呼叫時的環境（frame） | 呼叫方指定的資料夾＝被叫者的 cwd |
+| 綁定一個名字 | frame 裡放同名檔／資料夾 |
+| 實引數／回傳值 | `args.json`／`ret.json` |
+| 詞法 vs 動態 | 格的名字從 fsm.json 所在資料夾找；窗與資料從 cwd 找 |
+
+求值規則：① 字串＝名字、物件＝內嵌值（C-48）；② 找名字先找 frame；③ 呼叫＝在呼叫方給的 frame 寫 args.json、要蓋的綁定檔，跑被叫者的 loop；④ 被叫者走進 end 狀態（done）寫 ret.json 並 stop 自己的 loop，或 `times` 用完；⑤ 讀 ret.json。
+
+### 要注意的邊緣（動工時處理）
+
+- 葉子用相對腳本路徑在 cwd 換成 frame 後會壞，所以 Q8（葉子用指令名）是前提。
+- 沒有 `running`，各格要自己認得半成品（think 看 history 最後一則、tool 看 tool_calls 回了沒）。
+- 沒接錯的格會每拍重跑到 loop `times` 用完。
+- 表裡指回自己的遞迴 fsm 不擋，卡死不防護（使用者「好」）。
+- 巢狀時內層 `timeout_ms` 要比外層短。
+- ret.json 要先寫暫存再改名。

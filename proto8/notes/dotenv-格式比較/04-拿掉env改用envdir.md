@@ -1,6 +1,6 @@
 ← [入口 dotenv-格式比較](../dotenv-格式比較.md)｜涵蓋：選項「拿掉 aos 的 `.env`、改在 argv 鏈上接 s6-envdir（或 envdir／chpst -e）」——envdir 補不回來什麼、多出什麼｜上一份 [01-各家做法](01-各家做法.md)
 
-使用者 10-22 追加：「Hmmm，甚至有可能，有了s6-envdir之後，我們甚至不需要.env了。但還是先調查吧」。結果：使用者接著定了 `.env` 的格式（[ideas 10-22 § 3](../../thinking/2026-10-22-ideas.md#3-env-基礎子集與---dotenv-override10-22)），`.env` 留著；下面是換成 envdir 時會碰到的事實，給以後再想這件事的人。
+使用者 10-22 追加：「Hmmm，甚至有可能，有了s6-envdir之後，我們甚至不需要.env了。但還是先調查吧」。結果：使用者接著定了 `.env` 的格式（[ideas 10-22 § 3](../../thinking/2026-10/22/ideas/README.md#3-env-基礎子集與---dotenv-override10-22)），`.env` 留著；下面是換成 envdir 時會碰到的事實，給以後再想這件事的人。
 
 # 1. envdir 補不回來的
 

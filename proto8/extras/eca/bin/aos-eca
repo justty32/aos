@@ -21,7 +21,7 @@ add／rm＝建立與刪除（rm＝aos-daemon-ctl rm＋刪它的 stack、不封�
 
 資料夾的意思：add（和 open 新建的那條）的 XXX＝eca 本身（同 aos-daemon-ctl add XXX）；其他子命令的資料夾＝工作區（或小格裡面）。
   名字、資料夾都認時先比名字；都沒給＝cwd 當資料夾。
-設計：proto8/thinking/2026-10-30-eca.md C 結論 7～10（daemon＋三件 daemon 做不到的事：畫面、對話接回、CLI 自己的 session 檔）；11-03 改動見 eca 18。
+設計：proto8/thinking/2026-10/30/eca/README.md C 結論 7～10（daemon＋三件 daemon 做不到的事：畫面、對話接回、CLI 自己的 session 檔）；11-03 改動見 eca 18。
 沒有自己的常駐 kernel：常駐的是 aos-daemon（信箱模式），以它的 procs_state.json 為準（衝突 2）；每個子命令都是
 「叫 aos-daemon-ctl ＋ 動它 stack 裡 cli_session 的東西」。哪個 daemon＝--daemon-stack ＞ $AOS_DAEMON_STACK（同 aos-daemon-ctl，11-02 從 --daemon／AOS_DAEMON 改名；沒設、不是資料夾、
 daemon 沒在跑〔procs_state.json 的 pid＋started_at_ticks 對不上〕＝DaemonMissing）。不另設 hub 的環境變數（10-28 那個退場，衝突 4）。

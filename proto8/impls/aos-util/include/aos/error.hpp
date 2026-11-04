@@ -21,7 +21,7 @@ struct Error {
 };
 
 namespace code {
-// 代號照 10-23 命名統合（proto8/thinking/2026-10-23-naming）：沒有＝…Missing、不認得＝…Unknown、壞了或不合＝…Bad、
+// 代號照 10-23 命名統合（proto8/thinking/2026-10/23/naming）：沒有＝…Missing、不認得＝…Unknown、壞了或不合＝…Bad、
 // 動作做不成＝動作＋Failed；Internal＝照理不會發生的錯。
 // 命令列、stdin
 inline constexpr const char* ArgumentsBad = "ArgumentsBad"; // 命令列用錯（給了不收的參數、旗標少了值、開關帶值、沒給或多給位置參數）

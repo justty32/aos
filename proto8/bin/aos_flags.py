@@ -11,7 +11,7 @@ Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 刪了，只有它們用�
 不帶值的旗標（開關，10-22 `--dotenv-override`）另給一張表 switches：給了＝opts[值] 是 True，重複給＝一樣，寫 `--x=V`＝Error。不認得的旗標、旗標缺值＝Error；有沒有 XXX 由呼叫者自己判斷（rest 可能是空的）。
 錯誤訊息怎麼印也是呼叫者的事（各程式自己印 `程式名: 代號 usage: …（原因）`）。
 
-錯誤代號（代號照 10-23 命名統合（thinking/2026-10-23-naming）；使用者 10-22「錯誤訊息多代號也遵循」）：Error 帶 code——
+錯誤代號（代號照 10-23 命名統合（thinking/2026-10/23/naming）；使用者 10-22「錯誤訊息多代號也遵循」）：Error 帶 code——
 parse：不認得的旗標 FlagUnknown、其他（缺值、開關帶值）ArgumentsBad。"""
 
 

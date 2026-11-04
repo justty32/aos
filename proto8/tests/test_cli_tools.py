@@ -7,7 +7,7 @@
 驗：非互動模式續同一段對話（session.txt）、attach -d 開畫面後改從 tmux 送字、hook 把回答接進 turns.jsonl、
 人用 attach 接進去打字再 Ctrl-\\ 跳出（pty 模擬）、有人接著時 agent 叫＝SessionBad、各種錯的代號、
 小格的 transcripts/ symlink（10-30 eca 第 3 步；freeze_transcripts 11-02 晚跟著 aos-eca 歸檔一起拿掉）。
-設計：proto8/thinking/2026-10-24-cli-tools.md。需要 tmux（沒有就 skip 畫面那幾個）。"""
+設計：proto8/thinking/2026-10/24/cli-tools.md。需要 tmux（沒有就 skip 畫面那幾個）。"""
 import json, os, pty, re, select, shutil, subprocess, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402

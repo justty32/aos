@@ -3,8 +3,8 @@
 `aos-post - 投遞：把一封信寄進信箱、處理者一封封認領`（NAME，C-54 R1）
 
 **一句話：`aos-post 子命令 [旗標...] 信箱 [信件名稱]`——NORMS [N-16](../../docs/NORMS/05-基礎設施-窗.md)的標準投遞：寄信人 `send` 把一封信放進信箱的 `new/`，處理者 `take`／`take-all` 一封封拿進 `cur/`、`see` 讀信、`done` 收掉（要回信就照信裡的 `reply_to` 投一封回去），還沒被拿走的寄信人可以 `regret` 撤回。**
-aos-post 是 aos 體系跨行程交流（IPC）的語法糖、基底工具：跟 aos proc 的關聯不深，proc 自己拿它組出想要的效果（[thinking 11-03 aos-post](../../thinking/2026-11-03-aos-post.md)）。
-一個 lib（`lib/libaos-post.a`，公開標頭 `include/aos/post.hpp`，aos-daemon 的信箱模式、aos-llm-kernel、aos-llm-send 連它）加一支薄命令列（`bin/aos-post`）。連 aos-util、aos-lock（有順序的投遞）。全家慣例見 [impls/README.md](../README.md)；最早的設計見 [thinking 10-29 medium-plan § 二](../../thinking/2026-10-29-medium-plan.md)。
+aos-post 是 aos 體系跨行程交流（IPC）的語法糖、基底工具：跟 aos proc 的關聯不深，proc 自己拿它組出想要的效果（[thinking 11-03 aos-post](../../thinking/2026-11/03/aos-post.md)）。
+一個 lib（`lib/libaos-post.a`，公開標頭 `include/aos/post.hpp`，aos-daemon 的信箱模式、aos-llm-kernel、aos-llm-send 連它）加一支薄命令列（`bin/aos-post`）。連 aos-util、aos-lock（有順序的投遞）。全家慣例見 [impls/README.md](../README.md)；最早的設計見 [thinking 10-29 medium-plan § 二](../../thinking/2026-10/29/medium-plan/README.md)。
 
 像公司的收發室：寄件人在後面的桌上（`tmp/`）把信封好，封好才放進待收籃（`new/`）；收件人把信從籃子拿到自己桌上（`cur/`）就算簽收，簽收了寄件人就抽不回來；辦完撕掉，或歸檔（`archive/`）。掛號信（有序）永遠先收，平信（無序）排在後面。
 
@@ -46,7 +46,7 @@ aos-post done box                                   # 收掉那一封（--keep �
   - `in_reply_to`＝原信的名字（只驗是單純的名字，不驗那封在不在——它多半已經被收掉了）。
 - **壞信**（`see` 退 1、`done` 丟掉）：`letter.json` 讀不了或不是 JSON 物件、`sender`／`sent_at` 不是字串、沒有 `body`、`reply_to`／`in_reply_to` 有但不是字串。名字有序無序都不算壞。`body` 的形狀由收信的程式自己驗。不通知寄信人（決定 27）；記 `mailbox_warning` 是處理者的事（拿 `see` 的原因）。
 - **回信寄不出去**（`reply_to` 那個信箱沒了、不可寫）：退 1，原信**留在 `cur/`**，可以再 `done` 一次。
-- **有順序的投遞**（`send --ordered`，N-16、[medium-plan § 三](../../thinking/2026-10-29-medium-plan.md)）：信箱多兩樣——`order.lock/`（[aos-lock](../aos-lock/README.md) 的鎖，持有者＝這個 aos-post 行程）與 `order.json`（`{"counter_letters": N}`，沒有＝0）。步驟：信照常先在 `tmp/<尾名>` 寫好 → 拿 `order.lock/`（拿不到每 20 毫秒再試、**一直等**；持有者死了照 aos-lock 收屍）→ 讀 N → `order.json` 寫 N+1（暫存改名）→ rename 成 `new/<N+1 零填 12 位>.<尾名>` → 放鎖。鎖握到 rename 完，所以到 `new/` 的順序＝取號順序。`order.json` 讀不懂＝`OrderBad`（放鎖、信丟掉）。
+- **有順序的投遞**（`send --ordered`，N-16、[medium-plan § 三](../../thinking/2026-10/29/medium-plan/README.md)）：信箱多兩樣——`order.lock/`（[aos-lock](../aos-lock/README.md) 的鎖，持有者＝這個 aos-post 行程）與 `order.json`（`{"counter_letters": N}`，沒有＝0）。步驟：信照常先在 `tmp/<尾名>` 寫好 → 拿 `order.lock/`（拿不到每 20 毫秒再試、**一直等**；持有者死了照 aos-lock 收屍）→ 讀 N → `order.json` 寫 N+1（暫存改名）→ rename 成 `new/<N+1 零填 12 位>.<尾名>` → 放鎖。鎖握到 rename 完，所以到 `new/` 的順序＝取號順序。`order.json` 讀不懂＝`OrderBad`（放鎖、信丟掉）。
   - **會缺號、不會重號**：寄信人死在「寫完 N+1、還沒 rename」之間，那個號就缺了（信留在 `tmp/`）；處理者照上面的處理順序直接拿下一號。
   - 同一個信箱有序、無序都收；`send` 不管信箱是不是「有序信箱」。
 - `tmp/` 處理者永遠不看；`new/`、`cur/` 裡 `.` 開頭的名字不算信（N-05）。不是資料夾的東西出現在 `new/` 也認領得到，`see` 算壞信、`done` 丟掉。`archive/` aos-post 永遠不讀。

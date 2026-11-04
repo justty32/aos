@@ -2,7 +2,7 @@
 
 aos-lua - 把一份 Lua 原始檔編成 aos 的資料夾＋JSON（嘗試）
 
-← [proto8](../../../README.md)｜設計、對照表、代定：[thinking 2026-10-24-lua-nvim](../../../thinking/2026-10-24-lua-nvim.md)｜nvim 外掛封存在 `proto8/archive/nvim/`｜測試 `proto8/tests/test_lua_aos.py`
+← [proto8](../../../README.md)｜設計、對照表、代定：[thinking 2026-10-24-lua-nvim](../../../thinking/2026-10/24/lua-nvim/README.md)｜nvim 外掛封存在 `proto8/archive/nvim/`｜測試 `proto8/tests/test_lua_aos.py`
 
 使用者 10-24：「再來是lisp/lua編譯成我們這套的方式。……但其實lua也不錯，可以的話接入nvim也挺好」。aos 把資料夾當成 Lua 的 table（C-71），所以「Lua 寫 aos」就是：寫一個 table，編成資料夾。編完就只剩檔案，跑的時候照舊 `aos-exec`，跟 Lua 無關。
 

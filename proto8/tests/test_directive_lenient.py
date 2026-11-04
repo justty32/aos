@@ -1,4 +1,4 @@
-"""10-20 指示詞改版（proto8/thinking/2026-10-20-ideas.md D9～D15）：$path 取代 path、加 $prefix；
+"""10-20 指示詞改版（proto8/thinking/2026-10/20/ideas.md D9～D15）：$path 取代 path、加 $prefix；
 錯分兩類——真的解不開（變數沒設、讀不到、指不到、繞圈）照舊是錯，寫法（格式）寬容、不報錯。
 10-23 Python 版刪了（使用者「python版本可以刪掉了」）：原本直接叫 Python 庫 aos_inst.resolve 的逐條案例拿掉，
 同樣的案例 C++ 版在 proto8/impls/aos-directive/tests/test_cli.py；這裡只留經 aos-exec 的命令列案例。"""

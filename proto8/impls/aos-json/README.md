@@ -4,7 +4,7 @@
 
 **一句話：用 `檔#/指標` 讀或改一份 JSON 的某個位置；認得 `$ref`／`$env`：可以穿過 `$ref` 改被參照的檔、追一個值實際寫在哪、一層層看（漸進展開）、寫之前先驗形狀。**
 一個 lib（`lib/libaos-json.a`，沒有公開標頭）加一支命令列（`bin/aos-json`），再加兩個給腦掛的工具（`tools/json/`、`tools/json_edit/`）。
-嘗試性原型（使用者「做一套方便修改json的工具集，配合指示詞」），討論與代定見 [thinking 2026-10-24 aos-json](../../thinking/2026-10-24-aos-json.md)。
+嘗試性原型（使用者「做一套方便修改json的工具集，配合指示詞」），討論與代定見 [thinking 2026-10-24 aos-json](../../thinking/2026-10/24/aos-json.md)。
 
 ```sh
 aos-json peek fsm.json                                   # 只看頂層，大的值摺起來

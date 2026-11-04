@@ -1,0 +1,79 @@
+# 2026-10-24 Linux 權限與沙箱：藉 s6 那套，把函數關起來跑
+
+← [thinking](../../README.md)｜月份表 [2026-10](../README.md)｜程式 [sandbox/](../../../extras/sandbox/README.md)（`aos-sandbox`）｜測試 `proto8/tests/test_sandbox.py`｜試驗場 `~/code/try/sandbox/`
+
+規矩見 [thinking/README](../../README.md)：只留使用者原文、決定、結論。這份是**嘗試性質**，決定全是頂層照推薦定的（使用者 10-24「都按建議做」），可翻案。**CONCEPTS／NORMS 正文沒改**。相關條文：[C-04、C-64](../../../docs/CONCEPTS/01-設計理念.md#檔案權限10-16-使用者定)（權限是 Linux 那邊的事、用檔案是為了借權限）、[C-52、C-53、C-56](../../../docs/CONCEPTS/01-設計理念.md)、[C-66、C-67](../../../docs/CONCEPTS/03-基礎設施.md#資料夾程式工作區與-stack10-19)（工作區是指標、stack 放哪由呼叫方決定）、[N-41](../../../docs/NORMS/07-基礎設施-組合子.md)（格自己不 setsid）、[N-58](../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[N-45](../../../docs/NORMS/06-基礎設施-命令列與指示詞.md)。
+
+## 使用者原文（10-24，逐字）
+
+- 前文：「我隨便說，你隨便做，反正只是嘗試」「我現在沒空管這些小事，都按建議做」
+- 頂層報告自我改進的最大漏洞（被改的函數跑起來讀得到判準檔）之後，使用者：「linux權限和沙箱可以開始做了，藉助s6那套」
+- 10-24 晚，WAIT_USER 問「沙箱的 kernel 信箱後門要不要堵、怎麼堵」，使用者：「都隨意」（S14～S16）
+- 10-24 晚，問到沙箱裡的 agent 能不能用 kernel，使用者：「能不能用kernel...那就是看他能不能存取檔案啊，只要我們預先設定好使用者，設定好權限，一切都好說。對，像這種存取控制，我們就是純靠linux，至於cpu/網路/記憶體限制，s6也可以幫忙，或者也可以用其他東西如docker/bwrap之類，反正在linux平臺上，啥都好用。」（S17）
+
+## 前提（別處已定）
+
+- **C-64**（10-16）：「之所以要用檔案，就是因為可以透過linux的檔案讀寫權限機制，來做一些神奇的事情。像是讓kernel成為某daemon的ctl/清單的唯一可讀寫者。」——權限歸 Linux 那層（C-04）。
+- **C-66**（10-16 夜）：工具動呼叫者的工作區靠指標 `AOS_WS`，「能不能寫由 Linux 權限管、風險由工具的設計者自己管控」。
+- **s6 報告**（10-22，[notes/aos-exec-s6-runit](../../../notes/aos-exec-s6-runit.md)）：換使用者、上限、拿鎖都不長進 aos-exec，接在 argv 前面；`s6-setuidgid` 要放在 aos-exec 外面；`s6-setsid` 不能放進格。使用者回：「這份報告很有價值，這會減少我們以後的工作量，等於說我們想要的很多功能都有現成輪子，不必重新造。然後方向題這塊，a.我覺得OK，aos-exec先維持只用標準庫。……cde.都先不要討論agent」
+- **`_metainfo` M4**（[紀錄](metainfo/README.md)）：`_metainfo` 是宣告、kernel 參考；`timeout_ms` 才強制；aos-exec 不讀 `_metainfo`。
+
+## 這台機器的工具（Manjaro）
+
+- s6 不在 Arch 官方庫（只有 AUR），試驗場自己編在 `~/code/try/sandbox/s6-root/bin`。`s6-setuidgid` 只有 root 能用；`s6-softlimit -p` 是**整個使用者**的行程數。bwrap 有；`unshare --user --map-root-user --map-auto` 可當假 root 測身分層（proto6 帳號模組用過同一招，使用者 10-12「proto6 已經是老黃曆了，不管」）。
+
+## 決定（照推薦定、可翻案；使用者 10-24「都按建議做」）
+
+- **S1 兩層**：**身分**＝s6（`s6-setuidgid`，要先有帳號、要 root）；**命名空間**＝bwrap（user namespace，免 root）。上限＝`s6-softlimit`（免 root）。
+- **S2 怎麼套：一支 chain-loading 的小程式 `aos-sandbox`**，寫在叫的那一方的 argv 最前面：`aos-sandbox 設定檔 prog args...`。它排好 `[s6-softlimit …] [s6-setuidgid 帳號] bwrap … -- prog args...` 就 exec 走、不常駐，結束碼與串流都是 prog 的。**aos-exec 一行不改**。
+- **S3 順序**：上限 → 身分 → bwrap → prog。身分要在 bwrap 前面（bwrap 開了 user namespace 就換不了別的 uid）；不加 `--new-session`（會逃出行程群組，單子的 `timeout_ms`、fsm 轉的訊號打不到，N-41）。
+- **S4 宣告與強制的分界**：**強制只在 argv 上**——誰的 argv 寫了 `aos-sandbox` 誰就被關（C-56 寫什麼就做什麼）。**宣告放 `_metainfo`**：函數可以在自己的 `_metainfo` 寫一格 `sandbox`（同一套 key）說「我只需要這些」，kernel 與人看（同 M4：`_metainfo` 只是承諾）；呼叫方要照它關，就明寫 `aos-sandbox _metainfo#/sandbox …`——宣告被拿去用了，但強制仍是 argv 上看得到的那一支。aos-exec、loop、fsm 都不讀它。
+- **S5 誰決定關不關：呼叫方**（函數自己關自己沒有意義；同 C-67「stack 放哪由呼叫方決定」）。
+- **S6 設定的 key**（C-54；全選填、不認得的忽略 C-48）：`user`、`base`、`commands`、`ro`、`rw`、`net`、`mem_mb`、`cpu_s`、`procs`、`file_mb`、`files`、`env`。**白名單**：沒列到的路徑一律看不到；`/proc`、`/dev`、空的 `/tmp` 一定有；`base` 預設 `/usr /bin /sbin /lib /lib64 /etc` 裡存在的；`net` 預設 `false`（沒給的就是不給）。`commands`＝照 PATH 找到那支指令、把它的資料夾唯讀綁進來（aos 的指令走 PATH，C-61 例外）。`mem_mb` 跟 `_metainfo` 通用 key 同名同義。設定檔可寫 `檔#/指標`；值只解 `$env`（含 `$path`、`$prefix`），不解 `$ref`（N-45 每支程式只解自己讀的格）。
+- **S7 錯誤**（P-21、C-54）：stderr 一行 `aos-sandbox: 代號 原因`、退 1：`ArgumentsBad`、`FlagUnknown`、`CfgMissing`、`CfgBad`、`PathMissing`、`CommandMissing`、`UserBad`；`--dry-run` 印出那條 argv、不跑。
+- **S8 放哪、什麼語言**：`proto8/extras/sandbox/`（`bin/aos-sandbox`、`root/setup.sh`、`examples/`），Python 純標準庫（同 aos-tick）。不進 impls。
+- **S9 自我改進的接線**：run 格跑函數時在 argv 前面接 `aos-sandbox`、把這次的暫時資料夾放在 `IMPROVE_RUN` 給設定用；改進者的 try_run 經 `IMPROVE_SANDBOX` 拿同一份設定。**判準是檢查程式時不關檢查程式**（它就是判準）。
+- **S10 要 root 的步驟寫成腳本、預設乾跑**：`proto8/extras/sandbox/root/setup.sh`；帳號叫 `aos-run`（跑不信任的函數；系統帳號、沒家目錄、不能登入）；工作的地方 `/srv/aos-run`（擁有者是使用者、群組 `aos-run`、2770）；sudoers 只准「`s6-setuidgid aos-run *`」（換得成 aos-run、換不成 root）。
+  `setup.sh --mailbox 信箱 [--apply]` 只做一件：讓 aos-run 寫得到某個 kernel 信箱——信箱與四格擁有者＝使用者（跑 kernel 的人）、群組 `aos-run`、2770；四格加預設 ACL `d:u:使用者:rwx,d:g:aos-run:rwx,d:o::---`（閘門建的信資料夾、kernel 寫的回信兩邊都讀寫得到，不看各自的 umask；改名搬資料夾要能寫那個資料夾本身）。不讓它寫＝`chmod 700 信箱`。信箱要放在 aos-run 走得到的地方（例 `/srv/aos-run/mailbox`；700 的家目錄底下走不進去）。
+- **S11 self-improve 預設就關**（使用者 10-24「我開litellm了。其他都按照建議」，代定、可翻案）：交辦工作區沒放 `sandbox.json` 也關，用 demo/self-improve/sandbox.json（11-03 封存，在 proto8/archive/）（`commands` aos-exec、只寫得到 `$IMPROVE_RUN`、斷網、`env` 白名單；不放要 s6 的上限，免得沒裝 s6 就跑不了）。預設那份是看得到的檔；工作區的 `sandbox.json` 優先，內容寫 `false`＝明寫不關；要關卻找不到 `aos-sandbox` 或 `bwrap`＝`self-improve: SandboxMissing` 退 1，不靜靜改成不關。
+- **S12 環境白名單**（代定）：設定的 `env`（環境變數名陣列）有寫＝`--clearenv` 再只帶外面有設的那幾個。self-improve 兩份設定都只帶 `PATH`、`LANG`、`LC_ALL`、`LC_CTYPE`、`TZ`、`PYTHONDONTWRITEBYTECODE`、`PYTHONIOENCODING`（外面的 `DEEPSEEK_API_KEY` 這類 key 不讓被改的函數讀到）。
+- **S13 `mem_mb` 接 s6-softlimit 的 `-a`＋`-d`**（只限位址空間與資料段）：不用 `-m`——它把堆疊上限也設成同一個數，glibc 開執行緒照堆疊上限配，入口是單子的 aos-exec 會退 1「Resource temporarily unavailable」（給 8 GB 也一樣）。
+- **S14 沙箱能不能用 kernel＝看不看得到信箱**（使用者 10-24「就是看他能不能存取檔案啊」，代定可翻案）：aos-sandbox 不另設開關。預設看不到：信箱沒列進 `rw` 就沒綁（白名單），`AOS_KERNEL` 不在預設的 `env`（S16）。要用就在設定寫 `rw` 列信箱、`env` 列 `AOS_KERNEL`（[examples/agent.json](../../../extras/sandbox/examples/agent.json)）。綁進來的路徑包住信箱也照綁（寫什麼就做什麼，C-56）。再細的——哪個帳號寫得進、讀得到別人的信——由信箱的擁有者、群組、權限位管（S10 的 `setup.sh --mailbox`）。
+- **S15 寄信的人還在不在＝看信裡 `sender.lock` 有沒有人鎖**（照使用者「純靠linux」，代定可翻案；[llm-kernel](llm-kernel/README.md) 結論 4、10 照這條）：閘門在 `tmp/.<信號>/` 建信、先開 `sender.lock` 拿 flock（`LOCK_EX`），拿到行程結束；寫好 `letter.json` 才改名進 `new/<信號>`（`.` 開頭的 kernel 不碰：已經有 `letter.json`〔上了鎖才寫〕而沒人鎖才刪，還沒有的不碰——建鎖檔到上鎖之間、或那時閘門死了留下的空殼，留著）。kernel 收拾時對 `sender.lock` 試 `LOCK_SH|LOCK_NB`：鎖不到＝人在；拿得到、檔不在、開不了（Linux 權限不給）＝不在。flock 跟著檔走、不看 pid，所以沙箱（自己的行程編號、mount namespace）裡的閘門也認得。信號（`<奈秒>.<pid>.<ticks>`）只用來排先後與不撞名。kernel 自己的跑信子行程（`runner.json`）同一個 pid namespace，看 pid。
+- **S16 環境白名單預設就開**（使用者 10-24「都隨意」，代定可翻案）：設定沒寫 `env`＝只帶 `PATH`、`LANG`、`LC_ALL`、`LC_CTYPE`、`TZ`、`PYTHONDONTWRITEBYTECODE`、`PYTHONIOENCODING` 與 aos 的六個（`AOS_ENTRY`、`AOS_WS`、`AOS_STACK`、`AOS_CF`、`AOS_CD`、`AOS_CO`；路徑、不是祕密，裡面的 aos-exec 要 `AOS_WS`、`AOS_STACK` 才接得上原本的 stack）；寫了就只照它（同 `base` 的寫法：預設是看得到的一份表，`aos-sandbox` 的 `ENV_BASE`）。例子：`bash-boxed` 用預設；`cli-tool.json` 另帶 `HOME`、`TERM`（CLI 靠 `~/.claude`、`~/.codex` 的檔登入，不帶 key）；`agent.json` 另帶 `AOS_KERNEL`、`AOS_BRAIN_URL`、`AOS_BRAIN_MODEL`（不帶 key；信箱綁法見 S14）。
+- **S17 存取控制純靠 Linux、上限交給現成工具**（使用者 10-24 原話，見上；代定可翻案）：誰能用 kernel、碰哪些檔＝Linux 的使用者、群組、權限位（信箱的擁有者與權限、身分層 s6-setuidgid／aos-run、bwrap 綁哪些路徑）；CPU／記憶體／網路上限＝s6-softlimit、bwrap（以後要 docker、cgroup 也一樣接在 argv 前面）。aos 自己不另做一套存取控制。
+- **S18 `accept` 留著（10-30 已定）**：使用者 10-30 原文：「kernel的accept名單這塊，應該說，linux是托底，我們可以充分利用linux的檔案存取權限機制，但我們也可以實作自己的機制。」→ Linux 是托底，aos 也可以實作自己的機制；`accept` 名單就是 aos 自己的機制，留著。規則（10-24 晚代定，使用者「都隨意」）：kernel.json 多一格 `accept`：`[{"argv", "cwd"}]`，信裡單子的 argv 與 cwd 要一字不差、不能自帶 `envs` 與串流，不合＝回 `InstUnknown`、不跑；有 `accept` 時環境用 kernel 自己的、只疊信裡 `AOS_` 開頭的；沒寫＝閘門透明。它要擋的是：kernel 在沙箱外用自己的身分照信跑單子，寫得進信箱＝以 kernel 的身分跑任何指令。
+
+## 要使用者用 root 做的
+
+```
+sh proto8/extras/sandbox/root/setup.sh            # 先乾跑看要做什麼
+sudo sh proto8/extras/sandbox/root/setup.sh --apply
+sudo -n /usr/local/bin/s6-setuidgid aos-run id      # 驗：uid 是 aos-run
+```
+
+做了四件：s6 四支（`s6-setuidgid`、`s6-applyuidgid`、`s6-envuidgid`、`s6-softlimit`）從試驗場放進 `/usr/local/bin`（或改裝 AUR 的 s6）；建 `aos-run`；開 `/srv/aos-run`；加 `/etc/sudoers.d/aos-run`（先 `visudo -c` 驗過才放）。拆掉的指令在腳本最後一行。之後要用身分層：`sudo -n s6-setuidgid aos-run aos-sandbox 設定檔 prog…`（身分在最外面，設定裡不寫 `user`），或由 root 起的 daemon／kernel 在設定裡寫 `"user": "aos-run"`。
+
+## 用例怎麼套
+
+| 用例 | 怎麼關 | 擋什麼、不擋什麼 |
+|---|---|---|
+| 自我改進 | 預設就關（S11）；工作區放 `sandbox.json` 換設定或寫 `false` 不關 | 擋：讀判準、碰家目錄、連網、吃爆記憶體／CPU。不擋：判準是檢查程式時，檢查程式自己跑函數（要關得檢查程式作者自己接） |
+| pi-tools／工具庫的 bash | 工具資料夾 `_entry` 寫 `["aos-sandbox", "sandbox.json", "aos-exec", "inner"]`，`inner` 指原本的工具（[examples/bash-boxed](../../../extras/sandbox/examples/bash-boxed)） | 擋：出工作區、連網。原本工具一行不改 |
+| claude／codex CLI 工具 | [examples/cli-tool.json](../../../extras/sandbox/examples/cli-tool.json)：要網、要寫 `~/.claude`、`~/.codex` | 只擋「讀寫工作區以外」；CLI 自己的沙盒（`--tools`、`sandbox_mode`）照舊 |
+| agent 當工具 | [examples/agent.json](../../../extras/sandbox/examples/agent.json)：斷網、信箱綁進來（`rw`＋`env` 的 `AOS_KERNEL`）、kernel 那邊要寫 `accept` | 擋：任意單子（S18）。換帳號跑時信箱照 `setup.sh --mailbox` 設 |
+
+## 邊緣狀況（還沒問使用者）
+
+- **kernel 信箱**：`accept` 名單裡的腦照信裡的 `AOS_WS`、`AOS_STACK` 動檔（agent-ivy 的 brain.py 會搬 `$AOS_WS/new/` 的題目、寫 `$AOS_STACK/current.txt`），寄信的人把它們指到別的 agent 的工作區就能借 kernel 的手去動；同一個信箱的人看得到彼此的信（含整份環境）——要分開就分信箱、分群組；同一個帳號、只靠 bwrap 時，綁了信箱的上層資料夾（例：信箱放在綁進來的 `$AOS_STACK` 底下）就等於給了信箱。
+- **`sender.lock`**：寄得進信箱的程式自己建一封信、拿著鎖不放，kernel 就當它是活著的寄信人——鎖只說「人還在」、不是身分（身分只有 Linux 的 uid）。閘門被 SIGKILL 時鎖自動放掉；kernel 讀不到鎖檔（權限不給）＝當人不在、丟信。
+- **`procs`（`-p`）是整個使用者的行程數**：用自己的帳號跑時，瀏覽器等行程都算進去，設小了一開跑就失敗；只有專用帳號（`aos-run`）時才有意義。
+- **`mem_mb` 是虛擬記憶體上限**：會先預留大塊虛擬記憶體的程式（Go、Java、Node、某些 LLM 函式庫）可能一起跑就失敗；Python 小程式沒事。
+- **綁進來的路徑會帶出上層資料夾的名字**：綁 `/home/lorkhan/repo/…/x`，沙箱裡 `ls ~` 看得到 `repo`（空殼、看不到內容）。
+- **cwd 不在沙箱裡**：bwrap 靜靜改到 `/`；相對路徑的 prog 會找不到。
+- **符號連結指出去**：`ro`／`rw` 裡的連結會照指到的地方綁；函數在 `rw` 裡自己做的連結指到外面，沙箱裡看不到（指到的地方沒綁）。
+- **身分層的權限**：換成 `aos-run` 之後，它進不了 700 的家目錄、也進不了 `mkdtemp` 開的 700 暫時資料夾——self-improve 的暫時資料夾要改到 `/srv/aos-run` 底下才能配身分層用（現在只配命名空間層）。`sudo` 預設清環境，`PATH`、`AOS_*` 要另外帶（`sudo --preserve-env=…`）。
+- **stack 也得綁**：包住 `aos-exec` 時，它會在沙箱裡建 `$AOS_STACK`；stack 沒列進 `rw` 就建不了（或建在沙箱的 `/tmp`、跑完就沒了）。
+- **巢狀的沙箱**：沙箱裡再叫 `aos-sandbox`：bwrap 在 user namespace 裡再開一層可以，但 `user` 換不了（不是真 root）。
+- **只在 Linux、要開 user namespace**：有的發行版或容器關了 unprivileged userns，bwrap 就起不來（`aos-sandbox` 不會降級成不關，直接是 bwrap 的錯）。
+- **`/etc` 整個唯讀綁進來**：`/etc/passwd`、`/etc/hosts` 看得到（本來就是誰都能讀的）；`/etc/resolv.conf` 指到 `/run` 的機器上 `net: true` 也解析不了名字（`/run` 沒綁）。

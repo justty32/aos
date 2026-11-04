@@ -3,7 +3,7 @@
 11-04 前叫 test_eve、跑 demo/agent-eve；demo 刪了，eve 搬到 tests/fixtures 當叫 pyfix 的那一方，只測 eve 自己設定的 EveFiles 兩案一起刪。
 
 假 server 照劇本回：同一個 URL 同時當 eve 和 pyfix 的腦，看 request 裡的 tools 有沒有 pyfix 分給兩份劇本。
-設計：proto8/thinking/2026-10-24-agent-as-tool.md。不連真模型。"""
+設計：proto8/thinking/2026-10/24/agent-as-tool.md。不連真模型。"""
 import http.server, json, os, re, subprocess, tempfile, threading, unittest
 from pathlib import Path
 import own_error  # noqa: E402

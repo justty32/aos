@@ -7,7 +7,7 @@
 #   --s6-bin 路徑（s6 的 bin；預設試驗場 /home/<我>/code/try/sandbox/s6-root/bin）、--runner 名（跑不信任函數的帳號與群組；預設 aos-run）
 # 預設乾跑：只把要做的指令印出來，什麼都不動。看過沒問題再用 root 跑一次：
 #   sudo sh proto8/extras/sandbox/root/setup.sh --apply
-# 設計與為什麼：proto8/thinking/2026-10-24-sandbox.md（「要 root 的步驟」、S17）。
+# 設計與為什麼：proto8/thinking/2026-10/24/sandbox.md（「要 root 的步驟」、S17）。
 # 不要 root 的那半（bwrap 看得到什麼、斷網、s6-softlimit 上限）現在就能用，不必跑這支。
 # 誰能用 kernel、碰哪些檔都交給 Linux 的使用者、群組、權限位（使用者 10-24「只要我們預先設定好使用者，設定好權限，一切都好說」）。
 set -eu

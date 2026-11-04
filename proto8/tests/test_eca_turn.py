@@ -4,7 +4,7 @@ queue 認領全部（11-03 起一批一次：cur/ 與 new/ 的信照順序一起
 
 用 test_cli_tools 的假 claude／codex，不花額度；畫面那條路大多是 cli_session 的、test_cli_tools 測，這裡只測 --on-busy answer 碰畫面的兩案
 （真 tmux＋假 claude；沒 tmux 就 skip）。
-設計：proto8/thinking/2026-10-30-eca.md。"""
+設計：proto8/thinking/2026-10/30/eca/README.md。"""
 import fcntl, json, os, pty, select, shutil, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402

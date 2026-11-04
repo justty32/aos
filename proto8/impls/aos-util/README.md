@@ -24,7 +24,7 @@ int main() {
 
 | 標頭 | 放什麼 |
 |---|---|
-| `aos/error.hpp` | `aos::Error{code, msg}`；**全家共用的錯誤代號** `aos::code::*`（ArgumentsBad、FlagUnknown、InputBad、InputExtra、CfgMissing、CfgBad、WriteFailed、MkdirFailed、LaunchFailed、Internal；投遞的 CommandUnknown、MailboxMissing、LetterMissing、LetterBad；照 [10-23 命名統合](../../thinking/2026-10-23-naming.md)）。只有一支工具會吐的代號放那支自己的 `code` |
+| `aos/error.hpp` | `aos::Error{code, msg}`；**全家共用的錯誤代號** `aos::code::*`（ArgumentsBad、FlagUnknown、InputBad、InputExtra、CfgMissing、CfgBad、WriteFailed、MkdirFailed、LaunchFailed、Internal；投遞的 CommandUnknown、MailboxMissing、LetterMissing、LetterBad；照 [10-23 命名統合](../../thinking/2026-10/23/naming.md)）。只有一支工具會吐的代號放那支自己的 `code` |
 | `aos/io.hpp`（`src/io.cpp`） | 三扇門：`read_stream`（JSON 串流 → 一個個值，壞尾丟掉）、`read_stdin`（一份：空＝`{}`、多份＝InputExtra、解不出來＝InputBad）、`dumps`（排版同 Python `json.dumps`，key 照原順序）、`emit`、`emit_error`；JSON 小工具 `is_count`（非負整數）。`Json`＝`nlohmann::ordered_json` |
 | `aos/cli.hpp`（`src/cli.cpp`） | **命令列**（aos-exec、aos-loop、aos-fsm、aos-daemon 共用）：`parse_cli(argv, 旗標表)`——旗標寫在位置參數前面，第一個不是旗標的參數（不以 `-` 開頭，或就是 `-`）起全部原樣放進 `rest`；`--` 結束旗標；旗標都帶一個值（`--x V` 或 `--x=V`，`--x=` 是空字串），重複給最後一個算；可另給一張不帶值的旗標表 `switches`（給了＝`opts[名]` 是 `"1"`、重複給一樣、寫 `--x=V`＝`ArgumentsBad`；aos-exec 的 `--dotenv-override`）；不認得的旗標＝`FlagUnknown`、缺值＝`ArgumentsBad`（`rest` 夠不夠由呼叫者判斷）。`load_cfg(spec)`——設定檔 `檔` 或 `檔#/指標`，回那個位置的值（不驗是不是物件）：檔不在 CfgMissing、其他讀不了或不是 JSON CfgBad、`#` 後不是 `/` CfgBad、`#/` 指不到 CfgMissing、第一行 `#!` 跳過 |
 | `aos/flags.hpp`（`src/flags.cpp`） | **另一套旗標**（跟 `aos/cli.hpp` 是兩套；全家沒有程式叫它，aos-schema、aos-directive 的 bin 也沒用）：命令列旗標 `parse_flags(argc, argv, keys, prog)`：`--key 值`（名字＝JSON key 原名）、值先當 JSON 解、`--` 後面整段放 `rest`、位置參數＝ArgumentsBad、不認得＝FlagUnknown |

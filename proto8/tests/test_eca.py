@@ -2,7 +2,7 @@
 aos-say → aos-exec 跑範本（aos-loop 包 bin/aos-eca-turn，10-31 前是 lib/eca/turn）→ aos-listen 拿回答；射後不理（--on-empty stop）跑完就結束，
 停著等（範本本身，idle）背景跑、ctl.json paused 時信留 new/、aos-listen --status 看得到 paused。
 
-用 test_cli_tools 的假 claude／codex，不花額度。設計：proto8/thinking/2026-10-30-eca.md。"""
+用 test_cli_tools 的假 claude／codex，不花額度。設計：proto8/thinking/2026-10/30/eca/README.md。"""
 import json, os, shutil, subprocess, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402

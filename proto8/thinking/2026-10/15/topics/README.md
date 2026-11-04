@@ -1,0 +1,13 @@
+# 2026-10-15 待定清帳、主題分法、fsm 補細則
+
+← [討論紀錄](../../../README.md)
+
+只記使用者原文（整理）與決定；條文落在 [NORMS](../../../../docs/NORMS.md)、[CONCEPTS](../../../../docs/CONCEPTS.md)。
+
+<!-- wf-nav -->
+| 分檔 | 涵蓋段落 |
+|---|---|
+| [01-清帳分法與fsm細則](01-清帳分法與fsm細則.md) | 1. 早上清帳待定；2. 主題分法；3. fsm 補細則；4. a～f 暫定預設全定 |
+| [02-agent工具與試146](02-agent工具與試146.md) | 5. agent 的工具與思考介面；6. agent 格庫改名、設定走 stdin；7. 試 146 ollama（小模型） |
+| [03-試146-qwen與LM-Studio](03-試146-qwen與LM-Studio.md) | 8. 試 146 ollama：qwen2.5:14b；9. 試 LM Studio：Qwen3-1.7B；10. 丟掉想的內容、加系統提示 |
+| [04-agent當函數](04-agent當函數.md) | 11. agent 當函數＋binding、當工具 |

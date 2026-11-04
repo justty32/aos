@@ -1,7 +1,7 @@
 """test_lib - proto8/lib（agent 的函式庫）：每個工具的形狀照 lib/README 的契約檢查，base 七個各自的行為（demo/agent-liv 經捷徑用庫的工具那三案 11-04 隨 demo 刪了；捷徑掛庫的工具照樣由 test_pyfix 的 tests/fixtures/agent-eve 跑到）。
 
 工具一支一支用 aos-exec 叫（arguments 從 stdin 進、stdout 是結果），不連真模型。
-設計：proto8/thinking/2026-10-24-tool-lib.md。"""
+設計：proto8/thinking/2026-10/24/tool-lib/README.md。"""
 import json, os, re, stat, subprocess, tempfile, unittest
 from pathlib import Path
 import own_error  # noqa: E402

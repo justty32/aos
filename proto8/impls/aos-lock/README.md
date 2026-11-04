@@ -3,7 +3,7 @@
 `aos-lock - 鎖：mkdir 一個 .lock/ 資料夾，掛上名牌，持有者死了別人能收`（NAME，C-54 R1）
 
 **一句話：`aos-lock 子命令 [旗標...] 目標`——NORMS [N-15](../../docs/NORMS/05-基礎設施-窗.md)的鎖：`acquire` 用 mkdir 拿 `<資料夾>/.lock/` 或 `<檔>.lock/`、在裡面寫名牌 `holder.json`，`release` 先改名再刪，`show` 印名牌；拿不到時看名牌，持有者死了（pid＋`started_at_ticks`＋`boot_id` 對不上）或租約過了就替它收。**
-一個 lib（`lib/libaos-lock.a`，公開標頭 `include/aos/lock.hpp`，aos-post 的有順序投遞連它）加一支薄命令列（`bin/aos-lock`）。只連 aos-util。全家慣例見 [impls/README.md](../README.md)；設計見 [thinking 10-29 medium-plan § 五](../../thinking/2026-10-29-medium-plan.md)。
+一個 lib（`lib/libaos-lock.a`，公開標頭 `include/aos/lock.hpp`，aos-post 的有順序投遞連它）加一支薄命令列（`bin/aos-lock`）。只連 aos-util。全家慣例見 [impls/README.md](../README.md)；設計見 [thinking 10-29 medium-plan § 五](../../thinking/2026-10/29/medium-plan/README.md)。
 
 像會議室門口的牌子：先把牌子掛上門（mkdir，只有一個人掛得上）再寫上名字；用完先把牌子摘下拿走（改名）再丟。牌子上的人早就下班了（行程不在）或寫的時段過了（租約），下一個人可以自己摘掉換上自己的。這是約定，不是門鎖：從 Linux 繞過去 aos 不管（決定 10）。
 

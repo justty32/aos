@@ -1,0 +1,61 @@
+# 2026-10-15 收工後意見 5～7：資料夾⇄JSON、JSON schema
+
+← [討論紀錄](../../README.md)｜前情：[JSON 格式族](json-families.md)（C-48）、[同像性](homoiconic.md)（schema 五點、`_schema`、aos_tree）｜意見 1～4 另見 [opinions-1-4](opinions-1-4.md)｜概念：[C-48](../../../docs/CONCEPTS/01-設計理念.md)｜規範：[N-35](../../../docs/NORMS/01-總則.md)、N-05
+
+## 原文（10-15 收工後，照記，出處 [SESSION-LOG](../../../../wf/SESSION-LOG.md)）
+
+5. 「檔案系統和json是可以互通的，資料夾可以當作object，資料夾名稱就是key，而json本身就是.json內部就是一個小型的檔案系統，所以在此情況下，不只是我們的inst體系，也包括其他各類格式，都可以用這套概念去套。但是我會覺得，建議不要濫用，因為雖然可以互通，但畢竟在細節上有差異」
+6. 「json schema，在我們現在這套大量依賴json的體系狀況下，想必會有更多的施展空間」
+7. 「json schema是否可以用來規範資料夾，或許」
+
+## 結論（AI 整理；10-15 使用者照建議採納，第 5 條改法見「決定」）
+
+### 一、資料夾⇄JSON 怎麼對
+
+**對應規則**（一個資料夾＝一個 object）：
+
+- 資料夾＝object；裡面每個項目的名字＝key。
+- 子資料夾＝值是 object。
+- `.json` 檔＝值是那份檔的內容（整份 JSON）。key **保留副檔名**（`agent.json`，不是 `agent`），這樣無損、也跟 N-35 的 `檔#/位置` 一致：`bob/agent.json#/states` 與「把 bob 當 object 後的 `/agent.json/states`」指的是同一塊。
+- 其他檔（`.md`、`.py`、二進位）＝不展開，只放一個存根，例 `{"$file": "text"}`／`{"$file": "bin"}`（要的話帶 `size`、可執行位）。
+- 反方向（object → 資料夾）只攤到「一個檔＝一份 JSON 文件」為止，不往下拆成一個值一個檔。
+
+**劃線**（「別濫用」建議停在這裡）：
+
+- **可以互通**：拿來**看**（印樹、攤平、diff）、拿來**驗**（下面的 schema），以及**定義類**的樹（agent 定義、fsm 表、設定），而且名字守「安全子集」：非空、不以 `.` 開頭、只用英數與 `_-.`（中文也行）、同一層不靠大小寫區分。
+- **別攤**：
+  - 執行期的窗（state／ctl／lock）：要一個檔原子換掉，不攤成資料夾。
+  - 陣列：整個留在一份 `.json` 裡，不攤成 `0/`、`1/`。
+  - 單個純值：不做「一個值一個檔」，攤到一份 JSON 文件為止。
+- **規範不動**：互通只當工具與思考方式，不入規範；N-35 的 `#` 繼續當「檔案系統｜JSON」的分界，不讓它穿過資料夾。
+
+### 二、JSON schema 在這套體系能用在哪
+
+位置照同像性決定 6：inst 上的私有 key `_schema`（`{"stdin", "stdout"}`）。先做的見「決定」7（LLM 回話、fsm 表、agent 定義用 `allOf` 疊上去）；`_tool.parameters` 已經在用。其他候選等需要再做：inst 的 stdin／stdout 簽名（當「標頭檔」，C-42；先在測試與工具裡驗，執行期不驗）、binding／call 的型別檢查（填完那棵過 callee 的 stdin schema）、閘門的信、窗族（規範條文配一份 schema 當附件）、從 schema 產生 lib 說明頁的「認得的 key」表、agent 改自己的樹之前先驗。
+
+schema **預設不寫 `additionalProperties: false`**（C-48：只處理認得的 key、可以隨意加 key）；只有像判官回話這種封閉的 stdout 才關起來。`_` 開頭的私有 key 一律放行。
+
+### 三、意見 7：用 schema 規範資料夾——可行，但只管得到「形狀」
+
+做法：先照第一節把資料夾轉成 JSON，再對那份 JSON 套 schema。
+
+- **表達得出來**：必須有哪些檔（`required`）、某個名字一定是資料夾或檔；某類檔名（`*.json`）的內容形狀；其他檔只准哪幾種、名字樣式（`patternProperties`、`propertyNames`）；檔案大小上限、可執行位（前提是存根有帶這些欄位）。
+- **表達不出來**：互相指的關係（`"brain": "brain.json"` 指的檔要存在、`next` 指的格要存在；補法＝先把路徑攤成物件再驗）；非 JSON 檔的內容；第一節那些細節（大小寫撞名、空資料夾、暫存檔）；順序。
+
+## 決定（10-15 使用者拍板）
+
+使用者原文：「.aos這塊例外，我覺得可以用環境變數來定，也就是AOS_DIR。剩下就按照建議。」
+
+1. **互通只當工具與思考方式**，不進規範。
+2. **攤到一個檔＝一份 JSON 文件為止**；陣列與 state／ctl 窗不攤。
+3. **key 保留副檔名**（`agent.json`）。
+4. **非 JSON 檔用存根** `{"$file": …}`，要內容另開選項。
+5. **隱藏檔略過**（`.` 開頭一律不算）；例外的那個資料夾名字不寫死，**由環境變數 `AOS_DIRNAME` 決定**（資料夾名，語意同 proto7-1 的 `aos_dirname.py`：單一名字、不含 `/`、不是 `.`／`..`），沒設時預設 `.aos`。
+6. **N-35 的 `資料夾#/位置` 維持**「先找 inst.json」，`#` 不穿過資料夾。
+7. **schema 先用在 LLM 回話**（判官、think 吐的 tool_calls）和**一份 fsm 表 schema**，agent 定義用 `allOf` 疊上去；其他等需要。
+8. **驗證時機**：測試與 `aos_schema check` 先用；執行期只在 LLM 回話驗（驗不過＝當錯，照現有退回規則）。
+9. **驗證器自寫最小子集**，import 得到 jsonschema 就改用它（守純標準庫）。
+10. **資料夾布局的 schema 放 lib 共用**（例 `lib/schema/agent-dir.schema.json`，驗證時指定），一類資料夾一份。
+11. **`additionalProperties` 預設開**，只有封閉回話才關。
+12. **變數名用 `AOS_DIRNAME`**（不用 `AOS_DIR`：proto4-2 用過 `AOS_DIR`，意思是資料夾的絕對路徑）。使用者原文：「那還是AOS_DIRNAME好了」
+13. **找 inst.json 也跟 `AOS_DIRNAME` 走**（`$AOS_DIRNAME/inst.json`，沒設＝`.aos`）。使用者原文：「都AOS_DIRNAME」

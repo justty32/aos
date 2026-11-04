@@ -2,7 +2,7 @@
 
 11-04 前叫 test_talk、還跑 demo/talk（一個 daemon 同時跑 ann、bob、cat 三隻 member 互相寄信）；demo 刪了，跑團隊的 Team 四案一起刪，
 寄信工具本身的案留下、改指 lib，名冊照 demo/talk/team/roster.json 原樣寫在這裡。
-設計：proto8/thinking/2026-10-24-agent-talk.md。"""
+設計：proto8/thinking/2026-10/24/agent-talk/README.md。"""
 import json, os, shutil, subprocess, tempfile, unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path

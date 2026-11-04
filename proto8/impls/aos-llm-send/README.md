@@ -15,7 +15,7 @@ cat fsm.json   # think 格不直接跑腦，跑閘門；腦那張單子放在同
 AOS_KERNEL=/path/to/mailbox aos-exec --ws ws agent    # 信箱位置由叫它的人綁（像 AOS_BRAIN_*，P-39）
 ```
 
-設計與決定見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10-24-llm-kernel.md)。
+設計與決定見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10/24/llm-kernel/README.md)。
 
 ## 用法
 
@@ -30,7 +30,7 @@ aos-llm-send [旗標] 單子.json
   2. 讀單子、**在閘門的環境解整份指示詞**（＝叫它那一刻的值；`$ref` 從單子檔的資料夾算）。不是物件＝`CfgBad`；解不開＝`DirectiveBad`。
   3. `priority` 先驗（形狀見 aos-llm-kernel），壞＝`PriorityBad`、不寄。
   4. `cwd` 轉絕對：沒寫＝單子檔的資料夾（同 aos-exec），相對的接在它後面。
-  5. **回信信箱** `<信箱>/reply/`（N-16 信箱：`tmp/`、`new/`、`cur/`）沒有就建（aos-post 的 `init`；建不了＝`MkdirFailed`）。放在 kernel 的信箱底下、不放寄信人自己的 stack：kernel（可能是別的帳號、在沙箱外）要寫得進去，沙箱裡也不一定有 `AOS_STACK`（[medium 決定 3](../../thinking/2026-10-28-medium.md)）。
+  5. **回信信箱** `<信箱>/reply/`（N-16 信箱：`tmp/`、`new/`、`cur/`）沒有就建（aos-post 的 `init`；建不了＝`MkdirFailed`）。放在 kernel 的信箱底下、不放寄信人自己的 stack：kernel（可能是別的帳號、在沙箱外）要寫得進去，沙箱裡也不一定有 `AOS_STACK`（[medium 決定 3](../../thinking/2026-10/28/medium.md)）。
   6. 信＝`{"sender": 寄信人, "sent_at": 寄出時間, "reply_to": 回信信箱, "inst": 單子, "env": 閘門這一刻的整份環境, "priority": 原樣}`（前三個＝N-16 的信封，11-03 起沒有 `kind`：`sender`＝aos-util 的 `aos::identity()`——`$AOS_WS` ＞ `$AOS_STACK` ＞ `$AOS_CF` ＞ cwd〔空字串算沒設、轉絕對路徑；在第 1 步改 `AOS_CF` 之前取，是叫閘門那一方的〕，`sent_at`＝ISO 8601 UTC 到毫秒；`reply_to`＝回信信箱的絕對路徑；`inst`／`env`／`priority` 過渡期在頂層、還沒包進 `body`），寫進 `tmp/.<信件名稱>/letter.json`（先建 `sender.flock`、flock 住，拿到行程結束：kernel 靠它認寄信的人還在、不看 pid，所以關在沙箱裡也行）再改名進 `new/<信件名稱>/`。
 - **等**：每 20 毫秒看一次回信信箱的 `new/`，`letter.json` 的 `in_reply_to`＝自己的信件名稱就是回信（別人的不碰；中間收到訊號馬上醒）。**等多久不歸閘門管**：由包它那格的 `timeout_ms` 守（10-15 KISS 1.8）；kernel 不在＝信堆在 `new/`、一直等，kernel 起來就接著做。
   原信在 `new/`、`cur/`、`done/` 都找不到、也沒有回信（照信走的方向依序看，不會看漏）＝`LetterMissing`。

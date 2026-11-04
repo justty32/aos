@@ -5,7 +5,7 @@
 `aos-janet - 把一份 Janet 寫的 aos 程式編成資料夾（_entry、loop.json、fsm.json…）`（NAME，C-54 R1）
 
 **一句話：與其一個個 mkdir、vim 堆出一整套資料夾，不如用 Janet 寫一段、`aos-janet` 把它生成出來**（C-43，使用者 10-19「不如直接用lua/lisp生成這麼一套資料夾佈局」；10-24「我想試試看janet編譯成這套」）。
-編出來的就是普通的資料夾＋JSON＋短腳本，跟手寫的一樣，可以直接看、直接手改、直接 `aos-exec`。設計與代定在 [thinking 2026-10-24-janet-compile](../../../thinking/2026-10-24-janet-compile.md)。嘗試性質。
+編出來的就是普通的資料夾＋JSON＋短腳本，跟手寫的一樣，可以直接看、直接手改、直接 `aos-exec`。設計與代定在 [thinking 2026-10-24-janet-compile](../../../thinking/2026-10/24/janet-compile.md)。嘗試性質。
 
 ```sh
 proto8/extras/langs/janet/bin/aos-janet proto8/extras/langs/janet/examples/count.janet /tmp/count   # 編

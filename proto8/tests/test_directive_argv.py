@@ -1,4 +1,4 @@
-"""10-20 拍板（proto8/thinking/2026-10-20-ideas.md D1～D8）：$ref 取檔內位置（#/；原本另有 $at，10-23 使用者「把$at刪掉，就都只認#/。」）、argv 陣列放指示詞、
+"""10-20 拍板（proto8/thinking/2026-10/20/ideas.md D1～D8）：$ref 取檔內位置（#/；原本另有 $at，10-23 使用者「把$at刪掉，就都只認#/。」）、argv 陣列放指示詞、
 argv[0] 帶 / 又 exec 不了＝前面插 aos-exec（入口 argv 陣列、單子、loop／fsm 內嵌單子都一樣）。"""
 import json, os, subprocess, sys, tempfile, unittest
 from pathlib import Path

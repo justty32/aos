@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""aos-grow - 把一個函數往上長一級（或縮回一級），呼叫方跟著改、行為不變。原型（10-24 嘗試，thinking/2026-10-24-fn-grow.md）。
+"""aos-grow - 把一個函數往上長一級（或縮回一級），呼叫方跟著改、行為不變。原型（10-24 嘗試，thinking/2026-10/24/fn-grow/README.md）。
 
 函數＝aos-exec 跑得動的一個東西。這支只動一格：CALLER＝`設定檔#/指標`，指到「呼叫方寫著要跑什麼」的那一格（fsm 格的 exec、loop.json 的 exec…）。
 

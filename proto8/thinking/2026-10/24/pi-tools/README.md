@@ -1,0 +1,25 @@
+# 2026-10-24 仿 pi coding agent 的基本工具組（pi-tools）與 agent-pip
+
+← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜前情：[腦的工具呼叫](../../23/tool-calls/README.md)｜後續：[工具庫](../tool-lib/README.md)
+
+規矩見 [thinking/README](../../../README.md)：只留使用者原文、決定、結論。相關條文：[P-17、P-20、P-25、P-41](../../../../docs/CONVENTION/02-題目stack停錯腦.md)、[C-52、C-53、C-54](../../../../docs/CONCEPTS/01-設計理念.md)、N-05。
+
+**工具現在在 [`proto8/lib/base/`](../../../../lib/README.md)**（[工具庫](../tool-lib/README.md)把 pi-tools、file-tools 收進去）：參數名、回傳的 key 以 lib/README 為準（例 bash 的 `timeout_s`、計數 key 的 `counter_*`），下面記的是設計。
+
+## 分檔目錄
+
+> 超過 8 KB，依 [STRUCTURE](../../../../../wf/STRUCTURE.md) 按 `##` 標題拆開（單段仍超標的再按 `###` 切）；本檔留前言與表，各段逐字在下列分檔（2026-10-31 tidy）。
+
+| 分檔 | 涵蓋的段 |
+|---|---|
+| [01-使用者原文](01-使用者原文.md) | 使用者原文（整理版，10-24）、pi 怎麼做（2026-10-24 查，`badlogic/pi-mono` 主線 commit `136b87e8`）、決定（使用者 10-24「都按建議做」，照推薦定、可翻案）、邊緣狀況（攤出來，不擋） |
+| [02-10-24-稍晚-資料夾與檔案的工具要特別設計](02-10-24-稍晚-資料夾與檔案的工具要特別設計.md) | 10-24 稍晚：資料夾與檔案的工具要特別設計（file-tools） |
+
+<a id="使用者原文整理版10-24"></a>
+<a id="pi-怎麼做2026-10-24-查badlogicpi-mono-主線-commit-136b87e8"></a>
+<a id="決定使用者-10-24都按建議做照推薦定可翻案"></a>
+<a id="邊緣狀況攤出來不擋"></a>
+<a id="10-24-稍晚資料夾與檔案的工具要特別設計file-tools"></a>
+<a id="使用者原文"></a>
+<a id="決定使用者-10-24都按建議做照推薦定可翻案-1"></a>
+<a id="邊緣狀況"></a>

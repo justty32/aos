@@ -20,7 +20,7 @@ cat st/served.jsonl   # {"served_at": "...", "letter": "0179...", "level": "high
 cat st/used.json      # {"window": "day", "since": "2026-10-24T00:00:00+08:00", "counter_calls": 3, "counter_tokens": 129, "counter_all_calls": 3, "counter_all_tokens": 129}
 ```
 
-設計與決定見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10-24-llm-kernel.md)；排序規則是 [10-15 LLM kernel 稿](../../thinking/2026-10-15-llm-kernel.md) 已定的六條；規範 [N-42](../../docs/NORMS/09-kernel.md)、信箱 [N-16](../../docs/NORMS/05-基礎設施-窗.md)。
+設計與決定見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10/24/llm-kernel/README.md)；排序規則是 [10-15 LLM kernel 稿](../../thinking/2026-10/15/llm-kernel.md) 已定的六條；規範 [N-42](../../docs/NORMS/09-kernel.md)、信箱 [N-16](../../docs/NORMS/05-基礎設施-窗.md)。
 
 ## 用法
 
@@ -39,16 +39,16 @@ aos-llm-kernel [旗標] kernel.json
   - `used.json`：用量帳 `{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens"}`——這一窗（`since` 起）跑了幾封、多少 token，與開帳以來的總數；每封跑過的信寫完 served 那行就記一次（先寫暫存再改名）。在但讀不懂＝`UsedBad`（刪掉就從 0 算）。
 - **信箱**（N-16 資料夾式）：`tmp/`、`new/`、`cur/`、`done/` 四格，一封信＝一個資料夾 `<信件名稱>/`；kernel 每次先建好四格（建不了 `MkdirFailed`），`.flock` 用 flock 鎖住整次（另一個 kernel 鎖著＝`LockFailed`；`.lock/` 留給 N-15 的資料夾鎖，`.lock` 不認）。
   信件名稱＝`<UTC 奈秒 20 位>.<閘門 pid>.<閘門 started_at_ticks>`：字典序＝寄的先後（pid、ticks 只讓名字不撞）。
-  **寄信的人還在不在＝信裡的 `sender.flock` 有沒有人鎖著**（`sender.lock` 不認；[thinking sandbox S15](../../thinking/2026-10-24-sandbox.md)）：閘門在 `tmp/.<信件名稱>/` 建信、先 flock 住 `sender.flock`、拿到行程結束，寫好才改名進 `new/`；kernel 試著拿共享鎖（不等），拿得到、檔不在、開不了＝人不在。flock 跟著檔走、不看 pid，沙箱（自己的行程編號）裡的閘門也認得。`tmp/` 裡 `.` 開頭的＝閘門正在寫：已有 `letter.json`（上了鎖才寫）而沒人鎖才刪。
+  **寄信的人還在不在＝信裡的 `sender.flock` 有沒有人鎖著**（`sender.lock` 不認；[thinking sandbox S15](../../thinking/2026-10/24/sandbox.md)）：閘門在 `tmp/.<信件名稱>/` 建信、先 flock 住 `sender.flock`、拿到行程結束，寫好才改名進 `new/`；kernel 試著拿共享鎖（不等），拿得到、檔不在、開不了＝人不在。flock 跟著檔走、不看 pid，沙箱（自己的行程編號）裡的閘門也認得。`tmp/` 裡 `.` 開頭的＝閘門正在寫：已有 `letter.json`（上了鎖才寫）而沒人鎖才刪。
 - **信**（`letter.json`）：`{"sender": 寄信人, "sent_at": 寄出時間, "reply_to": 回信信箱, "inst": 單子, "env": 寄信那一刻閘門的整份環境, "priority": 原樣}`。前三個是 N-16 的信封（aos-llm-send 會寫；11-03 起沒有 `kind`）：kernel **不檢查也不擋**，沒有、或帶著舊的 `kind` 也照收；`inst`／`env`／`priority` 過渡期在頂層（還沒包進 `body`），其他不認得的 key 一律忽略。**priority**：沒寫＝normal；`"low"`／`"normal"`／`"high"`；數字看正負；
   物件 `{"level", "deadline", 其他 key 照帶不管}`；`deadline`＝帶時區的 ISO 8601 或 epoch 秒（沒時區不猜＝壞）。
-  **`_metainfo`**（被叫者自報的特性，[thinking 10-24 metainfo § 5](../../thinking/2026-10-24-metainfo/02-誰讀與kernel接法.md#5-給-llm-kernel-實作者的接法)）：只讀信裡單子的 `_metainfo` 的 `time_ms`、`llm_tokens`（數字，或 `{"val", "max"}` 取 `val`；非負數才算）；
+  **`_metainfo`**（被叫者自報的特性，[thinking 10-24 metainfo § 5](../../thinking/2026-10/24/metainfo/02-誰讀與kernel接法.md#5-給-llm-kernel-實作者的接法)）：只讀信裡單子的 `_metainfo` 的 `time_ms`、`llm_tokens`（數字，或 `{"val", "max"}` 取 `val`；非負數才算）；
   形狀不對＝那個 key 當沒寫、記進 served 的 `metainfo_bad`，**照樣跑、不回 `LetterBad`**（M8）。`llm_tokens` 只讀不用（留給額度）。不讀單子以外的檔（資料夾的 `_metainfo`、子葉）。
   排隊依據都從 `priority_of` 一個函式讀（priority＋`_metainfo`）。
 - **回信**（`reply.json`）：`{"code", "signal"}` 或 `{"error": {"code", "msg"}}`。
-  **信封寫了 `reply_to`（信箱路徑）**（[medium 決定 3](../../thinking/2026-10-28-medium.md)；aos-llm-send 都會寫）：另把同一份當 `body`、照 [N-16](../../docs/NORMS/05-基礎設施-窗.md) 寄一封回信進那個信箱（aos-post 的庫；`in_reply_to`＝原信的信件名稱、`sender`＝kernel 自己的身分、信裡有 `stdout.txt`／`stderr.txt` 就附上），寄出的信件名稱記在 `<信>/reply_letter.txt`（已經有＝寄過了、不寄第二封，接手上一次留下的也一樣）。`reply.json` 照寫、信照搬 `done/` 當紀錄。寄不出去（信箱不在、寫不進）不是 kernel 的錯：原因記進 served 的 `reply_error`（`"代號 原因"`；成功或沒寫 `reply_to`＝null）。寄信的人不在了、收拾 `done/<信件名稱>` 時，那封回信還在對方 `new/`（沒人拿）就撤回。沒寫 `reply_to` 的信：回信只在 `done/<信件名稱>/reply.json`，由寄信人來撈。
+  **信封寫了 `reply_to`（信箱路徑）**（[medium 決定 3](../../thinking/2026-10/28/medium.md)；aos-llm-send 都會寫）：另把同一份當 `body`、照 [N-16](../../docs/NORMS/05-基礎設施-窗.md) 寄一封回信進那個信箱（aos-post 的庫；`in_reply_to`＝原信的信件名稱、`sender`＝kernel 自己的身分、信裡有 `stdout.txt`／`stderr.txt` 就附上），寄出的信件名稱記在 `<信>/reply_letter.txt`（已經有＝寄過了、不寄第二封，接手上一次留下的也一樣）。`reply.json` 照寫、信照搬 `done/` 當紀錄。寄不出去（信箱不在、寫不進）不是 kernel 的錯：原因記進 served 的 `reply_error`（`"代號 原因"`；成功或沒寫 `reply_to`＝null）。寄信的人不在了、收拾 `done/<信件名稱>` 時，那封回信還在對方 `new/`（沒人拿）就撤回。沒寫 `reply_to` 的信：回信只在 `done/<信件名稱>/reply.json`，由寄信人來撈。
 
-### token 回報與額度（[thinking § token 回報與額度](../../thinking/2026-10-24-llm-kernel.md#token-回報與額度10-24-下午)）
+### token 回報與額度（[thinking § token 回報與額度](../../thinking/2026-10/24/llm-kernel/README.md#token-回報與額度10-24-下午)）
 
 - **回報**：kernel 跑每封信時，在信裡帶來的環境上**加一個** `AOS_KERNEL_REPORT`＝這封信小格裡的 `cur/<信件名稱>/report.json`（信裡原本有同名的也蓋掉）。腦願意就把 API 回覆的 `usage` 物件**原樣**寫進去（先寫 `.report.json` 再改名）；
   kernel 跑完讀它：`total_tokens`（非負整數）就是這封的 token 數；沒有 `total_tokens` 就 `prompt_tokens`＋`completion_tokens`；檔不在＝沒回報（`counter_tokens` null，只算次數）；讀不懂、不是物件、數字不對＝`report_bad: true`（也只算次數，照樣交回信）。
@@ -59,9 +59,9 @@ aos-llm-kernel [旗標] kernel.json
   `budget` 沒寫也照樣記 `used.json`（窗＝day）。換窗＝`used.json` 的 `window` 或 `since` 跟現在算出來的不同：`counter_calls`、`counter_tokens` 歸零，`counter_all_*` 照留。
 - **到頂怎麼判**：要開下一封之前看——`counter_calls`（已用）＋這次已開的＋上一次留下還在跑的 ≥ `max_calls`，或 `counter_tokens`（已用）≥ `max_tokens`。token 只能跑完才知道，所以一次裡最多超過「那一次所有封的量」（`slots` 1 時＝最後一封）。
 
-### accept：只跑名單裡的單子（堵沙箱信箱後門，[thinking sandbox S14](../../thinking/2026-10-24-sandbox.md)）
+### accept：只跑名單裡的單子（堵沙箱信箱後門，[thinking sandbox S14](../../thinking/2026-10/24/sandbox.md)）
 
-kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sandbox](../../extras/sandbox/README.md) 裡的程式寄得到信（設定把信箱綁進來）時，就能叫它跑「`cat 判準`」。誰寄得進信箱由 Linux 權限管（[sandbox/root/setup.sh](../../extras/sandbox/root/setup.sh) `--mailbox`），寄進來之後替它跑什麼 Linux 管不到，現在只能靠 `accept`（跟「存取控制純靠 Linux」衝突、暫留，[thinking sandbox S18](../../thinking/2026-10-24-sandbox.md)）：
+kernel 在沙箱外、用自己的身分照信跑任何單子；關在 [aos-sandbox](../../extras/sandbox/README.md) 裡的程式寄得到信（設定把信箱綁進來）時，就能叫它跑「`cat 判準`」。誰寄得進信箱由 Linux 權限管（[sandbox/root/setup.sh](../../extras/sandbox/root/setup.sh) `--mailbox`），寄進來之後替它跑什麼 Linux 管不到，現在只能靠 `accept`（跟「存取控制純靠 Linux」衝突、暫留，[thinking sandbox S18](../../thinking/2026-10/24/sandbox.md)）：
 
 ```json
 {"mailbox": {"$env": "AOS_KERNEL"}, "accept": [{"argv": ["python3", "/abs/agent/brain.py"], "cwd": "/abs/agent"}]}
@@ -153,6 +153,6 @@ cmake -B build && cmake --build build && ctest --test-dir build
 - 回信放在 `done/` 等閘門來拿；閘門還活著卻一直不拿（不會發生，除非有人 SIGSTOP 它）就一直佔著。閘門拿 `reply_to` 的回信、不刪 `done/`，`done/` 留到寄信的人不在了才收（通常是下一次 kernel 起來時）。
 - 寄回信跟搬 `done/` 之間 kernel 死掉（`reply_letter.txt` 還沒寫成）：下一次接手會再寄一封，閘門只拿第一封，第二封在寄信人不在之後也不會被撤回（`reply_letter.txt` 記的是第二封）——留在回信信箱的 `new/`。
 - 信裡帶整份環境（含 `AOS_BRAIN_KEY` 這種），信箱在誰都讀得到的地方就會外洩：信箱放自己的 stack 裡。
-- **寄信的人是誰 kernel 不驗**：`sender.flock` 只說「人還在」、不是身分，信封的 `sender` 是閘門照環境填的、kernel 也不看，寫得到信箱的程式自己建一封、拿著鎖就算數；kernel 用自己的身分跑信。擋任意單子只能靠 `accept`（[thinking sandbox S18](../../thinking/2026-10-24-sandbox.md)）。
+- **寄信的人是誰 kernel 不驗**：`sender.flock` 只說「人還在」、不是身分，信封的 `sender` 是閘門照環境填的、kernel 也不看，寫得到信箱的程式自己建一封、拿著鎖就算數；kernel 用自己的身分跑信。擋任意單子只能靠 `accept`（[thinking sandbox S18](../../thinking/2026-10/24/sandbox.md)）。
 - **共用信箱看得到別人的信**：寫得到信箱就讀得到別封信（含整份環境）與回信；要分開就分信箱、分群組（Linux 權限）。kernel 自己建的信箱照 umask（多半 755），跨帳號用照 `setup.sh --mailbox` 先建好。
 - 沒有每個寄件人的配額（10-15「濫用：先信任」）；`class` 不看；`_metainfo` 宣告錯（說 1 秒跑 1 小時）不處罰，只記在 served 裡（只有單子的 `timeout_ms` 收得掉它）。

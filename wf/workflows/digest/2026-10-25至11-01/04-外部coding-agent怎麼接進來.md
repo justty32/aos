@@ -58,7 +58,7 @@ bob-1 射後不理（跑完就結束），bob-2 射後有理（跑著時能塞�
 
 ## 想看原文
 
-- [10-26 playground（含 10-27 MCP）](../../../../proto8/thinking/2026-10-26-playground.md)｜[10-27 aos-hub](../../../../proto8/thinking/2026-10-27-claude-switch.md)
-- [10-28 常駐程式](../../../../proto8/thinking/2026-10-28-hub-kernel.md)｜[10-28 重寫與適配表](../../../../proto8/thinking/2026-10-28-hub-adapter.md)
-- [10-29 兩隻 bob](../../../../proto8/thinking/2026-10-29-agent-bob.md)｜[10-30 生命週期](../../../../proto8/thinking/2026-10-30-agent-lifecycle.md)
-- [10-30 看地圖](../../../../proto8/thinking/2026-10-30-map-review.md)｜[10-30 eca](../../../../proto8/thinking/2026-10-30-eca.md)｜[11-01 bob 與 amy](../../../../proto8/thinking/2026-11-01-playground-bob.md)
+- [10-26 playground（含 10-27 MCP）](../../../../proto8/thinking/2026-10/26/playground.md)｜[10-27 aos-hub](../../../../proto8/thinking/2026-10/27/claude-switch/README.md)
+- [10-28 常駐程式](../../../../proto8/thinking/2026-10/28/hub-kernel/README.md)｜[10-28 重寫與適配表](../../../../proto8/thinking/2026-10/28/hub-adapter/README.md)
+- [10-29 兩隻 bob](../../../../proto8/thinking/2026-10/29/agent-bob/README.md)｜[10-30 生命週期](../../../../proto8/thinking/2026-10/30/agent-lifecycle/README.md)
+- [10-30 看地圖](../../../../proto8/thinking/2026-10/30/map-review/README.md)｜[10-30 eca](../../../../proto8/thinking/2026-10/30/eca/README.md)｜[11-01 bob 與 amy](../../../../proto8/thinking/2026-11/01/playground-bob/README.md)

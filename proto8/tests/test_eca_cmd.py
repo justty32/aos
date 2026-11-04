@@ -6,7 +6,7 @@
 
 eca 資料夾在測試裡臨時組（cli.json＋loop.json 叫 bin/aos-eca-turn --on-empty idle＋_entry 轉 aos-loop），add 的 XXX 就給它（11-03：沒有 --kind／--template）；CLI 用 test_cli_tools 的假 claude
 （外面包一層：有 BROKEN 這個檔就退 1，測 CLI 出錯），不花額度。要 tmux 的只有 open -d 那案（沒有就 skip）。
-設計：proto8/thinking/2026-10-30-eca.md C 結論 7～10。"""
+設計：proto8/thinking/2026-10/30/eca/README.md C 結論 7～10。"""
 import json, os, shutil, subprocess, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402

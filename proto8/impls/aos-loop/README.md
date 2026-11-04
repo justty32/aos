@@ -18,7 +18,7 @@ aos-loop --max 2 loop.json # 每次 `aos-exec -- idle`，旗標蓋過 loop.json 
 
 規範：窗 N-06～N-09、N-17、N-32、N-33 在 [NORMS/05 窗](../../docs/NORMS/05-基礎設施-窗.md)，結束碼 N-43 在 [NORMS/01 總則](../../docs/NORMS/01-總則.md)，loop 的定位在 [NORMS/04 loop 與 daemon](../../docs/NORMS/04-基礎設施-loop與daemon.md)；慣例 CONVENTION P-06、P-19～P-22、P-36。本頁只寫用法與實作細節。
 骨架是公開的 `aos::loop::Loop`（aos-daemon 繼承它）。
-`exec` 可以直接放單子物件（使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」，[thinking 10-24](../../thinking/2026-10-24-exec-relative.md#10-24-exec-直接放單子)）：物件＝每次行程內 `run_inst`（`src/run/inline.cpp`），見下面「用法」的 `exec`。
+`exec` 可以直接放單子物件（使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」，[thinking 10-24](../../thinking/2026-10/24/exec-relative/README.md#10-24-exec-直接放單子)）：物件＝每次行程內 `run_inst`（`src/run/inline.cpp`），見下面「用法」的 `exec`。
 
 ## 用法
 
@@ -50,7 +50,7 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] �
 
 ### log
 
-使用者 11-02「daemon和loop他們就是把log輸出到stdout」「要給argv讓使用者選擇是否要印出」，11-02 晚「aos-loop和aos-daemon他們印出的log感覺都沒啥用，應該要改成默認不印」（[thinking 11-02 state 窗](../../thinking/2026-11-02-state-window.md)）：
+使用者 11-02「daemon和loop他們就是把log輸出到stdout」「要給argv讓使用者選擇是否要印出」，11-02 晚「aos-loop和aos-daemon他們印出的log感覺都沒啥用，應該要改成默認不印」（[thinking 11-02 state 窗](../../thinking/2026-11/02/state-window.md)）：
 
 - **每跑完一次在 stdout 印一行 JSON**（不論那次怎麼結束：0、10、失敗、被訊號停掉）：`{"started_at": 這次開始（ISO 8601 UTC 到毫秒）, "counter_runs": 第幾次, "code": 結束碼, "signal": 訊號或 null, "elapsed_ms": 毫秒}`。結束不另印；`exec` 起不來（單子壞、fork 失敗）那次沒有結果、不印。沒有 `exec`（aos-daemon 純監工）不印每圈的行。
 - **預設不印，`--enable-logs` 才印**。不寫任何 log 檔（loop.json 沒有 `log` key）；要存檔就在外面接（`aos-loop loop.json >> log.jsonl`）。
@@ -76,19 +76,19 @@ aos-loop [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] �
 
 `"ctl": "ctl.json"`、`"state": "state.json"`＝兩扇窗的檔名，放在 `$AOS_STACK` 底下（寫了卻沒設 `AOS_STACK`＝`StackMissing`；沒寫或寫 `null`＝不開、不提醒）。
 
-- **ctl**（誰都能寫、loop 只讀；每跑一次讀一次、暫停中每秒讀一次）：**一道指令**（使用者「還是用指令吧，不然大家不好理解。但是loop就不要用mailbox那套，就是誰能寫ctl.json就能控制。」，[thinking 11-03 ctl-commands](../../thinking/2026-11-03-ctl-commands.md)）：
+- **ctl**（誰都能寫、loop 只讀；每跑一次讀一次、暫停中每秒讀一次）：**一道指令**（使用者「還是用指令吧，不然大家不好理解。但是loop就不要用mailbox那套，就是誰能寫ctl.json就能控制。」，[thinking 11-03 ctl-commands](../../thinking/2026-11/03/ctl-commands.md)）：
   `{"cmd": "pause"／"resume"／"stop", "max", "interval_ms", "seq"}`，都選填。`pause`＝這次跑完不起下一次、phase `paused`；`resume`＝解除；`stop`＝這次跑完以 0 結束、phase `stopped`（壓過同一道裡的其他東西）；
   `max`／`interval_ms` 寫了＝從現在起用它、寫 `null`＝回旗標／loop.json 的值、沒寫＝不動；`seq` 只回音（state 的 `ctl_seq`＝最後一道照做的指令的 `seq`）。三個動詞冪等。其他 key 忽略（`paused`／`stopped` 也是）。
   **新舊比內容**：解完的那份跟上一次讀到的一樣＝同一道、不再做；不一樣才照做一次。所以檔留著沒事、loop 不刪不改它；兩個人先後寫、loop 還沒讀＝後寫的算、前一道就沒了。
   **起來第一次讀到的當基準線、不執行**——殘留的 `{"cmd": "stop"}` 不會讓新起的馬上退，不用誰去清；代價是起來之前寫好的指令不算（要一起來就暫停見下面 state）。檔不見了＝沒有新指令，之後再寫的一律算新的（實作時代定）。
   讀到新的壞的（讀不了、不是 JSON 物件、型別不對、`cmd` 不認得、指示詞解不開）整份不採用、維持原狀、原因寫進 state 的 `ctl_warning`；照做了一道好的才清回 null。基準線那份壞的不提醒（實作時代定）。
-- **state**（只有自己寫；先寫 `.state.json` 再改名，N-05）：只在兩次之間寫，**而且有變才寫**（[thinking 11-02 state 窗](../../thinking/2026-11-02-state-window.md)）：
+- **state**（只有自己寫；先寫 `.state.json` 再改名，N-05）：只在兩次之間寫，**而且有變才寫**（[thinking 11-02 state 窗](../../thinking/2026-11/02/state-window.md)）：
   `{"phase": running／waiting／paused／done／stopped, "counter_runs", "max", "interval_ms", "paused", "ctl_seq", "ctl_warning", "pid", "started_at_ticks", "boot_id", "updated_at"}`，
   `counter_runs`＝跑過幾次（寫那一刻的快照）、`started_at_ticks`＝/proc/<pid>/stat 第 22 欄、`updated_at`＝這份寫出去的那一刻（ISO 8601 UTC 到毫秒，例 `2026-10-23T01:58:45.123+00:00`；最後一欄）（使用者 10-25「計數這塊，幫我改成counter_*」）。
   **有變才寫**：每次要寫先組好一份（不含 `updated_at`），跟上一份寫出去的比，**`counter_runs` 不算變動**（比的時候排除；使用者 11-02「對」），**`phase` 在 running／waiting 之間換也不算**（11-02 晚使用者「running/waiting確實不該算變動」；寫出去的照帶當下的）——一樣就不碰檔，不一樣才加 `updated_at` 寫。
   啟動後第一份、結束那份（帶 `code`）一定寫。會變的：進出 paused／stopped／done（有身體的 loop 跑著睡著來回時窗停在第一份）、讀到新的 ctl（`ctl_seq`、`max`、`interval_ms`、`paused`）、`ctl_warning` 變。
   **沒有心跳**（11-02 使用者「心跳這塊就直接看pid就好」）：睡著時窗不動；判活著看 `pid`＋`started_at_ticks`＋`boot_id`（N-17），不看檔案的更新時間。nap 最多睡 1 秒是為了讀 ctl、不是心跳。
-  沒有 `exec`（只有 aos-daemon 會這樣）時一輪只讀一次 ctl、只 tend 一次、最多寫一份 `waiting`（不寫 `running`），睡著的 daemon 窗不動（使用者「都修都處理」，[thinking](../../thinking/2026-10-23-daemon-bench.md)）。
+  沒有 `exec`（只有 aos-daemon 會這樣）時一輪只讀一次 ctl、只 tend 一次、最多寫一份 `waiting`（不寫 `running`），睡著的 daemon 窗不動（使用者「都修都處理」，[thinking](../../thinking/2026-10/23/daemon-bench.md)）。
   **起來先暫停**（代定，使用者四態「休眠但是可以隨時叫醒繼續跑指令或繼續暫停」）：開了 state 窗、`$AOS_STACK` 裡已有一份舊的 state.json 而且它的 `paused` 是 `true`＝起來先暫停（第一份 state 就是 `paused`，等 `{"cmd": "resume"}`）；其他欄位不接（`counter_runs` 從 0、`max`／`interval_ms` 回設定）。
   `$AOS_STACK` 資料夾不在＝state 寫不了＝`WriteFailed`、退 1、那次沒跑，**不自己建**（建 stack 只在 aos-exec 做，N-59 第 1 件；經 aos-exec 跑時它已經建好）。
   結束時多 `code`（`done`＝自己跑完或失敗、`stopped`＝ctl 的 `stop`、收到訊號或自己的錯）；`max` 不限時是 `null`。

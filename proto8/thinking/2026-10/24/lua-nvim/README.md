@@ -1,0 +1,20 @@
+# 2026-10-24 Lua 寫 aos、接進 nvim（嘗試）
+
+← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜程式 [langs/lua](../../../../extras/langs/lua/README.md)、editors/nvim（11-03 封存，在 proto8/archive/）｜測試 `proto8/tests/test_lua_aos.py`｜試驗場 `~/code/try/lua-aos/`
+
+## 分檔目錄
+
+> 超過 8 KB，依 [STRUCTURE](../../../../../wf/STRUCTURE.md) 按 `##` 標題拆開（單段仍超標的再按 `###` 切）；本檔留前言與表，各段逐字在下列分檔（2026-10-31 tidy）。
+
+| 分檔 | 涵蓋的段 |
+|---|---|
+| [01-使用者原文](01-使用者原文.md) | 使用者原文（整理版，10-24）、前提（查 notes、janet-lab 得到的，唯讀沒改）、決定與結論（照推薦定、可翻案；使用者 10-24「都按建議做」）、Lua 寫法 ↔ 編出來的 JSON、nvim 外掛能做的（用法在 editors/nvim/README） |
+| [02-邊緣狀況](02-邊緣狀況.md) | 邊緣狀況、未決（沒做，等他想到再說） |
+
+<a id="使用者原文整理版10-24"></a>
+<a id="前提查-notesjanet-lab-得到的唯讀沒改"></a>
+<a id="決定與結論照推薦定可翻案使用者-10-24都按建議做"></a>
+<a id="lua-寫法--編出來的-json"></a>
+<a id="nvim-外掛能做的用法在-editorsnvimreadme"></a>
+<a id="邊緣狀況"></a>
+<a id="未決沒做等他想到再說"></a>
