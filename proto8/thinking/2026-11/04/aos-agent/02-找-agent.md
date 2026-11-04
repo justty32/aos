@@ -1,47 +1,49 @@
-← [入口](README.md)｜涵蓋：找 agent 的兩條路、`.aos/agent.json` 格式與規則、佔資料夾的衝突、哪個 daemon｜上一份 [01-子命令](01-子命令.md)｜下一份 [03-種類與契約](03-種類與契約.md)
+← [入口](README.md)｜涵蓋：找 agent（`--target`／`AOS_AGENT`）、哪個 daemon（`--daemon`／`AOS_DAEMON`）、`using-aos-agent.sh`、chat 怎麼運作｜上一份 [01-子命令](01-子命令.md)｜下一份 [03-種類與契約](03-種類與契約.md)
 
-## 找 agent：只有兩條路（使用者 11-04 定的，fable 補細節）
+> 11-04 晚改寫。原本這份是「兩條路：名字查表／當前資料夾的 `.aos/agent.json`」加佔資料夾的衝突表；使用者 11-04「先不做擴充」、稍晚定 `--to`／`AOS_AGENT`、晚上改 `--target`——標記、`occupy`／`release`、「名字還是話」整段作廢。
 
-使用者 11-04：找 agent＝`AOS_DAEMON_STACK` → daemon 表上的名字 → 那列的 stack；擴充＝當前資料夾有 `.aos/agent.json` 就知道找誰。所以：
+## 找 agent：只有一條路
 
-1. **給了名字**：查 daemon 表（`aos-daemon-ctl ls --json` 的 `procs`），表上有＝那列；`running`／`stopping`／`stopped`／`sleeping` 都算在（跟 `where` 一樣，11-03「一個proc在daemon中的狀態……除此之外就是不存在於daemon了」）；沒有＝`InstanceMissing`。
-2. **沒給名字（或給的是資料夾）**：看 `<資料夾>/.aos/agent.json`（沒給資料夾＝cwd）。有＝讀出 `name` 與 `daemon_stack`，回到第 1 條去查**那個** daemon 的表。沒有＝`InstanceMissing`，訊息教兩句：「給名字（`aos-agent ls` 看有哪些）」或「讓一隻佔這裡：`aos-agent occupy 名字`」。
+使用者 11-04 晚：「--target……這東西沒給的話就是吃AOS_AGENT。」
 
-**不帶過來的第三條路**：aos-eca 現在會「再比工作區」（表上 `ws` 跟這個資料夾相同就算）。aos-agent 不做——使用者定的只有兩條，比工作區是第三條暗路（C-56），而且兩隻共用同一工作區時就猜不出來。要「cd 進去就能說」就 `occupy`。這是跟 aos-eca 行為不同的一點，記在 [04 過渡](04-過渡與邊緣.md)。
+1. `--target 名字` ＞ `$AOS_AGENT`；都沒有＝`TargetMissing`。
+2. 名字查 daemon 表（`aos-daemon-ctl ls --json` 的 `procs`）：`running`／`stopping`／`stopped`／`sleeping` 都算在（跟 `where` 一樣，11-03「除此之外就是不存在於daemon了」）；沒有＝`InstanceMissing`，訊息：rm 過或自己結束下了表、stack 可能還在、要接著用同名再 `add`。
+3. 對到那一列：stack＝列上的 `stack`、工作區＝列上的 `ws`（沒有＝daemon 的）。之後只碰這個 stack（[03](03-種類與契約.md)）。
 
-**`--stack S` 例外**：say／listen／state／pause／resume 給了 `--stack`（或設了 `$AOS_STACK`）就直接用那個 stack、不走上面兩條（給直接 `aos-exec` 跑的留的；使用者「先暫時忽略直接aos-exec出來的那些」，所以只留明路、不猜 `.stack`）。這時沒有 daemon、沒有名字：start／stop／rm 這些要 daemon 的子命令不收 `--stack`（給了＝`ArgumentsBad`「這隻不在 daemon 上」）。
+**`add`／`rm` 不走這條**：`add` 的名字是 `--name`（沒給＝資料夾名）、`rm` 是位置參數 `rm 名字`（使用者 11-04 晚）；兩個都**不吃 `AOS_AGENT`**——插拔改的是 daemon 的名單、拔掉還刪 stack 不可逆（11-02 晚不封存），對象要明講，不讓環境變數默默代入（C-56 不藏暗規則）。`ls` 不收對象。
 
-## `.aos/agent.json`：佔資料夾的證據
+**不再比工作區**：aos-eca 會「表上 `ws` 跟 cwd 相同就算」，aos-agent 不做（第三條暗路；兩隻同工作區就猜不出來）。要「cd 進去就能說」＝在那個殼裡 `export AOS_AGENT=bob`（或 `source using-aos-agent.sh bob`，下節）；使用者 11-04 自己的話：「有點類似命名空間」。
 
-**位置**：`<資料夾>/.aos/agent.json`（使用者的字；`.aos/` 是隱藏資料夾，C-51「隱藏檔一律略過」所以不會被當成程式的一部分）。只這一個檔；`.aos/` 裡以後要放別的再說。
-
-**內容**（只放找到它要用的兩樣，其他都查表就有，C-56）：
-
-```json
-{"name": "bob", "daemon_stack": "/home/u/aos-daemon/.stack"}
-```
-
-- `name`＝daemon 表上的名字；`daemon_stack`＝那個 daemon 的 stack，**絕對路徑**（寫入時從 `--daemon-stack`／`$AOS_DAEMON_STACK` 轉絕對）。
-- 不放 stack、ws、種類：都從表與 stack 推得出來（[03](03-種類與契約.md)），放了就會跟表上不同步（C-48「不認得的 key 一律忽略」照舊——多的 key 不報錯）。
-
-**誰寫**：`aos-agent occupy 名字 [資料夾]` 寫、`aos-agent release [資料夾]` 刪（`.aos/` 空了順手刪）；`aos-agent rm` 把指著被拔那隻的標記一起拿掉。**agent 的身體（aos-eca-turn、idle.py）從不寫它**——身體只碰自己的 stack（P-42 三樣以外不碰工作區；C-65 工作區只放交辦的東西與成果）。這是[方向題 1](06-衝突與方向題.md#方向題-1aosagentjson-誰寫怎麼寫)的建議案；用 `add --occupy` 旗標或讓 agent 自己寫是另兩案。
-
-**佔資料夾的衝突怎麼判**（使用者「如果有其他agent想要佔據資料夾，那就是看這個」）：
-
-| `occupy X 資料夾` 時發現 | 判法 |
-|---|---|
-| 沒有 `.aos/agent.json` | 寫入 |
-| 有，`name` 就是 X、`daemon_stack` 相同 | 已經佔著，說一句、退 0 |
-| 有，指的那隻**還在**它那個 daemon 的表上（任何 phase，含 `stopped`／`sleeping`） | `WsOccupied`「這裡被 Y 佔著；要換先 `aos-agent release`」、退 1、不改檔 |
-| 有，指的那隻**不在**表上（rm 過、自己結束下了表）、或 `daemon_stack` 不是資料夾／沒有 `procs_state.json` | 舊標記＝沒人佔，直接覆寫（11-03「拿下名單後……就不存在了」） |
-| 有，讀不懂（不是 JSON、沒有 `name`／`daemon_stack`） | `MarkerBad`、退 1、不改檔；訊息指路徑，人自己刪 |
-
-- `occupy` 的 X 要**已經在表上**（先 `add` 再 `occupy`）；不在＝`InstanceMissing`。
-- 一個資料夾只被一隻佔；一隻可以佔好幾個資料夾（標記在資料夾那邊，agent 那邊不記）。agent 平常不佔任何資料夾（使用者「agent通常是不需要佔據資料夾的」）。
-- `occupy` 不檢查資料夾是不是它的工作區（`--ws`）：佔資料夾只是「cd 進來能找到它」的捷徑，跟它在哪裡做事是兩件事（C-65 stack／工作區分開的精神）。
-- `release` 不管標記指誰、不問 daemon，直接刪（人的資料夾人作主）；沒有標記＝說一句、退 0。
-- `rm`／`stop`／`start` 之外沒有別的子命令會動標記；`stop` 的那隻仍佔著（它還在表上）。
+**`--stack S` 例外**（`say`／`listen`／`chat`／`state`）：給了就直接用那個 stack、不查表、不要 daemon——給直接 `aos-exec` 跑的留的（[方向題 2](06-衝突與方向題/02-新題-11-04-晚.md#方向題-2直接-aos-exec-跑的要不要留---stack)）。這時沒有名字：`start`／`stop`／`rm`／`pause`／`resume`／`open` 不收 `--stack`（給了＝`ArgumentsBad`「這隻不在 daemon 上」）。
 
 ## 哪個 daemon
 
-順序：`--daemon-stack D` ＞（沒給名字時）標記的 `daemon_stack` ＞ `$AOS_DAEMON_STACK`。給了名字就不看標記（名字＝「我知道是哪隻」，daemon 照環境）。三個都沒有＝`DaemonMissing`。標記指的 daemon 跟環境的不同時以標記為準（它存的是絕對路徑、正是為了 cd 之後還找得到）；要明講就 `--daemon-stack`。daemon 沒在跑（`procs_state.json` 的 pid 對不上）：查表類（ls／state／where）照 aos-daemon-ctl 說一句注意、照表印；要動它的（add／rm／start／stop）＝`DaemonMissing`（跟 aos-eca 一樣）；say 照寄、提醒重開 daemon（aos_human 的 `run_hint` 已有：`sleeping`＝「重開 daemon 它會自己醒」）。
+`--daemon D` ＞ `$AOS_DAEMON`；都沒有＝`DaemonMissing`（N-63 ②：不猜位置）。值＝那個 daemon 的 stack（窗用預設名：`procs_ctl_mailbox/`、`procs_state.json`）。跟 aos-daemon-ctl 同一套，名字從 `--daemon-stack`／`AOS_DAEMON_STACK` 改過來（使用者 11-04 晚「AOS_DAEMON_STACK實在太醜，還是直接簡化成AOS_DAEMON就好了」；影響範圍在 [05 步 0](05-實作步驟.md#步-0aos_daemon_stack-改名-aos_daemon)）。`AOS_DAEMON` 要絕對路徑（相對路徑 cd 之後對不上，11-02「3」維持只寫清楚）。daemon 沒在跑（`procs_state.json` 的 pid 對不上）：查表類（`ls`／`state`／`where`）照 aos-daemon-ctl 說一句注意、照表印；要動它的（`add`／`rm`／`start`／`stop`）＝`DaemonMissing`；`say` 照寄、提醒重開 daemon（`sleeping`＝「重開 daemon 它會自己醒」，aos_human 現成）。
+
+## `using-aos-agent.sh`：像命名空間
+
+使用者 11-04：「有需要的話就是讓人用source using-aos-agent.sh，然後我們就可以直接say --to bob "..."，有點類似命名空間。」放 `proto8/extras/agent/using-aos-agent.sh`，`source` 用（不是跑；10-15「少用 sh」是說 inst 的 argv 不拼 `sh -c`，給人 source 的殼檔不在內）。只做兩件事：
+
+```sh
+source proto8/extras/agent/using-aos-agent.sh bob   # 帶名字＝export AOS_AGENT=bob；不帶＝只定義函數
+say 現在幾點 && listen                             # ＝aos-agent say 現在幾點 && aos-agent listen
+say --target ann 你好                             # 旗標照常過（函數就是 aos-agent say "$@"）
+chat                                              # 一直聊，Ctrl-C 退出
+status
+```
+
+- 定義的函數只有 **`say`、`listen`、`chat`、`status`**：這四個名字跟系統指令不撞。**不定義** `rm`、`ls`、`open`、`watch`、`start`、`stop`、`state`——會蓋掉或撞到 shell 本來的指令（`rm` 尤其危險），這些照打 `aos-agent rm …`。
+- 帶的名字不查表、不報錯（只是 export）；真的不在表上，下一句 `say` 自己報 `InstanceMissing`。
+- 不設 `AOS_DAEMON`（那是另一個 hub 的事，各設各的，N-63 一個 hub 一個變數）；也不改 PATH（PATH 照 [dev-env](../../../../../wf/workflows/dev-env.md) 自己擺）。
+- bash 與 zsh 都能 source（`$1` 兩邊都有）；函數名撞到使用者自己的別名由他自己承擔。
+
+## chat 怎麼運作
+
+使用者 11-04 晚：「幫我弄個aos-agent chat指令，ctrl-c退出。」它就是 `say`＋`listen` 的迴圈，程式共用同一段（aos_ws.put、aos-listen 的 `wait_latest`／`print_answer`），沒有自己的新機制、不碰 agent 的 stack 以外的東西：
+
+1. 開場：對到那隻（`--target`／`AOS_AGENT`／`--stack`）；stderr 一行「跟 bob 聊（Ctrl-C 退出）」。不印舊對話（要看先 `listen --last N`）。
+2. 提示符 `> ` 印在 **stderr**，讀 stdin 一行＝一句（空行跳過；一行就是一句，多行貼上就是多封）。**stdout 只有回答**（跟 say／listen 同一條規矩：提醒、錯都在 stderr），所以 `chat < 問題.txt > 答案.txt` 也能用。
+3. 寄（同 `say`：有序信、印不印信件名稱？——**不印**，人聊天不要看到序號；要對帳用 `say`）→ 等（同 `listen` 不帶旗標：等最新那封；沒人在跑＝提醒一次、繼續等）→ 印回答 → 回到 2。
+4. **Ctrl-C**：任何時候退 130。正在等答案時按：**那封信已經寄出、agent 照答**（say 只寄信、不叫醒誰、也收不回——信交出去就是它的，P-42／eca 20）；chat 退出前 stderr 一行「那句已寄出，回答之後用 `aos-agent listen` 看」。`listen` 不帶旗標本來就會「信還在就等、不見了就印最新回答」，所以不會漏。Ctrl-D（stdin 結束）＝正常收尾、退 0。
+5. 錯跟 `listen` 一樣：`QuestionUnknown`／`AnswerMissing`（信不見了、沒回答、也沒人在跑）印一行後**不退出**、回到提示符——聊天途中 agent 掛了，人看到一行就知道，再按 Ctrl-C 走。
+6. 不做：歷史回顧、斜線指令、多行輸入、逾時（11-03 封存的 aos-chat 有一堆，使用者「等之後進展到那塊再拉出來看」——這次只要一行一句）。
