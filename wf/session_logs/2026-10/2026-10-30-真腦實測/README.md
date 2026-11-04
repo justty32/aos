@@ -60,7 +60,7 @@ echo "用 mcp__aos__ask_nia 工具問那隻 agent：『17乘23是多少？順便
 
 ## 8. aos-eca-hub 與試驗場
 
-家機 `~/code/playground` 是 10-29 的舊試驗場（agent-bob-1 等，沒有 `env.sh`），新四隻只在 WSL。在 scratchpad `pg/` 照 [eca § D](../../../../proto8/thinking/2026-10/30/eca/README.md#d-第-9-步試驗場怎麼重做codeplayground不進-git) 建：bob-1＝eca-claude 複本（`ECA_ON_EMPTY=stop`、不給 max、`prompt.txt`、cli.json 加 Write＋`acceptEdits`、haiku）；bob-2＝eca-claude 原樣只換 haiku；nia-idle＝第 2 項的 sol 停著等版；dan-pause＝agent-dan-q 複本；hub＝空名單的信箱模式 daemon。**都叫真的 claude -p**（haiku），不是假 CLI。
+家機 `~/code/playground` 是 10-29 的舊試驗場（agent-bob-1 等，沒有 `env.sh`），新四隻只在 WSL。在 scratchpad `pg/` 照 [eca § D](../../../../proto8/thinking/2026-10/30/eca/05-各題結論.md#d-第-9-步試驗場怎麼重做codeplayground不進-git) 建：bob-1＝eca-claude 複本（`ECA_ON_EMPTY=stop`、不給 max、`prompt.txt`、cli.json 加 Write＋`acceptEdits`、haiku）；bob-2＝eca-claude 原樣只換 haiku；nia-idle＝第 2 項的 sol 停著等版；dan-pause＝agent-dan-q 複本；hub＝空名單的信箱模式 daemon。**都叫真的 claude -p**（haiku），不是假 CLI。
 
 - bob-1：`aos-exec --ws ws/ws1 bob-1` 10 秒退 0，`result.md`＝「17 乘 23 的答案是 391；今天的心情是平靜又專注…」，`--last 1` 看得到，`transcripts/` 有 symlink。過。
 - bob-2 與 nia-idle 用一字不差的同一組指令（背景 aos-exec、say 兩句、paused 後 say、`--status`、放行、stopped）：兩隻都記得「阿土」、paused 時 `new 1`／`phase paused`、放行後答「再見，阿土！」、退 0。`--status` 最後一格 bob-2 是 `turn`、nia-idle 是 `finish`（aos-round 之後不再叫 round）。過。

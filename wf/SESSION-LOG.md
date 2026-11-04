@@ -15,8 +15,8 @@
 - **open｜tidy 收斂（11-03 晚起）**：批次與狀態 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)；P4-D／E 已補對讀（補回 4 處），剩其餘 thinking 與 P1-2、P1-3、P2、P3、P4-F
 - **open｜介質**：實作八步已做；agent 的輸入是 queue、接單後放 tools（決定 32）那兩題先擱著 → [10-28 medium](../proto8/thinking/2026-10/28/medium.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10/29/medium-plan/README.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - **open｜現況地圖十一點**：剩第 1 點（plan 9 式檔案串流）、第 7 點（post／lock 補指令），使用者「之後有遇到再說」 → [map-review § 結論](../proto8/thinking/2026-10/30/map-review/README.md#結論10-31-補)
-- **open｜playground／eca**：開著停著改 history 再繼續（[eca § 之後再改](../proto8/thinking/2026-10/30/eca/README.md#之後再改停著時改-history-再繼續10-30使用者先記下)）、pi coding agent 只有適配表 → [playground](../proto8/thinking/2026-10/26/playground.md)、統整頁 https://claude.ai/artifact/W7aXZvCPTf1u2qExH6CEMM
-- **open｜固定名字判準（C-51 10-31 加註）**：使用者尚有後續想法 → [eca § 10-31 原則](../proto8/thinking/2026-10/30/eca/README.md#10-31-使用者原則固定名字可以但限縮範圍判準)
+- **open｜playground／eca**：開著停著改 history 再繼續（[eca § 之後再改](../proto8/thinking/2026-10/30/eca/09-方向題.md#之後再改停著時改-history-再繼續10-30使用者先記下)）、pi coding agent 只有適配表 → [playground](../proto8/thinking/2026-10/26/playground.md)、統整頁 https://claude.ai/artifact/W7aXZvCPTf1u2qExH6CEMM
+- **open｜固定名字判準（C-51 10-31 加註）**：使用者尚有後續想法 → [eca § 10-31 原則](../proto8/thinking/2026-10/30/eca/10-10-31-使用者原文-turn-的定義檔只認固.md#10-31-使用者原則固定名字可以但限縮範圍判準)
 - **open｜10-24 其餘下一步**（代定可翻案）：代定落條文、沙箱 `accept` 跟「純靠 Linux」衝突（[sandbox S18](../proto8/thinking/2026-10/24/sandbox/README.md)）、compact 與 P-41 → [10-24](session_logs/2026-10-parts/12-10-24.md#下一步open)
 - **open｜還是草稿的條文**：N-34 tasks → [NORMS 待定](../proto8/docs/NORMS/08-待定.md)；tasks、seq、if 之後順便做 → [aos-round § 10-31](../proto8/thinking/2026-10/30/aos-round/README.md#10-31-使用者想法控制流不拉-seqif-拼整合成單檔tasksseqif-之後順便做先記之後處理)
 - **待照新做法重寫**：tasks、通用 kernel（10-30 停滯） → [plan § 1.2](../proto8/thinking/2026-10/21/plan/README.md)、[rewrite-order](../proto8/thinking/2026-10/19/rewrite-order.md)
