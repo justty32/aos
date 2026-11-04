@@ -10,8 +10,9 @@
 做滿 20 次也下班，什麼都不說。老闆中途喊停（SIGTERM），他把話轉給正在做事的人，等那人收好，再帶著「被喊停」的燈號（128＋N）回去。
 
 ```sh
-cat loop.json              # {"exec": ["aos-fsm", "fsm.json"], "max": 20}
-aos-loop loop.json         # 每次 `aos-exec -- aos-fsm fsm.json`（跑一次 fsm）；格退 10 → loop 以 0 結束
+cat loop.json              # {"exec": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}
+aos-loop loop.json         # 每次行程內跑單子 `aos-fsm fsm.json`（跑一次 fsm）；格退 10 → loop 以 0 結束
+                           # 注意：寫成 "exec": ["aos-fsm", "fsm.json"]＝`aos-exec -- aos-fsm fsm.json`，aos-fsm 被當成路徑＝EntryMissing
 echo '{"exec": "idle", "max": 5}' > loop.json
 aos-loop --max 2 loop.json # 每次 `aos-exec -- idle`，旗標蓋過 loop.json 的 max：只跑 2 次
 ```

@@ -22,7 +22,7 @@ namespace {
 // 要寫的值：參數有就用參數、沒有讀 stdin（整份）。--str＝字面字串（stdin 去掉結尾一個換行），不然當 JSON 解。
 Json read_value(const std::vector<std::string>& rest, size_t idx, bool str) {
     if (rest.size() > idx + 1) {
-        throw Error{code::ArgumentsBad, "多了參數 " + rest[idx + 1] + "（值有空白、是負數，記得加引號或寫在 -- 後面）"};
+        throw Error{code::ArgumentsBad, "多了參數 " + rest[idx + 1] + "（值有空白要整個加引號；負數直接寫在檔#/指標後面就行）"};
     }
     std::string text;
     if (rest.size() == idx + 1) {
