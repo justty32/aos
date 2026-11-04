@@ -1,7 +1,7 @@
 #!/usr/bin/env janet
 # aos-janet - 把一份 Janet 寫的 aos 程式編成資料夾（_entry、loop.json、fsm.json…）
 #
-# 用法：aos-janet [--force] 原始檔.janet 輸出資料夾
+# 用法：aos-janet [--force] [--] 原始檔.janet 輸出資料夾（形狀照 CONVENTION P-44）
 # 原始檔裡 aos、combine 的東西都直接能用（不用 import），要 (def program (dir …))。
 # 錯：stderr 一行「aos-janet: 代號 原因」、退 1。
 
@@ -15,11 +15,27 @@
   (eprint "aos-janet: " msg)
   (os/exit 1))
 
+(def- usage "usage: aos-janet [--force] [--] 原始檔.janet 輸出資料夾")
+
+# 命令列形狀照 CONVENTION P-44（11-04）：旗標在位置參數前面、`--` 結束旗標、不認得＝FlagUnknown、開關帶值＝ArgumentsBad
+(defn- parse-args [argv]
+  (var force false)
+  (var i 0)
+  (var done false)
+  (while (and (not done) (< i (length argv)))
+    (def a (get argv i))
+    (cond
+      (= a "--") (do (++ i) (set done true))
+      (or (not (string/has-prefix? "-" a)) (= a "-")) (set done true)
+      (= a "--force") (do (set force true) (++ i))
+      (string/has-prefix? "--force=" a) (die (string "ArgumentsBad --force 不帶值（" usage "）"))
+      (die (string "FlagUnknown 不認得的旗標 " a "（" usage "）"))))
+  [force (slice argv i)])
+
 (defn main [_ & argv]
-  (def force (= (first argv) "--force"))
-  (def args (if force (slice argv 1) argv))
+  (def [force args] (parse-args argv))
   (unless (= 2 (length args))
-    (die "ArgumentsBad usage: aos-janet [--force] 原始檔.janet 輸出資料夾"))
+    (die (string "ArgumentsBad " usage)))
   (def [src out] args)
   (unless (= :file (os/stat src :mode)) (die (string "SourceMissing 找不到原始檔 " src)))
   (def env (make-env dsl-env))

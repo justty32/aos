@@ -187,7 +187,8 @@ class AosMcp(unittest.TestCase):
         broken = Path(self.tmp.name) / "broken"
         broken.mkdir()
         (broken / "tools.json").write_text('{"tools": {"gone": {"path": "nope"}}}')
-        for args, code in ((["--bogus"], "ArgumentsBad"), (self.base + ["--logs-path", "x.jsonl"], "ArgumentsBad"), (self.base + ["--enable-logs", "--logs-path"], "ArgumentsBad"), (["--ws", "/nonexistent", self.agent(BASE / "clock")], "WsMissing"),
+        for args, code in ((["--bogus"], "FlagUnknown"), (["--ws"], "ArgumentsBad"),   # P-44（11-04）：不認得＝FlagUnknown、缺值＝ArgumentsBad
+                           (self.base + ["--logs-path", "x.jsonl"], "ArgumentsBad"), (self.base + ["--enable-logs", "--logs-path"], "ArgumentsBad"), (["--ws", "/nonexistent", self.agent(BASE / "clock")], "WsMissing"),
                            (self.base + [str(self.ws)], "ToolMissing"),             # 給資料夾＝不收（11-02 起只收檔）
                            (self.base + [str(broken)], "ToolMissing"),              # 資料夾裡有 tools.json 也不去找
                            (self.base + [str(self.ws / "nope.json")], "ToolMissing"),

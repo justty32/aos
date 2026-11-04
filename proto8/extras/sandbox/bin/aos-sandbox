@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # aos-sandbox - 照一份設定把 prog 關進沙箱再跑：身分（s6-setuidgid）、上限（s6-softlimit）、看得到哪些路徑與能不能連網（bwrap）
 #
-# 用法：aos-sandbox [--dry-run] [--] 設定檔 prog [args...]
+# 用法：aos-sandbox [--dry-run] [--] 設定檔 prog [args...]（形狀照 CONVENTION P-44）
 #   設定檔可寫 `檔#/指標`（例 `_metainfo#/sandbox`）；裡面的 {"$env", "$path", "$prefix"} 先換掉。
 #   做的事＝排好一條 chain-loading（s6 那套：每支改一下行程狀態就 exec 成剩下的），然後 exec 它，自己不留下來：
 #     [s6-softlimit 上限...] [s6-setuidgid 身分] bwrap 綁定... -- prog args...
@@ -19,7 +19,11 @@
 #   沒有就看不到；再細的由信箱的擁有者、群組、權限位管（root/setup.sh --mailbox）。
 # 錯：stderr 一行「aos-sandbox: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、PathMissing、CommandMissing、UserBad）。
 # 之後的結束碼都是 prog 的（bwrap 透明轉交；被訊號停＝128＋N）。
+# 命令列形狀照 CONVENTION P-44（11-04）：用 proto8/bin/aos_flags.py 解（`--dry-run=x`＝ArgumentsBad、不認得＝FlagUnknown）。
 import json, os, shutil, sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "bin"))
+import aos_flags  # noqa: E402
 
 BASE = ["/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc"]
 # 設定沒寫 env 時帶進去的環境變數（10-24 照 S12 的精神：PATH、語系、aos 自己的六個路徑；API key 一律不帶，要就在 env 明寫）
@@ -41,18 +45,11 @@ def usage(code, reason):
 
 
 def parse_args(argv):
-    dry = False
-    i = 0
-    while i < len(argv) and argv[i].startswith("-") and argv[i] != "-":
-        a = argv[i]
-        i += 1
-        if a == "--":
-            break
-        if a == "--dry-run":
-            dry = True
-        else:
-            usage("FlagUnknown", "不認得的旗標 %s" % a)
-    rest = argv[i:]
+    try:
+        opts, rest = aos_flags.parse(argv, {}, {"--dry-run": "dry"})
+    except aos_flags.Error as e:
+        usage(e.code, str(e))
+    dry = opts.get("dry", False)
     if len(rest) < 2:
         usage("ArgumentsBad", "要有設定檔和 prog")
     return dry, rest[0], rest[1:]

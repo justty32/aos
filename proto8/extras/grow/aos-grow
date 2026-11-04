@@ -3,8 +3,10 @@
 
 函數＝aos-exec 跑得動的一個東西。這支只動一格：CALLER＝`設定檔#/指標`，指到「呼叫方寫著要跑什麼」的那一格（fsm 格的 exec、loop.json 的 exec…）。
 
-  aos-grow [--dry-run] up   CALLER --to file|dir [--name NAME] [--take PATH]...
+  aos-grow [--dry-run] up --to file|dir [--name NAME] [--take PATH]... CALLER
   aos-grow [--dry-run] down CALLER
+
+命令列形狀照 CONVENTION P-44（11-04）：旗標在位置參數前面（子命令的旗標接在子命令後、CALLER 前）、`--` 結束旗標、`--x V`／`--x=V`。
 
 up：
   那格是內嵌單子（有 argv 的物件）→ --to file：寫成 設定檔旁的 NAME.json（就是那張單子）；--to dir：寫成 NAME/_entry（同一張單子）。
@@ -20,7 +22,10 @@ down：反過來縮一級：NAME/（裡面只剩 _entry）→ NAME.json；NAME.j
 錯：stderr 一行「aos-grow: 代號 原因」、退 1，什麼都不寫（ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、TargetBad、NameBad、WriteFailed）。"""
 import difflib, json, os, re, shutil, sys
 
-USAGE = "aos-grow [--dry-run] up CALLER --to file|dir [--name NAME] [--take PATH]... ｜ aos-grow [--dry-run] down CALLER"
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "bin"))
+import aos_flags  # noqa: E402  proto8/bin/aos_flags.py：P-44 的解析
+
+USAGE = "aos-grow [--dry-run] up --to file|dir [--name NAME] [--take PATH]... CALLER ｜ aos-grow [--dry-run] down CALLER"
 ENTRY = os.environ.get("AOS_ENTRY") or "_entry"
 
 
@@ -334,26 +339,17 @@ def down(caller):
 
 
 def main(argv):
-    dry, rest, i = False, [], 0
-    opts = {"to": None, "name": None, "take": []}
-    while i < len(argv):
-        a = argv[i]
-        if a == "--dry-run":
-            dry = True
-        elif a in ("--to", "--name", "--take"):
-            if i + 1 >= len(argv):
-                raise Fail("ArgumentsBad", "%s 缺值；用法：%s" % (a, USAGE))
-            i += 1
-            if a == "--take":
-                opts["take"].append(argv[i])
-            else:
-                opts[a[2:]] = argv[i]
-        elif a.startswith("--"):
-            raise Fail("FlagUnknown", "不認得的旗標 %s；用法：%s" % (a, USAGE))
-        else:
-            rest.append(a)
-        i += 1
-    if len(rest) != 2 or rest[0] not in ("up", "down"):
+    try:
+        top, rest = aos_flags.parse(argv, {}, {"--dry-run": "dry"})
+        if not rest or rest[0] not in ("up", "down"):
+            raise Fail("ArgumentsBad", "用法：" + USAGE)
+        sub_opts, rest2 = aos_flags.parse(rest[1:], {"--to": "to", "--name": "name"}, {}, {"--take": "take"})
+    except aos_flags.Error as e:
+        raise Fail(e.code, "%s；用法：%s" % (e, USAGE))
+    dry = top.get("dry", False)
+    opts = {"to": sub_opts.get("to"), "name": sub_opts.get("name"), "take": sub_opts.get("take", [])}
+    rest = [rest[0]] + rest2
+    if len(rest) != 2:
         raise Fail("ArgumentsBad", "用法：" + USAGE)
     if rest[0] == "up":
         if opts["to"] not in ("file", "dir"):

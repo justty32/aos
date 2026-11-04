@@ -23,7 +23,10 @@ def run(args, stdin_path):
     with open(stdin_path, "rb") as f:
         r = subprocess.run([BIN, *args], stdin=f, capture_output=True, text=True)
     out = json.loads(r.stdout) if r.returncode == 0 and r.stdout else None
-    err = json.loads(r.stderr)["error"]["code"] if r.returncode == 1 and r.stderr else None
+    err = None
+    if r.returncode == 1 and r.stderr:   # 11-04 起（P-44）：一行「aos-schema: 代號 原因」
+        assert r.stderr.startswith("aos-schema: ") and len(r.stderr.splitlines()) == 1, r.stderr
+        err = r.stderr[len("aos-schema: "):].split(" ", 1)[0]
     return r.returncode, out, err, r.stdout
 
 
@@ -71,6 +74,7 @@ check("file_missing", run([os.path.join(DATA, "no_such.json")], os.path.join(DAT
 check("schema_not_json", run([os.path.join(DATA, "broken.txt")], os.path.join(DATA, "inst_ok.json"))[:3],
       (1, None, "SchemaBad"))
 check("usage", run([], "/dev/null")[:3], (1, None, "ArgumentsBad"))
+check("不認得的旗標＝FlagUnknown（P-44）", run(["--nope", INST_SCHEMA], "/dev/null")[:3], (1, None, "FlagUnknown"))
 
 if failures:
     print("test_cli：%d 個失敗" % failures)

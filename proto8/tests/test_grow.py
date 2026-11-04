@@ -75,7 +75,7 @@ class GrowDan(unittest.TestCase):
 
     def test_dry_run_writes_nothing(self):
         old = tree(self.after)
-        r = grow("--dry-run", "up", "%s/fsm.json#/states/think/exec" % self.after, "--to", "dir", "--take", "brain.py")
+        r = grow("--dry-run", "up", "--to", "dir", "--take", "brain.py", "%s/fsm.json#/states/think/exec" % self.after)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertEqual(tree(self.after), old)
         self.assertIn("建資料夾", r.stdout)
@@ -84,8 +84,8 @@ class GrowDan(unittest.TestCase):
 
     def grow_both(self):
         fsm = "%s/fsm.json" % self.after
-        self.assertEqual(grow("up", fsm + "#/states/think/exec", "--to", "dir", "--take", "brain.py").returncode, 0)
-        self.assertEqual(grow("up", fsm + "#/states/act/exec", "--to", "file").returncode, 0)
+        self.assertEqual(grow("up", "--to", "dir", "--take", "brain.py", fsm + "#/states/think/exec").returncode, 0)
+        self.assertEqual(grow("up", "--to", "file", fsm + "#/states/act/exec").returncode, 0)
         states = json.loads(Path(fsm).read_text())["states"]
         self.assertEqual(states["think"]["exec"], "think")
         self.assertEqual(states["act"]["exec"], "act")
@@ -109,7 +109,7 @@ class GrowDan(unittest.TestCase):
         orig = json.loads(Path(fsm).read_text())
         self.grow_both()
         self.assertEqual(code(grow("down", fsm + "#/states/think/exec")), "TargetBad")
-        self.assertEqual(grow("up", fsm + "#/states/act/exec", "--to", "dir").returncode, 0)
+        self.assertEqual(grow("up", "--to", "dir", fsm + "#/states/act/exec").returncode, 0)
         self.assertTrue(Path(self.after, "act", "_entry").is_file())
         self.assertFalse(Path(self.after, "act.json").exists())
         self.assertEqual(grow("down", fsm + "#/states/act/exec").returncode, 0)   # 資料夾 → 檔
@@ -137,7 +137,7 @@ class Rebase(unittest.TestCase):
     def test_dir_rebases_paths(self):
         caller = self.put({"argv": ["x", {"$ref": "#/args"}, {"$ref": "lib/a.json#/b"}, {"$env": "AOS_CD", "$path": "/tools"}],
                            "cwd": "sub", "stdout": "o.txt"})
-        self.assertEqual(grow("up", caller, "--to", "dir").returncode, 0)
+        self.assertEqual(grow("up", "--to", "dir", caller).returncode, 0)
         got = json.loads(Path(self.d, "s", "_entry").read_text())
         self.assertEqual(got, {"argv": ["x", {"$ref": "../fsm.json#/args"}, {"$ref": "../lib/a.json#/b"},
                                         {"$env": "AOS_CD", "$path": "/../tools"}],
@@ -147,20 +147,22 @@ class Rebase(unittest.TestCase):
 
     def test_file_points_own_refs_back(self):
         caller = self.put({"argv": ["x", {"$ref": "#/args"}]})
-        self.assertEqual(grow("up", caller, "--to", "file", "--name", "job").returncode, 0)
+        self.assertEqual(grow("up", "--to", "file", "--name", "job", caller).returncode, 0)
         self.assertEqual(json.loads(Path(self.d, "job.json").read_text()), {"argv": ["x", {"$ref": "fsm.json#/args"}]})
 
     def test_refusals(self):
         caller = self.put({"argv": ["x", {"$env": "AOS_CF"}]})
-        self.assertEqual(code(grow("up", caller, "--to", "file")), "TargetBad")
+        self.assertEqual(code(grow("up", "--to", "file", caller)), "TargetBad")
         caller = self.put({"argv": ["x"]})
         Path(self.d, "s.json").write_text("{}")
-        self.assertEqual(code(grow("up", caller, "--to", "file")), "NameBad")
+        self.assertEqual(code(grow("up", "--to", "file", caller)), "NameBad")
         os.remove(Path(self.d, "s.json"))
         self.assertEqual(code(grow("up", caller)), "ArgumentsBad")
-        self.assertEqual(code(grow("--nope", "up", caller, "--to", "file")), "FlagUnknown")
-        self.assertEqual(code(grow("up", "%s#/states/zz/exec" % self.cfg, "--to", "file")), "CfgMissing")
-        self.assertEqual(code(grow("up", "%s#/states/s" % self.cfg, "--to", "file")), "TargetBad")   # 不是單子
+        self.assertEqual(code(grow("--nope", "up", "--to", "file", caller)), "FlagUnknown")
+        self.assertEqual(code(grow("up", "--nope", caller)), "FlagUnknown")
+        self.assertEqual(code(grow("up", caller, "--to", "file")), "ArgumentsBad")   # P-44（11-04）：旗標在 CALLER 前面
+        self.assertEqual(code(grow("up", "--to", "file", "%s#/states/zz/exec" % self.cfg)), "CfgMissing")
+        self.assertEqual(code(grow("up", "--to", "file", "%s#/states/s" % self.cfg)), "TargetBad")   # 不是單子
         # 縮回：還有別格叫它＝不內嵌
         self.put("s", {"other": {"exec": "s"}})
         Path(self.d, "s.json").write_text(json.dumps({"argv": ["x"]}))

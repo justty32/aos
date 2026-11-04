@@ -30,7 +30,10 @@ def run(stdin, files=None, args=(), env=None, links=None):
         r = subprocess.run([BIN, *args], cwd=work, input=stdin if isinstance(stdin, str) else json.dumps(stdin),
                            capture_output=True, text=True, env=dict(os.environ, **(env or {})))
         out = json.loads(r.stdout) if r.returncode == 0 else None
-        err = json.loads(r.stderr)["error"]["code"] if r.returncode == 1 else None
+        err = None
+        if r.returncode == 1:   # 11-04 起（P-44）：一行「aos-directive: 代號 原因」
+            assert r.stderr.startswith("aos-directive: ") and len(r.stderr.splitlines()) == 1, r.stderr
+            err = r.stderr[len("aos-directive: "):].split(" ", 1)[0]
         return r.returncode, out, err, r.stdout
 
 
@@ -165,6 +168,7 @@ check("stdin 空", run("")[:3], (0, {}, None))
 check("stdin 多份", run("{} {}")[:3], (1, None, "InputExtra"))
 check("stdin 壞", run("{")[:3], (1, None, "InputBad"))
 check("參數", run("{}", args=["x"])[:3], (1, None, "ArgumentsBad"))
+check("不認得的旗標＝FlagUnknown（P-44）", run("{}", args=["--nope"])[:3], (1, None, "FlagUnknown"))
 
 if failures:
     print("test_cli：%d 個失敗" % failures)

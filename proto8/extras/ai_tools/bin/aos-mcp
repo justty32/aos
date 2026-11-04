@@ -17,9 +17,13 @@
 #   <stack>/aos-mcp-logs.jsonl 記一行（名字、arguments、結束碼、花多久），再加 --logs-path FILE＝記在 FILE（相對路徑從啟動時的 cwd 算）；
 #   只給 --logs-path、沒給 --enable-logs＝ArgumentsBad。
 # 只做 initialize、ping、tools/list、tools/call；沒有 progress、resources、prompts、HTTP。
-# 錯：自己的錯 stderr 一行「aos-mcp: 代號 原因」、退 1（ArgumentsBad、WsMissing、ToolMissing、ToolsBad）。
+# 錯：自己的錯 stderr 一行「aos-mcp: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、WsMissing、ToolMissing、ToolsBad）。
 #   啟動時 aos-tools ls 失敗＝ToolsBad（aos-tools 自己那行照樣在 stderr）；跑起來之後重讀失敗＝那一則 JSON-RPC 回錯誤、不退。
+#   命令列形狀照 CONVENTION P-44（11-04）：旗標都在 REGISTRY 前面、`--` 結束旗標、`--x V`／`--x=V`；不認得的旗標＝FlagUnknown。
 import json, os, signal, subprocess, sys, time
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "bin"))
+import aos_flags  # noqa: E402  proto8/bin/aos_flags.py：P-44 的解析
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
@@ -41,33 +45,18 @@ def die(code, reason):
 def parse_args(argv):
     """命令列 → (ws, stack, timeout_s, registries)；--enable-logs／--logs-path 設進 LOGS_PATH。"""
     global LOGS_PATH
-    ws, stack, timeout_s, files, enable, log = os.environ.get("AOS_WS"), os.environ.get("AOS_STACK"), 60.0, [], False, None
-    i = 0
-    while i < len(argv):
-        a = argv[i]
-        if a in ("--ws", "--stack", "--timeout-s", "--logs-path"):
-            if i + 1 >= len(argv):
-                die("ArgumentsBad", "%s 後面要接值" % a)
-            v = argv[i + 1]
-            if a == "--ws":
-                ws = v
-            elif a == "--stack":
-                stack = v
-            elif a == "--logs-path":
-                log = v
-            else:
-                try:
-                    timeout_s = float(v)
-                except ValueError:
-                    die("ArgumentsBad", "--timeout-s 要是數字")
-            i += 2
-        elif a == "--enable-logs":
-            enable, i = True, i + 1
-        elif a.startswith("--"):
-            die("ArgumentsBad", "不認得的旗標 %s（usage: %s）" % (a, USAGE))
-        else:
-            files.append(a)
-            i += 1
+    try:
+        opts, files = aos_flags.parse(argv, {"--ws": "ws", "--stack": "stack", "--timeout-s": "timeout_s",
+                                             "--logs-path": "log"}, {"--enable-logs": "enable"})
+    except aos_flags.Error as e:
+        die(e.code, "%s（usage: %s）" % (e, USAGE))
+    ws, stack = opts.get("ws", os.environ.get("AOS_WS")), opts.get("stack", os.environ.get("AOS_STACK"))
+    enable, log, timeout_s = opts.get("enable", False), opts.get("log"), 60.0
+    if "timeout_s" in opts:
+        try:
+            timeout_s = float(opts["timeout_s"])
+        except ValueError:
+            die("ArgumentsBad", "--timeout-s 要是數字")
     if log is not None and not enable:
         die("ArgumentsBad", "給了 --logs-path 卻沒給 --enable-logs（要記就兩個都給；預設不記）")
     if log == "":

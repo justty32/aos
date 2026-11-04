@@ -22,7 +22,7 @@ aos-janet [--force] 原始檔.janet 輸出資料夾
 
 - 原始檔是普通的 Janet：下面那些名字直接能用（不用 import），最後要 `(def program (dir …))`——program 就是那支程式（一個資料夾）。
 - 輸出資料夾已經有東西＝`OutExists`；`--force`＝只蓋這次要寫的檔，其他檔不刪。
-- 錯：stderr 一行 `aos-janet: 代號 原因`、退 1。代號：`ArgumentsBad`、`SourceMissing`、`SourceBad`（原始檔跑不起來，上面先印 Janet 的錯）、`ProgramMissing`、`ProgramBad`、
+- 錯：stderr 一行 `aos-janet: 代號 原因`、退 1。代號：`ArgumentsBad`（含 `--force=x`）、`FlagUnknown`（不認得的旗標；11-04 起照 [CONVENTION P-44](../../../docs/CONVENTION/02-題目stack停錯腦/07-P-44.md)）、`SourceMissing`、`SourceBad`（原始檔跑不起來，上面先印 Janet 的錯）、`ProgramMissing`、`ProgramBad`、
   `OutExists`、`OutBad`、`NameBad`、`NameTaken`、`KeyTwice`、`ValueBad`、`HoistBad`、`StepBad`。
 
 ## 寫法 ↔ 編出來的東西

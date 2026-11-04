@@ -104,6 +104,13 @@ class JanetCompile(unittest.TestCase):
         self.assertEqual((self.tmp / "eo" / "keep").read_text(), "x")   # --force 不刪別的檔
         r = run(COMPILER, "only-one")
         self.assertEqual((r.returncode, r.stderr.split(" ")[1]), (1, "ArgumentsBad"))
+        # P-44（11-04）：不認得的旗標＝FlagUnknown、開關帶值＝ArgumentsBad、`--` 之後都是位置參數
+        r = run(COMPILER, "--nope", str(self.tmp / "e.janet"), str(self.tmp / "eo"))
+        self.assertEqual((r.returncode, r.stderr.split(" ")[1]), (1, "FlagUnknown"))
+        r = run(COMPILER, "--force=1", str(self.tmp / "e.janet"), str(self.tmp / "eo"))
+        self.assertEqual((r.returncode, r.stderr.split(" ")[1]), (1, "ArgumentsBad"))
+        r = run(COMPILER, "--force", "--", str(self.tmp / "e.janet"), str(self.tmp / "eo"))
+        self.assertEqual(r.returncode, 0, r.stderr)
 
 
 if __name__ == "__main__":

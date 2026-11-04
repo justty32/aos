@@ -156,6 +156,8 @@ class SandboxTest(unittest.TestCase):
     def test_errors(self):
         self.assert_error(subprocess.run([BOX, "--nope", "a", "b"], capture_output=True, text=True, env=env()), "FlagUnknown")
         self.assert_error(subprocess.run([BOX, "a"], capture_output=True, text=True, env=env()), "ArgumentsBad")
+        self.assert_error(subprocess.run([BOX, "--dry-run=1", "a", "b"], capture_output=True, text=True, env=env()),
+                          "ArgumentsBad")   # P-44（11-04）：開關帶值
         self.assert_error(self.box(str(self.tmp / "none.json"), "true"), "CfgMissing")
         self.assert_error(self.box(self.cfg([1], "arr.json"), "true"), "CfgBad")
         self.assert_error(self.box(self.cfg({"net": "no"}, "b1.json"), "true"), "CfgBad")

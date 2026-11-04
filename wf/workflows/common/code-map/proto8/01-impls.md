@@ -44,7 +44,7 @@
 | `src/ref.cpp` | `$ref`：取檔與指標、繞圈、陣列多份合併（`merge`） |
 | `src/env.cpp` | `$env`：換成環境變數的值 |
 | `src/internal.hpp` | 內部標頭 |
-| `src/main.cpp` | 命令列 `aos-directive < 設定.json`（不算對外提供） |
+| `src/main.cpp` | 命令列 `aos-directive < 設定.json`（不算對外提供；`parse_cli`，錯一行 `aos-directive: 代號 原因`，11-04） |
 | `tests/test_cli.py` | 命令列黑箱 |
 
 ## `impls/aos-schema/`（用 JSON Schema draft-07 驗 JSON）
@@ -54,7 +54,7 @@
 | `include/aos/schema.hpp` | 公開介面：驗一份 JSON，回「哪裡不對」清單 |
 | `src/validate.cpp` | 唯一碰驗證器（pboettch）的檔；先用 meta-schema 驗 schema 本身 |
 | `src/load_file.cpp` | 讀 schema 檔（`SchemaMissing`／`SchemaBad`） |
-| `src/main.cpp` | 命令列 `aos-schema SCHEMA檔 < doc.json`，印 `{"valid", "problems"}` |
+| `src/main.cpp` | 命令列 `aos-schema SCHEMA檔 < doc.json`，印 `{"valid", "problems"}`；`parse_cli`，錯一行 `aos-schema: 代號 原因`（11-04） |
 | `examples/inst.schema.json` | inst 單子的 schema 範例 |
 | `tests/test_lib.cpp`、`tests/test_cli.py`、`tests/data/*` | 單元、命令列黑箱與測試資料 |
 
