@@ -1,4 +1,4 @@
-// aos/lock.hpp：aos-lock 的公開介面——鎖（NORMS N-15 的 10-29 補）：拿、放、看、判死活、收屍。
+// aos/lock.hpp：aos-lock 的公開介面——鎖（NORMS N-15）：拿、放、看、判死活、收屍。
 // aos-lock 命令列用這組；aos-post 的有順序投遞（order.lock/）直接連這個庫。
 //
 //   鎖＝一個資料夾，mkdir 成功＝拿到（只有一種獨佔鎖、不分讀寫、不檢查上下層）：
