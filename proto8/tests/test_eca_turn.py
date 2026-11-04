@@ -14,7 +14,7 @@ from aos_bins import ROOT, tool, path_with  # noqa: E402
 from test_cli_tools import FAKE_CLAUDE, FAKE_CODEX, SYS_PATH, HAS_TMUX  # noqa: E402
 TURN = ROOT / "bin" / "aos-eca-turn"
 CLI_SESSION = ROOT / "lib" / "agent" / "cli_session.py"
-SAY = ROOT / "extras" / "human" / "bin" / "aos-say"
+import stack_talk  # noqa: E402  11-04 aos-say 併進 aos-agent
 POST = tool("aos-post")
 # 探針 CLI（test_finished_when_handed）：題目讀完之後（交出去的那一刻起）等這批信被收掉，記下當時的 queue 與 history，
 # 再把題目原樣交給真的假 CLI 答
@@ -81,10 +81,7 @@ class Turn(unittest.TestCase):
         return p
 
     def say(self, text):
-        r = subprocess.run([str(SAY), "--stack", str(self.stack), text], capture_output=True, text=True,
-                           env=self.env(), timeout=30, stdin=subprocess.DEVNULL)
-        self.assertEqual(r.returncode, 0, r.stderr)
-        return r.stdout.strip()
+        return stack_talk.say(self.stack, text, self.env())
 
     def post(self, *args, input=""):
         r = subprocess.run([POST] + list(args), input=input, capture_output=True, text=True, env=self.env(), timeout=30)
@@ -112,7 +109,7 @@ class Turn(unittest.TestCase):
     # ------------------------------------------------------------ 平級形
 
     def test_say_then_turn(self):
-        """say 一封、turn 一次：history 多 user＋assistant 兩則、信不見、沒有 trace.jsonl、eca.json、transcripts symlink；再一封續同一段對話。"""
+        """say 一封、turn 一次：history 多 user＋assistant 兩則、信不見、沒有 trace.jsonl、沒有 eca.json（11-04 起不寫）、transcripts symlink；再一封續同一段對話。"""
         self.say("你好")
         r = self.turn()
         self.assertEqual(r.returncode, 0, r.stderr)
@@ -122,8 +119,7 @@ class Turn(unittest.TestCase):
         self.assertEqual((self.stage("new"), self.stage("cur")), ([], []))
         self.assertFalse((self.stack / "current.txt").exists())
         self.no_trace()
-        self.assertEqual(json.loads((self.stack / "eca.json").read_text()),
-                         {"kind": "claude", "ws": str(self.ws), "template": str(self.defs["claude"])})
+        self.assertFalse((self.stack / "eca.json").exists())
         self.assertEqual(self.calls()[0]["cwd"], str(self.ws))                 # CLI 在工作區裡跑
         self.assertTrue((self.stack / "claude" / "transcripts" / ("claude-%s.jsonl" % sid)).is_symlink())
         self.say("再一句")
@@ -171,7 +167,7 @@ class Turn(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         thread = self.sid("codex")
         self.assertEqual(self.history()[-1], {"role": "assistant", "content": "fake codex[%s]: codex 你好" % thread[:8]})
-        self.assertEqual(json.loads((self.stack / "eca.json").read_text())["kind"], "codex")
+        self.assertFalse((self.stack / "eca.json").exists())
 
     def test_cur_first(self):
         """cur/ 有認領了、還沒交出去的（上次 yield 退讓或 CLI 沒起來；history 沒動）＝跟 new/ 那封同一批一起答（一次 CLI），

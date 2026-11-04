@@ -40,7 +40,7 @@
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
   人在畫面上自己打的話不進 history（沒經 queue；eca 方向題 2）。
-  每次把 {"kind", "ws", "template"} 寫進 $AOS_STACK/eca.json（有變才寫；template＝定義資料夾）。
+  11-04 起不寫 $AOS_STACK/eca.json（名片沒人讀了：aos-eca 刪了，aos-agent 從 daemon 表的 exec 欄找定義；thinking 2026-11-04 aos-agent 05）。
 --one（工具形，P-41 工具契約）：stdin {"prompt"} → stdout 回答，對話在 $AOS_STACK 這格本身（cli_session.call_main，跟 lib/agent/claude 同一條路）；
   --on-busy 照認（yield 時 SessionBad 照錯退 1）；跟 --on-empty 一起給＝ArgumentsBad（工具形沒有 queue）。
   錯照 lib 契約 stderr 與 stdout 各一行「<定義資料夾名>: 代號 原因」、退 1。
@@ -142,22 +142,11 @@ def append_history(stack, msg):
         raise Fail("WriteFailed", "接不進 history.jsonl：%s" % e)
 
 
-# ---- mailbox_warning.txt、eca.json ----
+# ---- mailbox_warning.txt ----
 
 def warn(stack, sig, why):
     """N-16 壞信記 mailbox_warning：$AOS_STACK/mailbox_warning.txt 一行、只留最後一封（11-03 前記在 trace）。"""
     write_atomic(os.path.join(stack, "mailbox_warning.txt"), "信 %s 不採用：%s\n" % (sig, why.replace("\n", " ")))
-
-
-def note_instance(stack, kind, ws, template):
-    want = {"kind": kind, "ws": ws, "template": template}
-    try:
-        with open(os.path.join(stack, "eca.json"), encoding="utf-8") as f:
-            if json.load(f) == want:
-                return
-    except (OSError, ValueError):
-        pass
-    write_atomic(os.path.join(stack, "eca.json"), json.dumps(want, ensure_ascii=False) + "\n")
 
 
 # ---- 一批 ----
@@ -214,7 +203,6 @@ def one_turn(template, stack, ws, empty_code, on_busy, prompt):
         must_post(["init", box])                                   # 先建好，aos-say／listen 認得
     cfg = cli_session.load_cfg(template)
     cell = cli_session.Cell(os.path.join(stack, cfg["kind"]))
-    note_instance(stack, cfg["kind"], ws, template)
     take_all(stack, box, prompt)                                   # 這輪要答的＝cur/ 全部（上次沒交出去的＋剛認領的）
     batch = names(box, "cur")
     if not batch:

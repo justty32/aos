@@ -1,6 +1,6 @@
 """test_agent_fsm - aos 體系自己的 loop／fsm agent 範本 demo/agent-fsm（11-04；thinking 2026-11/04/loop-fsm-agent 03 的測試清單 13 案）：
 _entry＝aos-loop loop.json、每次一格 fsm.json（idle 收信→think 問腦→act 跑工具），走 queue 協議（P-42）；
-aos-say 寄進 $AOS_STACK/queue/、aos-listen 讀 history.jsonl；掛 daemon 用 aos-daemon-ctl add。
+說話寄進 $AOS_STACK/queue/、讀 history.jsonl（11-04 起經 tests/stack_talk，aos-say／aos-listen 併進 aos-agent）；掛 daemon 用 aos-daemon-ctl add。
 
 腦一律不碰外網：沒設 AOS_BRAIN_URL＝範本的假腦（有工具先叫第一個、再答一句）；要看送出的 request 的案起一個本機假端點（FakeBrain）。
 範本原處就跑（tools.json 的 clock 相對路徑從範本算）；要改表、改旗標的案複製一份，tools.json 改寫成絕對路徑。"""
@@ -12,7 +12,7 @@ own_error.install()
 from aos_bins import ROOT, EXEC, tool, path_with  # noqa: E402
 from dead_brain import DEAD  # noqa: E402
 TEMPLATE = ROOT / "demo" / "agent-fsm"
-HUMAN = ROOT / "extras" / "human" / "bin"
+import stack_talk  # noqa: E402  11-04 aos-say／aos-listen 併進 aos-agent，直接跑的用 stack_talk
 CTL = ROOT / "bin" / "aos-daemon-ctl"
 POST = tool("aos-post")
 CLOCK = ROOT / "lib" / "base" / "clock"
@@ -115,14 +115,10 @@ class AgentFsm(unittest.TestCase):
         return code, err
 
     def say(self, text, stack=None):
-        where = ["--stack", stack] if stack else ["--ws", self.ws]
-        r = self.run_([HUMAN / "aos-say", *where, text])
-        self.assertEqual(r.returncode, 0, r.stderr)
-        return r.stdout.strip()
+        return stack_talk.say(stack or self.ws / ".stack", text, self.env())
 
     def listen(self, stack=None, secs=30):
-        where = ["--stack", stack] if stack else ["--ws", self.ws]
-        r = self.run_([HUMAN / "aos-listen", *where, "--timeout", str(secs)], timeout=secs + 10)
+        r = stack_talk.listen(stack or self.ws / ".stack", secs)
         self.assertEqual(r.returncode, 0, r.stderr)
         return r.stdout
 

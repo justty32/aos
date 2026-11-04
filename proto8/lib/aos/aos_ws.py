@@ -1,4 +1,4 @@
-"""aos_ws - 「放一則訊息、等答案、讀 stack」的共用小零件：給人用的 aos-say／aos-listen（proto8/extras/human）用。
+"""aos_ws - 「放一則訊息、等答案、讀 stack」的共用小零件：給人用的 aos-agent say／listen／chat（proto8/extras/agent；11-04 前是 extras/human 的 aos-say／aos-listen）與測試的 tests/stack_talk 用。
 
 10-24 遷移（tool-lib 遷移清單「human、aos-ai 的放題、等答案合成一份」）：兩邊各寫了一份同樣的事，收到這裡；不是工具（沒有 _entry），
 是 lib/aos 的共用模組，命令列用 realpath 找到這個資料夾再 import。

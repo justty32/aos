@@ -10,7 +10,7 @@ own_error.install()
 
 from aos_bins import ROOT, EXEC, path_with  # noqa: E402
 from test_cli_tools import FAKE_CLAUDE, FAKE_CODEX, SYS_PATH  # noqa: E402
-HUMAN = ROOT / "extras" / "human" / "bin"
+import stack_talk  # noqa: E402  11-04 aos-say／aos-listen 併進 aos-agent，直接跑的用 stack_talk
 TEMPLATE = ROOT / "demo" / "eca-claude"
 CODEX_CLI = {"kind": "codex",                        # 11-04 前 demo/eca-codex/cli.json 原樣
              "flags": ["-c", "sandbox_mode=\"read-only\"", "-c", "approval_policy=\"never\""],
@@ -53,12 +53,10 @@ class Eca(unittest.TestCase):
                               stdin=subprocess.DEVNULL, timeout=timeout)
 
     def say(self, text):
-        r = self.run_([HUMAN / "aos-say", "--ws", self.ws, text])
-        self.assertEqual(r.returncode, 0, r.stderr)
-        return r.stdout.strip()
+        return stack_talk.say(self.ws / ".stack", text, self.env())
 
-    def listen(self, *args):
-        return self.run_([HUMAN / "aos-listen", "--ws", self.ws] + list(args))
+    def listen(self, flag="--timeout", secs="20"):
+        return stack_talk.listen(self.ws / ".stack", float(secs))
 
     def fire_and_forget(self, kind):
         """範本複製一份改成射後不理：loop.json 的 --on-empty idle 換成 stop（aos-eca-turn 在 PATH 上、定義＝AOS_CD，搬家不斷）。"""
@@ -122,7 +120,7 @@ class Eca(unittest.TestCase):
             else:
                 argv = [json.loads(l) for l in self.log.read_text().splitlines()][-1]["argv"]
                 self.assertIn("mcp_servers.aos.args=" + json.dumps(["--ws", str(self.ws), "--stack", str(self.stack), reg]), argv)
-            for f in ("state.json", "ctl.json", "eca.json"):                     # 下一隻從乾淨的 stack 開始
+            for f in ("state.json", "ctl.json"):                     # 下一隻從乾淨的 stack 開始
                 if (self.stack / f).exists():
                     (self.stack / f).unlink()
         self.assertEqual(sorted(os.listdir(self.ws)), [".stack"])              # 工作區本身不長東西

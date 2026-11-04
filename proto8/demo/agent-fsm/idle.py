@@ -138,7 +138,7 @@ def opening():
 
 
 if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
-    post(["init", box])                          # 先建好，aos-say／aos-listen 認得（同 aos-eca-turn）
+    post(["init", box])                          # 先建好，aos-agent say／listen 認得（同 aos-eca-turn）
 if take() or (opening() and take()):
     sys.exit(0)
 sys.exit(10)
