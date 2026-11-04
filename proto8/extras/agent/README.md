@@ -11,7 +11,7 @@
 
 ```
 aos-agent [--daemon D] add [--name N] [--ws WS] [--stack S] XXX     掛一隻；等上表、印 stack
-aos-agent [--daemon D] rm 名字                                        拔掉並刪它的 stack（名字要明講；stack 是工作區、定義、daemon 資料夾、目前資料夾、家目錄或在它們上層的不刪，11-04 夜）
+aos-agent [--daemon D] rm 名字                                        拔掉並刪它的 stack（名字要明講；stack 是工作區、定義、daemon 資料夾、目前資料夾、家目錄、表上別隻的 stack 或在它們上層的不刪，11-04 夜）
 aos-agent [--daemon D] ls [--json]                                    列 daemon 表上全部：名字 狀態 工作區 queue 幾封
 aos-agent [--daemon D] state|status|start|stop|pause|resume [--target 名字]
 aos-agent [--daemon D] where [--stack|--ws] [--target 名字]            印 stack（預設）／工作區（--ws）
