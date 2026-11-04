@@ -1,4 +1,4 @@
-"""test_agent_cmd - proto8/extras/agent/bin/aos-agent（11-04 aos-agent 步 4、5；thinking 2026-11/04/aos-agent 05/01 的測試清單 15 案）：
+"""test_agent_cmd - proto8/extras/agent/bin/aos-agent（11-04 aos-agent 步 4、5；thinking 2026-11/04/aos-agent 05/01 的測試清單 15 案，加第 16 案：測試自己造的 llm／screen 入口）：
 一支指令管掛在信箱模式 aos-daemon 上的一隻 agent（eca 與 loop／fsm agent 同一套子命令）；對象 --target ＞ $AOS_AGENT、daemon --daemon ＞ $AOS_DAEMON。
 
 兩種 agent 都在暫存資料夾臨時組、自己寫 interfaces.json 宣告遵守 aos-agent：
@@ -486,6 +486,47 @@ class AgentCmd(unittest.TestCase):
         self.assertTrue(r.stdout.startswith("old "), r.stdout)
         self.assertIn("沒在跑", r.stderr)
         self.assertEqual(self.code(self.ag("add", self.fsm_def())), (1, "DaemonMissing"))
+
+    # ---- 16 子介面的接法（測試自己造的 llm／screen 入口，不等步 1、2） ----
+
+    @unittest.skipUnless(daemon_has_exec(), "daemon 表還沒有 exec 欄（步 0）")
+    def test_16_fake_entries(self):
+        """llm 入口收到 `stack 動作…`、AOS_STACK＝那隻的 stack、stdout 透傳；入口自己的錯（KeyUnknown）原樣轉、退 1；
+        screen 入口收到 open -d／close／watch；rm 時 close 報 SessionBad＝不拔；入口退 0 才往下拔。"""
+        LLM = ('import json, os, sys\nf = os.path.join(os.environ["AOS_STACK"], "llm.json")\na = sys.argv[1:]\n'
+               'cur = json.load(open(f)) if os.path.exists(f) else {}\n'
+               'if a[:2] == ["stack", "set"]:\n    for kv in a[2:]:\n        k, _, v = kv.partition("=")\n'
+               '        if k != "model":\n            print("llm: KeyUnknown " + k, file=sys.stderr); sys.exit(1)\n        cur[k] = v\n'
+               '    json.dump(cur, open(f, "w"))\nelif a[:2] == ["stack", "reset"] and os.path.exists(f):\n    os.unlink(f)\n'
+               'print("model=" + cur.get("model", "def") if a[1] != "reset" else "model=def")\n')
+        SCREEN = ('import os, sys\nif os.path.exists(os.path.join(os.environ["AOS_STACK"], "BUSY")):\n'
+                  '    print("screen: SessionBad 正在答", file=sys.stderr); sys.exit(1)\n'
+                  'print("screen " + " ".join(sys.argv[1:]) + " " + os.environ["AOS_WS"])\n')
+        self.start_daemon()
+        d = self.fsm_def(decl={"llm": "llm", "screen": "screen"})
+        for sub, src in (("llm", LLM), ("screen", SCREEN)):
+            (d / sub).mkdir(exist_ok=True)
+            (d / sub / "_entry").write_text(json.dumps(["python3", "main.py"]))
+            (d / sub / "main.py").write_text(src)
+            (d / sub / "interfaces.json").write_text(json.dumps({"aos-agent/" + sub: {}}))
+        s = Path(self.add("f1", d))
+        self.assertEqual(self.ok("llm", "--target", "f1").stdout, "model=def\n")
+        self.assertEqual(self.ok("llm", "--target", "f1", "set", "model=x").stdout, "model=x\n")
+        self.assertEqual(json.loads((s / "llm.json").read_text()), {"model": "x"})
+        r = self.ag("llm", "--target", "f1", "set", "zzz=1")
+        self.assertEqual(self.code(r), (1, "KeyUnknown"))
+        self.ok("llm", "--target", "f1", "reset")
+        self.assertFalse((s / "llm.json").exists())
+        self.assertEqual(self.code(self.ag("llm", "--target", "f1", "frob")), (1, "CommandUnknown"))
+        self.assertEqual(self.ok("open", "-d", "--target", "f1").stdout, "screen open -d %s\n" % self.ws)
+        self.assertEqual(self.ok("watch", "--target", "f1").stdout, "screen watch %s\n" % self.ws)
+        (s / "BUSY").write_text("")
+        self.assertEqual(self.code(self.ag("rm", "f1")), (1, "SessionBad"))
+        self.assertEqual(self.code(self.ag("stop", "--target", "f1")), (1, "SessionBad"))
+        self.assertIn("f1", self.rows())
+        (s / "BUSY").unlink()
+        self.ok("rm", "f1")
+        self.assertNotIn("f1", self.rows())
 
     # ---- 15 using-aos-agent.sh ----
 
