@@ -1,12 +1,14 @@
-# brain.py [--system FILE] [--tools FILE] - think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）問腦，回覆一則 assistant 接進 history。
-# 結束碼（fsm.json 照碼分岔，N-36）：0＝腦要叫工具（有 tool_calls → act）；10＝腦給了最後答案、沒事做了（→ idle）。
-#   history 最後一則不是 user／tool（上一題已答完、或人改了 history）＝沒事做，不問腦、退 10（自保）。
+# brain.py [--system FILE] [--tools FILE] - think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。
+# 寄出去、收回信是下一格 wait（wait.py：aos-llm send／recv，經 $AOS_KERNEL 的 llm kernel；thinking 2026-11-04 think-as-function 03 § 1）。
+# 結束碼（fsm.json 照碼分岔，N-36）：0＝請求寫好了（→ wait）；10＝history 最後一則不是 user／tool（上一題已答完、或人改了 history）＝沒事做（→ idle）。
+# 請求＝llm kernel 請求信的 body：{"endpoint"?: 代號, "request": {"messages", "tools"?, "model"?}}。
+#   endpoint／model 來自範本的 llm.json（AOS_CD）疊 $AOS_STACK/llm.json（副本，aos-agent llm set 寫的；有的鍵蓋過定義），每格重讀＝下一題生效；
+#   都沒寫＝不放（kernel 用它自己的預設代號）。其他鍵不看（C-48）。
+# 寫新請求時順手刪 $AOS_STACK/think/pending.txt（上一封的名字）：新請求取代舊的，wait 會重寄。
 # --system FILE：讀成一則 system 放最前面、不存進 history（P-41）；沒給＝沒有 system。
 # --tools FILE：aos-tools 登記檔（預設範本裡的 tools.json；沒有那份＝不給工具）；腦看到的工具名＝登記名。相對路徑從範本資料夾（AOS_CD）算。
-# 腦（P-23）：AOS_BRAIN_URL 沒設＝假腦（有工具就先叫第一個、再答一句，不碰網路）；有設＝問 OpenAI 相容的 {url}/chat/completions，
-#   AOS_BRAIN_MODEL（範本 .env）、AOS_BRAIN_KEY（有才帶 Bearer）；只留 role、content、tool_calls。
-# 錯：stderr 一行「agent-fsm: 代號 原因」、退 1、history 不接（P-20）。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
-import json, os, subprocess, sys, urllib.error, urllib.request
+# 錯：stderr 一行「agent-fsm: 代號 原因」、退 1（P-20）。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
+import json, os, subprocess, sys
 
 
 def die(code, reason):
@@ -87,77 +89,44 @@ if system_file:
         die("SystemMissing", "讀不了 %s：%s" % (system_file, e))
 
 
-def fake():
-    """假腦：最後一則是 user、有工具＝先叫第一個工具；否則答一句（帶上最後那則 user 與工具的結果）。"""
-    last = history[-1]
-    if last.get("role") == "user" and tools:
-        return {"role": "assistant", "content": None,
-                "tool_calls": [{"id": "call_fake_%d" % len(history), "type": "function",
-                                "function": {"name": tools[0]["function"]["name"], "arguments": "{}"}}]}
-    question = next((m.get("content") or "" for m in reversed(history) if m.get("role") == "user"), "")
-    content = "FAKE ANSWER to: " + question.rstrip("\n")
-    if last.get("role") == "tool":
-        content += "（tool said: %s）" % (last.get("content") or "").rstrip("\n")
-    return {"role": "assistant", "content": content}
-
-
-def ask(url):
-    body = {"model": os.environ.get("AOS_BRAIN_MODEL") or "default", "messages": system + history}
-    if tools:
-        body["tools"] = tools
-    headers = {"Content-Type": "application/json"}
-    if os.environ.get("AOS_BRAIN_KEY"):
-        headers["Authorization"] = "Bearer " + os.environ["AOS_BRAIN_KEY"]
-    req = urllib.request.Request(url.rstrip("/") + "/chat/completions",
-                                 json.dumps(body, ensure_ascii=False).encode("utf-8"), headers)
+def read_cfg(path):
+    """llm.json：一層物件；不在＝{}。"""
     try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            raw = r.read()
-    except urllib.error.HTTPError as e:
-        detail = e.read()[:200].decode("utf-8", "replace")
-        die("BrainFailed", "HTTP %d：%s" % (e.code, detail))
-    except (urllib.error.URLError, OSError) as e:     # 連不上、逾時（TimeoutError 是 OSError）
-        die("BrainFailed", "%s 連不上或逾時：%s" % (url, getattr(e, "reason", e)))
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as e:
+        die("CfgBad", "%s 讀不懂：%s" % (path, e))
+    if not isinstance(d, dict):
+        die("CfgBad", "%s 要是一層物件" % path)
+    return d
+
+
+cfg = read_cfg(here("llm.json"))
+cfg.update(read_cfg(os.path.join(stack, "llm.json")))   # 副本有的鍵蓋過定義（aos-agent llm set，每格重讀）
+request = {"messages": system + history}
+if tools:
+    request["tools"] = tools
+body = {"request": request}
+for k, into in (("endpoint", body), ("model", request)):
+    if k in cfg:
+        if not isinstance(cfg[k], str) or not cfg[k]:
+            die("CfgBad", "llm.json 的 %s 要是非空字串" % k)
+        into[k] = cfg[k]
+
+think = os.path.join(stack, "think")
+path = os.path.join(think, "request.json")
+tmp = os.path.join(think, ".request.json.tmp")                # N-05：先寫暫存再改名
+try:
+    os.makedirs(think, exist_ok=True)
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(json.dumps(body, ensure_ascii=False) + "\n")
+    os.replace(tmp, path)
     try:
-        reply = json.loads(raw)
-        message = reply["choices"][0]["message"]
-    except (ValueError, KeyError, IndexError, TypeError) as e:
-        die("ReplyBad", "回覆不是 OpenAI 的形狀（%s: %s）" % (type(e).__name__, e))
-    report, usage = os.environ.get("AOS_KERNEL_REPORT"), reply.get("usage") if isinstance(reply, dict) else None
-    if report and isinstance(usage, dict):           # 經 LLM kernel 跑時把 API 回的 usage 交給它（P-23 註）
-        tmp = os.path.join(os.path.dirname(report), "." + os.path.basename(report))   # N-05：先寫暫存再改名
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(usage, f)
-        os.replace(tmp, report)
-    if not isinstance(message, dict):
-        die("ReplyBad", "choices[0].message 不是物件")
-    out = {"role": "assistant", "content": message.get("content")}
-    calls = message.get("tool_calls")
-    if calls:
-        if not isinstance(calls, list) or not all(isinstance(c, dict) for c in calls):
-            die("ReplyBad", "tool_calls 不是物件的陣列")
-        out["tool_calls"] = [{k: c[k] for k in ("id", "type", "function") if k in c} for c in calls]
-    return out                                       # 只留 role、content、tool_calls（模型想的內容不收，P-23）
-
-
-# 子介面 llm（11-04）：stack 有副本 llm.json 就用它的鍵蓋過 AOS_BRAIN_*（aos-agent llm set 寫的；每格重讀＝下一題生效）
-try:
-    with open(os.path.join(stack, "llm.json"), encoding="utf-8") as f:
-        brain_copy = json.load(f)
-except FileNotFoundError:
-    brain_copy = {}
-except (OSError, ValueError) as e:
-    die("CfgBad", "llm.json 讀不懂：%s" % e)
-if not isinstance(brain_copy, dict):
-    die("CfgBad", "llm.json 要是一層物件")
-for k, var in (("url", "AOS_BRAIN_URL"), ("model", "AOS_BRAIN_MODEL"), ("key", "AOS_BRAIN_KEY")):
-    if isinstance(brain_copy.get(k), str):
-        os.environ[var] = brain_copy[k]
-url = os.environ.get("AOS_BRAIN_URL")
-said = fake() if not url else ask(url)
-try:
-    with open(history_path, "a", encoding="utf-8") as f:
-        f.write(json.dumps(said, ensure_ascii=False) + "\n")
+        os.remove(os.path.join(think, "pending.txt"))         # 新請求取代上一封（wait 會重寄）
+    except FileNotFoundError:
+        pass
 except OSError as e:
-    die("WriteFailed", "接不進 history.jsonl：%s" % e)
-sys.exit(0 if said.get("tool_calls") else 10)
+    die("WriteFailed", "寫不了 %s：%s" % (path, e))
+sys.exit(0)

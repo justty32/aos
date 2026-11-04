@@ -1,6 +1,8 @@
 # brain.py - think 格：認領題目、把 tools.json 登記的工具（aos-tools ls --json）組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history（照抄 agent-dan，只改錯誤訊息開頭的名字）
-# 沒設 AOS_BRAIN_URL＝假腦；有設就問 OpenAI 相容的 {url}/chat/completions。失敗時 history 不接任何東西、退 1（P-20）。
-import json, os, subprocess, sys, urllib.error, urllib.request
+# 問腦＝寄請求給 llm kernel、同步等回信：`aos-llm ask`（stdin＝{"request": {messages, tools}}；用 kernel 的預設代號，假腦＝kernel 的 fake；
+#   11-04 晚 think-as-function 03 § 3：pyfix 是工具形、一次跑完，同步就好）。$AOS_KERNEL 沒設＝aos-llm 報 KernelMissing。
+# 失敗時 history 不接任何東西、退 1（P-20）：BrainFailed（aos-llm 退非 0，它自己的 stderr 在上面）、ReplyBad。
+import json, os, subprocess, sys
 
 
 def die(code, reason):
@@ -81,55 +83,24 @@ if os.path.exists("system.txt"):
         system = [{"role": "system", "content": f.read()}]   # 每次從檔讀，不存進 history
 
 
-def fake():
-    last = history[-1]
-    if last.get("role") == "user" and any(t["function"]["name"] == "clock" for t in tools):
-        return {"role": "assistant", "content": None,
-                "tool_calls": [{"id": "call_fake_1", "type": "function",
-                                "function": {"name": "clock", "arguments": "{}"}}]}
-    content = "FAKE ANSWER to: " + question.rstrip("\n")
-    if last.get("role") == "tool":
-        content += "（clock said: %s）" % (last.get("content") or "").rstrip("\n")
-    return {"role": "assistant", "content": content}
-
-
-def ask(url):
-    body = {"model": os.environ.get("AOS_BRAIN_MODEL") or "default", "messages": system + history}
+def ask():
+    request = {"messages": system + history}
     if tools:
-        body["tools"] = tools
-    headers = {"Content-Type": "application/json"}
-    if os.environ.get("AOS_BRAIN_KEY"):
-        headers["Authorization"] = "Bearer " + os.environ["AOS_BRAIN_KEY"]
-    req = urllib.request.Request(url.rstrip("/") + "/chat/completions",
-                                 json.dumps(body, ensure_ascii=False).encode("utf-8"), headers)
+        request["tools"] = tools
     try:
-        with urllib.request.urlopen(req, timeout=120) as r:
-            raw = r.read()
-    except urllib.error.HTTPError as e:
-        detail = e.read()[:200].decode("utf-8", "replace")
-        die("BrainFailed", ("HTTP %d：%s" % (e.code, detail)).replace("\n", " "))
-    except (urllib.error.URLError, OSError) as e:     # 連不上、逾時（TimeoutError 是 OSError）
-        die("BrainFailed", ("%s 連不上或逾時：%s" % (url, getattr(e, "reason", e))).replace("\n", " "))
+        r = subprocess.run(["aos-llm", "ask"], input=json.dumps({"request": request}, ensure_ascii=False),
+                           stdout=subprocess.PIPE, text=True)      # stderr 不吞：aos-llm 自己說原因
+    except OSError as e:
+        die("BrainFailed", "aos-llm 起不來（要在 PATH 上）：%s" % e)
+    if r.returncode != 0:
+        die("BrainFailed", "aos-llm ask 退 %d" % r.returncode)
     try:
-        message = json.loads(raw)["choices"][0]["message"]
-    except (ValueError, KeyError, IndexError, TypeError) as e:
-        die("ReplyBad", ("回覆不是 OpenAI 的形狀（%s: %s）" % (type(e).__name__, e)).replace("\n", " "))
-    report, usage = os.environ.get("AOS_KERNEL_REPORT"), json.loads(raw).get("usage")
-    if report and isinstance(usage, dict):           # 經 LLM kernel 跑時把 API 回的 usage 交給它（P-23 註；不寫＝kernel 只算次數）
-        tmp = os.path.join(os.path.dirname(report), "." + os.path.basename(report))   # N-05：先寫暫存再改名
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(usage, f)
-        os.replace(tmp, report)
+        message = json.loads(r.stdout)
+    except ValueError as e:
+        die("ReplyBad", "aos-llm ask 印的不是 JSON：%s" % e)
     if not isinstance(message, dict):
-        die("ReplyBad", "choices[0].message 不是物件")
-    out = {"role": message.get("role") or "assistant", "content": message.get("content")}
-    calls = message.get("tool_calls")
-    if calls:
-        if not isinstance(calls, list) or not all(isinstance(c, dict) for c in calls):
-            die("ReplyBad", "tool_calls 不是物件的陣列")
-        out["tool_calls"] = [{k: c[k] for k in ("id", "type", "function") if k in c} for c in calls]
-    return out                                       # 只留 role、content、tool_calls（模型想的內容不收，P-23）
+        die("ReplyBad", "回信的 message 不是物件")
+    return message                                   # kernel 的 endpoint 函數已只留 role、content、tool_calls（P-23）
 
 
-url = os.environ.get("AOS_BRAIN_URL")
-append(fake() if not url else ask(url))
+append(ask())

@@ -1,10 +1,11 @@
 # act.py [--tools FILE] - act 格：照 history 最後一則 assistant 的 tool_calls 逐個（依序）aos-tools call <名>，每個結果接一則 tool 進 history。
-# 結束碼：全部跑完退 0（fsm.json 的 next 是 "think"：帶工具結果再問腦）。
+# 結束碼（fsm.json 照碼分岔，N-36）：全部跑完退 0（→ think：帶工具結果再問腦）；最後一則 assistant 沒有 tool_calls＝腦給了最後答案、沒事做，退 10（→ idle）。
+#   「要不要叫工具」11-04 晚從 think 搬到這裡判（think 只組請求，thinking 2026-11-04 think-as-function 03 § 1）。
 # 工具的介面（P-41）：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的小格＝$AOS_STACK/tools/<名>/（P-17）、工作區＝$AOS_WS。
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。
 # 叫工具出的問題回給腦、不停（P-41 10-24 代定）：工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒登記的工具、arguments 不是 JSON。
 # 只有自己這層的錯才停：stderr 一行「agent-fsm: 代號 原因」、退 1、history 不接（P-20）——沒 stack、history 壞、
-#   最後一則 assistant 沒有 tool_calls（act 只從 think 退 0 來；人改了 history 才會這樣）、aos-tools 起不來。
+#   history 裡沒有 assistant、aos-tools 起不來。
 # --tools FILE：aos-tools 登記檔（預設範本裡的 tools.json；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
 # 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
 import json, os, subprocess, sys
@@ -55,8 +56,10 @@ last = max((i for i, m in enumerate(history) if m.get("role") == "assistant"), d
 if last is None:
     die("HistoryBad", "history.jsonl 裡沒有 assistant 的訊息")
 calls = history[last].get("tool_calls")
-if not calls or not isinstance(calls, list):
-    die("HistoryBad", "最後一則 assistant 沒有 tool_calls")
+if not calls:
+    sys.exit(10)                                 # 最後答案：沒有工具要叫，回 idle 等信
+if not isinstance(calls, list):
+    die("HistoryBad", "最後一則 assistant 的 tool_calls 不是陣列")
 
 
 def append(message):
