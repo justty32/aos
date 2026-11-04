@@ -44,7 +44,7 @@ cmake -B build && cmake --build build && ctest --test-dir build
 - `ctest` 跑 `test_cli`（`tests/test_cli.py`）：用測試小程式 `tests/util_cli.cpp`（讀一份、原樣印）測 emit 排版、讀 stdin 空／多份／壞掉。
   另跑 `test_lib_*`（`tests/test_lib.cpp`，一條一個 ctest）：入口尋址 `split_hash`／`read_json_at`（切 `#`、`#` 後沒 `/`、shebang 跳過、`~0`／`~1` 跳脫、指不到）、`cli`（`parse_cli`／`load_cfg` 的代號——FlagUnknown、ArgumentsBad、CfgMissing、CfgBad）、`identity`（四級順序、空字串算沒設、轉絕對、不看 `HOME`、cwd 被刪＝Internal）。
   其餘 files／proc（`identity` 以外）／signals 由用它的專案（aos-loop、aos-daemon…）的測試覆蓋；`parse_cli`／`load_cfg` 沒有自己的測試，由 aos-exec、aos-loop、aos-fsm、aos-daemon 的 `test_cli`（旗標、`檔#/指標`）覆蓋。
-- 別的專案怎麼連、vcpkg、產物：見 [impls/README.md「建置」](../README.md#建置)。
+- 別的專案怎麼連、vcpkg、產物：見 [impls/README.md「建置」](../docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md#建置)。
 
 ## 已知限制
 

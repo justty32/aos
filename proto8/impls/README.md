@@ -6,213 +6,26 @@
 
 語意以 [NORMS](../docs/NORMS.md) 為準；各支 README 只寫用法、跟規範不同或規範沒寫的實作細節、實作注意、建置與測試。這一頁講「全家一樣的東西」。
 
-## 現況
+## 分檔目錄
 
-impls 是唯一實作；`proto8/bin` 只剩 Python 的 `aos-tick`。`proto8/tests`（`tests/aos_bins.py`）直接跑各支的 `bin/`（11-04 前 `proto8/demo/run.sh` 也是；demo 刪了）（要先照下面「建置」建好）。對外提供九支命令列；`inst` 是 C 函式庫、沒有命令列（inst 單子的 JSON 解析在 aos-exec 的 `src/inst/`，沒有 `aos-inst`）；`aos-util`、`aos-directive`、`aos-schema` 是函式庫，aos-directive、aos-schema 的 `bin/` 不算對外提供。每個專案是一個獨立的 CMake 專案（照 [dcap](../../../dcap/README.md) 的慣例）。
+> 超過 8 KB，依 [STRUCTURE](../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。
 
-| 專案 | 做什麼 | 產物 | 現況 | 去哪讀 |
-|---|---|---|---|---|
-| aos-exec | `aos-exec [--ws WS] [--stack S] [--dotenv-override] XXX [args...]`：在工作區執行一個資料夾程式（走進去、讀 `.env`、挑入口、開跑；inst 單子在行程內跑）；公開 API `run_cli`、`run_inst`、`argv0` | `lib/libaos-exec.a`、`bin/aos-exec` | **提供** | [aos-exec](aos-exec/README.md) |
-| aos-loop | `aos-loop [旗標] loop.json`：一次次跑 `exec`，有 `interval_ms`、ctl／state 窗；公開 API（跑一次 `run_once`、骨架 `Loop`、`loop_cli`） | `lib/libaos-loop.a`、`bin/aos-loop` | **提供** | [aos-loop](aos-loop/README.md) |
-| aos-fsm | `aos-fsm fsm.json`：一次跑一格、照 `next` 換狀態 | `lib/libaos-fsm.a`、`bin/aos-fsm` | **提供** | [aos-fsm](aos-fsm/README.md) |
-| aos-daemon | `aos-daemon [旗標] daemon.json`：顧一群 proc（子 loop 或 aos-exec 一次），`procs_ctl` 增減、`procs_state` 表 | `lib/libaos-daemon.a`、`bin/aos-daemon` | **提供** | [aos-daemon](aos-daemon/README.md) |
-| aos-llm-kernel | `aos-llm-kernel [旗標] kernel.json`：LLM kernel 跑一次（挑信、跑、回信）；公開標頭 `aos/llm_kernel.hpp`（信箱與信） | `lib/libaos-llm-kernel.a`、`bin/aos-llm-kernel` | **提供** | [aos-llm-kernel](aos-llm-kernel/README.md) |
-| aos-llm-send | `aos-llm-send [旗標] 單子.json`：把單子寄給 kernel、等回信、原樣交回 | `lib/libaos-llm-send.a`、`bin/aos-llm-send` | **提供** | [aos-llm-send](aos-llm-send/README.md) |
-| aos-json | `aos-json 子命令 [旗標...] 檔#/指標 [值]`：讀、改 aos 的 JSON 設定（認得 `$ref`／`$env`）；另有給腦掛的工具 `tools/json/`、`tools/json_edit/`；庫沒有公開標頭 | `lib/libaos-json.a`、`bin/aos-json` | **提供**（嘗試） | [aos-json](aos-json/README.md) |
-| aos-post | `aos-post 子命令 [旗標...] 信箱 [信件名稱]`：N-16 投遞（IPC 的語法糖；有序、無序同箱）；公開標頭 `aos/post.hpp` | `lib/libaos-post.a`、`bin/aos-post` | **提供** | [aos-post](aos-post/README.md) |
-| aos-lock | `aos-lock 子命令 [旗標...] 目標`：N-15 的鎖；公開標頭 `aos/lock.hpp` | `lib/libaos-lock.a`、`bin/aos-lock` | **提供** | [aos-lock](aos-lock/README.md) |
-| inst | C 函式庫 libaos：起一個程式、等它結束、告訴你結果 | `lib/libinst.so`（FFI）、`lib/libinst.a` | 庫（不讀 JSON、沒有命令列） | [inst](inst/README.md) |
-| aos-util | 全家共用的 C++ 函式庫 | `lib/libaos-util.a` | 庫 | [aos-util](aos-util/README.md) |
-| aos-directive | 指示詞 `$ref`／`$env`（可帶 `$path`（字串拼接）、`$prefix`） | `lib/libaos-directive.a`、`bin/aos-directive` | 庫（bin 不對外提供） | [aos-directive](aos-directive/README.md) |
-| aos-schema | JSON Schema 驗證 | `lib/libaos-schema.a`、`bin/aos-schema` | 庫（bin 不對外提供；aos-exec 不連） | [aos-schema](aos-schema/README.md) |
+| 分檔 | 涵蓋的段 |
+|---|---|
+| [01-現況與地圖與依賴](docs/01-現況與地圖與依賴.md) | 現況；地圖與依賴 |
+| [02-從哪開始讀與慣例](docs/02-從哪開始讀與慣例.md) | 從哪開始讀；慣例（全家一樣；新專案照這張做）：開頭、命名、寫法（不要太難） |
+| [03-錯誤](docs/03-錯誤.md) | 慣例（全家一樣；新專案照這張做）（續）：錯誤 |
+| [04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單](docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md) | 慣例（全家一樣；新專案照這張做）（續）：命令列：設定、旗標、三扇門、指示詞、目錄（照 dcap，三處偏離）、建置、測試；新專案照這張清單 |
 
-使用者看得到的名字照 [C-54 命名方法](../docs/CONCEPTS/01-設計理念/C-54-命名方法.md) 與 [NORMS 前言「命名」](../docs/NORMS.md)；時間值一律 ISO 8601 UTC 到毫秒（例 `2026-10-23T01:58:45.123+00:00`）。庫裡的內部變數、結構欄位不一定跟著改名（例 `runs_`）。
-
-## 地圖與依賴
-
-```
- aos-llm-send     寄信：單子＋整份環境＋priority → $AOS_KERNEL 信箱 new/，等 done/ 的回信、原樣交回      src/{send,wait,common}
-     │ 連 aos-llm-kernel 的公開標頭（信箱與信的格式）
- aos-llm-kernel  一次：鎖信箱 → 收拾 → 排隊 → 額度到頂就回錯／停 → 認領 slots 封、各 fork 一個子行程 run_inst → 回信、served.jsonl、used.json   src/{letter,queue,serve,budget,common}
-     │ 連 aos-loop 的公開 API（擋訊號、resolve_keys；跑單子＝aos-exec 的 run_inst）
- aos-daemon   一個 loop＋proc 的表：小格＝proc 的 stack（預設 $AOS_STACK/procs/<名字>/）、procs_ctl 增減與 stop／start（或信箱 procs_ctl_mailbox）、procs_state 表（一張）、不自動重起、adopt   src/{daemon,child,common}
-     │ 繼承 aos-loop 的 Loop；信箱模式連 aos-post 的庫（aos/post.hpp）；子 loop＝fork 後子行程呼叫 run_cli(-- 小格/loop.json#/_entry)，exec 成 PATH 上的 aos-loop
- aos-fsm      一次跑一格：$AOS_STACK/state.txt → 跑那格 → 照 next 換（字串＝碼 0 才換；物件＝照碼查）；不寫 trace   src/{table,state,common}
-     │ 跑一格借 aos-loop 的 run_once（aos/loop.hpp）
- aos-loop     一次次跑 exec：0 下一次、10 停、其他非 0 失敗；轉訊號、收完 128＋N；interval_ms、ctl／state 窗  src/{run,engine,common}
-     │ 每次：fork 子行程呼叫 aos-exec 的 run_cli({"--", 目標, 參數...})（等同起一支 aos-exec）；exec 是單子＝行程內 run_inst
- aos-exec     [--ws WS] XXX——定工作區、走進去（cd、讀 .env）、挑入口、備六個 AOS_*、開跑   src/{cli,find,env,inst,launch,common}
-     │        可執行檔／argv 陣列＝exec；inst 單子＝行程內交給 libaos、留著當監工
-     │ 靜態連 inst（inst-static）、aos-directive、aos-util
-     ▼
- inst         純 C 的 libaos：fork＋exec、等、限時收掉。零 malloc、給 FFI     include/aos.h、src/inst_*.c
-
- aos-util       全家共用：錯誤、三扇門（stdin／stdout／stderr）、旗標（aos/cli.hpp，另有較早的 aos/flags.hpp）、路徑與原子寫入、子程序、訊號
-                ← aos-exec、aos-directive、aos-schema 都連它（aos-loop、aos-fsm 經 aos-exec 連到）
- aos-directive  解 JSON 裡的 {"$ref": 檔[#/指標]}、{"$env": 變數}，可帶 $path（字串拼接）、$prefix（lib＋bin） ← aos-exec 連它（單子、argv 陣列、JSON .env key 的指示詞）；aos-loop 也連（設定檔與 ctl）
- aos-schema     用 JSON Schema（draft-07）驗 JSON（lib＋bin）                  ← 獨立，只連 aos-util
- aos-json       讀、改 aos 的 JSON 設定：檔#/指標、穿 $ref、只重寫變的那塊、check（lib＋bin＋tools/）  ← 連 aos-directive、aos-util；test_tool 要 aos-exec 的 bin/
- aos-post       投遞（N-16 信箱）：send、take、see、done（--reply）、regret；send --ordered（lib＋bin，公開 aos/post.hpp）  ← 連 aos-lock、aos-util；aos-daemon 的信箱模式連它
- aos-lock       鎖（N-15）：mkdir .lock/、名牌 holder.json、判死活、收屍（lib＋bin，公開 aos/lock.hpp）  ← 只連 aos-util
-```
-
-## 從哪開始讀
-
-1. **aos-util**（最小）：全家的共同語彙——`aos::Error`、`aos::Json`、三扇門、旗標（`aos/cli.hpp`）、路徑、子程序、訊號。讀完它，別的專案裡沒解釋的名字都在這。
-2. **inst**（C）：一個 `.h` 三個 `.c`，從 `src/inst_exec.c` 的 `aos_inst_start` 由上往下讀。
-3. **aos-exec**：先看 `src/cli/cli.cpp` 的 `run_cli`（解旗標 → 一跳跳走 → 開跑），再看 `src/find/find.cpp` 的 `hop`（定工作區 → 走進去讀 `.env` → 挑入口 → 判種類），
-   其餘照 README 的元素表進資料夾；inst 單子怎麼交給 libaos 在 `src/inst/`。
-4. **aos-loop** → **aos-fsm** → **aos-daemon**：同樣先 `main.cpp`（各二三十行），再看 aos-loop 的 `src/run/`（跑一次：fork 子行程呼叫 aos-exec 的 `run_cli`）
-   與 `src/engine/`（骨架 `Loop`：讀設定、每次讀 ctl、睡、跑一次、寫 state）；aos-daemon 是 `Loop` 的子類別，子 loop 在 `src/child/`。
-5. aos-directive、aos-schema 各自獨立，用到再看。
-
-每個專案的 README 章節順序都一樣：一句話＋比喻＋例子 → 用法 → 元素（資料夾地圖）→ 流程（從 main 往下）→
-公開介面 → 跟規範的差異 → 建置與測試 → 已知限制（沒有的章節就省）。每個原始檔開頭都有一段白話：它是哪個元素的哪一塊。
-
-## 慣例（全家一樣；新專案照這張做）
-
-### 命名
-
-| 東西 | 規則 | 例 |
-|---|---|---|
-| 專案＝資料夾＝CMake 函式庫 target＝vcpkg manifest 的 name | `aos-<短名>` | `aos-loop` |
-| 函式庫產物 | `lib/lib<專案名>.a`（STATIC） | `lib/libaos-loop.a` |
-| 執行檔 target／產物 | `<專案名>_main` → `bin/<專案名>` | `aos-loop_main` → `bin/aos-loop` |
-| namespace | `aos::<短名>`，整個專案一層、不分子 namespace（看檔案在哪個資料夾就知道是哪個元素）；aos-util、aos-directive 直接 `aos` | `aos::loop::Engine` |
-| 公開標頭 | 只有一個：`include/aos/<短名>.hpp`；好幾個：`include/aos/<短名>/*.hpp`；沒有要給別人用的就沒有 `include/` | `aos/inst.hpp`、`aos/loop/engine.hpp` |
-| 元素 | `src/<元素>/`，元素的標頭跟資料夾同名 `src/<元素>/<元素>.hpp`，裡面列「幾塊 → 哪個檔」 | `src/table/table.hpp` |
-| 跨元素共用 | `src/common/common.hpp`（型別別名、自己的錯誤代號） | |
-| 入口 | `src/main.cpp`：只把元素串起來，不做事 | |
-| 錯誤代號 | 常數 `code::Xxx`，字串是 CamelCase（照 C-54：`…Missing`／`…Unknown`／`…Bad`／動作＋`Failed`） | `code::CfgBad` |
-| 測試 | `tests/test_cli.py`（命令列黑箱）、`tests/test_lib.*`（函式庫）、`tests/test_ffi.py`；ctest 名＝檔名去掉副檔名 | |
-
-例外：`inst` 是純 C 專案，沿用 dcap 的 C 模板：資料夾 `inst`、target `inst`／`inst-static`、標頭 `aos.h`、函數 `aos_inst_*`。
-
-### 寫法（不要太難）
-
-- 好懂 > 巧妙 > 效能。普通函數、普通 struct、if／for；一個函數做一件事、短；名字直白。
-- 不用：模板技巧、巨集魔法、多層繼承（daemon 繼承 loop 反覆跑的引擎這一層是設計，到此為止）、`std::function`／`std::variant` 包閉包、
-  ranges 管線、縮寫函式模板（`const auto&` 參數）、`std::exception_ptr`。要「一定收尾再丟例外」就寫 `try { } catch (...) { 收尾; throw; } 收尾;`。
-- 每個 `if` 都加 `{}`；少用三元運算子（寫成 if）；少用 `auto`（型別寫出來）。
-- C++：4 格縮排、120 欄；C（inst）：`clang-format --style=LLVM`、一行一件事（不在 if 條件裡賦值、不串長的 `&&`）。
-- `Json`（nlohmann `ordered_json`）常拿來當「可能是 null」的值用：`Json last_code_`＝null 或數字。
-
-### 錯誤
-
-每支工具出錯都丟 `aos::Error{code, msg}`（aos-util 的 `aos/error.hpp`）；`main` 接到就 `aos::emit_error`：stderr 一行
-`{"error": {"code", "msg"}}`、退出 1。**例外：aos-exec** 印的是一行 **`aos-exec: 代號 原因`**（例 `aos-exec: EntryMissing 入口不存在：nope`）、退出 1——
-照 proto8 N-60／P-21「程式名: 原因」，代號放原因開頭給測試認。**aos-loop、aos-fsm 同格式**（`aos-loop: 代號 原因`、`aos-fsm: 代號 原因`）。`code` 看是哪種錯，`msg` 給人看（字面不保證）。
-**一個代號只定義一次**：兩支以上會吐的放 aos-util 的 `aos::code`；只有一支會吐的放那支自己的 `code`；每支在自己的 `code` 裡
-`using namespace aos::code;`，程式裡一律寫 `code::Xxx`。全家的代號：
-
-| 代號 | 誰吐 | 什麼時候 |
-|---|---|---|
-| `ArgumentsBad` | 每支命令列（含 aos-exec、aos-loop、aos-fsm、aos-daemon） | 參數用錯（位置參數、旗標少了值、aos-schema 參數不是剛好一個）；aos-exec、aos-loop、aos-fsm、aos-daemon：旗標缺值、沒給 XXX／設定檔、設定檔多給、不帶值的旗標寫成 `--x=V` |
-| `FlagUnknown` | aos-exec、aos-loop、aos-fsm、aos-daemon（`aos/cli.hpp`）；`aos/flags.hpp` 也有（目前沒有程式叫它） | 不認得的旗標 |
-| `InputBad` | aos-schema、aos-directive（aos-util 讀 stdin）；libaos（`aos_inst_strerror`） | stdin 一份 JSON 都解不出來；libaos 的輸入 `in`／`out` 是 NULL、`argv` 空 |
-| `InputExtra` | aos-schema、aos-directive（aos-util 讀 stdin） | stdin 有好幾份 JSON |
-| `CfgMissing` | aos-loop、aos-fsm、aos-daemon（`load_cfg`） | 設定檔（loop.json、fsm.json、daemon.json）不在；`#/` 指不到 |
-| `CfgBad` | aos-loop、aos-fsm、aos-daemon | 設定檔讀不了、不是 JSON、`#` 後不是 `/`；不是物件、某個 key 型別不對、必填沒寫；aos-fsm 開跑時查整張表不合（`start`／`next` 不在表上、`next` 空字串或頭尾有空白、物件 `next` 的 key 不對或沒有 `"0"`／`"*"`、格的形狀不對）；aos-daemon：procs 的名字不能當資料夾名、proc 寫法不合、`procs_ctl`／`procs_state` 不是檔名或 null |
-| `StateBad` | aos-fsm | `$AOS_STACK/state.txt` 在但讀不了（沒權限、是資料夾、不是 UTF-8） |
-| `SchemaMissing` | aos-schema | SCHEMA檔 不在 |
-| `WriteFailed` | aos-loop、aos-fsm、aos-daemon | state 窗寫不了；aos-fsm：`.state.txt` 寫不了；aos-daemon：procs_state 窗、子項的 loop.json、daemon 下 stop 時子 loop 的 ctl.json 寫不了 |
-| `MkdirFailed` | aos-daemon、aos-exec | 資料夾建不了（aos-exec：`AOS_STACK`；aos-daemon：子項的小格、信箱模式的信箱〔`$AOS_STACK` 不在也算，不替人建〕） |
-| `LaunchFailed` | inst、aos-loop、aos-daemon、aos-exec | 子程序起不來（執行檔不在、fork 失敗；aos-exec 還有 exec 失敗、libaos 起不來；aos-daemon：小格的 stderr 開不了；aos-loop／aos-fsm／aos-daemon 的 `exec` 單子起不來也是） |
-| `Internal` | 每支 | 照理不會發生的例外 |
-| `DirectiveBad` | aos-directive（aos-exec 原樣透傳） | 指示詞解不開：`$env` 沒設、`$ref` 讀不到（含指到資料夾）／不是 JSON、指不到、繞圈（寫法不合不算錯） |
-| `WsMissing`、`EntryMissing`、`EntryBad` | aos-exec | 見 [aos-exec](aos-exec/README.md)；aos-loop／aos-fsm／aos-daemon 的 `exec` 單子形狀不對也是 `EntryBad`（原因開頭「單子跑不起來：」） |
-| `DotenvBad` | aos-exec | `.env` 在但讀不到（權限、是資料夾、壞掉的捷徑）；`.env` 壞（格式不合〔含引號沒收尾、引號裡有 `\`、單引號裡有 `${`、引號後有雜字、`=` 後空白再接 `#`〕、`${名字}` 沒設、不是 UTF-8）；JSON 的 `.env` key 指示詞解不開、名字不合。只印位置、不印值 |
-| `CwdMissing`、`OpenFailed`、`CommandMissing`、`CommandBad`、`WaitFailed`、`KillFailed`、`PathConflict`、`PathNotAbsolute` | libaos（`aos_inst_strerror`；aos-exec 跑 inst 單子起不來時放在 `LaunchFailed` 的原因開頭） | 見 [inst](inst/README.md) |
-| `StackMissing` | aos-loop（定義在 `aos/loop.hpp`）、aos-fsm、aos-daemon | 要 `AOS_STACK` 卻沒設（loop 開了窗、fsm、daemon） |
-| `StateUnknown` | aos-fsm | state 檔裡的狀態不在表上。見 [aos-fsm](aos-fsm/README.md) |
-| `PriorityBad`、`ReplyBad` | aos-llm-send（定義在 `aos/llm_kernel.hpp`） | priority 寫壞；回信讀不懂 |
-| `MailboxMissing`、`LetterMissing`、`LetterBad`、`CommandUnknown` | aos-post、aos-llm-send、aos-llm-kernel（回信）；`CommandUnknown`＝aos-json、aos-post、aos-lock（定義在 aos-util 的 `aos::code`） | 信箱或用到的格不在、沒設 `AOS_KERNEL`；信不在該在的格（aos-post 的 `cur/`、aos-llm-send 等的信不見了）；信壞了（aos-post `see`、kernel 回信）；不認得的子命令 |
-| `LockFailed`、`QueueBad`、`UsedBad` | aos-llm-kernel | 信箱被另一個 kernel 鎖著；`$AOS_STACK/queue.json` 讀不懂；`$AOS_STACK/used.json`（用量帳）讀不懂 |
-| `LetterBad`、`DeadlineMissed`、`BudgetMissing`、`RunFailed` | aos-llm-kernel 寫進回信、aos-llm-send 印出來 | 信讀不懂或 priority 壞；輪到之前時限已過；這一窗額度用完；上一次 kernel 跑到一半死了沒回信 |
-| `FileMissing`、`FileBad`、`SpecBad`、`PointerMissing`、`ValueMissing`、`ValueBad`、`TargetBad`、`FollowMissing`、`CheckFailed` | aos-json（`src/common/common.hpp`；印法同 aos-exec：`aos-json: 代號 原因`） | 見 [aos-json](aos-json/README.md)；它也吐全家共用的 `ArgumentsBad`、`FlagUnknown`、`WriteFailed`、`Internal` 與 `DirectiveBad` |
-| `RegretFailed`、`OrderBad`、`LetterExists`、`MailboxBad` | aos-post（`aos/post.hpp`；印法 `aos-post: 代號 原因`；它也吐上面那列的四個） | 撤不了（不在 `new/`）；`order.json` 讀不懂；`send` 自己給的信件名稱已有同名的；信箱的 `tmp/`／`new/` 不可寫。見 [aos-post](aos-post/README.md) |
-| `LockMissing`、`HolderBad` | aos-lock（`aos/lock.hpp`；印法 `aos-lock: 代號 原因`） | `release` 的鎖不在；`show` 的名牌不在或讀不懂；不認得的子命令。見 [aos-lock](aos-lock/README.md) |
-| `DirectiveFormBad`、`ExecBad` | aos-json 的 `check` 印在 stdout（問題，不是 aos-json 自己的錯） | 帶 `$ref`／`$env` 但寫法不合（aos 會原封不動留著）；`exec` 形狀不對 |
-| `SchemaBad` | aos-schema | schema 不合 draft-07、`$ref` 指不到 |
-
-ctl 壞不是錯（不採用、記在 state 的 `ctl_warning`）。
-
-### 命令列：設定、旗標、三扇門、指示詞
-
-> **aos-exec、aos-loop、aos-fsm、aos-daemon 的命令列不照這一節**：不讀 stdin 設定，設定只認設定檔（loop.json、fsm.json、daemon.json 是唯一的位置參數，可寫 `檔#/指標`），
-> 不寫結果 JSON（結果＝結束碼），錯誤一行「程式名: 代號 原因」。**旗標**：旗標寫在位置參數前面，`--x V` 或 `--x=V`、重複給最後一個算、`--` 結束旗標、
-> 第一個不是旗標的參數起原樣；不認得＝`FlagUnknown`、缺值＝`ArgumentsBad`。規則在 aos-util 的 `aos/cli.hpp`（`parse_cli`、`load_cfg`）：
-> aos-exec 有 `--ws`、`--stack` 與不帶值的 `--dotenv-override`；aos-loop、aos-daemon 有 `--max`、`--interval-ms`、`--ctl`、`--state` 與不帶值的 `--enable-logs`（旗標 ＞ 設定檔 ＞ 預設）；aos-fsm 沒有旗標。
-> 下面是較早那代（aos-schema、aos-directive 的 bin）的規矩。
-
-- **設定只從 stdin 讀一份 JSON**（`aos::read_stdin`）：空的＝`{}`、多份＝`InputExtra`、解不出來＝`InputBad`、壞掉的尾巴丟掉。
-  沒有 TARGET、沒有 `-`：任何位置參數＝`ArgumentsBad`。
-- **旗標＝純量 key 原名**（`aos::parse_flags`）：`--timeout_ms 100`、`--stop_on_end true`（底線；不收減號寫法）。每個旗標都要帶值；
-  值先當 JSON 解、解不了當字串；蓋過 stdin 的同名欄位。清單由各專案的欄位表自動產生；陣列、物件（`argv`、`envs`、`inst`）不鏡射。
-  `--` 後面整段放進 `Flags::rest`，收不收由各支自己定。
-- **指示詞**（aos-directive）：stdin 與每個旗標值裡的 `{"$ref": 檔}`、`{"$env": 變數}` 先解開再驗欄位。語意見 [N-45](../docs/NORMS/06-基礎設施-命令列與指示詞.md)。
-- **結果 stdout 一行 JSON、退出 0**（`aos::emit`，排版同 Python `json.dumps`，key 照原順序）；**出錯 stderr 一行、退出 1**。
-  子程式回非 0 不算錯（那是結果）。
-- **找兄弟執行檔**（`aos::sibling_tool`）：自己是 `impls/X/bin/X`，要叫 Y 就叫 `impls/Y/bin/Y`，不看 PATH。
-
-### 目錄（照 dcap，三處偏離）
-
-```
-<專案>/
-  CMakeLists.txt    include(../cmake/settings.cmake) → project() → 兄弟專案 → 函式庫 → if(PROJECT_IS_TOP_LEVEL) 執行檔＋測試
-  vcpkg.json        nlohmann-json（aos-schema 再加 json-schema-validator）
-  include/aos/...   公開標頭（有要給別人用的才有）
-  src/              除 main.cpp 全進函式庫；一個元素一個資料夾
-  tests/            test_cli.py／test_lib.*（＋資料）
-  bin/ lib/ build/  產物與建置目錄（不進 git）
-```
-
-跟 dcap 不同的三點（使用者拍板）：函式庫 **STATIC**（不是 SHARED）、執行檔 **`-static-pie` 全靜態**（啟動不必動態載入 libstdc++；代價是執行檔較大、glibc 有安全更新要重建）、**兄弟專案用 `add_subdirectory` 一起編**
-（它們的 `lib/*.a` 會輸出到各自的資料夾，所以建 aos-fsm 也會更新 `../aos-loop/lib/`、`../aos-exec/lib/`——可接受）。
-
-### 建置
-
-每個專案都一樣：
-
-```sh
-cmake -B build && cmake --build build && ctest --test-dir build
-```
-
-- 共通的 CMake 設定在 [`cmake/settings.cmake`](cmake/settings.cmake)（vcpkg toolchain 的找法、Release、`compile_commands.json`、PIC、
-  `-static-pie` 與 sanitizer 例外），各專案 `project()` 之前 `include` 它。只有 `set()`，沒有函數、沒有巨集。
-- nlohmann-json 走 vcpkg（toolchain 自動找 `~/dev/vcpkg`，或設 `VCPKG_ROOT`）；每個專案一份 `vcpkg.json`（可接受的重複）。
-- 要用兄弟專案就 `add_subdirectory`，包在 `if(NOT TARGET ...)` 裡（同一個 build 裡好幾個專案都要它，只 add 一次）：
-  ```cmake
-  if(NOT TARGET aos-util)
-    add_subdirectory(../aos-util aos-util-build)
-  endif()
-  target_link_libraries(你的target PRIVATE aos-util)
-  ```
-- 依賴順序：inst → aos-util → aos-directive → aos-exec → aos-loop → aos-fsm、aos-daemon、aos-llm-kernel → aos-llm-send；aos-schema 獨立（庫留著，沒人連）；aos-json 連 aos-util、aos-directive，它的 `test_tool` 要 aos-exec 的 `bin/`，所以排在 aos-exec 後面；aos-lock 只連 aos-util、aos-post 連 aos-lock、aos-daemon 連 aos-post（信箱模式），所以 aos-lock、aos-post 排在 aos-daemon 前面。
-  一次全建（aos-fsm 的 `test_cli` 巢狀逾時那案要 aos-exec 的 `bin/` 先建好，所以照這個順序；11-04 前 aos-fsm、aos-daemon 還有跑 demo 的 `test_demo`，隨 demo 刪了）：
-  ```sh
-  for p in inst aos-util aos-directive aos-schema aos-exec aos-json aos-loop aos-fsm aos-lock aos-post aos-daemon aos-llm-kernel aos-llm-send; do (cd $p && cmake -B build && cmake --build build && ctest --test-dir build) || break; done
-  ```
-- Sanitizer：`cmake -B build-asan -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined"`（`settings.cmake` 看到 `-fsanitize` 就不加 `-static-pie`）。
-  帶 sanitizer 的 `.a` 會蓋掉共用的 `lib/`，建完記得重建正常版。
-- clangd 看 `build/compile_commands.json`（會自己去 `build/` 找）。
-
-### 測試
-
-| 檔 | 做什麼 | ctest 名 | 誰有 |
-|---|---|---|---|
-| `tests/test_cli.py` | 命令列黑箱：餵 stdin 或設定檔、看退出碼與輸出 | `test_cli` | aos-util、aos-directive（57 組）、aos-schema（12 案）、aos-exec（56 組）、aos-loop（40 組）、aos-fsm（29 組）、aos-daemon（84 案，unittest）、aos-llm-kernel（42 案，unittest）、aos-llm-send（18 案，unittest；測試自己當 kernel）、aos-json（126 個）、aos-post（45 案，unittest，含 20 寄信人並發、有順序的投遞 50 寄信人與收屍、有序無序同箱）、aos-lock（unittest，含搶鎖、kill -9 後收屍、boot_id、lease） |
-| `tests/test_tool.py` | 給腦掛的工具經 aos-exec 跑（假 OpenAI 端點） | `test_tool` | aos-json（30 個；aos-exec 的 `bin/` 沒建＝跳過） |
-| `tests/test_lib.*` | 函式庫 | `test_lib`、`test_lib_*` | inst（C；另一份 `test_lib_nopidfd` 走輪詢退路）、aos-schema、aos-util（7 條，含代號 `cli`） |
-| `tests/test_ffi.py` | Python ctypes 載 `.so` | `test_ffi` | inst |
-
-## 新專案照這張清單
-
-1. 資料夾 `aos-<短名>`；`CMakeLists.txt` 照 [aos-directive 的](aos-directive/CMakeLists.txt)（最短的一份）改名字；`vcpkg.json` 抄一份改 name／description。
-2. namespace `aos::<短名>`；`src/common/common.hpp` 放 `using aos::Error; using aos::Json;` 與自己的 `code`（`using namespace aos::code;` ＋獨有的）。
-3. 先用一句話說清楚這支程式是什麼，從那句話裡的元素拆 `src/<元素>/`，每個元素一個同名 `.hpp` 列「幾塊 → 哪個檔」；跨元素共用的進 `common/`；
-   全家都要的進 aos-util。`main.cpp` 只串。
-4. 命令列：`aos::parse_flags` ＋ `aos::read_stdin` ＋ `aos::resolve` ＋ 欄位表；結果 `aos::emit`、錯誤 `aos::emit_error`。
-5. README 照上面的章節順序；只講自己，共通的連回這一頁，規範的語意連回 [NORMS](../docs/NORMS.md)。
-6. 測試：命令列黑箱 `tests/test_cli.py`；ctest 名＝檔名。
-7. 每個檔開頭一段白話（哪個元素的哪一塊）；寫法照「寫法（不要太難）」。
+<a id="現況"></a>
+<a id="地圖與依賴"></a>
+<a id="從哪開始讀"></a>
+<a id="慣例全家一樣新專案照這張做"></a>
+<a id="命名"></a>
+<a id="寫法不要太難"></a>
+<a id="錯誤"></a>
+<a id="命令列設定旗標三扇門指示詞"></a>
+<a id="目錄照-dcap三處偏離"></a>
+<a id="建置"></a>
+<a id="測試"></a>
+<a id="新專案照這張清單"></a>

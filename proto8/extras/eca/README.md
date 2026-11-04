@@ -10,77 +10,16 @@
 
 **資料夾的兩種意思**：`add XXX`（和 `open` 新建的那條）的資料夾＝**eca 本身**（頂層有 `cli.json` 的那個，例 `proto8/demo/eca-claude`）；其他子命令的 `資料夾`＝**工作區**（或小格裡面）。名字、資料夾都收的地方先比名字；都沒給＝cwd。
 
-## 是什麼
+## 分檔目錄
 
-| 檔 | 做什麼 |
+> 超過 8 KB，依 [STRUCTURE](../../../wf/STRUCTURE.md) 按標題（再按條號／頂層清單項）拆開；本檔留前言與表，各段逐字在下列分檔。
+
+| 分檔 | 涵蓋的段 |
 |---|---|
-| `bin/aos-eca` | 給人用的指令（Python）：每個子命令都是「叫 aos-daemon-ctl ＋ 動它 stack 裡 cli_session 的東西」 |
+| [01-是什麼](docs/01-是什麼.md) | 是什麼：開頭、它的 stack、對它說話＝--stack $(aos-daemon-ctl 、不封存、狀態、暫停 |
+| [02-是什麼續與對它說話](docs/02-是什麼續與對它說話.md) | 是什麼（續）：畫面裡 Ctrl-]（或 Ctrl-\\）＝跳出、實例不、eca 資料夾、開場白檔、工具箱（thinking 11-03 eca-tools）；對它說話 |
+| [03-已知限制](docs/03-已知限制.md) | 已知限制 |
 
-**沒有自己的常駐 kernel**（衝突 2）：常駐的是 aos-daemon（信箱模式，`daemon.json` 寫 `"procs_ctl_mailbox": "procs_ctl_mailbox"`），誰掛著以它的 `procs_state.json` 為準。**不另設 hub 的環境變數**（衝突 4）：哪個 daemon＝`--daemon-stack` ＞ `$AOS_DAEMON_STACK`（使用者「就AOS_DAEMON_STACK吧」「最好明講，也就是--daemon-stack」；給 `--daemon`＝`FlagUnknown`，只設舊名 `$AOS_DAEMON`＝`DaemonMissing`、訊息提示改設新名），跟 [aos-daemon-ctl](../../bin/README.md) 同一套；沒設、不是資料夾、daemon 沒在跑（`procs_state.json` 的 `pid`＋`started_at_ticks` 對不上）＝`DaemonMissing`。
-
-| 指令 | 做什麼 | 底下是 |
-|---|---|---|
-| `aos-eca add [--name N] [--ws WS] [--stack S] XXX` | 建立：XXX＝eca 資料夾（頂層有 `cli.json`），把它掛到 daemon、工作區＝WS，開始替它收 queue；等 daemon 把它放上表才回（`where` 只認表上的），印它的 stack。**`--stack S`**＝這隻的 stack（從呼叫的 cwd 轉絕對、不驗在不在，daemon 起它時建；空＝`ArgumentsBad`；沒給＝daemon 的預設小格 `$AOS_DAEMON_STACK/procs/<名字>/`）。**撞名＝`InstanceExists`、退 1、不送信**：daemon 表上已有這個名字（不論是不是 eca、在跑或停著）——訊息叫你換 `--name` 或先 `rm`，停著的多一句用 `start` | `aos-daemon-ctl add --ws WS --name N [--stack S] XXX`；名字預設 XXX 的資料夾名、`--ws` 預設 cwd（沒有預設的 eca，要明給 XXX） |
-| `aos-eca rm [資料夾\|名字]` | 刪除：關畫面、從 daemon 拿掉、刪它的 stack（queue、history、session.txt 都沒了；`--stack` 給的那個資料夾也整個刪；**不封存**，要留先自己複製；claude 自己 `~/.claude/projects` 的對話檔不動） | `aos-daemon-ctl rm` → 等它下表 → `rm -r` 列上的 stack |
-| `aos-eca start [資料夾\|名字]` | 再起：停著的用**同一個 stack** 起來（daemon 照原本 add 的設定），接著答 queue 裡排著的信（同一段對話 `--resume`）；本來就在跑＝說一句、退 0 | `aos-daemon-ctl start 名字` → 等列不再是 `stopped` |
-| `aos-eca stop [資料夾\|名字]` | 停：關畫面、答完手上這題就停；**還在 daemon 表上**（`stopped`）、stack 原樣留，`where` 照找得到，這期間 `aos-say` 的信照收在 queue、沒人答，`start` 才答；本來就停著＝說一句、退 0 | `aos-daemon-ctl stop 名字` → 等列變 `stopped` |
-| `aos-eca ls [--json]` | 列在跑的與停著的，一隻一行：名字、狀態、畫面、種類、工作區、`session` 對話 id 前 8 碼（見下方「狀態」）；`--json` 的 `state` 同一個字、`screen` 是 `open`／`closed` | `aos-daemon-ctl ls --json` 的 procs 表，只留列上 `stack` 裡有 `eca.json` 的（aos-eca-turn 每次寫：`kind`、`ws`、`template`）；`--json` 每隻的 `cell`＝那個 stack |
-| `aos-eca state [資料夾\|名字]`（或 `status`） | 這裡有沒有外部 agent（掛著或停了）；沒有＝`InstanceMissing`、退 1。`status` 是 `state` 的別名、行為一樣（11-03 使用者「那就兩個都支援，status和state兩個指令都可以，檔案照舊」；小格的 `state.json` 不改名） | 同一張表 |
-| `aos-eca open [-d] [--name N] [--ws WS] [--stack S] [名字\|資料夾\|XXX]` | 接進畫面；沒開就開（有對話就 `--resume` 叫回）；停著的只開畫面、不替人 start（stderr 提醒）。先比名字、再比工作區（或在它的 stack 裡）；都認不出而給的是 eca 資料夾（有 `cli.json`）＝先照 add 建（`--name`、`--ws`、`--stack` 照 add）再開；也不是 eca 資料夾＝`InstanceMissing`。已經有的再給 `--name`／`--ws`／`--stack`＝`ArgumentsBad`。`-d` 只開不接 | cli_session 的 `open_cell`（工具形的 `attach_main` 同一段）；只有人開畫面，aos-eca-turn 從不自己開 |
-| `aos-eca close [資料夾\|名字]` | 收起：關畫面、對話留著，aos-eca-turn 照樣用 `--resume` 答。**只管畫面**：停著的不替它起來，stderr 提醒用 `start` | `tmux kill-server`；正在答題＝`SessionBad` |
-| `aos-eca watch [資料夾\|名字]` | 跟著看非互動那次在做什麼（讀了哪個檔、說了什麼、花多少），一次回答結束就走 | 讀 CLI 小格的 `live.jsonl` |
-
-- **它的 stack**：daemon 表上那一列的 `stack`（預設小格 `$AOS_DAEMON_STACK/procs/<名字>/`；`add --stack S` 給的就是 S）——aos-eca 一律從表上拿、不自己拼路徑。裡面是 `queue/`、`history.jsonl`、`ctl.json`、`state.json`、`eca.json`，CLI 的小格是它底下的 `<kind>/`（`session.txt`、`tty.sock`、`live.jsonl`、`transcripts/`…）；`<kind>` 是 eca 的 claude／codex，跟 daemon 的 proc 是哪一型無關（eca 一律是 loop 型）。
-- **對它說話＝`--stack $(aos-daemon-ctl where --stack 名字)`**（[thinking 11-03 stack-where](../../thinking/2026-11/03/stack-where.md)；使用者「那其實.stack根本不需要放到ws那邊」）：工作區沒有指到小格的 `.stack` 捷徑，add 不碰工作區、原本有的 `.stack/` 也不動不說話。`where` 只認 daemon 表上的；stop 之後還在表上，照樣 `where`。
-- **不封存**（使用者 11-02 晚「我覺得不要封存，封存了放在那邊也沒人要用，要用的，結束前自己複製就是了」）：stop 的 stack 原樣留，rm 直接刪。
-- **狀態**（照 procs 名詞表，使用者「能不能改成用英文，就用我們先前的名詞表」；[eca 19](../../thinking/2026-10/30/eca/19-11-03-ls英文.md)）：`running`、`paused`（表上 `running`、它的 stack 裡子 loop 的 `state.json` 是 `paused`＝`aos-daemon-ctl pause` 停的，讀不到當 `running`）、`stopping`（收的途中）、`stopped`（daemon 表上 `stopped`）、`sleeping`（daemon 收工時還在跑的，daemon 再開自動 wake，[procs § 8](../../thinking/2026-11/03/procs.md#8-收工時改寫成休息中sleepwake11-03-晚)；daemon 沒在跑時 aos-eca 是 DaemonMissing，平常看不到），或 daemon 的其他 `phase`。**畫面另一欄**：`open`／`closed`（對應 `open`／`close`）。例：
-
-  ```
-  eca_bob      running  closed claude /home/guanyu/code/playground/ws  session 154bb4f3
-  ```
-
-  `state` 印兩行：`狀態   running（daemon phase running）`、`畫面   closed`。自己結束的（CLI 出錯退 1、外部直接寫它 `ctl.json` 的 `{"cmd": "stop"}`）daemon 從表上拿掉＝對 daemon、對 aos-eca 都不在了（procs 衝突 2 使用者「照舊拿掉」），`ls` 不列、`state`／`start`／`stop`／`rm`＝`InstanceMissing`；stack 資料夾留著——要接著用就**同名再 add**（同一個 `--stack` 或預設小格：前文、`cur/` 裡還沒交出去的信都接著〔交出去之後才掛的那批不重答，見下方已知限制〕），不要了自己 `rm -r`。所以掛在 daemon 下要停就用 `aos-eca stop`。
-- **暫停**只有一種：`aos-daemon-ctl pause 名字`／`resume 名字`（寫小格的 `ctl.json` `{"cmd": "pause"}`，aos-loop 的窗，不餵下一則），aos-eca 不另做 pause。
-- 畫面裡 **Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束**。人在畫面上自己打的話不進 history（方向題 2），全貌看 `transcripts/`。
-- **eca 資料夾**＝頂層有 `cli.json` 的資料夾（`kind`、`flags`、`print_flags`、`timeout_ms`；選填 `tools`、`tools_flags`〔見下〕；開場白不在這裡，見下一條），`add` 的 XXX 就給它；要別的模型、權限就複製一份 `demo/eca-claude` 改 `cli.json`、add 那份。小格 `eca.json` 的 `template` 那格記的就是它（aos-eca-turn 寫的 key，名字沒改）。
-- **開場白檔**（[eca 21](../../thinking/2026-10/30/eca/21-11-04-開場白檔可指定.md)；使用者 11-04「不該在json中指定檔案名稱，應該改成用旗標指定，或是吃stdin」，選了旗標）：history 與 queue 都空時 aos-eca-turn 把它當第一則投進 queue。**用 `aos-eca-turn --prompt FILE` 給，寫在 eca 資料夾的 `loop.json` 裡**，相對路徑從定義資料夾（aos-eca-turn 的位置參數，範本是 `{"$env": "AOS_CD"}`＝eca 資料夾）算；**沒給＝沒有開場白**（同層有 `prompt.txt` 也不找）；`cli.json` 寫了 `prompt` 不看。`add`／`open` 新建時先檢查 `loop.json`：`--prompt` 指的不是檔＝`PromptMissing`、不送信（`loop.json` 寫法認不出來、定義資料夾不是 `{"$env": "AOS_CD"}` 或絕對路徑＝不查，留給 aos-eca-turn 起來時報）。例（射後不理＋開場白）：
-
-  ```json
-  {"exec": {"argv": ["aos-eca-turn", "--on-empty", "stop", "--prompt", "prompt.txt", {"$env": "AOS_CD"}], "timeout_ms": 900000},
-   "interval_ms": 300, "ctl": "ctl.json", "state": "state.json"}
-  ```
-- **工具箱（[thinking 11-03 eca-tools](../../thinking/2026-11/03/eca-tools.md)）**：eca 資料夾裡放一份 aos-tools 的登記檔（格式 `{"tools": {名: {"path": …}}}`，用 `aos-tools --file 它 add …` 登記，或手寫相對路徑＝從登記檔的資料夾算），claude／codex 就叫得到那些工具（工具名 `mcp__aos__<登記名>`）。**`cli.json` 沒寫 `tools`＝用同層的 `tools.json`**（使用者 11-03「如果cli.json沒有指定，那就去找默認的tools.json」；沒有就不接工具）；寫了 `"tools": "別的.json"`＝用那份（相對路徑從 `cli.json` 的資料夾算）。選填 **`tools_flags`**＝字串陣列，原樣交給 aos-mcp（例 `["--enable-logs"]` 記呼叫紀錄到 `<它的 stack>/aos-mcp-logs.jsonl`、`["--timeout-s", "120"]`）；預設不記。不用自己在 `flags` 寫 `--mcp-config`：每次起 CLI 前，cli_session 把 `aos-mcp --ws <工作區> --stack <這隻的 stack> [tools_flags…] <登記檔絕對路徑>` 寫成 CLI 小格的 `mcp.json`、加 `--mcp-config <小格>/mcp.json --allowedTools mcp__aos`（codex 改成兩個 `-c mcp_servers.aos.command／args`），非互動與 `open` 的畫面都接；定義資料夾不被寫。工具在 `<這隻的 stack>/tools/<名>/` 跑，`rm` 時一起走。**白名單＝登記檔本身**：能叫哪些就是登記的那幾個，要收窄換一份小一點的登記檔。`add`／`open` 新建時先檢查：`tools` 指的檔不在＝`ToolsMissing`、`cli.json` 壞（`tools` 不是字串、`tools_flags` 不是字串陣列、有 `tools_flags` 卻沒有登記檔）＝`CfgBad`，都不送信；登記檔的內容壞了不在這裡查（aos-mcp 起不來，`watch` 看得到 claude 說 MCP 連不上）。`state` 多印一行「工具箱」。
-
-## 對它說話
-
-```sh
-export AOS_DAEMON_STACK=~/aos-daemon/.stack      # 一個信箱模式的 aos-daemon 在跑（daemon.json 寫 procs_ctl_mailbox）；要絕對路徑，相對路徑 cd 之後就對不上
-aos-eca add --ws ~/code/myproj --name myproj proto8/demo/eca-claude   # 掛上（在 repo 根下；XXX＝eca 資料夾）；stack 在 $AOS_DAEMON_STACK/procs/myproj/（--stack S 就在 S）
-S=$(aos-daemon-ctl where --stack myproj)       # 它的 stack（where 只認 daemon 表上的）
-cd ~/code/myproj
-aos-say --stack $S 讀 src/calc.py 說說裡面有什麼 && aos-listen --stack $S   # 畫面開著＝打進畫面、沒開＝--resume 問一次
-aos-tools --file proto8/demo/eca-claude/tools.json ls    # 它的工具箱（範本只登記 clock）；aos-say --stack $S 用 clock 查現在時間 → 叫得到
-aos-eca status                                   # 這隻的狀態
-aos-eca open                                 # 接進畫面（第一次會問信任這個資料夾：游標預設在 No, exit，先移游標到 Yes 再 Enter）；Ctrl-] 跳出
-aos-eca close && aos-eca ls              # 收起；再問一句照樣答（--resume）
-aos-eca stop                                 # 停：還在 daemon 表上（stopped）、ls 的狀態 stopped，where 照找得到，aos-say --stack $S 的信排著
-aos-eca start                                # 再起：同一個 stack，接著答排著的信、記得前文
-aos-eca rm                                   # 刪掉：stack 沒了（要留先複製 $S）
-```
-
-不掛 daemon 也行：`aos-exec --ws ~/code/myproj proto8/demo/eca-claude` 直接跑（stack 在 `~/code/myproj/.stack/`，say／listen 一樣），只是沒有 ls、start／stop 這些。
-
-## 已知限制
-
-- **`AOS_DAEMON_STACK` 要給絕對路徑**，相對路徑 cd 之後就對不上：在 A 資料夾 add 得上，cd 到工作區後 open／ls／close／stop 都是 `DaemonMissing`（`aos-daemon-ctl where` 也一樣）。使用者 11-02 晚選「3」：維持、只寫清楚（[eca 09 § 決定 11-02 晚](../../thinking/2026-10/30/eca/09-方向題.md#決定11-02-晚使用者)）。
-- **短時間多封信＝一批**：aos-eca-turn 一次把 queue 的信全部、照順序丟進一次 CLI（[eca 17](../../thinking/2026-10/30/eca/17-11-03-批次-status.md)）；人接在畫面上時信排著等人跳出（`--on-busy yield`）；`aos-listen` 等的是最新那封，前面的要 `--last N` 看。
-- **daemon 的 PATH**：子 loop 用 daemon 啟動時的環境叫 claude／codex、aos-eca-turn、aos-post。從沒有 `~/.local/bin` 的 shell 起 daemon，每則都 `CliMissing`。接了工具還要 `proto8/extras/ai_tools/bin`（aos-mcp）與 `proto8/bin`（aos-tools）、impls 的 aos-exec：沒有 aos-mcp＝每則 `CliMissing`（「aos-mcp 不在 PATH 上」）。
-- **`tools_flags` 的 `--logs-path` 給相對路徑會寫進工作區**：aos-mcp 的 cwd＝claude 的 cwd＝工作區。要嘛給絕對路徑，要嘛不給（預設記在它的 stack）。
-- **新資料夾第一次開畫面，claude 會先問「信任這個資料夾嗎」**：人 `open` 接進去回答就好——游標預設停在「No, exit」，直接按 Enter 會讓 claude 退出，要先用方向鍵移到「Yes」再按 Enter；`open -d` 之後馬上 say，那句會被貼進這個提問。非互動（`-p`）沒有這個提問。
-- **ls 要等子 loop 跑第一次**：`eca.json` 是 aos-eca-turn 寫的，add 之後一個 `interval_ms` 內才列得到。
-- **自己結束的（CLI 出錯、直接寫它 `ctl.json` 的 `{"cmd": "stop"}`）在 daemon 表上沒有、aos-eca 也找不到**：`ls` 不列、`rm` 刪不了（stack 資料夾自己 `rm -r`），要接著用就同名再 `add`。用自訂 `--stack` 的要記得當初給的 S（daemon 不再記得它）。
-- **信交給 CLI 就算答了，中途掛掉的那批不重答**（使用者「對於eca來說，他收到信後，丟給claude之類的，然後這封信就算是完成了」「中途掛掉就是邊緣狀況，不要讓邊緣狀況影響他的原本意思」，[eca 20](../../thinking/2026-10/30/eca/20-11-03-交出去就收.md)）：aos-eca-turn 把題目交給 claude／codex 的那一刻就收信、user 接進 history，答完才接回答。CLI 出錯（`CliFailed`、等太久 `ReplyMissing`、被殺）＝那批信已經不在 queue、history 停在 user、沒有回答；修好再 add／start 不會自己重答，要重答就再 `aos-say` 一次。`aos-listen` 這時說 `AnswerMissing`（沒人在跑時）。還沒交出去就出錯（CLI 不在 PATH、人接在畫面上退讓）的信照舊留在 `cur/`，下一輪照答。
-- codex 沒有「正在跑一輪」的訊號：人在畫面上送出、還沒講完就跳出，aos-eca-turn 這時送字會插進去。
-- `watch` 只讀 `live.jsonl`（非互動那條路）；畫面上那幾輪看不到，要 `open` 進去看。`live.jsonl` 只接不重寫，會一直長。
-- 收起＝`tmux kill-server`：人打到一半沒送出的字會丟。
-- 你自己在終端機開的 claude 不在裡面，用 Claude Code 內建的 `claude agents` 看。
+<a id="是什麼"></a>
+<a id="對它說話"></a>
+<a id="已知限制"></a>
