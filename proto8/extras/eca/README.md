@@ -42,7 +42,12 @@
   `state` 印兩行：`狀態   running（daemon phase running）`、`畫面   closed`。自己結束的（CLI 出錯退 1、外部直接寫它 `ctl.json` 的 `{"cmd": "stop"}`）daemon 從表上拿掉＝對 daemon、對 aos-eca 都不在了（procs 衝突 2 使用者「照舊拿掉」），`ls` 不列、`state`／`start`／`stop`／`rm`＝`InstanceMissing`；stack 資料夾留著——要接著用就**同名再 add**（同一個 `--stack` 或預設小格：前文、`cur/` 裡還沒交出去的信都接著〔交出去之後才掛的那批不重答，見下方已知限制〕），不要了自己 `rm -r`。所以掛在 daemon 下要停就用 `aos-eca stop`。
 - **暫停**只有一種：`aos-daemon-ctl pause 名字`／`resume 名字`（寫小格的 `ctl.json` `{"cmd": "pause"}`，aos-loop 的窗，不餵下一則），aos-eca 不另做 pause。
 - 畫面裡 **Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束**。人在畫面上自己打的話不進 history（方向題 2），全貌看 `transcripts/`。
-- **eca 資料夾**＝頂層有 `cli.json` 的資料夾（`kind`、`flags`、`print_flags`、`timeout_ms`），`add` 的 XXX 就給它；要別的模型、權限就複製一份 `demo/eca-claude` 改 `cli.json`、add 那份。小格 `eca.json` 的 `template` 那格記的就是它（aos-eca-turn 寫的 key，名字沒改）。
+- **eca 資料夾**＝頂層有 `cli.json` 的資料夾（`kind`、`flags`、`print_flags`、`timeout_ms`；選填 `tools`、`tools_flags`〔見下〕、`prompt`），`add` 的 XXX 就給它；要別的模型、權限就複製一份 `demo/eca-claude` 改 `cli.json`、add 那份。小格 `eca.json` 的 `template` 那格記的就是它（aos-eca-turn 寫的 key，名字沒改）。
+- **開場白檔**（[eca 21](../../thinking/2026-10-30-eca/21-11-04-開場白檔可指定.md)；使用者 11-04「他仍然是吃固定的prompt.txt對吧，能改嗎？可以的話就改吧。」）：history 與 queue 都空時 aos-eca-turn 把它當第一則投進 queue。**`cli.json` 沒寫 `prompt`＝用同層的 `prompt.txt`**（沒有就不投）；寫了 `"prompt": "tasks/open.txt"`＝用那份（相對路徑從 `cli.json` 的資料夾算）。`add`／`open` 新建時先檢查：指的不是檔＝`PromptMissing`、`prompt` 不是非空字串＝`CfgBad`，都不送信。例：
+
+  ```json
+  {"kind": "claude", "flags": ["--model", "sonnet"], "prompt": "tasks/open.txt"}
+  ```
 - **工具箱（[thinking 11-03 eca-tools](../../thinking/2026-11-03-eca-tools.md)）**：eca 資料夾裡放一份 aos-tools 的登記檔（格式 `{"tools": {名: {"path": …}}}`，用 `aos-tools --file 它 add …` 登記，或手寫相對路徑＝從登記檔的資料夾算），claude／codex 就叫得到那些工具（工具名 `mcp__aos__<登記名>`）。**`cli.json` 沒寫 `tools`＝用同層的 `tools.json`**（使用者 11-03「如果cli.json沒有指定，那就去找默認的tools.json」；沒有就不接工具）；寫了 `"tools": "別的.json"`＝用那份（相對路徑從 `cli.json` 的資料夾算）。選填 **`tools_flags`**＝字串陣列，原樣交給 aos-mcp（例 `["--enable-logs"]` 記呼叫紀錄到 `<它的 stack>/aos-mcp-logs.jsonl`、`["--timeout-s", "120"]`）；預設不記。不用自己在 `flags` 寫 `--mcp-config`：每次起 CLI 前，cli_session 把 `aos-mcp --ws <工作區> --stack <這隻的 stack> [tools_flags…] <登記檔絕對路徑>` 寫成 CLI 小格的 `mcp.json`、加 `--mcp-config <小格>/mcp.json --allowedTools mcp__aos`（codex 改成兩個 `-c mcp_servers.aos.command／args`），非互動與 `open` 的畫面都接；定義資料夾不被寫。工具在 `<這隻的 stack>/tools/<名>/` 跑，`rm` 時一起走。**白名單＝登記檔本身**：能叫哪些就是登記的那幾個，要收窄換一份小一點的登記檔。`add`／`open` 新建時先檢查：`tools` 指的檔不在＝`ToolsMissing`、`cli.json` 壞（`tools` 不是字串、`tools_flags` 不是字串陣列、有 `tools_flags` 卻沒有登記檔）＝`CfgBad`，都不送信；登記檔的內容壞了不在這裡查（aos-mcp 起不來，`watch` 看得到 claude 說 MCP 連不上）。`state` 多印一行「工具箱」。
 
 ## 對它說話

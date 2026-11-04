@@ -295,6 +295,29 @@ class Turn(unittest.TestCase):
         self.assertEqual(self.turn().returncode, 10)
         self.assertEqual(len(self.calls()), 1)
 
+    def test_opening_prompt_key(self):
+        """11-04：cli.json 的 prompt 指開場白檔（相對路徑從 cli.json 的資料夾算）＝用那份、同層 prompt.txt 不看；
+        指的不是檔＝PromptMissing 退 1、不問 CLI；空字串、不是字串＝CfgBad。"""
+        d = self.defs["claude"]
+        cfg = json.loads((d / "cli.json").read_text())
+        (d / "prompt.txt").write_text("不該用這份\n")
+        (d / "cli.json").write_text(json.dumps(dict(cfg, prompt="gone.txt")))
+        r = self.turn()
+        self.assertEqual((r.returncode, r.stderr.split()[:2]), (1, ["aos-eca-turn:", "PromptMissing"]), r.stderr)
+        self.assertEqual(self.calls(), [])
+        for bad in ("", 3):
+            (d / "cli.json").write_text(json.dumps(dict(cfg, prompt=bad)))
+            r = self.turn()
+            self.assertEqual((r.returncode, r.stderr.split()[:2]), (1, ["aos-eca-turn:", "CfgBad"]), r.stderr)
+        (d / "tasks").mkdir()
+        (d / "tasks" / "open.txt").write_text("照 tasks/open.txt 做\n")
+        (d / "cli.json").write_text(json.dumps(dict(cfg, prompt="tasks/open.txt")))
+        r = self.turn()
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.history()[0], {"role": "user", "content": "照 tasks/open.txt 做"})
+        self.assertEqual(self.turn().returncode, 10)
+        self.assertEqual(len(self.calls()), 1)
+
     def test_session_bad_keeps_letter(self):
         """這段對話有人在用（小格的 lock 被拿著）＝SessionBad：--on-busy 沒給／yield 都退 0、信留 cur/；
         放開後再一次就答，user 不接兩次。"""

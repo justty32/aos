@@ -114,6 +114,19 @@ class Eca(unittest.TestCase):
                     (self.stack / f).unlink()
         self.assertEqual(sorted(os.listdir(self.ws)), [".stack"])              # 工作區本身不長東西
 
+    def test_fire_and_forget_prompt(self):
+        """11-04：射後不理的範本在 cli.json 寫 "prompt": "tasks/open.txt"（相對 cli.json 的資料夾）＝不用 say，開場白就是那份；
+        aos-exec 答完收工、listen 拿到回答。"""
+        d = self.fire_and_forget("claude")
+        (d / "tasks").mkdir()
+        (d / "tasks" / "open.txt").write_text("開場白在別的檔\n")
+        cfg = json.loads((d / "cli.json").read_text())
+        (d / "cli.json").write_text(json.dumps(dict(cfg, prompt="tasks/open.txt")))
+        r = self.run_([EXEC, "--ws", self.ws, d])
+        self.assertEqual(r.returncode, 0, r.stderr)
+        r = self.listen("--timeout", "10")
+        self.assertEqual((r.returncode, r.stdout), (0, "fake claude[%s]: 開場白在別的檔\n" % self.sid("claude")[:8]), r.stderr)
+
     def test_idle_template_pause(self):
         """範本本身（停著等）背景跑：say 兩句答兩句（同一段對話）；ctl.json paused 後第三句留在 new/（11-03 起沒有 aos-listen --status，phase 由 wait_phase 看 state.json）；
         恢復後答第三句；stopped 收工、退 0。"""

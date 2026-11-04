@@ -43,7 +43,8 @@ CLI 的小格＝<stack>/<kind>/（cli_session 的 session.txt、tty.sock、live.
 畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。「暫停」＝aos-daemon-ctl pause／resume（寫它 stack 裡的 ctl.json），這裡不另做。
 錯：stderr 一行 `aos-eca: 代號 原因`、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、
   InstanceExists（add 撞名）、PathMissing（XXX、--ws 不在或不是資料夾）、EcaBad（XXX 沒有 cli.json）、
-  CfgBad／ToolsMissing（add、open 新建時 XXX 的 cli.json 壞、tools 指的登記檔不在；11-03 eca-tools，不送信）、SessionBad（正在答題時 close、stop、rm）、
+  CfgBad／ToolsMissing／PromptMissing（add、open 新建時 XXX 的 cli.json 壞、tools 指的登記檔不在、prompt 指的開場白檔不在；
+  11-03 eca-tools、11-04 prompt，不送信）、SessionBad（正在答題時 close、stop、rm）、
   Timeout（等 daemon 放上表、停好、收掉逾時），加 aos-daemon-ctl 與 cli_session 的。"""
 import json, os, shutil, subprocess, sys, time
 
@@ -229,7 +230,8 @@ def is_eca(xxx):
 
 def eca_dir(xxx):
     """add 的 XXX：eca 資料夾（頂層有 cli.json）→ 絕對路徑。不在＝PathMissing、沒有 cli.json＝EcaBad；
-    cli.json 讀不懂、tools 指的登記檔不在＝cli_session 的 CfgBad／ToolsMissing（11-03 eca-tools：入口先檢查、不送信，
+    cli.json 讀不懂、tools 指的登記檔不在、prompt 指的開場白檔不在＝cli_session 的 CfgBad／ToolsMissing／PromptMissing
+    （11-03 eca-tools、11-04 prompt：入口先檢查、不送信，
     免得要等 daemon 起子 loop、aos-eca-turn 退 1 才看得到）。登記檔的內容不在這裡查（aos-mcp 起來時的事）。"""
     if not os.path.isdir(xxx):
         die("PathMissing", "沒有 %s（add 要一個 eca 資料夾，例 proto8/demo/eca-claude）" % xxx)

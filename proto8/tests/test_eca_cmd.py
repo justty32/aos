@@ -403,6 +403,28 @@ class EcaCtl(unittest.TestCase):
         self.assertEqual(args, ["--ws", str(w), "--stack", st, str(reg)])
         self.assertIn("工具箱 %s" % reg, self.ctl("state", name).stdout)
 
+    def test_add_prompt(self):
+        """11-04：add／open 新建先驗 cli.json 的 prompt——指的不是檔＝PromptMissing、空字串＝CfgBad，都不送信（表上沒有）；
+        指得到的（相對路徑從 cli.json 的資料夾算）照常 add。"""
+        self.start_daemon()
+        w = self.ws()
+        bad = self.tmp / "eca-bad"
+        shutil.copytree(self.tpl, bad)
+        cfg = json.loads((bad / "cli.json").read_text())
+        (bad / "cli.json").write_text(json.dumps(dict(cfg, prompt="nope.txt")))
+        r = self.ctl("add", "--name", "bad", "--ws", w, bad)
+        self.assertEqual(self.code(r), (1, "PromptMissing"))
+        self.assertTrue(r.stderr.startswith("aos-eca: PromptMissing "), r.stderr)
+        self.assertEqual(self.code(self.ctl("open", "-d", "--name", "bad", "--ws", w, bad)), (1, "PromptMissing"))
+        (bad / "cli.json").write_text(json.dumps(dict(cfg, prompt="")))
+        self.assertEqual(self.code(self.ctl("add", "--name", "bad", "--ws", w, bad)), (1, "CfgBad"))
+        self.assertEqual(self.daemon_rows(), {})
+        (bad / "open.txt").write_text("開場白\n")
+        (bad / "cli.json").write_text(json.dumps(dict(cfg, prompt="open.txt")))
+        r = self.ctl("add", "--name", "good", "--ws", w, bad)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.until(lambda: any(x["name"] == "good" for x in self.ls())), self.daemon_rows())
+
     def test_add_demo(self):
         """add 給 proto8/demo/eca-claude（11-03 起沒有預設，要明給 XXX）：掛 daemon 時 aos-daemon-ctl 把 {"$env": "AOS_CD"} 換成 eca 資料夾路徑，
         aos-eca-turn 拿得到 cli.json；say／listen 答得出、ls 的 template 是 demo/eca-claude、名字＝eca-claude。"""
