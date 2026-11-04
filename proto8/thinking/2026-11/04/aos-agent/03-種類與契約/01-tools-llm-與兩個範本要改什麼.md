@@ -1,5 +1,7 @@
 ← [回入口 03-種類與契約.md](../03-種類與契約.md)｜段落：選配子介面總覽（`screen`／`tools`／`llm` 都怎麼宣告）、副本怎麼運作（改正在跑的那一隻）、`aos-tools`／`aos-llm` 改定義、eca 與 agent-fsm 各要改什麼｜上一份：—｜下一份：[02-子介面規格](02-子介面規格.md)
 
+> 11-04 晚已改：`llm` 子介面改成設定檔宣告（`interfaces.json` 的 `"llm": "llm.json"`，aos-agent `llm` 是 aos-json 語法糖；`llm/` 入口、`aos-eca-llm`、Python `aos-llm` 退場），見 [think-as-function](../../think-as-function/README.md)（使用者 11-04 晚「然後aos llm,tool這兩個，我希望他們的定位是跟aos post一樣，作為基礎工具」）。本檔原字不動。
+
 ## 使用者 11-04 晚定的三句（原文在 [06 檔末](../06-衝突與方向題.md#使用者原文11-04-晚逐字toolsllm)）
 
 「啊，還有，aos-agent tools/llm」→ 選「aos-agent 加兩個子命令」；對衝突 3「**改副本。改定義那塊用aos-tools**」；對方向題 3「**一個入口小程式。並且要是aos資料夾函數。可以設計宣告介面。**」；再補「**llm這塊也是，aos-agent llm改正在跑著的，aos-llm改定義**」。

@@ -7,7 +7,7 @@
 <!-- wf-nav -->
 | 日期 | 這天定下了什麼 | 全文 |
 |------|------|------|
-| 2026-11-04 | 定：沒有新決定（tidy P4-D／E 補完對讀、晚上 P2／P3／P4 續收斂；round 刪掉後的 13 條條文攤給使用者裁；aos-post 改版做完：全套驗過、條文照「都按照建議」加註，`…Exists` 成代號第五種結尾；四元素審查十題裁定並全部實作，`_metainfo.json`、daemon 小格名可設、add 看入口 JSON、N-63 `AOS_` 四種性質表；send_message／memory、resident-bob 封存、整份 AI 產出的 thinking 刪，NORMS 加舊名對照表附錄3） | [2026-11](2026-11/2026-11-04.md#2026-11-04) |
+| 2026-11-04 | 定：沒有新決定（tidy P4-D／E 補完對讀、晚上 P2／P3／P4 續收斂；round 刪掉後的 13 條條文攤給使用者裁；aos-post 改版做完：全套驗過、條文照「都按照建議」加註，`…Exists` 成代號第五種結尾；四元素審查十題裁定並全部實作，`_metainfo.json`、daemon 小格名可設、add 看入口 JSON、N-63 `AOS_` 四種性質表；send_message／memory、resident-bob 封存、整份 AI 產出的 thinking 刪，NORMS 加舊名對照表附錄3；晚上「思考是 aos 函數」照推薦實作：問腦＝寄請求信給 llm kernel 收回信、`AOS_BRAIN_*` 退場、`aos-llm` 成基礎工具，四題可翻案） | [2026-11](2026-11/2026-11-04.md#2026-11-04) |
 | 2026-11-03 | 定：`aos-eca-hub` 改名 `aos-eca-ctl`（不留舊名、舊紀錄照舊名，代定 6 條） | [2026-11](2026-11/2026-11-03.md#2026-11-03) |
 | 2026-11-02 | 定：使用者 CPU 類比（CF／CD／CO＝指令位置、STACK／WS＝兩個主暫存器、ENTRY 與 cwd 無關）只記原文；試驗場 bob-cathy 代定 8 條 | [2026-11](2026-11/2026-11-02.md#2026-11-02) |
 | 2026-11-01 | 定：parts 降為 agent 慣例層的約定（aos-exec 格式的 `parts.json`）、以刪掉 aos-parts 為目標；註冊檔與固定名字共存；round 不重切、使用者要深思；parts.json 不併；收五格的門檻只當參考、比技術棧優缺點；A 題當天做完：`aos-parts` 刪了、沒留殼（器官共用 `lib/agent/parts.py`），`parts.json` 換 aos-exec 格式，`AOS_ROUND_ON_EMPTY` 改 `aos-round --on-empty`（另：10 月每日檔收成月摘要）；下午試驗場現場開始（agents/bob 兩個檔跑通），使用者定原則：環境變數像 Janet 的 `dyn`、只在必要時用；晚上裁環境變數五題（hub 型不改、腦到時候再說、格旋鈕 42 個改 argv／檔、傳話筒待裁、`AOS_ENTRY` 不拿掉）、刪 aos-round 整支、整體瘦身明天再說 | [2026-11](2026-11/2026-11-01.md#2026-11-01)、[10 月月摘要](2026-10.md) |

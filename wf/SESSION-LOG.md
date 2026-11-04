@@ -12,7 +12,6 @@
 
 ## 最新進度
 
-- **open｜思考是 aos 函數（`AOS_BRAIN_*` 退場）**：使用者 11-04 晚給方向（問腦＝寄信給 llm kernel、收回信；非同步；aos-llm／aos-tools 當基礎工具；代號表），fable 設計與步 0～8 已寫、**沒改程式**，等使用者看 [05 衝突與方向題](../proto8/thinking/2026-11/04/think-as-function/05-衝突與方向題.md) → [think-as-function](../proto8/thinking/2026-11/04/think-as-function/README.md)
 - **open｜tidy 收斂（11-03 晚起）**：批次與狀態 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)；P1～P4 除 C-54（等 aos-post 步 9 加註）與 round 那批（原字不動）外都做完，剩使用者裁的題（[07](workflows/tidy/reports/2026-11-03-收斂/07-11-04夜-代定與留給使用者.md)）
 - **open｜介質**：實作八步已做；agent 的輸入是 queue、接單後放 tools（決定 32）那兩題先擱著 → [10-28 medium](../proto8/thinking/2026-10/28/medium/README.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10/29/medium-plan/README.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - **open｜現況地圖十一點**：剩第 1 點（plan 9 式檔案串流）、第 7 點（post／lock 補指令），使用者「之後有遇到再說」 → [map-review § 結論](../proto8/thinking/2026-10/30/map-review/README.md#結論10-31-補)
