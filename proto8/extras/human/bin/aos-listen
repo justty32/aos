@@ -14,7 +14,7 @@ thinking 2026-11-03-trace）：給 --status／--trace＝FlagUnknown。
   （thinking 2026-10-24-say-listen「11-01 晚」一節）。信還在 <stack>/queue/new/ 或 cur/ 就等；不見了就印 history.jsonl 最新那則沒有 tool_calls 的
   assistant 的 content（回答就是它，沒有 out/；先 say、後 listen 不會漏）。信不見了 history 卻沒有回答＝AnswerMissing。
   11-03 外部 coding agent（aos-eca-turn）交給 CLI 就收信、答完才接回答（thinking 2026-10-30-eca/20-11-03-交出去就收.md）：信不見了、
-  history 最後一則是 user、回答也沒比開始時多＝已經交出去、還在答，接著等回答出來（開始時 new/ cur/ 就空、history 最後一則是 user 也一樣，
+  history 最後一則不是回答（是 user；agent-fsm 答的途中也可能是帶 tool_calls 的 assistant 或 tool，11-04）、回答也沒比開始時多＝已經交出去、還在答，接著等回答出來（開始時 new/ cur/ 就空、history 最後一則是 user 也一樣，
   不印上一則舊回答）；這時沒有程式在跑它＝AnswerMissing
   （中途掛掉的那批不會自動重答，要重答再 aos-say）。每秒看一次有沒有程式在跑這隻 agent（/proc 裡 AOS_STACK＝這個 stack、
   或 AOS_WS＝這個工作區，argv[0] 是 aos-loop／aos-fsm／aos-exec／aos-daemon；只看 /proc），沒有就在 stderr 提醒一次
@@ -54,9 +54,11 @@ def print_answer(w, sig):
 
 
 def handed_unanswered(w, before):
-    """信不見了、回答沒比開始時（before 則）多、history 最後一則是 user＝交給 CLI 了、還在答（aos-eca-turn 交出去就收信，11-03）。"""
+    """信不見了、回答沒比開始時（before 則）多、history 最後一則不是回答＝已經收進去了、還在答（aos-eca-turn 交出去就收信，11-03）。
+    11-04 從「最後一則是 user」放寬成「不是回答」：agent-fsm 接進 history 就收信，答的途中最後一則可能是帶 tool_calls 的 assistant 或 tool
+    （thinking 2026-11/04/loop-fsm-agent 實作時代定）；eca 的 history 只有 user／回答，兩種寫法一樣。"""
     rows = h.aos_ws.history(w.stack)
-    return len(h.aos_ws.answers(w.stack)) <= before and bool(rows) and rows[-1].get("role") == "user"
+    return len(h.aos_ws.answers(w.stack)) <= before and bool(rows) and not h.aos_ws.is_answer(rows[-1])
 
 
 def wait_latest(w, timeout):

@@ -9,7 +9,7 @@
 python3 -m unittest discover -s proto8/tests      # 全過（python-dotenv 沒裝時 1 個 skip）
 ```
 
-11-04 起沒有「跑 demo」這一步：`proto8/demo/run.sh` 與它跑的範例刪了（使用者「demo中的，用不到的全部刪掉，也不用封存了。」），demo 只剩 eca-claude；原本 run.sh 跑的 agent-bob、agent-ann、tick 搬到 `proto8/tests/fixtures/`，由上面的 unittest 跑（test_exec、test_tick）。
+11-04 起沒有「跑 demo」這一步：`proto8/demo/run.sh` 與它跑的範例刪了（使用者「demo中的，用不到的全部刪掉，也不用封存了。」），demo 只剩 eca-claude（同天加 agent-fsm，由 test_agent_fsm 跑）；原本 run.sh 跑的 agent-bob、agent-ann、tick 搬到 `proto8/tests/fixtures/`，由上面的 unittest 跑（test_exec、test_tick）。
 
 impls 各專案自己的 ctest（`test_cli`、`test_tool`…；aos-fsm、aos-daemon 跑 demo 的 `test_demo` 11-04 刪了）說明在 [proto8/impls/README.md](../../../proto8/impls/README.md)。
 

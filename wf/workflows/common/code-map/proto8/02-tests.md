@@ -70,5 +70,6 @@
 | 檔 | 涵蓋 |
 |---|---|
 | `test_eca_turn.py` | `bin/aos-eca-turn`：`--one`、`--on-empty`、`--on-busy`；批次順序（無序排最後、照樣答） |
+| `test_agent_fsm.py` | 範本 `demo/agent-fsm`（11-04）：形狀、一問一答、整批、壞信、無序排後、`--prompt`、停著等 vs 收工、腦失敗接著答、工具錯回給腦、`--system`／`--tools`（本機假端點）、暫停改 history、掛 daemon（add／pause／resume／stop／start／rm） |
 | `test_eca.py` | 範本 `demo/eca-claude`（codex 版由它複製換 `cli.json`）：say → 跑 → listen、停著等 |
 | `test_eca_cmd.py` | `extras/eca` 的 `aos-eca`：open／close、start／stop、add／rm、ls／state |

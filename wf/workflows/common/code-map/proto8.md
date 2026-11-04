@@ -13,7 +13,7 @@
 | [01-impls-3](proto8/01-impls-3.md) | `impls/aos-llm-kernel/`、`impls/aos-llm-send/`、`impls/aos-json/` |
 | [06-周邊工具](proto8/06-周邊工具.md) | `bin/`、`extras/human/`、`extras/ai_tools/`、`extras/eca/`、`extras/grow/`、`extras/langs/janet/`、`extras/langs/lua/`、`extras/sandbox/` |
 | [09-lib](proto8/09-lib.md) | `lib/base/`、`lib/aos/`、`lib/agent/` |
-| [13-demo](proto8/13-demo.md) | `demo/`（只剩 eca-claude） |
+| [13-demo](proto8/13-demo.md) | `demo/`（eca-claude、agent-fsm） |
 | [02-tests](proto8/02-tests.md) | `tests/`（共用模組、`fixtures/`、impls 與 bin、lib、extras、eca） |
 
 依賴由小到大：`inst`（C lib）→ `aos-exec` → `aos-loop`／`aos-fsm` → `aos-daemon`；`aos-util`、`aos-directive`、`aos-schema` 是庫；`aos-post`（連 `aos-lock`）是信箱，aos-daemon、aos-llm-kernel、aos-llm-send 連它。
