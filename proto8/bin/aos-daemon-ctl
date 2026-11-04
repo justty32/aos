@@ -25,16 +25,17 @@ proto8/thinking/2026-10/30/agent-lifecycle/README.md（實作第 7 步的補）�
   （--daemon-stack＝FlagUnknown；只設了 AOS_DAEMON_STACK＝DaemonMissing，訊息提示改設 AOS_DAEMON）。
   信箱＝<D>/<窗上的 procs_ctl_mailbox>/（11-04 起 daemon.json 沒寫也開、預設 procs_ctl_mailbox；寫 null＝沒開＝MailboxMissing；
   11-03 前叫 loops_ctl_mailbox，舊名不認）；沒有 new/＝MailboxMissing（daemon 還沒起）。
-add 的自動識別（11-02 拿掉 --kind，使用者「把--kind刪掉」；11-03 起 daemon 看寫法決定怎麼起，procs § 2）：XXX 是資料夾、裡面有 loop.json＝loop 型
-  （daemon 的子 loop 直接跑 XXX 的 loop.json）；其他＝exec 型（跑一次）。
-  loop：子項設定＝XXX/loop.json 的內容（去掉 _entry），exec 的相對目標照 XXX 轉絕對；exec 是內嵌單子＝換成字串目標
-        `<XXX 絕對路徑>/loop.json#/exec`（子 loop 每次 aos-exec 指回原檔那張單子：AOS_CD＝XXX、相對的 cwd／argv 從 XXX 算，跟直接
-        aos-exec XXX 一樣；11-01 刪 aos-round 時改，取代原本「複製單子、補 cwd、把 {"$env": "AOS_CD"} 釘成 XXX」——
-        eca 定義的 `aos-eca-turn … {"$env": "AOS_CD"}` 靠這條掛得上 daemon）。
-        11-04 起不補 ctl／state（aos-loop 自己沒寫＝ctl.json／state.json）；loop.json 只有 exec＝補 "interval_ms": 0（aos-loop 的預設本來是 0），
+add 的自動識別（11-02 拿掉 --kind；11-04 改看入口最終指到的 JSON，使用者「拿掉，不應該看特定檔案。add這塊，就是看最終指向的json的內部結構。」，
+  four-elements 08 步 7）：照 aos-exec 的找法（N-61／N-62 的子集）走到入口——資料夾＝XXX/$AOS_ENTRY（預設 _entry，沒有再找 .json）；
+  可執行檔＝exec 型；JSON 陣列且 [0] 是 aos-loop＝[1] 是 loop 設定檔（從這份檔的資料夾算）；字串＝轉向再走；物件有 argv＝單子＝exec 型；
+  物件沒 argv、有 exec＝它就是 loop 設定；沒 argv 沒 exec＝取 js[$AOS_ENTRY] 再走。走到 loop 設定＝loop 型，其他＝exec 型（跑一次）。
+  不看檔名（「有沒有 loop.json」不再算）；繞圈＝EntryBad；XXX 的 .env 不讀（只判型、不是真的跑；.env 改了 AOS_ENTRY 這裡看不到），$ref／$env 不解。
+  loop：子項設定＝那份 loop 設定（去掉 _entry），exec 的相對目標照它的資料夾轉絕對；exec 是內嵌單子＝換成字串目標
+        `<那份檔>#<指標>/exec`（例 `<XXX>/loop.json#/exec`；子 loop 每次 aos-exec 指回原檔那張單子：AOS_CD 與相對的 cwd／argv 從原處算，跟直接
+        aos-exec XXX 一樣；11-01 刪 aos-round 時改——eca 定義的 `aos-eca-turn … {"$env": "AOS_CD"}` 靠這條掛得上 daemon）。
+        11-04 起不補 ctl／state（aos-loop 自己沒寫＝ctl.json／state.json）；設定只有 exec＝補 "interval_ms": 0（aos-loop 的預設本來是 0），
         不然 daemon 會把只有 {"exec": …} 的物件當成跑一次（N-28 型別判法）。ctl／state 寫了就原樣（相對 $AOS_STACK，落在它的 stack）。
-        XXX 的 .env、loop.json 裡的 $ref／$env 不處理（照 daemon 的規則從它的 cwd 算）。
-        **不收參數**：`-- 參數...` 給 loop 型＝ArgumentsBad（子項設定是 XXX 的 loop.json，參數沒地方放；要參數寫進 loop.json 的 exec；11-02 代定）。
+        **不收參數**：`-- 參數...` 給 loop 型＝ArgumentsBad（參數沒地方放；要參數寫進那份設定的 exec；11-02 代定）。
   exec：procs_added {名字: XXX 的絕對路徑}（`檔#/指標` 只轉 # 前面）；有 `-- 參數...`（11-02，使用者「XXX後面可以接-- ... 也就是附加argv參數」）
         ＝{名字: [XXX 絕對路徑, 參數...]}（daemon 起它＝aos-exec XXX 參數...），參數原樣、不轉路徑。有 --ws／--stack＝{"exec": 上面那個, "ws"?, "stack"?}。
   def（11-04，aos-agent，使用者「那就b。」）：loop 型、exec 型都在子項物件多帶 "def"＝XXX 的絕對路徑（`#` 後面不帶）＝定義資料夾，
@@ -67,7 +68,7 @@ ls：一張表 procs（11-03 起沒有種類欄）；stopped、sleeping 的列 p
   procs_state 頂層的 pid＋started_at_ticks（＋boot_id）對 /proc；對不上＝stderr 一句「aos-daemon-ctl: 注意 daemon 沒在跑（pid N）；表是它最後寫的」，
   照樣列、退 0（--json 也一樣；輸出不加欄）。不看檔案的更新時間（使用者：檔案的更新受多方面影響）。
 錯：stderr 一行「aos-daemon-ctl: 代號 原因」、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、MailboxMissing、
-  PathMissing、LoopBad（loop.json 讀不了或不是物件）、StateMissing（procs_state.json 不在）、StateBad、ProcMissing（表上沒有）、
+  PathMissing、EntryBad（add 走入口時：讀不懂、指不到、繞圈）、LoopBad（loop 設定讀不了或不是物件）、StateMissing（procs_state.json 不在）、StateBad、ProcMissing（表上沒有）、
   CtlMissing（stop／start／pause／resume：沒有 ctl＝exec 型）、WriteFailed（pause／resume 寫不了 ctl）、CommandMissing（PATH 沒 aos-post）、
   SendFailed（aos-post 退非 0，它的 stderr 照轉）。（KindBad 11-02 跟 --kind 一起拿掉；給 --kind＝FlagUnknown。）
 要 PATH 上有 aos-post。
@@ -123,17 +124,109 @@ def read_loop(path):
     return cfg
 
 
-def loop_spec(xxx):
-    cfg = read_loop(os.path.join(xxx, "loop.json"))
+def read_entry_json(path):
+    """入口找法用：讀一份沒 +x 的檔當 JSON（第一行 #! 跳過）。讀不了、不是 JSON＝EntryBad（aos-exec 也會這樣報）。"""
+    try:
+        with open(path, encoding="utf-8") as fh:
+            text = fh.read()
+    except OSError as e:
+        raise Fail("EntryBad", "%s 讀不了：%s" % (path, e))
+    if text.startswith("#!"):
+        text = text.split("\n", 1)[1] if "\n" in text else ""
+    try:
+        return json.loads(text)
+    except ValueError as e:
+        raise Fail("EntryBad", "%s 不是 JSON：%s" % (path, e))
+
+
+def pointer(v, ptr, where):
+    """JSON pointer（RFC 6901，N-62）：ptr＝"" 或 "/a/b"。指不到＝EntryBad（判型用，不細分 EntryMissing）。"""
+    if ptr == "":
+        return v
+    if not ptr.startswith("/"):
+        raise Fail("EntryBad", "%s：# 後面要接 /" % where)
+    for tok in ptr[1:].split("/"):
+        tok = tok.replace("~1", "/").replace("~0", "~")
+        if isinstance(v, dict) and tok in v:
+            v = v[tok]
+        elif isinstance(v, list) and tok.isdigit() and int(tok) < len(v):
+            v = v[int(tok)]
+        else:
+            raise Fail("EntryBad", "%s 指不到" % where)
+    return v
+
+
+def find_loop(xxx):
+    """add 的自動識別（11-04，four-elements 08 步 7；使用者「拿掉，不應該看特定檔案。add這塊，就是看最終指向的json的內部結構。」）：
+    照 aos-exec 的找法（N-61／N-62 的子集）走到入口，看最後指到的 JSON 長怎樣。回 (loop 設定物件, 它所在的檔, 它在檔裡的指標, 相對路徑的起點)，
+    exec 型回 None。不看檔名（loop.json 這個名字不出現在這裡）；.env 不讀（只判型、不是真的跑），$ref／$env 不解。
+      資料夾＝XXX/$AOS_ENTRY（預設 _entry；沒有再找 .json）；可執行檔（+x）＝exec 型；
+      JSON：陣列且 [0] 是 aos-loop＝[1] 是 loop 設定檔（從這份檔的資料夾算）、讀它；其他陣列＝exec 型；字串＝轉向（從這份檔的資料夾算）再來一遍；
+      物件有 argv＝單子＝exec 型；物件沒 argv、有 exec＝它就是 loop 設定；沒 argv 沒 exec＝取 js[$AOS_ENTRY] 再來（同一份檔、指標往下）。
+    繞圈＝EntryBad；路徑不在＝PathMissing。"""
+    ent = os.environ.get("AOS_ENTRY") or "_entry"
+    seen = set()
+    path, _, ptr = abs_target(xxx, os.getcwd()).partition("#")
+    while True:
+        key = (os.path.realpath(path), ptr)
+        if key in seen:
+            raise Fail("EntryBad", "%s 的入口繞圈了（%s#%s）" % (xxx, path, ptr))
+        seen.add(key)
+        if os.path.isdir(path):
+            if ptr:
+                raise Fail("EntryBad", "%s 是資料夾，不能帶 #/" % path)
+            nxt = os.path.join(path, ent)
+            if not os.path.exists(nxt) and os.path.isfile(nxt + ".json"):
+                nxt += ".json"
+            if not os.path.exists(nxt):
+                return None   # 找不到入口：當 exec 型交給 daemon（aos-exec 會報 EntryMissing，寫在小格的 stderr）
+            path = nxt
+            continue
+        if not os.path.isfile(path):
+            raise Fail("PathMissing", "沒有 %s" % path)
+        if not ptr and os.access(path, os.X_OK):
+            return None   # 可執行檔
+        base = os.path.dirname(path)
+        v = pointer(read_entry_json(path), ptr, "%s#%s" % (path, ptr))
+        while isinstance(v, dict) and "argv" not in v and "exec" not in v:   # 沒 argv 的物件＝當資料夾，取 js[$AOS_ENTRY] 一路往下
+            if ent not in v:
+                return None
+            v = v[ent]
+            ptr += "/" + ent.replace("~", "~0").replace("/", "~1")
+        if isinstance(v, dict):
+            if "argv" in v:
+                return None   # 單子
+            return v, path, ptr, base   # 有 exec：loop 設定
+        if isinstance(v, list):
+            if len(v) >= 2 and v[0] == "aos-loop" and isinstance(v[1], str) and not v[1].startswith("-"):
+                lp, _, lptr = abs_target(v[1], base).partition("#")   # loop 設定檔（可以帶 #/指標）
+                try:
+                    cfg = pointer(read_entry_json(lp), lptr, "%s#%s" % (lp, lptr))
+                except Fail as e:
+                    raise Fail("LoopBad", str(e))
+                if not isinstance(cfg, dict):
+                    raise Fail("LoopBad", "%s#%s 要是 JSON 物件" % (lp, lptr))
+                return cfg, lp, lptr, os.path.dirname(lp)
+            return None   # 別的 argv 陣列
+        if isinstance(v, str):
+            path, _, ptr = abs_target(v, base).partition("#")   # 轉向
+            continue
+        raise Fail("EntryBad", "%s#%s 不是入口（要是單子、argv 陣列、字串或物件）" % (path, ptr))
+
+
+def loop_spec(found):
+    """loop 型的子項設定：那份 loop 設定（去掉 _entry），相對的 exec 目標照它的資料夾轉絕對；exec 是內嵌單子＝換成指回原處的字串目標。"""
+    cfg, path, ptr, base = found
+    cfg = dict(cfg)
     cfg.pop("_entry", None)
     ex = cfg.get("exec")
     if isinstance(ex, str):
-        cfg["exec"] = abs_target(ex, xxx)
+        cfg["exec"] = abs_target(ex, base)
     elif isinstance(ex, list) and ex and isinstance(ex[0], str):
-        cfg["exec"] = [abs_target(ex[0], xxx)] + ex[1:]
+        cfg["exec"] = [abs_target(ex[0], base)] + ex[1:]
     elif isinstance(ex, dict) and "$ref" not in ex and "$env" not in ex:   # 內嵌單子：指回原檔，AOS_CD 與相對路徑照原地
-        cfg["exec"] = os.path.join(xxx, "loop.json") + "#/exec"
-    # 11-04（four-elements 08 步 6「不補名」）：ctl／state 不補（aos-loop 自己沒寫＝ctl.json／state.json）。只有 exec 的 loop.json
+        cfg["exec"] = path + "#" + ptr + "/exec"
+    # 11-04（four-elements 08 步 6「不補名」）：ctl／state 不補（aos-loop 自己沒寫＝ctl.json／state.json）。只有 exec 的 loop 設定
     # 交給 daemon 會被認成 exec 型（題 3：物件只有 exec＝跑一次），所以補一格 "interval_ms": 0——aos-loop 的預設本來就是 0，行為不變
     if set(cfg) <= {"exec", "ws", "stack", "def"}:   # 同 daemon 的 is_once 認的那幾個 key
         cfg["interval_ms"] = 0
@@ -254,9 +347,9 @@ def cmd_add(opts, args):
     path = xxx.partition("#")[0]
     if not os.path.exists(path):
         raise Fail("PathMissing", "沒有 %s" % path)
-    is_loop = os.path.isdir(path) and os.path.isfile(os.path.join(path, "loop.json"))
-    if is_loop and extra:
-        raise Fail("ArgumentsBad", "loop 型（%s 有 loop.json）不收參數；參數寫進 loop.json 的 exec" % path)
+    found = find_loop(xxx)
+    if found and extra:
+        raise Fail("ArgumentsBad", "loop 型（%s 的入口指到 loop 設定 %s）不收參數；參數寫進那份設定的 exec" % (path, found[1]))
     ws = None
     if o.get("ws") is not None:
         if not o["ws"]:
@@ -270,8 +363,8 @@ def cmd_add(opts, args):
             raise Fail("ArgumentsBad", "--stack 不能是空的（usage: %s）" % USAGE)
         stack = os.path.abspath(o["stack"])   # 同 --ws 從呼叫當下的 cwd 算；在不在不驗（daemon 起它時建）
     name = o.get("name") or os.path.basename(path.rstrip("/"))
-    if is_loop:
-        spec = loop_spec(path)
+    if found:
+        spec = loop_spec(found)
     else:
         spec = {"exec": [xxx] + extra if extra else xxx}
     spec["def"] = os.path.abspath(path)   # 11-04（使用者「那就b。」）：定義資料夾，daemon 記進表的 def 欄
