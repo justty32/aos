@@ -2,7 +2,7 @@
 
 ← [thinking README](../../../README.md)｜月份表 [2026-11](../../README.md)｜前情：[11-03 aos-agent](../../03/aos-agent.md)（say／listen 以後併進通用介面、對接 eca 與這隻）、[10-30 eca](../../../2026-10/30/eca/README.md)（外部 coding agent 包成同形資料夾；[02 兩塊比較](../../../2026-10/30/eca/02-A-兩塊比較-aos-agent-vs-外部-c.md)）、[10-30 agent-lifecycle](../../../2026-10/30/agent-lifecycle/README.md)（queue 協議、決定 33～36）、[11-03 eca-tools](../../03/eca-tools.md)（`tools.json` 登記檔）、[eca 21](../../../2026-10/30/eca/21-11-04-開場白檔可指定.md)（開場白改旗標 `--prompt`）、[11-03 procs](../../03/procs.md)、[11-03 ctl-commands](../../03/ctl-commands.md)、[11-03 aos-post](../../03/aos-post.md)｜被刪的上一套：[10-28 agent-round](../../../2026-10/28/agent-round/README.md)、[archive/agent-round-concepts](../../../../archive/agent-round-concepts/README.md)（只留概念）｜條文：[C-19、C-46、C-50、C-62](../../../../docs/CONCEPTS/05-agent.md)、[C-51、C-52、C-56、C-69](../../../../docs/CONCEPTS/01-設計理念.md)、[N-36、N-39](../../../../docs/NORMS/07-基礎設施-組合子.md)、[N-16](../../../../docs/NORMS/05-基礎設施-窗.md)、[N-53](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[P-08、P-11、P-12、P-19、P-20、P-35、P-41、P-42、P-43](../../../../docs/CONVENTION/02-題目stack停錯腦.md)｜程式（只翻、沒改）：[impls](../../../../impls/README.md) aos-exec／aos-loop／aos-fsm／aos-daemon／aos-post、[bin](../../../../bin/README.md) aos-tools／aos-eca-turn、[lib](../../../../lib/README.md)、[extras/human](../../../../extras/human/README.md)、[extras/eca](../../../../extras/eca/README.md)、`tests/fixtures/agent-eve`（P-41 範本，舊協議）
 
-本檔只記使用者原文（逐字）、決定、fable 照原則定的規劃（可翻案）、原則推不出答案的衝突與方向題（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。**只規劃、未實作**；統一的 aos-agent 介面本身這輪不規劃，只把兩邊不一樣的地方標出來留給它。
+本檔只記使用者原文（逐字）、決定、fable 照原則定的規劃（可翻案）、原則推不出答案的衝突與方向題（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。**規劃 11-04 裁完、照規劃實作**；統一的 aos-agent 介面本身這輪不規劃，只把兩邊不一樣的地方標出來留給它。
 
 ## 使用者原文
 
@@ -14,7 +14,7 @@
 
 - 11-04：要做；規劃交 fable（「讓fable去規劃吧」）。
 - 11-04：做完之後才綜合兩邊弄統一的 aos-agent 介面；這輪不規劃它。
-- 其餘見分檔 [04 衝突與方向題](04-衝突與方向題.md)，待使用者。
+- 11-04：[04 衝突與方向題](04-衝突與方向題.md#決定11-04使用者) 四題都選建議（逐字選項）：衝突 1「接進對話紀錄就收」、衝突 2「think 也退 10，條文加註」、方向題 1「放範本裡，每隻複製」、方向題 2「等答完回 idle 再收」；並說「記完就實作」。條文 P-11、P-19、P-35 照這兩個衝突加 11-04 註（原字不改）。
 
 ## 一句話
 
