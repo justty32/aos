@@ -6,7 +6,7 @@
 03 介面、04 邊緣）。說明與用法例子：proto8/extras/agent/README.md。
 
     aos-agent [--daemon D] add [--name N] [--ws WS] [--stack S] XXX   掛一隻（XXX 要在 interfaces.json 宣告遵守 aos-agent）；等上表、印 stack
-    aos-agent [--daemon D] rm 名字                     拔掉並刪它的 stack（有畫面先關；不吃 AOS_AGENT）
+    aos-agent [--daemon D] rm 名字                     拔掉並刪它的 stack（有畫面先關；不吃 AOS_AGENT；stack 蓋住工作區／定義／daemon／cwd／家目錄的不刪）
     aos-agent [--daemon D] ls [--json]                 列 daemon 表上全部的 proc：名字 狀態 工作區 queue 排幾封
     aos-agent [--daemon D] state|status [--target 名字]   這隻的狀態幾行
     aos-agent [--daemon D] where [--stack|--ws] [--target 名字]   印它的 stack（預設＝--stack）／工作區（--ws）
@@ -640,8 +640,23 @@ def cmd_rm(argv):
     close_screen_if_any(a)
     ctl("rm", "--", a.name)
     wait_for(lambda: row_named(a.name) is None, "daemon 還沒收掉 %s" % a.name)
+    keep = covers(a.stack, [a.row.get("ws"), a.row.get("def"), daemon_dir(), os.getcwd(), os.path.expanduser("~")])
+    if keep:                                          # 11-04 夜邊緣實測：add --stack . 之後 rm 會連工作區一起刪；stack 蓋住這些的不刪
+        print("拔了 %s；stack %s 沒刪（它是 %s 或在它上層）" % (a.name, a.stack, keep))
+        return
     shutil.rmtree(a.stack, ignore_errors=True)        # 不封存（使用者 11-02 晚）
     print("刪了 %s（stack %s）" % (a.name, a.stack))
+
+
+def covers(stack, paths):
+    """stack 是不是 paths 裡某一個、或在它上層（rm 不能刪的）；回那一個或 None。"""
+    s = os.path.realpath(stack)
+    for p in paths:
+        if isinstance(p, str) and p:
+            r = os.path.realpath(p)
+            if r == s or r.startswith(s.rstrip("/") + "/"):
+                return p
+    return None
 
 
 def cmd_start(argv):
