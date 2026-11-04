@@ -1,12 +1,12 @@
 # 2026-10-30 eca：外部 coding agent 跟 aos agent 平級——兩塊比較、通用介面、aos-eca-hub 怎麼切（fable 規劃）
 
-← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜出發點：[10-30 map-review](../map-review/README.md) 第 3、5、6、10 點與 [§ 決定（10-30）](../map-review/01-使用者原文.md#決定10-30)｜前一份規劃：[10-30 agent-lifecycle](../agent-lifecycle/README.md)（已做完的十步、暫停的第 6、9 步、[實作時代定](../agent-lifecycle/07-衝突.md#實作時代定10-30隊長與工人照原則定的細節可翻案)）｜aos-hub 現況：[10-28 hub-kernel](../../28/hub-kernel/README.md)、[10-28 hub-adapter](../../28/hub-adapter/README.md)、extras/cli_hub、分支 `wip/hub-step6`（42f1be73）｜claude／codex 當工具：[10-24 cli-tools](../../24/cli-tools/README.md)、[demo/agent-fay](../../../../demo/README.md)｜兩個場景：[10-29 playground-queue](../../29/playground-queue/02-要帶給使用者的題.md#結論10-29-晚看完-a-之後)｜條文：[C-65、C-75](../../../../docs/CONCEPTS/03-基礎設施.md)、[N-14～N-17](../../../../docs/NORMS/05-基礎設施-窗.md)、[N-28、N-54](../../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-63](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[P-11～P-14、P-42](../../../../docs/CONVENTION/02-題目stack停錯腦.md)
+← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜出發點：[10-30 map-review](../map-review/README.md) 第 3、5、6、10 點與 [§ 決定（10-30）](../map-review/01-使用者原文.md#決定10-30)｜前一份規劃：[10-30 agent-lifecycle](../agent-lifecycle/README.md)（已做完的十步、暫停的第 6、9 步、[實作時代定](../agent-lifecycle/07-衝突.md#實作時代定10-30隊長與工人照原則定的細節可翻案)）｜aos-hub 現況：[10-28 hub-kernel](../../28/hub-kernel/README.md)、[10-28 hub-adapter](../../28/hub-adapter/README.md)｜claude／codex 當工具：[10-24 cli-tools](../../24/cli-tools/README.md)、[demo/agent-fay](../../../../demo/README.md)｜兩個場景：[10-29 playground-queue](../../29/playground-queue/02-要帶給使用者的題.md#結論10-29-晚看完-a-之後)｜條文：[C-65、C-75](../../../../docs/CONCEPTS/03-基礎設施.md)、[N-14～N-17](../../../../docs/NORMS/05-基礎設施-窗.md)、[N-28、N-54](../../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-63](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[P-11～P-14、P-42](../../../../docs/CONVENTION/02-題目stack停錯腦.md)
 
-規矩見 [thinking/README](../../../README.md)。**這份整份是 fable 照原則代定的細節設計，可翻案**；使用者定的在 map-review 的決定與 agent-bob 的決定 33～36。**NORMS／CONVENTION 正文沒動、程式沒動**；條文只是草稿，實作步驟標了檔案與測試。衝突與方向題寫在文末，寫給不看 CS 術語的人；使用者 10-30「都照建議」，見 [§ 決定（10-30）](09-方向題.md#決定10-30)。
+規矩見 [thinking/README](../../../README.md)。01～08 是 fable 照原則代定的細節設計（可翻案），使用者 10-30「都照建議」，見 [§ 決定（10-30）](09-方向題.md#決定10-30)；條文已落正文、實作九步已做完。之後的改口在 10～21，跟 01～08 不一致時以 10～21 為準。
 
 ## 分檔目錄
 
-> 超過 8 KB，依 [STRUCTURE](../../../../../wf/STRUCTURE.md) 按 `##` 標題拆開（單段仍超標的再按 `###` 切）；本檔留前言與表，各段逐字在下列分檔（2026-10-31 tidy）。
+> 依 [STRUCTURE](../../../../../wf/STRUCTURE.md) 按 `##` 標題拆開；本檔留前言與表。
 
 | 分檔 | 涵蓋的段 |
 |---|---|
@@ -23,14 +23,14 @@
 | [11-10-31-使用者想法-turn-改名-把-tu](11-10-31-使用者想法-turn-改名-把-tu.md) | 10-31 使用者想法：turn 改名、把 turn 讓出來（先記、之後處理）、翻案：round 化作 aos-round 薄殼（10-30，使用者澄清）、實跑（10-30，試驗場、假 CLI） |
 | [12-實作時代定](12-實作時代定.md) | 實作時代定（10-30，隊長與工人照原則定的細節，可翻案） |
 | [13-實作時代定](13-實作時代定.md) | 實作時代定（10-31，隊長與工人照原則定的細節，可翻案） |
-| [14-11-02-晚使用者想法](14-11-02-晚使用者想法.md) | 11-02 晚使用者想法（原文，未定）、決定（11-02 晚，使用者）、情境：短時間多封信 |
+| [14-11-02-晚使用者想法](14-11-02-晚使用者想法.md) | 11-02 晚使用者想法（原文，未定）、決定（11-02 晚，使用者） |
 | [15-實作時代定](15-實作時代定.md) | 實作時代定（11-02 晚，第二輪：三對指令、不封存、reap 自動掛，可翻案） |
 | [16-11-03-改名-aos-eca-ctl](16-11-03-改名-aos-eca-ctl.md) | 11-03 改名：aos-eca-hub → aos-eca-ctl，同日再改 aos-eca（使用者原文、頂層代定，可翻案） |
 | [17-11-03-批次-status](17-11-03-批次-status.md) | 11-03 aos-eca-ctl 加 `status` 別名、aos-eca-turn 一次把 queue 的信全丟進去（使用者原文、決定、頂層代定，可翻案） |
 | [18-11-03-單隻-add-rm](18-11-03-單隻-add-rm.md) | 11-03 aos-eca 每個子命令只管一隻（拿掉 `close --idle`、`eca_reap`）、`add XXX` 照 aos-daemon-ctl（沒有 template、撞名報錯）、`remove` 改 `rm`（使用者原文、決定、頂層代定，可翻案） |
 | [19-11-03-ls英文](19-11-03-ls英文.md) | 11-03 aos-eca 的 ls／state 狀態改英文名詞（running／paused／stopping／stopped）、畫面另開一欄 open／closed（使用者原文、決定、頂層代定，可翻案） |
 | [20-11-03-交出去就收](20-11-03-交出去就收.md) | 11-03 aos-eca-turn 的信交給 CLI 就算完成、當場收信，CLI 中途掛掉那批不自動重答（P-12 在 eca 的例外；使用者原文、決定、實作時代定，可翻案） |
-| [21-11-04-開場白檔可指定](21-11-04-開場白檔可指定.md) | 11-04 aos-eca-turn 的開場白檔：先改成 `cli.json` 的 `prompt`，同天翻案成旗標 `--prompt FILE`（寫在 `loop.json`、相對定義資料夾、沒給＝沒有開場白、不找 `prompt.txt`、指的不是檔＝`PromptMissing`）（使用者原文、決定、實作時代定，可翻案） |
+| [21-11-04-開場白檔可指定](21-11-04-開場白檔可指定.md) | 11-04 aos-eca-turn 的開場白檔改成旗標 `--prompt FILE`（寫在 `loop.json`、相對定義資料夾、沒給＝沒有開場白、不找 `prompt.txt`、指的不是檔＝`PromptMissing`）（使用者原文、決定、實作時代定，可翻案） |
 
 <a id="決定10-30"></a>
 <a id="10-31-使用者原則固定名字可以但限縮範圍判準"></a>
