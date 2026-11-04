@@ -6,7 +6,7 @@
 
 | 日期 | 份數 | 一句話 |
 |---|---|---|
-| [2026-11-01](01/README.md) | 1 | 試驗場現場：agents/bob（進行中）、環境變數要謹慎 |
-| [2026-11-02](02/README.md) | 9 | 試驗場 bob 串 aos-mcp／aos-tools 與資料夾工具 cathy、小格改放 `.stack/tools/`、daemon 試驗場、daemon 的環境變數、exec 像繼承、state 窗有變動才寫、loop／daemon 的 stdio 與 log、常駐 bob、晚 loop 這一系的窗檔名改 `ctl.json`／`state.json` |
-| [2026-11-03](03/README.md) | 7 | execs／loops 統稱 procs、aos-agent 通用介面（只記原文）、trace 拿掉、ctl 改成下指令、stack 不放工作區、eca 接 aos 工具、aos-post 重新定位 |
+| [2026-11-01](01/README.md) | 1 | 試驗場 bob；環境變數只在必要時用（五題已裁、格旋鈕改 argv／檔） |
+| [2026-11-02](02/README.md) | 9 | cathy、工具小格 `.stack/tools/`、daemon 掛 bob、`AOS_DAEMON_STACK`、exec 像繼承、窗有變動才寫、常駐 bob、窗名就叫 `ctl.json`／`state.json` |
+| [2026-11-03](03/README.md) | 7 | procs 合一（含 sleep／wake）、ctl 改下指令、stack 不放工作區、trace 拿掉、eca 接 aos 工具、aos-post 重新定位；aos-agent 介面細節未規劃、topdown 量測待使用者 |
 | [2026-11-04](04/README.md) | 3 | eca 開場白檔可指定、loop／fsm agent、aos-post 信箱要不要改成一個資料夾 |

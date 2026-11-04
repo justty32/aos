@@ -14,8 +14,8 @@
 
 | 月份 | 份數 | 範圍 |
 |---|---|---|
-| [2026-11](2026-11/README.md) | 20 | 11-01～11-04：試驗場 bob／cathy、daemon 的環境變數與窗、常駐 bob、晚 loop 窗檔名改 `ctl.json`／`state.json`；procs、ctl 改下指令、stack 不放工作區、trace 拿掉、aos-agent 通用介面、eca 接 aos 工具、aos-post 重新定位；eca 開場白檔、loop／fsm agent、aos-post 信箱要不要改成一個資料夾（每天一列見月份表，每份一列見各日 README） |
-| [2026-10](2026-10/README.md) | 82 | 10-11 重來～10-31：inst／loop／daemon／fsm／agent 的概念、JSON 入口與指示詞、kernel、命名、aos-exec 與 `.env`、10-24 的各種嘗試、介質與 aos-hub、aos-tools、playground 與 agent-bob、agent-lifecycle、eca、aos-round、aos-var 收回與 parts 收斂（每天一列見月份表，每份一列見各日 README） |
+| [2026-11](2026-11/README.md) | 20 | 11-01～11-04：試驗場 bob／cathy／daemon／常駐 bob、`AOS_DAEMON_STACK`、窗名與有變動才寫、procs 合一、ctl 改下指令、trace 拿掉、eca 接 aos 工具、aos-post 重新定位、aos-agent 介面起頭；eca 開場白檔、loop／fsm agent、aos-post 信箱（每天一列見月份表） |
+| [2026-10](2026-10/README.md) | 82 | 10-11 重來～10-31：inst／loop／daemon／fsm／agent 的概念與規範、JSON 入口與指示詞、命名、aos-exec 與 `.env`、10-24 的嘗試、介質、aos-tools、eca、parts 收斂（每天一列見月份表） |
 
 按月份分層（使用者「都按照推薦」）：本檔只留月份索引，各月一份表放在該月資料夾的 `README.md`（`2026-10/README.md`），一天一列、連到該日資料夾的 `README.md`，那天的每份一列放在日 README（11-04 使用者「proto8/thinking/2026-10/README.md也太大了，類似的也都拆一拆」）。新增一份討論＝在那天的 README 加一列；那天的第一份順便在月份表加一列。
 

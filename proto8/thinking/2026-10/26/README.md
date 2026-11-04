@@ -6,4 +6,4 @@
 
 | 日期 | 一句話 |
 |---|---|
-| [2026-10-26 playground：呼叫 claude code cli 的節點](playground.md) | user-advice 第一回合的節點；第一版砸掉重來、一步一步做：現在只有 `_entry`＋初始 prompt，叫 `claude -p`（haiku、權限收窄到工作區、上限 $0.2），實跑一次通、$0.0005；10-27 經 MCP（新 `aos-mcp`）接 aos 的 clock／math／read，實跑三個都叫到、$0.0016 |
+| [2026-10-26 playground：呼叫 claude code cli 的節點](playground.md) | 叫 claude code cli 的節點從 `_entry`＋初始 prompt 一步一步做，`claude -p` 實跑通；10-27 經 aos-mcp 接上 aos 工具 |

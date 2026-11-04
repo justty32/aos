@@ -6,22 +6,22 @@
 
 | 日期 | 份數 | 一句話 |
 |---|---|---|
-| [2026-10-11](11/README.md) | 1 | 為什麼重來（太繁複、做太快）、河堤邊的思考、三輪口述與未決 |
-| [2026-10-12](12/README.md) | 4 | tasks／tick-tock、loop／daemon、inst 進 json、ctl 規範 |
-| [2026-10-13](13/README.md) | 2 | JSON 路徑、kernel／agent |
-| [2026-10-14](14/README.md) | 1 | JSON 統一入口 |
-| [2026-10-15](15/README.md) | 20 | 主題分法、kernel 截流與 LLM／通用 kernel、各種實跑（報時員、判官、LiteLLM、畫家）、JSON 格式族、同像性、意見 1～7、兩條總原則、命名、inst／aos-exec 一～四版、布局成長、KISS 審視 |
-| [2026-10-16](16/README.md) | 4 | KISS 也是最後原則與重審、agent 繼承／當函數／食譜與廚房、結束碼只是參考、用檔案借權限 |
-| [2026-10-19](19/README.md) | 2 | 新想法（資料夾＝程式）、重寫順序 |
-| [2026-10-20](20/README.md) | 1 | 指示詞與 argv 第一個元素 |
-| [2026-10-21](21/README.md) | 2 | aos-exec 收旗標與 .env、計畫：loop／daemon／fsm／agent |
-| [2026-10-22](22/README.md) | 1 | Python 版向 C++ 看齊 |
-| [2026-10-23](23/README.md) | 6 | 命名統合與命名方法、daemon 壓測六題、ctl 只寫變動／`$ref` 切檔／指示詞全面、fsm 上做 aos-agent 與 aos-kernel、腦的工具呼叫 |
-| [2026-10-24](24/README.md) | 20 | 二十份嘗試：exec 相對格、agent 當工具、say／listen、pi 工具組、claude／codex CLI 當工具、`_metainfo`、AI 工具集、記憶庫、agent 寄信、函數成長、先規劃 steps、Janet、aos-json、Lua／nvim、按意圖組 context、自我改進、LLM kernel 第一版、工具＝函式庫、土法 compact、沙箱 |
-| [2026-10-25](25/README.md) | 1 | 由上而下拆資料夾樹 |
-| [2026-10-26](26/README.md) | 1 | playground：呼叫 claude code cli 的節點 |
-| [2026-10-27](27/README.md) | 1 | 很多 claude：總覽、cd 接入、收起與叫回 |
-| [2026-10-28](28/README.md) | 6 | aos-hub 常駐 kernel 與實作、aos-tools 工具註冊檔、agent 函數的常用操作、agent 的一輪（round）、介質 |
-| [2026-10-29](29/README.md) | 3 | 介質後續規劃、playground（輸入是對話簿、看信箱是 tool）、agent-bob 兩隻實跑 |
-| [2026-10-30](30/README.md) | 4 | agent-lifecycle（queue、外部 agent 生命週期、session 檔）、看現況地圖的九點、eca 規劃、aos-round 規劃 |
-| [2026-10-31](31/README.md) | 2 | aos-var 提了又收回→parts 能否組出來、parts 組合化與 round 重切收斂（fable） |
+| [2026-10-11](11/README.md) | 1 | 重來的理由與 aos 基本概念；未決：kernel 資源與排程格式、agent 與工具的引用協議 |
+| [2026-10-12](12/README.md) | 4 | tasks 只做 seq／par／if／not、tick-tock 只是時鐘、loop 包 inst、daemon 管 loop 表；未決：監工參數、限時算不算出錯等 |
+| [2026-10-13](13/README.md) | 2 | TARGET 吃 `檔#/位置`、`_metainfo` 給 kernel 參考、kernel 基於 daemon、agent＝狀態機；未決：agent 資料夾怎麼放 |
+| [2026-10-14](14/README.md) | 1 | 統一入口 stdin／stdout JSON、窗一族、aos-fsm 抽成通用 |
+| [2026-10-15](15/README.md) | 20 | 條文按主題分、kernel 截流與 LLM／通用 kernel、JSON 格式族與同像性、兩條總原則與 KISS、命名 C-54、inst／aos-exec 第四版（沒有指示詞可用，N-45） |
+| [2026-10-16](16/README.md) | 4 | KISS 也是最後原則、重審五件拍板（批次 2～6 暫停）、agent 當函數是概念上的、結束碼只是參考 |
+| [2026-10-19](19/README.md) | 2 | 資料夾＝程式、aos 只訂環境變數、proto8-2 併進 proto8；重寫順序（tasks、通用 kernel 未決） |
+| [2026-10-20](20/README.md) | 1 | argv 可放指示詞、argv[0] 帶 `/` 就插 aos-exec、`$path`／`$prefix`；未決：`$fmt`、D15 |
+| [2026-10-21](21/README.md) | 2 | aos-exec 旗標放前面、`.env` 的讀法；loop／daemon／fsm／tick 計畫已做 |
+| [2026-10-22](22/README.md) | 1 | Python 版向 C++ 看齊、分層（基礎層 → 標準庫 → agent／kernel） |
+| [2026-10-23](23/README.md) | 6 | 命名統合與命名方法（R1～R12）、daemon 壓測修正、ctl 只寫變動與 `$ref` 陣列、aos-agent＝範本、腦的工具呼叫；未決：kernel 怎麼做 |
+| [2026-10-24](24/README.md) | 20 | 二十份嘗試（多是 demo、代定可翻案）：`exec` 收內嵌單子、`_metainfo`、工具＝函式庫三層、LLM kernel 第一版、沙箱等；未決在各份 |
+| [2026-10-25](25/README.md) | 1 | 兩隊由上而下拆 galtxt；沒有人評、量測沒做完 |
+| [2026-10-26](26/README.md) | 1 | claude code cli 節點一步步做、經 aos-mcp 接 aos 工具 |
+| [2026-10-27](27/README.md) | 1 | 很多 claude 的小格登記與 aos-hub 接入／收起／叫回 |
+| [2026-10-28](28/README.md) | 6 | aos-hub 常駐 kernel（10-30 起改做 aos-eca-hub）、工具註冊檔 aos-tools、各單位都是 aos 函數、round 設計（11-03 晚整條刪）、介質概念收線 |
+| [2026-10-29](29/README.md) | 3 | 介質細節規劃（都照建議、已實作）、看信箱 tool 解錯題、bob 兩隻實跑與決定 33～35 |
+| [2026-10-30](30/README.md) | 4 | agent 的 queue 與外部 agent 生命週期、地圖各點的去向、eca 規劃（都照建議、已做）、aos-round（11-01 刪） |
+| [2026-10-31](31/README.md) | 2 | aos-var 收回、parts 退成約定（11-01 裁、aos-parts 刪）、round 不重切（使用者要深思） |
