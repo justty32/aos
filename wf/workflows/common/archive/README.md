@@ -9,3 +9,5 @@
 | `code-map/inst.md`、`code-map/inst/` | 2026-11-03 | `core/inst` 逐檔 code map；程式已於 2026-08-30 刪除 |
 | `code-map/tooljson.md` | 2026-11-03 | `core/tooljson` 逐檔 code map；程式已於 2026-08-30 刪除 |
 | `code-map/llms.md` | 2026-11-03 | `core/llms` 逐檔 code map；程式已於 2026-08-30 刪除 |
+| `code-map/proto5-lib.md`、`code-map/proto5-lib/` | 2026-11-04 | `proto5/lib` 逐模組 code map；`proto5/` 已於 2026-11-04 封存到 repo 根 `archive/`，使用者 11-04「從 code map 移掉」 |
+| `code-map/proto7-2.md` | 2026-11-04 | `proto7-2/` 逐檔表位置；`proto7-2/` 已於 2026-11-04 封存到 repo 根 `archive/`，使用者 11-04「從 code map 移掉」 |

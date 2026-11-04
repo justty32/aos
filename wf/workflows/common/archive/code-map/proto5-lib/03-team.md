@@ -1,3 +1,5 @@
+> 封存 2026-11-04，原因：`proto5/` 已於 2026-11-04 封存到 repo 根 `archive/`，本冊從 code map 移掉（使用者 11-04「從 code map 移掉」）
+
 ← [proto5/lib 模組](../proto5-lib.md)（分檔 3/3）｜[上一份](02-llm-agent.md)
 
 | 模組 | 職責 |

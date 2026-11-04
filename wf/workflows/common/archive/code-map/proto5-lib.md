@@ -1,3 +1,5 @@
+> 封存 2026-11-04，原因：`proto5/` 已於 2026-11-04 封存到 repo 根 `archive/`，本冊從 code map 移掉（使用者 11-04「從 code map 移掉」）
+
 ← [code map 總圖](../code-map.md)｜[各分冊導覽](README.md)
 
 ## proto5/lib 模組

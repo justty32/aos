@@ -151,8 +151,8 @@ aos-kernel rm $K NAME   # 只拿掉一個行程
 
 ## 想看更多
 
-- 作業系統那層（daemon／kernel／inst.json）：[proto4-3/README.md](../archive/proto4-3/README.md)
-- LLM 兩層：[proto4-5/README.md](../archive/proto4-5/README.md)
-- 逐步 JSON／Python／Lua：[proto4-6/README.md](../archive/proto4-6/README.md)；逐步 Lisp：[proto4-4/README.md](../archive/proto4-4/README.md)
-- 簡單 agent：[proto4-7/README.md](../archive/proto4-7/README.md)
-- 別人怎麼玩的：[proto4/notes/play/](../archive/proto4/notes/play/README.md) 有四輪試玩報告
+- 作業系統那層（daemon／kernel／inst.json）：proto4-3/README.md
+- LLM 兩層：proto4-5/README.md
+- 逐步 JSON／Python／Lua：proto4-6/README.md；逐步 Lisp：proto4-4/README.md
+- 簡單 agent：proto4-7/README.md
+- 別人怎麼玩的：proto4/notes/play/ 有四輪試玩報告

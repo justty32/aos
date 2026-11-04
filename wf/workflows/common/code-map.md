@@ -44,8 +44,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 
 **新增或刪除一個原始碼／測試檔（或某個檔的職責變了）時，那一列去哪裡加**：
 - `common/`／`app/`／`cmake/` 底下或建置設定檔（含新增小專案要加的那行 `add_subdirectory()`）→ `code-map/build.md`。
-- `core/exec`、`core/wire`、`core/loop`、`core/tick` → 小專案自己的 `README.md`；`core/tool`、`core/llm`、`core/agent` → `code-map/tool.md`、`code-map/llm.md`、`code-map/agent.md`；proto5/lib → `code-map/proto5-lib.md`。
-- `proto7-2/` → [proto7-2/INDEX.md](../../../archive/proto7-2/INDEX.md) 與 [proto7-2/tests/README.md](../../../archive/proto7-2/tests/README.md)。
+- `core/exec`、`core/wire`、`core/loop`、`core/tick` → 小專案自己的 `README.md`；`core/tool`、`core/llm`、`core/agent` → `code-map/tool.md`、`code-map/llm.md`、`code-map/agent.md`。
 - `proto8/`（現役主線）→ [code-map/proto8.md](code-map/proto8.md) 分檔表裡涵蓋那個資料夾的分檔；行為說明在各程式的 README。
 - 多一個小專案 → `code-map/` 多一冊，並在 code-map/README.md 的對照表加一列。
 

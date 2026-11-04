@@ -23,7 +23,7 @@
 - 別用 `TaskOutput` 讀 agent 任務（會倒整份 transcript 進 context）；等通知即可。
 - 實作層級的裁決我可以代裁並寫進交接書（多隊共用的契約由我先定，才能真並行）；**方向性的留給使用者**（鐵律 5），記 [WAIT_USER](../../WAIT_USER.md)。
 
-使用者 10-09 起指示：隊伍遇方向題不停線，回報頂層代定、記進 [decisions-日期](../../../archive/proto7-2/notes/decisions-2026-10-10.md)。
+使用者 10-09 起指示：隊伍遇方向題不停線，回報頂層代定、記進 decisions-日期。
 
 ### codex 呼叫與沙箱
 

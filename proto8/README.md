@@ -1,6 +1,6 @@
 # proto8 — 重新想過一遍
 
-← [repo INDEX](../wf/INDEX.md)｜上一代 [proto7](../archive/proto7/README.md)、[proto7-2](../archive/proto7-2/README.md)
+← [repo INDEX](../wf/INDEX.md)｜上一代 proto7、proto7-2
 
 2026-10-11 開：使用者看完 proto7-2 之後說「整個都不對，太繁複」，從概念重新想過一遍；之前的程式當探針有價值，但不是成品。
 
@@ -40,7 +40,7 @@
 - **tests/**：`python3 -m unittest discover -s proto8/tests`。
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
 - **[notes/](notes/README.md)**：AI 寫的參考筆記（不是規範、不算數）：拿外面現成的東西跟 aos 對照，例如 [跟 s6、runit 的對照](notes/s6-runit.md)。
-- 之前乾淨的兩個時刻，要回頭看的：九月初 [ideas 13 章](../wf/workflows/ideas/README.md)、十月初 [proto7 核心 spec](../archive/proto7/spec/core.md) 與 [設計原則](../archive/proto7/notes/principles.md)。
+- 之前乾淨的兩個時刻，要回頭看的：九月初 [ideas 13 章](../wf/workflows/ideas/README.md)、十月初 proto7 核心 spec 與 設計原則。
 - 使用者自己的草稿：[thinking/（repo 頂層）](../thinking/)（2026-09-19～24）。
 - 這兩個月做過什麼、每一代長什麼樣：[thinking/2026-10/11/restart/README.md](thinking/2026-10/11/restart/README.md) 第一節。
 

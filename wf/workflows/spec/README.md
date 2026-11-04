@@ -4,7 +4,7 @@
 
 ## 這是什麼
 
-> **歷史：2026-09-05 那一代（`core/` C++ 線與根目錄 `proto/` 原型）的規格，不再是現行。** 現行規格是 [proto6/spec](../../../archive/proto6/spec/README.md)（唯一事實），行為正本是 [proto6/src/py](../../../archive/proto6/src/py/README.md) 的程式與測試。新實作照 proto6 寫，不照這疊。
+> **歷史：2026-09-05 那一代（`core/` C++ 線與根目錄 `proto/` 原型）的規格，不再是現行。** 現行規格是 proto6/spec（唯一事實），行為正本是 proto6/src/py 的程式與測試。新實作照 proto6 寫，不照這疊。
 
 > **2026-10-13 封存**：下面提到的正文（01～14）、`schemas/`、`data/`、`notes/`、`clause-sources/` 全部搬進 [archive/](archive/README.md)，本檔只留脈絡。
 
