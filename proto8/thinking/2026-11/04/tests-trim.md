@@ -2,7 +2,7 @@
 
 ← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜相關：[testing 工作流](../../../../wf/workflows/testing.md)、[code map 02-tests](../../../../wf/workflows/common/code-map/proto8/02-tests.md)、[AGENTS.md 鐵律](../../../../AGENTS.md)
 
-本檔只記使用者原文（逐字）、決定、盤點結論與執行清單、要使用者裁的題（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。**11-04 只盤點、沒刪；等 aos-agent 實作與 four-elements 07 步 0～4 收完，頂層再叫執行。**
+本檔只記使用者原文（逐字）、決定、盤點結論與執行清單、要使用者裁的題（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。三題 11-04 已裁（見「使用者裁定」）。**11-04 只盤點、沒刪；等 aos-agent 實作與 four-elements 07 步 0～4 收完，頂層再叫執行。**
 
 ## 使用者原文（11-04，逐字）
 
@@ -134,7 +134,7 @@
 ### 三、改程式裡指向測試的註解／路徑
 
 - `proto8/bin/aos-tick`（第 8 行例子）、`proto8/bin/aos-tools`（第 5 行例子）、`proto8/demo/agent-fsm/act.py`、`brain.py`（「照 tests/fixtures/agent-eve 改」）：改說法或刪。
-- `proto8/extras/langs/lua/examples/agent_ann.lua`：讀 fixtures 的路徑 → 看題 2。
+- `proto8/extras/langs/lua/examples/agent_ann.lua`：整檔刪（題 2 使用者裁「範例一起刪」），lua README 與 code map 06 跟著改。
 - `proto8/tests/aos_bins.py` 的 PATH 拼法（spy_bin、各 impls bin、extras/ai_tools/bin）沒有別人用，隨目錄刪。
 
 ### 四、改文件
@@ -164,6 +164,12 @@ proto8：
 1. **刪光後要不要留一支冒煙腳本**（不是測試框架、不進 ctest）：例如 `proto8/smoke.sh` 三十行左右——建好 impls 後用假腦經 aos-exec 跑 `demo/agent-fsm` 一題、`aos-tools ls`、`aos-agent ls`，任何一步非 0 就停，幾秒跑完。好處：「改完根本起不來」這種最大的壞還抓得到；代價：又是一份要跟著改的東西。不留＝驗證只有 build。
 2. **`extras/langs/lua/examples/agent_ann.lua` 執行時讀 `tests/fixtures/agent-ann/`**：(a) 把 agent-ann 那 7 個檔搬進 `extras/langs/lua/examples/agent-ann/`、改路徑；(b) lua 範例（與 test_lua_aos 一起）刪掉；(c) 不管，範例壞著。
 3. **core/ 的 Catch2 刪了之後 vcpkg 的 `tests` feature 與 presets 一起拿掉**（清單已列）；若還想留著「以後要寫測試時的掛點」（`aos_add_test` 函式空殼），說一聲就只刪測試檔、不刪函式。
+
+### 使用者裁定（11-04，選項原文）
+
+1. 冒煙腳本：「不留」——不寫 `smoke.sh`，刪完後驗證只剩 build 得過。
+2. lua 範例：「範例一起刪 (Recommended)」——`extras/langs/lua/examples/agent_ann.lua` 跟 fixtures 一起刪（`clocks.lua` 不讀 fixtures，留著）；`extras/langs/lua/README.md` 第 13、20、21 行那列與兩行指令改成只講 clocks.lua，code map `proto8/06-周邊工具.md:49` 拿掉 agent_ann.lua。
+3. `aos_add_test`：「整個刪 (Recommended)」——函式連說明一起刪、不留空殼（清單二已照這樣列）。
 
 ## 計時
 
