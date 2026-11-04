@@ -73,3 +73,4 @@
 | `test_agent_fsm.py` | 範本 `demo/agent-fsm`（11-04）：形狀、一問一答、整批、壞信、無序排後、`--prompt`、停著等 vs 收工、腦失敗接著答、工具錯回給腦、`--system`／`--tools`（本機假端點）、暫停改 history、掛 daemon（add／pause／resume／stop／start／rm） |
 | `test_eca.py` | 範本 `demo/eca-claude`（codex 版由它複製換 `cli.json`）：say → 跑 → listen、停著等 |
 | `test_eca_cmd.py` | `extras/eca` 的 `aos-eca`：open／close、start／stop、add／rm、ls／state |
+| `test_agent_cmd.py` | `extras/agent` 的 `aos-agent`（11-04，15 案；臨時組的 fsm／eca 定義＋假腦、假 claude）：宣告與 add、找 target、ls／state、start／stop／pause／resume、rm、say／listen／chat、tools／llm 副本、同定義提醒、screen、自己結束的、daemon、using-aos-agent.sh |

@@ -6,6 +6,7 @@ aos 主體（[impls/](../impls/README.md) 的四支 C++、[bin/](../bin/README.m
 
 | 資料夾 | 是什麼 | 測試 |
 |---|---|---|
+| [agent/](agent/README.md) | aos-agent：統一的 agent 介面（eca 與 loop／fsm agent 同一套子命令）：add／rm、start／stop、pause／resume、ls、state、where、say／listen／chat、open／close／watch、tools、llm；`source using-aos-agent.sh 名字` 之後直接 say／listen（11-04，之後取代 human、eca） | `tests/test_agent_cmd.py` |
 | [human/](human/README.md) | 給人用的 aos-say／aos-listen（aos-chat 封存在 proto8/archive/aos-chat/）：對 agent 丟題、等答案 | `tests/test_human.py` |
 | [ai_tools/](ai_tools/README.md) | aos-mcp：把 aos-tools 登記的工具當 MCP tools（eca 接 aos 工具用的；aos-ai 與 Claude skill 11-03 刪了） | `tests/test_aos_mcp.py` |
 | [grow/](grow/README.md) | aos-grow：把一個函數往上長一級／縮回一級，呼叫方跟著改 | `tests/test_grow.py` |
