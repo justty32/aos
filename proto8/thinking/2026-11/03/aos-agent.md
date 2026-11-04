@@ -2,7 +2,7 @@
 
 ← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)
 
-狀態：**記下、未規劃**。
+狀態：**記下、未規劃**。（11-04 已改：aos-agent 已規劃並實作，見 [11-04 aos-agent](../04/aos-agent/README.md)。）
 
 ## 使用者原文（11-03，逐字）
 
