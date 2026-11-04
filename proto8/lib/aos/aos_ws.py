@@ -1,4 +1,4 @@
-"""aos_ws - 「放一則訊息、等答案、讀 stack」的共用小零件：給人用的 aos-agent say／listen／chat（proto8/extras/agent；11-04 前是 extras/human 的 aos-say／aos-listen）與測試的 tests/stack_talk 用。
+"""aos_ws - 「放一則訊息、等答案、讀 stack」的共用小零件：給人用的 aos-agent say／listen／chat（proto8/extras/agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。
 
 10-24 遷移（tool-lib 遷移清單「human、aos-ai 的放題、等答案合成一份」）：兩邊各寫了一份同樣的事，收到這裡；不是工具（沒有 _entry），
 是 lib/aos 的共用模組，命令列用 realpath 找到這個資料夾再 import。
@@ -7,7 +7,7 @@
   ① queue＝<stack>/queue/（N-16 有順序的信箱；寄＝aos-post send --ordered，一封信的 body＝一則 OpenAI message）；
   ② history＝<stack>/history.jsonl（回答＝最新那則沒有 tool_calls 的 assistant，沒有 out/）；
   ③ ctl／state＝aos-loop 開在 <stack>/ctl.json、state.json 的窗（state 的 phase 看得出 paused）。
-舊協議（工作區的 new/ cur/ out/ done/，P-11 的 10-30 改口：agent-bob／ann／dan、topdown 這些 fsm 範本；11-04 demo 刪了，bob、ann 搬到 tests/fixtures）這裡不再認。
+舊協議（工作區的 new/ cur/ out/ done/，P-11 的 10-30 改口：agent-bob／ann／dan、topdown 這些 fsm 範本；11-04 demo 刪了）這裡不再認。
 11-03 起不讀 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）：fsm、aos-eca-turn 都不寫了，last_jsonl／unit_of／failed 跟著拿掉。"""
 import json, os, re, subprocess
 

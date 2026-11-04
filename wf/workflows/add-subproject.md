@@ -38,7 +38,6 @@ core/<name>/  或  modules/<name>/       ← Step 0 決定的那個
   include/aos/<name>.hpp     公開標頭
   src/<name>.cpp             實作
   src/run.cpp                CLI 層（要子命令才需要）
-  tests/test_<name>.cpp
   docs/                      這個小專案的細節文件（可以先空著）
   CMakeLists.txt
 ```
@@ -99,10 +98,6 @@ aos_add_subcommand(
     SUMMARY "一行說明"
 )
 
-aos_add_test(aos_<name>_tests
-    SOURCES tests/test_<name>.cpp
-    LINK aos_<name>_cli
-)
 ```
 
 **相依要放對層**（判準與理由見 [`docs/subprojects.md`](../../docs/subprojects.md)）：
@@ -135,7 +130,6 @@ add_subdirectory(<name>)
 ```bash
 cmake --preset default
 cmake --build --preset default
-ctest --preset default                      # 要全綠
 ./build/bin/aos --help                      # 新子命令要出現、說明要正確
 ./build/bin/aos <name> ...                  # 真的叫得動
 

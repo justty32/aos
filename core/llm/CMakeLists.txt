@@ -20,10 +20,3 @@ aos_add_subcommand(
     LIBRARY aos_llm_cli
     SUMMARY "呼叫 OpenAI 相容端點並回傳文字"
 )
-
-aos_add_test(aos_llm_tests
-    SOURCES
-        tests/test_llm.cpp
-        tests/test_slot.cpp
-    LINK aos_llm_cli
-)

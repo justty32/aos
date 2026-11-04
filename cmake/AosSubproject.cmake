@@ -185,29 +185,3 @@ function(aos_add_subcommand)
     set_property(GLOBAL PROPERTY AOS_SUBCOMMAND_OWNER_${key} "${CMAKE_CURRENT_SOURCE_DIR}")
     set_property(GLOBAL APPEND PROPERTY AOS_SUBCOMMAND_LIBRARIES ${ARG_LIBRARY})
 endfunction()
-
-# aos_add_test(<name> SOURCES <…> LINK <…> LANGUAGE <C|CXX>)
-#
-# LANGUAGE CXX（預設）會連上 Catch2::Catch2WithMain；LANGUAGE C 的測試自帶 main。
-function(aos_add_test name)
-    cmake_parse_arguments(PARSE_ARGV 1 ARG "" "LANGUAGE" "SOURCES;LINK")
-    if(NOT AOS_BUILD_TESTS)
-        return()
-    endif()
-    if(NOT ARG_LANGUAGE)
-        set(ARG_LANGUAGE CXX)
-    endif()
-
-    add_executable(${name} ${ARG_SOURCES})
-    target_link_libraries(${name} PRIVATE ${ARG_LINK})
-    if(ARG_LANGUAGE STREQUAL "C")
-        set_target_properties(${name} PROPERTIES
-            C_STANDARD 99
-            C_STANDARD_REQUIRED ON
-            C_EXTENSIONS OFF
-        )
-    else()
-        target_link_libraries(${name} PRIVATE Catch2::Catch2WithMain)
-    endif()
-    add_test(NAME ${name} COMMAND ${name})
-endfunction()

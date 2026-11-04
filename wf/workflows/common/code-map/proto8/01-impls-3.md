@@ -13,7 +13,6 @@
 | `src/budget/budget.cpp`、`src/budget/budget.hpp` | token 回報與額度：`parse_budget`、`window_since`、`read_used`／`add_used`、`spent`、`read_report` |
 | `src/main.cpp` | 命令列 `aos-llm-kernel [旗標] kernel.json`（要 `AOS_STACK`） |
 | `src/common/common.hpp` | 內部共用標頭 |
-| `tests/test_cli.py` | 命令列黑箱 |
 
 ## `impls/aos-llm-send/`（閘門：寄單子給 kernel、等回信）
 
@@ -23,7 +22,6 @@
 | `src/wait/wait.cpp`、`src/wait/wait.hpp` | `wait_reply`（看回信信箱、訊號＝撤信）、`relay`（stdout／stderr 原樣、結束碼） |
 | `src/main.cpp` | 命令列 `aos-llm-send [旗標] 單子.json` |
 | `src/common/common.hpp` | 內部標頭：`reply_box` |
-| `tests/test_cli.py` | 命令列黑箱（測試自己當 kernel） |
 
 ## `impls/aos-json/`（讀、改 aos 的 JSON 設定；沒有公開標頭）
 
@@ -45,4 +43,3 @@
 | `src/cmd/check.cpp` | `check`：`$ref` 指得到、指示詞寫法、`exec` 形狀 |
 | `tools/json/_entry`、`tools/json/_tooldef.json` | 腦用工具：一次一個 aos-json 動作 |
 | `tools/json_edit/_entry`、`tools/json_edit/_tooldef.json` | 腦用工具：自己問腦，peek 找指標 → 問新值 → `batch` 一次寫 |
-| `tests/test_cli.py`、`tests/test_tool.py` | 命令列黑箱；兩個工具經 aos-exec 跑（假 OpenAI 端點） |

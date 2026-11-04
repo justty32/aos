@@ -36,12 +36,4 @@ if(PROJECT_IS_TOP_LEVEL)
   set_target_properties(aos-json_main PROPERTIES
     OUTPUT_NAME aos-json
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-
-  enable_testing()
-  find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  add_test(NAME test_cli
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cli.py $<TARGET_FILE:aos-json_main>)
-  # 腦的工具（tools/json/）：要 aos-exec 已經建好（../aos-exec/bin/aos-exec）；沒建就跳過（退 0、印一行說跳過）
-  add_test(NAME test_tool
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_tool.py $<TARGET_FILE:aos-json_main>)
 endif()

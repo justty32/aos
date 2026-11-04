@@ -17,7 +17,7 @@
 |---|---|---|---|---|
 | `screen` | `"screen": "screen"` | **資料夾程式** `<定義>/screen/`（有 `_entry`），自己宣告遵守介面 `aos-agent/screen` | 沒有 | [02 § screen](02-子介面規格.md#介面-aos-agentscreen) |
 | `llm` | `"llm": "llm"` | **資料夾程式** `<定義>/llm/`，自己宣告遵守介面 `aos-agent/llm`；`def`／`stack` 兩個對象 | **讀腦設定時 `$AOS_STACK/llm.json` 有就用它蓋過定義的**（不是暗路，宣告 `llm` 就是承諾這條） | [02 § llm](02-子介面規格.md#介面-aos-agentllm) |
-| `tools` | `"tools": "tools.json"` | **一個檔**：aos-tools 登記檔（兩邊同格式，不需要程式） | **找登記檔時 `$AOS_STACK/tools.json` 有就用它、沒有才用宣告的那份** | [02 § tools](02-子介面規格.md#子介面-tools副本規則) |
+| `tools` | `"tools": "tools.json"` | **一個檔**：aos-tools 登記檔（兩邊同格式，不需要程式） | **找登記檔時 `$AOS_STACK/tools.json` 有就用它、沒有才用宣告的那份** | [02 § tools](02-子介面規格.md#子介面-tools副本規則不需要程式) |
 
 **為什麼 `screen` 也改成資料夾程式**（使用者只說 llm 要是 aos 資料夾函數）：三個選配兩個是程式，一個檔一個資料夾會變成兩種寫法（C-54 一次記住）；資料夾程式才有地方放自己的 `interfaces.json` 宣告（C-71 入口之外都是其他元素），aos-agent 叫之前能確認「它說它遵守 `aos-agent/screen`」（宣告了卻沒做到＝`ScreenBad`，不是猜）；C-55 布局成長本來就是「檔長成資料夾」。`tools` 不用程式：登記檔格式已全體系通用，程式就是 aos-tools。
 

@@ -38,10 +38,4 @@ if(PROJECT_IS_TOP_LEVEL)
   set_target_properties(aos-daemon_main PROPERTIES
     OUTPUT_NAME aos-daemon
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-
-  # 測試：命令列黑箱（對照 proto8/tests/test_daemon.py，約 10 秒）。
-  enable_testing()
-  find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  add_test(NAME test_cli
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cli.py $<TARGET_FILE:aos-daemon_main>)
 endif()

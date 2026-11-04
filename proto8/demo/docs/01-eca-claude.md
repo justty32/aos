@@ -33,5 +33,5 @@ aos-agent rm myproj                  # 拔掉並刪它的 stack
 
 不掛 daemon、直接 `aos-exec --ws ~/code/myproj proto8/demo/eca-claude &` 跑的，aos-agent 不管：`aos-post send --ordered ~/code/myproj/.stack/queue` 寫信（stdin＝`{"role": "user", "content": 話}`）、看 `.stack/history.jsonl`、寫 `.stack/ctl.json` 停（`{"cmd": "pause"}`／`{"cmd": "stop"}`）。
 
-`aos-eca-turn` 一次答一批（怎麼答、`--on-empty`／`--on-busy`、錯見 [bin/README](../../bin/README.md)）。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就放一份檔、aos-eca-turn 加 `--prompt 那個檔`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。測試 `test_eca.py`（範本）、`test_eca_turn.py`（aos-eca-turn）。
+`aos-eca-turn` 一次答一批（怎麼答、`--on-empty`／`--on-busy`、錯見 [bin/README](../../bin/README.md)）。人在畫面上自己打的話不進 history，完整對話看小格的 `transcripts/`。**射後不理**：複製一份，`loop.json` 的 `--on-empty idle` 改 `stop`（或拿掉，沒給＝stop；要開場白就放一份檔、aos-eca-turn 加 `--prompt 那個檔`）——queue 空 aos-eca-turn 退 10、loop 以 0 收工。CLI 那層出錯＝aos-eca-turn 退 1、loop 停下等人（信留 `cur/`）。
 

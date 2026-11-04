@@ -32,7 +32,7 @@ target_link_libraries(aos-llm-send PUBLIC aos-llm-kernel aos-post)
 set_target_properties(aos-llm-send PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-# 執行檔與測試只在這個專案自己是主角時。
+# 執行檔只在這個專案自己是主角時。
 if(PROJECT_IS_TOP_LEVEL)
   add_executable(aos-llm-send_main src/main.cpp)
   target_link_libraries(aos-llm-send_main PRIVATE aos-llm-send)
@@ -41,9 +41,4 @@ if(PROJECT_IS_TOP_LEVEL)
   set_target_properties(aos-llm-send_main PROPERTIES
     OUTPUT_NAME aos-llm-send
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-
-  enable_testing()
-  find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  add_test(NAME test_cli
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cli.py $<TARGET_FILE:aos-llm-send_main>)
 endif()

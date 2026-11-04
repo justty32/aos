@@ -20,7 +20,6 @@
 | `src/inst_proc.c` | fork＋exec（失敗 errno 經 CLOEXEC pipe 傳回）、pidfd、逾時 SIGTERM 再 SIGKILL、單調時鐘 |
 | `src/inst_stream.c` | 三個串流的開檔、fd 搬到 3 以上 |
 | `src/inst_internal.h` | 內部標頭 |
-| `tests/test_lib.c`、`tests/test_ffi.py` | C 單元測試、經 FFI 的測試 |
 
 ## `impls/aos-util/`（全家共用的函式庫）
 
@@ -33,7 +32,6 @@
 | `include/aos/proc.hpp`、`src/proc.cpp` | 子程序（起、看、整群送訊號、收屍）、`/proc`、memfd、`utc_now_ms`／`utc_now_ns`、獨一無二的名字 `unique_id`、身分 `identity`（`AOS_WS` ＞ `AOS_STACK` ＞ `AOS_CF` ＞ cwd） |
 | `include/aos/signals.hpp`、`src/signals.cpp` | 擋 SIGINT／SIGTERM／SIGHUP、經 signalfd 讓呼叫者每次去看 |
 | `include/aos/text.hpp`、`src/text.cpp` | UTF-8 檢查、照 Python `str.isspace` 去頭尾空白 |
-| `tests/test_lib.cpp`、`tests/test_cli.py`、`tests/util_cli.cpp` | 單元測試；`util_cli.cpp` 是測三扇門用的小程式 |
 
 ## `impls/aos-directive/`（指示詞 `$ref`／`$env` 的函式庫）
 
@@ -45,7 +43,6 @@
 | `src/env.cpp` | `$env`：換成環境變數的值 |
 | `src/internal.hpp` | 內部標頭 |
 | `src/main.cpp` | 命令列 `aos-directive < 設定.json`（不算對外提供；`parse_cli`，錯一行 `aos-directive: 代號 原因`，11-04） |
-| `tests/test_cli.py` | 命令列黑箱 |
 
 ## `impls/aos-schema/`（用 JSON Schema draft-07 驗 JSON）
 
@@ -56,7 +53,6 @@
 | `src/load_file.cpp` | 讀 schema 檔（`SchemaMissing`／`SchemaBad`） |
 | `src/main.cpp` | 命令列 `aos-schema SCHEMA檔 < doc.json`，印 `{"valid", "problems"}`；`parse_cli`，錯一行 `aos-schema: 代號 原因`（11-04） |
 | `examples/inst.schema.json` | inst 單子的 schema 範例 |
-| `tests/test_lib.cpp`、`tests/test_cli.py`、`tests/data/*` | 單元、命令列黑箱與測試資料 |
 
 ## `impls/aos-exec/`（在工作區執行一個資料夾程式）
 
@@ -75,4 +71,3 @@
 | `src/inst/lib_input.cpp` | Inst → libaos 的 `aos_inst_input_t`（絕對路徑、`*_mkdir` 建資料夾、完整環境／`envs_clear`、`stderr_merge`→`merge`） |
 | `src/inst/signals.cpp` | 跑單子期間轉訊號給子程式整群，逾 grace_ms 再 SIGKILL |
 | `src/common/common.hpp` | 內部共用標頭 |
-| `tests/test_cli.py` | 命令列黑箱 |

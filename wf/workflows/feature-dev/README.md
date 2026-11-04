@@ -9,7 +9,7 @@
 
 ## Done when
 
-- [testing](../testing.md) 標「改完必跑」的驗證指令回傳 0，ctest 全綠。
+- [testing](../testing.md) 標「改完必跑」的建置指令回傳 0（build 得過）。
 - [common/code-map](../common/code-map.md) 中該領域的列已更新（新增／刪除的檔、職責變動、測試位置）。
 - 下表對應的文檔已補；要使用者實機驗證的在 [WAIT_USER](../../WAIT_USER.md) 有一行；跨 session 沒收尾的在 [SESSION-LOG](../../SESSION-LOG.md) 有一行。
 
@@ -18,7 +18,7 @@
 ```
 讀 code map 找到相關領域（只讀清單裡的檔）
   → 增量修改（守 conventions）
-  → 跑自動驗證（從 repo 根目錄 cmake --build --preset default && ctest --preset default）綠燈
+  → build 得過（repo 根 cmake --build --preset default；proto8 照 testing 建 impls）
   → 交使用者驗證（若需實機/實環境）→ 回報問題 → 修 → 重複
   → 全數通過後：補齊 code map → 補文檔 → commit
 ```

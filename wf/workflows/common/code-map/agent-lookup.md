@@ -15,7 +15,6 @@
 | LM Studio 端點與模型怎麼設 | 全域預設從 `core/llm/src/llm.cpp` 的 `options_from_env()` 讀 `AOS_LLM_URL`／`AOS_LLM_MODEL`／`AOS_LLM_KEY`；agent 的 `engine.json` 若有 model，`core/agent/src/step.cpp` 的 `complete_locally()` 會覆蓋環境模型。 |
 | LLM 並行上限住哪、怎麼排隊 | `<AOS_HOME>/cpus.json`（權威）與 `<world>/.aos/llm.json`（只能往下限）；實作在 `core/llm/src/slot.cpp`；用 `aos llm --slots` 看現況。 |
 | 取槽等太久會怎樣 | stderr 一行 `waiting-llm`、exit 75（`EX_TEMPFAIL`）；agent 走 lmstudio 或 pi 時 status 都寫 `waiting-llm`，訊息還沒被吃掉，下回合重試。 |
-| loop 替身在哪、怎麼跑 | `core/agent/tests/fake_loop.py`；repo 根執行 `python3 core/agent/tests/fake_loop.py <folder> --step N --interval 100`。完整 smoke 是 `bash core/agent/tests/smoke.sh`（使用 `build/bin/aos`）。 |
 
 every 常駐投遞的裁決已封存（ideas/archive/self-delivery-in-loop.md），新構想見 ideas/07-daemon.md；pi 終端介面調查與建議接法見 [`core/agent/docs/pi-interface.md`](../../../../core/agent/docs/pi-interface.md)。
 
@@ -28,5 +27,4 @@ every 常駐投遞的裁決已封存（ideas/archive/self-delivery-in-loop.md）
 |------|----------|
 | `core/agent/src/engine.cpp` | `engine.json` 的讀寫與驗證（含 lmstudio model）、lmstudio／pi 預設值、共用 LLM priority 解析，以及 pi session 使用的 v4 UUID 產生。 |
 | `core/agent/src/engine_pi.cpp` | pi 引擎的 step 分支：組 argv 與 stdin、執行 pi、解析 JSONL 最終回覆；成功後才刪 say，失敗寫 error／note、`No API key` 指向 provider 環境變數並回 1；step 期間佔 provider 槽，等不到回 75。 |
-| `core/agent/tests/test_agent_engine.cpp` | engine 選擇、設定相容性、假 pi 插銷、JSONL 解析與 pi step 行為測試。 |
 | `core/agent/docs/pi-cpu.md` | pi 0.84.2 的 provider／JSONL／session 實測、aos 接法，以及相對於 `aos llm` 的取捨。 |

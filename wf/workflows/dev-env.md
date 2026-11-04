@@ -16,7 +16,7 @@
 
 1. **vcpkg**：本機裝在 `~/dev/vcpkg`，根 `CMakeLists.txt` 會自動找到，不用設 `VCPKG_ROOT`。要用別的路徑就設 `VCPKG_ROOT` 環境變數，或把個人 preset 放 `CMakeUserPresets.json`（已 `.gitignore`）。`git clone --depth 1` 的 vcpkg 會缺 `vcpkg.json` 指定的 baseline commit，要 `git fetch --depth 1 origin <sha>` 補，不必 unshallow。
 2. `cmake --preset default`（第一次、或 `CMakeLists.txt`／`vcpkg.json` 變動後重跑）。**只能從 repo 根目錄**，子專案不可單獨 configure。
-3. `cmake --build --preset default`，接著照 [testing](testing.md) 跑 ctest 確認全綠。
+3. `cmake --build --preset default`，build 得過就好（[testing](testing.md)）。
 
 ## 指令表
 
@@ -26,7 +26,7 @@
 | build | `cmake --build --preset default` | 重運算，派給隊員時 `nice -n 19`（見 [resources](resources.md)）|
 | 跑起來 | `build/bin/aos <子命令>` | 執行檔與各測試都在 `build/bin/` |
 | 關掉擴充建一次 | `cmake -S . -B /tmp/aos-nomod -DAOS_BUILD_MODULES=OFF && cmake --build /tmp/aos-nomod` | 動過 `modules/` 之後 |
-| 建 proto8 的 C++ 實作 | 照 [testing「proto8」](testing.md#proto8不在-ctest-裡)的迴圈，在 `proto8/impls/` 逐專案 `cmake -B build && cmake --build build` | 10-23 起 proto8 的 aos-exec／loop／fsm／daemon 只有 C++ 版，跑 `proto8/tests` 前要先建（`proto8/demo/run.sh` 11-04 刪了）；各專案獨立、不走 repo 根的 preset |
+| 建 proto8 的 C++ 實作 | 照 [testing「proto8」](testing.md#proto8)的迴圈，在 `proto8/impls/` 逐專案 `cmake -B build && cmake --build build` | 10-23 起 proto8 的 aos-exec／loop／fsm／daemon 只有 C++ 版，手跑前要先建；各專案獨立、不走 repo 根的 preset |
 | 文檔檢查 | `bash wf/tools/wf-lint.sh --strict wf .claude/commands` | 可選，預設不跑；或 `/wf-lint`；從 repo 根跑 `.` 會被 `.claude/worktrees/` 的副本淹掉 |
 
 驗證與測試指令不列這裡——連同「誰跑」一起在 [testing](testing.md)。
@@ -48,7 +48,7 @@ aos 是 `simple_tools` 的 submodule：`aos/.git` 是指標檔，真正的 gitdi
 
 ## 跨機、外部工具、模型端點
 
-**10-28 起換到 Windows 機**：使用者在 Windows 機（`C:\code\mine\simple_toolsos`）工作，這台有 WSL Ubuntu，之後實跑（build、ctest、proto8 的程式與試驗場）都在 WSL 那邊做（使用者 10-28：「這台有wsl ubuntu，可能之後都要在那邊做處理」）。WSL 裡的 clone：hub 隊在 `~/repo/simple_tools/aos`，aos-tools 隊另開 `~/repo/aos-tools`（同一個 GitHub repo，避免兩隊在同一份工作樹打架；各自建 impls）。**不要在 `/mnt/c` 底下跑**：那裡每個檔都帶 `+x`，aos-exec 會把 JSON 當可執行檔（N-61）。從 Windows 端經 `\\wsl.localhost\Ubuntu\…` 改檔會把 `+x` 弄掉，改完要在 WSL `chmod +x`。
+**10-28 起換到 Windows 機**：使用者在 Windows 機（`C:\code\mine\simple_toolsos`）工作，這台有 WSL Ubuntu，之後實跑（build、proto8 的程式與試驗場）都在 WSL 那邊做（使用者 10-28：「這台有wsl ubuntu，可能之後都要在那邊做處理」）。WSL 裡的 clone：hub 隊在 `~/repo/simple_tools/aos`，aos-tools 隊另開 `~/repo/aos-tools`（同一個 GitHub repo，避免兩隊在同一份工作樹打架；各自建 impls）。**不要在 `/mnt/c` 底下跑**：那裡每個檔都帶 `+x`，aos-exec 會把 JSON 當可執行檔（N-61）。從 Windows 端經 `\\wsl.localhost\Ubuntu\…` 改檔會把 `+x` 弄掉，改完要在 WSL `chmod +x`。
 
 <!-- wf-nav -->
 | 分檔 | 涵蓋段落 |

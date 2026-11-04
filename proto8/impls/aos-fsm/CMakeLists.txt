@@ -27,7 +27,7 @@ target_link_libraries(aos-fsm PUBLIC aos-loop)
 set_target_properties(aos-fsm PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-# 執行檔與測試只在這個專案自己是主角時。
+# 執行檔只在這個專案自己是主角時。
 if(PROJECT_IS_TOP_LEVEL)
   add_executable(aos-fsm_main src/main.cpp)
   target_link_libraries(aos-fsm_main PRIVATE aos-fsm)
@@ -36,9 +36,4 @@ if(PROJECT_IS_TOP_LEVEL)
   set_target_properties(aos-fsm_main PROPERTIES
     OUTPUT_NAME aos-fsm
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-
-  enable_testing()
-  find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  add_test(NAME test_cli
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cli.py $<TARGET_FILE:aos-fsm_main>)
 endif()

@@ -4,7 +4,7 @@
 
 - **回報**：kernel 跑每封信時，在信裡帶來的環境上**加一個** `AOS_KERNEL_REPORT`＝這封信小格裡的 `cur/<信件名稱>/report.json`（信裡原本有同名的也蓋掉）。腦願意就把 API 回覆的 `usage` 物件**原樣**寫進去（先寫 `.report.json` 再改名）；
   kernel 跑完讀它：`total_tokens`（非負整數）就是這封的 token 數；沒有 `total_tokens` 就 `prompt_tokens`＋`completion_tokens`；檔不在＝沒回報（`counter_tokens` null，只算次數）；讀不懂、不是物件、數字不對＝`report_bad: true`（也只算次數，照樣交回信）。
-  一封信問了好幾次腦，由腦自己加總再寫（kernel 只讀最後那份）。範本 [agent-eve 的 brain.py](../../../tests/fixtures/agent-eve/brain.py)（11-04 前在 demo/）有寫（P-23 註）。
+  一封信問了好幾次腦，由腦自己加總再寫（kernel 只讀最後那份）。範本 [agent-fsm 的 brain.py](../../../demo/agent-fsm/brain.py) 有寫（P-23 註）。
 - **算什麼**：子行程起來過（`runner.json` 在）的信才算一次、才讀回報——`LetterBad`、`DeadlineMissed`、`BudgetMissing` 不算；kernel 死了、下一次回 `RunFailed` 的那封算（腦可能已經花了錢）。
 - **額度**（kernel.json 的 `budget`，都選填）：`max_calls`、`max_tokens`＝每窗上限（非負整數；沒寫＝那一種不限；上限一律 `max_*`，寫 `calls`、`tokens`＝`CfgBad`，免得以為有上限）；`window`＝`"hour"`／`"day"`／`"all"`（沒寫＝`day`，10-15 定「一天一期歸零」；窗的起點用 kernel 的本地時間〔`TZ`〕的整點／午夜，`all`＝不歸零）；
   `spent`＝到頂時排著的信怎麼辦：`"refuse"`（沒寫＝這個，10-15「見底就擋」）回 `BudgetMissing`、不跑；`"wait"` 留在 `new/` 等下一窗（閘門一直等，由包它那格的 `timeout_ms` 守）。

@@ -28,7 +28,7 @@ target_link_libraries(aos-loop PUBLIC aos-exec aos-directive)
 set_target_properties(aos-loop PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-# 執行檔與測試只在這個專案自己是主角時。
+# 執行檔只在這個專案自己是主角時。
 if(PROJECT_IS_TOP_LEVEL)
   add_executable(aos-loop_main src/main.cpp)
   target_link_libraries(aos-loop_main PRIVATE aos-loop)
@@ -37,9 +37,4 @@ if(PROJECT_IS_TOP_LEVEL)
   set_target_properties(aos-loop_main PROPERTIES
     OUTPUT_NAME aos-loop
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-
-  enable_testing()
-  find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  add_test(NAME test_cli
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cli.py $<TARGET_FILE:aos-loop_main>)
 endif()

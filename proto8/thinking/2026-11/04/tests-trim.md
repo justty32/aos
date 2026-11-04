@@ -1,8 +1,8 @@
 # 2026-11-04 測試大刪：proto8/tests、impls 與 core 的 ctest 全刪
 
-← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜相關：[testing 工作流](../../../../wf/workflows/testing.md)、[code map 02-tests](../../../../wf/workflows/common/code-map/proto8/02-tests.md)、[AGENTS.md 鐵律](../../../../AGENTS.md)
+← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜相關：[testing 工作流](../../../../wf/workflows/testing.md)、code map 02-tests、[AGENTS.md 鐵律](../../../../AGENTS.md)
 
-本檔只記使用者原文（逐字）、決定、盤點結論與執行清單、要使用者裁的題（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。三題 11-04 已裁（見「使用者裁定」）。**11-04 只盤點、沒刪；等 aos-agent 實作與 four-elements 07 步 0～4 收完，頂層再叫執行。**
+本檔只記使用者原文（逐字）、決定、盤點結論與執行清單、要使用者裁的題（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。三題 11-04 已裁（見「使用者裁定」）。**11-04 先盤點；同天 aos-agent 實作與 four-elements 07 收完後照清單執行完（見「執行結果」）。**
 
 ## 使用者原文（11-04，逐字）
 
@@ -30,6 +30,7 @@
 2. **C++ 的 ctest 也全刪**：repo 根 `core/*/tests`、`aos_add_test`／`enable_testing`／Catch2；`proto8/impls/*/tests` 與各 CMakeLists 的測試段；`CMakePresets.json` 的 test preset。
 3. 刪完之後的驗證只剩「**build 得過**」（repo 根 `cmake --build --preset default`、proto8 照順序建 impls）。
 4. 執行排在 aos-agent 實作（它會新增／改 test_agent_cmd、test_aos_llm、test_eca_*、test_agent_fsm，刪 extras/human、eca 與其測試）與 four-elements 07（aos-exec、aos-loop、fsm `stage.txt`、ai_tools 解析，改 test_exec*、test_loop、test_fsm、test_cli_tools、test_aos_mcp、test_grow、test_sandbox、test_janet 與 impls 的 test_cli）**之後**——現在刪，它們的 commit 會把檔帶回來或撞衝突。
+5. **已執行（11-04，983701a0 之後）**：見檔末「執行結果」。
 
 ## 盤點結論（11-04，HEAD 129a1a52）
 
@@ -174,3 +175,11 @@ proto8：
 ## 計時
 
 WSL 暫存 clone（HEAD 129a1a52，impls 用 Release 建）逐檔 `python3 -m unittest <檔>`：35 支全過，**510 案、9 skip（janet 沒裝 4、s6 沒裝 4、python-dotenv 1），合計約 300 秒**。最慢五支 test_agent_cmd 43 秒、test_daemon 38、test_agent_fsm 37、test_human 33、test_eca_cmd 31，佔六成；其餘多在 1～8 秒，test_cli_tools 24、test_eca_turn 18。impls 各自的 ctest 與 core 的 ctest 這次沒計時。
+
+## 執行結果（11-04）
+
+- 刪掉 148 個進 git 的檔、約 24,700 行：`proto8/tests/` 70 檔（含 aos-agent 新加的 test_agent_cmd、test_eca_llm、test_eca_screen、test_aos_llm、stack_talk.py 與 fixtures）、13 個 `proto8/impls/*/tests/` 28 檔、7 個 `core/*/tests/` 46 檔、`extras/langs/lua/examples/agent_ann.lua`、`wf/workflows/testing/` 兩份分檔、code map `proto8/02-tests.md`。
+- 建置設定：13 份 impls CMakeLists 的測試段、7 份 core CMakeLists 的 `aos_add_test`（core/agent 連 `include(tests/fake_loop.cmake)`）、`cmake/AosSubproject.cmake` 的 `aos_add_test`、根 `CMakeLists.txt` 的 `AOS_BUILD_TESTS`／Catch2／`enable_testing`、`vcpkg.json` 的 `tests` feature、`CMakePresets.json` 的 `VCPKG_MANIFEST_FEATURES` 與 `testPresets`。
+- 驗證：WSL 暫存目錄（乾淨 build 目錄）repo 根 `cmake --preset default && cmake --build --preset default` 過；proto8 impls 13 個各自 `cmake -B build && cmake --build build` 過；wf-lint broken 0（順手把 thinking／舊日誌裡 31 處指向已刪 extras/eca、extras/human、testing/01、02-tests 的連結改純文字，修一個錨點）。
+- 文件：testing.md 重寫成「build 得過」；WORKFLOWS、tidy/content-trim 不再引鐵律 1；feature-dev、refactor、add-subproject、dev-env、user.md、team-model、hackathon／workshop 職務單、gotchas、code map（build、agent、agent-lookup、llm、tool、proto8 01-impls*、06、13、README、proto8.md）、repo 根 docs（build、subprojects、aos-core-guide、README）、core READMEs（exec、loop、tick、agent）、proto8 README、bin、demo、lib、extras、impls 各 README／docs、條文裡指向測試或 fixtures 的出處（改「11-04 隨 proto8/tests 刪了」）。
+- 程式註解：bin/aos-tick、aos-tools、demo/agent-fsm act.py／brain.py、lib/agent claude／codex `_entry`、cli_session.py、pyfix `_entry`、lib/aos/aos_ws.py、CONCEPTS abbr.json 的例子。

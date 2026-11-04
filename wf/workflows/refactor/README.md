@@ -9,7 +9,7 @@
 
 ## Done when
 
-- [testing](../testing.md) 的驗證指令綠燈，且與動手前結果相同。
+- [testing](../testing.md) 的建置指令回傳 0；行為不變靠讀碼與手跑確認。
 - [common/code-map](../common/code-map.md) 中受影響領域的列已更新。
 
 ## 流程

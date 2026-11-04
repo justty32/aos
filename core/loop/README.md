@@ -111,10 +111,6 @@ AOS_API bool run_turn(const Layout &layout, TurnSummary &summary, std::string &e
 | `src/turn.cpp` | `run_turn`：`ensure_layout` → `read_turn` → `aggregate`（同步填 `TurnSummary.every_count`）→ 把每條 `Inst` 換成 `exec::Spawn`（`cwd` 相對 folder 轉絕對、空＝folder；注入 `AOS_FOLDER`、`AOS_TURN` 覆蓋同名 key）→ `start_all` → `write_state(phase=running)` → `wait_all` → 每條寫 `out/<id>.json`（`wire::Outcome`）→ 收集非零 exit／signal 的 `InstFailure`（exit 75 除外）→ `write_state(phase=idle, status=done)` → `write_turn(turn+1)`。idle 回合直接跳到最後兩步 | 220 |
 | `src/run.cpp` | `extern "C" int aos_run_cli_main`：完整 help、明確 folder 驗證、重複旗標採第一個、`run.lock` 單 runner 鎖與 SIGINT／SIGTERM 收線；迴圈 `run_turn` 並逐條印失敗，任一 inst 失敗最後回 1，中斷寫 `phase=interrupted` 並回 130 | 340 |
 | `src/deliver_cli.cpp` | `extern "C" int aos_deliver_cli_main`：完整 help（遇 `--` 停止掃描）；`[folder] -- <argv...>` 走 `inst_from_argv`，`[folder] <inst.json>` 讀檔 `parse_inst(default_id＝檔名去 .json)`，再 `deliver` | 140 |
-| `tests/test_idle.cpp` | inbox 與 every 都空時驗 idle state、不建 batch 與 turn +1 | 30 |
-| `tests/test_every.cpp` | every 三回合常駐執行、強制 id、與 inbox 同回合並存，以及 `every_ms` 到期邊界、跳過回合與各檔獨立節奏 | 150 |
-| `tests/test_folder.cpp` | `find_folder` 往上找最近世界與找不到的情形 | 30 |
-| `tests/test_run_cli.cpp` | 回歸明確 folder 驗證、inst 失敗摘要／退出碼、run 鎖、重複旗標與 run／deliver help。 | 165 |
 
 ## CLI
 

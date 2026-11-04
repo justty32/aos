@@ -1,6 +1,6 @@
 # 2026-10-28 aos-hub 下一步：常駐 aos-kernel 管所有 CLI 實例、pause 與 stop
 
-← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜前情：[10-27 aos-hub（demo）](../../27/claude-switch/README.md)、[10-26 playground](../../26/playground.md)（`_entry` 叫 claude、經 aos-mcp 接工具）｜使用者筆記：[user-advice/20261027](../../../../user-advice/20261027.md)（使用者的資料夾，不改）｜程式：[extras/cli_hub](../../../../extras/eca/README.md)｜後續：[10-28 hub-adapter](../hub-adapter/README.md)（say／listen 協議、適配表、副產物、實作與實跑）
+← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜前情：[10-27 aos-hub（demo）](../../27/claude-switch/README.md)、[10-26 playground](../../26/playground.md)（`_entry` 叫 claude、經 aos-mcp 接工具）｜使用者筆記：[user-advice/20261027](../../../../user-advice/20261027.md)（使用者的資料夾，不改）｜程式：extras/cli_hub｜後續：[10-28 hub-adapter](../hub-adapter/README.md)（say／listen 協議、適配表、副產物、實作與實跑）
 
 > 10-30 起 aos-hub 改做 aos-eca-hub，見 [eca](../../30/eca/README.md)。
 

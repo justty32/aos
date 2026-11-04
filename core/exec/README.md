@@ -90,8 +90,6 @@ AOS_API std::string now_iso8601();
 | `src/interrupt.hpp` / `src/interrupt.cpp` | 行程級、固定容量的尚未收線 pid 註冊表；`register_running`／`unregister_running` 供 exec 內部維護，公開 `interrupt_running(signal)` 只以 `kill(2)` 對各 process group 送 signal，可從 signal handler 呼叫 | 10 / 60 |
 | `src/start.cpp` | `start_all`：每條先建三個暫存檔並寫入 stdin_data、`prepare_spawn`、`fork`；**child 側** `setpgid(0,0)` → dup2 三個 fd → `chdir` → `execve`（只做 async-signal-safe）；**parent 側** `setpgid(pid,pid)` 忽略 `EACCES`（雙保險，抄舊 `exec.cpp`）；填 `started_at` 與 `deadline_mono_ms`，成功後登記 pid | 200 |
 | `src/wait_all.cpp` | `wait_all`：單一輪詢迴圈，對每條未完成者 `waitpid(WNOHANG)`；過了 `deadline_mono_ms` 就 `kill(-pid, SIGKILL)` 再阻塞等；每條收線時立即註銷 pid 並各自填 `ended_at`，最後拆 exit/signal、讀回暫存檔並 `unlink` | 180 |
-| `tests/test_interrupt.cpp` | 驗 `interrupt_running()` 會立即中止尚未收線的行程群組。 | 30 |
-| `tests/test_ended_at.cpp` | 驗快慢兩條子行程各自在收線當下記錄不同的 `ended_at`。 | 25 |
 
 CMake：`aos_add_subproject(exec SOURCES … HEADERS include/aos/exec.hpp)`，沒有 `PUBLIC_DEPS`／`PRIVATE_DEPS`、沒有 `aos_add_subcommand`。
 

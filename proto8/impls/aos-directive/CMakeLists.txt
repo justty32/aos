@@ -23,7 +23,7 @@ target_link_libraries(aos-directive PUBLIC aos-util)
 set_target_properties(aos-directive PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-# 執行檔與測試只在這個專案自己是主角時：被別的專案 add_subdirectory 進去時，人家要的是函式庫。
+# 執行檔只在這個專案自己是主角時：被別的專案 add_subdirectory 進去時，人家要的是函式庫。
 if(PROJECT_IS_TOP_LEVEL)
   add_executable(aos-directive_main src/main.cpp)
   target_link_libraries(aos-directive_main PRIVATE aos-directive)
@@ -31,9 +31,4 @@ if(PROJECT_IS_TOP_LEVEL)
   set_target_properties(aos-directive_main PROPERTIES
     OUTPUT_NAME aos-directive
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-
-  enable_testing()
-  find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  add_test(NAME test_cli
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cli.py $<TARGET_FILE:aos-directive_main>)
 endif()

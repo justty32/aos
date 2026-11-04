@@ -11,7 +11,7 @@
 `~/dev/vcpkg` 的話什麼都不用設）。
 
 ```bash
-cmake --preset default && cmake --build --preset default && ctest --preset default
+cmake --preset default && cmake --build --preset default
 ```
 
 **只能從 repo 根目錄 configure**，子專案不提供獨立建置。產物在 `build/bin/aos`

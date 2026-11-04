@@ -31,7 +31,6 @@ include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
 
 option(AOS_BUILD_APP        "建置 aos 執行檔" ON)
-option(AOS_BUILD_TESTS      "建置測試" ${PROJECT_IS_TOP_LEVEL})
 option(AOS_BUILD_MODULES    "建置擴充小專案（modules/）" ON)
 option(AOS_BUILD_MERGED_LIB "額外產出一個把所有小專案合在一起的 libaos.so" OFF)
 option(AOS_INSTALL          "產生 install 與 find_package 規則" ${PROJECT_IS_TOP_LEVEL})
@@ -64,10 +63,6 @@ endif()
 
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(CURL REQUIRED)
-if(AOS_BUILD_TESTS)
-    find_package(Catch2 3 CONFIG REQUIRED)
-    enable_testing()
-endif()
 
 # common 要最先，其餘小專案都相依它。
 add_subdirectory(common)

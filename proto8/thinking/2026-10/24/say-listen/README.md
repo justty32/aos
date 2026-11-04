@@ -1,6 +1,6 @@
 # 2026-10-24 給人用的 say／listen：對跑著的 fsm agent 下指令、看回覆
 
-← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜程式 [proto8/human](../../../../extras/human/README.md)｜測試 `proto8/tests/test_human.py`
+← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜程式 proto8/human｜測試 `proto8/tests/test_human.py`
 
 ## 分檔目錄
 

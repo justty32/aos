@@ -1,6 +1,6 @@
 # 2026-11-04 eca 掛在 daemon 底下跑 claude：工作區的 .claude 會怎樣
 
-← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜程式：[cli_session.py](../../../lib/agent/cli_session.py)、[aos-eca-turn](../../../bin/aos-eca-turn)、[eca](../../../extras/eca/README.md)｜相關：[11-03 stack-where](../03/stack-where.md)、[aos-agent 06](aos-agent/06-衝突與方向題.md)
+← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜程式：[cli_session.py](../../../lib/agent/cli_session.py)、[aos-eca-turn](../../../bin/aos-eca-turn)、eca｜相關：[11-03 stack-where](../03/stack-where.md)、[aos-agent 06](aos-agent/06-衝突與方向題.md)
 
 本檔只記使用者原文、結論、要帶給使用者的方向題（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。11-04 調查＋WSL 實驗（claude 2.1.318、haiku、每次有花費上限；暫存資料夾做完已刪、無殘留行程）；只讀不改程式。
 

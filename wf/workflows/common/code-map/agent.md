@@ -20,11 +20,6 @@
 | `core/agent/src/run.cpp` | `aos agent init／step／say／listen／talk／state` 完整 help 與 CLI 分派；init 省略 folder 時固定用 cwd，其他命令維持世界解析；共用 state 增加 unread／engine／model，listen 顯示未讀，talk 讀 stdin 前驗 runner 鎖。 |
 | `core/agent/src/run.hpp` | agent CLI 內部介面：共用 `state_text()` 與 listen／talk 實作；pending 顯示規則、未讀區塊宣告都在這裡，不安裝。 |
 | `core/agent/src/run_top.cpp` | 頂層 `aos say／listen／talk／state` 進入點與逐命令完整 help：解析 cwd 世界與唯一 agent；`say --to` 驗目標世界並印真正收件匣，`listen` 顯示未讀，`talk` 回報 pi 尚未內建並共用 runner 鎖檢查。 |
-| `core/agent/tests/test_agent_cli.cpp` | CLI 回歸：全組 help、say 真實目的地與錯誤、state 未讀／engine／model、listen 未讀、talk runner 鎖與 pi 指引。 |
-| `core/agent/tests/test_agent_lifecycle.cpp` | 生命周期回歸：lmstudio model、LLM／pi 失敗保留訊息、error／log 指引、journal 渲染／防竄改／舊世界相容，以及 every 的絕對 aos 路徑。 |
-| `core/agent/tests/fake_loop.py` | 測試用 loop 替身：依協定搬入 inbox、複製 every、並行跑 instruction、寫 out／state、鏡射 agent status 並推進 turn。 |
-| `core/agent/tests/smoke.sh` | 端到端 smoke：在 bob cwd 無參數初始化、驗 every 的 argv[0] 是可執行的 aos 路徑，再用替身推三回合，驗 every 每回合執行與 `state.json` 的 status 鏡射。 |
-| `core/agent/tests/smoke_user.sh` | 手動端到端 smoke：離線驗 lmstudio step 搶槽、使用者 `~` 的 say／listen 與天然通訊錄列。 |
 | `core/agent/README.md` | 回合 agent 的快速使用、工具往返節奏與函式庫入口。 |
 | `core/agent/docs/pi-interface.md` | pi 0.84.2 實測、三種接法與尚未內建的 extension adapter 規劃；不是目前已完成的 CLI transport。 |
 

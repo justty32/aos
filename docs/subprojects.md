@@ -28,7 +28,6 @@ core/<name>/  或  modules/<name>/
   include/aos/<name>.hpp     公開標頭（會被安裝）
   include/aos/<name>.h       C ABI（可選，之後再補也行）
   src/                       實作 + CLI 層
-  tests/
   docs/                      這個小專案自己的細節文件
   CMakeLists.txt
 ```
@@ -45,7 +44,7 @@ aos_add_subproject(<name>
 )
 
 # CLI 層另外放：它屬於 aos 執行檔，不是函式庫的公開介面，所以不安裝。
-# 做成 OBJECT library 是為了讓執行檔與測試共用同一份編譯結果。
+# 做成 OBJECT library，執行檔連它。
 add_library(aos_<name>_cli OBJECT src/run.cpp)
 target_link_libraries(aos_<name>_cli PUBLIC aos::<name>)
 
@@ -56,10 +55,6 @@ aos_add_subcommand(
     SUMMARY "一行說明，會印在 aos --help 裡"
 )
 
-aos_add_test(aos_<name>_tests
-    SOURCES tests/test_foo.cpp
-    LINK aos_<name>_cli
-)
 ```
 
 CLI 的進入點在 `src/run.cpp` 裡長這樣，名字要跟 `ENTRY` 一致：
@@ -184,16 +179,6 @@ configure 期會擋三件事，都是「不擋的話症狀很難查」的：
 - `ENTRY` 重複 —— 不擋的話錯誤會延到連結期，變成跟「子命令」八竿子打不著的
   multiple definition
 
-### `aos_add_test(<name> ...)`
-
-| 參數 | 說明 |
-|------|------|
-| `SOURCES` | 測試檔 |
-| `LINK` | 要連的 target |
-| `LANGUAGE` | `CXX`（預設，會自動連上 `Catch2::Catch2WithMain`）或 `C`（自帶 `main`，以 C99 建）|
-
-`AOS_BUILD_TESTS` 關掉時整個函式直接 return。
-
 ---
 
 ## 檢查清單
@@ -201,7 +186,7 @@ configure 期會擋三件事，都是「不擋的話症狀很難查」的：
 新的小專案落地之後，跑一遍：
 
 ```bash
-cmake --preset default && cmake --build --preset default && ctest --preset default
+cmake --preset default && cmake --build --preset default
 ./build/bin/aos --help                    # 新子命令有出現嗎
 cmake --install build --prefix /tmp/p     # 標頭與 .so 都裝出去了嗎
 ```

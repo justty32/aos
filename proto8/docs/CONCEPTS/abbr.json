@@ -182,7 +182,7 @@
    "abbr": "cli",
    "full": "command-line interface",
    "meaning": "命令列程式共用部分",
-   "example": "impls 的 tests/test_cli.py（命令列黑箱）"
+   "example": "aos-util 的 cli.hpp（各支命令列共用的解析）"
   },
   {
    "abbr": "proc",

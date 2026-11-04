@@ -6,7 +6,7 @@
 # 只有自己這層的錯才停：stderr 一行「agent-fsm: 代號 原因」、退 1、history 不接（P-20）——沒 stack、history 壞、
 #   最後一則 assistant 沒有 tool_calls（act 只從 think 退 0 來；人改了 history 才會這樣）、aos-tools 起不來。
 # --tools FILE：aos-tools 登記檔（預設範本裡的 tools.json；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
-# 照 tests/fixtures/agent-eve/act.py 改（拿掉 out/、done/、current.txt）。
+# 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
 import json, os, subprocess, sys
 
 

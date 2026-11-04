@@ -1,4 +1,4 @@
-← [回入口 README.md](../README.md)｜段落：索引：agent、agent 自己的格（11-03 刪了）、外部 agent 的一輪（eca）、範例（demo/agent-liv 11-04 刪了）、測試｜上一份：[02-索引-base與索引-aos](02-索引-base與索引-aos.md)｜下一份：—
+← [回入口 README.md](../README.md)｜段落：索引：agent、agent 自己的格（11-03 刪了）、外部 agent 的一輪（eca）、範例（demo/agent-liv 11-04 刪了）｜上一份：[02-索引-base與索引-aos](02-索引-base與索引-aos.md)｜下一份：—
 
 ## 索引：agent
 
@@ -22,12 +22,8 @@ round 那套用格組起來的 agent（一輪的 fsm 表與五格、parts、queu
 <a id="外部-agent-的格eca不是工具"></a>
 ## 外部 agent 的一輪（eca）
 
-claude code、codex 這類外部 coding agent 的一輪是 bin 指令 [`aos-eca-turn`](../../bin/README.md)（使用者「aos eca turn」；定義資料夾範本在 [demo eca-claude](../../demo/README.md#eca-templates)），問 CLI 那段是這層的 [cli_session](../agent/cli_session.py) `ask`。測試 `tests/test_eca_turn.py`。
+claude code、codex 這類外部 coding agent 的一輪是 bin 指令 [`aos-eca-turn`](../../bin/README.md)（使用者「aos eca turn」；定義資料夾範本在 [demo eca-claude](../../demo/README.md#eca-templates)），問 CLI 那段是這層的 [cli_session](../agent/cli_session.py) `ask`。
 
 ## 範例（demo/agent-liv 11-04 刪了）
 
-原本的 demo/agent-liv（`tools/` 七條捷徑掛 lib/base）隨 demo 刪了。捷徑掛庫的工具的例子現在是 `proto8/tests/fixtures/agent-eve`：`tools/pyfix` 捷徑指到 lib/agent/pyfix，pyfix 的子 agent 的 `tools/` 再捷徑掛 lib/base 五個（read、write、edit、bash、ls）；`test_pyfix.py` 跑它。
-
-## 測試
-
-`python3 -m unittest discover -s proto8/tests -p test_lib.py`：形狀檢查跑過 `lib/` 底下每個工具（三個檔、NAME 行、`_tooldef.json` 與 `_metainfo` 的形、壞 stdin 的錯誤行格式與 stdout 同一行），base 上午那七個各自的行為（截斷、全有或全無、逾時整群停、路徑出不去、沒 `AOS_WS`；不碰工作區的 math、clock、run_python 不驗這條）（agent-liv 經捷徑用庫的工具跑完一題那幾案 11-04 隨 demo 刪了）。其他工具的行為案例在這幾份：`test_pi_tools.py`、`test_file_tools.py`（base）、`test_memory.py`、`test_send_message.py`（aos；11-04 前叫 test_meg、test_talk）、`test_pyfix.py`（11-04 前叫 test_eve）、`test_cli_tools.py`（agent）；`check_inbox` 只有形狀檢查（行為案例原本在 test_talk 跑團隊那段，隨 demo/talk 刪了）。
+原本的 demo/agent-liv（`tools/` 七條捷徑掛 lib/base）隨 demo 刪了。捷徑掛庫的工具的例子現在是 agent-eve（11-04 隨 proto8/tests 刪了）：`tools/pyfix` 捷徑指到 lib/agent/pyfix，pyfix 的子 agent 的 `tools/` 再捷徑掛 lib/base 五個（read、write、edit、bash、ls）。

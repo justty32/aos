@@ -71,12 +71,11 @@ std::vector<Problem> validate(const nlohmann::json& schema,
 ## 建置與測試
 
 ```sh
-cmake -B build && cmake --build build && ctest --test-dir build
+cmake -B build && cmake --build build
 ```
 
 - 依賴 [aos-util](../aos-util/README.md)；vcpkg 比全家多一個 [pboettch/json-schema-validator](https://github.com/pboettch/json-schema-validator) 2.4.0（`vcpkg.json`）。
   別的專案要連 `aos-schema`，那邊的 `vcpkg.json` 也要列 `json-schema-validator`（manifest 只看最上層專案）。
-- `ctest` 跑 `test_lib_*`（`tests/test_lib.cpp`：一個執行檔、第一個參數挑哪一條）和 `test_cli`（`tests/test_cli.py`：餵 stdin 看輸出）。測試資料在 `tests/data/`。
 
 ## 已知限制
 

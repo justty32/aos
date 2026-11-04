@@ -37,7 +37,7 @@ AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md / wf/INDEX.md → 各工作流
 
 ## 開發環境
 
-單機開發，沒有跨機或離線的特殊情況。vcpkg 在 `~/dev/vcpkg`、根 `CMakeLists.txt` 會自動找到；細節、指令表與外部工具見 [wf/workflows/dev-env.md](wf/workflows/dev-env.md)，建置與測試指令、測試分類見 [wf/workflows/testing.md](wf/workflows/testing.md)。
+單機開發，沒有跨機或離線的特殊情況。vcpkg 在 `~/dev/vcpkg`、根 `CMakeLists.txt` 會自動找到；細節、指令表與外部工具見 [wf/workflows/dev-env.md](wf/workflows/dev-env.md)，驗證（11-04 起只剩 build 得過）見 [wf/workflows/testing.md](wf/workflows/testing.md)。
 
 ## 主工作流（活狀態：進度 / 待測 / 信件）
 

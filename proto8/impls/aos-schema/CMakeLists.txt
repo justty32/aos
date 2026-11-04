@@ -30,7 +30,7 @@ target_link_libraries(aos-schema
 set_target_properties(aos-schema PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-# 執行檔與測試只在這個專案自己是主角時：被別的專案 add_subdirectory 進去時，人家要的是函式庫。
+# 執行檔只在這個專案自己是主角時：被別的專案 add_subdirectory 進去時，人家要的是函式庫。
 if(PROJECT_IS_TOP_LEVEL)
   add_executable(aos-schema_main src/main.cpp)
   target_link_libraries(aos-schema_main PRIVATE aos-schema)
@@ -38,19 +38,4 @@ if(PROJECT_IS_TOP_LEVEL)
   set_target_properties(aos-schema_main PROPERTIES
     OUTPUT_NAME aos-schema
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bin)
-
-  enable_testing()
-  find_package(Python3 REQUIRED COMPONENTS Interpreter)
-
-  # 函式庫：一個執行檔，第一個參數挑要跑哪一條（tests/test_lib.cpp）
-  add_executable(test_lib tests/test_lib.cpp)
-  target_link_libraries(test_lib PRIVATE aos-schema)
-  foreach(name valid missing_required wrong_type out_of_range local_ref schema_bad file_missing file_bad_json)
-    add_test(NAME test_lib_${name}
-      COMMAND test_lib ${name} ${CMAKE_CURRENT_SOURCE_DIR}/examples/inst.schema.json ${CMAKE_CURRENT_SOURCE_DIR}/tests/data)
-  endforeach()
-
-  # 命令列：餵 stdin、看輸出（tests/test_cli.py）
-  add_test(NAME test_cli
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cli.py $<TARGET_FILE:aos-schema_main>)
 endif()

@@ -10,10 +10,7 @@
       "name": "base",
       "hidden": true,
       "generator": "Unix Makefiles",
-      "binaryDir": "${sourceDir}/build/${presetName}",
-      "cacheVariables": {
-        "VCPKG_MANIFEST_FEATURES": "tests"
-      }
+      "binaryDir": "${sourceDir}/build/${presetName}"
     },
     {
       "name": "default",
@@ -47,17 +44,5 @@
     { "name": "default", "configurePreset": "default" },
     { "name": "release", "configurePreset": "release" },
     { "name": "merged", "configurePreset": "merged" }
-  ],
-  "testPresets": [
-    {
-      "name": "default",
-      "configurePreset": "default",
-      "output": { "outputOnFailure": true }
-    },
-    {
-      "name": "release",
-      "configurePreset": "release",
-      "output": { "outputOnFailure": true }
-    }
   ]
 }

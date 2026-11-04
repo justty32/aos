@@ -7,7 +7,7 @@
 # pyfix_dir.txt（一行；11-01 起取代環境變數），它的 act 讀那個檔、把工具的工作區換成那裡，所以只碰得到那個資料夾
 # （bash 的指令本身擋不住出去，同 lib/base/bash）。PYTHONDONTWRITEBYTECODE=1 往下帶：跑測試不在使用者的程式資料夾留 __pycache__。
 # 錯：stderr 與 stdout 各一行「pyfix: 代號 原因」、退 1——ArgumentsBad、StackMissing、DirBad、AgentFailed、AnswerMissing。
-# 來源：demo/agent-eve/tools/pyfix（10-24；遷移時子 agent 改掛 lib/base 的工具、轉接抽成 agent_tool.py；demo 11-04 刪了，agent-eve 搬到 tests/fixtures 當測試裡叫它的那一方）。
+# 來源：demo/agent-eve/tools/pyfix（10-24；遷移時子 agent 改掛 lib/base 的工具、轉接抽成 agent_tool.py；demo 11-04 刪了）。
 import difflib, json, os, sys
 
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__

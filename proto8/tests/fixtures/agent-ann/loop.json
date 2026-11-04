@@ -1,2 +1,0 @@
-{"_entry": ["aos-loop", {"$env": "AOS_CF"}],
- "exec": {"argv": ["aos-fsm", "fsm.json"]}, "max": 20}

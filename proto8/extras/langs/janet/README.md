@@ -63,4 +63,3 @@ key 照寫的字面用（`:timeout_ms` 就是 `timeout_ms`，不換 `-`）。一
 | `json_write.janet` | Janet 的值 → 好讀的 JSON |
 | `code_write.janet` | Janet 程式碼 → 原始碼字串（janet-main 用；中文照原樣） |
 
-測試：`python3 -m unittest discover -s proto8/tests -p test_janet.py`（沒裝 janet 就 skip）。

@@ -1,6 +1,6 @@
 # grow — aos-grow（原型）
 
-← [proto8](../../README.md)｜設計：[thinking 2026-10-24 函數成長](../../thinking/2026-10/24/fn-grow/README.md)｜測試：`proto8/tests/test_grow.py`
+← [proto8](../../README.md)｜設計：[thinking 2026-10-24 函數成長](../../thinking/2026-10/24/fn-grow/README.md)
 
 `aos-grow - 把一個函數往上長一級或縮回一級，呼叫方跟著改、跑起來一樣`
 

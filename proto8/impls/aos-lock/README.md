@@ -59,10 +59,10 @@ stderr 一行 **`aos-lock: 代號 原因`**、退 1。
 ## 建置與測試
 
 ```sh
-cmake -B build && cmake --build build && ctest --test-dir build
+cmake -B build && cmake --build build
 ```
 
-依賴：aos-util（`add_subdirectory` 一起編）。`ctest` 跑 `test_cli`（`tests/test_cli.py`，unittest）：命令列的錯、目標換鎖、名牌各欄（`pid`＝叫它的行程、`--pid`）、十個行程搶同一把只有一個拿到、kill -9 持有者後收屍、`boot_id` 不同的舊名牌、pid 被重用、租約到期、名牌沒寫好就死（10 秒）、`started_at_ticks` 是 null、30 個人同時收同一把死鎖只有一個拿到（收屍牌；機率性的守門，拿掉收屍牌時 10 次約紅 2 次）、`--wait-ms` 逾時與等到、release 不留殘骸、`.releasing.*` 殘骸不擋人。
+依賴：aos-util（`add_subdirectory` 一起編）。
 
 ## 已知限制
 

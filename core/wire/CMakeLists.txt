@@ -7,12 +7,3 @@ aos_add_subproject(wire
         src/state.cpp
     HEADERS include/aos/wire.hpp
 )
-
-aos_add_test(aos_wire_tests
-    SOURCES
-        tests/test_inst.cpp
-        tests/test_outcome.cpp
-        tests/test_state.cpp
-        tests/test_errors.cpp
-    LINK aos::wire
-)

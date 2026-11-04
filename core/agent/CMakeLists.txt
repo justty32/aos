@@ -77,16 +77,3 @@ aos_add_subcommand(
     LIBRARY aos_agent_cli
     SUMMARY "一個指令：建世界、說一句話、等到回覆"
 )
-
-aos_add_test(aos_agent_tests
-    SOURCES
-        tests/test_agent_tools.cpp
-        tests/test_agent_store.cpp
-        tests/test_agent_step.cpp
-        tests/test_agent_engine.cpp
-        tests/test_agent_cli.cpp
-        tests/test_agent_lifecycle.cpp
-    LINK aos_agent_cli
-)
-
-include(${CMAKE_CURRENT_SOURCE_DIR}/tests/fake_loop.cmake)

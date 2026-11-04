@@ -1,6 +1,6 @@
 # aos core 使用指南
 
-這份文件描述目前 `main` 工作樹裡實際存在的功能。指令面以現有 17 個子命令、CLI parser、測試與已保存的真實 help dump 為準；舊 `core/inst`、`core/llms`、`core/tooljson` 文件已封存，不代表現在的 CLI。
+這份文件描述目前 `main` 工作樹裡實際存在的功能。指令面以現有 17 個子命令、CLI parser 與已保存的真實 help dump 為準；舊 `core/inst`、`core/llms`、`core/tooljson` 文件已封存，不代表現在的 CLI。
 
 ## 1. 一分鐘總覽
 
@@ -37,25 +37,17 @@
 根 `CMakeLists.txt` 在 `WIN32` 直接 `FATAL_ERROR`；這台 Windows 不能原生建置，必須在 WSL Ubuntu 內從 repo 根目錄執行：
 
 ```powershell
-wsl -d Ubuntu -e bash -lc "cd /mnt/c/code/mine/simple_tools/aos && cmake --preset default && cmake --build --preset default && ctest --preset default"
+wsl -d Ubuntu -e bash -lc "cd /mnt/c/code/mine/simple_tools/aos && cmake --preset default && cmake --build --preset default"
 ```
 
-目前 preset 明確使用 `Unix Makefiles`，不需要 Ninja。需求是 CMake 3.25+ 與 C++23 compiler；這台 WSL 的 CMake 3.28、g++ 13、make、ctest 可用。
+目前 preset 明確使用 `Unix Makefiles`，不需要 Ninja。需求是 CMake 3.25+ 與 C++23 compiler；這台 WSL 的 CMake 3.28、g++ 13、make 可用。
 
-### vcpkg 與 tests feature
+### vcpkg
 
-這是 vcpkg manifest project。toolchain 的尋找順序是：呼叫者給的 `CMAKE_TOOLCHAIN_FILE`、`$VCPKG_ROOT`、`~/dev/vcpkg`。`nlohmann-json` 與 `curl[ssl]` 是基礎相依；Catch2 只在 manifest 的 `tests` feature。
-
-presets 已帶 `VCPKG_MANIFEST_FEATURES=tests`。若不用 preset、又開著測試，必須自己加上它：
+這是 vcpkg manifest project。toolchain 的尋找順序是：呼叫者給的 `CMAKE_TOOLCHAIN_FILE`、`$VCPKG_ROOT`、`~/dev/vcpkg`。相依只有 `nlohmann-json` 與 `curl[ssl]`（11-04 起沒有測試，Catch2 與 `tests` feature 拿掉了）。不用 preset 時：
 
 ```powershell
-wsl -d Ubuntu -e bash -lc 'cd /mnt/c/code/mine/simple_tools/aos && cmake -S . -B build-manual -DCMAKE_BUILD_TYPE=Debug -DVCPKG_MANIFEST_FEATURES=tests && cmake --build build-manual -j$(nproc) && ctest --test-dir build-manual --output-on-failure'
-```
-
-漏掉 `-DVCPKG_MANIFEST_FEATURES=tests` 時，configure 會在根 `CMakeLists.txt` 的 `find_package(Catch2 3 CONFIG REQUIRED)` 失敗。只要不建測試，可用：
-
-```powershell
-wsl -d Ubuntu -e bash -lc 'cd /mnt/c/code/mine/simple_tools/aos && cmake -S . -B /tmp/aos-build -DCMAKE_BUILD_TYPE=Release -DAOS_BUILD_TESTS=OFF && cmake --build /tmp/aos-build -j$(nproc)'
+wsl -d Ubuntu -e bash -lc 'cd /mnt/c/code/mine/simple_tools/aos && cmake -S . -B /tmp/aos-build -DCMAKE_BUILD_TYPE=Release && cmake --build /tmp/aos-build -j$(nproc)'
 ```
 
 執行檔固定落在 `<builddir>/bin/aos`，共享／靜態函式庫落在 `<builddir>/lib/`。只能從 repo 根目錄 configure；各 core 子目錄不是獨立 CMake project。
@@ -430,7 +422,7 @@ file-created
 
 ## 7. 目前還沒做的／已知限制
 
-- **平台：** POSIX only；Windows 原生 configure 直接失敗。macOS 雖未被擋，但主要實作與測試使用 Linux/POSIX API。
+- **平台：** POSIX only；Windows 原生 configure 直接失敗。macOS 雖未被擋，但主要實作使用 Linux/POSIX API。
 - **沒有 loop 崩潰恢復：** SIGKILL、斷電或 crash 可能留下已搬到 `insts/`、尚未產生 `out/` 的回合；下次不會自動補跑。沒有 `recover`、`check` 或 loop 層 `status` 子命令。已封存的 `wf/workflows/common/archive/roadmap.md` 提過這些名稱，但目前完整 17 指令表中不存在。
 - **沒有 `fsync`：** 多數檔案採 `.tmp + rename` 保證名稱發布原子性，不保證斷電耐久。
 - **instruction 無 sandbox／大小上限：** 可執行任意程式；stdout/stderr 整份讀入 RAM，超大輸出可耗盡記憶體。timeout 直接 `SIGKILL` process group；自行脫離群組的孫行程不一定殺得到。

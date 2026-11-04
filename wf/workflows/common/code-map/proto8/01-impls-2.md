@@ -17,7 +17,6 @@
 | `src/run/inline.cpp` | 行程內跑單子：設 `AOS_CF`／`AOS_CD`／`AOS_CO`、相對 `AOS_WS`／`AOS_STACK` 轉絕對、`run_inst` |
 | `src/run/signals.cpp` | 整支程式壽命擋訊號、兩次之間取出 |
 | `src/common/common.hpp` | 內部共用標頭 |
-| `tests/test_cli.py` | 命令列黑箱 |
 
 ## `impls/aos-fsm/`（一次跑一格）
 
@@ -27,7 +26,6 @@
 | `src/table/table.cpp`、`src/table/table.hpp` | `read_table`（解指示詞、單子記 `exec_bases`）、`check`（開跑查整張表，壞＝`CfgBad`）、`pick`、`next_for`（`next` 是字串或 `{結束碼: 狀態名}`） |
 | `src/state/state.cpp`、`src/state/state.hpp` | `stage.txt`（11-04 前叫 `state.txt`）的讀（去頭尾 Unicode 空白、`StateBad`）與原子寫 |
 | `src/common/common.hpp` | 內部共用標頭 |
-| `tests/test_cli.py` | 命令列黑箱（跑 demo 的 `test_demo.py` 11-04 隨 demo 刪了） |
 
 ## `impls/aos-daemon/`（顧一群 proc）
 
@@ -39,7 +37,6 @@
 | `src/daemon/mailbox.cpp` | 信箱 `procs_ctl_mailbox`：`open_mailbox`（`cur/` 殘骸照 aos-post 的 `sort_letters` 排）、`take_letters`（`take_all`、`see`）、`apply_letter`（`procs_added`／`removed`／`stopped`／`started`）、`done_letters`（`reply`、`done`） |
 | `src/child/child.cpp`、`src/child/child.hpp` | 子項：建小格、寫小格的 `loop.json`、`spawn`／`spawn_exec`、`launch`（setsid、`AOS_STACK`、`AOS_WS`、`AOS_DAEMON`）、`Child` 與狀態列（`row`：…`stack`、`exec`、`ws`?） |
 | `src/common/common.hpp` | 內部共用標頭 |
-| `tests/test_cli.py` | 命令列黑箱（跑 demo daemon、daemon-2、daemon-3 的 `test_demo.py` 11-04 隨 demo 刪了） |
 
 ## `impls/aos-post/`（投遞：信箱，IPC 的語法糖）
 
@@ -51,7 +48,6 @@
 | `src/send/send.cpp` | `send`（入口檢查：`tmp/`、`new/` 可寫、`reply_to`、自己給的名字；`tmp/` 寫好 rename 進 `new/`；sender 用 aos-util 的 `identity`）、`--ordered`（經 aos-lock 拿 `order.lock/` 編序號） |
 | `src/take/take.cpp` | `take`／`take_all`（`cur/` 沒有就建）、`first_in_cur`、`see`、`reply`、`done`（`--keep` 進 `archive/`）、`regret` |
 | `src/common/common.hpp` | 內部標頭：`is_dir`、`need_dir`、`make_dir`、`names_in`、`drop`、`move` |
-| `tests/test_cli.py` | 命令列黑箱 |
 
 ## `impls/aos-lock/`（鎖資料夾＋名牌）
 
@@ -62,4 +58,3 @@
 | `src/holder/holder.cpp` | 名牌：`holder_of`（身分用 aos-util 的 `identity`）、`to_json`、`look`、`reapable`（boot_id、pid＋ticks、殭屍、租約、名牌壞） |
 | `src/lock/lock.cpp` | `lock_dir_of`、寫名牌、收屍 `reap`、`try_acquire`、`acquire`（每 20 毫秒）、`release` |
 | `src/common/common.hpp` | 內部標頭：`now_ms`、`parse_at` |
-| `tests/test_cli.py` | 命令列黑箱 |

@@ -5,7 +5,7 @@
 # --tools FILE：aos-tools 登記檔（預設範本裡的 tools.json；沒有那份＝不給工具）；腦看到的工具名＝登記名。相對路徑從範本資料夾（AOS_CD）算。
 # 腦（P-23）：AOS_BRAIN_URL 沒設＝假腦（有工具就先叫第一個、再答一句，不碰網路）；有設＝問 OpenAI 相容的 {url}/chat/completions，
 #   AOS_BRAIN_MODEL（範本 .env）、AOS_BRAIN_KEY（有才帶 Bearer）；只留 role、content、tool_calls。
-# 錯：stderr 一行「agent-fsm: 代號 原因」、退 1、history 不接（P-20）。照 tests/fixtures/agent-eve/brain.py 改（拿掉工作區題目認領與 current.txt）。
+# 錯：stderr 一行「agent-fsm: 代號 原因」、退 1、history 不接（P-20）。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
 import json, os, subprocess, sys, urllib.error, urllib.request
 
 

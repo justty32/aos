@@ -47,6 +47,5 @@ repo 根的 `.aos/tools/` 目前放了五個進版控的範例登記：`sh`／`l
 | `core/tool/src/contacts.cpp` | 驗證、讀寫 `.aos/contacts.json`，合成 `$HOME` 的天然 `~` 聯絡人，並依名稱新增／取代、查找與移除。 |
 | `core/tool/src/tool_cli.cpp` | `aos tool add／ls／rm` 的完整 help、參數解析、argv[0] 檔案／PATH 預檢、探測重試、旗標覆寫、人工 description 閘門與人類／JSON 列表輸出。 |
 | `core/tool/src/contact_cli.cpp` | `aos contact add／ls／rm` 的完整 help、參數解析、`--folder-root`、可選 agent／note，以及天然 `~` 置頂的人類／JSON 列表輸出。 |
-| `core/tool/tests/test_tool_cli.cpp` | CLI 回歸：登記／列表／移除、metainfo 合併、缺少 executable 不登記、既有 executable 可登記，以及 tool／contact help。 |
-| `core/tool/CMakeLists.txt` | 建 `aos::tool`／`libaos_tool.so`、連私有 `aos::exec`＋`aos::loop`，登記 `tool`／`contact` 子命令與測試。 |
+| `core/tool/CMakeLists.txt` | 建 `aos::tool`／`libaos_tool.so`、連私有 `aos::exec`＋`aos::loop`，登記 `tool`／`contact` 子命令。 |
 | `core/tool/README.md` | 工具與通訊錄格式、CLI、探測降級與公開函式庫入口。 |

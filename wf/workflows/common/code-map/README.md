@@ -18,4 +18,4 @@
 | [core/agent/README.md](../../../../core/agent/README.md) | `core/agent/`：回合 agent、工具往返與可選 LLM CPU；逐檔表格見 [agent.md](agent.md)，常查的東西見 [agent-lookup.md](agent-lookup.md) | 要改 agent 版面、step、工具呼叫、跨世界 say 或 lmstudio／pi engine |
 | [core/tick/README.md](../../../../core/tick/README.md) | `core/tick/`：heartbeat 兩張清單的格式、到期規則、`aos tick` 一次心跳與四個登記子命令 | 要改到期判定、`routines.json`／`schedule.json` 的欄位、`log.md` 格式或 `aos routine`／`aos schedule` 的 CLI |
 | [build.md](build.md) | `common/`、`app/` 的逐檔表格，以及根 CMakeLists／`cmake/`／vcpkg／presets 等建置設定 | 要改建置骨架、子命令登記機制、相依放哪一層，或新增一個小專案 |
-| [proto8.md](proto8.md) | `proto8/`（現役主線）：impls、bin、lib、extras、demo、tests 每個檔一列，照資料夾分檔 | 要改 proto8 |
+| [proto8.md](proto8.md) | `proto8/`（現役主線）：impls、bin、lib、extras、demo 每個檔一列，照資料夾分檔 | 要改 proto8 |

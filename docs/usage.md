@@ -7,7 +7,7 @@
 從 repo 根目錄執行：
 
 ```bash
-cmake --preset default && cmake --build --preset default && ctest --preset default
+cmake --preset default && cmake --build --preset default
 ```
 
 執行檔會在 `build/bin/aos`；安裝方式、平台、vcpkg、preset 與產物見

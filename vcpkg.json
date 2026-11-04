@@ -11,13 +11,5 @@
         "ssl"
       ]
     }
-  ],
-  "features": {
-    "tests": {
-      "description": "建置測試所需的相依",
-      "dependencies": [
-        "catch2"
-      ]
-    }
-  }
+  ]
 }

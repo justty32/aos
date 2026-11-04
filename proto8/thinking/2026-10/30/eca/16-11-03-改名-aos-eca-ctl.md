@@ -6,7 +6,7 @@
 
 ### 決定（11-03，使用者）
 
-指令 `aos-eca-hub` 改名 `aos-eca-ctl`（說明在 [extras/eca_ctl](../../../../extras/eca/README.md)）。
+指令 `aos-eca-hub` 改名 `aos-eca-ctl`（說明在 extras/eca_ctl）。
 
 ### 頂層代定（11-03，可翻案）
 
@@ -23,7 +23,7 @@
 
 ### 決定（11-03，使用者）
 
-指令 `aos-eca-ctl` 改名 `aos-eca`（說明在 [extras/eca](../../../../extras/eca/README.md)）。
+指令 `aos-eca-ctl` 改名 `aos-eca`（說明在 extras/eca）。
 
 ### 頂層代定（11-03，可翻案；做法同上一節）
 

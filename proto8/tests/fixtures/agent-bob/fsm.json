@@ -1,9 +1,0 @@
-{"_entry": ["aos-fsm", {"$env": "AOS_CF"}],
- "start": "idle",
- "states": {
-   "idle":  {"exec": "idle", "next": "think"},
-   "think": {"exec": {"argv": ["python3", "brain.py"],
-                      "stdout": {"$env": "AOS_STACK", "$path": "plan.txt"},
-                      "timeout_ms": 120000},
-             "next": "act"},
-   "act":   {"exec": "act", "next": "idle"}}}

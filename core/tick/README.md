@@ -112,18 +112,16 @@ JSON 一律用 `nlohmann::ordered_json`（私有相依，不出現在標頭）�
 | 1 | `src/clock.cpp` | `parse_duration`、`valid_zone`、`to_local`／`from_local`（`std::chrono::locate_zone`＋`zoned_time`，GCC 16 實測可用）、`parse_timestamp`／`format_timestamp`、`parse_at`／`format_at` | 180 |
 | 1 | `src/ids.cpp` | `valid_id`、`make_id`（`<prefix>-<base36(now)>`，撞 `taken` 就 `-2`、`-3`…） | 50 |
 | 1 | `src/table.cpp` | `read_routines`／`read_schedule`／`write_routines`／`write_schedule`／`read_config`／`ensure_heartbeat`（`mkdir -p` + 缺的表寫空表）；`run` 欄的物件↔`Run`；表頭四欄；原子改寫（自己寫 `.tmp`＋`rename`，不 include `loop/src/`） | 240 |
-| 1 | `tests/test_clock.cpp`、`tests/test_table.cpp` | 期間／時間戳／`at` 的往返與拒收；表的讀寫往返、缺欄、壞 run、重複 id、缺檔 config | 120 / 120 |
 | 2 | `src/due.cpp` | `parse_slot`、`routine_due`、`routine_next`、`schedule_state` | 180 |
 | 2 | `src/log.cpp` | `format_log_line`（`error` 的 target 換行→空白）、`append_log`（`O_APPEND`，一次 write 一行） | 60 |
 | 2 | `src/tick.cpp` | `run_tick`：上面 1–7 步；missed 文字在這裡組 | 200 |
-| 2 | `tests/test_due.cpp`、`tests/test_tick.cpp` | interval 的 `≥`／空 last_run；slot 的三條件、換日、遮罩；schedule 三態與 `missed_after` 邊界；`run_tick` 在 TempDir 世界裡：inbox 出現 `hb-<id>-<turn>.json`、`last_run` 更新、schedule 刪列、missed 走 say（建一個 `agents/bob/say/` 目錄驗檔案出現）、0／2 個 agent 記 `none`、dry-run 什麼都不動、無事不寫 log | 150 / 200 |
 | 3 | `src/init.cpp` | `heartbeat_init`：`ensure_layout` → `ensure_heartbeat` → 原子寫 `every/tick.json`（`every_ms` 是 wire 不認得的欄，所以用 nlohmann 直接組，不走 `wire::to_json_text`） | 50 |
 | 3 | `src/cli_common.cpp` | `extern "C"` 以外的 CLI 共用：可選 folder 位置參數（`is_directory(argv[1])`）、`--ask`／`-- argv`／`--note`／`--id` 解析、`now()` 取時鐘、對齊列印表格。宣告在 `src/cli_common.hpp`（**只給第 3 條的四個 CLI 檔 include**，是本專案唯一的內部標頭） | 30 / 150 |
 | 3 | `src/tick_cli.cpp` | `aos_tick_cli_main`：`[folder] [--dry-run]`；turn＝`AOS_TURN` 有值就用，否則 `read_turn`；印 `report.line`（dry-run 加前綴）；有 `error` 事件退出碼 1 | 70 |
 | 3 | `src/heartbeat_cli.cpp` | `aos_heartbeat_cli_main`：`init [folder] [--interval 30m]`（預設 `30m`，換算毫秒） | 60 |
 | 3 | `src/routine_cli.cpp` | `aos_routine_cli_main`：`add [folder] (--every D \| --slot S) [--id ID] [--note …] (--ask … \| -- argv…)`／`ls [folder]`／`rm [folder] <id>` | 150 |
 | 3 | `src/schedule_cli.cpp` | `aos_schedule_cli_main`：`add [folder] --at "YYYY-MM-DD HH:MM" [--id ID] [--note …] (--ask … \| -- argv…)`／`ls`／`rm <id>` | 130 |
-| 3 | `CMakeLists.txt`、`tests/test_cli.cpp` | 見下；CLI 測試直接呼叫 `extern "C"` 進入點（同 `core/agent` 的作法 `LINK aos_tick_cli`），驗 add 缺 run 退出碼非 0、add→ls 看得到、rm 後消失、init 寫出的 `every/tick.json` 含 `every_ms` | 40 / 120 |
+| 3 | `CMakeLists.txt` | 見下 |
 
 `ls` 的表（欄位左對齊、兩空白分隔、第一行是欄名；`RUN` 印 `argv: a b c` 或 `ask: …`）：
 routine → `ID  KIND  EVERY/SLOT  LAST_RUN  NEXT  RUN  NOTE`（`NEXT`＝`format_at(routine_next)` 或 `到期`；列無效印 `無效`）；
@@ -159,11 +157,9 @@ aos_add_subcommand(NAME tick      ENTRY aos_tick_cli_main      LIBRARY aos_tick_
 aos_add_subcommand(NAME heartbeat ENTRY aos_heartbeat_cli_main LIBRARY aos_tick_cli SUMMARY "在資料夾裝上心跳（every/tick.json）")
 aos_add_subcommand(NAME routine   ENTRY aos_routine_cli_main   LIBRARY aos_tick_cli SUMMARY "登記／列出／移除固定循環的事務")
 aos_add_subcommand(NAME schedule  ENTRY aos_schedule_cli_main  LIBRARY aos_tick_cli SUMMARY "登記／列出／移除一次性行程")
-aos_add_test(aos_tick_tests SOURCES tests/test_clock.cpp tests/test_table.cpp tests/test_due.cpp tests/test_tick.cpp tests/test_cli.cpp LINK aos_tick_cli)
 ```
 
 `core/CMakeLists.txt` 要加一行 `add_subdirectory(tick)`（放 `agent` 之後）——**這行由隊長合併時加**，三條都不動它。
-測試的 `TempDir`／`write_file`／`read_file` 照 `core/loop/tests/test_support.hpp` 的樣子在 `tests/test_support.hpp` 抄一份（第 2 條寫，第 1、3 條 include）。
 
 ## 驗收（隊長跑）
 

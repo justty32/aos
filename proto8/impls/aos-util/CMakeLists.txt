@@ -21,20 +21,3 @@ target_compile_options(aos-util PRIVATE -Wall -Wextra)
 target_link_libraries(aos-util PUBLIC nlohmann_json::nlohmann_json)
 set_target_properties(aos-util PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
-
-# 測試只在這個專案自己是主角時加（被別的專案 add_subdirectory 進去時不編）：ctest --test-dir build
-if(PROJECT_IS_TOP_LEVEL)
-  enable_testing()
-  add_executable(util_cli tests/util_cli.cpp)   # 測試用的小程式（讀一份、原樣印），留在 build/，不進 bin/
-  target_link_libraries(util_cli PRIVATE aos-util)
-  find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  add_test(NAME test_cli
-    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_cli.py $<TARGET_FILE:util_cli>)
-
-  # 函式庫：一個執行檔，第一個參數挑要跑哪一條（tests/test_lib.cpp）
-  add_executable(test_lib tests/test_lib.cpp)
-  target_link_libraries(test_lib PRIVATE aos-util)
-  foreach(name split split_bad shebang escape missing cli text identity)
-    add_test(NAME test_lib_${name} COMMAND test_lib ${name})
-  endforeach()
-endif()

@@ -38,11 +38,11 @@
 
 | 路徑 | 負責 |
 |------|------|
-| 根 `CMakeLists.txt` | 頂層：`option()`、vcpkg toolchain 解析（在 `project()` 之前）、`find_package(nlohmann_json/CURL/Catch2)`、`add_subdirectory(common/core/modules/app)`、三個傘狀 target、合併版、`install`／`export` |
+| 根 `CMakeLists.txt` | 頂層：`option()`、vcpkg toolchain 解析（在 `project()` 之前）、`find_package(nlohmann_json/CURL)`、`add_subdirectory(common/core/modules/app)`、三個傘狀 target、合併版、`install`／`export` |
 | `core/CMakeLists.txt`／`modules/CMakeLists.txt` | 兩份小專案清單。新增小專案就是往其中一份加一行 `add_subdirectory()`；它們各自 `set(AOS_SUBPROJECT_CATEGORY ...)` 來決定分類 |
-| `cmake/AosSubproject.cmake` | 三個共用函式：`aos_add_subproject()`（產出 OBJECT＋SHARED 兩個 target、把私有相依從匯出介面剝掉、檢查保留名稱與分類）、`aos_add_subcommand()`（登記子命令＋三道守衛）、`aos_add_test()` |
+| `cmake/AosSubproject.cmake` | 兩個共用函式：`aos_add_subproject()`（產出 OBJECT＋SHARED 兩個 target、把私有相依從匯出介面剝掉、檢查保留名稱與分類）、`aos_add_subcommand()`（登記子命令＋三道守衛） |
 | `cmake/aos-config.cmake.in` | 讓外部專案 `find_package(aos CONFIG)`。`@AOS_FIND_DEPENDENCIES@` 由根 CMakeLists 從各小專案登記的 `PUBLIC_PACKAGES` 產生 |
-| 根 `vcpkg.json` | manifest，有 `builtin-baseline`；測試相依（Catch2）放在 `"tests"` feature |
+| 根 `vcpkg.json` | manifest，有 `builtin-baseline` |
 | `CMakePresets.json` | `default`／`release`／`merged`。vcpkg toolchain 由根 `CMakeLists.txt` 解析（`CMAKE_TOOLCHAIN_FILE` → `VCPKG_ROOT` → `~/dev/vcpkg`），本機不用設環境變數 |
 | `common/CMakeLists.txt` | `aos::common` 與 `aos_common_private`（見上面 common/ 那節）|
 | `core/inst/CMakeLists.txt` | 小專案的**參考範本**（核心類）：`aos_add_subproject()`（目前不需要任何 DEPS 參數）＋ CLI 的 OBJECT library ＋ `aos_add_subcommand()` ＋公開 API／C ABI 測試 |

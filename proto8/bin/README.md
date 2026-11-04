@@ -1,16 +1,12 @@
 # bin — aos-tick、aos-tools、aos-daemon-ctl、aos-eca-turn、aos-llm、aos-eca-screen、aos-eca-llm（Python）
 
-← [proto8](../README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)｜demo：[demo](../demo/README.md)｜C++ 實作：[impls](../impls/README.md)｜測試：`python3 -m unittest discover -s proto8/tests`（先建 impls，見 [testing](../../wf/workflows/testing.md)）
+← [proto8](../README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)｜demo：[demo](../demo/README.md)｜C++ 實作：[impls](../impls/README.md)
 
 > **C++（[proto8/impls](../impls/README.md)）是唯一實作**（使用者 10-23：「python版本可以刪掉了。aos-exec/loop/daemon都用C++」；fsm 和 tick，使用者選「fsm 也改用 C++、tick 先留 Python」）：
 > `aos-exec`、`aos-loop`、`aos-fsm`、`aos-daemon` 的說明在各自的 README：[aos-exec](../impls/aos-exec/README.md)、[aos-loop](../impls/aos-loop/README.md)、[aos-fsm](../impls/aos-fsm/README.md)、[aos-daemon](../impls/aos-daemon/README.md)；inst 是 C lib [inst](../impls/inst/README.md)。
 > 這裡是 Python 的 `aos-tick`、`aos-tools`、`aos-daemon-ctl`、`aos-eca-turn`（都用 `aos_flags.py` 的旗標解析 `parse`）；完整說明在各支的檔頭 docstring。
 
-```
-python3 -m unittest discover -s proto8/tests           # C++ 的在 impls/<名>/bin/、Python 的在這裡（tests/aos_bins.py 放 PATH）
-```
-
-aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<名>/bin/` 與這個 `bin/`（aos-tick、aos-tools…）放進 PATH，`tests/aos_bins.py` 就是這樣做（11-04 前 `demo/run.sh` 也是）。
+aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<名>/bin/` 與這個 `bin/`（aos-tick、aos-tools…）放進 PATH。
 
 ## 分檔目錄
 
