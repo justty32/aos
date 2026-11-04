@@ -17,9 +17,9 @@
 1. **授權**：今天隨意 push；普通事 opus、簡單與雜活 sonnet、規劃 fable；做事的 agent（雜活除外）先讀 wf 規矩、可再派 agent。新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問。**鐵律 1 已刪**（使用者「這個鐵律刪掉，不用ctest」）：驗證＝build 得過＋手跑，見 [testing](workflows/testing.md)。多個 agent 同工作樹一律用 `GIT_INDEX_FILE` 暫存 index 建 commit；不少 agent 直接 push、不動本機 main ref，頂層要自己把本機 main 對齊 origin。
 2. **今天做完並 push**：aos-post 改版收尾與全套驗證；tidy 補對讀、round 條文 13 條照建議落；demo 只留 eca-claude、archive/topdown 刪；aos-eca-turn 開場白改 `--prompt`（沒給＝沒開場白）；thinking 改「月/日/子項」結構並拆大檔；proto8／wf 大檔拆分；舊 proto1～7 封存到根 `archive/`、活文件連結拿掉、code map 舊分冊移出；loop/fsm agent（`demo/agent-fsm`）；**aos-agent 統一介面**（`extras/agent/bin/aos-agent`、`interfaces.json` 宣告、screen／tools／llm 子介面、副本 vs 定義〔`aos-tools`／新 `aos-llm` 改定義〕、`--target`／`AOS_AGENT`、chat、`using-aos-agent.sh`、`AOS_DAEMON_STACK`→`AOS_DAEMON`、daemon 表多 `exec` 與 `def` 欄）；aos-say／aos-listen／aos-eca 刪；四元素審查（[four-elements](../proto8/thinking/2026-11/04/four-elements/README.md)）十題裁定、07 前 5 步做完；**全部測試與 ctest 刪光**（c90f8617）。說明頁 https://claude.ai/artifact/AqwFbS1gLPCwJriyjAdKNA （使用者通勤 review）。
 3. **明天要接**：
-   - **Windows 工作樹對齊**：本機 main 停在 b2d2b5b2、origin 在 f56635ab 之後；工作樹裡的改動全都已在 origin（頂層逐檔比過），但 `reset --hard`／覆寫被權限擋下，等使用者自己 `git reset --hard origin/main` 或允許。
-   - 四元素 08 後 3 步（aos-tools 題 1／8、daemon 題 6／5 後半／3、daemon-ctl add 看 json 題 4、N-63 表題 2）：排在 aos-agent 之後，現在可以做 → [08](../proto8/thinking/2026-11/04/four-elements/README.md)。
-   - 使用者 review artifact 後的回饋；試驗場 `env.sh` 第 13 行使用者自己改成 `AOS_DAEMON`（WAIT_USER）。
+   - 四元素 08 步 5～8（4 步：aos-tools 題 1／8、daemon 題 6／5 後半／3、daemon-ctl add 看 json 題 4、N-63 表題 2）：aos-agent 已收工、可以做，使用者「明天再說」 → [08](../proto8/thinking/2026-11/04/four-elements/08-實作步驟-等aos-agent後.md)。
+   - `AOS_BRAIN_*` 改放哪：使用者「AOS_BRAIN_URL，我不喜歡這個環境變數」「我再想想」 → [aos-agent 06/03](../proto8/thinking/2026-11/04/aos-agent/06-衝突與方向題/03-新題-tools-llm.md)。
+   - 使用者 review artifact（設計總覽 https://claude.ai/artifact/AqwFbS1gLPCwJriyjAdKNA 、指令參考 https://claude.ai/artifact/HLMpsX3T76ndC7E8VQ8Nit ）後的回饋；試驗場 `env.sh` 第 13 行使用者自己改成 `AOS_DAEMON`（WAIT_USER）。
 4. **雜項**：LM Studio 伺服器頂層用 `lms server start` 開在 localhost:1234（qwen3-1.7b），試驗場 `agents/fsm_ann` 用它；WSL clone 已到 f56635ab、aos-daemon 已重建。eca-claude-dir 調查使用者裁「全部都是自己要承擔的風險」。
 
 ## 2026-11-03 晚收工（家機 Manjaro；明天開新 session 接）
