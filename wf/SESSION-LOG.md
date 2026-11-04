@@ -13,7 +13,7 @@
 ## 最新進度
 
 - **open｜`AOS_BRAIN_*` 改放哪**：使用者「AOS_BRAIN_URL，我不喜歡這個環境變數」「我再想想」 → [aos-agent 06/03](../proto8/thinking/2026-11/04/aos-agent/06-衝突與方向題/03-新題-tools-llm.md)
-- **open｜tidy 收斂（11-03 晚起）**：批次與狀態 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)；剩 P1-2、P1-3（NORMS）、P2 尾巴、P3 的 C-52／C-54（[05](workflows/tidy/reports/2026-11-03-收斂/05-11-04晚-P2-P3-P4續.md)）
+- **open｜tidy 收斂（11-03 晚起）**：批次與狀態 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)；P1～P4 除 C-54（等 aos-post 步 9 加註）與 round 那批（原字不動）外都做完，剩使用者裁的題（[07](workflows/tidy/reports/2026-11-03-收斂/07-11-04夜-代定與留給使用者.md)）
 - **open｜介質**：實作八步已做；agent 的輸入是 queue、接單後放 tools（決定 32）那兩題先擱著 → [10-28 medium](../proto8/thinking/2026-10/28/medium/README.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10/29/medium-plan/README.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - **open｜現況地圖十一點**：剩第 1 點（plan 9 式檔案串流）、第 7 點（post／lock 補指令），使用者「之後有遇到再說」 → [map-review § 結論](../proto8/thinking/2026-10/30/map-review/README.md#結論10-31-補)
 - **open｜playground／eca**：開著停著改 history 再繼續（[eca § 之後再改](../proto8/thinking/2026-10/30/eca/09-方向題.md#之後再改停著時改-history-再繼續10-30使用者先記下)）、pi coding agent 只有適配表 → [playground](../proto8/thinking/2026-10/26/playground.md)、統整頁 https://claude.ai/artifact/W7aXZvCPTf1u2qExH6CEMM
