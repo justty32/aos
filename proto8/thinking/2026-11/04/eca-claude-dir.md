@@ -46,3 +46,9 @@
 
 1. **eca 要不要吃工作區的 Claude 設定？**（甲）照現在：跟人在那個資料夾開 Claude Code 一樣，CLAUDE.md、hooks、agents、skills 全吃——好處是 repo 的規矩自動生效；壞處是工作區是 aos 這種「給頂層 agent 用」的 repo 時，eca 會照那套規矩做事。（乙）隔離：cli.json 預設加 `--setting-sources user`（不讀工作區的 settings 與 hooks）＋環境 `CLAUDE_CODE_DISABLE_CLAUDE_MDS=1`（不讀 CLAUDE.md），要吃的那隻自己拿掉。判準：你掛 eca 的工作區，多半是「有 CLAUDE.md 寫給人用的 repo」就選乙，多半是「專門給 eca 的空資料夾」就甲乙沒差。
 2. **stack 預設放工作區，跟「工作區是 git repo」打架**：11-03 你定「預設還是要放工作區」（[stack-where](../03/stack-where.md)）。工作區是 git repo 時，`.stack/` 是未追蹤的雜訊、裡面的 history 也被 claude 讀得到。要不要（甲）照舊、靠 `.gitignore`；（乙）工作區是 git repo 時預設放別處（例如 daemon 的 stack 不在工作區起）？
+
+## 決定（11-04 使用者）
+
+> .claude調查這塊。全部都是自己要承擔的風險
+
+調查列的狀況（信任提問時送字丟信、工作區 hooks／CLAUDE.md 照吃、AOS_STACK 傳進 claude、stack 放工作區、WSL codex 預設模型不能用等）**都不改程式**，算使用者自己要承擔的風險；兩題方向題照現況（eca 照吃工作區設定、stack 照舊放工作區）。
