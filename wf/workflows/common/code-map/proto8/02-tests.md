@@ -36,7 +36,7 @@
 | `test_directive_argv.py`、`test_directive_lenient.py` | 指示詞 `$ref`／`$env`／`$path` 的寫法與寬容規則 |
 | `test_loop.py` | aos-loop：訊號、`interval_ms`、ctl 指令、state 窗 |
 | `test_fsm.py` | aos-fsm：表、`next` 分岔、state 檔、訊號 |
-| `test_daemon.py` | aos-daemon：procs、ctl 增減、不重起、收工、接回 |
+| `test_daemon.py` | aos-daemon：procs、ctl 增減、不重起、收工、接回；`ls --json` 每列有 `exec` 欄（11-04） |
 | `test_aos_daemon_ctl.py` | `bin/aos-daemon-ctl`：add／rm／start／stop／pause／resume／ls／where、sleep／wake |
 | `test_aos_tools.py` | `bin/aos-tools`：三種登記對象、撞名、路徑、`--tooldef` 快取與 `--no-cache` |
 | `test_tick.py` | `bin/aos-tick` 與 fixtures 的 tick |
@@ -58,7 +58,6 @@
 
 | 檔 | 涵蓋 |
 |---|---|
-| `test_human.py` | `aos-say`、`aos-listen`（對臨時組的 eca 定義＋假 claude）；`aos_ws.letter_key`／「最新那封」照處理順序 |
 | `test_aos_mcp.py` | `aos-mcp`：測試自己當 MCP client |
 | `test_grow.py` | `aos-grow`：長上去再縮回、行為不變 |
 | `test_janet.py` | Janet 編成 aos |
@@ -69,11 +68,11 @@
 
 | 檔 | 涵蓋 |
 |---|---|
+| `stack_talk.py` | 測試用：對一個 stack 說一句（`aos_ws.put`）、等它答（11-04 起取代測試裡的 aos-say／aos-listen；直接 aos-exec 跑的不歸 aos-agent 管） |
 | `test_eca_screen.py` | eca 的 screen 子介面（`aos-exec … demo/eca-claude/screen open -d／close／watch`，11-04） |
 | `test_eca_llm.py` | eca 的 llm 子介面（def／stack show／set／reset）、cli_session 讀 stack 的 `llm.json`／`tools.json`（11-04） |
 | `test_aos_llm.py` | `bin/aos-llm`（兩個範本、宣告錯）、agent-fsm 的 `llm/llm.py`、brain.py 讀 stack 副本（11-04） |
 | `test_eca_turn.py` | `bin/aos-eca-turn`：`--one`、`--on-empty`、`--on-busy`；批次順序（無序排最後、照樣答） |
 | `test_agent_fsm.py` | 範本 `demo/agent-fsm`（11-04）：形狀、一問一答、整批、壞信、無序排後、`--prompt`、停著等 vs 收工、腦失敗接著答、工具錯回給腦、`--system`／`--tools`（本機假端點）、暫停改 history、掛 daemon（add／pause／resume／stop／start／rm） |
 | `test_eca.py` | 範本 `demo/eca-claude`（codex 版由它複製換 `cli.json`）：say → 跑 → listen、停著等 |
-| `test_eca_cmd.py` | `extras/eca` 的 `aos-eca`：open／close、start／stop、add／rm、ls／state |
 | `test_agent_cmd.py` | `extras/agent` 的 `aos-agent`（11-04，05/01 的 15 案＋自造 llm／screen 入口 1 案；臨時組的 fsm／eca 定義＋假腦、假 claude）：宣告與 add、找 target、ls／state、start／stop／pause／resume、rm、say／listen／chat、tools／llm 副本、同定義提醒、screen、自己結束的、daemon、using-aos-agent.sh |
