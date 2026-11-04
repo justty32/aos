@@ -25,3 +25,23 @@
 > 這個好了之後，就可以綜合eca和這個的特性，弄出統一的aos-agent介面
 
 決定（11-04）：先做 aos 體系自己的 loop／fsm agent（規劃在 [11-04 loop-fsm-agent](../04/loop-fsm-agent/README.md)，對外接法盡量跟 eca 對齊、不一樣的地方標出來），做完才綜合兩邊弄統一的 aos-agent 介面；統一介面本身還沒規劃。
+
+## 使用者原文（11-04 下午，逐字；aos-agent 介面起頭）
+
+> 然後可以開始來做aos-agent介面了。我這邊先起個頭：agent本身運行所需的東西都會放在其stack，然後我預期是一個agent會佔據一個workspace，所以指定給agent的workspace，會在啟動時被agent放一個.aos/資料夾，裡面放著一些資料，比如信箱的捷徑/位置，daemon的stack位置之類
+
+（上面「一個agent會佔據一個workspace」被下一句翻掉。）
+
+> hmmm，感覺有點捨本逐末了。agent不需要佔據workspace。agent本身就是一支aos proc，由daemon管理(對，先暫時忽略直接aos-exec出來的那些)，所以我們要找agent，那就是透過環境變數AOS_DAEMON，然後藉此找到agent這個aos proc的stack
+
+（頂層問：環境變數是不是現有的 `AOS_DAEMON_STACK`；沒有 workspace 可認時，找 agent 是不是一定要給名字。）
+
+> 1.是的，是AOS_STACK_DAEMON。2.啊，這確實有些麻煩，所以可以做擴充，也就是aos-say會去找當前資料夾下有沒有.aos/，有的話去找agent.json。這就是agent佔據資料夾的證據，如果有其他agent想要佔據資料夾，那就是看這個。當然，agent通常是不需要佔據資料夾的。
+
+> 拍謝，打反了，應該是AOS_DAEMON_STACK
+
+決定（11-04）：
+- agent 運行所需的東西都在它自己的 stack；agent 是 daemon 管的一支 proc（先不管直接 aos-exec 起的）。
+- 找 agent：環境變數 `AOS_DAEMON_STACK`（沿用現有名字）→ daemon 表上的名字 → 那支 proc 的 stack。
+- agent 通常不佔資料夾；可選的擴充：資料夾裡有 `.aos/agent.json`＝被某隻 agent 佔了，`aos-say` 在當前資料夾找到它就知道找誰；別的 agent 想佔同一個資料夾也看這個。
+- 介面的細節等 loop／fsm agent 做完後由 fable 規劃。
