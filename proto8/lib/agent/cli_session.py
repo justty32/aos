@@ -100,7 +100,9 @@ def stack_copies(cfg, tool_dir):
             cfg["registry"] = copy
         llm.update(read_llm(os.path.join(stack, "llm.json")))
     model = llm.get("model")
-    if isinstance(model, str) and model:
+    if "model" in llm and (not isinstance(model, str) or not model):
+        die("CfgBad", "llm.json 的 model 要是非空字串（同 agent-fsm 的 brain.py），不是 %s" % json.dumps(model))
+    if model:
         flags = list(cfg.get("flags", []))
         if "--model" in flags[:-1]:
             flags[flags.index("--model") + 1] = model
