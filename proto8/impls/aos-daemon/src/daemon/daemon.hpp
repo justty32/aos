@@ -30,7 +30,7 @@
 //   其他退出（跑滿、退 10、訊號、別人直接往子 loop 的 ctl 寫 stop）照 11-02 從表上拿掉（使用者 11-03「照舊拿掉」）；自己結束（done）的本次執行不再起（ended_）。
 //   同名改寫法：已在跑的不重起（N-54）。
 // procs_state.json＝{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫；
-// 每列 {pid, started_at_ticks, phase（running／stopping／stopped／sleeping）, code, signal, stack, ws?}；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
+// 每列 {pid, started_at_ticks, phase（running／stopping／stopped／sleeping）, code, signal, stack, exec, ws?}（exec 11-04 晚：起它時的目標，見 exec_of）；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
 // ctl 的 stop（這圈收工）或 pause（整圈暫停）時不調表：不收多的、不起少的、起停也等解除，但照讀兩份 ctl、照寫兩扇 state、照收已在收的、照記自己結束的。
 // log（--enable-logs 才印到 stdout）：行程起來一行、結束一行 {"at", "name", "phase"（running／done／stopped／sleeping）, "pid", "code", "signal", "ws"?}。
 #pragma once
@@ -57,6 +57,12 @@ namespace aos::daemon {
 //   exec 型的物件（is_once）的 exec 要是目標或單子。
 // 壞丟 Error{CfgBad, 原因}（key＝訊息裡的名字）；指示詞解不開丟 DirectiveBad。
 Json read_procs(const Json& v, const std::string& base, const std::string& key);
+
+// procs_state 列上的 exec 欄（11-04 晚，aos-agent 方向題 1，使用者「daemon表多一欄記下來」）：proc 設定裡的目標——
+//   字串、陣列（取第一個）、物件的 exec（同前兩種）——相對的接在 cwd 後面（`檔#/…` 只動 # 前面；只有 `#/…` 的不動），其他照原字串；
+//   內嵌單子、null（信箱接回只留名的）＝回 null。aos-daemon-ctl add 的 loop 型目標是 `<XXX>/loop.json#/exec`（或 loop.json 的 exec 轉絕對）、
+//   exec 型是 XXX（都已絕對）。
+Json exec_of(const Json& spec, const std::string& cwd);
 
 // 這個 proc 是 exec 型嗎（procs § 2）：字串、陣列，或 key 只有 exec（＋ws、stack）的物件＝是；其他（loop 設定、null）＝不是。
 bool is_once(const Json& spec);
@@ -93,7 +99,8 @@ private:
     void hold(const std::string& name, Child& c, const char* phase = "stopped");   // 要留列的退了：印 log、列留成 phase（stopped／sleeping；pid 0、held）
     bool settle(Child& c);                // 收的途中看一眼：退了＝phase stopped、回 true；SIGTERM 過了期限還在＝SIGKILL 整群＋底下自成一群的（只送一次）
     bool look(const std::string& name, Child& c, bool stop);   // 不調表地看一眼（見 daemon.cpp）；回 true＝結束了、要拿掉
-    Child start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws = Json());   // 照寫法起（spawn／spawn_exec）；kept_ws＝spec 是 null 時用的 ws（列上記的）
+    Child start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws = Json(),
+                const Json& kept_exec = Json());   // 照寫法起（spawn／spawn_exec）；kept_ws／kept_exec＝spec 是 null 時用的 ws／exec 欄（列上記的）
     std::string cell_of(const std::string& name, const Json& spec) const;   // proc 的 stack：寫了 stack＝它，沒寫＝$AOS_STACK/procs/<名字>
     void read_procs_ctl();                // 讀 procs_ctl.json：好的進 pctl_good_、清 pctl_warning_；壞的不採用、原因進 pctl_warning_；檔不在＝不動
     std::optional<std::string> check_lists(Json& doc, const aos::Resolved& where);   // procs、procs_added、三個名字陣列
@@ -117,7 +124,7 @@ private:
 
     Json procs_ = Json::object();                        // daemon.json 的 procs
     std::string cwd_;                                    // 子項的 cwd＝daemon 起來時的 cwd
-    std::string dstack_;                                 // 給子項的 AOS_DAEMON_STACK＝stack_ 轉絕對、結尾 /；預設小格也從它拼
+    std::string dstack_;                                 // 給子項的 AOS_DAEMON＝stack_ 轉絕對、結尾 /；預設小格也從它拼
     std::string pctl_path_;                              // procs_ctl.json（空＝不開）
     std::string pstate_path_;                            // procs_state.json（空＝不開）
     Json pctl_good_ = Json::object();                    // 最後一份好的 procs_ctl（一份都沒讀到過＝{}）

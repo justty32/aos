@@ -41,7 +41,7 @@ class EcaCtl(unittest.TestCase):
         (self.tpl / "loop.json").write_text(json.dumps({"exec": [str(TURN), "--on-empty", "idle", str(self.tpl)], "interval_ms": 100,
                                                         "ctl": "ctl.json", "state": "state.json"}))
         (self.tpl / "_entry").write_text(json.dumps(["aos-loop", "loop.json"]))
-        self.ds = self.tmp / "dstack"                                # daemon 的 $AOS_STACK＝AOS_DAEMON_STACK
+        self.ds = self.tmp / "dstack"                                # daemon 的 $AOS_STACK＝AOS_DAEMON
         self.ds.mkdir()
         self.daemon = None
         self.socks = []
@@ -61,7 +61,7 @@ class EcaCtl(unittest.TestCase):
                  CLAUDE_CONFIG_DIR=str(self.tmp / "claude-home"), FAKE_TRANSCRIPTS="1",
                  BROKEN=str(self.broken))
         if daemon:
-            e["AOS_DAEMON_STACK"] = str(self.ds)
+            e["AOS_DAEMON"] = str(self.ds)
         e.update(extra or {})
         return e
 
@@ -141,13 +141,13 @@ class EcaCtl(unittest.TestCase):
         return (r.returncode, (r.stderr.split() + ["", ""])[1])
 
     def test_daemon_missing(self):
-        """AOS_DAEMON_STACK 沒設＝DaemonMissing；資料夾在、daemon 沒在跑（沒有 procs_state、或它的 pid＋started_at_ticks 對不上；11-02 起沒有心跳）＝同。
-        11-02 改名：只設舊的 AOS_DAEMON＝DaemonMissing、訊息提示 AOS_DAEMON_STACK；給舊旗標 --daemon＝FlagUnknown。"""
+        """AOS_DAEMON 沒設＝DaemonMissing；資料夾在、daemon 沒在跑（沒有 procs_state、或它的 pid＋started_at_ticks 對不上；11-02 起沒有心跳）＝同。
+        11-04 晚改名：只設舊的 AOS_DAEMON_STACK＝DaemonMissing、訊息提示 AOS_DAEMON；給舊旗標 --daemon-stack＝FlagUnknown。"""
         self.assertEqual(self.code(self.ctl("ls", env=self.env(daemon=False))), (1, "DaemonMissing"))
-        r = self.ctl("ls", env=self.env({"AOS_DAEMON": str(self.ds)}, daemon=False))
+        r = self.ctl("ls", env=self.env({"AOS_DAEMON_STACK": str(self.ds)}, daemon=False))
         self.assertEqual(self.code(r), (1, "DaemonMissing"))
-        self.assertIn("AOS_DAEMON_STACK", r.stderr)
-        self.assertEqual(self.code(self.ctl("--daemon", str(self.ds), "ls")), (1, "FlagUnknown"))
+        self.assertIn("改設 AOS_DAEMON", r.stderr)
+        self.assertEqual(self.code(self.ctl("--daemon-stack", str(self.ds), "ls")), (1, "FlagUnknown"))
         self.assertEqual(self.code(self.ctl("ls")), (1, "DaemonMissing"))
         (self.ds / "procs_state.json").write_text(json.dumps({"procs": {}, "pid": 999999999,
                                                               "started_at_ticks": 1}))

@@ -10,7 +10,7 @@
 | `src/main.cpp` | 命令列 `aos-loop [旗標] loop.json [-- 參數...]` |
 | `src/engine/loop.cpp` | 每次怎麼走、`log_line`（`--enable-logs`） |
 | `src/engine/window.cpp` | 窗：`read_ctl`（ctl 指令 `cmd`／`max`／`interval_ms`／`seq`，比內容判新舊）、`write_state`（有變才寫）＋子類別的 `write_more` |
-| `src/engine/config.cpp` | `resolve_keys`（設定檔與 ctl 的指示詞，daemon、fsm 共用）、`Loop` 建構子（旗標 ＞ 設定檔 ＞ 預設）、`parse_target`、`resolve_exec`、`place_inline`、`loop_cli`、`add_args` |
+| `src/engine/config.cpp` | `resolve_keys`（設定檔與 ctl 的指示詞，daemon、fsm 共用）、`Loop` 建構子（旗標 ＞ 設定檔 ＞ 預設；`ctl`／`state` 沒寫＝`ctl.json`／`state.json`、`null`＝不開，11-04）、`parse_target`、`resolve_exec`、`place_inline`、`loop_cli`、`add_args` |
 | `src/engine/engine.hpp` | engine 的內部標頭 |
 | `src/run/run.cpp`、`src/run/run.hpp` | `run_once`：目標交給 `run_folder`、單子交給 `run_inline` |
 | `src/run/folder.cpp` | fork 子行程呼叫 aos-exec 的 `run_cli`、轉訊號 |
@@ -25,7 +25,7 @@
 |---|---|
 | `src/main.cpp` | 跑一格：`run_once` → `next_for` 查表 → 查到寫 state 退 0、查不到以格的碼退；訊號照表寫完再 128＋N |
 | `src/table/table.cpp`、`src/table/table.hpp` | `read_table`（解指示詞、單子記 `exec_bases`）、`check`（開跑查整張表，壞＝`CfgBad`）、`pick`、`next_for`（`next` 是字串或 `{結束碼: 狀態名}`） |
-| `src/state/state.cpp`、`src/state/state.hpp` | `state.txt` 的讀（去頭尾 Unicode 空白、`StateBad`）與原子寫 |
+| `src/state/state.cpp`、`src/state/state.hpp` | `stage.txt`（11-04 前叫 `state.txt`）的讀（去頭尾 Unicode 空白、`StateBad`）與原子寫 |
 | `src/common/common.hpp` | 內部共用標頭 |
 | `tests/test_cli.py` | 命令列黑箱（跑 demo 的 `test_demo.py` 11-04 隨 demo 刪了） |
 
@@ -34,10 +34,10 @@
 | 檔 | 負責什麼 |
 |---|---|
 | `src/main.cpp` | 命令列 `aos-daemon [旗標] daemon.json [-- 參數...]` |
-| `src/daemon/daemon.cpp`、`src/daemon/daemon.hpp` | 名單 `procs`：`read_procs`、`is_once`（看寫法判 exec 型）、`adopt`（接回）、`tend`、`reconcile`、`halt`／`term`／`hold`／`look`／`start`、`cell_of`、`finish`（收工；還在跑的 loop 型留成 `sleeping`） |
+| `src/daemon/daemon.cpp`、`src/daemon/daemon.hpp` | 名單 `procs`：`read_procs`、`is_once`（看寫法判 exec 型）、`adopt`（接回）、`tend`、`reconcile`、`halt`／`term`／`hold`／`look`／`start`、`cell_of`、`exec_of`（列上的 `exec` 欄，11-04 晚）、`finish`（收工；還在跑的 loop 型留成 `sleeping`） |
 | `src/daemon/windows.cpp` | `procs_ctl.json` 的讀與驗（`read_procs_ctl`、`check_lists`、`check_once`）、`procs_state.json` 的寫（`write_more`、超過 100 列切 `write_parts`、`clean_parts`） |
 | `src/daemon/mailbox.cpp` | 信箱 `procs_ctl_mailbox`：`open_mailbox`（`cur/` 殘骸照 aos-post 的 `sort_letters` 排）、`take_letters`（`take_all`、`see`）、`apply_letter`（`procs_added`／`removed`／`stopped`／`started`）、`done_letters`（`reply`、`done`） |
-| `src/child/child.cpp`、`src/child/child.hpp` | 子項：建小格、寫小格的 `loop.json`、`spawn`／`spawn_exec`、`launch`（setsid、`AOS_STACK`、`AOS_WS`、`AOS_DAEMON_STACK`）、`Child` 與狀態列 |
+| `src/child/child.cpp`、`src/child/child.hpp` | 子項：建小格、寫小格的 `loop.json`、`spawn`／`spawn_exec`、`launch`（setsid、`AOS_STACK`、`AOS_WS`、`AOS_DAEMON`）、`Child` 與狀態列（`row`：…`stack`、`exec`、`ws`?） |
 | `src/common/common.hpp` | 內部共用標頭 |
 | `tests/test_cli.py` | 命令列黑箱（跑 demo daemon、daemon-2、daemon-3 的 `test_demo.py` 11-04 隨 demo 刪了） |
 

@@ -6,7 +6,8 @@
 10-30 eca 子項的工作區 ws（thinking 2026-10-30-eca 衝突 1）：子項物件寫 ws＝起它時設 AOS_WS，沒寫＝繼承 daemon 的。
 11-02（thinking 2026-11-02-state-window）：daemon 自己的窗慣用名 ctl.json／state.json（白天改 daemon_*，11-02 晚改回，thinking 2026-11-02-ctl-state-names）；子項結束（done／stopped）就從
 procs_state 的表上拿掉，結束的 phase／code 改看 daemon 的 log（--enable-logs 時 stdout 一行一個 JSON，ended()）。
-11-02（thinking 2026-11-02-resident-bob 衝突 2）：子項的環境多 AOS_DAEMON_STACK＝daemon 的 stack（絕對、結尾 /）。"""
+11-02（thinking 2026-11-02-resident-bob 衝突 2）：子項的環境多 AOS_DAEMON＝daemon 的 stack（絕對、結尾 /；11-04 晚改名，舊名不認）。
+11-04 晚（aos-agent 方向題 1，使用者「daemon表多一欄記下來」）：procs_state 每列多一欄 exec＝起它時的目標（絕對）。"""
 import json, os, signal, subprocess, tempfile, time, unittest
 from pathlib import Path
 import own_error  # noqa: E402
@@ -170,7 +171,7 @@ class T(unittest.TestCase):
         self.assertEqual((p.returncode, err, st["phase"], st["ctl_seq"]), (0, "", "stopped", 1))
         # 10-23 命名統合：daemon 收掉的子項＝stopped（統合前叫 exited）；每列 {pid, started_at_ticks, phase, code, signal, stack}（11-03 多 stack）
         self.assertNotIn("procs", st)   # 10-29 拆窗：子項表在 procs_state.json
-        self.assertEqual({frozenset(r) for r in k.values()}, {frozenset({"pid", "started_at_ticks", "phase", "code", "signal", "stack"})})
+        self.assertEqual({frozenset(r) for r in k.values()}, {frozenset({"pid", "started_at_ticks", "phase", "code", "signal", "stack", "exec"})})
         # 11-02 收掉的從表上拿掉；11-03 sleep／wake 起收工時還在跑的 loop 型列留成 sleeping（pid null），log 記一行 sleeping
         self.assertEqual(({n: (r["phase"], r["pid"]) for n, r in self.kids().items()}, {n: (d["phase"], d["pid"]) for n, d in ended(out).items()}),
                          ({n: ("sleeping", None) for n in k}, {n: ("sleeping", r["pid"]) for n, r in k.items()}))
@@ -504,10 +505,10 @@ class T(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertTrue(r.stderr.startswith("aos-daemon: ") and "ws" in r.stderr, r.stderr)
 
-    # ---- 11-02 子項的 AOS_DAEMON_STACK（thinking 2026-11-02-resident-bob 衝突 2、2026-11-02-daemon-env 方向題 2；N-63 11-02 補）
+    # ---- 11-02 子項的 AOS_DAEMON（11-04 晚改名；thinking 2026-11-02-resident-bob 衝突 2、2026-11-02-daemon-env 方向題 2；N-63 11-02 補）
 
     def test_children_get_daemon_stack(self):
-        # loop 型（身體）、exec 型子項都看到 AOS_DAEMON_STACK＝daemon 的 stack（絕對、結尾 /）；AOS_DAEMON 開頭的只有這一個。
+        # loop 型（身體）、exec 型子項都看到 AOS_DAEMON＝daemon 的 stack（絕對、結尾 /）；AOS_DAEMON 開頭的只有這一個。
         # daemon 自己的環境沒設它（env_of 濾掉 AOS_）；daemon 的 $AOS_STACK 是相對的也轉成絕對（子項會 cd 走）
         self.prog("pe", 'env | grep "^AOS_DAEMON" > "$AOS_STACK/denv"\n')
         for st in (str(self.s), "stack"):
@@ -515,7 +516,43 @@ class T(unittest.TestCase):
                            env={"AOS_STACK": st})
             self.assertEqual((r.returncode, r.stderr), (0, ""))
             for n in ("bob", "j"):
-                self.assertEqual((self.s / "procs" / n / "denv").read_text(), "AOS_DAEMON_STACK=%s/\n" % self.s, (st, n))
+                self.assertEqual((self.s / "procs" / n / "denv").read_text(), "AOS_DAEMON=%s/\n" % self.s, (st, n))
+
+
+    # ---- 11-04 晚 列上的 exec 欄（aos-agent 方向題 1，使用者「daemon表多一欄記下來」）
+
+    def test_rows_have_exec(self):
+        # aos-daemon-ctl add 的 loop 型（內嵌單子＝<XXX>/loop.json#/exec）、exec 型（XXX），daemon.json 寫的相對目標（照 daemon 的 cwd 轉絕對）：
+        # ls --json 每列都有 exec、是絕對路徑；daemon 收工再開（adopt 接回、wake）照舊表帶過來
+        ctl = tool("aos-daemon-ctl")
+        ag = self.t / "ag"
+        ag.mkdir()
+        (ag / "loop.json").write_text(json.dumps({"exec": {"argv": ["sh", "-c", LONG]}, "max": 1}))
+        doc = {"state": "state.json", "ctl": "ctl.json", "procs_ctl_mailbox": "procs_ctl_mailbox", "procs": {"b": self.long()}}
+        p = self.start(doc)
+        self.assertTrue(until(lambda: (self.s / "procs_ctl_mailbox" / "new").is_dir()))
+        e = env_of({"AOS_DAEMON": str(self.s)})
+        for args in (("add", str(ag)), ("add", "--name", "j", str(self.t / "long"))):
+            r = subprocess.run([ctl, *args], cwd=str(self.t), env=e, capture_output=True, text=True, timeout=30)
+            self.assertEqual((r.returncode, r.stderr), (0, ""), args)
+
+        def ls():
+            r = subprocess.run([ctl, "ls", "--json"], cwd=str(self.t), env=e, capture_output=True, text=True, timeout=30)
+            return json.loads(r.stdout)["procs"]
+        want = {"ag": str(ag / "loop.json") + "#/exec", "b": os.path.join(os.path.realpath(self.t), "long"), "j": str(self.t / "long")}
+        k = until(lambda: set(ls()) == set(want) and ls())
+        self.assertTrue(k)
+        self.assertEqual({n: r["exec"] for n, r in k.items()}, want)
+        self.assertTrue(all(os.path.isabs(r["exec"]) for r in k.values()))
+        self.ctl({"cmd": "stop", "seq": 1})
+        p.communicate(timeout=30)
+        self.assertEqual({n: (r["phase"], r["exec"]) for n, r in self.kids().items()}, {"ag": ("sleeping", want["ag"]), "b": ("sleeping", want["b"])})
+        doc.pop("procs")
+        p = self.start(doc)   # 再開：adopt 接回 sleeping 的列（信箱模式只留名、沒有設定）→ wake，exec 欄照舊
+        k = until(lambda: all(r["phase"] == "running" for r in ls().values()) and ls())
+        self.assertEqual({n: r["exec"] for n, r in k.items()}, {"ag": want["ag"], "b": want["b"]})
+        self.ctl({"cmd": "stop", "seq": 2})
+        p.communicate(timeout=30)
 
 
 if __name__ == "__main__":

@@ -164,6 +164,18 @@ static bool is_target(const Json& t) {   // aos-exec 的目標：字串或 [目�
     return true;
 }
 
+Json exec_of(const Json& spec, const std::string& cwd) {
+    Json t = spec.is_object() ? spec.value("exec", Json()) : spec;
+    if (t.is_array() && !t.empty()) {
+        t = Json(t[0]);
+    }
+    if (!t.is_string()) {
+        return Json();   // 內嵌單子、null（只留名）、設定沒寫 exec
+    }
+    std::string v = t.get<std::string>();
+    return v.empty() || v[0] == '#' ? Json(v) : Json(aos::join(cwd, v));
+}
+
 bool is_once(const Json& spec) {
     if (spec.is_string() || spec.is_array()) {
         return true;
@@ -312,7 +324,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         throw Error{code::CfgBad, "adopt 要是 true／false"};
     }
     cwd_ = std::filesystem::current_path().string();
-    // 給子項的 AOS_DAEMON_STACK（11-02，resident-bob 衝突 2）：stack_ 轉絕對、結尾 /，跟 aos-exec 給的 AOS_STACK 同形；預設小格也從它拼（列上的 stack 一律絕對）
+    // 給子項的 AOS_DAEMON（11-02，resident-bob 衝突 2；11-04 晚改名，舊名不認）：stack_ 轉絕對、結尾 /，跟 aos-exec 給的 AOS_STACK 同形；預設小格也從它拼（列上的 stack 一律絕對）
     dstack_ = aos::abspath(stack_);
     if (dstack_ != "/") {
         dstack_ += "/";
@@ -356,6 +368,9 @@ void Daemon::adopt() {
         c.stack = st.is_string() && !st.get<std::string>().empty() ? st.get<std::string>() : cell_of(name, Json());
         if (r.value("ws", Json()).is_string()) {
             c.ws = r["ws"];
+        }
+        if (r.value("exec", Json()).is_string()) {
+            c.exec = r["exec"];   // 11-04 晚：照舊表帶過來（信箱模式接回的列沒有設定，exec 欄只能從這裡來）
         }
         if (phase == "stopped" || phase == "sleeping") {   // stopped 的列（11-03 procs § 2c 第 7 條）：接成 stopped、不起、不判活；名字進底的 stopped 集合
             c.phase = phase.get<std::string>();            // sleeping 的列（11-03 sleep／wake）：同樣接成列、不判活，但不進 stopped 集合＝reconcile 第一圈就 wake
@@ -604,9 +619,11 @@ std::string Daemon::cell_of(const std::string& name, const Json& spec) const {
     return dstack_ + "procs/" + name;   // 預設小格（11-03 原 loops/<名字>/）
 }
 
-Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws) {
+Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws, const Json& kept_exec) {
     bool deep = cell != dstack_ + "procs/" + name;   // 不是預設小格＝proc 自己的 stack：不在就 mkdir -p
-    return is_once(spec) ? spawn_exec(name, cell, deep, spec, cwd_, dstack_) : spawn(name, cell, deep, spec, cwd_, dstack_, kept_ws);
+    Child c = is_once(spec) ? spawn_exec(name, cell, deep, spec, cwd_, dstack_) : spawn(name, cell, deep, spec, cwd_, dstack_, kept_ws);
+    c.exec = spec.is_null() ? kept_exec : exec_of(spec, cwd_);   // 11-04 晚：列上的 exec 欄
+    return c;
 }
 
 void Daemon::reconcile(const Json& want, const Names& stopped) {
@@ -650,7 +667,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped) {
         if (at != index_.end()) {
             Child& c = at->second->second;
             if (c.held && stopped.count(n) == 0) {   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（基準線）
-                Child nc = start(n, spec, c.stack, c.ws);   // 信箱接回只留名的（spec null）：ws 照列上的（11-03 晚：不然 wake 後表上 ws 變空）
+                Child nc = start(n, spec, c.stack, c.ws, c.exec);   // 信箱接回只留名的（spec null）：ws 照列上的（11-03 晚：不然 wake 後表上 ws 變空）
                 c = nc;
                 log_child(n, c);
                 flush_table();
@@ -666,6 +683,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped) {
             c.held = true;
             c.own = false;
             c.stack = cell_of(n, spec);
+            c.exec = exec_of(spec, cwd_);
             add(n, c);
         } else {
             add(n, start(n, spec, cell_of(n, spec)));

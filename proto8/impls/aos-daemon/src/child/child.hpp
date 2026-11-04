@@ -10,7 +10,7 @@
 //               $AOS_STACK 不在＝MkdirFailed）
 //               alive：自己生的看 waitpid（結束就記 code／signal）；接回來的看 /proc 的 started_at_ticks 還對不對
 //               row：寫進 procs_state 的那一列
-//               ws：設定寫了 ws＝子行程的環境多設 AOS_WS＝它；沒寫＝照舊繼承 daemon 的。AOS_DAEMON_STACK 一律設成 daemon 的 stack（dstack：絕對、結尾 /）
+//               ws：設定寫了 ws＝子行程的環境多設 AOS_WS＝它；沒寫＝照舊繼承 daemon 的。AOS_DAEMON 一律設成 daemon 的 stack（dstack：絕對、結尾 /；11-04 晚改名，舊名不認）
 #pragma once
 
 #include "common/common.hpp"
@@ -43,6 +43,8 @@ struct Child {
     std::chrono::steady_clock::time_point deadline;
     bool killed = false;
     Json ws;                            // null 或起它時給的工作區（絕對路徑；子行程的 AOS_WS）——起的那一刻的值，名單後來改了 ws 也不變（已在跑的不重起，N-54）
+    Json exec;                          // null 或起它時的目標（11-04 晚，aos-agent 方向題 1「daemon表多一欄記下來」）：Daemon 填（exec_of）；
+                                        // adopt 接回的照舊表帶過來；名單後來改了也不變（同 ws）
 };
 
 // 起一支子 loop。cell＝小格（proc 的 stack，絕對、結尾不帶 /；deep＝mkdir -p，不然只建 cell 與上一層）、spec＝loop 設定物件
@@ -51,7 +53,7 @@ struct Child {
 // spec 有 ws（read_procs 已轉絕對）＝子行程設 AOS_WS＝它；ws、stack 都不寫進 loop.json（daemon 的 key，不是 loop 的）。
 // 小格建不了 MkdirFailed、loop.json 寫不了 WriteFailed、stderr 開不了／fork 失敗 LaunchFailed。
 // aos-exec 自己的錯（PATH 上沒有 aos-loop…）寫在小格的 stderr.txt、子 loop 以 1 結束（phase done、code 1）。
-// dstack＝daemon 的 stack（絕對、結尾 /）：子行程設成 AOS_DAEMON_STACK（11-02）。spawn_exec 同。
+// dstack＝daemon 的 stack（絕對、結尾 /）：子行程設成 AOS_DAEMON（11-02；11-04 晚改名，舊名不認）。spawn_exec 同。
 Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
             const std::string& dstack, const Json& kept_ws = Json());
 
@@ -66,7 +68,8 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
 // 還活著嗎（自己生的：結束了就收屍、記 code／signal）。
 bool alive(Child& c);
 
-// procs_state 裡的一列：{"pid", "started_at_ticks", "phase", "code", "signal", "stack"}，起它時給了工作區才多一欄 "ws"。
+// procs_state 裡的一列：{"pid", "started_at_ticks", "phase", "code", "signal", "stack", "exec"}，起它時給了工作區才多一欄 "ws"。
+// exec（11-04 晚）一律寫：起它時的目標（絕對）或 null。
 // held（stopped 的列）的 pid、started_at_ticks 是 null。
 Json row(const Child& c);
 

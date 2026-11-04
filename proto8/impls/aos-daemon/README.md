@@ -5,7 +5,7 @@
 **一句話：`aos-daemon [旗標] daemon.json`——一個開了窗的 aos-loop，外加一張 proc 的表：照表把 proc（經 aos-exec）起起來、看著、停掉、收掉。**
 一個 lib（`lib/libaos-daemon.a`，沒有公開標頭）加一支薄命令列（`bin/aos-daemon`）。連 [aos-loop](../aos-loop/README.md) 的公開 API
 （骨架 `aos::loop::Loop`；它又帶進 aos-exec、inst、aos-util、aos-directive）與 [aos-post](../aos-post/README.md) 的庫（信箱；它再帶進 aos-lock）。全家慣例見 [impls/README.md](../README.md)。
-規範（語意以它為準）：[N-28、N-54](../../docs/NORMS/04-基礎設施-loop與daemon.md)；窗 [N-06～N-17](../../docs/NORMS/05-基礎設施-窗.md)；`AOS_DAEMON_STACK` [N-63、N-64](../../docs/NORMS/10-基礎設施-定義與工作區.md)。
+規範（語意以它為準）：[N-28、N-54](../../docs/NORMS/04-基礎設施-loop與daemon.md)；窗 [N-06～N-17](../../docs/NORMS/05-基礎設施-窗.md)；`AOS_DAEMON` [N-63、N-64](../../docs/NORMS/10-基礎設施-定義與工作區.md)。
 
 照「資料夾＝程式」的做法寫（使用者「daemon也用新做法重寫吧」、「照預設」，[ideas § 25](../../thinking/2026-10/19/ideas/README.md)）。名詞見 [thinking procs](../../thinking/2026-11/03/procs/README.md)：
 daemon 管的子項不論包在 aos-loop 裡一直跑的（loop 型）還是 aos-exec 跑一次的（exec 型）都叫 **proc**；**一份名單 `procs`**、**看寫法決定怎麼起**（沒有 `kind`）、**每項可寫自己的 `stack`**、
@@ -38,7 +38,7 @@ AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法�
 | [02-看寫法決定怎麼起](docs/02-看寫法決定怎麼起.md) | 用法（續）：看寫法決定怎麼起、每個 proc 自己的 stack |
 | [03-起-停-暫停](docs/03-起-停-暫停.md) | 用法（續）：起、停、暫停、收工與開門：sleep／wake、log |
 | [04-兩個手把-兩扇狀態窗](docs/04-兩個手把-兩扇狀態窗.md) | 用法（續）：兩個手把、兩扇狀態窗、procs_ctl 只寫變動（N-54） |
-| [05-信箱](docs/05-信箱.md) | 用法（續）：信箱（N-28、N-16）、子項的工作區 ws、子項的 AOS_DAEMON_STACK、指示詞與切檔（N-28、N-45） |
+| [05-信箱](docs/05-信箱.md) | 用法（續）：信箱（N-28、N-16）、子項的工作區 ws、子項的 AOS_DAEMON、指示詞與切檔（N-28、N-45） |
 | [06-結束碼等](docs/06-結束碼等.md) | 用法（續）：結束碼；元素；實作注意 |
 | [07-建置與測試](docs/07-建置與測試.md) | 建置與測試 |
 

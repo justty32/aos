@@ -17,7 +17,7 @@ from aos_bins import ROOT, path_with  # noqa: E402
 HUMAN = ROOT / "extras" / "human" / "bin"
 SAY, LISTEN = (str(HUMAN / n) for n in ("aos-say", "aos-listen"))
 DAN = str(Path(__file__).resolve().parent / "fixtures" / "agent-eve")   # 舊協議（讀工作區 new/、不收 queue）：10-30 晚真腦實測發現 2；11-02 晚 agent-dan 刪除，改用它的複本 agent-eve（11-04 demo 刪了，搬到 tests/fixtures）
-CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_DAEMON_STACK",
+CLEAR = ("AOS_WS", "AOS_ENTRY", "AOS_STACK", "AOS_BRAIN_URL", "AOS_BRAIN_MODEL", "AOS_BRAIN_KEY", "AOS_DAEMON",
          "TMUX", "CODEX_HOME", "FAKE_TRANSCRIPTS")
 SIG = re.compile(r"^\d{12}\.\d{20}\.\d+\.\d+$")
 TURN = ROOT / "bin" / "aos-eca-turn"                # 10-30 eca：外部 coding agent 的一輪（10-31 前是 lib/eca/turn 格）
@@ -121,7 +121,7 @@ class SayTest(Base):
             d.mkdir(exist_ok=True)
             (d / "procs_state.json").write_text(json.dumps({"procs": rows}))
         table(bob={"phase": "stopped", "pid": None, "stack": str(cell)})
-        r = run(SAY, "--ws", str(self.ws), "--stack", str(cell), "x")       # 預設小格：不用 AOS_DAEMON_STACK 也認得
+        r = run(SAY, "--ws", str(self.ws), "--stack", str(cell), "x")       # 預設小格：不用 AOS_DAEMON 也認得
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("bob 是 stopped", r.stderr)
         self.assertIn("aos-daemon-ctl start bob", r.stderr)
@@ -130,13 +130,13 @@ class SayTest(Base):
         (cell / "eca.json").write_text(json.dumps({"kind": "claude"}))
         r = run(SAY, "--ws", str(self.ws), "--stack", str(cell), "x")
         self.assertIn("aos-eca start bob", r.stderr)
-        table(c2={"phase": "stopped", "pid": None, "stack": str(other) + "/"})   # 別處的 stack：看 AOS_DAEMON_STACK
+        table(c2={"phase": "stopped", "pid": None, "stack": str(other) + "/"})   # 別處的 stack：看 AOS_DAEMON
         r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x")
         self.assertIn("另開一個終端機", r.stderr)                            # 沒設：認不出，照舊提醒
-        r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x", AOS_DAEMON_STACK=str(d))
+        r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x", AOS_DAEMON=str(d))
         self.assertIn("aos-daemon-ctl start c2", r.stderr)
         table(c2={"phase": "running", "pid": 1, "stack": str(other)})           # 表上不是 stopped：照舊
-        r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x", AOS_DAEMON_STACK=str(d))
+        r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x", AOS_DAEMON=str(d))
         self.assertIn("另開一個終端機", r.stderr)
         self.assertIn("where --stack", r.stderr)
 
@@ -152,7 +152,7 @@ class SayTest(Base):
         for eca in (False, True):                                            # eca 也一樣：daemon 再開自己 wake
             if eca:
                 (cell / "eca.json").write_text(json.dumps({"kind": "claude"}))
-            r = run(SAY, "--ws", str(self.ws), "--stack", str(cell), "x")   # 預設小格：不用 AOS_DAEMON_STACK 也認得
+            r = run(SAY, "--ws", str(self.ws), "--stack", str(cell), "x")   # 預設小格：不用 AOS_DAEMON 也認得
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn("bob 是 sleeping", r.stderr)
             self.assertIn("重開 daemon 它會自己醒：aos-exec <daemon 資料夾>", r.stderr)
@@ -160,10 +160,10 @@ class SayTest(Base):
             self.assertNotIn("start bob", r.stderr)
             self.assertNotIn("另開一個終端機", r.stderr)
             self.assertNotIn("where --stack", r.stderr)
-        table(c2={"phase": "sleeping", "pid": None, "stack": str(other) + "/"})  # 別處的 stack：看 AOS_DAEMON_STACK
+        table(c2={"phase": "sleeping", "pid": None, "stack": str(other) + "/"})  # 別處的 stack：看 AOS_DAEMON
         r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x")
         self.assertIn("另開一個終端機", r.stderr)                            # 沒設：認不出，照舊提醒
-        r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x", AOS_DAEMON_STACK=str(d))
+        r = run(SAY, "--ws", str(self.ws), "--stack", str(other), "x", AOS_DAEMON=str(d))
         self.assertIn("c2 是 sleeping", r.stderr)
         self.assertIn("重開 daemon", r.stderr)
 
@@ -421,11 +421,11 @@ class External(Base):
             self.assertLess(time.time(), end)
             time.sleep(0.05)
         ctl = str(ROOT / "bin" / "aos-daemon-ctl")
-        r = self.xrun(ctl, "--daemon-stack", str(ds), "add", "--ws", str(self.ws), "--name", "bob", str(self.eca))
+        r = self.xrun(ctl, "--daemon", str(ds), "add", "--ws", str(self.ws), "--name", "bob", str(self.eca))
         self.assertEqual((r.returncode, r.stderr), (0, ""))
         self.assertFalse(os.path.lexists(self.stack))
         self.assertTrue(self.phase(ds / "procs" / "bob", ("waiting", "running")))
-        r = self.xrun(ctl, "--daemon-stack", str(ds), "where", "--stack", "bob")
+        r = self.xrun(ctl, "--daemon", str(ds), "where", "--stack", "bob")
         self.assertEqual((r.returncode, r.stdout), (0, str(ds / "procs" / "bob") + "\n"), r.stderr)
         stack = r.stdout.strip()
         r = self.xrun(SAY, "--stack", stack, "在 daemon 底下")

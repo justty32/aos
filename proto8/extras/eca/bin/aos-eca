@@ -6,7 +6,7 @@
 start／stop＝daemon 的起停（11-03 procs 起＝aos-daemon-ctl start／stop：stop 後還在 daemon 表上、phase stopped、stack 留著），
 add／rm＝建立與刪除（rm＝aos-daemon-ctl rm＋刪它的 stack、不封存）。
 
-    aos-eca [--daemon-stack D] add [--name N] [--ws WS] [--stack S] XXX   建立：XXX＝eca 資料夾（頂層有 cli.json，例 proto8/demo/eca-claude）；
+    aos-eca [--daemon D] add [--name N] [--ws WS] [--stack S] XXX   建立：XXX＝eca 資料夾（頂層有 cli.json，例 proto8/demo/eca-claude）；
                                                    掛到 daemon（aos-daemon-ctl add --ws WS --name N [--stack S] XXX）；印它的 stack
     aos-eca ls    [--json]                         列外部 agent（掛著的、停了的）：名字、狀態、畫面、種類、工作區、session（對話 id 前 8 碼）；
                                                    狀態 running／paused／stopping／stopped／sleeping、畫面 open／closed（11-03 起英文，procs § 0 名詞表）
@@ -23,7 +23,7 @@ add／rm＝建立與刪除（rm＝aos-daemon-ctl rm＋刪它的 stack、不封�
   名字、資料夾都認時先比名字；都沒給＝cwd 當資料夾。
 設計：proto8/thinking/2026-10/30/eca/README.md C 結論 7～10（daemon＋三件 daemon 做不到的事：畫面、對話接回、CLI 自己的 session 檔）；11-03 改動見 eca 18。
 沒有自己的常駐 kernel：常駐的是 aos-daemon（信箱模式），以它的 procs_state.json 為準（衝突 2）；每個子命令都是
-「叫 aos-daemon-ctl ＋ 動它 stack 裡 cli_session 的東西」。哪個 daemon＝--daemon-stack ＞ $AOS_DAEMON_STACK（同 aos-daemon-ctl，11-02 從 --daemon／AOS_DAEMON 改名；沒設、不是資料夾、
+「叫 aos-daemon-ctl ＋ 動它 stack 裡 cli_session 的東西」。哪個 daemon＝--daemon ＞ $AOS_DAEMON（同 aos-daemon-ctl，11-04 晚從 --daemon-stack／AOS_DAEMON_STACK 改名；沒設、不是資料夾、
 daemon 沒在跑〔procs_state.json 的 pid＋started_at_ticks 對不上〕＝DaemonMissing）。不另設 hub 的環境變數（10-28 那個退場，衝突 4）。
 add：名字沒給＝XXX 的資料夾名；--ws 沒給＝cwd（就是 claude 的 cwd）；--stack 沒給＝daemon 的預設小格 <daemon>/procs/<名字>/，給了＝從呼叫的 cwd
   轉絕對、照傳給 aos-daemon-ctl add --stack（不驗在不在，daemon 起它時建；空＝ArgumentsBad；11-03 使用者「aos-eca add沒辦法指定stack嗎？」）。
@@ -89,15 +89,15 @@ def parse(argv, flags=(), switches=()):
 
 # ---------------------------------------------------------------- daemon（經 aos-daemon-ctl）
 
-DAEMON = None                                   # main 裡從 --daemon-stack／$AOS_DAEMON_STACK 定
+DAEMON = None                                   # main 裡從 --daemon／$AOS_DAEMON 定
 
 
 def daemon_dir():
-    d = DAEMON or os.environ.get("AOS_DAEMON_STACK", "")
+    d = DAEMON or os.environ.get("AOS_DAEMON", "")
     if not d:
-        hint = ("；AOS_DAEMON 11-02 起改名，請改設 AOS_DAEMON_STACK（或 --daemon-stack）"
-                if os.environ.get("AOS_DAEMON") else "")
-        die("DaemonMissing", "沒給 --daemon-stack、也沒設 AOS_DAEMON_STACK（要指到 aos-daemon 的 $AOS_STACK 資料夾）" + hint)
+        hint = ("；AOS_DAEMON_STACK 11-04 起改名，請改設 AOS_DAEMON（或 --daemon）"
+                if os.environ.get("AOS_DAEMON_STACK") else "")
+        die("DaemonMissing", "沒給 --daemon、也沒設 AOS_DAEMON（要指到 aos-daemon 的 $AOS_STACK 資料夾）" + hint)
     if not os.path.isdir(d):
         die("DaemonMissing", "daemon 的資料夾不在：%s" % d)
     d = os.path.abspath(d)
@@ -117,7 +117,7 @@ def daemon_dir():
 def ctl(*args):
     """叫 aos-daemon-ctl；錯＝把它那一行換成這支的名字、退 1。回 stdout。stderr 的提醒照轉。"""
     try:
-        r = subprocess.run([sys.executable, CTL, "--daemon-stack", daemon_dir()] + list(args), capture_output=True, text=True)
+        r = subprocess.run([sys.executable, CTL, "--daemon", daemon_dir()] + list(args), capture_output=True, text=True)
     except OSError as e:
         die("CommandMissing", "叫不了 aos-daemon-ctl：%s" % e)
     if r.returncode != 0:
@@ -549,18 +549,18 @@ CMDS = {"add": cmd_add, "rm": cmd_rm, "start": cmd_start, "stop": cmd_stop, "ope
 def main():
     global DAEMON
     a = sys.argv[1:]
-    while a and (a[0] == "--daemon-stack" or a[0].startswith("--daemon-stack=")):
-        if a[0] == "--daemon-stack":
+    while a and (a[0] == "--daemon" or a[0].startswith("--daemon=")):
+        if a[0] == "--daemon":
             if len(a) < 2:
-                die("ArgumentsBad", "--daemon-stack 要一個值")
+                die("ArgumentsBad", "--daemon 要一個值")
             DAEMON, a = a[1], a[2:]
         else:
-            DAEMON, a = a[0][len("--daemon-stack="):], a[1:]
+            DAEMON, a = a[0][len("--daemon="):], a[1:]
     if not a or a[0] in ("-h", "--help"):
         print(__doc__)
         return
     if a[0].startswith("-"):
-        die("FlagUnknown", "不認得的旗標 %s（子命令前只認 --daemon-stack）" % a[0])
+        die("FlagUnknown", "不認得的旗標 %s（子命令前只認 --daemon）" % a[0])
     if a[0] not in CMDS:
         die("CommandUnknown", "不認得的子命令 %s（%s）" % (a[0], "、".join(CMDS)))
     CMDS[a[0]](a[1:])

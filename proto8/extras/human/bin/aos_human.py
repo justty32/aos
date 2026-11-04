@@ -89,9 +89,9 @@ def runners(w):
 def daemon_held(w):
     """這個 stack 是不是 daemon 表上留著、行程不在的那一列（phase stopped 或 sleeping）：回 (名字, phase, 是不是 eca, daemon 的 stack)，
     不是就 None（11-03 procs；sleeping＝daemon 收工時還在跑、睡下的，11-04 加）。
-    看哪個 daemon：$AOS_DAEMON_STACK，加上 stack 在預設小格 <D>/procs/<名字>/ 時的那個 <D>；讀它的 procs_state.json，
+    看哪個 daemon：$AOS_DAEMON，加上 stack 在預設小格 <D>/procs/<名字>/ 時的那個 <D>；讀它的 procs_state.json，
     列上的 stack 跟這個 stack 是同一個（samefile）才算。eca＝那個 stack 裡有 eca.json（同 aos-eca 認的）。讀不到就當不是。"""
-    ds = [os.environ.get("AOS_DAEMON_STACK") or ""]
+    ds = [os.environ.get("AOS_DAEMON") or ""]
     if os.path.basename(os.path.dirname(w.stack.rstrip("/"))) == "procs":
         ds.append(os.path.dirname(os.path.dirname(w.stack.rstrip("/"))))
     for d in ds:

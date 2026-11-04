@@ -11,7 +11,8 @@
 // （小格、stderr.txt、setsid、/dev/null、AOS_STACK、cd 到 daemon 的 cwd），只是不寫 loop.json、run_cli 直接拿 {"--", 目標, 參數...}——中間沒有 aos-loop。
 // 10-30 eca（thinking 2026-10-30-eca 衝突 1，使用者「都照建議」；N-55 工作區由呼叫方設，daemon 是呼叫方）：子項寫了 ws＝run_child 多設 AOS_WS；
 // 沒寫＝不碰（繼承 daemon 的）。
-// 11-02（resident-bob 衝突 2、daemon-env 方向題 2，使用者「照建議走」）：兩種子項一律多設 AOS_DAEMON_STACK＝daemon 的 stack（絕對、結尾 /），
+// 11-02（resident-bob 衝突 2、daemon-env 方向題 2，使用者「照建議走」）：兩種子項一律多設 AOS_DAEMON＝daemon 的 stack（絕對、結尾 /；
+// 11-04 晚改名，舊名不認，使用者要「直接簡化成AOS_DAEMON」），
 // 兄弟（控制器與 bob）靠它找到共同的 stack；只設這一個（定義資料夾、ws 那兩名不設）。
 #include "child/child.hpp"
 
@@ -37,7 +38,7 @@ namespace aos::daemon {
 // 子行程：自成 session、接好三個串流、設 AOS_STACK、cd 到 daemon 的 cwd，呼叫 aos-exec 的 run_cli(argv)。不回來。
 // argv：子 loop＝{"--", 小格/loop.json#/_entry}；exec 型子項＝{"--", 目標, 參數...}（10-30）。fork 之前就備好。
 // ws：空＝AOS_WS 不碰（繼承 daemon 的）；不空＝設成它（eca 10-30）。
-// dstack：daemon 的 stack（絕對、結尾 /），一律設成 AOS_DAEMON_STACK（11-02，resident-bob 衝突 2：兄弟要共用位置；只設這一個）。
+// dstack：daemon 的 stack（絕對、結尾 /），一律設成 AOS_DAEMON（11-02，resident-bob 衝突 2：兄弟要共用位置；只設這一個；11-04 晚改名）。
 [[noreturn]] static void run_child(const std::string& cell, const std::string& cwd, int err_fd,
                                    const std::vector<std::string>& argv, const std::string& ws, const std::string& dstack) {
     setsid();
@@ -61,7 +62,7 @@ namespace aos::daemon {
     sigprocmask(SIG_UNBLOCK, &set, nullptr);
     int rc = 1;
     setenv("AOS_STACK", (cell + "/").c_str(), 1);
-    setenv("AOS_DAEMON_STACK", dstack.c_str(), 1);
+    setenv("AOS_DAEMON", dstack.c_str(), 1);
     if (!ws.empty()) {
         setenv("AOS_WS", ws.c_str(), 1);
     }
@@ -241,6 +242,7 @@ Json row(const Child& c) {
     if (!c.ws.is_null()) {
         r["ws"] = c.ws;   // eca 10-30：有給才寫
     }
+    r["exec"] = c.exec;   // 11-04 晚（aos-agent 方向題 1）：一律寫，目標（絕對）或 null
     return r;
 }
 

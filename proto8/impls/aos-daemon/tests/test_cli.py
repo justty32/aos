@@ -11,7 +11,7 @@ ctl.json／state.json 只管 loop 面向（H 段）；信箱 procs_ctl_mailbox�
 daemon 的 stop／start（P 段：寫子 loop 的 ctl {"cmd": "stop"}、列留 stopped）；舊 key 不認（H 段）。差別只有：PATH 放 impls 的 aos-exec、aos-loop 兩支的 bin/（子 loop 經 aos-exec
 exec 成 PATH 上的 aos-loop，10-21 傍晚起同 bin 版）、usage 一行多了代號（「aos-daemon: ArgumentsBad usage: …」）、
 自己的錯多驗代號（E 段）。11-02（L 段）：log 印到 stdout（11-02 晚改預設不印、--enable-logs 才印；這裡 run_d／start 一律帶 --enable-logs），子項結束後不留名單（結束的 phase／code 看 log 那行：ended）、
-兩扇窗有變才寫（心跳拿掉）。N 段（11-02）：子項的環境多 AOS_DAEMON_STACK＝daemon 的 stack（resident-bob 衝突 2）。
+兩扇窗有變才寫（心跳拿掉）。N 段（11-02）：子項的環境多 AOS_DAEMON＝daemon 的 stack（resident-bob 衝突 2；11-04 晚改名，舊名不認）。
 """
 import ctypes, datetime, json, os, re, shutil, struct, signal, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
@@ -195,12 +195,14 @@ class T(unittest.TestCase):
         st = self.state()
         self.assertEqual((p.returncode, err, st["phase"], st["ctl_seq"]), (0, "", "stopped", 1))
         self.assertNotIn("procs", st)   # 10-29 拆窗：子項表在 procs_state.json
-        self.assertEqual(list(k["a"]), ["pid", "started_at_ticks", "phase", "code", "signal", "stack"])   # 11-03 多 stack（一律寫）
+        self.assertEqual(list(k["a"]), ["pid", "started_at_ticks", "phase", "code", "signal", "stack", "exec"])   # 11-03 多 stack、11-04 晚多 exec（一律寫）
+        self.assertEqual({n: r["exec"] for n, r in k.items()}, {"a": os.path.join(os.path.realpath(self.t), "sub"),
+                                                               "b": os.path.join(os.path.realpath(self.t), "long")})   # 目標照 daemon 的 cwd 轉絕對
         self.assertEqual(k["a"]["stack"], str(self.s / "procs" / "a"))
         ls = self.lstate()
         # 11-02 結束的子項不留在表上；11-03 sleep／wake 起收工時還在跑的 loop 型例外：列留成 sleeping（pid null、stack 留著）
         self.assertEqual(ls["procs"], {n: {"pid": None, "started_at_ticks": None, "phase": "sleeping", "code": ls["procs"][n]["code"], "signal": ls["procs"][n]["signal"],
-                                           "stack": str(self.s / "procs" / n)} for n in ("a", "b")})
+                                           "stack": str(self.s / "procs" / n), "exec": k[n]["exec"]} for n in ("a", "b")})
         self.assertEqual(list(ls), ["ctl_seq", "ctl_warning", "procs", "pid", "started_at_ticks", "boot_id",
                                     "updated_at"])   # 11-02：kind、recorded_at 拿掉；11-03 一張表 procs
         self.assertEqual([ls[k] for k in ("ctl_seq", "ctl_warning", "pid", "started_at_ticks", "boot_id")],
@@ -1461,10 +1463,10 @@ class T(unittest.TestCase):
         p.communicate(timeout=30)
         self.assertEqual(p.returncode, 0)
 
-    # ───── N. 11-02 子項的 AOS_DAEMON_STACK（thinking 2026-11-02-resident-bob 衝突 2、2026-11-02-daemon-env 方向題 2）─────
+    # ───── N. 11-02 子項的 AOS_DAEMON（11-04 晚改名；thinking 2026-11-02-resident-bob 衝突 2、2026-11-02-daemon-env 方向題 2）─────
 
     def test_children_get_daemon_stack(self):
-        # loop 型（身體）、exec 型子項都看到 AOS_DAEMON_STACK＝daemon 的 stack（絕對、結尾 /）；AOS_DAEMON 開頭的只有這一個。
+        # loop 型（身體）、exec 型子項都看到 AOS_DAEMON＝daemon 的 stack（絕對、結尾 /）；AOS_DAEMON 開頭的只有這一個。
         # daemon 自己的環境沒設它（env_of 濾掉 AOS_）；daemon 的 $AOS_STACK 是相對的也轉成絕對（子項會 cd 走）
         self.prog("pe", 'env | grep "^AOS_DAEMON" > "$AOS_STACK/denv"\n')
         for st in (str(self.s), "stack"):
@@ -1472,7 +1474,7 @@ class T(unittest.TestCase):
                            env={"AOS_STACK": st})
             self.assertEqual((r.returncode, r.stderr), (0, ""))
             for n in ("bob", "j"):
-                self.assertEqual((self.s / "procs" / n / "denv").read_text(), "AOS_DAEMON_STACK=%s/\n" % self.s, (st, n))
+                self.assertEqual((self.s / "procs" / n / "denv").read_text(), "AOS_DAEMON=%s/\n" % self.s, (st, n))
 
 
     # ───── O. 11-03 procs（thinking 2026-11-03-procs § 2b）：每個 proc 可寫自己的 stack ─────
@@ -1545,7 +1547,8 @@ class T(unittest.TestCase):
         pid = k["c"]["pid"]
         self.lctl({"procs_stopped": ["c", "nobody"], "seq": 1})
         r = until(lambda: self.kids()["c"]["phase"] == "stopped" and self.kids()["c"])
-        self.assertEqual(r, {"pid": None, "started_at_ticks": None, "phase": "stopped", "code": 0, "signal": None, "stack": str(c)})
+        self.assertEqual(r, {"pid": None, "started_at_ticks": None, "phase": "stopped", "code": 0, "signal": None, "stack": str(c),
+                             "exec": k["c"]["exec"]})
         self.assertEqual((json.loads((c / "ctl.json").read_text()), json.loads((c / "state.json").read_text())["phase"], alive(pid)),
                          ({"cmd": "stop", "seq": 1}, "stopped", False))
         self.assertIsNone(self.lstate()["ctl_warning"])

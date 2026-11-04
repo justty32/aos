@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
-"""aos-daemon-ctl [--daemon-stack D] add|rm|start|stop|pause|resume|ls|where … — 把 proc 掛到一個 aos-daemon 上、起停、暫停（10-30，使用者「或許是aos-daemon-ctl add XXX這樣」）。
+"""aos-daemon-ctl [--daemon D] add|rm|start|stop|pause|resume|ls|where … — 把 proc 掛到一個 aos-daemon 上、起停、暫停（10-30，使用者「或許是aos-daemon-ctl add XXX這樣」）。
 
 `aos-exec XXX`＝掛到 Linux 的 proc 管理；`aos-daemon-ctl add XXX`＝掛到 daemon 上。本質是 N-54 的管轄手把：
 往 daemon 的信箱（信箱模式，N-28 的 10-29 補）投一封 `procs_added`／`procs_removed`／`procs_stopped`／`procs_started` 的信。設計與代定見
 proto8/thinking/2026-10/30/agent-lifecycle/README.md（實作第 7 步的補）、2026-11/03/procs.md（11-03 loops／execs 統稱 procs）與 bin/README.md。
 
-    aos-daemon-ctl [--daemon-stack D] add [--name N] [--ws WS] [--stack S] XXX [-- 參數...]   掛上去（add＝登記＋起）；stdout 印信件名稱（aos-post 給的）
-    aos-daemon-ctl [--daemon-stack D] rm 名字                                      拿下來（procs_removed；先停再拿掉，stack 留著）；印信件名稱
-    aos-daemon-ctl [--daemon-stack D] stop 名字                                    停（procs_stopped：跑完這次退、列留成 stopped、stack 留著）；印信件名稱
-    aos-daemon-ctl [--daemon-stack D] start 名字                                   起（procs_started：stopped 的用同一個 stack 再起）；印信件名稱
-    aos-daemon-ctl [--daemon-stack D] pause 名字                                   暫停（直接寫它的 ctl.json {"cmd": "pause", "seq": N}）；印 N
-    aos-daemon-ctl [--daemon-stack D] resume 名字                                  解除暫停（{"cmd": "resume", "seq": N}）；印 N
-    aos-daemon-ctl [--daemon-stack D] ls [--json]                                  列 procs_state.json 的表：一行「名字 TAB phase TAB pid TAB code TAB ws」
-    aos-daemon-ctl [--daemon-stack D] where --stack 名字                           印這個 proc 的 stack（絕對路徑一行）；只認表上的
+    aos-daemon-ctl [--daemon D] add [--name N] [--ws WS] [--stack S] XXX [-- 參數...]   掛上去（add＝登記＋起）；stdout 印信件名稱（aos-post 給的）
+    aos-daemon-ctl [--daemon D] rm 名字                                      拿下來（procs_removed；先停再拿掉，stack 留著）；印信件名稱
+    aos-daemon-ctl [--daemon D] stop 名字                                    停（procs_stopped：跑完這次退、列留成 stopped、stack 留著）；印信件名稱
+    aos-daemon-ctl [--daemon D] start 名字                                   起（procs_started：stopped 的用同一個 stack 再起）；印信件名稱
+    aos-daemon-ctl [--daemon D] pause 名字                                   暫停（直接寫它的 ctl.json {"cmd": "pause", "seq": N}）；印 N
+    aos-daemon-ctl [--daemon D] resume 名字                                  解除暫停（{"cmd": "resume", "seq": N}）；印 N
+    aos-daemon-ctl [--daemon D] ls [--json]                                  列 procs_state.json 的表：一行「名字 TAB phase TAB pid TAB code TAB ws」
+    aos-daemon-ctl [--daemon D] where --stack 名字                           印這個 proc 的 stack（絕對路徑一行）；只認表上的
 
 名詞（11-03 procs § 0）：add／rm＝插拔、start／stop＝起停（stack 留著）、pause／resume＝暫停；daemon 表上的 phase 只有
   running、stopping（收的途中）、stopped（daemon 下的 stop：行程不在、表上還在）、sleeping（11-03 procs § 8：daemon 收工〔ctl 的 stop、Ctrl+C〕時
   還在跑的 loop 型，行程不在、表上還在，daemon 再開自動 wake；sleep／wake 先不開放成子命令）。暫停中是子 loop 自己的事（它的 state.json），表上不轉述。
-哪個 daemon（N-63 hub 型變數）：--daemon-stack ＞ $AOS_DAEMON_STACK；值＝那個 daemon 的 $AOS_STACK 資料夾（它的窗都在這：
-  procs_ctl_mailbox/、procs_state.json，用預設名字）。都沒有＝DaemonMissing；不是資料夾＝DaemonMissing。子 proc 照常繼承 AOS_DAEMON_STACK。
-  11-02 改名（使用者「就AOS_DAEMON_STACK吧」「最好明講，也就是--daemon-stack」）：舊的 AOS_DAEMON／--daemon 不認、不留別名
-  （--daemon＝FlagUnknown；只設了 AOS_DAEMON＝DaemonMissing，訊息提示改設 AOS_DAEMON_STACK）。
+哪個 daemon（N-63 hub 型變數）：--daemon ＞ $AOS_DAEMON；值＝那個 daemon 的 $AOS_STACK 資料夾（它的窗都在這：
+  procs_ctl_mailbox/、procs_state.json，用預設名字）。都沒有＝DaemonMissing；不是資料夾＝DaemonMissing。子 proc 照常繼承 AOS_DAEMON。
+  11-04 晚改名（使用者「AOS_DAEMON_STACK實在太醜，還是直接簡化成AOS_DAEMON就好了」；11-02 曾從 AOS_DAEMON／--daemon 改成 AOS_DAEMON_STACK／
+  --daemon-stack，這次倒回來）：舊的 AOS_DAEMON_STACK／--daemon-stack 不認、不留別名
+  （--daemon-stack＝FlagUnknown；只設了 AOS_DAEMON_STACK＝DaemonMissing，訊息提示改設 AOS_DAEMON）。
   信箱固定是 <D>/procs_ctl_mailbox/（daemon.json 要寫 "procs_ctl_mailbox": "procs_ctl_mailbox"；11-03 前叫 loops_ctl_mailbox，舊名不認）；
   沒有 new/＝MailboxMissing（daemon 沒開信箱或還沒起）。
 add 的自動識別（11-02 拿掉 --kind，使用者「把--kind刪掉」；11-03 起 daemon 看寫法決定怎麼起，procs § 2）：XXX 是資料夾、裡面有 loop.json＝loop 型
@@ -73,7 +74,7 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
 NAME = "aos-daemon-ctl"
-USAGE = ("aos-daemon-ctl [--daemon-stack D] add [--name N] [--ws WS] [--stack S] XXX [-- 參數...] | rm 名字 | stop 名字 | start 名字"
+USAGE = ("aos-daemon-ctl [--daemon D] add [--name N] [--ws WS] [--stack S] XXX [-- 參數...] | rm 名字 | stop 名字 | start 名字"
          " | pause 名字 | resume 名字 | ls [--json] | where --stack 名字")
 MAILBOX = "procs_ctl_mailbox"
 STATE = "procs_state.json"
@@ -86,11 +87,11 @@ class Fail(Exception):
 
 
 def daemon_dir(opts):
-    d = opts.get("daemon_stack") or os.environ.get("AOS_DAEMON_STACK", "")
+    d = opts.get("daemon") or os.environ.get("AOS_DAEMON", "")
     if not d:
-        hint = ("；AOS_DAEMON 11-02 起改名，請改設 AOS_DAEMON_STACK（或 --daemon-stack）"
-                if os.environ.get("AOS_DAEMON") else "")
-        raise Fail("DaemonMissing", "沒給 --daemon-stack、也沒設 AOS_DAEMON_STACK（要指到 daemon 的 $AOS_STACK 資料夾）" + hint)
+        hint = ("；AOS_DAEMON_STACK 11-04 起改名，請改設 AOS_DAEMON（或 --daemon）"
+                if os.environ.get("AOS_DAEMON_STACK") else "")
+        raise Fail("DaemonMissing", "沒給 --daemon、也沒設 AOS_DAEMON（要指到 daemon 的 $AOS_STACK 資料夾）" + hint)
     if not os.path.isdir(d):
         raise Fail("DaemonMissing", "daemon 的資料夾不在：%s" % d)
     return os.path.abspath(d)
@@ -347,7 +348,7 @@ COMMANDS = {"add": cmd_add, "rm": cmd_rm, "stop": cmd_stop, "start": cmd_start, 
 def main():
     try:
         try:
-            opts, rest = aos_flags.parse(sys.argv[1:], {"--daemon-stack": "daemon_stack"})
+            opts, rest = aos_flags.parse(sys.argv[1:], {"--daemon": "daemon"})
             if not rest:
                 raise Fail("ArgumentsBad", "usage: %s" % USAGE)
             if rest[0] not in COMMANDS:

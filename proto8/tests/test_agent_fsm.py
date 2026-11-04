@@ -430,7 +430,7 @@ class AgentFsm(unittest.TestCase):
         ds.mkdir()
         (self.tmp / "daemon.json").write_text(json.dumps({"interval_ms": 100, "ctl": "ctl.json", "state": "state.json",
                                                           "procs_ctl_mailbox": "procs_ctl_mailbox"}))
-        denv = self.env({"AOS_DAEMON_STACK": str(ds)})
+        denv = self.env({"AOS_DAEMON": str(ds)})
         d = subprocess.Popen([tool("aos-daemon"), str(self.tmp / "daemon.json")], cwd=str(self.tmp),
                              env=dict(denv, AOS_STACK=str(ds)), stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
         self.procs.append(d)
