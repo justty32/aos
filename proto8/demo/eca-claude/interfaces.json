@@ -1,1 +1,1 @@
-{"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm"}}
+{"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json"}}

@@ -29,6 +29,7 @@
 #   aos-mcp --ws <工作區> --stack <stack> [tools_flags…] <登記檔絕對路徑>：claude＝寫小格 mcp.json、加 --mcp-config 它 --allowedTools mcp__aos；
 #   codex＝兩個 -c mcp_servers.aos.command／args。aos-mcp 靠 PATH 找（N-50）；定義資料夾一個字都不寫（P-15）。
 #   11-04 起 $AOS_STACK 裡的副本優先（aos-agent tools／llm 寫的，stack_copies）：tools.json（cli.json 沒明寫 tools 時）、llm.json 的 model。
+#   模型（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本）的 model＝flags 的 --model（換掉或加在尾）；都沒有＝flags 原樣。
 # 開場白不歸這層（11-04 翻案，使用者「不該在json中指定檔案名稱，應該改成用旗標指定」）：是 aos-eca-turn 的 --prompt FILE；
 #   cli.json 寫了 prompt 跟其他沒認的鍵一樣不看。
 # 錯：當工具叫（call_main）時照 lib 契約 stderr 與 stdout 各一行「工具名: 代號 原因」、退 1；attach 與 hook 是 stderr 一行「cli_session: 代號 原因」、退 1。
@@ -69,30 +70,35 @@ def load_cfg(tool_dir):
         if not isinstance(cfg.get(k, []), list) or not all(isinstance(a, str) for a in cfg.get(k, [])):
             die("CfgBad", "%s：%s 要是字串陣列" % (path, k))
     cfg["registry"] = registry(cfg, tool_dir, path)
-    stack_copies(cfg)
+    stack_copies(cfg, tool_dir)
     return cfg
 
 
-def stack_copies(cfg):
-    """子介面 tools／llm（11-04 aos-agent，使用者「改副本。改定義那塊用aos-tools」「aos-agent llm改正在跑著的，aos-llm改定義」）：
-    $AOS_STACK/tools.json 在、cli.json 又沒明寫 tools＝登記檔用這份副本；$AOS_STACK/llm.json 有 model＝flags 的 --model 換成它（沒有就加）。
-    每次 load_cfg（每題）重讀＝下一題生效。"""
-    stack = os.environ.get("AOS_STACK")
-    if not stack:
-        return
-    copy = os.path.join(stack, "tools.json")
-    if "tools" not in cfg and os.path.isfile(copy):
-        cfg["registry"] = copy
-    path = os.path.join(stack, "llm.json")
+def read_llm(path):
+    """llm.json：一層物件；不在＝{}。"""
     try:
         with open(path, encoding="utf-8") as f:
             llm = json.load(f)
     except FileNotFoundError:
-        return
+        return {}
     except (OSError, ValueError) as e:
         die("CfgBad", "%s：%s" % (path, e))
     if not isinstance(llm, dict):
         die("CfgBad", "%s：要是一層物件" % path)
+    return llm
+
+
+def stack_copies(cfg, tool_dir):
+    """子介面 tools（11-04 aos-agent，使用者「改副本。改定義那塊用aos-tools」）：$AOS_STACK/tools.json 在、cli.json 又沒明寫 tools＝登記檔用這份副本。
+    腦設定（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本，aos-agent llm set 寫的）；
+    有 model＝flags 的 --model 換成它（沒有就加在尾）。每次 load_cfg（每題）重讀＝下一題生效。"""
+    stack = os.environ.get("AOS_STACK")
+    llm = read_llm(os.path.join(tool_dir, "llm.json"))
+    if stack:
+        copy = os.path.join(stack, "tools.json")
+        if "tools" not in cfg and os.path.isfile(copy):
+            cfg["registry"] = copy
+        llm.update(read_llm(os.path.join(stack, "llm.json")))
     model = llm.get("model")
     if isinstance(model, str) and model:
         flags = list(cfg.get("flags", []))

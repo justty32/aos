@@ -9,17 +9,17 @@ eca-claude/
   _entry      ["aos-loop", "loop.json"]（JSON 入口）
   loop.json   {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000},
                "interval_ms": 300, "ctl": "ctl.json", "state": "state.json"}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；兩扇窗落在 $AOS_STACK）
-  cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms），抄 lib/agent/claude 的保守旗標
+  cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms），抄 lib/agent/claude 的保守旗標（--model 不寫在這，見 llm.json）
+  llm.json    腦設定：{"model": "sonnet"}（11-04 晚；cli_session 每題讀它疊 $AOS_STACK/llm.json 副本，補成 --model）
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔11-04 起，相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
   tools.json  aos-tools 的登記檔，只登記 clock（"../../lib/base/clock"，相對路徑從這份檔的資料夾算）；cli.json 沒寫 tools＝用它，
               cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__clock）；不要工具就刪掉它
-  interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm"}}（11-04；aos-agent add 只看這個宣告）
+  interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json"}}（11-04；aos-agent add 只看這個宣告）
   screen/     子介面：_entry＝["aos-eca-screen", ".."]（aos-agent open／close／watch 叫它）
-  llm/        子介面：_entry＝["aos-eca-llm", ".."]（aos-agent llm、aos-llm 叫它）
 ```
 
-**實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`（掛 daemon 的在 daemon 給的小格），裡面長 `queue/`、`history.jsonl`、`ctl.json`、`state.json` 與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）；`eca.json` 11-04 起不寫（沒人讀）。改過副本的還有 `tools.json`、`llm.json`（`aos-agent tools`／`llm`）。
+**實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`（掛 daemon 的在 daemon 給的小格），裡面長 `queue/`、`history.jsonl`、`ctl.json`、`state.json` 與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）；`eca.json` 11-04 起不寫（沒人讀）。改過副本的還有 `tools.json`、`llm.json`（`aos-agent tools`／`llm`；`aos-agent llm --target myproj set model=haiku`＝下一題起 `--model haiku`，`reset` 回定義的 sonnet）。換定義的模型＝`aos-json set --str proto8/demo/eca-claude/llm.json#/model opus`。eca 的腦是 CLI 自己，不經 llm kernel（think-as-function 03 § 2）。
 
 ```sh
 # PATH 要有 impls 的 aos-exec／aos-loop／aos-post／aos-daemon、proto8/bin 的 aos-eca-turn、aos-eca-screen、aos-tools 與 aos-daemon-ctl、

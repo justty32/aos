@@ -26,18 +26,19 @@ aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
 - **對象**：`--target 名字` ＞ `$AOS_AGENT`；都沒有＝`TargetMissing`。名字查 daemon 表，沒有＝`InstanceMissing`。`add`（名字＝`--name`，沒給＝資料夾名）、`rm`（位置參數）、`ls` 不吃 `AOS_AGENT`。不再比工作區、沒有用來指對象的 `--stack`。
 - **where**：不帶旗標＝`--stack`，印那隻的 stack 一行（`aos-daemon-ctl where --stack 名字` 轉述）；`--ws` 印它的工作區（表上那列的 `ws`；沒記＝`WsMissing`，那隻是沒給 `--ws` 直接用 aos-daemon-ctl 掛的）；兩個一起給＝`ArgumentsBad`（使用者 11-04 晚「aos agent的where，我希望默認是--stack，有需要再另外指定--ws。」）。
 - **哪個 daemon**：`--daemon D` ＞ `$AOS_DAEMON`（那個 daemon 的 `$AOS_STACK`，絕對路徑）；都沒有＝`DaemonMissing`（只設舊名 `AOS_DAEMON_STACK` 也是，訊息提示新名）。daemon 沒在跑：`ls`／`state`／`where` 照表印＋注意；`add`／`rm`／`start`／`stop`＝`DaemonMissing`；`say` 照寄＋提醒。
-- **錯**：stderr 一行 `aos-agent: 代號 原因`、退 1；等 daemon 逾時＝`WaitFailed`。子介面入口（screen／llm）與 aos-tools 自己報的錯原樣轉。
+- **錯**：stderr 一行 `aos-agent: 代號 原因`、退 1；等 daemon 逾時＝`WaitFailed`。子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉。
 
 ## 介面 `aos-agent`：add 只看宣告
 
 一個資料夾能被 `add`，只看它頂層 `interfaces.json` 有沒有 `aos-agent` 這個 key（沒有＝`InterfaceMissing`、不送信；讀不懂＝`InterfaceBad`）；不驗 `cli.json`、`fsm.json`（宣告了卻沒做到，第一圈就下表）。介面六條（資料夾程式、只吃 aos 的環境變數、常駐有窗、`queue/` 收 user message、`history.jsonl` 寫回答、錯在 stderr 一行）與選配子介面見 [03](../../thinking/2026-11/04/aos-agent/03-種類與契約.md)：
 
 ```json
-{"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm"}}
+{"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json"}}
 ```
 
-- `screen`、`llm`＝定義裡一個資料夾程式，它自己的 `interfaces.json` 宣告 `{"aos-agent/screen": {}}`／`{"aos-agent/llm": {}}`（沒宣告＝`ScreenBad`／`LlmBad`）。aos-agent 從 daemon 表那一列的 `def` 欄找回定義（aos-daemon-ctl add 送、daemon 記；使用者 11-04「那就b。」；沒這欄＝舊 daemon 掛的，`InterfaceMissing`，`rm` 再 `add` 一次），叫 `aos-exec --ws <ws> --stack <stack> <定義>/<入口> 動作…`（llm 的第一個 arg 是對象 `stack`）。沒宣告＝`ScreenMissing`（看回答改用 `listen --follow`）／`LlmMissing`。
-- `tools`＝登記檔。`aos-agent tools` 改的是**這一隻 stack 裡的副本** `<stack>/tools.json`：第一次 `add`／`rm` 才從定義複製（`path` 一律改成絕對）、之後**不跟定義變**（使用者 11-04「不跟。風險自行處理。但我們可以給reset。」）、`reset` 刪副本回去用定義的；改定義用 `aos-tools --file <定義>/tools.json …`。`llm` 同理：副本 `<stack>/llm.json`，改定義用 `aos-llm`。同一份定義掛了好幾隻時，改副本會在 stderr 提醒「X 也用這份定義」。
+- `screen`＝定義裡一個資料夾程式，它自己的 `interfaces.json` 宣告 `{"aos-agent/screen": {}}`（沒宣告＝`ScreenBad`）。aos-agent 從 daemon 表那一列的 `def` 欄找回定義（aos-daemon-ctl add 送、daemon 記；使用者 11-04「那就b。」；沒這欄＝舊 daemon 掛的，`InterfaceMissing`，`rm` 再 `add` 一次），叫 `aos-exec --ws <ws> --stack <stack> <定義>/<入口> 動作…`。沒宣告＝`ScreenMissing`（看回答改用 `listen --follow`）。
+- `tools`＝登記檔。`aos-agent tools` 改的是**這一隻 stack 裡的副本** `<stack>/tools.json`：第一次 `add`／`rm` 才從定義複製（`path` 一律改成絕對）、之後**不跟定義變**（使用者 11-04「不跟。風險自行處理。但我們可以給reset。」）、`reset` 刪副本回去用定義的；改定義用 `aos-tools --file <定義>/tools.json …`。同一份定義掛了好幾隻時，改副本會在 stderr 提醒「X 也用這份定義」。
+- `llm`＝定義裡那份**腦設定檔**的相對路徑（跟 `tools` 同一種寫法；11-04 晚 [think-as-function 03 § 4](../../thinking/2026-11/04/think-as-function/03-呼叫端.md)：`aos-llm` 是寄請求給 llm kernel 的基礎工具，aos-agent 的 `llm` 只是 aos-json 的語法糖）。副本＝stack 裡同一個相對路徑（例 `<stack>/llm.json`），**只放改過的鍵**、不跟定義：`show`＝定義那份（沒有＝`{}`）疊副本、一行一個 `鍵=值`，stderr 一行列哪些鍵來自副本；`set 鍵=值…`＝`aos-json set --str <副本>#/鍵 值`（副本不在先建 `{}`；值一律字串）；`reset`＝刪副本。鍵由那隻身體認（agent-fsm：`endpoint`＝kernel 的代號、`model`；eca：`model`），aos-agent 不認也不擋；身體每題重讀副本、有的鍵蓋過定義。改定義＝人直接 `aos-json set --str <定義>/llm.json#/endpoint sol`。沒宣告＝`LlmMissing`；宣告的是資料夾（舊的 `"llm": "llm"`）或讀不懂＝`LlmBad`。
 
 ## 用法例子
 

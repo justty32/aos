@@ -21,14 +21,15 @@
 對象：--target 名字 ＞ $AOS_AGENT（add、rm、ls 不吃）；都沒有＝TargetMissing。名字查 daemon 表（aos-daemon-ctl ls --json），
   表上沒有＝InstanceMissing。哪個 daemon：--daemon D ＞ $AOS_DAEMON（那個 daemon 的 $AOS_STACK）；都沒有＝DaemonMissing。沒有用來指對象的 --stack（where 的 --stack／--ws 只選印哪個）。
 介面（03）：只碰 daemon 表與那隻的 stack（queue/、history.jsonl、ctl／state 窗）；定義資料夾只讀 interfaces.json 宣告
-  （表上那一列的 def 欄＝定義資料夾，aos-daemon-ctl add 送、daemon 記；11-04 使用者「那就b。」）。子介面 screen、llm＝定義裡自己宣告 aos-agent/screen、aos-agent/llm 的資料夾程式，
-  用 aos-exec --ws <ws> --stack <stack> <定義>/<入口> 動作… 叫；tools＝登記檔，副本在 <stack>/tools.json（第一次改才建、不跟定義、reset 刪）。
+  （表上那一列的 def 欄＝定義資料夾，aos-daemon-ctl add 送、daemon 記；11-04 使用者「那就b。」）。子介面 screen＝定義裡自己宣告 aos-agent/screen 的資料夾程式，
+  用 aos-exec --ws <ws> --stack <stack> <定義>/<入口> 動作… 叫；tools＝登記檔，副本在 <stack>/tools.json（第一次改才建、不跟定義、reset 刪）；
+  llm＝腦設定檔（例 "llm.json"），副本在 stack 的同一個相對路徑（只放改過的鍵、reset 刪；set＝aos-json set --str，11-04 晚 think-as-function）。
 stdout 只有結果；提醒在 stderr（括號一行）。錯：stderr 一行 `aos-agent: 代號 原因`、退 1（chat 被 Ctrl-C 退 130）。
   代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、InstanceExists、PathMissing、SessionBad、
   SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、TargetMissing、WsMissing、InterfaceMissing、InterfaceBad、
   ScreenMissing、ScreenBad、ToolsMissing、LlmMissing、LlmBad。下層（aos-daemon-ctl）的錯換成這支的名字轉述（ProcMissing→InstanceMissing）；
-  子介面入口（screen／llm）與 aos-tools 自己報的錯原樣轉（C-53 各層只說自己的錯）。
-只在 Linux（讀 /proc）。PATH 上要有 aos-post、aos-exec（tools 還要 aos-tools，在 proto8/bin）。"""
+  子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉（C-53 各層只說自己的錯）。
+只在 Linux（讀 /proc）。PATH 上要有 aos-post、aos-exec（tools 還要 aos-tools，在 proto8/bin；llm set 還要 aos-json）。"""
 import json, os, shutil, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -416,11 +417,11 @@ def same_def(a, folder):
 def warn_shared(a, folder):
     others = same_def(a, folder)
     if others:
-        note("注意 %s 也用這份定義（%s）；只改了 %s 的副本，它們不變（要一起變就改定義：aos-tools／aos-llm）" % ("、".join(others), folder, a.name))
+        note("注意 %s 也用這份定義（%s）；只改了 %s 的副本，它們不變（要一起變就改定義：aos-tools／aos-json）" % ("、".join(others), folder, a.name))
 
 
 def sub_entry(a, key, iface, missing, bad):
-    """選配子介面（screen／llm）：宣告值＝定義裡的資料夾程式，自己宣告 aos-agent/<x>。回 (定義, 入口資料夾)。"""
+    """選配子介面（screen）：宣告值＝定義裡的資料夾程式，自己宣告 aos-agent/<x>。回 (定義, 入口資料夾)。"""
     folder, decl = agent_decl(a)
     rel = decl.get(key)
     if not isinstance(rel, str) or not rel:
@@ -778,19 +779,87 @@ def cmd_tools(argv):
     warn_shared(a, folder)
 
 
+def llm_paths(a):
+    """宣告 llm＝定義裡那份腦設定檔的相對路徑（11-04 晚 think-as-function 03 § 4，跟 tools 同一種寫法）；副本＝stack 裡同一個相對路徑。
+    回 (定義, 定義那份, 副本)。沒宣告＝LlmMissing；宣告的是資料夾（舊的子介面 "llm": "llm"）＝LlmBad。定義那份不在＝當 {}。"""
+    folder, decl = agent_decl(a)
+    rel = decl.get("llm")
+    if not isinstance(rel, str) or not rel:
+        raise Fail("LlmMissing", "%s 沒宣告 llm（定義的 interfaces.json 寫 {\"aos-agent\": {\"llm\": \"llm.json\"}}）" % a.name)
+    orig = os.path.join(folder, rel)
+    if os.path.isdir(orig) or os.path.isabs(rel) or ".." in rel.split("/"):
+        raise Fail("LlmBad", "%s 宣告的 llm 要是定義裡一份設定檔的相對路徑（例 \"llm.json\"），不是 %s" % (folder, rel))
+    return folder, orig, os.path.join(a.stack, rel)
+
+
+def read_llm(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError) as e:
+        raise Fail("LlmBad", "%s 讀不懂：%s" % (path, e))
+    if not isinstance(d, dict):
+        raise Fail("LlmBad", "%s 要是一層物件" % path)
+    return d
+
+
+def show_llm(orig, copy):
+    """定義那份疊副本，一行一個 鍵=值（字串原樣、其他印 JSON）；哪些鍵來自副本印在 stderr。不認鍵、不遮罩（金鑰不在 agent 這邊）。"""
+    vals, over = read_llm(orig), read_llm(copy)
+    vals.update(over)
+    if over:
+        note("副本：%s" % " ".join(over))
+    if not vals:
+        note("沒有設定（定義 %s 沒寫鍵、也沒有副本）：身體用自己的預設" % orig)
+    for k, v in vals.items():
+        print("%s=%s" % (k, v if isinstance(v, str) else json.dumps(v, ensure_ascii=False)))
+
+
 def cmd_llm(argv):
+    """llm show｜set 鍵=值…｜reset：aos-json 的語法糖（只碰這隻 stack 裡的副本；改定義＝人直接 aos-json set <定義>/llm.json#/鍵 值）。
+    鍵由那隻身體認（fsm：endpoint、model；eca：model），這裡不認、不擋；值一律字串。"""
     opts, rest = parse(argv, {"--target": "target"})
     a = target(opts)
-    folder, entry = sub_entry(a, "llm", "aos-agent/llm",
-                              lambda f: ("LlmMissing", "%s 沒宣告子介面 llm（定義的 interfaces.json 寫 {\"aos-agent\": {\"llm\": \"llm\"}}）" % a.name),
-                              "LlmBad")
-    act = rest or ["show"]
-    if act[0] not in ("show", "set", "reset"):
-        raise Fail("CommandUnknown", "llm 不認得 %s（show、set 鍵=值…、reset）" % act[0])
-    rc, err = run_entry(a, entry, ["stack"] + act)
-    pass_err(rc, err)
-    if act[0] == "set":
+    folder, orig, copy = llm_paths(a)
+    act, args = (rest[0], rest[1:]) if rest else ("show", [])
+    if act == "show":
+        if args:
+            raise Fail("ArgumentsBad", "llm show 不收參數")
+    elif act == "reset":
+        if args:
+            raise Fail("ArgumentsBad", "llm reset 不收參數")
+        if os.path.isfile(copy):
+            os.unlink(copy)
+            note("刪了副本 %s，回去用定義的 %s" % (copy, orig))
+    elif act == "set":
+        pairs = []
+        for x in args:
+            k, eq, v = x.partition("=")
+            if not eq or not k or "/" in k or "~" in k:
+                raise Fail("ArgumentsBad", "要寫成 鍵=值：%s" % x)
+            pairs.append((k, v))
+        if not pairs:
+            raise Fail("ArgumentsBad", "llm set 至少一個 鍵=值")
+        if not os.path.isfile(copy):
+            os.makedirs(os.path.dirname(copy), exist_ok=True)
+            tmp = os.path.join(os.path.dirname(copy), "." + os.path.basename(copy) + ".tmp")   # N-05
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write("{}\n")
+            os.replace(tmp, copy)
+            note("建了副本 %s（只放改過的鍵、不跟定義；回去跟用 llm reset）" % copy)
+        for k, v in pairs:
+            try:
+                r = subprocess.run(["aos-json", "set", "--str", "%s#/%s" % (copy, k), v])   # aos-json 的錯原樣（C-53）
+            except OSError as e:
+                raise Fail("CommandMissing", "叫不了 aos-json（PATH 上要有 proto8/impls/aos-json/bin）：%s" % e)
+            if r.returncode != 0:
+                sys.exit(1)
         warn_shared(a, folder)
+    else:
+        raise Fail("CommandUnknown", "llm 不認得 %s（show、set 鍵=值…、reset）" % act)
+    show_llm(orig, copy)
 
 
 CMDS = {"add": cmd_add, "rm": cmd_rm, "start": cmd_start, "stop": cmd_stop,

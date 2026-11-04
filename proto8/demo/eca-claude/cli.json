@@ -1,4 +1,4 @@
 {"kind": "claude",
- "flags": ["--tools", "Read,Glob,Grep", "--permission-mode", "dontAsk", "--strict-mcp-config", "--model", "sonnet"],
+ "flags": ["--tools", "Read,Glob,Grep", "--permission-mode", "dontAsk", "--strict-mcp-config"],
  "print_flags": ["--max-budget-usd", "0.5"],
  "timeout_ms": 600000}
