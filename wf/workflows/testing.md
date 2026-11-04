@@ -32,7 +32,7 @@
 proto8 不在 repo 根的 CMake 裡。`proto8/impls/` 各專案是獨立的 CMake 專案，照依賴順序建（`bin/`、`build/` 不進 git）：
 
 ```sh
-(cd proto8/impls && for p in inst aos-util aos-directive aos-schema aos-exec aos-json aos-loop aos-fsm aos-lock aos-post aos-daemon aos-llm-kernel aos-llm-send; do (cd $p && cmake -B build && cmake --build build) || break; done)
+(cd proto8/impls && for p in inst aos-util aos-directive aos-schema aos-exec aos-json aos-loop aos-fsm aos-lock aos-post aos-daemon aos-llm-kernel aos-llm; do (cd $p && cmake -B build && cmake --build build) || break; done)
 ```
 
 `proto8/bin/`、`proto8/extras/`、`proto8/lib/` 是 Python／sh，沒有建置步驟；要確認就手跑（用法在各自的 README）。aos 的程式都不動 PATH，手跑時把 `proto8/impls/<名>/bin/`、`proto8/bin/` 放進 PATH。

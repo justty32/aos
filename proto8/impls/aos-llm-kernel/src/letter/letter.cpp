@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <filesystem>
 
 #include <fcntl.h>
 #include <sys/file.h>
@@ -44,6 +45,11 @@ bool sender_alive(const std::string& letter_dir) {
     bool alive = flock(fd, LOCK_SH | LOCK_NB) != 0 && errno == EWOULDBLOCK;
     close(fd);   // 鎖得到的話一關就放掉
     return alive;
+}
+
+bool has_sender(const std::string& letter_dir) {
+    std::error_code ec;
+    return std::filesystem::exists(aos::join(letter_dir, SENDER_FLOCK), ec);
 }
 
 static int level_of(const Json& v) {
@@ -165,45 +171,12 @@ Priority parse_priority(const Json& v) {
     throw Error{code::PriorityBad, "priority 要是 \"low\"／\"normal\"／\"high\"、數字或 {\"level\", \"deadline\"}，不是 " + aos::dumps(v)};
 }
 
-// `_metainfo` 的數量類 key：數字＝典型值；物件取 val（C-55 值的雙形）。非負有限數才算，其他＝寫壞。
-static std::optional<double> amount(const Json& v) {
-    Json x = v;
-    if (v.is_object()) {
-        x = v.value("val", Json());
-    }
-    if (x.is_number() && !x.is_boolean()) {
-        double d = x.get<double>();
-        if (std::isfinite(d) && d >= 0) {
-            return d;
-        }
-    }
-    return std::nullopt;
-}
-
 Priority priority_of(const Json& letter) {
-    Priority p = parse_priority(letter.value("priority", Json()));
-    Json inst = letter.value("inst", Json());
-    if (!inst.is_object() || !inst.contains("_metainfo")) {
-        return p;
+    Json body = letter.value("body", Json());
+    if (!body.is_object()) {
+        return parse_priority(Json());
     }
-    const Json& m = inst["_metainfo"];
-    if (!m.is_object()) {
-        p.metainfo_bad.push_back("_metainfo");
-        return p;
-    }
-    if (m.contains("time_ms")) {
-        p.time_ms = amount(m["time_ms"]);
-        if (!p.time_ms) {
-            p.metainfo_bad.push_back("time_ms");
-        }
-    }
-    if (m.contains("llm_tokens")) {
-        p.llm_tokens = amount(m["llm_tokens"]);
-        if (!p.llm_tokens) {
-            p.metainfo_bad.push_back("llm_tokens");
-        }
-    }
-    return p;
+    return parse_priority(body.value("priority", Json()));
 }
 
 std::string level_name(int level) {
@@ -227,9 +200,7 @@ std::optional<Json> reply_of(const Json& r) {
         }
         return std::nullopt;
     }
-    Json c = r.value("code", Json());
-    Json s = r.value("signal", Json());
-    if (!c.is_number_integer() || !(s.is_null() || s.is_number_integer())) {
+    if (!r.value("message", Json()).is_object()) {
         return std::nullopt;
     }
     return std::optional<Json>(std::in_place, r);

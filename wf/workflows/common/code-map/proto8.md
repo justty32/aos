@@ -10,9 +10,9 @@
 |---|---|
 | [01-impls](proto8/01-impls.md) | `impls/` 共通建置（`cmake/`、各專案 `CMakeLists.txt`／`vcpkg.json`／`.gitignore`）、`impls/inst/`、`impls/aos-util/`、`impls/aos-directive/`、`impls/aos-schema/`、`impls/aos-exec/` |
 | [01-impls-2](proto8/01-impls-2.md) | `impls/aos-loop/`、`impls/aos-fsm/`、`impls/aos-daemon/`、`impls/aos-post/`、`impls/aos-lock/` |
-| [01-impls-3](proto8/01-impls-3.md) | `impls/aos-llm-kernel/`、`impls/aos-llm-send/`、`impls/aos-json/` |
+| [01-impls-3](proto8/01-impls-3.md) | `impls/aos-llm-kernel/`、`impls/aos-llm/`、`impls/aos-json/` |
 | [06-周邊工具](proto8/06-周邊工具.md) | `bin/`、`extras/agent/`、`extras/ai_tools/`、`extras/grow/`、`extras/langs/janet/`、`extras/langs/lua/`、`extras/sandbox/` |
 | [09-lib](proto8/09-lib.md) | `lib/base/`、`lib/aos/`、`lib/agent/` |
 | [13-demo](proto8/13-demo.md) | `demo/`（eca-claude、agent-fsm） |
 
-依賴由小到大：`inst`（C lib）→ `aos-exec` → `aos-loop`／`aos-fsm` → `aos-daemon`；`aos-util`、`aos-directive`、`aos-schema` 是庫；`aos-post`（連 `aos-lock`）是信箱，aos-daemon、aos-llm-kernel、aos-llm-send 連它。
+依賴由小到大：`inst`（C lib）→ `aos-exec` → `aos-loop`／`aos-fsm` → `aos-daemon`；`aos-util`、`aos-directive`、`aos-schema` 是庫；`aos-post`（連 `aos-lock`）是信箱，aos-daemon、aos-llm-kernel、aos-llm 連它。

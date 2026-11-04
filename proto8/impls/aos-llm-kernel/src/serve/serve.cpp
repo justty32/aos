@@ -28,14 +28,26 @@ namespace fs = std::filesystem;
 
 namespace aos::llm_kernel {
 
+// aos-exec 目標（資料夾、檔、`檔#/指標`）：相對的從 base 算、轉成絕對（信資料夾裡跑的 aos-exec 才找得到）。
+static std::string target_abs(const std::string& t, const std::string& base) {
+    aos::Spec sp = aos::split_hash(t);
+    std::string p = aos::abspath(aos::join(base, sp.path));
+    if (sp.pointer.empty()) {
+        return p;
+    }
+    return p + "#" + sp.pointer;
+}
+
 Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json doc = aos::load_cfg(spec);
     std::string base = aos::dirname(aos::abspath(aos::split_hash(spec).path));
-    doc = aos::loop::resolve_keys(doc, base, {"mailbox", "slots", "budget", "accept"}).value;
+    aos::Resolved r = aos::loop::resolve_keys(doc, base, {"mailbox", "slots", "budget", "exec", "endpoint", "timeout_ms"});
+    doc = r.value;
     if (!doc.is_object()) {
         throw Error{code::CfgBad, spec + " 要是 JSON 物件"};
     }
     Cfg c;
+    c.base = base;
     Json m = doc.value("mailbox", Json());
     std::string mailbox = "mailbox";
     if (!m.is_null()) {
@@ -53,29 +65,35 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
         c.slots = s.get<long long>();
     }
     c.budget = parse_budget(doc.value("budget", Json()));
-    Json a = doc.value("accept", Json());
-    if (!a.is_null()) {
-        const std::string bad = "accept 要是 [{\"argv\": 非空字串陣列, \"cwd\": 字串}, …]，不是 " + aos::dumps(a);
-        if (!a.is_array()) {
-            throw Error{code::CfgBad, bad};
+    Json ex = doc.value("exec", Json());
+    if (!ex.is_string() || ex.get<std::string>().empty()) {
+        throw Error{code::CfgBad, "exec 要是非空字串（endpoint 函數：資料夾、檔或 `檔#/指標`，相對的從 kernel.json 的資料夾算），不是 " + aos::dumps(ex)};
+    }
+    c.exec = target_abs(ex.get<std::string>(), base);
+    if (!doc.contains("endpoints")) {
+        throw Error{code::CfgBad, "沒寫 endpoints（代號 → 一組 llm 設定）"};
+    }
+    aos::Resolved eps = aos::resolve_shallow(doc["endpoints"], r.dir_of("endpoints"));
+    if (!eps.value.is_object() || eps.value.empty()) {
+        throw Error{code::CfgBad, "endpoints 要是非空物件（代號 → 一組 llm 設定），不是 " + aos::dumps(eps.value)};
+    }
+    c.endpoints = eps.value;
+    for (auto& [k, v] : c.endpoints.items()) {
+        c.endpoint_dirs[k] = eps.dir_of(k);
+    }
+    Json ep = doc.value("endpoint", Json());
+    if (!ep.is_null()) {
+        if (!ep.is_string() || !c.endpoints.contains(ep.get<std::string>())) {
+            throw Error{code::CfgBad, "endpoint（預設代號）要是 endpoints 表裡的一個代號，不是 " + aos::dumps(ep)};
         }
-        std::vector<Accepted> list;
-        for (const Json& e : a) {
-            if (!e.is_object() || !e.value("argv", Json()).is_array() || e["argv"].empty() ||
-                !e.value("cwd", Json()).is_string() || e["cwd"].get<std::string>().empty()) {
-                throw Error{code::CfgBad, bad};
-            }
-            Accepted one;
-            for (const Json& x : e["argv"]) {
-                if (!x.is_string()) {
-                    throw Error{code::CfgBad, bad};
-                }
-                one.argv.push_back(x.get<std::string>());
-            }
-            one.cwd = aos::abspath(aos::join(base, e["cwd"].get<std::string>()));
-            list.push_back(one);
+        c.endpoint = ep.get<std::string>();
+    }
+    Json t = doc.value("timeout_ms", Json());
+    if (!t.is_null()) {
+        if (!aos::is_count(t)) {
+            throw Error{code::CfgBad, "timeout_ms 要是非負整數（跑 endpoint 函數的上限），不是 " + aos::dumps(t)};
         }
-        c.accept = list;
+        c.timeout_ms = t.get<long long>();
     }
     return c;
 }
@@ -135,14 +153,13 @@ struct Served {
     std::string id;
     Json level;          // "low"／"normal"／"high" 或 null（讀不懂信）
     Json waited_runs;    // 或 null
+    Json endpoint = nullptr;   // 用的代號（查出來之前就回錯＝null）
     Json reply;
     unsigned long long elapsed_ms = 0;
-    Json time_ms = nullptr;                    // `_metainfo` 宣告的 time_ms（val；沒寫＝null）
-    Json metainfo_bad = Json::array();         // 寫壞而當沒寫的 `_metainfo` key
 };
 
 // 回信走 reply_to（10-30，medium 決定 3、N-16）：信裡寫了 reply_to＝照 N-16 寄一封回信進去（body＝reply.json 那份、
-// in_reply_to＝原信的信件名稱、stdout.txt／stderr.txt 有就附上），寄出的信件名稱記在 <信>/reply_letter.txt（已經有＝上一次寄過了，不寄第二封）。
+// in_reply_to＝原信的信件名稱；11-04 起不附檔），寄出的信件名稱記在 <信>/reply_letter.txt（已經有＝上一次寄過了，不寄第二封）。
 // 寄不出去（信箱不在、寫不進）不是 kernel 的錯：回「代號 原因」記進 served 的 reply_error，信照搬 done/。沒寫 reply_to＝null。
 Json post_reply(const std::string& dir, const std::string& id, const Json& reply) {
     std::optional<Json> letter = aos::read_json(aos::join(dir, "letter.json"));
@@ -157,11 +174,6 @@ Json post_reply(const std::string& dir, const std::string& id, const Json& reply
         aos::post::Mailbox box = aos::post::open((*letter)["reply_to"].get<std::string>());
         aos::post::SendOpts opts;
         opts.in_reply_to = id;
-        for (const char* f : {"stdout.txt", "stderr.txt"}) {
-            if (fs::is_regular_file(aos::join(dir, f), ec)) {
-                opts.files.push_back({f, aos::join(dir, f)});
-            }
-        }
         std::string sig = aos::post::send(box, reply, opts);
         std::string tmp = aos::join(dir, ".reply_letter.txt.tmp");   // N-05
         std::FILE* f = std::fopen(tmp.c_str(), "w");
@@ -196,28 +208,7 @@ void regret_reply(const std::string& dir) {
     }
 }
 
-// accept 名單（10-24）：單子的 argv 與 cwd 跟其中一張一字不差，而且沒自帶串流與 envs。
-bool accepted(const std::vector<Accepted>& list, const Json& inst) {
-    for (const char* k : {"envs", "stdin", "stdout", "stderr", "stdout_append", "stderr_append"}) {
-        Json v = inst.value(k, Json());
-        if (!v.is_null() && v != Json(false)) {
-            return false;
-        }
-    }
-    Json cwd = inst.value("cwd", Json());
-    Json argv = inst.value("argv", Json());
-    if (!cwd.is_string() || !argv.is_array()) {
-        return false;
-    }
-    for (const Accepted& a : list) {
-        if (aos::abspath(cwd.get<std::string>()) == a.cwd && argv == Json(a.argv)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// 跑過的（子行程起來過＝cur/<id>/runner.json 在）才算一次、才看回報；沒跑的（LetterBad、DeadlineMissed、BudgetMissing）不算。
+// 跑過的（子行程起來過＝cur/<id>/runner.json 在）才算一次、才看 usage；沒跑的（LetterBad、EndpointUnknown、DeadlineMissed、BudgetMissing…）不算。
 bool ran(const std::string& dir) {
     std::error_code ec;
     return fs::exists(aos::join(dir, "runner.json"), ec);
@@ -226,7 +217,7 @@ bool ran(const std::string& dir) {
 class Server {
 public:
     Server(const Cfg& cfg, const std::string& stack)
-        : mb_{cfg.mailbox}, slots_(cfg.slots), budget_(cfg.budget), accept_(cfg.accept), stack_(stack) {}
+        : cfg_(cfg), mb_{cfg.mailbox}, slots_(cfg.slots), budget_(cfg.budget), stack_(stack) {}
     ~Server() {
         if (lock_fd_ >= 0) {
             close(lock_fd_);
@@ -238,10 +229,10 @@ public:
     int run();
 
 private:
+    const Cfg& cfg_;
     Mailbox mb_;
     long long slots_;
     Budget budget_;
-    std::optional<std::vector<Accepted>> accept_;
     std::string stack_;
     int lock_fd_ = -1;
     Queue q_;
@@ -253,7 +244,9 @@ private:
     void recover();
     void sweep();
     std::vector<Waiting> scan();
-    void refuse(const std::string& id, const Json& level, const Json& reply, const Json& waited = nullptr);
+    void refuse(const std::string& id, const Json& level, const Json& reply, const Json& waited = nullptr,
+                const Json& endpoint = nullptr);
+    std::optional<Json> pick(Waiting& w);
     void finish(const Served& s);
     pid_t start_runner(const Waiting& w);
     void wait_runners(std::map<pid_t, Served>& running);
@@ -281,36 +274,32 @@ void Server::lock() {
     }
 }
 
-// served.jsonl 一行、cur → done（reply.json 已在 cur/<id>/ 裡）。
+// served.jsonl 一行、刪 request.json（含金鑰，04 #13）、cur → done（reply.json 已在 cur/<id>/ 裡）。
 void Server::finish(const Served& s) {
     Json line = Json::object();
     line["served_at"] = s.served_at;
     line["letter"] = s.id;
     line["level"] = s.level;
     line["counter_waited_runs"] = s.waited_runs;
-    Json code = nullptr;
-    Json signal = nullptr;
+    line["endpoint"] = s.endpoint;
     Json error = nullptr;
+    Json model = nullptr;
     if (s.reply.contains("error")) {
         error = s.reply["error"]["code"];
-    } else {
-        code = s.reply["code"];
-        signal = s.reply["signal"];
+    } else if (s.reply.value("model", Json()).is_string()) {
+        model = s.reply["model"];
     }
-    line["code"] = code;
-    line["signal"] = signal;
+    line["model"] = model;
     line["error"] = error;
     line["elapsed_ms"] = s.elapsed_ms;
-    line["time_ms"] = s.time_ms;
-    line["metainfo_bad"] = s.metainfo_bad;
     std::string dir = aos::join(mb_.cur(), s.id);
     bool counted = ran(dir);
     Report rep;
     if (counted) {
-        rep = read_report(aos::join(dir, "report.json"));   // 腦願意寫才有（AOS_KERNEL_REPORT）；沒寫＝只算次數
+        rep = report_of(s.reply);   // usage 從回信拿（11-04 起；沒有＝只算次數）
     }
     line["counter_tokens"] = rep.tokens;
-    line["report_bad"] = rep.bad;
+    line["usage_bad"] = rep.bad;
     line["reply_error"] = post_reply(dir, s.id, s.reply);   // 回信走 reply_to（10-30）
     std::string path = aos::join(stack_, "served.jsonl");
     std::FILE* f = std::fopen(path.c_str(), "a");
@@ -325,6 +314,8 @@ void Server::finish(const Served& s) {
     if (counted) {
         add_used(stack_, used_, rep);
     }
+    std::error_code ec;
+    fs::remove(aos::join(dir, "request.json"), ec);
     std::string from = aos::join(mb_.cur(), s.id);
     std::string to = aos::join(mb_.done(), s.id);
     if (!move(from, to)) {
@@ -347,6 +338,12 @@ void Server::recover() {
                 s.level = level_name(priority_of(*letter).level);
             } catch (const Error&) {
             }
+            Json body = letter->value("body", Json());
+            if (body.is_object() && body.value("endpoint", Json()).is_string()) {
+                s.endpoint = body["endpoint"];
+            } else if (cfg_.endpoint) {
+                s.endpoint = *cfg_.endpoint;
+            }
         }
         std::optional<Json> reply = read_reply(aos::join(dir, "reply.json"));
         if (reply) {
@@ -355,15 +352,15 @@ void Server::recover() {
             ++busy_;   // 上一次 kernel 死了、跑信的子行程還活著：讓它跑完（佔一格），回信寫好後下一次再搬
             continue;
         } else {
-            s.reply = error_reply(code::RunFailed, "上一次 kernel 跑這封信跑到一半停了，沒有回信（單子可能還在跑或跑了一半）");
+            s.reply = error_reply(code::RunFailed, "上一次 kernel 跑這封信跑到一半停了，沒有回信（endpoint 函數可能還在跑或跑了一半）");
             write_reply(dir, s.reply);
         }
         finish(s);
     }
 }
 
-// 寄信的人不在了的（<信>/sender.flock 沒人鎖著）：tmp/、done/ 直接刪；new/ 先改名回 tmp/ 再刪（跟閘門撤信同一個做法，不會跟認領撞）。
-// tmp/ 裡 . 開頭的＝閘門正在寫：鎖檔在而沒人鎖著才刪（還沒建鎖檔的那一瞬間不碰）。
+// 寄信的人不在了的（<信>/sender.flock 在、但沒人鎖著）：tmp/、done/ 直接刪；new/ 先改名回 tmp/ 再刪（跟撤信同一個做法，不會跟認領撞）。
+// 沒有 sender.flock＝非同步寄的（aos-llm send、aos-post send）或還在建鎖檔：不判存活、不碰（11-04 衝突 2 (a)）。
 void Server::sweep() {
     std::vector<std::string> tmps;
     std::error_code ec;
@@ -374,31 +371,32 @@ void Server::sweep() {
         std::string dir = aos::join(mb_.tmp(), n);
         bool writing = !n.empty() && n[0] == '.';
         if (writing && !fs::exists(aos::join(dir, "letter.json"), ec)) {
-            continue;   // 閘門鎖好才寫 letter.json：還沒有＝可能正在建鎖檔、上鎖，不碰
+            continue;   // ask 鎖好才寫 letter.json：還沒有＝可能正在建鎖檔、上鎖，不碰
         }
-        if (!sender_alive(dir)) {
+        if (has_sender(dir) && !sender_alive(dir)) {
             remove_tree(dir);
         }
     }
     for (const std::string& id : names_in(mb_.done())) {
         std::string dir = aos::join(mb_.done(), id);
-        if (!sender_alive(dir)) {
+        if (has_sender(dir) && !sender_alive(dir)) {
             regret_reply(dir);   // 它寄過、沒人拿的回信撤回（10-30；aos-post regret）
             remove_tree(dir);
         }
     }
     for (const std::string& id : names_in(mb_.fresh())) {
-        if (!sender_alive(aos::join(mb_.fresh(), id))) {
+        std::string dir = aos::join(mb_.fresh(), id);
+        if (has_sender(dir) && !sender_alive(dir)) {
             std::string t = aos::join(mb_.tmp(), id);
-            if (move(aos::join(mb_.fresh(), id), t)) {
+            if (move(dir, t)) {
                 remove_tree(t);
             }
         }
     }
 }
 
-// 不跑、直接回信（LetterBad、DeadlineMissed、BudgetMissing）：先認領，認領不到＝閘門剛撤信，算了。
-void Server::refuse(const std::string& id, const Json& level, const Json& reply, const Json& waited) {
+// 不跑、直接回信（LetterBad、RequestBad、Endpoint*、DeadlineMissed、BudgetMissing…）：先認領，認領不到＝寄信的剛撤信，算了。
+void Server::refuse(const std::string& id, const Json& level, const Json& reply, const Json& waited, const Json& endpoint) {
     std::string dir = aos::join(mb_.cur(), id);
     if (!move(aos::join(mb_.fresh(), id), dir)) {
         return;
@@ -409,8 +407,43 @@ void Server::refuse(const std::string& id, const Json& level, const Json& reply,
     s.id = id;
     s.level = level;
     s.waited_runs = waited;
+    s.endpoint = endpoint;
     s.reply = reply;
     finish(s);
+}
+
+// 查代號、解那組的指示詞、定 exec（填進 w）；查不到或那組壞了＝回那封信的 error 回信。
+std::optional<Json> Server::pick(Waiting& w) {
+    const Json& body = w.letter["body"];
+    if (body.contains("endpoint")) {
+        w.endpoint = body["endpoint"].get<std::string>();
+    } else if (cfg_.endpoint) {
+        w.endpoint = *cfg_.endpoint;
+    } else {
+        return error_reply(code::EndpointMissing, "信沒寫 endpoint（代號），kernel.json 也沒寫預設的 endpoint");
+    }
+    if (!cfg_.endpoints.contains(w.endpoint)) {
+        return error_reply(code::EndpointUnknown, "代號 " + w.endpoint + " 不在 kernel.json 的 endpoints 表裡");
+    }
+    Json g;
+    try {
+        g = aos::resolve(cfg_.endpoints[w.endpoint], cfg_.endpoint_dirs.at(w.endpoint));
+    } catch (const Error& e) {
+        return error_reply(e.code, "kernel.json 的 endpoints." + w.endpoint + "：" + e.msg);
+    }
+    if (!g.is_object()) {
+        return error_reply(code::CfgBad, "kernel.json 的 endpoints." + w.endpoint + " 要是物件（一組 llm 設定），不是 " + aos::dumps(g));
+    }
+    w.exec = cfg_.exec;
+    if (g.contains("exec")) {
+        if (!g["exec"].is_string() || g["exec"].get<std::string>().empty()) {
+            return error_reply(code::CfgBad, "kernel.json 的 endpoints." + w.endpoint + ".exec 要是非空字串，不是 " + aos::dumps(g["exec"]));
+        }
+        w.exec = target_abs(g["exec"].get<std::string>(), cfg_.base);
+        g.erase("exec");
+    }
+    w.group = g;
+    return std::nullopt;
 }
 
 std::vector<Waiting> Server::scan() {
@@ -420,9 +453,18 @@ std::vector<Waiting> Server::scan() {
     for (const std::string& id : names_in(mb_.fresh())) {
         std::string path = aos::join(aos::join(mb_.fresh(), id), "letter.json");
         std::optional<Json> letter = aos::read_json(path);
-        if (!letter || !letter->is_object() || !letter->value("inst", Json()).is_object() ||
-            !letter->value("env", Json::object()).is_object()) {
-            refuse(id, nullptr, error_reply(code::LetterBad, "信讀不懂：letter.json 要是 {\"inst\": 單子物件, \"env\": {…}, \"priority\": …}"));
+        if (!letter || !letter->is_object() || !letter->value("body", Json()).is_object() ||
+            !(*letter)["body"].contains("request")) {
+            std::string why = "信讀不懂：letter.json 要是 N-16 的信，body＝{\"endpoint\"?: 代號, \"request\": {...}, \"priority\"?}";
+            if (letter && letter->is_object() && letter->contains("inst")) {
+                why += "（頂層 inst／env 是 11-04 以前閘門的信，不再認）";
+            }
+            refuse(id, nullptr, error_reply(code::LetterBad, why));
+            continue;
+        }
+        const Json& body = (*letter)["body"];
+        if (body.contains("endpoint") && !body["endpoint"].is_string()) {
+            refuse(id, nullptr, error_reply(code::LetterBad, "信的 body.endpoint 要是字串（代號），不是 " + aos::dumps(body["endpoint"])));
             continue;
         }
         Waiting w;
@@ -434,13 +476,27 @@ std::vector<Waiting> Server::scan() {
             refuse(id, nullptr, error_reply(code::LetterBad, "信的 " + e.msg));
             continue;
         }
-        if (accept_ && !accepted(*accept_, w.letter["inst"])) {
-            refuse(id, level_name(w.priority.level),
-                   error_reply(code::InstUnknown, "這張單子不在 kernel.json 的 accept 名單裡（argv、cwd 要一字不差，不能自帶 envs 與串流），沒跑"));
+        Json level = level_name(w.priority.level);
+        const Json& req = body["request"];
+        if (!req.is_object() || !req.value("messages", Json()).is_array()) {
+            refuse(id, level, error_reply(code::RequestBad, "body.request 要是物件、messages 要是陣列"));
+            continue;
+        }
+        if (req.contains("stream") && !req["stream"].is_null() && req["stream"] != Json(false)) {
+            refuse(id, level, error_reply(code::RequestBad, "串流不做：request 不能寫 stream: true"));
+            continue;
+        }
+        std::optional<Json> bad = pick(w);
+        if (bad) {
+            Json ep = nullptr;
+            if (!w.endpoint.empty()) {
+                ep = w.endpoint;
+            }
+            refuse(id, level, *bad, nullptr, ep);
             continue;
         }
         if (w.priority.deadline && *w.priority.deadline < now) {
-            refuse(id, level_name(w.priority.level), error_reply(code::DeadlineMissed, "輪到之前時限已過，沒跑"));
+            refuse(id, level, error_reply(code::DeadlineMissed, "輪到之前時限已過，沒跑"), nullptr, w.endpoint);
             continue;
         }
         w.seen_at_runs = q_.runs;
@@ -455,19 +511,35 @@ std::vector<Waiting> Server::scan() {
     return ws;
 }
 
+// stderr.txt 的第一行（沒有＝空）。
+std::string first_line(const std::string& path) {
+    int err = 0;
+    std::optional<std::string> t = aos::read_file(path, err);
+    if (!t) {
+        return "";
+    }
+    size_t n = t->find('\n');
+    return n == std::string::npos ? *t : t->substr(0, n);
+}
+
 pid_t Server::start_runner(const Waiting& w) {
     std::string dir = aos::join(mb_.cur(), w.id);
-    Json inst = w.letter["inst"];
-    if (inst.value("stdout", Json()).is_null()) {
-        inst["stdout"] = aos::join(dir, "stdout.txt");
+    Json req = Json::object();
+    req["endpoint"] = w.group;
+    req["request"] = w.letter["body"]["request"];
+    std::optional<std::string> werr = aos::write_json(aos::join(dir, "request.json"), req);
+    if (werr) {
+        throw Error{code::WriteFailed, *werr};
     }
-    if (inst.value("stderr", Json()).is_null()) {
-        inst["stderr"] = aos::join(dir, "stderr.txt");
+    Json inst = Json::object();
+    inst["argv"] = Json::array({"aos-exec", "--stack", dir + "/", w.exec});
+    inst["cwd"] = dir;
+    inst["stdin"] = aos::join(dir, "request.json");
+    inst["stdout"] = aos::join(dir, "reply.json");
+    inst["stderr"] = aos::join(dir, "stderr.txt");
+    if (cfg_.timeout_ms) {
+        inst["timeout_ms"] = *cfg_.timeout_ms;
     }
-    if (inst.value("stdin", Json()).is_null()) {
-        inst["stdin"] = "/dev/null";   // 閘門不轉自己的 stdin
-    }
-    Json env = w.letter.value("env", Json::object());
     std::fflush(nullptr);
     pid_t pid = fork();
     if (pid < 0) {
@@ -476,31 +548,35 @@ pid_t Server::start_runner(const Waiting& w) {
     if (pid > 0) {
         return pid;
     }
-    // 子行程：只跑這一封
+    // 子行程：只跑這一封（環境照 kernel 自己的，不換）
     close(lock_fd_);   // 鎖只留在 kernel 本身（子行程拿著的話 kernel 死了鎖也不放）
-    if (!accept_) {
-        clearenv();   // 照舊：環境整份換成寄信那一刻的（閘門透明，C-20）
-    }
-    for (auto& [k, v] : env.items()) {
-        if (v.is_string() && (!accept_ || k.rfind("AOS_", 0) == 0)) {   // 有 accept：只疊信裡 AOS_ 開頭的，其他用 kernel 自己的
-            setenv(k.c_str(), v.get<std::string>().c_str(), 1);
-        }
-    }
-    setenv("AOS_KERNEL_REPORT", aos::join(dir, "report.json").c_str(), 1);   // 腦願意就把 API 回覆的 usage 寫進去（10-24）
     Json me = Json::object();   // 先記下自己（kernel 本體死了、自己還活著時，下一次 kernel 看這個不去搶）
     me["pid"] = (long long)getpid();
     me["started_at_ticks"] = aos::proc_started_at_ticks(0).value_or(-1);
     aos::write_json(aos::join(dir, "runner.json"), me);
-    Json reply = Json::object();
+    Json reply;
     try {
         aos::exec::Result r = aos::exec::run_inst(inst, "/", {}, "/");
-        reply["code"] = r.code;
-        reply["signal"] = nullptr;
-        if (r.signal != 0) {
-            reply["signal"] = r.signal;
+        if (r.code != 0 || r.signal != 0 || r.timed_out) {
+            std::string why = "endpoint 函數退 " + std::to_string(r.code);
+            if (r.timed_out) {
+                why += "（逾時 " + std::to_string(*cfg_.timeout_ms) + " ms）";
+            }
+            std::string line = first_line(aos::join(dir, "stderr.txt"));
+            if (!line.empty()) {
+                why += "：" + line;
+            }
+            reply = error_reply(code::EndpointFailed, why);
+        } else {
+            std::optional<Json> got = read_reply(aos::join(dir, "reply.json"));
+            if (got) {
+                reply = *got;
+            } else {
+                reply = error_reply(code::ReplyBad, "endpoint 函數的 stdout 讀不懂（要是一行 {\"message\": {...}, \"usage\", \"model\"}）");
+            }
         }
     } catch (const Error& e) {
-        reply = error_reply(e.code, "單子跑不起來：" + e.msg);
+        reply = error_reply(code::EndpointFailed, "endpoint 函數跑不起來：" + e.code + " " + e.msg);
     } catch (const std::exception& e) {
         reply = error_reply(code::Internal, e.what());
     }
@@ -594,19 +670,19 @@ int Server::run() {
         for (const Waiting& w : ws) {
             if (spent(budget_, used_, n + busy_)) {   // 這一窗額度到頂
                 if (budget_.wait) {
-                    break;   // 留在 new/ 等下一窗（閘門一直等，由包它那格的 timeout_ms 守）
+                    break;   // 留在 new/ 等下一窗（寄信的一直等，由它自己那邊守）
                 }
                 q_.seen_at_runs.erase(w.id);
                 refuse(w.id, level_name(w.priority.level),
                        error_reply(code::BudgetMissing, "這一窗（" + budget_.window + "）的額度用完了，沒跑"),
-                       waited_runs(w, q_.runs));
+                       waited_runs(w, q_.runs), w.endpoint);
                 continue;
             }
             if (n + busy_ >= slots_) {
                 break;
             }
             if (!move(aos::join(mb_.fresh(), w.id), aos::join(mb_.cur(), w.id))) {
-                continue;   // 閘門剛撤信
+                continue;   // 寄信的剛撤信
             }
             q_.seen_at_runs.erase(w.id);
             Served s;
@@ -614,16 +690,7 @@ int Server::run() {
             s.id = w.id;
             s.level = level_name(w.priority.level);
             s.waited_runs = waited_runs(w, q_.runs);
-            if (w.priority.time_ms) {
-                double v = *w.priority.time_ms;
-                s.time_ms = v;
-                if (v == std::floor(v) && v < 9e15) {
-                    s.time_ms = (long long)v;   // 整數就印整數（800，不是 800.0）
-                }
-            }
-            for (const std::string& k : w.priority.metainfo_bad) {
-                s.metainfo_bad.push_back(k);
-            }
+            s.endpoint = w.endpoint;
             pid_t pid = 0;
             try {
                 pid = start_runner(w);

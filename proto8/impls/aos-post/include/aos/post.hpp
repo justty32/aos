@@ -1,6 +1,6 @@
 // aos/post.hpp：aos-post 的公開介面——投遞（NORMS N-16）：寄信、認領、讀信、處理完、撤回。
 // aos-post＝IPC 的語法糖、基底工具（thinking 11-03 aos-post）：跟 aos proc 的關聯不深，proc 自己拿它組出想要的效果。
-// aos-post 命令列用這組；aos-daemon 的信箱模式、aos-llm-kernel 的回信、aos-llm-send 的回信信箱直接連這個庫。
+// aos-post 命令列用這組；aos-daemon 的信箱模式、aos-llm-kernel 的回信、aos-llm 的寄信與回信信箱直接連這個庫。
 //
 //   信箱＝一個資料夾，底下的格（各函式只驗自己用到的格，少了丟 MailboxMissing，不替人建——init、take、done keep 例外）：
 //     tmp/<信件名稱>/      寄信人正在寫、或正在撤回／丟掉的信；處理者永遠不看這格
@@ -78,7 +78,7 @@ struct SendOpts {
     std::optional<std::string> in_reply_to;   // 原信的信件名稱（check_name；不驗那封在不在）
     bool ordered = false;                     // 有順序的投遞（order.lock/＋order.json）；拿不到鎖就一直等
     // 信裡另放的檔（N-16「其他檔隨意」）：{信裡的名字, 來源檔路徑}，在寫 letter.json 之前複製進去；複製不了丟 WriteFailed。
-    // 名字要是單純的檔名、不能叫 letter.json（ArgumentsBad）。aos-llm-kernel 的回信用它附 stdout.txt、stderr.txt（10-30）
+    // 名字要是單純的檔名、不能叫 letter.json（ArgumentsBad）。aos-llm-kernel 的回信 10-30～11-04 用它附 stdout.txt、stderr.txt（11-04 起不附）
     std::vector<std::pair<std::string, std::string>> files;
 };
 

@@ -65,13 +65,6 @@ void order(std::vector<Waiting>& ws, long long runs) {
         if (a.priority.deadline && *a.priority.deadline != *b.priority.deadline) {
             return *a.priority.deadline < *b.priority.deadline;
         }
-        // 10-24 `_metainfo`：同級同時限，宣告短的先、有寫的在沒寫的前面（不蓋過 level 與 deadline；aging 照舊，插隊有上限）
-        if (a.priority.time_ms.has_value() != b.priority.time_ms.has_value()) {
-            return a.priority.time_ms.has_value();
-        }
-        if (a.priority.time_ms && *a.priority.time_ms != *b.priority.time_ms) {
-            return *a.priority.time_ms < *b.priority.time_ms;
-        }
         long long wa = waited_runs(a, runs);
         long long wb = waited_runs(b, runs);
         if (wa != wb) {

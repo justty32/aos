@@ -1,27 +1,27 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/impls/` 的 `aos-llm-kernel`、`aos-llm-send`、`aos-json`｜上一份：[01-impls-2](01-impls-2.md)
+← [入口](../proto8.md)｜涵蓋：`proto8/impls/` 的 `aos-llm-kernel`、`aos-llm`、`aos-json`｜上一份：[01-impls-2](01-impls-2.md)
 
 行為細節以各專案 README 為準。路徑相對於該段標題的資料夾。建置檔見 [01-impls](01-impls.md) 的共通段。
 
-## `impls/aos-llm-kernel/`（LLM kernel：排隊、額度、代跑單子）
+## `impls/aos-llm-kernel/`（LLM kernel：排隊、額度、跑自己的 endpoint 函數）
 
 | 檔 | 負責什麼 |
 |---|---|
-| `include/aos/llm_kernel.hpp` | 公開標頭（aos-llm-send 連它）：信箱、信、優先序、代號 |
-| `src/letter/letter.cpp` | 信箱四格、寄信人存活（`sender.flock`）、`parse_priority`、`priority_of`、`read_reply` |
-| `src/queue/queue.cpp`、`src/queue/queue.hpp` | `queue.json` 讀寫、`effective`、`order`（級數 → deadline → `time_ms` → 等得久 → 先寄） |
-| `src/serve/serve.cpp`、`src/serve/serve.hpp` | `Server`：讀設定（`slots`、`budget`、`accept`）、`recover`、`sweep`、`scan`、`start_runner`、`wait_runners`、`finish`（`served.jsonl`、`used.json`）、回信 `post_reply`／`regret_reply`（撤回沒人拿的回信，aos-post 的 `regret`） |
-| `src/budget/budget.cpp`、`src/budget/budget.hpp` | token 回報與額度：`parse_budget`、`window_since`、`read_used`／`add_used`、`spent`、`read_report` |
+| `include/aos/llm_kernel.hpp` | 公開標頭（aos-llm 連它）：信箱、信（`body.endpoint`／`request`／`priority`）、優先序、回信形狀、代號（含 `Endpoint*`、`RequestBad`） |
+| `src/letter/letter.cpp` | 信箱四格、寄信人存活（`sender.flock`：`has_sender`／`sender_alive`）、`parse_priority`、`priority_of`（`body.priority`）、`reply_of`／`read_reply`（`{"message"}` 或 `{"error"}`） |
+| `src/queue/queue.cpp`、`src/queue/queue.hpp` | `queue.json` 讀寫、`effective`、`order`（級數 → deadline → 等得久 → 先寄） |
+| `src/serve/serve.cpp`、`src/serve/serve.hpp` | `read_cfg`（`slots`、`budget`、`exec`、`endpoints`、`endpoint`、`timeout_ms`）；`Server`：`recover`、`sweep`（只看有 `sender.flock` 的信）、`scan`＋`pick`（查代號、解那組、定 exec）、`start_runner`（寫 `request.json`、fork、`run_inst` 跑 `aos-exec --stack <信>/ <exec>`、判結束碼與 stdout）、`wait_runners`、`finish`（`served.jsonl`、`used.json`、刪 `request.json`）、回信 `post_reply`／`regret_reply`（撤回沒人拿的回信，aos-post 的 `regret`） |
+| `src/budget/budget.cpp`、`src/budget/budget.hpp` | token 與額度：`parse_budget`、`window_since`、`read_used`／`add_used`、`spent`、`report_of`（回信的 `usage`） |
 | `src/main.cpp` | 命令列 `aos-llm-kernel [旗標] kernel.json`（要 `AOS_STACK`） |
 | `src/common/common.hpp` | 內部共用標頭 |
 
-## `impls/aos-llm-send/`（閘門：寄單子給 kernel、等回信）
+## `impls/aos-llm/`（基礎工具：寄請求信給 kernel、收回信；11-04 由 aos-llm-send 改名）
 
 | 檔 | 負責什麼 |
 |---|---|
-| `src/send/send.cpp`、`src/send/send.hpp` | `mailbox`（`$AOS_KERNEL`）、`post`（寄信人身分用 aos-util 的 `identity`、解指示詞、驗 priority、信封〔沒有 `kind`〕、先鎖 `sender.flock` 再寫信、回信信箱 `reply_to`） |
-| `src/wait/wait.cpp`、`src/wait/wait.hpp` | `wait_reply`（看回信信箱、訊號＝撤信）、`relay`（stdout／stderr 原樣、結束碼） |
-| `src/main.cpp` | 命令列 `aos-llm-send [旗標] 單子.json` |
-| `src/common/common.hpp` | 內部標頭：`reply_box` |
+| `src/send/send.cpp`、`src/send/send.hpp` | `kernel`（`$AOS_KERNEL`）、`read_body`（stdin 整份 body、`--priority` 蓋上、驗形狀與 priority）、`send`（非同步：aos-post 的 `init`／`send`，不建 `sender.flock`）、`send_held`（同步：先鎖 `sender.flock` 再寫信、回信信箱 `<信箱>/reply/`）、`regret`（aos-post 的 `regret`） |
+| `src/wait/wait.cpp`、`src/wait/wait.hpp` | `recv`（照 `in_reply_to` 找回信、印 `body.message`；沒到 10）、`ask_wait`（20 ms 輪詢、訊號＝撤信）；內部 `find_reply`、`take`、`deliver`、`withdraw` |
+| `src/main.cpp` | 命令列 `aos-llm send [--priority P] --reply-to BOX`／`recv BOX 名`／`ask [--priority P]`／`regret 名` |
+| `src/common/common.hpp` | 內部標頭：`reply_box`、代號（加 `RegretFailed`） |
 
 ## `impls/aos-json/`（讀、改 aos 的 JSON 設定；沒有公開標頭）
 
@@ -42,4 +42,4 @@
 | `src/cmd/write.cpp` | `set`、`batch`、`del`、`append`、`merge`、`env`、`ref`；共用 `Edit`（`--check` 比原本多出問題才擋） |
 | `src/cmd/check.cpp` | `check`：`$ref` 指得到、指示詞寫法、`exec` 形狀 |
 | `tools/json/_entry`、`tools/json/_tooldef.json` | 腦用工具：一次一個 aos-json 動作 |
-| `tools/json_edit/_entry`、`tools/json_edit/_tooldef.json` | 腦用工具：自己問腦，peek 找指標 → 問新值 → `batch` 一次寫 |
+| `tools/json_edit/_entry`、`tools/json_edit/_tooldef.json` | 腦用工具：自己問腦（`aos-llm ask`，11-04 晚），peek 找指標 → 問新值 → `batch` 一次寫 |

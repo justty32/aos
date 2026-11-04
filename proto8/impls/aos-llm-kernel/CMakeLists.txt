@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 # aos-llm-kernel：`aos-llm-kernel kernel.json`——LLM kernel 跑一次（挑信、跑、回信）。兩個產物：lib/libaos-llm-kernel.a、bin/aos-llm-kernel。
-# 公開標頭 aos/llm_kernel.hpp（信箱與信的格式）也給 aos-llm-send 用。
+# 公開標頭 aos/llm_kernel.hpp（信箱與信的格式）也給 aos-llm 用。
 # CMake 的共通設定（vcpkg、Release、compile_commands、PIC、AOS_STATIC_PIE）在 ../cmake/settings.cmake。
 # 照 aos-fsm 的 CMakeLists.txt 改名。
 include(../cmake/settings.cmake)
@@ -9,7 +9,7 @@ include(../cmake/settings.cmake)
 project(aos-llm-kernel C CXX)
 
 # 用到的兄弟專案（包一層 if(NOT TARGET)，全家都這樣寫）。
-#   aos-loop   公開 API（aos/loop.hpp）：擋訊號、設定檔的指示詞（resolve_keys）；它又帶進 aos-exec（跑單子＝run_inst）、inst、aos-util、aos-directive
+#   aos-loop   公開 API（aos/loop.hpp）：擋訊號、設定檔的指示詞（resolve_keys）；它又帶進 aos-exec（跑 endpoint 函數＝run_inst）、inst、aos-util、aos-directive
 if(NOT TARGET aos-loop)
   add_subdirectory(../aos-loop aos-loop-build)
 endif()

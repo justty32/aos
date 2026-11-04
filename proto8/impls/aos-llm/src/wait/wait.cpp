@@ -1,8 +1,7 @@
-// wait.cpp：【wait】等回信、撤信、轉交（說明見 wait.hpp）。
+// wait.cpp：【wait】收回信、等回信、撤信（說明見 wait.hpp）。
 #include "wait/wait.hpp"
 
 #include "aos/files.hpp"
-#include "aos/post.hpp"
 
 #include <cstdio>
 #include <filesystem>
@@ -10,33 +9,13 @@
 #include <set>
 #include <signal.h>
 
-#include <unistd.h>
-
 namespace fs = std::filesystem;
 
-namespace aos::llm_send {
+namespace aos::llm {
 
 static bool exists(const std::string& p) {
     std::error_code ec;
     return fs::exists(p, ec);
-}
-
-static void copy_to(const std::string& path, int fd) {
-    int err = 0;
-    std::optional<std::string> text = aos::read_file(path, err);
-    if (!text) {
-        return;   // 沒有這個檔＝單子自己導到別處了
-    }
-    const char* p = text->data();
-    size_t left = text->size();
-    while (left > 0) {
-        ssize_t n = write(fd, p, left);
-        if (n <= 0) {
-            return;   // 對方不收了（EPIPE 之類）就算了
-        }
-        p += n;
-        left -= (size_t)n;
-    }
 }
 
 // 回信信箱 new/ 裡回 id 的那封（看過不是的記在 seen，不再讀）；沒有＝nullopt。
@@ -62,16 +41,15 @@ static std::optional<std::string> find_reply(const aos::post::Mailbox& rb, const
     return std::nullopt;
 }
 
-// 認領回信（new → cur）；被別人搶走（不會發生，除非有人亂動）＝false。
+// 認領回信（new → cur；cur/ 沒有就建）；被別人搶走＝false。
 static bool take(const aos::post::Mailbox& rb, const std::string& n) {
+    std::error_code ec;
+    fs::create_directories(rb.cur(), ec);
     return std::rename(aos::join(rb.fresh(), n).c_str(), aos::join(rb.cur(), n).c_str()) == 0;
 }
 
-static int relay(const aos::post::Mailbox& rb, const std::string& n) {
+static int deliver(const aos::post::Mailbox& rb, const std::string& n) {
     std::string dir = aos::join(rb.cur(), n);
-    std::fflush(nullptr);
-    copy_to(aos::join(dir, "stdout.txt"), 1);
-    copy_to(aos::join(dir, "stderr.txt"), 2);
     std::optional<Json> l = aos::read_json(aos::join(dir, "letter.json"));
     std::optional<Json> reply;
     if (l && l->is_object() && l->contains("body")) {
@@ -88,10 +66,24 @@ static int relay(const aos::post::Mailbox& rb, const std::string& n) {
         const Json& e = (*reply)["error"];
         throw Error{e["code"].get<std::string>(), e["msg"].get<std::string>()};
     }
-    return (*reply)["code"].get<int>();
+    std::string line = aos::dumps((*reply)["message"]) + "\n";
+    std::fwrite(line.data(), 1, line.size(), stdout);
+    std::fflush(stdout);
+    return 0;
 }
 
-static void regret(const Mailbox& mb, const aos::post::Mailbox& rb, const std::string& id,
+int recv(const std::string& box, const std::string& name) {
+    aos::post::check_name(name);   // 不合 ArgumentsBad
+    aos::post::Mailbox rb = aos::post::open(box);   // 不是資料夾＝MailboxMissing
+    std::set<std::string> seen;
+    std::optional<std::string> n = find_reply(rb, name, seen);
+    if (n && take(rb, *n)) {
+        return deliver(rb, *n);
+    }
+    return 10;
+}
+
+static void withdraw(const Mailbox& mb, const aos::post::Mailbox& rb, const std::string& id,
                      std::set<std::string>& seen) {
     std::error_code ec;
     std::string t = aos::join(mb.tmp(), id);
@@ -109,7 +101,7 @@ static void regret(const Mailbox& mb, const aos::post::Mailbox& rb, const std::s
     }
 }
 
-int wait_reply(const Mailbox& mb, const std::string& id) {
+int ask_wait(const Mailbox& mb, const std::string& id) {
     aos::post::Mailbox rb = aos::post::open(reply_box(mb));
     std::set<std::string> seen;
     sigset_t set;
@@ -120,7 +112,7 @@ int wait_reply(const Mailbox& mb, const std::string& id) {
     while (true) {
         std::optional<std::string> n = find_reply(rb, id, seen);
         if (n && take(rb, *n)) {
-            return relay(rb, *n);
+            return deliver(rb, *n);
         }
         if (!exists(aos::join(mb.fresh(), id)) && !exists(aos::join(mb.cur(), id)) &&
             !exists(aos::join(mb.done(), id)) && !find_reply(rb, id, seen)) {
@@ -129,10 +121,10 @@ int wait_reply(const Mailbox& mb, const std::string& id) {
         timespec ts{0, 20 * 1000 * 1000};
         int sig = sigtimedwait(&set, nullptr, &ts);
         if (sig > 0) {
-            regret(mb, rb, id, seen);
+            withdraw(mb, rb, id, seen);
             return 128 + sig;
         }
     }
 }
 
-}  // namespace aos::llm_send
+}  // namespace aos::llm

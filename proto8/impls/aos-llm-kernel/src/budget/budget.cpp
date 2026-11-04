@@ -145,25 +145,23 @@ bool spent(const Budget& b, const Used& u, long long started) {
     return b.max_tokens && u.tokens >= *b.max_tokens;
 }
 
-Report read_report(const std::string& path) {
+Report report_of(const Json& reply) {
     Report r;
-    int err = 0;
-    if (!aos::read_file(path, err)) {
-        r.bad = err != ENOENT;
-        return r;
+    if (!reply.is_object() || !reply.contains("usage")) {
+        return r;   // 沒回報＝只算次數
     }
-    std::optional<Json> u = aos::read_json(path);
-    if (!u || !u->is_object()) {
+    const Json& u = reply["usage"];
+    if (!u.is_object()) {
         r.bad = true;
         return r;
     }
-    Json total = u->value("total_tokens", Json());
+    Json total = u.value("total_tokens", Json());
     if (aos::is_count(total)) {
         r.tokens = total;
         return r;
     }
-    Json p = u->value("prompt_tokens", Json());
-    Json c = u->value("completion_tokens", Json());
+    Json p = u.value("prompt_tokens", Json());
+    Json c = u.value("completion_tokens", Json());
     if (total.is_null() && aos::is_count(p) && aos::is_count(c)) {
         r.tokens = p.get<long long>() + c.get<long long>();
         return r;

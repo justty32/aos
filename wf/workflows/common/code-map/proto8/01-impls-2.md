@@ -42,7 +42,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| `include/aos/post.hpp` | 公開介面：`Mailbox`（`tmp`／`fresh`／`cur`／`archive`）、`SendOpts`、`Seen`、`init`／`open`／`send`／`take`／`take_all`／`first_in_cur`／`see`／`reply`／`done`／`regret`、`check_name`／`is_ordered`／`sort_letters`（處理順序：有序在前）；aos-daemon、aos-llm-kernel、aos-llm-send 連它 |
+| `include/aos/post.hpp` | 公開介面：`Mailbox`（`tmp`／`fresh`／`cur`／`archive`）、`SendOpts`、`Seen`、`init`／`open`／`send`／`take`／`take_all`／`first_in_cur`／`see`／`reply`／`done`／`regret`、`check_name`／`is_ordered`／`sort_letters`（處理順序：有序在前）；aos-daemon、aos-llm-kernel、aos-llm 連它 |
 | `src/main.cpp` | 命令列 `aos-post init\|send\|take\|take-all\|see\|done\|regret [旗標] 信箱 [信件名稱]`；沒東西退 10 |
 | `src/mailbox/mailbox.cpp` | 信箱路徑、`init`、`open`；信件名稱規則 `check_name`、`is_ordered`、`sort_letters`；common 小工具的實作 |
 | `src/send/send.cpp` | `send`（入口檢查：`tmp/`、`new/` 可寫、`reply_to`、自己給的名字；`tmp/` 寫好 rename 進 `new/`；sender 用 aos-util 的 `identity`）、`--ordered`（經 aos-lock 拿 `order.lock/` 編序號） |

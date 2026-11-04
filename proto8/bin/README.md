@@ -1,4 +1,4 @@
-# bin — aos-tick、aos-tools、aos-daemon-ctl、aos-eca-turn、aos-llm、aos-eca-screen、aos-eca-llm（Python）
+# bin — aos-tick、aos-tools、aos-daemon-ctl、aos-eca-turn、aos-eca-screen（Python）
 
 ← [proto8](../README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)｜demo：[demo](../demo/README.md)｜C++ 實作：[impls](../impls/README.md)
 
@@ -18,7 +18,7 @@ aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<�
 | [02-aos-tick與已定值](docs/02-aos-tick與已定值.md) | 逐支說明（續）：aos-tick - 把時鐘檔的回合數往前走一格、aos_flags.py：命令列旗標解析 parse(；已定值 |
 | [03-aos-daemon-ctl](docs/03-aos-daemon-ctl.md) | aos-daemon-ctl：開頭、哪個 daemon、add／rm＝投信、做完的同名再 add＝重新起、自動識別、-- 參數...、--ws WS、--stack S、不碰 /.stack、stop／start、pause／resume、exec 型只有跑和拔 |
 | [04-aos-daemon-ctl續](docs/04-aos-daemon-ctl續.md) | aos-daemon-ctl（續）：where --stack 名字、ls、ls 另判 daemon 活著、錯 |
-| [05-aos-llm與eca入口](docs/05-aos-llm與eca入口.md) | aos-llm（改定義裡的腦，11-04）、aos-eca-screen／aos-eca-llm（eca 的 screen／llm 子介面身體，11-04） |
+| [05-aos-llm與eca入口](docs/05-aos-llm與eca入口.md) | aos-llm（Python 改定義那支 11-04 刪了，名字給 C++ 的基礎工具）、aos-eca-screen（eca 的 screen 子介面身體，11-04）；aos-eca-llm 11-04 晚刪了 |
 
 <a id="逐支說明"></a>
 <a id="已定值"></a>

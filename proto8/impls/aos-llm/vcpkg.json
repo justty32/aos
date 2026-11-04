@@ -1,7 +1,7 @@
 {
-  "name": "aos-llm-send",
+  "name": "aos-llm",
   "version": "0.1.0",
-  "description": "aos-llm-send：把一張單子寄進 kernel 的信箱、等回信、結果原樣交回",
+  "description": "aos-llm：寄請求信進 LLM kernel 的信箱、收回信（send／recv／ask／regret）",
   "builtin-baseline": "b781af668027bbf77f2f827f47b5c6cd8d825c08",
   "dependencies": [
     "nlohmann-json"
