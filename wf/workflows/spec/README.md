@@ -4,7 +4,7 @@
 
 ## 這是什麼
 
-> **歷史：2026-09-05 那一代（`core/` C++ 線與根目錄 `proto/` 原型）的規格，不再是現行。** 現行規格是 [proto6/spec](../../../proto6/spec/README.md)（唯一事實），行為正本是 [proto6/src/py](../../../proto6/src/py/README.md) 的程式與測試。新實作照 proto6 寫，不照這疊。
+> **歷史：2026-09-05 那一代（`core/` C++ 線與根目錄 `proto/` 原型）的規格，不再是現行。** 現行規格是 [proto6/spec](../../../archive/proto6/spec/README.md)（唯一事實），行為正本是 [proto6/src/py](../../../archive/proto6/src/py/README.md) 的程式與測試。新實作照 proto6 寫，不照這疊。
 
 > **2026-10-13 封存**：下面提到的正文（01～14）、`schemas/`、`data/`、`notes/`、`clause-sources/` 全部搬進 [archive/](archive/README.md)，本檔只留脈絡。
 
@@ -59,7 +59,7 @@
 | 14-conformance.md | 每條「必須」對一個可測的檢查：怎麼跑＋測不到的「必須」清單（表本身在 data/conformance.json） |
 | schemas/ | 每種 json 一份 JSON Schema，schema 是正本 |
 
-寫 spec 那天的材料（使用者拍板原文、83 條邊緣狀況與主編的取捨、舊資產盤點）在 notes/；能跑的 Python 原型在 repo 根目錄 `proto/`，它撞到的事在 `proto/FINDINGS.md`。
+寫 spec 那天的材料（使用者拍板原文、83 條邊緣狀況與主編的取捨、舊資產盤點）在 notes/；能跑的 Python 原型在 `archive/proto/`（11-04 封存），它撞到的事在 `archive/proto/FINDINGS.md`。
 
 ## 條款來源與主編裁決（已下放）
 

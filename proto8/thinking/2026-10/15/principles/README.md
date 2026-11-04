@@ -1,6 +1,6 @@
 # 2026-10-15 兩條總原則：巢狀只管自己這一層、錯誤只處理自己的（深夜加：KISS 最高原則）
 
-← [討論紀錄](../../../README.md)｜落成：[C-56、C-52、C-53](../../../../docs/CONCEPTS/01-設計理念.md)｜先前的標準：[proto7 設計原則](../../../../../proto7/notes/principles.md) 第 9、10 條（10-04）、[proto7-2 契約卡](../../../../../proto7-2/notes/component-contracts.md)（職責／前置條件／保證／明確不管）
+← [討論紀錄](../../../README.md)｜落成：[C-56、C-52、C-53](../../../../docs/CONCEPTS/01-設計理念.md)｜先前的標準：[proto7 設計原則](../../../../../archive/proto7/notes/principles.md) 第 9、10 條（10-04）、[proto7-2 契約卡](../../../../../archive/proto7-2/notes/component-contracts.md)（職責／前置條件／保證／明確不管）
 
 ## 分檔目錄
 

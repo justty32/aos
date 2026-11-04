@@ -10,11 +10,11 @@
 
 ## 現況（2026-10-03）：開 proto7
 
-**10-03 使用者定**：架構照分層想法重來，開 [proto7](../../../../proto7/README.md)，先立[核心 spec](../../../../proto7/spec/core.md)（S-01～S-23）；daemon 與 tick 用程序、不用 thread。proto7 文件不連回 proto6，需要的搬過去。下面 proto6 一段是到 10-03 為止的現況，程式仍可參考。
+**10-03 使用者定**：架構照分層想法重來，開 [proto7](../../../../archive/proto7/README.md)，先立[核心 spec](../../../../archive/proto7/spec/core.md)（S-01～S-23）；daemon 與 tick 用程序、不用 thread。proto7 文件不連回 proto6，需要的搬過去。下面 proto6 一段是到 10-03 為止的現況，程式仍可參考。
 
 ### proto6（到 10-03）
 
-規格在 [proto6/spec](../../../../proto6/spec/README.md)（唯一事實，行為正本是程式與測試）、程式在 [proto6/src/py](../../../../proto6/src/py/README.md)、各段做完／暫緩／未做的狀態在 [proto6/plan](../../../../proto6/plan/README.md#各段狀態)。**分工（09-30 晚使用者定）**：先用 **Python 把整條 POC 做通，POC 由 AI 團隊寫**，使用者看結果、做裁定；**C++11 改寫放到最後**，等 POC 玩過再開，他想親手寫的部分留到那時。這取代 09-29「程式由他親手寫、我們只規劃」的分工（更早 09-05「spec 出一部分就做原型、不寫 plan」也不再適用）。
+規格在 [proto6/spec](../../../../archive/proto6/spec/README.md)（唯一事實，行為正本是程式與測試）、程式在 [proto6/src/py](../../../../archive/proto6/src/py/README.md)、各段做完／暫緩／未做的狀態在 [proto6/plan](../../../../archive/proto6/plan/README.md#各段狀態)。**分工（09-30 晚使用者定）**：先用 **Python 把整條 POC 做通，POC 由 AI 團隊寫**，使用者看結果、做裁定；**C++11 改寫放到最後**，等 POC 玩過再開，他想親手寫的部分留到那時。這取代 09-29「程式由他親手寫、我們只規劃」的分工（更早 09-05「spec 出一部分就做原型、不寫 plan」也不再適用）。
 **成熟元件直接複製**：inst.json、aos-exec、`$ref` 從 proto5 原樣複製進 `proto6/src/py`，不重寫；它們的既有規則不列待問（見 [dispatch/lessons](../../dispatch/lessons.md) 第 8 條）。
 **review**〔使用者方向 2026-09-30 晚〕：aos-exec／inst.json 成熟、他不 review；**從 tick 起他要 review**，之後程式**以好讀為先**，附導讀（從哪讀起、每檔一句、plan 步驟對應函式、AI 自做的判斷）。
 

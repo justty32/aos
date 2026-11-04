@@ -6,7 +6,7 @@
 
 ## Repo 佈局
 
-佈局表與說明（每個頂層路徑放什麼、`proto*/` 各代原型、非侵入式佈局）在 [INDEX/01-repo-layout.md](INDEX/01-repo-layout.md)（2026-10-13 tidy：本檔超過 8 KB，整段逐字下放）。
+佈局表與說明（每個頂層路徑放什麼、`proto8/` 原型與 `archive/` 舊原型、非侵入式佈局）在 [INDEX/01-repo-layout.md](INDEX/01-repo-layout.md)（2026-10-13 tidy：本檔超過 8 KB，整段逐字下放）。
 
 ## 程式碼在哪 → code map
 
