@@ -4,7 +4,7 @@
 
 11-04 使用者「demo中的，用不到的全部刪掉，也不用封存了」：`run.sh`、agent-gus、hal、kai、liv、meg、pip、talk、eca-codex、daemon、daemon-2、daemon-3 刪了；agent-bob、ann、eve 與 tick 先搬進 tests/fixtures，同天隨 proto8/tests 刪了。
 
-## `demo/eca-claude/`（外部 coding agent 範本；當時 aos-eca add 的預設範本，11-04 晚 aos-eca 併進 aos-agent、`aos-agent add` 不給預設）
+## `demo/eca-claude/`（外部 coding agent 範本；當時 aos-eca add 的預設範本，11-04 晚 aos-eca 併進 aos-agent、`aos-agent ctl add` 不給預設）
 
 | 檔 | 負責什麼 |
 |---|---|
@@ -20,7 +20,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| `_entry` | 單子 `aos-agent add <AOS_CD>`（`cwd`＝`AOS_WS`）：`aos-exec 這個資料夾`＝掛上 daemon（11-05 portable-flow 題 4） |
+| `_entry` | 單子 `aos-agent ctl add <AOS_CD>`（`cwd`＝`AOS_WS`）：`aos-exec 這個資料夾`＝掛上 daemon（11-05 portable-flow 題 4） |
 | `body.json` | 身體的入口 `["aos-loop", "loop.json"]`（`interfaces.json` 的 `entry` 指它；直接跑＝`aos-exec body.json`；11-05 從 `_entry` 搬來） |
 | `loop.json` | 停著等版：`exec` 是 `fsm.json`、`interval_ms` 300、開 `ctl`／`state` 窗 |
 | `fsm.json` | 四格表：idle `{"0": "think", "10": "idle"}`、think `{"0": "wait", "10": "idle"}`、wait `{"0": "act", "10": "wait"}`、act `{"0": "think", "10": "idle"}`；`_entry` 讓 aos-exec 也能直接跑一格 |

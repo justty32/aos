@@ -35,14 +35,6 @@
 - 定義**拿掉了** `rm` 裡的名字＝那個名字疊的時候找不到，忽略（不報錯、檔裡留著也無害）。
 - 定義**多了一個跟 `add` 同名的**＝覆蓋層的 `add` 贏（這隻自己加的優先）。
 
-### 舊的整份副本怎麼遷移（11-04～11-05 建的）
-
-11-05 前 `tools add／rm` 建的是整份副本 `{"tools": {…}}`（path 是絕對）。KISS：**認得、照舊、要改就先 reset**——
-
-- `<stack>/tools.json` 裡有 `tools` 這格＝當成一份完整登記檔、**整份取代定義**（就是 11-04 的行為；正在跑的那隻不受影響）。`tools ls`／`get` 的 stderr 會提醒「這是 11-05 前的整份副本」。
-- 這時 `tools add／rm`＝`aos-tools: RegistryBad …先刪掉它（aos-agent tools reset）`，不寫。`tools reset` 刪掉副本，之後再 `add`／`rm` 就是覆蓋層。副本裡改過的會丟——reset 前先 `tools ls` 記下來、reset 後再 `add` 回去。
-- 不自動轉換（要比對定義才知道哪些是改過的，猜錯會默默改掉工具箱）。
-
 ### 已知的邊
 
 - 指到 image 外面的工具（例 repo 裡的 `lib/base/clock`）存的也是相對路徑（`../../../../../../home/…`）：整份搬到另一層深度或別台、那邊沒有同樣相對位置的檔＝那個工具找不到（aos-tools 報 `PathMissing`）。照 [portable-flow 03 原則 5](../../../thinking/2026-11/05/portable-flow/03-絕對路徑盤點.md)「指到 daemon 外面自擔」；要帶著走就把工具放進定義旁的 `lib/`。

@@ -91,7 +91,7 @@ def read_llm(path):
 
 def stack_copies(cfg, tool_dir):
     """子介面 tools（11-05 portable-flow 步 4，使用者「tools只存差異」）：$AOS_STACK/tools.json 在、cli.json 又沒明寫 tools＝它是這隻的覆蓋層，
-    cfg["overlay"]＝它、交給 aos-mcp --overlay（疊法歸 aos-tools；11-05 前的整份副本 aos-tools 照舊整份取代）；定義沒有登記檔＝registry 用同層 tools.json 的路徑（不在也行）。
+    cfg["overlay"]＝它、交給 aos-mcp --overlay（疊法歸 aos-tools）；定義沒有登記檔＝registry 用同層 tools.json 的路徑（不在也行）。
     腦設定（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本，aos-agent llm set 寫的）；
     有 model＝flags 的 --model 換成它（沒有就加在尾）。每次 load_cfg（每題）重讀＝下一題生效。"""
     stack = os.environ.get("AOS_STACK")

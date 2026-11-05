@@ -35,7 +35,7 @@
      CLI 中途掛掉（CliFailed、ReplyMissing、這支被殺）＝邊緣狀況：信已經收了、不自動重答，要重答由人再 say
      （使用者 11-03「中途掛掉就是邊緣狀況，不要讓邊緣狀況影響他的原本意思」；P-12 在 eca 的例外，見 P-43）。
   ⑤ queue 空（cur/、new/ 都沒信）：照 --on-empty——stop 退 10、idle 退 0（Q-9）。
-  ⑥ 11-03 起不寫 $AOS_STACK/trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）；要看狀態用 aos-agent status。
+  ⑥ 11-03 起不寫 $AOS_STACK/trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）；要看狀態用 aos-agent ctl status。
   ⑦ 拿到 session id 就在小格建 transcripts/<kind>-<id>.jsonl symlink（cli_session.link_transcript，C-15～17）。
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。

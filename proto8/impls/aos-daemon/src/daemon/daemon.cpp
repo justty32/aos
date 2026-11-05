@@ -388,7 +388,7 @@ void Daemon::check_running() const {
     std::optional<long long> now = aos::proc_started_at_ticks((pid_t)pid.get<long long>());
     if (now && *now == ticks.get<long long>()) {
         throw Error{code::DaemonRunning, "這個 stack（" + stack_ + "）已有 daemon 在跑（pid " + std::to_string(pid.get<long long>()) +
-                                             "）；要沿用就直接 aos-daemon-ctl add／aos-agent add"};
+                                             "）；要沿用就直接 aos-daemon-ctl add／aos-agent ctl add"};
     }
 }
 
