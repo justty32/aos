@@ -33,7 +33,9 @@ aos 自己的程式（impls、bin、extras、lib 工具、demo 的格）的 stdi
 **優先級（衝突或時間不夠時，依序保持一致）：** 程式碼 > code map > 文檔。
 **code map 與程式碼衝突時：以程式碼為準，立即修正 code map。**
 
-**日常規則：**
-1. **修改前**：先讀 code map，找到相關領域，只讀清單中列出的檔案——不要讀無關領域的檔案。
-2. **修改後**：若新增或刪除了原始碼檔案，或某檔案的職責有顯著改變，必須同步更新 code map。
-3. 原始碼檔案本身**不加**「對應 code map」的註釋（維護成本過高）；反向查找直接 grep code map 文件。
+**日常規則**（11-05 起逐檔表改生成，使用者裁「七題照推薦」，[thinking arch-refactor](../../../proto8/thinking/2026-11/05/arch-refactor/README.md)）：
+1. **修改前**：先讀 code map 地圖，再到[生成冊](code-map/proto8/README.md)找相關的夾，只讀列出的檔——不要讀無關領域的檔案。
+2. **檔頭一句話就是 code map 的來源**：每個程式檔第一行（腳本跳過 shebang 的第一行、Python 可以是 docstring 第一行；JSON 用 `description`）寫「它負責什麼」一句話。新增檔一定要寫；職責變了改那一句。
+3. **commit 前跑 `python3 wf/tools/codemap_gen.py --apply`**，生成冊跟程式同一個 commit；不帶參數＝只檢查（`wf-lint` 的 CODEMAP，不一致算 broken）。生成冊不要手改；一句話空或只寫檔名會印 warning，順手補。
+4. 手寫的只剩 [code-map](code-map.md) 地圖（夾一句話、常查表、真相層優先序）與各程式 README 的**行為**說明；README 不再放逐檔表。
+5. 原始碼檔案本身**不加**「對應 code map」的註釋；反向查找 grep 生成冊。

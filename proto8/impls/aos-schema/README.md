@@ -40,13 +40,7 @@ stdin 讀一份 JSON（規則同全家：空的＝`{}`、多份＝`InputExtra`�
 
 ## 元素
 
-| 檔 | 做什麼 |
-|---|---|
-| `include/aos/schema.hpp` | 公開介面：`Problem`、`load_file`、`validate`、代號 `SchemaMissing`、`SchemaBad` |
-| `src/load_file.cpp` | 檔 → `nlohmann::json`（不在＝SchemaMissing、讀不了或不是 JSON＝SchemaBad） |
-| `src/validate.cpp` | **整個專案唯一碰 pboettch/json-schema-validator 的檔**：先拿 draft-07 的 meta-schema 驗 schema 本身 → 編 schema → 驗 doc、每個錯收成一個 `Problem` |
-| `src/main.cpp` | 命令列：讀 → `load_file` → `validate` → 印 |
-| `examples/inst.schema.json` | 示範 schema：一張 inst 的欄位 |
+逐檔「哪個檔負責什麼」從檔頭一句話生成，在 code map 的 [proto8 生成冊](../../../wf/workflows/common/code-map/proto8/README.md)（`impls` 冊的 `aos-schema/` 段）；改說明去改檔頭。
 
 整個專案在 namespace `aos::schema`。
 

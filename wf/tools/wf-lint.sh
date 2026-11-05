@@ -6,6 +6,7 @@
 # 檢查：① 相對連結 ② workflows/ 單檔 >8192 bytes ③ 模板標記殘留 ④ inbox/ 未辦信
 #       ⑤ BIGLIST（>1 KB 條列；導航表印 BIGLIST-LINKS）⑥ 資料檔連結（tabledb.py check）
 #       ⑦ QUERYCMD（md 殘留查詢指令）⑧ BROKEN-ANCHOR（#錨點不存在，計入 broken）
+#       ⑨ CODEMAP（有 proto8/ 與 codemap_gen.py 時：逐檔 code map 生成冊跟檔頭不一致，每冊一筆，計入 broken）
 # 結束碼：BROKEN > 0 → 1；--strict 時 residue / oversize / biglist / querycmd > 0 也 → 1。
 set -u
 
@@ -85,7 +86,7 @@ count_literal() {
 # 檢查一個目錄
 lint_dir() {
   local root=${1%/} label=${2:-$1}
-  local broken=0 oversize=0 ph=0 note=0 judge=0 inbox=0 biglist=0 bl_links=0 querycmd=0
+  local broken=0 oversize=0 ph=0 note=0 judge=0 inbox=0 biglist=0 bl_links=0 querycmd=0 codemap=0
   local out df n rel
   local -a md_files=()
 
@@ -152,6 +153,14 @@ lint_dir() {
     done < <(grep -nE 'tabledb\.py' "$f" | grep -E 'python3 |tools/tabledb\.py' | cut -d: -f1)
   done
 
+  # ⑨ CODEMAP：逐檔 code map 由 codemap_gen.py 從檔頭生成；重跑生成跟 commit 的冊不一致＝broken
+  if [[ $have_py -eq 1 && -f "$tools/codemap_gen.py" && -d "$root/proto8" && -d "$root/wf/workflows/common/code-map" ]]; then
+    out=$(python3 "$tools/codemap_gen.py" --root "$root" --quiet 2>/dev/null)
+    codemap=$(printf '%s\n' "$out" | grep -c 'error: CodemapStale')
+    [[ $codemap -gt 0 ]] && printf '%s\n' "$out" | sed -n 's/^codemap_gen: error: CodemapStale /CODEMAP /p'
+    broken=$((broken + codemap))
+  fi
+
   ph=$(count_literal '{{' "${md_files[@]}")
   note=$(count_literal '〔模板說明〕' "${md_files[@]}")
   judge=$(count_literal '〔導入判斷〕' "${md_files[@]}")
@@ -161,7 +170,7 @@ lint_dir() {
   local residue=$((ph + note + judge))
 
   if [[ $quiet -eq 0 || $broken -gt 0 ]]; then
-    echo "SUMMARY $label: broken=$broken oversize=$oversize biglist=$biglist biglist_links=$bl_links querycmd=$querycmd residue={{=$ph 模板說明=$note 導入判斷=$judge inbox_pending=$inbox"
+    echo "SUMMARY $label: broken=$broken oversize=$oversize biglist=$biglist biglist_links=$bl_links querycmd=$querycmd codemap=$codemap residue={{=$ph 模板說明=$note 導入判斷=$judge inbox_pending=$inbox"
   fi
   total_broken=$((total_broken + broken))
   if [[ $strict -eq 1 ]]; then

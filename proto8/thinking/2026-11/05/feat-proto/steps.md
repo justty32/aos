@@ -2,7 +2,7 @@
 
 # 實作步驟（13 步；S1～S13 全在我們領地；件 5 的 daemon 半邊見 [05 請邊緣隊改](05-資源份額.md)）
 
-通則：每步一個 commit、build 得過（[testing](../../../../../wf/workflows/testing.md)）＋手跑；程式輸出一律英文；改了檔同 commit 補 code map（[proto8 分冊](../../../../../wf/workflows/common/code-map/proto8.md)）；改寫條文不派 sonnet。工人先讀 [README](README.md)＋對應分檔。**同一檔不給兩人同時寫**：S2→S3→S12 同檔串行；標 ∥ 的可並行。真腦標「使用者試」（LM Studio；LiteLLM haiku ≤0.5 美金）。
+通則：每步一個 commit、build 得過（[testing](../../../../../wf/workflows/testing.md)）＋手跑；程式輸出一律英文；改了檔同 commit 補 code map（proto8 分冊）；改寫條文不派 sonnet。工人先讀 [README](README.md)＋對應分檔。**同一檔不給兩人同時寫**：S2→S3→S12 同檔串行；標 ∥ 的可並行。真腦標「使用者試」（LM Studio；LiteLLM haiku ≤0.5 美金）。
 
 | 步 | 內容 | 動哪些檔 | 做到什麼算完（可觀察） | 派 | 依賴 |
 |---|---|---|---|---|---|

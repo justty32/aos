@@ -12,4 +12,4 @@ aos 主體（[impls/](../impls/README.md) 的四支 C++、[bin/](../bin/README.m
 | [langs/](langs/README.md) | 用 Janet、Lua 寫 aos 程式，編成資料夾＋JSON |
 | [sandbox/](sandbox/README.md) | aos-sandbox：照一份設定把程式關進沙箱（s6＋bwrap）再跑 |
 
-逐檔說明在 code map 的 [proto8/06-周邊工具](../../wf/workflows/common/code-map/proto8/06-周邊工具.md)。
+逐檔說明在 code map 的 [proto8 生成冊](../../wf/workflows/common/code-map/proto8/README.md)（從檔頭一句話生成）。

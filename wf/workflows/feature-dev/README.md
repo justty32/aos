@@ -10,7 +10,7 @@
 ## Done when
 
 - [testing](../testing.md) 標「改完必跑」的建置指令回傳 0（build 得過）。
-- [common/code-map](../common/code-map.md) 中該領域的列已更新（新增／刪除的檔、職責變動、測試位置）。
+- 新檔有檔頭一句話、職責變了的已改那一句，並跑過 `python3 wf/tools/codemap_gen.py --apply`（[code map](../common/code-map.md) 生成冊跟程式同一個 commit；`wf-lint` 的 CODEMAP＝0）。
 - 下表對應的文檔已補；要使用者實機驗證的在 [WAIT_USER](../../WAIT_USER.md) 有一行；跨 session 沒收尾的在 [SESSION-LOG](../../SESSION-LOG.md) 有一行。
 
 ## 流程
@@ -20,7 +20,7 @@
   → 增量修改（守 conventions）
   → build 得過（proto8 照 testing 建 impls）
   → 交使用者驗證（若需實機/實環境）→ 回報問題 → 修 → 重複
-  → 全數通過後：補齊 code map → 補文檔 → commit
+  → 全數通過後：檔頭一句話＋codemap_gen.py --apply → 補文檔 → commit
 ```
 
 - **自動驗證是你（Claude）自己跑**的把關（鐵律：改完跑驗證）。

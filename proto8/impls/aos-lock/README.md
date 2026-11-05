@@ -37,13 +37,7 @@ aos-lock show data.json                                                         
  main ──▶ 子命令表 ──▶ parse_cli ──▶ lock_dir_of ──▶ acquire（try_acquire：mkdir → 寫名牌｜look → reapable → reap）｜release｜look
 ```
 
-| 檔 | 做什麼 |
-|---|---|
-| `include/aos/lock.hpp` | 公開介面：`Holder`、`Seen`、`STALE_MS`；`lock_dir_of`、`holder_of`、`to_json`、`look`、`reapable`、`try_acquire`、`acquire`、`release`；自己的代號 |
-| `src/holder/holder.cpp` | 名牌：`holder_of`（身分用 aos-util 的 `aos::identity`）、`to_json`、`look`、`reapable`（判死活、殭屍、租約）；common 的 `now_ms`、`parse_at`（獨一無二的名字用 aos-util 的 `aos::unique_id`） |
-| `src/lock/lock.cpp` | 鎖：`lock_dir_of`、寫名牌（暫存改名、不建資料夾）、`try_acquire`、`reap`（收屍牌 `.reaping` → 再讀名牌確認 → 改名再刪）、`acquire`（steady_clock 計時）、`release` |
-| `src/common/common.hpp` | 內部標頭：`using`、時間與名字小工具的宣告 |
-| `src/main.cpp` | 命令列：子命令前先 `parse_cli`（只認 `--help`；不認得的旗標＝FlagUnknown）、子命令表、旗標、持有者預設 getppid；出錯印「aos-lock: error: 代號 原因」 |
+逐檔「哪個檔負責什麼」從檔頭一句話生成，在 code map 的 [proto8 生成冊](../../../wf/workflows/common/code-map/proto8/README.md)（`impls` 冊的 `aos-lock/` 段）；改說明去改檔頭。
 
 ## 錯誤代號
 

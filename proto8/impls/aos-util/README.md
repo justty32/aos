@@ -21,15 +21,7 @@ int main() {
 
 ## 元素（一個標頭一個元素）
 
-| 標頭 | 放什麼 |
-|---|---|
-| `aos/error.hpp` | `aos::Error{code, msg}`；**全家共用的錯誤代號** `aos::code::*`（ArgumentsBad、FlagUnknown、InputBad、InputExtra、CfgMissing、CfgBad、WriteFailed、MkdirFailed、LaunchFailed、Internal；投遞的 CommandUnknown、MailboxMissing、LlmKernelMissing（aos-llm 沒設 AOS_LLM_KERNEL）、LetterMissing、LetterBad；照 [10-23 命名統合](../../thinking/2026-10/23/naming.md)）。只有一支工具會吐的代號放那支自己的 `code` |
-| `aos/io.hpp`（`src/io.cpp`） | 三扇門：`read_stream`（JSON 串流 → 一個個值，壞尾丟掉）、`read_stdin`（一份：空＝`{}`、多份＝InputExtra、解不出來＝InputBad）、`dumps`（排版同 Python `json.dumps`，key 照原順序）、`emit`；stderr 的兩種行（11-05 stdio-unify R1）：錯誤行 `fail(prog, e)`（先 flush stdout，印「prog: error: 代號 原因」、回 1）、提醒行 `warn(prog, 句子)`（「prog: warning: 句子」；舊的 `emit_error` 刪了）；JSON 小工具 `is_count`（非負整數）。`Json`＝`nlohmann::ordered_json` |
-| `aos/cli.hpp`（`src/cli.cpp`） | **命令列**（aos-exec、aos-loop、aos-fsm、aos-daemon 共用）：`parse_cli(argv, 旗標表)`——旗標寫在位置參數前面，第一個不是旗標的參數（不以 `-` 開頭，或就是 `-`）起全部原樣放進 `rest`；`--` 結束旗標；旗標都帶一個值（`--x V` 或 `--x=V`，`--x=` 是空字串），重複給最後一個算；可另給一張不帶值的旗標表 `switches`（給了＝`opts[名]` 是 `"1"`、重複給一樣、寫 `--x=V`＝`ArgumentsBad`；aos-exec 的 `--dotenv-override`）；不認得的旗標＝`FlagUnknown`、缺值＝`ArgumentsBad`（`rest` 夠不夠由呼叫者判斷）；**內建 `--help`**（第四個參數給英文說明：在旗標位置給了＝印 stdout、退 0；11-05 R3）。`usage_error(code, 原因, usage)`＝`原因 (usage: …)`（R5）。`load_cfg(spec)`——設定檔 `檔` 或 `檔#/指標`，回那個位置的值（不驗是不是物件）：檔不在 CfgMissing、其他讀不了或不是 JSON CfgBad、`#` 後不是 `/` CfgBad、`#/` 指不到 CfgMissing、第一行 `#!` 跳過 |
-| `aos/files.hpp`（`src/files.cpp`） | 路徑 `abspath`／`dirname`／`join`（照 Python `os.path`）、`read_file`、`read_json`、**原子寫入** `write_json`（寫 `.名字.tmp` 再 rename；所在資料夾沒有就建）；**入口尋址** `split_hash`（`檔#/指標` 第一個 `#` 就切，`#` 後不是 `/`＝CfgBad）、`read_json_at`（讀檔、第一行 `#!` 跳過、照 JSON pointer 取值；檔不在 CfgMissing、其他讀不到或不是 JSON CfgBad、指不到 CfgMissing） |
-| `aos/proc.hpp`（`src/proc.cpp`） | 子程序：`spawn`（posix_spawn，可自成 session）、`has_exited`／`wait_exited`（不收屍）、`signal_group`、`reap`（整群補 SIGKILL 再收屍）、`stop`、`wait_plain`；`proc_started_at_ticks`、`boot_id`（/proc）、`utc_now_ms`（ISO 8601 UTC 到毫秒，例 state 的 `updated_at`、信的 `sent_at`）、`utc_now_ns`、`utc_ms_at`；**獨一無二的名字** `unique_id`（`<UTC 奈秒 20 位>.<pid>.<started_at_ticks>`，aos-post 預設的信件名稱與 aos-lock 放鎖的改名）；**身分** `identity`（`$AOS_WS` ＞ `$AOS_STACK` ＞ `$AOS_CF` ＞ cwd，空字串算沒設、轉絕對路徑、cwd 拿不到＝Internal；aos-post 的 `sender`、aos-lock 的 `holder`）；`sibling_tool`（找兄弟執行檔）；`memfd_with`／`memfd_empty`／`read_all` |
-| `aos/text.hpp`（`src/text.cpp`） | `is_utf8`（嚴格，同 Python 的 utf-8 解碼）、`space_at`、`lstrip`／`rstrip`／`strip`（照 Python `str.isspace`／`str.strip()` 認 Unicode 空白，含全形空白）。aos-exec 的 `.env` 值、aos-fsm 的 state 檔與 `next` 檢查用 |
-| `aos/signals.hpp`（`src/signals.cpp`） | `SignalCatcher`：擋住 INT／TERM／HUP、用 signalfd 讀；`start`／`sleep(ms)`（有訊號馬上醒）／`first()`／`stop` |
+逐檔「哪個檔負責什麼」從檔頭一句話生成，在 code map 的 [proto8 生成冊](../../../wf/workflows/common/code-map/proto8/README.md)（`impls` 冊的 `aos-util/` 段）；改說明去改檔頭。
 
 標頭開頭都有白話說明（含「為什麼原子寫入」「為什麼不用訊號處理函數」「行程群組、收屍、memfd 是什麼」），從那裡讀。
 

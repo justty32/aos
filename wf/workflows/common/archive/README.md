@@ -14,3 +14,4 @@
 | `tick.md`、`routines.md`、`schedule.md` | 2026-11-05 | 原 `wf/workflows/` 單檔工作流（定期喚醒 flavor：心跳、常規事務、一次性行程）；靠甲代 `aos run`／`aos heartbeat`，清單是空的、十月起沒人跑，隨甲代封存（arch-refactor 方向題 7，使用者 11-05「七題都照推薦」）；要時在 proto8 用 daemon＋aos-tick 重做 |
 | `wf-tick.md` | 2026-11-05 | 原 `.claude/commands/wf-tick.md`（`/wf-tick` slash 指令，tick 的薄殼）；同上一列一起封存，放這裡不放 `.claude/commands/` 底下以免仍被當指令載入 |
 | `use-aos.md`、`add-subproject.md` | 2026-11-05 | 原 `wf/workflows/` 單檔工作流：教用甲代單一執行檔 `aos` 的子命令、在根 CMake 底下加 `core/`／`modules/` 小專案；甲代 11-05 整組封存到 repo 根 `archive/aos-v1/`（arch-refactor 方向題 1） |
+| `code-map/build.md`、`code-map/tool.md`、`code-map/llm.md`、`code-map/agent.md`、`code-map/agent-lookup.md` | 2026-11-05 | 甲代（repo 根 `common/`／`app/`／`cmake/`、`core/tool`、`core/llm`、`core/agent`）逐檔 code map；11-05 夜架構大重構甲代整組封存（arch-refactor S4），code map 只留 proto8、逐檔表改由 `wf/tools/codemap_gen.py` 從檔頭生成 |
