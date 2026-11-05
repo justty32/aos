@@ -34,8 +34,10 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
 工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收不管。
 工具名：--name ＞ 檔名去掉副檔名（資料夾＝資料夾名），只收 [A-Za-z0-9_-]、最多 64 字（OpenAI／MCP 的限制）。撞名＝ToolExists，--override 蓋掉。
 不符合要求一律報錯、不猜不跳過（ls／get 碰到登記了但壞掉的工具也報錯，訊息帶工具名）。
-錯：stderr 一行「aos-tools: 代號 原因」、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、RegistryBad、PathMissing、
-  ToolDefMissing、ToolDefBad、NameBad、ToolExists、ToolMissing、StackMissing、DirectiveBad、CommandMissing、WriteFailed。call 自己沒錯時結束碼是工具的。
+錯：stderr 一行「aos-tools: error: 代號 原因」、退 1（11-05 stdio-unify R1；usage 在原因後面「原因 (usage: …)」）。代號：ArgumentsBad、FlagUnknown、CommandUnknown、RegistryBad、PathMissing、
+  ToolDefMissing、ToolDefBad、NameBad、ToolExists、ToolMissing、StackMissing、DirectiveBad、CommandMissing、WriteFailed。call 自己沒錯時結束碼是工具的
+  （R8：退非 0 時 stderr 有 `aos-tools: error:` 這行＝這支錯；沒有＝工具的碼；工具被訊號殺＝128＋N）。
+`--help`＝印 HELP（英文）到 stdout、退 0（子命令後也認）；不給子命令＝ArgumentsBad；Ctrl-C＝退 130、不吐 traceback。
 """
 import json, os, re, shutil, signal, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
@@ -46,6 +48,24 @@ USAGE = "aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-ca
 OVERLAY = None                                       # --overlay O（11-05）；main 裡定
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 TOOLDEF_TIMEOUT_S = 10
+aos_flags.HELP = """aos-tools - one tool registry (tools.json) per agent folder: which tools this agent can call.
+
+    aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-cache] XXX   register XXX (file or folder, relative to cwd; stored absolute)
+    aos-tools [--file F] [--overlay O] rm XXX       remove it (XXX = tool name; not a registered name = a path, remove the ones pointing there)
+    aos-tools [--file F] [--overlay O] ls [--json]  list: one line "NAME TAB KIND TAB PATH"; --json = one JSON array line
+    aos-tools [--file F] [--overlay O] get XXX      one JSON line per tool: name, kind, path, tooldef, metainfo (if any)
+    aos-tools [--file F] [--overlay O] call NAME    call it once: stdin = arguments (JSON); stdout and exit code are the tool's
+
+Registry: --file > ./tools.json, shaped {"tools": {"NAME": {"path": "/abs/path"}, ...}}; no file = no tools. $ref / $env are resolved by aos-json.
+Kinds (as aos-exec sees them): dir (a folder with _tooldef.json, optional _metainfo.json), json (a JSON file without +x that has a top-level
+  _tooldef), exe (an executable: `XXX --tooldef` prints the definition within 10 s; cached by mtime and size unless add --no-cache).
+  Calling: dir / json = aos-exec XXX with the arguments on stdin; exe = aos-exec XXX --tool-call $AOS_STACK/tool_call.json (needs AOS_STACK).
+--overlay O: use F with the overlay O on top ({"add": {NAME: entry}, "rm": [NAME]}); add / rm then write O only.
+Tool names: --name > file name without extension (folder = folder name); [A-Za-z0-9_-], at most 64 chars.
+Errors: one stderr line `aos-tools: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, CommandUnknown, RegistryBad, PathMissing,
+  ToolDefMissing, ToolDefBad, NameBad, ToolExists, ToolMissing, StackMissing, DirectiveBad, CommandMissing, WriteFailed.
+call: when it exits non-zero, an `aos-tools: error:` line on stderr means aos-tools failed; without it the code is the tool's
+  (a tool killed by signal N = 128+N)."""
 
 
 class Fail(Exception):
@@ -302,7 +322,7 @@ def write_new(reg, obj):
 def cmd_add(reg, args):
     opts, rest = aos_flags.parse(args, {"--name": "name"}, {"--override": "override", "--no-cache": "no_cache"})
     if len(rest) != 1:
-        raise Fail("ArgumentsBad", "usage: aos-tools [--file F] add [--override] [--name N] [--no-cache] XXX")
+        raise Fail("ArgumentsBad", "add needs one XXX (usage: aos-tools [--file F] add [--override] [--name N] [--no-cache] XXX)")
     path = os.path.normpath(os.path.abspath(rest[0]))
     if opts.get("no_cache") and kind_of(path) != "exe":
         raise Fail("ArgumentsBad", "--no-cache is only for executables (exe); %s is %s, which has no cache anyway" % (path, kind_of(path)))
@@ -333,7 +353,7 @@ def cmd_add(reg, args):
 def cmd_rm(reg, args):
     opts, rest = aos_flags.parse(args, {})
     if len(rest) != 1:
-        raise Fail("ArgumentsBad", "usage: aos-tools [--file F] rm XXX")
+        raise Fail("ArgumentsBad", "rm needs one XXX (usage: aos-tools [--file F] rm XXX)")
     names = match(load_tools(reg), rest[0])
     if OVERLAY is not None:                          # 只寫覆蓋層：覆蓋層 add 的拿掉；定義裡有的記進 rm
         ov, base = overlay_for_write(), load_registry(reg)
@@ -351,7 +371,7 @@ def cmd_rm(reg, args):
 def cmd_ls(reg, args):
     opts, rest = aos_flags.parse(args, {}, {"--json": "json"})
     if rest:
-        raise Fail("ArgumentsBad", "usage: aos-tools [--file F] ls [--json]")
+        raise Fail("ArgumentsBad", "ls takes no arguments (usage: aos-tools [--file F] ls [--json])")
     tools = load_tools(reg)
     found = [describe(n, tools[n]) for n in sorted(tools)]
     if opts.get("json"):
@@ -364,7 +384,7 @@ def cmd_ls(reg, args):
 def cmd_get(reg, args):
     opts, rest = aos_flags.parse(args, {})
     if len(rest) != 1:
-        raise Fail("ArgumentsBad", "usage: aos-tools [--file F] get XXX")
+        raise Fail("ArgumentsBad", "get needs one XXX (usage: aos-tools [--file F] get XXX)")
     tools = load_tools(reg)
     for n in match(tools, rest[0]):
         print(json.dumps(describe(n, tools[n]), ensure_ascii=False))
@@ -373,7 +393,7 @@ def cmd_get(reg, args):
 def cmd_call(reg, args):
     opts, rest = aos_flags.parse(args, {})
     if len(rest) != 1:
-        raise Fail("ArgumentsBad", "usage: aos-tools [--file F] call NAME (stdin = arguments)")
+        raise Fail("ArgumentsBad", "call needs one NAME, stdin = arguments (usage: aos-tools [--file F] call NAME)")
     tools = load_tools(reg)
     if rest[0] not in tools:
         raise Fail("ToolMissing", "%s is not registered (available: %s)" % (rest[0], ", ".join(sorted(tools)) or "none"))
@@ -420,16 +440,15 @@ def main():
                     raise Fail("ArgumentsBad", "--overlay must not be empty (usage: %s)" % USAGE)
                 OVERLAY = opts["overlay"]
             if not rest:
-                raise Fail("ArgumentsBad", "usage: %s" % USAGE)
+                raise Fail("ArgumentsBad", "missing subcommand (usage: %s)" % USAGE)
             if rest[0] not in COMMANDS:
                 raise Fail("CommandUnknown", "unknown subcommand %s (usage: %s)" % (rest[0], USAGE))
             COMMANDS[rest[0]](opts.get("file") or "tools.json", rest[1:])
         except aos_flags.Error as e:
             raise Fail(e.code, "%s (usage: %s)" % (e, USAGE))
     except Fail as e:
-        print("%s: %s %s" % (NAME, e.code, e), file=sys.stderr)
-        sys.exit(1)
+        aos_flags.die(NAME, e.code, e)
 
 
 if __name__ == "__main__":
-    main()
+    aos_flags.run(main)

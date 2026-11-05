@@ -45,12 +45,14 @@
   --on-busy 照認（yield 時 SessionBad 照錯退 1）；跟 --on-empty 一起給＝ArgumentsBad（工具形沒有 queue）。
   錯照 lib 契約 stderr 與 stdout 各一行「<定義資料夾名>: 代號 原因」、退 1。
 PATH 上要有 aos-post（平級形）。
-錯（平級形與 argv）：stderr 一行「aos-eca-turn: 代號 原因」、退 1（P-20 停下等人）。交出去之前的錯（CliMissing、ToolsMissing、
+錯（平級形與 argv）：stderr 一行「aos-eca-turn: error: 代號 原因」、退 1（P-20 停下等人；11-05 stdio-unify R1，usage 在原因後面）。
+  aos-post 的 stderr 原樣透出（不攔、不拿它的第一行當原因；R10），這支只多寫自己那一行（PostFailed「aos-post X exited N」）。交出去之前的錯（CliMissing、ToolsMissing、
   畫面等 busy.txt 逾時的 ReplyMissing…）＝整批信留在 cur/（或還在 new/）、history 不動，修好重跑整批照問；交出去之後的錯＝信已收、user 已接、
   沒有 assistant，不重答（④）。
   代號：ArgumentsBad、FlagUnknown、AgentBad、StackMissing、PromptMissing（11-04：--prompt 給的開場白檔不在）、HistoryBad、PostFailed、WriteFailed，
   加 cli_session 的 CfgMissing、CfgBad、ToolsMissing（11-03 eca-tools：cli.json 的 tools 指的登記檔不在）、CliMissing（含 aos-mcp 不在 PATH 上）、
-  CliFailed、ReplyMissing（yield 時的 SessionBad 不算錯，見上）。"""
+  CliFailed、ReplyMissing（yield 時的 SessionBad 不算錯，見上）。
+`--help`＝印 HELP（英文）到 stdout、退 0（R3）；Ctrl-C＝退 130、不吐 traceback（R12）。"""
 import json, os, subprocess, sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -60,7 +62,26 @@ import aos_flags, aos_ws, cli_session  # noqa: E402
 
 NAME = "aos-eca-turn"
 NOT_FOUND = 10
-USAGE = "usage: aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] [--prompt FILE] <absolute definition dir>"
+USAGE = "aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] [--prompt FILE] DEF_DIR"
+aos_flags.HELP = """aos-eca-turn - one turn of an external coding agent (claude / codex, an "eca"): hand every letter in the stack's queue,
+in order, to the CLI as one prompt (handing it over = the letters are done), wait for the answer, append it to history.
+
+    aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] [--prompt FILE] DEF_DIR
+
+DEF_DIR: the eca definition folder (absolute; cli.json at its top, optional tools.json). It is never written; everything goes to $AOS_STACK.
+Loop form (no --one): the batch = all of queue/cur/ plus all of queue/new/; bad letters are dropped and noted in
+  $AOS_STACK/mailbox_warning.txt; good contents are joined with a blank line and asked once (a pasted screen if one is open,
+  otherwise claude -p --resume / codex exec resume). The user messages go into history.jsonl when the prompt is handed over, the
+  answer goes in as one assistant message.
+  --on-empty stop (default): empty queue = exit 10 | idle: exit 0.
+  --on-busy yield (default): the session is busy (lock taken, someone attached, busy.txt) = leave the batch in cur/, exit 0 |
+    answer: wait and answer anyway.
+  --prompt FILE: opening message (relative to DEF_DIR) queued when history and queue are both empty.
+--one (tool form): stdin {"prompt"} -> stdout the answer; the conversation lives in $AOS_STACK itself. --on-empty / --prompt not allowed.
+Needs aos-post on PATH (loop form) and AOS_STACK.
+Errors: one stderr line `aos-eca-turn: error: CODE reason`, exit 1 (tool form: the line also goes to stdout). aos-post's own stderr
+  is passed through as it is. Codes: ArgumentsBad, FlagUnknown, AgentBad, StackMissing, PromptMissing, HistoryBad, PostFailed,
+  WriteFailed, CfgMissing, CfgBad, ToolsMissing, CliMissing, CliFailed, ReplyMissing."""
 
 
 class Fail(Exception):
@@ -72,8 +93,7 @@ class Fail(Exception):
 
 
 def die(code, reason):
-    print("%s: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
-    sys.exit(1)
+    aos_flags.die(NAME, code, reason)
 
 
 def names(box, stage):
@@ -96,18 +116,18 @@ def write_atomic(path, text):
 
 
 def post(args, stdin_text=""):
-    """叫 aos-post；回 (結束碼, stdout, stderr 第一行)。"""
+    """叫 aos-post；回 (結束碼, stdout)。它的 stderr 原樣透出、不攔（11-05 stdio-unify R10）。"""
     try:
-        r = subprocess.run(["aos-post"] + args, input=stdin_text, capture_output=True, text=True)
+        r = subprocess.run(["aos-post"] + args, input=stdin_text, stdout=subprocess.PIPE, text=True)
     except OSError as e:
         raise Fail("PostFailed", "aos-post cannot start (must be on PATH): %s" % e)
-    return r.returncode, r.stdout, (r.stderr.strip().splitlines() or ["exited %d with no reason given" % r.returncode])[0]
+    return r.returncode, r.stdout
 
 
 def must_post(args, stdin_text="", ok=(0,)):
-    code, out, err = post(args, stdin_text)
+    code, out = post(args, stdin_text)
     if code not in ok:
-        raise Fail("PostFailed", "aos-post %s exited %d: %s" % (args[0], code, err))
+        raise Fail("PostFailed", "aos-post %s exited %d" % (args[0], code))
     return code, out
 
 
@@ -153,9 +173,9 @@ def warn(stack, sig, why):
 
 def letter_body(box, sig):
     """好信回 (body, None)；壞信回 (None, 原因)。"""
-    code, out, err = post(["see", box, sig])
+    code, out = post(["see", box, sig])
     if code != 0:
-        return None, err
+        return None, "aos-post see exited %d" % code
     try:
         body = json.loads(out).get("body")
     except (ValueError, AttributeError):
@@ -250,9 +270,9 @@ def main():
         opts, args = aos_flags.parse(sys.argv[1:], {"--on-empty": "on_empty", "--on-busy": "on_busy", "--prompt": "prompt"},
                                      {"--one": "one"})
     except aos_flags.Error as e:
-        die(e.code, "%s (%s)" % (USAGE, e))
+        die(e.code, "%s (usage: %s)" % (e, USAGE))
     if len(args) != 1:
-        die("ArgumentsBad", USAGE)
+        die("ArgumentsBad", "%s (usage: %s)" % ("missing DEF_DIR" if not args else "only one DEF_DIR allowed, extra: %s" % args[1], USAGE))
     empty, busy = opts.get("on_empty", "stop"), opts.get("on_busy", "yield")
     if empty not in ("stop", "idle"):
         die("ArgumentsBad", "--on-empty must be stop or idle, got %r" % empty)
@@ -289,4 +309,4 @@ def main():
     sys.exit(code)
 
 
-main()
+aos_flags.run(main)

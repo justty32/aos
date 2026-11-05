@@ -86,13 +86,13 @@
 #   結束碼看 daemon 的 log（aos-daemon --enable-logs 時 stdout 每個子項結束一行）。所以 code 那欄平常是 -（daemon 停掉的 stopped 是 0）。
 #   --json＝一行 {"procs": 表}（列照 procs_state 原樣，只有 stack／ws／exec／def 拼回絕對；aos-agent 靠這個讀表）。
 #   另外看 daemon 還活不活（11-02，使用者「要看一個proc是否還活著，除去linux底層proc機制外，我們的aos-daemon-ctl問詢也是一個方式，兩者並存」）：
-#   procs_state 頂層的 pid＋started_at_ticks（＋boot_id）對 /proc；對不上＝stderr 一句「aos-daemon-ctl: 注意 daemon 沒在跑（pid N）；表是它最後寫的」，
+#   procs_state 頂層的 pid＋started_at_ticks（＋boot_id）對 /proc；對不上＝stderr 一行提醒「aos-daemon-ctl: warning: daemon is not running (pid N); …」，
 #   照樣列、退 0（--json 也一樣；輸出不加欄）。不看檔案的更新時間（使用者：檔案的更新受多方面影響）。
-# 錯：stderr 一行「aos-daemon-ctl: 代號 原因」、退 1。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、MailboxMissing、
+# 錯：stderr 一行「aos-daemon-ctl: error: 代號 原因」、退 1（11-05 stdio-unify R1；提醒行「aos-daemon-ctl: warning: 句子」可以退 0）。代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、MailboxMissing、
 #   PathMissing、EntryBad（add 走入口時：讀不懂、指不到、繞圈）、LoopBad（loop 設定讀不了或不是物件）、StateMissing（procs_state.json 不在）、StateBad、ProcMissing（表上沒有）、
 #   CtlMissing（stop／sleep／pause／resume：沒有 ctl＝exec 型）、PhaseBad（stop／start／sleep／wake 用在不對的 phase）、WriteFailed（pause／resume 寫不了 ctl）、CommandMissing（PATH 沒 aos-post）、
 #   SendFailed（aos-post 退非 0，它的 stderr 照轉）。（KindBad 11-02 跟 --kind 一起拿掉；給 --kind＝FlagUnknown。）
-# 要 PATH 上有 aos-post。-h／--help＝印下面那段英文說明。
+# 要 PATH 上有 aos-post。--help＝印下面那段英文說明到 stdout、退 0（R3；子命令後也認，-h 不認）；不給子命令＝ArgumentsBad；Ctrl-C＝退 130。
 """aos-daemon-ctl - attach procs to an aos-daemon, start / stop / sleep / wake them, pause / resume them.
 
 `aos-exec XXX` hands XXX to Linux process management; `aos-daemon-ctl add XXX` hands it to a daemon: it drops a procs_added /
@@ -162,11 +162,11 @@ where --stack NAME: the stack of that row (absolute, no trailing /). Only procs 
 ls: one table procs; pid of stopped / sleeping rows is -. Procs that ended by themselves leave the table (exit codes are in the daemon's
   log), so code is usually - (0 for one the daemon stopped). --json = one line {"procs": table} (rows as in procs_state, only the path
   columns made absolute). The daemon's liveness is checked against /proc (pid + started_at_ticks + boot_id); a mismatch prints
-  "aos-daemon-ctl: note: daemon is not running (pid N); the table is what it last wrote" on stderr, still lists, exits 0.
-Errors: one stderr line `aos-daemon-ctl: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, CommandUnknown, DaemonMissing,
+  "aos-daemon-ctl: warning: daemon is not running (pid N); the table is what it last wrote" on stderr, still lists, exits 0.
+Errors: one stderr line `aos-daemon-ctl: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, CommandUnknown, DaemonMissing,
   MailboxMissing, PathMissing, EntryBad, LoopBad, StateMissing, StateBad, ProcMissing, CtlMissing, PhaseBad, WriteFailed,
   CommandMissing (no aos-post on PATH), SendFailed (aos-post exited non-zero; its stderr is passed on).
-Needs aos-post on PATH. -h / --help prints this text.
+Needs aos-post on PATH. --help prints this text.
 """
 import json, os, re, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
@@ -421,7 +421,7 @@ def read_state(d):
     except (OSError, ValueError, AttributeError) as e:
         raise Fail("StateBad", "cannot parse %s: %s" % (p, e))
     if not proc_alive(st.get("pid"), st.get("started_at_ticks"), st.get("boot_id")):
-        sys.stderr.write("%s: note: daemon is not running (pid %s); the table is what it last wrote\n" % (NAME, st.get("pid")))
+        aos_flags.warn(NAME, "daemon is not running (pid %s); the table is what it last wrote" % st.get("pid"))
     return {n: resolve(d, r) if isinstance(r, dict) else r for n, r in procs.items()}
 
 
@@ -433,7 +433,7 @@ def note_down(d):
     except (OSError, ValueError):
         return
     if isinstance(st, dict) and not proc_alive(st.get("pid"), st.get("started_at_ticks"), st.get("boot_id")):
-        sys.stderr.write("%s: note: the daemon is not running (pid %s); the letter waits until it starts\n" % (NAME, st.get("pid")))
+        aos_flags.warn(NAME, "the daemon is not running (pid %s); the letter waits until it starts" % st.get("pid"))
 
 
 def row_of(d, name):
@@ -678,23 +678,20 @@ COMMANDS = {"add": cmd_add, "rm": cmd_rm, "stop": cmd_stop, "start": cmd_start, 
 
 
 def main():
-    if sys.argv[1:2] in (["-h"], ["--help"]):        # 11-05：印用法（同 aos-agent）
-        print(__doc__)
-        return
+    aos_flags.HELP = __doc__                         # --help（旗標的位置，子命令後也認）
     try:
         try:
             opts, rest = aos_flags.parse(sys.argv[1:], {"--daemon": "daemon"})
             if not rest:
-                raise Fail("ArgumentsBad", "usage: %s" % USAGE)
+                raise Fail("ArgumentsBad", "missing subcommand (usage: %s)" % USAGE)
             if rest[0] not in COMMANDS:
                 raise Fail("CommandUnknown", "unknown subcommand %s (usage: %s)" % (rest[0], USAGE))
             COMMANDS[rest[0]](opts, rest[1:])
         except aos_flags.Error as e:
             raise Fail(e.code, "%s (usage: %s)" % (e, USAGE))
     except Fail as e:
-        print("%s: %s %s" % (NAME, e.code, e), file=sys.stderr)
-        sys.exit(1)
+        aos_flags.die(NAME, e.code, e)
 
 
 if __name__ == "__main__":
-    main()
+    aos_flags.run(main)

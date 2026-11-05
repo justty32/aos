@@ -1,31 +1,49 @@
 #!/usr/bin/env python3
 """aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；demo/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。
 
-    aos-eca-screen <eca 資料夾> open [-d]     接進畫面（沒開就開、有對話就 --resume）；-d＝只開不接
-    aos-eca-screen <eca 資料夾> close         收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）
-    aos-eca-screen <eca 資料夾> watch         跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走；
-                                              那隻的 loop 不在了（loop.json 宣告的 state 窗：phase done／stopped 或 pid 不在）也走
+    aos-eca-screen open [--detach] ECA_DIR   接進畫面（沒開就開、有對話就 --resume）；--detach＝只開不接
+    aos-eca-screen close ECA_DIR             收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）
+    aos-eca-screen watch ECA_DIR             跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走；
+                                             那隻的 loop 不在了（loop.json 宣告的 state 窗：phase done／stopped 或 pid 不在）也走
 
-人不直接打它：`aos-agent open／close／watch --target 名字` ＝ `aos-exec --ws <ws> --stack <stack> <定義>/screen 動作`。
+命令列（11-05 stdio-unify R6）：`aos-eca-screen [旗標] 子命令 [子命令的旗標] ECA_DIR`，aos_flags.parse（P-44：只有長旗標；子命令前不認得的旗標＝
+FlagUnknown、子命令不認得＝CommandUnknown、缺 ECA_DIR＝ArgumentsBad）。11-05 前是 `<eca 資料夾> open [-d]`。
+
+人不直接打它：`aos-agent open／close／watch --target 名字` ＝ `aos-exec --ws <ws> --stack <stack> <定義>/screen 動作 [--detach]`
+（ECA_DIR 由 screen 的入口自己接在最後，見 bin/docs/05）。
 吃 AOS_STACK（那隻的 stack）、AOS_WS（那隻的工作區）；<eca 資料夾>（有 cli.json；相對路徑從 cwd 算）給 kind 與 tools。
 身體 11-04 從 aos-eca 的 open／close／watch 原樣搬來（it["cell"]→$AOS_STACK、it["ws"]→$AOS_WS、template→位置參數）。
 畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。
-錯：stderr 一行 `aos-eca-screen: 代號 原因`、退 1：ArgumentsBad、StackMissing、SessionBad（正在答題時 close）、加 cli_session 的（CfgBad…）。"""
+錯：stderr 一行 `aos-eca-screen: error: 代號 原因`、退 1：ArgumentsBad、FlagUnknown、CommandUnknown、StackMissing、SessionBad（正在答題時 close）、
+加 cli_session 的（CfgBad…）。給人看的狀態句（attaching、watching、watch 不等了）是提醒行 `aos-eca-screen: warning: 句子`（R1、D5）。
+`--help`＝英文說明到 stdout、退 0；Ctrl-C＝退 130、不吐 traceback（watch 用 Ctrl-C 離開是正常離開，照舊退 0）。"""
 import json, os, sys, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, ".."))                       # proto8/
 sys.dont_write_bytecode = True
-sys.path.insert(0, os.path.join(ROOT, "lib", "agent"))
-import cli_session  # noqa: E402
+sys.path[:0] = [os.path.join(ROOT, "bin"), os.path.join(ROOT, "lib", "agent")]
+import aos_flags, cli_session  # noqa: E402
 
 PROG = "aos-eca-screen"
-USAGE = "usage: aos-eca-screen <eca dir> open [-d]|close|watch"
+USAGE = "aos-eca-screen open [--detach] ECA_DIR | close ECA_DIR | watch ECA_DIR"
+aos_flags.HELP = """aos-eca-screen - the screen of an eca (the body of the aos-agent/screen sub-interface).
+
+    aos-eca-screen open [--detach] ECA_DIR   attach to the screen (opened if needed, --resume when a conversation exists);
+                                             --detach = only open it, do not attach
+    aos-eca-screen close ECA_DIR             close the screen; the conversation is kept (aos-eca-turn still answers with --resume)
+    aos-eca-screen watch ECA_DIR             follow what the non-interactive run is doing (live.jsonl in the cell) until one answer
+                                             ends, or until that agent's loop is gone; Ctrl-C leaves (exit 0)
+
+People do not run it directly: aos-agent open / close / watch --target NAME runs the screen entry of the definition.
+Reads AOS_STACK (the agent's stack) and AOS_WS (its workspace); ECA_DIR (with cli.json; relative to cwd) gives kind and tools.
+Inside the screen, Ctrl-] (or Ctrl-\\) detaches; the instance keeps running.
+Errors: one stderr line `aos-eca-screen: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, CommandUnknown, StackMissing,
+  SessionBad (close while answering), and those of cli_session (CfgMissing, CfgBad...). Status sentences are warning lines."""
 
 
 def die(code, msg):
-    print("%s: %s %s" % (PROG, code, msg), file=sys.stderr)
-    sys.exit(1)
+    aos_flags.die(PROG, code, msg)
 
 
 def cell_of(eca):
@@ -36,24 +54,20 @@ def cell_of(eca):
     return cli_session.Cell(os.path.join(stack, cfg["kind"])), stack
 
 
-def cmd_open(eca, args):
-    if args not in ([], ["-d"]):
-        die("ArgumentsBad", USAGE)
+def cmd_open(eca, opts):
     cell, stack = cell_of(eca)
     ws = os.path.abspath(os.environ.get("AOS_WS") or ".")
     cli_session.note_cell(cell, eca, ws, stack)          # open_cell 照 tool.txt（定義）、ws.txt、stack.txt（給 aos-mcp）開
     opened = cli_session.open_cell(cell)                 # 正在答題就等它答完（格的 lock）、等畫面穩
-    if args:
+    if opts.get("detach"):
         print("screen %s: %s" % ("opened (resumed with --resume if a conversation exists)" if opened else "already open", cell.file("tty.sock")))
         return
     env = {k: v for k, v in os.environ.items() if k != "TMUX"}
-    print("attaching to %s (Ctrl-] detaches; the instance keeps running)" % ws, file=sys.stderr)
+    aos_flags.warn(PROG, "attaching to %s (Ctrl-] detaches; the instance keeps running)" % ws)
     os.execvpe("tmux", ["tmux", "-S", cell.file("tty.sock"), "attach", "-t", cli_session.TMUX_SESSION], env)
 
 
-def cmd_close(eca, args):
-    if args:
-        die("ArgumentsBad", USAGE)
+def cmd_close(eca, opts):
     cell, _ = cell_of(eca)
     if not os.path.isdir(cell.path):
         print("no screen (already closed)")
@@ -119,13 +133,11 @@ def gone(eca, stack):
     return None
 
 
-def cmd_watch(eca, args):
-    if args:
-        die("ArgumentsBad", USAGE)
+def cmd_watch(eca, opts):
     cell, stack = cell_of(eca)
     path = cell.file("live.jsonl")
     pos = os.path.getsize(path) if os.path.exists(path) else 0
-    print("(watching %s; Ctrl-C to leave)" % path, file=sys.stderr, flush=True)
+    aos_flags.warn(PROG, "watching %s; Ctrl-C to leave" % path)
     try:
         while True:
             try:
@@ -148,7 +160,7 @@ def cmd_watch(eca, args):
                     return
             why = None if end else gone(eca, stack)   # 這一拍沒有新的整行才看
             if why:
-                print("watch: stopped waiting, %s; an answer cut off there never finishes" % why, file=sys.stderr, flush=True)
+                aos_flags.warn(PROG, "watch stopped waiting, %s; an answer cut off there never finishes" % why)
                 return
             time.sleep(0.2)
     except KeyboardInterrupt:
@@ -156,17 +168,26 @@ def cmd_watch(eca, args):
 
 
 CMDS = {"open": cmd_open, "close": cmd_close, "watch": cmd_watch}
+SWITCHES = {"open": {"--detach": "detach"}}
 
 
 def main():
-    argv = sys.argv[1:]
-    if len(argv) < 2 or argv[1] not in CMDS:
-        die("ArgumentsBad", USAGE)
-    eca = os.path.realpath(argv[0])
+    try:
+        _, rest = aos_flags.parse(sys.argv[1:], {})
+        if not rest:
+            die("ArgumentsBad", "missing subcommand (usage: %s)" % USAGE)
+        if rest[0] not in CMDS:
+            die("CommandUnknown", "unknown subcommand %s (usage: %s)" % (rest[0], USAGE))
+        opts, args = aos_flags.parse(rest[1:], {}, SWITCHES.get(rest[0]))
+    except aos_flags.Error as e:
+        die(e.code, "%s (usage: %s)" % (e, USAGE))
+    if len(args) != 1:
+        die("ArgumentsBad", "%s (usage: %s)" % ("missing ECA_DIR" if not args else "only one ECA_DIR allowed, extra: %s" % args[1], USAGE))
+    eca = os.path.realpath(args[0])
     if not os.path.isfile(os.path.join(eca, "cli.json")):
-        die("ArgumentsBad", "%s is not an eca dir (no cli.json)" % argv[0])
-    CMDS[argv[1]](eca, argv[2:])
+        die("ArgumentsBad", "%s is not an eca dir (no cli.json)" % args[0])
+    CMDS[rest[0]](eca, opts)
 
 
 if __name__ == "__main__":
-    main()
+    aos_flags.run(main)
