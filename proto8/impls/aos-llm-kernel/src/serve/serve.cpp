@@ -73,6 +73,7 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
     for (auto& [k, v] : c.endpoints.items()) {
         c.endpoint_dirs[k] = eps.dir_of(k);
     }
+    c.packs = read_packs(c.endpoints, c.endpoint_dirs);
     Json ep = doc.value("endpoint", Json());
     if (!ep.is_null()) {
         if (!ep.is_string() || !c.endpoints.contains(ep.get<std::string>())) {
@@ -209,6 +210,28 @@ bool ran(const std::string& dir) {
     return fs::exists(aos::join(dir, PROC_JSON), ec);
 }
 
+// 掛上去的信用的代號（proc.json 的 endpoint；沒有＝空）。
+std::string endpoint_of(const std::string& dir) {
+    std::optional<Json> proc = aos::read_json(aos::join(dir, PROC_JSON));
+    if (!proc || !proc->is_object() || !proc->value("endpoint", Json()).is_string()) {
+        return "";
+    }
+    return (*proc)["endpoint"].get<std::string>();
+}
+
+// 窗 $AOS_STACK/endpoints.json（11-05 feat-proto 件 2）：包的屬性表，給人與 aos-llm ls 挑代號；跟現有的一樣就不寫（N-05 暫存改名）。
+void write_window(const std::string& stack, const Json& w) {
+    std::string path = aos::join(stack, "endpoints.json");
+    std::optional<Json> old = aos::read_json(path);
+    if (old && *old == w) {
+        return;
+    }
+    std::optional<std::string> err = aos::write_json(path, w);
+    if (err) {
+        throw Error{code::WriteFailed, *err};
+    }
+}
+
 // 檔的第一行（沒有＝空）。
 std::string first_line(const std::string& path) {
     int err = 0;
@@ -274,6 +297,7 @@ void Server::finish(const std::string& id, const Json& reply) {
     std::string dir = aos::join(mb_.cur(), id);
     write_reply(dir, reply);
     bool counted = ran(dir);
+    std::string endpoint = endpoint_of(dir);
     Json reply_error = post_reply(mb_.root, dir, id, reply);   // 回信走 reply_to（10-30）
     if (reply_error.is_string()) {
         std::fprintf(stderr, "aos-llm-kernel: %s (cannot send the reply to letter %s; letter deleted anyway)\n",
@@ -284,7 +308,7 @@ void Server::finish(const std::string& id, const Json& reply) {
         regret_reply(mb_.root, dir);   // 同步寄的人已經走了（ask 被打斷）：回信沒人拿，撤回
     }
     if (counted) {
-        add_used(stack_, used_, report_of(reply));   // usage 從回信拿（沒有＝只算次數）
+        add_used(stack_, used_, report_of(reply), endpoint);   // usage 從回信拿（沒有＝只算次數）；packs.<代號> 也記
     }
     remove_tree(dir);   // 刪不掉（權限）不算錯：下一次 collect 看到 reply_letter.txt 就不重寄
 }
@@ -483,7 +507,9 @@ void Server::refuse(const std::string& id, const Json& reply) {
     finish(id, reply);
 }
 
-// 查代號、解那組的指示詞、定 exec（填進 w）；查不到或那組壞了＝回那封信的 error 回信。
+// 查代號、解那組的指示詞、定 exec、讀包的 slots／budget／speed（填進 w）；查不到或那組壞了＝回那封信的 error 回信；
+// request 撞到包釘死的（fixed 裡的 key、包有 model 而 request 寫 model）＝RequestBad（11-05 feat-proto 件 2）。
+// pick 在 scan 驗過 request 是物件之後才叫。
 std::optional<Json> Server::pick(Waiting& w) {
     const Json& body = w.letter["body"];
     if (body.contains("endpoint")) {
@@ -511,9 +537,17 @@ std::optional<Json> Server::pick(Waiting& w) {
             return error_reply(code::CfgBad, "kernel.json endpoints." + w.endpoint + ".exec must be a non-empty string, got " + aos::dumps(g["exec"]));
         }
         w.exec = target_abs(g["exec"].get<std::string>(), cfg_.base);
-        g.erase("exec");
     }
-    w.group = g;
+    try {
+        w.pack = parse_pack(g, w.endpoint);
+    } catch (const Error& e) {
+        return error_reply(e.code, e.msg);
+    }
+    std::optional<std::string> clash = fixed_clash(g, body["request"], w.endpoint);
+    if (clash) {
+        return error_reply(code::RequestBad, *clash);
+    }
+    w.group = strip_pack(g);   // kernel 看的 exec／slots／budget／speed 拿掉，其他原樣交給 endpoint 函數
     return std::nullopt;
 }
 
@@ -584,6 +618,7 @@ int Server::run() {
     q_.runs += 1;
     used_ = read_used(stack_, budget_.window);
     table_ = read_table(host_);
+    write_window(stack_, window_of(cfg_.packs));
     collect();
     sweep();
     std::vector<Waiting> ws = scan();
@@ -617,7 +652,9 @@ int Server::run() {
                 if (werr) {
                     throw Error{code::WriteFailed, *werr};
                 }
-                mount(w.id, w.exec, Json::object());
+                Json proc = Json::object();
+                proc["endpoint"] = w.endpoint;   // 代號（在飛幾封、packs 的帳照它算；request.json 裡是解好的那組、沒代號）
+                mount(w.id, w.exec, proc);
             } catch (const Error& e) {
                 std::error_code ec;
                 fs::remove(aos::join(dir, PROC_JSON), ec);

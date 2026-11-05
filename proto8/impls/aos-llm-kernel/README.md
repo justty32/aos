@@ -15,14 +15,18 @@ cp -r <repo>/proto8/demo/llm-kernel def          # 定義放 def/（放哪都行
 cat def/daemon.json
 # {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300}
 cat def/kernel.json
-# {"slots": 2, "timeout_ms": 120000, "exec": "/絕對/proto8/lib/base/llm_http", "endpoint": "fake",
-#  "endpoints": {"luna": {"url": "http://localhost:4000/v1", "model": "chatgpt-gpt-6-luna-low", "key": {"$env": "LITELLM_KEY"}},
-#                "fake": {"exec": "/絕對/proto8/lib/base/llm_fake"}}}
+# {"slots": 4, "timeout_ms": 120000, "exec": "/絕對/proto8/lib/base/llm_http", "endpoint": "fake",
+#  "endpoints": {"smart-high": {"url": "http://localhost:4000/v1", "model": "claude-haiku-5-5", "key": {"$env": "LITELLM_KEY"},
+#                               "fixed": {"temperature": 0.2}, "slots": 4, "speed": "normal", "cost": "high", "summary": "..."},
+#                "fake": {"exec": "/絕對/proto8/lib/base/llm_fake", "speed": "fast", "cost": "free"}}}
 aos-exec --stack . def &                          # 起 llm 的 daemon（身體＝kernel）；信箱在 ~/llm_kernel/mailbox/
 echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | AOS_LLM_KERNEL=~/llm_kernel aos-llm ask
 # {"role": "assistant", "content": "FAKE ANSWER to: hi"}
 aos-daemon-ctl --daemon ~/llm_kernel ls           # 正在飛的問腦：llm_<信件名稱> 一封一列
-cat used.json   # {"window": "day", "since": "2026-11-05T00:00:00+08:00", "counter_calls": 3, "counter_tokens": 129, "counter_all_calls": 3, "counter_all_tokens": 129}
+cat used.json   # {"window": "day", "since": "2026-11-05T00:00:00+08:00", "counter_calls": 3, "counter_tokens": 129, "counter_all_calls": 3, "counter_all_tokens": 129, "packs": {"fake": {"counter_calls": 3, "counter_tokens": 129}}}
+cat endpoints.json   # 窗：包的屬性表 {"fake": {"speed": "fast", "cost": "free"}, "smart-high": {"slots": 4, "speed": "normal", "cost": "high", "summary": "..."}}
+echo '{"endpoint": "smart-high", "request": {"messages": [{"role": "user", "content": "hi"}], "temperature": 1}}' | AOS_LLM_KERNEL=~/llm_kernel aos-llm ask
+# aos-llm: RequestBad temperature is fixed by endpoint smart-high (remove it from the request; to change it pick another endpoint name)
 ```
 
 設計與決定見 [thinking 2026-11-05 kernel-daemon](../../thinking/2026-11/05/kernel-daemon/README.md)（問腦改掛 daemon 在 [03](../../thinking/2026-11/05/kernel-daemon/03-問腦改掛daemon.md)、`~/llm_kernel` 佈局在 [07](../../thinking/2026-11/05/kernel-daemon/07-llm-daemon佈局.md)）、[thinking 2026-11-04 think-as-function](../../thinking/2026-11/04/think-as-function/README.md)（信與 kernel.json 在 [02](../../thinking/2026-11/04/think-as-function/02-設計-信與kernel.md)）；排隊、額度、收拾的來由見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10/24/llm-kernel/README.md)、[10-15 LLM kernel 稿](../../thinking/2026-10/15/llm-kernel.md)；規範 [N-42](../../docs/NORMS/09-kernel.md)、信箱 [N-16](../../docs/NORMS/05-基礎設施-窗/05-N-16.md)。

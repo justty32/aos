@@ -3,8 +3,9 @@
 //   read_cfg   kernel.json（`檔` 或 `檔#/指標`；thinking 11-04 think-as-function 02 § 3）：
 //                slots（同時在飛幾封，正整數；沒寫＝1）、budget（額度，budget.hpp）、
 //                exec（必填：預設的 endpoint 函數＝aos-exec 目標，資料夾、檔、`檔#/指標`；相對的從 kernel 定義資料夾〔kernel.json 所在〕算、轉成絕對）、
-//                endpoints（必填、非空物件：代號 → 一組 llm 設定；一組裡 kernel 只認 exec〔選填，這組改用別的 endpoint 函數，相對的同上〕，
-//                  其他鍵整個原樣交給 endpoint 函數）、endpoint（選填：預設代號，要在表裡）、timeout_ms（選填：問腦單子的上限，非負整數）；
+//                endpoints（必填、非空物件：代號 → 一組 llm 設定＝一個能力包〔11-05 feat-proto，pack.hpp〕；一組裡 kernel 認 exec〔選填，這組改用別的
+//                  endpoint 函數，相對的同上〕、slots、budget、speed，拿掉後其他鍵〔url／model／key／fixed／cost／context／summary…〕整個原樣交給 endpoint 函數）、
+//                  endpoint（選填：預設代號，要在表裡）、timeout_ms（選填：問腦單子的上限，非負整數）；
 //                其他 key 忽略。信箱固定 $AOS_STACK/mailbox/（11-05 kernel-daemon 07 § 2：AOS_LLM_KERNEL＝kernel 的 stack）。
 //              指示詞：slots、budget、exec、endpoint、timeout_ms 整格先解（aos-loop 的 resolve_keys）；endpoints 只換一層
 //              （整張表可以 {"$ref": "endpoints.json#/"}），裡面每組到用的時候才解（解不開＝那封信回 DirectiveBad，kernel 照跑別封）。
@@ -12,7 +13,8 @@
 //   serve      跑一次（給 daemon 一次次拍，多半是 daemon.json 的身體），回結束碼（0；開始前收到訊號＝128＋N）。
 //              11-05（kernel-daemon 03）起 kernel 不自己 fork 跑 endpoint 函數：每封請 daemon 掛成 max: 1 的 loop 型 proc，下一次收。
 //                0. 找 daemon（daemon.hpp 的 find_host：沒 AOS_DAEMON＝DaemonMissing、沒 ctl 信箱＝MailboxMissing；有 AOS_KERNEL 掛信寄那裡）
-//                1. 建信箱三格（tmp／new／cur）、flock 住 .flock（鎖不到＝LockFailed）；queue.json 的 counter_runs＋1；讀 daemon 的表
+//                1. 建信箱三格（tmp／new／cur）、flock 住 .flock（鎖不到＝LockFailed）；queue.json 的 counter_runs＋1；讀 daemon 的表；
+//                   寫窗 $AOS_STACK/endpoints.json（包的屬性表，pack.hpp 的 window_of；有變才寫）
 //                2. 收成品（collect）：cur/<id>/ 有 proc.json＝在飛，看表與 <id>/state.json（settle）：收尾 code 0＝reply.json 當回信（讀不懂＝ReplyBad）、
 //                   其他碼＝EndpointFailed（reply.json 或 stderr.txt 第一行）、143／137 且過了 timeout_ms＝逾時；被收掉／死在半路＝重掛一次、第二次 EndpointFailed；
 //                   表上沒列又沒 state.json＝daemon 還沒套（照算一格），mailbox_warning 提到掛信＝LaunchFailed；
@@ -23,17 +25,19 @@
 //                   new/、cur/ 只看子資料夾（信＝資料夾，N-16；混進來的一般檔不理）
 //                4. 看 new/：letter.json 讀不懂、body 不是物件、沒有 body.request、endpoint 不是字串、priority 壞＝回 LetterBad；
 //                   request 不是物件、messages 不是陣列、stream 真＝RequestBad；代號：沒寫又沒預設＝EndpointMissing、表裡沒有＝EndpointUnknown；
-//                   那組解指示詞失敗＝DirectiveBad、不是物件或 exec 不是非空字串＝CfgBad；deadline 已過＝DeadlineMissed（都不佔格）
+//                   那組解指示詞失敗＝DirectiveBad、不是物件或 exec 不是非空字串、slots／budget／speed／fixed 形狀不對＝CfgBad；
+//                   request 寫了包 fixed 裡的 key、或包有 model 而 request 寫 model＝RequestBad（C-56：釘死的不給蓋）；deadline 已過＝DeadlineMissed（都不佔格）
 //                5. 排隊（queue.hpp 的 order）、補位到 slots（在飛＋新掛）：額度到頂（budget.hpp 的 spent）＝"refuse" 剩下的全回 BudgetMissing、
 //                   "wait" 留在 new/；沒到頂就認領（new → cur 改名；改不成＝寄信的剛撤信）、寫 request.json＝{"endpoint": 那組（指示詞已解、去掉 exec）,
-//                   "request": body.request}、寄掛信 {"procs_added": {"llm_<id>": {"exec": {"argv": ["aos-exec", 函數], "cwd": 信資料夾,
+//                   "request": body.request}、寄掛信（proc.json 記 endpoint＝代號） {"procs_added": {"llm_<id>": {"exec": {"argv": ["aos-exec", 函數], "cwd": 信資料夾,
 //                   "stdin": "request.json", "stdout": "reply.json", "timeout_ms"?}, "max": 1, "stack": 信資料夾}}}、寫 proc.json；寄不進＝LaunchFailed
-//                6. 回信（寄信的 sender.flock 已沒人鎖＝馬上撤回）、寄不出去 stderr 印一行；掛過的記進 used.json；整封刪掉；寫 queue.json
+//                6. 回信（寄信的 sender.flock 已沒人鎖＝馬上撤回）、寄不出去 stderr 印一行；掛過的記進 used.json（含 packs.<代號>）；整封刪掉；寫 queue.json
 //              endpoint 函數的環境＝daemon 給子項的（AOS_STACK＝信資料夾、AOS_DAEMON、daemon 的 AOS_WS），不是 kernel 的。
 #pragma once
 
 #include "budget/budget.hpp"
 #include "common/common.hpp"
+#include "pack/pack.hpp"
 
 #include <map>
 #include <optional>
@@ -49,6 +53,7 @@ struct Cfg {
     std::string exec;                                   // 預設的 endpoint 函數（絕對路徑，可帶 #/指標）
     Json endpoints = Json::object();                    // 代號 → 一組（只換過表這一層，每組裡的指示詞還沒解）
     std::map<std::string, std::string> endpoint_dirs;   // 代號 → 那組裡相對 $ref 的起點
+    std::map<std::string, Pack> packs;                  // 代號 → 包的 slots／budget／speed（只解這幾格；pack.hpp 的 read_packs）
     std::optional<std::string> endpoint;                // 預設代號
     std::optional<long long> timeout_ms;
     std::string base;                                   // kernel 定義資料夾（相對的 exec 從這裡算）

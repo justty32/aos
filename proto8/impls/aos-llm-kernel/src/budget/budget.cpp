@@ -79,7 +79,21 @@ static void roll(Used& u, const std::string& window) {
         u.since = since;
         u.calls = 0;
         u.tokens = 0;
+        u.packs = Json::object();
     }
+}
+
+// packs 那格（11-05 feat-proto）：沒有＝{}；要是 {代號: {"counter_calls", "counter_tokens"}}。
+static bool packs_ok(const Json& p) {
+    if (!p.is_object()) {
+        return false;
+    }
+    for (auto& [k, v] : p.items()) {
+        if (!v.is_object() || !aos::is_count(v.value("counter_calls", Json())) || !aos::is_count(v.value("counter_tokens", Json()))) {
+            return false;
+        }
+    }
+    return true;
 }
 
 Used read_used(const std::string& stack, const std::string& window) {
@@ -99,8 +113,12 @@ Used read_used(const std::string& stack, const std::string& window) {
         for (const char* k : {"counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens"}) {
             ok = ok && aos::is_count(doc->value(k, Json()));
         }
+        ok = ok && (!doc->contains("packs") || packs_ok((*doc)["packs"]));
         if (!ok) {
-            throw Error{code::UsedBad, path + " must be {\"window\", \"since\", \"counter_calls\", \"counter_tokens\", \"counter_all_calls\", \"counter_all_tokens\"} (delete it to count from 0)"};
+            throw Error{code::UsedBad, path + " must be {\"window\", \"since\", \"counter_calls\", \"counter_tokens\", \"counter_all_calls\", \"counter_all_tokens\", \"packs\"?: {name: {\"counter_calls\", \"counter_tokens\"}}} (delete it to count from 0)"};
+        }
+        if (doc->contains("packs")) {
+            u.packs = (*doc)["packs"];
         }
         u.window = (*doc)["window"].get<std::string>();
         u.since = (*doc)["since"];
@@ -113,13 +131,21 @@ Used read_used(const std::string& stack, const std::string& window) {
     return u;
 }
 
-void add_used(const std::string& stack, Used& u, const Report& r) {
+void add_used(const std::string& stack, Used& u, const Report& r, const std::string& endpoint) {
     roll(u, u.window);
     long long t = r.tokens.is_number_integer() ? r.tokens.get<long long>() : 0;
     u.calls += 1;
     u.tokens += t;
     u.all_calls += 1;
     u.all_tokens += t;
+    if (!endpoint.empty()) {
+        Json& p = u.packs[endpoint];
+        if (!p.is_object()) {
+            p = Json::object();
+        }
+        p["counter_calls"] = p.value("counter_calls", 0LL) + 1;
+        p["counter_tokens"] = p.value("counter_tokens", 0LL) + t;
+    }
     Json doc = Json::object();
     doc["window"] = u.window;
     doc["since"] = u.since;
@@ -127,6 +153,7 @@ void add_used(const std::string& stack, Used& u, const Report& r) {
     doc["counter_tokens"] = u.tokens;
     doc["counter_all_calls"] = u.all_calls;
     doc["counter_all_tokens"] = u.all_tokens;
+    doc["packs"] = u.packs;
     std::optional<std::string> err = aos::write_json(aos::join(stack, "used.json"), doc);
     if (err) {
         throw Error{code::WriteFailed, *err};

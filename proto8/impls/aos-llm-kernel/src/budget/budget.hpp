@@ -4,10 +4,11 @@
 //                 10-15 定「一天一期歸零」）、spent（到頂時新信怎麼辦："refuse"＝回 BudgetMissing（預設，10-15「見底就擋」）、"wait"＝留在 new/ 等下一窗）
 //   parse_budget  讀 budget 那格（沒寫＝不限、window day）；壞了 CfgBad
 //   Used          $AOS_STACK/used.json＝{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens"}：這一窗用了多少、開 kernel 以來一共多少
-//                 （10-25 計數改 counter_*，原 calls、tokens、all_calls、all_tokens）
+//                 （10-25 計數改 counter_*，原 calls、tokens、all_calls、all_tokens）；
+//                 11-05 feat-proto 多一格 packs＝{代號: {"counter_calls", "counter_tokens"}}：這一窗每個包（endpoints 的一組）用了多少（換窗一起歸零）
 //   window_since  這一刻所在那一窗的起點（kernel 的本地時間，帶時區的 ISO 8601；hour＝整點、day＝午夜；all＝null）
 //   read_used     讀 used.json（沒有＝全 0；在但讀不懂＝UsedBad）；換窗了（window 或 since 不同）就把 counter_calls、counter_tokens 歸零，counter_all_* 照留
-//   add_used      跑過的一封記上去（先換窗）：counter_calls＋1、counter_tokens＋回報的（沒回報＝只算次數）；寫回 used.json（先寫暫存再改名）
+//   add_used      跑過的一封記上去（先換窗）：counter_calls＋1、counter_tokens＋回報的（沒回報＝只算次數），代號有給＝packs 那格也記；寫回 used.json（先寫暫存再改名）
 //   spent         照這一窗的帳，再開第 started＋1 封會不會超過：counter_calls 已到 max_calls、或 counter_tokens 已經到 max_tokens（token 只能事後知道，所以一次裡可能超過一點）
 //   report_of     回信（reply.json，endpoint 函數的 stdout）的 usage 物件（11-04 起取代 AOS_KERNEL_REPORT 指的 report.json）：
 //                 tokens＝total_tokens；沒有就 prompt_tokens＋completion_tokens（非負整數才算）。沒有 usage（含 error 回信）＝沒回報（tokens null）；
@@ -36,6 +37,7 @@ struct Used {
     long long tokens = 0;
     long long all_calls = 0;
     long long all_tokens = 0;
+    Json packs = Json::object();   // 代號 → {"counter_calls", "counter_tokens"}（這一窗）
 };
 
 struct Report {
@@ -46,7 +48,7 @@ struct Report {
 Budget parse_budget(const Json& v);
 Json window_since(const std::string& window, std::time_t now);
 Used read_used(const std::string& stack, const std::string& window);
-void add_used(const std::string& stack, Used& u, const Report& r);
+void add_used(const std::string& stack, Used& u, const Report& r, const std::string& endpoint = "");
 bool spent(const Budget& b, const Used& u, long long started);
 Report report_of(const Json& reply);
 

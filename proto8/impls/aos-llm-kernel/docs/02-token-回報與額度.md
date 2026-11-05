@@ -4,11 +4,11 @@
 
 （[thinking 11-05 kernel-daemon 03](../../../thinking/2026-11/05/kernel-daemon/03-問腦改掛daemon.md)：kernel 不自己跑，每封請 daemon 掛成一個問腦 proc、下一次收）
 
-1. 查代號（信的 `body.endpoint`，沒寫用預設）→ 解那組的指示詞 → 那組有 `exec` 就用它、沒有用 kernel.json 的 `exec`，`exec` 鍵拿掉。
-2. 認領（`new/` → `cur/` 改名），在信的資料夾（`cur/<信件名稱>/`）寫 `request.json`＝`{"endpoint": 那組（指示詞已解、去掉 exec）, "request": body.request}`。
+1. 查代號（信的 `body.endpoint`，沒寫用預設）→ 解那組的指示詞 → 那組有 `exec` 就用它、沒有用 kernel.json 的 `exec`；讀那組的 `slots`／`budget`／`speed`（壞了 `CfgBad`）；`request` 撞到釘死的（`fixed` 的 key、那組有 `model` 時的 `model`）＝`RequestBad`；kernel 看的四個鍵（`exec`、`slots`、`budget`、`speed`）拿掉。
+2. 認領（`new/` → `cur/` 改名），在信的資料夾（`cur/<信件名稱>/`）寫 `request.json`＝`{"endpoint": 那組（指示詞已解、去掉那四個鍵）, "request": body.request}`。
 3. 寄一封**掛信**進 daemon（`$AOS_KERNEL`，沒設＝`$AOS_DAEMON` 的 ctl 信箱）：
    `{"procs_added": {"llm_<信件名稱>": {"exec": {"argv": ["aos-exec", <exec 絕對路徑>], "cwd": "<信>", "stdin": "request.json", "stdout": "reply.json", "timeout_ms"?: kernel.json 的}, "max": 1, "stack": "<信>"}}}`。
-   `max: 1` 的 loop 型 proc：跑一次就停、`state.json` 留下 `phase` 與結束碼；stderr 由 daemon 接到 `<信>/stderr.txt`。寄出後寫 `<信>/proc.json`＝`{"name", "exec", "mount_letter": 掛信的信件名稱, "mounted_at": epoch 秒, "retries": 重掛過幾次}`；寄不進＝那封回 `LaunchFailed`。
+   `max: 1` 的 loop 型 proc：跑一次就停、`state.json` 留下 `phase` 與結束碼；stderr 由 daemon 接到 `<信>/stderr.txt`。寄出後寫 `<信>/proc.json`＝`{"endpoint": 代號, "name", "exec", "mount_letter": 掛信的信件名稱, "mounted_at": epoch 秒, "retries": 重掛過幾次}`（`endpoint` 給「這包在飛幾封」與 `used.json` 的 `packs` 用；`request.json` 裡是解好的那組、沒有代號）；寄不進＝那封回 `LaunchFailed`。
    **endpoint 函數的環境＝daemon 給子項的**（`AOS_STACK`＝那封信的資料夾、`AOS_DAEMON`、daemon 的 `AOS_WS`、daemon 殼裡的其他變數），不是 kernel 的；金鑰已經解進 `request.json`。函數要別的變數（代理、憑證）＝寫進 daemon 的 `.env` 或函數自己的 `.env`。
 4. **下一次收成品**（看 daemon 的表 `$AOS_DAEMON/procs_state.json` 與 `<信>/state.json`）：
    - 收尾、結束碼 0＝`reply.json` 讀得懂就原樣當回信；讀不懂＝`ReplyBad`。
@@ -28,12 +28,12 @@ endpoint 函數的契約（stdin `{"endpoint", "request"}` → stdout 一行 `{"
 - **算什麼**：掛出去過（`proc.json` 在）的信才算一次——`LetterBad`、`RequestBad`、`Endpoint{Missing,Unknown}`、`DeadlineMissed`、`BudgetMissing`、第一次就寄不出掛信的 `LaunchFailed` 不算；`EndpointFailed`、`ReplyBad` 算（函數跑過、可能已經花了錢）。
 - **額度**（kernel.json 的 `budget`，都選填）：`max_calls`、`max_tokens`＝每窗上限（非負整數；沒寫＝那一種不限）；`window`＝`"hour"`／`"day"`／`"all"`（沒寫＝`day`；窗的起點用 kernel 的本地時間〔`TZ`〕的整點／午夜，`all`＝不歸零）；
   `spent`＝到頂時排著的信怎麼辦：`"refuse"`（沒寫＝這個）回 `BudgetMissing`、不跑；`"wait"` 留在 `new/` 等下一窗。
-  `budget` 沒寫也照樣記 `used.json`（窗＝day）：`{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens"}`。換窗＝`window` 或 `since` 跟現在算出來的不同：`counter_calls`、`counter_tokens` 歸零，`counter_all_*` 照留。
+  `budget` 沒寫也照樣記 `used.json`（窗＝day）：`{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens", "packs": {代號: {"counter_calls", "counter_tokens"}}}`（`packs`＝這一窗每個包用了多少，代號從 `proc.json` 的 `endpoint` 拿；11-05 feat-proto）。換窗＝`window` 或 `since` 跟現在算出來的不同：`counter_calls`、`counter_tokens`、`packs` 歸零，`counter_all_*` 照留。
 - **到頂怎麼判**：要掛下一封之前看——`counter_calls`＋在飛的＋這次新掛的 ≥ `max_calls`，或 `counter_tokens` ≥ `max_tokens`。token 收到回信才知道，所以最多超過「在飛那幾封的量」。
 
 ### 一次
 
-1. 建信箱三格；找 daemon（沒 `AOS_DAEMON`＝`DaemonMissing`、沒 ctl 信箱＝`MailboxMissing`，都退 1）；flock；`queue.json` 的 `counter_runs`＋1；讀 `used.json`（換窗了先歸零）、讀 daemon 的表。
+1. 建信箱三格；找 daemon（沒 `AOS_DAEMON`＝`DaemonMissing`、沒 ctl 信箱＝`MailboxMissing`，都退 1）；flock；`queue.json` 的 `counter_runs`＋1；讀 `used.json`（換窗了先歸零）、讀 daemon 的表；寫窗 `endpoints.json`（有變才寫）。
 2. **收成品**：`cur/` 裡有 `proc.json` 的照上面「跑一封」第 4 步看，收尾的寄回信、刪掉，還在飛的記一格。沒有 `proc.json` 的：有讀得懂的 `reply.json`＝上一次寄到一半，照寄；都沒有＝認領了還沒掛就停了，改名回 `new/` 重排。
 3. **收拾**（只看有 `sender.flock` 的信）：`tmp/` 裡寄信的人不在了的刪掉；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑）。沒有 `sender.flock` 的一律不碰。
 4. **看 `new/`**：`LetterBad`、`RequestBad`、`EndpointMissing`、`EndpointUnknown`、那組壞了（`DirectiveBad`、`CfgBad`）、deadline 已過（`DeadlineMissed`）＝直接回信（都不佔格、不跑）。

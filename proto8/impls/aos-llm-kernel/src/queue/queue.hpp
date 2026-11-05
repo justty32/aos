@@ -8,6 +8,7 @@
 #pragma once
 
 #include "common/common.hpp"
+#include "pack/pack.hpp"
 
 #include <string>
 #include <vector>
@@ -24,8 +25,9 @@ struct Waiting {
     Json letter;               // letter.json 整份
     Priority priority;
     std::string endpoint;      // 用的代號（信的 body.endpoint，沒寫＝kernel.json 的預設）
-    Json group;                // 那組設定（指示詞已解、去掉 exec）＝request.json 的 endpoint
+    Json group;                // 那組設定（指示詞已解、去掉 kernel 看的 exec／slots／budget／speed）＝request.json 的 endpoint
     std::string exec;          // 這組的 endpoint 函數（aos-exec 目標，絕對路徑）
+    Pack pack;                 // 這組的 slots／budget／speed（pack.hpp）
     long long seen_at_runs = 0;
 };
 
