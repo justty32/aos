@@ -116,7 +116,9 @@ bool reapable(const Seen& s) {
         return false;
     }
     if (!s.holder || !is_int(*s.holder, "pid")) {
-        return s.age_ms >= STALE_MS;   // 名牌還沒寫好就死了、或讀不懂
+        // 名牌還沒寫好就死了、或讀不懂。11-05 第二輪：mtime 在未來 STALE_MS 以上（時鐘往回跳過：WSL 睡醒校時、NTP）也算過期——
+        // 原本年齡是負的永遠不到 10 秒，send --ordered 一直卡著、什麼都不說
+        return s.age_ms >= STALE_MS || s.age_ms <= -STALE_MS;
     }
     const Json& j = *s.holder;
     // 1. 開機過了：舊名牌上的行程都不在了

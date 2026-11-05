@@ -92,7 +92,8 @@ static void reap(const std::string& lock_dir, const Seen& judged) {
         struct stat st{};
         if (errno == EEXIST && stat(token.c_str(), &st) == 0) {
             long long mtime_ms = (long long)st.st_mtim.tv_sec * 1000LL + st.st_mtim.tv_nsec / 1000000L;
-            if (now_ms() - mtime_ms >= STALE_MS) {
+            long long age = now_ms() - mtime_ms;
+            if (age >= STALE_MS || age <= -STALE_MS) {   // 11-05 第二輪：時鐘往回跳過的（mtime 在未來）同樣算收的人死了
                 ::rmdir(token.c_str());
             }
         }
