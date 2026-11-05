@@ -49,8 +49,8 @@
 #   定義的 _entry 就空出來給「aos-exec 這個資料夾＝aos-agent ctl add 自己」（demo/agent-fsm 的寫法）；沒宣告＝掛定義資料夾本身（11-04 起的行為）。
 #   limits（選填，11-05 feat-proto 件 5，使用者「會想要限制特定aos proc所占用的資源」）：這隻建議的份額 {"mem_mb", "cpu_s", "procs", "file_mb", "files"：
 #   正整數；"user"：字串}（同 aos-sandbox 的 key）；ctl add --limits JSON 整份蓋過宣告（'{}'＝不限）。key 不認、值不對＝InterfaceBad（宣告）／ArgumentsBad（--limits）。
-#   要送 aos-daemon-ctl add --limits（daemon 在子行程 setrlimit，05 的 E1／E2）；E2 還沒做（aos-daemon-ctl 不認 --limits，送了＝FlagUnknown 整封掛不上），
-#   所以現在只驗、不送，stderr 提醒一行。ctl state：表上那列有 limits（E1 起 daemon 寫）就多一行 limits。
+#   有宣告或 --limits＝原樣轉成 aos-daemon-ctl add --limits JSON（daemon 在子行程 setrlimit／換帳號，等同 s6-softlimit；05 的 E1／E2，11-05 晚做好）。
+#   ctl state：表上那列有 limits（daemon 寫的生效那份）就多一行 limits。
 # stdout 只有結果；提醒在 stderr（括號一行）。錯：stderr 一行 `aos-agent: 代號 原因`、退 1（chat 被 Ctrl-C 退 130）。
 #   代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、InstanceExists、PathMissing、SessionBad、
 #   SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、AddRejected、CtlRejected、TargetMissing、WsMissing、StackMissing、InterfaceMissing、InterfaceBad、PhaseBad、
@@ -110,8 +110,8 @@ Interface: touches only the daemon table and the agent's stack (queue/, history.
   the definition folder); not declared = attaches the definition folder itself.
   limits (optional): the resources this agent should get, {"mem_mb", "cpu_s", "procs", "file_mb", "files": positive integers; "user": a
   string} (the aos-sandbox keys); ctl add --limits JSON replaces the declared one as a whole ('{}' = no limits). An unknown key or a bad
-  value = InterfaceBad (declared) / ArgumentsBad (--limits). The daemon does not take limits yet, so they are checked but not sent (one note
-  on stderr). ctl state prints a limits line when the daemon table row has one.
+  value = InterfaceBad (declared) / ArgumentsBad (--limits). They are passed on as aos-daemon-ctl add --limits JSON; the daemon applies them
+  in the child process (setrlimit / switching user). ctl state prints a limits line when the daemon table row has one.
 stdout carries results only; notes go to stderr as one line in parentheses. Errors: one stderr line `aos-agent: CODE reason`, exit 1
   (Ctrl-C exits 130, SIGTERM 143, SIGHUP 129).
   Codes: ArgumentsBad, FlagUnknown, CommandUnknown, CommandMissing, DaemonMissing, InstanceMissing, InstanceExists, PathMissing, SessionBad,
@@ -1014,15 +1014,13 @@ def cmd_add(argv):
                 "sleeping": "; it is asleep, to carry on: aos-agent ctl wake --target %s" % name}.get(row.get("phase"), "")
         raise Fail("InstanceExists", "%s is already on the daemon; pick another name (--name), or first aos-agent ctl rm %s%s" % (name, name, hint))
     try:
-        row = ctl_wait("add", ["--ws", ws, "--name", name, *(["--stack", stack] if stack else []), *body],
+        row = ctl_wait("add", ["--ws", ws, "--name", name, *(["--stack", stack] if stack else []),
+                               *(["--limits", json.dumps(limits, ensure_ascii=False)] if limits is not None else []), *body],   # 11-05 晚：E2 做好，照轉
                        lambda letter: row_named(name) or rejected(letter),
                        "the daemon has not put %s on the table yet (see aos-agent ctl ls and the daemon's log)" % name, "AddRejected")
     except KeyboardInterrupt:                         # 11-04 夜邊緣實測：信已寄出，Ctrl-C 不撤；原本安靜退 130，人以為沒掛上
         note("the add letter was sent, the daemon will still attach %s; if you do not want it, aos-agent ctl rm %s (check with aos-agent ctl ls)" % (name, name))
         raise
-    if limits:                                        # E2（aos-daemon-ctl add --limits）沒到前不送：送了它回 FlagUnknown、整封掛不上
-        note("note: limits %s not applied: the daemon does not take limits yet (aos-daemon-ctl add has no --limits), %s runs without them"
-             % (show_limits(limits), name))
     print(Agent(name, row).stack)
 
 
