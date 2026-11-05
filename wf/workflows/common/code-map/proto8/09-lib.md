@@ -16,7 +16,7 @@
 | `math/`、`clock/` | 四則運算、印 UTC 時間 |
 | `run_python/` | 跑一段 Python，回輸出、最後一行 `[exit code N]`（同 bash） |
 | `judge/` | 只有 `_entry`（不是腦的工具，11-05）：判官，一輪＝收 `$AOS_STACK/requests/` 的 `procs_*` 信，照 `judge.json`（`allowed`、`max_running`〔數 `$AOS_DAEMON/procs_state.json` 的 running 列，經 aos-directive 解〕）判 `procs_added`（`procs_started`／`procs_woken` 也算進 `max_running`，11-05 edge-agent）；掛＝body 原樣 `aos-post send --reply-to` 進 daemon 的 ctl 信箱（無序信同名）、不掛＝stderr 一行＋`done --reply` 回 `applied: false`（`msg` 英文；aos-daemon-ctl `--reply-to` 帶的信才回得到，11-05 edge-agent 題 2）；不自己跑東西。模式 1 的身體、模式 2 的 0 號共用（[demo/docs/04](../../../../../proto8/demo/docs/04-kernel-modes.md)） |
-| `llm_http/`、`llm_fake/` | endpoint 函數（11-04 晚）：stdin `{endpoint, request}` → POST OpenAI 相容端點、印 `{message, usage, model}`；body 組法 request 先、endpoint.fixed 蓋上、model 用包的（11-05）；假腦同契約不碰網路，認 endpoint.script 劇本。aos-llm-kernel 的 `kernel.json` `exec`／`endpoints.*.exec` 指它們 |
+| `llm_http/`、`llm_fake/` | endpoint 函數（11-04 晚）：stdin `{endpoint, request}` → POST OpenAI 相容端點、印 `{message, usage, model}`；body 組法 request 先、endpoint.fixed 蓋上、model 用包的（11-05）；假腦同契約不碰網路，認 endpoint.script 劇本、endpoint.tool（先叫哪個工具，11-05 E 線）。aos-llm-kernel 的 `kernel.json` `exec`／`endpoints.*.exec` 指它們 |
 
 ## `lib/aos/`（懂 aos 的工具）
 
@@ -33,8 +33,8 @@
 | `pyfix/_entry`、`pyfix/_tooldef.json`、`pyfix/_metainfo.json` | 把改 Python 的事交給子 agent pyfix-agent，印答案＋實際 diff |
 | `pyfix/agent/*` | 子 agent pyfix-agent：`_entry`、`loop.json`、`fsm.json`、`idle/`、`brain.py`（`aos-llm ask` 問 kernel，11-04 晚）、`act.py`、`system.txt`、`tools.json`、`tools/`（捷徑到 `lib/base`） |
 | `cli_session.py` | 不是工具：claude／codex CLI 接成工具（非互動續對話，或 tmux 貼字等 hook）；`call_main`、`attach_main`、`hook`；`stack_copies`＝`$AOS_STACK` 的 `tools.json` 是這隻的覆蓋層、給 aos-mcp `--overlay`（11-05）、`--model` 取 cli.json 同層 `llm.json` 疊 `$AOS_STACK/llm.json` 的 `model`（11-04 晚） |
-| `self_tools/_entry`、`self_tools/_tooldef.json`、`self_tools/_metainfo.json` | 改叫我的 agent 自己的工具覆蓋層（11-05 feat-proto 件 1）：`aos-agent ctl who` 認出是哪隻 → `aos-agent tools --target 它 add／rm／ls --json`；`tool_path`（相對從 `$AOS_WS`、絕對限 `lib/`）、`agent`（轉 aos-agent，stderr 原樣透出、退非 0＝自己一行 CommandFailed，11-05 stdio-unify R10） |
-| `agents/_entry`、`agents/_tooldef.json`、`agents/_metainfo.json` | 生、叫、收另一隻 agent（11-05 feat-proto 件 4）：op add／say／ask／rm／ls 轉 `aos-agent --daemon $AOS_DAEMON` 的 `ctl add`（`limits` 原樣轉 `--limits`、它的提醒行接在 added 後，件 5；＋`llm set endpoint`、`tools add`，失敗 `ctl rm` 收回）／`say`／`say`＋`listen`／`ctl rm`／`ctl ls --json`；`resolve`（相對從 `$AOS_WS`、絕對限工作區或 `proto8/lib`、`proto8/demo`）、`children.json`（工具小格，只 say／ask／rm 自己生的，`ChildUnknown`）、`agent`（叫 aos-agent、逾時與被 TERM 收整群、錯取最後一行 `aos-…: 代號`） |
+| `self_tools/_entry`、`self_tools/_tooldef.json`、`self_tools/_metainfo.json` | 改叫我的 agent 自己的工具覆蓋層（11-05 feat-proto 件 1）：`aos-agent ctl who` 認出是哪隻 → `aos-agent tools --target 它 add／rm／ls --json`；`tool_path`（相對從 `$AOS_WS`、絕對限 `lib/`）、`agent`（轉 aos-agent，stderr 原樣透出；退非 0＝取它最後一行錯誤行的代號與原因當自己的錯，沒有才 CommandFailed，11-05 E 線） |
+| `agents/_entry`、`agents/_tooldef.json`、`agents/_metainfo.json` | 生、叫、收另一隻 agent（11-05 feat-proto 件 4；E 線補兩種生法與配額）：op new（`build_def`：範本複製到暫存資料夾、`absolutize_tools`、寫 files、併 llm、改 tools 檔，改名後掛上，掛不上刪掉）／add（`mount`＝`ctl add`，`llm set`、`tools rm`、`tools add --override` 走子的覆蓋層，失敗 `ctl rm` 收回）／say／ask／rm／ls；`read_path`（相對從 `$AOS_WS`、絕對照用）、`write_path`（限工作區）；配額 `reconcile`（`children.json`〔`[{name, stack}]`〕對 `ctl ls --json`）、`max_children`（父定義的 `agents.json` 疊父 stack 的，預設 4）、`quota`（滿＝ChildSlotMissing、不寄信）；`agent`（叫 aos-agent、逾時與被 TERM 收整群、錯取最後一行 `aos-…: error: 代號`） |
 | `memory/_entry`、`memory/_tooldef.json`、`memory/_metainfo.json` | 層級式記憶工具的查詢半邊（11-05 下午 agent-knowledge）：`AOS_MEMORY` 指知識庫根（`base`：相對從 `$AOS_DAEMON`）、`parse_path`（段名 `[a-z0-9_-]`、尾巴 `/` 可有）、`resolve`（資料夾 → `.md` → `.json`）、`read`／`ls`／`find`（`find` 真的叫 `grep -ril`，TERM 時先收掉它）、`title_summary`（md 第一行與其後第一個非空行／json 的 `title`／`summary`）、`NodeMissing` 附祖先的子節點名 |
 
 ## `proto8/knowledge/`（知識庫：記憶工具讀的資料夾樹，不是程式）
