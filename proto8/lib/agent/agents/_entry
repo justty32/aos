@@ -2,8 +2,10 @@
 # agents - 生、叫、收另一隻 agent：包著 aos-agent ctl add／say／listen／rm／ls，掛在管我的那台 daemon（$AOS_DAEMON）上
 # 使用者 11-05 午：「讓agent利用aos指令產出另一個agent」。規劃：proto8/thinking/2026-11/05/feat-proto/04-spawn-agent.md（代定 1～5）。
 # 介面（lib/README 的契約）：stdin 一份 {"op": "add"|"say"|"ask"|"rm"|"ls", ...}：
-#   add {name, def, ws?, endpoint?, tools?: [{name, path}]}  aos-agent ctl add --name <name> --ws <ws> <def>；有 endpoint＝llm set endpoint=…、
+#   add {name, def, ws?, endpoint?, tools?: [{name, path}], limits?}  aos-agent ctl add --name <name> --ws <ws> [--limits <JSON>] <def>；有 endpoint＝llm set endpoint=…、
 #       有 tools＝逐個 tools add（不繼承父的腦與工具：要就明寫，C-52）；後面兩步失敗＝ctl rm 收回（全有或全無，規則 6）。印 added <name> (stack …)。
+#       limits（11-05 feat-proto 件 5）原樣 json 轉成 --limits（驗 key 與值是 aos-agent 的事）；ctl add 在 stderr 的提醒行（括號那種，
+#       例 limits 還沒生效）接在 added 那行後面印給腦。
 #   say {name, text}           寄一句（aos-agent say，話走 stdin）、馬上回，印信件名稱
 #   ask {name, text, timeout_s?}  say＋listen --timeout-s（預設 600、上限 1700：act 格 timeout_ms 1800000 包得住）印回答
 #   rm {name}                  ctl rm（刪子的 stack；aos-agent 的保護規則照舊）
@@ -26,6 +28,7 @@ ERR_RE = re.compile(r"aos-[a-z-]+: ([A-Z][A-Za-z]+) (.*)\Z")
 ASK_DEFAULT_S, ASK_MAX_S = 600, 1700
 STEP_S = 90                    # 其他每一步（ctl add 自己最多等 30 秒）的逾時
 child = None
+last_err = ""                  # 上一次 aos-agent 的 stderr（成功時拿來轉提醒行）
 
 
 def die(code, reason):
@@ -59,7 +62,7 @@ signal.signal(signal.SIGTERM, on_term)
 
 def agent(argv, text=None, timeout_s=STEP_S):
     """叫 aos-agent --daemon <AOS_DAEMON> argv…；退 0 回 stdout，退非 0 回 (代號, 原因)。"""
-    global child
+    global child, last_err
     cmd = ["aos-agent", "--daemon", daemon] + argv
     try:
         child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL,
@@ -73,6 +76,7 @@ def agent(argv, text=None, timeout_s=STEP_S):
         die("CommandFailed", "aos-agent %s did not finish in %d s (killed)" % (" ".join(argv[:2]), timeout_s))
     p, child = child, None
     out, err = out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
+    last_err = err
     if p.returncode == 0:
         return out, None
     lines = [x for x in err.splitlines() if x.strip()]
@@ -227,15 +231,18 @@ for t in tools:
     if not isinstance(t, dict):
         die("ArgumentsBad", "each tools item must be an object {name, path}")
     tool_list.append((need_name(t.get("name"), "tool name"), resolve(t.get("path"), "tool path", shared)))
+limits = args.get("limits")
 if not os.path.isdir(child_ws):
     try:
         os.makedirs(child_ws)
     except OSError as e:
         die("MkdirFailed", "cannot create ws %s: %s" % (child_ws, e))
 
-out, err = agent(["ctl", "add", "--name", name, "--ws", child_ws, definition])
+out, err = agent(["ctl", "add", "--name", name, "--ws", child_ws,
+                  *(["--limits", json.dumps(limits, ensure_ascii=False)] if limits is not None else []), definition])
 if err:
     fail(err)
+notes = [x.strip() for x in last_err.splitlines() if x.strip().startswith("(")]
 child_stack = out.strip().splitlines()[-1] if out.strip() else "?"
 names = read_children()
 write_children(names + [name] if name not in names else names)
@@ -250,4 +257,4 @@ for what, argv in steps:
             write_children([x for x in read_children() if x != name])
         fail(err, " (during %s; %s)" % (what,
                                         "rolled back: removed %s" % name if err2 is None else "rollback failed too: %s %s" % err2))
-sys.stdout.write("added %s (stack %s)\n" % (name, child_stack))
+sys.stdout.write("added %s (stack %s)\n" % (name, child_stack) + "".join(x + "\n" for x in notes))

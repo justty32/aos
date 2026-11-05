@@ -6,7 +6,7 @@
 # 03 介面、04 邊緣）。說明與用法例子：proto8/extras/agent/README.md。
 #
 #   掛上與管理（11-05 使用者「我希望掛上和管理這塊，能夠放到aos-agent ctl這個子命令下。」）：
-#     aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] XXX   掛一隻（XXX 要在 interfaces.json 宣告遵守 aos-agent）；等上表、印 stack（daemon 拒收＝AddRejected）
+#     aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] [--limits JSON] XXX   掛一隻（XXX 要在 interfaces.json 宣告遵守 aos-agent）；等上表、印 stack（daemon 拒收＝AddRejected）
 #     aos-agent [--daemon D] ctl rm 名字                 拔掉並刪它的 stack（有畫面先關；不吃 AOS_AGENT；stack 蓋住工作區／定義／daemon／cwd／家目錄／表上別隻的 stack 的不刪）
 #     aos-agent [--daemon D] ctl ls [--json]             列 daemon 表上全部的 proc：名字 狀態 工作區 queue 排幾封
 #     aos-agent [--daemon D] ctl state|status [--target 名字]   這隻的狀態幾行
@@ -44,6 +44,10 @@
 #   llm＝腦設定檔（例 "llm.json"），改過的鍵在 stack 的同一個相對路徑（只放改過的鍵、reset 刪；set＝aos-json set --str，11-04 晚 think-as-function）。
 #   entry（選填，11-05 portable-flow 題 4）：定義裡身體的入口（例 "body.json"）；宣告了＝add 掛的是 <定義>/<entry>（def 欄照樣是定義資料夾），
 #   定義的 _entry 就空出來給「aos-exec 這個資料夾＝aos-agent ctl add 自己」（demo/agent-fsm 的寫法）；沒宣告＝掛定義資料夾本身（11-04 起的行為）。
+#   limits（選填，11-05 feat-proto 件 5，使用者「會想要限制特定aos proc所占用的資源」）：這隻建議的份額 {"mem_mb", "cpu_s", "procs", "file_mb", "files"：
+#   正整數；"user"：字串}（同 aos-sandbox 的 key）；ctl add --limits JSON 整份蓋過宣告（'{}'＝不限）。key 不認、值不對＝InterfaceBad（宣告）／ArgumentsBad（--limits）。
+#   要送 aos-daemon-ctl add --limits（daemon 在子行程 setrlimit，05 的 E1／E2）；E2 還沒做（aos-daemon-ctl 不認 --limits，送了＝FlagUnknown 整封掛不上），
+#   所以現在只驗、不送，stderr 提醒一行。ctl state：表上那列有 limits（E1 起 daemon 寫）就多一行 limits。
 # stdout 只有結果；提醒在 stderr（括號一行）。錯：stderr 一行 `aos-agent: 代號 原因`、退 1（chat 被 Ctrl-C 退 130）。
 #   代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、InstanceExists、PathMissing、SessionBad、
 #   SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、AddRejected、CtlRejected、TargetMissing、WsMissing、StackMissing、InterfaceMissing、InterfaceBad、PhaseBad、
@@ -53,8 +57,8 @@
 """aos-agent - one interface for an agent hosted on aos-daemon (eca, loop / fsm agents alike); each subcommand acts on one agent.
 
   Attach and manage (ctl):
-    aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] XXX   attach one (XXX must declare aos-agent in interfaces.json);
-                                                       waits until it is on the table, prints its stack (daemon refuses = AddRejected)
+    aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] [--limits JSON] XXX   attach one (XXX must declare aos-agent in
+                                                       interfaces.json); waits until it is on the table, prints its stack (daemon refuses = AddRejected)
     aos-agent [--daemon D] ctl rm NAME                 detach it and delete its stack (closes its screen first; ignores AOS_AGENT; a stack that
                                                        covers the workspace / definition / daemon / cwd / home / another listed stack is kept)
     aos-agent [--daemon D] ctl ls [--json]             list every proc on the daemon table: name, state, workspace, queued letters
@@ -96,6 +100,10 @@ Interface: touches only the daemon table and the agent's stack (queue/, history.
   llm = a brain settings file (e.g. "llm.json"), the keys this agent changed live at the same relative path in its stack (reset deletes it).
   entry (optional): the body's entry in the definition (e.g. "body.json"); declared = add attaches <definition>/<entry> (def column is still
   the definition folder); not declared = attaches the definition folder itself.
+  limits (optional): the resources this agent should get, {"mem_mb", "cpu_s", "procs", "file_mb", "files": positive integers; "user": a
+  string} (the aos-sandbox keys); ctl add --limits JSON replaces the declared one as a whole ('{}' = no limits). An unknown key or a bad
+  value = InterfaceBad (declared) / ArgumentsBad (--limits). The daemon does not take limits yet, so they are checked but not sent (one note
+  on stderr). ctl state prints a limits line when the daemon table row has one.
 stdout carries results only; notes go to stderr as one line in parentheses. Errors: one stderr line `aos-agent: CODE reason`, exit 1
   (chat interrupted by Ctrl-C exits 130).
   Codes: ArgumentsBad, FlagUnknown, CommandUnknown, CommandMissing, DaemonMissing, InstanceMissing, InstanceExists, PathMissing, SessionBad,
@@ -121,6 +129,7 @@ REPLY_GRACE = 1.0                               # 結果先到、回信還沒到
 POLL = 0.2                                      # listen 看一次的間隔（秒）
 RUNNERS = ("aos-loop", "aos-fsm", "aos-exec", "aos-daemon")   # 算「有人在跑」的程式名
 DECL = "interfaces.json"                        # 宣告檔（03）
+LIMIT_INTS = ("mem_mb", "cpu_s", "procs", "file_mb", "files")   # limits 的正整數 key（同 aos-sandbox）；另有 user（字串）
 IFACE = "aos-agent"
 
 
@@ -615,6 +624,27 @@ def read_decl(folder, iface):
     return d[iface], None
 
 
+def check_limits(v, where, code):
+    """limits（11-05 feat-proto 件 5）：物件，key 只有 LIMIT_INTS（正整數）與 user（非空字串）。錯＝code（宣告 InterfaceBad、--limits ArgumentsBad）。"""
+    keys = ", ".join(LIMIT_INTS + ("user",))
+    if not isinstance(v, dict):
+        raise Fail(code, "%s must be a JSON object such as {\"mem_mb\": 512, \"cpu_s\": 60} (keys: %s), not %s" % (where, keys, json.dumps(v, ensure_ascii=False)))
+    for k, x in v.items():
+        if k == "user":
+            if not isinstance(x, str) or not x:
+                raise Fail(code, "user in %s must be a non-empty string (account name), not %s" % (where, json.dumps(x, ensure_ascii=False)))
+        elif k in LIMIT_INTS:
+            if type(x) is not int or x <= 0:
+                raise Fail(code, "%s in %s must be a positive integer, not %s" % (k, where, json.dumps(x, ensure_ascii=False)))
+        else:
+            raise Fail(code, "unknown key %s in %s (keys: %s)" % (k, where, keys))
+    return v
+
+
+def show_limits(v):
+    return " ".join("%s=%s" % (k, x) for k, x in v.items()) if isinstance(v, dict) else json.dumps(v, ensure_ascii=False)
+
+
 def def_of(a):
     """表那一列的 def 欄（aos-daemon-ctl add 送的 XXX 絕對路徑）＝定義資料夾。沒有這欄＝InterfaceMissing（舊 daemon 或舊 aos-daemon-ctl 掛的）。
     11-04 使用者「那就b。」：不再從 exec 欄倒推（loop.json 的 exec 是陣列或指到別的資料夾會推錯）。"""
@@ -741,6 +771,9 @@ def cmd_state(argv):
         lines.insert(4, "def     %s" % def_of(a))
     except Fail:
         pass
+    if a.row.get("limits"):                           # 11-05 feat-proto 件 5：表上那列的份額（E1 起 daemon 寫；沒有不印）
+        at = max(i for i, s in enumerate(lines) if s.startswith(("stack ", "def ")))
+        lines.insert(at + 1, "limits  %s" % show_limits(a.row["limits"]))
     ov = overlay_count(a)
     if ov:
         lines.insert(len(lines) - 2, "tools   %s" % ov)
@@ -889,9 +922,9 @@ def cmd_chat(argv):
 # ---------------------------------------------------------------- 子命令：動它的（步 5）
 
 def cmd_add(argv):
-    opts, rest = parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack"})
+    opts, rest = parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits"})
     if len(rest) != 1:
-        raise Fail("ArgumentsBad", "add takes one agent folder XXX (aos-agent ctl add [--name N] [--ws WS] [--stack S] XXX)"
+        raise Fail("ArgumentsBad", "add takes one agent folder XXX (aos-agent ctl add [--name N] [--ws WS] [--stack S] [--limits JSON] XXX)"
                    + ("; extra argument %s (add takes no -- arguments)" % rest[1] if len(rest) > 1 else ""))
     xxx = os.path.abspath(rest[0])
     if not os.path.isdir(xxx):
@@ -907,6 +940,16 @@ def cmd_add(argv):
         if not os.path.exists(os.path.join(xxx, ent.partition("#")[0])):
             raise Fail("InterfaceBad", "the entry declared by %s does not exist: %s" % (xxx, os.path.join(xxx, ent)))
         body = ["--def", xxx, os.path.join(xxx, ent)]
+    if opts.get("limits") is not None:                # 11-05 feat-proto 件 5：--limits 整份蓋過宣告
+        try:
+            limits = json.loads(opts["limits"])
+        except ValueError as e:
+            raise Fail("ArgumentsBad", "--limits is not JSON: %s" % e)
+        check_limits(limits, "--limits", "ArgumentsBad")
+    else:
+        limits = decl.get("limits")
+        if limits is not None:
+            check_limits(limits, "the limits declared by %s" % xxx, "InterfaceBad")
     ws = os.path.abspath(opts.get("ws") or ".")
     if not os.path.isdir(ws):
         raise Fail("PathMissing", "--ws is not a folder: %s" % ws)
@@ -929,6 +972,9 @@ def cmd_add(argv):
     except KeyboardInterrupt:                         # 11-04 夜邊緣實測：信已寄出，Ctrl-C 不撤；原本安靜退 130，人以為沒掛上
         note("the add letter was sent, the daemon will still attach %s; if you do not want it, aos-agent ctl rm %s (check with aos-agent ctl ls)" % (name, name))
         raise
+    if limits:                                        # E2（aos-daemon-ctl add --limits）沒到前不送：送了它回 FlagUnknown、整封掛不上
+        note("note: limits %s not applied: the daemon does not take limits yet (aos-daemon-ctl add has no --limits), %s runs without them"
+             % (show_limits(limits), name))
     print(Agent(name, row).stack)
 
 

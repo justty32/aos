@@ -9,6 +9,7 @@
                                          "items": {"type": "object",
                                                    "properties": {"name": {"type": "string"}, "path": {"type": "string", "description": "tool folder, same rules as def"}},
                                                    "required": ["name", "path"]}},
+                               "limits": {"type": "object", "description": "add: resource limits for it, e.g. {\"mem_mb\": 512, \"cpu_s\": 600}; keys mem_mb, cpu_s, procs, file_mb, files (positive integers), user (string); default is what its definition declares"},
                                "text": {"type": "string", "description": "say, ask: the message"},
                                "timeout_s": {"type": "number", "description": "ask: seconds to wait for the answer; default 600, at most 1700"}},
                 "required": ["op"]}}
