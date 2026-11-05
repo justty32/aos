@@ -1,4 +1,4 @@
-{"mailbox": "mailbox", "slots": 2, "timeout_ms": 120000,
+{"slots": 2, "timeout_ms": 120000,
  "exec": "../../lib/base/llm_http",
  "endpoint": "fake",
  "endpoints": {

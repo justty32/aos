@@ -3,7 +3,7 @@
 //   信箱（N-16 資料夾式，Maildir）：一個資料夾，底下三格、一封信＝一個資料夾（名字＝信件名稱，下面寫 id）：
 //     tmp/<id>/、tmp/.<id>/   寄信的正在寫（aos-post 寫 tmp/<id>；aos-llm ask 寫 tmp/.<id>）；撤信、丟信先改名回這裡再刪
 //     new/<id>/    排隊中（kernel 認領＝改名進 cur/；寄信的撤信＝改名回 tmp/，兩邊只有一個改得成）
-//     cur/<id>/    kernel 正在跑（request.json、reply.json、stderr.txt）；寄出回信就整封刪掉
+//     cur/<id>/    kernel 認領了、請 daemon 掛成問腦 proc（stack＝這個資料夾：request.json、proc.json、daemon 寫的 loop.json／state.json／stderr.txt、函數寫的 reply.json）；寄出回信就整封刪掉
 //                  （11-04 夜使用者「舊信根本不用留，就是刪」：沒有 done/，舊 kernel 留下的 done/ 下一次整個刪）
 //     .flock       kernel 跑一次的期間 flock 住（同一個信箱同時只有一個 kernel）
 //   信：letter.json＝N-16 的信（aos-post 寫）：{"sender", "sent_at", "reply_to": 回信信箱（必有，沒有就沒人收得到回信）,
@@ -12,7 +12,7 @@
 //                             "priority"?: 原樣（parse_priority）}}
 //       （thinking 11-04 think-as-function 02 § 1；頂層 inst／env 的舊閘門信不再認＝LetterBad）；其他不認得的 key 一律忽略（C-48）
 //   回信：reply.json＝endpoint 函數 stdout 那份 {"message": {...}, "usage"?: {...}, "model"?: ...}，或 {"error": {"code": 代號, "msg": 原因}}
-//       （kernel 沒跑、跑不起來、endpoint 函數退非 0〔EndpointFailed〕、stdout 讀不懂〔ReplyBad〕）。
+//       （kernel 沒跑、掛不上 daemon〔LaunchFailed〕、endpoint 函數退非 0 或逾時〔EndpointFailed〕、stdout 讀不懂〔ReplyBad〕）。
 //       kernel 把同一份當 body、照 N-16 寄一封回信進信的 reply_to（沒寫 reply_to＝回信沒人收，信照刪）（in_reply_to＝原信的信件名稱），寄出的信件名稱記在 <信>/reply_letter.txt
 //   用量：reply.json 的 usage.total_tokens（沒有就 prompt_tokens＋completion_tokens）→ used.json（11-04 起取代 AOS_KERNEL_REPORT）
 //   寄信的人：sender.flock＝aos-llm ask（同步）建好信就 flock（LOCK_EX）住、拿到行程結束；aos-llm send（非同步）不建＝kernel 不判存活、照跑
@@ -42,11 +42,11 @@ namespace aos::llm_kernel {
 // 錯誤代號：沿用 aos-loop 的（→ aos-exec → aos-util），再加信箱、信會吐的。
 namespace code {
 using namespace aos::loop::code;   // ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、StackMissing、WriteFailed、MkdirFailed…
-                                   // KernelMissing（aos-llm：沒設 AOS_LLM_KERNEL、不是資料夾；11-04 原 MailboxMissing）、LetterBad（回信：信讀不懂）、
+                                   // LlmKernelMissing（aos-llm：沒設 AOS_LLM_KERNEL、不是資料夾）、MailboxMissing（kernel：daemon 沒開 ctl 信箱）、LaunchFailed（回信：掛不上 daemon）、LetterBad（回信：信讀不懂）、
                                    // LetterMissing（aos-llm ask：自己的信不見了）10-30 收進 aos-util
 inline constexpr const char* PriorityBad = "PriorityBad";       // priority 寫壞（aos-llm 自己擋；kernel 收到這種信回 LetterBad）
 inline constexpr const char* DeadlineMissed = "DeadlineMissed"; // 回信：輪到之前時限已過，沒跑（10-15 LLM kernel 稿定的名字）
-inline constexpr const char* RunFailed = "RunFailed";           // 回信：跑到一半 kernel 死了、沒寫回信（下次 kernel 起來時發現）
+inline constexpr const char* DaemonMissing = "DaemonMissing";   // kernel：沒設 AOS_DAEMON、不是資料夾（11-05：問腦請 daemon 掛，kernel 要在 daemon 底下）
 inline constexpr const char* ReplyBad = "ReplyBad";             // 回信：endpoint 函數的 stdout 讀不懂；aos-llm：回信讀不懂
 inline constexpr const char* LockFailed = "LockFailed";         // kernel：信箱被另一個 kernel 鎖著
 inline constexpr const char* QueueBad = "QueueBad";             // kernel：$AOS_STACK/queue.json 在但讀不懂

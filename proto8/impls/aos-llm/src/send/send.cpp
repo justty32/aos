@@ -14,20 +14,17 @@ namespace fs = std::filesystem;
 
 namespace aos::llm {
 
-// 11-05 由 AOS_KERNEL 改名 AOS_LLM_KERNEL（使用者 11-05 題 5：AOS_KERNEL 留給通用於所有 proc 的 kernel）：
-// 舊名不認、不留別名；只設了舊名＝KernelMissing、訊息提示改設新名（同 11-04 AOS_DAEMON_STACK→AOS_DAEMON）。
+// $AOS_LLM_KERNEL＝llm kernel 的 stack（11-05 kernel-daemon 07 § 2；合一時＝那台 llm daemon 的 stack），信箱固定在 <stack>/mailbox/。
 Mailbox kernel() {
     const char* k = std::getenv("AOS_LLM_KERNEL");
-    if (k == nullptr || k[0] == '\0') {
-        const char* old = std::getenv("AOS_KERNEL");
-        std::string hint = (old != nullptr && old[0] != '\0') ? "；AOS_KERNEL 11-05 起改名，請改設 AOS_LLM_KERNEL" : "";
-        throw Error{code::KernelMissing, "沒設定 AOS_LLM_KERNEL（llm kernel 的信箱資料夾）" + hint};
+    if (k == nullptr || *k == 0) {
+        throw Error{code::LlmKernelMissing, "沒設定 AOS_LLM_KERNEL（llm kernel 的 stack，例 ~/llm_kernel）"};
     }
     std::error_code ec;
     if (!fs::is_directory(k, ec)) {
-        throw Error{code::KernelMissing, std::string("AOS_LLM_KERNEL 指的信箱不在：") + k};
+        throw Error{code::LlmKernelMissing, std::string("AOS_LLM_KERNEL 指的資料夾不在：") + k};
     }
-    return Mailbox{aos::abspath(k)};
+    return Mailbox{aos::join(aos::abspath(k), "mailbox")};
 }
 
 // --priority 的值：讀得成 JSON 就用它（1、{"level": "high"}），不然當字串（high）。

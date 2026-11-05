@@ -1,9 +1,9 @@
 // serve.cpp：【serve】kernel 跑一次（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
+#include "daemon/daemon.hpp"
 #include "queue/queue.hpp"
 
-#include "aos/exec.hpp"
 #include "aos/post.hpp"
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
@@ -41,22 +41,14 @@ static std::string target_abs(const std::string& t, const std::string& base) {
 Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json doc = aos::load_cfg(spec);
     std::string base = aos::dirname(aos::abspath(aos::split_hash(spec).path));
-    aos::Resolved r = aos::loop::resolve_keys(doc, base, {"mailbox", "slots", "budget", "exec", "endpoint", "timeout_ms"});
+    aos::Resolved r = aos::loop::resolve_keys(doc, base, {"slots", "budget", "exec", "endpoint", "timeout_ms"});
     doc = r.value;
     if (!doc.is_object()) {
         throw Error{code::CfgBad, spec + " 要是 JSON 物件"};
     }
     Cfg c;
     c.base = base;
-    Json m = doc.value("mailbox", Json());
-    std::string mailbox = "mailbox";
-    if (!m.is_null()) {
-        if (!m.is_string() || m.get<std::string>().empty()) {
-            throw Error{code::CfgBad, "mailbox 要是非空字串（信箱資料夾，相對的從 $AOS_STACK 算），不是 " + aos::dumps(m)};
-        }
-        mailbox = m.get<std::string>();
-    }
-    c.mailbox = aos::join(stack, mailbox);
+    c.mailbox = aos::join(stack, "mailbox");   // 11-05 固定（AOS_LLM_KERNEL＝kernel 的 stack，寄信的人從 stack 算信箱）
     Json s = doc.value("slots", Json());
     if (!s.is_null()) {
         if (!aos::is_count(s) || s.get<long long>() < 1) {
@@ -148,11 +140,6 @@ Json error_reply(const std::string& c, const std::string& msg) {
     return r;
 }
 
-struct Served {
-    std::string id;
-    Json reply;
-};
-
 // 回信走 reply_to（10-30，medium 決定 3、N-16）：信裡寫了 reply_to＝照 N-16 寄一封回信進去（body＝reply.json 那份、
 // in_reply_to＝原信的信件名稱；11-04 起不附檔），寄出的信件名稱記在 <信>/reply_letter.txt（已經有＝上一次寄過了，不寄第二封）。
 // 寄不出去（信箱不在、寫不進）不是 kernel 的錯：回「代號 原因」（finish 印一行到 stderr），信照刪（11-04 夜：舊信不留）。沒寫 reply_to＝null。
@@ -206,10 +193,29 @@ void regret_reply(const std::string& root, const std::string& dir) {
     }
 }
 
-// 跑過的（子行程起來過＝cur/<id>/runner.json 在）才算一次、才看 usage；沒跑的（LetterBad、EndpointUnknown、DeadlineMissed、BudgetMissing…）不算。
+// 問腦 proc（11-05 kernel-daemon 03）：kernel 不自己跑，請 daemon 掛成 max: 1 的 loop 型 proc。
+// 掛上去的信才有 cur/<id>/proc.json＝{"name": daemon 表上的名字, "exec": endpoint 函數, "mount_letter": 掛信的信件名稱, "mounted_at": epoch 秒, "retries": 重掛過幾次}。
+const char* PROC_JSON = "proc.json";
+
+double now_s() {
+    return std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+// 跑過的（掛上去過＝cur/<id>/proc.json 在）才算一次、才看 usage；沒跑的（LetterBad、EndpointUnknown、DeadlineMissed、BudgetMissing…）不算。
 bool ran(const std::string& dir) {
     std::error_code ec;
-    return fs::exists(aos::join(dir, "runner.json"), ec);
+    return fs::exists(aos::join(dir, PROC_JSON), ec);
+}
+
+// 檔的第一行（沒有＝空）。
+std::string first_line(const std::string& path) {
+    int err = 0;
+    std::optional<std::string> t = aos::read_file(path, err);
+    if (!t) {
+        return "";
+    }
+    size_t n = t->find('\n');
+    return n == std::string::npos ? *t : t->substr(0, n);
 }
 
 class Server {
@@ -235,30 +241,20 @@ private:
     int lock_fd_ = -1;
     Queue q_;
     Used used_;
-    int got_ = 0;
-    long long busy_ = 0;   // cur/ 裡上一次 kernel 留下、還在跑的
+    Host host_;
+    Table table_;
+    long long busy_ = 0;   // 掛上去、還沒收的（在飛）
 
     void lock();
-    void recover();
+    void collect();
     void sweep();
     std::vector<Waiting> scan();
     void refuse(const std::string& id, const Json& reply);
     std::optional<Json> pick(Waiting& w);
-    void finish(const Served& s);
-    pid_t start_runner(const Waiting& w);
-    void wait_runners(std::map<pid_t, Served>& running);
+    void finish(const std::string& id, const Json& reply);
+    void mount(const std::string& id, const std::string& exec, Json proc);
+    std::optional<Json> settle(const std::string& id, Json proc);
 };
-
-// cur/<id>/runner.json（跑信的子行程一起來就寫）記的那個行程還在不在。
-bool runner_alive(const std::string& dir) {
-    std::optional<Json> r = aos::read_json(aos::join(dir, "runner.json"));
-    if (!r || !r->is_object() || !aos::is_count(r->value("pid", Json())) ||
-        !r->value("started_at_ticks", Json()).is_number_integer()) {
-        return false;
-    }
-    std::optional<long long> now = aos::proc_started_at_ticks((pid_t)(*r)["pid"].get<long long>());
-    return now && *now == (*r)["started_at_ticks"].get<long long>();
-}
 
 void Server::lock() {
     std::string path = aos::join(mb_.root, ".flock");   // 10-29 改名（原 .lock；.lock/ 留給 N-15 的資料夾鎖）
@@ -271,49 +267,158 @@ void Server::lock() {
     }
 }
 
-// 寄回信，然後整封刪掉（cur/<id>/ 連 reply.json；11-04 夜使用者「舊信根本不用留，就是刪」，08 題 3）。
-// kernel 這邊不留任何一封的紀錄（11-05 使用者選「也刪」：served.jsonl 不寫了）；回信寄不出去＝stderr 印一行、照刪、不退。
-void Server::finish(const Served& s) {
-    std::string dir = aos::join(mb_.cur(), s.id);
+// 寫好 reply.json、寄回信，然後整封刪掉（cur/<id>/；11-04 夜使用者「舊信根本不用留，就是刪」）。回信寄不出去＝stderr 印一行、照刪、不退。
+void Server::finish(const std::string& id, const Json& reply) {
+    std::string dir = aos::join(mb_.cur(), id);
+    write_reply(dir, reply);
     bool counted = ran(dir);
-    Json reply_error = post_reply(mb_.root, dir, s.id, s.reply);   // 回信走 reply_to（10-30）
+    Json reply_error = post_reply(mb_.root, dir, id, reply);   // 回信走 reply_to（10-30）
     if (reply_error.is_string()) {
         std::fprintf(stderr, "aos-llm-kernel: %s（信 %s 的回信寄不出去，信照刪）\n",
-                     reply_error.get<std::string>().c_str(), s.id.c_str());
+                     reply_error.get<std::string>().c_str(), id.c_str());
         std::fflush(stderr);
     }
     if (has_sender(dir) && !sender_alive(dir)) {
         regret_reply(mb_.root, dir);   // 同步寄的人已經走了（ask 被打斷）：回信沒人拿，撤回
     }
     if (counted) {
-        add_used(stack_, used_, report_of(s.reply));   // usage 從回信拿（11-04 起；沒有＝只算次數）
+        add_used(stack_, used_, report_of(reply));   // usage 從回信拿（沒有＝只算次數）
     }
-    remove_tree(dir);   // 刪不掉（權限）不算錯：下一次 recover 會再看到它、回信已寄過（reply_letter.txt）不重寄
+    remove_tree(dir);   // 刪不掉（權限）不算錯：下一次 collect 看到 reply_letter.txt 就不重寄
 }
 
-// cur/ 裡留下的＝上一次 kernel 跑到一半死了（一次跑完才結束，而且有鎖，所以這時 cur/ 不該有東西）。
-void Server::recover() {
+// 寄一封掛信：{"procs_added": {"llm_<id>": {"exec": 單子, "max": 1, "stack": 信資料夾}}}（03 § 1）。
+// 單子的 cwd＝信資料夾（daemon 存成相對它自己的 stack），stdin／stdout 從 cwd 算＝搬家照樣對；stderr 不寫（daemon 接到 stack 的 stderr.txt）。
+void Server::mount(const std::string& id, const std::string& exec, Json proc) {
+    std::string dir = aos::join(mb_.cur(), id);
+    std::string name = "llm_" + id;
+    Json inst = Json::object();
+    inst["argv"] = Json::array({"aos-exec", exec});
+    inst["cwd"] = dir;
+    inst["stdin"] = "request.json";
+    inst["stdout"] = "reply.json";
+    if (cfg_.timeout_ms) {
+        inst["timeout_ms"] = *cfg_.timeout_ms;
+    }
+    Json spec = Json::object();
+    spec["exec"] = inst;
+    spec["max"] = 1;
+    spec["stack"] = dir;
+    Json added = Json::object();
+    added[name] = spec;
+    Json body = Json::object();
+    body["procs_added"] = added;
+    proc["name"] = name;
+    proc["exec"] = exec;
+    proc["mount_letter"] = send_procs(host_, body);   // 寄不進丟錯（呼叫的人回那封信 LaunchFailed）
+    proc["mounted_at"] = now_s();
+    if (!proc.contains("retries")) {
+        proc["retries"] = 0;
+    }
+    std::optional<std::string> err = aos::write_json(aos::join(dir, PROC_JSON), proc);
+    if (err) {
+        throw Error{code::WriteFailed, *err};
+    }
+}
+
+// 一封在飛的信現在怎樣（03 § 2、04 #13）：回 nullopt＝還在飛（佔一格）；回信＝收尾。
+//   表上有這列：running／stopping／sleeping＝在飛；stopped 而問腦 loop 收尾了（wake 後 3 秒內跑完也會留 stopped）＝收、順手寄 procs_removed 拔列；
+//              stopped 但沒收尾（有人下了 stop）＝在飛（等）
+//   表上沒有：state.json 收尾了（done／stopped）＝看 code；state.json 在、沒收尾＝跑到一半死了→重掛；
+//            不在＝daemon 還沒套（暫停中、還沒輪到）＝在飛，或拒了（mailbox_warning 提到這封掛信）＝LaunchFailed
+std::optional<Json> Server::settle(const std::string& id, Json proc) {
+    std::string dir = aos::join(mb_.cur(), id);
+    std::string name = proc.value("name", "llm_" + id);
+    std::optional<Json> st = aos::read_json(aos::join(dir, "state.json"));
+    std::string phase = st && st->is_object() ? st->value("phase", "") : "";
+    bool ended = phase == "done" || phase == "stopped";
+    if (table_.procs.contains(name)) {
+        const Json& row = table_.procs[name];
+        if (!row.is_object() || row.value("phase", "") != "stopped" || !ended) {
+            return std::nullopt;
+        }
+        Json rm = Json::object();
+        rm["procs_removed"] = Json::array({name});
+        try {
+            send_procs(host_, rm);
+        } catch (const Error&) {
+        }
+    } else if (!st) {
+        std::string letter = proc.value("mount_letter", "");
+        if (!letter.empty() && table_.warning.find(letter) != std::string::npos) {
+            return error_reply(code::LaunchFailed, "daemon 不採用掛信：" + table_.warning);
+        }
+        return std::nullopt;
+    }
+    long long c = -1;
+    if (ended && (*st)["code"].is_number_integer()) {
+        c = (*st)["code"].get<long long>();
+    }
+    if (phase == "done" && c == 0) {
+        std::optional<Json> got = read_reply(aos::join(dir, "reply.json"));
+        if (got) {
+            return *got;
+        }
+        return error_reply(code::ReplyBad, "endpoint 函數的 stdout 讀不懂（要是一行 {\"message\": {...}, \"usage\", \"model\"}）");
+    }
+    if (phase == "done" && c != 143) {
+        std::string why = "endpoint 函數退 " + std::to_string(c);
+        std::string line = first_line(aos::join(dir, "reply.json"));   // llm_http 失敗時 stdout 也印同一行
+        if (line.empty()) {
+            line = first_line(aos::join(dir, "stderr.txt"));
+        }
+        if (!line.empty()) {
+            why += "：" + line;
+        }
+        return error_reply(code::EndpointFailed, why);
+    }
+    // 逾時（143）、被收掉（stopped）、死在半路（沒收尾、列也不在）
+    double at = proc.value("mounted_at", 0.0);
+    if (c == 143 && cfg_.timeout_ms && now_s() - at >= (double)*cfg_.timeout_ms / 1000.0) {
+        return error_reply(code::EndpointFailed, "endpoint 函數逾時（" + std::to_string(*cfg_.timeout_ms) + " ms）");
+    }
+    long long retries = proc.value("retries", 0LL);
+    if (retries >= 1) {
+        return error_reply(code::EndpointFailed, "問腦跑了兩次都沒結果（被收掉或死在半路）");
+    }
+    std::error_code ec;
+    fs::remove(aos::join(dir, "state.json"), ec);
+    fs::remove(aos::join(dir, "reply.json"), ec);
+    proc["retries"] = retries + 1;
+    try {
+        mount(id, proc.value("exec", cfg_.exec), proc);
+    } catch (const Error& e) {
+        return error_reply(code::LaunchFailed, "重掛寄不出去：" + e.code + " " + e.msg);
+    }
+    return std::nullopt;
+}
+
+// cur/ 裡的：有 proc.json＝在飛（看 settle）；有 reply.json 沒 proc.json＝回信寫好了只差寄（上一次寄到一半）；
+// 都沒有＝認領了還沒掛就死＝改名回 new/ 重排。
+void Server::collect() {
     for (const std::string& id : names_in(mb_.cur())) {
         std::string dir = aos::join(mb_.cur(), id);
-        Served s;
-        s.id = id;
+        std::optional<Json> proc = aos::read_json(aos::join(dir, PROC_JSON));
+        if (proc && proc->is_object()) {
+            std::optional<Json> reply = settle(id, *proc);
+            if (reply) {
+                finish(id, *reply);
+            } else {
+                ++busy_;
+            }
+            continue;
+        }
         std::optional<Json> reply = read_reply(aos::join(dir, "reply.json"));
         if (reply) {
-            s.reply = *reply;   // 跑完、回信寫好了，只差寄回信、刪掉
-        } else if (runner_alive(dir)) {
-            ++busy_;   // 上一次 kernel 死了、跑信的子行程還活著：讓它跑完（佔一格），回信寫好後下一次再寄
-            continue;
-        } else {
-            s.reply = error_reply(code::RunFailed, "上一次 kernel 跑這封信跑到一半停了，沒有回信（endpoint 函數可能還在跑或跑了一半）");
-            write_reply(dir, s.reply);
+            finish(id, *reply);
+        } else if (!move(dir, aos::join(mb_.fresh(), id))) {
+            remove_tree(dir);
         }
-        finish(s);
     }
 }
 
 // 寄信的人不在了的（<信>/sender.flock 在、但沒人鎖著）：tmp/ 直接刪；new/ 先改名回 tmp/ 再刪（跟撤信同一個做法，不會跟認領撞）。
 // 沒有 sender.flock＝非同步寄的（aos-llm send、aos-post send）或還在建鎖檔：不判存活、不碰（11-04 衝突 2 (a)）。
-// 11-04 夜以前的 kernel 留下的 done/（跑完的信）整個刪（使用者「舊信根本不用留，就是刪」）。
 void Server::sweep() {
     std::vector<std::string> tmps;
     std::error_code ec;
@@ -330,7 +435,6 @@ void Server::sweep() {
             remove_tree(dir);
         }
     }
-    remove_tree(aos::join(mb_.root, "done"));
     for (const std::string& id : names_in(mb_.fresh())) {
         std::string dir = aos::join(mb_.fresh(), id);
         if (has_sender(dir) && !sender_alive(dir)) {
@@ -344,15 +448,10 @@ void Server::sweep() {
 
 // 不跑、直接回信（LetterBad、RequestBad、Endpoint*、DeadlineMissed、BudgetMissing…）：先認領，認領不到＝寄信的剛撤信，算了。
 void Server::refuse(const std::string& id, const Json& reply) {
-    std::string dir = aos::join(mb_.cur(), id);
-    if (!move(aos::join(mb_.fresh(), id), dir)) {
+    if (!move(aos::join(mb_.fresh(), id), aos::join(mb_.cur(), id))) {
         return;
     }
-    write_reply(dir, reply);
-    Served s;
-    s.id = id;
-    s.reply = reply;
-    finish(s);
+    finish(id, reply);
 }
 
 // 查代號、解那組的指示詞、定 exec（填進 w）；查不到或那組壞了＝回那封信的 error 回信。
@@ -449,155 +548,24 @@ std::vector<Waiting> Server::scan() {
     return ws;
 }
 
-// stderr.txt 的第一行（沒有＝空）。
-std::string first_line(const std::string& path) {
-    int err = 0;
-    std::optional<std::string> t = aos::read_file(path, err);
-    if (!t) {
-        return "";
-    }
-    size_t n = t->find('\n');
-    return n == std::string::npos ? *t : t->substr(0, n);
-}
-
-pid_t Server::start_runner(const Waiting& w) {
-    std::string dir = aos::join(mb_.cur(), w.id);
-    Json req = Json::object();
-    req["endpoint"] = w.group;
-    req["request"] = w.letter["body"]["request"];
-    std::optional<std::string> werr = aos::write_json(aos::join(dir, "request.json"), req);
-    if (werr) {
-        throw Error{code::WriteFailed, *werr};
-    }
-    Json inst = Json::object();
-    inst["argv"] = Json::array({"aos-exec", "--stack", dir + "/", w.exec});
-    inst["cwd"] = dir;
-    inst["stdin"] = aos::join(dir, "request.json");
-    inst["stdout"] = aos::join(dir, "reply.json");
-    inst["stderr"] = aos::join(dir, "stderr.txt");
-    if (cfg_.timeout_ms) {
-        inst["timeout_ms"] = *cfg_.timeout_ms;
-    }
-    std::fflush(nullptr);
-    pid_t pid = fork();
-    if (pid < 0) {
-        throw Error{code::LaunchFailed, "fork 失敗：" + std::string(std::strerror(errno))};
-    }
-    if (pid > 0) {
-        return pid;
-    }
-    // 子行程：只跑這一封（環境照 kernel 自己的，不換）
-    close(lock_fd_);   // 鎖只留在 kernel 本身（子行程拿著的話 kernel 死了鎖也不放）
-    Json me = Json::object();   // 先記下自己（kernel 本體死了、自己還活著時，下一次 kernel 看這個不去搶）
-    me["pid"] = (long long)getpid();
-    me["started_at_ticks"] = aos::proc_started_at_ticks(0).value_or(-1);
-    aos::write_json(aos::join(dir, "runner.json"), me);
-    Json reply;
-    try {
-        aos::exec::Result r = aos::exec::run_inst(inst, "/", {}, "/");
-        if (r.code != 0 || r.signal != 0 || r.timed_out) {
-            std::string why = "endpoint 函數退 " + std::to_string(r.code);
-            if (r.timed_out) {
-                why += "（逾時 " + std::to_string(*cfg_.timeout_ms) + " ms）";
-            }
-            std::string line = first_line(aos::join(dir, "stderr.txt"));
-            if (!line.empty()) {
-                why += "：" + line;
-            }
-            reply = error_reply(code::EndpointFailed, why);
-        } else {
-            std::optional<Json> got = read_reply(aos::join(dir, "reply.json"));
-            if (got) {
-                reply = *got;
-            } else {
-                reply = error_reply(code::ReplyBad, "endpoint 函數的 stdout 讀不懂（要是一行 {\"message\": {...}, \"usage\", \"model\"}）");
-            }
-        }
-    } catch (const Error& e) {
-        reply = error_reply(code::EndpointFailed, "endpoint 函數跑不起來：" + e.code + " " + e.msg);
-    } catch (const std::exception& e) {
-        reply = error_reply(code::Internal, e.what());
-    }
-    std::optional<std::string> err = aos::write_json(aos::join(dir, "reply.json"), reply);
-    if (err) {
-        std::fprintf(stderr, "aos-llm-kernel: WriteFailed %s\n", err->c_str());
-        std::fflush(stderr);
-    }
-    _exit(0);
-}
-
-void Server::wait_runners(std::map<pid_t, Served>& running) {
-    std::map<pid_t, int> statuses;
-    std::vector<pid_t> left;
-    for (auto& [pid, s] : running) {
-        left.push_back(pid);
-    }
-    sigset_t set;
-    sigemptyset(&set);
-    sigaddset(&set, SIGINT);
-    sigaddset(&set, SIGTERM);
-    sigaddset(&set, SIGHUP);
-    while (!left.empty()) {
-        std::vector<pid_t> still;
-        for (pid_t pid : left) {
-            int st = 0;
-            pid_t r = waitpid(pid, &st, WNOHANG);
-            if (r == pid) {
-                statuses[pid] = st;
-            } else {
-                still.push_back(pid);
-            }
-        }
-        left = still;
-        if (left.empty()) {
-            break;
-        }
-        timespec ts{0, 20 * 1000 * 1000};
-        int sig = sigtimedwait(&set, nullptr, &ts);
-        if (sig > 0) {
-            if (got_ == 0) {
-                got_ = sig;
-            }
-            for (pid_t pid : left) {
-                kill(pid, sig);   // 子行程的 run_inst 再轉給單子的整群
-            }
-        }
-    }
-    for (auto& [pid, s] : running) {
-        std::string dir = aos::join(mb_.cur(), s.id);
-        std::optional<Json> reply = read_reply(aos::join(dir, "reply.json"));
-        if (reply) {
-            s.reply = *reply;
-        } else {
-            int st = statuses[pid];
-            std::string why = "跑這封信的子行程沒寫回信就結束了";
-            if (WIFSIGNALED(st)) {
-                why += "（被訊號 " + std::to_string(WTERMSIG(st)) + " 停掉）";
-            }
-            s.reply = error_reply(code::RunFailed, why);
-            write_reply(dir, s.reply);
-        }
-        finish(s);
-    }
-}
-
 int Server::run() {
     for (const std::string& d : {mb_.root, mb_.tmp(), mb_.fresh(), mb_.cur()}) {
         make_dir(d);
     }
+    host_ = find_host();   // 沒 AOS_DAEMON＝DaemonMissing、daemon 沒開 ctl 信箱＝MailboxMissing（kernel 自己的錯，退 1）
     lock();
     q_ = read_queue(stack_);
     q_.runs += 1;
     used_ = read_used(stack_, budget_.window);
-    recover();
+    table_ = read_table(host_);
+    collect();
     sweep();
     std::vector<Waiting> ws = scan();
     order(ws, q_.runs);
 
-    got_ = aos::loop::take_signal();
-    std::map<pid_t, Served> running;
-    if (got_ == 0) {
-        long long n = 0;
+    int got = aos::loop::take_signal();
+    if (got == 0) {
+        long long n = 0;   // 這次新掛的
         for (const Waiting& w : ws) {
             if (spent(budget_, used_, n + busy_)) {   // 這一窗額度到頂
                 if (budget_.wait) {
@@ -608,32 +576,34 @@ int Server::run() {
                 continue;
             }
             if (n + busy_ >= slots_) {
-                break;
+                break;   // 補位到 slots 為止；其餘下一次
             }
-            if (!move(aos::join(mb_.fresh(), w.id), aos::join(mb_.cur(), w.id))) {
+            std::string dir = aos::join(mb_.cur(), w.id);
+            if (!move(aos::join(mb_.fresh(), w.id), dir)) {
                 continue;   // 寄信的剛撤信
             }
             q_.seen_at_runs.erase(w.id);
-            Served s;
-            s.id = w.id;
-            pid_t pid = 0;
+            Json req = Json::object();
+            req["endpoint"] = w.group;
+            req["request"] = w.letter["body"]["request"];
+            std::optional<std::string> werr = aos::write_json(aos::join(dir, "request.json"), req);
             try {
-                pid = start_runner(w);
+                if (werr) {
+                    throw Error{code::WriteFailed, *werr};
+                }
+                mount(w.id, w.exec, Json::object());
             } catch (const Error& e) {
-                Json reply = error_reply(e.code, e.msg);
-                write_reply(aos::join(mb_.cur(), w.id), reply);
-                s.reply = reply;
-                finish(s);
+                std::error_code ec;
+                fs::remove(aos::join(dir, PROC_JSON), ec);
+                finish(w.id, error_reply(code::LaunchFailed, "掛不上 daemon：" + e.code + " " + e.msg));
                 continue;
             }
-            running[pid] = s;
             ++n;
         }
-        wait_runners(running);
     }
     write_queue(stack_, q_);
-    if (got_ != 0) {
-        return 128 + got_;
+    if (got != 0) {
+        return 128 + got;
     }
     return 0;
 }
