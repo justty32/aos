@@ -78,4 +78,4 @@ aos-daemon-ctl ls                                                # procs-kernel�
 
 - 模式 2 的判官跟 daemon 各自打拍子：轉了、daemon 還沒套的不算 running，連著很快寄好幾封時可能多放幾個。模式 1 沒這個問題（判官跑在 daemon 那一圈裡，下一圈之前 daemon 已套完）。
 - **模式 2 的 0 號睡著或停著**：寄給它的信排在它的 `requests/` 等它回來。所以 kernel 本身的 wake／start 不能寄給它自己——`aos-agent ctl wake --target procs-kernel` 會認出「對象就是 `AOS_KERNEL` 那個」、直接寄 daemon；直接打 `aos-daemon-ctl` 的要先 `unset AOS_KERNEL`（或 `AOS_KERNEL= aos-daemon-ctl wake procs-kernel`）。`aos-agent ctl add` 等這種情形會立刻 `WaitFailed` 說 kernel 睡著（11-05 edge-agent）；那封留在 0 號的 `requests/`、醒來才判，回信寄到已刪的暫時信箱＝判官 stderr 一行 `ReplyFailed`、照樣收掉。
-- 判官自己的錯（`judge.json` 壞、沒 `AOS_DAEMON`、daemon 沒開 ctl 信箱）退 1：模式 1 整台 daemon 停、模式 2 那個 proc 停（P-20）。
+- 判官自己的錯（`judge.json` 壞、沒 `AOS_DAEMON`、daemon 沒開 ctl 信箱）退 1：模式 1 daemon 不停——stderr 一行 `aos-daemon: body … failed (code N), retrying next round`（碼變了才印，好了印 ok again）、`state.json` 記 `body_code`、下一圈再跑（11-05 使用者裁「記一行、下一圈再跑 (Recommended)」，N-28 ⑥）；那段時間判官沒跑、`requests/` 的信沒人判；模式 2 那個 proc 出錯結束、表上留 `stopped`＋`reason`，修好 `start`（P-20）。
