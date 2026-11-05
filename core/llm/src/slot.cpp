@@ -25,14 +25,14 @@ namespace {
 using Json = nlohmann::json;
 
 void validate_cpu(std::string_view cpu) {
-    if (cpu.empty()) throw std::runtime_error("CPU 名稱不安全");
+    if (cpu.empty()) throw std::runtime_error("unsafe CPU name");
     for (const char character : cpu) {
         const bool safe =
             (character >= 'A' && character <= 'Z') ||
             (character >= 'a' && character <= 'z') ||
             (character >= '0' && character <= '9') || character == '.' ||
             character == '_' || character == '-';
-        if (!safe) throw std::runtime_error("CPU 名稱不安全");
+        if (!safe) throw std::runtime_error("unsafe CPU name");
     }
 }
 
@@ -41,12 +41,12 @@ Json read_json_file(const std::filesystem::path &path) {
 
     std::ifstream input(path);
     if (!input) {
-        throw std::runtime_error("無法讀取 JSON 設定: " + path.string());
+        throw std::runtime_error("cannot read JSON config: " + path.string());
     }
     try {
         return Json::parse(input);
     } catch (const Json::parse_error &error) {
-        throw std::runtime_error("JSON 設定無法解析: " + path.string() +
+        throw std::runtime_error("invalid JSON config: " + path.string() +
                                  ": " + error.what());
     }
 }
@@ -92,7 +92,7 @@ LockResult try_lock(int descriptor, const std::filesystem::path &path) {
         return LockResult::acquired;
     }
     if (errno == EWOULDBLOCK || errno == EAGAIN) return LockResult::busy;
-    throw std::runtime_error("無法鎖定檔案: " + path.string());
+    throw std::runtime_error("cannot lock file: " + path.string());
 }
 
 void close_descriptor(int descriptor) noexcept {
@@ -110,7 +110,7 @@ public:
 
     void remove() {
         if (!path_.empty() && ::unlink(path_.c_str()) != 0 && errno != ENOENT) {
-            throw std::runtime_error("無法刪除等待票: " + path_.string());
+            throw std::runtime_error("cannot remove wait ticket: " + path_.string());
         }
         path_.clear();
         close_descriptor(descriptor_);
@@ -170,7 +170,7 @@ std::vector<std::string> live_tickets(
         const int descriptor = ::open(path.c_str(), O_RDWR | O_CLOEXEC);
         if (descriptor < 0) {
             if (errno == ENOENT) continue;
-            throw std::runtime_error("無法開啟等待票: " + path.string());
+            throw std::runtime_error("cannot open wait ticket: " + path.string());
         }
 
         try {
@@ -178,7 +178,7 @@ std::vector<std::string> live_tickets(
                 live.push_back(name);
             } else if (remove_dead && ::unlink(path.c_str()) != 0 &&
                        errno != ENOENT) {
-                throw std::runtime_error("無法刪除陳屍票: " +
+                throw std::runtime_error("cannot remove stale ticket: " +
                                          path.string());
             }
         } catch (...) {
@@ -200,7 +200,7 @@ int count_held(const std::filesystem::path &directory, int limit) {
         const int descriptor = ::open(path.c_str(), O_RDWR | O_CLOEXEC);
         if (descriptor < 0) {
             if (errno == ENOENT) continue;
-            throw std::runtime_error("無法開啟槽檔: " + path.string());
+            throw std::runtime_error("cannot open slot file: " + path.string());
         }
         try {
             if (try_lock(descriptor, path) == LockResult::busy) ++held;
@@ -230,7 +230,7 @@ std::filesystem::path aos_home() {
     }
     const char *home = std::getenv("HOME");
     if (home == nullptr || home[0] == '\0') {
-        throw std::runtime_error("找不到 AOS_HOME 或 HOME");
+        throw std::runtime_error("neither AOS_HOME nor HOME is set");
     }
     return (std::filesystem::absolute(home) / ".aos").lexically_normal();
 }
@@ -331,11 +331,11 @@ Slot acquire(std::string_view cpu, int priority,
     const int ticket_descriptor =
         ::open(own_path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0666);
     if (ticket_descriptor < 0) {
-        throw std::runtime_error("無法建立等待票: " + own_path.string());
+        throw std::runtime_error("cannot create wait ticket: " + own_path.string());
     }
     Ticket ticket(own_path, ticket_descriptor);
     if (try_lock(ticket_descriptor, own_path) == LockResult::busy) {
-        throw std::runtime_error("等待票名稱衝突: " + own_path.string());
+        throw std::runtime_error("wait ticket name collision: " + own_path.string());
     }
 
     const auto start = std::chrono::steady_clock::now();
@@ -344,7 +344,7 @@ Slot acquire(std::string_view cpu, int priority,
             live_tickets(wait_directory, own_name, true);
         const auto position = std::find(live.begin(), live.end(), own_name);
         if (position == live.end()) {
-            throw std::runtime_error("等待票遺失: " + own_path.string());
+            throw std::runtime_error("wait ticket lost: " + own_path.string());
         }
         const auto rank = std::distance(live.begin(), position);
         if (rank < static_cast<decltype(rank)>(*limit.max_inflight)) {
@@ -354,7 +354,7 @@ Slot acquire(std::string_view cpu, int priority,
                 const int descriptor = ::open(
                     slot_path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0666);
                 if (descriptor < 0) {
-                    throw std::runtime_error("無法開啟槽檔: " +
+                    throw std::runtime_error("cannot open slot file: " +
                                              slot_path.string());
                 }
                 try {

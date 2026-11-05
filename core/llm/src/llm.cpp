@@ -28,7 +28,7 @@ long parse_timeout(const std::string &text) {
     const auto [end, error] =
         std::from_chars(text.data(), text.data() + text.size(), value);
     if (error != std::errc() || end != text.data() + text.size() || value <= 0) {
-        throw std::invalid_argument("--timeout-ms 必須是正整數");
+        throw std::invalid_argument("--timeout-ms must be a positive integer");
     }
     return value;
 }
@@ -38,14 +38,14 @@ int parse_priority(const std::string &text) {
     const auto [end, error] =
         std::from_chars(text.data(), text.data() + text.size(), value);
     if (error != std::errc() || end != text.data() + text.size()) {
-        throw std::invalid_argument("--priority 必須是整數");
+        throw std::invalid_argument("--priority must be an integer");
     }
     return value;
 }
 
 std::string completion_url(std::string base) {
     while (!base.empty() && base.back() == '/') base.pop_back();
-    if (base.empty()) throw std::runtime_error("LLM endpoint 不可為空");
+    if (base.empty()) throw std::runtime_error("LLM endpoint must not be empty");
     return base + "/chat/completions";
 }
 
@@ -53,7 +53,7 @@ template <typename Value>
 void set_option(CURL *curl, CURLoption option, Value value) {
     const CURLcode result = curl_easy_setopt(curl, option, value);
     if (result != CURLE_OK) {
-        throw std::runtime_error(std::string("設定 HTTP 請求失敗: ") +
+        throw std::runtime_error(std::string("cannot set up HTTP request: ") +
                                  curl_easy_strerror(result));
     }
 }
@@ -103,17 +103,17 @@ CommandOptions parse_arguments(const std::vector<std::string> &arguments) {
         const std::string &argument = arguments[index];
         auto take_value = [&](const char *name) -> const std::string & {
             if (++index >= arguments.size()) {
-                throw std::invalid_argument(std::string(name) + " 缺少值");
+                throw std::invalid_argument(std::string(name) + " is missing a value");
             }
             return arguments[index];
         };
 
         if (argument == "--system") {
-            if (command.system) throw std::invalid_argument("--system 重複指定");
+            if (command.system) throw std::invalid_argument("--system given more than once");
             command.system = take_value("--system");
         } else if (argument == "--messages") {
             if (command.messages_file) {
-                throw std::invalid_argument("--messages 重複指定");
+                throw std::invalid_argument("--messages given more than once");
             }
             command.messages_file = take_value("--messages");
         } else if (argument == "--url") {
@@ -126,18 +126,18 @@ CommandOptions parse_arguments(const std::vector<std::string> &arguments) {
         } else if (argument == "--engine") {
             command.engine = take_value("--engine");
             if (command.engine.empty()) {
-                throw std::invalid_argument("--engine 不可為空");
+                throw std::invalid_argument("--engine must not be empty");
             }
         } else if (argument == "--priority") {
             command.priority = parse_priority(take_value("--priority"));
         } else if (argument == "--slots") {
             command.slots = true;
         } else {
-            throw std::invalid_argument("未知參數: " + argument);
+            throw std::invalid_argument("unknown argument: " + argument);
         }
     }
     if (!command.slots && command.system && command.messages_file) {
-        throw std::invalid_argument("--system 不可與 --messages 同時使用");
+        throw std::invalid_argument("--system cannot be used together with --messages");
     }
     return command;
 }
@@ -146,7 +146,7 @@ std::vector<Message> parse_messages_json(std::string_view text) {
     try {
         const Json root = Json::parse(text);
         if (!root.is_array()) {
-            throw std::runtime_error("messages JSON 必須是陣列");
+            throw std::runtime_error("messages JSON must be an array");
         }
         std::vector<Message> messages;
         messages.reserve(root.size());
@@ -155,7 +155,7 @@ std::vector<Message> parse_messages_json(std::string_view text) {
                 !item["role"].is_string() || !item.contains("content") ||
                 !item["content"].is_string()) {
                 throw std::runtime_error(
-                    "messages 每一項都必須包含字串 role 與 content");
+                    "every messages item must have string role and content");
             }
             messages.push_back(
                 {item["role"].get<std::string>(),
@@ -165,7 +165,7 @@ std::vector<Message> parse_messages_json(std::string_view text) {
     } catch (const std::runtime_error &) {
         throw;
     } catch (const Json::exception &error) {
-        throw std::runtime_error(std::string("messages JSON 無法解析: ") +
+        throw std::runtime_error(std::string("invalid messages JSON: ") +
                                  error.what());
     }
 }
@@ -197,7 +197,7 @@ std::string parse_response_text(std::string_view text) {
         if (!root.contains("choices") || !root["choices"].is_array() ||
             root["choices"].empty()) {
             throw std::runtime_error(
-                "LLM 回應缺少 choices[0].message.content");
+                "LLM response has no choices[0].message.content");
         }
         // LiteLLM 會把 sol 的開場白與答案拆成多個 choice：取最後一個非空的。
         const Json &choices = root["choices"];
@@ -210,13 +210,13 @@ std::string parse_response_text(std::string_view text) {
         const Json *first = content(choices[0]);
         if (!first) {
             throw std::runtime_error(
-                "LLM 回應缺少 choices[0].message.content");
+                "LLM response has no choices[0].message.content");
         }
         return first->get<std::string>();
     } catch (const std::runtime_error &) {
         throw;
     } catch (const Json::exception &error) {
-        throw std::runtime_error(std::string("LLM 回應 JSON 無法解析: ") +
+        throw std::runtime_error(std::string("invalid LLM response JSON: ") +
                                  error.what());
     }
 }
@@ -227,20 +227,20 @@ std::string parse_response_model(std::string_view text) {
         if (!root.contains("model") || !root["model"].is_string()) return {};
         return root["model"].get<std::string>();
     } catch (const Json::exception &error) {
-        throw std::runtime_error(std::string("LLM 回應 JSON 無法解析: ") +
+        throw std::runtime_error(std::string("invalid LLM response JSON: ") +
                                  error.what());
     }
 }
 
 std::string complete(const std::vector<Message> &messages,
                      const Options &options, std::string *served_model) {
-    if (options.model.empty()) throw std::runtime_error("LLM model 不可為空");
-    if (options.timeout_ms <= 0) throw std::runtime_error("timeout 必須大於零");
+    if (options.model.empty()) throw std::runtime_error("LLM model must not be empty");
+    if (options.timeout_ms <= 0) throw std::runtime_error("timeout must be greater than zero");
 
     static const bool curl_ready = [] {
         const CURLcode result = curl_global_init(CURL_GLOBAL_DEFAULT);
         if (result != CURLE_OK) {
-            throw std::runtime_error(std::string("初始化 libcurl 失敗: ") +
+            throw std::runtime_error(std::string("cannot initialize libcurl: ") +
                                      curl_easy_strerror(result));
         }
         return true;
@@ -249,14 +249,14 @@ std::string complete(const std::vector<Message> &messages,
 
     using CurlHandle = std::unique_ptr<CURL, decltype(&curl_easy_cleanup)>;
     CurlHandle curl(curl_easy_init(), &curl_easy_cleanup);
-    if (!curl) throw std::runtime_error("無法建立 HTTP 請求");
+    if (!curl) throw std::runtime_error("cannot create HTTP request");
 
     using HeaderList =
         std::unique_ptr<curl_slist, decltype(&curl_slist_free_all)>;
     HeaderList headers(nullptr, &curl_slist_free_all);
     auto append_header = [&](const std::string &header) {
         curl_slist *next = curl_slist_append(headers.get(), header.c_str());
-        if (next == nullptr) throw std::runtime_error("無法建立 HTTP headers");
+        if (next == nullptr) throw std::runtime_error("cannot create HTTP headers");
         headers.release();
         headers.reset(next);
     };
@@ -267,7 +267,7 @@ std::string complete(const std::vector<Message> &messages,
     const std::string request = make_request_json(messages, options);
     if (request.size() >
         static_cast<std::size_t>(std::numeric_limits<curl_off_t>::max())) {
-        throw std::runtime_error("LLM 請求過大");
+        throw std::runtime_error("LLM request too large");
     }
     ResponseBuffer response;
     std::array<char, CURL_ERROR_SIZE> error_buffer{};
@@ -285,20 +285,20 @@ std::string complete(const std::vector<Message> &messages,
     set_option(curl.get(), CURLOPT_ERRORBUFFER, error_buffer.data());
 
     const CURLcode result = curl_easy_perform(curl.get());
-    if (response.write_failed) throw std::runtime_error("無法儲存 HTTP 回應");
+    if (response.write_failed) throw std::runtime_error("cannot store HTTP response");
     if (result != CURLE_OK) {
         const char *reason = error_buffer[0] != '\0'
             ? error_buffer.data() : curl_easy_strerror(result);
-        throw std::runtime_error(std::string("LLM 連線失敗: ") + reason);
+        throw std::runtime_error(std::string("LLM connection failed: ") + reason);
     }
 
     long status = 0;
     if (curl_easy_getinfo(curl.get(), CURLINFO_RESPONSE_CODE, &status) !=
         CURLE_OK) {
-        throw std::runtime_error("無法取得 HTTP status");
+        throw std::runtime_error("cannot get HTTP status");
     }
     if (status < 200 || status >= 300) {
-        throw std::runtime_error("LLM endpoint 回傳 HTTP " +
+        throw std::runtime_error("LLM endpoint returned HTTP " +
                                  std::to_string(status));
     }
     const std::string reply = parse_response_text(response.text);

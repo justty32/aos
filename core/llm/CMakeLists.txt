@@ -18,5 +18,5 @@ aos_add_subcommand(
     NAME llm
     ENTRY aos_llm_cli_main
     LIBRARY aos_llm_cli
-    SUMMARY "呼叫 OpenAI 相容端點並回傳文字"
+    SUMMARY "call an OpenAI-compatible endpoint and print the text"
 )

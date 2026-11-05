@@ -20,15 +20,15 @@ int usage(const char *program, FILE *stream = stderr, int result = 2) {
                  "[--model M] [--timeout-ms N] [--engine CPU] "
                  "[--priority N] [--slots] [-h|--help]\n"
                  "\n"
-                 "  stdin             整段作為 user prompt\n"
-                 "  --messages FILE   直接送出檔案內的 OpenAI messages 陣列\n"
-                 "  --url U           預設 $AOS_LLM_URL 或 http://localhost:1234/v1\n"
-                 "  --model M         預設 $AOS_LLM_MODEL 或 qwen/qwen3.5-9b\n"
-                 "  --timeout-ms N    預設 120000\n"
-                 "  --engine CPU      預設 $AOS_LLM_ENGINE 或 lmstudio\n"
-                 "  --priority N      預設 $AOS_LLM_PRIORITY 或 0\n"
-                 "  --slots           顯示各 CPU 的槽狀態，不呼叫端點\n"
-                 "  -h, --help        顯示這份用法\n",
+                 "  stdin             the whole input is the user prompt\n"
+                 "  --messages FILE   send the OpenAI messages array in FILE as is\n"
+                 "  --url U           default $AOS_LLM_URL or http://localhost:1234/v1\n"
+                 "  --model M         default $AOS_LLM_MODEL or qwen/qwen3.5-9b\n"
+                 "  --timeout-ms N    default 120000\n"
+                 "  --engine CPU      default $AOS_LLM_ENGINE or lmstudio\n"
+                 "  --priority N      default $AOS_LLM_PRIORITY or 0\n"
+                 "  --slots           show slot status per CPU without calling the endpoint\n"
+                 "  -h, --help        show this usage\n",
                  program);
     return result;
 }
@@ -43,7 +43,7 @@ std::vector<aos::llm::Message> read_messages(
     if (command.messages_file) {
         std::ifstream input(*command.messages_file, std::ios::binary);
         if (!input) {
-            throw std::runtime_error("無法開啟 messages 檔案: " +
+            throw std::runtime_error("cannot open messages file: " +
                                      *command.messages_file);
         }
         return aos::llm::parse_messages_json(read_stream(input));
@@ -59,9 +59,9 @@ void print_slot_status() {
     const std::vector<aos::llm::SlotStatus> statuses =
         aos::llm::slot_status();
     if (statuses.empty()) {
-        std::cout << "（沒有任何 CPU 設了並行上限；見 "
+        std::cout << "(no CPU has a concurrency limit; see "
                   << (aos::llm::aos_home() / "cpus.json").string()
-                  << "）\n";
+                  << ")\n";
         return;
     }
 
@@ -127,7 +127,7 @@ extern "C" int aos_llm_cli_main(int argc, char *argv[]) {
             std::fflush(stdout);
             std::fprintf(
                 stderr,
-                "aos llm: 端點回答的是 %s，不是你要的 %s——這個端點沒有那顆模型（用 aos llm --slots 或端點的 /v1/models 確認）\n",
+                "aos llm: the endpoint answered with %s, not the requested %s; it does not serve that model (check with aos llm --slots or the endpoint's /v1/models)\n",
                 served_model.c_str(), command.completion.model.c_str());
             return 1;
         }
