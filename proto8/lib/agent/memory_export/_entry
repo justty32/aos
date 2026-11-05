@@ -36,7 +36,7 @@ CFG_NAME = "_memory.json"
 def memory_root():
     here = os.environ.get("AOS_CD") or HERE
     cfg = os.path.join(here, CFG_NAME)
-    if os.path.isfile(cfg):
+    if os.path.lexists(cfg):                    # 在但不是檔（資料夾、斷捷徑）＝CfgBad，不默默改用 AOS_MEMORY（11-05 夜第二輪邊緣）
         try:
             with open(cfg, encoding="utf-8") as f:
                 c = json.load(f)

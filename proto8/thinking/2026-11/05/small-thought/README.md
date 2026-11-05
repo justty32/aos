@@ -65,3 +65,12 @@
 - 同一格同時叫三個 thought：三個都搶到同一個號 `t-<父>-002`、互相 rollback、全退 1（對帳先看「不在表上＝刪紀錄」，把別人剛 mkdir、還沒 ctl add 的號刪了）→ 對帳先跳過「running 且 PID 活著」與「剛建、state 還沒寫（90 秒內）」的紀錄；重測三個各拿一號、都退 0、做完都下表。
 - goal／context 含換行、非 ASCII、emoji；`max_chars: 1`（`F [truncated]`）；沒 `AOS_DAEMON`（DaemonMissing）；keep 的子被外面 `ctl rm` 後再叫（紀錄被對帳清掉、號照用）；keep 的子 pause→resume→stop→start→say→listen：都正常。
 - 沒修、列給隊長：keep 的子留在表上一直 running（佔一支 loop），要追問用 `aos-agent say --target`；不要了得人 `ctl rm`。
+
+## 11-05 夜 第二輪邊緣
+
+- **修**（隊長推薦，可翻案）：`keep: true` 的子答完一直 running 佔一支 loop → 答完就 `ctl stop`（stack、紀錄 `kept` 都在；追問＝`aos-agent ctl start --target <子>` 再 say／listen，實測接得上）。`_entry` 說明、`_tooldef.json`、knowledge `agents/thought`、lib/docs/03、code map 同步。
+- 假腦 A→B→C（B 給子 `thought`＋`memory`、子再叫 thought、孫再叫）：孫拿到 `DepthExceeded`、照樣答完；子借父的 `memory`（範本的包裝資料夾 `tools/memory`）解到 `knowledge/aos`（包裝資料夾的 `_memory.json`，跟父同一個庫）。
+- 真腦（LM Studio `google/gemma-4-e4b`）：叫父「A 問 endpoint pack（給 memory）、B 問 UTC 幾點（給 clock）、C 合成一句」，父三次 thought、前一步結論自己放進 context、最後一句正確；三隻子做完都下表。
+- **沒修**：父的 memory 若是**登記格 `env`**（`AOS_MEMORY`，沒有 `_memory.json`）配的，借給子會掉 env——`aos-agent tools ls --json`（aos-tools ls）不印 env、`aos-agent tools add` 也沒有 `--env`，子的 memory `MemoryMissing` → brain `MemoryFailed` → 子 stopped，thought 回 `AnswerMissing …`（看不出真因）。可攜的配法（包裝資料夾＋`_memory.json`）沒事。要修得 aos-agent 先有 `tools add --env`，再決定 env 怎麼抄給子（ls 印 env 會讓 self_tools ls 把值給腦看，值是 `$env` 解出來的金鑰就外洩）——列給隊長。
+- **沒修**：thought 在 aos-sandbox 裡（bash-boxed 那種 bwrap `--unshare-all`）起不來：PID 命名空間看不到 daemon 的 pid，`aos-daemon-ctl` 判 daemon 沒在跑、thought 回 `DaemonMissing`（daemon 其實活著）。agents、self_tools 同理。屬 aos-sandbox／aos-daemon-ctl（另一位測試員範圍）。
+- 每叫一次 thought，stderr 都有好幾行 aos-agent 的「this definition … is also used by …」提醒，名單隨子變長；只進 stderr、不進腦，沒改。

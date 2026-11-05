@@ -101,3 +101,10 @@
 
 - lib 工具的 stdout 被讀的人先關（`| head -c0`、`| true`）：BrokenPipeError traceback 進 stderr、退 120（違反 N-43 stderr 只有錯誤行／提醒行）→ `tool_io.start` 把 SIGPIPE 設回預設：安靜退 141（128＋13）。
 - 非 UTF-8 的 stdin＝ArgumentsBad（UnicodeDecodeError 是 ValueError，本來就接住）；`--help` 跟別的參數混用＝照印說明退 0：不用改。
+
+## 11-05 夜 第二輪邊緣
+
+- 20 支 math＋20 支 clock 同時跑（同一份 `tool_io`）：全退 0，lib 底下沒長出新的 `.pyc`（各 `_entry` 都 `sys.dont_write_bytecode`）。
+- 工具 `cp -r` 出 repo、`tool_io.py` 一起複製、資料夾唯讀：照跑；工具資料夾是捷徑、或只有三個檔是捷徑、掛在 repo 外 agent 的 `tools/`：realpath 找得到 lib，照跑。
+- **沒修**：複製出 repo、沒帶 `tool_io.py`、PATH 上也沒有 aos-tools＝`ModuleNotFoundError` traceback（lib/docs/01 規則 9 已寫明「起不來」，但 stderr 不是錯誤行）。要收得每支 `_entry` 的 import 包一層 try（25 支）——列給隊長。
+- bash-boxed（沙箱綁 `tool_io.py` 唯讀）照跑、逾時照收。

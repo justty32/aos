@@ -67,7 +67,7 @@ def memory_root():
     使用者 11-05：「隨意複製，隨意修改，隨意給agent指定、隨意拆卸增添」——知識庫是普通資料夾，不登記。"""
     here = tool_dir()
     cfg = os.path.join(here, CFG_NAME)
-    if os.path.isfile(cfg):
+    if os.path.lexists(cfg):                    # 在但不是檔（資料夾、斷捷徑）＝CfgBad，不默默改用 AOS_MEMORY（11-05 夜第二輪邊緣）
         try:
             with open(cfg, encoding="utf-8") as f:
                 c = json.load(f)

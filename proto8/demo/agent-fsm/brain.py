@@ -8,7 +8,7 @@
 # --system FILE：讀成一則 system 放最前面、不存進 history（P-41）；沒給＝沒有 system。
 # --memory NAME（11-05 晚 agent-knowledge K2）：登記名 NAME 的工具（memory）叫一次 {"op": "read"}，它印的知識庫根接在 system 後面、
 #   同一則 system 訊息（每格重叫＝知識庫改了下一題就看到；不存進 history）。叫的是腦之後叫的同一個工具＝腦看到的根跟它自己查的一樣。
-#   工具清單（疊覆蓋層後）沒有 NAME＝不給根（這隻把 memory 拿掉了）；叫了退非 0＝MemoryFailed（工具自己那行照樣在 stderr）。
+#   工具清單（疊覆蓋層後）沒有 NAME＝不給根（這隻把 memory 拿掉了）；叫了退非 0、或 30 秒沒叫完（整群收掉）＝MemoryFailed（工具自己那行照樣在 stderr）。
 # --tools FILE：aos-tools 登記檔（預設範本裡的 tools.json；沒有那份＝不給工具）；腦看到的工具名＝登記名。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/tools.json 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1（P-20）。--help 印英文用法；Ctrl-C 退 130。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
@@ -30,6 +30,7 @@ if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdou
     sys.stdout.write(HELP)
     sys.exit(0)
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
+MEMORY_TIMEOUT_S = 30                           # --memory 叫根的逾時（11-05 夜第二輪邊緣：原本沒逾時，memory 卡住＝think 格卡住）
 
 
 def die(code, reason):
@@ -113,13 +114,26 @@ memory = opts.get("--memory")
 if memory and any(t["function"]["name"] == memory for t in tools):   # 這隻把 memory 拿掉了＝不給根
     env = dict(os.environ, AOS_STACK=os.path.join(stack, "tools", memory) + "/")   # 跟 act 叫工具同一格（P-17）
     try:
-        r = subprocess.run(TOOLS + ["call", memory], input='{"op": "read"}', stdout=subprocess.PIPE,
-                           text=True, env=env)                           # stderr 不吞：工具自己說哪裡壞
+        p = subprocess.Popen(TOOLS + ["call", memory], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                             text=True, env=env, start_new_session=True)   # stderr 不吞：工具自己說哪裡壞
     except OSError as e:
         die("MemoryFailed", "aos-tools cannot start: %s" % e)
-    if r.returncode != 0:
-        die("MemoryFailed", "tool %s (op read of the root) exited %d" % (memory, r.returncode))
-    root = r.stdout.strip()
+    try:
+        out, _ = p.communicate('{"op": "read"}', timeout=MEMORY_TIMEOUT_S)
+    except subprocess.TimeoutExpired:            # 卡住的 memory 不讓 think 格一直卡（11-05 夜第二輪邊緣）：整群收掉
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(p.pid, sig)
+                p.wait(2)
+                break
+            except subprocess.TimeoutExpired:
+                continue
+            except OSError:
+                break
+        die("MemoryFailed", "tool %s (op read of the root) did not finish in %d s (killed)" % (memory, MEMORY_TIMEOUT_S))
+    if p.returncode != 0:
+        die("MemoryFailed", "tool %s (op read of the root) exited %d" % (memory, p.returncode))
+    root = out.strip()
     if root:
         system_text = (system_text.rstrip("\n") + "\n\n" if system_text.strip() else "") + \
             "Knowledge base root (from tool %s; call it for more):\n\n%s\n" % (memory, root)

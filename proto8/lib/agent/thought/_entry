@@ -9,7 +9,7 @@
 #   max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、上限 1700（act 格 1800 秒包得住）；keep 預設 false。
 # 一次叫＝aos-agent --daemon $AOS_DAEMON 的五步：ctl who（我是誰、我的深度）→ ctl add 範本（--name t-<父名>-NNN、--ws 我的 $AOS_WS）→
 #   子的覆蓋層 llm set endpoint／tools rm／tools add --override → say 開場文（固定英文段＋goal＋context）＋listen --timeout-s →
-#   預設 ctl rm 子（stack 刪掉、不印 details）；keep: true＝留著、結論後多一行 details: <子的 stack，相對 $AOS_DAEMON>/。
+#   預設 ctl rm 子（stack 刪掉、不印 details）；keep: true＝留著但 ctl stop（不佔 loop；要追問 ctl start 再 say）、結論後多一行 details: <子的 stack，相對 $AOS_DAEMON>/。
 #   設定那幾步失敗＝ctl rm 收回再報錯（不算子的失敗）。
 # 子名搶號：mkdir $AOS_STACK/children/<子名>/（P-17 工具小格；同時也是「我生過、還留著的」紀錄，裡面 state 檔＝running PID／kept／failed）。
 #   每次叫先對帳：表上已不在的紀錄刪掉；failed（含 running 但 PID 已不在＝我被殺掉時留的）超過 FAILED_KEEP 隻＝最舊的 ctl rm（gc）；kept 不動。
@@ -33,7 +33,8 @@ Arguments: one JSON object on stdin (empty stdin = {}):
   endpoint   string: the child's brain pack; default: the same as yours
   max_chars  integer, default 600: longer conclusions are cut and end with [truncated]
   timeout_s  number, default 600, at most 1700
-  keep       boolean, default false: true keeps the child's stack and adds a last line "details: <stack>/"
+  keep       boolean, default false: true keeps the child (stopped, stack kept) and adds a last line "details: <stack>/";
+             to ask it more later: aos-agent ctl start --target <child>, then say / listen
 Result on stdout: the conclusion. The child is removed afterwards unless keep is true; if it fails, its stack
 is kept and the error line ends with (details: <stack>/). A child may start one more level of thoughts
 (depth 2 at most: DepthExceeded).
@@ -350,8 +351,11 @@ if err:                                         # 子答不出：先停、stack 
 answer = answer.strip()
 if len(answer) > max_chars:
     answer = answer[:max_chars].rstrip() + " [truncated]"
-if keep:
+if keep:                                        # 留著也不佔 loop：答完就 ctl stop（stack 在；要追問＝ctl start＋say，11-05 夜第二輪邊緣）
     mark(kid, "kept")
+    _, err = agent(["ctl", "stop", "--target", kid])
+    if err:
+        tool_io.warn("could not stop the kept thought %s: %s %s" % ((kid,) + err))
     sys.stdout.write("%s\ndetails: %s\n" % (answer, rel(kid_stack)))
     sys.exit(0)
 _, err = agent(["ctl", "rm", kid])

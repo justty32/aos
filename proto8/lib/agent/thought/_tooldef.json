@@ -6,5 +6,5 @@
                                "endpoint": {"type": "string", "description": "the helper's brain pack (e.g. stupid-fast to save money); default: the same as yours"},
                                "max_chars": {"type": "integer", "description": "at most this many characters come back; default 600 (longer ones end with [truncated])"},
                                "timeout_s": {"type": "number", "description": "seconds to wait for the conclusion; default 600, at most 1700"},
-                               "keep": {"type": "boolean", "description": "true keeps the helper's stack and adds a last line details: <its stack>/ for later inspection; default false"}},
+                               "keep": {"type": "boolean", "description": "true keeps the helper (stopped) and adds a last line details: <its stack>/ for later inspection; default false"}},
                 "required": ["goal"]}}

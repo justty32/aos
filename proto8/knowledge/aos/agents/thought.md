@@ -18,5 +18,5 @@ Rules:
 - The helper knows only `goal` and `context`. Say in `goal` what to bring back.
 - Tools: default only `clock`. `{"name": "memory"}` without `path` lends it your own tool of that name; with `path` it gets that tool folder.
 - Brain: yours, unless `endpoint` names another pack (e.g. a cheaper one).
-- `keep: true` keeps the helper's stack; the answer then ends with `details: procs/<name>/` (relative to your daemon).
+- `keep: true` keeps the helper, stopped (it does not use a loop); the answer then ends with `details: procs/<name>/` (relative to your daemon). To ask it more: `aos-agent ctl start --target <name>`, then `say` / `listen`.
 - Errors: `AnswerMissing` = no answer within `timeout_s` (default 600); the line ends with `(details: ...)`, the stack is kept for a human to inspect. `DepthExceeded` = a helper's helper may not start more helpers; do the step yourself. `ToolMissing` = you lent a tool you do not have. Do not retry in a loop.
