@@ -60,10 +60,10 @@
 |---|---|
 | `include/aos/exec.hpp` | 公開 API：`run_cli`、`run_inst`、`argv0`、`Result`、代號 |
 | `src/main.cpp` | 命令列：把參數交給 `run_cli` |
-| `src/cli/cli.cpp`、`src/cli/cli.hpp` | `run_cli`：解旗標（`--ws`、`--stack`、`--dotenv-override`）→ 一跳跳走 → `launch` |
+| `src/cli/cli.cpp`、`src/cli/cli.hpp` | `run_cli`：解旗標（`--ws`、`--stack`、`--dotenv-override`）→ 一跳跳走 → `launch`；回來前收回沒用上的新建 stack |
 | `src/find/find.cpp`、`src/find/find.hpp` | `hop`：定工作區 → 找入口 → 建 stack → `enter`（cd、讀 `.env`、旗標蓋回）→ 照 `$AOS_ENTRY` 挑入口、設 `AOS_CF`／`AOS_CD`／`AOS_CO` |
 | `src/find/classify.cpp` | 判種類（資料夾、JSON 物件、單子、轉向）、轉向繞圈 |
-| `src/env/env.cpp`、`src/env/env.hpp` | `check_ws`、`setup_stack`、`set_env`（只展開 `${名字}`、錯不印值）、JSON `.env` key |
+| `src/env/env.cpp`、`src/env/env.hpp` | `check_ws`、`setup_stack`、`drop_stack_if_empty`（新建的 stack 回來時還空＝rmdir）、`set_env`（只展開 `${名字}`、錯不印值）、JSON `.env` key |
 | `src/env/dotenv.cpp` | `.env` 檔的 dotenv 基礎子集（引號、註解、`export`） |
 | `src/launch/launch.cpp`、`src/launch/launch.hpp` | 執行可執行檔／argv 陣列；inst 單子交給 `run_inst` |
 | `src/inst/run.cpp`、`src/inst/inst.hpp` | `run_inst`：解指示詞 → 驗欄位 → 轉成 libaos 單子 → 跑；libaos 起不來時換成 `LaunchFailed`（`OpenFailed` 由 `open_failed_why` 不動檔地查出是哪個串流、為什麼） |

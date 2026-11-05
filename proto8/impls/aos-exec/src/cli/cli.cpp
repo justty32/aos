@@ -1,6 +1,7 @@
 // cli.cpp：【cli】run_cli（說明見 cli.hpp；10-21 ideas § 3、§ 4）。
 #include "cli/cli.hpp"
 
+#include "env/env.hpp"
 #include "find/find.hpp"
 #include "launch/launch.hpp"
 #include "aos/cli.hpp"
@@ -20,7 +21,7 @@ static int fail(const std::string& code, const std::string& msg) {
     return 1;
 }
 
-int run_cli(const std::vector<std::string>& argv) {
+static int run(const std::vector<std::string>& argv) {
     try {
         Cli cli;
         try {
@@ -68,6 +69,13 @@ int run_cli(const std::vector<std::string>& argv) {
     } catch (const std::exception& e) {
         return fail(code::Internal, e.what());
     }
+}
+
+// 11-05：沒用上的 stack 不留（在不是工作區的地方跑「把自己掛上 daemon」的 _entry 會留一個空 .stack）。
+int run_cli(const std::vector<std::string>& argv) {
+    int rc = run(argv);
+    drop_stack_if_empty();
+    return rc;
 }
 
 }  // namespace aos::exec
