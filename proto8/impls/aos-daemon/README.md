@@ -9,12 +9,12 @@
 
 照「資料夾＝程式」的做法寫（使用者「daemon也用新做法重寫吧」、「照預設」，[ideas § 25](../../thinking/2026-10/19/ideas/README.md)）。名詞見 [thinking procs](../../thinking/2026-11/03/procs/README.md)：
 daemon 管的子項不論包在 aos-loop 裡一直跑的（loop 型）還是 aos-exec 跑一次的（exec 型）都叫 **proc**；**一份名單 `procs`**、**看寫法決定怎麼起**（沒有 `kind`）、**每項可寫自己的 `stack`**、
-daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `stopped`、用同一個 stack 再起）、收工時的 **sleep／開門的 wake**（還在跑的 loop 型列留成 `sleeping`、再開自動起，[下「收工與開門」](docs/03-起-停-暫停.md#收工與開門sleepwake)）；11-05 起 **sleep／wake 也是指令**（`procs_slept`／`procs_woken`）、**表上的路徑相對 daemon 的 stack**（整份 `ws/` 搬走照樣醒）、**wake／start 起不來的留成 `stopped`＋`reason`**、**同一個 stack 已有 daemon 在跑＝`DaemonRunning`**（[下「11-05 搬家相關」](docs/03-起-停-暫停.md#11-05-搬家相關)）；手把 `procs_ctl.json`、窗 `procs_state.json`（一張表）、信箱 `procs_ctl_mailbox/`、小格 `procs/<名字>/`。
+daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `stopped`、用同一個 stack 再起）、收工時的 **sleep／開門的 wake**（還在跑的 loop 型列留成 `sleeping`、再開自動起，[下「收工與開門」](docs/03-起-停-暫停.md#收工與開門sleepwake)）；11-05 起 **sleep／wake 也是指令**（`procs_slept`／`procs_woken`）、**表上的路徑相對 daemon 的 stack**（整份 `ws/` 搬走照樣醒）、**loop 型出錯結束（退非 0）一律留成 `stopped`＋`reason`**（11-05 晚：原本只留 wake／start 起不來的）、**身體失敗＝記一行、下一圈再跑**（11-05 晚，[docs/06](docs/06-結束碼等.md#結束碼)）、**同一個 stack 已有 daemon 在跑＝`DaemonRunning`**（[下「11-05 搬家相關」](docs/03-起-停-暫停.md#11-05-搬家相關)）；手把 `procs_ctl.json`、窗 `procs_state.json`（一張表）、信箱 `procs_ctl_mailbox/`、小格 `procs/<名字>/`。
 舊名 `loops`、`execs`、`loops_ctl`、`loops_state`、`loops_ctl_mailbox`、`loops_added`……**當沒看到**（C-48，使用者「1. 當沒看到。」）：不報錯、不提醒。
 
 像一個領班：手上一張名單（`procs`），名單上每個人各有一個小隔間（`$AOS_STACK/procs/<名字>/`，或他自己指定的 `stack`）。他每隔一會兒（`interval_ms`）看一眼兩塊佈告欄：
 一塊管他自己（ctl 窗：暫停、收工、節奏），一塊管名單（procs_ctl 窗）。名單改了就把多的請走、少的叫來、要停的請他做完手上這件就下班（**留在名單上**，叫得回來）；
-誰自己下班了（`done`）或被他請走了（`stopped`）就在工作日誌（stdout 的 log）記一行「誰、結束碼幾」、從名單白板（procs_state 窗）上擦掉，**這一班不會再叫他回來**；
+誰自己下班了（`done`）或被他請走了（`stopped`）就在工作日誌（stdout 的 log）記一行「誰、結束碼幾」、從名單白板（procs_state 窗）上擦掉，**這一班不會再叫他回來**（做到一半出了錯走的不擦，標「停著」並寫上原因，修好叫得回來，11-05 晚）；
 他自己的狀況寫在另一塊白板（state 窗）。他自己收工時（不論為什麼）先把每個人都請走、寫好白板，才走人——還在做事的不擦名字，白板上改寫「休息中」（`sleeping`），他下次開門就把這些人叫回同一個隔間接著做（被他請下班的 `stopped` 不叫）。
 
 ```sh

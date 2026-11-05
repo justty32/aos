@@ -16,7 +16,8 @@
    - 143（aos-exec 的 TERM）或 137（不理 TERM、寬限後 KILL）而且掛出去已經超過 `timeout_ms`＝`EndpointFailed` 逾時（11-05 edge-llm 補 137）。
    - 被收掉（沒逾時的 143、`stopped`）、死在半路（`state.json` 沒收尾、表上也沒這列）＝**重掛一次**（同名、新掛信、`retries` 變 1）；第二次還是這樣＝`EndpointFailed 問腦跑了兩次都沒結果`。
    - 表上還有這列（`running`／`stopping`／`sleeping`）＝還在飛，佔一格。表上沒列、`state.json` 也沒有＝daemon 還沒套（暫停中、還沒輪到），照樣佔一格；daemon 的 `mailbox_warning` 提到這封掛信＝daemon 不收＝`LaunchFailed`。
-   - 表上列著 `stopped` 而 `state.json` 收尾了（wake 後 3 秒內就跑完會這樣）＝照上面收，順手寄一封 `procs_removed` 把列拔掉。
+   - 表上列著 `stopped` 而 `state.json` 收尾了＝照上面收，順手寄一封 `procs_removed` 把列拔掉。
+   - 表上列著 `stopped` 而列上有 `reason`（11-05 晚：問腦 loop 退非 0——endpoint 退非 0、整個 loop 被打掉——daemon 不再下表、留 `stopped`＋原因；配合使用者裁 edge-agent 題 1「留表標 stopped (Recommended)」、edge-daemon 題 2「一起改成留表 (Recommended)」）＝**當收尾**：照上面看 `state.json` 的碼回信、寄 `procs_removed` 拔列；要重掛的（沒收尾、沒到時限的 143）先寄 `procs_removed`、`proc.json` 記 `"remount": true`，**等列拔了下一次才寄掛信**（同名 add 不會把 `stopped` 的拉起來；直接 `procs_started` 的話 daemon 還沒套信前，下一次會把舊列的 `reason` 當成第二次失敗）。`stopped` 而沒 `reason`、沒收尾＝有人下了 stop，照舊等（[04](04-已知限制.md)）。
 5. 收到的寄回信、整封（`cur/<信>/`）刪掉，不留紀錄（11-04 夜使用者「舊信根本不用留，就是刪」）。`request.json` 裡有那組的金鑰，跟著整封刪（[04 #13](../../../thinking/2026-11/04/think-as-function/04-邊緣狀況.md)）。
 
 endpoint 函數的契約（stdin `{"endpoint", "request"}` → stdout 一行 `{"message", "usage", "model"}`、退 0；錯退非 0、stderr 一行）是 [lib/base/llm_http、llm_fake](../../../lib/README.md) 定的，kernel 只看結束碼與 stdout 的形狀，不看內容（`message` 剪不剪是函數的事）。
