@@ -16,39 +16,21 @@ Arguments: one JSON object on stdin (empty stdin = {}):
   timeout_s  number
 Result on stdout. On error: one line "bash: error: CODE reason" on stderr and stdout, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
-signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+import tool_io  # noqa: E402
 
 NAME = "bash"
+tool_io.start(NAME, HELP)
 MAX_LINES, MAX_BYTES = 2000, 50 * 1024
 TIMEOUT_DEFAULT, TIMEOUT_MAX = 30, 300      # 秒
 GRACE = 2                                   # TERM 之後等幾秒才 KILL
 
 
-def die(code, reason, before=""):
-    line = "%s: error: %s %s" % (NAME, code, reason)
-    print(line, file=sys.stderr)
-    sys.stdout.write(before + line + "\n")      # stdout 也印：stdout 是給腦看的結果
-    sys.exit(1)
-
-
-def workspace():
-    ws = os.environ.get("AOS_WS")
-    if not ws or not os.path.isdir(ws):
-        die("WsMissing", "AOS_WS is not set or not a directory")
-    return os.path.realpath(ws)
-
-
-def arguments():
-    try:
-        a = json.loads(sys.stdin.read() or "{}")
-    except ValueError:
-        die("ArgumentsBad", "stdin is not JSON")
-    if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments must be an object")
-    return a
+die = tool_io.die
+workspace = tool_io.workspace
+arguments = tool_io.arguments
 
 
 root = workspace()

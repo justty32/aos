@@ -8,7 +8,7 @@
 # （bash 的指令本身擋不住出去，同 lib/base/bash）。PYTHONDONTWRITEBYTECODE=1 往下帶：跑測試不在使用者的程式資料夾留 __pycache__。
 # 錯：stderr 與 stdout 各一行「pyfix: error: 代號 原因」、退 1——ArgumentsBad、StackMissing、DirBad、AgentFailed、AnswerMissing。
 # 來源：demo/agent-eve/tools/pyfix（10-24；遷移時子 agent 改掛 lib/base 的工具、轉接抽成 agent_tool.py；demo 11-04 刪了）。
-import difflib, json, os, signal, sys
+import difflib, json, os, sys
 HELP = """\
 usage: pyfix < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Hand a Python fixing task to a sub-agent working on $AOS_WS/<dir>; print its
@@ -18,22 +18,19 @@ Arguments: one JSON object on stdin (empty stdin = {}):
   dir   string
 Result on stdout. On error: one line "pyfix: error: CODE reason" on stderr and stdout, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
-signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
-
+HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # lib/agent（agent_tool.py）
+sys.path[:0] = [HERE, os.path.dirname(HERE), os.path.dirname(os.path.dirname(HERE))]   # tool_io.py、agent_tool.py：先找自己資料夾、再找 lib/agent、lib/
+import tool_io  # noqa: E402
 import agent_tool  # noqa: E402
 
 NAME = "pyfix"
+tool_io.start(NAME, HELP)
 SNAP_MAX = 256 * 1024          # 備份與 diff 只管這麼大以下的檔
 DIFF_MAX = 8000                # 回給外層的 diff 最多幾個字
 
 
-def die(code, reason):
-    agent_tool.die(NAME, code, reason)
+die = tool_io.die
 
 
 stack, ws = os.environ.get("AOS_STACK"), os.path.realpath(os.environ.get("AOS_WS", "."))
@@ -84,7 +81,7 @@ for rel, text in before.items():          # 備份：子 agent 改壞了，從�
 os.makedirs(os.path.join(run, "stack"))
 with open(os.path.join(run, "stack", "pyfix_dir.txt"), "w", encoding="utf-8") as f:   # 子 agent 的 act 讀：要改的程式在哪
     f.write(root + "\n")
-answer = agent_tool.run_agent(NAME, "agent", args["task"], run, {"PYTHONDONTWRITEBYTECODE": "1"})
+answer = agent_tool.run_agent("agent", args["task"], run, {"PYTHONDONTWRITEBYTECODE": "1"})
 
 after = files(root)
 diff = []

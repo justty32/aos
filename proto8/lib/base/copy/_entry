@@ -3,7 +3,7 @@
 # 介面（lib/README 的契約）：stdin 收 {"from", "to"}；stdout 一份 JSON {"from", "to", "counter_files"}（複製了幾個檔；10-25 原 files）。
 # to 已經有東西＝不複製（FileBad）。先複製到 . 開頭的暫存（檔或資料夾）再改名（N-05）。路徑從 $AOS_WS 算、不能跑出去。
 # 錯：stderr 與 stdout 各一行「copy: error: 代號 原因」、退 1。來源：demo/file-tools/copy（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
-import json, os, shutil, signal, sys
+import json, os, shutil, sys
 HELP = """\
 usage: copy < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Copy a file or folder inside the workspace (symlinks are copied as links; parent
@@ -13,43 +13,24 @@ Arguments: one JSON object on stdin (empty stdin = {}):
   to    string, required
 Result on stdout. On error: one line "copy: error: CODE reason" on stderr and stdout, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
-signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+import tool_io  # noqa: E402
 
 NAME = "copy"
+tool_io.start(NAME, HELP)
 
 
-def die(code, reason):
-    line = "%s: error: %s %s" % (NAME, code, reason)
-    print(line, file=sys.stderr)
-    print(line)                                 # stdout 也印：stdout 是給腦看的結果
-    sys.exit(1)
+die = tool_io.die
 
 
 def out(obj):
     print(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
 
 
-def workspace():
-    ws = os.environ.get("AOS_WS")
-    if not ws or not os.path.isdir(ws):
-        die("WsMissing", "AOS_WS is not set or not a directory")
-    return os.path.realpath(ws)
-
-
-def arguments(*required):
-    try:
-        a = json.loads(sys.stdin.read() or "{}")
-    except ValueError:
-        die("ArgumentsBad", "stdin is not JSON")
-    if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments must be an object")
-    for k in required:
-        if not isinstance(a.get(k), str) or not a[k]:
-            die("ArgumentsBad", "missing %s (a string)" % k)
-    return a
+workspace = tool_io.workspace
+arguments = tool_io.arguments
 
 
 def inside(rel, root_ok=True):

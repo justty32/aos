@@ -8,7 +8,7 @@
 # 要把 JSON 當文字看（看原始排版），給 start／end 就好。路徑從 $AOS_WS 算、不能跑出去。
 # 計數的 key 一律 counter_*（10-25，原 total_lines、children_more，摘要裡的 keys、items、chars）。
 # 錯：stderr 與 stdout 各一行「view: error: 代號 原因」、退 1。來源：demo/file-tools/view（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
-import ast, json, os, re, signal, sys
+import ast, json, os, re, sys
 HELP = """\
 usage: view < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 View a file in the workspace step by step: JSON one level at a time, big text files
@@ -20,43 +20,24 @@ Arguments: one JSON object on stdin (empty stdin = {}):
   end      integer
 Result on stdout. On error: one line "view: error: CODE reason" on stderr and stdout, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
-signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+import tool_io  # noqa: E402
 
 NAME = "view"
+tool_io.start(NAME, HELP)
 
 
-def die(code, reason):
-    line = "%s: error: %s %s" % (NAME, code, reason)
-    print(line, file=sys.stderr)
-    print(line)                                 # stdout 也印：stdout 是給腦看的結果
-    sys.exit(1)
+die = tool_io.die
 
 
 def out(obj):
     print(json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
 
 
-def workspace():
-    ws = os.environ.get("AOS_WS")
-    if not ws or not os.path.isdir(ws):
-        die("WsMissing", "AOS_WS is not set or not a directory")
-    return os.path.realpath(ws)
-
-
-def arguments(*required):
-    try:
-        a = json.loads(sys.stdin.read() or "{}")
-    except ValueError:
-        die("ArgumentsBad", "stdin is not JSON")
-    if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments must be an object")
-    for k in required:
-        if not isinstance(a.get(k), str) or not a[k]:
-            die("ArgumentsBad", "missing %s (a string)" % k)
-    return a
+workspace = tool_io.workspace
+arguments = tool_io.arguments
 
 
 def inside(rel, root_ok=True):

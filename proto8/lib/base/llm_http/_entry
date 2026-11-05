@@ -6,7 +6,7 @@
 # 錯：stderr 與 stdout 各一行「llm_http: error: 代號 原因」、退 1：ArgumentsBad（stdin 不是這形狀）、EndpointFailed（連不上、HTTP 非 2xx）、
 #   ReplyBad（不是 OpenAI 形狀）。沒有自己的逾時旗標（包它的單子守，10-15 KISS）；平常由 aos-llm-kernel 經 aos-exec 跑（kernel.json 的 exec）。
 # 來源：demo/agent-fsm/brain.py 的 ask()（11-04 晚搬過來，brain.py 改成只組請求）。
-import http.client, json, signal, sys, urllib.parse
+import http.client, json, os, sys, urllib.parse
 HELP = """\
 usage: llm_http < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Endpoint function: POST the request to an OpenAI-compatible {url}/chat/completions
@@ -16,19 +16,16 @@ Arguments: one JSON object on stdin (empty stdin = {}):
   request   object, required
 Result on stdout. On error: one line "llm_http: error: CODE reason" on stderr and stdout, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
-signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+import tool_io  # noqa: E402
 
 NAME = "llm_http"
+tool_io.start(NAME, HELP)
 
 
-def die(code, reason):
-    line = "%s: error: %s %s" % (NAME, code, str(reason).replace("\n", " "))
-    print(line, file=sys.stderr)
-    print(line)
-    sys.exit(1)
+die = tool_io.die
 
 
 try:

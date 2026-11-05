@@ -35,12 +35,13 @@ Arguments: one JSON object on stdin (empty stdin = {}):
   max_bytes  integer
 Result on stdout. On error: one line "memory: error: CODE reason" on stderr and stdout, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
-signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+import tool_io  # noqa: E402
 
 NAME = "memory"
+tool_io.start(NAME, HELP)
 DEFAULT_MAX_BYTES = 8000
 FIND_LIMIT = 20
 SEGMENT = re.compile(r"^[a-z0-9_-]+$")
@@ -48,21 +49,8 @@ LEAF_EXTS = (".md", ".json")                    # 前面的優先
 child = None
 
 
-def die(code, reason):
-    line = "%s: error: %s %s" % (NAME, code, str(reason).replace("\n", " "))
-    print(line, file=sys.stderr)
-    print(line)                                 # stdout 也印：stdout 是給腦看的結果
-    sys.exit(1)
-
-
-def arguments():
-    try:
-        a = json.loads(sys.stdin.read() or "{}")
-    except ValueError:
-        die("ArgumentsBad", "stdin is not JSON")
-    if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments must be an object")
-    return a
+die = tool_io.die
+arguments = tool_io.arguments
 
 
 CFG_NAME = "_memory.json"      # 工具資料夾裡的設定檔（定義配的）：{"base": "<知識庫路徑>"}，相對＝從這個資料夾算

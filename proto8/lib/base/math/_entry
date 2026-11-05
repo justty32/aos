@@ -3,7 +3,7 @@
 # 介面（lib/README 的契約）：stdin 收 {"expr": "17*23"}；stdout 印算出來的結果。不碰檔案、不用 $AOS_WS。
 # 錯：stderr 與 stdout 各一行「math: error: 代號 原因」、退 1——stdin 不對＝ArgumentsBad，式子讀不懂、除以零、算不出來＝ExprBad。
 # 來源：demo/agent-dan/tools/math（10-23；10-24 遷移：hal、kai、talk 的複本改掛這一份，錯誤行照 lib 契約）。
-import ast, json, operator, signal, sys
+import ast, json, operator, os, sys
 HELP = """\
 usage: math < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Evaluate an arithmetic expression (numbers, + - * / // % **, parentheses, signs).
@@ -11,23 +11,20 @@ Arguments: one JSON object on stdin (empty stdin = {}):
   expr  string, required
 Result on stdout. On error: one line "math: error: CODE reason" on stderr and stdout, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
-signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+import tool_io  # noqa: E402
 
 NAME = "math"
+tool_io.start(NAME, HELP)
 BIN = {ast.Add: operator.add, ast.Sub: operator.sub, ast.Mult: operator.mul, ast.Div: operator.truediv,
        ast.FloorDiv: operator.floordiv, ast.Mod: operator.mod, ast.Pow: operator.pow}
 UNARY = {ast.UAdd: operator.pos, ast.USub: operator.neg}
 POW_MAX = 1000          # 指數上限：9**9**9 這種會把機器算死
 
 
-def die(code, reason):
-    line = "%s: error: %s %s" % (NAME, code, reason)
-    print(line, file=sys.stderr)
-    print(line)                                 # stdout 也印：stdout 是給腦看的結果
-    sys.exit(1)
+die = tool_io.die
 
 
 def value(node):

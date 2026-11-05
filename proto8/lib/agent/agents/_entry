@@ -46,12 +46,13 @@ ws: relative to your workspace, or absolute; default = your workspace. Quota: ma
 (your definition, overridden by your stack's agents.json; default 4); over it = ChildSlotMissing, nothing is sent.
 Result on stdout. On error: one line "agents: error: CODE reason" on stderr and stdout, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
-signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+import tool_io  # noqa: E402
 
 NAME = "agents"
+tool_io.start(NAME, HELP)
 OPS = ("new", "add", "say", "ask", "rm", "ls")
 NAME_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_-]{0,63}\Z")
 ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
@@ -63,11 +64,7 @@ child = None
 last_err = ""                  # 上一次 aos-agent 的 stderr（成功時拿來轉提醒行給腦）
 
 
-def die(code, reason):
-    line = "%s: error: %s %s" % (NAME, code, str(reason).replace("\n", " "))
-    print(line, flush=True)
-    print(line, file=sys.stderr, flush=True)
-    sys.exit(1)
+die = tool_io.die
 
 
 def kill_group(p):

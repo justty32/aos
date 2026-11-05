@@ -3,26 +3,23 @@
 # 介面（lib/README 的契約）：stdin 收 {}（沒有參數；空 stdin 也算）；不碰檔案、不用 $AOS_WS。
 # 錯：stdin 不是 JSON 物件＝stderr 與 stdout 各一行「clock: error: ArgumentsBad 原因」、退 1。
 # 來源：demo/agent-dan/tools/clock（10-23，原本是一行 sh `date -u`、不讀 stdin；10-24 遷移改 python3 才能照契約檢查 stdin，印的一樣）。
-import json, signal, sys, time
+import json, os, sys, time
 HELP = """\
 usage: clock < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Print the current UTC time (ISO 8601 to the second, e.g. 2026-10-23T08:00:00Z).
 Arguments: none (stdin is {} or empty).
 Result on stdout. On error: one line "clock: error: CODE reason" on stderr and stdout, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
-signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+import tool_io  # noqa: E402
 
 NAME = "clock"
+tool_io.start(NAME, HELP)
 
 
-def die(code, reason):
-    line = "%s: error: %s %s" % (NAME, code, reason)
-    print(line, file=sys.stderr)
-    print(line)
-    sys.exit(1)
+die = tool_io.die
 
 
 try:

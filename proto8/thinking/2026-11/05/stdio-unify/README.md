@@ -87,7 +87,12 @@
 
 ## 剩下的
 
-- **lib 工具的共用介面**：lib/base 19 支、lib/aos/check_inbox、memory 各自寫 `die`（同一份格式抄在每支裡）。跟 [lib/docs/01](../../../../lib/docs/01-分層等.md) 規則 9「每個工具自成一格」衝突——要使用者裁：在 lib 放一個共用小模組（沙箱裡要看得到），還是維持每格自成一格。
 - demo 的格的 `--help`、Ctrl-C 還是各自寫（頂層腳本、沒 main 交給 `aos_flags.run`）。
 - sh 兩支（install.sh、setup.sh）沒有共用函數檔，先算例外。
 - 真腦沒跑；json_edit 給模型的 prompt 還是中文；install.sh 沒裝 aos-lua、aos-janet。
+
+## 11-05 晚 lib 共用模組（使用者裁「收成共用模組」）
+
+- 結果：`proto8/lib/tool_io.py`（`start`／`die`／`warn`／`arguments`／`workspace`）；lib/base 19 支、check_inbox、memory、self_tools、agents、pyfix、agent_tool.py 都改用它，各支不再自己拼錯誤行。lib/docs/01 規則 9 改寫成「共用開頭收在 tool_io.py；先找自己資料夾、再找 lib/」。
+- 沙箱：bash-boxed 原本只綁 `inner`，改完實跑 `ModuleNotFoundError`；`sandbox.json` 的 `ro` 加 `../../../../lib/tool_io.py` 後通過（stdout `[exit code 0]`、壞 stdin＝ArgumentsBad）。
+- 代定（可翻案）：L1 檔名 `tool_io.py`、放 lib 根（base 之下最底層，三層都能用）；L2 找的順序「自己資料夾 → lib/」，複製出 lib 的工具把它一起複製（實測：沒複製＝起不來、複製後通過）；L3 judge 也用、但 `echo=False`（不是給腦用的）；L4 cli_session.py（bin 的 aos-eca-turn 也 import）與 pyfix 子 agent 的格不收；L5 `sys.dont_write_bytecode`（不在庫留 `__pycache__`，沿 pyfix）。

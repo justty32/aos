@@ -4,6 +4,12 @@
 
 **工具**＝一個資料夾三個檔：`_entry`（第二行是 NAME）、`_tooldef.json`（給模型看）、`_metainfo.json`（給 kernel 與人；11-04 前叫 `_metainfo`）；agent 的 `tools/<名>` 用捷徑掛進來。（11-03 round 那套「格」——一輪的表與五格、parts、queue、history、compact、act、`lib/endpoint/`——與 aos-ai 的六個工具、ask_round 連程式刪了，概念在 proto8/archive/agent-round-concepts/。）
 
+## `lib/`（共用模組）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `tool_io.py` | 不是工具：每支 lib 工具共用的開頭（11-05 晚）——`start`（`--help`、Ctrl-C 130）、`die`（錯誤行 stderr＋stdout、退 1；`echo=False` 只 stderr）、`warn`、`arguments`、`workspace`；工具先找自己資料夾、再找 lib/（lib/docs/01 規則 9），沙箱要綁它 |
+
 ## `lib/base/`（不懂 aos 的通用工具）
 
 | 檔 | 負責什麼 |

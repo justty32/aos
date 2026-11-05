@@ -22,7 +22,7 @@
 # 錯（自己這層的，退 1，loop／daemon 會停，P-20）：ArgumentsBad、CfgMissing、CfgBad（judge.json）、StackMissing、DaemonMissing（沒設 AOS_DAEMON 或不是資料夾）、
 #   StateBad（procs_state.json 讀不懂）、MailboxMissing（daemon 沒開 ctl 信箱）、CommandMissing（PATH 沒 aos-post／aos-directive）、PostFailed（收件箱 init／take-all／see 失敗）。
 #   stderr 一行「judge: error: 代號 原因」。--help＝英文用法印 stdout、退 0。Ctrl-C＝退 130、不吐 traceback。
-import json, os, re, signal, subprocess, sys
+import json, os, re, subprocess, sys
 
 HELP = """\
 usage: judge JUDGE.json   (run it with aos-exec as a daemon body or a loop proc; needs $AOS_STACK and $AOS_DAEMON)
@@ -33,19 +33,19 @@ Each refused letter: one line "judge: warning: letter NAME refused: CODE reason"
 Exit 0 after a round (also with no letters). On error: "judge: error: CODE reason" on stderr, exit 1.
 """
 
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+import tool_io  # noqa: E402
+
 NAME = "judge"
+tool_io.start(NAME, HELP, echo=False)            # 不是給腦用的：錯誤行只到 stderr
 NOT_FOUND = 10                                   # aos-post take-all／see 沒信
 ORDERED = re.compile(r"^[0-9]{12}\.")            # 有序信的名字（N-16）
 
 
-def die(code, reason):
-    print("%s: error: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
-    sys.exit(1)
-
-
-def warn(sentence):
-    """提醒行（stdio-unify R1）：不帶代號的一句；退 0 也可以有。"""
-    print("%s: warning: %s" % (NAME, str(sentence).replace("\n", " ")), file=sys.stderr)
+die = tool_io.die
+warn = tool_io.warn
 
 
 def run(argv, stdin_text="", cwd=None):
@@ -171,9 +171,6 @@ def refuse(inbox, name, code, msg):
 
 
 def main():
-    if "--help" in sys.argv[1:]:                # --help：英文說明印 stdout、退 0（stdio-unify R3）
-        sys.stdout.write(HELP)
-        sys.exit(0)
     if len(sys.argv) != 2 or not sys.argv[1]:
         die("ArgumentsBad", "need exactly one argument, the path of judge.json (usage: judge JUDGE.json)")
     allowed, cap = load_policy(sys.argv[1])
@@ -214,5 +211,4 @@ def main():
         post(["done", inbox, name])
 
 
-signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 main()
