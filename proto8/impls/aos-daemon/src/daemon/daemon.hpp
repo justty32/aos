@@ -104,6 +104,8 @@ protected:
     void finish() override;
     void write_more(const Json& me) override;   // procs_state.json（沒開＝不寫；有變才寫，11-02）
     Json info() override;                       // 11-05：有身體＝state 多一欄 body_code（最後一次的結束碼）
+    // 11-05（edge-round2 題 1）：兩扇狀態窗寫不了＝stderr 一行（變了才印）、下一圈再寫，不收工；起來後一份都還沒寫成＝照舊退 1
+    void write_state(const std::string& phase, const Json& code) override;
 
 private:
     using Table = std::list<std::pair<std::string, Child>>;
@@ -112,7 +114,9 @@ private:
     void add(const std::string& name, const Child& c);   // 放上表＋印 log 一行（running；stopped 的列不印）
     Table::iterator drop(Table::iterator it);             // 從表上拿掉：行程結束的印 log 一行、done 的記成本次不再起；回下一列
     void log_child(const std::string& name, const Child& c);   // log 一行（見檔頭）
-    void flush_table();                                   // 表變了：寫 procs_state（有變才寫）；寫不了丟 StateError
+    void flush_table();                                   // 表變了：寫 procs_state（有變才寫）；寫不了＝state_failed（起來後還沒寫成過＝丟 StateError）
+    void state_failed(const Error& e);                    // 11-05：狀態窗寫不了（寫成過＝stderr 一行、下一圈再寫；沒寫成過＝丟 StateError）
+    void state_ok();                                      // 11-05：寫成了（之前寫不了＝stderr 一行 written again）
     void term(Child& c);                  // 送 SIGTERM、phase stopping、記期限（不等）
     void halt(const std::string& name, Child& c);   // daemon 的 stop：往子 loop 的 ctl 寫 {"cmd": "stop", "seq": N}、phase stopping（沒 ctl＝term）
     void hold(const std::string& name, Child& c, const char* phase = "stopped");   // 要留列的退了：印 log、列留成 phase（stopped／sleeping；pid 0、held）
@@ -175,6 +179,8 @@ private:
     bool parts_stale_ = false;                           // 上一次寫完還留著「再上一次」的分檔：下一次沒變的那一下清（11-02）
     Json last_more_;                                     // 上一份寫出去的 procs_state（分檔前的表、不含 proc_fields／updated_at；比有沒有變用）
     bool was_paused_ = false;                            // 11-05 第二輪：上一圈是暫停的（resume 那圈先寫 state 再對表）
+    bool state_wrote_ = false;                           // 11-05：兩扇狀態窗寫成過沒（沒有＝寫不了照舊退 1：stack 不在、一起來就唯讀）
+    std::string state_bad_;                              // 11-05：上一次寫不了的代號（空＝上一次好的；變了才印）
     int lock_fd_ = -1;                                   // check_running 鎖著的 stack 資料夾（不關，行程結束自己放）
     aos::loop::Target body_;                             // 11-05：daemon 自己的身體（設定檔的 exec；Loop 的 exec_ 收過來）
     bool has_body_ = false;

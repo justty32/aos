@@ -15,6 +15,10 @@
 1. **（推薦）寫不了＝stderr 一行、下一圈再寫，proc 照顧著**：只改 aos-daemon（aos-loop 照舊）。後果：磁碟滿的期間 `ls` 看到的表是舊的；騰出空間後自己好；要停用 ctl stop 或 Ctrl-C。
 2. **照現況（退 1）**：再起時照這輪的修法接回；文件已寫。
 
+**使用者裁定（11-05）**：選「記一行、下一圈再試 (Recommended)」。
+
+**實作（11-05）**：aos-daemon 蓋 Loop 的 `write_state`（aos-loop 只把它改成 virtual、行為不變）；寫成過之後兩扇窗寫不了＝stderr 一行 `cannot write the state windows (…), retrying next round`（代號變了才印）、好了一行 `state windows written again`，proc 照顧著，窗照「有變才寫」下一次重寫；收工那份寫不了照常結束（碼照舊）；起來後一份都還沒寫成（stack 不在、一起來就唯讀）照舊退 1。P-36 加註這個例外。WSL `/tmp/feat-lim-3`：daemon 跑著時 `chmod a-w` stack、子項退了表寫不進去——daemon 與另一個子項照活、stderr 一行；`chmod u+w` 後一行 written again、表追上；aos-loop 同樣情況照舊退 1。
+
 ## 測了哪些類、結果
 
 | # | 類 | 情境 | 結果 | 處理 |

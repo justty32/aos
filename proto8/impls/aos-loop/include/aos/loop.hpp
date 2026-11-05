@@ -200,7 +200,8 @@ protected:
     // 要寫一份 state（沒開 state 窗就不寫；跟上一份一樣也不寫，見上）再呼叫 write_more：phase＝這份的階段，code＝結束碼
     // （null＝還沒結束；非 null＝一定寫）。寫不了丟 StateError（WriteFailed）。
     // 11-02 拿掉 beat（心跳：離上一次滿 1 秒就寫一份）；daemon 起一大批、收工等子項退時改成表有變就寫 loops_state（daemon 自己呼叫 write_more）。
-    void write_state(const std::string& phase, const Json& code);
+    // 11-05 virtual（edge-round2 題 1，使用者「記一行、下一圈再試 (Recommended)」）：aos-daemon 蓋它、寫不了時記一行下一圈再寫；aos-loop 自己照舊（寫不了＝退 1）。
+    virtual void write_state(const std::string& phase, const Json& code);
     // log 一行（11-02）：doc 印成一行 JSON＋換行到 stdout（一次 write，不經 stdio 緩衝）。沒給 --enable-logs＝不印。印不了（stdout 是關掉的管子 EPIPE…）＝
     // 之後都不印、不退出；寫的那一下用 pthread_sigmask 擋著 SIGPIPE、排著的吃掉再還原遮罩（不改 SIGPIPE 的處置，子行程不受影響）。
     void log_line(const Json& doc);
