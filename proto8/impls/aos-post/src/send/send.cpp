@@ -53,11 +53,11 @@ static long long read_counter(const std::string& path) {
         if (err == ENOENT) {
             return 0;
         }
-        throw Error{code::OrderBad, "讀不了 " + path + "：" + std::strerror(err)};
+        throw Error{code::OrderBad, "cannot read " + path + ": " + std::strerror(err)};
     }
     std::optional<Json> doc = aos::read_json(path);
     if (!doc || !doc->is_object() || !doc->contains("counter_letters") || !aos::is_count((*doc)["counter_letters"])) {
-        throw Error{code::OrderBad, path + " 要是 {\"counter_letters\": 非負整數}"};
+        throw Error{code::OrderBad, path + " must be {\"counter_letters\": non-negative integer}"};
     }
     return (*doc)["counter_letters"].get<long long>();
 }
@@ -90,9 +90,9 @@ static std::string post_ordered(const Mailbox& mb, const std::string& t, const s
         if (std::rename(t.c_str(), to.c_str()) != 0) {
             int e = errno;
             if (e == EEXIST || e == ENOTEMPTY) {
-                throw Error{code::LetterExists, "new/ 已經有同名的信：" + to};   // 缺一個號
+                throw Error{code::LetterExists, "new/ already has a letter with this name: " + to};   // 缺一個號
             }
-            throw Error{code::WriteFailed, "改名不了 " + t + " → " + to + "：" + std::strerror(e)};   // 缺一個號
+            throw Error{code::WriteFailed, "cannot rename " + t + " -> " + to + ": " + std::strerror(e)};   // 缺一個號
         }
     } catch (...) {
         aos::lock::release(lock_dir);
@@ -111,7 +111,7 @@ static void check_sendable(const Mailbox& mb) {
     }
     for (const std::string& p : parts) {
         if (access(p.c_str(), W_OK | X_OK) != 0) {
-            throw Error{code::MailboxBad, p.substr(mb.root.size() + 1) + "/ 不可寫：" + p};
+            throw Error{code::MailboxBad, p.substr(mb.root.size() + 1) + "/ is not writable: " + p};
         }
     }
 }
@@ -130,7 +130,7 @@ std::string send(const Mailbox& mb, const Json& body, const SendOpts& opts) {
     if (opts.name) {
         check_name(*opts.name);
         if (is_ordered(*opts.name)) {
-            throw Error{code::ArgumentsBad, "自己給的信件名稱不能像有序名（12 位數字＋.開頭）：" + *opts.name};
+            throw Error{code::ArgumentsBad, "a given letter name must not look like an ordered name (12 digits then .): " + *opts.name};
         }
     }
     std::string who = aos::identity();   // aos-util：$AOS_WS ＞ $AOS_STACK ＞ $AOS_CF ＞ cwd（cwd 拿不到丟 Internal）
@@ -148,23 +148,23 @@ std::string send(const Mailbox& mb, const Json& body, const SendOpts& opts) {
         }
         int e = errno;
         if (e == EEXIST && opts.name) {
-            throw Error{code::LetterExists, "tmp/ 已經有同名的：" + t};
+            throw Error{code::LetterExists, "tmp/ already has an entry with this name: " + t};
         }
         if (e != EEXIST || i >= 100) {
-            throw Error{code::MkdirFailed, "建不了 " + t + "：" + std::strerror(e)};
+            throw Error{code::MkdirFailed, "cannot create " + t + ": " + std::strerror(e)};
         }
     }
     // 1'. 另放的檔（在 tmp/ 裡，處理者還看不到）
     for (const auto& [name, from] : opts.files) {
         if (name.empty() || name[0] == '.' || name.find('/') != std::string::npos || name == "letter.json") {
             drop(t);
-            throw Error{code::ArgumentsBad, "信裡另放的檔名要是單純的名字、不是 letter.json：" + name};
+            throw Error{code::ArgumentsBad, "attached file name must be a plain name other than letter.json: " + name};
         }
         std::error_code ec;
         std::filesystem::copy_file(from, aos::join(t, name), ec);
         if (ec) {
             drop(t);
-            throw Error{code::WriteFailed, "複製不了 " + from + " → " + aos::join(t, name) + "：" + ec.message()};
+            throw Error{code::WriteFailed, "cannot copy " + from + " -> " + aos::join(t, name) + ": " + ec.message()};
         }
     }
     // 2. 寫 letter.json（沒有 kind，11-03）
@@ -192,9 +192,9 @@ std::string send(const Mailbox& mb, const Json& body, const SendOpts& opts) {
         int e = errno;
         drop(t);
         if (e == EEXIST || e == ENOTEMPTY) {
-            throw Error{code::LetterExists, "new/ 已經有同名的信：" + n};
+            throw Error{code::LetterExists, "new/ already has a letter with this name: " + n};
         }
-        throw Error{code::WriteFailed, "改名不了 " + t + " → " + n + "：" + std::strerror(e)};
+        throw Error{code::WriteFailed, "cannot rename " + t + " -> " + n + ": " + std::strerror(e)};
     }
     return s.id;
 }

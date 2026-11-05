@@ -25,7 +25,7 @@ namespace {
 namespace p = aos::post;
 using Args = std::vector<std::string>;
 
-const char* USAGE = "aos-post init|send|take|take-all|see|done|regret [旗標...] 信箱 [信件名稱]（說明見 README）";
+const char* USAGE = "aos-post init|send|take|take-all|see|done|regret [flags...] MAILBOX [LETTER] (see README)";
 
 int fail(const std::string& code, const std::string& msg) {
     std::cout << std::flush;
@@ -38,8 +38,8 @@ aos::Cli parse(const Args& args, size_t lo, size_t hi, const std::map<std::strin
                const std::map<std::string, std::string>& switches = {}) {
     aos::Cli cli = aos::parse_cli(args, flags, switches);
     if (cli.rest.size() < lo || cli.rest.size() > hi) {
-        std::string want = hi == 1 ? "要一個信箱" : lo == 2 ? "要信箱與信件名稱" : "要信箱（信件名稱可不給）";
-        throw aos::Error{p::code::ArgumentsBad, want + "；用法：" + USAGE};
+        std::string want = hi == 1 ? "expects one mailbox" : lo == 2 ? "expects a mailbox and a letter name" : "expects a mailbox (letter name optional)";
+        throw aos::Error{p::code::ArgumentsBad, want + "; usage: " + USAGE};
     }
     if (cli.rest.size() == 2) {
         p::check_name(cli.rest[1]);
@@ -139,7 +139,7 @@ int cmd_done(const Args& args) {
 int cmd_regret(const Args& args) {
     aos::Cli cli = parse(args, 2, 2, {});
     if (!p::regret(p::open(cli.rest[0]), cli.rest[1])) {
-        return fail(p::code::RegretFailed, "信不在 new/（已被認領，或本來就沒有）：" + cli.rest[1]);
+        return fail(p::code::RegretFailed, "letter not in new/ (already taken, or never there): " + cli.rest[1]);
     }
     return 0;
 }
@@ -153,11 +153,11 @@ int main(int argc, char** argv) {
     };
     try {
         if (argc < 2) {
-            throw aos::Error{p::code::ArgumentsBad, std::string("用法：") + USAGE};
+            throw aos::Error{p::code::ArgumentsBad, std::string("usage: ") + USAGE};
         }
         auto it = table.find(argv[1]);
         if (it == table.end()) {
-            throw aos::Error{p::code::CommandUnknown, std::string("不認得的子命令 ") + argv[1] + "；用法：" + USAGE};
+            throw aos::Error{p::code::CommandUnknown, std::string("unknown subcommand ") + argv[1] + "; usage: " + USAGE};
         }
         return it->second(Args(argv + 2, argv + argc));
     } catch (const aos::Error& e) {

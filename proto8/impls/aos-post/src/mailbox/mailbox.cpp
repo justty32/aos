@@ -58,12 +58,12 @@ bool move(const std::string& from, const std::string& to) {
     if (e == ENOENT || e == ENOTEMPTY || e == EEXIST) {
         return false;
     }
-    throw Error{code::WriteFailed, "改名不了 " + from + " → " + to + "：" + std::strerror(e)};
+    throw Error{code::WriteFailed, "cannot rename " + from + " -> " + to + ": " + std::strerror(e)};
 }
 
 void need_dir(const std::string& path) {
     if (!is_dir(path)) {
-        throw Error{code::MailboxMissing, "信箱沒建好（少了 " + path + "；先 aos-post init）"};
+        throw Error{code::MailboxMissing, "mailbox not set up (missing " + path + "); run aos-post init first"};
     }
 }
 
@@ -71,7 +71,7 @@ void make_dir(const std::string& dir) {
     std::error_code ec;
     fs::create_directories(dir, ec);
     if (!is_dir(dir)) {
-        throw Error{code::MkdirFailed, "建不了 " + dir + (ec ? "：" + ec.message() : "")};
+        throw Error{code::MkdirFailed, "cannot create " + dir + (ec ? ": " + ec.message() : "")};
     }
 }
 
@@ -86,7 +86,7 @@ void init(const std::string& root) {
 Mailbox open(const std::string& root) {
     Mailbox mb{aos::abspath(root)};
     if (!is_dir(mb.root)) {
-        throw Error{code::MailboxMissing, "信箱不在：" + root};
+        throw Error{code::MailboxMissing, "mailbox not found: " + root};
     }
     return mb;
 }
@@ -140,12 +140,12 @@ std::string reply_to_abs(const Mailbox& mb, const std::string& reply_to) {
 
 void check_name(const std::string& name) {
     if (name.empty() || name[0] == '.' || name.find('/') != std::string::npos) {
-        throw Error{code::ArgumentsBad, "信件名稱要是一個單純的名字（不空、不含 /、不以 . 開頭）：" + name};
+        throw Error{code::ArgumentsBad, "letter name must be a plain name (non-empty, no /, not starting with .): " + name};
     }
     // take-all 一行一個名字：名字裡有換行等控制字元會被拆成兩個不存在的名字（11-04 夜 C 線）
     for (unsigned char ch : name) {
         if (ch < 0x20 || ch == 0x7f) {
-            throw Error{code::ArgumentsBad, "信件名稱不能有換行、tab 等控制字元"};
+            throw Error{code::ArgumentsBad, "letter name must not contain control characters (newline, tab, ...)"};
         }
     }
 }

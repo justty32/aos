@@ -53,7 +53,7 @@ static std::string in_cur(const Mailbox& mb, const std::string& name) {
     std::string c = aos::join(mb.cur(), name);
     std::error_code ec;
     if (!std::filesystem::exists(std::filesystem::symlink_status(c, ec))) {   // 不是資料夾也算在（讀不到 letter.json＝壞信，done 丟掉）
-        throw Error{code::LetterMissing, "信不在 cur/：" + c};
+        throw Error{code::LetterMissing, "letter not in cur/: " + c};
     }
     return c;
 }
@@ -61,24 +61,24 @@ static std::string in_cur(const Mailbox& mb, const std::string& name) {
 // 驗信封；好信回空字串，壞信回原因。
 static std::string why_bad(const std::optional<Json>& doc) {
     if (!doc) {
-        return "letter.json 不在、讀不了或不是 JSON";
+        return "letter.json is missing, unreadable, or not JSON";
     }
     if (!doc->is_object()) {
-        return "letter.json 要是物件";
+        return "letter.json must be an object";
     }
     const char* strings[] = {"sender", "sent_at"};
     for (const char* k : strings) {
         if (!doc->contains(k) || !(*doc)[k].is_string()) {
-            return std::string("缺 ") + k + "（要是字串）";
+            return std::string("missing ") + k + " (must be a string)";
         }
     }
     if (!doc->contains("body")) {
-        return "缺 body";
+        return "missing body";
     }
     const char* optional_strings[] = {"reply_to", "in_reply_to"};
     for (const char* k : optional_strings) {
         if (doc->contains(k) && !(*doc)[k].is_string()) {
-            return std::string(k) + " 要是字串";
+            return std::string(k) + " must be a string";
         }
     }
     return "";
@@ -109,7 +109,7 @@ std::optional<std::string> reply(const Mailbox& mb, const std::string& name, con
         opts.in_reply_to = name;
         return send(to, body, opts);
     } catch (const Error& e) {
-        throw Error{e.code, "回信寄不出去（" + name + " 的 reply_to），原信留在 cur/：" + e.msg};
+        throw Error{e.code, "cannot send the reply (reply_to of " + name + "); original left in cur/: " + e.msg};
     }
 }
 
@@ -120,13 +120,13 @@ void done(const Mailbox& mb, const std::string& name, bool keep) {
     if (keep && c.ok) {
         make_dir(mb.archive());
         if (!move(from, aos::join(mb.archive(), name))) {
-            throw Error{code::WriteFailed, "搬不進 archive/（同名的已經在、或信不見了）：" + from};
+            throw Error{code::WriteFailed, "cannot move into archive/ (same name already there, or letter gone): " + from};
         }
         return;
     }
     std::string t = aos::join(mb.tmp(), name);
     if (!move(from, t)) {
-        throw Error{code::LetterMissing, "信不在 cur/：" + from};
+        throw Error{code::LetterMissing, "letter not in cur/: " + from};
     }
     drop(t);
 }
