@@ -6,7 +6,7 @@
 //                  cur/ 裡的殘骸（上次認領了、還沒收完就死掉）記進 redo_——片段、重做無害，所以照建議重做
 //   take_letters   每圈（stop／pause 那圈不呼叫）：redo_（照處理順序）＋take_all 認領到的（照處理順序），逐封 see 驗信封、
 //                  apply_letter 驗 body 並套進底；壞信的原因記進 mailbox_warning_（最後一封壞信；沒有壞信的圈維持原值）
-//   apply_letter   body 要是物件，只認 procs_added（物件，寫法同 procs_ctl）、procs_removed、procs_stopped、procs_started（名字的陣列），其他 key 忽略；
+//   apply_letter   body 要是物件，只認 procs_added（物件，寫法同 procs_ctl）、procs_removed、procs_stopped、procs_started、procs_slept、procs_woken（11-05，名字的陣列），其他 key 忽略；
 //                  檢查照 procs_ctl（check_lists；相對 $ref 從 daemon 的 cwd 算——信收完就刪了，不能從信的資料夾算）、procs_stopped／procs_started 有 exec 型＝壞信（check_once）。
 //                  好的才套：procs_added（已在名單上的換設定、不在的接在尾巴）→procs_removed（名單與 stopped 集合都拿掉）→procs_stopped 加進 stopped 集合→
 //                  procs_started 從 stopped 集合拿掉（同名兩邊都寫＝起）；後面的信蓋前面的
@@ -70,7 +70,7 @@ std::optional<std::string> Daemon::apply_letter(const Json& body) {
     }
     Json doc = Json::object();
     // 只認這四個；沒有整份的 procs（信是增減，整份宣告留給 procs_ctl）
-    for (const char* k : {"procs_added", "procs_removed", "procs_stopped", "procs_started"}) {
+    for (const char* k : {"procs_added", "procs_removed", "procs_stopped", "procs_started", "procs_slept", "procs_woken"}) {
         if (body.contains(k)) {
             doc[k] = body[k];
         }
@@ -89,6 +89,7 @@ std::optional<std::string> Daemon::apply_letter(const Json& body) {
     // 先在副本上套，procs_stopped／procs_started 有 exec 型＝壞信、底不動
     Json w = want_;
     Names s = stopped_;
+    Names z = slept_;   // 11-05 sleep／wake：procs_slept 加進 slept 集合、procs_woken 拿掉（同名兩邊都寫＝醒）
     if (doc.contains("procs_added")) {
         for (auto& [n, spec] : doc["procs_added"].items()) {
             w[n] = spec;   // 已在名單上的換設定（已在跑的不看設定變了沒，同 N-54；stopped 的照停）、不在的接在尾巴
@@ -98,6 +99,7 @@ std::optional<std::string> Daemon::apply_letter(const Json& body) {
         for (const Json& n : doc["procs_removed"]) {
             w.erase(n.get<std::string>());
             s.erase(n.get<std::string>());
+            z.erase(n.get<std::string>());
         }
     }
     if (doc.contains("procs_stopped")) {
@@ -110,12 +112,23 @@ std::optional<std::string> Daemon::apply_letter(const Json& body) {
             s.erase(n.get<std::string>());
         }
     }
+    if (doc.contains("procs_slept")) {
+        for (const Json& n : doc["procs_slept"]) {
+            z.insert(n.get<std::string>());
+        }
+    }
+    if (doc.contains("procs_woken")) {
+        for (const Json& n : doc["procs_woken"]) {
+            z.erase(n.get<std::string>());
+        }
+    }
     bad = check_once(doc, w);
     if (bad) {
         return bad;
     }
     want_ = std::move(w);
     stopped_ = std::move(s);
+    slept_ = std::move(z);
     return std::nullopt;
 }
 

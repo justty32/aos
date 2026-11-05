@@ -36,6 +36,9 @@
 // 每列 {pid, started_at_ticks, phase（running／stopping／stopped／sleeping）, code, signal, stack, exec, def, ws?}（exec 11-04 晚：起它時的目標，見 exec_of；def 11-04：見 def_of）；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
 // ctl 的 stop（這圈收工）或 pause（整圈暫停）時不調表：不收多的、不起少的、起停也等解除，但照讀兩份 ctl、照寫兩扇 state、照收已在收的、照記自己結束的。
 // log（--enable-logs 才印到 stdout）：行程起來一行、結束一行 {"at", "name", "phase"（running／done／stopped／sleeping）, "pid", "code", "signal", "ws"?}。
+// 11-05（portable-flow，見 docs/03「11-05 搬家相關」）：信／procs_ctl 多認 procs_slept、procs_woken（sleep＝現在就睡、列 sleeping，這一班 wake 才醒；daemon 重開 slept 集合空＝自己醒）；
+//   表上 stack／ws／exec／def 存相對 daemon 的 stack（adopt 用 unrel 拼回）；wake／start 起來 REVIVE_MS 內就退＝列留 stopped＋reason；
+//   起來先 check_running：同一個 stack 已有 daemon 活著＝DaemonRunning。
 #pragma once
 
 #include "child/child.hpp"
@@ -118,9 +121,12 @@ private:
     void clean_parts(const std::set<std::string>& now);   // 寫好之後：清掉這次與上一次都沒用到的分檔
     // 期望表＝（ctl 的 procs，沒寫＝底 want_）＋procs_added－procs_removed（ctl＝一份驗過的 procs_ctl）；回的參照指向底、ctl 或 merged
     const Json& ctl_want(const Json& ctl, Json& merged) const;
-    Names ctl_stopped(const Json& ctl) const;   // stopped 集合＝底 stopped_＋ctl 的 procs_stopped－procs_started
+    Names ctl_stopped(const Json& ctl) const;
+    Names ctl_slept(const Json& ctl) const;     // 11-05 slept 集合＝底 slept_＋ctl 的 procs_slept－procs_woken
+    Json unrel(const Json& v) const;            // 11-05：表上相對 daemon stack 的路徑拼回絕對（絕對的＝舊表，照用；# 片段照留）
+    void check_running() const;                 // 11-05：這個 stack 已有 daemon 在跑＝丟 DaemonRunning   // stopped 集合＝底 stopped_＋ctl 的 procs_stopped－procs_started
     bool from_ctl(const std::string& name) const;   // 名字是 procs_ctl 疊上去的（它的 procs 或 procs_added 裡有；沒開 procs_ctl＝false）
-    void reconcile(const Json& want, const Names& stopped);   // 對表：收多的、停要停的、看誰結束、起少的與要 start 的
+    void reconcile(const Json& want, const Names& stopped, const Names& slept);   // 對表：收多的、停要停的、看誰結束、起少的與要 start 的
 
     // 信箱（mailbox.cpp）
     using Letters = std::vector<std::pair<std::string, bool>>;   // 這圈的信（照處理順序）：{信件名稱, 好信}
@@ -145,6 +151,7 @@ private:
     aos::post::Mailbox mbox_;
     std::vector<std::string> redo_;                      // 起來時 cur/ 裡的（上次做到一半死掉），第一個認領的圈排在 new/ 前面重做
     Json want_ = Json::object();                         // 底的期望表（記憶體裡；重起時從 daemon.json＋adopt 重建；信改它）
+    Names slept_;                                        // 底的 slept 集合（11-05 sleep 指令：要它睡著；daemon 重開＝空＝睡著的列自己醒）
     Names stopped_;                                      // 底的 stopped 集合（11-03；起來時＝adopt 接回的 stopped 列；信改它）
     long long stop_seq_ = 0;                             // 寫給子 loop 的 stop 指令的 seq（自己數、遞增，也比它 ctl 裡現有的大）
     Json mailbox_warning_;                               // null 或字串（procs_state 的 mailbox_warning：最後一封壞信）

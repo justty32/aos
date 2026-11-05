@@ -84,7 +84,7 @@ std::optional<std::string> Daemon::check_lists(Json& doc, const aos::Resolved& w
             return e.msg;
         }
     }
-    for (const char* k : {"procs_removed", "procs_stopped", "procs_started"}) {
+    for (const char* k : {"procs_removed", "procs_stopped", "procs_started", "procs_slept", "procs_woken"}) {
         if (!doc.contains(k)) {
             continue;
         }
@@ -102,7 +102,7 @@ std::optional<std::string> Daemon::check_lists(Json& doc, const aos::Resolved& w
 }
 
 std::optional<std::string> Daemon::check_once(const Json& doc, const Json& want) const {
-    for (const char* k : {"procs_stopped", "procs_started"}) {
+    for (const char* k : {"procs_stopped", "procs_started", "procs_slept", "procs_woken"}) {
         if (!doc.contains(k)) {
             continue;
         }
@@ -114,7 +114,7 @@ std::optional<std::string> Daemon::check_once(const Json& doc, const Json& want)
             auto at = index_.find(n);   // 表上有＝看那列（跑著的是哪種）；不在表上＝看寫法
             bool once = at != index_.end() ? at->second->second.once : is_once(want[n]);
             if (once) {
-                return "exec 型 " + aos::dumps(Json(n)) + " 沒有 stop／start（exec 型只有跑和拔）";
+                return "exec 型 " + aos::dumps(Json(n)) + " 沒有 stop／start／sleep／wake（exec 型只有跑和拔）";
             }
         }
     }
@@ -203,7 +203,7 @@ void Daemon::write_more(const Json& me) {
     auto& vec = static_cast<std::vector<std::pair<const std::string, Json>>&>(rows.get_ref<Json::object_t&>());
     vec.reserve(table_.size());
     for (auto& [n, c] : table_) {
-        vec.emplace_back(n, row(c));
+        vec.emplace_back(n, row(c, dstack_));
     }
     Json doc = Json::object();
     doc["ctl_seq"] = pctl_good_.contains("seq") ? pctl_good_["seq"] : Json();

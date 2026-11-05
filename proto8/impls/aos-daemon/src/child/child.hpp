@@ -54,6 +54,10 @@ struct Child {
     Json ws;                            // null 或起它時給的工作區（絕對路徑；子行程的 AOS_WS）——起的那一刻的值，名單後來改了 ws 也不變（已在跑的不重起，N-54）
     Json exec;                          // null 或起它時的目標（11-04 晚，aos-agent 方向題 1「daemon表多一欄記下來」）：Daemon 填（exec_of）；
                                         // adopt 接回的照舊表帶過來；名單後來改了也不變（同 ws）
+    Json reason;                        // null 或字串（11-05 portable-flow 衝突 3「留成stopped，並寫原因」）：wake／start 起來沒多久就退的，列留成 stopped、記原因
+    bool failed = false;                // 11-05：這一圈剛因 REVIVE_MS 內退了留成 stopped（reconcile 這圈不再起它）
+    bool revived = false;               // 這一支是 wake／start 從 stopped／sleeping 的列再起的（11-05）：REVIVE_MS 內退了＝留成 stopped＋reason
+    std::chrono::steady_clock::time_point revived_at;
     Json def;                           // null 或起它時給的定義資料夾（11-04，aos-agent，使用者「那就b。」）：Daemon 填（def_of）；接回、不變同 exec
 };
 
@@ -82,6 +86,15 @@ bool alive(Child& c);
 // procs_state 裡的一列：{"pid", "started_at_ticks", "phase", "code", "signal", "stack", "exec", "def"}，起它時給了工作區才多一欄 "ws"。
 // exec（11-04 晚）一律寫：起它時的目標（絕對）或 null。def（11-04）一律寫：起它時給的定義資料夾或 null。
 // held（stopped 的列）的 pid、started_at_ticks 是 null。
-Json row(const Child& c);
+// 11-05（portable-flow，使用者「可以用daemon作為相對路徑的一個基準點」）：stack、ws、exec、def 存成相對 dstack（daemon 的 stack）的路徑
+// （字串算、不解捷徑；exec 的 `#` 片段照留）；reason 一律寫（null 或字串）。
+Json row(const Child& c, const std::string& dstack);
+
+// 11-05：path 相對 base 的寫法（兩個都是絕對、已整理過；字串逐段比，不解捷徑；一樣＝"."）。path 不是絕對＝原樣回。
+std::string rel_to(const std::string& path, const std::string& base);
+// 11-05：`檔#/…` 只把 # 前面相對化（rel_to）；只有 `#/…` 的、相對的原樣回。
+std::string rel_spec(const std::string& spec, const std::string& base);
+// 11-05：寫進小格的目標＝{"$env": "AOS_DAEMON", "$path": 相對 dstack}（aos-loop／aos-exec 解指示詞時拼回；03 推薦 (b)）。
+Json daemon_ref(const std::string& abs, const std::string& dstack);
 
 }  // namespace aos::daemon

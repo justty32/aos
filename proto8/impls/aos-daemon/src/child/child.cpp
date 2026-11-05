@@ -35,6 +35,90 @@
 
 namespace aos::daemon {
 
+std::string rel_to(const std::string& path, const std::string& base) {
+    if (path.empty() || path[0] != '/' || base.empty() || base[0] != '/') {
+        return path;
+    }
+    auto parts = [](const std::string& s) {
+        std::vector<std::string> out;
+        size_t i = 0;
+        while (i < s.size()) {
+            size_t j = s.find('/', i);
+            if (j == std::string::npos) {
+                j = s.size();
+            }
+            if (j > i) {
+                out.push_back(s.substr(i, j - i));
+            }
+            i = j + 1;
+        }
+        return out;
+    };
+    std::vector<std::string> p = parts(path);
+    std::vector<std::string> b = parts(base);
+    size_t k = 0;
+    while (k < p.size() && k < b.size() && p[k] == b[k]) {
+        k += 1;
+    }
+    std::string out;
+    for (size_t i = k; i < b.size(); i++) {
+        out += out.empty() ? ".." : "/..";
+    }
+    for (size_t i = k; i < p.size(); i++) {
+        out += (out.empty() ? "" : "/") + p[i];
+    }
+    return out.empty() ? "." : out;
+}
+
+std::string rel_spec(const std::string& spec, const std::string& base) {
+    size_t hash = spec.find('#');
+    std::string file = spec.substr(0, hash);
+    if (file.empty() || file[0] != '/') {
+        return spec;
+    }
+    return rel_to(file, base) + (hash == std::string::npos ? "" : spec.substr(hash));
+}
+
+Json daemon_ref(const std::string& abs, const std::string& dstack) {
+    return Json::object({{"$env", "AOS_DAEMON"}, {"$path", rel_spec(abs, dstack)}});
+}
+
+// 內嵌單子寫進小格之前（11-05）：相對的 $ref 已在 read_procs 轉成絕對（abs_refs）；寫進小格時改成相對小格（$ref 本來就從它所在的檔算），
+// 整份 image 搬走還解得開。只動 $ref 的檔名，跟 abs_refs 對稱。
+static Json rel_refs(const Json& v, const std::string& cell) {
+    if (v.is_array()) {
+        Json out = Json::array();
+        for (const Json& x : v) {
+            out.push_back(rel_refs(x, cell));
+        }
+        return out;
+    }
+    if (!v.is_object()) {
+        return v;
+    }
+    Json out = v;
+    if (v.contains("$ref")) {
+        auto fix = [&](Json& s) {
+            if (s.is_string()) {
+                s = rel_spec(s.get<std::string>(), cell);
+            }
+        };
+        Json& ref = out["$ref"];
+        if (ref.is_array()) {
+            for (Json& s : ref) {
+                fix(s);
+            }
+        } else {
+            fix(ref);
+        }
+        return out;
+    }
+    for (auto& [k, x] : out.items()) {
+        x = rel_refs(x, cell);
+    }
+    return out;
+}
+
 // 子行程：自成 session、接好三個串流、設 AOS_STACK、cd 到 daemon 的 cwd，呼叫 aos-exec 的 run_cli(argv)。不回來。
 // argv：子 loop＝{"--", 小格/loop.json#/_entry}；exec 型子項＝{"--", 目標, 參數...}（10-30）。fork 之前就備好。
 // ws：空＝AOS_WS 不碰（繼承 daemon 的）；不空＝設成它（eca 10-30）。
@@ -123,13 +207,14 @@ static Child launch(const std::string& name, const std::string& cell, const std:
 // 內嵌單子搬進小格之前（10-24；11-02 晚 exec 型子項也用）：跑它時相對路徑的基準是小格（AOS_CD），所以 cwd 照 daemon 的 cwd 定死——
 // 沒寫＝daemon 的 cwd、相對的字串＝接在 daemon 的 cwd 後面（argv[0]、stdin／stdout／stderr 都從 cwd 算，跟著對）；
 // cwd 是指示詞就不動（解出來若是相對的，從小格算）。裡面相對的 $ref 已在 read_procs 轉成絕對。
-static void pin_cwd(Json& inst, const std::string& cwd) {
+static void pin_cwd(Json& inst, const std::string& cwd, const std::string& cell, const std::string& dstack) {
     Json c = inst.value("cwd", Json());
     if (c.is_null()) {
-        inst["cwd"] = cwd;
+        inst["cwd"] = daemon_ref(cwd, dstack);   // 11-05：存相對 daemon 的 stack（指示詞），搬家後由 aos-exec 從新的 AOS_DAEMON 拼回
     } else if (c.is_string()) {
-        inst["cwd"] = aos::join(cwd, c.get<std::string>());
+        inst["cwd"] = daemon_ref(aos::abspath(aos::join(cwd, c.get<std::string>())), dstack);
     }
+    inst = rel_refs(inst, cell);
 }
 
 Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
@@ -145,12 +230,17 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
     cfg.erase("stack");
     cfg.erase("def");   // def 同（11-04）：只記進表
     Json ex = cfg.value("exec", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗；單子見下）
+    // 11-05（portable-flow 03 推薦 (b)）：轉絕對之後寫成 {"$env": "AOS_DAEMON", "$path": 相對 daemon 的 stack}，aos-loop 解指示詞拼回（搬家不用改檔）
+    auto keep = [&](const std::string& t) {
+        return t.empty() || t[0] == '#' ? Json(t) : daemon_ref(aos::abspath(aos::join(cwd, t.substr(0, t.find('#')))) +
+                                                                   (t.find('#') == std::string::npos ? "" : t.substr(t.find('#'))), dstack);
+    };
     if (ex.is_string()) {
-        cfg["exec"] = aos::join(cwd, ex.get<std::string>());
+        cfg["exec"] = keep(ex.get<std::string>());
     } else if (ex.is_array() && !ex.empty() && ex[0].is_string()) {
-        cfg["exec"][0] = aos::join(cwd, ex[0].get<std::string>());
+        cfg["exec"][0] = keep(ex[0].get<std::string>());
     } else if (ex.is_object()) {
-        pin_cwd(cfg["exec"], cwd);   // 內嵌單子（10-24）
+        pin_cwd(cfg["exec"], cwd, cell, dstack);   // 內嵌單子（10-24）
     }
     // ctl／state 不補（11-04，four-elements 08 步 6「不補名」）：aos-loop 自己沒寫＝ctl.json／state.json、null＝不開
     Json exec_entry = Json::array();
@@ -177,7 +267,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
         // 子行程 `aos-exec -- 小格/exec.json#/exec` 跑它一次：AOS_CF＝小格的 exec.json、AOS_CO＝/exec（同 loop 型的小格 loop.json#/exec）。
         // 單子沒寫 stdin／stdout＝照舊接 daemon 給的 /dev/null、stderr 是小格的 stderr.txt；寫了就照它
         Json inst = target;
-        pin_cwd(inst, cwd);
+        pin_cwd(inst, cwd, cell, dstack);
         make_cell(name, cell, deep);
         try {
             aos::loop::write_window(aos::join(cell, names.exec), Json::object({{"exec", inst}}));
@@ -225,7 +315,7 @@ bool alive(Child& c) {
     return false;
 }
 
-Json row(const Child& c) {
+Json row(const Child& c, const std::string& dstack) {
     Json r = Json::object();
     r["pid"] = c.held ? Json() : Json((long long)c.pid);   // stopped／sleeping 的列：行程不在（11-03）
     r["started_at_ticks"] = nullptr;
@@ -235,12 +325,14 @@ Json row(const Child& c) {
     r["phase"] = c.phase;
     r["code"] = c.code;
     r["signal"] = c.signal;
-    r["stack"] = c.stack;   // 11-03 procs § 2b：一律寫（adopt、start、aos-daemon-ctl where 靠它）
+    auto rel = [&](const Json& v) { return v.is_string() ? Json(rel_spec(v.get<std::string>(), dstack)) : v; };
+    r["stack"] = rel_spec(c.stack, dstack);   // 11-05：相對 daemon 的 stack（portable-flow）   // 11-03 procs § 2b：一律寫（adopt、start、aos-daemon-ctl where 靠它）
     if (!c.ws.is_null()) {
-        r["ws"] = c.ws;   // eca 10-30：有給才寫
+        r["ws"] = rel(c.ws);   // eca 10-30：有給才寫
     }
-    r["exec"] = c.exec;   // 11-04 晚（aos-agent 方向題 1）：一律寫，目標（絕對）或 null
-    r["def"] = c.def;     // 11-04（使用者「那就b。」）：一律寫，定義資料夾（絕對）或 null
+    r["exec"] = rel(c.exec);   // 11-04 晚（aos-agent 方向題 1）：一律寫，目標（絕對）或 null
+    r["def"] = rel(c.def);     // 11-04（使用者「那就b。」）：一律寫，定義資料夾或 null（11-05 起相對 daemon 的 stack）
+    r["reason"] = c.reason;    // 11-05（portable-flow 衝突 3）：null 或 daemon 把它留成 stopped 的原因
     return r;
 }
 

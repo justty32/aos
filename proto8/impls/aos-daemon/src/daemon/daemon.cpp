@@ -29,6 +29,7 @@ namespace aos::daemon {
 
 using Clock = std::chrono::steady_clock;
 
+static const int REVIVE_MS = 3000;  // 11-05（衝突 3）：wake／start 起來這麼久內就退＝不下表、留成 stopped＋原因
 static const int GRACE_MS = 10000;   // 收子項：SIGTERM 後等幾毫秒才 SIGKILL（P-36 daemon 的 grace 慣例 10000）
 
 static aos::loop::Defaults daemon_defaults() {
@@ -173,7 +174,11 @@ Json exec_of(const Json& spec, const std::string& cwd) {
         return Json();   // 內嵌單子、null（只留名）、設定沒寫 exec
     }
     std::string v = t.get<std::string>();
-    return v.empty() || v[0] == '#' ? Json(v) : Json(aos::join(cwd, v));
+    if (v.empty() || v[0] == '#') {
+        return Json(v);
+    }
+    size_t hash = v.find('#');   // 11-05：整理掉 ..（表上存相對 daemon 的 stack，`daemon/../kernel` 這種要先收掉）
+    return Json(aos::abspath(aos::join(cwd, v.substr(0, hash))) + (hash == std::string::npos ? "" : v.substr(hash)));
 }
 
 Json def_of(const Json& spec) {
@@ -348,6 +353,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     if (dstack_ != "/") {
         dstack_ += "/";
     }
+    check_running();   // 11-05（portable-flow 步 5「沒有才起、有就沿用」）
     if (a.get<bool>()) {
         adopt();
     }
@@ -355,6 +361,44 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     if (!mbox_path_.empty()) {
         open_mailbox();   // 開了信箱：adopt 接回、daemon.json 沒有的也放進底（只留名）
     }
+}
+
+void Daemon::check_running() const {
+    if (state_path_.empty()) {
+        return;
+    }
+    std::optional<Json> st = aos::read_json(state_path_);
+    if (!st || !st->is_object()) {
+        return;
+    }
+    Json pid = st->value("pid", Json());
+    Json ticks = st->value("started_at_ticks", Json());
+    Json boot = st->value("boot_id", Json());
+    if (!pid.is_number_integer() || !ticks.is_number_integer() || (pid_t)pid.get<long long>() == getpid()) {
+        return;
+    }
+    std::optional<std::string> now_boot = aos::boot_id();
+    if (boot.is_string() && now_boot && *now_boot != boot.get<std::string>()) {
+        return;   // 別次開機（別台搬來的、重開機過）＝沒在跑
+    }
+    std::optional<long long> now = aos::proc_started_at_ticks((pid_t)pid.get<long long>());
+    if (now && *now == ticks.get<long long>()) {
+        throw Error{code::DaemonRunning, "這個 stack（" + stack_ + "）已有 daemon 在跑（pid " + std::to_string(pid.get<long long>()) +
+                                             "）；要沿用就直接 aos-daemon-ctl add／aos-agent add"};
+    }
+}
+
+Json Daemon::unrel(const Json& v) const {
+    if (!v.is_string() || v.get<std::string>().empty()) {
+        return v;
+    }
+    std::string s = v.get<std::string>();
+    if (s[0] == '/' || s[0] == '#') {
+        return v;   // 舊表（絕對）照用
+    }
+    size_t hash = s.find('#');
+    std::string file = aos::abspath(aos::join(dstack_, s.substr(0, hash)));
+    return Json(file + (hash == std::string::npos ? "" : s.substr(hash)));
 }
 
 void Daemon::adopt() {
@@ -384,15 +428,19 @@ void Daemon::adopt() {
         Json st = r.value("stack", Json());
         Child c;
         c.own = false;
-        c.stack = st.is_string() && !st.get<std::string>().empty() ? st.get<std::string>() : cell_of(name, Json());
+        // 11-05（portable-flow）：表上的路徑相對 daemon 的 stack（dstack_）拼回；絕對的（舊表）照用
+        c.stack = st.is_string() && !st.get<std::string>().empty() ? unrel(st).get<std::string>() : cell_of(name, Json());
         if (r.value("ws", Json()).is_string()) {
-            c.ws = r["ws"];
+            c.ws = unrel(r["ws"]);
         }
         if (r.value("exec", Json()).is_string()) {
-            c.exec = r["exec"];   // 11-04 晚：照舊表帶過來（信箱模式接回的列沒有設定，exec 欄只能從這裡來）
+            c.exec = unrel(r["exec"]);   // 11-04 晚：照舊表帶過來（信箱模式接回的列沒有設定，exec 欄只能從這裡來）
         }
         if (r.value("def", Json()).is_string()) {
-            c.def = r["def"];   // 11-04（使用者「那就b。」）：同 exec 欄
+            c.def = unrel(r["def"]);   // 11-04（使用者「那就b。」）：同 exec 欄
+        }
+        if (r.value("reason", Json()).is_string()) {
+            c.reason = r["reason"];   // 11-05：stopped 的原因照帶
         }
         if (phase == "stopped" || phase == "sleeping") {   // stopped 的列（11-03 procs § 2c 第 7 條）：接成 stopped、不起、不判活；名字進底的 stopped 集合
             c.phase = phase.get<std::string>();            // sleeping 的列（11-03 sleep／wake）：同樣接成列、不判活，但不進 stopped 集合＝reconcile 第一圈就 wake
@@ -457,7 +505,8 @@ Daemon::Table::iterator Daemon::drop(Table::iterator it) {
         }
         ended_.insert(n);
     }
-    stopped_.erase(n);   // 表上沒有了＝對 daemon 不存在：底的 stopped 集合也不留它
+    stopped_.erase(n);   // 表上沒有了＝對 daemon 不存在：底的 stopped／slept 集合也不留它
+    slept_.erase(n);
     index_.erase(n);
     return table_.erase(it);   // 小格（stack）留著
 }
@@ -548,6 +597,32 @@ bool Daemon::look(const std::string& name, Child& c, bool stop) {
             hold(name, c);
             return false;
         }
+        if (c.revived && Clock::now() - c.revived_at < std::chrono::milliseconds(REVIVE_MS)) {
+            // 11-05（portable-flow 衝突 3，使用者「留成stopped，並寫原因」）：wake／start 起來沒多久就退（定義沒一起搬、exec 的檔不在…）：
+            // 不下表，留成 stopped（要 start 才再起）、記原因（結束碼＋小格 stderr 最後一行）
+            std::string why = "wake／start 後 " + std::to_string(REVIVE_MS / 1000) + " 秒內就退了（code " +
+                              (c.code.is_null() ? std::string("?") : aos::dumps(c.code)) + "）";
+            int err = 0;
+            std::optional<std::string> text = aos::read_file(aos::join(c.stack, names_.err), err);
+            if (text) {
+                std::string t = *text;
+                while (!t.empty() && (t.back() == '\n' || t.back() == ' ')) {
+                    t.pop_back();
+                }
+                std::string last = t.substr(t.rfind('\n') == std::string::npos ? 0 : t.rfind('\n') + 1);
+                if (last.size() > 300) {
+                    last = last.substr(0, 300) + "…";
+                }
+                if (!last.empty()) {
+                    why += "：" + last;
+                }
+            }
+            c.reason = why;
+            hold(name, c);
+            c.failed = true;   // 這一圈的起少的不再起它（stopped 參數是這圈開頭算的）
+            stopped_.insert(name);
+            return false;
+        }
         c.phase = "done";   // 自己結束（跑滿、退 10、訊號、別人往它的 ctl 寫 stop……）：照 11-02 從表上拿掉
         return true;
     }
@@ -599,7 +674,7 @@ void Daemon::tend() {
             it = ended_.erase(it);
         }
     }
-    reconcile(want, ctl_stopped(pctl_good_));
+    reconcile(want, ctl_stopped(pctl_good_), ctl_slept(pctl_good_));
     if (!mbox_path_.empty()) {
         done_letters(got);
     }
@@ -634,6 +709,21 @@ Names Daemon::ctl_stopped(const Json& ctl) const {
     return s;
 }
 
+Names Daemon::ctl_slept(const Json& ctl) const {
+    Names s = slept_;   // 11-05：同 ctl_stopped（同名兩邊都寫＝醒）
+    if (ctl.contains("procs_slept")) {
+        for (const Json& n : ctl["procs_slept"]) {
+            s.insert(n.get<std::string>());
+        }
+    }
+    if (ctl.contains("procs_woken")) {
+        for (const Json& n : ctl["procs_woken"]) {
+            s.erase(n.get<std::string>());
+        }
+    }
+    return s;
+}
+
 std::string Daemon::cell_of(const std::string& name, const Json& spec) const {
     if (spec.is_object() && spec.contains("stack")) {
         return spec["stack"].get<std::string>();   // read_procs 已轉絕對（procs § 2b）
@@ -650,7 +740,7 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
     return c;
 }
 
-void Daemon::reconcile(const Json& want, const Names& stopped) {
+void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slept) {
     std::unordered_map<std::string, const Json*> wanted;   // want 是 ordered_json，contains 是逐個比對；先收成雜湊表
     wanted.reserve(want.size());
     for (auto& [n, spec] : want.items()) {
@@ -660,6 +750,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped) {
         auto& [n, c] = *it;
         bool in = wanted.count(n) > 0;
         bool stop = in && stopped.count(n) > 0;
+        bool nap = in && !stop && slept.count(n) > 0;   // 11-05 sleep：現在就睡（SIGTERM、10 秒 KILL、列 sleeping），wake 或 daemon 重開才醒
         if (look(n, c, stop)) {
             it = drop(it);   // 結束了：印 log、拿掉（小格留著；11-02 子項結束後不留名單）
             continue;
@@ -677,6 +768,9 @@ void Daemon::reconcile(const Json& want, const Names& stopped) {
                 term(c);         // 表上多出來的：送 SIGTERM 就往下走，不等（10-23 壓測後改）
             } else if (stop) {
                 halt(n, c);      // daemon 的 stop：寫子 loop 的 ctl，等它跑完這次自己退
+            } else if (nap && !c.once) {
+                c.nap = true;    // 11-05 sleep：同收工那套，退了列留成 sleeping
+                term(c);
             }
         } else if (c.phase == "stopping" && c.soft && !c.termed && !in) {
             term(c);             // 等它自己退的途中被 rm：改送 SIGTERM
@@ -690,8 +784,14 @@ void Daemon::reconcile(const Json& want, const Names& stopped) {
         auto at = index_.find(n);
         if (at != index_.end()) {
             Child& c = at->second->second;
-            if (c.held && stopped.count(n) == 0) {   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（基準線）
+            if (c.failed) {
+                c.failed = false;   // 11-05：剛留成 stopped＋原因的，這圈不起；下一圈起 stopped 集合已有它
+                continue;
+            }
+            if (c.held && stopped.count(n) == 0 && !(c.phase == "sleeping" && slept.count(n) > 0)) {   // 11-05：sleep 叫睡的不自己醒   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（基準線）
                 Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def);   // 信箱接回只留名的（spec null）：ws 照列上的（11-03 晚：不然 wake 後表上 ws 變空）
+                nc.revived = true;   // 11-05：REVIVE_MS 內退了＝留成 stopped＋原因（衝突 3）
+                nc.revived_at = Clock::now();
                 c = nc;
                 log_child(n, c);
                 flush_table();
@@ -701,9 +801,9 @@ void Daemon::reconcile(const Json& want, const Names& stopped) {
         if (ended_.count(n) > 0 || (spec.is_null() && stopped.count(n) == 0)) {
             continue;
         }
-        if (stopped.count(n) > 0) {   // add＋stop 同時（procs § 2c 第 2 條）：直接一列 stopped、不起、stack 不建
+        if (stopped.count(n) > 0 || (slept.count(n) > 0 && !is_once(spec))) {   // add＋stop 同時（procs § 2c 第 2 條）：直接一列 stopped、不起、stack 不建
             Child c;
-            c.phase = "stopped";
+            c.phase = stopped.count(n) > 0 ? "stopped" : "sleeping";   // 11-05：add＋sleep 同時＝一列 sleeping、不起（wake 才起）
             c.held = true;
             c.own = false;
             c.stack = cell_of(n, spec);

@@ -32,19 +32,19 @@
 | 檔 | 負責什麼 |
 |---|---|
 | `src/main.cpp` | 命令列 `aos-daemon [旗標] daemon.json [-- 參數...]` |
-| `src/daemon/daemon.cpp`、`src/daemon/daemon.hpp` | 名單 `procs`：`read_procs`、`is_once`（看寫法判 exec 型）、`adopt`（接回）、`tend`、`reconcile`、`halt`／`term`／`hold`／`look`／`start`、`cell_of`、`exec_of`（列上的 `exec` 欄，11-04 晚）、`def_of`（列上的 `def` 欄＝定義資料夾，11-04）、`finish`（收工；還在跑的 loop 型留成 `sleeping`） |
-| `src/daemon/windows.cpp` | `procs_ctl.json` 的讀與驗（`read_procs_ctl`、`check_lists`、`check_once`）、`procs_state.json` 的寫（`write_more`：11-04 起頂層回報 `procs_loop`／`procs_exec`／`procs_stderr`／`procs_ctl_mailbox`、超過 100 列切 `write_parts`、`clean_parts`） |
-| `src/daemon/mailbox.cpp` | 信箱 `procs_ctl_mailbox`：`open_mailbox`（`cur/` 殘骸照 aos-post 的 `sort_letters` 排）、`take_letters`（`take_all`、`see`）、`apply_letter`（`procs_added`／`removed`／`stopped`／`started`）、`done_letters`（`reply`、`done`） |
-| `src/child/child.cpp`、`src/child/child.hpp` | 子項：建小格、寫小格的 `loop.json`（三個檔名 `CellNames`＝daemon.json 的 `procs_loop`／`procs_exec`／`procs_stderr`，11-04）、`spawn`／`spawn_exec`、`launch`（setsid、`AOS_STACK`、`AOS_WS`、`AOS_DAEMON`）、`Child` 與狀態列（`row`：…`stack`、`exec`、`def`、`ws`?） |
+| `src/daemon/daemon.cpp`、`src/daemon/daemon.hpp` | 名單 `procs`：`read_procs`、`is_once`（看寫法判 exec 型）、`adopt`（接回）、`tend`、`reconcile`、`halt`／`term`／`hold`／`look`／`start`、`check_running`（11-05 `DaemonRunning`）、`unrel`（11-05 表上相對 daemon stack 的路徑拼回）、`ctl_slept`（11-05 sleep／wake）、`cell_of`、`exec_of`（列上的 `exec` 欄，11-04 晚）、`def_of`（列上的 `def` 欄＝定義資料夾，11-04）、`finish`（收工；還在跑的 loop 型留成 `sleeping`） |
+| `src/daemon/windows.cpp` | `procs_ctl.json` 的讀與驗（`read_procs_ctl`、`check_lists`、`check_once`；11-05 多認 `procs_slept`／`procs_woken`）、`procs_state.json` 的寫（`write_more`：11-04 起頂層回報 `procs_loop`／`procs_exec`／`procs_stderr`／`procs_ctl_mailbox`、超過 100 列切 `write_parts`、`clean_parts`） |
+| `src/daemon/mailbox.cpp` | 信箱 `procs_ctl_mailbox`：`open_mailbox`（`cur/` 殘骸照 aos-post 的 `sort_letters` 排）、`take_letters`（`take_all`、`see`）、`apply_letter`（`procs_added`／`removed`／`stopped`／`started`／11-05 `slept`／`woken`）、`done_letters`（`reply`、`done`） |
+| `src/child/child.cpp`、`src/child/child.hpp` | 子項：建小格、寫小格的 `loop.json`（三個檔名 `CellNames`＝daemon.json 的 `procs_loop`／`procs_exec`／`procs_stderr`，11-04）、`spawn`／`spawn_exec`、`launch`（setsid、`AOS_STACK`、`AOS_WS`、`AOS_DAEMON`）、`Child` 與狀態列（`row`：…`stack`、`exec`、`def`、`ws`?、11-05 `reason`；路徑存相對 daemon stack）、`rel_to`／`rel_spec`／`daemon_ref`／`rel_refs`（11-05 相對化；小格 loop.json 的 exec 寫成 `$env AOS_DAEMON` 指示詞） |
 | `src/common/common.hpp` | 內部共用標頭 |
 
 ## `impls/aos-post/`（投遞：信箱，IPC 的語法糖）
 
 | 檔 | 負責什麼 |
 |---|---|
-| `include/aos/post.hpp` | 公開介面：`Mailbox`（`tmp`／`fresh`／`cur`／`archive`）、`SendOpts`、`Seen`、`init`／`open`／`send`／`take`／`take_all`／`first_in_cur`／`see`／`reply`／`done`／`regret`、`check_name`／`is_ordered`／`sort_letters`（處理順序：有序在前）；aos-daemon、aos-llm-kernel、aos-llm 連它 |
+| `include/aos/post.hpp` | 公開介面：`Mailbox`（`tmp`／`fresh`／`cur`／`archive`）、`SendOpts`、`Seen`、`init`／`open`／`send`／`take`／`take_all`／`first_in_cur`／`see`／`reply`／`done`／`regret`、`reply_to_rel`／`reply_to_abs`（11-05）、`check_name`／`is_ordered`／`sort_letters`（處理順序：有序在前）；aos-daemon、aos-llm-kernel、aos-llm 連它 |
 | `src/main.cpp` | 命令列 `aos-post init\|send\|take\|take-all\|see\|done\|regret [旗標] 信箱 [信件名稱]`；沒東西退 10 |
-| `src/mailbox/mailbox.cpp` | 信箱路徑、`init`、`open`；信件名稱規則 `check_name`、`is_ordered`、`sort_letters`；common 小工具的實作 |
+| `src/mailbox/mailbox.cpp` | 信箱路徑、`init`、`open`；信件名稱規則 `check_name`、`is_ordered`、`sort_letters`；`reply_to_rel`／`reply_to_abs`（信封的 `reply_to` 存相對信箱根、讀時拼回，11-05）；common 小工具的實作 |
 | `src/send/send.cpp` | `send`（入口檢查：`tmp/`、`new/` 可寫、`reply_to`、自己給的名字；`tmp/` 寫好 rename 進 `new/`；sender 用 aos-util 的 `identity`）、`--ordered`（經 aos-lock 拿 `order.lock/` 編序號） |
 | `src/take/take.cpp` | `take`／`take_all`（`cur/` 沒有就建）、`first_in_cur`、`see`、`reply`、`done`（`--keep` 進 `archive/`）、`regret` |
 | `src/common/common.hpp` | 內部標頭：`is_dir`、`need_dir`、`make_dir`、`names_in`、`drop`、`move` |
