@@ -15,6 +15,7 @@
 // 11-04 晚改名，舊名不認，使用者要「直接簡化成AOS_DAEMON」），
 // 兄弟（控制器與 bob）靠它找到共同的 stack；只設這一個（定義資料夾、ws 那兩名不設）。
 #include "child/child.hpp"
+#include "child/limits.hpp"
 
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
@@ -124,8 +125,10 @@ static Json rel_refs(const Json& v, const std::string& cell) {
 // argv：子 loop＝{"--", 小格/loop.json#/_entry}；exec 型子項＝{"--", 目標, 參數...}（10-30）。fork 之前就備好。
 // ws：空＝AOS_WS 不碰（繼承 daemon 的）；不空＝設成它（eca 10-30）。
 // dstack：daemon 的 stack（絕對、結尾 /），一律設成 AOS_DAEMON（11-02，resident-bob 衝突 2：兄弟要共用位置；只設這一個；11-04 晚改名）。
+// lim：份額（fork 之前 prep_limits 備好）；接好 stderr 之後、run_cli 之前照做（11-05 feat-proto 件 5，失敗＝stderr.txt 一行 LimitBad、退 1）。
 [[noreturn]] static void run_child(const std::string& cell, const std::string& cwd, int err_fd,
-                                   const std::vector<std::string>& argv, const std::string& ws, const std::string& dstack) {
+                                   const std::vector<std::string>& argv, const std::string& ws, const std::string& dstack,
+                                   const Limits& lim) {
     setsid();
     int null_fd = open("/dev/null", O_RDWR);
     if (null_fd >= 0) {
@@ -139,6 +142,7 @@ static Json rel_refs(const Json& v, const std::string& cell) {
     if (err_fd > 2) {
         close(err_fd);
     }
+    apply_limits(lim);   // 等同 s6-softlimit／s6-setuidgid（daemon 自己做、不 exec s6）；proc 自己不知道（「偷偷」，C-52）
     sigset_t set;
     sigemptyset(&set);
     sigaddset(&set, SIGINT);
@@ -179,8 +183,10 @@ static void make_cell(const std::string& name, const std::string& cell, bool dee
 
 // 小格建好之後：開小格的 stderr.txt（附加）、fork、子行程 run_child(argv, ws, dstack)。spawn 與 spawn_exec 共用。ws＝null 或絕對路徑（記進 Child）。
 static Child launch(const std::string& name, const std::string& cell, const std::string& cwd,
-                    const std::vector<std::string>& argv, const Json& ws, const std::string& dstack, const std::string& err_name) {
+                    const std::vector<std::string>& argv, const Json& ws, const std::string& dstack, const std::string& err_name,
+                    const Json& limits) {
     std::string ws_s = ws.is_string() ? ws.get<std::string>() : std::string();   // fork 之前備好
+    Limits lim = prep_limits(limits);
     std::string err_path = aos::join(cell, err_name);
     int err_fd = open(err_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
     if (err_fd < 0) {
@@ -196,7 +202,7 @@ static Child launch(const std::string& name, const std::string& cell, const std:
         throw Error{code::LaunchFailed, "cannot start child " + name + ": fork failed (" + std::strerror(e) + ")"};
     }
     if (pid == 0) {
-        run_child(cell, cwd, err_fd, argv, ws_s, dstack);
+        run_child(cell, cwd, err_fd, argv, ws_s, dstack, lim);
     }
     close(err_fd);
     Child c;
@@ -205,6 +211,7 @@ static Child launch(const std::string& name, const std::string& cell, const std:
     c.err_off = err_off;
     c.ws = ws_s.empty() ? Json() : Json(ws_s);
     c.stack = cell;
+    c.limits = limits.is_object() && !limits.empty() ? limits : Json();
     return c;
 }
 
@@ -222,17 +229,18 @@ static void pin_cwd(Json& inst, const std::string& cwd, const std::string& cell,
 }
 
 Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-            const std::string& dstack, const CellNames& names, const Json& kept_ws) {
+            const std::string& dstack, const CellNames& names, const Json& limits, const Json& kept_ws) {
     std::string lj = aos::join(cell, names.loop);
     if (spec.is_null()) {   // 信箱接回的 stopped／sleeping 列（只留名、沒有設定）再 start／wake：照小格裡現有的 loop.json（11-03），ws 照列上記的（11-03 晚）
         make_cell(name, cell, deep);
-        return launch(name, cell, cwd, {"--", lj + "#/_entry"}, kept_ws, dstack, names.err);
+        return launch(name, cell, cwd, {"--", lj + "#/_entry"}, kept_ws, dstack, names.err, limits);
     }
     Json cfg = spec;
     Json ws = cfg.value("ws", Json());   // ws、stack 是 daemon 的 key（不是 loop 的）：不灌進小格的 loop.json；ws 只進子行程的環境（AOS_WS）
     cfg.erase("ws");
     cfg.erase("stack");
     cfg.erase("def");   // def 同（11-04）：只記進表
+    cfg.erase("limits");   // limits 同（11-05 feat-proto 件 5）：daemon 在子行程裡做，子 loop 不知道
     Json ex = cfg.value("exec", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗；單子見下）
     // 11-05（portable-flow 03 推薦 (b)）：轉絕對之後寫成 {"$env": "AOS_DAEMON", "$path": 相對 daemon 的 stack}，aos-loop 解指示詞拼回（搬家不用改檔）
     auto keep = [&](const std::string& t) {
@@ -257,11 +265,11 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
     } catch (const Error& e) {
         throw Error{e.code, "cannot start child " + name + ": " + e.msg};
     }
-    return launch(name, cell, cwd, {"--", lj + "#/_entry"}, ws, dstack, names.err);
+    return launch(name, cell, cwd, {"--", lj + "#/_entry"}, ws, dstack, names.err, limits);
 }
 
 Child spawn_exec(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-                 const std::string& dstack, const CellNames& names) {
+                 const std::string& dstack, const CellNames& names, const Json& limits) {
     // 字串、陣列＝目標本身；物件＝{"exec": 目標或單子, "ws"?, "stack"?}（read_procs 驗過）
     const Json& target = spec.is_object() ? spec["exec"] : spec;
     Json ws = spec.is_object() ? spec.value("ws", Json()) : Json();
@@ -278,7 +286,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
         } catch (const Error& e) {
             throw Error{e.code, "cannot start child " + name + ": " + e.msg};
         }
-        Child c = launch(name, cell, cwd, {"--", aos::join(cell, names.exec) + "#/exec"}, ws, dstack, names.err);
+        Child c = launch(name, cell, cwd, {"--", aos::join(cell, names.exec) + "#/exec"}, ws, dstack, names.err, limits);
         c.once = true;
         return c;
     }
@@ -290,7 +298,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
         }
     }
     make_cell(name, cell, deep);
-    Child c = launch(name, cell, cwd, argv, ws, dstack, names.err);
+    Child c = launch(name, cell, cwd, argv, ws, dstack, names.err, limits);
     c.once = true;
     return c;
 }
@@ -337,6 +345,9 @@ Json row(const Child& c, const std::string& dstack) {
     r["exec"] = rel(c.exec);   // 11-04 晚（aos-agent 方向題 1）：一律寫，目標（絕對）或 null
     r["def"] = rel(c.def);     // 11-04（使用者「那就b。」）：一律寫，定義資料夾或 null（11-05 起相對 daemon 的 stack）
     r["reason"] = c.reason;    // 11-05（portable-flow 衝突 3）：null 或 daemon 把它留成 stopped 的原因
+    if (!c.limits.is_null()) {
+        r["limits"] = c.limits;   // 11-05（feat-proto 件 5）：生效的份額，有才寫
+    }
     return r;
 }
 

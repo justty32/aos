@@ -11,6 +11,7 @@
 // adopt：起來時讀自己上次的 procs_state，phase running、pid＋started_at_ticks 對得上的直接放回表上、不重起（N-17）；phase stopped 的列接成 stopped（不起、不判活）、名字進底的 stopped 集合；
 //   phase sleeping 的列接成 sleeping（不判活）、不進 stopped 集合＝第一次 reconcile 照 start 那條用列上的 stack 再起（wake）。
 #include "daemon/daemon.hpp"
+#include "child/limits.hpp"
 
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
@@ -198,7 +199,7 @@ bool is_once(const Json& spec) {
         return false;
     }
     for (auto& [k, v] : spec.items()) {
-        if (k != "exec" && k != "ws" && k != "stack" && k != "def") {
+        if (k != "exec" && k != "ws" && k != "stack" && k != "def" && k != "limits") {
             return false;   // 多了任何一個 key＝loop 設定（procs § 2 第 3 條）
         }
     }
@@ -224,7 +225,7 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             }
             vec.emplace_back(name, std::move(t));
         } else if (it.value.is_object()) {
-            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", "ctl", "state", "ws", "stack", "def"});
+            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", "ctl", "state", "ws", "stack", "def", "limits"});
             if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解、相對 $ref 轉成絕對（10-24）
                 aos::Resolved ex = aos::loop::resolve_exec(r.value["exec"], r.dir_of("exec"));
                 if (ex.value.is_object()) {
@@ -238,6 +239,13 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             fix_path(r.value, name, key, "ws", "workspace");
             fix_path(r.value, name, key, "stack", "stack");
             fix_path(r.value, name, key, "def", "definition directory");   // 11-04（aos-agent，使用者「那就b。」）：只記、不驗在不在
+            if (r.value.contains("limits")) {   // 11-05（feat-proto 件 5）：份額；null＝當沒寫（用 daemon 的預設）、{}＝不限，壞＝同 stack
+                if (r.value["limits"].is_null()) {
+                    r.value.erase("limits");
+                } else {
+                    check_limits(r.value["limits"], key + "[" + name + "].limits");
+                }
+            }
             if (is_once(r.value) && !is_target(r.value["exec"]) && !r.value["exec"].is_object()) {   // exec 型的物件（procs § 2 第 2 條）
                 throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
             }
@@ -300,7 +308,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         if (cfg_.contains("procs")) {
             procs_ = read_procs(cfg_["procs"], cfg_dirs_.dir_of("procs"), "procs");
         }
-        for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_ctl_mailbox", "procs_loop", "procs_exec", "procs_stderr"}) {
+        for (const char* k : {"adopt", "procs_ctl", "procs_state", "procs_ctl_mailbox", "procs_loop", "procs_exec", "procs_stderr", "limits"}) {
             if (cfg_.contains(k)) {
                 cfg_[k] = aos::resolve(cfg_[k], cfg_dirs_.dir_of(k));
             }
@@ -353,6 +361,9 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         }
         parts_dir_ = aos::join(aos::dirname(pstate_path_), name + "_procs");
     }
+    // 11-05（feat-proto 件 5）：頂層 limits＝沒寫 limits 的列用的預設份額（沒寫、null＝不限）；壞＝CfgBad 退 1
+    limits_ = cfg_.value("limits", Json());
+    check_limits(limits_, "limits");
     Json a = cfg_.value("adopt", Json(true));
     if (!a.is_boolean()) {
         throw Error{code::CfgBad, "adopt must be true or false"};
@@ -506,6 +517,9 @@ void Daemon::adopt() {
         }
         if (r.value("reason", Json()).is_string()) {
             c.reason = r["reason"];   // 11-05：stopped 的原因照帶
+        }
+        if (r.value("limits", Json()).is_object()) {
+            c.limits = r["limits"];   // 11-05（feat-proto 件 5）：起它時生效的份額照帶（信箱接回只留名的列再起時用它）
         }
         if (phase == "stopped" || phase == "sleeping") {   // stopped 的列（11-03 procs § 2c 第 7 條）：接成 stopped、不起、不判活；名字進底的 stopped 集合
             c.phase = phase.get<std::string>();            // sleeping 的列（11-03 sleep／wake）：同樣接成列、不判活，但不進 stopped 集合＝reconcile 第一圈就 wake
@@ -971,8 +985,14 @@ std::string Daemon::cell_of(const std::string& name, const Json& spec) const {
     return dstack_ + "procs/" + name;   // 預設小格（11-03 原 loops/<名字>/）
 }
 
+Json Daemon::limits_of(const Json& spec, const Json& kept) const {
+    Json l = spec.is_null() ? kept : spec.is_object() && spec.contains("limits") ? spec["limits"] : limits_;
+    return l.is_object() && !l.empty() ? l : Json();   // {}＝不限（蓋過預設）
+}
+
 Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws, const Json& kept_exec,
-                    const Json& kept_def) {
+                    const Json& kept_def, const Json& kept_limits) {
+    Json lim = limits_of(spec, kept_limits);
     bool deep = cell != dstack_ + "procs/" + name;   // 不是預設小格＝proc 自己的 stack：不在就 mkdir -p
     if (!is_once(spec)) {
         if (auto live = live_in_cell(cell, names_.loop)) {   // 11-05 第二輪：小格裡已有活著的子 loop（上一個 daemon 起了、沒記進表就死）＝接回、不再起一份
@@ -984,13 +1004,15 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
             c.ws = spec.is_object() && spec.contains("ws") ? spec["ws"] : kept_ws;
             c.exec = spec.is_null() ? kept_exec : exec_of(spec, cwd_);
             c.def = spec.is_null() ? kept_def : def_of(spec);
+            c.limits = lim;
             std::error_code ec;
             std::uintmax_t sz = std::filesystem::file_size(aos::join(cell, names_.err), ec);
             c.err_off = ec ? 0 : (long long)sz;
             return c;
         }
     }
-    Child c = is_once(spec) ? spawn_exec(name, cell, deep, spec, cwd_, dstack_, names_) : spawn(name, cell, deep, spec, cwd_, dstack_, names_, kept_ws);
+    Child c = is_once(spec) ? spawn_exec(name, cell, deep, spec, cwd_, dstack_, names_, lim)
+                            : spawn(name, cell, deep, spec, cwd_, dstack_, names_, lim, kept_ws);
     c.exec = spec.is_null() ? kept_exec : exec_of(spec, cwd_);   // 11-04 晚：列上的 exec 欄
     c.def = spec.is_null() ? kept_def : def_of(spec);              // 11-04：列上的 def 欄
     return c;
@@ -1054,7 +1076,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                 continue;
             }
             if (c.held && stopped.count(n) == 0 && !(c.phase == "sleeping" && slept.count(n) > 0)) {   // 11-05：sleep 叫睡的不自己醒   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（基準線）
-                Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def);   // 信箱接回只留名的（spec null）：ws 照列上的（11-03 晚：不然 wake 後表上 ws 變空）
+                Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits);   // 信箱接回只留名的（spec null）：ws 照列上的（11-03 晚：不然 wake 後表上 ws 變空）
                 nc.revived = true;   // 11-05：REVIVE_MS 內退了＝留成 stopped＋原因（衝突 3）
                 nc.revived_at = Clock::now();
                 c = nc;
@@ -1074,6 +1096,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
             c.stack = cell_of(n, spec);
             c.exec = exec_of(spec, cwd_);
             c.def = def_of(spec);
+            c.limits = limits_of(spec, Json());
             add(n, c);
         } else {
             Child nc = start(n, spec, cell_of(n, spec));

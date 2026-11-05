@@ -12,6 +12,8 @@
 //               alive：自己生的看 waitpid（結束就記 code／signal）；接回來的看 /proc 的 started_at_ticks 還對不對
 //               row：寫進 procs_state 的那一列
 //               ws：設定寫了 ws＝子行程的環境多設 AOS_WS＝它；沒寫＝照舊繼承 daemon 的。AOS_DAEMON 一律設成 daemon 的 stack（dstack：絕對、結尾 /；11-04 晚改名，舊名不認）
+//               limits（11-05 feat-proto 件 5）：生效的份額（列的，或 daemon.json 頂層的預設；null＝不限）——子行程在 run_cli 之前照它 setrlimit／換身分
+//               （limits.cpp；等同 s6-softlimit／s6-setuidgid），失敗＝小格 stderr.txt 一行 LimitBad、退 1
 #pragma once
 
 #include "common/common.hpp"
@@ -60,6 +62,7 @@ struct Child {
     std::chrono::steady_clock::time_point revived_at;
     long long err_off = 0;              // 11-05 第二輪：起它那一刻小格 stderr.txt 的長度——reason 只看這次之後寫的（檔是附加的，前幾輩子的話不算）
     Json def;                           // null 或起它時給的定義資料夾（11-04，aos-agent，使用者「那就b。」）：Daemon 填（def_of）；接回、不變同 exec
+    Json limits;                        // null 或起它時生效的份額（11-05 feat-proto 件 5；{}＝不限、存成 null）：起的那一刻的值，接回、不變同 exec
 };
 
 // 起一支子 loop。cell＝小格（proc 的 stack，絕對、結尾不帶 /；deep＝mkdir -p，不然只建 cell 與上一層）、spec＝loop 設定物件
@@ -70,8 +73,9 @@ struct Child {
 // aos-exec 自己的錯（PATH 上沒有 aos-loop…）寫在小格的 stderr.txt、子 loop 以 1 結束（phase done、code 1）。
 // dstack＝daemon 的 stack（絕對、結尾 /）：子行程設成 AOS_DAEMON（11-02；11-04 晚改名，舊名不認）。spawn_exec 同。
 // names＝小格裡三個檔名（CellNames）。11-04 起不再替設定補 ctl／state（aos-loop 自己沒寫＝ctl.json／state.json，four-elements 07 步 4）。
+// limits＝生效的份額（null＝不限；check_limits 驗過的物件），子行程照它做（limits.hpp）。spec 裡的 limits 不寫進 loop.json（daemon 的 key）。
 Child spawn(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-            const std::string& dstack, const CellNames& names, const Json& kept_ws = Json());
+            const std::string& dstack, const CellNames& names, const Json& limits, const Json& kept_ws = Json());
 
 // 起一個 exec 型 proc。spec＝aos-exec 的目標：字串或 [目標, 參數...]（read_procs 驗過），
 // 或 {"exec": 上面兩種或單子, "ws"?, "stack"?, "def"?}（子行程設 AOS_WS＝ws；def 只記進表）；cell、deep 同 spawn；相對路徑從 cwd（daemon 的 cwd）算——
@@ -79,12 +83,13 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
 // stderr.txt、子項以 1 結束（phase done、code 1）。它退了＝done、從表上拿掉、本次執行不再起（同子 loop，11-02）。
 // 11-02 晚：spec 的 exec 是內嵌單子（物件）＝寫成小格的 exec.json {"exec": 單子}（cwd 定成 daemon 的 cwd，pin_cwd），子行程跑 `aos-exec -- 小格/exec.json#/exec`。
 Child spawn_exec(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
-                 const std::string& dstack, const CellNames& names);
+                 const std::string& dstack, const CellNames& names, const Json& limits);
 
 // 還活著嗎（自己生的：結束了就收屍、記 code／signal）。
 bool alive(Child& c);
 
-// procs_state 裡的一列：{"pid", "started_at_ticks", "phase", "code", "signal", "stack", "exec", "def"}，起它時給了工作區才多一欄 "ws"。
+// procs_state 裡的一列：{"pid", "started_at_ticks", "phase", "code", "signal", "stack", "exec", "def"}，起它時給了工作區才多一欄 "ws"、
+// 有份額才多一欄 "limits"（11-05 feat-proto 件 5：生效的那份）。
 // exec（11-04 晚）一律寫：起它時的目標（絕對）或 null。def（11-04）一律寫：起它時給的定義資料夾或 null。
 // held（stopped 的列）的 pid、started_at_ticks 是 null。
 // 11-05（portable-flow，使用者「可以用daemon作為相對路徑的一個基準點」）：stack、ws、exec、def 存成相對 dstack（daemon 的 stack）的路徑

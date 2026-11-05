@@ -15,6 +15,8 @@ namespace code {
 using namespace aos::loop::code;
 // 11-05（portable-flow 步 5「沒有才起、有就沿用」）：這個 stack 的 state.json 記的 daemon（pid＋started_at_ticks＋boot_id）還活著＝不起第二個
 inline constexpr const char* DaemonRunning = "DaemonRunning";
+// 11-05（feat-proto 件 5）：子行程照 limits 做 setrlimit／換身分失敗（小格 stderr.txt 一行、子行程退 1；見 child/limits.hpp）
+inline constexpr const char* LimitBad = "LimitBad";
 }  // namespace code
 
 }  // namespace aos::daemon
