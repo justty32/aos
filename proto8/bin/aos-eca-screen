@@ -1,20 +1,22 @@
 #!/usr/bin/env python3
 """aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；demo/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。
 
-    aos-eca-screen open [--detach] ECA_DIR   接進畫面（沒開就開、有對話就 --resume）；--detach＝只開不接
-    aos-eca-screen close ECA_DIR             收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）
-    aos-eca-screen watch ECA_DIR             跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走；
-                                             那隻的 loop 不在了（loop.json 宣告的 state 窗：phase done／stopped 或 pid 不在）也走
+    aos-eca-screen --eca ECA_DIR open [--detach]   接進畫面（沒開就開、有對話就 --resume）；--detach＝只開不接
+    aos-eca-screen --eca ECA_DIR close             收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）
+    aos-eca-screen --eca ECA_DIR watch             跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走；
+                                                   那隻的 loop 不在了（loop.json 宣告的 state 窗：phase done／stopped 或 pid 不在）也走
 
-命令列（11-05 stdio-unify R6）：`aos-eca-screen [旗標] 子命令 [子命令的旗標] ECA_DIR`，aos_flags.parse（P-44：只有長旗標；子命令前不認得的旗標＝
-FlagUnknown、子命令不認得＝CommandUnknown、缺 ECA_DIR＝ArgumentsBad）。11-05 前是 `<eca 資料夾> open [-d]`。
+命令列（11-05 stdio-unify R6；11-05 隊長代定 D6 把 ECA_DIR 改成子命令前的旗標）：`aos-eca-screen [--eca ECA_DIR] 子命令 [--detach]`，
+aos_flags.parse（P-44：只有長旗標；子命令前不認得的旗標＝FlagUnknown、子命令不認得＝CommandUnknown、沒給 --eca 或多給位置參數＝ArgumentsBad）。
+為什麼是旗標：aos-exec 把呼叫者的參數接在入口 argv 的最後面（`aos-exec 資料夾 參數…`），screen 的入口寫死的部分只能在前面——
+`["aos-eca-screen", "--eca", ".."]` ＋ 動作 `open --detach` ＝ `aos-eca-screen --eca .. open --detach`。不用 sh 拼字串（少用 sh）。
 
 人不直接打它：`aos-agent open／close／watch --target 名字` ＝ `aos-exec --ws <ws> --stack <stack> <定義>/screen 動作 [--detach]`
-（ECA_DIR 由 screen 的入口自己接在最後，見 bin/docs/05）。
+（ECA_DIR 由 screen 的入口寫在前面的 `--eca ..`，見 bin/docs/05）。
 吃 AOS_STACK（那隻的 stack）、AOS_WS（那隻的工作區）；<eca 資料夾>（有 cli.json；相對路徑從 cwd 算）給 kind 與 tools。
 身體 11-04 從 aos-eca 的 open／close／watch 原樣搬來（it["cell"]→$AOS_STACK、it["ws"]→$AOS_WS、template→位置參數）。
 畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。
-錯：stderr 一行 `aos-eca-screen: error: 代號 原因`、退 1：ArgumentsBad、FlagUnknown、CommandUnknown、StackMissing、SessionBad（正在答題時 close）、
+錯：stderr 一行 `aos-eca-screen: error: 代號 原因`、退 1：ArgumentsBad（沒給 --eca、多給參數、不是 eca 資料夾）、FlagUnknown、CommandUnknown、StackMissing、SessionBad（正在答題時 close）、
 加 cli_session 的（CfgBad…）。給人看的狀態句（attaching、watching、watch 不等了）是提醒行 `aos-eca-screen: warning: 句子`（R1、D5）。
 `--help`＝英文說明到 stdout、退 0；Ctrl-C＝退 130、不吐 traceback（watch 用 Ctrl-C 離開是正常離開，照舊退 0）。"""
 import json, os, sys, time
@@ -26,19 +28,21 @@ sys.path[:0] = [os.path.join(ROOT, "bin"), os.path.join(ROOT, "lib", "agent")]
 import aos_flags, cli_session  # noqa: E402
 
 PROG = "aos-eca-screen"
-USAGE = "aos-eca-screen open [--detach] ECA_DIR | close ECA_DIR | watch ECA_DIR"
+USAGE = "aos-eca-screen --eca ECA_DIR open [--detach] | close | watch"
 aos_flags.HELP = """aos-eca-screen - the screen of an eca (the body of the aos-agent/screen sub-interface).
 
-    aos-eca-screen open [--detach] ECA_DIR   attach to the screen (opened if needed, --resume when a conversation exists);
-                                             --detach = only open it, do not attach
-    aos-eca-screen close ECA_DIR             close the screen; the conversation is kept (aos-eca-turn still answers with --resume)
-    aos-eca-screen watch ECA_DIR             follow what the non-interactive run is doing (live.jsonl in the cell) until one answer
-                                             ends, or until that agent's loop is gone; Ctrl-C leaves (exit 0)
+    aos-eca-screen --eca ECA_DIR open [--detach]   attach to the screen (opened if needed, --resume when a conversation exists);
+                                                   --detach = only open it, do not attach
+    aos-eca-screen --eca ECA_DIR close             close the screen; the conversation is kept (aos-eca-turn still answers with --resume)
+    aos-eca-screen --eca ECA_DIR watch             follow what the non-interactive run is doing (live.jsonl in the cell) until one
+                                                   answer ends, or until that agent's loop is gone; Ctrl-C leaves (exit 0)
 
+--eca comes before the subcommand because aos-exec appends the caller's arguments at the end of the entry's argv:
+the screen entry ["aos-eca-screen", "--eca", ".."] plus "open --detach" runs aos-eca-screen --eca .. open --detach.
 People do not run it directly: aos-agent open / close / watch --target NAME runs the screen entry of the definition.
 Reads AOS_STACK (the agent's stack) and AOS_WS (its workspace); ECA_DIR (with cli.json; relative to cwd) gives kind and tools.
 Inside the screen, Ctrl-] (or Ctrl-\\) detaches; the instance keeps running.
-Errors: one stderr line `aos-eca-screen: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, CommandUnknown, StackMissing,
+Errors: one stderr line `aos-eca-screen: error: CODE reason`, exit 1. Codes: ArgumentsBad (no --eca, extra arguments), FlagUnknown, CommandUnknown, StackMissing,
   SessionBad (close while answering), and those of cli_session (CfgMissing, CfgBad...). Status sentences are warning lines."""
 
 
@@ -173,7 +177,7 @@ SWITCHES = {"open": {"--detach": "detach"}}
 
 def main():
     try:
-        _, rest = aos_flags.parse(sys.argv[1:], {})
+        top, rest = aos_flags.parse(sys.argv[1:], {"--eca": "eca"})
         if not rest:
             die("ArgumentsBad", "missing subcommand (usage: %s)" % USAGE)
         if rest[0] not in CMDS:
@@ -181,11 +185,13 @@ def main():
         opts, args = aos_flags.parse(rest[1:], {}, SWITCHES.get(rest[0]))
     except aos_flags.Error as e:
         die(e.code, "%s (usage: %s)" % (e, USAGE))
-    if len(args) != 1:
-        die("ArgumentsBad", "%s (usage: %s)" % ("missing ECA_DIR" if not args else "only one ECA_DIR allowed, extra: %s" % args[1], USAGE))
-    eca = os.path.realpath(args[0])
+    if args:
+        die("ArgumentsBad", "unexpected argument %s (usage: %s)" % (args[0], USAGE))
+    if not top.get("eca"):
+        die("ArgumentsBad", "missing --eca ECA_DIR (usage: %s)" % USAGE)
+    eca = os.path.realpath(top["eca"])
     if not os.path.isfile(os.path.join(eca, "cli.json")):
-        die("ArgumentsBad", "%s is not an eca dir (no cli.json)" % args[0])
+        die("ArgumentsBad", "%s is not an eca dir (no cli.json)" % top["eca"])
     CMDS[rest[0]](eca, opts)
 
 

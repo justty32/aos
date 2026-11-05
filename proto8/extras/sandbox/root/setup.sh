@@ -5,6 +5,7 @@
 #   sh setup.sh --mailbox 信箱 [--apply]   只做一件：讓 aos-run 寫得到這個 LLM kernel 信箱（帳號要先建好）
 #   另外三個旗標換預設值（11-01 起取代環境變數）：--me 名（我＝跑 kernel 的人；預設 $SUDO_USER 或自己，測試在假 root 裡給數字）、
 #   --s6-bin 路徑（s6 的 bin；預設試驗場 /home/<我>/code/try/sandbox/s6-root/bin）、--runner 名（跑不信任函數的帳號與群組；預設 aos-run）
+# --help＝英文說明印 stdout、退 0。錯：stderr 一行 `setup.sh: error: 代號 原因`、退 1（11-05 stdio-unify）。
 # 預設乾跑：只把要做的指令印出來，什麼都不動。看過沒問題再用 root 跑一次：
 #   sudo sh proto8/extras/sandbox/root/setup.sh --apply
 # 設計與為什麼：proto8/thinking/2026-10/24/sandbox.md（「要 root 的步驟」、S17）。
@@ -20,11 +21,26 @@ RUNNER=
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--apply) APPLY=1 ;;
+	--help)  # 英文說明印 stdout、退 0（11-05 stdio-unify R3）
+		cat <<'EOF'
+setup.sh - the root-only part of the sandbox: install s6 into /usr/local, create the account aos-run, give it a place
+to work, and let me ($SUDO_USER) switch to it. Dry run by default: prints the commands, changes nothing.
+
+    sh setup.sh [--me NAME] [--s6-bin PATH] [--runner NAME] [--apply]   the account set-up (steps 1-4)
+    sh setup.sh --mailbox MAILBOX [--me NAME] [--runner NAME] [--apply]  only let the runner write into this LLM kernel mailbox
+
+--me NAME       who runs the kernel (default: $SUDO_USER, or yourself)
+--s6-bin PATH   where the s6 programs are (default: the playground's s6-root/bin)
+--runner NAME   the account and group that runs untrusted functions (default: aos-run)
+--apply         really run the commands (needs root: sudo sh setup.sh --apply)
+Errors: one stderr line `setup.sh: error: CODE reason`, exit 1 (ArgumentsBad, FlagUnknown, UserBad).
+EOF
+		exit 0 ;;
 	--mailbox|--me|--s6-bin|--runner)
-		[ $# -ge 2 ] || { echo "setup.sh: ArgumentsBad $1 needs a value" >&2; exit 1; }
+		[ $# -ge 2 ] || { echo "setup.sh: error: ArgumentsBad $1 needs a value" >&2; exit 1; }
 		case "$1" in --mailbox) MAILBOX="$2" ;; --me) ME="$2" ;; --s6-bin) BIN="$2" ;; --runner) RUNNER="$2" ;; esac
 		shift ;;
-	*) echo "setup.sh: FlagUnknown $1 (usage: setup.sh [--mailbox MAILBOX] [--me NAME] [--s6-bin PATH] [--runner NAME] [--apply])" >&2; exit 1 ;;
+	*) echo "setup.sh: error: FlagUnknown $1 (usage: setup.sh [--mailbox MAILBOX] [--me NAME] [--s6-bin PATH] [--runner NAME] [--apply])" >&2; exit 1 ;;
 	esac
 	shift
 done
@@ -39,7 +55,7 @@ run() {
 }
 
 if [ "$APPLY" = 1 ] && [ "$(id -u)" != 0 ]; then
-	echo "setup.sh: UserBad must run as root (sudo sh $0 --apply)" >&2
+	echo "setup.sh: error: UserBad must run as root (sudo sh $0 --apply)" >&2
 	exit 1
 fi
 [ "$APPLY" = 1 ] || echo "# dry run: none of the commands below were run. Run as root with --apply to do them."
@@ -59,7 +75,7 @@ if [ -n "$MAILBOX" ]; then
 	echo "#    and under a 700 home folder others cannot even see it."
 	echo "# check (no root needed; give aos-llm as an absolute path, sudo uses its own PATH), with the kernel running:"
 	echo "#    echo '{\"request\":{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}}' | sudo -n /usr/local/bin/s6-setuidgid $RUNNER env AOS_LLM_KERNEL=\$(dirname $MAILBOX) /absolute/aos-llm ask   # gets a reply"
-	echo "#    after chmod 700 $MAILBOX the same line = aos-llm: MkdirFailed (cannot write); chmod 2770 to undo"
+	echo "#    after chmod 700 $MAILBOX the same line = aos-llm: error: MkdirFailed (cannot write); chmod 2770 to undo"
 	exit 0
 fi
 

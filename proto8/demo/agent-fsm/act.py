@@ -105,14 +105,14 @@ for call in calls:
         continue
     if name not in registered:                   # 名字只認登記過的（也擋掉 ../ 之類）
         append({"role": "tool", "tool_call_id": cid,
-                "content": "act: ToolUnknown %s (available: %s)\n" % (name, ", ".join(registered))})
+                "content": "act: error: ToolUnknown %s (available: %s)\n" % (name, ", ".join(registered))})
         continue
     try:
         if not isinstance(arguments, str):
             raise ValueError("arguments is not a string")
         json.loads(arguments)
     except ValueError as e:
-        append({"role": "tool", "tool_call_id": cid, "content": "act: ArgumentsBad %s: %s\n" % (name, e)})
+        append({"role": "tool", "tool_call_id": cid, "content": "act: error: ArgumentsBad %s: %s\n" % (name, e)})
         continue
     env = dict(os.environ, AOS_STACK=os.path.join(stack, "tools", name) + "/")
     try:

@@ -30,7 +30,7 @@
 
 **R5 usage 位置**（#6）：錯誤行裡「原因在前、`(usage: …)` 在後」：`程式: error: ArgumentsBad missing CONFIG (usage: aos-fsm [FLAGS] CONFIG.json)`。
 
-**R6**（#7）aos-eca-screen 改成 `aos-eca-screen open [--detach] ECA_DIR`（其他子命令同形），用 aos_flags.parse。
+**R6**（#7）aos-eca-screen 改成 `aos-eca-screen open [--detach] ECA_DIR`（其他子命令同形），用 aos_flags.parse。〔11-05 隊長代定 D6：ECA_DIR 改旗標，因 aos-exec 動作接最後——現在是 `aos-eca-screen [--eca ECA_DIR] 子命令 [--detach]`，`demo/eca-claude/screen/_entry`＝`["aos-eca-screen", "--eca", ".."]`〕
 
 **R7 驗不過**（#8）：aos-schema 照舊退 0（stdout 的 `valid:false` 就是答案）；aos-json check 有問題＝退 10（問題照舊一行一條印 stdout、stderr 空）——代定 D1。
 
@@ -57,6 +57,7 @@
 - D3 install.sh 有 skip 照舊退 1（使用者要的名字沒裝上＝沒做成），補錯誤行，代號 `LinkFailed`（10-23 命名：動作＋Failed）。
 - D4 aos-loop 身體失敗那行改成錯誤行 `aos-loop: error: RunFailed run N: X failed with exit code C`（它接著照那個碼退出）；aos-daemon 身體失敗／好了（不退出）改成提醒行。
 - D5 互動提示符（aos-agent chat 的 `> `）不算一行，照舊在 stderr；其他給人看的狀態句（attaching、watching）改提醒行。
+- D6 aos-eca-screen 的 ECA_DIR 改成子命令前的旗標 `--eca`（見 R6 旁註；E 線收尾）。
 
 ## 做了什麼
 

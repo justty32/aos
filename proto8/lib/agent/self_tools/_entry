@@ -6,12 +6,13 @@
 #   再 aos-agent tools --target <那隻> add [--override] <name> <絕對路徑>／rm <name>／ls --json。下一格 brain 重讀就看到新清單。
 #   path：相對路徑從 $AOS_WS 算、解開 .. 與捷徑後要在工作區裡；絕對路徑要在 lib/（這個工具所在的庫）底下；其他＝PathBad。
 #   結果：add／rm 印一句（下一題起生效）、ls 印 aos-tools ls --json 那一行。
-#   錯：stderr 與 stdout 各一行「self_tools: error: 代號 原因」、退 1；aos-agent（與它轉的 aos-tools）的 stderr 原樣透到 stderr，
-#   它退非 0 時這裡只多寫自己一行 CommandFailed（stdio-unify R10：不拿它的末行；原因在 stderr，給人看）。op 沒給＝ArgumentsBad、不認得＝OpUnknown（R11）。
-#   沒掛在 daemon 下跑的 agent（aos-exec body.json）不支援：ctl who 失敗＝CommandFailed（aos-agent 在 stderr 說 DaemonMissing／InstanceMissing）。
+#   錯：stderr 與 stdout 各一行「self_tools: error: 代號 原因」、退 1；aos-agent（與它轉的 aos-tools）的 stderr 原樣透到 stderr；
+#   它退非 0＝把它 stderr 裡最後一行錯誤行 `aos-…: error: 代號 原因` 的代號與原因接在 `self_tools: error: ` 後面給腦（給腦用的工具把下層錯
+#   翻成自己的錯，同 agents；例 ToolExists、ToolMissing、PathMissing），沒那行才是 CommandFailed＋結束碼。op 沒給＝ArgumentsBad、不認得＝OpUnknown（R11）。
+#   沒掛在 daemon 下跑的 agent（aos-exec body.json）不支援：ctl who 失敗＝aos-agent 的 DaemonMissing／InstanceMissing。
 #   --help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉 aos-agent，退 130）。
 # 需要 PATH 上有 aos-agent（proto8/install.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
-import json, os, signal, subprocess, sys
+import json, os, re, signal, subprocess, sys
 HELP = """\
 usage: self_tools < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Change the tool box of the agent that calls me (its overlay, not its definition):
@@ -30,6 +31,7 @@ signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：�
 
 NAME = "self_tools"
 TIMEOUT_S = 60
+ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
 LIB = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # proto8/lib
 child = None
 
@@ -82,20 +84,26 @@ def tool_path(p):
 
 
 def agent(*args):
-    """aos-agent args…：stderr 原樣往上；退非 0＝自己一行 CommandFailed（不讀它的 stderr，R10）。回 stdout。"""
+    """aos-agent args…：stderr 原樣往上；退非 0＝它最後一行錯誤行的代號與原因當自己的錯（沒有＝CommandFailed）。回 stdout。"""
     global child
     try:
         child = subprocess.Popen(["aos-agent"] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                                 text=True, start_new_session=True)      # stderr 不攔：原樣透出（R10）
+                                 stderr=subprocess.PIPE, text=True, start_new_session=True)
     except OSError as e:
         die("LaunchFailed", "cannot run aos-agent (put it on PATH with proto8/install.sh): %s" % e)
     try:
-        out, _ = child.communicate(timeout=TIMEOUT_S)
+        out, err = child.communicate(timeout=TIMEOUT_S)
     except subprocess.TimeoutExpired:
         os.killpg(child.pid, signal.SIGKILL)
         child.communicate()
         die("CommandFailed", "aos-agent %s took over %d s and was killed" % (" ".join(args[:2]), TIMEOUT_S))
-    if child.returncode != 0:
+    if err:                                     # 下層的 stderr 原樣透出（R10）
+        sys.stderr.write(err if err.endswith("\n") else err + "\n")
+        sys.stderr.flush()
+    if child.returncode != 0:                   # 給腦用的工具把下層錯翻成自己的錯（同 agents）
+        mine = [m for m in map(ERR_RE.match, err.splitlines()) if m]
+        if mine:
+            die(mine[-1].group(1), mine[-1].group(2))
         die("CommandFailed", "aos-agent %s exited %d" % (" ".join(args[:2]), child.returncode))
     return out
 

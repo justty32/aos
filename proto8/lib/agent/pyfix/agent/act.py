@@ -74,14 +74,14 @@ if calls:
             continue
         if name not in tools:           # 名字只認 tools.json 登記過的（也擋掉 ../ 之類）
             append({"role": "tool", "tool_call_id": cid,
-                    "content": "act: ToolUnknown %s (available: %s)\n" % (name, ", ".join(tools))})
+                    "content": "act: error: ToolUnknown %s (available: %s)\n" % (name, ", ".join(tools))})
             continue
         try:
             if not isinstance(arguments, str):
                 raise ValueError("arguments is not a string")
             json.loads(arguments)
         except ValueError as e:
-            append({"role": "tool", "tool_call_id": cid, "content": "act: ArgumentsBad %s: %s\n" % (name, e)})
+            append({"role": "tool", "tool_call_id": cid, "content": "act: error: ArgumentsBad %s: %s\n" % (name, e)})
             continue
         env = dict(os.environ, AOS_STACK=os.path.join(stack, "tools", name) + "/", AOS_WS=os.path.abspath(code_dir))   # 工作區＝pyfix_dir.txt 的資料夾（aos-exec 沒給 --ws 就用 $AOS_WS）
         try:
