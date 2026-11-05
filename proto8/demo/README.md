@@ -21,7 +21,7 @@
 | [02-agent-fsm](docs/02-agent-fsm.md) | loop／fsm agent 範本 agent-fsm（11-04） |
 | [03-llm-kernel](docs/03-llm-kernel.md) | llm kernel 範本 llm-kernel（11-04 晚：問腦＝寄信給它、收回信；11-05 改成自己一台 daemon：`~/llm_kernel` 裡 `aos-exec --stack . def`，agent daemon 另一台、`AOS_LLM_KERNEL=~/llm_kernel`）；11-05 午 `endpoints` 改成能力包 `smart-high`／`stupid-fast`／`fake-demo-*`…、`aos-llm ls`） |
 | [04-kernel-modes](docs/04-kernel-modes.md) | kernel 三種模式：daemon 本身、daemon-judge（繼承式）、procs-kernel（0 號 proc 式）；判官 lib/base/judge、AOS_KERNEL、「唯一能下 ctl」三級（11-05） |
-| [05-feat-proto](docs/05-feat-proto.md) | 新功能原型的假腦劇本（11-05 午）：agent 給自己加工具（`self_tools`）、能力包與排程（包的 `slots` 補位、`speed`）、agent 生 agent（`agents`＋判官 `max_running` 4）、資源份額（daemon 被 `ulimit` 限、子項超不過；kernel 每寄件人額度；daemon 那半未做） |
+| [05-feat-proto](docs/05-feat-proto.md) | 新功能原型的假腦劇本（11-05 午）：agent 給自己加工具（`self_tools`）、能力包與排程（包的 `slots` 補位、`speed`）、agent 生 agent（`agents`＋判官 `max_running` 4）、資源份額（daemon 在子行程 setrlimit 包子項、daemon 被 `prlimit` 限、子項超不過；kernel 每寄件人額度） |
 
 <a id="eca-templates"></a>
 <a id="agent-fsm"></a>

@@ -69,7 +69,7 @@ kill $K $D && unset AOS_DAEMON AOS_KERNEL
 
 第一題劇本：`agents add {"name": "kid", "def": "<repo>/proto8/demo/agent-fsm", "endpoint": "fake"}` → `ask kid "what time is it?"`（kid 的假腦先叫 clock、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`。第二題一次 add kid1～kid4：fsm1＋三隻＝4 隻 running，kid4 被判官擋，回給腦一則 `agents: AddRejected AOS_KERNEL refused the add letter: SlotMissing …`；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的），工作區跟 fsm1 同一個；`agents` 只收自己生的（`$AOS_STACK/children.json`）。
 
-### 件 5：資源份額（daemon 那半未做）
+### 件 5：資源份額（daemon 在子行程 setrlimit）
 
 ```sh
 T=/tmp/feat-s9-limits && rm -rf $T && mkdir -p $T/ws/.stack $T/hog && cd $T
@@ -80,14 +80,19 @@ echo '{"exec": {"argv": ["python3", "-c", "b = bytearray(300 * 2**20)"]}, "max":
 cp -r hog hog-big && sed -i s/300/3000/ hog-big/loop.json                   # 吃 3000 MB
 AOS_STACK=$T/ws/.stack/ prlimit --as=2048000000 aos-daemon daemon.json > d.log 2>&1 & D=$!   # daemon 自己被限 2 GB（起它的人包；同 ulimit -v 2000000）
 sleep 1 && cd ws
-aos-agent ctl add ../hog                  # (note: limits mem_mb=256 not applied: the daemon does not take limits yet …)；吃完 300 MB 退 0、下表
-aos-agent ctl add ../hog-big && sleep 2
-aos-agent ctl state --target hog-big      # state stopped、reason failed to start: exited within 3s of wake/start (code 1): MemoryError
+aos-agent ctl add ../hog && sleep 2       # 宣告的 mem_mb 256 送到 daemon：吃 300 MB 撞上
+aos-agent ctl state --target hog          # state stopped、reason failed to start: … (code 1): MemoryError；limits  mem_mb=256
+aos-agent ctl add --name hog2 --limits '{"mem_mb": 1024}' ../hog && sleep 2   # --limits 蓋過宣告：吃完 300 MB 退 0、下表
+aos-agent ctl add --name big --limits '{"mem_mb": 4096}' ../hog-big && sleep 2
+aos-agent ctl state --target big          # reason … aos-daemon: LimitBad mem_mb 4096 exceeds the daemon's own hard limit
+aos-agent ctl add --name big2 --limits '{}' ../hog-big && sleep 2              # {}＝自己不限，但超不過 daemon 的 2 GB
+aos-agent ctl state --target big2         # reason failed to start: … (code 1): MemoryError
+aos-agent ctl ls                          # hog、big、big2 stopped＋reason；hog2 吃完已下表
 kill $D
 ```
 
-- **現在就看得到的**：daemon 被 `ulimit -v` 限住，它掛的子項天生超不過（rlimit 繼承）——hog-big 要 3 GB、撞到 daemon 的 2 GB＝Python `MemoryError`、退 1、表上留 `stopped`＋`reason`（不加新的錯誤路徑）。
-- **邊緣隊 E1／E2 做好之後**（[feat-proto 05](../../thinking/2026-11/05/feat-proto/05-資源份額.md)）：`ctl add ../hog` 的宣告 `mem_mb: 256` 會送到 daemon、daemon 在子行程 `setrlimit`——hog 吃 300 MB 就 `MemoryError`、`ctl state` 多一行 `limits  mem_mb=256`；`aos-agent ctl add --limits '{"mem_mb": 1024}' ../hog` 蓋過宣告、正常吃完。現在只會看到上面那行 `(note: …)`。
+- **daemon 包子項**（使用者「讓daemon偷偷給底下的proc包s6」）：表那列的 `limits`（定義宣告的，或 `ctl add --limits` 蓋過的）由 daemon 在子行程裡 `setrlimit`（等同 s6-softlimit；proc 自己不知道）——hog 宣告 `mem_mb: 256`、要 300 MB＝Python `MemoryError`、退 1、表上留 `stopped`＋`reason`；`--limits '{"mem_mb": 1024}'` 的 hog2 照常吃完、下表。規則見 [aos-daemon docs/09](../../impls/aos-daemon/docs/09-份額.md)。
+- **daemon 自己被限**：起它的人包（這裡 `prlimit --as`），rlimit 繼承——big 寫 `mem_mb: 4096` 比 daemon 的 2 GB 寬＝不自動夾，那隻起不來（`LimitBad`）；big2 自己不限（`{}`），要 3 GB 照樣撞 daemon 的 2 GB＝`MemoryError`。
 - **天然差異**：份額是每個行程各自的上限、不從 daemon 總額扣（三隻各 1024 加起來可以超過 daemon 的 2 GB）。
 - **llm kernel 的份額**＝包的 `budget`＋每個寄件人的 `budget.senders`。範本限了寄件人 `/tmp/aos-demo-sender` 每天 1 次（帳記在 kernel 的 `used.json`，新起一台就從 0 算）：
 
