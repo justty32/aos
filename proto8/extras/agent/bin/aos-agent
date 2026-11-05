@@ -519,6 +519,11 @@ def off_table(a):
             % (a.stack, cell_name("procs_stderr", "stderr.txt")))
 
 
+def restart_how(d):
+    """重起 daemon 的兩種起法（11-05 晚：從 stack 看不出當初是 aos-exec 定義還是直接 AOS_STACK=… aos-daemon，兩種都列）。"""
+    return "the way it was started, aos-exec <daemon folder> or AOS_STACK=%s/ aos-daemon <daemon.json>" % d
+
+
 def run_hint(a):
     gone = off_table(a)
     if gone:
@@ -527,12 +532,13 @@ def run_hint(a):
     if held == "sleeping":   # 睡下的（收工或 aos-agent ctl sleep）：daemon 在跑＝wake；沒在跑＝重開 daemon 第一圈自己醒
         if daemon_alive(daemon_dir()):
             return "it is asleep on the daemon (%s is sleeping); wake it: aos-agent ctl wake --target %s" % (a.name, a.name)
-        return "it is asleep on the daemon (%s is sleeping); restart the daemon and it wakes by itself: aos-exec <daemon folder> (that daemon's stack is %s)" % (a.name, daemon_dir())
+        return "it is asleep on the daemon (%s is sleeping); restart the daemon and it wakes by itself: %s" % (a.name, restart_how(daemon_dir()))
     if held:
         why = "; reason recorded by the daemon: %s" % a.reason if a.reason else ""
         return "it is stopped on the daemon table (%s is stopped%s); start it: aos-agent ctl start --target %s" % (a.name, why, a.name)
     if not daemon_alive(daemon_dir()):
-        return "the daemon is not running (%s); restart it: aos-exec <daemon folder>" % daemon_dir()
+        d = daemon_dir()
+        return "the daemon is not running (%s); restart it: %s" % (d, restart_how(d))
     return "see its error line: %s/%s, or aos-agent ctl state --target %s" % (a.stack, cell_name("procs_stderr", "stderr.txt"), a.name)
 
 

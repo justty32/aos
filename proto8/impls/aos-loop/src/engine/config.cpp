@@ -63,8 +63,9 @@ Target parse_target(const Json& v, const std::string& what) {
 }
 
 std::string Target::label() const {
-    if (!inst) {
-        return target;
+    if (!inst) {   // 錯誤行裡給人看的：整理成最短寫法（daemon 小格的 $AOS_DAEMON/../../x 這種；只動顯示、照字面不解捷徑，11-05 晚）
+        std::string s = std::filesystem::path(target).lexically_normal().string();
+        return s.empty() ? target : s;
     }
     return cf.substr(cf.rfind('/') + 1) + "#" + co;
 }

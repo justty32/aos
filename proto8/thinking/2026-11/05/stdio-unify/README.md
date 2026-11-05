@@ -106,5 +106,5 @@
 
 - 20 支 math＋20 支 clock 同時跑（同一份 `tool_io`）：全退 0，lib 底下沒長出新的 `.pyc`（各 `_entry` 都 `sys.dont_write_bytecode`）。
 - 工具 `cp -r` 出 repo、`tool_io.py` 一起複製、資料夾唯讀：照跑；工具資料夾是捷徑、或只有三個檔是捷徑、掛在 repo 外 agent 的 `tools/`：realpath 找得到 lib，照跑。
-- **沒修**：複製出 repo、沒帶 `tool_io.py`、PATH 上也沒有 aos-tools＝`ModuleNotFoundError` traceback（lib/docs/01 規則 9 已寫明「起不來」，但 stderr 不是錯誤行）。要收得每支 `_entry` 的 import 包一層 try（25 支）——列給隊長。
+- 複製出 repo、沒帶 `tool_io.py`、PATH 上也沒有 aos-tools：原本 `ModuleNotFoundError` traceback → 11-05 晚修：26 支 `_entry` 的 import 包一層 try，印 `工具名: error: ModuleMissing tool_io.py not found (…)`（名字取工具資料夾名；給腦用的 stdout 也印、judge 只 stderr）、退 1。代定（可翻案）：代號用 `ModuleMissing`（不新增縮寫；要更具體可改 `ToolIoMissing`，得先把 io 進縮寫表）。
 - bash-boxed（沙箱綁 `tool_io.py` 唯讀）照跑、逾時照收。

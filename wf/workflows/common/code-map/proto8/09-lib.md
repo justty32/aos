@@ -8,7 +8,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| `tool_io.py` | 不是工具：每支 lib 工具共用的開頭（11-05 晚）——`start`（`--help`、Ctrl-C 130）、`die`（錯誤行 stderr＋stdout、退 1；`echo=False` 只 stderr）、`warn`、`arguments`、`workspace`；工具先找自己資料夾、再找 lib/（lib/docs/01 規則 9），沙箱要綁它 |
+| `tool_io.py` | 不是工具：每支 lib 工具共用的開頭（11-05 晚）——`start`（`--help`、Ctrl-C 130）、`die`（錯誤行 stderr＋stdout、退 1；`echo=False` 只 stderr）、`warn`、`arguments`、`workspace`；工具先找自己資料夾、再找 lib/（lib/docs/01 規則 9），都找不到＝工具印 `ModuleMissing` 一行退 1；沙箱要綁它 |
 
 ## `lib/base/`（不懂 aos 的通用工具）
 
