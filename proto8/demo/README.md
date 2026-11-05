@@ -20,6 +20,7 @@
 | [01-eca-claude](docs/01-eca-claude.md) | 外部 coding agent 範本（eca-claude） |
 | [02-agent-fsm](docs/02-agent-fsm.md) | loop／fsm agent 範本 agent-fsm（11-04） |
 | [03-llm-kernel](docs/03-llm-kernel.md) | llm kernel 範本 llm-kernel（11-04 晚：問腦＝寄信給它、收回信） |
+| [04-kernel-modes](docs/04-kernel-modes.md) | kernel 三種模式：daemon 本身、daemon-judge（繼承式）、procs-kernel（0 號 proc 式）；判官 lib/base/judge、AOS_KERNEL、「唯一能下 ctl」三級（11-05） |
 
 <a id="eca-templates"></a>
 <a id="agent-fsm"></a>

@@ -1,0 +1,1 @@
+{"exec": {"argv": ["aos-exec", "../../lib/base/judge", {"$env": "AOS_CD", "$path": "judge.json"}]}, "interval_ms": 300}

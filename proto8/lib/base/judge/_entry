@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+# judge - 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false
+# 用法：aos-exec <這個資料夾> <judge.json 的絕對路徑>（每跑一次＝一輪；定義裡寫 {"$env": "AOS_CD", "$path": "judge.json"}，因為 aos-exec 會 cd 進這裡）。
+#   模式 1（繼承式）：daemon.json 的 exec 身體＝它，AOS_STACK＝daemon 自己的 stack；模式 2（0 號 proc 式）：daemon 底下一個 loop 型 proc 每次跑它，AOS_STACK＝它的小格。
+#   兩種都靠 AOS_DAEMON 找 daemon（11-05 起 daemon 的身體也拿得到）。設計：proto8/thinking/2026-11/05/kernel-daemon/02-兩種模式.md § 1、§ 2；說明 proto8/demo/docs/04-kernel-modes.md。
+# 一輪：aos-post init＋take-all $AOS_STACK/requests（對外收件箱，沒有就建）→ requests/cur/ 照處理順序逐封（含上次認領了沒收完的）：
+#   body 有 procs_added（物件）才判，其他 procs_*、不認的 key 原樣轉（C-48）：
+#   - judge.json 的 allowed（名字的陣列；null 或沒寫＝不限）：procs_added 每個名字都要在裡面，不然 NameUnknown；
+#   - max_running（非負整數；null 或沒寫＝不限）：$AOS_DAEMON/procs_state.json 裡 phase running 的列＋這一輪已放行的新名字＋這封的新名字（表上已 running 的不算新）超過就 SlotMissing；
+#   - body 不是物件、procs_added 不是物件＝BodyBad。
+#   掛＝body 原樣 aos-post send --reply-to <原信 reply_to 拼回絕對> <ctl 信箱> <同一個信件名稱>（有序信＝--ordered＋尾名），daemon 套完直接回 {"applied": true} 給原寄件人
+#     （無序信 in_reply_to＝原信名字；有序信換了序號）；ctl 信箱已有同名（上一輪轉了沒收完）＝當轉過了。送不出去＝ForwardFailed 回給原寄件人。然後 aos-post done 收掉。
+#   不掛＝aos-post done --reply '{"applied": false, "error": {"code", "msg"}}'（沒 reply_to＝只收掉）；回信寄不出去＝stderr 一行、照樣收掉。壞信＝stderr 一行、丟掉。
+#   只判斷＋轉寄，不自己跑任何東西。一輪做完退 0（沒信也是 0：身體退 10 會讓 loop／daemon 收工）。
+# ctl 信箱＝$AOS_DAEMON/<procs_state.json 頂層的 procs_ctl_mailbox>；procs_state.json 還沒寫（daemon 第一圈）＝預設 procs_ctl_mailbox、running 0 列（同 aos-daemon-ctl）。
+#   procs_state.json 經 aos-directive 解（procs 超過 100 列會切檔）。在飛的（轉了、daemon 還沒套）不算 running：模式 2 判得比 daemon 快時可能多放幾個（已知限制）。
+# 錯（自己這層的，退 1，loop／daemon 會停，P-20）：ArgumentsBad、CfgMissing、CfgBad（judge.json）、StackMissing、DaemonMissing（沒設 AOS_DAEMON 或不是資料夾）、
+#   StateBad（procs_state.json 讀不懂）、MailboxMissing（daemon 沒開 ctl 信箱）、CommandMissing（PATH 沒 aos-post／aos-directive）、PostFailed（收件箱 init／take-all／see 失敗）。
+#   stderr 一行「judge: 代號 原因」。
+import json, os, re, subprocess, sys
+
+NAME = "judge"
+NOT_FOUND = 10                                   # aos-post take-all／see 沒信
+ORDERED = re.compile(r"^[0-9]{12}\.")            # 有序信的名字（N-16）
+
+
+def die(code, reason):
+    print("%s: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
+    sys.exit(1)
+
+
+def warn(code, reason):
+    print("%s: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
+
+
+def run(argv, stdin_text="", cwd=None):
+    """叫一支程式；回 (結束碼, stdout)。stderr 不接（照轉到我們的 stderr，不偷讀，C-52）。"""
+    try:
+        r = subprocess.run(argv, input=stdin_text, stdout=subprocess.PIPE, text=True, cwd=cwd)
+    except OSError as e:
+        die("CommandMissing", "%s 起不來（要在 PATH 上）：%s" % (argv[0], e))
+    return r.returncode, r.stdout
+
+
+def post(args, stdin_text=""):
+    return run(["aos-post"] + args, stdin_text)
+
+
+def load_policy(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except FileNotFoundError:
+        die("CfgMissing", "judge.json 不在：%s" % path)
+    except OSError as e:
+        die("CfgBad", "judge.json 讀不了：%s" % e)
+    try:
+        cfg = json.loads(text)
+    except ValueError as e:
+        die("CfgBad", "judge.json 不是 JSON：%s" % e)
+    if not isinstance(cfg, dict):
+        die("CfgBad", "judge.json 要是物件")
+    allowed, cap = cfg.get("allowed"), cfg.get("max_running")
+    if allowed is not None and not (isinstance(allowed, list) and all(isinstance(n, str) for n in allowed)):
+        die("CfgBad", "allowed 要是名字的陣列或 null")
+    if cap is not None and not (isinstance(cap, int) and not isinstance(cap, bool) and cap >= 0):
+        die("CfgBad", "max_running 要是非負整數或 null")
+    return (set(allowed) if allowed is not None else None), cap
+
+
+def daemon_view(daemon):
+    """回 (ctl 信箱的絕對路徑, 正在 running 的名字集合)。"""
+    state = os.path.join(daemon, "procs_state.json")
+    if not os.path.exists(state):
+        return os.path.join(daemon, "procs_ctl_mailbox"), set()
+    try:
+        with open(state, encoding="utf-8") as f:
+            text = f.read()
+    except OSError as e:
+        die("StateBad", "procs_state.json 讀不了：%s" % e)
+    code, out = run(["aos-directive"], text, cwd=daemon)
+    try:
+        if code != 0:
+            raise ValueError("aos-directive 退 %d" % code)
+        st = json.loads(out)
+        procs = st.get("procs") or {}
+        running = {n for n, row in procs.items() if isinstance(row, dict) and row.get("phase") == "running"}
+    except (ValueError, AttributeError) as e:
+        die("StateBad", "procs_state.json 讀不懂：%s" % e)
+    if "procs_ctl_mailbox" in st and st["procs_ctl_mailbox"] is None:
+        die("MailboxMissing", "daemon 沒開 ctl 信箱（procs_state.json 的 procs_ctl_mailbox 是 null）")
+    box = st.get("procs_ctl_mailbox") or "procs_ctl_mailbox"
+    return os.path.join(daemon, box), running
+
+
+def letter_key(name):
+    """處理順序：有序在前照名字、無序在後照名字（同 aos-post）。"""
+    return (0 if ORDERED.match(name) else 1, name)
+
+
+def verdict(body, allowed, cap, running, admitted):
+    """回 (None, 新名字們)＝掛；(代號, 原因)＝不掛。"""
+    if not isinstance(body, dict):
+        return "BodyBad", "信的 body 要是物件"
+    if "procs_added" not in body:
+        return None, []
+    added = body["procs_added"]
+    if not isinstance(added, dict):
+        return "BodyBad", "procs_added 要是物件"
+    if allowed is not None:
+        bad = [n for n in added if n not in allowed]
+        if bad:
+            return "NameUnknown", "%s 不在 allowed 裡" % "、".join(bad)
+    fresh = [n for n in added if n not in running and n not in admitted]
+    if cap is not None and len(running) + len(admitted) + len(fresh) > cap:
+        return "SlotMissing", "同時最多 %d 個 running，現在 %d 個（含這一輪已放行的），這封要再加 %d 個" % (
+            cap, len(running) + len(admitted), len(fresh))
+    return None, fresh
+
+
+def forward(name, letter, inbox, ctl_box):
+    """轉寄；回 None＝成功（或上一輪已轉過）、字串＝失敗原因。"""
+    args = ["send"]
+    reply_to = letter.get("reply_to")
+    if reply_to:
+        args += ["--reply-to", os.path.normpath(os.path.join(inbox, reply_to))]   # 相對收件箱的根（11-05 起）；絕對的 join 照用
+    if ORDERED.match(name):
+        args += ["--ordered", ctl_box, name.split(".", 1)[1]]
+    else:
+        args += [ctl_box, name]
+    if os.path.exists(os.path.join(ctl_box, "new", name)):
+        return None                                           # 上一輪轉了、還沒收掉就停了
+    code, _ = post(args, json.dumps(letter["body"], ensure_ascii=False))
+    return None if code == 0 else "aos-post send 退 %d（原因見它的 stderr）" % code
+
+
+def refuse(inbox, name, code, msg):
+    reply = {"applied": False, "error": {"code": code, "msg": msg}}
+    rc, _ = post(["done", "--reply", inbox, name], json.dumps(reply, ensure_ascii=False))
+    if rc != 0:
+        warn("ReplyFailed", "信 %s 的回信寄不出去，信收掉" % name)
+        post(["done", inbox, name])
+
+
+def main():
+    if len(sys.argv) != 2 or not sys.argv[1]:
+        die("ArgumentsBad", "usage: judge <judge.json>")
+    allowed, cap = load_policy(sys.argv[1])
+    stack = os.environ.get("AOS_STACK")
+    if not stack:
+        die("StackMissing", "沒設定 AOS_STACK")
+    daemon = os.environ.get("AOS_DAEMON")
+    if not daemon or not os.path.isdir(daemon):
+        die("DaemonMissing", "AOS_DAEMON 沒設或不是資料夾：%s" % (daemon or "（空）"))
+    inbox = os.path.abspath(os.path.join(stack, "requests"))
+    if post(["init", inbox])[0] != 0:
+        die("PostFailed", "收件箱 %s 建不了" % inbox)
+    if post(["take-all", inbox])[0] not in (0, NOT_FOUND):
+        die("PostFailed", "收件箱 %s 收不了信" % inbox)
+    names = sorted((n for n in os.listdir(os.path.join(inbox, "cur")) if not n.startswith(".")), key=letter_key)
+    if not names:
+        return
+    ctl_box, running = daemon_view(daemon)
+    admitted = set()
+    for name in names:
+        code, out = post(["see", inbox, name])
+        if code == 1:
+            warn("LetterBad", "信 %s 壞了，丟掉" % name)
+            post(["done", inbox, name])
+            continue
+        if code != 0:
+            die("PostFailed", "aos-post see %s 退 %d" % (name, code))
+        letter = json.loads(out)
+        bad, detail = verdict(letter.get("body"), allowed, cap, running, admitted)
+        if bad:
+            refuse(inbox, name, bad, detail)
+            continue
+        failed = forward(name, letter, inbox, ctl_box)
+        if failed:
+            refuse(inbox, name, "ForwardFailed", failed)
+            continue
+        admitted.update(detail)
+        post(["done", inbox, name])
+
+
+main()

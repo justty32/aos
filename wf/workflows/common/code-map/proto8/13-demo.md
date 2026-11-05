@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/demo/`（外部 coding agent 範本 eca-claude、loop／fsm agent 範本 agent-fsm）
+← [入口](../proto8.md)｜涵蓋：`proto8/demo/`（外部 coding agent 範本 eca-claude、loop／fsm agent 範本 agent-fsm、llm-kernel、判官範本 daemon-judge／procs-kernel）
 
 用法、跑法與錯誤代號以 [demo/README](../../../../../proto8/demo/README.md) 為準。路徑相對於該段標題的資料夾。
 
@@ -40,3 +40,15 @@
 | `_entry` | `["aos-loop", "loop.json"]` |
 | `loop.json` | 每 300 ms 拍一次 `aos-llm-kernel kernel.json` |
 | `kernel.json` | 信箱、`slots`、`timeout_ms`、預設 endpoint 函數 `exec`（`lib/base/llm_http`）、預設代號 `endpoint`（`fake`）、代號表 `endpoints`（luna／sol／local-qwen／fake） |
+
+## `demo/daemon-judge/`、`demo/procs-kernel/`（判官範本：kernel 模式 1、2；11-05）
+
+設計：[thinking 11-05 kernel-daemon 02](../../../../../proto8/thinking/2026-11/05/kernel-daemon/02-兩種模式.md)；說明 [demo/docs/04-kernel-modes](../../../../../proto8/demo/docs/04-kernel-modes.md)；判官本體 [`lib/base/judge`](09-lib.md)。
+
+| 檔 | 負責什麼 |
+|---|---|
+| `daemon-judge/_entry` | `["aos-daemon", "daemon.json"]`（模式 1：`aos-exec` 這個資料夾＝起一台帶判官的 daemon） |
+| `daemon-judge/daemon.json` | 身體 `exec`＝單子 `aos-exec ../../lib/base/judge <AOS_CD>/judge.json`、`interval_ms` 300；`procs` 不寫＝空名單，全靠 `requests/` 進來 |
+| `procs-kernel/_entry` | `["aos-loop", "loop.json"]`（模式 2：`aos-daemon-ctl add` 它＝0 號 proc） |
+| `procs-kernel/loop.json` | 每 300 ms 跑同一張判官單子 |
+| `*/judge.json` | 政策範例 `{"allowed": ["clock", "clock2"], "max_running": N}`（daemon-judge 1、procs-kernel 2＝含 0 號自己） |
