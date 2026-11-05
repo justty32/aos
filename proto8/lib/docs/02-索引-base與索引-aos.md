@@ -9,7 +9,7 @@
 | [read](../base/read/) | 讀工作區裡一個文字檔，太長從頭截 | `path`、`offset`、`max_lines` | 內容（不加行號）；被截時尾巴寫從第幾行接著讀 |
 | [write](../base/write/) | 整份寫進一個檔（建或蓋）、上層資料夾自動建 | `path`、`content` | 一行：寫了幾 bytes |
 | [edit](../base/edit/) | 幾處照字面替換，一處不合整個不改 | `path`、`edits[{old_text, new_text}]` | 一行：換了幾處 |
-| [bash](../base/bash/) | 在工作區用 bash 跑一行指令 | `command`、`timeout_s`（30／300） | stdout＋stderr 合在一起、尾巴寫結束碼；留最後 2000 行／50KB |
+| [bash](../base/bash/) | 在工作區用 bash 跑一行指令 | `command`、`timeout_s`（30／300） | stdout＋stderr 合在一起、最後一行一律 `[exit code N]`；留最後 2000 行／50KB |
 | [ls](../base/ls/) | 列一個資料夾的子項，一次一頁 | `path`、`offset`、`max_items`（100／500）、`hidden` | JSON：`counter_items`（一共幾項）、`items[{name, type, size, mtime}]`（資料夾多 `counter_children`、`aos`，檔多 `exec`，`.json` 多 `keys`）、`next_offset`、`counter_hidden` |
 | [stat](../base/stat/) | 單一個檔或資料夾的屬性 | `path` | JSON：`type`、`mtime`、`mode`；檔多 `size`、`exec`、`text`、`counter_lines`、`format`、`top` |
 | [view](../base/view/) | 漸進看一個檔：JSON 照指標一次一層、大文字檔先給大綱 | `path`、`pointer` 或 `start`／`end` | JSON：`value` 或 `children`；文字的 `text` 或 `outline` |
@@ -21,10 +21,10 @@
 | [trash](../base/trash/) | 丟進 `.trash/<時間>/`（不真的刪，move 救回） | `path` | JSON：`path`、`to` |
 | [math](../base/math/) | 算一個算術式子（不用 eval） | `expr` | 結果 |
 | [clock](../base/clock/) | 現在的 UTC 時間 | （無） | `2026-10-23T08:00:00Z` |
-| [run_python](../base/run_python/) | 跑一段 Python，回結束碼與輸出 | `code`、`timeout_s`（60／300） | 第一行「exit code N」、接著輸出 |
+| [run_python](../base/run_python/) | 跑一段 Python，回輸出與結束碼 | `code`、`timeout_s`（60／300） | 輸出、最後一行一律 `[exit code N]`（同 bash，11-05 前是第一行） |
 | [llm_http](../base/llm_http/) | endpoint 函數：把一份請求 POST 到 OpenAI 相容端點（11-04 晚，[think-as-function](../../thinking/2026-11/04/think-as-function/README.md)；平常由 aos-llm-kernel 經 aos-exec 跑） | `endpoint{url, model, key?, fixed?}`（request 先、`fixed` 蓋上、model 一律用包的）、`request{messages, …}` | 一行 JSON：`message`（只留 role／content／tool_calls）、`usage`、`model` |
 | [llm_fake](../base/llm_fake/) | 假腦：同 llm_http 的形狀、不碰網路（有工具先叫第一個，否則答 FAKE ANSWER；`endpoint.script` 有就照劇本：第 n 則 assistant 回 `script[n]`，項＝`{"content"}` 或 `{"tool_calls":[{"name","arguments"}]}`，超出照原樣） | 同上（`endpoint` 只看 `script`） | 同上，`model`＝`fake` |
-| [judge](../base/judge/) | 判官（11-05；不是腦的工具，只有 `_entry`）：收 `$AOS_STACK/requests/` 的 `procs_*` 信，照 `judge.json` 判掛不掛；掛＝轉寄進 `$AOS_DAEMON` 的 ctl 信箱、不掛＝回 `applied: false`。daemon 的身體（[demo/daemon-judge](../../demo/daemon-judge/)）或 daemon 底下的 0 號 proc（[demo/procs-kernel](../../demo/procs-kernel/)）每次跑一輪；說明 [demo/docs/04](../../demo/docs/04-kernel-modes.md) | 命令列一個參數：`judge.json` 的絕對路徑；`judge.json` 的 `allowed`（名字陣列／null）、`max_running`（非負整數／null） | 轉寄（照帶原信 `reply_to`）或回信、退 0；不掛的代號 `NameUnknown`、`SlotMissing`、`BodyBad`、`ForwardFailed`（`msg` 英文，同 stderr 那行；aos-agent ctl 收到就報 `AddRejected`／`CtlRejected`，11-05 edge-agent 題 2） |
+| [judge](../base/judge/) | 判官（11-05；不是腦的工具，只有 `_entry`）：收 `$AOS_STACK/requests/` 的 `procs_*` 信，照 `judge.json` 判掛不掛；掛＝轉寄進 `$AOS_DAEMON` 的 ctl 信箱、不掛＝回 `applied: false`。daemon 的身體（[demo/daemon-judge](../../demo/daemon-judge/)）或 daemon 底下的 0 號 proc（[demo/procs-kernel](../../demo/procs-kernel/)）每次跑一輪；說明 [demo/docs/04](../../demo/docs/04-kernel-modes.md) | 命令列一個參數：`judge.json` 的絕對路徑；`judge.json` 的 `allowed`（名字陣列／null）、`max_running`（非負整數／null） | 轉寄（照帶原信 `reply_to`）或回信、退 0；不掛的代號 `NameUnknown`、`SlotMissing`、`BodyBad`、`ForwardFailed`（`msg` 英文，同 stderr 那行提醒 `judge: warning: letter <名> refused: 代號 原因`；aos-agent ctl 收到就報 `AddRejected`／`CtlRejected`，11-05 edge-agent 題 2） |
 
 不碰工作區的（`math`、`clock`、`run_python`、`llm_http`、`llm_fake`）不收路徑、不看 `$AOS_WS`；`run_python` 把程式寫進自己的小格再跑（規則 8 的例外：拿小格當草稿區，不跨呼叫留東西）。
 每個工具的細節看它 `_entry` 開頭的幾行說明與 `_tooldef.json`。

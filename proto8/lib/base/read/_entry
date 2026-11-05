@@ -1,16 +1,30 @@
 #!/usr/bin/env python3
 # read - 讀工作區裡一個文字檔，太長從頭截、告訴你從第幾行接著讀
 # 介面（lib/README 的契約）：stdin 收 {"path", "offset"?, "max_lines"?}；stdout 印內容（不加行號）；
-# 路徑從 $AOS_WS 算、解開 .. 與捷徑後不能跑出去；錯：stderr 與 stdout 各一行「read: 代號 原因」、退 1。
+# 路徑從 $AOS_WS 算、解開 .. 與捷徑後不能跑出去；錯：stderr 與 stdout 各一行「read: error: 代號 原因」、退 1。
 # 來源：demo/pi-tools/read（10-24，照 pi 的 read：2000 行或 50KB 先到先算）。
-import json, os, sys
+import json, os, signal, sys
+HELP = """\
+usage: read < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Read a text file in the workspace (at most 2000 lines or 50KB per call; the end
+of the output says which offset to continue from).
+Arguments: one JSON object on stdin (empty stdin = {}):
+  path       string, required
+  offset     integer
+  max_lines  integer
+Result on stdout. On error: one line "read: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "read"
 MAX_LINES, MAX_BYTES = 2000, 50 * 1024
 
 
 def die(code, reason):
-    line = "%s: %s %s" % (NAME, code, reason)
+    line = "%s: error: %s %s" % (NAME, code, reason)
     print(line, file=sys.stderr)
     print(line)                                 # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
@@ -26,8 +40,8 @@ def workspace():
 def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
-    except ValueError as e:
-        die("ArgumentsBad", "stdin is not JSON: %s" % e)
+    except ValueError:
+        die("ArgumentsBad", "stdin is not JSON")
     if not isinstance(a, dict):
         die("ArgumentsBad", "arguments must be an object")
     return a

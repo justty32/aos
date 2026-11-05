@@ -5,8 +5,22 @@
 # 資料夾多 counter_children（子項數）與 aos（裡面有哪些 _entry、.env、_tooldef.json…）；檔多 exec（可執行）；.json 檔多 keys（頂層 key，最多 12 個；多的個數放 counter_keys_more）。
 # 資料夾在前、照名字排；. 開頭的預設不列（數目放 counter_hidden）；還有就給 next_offset。路徑從 $AOS_WS 算、不能跑出去。
 # 計數的 key 一律 counter_*（10-25，原 total、children、hidden、keys_more）。
-# 錯：stderr 與 stdout 各一行「ls: 代號 原因」、退 1。（10-24 遷移：併進 demo/file-tools/ls 的加料——aos 記號、children、exec、JSON 頂層 key）
-import json, os, sys, time
+# 錯：stderr 與 stdout 各一行「ls: error: 代號 原因」、退 1。（10-24 遷移：併進 demo/file-tools/ls 的加料——aos 記號、children、exec、JSON 頂層 key）
+import json, os, signal, sys, time
+HELP = """\
+usage: ls < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+List the entries of a folder in the workspace, one page at a time, as JSON.
+Arguments: one JSON object on stdin (empty stdin = {}):
+  path       string
+  offset     integer
+  max_items  integer
+  hidden     boolean
+Result on stdout. On error: one line "ls: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "ls"
 LIMIT_DEFAULT, LIMIT_MAX = 100, 500
@@ -16,7 +30,7 @@ JSON_PEEK_MAX = 1024 * 1024         # 這麼大以下的 .json 才打開看頂�
 
 
 def die(code, reason):
-    line = "%s: %s %s" % (NAME, code, reason)
+    line = "%s: error: %s %s" % (NAME, code, reason)
     print(line, file=sys.stderr)
     print(line)                                 # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
@@ -32,8 +46,8 @@ def workspace():
 def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
-    except ValueError as e:
-        die("ArgumentsBad", "stdin is not JSON: %s" % e)
+    except ValueError:
+        die("ArgumentsBad", "stdin is not JSON")
     if not isinstance(a, dict):
         die("ArgumentsBad", "arguments must be an object")
     return a

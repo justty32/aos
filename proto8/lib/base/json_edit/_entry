@@ -2,19 +2,33 @@
 # json_edit - 照 JSON 指標改工作區裡一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫
 # 介面（lib/README 的契約）：stdin 收 {"path", "set"?: {指標: 新值}, "del"?: [指標]}；先照順序做 set、再做 del；
 # set 的指標中間缺的物件層自動建，陣列用 "-" 接在尾巴、數字要是既有的那一項；del 的指標一定要指得到。
-# stdout 一份 JSON {"path", "counter_set": 幾個, "counter_del": 幾個, "top": 改完頂層的 key（或 {"type": "array", "counter_items"}）}（計數 10-25 改 counter_*，原 set、del、len）。錯：stderr 與 stdout 各一行「json_edit: 代號 原因」、退 1。
+# stdout 一份 JSON {"path", "counter_set": 幾個, "counter_del": 幾個, "top": 改完頂層的 key（或 {"type": "array", "counter_items"}）}（計數 10-25 改 counter_*，原 set、del、len）。錯：stderr 與 stdout 各一行「json_edit: error: 代號 原因」、退 1。
 # 做法（10-24 遷移，代定 14「換實作不換介面」）：先在記憶體裡照上面的規則全部做一遍（錯誤代號在這裡定），都合了才交給 C++ 的 aos-json 寫：
 #   連續的 set 一次 `aos-json batch --parents 檔`、接陣列尾巴的 `aos-json append 檔#指標`、del 每個一次 `aos-json del 檔#指標`——
 #   aos-json 原子寫入、只重寫有變的那一塊（排版不換）。aos-json 照 PATH 找；它的 stderr 原樣往上、這裡不讀（C-53），失敗只說結束碼。
 #   不穿 $ref：路上經過 {"$ref"}／{"$env"} 物件時 aos-json 會拒絕（WriteFailed），要穿過去用 aos-json 本身。
-import json, os, subprocess, sys
+import json, os, signal, subprocess, sys
+HELP = """\
+usage: json_edit < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Change a JSON file in the workspace at JSON pointers: set first, then del; if any
+place does not fit, the file is not written. Prints a one-line JSON summary.
+Arguments: one JSON object on stdin (empty stdin = {}):
+  path  string, required
+  set   object
+  del   array
+Result on stdout. On error: one line "json_edit: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "json_edit"
 SIZE_MAX = 4 * 1024 * 1024
 
 
 def die(code, reason):
-    line = "%s: %s %s" % (NAME, code, reason)
+    line = "%s: error: %s %s" % (NAME, code, reason)
     print(line, file=sys.stderr)
     print(line)                                 # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
@@ -30,8 +44,8 @@ def workspace():
 def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
-    except ValueError as e:
-        die("ArgumentsBad", "stdin is not JSON: %s" % e)
+    except ValueError:
+        die("ArgumentsBad", "stdin is not JSON")
     if not isinstance(a, dict):
         die("ArgumentsBad", "arguments must be an object")
     return a

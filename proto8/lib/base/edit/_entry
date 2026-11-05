@@ -3,14 +3,27 @@
 # 介面（lib/README 的契約）：stdin 收 {"path", "edits": [{"old_text", "new_text"}]}；stdout 一行說換了幾處；
 # 規則同 pi：每個 old_text 都拿改之前的原檔比、要剛好出現一次、彼此不重疊、不能空；改完跟原本一樣也算錯；
 # 全有或全無；CRLF 的檔照 LF 比、寫回時還原；不做模糊比對。路徑從 $AOS_WS 算、不能跑出去；
-# 錯：stderr 與 stdout 各一行「edit: 代號 原因」、退 1。來源：demo/pi-tools/edit（10-24）。
-import json, os, sys
+# 錯：stderr 與 stdout 各一行「edit: error: 代號 原因」、退 1。來源：demo/pi-tools/edit（10-24）。
+import json, os, signal, sys
+HELP = """\
+usage: edit < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Replace exact text in one file in the workspace, at one or more places; every
+old_text must appear exactly once, otherwise nothing is changed.
+Arguments: one JSON object on stdin (empty stdin = {}):
+  path   string, required
+  edits  array, required
+Result on stdout. On error: one line "edit: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "edit"
 
 
 def die(code, reason):
-    line = "%s: %s %s" % (NAME, code, reason)
+    line = "%s: error: %s %s" % (NAME, code, reason)
     print(line, file=sys.stderr)
     print(line)                                 # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
@@ -26,8 +39,8 @@ def workspace():
 def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
-    except ValueError as e:
-        die("ArgumentsBad", "stdin is not JSON: %s" % e)
+    except ValueError:
+        die("ArgumentsBad", "stdin is not JSON")
     if not isinstance(a, dict):
         die("ArgumentsBad", "arguments must be an object")
     return a

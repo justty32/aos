@@ -7,14 +7,29 @@
 #   （Python：class／def 與行號範圍；Markdown：標題與行號；其他：前 40 行），再用 start／end 看要的那段。一次最多 2000 行或 50KB。
 # 要把 JSON 當文字看（看原始排版），給 start／end 就好。路徑從 $AOS_WS 算、不能跑出去。
 # 計數的 key 一律 counter_*（10-25，原 total_lines、children_more，摘要裡的 keys、items、chars）。
-# 錯：stderr 與 stdout 各一行「view: 代號 原因」、退 1。來源：demo/file-tools/view（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
-import ast, json, os, re, sys
+# 錯：stderr 與 stdout 各一行「view: error: 代號 原因」、退 1。來源：demo/file-tools/view（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
+import ast, json, os, re, signal, sys
+HELP = """\
+usage: view < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+View a file in the workspace step by step: JSON one level at a time, big text files
+as an outline first, or the lines start..end.
+Arguments: one JSON object on stdin (empty stdin = {}):
+  path     string, required
+  pointer  string
+  start    integer
+  end      integer
+Result on stdout. On error: one line "view: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "view"
 
 
 def die(code, reason):
-    line = "%s: %s %s" % (NAME, code, reason)
+    line = "%s: error: %s %s" % (NAME, code, reason)
     print(line, file=sys.stderr)
     print(line)                                 # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
@@ -34,8 +49,8 @@ def workspace():
 def arguments(*required):
     try:
         a = json.loads(sys.stdin.read() or "{}")
-    except ValueError as e:
-        die("ArgumentsBad", "stdin is not JSON: %s" % e)
+    except ValueError:
+        die("ArgumentsBad", "stdin is not JSON")
     if not isinstance(a, dict):
         die("ArgumentsBad", "arguments must be an object")
     for k in required:

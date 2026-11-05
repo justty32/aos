@@ -3,8 +3,22 @@
 # 介面（lib/README 的契約）：stdin 收 {"path", "pointer"?: "", "depth"?: 1}；stdout 一份 JSON {"path", "pointer", "value"}：
 # value 超過 depth 層的物件摺成 {"type": "object", "keys": [最多 20 個], "counter_keys_more"?: 沒列的個數}、陣列摺成 {"type": "array", "counter_items": N}、
 # 長字串摺成 {"type": "string", "counter_chars": N, "head": 前 100 字}（計數 10-25 改 counter_*，原 len、keys_more）；其餘照原樣。pointer 照 RFC 6901（整份是空字串）。
-# 錯：stderr 與 stdout 各一行「json_read: 代號 原因」、退 1。（impls/aos-json 的 peek 是同一件事的 C++ 版，做好後可換）
-import json, os, sys
+# 錯：stderr 與 stdout 各一行「json_read: error: 代號 原因」、退 1。（impls/aos-json 的 peek 是同一件事的 C++ 版，做好後可換）
+import json, os, signal, sys
+HELP = """\
+usage: json_read < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Look at one place in a JSON file in the workspace, unfolding only depth levels
+(bigger values are folded into summaries). Prints {"path", "pointer", "value"}.
+Arguments: one JSON object on stdin (empty stdin = {}):
+  path     string, required
+  pointer  string
+  depth    integer
+Result on stdout. On error: one line "json_read: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "json_read"
 DEPTH_MAX, KEYS_MAX, STR_MAX, HEAD = 10, 20, 500, 100
@@ -12,7 +26,7 @@ SIZE_MAX = 4 * 1024 * 1024
 
 
 def die(code, reason):
-    line = "%s: %s %s" % (NAME, code, reason)
+    line = "%s: error: %s %s" % (NAME, code, reason)
     print(line, file=sys.stderr)
     print(line)                                 # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
@@ -28,8 +42,8 @@ def workspace():
 def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
-    except ValueError as e:
-        die("ArgumentsBad", "stdin is not JSON: %s" % e)
+    except ValueError:
+        die("ArgumentsBad", "stdin is not JSON")
     if not isinstance(a, dict):
         die("ArgumentsBad", "arguments must be an object")
     return a

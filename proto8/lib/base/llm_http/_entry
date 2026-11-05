@@ -3,16 +3,29 @@
 # 介面（lib/README 的契約）：stdin 一份 {"endpoint": {"url", "model", "key"?, "fixed"?}, "request": {"messages", ...}}；
 #   送出的 body＝request 先、endpoint.fixed（那組釘死的欄位，例 temperature）蓋上，model 一律用 endpoint.model（11-05 件 2 代定 2；不留舊 body 名）；
 #   key 有才帶 Bearer。stdout 一行 {"message": choices[0].message 只留 role／content／tool_calls, "usage", "model"}、退 0。
-# 錯：stderr 與 stdout 各一行「llm_http: 代號 原因」、退 1：ArgumentsBad（stdin 不是這形狀）、EndpointFailed（連不上、HTTP 非 2xx）、
+# 錯：stderr 與 stdout 各一行「llm_http: error: 代號 原因」、退 1：ArgumentsBad（stdin 不是這形狀）、EndpointFailed（連不上、HTTP 非 2xx）、
 #   ReplyBad（不是 OpenAI 形狀）。沒有自己的逾時旗標（包它的單子守，10-15 KISS）；平常由 aos-llm-kernel 經 aos-exec 跑（kernel.json 的 exec）。
 # 來源：demo/agent-fsm/brain.py 的 ask()（11-04 晚搬過來，brain.py 改成只組請求）。
-import http.client, json, sys, urllib.parse
+import http.client, json, signal, sys, urllib.parse
+HELP = """\
+usage: llm_http < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Endpoint function: POST the request to an OpenAI-compatible {url}/chat/completions
+and print {"message", "usage", "model"} trimmed from the reply.
+Arguments: one JSON object on stdin (empty stdin = {}):
+  endpoint  object, required
+  request   object, required
+Result on stdout. On error: one line "llm_http: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "llm_http"
 
 
 def die(code, reason):
-    line = "%s: %s %s" % (NAME, code, str(reason).replace("\n", " "))
+    line = "%s: error: %s %s" % (NAME, code, str(reason).replace("\n", " "))
     print(line, file=sys.stderr)
     print(line)
     sys.exit(1)
@@ -20,8 +33,8 @@ def die(code, reason):
 
 try:
     args = json.loads(sys.stdin.read() or "null")
-except ValueError as e:
-    die("ArgumentsBad", "stdin is not JSON: %s" % e)
+except ValueError:
+    die("ArgumentsBad", "stdin is not JSON")
 if not isinstance(args, dict) or not isinstance(args.get("endpoint"), dict) or not isinstance(args.get("request"), dict):
     die("ArgumentsBad", "stdin must be {\"endpoint\": {...}, \"request\": {...}}")
 endpoint, request = args["endpoint"], args["request"]

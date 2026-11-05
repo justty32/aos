@@ -5,16 +5,30 @@
 #   stdout 一行 {"message", "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}, "model": "fake"}、退 0。
 #   endpoint.script（陣列，劇本）有就照劇本：已在 messages 裡的 assistant 則數 n，這次回 script[n]；一項是 {"content": "..."} 或
 #   {"tool_calls": [{"name": "...", "arguments": {...}}]}（arguments 給物件，這裡轉成 JSON 字串；補 id／type）；n 超過劇本長度＝照上面原本的行為。
-# 錯：stderr 與 stdout 各一行「llm_fake: ArgumentsBad 原因」、退 1。
+# 錯：stderr 與 stdout 各一行「llm_fake: error: ArgumentsBad 原因」、退 1。
 # 用法：kernel.json 的 endpoints 登記一組 "fake": {"exec": "<到這個資料夾的路徑>"}，信寫 "endpoint": "fake"（或設成預設）。
 # 來源：demo/agent-fsm/brain.py 的 fake()（11-04 晚搬過來；不再用「URL 沒設＝假腦」的暗規則，C-56）。
-import json, sys
+import json, signal, sys
+HELP = """\
+usage: llm_fake < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Fake brain endpoint function (same stdin/stdout as llm_http, no network): answers
+"FAKE ANSWER to: ..." or calls the first tool; endpoint.script gives scripted replies.
+Prints {"message", "usage", "model"}.
+Arguments: one JSON object on stdin (empty stdin = {}):
+  endpoint  object
+  request   object, required
+Result on stdout. On error: one line "llm_fake: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "llm_fake"
 
 
 def die(code, reason):
-    line = "%s: %s %s" % (NAME, code, reason)
+    line = "%s: error: %s %s" % (NAME, code, reason)
     print(line, file=sys.stderr)
     print(line)
     sys.exit(1)
@@ -22,8 +36,8 @@ def die(code, reason):
 
 try:
     args = json.loads(sys.stdin.read() or "null")
-except ValueError as e:
-    die("ArgumentsBad", "stdin is not JSON: %s" % e)
+except ValueError:
+    die("ArgumentsBad", "stdin is not JSON")
 request = args.get("request") if isinstance(args, dict) else None
 if not isinstance(request, dict) or not isinstance(request.get("messages"), list) or not request["messages"]:
     die("ArgumentsBad", "stdin must be {\"endpoint\": {...}, \"request\": {\"messages\": [at least one]}}")

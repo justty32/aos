@@ -13,15 +13,25 @@
 #   掛＝body 原樣 aos-post send --reply-to <原信 reply_to 拼回絕對> <ctl 信箱> <同一個信件名稱>（有序信＝--ordered＋尾名），daemon 套完直接回 {"applied": true} 給原寄件人
 #     （無序信 in_reply_to＝原信名字；有序信換了序號）；ctl 信箱已有同名（上一輪轉了沒收完）＝當轉過了。送不出去＝ForwardFailed 回給原寄件人。然後 aos-post done 收掉。
 #   不掛＝aos-post done --reply '{"applied": false, "error": {"code", "msg"}}'（沒 reply_to＝只收掉）；回信寄不出去＝stderr 一行、照樣收掉。壞信＝stderr 一行、丟掉。
-#     不掛的每封一律 stderr 一行「judge: 代號 letter <名> refused: 原因」（11-05 edge-agent）；回信的 msg 與這行的原因是同一句（英文）。
+#     不掛的每封一律 stderr 一行提醒「judge: warning: letter <名> refused: 代號 原因」（11-05 edge-agent；stdio-unify R1 起是提醒行：拒信是判官的答案、不是它的錯）；
+#     回信的 code、msg 與這行的代號、原因同一句（英文）。回信寄不出去、壞信也是提醒行。
 #     aos-daemon-ctl --reply-to（11-05 edge-agent 題 2）帶 reply_to：aos-agent ctl 收這封 applied: false 立刻報錯，不等逾時。
 #   只判斷＋轉寄，不自己跑任何東西。一輪做完退 0（沒信也是 0：身體退 10 會讓 loop／daemon 收工）。
 # ctl 信箱＝$AOS_DAEMON/<procs_state.json 頂層的 procs_ctl_mailbox>；procs_state.json 還沒寫（daemon 第一圈）＝預設 procs_ctl_mailbox、running 0 列（同 aos-daemon-ctl）。
 #   procs_state.json 經 aos-directive 解（procs 超過 100 列會切檔）。在飛的（轉了、daemon 還沒套）不算 running：模式 2 判得比 daemon 快時可能多放幾個（已知限制）。
 # 錯（自己這層的，退 1，loop／daemon 會停，P-20）：ArgumentsBad、CfgMissing、CfgBad（judge.json）、StackMissing、DaemonMissing（沒設 AOS_DAEMON 或不是資料夾）、
 #   StateBad（procs_state.json 讀不懂）、MailboxMissing（daemon 沒開 ctl 信箱）、CommandMissing（PATH 沒 aos-post／aos-directive）、PostFailed（收件箱 init／take-all／see 失敗）。
-#   stderr 一行「judge: 代號 原因」。
-import json, os, re, subprocess, sys
+#   stderr 一行「judge: error: 代號 原因」。--help＝英文用法印 stdout、退 0。Ctrl-C＝退 130、不吐 traceback。
+import json, os, re, signal, subprocess, sys
+
+HELP = """\
+usage: judge JUDGE.json   (run it with aos-exec as a daemon body or a loop proc; needs $AOS_STACK and $AOS_DAEMON)
+One round of the judge: take the procs_* letters in $AOS_STACK/requests/, decide each by
+JUDGE.json ({"allowed": [names] | null, "max_running": N | null}); forward the admitted ones
+to the daemon's ctl mailbox, answer the others {"applied": false, "error": {code, msg}}.
+Each refused letter: one line "judge: warning: letter NAME refused: CODE reason" on stderr.
+Exit 0 after a round (also with no letters). On error: "judge: error: CODE reason" on stderr, exit 1.
+"""
 
 NAME = "judge"
 NOT_FOUND = 10                                   # aos-post take-all／see 沒信
@@ -29,12 +39,13 @@ ORDERED = re.compile(r"^[0-9]{12}\.")            # 有序信的名字（N-16）
 
 
 def die(code, reason):
-    print("%s: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
+    print("%s: error: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
     sys.exit(1)
 
 
-def warn(code, reason):
-    print("%s: %s %s" % (NAME, code, str(reason).replace("\n", " ")), file=sys.stderr)
+def warn(sentence):
+    """提醒行（stdio-unify R1）：不帶代號的一句；退 0 也可以有。"""
+    print("%s: warning: %s" % (NAME, str(sentence).replace("\n", " ")), file=sys.stderr)
 
 
 def run(argv, stdin_text="", cwd=None):
@@ -151,17 +162,20 @@ def forward(name, letter, inbox, ctl_box):
 
 
 def refuse(inbox, name, code, msg):
-    warn(code, "letter %s refused: %s" % (name, msg))
+    warn("letter %s refused: %s %s" % (name, code, msg))
     reply = {"applied": False, "error": {"code": code, "msg": msg}}
     rc, _ = post(["done", "--reply", inbox, name], json.dumps(reply, ensure_ascii=False))
     if rc != 0:
-        warn("ReplyFailed", "letter %s: could not send the reply, letter dropped" % name)
+        warn("letter %s: could not send the reply, letter dropped" % name)
         post(["done", inbox, name])
 
 
 def main():
+    if "--help" in sys.argv[1:]:                # --help：英文說明印 stdout、退 0（stdio-unify R3）
+        sys.stdout.write(HELP)
+        sys.exit(0)
     if len(sys.argv) != 2 or not sys.argv[1]:
-        die("ArgumentsBad", "usage: judge <judge.json>")
+        die("ArgumentsBad", "need exactly one argument, the path of judge.json (usage: judge JUDGE.json)")
     allowed, cap = load_policy(sys.argv[1])
     stack = os.environ.get("AOS_STACK")
     if not stack:
@@ -182,7 +196,7 @@ def main():
     for name in names:
         code, out = post(["see", inbox, name])
         if code == 1:
-            warn("LetterBad", "letter %s is broken; dropped" % name)
+            warn("letter %s is broken; dropped" % name)
             post(["done", inbox, name])
             continue
         if code != 0:
@@ -200,4 +214,5 @@ def main():
         post(["done", inbox, name])
 
 
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 main()

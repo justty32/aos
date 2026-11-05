@@ -1,10 +1,25 @@
 #!/usr/bin/env python3
 # bash - 在工作區裡用 bash 跑一行指令，回 stdout＋stderr 合在一起的輸出
 # 介面（lib/README 的契約）：stdin 收 {"command", "timeout_s"?}；stdout 印輸出（太長留最後 2000 行或 50KB）；
-# 指令退非 0 不算這個工具的錯（結果尾巴寫結束碼，腦自己看）；逾時（預設 30 秒、上限 300）＝整群先 TERM、2 秒後 KILL、算錯。
+# 指令退非 0 不算這個工具的錯（最後一行一律寫 [exit code N]，退 0 也寫、被訊號殺＝128＋N；腦自己看）；逾時（預設 30 秒、上限 300）＝整群先 TERM、2 秒後 KILL、算錯。
 # 這個工具被外面 TERM 時也先停掉指令那一群再走。指令本身碰得到工作區外面——路徑檢查只在 read／write／edit。
-# 錯：stderr 與 stdout 各一行「bash: 代號 原因」、退 1。來源：demo/pi-tools/bash（10-24；參數 timeout 改名 timeout_s，C-54 單位放字尾）。
+# 錯：stderr 與 stdout 各一行「bash: error: 代號 原因」、退 1。來源：demo/pi-tools/bash（10-24；參數 timeout 改名 timeout_s，C-54 單位放字尾）。
 import json, os, signal, subprocess, sys, tempfile
+HELP = """\
+usage: bash < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Run one bash command in the workspace ($AOS_WS); print its stdout+stderr combined
+(last 2000 lines or 50KB). The last line is always [exit code N]; the command exiting
+non-zero is a result, not an error of this tool. Over timeout_s the whole process group
+is stopped (CommandFailed).
+Arguments: one JSON object on stdin (empty stdin = {}):
+  command    string, required
+  timeout_s  number
+Result on stdout. On error: one line "bash: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "bash"
 MAX_LINES, MAX_BYTES = 2000, 50 * 1024
@@ -13,7 +28,7 @@ GRACE = 2                                   # TERM 之後等幾秒才 KILL
 
 
 def die(code, reason, before=""):
-    line = "%s: %s %s" % (NAME, code, reason)
+    line = "%s: error: %s %s" % (NAME, code, reason)
     print(line, file=sys.stderr)
     sys.stdout.write(before + line + "\n")      # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
@@ -29,8 +44,8 @@ def workspace():
 def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
-    except ValueError as e:
-        die("ArgumentsBad", "stdin is not JSON: %s" % e)
+    except ValueError:
+        die("ArgumentsBad", "stdin is not JSON")
     if not isinstance(a, dict):
         die("ArgumentsBad", "arguments must be an object")
     return a
@@ -103,8 +118,7 @@ if note:
     parts.append(note)
 if timed_out:
     die("CommandFailed", "ran over %g s; stopped the whole process group" % timeout, "\n\n".join(parts) + "\n\n" if parts else "")
-if code < 0:
-    parts.append("[killed by signal %d]" % -code)
-elif code != 0:
-    parts.append("[exit code %d]" % code)
-print("\n\n".join(parts) if parts else "(no output)")
+if not parts:
+    parts.append("(no output)")
+parts.append("[exit code %d]" % (128 - code if code < 0 else code))   # 一律寫在最後一行（stdio-unify R2）；被訊號殺＝128＋N（R12）
+print("\n\n".join(parts))
