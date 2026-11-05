@@ -5,7 +5,7 @@
 # 往 daemon 的信箱（信箱模式，N-28 的 10-29 補）投一封 `procs_added`／`procs_removed`／`procs_stopped`／`procs_started`／`procs_slept`／`procs_woken` 的信。設計與代定見
 # proto8/thinking/2026-10/30/agent-lifecycle/README.md（實作第 7 步的補）、2026-11/03/procs.md（11-03 loops／execs 統稱 procs）與 bin/README.md。
 #
-#     aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--name N] [--ws WS] [--stack S] [--def DEF] XXX [-- 參數...]   掛上去（add＝登記＋起）；stdout 印信件名稱（aos-post 給的）
+#     aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--name N] [--ws WS] [--stack S] [--def DEF] [--limits JSON] XXX [-- 參數...]   掛上去（add＝登記＋起）；stdout 印信件名稱（aos-post 給的）
 #     aos-daemon-ctl [--daemon D] rm [--reply-to BOX] 名字                                      拿下來（procs_removed；先停再拿掉，stack 留著）；印信件名稱
 #     aos-daemon-ctl [--daemon D] stop [--reply-to BOX] 名字                                    停（procs_stopped：跑完這次退、列留成 stopped、stack 留著）；印信件名稱
 #     aos-daemon-ctl [--daemon D] start [--reply-to BOX] 名字                                   起（procs_started：stopped 的用同一個 stack 再起）；印信件名稱
@@ -61,6 +61,10 @@
 #   歸 daemon 管，AOS_WS 只是一個位址。要對它說話＝`aos-agent say --target 名字 …`（11-04 起取代 aos-say／aos-listen）。
 # --stack S（11-03 procs § 2b）：這個子項的 stack（沒給＝daemon 的預設小格 <D>/procs/<名字>/）。S 從呼叫當下的 cwd 轉絕對、不驗在不在
 #   （daemon 起它時 mkdir -p；S 裡有別的東西使用者自己承擔）；空＝ArgumentsBad。寫進子項物件的 stack。
+# --limits JSON（11-05 feat-proto 件 5，使用者「會想要限制特定aos proc所占用的資源」）：這個子項的份額，原樣寫進子項物件的 limits
+#   （{"mem_mb", "cpu_s", "procs", "file_mb", "files"：正整數；"user"：字串}，同 aos-sandbox 的 key；'{}'＝不限、蓋過 daemon.json 頂層的預設）。
+#   不是 JSON、key 不認、值不對＝ArgumentsBad、不送信（daemon 再驗一次）。daemon 在子行程 setrlimit／換身分（等同 s6-softlimit／s6-setuidgid）；
+#   比 daemon 自己的 hard limit 寬、user 沒有 root＝子項起不來，小格 stderr.txt 一行 LimitBad。表上那列的 limits（生效的那份）ls --json 帶出。
 # rm／stop／start（11-03 procs § 2c）：rm＝procs_removed（先停再拿掉；stack 不清）；stop＝procs_stopped（loop 型跑完這次自己退 0、列留成 stopped、
 #   where 照找得到）；start＝procs_started（stopped 的用列上的 stack 再起；起來是跑還是暫停看它自己的 state.json）。
 # sleep／wake（11-05 portable-flow 衝突 1，使用者選「嚴格分」）：sleep＝procs_slept（daemon 現在就對它 SIGTERM〔10 秒 KILL〕、列留成 sleeping、
@@ -94,7 +98,7 @@
 `aos-exec XXX` hands XXX to Linux process management; `aos-daemon-ctl add XXX` hands it to a daemon: it drops a procs_added /
 procs_removed / procs_stopped / procs_started / procs_slept / procs_woken letter into the daemon's mailbox.
 
-    aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--name N] [--ws WS] [--stack S] [--def DEF] XXX [-- ARGS...]
+    aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--name N] [--ws WS] [--stack S] [--def DEF] [--limits JSON] XXX [-- ARGS...]
                                                        attach (register + start); stdout prints the letter name (from aos-post)
     aos-daemon-ctl [--daemon D] rm [--reply-to BOX] NAME      detach (procs_removed: stop, then remove; the stack is kept); prints the letter name
     aos-daemon-ctl [--daemon D] stop [--reply-to BOX] NAME    stop (procs_stopped: exits after this run, row stays as stopped, stack kept)
@@ -141,6 +145,11 @@ add, what XXX is: follow the entry the way aos-exec does (folder = XXX/$AOS_ENTR
   (not given = inherits the daemon's). ls shows a ws column (- if none).
 --stack S: this child's stack (not given = the daemon's default cell <D>/procs/<NAME>/), made absolute, not checked (the daemon
   mkdir -p's it); empty = ArgumentsBad.
+--limits JSON: this child's resource limits, sent as the limits of the child object ({"mem_mb", "cpu_s", "procs", "file_mb", "files":
+  positive integers; "user": a string}, the aos-sandbox keys; '{}' = no limits, overriding the daemon's default). Not JSON, an unknown
+  key or a bad value = ArgumentsBad, nothing sent. The daemon applies them in the child process (setrlimit / switching user, the same
+  as s6-softlimit / s6-setuidgid); wider than the daemon's own hard limit, or user without root = the child does not start and its
+  stderr.txt gets one LimitBad line. The row's limits (the ones in effect) show in ls --json.
 stop vs sleep: stop waits for this round to finish and needs start to come back; sleep stops it now and the daemon wakes it when it
   starts. Exec types have no stop / sleep (CtlMissing). Wrong phase = PhaseBad, exit 1, nothing sent (checked against the table; the
   daemon checks again): stop and sleep only take running; start only stopped; wake only sleeping.
@@ -164,7 +173,7 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
 NAME = "aos-daemon-ctl"
-USAGE = ("aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--name N] [--ws WS] [--stack S] [--def DEF] XXX [-- ARGS...]"
+USAGE = ("aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--name N] [--ws WS] [--stack S] [--def DEF] [--limits JSON] XXX [-- ARGS...]"
          " | rm|stop|start|sleep|wake [--reply-to BOX] NAME | pause NAME | resume NAME | ls [--json] | where --stack NAME")
 PATHS = ("stack", "ws", "exec", "def")   # procs_state 每列存相對 daemon stack 的欄（11-05 portable-flow）
 STATE = "procs_state.json"   # daemon 的名單窗：找其他名字的起點，所以只能用預設名（daemon.json 改了 procs_state＝這支找不到，StateMissing）
@@ -316,7 +325,7 @@ def loop_spec(found):
         cfg["exec"] = path + "#" + ptr + "/exec"
     # 11-04（four-elements 08 步 6「不補名」）：ctl／state 不補（aos-loop 自己沒寫＝ctl.json／state.json）。只有 exec 的 loop 設定
     # 交給 daemon 會被認成 exec 型（題 3：物件只有 exec＝跑一次），所以補一格 "interval_ms": 0——aos-loop 的預設本來就是 0，行為不變
-    if set(cfg) <= {"exec", "ws", "stack", "def"}:   # 同 daemon 的 is_once 認的那幾個 key
+    if set(cfg) <= {"exec", "ws", "stack", "def", "limits"}:   # 同 daemon 的 is_once 認的那幾個 key
         cfg["interval_ms"] = 0
     return cfg
 
@@ -464,8 +473,32 @@ def reply_box(o):
     return os.path.abspath(v)
 
 
+LIMIT_INTS = ("mem_mb", "cpu_s", "procs", "file_mb", "files")   # limits 的正整數 key（同 aos-sandbox、daemon 的 check_limits）；另有 user（字串）
+
+
+def limits_arg(v):
+    """--limits JSON（11-05 feat-proto 件 5）：物件，key 只有 LIMIT_INTS（正整數）與 user（非空字串）；錯＝ArgumentsBad。"""
+    try:
+        lim = json.loads(v)
+    except ValueError as e:
+        raise Fail("ArgumentsBad", "--limits is not JSON: %s" % e)
+    if not isinstance(lim, dict):
+        raise Fail("ArgumentsBad", "--limits must be an object {mem_mb, cpu_s, procs, file_mb, files: positive integers; user: a string}")
+    for k, x in lim.items():
+        if k == "user":
+            if not isinstance(x, str) or not x:
+                raise Fail("ArgumentsBad", "--limits: user must be a user name (non-empty string)")
+        elif k not in LIMIT_INTS:
+            raise Fail("ArgumentsBad", "--limits: unknown key %s (known: %s, user)" % (json.dumps(k), ", ".join(LIMIT_INTS)))
+        elif isinstance(x, bool) or not isinstance(x, int) or x <= 0:
+            raise Fail("ArgumentsBad", "--limits: %s must be a positive integer" % k)
+    return lim
+
+
 def cmd_add(opts, args):
-    o, rest = aos_flags.parse(args, dict(REPLY, **{"--name": "name", "--ws": "ws", "--stack": "stack", "--def": "def"}))
+    o, rest = aos_flags.parse(args, dict(REPLY, **{"--name": "name", "--ws": "ws", "--stack": "stack", "--def": "def",
+                                                   "--limits": "limits"}))
+    limits = limits_arg(o["limits"]) if o.get("limits") is not None else None
     if not rest:
         raise Fail("ArgumentsBad", "add needs one XXX (usage: %s)" % USAGE)
     extra = rest[1:]
@@ -507,6 +540,8 @@ def cmd_add(opts, args):
         spec["ws"] = ws
     if stack:
         spec["stack"] = stack
+    if limits is not None:
+        spec["limits"] = limits     # 11-05：原樣（{}＝不限、蓋過 daemon 的預設）
     note_down(d)
     send(d, {"procs_added": {name: spec}}, reply_box(o))
 
