@@ -74,7 +74,7 @@
    "abbr": "msg",
    "full": "message",
    "meaning": "白話訊息",
-   "example": "stderr 一行「程式名: 原因」（P-21）"
+   "example": "stderr 一行「程式名: error: 代號 原因」（P-21）"
   },
   {
    "abbr": "tmp",
