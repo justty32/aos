@@ -51,7 +51,7 @@
 | `include/aos/schema.hpp` | 公開介面：驗一份 JSON，回「哪裡不對」清單 |
 | `src/validate.cpp` | 唯一碰驗證器（pboettch）的檔；先用 meta-schema 驗 schema 本身 |
 | `src/load_file.cpp` | 讀 schema 檔（`SchemaMissing`／`SchemaBad`） |
-| `src/main.cpp` | 命令列 `aos-schema SCHEMA檔 < doc.json`，印 `{"valid", "problems"}`；`parse_cli`，錯一行 `aos-schema: 代號 原因`（11-04） |
+| `src/main.cpp` | 命令列 `aos-schema SCHEMA_FILE < doc.json`，印 `{"valid", "problems"}`；`parse_cli`，錯一行 `aos-schema: 代號 原因`（11-04） |
 | `examples/inst.schema.json` | inst 單子的 schema 範例 |
 
 ## `impls/aos-exec/`（在工作區執行一個資料夾程式）

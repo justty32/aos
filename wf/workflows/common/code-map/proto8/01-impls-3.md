@@ -12,7 +12,7 @@
 | `src/queue/queue.cpp`、`src/queue/queue.hpp` | `queue.json` 讀寫、`effective`、`order`（級數 → deadline → 等得久 → 先寄） |
 | `src/serve/serve.cpp`、`src/serve/serve.hpp` | `read_cfg`（`slots`、`budget`、`exec`、`endpoints`、`endpoint`、`timeout_ms`；信箱固定 `$AOS_STACK/mailbox`）；`Server`：`collect`＋`settle`（看 daemon 的表與 `<信>/state.json` 收成品：結束碼 0＋`reply.json`＝回信、其他＝`EndpointFailed`、逾時、被收掉／死在半路重掛一次、`stopped` 列順手拔；列上有 `reason`＝出錯結束、當收尾〔11-05〕；要重掛先寄 `procs_removed`、`proc.json` 記 `remount`、列拔了下一次才寄掛信）、`sweep`（只看有 `sender.flock` 的信）、`scan`＋`pick`（查代號、解那組、定 exec）、補位到 `slots`＋`mount`（寫 `request.json`、寄掛信 `llm_<信件名稱>`〔`max: 1` 的 loop 型、stack＝信資料夾〕、寫 `proc.json`；寄不進＝`LaunchFailed`）、`finish`（寄回信〔寄不出去＝stderr 一行〕、`used.json`、整封刪掉）、回信 `post_reply`／`regret_reply`（`reply_to` 經 aos-post 的 `reply_to_abs` 從信箱根拼回，11-05；寄完時同步寄信的人已不在＝撤回沒人拿的回信，aos-post 的 `regret`） |
 | `src/budget/budget.cpp`、`src/budget/budget.hpp` | token 與額度：`parse_budget`、`window_since`、`read_used`／`add_used`、`spent`、`report_of`（回信的 `usage`） |
-| `src/main.cpp` | 命令列 `aos-llm-kernel [旗標] kernel.json`（要 `AOS_STACK`；`AOS_DAEMON` 由 serve 要） |
+| `src/main.cpp` | 命令列 `aos-llm-kernel [FLAGS] kernel.json`（要 `AOS_STACK`；`AOS_DAEMON` 由 serve 要） |
 | `src/common/common.hpp` | 內部共用標頭 |
 
 ## `impls/aos-llm/`（基礎工具：寄請求信給 kernel、收回信；11-04 由 aos-llm-send 改名）
@@ -28,7 +28,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| `src/main.cpp` | 命令列 `aos-json 子命令 [旗標] 檔#/指標`：`get`、`peek`、`where`、`set`、`batch`、`del`、`append`、`merge`、`env`、`ref`、`check` |
+| `src/main.cpp` | 命令列 `aos-json 子命令 [FLAGS] 檔#/指標`：`get`、`peek`、`where`、`set`、`batch`、`del`、`append`、`merge`、`env`、`ref`、`check` |
 | `src/common/common.hpp` | 自己的錯誤代號 |
 | `src/doc/doc.hpp` | `File`、`Docs`、`Spec`、指標 |
 | `src/doc/file.cpp` | `load_file`（記 `#!`、縮排、權限）、`save_file`（原子寫、值沒變不寫） |

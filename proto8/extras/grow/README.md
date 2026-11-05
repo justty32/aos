@@ -7,13 +7,13 @@
 嘗試性質（使用者 10-24「我隨便說，你隨便做，反正只是嘗試」）。Python、只用標準庫，不進 impls。
 
 ```
-aos-grow [--dry-run] up --to file|dir [--name NAME] [--take PATH]... 設定檔#/指標
-aos-grow [--dry-run] down 設定檔#/指標
+aos-grow [--dry-run] up --to file|dir [--name NAME] [--take PATH]... CALLER
+aos-grow [--dry-run] down CALLER
 ```
 
 11-04 起旗標寫在 `設定檔#/指標` 前面（命令列形狀照 [CONVENTION P-44](../../docs/CONVENTION/02-題目stack停錯腦/07-P-44.md)；原本 `up 設定檔#/指標 --to …` 旗標在後，現在 `--to` 放後面＝`ArgumentsBad`）。
 
-`設定檔#/指標` 指到呼叫方「寫著要跑什麼」的那一格（fsm 格的 `exec`、loop.json 的 `exec`…）。
+`CALLER`（`設定檔#/指標`）指到呼叫方「寫著要跑什麼」的那一格（fsm 格的 `exec`、loop.json 的 `exec`…）。
 
 | 做什麼 | 那格原本 | 之後 |
 |---|---|---|

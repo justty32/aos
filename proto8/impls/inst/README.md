@@ -21,7 +21,7 @@ aos_inst_input_t in = {
 };
 aos_inst_result_t r;
 int rc = aos_inst_exec(&in, &r);
-if (rc != AOS_INST_OK) printf("lib 出錯：%s\n", aos_inst_strerror(rc));
+if (rc != AOS_INST_OK) printf("lib error: %s\n", aos_inst_strerror(rc));
 else printf("%d %d %llu\n", r.code, r.timed_out, r.ms);   // 3 0 11 左右
 ```
 

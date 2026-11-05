@@ -5,7 +5,7 @@
 `aos-sandbox - 照一份設定把 prog 關進沙箱再跑`（使用者 10-24「linux權限和沙箱可以開始做了，藉助s6那套」）。
 
 ```
-aos-sandbox [--dry-run] [--] 設定檔 prog [args...]
+aos-sandbox [--dry-run] [--] CONFIG prog [args...]
 ```
 
 它不常駐：排好一條 s6 式的 chain-loading（每支改一下行程狀態就 exec 成剩下的），exec 下去就走了。結束碼、stdin、stdout、stderr 都是 prog 的（被訊號停＝128＋N）。

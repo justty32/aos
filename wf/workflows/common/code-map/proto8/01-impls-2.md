@@ -7,7 +7,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | `include/aos/loop.hpp` | 公開介面：擋訊號、兩次之間取訊號、`parse_target`（`exec` 是字串、`[目標, 參數...]` 或單子物件）、`Loop` |
-| `src/main.cpp` | 命令列 `aos-loop [旗標] loop.json [-- 參數...]` |
+| `src/main.cpp` | 命令列 `aos-loop [FLAGS] loop.json [-- ARGS...]` |
 | `src/engine/loop.cpp` | 每次怎麼走、`log_line`（`--enable-logs`） |
 | `src/engine/window.cpp` | 窗：`read_ctl`（ctl 指令 `cmd`／`max`／`interval_ms`／`seq`，比內容判新舊）、`write_state`（有變才寫）＋子類別的 `write_more` |
 | `src/engine/config.cpp` | `resolve_keys`（設定檔與 ctl 的指示詞，daemon、fsm 共用）、`Loop` 建構子（旗標 ＞ 設定檔 ＞ 預設；`ctl`／`state` 沒寫＝`ctl.json`／`state.json`、`null`＝不開，11-04）、`parse_target`、`resolve_exec`、`place_inline`、`loop_cli`、`add_args` |
@@ -31,7 +31,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| `src/main.cpp` | 命令列 `aos-daemon [旗標] daemon.json [-- 參數...]` |
+| `src/main.cpp` | 命令列 `aos-daemon [FLAGS] daemon.json [-- ARGS...]` |
 | `src/daemon/daemon.cpp`、`src/daemon/daemon.hpp` | 名單 `procs`：`read_procs`、`is_once`（看寫法判 exec 型）、`adopt`（接回）、`tend`、`reconcile`、`halt`／`term`／`hold`／`look`／`start`、`check_running`（11-05 `DaemonRunning`；B 線改 flock 鎖 stack 資料夾）、`unrel`（11-05 表上相對 daemon stack 的路徑拼回）、`ctl_slept`（11-05 sleep／wake）、`cell_of`、`exec_of`（列上的 `exec` 欄，11-04 晚）、`def_of`（列上的 `def` 欄＝定義資料夾，11-04）、`finish`（收工；還在跑的 loop 型留成 `sleeping`）、`fail_reason`（11-05 晚：loop 型退非 0 留 `stopped` 的 reason）、`run_body`／`info`（11-05 晚：身體由 daemon 自己在 tend 最後跑，失敗記一行下一圈再跑、state 的 `body_code`） |
 | `src/daemon/windows.cpp` | `procs_ctl.json` 的讀與驗（`read_procs_ctl`、`check_lists`、`check_once`；11-05 多認 `procs_slept`／`procs_woken`）、`procs_state.json` 的寫（`write_more`：11-04 起頂層回報 `procs_loop`／`procs_exec`／`procs_stderr`／`procs_ctl_mailbox`、超過 100 列切 `write_parts`、`clean_parts`） |
 | `src/daemon/mailbox.cpp` | 信箱 `procs_ctl_mailbox`：`open_mailbox`（`cur/` 殘骸照 aos-post 的 `sort_letters` 排）、`take_letters`（`take_all`、`see`）、`apply_letter`（`procs_added`／`removed`／`stopped`／`started`／11-05 `slept`／`woken`）、`done_letters`（`reply`、`done`） |
@@ -43,7 +43,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | `include/aos/post.hpp` | 公開介面：`Mailbox`（`tmp`／`fresh`／`cur`／`archive`）、`SendOpts`、`Seen`、`init`／`open`／`send`／`take`／`take_all`／`first_in_cur`／`see`／`reply`／`done`／`regret`、`reply_to_rel`／`reply_to_abs`（11-05）、`check_name`／`is_ordered`／`sort_letters`（處理順序：有序在前）；aos-daemon、aos-llm-kernel、aos-llm 連它 |
-| `src/main.cpp` | 命令列 `aos-post init\|send\|take\|take-all\|see\|done\|regret [旗標] 信箱 [信件名稱]`；沒東西退 10 |
+| `src/main.cpp` | 命令列 `aos-post init\|send\|take\|take-all\|see\|done\|regret [FLAGS] 信箱 [信件名稱]`；沒東西退 10 |
 | `src/mailbox/mailbox.cpp` | 信箱路徑、`init`、`open`；信件名稱規則 `check_name`、`is_ordered`、`sort_letters`；`reply_to_rel`／`reply_to_abs`（信封的 `reply_to` 存相對信箱根、讀時拼回，11-05）；common 小工具的實作 |
 | `src/send/send.cpp` | `send`（入口檢查：`tmp/`、`new/` 可寫、`reply_to`、自己給的名字；`tmp/` 寫好 rename 進 `new/`；sender 用 aos-util 的 `identity`）、`--ordered`（經 aos-lock 拿 `order.lock/` 編序號） |
 | `src/take/take.cpp` | `take`／`take_all`（`cur/` 沒有就建）、`first_in_cur`、`see`、`reply`、`done`（`--keep` 進 `archive/`）、`regret` |
@@ -54,7 +54,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | `include/aos/lock.hpp` | 公開介面：`Holder`、`Seen`、`STALE_MS`、`try_acquire`／`acquire`／`release`、`look`、`reapable`；aos-post 連它 |
-| `src/main.cpp` | 命令列 `aos-lock acquire\|release\|show [旗標] 目標`；拿不到／沒有鎖退 10 |
+| `src/main.cpp` | 命令列 `aos-lock acquire\|release\|show [FLAGS] 目標`；拿不到／沒有鎖退 10 |
 | `src/holder/holder.cpp` | 名牌：`holder_of`（身分用 aos-util 的 `identity`）、`to_json`、`look`、`reapable`（boot_id、pid＋ticks、殭屍、租約、名牌壞） |
 | `src/lock/lock.cpp` | `lock_dir_of`、寫名牌、收屍 `reap`、`try_acquire`、`acquire`（每 20 毫秒）、`release` |
 | `src/common/common.hpp` | 內部標頭：`now_ms`、`parse_at` |

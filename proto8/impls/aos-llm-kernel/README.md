@@ -2,7 +2,7 @@
 
 `aos-llm-kernel - 從信箱挑最該跑的信、請 daemon 掛去問腦、收成品回信，一次一輪`（NAME，C-54 R1）
 
-**一句話：`aos-llm-kernel [旗標] kernel.json`——LLM kernel 跑一次：先收上一輪掛出去、已經跑完的問腦結果寄回信，再看信箱 `new/` 裡排隊的請求信（每封是一份「問腦」的 OpenAI 形狀請求＋一個代號），照優先度挑最該跑的，補到 `slots` 封在飛為止——每封請 **daemon** 掛成一個問腦 proc（`llm_<信件名稱>`，跑 `kernel.json` 的 `exec`＝endpoint 函數），然後結束，不等它跑完。**
+**一句話：`aos-llm-kernel [FLAGS] kernel.json`——LLM kernel 跑一次：先收上一輪掛出去、已經跑完的問腦結果寄回信，再看信箱 `new/` 裡排隊的請求信（每封是一份「問腦」的 OpenAI 形狀請求＋一個代號），照優先度挑最該跑的，補到 `slots` 封在飛為止——每封請 **daemon** 掛成一個問腦 proc（`llm_<信件名稱>`，跑 `kernel.json` 的 `exec`＝endpoint 函數），然後結束，不等它跑完。**
 它要住在 daemon 底下：一般是當那台 daemon 的身體（`daemon.json` 的 `exec`），daemon 每 300 ms 拍它一次（C-47）。寄信收信的一方是 [aos-llm](../aos-llm/README.md)（`send`／`recv`／`ask`／`regret`）；呼叫端只看得到「信箱＋信的形狀」，裡面怎麼打端點是封裝細節（使用者 11-04 晚「包起來的」「我是希望走2」；11-05「問腦，他本身也可以包裝成一個aos函數，掛成proc去跑」）。
 一個 lib（`lib/libaos-llm-kernel.a`，公開標頭 `aos/llm_kernel.hpp`：信箱與信的格式，aos-llm 也用）加一支薄命令列（`bin/aos-llm-kernel`）。連 [aos-loop](../aos-loop/README.md) 的公開 API（擋訊號、`resolve_keys`）與 [aos-post](../aos-post/README.md)（寄掛信、寄回信）。全家慣例見 [impls/README.md](../README.md)。
 

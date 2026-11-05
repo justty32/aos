@@ -56,7 +56,7 @@
   沒有「結束時刻」：機器 23:50 才醒，09:30 的 slot 照樣觸發一次（同一天內晚到就晚做；`missed_after` 只管 schedule）。
 - **schedule**：`at > now` → `pending`；`now − at ≤ missed_after` → `due`；否則 → `missed`。
 - 列無效（`kind`／`every`／`slot`／`at`／`run` 壞掉）：`routine_due` 回 false 並填 `error`，`schedule_state` 回 `pending` 並填 `error`；tick 對這種列記一個 `error` 事件、**不刪不改**，其他列照做。
-- `routine_next`（給 `ls`）：已到期 → `nullopt`（印「到期」）；interval → `last_run + every`；slot → 大於 `now`、落在允許日 `HH:MM`、且日期晚於 `last_run` 日期的最早時刻。
+- `routine_next`（給 `ls`）：已到期 → `nullopt`（印 `due`）；interval → `last_run + every`；slot → 大於 `now`、落在允許日 `HH:MM`、且日期晚於 `last_run` 日期的最早時刻。
 
 ## `aos tick` 一次心跳（`run_tick`）
 

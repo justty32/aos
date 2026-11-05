@@ -17,7 +17,7 @@ aos-exec --ws 工作區 /tmp/count                                              
 ## 用法
 
 ```
-aos-janet [--force] 原始檔.janet 輸出資料夾
+aos-janet [--force] [--] SOURCE.janet OUT_DIR
 ```
 
 - 原始檔是普通的 Janet：下面那些名字直接能用（不用 import），最後要 `(def program (dir …))`——program 就是那支程式（一個資料夾）。
