@@ -2,13 +2,19 @@
 
 ← [thinking README](../../../README.md)｜日 [2026-11-05](../README.md)｜前情：[10-30 map-review（使用者看現況地圖後的想法）](../../../2026-10/30/map-review/README.md)、[11-04 tests-trim（測試全刪）](../../../2026-11/04/tests-trim.md)、[11-05 stdio-unify § 使用者原則「統一成單一介面」](../stdio-unify/README.md#使用者原則11-05-傍晚)｜規矩：[STRUCTURE](../../../../../wf/STRUCTURE.md)、[refactor](../../../../../wf/workflows/refactor/README.md)、[C-74 分層](../../../../docs/CONCEPTS/01-設計理念/02-C-51.md#分層10-22-使用者定)、[C-54 命名](../../../../docs/CONCEPTS/01-設計理念/04-C-54.md)
 
-狀態：**只規劃、沒改程式、沒 commit；七題等使用者裁**（下方「要使用者裁的」）。四個盤點員（opus×3、sonnet×1）實查 impls、Python 層、code map 對實檔、repo 根舊代；數字與行號都在分檔。同時有三隊在改 lib（die 共用模組已 commit `5deb73a6`）、thought 工具、知識庫 K1～K8——他們的檔這裡沒碰，步驟表標 ⏳ 的要等他們收工。
+狀態：**七題已裁（11-05 20:17「七題照推薦」）、今晚開始施工**，排程與實際進度見 [06-工作量與排程](06-工作量與排程.md)。以下規劃原文照留。四個盤點員（opus×3、sonnet×1）實查 impls、Python 層、code map 對實檔、repo 根舊代；數字與行號都在分檔。同時有三隊在改 lib（die 共用模組已 commit `5deb73a6`）、thought 工具、知識庫 K1～K8——他們的檔這裡沒碰，步驟表標 ⏳ 的要等他們收工。
 
 ## 使用者原文（11-05 夜，逐字）
 
 > 給整個程式碼庫、codemap之類，做一次架構上的大重構
 
 隊長記在 SESSION-LOG：「先派 fable 規劃、挑沒別隊在改的時段」。
+
+## 使用者裁定（11-05 20:17，逐字）
+
+> 大重構七題都照推薦吧，我覺得OK。然後評估一下工作量。我今天十一點要關機睡覺，做不完就先做規劃，然後明天再說。
+
+**七題全照推薦**：1 甲代整組封存 `archive/aos-v1/`；2 proto8 不升；3 按角色 impls／cmd／lib／kernel／templates；4 加頂層 `impls/CMakeLists.txt`；5 code map 逐檔表改生成；6 死碼與殘渣一次授權照推薦（刪根 `proto/`、`proto2/` 等未追蹤殘渣、aos-schema 封存、util 沒人用 API 刪、pyfix＋agent_tool／check_inbox／claude／codex 封存、`aos-json/tools` 併 lib）；7 `/wf-tick` 跟甲代一起封存。工作量與今晚排程 → [06](06-工作量與排程.md)。
 
 ## 一句話結論
 
@@ -23,8 +29,9 @@ repo 現在是**兩代並存**：根上的 `core/app/docs/…` 是 08～09 月�
 | [03-重構方案](03-重構方案.md)、[03-續](03-重構方案-續.md) | 目標形狀（03：§ 1 根、§ 2 proto8 內部、§ 3 impls 建置、§ 4 code map 生成機制；續：§ 5 去重分層、§ 6 拆檔表、§ 7 命名、§ 8 死碼） |
 | [04-實作步驟](04-實作步驟.md) | S0～S11 分步表（每步一 commit、建得過、可觀察驗收、派誰、等誰）、波次、不做的 |
 | [05-風險與邊緣](05-風險與邊緣.md) | R1～R20 風險與防法、邊緣狀況 |
+| [06-工作量與排程](06-工作量與排程.md) | 每步估時、今晚排程與實際進度、明天剩什麼 |
 
-## 要使用者裁的（白話；推薦放第一）
+## 要使用者裁的（白話；推薦放第一）——11-05 20:17 已裁：全照推薦
 
 照 [user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)：只帶原則推不出的方向題；細節（夾名、步驟順序、拆檔切點）fable 代定、可翻案。
 
