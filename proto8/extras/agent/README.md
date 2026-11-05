@@ -18,6 +18,7 @@ aos-agent [--daemon D] ctl rm 名字                                        拔�
 aos-agent [--daemon D] ctl ls [--json]                                    列 daemon 表上全部：名字 狀態 工作區 queue 幾封
 aos-agent [--daemon D] ctl state|status|start|stop|sleep|wake|pause|resume [--target 名字]
 aos-agent [--daemon D] ctl where [--stack|--ws] [--target 名字]            印 stack（預設）／工作區（--ws）
+aos-agent [--daemon D] ctl who [--stack S] [--json]                        S（預設 $AOS_STACK）是表上哪一隻的 stack（或在它底下）＝印那隻的名字
 ```
 
 **跟它說話、畫面、設定**（在頂層）
@@ -33,6 +34,8 @@ aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
 
 - **對象**：`--target 名字` ＞ `$AOS_AGENT`；都沒有＝`TargetMissing`。名字查 daemon 表，沒有＝`InstanceMissing`。`ctl add`（名字＝`--name`，沒給＝資料夾名）、`ctl rm`（位置參數）、`ctl ls` 不吃 `AOS_AGENT`。不再比工作區、沒有用來指對象的 `--stack`。
 - **ctl where**：不帶旗標＝`--stack`，印那隻的 stack 一行（`aos-daemon-ctl where --stack 名字` 轉述）；`--ws` 印它的工作區（表上那列的 `ws`；沒記＝`WsMissing`，那隻是沒給 `--ws` 直接用 aos-daemon-ctl 掛的）；兩個一起給＝`ArgumentsBad`（使用者 11-04 晚「aos agent的where，我希望默認是--stack，有需要再另外指定--ws。」）。
+- **ctl who**（11-05 [feat-proto 件 1](../../thinking/2026-11/05/feat-proto/01-self-tools.md) 代定 1，使用者「讓agent給自己改tool」）：拿 `S`（`--stack S` ＞ `$AOS_STACK`；都沒有＝`StackMissing`）在 daemon 表（`aos-daemon-ctl ls --json`）裡找 `stack` 是 S 本身或 S 上層的那列，印名字；好幾列都包住 S＝取最深的；`--json` 印 `{"name", "stack", "ws", "def"}`。沒找到＝`InstanceMissing`；沒 daemon＝`DaemonMissing`。給工具用：工具的小格是 `<agent stack>/tools/<名>/`（P-17），工具裡 `aos-agent ctl who` 就認出「叫我的是哪隻」——只查表、不從路徑往上爬（C-52「經機制看上層」）；工具繼承 daemon 給的 `AOS_DAEMON`。沒掛 daemon 直接 `aos-exec body.json` 跑的不支援（沒有表）。用它的工具：[lib/agent/self_tools](../../lib/docs/03-索引-agent等.md#索引agent)。
+- **ctl state 的 tools 那行**（11-05 feat-proto 件 1）：這隻有覆蓋層時多一行 `tools   overlay: N added, M removed (+名, -名…)`——同一份定義跑久了被這隻自己改過多少，一眼看得到（C-46 定義不變、stack 漂移）；沒覆蓋層不印。
 - **哪個 daemon**：`--daemon D` ＞ `$AOS_DAEMON`（那個 daemon 的 `$AOS_STACK`，絕對路徑）＞ **cwd 的 `./.stack`**（11-05 [portable-flow 題 3](../../thinking/2026-11/05/portable-flow/05-衝突與方向題.md)：daemon 在 ws 裡起，`cd ws` 就找得到，不用設變數；轉絕對、不往上找）；都沒有＝`DaemonMissing`。daemon 沒在跑：`ctl ls`／`state`／`where` 照表印＋注意；`ctl add`／`rm`／`start`／`stop`／`sleep`／`wake`＝`DaemonMissing`；`say` 照寄＋提醒。
 - **表上的路徑**（11-05）：daemon 把每列的 `stack`／`ws`／`def` 存成相對 daemon stack（整份搬家照樣對得上），`aos-daemon-ctl ls --json` 拼回絕對再給這支；`ctl ls`／`state`／`where` 印的都是絕對。列上的 `reason`（出錯結束〔loop 型退非 0〕留成 `stopped` 的列，daemon 寫的原因；修好後 `llm reset`／`tools reset` 再 `ctl start`，不要了 `ctl rm`）`ctl ls` 印在行尾 `reason …`、`ctl state` 多一行 `reason`。
 - **ctl sleep／wake**（11-05 [portable-flow 衝突 1](../../thinking/2026-11/05/portable-flow/05-衝突與方向題.md)，使用者選「嚴格分」）：`sleep`＝現在就睡（daemon SIGTERM、列 `sleeping`、stack 留；daemon 開門自己醒，或 `wake`）；`stop`＝等這輪做完、要 `start` 才回來。`start` 只起 `stopped`、`wake` 只醒 `sleeping`；跨著用（sleeping 的 `start`／`stop`、stopped 的 `wake`／`sleep`）＝`aos-daemon-ctl` 的 `PhaseBad` 原樣轉（`X is sleeping; use wake …` 之類）；同一狀態再叫（stopped 的 stop、running 的 start、sleeping 的 sleep、running 的 wake）＝印 `already …`、退 0。sleep 不關畫面（跟 daemon 收工一樣）。

@@ -11,6 +11,8 @@
 #     aos-agent [--daemon D] ctl ls [--json]             列 daemon 表上全部的 proc：名字 狀態 工作區 queue 排幾封
 #     aos-agent [--daemon D] ctl state|status [--target 名字]   這隻的狀態幾行
 #     aos-agent [--daemon D] ctl where [--stack|--ws] [--target 名字]   印它的 stack（預設＝--stack）／工作區（--ws）
+#     aos-agent [--daemon D] ctl who [--stack S] [--json]   S（預設 $AOS_STACK）落在表上哪一隻的 stack 裡（S 本身或它的上層）＝印那隻的名字
+#                                                       （11-05 feat-proto 件 1：工具 lib/agent/self_tools 靠它認出「我是哪隻」；只查表、不爬路徑）
 #     aos-agent [--daemon D] ctl start|stop|sleep|wake|pause|resume [--target 名字]
 #   跟它說話、它的畫面與設定：
 #     aos-agent [--daemon D] say [--target 名字] [話...]    寄一句進它的 queue；stdout 印信件名稱（話沒給＝讀 stdin）
@@ -44,7 +46,7 @@
 #   定義的 _entry 就空出來給「aos-exec 這個資料夾＝aos-agent ctl add 自己」（demo/agent-fsm 的寫法）；沒宣告＝掛定義資料夾本身（11-04 起的行為）。
 # stdout 只有結果；提醒在 stderr（括號一行）。錯：stderr 一行 `aos-agent: 代號 原因`、退 1（chat 被 Ctrl-C 退 130）。
 #   代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、InstanceExists、PathMissing、SessionBad、
-#   SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、AddRejected、CtlRejected、TargetMissing、WsMissing、InterfaceMissing、InterfaceBad、PhaseBad、
+#   SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、AddRejected、CtlRejected、TargetMissing、WsMissing、StackMissing、InterfaceMissing、InterfaceBad、PhaseBad、
 #   ScreenMissing、ScreenBad、ToolsMissing、LlmMissing、LlmBad。下層（aos-daemon-ctl）的錯換成這支的名字轉述（ProcMissing→InstanceMissing）；
 #   子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉（C-53 各層只說自己的錯）。
 # 只在 Linux（讀 /proc）。PATH 上要有 aos-post、aos-exec（tools 還要 aos-tools，在 proto8/bin；llm set 還要 aos-json）。
@@ -58,6 +60,8 @@
     aos-agent [--daemon D] ctl ls [--json]             list every proc on the daemon table: name, state, workspace, queued letters
     aos-agent [--daemon D] ctl state|status [--target NAME]            a few lines about this one
     aos-agent [--daemon D] ctl where [--stack|--ws] [--target NAME]    print its stack (default, = --stack) or its workspace (--ws)
+    aos-agent [--daemon D] ctl who [--stack S] [--json]   which listed agent S (default $AOS_STACK) belongs to: the one whose stack is S
+                                                       or above S; prints its name (--json: {"name", "stack", "ws", "def"})
     aos-agent [--daemon D] ctl start|stop|sleep|wake|pause|resume [--target NAME]
   Talk to it, its screen and settings:
     aos-agent [--daemon D] say [--target NAME] [WORDS...]    put one message in its queue; stdout prints the letter name (no words = read stdin)
@@ -71,7 +75,8 @@
 
 Target: --target NAME > $AOS_AGENT (ctl add, rm, ls ignore it); neither = TargetMissing. Names are looked up on the daemon table
   (aos-daemon-ctl ls --json); not there = InstanceMissing. Which daemon: --daemon D > $AOS_DAEMON (that daemon's $AOS_STACK) > ./.stack in cwd;
-  none = DaemonMissing. There is no --stack to pick the target (where's --stack / --ws only choose what to print). Printed paths are absolute.
+  none = DaemonMissing. There is no --stack to pick the target (where's --stack / --ws only choose what to print; who's --stack is the path
+  to look up, not a target). Printed paths are absolute. who: no row whose stack is S or above it = InstanceMissing; no S = StackMissing.
   A proc that failed to start or ended with an error (exit non-zero) stays on the table as stopped with a reason, which ls and state print;
   only one that exited 0 leaves the table.
 sleep / wake: sleep = sleep now (the daemon SIGTERMs it, row sleeping, stack kept, it wakes by itself when the daemon starts);
@@ -94,8 +99,8 @@ Interface: touches only the daemon table and the agent's stack (queue/, history.
 stdout carries results only; notes go to stderr as one line in parentheses. Errors: one stderr line `aos-agent: CODE reason`, exit 1
   (chat interrupted by Ctrl-C exits 130).
   Codes: ArgumentsBad, FlagUnknown, CommandUnknown, CommandMissing, DaemonMissing, InstanceMissing, InstanceExists, PathMissing, SessionBad,
-  SendFailed, PostFailed, QuestionUnknown, AnswerMissing, WaitFailed, AddRejected, CtlRejected, TargetMissing, WsMissing, InterfaceMissing,
-  InterfaceBad, PhaseBad, ScreenMissing, ScreenBad, ToolsMissing, LlmMissing, LlmBad. Errors of aos-daemon-ctl are renamed for this program
+  SendFailed, PostFailed, QuestionUnknown, AnswerMissing, WaitFailed, AddRejected, CtlRejected, TargetMissing, WsMissing, StackMissing,
+  InterfaceMissing, InterfaceBad, PhaseBad, ScreenMissing, ScreenBad, ToolsMissing, LlmMissing, LlmBad. Errors of aos-daemon-ctl are renamed for this program
   (ProcMissing -> InstanceMissing); errors of the screen entry, aos-tools and aos-json pass through as they are.
 Linux only (reads /proc). Needs aos-post and aos-exec on PATH (tools also needs aos-tools in proto8/bin; llm set also needs aos-json)."""
 import json, os, re, shutil, subprocess, sys, tempfile, time
@@ -736,12 +741,53 @@ def cmd_state(argv):
         lines.insert(4, "def     %s" % def_of(a))
     except Fail:
         pass
+    ov = overlay_count(a)
+    if ov:
+        lines.insert(len(lines) - 2, "tools   %s" % ov)
     if a.reason:
         lines.insert(2, "reason  %s" % a.reason)
     warn = aos_ws.read(os.path.join(a.stack, "mailbox_warning.txt"))
     if warn and warn.strip():
         lines.append("badmail %s" % warn.strip().splitlines()[-1])
     print("\n".join(lines))
+
+
+def overlay_count(a):
+    """ctl state 的一行（11-05 feat-proto 件 1）：這隻的 tools 覆蓋層 <stack>/tools.json 加了幾個、拿掉幾個；沒覆蓋層＝None。"""
+    p = os.path.join(a.stack, "tools.json")
+    if not os.path.isfile(p):
+        return None
+    try:
+        with open(p, encoding="utf-8") as f:
+            o = json.load(f)
+        add, rm = o.get("add") or {}, o.get("rm") or []
+        return "overlay: %d added, %d removed (%s)" % (len(add), len(rm), ", ".join(["+" + n for n in add] + ["-" + n for n in rm]) or "empty")
+    except (OSError, ValueError, AttributeError, TypeError) as e:
+        return "overlay unreadable: %s (%s)" % (p, e)
+
+
+def cmd_who(argv):
+    """ctl who（11-05 feat-proto 件 1 代定 1）：S（--stack ＞ $AOS_STACK）落在表上哪一隻的 stack 裡——那列的 stack 是 S 本身或 S 的上層
+    （工具的小格 <agent stack>/tools/<名>/ 也認得）；好幾列都包住 S＝取最深的那列。只查 daemon 表（C-52 經機制看上層），不從 S 往上爬猜。"""
+    opts, rest = parse(argv, {"--stack": "stack"}, {"--json": "json"})
+    if rest:
+        raise Fail("ArgumentsBad", "who takes no positional arguments: %s (give the path with --stack S)" % rest[0])
+    s = opts.get("stack") or os.environ.get("AOS_STACK", "")
+    if not s:
+        raise Fail("StackMissing", "no --stack and no AOS_STACK; give the stack path to look up")
+    hit = None
+    for n, r in table(quiet=True).items():
+        st = r.get("stack")
+        if isinstance(st, str) and st and under(s, st):
+            if hit is None or len(os.path.realpath(st)) > len(os.path.realpath(hit[1]["stack"])):
+                hit = (n, r)
+    if hit is None:
+        raise Fail("InstanceMissing", "%s is not inside the stack of any proc on the daemon table %s" % (os.path.abspath(s), daemon_dir()))
+    n, r = hit
+    if opts.get("json"):
+        print(json.dumps({"name": n, "stack": r.get("stack"), "ws": r.get("ws"), "def": r.get("def")}, ensure_ascii=False))
+    else:
+        print(n)
 
 
 def cmd_where(argv):
@@ -1170,7 +1216,7 @@ def cmd_llm(argv):
 
 CTL_CMDS = {"add": cmd_add, "rm": cmd_rm, "start": cmd_start, "stop": cmd_stop, "sleep": cmd_sleep, "wake": cmd_wake,
             "pause": cmd_pause_resume("pause"), "resume": cmd_pause_resume("resume"),
-            "ls": cmd_ls, "state": cmd_state, "status": cmd_state, "where": cmd_where}
+            "ls": cmd_ls, "state": cmd_state, "status": cmd_state, "where": cmd_where, "who": cmd_who}
 
 
 def cmd_ctl(argv):
