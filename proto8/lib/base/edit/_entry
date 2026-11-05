@@ -19,7 +19,7 @@ def die(code, reason):
 def workspace():
     ws = os.environ.get("AOS_WS")
     if not ws or not os.path.isdir(ws):
-        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+        die("WsMissing", "AOS_WS is not set or not a directory")
     return os.path.realpath(ws)
 
 
@@ -27,45 +27,45 @@ def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
     except ValueError as e:
-        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+        die("ArgumentsBad", "stdin is not JSON: %s" % e)
     if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments 要是物件")
+        die("ArgumentsBad", "arguments must be an object")
     return a
 
 
 def inside(root, rel):
     p = os.path.realpath(os.path.join(root, rel))
     if os.path.commonpath([root, p]) != root:
-        die("PathBad", "%s 在工作區外面" % rel)
+        die("PathBad", "%s is outside the workspace" % rel)
     return p
 
 
 root = workspace()
 args = arguments()
 if not isinstance(args.get("path"), str) or not args["path"]:
-    die("ArgumentsBad", "缺 path（要一個字串）")
+    die("ArgumentsBad", "missing path (a string)")
 edits = args.get("edits")
 if not isinstance(edits, list) or not edits:
-    die("ArgumentsBad", "edits 要是至少一項的陣列")
+    die("ArgumentsBad", "edits must be an array with at least one item")
 for i, e in enumerate(edits):
     if not isinstance(e, dict) or not isinstance(e.get("old_text"), str) or not isinstance(e.get("new_text"), str):
-        die("ArgumentsBad", "edits[%d] 要有 old_text、new_text 兩個字串" % i)
+        die("ArgumentsBad", "edits[%d] needs two strings: old_text and new_text" % i)
     if not e["old_text"]:
-        die("TextBad", "edits[%d].old_text 是空的" % i)
+        die("TextBad", "edits[%d].old_text is empty" % i)
 
 name = args["path"]
 path = inside(root, name)
 if not os.path.isfile(path):
-    die("FileMissing", "%s（新檔用 write）" % name)
+    die("FileMissing", "%s (use write for a new file)" % name)
 try:
     with open(path, "rb") as f:
         raw = f.read()
 except OSError as e:
-    die("ReadFailed", "%s：%s" % (name, e.strerror))
+    die("ReadFailed", "%s: %s" % (name, e.strerror))
 try:
     text = raw.decode("utf-8")
 except UnicodeDecodeError:
-    die("FileBad", "%s 不是 UTF-8 文字檔" % name)
+    die("FileBad", "%s is not a UTF-8 text file" % name)
 crlf = "\r\n" in text
 base = text.replace("\r\n", "\n")
 
@@ -75,15 +75,15 @@ for i, e in enumerate(edits):
     count = base.count(old)
     which = "old_text" if len(edits) == 1 else "edits[%d].old_text" % i
     if count == 0:
-        die("TextMissing", "%s 在 %s 裡找不到（要跟原檔一字不差，含空白與換行）" % (which, name))
+        die("TextMissing", "%s not found in %s (must match the file exactly, including whitespace and newlines)" % (which, name))
     if count > 1:
-        die("TextBad", "%s 在 %s 裡出現 %d 次，要剛好一次——多帶幾行前後文讓它唯一" % (which, name, count))
+        die("TextBad", "%s occurs in %s %d times; it must occur exactly once - include more surrounding lines to make it unique" % (which, name, count))
     at = base.index(old)
     spans.append((at, at + len(old), i, e["new_text"].replace("\r\n", "\n")))
 spans.sort()
 for a, b in zip(spans, spans[1:]):
     if a[1] > b[0]:
-        die("TextBad", "edits[%d] 和 edits[%d] 重疊了——合成一項" % (a[2], b[2]))
+        die("TextBad", "edits[%d] and edits[%d] overlap; merge them into one" % (a[2], b[2]))
 
 out, pos = [], 0
 for start, end, _, new in spans:
@@ -93,7 +93,7 @@ for start, end, _, new in spans:
 out.append(base[pos:])
 result = "".join(out)
 if result == base:
-    die("TextBad", "%s 改完跟原本一樣" % name)
+    die("TextBad", "%s is unchanged after the edits" % name)
 if crlf:
     result = result.replace("\n", "\r\n")
 
@@ -108,6 +108,6 @@ except OSError as e:
         os.unlink(tmp)
     except OSError:
         pass
-    die("WriteFailed", "%s：%s" % (name, e.strerror))
+    die("WriteFailed", "%s: %s" % (name, e.strerror))
 first = base[:spans[0][0]].count("\n") + 1
-print("已在 %s 換掉 %d 處（第一處在第 %d 行）" % (name, len(spans), first))
+print("In %s, replaced %d places (first at line %d)" % (name, len(spans), first))

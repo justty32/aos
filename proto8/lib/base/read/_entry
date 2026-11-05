@@ -19,7 +19,7 @@ def die(code, reason):
 def workspace():
     ws = os.environ.get("AOS_WS")
     if not ws or not os.path.isdir(ws):
-        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+        die("WsMissing", "AOS_WS is not set or not a directory")
     return os.path.realpath(ws)
 
 
@@ -27,9 +27,9 @@ def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
     except ValueError as e:
-        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+        die("ArgumentsBad", "stdin is not JSON: %s" % e)
     if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments 要是物件")
+        die("ArgumentsBad", "arguments must be an object")
     return a
 
 
@@ -37,31 +37,31 @@ def inside(root, rel):
     """工作區裡的真實路徑；解開 .. 與捷徑後跑出去＝PathBad。"""
     p = os.path.realpath(os.path.join(root, rel))
     if os.path.commonpath([root, p]) != root:
-        die("PathBad", "%s 在工作區外面" % rel)
+        die("PathBad", "%s is outside the workspace" % rel)
     return p
 
 
 root = workspace()
 args = arguments()
 if not isinstance(args.get("path"), str) or not args["path"]:
-    die("ArgumentsBad", "缺 path（要一個字串）")
+    die("ArgumentsBad", "missing path (a string)")
 offset, max_lines = args.get("offset"), args.get("max_lines")   # 上限一律 max_*（10-25 前叫 limit）
 for k, v in (("offset", offset), ("max_lines", max_lines)):
     if v is not None and (type(v) is not int or v < 1):
-        die("ArgumentsBad", "%s 要是正整數" % k)
+        die("ArgumentsBad", "%s must be a positive integer" % k)
 
 path = inside(root, args["path"])
 if not os.path.exists(path):
     die("FileMissing", args["path"])
 if os.path.isdir(path):
-    die("FileBad", "%s 是資料夾，看資料夾用 ls" % args["path"])
+    die("FileBad", "%s is a directory; use ls for directories" % args["path"])
 try:
     with open(path, "rb") as f:
         data = f.read()
 except OSError as e:
-    die("ReadFailed", "%s：%s" % (args["path"], e.strerror))
+    die("ReadFailed", "%s: %s" % (args["path"], e.strerror))
 if b"\0" in data[:8192]:
-    die("FileBad", "%s 像是二進位檔，不讀" % args["path"])
+    die("FileBad", "%s looks like a binary file; not reading it" % args["path"])
 text = data.decode("utf-8", "replace")
 
 lines = text.split("\n")
@@ -69,11 +69,11 @@ if text.endswith("\n"):
     lines.pop()                                 # 檔尾換行不算一行
 total = len(lines)
 if total == 0:
-    print("(空檔)")
+    print("(empty file)")
     sys.exit(0)
 start = (offset or 1) - 1
 if start >= total:
-    die("ArgumentsBad", "offset %d 超過檔尾（共 %d 行）" % (offset, total))
+    die("ArgumentsBad", "offset %d is past the end of the file (%d lines)" % (offset, total))
 end = total if max_lines is None else min(start + max_lines, total)
 out, size = [], 0
 for line in lines[start:end]:
@@ -84,11 +84,11 @@ for line in lines[start:end]:
     size += n
 first = start + 1
 if not out:                                     # 第一行就超過 50KB
-    die("FileBad", "第 %d 行超過 %dKB，改用 bash：sed -n '%dp' %s | head -c %d"
+    die("FileBad", "line %d is over %dKB; use bash: sed -n '%dp' %s | head -c %d"
         % (first, MAX_BYTES // 1024, first, args["path"], MAX_BYTES))
 print("\n".join(out))
 shown_end = start + len(out)
 if shown_end < end:                             # 被 2000 行／50KB 截掉
-    print("\n[第 %d-%d 行，共 %d 行。用 offset=%d 接著讀。]" % (first, shown_end, total, shown_end + 1))
+    print("\n[lines %d-%d of %d. Use offset=%d to continue.]" % (first, shown_end, total, shown_end + 1))
 elif end < total:                               # max_lines 停在檔尾之前
-    print("\n[檔案還有 %d 行。用 offset=%d 接著讀。]" % (total - end, end + 1))
+    print("\n[%d more lines in the file. Use offset=%d to continue.]" % (total - end, end + 1))

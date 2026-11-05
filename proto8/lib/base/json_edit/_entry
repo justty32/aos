@@ -23,7 +23,7 @@ def die(code, reason):
 def workspace():
     ws = os.environ.get("AOS_WS")
     if not ws or not os.path.isdir(ws):
-        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+        die("WsMissing", "AOS_WS is not set or not a directory")
     return os.path.realpath(ws)
 
 
@@ -31,24 +31,24 @@ def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
     except ValueError as e:
-        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+        die("ArgumentsBad", "stdin is not JSON: %s" % e)
     if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments 要是物件")
+        die("ArgumentsBad", "arguments must be an object")
     return a
 
 
 def inside(root, rel):
     p = os.path.realpath(os.path.join(root, rel))
     if os.path.commonpath([root, p]) != root:
-        die("PathBad", "%s 在工作區外面" % rel)
+        die("PathBad", "%s is outside the workspace" % rel)
     return p
 
 
 def parts(pointer):
     if pointer == "":
-        die("PointerBad", "不能改整份（指標是空字串）；要整份重寫用 write")
+        die("PointerBad", "cannot edit the whole document (pointer is empty); use write to rewrite it")
     if not pointer.startswith("/"):
-        die("PointerBad", "指標要以 / 開頭：%s" % pointer)
+        die("PointerBad", "pointer must start with /: %s" % pointer)
     return [raw.replace("~1", "/").replace("~0", "~") for raw in pointer[1:].split("/")]
 
 
@@ -57,14 +57,14 @@ def step(here, key, pointer, make):
     if isinstance(here, dict):
         if key not in here:
             if not make:
-                die("PointerMissing", "%s：沒有 %s 這個 key" % (pointer, key))
+                die("PointerMissing", "%s: no key %s" % (pointer, key))
             here[key] = {}
         return here[key]
     if isinstance(here, list):
         if not key.isdigit() or int(key) >= len(here):
-            die("PointerMissing", "%s：陣列沒有第 %s 項（共 %d 項）" % (pointer, key, len(here)))
+            die("PointerMissing", "%s: array has no item %s (%d items)" % (pointer, key, len(here)))
         return here[int(key)]
-    die("PointerMissing", "%s：%s 底下不是物件也不是陣列" % (pointer, key))
+    die("PointerMissing", "%s: %s is neither an object nor an array" % (pointer, key))
 
 
 def do_set(doc, pointer, value):
@@ -82,9 +82,9 @@ def do_set(doc, pointer, value):
         elif last.isdigit() and int(last) < len(here):
             here[int(last)] = value
         else:
-            die("PointerMissing", "%s：陣列沒有第 %s 項（共 %d 項；接在尾巴寫 -）" % (pointer, last, len(here)))
+            die("PointerMissing", "%s: array has no item %s (%d items; use - to append)" % (pointer, last, len(here)))
     else:
-        die("PointerMissing", "%s：上一層不是物件也不是陣列" % pointer)
+        die("PointerMissing", "%s: parent is neither an object nor an array" % pointer)
     return "set"
 
 
@@ -99,37 +99,37 @@ def do_del(doc, pointer):
     elif isinstance(here, list) and last.isdigit() and int(last) < len(here):
         del here[int(last)]
     else:
-        die("PointerMissing", "%s：指不到" % pointer)
+        die("PointerMissing", "%s: not found" % pointer)
 
 
 root = workspace()
 args = arguments()
 if not isinstance(args.get("path"), str) or not args["path"]:
-    die("ArgumentsBad", "缺 path（要一個字串）")
+    die("ArgumentsBad", "missing path (a string)")
 sets, dels = args.get("set", {}), args.get("del", [])
 if not isinstance(sets, dict) or not all(isinstance(k, str) for k in sets):
-    die("ArgumentsBad", "set 要是 {指標: 新值} 的物件")
+    die("ArgumentsBad", "set must be an object of {pointer: new value}")
 if not isinstance(dels, list) or not all(isinstance(k, str) for k in dels):
-    die("ArgumentsBad", "del 要是指標的陣列")
+    die("ArgumentsBad", "del must be an array of pointers")
 if not sets and not dels:
-    die("ArgumentsBad", "set 與 del 至少要有一個")
+    die("ArgumentsBad", "need at least one of set and del")
 
 path = inside(root, args["path"])
 if not os.path.exists(path):
-    die("FileMissing", "%s（新檔用 write）" % args["path"])
+    die("FileMissing", "%s (use write for a new file)" % args["path"])
 if os.path.isdir(path):
-    die("FileBad", "%s 是資料夾" % args["path"])
+    die("FileBad", "%s is a directory" % args["path"])
 if os.path.getsize(path) > SIZE_MAX:
-    die("FileBad", "%s 超過 %dMB" % (args["path"], SIZE_MAX // (1024 * 1024)))
+    die("FileBad", "%s is over %dMB" % (args["path"], SIZE_MAX // (1024 * 1024)))
 try:
     with open(path, encoding="utf-8") as f:
         doc = json.load(f)
 except OSError as e:
-    die("ReadFailed", "%s：%s" % (args["path"], e.strerror))
+    die("ReadFailed", "%s: %s" % (args["path"], e.strerror))
 except (ValueError, UnicodeDecodeError) as e:
-    die("FileBad", "%s 不是 JSON：%s" % (args["path"], e))
+    die("FileBad", "%s is not JSON: %s" % (args["path"], e))
 if not isinstance(doc, (dict, list)):
-    die("FileBad", "%s 頂層不是物件也不是陣列，改不了裡面" % args["path"])
+    die("FileBad", "%s: top level is neither an object nor an array; cannot edit inside" % args["path"])
 
 steps = []                                   # 全部先在記憶體裡做完，哪一處錯都不寫檔
 for pointer, value in sets.items():
@@ -149,9 +149,9 @@ def aos_json(argv, stdin=None):
     try:
         r = subprocess.run(["aos-json"] + argv, input=stdin, text=True, stdout=subprocess.DEVNULL)   # stderr 不吞
     except OSError as e:
-        die("LaunchFailed", "aos-json 起不來（PATH 上要有 aos-json）：%s" % e.strerror)
+        die("LaunchFailed", "aos-json failed to start (aos-json must be on PATH): %s" % e.strerror)
     if r.returncode != 0:
-        die("WriteFailed", "aos-json %s 結束碼 %d（原因在 stderr）" % (argv[0], r.returncode))
+        die("WriteFailed", "aos-json %s exited %d (reason on stderr)" % (argv[0], r.returncode))
 
 
 for op in steps:                             # 值一律從 stdin 給（負數放參數會被當旗標）

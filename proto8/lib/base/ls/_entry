@@ -25,7 +25,7 @@ def die(code, reason):
 def workspace():
     ws = os.environ.get("AOS_WS")
     if not ws or not os.path.isdir(ws):
-        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+        die("WsMissing", "AOS_WS is not set or not a directory")
     return os.path.realpath(ws)
 
 
@@ -33,16 +33,16 @@ def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
     except ValueError as e:
-        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+        die("ArgumentsBad", "stdin is not JSON: %s" % e)
     if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments 要是物件")
+        die("ArgumentsBad", "arguments must be an object")
     return a
 
 
 def inside(root, rel):
     p = os.path.realpath(os.path.join(root, rel))
     if os.path.commonpath([root, p]) != root:
-        die("PathBad", "%s 在工作區外面" % rel)
+        die("PathBad", "%s is outside the workspace" % rel)
     return p
 
 
@@ -55,23 +55,23 @@ args = arguments()
 rel = args.get("path", ".")
 offset, max_items, hidden = args.get("offset", 0), args.get("max_items", LIMIT_DEFAULT), args.get("hidden", False)   # 上限一律 max_*（10-25 前叫 limit）
 if not isinstance(rel, str) or not rel:
-    die("ArgumentsBad", "path 要是字串")
+    die("ArgumentsBad", "path must be a string")
 if type(offset) is not int or offset < 0:
-    die("ArgumentsBad", "offset 要是 0 以上的整數")
+    die("ArgumentsBad", "offset must be an integer >= 0")
 if type(max_items) is not int or not 0 < max_items <= LIMIT_MAX:
-    die("ArgumentsBad", "max_items 要是 1～%d 的整數" % LIMIT_MAX)
+    die("ArgumentsBad", "max_items must be an integer from 1 to %d" % LIMIT_MAX)
 if not isinstance(hidden, bool):
-    die("ArgumentsBad", "hidden 要是布林")
+    die("ArgumentsBad", "hidden must be a boolean")
 
 d = inside(root, rel)
 if not os.path.exists(d):
     die("FileMissing", rel)
 if not os.path.isdir(d):
-    die("FileBad", "%s 不是資料夾，看檔用 read" % rel)
+    die("FileBad", "%s is not a directory; use read for files" % rel)
 try:
     names = os.listdir(d)
 except OSError as e:
-    die("ReadFailed", "%s：%s" % (rel, e.strerror))
+    die("ReadFailed", "%s: %s" % (rel, e.strerror))
 dots = [n for n in names if n.startswith(".")]
 if not hidden:
     names = [n for n in names if not n.startswith(".")]
@@ -91,7 +91,7 @@ def json_top(p, it):
         with open(p, encoding="utf-8") as f:
             v = json.load(f)
     except (OSError, ValueError):
-        it["json"] = "壞的"
+        it["json"] = "broken"
         return
     if isinstance(v, dict):
         it["keys"] = list(v)[:JSON_KEYS_MAX]
@@ -112,7 +112,7 @@ def item(n):
     if os.path.islink(p):
         it["type"] = "link"
         target = os.path.realpath(p)
-        it["link_to"] = os.path.relpath(target, root) if os.path.commonpath([root, target]) == root else "(工作區外)"
+        it["link_to"] = os.path.relpath(target, root) if os.path.commonpath([root, target]) == root else "(outside workspace)"
     elif os.path.isdir(p):
         it["type"] = "dir"
         try:

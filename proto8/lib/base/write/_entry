@@ -18,7 +18,7 @@ def die(code, reason):
 def workspace():
     ws = os.environ.get("AOS_WS")
     if not ws or not os.path.isdir(ws):
-        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+        die("WsMissing", "AOS_WS is not set or not a directory")
     return os.path.realpath(ws)
 
 
@@ -26,33 +26,33 @@ def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
     except ValueError as e:
-        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+        die("ArgumentsBad", "stdin is not JSON: %s" % e)
     if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments 要是物件")
+        die("ArgumentsBad", "arguments must be an object")
     return a
 
 
 def inside(root, rel):
     p = os.path.realpath(os.path.join(root, rel))
     if os.path.commonpath([root, p]) != root or p == root:
-        die("PathBad", "%s 在工作區外面、或就是工作區本身" % rel)
+        die("PathBad", "%s is outside the workspace or is the workspace itself" % rel)
     return p
 
 
 root = workspace()
 args = arguments()
 if not isinstance(args.get("path"), str) or not args["path"]:
-    die("ArgumentsBad", "缺 path（要一個字串）")
+    die("ArgumentsBad", "missing path (a string)")
 if not isinstance(args.get("content"), str):
-    die("ArgumentsBad", "缺 content（要一個字串）")
+    die("ArgumentsBad", "missing content (a string)")
 
 path = inside(root, args["path"])
 if os.path.isdir(path):
-    die("FileBad", "%s 是資料夾" % args["path"])
+    die("FileBad", "%s is a directory" % args["path"])
 try:
     os.makedirs(os.path.dirname(path), exist_ok=True)
 except OSError as e:
-    die("MkdirFailed", "%s：%s" % (os.path.dirname(args["path"]) or ".", e.strerror))
+    die("MkdirFailed", "%s: %s" % (os.path.dirname(args["path"]) or ".", e.strerror))
 data = args["content"].encode("utf-8")
 tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path) + ".tmp")
 try:
@@ -66,5 +66,5 @@ except OSError as e:
         os.unlink(tmp)
     except OSError:
         pass
-    die("WriteFailed", "%s：%s" % (args["path"], e.strerror))
-print("已寫入 %s（%d bytes）" % (args["path"], len(data)))
+    die("WriteFailed", "%s: %s" % (args["path"], e.strerror))
+print("Wrote %s (%d bytes)" % (args["path"], len(data)))

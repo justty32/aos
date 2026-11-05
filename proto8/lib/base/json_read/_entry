@@ -21,7 +21,7 @@ def die(code, reason):
 def workspace():
     ws = os.environ.get("AOS_WS")
     if not ws or not os.path.isdir(ws):
-        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+        die("WsMissing", "AOS_WS is not set or not a directory")
     return os.path.realpath(ws)
 
 
@@ -29,16 +29,16 @@ def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
     except ValueError as e:
-        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+        die("ArgumentsBad", "stdin is not JSON: %s" % e)
     if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments 要是物件")
+        die("ArgumentsBad", "arguments must be an object")
     return a
 
 
 def inside(root, rel):
     p = os.path.realpath(os.path.join(root, rel))
     if os.path.commonpath([root, p]) != root:
-        die("PathBad", "%s 在工作區外面" % rel)
+        die("PathBad", "%s is outside the workspace" % rel)
     return p
 
 
@@ -47,20 +47,20 @@ def walk(doc, pointer):
     if pointer == "":
         return doc
     if not pointer.startswith("/"):
-        die("PointerBad", "指標要以 / 開頭（整份是空字串）：%s" % pointer)
+        die("PointerBad", "pointer must start with / (empty string = whole document): %s" % pointer)
     here = doc
     for raw in pointer[1:].split("/"):
         key = raw.replace("~1", "/").replace("~0", "~")
         if isinstance(here, dict):
             if key not in here:
-                die("PointerMissing", "%s：沒有 %s 這個 key" % (pointer, key))
+                die("PointerMissing", "%s: no key %s" % (pointer, key))
             here = here[key]
         elif isinstance(here, list):
             if not key.isdigit() or int(key) >= len(here):
-                die("PointerMissing", "%s：陣列沒有第 %s 項（共 %d 項）" % (pointer, key, len(here)))
+                die("PointerMissing", "%s: array has no item %s (%d items)" % (pointer, key, len(here)))
             here = here[int(key)]
         else:
-            die("PointerMissing", "%s：%s 底下不是物件也不是陣列" % (pointer, key))
+            die("PointerMissing", "%s: %s is neither an object nor an array" % (pointer, key))
     return here
 
 
@@ -85,26 +85,26 @@ def fold(v, depth):
 root = workspace()
 args = arguments()
 if not isinstance(args.get("path"), str) or not args["path"]:
-    die("ArgumentsBad", "缺 path（要一個字串）")
+    die("ArgumentsBad", "missing path (a string)")
 pointer, depth = args.get("pointer", ""), args.get("depth", 1)
 if not isinstance(pointer, str):
-    die("ArgumentsBad", "pointer 要是字串")
+    die("ArgumentsBad", "pointer must be a string")
 if type(depth) is not int or not 1 <= depth <= DEPTH_MAX:
-    die("ArgumentsBad", "depth 要是 1～%d 的整數" % DEPTH_MAX)
+    die("ArgumentsBad", "depth must be an integer from 1 to %d" % DEPTH_MAX)
 
 path = inside(root, args["path"])
 if not os.path.exists(path):
     die("FileMissing", args["path"])
 if os.path.isdir(path):
-    die("FileBad", "%s 是資料夾" % args["path"])
+    die("FileBad", "%s is a directory" % args["path"])
 if os.path.getsize(path) > SIZE_MAX:
-    die("FileBad", "%s 超過 %dMB" % (args["path"], SIZE_MAX // (1024 * 1024)))
+    die("FileBad", "%s is over %dMB" % (args["path"], SIZE_MAX // (1024 * 1024)))
 try:
     with open(path, encoding="utf-8") as f:
         doc = json.load(f)
 except OSError as e:
-    die("ReadFailed", "%s：%s" % (args["path"], e.strerror))
+    die("ReadFailed", "%s: %s" % (args["path"], e.strerror))
 except (ValueError, UnicodeDecodeError) as e:
-    die("FileBad", "%s 不是 JSON：%s" % (args["path"], e))
+    die("FileBad", "%s is not JSON: %s" % (args["path"], e))
 value = walk(doc, pointer)
 print(json.dumps({"path": args["path"], "pointer": pointer, "value": fold(value, depth)}, ensure_ascii=False))

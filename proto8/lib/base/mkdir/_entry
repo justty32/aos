@@ -21,7 +21,7 @@ def out(obj):
 def workspace():
     ws = os.environ.get("AOS_WS")
     if not ws or not os.path.isdir(ws):
-        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+        die("WsMissing", "AOS_WS is not set or not a directory")
     return os.path.realpath(ws)
 
 
@@ -29,12 +29,12 @@ def arguments(*required):
     try:
         a = json.loads(sys.stdin.read() or "{}")
     except ValueError as e:
-        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+        die("ArgumentsBad", "stdin is not JSON: %s" % e)
     if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments 要是物件")
+        die("ArgumentsBad", "arguments must be an object")
     for k in required:
         if not isinstance(a.get(k), str) or not a[k]:
-            die("ArgumentsBad", "缺 %s（要一個字串）" % k)
+            die("ArgumentsBad", "missing %s (a string)" % k)
     return a
 
 
@@ -42,7 +42,7 @@ def inside(rel, root_ok=True):
     """工作區裡的真實路徑；解開 .. 與捷徑後跑出去＝PathBad。回 (絕對路徑, 給人看的相對路徑)。"""
     p = os.path.realpath(os.path.join(ROOT, rel))
     if os.path.commonpath([ROOT, p]) != ROOT or (p == ROOT and not root_ok):
-        die("PathBad", "%s 在工作區外面" % rel)
+        die("PathBad", "%s is outside the workspace" % rel)
     return p, (os.path.relpath(p, ROOT) if p != ROOT else ".")
 
 
@@ -53,9 +53,9 @@ if os.path.isdir(p):
     out({"path": shown, "created": False})
     sys.exit(0)
 if os.path.lexists(p):
-    die("FileBad", "%s 已經是檔案" % a["path"])
+    die("FileBad", "%s is already a file" % a["path"])
 try:
     os.makedirs(p)
 except OSError as e:
-    die("MkdirFailed", "%s：%s" % (a["path"], e.strerror))
+    die("MkdirFailed", "%s: %s" % (a["path"], e.strerror))
 out({"path": shown, "created": True})

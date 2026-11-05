@@ -27,7 +27,7 @@ def out(obj):
 def workspace():
     ws = os.environ.get("AOS_WS")
     if not ws or not os.path.isdir(ws):
-        die("WsMissing", "沒設定 AOS_WS 或不是資料夾")
+        die("WsMissing", "AOS_WS is not set or not a directory")
     return os.path.realpath(ws)
 
 
@@ -35,12 +35,12 @@ def arguments(*required):
     try:
         a = json.loads(sys.stdin.read() or "{}")
     except ValueError as e:
-        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+        die("ArgumentsBad", "stdin is not JSON: %s" % e)
     if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments 要是物件")
+        die("ArgumentsBad", "arguments must be an object")
     for k in required:
         if not isinstance(a.get(k), str) or not a[k]:
-            die("ArgumentsBad", "缺 %s（要一個字串）" % k)
+            die("ArgumentsBad", "missing %s (a string)" % k)
     return a
 
 
@@ -48,7 +48,7 @@ def inside(rel, root_ok=True):
     """工作區裡的真實路徑；解開 .. 與捷徑後跑出去＝PathBad。回 (絕對路徑, 給人看的相對路徑)。"""
     p = os.path.realpath(os.path.join(ROOT, rel))
     if os.path.commonpath([ROOT, p]) != ROOT or (p == ROOT and not root_ok):
-        die("PathBad", "%s 在工作區外面" % rel)
+        die("PathBad", "%s is outside the workspace" % rel)
     return p, (os.path.relpath(p, ROOT) if p != ROOT else ".")
 
 
@@ -74,21 +74,21 @@ a = arguments("path")
 p, shown = inside(a["path"])
 pointer, start, end = a.get("pointer"), a.get("start"), a.get("end")
 if pointer is not None and not isinstance(pointer, str):
-    die("ArgumentsBad", "pointer 要是字串（例：/states/think）")
+    die("ArgumentsBad", "pointer must be a string (e.g. /states/think)")
 for k, v in (("start", start), ("end", end)):
     if v is not None and (type(v) is not int or v < 1):
-        die("ArgumentsBad", "%s 要是正整數" % k)
+        die("ArgumentsBad", "%s must be a positive integer" % k)
 if not os.path.exists(p):
     die("FileMissing", a["path"])
 if os.path.isdir(p):
-    die("FileBad", "%s 是資料夾，看資料夾用 ls" % a["path"])
+    die("FileBad", "%s is a directory; use ls for directories" % a["path"])
 try:
     with open(p, "rb") as f:
         data = f.read()
 except OSError as e:
-    die("ReadFailed", "%s：%s" % (a["path"], e.strerror))
+    die("ReadFailed", "%s: %s" % (a["path"], e.strerror))
 if b"\0" in data[:8192]:
-    die("FileBad", "%s 像是二進位檔，不讀" % a["path"])
+    die("FileBad", "%s looks like a binary file; not reading it" % a["path"])
 text = data.decode("utf-8", "replace")
 
 doc = None
@@ -97,13 +97,13 @@ if start is None and end is None:
         doc = json.loads(text)
     except ValueError:
         if pointer:
-            die("FileBad", "%s 不是 JSON，不能用 pointer；用 start／end 看行" % a["path"])
+            die("FileBad", "%s is not JSON, so pointer does not apply; use start/end for lines" % a["path"])
 
 if doc is not None:                     # ---- JSON：照 pointer 看一層
     v = doc
     pointer = pointer or ""
     if pointer and not pointer.startswith("/"):
-        die("ArgumentsBad", "pointer 要以 / 開頭（整份是 \"\"）")
+        die("ArgumentsBad", "pointer must start with / (\"\" = whole document)")
     for raw in pointer.split("/")[1:] if pointer else []:
         key = raw.replace("~1", "/").replace("~0", "~")
         if isinstance(v, dict) and key in v:
@@ -111,7 +111,7 @@ if doc is not None:                     # ---- JSON：照 pointer 看一層
         elif isinstance(v, list) and key.isdigit() and int(key) < len(v):
             v = v[int(key)]
         else:
-            die("PointerMissing", "%s#%s 指不到（%s 不在）" % (shown, pointer, key))
+            die("PointerMissing", "%s#%s not found (%s is missing)" % (shown, pointer, key))
     res = {"path": shown, "format": "json", "pointer": pointer}
     res.update(json_summary(v))
     if isinstance(v, (dict, list)):
@@ -122,7 +122,7 @@ if doc is not None:                     # ---- JSON：照 pointer 看一層
             res["children"] = [dict({"key": k}, **json_summary(c)) for k, c in items[:CHILDREN_MAX]]
             if len(items) > CHILDREN_MAX:
                 res["counter_children_more"] = len(items) - CHILDREN_MAX
-            res["hint"] = "把子項的 key 接到 pointer 後面再看（例：%s/%s）" % (pointer, items[0][0]) if items else ""
+            res["hint"] = "append a child key to pointer to look inside (e.g. %s/%s)" % (pointer, items[0][0]) if items else ""
     out(res)
     sys.exit(0)
 
@@ -136,7 +136,7 @@ res = {"path": shown, "format": "text", "counter_lines": total}
 def segment(s, e):
     s0 = s - 1
     if total and s0 >= total:
-        die("ArgumentsBad", "start %d 超過檔尾（共 %d 行）" % (s, total))
+        die("ArgumentsBad", "start %d is past the end of the file (%d lines)" % (s, total))
     e = min(e, total)
     picked, size = [], 0
     for line in lines[s0:e]:
@@ -147,7 +147,7 @@ def segment(s, e):
         size += n
     res.update({"start": s, "end": s0 + len(picked), "text": "\n".join(picked) + ("\n" if picked else "")})
     if s0 + len(picked) < e:
-        res["hint"] = "超過 %d 行或 %dKB，用 start=%d 接著看" % (MAX_LINES, MAX_BYTES // 1024, s0 + len(picked) + 1)
+        res["hint"] = "over %d lines or %dKB; use start=%d to continue" % (MAX_LINES, MAX_BYTES // 1024, s0 + len(picked) + 1)
 
 
 if start is not None or end is not None:
@@ -168,7 +168,7 @@ else:
                         outline += [{"line": m.lineno, "end": m.end_lineno, "name": node.name + "." + m.name, "kind": "def"}
                                     for m in node.body if isinstance(m, (ast.FunctionDef, ast.AsyncFunctionDef))]
         except SyntaxError as e:
-            res["syntax_error"] = "第 %s 行：%s" % (e.lineno, e.msg)
+            res["syntax_error"] = "line %s: %s" % (e.lineno, e.msg)
     elif p.endswith(".md"):
         res["format"] = "markdown"
         fence = False
@@ -182,5 +182,5 @@ else:
         res["outline"] = outline
     else:
         res["head"] = "\n".join(lines[:40]) + "\n"
-    res["hint"] = "用 start／end（行號）看要的那段"
+    res["hint"] = "use start/end (line numbers) to view the part you need"
 out(res)
