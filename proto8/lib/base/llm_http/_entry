@@ -21,18 +21,18 @@ def die(code, reason):
 try:
     args = json.loads(sys.stdin.read() or "null")
 except ValueError as e:
-    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    die("ArgumentsBad", "stdin is not JSON: %s" % e)
 if not isinstance(args, dict) or not isinstance(args.get("endpoint"), dict) or not isinstance(args.get("request"), dict):
-    die("ArgumentsBad", "stdin 要是 {\"endpoint\": {...}, \"request\": {...}}")
+    die("ArgumentsBad", "stdin must be {\"endpoint\": {...}, \"request\": {...}}")
 endpoint, request = args["endpoint"], args["request"]
 url = endpoint.get("url")
 if not isinstance(url, str) or not url:
-    die("ArgumentsBad", "endpoint.url 要是字串")
+    die("ArgumentsBad", "endpoint.url must be a string")
 defaults = endpoint.get("body", {})
 if not isinstance(defaults, dict):
-    die("ArgumentsBad", "endpoint.body 要是物件")
+    die("ArgumentsBad", "endpoint.body must be an object")
 if not isinstance(request.get("messages"), list):
-    die("ArgumentsBad", "request.messages 要是陣列")
+    die("ArgumentsBad", "request.messages must be an array")
 body = dict(defaults)
 body.update(request)
 model = request.get("model") or endpoint.get("model")
@@ -47,23 +47,23 @@ try:
     with urllib.request.urlopen(req) as r:
         raw = r.read()
 except urllib.error.HTTPError as e:
-    die("EndpointFailed", "HTTP %d：%s" % (e.code, e.read()[:200].decode("utf-8", "replace")))
+    die("EndpointFailed", "HTTP %d: %s" % (e.code, e.read()[:200].decode("utf-8", "replace")))
 except (urllib.error.URLError, OSError) as e:
-    die("EndpointFailed", "%s 連不上：%s" % (url, getattr(e, "reason", e)))
+    die("EndpointFailed", "cannot connect to %s: %s" % (url, getattr(e, "reason", e)))
 except http.client.HTTPException as e:                     # 回到一半斷線（IncompleteRead）、狀態列壞掉等
-    die("EndpointFailed", "%s 回覆沒收完整：%s %s" % (url, type(e).__name__, e))
+    die("EndpointFailed", "incomplete reply from %s: %s %s" % (url, type(e).__name__, e))
 try:
     reply = json.loads(raw)
     message = reply["choices"][0]["message"]
 except (ValueError, KeyError, IndexError, TypeError) as e:
-    die("ReplyBad", "回覆不是 OpenAI 的形狀（%s: %s）" % (type(e).__name__, e))
+    die("ReplyBad", "reply is not OpenAI-shaped (%s: %s)" % (type(e).__name__, e))
 if not isinstance(message, dict):
-    die("ReplyBad", "choices[0].message 不是物件")
+    die("ReplyBad", "choices[0].message is not an object")
 out = {"role": "assistant", "content": message.get("content")}
 calls = message.get("tool_calls")
 if calls:
     if not isinstance(calls, list) or not all(isinstance(c, dict) for c in calls):
-        die("ReplyBad", "tool_calls 不是物件的陣列")
+        die("ReplyBad", "tool_calls is not an array of objects")
     out["tool_calls"] = [{k: c[k] for k in ("id", "type", "function") if k in c} for c in calls]
 usage = reply.get("usage") if isinstance(reply.get("usage"), dict) else None
 print(json.dumps({"message": out, "usage": usage, "model": reply.get("model") or model}, ensure_ascii=False))

@@ -21,13 +21,13 @@ def die(code, reason):
 try:
     args = json.loads(sys.stdin.read() or "null")
 except ValueError as e:
-    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    die("ArgumentsBad", "stdin is not JSON: %s" % e)
 request = args.get("request") if isinstance(args, dict) else None
 if not isinstance(request, dict) or not isinstance(request.get("messages"), list) or not request["messages"]:
-    die("ArgumentsBad", "stdin 要是 {\"endpoint\": {...}, \"request\": {\"messages\": [至少一則]}}")
+    die("ArgumentsBad", "stdin must be {\"endpoint\": {...}, \"request\": {\"messages\": [at least one]}}")
 messages, tools = request["messages"], request.get("tools") or []
 if not isinstance(tools, list):
-    die("ArgumentsBad", "request.tools 要是陣列")
+    die("ArgumentsBad", "request.tools must be an array")
 last = messages[-1] if isinstance(messages[-1], dict) else {}
 if last.get("role") == "user" and tools:
     name = (tools[0].get("function") or {}).get("name") if isinstance(tools[0], dict) else None
@@ -39,7 +39,7 @@ else:
                      if isinstance(m, dict) and m.get("role") == "user"), "")
     content = "FAKE ANSWER to: " + str(question).rstrip("\n")
     if last.get("role") == "tool":
-        content += "（tool said: %s）" % str(last.get("content") or "").rstrip("\n")
+        content += " (tool said: %s)" % str(last.get("content") or "").rstrip("\n")
     said = {"role": "assistant", "content": content}
 print(json.dumps({"message": said, "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
                   "model": "fake"}, ensure_ascii=False))
