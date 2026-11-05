@@ -4,7 +4,7 @@
 
 1. 信的 body 形狀：`{"endpoint": 代號, "request": OpenAI body 去端點, "priority"}`；回信 `{"message","usage","model"}` 或 `{"error"}`；不再有 `inst`／`env`。
 2. 代號表放 `kernel.json` 的 `endpoints`（一組一層物件、可 `$ref` 拆檔）、預設代號 `endpoint`；`EndpointMissing`／`EndpointUnknown`；信可臨時覆寫 `request` 內的欄位（含 `model`），不能改 `url`／`key`。
-3. kernel 跑的是自己 `exec` 指的 endpoint 函數（`lib/base/llm_http`、假腦 `llm_fake`），stdin／stdout 契約固定；環境是 kernel 的、stack＝那封信的資料夾；`AOS_KERNEL_REPORT`、`accept`、`_metainfo` 排序依據退場。
+3. kernel 跑的是自己 `exec` 指的 endpoint 函數（`lib/base/llm_http`、假腦 `llm_fake`），stdin／stdout 契約固定；環境是 kernel 的、stack＝那封信的資料夾；`AOS_KERNEL_REPORT`、`accept`、`_metainfo` 排序依據退場。（**11-05 改**：kernel 不自己跑，把每次問腦寫成 `procs_added` 信請 daemon 掛成 proc、下一拍收；環境變成 daemon 給子項的，stack 仍是那封信的資料夾；見 [kernel-daemon 03](../../../05/kernel-daemon/03-問腦改掛daemon.md)）
 4. 保留 C++ aos-llm-kernel、改它跑的東西；不另寫 Python kernel。`impls/aos-llm-send` 改名 `impls/aos-llm`、長出 `send／recv／ask／regret`；`bin/aos-llm`（Python）刪。
 5. kernel 當資料夾程式 `demo/llm-kernel/`（aos-loop 拍），掛 daemon 用 `aos-daemon-ctl add`；`AOS_KERNEL` 由人 export（或 daemon 環境繼承）。
 6. agent-fsm 四格 idle／think／wait／act；「要不要叫工具」的判斷從 think 搬到 act（沒 `tool_calls`＝退 10）；wait 負責寄＋收＋重試；stack 用 `think/`。
