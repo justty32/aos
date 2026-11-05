@@ -5,12 +5,12 @@
 往 daemon 的信箱（信箱模式，N-28 的 10-29 補）投一封 `procs_added`／`procs_removed`／`procs_stopped`／`procs_started`／`procs_slept`／`procs_woken` 的信。設計與代定見
 proto8/thinking/2026-10/30/agent-lifecycle/README.md（實作第 7 步的補）、2026-11/03/procs.md（11-03 loops／execs 統稱 procs）與 bin/README.md。
 
-    aos-daemon-ctl [--daemon D] add [--name N] [--ws WS] [--stack S] [--def DEF] XXX [-- 參數...]   掛上去（add＝登記＋起）；stdout 印信件名稱（aos-post 給的）
-    aos-daemon-ctl [--daemon D] rm 名字                                      拿下來（procs_removed；先停再拿掉，stack 留著）；印信件名稱
-    aos-daemon-ctl [--daemon D] stop 名字                                    停（procs_stopped：跑完這次退、列留成 stopped、stack 留著）；印信件名稱
-    aos-daemon-ctl [--daemon D] start 名字                                   起（procs_started：stopped 的用同一個 stack 再起）；印信件名稱
-    aos-daemon-ctl [--daemon D] sleep 名字                                   睡（procs_slept：現在就 SIGTERM、列留成 sleeping、stack 留著；daemon 開門自己醒）；印信件名稱
-    aos-daemon-ctl [--daemon D] wake 名字                                    醒（procs_woken：sleeping 的用同一個 stack 再起）；印信件名稱
+    aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--name N] [--ws WS] [--stack S] [--def DEF] XXX [-- 參數...]   掛上去（add＝登記＋起）；stdout 印信件名稱（aos-post 給的）
+    aos-daemon-ctl [--daemon D] rm [--reply-to BOX] 名字                                      拿下來（procs_removed；先停再拿掉，stack 留著）；印信件名稱
+    aos-daemon-ctl [--daemon D] stop [--reply-to BOX] 名字                                    停（procs_stopped：跑完這次退、列留成 stopped、stack 留著）；印信件名稱
+    aos-daemon-ctl [--daemon D] start [--reply-to BOX] 名字                                   起（procs_started：stopped 的用同一個 stack 再起）；印信件名稱
+    aos-daemon-ctl [--daemon D] sleep [--reply-to BOX] 名字                                   睡（procs_slept：現在就 SIGTERM、列留成 sleeping、stack 留著；daemon 開門自己醒）；印信件名稱
+    aos-daemon-ctl [--daemon D] wake [--reply-to BOX] 名字                                    醒（procs_woken：sleeping 的用同一個 stack 再起）；印信件名稱
     aos-daemon-ctl [--daemon D] pause 名字                                   暫停（直接寫它的 ctl.json {"cmd": "pause", "seq": N}）；印 N
     aos-daemon-ctl [--daemon D] resume 名字                                  解除暫停（{"cmd": "resume", "seq": N}）；印 N
     aos-daemon-ctl [--daemon D] ls [--json]                                  列 procs_state.json 的表：一行「名字 TAB phase TAB pid TAB code TAB ws TAB reason」
@@ -27,6 +27,10 @@ proto8/thinking/2026-10/30/agent-lifecycle/README.md（實作第 7 步的補）�
   （「要掛 proc 往哪寄」的信箱：模式 1＝daemon 的 requests/、模式 2＝0 號 proc 的 requests/，由判官決定掛不掛、再轉寄進 daemon 的 ctl 信箱）；
   沒設＝直接寄 daemon 的 ctl 信箱（daemon 就是 kernel，模式 0）。表照樣從 D 讀（ls、where、PhaseBad 檢查）。
   AOS_KERNEL 沒有 new/＝MailboxMissing。aos-agent 經這支，跟著走。人殼裡設了別台的 AOS_KERNEL 再對另一台下指令＝寄錯台（自擔）。
+--reply-to BOX（11-05 edge-agent 題 2，使用者選「加 --reply-to 等回信」）：add／rm／stop／start／sleep／wake 都收；原樣交給 aos-post send --reply-to
+  （BOX 從 cwd 轉絕對；信封存相對收信信箱的根，照 aos-post；BOX 不是信箱＝aos-post 的 MailboxMissing／MailboxBad、這支 SendFailed）。
+  回信：daemon 套了＝{"applied": true}（壞信不回，原因在 procs_state.json 的 mailbox_warning）；經判官不掛＝判官回
+  {"applied": false, "error": {"code", "msg"}}、放行＝轉寄時照帶 reply_to、daemon 回。這支只寄、不等回信（等是呼叫者的事）。
 表上的路徑（11-05 portable-flow，使用者「可以用daemon作為相對路徑的一個基準點」）：procs_state 每列的 stack／ws／exec／def 之後 daemon 存成相對
   daemon 的 stack（＝D；例 procs/bob、..、../../agents/bob/loop.json#/exec），這支讀表時一律 normpath(join(D, 值))（exec 的 # 片段照留），對外（ls、ls --json、where）印的都是絕對。D 先 realpath（daemon 的基準點是 stack 的真實路徑），值照字面。
   每列另有 reason（null 或字串：daemon 把起不來的列留成 stopped 時寫的原因），ls 印在最後一欄（null＝-）。
@@ -91,8 +95,8 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
 NAME = "aos-daemon-ctl"
-USAGE = ("aos-daemon-ctl [--daemon D] add [--name N] [--ws WS] [--stack S] [--def DEF] XXX [-- 參數...] | rm 名字 | stop 名字 | start 名字"
-         " | sleep 名字 | wake 名字 | pause 名字 | resume 名字 | ls [--json] | where --stack 名字")
+USAGE = ("aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--name N] [--ws WS] [--stack S] [--def DEF] XXX [-- 參數...]"
+         " | rm|stop|start|sleep|wake [--reply-to BOX] 名字 | pause 名字 | resume 名字 | ls [--json] | where --stack 名字")
 PATHS = ("stack", "ws", "exec", "def")   # procs_state 每列存相對 daemon stack 的欄（11-05 portable-flow）
 STATE = "procs_state.json"   # daemon 的名單窗：找其他名字的起點，所以只能用預設名（daemon.json 改了 procs_state＝這支找不到，StateMissing）
 NAMES = {"procs_loop": "loop.json", "procs_ctl_mailbox": "procs_ctl_mailbox"}   # 窗上沒回報（11-04 前的 daemon、還沒起）時用的預設
@@ -264,8 +268,8 @@ def names_of(d):
     return out
 
 
-def send(d, body):
-    """procs_* 信：有 $AOS_KERNEL＝寄那裡（11-05 kernel-daemon 步 6），沒有＝daemon 的 ctl 信箱。"""
+def send(d, body, reply_to=None):
+    """procs_* 信：有 $AOS_KERNEL＝寄那裡（11-05 kernel-daemon 步 6），沒有＝daemon 的 ctl 信箱。reply_to＝--reply-to 給的（已轉絕對）或 None。"""
     k = os.environ.get("AOS_KERNEL", "")
     if k:
         box = os.path.abspath(k)
@@ -279,7 +283,7 @@ def send(d, body):
         if not os.path.isdir(os.path.join(box, "new")):
             raise Fail("MailboxMissing", "%s 不是信箱（daemon 還沒起，或沒開信箱）" % box)
     try:
-        r = subprocess.run(["aos-post", "send", box], input=json.dumps(body, ensure_ascii=False), capture_output=True, text=True)
+        r = subprocess.run(["aos-post", "send"] + (["--reply-to", reply_to] if reply_to else []) + [box], input=json.dumps(body, ensure_ascii=False), capture_output=True, text=True)
     except FileNotFoundError:
         raise Fail("CommandMissing", "PATH 上沒有 aos-post")
     if r.returncode != 0:
@@ -371,15 +375,28 @@ def cell_of(d, name, row=None):
     return s.rstrip("/") or "/"
 
 
-def name_arg(cmd, args):
-    o, rest = aos_flags.parse(args, {})
+def name_arg(cmd, args, flags=None):
+    o, rest = aos_flags.parse(args, flags or {})
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "%s 要一個名字（usage: %s）" % (cmd, USAGE))
-    return rest[0]
+    return (rest[0], o) if flags else rest[0]
+
+
+REPLY = {"--reply-to": "reply_to"}   # 寄信的子命令（add／rm／stop／start／sleep／wake）都收（11-05 edge-agent 題 2）
+
+
+def reply_box(o):
+    """--reply-to 的值轉絕對（從呼叫當下的 cwd 算）；沒給＝None。是不是信箱由 aos-post send 驗。"""
+    v = o.get("reply_to")
+    if v is None:
+        return None
+    if not v:
+        raise Fail("ArgumentsBad", "--reply-to must not be empty (usage: %s)" % USAGE)
+    return os.path.abspath(v)
 
 
 def cmd_add(opts, args):
-    o, rest = aos_flags.parse(args, {"--name": "name", "--ws": "ws", "--stack": "stack", "--def": "def"})
+    o, rest = aos_flags.parse(args, dict(REPLY, **{"--name": "name", "--ws": "ws", "--stack": "stack", "--def": "def"}))
     if not rest:
         raise Fail("ArgumentsBad", "add 要一個 XXX（usage: %s）" % USAGE)
     extra = rest[1:]
@@ -422,14 +439,14 @@ def cmd_add(opts, args):
     if stack:
         spec["stack"] = stack
     note_down(d)
-    send(d, {"procs_added": {name: spec}})
+    send(d, {"procs_added": {name: spec}}, reply_box(o))
 
 
 def cmd_rm(opts, args):
-    name = name_arg("rm", args)
+    name, o = name_arg("rm", args, REPLY)
     d = daemon_dir(opts)
     note_down(d)
-    send(d, {"procs_removed": [name]})
+    send(d, {"procs_removed": [name]}, reply_box(o))
 
 
 def need_ctl(d, name, row=None):
@@ -473,13 +490,13 @@ def need_phase(cmd, name, row):
 def phase_cmd(cmd, key):
     """stop／start／sleep／wake：照表檢查 phase（PhaseBad）；stop、sleep 另要 loop 型（CtlMissing），然後寄 {key: [名字]}。"""
     def run(opts, args):
-        name = name_arg(cmd, args)
+        name, o = name_arg(cmd, args, REPLY)
         d = daemon_dir(opts)
         row = row_of(d, name)
         if cmd in ("stop", "sleep"):
             need_ctl(d, name, row)          # exec 型只有跑和拔：先報 CtlMissing（跟 11-05 前一樣）
         need_phase(cmd, name, row)
-        send(d, {key: [name]})
+        send(d, {key: [name]}, reply_box(o))
     return run
 
 
