@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # llm_http - endpoint 函數：把一份請求 POST 到 OpenAI 相容的 {url}/chat/completions，印剪過的回覆（think-as-function 02/01 § 4）
-# 介面（lib/README 的契約）：stdin 一份 {"endpoint": {"url", "model", "key"?, "body"?}, "request": {"messages", ...}}；
-#   送出的 body＝endpoint.body（那組的預設，例 temperature）疊上 request（信裡寫的蓋過預設），再補 model（request.model 有就用、沒有用 endpoint.model）；
+# 介面（lib/README 的契約）：stdin 一份 {"endpoint": {"url", "model", "key"?, "fixed"?}, "request": {"messages", ...}}；
+#   送出的 body＝request 先、endpoint.fixed（那組釘死的欄位，例 temperature）蓋上，model 一律用 endpoint.model（11-05 件 2 代定 2；不留舊 body 名）；
 #   key 有才帶 Bearer。stdout 一行 {"message": choices[0].message 只留 role／content／tool_calls, "usage", "model"}、退 0。
 # 錯：stderr 與 stdout 各一行「llm_http: 代號 原因」、退 1：ArgumentsBad（stdin 不是這形狀）、EndpointFailed（連不上、HTTP 非 2xx）、
 #   ReplyBad（不是 OpenAI 形狀）。沒有自己的逾時旗標（包它的單子守，10-15 KISS）；平常由 aos-llm-kernel 經 aos-exec 跑（kernel.json 的 exec）。
@@ -28,16 +28,18 @@ endpoint, request = args["endpoint"], args["request"]
 url = endpoint.get("url")
 if not isinstance(url, str) or not url:
     die("ArgumentsBad", "endpoint.url must be a string")
-defaults = endpoint.get("body", {})
-if not isinstance(defaults, dict):
-    die("ArgumentsBad", "endpoint.body must be an object")
+fixed = endpoint.get("fixed", {})
+if not isinstance(fixed, dict):
+    die("ArgumentsBad", "endpoint.fixed must be an object")
 if not isinstance(request.get("messages"), list):
     die("ArgumentsBad", "request.messages must be an array")
-body = dict(defaults)
-body.update(request)
-model = request.get("model") or endpoint.get("model")
+body = dict(request)
+body.update(fixed)
+model = endpoint.get("model")
 if model:
     body["model"] = model
+else:
+    body.pop("model", None)
 headers = {"Content-Type": "application/json"}
 if isinstance(endpoint.get("key"), str) and endpoint["key"]:
     headers["Authorization"] = "Bearer " + endpoint["key"]

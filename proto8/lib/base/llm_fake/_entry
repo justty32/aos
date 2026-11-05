@@ -3,6 +3,8 @@
 # 介面：stdin {"endpoint": {...}（不看）, "request": {"messages", "tools"?}}；最後一則是 user 而且有 tools＝先叫第一個工具（arguments "{}"）；
 #   否則答一句「FAKE ANSWER to: <最後一則 user>」（最後一則是 tool 就附「（tool said: …）」）。
 #   stdout 一行 {"message", "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}, "model": "fake"}、退 0。
+#   endpoint.script（陣列，劇本）有就照劇本：已在 messages 裡的 assistant 則數 n，這次回 script[n]；一項是 {"content": "..."} 或
+#   {"tool_calls": [{"name": "...", "arguments": {...}}]}（arguments 給物件，這裡轉成 JSON 字串；補 id／type）；n 超過劇本長度＝照上面原本的行為。
 # 錯：stderr 與 stdout 各一行「llm_fake: ArgumentsBad 原因」、退 1。
 # 用法：kernel.json 的 endpoints 登記一組 "fake": {"exec": "<到這個資料夾的路徑>"}，信寫 "endpoint": "fake"（或設成預設）。
 # 來源：demo/agent-fsm/brain.py 的 fake()（11-04 晚搬過來；不再用「URL 沒設＝假腦」的暗規則，C-56）。
@@ -28,8 +30,25 @@ if not isinstance(request, dict) or not isinstance(request.get("messages"), list
 messages, tools = request["messages"], request.get("tools") or []
 if not isinstance(tools, list):
     die("ArgumentsBad", "request.tools must be an array")
+script = args["endpoint"].get("script") if isinstance(args.get("endpoint"), dict) else None
+if script is not None and not isinstance(script, list):
+    die("ArgumentsBad", "endpoint.script must be an array")
 last = messages[-1] if isinstance(messages[-1], dict) else {}
-if last.get("role") == "user" and tools:
+n = sum(1 for m in messages if isinstance(m, dict) and m.get("role") == "assistant")
+if script and n < len(script):
+    item = script[n]
+    if not isinstance(item, dict) or not (isinstance(item.get("tool_calls"), list) or "content" in item):
+        die("ArgumentsBad", "endpoint.script[%d] must be {\"content\": ...} or {\"tool_calls\": [...]}" % n)
+    said = {"role": "assistant", "content": item.get("content")}
+    if item.get("tool_calls"):
+        said["tool_calls"] = []
+        for i, c in enumerate(item["tool_calls"]):
+            if not isinstance(c, dict) or not isinstance(c.get("name"), str):
+                die("ArgumentsBad", "endpoint.script[%d].tool_calls[%d] needs a string name" % (n, i))
+            a = c.get("arguments", {})
+            said["tool_calls"].append({"id": "call_script_%d_%d" % (n, i), "type": "function",
+                                       "function": {"name": c["name"], "arguments": a if isinstance(a, str) else json.dumps(a, ensure_ascii=False)}})
+elif last.get("role") == "user" and tools:
     name = (tools[0].get("function") or {}).get("name") if isinstance(tools[0], dict) else None
     said = {"role": "assistant", "content": None,
             "tool_calls": [{"id": "call_fake_%d" % len(messages), "type": "function",
