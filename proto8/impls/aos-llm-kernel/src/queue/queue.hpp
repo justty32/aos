@@ -3,7 +3,8 @@
 //   read_queue / write_queue   queue.json＝{"counter_runs": kernel 跑過幾次（10-25 原 runs）, "seen_at_runs": {信件名稱: 第一次看到它是第幾次}}
 //                              （沒有＝從 0 起；在但讀不懂＝QueueBad；寫：先寫暫存再改名，N-05）
 //   effective                  這封信現在算幾級：level＋等了幾次÷10（10-15 定案「每等 10 拍升一級」；不封頂，等久了 low 可以超過 high）
-//   order                      排隊：級數大的先 → deadline 近的先（有寫的排在沒寫的前面）→ 等得久的先 → 先寄的先（信件名稱字典序）
+//   order                      排隊：級數大的先 → deadline 近的先（有寫的排在沒寫的前面）→ 包的 speed（fast → normal → slow，11-05 feat-proto）
+//                              → 等得久的先 → 先寄的先（信件名稱字典序）
 //                              （11-04 起 `_metainfo` 的 time_ms 那條拿掉：信裡沒單子）
 #pragma once
 

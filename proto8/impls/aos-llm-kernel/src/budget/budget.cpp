@@ -167,6 +167,20 @@ bool spent(const Budget& b, const Used& u, long long started) {
     return b.max_tokens && u.tokens >= *b.max_tokens;
 }
 
+bool spent_pack(const Used& u, const std::string& name, std::optional<long long> max_calls, std::optional<long long> max_tokens,
+                long long started) {
+    long long calls = 0;
+    long long tokens = 0;
+    if (u.packs.contains(name) && u.packs[name].is_object()) {
+        calls = u.packs[name].value("counter_calls", 0LL);
+        tokens = u.packs[name].value("counter_tokens", 0LL);
+    }
+    if (max_calls && calls + started >= *max_calls) {
+        return true;
+    }
+    return max_tokens && tokens >= *max_tokens;
+}
+
 Report report_of(const Json& reply) {
     Report r;
     if (!reply.is_object() || !reply.contains("usage")) {

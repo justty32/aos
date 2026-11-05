@@ -269,6 +269,7 @@ private:
     Host host_;
     Table table_;
     long long busy_ = 0;   // 掛上去、還沒收的（在飛）
+    std::map<std::string, long long> pack_busy_;   // 代號 → 這包在飛幾封（proc.json 的 endpoint；11-05 feat-proto）
 
     void lock();
     void collect();
@@ -458,6 +459,9 @@ void Server::collect() {
                 finish(id, *reply);
             } else {
                 ++busy_;
+                if (proc->value("endpoint", Json()).is_string()) {
+                    ++pack_busy_[(*proc)["endpoint"].get<std::string>()];
+                }
             }
             continue;
         }
@@ -639,6 +643,25 @@ int Server::run() {
             if (n + busy_ >= slots_) {
                 break;   // 補位到 slots 為止；其餘下一次
             }
+            // 包（11-05 feat-proto 件 3）：在飛＝上一次留下的＋這次新掛的
+            long long inflight = pack_busy_[w.endpoint];
+            if (w.pack.max_calls || w.pack.max_tokens) {
+                if (spent_pack(used_, w.endpoint, w.pack.max_calls, w.pack.max_tokens, inflight)) {
+                    if (budget_.wait) {
+                        continue;   // 這包到頂：這封留在 new/ 等下一窗，別包照跑
+                    }
+                    q_.seen_at_runs.erase(w.id);
+                    bool by_calls = spent_pack(used_, w.endpoint, w.pack.max_calls, std::nullopt, inflight);
+                    std::string which = by_calls ? "max_calls " + std::to_string(*w.pack.max_calls)
+                                                 : "max_tokens " + std::to_string(*w.pack.max_tokens);
+                    refuse(w.id, error_reply(code::BudgetMissing, "endpoint " + w.endpoint + ": " + which + " reached in this window (" +
+                                                                       budget_.window + "); not run (no fallback: pick another endpoint name)"));
+                    continue;
+                }
+            }
+            if (w.pack.slots && inflight >= *w.pack.slots) {
+                continue;   // 這包的格滿了：跳過、讓下一封補位（不是停下）
+            }
             std::string dir = aos::join(mb_.cur(), w.id);
             if (!move(aos::join(mb_.fresh(), w.id), dir)) {
                 continue;   // 寄信的剛撤信
@@ -662,6 +685,7 @@ int Server::run() {
                 continue;
             }
             ++n;
+            ++pack_busy_[w.endpoint];
         }
     }
     write_queue(stack_, q_);

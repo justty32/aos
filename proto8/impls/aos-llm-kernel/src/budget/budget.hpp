@@ -10,6 +10,8 @@
 //   read_used     讀 used.json（沒有＝全 0；在但讀不懂＝UsedBad）；換窗了（window 或 since 不同）就把 counter_calls、counter_tokens 歸零，counter_all_* 照留
 //   add_used      跑過的一封記上去（先換窗）：counter_calls＋1、counter_tokens＋回報的（沒回報＝只算次數），代號有給＝packs 那格也記；寫回 used.json（先寫暫存再改名）
 //   spent         照這一窗的帳，再開第 started＋1 封會不會超過：counter_calls 已到 max_calls、或 counter_tokens 已經到 max_tokens（token 只能事後知道，所以一次裡可能超過一點）
+//   spent_pack    同 spent、看一個包（11-05 feat-proto）：packs.<代號> 的 counter_calls＋started（這包在飛＋這次新掛）≥ 包的 max_calls、
+//                 或 counter_tokens ≥ max_tokens（窗＝kernel 的 budget.window）
 //   report_of     回信（reply.json，endpoint 函數的 stdout）的 usage 物件（11-04 起取代 AOS_KERNEL_REPORT 指的 report.json）：
 //                 tokens＝total_tokens；沒有就 prompt_tokens＋completion_tokens（非負整數才算）。沒有 usage（含 error 回信）＝沒回報（tokens null）；
 //                 有但不是物件、形狀不對＝bad（tokens null，只算次數）
@@ -50,6 +52,8 @@ Json window_since(const std::string& window, std::time_t now);
 Used read_used(const std::string& stack, const std::string& window);
 void add_used(const std::string& stack, Used& u, const Report& r, const std::string& endpoint = "");
 bool spent(const Budget& b, const Used& u, long long started);
+bool spent_pack(const Used& u, const std::string& name, std::optional<long long> max_calls, std::optional<long long> max_tokens,
+                long long started);
 Report report_of(const Json& reply);
 
 }  // namespace aos::llm_kernel

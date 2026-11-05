@@ -27,8 +27,10 @@
 //                   request 不是物件、messages 不是陣列、stream 真＝RequestBad；代號：沒寫又沒預設＝EndpointMissing、表裡沒有＝EndpointUnknown；
 //                   那組解指示詞失敗＝DirectiveBad、不是物件或 exec 不是非空字串、slots／budget／speed／fixed 形狀不對＝CfgBad；
 //                   request 寫了包 fixed 裡的 key、或包有 model 而 request 寫 model＝RequestBad（C-56：釘死的不給蓋）；deadline 已過＝DeadlineMissed（都不佔格）
-//                5. 排隊（queue.hpp 的 order）、補位到 slots（在飛＋新掛）：額度到頂（budget.hpp 的 spent）＝"refuse" 剩下的全回 BudgetMissing、
-//                   "wait" 留在 new/；沒到頂就認領（new → cur 改名；改不成＝寄信的剛撤信）、寫 request.json＝{"endpoint": 那組（指示詞已解、去掉 exec）,
+//                5. 排隊（queue.hpp 的 order：級數＋aging → deadline → 包的 speed → 等得久 → 先寄）、補位到 slots（在飛＋新掛）：
+//                   額度到頂（budget.hpp 的 spent）＝"refuse" 剩下的全回 BudgetMissing、"wait" 停整列留在 new/；
+//                   包（11-05 feat-proto 件 3）：那包的 budget 到頂（spent_pack，數那包在飛＋新掛）＝"refuse" 那封回 BudgetMissing、"wait" 那封留在 new/、
+//                   別包照跑（不降級換包）；那包在飛＋新掛已到它的 slots＝跳過、看下一封（不是停下）；都沒擋就認領（new → cur 改名；改不成＝寄信的剛撤信）、寫 request.json＝{"endpoint": 那組（指示詞已解、去掉 exec）,
 //                   "request": body.request}、寄掛信（proc.json 記 endpoint＝代號） {"procs_added": {"llm_<id>": {"exec": {"argv": ["aos-exec", 函數], "cwd": 信資料夾,
 //                   "stdin": "request.json", "stdout": "reply.json", "timeout_ms"?}, "max": 1, "stack": 信資料夾}}}、寫 proc.json；寄不進＝LaunchFailed
 //                6. 回信（寄信的 sender.flock 已沒人鎖＝馬上撤回）、寄不出去 stderr 印一行；掛過的記進 used.json（含 packs.<代號>）；整封刪掉；寫 queue.json

@@ -29,7 +29,7 @@ endpoint 函數的契約（stdin `{"endpoint", "request"}` → stdout 一行 `{"
 - **額度**（kernel.json 的 `budget`，都選填）：`max_calls`、`max_tokens`＝每窗上限（非負整數；沒寫＝那一種不限）；`window`＝`"hour"`／`"day"`／`"all"`（沒寫＝`day`；窗的起點用 kernel 的本地時間〔`TZ`〕的整點／午夜，`all`＝不歸零）；
   `spent`＝到頂時排著的信怎麼辦：`"refuse"`（沒寫＝這個）回 `BudgetMissing`、不跑；`"wait"` 留在 `new/` 等下一窗。
   `budget` 沒寫也照樣記 `used.json`（窗＝day）：`{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens", "packs": {代號: {"counter_calls", "counter_tokens"}}}`（`packs`＝這一窗每個包用了多少，代號從 `proc.json` 的 `endpoint` 拿；11-05 feat-proto）。換窗＝`window` 或 `since` 跟現在算出來的不同：`counter_calls`、`counter_tokens`、`packs` 歸零，`counter_all_*` 照留。
-- **到頂怎麼判**：要掛下一封之前看——`counter_calls`＋在飛的＋這次新掛的 ≥ `max_calls`，或 `counter_tokens` ≥ `max_tokens`。token 收到回信才知道，所以最多超過「在飛那幾封的量」。
+- **到頂怎麼判**：要掛下一封之前看——`counter_calls`＋在飛的＋這次新掛的 ≥ `max_calls`，或 `counter_tokens` ≥ `max_tokens`。token 收到回信才知道，所以最多超過「在飛那幾封的量」。包的 `budget` 同一個判法、只數那包（`packs.<代號>` 與那包在飛的），窗跟 kernel 的同一個；kernel 的先判。
 
 ### 一次
 
@@ -37,8 +37,13 @@ endpoint 函數的契約（stdin `{"endpoint", "request"}` → stdout 一行 `{"
 2. **收成品**：`cur/` 裡有 `proc.json` 的照上面「跑一封」第 4 步看，收尾的寄回信、刪掉，還在飛的記一格。沒有 `proc.json` 的：有讀得懂的 `reply.json`＝上一次寄到一半，照寄；都沒有＝認領了還沒掛就停了，改名回 `new/` 重排。
 3. **收拾**（只看有 `sender.flock` 的信）：`tmp/` 裡寄信的人不在了的刪掉；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑）。沒有 `sender.flock` 的一律不碰。
 4. **看 `new/`**：`LetterBad`、`RequestBad`、`EndpointMissing`、`EndpointUnknown`、那組壞了（`DirectiveBad`、`CfgBad`）、deadline 已過（`DeadlineMissed`）＝直接回信（都不佔格、不跑）。
-5. **排隊**：`level`＋等了幾次÷10（每等 10 次升一級，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ 等得久的先 → 先寄的先。
-6. 掛之前看一眼訊號（有＝不認領、寫完 `queue.json` 以 128＋N 結束）。照排好的順序一封封看：額度到頂＝`refuse` 回 `BudgetMissing`、`wait` 就停；在飛＋這次新掛的到 `slots` 就停（其餘下一次）；不然照「跑一封」1～3 步掛上去。
+5. **排隊**（11-05 使用者「讓kernel能根據信件中額外附送的priority之類資訊做排程」，[feat-proto 03](../../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：`level`＋等了幾次÷10（每等 10 次升一級，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ **那封的包的 `speed`**（`fast` → `normal` → `slow`）→ 等得久的先 → 先寄的先。
+   同級、同 deadline 狀態下，慢包的信會被後寄的快包信超過（今天就有 priority 超車，aging 保底不會餓死）。
+6. 掛之前看一眼訊號（有＝不認領、寫完 `queue.json` 以 128＋N 結束）。照排好的順序一封封看：
+   - kernel 的額度到頂＝`refuse` 回 `BudgetMissing`、`wait` 就**停整列**；在飛＋這次新掛的到 kernel 的 `slots` 就停（其餘下一次）。
+   - **包的額度**（那組的 `budget`）到頂（`packs.<代號>.counter_calls`＋這包在飛＋這次新掛的 ≥ `max_calls`、或 `counter_tokens` ≥ `max_tokens`）＝`refuse` 回 `BudgetMissing`（`endpoint once: max_calls 1 reached in this window (day); not run (no fallback: pick another endpoint name)`）；`wait` 時那封留在 `new/` 等、**別包照跑**。不替人降級換包（C-56；要換就寄信的自己改代號重寄）。
+   - **包的格**（那組的 `slots`）：這包在飛＋這次新掛的已到它的 `slots`＝**跳過、看下一封**（不是停下），讓別包的信補位。
+   - 不然照「跑一封」1～3 步掛上去。
 7. 寫 `queue.json`；結束碼 0。**不等問腦跑完**：一次只花看信、寄信的時間。
 
 ### 訊號

@@ -65,6 +65,9 @@ void order(std::vector<Waiting>& ws, long long runs) {
         if (a.priority.deadline && *a.priority.deadline != *b.priority.deadline) {
             return *a.priority.deadline < *b.priority.deadline;
         }
+        if (a.pack.speed != b.pack.speed) {   // 11-05 feat-proto：同級、同 deadline 時快的包先（早放格；慢的靠 aging 不會餓死）
+            return a.pack.speed < b.pack.speed;
+        }
         long long wa = waited_runs(a, runs);
         long long wb = waited_runs(b, runs);
         if (wa != wb) {
