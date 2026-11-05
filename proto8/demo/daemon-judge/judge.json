@@ -1,1 +1,1 @@
-{"allowed": ["clock", "clock2"], "max_running": 1}
+{"allowed": ["clock", "clock2", "fsm1", "kid", "kid1", "kid2", "kid3", "kid4"], "max_running": 4}

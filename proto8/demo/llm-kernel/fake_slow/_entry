@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+# fake_slow - demo 用的慢假腦 endpoint 函數：先睡 endpoint.delay_s 秒，再把同一份 stdin 交給 lib/base/llm_fake、它的 stdout／結束碼原樣交回
+# 用途：demo/docs/05-feat-proto.md 件 3（包的 slots 補位要有「在飛」看得到的時間）。只給 demo，不是 lib 的工具。
+# 介面：同 llm_fake（stdin {"endpoint": {..., "delay_s"?: 秒}, "request": {...}}）；delay_s 沒寫＝2，要是 0～60 的數字。
+# 錯：stderr 與 stdout 各一行「fake_slow: 代號 原因」、退 1——ArgumentsBad（stdin 不是 JSON、delay_s 不對）。被 TERM＝照預設結束（daemon 收整群）。
+import json, os, subprocess, sys, time
+
+NAME = "fake_slow"
+FAKE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "lib", "base", "llm_fake", "_entry")
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, reason)
+    print(line, file=sys.stderr)
+    print(line)
+    sys.exit(1)
+
+
+data = sys.stdin.read()
+try:
+    args = json.loads(data or "null")
+except ValueError as e:
+    die("ArgumentsBad", "stdin is not JSON: %s" % e)
+endpoint = args.get("endpoint") if isinstance(args, dict) else None
+delay = endpoint.get("delay_s", 2) if isinstance(endpoint, dict) else 2
+if isinstance(delay, bool) or not isinstance(delay, (int, float)) or not 0 <= delay <= 60:
+    die("ArgumentsBad", "endpoint.delay_s must be a number from 0 to 60")
+time.sleep(delay)
+sys.exit(subprocess.run([sys.executable, FAKE], input=data.encode("utf-8")).returncode)

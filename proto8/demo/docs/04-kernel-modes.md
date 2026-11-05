@@ -1,4 +1,4 @@
-← [回入口 README.md](../README.md)｜段落：kernel 的三種模式與判官範本 daemon-judge、procs-kernel（11-05）｜上一份：[03-llm-kernel](03-llm-kernel.md)｜下一份：—
+← [回入口 README.md](../README.md)｜段落：kernel 的三種模式與判官範本 daemon-judge、procs-kernel（11-05）｜上一份：[03-llm-kernel](03-llm-kernel.md)｜下一份：[05-feat-proto](05-feat-proto.md)
 
 ## kernel 的三種模式：daemon 本身、daemon-judge、procs-kernel（11-05）
 
@@ -52,7 +52,7 @@ AOS_DAEMON=/tmp/judge-try/m1/st aos-daemon-ctl ls                # clock  runnin
 cat /tmp/judge-try/me/box/new/*/letter.json                      # body {"applied": true}（daemon 回的）
 ```
 
-白名單外的（`evil`）回 `{"applied": false, "error": {"code": "NameUnknown", "msg": "evil not in allowed"}}`；範本 `max_running` 是 1，clock 在跑時再寄 `clock2` 回 `SlotMissing`；`{"procs_stopped": ["clock"]}` 原樣轉、回 `applied: true`，之後 `clock2` 就放行。收工：在 daemon 的視窗 Ctrl-C。
+白名單外的（`evil`）回 `{"applied": false, "error": {"code": "NameUnknown", "msg": "evil not in allowed"}}`；範本 `max_running` 是 4（11-05 午從 1 改成 4、`allowed` 多了 `fsm1`、`kid`、`kid1`～`kid4`，給 [05](05-feat-proto.md) 件 4 的 agent 生 agent 劇本用），所以 clock 在跑時再寄 `clock2` 也放行；要看 `SlotMissing` 就照 05 件 4 跑，或把 `judge.json` 的 `max_running` 改回 1（判官每圈重讀）再寄 `clock2`——這時 `{"procs_stopped": ["clock"]}` 原樣轉、回 `applied: true`，之後 `clock2` 就放行。收工：在 daemon 的視窗 Ctrl-C。
 
 模式 2：一台普通 daemon，把 procs-kernel 掛上去當 0 號，寄信進它的 `requests/`：
 

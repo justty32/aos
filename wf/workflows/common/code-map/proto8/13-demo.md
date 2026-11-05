@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/demo/`（外部 coding agent 範本 eca-claude、loop／fsm agent 範本 agent-fsm、llm-kernel、判官範本 daemon-judge／procs-kernel）
+← [入口](../proto8.md)｜涵蓋：`proto8/demo/`（外部 coding agent 範本 eca-claude、loop／fsm agent 範本 agent-fsm、llm-kernel、判官範本 daemon-judge／procs-kernel；新功能原型劇本在 demo/docs/05）
 
 用法、跑法與錯誤代號以 [demo/README](../../../../../proto8/demo/README.md) 為準。路徑相對於該段標題的資料夾。
 
@@ -33,13 +33,14 @@
 
 ## `demo/llm-kernel/`（llm kernel 範本；11-04 晚，11-05 改成一台 daemon）
 
-設計：[thinking 11-04 think-as-function](../../../../../proto8/thinking/2026-11/04/think-as-function/README.md)、[11-05 kernel-daemon 07](../../../../../proto8/thinking/2026-11/05/kernel-daemon/07-llm-daemon佈局.md)；說明 [demo/docs/03-llm-kernel](../../../../../proto8/demo/docs/03-llm-kernel.md)。
+設計：[thinking 11-04 think-as-function](../../../../../proto8/thinking/2026-11/04/think-as-function/README.md)、[11-05 kernel-daemon 07](../../../../../proto8/thinking/2026-11/05/kernel-daemon/07-llm-daemon佈局.md)、[feat-proto 02](../../../../../proto8/thinking/2026-11/05/feat-proto/02-endpoint-packs.md)；說明 [demo/docs/03-llm-kernel](../../../../../proto8/demo/docs/03-llm-kernel.md)。
 
 | 檔 | 負責什麼 |
 |---|---|
 | `_entry` | `["aos-daemon", "daemon.json"]`（`cd ~/llm_kernel && aos-exec --stack . def`） |
 | `daemon.json` | daemon 的身體＝每 300 ms 拍一次 `aos-llm-kernel kernel.json`；表上只有問腦的 `llm_<信件名稱>` 列 |
-| `kernel.json` | `slots`、`timeout_ms`、預設 endpoint 函數 `exec`（`lib/base/llm_http`）、預設代號 `endpoint`（`fake`）、代號表 `endpoints`（luna／sol／local-qwen／fake） |
+| `kernel.json` | `slots`、`timeout_ms`、預設 endpoint 函數 `exec`（`lib/base/llm_http`）、預設代號 `endpoint`（`fake`）、`budget.senders` 一格例子（`/tmp/aos-demo-sender` 每天 1 次）、能力包表 `endpoints`（11-05 午 feat-proto：`smart-high`／`stupid-fast`／`luna`／`sol`／`fake`，劇本假腦 `fake-demo-self`／`fake-demo-spawn`〔`llm_fake` 的 `script`，路徑用 `$env AOS_CD`＋`$path`〕、慢假腦 `fake-demo-fast`／`fake-demo-slow`〔`fake_slow`，`slots` 1〕） |
+| `fake_slow/_entry` | demo 用的慢假腦 endpoint 函數（python3）：睡 `endpoint.delay_s` 秒（沒寫 2、0～60），再把同一份 stdin 交給 `lib/base/llm_fake`、結束碼原樣交回；錯 `fake_slow: ArgumentsBad`（demo/docs/05 件 3） |
 
 ## `demo/daemon-judge/`、`demo/procs-kernel/`（判官範本：kernel 模式 1、2；11-05）
 
@@ -51,4 +52,4 @@
 | `daemon-judge/daemon.json` | 身體 `exec`＝單子 `aos-exec ../../lib/base/judge <AOS_CD>/judge.json`、`interval_ms` 300；`procs` 不寫＝空名單，全靠 `requests/` 進來 |
 | `procs-kernel/_entry` | `["aos-loop", "loop.json"]`（模式 2：`aos-daemon-ctl add` 它＝0 號 proc） |
 | `procs-kernel/loop.json` | 每 300 ms 跑同一張判官單子 |
-| `*/judge.json` | 政策範例 `{"allowed": ["clock", "clock2"], "max_running": N}`（daemon-judge 1、procs-kernel 2＝含 0 號自己） |
+| `*/judge.json` | 政策範例 `{"allowed": [...], "max_running": N}`：daemon-judge 的白名單 `clock`、`clock2`、`fsm1`、`kid`、`kid1`～`kid4`、`max_running` 4（11-05 午，給 demo/docs/05 件 4）；procs-kernel 白名單 `clock`、`clock2`、`max_running` 2（含 0 號自己） |
