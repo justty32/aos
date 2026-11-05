@@ -1,0 +1,34 @@
+# 2026-11-05 夜 時間回到 tick（tick-time，fable 規劃，未實作）
+
+← [2026-11-05](../README.md)｜源頭：[fs-image](../fs-image/README.md)（使用者原文在那）｜原則：[CONCEPTS 時空](../../../../docs/CONCEPTS/02-設計理念-時空.md)（C-05、C-16、C-37、C-44）、[NORMS 時空](../../../../docs/NORMS/02-設計理念-時空.md)（N-01～N-03）
+
+**一句話**：aos 內部互相約時間（期限、租約、判卡住）一律用 tick 回合數，`AOS_TICK` 指時鐘檔；只有「人看、對外、對 Linux proc」三類留牆上時鐘。
+
+## 已定（使用者 11-05 夜，照 fs-image）
+
+- 時間就是 tick。推薦大家用 tick 回合數算時間。
+- `AOS_TICK`＝要參照的那個時鐘（一個檔的路徑）。
+- `AOS_TICK_INTERVAL`＝「一次 tick 大概多久」的默契；要實際時間就自己換算。
+- 需要精確時間的才用牆上時鐘：①人類使用者體驗 ②跟外部交互 ③跟 Linux proc 交互（daemon）。
+- aos-tick 跑在哪不重要。
+- 「aos-tick 跑到一半被 sleep，重啟時怎麼界定時間」是邊緣，之後處理。
+
+## 檔
+
+- [01-盤點](01-盤點.md)：現行用秒的地方，逐處標「改 tick」或「留牆上時鐘」。
+- [02-設計草稿](02-設計草稿.md)：時鐘檔格式、兩個環境變數沒設時怎麼辦、跟 no-pid 監管樹／state.json 的關係、sleep 邊緣清單、跟 C-44／N-01／N-03 的衝突。
+
+## 方向題（白話，推薦放第一）
+
+1. **誰讓時鐘走？** 推薦：使用者自己起一台 `aos-loop` 跑 `aos-tick FILE`（跟其他 daemon 一樣是一個 proc，照 no-pid 監管樹掛在根 daemon 底下）；aos 不內建「自動有個時鐘」。替代：根 daemon 內建一條 tick 線——但這把時鐘綁死在 daemon 上，違背「aos-tick 跑在哪不重要」。
+2. **`AOS_TICK` 沒設時，內部期限怎麼算？** 推薦：**沒時鐘＝時間不走**＝所有 tick 期限永不到（lock 租約不過期、kernel deadline 不過期、卡住不判），只印一次 warning。替代：退回牆上時鐘用 `AOS_TICK_INTERVAL` 反推——方便但偷偷把牆上時鐘混回來，凍住時又會全過期，正是今晚要解的病。
+3. **`AOS_TICK_INTERVAL` 沒設時？** 推薦：預設 1000（毫秒，一 tick≈一秒），只給「要換算成人看得懂」的地方用；內部邏輯根本不該讀它。
+4. **tick 數寫在哪些既有欄位？** 推薦：原本的秒／毫秒欄位改名帶 `_ticks`（`lease_ticks`、`deadline_tick`、`stuck_after_ticks`），不沿用舊名換語意，避免舊檔被誤讀。
+5. **daemon 的 3 秒／10 秒（REVIVE／GRACE）要不要動？** 推薦：不動，這兩個是跟 Linux proc 交互（SIGTERM→SIGKILL、fork 剛起就死），屬第③類。
+
+## 明天接
+
+- 使用者裁方向題 1～5（都照推薦就可直接開工）。
+- 01 盤點只掃了 proto8/impls 與 bin 的 grep 結果，`lib/`（agent 工具的 timeout、thought、listen）沒逐檔看，明天補。
+- 02 的時鐘檔格式只定最小（一個整數），要不要帶 `interval_ms` 旁檔、`started_at` 給 sleep 邊緣用，列在 02 末，未定。
+- 沒改程式、沒改 CONCEPTS／NORMS；衝突見 02 末段，要使用者點頭才改條文。
