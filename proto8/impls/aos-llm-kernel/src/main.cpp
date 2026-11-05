@@ -12,7 +12,7 @@
 #include <cstdlib>
 #include <exception>
 
-static const char* USAGE = "usage: aos-llm-kernel [flags] kernel.json";
+static const char* USAGE = "usage: aos-llm-kernel [FLAGS] kernel.json";
 
 static int fail(const std::string& code, const std::string& msg) {
     std::fprintf(stderr, "aos-llm-kernel: %s %s\n", code.c_str(), msg.c_str());
