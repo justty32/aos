@@ -23,7 +23,7 @@ namespace aos::daemon {
 void Daemon::open_mailbox() {
     std::error_code ec;
     if (!std::filesystem::is_directory(stack_, ec)) {   // 建 stack 只在 aos-exec 做（N-59 第 1 件）；init 是 mkdir -p，不能讓它順手建出來
-        throw Error{code::MkdirFailed, "建不了信箱 " + mbox_path_ + "（$AOS_STACK 不在：" + stack_ + "）"};
+        throw Error{code::MkdirFailed, "cannot create mailbox " + mbox_path_ + " ($AOS_STACK is missing: " + stack_ + ")"};
     }
     aos::post::init(mbox_path_);
     mbox_ = aos::post::open(mbox_path_);
@@ -57,7 +57,7 @@ Daemon::Letters Daemon::take_letters() {
             continue;   // 不在 cur/ 了（被人拿走、刪掉）：沒有這封
         }
         if (bad) {
-            mailbox_warning_ = "信 " + id + " 不採用：" + *bad;
+            mailbox_warning_ = "letter " + id + " rejected: " + *bad;
         }
         got.push_back({id, !bad});
     }
@@ -66,7 +66,7 @@ Daemon::Letters Daemon::take_letters() {
 
 std::optional<std::string> Daemon::apply_letter(const Json& body) {
     if (!body.is_object()) {
-        return std::string("body 要是物件");
+        return std::string("body must be an object");
     }
     Json doc = Json::object();
     // 只認這四個；沒有整份的 procs（信是增減，整份宣告留給 procs_ctl）
@@ -81,7 +81,7 @@ std::optional<std::string> Daemon::apply_letter(const Json& body) {
     try {
         bad = check_lists(doc, where);
     } catch (const Error& e) {
-        bad = "指示詞解不開：" + e.msg;
+        bad = "cannot resolve directives: " + e.msg;
     }
     if (bad) {
         return bad;

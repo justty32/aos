@@ -92,7 +92,7 @@ static std::vector<pid_t> leaders_below(pid_t root) {
 
 static void check_name(const std::string& name, const std::string& key) {
     if (name.empty() || name.find('/') != std::string::npos || name.find('#') != std::string::npos || name[0] == '.') {
-        throw Error{code::CfgBad, key + " 的名字 " + aos::dumps(Json(name)) + " 不能當資料夾名"};
+        throw Error{code::CfgBad, key + ": name " + aos::dumps(Json(name)) + " cannot be a directory name"};
     }
 }
 
@@ -149,7 +149,7 @@ static void fix_path(Json& c, const std::string& name, const std::string& key, c
         return;
     }
     if (!w.is_string() || w.get<std::string>().empty()) {
-        throw Error{code::CfgBad, key + "[" + name + "]." + k + " 要是" + what + "的路徑（非空字串）"};
+        throw Error{code::CfgBad, key + "[" + name + "]." + k + " must be a " + what + " path (non-empty string)"};
     }
     c[k] = aos::abspath(w.get<std::string>());
 }
@@ -207,12 +207,12 @@ bool is_once(const Json& spec) {
 Json read_procs(const Json& v, const std::string& base, const std::string& key) {
     aos::Resolved top = aos::resolve_shallow(v, base);   // 拆成好幾份檔＝{"$ref": [檔, …]}，合好的每個子項記著它來自哪份檔
     if (!top.value.is_object()) {
-        throw Error{code::CfgBad, key + " 要是 {名字: proc}"};
+        throw Error{code::CfgBad, key + " must be {name: proc}"};
     }
     Json out = Json::object();   // 名字本來就不重複（JSON 物件；$ref 陣列合的同名後面的蓋前面的），直接接在尾巴
     auto& vec = static_cast<std::vector<std::pair<const std::string, Json>>&>(out.get_ref<Json::object_t&>());
     vec.reserve(top.value.size());
-    const std::string bad_target = " 要是 aos-exec 的目標（字串或 [目標, 參數...]）、{\"exec\": 目標或單子} 或 loop 設定";
+    const std::string bad_target = " must be an aos-exec target (string or [target, args...]), {\"exec\": target or inst} or a loop config";
     for (auto& [name, c] : top.value.items()) {
         check_name(name, key);
         aos::Resolved it = aos::resolve_shallow(c, top.dir_of(name));
@@ -234,9 +234,9 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             if (!r.value.is_object()) {
                 throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
             }
-            fix_path(r.value, name, key, "ws", "工作區");
-            fix_path(r.value, name, key, "stack", " stack ");
-            fix_path(r.value, name, key, "def", "定義資料夾");   // 11-04（aos-agent，使用者「那就b。」）：只記、不驗在不在
+            fix_path(r.value, name, key, "ws", "workspace");
+            fix_path(r.value, name, key, "stack", "stack");
+            fix_path(r.value, name, key, "def", "definition directory");   // 11-04（aos-agent，使用者「那就b。」）：只記、不驗在不在
             if (is_once(r.value) && !is_target(r.value["exec"]) && !r.value["exec"].is_object()) {   // exec 型的物件（procs § 2 第 2 條）
                 throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
             }
@@ -293,7 +293,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         has_exec_ = false;
     }
     if (stack_.empty()) {
-        throw Error{code::StackMissing, "沒設定 AOS_STACK"};
+        throw Error{code::StackMissing, "AOS_STACK is not set"};
     }
     try {   // 指示詞（10-23 晚）：起點＝設定檔的資料夾（cfg_dirs_）。舊名 loops／execs／loops_* 不認（C-48，11-03「當沒看到」）
         if (cfg_.contains("procs")) {
@@ -306,7 +306,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         }
     } catch (const Error& e) {
         if (e.code == code::DirectiveBad) {
-            throw Error{e.code, "設定檔 " + spec + " 的指示詞解不開：" + e.msg};
+            throw Error{e.code, "config " + spec + ": cannot resolve directives: " + e.msg};
         }
         throw;
     }
@@ -314,7 +314,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     Json mb = cfg_.contains("procs_ctl_mailbox") ? cfg_["procs_ctl_mailbox"] : Json("procs_ctl_mailbox");
     if (!mb.is_null()) {
         if (!mb.is_string() || mb.get<std::string>().empty()) {
-            throw Error{code::CfgBad, "procs_ctl_mailbox 要是信箱的路徑或 null"};
+            throw Error{code::CfgBad, "procs_ctl_mailbox must be a mailbox path or null"};
         }
         mbox_name_ = mb.get<std::string>();
         mbox_path_ = aos::join(stack_, mbox_name_);
@@ -328,7 +328,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
         const Json& v = cfg_[k];
         if (!v.is_string() || v.get<std::string>().empty() || v.get<std::string>().find('/') != std::string::npos ||
             v.get<std::string>()[0] == '.') {
-            throw Error{code::CfgBad, std::string(k) + " 要是檔名（非空、不含 /、不以 . 開頭）"};
+            throw Error{code::CfgBad, std::string(k) + " must be a file name (non-empty, no /, not starting with .)"};
         }
         *dst = v.get<std::string>();
     }
@@ -340,7 +340,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
             continue;
         }
         if (!v.is_string() || v.get<std::string>().empty()) {
-            throw Error{code::CfgBad, std::string(k) + " 要是檔名或 null"};
+            throw Error{code::CfgBad, std::string(k) + " must be a file name or null"};
         }
         *path = aos::join(stack_, v.get<std::string>());
     }
@@ -354,7 +354,7 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     }
     Json a = cfg_.value("adopt", Json(true));
     if (!a.is_boolean()) {
-        throw Error{code::CfgBad, "adopt 要是 true／false"};
+        throw Error{code::CfgBad, "adopt must be true or false"};
     }
     cwd_ = std::filesystem::current_path().string();
     // 給子項的 AOS_DAEMON（11-02，resident-bob 衝突 2；11-04 晚改名，舊名不認）：stack_ 轉絕對、結尾 /，跟 aos-exec 給的 AOS_STACK 同形；預設小格也從它拼（列上的 stack 一律絕對）
@@ -573,7 +573,7 @@ void Daemon::halt(const std::string& name, Child& c) {
     try {
         aos::loop::write_window(path, Json::object({{"cmd", "stop"}, {"seq", stop_seq_}}));
     } catch (const Error& e) {
-        throw Error{e.code, "停不了 " + name + "：" + e.msg};
+        throw Error{e.code, "cannot stop " + name + ": " + e.msg};
     }
     c.phase = "stopping";
 }

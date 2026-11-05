@@ -34,13 +34,13 @@ void Daemon::read_procs_ctl() {
     std::optional<std::string> text = aos::read_file(pctl_path_, err);
     if (!text) {
         if (err != ENOENT) {
-            pctl_warning_ = std::string("procs_ctl 讀不了或不是 JSON：") + std::strerror(err);
+            pctl_warning_ = std::string("procs_ctl: cannot read or not JSON: ") + std::strerror(err);
         }
         return;
     }
     Json doc = Json::parse(*text, nullptr, false);
     if (doc.is_discarded()) {
-        pctl_warning_ = "procs_ctl 讀不了或不是 JSON：" + pctl_path_;
+        pctl_warning_ = "procs_ctl: cannot read or not JSON: " + pctl_path_;
         return;
     }
     std::optional<std::string> bad;
@@ -48,9 +48,9 @@ void Daemon::read_procs_ctl() {
         aos::Resolved r = aos::loop::resolve_keys(doc, aos::dirname(pctl_path_), {"seq"});
         doc = std::move(r.value);
         if (!doc.is_object()) {
-            bad = "要是 JSON 物件";
+            bad = "must be a JSON object";
         } else if (doc.contains("seq") && !is_nat(doc["seq"])) {
-            bad = "seq 要是非負整數";
+            bad = "seq must be a non-negative integer";
         } else {
             bad = check_lists(doc, r);
         }
@@ -59,10 +59,10 @@ void Daemon::read_procs_ctl() {
             bad = check_once(doc, ctl_want(doc, merged));
         }
     } catch (const Error& e) {
-        bad = "指示詞解不開：" + e.msg;
+        bad = "cannot resolve directives: " + e.msg;
     }
     if (bad) {
-        pctl_warning_ = "procs_ctl 不採用：" + *bad;
+        pctl_warning_ = "procs_ctl rejected: " + *bad;
         return;
     }
     pctl_good_ = doc;
@@ -94,7 +94,7 @@ std::optional<std::string> Daemon::check_lists(Json& doc, const aos::Resolved& w
             ok = ok && n.is_string();
         }
         if (!ok) {
-            return std::string(k) + " 要是名字（字串）的陣列";
+            return std::string(k) + " must be an array of names (strings)";
         }
         doc[k] = rm;
     }
@@ -114,7 +114,7 @@ std::optional<std::string> Daemon::check_once(const Json& doc, const Json& want)
             auto at = index_.find(n);   // 表上有＝看那列（跑著的是哪種）；不在表上＝看寫法
             bool once = at != index_.end() ? at->second->second.once : is_once(want[n]);
             if (once) {
-                return "exec 型 " + aos::dumps(Json(n)) + " 沒有 stop／start／sleep／wake（exec 型只有跑和拔）";
+                return "exec proc " + aos::dumps(Json(n)) + " has no stop/start/sleep/wake (exec procs can only be added and removed)";
             }
         }
     }
@@ -142,7 +142,7 @@ Json Daemon::write_parts(Json rows, std::set<std::string>& now) {
         std::error_code ec;
         std::filesystem::create_directories(parts_dir_, ec);
         if (ec) {
-            throw Error{code::WriteFailed, "寫不了 " + parts_dir_ + "（" + ec.message() + "）"};
+            throw Error{code::WriteFailed, "cannot write " + parts_dir_ + " (" + ec.message() + ")"};
         }
         std::string rel = parts_dir_.substr(parts_dir_.rfind('/') + 1);
         Json refs = Json::array();

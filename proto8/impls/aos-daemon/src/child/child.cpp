@@ -151,7 +151,7 @@ static Json rel_refs(const Json& v, const std::string& cell) {
         setenv("AOS_WS", ws.c_str(), 1);
     }
     if (chdir(cwd.c_str()) != 0) {
-        std::fprintf(stderr, "aos-daemon: %s cd 不進 %s：%s\n", code::Internal, cwd.c_str(), std::strerror(errno));
+        std::fprintf(stderr, "aos-daemon: %s cannot cd into %s: %s\n", code::Internal, cwd.c_str(), std::strerror(errno));
     } else {
         rc = aos::exec::run_cli(argv);   // exec 成功就不回來
     }
@@ -172,7 +172,7 @@ static void make_cell(const std::string& name, const std::string& cell, bool dee
         }
     }
     if (ec) {
-        throw Error{code::MkdirFailed, "起不了子項 " + name + "：建不了 " + cell + "（" + ec.message() + "）"};
+        throw Error{code::MkdirFailed, "cannot start child " + name + ": cannot create " + cell + " (" + ec.message() + ")"};
     }
 }
 
@@ -183,14 +183,14 @@ static Child launch(const std::string& name, const std::string& cell, const std:
     std::string err_path = aos::join(cell, err_name);
     int err_fd = open(err_path.c_str(), O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
     if (err_fd < 0) {
-        throw Error{code::LaunchFailed, "起不了子項 " + name + "：開不了 " + err_path + "（" + std::strerror(errno) + "）"};
+        throw Error{code::LaunchFailed, "cannot start child " + name + ": cannot open " + err_path + " (" + std::strerror(errno) + ")"};
     }
     std::fflush(nullptr);
     pid_t pid = fork();
     if (pid < 0) {
         int e = errno;
         close(err_fd);
-        throw Error{code::LaunchFailed, "起不了子項 " + name + "：fork 失敗（" + std::strerror(e) + "）"};
+        throw Error{code::LaunchFailed, "cannot start child " + name + ": fork failed (" + std::strerror(e) + ")"};
     }
     if (pid == 0) {
         run_child(cell, cwd, err_fd, argv, ws_s, dstack);
@@ -251,7 +251,7 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
     try {
         aos::loop::write_window(lj, cfg);
     } catch (const Error& e) {
-        throw Error{e.code, "起不了子項 " + name + "：" + e.msg};
+        throw Error{e.code, "cannot start child " + name + ": " + e.msg};
     }
     return launch(name, cell, cwd, {"--", lj + "#/_entry"}, ws, dstack, names.err);
 }
@@ -272,7 +272,7 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
         try {
             aos::loop::write_window(aos::join(cell, names.exec), Json::object({{"exec", inst}}));
         } catch (const Error& e) {
-            throw Error{e.code, "起不了子項 " + name + "：" + e.msg};
+            throw Error{e.code, "cannot start child " + name + ": " + e.msg};
         }
         Child c = launch(name, cell, cwd, {"--", aos::join(cell, names.exec) + "#/exec"}, ws, dstack, names.err);
         c.once = true;
