@@ -22,7 +22,7 @@ using Json = nlohmann::json;
 
 std::string read_file(const std::filesystem::path &path) {
     std::ifstream input(path, std::ios::binary);
-    if (!input) throw std::runtime_error("無法讀取 " + path.string());
+    if (!input) throw std::runtime_error("cannot read " + path.string());
     return {std::istreambuf_iterator<char>(input),
             std::istreambuf_iterator<char>()};
 }
@@ -89,12 +89,12 @@ ContactStatusRow world_row(std::string name,
     try {
         const std::filesystem::path aos = folder / ".aos";
         if (!std::filesystem::is_directory(aos)) {
-            row.status = "（找不到 .aos）";
+            row.status = "(no .aos)";
             return row;
         }
         const std::optional<std::string> agent = only_agent(aos, requested);
         if (!agent) {
-            row.status = "（沒有 agent）";
+            row.status = "(no agent)";
             return row;
         }
         row.agent = *agent;
@@ -106,11 +106,11 @@ ContactStatusRow world_row(std::string name,
             if (!status.is_object() || !status.contains("status") ||
                 !status["status"].is_string() || !status.contains("turn") ||
                 !status["turn"].is_number_unsigned()) {
-                throw std::runtime_error("status 欄位格式錯誤");
+                throw std::runtime_error("malformed status fields");
             }
         } catch (const std::exception &) {
             row.agent.clear();
-            row.status = "（status.json 讀不到）";
+            row.status = "(cannot read status.json)";
             return row;
         }
         row.status = status["status"].get<std::string>();
@@ -124,7 +124,7 @@ ContactStatusRow world_row(std::string name,
         return row;
     } catch (const std::exception &) {
         row.agent.clear();
-        row.status = "（status.json 讀不到）";
+        row.status = "(cannot read status.json)";
         row.turn.reset();
         row.unread.reset();
         row.last_error.clear();

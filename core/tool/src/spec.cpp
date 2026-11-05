@@ -23,11 +23,11 @@ std::string label(std::string_view source_hint) {
 std::string required_string(const Json &root, const char *key,
                             std::string_view source_hint) {
     if (!root.contains(key) || !root[key].is_string()) {
-        invalid(source_hint, std::string("缺少字串欄位 ") + key);
+        invalid(source_hint, std::string("missing string field ") + key);
     }
     const std::string value = root[key].get<std::string>();
     if (value.empty()) {
-        invalid(source_hint, std::string(key) + " 不可為空");
+        invalid(source_hint, std::string(key) + " must not be empty");
     }
     return value;
 }
@@ -37,7 +37,7 @@ std::string optional_string(const Json &root, const char *key,
                             std::string_view source_hint) {
     if (!root.contains(key)) return default_value;
     if (!root[key].is_string()) {
-        invalid(source_hint, std::string(key) + " 必須是字串");
+        invalid(source_hint, std::string(key) + " must be a string");
     }
     return root[key].get<std::string>();
 }
@@ -46,21 +46,21 @@ std::vector<std::string> string_array(const Json &root, const char *key,
                                       bool required,
                                       std::string_view source_hint) {
     if (!root.contains(key)) {
-        if (required) invalid(source_hint, std::string("缺少陣列欄位 ") + key);
+        if (required) invalid(source_hint, std::string("missing array field ") + key);
         return {};
     }
     if (!root[key].is_array()) {
-        invalid(source_hint, std::string(key) + " 必須是字串陣列");
+        invalid(source_hint, std::string(key) + " must be a string array");
     }
     std::vector<std::string> values;
     for (const Json &item : root[key]) {
         if (!item.is_string()) {
-            invalid(source_hint, std::string(key) + " 必須是字串陣列");
+            invalid(source_hint, std::string(key) + " must be a string array");
         }
         values.push_back(item.get<std::string>());
     }
     if (required && values.empty()) {
-        invalid(source_hint, std::string(key) + " 不可為空");
+        invalid(source_hint, std::string(key) + " must not be empty");
     }
     return values;
 }
@@ -79,16 +79,16 @@ void validate_spec(const Spec &spec, std::string_view source_hint) {
     } catch (const std::exception &error) {
         invalid(source_hint, error.what());
     }
-    if (spec.argv.empty()) invalid(source_hint, "argv 不可為空");
-    if (spec.description.empty()) invalid(source_hint, "description 不可為空");
+    if (spec.argv.empty()) invalid(source_hint, "argv must not be empty");
+    if (spec.description.empty()) invalid(source_hint, "description must not be empty");
     if (!one_of(spec.args, {"list", "string", "none"})) {
-        invalid(source_hint, "args 只能是 list、string 或 none");
+        invalid(source_hint, "args must be list, string or none");
     }
     if (!one_of(spec.stdin_mode, {"none", "text"})) {
-        invalid(source_hint, "stdin 只能是 none 或 text");
+        invalid(source_hint, "stdin must be none or text");
     }
     if (!one_of(spec.source, {"manual", "metainfo", "header"})) {
-        invalid(source_hint, "source 只能是 manual、metainfo 或 header");
+        invalid(source_hint, "source must be manual, metainfo or header");
     }
 }
 
@@ -99,7 +99,7 @@ void put_if_nonempty(Json &root, const char *key, const std::string &value) {
 }  // namespace
 
 void validate_tool_name(std::string_view name) {
-    if (name.empty()) throw std::runtime_error("工具名稱不可為空");
+    if (name.empty()) throw std::runtime_error("tool name must not be empty");
     for (const unsigned char character : name) {
         const bool valid = (character >= 'A' && character <= 'Z') ||
                            (character >= 'a' && character <= 'z') ||
@@ -108,7 +108,7 @@ void validate_tool_name(std::string_view name) {
                            character == '-';
         if (!valid) {
             throw std::runtime_error(
-                "工具名稱只能包含英文字母、數字、底線、句點與連字號");
+                "tool name may only contain ASCII letters, digits, underscore, dot and hyphen");
         }
     }
 }
@@ -118,9 +118,9 @@ Spec parse_spec(std::string_view json_text, std::string_view source_hint) {
     try {
         root = Json::parse(json_text);
     } catch (const Json::exception &error) {
-        invalid(source_hint, std::string("JSON 無法解析: ") + error.what());
+        invalid(source_hint, std::string("invalid JSON: ") + error.what());
     }
-    if (!root.is_object()) invalid(source_hint, "頂層必須是 JSON object");
+    if (!root.is_object()) invalid(source_hint, "top level must be a JSON object");
 
     Spec spec;
     spec.name = required_string(root, "name", source_hint);
@@ -142,13 +142,13 @@ Spec parse_spec(std::string_view json_text, std::string_view source_hint) {
 
     if (root.contains("timeout_ms")) {
         if (!root["timeout_ms"].is_number_unsigned()) {
-            invalid(source_hint, "timeout_ms 必須是非負整數");
+            invalid(source_hint, "timeout_ms must be a non-negative integer");
         }
         spec.timeout_ms = root["timeout_ms"].get<std::uint64_t>();
     }
     if (root.contains("network")) {
         if (!root["network"].is_boolean()) {
-            invalid(source_hint, "network 必須是 bool");
+            invalid(source_hint, "network must be a bool");
         }
         spec.network = root["network"].get<bool>();
         spec.network_declared = true;

@@ -40,32 +40,32 @@ struct AddOptions {
 int usage(const char *program, FILE *stream = stderr, int result = 2) {
     std::fprintf(
         stream,
-        "usage: %s add <name> [選項...] -- <argv...>\n"
+        "usage: %s add <name> [options...] -- <argv...>\n"
         "       %s ls [--folder F] [--json]\n"
         "       %s rm <name> [--folder F]\n"
         "\n"
-        "  add                    登記工具；-- 後方是固定 argv\n"
-        "    --folder F           指定世界資料夾\n"
-        "    --description TEXT   手動指定工具表述\n"
-        "    --args MODE          參數模式：list、string 或 none\n"
-        "    --stdin MODE         stdin 模式：none 或 text\n"
-        "    --cwd DIR            工具執行目錄\n"
-        "    --timeout-ms N       工具逾時毫秒數\n"
-        "    --predictability P   high、medium 或 low\n"
-        "    --guarantee TEXT     保證說明\n"
-        "    --lifecycle TEXT     生命週期說明\n"
-        "    --state TEXT         狀態說明\n"
-        "    --stage TEXT         階段說明\n"
-        "    --network            宣告需要網路\n"
-        "    --no-network         宣告不需要網路\n"
-        "    --replace            覆寫同名登記\n"
-        "    --no-probe           不探測工具表述\n"
-        "    --probe metadata     探測失敗時再試 --metadata\n"
-        "  ls                     列出工具；可加 --folder F、--json\n"
-        "  rm                     移除工具；可加 --folder F\n"
+        "  add                    register a tool; the fixed argv follows --\n"
+        "    --folder F           world folder\n"
+        "    --description TEXT   set the tool description by hand\n"
+        "    --args MODE          argument mode: list, string or none\n"
+        "    --stdin MODE         stdin mode: none or text\n"
+        "    --cwd DIR            working directory of the tool\n"
+        "    --timeout-ms N       tool timeout in milliseconds\n"
+        "    --predictability P   high, medium or low\n"
+        "    --guarantee TEXT     guarantee note\n"
+        "    --lifecycle TEXT     lifecycle note\n"
+        "    --state TEXT         state note\n"
+        "    --stage TEXT         stage note\n"
+        "    --network            declare that it needs network\n"
+        "    --no-network         declare that it needs no network\n"
+        "    --replace            overwrite an existing registration of the same name\n"
+        "    --no-probe           do not probe for a description\n"
+        "    --probe metadata     retry with --metadata if probing fails\n"
+        "  ls                     list tools; accepts --folder F, --json\n"
+        "  rm                     remove a tool; accepts --folder F\n"
         "\n"
-        "  子命令真名是 ls 與 rm，不是 list 與 remove。\n"
-        "  -h, --help             顯示這份用法\n",
+        "  The subcommands are ls and rm, not list and remove.\n"
+        "  -h, --help             show this usage\n",
         program, program, program);
     return result;
 }
@@ -219,12 +219,12 @@ int add(const char *program, const std::vector<std::string> &words) {
     if (executable == ExecutableStatus::missing) {
         std::fprintf(
             stderr,
-            "aos tool: 找不到執行檔 %s；它不在 PATH 上，也不是一個可執行的檔案路徑\n",
+            "aos tool: executable %s not found; it is not on PATH and not an executable file path\n",
             command.front().c_str());
         return 1;
     }
     if (executable == ExecutableStatus::not_executable) {
-        std::fprintf(stderr, "aos tool: %s 不可執行（chmod +x ?）\n",
+        std::fprintf(stderr, "aos tool: %s is not executable (chmod +x ?)\n",
                      command.front().c_str());
         return 1;
     }
@@ -233,7 +233,7 @@ int add(const char *program, const std::vector<std::string> &words) {
     if (std::filesystem::exists(aos::tool::spec_path(folder, name)) &&
         !options.replace) {
         std::fprintf(stderr,
-                     "aos tool: %s 已經登記過了；要覆寫請加 --replace\n",
+                     "aos tool: %s is already registered; add --replace to overwrite\n",
                      name.c_str());
         return 1;
     }
@@ -253,13 +253,13 @@ int add(const char *program, const std::vector<std::string> &words) {
     merge_cli(spec, options);
     if (spec.description.empty()) {
         std::fprintf(stderr,
-                     "aos tool: 探測不到表述，請用 --description 手填%s%s\n",
-                     probe.detail.empty() ? "" : "；",
+                     "aos tool: no description found by probing; give one with --description%s%s\n",
+                     probe.detail.empty() ? "" : "; ",
                      probe.detail.c_str());
         return 1;
     }
     aos::tool::write_spec(folder, spec);
-    std::printf("已登記 %s -> %s\n", name.c_str(),
+    std::printf("registered %s -> %s\n", name.c_str(),
                 aos::tool::spec_path(folder, name).string().c_str());
     return 0;
 }
@@ -290,7 +290,7 @@ int list(const char *program, const std::vector<std::string> &words) {
         return 0;
     }
     if (registry.empty()) {
-        std::puts("（沒有登記任何工具）");
+        std::puts("(no tools registered)");
         return 0;
     }
     std::vector<std::vector<std::string>> rows;
@@ -317,10 +317,10 @@ int remove(const char *program, const std::vector<std::string> &words) {
         index += 2;
     }
     if (!aos::tool::remove_spec(folder, name)) {
-        std::fprintf(stderr, "aos tool: 沒有登記 %s\n", name.c_str());
+        std::fprintf(stderr, "aos tool: %s is not registered\n", name.c_str());
         return 1;
     }
-    std::printf("已移除 %s\n", name.c_str());
+    std::printf("removed %s\n", name.c_str());
     return 0;
 }
 

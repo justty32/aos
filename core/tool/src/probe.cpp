@@ -112,7 +112,7 @@ Probe probe_metainfo(const std::vector<std::string> &argv,
     Probe probe;
     try {
         if (argv.empty()) {
-            probe.detail = "沒有可執行的 argv";
+            probe.detail = "no argv to run";
             return probe;
         }
         aos::exec::Spawn spawn;
@@ -124,21 +124,21 @@ Probe probe_metainfo(const std::vector<std::string> &argv,
         std::vector<aos::exec::Result> results =
             aos::exec::wait_all(running);
         if (results.empty()) {
-            probe.detail = "探測行程沒有回傳結果";
+            probe.detail = "probe process returned no result";
             return probe;
         }
         const aos::exec::Result &result = results.front();
         if (!result.error.empty()) {
-            probe.detail = "探測行程失敗：" + result.error;
+            probe.detail = "probe process failed: " + result.error;
             return probe;
         }
         if (result.signal != 0) {
-            probe.detail = "探測行程被 signal " +
-                           std::to_string(result.signal) + " 結束";
+            probe.detail = "probe process killed by signal " +
+                           std::to_string(result.signal);
             return probe;
         }
         if (result.exit != 0) {
-            probe.detail = "探測行程退出碼是 " + std::to_string(result.exit);
+            probe.detail = "probe process exited with " + std::to_string(result.exit);
             return probe;
         }
 
@@ -163,13 +163,13 @@ Probe probe_metainfo(const std::vector<std::string> &argv,
             probe.source = "header";
             return probe;
         }
-        probe.detail = "探測行程沒有輸出可用的表述";
+        probe.detail = "probe process printed no usable description";
         return probe;
     } catch (const std::exception &error) {
-        probe.detail = std::string("探測失敗：") + error.what();
+        probe.detail = std::string("probe failed: ") + error.what();
         return probe;
     } catch (...) {
-        probe.detail = "探測發生未知錯誤";
+        probe.detail = "probe failed with an unknown error";
         return probe;
     }
 }

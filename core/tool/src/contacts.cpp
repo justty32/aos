@@ -18,7 +18,7 @@ std::string required_string(const Json &item, const char *key,
     if (!item.contains(key) || !item[key].is_string() ||
         item[key].get_ref<const std::string &>().empty()) {
         throw std::runtime_error(path.string() + ": " + key +
-                                 " 必須是非空字串");
+                                 " must be a non-empty string");
     }
     return item[key].get<std::string>();
 }
@@ -27,14 +27,14 @@ std::string optional_string(const Json &item, const char *key,
                             const std::filesystem::path &path) {
     if (!item.contains(key)) return {};
     if (!item[key].is_string()) {
-        throw std::runtime_error(path.string() + ": " + key + " 必須是字串");
+        throw std::runtime_error(path.string() + ": " + key + " must be a string");
     }
     return item[key].get<std::string>();
 }
 
 void validate_contact(const Contact &contact) {
-    if (contact.name.empty()) throw std::runtime_error("聯絡人 name 不可為空");
-    if (contact.folder.empty()) throw std::runtime_error("聯絡人 folder 不可為空");
+    if (contact.name.empty()) throw std::runtime_error("contact name must not be empty");
+    if (contact.folder.empty()) throw std::runtime_error("contact folder must not be empty");
 }
 
 }  // namespace
@@ -42,11 +42,11 @@ void validate_contact(const Contact &contact) {
 Contact user_contact() {
     const char *home = std::getenv("HOME");
     if (home == nullptr || *home == '\0') {
-        return {"~", "", "", "使用者（頂層信箱）"};
+        return {"~", "", "", "user (top-level mailbox)"};
     }
     const std::filesystem::path folder =
         std::filesystem::absolute(home).lexically_normal();
-    return {"~", folder.string(), "", "使用者（頂層信箱）"};
+    return {"~", folder.string(), "", "user (top-level mailbox)"};
 }
 
 std::vector<Contact> read_contacts(const std::filesystem::path &folder) {
@@ -56,16 +56,16 @@ std::vector<Contact> read_contacts(const std::filesystem::path &folder) {
     try {
         root = Json::parse(detail::read_text(path));
     } catch (const Json::exception &error) {
-        throw std::runtime_error(path.string() + ": JSON 無法解析: " +
+        throw std::runtime_error(path.string() + ": invalid JSON: " +
                                  error.what());
     }
     if (!root.is_array()) {
-        throw std::runtime_error(path.string() + ": 頂層必須是 JSON 陣列");
+        throw std::runtime_error(path.string() + ": top level must be a JSON array");
     }
     std::vector<Contact> contacts;
     for (const Json &item : root) {
         if (!item.is_object()) {
-            throw std::runtime_error(path.string() + ": 聯絡人必須是 object");
+            throw std::runtime_error(path.string() + ": each contact must be an object");
         }
         contacts.push_back({required_string(item, "name", path),
                             required_string(item, "folder", path),

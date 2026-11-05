@@ -12,5 +12,5 @@ add_library(aos_tool_cli OBJECT
 target_link_libraries(aos_tool_cli PUBLIC aos::tool)
 target_link_libraries(aos_tool_cli PRIVATE nlohmann_json::nlohmann_json)
 
-aos_add_subcommand(NAME tool    ENTRY aos_tool_cli_main    LIBRARY aos_tool_cli SUMMARY "登記／列出／移除這個世界可用的工具")
-aos_add_subcommand(NAME contact ENTRY aos_contact_cli_main LIBRARY aos_tool_cli SUMMARY "登記／列出／移除 agent 通訊錄")
+aos_add_subcommand(NAME tool    ENTRY aos_tool_cli_main    LIBRARY aos_tool_cli SUMMARY "add / list / remove the tools of this world")
+aos_add_subcommand(NAME contact ENTRY aos_contact_cli_main LIBRARY aos_tool_cli SUMMARY "add / list / remove agent contacts")

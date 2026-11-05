@@ -15,7 +15,7 @@ namespace detail {
 
 std::string read_text(const std::filesystem::path &path) {
     std::ifstream input(path, std::ios::binary);
-    if (!input) throw std::runtime_error("無法讀取 " + path.string());
+    if (!input) throw std::runtime_error("cannot read " + path.string());
     return {std::istreambuf_iterator<char>(input),
             std::istreambuf_iterator<char>()};
 }
@@ -25,10 +25,10 @@ void atomic_write(const std::filesystem::path &path, std::string_view text) {
     const std::filesystem::path temporary = path.string() + ".tmp";
     {
         std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
-        if (!output) throw std::runtime_error("無法寫入 " + temporary.string());
+        if (!output) throw std::runtime_error("cannot write " + temporary.string());
         output.write(text.data(), static_cast<std::streamsize>(text.size()));
         output.close();
-        if (!output) throw std::runtime_error("寫入失敗 " + temporary.string());
+        if (!output) throw std::runtime_error("write failed: " + temporary.string());
     }
     std::filesystem::rename(temporary, path);
 }
@@ -62,7 +62,7 @@ std::optional<Spec> read_spec(const std::filesystem::path &folder,
     if (!std::filesystem::exists(path)) return std::nullopt;
     Spec spec = parse_spec(detail::read_text(path), path.string());
     if (spec.name != name) {
-        throw std::runtime_error(path.string() + ": name 必須等於檔名 " +
+        throw std::runtime_error(path.string() + ": name must match the file name " +
                                  path.stem().string());
     }
     return spec;
@@ -76,7 +76,7 @@ bool remove_spec(const std::filesystem::path &folder, std::string_view name) {
     std::error_code error;
     const bool removed = std::filesystem::remove(spec_path(folder, name), error);
     if (error) {
-        throw std::runtime_error("無法移除工具 " + std::string(name) + ": " +
+        throw std::runtime_error("cannot remove tool " + std::string(name) + ": " +
                                  error.message());
     }
     return removed;
@@ -95,7 +95,7 @@ std::vector<Spec> read_registry(const std::filesystem::path &folder) {
                                entry.path().string());
         if (spec.name != entry.path().stem().string()) {
             throw std::runtime_error(entry.path().string() +
-                                     ": name 必須等於檔名 " +
+                                     ": name must match the file name " +
                                      entry.path().stem().string());
         }
         registry.push_back(std::move(spec));

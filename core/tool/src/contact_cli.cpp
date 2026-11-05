@@ -24,14 +24,14 @@ int usage(const char *program, FILE *stream = stderr, int result = 2) {
         "       %s rm <name> [--folder-root F]\n"
         "       %s status [--folder-root F] [--json]\n"
         "\n"
-        "  add                    新增或更新聯絡人\n"
-        "    --agent A            指定對方 agent 名稱\n"
-        "    --note TEXT          加上備註\n"
-        "    --folder-root F      指定通訊錄所在世界\n"
-        "  ls                     列出聯絡人；可加 --folder-root F、--json\n"
-        "  rm                     移除聯絡人；可加 --folder-root F\n"
-        "  status                 列出自己與每個聯絡人的狀態、回合與未讀數\n"
-        "  -h, --help             顯示這份用法\n",
+        "  add                    add or update a contact\n"
+        "    --agent A            name of the agent on the other side\n"
+        "    --note TEXT          attach a note\n"
+        "    --folder-root F      world that owns the contact list\n"
+        "  ls                     list contacts; accepts --folder-root F, --json\n"
+        "  rm                     remove a contact; accepts --folder-root F\n"
+        "  status                 show status, turn and unread count for self and each contact\n"
+        "  -h, --help             show this usage\n",
         program, program, program, program);
     return result;
 }
@@ -51,9 +51,9 @@ int add(const char *program, const std::vector<std::string> &words) {
     const bool existed = aos::tool::find_contact(root, contact.name).has_value();
     aos::tool::add_contact(root, contact);
     if (existed) {
-        std::printf("已更新聯絡人 %s\n", contact.name.c_str());
+        std::printf("updated contact %s\n", contact.name.c_str());
     } else {
-        std::printf("已登記聯絡人 %s -> %s\n", contact.name.c_str(),
+        std::printf("added contact %s -> %s\n", contact.name.c_str(),
                     contact.folder.c_str());
     }
     return 0;
@@ -106,7 +106,7 @@ int list(const char *program, const std::vector<std::string> &words) {
         return 0;
     }
     if (contacts.empty()) {
-        std::puts("（通訊錄是空的）");
+        std::puts("(no contacts)");
         return 0;
     }
     std::vector<std::vector<std::string>> rows;
@@ -131,10 +131,10 @@ int remove(const char *program, const std::vector<std::string> &words) {
         index += 2;
     }
     if (!aos::tool::remove_contact(root, name)) {
-        std::fprintf(stderr, "aos contact: 沒有聯絡人 %s\n", name.c_str());
+        std::fprintf(stderr, "aos contact: no contact named %s\n", name.c_str());
         return 1;
     }
-    std::printf("已移除聯絡人 %s\n", name.c_str());
+    std::printf("removed contact %s\n", name.c_str());
     return 0;
 }
 
