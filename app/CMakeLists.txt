@@ -5,7 +5,7 @@ get_property(aos_subcommand_libraries GLOBAL PROPERTY AOS_SUBCOMMAND_LIBRARIES)
 
 if(NOT aos_subcommand_names)
     message(FATAL_ERROR
-        "AOS_BUILD_APP 開著，但沒有任何小專案呼叫 aos_add_subcommand()。"
+        "AOS_BUILD_APP is on, but no subproject called aos_add_subcommand()."
     )
 endif()
 
