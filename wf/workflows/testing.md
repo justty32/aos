@@ -26,10 +26,10 @@
 
 ## proto8
 
-repo 根沒有 CMake（08～09 月那一代 11-05 封存到 `archive/aos-v1/`、不再建），要建的只有 `proto8/impls/`。各專案是獨立的 CMake 專案，照依賴順序建（`bin/`、`build/` 不進 git）：
+repo 根沒有 CMake（08～09 月那一代 11-05 封存到 `archive/aos-v1/`、不再建），要建的只有 `proto8/impls/`：頂層 `impls/CMakeLists.txt` 一次建全部（11-05 S3；各專案仍可單獨 `cmake -B build`，兩種擇一、不要同時跑，見 impls/docs/04；`bin/`、`build/` 不進 git）：
 
 ```sh
-(cd proto8/impls && for p in inst aos-util aos-directive aos-schema aos-exec aos-json aos-loop aos-fsm aos-lock aos-post aos-daemon aos-llm-kernel aos-llm; do (cd $p && cmake -B build && cmake --build build) || break; done)
+(cd proto8/impls && cmake -B build && cmake --build build)
 ```
 
 `proto8/bin/`、`proto8/extras/`、`proto8/lib/` 是 Python／sh，沒有建置步驟；要確認就手跑（用法在各自的 README）。aos 的程式都不動 PATH，手跑時把 `proto8/impls/<名>/bin/`、`proto8/bin/` 放進 PATH。
