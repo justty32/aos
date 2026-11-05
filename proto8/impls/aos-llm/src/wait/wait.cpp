@@ -60,7 +60,7 @@ static int deliver(const aos::post::Mailbox& rb, const std::string& n) {
     } catch (const Error&) {
     }
     if (!reply) {
-        throw Error{code::ReplyBad, "回信讀不懂：" + aos::join(dir, "letter.json") + " 的 body"};
+        throw Error{code::ReplyBad, "cannot understand the reply: body of " + aos::join(dir, "letter.json")};
     }
     if (reply->contains("error")) {
         const Json& e = (*reply)["error"];
@@ -119,7 +119,7 @@ int ask_wait(const Mailbox& mb, const std::string& id) {
             if (!exists(rb.fresh())) {   // 11-05 edge-llm：回信信箱被刪＝kernel 寄不進、信照刪，別說成「信不見了」
                 throw Error{code::LetterMissing, "reply mailbox " + rb.root + " is gone (kernel could not deliver the reply; letter " + id + " already handled)"};
             }
-            throw Error{code::LetterMissing, "信 " + id + " 在信箱 " + mb.root + " 裡不見了"};
+            throw Error{code::LetterMissing, "letter " + id + " is gone from mailbox " + mb.root};
         }
         timespec ts{0, 20 * 1000 * 1000};
         int sig = sigtimedwait(&set, nullptr, &ts);

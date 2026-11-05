@@ -19,7 +19,7 @@
 #include <optional>
 
 static const char* USAGE =
-    "usage: aos-llm send [--priority P] --reply-to BOX | recv BOX 信件名稱 | ask [--priority P] | regret 信件名稱";
+    "usage: aos-llm send [--priority P] --reply-to BOX | recv BOX LETTER | ask [--priority P] | regret LETTER";
 
 static int fail(const std::string& code, const std::string& msg) {
     std::fflush(stdout);
@@ -35,10 +35,10 @@ static aos::Cli parse(const std::vector<std::string>& argv, const std::map<std::
     try {
         cli = aos::parse_cli(argv, flags);
     } catch (const aos::Error& e) {
-        throw aos::Error{e.code, std::string(USAGE) + "（" + e.msg + "）"};
+        throw aos::Error{e.code, std::string(USAGE) + " (" + e.msg + ")"};
     }
     if (cli.rest.size() != want) {
-        throw aos::Error{g::code::ArgumentsBad, std::string(USAGE) + "（" + what + "）"};
+        throw aos::Error{g::code::ArgumentsBad, std::string(USAGE) + " (" + what + ")"};
     }
     return cli;
 }
@@ -57,15 +57,15 @@ int main(int argc, char** argv) {
         aos::loop::block_signals();
         std::vector<std::string> args(argv + 1, argv + argc);
         if (args.empty()) {
-            throw aos::Error{g::code::ArgumentsBad, std::string(USAGE) + "（沒給子命令）"};
+            throw aos::Error{g::code::ArgumentsBad, std::string(USAGE) + " (no subcommand given)"};
         }
         std::string cmd = args[0];
         args.erase(args.begin());
         if (cmd == "send") {
-            aos::Cli cli = parse(args, {{"--priority", "priority"}, {"--reply-to", "reply_to"}}, 0, "send 不收位置參數");
+            aos::Cli cli = parse(args, {{"--priority", "priority"}, {"--reply-to", "reply_to"}}, 0, "send takes no positional arguments");
             std::optional<std::string> rt = opt(cli, "reply_to");
             if (!rt || rt->empty()) {
-                throw aos::Error{g::code::ArgumentsBad, std::string(USAGE) + "（send 要給 --reply-to BOX）"};
+                throw aos::Error{g::code::ArgumentsBad, std::string(USAGE) + " (send needs --reply-to BOX)"};
             }
             g::Mailbox mb = g::kernel();
             g::warn_idle(mb);
@@ -76,11 +76,11 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (cmd == "recv") {
-            aos::Cli cli = parse(args, {}, 2, "recv 要給 BOX 與信件名稱");
+            aos::Cli cli = parse(args, {}, 2, "recv needs BOX and a letter name");
             return g::recv(cli.rest[0], cli.rest[1]);
         }
         if (cmd == "ask") {
-            aos::Cli cli = parse(args, {{"--priority", "priority"}}, 0, "ask 不收位置參數");
+            aos::Cli cli = parse(args, {{"--priority", "priority"}}, 0, "ask takes no positional arguments");
             g::Mailbox mb = g::kernel();
             g::warn_idle(mb);
             aos::Json body = g::read_body(opt(cli, "priority"));
@@ -88,11 +88,11 @@ int main(int argc, char** argv) {
             return g::ask_wait(mb, id);
         }
         if (cmd == "regret") {
-            aos::Cli cli = parse(args, {}, 1, "regret 要給信件名稱");
+            aos::Cli cli = parse(args, {}, 1, "regret needs a letter name");
             g::regret(g::kernel(), cli.rest[0]);
             return 0;
         }
-        throw aos::Error{g::code::CommandUnknown, std::string(USAGE) + "（不認得的子命令 " + cmd + "）"};
+        throw aos::Error{g::code::CommandUnknown, std::string(USAGE) + " (unknown subcommand " + cmd + ")"};
     } catch (const aos::Error& e) {
         return fail(e.code, e.msg);
     } catch (const std::exception& e) {

@@ -73,17 +73,17 @@ Json read_body(const std::optional<std::string>& priority) {
     try {
         body = aos::read_stdin();
     } catch (const Error& e) {
-        throw Error{code::RequestBad, "stdin 要是一份 JSON（body）：" + e.msg};
+        throw Error{code::RequestBad, "stdin must be one JSON document (the body): " + e.msg};
     }
-    const std::string shape = "stdin 要是 {\"endpoint\"?: 代號, \"request\": {\"messages\": [...], ...}, \"priority\"?}";
+    const std::string shape = "stdin must be {\"endpoint\"?: name, \"request\": {\"messages\": [...], ...}, \"priority\"?}";
     if (!body.is_object()) {
-        throw Error{code::RequestBad, shape + "，不是 " + aos::dumps(body)};
+        throw Error{code::RequestBad, shape + ", got " + aos::dumps(body)};
     }
     if (!body.value("request", Json()).is_object() || !body["request"].value("messages", Json()).is_array()) {
-        throw Error{code::RequestBad, shape + "（request 要是物件、messages 要是陣列）"};
+        throw Error{code::RequestBad, shape + " (request must be an object, messages an array)"};
     }
     if (body.contains("endpoint") && !body["endpoint"].is_string()) {
-        throw Error{code::RequestBad, shape + "（endpoint 要是字串）"};
+        throw Error{code::RequestBad, shape + " (endpoint must be a string)"};
     }
     if (priority) {
         body["priority"] = priority_value(*priority);
@@ -98,7 +98,7 @@ static void make_dir(const std::string& dir) {
     std::error_code ec;
     fs::create_directories(dir, ec);
     if (ec || !fs::is_directory(dir)) {
-        throw Error{code::MkdirFailed, "建不了 " + dir + (ec ? "：" + ec.message() : "")};
+        throw Error{code::MkdirFailed, "cannot create " + dir + (ec ? ": " + ec.message() : "")};
     }
 }
 
@@ -140,7 +140,7 @@ std::string send_held(const Mailbox& mb, const Json& body) {
     if (std::rename(t.c_str(), n.c_str()) != 0) {
         int e = errno;
         fs::remove_all(t, ec);
-        throw Error{code::WriteFailed, "改名不了 " + t + " → " + n + "：" + std::strerror(e)};
+        throw Error{code::WriteFailed, "cannot rename " + t + " -> " + n + ": " + std::strerror(e)};
     }
     return id;
 }
@@ -148,7 +148,7 @@ std::string send_held(const Mailbox& mb, const Json& body) {
 void regret(const Mailbox& mb, const std::string& name) {
     aos::post::check_name(name);   // 不合 ArgumentsBad
     if (!aos::post::regret(aos::post::open(mb.root), name)) {
-        throw Error{code::RegretFailed, "信 " + name + " 不在 " + mb.fresh() + "（已被 kernel 認領，或本來就沒有）"};
+        throw Error{code::RegretFailed, "letter " + name + " not in " + mb.fresh() + " (already taken by the kernel, or never there)"};
     }
 }
 
