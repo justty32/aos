@@ -38,13 +38,13 @@ bool append_log(const std::string &path, const std::string &line,
             std::filesystem::path(path).parent_path();
         if (!parent.empty()) std::filesystem::create_directories(parent);
     } catch (const std::exception &exception) {
-        error = "無法建立 log 父目錄: " + std::string(exception.what());
+        error = "cannot create log parent directory: " + std::string(exception.what());
         return false;
     }
 
     const int fd = ::open(path.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
     if (fd < 0) {
-        error = "無法開啟 log: " + std::string(std::strerror(errno));
+        error = "cannot open log: " + std::string(std::strerror(errno));
         return false;
     }
 
@@ -52,13 +52,13 @@ bool append_log(const std::string &path, const std::string &line,
     const int write_errno = errno;
     const int close_result = ::close(fd);
     if (written < 0 || static_cast<std::size_t>(written) != line.size()) {
-        error = written < 0 ? "無法寫入 log: " +
+        error = written < 0 ? "cannot write log: " +
                                   std::string(std::strerror(write_errno))
-                            : "無法一次寫完整行到 log";
+                            : "cannot write a whole line to log at once";
         return false;
     }
     if (close_result != 0) {
-        error = "無法關閉 log: " + std::string(std::strerror(errno));
+        error = "cannot close log: " + std::string(std::strerror(errno));
         return false;
     }
     return true;

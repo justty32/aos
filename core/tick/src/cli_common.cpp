@@ -9,10 +9,10 @@
 namespace aos::tick::cli {
 
 Args::Args(int argc, char *argv[]) {
-    if (argc < 0 || argv == nullptr) throw std::invalid_argument("命令列參數無效");
+    if (argc < 0 || argv == nullptr) throw std::invalid_argument("invalid command-line arguments");
     words.reserve(argc > 1 ? static_cast<std::size_t>(argc - 1) : 0);
     for (int index = 1; index < argc; ++index) {
-        if (argv[index] == nullptr) throw std::invalid_argument("命令列參數無效");
+        if (argv[index] == nullptr) throw std::invalid_argument("invalid command-line arguments");
         words.emplace_back(argv[index]);
     }
 }
@@ -88,7 +88,7 @@ std::string run_text(const Run &run) {
         return text;
     }
     if (!run.ask.empty()) return "ask: " + run.ask;
-    return "（空）";
+    return "(empty)";
 }
 
 bool load_context(const std::string &folder, loop::Layout &layout, Paths &paths,
@@ -97,7 +97,7 @@ bool load_context(const std::string &folder, loop::Layout &layout, Paths &paths,
     paths = paths_of(layout);
     if (!read_config(paths.config_file, config, error)) return false;
     if (!valid_zone(config.tz)) {
-        error = "時區不合法: " + config.tz;
+        error = "invalid timezone: " + config.tz;
         return false;
     }
     return true;

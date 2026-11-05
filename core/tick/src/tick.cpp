@@ -40,9 +40,9 @@ std::string missed_message(const ScheduleItem &item, Instant now,
     const std::string content = item.run.argv.empty()
                                     ? item.run.ask
                                     : join_argv(item.run.argv);
-    return "這項行程錯過了：原定 " + format_at(at, config.tz) +
-           "，現在是 " + format_at(now, config.tz) + "。\n內容：" +
-           content + "\n要補做還是跳過？";
+    return "This scheduled item was missed: due " + format_at(at, config.tz) +
+           ", now " + format_at(now, config.tz) + ".\nContent: " +
+           content + "\nRun it now or skip it?";
 }
 
 std::vector<PlanItem> make_plan(
@@ -117,7 +117,7 @@ Event say_message(const loop::Layout &layout, const PlanItem &item) {
     } catch (const std::exception &exception) {
         return {"error", item.event.id, exception.what()};
     } catch (...) {
-        return {"error", item.event.id, "agent::say 發生未知例外"};
+        return {"error", item.event.id, "agent::say threw an unknown exception"};
     }
 }
 
@@ -133,7 +133,7 @@ bool run_tick(const loop::Layout &layout, Instant now,
         Config config;
         if (!read_config(paths.config_file, config, error)) return false;
         if (!valid_zone(config.tz)) {
-            error = "時區不合法: " + config.tz;
+            error = "invalid timezone: " + config.tz;
             return false;
         }
 
@@ -219,10 +219,10 @@ bool run_tick(const loop::Layout &layout, Instant now,
         if (!append_log(paths.log_file, report.line, error)) return false;
         return true;
     } catch (const std::exception &exception) {
-        error = "心跳發生例外: " + std::string(exception.what());
+        error = "heartbeat threw: " + std::string(exception.what());
         return false;
     } catch (...) {
-        error = "心跳發生未知例外";
+        error = "heartbeat threw an unknown exception";
         return false;
     }
 }

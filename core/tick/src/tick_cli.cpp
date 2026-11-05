@@ -10,7 +10,7 @@
 namespace {
 
 int usage(const char *program) {
-    std::fprintf(stderr, "用法：%s [folder] [--dry-run]\n", program);
+    std::fprintf(stderr, "usage: %s [folder] [--dry-run]\n", program);
     return 2;
 }
 
@@ -60,7 +60,7 @@ int dispatch(int argc, char *argv[]) {
 
     if (report.line.empty()) {
         // 空報告仍印「無事」，讓手動執行者知道命令確實已完成。
-        std::printf("%s無事\n", dry_run ? "[dry-run] " : "");
+        std::printf("%snothing to do\n", dry_run ? "[dry-run] " : "");
     } else {
         if (dry_run) std::fputs("[dry-run] ", stdout);
         std::fwrite(report.line.data(), 1, report.line.size(), stdout);
@@ -86,7 +86,7 @@ extern "C" int aos_tick_cli_main(int argc, char *argv[]) {
         const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
                                   ? argv[0]
                                   : "aos tick";
-        std::fprintf(stderr, "%s: 發生未知錯誤\n", program);
+        std::fprintf(stderr, "%s: unknown error\n", program);
         return 1;
     }
 }

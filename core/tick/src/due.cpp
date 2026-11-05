@@ -25,11 +25,11 @@ bool read_last_date(const Routine &routine, const std::string &tz,
                     LocalTime &last_local, std::string &error) {
     Instant last = 0;
     if (!parse_timestamp(routine.last_run, last)) {
-        error = "last_run 不是合法時間戳: " + routine.last_run;
+        error = "last_run is not a valid timestamp: " + routine.last_run;
         return false;
     }
     if (!to_local(last, tz, last_local, error)) {
-        error = "last_run 無法換算為當地時間: " + error;
+        error = "last_run cannot be converted to local time: " + error;
         return false;
     }
     return true;
@@ -69,21 +69,21 @@ bool routine_due(const Routine &routine, Instant now, const std::string &tz,
                  std::string &error) {
     error.clear();
     if (run_is_empty(routine.run)) {
-        error = "run 欄是空的（既沒有 argv 也沒有 ask）";
+        error = "run is empty (neither argv nor ask)";
         return false;
     }
 
     if (routine.kind == "interval") {
         std::int64_t every = 0;
         if (!parse_duration(routine.every, every)) {
-            error = "every 不是合法期間: " + routine.every;
+            error = "every is not a valid duration: " + routine.every;
             return false;
         }
         if (routine.last_run.empty()) return true;
 
         Instant last = 0;
         if (!parse_timestamp(routine.last_run, last)) {
-            error = "last_run 不是合法時間戳: " + routine.last_run;
+            error = "last_run is not a valid timestamp: " + routine.last_run;
             return false;
         }
         return now >= last &&
@@ -93,12 +93,12 @@ bool routine_due(const Routine &routine, Instant now, const std::string &tz,
     if (routine.kind == "slot") {
         SlotSpec slot;
         if (!parse_slot(routine.slot, slot)) {
-            error = "slot 不是 HH:MM 或 HH:MM 遮罩: " + routine.slot;
+            error = "slot is not HH:MM or an HH:MM mask: " + routine.slot;
             return false;
         }
         LocalTime local;
         if (!to_local(now, tz, local, error)) {
-            error = "now 無法換算為當地時間: " + error;
+            error = "now cannot be converted to local time: " + error;
             return false;
         }
 
@@ -114,7 +114,7 @@ bool routine_due(const Routine &routine, Instant now, const std::string &tz,
                earlier_date;
     }
 
-    error = "kind 不是 interval 或 slot: " + routine.kind;
+    error = "kind is not interval or slot: " + routine.kind;
     return false;
 }
 
@@ -183,18 +183,18 @@ ScheduleState schedule_state(const ScheduleItem &item, Instant now,
                              const Config &config, std::string &error) {
     error.clear();
     if (run_is_empty(item.run)) {
-        error = "run 欄是空的（既沒有 argv 也沒有 ask）";
+        error = "run is empty (neither argv nor ask)";
         return ScheduleState::pending;
     }
 
     Instant at = 0;
     if (!parse_at(item.at, config.tz, at)) {
-        error = "at 不是 YYYY-MM-DD HH:MM: " + item.at;
+        error = "at is not YYYY-MM-DD HH:MM: " + item.at;
         return ScheduleState::pending;
     }
     std::int64_t missed_after = 0;
     if (!parse_duration(config.missed_after, missed_after)) {
-        error = "missed_after 不是合法期間: " + config.missed_after;
+        error = "missed_after is not a valid duration: " + config.missed_after;
         return ScheduleState::pending;
     }
     if (at > now) return ScheduleState::pending;

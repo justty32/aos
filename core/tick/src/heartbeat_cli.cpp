@@ -9,7 +9,7 @@ namespace {
 
 int usage(const char *program) {
     std::fprintf(stderr,
-                 "用法：%s init [folder] [--interval 30m]\n", program);
+                 "usage: %s init [folder] [--interval 30m]\n", program);
     return 2;
 }
 
@@ -45,7 +45,7 @@ int dispatch(int argc, char *argv[]) {
     if (!aos::tick::parse_duration(interval, seconds) ||
         seconds > static_cast<std::int64_t>(
                       std::numeric_limits<std::uint64_t>::max() / 1000)) {
-        std::fprintf(stderr, "%s: 期間不合法: %s\n", program,
+        std::fprintf(stderr, "%s: invalid duration: %s\n", program,
                      interval.c_str());
         return usage(program);
     }
@@ -55,7 +55,7 @@ int dispatch(int argc, char *argv[]) {
         std::fprintf(stderr, "%s: %s\n", program, error.c_str());
         return 1;
     }
-    std::printf("已建立心跳設定 %s/every/tick.json，週期 %s\n",
+    std::printf("created heartbeat config %s/every/tick.json, interval %s\n",
                 layout.aos.c_str(), interval.c_str());
     return 0;
 }
@@ -75,7 +75,7 @@ extern "C" int aos_heartbeat_cli_main(int argc, char *argv[]) {
         const char *program = argc > 0 && argv != nullptr && argv[0] != nullptr
                                   ? argv[0]
                                   : "aos heartbeat";
-        std::fprintf(stderr, "%s: 發生未知錯誤\n", program);
+        std::fprintf(stderr, "%s: unknown error\n", program);
         return 1;
     }
 }

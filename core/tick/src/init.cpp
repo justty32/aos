@@ -30,19 +30,19 @@ bool heartbeat_init(const loop::Layout &layout, Instant now,
     {
         std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
         if (!output) {
-            error = "無法開啟暫存檔 " + temporary;
+            error = "cannot open temp file " + temporary;
             return false;
         }
         output << json.dump(2) << '\n';
         output.close();
         if (!output) {
-            error = "無法寫入暫存檔 " + temporary;
+            error = "cannot write temp file " + temporary;
             std::remove(temporary.c_str());
             return false;
         }
     }
     if (std::rename(temporary.c_str(), path.c_str()) != 0) {
-        error = "無法發佈 " + path + ": " + std::strerror(errno);
+        error = "cannot publish " + path + ": " + std::strerror(errno);
         std::remove(temporary.c_str());
         return false;
     }

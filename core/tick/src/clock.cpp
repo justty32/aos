@@ -75,7 +75,7 @@ void split_local(LocalSeconds point, LocalTime &local) {
 }
 
 std::string clock_error(const std::string &tz, const std::exception &exception) {
-    return "時區「" + tz + "」換算失敗：" + exception.what();
+    return "timezone '" + tz + "' conversion failed: " + exception.what();
 }
 
 std::string format_local(const LocalTime &local, bool with_seconds,
@@ -144,7 +144,7 @@ bool to_local(Instant at, const std::string &tz, LocalTime &local,
     } catch (const std::exception &exception) {
         error = clock_error(tz, exception);
     } catch (...) {
-        error = "時區「" + tz + "」換算失敗：未知錯誤";
+        error = "timezone '" + tz + "' conversion failed: unknown error";
     }
     return false;
 }
@@ -157,7 +157,7 @@ bool from_local(const LocalTime &local, const std::string &tz, Instant &at,
         std::chrono::day{static_cast<unsigned>(local.day)}};
     if (!date.ok() || local.hour < 0 || local.hour > 23 || local.minute < 0 ||
         local.minute > 59 || local.second < 0 || local.second > 59) {
-        error = "當地時間不合法";
+        error = "invalid local time";
         return false;
     }
     try {
@@ -175,7 +175,7 @@ bool from_local(const LocalTime &local, const std::string &tz, Instant &at,
     } catch (const std::exception &exception) {
         error = clock_error(tz, exception);
     } catch (...) {
-        error = "時區「" + tz + "」換算失敗：未知錯誤";
+        error = "timezone '" + tz + "' conversion failed: unknown error";
     }
     return false;
 }

@@ -16,19 +16,19 @@ bool load_json(const std::string &path, Json &document, bool &missing,
     std::error_code code;
     missing = !std::filesystem::exists(path, code);
     if (code) {
-        error = "無法檢查 " + path + "：" + code.message();
+        error = "cannot check " + path + ": " + code.message();
         return false;
     }
     if (missing) return true;
     std::ifstream input(path, std::ios::binary);
     if (!input) {
-        error = "無法讀取 " + path;
+        error = "cannot read " + path;
         return false;
     }
     try {
         input >> document;
     } catch (const nlohmann::json::exception &exception) {
-        error = path + "：JSON 解析失敗：" + exception.what();
+        error = path + ": invalid JSON: " + exception.what();
         return false;
     }
     return true;
@@ -42,7 +42,7 @@ bool take_string(const Json &object, const char *key, std::string &value,
         return true;
     }
     if (!item->is_string()) {
-        error = path + "：欄位「" + key + "」必須是字串";
+        error = path + ": field '" + key + "' must be a string";
         return false;
     }
     value = item->get<std::string>();
@@ -109,12 +109,12 @@ bool read_table(const std::string &path, std::vector<Row> &rows,
         return true;
     }
     if (!document.is_object()) {
-        error = path + "：表格頂層必須是物件";
+        error = path + ": table top level must be an object";
         return false;
     }
     const auto values = document.find("rows");
     if (values == document.end() || !values->is_array()) {
-        error = path + "：欄位「rows」必須是陣列";
+        error = path + ": field 'rows' must be an array";
         return false;
     }
     std::vector<Row> parsed;
@@ -122,13 +122,13 @@ bool read_table(const std::string &path, std::vector<Row> &rows,
     parsed.reserve(values->size());
     for (const auto &value : *values) {
         if (!value.is_object()) {
-            error = path + "：rows 的每一列都必須是物件";
+            error = path + ": every row in rows must be an object";
             return false;
         }
         Row row;
         if (!parse(value, row, path, error)) return false;
         if (!ids.insert(row.id).second) {
-            error = path + "：表內 id 重複：「" + row.id + "」";
+            error = path + ": duplicate id in table: '" + row.id + "'";
             return false;
         }
         parsed.push_back(std::move(row));
@@ -152,7 +152,7 @@ bool mkdir_parent(const std::string &path, std::string &error) {
     std::error_code code;
     std::filesystem::create_directories(parent, code);
     if (code) {
-        error = "無法建立 " + parent.string() + "：" + code.message();
+        error = "cannot create " + parent.string() + ": " + code.message();
         return false;
     }
     return true;
@@ -163,7 +163,7 @@ bool write_atomic(const std::string &path, const std::string &text,
     const std::string temporary = path + ".tmp";
     std::FILE *output = std::fopen(temporary.c_str(), "wb");
     if (output == nullptr) {
-        error = "無法寫入 " + temporary + "：" + std::strerror(errno);
+        error = "cannot write " + temporary + ": " + std::strerror(errno);
         return false;
     }
     bool okay = std::fwrite(text.data(), 1, text.size(), output) == text.size();
@@ -174,12 +174,12 @@ bool write_atomic(const std::string &path, const std::string &text,
         okay = false;
     }
     if (!okay) {
-        error = "寫入失敗 " + temporary + "：" + std::strerror(saved_errno);
+        error = "write failed: " + temporary + ": " + std::strerror(saved_errno);
         std::remove(temporary.c_str());
         return false;
     }
     if (std::rename(temporary.c_str(), path.c_str()) != 0) {
-        error = "無法發佈 " + path + "：" + std::strerror(errno);
+        error = "cannot publish " + path + ": " + std::strerror(errno);
         std::remove(temporary.c_str());
         return false;
     }
@@ -190,7 +190,7 @@ bool write_table(const std::string &path, const Json &columns, Json rows,
                  Instant now, const std::string &tz, std::string &error) {
     const std::string local = format_at(now, tz);
     if (local.size() < 10) {
-        error = path + "：無法用時區「" + tz + "」產生日期";
+        error = path + ": cannot produce a date with timezone '" + tz + "'";
         return false;
     }
     Json document = Json::object();
@@ -206,7 +206,7 @@ bool exists(const std::string &path, bool &result, std::string &error) {
     std::error_code code;
     result = std::filesystem::exists(path, code);
     if (code) {
-        error = "無法檢查 " + path + "：" + code.message();
+        error = "cannot check " + path + ": " + code.message();
         return false;
     }
     return true;
@@ -234,7 +234,7 @@ bool write_routines(const std::string &path, const std::vector<Routine> &rows,
                            {"id", "kind", "every", "slot", "last_run", "run", "note"},
                            std::move(values), now, tz, error);
     } catch (const nlohmann::json::exception &exception) {
-        error = path + "：JSON 寫入失敗：" + exception.what();
+        error = path + ": JSON write failed: " + exception.what();
         return false;
     }
 }
@@ -250,7 +250,7 @@ bool write_schedule(const std::string &path,
         return write_table(path, {"id", "at", "run", "note"},
                            std::move(values), now, tz, error);
     } catch (const nlohmann::json::exception &exception) {
-        error = path + "：JSON 寫入失敗：" + exception.what();
+        error = path + ": JSON write failed: " + exception.what();
         return false;
     }
 }
@@ -265,7 +265,7 @@ bool read_config(const std::string &path, Config &config, std::string &error) {
         return true;
     }
     if (!document.is_object()) {
-        error = path + "：設定檔頂層必須是物件";
+        error = path + ": config top level must be an object";
         return false;
     }
     if (!take_string(document, "tz", parsed.tz, path, error, true) ||
@@ -280,7 +280,7 @@ bool ensure_heartbeat(const Paths &paths, Instant now, const std::string &tz,
     std::error_code code;
     std::filesystem::create_directories(paths.heartbeat, code);
     if (code) {
-        error = "無法建立 " + paths.heartbeat + "：" + code.message();
+        error = "cannot create " + paths.heartbeat + ": " + code.message();
         return false;
     }
     bool present = false;

@@ -74,8 +74,8 @@
 6. 事件非空 → `append_log` 一行；事件為空 → **不寫**。
 7. `--dry-run`：1–4 只算不做（不 deliver、不 say、不改表、不寫 log），`report.line` 照組，CLI 印到 stdout 前綴 `dry-run: `。
 
-錯過的 `say()` 文字（單行，`<運行內容>`＝argv 以空白連接，或 ask 原文；`note` 非空時尾端加 `（備註：<note>）`）：
-`行程「<id>」錯過了：原定 <at>，現在 <format_at(now)>，已從行程表刪除。要補做還是跳過？內容：<運行內容>`
+錯過的 `say()` 文字（三行，`<運行內容>`＝argv 以空白連接，或 ask 原文）：
+`This scheduled item was missed: due <at>, now <format_at(now)>.` ／ `Content: <運行內容>` ／ `Run it now or skip it?`
 
 `say()` 丟例外（agent 目錄在但沒初始化）→ 當 `error=<id>→<what()>`，該列**不更新、不刪**。
 
@@ -86,7 +86,7 @@ say 一次、把 agent 的收件匣灌爆。投出去＝這一輪的責任已交
 ## `log.md` 一行
 
 ```
-2026-08-30T17:00:05+08:00 turn=42 run=lint→hb-lint-42 ask=standup→bob missed=s-tq3k9x→none error=r-bad→every 不合法: 1h30m
+2026-08-30T17:00:05+08:00 turn=42 run=lint→hb-lint-42 ask=standup→bob missed=s-tq3k9x→none error=r-bad→every is not a valid duration: 1h30m
 ```
 
 - 開頭 `format_timestamp(now, tz)`，接 `turn=<turn>`，再接**依處理順序**的事件，全部單一空白分隔，行尾 `\n`。
@@ -153,10 +153,10 @@ aos_add_subproject(tick
 )
 add_library(aos_tick_cli OBJECT src/cli_common.cpp src/tick_cli.cpp src/heartbeat_cli.cpp src/routine_cli.cpp src/schedule_cli.cpp)
 target_link_libraries(aos_tick_cli PUBLIC aos::tick)
-aos_add_subcommand(NAME tick      ENTRY aos_tick_cli_main      LIBRARY aos_tick_cli SUMMARY "跑一次心跳：到期的投進 inbox 或交給 agent")
-aos_add_subcommand(NAME heartbeat ENTRY aos_heartbeat_cli_main LIBRARY aos_tick_cli SUMMARY "在資料夾裝上心跳（every/tick.json）")
-aos_add_subcommand(NAME routine   ENTRY aos_routine_cli_main   LIBRARY aos_tick_cli SUMMARY "登記／列出／移除固定循環的事務")
-aos_add_subcommand(NAME schedule  ENTRY aos_schedule_cli_main  LIBRARY aos_tick_cli SUMMARY "登記／列出／移除一次性行程")
+aos_add_subcommand(NAME tick      ENTRY aos_tick_cli_main      LIBRARY aos_tick_cli SUMMARY "run one heartbeat: deliver due items to inbox or the agent")
+aos_add_subcommand(NAME heartbeat ENTRY aos_heartbeat_cli_main LIBRARY aos_tick_cli SUMMARY "install a heartbeat in a folder (every/tick.json)")
+aos_add_subcommand(NAME routine   ENTRY aos_routine_cli_main   LIBRARY aos_tick_cli SUMMARY "add / list / remove recurring routines")
+aos_add_subcommand(NAME schedule  ENTRY aos_schedule_cli_main  LIBRARY aos_tick_cli SUMMARY "add / list / remove one-off schedules")
 ```
 
 `core/CMakeLists.txt` 要加一行 `add_subdirectory(tick)`（放 `agent` 之後）——**這行由隊長合併時加**，三條都不動它。
