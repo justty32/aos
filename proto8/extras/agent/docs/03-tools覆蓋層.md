@@ -37,4 +37,6 @@
 
 ### 已知的邊
 
+- **覆蓋層壞掉或 `add` 的工具不見了＝整隻停下**（11-05 [edge-agent](../../../thinking/2026-11/05/edge-agent/README.md) 實測）：brain／act 每格 `aos-tools ls`，覆蓋層 JSON 壞、或 `add` 指的路徑不在，aos-tools 報 `RegistryBad`／`PathMissing`、身體報 `ToolsBad` 退 1，那隻自己結束、**下了 daemon 表**——這時 `aos-agent tools rm／reset` 也找不到它（`InstanceMissing`）。救法：手動刪或改 `<stack>/tools.json`（stack 留著），再同名 `aos-agent ctl add`，從停的那格接著答。照 aos-tools「不猜不跳過」，不改成略過壞的那個。
+- **跟定義同名的**：`tools add 名 路徑` 撞到定義裡已有的名字＝aos-tools `ToolExists`；要這隻改用自己的就 `tools add --override 名 路徑`（寫進覆蓋層的 `add`，疊的時候蓋過定義）。
 - 指到 image 外面的工具（例 repo 裡的 `lib/base/clock`）存的也是相對路徑（`../../../../../../home/…`）：整份搬到另一層深度或別台、那邊沒有同樣相對位置的檔＝那個工具找不到（aos-tools 報 `PathMissing`）。照 [portable-flow 03 原則 5](../../../thinking/2026-11/05/portable-flow/03-絕對路徑盤點.md)「指到 daemon 外面自擔」；要帶著走就把工具放進定義旁的 `lib/`。
