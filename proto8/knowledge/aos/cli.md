@@ -28,4 +28,4 @@ Per-agent settings (overlays; the definition is never changed):
 
 Brain service: `aos-llm ls` lists endpoint packs; `echo '<letter>' | aos-llm ask` asks once. Needs `AOS_LLM_KERNEL`.
 
-Errors: one line `aos-agent: Code reason` on stderr, exit 1. `TargetMissing` = no `--target` and no `$AOS_AGENT`; `InstanceMissing` = no such name in the table; `DaemonMissing` = no daemon found.
+Errors: one line `aos-agent: error: Code reason` on stderr, exit 1; `warning:` lines are not errors. `TargetMissing` = no `--target` and no `$AOS_AGENT`; `InstanceMissing` = no such name in the table; `DaemonMissing` = no daemon found.

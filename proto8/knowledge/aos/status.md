@@ -17,6 +17,6 @@ A row that disappeared: the proc finished (exit 0) or was removed (`rm`). Its st
 
 `queue N`: how many letters wait in its inbox. `queue 0` with phase `running` means idle.
 
-Reading a `reason`: it is the last error line of the thing that died, in the usual form `program: Code reason`. Example: `agent-fsm: LlmKernelMissing AOS_LLM_KERNEL is not set` means the agent could not reach the llm kernel; a human must set it up. See node `errors` for codes.
+Reading a `reason`: it is the last error line of the thing that died, in the usual form `program: error: Code reason`. Example: `agent-fsm: error: LlmKernelMissing AOS_LLM_KERNEL is not set` means the agent could not reach the llm kernel; a human must set it up. See node `errors` for codes.
 
 Paused: a human can pause and resume an agent (`aos-agent ctl pause/resume`). A paused agent still shows `running` in the daemon table; it just does not take the next step. If an `ask` to a child hangs with no `reason`, it may be paused; a human has to resume it.
