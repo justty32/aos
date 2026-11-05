@@ -43,11 +43,11 @@ aos-lock show data.json                                                         
 | `src/holder/holder.cpp` | 名牌：`holder_of`（身分用 aos-util 的 `aos::identity`）、`to_json`、`look`、`reapable`（判死活、殭屍、租約）；common 的 `now_ms`、`parse_at`（獨一無二的名字用 aos-util 的 `aos::unique_id`） |
 | `src/lock/lock.cpp` | 鎖：`lock_dir_of`、寫名牌（暫存改名、不建資料夾）、`try_acquire`、`reap`（收屍牌 `.reaping` → 再讀名牌確認 → 改名再刪）、`acquire`（steady_clock 計時）、`release` |
 | `src/common/common.hpp` | 內部標頭：`using`、時間與名字小工具的宣告 |
-| `src/main.cpp` | 命令列：子命令表、旗標、持有者預設 getppid；出錯印「aos-lock: 代號 原因」 |
+| `src/main.cpp` | 命令列：子命令前先 `parse_cli`（只認 `--help`；不認得的旗標＝FlagUnknown）、子命令表、旗標、持有者預設 getppid；出錯印「aos-lock: error: 代號 原因」 |
 
 ## 錯誤代號
 
-stderr 一行 **`aos-lock: 代號 原因`**、退 1。
+stderr 一行 **`aos-lock: error: 代號 原因`**、退 1。
 
 | 代號 | 什麼時候 |
 |---|---|

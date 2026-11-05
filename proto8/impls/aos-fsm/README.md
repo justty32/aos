@@ -24,6 +24,8 @@ AOS_STACK=st/ aos-fsm fsm.json; echo $?   # 跑 idle 那格（aos-exec -- idle�
 **11-04 起狀態檔叫 `stage.txt`**（原 `state.txt`；使用者題 10「fsm改名，嘗試用同義詞」——`state` 跟 aos-loop 的 `state.json` 窗同在 stack 根、一詞二義，[four-elements 07](../../thinking/2026-11/04/four-elements/07-實作步驟.md) 步 3）；格式、讀寫規則不變，fsm.json 的 `start`／`states` 不改。
 格的 `exec` 可以直接放單子（使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」，[thinking 10-24](../../thinking/2026-10/24/exec-relative/README.md#10-24-exec-直接放單子)）：物件＝aos-fsm 行程內 `run_inst`（aos-loop 的 `run_once`）。
 
+**轉交的碼**（11-05 stdio-unify R8）：退非 0 時 stderr 有 `aos-fsm: error:` 這行＝我錯（退 1）；沒有＝格的碼（表沒接住，原樣往上）。格的分岔碼是給 fsm 表看的，被表接住不算錯（退 0）。`aos-fsm --help`＝英文說明印 stdout、退 0。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。

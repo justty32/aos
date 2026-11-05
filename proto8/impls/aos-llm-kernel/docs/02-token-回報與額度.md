@@ -12,7 +12,7 @@
    **endpoint 函數的環境＝daemon 給子項的**（`AOS_STACK`＝那封信的資料夾、`AOS_DAEMON`、daemon 的 `AOS_WS`、daemon 殼裡的其他變數），不是 kernel 的；金鑰已經解進 `request.json`。函數要別的變數（代理、憑證）＝寫進 daemon 的 `.env` 或函數自己的 `.env`。
 4. **下一次收成品**（看 daemon 的表 `$AOS_DAEMON/procs_state.json` 與 `<信>/state.json`）：
    - 收尾、結束碼 0＝`reply.json` 讀得懂就原樣當回信；讀不懂＝`ReplyBad`。
-   - 收尾、其他碼＝`EndpointFailed`，msg 帶 `reply.json` 的第一行（llm_http 失敗時 stdout 也印同一行），沒有就帶 `stderr.txt` 的第一行。
+   - 收尾、其他碼＝`EndpointFailed`，msg 帶 `reply.json` 的第一行（llm_http 失敗時 stdout 也印同一行），沒有就帶 `stderr.txt` 的第一行——**原樣**（C-52 明文例外：出口是給人看的回信原因；11-05 stdio-unify R10 代定：下層錯誤行的 `程式: error: ` 前綴不去掉，原因裡看得出是誰錯，例 `endpoint function exited with code 1: llm_http: error: 代號 原因`）。
    - 143（aos-exec 的 TERM）或 137（不理 TERM、寬限後 KILL）而且掛出去已經超過 `timeout_ms`＝`EndpointFailed` 逾時（11-05 edge-llm 補 137）。
    - 被收掉（沒逾時的 143、`stopped`）、死在半路（`state.json` 沒收尾、表上也沒這列）＝**重掛一次**（同名、新掛信、`retries` 變 1）；第二次還是這樣＝`EndpointFailed the brain call ran twice without a result (stopped or died midway)`。
    - 表上還有這列（`running`／`stopping`／`sleeping`）＝還在飛，佔一格。表上沒列、`state.json` 也沒有＝daemon 還沒套（暫停中、還沒輪到），照樣佔一格；daemon 的 `mailbox_warning` 提到這封掛信＝daemon 不收＝`LaunchFailed`。

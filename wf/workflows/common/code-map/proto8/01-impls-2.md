@@ -8,7 +8,7 @@
 |---|---|
 | `include/aos/loop.hpp` | 公開介面：擋訊號、兩次之間取訊號、`parse_target`（`exec` 是字串、`[目標, 參數...]` 或單子物件）、`Loop`（11-05 `write_state` 改 virtual，給 aos-daemon 蓋） |
 | `src/main.cpp` | 命令列 `aos-loop [FLAGS] loop.json [-- ARGS...]` |
-| `src/engine/loop.cpp` | 每次怎麼走、`log_line`（`--enable-logs`） |
+| `src/engine/loop.cpp` | 每次怎麼走、`log_line`（`--enable-logs`）、錯誤行 `fail_line`（身體失敗＝`RunFailed`）與提醒行 `warn` |
 | `src/engine/window.cpp` | 窗：`read_ctl`（ctl 指令 `cmd`／`max`／`interval_ms`／`seq`，比內容判新舊）、`write_state`（有變才寫）＋子類別的 `write_more` |
 | `src/engine/config.cpp` | `resolve_keys`（設定檔與 ctl 的指示詞，daemon、fsm 共用）、`Loop` 建構子（旗標 ＞ 設定檔 ＞ 預設；`ctl`／`state` 沒寫＝`ctl.json`／`state.json`、`null`＝不開，11-04）、`parse_target`、`resolve_exec`、`place_inline`、`loop_cli`、`add_args` |
 | `src/engine/engine.hpp` | engine 的內部標頭 |

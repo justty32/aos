@@ -21,6 +21,8 @@ aos-loop --max 2 loop.json # 每次 `aos-exec -- idle`，旗標蓋過 loop.json 
 骨架是公開的 `aos::loop::Loop`（aos-daemon 繼承它）。
 `exec` 可以直接放單子物件（使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」，[thinking 10-24](../../thinking/2026-10/24/exec-relative/README.md#10-24-exec-直接放單子)）：物件＝每次行程內 `run_inst`（`src/run/inline.cpp`），見下面「用法」的 `exec`。
 
+**轉交的碼**（11-05 stdio-unify R8、D4）：退非 0 時 stderr 有 `aos-loop: error:` 這行＝我錯（退 1）——只有 `aos-loop: error: RunFailed …` 例外：那是身體那次的碼原樣帶回（碼不是 1）；沒有錯誤行（128＋N）＝收到訊號。`aos-loop --help`＝英文說明印 stdout、退 0。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。

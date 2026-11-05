@@ -25,9 +25,9 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| `include/aos/cli.hpp`、`src/cli.cpp` | 命令列 `parse_cli`（旗標在位置參數前、`--x V`／`--x=V`、`--` 結束、開關表 `switches`）、`load_cfg`（`檔` 或 `檔#/指標`） |
+| `include/aos/cli.hpp`、`src/cli.cpp` | 命令列 `parse_cli`（旗標在位置參數前、`--x V`／`--x=V`、`--` 結束、開關表 `switches`、內建 `--help`〔英文說明印 stdout、退 0〕）、`usage_error`（`原因 (usage: …)`）、`load_cfg`（`檔` 或 `檔#/指標`） |
 | `include/aos/error.hpp` | 共用錯誤型別 `aos::Error` 與多支工具都會吐的錯誤代號 `aos::code` |
-| `include/aos/io.hpp`、`src/io.cpp` | 三扇門：stdin 讀 JSON（串流）、stdout 印一行 JSON、stderr 印一行錯誤 |
+| `include/aos/io.hpp`、`src/io.cpp` | 三扇門：stdin 讀 JSON（串流）、stdout 印一行 JSON、stderr 兩種行：`fail`（`程式: error: 代號 原因`、回 1）、`warn`（`程式: warning: 句子`） |
 | `include/aos/files.hpp`、`src/files.cpp` | 路徑、讀檔、原子寫入（暫存檔再改名） |
 | `include/aos/proc.hpp`、`src/proc.cpp` | 子程序（起、看、整群送訊號、收屍）、`/proc`、memfd、`utc_now_ms`／`utc_now_ns`、獨一無二的名字 `unique_id`、身分 `identity`（`AOS_WS` ＞ `AOS_STACK` ＞ `AOS_CF` ＞ cwd） |
 | `include/aos/signals.hpp`、`src/signals.cpp` | 擋 SIGINT／SIGTERM／SIGHUP、經 signalfd 讓呼叫者每次去看 |
@@ -42,7 +42,7 @@
 | `src/ref.cpp` | `$ref`：取檔與指標、繞圈、陣列多份合併（`merge`） |
 | `src/env.cpp` | `$env`：換成環境變數的值 |
 | `src/internal.hpp` | 內部標頭 |
-| `src/main.cpp` | 命令列 `aos-directive < 設定.json`（不算對外提供；`parse_cli`，錯一行 `aos-directive: 代號 原因`，11-04） |
+| `src/main.cpp` | 命令列 `aos-directive < 設定.json`（不算對外提供；`parse_cli`，錯一行 `aos-directive: error: 代號 原因`，11-04） |
 
 ## `impls/aos-schema/`（用 JSON Schema draft-07 驗 JSON）
 
@@ -51,7 +51,7 @@
 | `include/aos/schema.hpp` | 公開介面：驗一份 JSON，回「哪裡不對」清單 |
 | `src/validate.cpp` | 唯一碰驗證器（pboettch）的檔；先用 meta-schema 驗 schema 本身 |
 | `src/load_file.cpp` | 讀 schema 檔（`SchemaMissing`／`SchemaBad`） |
-| `src/main.cpp` | 命令列 `aos-schema SCHEMA_FILE < doc.json`，印 `{"valid", "problems"}`；`parse_cli`，錯一行 `aos-schema: 代號 原因`（11-04） |
+| `src/main.cpp` | 命令列 `aos-schema SCHEMA_FILE < doc.json`，印 `{"valid", "problems"}`；`parse_cli`，錯一行 `aos-schema: error: 代號 原因`（11-04） |
 | `examples/inst.schema.json` | inst 單子的 schema 範例 |
 
 ## `impls/aos-exec/`（在工作區執行一個資料夾程式）

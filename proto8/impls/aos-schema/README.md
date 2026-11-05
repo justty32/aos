@@ -22,7 +22,7 @@ aos-schema SCHEMA_FILE < doc.json
 ```
 
 stdin 讀一份 JSON（規則同全家：空的＝`{}`、多份＝`InputExtra`、壞尾丟掉），用 SCHEMA檔 驗，stdout 印一行
-`{"valid": true/false, "problems": [{"pointer", "message"}, ...]}`。**驗不過也退 0**（那是答案，不是錯）。工具自己出錯才往 stderr 印一行 `aos-schema: 代號 原因`、退 1（11-04 起照 [CONVENTION P-44](../../docs/CONVENTION/02-題目stack停錯腦/07-P-44.md)；原本是一行 `{"error": {"code", "msg"}}`）：
+`{"valid": true/false, "problems": [{"pointer", "message"}, ...]}`。**驗不過也退 0**（那是答案，不是錯）。工具自己出錯才往 stderr 印一行 `aos-schema: error: 代號 原因`、退 1（11-04 起照 [CONVENTION P-44](../../docs/CONVENTION/02-題目stack停錯腦/07-P-44.md)；原本是一行 `{"error": {"code", "msg"}}`）：
 
 | 代號 | 什麼時候 |
 |---|---|

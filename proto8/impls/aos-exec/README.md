@@ -17,6 +17,8 @@ echo hi | aos-exec tool              # tool/_entry.json 是 {"argv": ["cat"]}：
 
 語意以規範為準：環境變數 N-57、命令列 N-58、只做哪幾件事 N-59、錯誤 N-60、找入口與種類 N-61、`#/` 尋址 N-62 在 [NORMS/10](../../docs/NORMS/10-基礎設施-定義與工作區.md)；指示詞 N-45 在 [NORMS/06](../../docs/NORMS/06-基礎設施-命令列與指示詞.md)；inst 在 [NORMS/03](../../docs/NORMS/03-基礎設施-inst.md)。下面寫的是這支程式的用法與實作上的細節。
 
+**轉交的碼**（11-05 stdio-unify R8）：退非 0 時 stderr 有 `aos-exec: error:` 這行＝我錯（退 1）；沒有＝入口自己的碼。`aos-exec --help`＝英文說明印 stdout、退 0。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。
