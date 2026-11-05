@@ -7,7 +7,7 @@
 <!-- wf-nav -->
 | 日期 | 這天定下了什麼 | 全文 |
 |------|------|------|
-| 2026-11-05 | 定：aos-mcp 工具失敗時把 stderr 最後一段附給外部 agent（C-52 例外）；llm kernel 不再寫 `served.jsonl`；無痛遷移——sleep／wake 開放成指令、image 裡的路徑相對「管我的 daemon」、stack 不存定義副本、啟動四步「複製→（沒有才）起 daemon→環境變數盡量少→aos-exec」（規劃，8 題待裁） | [2026-11](2026-11/2026-11-05.md#2026-11-05) |
+| 2026-11-05 | 定：aos-mcp 工具失敗時把 stderr 最後一段附給外部 agent（C-52 例外）；llm kernel 不再寫 `served.jsonl`；無痛遷移——sleep／wake 開放成指令、image 裡的路徑相對「管我的 daemon」、stack 不存定義副本、啟動四步「複製→（沒有才）起 daemon→環境變數盡量少→aos-exec」（規劃，8 題待裁）；kernel＝管 proc 是否可執行、daemon＝最基礎 kernel、問腦改掛 daemon、`AOS_LLM_KERNEL`＝llm daemon 的 stack（規劃，2 題待裁） | [2026-11](2026-11/2026-11-05.md#2026-11-05) |
 | 2026-11-04 | 定：沒有新決定（tidy P4-D／E 補完對讀、晚上 P2／P3／P4 續收斂；round 刪掉後的 13 條條文攤給使用者裁；aos-post 改版做完：全套驗過、條文照「都按照建議」加註，`…Exists` 成代號第五種結尾；四元素審查十題裁定並全部實作，`_metainfo.json`、daemon 小格名可設、add 看入口 JSON、N-63 `AOS_` 四種性質表；send_message／memory、resident-bob 封存、整份 AI 產出的 thinking 刪，NORMS 加舊名對照表附錄3；晚上「思考是 aos 函數」照推薦實作：問腦＝寄請求信給 llm kernel 收回信、`AOS_BRAIN_*` 退場、`aos-llm` 成基礎工具，四題可翻案；夜裡使用者選項定：換腦只留 `llm.json` 代號、`AOS_KERNEL` 只當 hub，P-23 刪「不跑本機模型」，P-42 正式改寫，N-14 窗不帶 `kind` 定案；邊緣狀況三條線〔llm kernel、daemon／aos-agent、基礎積木〕修十幾處，使用者口徑「風險自擔」、只有 add 被拒照推薦立刻報 `AddRejected`；llm kernel 舊信處理完就刪） | [2026-11](2026-11/2026-11-04.md#2026-11-04) |
 | 2026-11-03 | 定：`aos-eca-hub` 改名 `aos-eca-ctl`（不留舊名、舊紀錄照舊名，代定 6 條） | [2026-11](2026-11/2026-11-03.md#2026-11-03) |
 | 2026-11-02 | 定：使用者 CPU 類比（CF／CD／CO＝指令位置、STACK／WS＝兩個主暫存器、ENTRY 與 cwd 無關）只記原文；試驗場 bob-cathy 代定 8 條 | [2026-11](2026-11/2026-11-02.md#2026-11-02) |
