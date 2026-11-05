@@ -14,7 +14,7 @@
 |---|---|
 | [01-分層等](docs/01-分層等.md) | 分層（每層只依賴下層）；一個工具長什麼樣（契約）；怎麼引用（不複製） |
 | [02-索引-base與索引-aos](docs/02-索引-base與索引-aos.md) | 索引：base；索引：aos |
-| [03-索引-agent等](docs/03-索引-agent等.md) | 索引：agent；agent 自己的格（11-03 刪了）；外部 agent 的一輪（eca）；範例（demo/agent-liv 11-04 刪了） |
+| [03-索引-agent等](docs/03-索引-agent等.md) | 索引：agent（11-05 加 self_tools：agent 改自己的工具）；agent 自己的格（11-03 刪了）；外部 agent 的一輪（eca）；範例（demo/agent-liv 11-04 刪了） |
 
 <a id="分層每層只依賴下層"></a>
 <a id="一個工具長什麼樣契約"></a>

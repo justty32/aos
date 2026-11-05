@@ -1,0 +1,7 @@
+{"description": "改你自己的工具箱：add 加一個工具、rm 拿掉一個、ls 列出你現在有的（一行 JSON）。改的只是你這一隻（別隻、你的定義都不變），從你的下一輪起生效。工具是一個資料夾（裡面有 _entry、_tooldef.json），path 寫從工作區算的相對路徑，或工具庫 lib/ 底下的絕對路徑。名字跟你已有的撞到時，要換掉就加 override: true。",
+ "parameters": {"type": "object",
+                "properties": {"op": {"type": "string", "enum": ["add", "rm", "ls"], "description": "add＝加、rm＝拿掉、ls＝列出"},
+                               "name": {"type": "string", "description": "工具名（add、rm 要給）；就是你之後叫它用的名字"},
+                               "path": {"type": "string", "description": "工具資料夾（add 要給）：從工作區算的相對路徑，或 lib/ 底下的絕對路徑"},
+                               "override": {"type": "boolean", "description": "add 時名字撞到已有的工具，要用這個換掉就給 true（預設 false）"}},
+                "required": ["op"]}}

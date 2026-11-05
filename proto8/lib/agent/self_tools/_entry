@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+# self_tools - 讓叫我的 agent 改自己的工具箱：加（add）、拿掉（rm）、列（ls）；改的是那隻的覆蓋層，定義不動
+# 使用者 11-05 午：「讓agent給自己改tool」。規劃：proto8/thinking/2026-11/05/feat-proto/01-self-tools.md。
+# 介面（lib/README 的契約）：stdin 收 {"op": "add"|"rm"|"ls", "name"?, "path"?, "override"?}；
+#   先 aos-agent ctl who（拿 $AOS_STACK＝<agent stack>/tools/self_tools/ 查 daemon 表，C-52 經機制看上層、不爬路徑）認出是哪隻，
+#   再 aos-agent tools --target <那隻> add [--override] <name> <絕對路徑>／rm <name>／ls --json。下一格 brain 重讀就看到新清單。
+#   path：相對路徑從 $AOS_WS 算、解開 .. 與捷徑後要在工作區裡；絕對路徑要在 lib/（這個工具所在的庫）底下；其他＝PathBad。
+#   結果：add／rm 印一句（下一題起生效）、ls 印 aos-tools ls --json 那一行。
+#   錯：stderr 與 stdout 各一行「self_tools: 代號 原因」、退 1；aos-agent（與它轉的 aos-tools）的 stderr 原樣往上、
+#   它退非 0 時取它最後一行的代號與原因（例 PathMissing、ToolExists、ToolUnknown、DaemonMissing、InstanceMissing）。
+#   沒掛在 daemon 下跑的 agent（aos-exec body.json）不支援：ctl who 報 DaemonMissing／InstanceMissing，原樣回給腦。
+# 需要 PATH 上有 aos-agent（proto8/install.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
+import json, os, signal, subprocess, sys
+
+NAME = "self_tools"
+TIMEOUT_S = 60
+LIB = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # proto8/lib
+child = None
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, str(reason).replace("\n", " "))
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def on_term(signum, frame):
+    if child is not None and child.poll() is None:
+        try:
+            os.killpg(child.pid, signal.SIGTERM)
+        except OSError:
+            pass
+    sys.exit(128 + signum)
+
+
+def workspace():
+    ws = os.environ.get("AOS_WS")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "AOS_WS is not set or not a directory")
+    return os.path.realpath(ws)
+
+
+def arguments():
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin is not JSON: %s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments must be an object")
+    return a
+
+
+def tool_path(p):
+    """相對＝從工作區算、不能出工作區；絕對＝要在 lib/ 底下（照抄庫的工具）。回解開後的絕對路徑。"""
+    if os.path.isabs(p):
+        real = os.path.realpath(p)
+        if os.path.commonpath([LIB, real]) != LIB:
+            die("PathBad", "%s is an absolute path outside the tool library %s; give a path relative to the workspace, or one under %s" % (p, LIB, LIB))
+        return real
+    root = workspace()
+    real = os.path.realpath(os.path.join(root, p))
+    if os.path.commonpath([root, real]) != root:
+        die("PathBad", "%s is outside the workspace" % p)
+    return real
+
+
+def agent(*args):
+    """aos-agent args…：stderr 原樣往上；退非 0＝取它最後一行的代號與原因報錯。回 stdout。"""
+    global child
+    try:
+        child = subprocess.Popen(["aos-agent"] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 text=True, start_new_session=True)
+    except OSError as e:
+        die("LaunchFailed", "cannot run aos-agent (put it on PATH with proto8/install.sh): %s" % e)
+    try:
+        out, err = child.communicate(timeout=TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        os.killpg(child.pid, signal.SIGKILL)
+        child.communicate()
+        die("CommandFailed", "aos-agent %s took over %d s and was killed" % (" ".join(args[:2]), TIMEOUT_S))
+    if err:
+        sys.stderr.write(err if err.endswith("\n") else err + "\n")
+    if child.returncode != 0:
+        last = (err.strip().splitlines() or ["aos-agent: CommandFailed exited %d" % child.returncode])[-1]
+        prog, _, rest = last.partition(": ")
+        code, _, why = rest.partition(" ")
+        if not code or not code[:1].isupper():
+            code, why = "CommandFailed", last
+        die(code, "%s (from %s)" % (why, prog or "aos-agent"))
+    return out
+
+
+signal.signal(signal.SIGTERM, on_term)
+args = arguments()
+op = args.get("op")
+if op not in ("add", "rm", "ls"):
+    die("ArgumentsBad", "op must be one of add, rm, ls")
+name = args.get("name")
+if op in ("add", "rm") and (not isinstance(name, str) or not name):
+    die("ArgumentsBad", "%s needs name (a string)" % op)
+override = args.get("override", False)
+if not isinstance(override, bool):
+    die("ArgumentsBad", "override must be true or false")
+if op == "add":
+    if not isinstance(args.get("path"), str) or not args["path"]:
+        die("ArgumentsBad", "add needs path (a string: relative to the workspace, or absolute under %s)" % LIB)
+    path = tool_path(args["path"])
+
+me = agent("ctl", "who").strip()
+if op == "ls":
+    sys.stdout.write(agent("tools", "--target", me, "ls", "--json"))
+elif op == "add":
+    agent("tools", "--target", me, "add", *(["--override"] if override else []), name, path)
+    print("added %s (%s) to your tools; available from your next turn" % (name, path))
+else:
+    agent("tools", "--target", me, "rm", name)
+    print("removed %s from your tools; gone from your next turn" % name)

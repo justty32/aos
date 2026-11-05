@@ -1,0 +1,8 @@
+{"summary": "改叫我的 agent 自己的工具覆蓋層（aos-agent ctl who＋tools add／rm／ls）",
+ "time_ms": {"val": 500, "max": 60000},
+ "resource": "cpu",
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": false,
+ "interrupt": "safe",
+ "parallel": false}

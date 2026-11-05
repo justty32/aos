@@ -33,4 +33,5 @@
 | `pyfix/_entry`、`pyfix/_tooldef.json`、`pyfix/_metainfo.json` | 把改 Python 的事交給子 agent pyfix-agent，印答案＋實際 diff |
 | `pyfix/agent/*` | 子 agent pyfix-agent：`_entry`、`loop.json`、`fsm.json`、`idle/`、`brain.py`（`aos-llm ask` 問 kernel，11-04 晚）、`act.py`、`system.txt`、`tools.json`、`tools/`（捷徑到 `lib/base`） |
 | `cli_session.py` | 不是工具：claude／codex CLI 接成工具（非互動續對話，或 tmux 貼字等 hook）；`call_main`、`attach_main`、`hook`；`stack_copies`＝`$AOS_STACK` 的 `tools.json` 是這隻的覆蓋層、給 aos-mcp `--overlay`（11-05）、`--model` 取 cli.json 同層 `llm.json` 疊 `$AOS_STACK/llm.json` 的 `model`（11-04 晚） |
+| `self_tools/_entry`、`self_tools/_tooldef.json`、`self_tools/_metainfo.json` | 改叫我的 agent 自己的工具覆蓋層（11-05 feat-proto 件 1）：`aos-agent ctl who` 認出是哪隻 → `aos-agent tools --target 它 add／rm／ls --json`；`tool_path`（相對從 `$AOS_WS`、絕對限 `lib/`）、`agent`（轉 aos-agent，stderr 原樣、錯取最後一行代號） |
 | `claude/`、`codex/` | claude／codex CLI 當工具：`_entry`、`_tooldef.json`、`_metainfo.json`、`cli.json`（CLI 旗標） |

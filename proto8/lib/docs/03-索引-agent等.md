@@ -7,6 +7,7 @@
 | [pyfix](../agent/pyfix/) | 把改 Python 的事交給子 agent pyfix-agent（`agent/`，它的工具是 base 的 ls、read、write、edit、bash） | `task`、`dir` | 子 agent 的報告＋實際 diff |
 | [claude](../agent/claude/) | 交給 Claude Code CLI 做、同一段對話續著講（人可以 attach 進去） | `prompt` | CLI 的回答 |
 | [codex](../agent/codex/) | 交給 Codex CLI 做、同上 | `prompt` | CLI 的回答 |
+| [self_tools](../agent/self_tools/) | 改叫我的 agent 自己的工具箱（11-05 [feat-proto 件 1](../../thinking/2026-11/05/feat-proto/01-self-tools.md)，使用者「讓agent給自己改tool」）：`aos-agent ctl who` 查 daemon 表認出是哪隻，再 `aos-agent tools --target 那隻 add [--override]／rm／ls --json`——只改那隻的覆蓋層 `<stack>/tools.json`、定義不動，下一格 brain 重讀就看到。`path` 相對＝從 `$AOS_WS` 算、不能出工作區，絕對＝要在 `lib/` 底下，其他＝`PathBad`；aos-agent／aos-tools 的錯取最後一行代號回給腦（`PathMissing`、`ToolExists`、`ToolMissing`…，尾巴 `(from aos-tools)`）。只在 daemon 下跑的 agent 能用（沒表＝`DaemonMissing`／`InstanceMissing`）；不擋加什麼（10-15「先信任」）。PATH 要有 aos-agent | `op`（add／rm／ls）、`name`、`path`、`override` | add／rm 一句 `added X (…) to your tools; available from your next turn`；ls 一行 JSON（aos-tools ls --json） |
 
 **共用模組**（不是工具、沒有 `_entry`；工具用 realpath 找到 `lib/agent/` 再 import）：
 - [agent_tool.py](../agent/agent_tool.py)：「把一隻 agent 包成工具」的轉接，共用一支——每次呼叫開新小格 `$AOS_STACK/runs/NNN/`、題目寫進子 agent 的 `ws/new/`、`aos-exec --dotenv-override --ws` 跑、拿 `ws/out/` 的答案（錯 `AgentFailed`、`AnswerMissing`）。要把另一隻 agent 包成工具：資料夾裡放 `agent/`、`_entry` 叫 `agent_tool.run_agent`（pyfix 是範例）。
