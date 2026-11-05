@@ -324,19 +324,36 @@ void Server::mount(const std::string& id, const std::string& exec, Json proc) {
 }
 
 // 一封在飛的信現在怎樣（03 § 2、04 #13）：回 nullopt＝還在飛（佔一格）；回信＝收尾。
-//   表上有這列：running／stopping／sleeping＝在飛；stopped 而問腦 loop 跑完了（state.json done；wake 後 3 秒內跑完也會留 stopped）＝收、順手寄 procs_removed 拔列；
-//              stopped 但沒跑完（有人下了 stop）＝在飛（等）
+//   表上有這列：running／stopping／sleeping＝在飛；stopped 而問腦 loop 跑完了（state.json done）＝收、順手寄 procs_removed 拔列；
+//              stopped 而列上有 reason（11-05：問腦 loop 退非 0，daemon 不再下表、留 stopped＋reason）＝同樣收尾（照下面看 code）、寄 procs_removed；
+//              stopped、沒 reason、沒跑完（有人下了 stop）＝在飛（等）
 //   表上沒有：state.json 收尾了（done／stopped）＝看 code；state.json 在、沒收尾＝跑到一半死了→重掛；
 //            不在＝daemon 還沒套（暫停中、還沒輪到）＝在飛，或拒了（mailbox_warning 提到這封掛信）＝LaunchFailed
+//   重掛時列還在（出錯留的 stopped）：先寄 procs_removed、proc.json 記 remount，等 daemon 把列拔了下一次才寄掛信（同名 add 不會把 stopped 的拉起來；
+//   直接 procs_started 的話，daemon 還沒套信前下一次 collect 會把舊列的 reason 當成第二次失敗）
 std::optional<Json> Server::settle(const std::string& id, Json proc) {
     std::string dir = aos::join(mb_.cur(), id);
     std::string name = proc.value("name", "llm_" + id);
+    if (proc.value("remount", false)) {
+        if (table_.procs.contains(name)) {
+            return std::nullopt;   // 舊列還沒拔：等
+        }
+        proc.erase("remount");
+        try {
+            mount(id, proc.value("exec", cfg_.exec), proc);
+        } catch (const Error& e) {
+            return error_reply(code::LaunchFailed, "remount letter could not be sent: " + e.code + " " + e.msg);
+        }
+        return std::nullopt;
+    }
     std::optional<Json> st = aos::read_json(aos::join(dir, "state.json"));
     std::string phase = st && st->is_object() ? st->value("phase", "") : "";
     bool ended = phase == "done" || phase == "stopped";
-    if (table_.procs.contains(name)) {
+    bool held = table_.procs.contains(name);
+    if (held) {
         const Json& row = table_.procs[name];
-        if (!row.is_object() || row.value("phase", "") != "stopped" || phase != "done") {   // stopped 沒跑完＝有人下了 stop：等
+        bool failed = row.is_object() && row.value("reason", Json()).is_string();   // 11-05：出錯結束 daemon 留的 stopped
+        if (!row.is_object() || row.value("phase", "") != "stopped" || (phase != "done" && !failed)) {   // stopped 沒 reason 沒跑完＝有人下了 stop：等
             return std::nullopt;
         }
         Json rm = Json::object();
@@ -389,6 +406,14 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
     fs::remove(aos::join(dir, "state.json"), ec);
     fs::remove(aos::join(dir, "reply.json"), ec);
     proc["retries"] = retries + 1;
+    if (held) {   // 列還在（procs_removed 上面寄了）：等它拔了再掛（見函數頭）
+        proc["remount"] = true;
+        std::optional<std::string> err = aos::write_json(aos::join(dir, PROC_JSON), proc);
+        if (err) {
+            return error_reply(code::WriteFailed, *err);
+        }
+        return std::nullopt;
+    }
     try {
         mount(id, proc.value("exec", cfg_.exec), proc);
     } catch (const Error& e) {
