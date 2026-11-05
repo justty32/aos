@@ -23,16 +23,15 @@ proto8/thinking/2026-10/30/agent-lifecycle/README.md（實作第 7 步的補）�
   轉絕對；不是資料夾＝DaemonMissing，不往上層找）；值＝那個 daemon 的 $AOS_STACK 資料夾（它的窗都在這：
   procs_state.json 用預設名字；信箱與小格裡 loop.json 的名字照 daemon 在 procs_state.json 頂層回報的 procs_ctl_mailbox、procs_loop，
   11-04 起，沒回報＝預設 procs_ctl_mailbox、loop.json）。都沒有＝DaemonMissing；不是資料夾＝DaemonMissing。子 proc 照常繼承 AOS_DAEMON。
-  11-04 晚改名（使用者「AOS_DAEMON_STACK實在太醜，還是直接簡化成AOS_DAEMON就好了」；11-02 曾從 AOS_DAEMON／--daemon 改成 AOS_DAEMON_STACK／
-  --daemon-stack，這次倒回來）：舊的 AOS_DAEMON_STACK／--daemon-stack 不認、不留別名
-  （--daemon-stack＝FlagUnknown；只設了 AOS_DAEMON_STACK、cwd 也沒有 ./.stack＝DaemonMissing，訊息提示改設 AOS_DAEMON）。
+掛信寄哪（11-05 kernel-daemon 06 步 6、N-63 AOS_KERNEL）：add／rm／stop／start／sleep／wake 的 procs_* 信，有設 $AOS_KERNEL（非空）＝寄那裡
+  （「要掛 proc 往哪寄」的信箱：模式 1＝daemon 的 requests/、模式 2＝0 號 proc 的 requests/，由判官決定掛不掛、再轉寄進 daemon 的 ctl 信箱）；
+  沒設＝直接寄 daemon 的 ctl 信箱（daemon 就是 kernel，模式 0）。表照樣從 D 讀（ls、where、PhaseBad 檢查）。
+  AOS_KERNEL 沒有 new/＝MailboxMissing。aos-agent 經這支，跟著走。人殼裡設了別台的 AOS_KERNEL 再對另一台下指令＝寄錯台（自擔）。
 表上的路徑（11-05 portable-flow，使用者「可以用daemon作為相對路徑的一個基準點」）：procs_state 每列的 stack／ws／exec／def 之後 daemon 存成相對
-  daemon 的 stack（＝D；例 procs/bob、..、../../agents/bob/loop.json#/exec），這支讀表時一律 normpath(join(D, 值))（exec 的 # 片段照留；
-  已經是絕對的＝舊表，照用），對外（ls、ls --json、where）印的都是絕對。字串算、不 realpath（symlink 照字面）。
+  daemon 的 stack（＝D；例 procs/bob、..、../../agents/bob/loop.json#/exec），這支讀表時一律 normpath(join(D, 值))（exec 的 # 片段照留），對外（ls、ls --json、where）印的都是絕對。字串算、不 realpath（symlink 照字面）。
   每列另有 reason（null 或字串：daemon 把起不來的列留成 stopped 時寫的原因），ls 印在最後一欄（null＝-）。
   add 送給 daemon 的照舊是絕對路徑（「只改存的格式，不改給的格式」；相對化是 daemon 寫表那一刻的事）。
-  信箱＝<D>/<窗上的 procs_ctl_mailbox>/（11-04 起 daemon.json 沒寫也開、預設 procs_ctl_mailbox；寫 null＝沒開＝MailboxMissing；
-  11-03 前叫 loops_ctl_mailbox，舊名不認）；沒有 new/＝MailboxMissing（daemon 還沒起）。
+  信箱＝<D>/<窗上的 procs_ctl_mailbox>/（11-04 起 daemon.json 沒寫也開、預設 procs_ctl_mailbox；寫 null＝沒開＝MailboxMissing）；沒有 new/＝MailboxMissing（daemon 還沒起）。
 add 的自動識別（11-02 拿掉 --kind；11-04 改看入口最終指到的 JSON，使用者「拿掉，不應該看特定檔案。add這塊，就是看最終指向的json的內部結構。」，
   four-elements 08 步 7）：照 aos-exec 的找法（N-61／N-62 的子集）走到入口——資料夾＝XXX/$AOS_ENTRY（預設 _entry，沒有再找 .json）；
   可執行檔＝exec 型；JSON 陣列且 [0] 是 aos-loop＝[1] 是 loop 設定檔（從這份檔的資料夾算）；字串＝轉向再走；物件有 argv＝單子＝exec 型；
@@ -111,9 +110,7 @@ def daemon_dir(opts):
     if not d and os.path.isdir(".stack"):
         d = ".stack"
     if not d:
-        hint = ("；AOS_DAEMON_STACK 11-04 起改名，請改設 AOS_DAEMON（或 --daemon）"
-                if os.environ.get("AOS_DAEMON_STACK") else "")
-        raise Fail("DaemonMissing", "沒給 --daemon、沒設 AOS_DAEMON、cwd 也沒有 .stack 資料夾（要指到 daemon 的 $AOS_STACK 資料夾）" + hint)
+        raise Fail("DaemonMissing", "沒給 --daemon、沒設 AOS_DAEMON、cwd 也沒有 .stack 資料夾（要指到 daemon 的 $AOS_STACK 資料夾）")
     if not os.path.isdir(d):
         raise Fail("DaemonMissing", "daemon 的資料夾不在：%s" % d)
     return os.path.abspath(d)
@@ -268,12 +265,19 @@ def names_of(d):
 
 
 def send(d, body):
-    mb = names_of(d)["procs_ctl_mailbox"]
-    if not isinstance(mb, str) or not mb:
-        raise Fail("MailboxMissing", "%s 的 daemon 沒開信箱（procs_state.json 的 procs_ctl_mailbox 是 null；daemon.json 別把 procs_ctl_mailbox 寫成 null）" % d)
-    box = os.path.join(d, mb)
-    if not os.path.isdir(os.path.join(box, "new")):
-        raise Fail("MailboxMissing", "%s 不是信箱（daemon 還沒起，或沒開信箱）" % box)
+    """procs_* 信：有 $AOS_KERNEL＝寄那裡（11-05 kernel-daemon 步 6），沒有＝daemon 的 ctl 信箱。"""
+    k = os.environ.get("AOS_KERNEL", "")
+    if k:
+        box = os.path.abspath(k)
+        if not os.path.isdir(os.path.join(box, "new")):
+            raise Fail("MailboxMissing", "AOS_KERNEL 指的 %s 不是信箱（判官還沒起？）" % box)
+    else:
+        mb = names_of(d)["procs_ctl_mailbox"]
+        if not isinstance(mb, str) or not mb:
+            raise Fail("MailboxMissing", "%s 的 daemon 沒開信箱（procs_state.json 的 procs_ctl_mailbox 是 null；daemon.json 別把 procs_ctl_mailbox 寫成 null）" % d)
+        box = os.path.join(d, mb)
+        if not os.path.isdir(os.path.join(box, "new")):
+            raise Fail("MailboxMissing", "%s 不是信箱（daemon 還沒起，或沒開信箱）" % box)
     try:
         r = subprocess.run(["aos-post", "send", box], input=json.dumps(body, ensure_ascii=False), capture_output=True, text=True)
     except FileNotFoundError:
@@ -298,7 +302,7 @@ def table(d, v):
 
 
 def resolve(d, row):
-    """表上一列的 stack／ws／exec／def 拼回絕對（11-05：daemon 存相對 daemon stack；絕對的＝舊表照用）。exec 的 # 片段照留；
+    """表上一列的 stack／ws／exec／def 拼回絕對（11-05：daemon 存相對 daemon stack）。exec 的 # 片段照留；
     字串算、不 realpath。不是字串的（null、內嵌單子）不動。回新的一列。"""
     out = dict(row)
     for k in PATHS:
