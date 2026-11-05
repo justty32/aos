@@ -53,7 +53,7 @@ def tail_of(err):
     sys.stderr.buffer.write(err)
     sys.stderr.buffer.flush()
     t = err[-STDERR_TAIL:].decode("utf-8", "replace").strip()
-    return ("…" + t) if len(err) > STDERR_TAIL else t
+    return ("..." + t) if len(err) > STDERR_TAIL else t
 
 
 def die(code, reason):
@@ -68,32 +68,32 @@ def parse_args(argv):
         opts, files = aos_flags.parse(argv, {"--ws": "ws", "--stack": "stack", "--timeout-s": "timeout_s",
                                              "--logs-path": "log", "--overlay": "overlay"}, {"--enable-logs": "enable"})
     except aos_flags.Error as e:
-        die(e.code, "%s（usage: %s）" % (e, USAGE))
+        die(e.code, "%s (usage: %s)" % (e, USAGE))
     ws, stack = opts.get("ws", os.environ.get("AOS_WS")), opts.get("stack", os.environ.get("AOS_STACK"))
     enable, log, timeout_s = opts.get("enable", False), opts.get("log"), 60.0
     if "timeout_s" in opts:
         try:
             timeout_s = float(opts["timeout_s"])
         except ValueError:
-            die("ArgumentsBad", "--timeout-s 要是數字")
+            die("ArgumentsBad", "--timeout-s must be a number")
     if log is not None and not enable:
-        die("ArgumentsBad", "給了 --logs-path 卻沒給 --enable-logs（要記就兩個都給；預設不記）")
+        die("ArgumentsBad", "--logs-path given without --enable-logs (give both to log; nothing is logged by default)")
     if log == "":
-        die("ArgumentsBad", "--logs-path 要接檔名")
+        die("ArgumentsBad", "--logs-path needs a file name")
     if not files:
         files = [DEFAULT_REGISTRY]
     if "overlay" in opts:
         if not opts["overlay"]:
-            die("ArgumentsBad", "--overlay 要接檔名")
+            die("ArgumentsBad", "--overlay needs a file name")
         if len(files) != 1:
-            die("ArgumentsBad", "--overlay 只能配一份 REGISTRY（給了 %d 份）" % len(files))
+            die("ArgumentsBad", "--overlay goes with exactly one REGISTRY (got %d)" % len(files))
         OVERLAY = os.path.abspath(opts["overlay"])
     if not ws or not os.path.isdir(ws):
-        die("WsMissing", "沒給 --ws、也沒設 AOS_WS，或不是資料夾")
+        die("WsMissing", "no --ws and no AOS_WS, or it is not a folder")
     regs = []
     for f in files:
         if not os.path.isfile(f) and (OVERLAY is None or os.path.isdir(f)):   # 有覆蓋層時定義那份可以不在
-            die("ToolMissing", "%s 不是檔（給登記檔的路徑，例 tools.json；用 aos-tools --file 它 add 登記工具）" % f)
+            die("ToolMissing", "%s is not a file (give the path of a registry, e.g. tools.json; register tools with aos-tools --file it add)" % f)
         regs.append(os.path.abspath(f))
     ws = os.path.abspath(ws)
     stack = os.path.abspath(stack) if stack else os.path.join(ws, ".stack")
@@ -128,13 +128,13 @@ def load_tools(regs):
             r = subprocess.run(tools_argv(reg) + ["ls", "--json"], stdin=subprocess.DEVNULL,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)   # stderr 接住、照樣轉印（tail_of）
         except OSError as e:
-            raise ToolsBad("aos-tools 起不來：%s" % e)
+            raise ToolsBad("cannot run aos-tools: %s" % e)
         tail = tail_of(r.stderr)
         if r.returncode != 0:
-            raise ToolsBad("aos-tools ls %s 退 %d" % (reg, r.returncode), tail)
+            raise ToolsBad("aos-tools ls %s exited %d" % (reg, r.returncode), tail)
         for t in json.loads(r.stdout.decode("utf-8")):
             if t["name"] in tools:
-                raise ToolsBad("工具名重複：%s（%s 與 %s）" % (t["name"], tools[t["name"]]["reg"], reg))
+                raise ToolsBad("duplicate tool name: %s (%s and %s)" % (t["name"], tools[t["name"]]["reg"], reg))
             td, meta = t["tooldef"], t.get("metainfo") or {}
             spec = {"name": t["name"], "description": td.get("description", ""),
                     "inputSchema": td.get("parameters", {"type": "object", "properties": {}})}
@@ -191,19 +191,19 @@ def record(line):
 def tools_call(params, tools, ws, stack, timeout_s):
     name, args = params.get("name"), params.get("arguments") or {}
     if name not in tools:
-        return None, (-32602, "沒有這個工具：%s" % name)
+        return None, (-32602, "no such tool: %s" % name)
     code, out, tail, ms, limit = call(name, tools[name], args, ws, stack, timeout_s)
     record({"name": name, "arguments": args, "code": code, "elapsed_ms": ms,
                    "called_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
     if code is None:
-        text = "%s: CommandFailed %s 逾時（%g 秒），整群收掉了" % (NAME, name, limit)
+        text = "%s: CommandFailed %s timed out (%g s); its process group was killed" % (NAME, name, limit)
     elif code != 0 and not out.strip():
-        text = "%s: CommandFailed %s 退 %d、stdout 沒東西" % (NAME, name, code)
+        text = "%s: CommandFailed %s exited %d with empty stdout" % (NAME, name, code)
     else:
         text = out
     content = [{"type": "text", "text": text}]
     if code != 0 and tail:                      # 失敗時附 stderr 尾巴，外部 agent 才看得到原因（11-05，edge-basics 題 1）
-        content.append({"type": "text", "text": "stderr（最後 %d 位元組以內）：\n%s" % (STDERR_TAIL, tail)})
+        content.append({"type": "text", "text": "stderr (last %d bytes at most):\n%s" % (STDERR_TAIL, tail)})
     return {"content": content, "isError": code != 0}, None
 
 
@@ -224,9 +224,9 @@ def handle(msg, regs, ws, stack, timeout_s):
         elif method == "tools/call":
             result, err = tools_call(params, load_tools(regs), ws, stack, timeout_s)
         else:
-            err = (-32601, "不支援的方法：%s" % method)
+            err = (-32601, "method not supported: %s" % method)
     except ToolsBad as e:                       # 跑起來之後登記檔壞了：這一則回錯，不退
-        err = (-32603, "%s: ToolsBad %s" % (NAME, e) + ("\nstderr（最後一段）：\n%s" % e.tail if e.tail else ""))
+        err = (-32603, "%s: ToolsBad %s" % (NAME, e) + ("\nstderr (last part):\n%s" % e.tail if e.tail else ""))
     if err:
         return {"jsonrpc": "2.0", "id": mid, "error": {"code": err[0], "message": err[1]}}
     return {"jsonrpc": "2.0", "id": mid, "result": result}
@@ -244,9 +244,9 @@ def main():
         try:
             msg = json.loads(line)
             reply = handle(msg, regs, ws, stack, timeout_s) if isinstance(msg, dict) else \
-                {"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "要是一個物件"}}
+                {"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "must be a JSON object"}}
         except ValueError as e:
-            reply = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "不是 JSON：%s" % e}}
+            reply = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "not JSON: %s" % e}}
         if reply is not None:
             sys.stdout.write(json.dumps(reply, ensure_ascii=False) + "\n")
             sys.stdout.flush()
