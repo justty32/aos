@@ -35,6 +35,11 @@ void Daemon::read_procs_ctl() {
     if (!text) {
         if (err != ENOENT) {
             pctl_warning_ = std::string("procs_ctl: cannot read or not JSON: ") + std::strerror(err);
+        } else {
+            // 11-05 第二輪：檔不在＝什麼都沒宣告＝回初始值（N-06「沒寫的欄位＝回初始值，不是維持上一版」）。原本沿用最後一份好的：
+            // 刪掉 procs_ctl.json，它的 procs_added 照留、rm 的信照被蓋回去，前一份的 ctl_warning 也一直掛著
+            pctl_good_ = Json::object();
+            pctl_warning_ = nullptr;
         }
         return;
     }
