@@ -6,6 +6,8 @@
 # llm_fake 被訊號殺＝退 128＋N（stdio-unify R12，同 aos-tools）；其他碼原樣交回：退非 0 時 stderr 有「fake_slow: error:」那行＝我錯，沒有＝llm_fake 的碼（R8）。
 # --help 印英文用法；Ctrl-C 退 130。
 import json, os, signal, subprocess, sys, time
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "bin"))   # bin/aos_flags.py（錯誤行、提醒行的共用介面）
+import aos_flags  # noqa: E402
 
 HELP = """\
 usage: fake_slow < ARGUMENTS.json   (a demo endpoint function for the llm kernel)
@@ -23,10 +25,7 @@ FAKE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..
 
 
 def die(code, reason):
-    line = "%s: error: %s %s" % (NAME, code, reason)
-    print(line, file=sys.stderr)
-    print(line)
-    sys.exit(1)
+    aos_flags.die(NAME, code, reason, also_stdout=True)   # stdout 與 stderr 各一行
 
 
 data = sys.stdin.read()

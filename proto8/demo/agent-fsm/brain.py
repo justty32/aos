@@ -10,6 +10,8 @@
 #   沒給 --tools 時，$AOS_STACK/tools.json 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1（P-20）。--help 印英文用法；Ctrl-C 退 130。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
 import json, os, signal, subprocess, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "bin"))   # bin/aos_flags.py（錯誤行、提醒行的共用介面）
+import aos_flags  # noqa: E402
 
 HELP = """\
 usage: brain.py [--system FILE] [--tools FILE]   (a cell of demo/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
@@ -25,8 +27,7 @@ signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：�
 
 
 def die(code, reason):
-    print("agent-fsm: error: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
-    sys.exit(1)
+    aos_flags.die("agent-fsm", code, reason)
 
 
 def flags(argv, known):

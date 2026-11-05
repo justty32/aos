@@ -11,6 +11,8 @@
 #   沒給 --tools 時，$AOS_STACK/tools.json 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
 # 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
 import json, os, signal, subprocess, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "bin"))   # bin/aos_flags.py（錯誤行、提醒行的共用介面）
+import aos_flags  # noqa: E402
 
 HELP = """\
 usage: act.py [--tools FILE]   (a cell of demo/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
@@ -26,8 +28,7 @@ signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：�
 
 
 def die(code, reason):
-    print("agent-fsm: error: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
-    sys.exit(1)
+    aos_flags.die("agent-fsm", code, reason)
 
 
 def flags(argv, known):
@@ -105,14 +106,14 @@ for call in calls:
         continue
     if name not in registered:                   # 名字只認登記過的（也擋掉 ../ 之類）
         append({"role": "tool", "tool_call_id": cid,
-                "content": "act: error: ToolUnknown %s (available: %s)\n" % (name, ", ".join(registered))})
+                "content": aos_flags.error_line("act", "ToolUnknown", "%s (available: %s)" % (name, ", ".join(registered))) + "\n"})
         continue
     try:
         if not isinstance(arguments, str):
             raise ValueError("arguments is not a string")
         json.loads(arguments)
     except ValueError as e:
-        append({"role": "tool", "tool_call_id": cid, "content": "act: error: ArgumentsBad %s: %s\n" % (name, e)})
+        append({"role": "tool", "tool_call_id": cid, "content": aos_flags.error_line("act", "ArgumentsBad", "%s: %s" % (name, e)) + "\n"})
         continue
     env = dict(os.environ, AOS_STACK=os.path.join(stack, "tools", name) + "/")
     try:
@@ -122,7 +123,7 @@ for call in calls:
         die("ToolFailed", "aos-tools cannot start: %s" % e)
     content = r.stdout
     if r.returncode != 0:                        # 回給腦、不停；人在 stderr 看得到
-        print("agent-fsm: warning: tool %s exit code %d (passed back to the brain)" % (name, r.returncode), file=sys.stderr)   # 提醒行（R1）
+        aos_flags.warn("agent-fsm", "tool %s exit code %d (passed back to the brain)" % (name, r.returncode))   # 提醒行（R1）
         content += "%s(tool %s exit code %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
     append({"role": "tool", "tool_call_id": cid, "content": content})
 sys.exit(0)

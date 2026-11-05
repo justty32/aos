@@ -5,6 +5,8 @@
 # --prompt FILE＝開場白（相對路徑從範本資料夾＝AOS_CD 算）：history 空、queue 也沒好信時投一次進 queue 再收；沒給＝沒有開場白。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）。aos-post 的 stderr 不攔、原樣透出（stdio-unify R10）。--help 印英文用法；Ctrl-C 退 130。設計：proto8/thinking/2026-11/04/loop-fsm-agent/01-設計.md § 3。
 import json, os, re, signal, subprocess, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "bin"))   # bin/aos_flags.py（錯誤行、提醒行的共用介面）
+import aos_flags  # noqa: E402
 
 HELP = """\
 usage: idle.py [--prompt FILE]   (a cell of demo/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
@@ -23,8 +25,7 @@ ORDERED = re.compile(r"^[0-9]{12}\.")            # 有序信的名字：<12 位�
 
 
 def die(code, reason):
-    print("agent-fsm: error: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
-    sys.exit(1)
+    aos_flags.die("agent-fsm", code, reason)
 
 
 def flags(argv, known):

@@ -13,6 +13,8 @@
 #   SendFailed（aos-llm send 退非 0；它自己的 stderr 原樣在上面，例 LlmKernelMissing）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
 # --help 印英文用法；Ctrl-C 退 130。
 import json, os, signal, subprocess, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "bin"))   # bin/aos_flags.py（錯誤行、提醒行的共用介面）
+import aos_flags  # noqa: E402
 
 HELP = """\
 usage: wait.py   (a cell of demo/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
@@ -31,8 +33,7 @@ REBUILD = 11                                     # 腦設定跟 request.json 對
 
 
 def die(code, reason):
-    print("agent-fsm: error: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
-    sys.exit(1)
+    aos_flags.die("agent-fsm", code, reason)
 
 
 def write_atomic(path, text):
