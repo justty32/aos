@@ -22,7 +22,7 @@ namespace {
 namespace l = aos::lock;
 using Args = std::vector<std::string>;
 
-const char* USAGE = "aos-lock acquire|release|show [旗標...] 目標（說明見 README）";
+const char* USAGE = "aos-lock acquire|release|show [FLAGS...] TARGET (see README)";
 
 int fail(const std::string& code, const std::string& msg) {
     std::cout << std::flush;
@@ -33,7 +33,7 @@ int fail(const std::string& code, const std::string& msg) {
 aos::Cli parse(const Args& args, const std::map<std::string, std::string>& flags) {
     aos::Cli cli = aos::parse_cli(args, flags);
     if (cli.rest.size() != 1) {
-        throw aos::Error{l::code::ArgumentsBad, std::string("要剛好一個目標；用法：") + USAGE};
+        throw aos::Error{l::code::ArgumentsBad, std::string("need exactly one TARGET; usage: ") + USAGE};
     }
     return cli;
 }
@@ -42,7 +42,7 @@ aos::Cli parse(const Args& args, const std::map<std::string, std::string>& flags
 long long count_of(const aos::Cli& cli, const std::string& name, const std::string& flag) {
     const std::string& v = cli.opts.at(name);
     if (v.empty() || v.find_first_not_of("0123456789") != std::string::npos || v.size() > 15) {
-        throw aos::Error{l::code::ArgumentsBad, flag + " 要是非負整數：" + v};
+        throw aos::Error{l::code::ArgumentsBad, flag + " must be a non-negative integer: " + v};
     }
     return std::stoll(v);
 }
@@ -53,7 +53,7 @@ int cmd_acquire(const Args& args) {
     if (cli.opts.count("pid")) {
         pid = (pid_t)count_of(cli, "pid", "--pid");
         if (pid <= 0 || !aos::proc_started_at_ticks(pid)) {
-            throw aos::Error{l::code::ArgumentsBad, "--pid 指的行程不在：" + cli.opts["pid"]};
+            throw aos::Error{l::code::ArgumentsBad, "--pid: no such process: " + cli.opts["pid"]};
         }
     }
     l::Holder h = l::holder_of(pid);
@@ -74,7 +74,7 @@ int cmd_release(const Args& args) {
     aos::Cli cli = parse(args, {});
     std::string dir = l::lock_dir_of(cli.rest[0]);
     if (!l::release(dir)) {
-        return fail(l::code::LockMissing, "鎖不在：" + dir);
+        return fail(l::code::LockMissing, "lock not held: " + dir);
     }
     return 0;
 }
@@ -87,7 +87,7 @@ int cmd_show(const Args& args) {
         return 10;
     }
     if (!s.holder) {
-        return fail(l::code::HolderBad, "名牌不在或讀不懂：" + dir + "/holder.json");
+        return fail(l::code::HolderBad, "holder file missing or unreadable: " + dir + "/holder.json");
     }
     std::cout << aos::dumps(*s.holder) << std::endl;
     return 0;
@@ -101,11 +101,11 @@ int main(int argc, char** argv) {
     };
     try {
         if (argc < 2) {
-            throw aos::Error{l::code::ArgumentsBad, std::string("用法：") + USAGE};
+            throw aos::Error{l::code::ArgumentsBad, std::string("usage: ") + USAGE};
         }
         auto it = table.find(argv[1]);
         if (it == table.end()) {
-            throw aos::Error{l::code::CommandUnknown, std::string("不認得的子命令 ") + argv[1] + "；用法：" + USAGE};
+            throw aos::Error{l::code::CommandUnknown, std::string("unknown subcommand ") + argv[1] + "; usage: " + USAGE};
         }
         return it->second(Args(argv + 2, argv + argc));
     } catch (const aos::Error& e) {

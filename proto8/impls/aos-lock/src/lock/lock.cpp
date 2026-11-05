@@ -42,7 +42,7 @@ static bool write_holder(const std::string& lock_dir, const Json& doc, std::stri
     std::string text = doc.dump(2, ' ', false, Json::error_handler_t::replace);
     int fd = ::open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);
     if (fd < 0) {
-        why = "開不了 " + tmp + "：" + std::strerror(errno);
+        why = "cannot open " + tmp + ": " + std::strerror(errno);
         return false;
     }
     size_t done = 0;
@@ -52,7 +52,7 @@ static bool write_holder(const std::string& lock_dir, const Json& doc, std::stri
             continue;
         }
         if (n <= 0) {
-            why = "寫不了 " + tmp + "：" + std::strerror(errno);
+            why = "cannot write " + tmp + ": " + std::strerror(errno);
             ::close(fd);
             ::unlink(tmp.c_str());
             return false;
@@ -61,7 +61,7 @@ static bool write_holder(const std::string& lock_dir, const Json& doc, std::stri
     }
     ::close(fd);
     if (std::rename(tmp.c_str(), path.c_str()) != 0) {
-        why = "改名不了 " + tmp + "：" + std::strerror(errno);
+        why = "cannot rename " + tmp + ": " + std::strerror(errno);
         ::unlink(tmp.c_str());
         return false;
     }
@@ -78,7 +78,7 @@ static std::string move_away(const std::string& lock_dir) {
     if (e == ENOENT) {
         return "";
     }
-    throw Error{code::WriteFailed, "改名不了 " + lock_dir + "：" + std::strerror(e)};
+    throw Error{code::WriteFailed, "cannot rename " + lock_dir + ": " + std::strerror(e)};
 }
 
 // 替死掉的持有者收。好幾個人同時判到同一把死鎖時，直接改名會出事：A 收完、B 剛 mkdir 到新的，C 才改名——
@@ -122,7 +122,7 @@ bool try_acquire(const std::string& lock_dir, const Holder& h) {
         }
         int e = errno;
         if (e != EEXIST) {
-            throw Error{code::MkdirFailed, "建不了 " + lock_dir + "：" + std::strerror(e)};
+            throw Error{code::MkdirFailed, "cannot create " + lock_dir + ": " + std::strerror(e)};
         }
         Seen s = look(lock_dir);
         if (!s.held) {
