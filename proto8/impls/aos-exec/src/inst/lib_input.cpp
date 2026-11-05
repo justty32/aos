@@ -48,7 +48,7 @@ static void mkdir_p(const std::string& dir, const char* key) {
     std::error_code ec;
     std::filesystem::create_directories(dir, ec);
     if (ec || !std::filesystem::is_directory(dir)) {
-        throw Error{code::MkdirFailed, std::string("單子的 ") + key + " 建不了 " + dir + "（" + ec.message() + "）"};
+        throw Error{code::MkdirFailed, std::string("inst ") + key + ": cannot create " + dir + " (" + ec.message() + ")"};
     }
 }
 

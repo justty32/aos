@@ -29,7 +29,7 @@ std::string check_ws(const std::string& ws_flag) {
     }
     struct stat st;
     if (stat(ws.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)) {
-        throw Error{code::WsMissing, "工作區不存在：" + ws};
+        throw Error{code::WsMissing, "workspace does not exist: " + ws};
     }
     return abspath(ws);
 }
@@ -51,7 +51,7 @@ std::string setup_stack(const std::string& ws, const std::string& stack_flag) {
     std::error_code ec;
     fs::create_directories(stack, ec);
     if (ec) {
-        throw Error{code::MkdirFailed, "建不了 AOS_STACK：" + stack + "（" + ec.message() + "）"};
+        throw Error{code::MkdirFailed, "cannot create AOS_STACK: " + stack + " (" + ec.message() + ")"};
     }
     if (!top.empty() && made_stack.empty()) {
         made_stack = abs;

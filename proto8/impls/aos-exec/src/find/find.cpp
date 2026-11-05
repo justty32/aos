@@ -77,19 +77,19 @@ struct Located {
 
 Located locate(const std::string& spec, const std::string& base) {
     if (spec.empty()) {   // 字串轉向寫 ""：不當成「寫著它的那個資料夾」
-        throw Error{code::EntryBad, "入口壞：轉向的路徑是空字串"};
+        throw Error{code::EntryBad, "bad entry: redirect path is an empty string"};
     }
     Spec s;
     try {
         s = split_hash(spec);
     } catch (const Error&) {
-        throw Error{code::EntryBad, "入口壞：" + spec + " 的 # 後面要接 /"};
+        throw Error{code::EntryBad, "bad entry: " + spec + ": # must be followed by /"};
     }
     std::string p = join(base, s.path);
     Located out;
     if (is_dir(p)) {
         if (!s.pointer.empty()) {
-            throw Error{code::EntryBad, "入口壞：資料夾不能帶 #/：" + spec};
+            throw Error{code::EntryBad, "bad entry: a directory cannot take #/: " + spec};
         }
         out.dir = real(p);
         return out;
@@ -100,7 +100,7 @@ Located locate(const std::string& spec, const std::string& base) {
     } else if (!lexists(p) && !has_extension(s.path) && is_file(p + ".json")) {
         f = p + ".json";
     } else {
-        throw Error{code::EntryMissing, "入口不存在：" + spec};
+        throw Error{code::EntryMissing, "entry not found: " + spec};
     }
     out.file = real(f);
     out.pointer = s.pointer;
@@ -114,7 +114,7 @@ std::set<std::string> enter(const std::string& dir, const std::string& cf, const
     setenv("AOS_CD", dir.c_str(), 1);
     setenv("AOS_CO", "", 1);
     if (chdir(dir.c_str()) != 0) {
-        throw Error{code::Internal, "cd 不進 " + dir + "：" + std::strerror(errno)};
+        throw Error{code::Internal, "cannot cd into " + dir + ": " + std::strerror(errno)};
     }
     std::set<std::string> names;
     if (entry_name() != ".env") {
@@ -126,7 +126,7 @@ std::set<std::string> enter(const std::string& dir, const std::string& cf, const
 
 void mark(std::set<std::string>& visited, const std::string& dir) {
     if (visited.count(dir) > 0) {
-        throw Error{code::EntryBad, "入口壞：資料夾繞圈：" + dir};
+        throw Error{code::EntryBad, "bad entry: directory loop: " + dir};
     }
     visited.insert(dir);
 }
@@ -170,7 +170,7 @@ Found hop(const std::string& spec, const std::string& base, const std::string& w
             for (size_t k = 0; k + 1 < parts.size(); ++k) {   // 多段的 $AOS_ENTRY（例 sub/run）：沿路的資料夾都走進去（由外到內）
                 std::string nxt = real(join(d, parts[k]));
                 if (nxt.empty() || !is_dir(nxt)) {
-                    throw Error{code::EntryMissing, "入口不存在：" + join(d, name) + "（" + join(d, parts[k]) + " 不是資料夾）"};
+                    throw Error{code::EntryMissing, "entry not found: " + join(d, name) + " (" + join(d, parts[k]) + " is not a directory)"};
                 }
                 if (nxt != d) {   // . 不算走進新資料夾；走回走過的（例 sub/../sub/run）＝繞圈
                     mark(visited, nxt);
@@ -191,7 +191,7 @@ Found hop(const std::string& spec, const std::string& base, const std::string& w
             }
             if (!is_file(last)) {
                 throw Error{code::EntryMissing,
-                            "入口不存在：" + join(d, parts.back()) + "（也沒有 " + parts.back() + ".json）"};
+                            "entry not found: " + join(d, parts.back()) + " (no " + parts.back() + ".json either)"};
             }
             f = real(last);
         }
@@ -201,7 +201,7 @@ Found hop(const std::string& spec, const std::string& base, const std::string& w
         std::string fd = dirname(f);
         if (fd != d) {   // 入口檔是指到別處的捷徑：cd 到實際的資料夾，那邊的 .env 不讀
             if (chdir(fd.c_str()) != 0) {
-                throw Error{code::Internal, "cd 不進 " + fd + "：" + std::strerror(errno)};
+                throw Error{code::Internal, "cannot cd into " + fd + ": " + std::strerror(errno)};
             }
             if (names.count("AOS_CD") == 0) {
                 setenv("AOS_CD", fd.c_str(), 1);

@@ -29,7 +29,7 @@ static std::vector<char*> c_argv(const std::vector<std::string>& argv) {
 }
 
 static Error launch_failed(const std::string& what, int err) {
-    std::string msg = "起不來：" + what + "（" + std::strerror(err) + "）";
+    std::string msg = "cannot start: " + what + " (" + std::strerror(err) + ")";
     return Error{code::LaunchFailed, msg};
 }
 
@@ -63,12 +63,12 @@ static std::vector<std::string> argv_of(const Json& doc, const std::string& dir)
     try {
         v = aos::resolve(doc, dir);
     } catch (const Error& e) {
-        throw Error{code::EntryBad, "入口壞：argv 陣列的指示詞解不開：" + e.msg};
+        throw Error{code::EntryBad, "bad entry: cannot resolve directives in argv array: " + e.msg};
     }
     std::vector<std::string> out;
     for (const Json& a : v) {
         if (!a.is_string()) {
-            throw Error{code::EntryBad, "入口壞：argv 陣列解完要全是字串：" + aos::dumps(v)};
+            throw Error{code::EntryBad, "bad entry: resolved argv array must be all strings: " + aos::dumps(v)};
         }
         out.push_back(a.get<std::string>());
     }
@@ -81,7 +81,7 @@ int launch(const Found& found, const std::vector<std::string>& args) {
         try {
             return run_inst(found.doc, dir, args).code;
         } catch (const Error& e) {
-            throw Error{e.code, "單子跑不起來：" + e.msg};   // 代號照舊分種類
+            throw Error{e.code, "inst cannot run: " + e.msg};   // 代號照舊分種類
         }
     }
     std::vector<std::string> argv;

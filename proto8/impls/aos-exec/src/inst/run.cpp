@@ -77,39 +77,39 @@ std::string open_failed_why(const LibInput& lib) {
             std::string up = dirname(p);
             struct stat st{};
             if (stat(up.c_str(), &st) != 0 || !S_ISDIR(st.st_mode)) {
-                std::string hint = std::string("（要自動建就加 ") + names[i] + "_mkdir: true）";
-                return std::string(names[i]) + " " + p + " 開不了：上層資料夾不在" + hint;
+                std::string hint = std::string(" (add ") + names[i] + "_mkdir: true to create it)";
+                return std::string(names[i]) + " " + p + ": cannot open: parent directory does not exist" + hint;
             }
             if (access(up.c_str(), W_OK | X_OK) != 0) {
-                return std::string(names[i]) + " " + p + " 開不了：上層資料夾不能寫（" + std::strerror(errno) + "）";
+                return std::string(names[i]) + " " + p + ": cannot open: parent directory is not writable (" + std::strerror(errno) + ")";
             }
             continue;
         }
         if (fd < 0) {
-            return std::string(names[i]) + " " + p + " 開不了（" + std::strerror(errno) + "）";
+            return std::string(names[i]) + " " + p + ": cannot open (" + std::strerror(errno) + ")";
         }
         close(fd);
     }
-    return "串流開不了（stdin／stdout／stderr 其中一個）";
+    return "cannot open a stream (one of stdin/stdout/stderr)";
 }
 
 // libaos 起不來的錯 → LaunchFailed（訊息開頭是 libaos 的名字，例「CommandMissing 找不到要跑的程式 x」）。
 Error start_error(int rc, const LibInput& lib) {
     std::string name = aos_inst_strerror(rc);
     std::string prog = lib.argv[0];
-    std::string why = "libaos 回報（" + prog + "）";
+    std::string why = "reported by libaos (" + prog + ")";
     if (rc == AOS_INST_ERR_CWD_MISSING) {
-        why = "cwd " + lib.cwd + " 不是資料夾或進不去";
+        why = "cwd " + lib.cwd + " is not a directory or cannot be entered";
     } else if (rc == AOS_INST_ERR_PATH_CONFLICT) {
-        why = "stderr_merge 是 true 又寫了 stderr（二選一）";
+        why = "stderr_merge is true and stderr is also set (pick one)";
     } else if (rc == AOS_INST_ERR_OPEN_FAILED) {
         why = open_failed_why(lib);
     } else if (rc == AOS_INST_ERR_COMMAND_MISSING) {
-        why = "找不到要跑的程式 " + prog;
+        why = "program not found: " + prog;
     } else if (rc == AOS_INST_ERR_COMMAND_BAD) {
-        why = prog + " 不能執行";
+        why = prog + " is not executable";
     } else if (rc == AOS_INST_ERR_LAUNCH_FAILED) {
-        why = "起不了 " + prog;
+        why = "cannot start " + prog;
     }
     return Error{code::LaunchFailed, name + " " + why};
 }
@@ -138,7 +138,7 @@ Result run_inst(const Json& doc, const std::string& base_dir, const std::vector<
     Fd sig_fd(open_signal_fd());
     Fd done_fd(eventfd(0, EFD_CLOEXEC));
     if (sig_fd.fd < 0 || done_fd.fd < 0) {
-        throw Error{code::Internal, std::string("準備轉送訊號失敗：") + std::strerror(errno)};
+        throw Error{code::Internal, std::string("cannot set up signal forwarding: ") + std::strerror(errno)};
     }
 
     // 4. 起
@@ -162,8 +162,7 @@ Result run_inst(const Json& doc, const std::string& base_dir, const std::vector<
 
     // 6. 結果
     if (rc != AOS_INST_OK) {
-        throw Error{code::Internal, std::string(aos_inst_strerror(rc)) + " 收不到子程式 " + std::to_string(pid) +
-                                        " 的結果"};
+        throw Error{code::Internal, std::string(aos_inst_strerror(rc)) + " cannot get the result of child " + std::to_string(pid)};
     }
     Result r;
     r.code = out.code;

@@ -29,14 +29,14 @@ static int run(const std::vector<std::string>& argv) {
             // --stack S（11-03）：stack 放哪，同 --ws（"-"／空＝沿用外面的）
             cli = parse_cli(argv, {{"--ws", "ws"}, {"--stack", "stack"}}, {{"--dotenv-override", "dotenv_override"}});
         } catch (const Error& e) {
-            throw Error{e.code, std::string("usage: ") + USAGE + "（" + e.msg + "）"};   // FlagUnknown／ArgumentsBad
+            throw Error{e.code, std::string("usage: ") + USAGE + " (" + e.msg + ")"};   // FlagUnknown／ArgumentsBad
         }
         if (cli.rest.empty()) {
-            throw Error{code::ArgumentsBad, std::string("usage: ") + USAGE + "（沒有 XXX）"};
+            throw Error{code::ArgumentsBad, std::string("usage: ") + USAGE + " (missing XXX)"};
         }
         std::string spec = cli.rest[0];
         if (spec.empty()) {   // "" 不當成 .：`aos-exec "$X"` 的 X 沒設時不該默默跑 cwd 的入口
-            throw Error{code::ArgumentsBad, std::string("usage: ") + USAGE + "（XXX 是空字串）"};
+            throw Error{code::ArgumentsBad, std::string("usage: ") + USAGE + " (XXX is an empty string)"};
         }
         std::vector<std::string> args(cli.rest.begin() + 1, cli.rest.end());
         std::string ws = "-";

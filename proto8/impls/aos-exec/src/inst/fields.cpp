@@ -14,7 +14,7 @@ static std::string shown(const Json& v) {
 }
 
 [[noreturn]] static void bad(const std::string& key, const std::string& want, const Json& v) {
-    throw Error{code::EntryBad, "單子的 " + key + " 要是" + want + "，不是 " + shown(v)};
+    throw Error{code::EntryBad, "inst " + key + " must be " + want + ", not " + shown(v)};
 }
 
 // 整數（不含 bool、小數）且 >= min。
@@ -31,17 +31,17 @@ static bool is_int_at_least(const Json& v, unsigned long long min) {
 
 Inst parse_inst(const Json& doc, const std::vector<std::string>& args) {
     if (!doc.is_object()) {
-        throw Error{code::EntryBad, "單子要是 JSON 物件，不是 " + shown(doc)};
+        throw Error{code::EntryBad, "inst must be a JSON object, not " + shown(doc)};
     }
     Inst inst;
 
     Json argv = doc.value("argv", Json());
     if (!argv.is_array() || argv.empty()) {
-        bad("argv", "非空的字串陣列", argv);
+        bad("argv", "a non-empty array of strings", argv);
     }
     for (const Json& a : argv) {
         if (!a.is_string()) {
-            bad("argv", "非空的字串陣列", argv);
+            bad("argv", "a non-empty array of strings", argv);
         }
         inst.argv.push_back(a.get<std::string>());
     }
@@ -50,11 +50,11 @@ Inst parse_inst(const Json& doc, const std::vector<std::string>& args) {
     if (doc.contains("envs")) {
         const Json& envs = doc["envs"];
         if (!envs.is_object()) {
-            bad("envs", "{名字: 字串}", envs);
+            bad("envs", "{name: string}", envs);
         }
         for (auto& [k, v] : envs.items()) {
             if (!v.is_string()) {
-                bad("envs", "{名字: 字串}", envs);
+                bad("envs", "{name: string}", envs);
             }
             inst.envs[k] = v.get<std::string>();
         }
@@ -67,7 +67,7 @@ Inst parse_inst(const Json& doc, const std::vector<std::string>& args) {
             continue;
         }
         if (!v.is_string()) {
-            bad(path_keys[i], "字串路徑", v);
+            bad(path_keys[i], "a path string", v);
         }
         if (i == 0) {
             inst.cwd = v.get<std::string>();
@@ -80,7 +80,7 @@ Inst parse_inst(const Json& doc, const std::vector<std::string>& args) {
     for (int i = 1; i < 3; ++i) {
         Json v = doc.value(append_keys[i], Json(false));
         if (!v.is_boolean()) {
-            bad(append_keys[i], " true／false", v);
+            bad(append_keys[i], "true or false", v);
         }
         inst.appends[i] = v.get<bool>();
     }
@@ -88,14 +88,14 @@ Inst parse_inst(const Json& doc, const std::vector<std::string>& args) {
     Json t = doc.value("timeout_ms", Json());
     if (!t.is_null()) {
         if (!is_int_at_least(t, 1)) {
-            bad("timeout_ms", "正整數或 null", t);
+            bad("timeout_ms", "a positive integer or null", t);
         }
         inst.timeout_ms = t.get<unsigned long long>();
     }
     if (doc.contains("grace_ms")) {
         const Json& g = doc["grace_ms"];
         if (!is_int_at_least(g, 0)) {
-            bad("grace_ms", "非負整數", g);
+            bad("grace_ms", "a non-negative integer", g);
         }
         inst.grace_ms = g.get<unsigned long long>();
     }
@@ -110,7 +110,7 @@ Inst parse_inst(const Json& doc, const std::vector<std::string>& args) {
     for (auto& f : flags) {
         Json v = doc.value(f.key, Json(false));
         if (!v.is_boolean()) {
-            bad(f.key, " true／false", v);
+            bad(f.key, "true or false", v);
         }
         *f.out = v.get<bool>();
     }

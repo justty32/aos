@@ -37,7 +37,7 @@ static Json read_doc(const std::string& file) {
     int err = 0;
     std::optional<std::string> text = read_file(file, err);
     if (!text) {
-        throw Error{code::EntryBad, "入口讀不到：" + file + "（" + std::strerror(err) + "）"};
+        throw Error{code::EntryBad, "cannot read entry: " + file + " (" + std::strerror(err) + ")"};
     }
     if (text->starts_with("#!")) {
         size_t nl = text->find('\n');
@@ -49,7 +49,7 @@ static Json read_doc(const std::string& file) {
     }
     Json doc = Json::parse(*text, nullptr, false);
     if (doc.is_discarded()) {
-        throw Error{code::EntryBad, "入口壞：沒有 +x、也不是 JSON：" + file};
+        throw Error{code::EntryBad, "bad entry: not executable (+x) and not JSON: " + file};
     }
     return doc;
 }
@@ -62,7 +62,7 @@ Classified classify(const std::string& file, const std::string& pointer, Chain& 
     Classified out;
     if (access(file.c_str(), X_OK) == 0) {
         if (!pointer.empty()) {
-            throw Error{code::EntryBad, "入口壞：可執行檔不能帶 #/：" + spec};
+            throw Error{code::EntryBad, "bad entry: an executable cannot take #/: " + spec};
         }
         out.kind = Kind::Executable;
         return out;
@@ -74,7 +74,7 @@ Classified classify(const std::string& file, const std::string& pointer, Chain& 
             for (const std::string& seen : chain.keys) {
                 loop += seen + " → ";
             }
-            throw Error{code::EntryBad, "入口壞：字串轉向繞圈：" + loop + key};
+            throw Error{code::EntryBad, "bad entry: redirect loop: " + loop + key};
         }
     }
     chain.keys.push_back(key);
@@ -84,7 +84,7 @@ Classified classify(const std::string& file, const std::string& pointer, Chain& 
         try {
             doc = doc.at(Json::json_pointer(pointer));
         } catch (const nlohmann::json::exception&) {
-            throw Error{code::EntryMissing, "入口不存在：" + file + "#" + pointer + " 指不到"};
+            throw Error{code::EntryMissing, "entry not found: " + file + "#" + pointer + " (pointer not found)"};
         }
     }
     out.at = pointer;
@@ -100,7 +100,7 @@ Classified classify(const std::string& file, const std::string& pointer, Chain& 
         }
         std::string name = entry_name();
         if (!doc.contains(name)) {
-            throw Error{code::EntryBad, "入口壞：" + here + " 不是單子、也沒有 " + name};
+            throw Error{code::EntryBad, "bad entry: " + here + " is not an inst and has no " + name};
         }
         Json next = doc[name];
         doc = next;
@@ -117,7 +117,7 @@ Classified classify(const std::string& file, const std::string& pointer, Chain& 
         if (!out.at.empty()) {
             here += "#" + out.at;
         }
-        throw Error{code::EntryBad, "入口壞：" + here + " 不是單子、argv 陣列或路徑"};
+        throw Error{code::EntryBad, "bad entry: " + here + " is not an inst, an argv array or a path"};
     }
     out.doc = doc;
     return out;

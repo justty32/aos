@@ -49,11 +49,11 @@ bool good_name(const std::string& s) {
 bool set_env(const std::string& name, const std::string& val, const std::string& bad_prefix,
              const std::set<std::string>& keep, bool expand) {
     if (!good_name(name)) {
-        std::string why = "名字要是英數字和底線、不以數字開頭";
+        std::string why = "name must be letters, digits and underscores, not starting with a digit";
         if (name.starts_with("\xEF\xBB\xBF")) {
-            why += "；檔頭有 BOM（UTF-8 簽章），存成不帶 BOM 的 UTF-8";   // Windows 記事本常加，肉眼看不到
+            why += "; file starts with a BOM (UTF-8 signature), save as UTF-8 without BOM";   // Windows 記事本常加，肉眼看不到
         }
-        throw Error{code::DotenvBad, bad_prefix + "（" + why + "）"};
+        throw Error{code::DotenvBad, bad_prefix + " (" + why + ")"};
     }
     std::string out;
     size_t i = 0;
@@ -72,19 +72,19 @@ bool set_env(const std::string& name, const std::string& val, const std::string&
             end += 1;
         }
         if (end == k || !name_start(val[k]) || end >= val.size() || val[end] != '}') {
-            throw Error{code::DotenvBad, bad_prefix + "（${ 後面要接 名字}）"};
+            throw Error{code::DotenvBad, bad_prefix + " (${ must be followed by NAME})"};
         }
         std::string ref = val.substr(k, end - k);
         const char* v = std::getenv(ref.c_str());
         if (v == nullptr) {
-            throw Error{code::DotenvBad, bad_prefix + "（${…} 引用的環境變數沒設）"};
+            throw Error{code::DotenvBad, bad_prefix + " (variable referenced by ${...} is not set)"};
         }
         out += val.substr(i, j - i);
         out += v;
         i = end + 1;
     }
     if (out.find('\0') != std::string::npos) {
-        throw Error{code::DotenvBad, bad_prefix + "（值不能有 NUL）"};
+        throw Error{code::DotenvBad, bad_prefix + " (value cannot contain NUL)"};
     }
     if (keep.count(name) > 0) {
         return false;
@@ -129,24 +129,24 @@ std::string env_value(const std::string& rest, const std::string& bad, bool& exp
         char q = v[0];
         size_t j = v.find(q, 1);
         if (j == std::string::npos) {
-            throw Error{code::DotenvBad, bad + "（引號沒收尾（不支援多行））"};
+            throw Error{code::DotenvBad, bad + " (unterminated quote; multi-line values are not supported)"};
         }
         std::string inner = v.substr(1, j - 1);
         std::string tail = aos::lstrip(v.substr(j + 1));
         if (inner.find('\\') != std::string::npos) {
-            throw Error{code::DotenvBad, bad + "（引號裡不能有 \\（不支援跳脫））"};
+            throw Error{code::DotenvBad, bad + " (no \\ inside quotes; escapes are not supported)"};
         }
         if (q == '\'' && inner.find("${") != std::string::npos) {
-            throw Error{code::DotenvBad, bad + "（單引號裡不能有 ${）"};
+            throw Error{code::DotenvBad, bad + " (no ${ inside single quotes)"};
         }
         if (!tail.empty() && tail[0] != '#') {
-            throw Error{code::DotenvBad, bad + "（引號後面只能接空白或 # 註解）"};
+            throw Error{code::DotenvBad, bad + " (only spaces or a # comment may follow the closing quote)"};
         }
         expand = q == '"';
         return inner;
     }
     if (!v.empty() && v[0] == '#' && v != rest) {
-        throw Error{code::DotenvBad, bad + "（= 後面空白再接 #（要空值寫 X=，要 # 開頭的值加引號））"};
+        throw Error{code::DotenvBad, bad + " (space then # after =; for an empty value write X=, quote a value starting with #)"};
     }
     size_t i = 0;
     while (i < v.size()) {
@@ -176,10 +176,10 @@ std::set<std::string> load_env(const std::string& dir, bool override) {
     int err = 0;
     std::optional<std::string> text = read_file(p, err);
     if (!text) {
-        throw Error{code::DotenvBad, ".env 讀不到：" + p + "（" + std::strerror(err) + "）"};
+        throw Error{code::DotenvBad, "cannot read .env: " + p + " (" + std::strerror(err) + ")"};
     }
     if (!aos::is_utf8(*text)) {
-        throw Error{code::DotenvBad, ".env 壞：" + p + " 不是 UTF-8"};
+        throw Error{code::DotenvBad, "bad .env: " + p + " is not UTF-8"};
     }
     std::set<std::string> keep;
     if (!override) {
@@ -207,11 +207,11 @@ std::set<std::string> load_env(const std::string& dir, bool override) {
         if (line.empty() || line[0] == '#') {
             continue;
         }
-        std::string bad = ".env 壞：" + p + " 第 " + std::to_string(n) + " 行";
+        std::string bad = "bad .env: " + p + " line " + std::to_string(n);
         line = line.substr(export_prefix(line));
         size_t eq = line.find('=');
         if (eq == std::string::npos) {
-            throw Error{code::DotenvBad, bad + "（沒有 =）"};
+            throw Error{code::DotenvBad, bad + " (no =)"};
         }
         std::string name = line.substr(0, eq);
         size_t name_end = name.find_last_not_of(" \t");   // 名字後面的空白只認空格／tab（同 Python 的 rstrip(" \t")）
@@ -231,12 +231,12 @@ std::set<std::string> load_env(const std::string& dir, bool override) {
 
 std::set<std::string> json_env(const Json& env, const std::string& where, const std::string& ref_base,
                                bool override) {
-    std::string bad = ".env 壞：" + where + " 的 .env";
+    std::string bad = "bad .env: .env in " + where;
     Json v;
     try {
         v = aos::resolve(env, ref_base);
     } catch (const Error&) {
-        throw Error{code::DotenvBad, bad + "（指示詞解不開）"};
+        throw Error{code::DotenvBad, bad + " (cannot resolve directives)"};
     }
     std::set<std::string> names;
     if (!v.is_object()) {
