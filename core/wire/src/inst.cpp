@@ -28,7 +28,7 @@ std::optional<Inst> parse_inst(const std::string &json_text,
         return std::nullopt;
     }
     if (inst.argv.empty()) {
-        error = "欄位 'argv' 不可為空陣列";
+        error = "field 'argv' must not be an empty array";
         return std::nullopt;
     }
     return inst;

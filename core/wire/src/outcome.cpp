@@ -26,7 +26,7 @@ std::optional<Outcome> parse_outcome(const std::string &json_text,
         return std::nullopt;
     }
     if (outcome.exit.has_value() == outcome.signal.has_value()) {
-        error = "欄位 'exit' 與 'signal' 必須恰有一個非 null";
+        error = "exactly one of fields 'exit' and 'signal' must be non-null";
         return std::nullopt;
     }
     return outcome;

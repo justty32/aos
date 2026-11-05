@@ -13,7 +13,7 @@ namespace {
 bool parse_running(const detail::Json &value, std::size_t index,
                    RunningEntry &entry, std::string &error) {
     if (!value.is_object()) {
-        error = "欄位 'running[" + std::to_string(index) + "]' 必須是物件";
+        error = "field 'running[" + std::to_string(index) + "]' must be an object";
         return false;
     }
     if (!detail::take_string(value, "id", entry.id, error) ||
@@ -59,7 +59,7 @@ std::optional<State> parse_state(const std::string &json_text,
 
     const auto running = document.find("running");
     if (running == document.end() || !running->is_array()) {
-        error = "欄位 'running' 必須是陣列";
+        error = "field 'running' must be an array";
         return std::nullopt;
     }
     state.running.reserve(running->size());
@@ -73,7 +73,7 @@ std::optional<State> parse_state(const std::string &json_text,
 
     const auto agents = document.find("agents");
     if (agents == document.end() || !agents->is_object()) {
-        error = "欄位 'agents' 必須是物件";
+        error = "field 'agents' must be an object";
         return std::nullopt;
     }
     for (const auto &[name, value] : agents->items()) {

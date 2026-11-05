@@ -16,7 +16,7 @@ using Json = nlohmann::ordered_json;
 
 inline bool fail_field(const std::string &key, const std::string &reason,
                        std::string &error) {
-    error = "欄位 '" + key + "' " + reason;
+    error = "field '" + key + "' " + reason;
     return false;
 }
 
@@ -25,11 +25,11 @@ inline bool parse_object(const std::string &text, Json &object,
     try {
         object = Json::parse(text);
     } catch (const nlohmann::json::exception &exception) {
-        error = std::string("JSON 解析失敗: ") + exception.what();
+        error = std::string("invalid JSON: ") + exception.what();
         return false;
     }
     if (!object.is_object()) {
-        error = "JSON 頂層必須是物件";
+        error = "JSON top level must be an object";
         return false;
     }
     return true;
@@ -40,10 +40,10 @@ inline bool take_string(const Json &object, const std::string &key,
                         bool required = true) {
     const auto item = object.find(key);
     if (item == object.end()) {
-        return required ? fail_field(key, "不可缺席", error) : true;
+        return required ? fail_field(key, "is required", error) : true;
     }
     if (!item->is_string()) {
-        return fail_field(key, "必須是字串", error);
+        return fail_field(key, "must be a string", error);
     }
     out = item->get<std::string>();
     return true;
@@ -54,10 +54,10 @@ inline bool take_uint(const Json &object, const std::string &key,
                       bool required = true) {
     const auto item = object.find(key);
     if (item == object.end()) {
-        return required ? fail_field(key, "不可缺席", error) : true;
+        return required ? fail_field(key, "is required", error) : true;
     }
     if (!item->is_number_unsigned()) {
-        return fail_field(key, "必須是非負整數", error);
+        return fail_field(key, "must be a non-negative integer", error);
     }
     out = item->get<std::uint64_t>();
     return true;
@@ -68,16 +68,16 @@ inline bool take_string_array(const Json &object, const std::string &key,
                               std::string &error, bool required = true) {
     const auto item = object.find(key);
     if (item == object.end()) {
-        return required ? fail_field(key, "不可缺席", error) : true;
+        return required ? fail_field(key, "is required", error) : true;
     }
     if (!item->is_array()) {
-        return fail_field(key, "必須是字串陣列", error);
+        return fail_field(key, "must be a string array", error);
     }
     std::vector<std::string> values;
     values.reserve(item->size());
     for (const Json &value : *item) {
         if (!value.is_string()) {
-            return fail_field(key, "必須是字串陣列", error);
+            return fail_field(key, "must be a string array", error);
         }
         values.push_back(value.get<std::string>());
     }
@@ -90,15 +90,15 @@ inline bool take_string_map(const Json &object, const std::string &key,
                             std::string &error, bool required = true) {
     const auto item = object.find(key);
     if (item == object.end()) {
-        return required ? fail_field(key, "不可缺席", error) : true;
+        return required ? fail_field(key, "is required", error) : true;
     }
     if (!item->is_object()) {
-        return fail_field(key, "必須是字串值物件", error);
+        return fail_field(key, "must be an object of string values", error);
     }
     std::map<std::string, std::string> values;
     for (const auto &[name, value] : item->items()) {
         if (!value.is_string()) {
-            return fail_field(key, "的所有值都必須是字串", error);
+            return fail_field(key, "must have only string values", error);
         }
         values.emplace(name, value.get<std::string>());
     }
@@ -116,18 +116,18 @@ inline bool take_opt_int(const Json &object, const std::string &key,
     if (item->is_number_unsigned()) {
         const std::uint64_t value = item->get<std::uint64_t>();
         if (value > static_cast<std::uint64_t>(std::numeric_limits<int>::max())) {
-            return fail_field(key, "超出 int 範圍", error);
+            return fail_field(key, "is out of int range", error);
         }
         out = static_cast<int>(value);
         return true;
     }
     if (!item->is_number_integer()) {
-        return fail_field(key, "必須是整數或 null", error);
+        return fail_field(key, "must be an integer or null", error);
     }
     const std::int64_t value = item->get<std::int64_t>();
     if (value < std::numeric_limits<int>::min() ||
         value > std::numeric_limits<int>::max()) {
-        return fail_field(key, "超出 int 範圍", error);
+        return fail_field(key, "is out of int range", error);
     }
     out = static_cast<int>(value);
     return true;
@@ -144,13 +144,13 @@ inline bool take_nullable_int64(const Json &object, const std::string &key,
         const std::uint64_t value = item->get<std::uint64_t>();
         if (value > static_cast<std::uint64_t>(
                         std::numeric_limits<std::int64_t>::max())) {
-            return fail_field(key, "超出 int64 範圍", error);
+            return fail_field(key, "is out of int64 range", error);
         }
         out = static_cast<std::int64_t>(value);
         return true;
     }
     if (!item->is_number_integer()) {
-        return fail_field(key, "必須是整數或 null", error);
+        return fail_field(key, "must be an integer or null", error);
     }
     out = item->get<std::int64_t>();
     return true;
