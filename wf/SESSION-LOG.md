@@ -8,8 +8,7 @@
 
 ## 最新進度
 
-- **open｜impls 重建**：11-04 夜 C 線改了 aos-exec／aos-post／aos-tools／aos-json 原始碼（aos-loop、aos-fsm、aos-daemon、aos-llm-kernel 編著前兩個），還沒 build；repo 根 build、impls 全重建 → [testing](workflows/testing.md)
-- **open｜portable-flow（無痛遷移）**：規劃完、沒改程式；8 題等使用者（[WAIT_USER](WAIT_USER.md)），裁完照 [06 步 0～7](../proto8/thinking/2026-11/05/portable-flow/06-實作步驟草稿.md) 派隊
+- **open｜portable-flow（無痛遷移）**：八題裁完、06 步 0～7 全做完並實測（[實作結果](../proto8/thinking/2026-11/05/portable-flow/README.md#實作結果11-05-隊長)）；剩使用者看 tools 覆蓋層（[WAIT_USER](WAIT_USER.md)）；llm kernel 變數的值若 kernel-daemon 改成「那台 daemon 的 stack」再接
 - **open｜kernel-daemon**：規劃完、沒改程式；衝突 2 等使用者；步 0、1、3、4、5 可先做 → [06](../proto8/thinking/2026-11/05/kernel-daemon/06-實作步驟草稿.md)
 - **open｜tidy 收斂**：剩 C-54 摺疊（aos-post 步 9 加註 11-04 已做）、2026-11/04 thinking 未精簡 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)
 - **open｜介質**：queue 輸入、接單後放 tools（決定 32）兩題擱著 → [10-28 medium](../proto8/thinking/2026-10/28/medium/README.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10/29/medium-plan/README.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
