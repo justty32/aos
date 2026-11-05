@@ -21,7 +21,7 @@ def flags(argv, known):
     out, i = {}, 0
     while i < len(argv):
         if argv[i] not in known or i + 1 >= len(argv) or not argv[i + 1]:
-            die("ArgumentsBad", "用法：brain.py [--system FILE] [--tools FILE]（看不懂 %s）" % argv[i])
+            die("ArgumentsBad", "usage: brain.py [--system FILE] [--tools FILE] (cannot parse %s)" % argv[i])
         out[argv[i]] = argv[i + 1]
         i += 2
     return out
@@ -35,13 +35,13 @@ def here(path):
 opts = flags(sys.argv[1:], ("--system", "--tools"))
 system_file = here(opts["--system"]) if "--system" in opts else None
 if system_file and not os.path.isfile(system_file):
-    die("SystemMissing", "system 檔不在：%s" % system_file)
+    die("SystemMissing", "system file not found: %s" % system_file)
 stack = os.environ.get("AOS_STACK")
 if not stack:
-    die("StackMissing", "沒設定 AOS_STACK")
+    die("StackMissing", "AOS_STACK is not set")
 tools_file = here(opts.get("--tools", "tools.json"))
 if "--tools" in opts and not os.path.isfile(tools_file):
-    die("ToolsMissing", "工具登記檔不在：%s" % tools_file)
+    die("ToolsMissing", "tool registry not found: %s" % tools_file)
 overlay = os.path.join(stack, "tools.json")         # 子介面 tools 的覆蓋層（aos-agent tools，11-05 起只存差異）
 overlay = overlay if "--tools" not in opts and os.path.isfile(overlay) else None
 
@@ -57,12 +57,12 @@ try:
                 except ValueError:
                     m = None
                 if not isinstance(m, dict):
-                    die("HistoryBad", "history.jsonl 第 %d 行不是 JSON 物件" % n)
+                    die("HistoryBad", "history.jsonl line %d is not a JSON object" % n)
                 history.append(m)
 except FileNotFoundError:
     pass
 except OSError as e:
-    die("HistoryBad", "讀不了 history.jsonl：%s" % e)
+    die("HistoryBad", "cannot read history.jsonl: %s" % e)
 if not history or history[-1].get("role") not in ("user", "tool"):
     sys.exit(10)                                 # 沒有要答的：回 idle 等信
 
@@ -74,9 +74,9 @@ if os.path.isfile(tools_file) or overlay:
                            stdin=subprocess.DEVNULL,
                            stdout=subprocess.PIPE, text=True)            # stderr 不吞：aos-tools 自己說哪個工具壞
     except OSError as e:
-        die("ToolsBad", "aos-tools 起不來：%s" % e)
+        die("ToolsBad", "aos-tools cannot start: %s" % e)
     if r.returncode != 0:
-        die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
+        die("ToolsBad", "aos-tools ls exited %d" % r.returncode)
     for t in json.loads(r.stdout):
         function = {"name": t["name"]}
         function.update({k: t["tooldef"][k] for k in ("description", "parameters") if k in t["tooldef"]})
@@ -88,7 +88,7 @@ if system_file:
         with open(system_file, encoding="utf-8") as f:
             system = [{"role": "system", "content": f.read()}]           # 每次從檔讀，不存進 history
     except OSError as e:
-        die("SystemMissing", "讀不了 %s：%s" % (system_file, e))
+        die("SystemMissing", "cannot read %s: %s" % (system_file, e))
 
 
 def read_cfg(path):
@@ -99,9 +99,9 @@ def read_cfg(path):
     except FileNotFoundError:
         return {}
     except (OSError, ValueError) as e:
-        die("CfgBad", "%s 讀不懂：%s" % (path, e))
+        die("CfgBad", "cannot parse %s: %s" % (path, e))
     if not isinstance(d, dict):
-        die("CfgBad", "%s 要是一層物件" % path)
+        die("CfgBad", "%s must be a flat object" % path)
     return d
 
 
@@ -114,7 +114,7 @@ body = {"request": request}
 for k, into in (("endpoint", body), ("model", request)):
     if k in cfg:
         if not isinstance(cfg[k], str) or not cfg[k]:
-            die("CfgBad", "llm.json 的 %s 要是非空字串" % k)
+            die("CfgBad", "%s in llm.json must be a non-empty string" % k)
         into[k] = cfg[k]
 
 think = os.path.join(stack, "think")
@@ -130,5 +130,5 @@ try:
     except FileNotFoundError:
         pass
 except OSError as e:
-    die("WriteFailed", "寫不了 %s：%s" % (path, e))
+    die("WriteFailed", "cannot write %s: %s" % (path, e))
 sys.exit(0)

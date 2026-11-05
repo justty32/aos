@@ -21,7 +21,7 @@ def flags(argv, known):
     out, i = {}, 0
     while i < len(argv):
         if argv[i] not in known or i + 1 >= len(argv) or not argv[i + 1]:
-            die("ArgumentsBad", "用法：act.py [--tools FILE]（看不懂 %s）" % argv[i])
+            die("ArgumentsBad", "usage: act.py [--tools FILE] (cannot parse %s)" % argv[i])
         out[argv[i]] = argv[i + 1]
         i += 2
     return out
@@ -30,10 +30,10 @@ def flags(argv, known):
 opts = flags(sys.argv[1:], ("--tools",))
 stack = os.environ.get("AOS_STACK")
 if not stack:
-    die("StackMissing", "沒設定 AOS_STACK")
+    die("StackMissing", "AOS_STACK is not set")
 tools_file = os.path.join(os.environ.get("AOS_CD") or ".", opts.get("--tools", "tools.json"))
 if "--tools" in opts and not os.path.isfile(tools_file):
-    die("ToolsMissing", "工具登記檔不在：%s" % tools_file)
+    die("ToolsMissing", "tool registry not found: %s" % tools_file)
 overlay = os.path.join(stack, "tools.json")         # 子介面 tools 的覆蓋層（aos-agent tools，11-05 起只存差異）
 overlay = overlay if "--tools" not in opts and os.path.isfile(overlay) else None
 TOOLS = ["aos-tools", "--file", tools_file] + (["--overlay", overlay] if overlay else [])
@@ -48,20 +48,20 @@ try:
                 except ValueError:
                     m = None
                 if not isinstance(m, dict):
-                    die("HistoryBad", "history.jsonl 第 %d 行不是 JSON 物件" % n)
+                    die("HistoryBad", "history.jsonl line %d is not a JSON object" % n)
                 history.append(m)
 except FileNotFoundError:
     pass
 except OSError as e:
-    die("HistoryBad", "讀不了 history.jsonl：%s" % e)
+    die("HistoryBad", "cannot read history.jsonl: %s" % e)
 last = max((i for i, m in enumerate(history) if m.get("role") == "assistant"), default=None)
 if last is None:
-    die("HistoryBad", "history.jsonl 裡沒有 assistant 的訊息")
+    die("HistoryBad", "no assistant message in history.jsonl")
 calls = history[last].get("tool_calls")
 if not calls:
     sys.exit(10)                                 # 最後答案：沒有工具要叫，回 idle 等信
 if not isinstance(calls, list):
-    die("HistoryBad", "最後一則 assistant 的 tool_calls 不是陣列")
+    die("HistoryBad", "tool_calls of the last assistant message is not an array")
 
 
 def append(message):
@@ -69,7 +69,7 @@ def append(message):
         with open(history_path, "a", encoding="utf-8") as f:
             f.write(json.dumps(message, ensure_ascii=False) + "\n")
     except OSError as e:
-        die("WriteFailed", "接不進 history.jsonl：%s" % e)
+        die("WriteFailed", "cannot append to history.jsonl: %s" % e)
 
 
 registered = []
@@ -78,38 +78,38 @@ if os.path.isfile(tools_file) or overlay:        # 能叫的＝登記檔（疊�
         r = subprocess.run(TOOLS + ["ls", "--json"], stdin=subprocess.DEVNULL,
                            stdout=subprocess.PIPE, text=True)
     except OSError as e:
-        die("ToolFailed", "aos-tools 起不來：%s" % e)
+        die("ToolFailed", "aos-tools cannot start: %s" % e)
     if r.returncode != 0:
-        die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
+        die("ToolsBad", "aos-tools ls exited %d" % r.returncode)
     registered = [t["name"] for t in json.loads(r.stdout)]
 answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
 for call in calls:
     try:
         cid, name, arguments = call["id"], call["function"]["name"], call["function"].get("arguments")
     except (KeyError, TypeError):
-        die("HistoryBad", "tool_calls 裡有一個沒有 id 或 function.name：%s" % json.dumps(call, ensure_ascii=False))
+        die("HistoryBad", "a tool_calls entry has no id or function.name: %s" % json.dumps(call, ensure_ascii=False))
     if cid in answered:
         continue
     if name not in registered:                   # 名字只認登記過的（也擋掉 ../ 之類）
         append({"role": "tool", "tool_call_id": cid,
-                "content": "act: ToolUnknown %s（能叫的：%s）\n" % (name, "、".join(registered))})
+                "content": "act: ToolUnknown %s (available: %s)\n" % (name, ", ".join(registered))})
         continue
     try:
         if not isinstance(arguments, str):
-            raise ValueError("arguments 不是字串")
+            raise ValueError("arguments is not a string")
         json.loads(arguments)
     except ValueError as e:
-        append({"role": "tool", "tool_call_id": cid, "content": "act: ArgumentsBad %s：%s\n" % (name, e)})
+        append({"role": "tool", "tool_call_id": cid, "content": "act: ArgumentsBad %s: %s\n" % (name, e)})
         continue
     env = dict(os.environ, AOS_STACK=os.path.join(stack, "tools", name) + "/")
     try:
         r = subprocess.run(TOOLS + ["call", name], input=arguments,
                            stdout=subprocess.PIPE, text=True, env=env)   # stderr 不吞：工具自己的錯原樣往上
     except OSError as e:
-        die("ToolFailed", "aos-tools 起不來：%s" % e)
+        die("ToolFailed", "aos-tools cannot start: %s" % e)
     content = r.stdout
     if r.returncode != 0:                        # 回給腦、不停；人在 stderr 看得到
-        print("agent-fsm: ToolFailed %s 結束碼 %d（回給腦）" % (name, r.returncode), file=sys.stderr)
-        content += "%s(工具 %s 結束碼 %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
+        print("agent-fsm: ToolFailed %s exit code %d (passed back to the brain)" % (name, r.returncode), file=sys.stderr)
+        content += "%s(tool %s exit code %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
     append({"role": "tool", "tool_call_id": cid, "content": content})
 sys.exit(0)

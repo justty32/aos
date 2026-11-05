@@ -29,7 +29,7 @@ def write_atomic(path, text):
             f.write(text)
         os.replace(tmp, path)
     except OSError as e:
-        die("WriteFailed", "寫不了 %s：%s" % (path, e))
+        die("WriteFailed", "cannot write %s: %s" % (path, e))
 
 
 def read_obj(path):
@@ -46,12 +46,12 @@ def run(argv, **kw):
     try:
         return subprocess.run(argv, stdout=subprocess.PIPE, text=True, **kw)   # stderr 不吞：下層自己說原因
     except OSError as e:
-        die("SendFailed", "%s 起不來（要在 PATH 上）：%s" % (argv[0], e))
+        die("SendFailed", "%s cannot start (must be on PATH): %s" % (argv[0], e))
 
 
 stack = os.environ.get("AOS_STACK")
 if not stack:
-    die("StackMissing", "沒設定 AOS_STACK")
+    die("StackMissing", "AOS_STACK is not set")
 think = os.path.join(stack, "think")
 request, pending, box = (os.path.join(think, n) for n in ("request.json", "pending.txt", "reply"))
 history_path = os.path.join(stack, "history.jsonl")
@@ -62,11 +62,11 @@ try:
 except FileNotFoundError:
     name = None
 except OSError as e:
-    die("WriteFailed", "讀不了 %s：%s" % (pending, e))
+    die("WriteFailed", "cannot read %s: %s" % (pending, e))
 
 if not name:                                     # 還沒寄
     if not os.path.isfile(request):
-        die("RequestMissing", "沒有 %s 也沒有 pending.txt（stack 被改過？把 stage.txt 寫成 think 再起）" % request)
+        die("RequestMissing", "neither %s nor pending.txt exists (stack edited? write think into stage.txt and start again)" % request)
     cfg = read_obj(os.path.join(os.environ.get("AOS_CD") or ".", "llm.json"))
     cfg.update(read_obj(os.path.join(stack, "llm.json")))
     body = read_obj(request)
@@ -76,12 +76,12 @@ if not name:                                     # 還沒寄
     if not all(os.path.isdir(os.path.join(box, s)) for s in ("tmp", "new", "cur")):
         r = run(["aos-post", "init", box])
         if r.returncode != 0:
-            die("PostFailed", "aos-post init %s 退 %d" % (box, r.returncode))
+            die("PostFailed", "aos-post init %s exited %d" % (box, r.returncode))
     with open(request, encoding="utf-8") as f:
         r = run(["aos-llm", "send", "--reply-to", box], stdin=f)
     name = r.stdout.strip()
     if r.returncode != 0 or not name:
-        die("SendFailed", "aos-llm send 退 %d" % r.returncode)
+        die("SendFailed", "aos-llm send exited %d" % r.returncode)
     write_atomic(pending, name + "\n")
     sys.exit(NOT_YET)
 
@@ -97,12 +97,12 @@ if r.returncode != 0:                            # kernel 回錯：aos-llm 已�
 try:
     message = json.loads(r.stdout)
 except ValueError as e:
-    die("ReplyBad", "aos-llm recv 印的不是 JSON：%s" % e)
+    die("ReplyBad", "aos-llm recv did not print JSON: %s" % e)
 if not isinstance(message, dict) or message.get("role") != "assistant":
-    die("ReplyBad", "回信的 message 不是 assistant 訊息：%s" % r.stdout.strip()[:200])
+    die("ReplyBad", "message in the reply is not an assistant message: %s" % r.stdout.strip()[:200])
 try:
     with open(history_path, "a", encoding="utf-8") as f:   # 一次寫一整行，只附加（P-41）
         f.write(json.dumps(message, ensure_ascii=False) + "\n")
 except OSError as e:
-    die("WriteFailed", "接不進 history.jsonl：%s" % e)
+    die("WriteFailed", "cannot append to history.jsonl: %s" % e)
 sys.exit(0)

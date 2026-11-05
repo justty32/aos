@@ -20,7 +20,7 @@ def flags(argv, known):
     out, i = {}, 0
     while i < len(argv):
         if argv[i] not in known or i + 1 >= len(argv) or not argv[i + 1]:
-            die("ArgumentsBad", "用法：idle.py [--prompt FILE]（看不懂 %s）" % argv[i])
+            die("ArgumentsBad", "usage: idle.py [--prompt FILE] (cannot parse %s)" % argv[i])
         out[argv[i]] = argv[i + 1]
         i += 2
     return out
@@ -34,10 +34,10 @@ def here(path):
 opts = flags(sys.argv[1:], ("--prompt",))
 prompt = here(opts["--prompt"]) if "--prompt" in opts else None
 if prompt and not os.path.isfile(prompt):
-    die("PromptMissing", "開場白檔不在：%s" % prompt)
+    die("PromptMissing", "prompt file not found: %s" % prompt)
 stack = os.environ.get("AOS_STACK")
 if not stack:
-    die("StackMissing", "沒設定 AOS_STACK")
+    die("StackMissing", "AOS_STACK is not set")
 box = os.path.join(stack, "queue")
 history_path = os.path.join(stack, "history.jsonl")
 
@@ -47,10 +47,10 @@ def post(args, stdin_text="", ok=(0,)):
     try:
         r = subprocess.run(["aos-post"] + args, input=stdin_text, capture_output=True, text=True)
     except OSError as e:
-        die("PostFailed", "aos-post 起不來（要在 PATH 上）：%s" % e)
-    err = (r.stderr.strip().splitlines() or ["退 %d、沒說原因" % r.returncode])[0]
+        die("PostFailed", "aos-post cannot start (must be on PATH): %s" % e)
+    err = (r.stderr.strip().splitlines() or ["exited %d with no reason given" % r.returncode])[0]
     if ok is not None and r.returncode not in ok:
-        die("PostFailed", "aos-post %s 退 %d：%s" % (args[0], r.returncode, err))
+        die("PostFailed", "aos-post %s exited %d: %s" % (args[0], r.returncode, err))
     return r.returncode, r.stdout, err
 
 
@@ -70,7 +70,7 @@ def history_empty():
     except FileNotFoundError:
         return True
     except OSError as e:
-        die("HistoryBad", "讀不了 history.jsonl：%s" % e)
+        die("HistoryBad", "cannot read history.jsonl: %s" % e)
 
 
 def write_atomic(path, text):
@@ -80,7 +80,7 @@ def write_atomic(path, text):
             f.write(text)
         os.replace(tmp, path)
     except OSError as e:
-        die("WriteFailed", "寫不了 %s：%s" % (path, e))
+        die("WriteFailed", "cannot write %s: %s" % (path, e))
 
 
 def body_of(sig):
@@ -91,10 +91,10 @@ def body_of(sig):
     try:
         body = json.loads(out).get("body")
     except (ValueError, AttributeError):
-        return None, "aos-post see 印的不是 JSON 物件"
+        return None, "aos-post see did not print a JSON object"
     if not (isinstance(body, dict) and body.get("role") == "user" and isinstance(body.get("content"), str)
             and body["content"].strip()):
-        return None, "body 要是 {\"role\": \"user\", \"content\": 非空字串}"
+        return None, "body must be {\"role\": \"user\", \"content\": non-empty string}"
     return body, None
 
 
@@ -107,13 +107,13 @@ def take():
         body, why = body_of(sig)
         if body is None:                         # 壞信一律丟，不通知寄信人（N-16）
             post(["done", box, sig])
-            write_atomic(os.path.join(stack, "mailbox_warning.txt"), "信 %s 不採用：%s\n" % (sig, why.replace("\n", " ")))
+            write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s rejected: %s\n" % (sig, why.replace("\n", " ")))
             continue
         try:
             with open(history_path, "a", encoding="utf-8") as f:     # 一次寫一整行，只附加（P-41）
                 f.write(json.dumps({"role": "user", "content": body["content"]}, ensure_ascii=False) + "\n")
         except OSError as e:
-            die("WriteFailed", "接不進 history.jsonl：%s" % e)
+            die("WriteFailed", "cannot append to history.jsonl: %s" % e)
         post(["done", box, sig])                 # 接進 history 就算收到（使用者 11-04「接進對話紀錄就收」）
         good += 1
     return good
@@ -127,9 +127,9 @@ def opening():
         with open(prompt, encoding="utf-8") as f:
             text = f.read()
     except FileNotFoundError:
-        die("PromptMissing", "開場白檔不在：%s" % prompt)
+        die("PromptMissing", "prompt file not found: %s" % prompt)
     except OSError as e:
-        die("PromptBad", "讀不了 %s：%s" % (prompt, e))
+        die("PromptBad", "cannot read %s: %s" % (prompt, e))
     text = text[:-1] if text.endswith("\n") else text          # 結尾一個換行不算
     if not text.strip():
         return False
