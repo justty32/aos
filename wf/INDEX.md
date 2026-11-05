@@ -1,6 +1,6 @@
 # INDEX — aos 專案地圖
 
-整個專案的頂層導航。aos = **一個 monorepo：一支執行檔 `aos`，靠子命令把陸續長出來的各個小專案掛上去**（小專案清單見 core/README）。[AGENTS.md](../AGENTS.md) 只放主工作流 + 指向本檔；細節從這裡分流出去。
+整個專案的頂層導航。aos = **「資料夾＝程式」的 AI agent 體系，本體是 [proto8/](../proto8/README.md)**（各夾一覽在它的 README）；repo 根只放入口、`wf/` 與 `archive/`（08～09 月那一代單一執行檔 `aos` 11-05 封存在 `archive/aos-v1/`）。[AGENTS.md](../AGENTS.md) 只放主工作流 + 指向本檔；細節從這裡分流出去。
 
 ---
 
@@ -14,7 +14,7 @@
 
 ## 工作流
 
-工作流的**選擇與入口**見 **[WORKFLOWS.md](WORKFLOWS.md)** 的派發表（本專案合了 **dev、heartbeat、multi-agent** 三個 flavor）。每個工作流的 durable 知識歸在 `workflows/<該工作流>/` 或單檔 `workflows/<該工作流>.md`（含 `archive/` 封存過時文檔），具體流程在各自入口檔。
+工作流的**選擇與入口**見 **[WORKFLOWS.md](WORKFLOWS.md)** 的派發表（本專案合了 **dev、multi-agent** 兩個 flavor；heartbeat flavor 的 tick／routines／schedule 11-05 隨甲代封存）。每個工作流的 durable 知識歸在 `workflows/<該工作流>/` 或單檔 `workflows/<該工作流>.md`（含 `archive/` 封存過時文檔），具體流程在各自入口檔。
 
 [STRUCTURE](STRUCTURE.md) 是**被動的結構整理參考**（分層原則、膨脹即拆、四級成長、archive 規則）——**只在要重構／整理結構時取用**。always-on 的**鐵律**在 [AGENTS.md](../AGENTS.md)；碰原始碼的**程式碼慣例 + code map 維護鏈**在 [workflows/common/conventions.md](workflows/common/conventions.md)。
 

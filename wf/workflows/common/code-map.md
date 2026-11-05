@@ -65,7 +65,7 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 | 新增一個小專案（像 llm 那樣）要照什麼模子 | `docs/subprojects.md`；函式定義在 `cmake/AosSubproject.cmake` |
 | 一批指令怎麼並行 fork、逾時或 runner 中斷怎麼殺整個 process group | `core/exec/src/start.cpp` 的 `start_all`／`run_child`；統一輪詢與逾時 `kill(-pid, SIGKILL)` 在 `core/exec/src/wait_all.cpp`，signal handler 可呼叫的群組註冊表與 `interrupt_running()` 在 `core/exec/src/interrupt.cpp` |
 | 協定的三種 JSON 長什麼樣、欄位怎麼對應 | struct 與公開轉換 API 在 `core/wire/include/aos/wire.hpp`；實作分在 `core/wire/src/inst.cpp`／`outcome.cpp`／`state.cpp`，共用取值在 `json_io.hpp` |
-| `.aos/` 動態版面（inbox／turn／batch／state.json） | 路徑推導在 `core/loop/src/layout.cpp`；協定版面在 [`PROTOCOL.md`](../dispatch/proto/PROTOCOL.md) §1 |
+| `.aos/` 動態版面（inbox／turn／batch／state.json） | 路徑推導在 `core/loop/src/layout.cpp`；協定版面在 `PROTOCOL.md` §1 |
 | 世界層工具登記表與 agent 通訊錄放哪、是否進版控 | `.aos/tools/<name>.json` 與 `.aos/contacts.json` 由 `core/tool` 管；`.gitignore:8-13` 只放行這兩種靜態設定（另有 heartbeat 清單），其餘 `.aos/` 動態狀態不進版控 |
 | 一回合的順序：匯聚 → 並行執行 → 落檔 → 更新 state | `core/loop/src/turn.cpp` 的 `run_turn`；running／done state 的組裝在 `core/loop/src/state.cpp` |
 | `aos run`／`aos deliver` 的 CLI 怎麼解參數 | `core/loop/src/run.cpp` 的 `aos_run_cli_main`／`core/loop/src/deliver_cli.cpp` 的 `aos_deliver_cli_main` |

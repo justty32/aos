@@ -1,3 +1,5 @@
+> 封存 2026-11-05：講的是 08～09 月那一代單一執行檔 `aos`（已整組封存到 repo 根 `archive/aos-v1/`），沒有取代者（現役本體是 proto8）；使用者 11-05「大重構七題都照推薦吧」
+
 # use-aos — 幫使用者用 aos（單檔工作流）
 
 ← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)

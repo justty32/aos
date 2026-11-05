@@ -1,73 +1,31 @@
 # aos
 
-一個資料夾的回合制執行器，外加一組 POSIX 小工具。每個小專案同時是兩件事：`aos` 執行檔的一條或多條子命令，
-以及一個可以被其他專案 `#include` 與連結的 C++23 函式庫。
+「資料夾＝程式」的 AI agent 體系。現役本體在 **[proto8/](proto8/README.md)**（第八版原型）：
+C／C++ 的基礎層與標準庫（aos-exec、aos-loop、aos-fsm、aos-daemon、aos-llm 等）在 `proto8/impls/`，
+給人打的指令、腦叫的工具、agent 範本是 Python／sh，概念／規範／慣例條文在 `proto8/docs/`。
 
-核心小專案現況見 core/README.md。
+## 建置與安裝
 
-## 建置
+需要 CMake、支援 C++20 的編譯器，以及 [vcpkg](https://vcpkg.io)（裝在 `~/dev/vcpkg` 的話什麼都不用設）。
+`proto8/impls/` 每個專案一夾、各自建；照依賴順序全建一次的指令在 [testing「proto8」](wf/workflows/testing.md#proto8)。
+建好後 `proto8/install.sh` 把指令 symlink 進 `~/.local/bin`（`--dry-run` 只印、`--uninstall` 拿掉）。
 
-需要 CMake 3.25+、支援 C++23 的編譯器，以及 [vcpkg](https://vcpkg.io)（裝在
-`~/dev/vcpkg` 的話什麼都不用設）。
-
-```bash
-cmake --preset default && cmake --build --preset default
-```
-
-**只能從 repo 根目錄 configure**，子專案不提供獨立建置。產物在 `build/bin/aos`
-與 `build/lib/libaos_*.so`。細節見 docs/build.md。
-
-## 當成執行檔用
-
-```bash
-aos --help                    # 列出所有子命令
-aos init world                # 建立 world/.aos/version
-aos exec world                # 消費 world/.aos/inst.json
-```
-
-## 當成函式庫用
-
-```bash
-cmake --install build --prefix ~/.local
-```
-
-```cmake
-find_package(aos CONFIG REQUIRED)
-target_link_libraries(myapp PRIVATE aos::inst)
-```
-
-```cpp
-#include <aos/inst.hpp>
-```
-
-`aos::inst` 是單一小專案。傘狀 target 有 `aos::core`（只有核心）、`aos::modules`
-（只有擴充）、`aos::aos`（全部）；`aos::merged` 是合併成單一檔案的版本。完整說明
-見 docs/usage.md。
+repo 根沒有 CMake：08～09 月那一代單一執行檔 `aos`（根目錄 CMake、`core/`、`modules/`、`docs/`…）
+11-05 整組封存在 [archive/](archive/README.md) 的 `aos-v1/`，不再建。
 
 ## repo 佈局
 
 ```
-CMakeLists.txt      頂層：選項、相依、add_subdirectory、install/export
-cmake/              AosSubproject.cmake（小專案樣板）、aos-config.cmake.in
-common/             跨小專案共用：aos::common（<aos/export.h>）與通用私有相依
-app/                唯一的執行檔 aos，只負責把 argv[1] 分派到某個子命令
-core/               核心小專案。目前只有 inst/：aos::inst + `aos init`／`aos exec`
-modules/            擴充小專案（可選，-DAOS_BUILD_MODULES=OFF 整批不建）
-docs/               整體文件
-wf/                 分層工作流文件（開發流程用，與程式無關）
+proto8/     現役本體（程式、條文、討論紀錄；一覽在 proto8/README）
+wf/         分層工作流文件（開發流程用，給 agent 看）
+archive/    封存：舊原型 proto～proto7-2、甲代 aos-v1
+AGENTS.md   agent 的最頂層入口（CLAUDE.md 指向它）
 ```
-
-## 指令檔必須是可信來源
-
-`aos exec` 沒有任何輸入限制：單筆與整份文件都沒有位元組上限，`argv` 與 `env`
-的元素數量沒有上限，JSON 巢狀深度也沒有上限。記憶體用量由呼叫者的 `ulimit`
-或 cgroup 決定，不是由這支程式決定；巢狀太深的文件會讓解析器爆堆疊——那是
-crash，不是錯誤狀態。**一份指令檔等同一段可執行程式碼，來源要照同樣的標準把關。**
 
 ## 文件
 
 | | |
 |---|---|
-| docs/ | 整體：總覽、建置、使用、新增小專案 |
-| core/inst/docs/ | inst 專屬：[記錄格式](wf/workflows/dispatch/proto/PROTOCOL.md)、執行語意、C++ API、C API、[架構](wf/workflows/common/code-map.md) |
-| [AGENTS.md](AGENTS.md) → [wf/](wf/) | 開發流程（不是給使用者看的）|
+| [proto8/README.md](proto8/README.md) | 各夾一覽、入口（CONCEPTS／NORMS／CONVENTION）、現況 |
+| [proto8/impls/README.md](proto8/impls/README.md) | C／C++ 各專案與建置 |
+| [AGENTS.md](AGENTS.md) → [wf/](wf/INDEX.md) | 開發流程（不是給使用者看的）|

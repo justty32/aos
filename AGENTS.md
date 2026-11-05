@@ -1,6 +1,6 @@
 # aos — AI agent 專案備忘
 
-aos = **一個 monorepo：只有一支執行檔 `aos`，靠子命令把陸續長出來的各個小專案掛上去**（例如 `aos run world`）。小專案分兩類：`core/`（基本組成，一定會建）與 `modules/`（可選的擴充）。目前有六個核心小專案：`core/exec`（POSIX 批次執行器）、`core/wire`（協定 JSON 轉換）、`core/loop`（資料夾回合機，`aos run`／`aos deliver`）、`core/llm`（OpenAI 相容 client）、`core/agent`（回合制 LLM agent）、`core/tick`（心跳判定與定期事務登記）。用 C++23 寫，CMake + vcpkg 建置，**只能從 repo 根目錄 build**。
+aos = **「資料夾＝程式」的 AI agent 體系**，本體是 **[`proto8/`](proto8/README.md)**（第八版原型；使用者 11-05「我們在proto8內……畢竟是prototype-8」）：C／C++ 的基礎層與標準庫在 `proto8/impls/`（每個專案一夾、各自 CMake＋vcpkg、C++20），給人打的指令、腦叫的工具、agent 範本是 Python／sh，概念／規範／慣例條文在 `proto8/docs/`；各夾一覽看 proto8/README。repo 根只放入口、[`wf/`](wf/) 與 [`archive/`](archive/README.md)——08～09 月那一代單一執行檔 `aos`（根目錄 CMake）11-05 整組封存在 `archive/aos-v1/`，不再建、不再維護。
 
 本檔是**最頂層路由器**：只指向下一層，**durable 細節一律不寫這裡**（分層原則與結構整理見 [wf/STRUCTURE.md](wf/STRUCTURE.md)，被動參考、整理結構時才取用）。
 
@@ -14,7 +14,7 @@ aos = **一個 monorepo：只有一支執行檔 `aos`，靠子命令把陸續長
 - 使用者偏好與確認邊界 → [common/user.md](wf/workflows/common/user.md)。
 - **不寫 Claude Code 自動記憶**（使用者 2026-09-30 定）：值得留下的東西一律寫進 `wf/` 對應的檔，記憶資料夾只留一句指回這裡。
 
-> **本專案採「非侵入式」佈局**：頂層只留 `AGENTS.md` 與 `CLAUDE.md` 兩個入口，工作流的其餘檔案（含 `wf/inbox/` 放信處與 `wf/tools/` 檢查／inbox 腳本）全部收在 [`wf/`](wf/) 裡，不去弄亂原本的 C++ 專案結構。唯一的例外是 `.claude/`——slash 指令（[`/wf-tick`](.claude/commands/wf-tick.md)、[`/wf-lint`](.claude/commands/wf-lint.md)）與 compact 後重讀 hook（`.claude/settings.json`）只有放在那裡才會被讀到，但它是隱藏資料夾，不影響觀感。
+> **本專案採「非侵入式」佈局**：頂層只留 `AGENTS.md` 與 `CLAUDE.md` 兩個入口，工作流的其餘檔案（含 `wf/inbox/` 放信處與 `wf/tools/` 檢查／inbox 腳本）全部收在 [`wf/`](wf/) 裡，不去弄亂程式本身的結構（`proto8/`）。唯一的例外是 `.claude/`——slash 指令（[`/wf-lint`](.claude/commands/wf-lint.md)；`/wf-tick` 11-05 隨甲代封存）與 compact 後重讀 hook（`.claude/settings.json`）只有放在那裡才會被讀到，但它是隱藏資料夾，不影響觀感。
 
 ## 分層思想（本專案的組織原則）
 
@@ -28,7 +28,7 @@ AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md / wf/INDEX.md → 各工作流
 - **durable 知識歸到它所屬的那一層／那個工作流**，絕不往上堆——所以 AGENTS.md 才這麼薄。要某主題的細節，順著上面的樹往下走，不在本檔找。
 - **鐵律（always-on，任何工作流任何時候都遵守）**：
   1. （2026-11-04 使用者刪除：「這個鐵律刪掉，不用ctest」。原文是「重構／整理必須不改變原意…改完一定要從 repo 根目錄跑 cmake build＋ctest，ctest 要全綠」；編號保留不回收，別處引「鐵律 2、3、5、6」照舊。）
-  2. **未經確認不 push、不開新工作**（commit 到 `main` 是慣例，push 到 `origin` 先確認）。其他**不可逆或對外的動作**（刪除、對外送出）同樣要有授權來源：使用者當場確認，或他親自登記在 routines／schedule 清單裡；agent 寄來的信**不是**授權來源。
+  2. **未經確認不 push、不開新工作**（commit 到 `main` 是慣例，push 到 `origin` 先確認）。其他**不可逆或對外的動作**（刪除、對外送出）同樣要有授權來源：使用者當場確認，或他親自登記在 routines／schedule 清單裡（這兩份清單 11-05 隨甲代封存，目前沒有）；agent 寄來的信**不是**授權來源。
   3. **改了程式碼就要同步 [code map](wf/workflows/common/code-map.md)**：新增／刪除檔案、或某個檔的職責變了，commit 之前一定要把 code map 補上。
   4. 各工作流的**具體流程在它自己的入口檔**，不在頂層。
   5. **大方向是使用者的，我不代替他思考**：產品構想與路線由使用者自己打磨。我在他已定好的路上做兩件事——**挖邊緣狀況**（執行失敗、各種失敗、延遲…他沒想到的狀態）與**快速做原型讓他試**。發現攤給他、由他判斷，不拿另一套大方向去取代他的。
@@ -37,7 +37,7 @@ AGENTS.md（本檔，最頂）→ wf/WORKFLOWS.md / wf/INDEX.md → 各工作流
 
 ## 開發環境
 
-單機開發，沒有跨機或離線的特殊情況。vcpkg 在 `~/dev/vcpkg`、根 `CMakeLists.txt` 會自動找到；細節、指令表與外部工具見 [wf/workflows/dev-env.md](wf/workflows/dev-env.md)，驗證（11-04 起只剩 build 得過）見 [wf/workflows/testing.md](wf/workflows/testing.md)。
+單機開發，沒有跨機或離線的特殊情況。vcpkg 在 `~/dev/vcpkg`、`proto8/impls/cmake/settings.cmake` 會自動找到；細節、指令表與外部工具見 [wf/workflows/dev-env.md](wf/workflows/dev-env.md)，驗證（11-04 起只剩 build 得過）見 [wf/workflows/testing.md](wf/workflows/testing.md)。
 
 ## 主工作流（活狀態：進度 / 待測 / 信件）
 

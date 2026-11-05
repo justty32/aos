@@ -37,7 +37,7 @@
 （使用者不想用想的拍板的，改成用做的），再來是使用者臨時起意。
 
 資料包通常是：對應那場的 `records/*.md` ＋ 該題的 `background/*.md` ＋
-[PROTOCOL](../dispatch/proto/PROTOCOL.md)（規格唯一真源）＋
+proto8 的 [NORMS](../../../proto8/docs/NORMS.md)／[CONVENTION](../../../proto8/docs/CONVENTION.md)（規格；08-30 那份 PROTOCOL 講甲代、11-05 封存）＋
 `roadmap`。
 
 

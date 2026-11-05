@@ -16,10 +16,7 @@
 
 | 驗證 | 指令 | 誰跑 |
 |------|------|------|
-| 設定（第一次、或 `CMakeLists.txt`／`vcpkg.json` 變動後）| `cmake --preset default` | agent |
-| **repo 根（改完必跑）** | `cmake --build --preset default` | agent |
-| 動過 `modules/` 之後 | `cmake -S . -B /tmp/aos-nomod -DAOS_BUILD_MODULES=OFF && cmake --build /tmp/aos-nomod`（確認關掉擴充仍建得起來）| agent |
-| **proto8（改完必跑）** | 見下面「proto8」 | agent |
+| **proto8 impls（改完必跑）** | 見下面「proto8」 | agent |
 | 要真模型、外部 CLI agent、跨機的 | 照該實驗檔的步驟 | 使用者 → [WAIT_USER](../WAIT_USER.md)；本機 LM Studio 跑得動的部分我自己跑 |
 
 「誰跑」只有兩種值：**agent**（本機跑得動）、**使用者 → WAIT_USER**（要實機、外部服務、帳號、付費、目視）。判不準就當後者。
@@ -29,7 +26,7 @@
 
 ## proto8
 
-proto8 不在 repo 根的 CMake 裡。`proto8/impls/` 各專案是獨立的 CMake 專案，照依賴順序建（`bin/`、`build/` 不進 git）：
+repo 根沒有 CMake（08～09 月那一代 11-05 封存到 `archive/aos-v1/`、不再建），要建的只有 `proto8/impls/`。各專案是獨立的 CMake 專案，照依賴順序建（`bin/`、`build/` 不進 git）：
 
 ```sh
 (cd proto8/impls && for p in inst aos-util aos-directive aos-schema aos-exec aos-json aos-loop aos-fsm aos-lock aos-post aos-daemon aos-llm-kernel aos-llm; do (cd $p && cmake -B build && cmake --build build) || break; done)

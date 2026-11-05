@@ -15,7 +15,6 @@
 | 觸發（你說…）| 工作流 | 入口檔（先讀這個）|
 |--------------|--------|-------------------|
 | 「我想開發 / 修改某個功能」「**修 bug**」 | **feature-dev** | [workflows/feature-dev/README.md](workflows/feature-dev/README.md) |
-| 「**加一個新的小專案 / 新工具**」 | **add-subproject** | [workflows/add-subproject.md](workflows/add-subproject.md) |
 | 「**我有個 idea**」「把這個構想記下來」「要重新拷問 X」 | **ideas** | 現行落點：[proto8/docs/CONCEPTS.md](../proto8/docs/CONCEPTS.md)（概念層）、[proto8/thinking/](../proto8/thinking/README.md)（討論紀錄）；舊的 ideas 13 章已封存 |
 | 「**寫 spec**」「照構想集定規格」「新實作要照什麼寫」 | **spec** | 現行落點：[proto8/docs/NORMS.md](../proto8/docs/NORMS.md)（規範）、[proto8/docs/CONVENTION.md](../proto8/docs/CONVENTION.md)（aos agent 慣例）；上一代 proto7-2 照 proto7-2/spec.md（核心 spec 是 proto7/spec/core.md），proto6 照 proto6/spec；舊的 09-05 規格已封存 |
 | 「**接下來做什麼**」「照進度表推進」「動工前該讀什麼」 | **roadmap** | 現行落點：[SESSION-LOG.md](SESSION-LOG.md)（open 進度與下一步）；舊的 roadmap 已封存 |
@@ -23,7 +22,6 @@
 | 「**辦個黑客松**」「找幾個 agent **各自去試做** X」「別再討論了，讓他們隨便做做看」 | **hackathon** | [workflows/hackathon/README.md](workflows/hackathon/README.md)（已辦場次見 [INDEX](workflows/hackathon/INDEX.md)）|
 | 「**直接去試試看**」「跑個實驗看會怎樣」「別再想了，做一次」 | **experiments** | [workflows/experiments/README.md](workflows/experiments/README.md) |
 | 「查清楚這是怎麼運作的」「這樣做可不可行」「這個 bug 是為什麼」（只讀不改）| **investigation** | [workflows/investigation.md](workflows/investigation.md) |
-| 「**幫我用 aos**」「把 aos 接進我的專案」「這個指令怎麼下」 | **use-aos** | [workflows/use-aos.md](workflows/use-aos.md) |
 | 「跑測試 / 驗證」「這樣改有沒有壞」 | **testing** | [workflows/testing.md](workflows/testing.md) |
 | 「重構 / 拆檔 / 整理程式結構」（行為不變）| **refactor** | [workflows/refactor/README.md](workflows/refactor/README.md) |
 | 「搬檔案 / 改目錄名 / 拆 repo」 | **refactor**（搬移專章）| [workflows/refactor/moving-things.md](workflows/refactor/moving-things.md) |
@@ -49,18 +47,6 @@
 | 「記個想法」「以後要做」「排進 roadmap」「幫我規劃」 | **planning** → 本專案落點是 [proto8/docs/CONCEPTS](../proto8/docs/CONCEPTS.md)／[proto8/thinking](../proto8/thinking/README.md)／[SESSION-LOG](SESSION-LOG.md)（舊的 ideas／roadmap 已封存） | [workflows/planning.md](workflows/planning.md) |
 | 「記個決定」「為什麼選 A 不選 B」 | **decisions** → 本專案落點是 [proto8/thinking](../proto8/thinking/README.md) 的決定與結論（舊的 ideas「待決定」表已封存） | [workflows/decisions.md](workflows/decisions.md) |
 | 「我的偏好是…」「以後直接做 / 先問」 | **user** | [workflows/common/user.md](workflows/common/user.md) |
-
-### 定期喚醒 flavor
-
-**兩種進入**：① **循環執行**——[`/wf-tick [週期]`](../.claude/commands/wf-tick.md) 每隔週期喚醒 tick，tick 派發 routines → schedule，判時間、**做**到期項；② **使用者登記**——「幫我登記行程」進 schedule、「加個常規事務」進 routines，只寫進清單、不當場做。
-
-| 觸發（你說…）| 工作流 | 入口檔（先讀這個）|
-|--------------|--------|-------------------|
-| 「跑一次心跳」（多半由 `/wf-tick` 定期喚醒，不用人說）| **tick** | [workflows/tick.md](workflows/tick.md) |
-| 「幫我加個常規事務」「登記例行」「每 N 天要做一次…」 | **routines** | [workflows/routines.md](workflows/routines.md) |
-| 「幫我登記行程：17:00 重啟 X」「今晚 8 點提醒我 OO」 | **schedule** | [workflows/schedule.md](workflows/schedule.md) |
-
-**tick 只派發、不判斷**；「什麼時間該做什麼」的判斷與清單各歸 routines / schedule。
 
 ### multi-agent flavor
 

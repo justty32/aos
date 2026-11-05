@@ -2,31 +2,27 @@
 
 ← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
 
-這台機器上要能開發需要什麼、怎麼裝、跑什麼指令；外部工具與 env var 也收在這裡。給人讀的完整版在 `docs/build.md`，本檔是 agent 照著做的清單。
+這台機器上要能開發需要什麼、怎麼裝、跑什麼指令；外部工具與 env var 也收在這裡。要建的只有 `proto8/impls/`（C／C++）；各專案的細節在 [proto8/impls/README](../../proto8/impls/README.md)，本檔是 agent 照著做的清單。
 
 **何時用**：fresh clone、換機器、裝不起來、忘了指令、要加一個外部工具或環境變數。
 **何時不用**：驗證／測試怎麼跑 → [testing](testing.md)；程式碼慣例 → [common/conventions](common/conventions.md)。
 
 ## Done when
 
-- 照「流程」走完，`cmake --build --preset default` 回傳 0，`build/bin/aos` 存在。
+- 照「流程」走完，[testing「proto8」](testing.md#proto8)的建置指令回傳 0，`proto8/impls/*/bin/` 底下有各專案的執行檔。
 - 要使用者親自做的（帳號、授權、金鑰）在 [WAIT_USER](../WAIT_USER.md) 各佔一行。
 
 ## 流程（fresh clone 後）
 
-1. **vcpkg**：本機裝在 `~/dev/vcpkg`，根 `CMakeLists.txt` 會自動找到，不用設 `VCPKG_ROOT`。要用別的路徑就設 `VCPKG_ROOT` 環境變數，或把個人 preset 放 `CMakeUserPresets.json`（已 `.gitignore`）。`git clone --depth 1` 的 vcpkg 會缺 `vcpkg.json` 指定的 baseline commit，要 `git fetch --depth 1 origin <sha>` 補，不必 unshallow。
-2. `cmake --preset default`（第一次、或 `CMakeLists.txt`／`vcpkg.json` 變動後重跑）。**只能從 repo 根目錄**，子專案不可單獨 configure。
-3. `cmake --build --preset default`，build 得過就好（[testing](testing.md)）。
+1. **vcpkg**：本機裝在 `~/dev/vcpkg`，`proto8/impls/cmake/settings.cmake` 會自動找到，不用設 `VCPKG_ROOT`；要用別的路徑就設 `VCPKG_ROOT` 環境變數（或 configure 時給 `-DCMAKE_TOOLCHAIN_FILE`）。`git clone --depth 1` 的 vcpkg 會缺各專案 `vcpkg.json` 指定的 baseline commit，要 `git fetch --depth 1 origin <sha>` 補，不必 unshallow。
+2. 照 [testing「proto8」](testing.md#proto8)把 `proto8/impls/` 建一次（repo 根沒有 CMake：08～09 月那一代 11-05 封存在 `archive/aos-v1/`）。
+3. `proto8/install.sh` 把指令放進 PATH（見下表）。
 
 ## 指令表
 
 | 做什麼 | 指令 | 備註 |
 |--------|------|------|
-| configure | `cmake --preset default` | preset：`default`（`build/`）、`release`（`build/release/`）、`merged`（`build/merged/`，多產一顆合併的 `libaos.so`）|
-| build | `cmake --build --preset default` | 重運算，派給隊員時 `nice -n 19`（見 [resources](resources.md)）|
-| 跑起來 | `build/bin/aos <子命令>` | 執行檔與各測試都在 `build/bin/` |
-| 關掉擴充建一次 | `cmake -S . -B /tmp/aos-nomod -DAOS_BUILD_MODULES=OFF && cmake --build /tmp/aos-nomod` | 動過 `modules/` 之後 |
-| 建 proto8 的 C++ 實作 | 照 [testing「proto8」](testing.md#proto8)的迴圈，在 `proto8/impls/` 逐專案 `cmake -B build && cmake --build build` | 10-23 起 proto8 的 aos-exec／loop／fsm／daemon 只有 C++ 版，手跑前要先建；各專案獨立、不走 repo 根的 preset |
+| 建 proto8 的 C++ 實作 | 照 [testing「proto8」](testing.md#proto8)，在 `proto8/impls/` 建 | 10-23 起 proto8 的 aos-exec／loop／fsm／daemon 只有 C++ 版，手跑前要先建；各專案獨立 CMake、也能單獨 `cd <專案> && cmake -B build && cmake --build build`；重運算，派給隊員時 `nice -n 19`（見 [resources](resources.md)）|
 | 把 proto8 的指令放進 PATH | `proto8/install.sh`（WSL clone 裡跑；預設 symlink 進 `~/.local/bin`，給參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉）| 11-05；impls 先建好；冪等、同名的別的東西不蓋；repo 換位置要重跑。之後不用每殼 source env.sh 設 PATH |
 | 文檔檢查 | `bash wf/tools/wf-lint.sh --strict wf .claude/commands` | 可選，預設不跑；或 `/wf-lint`；從 repo 根跑 `.` 會被 `.claude/worktrees/` 的副本淹掉 |
 
