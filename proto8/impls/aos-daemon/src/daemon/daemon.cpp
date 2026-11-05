@@ -33,7 +33,7 @@ namespace aos::daemon {
 
 using Clock = std::chrono::steady_clock;
 
-static const int REVIVE_MS = 3000;  // 11-05（衝突 3）：wake／start 起來這麼久內就退＝不下表、留成 stopped＋原因
+static const int REVIVE_MS = 3000;  // 11-05（衝突 3）：wake／start 起來這麼久內就退＝原因寫「起不來」（11-05 晚起出錯結束一律留 stopped，3 秒只分原因字樣）
 static const int GRACE_MS = 10000;   // 收子項：SIGTERM 後等幾毫秒才 SIGKILL（P-36 daemon 的 grace 慣例 10000）
 
 static aos::loop::Defaults daemon_defaults() {
@@ -601,7 +601,35 @@ bool Daemon::settle(Child& c) {
     return false;
 }
 
-// 不調表地看一眼：stopped／sleeping 的列不動；running 的退了＝done（stop＝daemon 正要停它＝留成 stopped 的列）；收的途中的照收，
+// 11-05：出錯結束留成 stopped 的原因（英文，使用者 11-05「全都用英文吧」）：wake／start 後 REVIVE_MS 內退＝起不來，其他＝跑到一半掛了；
+// 加結束碼（被訊號打掉多寫訊號）與小格 stderr 最後一行（最多 300 字）。
+std::string Daemon::fail_reason(const Child& c) const {
+    std::string code = aos::dumps(c.code);
+    if (c.signal.is_number_integer()) {
+        code += ", signal " + aos::dumps(c.signal);
+    }
+    bool quick = c.revived && Clock::now() - c.revived_at < std::chrono::milliseconds(REVIVE_MS);
+    std::string why = quick ? "failed to start: exited within " + std::to_string(REVIVE_MS / 1000) + "s of wake/start (code " + code + ")"
+                            : "failed while running: exited with code " + code;
+    int err = 0;
+    std::optional<std::string> text = aos::read_file(aos::join(c.stack, names_.err), err);
+    if (text) {
+        std::string t = *text;
+        while (!t.empty() && (t.back() == '\n' || t.back() == ' ')) {
+            t.pop_back();
+        }
+        std::string last = t.substr(t.rfind('\n') == std::string::npos ? 0 : t.rfind('\n') + 1);
+        if (last.size() > 300) {
+            last = last.substr(0, 300) + "...";
+        }
+        if (!last.empty()) {
+            why += ": " + last;
+        }
+    }
+    return why;
+}
+
+// 不調表地看一眼：stopped／sleeping 的列不動；running 的退了＝done（stop＝daemon 正要停它＝留成 stopped 的列；loop 型出錯結束＝留成 stopped＋reason，11-05）；收的途中的照收，
 // 退了：daemon 下的 stop（soft）＝留成 stopped 的列、收工時收的 loop 型（nap）＝留成 sleeping 的列，其他（被收掉的）＝拿掉。回 true＝這列結束了、要拿掉。
 bool Daemon::look(const std::string& name, Child& c, bool stop) {
     if (c.held) {
@@ -615,33 +643,18 @@ bool Daemon::look(const std::string& name, Child& c, bool stop) {
             hold(name, c);
             return false;
         }
-        if (c.revived && Clock::now() - c.revived_at < std::chrono::milliseconds(REVIVE_MS)) {
-            // 11-05（portable-flow 衝突 3，使用者「留成stopped，並寫原因」）：wake／start 起來沒多久就退（定義沒一起搬、exec 的檔不在…）：
-            // 不下表，留成 stopped（要 start 才再起）、記原因（結束碼＋小格 stderr 最後一行）
-            std::string why = "wake／start 後 " + std::to_string(REVIVE_MS / 1000) + " 秒內就退了（code " +
-                              (c.code.is_null() ? std::string("?") : aos::dumps(c.code)) + "）";
-            int err = 0;
-            std::optional<std::string> text = aos::read_file(aos::join(c.stack, names_.err), err);
-            if (text) {
-                std::string t = *text;
-                while (!t.empty() && (t.back() == '\n' || t.back() == ' ')) {
-                    t.pop_back();
-                }
-                std::string last = t.substr(t.rfind('\n') == std::string::npos ? 0 : t.rfind('\n') + 1);
-                if (last.size() > 300) {
-                    last = last.substr(0, 300) + "…";
-                }
-                if (!last.empty()) {
-                    why += "：" + last;
-                }
-            }
-            c.reason = why;
+        // 11-05（edge-agent 題 1「留表標 stopped (Recommended)」、edge-daemon 題 2「一起改成留表 (Recommended)」）：
+        // loop 型出錯結束（結束碼非 0，含被訊號打掉的 128＋N）＝不下表，留成 stopped（要 start 才再起）＋reason（見 fail_reason）。
+        // 3 秒（REVIVE_MS）只分原因字樣（起不來／跑到一半掛了）。退 0（做完：跑滿、身體退 10、別人往它的 ctl 寫 stop）照舊下表；
+        // exec 型（只有跑和拔，start 不收它）、接回來的（不是自己生的、拿不到結束碼）也照舊下表。
+        if (!c.once && c.code.is_number_integer() && c.code.get<long long>() != 0) {
+            c.reason = fail_reason(c);
             hold(name, c);
             c.failed = true;   // 這一圈的起少的不再起它（stopped 參數是這圈開頭算的）
             stopped_.insert(name);
             return false;
         }
-        c.phase = "done";   // 自己結束（跑滿、退 10、訊號、別人往它的 ctl 寫 stop……）：照 11-02 從表上拿掉
+        c.phase = "done";   // 自己結束：照 11-02 從表上拿掉
         return true;
     }
     if (c.phase == "stopping" && settle(c)) {

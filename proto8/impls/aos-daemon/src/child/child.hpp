@@ -54,9 +54,9 @@ struct Child {
     Json ws;                            // null 或起它時給的工作區（絕對路徑；子行程的 AOS_WS）——起的那一刻的值，名單後來改了 ws 也不變（已在跑的不重起，N-54）
     Json exec;                          // null 或起它時的目標（11-04 晚，aos-agent 方向題 1「daemon表多一欄記下來」）：Daemon 填（exec_of）；
                                         // adopt 接回的照舊表帶過來；名單後來改了也不變（同 ws）
-    Json reason;                        // null 或字串（11-05 portable-flow 衝突 3「留成stopped，並寫原因」）：wake／start 起來沒多久就退的，列留成 stopped、記原因
-    bool failed = false;                // 11-05：這一圈剛因 REVIVE_MS 內退了留成 stopped（reconcile 這圈不再起它）
-    bool revived = false;               // 這一支是 wake／start 從 stopped／sleeping 的列再起的（11-05）：REVIVE_MS 內退了＝留成 stopped＋reason
+    Json reason;                        // null 或字串（11-05 portable-flow 衝突 3「留成stopped，並寫原因」）：loop 型出錯結束（退非 0）的，列留成 stopped、記原因（11-05 晚：edge-agent 題 1、edge-daemon 題 2）
+    bool failed = false;                // 11-05：這一圈剛因出錯結束留成 stopped（reconcile 這圈不再起它）
+    bool revived = false;               // 這一支是 wake／start 從 stopped／sleeping 的列再起的（11-05）：REVIVE_MS 內退非 0＝原因寫「起不來」
     std::chrono::steady_clock::time_point revived_at;
     Json def;                           // null 或起它時給的定義資料夾（11-04，aos-agent，使用者「那就b。」）：Daemon 填（def_of）；接回、不變同 exec
 };
