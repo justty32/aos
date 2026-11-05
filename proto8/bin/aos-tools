@@ -31,7 +31,6 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   O 不在＝沒有覆蓋（就是 F）。疊法：F 的工具先拿掉 rm 裡的名字（F 裡沒有的＝忽略），再放上 add 的（同名蓋過 F）。
   有 --overlay 時 add／rm 只寫 O、不碰 F：add＝寫進 O 的 add（path 存相對 O 的資料夾，字串算、不 realpath）、名字從 rm 拿掉；
   rm＝從 O 的 add 拿掉、F 裡有的名字記進 O 的 rm。撞名照常（看疊好的那份）。O 不解指示詞；O 寫壞＝RegistryBad。
-  O 是一份完整登記檔（有 "tools"：11-05 前 aos-agent 的整份副本）＝整份取代 F（舊行為照舊）；這時 add／rm＝RegistryBad（先刪掉 O 再改）。
 工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收不管。
 工具名：--name ＞ 檔名去掉副檔名（資料夾＝資料夾名），只收 [A-Za-z0-9_-]、最多 64 字（OpenAI／MCP 的限制）。撞名＝ToolExists，--override 蓋掉。
 不符合要求一律報錯、不猜不跳過（ls／get 碰到登記了但壞掉的工具也報錯，訊息帶工具名）。
@@ -212,7 +211,7 @@ def entries(reg, where, tools):
 
 
 def read_overlay():
-    """--overlay 那份 → {"add": {…}, "rm": […]}（不在＝兩格空的）；是完整登記檔（有 tools）＝None。不解指示詞。"""
+    """--overlay 那份 → {"add": {…}, "rm": […]}（不在＝兩格空的）。不解指示詞。"""
     if not os.path.exists(OVERLAY):
         return {"add": {}, "rm": []}
     try:
@@ -222,8 +221,6 @@ def read_overlay():
         raise Fail("RegistryBad", "覆蓋層 %s 讀不了或不是 JSON：%s" % (OVERLAY, e))
     if not isinstance(raw, dict):
         raise Fail("RegistryBad", "覆蓋層 %s 要是 JSON 物件（{\"add\": {…}, \"rm\": […]}）" % OVERLAY)
-    if "tools" in raw:
-        return None
     add, rm = raw.get("add", {}), raw.get("rm", [])
     if not isinstance(add, dict):
         raise Fail("RegistryBad", "覆蓋層 %s 的 add 要是物件（名字 → {\"path\": …}）" % OVERLAY)
@@ -234,12 +231,10 @@ def read_overlay():
 
 
 def load_tools(reg):
-    """用的那份：沒 --overlay＝reg；有＝reg 疊覆蓋層（rm 先拿掉、add 再放上；覆蓋層是完整登記檔＝整份取代）。"""
+    """用的那份：沒 --overlay＝reg；有＝reg 疊覆蓋層（rm 先拿掉、add 再放上）。"""
     if OVERLAY is None:
         return load_registry(reg)
     ov = read_overlay()
-    if ov is None:
-        return load_registry(OVERLAY)
     tools = load_registry(reg)
     for n in ov["rm"]:
         tools.pop(n, None)                           # 定義裡已經沒有＝忽略
@@ -248,11 +243,7 @@ def load_tools(reg):
 
 
 def overlay_for_write():
-    ov = read_overlay()
-    if ov is None:
-        raise Fail("RegistryBad", "%s 是一份完整登記檔（有 tools，11-05 前 aos-agent 的整份副本），不是覆蓋層；要改先刪掉它"
-                   "（aos-agent tools reset；副本裡改過的會丟，先 ls 記下來）" % OVERLAY)
-    return ov
+    return read_overlay()
 
 
 def write_overlay(ov):
