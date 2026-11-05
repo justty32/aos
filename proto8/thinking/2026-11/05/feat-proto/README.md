@@ -2,7 +2,7 @@
 
 ← [thinking README](../../../README.md)｜日 [2026-11-05](../README.md)｜前情：[kernel-daemon](../kernel-daemon/README.md)（llm kernel＝一台 daemon、問腦掛 proc）、[11-04 think-as-function](../../04/think-as-function/README.md)（代號表、`aos-llm`）、[portable-flow](../portable-flow/README.md)（tools 覆蓋層只存差異）、[edge-agent](../edge-agent/README.md)、[10-24 sandbox](../../../2026-10/24/sandbox/README.md)｜程式（只翻、沒改）：[aos-llm-kernel](../../../../impls/aos-llm-kernel/README.md)、[aos-llm](../../../../impls/aos-llm/README.md)、[aos-agent](../../../../extras/agent/README.md)、[aos-tools](../../../../bin/README.md)、[lib](../../../../lib/README.md)、[demo](../../../../demo/README.md)、[aos-daemon](../../../../impls/aos-daemon/README.md)｜條文：[C-42、C-46、C-61](../../../../docs/CONCEPTS/05-agent.md)、[C-47](../../../../docs/CONCEPTS/04-kernel.md)、[C-52、C-56、C-64](../../../../docs/CONCEPTS/01-設計理念.md)、[N-42](../../../../docs/NORMS/09-kernel.md)、[P-17、P-23、P-41](../../../../docs/CONVENTION/02-題目stack停錯腦.md)
 
-狀態：**已實作**（11-05 午 S1～S10；件 5 的 daemon 半邊等邊緣隊 E1～E3；做到哪、代定總表、實測、已知限制在 [06-實作結果](06-實作結果.md)）。規劃時：使用者在午睡，方向題照推薦代定、標「可翻案」、不停線（鐵律 5：方向是他的，做原型讓他試）。本檔只記使用者原文（逐字）、已定、代定、留給他的題、跟原則的衝突（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。實作步驟給隊長：[steps](steps.md)。
+狀態：**已實作**（11-05 午 S1～S10；件 5 的 daemon 半邊 E1～E3 也做了〔隊長接手 aos-daemon，`9f8c957f` `f376a12c` `b596cddf`〕；做到哪、代定總表、實測、已知限制在 [06-實作結果](06-實作結果.md)）。規劃時：使用者在午睡，方向題照推薦代定、標「可翻案」、不停線（鐵律 5：方向是他的，做原型讓他試）。本檔只記使用者原文（逐字）、已定、代定、留給他的題、跟原則的衝突（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。實作步驟給隊長：[steps](steps.md)。
 
 ## 使用者原文（11-05 午，逐字）
 

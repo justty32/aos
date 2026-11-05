@@ -8,8 +8,8 @@
 
 ## 最新進度
 
-- **open｜agent-knowledge**：工具 `memory` 與 `knowledge/aos` 已做並實測；等新功能隊收工後排 K1～K8（description 改英文增量、agent-fsm／eca／aos-mcp 接根、轉 markdown 工具、條文）；五題待使用者 → [agent-knowledge](../proto8/thinking/2026-11/05/agent-knowledge/README.md)、[步驟](../proto8/thinking/2026-11/05/agent-knowledge/03-接進agent與工具說明.md)
-- **open｜kernel-daemon**：做完（[實作結果](../proto8/thinking/2026-11/05/kernel-daemon/08-實作結果.md)）；bob 真問 claude、`open` 畫面等使用者試（[WAIT_USER](WAIT_USER.md)）
+- **open｜feat-proto**：五件做完、六題代定待裁、真腦沒跑 → [feat-proto](../proto8/thinking/2026-11/05/feat-proto/README.md)
+- **open｜agent-knowledge**：工具 `memory` 與 `knowledge/aos` 已做並實測；K1～K8 可排（新功能隊已收工）；五題待使用者 → [agent-knowledge](../proto8/thinking/2026-11/05/agent-knowledge/README.md)
 - **open｜tidy 收斂**：剩 C-54 摺疊（aos-post 步 9 加註 11-04 已做）、2026-11/04 thinking 未精簡 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)
 - **open｜介質**：queue 輸入、接單後放 tools（決定 32）兩題擱著 → [10-28 medium](../proto8/thinking/2026-10/28/medium/README.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10/29/medium-plan/README.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - **open｜現況地圖十一點**：剩第 1 點（plan 9 式檔案串流）、第 7 點（post／lock 補指令），「之後有遇到再說」 → [map-review § 結論](../proto8/thinking/2026-10/30/map-review/README.md#結論10-31-補)
@@ -20,7 +20,7 @@
 - **待照新做法重寫**：tasks、通用 kernel（10-30 停滯） → [plan § 1.2](../proto8/thinking/2026-10/21/plan/README.md)、[rewrite-order](../proto8/thinking/2026-10/19/rewrite-order.md)
 - **open｜LLM kernel 下一步**：`_metainfo` 第二步 → [10-24 § LLM kernel 下一步](session_logs/2026-10-parts/12-10-24.md#llm-kernel-下一步從-session-log-逐字搬來)
 - **KISS 批次 2～6 暫停**（10-16 使用者撤回「都照推薦」）、10-15 剩兩候選題（對話太長〔[intent-context](../proto8/thinking/2026-10/24/intent-context/README.md)〕、規範草稿定稿） → [10-15](session_logs/2026-10-parts/03-10-15.md#2026-10-15)、[KISS 批次 1](session_logs/2026-10-parts/03-10-15.md#kiss-批次-1純刪照做10-15-深夜fable)
-- 導覽：[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/docs/CONCEPTS.md)、[NORMS](../proto8/docs/NORMS.md)；[restart](../proto8/thinking/2026-10/11/restart/README.md) §4 列了停在半路的幾處。
+- 導覽：[thinking](../proto8/thinking/README.md)、[CONCEPTS](../proto8/docs/CONCEPTS.md)、[NORMS](../proto8/docs/NORMS.md)；停在半路的見 [restart](../proto8/thinking/2026-10/11/restart/README.md) §4
 
 ## 各工作流 session-log
 

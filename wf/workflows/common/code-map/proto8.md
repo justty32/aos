@@ -11,7 +11,8 @@
 | [01-impls](proto8/01-impls.md) | `impls/` 共通建置（`cmake/`、各專案 `CMakeLists.txt`／`vcpkg.json`／`.gitignore`）、`impls/inst/`、`impls/aos-util/`、`impls/aos-directive/`、`impls/aos-schema/`、`impls/aos-exec/` |
 | [01-impls-2](proto8/01-impls-2.md) | `impls/aos-loop/`、`impls/aos-fsm/`、`impls/aos-daemon/`、`impls/aos-post/`、`impls/aos-lock/` |
 | [01-impls-3](proto8/01-impls-3.md) | `impls/aos-llm-kernel/`、`impls/aos-llm/`、`impls/aos-json/` |
-| [06-周邊工具](proto8/06-周邊工具.md) | `bin/`、`extras/agent/`、`extras/ai_tools/`、`extras/grow/`、`extras/langs/janet/`、`extras/langs/lua/`、`extras/sandbox/` |
+| [06-周邊工具](proto8/06-周邊工具.md) | `bin/`、`install.sh`、`extras/agent/`、`extras/ai_tools/` |
+| [06-周邊工具-2](proto8/06-周邊工具-2.md) | `extras/grow/`、`extras/langs/janet/`、`extras/langs/lua/`、`extras/sandbox/` |
 | [09-lib](proto8/09-lib.md) | `lib/base/`、`lib/aos/`、`lib/agent/`、`knowledge/`（記憶工具 `memory` 讀的知識庫，11-05） |
 | [13-demo](proto8/13-demo.md) | `demo/`（eca-claude、agent-fsm） |
 
