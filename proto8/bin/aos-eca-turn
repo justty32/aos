@@ -60,7 +60,7 @@ import aos_flags, aos_ws, cli_session  # noqa: E402
 
 NAME = "aos-eca-turn"
 NOT_FOUND = 10
-USAGE = "usage: aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] [--prompt FILE] <定義資料夾絕對路徑>"
+USAGE = "usage: aos-eca-turn [--one] [--on-empty stop|idle] [--on-busy yield|answer] [--prompt FILE] <absolute definition dir>"
 
 
 class Fail(Exception):
@@ -92,7 +92,7 @@ def write_atomic(path, text):
             f.write(text)
         os.replace(tmp, path)
     except OSError as e:
-        raise Fail("WriteFailed", "寫不了 %s：%s" % (path, e))
+        raise Fail("WriteFailed", "cannot write %s: %s" % (path, e))
 
 
 def post(args, stdin_text=""):
@@ -100,14 +100,14 @@ def post(args, stdin_text=""):
     try:
         r = subprocess.run(["aos-post"] + args, input=stdin_text, capture_output=True, text=True)
     except OSError as e:
-        raise Fail("PostFailed", "aos-post 起不來（要在 PATH 上）：%s" % e)
-    return r.returncode, r.stdout, (r.stderr.strip().splitlines() or ["退 %d、沒說原因" % r.returncode])[0]
+        raise Fail("PostFailed", "aos-post cannot start (must be on PATH): %s" % e)
+    return r.returncode, r.stdout, (r.stderr.strip().splitlines() or ["exited %d with no reason given" % r.returncode])[0]
 
 
 def must_post(args, stdin_text="", ok=(0,)):
     code, out, err = post(args, stdin_text)
     if code not in ok:
-        raise Fail("PostFailed", "aos-post %s 退 %d：%s" % (args[0], code, err))
+        raise Fail("PostFailed", "aos-post %s exited %d: %s" % (args[0], code, err))
     return code, out
 
 
@@ -125,12 +125,12 @@ def history_rows(stack):
                 except ValueError:
                     m = None
                 if not isinstance(m, dict):
-                    raise Fail("HistoryBad", "history.jsonl 第 %d 行不是 JSON 物件" % i)
+                    raise Fail("HistoryBad", "history.jsonl line %d is not a JSON object" % i)
                 rows.append(m)
     except FileNotFoundError:
         pass
     except OSError as e:
-        raise Fail("HistoryBad", "讀不了 history.jsonl：%s" % e)
+        raise Fail("HistoryBad", "cannot read history.jsonl: %s" % e)
     return rows
 
 
@@ -139,14 +139,14 @@ def append_history(stack, msg):
         with open(os.path.join(stack, "history.jsonl"), "a", encoding="utf-8") as f:   # 一次寫一整行
             f.write(json.dumps(msg, ensure_ascii=False) + "\n")
     except OSError as e:
-        raise Fail("WriteFailed", "接不進 history.jsonl：%s" % e)
+        raise Fail("WriteFailed", "cannot append to history.jsonl: %s" % e)
 
 
 # ---- mailbox_warning.txt ----
 
 def warn(stack, sig, why):
     """N-16 壞信記 mailbox_warning：$AOS_STACK/mailbox_warning.txt 一行、只留最後一封（11-03 前記在 trace）。"""
-    write_atomic(os.path.join(stack, "mailbox_warning.txt"), "信 %s 不採用：%s\n" % (sig, why.replace("\n", " ")))
+    write_atomic(os.path.join(stack, "mailbox_warning.txt"), "letter %s rejected: %s\n" % (sig, why.replace("\n", " ")))
 
 
 # ---- 一批 ----
@@ -159,10 +159,10 @@ def letter_body(box, sig):
     try:
         body = json.loads(out).get("body")
     except (ValueError, AttributeError):
-        return None, "aos-post see 印的不是 JSON 物件"
+        return None, "aos-post see did not print a JSON object"
     if not (isinstance(body, dict) and body.get("role") == "user" and isinstance(body.get("content"), str)
             and body["content"].strip()):
-        return None, "body 要是 {\"role\": \"user\", \"content\": 非空字串}"
+        return None, "body must be {\"role\": \"user\", \"content\": non-empty string}"
     return body, None
 
 
@@ -175,9 +175,9 @@ def opening(stack, box, path):
         with open(path, encoding="utf-8") as f:
             text = f.read()
     except FileNotFoundError:                                       # main 驗過之後才被刪掉；給了就要有
-        raise Fail("PromptMissing", "開場白檔不在：%s" % path)
+        raise Fail("PromptMissing", "prompt file not found: %s" % path)
     except OSError as e:
-        raise Fail("AgentBad", "讀不了 %s：%s" % (path, e))
+        raise Fail("AgentBad", "cannot read %s: %s" % (path, e))
     text = text[:-1] if text.endswith("\n") else text           # 結尾一個換行不算
     if not text.strip() or history_rows(stack):
         return False
@@ -250,35 +250,35 @@ def main():
         opts, args = aos_flags.parse(sys.argv[1:], {"--on-empty": "on_empty", "--on-busy": "on_busy", "--prompt": "prompt"},
                                      {"--one": "one"})
     except aos_flags.Error as e:
-        die(e.code, "%s（%s）" % (USAGE, e))
+        die(e.code, "%s (%s)" % (USAGE, e))
     if len(args) != 1:
         die("ArgumentsBad", USAGE)
     empty, busy = opts.get("on_empty", "stop"), opts.get("on_busy", "yield")
     if empty not in ("stop", "idle"):
-        die("ArgumentsBad", "--on-empty 要是 stop 或 idle，收到 %r" % empty)
+        die("ArgumentsBad", "--on-empty must be stop or idle, got %r" % empty)
     if busy not in ("yield", "answer"):
-        die("ArgumentsBad", "--on-busy 要是 yield 或 answer，收到 %r" % busy)
+        die("ArgumentsBad", "--on-busy must be yield or answer, got %r" % busy)
     if opts.get("one") and "on_empty" in opts:
-        die("ArgumentsBad", "--one（工具形）沒有 queue，不收 --on-empty")
+        die("ArgumentsBad", "--one (tool form) has no queue; --on-empty not allowed")
     if opts.get("one") and "prompt" in opts:
-        die("ArgumentsBad", "--one（工具形）沒有 queue，不收 --prompt")
+        die("ArgumentsBad", "--one (tool form) has no queue; --prompt not allowed")
     if opts.get("prompt") == "":
-        die("ArgumentsBad", "--prompt 要給開場白檔的路徑")
+        die("ArgumentsBad", "--prompt needs the path of a prompt file")
     template = args[0]
     if not os.path.isabs(template) or not os.path.isdir(template):
-        die("AgentBad", "定義資料夾要是存在的絕對路徑，收到 %r" % template)
+        die("AgentBad", "definition dir must be an existing absolute path, got %r" % template)
     template = os.path.normpath(template)
     prompt = None
     if "prompt" in opts:                                           # 相對路徑從定義資料夾算（11-04）
         prompt = os.path.normpath(os.path.join(template, opts["prompt"]))
         if not os.path.isfile(prompt):
-            die("PromptMissing", "--prompt 給的開場白檔不在：%s" % prompt)
+            die("PromptMissing", "--prompt file not found: %s" % prompt)
     if opts.get("one"):
         cli_session.call_main(template, busy)                      # 工具形：跟 lib/agent/claude、codex 同一條路
         return
     stack = os.environ.get("AOS_STACK")
     if not stack:
-        die("StackMissing", "沒設定 AOS_STACK")
+        die("StackMissing", "AOS_STACK is not set")
     stack = os.path.abspath(stack)
     ws = os.path.abspath(os.environ.get("AOS_WS") or ".")
     cli_session.die = _cli_die
