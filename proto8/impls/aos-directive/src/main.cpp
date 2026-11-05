@@ -25,11 +25,11 @@ int main(int argc, char** argv) {
         try {
             cli = aos::parse_cli(std::vector<std::string>(argv + 1, argv + argc), {});
         } catch (const aos::Error& e) {
-            throw aos::Error{e.code, "usage: aos-directive < 設定.json（" + e.msg + "）"};
+            throw aos::Error{e.code, "usage: aos-directive < CONFIG.json (" + e.msg + ")"};
         }
         if (!cli.rest.empty()) {
             throw aos::Error{aos::code::ArgumentsBad,
-                             "usage: aos-directive < 設定.json（不收參數、從 stdin 讀，多了 " + cli.rest[0] + "）"};
+                             "usage: aos-directive < CONFIG.json (takes no arguments, reads stdin; got extra " + cli.rest[0] + ")"};
         }
         aos::Json doc = aos::read_stdin();
         return aos::emit(aos::resolve(doc, std::filesystem::current_path()));

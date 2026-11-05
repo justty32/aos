@@ -39,7 +39,7 @@ static Json load(const std::string& path) {
     bool is_dir = ::stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
     std::ifstream f(path, std::ios::binary);
     if (!f || is_dir) {
-        throw Error{code::DirectiveBad, "$ref 讀不到 " + path};
+        throw Error{code::DirectiveBad, "$ref cannot read " + path};
     }
     std::string text(std::istreambuf_iterator<char>(f), {});
     if (text.starts_with("#!")) {
@@ -48,7 +48,7 @@ static Json load(const std::string& path) {
     }
     Json doc = Json::parse(text, nullptr, false);
     if (doc.is_discarded()) {
-        throw Error{code::DirectiveBad, "$ref " + path + " 不是 JSON"};
+        throw Error{code::DirectiveBad, "$ref " + path + " is not JSON"};
     }
     return doc;
 }
@@ -93,7 +93,7 @@ static Json pointer(const Json& doc, const std::string& ptr, const std::string& 
                    std::stoull(tok) < cur->size()) {
             cur = &(*cur)[std::stoull(tok)];
         } else {
-            throw Error{code::DirectiveBad, "$ref 指不到：" + file + "#" + ptr};
+            throw Error{code::DirectiveBad, "$ref pointer not found: " + file + "#" + ptr};
         }
         i = next + 1;
     }
@@ -156,7 +156,7 @@ std::optional<std::vector<Fetched>> fetch_ref(const Json& d, const std::string& 
                 for (const auto& s : chain) {
                     walked += s.first + (s.second.empty() ? "" : "#" + s.second) + " → ";
                 }
-                throw Error{code::DirectiveBad, "$ref 繞圈：" + walked + file + (ptr.empty() ? "" : "#" + ptr)};
+                throw Error{code::DirectiveBad, "$ref loop: " + walked + file + (ptr.empty() ? "" : "#" + ptr)};
             }
         }
         // 4. 讀、取值（原文，還沒往下解）
@@ -207,7 +207,7 @@ Resolved merge(std::vector<Resolved>& parts, const std::string& where) {
         return out;
     }
     if (!objects) {
-        throw Error{code::DirectiveBad, "$ref " + where + " 的幾份合不起來（要都是物件或都是陣列）"};
+        throw Error{code::DirectiveBad, "$ref " + where + ": parts cannot be merged (must be all objects or all arrays)"};
     }
     out.value = Json::object();
     // ordered_json 的 [] 逐個比對 key（N 個就 N×N）：自己記位置、直接接在尾巴；同名的就地蓋掉（位置留在第一次出現的地方）

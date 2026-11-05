@@ -15,7 +15,7 @@ std::optional<Json> resolve_env(const Json& d) {
     }
     const char* val = std::getenv(name.get<std::string>().c_str());
     if (val == nullptr) {
-        throw Error{code::DirectiveBad, "環境變數 " + name.get<std::string>() + " 沒設定"};
+        throw Error{code::DirectiveBad, "environment variable " + name.get<std::string>() + " is not set"};
     }
     return Json(val);
 }
