@@ -44,7 +44,7 @@ void check_against_meta(const nlohmann::json& schema) {
     if (where.empty()) {
         where = "/";
     }
-    throw Error{code::SchemaBad, "schema 不合 draft-07：" + where + " " + p.message};
+    throw Error{code::SchemaBad, "schema is not valid draft-07: " + where + " " + p.message};
 }
 
 }  // namespace

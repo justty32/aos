@@ -18,7 +18,7 @@ $ echo $?
 ## 用法
 
 ```sh
-aos-schema SCHEMA檔 < doc.json
+aos-schema SCHEMA_FILE < doc.json
 ```
 
 stdin 讀一份 JSON（規則同全家：空的＝`{}`、多份＝`InputExtra`、壞尾丟掉），用 SCHEMA檔 驗，stdout 印一行

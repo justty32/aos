@@ -12,21 +12,21 @@ namespace aos::schema {
 nlohmann::json load_file(const std::filesystem::path& path) {
     std::error_code ec;
     if (!std::filesystem::exists(path, ec)) {
-        throw Error{code::SchemaMissing, "沒有 " + path.string()};
+        throw Error{code::SchemaMissing, "not found: " + path.string()};
     }
     std::ifstream in(path, std::ios::binary);
     if (!in) {
-        throw Error{code::SchemaBad, "讀不到 " + path.string()};
+        throw Error{code::SchemaBad, "cannot read " + path.string()};
     }
     std::stringstream buf;
     buf << in.rdbuf();
     if (in.bad()) {
-        throw Error{code::SchemaBad, "讀 " + path.string() + " 時出錯"};
+        throw Error{code::SchemaBad, "error while reading " + path.string()};
     }
     try {
         return nlohmann::json::parse(buf.str());
     } catch (const nlohmann::json::parse_error& e) {
-        throw Error{code::SchemaBad, path.string() + " 不是合法 JSON：" + e.what()};
+        throw Error{code::SchemaBad, path.string() + " is not valid JSON: " + e.what()};
     }
 }
 

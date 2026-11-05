@@ -16,7 +16,7 @@
 
 using namespace aos::schema;
 
-static const char* const usage = "usage: aos-schema SCHEMA檔 < doc.json";
+static const char* const usage = "usage: aos-schema SCHEMA_FILE < doc.json";
 
 static int fail(const Error& e) {
     std::fprintf(stderr, "aos-schema: %s %s\n", e.code.c_str(), e.msg.c_str());
@@ -30,10 +30,10 @@ int main(int argc, char** argv) {
         try {
             cli = aos::parse_cli(std::vector<std::string>(argv + 1, argv + argc), {});
         } catch (const Error& e) {
-            throw Error{e.code, std::string(usage) + "（" + e.msg + "）"};
+            throw Error{e.code, std::string(usage) + " (" + e.msg + ")"};
         }
         if (cli.rest.size() != 1) {
-            throw Error{code::ArgumentsBad, std::string(usage) + "（要剛好一個 SCHEMA檔）"};
+            throw Error{code::ArgumentsBad, std::string(usage) + " (need exactly one SCHEMA_FILE)"};
         }
         nlohmann::json schema = load_file(cli.rest[0]);
         aos::Json doc = aos::read_stdin();
