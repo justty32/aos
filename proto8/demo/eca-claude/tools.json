@@ -1,1 +1,3 @@
-{"tools": {"clock": {"path": "../../lib/base/clock"}}}
+{"tools": {"clock": {"path": "../../lib/base/clock"},
+           "self_tools": {"path": "../../lib/agent/self_tools"},
+           "agents": {"path": "../../lib/agent/agents"}}}

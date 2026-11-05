@@ -13,10 +13,11 @@ eca-claude/
   llm.json    腦設定：{"model": "sonnet"}（11-04 晚；cli_session 每題讀它疊 $AOS_STACK/llm.json 副本，補成 --model）
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔11-04 起，相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
-  tools.json  aos-tools 的登記檔，只登記 clock（"../../lib/base/clock"，相對路徑從這份檔的資料夾算）；cli.json 沒寫 tools＝用它，
-              cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__clock）；不要工具就刪掉它
+  tools.json  aos-tools 的登記檔：clock、self_tools、agents（"../../lib/…"，相對路徑從這份檔的資料夾算；後兩個 11-05 使用者裁「內建」）；
+              cli.json 沒寫 tools＝用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__clock…）；不要工具就刪掉它
+  agents.json 工具 agents 的設定：{"max_children": 4}（這隻最多同時生幾隻；這隻的 stack 裡放一份 agents.json 只寫改過的鍵＝覆蓋）
   interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json"}}（11-04；aos-agent ctl add 只看這個宣告）
-  screen/     子介面：_entry＝["aos-eca-screen", ".."]（aos-agent open／close／watch 叫它）
+  screen/     子介面：_entry＝["aos-eca-screen", "--eca", ".."]（aos-agent open／close／watch 叫它；動作接在最後）
 ```
 
 **實例＝定義 × 工作區**：工作區＝CLI 的 cwd（你的程式專案）；stack 預設 `<工作區>/.stack/`（掛 daemon 的在 daemon 給的小格），裡面長 `queue/`、`history.jsonl`、`ctl.json`、`state.json` 與 cli_session 的小格 `claude/`（`session.txt`、`transcripts/`…）；`eca.json` 11-04 起不寫（沒人讀）。這隻自己改過的還有 `tools.json`（覆蓋層，只存差異）、`llm.json`（只存改過的鍵）（`aos-agent tools`／`llm`；`aos-agent llm --target myproj set model=haiku`＝下一題起 `--model haiku`，`reset` 回定義的 sonnet）。換定義的模型＝`aos-json set --str proto8/demo/eca-claude/llm.json#/model opus`。eca 的腦是 CLI 自己，不經 llm kernel（think-as-function 03 § 2）。

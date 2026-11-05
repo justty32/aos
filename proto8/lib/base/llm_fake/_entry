@@ -5,6 +5,8 @@
 #   stdout 一行 {"message", "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}, "model": "fake"}、退 0。
 #   endpoint.script（陣列，劇本）有就照劇本：已在 messages 裡的 assistant 則數 n，這次回 script[n]；一項是 {"content": "..."} 或
 #   {"tool_calls": [{"name": "...", "arguments": {...}}]}（arguments 給物件，這裡轉成 JSON 字串；補 id／type）；n 超過劇本長度＝照上面原本的行為。
+#   endpoint.tool（字串，11-05 E 線）＝先叫的那個工具名：request 的 tools 裡有它就叫它、沒有＝照舊叫第一個（範本 11-05 起內建 agents、
+#   self_tools，按名字排在 clock 前面；demo 的 fake 包寫 "tool": "clock"）。
 # 錯：stderr 與 stdout 各一行「llm_fake: error: ArgumentsBad 原因」、退 1。
 # 用法：kernel.json 的 endpoints 登記一組 "fake": {"exec": "<到這個資料夾的路徑>"}，信寫 "endpoint": "fake"（或設成預設）。
 # 來源：demo/agent-fsm/brain.py 的 fake()（11-04 晚搬過來；不再用「URL 沒設＝假腦」的暗規則，C-56）。
@@ -12,7 +14,8 @@ import json, signal, sys
 HELP = """\
 usage: llm_fake < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Fake brain endpoint function (same stdin/stdout as llm_http, no network): answers
-"FAKE ANSWER to: ..." or calls the first tool; endpoint.script gives scripted replies.
+"FAKE ANSWER to: ..." or calls a tool first (endpoint.tool if offered, else the first one);
+endpoint.script gives scripted replies.
 Prints {"message", "usage", "model"}.
 Arguments: one JSON object on stdin (empty stdin = {}):
   endpoint  object
@@ -63,7 +66,9 @@ if script and n < len(script):
             said["tool_calls"].append({"id": "call_script_%d_%d" % (n, i), "type": "function",
                                        "function": {"name": c["name"], "arguments": a if isinstance(a, str) else json.dumps(a, ensure_ascii=False)}})
 elif last.get("role") == "user" and tools:
-    name = (tools[0].get("function") or {}).get("name") if isinstance(tools[0], dict) else None
+    names = [(t.get("function") or {}).get("name") if isinstance(t, dict) else None for t in tools]
+    want = args["endpoint"].get("tool") if isinstance(args.get("endpoint"), dict) else None
+    name = want if want is not None and want in names else names[0]
     said = {"role": "assistant", "content": None,
             "tool_calls": [{"id": "call_fake_%d" % len(messages), "type": "function",
                             "function": {"name": name or "unknown", "arguments": "{}"}}]}

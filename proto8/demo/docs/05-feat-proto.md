@@ -17,12 +17,11 @@ echo '{"interval_ms": 300}' > daemon.json
 AOS_STACK=$T/ws/.stack/ aos-daemon daemon.json > d.log 2>&1 & D=$!   # 跑 agent 的 daemon（環境帶著 AOS_LLM_KERNEL）
 sleep 1 && cd ws                                                   # cwd 有 .stack＝aos-agent 找得到 daemon
 aos-agent ctl add --name fsm1 $P/demo/agent-fsm
-aos-agent tools --target fsm1 add self_tools $P/lib/agent/self_tools   # 人先塞第一個（範本不內建）
-aos-agent llm --target fsm1 set endpoint=fake-demo-self                # 換成劇本腦
+aos-agent llm --target fsm1 set endpoint=fake-demo-self                # 換成劇本腦（self_tools 範本內建，11-05 使用者裁「內建」）
 aos-agent say --target fsm1 give yourself a math tool && aos-agent listen --target fsm1
 # I added math to my own tools and used it right away: 17*23 = 391.
 aos-agent tools --target fsm1 ls          # 多一行 math（定義疊這隻的覆蓋層）
-aos-agent ctl state --target fsm1         # tools   overlay: 2 added, 0 removed (+self_tools, +math)
+aos-agent ctl state --target fsm1         # tools   overlay: 1 added, 0 removed (+math)
 kill $K $D                                # 收工（daemon 把它掛的收掉）
 ```
 
@@ -56,18 +55,33 @@ export AOS_LLM_KERNEL=$T/k AOS_DAEMON=$T/st AOS_KERNEL=$T/st/requests   # 掛 pr
 aos-exec --stack $T/st $P/demo/daemon-judge > d.log 2>&1 & D=$!         # 帶判官的 daemon：allowed 有 fsm1、kid、kid1～4，max_running 4
 sleep 1
 aos-agent ctl add --name fsm1 --ws $T/ws $P/demo/agent-fsm
-aos-agent tools --target fsm1 add agents $P/lib/agent/agents
-aos-agent llm --target fsm1 set endpoint=fake-demo-spawn
+aos-agent llm --target fsm1 set endpoint=fake-demo-spawn             # agents 範本內建（11-05「內建」）
 aos-agent say --target fsm1 start a kid and ask it the time && aos-agent listen --target fsm1
 # I started kid, asked it the time (its answer is in the tool result above) and removed it again.
 aos-agent say --target fsm1 now start four kids && aos-agent listen --target fsm1
-# Only three kids fit: the judge allows 4 running at once and I count too, so kid4 was refused (SlotMissing). I removed the three again.
+# I wrote defs/helper and started kid1 from it, kid2 and kid3 from the same definition; kid4 was refused by the judge (4 running at once, I count too). I removed the three again.
 aos-agent ctl ls                          # 只剩 fsm1
+ls ws/defs/helper                         # kid1 那時寫出的定義留著（普通定義資料夾，可再 add）
 tail -1 d.log                             # judge: warning: letter … refused: SlotMissing max_running is 4, 4 running now …
 kill $K $D && unset AOS_DAEMON AOS_KERNEL
 ```
 
-第一題劇本：`agents add {"name": "kid", "def": "<repo>/proto8/demo/agent-fsm", "endpoint": "fake"}` → `ask kid "what time is it?"`（kid 的假腦先叫 clock、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`。第二題一次 add kid1～kid4：fsm1＋三隻＝4 隻 running，kid4 被判官擋，回給腦一則 `agents: error: AddRejected AOS_KERNEL refused the add letter: SlotMissing …`；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的），工作區跟 fsm1 同一個；`agents` 只收自己生的（`$AOS_STACK/children.json`）。
+第一題劇本（生法 (b) 用現有定義）：`agents add {"name": "kid", "def": "<repo>/proto8/demo/agent-fsm", "llm": {"endpoint": "fake"}}`（`llm` 走 kid 自己的覆蓋層 `<kid stack>/llm.json`，定義不動）→ `ask kid "what time is it?"`（kid 的假腦先叫 clock〔`fake` 包寫 `"tool": "clock"`〕、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`。第二題一次叫四個：kid1 用生法 (a) `agents new {"path": "defs/helper", "from": "<repo>/proto8/demo/agent-fsm", "files": {"system.txt": …}, "llm": {"endpoint": "fake"}}`——範本整份抄到 `ws/defs/helper`、換掉 `system.txt`、`llm.json` 寫進 `endpoint`、`tools.json` 的相對路徑改成絕對，再掛上；kid2、kid3 用 (b) `add {"def": "defs/helper"}` 重用它（kid3 另給 `"ws": "kid3"`＝`ws/kid3/`）；fsm1＋三隻＝4 隻 running，kid4 被判官擋，回給腦一則 `agents: error: AddRejected AOS_KERNEL refused the add letter: SlotMissing …`；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的）；`ws` 沒給＝跟 fsm1 同一個；`agents` 只收自己生的（`$AOS_STACK/children.json`）。
+
+**兩道關**：`agents` 工具自己數這隻父生了幾隻（`max_children`，範本 `agents.json` 寫 4；記在父 stack 裡工具小格的 `children.json`，每次叫先跟 daemon 表對帳），超過＝工具直接回錯、不寄信；判官 `max_running` 數的是整台 daemon 的總量（含父）。上面第二題撞的是判官（父只有三隻，工具放行）。要看工具那道，照 act 格的叫法手叫一次（接在上面 `kill` 之前；`FS` 是 fsm1 的 stack）：
+
+```sh
+FS=$T/st/procs/fsm1 && export AOS_STACK=$FS/tools/agents/ AOS_WS=$T/ws
+echo '{"max_children": 1}' > $FS/agents.json        # 這隻父的覆蓋層：只放改過的鍵（定義 agents.json 不動）
+echo '{"op": "add", "name": "kid1", "def": "defs/helper"}' | aos-tools --file $P/demo/agent-fsm/tools.json call agents
+# added kid1 (stack …/procs/kid1); children 1/1
+echo '{"op": "add", "name": "kid2", "def": "defs/helper"}' | aos-tools --file $P/demo/agent-fsm/tools.json call agents; echo $?
+# agents: error: ChildSlotMissing you already have 1 of max 1 children (kid1); remove one with op rm first (…)   ← stdout 與 stderr 各一行
+# 1                                         （判官信箱沒多信：工具在寄信前就擋了）
+aos-agent ctl rm kid1                     # 別處收掉也行：下次叫工具時對帳、kid1 被忘掉
+echo '{"op": "ls"}' | aos-tools --file $P/demo/agent-fsm/tools.json call agents   # … "children": [], "max_children": 1}
+rm $FS/agents.json && unset AOS_STACK AOS_WS
+```
 
 ### 件 5：資源份額（daemon 在子行程 setrlimit）
 

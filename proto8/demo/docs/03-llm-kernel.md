@@ -22,7 +22,7 @@ llm-kernel/
 | `smart-high` | LiteLLM `localhost:4000` 的 `claude-haiku-5-5`（真名以 `curl localhost:4000/v1/models` 為準） | `fixed.temperature` 0.2、`slots` 4、`speed` normal、`cost` high、`context` 200000 |
 | `stupid-fast` | LM Studio `localhost:1234` 的 `qwen3-1.7b` | `fixed.temperature` 0.7、`slots` 1、`speed` fast、`cost` free、`context` 4096 |
 | `luna`、`sol` | LiteLLM 的 gpt-6 luna（low）、sol | `sol` 有 `fixed.temperature` 0.2；`cost` high |
-| `fake`（預設） | `lib/base/llm_fake`：有工具先叫第一個、再答「FAKE ANSWER to: …」 | `speed` fast、`cost` free |
+| `fake`（預設） | `lib/base/llm_fake`：有工具先叫 `tool` 寫的那個（範本 `clock`，沒有就第一個）、再答「FAKE ANSWER to: …」 | `speed` fast、`cost` free |
 | `fake-demo-self`、`fake-demo-spawn` | `llm_fake`＋`script` 劇本（[05](05-feat-proto.md) 件 1、件 4） | 劇本裡的路徑寫 `{"$env": "AOS_CD", "$path": "../agent-fsm"}`：kernel 用到那組時解，`AOS_CD`＝起 llm daemon 時 aos-exec 給的定義資料夾，所以**只在直接跑 repo 裡這份定義時對** |
 | `fake-demo-fast`、`fake-demo-slow` | `fake_slow`，每封 3 秒 | `slots` 1；`speed` fast／slow（[05](05-feat-proto.md) 件 3）；`fake_slow` 從自己的位置找 `lib/`，也只在 repo 裡對 |
 
@@ -39,7 +39,7 @@ export AOS_LLM_KERNEL=~/llm_kernel
 echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | aos-llm ask
 # {"role": "assistant", "content": "FAKE ANSWER to: hi"}
 aos-llm ls                                  # 一行一包、照代號排：代號 speed cost context slots summary（缺的印 -）；節錄：
-# fake fast free - - fake brain: calls the first tool, then answers FAKE ANSWER to ...
+# fake fast free - - fake brain: calls clock (or the first tool), then answers FAKE ANSWER to ...
 # smart-high normal high 200000 4 LiteLLM claude haiku: careful answers, costs money
 echo '{"endpoint": "smart-high", "request": {"messages": [{"role": "user", "content": "hi"}], "temperature": 1}}' | aos-llm ask
 # aos-llm: error: RequestBad temperature is fixed by endpoint smart-high (remove it from the request; to change it pick another endpoint name)

@@ -10,9 +10,9 @@
 |---|---|
 | `_entry` | `["aos-loop", "loop.json"]` |
 | `loop.json` | 停著等版：`aos-eca-turn --on-empty idle --on-busy yield` |
-| `cli.json`、`tools.json`、`llm.json` | CLI 種類與旗標（沒有 `--model`）；工具註冊檔；腦設定 `{"model": "sonnet"}`（cli_session 疊 `$AOS_STACK/llm.json` 補 `--model`，11-04 晚） |
+| `cli.json`、`tools.json`、`agents.json`、`llm.json` | CLI 種類與旗標（沒有 `--model`）；工具註冊檔（clock、self_tools、agents，11-05 裁「內建」）；工具 agents 的設定 `{"max_children": 4}`；腦設定 `{"model": "sonnet"}`（cli_session 疊 `$AOS_STACK/llm.json` 補 `--model`，11-04 晚） |
 | `interfaces.json` | 宣告遵守 `aos-agent` 介面，選配 `screen`、`tools`、`llm`（`"llm.json"`＝設定檔路徑，11-04 晚） |
-| `screen/`（`_entry`、`interfaces.json`） | 子介面 screen：`_entry`＝`["aos-eca-screen", ".."]`、宣告 `aos-agent/screen` |
+| `screen/`（`_entry`、`interfaces.json`） | 子介面 screen：`_entry`＝`["aos-eca-screen", "--eca", ".."]`（11-05 D6）、宣告 `aos-agent/screen` |
 
 ## `demo/agent-fsm/`（aos 自己的 loop／fsm agent 範本；11-04）
 
@@ -27,8 +27,8 @@
 | `idle.py` | idle 格：`$AOS_STACK/queue/` 全部收進 `history.jsonl`、接進去就 `aos-post done`；壞信丟掉寫 `mailbox_warning.txt`；`--prompt` 開場白 |
 | `brain.py` | think 格：history＋`--system`＋`--tools`（沒給＝定義 `tools.json` 疊 `$AOS_STACK/tools.json` 覆蓋層，`aos-tools --overlay`，11-05）＋`llm.json`（定義疊 `$AOS_STACK/llm.json` 的 `endpoint`；不寫 `request.model`，11-05）組成請求信 body，寫 `$AOS_STACK/think/request.json`、退 0；不碰網路；沒事做退 10 |
 | `wait.py` | wait 格：沒 `think/pending.txt`＝`aos-llm send --reply-to think/reply`、記名字、退 10；有＝`aos-llm recv`：沒到 10、到了接一則 assistant 進 history 退 0、kernel 回錯＝自己一行 BrainFailed 退 1；寄之前 `request.json` 的 endpoint 跟現在的 llm.json（定義疊 stack）對不上＝退 11 回 think 重組（11-05 edge-agent） |
-| `act.py` | act 格：最後一則 assistant 的 `tool_calls` 逐個 `aos-tools --file … [--overlay $AOS_STACK/tools.json] call`（11-05），結果各接一則 tool、退 0；沒 `tool_calls`＝最後答案、退 10；工具的錯回給腦（stderr 提醒行 `agent-fsm: warning: tool …`） |
-| `system.txt`、`tools.json`、`llm.json` | system 訊息；工具登記檔（clock）；腦設定（範本 `{}`＝kernel 預設代號；鍵 `endpoint`） |
+| `act.py` | act 格：最後一則 assistant 的 `tool_calls` 逐個 `aos-tools --file … [--overlay $AOS_STACK/tools.json] call`（11-05），結果各接一則 tool、退 0；沒 `tool_calls`＝最後答案、退 10；工具的錯回給腦（stderr 提醒行 `agent-fsm: warning: tool …`）；沒登記、arguments 壞＝回給腦一則 `act: error: ToolUnknown／ArgumentsBad …` |
+| `system.txt`、`tools.json`、`agents.json`、`llm.json` | system 訊息；工具登記檔（clock、self_tools、agents，11-05 裁「內建」）；工具 agents 的設定 `{"max_children": 4}`；腦設定（範本 `{}`＝kernel 預設代號；鍵 `endpoint`） |
 | `interfaces.json` | 宣告遵守 `aos-agent` 介面，`entry`＝`body.json`（11-05）、選配 `tools`、`llm`（`"llm.json"`，11-04 晚）；brain.py／act.py 疊 `$AOS_STACK/tools.json` 覆蓋層（11-05） |
 
 ## `demo/llm-kernel/`（llm kernel 範本；11-04 晚，11-05 改成一台 daemon）
