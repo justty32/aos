@@ -1,4 +1,4 @@
-← [入口](README.md)｜涵蓋：llm kernel 自己一台 daemon 的佈局、`AOS_LLM_KERNEL` 的值、信箱固定名、多台 agent daemon 共用、「設 daemon 都是指其 stack」三個選項、要轉給改名隊的語意改動｜上一份 [06-實作步驟草稿](06-實作步驟草稿.md)
+← [入口](README.md)｜涵蓋：llm kernel 自己一台 daemon 的佈局、`AOS_LLM_KERNEL` 的值、信箱固定名、多台 agent daemon 共用、「設 daemon 都是指其 stack」三個選項、要轉給改名隊的語意改動｜上一份 [06-實作步驟草稿](06-實作步驟草稿.md)｜下一份 [08-實作結果](08-實作結果.md)
 
 # llm daemon 的佈局（fable 照使用者 11-05 的用法定的細節，可翻案）
 

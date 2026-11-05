@@ -8,8 +8,7 @@
 
 ## 最新進度
 
-- **open｜portable-flow**：做完（[實作結果](../proto8/thinking/2026-11/05/portable-flow/README.md#實作結果11-05-隊長)）；等使用者看 tools 覆蓋層（[WAIT_USER](WAIT_USER.md)）
-- **open｜kernel-daemon**：規劃完、沒改程式；衝突 2 等使用者；步 0、1、3、4、5 可先做 → [06](../proto8/thinking/2026-11/05/kernel-daemon/06-實作步驟草稿.md)
+- **open｜kernel-daemon**：做完（[實作結果](../proto8/thinking/2026-11/05/kernel-daemon/08-實作結果.md)）；bob 真問 claude、`open` 畫面等使用者試（[WAIT_USER](WAIT_USER.md)）
 - **open｜tidy 收斂**：剩 C-54 摺疊（aos-post 步 9 加註 11-04 已做）、2026-11/04 thinking 未精簡 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)
 - **open｜介質**：queue 輸入、接單後放 tools（決定 32）兩題擱著 → [10-28 medium](../proto8/thinking/2026-10/28/medium/README.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10/29/medium-plan/README.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - **open｜現況地圖十一點**：剩第 1 點（plan 9 式檔案串流）、第 7 點（post／lock 補指令），「之後有遇到再說」 → [map-review § 結論](../proto8/thinking/2026-10/30/map-review/README.md#結論10-31-補)

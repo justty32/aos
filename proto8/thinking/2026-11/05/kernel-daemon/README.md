@@ -2,7 +2,7 @@
 
 ← [thinking README](../../../README.md)｜日 [2026-11-05](../README.md)｜同天另一份：[portable-flow](../portable-flow/README.md)（可搬移；基準點＝daemon 的 stack、sleep／wake 與 stop／start 嚴格分；交集只指過去、不改它）｜前情：[11-04 think-as-function](../../04/think-as-function/README.md)、[11-03 procs](../../03/procs/README.md)、[10-15 general-kernel](../../../2026-10/15/general-kernel.md)、[10-13 kernel-agent](../../../2026-10/13/kernel-agent/README.md)｜程式（只翻、沒改）：[aos-daemon](../../../../impls/aos-daemon/README.md)、[aos-daemon-ctl](../../../../bin/docs/03-aos-daemon-ctl.md)、[aos-llm-kernel](../../../../impls/aos-llm-kernel/README.md)、[aos-llm](../../../../impls/aos-llm/README.md)｜條文：[C-47](../../../../docs/CONCEPTS/04-kernel.md)、[N-42](../../../../docs/NORMS/09-kernel.md)、[N-28、N-54](../../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-63、N-64](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[C-52、C-56、C-64](../../../../docs/CONCEPTS/01-設計理念.md)
 
-狀態：**規劃、沒改程式、沒改條文**。本檔只記使用者原文（逐字）、決定、fable 照原則定的結論（可翻案）、要使用者看的題（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。[05](05-衝突與方向題.md) 的衝突 2 題使用者 11-05 已裁（都選推薦）；其餘代定、標可翻案。實作步驟草稿在 [06](06-實作步驟草稿.md)。
+狀態：**11-05 隊長已實作（06 步 0～6 全做）**，見下「[實作結果](#實作結果11-05-隊長)」與 [08](08-實作結果.md)；以下原規劃段照留。原狀態：**規劃、沒改程式、沒改條文**。本檔只記使用者原文（逐字）、決定、fable 照原則定的結論（可翻案）、要使用者看的題（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。[05](05-衝突與方向題.md) 的衝突 2 題使用者 11-05 已裁（都選推薦）；其餘代定、標可翻案。實作步驟草稿在 [06](06-實作步驟草稿.md)。
 
 ## 使用者原文（11-05 早，逐字，依先後）
 
@@ -47,6 +47,11 @@
 
 **「kernel」是角色不是程式：誰決定「這個 proc 掛不掛到 daemon 上」誰就是 kernel，daemon 自己是最底下那個（來者不拒）。** 掛 proc 只有一條路——往 daemon 的 ctl 信箱寄一封 `procs_added` 信；繼承式＝daemon.json 的 `exec` 身體當判官、判完轉寄進自己的 ctl 信箱（「呼叫 base」就是這一寄，零改 aos-daemon）；0 號式＝同一支判官掛成 loop 型 proc、daemon 信箱靠 Linux 權限只讓它寫。**llm kernel 就是繼承式的第一個實例**（`~/llm_kernel/def/daemon.json` 的身體＝`aos-llm-kernel`），它改一件事：不再自己 fork 跑 endpoint 函數，而是把那次問腦寫成 `procs_added` 信請自己這台 daemon 掛成 `max: 1` 的 loop（stack＝信資料夾），下一拍從 `state.json`＋`reply.json` 收、回信、刪信——「不補位」「RunFailed」兩個已知限制順帶消失。`AOS_LLM_KERNEL`＝那台 llm daemon 的 stack，信箱固定 `<stack>/mailbox/`；信的形狀、`aos-llm` 不變。
 
+<a id="實作結果11-05-隊長"></a>
+## 實作結果（11-05 隊長）
+
+06 步 0～6 全做，另照同輪使用者兩句做了「aos-agent 管理類收進 `ctl`」與「proto8 一律當沒有舊版」（舊版相容碼刪掉）。llm kernel 現在是自己一台 daemon（`demo/llm-kernel`；`cd ~/llm_kernel && aos-exec --stack . def`），每次問腦是那台 daemon 表上的一列 `llm_<信件名稱>`；`AOS_LLM_KERNEL`＝那台的 stack；判官範本 `lib/base/judge`（模式 1 `demo/daemon-judge`、模式 2 `demo/procs-kernel`）；aos-daemon-ctl 認 `AOS_KERNEL`。代定 12 條（例：在飛判定看表＋`state.json`、不用 `applied` 回信；`KernelMissing` 改名 `LlmKernelMissing`）、刪掉的相容碼、實測、已知限制都在 **[08 實作結果](08-實作結果.md)**。
+
 ## 分檔目錄
 
 | 分檔 | 涵蓋 |
@@ -57,4 +62,5 @@
 | [04-邊緣狀況](04-邊緣狀況.md) | daemon 不在／暫停／拒信、名字、睡醒、kill -9、兩個 kernel、搬家、權限、表上多出來的列 |
 | [05-衝突與方向題](05-衝突與方向題.md) | **要使用者看的**：衝突 2（推薦放第一）；fable 代定清單 |
 | [06-實作步驟草稿](06-實作步驟草稿.md) | 步 0～6（小步、每步 build 得過），標哪幾步跟 portable-flow 無衝突可以先做 |
+| [08-實作結果](08-實作結果.md) | 11-05 隊長實作結果：做了什麼、實作時代定（可翻案）、刪的舊版相容、實測、已知限制 |
 | [07-llm-daemon佈局](07-llm-daemon佈局.md) | llm kernel 自己一台 daemon（合一）：`~/llm_kernel` 長什麼樣、`AOS_LLM_KERNEL` 的值＝stack、信箱固定 `mailbox/`、多台 agent daemon 共用；「設 daemon 都是指其 stack」三個選項（推薦放第一）；要轉給改名隊的語意改動 |
