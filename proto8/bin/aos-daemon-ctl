@@ -75,6 +75,9 @@
 # pause／resume（11-03 procs § 2c 第 4 條、ctl-commands § 5）：不經 daemon，直接往它的 ctl（stack 裡 daemon 寫的 loop.json〔名字照窗上的
 #   procs_loop〕的 ctl 那格，沒寫＝ctl.json）寫一道 {"cmd": "pause"|"resume", "seq": N}（先寫 .ctl.json 暫存再改名，N-05；N＝ctl 裡現有的 seq＋1，內容一定跟上一道不同）；
 #   stdout 印 N（它 state.json 的 ctl_seq 追上 N＝看到了）。誰都不清 ctl（指令留在檔裡，loop 起來第一次讀的當基準線）。
+#   11-05 晚（listen paused bug）：寫完等它 state.json 的 ctl_seq 追上 N 才印（最多 APPLY_S 秒；wait_applied）——ctl 只有一格，
+#   沒等就接著 stop／sleep，daemon 寫的 stop 會蓋掉還沒讀的 resume（暫停中的 loop 每秒才讀一次 ctl）＝停下時 paused 還是 true、start 起來又暫停。
+#   等不到（身體一步很久，loop 只在步與步之間讀 ctl）＝提醒行、照樣退 0；沒開 state 窗＝不等。
 #   stop、sleep、pause、resume 先看它的 stack 裡有沒有 daemon 寫的 loop.json：沒有＝CtlMissing「X 沒有 ctl（exec 型只有跑和拔）」、退 1、不送信
 #   （start、wake 不看——只有 loop 型會是 stopped／sleeping；add＋stop 同一圈的 stack 還沒建）；loop.json 的 ctl 是 null＝CtlMissing。daemon 再驗一次。
 #   daemon 沒在跑時 wake／start／rm 照樣寄信：daemon 再開時先套信（rm＝拿掉；sleeping 的列本來就會醒，wake 信等於沒事）。
@@ -154,7 +157,9 @@ stop vs sleep: stop waits for this round to finish and needs start to come back;
   starts. Exec types have no stop / sleep (CtlMissing). Wrong phase = PhaseBad, exit 1, nothing sent (checked against the table; the
   daemon checks again): stop and sleep only take running; start only stopped; wake only sleeping.
 pause / resume: not through the daemon; writes {"cmd": "pause"|"resume", "seq": N} into its ctl (the ctl of the loop.json the daemon wrote
-  in its stack, default ctl.json; temp file then rename; N = current seq + 1); stdout prints N (its state.json ctl_seq reaching N = seen).
+  in its stack, default ctl.json; temp file then rename; N = current seq + 1), then waits up to 5 s for its state.json ctl_seq to reach N
+  (= applied; the ctl holds one command, so a stop or sleep sent before it is applied would overwrite or drop it); stdout prints N.
+  Not applied in 5 s (busy in a long step; it reads its ctl between steps) = a warning line, exit 0. No state window = no wait.
   stop / sleep / pause / resume first check for that loop.json: missing, or its ctl is null = CtlMissing (exec type), exit 1, nothing sent.
   When the daemon is not running, wake / start / rm still send their letter; the daemon applies it when it starts.
 where --stack NAME: the stack of that row (absolute, no trailing /). Only procs on the table (running, stopping, stopped, sleeping);
@@ -168,7 +173,7 @@ Errors: one stderr line `aos-daemon-ctl: error: CODE reason`, exit 1. Codes: Arg
   CommandMissing (no aos-post on PATH), SendFailed (aos-post exited non-zero; its stderr is passed on).
 Needs aos-post on PATH. --help prints this text.
 """
-import json, os, re, subprocess, sys
+import json, os, re, subprocess, sys, time
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
@@ -614,7 +619,7 @@ def write_cmd(opts, args, cmd):
     name = name_arg(cmd, args)
     d = daemon_dir(opts)
     row = row_of(d, name)
-    _, path = need_ctl(d, name, row)
+    stack, path = need_ctl(d, name, row)
     # 11-05 第二輪：只收 running 的（stopped／sleeping 的列沒有行程；起來時子 loop 把讀到的第一份 ctl 當基準線、不執行＝這道 pause 默默丟了，
     # 原本照寫、印 seq、退 0，看起來像成功）
     if row.get("phase") != "running":
@@ -634,7 +639,35 @@ def write_cmd(opts, args, cmd):
         os.replace(tmp, path)
     except OSError as e:
         raise Fail("WriteFailed", "cannot write %s: %s" % (path, e))
+    wait_applied(d, name, stack, cmd, seq)
     print(seq)
+
+
+APPLY_S = 5.0   # pause／resume 等子 loop 套用的上限（暫停中的 loop 每秒讀一次 ctl、閒著的每圈讀）
+
+
+def wait_applied(d, name, stack, cmd, seq):
+    """等子 loop 的 state 窗 ctl_seq 追上 seq（11-05 晚 listen paused bug）；state 窗是 null＝不等；等不到＝提醒行。"""
+    try:
+        sname = read_loop(os.path.join(stack, names_of(d)["procs_loop"])).get("state", "state.json")
+    except Fail:
+        return
+    if not isinstance(sname, str) or not sname:
+        return
+    spath, end = os.path.join(stack, sname), time.monotonic() + APPLY_S
+    while True:
+        try:
+            with open(spath, encoding="utf-8") as fh:
+                got = json.load(fh).get("ctl_seq")
+        except (OSError, ValueError, AttributeError):
+            got = None
+        if got == seq:
+            return
+        if time.monotonic() >= end:
+            aos_flags.warn(NAME, "%s has not applied %s (seq %d) within %g s (it reads its ctl between steps; a long step delays it); "
+                           "a stop or sleep sent before it applies overwrites or drops it" % (name, cmd, seq, APPLY_S))
+            return
+        time.sleep(0.05)
 
 
 def cmd_pause(opts, args):

@@ -1,0 +1,36 @@
+← [portable-flow README](README.md)｜上一份：[06-實作步驟草稿](06-實作步驟草稿.md)
+
+## 11-05 晚 listen paused bug
+
+寫 aos-agent 用法頁時實跑發現：對一隻 agent `pause → resume → stop → start` 之後，`aos-agent listen` 仍報 paused、等滿逾時。
+
+### 成因
+
+**子 loop 的 ctl 只有一格，`resume` 被 daemon 寫的 `stop` 蓋掉了。** 暫停中的 aos-loop 每秒才讀一次 ctl；`aos-daemon-ctl resume` 寫完就回，緊接著 `ctl stop` 讓 daemon 往同一格寫 `{"cmd": "stop"}`，loop 只讀到 stop——停下時 `state.json` 的 `paused` 還是 true，`start` 照「暫停中被停的，起來先暫停」又暫停。間隔一秒以上手打不會中，連著打（腳本、複製貼上）必中（試驗場 3/3 重現）。
+
+### 修法
+
+1. **`aos-daemon-ctl pause／resume` 等套用才回**（`write_cmd` → `wait_applied`）：寫完等子 loop `state.json` 的 `ctl_seq` 追上 N，最多 5 秒；沒套用＝提醒行、退 0；沒開 state 窗不等。關掉的是根本那扇窗：回來之後才送得出下一道。
+2. **aos-agent 的 paused 只認現任行程**（`loop_paused` 拆出 `loop_state`、比 `state.json` 的 `pid` 與表上的 `pid`）：start／wake 剛起、新 loop 還沒寫第一份時，舊行程留下的 paused 不算。
+3. **`ctl start`／`ctl wake` 說清楚會不會先暫停**（`comes_back_paused`、`paused_tail`）：暫停中被 stop／sleep 的，輸出尾巴多 `; it was paused when it went down, so it comes back paused: aos-agent ctl resume --target X`。
+4. **順手修的相鄰 bug——listen 印成前一題的回答**（`handed_unanswered`）：前一題還在答、這封已收進 history 時，前一題的回答一到，回答數變多，listen 就把它當這封的印出來（試驗場重跑時每次 listen 都慢一題）。改成「history 最後一則 user 在最後一則回答之後＝還在答」也算等。
+
+### 代定（可翻案）
+
+- 等套用的上限 5 秒；等不到只提醒不報錯（身體一步很久時 pause 本來就要等那步做完）。
+- 「暫停中被 stop，start 起來先暫停」照舊（11-03 代定，只把它說出來）；沒改成 stop 清掉 paused。
+- 不改 daemon（C++）：daemon 寫 stop 時照樣蓋 ctl；沒經 `aos-daemon-ctl`、自己直接寫 ctl 的人仍會撞到同一個競態。
+
+### 驗證（試驗場 scratchpad，假腦 `fake`、信箱模式 daemon＋llm kernel、proto8 impls 全部重建）
+
+- `pause; resume; stop; start; say; listen` 連打 3 輪：3/3 拿到答案（修前 3/3 卡 paused 逾時）。
+- 暫停中 stop→start、暫停中 sleep→wake：輸出說會先暫停、`ctl state` 是 paused；resume 後 say／listen 拿到答案。
+- pause→resume→sleep→wake：running、拿到答案。
+- start 後立刻 pause（3 輪）：都生效。
+- 子 loop `SIGSTOP` 時 pause：5 秒後提醒行、退 0；`SIGCONT` 後生效。
+- 前一題還在答時 say＋listen：印的是這一封的回答。
+
+### 其他發現（沒修）
+
+- `demo/agent-fsm` 複製到別處就跑不起來：四格用 `__file__/../../bin` 找 `aos_flags`，複製出去找不到（試驗場用捷徑 `bin → proto8/bin` 繞過）。
+- 試驗場第一次跑時 impls 的執行檔是 11-04 舊的：重建前 daemon 把退 1 的子項從表上拿掉，跟 docs「出錯結束一律留表」不合；重建後沒再測這條。

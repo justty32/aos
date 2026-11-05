@@ -79,6 +79,7 @@
 | [04-跨電腦與git](04-跨電腦與git.md) | 跨電腦與 git pull：要改設計的 vs 自擔風險／寫進說明的；`.gitignore` 該擋什麼 |
 | [05-衝突與方向題](05-衝突與方向題.md) | **要使用者看的**：衝突 3、方向題 5（推薦放第一） |
 | [06-實作步驟草稿](06-實作步驟草稿.md) | 步 0～7（給隊長，不實作） |
+| [07-listen-paused-bug](07-listen-paused-bug.md) | 11-05 晚 listen paused bug：pause→resume→stop→start 後 listen 仍報 paused 的成因、修法、驗證 |
 
 ## 使用者看過 tools 覆蓋層（11-05）
 

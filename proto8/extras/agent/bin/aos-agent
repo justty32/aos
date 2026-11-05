@@ -435,8 +435,8 @@ def cell_name(key, default):
     return v if isinstance(v, str) and v else default
 
 
-def loop_paused(a):
-    """子 loop 自己的 state.json（stack 裡 loop.json〔窗上的 procs_loop〕的 state 那格，沒寫＝state.json）phase 是 paused；讀不到＝False。"""
+def loop_state(a):
+    """子 loop 自己的 state.json（stack 裡 loop.json〔窗上的 procs_loop〕的 state 那格，沒寫＝state.json）→ 物件；讀不到＝{}。"""
     try:
         with open(os.path.join(a.stack, cell_name("procs_loop", "loop.json")), encoding="utf-8") as f:
             name = json.load(f).get("state")
@@ -444,9 +444,22 @@ def loop_paused(a):
         name = None
     try:
         with open(os.path.join(a.stack, name if isinstance(name, str) and name else "state.json"), encoding="utf-8") as f:
-            return json.load(f).get("phase") == "paused"
-    except (OSError, ValueError, AttributeError):
-        return False
+            st = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return st if isinstance(st, dict) else {}
+
+
+def loop_paused(a):
+    """子 loop 的 state.json phase 是 paused，而且是表上這個行程寫的（pid 對得上；11-05 晚：start／wake 剛起、新 loop 還沒寫第一份時，
+    上一個行程留下的 paused 不算）；讀不到＝False。"""
+    st = loop_state(a)
+    return st.get("phase") == "paused" and st.get("pid") == a.row.get("pid")
+
+
+def comes_back_paused(a):
+    """stopped／sleeping 的那隻起來會不會先暫停（aos-loop：舊 state.json 的 paused 是 true＝起來先暫停）。"""
+    return loop_state(a).get("paused") is True
 
 
 def label(a):
@@ -551,9 +564,16 @@ def print_answer(a, sig):
 
 
 def handed_unanswered(a, before):
-    """信不見了、回答沒比開始時多、history 最後一則不是回答＝已經收進去、還在答（eca 交出去就收信、fsm 答的途中）。"""
+    """信不見了、還沒答＝已經收進去、還在答（eca 交出去就收信、fsm 答的途中）：回答沒比開始時多、history 最後一則不是回答；
+    或 history 最後一則 user 在最後一則回答之後（11-05 晚：前一題的回答在等的途中才到、回答數變多，原本就把前一題的回答當成這封的印出來）。"""
     rows = aos_ws.history(a.stack)
-    return len(aos_ws.answers(a.stack)) <= before and bool(rows) and not aos_ws.is_answer(rows[-1])
+    if not rows:
+        return False
+    if len(aos_ws.answers(a.stack)) <= before and not aos_ws.is_answer(rows[-1]):
+        return True
+    last_user = max((i for i, m in enumerate(rows) if m.get("role") == "user"), default=-1)
+    last_answer = max((i for i, m in enumerate(rows) if aos_ws.is_answer(m)), default=-1)
+    return last_user > last_answer
 
 
 def wait_latest(a, timeout, before=None):
@@ -1102,11 +1122,16 @@ def cmd_start(argv):
     if a.phase == "running":
         print("already running (%s)" % label(a))
         return
-    n = queued(a) or 0
+    n, held = queued(a) or 0, comes_back_paused(a)
     direct = is_kernel(a)
     ctl_wait("start", ["--", a.name], lambda _: (row_named(a.name) or {}).get("phase") != "stopped",   # sleeping 的＝aos-daemon-ctl PhaseBad「要 wake」
              "the daemon has not started %s yet" % a.name, "CtlRejected", direct)
-    print("started (same stack); %d queued letters will be answered next" % n)
+    print("started (same stack); %d queued letters will be answered next" % n + paused_tail(a, held))
+
+
+def paused_tail(a, held):
+    """11-05 晚：暫停中被停／睡的，起來照它的 state 先暫停——原本照樣說「will be answered next」，listen 才發現暫停著。"""
+    return "; it was paused when it went down, so it comes back paused: aos-agent ctl resume --target %s" % a.name if held else ""
 
 
 def cmd_stop(argv):
@@ -1158,11 +1183,11 @@ def cmd_wake(argv):
     if a.phase == "running":
         print("already awake (%s)" % label(a))
         return
-    n = queued(a) or 0
+    n, held = queued(a) or 0, comes_back_paused(a)
     direct = is_kernel(a)
     ctl_wait("wake", ["--", a.name], lambda _: (row_named(a.name) or {}).get("phase") != "sleeping",   # stopped 的＝aos-daemon-ctl PhaseBad「要 start」
              "the daemon has not woken %s yet" % a.name, "CtlRejected", direct)
-    print("awake (same stack); %d queued letters will be answered next" % n)
+    print("awake (same stack); %d queued letters will be answered next" % n + paused_tail(a, held))
 
 
 def cmd_pause_resume(cmd):
