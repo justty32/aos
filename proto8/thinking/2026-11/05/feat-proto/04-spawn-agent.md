@@ -1,4 +1,4 @@
-← [入口](README.md)｜件 4：agent 用 aos 指令產出另一個 agent｜上一份 [03-scheduling](03-scheduling.md)｜下一份 [steps](steps.md)
+← [入口](README.md)｜件 4：agent 用 aos 指令產出另一個 agent｜上一份 [03-scheduling](03-scheduling.md)｜下一份 [05-資源份額](05-資源份額.md)
 
 # 件 4：agent 用 aos 指令產出另一個 agent（fable 照原則定，可翻案）
 
