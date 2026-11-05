@@ -10,6 +10,7 @@
 
 - **open｜明天先做**：知識庫 K7（增刪改、多庫、JSON 後端，先派 fable 規劃）、CONVENTION 草稿條文待使用者定 → [agent-knowledge 06](../proto8/thinking/2026-11/05/agent-knowledge/06-11-05晚-接線.md)
 - **open｜架構大重構**（使用者 11-05「給整個程式碼庫、codemap之類，做一次架構上的大重構」；20:17「七題照推薦」）：今晚施工中，排程與進度 → [arch-refactor 06](../proto8/thinking/2026-11/05/arch-refactor/06-工作量與排程.md)
+- **open｜11-05 夜五題裁定（「剩下都照推薦」，排在大重構之後）**：寄件人額度改相對 kernel 記帳、repo `stupid-fast` 維持 qwen3-1.7b（家機下載好後試驗場改回）→ [portable-flow 07](../proto8/thinking/2026-11/05/portable-flow/07-listen-paused-bug.md#使用者裁定11-05-夜排在大重構之後做)；`aos-agent tools add --env`（值不給腦看）、thought／agents／self_tools 沙箱先不支援 → [small-thought](../proto8/thinking/2026-11/05/small-thought/README.md#使用者裁定11-05-夜排在大重構之後做)；知識庫 CONVENTION 草稿定稿編號 → [agent-knowledge 06](../proto8/thinking/2026-11/05/agent-knowledge/06-11-05晚-接線.md#使用者裁定11-05-夜排在大重構之後做)
 - **open｜tidy 收斂**：剩 C-54 摺疊、2026-11/04 thinking 未精簡 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)
 - **open｜介質**：queue 輸入、接單後放 tools（決定 32）兩題擱著 → [10-28 medium](../proto8/thinking/2026-10/28/medium/README.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10/29/medium-plan/README.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - **open｜現況地圖十一點**：剩第 1、7 點，「之後有遇到再說」 → [map-review § 結論](../proto8/thinking/2026-10/30/map-review/README.md#結論10-31-補)

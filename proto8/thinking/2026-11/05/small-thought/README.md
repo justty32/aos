@@ -74,3 +74,10 @@
 - **沒修**：父的 memory 若是**登記格 `env`**（`AOS_MEMORY`，沒有 `_memory.json`）配的，借給子會掉 env——`aos-agent tools ls --json`（aos-tools ls）不印 env、`aos-agent tools add` 也沒有 `--env`，子的 memory `MemoryMissing` → brain `MemoryFailed` → 子 stopped，thought 回 `AnswerMissing …`（看不出真因）。可攜的配法（包裝資料夾＋`_memory.json`）沒事。要修得 aos-agent 先有 `tools add --env`，再決定 env 怎麼抄給子（ls 印 env 會讓 self_tools ls 把值給腦看，值是 `$env` 解出來的金鑰就外洩）——列給隊長。
 - **沒修**：thought 在 aos-sandbox 裡（bash-boxed 那種 bwrap `--unshare-all`）起不來：PID 命名空間看不到 daemon 的 pid，`aos-daemon-ctl` 判 daemon 沒在跑、thought 回 `DaemonMissing`（daemon 其實活著）。agents、self_tools 同理。屬 aos-sandbox／aos-daemon-ctl（另一位測試員範圍）。
 - 每叫一次 thought，stderr 都有好幾行 aos-agent 的「this definition … is also used by …」提醒，名單隨子變長；只進 stderr、不進腦，沒改。
+
+## 使用者裁定（11-05 夜，排在大重構之後做）
+
+> 剩下都照推薦
+
+- 登記格 `env` 借給 thought 子會掉：**`aos-agent tools add` 也能帶 `--env`**，值不給腦看到。
+- thought／agents／self_tools 在沙箱裡**先不支援**（沙箱只包葉工具）。

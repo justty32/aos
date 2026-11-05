@@ -51,3 +51,10 @@
 - 照常：`aos-exec ../agents/bob` 掛上、say／listen、pause→resume→stop→start→say→listen、sleep→wake、暫停中 stop→start（回來仍 paused）、思考中 pause 再 stop 的 listen 提醒、kernel Ctrl-C 重起續答、整包 `cp -a` 搬家再起（表是相對、`def` 指新位置、睡著的那隻開門自己醒、停機時寄的信照答）、直接 `aos-exec --ws W body.json`、沒設 `AOS_LLM_KERNEL`（三層各一行英文）。
 - **11-05 晚修了兩件**：`aos-loop` 的 `RunFailed` 原本印 `…/.stack/../../agents/bob/fsm.json` → `Target::label` 照字面整理成最短（`lexically_normal`，只動顯示、不解捷徑）；`aos-agent` 睡著／daemon 沒跑的重起提示原本只寫 `aos-exec <daemon folder>` → 兩種起法都列（`aos-exec <daemon folder> or AOS_STACK=<stack>/ aos-daemon <daemon.json>`；代定、可翻案：stack 看不出當初怎麼起的，所以不猜、兩個都印）。
 - **沒修、列給別人**：llm kernel `used.json` 的 `senders` 以寄件人絕對路徑記帳，整包搬家後新舊各一格、`budget.senders` 也是絕對路徑（搬家要人自己改；可翻案：存相對 kernel stack）。劇本假腦 `fake-demo-self`／`spawn`／`memory` 的 `$env AOS_CD`＋`../agent-fsm` 出 repo 不對（03 表上本來就寫「只在 repo 裡對」）。
+
+## 使用者裁定（11-05 夜，排在大重構之後做）
+
+> 剩下都照推薦
+
+- 寄件人額度（`used.json` 的 `senders`、`budget.senders`）**改成相對 kernel stack 記帳**，搬家跟著走。
+- repo 的 kernel.json `stupid-fast` **維持 `qwen3-1.7b`**、各台機器自己改；家機正在下載 qwen3-1.7b，下載好後試驗場那份可改回去。
