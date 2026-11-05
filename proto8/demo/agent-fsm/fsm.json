@@ -6,6 +6,6 @@
    "think": {"exec": {"argv": ["python3", "brain.py", "--system", "system.txt"]},
              "next": {"0": "wait", "10": "idle"}},
    "wait":  {"exec": {"argv": ["python3", "wait.py"]},
-             "next": {"0": "act", "10": "wait"}},
+             "next": {"0": "act", "10": "wait", "11": "think"}},
    "act":   {"exec": {"argv": ["python3", "act.py"], "timeout_ms": 1800000},
              "next": {"0": "think", "10": "idle"}}}}
