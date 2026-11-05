@@ -11,7 +11,7 @@
 | [docs/](docs/README.md) | 使用者條文：[CONCEPTS](docs/CONCEPTS.md)（概念）、[NORMS](docs/NORMS.md)（規範）、[CONVENTION](docs/CONVENTION.md)（agent 慣例） |
 | [impls/](impls/README.md) | 主實作：aos-exec、aos-loop、aos-fsm、aos-daemon 等 C++ 專案（各自 CMake；`build/`、`bin/`、`lib/` 是建置產物、不進 git） |
 | [bin/](bin/README.md) | Python 的 aos-tick、aos-tools、aos-daemon-ctl、aos-eca-turn |
-| [install.sh](install.sh) | 把上面 impls、bin、extras 的指令 symlink 進 `~/.local/bin`（11-05；參數換目的地、`--dry-run` 只印；用法在 [bin/README](bin/README.md)） |
+| [install.sh](install.sh) | 把上面 impls、bin、extras 的指令 symlink 進 `~/.local/bin`（11-05；參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉；用法在 [bin/README](bin/README.md)） |
 | [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），demo 用相對捷徑引用 |
 | [extras/](extras/README.md) | 周邊工具：aos-agent（給人用的 agent 介面：add、say／listen／chat、畫面、tools 覆蓋層、搬家範本）、aos-mcp、aos-grow、Janet／Lua 寫 aos、aos-sandbox |
 | [demo/](demo/README.md) | 兩個 agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent，11-04）；11-04 其餘範例 agent 與 `run.sh` 刪了 |

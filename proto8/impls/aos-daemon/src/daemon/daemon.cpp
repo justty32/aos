@@ -400,10 +400,10 @@ void Daemon::check_running() {
         pid_t pid = (pid_t)(*st)["pid"].get<long long>();
         std::optional<long long> now = aos::proc_started_at_ticks(pid);
         if (now && *now == (*st)["started_at_ticks"].get<long long>()) {
-            who = "（pid " + std::to_string(pid) + "）";
+            who = " (pid " + std::to_string(pid) + ")";
         }
     }
-    throw Error{code::DaemonRunning, "這個 stack（" + stack_ + "）已有 daemon 在跑" + who + "；要沿用就直接 aos-daemon-ctl add／aos-agent ctl add"};
+    throw Error{code::DaemonRunning, "a daemon is already running on this stack (" + stack_ + ")" + who + "; to reuse it, just aos-daemon-ctl add / aos-agent ctl add"};
 }
 
 Json Daemon::unrel(const Json& v) const {

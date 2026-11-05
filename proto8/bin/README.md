@@ -7,7 +7,7 @@
 > 這裡是 Python 的 `aos-tick`、`aos-tools`、`aos-daemon-ctl`、`aos-eca-turn`（都用 `aos_flags.py` 的旗標解析 `parse`）；完整說明在各支的檔頭 docstring。
 
 aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<名>/bin/` 與這個 `bin/`（aos-tick、aos-tools…）放進 PATH。
-要一次放好：impls 建完後跑 `proto8/install.sh`（11-05），把 impls 的 C++ 支、這裡的 `aos-*`、extras 的 aos-agent／aos-mcp／aos-sandbox／aos-grow 全部 symlink 進 `~/.local/bin`（給參數換目的地、`--dry-run` 只印）；Python 支靠 `realpath(__file__)` 找旁邊的檔，所以是 symlink 不是 cp；已有同名的別的東西不蓋、印「跳過」；repo 換位置要重跑。
+要一次放好：impls 建完後跑 `proto8/install.sh`（11-05），把 impls 的 C++ 支、這裡的 `aos-*`、extras 的 aos-agent／aos-mcp／aos-sandbox／aos-grow 全部 symlink 進 `~/.local/bin`（給參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉指進這份 repo 的連結；PATH 上同名的別支排在前面會印 warning；目的地是檔案＝`DestBad`）；Python 支靠 `realpath(__file__)` 找旁邊的檔，所以是 symlink 不是 cp；已有同名的別的東西不蓋、印「跳過」；repo 換位置要重跑。
 
 ## 分檔目錄
 

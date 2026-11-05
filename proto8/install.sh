@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install.sh [--dry-run] [目的地] - 把 aos 的指令 symlink 進一個 PATH 裡的資料夾（預設 ~/.local/bin），之後每個殼都找得到、不用 source env.sh。
+# install.sh [--dry-run] [--uninstall] [目的地] - 把 aos 的指令 symlink 進一個 PATH 裡的資料夾（預設 ~/.local/bin），之後每個殼都找得到、不用 source env.sh。
 #
 # 裝哪些（照資料夾掃，有就裝、執行檔才算）：
 #   impls/*/bin/*            C++ 的（aos-exec、aos-loop、aos-fsm、aos-daemon、aos-post、aos-json、aos-llm、aos-llm-kernel…；要先建，見 wf/workflows/testing.md「proto8」）
@@ -14,15 +14,19 @@
 # 冪等：已經是指向同一支的連結＝「已裝」、不動；目的地已有同名的別的東西（指向別處的連結、一般檔）＝印一行「跳過」、不蓋，最後退 1。
 #   目的地裡指進這份 repo 但目標已不在的連結（指令改名或刪了）＝印「斷了」提醒，不自己刪。
 # --dry-run：只印會做什麼、不動。每一行都印出做了什麼；最後一行是統計。
+# --uninstall：拿掉目的地裡指進這份 repo 的連結（含斷了的），別的不碰（11-05 B 線）。
+# PATH 上同名的另一支排在前面（例 /usr/local/bin/aos-exec）＝印一行 warning，裝照裝（11-05 B 線）。
 # 不改 PATH、不寫殼的設定檔：目的地不在 PATH 上就印一句提醒。只在 Linux／WSL 的檔案系統上用（/mnt/c 底下每個檔都 +x，見 dev-env）。
 set -u
 
 dry=0
+un=0
 dest=""
 for a in "$@"; do
   case "$a" in
     --dry-run) dry=1 ;;
-    -h|--help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --uninstall) un=1 ;;
+    -h|--help) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) echo "install.sh: ArgumentsBad 不認得的旗標 $a" >&2; exit 1 ;;
     *) if [ -n "$dest" ]; then echo "install.sh: ArgumentsBad 目的地只能一個" >&2; exit 1; fi; dest=$a ;;
   esac
@@ -31,6 +35,23 @@ done
 
 here=$(cd "$(dirname "$(readlink -f "$0")")" && pwd -P)   # proto8/
 case "$here" in /mnt/*) echo "install.sh: 注意 repo 在 $here（Windows 磁碟），aos 在這裡跑會把每個檔當執行檔；請用 Linux 檔案系統的 clone" >&2 ;; esac
+
+if [ -e "$dest" ] && [ ! -d "$dest" ]; then
+  echo "install.sh: DestBad $dest exists and is not a directory" >&2; exit 1
+fi
+
+if [ $un = 1 ]; then   # 11-05 B 線：拿掉指進這份 repo 的連結
+  n=0
+  for l in "$dest"/*; do
+    [ -L "$l" ] || continue
+    case "$(readlink "$l")" in "$here"/*)
+      if [ $dry = 1 ]; then echo "would remove $(basename "$l")"; else rm -f "$l" && echo "removed $(basename "$l")"; fi
+      n=$((n+1)) ;;
+    esac
+  done
+  echo "done: removed $n link(s) pointing into $here (dest $dest)"
+  exit 0
+fi
 
 if [ ! -d "$dest" ]; then
   if [ $dry = 1 ]; then echo "建資料夾 $dest（dry-run，沒建）"; else mkdir -p "$dest" && echo "建資料夾 $dest"; fi
@@ -48,7 +69,10 @@ link_one() {   # $1＝repo 裡那支的絕對路徑
   if [ -e "$dst" ]; then
     echo "跳過 $name：$dst 已有別的檔（不蓋；要換先自己挪開再跑）"; n_skip=$((n_skip+1)); return
   fi
-  if [ $dry = 1 ]; then echo "會裝 $name -> $src"; else ln -s "$src" "$dst" && echo "裝 $name -> $src"; fi
+  if [ $dry = 1 ]; then echo "會裝 $name -> $src"
+  elif ln -s "$src" "$dst"; then echo "裝 $name -> $src"
+  else echo "install.sh: LinkFailed $dst" >&2; n_skip=$((n_skip+1)); return   # 11-05 B 線：原本失敗也算「裝」
+  fi
   n_new=$((n_new+1))
 }
 
@@ -72,6 +96,13 @@ for l in "$dest"/*; do
   case "$t" in "$here"/*) [ -e "$t" ] || echo "斷了 $(basename "$l") -> $t（那支已不在；不要了就 rm $l）" ;; esac
 done
 
+# 11-05 B 線：PATH 上排在前面的同名指令會蓋掉裝的這支
+for src in "$dest"/*; do
+  [ -L "$src" ] || continue
+  case "$(readlink "$src")" in "$here"/*) ;; *) continue ;; esac
+  name=$(basename "$src"); got=$(command -v "$name" 2>/dev/null) || continue
+  [ "$got" = "$src" ] || [ "$(readlink -f "$got")" = "$(readlink -f "$src")" ] || echo "warning: $name on PATH resolves to $got first (not $src)"
+done
 case ":$PATH:" in *":$dest:"*) ;; *) echo "注意 $dest 不在 PATH 上：在 ~/.bashrc 加一行 export PATH=\"$dest:\$PATH\"（本腳本不改）" ;; esac
 verb=裝; [ $dry = 1 ] && verb=會裝
 echo "完成：$verb $n_new 支、已裝 $n_same 支、跳過 $n_skip 支（目的地 $dest）"
