@@ -26,7 +26,7 @@
 #include <exception>
 #include <optional>
 
-static const char* USAGE = "usage: aos-fsm [旗標] 設定檔.json";   // 旗標表是空的也寫 [旗標]（10-22）
+static const char* USAGE = "usage: aos-fsm [FLAGS] CONFIG.json";   // 旗標表是空的也寫 [旗標]（10-22）
 
 static int fail(const std::string& code, const std::string& msg) {
     std::fprintf(stderr, "aos-fsm: %s %s\n", code.c_str(), msg.c_str());
@@ -42,18 +42,18 @@ int main(int argc, char** argv) {
         try {
             cli = aos::parse_cli(std::vector<std::string>(argv + 1, argv + argc), {});   // 目前沒有旗標；以後加就在這裡加一列
         } catch (const aos::Error& e) {
-            throw aos::Error{e.code, std::string(USAGE) + "（" + e.msg + "）"};   // FlagUnknown／ArgumentsBad
+            throw aos::Error{e.code, std::string(USAGE) + " (" + e.msg + ")"};   // FlagUnknown／ArgumentsBad
         }
         if (cli.rest.size() != 1) {
-            std::string why = "沒有設定檔";
+            std::string why = "missing config file";
             if (!cli.rest.empty()) {
-                why = "設定檔只能一個，多給了 " + cli.rest[1];
+                why = "only one config file allowed, got extra " + cli.rest[1];
             }
-            throw aos::Error{fsm::code::ArgumentsBad, std::string(USAGE) + "（" + why + "）"};
+            throw aos::Error{fsm::code::ArgumentsBad, std::string(USAGE) + " (" + why + ")"};
         }
         const char* s = std::getenv("AOS_STACK");
         if (s == nullptr || s[0] == '\0') {
-            throw aos::Error{fsm::code::StackMissing, "沒設定 AOS_STACK"};
+            throw aos::Error{fsm::code::StackMissing, "AOS_STACK is not set"};
         }
         std::string stack = s;
         fsm::Table table = fsm::read_table(cli.rest[0]);
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
         try {
             b = aos::loop::run_once(cell.exec);
         } catch (const aos::Error& e) {
-            throw aos::Error{e.code, "狀態 " + state + "：" + e.msg};
+            throw aos::Error{e.code, "state " + state + ": " + e.msg};
         }
 
         std::optional<std::string> next = fsm::next_for(cell, b.code);   // 10-30 N-36：照表查，查不到＝state 不動

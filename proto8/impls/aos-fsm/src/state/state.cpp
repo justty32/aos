@@ -18,10 +18,10 @@ std::string read_state(const std::string& stack, const std::string& start) {
         if (err == ENOENT) {   // 沒有檔＝從 start 起
             return start;
         }
-        throw Error{code::StateBad, "讀不了 " + path + "：" + std::strerror(err)};   // 10-22：在但讀不了＝自己的錯
+        throw Error{code::StateBad, "cannot read " + path + ": " + std::strerror(err)};   // 10-22：在但讀不了＝自己的錯
     }
     if (!aos::is_utf8(*text)) {
-        throw Error{code::StateBad, "讀不了 " + path + "：不是 UTF-8"};
+        throw Error{code::StateBad, "cannot read " + path + ": not UTF-8"};
     }
     std::string s = aos::strip(*text);   // 去頭尾空白（同 Python str.strip()，認 Unicode 空白）
     if (s.empty()) {
@@ -34,14 +34,14 @@ std::string read_state(const std::string& stack, const std::string& start) {
 static void write_text(const std::string& path, const std::string& text, const char* mode) {
     std::FILE* f = std::fopen(path.c_str(), mode);
     if (f == nullptr) {
-        throw Error{code::WriteFailed, "寫不了 " + path + "：" + std::strerror(errno)};
+        throw Error{code::WriteFailed, "cannot write " + path + ": " + std::strerror(errno)};
     }
     bool ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
     if (std::fclose(f) != 0) {
         ok = false;
     }
     if (!ok) {
-        throw Error{code::WriteFailed, "寫不了 " + path};
+        throw Error{code::WriteFailed, "cannot write " + path};
     }
 }
 
@@ -52,7 +52,7 @@ void write_state(const std::string& stack, const std::string& name) {
     if (std::rename(tmp.c_str(), dst.c_str()) != 0) {
         int e = errno;
         std::remove(tmp.c_str());
-        throw Error{code::WriteFailed, "改名不了 " + tmp + " → " + dst + "：" + std::strerror(e)};
+        throw Error{code::WriteFailed, "cannot rename " + tmp + " -> " + dst + ": " + std::strerror(e)};
     }
 }
 

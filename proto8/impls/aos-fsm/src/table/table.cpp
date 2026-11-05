@@ -40,11 +40,11 @@ Table read_table(const std::string& spec) {
     try {
         doc = resolve_table(doc, aos::dirname(aos::loop::config_file(spec)), t.exec_bases);   // 捷徑解開（10-24 審後）
     } catch (const Error& e) {
-        throw Error{e.code, "設定檔 " + spec + " 的指示詞解不開：" + e.msg};
+        throw Error{e.code, "config " + spec + ": cannot resolve directives: " + e.msg};
     }
     if (!doc.is_object() || !doc.contains("states") || !doc["states"].is_object() || !doc.contains("start") ||
         !doc["start"].is_string()) {
-        throw Error{code::CfgBad, "fsm.json 要是 {\"start\": 狀態名, \"states\": {名: {\"exec\", \"next\"}}}"};
+        throw Error{code::CfgBad, "fsm.json must be {\"start\": STATE, \"states\": {NAME: {\"exec\", \"next\"}}}"};
     }
     t.spec = spec;
     t.start = doc["start"].get<std::string>();
@@ -56,10 +56,10 @@ Table read_table(const std::string& spec) {
 static void check_next_name(const Table& t, const std::string& name, const std::string& what, const std::string& next) {
     if (next.empty() || next != aos::strip(next) || next.find('\n') != std::string::npos) {
         throw Error{code::CfgBad,
-                    "狀態 " + name + " 的 " + what + " " + aos::dumps(Json(next)) + " 不能是空字串、頭尾不能有空白、不能有換行"};
+                    "state " + name + ": " + what + " " + aos::dumps(Json(next)) + " must not be empty, have leading or trailing spaces, or contain newlines"};
     }
     if (!t.states.contains(next)) {
-        throw Error{code::CfgBad, "狀態 " + name + " 的 " + what + " " + next + " 不在表上"};
+        throw Error{code::CfgBad, "state " + name + ": " + what + " " + next + " is not in the table"};
     }
 }
 
@@ -81,13 +81,13 @@ static bool code_key_ok(const std::string& key) {
 
 std::map<std::string, Cell> check(const Table& t) {
     if (!t.states.contains(t.start)) {
-        throw Error{code::CfgBad, "start 的 " + t.start + " 不在表上"};
+        throw Error{code::CfgBad, "start " + t.start + " is not in the table"};
     }
     std::map<std::string, Cell> cells;
     for (auto& [name, c] : t.states.items()) {   // 照表上的順序查，第一個壞的報出來
         if (!c.is_object() || !c.contains("exec") || !c.contains("next") ||
             !(c["next"].is_string() || c["next"].is_object())) {
-            throw Error{code::CfgBad, "狀態 " + name + " 要是 {\"exec\", \"next\"}（next 是狀態名字串或 {結束碼: 狀態名}）"};
+            throw Error{code::CfgBad, "state " + name + " must be {\"exec\", \"next\"} (next is a state name string or {EXIT_CODE: STATE})"};
         }
         Cell cell;
         if (c["next"].is_string()) {
@@ -98,22 +98,22 @@ std::map<std::string, Cell> check(const Table& t) {
             std::map<std::string, std::string> by_code;
             for (auto& [key, v] : c["next"].items()) {
                 if (!code_key_ok(key)) {
-                    throw Error{code::CfgBad, "狀態 " + name + " 的 next 的 key " + aos::dumps(Json(key)) +
-                                                  " 要是結束碼（0～255 的十進位整數字串）或 \"*\""};
+                    throw Error{code::CfgBad, "state " + name + ": next key " + aos::dumps(Json(key)) +
+                                                  " must be an exit code (decimal integer string 0-255) or \"*\""};
                 }
                 std::string what = "next[" + aos::dumps(Json(key)) + "]";
                 if (!v.is_string()) {
-                    throw Error{code::CfgBad, "狀態 " + name + " 的 " + what + " 要是狀態名字串"};
+                    throw Error{code::CfgBad, "state " + name + ": " + what + " must be a state name string"};
                 }
                 check_next_name(t, name, what, v.get<std::string>());
                 by_code[key] = v.get<std::string>();
             }
             if (!by_code.count("0") && !by_code.count("*")) {
-                throw Error{code::CfgBad, "狀態 " + name + " 的 next 至少要有 \"0\" 或 \"*\"（退 0 不能查不到）"};
+                throw Error{code::CfgBad, "state " + name + ": next must have \"0\" or \"*\" (exit code 0 must always match)"};
             }
             cell.next = by_code;
         }
-        cell.exec = aos::loop::parse_target(c["exec"], "狀態 " + name + " 的 exec");
+        cell.exec = aos::loop::parse_target(c["exec"], "state " + name + " exec");
         auto base = t.exec_bases.find(name);
         aos::loop::place_inline(cell.exec, t.spec, "/states/" + aos::loop::pointer_escape(name) + "/exec",
                                 base == t.exec_bases.end() ? std::string() : base->second);
@@ -143,7 +143,7 @@ std::optional<std::string> next_for(const Cell& cell, int code) {
 Cell pick(const std::map<std::string, Cell>& cells, const std::string& state, const std::string& where) {
     auto it = cells.find(state);
     if (it == cells.end()) {
-        throw Error{code::StateUnknown, "查不到狀態 " + state + "（" + where + " 裡的狀態不在表上）"};
+        throw Error{code::StateUnknown, "unknown state " + state + " (the state in " + where + " is not in the table)"};
     }
     return it->second;
 }
