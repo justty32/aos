@@ -64,12 +64,12 @@ def load_cfg(tool_dir):
     except FileNotFoundError:
         die("CfgMissing", path)
     except (OSError, ValueError) as e:
-        die("CfgBad", "%s：%s" % (path, e))
+        die("CfgBad", "%s: %s" % (path, e))
     if not isinstance(cfg, dict) or cfg.get("kind") not in ("claude", "codex"):
-        die("CfgBad", "%s：kind 要是 claude 或 codex" % path)
+        die("CfgBad", "%s: kind must be claude or codex" % path)
     for k in ("flags", "print_flags", "tools_flags"):
         if not isinstance(cfg.get(k, []), list) or not all(isinstance(a, str) for a in cfg.get(k, [])):
-            die("CfgBad", "%s：%s 要是字串陣列" % (path, k))
+            die("CfgBad", "%s: %s must be an array of strings" % (path, k))
     cfg["registry"] = registry(cfg, tool_dir, path)
     stack_copies(cfg, tool_dir)
     return cfg
@@ -83,9 +83,9 @@ def read_llm(path):
     except FileNotFoundError:
         return {}
     except (OSError, ValueError) as e:
-        die("CfgBad", "%s：%s" % (path, e))
+        die("CfgBad", "%s: %s" % (path, e))
     if not isinstance(llm, dict):
-        die("CfgBad", "%s：要是一層物件" % path)
+        die("CfgBad", "%s: must be a flat object" % path)
     return llm
 
 
@@ -105,7 +105,7 @@ def stack_copies(cfg, tool_dir):
         llm.update(read_llm(os.path.join(stack, "llm.json")))
     model = llm.get("model")
     if "model" in llm and (not isinstance(model, str) or not model):
-        die("CfgBad", "llm.json 的 model 要是非空字串（同 agent-fsm 的 brain.py），不是 %s" % json.dumps(model))
+        die("CfgBad", "model in llm.json must be a non-empty string (same as agent-fsm's brain.py), not %s" % json.dumps(model))
     if model:
         flags = list(cfg.get("flags", []))
         if "--model" in flags[:-1]:
@@ -122,16 +122,16 @@ def registry(cfg, tool_dir, path):
     base = os.path.abspath(tool_dir)
     if "tools" in cfg:
         if not isinstance(cfg["tools"], str) or not cfg["tools"]:
-            die("CfgBad", "%s：tools 要是登記檔的路徑（非空字串）" % path)
+            die("CfgBad", "%s: tools must be the path of a registry file (a non-empty string)" % path)
         reg = os.path.normpath(os.path.join(base, cfg["tools"]))
         if not os.path.isfile(reg):
-            die("ToolsMissing", "%s：tools 指的登記檔不在：%s" % (path, reg))
+            die("ToolsMissing", "%s: registry file named by tools not found: %s" % (path, reg))
         return reg
     reg = os.path.join(base, "tools.json")
     if os.path.isfile(reg):
         return reg
     if "tools_flags" in cfg:
-        die("CfgBad", "%s：有 tools_flags 但沒有登記檔（沒寫 tools、同層也沒有 tools.json）" % path)
+        die("CfgBad", "%s: tools_flags given but no registry file (no tools, and no tools.json alongside)" % path)
     return None
 
 
@@ -142,9 +142,9 @@ def mcp_argv(cfg, cell, ws, stack):
     if not reg:
         return []
     if not os.path.isfile(reg) and not cfg.get("overlay"):   # load_cfg 之後才被刪掉（有覆蓋層時定義那份可以不在）
-        die("ToolsMissing", "登記檔不在：%s" % reg)
+        die("ToolsMissing", "registry file not found: %s" % reg)
     if shutil.which("aos-mcp") is None:
-        die("CliMissing", "aos-mcp 不在 PATH 上（接了工具，要把 proto8/extras/ai_tools/bin 放進 PATH）")
+        die("CliMissing", "aos-mcp is not on PATH (tools are attached; add proto8/extras/ai_tools/bin to PATH)")
     args = ["--ws", ws, "--stack", stack] + cfg.get("tools_flags", []) + (["--overlay", cfg["overlay"]] if cfg.get("overlay") else []) + [reg]
     if cfg["kind"] == "codex":                           # JSON 字串與字串陣列同時是合法的 TOML（-c 的值照 TOML 解）
         return ["-c", "mcp_servers.aos.command=" + json.dumps("aos-mcp"), "-c", "mcp_servers.aos.args=" + json.dumps(args)]
@@ -152,7 +152,7 @@ def mcp_argv(cfg, cell, ws, stack):
         cell.write("mcp.json", json.dumps({"mcpServers": {"aos": {"command": "aos-mcp", "args": args}}},
                                           ensure_ascii=False) + "\n")
     except OSError as e:
-        die("WriteFailed", "寫不了 %s：%s" % (cell.file("mcp.json"), e))
+        die("WriteFailed", "cannot write %s: %s" % (cell.file("mcp.json"), e))
     return ["--mcp-config", cell.file("mcp.json"), "--allowedTools", "mcp__aos"]
 
 
@@ -277,7 +277,7 @@ def run_cli(argv, prompt, ws, timeout_ms, handed=None):
         p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                              text=True, cwd=ws)
     except FileNotFoundError:
-        die("CliMissing", "%s 不在 PATH 上" % argv[0])
+        die("CliMissing", "%s is not on PATH" % argv[0])
     if handed:
         handed()
     try:
@@ -285,7 +285,7 @@ def run_cli(argv, prompt, ws, timeout_ms, handed=None):
     except subprocess.TimeoutExpired:
         p.kill()
         p.communicate()
-        die("CliFailed", "%s 超過 %d 秒沒做完" % (argv[0], timeout_ms // 1000))
+        die("CliFailed", "%s did not finish within %d s" % (argv[0], timeout_ms // 1000))
     return subprocess.CompletedProcess(argv, p.returncode, out, err)
 
 
@@ -300,7 +300,7 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None):
         p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                              text=True, cwd=ws)
     except FileNotFoundError:
-        die("CliMissing", "%s 不在 PATH 上" % argv[0])
+        die("CliMissing", "%s is not on PATH" % argv[0])
     p.stdin.write(prompt)
     p.stdin.close()
     if handed:
@@ -322,7 +322,7 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None):
         timer.cancel()
     t.join(1)
     if time.time() > deadline:
-        die("CliFailed", "%s 超過 %d 秒沒做完" % (argv[0], timeout_ms // 1000))
+        die("CliFailed", "%s did not finish within %d s" % (argv[0], timeout_ms // 1000))
     return p.returncode, lines, "".join(err)
 
 
@@ -345,10 +345,10 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None):
             out = ev
     stdout = "".join(lines)
     if out is None:
-        die("CliFailed", "claude 結束碼 %d、輸出沒有 result：%s %s" % (code, tail(stdout), tail(err)))
+        die("CliFailed", "claude exited %d with no result in its output: %s %s" % (code, tail(stdout), tail(err)))
     if code != 0 or out.get("is_error"):   # result 行自己帶原因（例 模型不存在）就印它；stdout 尾巴會切在 JSON 中間
         why = out.get("result") if isinstance(out.get("result"), str) and out.get("result") else tail(stdout)
-        die("CliFailed", "claude 結束碼 %d：%s %s" % (code, tail(why), tail(err)))
+        die("CliFailed", "claude exited %d: %s %s" % (code, tail(why), tail(err)))
     if not sid:
         cell.write("session.txt", (out.get("session_id") or new) + "\n")
     return out.get("result") or ""
@@ -377,7 +377,7 @@ def print_codex(cfg, cell, ws, stack, prompt, handed=None):
         if isinstance(ev, dict) and ev.get("type") == "thread.started":
             thread = ev.get("thread_id") or thread
     if r.returncode != 0 or not os.path.exists(last):
-        die("CliFailed", "codex 結束碼 %d：%s" % (r.returncode, tail(r.stderr) or tail(r.stdout)))
+        die("CliFailed", "codex exited %d: %s" % (r.returncode, tail(r.stderr) or tail(r.stdout)))
     if not sid and thread:
         cell.write("session.txt", thread + "\n")
     with open(last, encoding="utf-8") as f:
@@ -393,19 +393,19 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None):
     if on_busy == "yield":
         who = cell.clients()
         if who:
-            die("SessionBad", "有人接在畫面上（%s），等他跳出再叫" % ", ".join(who))
+            die("SessionBad", "someone is attached to the screen (%s); call again after they detach" % ", ".join(who))
         if os.path.exists(cell.file("busy.txt")):
-            die("SessionBad", "畫面上正在跑一輪（有人送出、還沒講完），等它講完再叫")
+            die("SessionBad", "a turn is running on the screen (sent, not finished yet); call again after it finishes")
     while os.path.exists(cell.file("busy.txt")) and time.time() < deadline:
         if not cell.alive():
-            die("CliFailed", "畫面在講完之前關掉了")
+            die("CliFailed", "the screen closed before the turn finished")
         time.sleep(0.2)
     if os.path.exists(cell.file("busy.txt")):                # 等到期限還在跑：不貼，免得逾時了還打進畫面
-        die("ReplyMissing", "畫面上那一輪 %d 秒還沒講完，沒送出（attach 進去看）" % (cfg.get("timeout_ms", 600000) // 1000))
+        die("ReplyMissing", "the turn on the screen did not finish within %d s; not sent (attach to look)" % (cfg.get("timeout_ms", 600000) // 1000))
     seen = len(cell.turns())
     r = cell.tmux("load-buffer", "-b", "aos", "-", input=prompt)
     if r.returncode != 0:
-        die("CliFailed", "tmux load-buffer：%s" % tail(r.stderr))
+        die("CliFailed", "tmux load-buffer: %s" % tail(r.stderr))
     cell.tmux("paste-buffer", "-p", "-d", "-b", "aos", "-t", TMUX_SESSION)   # -p：程式要的話包成 bracketed paste，多行不會半路送出
     time.sleep(0.3)
     cell.tmux("send-keys", "-t", TMUX_SESSION, "Enter")
@@ -416,9 +416,9 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None):
         if len(turns) > seen:
             return turns[-1].get("text") or ""
         if not cell.alive():
-            die("CliFailed", "畫面在講完之前關掉了")
+            die("CliFailed", "the screen closed before the turn finished")
         time.sleep(0.2)
-    die("ReplyMissing", "送出後 %d 秒還沒講完（可能卡在權限或信任的提問；attach 進去看）"
+    die("ReplyMissing", "no answer %d s after sending (may be stuck on a permission or trust prompt; attach to look)"
         % (cfg.get("timeout_ms", 600000) // 1000))
 
 
@@ -434,7 +434,7 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None):
     f, ok = cell.lock()
     if not ok:
         if on_busy == "yield":
-            die("SessionBad", "這段對話有人在用（另一次呼叫、或 attach 正在開畫面）")
+            die("SessionBad", "this conversation is in use (another call, or attach is opening the screen)")
         fcntl.flock(f, fcntl.LOCK_EX)
     with f:
         if cell.alive():
@@ -455,13 +455,13 @@ def call_main(tool_dir, on_busy="yield"):
     cfg = load_cfg(tool_dir)
     stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
     if not stack:
-        die("StackMissing", "沒設定 AOS_STACK")
+        die("StackMissing", "AOS_STACK is not set")
     try:
         args = json.loads(sys.stdin.read())
     except ValueError as e:
-        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+        die("ArgumentsBad", "stdin is not JSON: %s" % e)
     if not isinstance(args, dict) or not isinstance(args.get("prompt"), str) or not args["prompt"].strip():
-        die("ArgumentsBad", "缺 prompt（要一個非空字串）")
+        die("ArgumentsBad", "missing prompt (a non-empty string)")
     cell = Cell(stack)                                   # 工具形：對話在這格本身，aos-mcp 的 stack 也是它（它叫的工具再疊 tools/<名>/）
     text = ask(cfg, cell, os.path.abspath(tool_dir), os.path.abspath(ws), cell.path, args["prompt"], on_busy)
     sys.stdout.write(text if text.endswith("\n") else text + "\n")
@@ -528,7 +528,7 @@ def hook_main(kind, cell_path, payload_arg=None):
 
 # ---------------------------------------------------------------- 開畫面（attach 用）
 
-TMUX_CONF = """# tmux.conf - attach 開的畫面用的 tmux 設定（cli_session.py 每次開畫面時重寫）
+TMUX_CONF = """# tmux.conf - tmux settings for the screen attach opens (cli_session.py rewrites it each time)
 set -g prefix None
 unbind-key C-b
 bind-key -n 'C-\\' detach-client
@@ -536,7 +536,7 @@ bind-key -n 'C-]' detach-client
 set -g escape-time 0
 set -g focus-events on
 set -g status-left ''
-set -g status-right ' Ctrl-] 跳出（畫面留著）｜在裡面 /exit 或 /quit 結束 '
+set -g status-right ' Ctrl-] detach (the screen stays) | /exit or /quit inside to end '
 set -g status-right-length 80
 """
 
@@ -569,9 +569,9 @@ def start(cfg, cell, ws, stack):
         r = cell.tmux("-f", cell.file("tmux.conf"), "new-session", "-d", "-s", TMUX_SESSION,
                       "-x", "160", "-y", "45", "-c", ws, "--", *argv)
     except FileNotFoundError:
-        die("TmuxMissing", "tmux 不在 PATH 上")
+        die("TmuxMissing", "tmux is not on PATH")
     if r.returncode != 0:
-        die("CliFailed", "tmux new-session：%s" % tail(r.stderr))
+        die("CliFailed", "tmux new-session: %s" % tail(r.stderr))
     # 等畫面穩下來（CLI 開機要幾秒；太早貼字會被吃掉）：畫面有字、連續 3 秒沒變、不是停在「Resuming session…」
     # （10-24 實跑：codex 的「Resuming session…」會停 2 秒以上不動，1.5 秒的門檻會太早放行）
     last, stable_since, deadline = None, time.time(), time.time() + 30
@@ -583,8 +583,14 @@ def start(cfg, cell, ws, stack):
             break
         time.sleep(0.25)
     if not cell.alive():
-        die("CliFailed", "%s 開起來就結束了（session id 不對？）" % argv[0])
+        die("CliFailed", "%s exited right after starting (wrong session id?)" % argv[0])
     return True
+
+
+ATTACH_USAGE = """usage: attach [--ws WS] [-d] [TOOL]
+  Attach to TOOL's interactive screen, opening it first if needed.
+  -d     open only, do not attach
+  no TOOL: list each tool's screen state"""
 
 
 def attach_main(argv, agent_dir):
@@ -593,13 +599,13 @@ def attach_main(argv, agent_dir):
     it = iter(argv)
     for a in it:
         if a == "--ws":
-            ws = next(it, None) or die("ArgumentsBad", "--ws 要一個路徑")
+            ws = next(it, None) or die("ArgumentsBad", "--ws needs a path")
         elif a.startswith("--ws="):
             ws = a[5:]
         elif a == "-d":
             detached = True
         elif a in ("-h", "--help"):
-            print(attach_main.__doc__)
+            print(ATTACH_USAGE)
             return
         elif a.startswith("-"):
             die("FlagUnknown", a)
@@ -614,22 +620,22 @@ def attach_main(argv, agent_dir):
     if not names:
         for t in known:
             cell = Cell(os.path.join(stack, "tools", t))
-            state = "畫面開著" if cell.alive() else "畫面沒開"
+            state = "screen open" if cell.alive() else "screen closed"
             if cell.alive() and cell.clients():
-                state += "、有人接著"
-            print("%-8s %s｜對話 %s｜%s" % (t, state, cell.read("session.txt") or "（還沒有）", cell.path))
+                state += ", attached"
+            print("%-8s %s | session %s | %s" % (t, state, cell.read("session.txt") or "(none yet)", cell.path))
         return
     if len(names) > 1:
-        die("ArgumentsBad", "一次只接一個工具")
+        die("ArgumentsBad", "attach one tool at a time")
     if names[0] not in known:
-        die("ToolUnknown", "%s（有：%s）" % (names[0], ", ".join(known)))
+        die("ToolUnknown", "%s (known: %s)" % (names[0], ", ".join(known)))
     cell = Cell(os.path.join(stack, "tools", names[0]))
     note_cell(cell, os.path.realpath(os.path.join(tools_dir, names[0])), ws, cell.path)   # 工具形：stack＝這格（同 call_main）
     opened = open_cell(cell)
     if detached:
-        print("%s 的畫面%s：%s" % (names[0], "開好了" if opened else "本來就開著", cell.file("tty.sock")))
+        print("%s screen %s: %s" % (names[0], "opened" if opened else "already open", cell.file("tty.sock")))
         return
-    print("接進 %s（Ctrl-\\ 跳出、畫面留著；在裡面 /exit 結束）" % names[0], file=sys.stderr)
+    print("attaching to %s (Ctrl-\\ detaches, the screen stays; /exit inside to end)" % names[0], file=sys.stderr)
     os.execvp("tmux", ["tmux", "-S", cell.file("tty.sock"), "attach", "-t", TMUX_SESSION])
 
 
@@ -638,13 +644,13 @@ def open_cell(cell):
     stack.txt 只在接了工具時要（沒有＝CellBad；11-03 eca-tools）。"""
     tool_dir, ws, stack = cell.read("tool.txt"), cell.read("ws.txt"), cell.read("stack.txt")
     if not tool_dir or not ws:
-        die("CellBad", "%s 沒有 tool.txt／ws.txt（不是 cli_session 用過的格）" % cell.path)
+        die("CellBad", "%s has no tool.txt/ws.txt (not a cell cli_session has used)" % cell.path)
     cfg = load_cfg(tool_dir)
     if cfg.get("registry") and not stack:
-        die("CellBad", "%s 沒有 stack.txt（接了工具，要知道給 aos-mcp 哪個 stack）" % cell.path)
+        die("CellBad", "%s has no stack.txt (tools are attached; need the stack for aos-mcp)" % cell.path)
     f, ok = cell.lock()
     if not ok:
-        print("agent 正在用這段對話，等它這次講完…", file=sys.stderr)
+        print("the agent is using this conversation; waiting for its turn to finish...", file=sys.stderr)
         fcntl.flock(f, fcntl.LOCK_EX)
     with f:
         return start(cfg, cell, ws, stack)
@@ -654,4 +660,4 @@ if __name__ == "__main__":
     if len(sys.argv) >= 4 and sys.argv[1] == "hook":
         hook_main(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else None)
     else:
-        die("ArgumentsBad", "用法：cli_session.py hook <claude|codex> <小格> [payload]（工具入口與 attach 用 import 叫）")
+        die("ArgumentsBad", "usage: cli_session.py hook <claude|codex> <cell> [payload] (tool entries and attach import it)")
