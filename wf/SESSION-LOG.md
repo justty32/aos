@@ -10,7 +10,7 @@
 
 - **open｜stdio-unify**：做完；lib 共用模組待裁 → [stdio-unify § 剩下的](../proto8/thinking/2026-11/05/stdio-unify/README.md#剩下的)
 - **open｜agent-knowledge**：工具 `memory` 與 `knowledge/aos` 已做並實測；K1～K8 可排；五題待使用者 → [agent-knowledge](../proto8/thinking/2026-11/05/agent-knowledge/README.md)
-- **open｜small-thought**：小念頭工具 `thought` 規劃完、未實作；三題待使用者（子的腦、stack 留不留、名字），T1～T6 可排 → [small-thought](../proto8/thinking/2026-11/05/small-thought/README.md)
+- **open｜small-thought**：小念頭工具 `thought` 規劃完、三題已裁（預設同父、默認刪掉可選保留、名字 thought）、未實作；T1～T6 可排 → [small-thought](../proto8/thinking/2026-11/05/small-thought/README.md)
 - **open｜tidy 收斂**：剩 C-54 摺疊（aos-post 步 9 加註 11-04 已做）、2026-11/04 thinking 未精簡 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)
 - **open｜介質**：queue 輸入、接單後放 tools（決定 32）兩題擱著 → [10-28 medium](../proto8/thinking/2026-10/28/medium/README.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10/29/medium-plan/README.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - **open｜現況地圖十一點**：剩第 1 點（plan 9 式檔案串流）、第 7 點（post／lock 補指令），「之後有遇到再說」 → [map-review § 結論](../proto8/thinking/2026-10/30/map-review/README.md#結論10-31-補)
