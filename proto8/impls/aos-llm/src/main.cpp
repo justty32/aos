@@ -68,6 +68,7 @@ int main(int argc, char** argv) {
                 throw aos::Error{g::code::ArgumentsBad, std::string(USAGE) + "（send 要給 --reply-to BOX）"};
             }
             g::Mailbox mb = g::kernel();
+            g::warn_idle(mb);
             aos::Json body = g::read_body(opt(cli, "priority"));
             std::string id = g::send(mb, body, *rt);
             std::printf("%s\n", id.c_str());
@@ -81,6 +82,7 @@ int main(int argc, char** argv) {
         if (cmd == "ask") {
             aos::Cli cli = parse(args, {{"--priority", "priority"}}, 0, "ask 不收位置參數");
             g::Mailbox mb = g::kernel();
+            g::warn_idle(mb);
             aos::Json body = g::read_body(opt(cli, "priority"));
             std::string id = g::send_held(mb, body);
             return g::ask_wait(mb, id);

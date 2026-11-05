@@ -21,6 +21,7 @@
 namespace aos::llm {
 
 Mailbox kernel();
+void warn_idle(const Mailbox& mb);   // 那裡沒有在跑的 llm daemon＝stderr 提醒一行（不擋）
 Json read_body(const std::optional<std::string>& priority);
 std::string send(const Mailbox& mb, const Json& body, const std::string& reply_to);
 std::string send_held(const Mailbox& mb, const Json& body);

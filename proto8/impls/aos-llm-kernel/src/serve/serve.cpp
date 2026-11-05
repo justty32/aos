@@ -367,7 +367,7 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
     double at = proc.value("mounted_at", 0.0);
     bool late = cfg_.timeout_ms && now_s() - at >= (double)*cfg_.timeout_ms / 1000.0;
     if (phase == "done" && (c == 143 || c == 137) && late) {
-        return error_reply(code::EndpointFailed, "endpoint 函數逾時（" + std::to_string(*cfg_.timeout_ms) + " ms）");
+        return error_reply(code::EndpointFailed, "endpoint function timed out (" + std::to_string(*cfg_.timeout_ms) + " ms)");
     }
     if (phase == "done" && c != 143) {
         std::string why = "endpoint 函數退 " + std::to_string(c);

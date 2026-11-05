@@ -57,7 +57,13 @@
 2. **aos-exec**：endpoint 函數丟到背景的孫行程，在函數結束後還活著（沒人收）。只有逾時才會收整群。
 3. **aos-daemon**：一般檔進 ctl 信箱只會記 `mailbox_warning`，正常；`mailbox_warning` 只留最後一封（04 #4 已知）。
 
-## 留給使用者的題（推薦放第一）
+## 使用者裁定
+
+> 11-05（頂層轉達）：題 1「按照推薦」＝(a)。另一句新規矩：「我發現我們做出來的程式，輸出的各種東西，裡面都有中文...全都用英文吧」——今天新加／改過的輸出都用英文。
+
+落實：aos-llm `send`、`ask` 寄之前看 `$AOS_LLM_KERNEL/state.json`（不在＝沒起過或指錯；`phase` 不是 running／stopping 或 pid 不在＝停了）→ stderr 一行 `aos-llm: warning: …`，照寄照等。手跑：沒起過、指 `def/`、Ctrl-C 停、kill -9（state 還寫 running、pid 不在）四種都提醒；正常跑不印。上面修的 2、3 兩條訊息也改成英文。
+
+## 原本的題（已裁）
 
 **題 1：llm kernel 不在、或 llm daemon 停了，`ask`／`send` 一聲不吭地等**
 昨天的題 1（`AOS_KERNEL` 打錯默默寄）你說「自擔」，今天沒改行為、只補了文件。不過變數的意思改成「llm daemon 的 stack」之後，多了兩種常見的指錯（指到 `def/`、起的時候漏了 `--stack .`），還有一種新情況：kernel 出錯讓 llm daemon 整台停了，寄信的人也看不出來。
