@@ -56,7 +56,7 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
         }
         c.slots = s.get<long long>();
     }
-    c.budget = parse_budget(doc.value("budget", Json()));
+    c.budget = parse_budget(doc.value("budget", Json()), base);   // senders 的相對路徑從 kernel.json 所在算
     Json ex = doc.value("exec", Json());
     if (!ex.is_string() || ex.get<std::string>().empty()) {
         throw Error{code::CfgBad, "exec must be a non-empty string (the endpoint function: a directory, a file or `file#/pointer`, relative to kernel.json's directory), got " + aos::dumps(ex)};
@@ -210,13 +210,13 @@ bool ran(const std::string& dir) {
     return fs::exists(aos::join(dir, PROC_JSON), ec);
 }
 
-// 掛上去的信用的代號（proc.json 的 endpoint；沒有＝空）。
-std::string endpoint_of(const std::string& dir) {
+// 掛上去的信的 proc.json 裡一格字串（endpoint＝代號、sender＝寄件人；沒有＝空）。
+std::string proc_str(const std::string& dir, const char* key) {
     std::optional<Json> proc = aos::read_json(aos::join(dir, PROC_JSON));
-    if (!proc || !proc->is_object() || !proc->value("endpoint", Json()).is_string()) {
+    if (!proc || !proc->is_object() || !proc->value(key, Json()).is_string()) {
         return "";
     }
-    return (*proc)["endpoint"].get<std::string>();
+    return (*proc)[key].get<std::string>();
 }
 
 // 窗 $AOS_STACK/endpoints.json（11-05 feat-proto 件 2）：包的屬性表，給人與 aos-llm ls 挑代號；跟現有的一樣就不寫（N-05 暫存改名）。
@@ -270,6 +270,7 @@ private:
     Table table_;
     long long busy_ = 0;   // 掛上去、還沒收的（在飛）
     std::map<std::string, long long> pack_busy_;   // 代號 → 這包在飛幾封（proc.json 的 endpoint；11-05 feat-proto）
+    std::map<std::string, long long> sender_busy_; // 寄件人 → 這人在飛幾封（proc.json 的 sender；11-05 feat-proto 件 5）
 
     void lock();
     void collect();
@@ -298,7 +299,8 @@ void Server::finish(const std::string& id, const Json& reply) {
     std::string dir = aos::join(mb_.cur(), id);
     write_reply(dir, reply);
     bool counted = ran(dir);
-    std::string endpoint = endpoint_of(dir);
+    std::string endpoint = proc_str(dir, "endpoint");
+    std::string sender = proc_str(dir, "sender");
     Json reply_error = post_reply(mb_.root, dir, id, reply);   // 回信走 reply_to（10-30）
     if (reply_error.is_string()) {
         std::fprintf(stderr, "aos-llm-kernel: %s (cannot send the reply to letter %s; letter deleted anyway)\n",
@@ -309,7 +311,7 @@ void Server::finish(const std::string& id, const Json& reply) {
         regret_reply(mb_.root, dir);   // 同步寄的人已經走了（ask 被打斷）：回信沒人拿，撤回
     }
     if (counted) {
-        add_used(stack_, used_, report_of(reply), endpoint);   // usage 從回信拿（沒有＝只算次數）；packs.<代號> 也記
+        add_used(stack_, used_, report_of(reply), endpoint, sender);   // usage 從回信拿（沒有＝只算次數）；packs.<代號>、senders.<寄件人> 也記
     }
     remove_tree(dir);   // 刪不掉（權限）不算錯：下一次 collect 看到 reply_letter.txt 就不重寄
 }
@@ -462,6 +464,9 @@ void Server::collect() {
                 if (proc->value("endpoint", Json()).is_string()) {
                     ++pack_busy_[(*proc)["endpoint"].get<std::string>()];
                 }
+                if (proc->value("sender", Json()).is_string()) {
+                    ++sender_busy_[(*proc)["sender"].get<std::string>()];
+                }
             }
             continue;
         }
@@ -576,6 +581,9 @@ std::vector<Waiting> Server::scan() {
         Waiting w;
         w.id = id;
         w.letter = *letter;
+        if (letter->value("sender", Json()).is_string()) {
+            w.sender = (*letter)["sender"].get<std::string>();   // 信封的 sender（aos-post／aos-llm 寫的 identity()；不驗，10-15「先信任」）
+        }
         try {
             w.priority = priority_of(*letter);
         } catch (const Error& e) {
@@ -659,6 +667,23 @@ int Server::run() {
                     continue;
                 }
             }
+            // 寄件人（11-05 feat-proto 件 5）：budget.senders 列了這人＝這人在飛＋這次新掛的也算；到頂同包的做法（refuse 回、wait 留著，別人照跑）
+            auto lim = budget_.senders.find(w.sender);
+            if (lim != budget_.senders.end() && !w.sender.empty()) {
+                long long mine = sender_busy_[w.sender];
+                const Limit& l = lim->second;
+                if (spent_of(used_.senders, w.sender, l.max_calls, l.max_tokens, mine)) {
+                    if (budget_.wait) {
+                        continue;
+                    }
+                    q_.seen_at_runs.erase(w.id);
+                    bool by_calls = spent_of(used_.senders, w.sender, l.max_calls, std::nullopt, mine);
+                    std::string which = by_calls ? "max_calls " + std::to_string(*l.max_calls) : "max_tokens " + std::to_string(*l.max_tokens);
+                    refuse(w.id, error_reply(code::BudgetMissing, "sender " + w.sender + ": " + which + " reached in this window (" +
+                                                                       budget_.window + "); not run"));
+                    continue;
+                }
+            }
             if (w.pack.slots && inflight >= *w.pack.slots) {
                 continue;   // 這包的格滿了：跳過、讓下一封補位（不是停下）
             }
@@ -677,6 +702,9 @@ int Server::run() {
                 }
                 Json proc = Json::object();
                 proc["endpoint"] = w.endpoint;   // 代號（在飛幾封、packs 的帳照它算；request.json 裡是解好的那組、沒代號）
+                if (!w.sender.empty()) {
+                    proc["sender"] = w.sender;   // 寄件人（這人在飛幾封、senders 的帳照它算）
+                }
                 mount(w.id, w.exec, proc);
             } catch (const Error& e) {
                 std::error_code ec;
@@ -686,6 +714,9 @@ int Server::run() {
             }
             ++n;
             ++pack_busy_[w.endpoint];
+            if (!w.sender.empty()) {
+                ++sender_busy_[w.sender];
+            }
         }
     }
     write_queue(stack_, q_);

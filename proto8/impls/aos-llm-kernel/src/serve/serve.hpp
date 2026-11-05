@@ -1,7 +1,7 @@
 // serve.hpp：【serve】kernel 跑一次——讀設定、鎖信箱、收拾、排隊、認領、請 daemon 掛問腦 proc、收成品、回信。
 //
 //   read_cfg   kernel.json（`檔` 或 `檔#/指標`；thinking 11-04 think-as-function 02 § 3）：
-//                slots（同時在飛幾封，正整數；沒寫＝1）、budget（額度，budget.hpp）、
+//                slots（同時在飛幾封，正整數；沒寫＝1）、budget（額度，budget.hpp；含每寄件人的 senders，相對路徑從 kernel 定義資料夾算）、
 //                exec（必填：預設的 endpoint 函數＝aos-exec 目標，資料夾、檔、`檔#/指標`；相對的從 kernel 定義資料夾〔kernel.json 所在〕算、轉成絕對）、
 //                endpoints（必填、非空物件：代號 → 一組 llm 設定＝一個能力包〔11-05 feat-proto，pack.hpp〕；一組裡 kernel 認 exec〔選填，這組改用別的
 //                  endpoint 函數，相對的同上〕、slots、budget、speed，拿掉後其他鍵〔url／model／key／fixed／cost／context／summary…〕整個原樣交給 endpoint 函數）、
@@ -30,10 +30,11 @@
 //                5. 排隊（queue.hpp 的 order：級數＋aging → deadline → 包的 speed → 等得久 → 先寄）、補位到 slots（在飛＋新掛）：
 //                   額度到頂（budget.hpp 的 spent）＝"refuse" 剩下的全回 BudgetMissing、"wait" 停整列留在 new/；
 //                   包（11-05 feat-proto 件 3）：那包的 budget 到頂（spent_pack，數那包在飛＋新掛）＝"refuse" 那封回 BudgetMissing、"wait" 那封留在 new/、
-//                   別包照跑（不降級換包）；那包在飛＋新掛已到它的 slots＝跳過、看下一封（不是停下）；都沒擋就認領（new → cur 改名；改不成＝寄信的剛撤信）、寫 request.json＝{"endpoint": 那組（指示詞已解、去掉 exec）,
-//                   "request": body.request}、寄掛信（proc.json 記 endpoint＝代號） {"procs_added": {"llm_<id>": {"exec": {"argv": ["aos-exec", 函數], "cwd": 信資料夾,
+//                   別包照跑（不降級換包）；寄件人（11-05 feat-proto 件 5）：budget.senders 列了信封 sender 而那人到頂（spent_of，數那人在飛＋新掛）＝同包的做法；
+//                   那包在飛＋新掛已到它的 slots＝跳過、看下一封（不是停下）；都沒擋就認領（new → cur 改名；改不成＝寄信的剛撤信）、寫 request.json＝{"endpoint": 那組（指示詞已解、去掉 exec）,
+//                   "request": body.request}、寄掛信（proc.json 記 endpoint＝代號、sender＝信封 sender） {"procs_added": {"llm_<id>": {"exec": {"argv": ["aos-exec", 函數], "cwd": 信資料夾,
 //                   "stdin": "request.json", "stdout": "reply.json", "timeout_ms"?}, "max": 1, "stack": 信資料夾}}}、寫 proc.json；寄不進＝LaunchFailed
-//                6. 回信（寄信的 sender.flock 已沒人鎖＝馬上撤回）、寄不出去 stderr 印一行；掛過的記進 used.json（含 packs.<代號>）；整封刪掉；寫 queue.json
+//                6. 回信（寄信的 sender.flock 已沒人鎖＝馬上撤回）、寄不出去 stderr 印一行；掛過的記進 used.json（含 packs.<代號>、senders.<寄件人>）；整封刪掉；寫 queue.json
 //              endpoint 函數的環境＝daemon 給子項的（AOS_STACK＝信資料夾、AOS_DAEMON、daemon 的 AOS_WS），不是 kernel 的。
 #pragma once
 

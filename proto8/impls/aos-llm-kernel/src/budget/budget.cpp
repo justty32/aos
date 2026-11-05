@@ -11,7 +11,28 @@
 
 namespace aos::llm_kernel {
 
-Budget parse_budget(const Json& v) {
+// 一格上限 {"max_calls", "max_tokens"}（寄件人那格；at＝訊息裡的位置）。window／spent 跟 kernel 的同一個，寫了＝CfgBad。
+static Limit parse_limit(const Json& v, const std::string& at) {
+    Limit l;
+    if (!v.is_object()) {
+        throw Error{code::CfgBad, at + " must be {\"max_calls\", \"max_tokens\"}, got " + aos::dumps(v)};
+    }
+    for (auto& [k, x] : v.items()) {
+        if (k != "max_calls" && k != "max_tokens") {
+            throw Error{code::CfgBad, at + "." + k + " is not allowed (only max_calls, max_tokens; the window and spent are the kernel's budget.window, budget.spent)"};
+        }
+        if (x.is_null()) {
+            continue;
+        }
+        if (!aos::is_count(x)) {
+            throw Error{code::CfgBad, at + "." + k + " must be a non-negative integer (limit per window), got " + aos::dumps(x)};
+        }
+        (k == "max_calls" ? l.max_calls : l.max_tokens) = x.get<long long>();
+    }
+    return l;
+}
+
+Budget parse_budget(const Json& v, const std::string& base) {
     Budget b;
     if (v.is_null()) {
         return b;
@@ -42,6 +63,22 @@ Budget parse_budget(const Json& v) {
             throw Error{code::CfgBad, "budget.spent must be \"refuse\" or \"wait\", got " + aos::dumps(s)};
         }
         b.wait = s == "wait";
+    }
+    Json se = v.value("senders", Json());
+    if (!se.is_null()) {
+        if (!se.is_object()) {
+            throw Error{code::CfgBad, "budget.senders must be {sender: {\"max_calls\", \"max_tokens\"}} (sender = the letter's envelope sender, a path), got " + aos::dumps(se)};
+        }
+        for (auto& [k, x] : se.items()) {
+            if (k.empty()) {
+                throw Error{code::CfgBad, "budget.senders: a sender must be a non-empty path"};
+            }
+            std::string who = aos::abspath(k[0] == '/' ? k : aos::join(base, k));   // 信封的 sender 是 identity()＝絕對路徑
+            if (b.senders.count(who)) {
+                throw Error{code::CfgBad, "budget.senders: " + k + " names the same sender (" + who + ") as another key"};
+            }
+            b.senders[who] = parse_limit(x, "budget.senders." + k);
+        }
     }
     return b;
 }
@@ -80,10 +117,11 @@ static void roll(Used& u, const std::string& window) {
         u.calls = 0;
         u.tokens = 0;
         u.packs = Json::object();
+        u.senders = Json::object();
     }
 }
 
-// packs 那格（11-05 feat-proto）：沒有＝{}；要是 {代號: {"counter_calls", "counter_tokens"}}。
+// packs、senders 那格（11-05 feat-proto）：沒有＝{}；要是 {代號或寄件人: {"counter_calls", "counter_tokens"}}。
 static bool packs_ok(const Json& p) {
     if (!p.is_object()) {
         return false;
@@ -114,11 +152,15 @@ Used read_used(const std::string& stack, const std::string& window) {
             ok = ok && aos::is_count(doc->value(k, Json()));
         }
         ok = ok && (!doc->contains("packs") || packs_ok((*doc)["packs"]));
+        ok = ok && (!doc->contains("senders") || packs_ok((*doc)["senders"]));
         if (!ok) {
-            throw Error{code::UsedBad, path + " must be {\"window\", \"since\", \"counter_calls\", \"counter_tokens\", \"counter_all_calls\", \"counter_all_tokens\", \"packs\"?: {name: {\"counter_calls\", \"counter_tokens\"}}} (delete it to count from 0)"};
+            throw Error{code::UsedBad, path + " must be {\"window\", \"since\", \"counter_calls\", \"counter_tokens\", \"counter_all_calls\", \"counter_all_tokens\", \"packs\"?: {name: {\"counter_calls\", \"counter_tokens\"}}, \"senders\"?: {sender: {\"counter_calls\", \"counter_tokens\"}}} (delete it to count from 0)"};
         }
         if (doc->contains("packs")) {
             u.packs = (*doc)["packs"];
+        }
+        if (doc->contains("senders")) {
+            u.senders = (*doc)["senders"];
         }
         u.window = (*doc)["window"].get<std::string>();
         u.since = (*doc)["since"];
@@ -131,7 +173,17 @@ Used read_used(const std::string& stack, const std::string& window) {
     return u;
 }
 
-void add_used(const std::string& stack, Used& u, const Report& r, const std::string& endpoint) {
+// 一格帳（packs 或 senders 的 name 那格）記上一次。
+static void count_in(Json& group, const std::string& name, long long t) {
+    Json& p = group[name];
+    if (!p.is_object()) {
+        p = Json::object();
+    }
+    p["counter_calls"] = p.value("counter_calls", 0LL) + 1;
+    p["counter_tokens"] = p.value("counter_tokens", 0LL) + t;
+}
+
+void add_used(const std::string& stack, Used& u, const Report& r, const std::string& endpoint, const std::string& sender) {
     roll(u, u.window);
     long long t = r.tokens.is_number_integer() ? r.tokens.get<long long>() : 0;
     u.calls += 1;
@@ -139,12 +191,10 @@ void add_used(const std::string& stack, Used& u, const Report& r, const std::str
     u.all_calls += 1;
     u.all_tokens += t;
     if (!endpoint.empty()) {
-        Json& p = u.packs[endpoint];
-        if (!p.is_object()) {
-            p = Json::object();
-        }
-        p["counter_calls"] = p.value("counter_calls", 0LL) + 1;
-        p["counter_tokens"] = p.value("counter_tokens", 0LL) + t;
+        count_in(u.packs, endpoint, t);
+    }
+    if (!sender.empty()) {
+        count_in(u.senders, sender, t);
     }
     Json doc = Json::object();
     doc["window"] = u.window;
@@ -154,6 +204,7 @@ void add_used(const std::string& stack, Used& u, const Report& r, const std::str
     doc["counter_all_calls"] = u.all_calls;
     doc["counter_all_tokens"] = u.all_tokens;
     doc["packs"] = u.packs;
+    doc["senders"] = u.senders;
     std::optional<std::string> err = aos::write_json(aos::join(stack, "used.json"), doc);
     if (err) {
         throw Error{code::WriteFailed, *err};
@@ -169,11 +220,16 @@ bool spent(const Budget& b, const Used& u, long long started) {
 
 bool spent_pack(const Used& u, const std::string& name, std::optional<long long> max_calls, std::optional<long long> max_tokens,
                 long long started) {
+    return spent_of(u.packs, name, max_calls, max_tokens, started);
+}
+
+bool spent_of(const Json& group, const std::string& name, std::optional<long long> max_calls, std::optional<long long> max_tokens,
+              long long started) {
     long long calls = 0;
     long long tokens = 0;
-    if (u.packs.contains(name) && u.packs[name].is_object()) {
-        calls = u.packs[name].value("counter_calls", 0LL);
-        tokens = u.packs[name].value("counter_tokens", 0LL);
+    if (group.contains(name) && group[name].is_object()) {
+        calls = group[name].value("counter_calls", 0LL);
+        tokens = group[name].value("counter_tokens", 0LL);
     }
     if (max_calls && calls + started >= *max_calls) {
         return true;
