@@ -41,7 +41,7 @@
 - **[thinking/](thinking/README.md)**：討論紀錄，一天一份，使用者的話照原意記、AI 的話標明是 AI 的。
 - **[notes/](notes/README.md)**：AI 寫的參考筆記（不是規範、不算數）：拿外面現成的東西跟 aos 對照，例如 [跟 s6、runit 的對照](notes/s6-runit.md)。
 - 之前乾淨的兩個時刻，要回頭看的：九月初 [ideas 13 章](../wf/workflows/ideas/README.md)、十月初 proto7 核心 spec 與 設計原則。
-- 使用者自己的草稿：[thinking/（repo 頂層）](../thinking/)（2026-09-19～24）。
+- 使用者自己的草稿：[user-advice/2026-09/](user-advice/2026-09/)（2026-09-19～24；原在 repo 頂層 `thinking/`，11-05 搬來）。
 - 這兩個月做過什麼、每一代長什麼樣：[thinking/2026-10/11/restart/README.md](thinking/2026-10/11/restart/README.md) 第一節。
 
 ## 規矩（使用者 10-11 定）

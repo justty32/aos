@@ -2,7 +2,7 @@
 
 ## core/tool
 
-`core/tool` 是世界層的工具與聯絡方式登記庫（公開 target `aos::tool`，產物 `libaos_tool.so`），提供 `aos tool` 與 `aos contact` 兩條子命令。它以私有相依使用 `aos::exec` 做工具自述探測、使用 `aos::loop` 解析目前世界；`aos::agent` 的公開 API 直接暴露 `aos::tool::Spec`，因此把 `aos::tool` 列成公開相依。完整使用入口見 [core/tool/README.md](../../../../core/tool/README.md)。
+`core/tool` 是世界層的工具與聯絡方式登記庫（公開 target `aos::tool`，產物 `libaos_tool.so`），提供 `aos tool` 與 `aos contact` 兩條子命令。它以私有相依使用 `aos::exec` 做工具自述探測、使用 `aos::loop` 解析目前世界；`aos::agent` 的公開 API 直接暴露 `aos::tool::Spec`，因此把 `aos::tool` 列成公開相依。完整使用入口見 core/tool/README.md。
 
 ### 世界層檔案格式
 

@@ -54,15 +54,15 @@ app/ ── loop 掛 `run／deliver`；llm 掛 `llm`；tool 掛 `tool／contact`
 
 ## 文件在哪
 
-`docs/`（repo 根）放**整體**文件：[總覽](../../../docs/overview.md)、[建置](../../../docs/build.md)、[使用](../../../docs/usage.md)、[新增小專案](../../../docs/subprojects.md)。改了建置骨架、子命令機制或相依管理，那邊要跟著更新。
+`docs/`（repo 根）放**整體**文件：總覽、建置、使用、新增小專案。改了建置骨架、子命令機制或相依管理，那邊要跟著更新。
 
 ## 常查的東西在哪
 
 | 我想找… | 去哪 |
 |---------|------|
 | 子命令怎麼被登記、怎麼被分派 | `cmake/AosSubproject.cmake` 的 `aos_add_subcommand()` → `app/CMakeLists.txt` 產表 → `app/src/main.cpp` |
-| 某個相依該放在哪一層 | [common/ 那節](code-map/build.md)的判準；完整說明在 [`docs/subprojects.md`](../../../docs/subprojects.md) |
-| 新增一個小專案（像 llm 那樣）要照什麼模子 | [`docs/subprojects.md`](../../../docs/subprojects.md)；函式定義在 `cmake/AosSubproject.cmake` |
+| 某個相依該放在哪一層 | [common/ 那節](code-map/build.md)的判準；完整說明在 `docs/subprojects.md` |
+| 新增一個小專案（像 llm 那樣）要照什麼模子 | `docs/subprojects.md`；函式定義在 `cmake/AosSubproject.cmake` |
 | 一批指令怎麼並行 fork、逾時或 runner 中斷怎麼殺整個 process group | `core/exec/src/start.cpp` 的 `start_all`／`run_child`；統一輪詢與逾時 `kill(-pid, SIGKILL)` 在 `core/exec/src/wait_all.cpp`，signal handler 可呼叫的群組註冊表與 `interrupt_running()` 在 `core/exec/src/interrupt.cpp` |
 | 協定的三種 JSON 長什麼樣、欄位怎麼對應 | struct 與公開轉換 API 在 `core/wire/include/aos/wire.hpp`；實作分在 `core/wire/src/inst.cpp`／`outcome.cpp`／`state.cpp`，共用取值在 `json_io.hpp` |
 | `.aos/` 動態版面（inbox／turn／batch／state.json） | 路徑推導在 `core/loop/src/layout.cpp`；協定版面在 [`PROTOCOL.md`](../dispatch/proto/PROTOCOL.md) §1 |

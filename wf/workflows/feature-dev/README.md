@@ -31,8 +31,8 @@
   | 改了什麼 | 要跟著改 |
   |---|---|
   | 某個小專案的內部行為 | 該小專案的 `docs/`（如 `core/inst/docs/`）＋ [code map](../common/code-map.md) |
-  | 建置骨架、CMake 函式、相依管理 | [`docs/build.md`](../../../docs/build.md)、[`docs/subprojects.md`](../../../docs/subprojects.md)、[add-subproject 工作流](../add-subproject.md) |
-  | 公開 API、子命令、退出碼 | [`docs/usage.md`](../../../docs/usage.md)、[use-aos 工作流](../use-aos.md) |
+  | 建置骨架、CMake 函式、相依管理 | `docs/build.md`、`docs/subprojects.md`、[add-subproject 工作流](../add-subproject.md) |
+  | 公開 API、子命令、退出碼 | `docs/usage.md`、[use-aos 工作流](../use-aos.md) |
   | `.aos` 版面、回合模型、交接協定 | [PROTOCOL](../dispatch/proto/PROTOCOL.md)（唯一真源）＋ proto8 的 CONCEPTS／NORMS／CONVENTION |
   | 頂層結構（多／少了目錄）| [INDEX](../../INDEX.md)、根 `README.md` |
 

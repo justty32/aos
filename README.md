@@ -3,7 +3,7 @@
 一個資料夾的回合制執行器，外加一組 POSIX 小工具。每個小專案同時是兩件事：`aos` 執行檔的一條或多條子命令，
 以及一個可以被其他專案 `#include` 與連結的 C++23 函式庫。
 
-核心小專案現況見 [core/README.md](core/README.md)。
+核心小專案現況見 core/README.md。
 
 ## 建置
 
@@ -15,7 +15,7 @@ cmake --preset default && cmake --build --preset default
 ```
 
 **只能從 repo 根目錄 configure**，子專案不提供獨立建置。產物在 `build/bin/aos`
-與 `build/lib/libaos_*.so`。細節見 [docs/build.md](docs/build.md)。
+與 `build/lib/libaos_*.so`。細節見 docs/build.md。
 
 ## 當成執行檔用
 
@@ -42,7 +42,7 @@ target_link_libraries(myapp PRIVATE aos::inst)
 
 `aos::inst` 是單一小專案。傘狀 target 有 `aos::core`（只有核心）、`aos::modules`
 （只有擴充）、`aos::aos`（全部）；`aos::merged` 是合併成單一檔案的版本。完整說明
-見 [docs/usage.md](docs/usage.md)。
+見 docs/usage.md。
 
 ## repo 佈局
 
@@ -68,6 +68,6 @@ crash，不是錯誤狀態。**一份指令檔等同一段可執行程式碼，�
 
 | | |
 |---|---|
-| [docs/](docs/README.md) | 整體：[總覽](docs/overview.md)、[建置](docs/build.md)、[使用](docs/usage.md)、[新增小專案](docs/subprojects.md) |
-| core/inst/docs/ | inst 專屬：[記錄格式](wf/workflows/dispatch/proto/PROTOCOL.md)、[執行語意](core/exec/README.md)、C++ API、C API、[架構](wf/workflows/common/code-map.md) |
+| docs/ | 整體：總覽、建置、使用、新增小專案 |
+| core/inst/docs/ | inst 專屬：[記錄格式](wf/workflows/dispatch/proto/PROTOCOL.md)、執行語意、C++ API、C API、[架構](wf/workflows/common/code-map.md) |
 | [AGENTS.md](AGENTS.md) → [wf/](wf/) | 開發流程（不是給使用者看的）|

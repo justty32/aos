@@ -16,7 +16,7 @@
 | LLM 並行上限住哪、怎麼排隊 | `<AOS_HOME>/cpus.json`（權威）與 `<world>/.aos/llm.json`（只能往下限）；實作在 `core/llm/src/slot.cpp`；用 `aos llm --slots` 看現況。 |
 | 取槽等太久會怎樣 | stderr 一行 `waiting-llm`、exit 75（`EX_TEMPFAIL`）；agent 走 lmstudio 或 pi 時 status 都寫 `waiting-llm`，訊息還沒被吃掉，下回合重試。 |
 
-every 常駐投遞的裁決已封存（ideas/archive/self-delivery-in-loop.md），新構想見 ideas/07-daemon.md；pi 終端介面調查與建議接法見 [`core/agent/docs/pi-interface.md`](../../../../core/agent/docs/pi-interface.md)。
+every 常駐投遞的裁決已封存（ideas/archive/self-delivery-in-loop.md），新構想見 ideas/07-daemon.md；pi 終端介面調查與建議接法見 `core/agent/docs/pi-interface.md`。
 
 ## `core/agent` 的可選 LLM CPU
 

@@ -4,7 +4,7 @@
 
 **使用者說**「幫我加一個叫 `xxx` 的小專案」「我要做一個新工具」→ 走這條。
 
-完整的說明文件在 [`docs/subprojects.md`](../../docs/subprojects.md)（給人讀的）。
+完整的說明文件在 `docs/subprojects.md`（給人讀的）。
 **本檔是給你（agent）照著做的執行順序**，含每一步要問什麼、驗什麼。
 
 ---
@@ -100,7 +100,7 @@ aos_add_subcommand(
 
 ```
 
-**相依要放對層**（判準與理由見 [`docs/subprojects.md`](../../docs/subprojects.md)）：
+**相依要放對層**（判準與理由見 `docs/subprojects.md`）：
 
 | 相依出現在 | 寫在哪 |
 |---|---|
@@ -162,10 +162,10 @@ cmake --build build && ./build/c
 照 [AGENTS.md](../../AGENTS.md) 的鐵律，這幾份都要同步，缺一不可：
 
 - [ ] [code map](common/code-map.md)：新增這個小專案的段落（哪個檔負責什麼）
-- [ ] [`core/README.md`](../../core/README.md) 或 [`modules/README.md`](../../modules/README.md)：表格加一列
+- [ ] `core/README.md` 或 `modules/README.md`：表格加一列
 - [ ] `<core|modules>/<name>/docs/`：這個小專案自己的細節文件
-- [ ] [`docs/overview.md`](../../docs/overview.md)：如果小專案清單有寫在裡面
-- [ ] 有新相依的話，[`docs/subprojects.md`](../../docs/subprojects.md) 的相依那節要不要跟著調整
+- [ ] `docs/overview.md`：如果小專案清單有寫在裡面
+- [ ] 有新相依的話，`docs/subprojects.md` 的相依那節要不要跟著調整
 
 ## 常見錯誤
 

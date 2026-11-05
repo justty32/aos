@@ -10,12 +10,12 @@
 
 | 分冊 | 涵蓋 | 什麼時候會想看 |
 |------|------|---------------|
-| [core/exec/README.md](../../../../core/exec/README.md) | `core/exec/`：整批 POSIX 行程的啟動、等待、中斷、逾時、輸出與時間 | 要改 `start_all`／`wait_all`／`interrupt_running`、行程群組、PATH／env 準備或暫存檔收拾 |
-| [core/wire/README.md](../../../../core/wire/README.md) | `core/wire/`：指令、結果與 loop state 三種協定的 C++ struct／JSON 邊界 | 要改協定欄位的解析、序列化、預設值或錯誤回報 |
-| [core/loop/README.md](../../../../core/loop/README.md) | `core/loop/`：`.aos/` 版面、投遞、匯聚、state 與一回合的推進順序 | 要改資料夾回合機、`aos run`／`aos deliver` 或它對 exec／wire 的接法 |
-| [core/tool/README.md](../../../../core/tool/README.md) | `core/tool/`：世界層工具登記表、探測與 agent 通訊錄；逐檔表格見 [tool.md](tool.md) | 要改 `.aos/tools/`／`.aos/contacts.json`、`aos tool`／`aos contact` 或工具自述探測 |
-| [core/llm/README.md](../../../../core/llm/README.md) | `core/llm/`：OpenAI 相容 chat completions client；逐檔表格見 [llm.md](llm.md) | 要改 endpoint／model／request／response、環境變數或 `aos llm` CLI |
-| [core/agent/README.md](../../../../core/agent/README.md) | `core/agent/`：回合 agent、工具往返與可選 LLM CPU；逐檔表格見 [agent.md](agent.md)，常查的東西見 [agent-lookup.md](agent-lookup.md) | 要改 agent 版面、step、工具呼叫、跨世界 say 或 lmstudio／pi engine |
-| [core/tick/README.md](../../../../core/tick/README.md) | `core/tick/`：heartbeat 兩張清單的格式、到期規則、`aos tick` 一次心跳與四個登記子命令 | 要改到期判定、`routines.json`／`schedule.json` 的欄位、`log.md` 格式或 `aos routine`／`aos schedule` 的 CLI |
+| core/exec/README.md | `core/exec/`：整批 POSIX 行程的啟動、等待、中斷、逾時、輸出與時間 | 要改 `start_all`／`wait_all`／`interrupt_running`、行程群組、PATH／env 準備或暫存檔收拾 |
+| core/wire/README.md | `core/wire/`：指令、結果與 loop state 三種協定的 C++ struct／JSON 邊界 | 要改協定欄位的解析、序列化、預設值或錯誤回報 |
+| core/loop/README.md | `core/loop/`：`.aos/` 版面、投遞、匯聚、state 與一回合的推進順序 | 要改資料夾回合機、`aos run`／`aos deliver` 或它對 exec／wire 的接法 |
+| core/tool/README.md | `core/tool/`：世界層工具登記表、探測與 agent 通訊錄；逐檔表格見 [tool.md](tool.md) | 要改 `.aos/tools/`／`.aos/contacts.json`、`aos tool`／`aos contact` 或工具自述探測 |
+| core/llm/README.md | `core/llm/`：OpenAI 相容 chat completions client；逐檔表格見 [llm.md](llm.md) | 要改 endpoint／model／request／response、環境變數或 `aos llm` CLI |
+| core/agent/README.md | `core/agent/`：回合 agent、工具往返與可選 LLM CPU；逐檔表格見 [agent.md](agent.md)，常查的東西見 [agent-lookup.md](agent-lookup.md) | 要改 agent 版面、step、工具呼叫、跨世界 say 或 lmstudio／pi engine |
+| core/tick/README.md | `core/tick/`：heartbeat 兩張清單的格式、到期規則、`aos tick` 一次心跳與四個登記子命令 | 要改到期判定、`routines.json`／`schedule.json` 的欄位、`log.md` 格式或 `aos routine`／`aos schedule` 的 CLI |
 | [build.md](build.md) | `common/`、`app/` 的逐檔表格，以及根 CMakeLists／`cmake/`／vcpkg／presets 等建置設定 | 要改建置骨架、子命令登記機制、相依放哪一層，或新增一個小專案 |
 | [proto8.md](proto8.md) | `proto8/`（現役主線）：impls、bin、lib、extras、demo 每個檔一列，照資料夾分檔 | 要改 proto8 |

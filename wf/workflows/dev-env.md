@@ -2,7 +2,7 @@
 
 ← [WORKFLOWS](../WORKFLOWS.md)｜[INDEX](../INDEX.md)
 
-這台機器上要能開發需要什麼、怎麼裝、跑什麼指令；外部工具與 env var 也收在這裡。給人讀的完整版在 [`docs/build.md`](../../docs/build.md)，本檔是 agent 照著做的清單。
+這台機器上要能開發需要什麼、怎麼裝、跑什麼指令；外部工具與 env var 也收在這裡。給人讀的完整版在 `docs/build.md`，本檔是 agent 照著做的清單。
 
 **何時用**：fresh clone、換機器、裝不起來、忘了指令、要加一個外部工具或環境變數。
 **何時不用**：驗證／測試怎麼跑 → [testing](testing.md)；程式碼慣例 → [common/conventions](common/conventions.md)。

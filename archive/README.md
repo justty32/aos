@@ -26,3 +26,4 @@ repo 根層級的過時資料夾放這裡，照 [STRUCTURE archive 規則](../wf
 | [proto7/](proto7/README.md) | 2026-11-04 | 舊原型（proto7 — aos 時空架構），由 [proto8](../proto8/README.md) 取代；使用者 11-04「舊的proto1~7都封存」 |
 | [proto7-1/](proto7-1/README.md) | 2026-11-04 | 舊原型（proto7-1 — 照 proto7 核心 spec 一路做到 kernel／agent 的試做），由 [proto8](../proto8/README.md) 取代；使用者 11-04「舊的proto1~7都封存」 |
 | [proto7-2/](proto7-2/README.md) | 2026-11-04 | 舊原型（proto7-2 — 照使用者建議重做 daemon／tick 的第二次試做），由 [proto8](../proto8/README.md) 取代；使用者 11-04「舊的proto1~7都封存」 |
+| [aos-v1/](aos-v1/) | 2026-11-05 | 甲代 C++（08～09 月的單一執行檔 `aos`：根 `CMakeLists.txt`／`CMakePresets.json`／`vcpkg.json`、`cmake/`、`common/`、`app/`、`core/`、`modules/`、`docs/`、`.aos/`、`playground/`、`brief/`、`reference/`，原樣搬來），由 [proto8](../proto8/README.md) 取代；使用者 11-05「大重構七題都照推薦吧，我覺得OK」（[arch-refactor 方向題 1](../proto8/thinking/2026-11/05/arch-refactor/README.md)） |
