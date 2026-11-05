@@ -219,7 +219,7 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
             if (flag == "interval_ms") {
                 flag = "interval-ms";
             }
-            throw Error{code::CfgBad, "--" + flag + " must be a non-negative integer"};
+            throw Error{code::ArgumentsBad, "--" + flag + " must be a non-negative integer"};   // 11-05 第二輪：旗標的值錯＝命令列用錯（原本 CfgBad）
         }
         cfg_[k] = n;
     }

@@ -78,7 +78,7 @@
 - **aos-agent**（`proto8/extras/agent/bin/aos-agent` 的 `reply_mailbox`／`ctl_wait`）：被 SIGTERM、SIGHUP（關終端）、kill -9 時暫時信箱 `$TMPDIR/aos-agent-reply-*` 留著，daemon 信箱裡那封的 `reply_to` 指向不在的資料夾（daemon 照套、回信默默丟）。README 說「用完一律刪」只對 Ctrl-C 成立。可裝 TERM／HUP 處理或文件一句。
 - **aos-llm-kernel**（只讀程式碼）：budget 窗用 `time(nullptr)`／`system_clock`，時鐘跳動時預算窗跟著跳。
 - **aos-util**（共用庫，不在這次領地）：`InputBad stdin has no JSON` 其實是「不是 JSON」；設定檔讀不了時路徑印兩次、帶 Python 樣式的 `[Errno 2]`；`--max x` 報 `CfgBad`（應是 `ArgumentsBad`）。
-  - 後續（頂層轉給本隊）：前兩條已修（stdin 不是 JSON＝`InputBad stdin is not JSON`；設定檔讀不了＝`CfgMissing cannot read X: 原因`、壞＝`CfgBad not JSON: X`，不再印兩次、不帶 `[Errno N]`），重建 13:57～14:00；`--max x` 報 CfgBad 的那句在 aos-loop（`src/engine/config.cpp:222`），不在 aos-util，沒改。
+  - 後續（頂層轉給本隊）：前兩條已修（stdin 不是 JSON＝`InputBad stdin is not JSON`；設定檔讀不了＝`CfgMissing cannot read X: 原因`、壞＝`CfgBad not JSON: X`，不再印兩次、不帶 `[Errno N]`），重建 13:57～14:00；`--max x` 報 CfgBad 的那句在 aos-loop（`src/engine/config.cpp:222`），不在 aos-util；之後也轉給本隊，改成 `ArgumentsBad`（aos-loop／aos-daemon／aos-fsm 共用這段），docs/01、03 同步。
 
 ## 沒測到的
 
