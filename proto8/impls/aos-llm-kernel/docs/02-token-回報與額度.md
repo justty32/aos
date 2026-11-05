@@ -13,7 +13,7 @@
 4. **下一次收成品**（看 daemon 的表 `$AOS_DAEMON/procs_state.json` 與 `<信>/state.json`）：
    - 收尾、結束碼 0＝`reply.json` 讀得懂就原樣當回信；讀不懂＝`ReplyBad`。
    - 收尾、其他碼＝`EndpointFailed`，msg 帶 `reply.json` 的第一行（llm_http 失敗時 stdout 也印同一行），沒有就帶 `stderr.txt` 的第一行。
-   - 143 而且掛出去已經超過 `timeout_ms`＝`EndpointFailed` 逾時。
+   - 143（aos-exec 的 TERM）或 137（不理 TERM、寬限後 KILL）而且掛出去已經超過 `timeout_ms`＝`EndpointFailed` 逾時（11-05 edge-llm 補 137）。
    - 被收掉（沒逾時的 143、`stopped`）、死在半路（`state.json` 沒收尾、表上也沒這列）＝**重掛一次**（同名、新掛信、`retries` 變 1）；第二次還是這樣＝`EndpointFailed 問腦跑了兩次都沒結果`。
    - 表上還有這列（`running`／`stopping`／`sleeping`）＝還在飛，佔一格。表上沒列、`state.json` 也沒有＝daemon 還沒套（暫停中、還沒輪到），照樣佔一格；daemon 的 `mailbox_warning` 提到這封掛信＝daemon 不收＝`LaunchFailed`。
    - 表上列著 `stopped` 而 `state.json` 收尾了（wake 後 3 秒內就跑完會這樣）＝照上面收，順手寄一封 `procs_removed` 把列拔掉。

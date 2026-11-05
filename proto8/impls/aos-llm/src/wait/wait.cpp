@@ -116,6 +116,9 @@ int ask_wait(const Mailbox& mb, const std::string& id) {
         }
         // 照信走的方向看：new → cur（kernel 先寄回信才刪 cur/ 那封，所以 cur/ 沒了回信一定已經到了）
         if (!exists(aos::join(mb.fresh(), id)) && !exists(aos::join(mb.cur(), id)) && !find_reply(rb, id, seen)) {
+            if (!exists(rb.fresh())) {   // 11-05 edge-llm：回信信箱被刪＝kernel 寄不進、信照刪，別說成「信不見了」
+                throw Error{code::LetterMissing, "回信信箱 " + rb.root + " 不見了（kernel 寄不進回信，信 " + id + " 已處理掉）"};
+            }
             throw Error{code::LetterMissing, "信 " + id + " 在信箱 " + mb.root + " 裡不見了"};
         }
         timespec ts{0, 20 * 1000 * 1000};

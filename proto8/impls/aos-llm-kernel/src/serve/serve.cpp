@@ -92,13 +92,15 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
 
 namespace {
 
-// 資料夾裡的名字（不含 . 開頭的），照字典序。
+// 資料夾裡的信（子資料夾、不含 . 開頭的），照字典序。
+// 信＝資料夾（N-16）：混進來的一般檔不理（11-05 edge-llm：new/ 裡一個一般檔曾讓 kernel 每次 WriteFailed 退 1、daemon 停）。
 std::vector<std::string> names_in(const std::string& dir) {
     std::vector<std::string> out;
     std::error_code ec;
     for (const fs::directory_entry& e : fs::directory_iterator(dir, ec)) {
         std::string n = e.path().filename().string();
-        if (!n.empty() && n[0] != '.') {
+        std::error_code ec2;
+        if (!n.empty() && n[0] != '.' && e.is_directory(ec2)) {
             out.push_back(n);
         }
     }
@@ -361,6 +363,12 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
         }
         return error_reply(code::ReplyBad, "endpoint 函數的 stdout 讀不懂（要是一行 {\"message\": {...}, \"usage\", \"model\"}）");
     }
+    // 逾時：aos-exec 先 TERM（143），不理 TERM 的過了寬限再 KILL（137）——兩種都看 mounted_at＋timeout_ms 過了沒（11-05 edge-llm）
+    double at = proc.value("mounted_at", 0.0);
+    bool late = cfg_.timeout_ms && now_s() - at >= (double)*cfg_.timeout_ms / 1000.0;
+    if (phase == "done" && (c == 143 || c == 137) && late) {
+        return error_reply(code::EndpointFailed, "endpoint 函數逾時（" + std::to_string(*cfg_.timeout_ms) + " ms）");
+    }
     if (phase == "done" && c != 143) {
         std::string why = "endpoint 函數退 " + std::to_string(c);
         std::string line = first_line(aos::join(dir, "reply.json"));   // llm_http 失敗時 stdout 也印同一行
@@ -372,11 +380,7 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
         }
         return error_reply(code::EndpointFailed, why);
     }
-    // 逾時（143）、被收掉（stopped）、死在半路（沒收尾、列也不在）
-    double at = proc.value("mounted_at", 0.0);
-    if (c == 143 && cfg_.timeout_ms && now_s() - at >= (double)*cfg_.timeout_ms / 1000.0) {
-        return error_reply(code::EndpointFailed, "endpoint 函數逾時（" + std::to_string(*cfg_.timeout_ms) + " ms）");
-    }
+    // 沒到時限的 143、被收掉（stopped）、死在半路（沒收尾、列也不在）＝重掛一次
     long long retries = proc.value("retries", 0LL);
     if (retries >= 1) {
         return error_reply(code::EndpointFailed, "問腦跑了兩次都沒結果（被收掉或死在半路）");

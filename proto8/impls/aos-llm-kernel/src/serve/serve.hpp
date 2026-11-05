@@ -14,11 +14,12 @@
 //                0. 找 daemon（daemon.hpp 的 find_host：沒 AOS_DAEMON＝DaemonMissing、沒 ctl 信箱＝MailboxMissing；有 AOS_KERNEL 掛信寄那裡）
 //                1. 建信箱三格（tmp／new／cur）、flock 住 .flock（鎖不到＝LockFailed）；queue.json 的 counter_runs＋1；讀 daemon 的表
 //                2. 收成品（collect）：cur/<id>/ 有 proc.json＝在飛，看表與 <id>/state.json（settle）：收尾 code 0＝reply.json 當回信（讀不懂＝ReplyBad）、
-//                   其他碼＝EndpointFailed（reply.json 或 stderr.txt 第一行）、143 且過了 timeout_ms＝逾時；被收掉／死在半路＝重掛一次、第二次 EndpointFailed；
+//                   其他碼＝EndpointFailed（reply.json 或 stderr.txt 第一行）、143／137 且過了 timeout_ms＝逾時；被收掉／死在半路＝重掛一次、第二次 EndpointFailed；
 //                   表上沒列又沒 state.json＝daemon 還沒套（照算一格），mailbox_warning 提到掛信＝LaunchFailed；
 //                   表上列 stopped 而 state.json 收尾了＝收、寄 procs_removed 拔列。沒 proc.json 的：有 reply.json＝寄，沒有＝改名回 new/
 //                3. 收拾（只看有 sender.flock 的信；沒有＝非同步寄的，不判存活）：tmp/ 裡寄信的人不在了（沒人鎖）的刪掉；
 //                   new/ 裡寄信的人不在了的先改名回 tmp/ 再刪（不白跑）
+//                   new/、cur/ 只看子資料夾（信＝資料夾，N-16；混進來的一般檔不理）
 //                4. 看 new/：letter.json 讀不懂、body 不是物件、沒有 body.request、endpoint 不是字串、priority 壞＝回 LetterBad；
 //                   request 不是物件、messages 不是陣列、stream 真＝RequestBad；代號：沒寫又沒預設＝EndpointMissing、表裡沒有＝EndpointUnknown；
 //                   那組解指示詞失敗＝DirectiveBad、不是物件或 exec 不是非空字串＝CfgBad；deadline 已過＝DeadlineMissed（都不佔格）
