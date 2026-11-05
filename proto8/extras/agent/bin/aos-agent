@@ -8,7 +8,7 @@
 #   掛上與管理（11-05 使用者「我希望掛上和管理這塊，能夠放到aos-agent ctl這個子命令下。」）：
 #     aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] [--limits JSON] XXX   掛一隻（XXX 要在 interfaces.json 宣告遵守 aos-agent）；等上表、印 stack（daemon 拒收＝AddRejected）
 #     aos-agent [--daemon D] ctl rm 名字                 拔掉並刪它的 stack（有畫面先關；不吃 AOS_AGENT；stack 蓋住工作區／定義／daemon／cwd／家目錄／表上別隻的 stack 的不刪）
-#     aos-agent [--daemon D] ctl ls [--json]             列 daemon 表上全部的 proc：名字 狀態 工作區 queue 排幾封
+#     aos-agent [--daemon D] ctl ls [--json]             列 daemon 表上全部的 proc：一行「名字 TAB 狀態 TAB 工作區 TAB queue 排幾封 TAB reason」（沒有＝-；11-05 R15）
 #     aos-agent [--daemon D] ctl state|status [--target 名字]   這隻的狀態幾行
 #     aos-agent [--daemon D] ctl where [--stack|--ws] [--target 名字]   印它的 stack（預設＝--stack）／工作區（--ws）
 #     aos-agent [--daemon D] ctl who [--stack S] [--json]   S（預設 $AOS_STACK）落在表上哪一隻的 stack 裡（S 本身或它的上層）＝印那隻的名字
@@ -20,7 +20,7 @@
 #     aos-agent [--daemon D] listen [--target 名字] [--timeout-s 秒] | [--last N] [--follow]
 #                                                       stdout 只有回答本文（提醒、狀態一律 stderr）：可以 > 答.txt、接管線
 #     aos-agent [--daemon D] chat [--target 名字]        一行一句、等回答；Ctrl-C 退出（130），stdin 結束退 0
-#     aos-agent [--daemon D] open [-d]|close|watch [--target 名字]   畫面（宣告了子介面 screen 的才有）
+#     aos-agent [--daemon D] open [--detach]|close|watch [--target 名字]   畫面（宣告了子介面 screen 的才有；入口照收 動作 [--detach]）
 #     aos-agent [--daemon D] tools [--target 名字] [ls [--json]|get 名|add [--override] [--no-cache] 名 路徑|rm 名|reset]   這隻的工具箱（定義疊這隻的覆蓋層）
 #     aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]                         這隻的腦設定（定義疊這隻改過的鍵）
 #
@@ -51,10 +51,14 @@
 #   正整數；"user"：字串}（同 aos-sandbox 的 key）；ctl add --limits JSON 整份蓋過宣告（'{}'＝不限）。key 不認、值不對＝InterfaceBad（宣告）／ArgumentsBad（--limits）。
 #   有宣告或 --limits＝原樣轉成 aos-daemon-ctl add --limits JSON（daemon 在子行程 setrlimit／換帳號，等同 s6-softlimit；05 的 E1／E2，11-05 晚做好）。
 #   ctl state：表上那列有 limits（daemon 寫的生效那份）就多一行 limits。
-# stdout 只有結果；提醒在 stderr（括號一行）。錯：stderr 一行 `aos-agent: 代號 原因`、退 1（chat 被 Ctrl-C 退 130）。
+# stdout 只有結果；提醒在 stderr 一行 `aos-agent: warning: 句子`（11-05 stdio-unify R1；chat 的提示符 `> ` 照舊在 stderr，D5）。
+# 錯：stderr 一行 `aos-agent: error: 代號 原因`、退 1（Ctrl-C 退 130；listen --follow 用 Ctrl-C 離開是正常離開、退 0）。chat 中途單句的錯印一行、
+#   回提示符，stdin 結束時有印過錯誤行＝退 1（有錯誤行不准退 0）。不給子命令＝ArgumentsBad；--help＝英文說明到 stdout、退 0（R3）。
 #   代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、InstanceExists、PathMissing、SessionBad、
 #   SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、AddRejected、CtlRejected、TargetMissing、WsMissing、StackMissing、InterfaceMissing、InterfaceBad、PhaseBad、
-#   ScreenMissing、ScreenBad、ToolsMissing、LlmMissing、LlmBad。下層（aos-daemon-ctl）的錯換成這支的名字轉述（ProcMissing→InstanceMissing）；
+#   ScreenMissing、ScreenBad、ToolsMissing、LlmMissing、LlmBad。下層（aos-daemon-ctl）的錯換成這支的名字轉述（ProcMissing→InstanceMissing）——
+#   這是 C-52「不偷讀下層 stderr」的明文例外（R10：出口給人看）：拆 aos-daemon-ctl 的錯誤行 `aos-daemon-ctl: error: 代號 原因`
+#   （aos_flags.split_line），只換那一行，它其他的 stderr 行（提醒、它轉的 aos-post 的錯）原樣透出；
 #   子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉（C-53 各層只說自己的錯）。
 # 只在 Linux（讀 /proc）。PATH 上要有 aos-post、aos-exec（tools 還要 aos-tools，在 proto8/bin；llm set 還要 aos-json）。
 """aos-agent - one interface for an agent hosted on aos-daemon (eca, loop / fsm agents alike); each subcommand acts on one agent.
@@ -64,7 +68,8 @@
                                                        interfaces.json); waits until it is on the table, prints its stack (daemon refuses = AddRejected)
     aos-agent [--daemon D] ctl rm NAME                 detach it and delete its stack (closes its screen first; ignores AOS_AGENT; a stack that
                                                        covers the workspace / definition / daemon / cwd / home / another listed stack is kept)
-    aos-agent [--daemon D] ctl ls [--json]             list every proc on the daemon table: name, state, workspace, queued letters
+    aos-agent [--daemon D] ctl ls [--json]             list every proc on the daemon table, one line
+                                                       "NAME TAB STATE TAB WORKSPACE TAB QUEUED TAB REASON" (none = -)
     aos-agent [--daemon D] ctl state|status [--target NAME]            a few lines about this one
     aos-agent [--daemon D] ctl where [--stack|--ws] [--target NAME]    print its stack (default, = --stack) or its workspace (--ws)
     aos-agent [--daemon D] ctl who [--stack S] [--json]   which listed agent S (default $AOS_STACK) belongs to: the one whose stack is S
@@ -78,7 +83,8 @@
                                                        stdout carries only the answer text (notes go to stderr), so > file and pipes work;
                                                        --last / --follow print blocks: a line "== #N", the question lines prefixed "> ", the answer
     aos-agent [--daemon D] chat [--target NAME]        one line per message, waits for the answer; Ctrl-C exits (130), end of stdin exits 0
-    aos-agent [--daemon D] open [-d]|close|watch [--target NAME]   its screen (only if the definition declares the screen sub-interface)
+    aos-agent [--daemon D] open [--detach]|close|watch [--target NAME]   its screen (only if the definition declares the screen
+                                                       sub-interface; the entry is run with ACTION [--detach])
     aos-agent [--daemon D] tools [--target NAME] [ls [--json]|get NAME|add [--override] [--no-cache] NAME PATH|rm NAME|reset]
                                                        its toolbox (the definition's registry with this agent's overlay on top)
     aos-agent [--daemon D] llm [--target NAME] [show|set KEY=VALUE...|reset]
@@ -112,12 +118,15 @@ Interface: touches only the daemon table and the agent's stack (queue/, history.
   string} (the aos-sandbox keys); ctl add --limits JSON replaces the declared one as a whole ('{}' = no limits). An unknown key or a bad
   value = InterfaceBad (declared) / ArgumentsBad (--limits). They are passed on as aos-daemon-ctl add --limits JSON; the daemon applies them
   in the child process (setrlimit / switching user). ctl state prints a limits line when the daemon table row has one.
-stdout carries results only; notes go to stderr as one line in parentheses. Errors: one stderr line `aos-agent: CODE reason`, exit 1
-  (Ctrl-C exits 130, SIGTERM 143, SIGHUP 129).
+stdout carries results only; reminders go to stderr as warning lines `aos-agent: warning: SENTENCE` (chat's "> " prompt is on stderr too).
+  Errors: one stderr line `aos-agent: error: CODE reason`, exit 1 (Ctrl-C exits 130, SIGTERM 143, SIGHUP 129; leaving listen --follow with
+  Ctrl-C exits 0). In chat, an error about one message prints its error line and returns to the prompt; end of stdin then exits 1.
+  No subcommand = ArgumentsBad. --help prints this text.
   Codes: ArgumentsBad, FlagUnknown, CommandUnknown, CommandMissing, DaemonMissing, InstanceMissing, InstanceExists, PathMissing, SessionBad,
   SendFailed, PostFailed, QuestionUnknown, AnswerMissing, WaitFailed, AddRejected, CtlRejected, TargetMissing, WsMissing, StackMissing,
-  InterfaceMissing, InterfaceBad, PhaseBad, ScreenMissing, ScreenBad, ToolsMissing, LlmMissing, LlmBad. Errors of aos-daemon-ctl are renamed for this program
-  (ProcMissing -> InstanceMissing); errors of the screen entry, aos-tools and aos-json pass through as they are.
+  InterfaceMissing, InterfaceBad, PhaseBad, ScreenMissing, ScreenBad, ToolsMissing, LlmMissing, LlmBad. The error line of aos-daemon-ctl is renamed for
+  this program (ProcMissing -> InstanceMissing; its other stderr lines pass through); errors of the screen entry, aos-tools and aos-json pass
+  through as they are.
 Linux only (reads /proc). Needs aos-post and aos-exec on PATH (tools also needs aos-tools in proto8/bin; llm set also needs aos-json)."""
 import json, os, re, shutil, signal, stat, subprocess, sys, tempfile, time
 
@@ -148,8 +157,8 @@ class Fail(Exception):
 
 
 def note(msg):
-    """提醒（不是錯）：stderr 一行，括號包起來、不帶程式名，跟錯誤一行分得開。"""
-    print("(%s)" % msg, file=sys.stderr, flush=True)
+    """提醒（不是錯）：stderr 一行 `aos-agent: warning: 句子`（11-05 R1；原本是括號一行）。"""
+    aos_flags.warn(PROG, msg)
 
 
 def parse(argv, flags=None, switches=None):
@@ -199,7 +208,8 @@ def need_daemon():
 
 
 def ctl(*args, quiet=False, direct=False):
-    """叫 aos-daemon-ctl；錯＝把它那一行換成這支的名字（ProcMissing→InstanceMissing）。回 stdout。stderr 的提醒照轉（quiet＝不轉）。
+    """叫 aos-daemon-ctl；錯＝把它的錯誤行 `aos-daemon-ctl: error: 代號 原因` 換成這支的名字（ProcMissing→InstanceMissing）。回 stdout。
+    C-52 的明文例外（11-05 stdio-unify R10：出口給人看）：只拆那一行；它其他的 stderr 行（提醒、它轉的 aos-post 的錯）原樣透出（quiet＝不透）。
     direct＝不經 AOS_KERNEL、直接寄 daemon（對象是 kernel 本身時）。"""
     env = dict(os.environ)
     if direct:
@@ -208,12 +218,22 @@ def ctl(*args, quiet=False, direct=False):
         r = subprocess.run([sys.executable, CTL, "--daemon", daemon_dir()] + list(args), capture_output=True, text=True, env=env)
     except OSError as e:
         raise Fail("CommandMissing", "cannot run aos-daemon-ctl: %s" % e)
+    lines = r.stderr.splitlines()
+    mine = None
     if r.returncode != 0:
-        line = (r.stderr.strip().splitlines() or ["aos-daemon-ctl: CtlFailed exited %d" % r.returncode])[-1]
-        code, _, why = line.partition(": ")[2].partition(" ")
-        raise Fail({"ProcMissing": "InstanceMissing"}.get(code, code or "CtlFailed"), why or line)
-    if r.stderr and not quiet:
-        sys.stderr.write(r.stderr)
+        for i in range(len(lines) - 1, -1, -1):
+            got = aos_flags.split_line(lines[i])
+            if got and got[0] == "aos-daemon-ctl":
+                mine = got
+                del lines[i]
+                break
+    if lines and not quiet:
+        sys.stderr.write("\n".join(lines) + "\n")
+        sys.stderr.flush()
+    if r.returncode != 0:
+        if mine is None:
+            raise Fail("CtlFailed", "aos-daemon-ctl exited %d" % r.returncode)
+        raise Fail({"ProcMissing": "InstanceMissing"}.get(mine[1], mine[1]), mine[2])
     return r.stdout
 
 
@@ -322,13 +342,13 @@ def reply_mailbox():
     （TERM／HUP 也刪：main 把它們換成 SystemExit；kill -9 刪不了，下一次 aos-agent 啟動時 sweep_replies 清）。"""
     box = tempfile.mkdtemp(prefix="%s%d-" % (REPLY_PREFIX, os.getpid()))
     try:
-        r = subprocess.run(["aos-post", "init", box], capture_output=True, text=True)
+        r = subprocess.run(["aos-post", "init", box], stdout=subprocess.DEVNULL)   # 它的 stderr 原樣透出（R10）
     except OSError as e:
         shutil.rmtree(box, ignore_errors=True)
         raise Fail("CommandMissing", "cannot run aos-post: %s" % e)
     if r.returncode != 0:
         shutil.rmtree(box, ignore_errors=True)
-        raise Fail("PostFailed", "aos-post init %s exited %d: %s" % (box, r.returncode, r.stderr.strip()))
+        raise Fail("PostFailed", "aos-post init %s exited %d" % (box, r.returncode))
     return box
 
 
@@ -720,7 +740,7 @@ def same_def(a, folder):
 def warn_shared(a, folder):
     others = same_def(a, folder)
     if others:
-        note("note: this definition (%s) is also used by %s; only %s's own copy (in its stack) changed, theirs did not (to change them all, edit the definition: aos-tools / aos-json)" % (folder, ", ".join(others), a.name))
+        note("this definition (%s) is also used by %s; only %s's own copy (in its stack) changed, theirs did not (to change them all, edit the definition: aos-tools / aos-json)" % (folder, ", ".join(others), a.name))
 
 
 def sub_entry(a, key, iface, missing, bad):
@@ -788,8 +808,8 @@ def cmd_ls(argv):
         return
     for a in rows:
         q = queued(a)
-        print("%-12s %-8s %s  queue %s%s" % (a.name, label(a), a.row.get("ws") or "-", "-" if q is None else q,
-                                             "  reason %s" % a.reason if a.reason else ""))
+        print("\t".join([a.name, label(a), a.row.get("ws") or "-", "-" if q is None else str(q),
+                         " ".join(str(a.reason).splitlines()) if a.reason else "-"]))
 
 
 def last_answer(a):
@@ -927,13 +947,14 @@ def cmd_listen(argv):
 
 
 def cmd_chat(argv):
-    """say＋listen 的迴圈（02「chat 怎麼運作」）：提示符在 stderr、stdout 只有回答；Ctrl-C 退 130、stdin 結束退 0。"""
+    """say＋listen 的迴圈（02「chat 怎麼運作」）：提示符在 stderr、stdout 只有回答；Ctrl-C 退 130、stdin 結束退 0
+    （中途印過錯誤行＝退 1：有錯誤行不准退 0，11-05 R1）。"""
     opts, rest = parse(argv, {"--target": "target"})
     if rest:
         raise Fail("ArgumentsBad", "chat takes no positional arguments: %s (pick the target with --target)" % rest[0])
     a = target(opts)
-    print("chatting with %s (Ctrl-C to exit)" % a.name, file=sys.stderr, flush=True)
-    sent = False
+    note("chatting with %s (Ctrl-C to exit)" % a.name)
+    sent, failed = False, False
     try:
         while True:
             sent = False
@@ -942,11 +963,12 @@ def cmd_chat(argv):
             try:
                 line = sys.stdin.buffer.readline().decode("utf-8")   # 一行一行解碼：壞一行不連累前後
             except UnicodeDecodeError:                  # 11-04 夜：這行不是 UTF-8＝印一行、不寄、回提示符
-                print("%s: ArgumentsBad this line is not UTF-8, not sent" % PROG, file=sys.stderr, flush=True)
+                print(aos_flags.error_line(PROG, "ArgumentsBad", "this line is not UTF-8, not sent"), file=sys.stderr, flush=True)
+                failed = True
                 continue
             if not line:
                 sys.stderr.write("\n")
-                return
+                sys.exit(1 if failed else 0)
             if not line.strip():
                 continue
             a = find(a.name, quiet=True)            # 11-05 edge-agent：聊到一半被 ctl rm＝原本照寄、把刪掉的 stack 建回來、然後一直等
@@ -958,10 +980,12 @@ def cmd_chat(argv):
             except Fail as e:
                 if e.code not in ("QuestionUnknown", "AnswerMissing"):
                     raise
-                print("%s: %s %s" % (PROG, e.code, e), file=sys.stderr, flush=True)   # 印一行、不退出，回提示符
+                print(aos_flags.error_line(PROG, e.code, e), file=sys.stderr, flush=True)   # 印一行、不退出，回提示符
+                failed = True
     except KeyboardInterrupt:
         if sent:
-            print("\n(that message was sent; read the answer later with aos-agent listen --target %s)" % a.name, file=sys.stderr, flush=True)
+            sys.stderr.write("\n")
+            note("that message was sent; read the answer later with aos-agent listen --target %s" % a.name)
         else:
             sys.stderr.write("\n")
         sys.exit(130)
@@ -1154,13 +1178,13 @@ def cmd_pause_resume(cmd):
 
 def cmd_screen(action):
     def run(argv):
-        opts, rest = parse(argv, {"--target": "target"}, {"-d": "d"} if action == "open" else None)
+        opts, rest = parse(argv, {"--target": "target"}, {"--detach": "detach"} if action == "open" else None)
         if rest:
             raise Fail("ArgumentsBad", "%s takes no positional arguments: %s (pick the target with --target)" % (action, rest[0]))
         a = target(opts)
         _, entry = screen_entry(a)
-        args = [action] + (["-d"] if opts.get("d") else [])
-        attach = action == "open" and not opts.get("d")
+        args = [action] + (["--detach"] if opts.get("detach") else [])
+        attach = action == "open" and not opts.get("detach")
         rc, err = run_entry(a, entry, args, capture_err=not attach)
         if attach and rc != 0:
             raise Fail("ScreenBad", "the screen entry %s of %s exited %d" % (entry, a.name, rc))
@@ -1313,8 +1337,11 @@ CTL_CMDS = {"add": cmd_add, "rm": cmd_rm, "start": cmd_start, "stop": cmd_stop, 
 
 def cmd_ctl(argv):
     """ctl＝掛上與管理（11-05 使用者「我希望掛上和管理這塊，能夠放到aos-agent ctl這個子命令下。」）。"""
-    if not argv or argv[0] not in CTL_CMDS:
-        raise Fail("CommandUnknown", "ctl needs one of %s%s" % (", ".join(CTL_CMDS), "; unknown: %s" % argv[0] if argv else ""))
+    _, argv = parse(argv)                            # ctl 跟它的子命令之間也是旗標的位置（--help 認、別的 FlagUnknown）
+    if not argv:
+        raise Fail("ArgumentsBad", "ctl needs one of %s" % ", ".join(CTL_CMDS))
+    if argv[0] not in CTL_CMDS:
+        raise Fail("CommandUnknown", "ctl: unknown subcommand %s (%s)" % (argv[0], ", ".join(CTL_CMDS)))
     CTL_CMDS[argv[0]](argv[1:])
 
 
@@ -1334,25 +1361,20 @@ def main():
     for s in (signal.SIGTERM, signal.SIGHUP):
         signal.signal(s, on_signal)
     sweep_replies()                                 # kill -9 留下的暫時回信信箱（pid 已不在的才刪）
+    aos_flags.HELP = __doc__                        # --help（旗標的位置，子命令後也認）：英文說明到 stdout、退 0
     a = sys.argv[1:]
     try:
-        if a and a[0] in ("-h", "--help"):
-            print(__doc__)
-            return
         opts, rest = parse(a, {"--daemon": "daemon"})
         DAEMON = opts.get("daemon")
         if not rest:
-            print(__doc__)
-            return
+            raise Fail("ArgumentsBad", "missing subcommand (%s; see aos-agent --help)" % ", ".join(CMDS))
         if rest[0] not in CMDS:
-            raise Fail("CommandUnknown", "unknown subcommand %s (%s)" % (rest[0], ", ".join(CMDS)))
+            raise Fail("CommandUnknown", "unknown subcommand %s (%s; see aos-agent --help)" % (rest[0], ", ".join(CMDS)))
         CMDS[rest[0]](rest[1:])
     except Fail as e:
-        print("%s: %s %s" % (PROG, e.code, e), file=sys.stderr)
-        sys.exit(1)
+        aos_flags.die(PROG, e.code, e)
     except aos_ws.Error as e:
-        print("%s: %s %s" % (PROG, e.code, str(e).replace("\n", " ")), file=sys.stderr)
-        sys.exit(1)
+        aos_flags.die(PROG, e.code, e)
     except KeyboardInterrupt:
         sys.exit(130)
 
