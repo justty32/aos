@@ -38,14 +38,14 @@ void write_window(const std::string& path, const Json& doc) {
     std::string text = aos::dumps(doc) + "\n";
     FILE* f = std::fopen(tmp.c_str(), "w");
     if (f == nullptr) {
-        throw Error{code::WriteFailed, "寫不了 " + tmp + "：" + std::strerror(errno)};
+        throw Error{code::WriteFailed, "cannot write " + tmp + ": " + std::strerror(errno)};
     }
     bool ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
     ok = std::fclose(f) == 0 && ok;
     if (!ok || std::rename(tmp.c_str(), path.c_str()) != 0) {
         std::string why = std::strerror(errno);
         std::remove(tmp.c_str());
-        throw Error{code::WriteFailed, "寫不了 " + path + "：" + why};
+        throw Error{code::WriteFailed, "cannot write " + path + ": " + why};
     }
 }
 
@@ -107,22 +107,22 @@ void Loop::log_line(const Json& doc) {
 // 不是 nullopt＝不採用的原因。
 static std::optional<std::string> check_base(const Json& doc) {
     if (!doc.is_object()) {
-        return "要是 JSON 物件";
+        return "must be a JSON object";
     }
     if (doc.contains("cmd")) {
         const Json& c = doc["cmd"];
         if (!c.is_string() || (c != "pause" && c != "resume" && c != "stop")) {
-            return "cmd 要是 \"pause\"、\"resume\" 或 \"stop\"";
+            return "cmd must be \"pause\", \"resume\" or \"stop\"";
         }
     }
     const char* nats[2] = {"max", "interval_ms"};   // null＝回設定檔的值（11-03）
     for (const char* k : nats) {
         if (doc.contains(k) && !doc[k].is_null() && !is_nat(doc[k])) {
-            return std::string(k) + " 要是非負整數或 null";
+            return std::string(k) + " must be a non-negative integer or null";
         }
     }
     if (doc.contains("seq") && !is_nat(doc["seq"])) {
-        return "seq 要是非負整數";
+        return "seq must be a non-negative integer";
     }
     return std::nullopt;
 }
@@ -142,7 +142,7 @@ void Loop::read_ctl() {
         bool fresh = seen != ctl_last_;
         ctl_last_ = seen;
         if (!first && fresh && err != ENOENT) {
-            ctl_warning_ = std::string("ctl 讀不了或不是 JSON：") + std::strerror(err);
+            ctl_warning_ = std::string("ctl: cannot read or not JSON: ") + std::strerror(err);
         }
         return;   // 檔不在＝沒有新指令（之後再寫的都算新的）
     }
@@ -150,7 +150,7 @@ void Loop::read_ctl() {
     std::optional<std::string> bad;
     std::string seen = "!" + *text;
     if (doc.is_discarded()) {
-        bad = "讀不了或不是 JSON：" + ctl_path_;
+        bad = "cannot read or not JSON: " + ctl_path_;
     } else {
         try {   // 指示詞（10-23 晚）：相對 $ref 從 ctl 所在的資料夾算；解不開＝整份不採用（N-08）
             aos::Resolved r = resolve_keys(doc, aos::dirname(ctl_path_), {"cmd", "max", "interval_ms", "seq"});
@@ -161,7 +161,7 @@ void Loop::read_ctl() {
                 bad = check_ctl(doc, r);
             }
         } catch (const Error& e) {
-            bad = "指示詞解不開：" + e.msg;
+            bad = "cannot resolve directives: " + e.msg;
         }
         if (!bad) {
             seen = aos::dumps(doc);
@@ -175,7 +175,7 @@ void Loop::read_ctl() {
         return;   // 基準線：起來前就在的那份當已經看過
     }
     if (bad) {
-        ctl_warning_ = (doc.is_discarded() ? "ctl " : "ctl 不採用：") + *bad;
+        ctl_warning_ = (doc.is_discarded() ? "ctl: " : "ctl rejected: ") + *bad;
         return;
     }
     // 照做一次。stop 壓過同一道裡的其他東西（N-07 stopped 壓過 paused，11-03 照舊）

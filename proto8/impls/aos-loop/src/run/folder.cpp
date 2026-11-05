@@ -119,14 +119,14 @@ Run run_folder(const std::vector<std::string>& argv) {
     sigset_t set = run_signals();
     Fd sig_fd(signalfd(-1, &set, SFD_CLOEXEC));
     if (sig_fd.fd < 0) {
-        throw Error{code::Internal, std::string("準備轉送訊號失敗：") + std::strerror(errno)};
+        throw Error{code::Internal, std::string("cannot set up signal forwarding: ") + std::strerror(errno)};
     }
 
     // 2. fork
     std::fflush(nullptr);
     pid_t pid = fork();
     if (pid < 0) {
-        throw Error{code::LaunchFailed, std::string("fork 失敗：") + std::strerror(errno)};
+        throw Error{code::LaunchFailed, std::string("fork failed: ") + std::strerror(errno)};
     }
     if (pid == 0) {
         child(argv, sig_fd.fd);

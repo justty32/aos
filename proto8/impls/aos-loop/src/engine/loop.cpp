@@ -128,7 +128,7 @@ int Loop::main_loop() {
                 return end(0, "done");
             }
             if (b.code != 0) {
-                say("第 " + std::to_string(runs_) + " 次 " + exec_.label() + " 失敗，結束碼 " + std::to_string(b.code));
+                say("run " + std::to_string(runs_) + ": " + exec_.label() + " failed with exit code " + std::to_string(b.code));
                 return end(b.code, "done");
             }
         }

@@ -53,7 +53,7 @@ Target parse_target(const Json& v, const std::string& what) {
         }
     }
     if (!ok) {
-        throw Error{code::CfgBad, what + " 要是 aos-exec 的目標（字串）、[目標, 參數...]（非空字串陣列）或單子（物件）"};
+        throw Error{code::CfgBad, what + " must be an aos-exec target (string), [target, args...] (non-empty array of strings) or an inst (object)"};
     }
     t.target = v[0].get<std::string>();
     for (size_t i = 1; i < v.size(); ++i) {
@@ -108,16 +108,16 @@ std::string config_file(const std::string& spec) {
 }
 
 aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog) {
-    std::string usage = "usage: " + prog + " [--max N] [--interval-ms N] [--ctl 檔] [--state 檔] [--enable-logs] 設定檔.json [-- 參數...]";
+    std::string usage = "usage: " + prog + " [--max N] [--interval-ms N] [--ctl FILE] [--state FILE] [--enable-logs] CONFIG.json [-- ARGS...]";
     aos::Cli cli;
     try {
         cli = aos::parse_cli(argv, {{"--max", "max"}, {"--interval-ms", "interval_ms"}, {"--ctl", "ctl"}, {"--state", "state"}},
                              {{"--enable-logs", "enable_logs"}});   // 11-02 晚：不帶值的開關，給了才印 log（同 aos-mcp；原 --no-log）
     } catch (const Error& e) {
-        throw Error{e.code, usage + "（" + e.msg + "）"};   // FlagUnknown／ArgumentsBad
+        throw Error{e.code, usage + " (" + e.msg + ")"};   // FlagUnknown／ArgumentsBad
     }
     if (cli.rest.empty()) {
-        throw Error{code::ArgumentsBad, usage + "（沒有設定檔）"};
+        throw Error{code::ArgumentsBad, usage + " (missing config file)"};
     }
     // 11-02 晚（使用者「aos-XXX ... ... -- ...」）：設定檔之後接 `--`＝後面全是附加參數（rest＝[設定檔, 參數...]，`--` 剝掉）；
     // 接別的＝照舊 ArgumentsBad。設定檔之前的 `--` 是 parse_cli 的「旗標結束」，不受影響。
@@ -127,7 +127,7 @@ aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog)
             throw Error{code::ArgumentsBad, usage + " (flag " + cli.rest[1] + " must come before the config file; when started via aos-exec, put flags in the definition's _entry before the config file, e.g. [\"" + prog +
                                                 "\", \"--enable-logs\", \"config.json\"])"};
         }
-        throw Error{code::ArgumentsBad, usage + "（設定檔只能一個，多給了 " + cli.rest[1] + "；附加參數要寫在 -- 後面）"};
+        throw Error{code::ArgumentsBad, usage + " (only one config file allowed, got extra " + cli.rest[1] + "; put extra args after --)"};
     }
     if (cli.rest.size() > 1) {
         cli.rest.erase(cli.rest.begin() + 1);
@@ -178,7 +178,7 @@ void add_args(Target& t, const std::vector<std::string>& args) {
     // 內嵌單子：接在單子 argv 的最後（argv 要是陣列；是指示詞或沒寫＝CfgBad，跑之前接不上）。字串不是指示詞，原樣接
     Json& inst = *t.inst;
     if (!inst.is_object() || !inst.contains("argv") || !inst["argv"].is_array()) {
-        throw Error{code::CfgBad, "有 -- 附加參數時，exec 的單子 argv 要直接寫成陣列（才接得上）"};
+        throw Error{code::CfgBad, "with extra args after --, the argv of the exec inst must be a literal array (to append them)"};
     }
     for (const std::string& a : args) {
         inst["argv"].push_back(a);
@@ -202,10 +202,10 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
         cfg_dirs_ = std::move(r);
         cfg_dirs_.value = nullptr;
     } catch (const Error& e) {
-        throw Error{e.code, "設定檔 " + spec + " 的指示詞解不開：" + e.msg};
+        throw Error{e.code, "config " + spec + ": cannot resolve directives: " + e.msg};
     }
     if (!cfg_.is_object()) {
-        throw Error{code::CfgBad, "設定檔要是 JSON 物件：" + spec};
+        throw Error{code::CfgBad, "config must be a JSON object: " + spec};
     }
     const char* nums[2] = {"max", "interval_ms"};   // 旗標 ＞ 設定檔 ＞ 預設（10-21 plan L5）
     for (const char* k : nums) {
@@ -219,7 +219,7 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
             if (flag == "interval_ms") {
                 flag = "interval-ms";
             }
-            throw Error{code::CfgBad, "--" + flag + " 要是非負整數"};
+            throw Error{code::CfgBad, "--" + flag + " must be a non-negative integer"};
         }
         cfg_[k] = n;
     }
@@ -237,21 +237,21 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
         has_exec_ = true;
         add_args(exec_, args);
     } else if (d_.need_exec) {
-        throw Error{code::CfgBad, "沒有東西可跑（設定檔沒有 exec）"};
+        throw Error{code::CfgBad, "nothing to run (config has no exec)"};
     } else if (!args.empty()) {
-        throw Error{code::ArgumentsBad, "沒有 exec（身體），-- 後面的附加參數沒地方接"};   // daemon 純監工（11-02 晚代定）
+        throw Error{code::ArgumentsBad, "no exec (body), so the extra args after -- have nowhere to go"};   // daemon 純監工（11-02 晚代定）
     }
     max_ = d_.max;
     if (cfg_.contains("max")) {
         if (!is_nat(cfg_["max"])) {
-            throw Error{code::CfgBad, "max 要是非負整數"};
+            throw Error{code::CfgBad, "max must be a non-negative integer"};
         }
         max_ = as_ll(cfg_["max"]);
     }
     interval_ms_ = d_.interval_ms;
     if (cfg_.contains("interval_ms")) {
         if (!is_nat(cfg_["interval_ms"])) {
-            throw Error{code::CfgBad, "interval_ms 要是非負整數"};
+            throw Error{code::CfgBad, "interval_ms must be a non-negative integer"};
         }
         interval_ms_ = as_ll(cfg_["interval_ms"]);
     }
@@ -269,10 +269,10 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
             continue;
         }
         if (!v.is_string() || v.get<std::string>().empty()) {
-            throw Error{code::CfgBad, std::string(keys[i]) + " 要是檔名"};
+            throw Error{code::CfgBad, std::string(keys[i]) + " must be a file name"};
         }
         if (stack_.empty()) {
-            throw Error{code::StackMissing, std::string("要開 ") + keys[i] + " 窗卻沒設定 AOS_STACK（不要窗就寫 null）"};
+            throw Error{code::StackMissing, std::string("the ") + keys[i] + " window needs AOS_STACK, which is not set (write null to turn it off)"};
         }
         *paths[i] = aos::join(stack_, v.get<std::string>());
     }

@@ -75,7 +75,7 @@ Run run_inline(const Target& t) {
     try {
         r = aos::exec::run_inst(*t.inst, dir, t.args, t.ref_base);
     } catch (const Error& e) {
-        throw Error{e.code, "單子跑不起來：" + e.msg};   // 代號照舊分種類（同 aos-exec）
+        throw Error{e.code, "inst cannot run: " + e.msg};   // 代號照舊分種類（同 aos-exec）
     }
     Run b;
     b.code = r.code;
