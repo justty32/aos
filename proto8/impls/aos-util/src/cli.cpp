@@ -59,12 +59,9 @@ Json load_cfg(const std::string& spec) {
     } catch (const Error&) {
         throw Error{code::CfgBad, "config " + spec + ": # must be followed by /"};
     }
-    Json doc;
-    try {
-        doc = read_json_at(s.path, "");
-    } catch (const Error& e) {
-        throw Error{e.code, "cannot read or not JSON: " + s.path + " (" + e.msg + ")"};   // 檔不在 CfgMissing、其他 CfgBad
-    }
+    // 檔不在 CfgMissing、其他讀不了或不是 JSON CfgBad；原因照 read_json_at（`cannot read X: 原因`／`not JSON: X`），不再包一層
+    // （11-05 第二輪：原本 `cannot read or not JSON: X (not JSON: X)`，路徑印兩次）
+    Json doc = read_json_at(s.path, "");
     if (s.pointer.empty()) {
         return doc;
     }

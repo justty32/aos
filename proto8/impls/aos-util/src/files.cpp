@@ -125,9 +125,8 @@ Json read_json_at(const std::string& path, const std::string& pointer) {
     int err = 0;
     std::optional<std::string> text = read_file(path, err);
     if (!text) {
-        // 原因的寫法同 Python 的 OSError（`[Errno 2] No such file or directory: 'x'`）
-        throw Error{err == ENOENT ? code::CfgMissing : code::CfgBad,
-                    "[Errno " + std::to_string(err) + "] " + std::strerror(err) + ": '" + path + "'"};
+        // 11-05 第二輪：原本照 Python 的 OSError 寫（`[Errno 2] No such file or directory: 'x'`），C++ 程式印 Python 樣式、load_cfg 又包一層＝路徑印兩次
+        throw Error{err == ENOENT ? code::CfgMissing : code::CfgBad, "cannot read " + path + ": " + std::strerror(err)};
     }
     // 第一行 #!：換成空行（留著換行，JSON 錯誤訊息的行號才對得上）
     if (text->starts_with("#!")) {
