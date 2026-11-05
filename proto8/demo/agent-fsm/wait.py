@@ -12,8 +12,9 @@
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1——StackMissing、RequestMissing（沒 pending 也沒 request.json：人改了 stack）、BrainFailed（kernel 回錯）、
 #   SendFailed（aos-llm send 退非 0；它自己的 stderr 原樣在上面，例 LlmKernelMissing）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
 # --help 印英文用法；Ctrl-C 退 130。
-import json, os, signal, subprocess, sys
+import json, os, shutil, signal, subprocess, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "bin"))   # bin/aos_flags.py（錯誤行、提醒行的共用介面）
+sys.path.append(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")))   # 複製出 repo 的：PATH 上 aos-tools 的真位置（install.sh 的捷徑指回 proto8/bin）旁邊就是 aos_flags.py
 import aos_flags  # noqa: E402
 
 HELP = """\

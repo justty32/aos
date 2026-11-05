@@ -49,6 +49,7 @@ Result on stdout. On error: one line "agents: error: CODE reason" on stderr and 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "lib"))   # 複製出 repo 的：PATH 上 aos-tools 所屬 proto8 的 lib/
 import tool_io  # noqa: E402
 
 NAME = "agents"

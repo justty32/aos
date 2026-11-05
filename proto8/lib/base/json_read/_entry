@@ -4,7 +4,7 @@
 # value 超過 depth 層的物件摺成 {"type": "object", "keys": [最多 20 個], "counter_keys_more"?: 沒列的個數}、陣列摺成 {"type": "array", "counter_items": N}、
 # 長字串摺成 {"type": "string", "counter_chars": N, "head": 前 100 字}（計數 10-25 改 counter_*，原 len、keys_more）；其餘照原樣。pointer 照 RFC 6901（整份是空字串）。
 # 錯：stderr 與 stdout 各一行「json_read: error: 代號 原因」、退 1。（impls/aos-json 的 peek 是同一件事的 C++ 版，做好後可換）
-import json, os, sys
+import json, os, shutil, sys
 HELP = """\
 usage: json_read < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Look at one place in a JSON file in the workspace, unfolding only depth levels
@@ -18,6 +18,7 @@ Result on stdout. On error: one line "json_read: error: CODE reason" on stderr a
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "lib"))   # 複製出 repo 的：PATH 上 aos-tools 所屬 proto8 的 lib/
 import tool_io  # noqa: E402
 
 NAME = "json_read"

@@ -3,7 +3,7 @@
 # 介面（lib/README 的契約）：stdin 收 {"expr": "17*23"}；stdout 印算出來的結果。不碰檔案、不用 $AOS_WS。
 # 錯：stderr 與 stdout 各一行「math: error: 代號 原因」、退 1——stdin 不對＝ArgumentsBad，式子讀不懂、除以零、算不出來＝ExprBad。
 # 來源：demo/agent-dan/tools/math（10-23；10-24 遷移：hal、kai、talk 的複本改掛這一份，錯誤行照 lib 契約）。
-import ast, json, operator, os, sys
+import ast, json, operator, os, shutil, sys
 HELP = """\
 usage: math < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Evaluate an arithmetic expression (numbers, + - * / // % **, parentheses, signs).
@@ -14,6 +14,7 @@ Result on stdout. On error: one line "math: error: CODE reason" on stderr and st
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "lib"))   # 複製出 repo 的：PATH 上 aos-tools 所屬 proto8 的 lib/
 import tool_io  # noqa: E402
 
 NAME = "math"

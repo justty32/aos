@@ -2,7 +2,7 @@
 # mkdir - 在工作區裡建資料夾（上層一起建；已經有＝沒事）
 # 介面（lib/README 的契約）：stdin 收 {"path"}；stdout 一份 JSON {"path", "created"}。路徑從 $AOS_WS 算、不能跑出去、不能是工作區本身。
 # 錯：stderr 與 stdout 各一行「mkdir: error: 代號 原因」、退 1。來源：demo/file-tools/mkdir（10-24；遷移時 common.py 攤回這裡、錯誤行照 lib 契約）。
-import json, os, sys
+import json, os, shutil, sys
 HELP = """\
 usage: mkdir < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Create a folder in the workspace (parents too; already there is fine).
@@ -13,6 +13,7 @@ Result on stdout. On error: one line "mkdir: error: CODE reason" on stderr and s
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "lib"))   # 複製出 repo 的：PATH 上 aos-tools 所屬 proto8 的 lib/
 import tool_io  # noqa: E402
 
 NAME = "mkdir"

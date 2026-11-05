@@ -5,8 +5,9 @@
 # 錯：stderr 與 stdout 各一行「fake_slow: error: 代號 原因」、退 1——ArgumentsBad（stdin 不是 JSON、delay_s 不對）。被 TERM＝照預設結束（daemon 收整群）。
 # llm_fake 被訊號殺＝退 128＋N（stdio-unify R12，同 aos-tools）；其他碼原樣交回：退非 0 時 stderr 有「fake_slow: error:」那行＝我錯，沒有＝llm_fake 的碼（R8）。
 # --help 印英文用法；Ctrl-C 退 130。
-import json, os, signal, subprocess, sys, time
+import json, os, shutil, signal, subprocess, sys, time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "bin"))   # bin/aos_flags.py（錯誤行、提醒行的共用介面）
+sys.path.append(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")))   # 複製出 repo 的：PATH 上 aos-tools 的真位置（install.sh 的捷徑指回 proto8/bin）旁邊就是 aos_flags.py
 import aos_flags  # noqa: E402
 
 HELP = """\

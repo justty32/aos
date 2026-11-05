@@ -23,7 +23,7 @@
 # 設計（使用者 11-05「依託檔案系統、/usr/bin 的 ls/grep 包成工具，不用重複發明」）：
 #   read＝cat/head -c、ls＝ls、find＝grep -ril，全部限定在 AOS_MEMORY 根之下、唯讀、輸出截斷給小模型；不另發明儲存格式。
 #   節點路徑 a/b 跟 aos-json 的 #/a/b 指標同形，之後 AOS_MEMORY 指到一份 .json 時可以用 aos-json 當後端（這版不做）。
-import json, os, re, signal, subprocess, sys
+import json, os, re, shutil, signal, subprocess, sys
 HELP = """\
 usage: memory < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Read a shared, hierarchical, read-only knowledge base: op read (a node's text and
@@ -38,6 +38,7 @@ Result on stdout. On error: one line "memory: error: CODE reason" on stderr and 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "lib"))   # 複製出 repo 的：PATH 上 aos-tools 所屬 proto8 的 lib/
 import tool_io  # noqa: E402
 
 NAME = "memory"

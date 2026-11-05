@@ -6,7 +6,7 @@
 # 逾時（預設 60 秒、上限 300）＝整群先 TERM、2 秒後 KILL、算 CommandFailed（已經印出來的照樣給）；這個工具被外面 TERM 時也先停掉那一群。
 # 錯：stderr 與 stdout 各一行「run_python: error: 代號 原因」、退 1。來源：demo/agent-gus/tools/run_python（10-24；遷移時錯誤照 lib 契約：
 # 以前「模型的錯、逾時」印「錯誤：…」退 0，現在一律退 1，回不回給腦由叫它的 agent 決定——agent-gus 回給腦；demo/agent-gus 11-04 刪了）。
-import json, os, signal, subprocess, sys
+import json, os, shutil, signal, subprocess, sys
 HELP = """\
 usage: run_python < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Run a piece of Python with python3 -I in this tool's stack cell; print its
@@ -20,6 +20,7 @@ Result on stdout. On error: one line "run_python: error: CODE reason" on stderr 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "lib"))   # 複製出 repo 的：PATH 上 aos-tools 所屬 proto8 的 lib/
 import tool_io  # noqa: E402
 
 NAME = "run_python"

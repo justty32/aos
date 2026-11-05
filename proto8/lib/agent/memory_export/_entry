@@ -9,10 +9,11 @@
 #   .md 的文原樣接上（標題層級不改），.json 的文包成 ```json 區塊（前面加「# 節點名」當標題）；節點之間空一行。
 #   超過 max_bytes（預設 50000）就截，最後一行「[truncated: N more bytes; export a child path]」。
 # 錯：「memory_export: error: 代號 原因」stderr 與 stdout 各一行、退 1：ArgumentsBad、PathBad、MemoryMissing、NodeMissing、CfgBad、ReadFailed。
-import json, os, re, sys
+import json, os, re, shutil, sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
 sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "lib"))   # 複製出 repo 的：PATH 上 aos-tools 所屬 proto8 的 lib/
 import tool_io  # noqa: E402
 
 HELP = """\

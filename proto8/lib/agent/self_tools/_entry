@@ -12,7 +12,7 @@
 #   沒掛在 daemon 下跑的 agent（aos-exec body.json）不支援：ctl who 失敗＝aos-agent 的 DaemonMissing／InstanceMissing。
 #   --help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉 aos-agent，退 130）。
 # 需要 PATH 上有 aos-agent（proto8/install.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
-import json, os, re, signal, subprocess, sys
+import json, os, re, shutil, signal, subprocess, sys
 HELP = """\
 usage: self_tools < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Change the tool box of the agent that calls me (its overlay, not its definition):
@@ -27,6 +27,7 @@ Result on stdout. On error: one line "self_tools: error: CODE reason" on stderr 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "lib"))   # 複製出 repo 的：PATH 上 aos-tools 所屬 proto8 的 lib/
 import tool_io  # noqa: E402
 
 NAME = "self_tools"

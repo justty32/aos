@@ -4,6 +4,8 @@
 
 aos 體系自己的 agent：**一隻＝一個範本資料夾**，複製一份、改 `llm.json`／`system.txt`／`tools.json` 就是另一隻（四支格的程式也放在範本裡，每隻複製；使用者 11-04「放範本裡，每隻複製」）。`body.json` 讓 aos-loop 跑 `loop.json`，loop 每次跑 `fsm.json` 的一格；`_entry` 是「把自己掛上 daemon」（11-05，下面）；格是範本裡四支純標準庫的 Python。設計與代定：[thinking 11-04 loop-fsm-agent](../../thinking/2026-11/04/loop-fsm-agent/README.md)；問腦 11-04 晚改成寄信給 llm kernel：[think-as-function 03 § 1](../../thinking/2026-11/04/think-as-function/03-呼叫端.md)；條文 P-11、P-19、P-35 的 11-04 註。
 
+**複製出 repo**（11-05 晚試驗場回報）：四支格找 `aos_flags.py` 先找 `../../bin`、再找 PATH 上 `aos-tools` 的真位置（跑過 `install.sh` 或 PATH 放了 `proto8/bin` 就找得到）；相對 repo 的三處要自己改成絕對路徑——`tools.json` 的 `../../lib/…`、`tools/memory/_entry` 單子裡的 `../../../../lib/agent/memory/_entry`、`tools/memory/_memory.json` 的 `base`。
+
 ```
 agent-fsm/
   _entry       {"argv": ["aos-agent", "ctl", "add", {"$env": "AOS_CD"}], "cwd": {"$env": "AOS_WS"}}（單子，沒 +x；11-05：aos-exec 這個資料夾＝掛上 daemon）

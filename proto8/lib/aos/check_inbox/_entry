@@ -2,7 +2,7 @@
 # check_inbox - 看自己信箱裡還沒處理的信（$AOS_WS/new/），只看不認領；stdout 一封一行摘要。
 # 介面（lib/README 的契約）：stdin 收 {}（沒有參數；空 stdin 也算）；錯：stdin 不是 JSON 物件＝stderr 與 stdout 各一行「check_inbox: error: ArgumentsBad 原因」、退 1。
 # 來源：demo/talk/member/tools/check_inbox（10-24；遷移時加上驗 stdin，原本不讀 stdin；demo/talk 11-04 刪了）。
-import json, os, sys
+import json, os, shutil, sys
 HELP = """\
 usage: check_inbox < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 List the unprocessed letters in $AOS_WS/new/, one line each (looks only, does not take).
@@ -12,6 +12,7 @@ Result on stdout. On error: one line "check_inbox: error: CODE reason" on stderr
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "lib"))   # 複製出 repo 的：PATH 上 aos-tools 所屬 proto8 的 lib/
 import tool_io  # noqa: E402
 
 tool_io.start("check_inbox", HELP)

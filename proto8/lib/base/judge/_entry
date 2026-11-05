@@ -22,7 +22,7 @@
 # 錯（自己這層的，退 1，loop／daemon 會停，P-20）：ArgumentsBad、CfgMissing、CfgBad（judge.json）、StackMissing、DaemonMissing（沒設 AOS_DAEMON 或不是資料夾）、
 #   StateBad（procs_state.json 讀不懂）、MailboxMissing（daemon 沒開 ctl 信箱）、CommandMissing（PATH 沒 aos-post／aos-directive）、PostFailed（收件箱 init／take-all／see 失敗）。
 #   stderr 一行「judge: error: 代號 原因」。--help＝英文用法印 stdout、退 0。Ctrl-C＝退 130、不吐 traceback。
-import json, os, re, subprocess, sys
+import json, os, re, shutil, subprocess, sys
 
 HELP = """\
 usage: judge JUDGE.json   (run it with aos-exec as a daemon body or a loop proc; needs $AOS_STACK and $AOS_DAEMON)
@@ -36,6 +36,7 @@ Exit 0 after a round (also with no letters). On error: "judge: error: CODE reaso
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "lib"))   # 複製出 repo 的：PATH 上 aos-tools 所屬 proto8 的 lib/
 import tool_io  # noqa: E402
 
 NAME = "judge"

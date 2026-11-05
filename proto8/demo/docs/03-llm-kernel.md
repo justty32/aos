@@ -33,6 +33,7 @@ llm-kernel/
 ```sh
 mkdir ~/llm_kernel && cd ~/llm_kernel
 cp -r <repo>/proto8/demo/llm-kernel def     # kernel.json 裡 ../../lib 開頭的 exec 改成絕對路徑（<repo>/proto8/lib/base/llm_http、llm_fake）
+                                            # 格（fake_slow 等）找 aos_flags.py：先 ../../../bin、再 PATH 上 aos-tools 的真位置（11-05 晚）
 aos-exec --stack . def                      # 起 llm daemon；信箱在 ~/llm_kernel/mailbox/，Ctrl-C 收工
 # 另一個殼：
 export AOS_LLM_KERNEL=~/llm_kernel

@@ -10,8 +10,9 @@
 # --tools FILE：aos-tools 登記檔（預設範本裡的 tools.json；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/tools.json 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
 # 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
-import json, os, signal, subprocess, sys
+import json, os, shutil, signal, subprocess, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "bin"))   # bin/aos_flags.py（錯誤行、提醒行的共用介面）
+sys.path.append(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")))   # 複製出 repo 的：PATH 上 aos-tools 的真位置（install.sh 的捷徑指回 proto8/bin）旁邊就是 aos_flags.py
 import aos_flags  # noqa: E402
 
 HELP = """\
