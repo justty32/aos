@@ -41,6 +41,8 @@
 // 11-05（portable-flow，見 docs/03「11-05 搬家相關」）：信／procs_ctl 多認 procs_slept、procs_woken（sleep＝現在就睡、列 sleeping，這一班 wake 才醒；daemon 重開 slept 集合空＝自己醒）；
 //   表上 stack／ws／exec／def 存相對 daemon 的 stack（adopt 用 unrel 拼回）；wake／start 起來 REVIVE_MS 內就退＝列留 stopped＋reason（11-05 晚起凡 loop 型退非 0 都留，REVIVE_MS 只分原因字樣）；
 //   起來先 check_running：flock 鎖住 stack 資料夾（鎖到行程結束）；鎖不到＝同一個 stack 已有 daemon 活著＝DaemonRunning。
+// 11-05（edge-daemon 題 1，使用者「記一行、下一圈再跑 (Recommended)」）：身體（exec）由 daemon 自己在 tend 最後跑（run_body；Loop 當沒有身體），
+//   退非 0、起不來＝不收工：stderr 一行（變了才印）、state 的 body_code、下一圈再跑；退 10＝收工（同 ctl stop）。aos-loop 本身照舊（P-20）。
 #pragma once
 
 #include "child/child.hpp"
@@ -97,6 +99,7 @@ protected:
     void tend() override;
     void finish() override;
     void write_more(const Json& me) override;   // procs_state.json（沒開＝不寫；有變才寫，11-02）
+    Json info() override;                       // 11-05：有身體＝state 多一欄 body_code（最後一次的結束碼）
 
 private:
     using Table = std::list<std::pair<std::string, Child>>;
@@ -111,6 +114,7 @@ private:
     void hold(const std::string& name, Child& c, const char* phase = "stopped");   // 要留列的退了：印 log、列留成 phase（stopped／sleeping；pid 0、held）
     bool settle(Child& c);                // 收的途中看一眼：退了＝phase stopped、回 true；SIGTERM 過了期限還在＝SIGKILL 整群＋底下自成一群的（只送一次）
     bool look(const std::string& name, Child& c, bool stop);   // 不調表地看一眼（見 daemon.cpp）；回 true＝結束了、要拿掉
+    void run_body();                      // 11-05：tend 最後跑身體一次（到時間才跑；失敗＝stderr 一行、下一圈再跑，見 daemon.cpp）
     std::string fail_reason(const Child& c) const;   // 11-05：出錯結束留成 stopped 的 reason（英文；起不來／跑到一半掛了＋碼＋小格 stderr 最後一行）
     Child start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws = Json(),
                 const Json& kept_exec = Json(), const Json& kept_def = Json());   // 照寫法起（spawn／spawn_exec）；kept_ws／kept_exec／kept_def＝spec 是 null 時用的 ws／exec／def 欄（列上記的）
@@ -163,6 +167,12 @@ private:
     bool parts_stale_ = false;                           // 上一次寫完還留著「再上一次」的分檔：下一次沒變的那一下清（11-02）
     Json last_more_;                                     // 上一份寫出去的 procs_state（分檔前的表、不含 proc_fields／updated_at；比有沒有變用）
     int lock_fd_ = -1;                                   // check_running 鎖著的 stack 資料夾（不關，行程結束自己放）
+    aos::loop::Target body_;                             // 11-05：daemon 自己的身體（設定檔的 exec；Loop 的 exec_ 收過來）
+    bool has_body_ = false;
+    long long body_runs_ = 0;                            // 身體跑過幾次（max 照算）
+    std::chrono::steady_clock::time_point body_next_{};  // 下一次最早什麼時候跑（上一次結束＋interval_ms）
+    std::string body_bad_;                               // 上一次失敗的「碼或錯」（空＝上一次好的；變了才印）
+    Json body_code_;                                     // 最後一次的結束碼（state 的 body_code；null＝還沒跑過）
     Table table_;                                        // 照加入的順序（procs_state 的 procs 也照這個順序）
     std::unordered_map<std::string, Table::iterator> index_;   // 名字 → 表上那一列
 };
