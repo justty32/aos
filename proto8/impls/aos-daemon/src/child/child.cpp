@@ -156,7 +156,7 @@ static Json rel_refs(const Json& v, const std::string& cell) {
         setenv("AOS_WS", ws.c_str(), 1);
     }
     if (chdir(cwd.c_str()) != 0) {
-        std::fprintf(stderr, "aos-daemon: %s cannot cd into %s: %s\n", code::Internal, cwd.c_str(), std::strerror(errno));
+        std::fprintf(stderr, "aos-daemon: error: %s cannot cd into %s: %s\n", code::Internal, cwd.c_str(), std::strerror(errno));
     } else {
         rc = aos::exec::run_cli(argv);   // exec 成功就不回來
     }

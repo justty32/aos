@@ -107,27 +107,27 @@ std::string config_file(const std::string& spec) {
     return ec ? aos::abspath(path) : real.string();
 }
 
-aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog) {
-    std::string usage = "usage: " + prog + " [--max N] [--interval-ms N] [--ctl FILE] [--state FILE] [--enable-logs] CONFIG.json [-- ARGS...]";
+aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog, const std::string& help) {
+    std::string usage = prog + " [--max N] [--interval-ms N] [--ctl FILE] [--state FILE] [--enable-logs] CONFIG.json [-- ARGS...]";
     aos::Cli cli;
     try {
         cli = aos::parse_cli(argv, {{"--max", "max"}, {"--interval-ms", "interval_ms"}, {"--ctl", "ctl"}, {"--state", "state"}},
-                             {{"--enable-logs", "enable_logs"}});   // 11-02 晚：不帶值的開關，給了才印 log（同 aos-mcp；原 --no-log）
+                             {{"--enable-logs", "enable_logs"}}, help);   // 11-02 晚：不帶值的開關，給了才印 log（同 aos-mcp；原 --no-log）
     } catch (const Error& e) {
-        throw Error{e.code, usage + " (" + e.msg + ")"};   // FlagUnknown／ArgumentsBad
+        throw aos::usage_error(e.code, e.msg, usage);   // FlagUnknown／ArgumentsBad
     }
     if (cli.rest.empty()) {
-        throw Error{code::ArgumentsBad, usage + " (missing config file)"};
+        throw aos::usage_error(code::ArgumentsBad, "missing config file", usage);
     }
     // 11-02 晚（使用者「aos-XXX ... ... -- ...」）：設定檔之後接 `--`＝後面全是附加參數（rest＝[設定檔, 參數...]，`--` 剝掉）；
     // 接別的＝照舊 ArgumentsBad。設定檔之前的 `--` 是 parse_cli 的「旗標結束」，不受影響。
     if (cli.rest.size() > 1 && cli.rest[1] != "--") {
         // 11-05 B 線：設定檔後面接旗標，多半是 `aos-exec 定義 --enable-logs`（aos-exec 把參數接在 _entry 後面）；照舊不收，但別叫人寫到 -- 後面（那是給身體的）
         if (cli.rest[1].size() > 1 && cli.rest[1][0] == '-') {
-            throw Error{code::ArgumentsBad, usage + " (flag " + cli.rest[1] + " must come before the config file; when started via aos-exec, put flags in the definition's _entry before the config file, e.g. [\"" + prog +
-                                                "\", \"--enable-logs\", \"config.json\"])"};
+            throw aos::usage_error(code::ArgumentsBad, "flag " + cli.rest[1] + " must come before the config file; when started via aos-exec, put flags in the definition's _entry before the config file, e.g. [\"" + prog +
+                                                           "\", \"--enable-logs\", \"config.json\"]", usage);
         }
-        throw Error{code::ArgumentsBad, usage + " (only one config file allowed, got extra " + cli.rest[1] + "; put extra args after --)"};
+        throw aos::usage_error(code::ArgumentsBad, "only one config file allowed, got extra " + cli.rest[1] + "; put extra args after --", usage);
     }
     if (cli.rest.size() > 1) {
         cli.rest.erase(cli.rest.begin() + 1);

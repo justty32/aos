@@ -6,6 +6,9 @@
 //               `--` 結束旗標（位置參數可以 - 開頭）。旗標都帶一個值：`--x V` 或 `--x=V`（`--x=` 是空字串），
 //               重複給＝最後一個算。不帶值的旗標（開關，10-22 `--dotenv-override`）另給一張表 switches：給了＝opts[值] 是 "1"，
 //               重複給＝一樣，寫 `--x=V`＝Error{ArgumentsBad}。不認得的旗標＝Error{FlagUnknown}、旗標缺值＝Error{ArgumentsBad}；rest 夠不夠由呼叫者自己判斷。
+//               `--help`（11-05 stdio-unify R3，內建開關）：在旗標的位置給了＝把 help（英文說明）印到 stdout、退 0（std::exit，不回來）；
+//               help 是空的＝當成不認得的旗標。子命令程式：子命令前一次（全程式的說明）、子命令後各一次（那個子命令的說明）。
+//   usage_error 錯誤行的 usage 位置（R5）：「原因 (usage: …)」——Error{code, reason + " (usage: " + usage + ")"}。
 //   load_cfg    設定檔（aos-loop、aos-fsm、aos-daemon 的唯一位置參數）：`檔` 或 `檔#/指標`，回那個位置的值（不驗是不是物件）。
 //               檔不在 CfgMissing、其他讀不了或不是 JSON CfgBad、`#` 後不是 `/` CfgBad、`#/` 指不到 CfgMissing（10-23 命名統合）。第一行 `#!` 跳過（同 read_json_at）。
 //
@@ -27,8 +30,11 @@ struct Cli {
 };
 
 // argv 不含程式名。flags：旗標名（"--ws"）→ 存進 opts 的名字（"ws"）；switches：不帶值的旗標名 → 存進 opts 的名字。
+// help：`--help` 時印的說明（英文、印 stdout、退 0）。
 Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
-              const std::map<std::string, std::string>& switches = {});
+              const std::map<std::string, std::string>& switches = {}, const std::string& help = "");
+
+Error usage_error(const std::string& code, const std::string& reason, const std::string& usage);
 
 Json load_cfg(const std::string& spec);
 

@@ -168,9 +168,9 @@ Json& existing(Place& p, const std::string& spec) {
 
 // set [--follow] [--parents] [--str] 檔#/指標 [值]
 int cmd_set(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}, {"--str", "str"}});
+    Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}, {"--str", "str"}}, "usage: aos-json set [--check] [--follow] [--parents] [--str] FILE#/POINTER [VALUE] (reads stdin without VALUE)\n\nSet the value at FILE#/POINTER (VALUE is JSON, or a string with --str; without VALUE reads stdin). --check validates before writing.\n");
     if (cli.rest.empty()) {
-        throw Error{code::ArgumentsBad, "usage: aos-json set [--check] [--follow] [--parents] [--str] FILE#/POINTER [VALUE] (reads stdin without VALUE)"};
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json set [--check] [--follow] [--parents] [--str] FILE#/POINTER [VALUE] (reads stdin without VALUE)");
     }
     Json v = read_value(cli.rest, 1, cli.opts.count("str") > 0);
     bool follow = cli.opts.count("follow") > 0;
@@ -190,9 +190,9 @@ int cmd_set(const Args& args) {
 // batch [--follow] [--parents] 檔：stdin 一個物件 {"/指標": 值, …}（"" ＝整份），照順序一個個 set（規則同 set），
 // 全部成功才寫回（每份檔一次原子寫入；有一個失敗＝一個都不寫）。一次給很多個值用這個。
 int cmd_batch(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}});
+    Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}}, "usage: aos-json batch [--check] [--follow] [--parents] FILE < {\"/POINTER\": VALUE, ...}\n\nApply {\"/POINTER\": VALUE, ...} from stdin to FILE, one set at a time (\"\" = the whole file).\n");
     if (cli.rest.size() != 1) {
-        throw Error{code::ArgumentsBad, "usage: aos-json batch [--follow] [--parents] FILE < {\"/POINTER\": VALUE, ...}"};
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json batch [--check] [--follow] [--parents] FILE < {\"/POINTER\": VALUE, ...}");
     }
     Json all = read_value({}, 0, false);
     if (!all.is_object()) {
@@ -221,9 +221,9 @@ int cmd_batch(const Args& args) {
 
 // del [--follow] 檔#/指標：刪掉那個 key／元素。--follow＝路上穿過 $ref；$ref 陣列合起來的 key 每一份有的都刪（刪到指不到為止）。
 int cmd_del(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--follow", "follow"}});
+    Cli cli = parse_cli(args, {}, {{"--follow", "follow"}}, "usage: aos-json del [--follow] FILE#/POINTER\n\nDelete the key or element at FILE#/POINTER.\n");
     if (cli.rest.size() != 1) {
-        throw Error{code::ArgumentsBad, "usage: aos-json del [--follow] FILE#/POINTER"};
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json del [--follow] FILE#/POINTER");
     }
     bool follow = cli.opts.count("follow") > 0;
     Edit ed;
@@ -255,9 +255,9 @@ int cmd_del(const Args& args) {
 
 // append [--follow] [--str] 檔#/指標 [值]：那個位置要是陣列，接在尾巴。
 int cmd_append(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--str", "str"}});
+    Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--str", "str"}}, "usage: aos-json append [--check] [--follow] [--str] FILE#/POINTER [VALUE]\n\nAppend VALUE (or stdin) to the array at FILE#/POINTER.\n");
     if (cli.rest.empty()) {
-        throw Error{code::ArgumentsBad, "usage: aos-json append [--follow] [--str] FILE#/POINTER [VALUE]"};
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json append [--check] [--follow] [--str] FILE#/POINTER [VALUE]");
     }
     Json v = read_value(cli.rest, 1, cli.opts.count("str") > 0);
     bool follow = cli.opts.count("follow") > 0;
@@ -277,9 +277,9 @@ int cmd_append(const Args& args) {
 
 // merge [--follow] 檔#/指標 [物件]：淺層合 key，同名的換掉（同 $ref 陣列的合法：後蓋前、不往下層合；null 照字面放 null）。
 int cmd_merge(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}});
+    Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}}, "usage: aos-json merge [--check] [--follow] FILE#/POINTER [OBJECT]\n\nShallow-merge OBJECT (or stdin) into the object at FILE#/POINTER.\n");
     if (cli.rest.empty()) {
-        throw Error{code::ArgumentsBad, "usage: aos-json merge [--follow] FILE#/POINTER [OBJECT]"};
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json merge [--check] [--follow] FILE#/POINTER [OBJECT]");
     }
     Json v = read_value(cli.rest, 1, false);
     if (!v.is_object()) {
@@ -304,9 +304,9 @@ int cmd_merge(const Args& args) {
 
 // env [--path 子路徑] [--prefix 前綴] [--parents] 檔#/指標 名字：那個位置換成 {"$env": 名字, …}。
 int cmd_env(const Args& args) {
-    Cli cli = parse_cli(args, {{"--path", "path"}, {"--prefix", "prefix"}}, {{"--parents", "parents"}});
+    Cli cli = parse_cli(args, {{"--path", "path"}, {"--prefix", "prefix"}}, {{"--parents", "parents"}}, "usage: aos-json env [--path SUBPATH] [--prefix PREFIX] [--parents] FILE#/POINTER NAME\n\nReplace the value at FILE#/POINTER with {\"$env\": NAME, ...}.\n");
     if (cli.rest.size() != 2 || cli.rest[1].empty()) {
-        throw Error{code::ArgumentsBad, "usage: aos-json env [--path SUBPATH] [--prefix PREFIX] [--parents] FILE#/POINTER NAME"};
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json env [--path SUBPATH] [--prefix PREFIX] [--parents] FILE#/POINTER NAME");
     }
     Json v = {{"$env", cli.rest[1]}};
     if (cli.opts.count("path")) {
@@ -357,9 +357,9 @@ static void rebase(Json& v, const std::string& from, const std::string& to) {
 // ref [--move] [--parents] 檔#/指標 目標：那個位置換成 {"$ref": 目標}（目標照 $ref 的寫法，從這份檔所在的資料夾算）。
 // --move＝先把原本的值搬到目標（目標是整份檔＝檔不能已經在；是 檔#/指標＝檔要在、那個位置要還沒有），裡面的相對 $ref 跟著改。
 int cmd_ref(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--move", "move"}, {"--parents", "parents"}});
+    Cli cli = parse_cli(args, {}, {{"--move", "move"}, {"--parents", "parents"}}, "usage: aos-json ref [--move] [--parents] FILE#/POINTER TARGET\n\nReplace the value at FILE#/POINTER with {\"$ref\": TARGET} (--move moves the old value into TARGET).\n");
     if (cli.rest.size() != 2) {
-        throw Error{code::ArgumentsBad, "usage: aos-json ref [--move] [--parents] FILE#/POINTER TARGET"};
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json ref [--move] [--parents] FILE#/POINTER TARGET");
     }
     const std::string& spec = cli.rest[0];
     const std::string& target = cli.rest[1];

@@ -5,7 +5,7 @@
 //                 與 user（非空字串）；壞丟 CfgBad（呼叫者照 stack 那三條錯誤路徑處理：daemon.json 退 1、procs_ctl 不採用、壞信）
 //   prep_limits   fork 之前把 limits 備成系統呼叫要的值（rlimit 的數字、user 的 uid／gid／groups 先查好）
 //   apply_limits  子行程裡（setsid、接好 stderr 之後、run_cli 之前）照備好的做：setrlimit（soft＝hard＝寫的值）、setgroups＋setgid＋setuid；
-//                 失敗＝stderr（小格的 stderr.txt）一行 `aos-daemon: LimitBad …`、_exit(1)
+//                 失敗＝stderr（小格的 stderr.txt）一行 `aos-daemon: error: LimitBad …`、_exit(1)
 // 等同 s6-softlimit／s6-setuidgid：做的就是那兩支程式內部那幾個系統呼叫（代定 1：daemon 自己做、不 exec s6、不依賴 PATH；題 6 留使用者翻案）。
 // mem_mb→RLIMIT_AS＋RLIMIT_DATA（不碰 RLIMIT_STACK，同 aos-sandbox）、cpu_s→RLIMIT_CPU、procs→RLIMIT_NPROC、file_mb→RLIMIT_FSIZE、files→RLIMIT_NOFILE。
 // rlimit 是每個行程各自的上限，不從 daemon 的總額扣；daemon 自己的 hard limit 子項天生超不過（比它寬＝setrlimit EPERM＝LimitBad，不自動夾）。

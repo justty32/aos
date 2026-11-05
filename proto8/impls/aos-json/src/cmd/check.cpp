@@ -1,4 +1,4 @@
-// check.cpp：【cmd】check [--env] 檔[#/指標]...——驗一份（或幾份）aos 的 JSON，有問題每個一行印在 stdout、退 1；沒問題不印、退 0。
+// check.cpp：【cmd】check [--env] 檔[#/指標]...——驗一份（或幾份）aos 的 JSON，有問題每個一行印在 stdout、退 10（11-05 D1；原退 1）；沒問題不印、退 0。
 //
 // 驗三件：
 //   1. 每個 $ref 指得到（檔在、是 JSON、指標指得到、不繞圈；陣列的幾份合得起來）——被參照的檔也一路往下驗
@@ -155,9 +155,9 @@ std::vector<std::string> problems_of(Docs& docs, const std::string& spec, bool e
 }
 
 int cmd_check(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--env", "env"}});
+    Cli cli = parse_cli(args, {}, {{"--env", "env"}}, "usage: aos-json check [--env] FILE[#/POINTER]...\n\nCheck aos JSON files: one problem per line on stdout; exit 0 = no problem, 10 = problems found.\n");
     if (cli.rest.empty()) {
-        throw Error{code::ArgumentsBad, "usage: aos-json check [--env] FILE[#/POINTER]..."};
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json check [--env] FILE[#/POINTER]...");
     }
     Docs docs;
     std::vector<std::string> all;
@@ -170,7 +170,7 @@ int cmd_check(const Args& args) {
         std::cout << p << "\n";
     }
     std::cout << std::flush;
-    return all.empty() ? 0 : 1;
+    return all.empty() ? 0 : 10;   // 11-05 stdio-unify R7／D1：有問題＝查完了、結果否定，退 10（stderr 空）
 }
 
 }  // namespace aos::json

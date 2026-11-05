@@ -153,9 +153,9 @@ void apply_limits(const Limits& lim) {
         if (setrlimit(r.resource, &rl) != 0) {
             int e = errno;
             if (e == EPERM) {   // 比 daemon 自己的 hard 寬：hard 只能降不能升（不自動夾成 daemon 的，C-56）
-                std::fprintf(stderr, "aos-daemon: %s %s %lld exceeds the daemon's own hard limit\n", code::LimitBad, r.key, r.shown);
+                std::fprintf(stderr, "aos-daemon: error: %s %s %lld exceeds the daemon's own hard limit\n", code::LimitBad, r.key, r.shown);
             } else {
-                std::fprintf(stderr, "aos-daemon: %s %s %lld %s\n", code::LimitBad, r.key, r.shown, std::strerror(e));
+                std::fprintf(stderr, "aos-daemon: error: %s %s %lld %s\n", code::LimitBad, r.key, r.shown, std::strerror(e));
             }
             std::fflush(stderr);
             _exit(1);
@@ -165,13 +165,13 @@ void apply_limits(const Limits& lim) {
         return;
     }
     if (!lim.user_found) {
-        std::fprintf(stderr, "aos-daemon: %s user %s: no such user\n", code::LimitBad, lim.user.c_str());
+        std::fprintf(stderr, "aos-daemon: error: %s user %s: no such user\n", code::LimitBad, lim.user.c_str());
         std::fflush(stderr);
         _exit(1);
     }
     if (setgroups(lim.groups.size(), lim.groups.data()) != 0 || setgid(lim.gid) != 0 || setuid(lim.uid) != 0) {
         int e = errno;
-        std::fprintf(stderr, "aos-daemon: %s user %s: %s%s\n", code::LimitBad, lim.user.c_str(), std::strerror(e),
+        std::fprintf(stderr, "aos-daemon: error: %s user %s: %s%s\n", code::LimitBad, lim.user.c_str(), std::strerror(e),
                      e == EPERM ? " (switching users needs the daemon to run as root)" : "");
         std::fflush(stderr);
         _exit(1);

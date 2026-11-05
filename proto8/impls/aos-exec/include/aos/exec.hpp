@@ -1,7 +1,7 @@
 // aos/exec.hpp：aos-exec 的公開介面——在工作區執行一個 aos 程式（定工作區、找入口、設環境變數、cd 進去、讀 .env、開跑）。
 //
 //   run_cli       等同命令列 `aos-exec [旗標...] XXX [args...]`（10-21 起；src/cli/）：可執行檔／argv 陣列＝exec（成功不回來）；
-//                 inst 單子＝行程內跑、回子程式的碼；自己的錯 stderr 一行「aos-exec: 代號 原因」、回 1   ← 會動行程全域狀態
+//                 inst 單子＝行程內跑、回子程式的碼；自己的錯 stderr 一行「aos-exec: error: 代號 原因」、回 1   ← 會動行程全域狀態
 //   run_inst      行程內跑一張 inst 單子（交給 impls/inst 的 libaos；aos-exec 留在行程裡當監工）
 //   argv0         argv[0] 帶 / 又 exec 不了（資料夾、沒 +x 的檔、不在、帶 #/）＝前面插 aos-exec（10-20 ideas D3）
 //

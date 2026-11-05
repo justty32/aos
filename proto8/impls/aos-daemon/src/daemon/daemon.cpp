@@ -646,7 +646,7 @@ void Daemon::state_failed(const Error& e) {
     }
     // 只比代號（state.json、procs_state.json 輪流寫不了時訊息裡的檔名不同，比整句會每圈印）
     if (e.code != state_bad_) {
-        say("cannot write the state windows (" + e.code + " " + e.msg + "), retrying next round");
+        warn("cannot write the state windows (" + e.code + " " + e.msg + "), retrying next round");
         state_bad_ = e.code;
     }
 }
@@ -654,7 +654,7 @@ void Daemon::state_failed(const Error& e) {
 void Daemon::state_ok() {
     state_wrote_ = true;
     if (!state_bad_.empty()) {
-        say("state windows written again");
+        warn("state windows written again");
         state_bad_.clear();
     }
 }
@@ -691,7 +691,7 @@ void Daemon::halt(const std::string& name, Child& c) {
         aos::loop::write_window(path, Json::object({{"cmd", "stop"}, {"seq", stop_seq_}}));
     } catch (const Error& e) {
         // 11-05 第二輪：原本整台 daemon 退 1（一個小格唯讀就把全部 proc 收掉）；改成這一支改送 SIGTERM（同沒開 ctl 的），退了照樣留 stopped
-        say("cannot stop " + name + " through its ctl (" + e.code + " " + e.msg + "); sending SIGTERM instead");
+        warn("cannot stop " + name + " through its ctl (" + e.code + " " + e.msg + "); sending SIGTERM instead");
         term(c);
         return;
     }
@@ -947,14 +947,14 @@ void Daemon::run_body() {
     }
     if (b.code == 0) {
         if (!body_bad_.empty()) {
-            say("body " + body_.label() + " ok again");
+            warn("body " + body_.label() + " ok again");
             body_bad_.clear();
         }
         return;
     }
     std::string key = bad.empty() ? "code " + std::to_string(b.code) : bad;
     if (key != body_bad_) {
-        say("body " + body_.label() + " failed (" + key + "), retrying next round");
+        warn("body " + body_.label() + " failed (" + key + "), retrying next round");
         body_bad_ = key;
     }
 }

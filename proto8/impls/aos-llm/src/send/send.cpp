@@ -54,8 +54,7 @@ void warn_idle(const Mailbox& mb) {
         }
     }
     if (!why.empty()) {
-        std::fprintf(stderr, "aos-llm: warning: %s: %s; letter sent anyway, the reply comes once it runs\n", stack.c_str(), why.c_str());
-        std::fflush(stderr);
+        aos::warn("aos-llm", stack + ": " + why + "; letter sent anyway, the reply comes once it runs");
     }
 }
 

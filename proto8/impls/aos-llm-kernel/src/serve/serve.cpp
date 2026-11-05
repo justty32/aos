@@ -294,7 +294,7 @@ void Server::lock() {
     }
 }
 
-// 寫好 reply.json、寄回信，然後整封刪掉（cur/<id>/；11-04 夜使用者「舊信根本不用留，就是刪」）。回信寄不出去＝stderr 印一行、照刪、不退。
+// 寫好 reply.json、寄回信，然後整封刪掉（cur/<id>/；11-04 夜使用者「舊信根本不用留，就是刪」）。回信寄不出去＝stderr 提醒行（不退出，11-05 R1）、照刪、不退。
 void Server::finish(const std::string& id, const Json& reply) {
     std::string dir = aos::join(mb_.cur(), id);
     write_reply(dir, reply);
@@ -303,9 +303,7 @@ void Server::finish(const std::string& id, const Json& reply) {
     std::string sender = proc_str(dir, "sender");
     Json reply_error = post_reply(mb_.root, dir, id, reply);   // 回信走 reply_to（10-30）
     if (reply_error.is_string()) {
-        std::fprintf(stderr, "aos-llm-kernel: %s (cannot send the reply to letter %s; letter deleted anyway)\n",
-                     reply_error.get<std::string>().c_str(), id.c_str());
-        std::fflush(stderr);
+        aos::warn("aos-llm-kernel", "cannot send the reply to letter " + id + " (" + reply_error.get<std::string>() + "); letter deleted anyway");
     }
     if (has_sender(dir) && !sender_alive(dir)) {
         regret_reply(mb_.root, dir);   // 同步寄的人已經走了（ask 被打斷）：回信沒人拿，撤回

@@ -1,4 +1,4 @@
-// io.cpp：【aos-util】三扇門——stdin 讀一份 JSON、stdout 印一行、stderr 印錯誤（說明見 include/aos/io.hpp）。
+// io.cpp：【aos-util】三扇門——stdin 讀一份 JSON、stdout 印一行、stderr 印錯誤行／提醒行（說明見 include/aos/io.hpp）。
 #include "aos/io.hpp"
 
 #include <cctype>
@@ -108,10 +108,18 @@ int emit(const Json& v) {
     return 0;
 }
 
-int emit_error(const Error& e) {
-    Json err = {{"error", {{"code", e.code}, {"msg", e.msg}}}};
-    print_line(stderr, dumps(err));
+int fail(const std::string& prog, const std::string& code, const std::string& msg) {
+    std::fflush(stdout);
+    print_line(stderr, prog + ": error: " + code + " " + msg);
     return 1;
+}
+
+int fail(const std::string& prog, const Error& e) {
+    return fail(prog, e.code, e.msg);
+}
+
+void warn(const std::string& prog, const std::string& msg) {
+    print_line(stderr, prog + ": warning: " + msg);
 }
 
 // nlohmann 解 JSON 時，非負整數存成 unsigned、負的存成 signed；程式裡自己放進去的整數則是 signed。兩種都看。

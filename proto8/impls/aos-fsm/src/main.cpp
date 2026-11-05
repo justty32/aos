@@ -13,7 +13,7 @@
 // 單子被逾時收掉：格的碼 128＋N。
 // 只看格的結束碼：不讀格的 stdout、不轉述格的 stderr（N-38）。表上沒接住的碼（字串 next 的非 0，含 10）＝state 不動、原碼往上。
 // 收到 SIGINT／SIGTERM／SIGHUP：轉給那格、等它結束，state 照表寫完（含分岔），再以 128＋N 結束（P-36、N-38）。
-// 自己出錯：stderr 一行「aos-fsm: 代號 原因」、退 1（N-38、N-60）。
+// 自己出錯：stderr 一行「aos-fsm: error: 代號 原因」、退 1（11-05 stdio-unify R1）。`--help`＝英文說明印 stdout、退 0（R3）。
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
 #include "aos/loop.hpp"
@@ -26,13 +26,22 @@
 #include <exception>
 #include <optional>
 
-static const char* USAGE = "usage: aos-fsm [FLAGS] CONFIG.json";   // 旗標表是空的也寫 [旗標]（10-22）
+static const char* USAGE = "aos-fsm [FLAGS] CONFIG.json";   // 旗標表是空的也寫 [旗標]（10-22）
 
-static int fail(const std::string& code, const std::string& msg) {
-    std::fprintf(stderr, "aos-fsm: %s %s\n", code.c_str(), msg.c_str());
-    std::fflush(stderr);
-    return 1;
-}
+static const char* HELP = R"(usage: aos-fsm [FLAGS] CONFIG.json
+
+Run one step of the state table in CONFIG.json ({"start", "states"}): read the
+state from $AOS_STACK/stage.txt (none = "start"), run that state's exec once, then
+look up the next state by its exit code ("next": a name = only on 0;
+{"CODE": name, "*": name}).
+
+flags:
+  --help   show this help
+
+exit codes: 0 the table took the code (state written); 1 own error
+("aos-fsm: error: CODE ..." on stderr); otherwise the step's own code (state unchanged);
+128+N on signal N.
+)";
 
 int main(int argc, char** argv) {
     namespace fsm = aos::fsm;
@@ -40,16 +49,16 @@ int main(int argc, char** argv) {
         aos::loop::block_signals();
         aos::Cli cli;
         try {
-            cli = aos::parse_cli(std::vector<std::string>(argv + 1, argv + argc), {});   // 目前沒有旗標；以後加就在這裡加一列
+            cli = aos::parse_cli(std::vector<std::string>(argv + 1, argv + argc), {}, {}, HELP);   // 目前沒有旗標；以後加就在這裡加一列
         } catch (const aos::Error& e) {
-            throw aos::Error{e.code, std::string(USAGE) + " (" + e.msg + ")"};   // FlagUnknown／ArgumentsBad
+            throw aos::usage_error(e.code, e.msg, USAGE);   // FlagUnknown／ArgumentsBad
         }
         if (cli.rest.size() != 1) {
             std::string why = "missing config file";
             if (!cli.rest.empty()) {
                 why = "only one config file allowed, got extra " + cli.rest[1];
             }
-            throw aos::Error{fsm::code::ArgumentsBad, std::string(USAGE) + " (" + why + ")"};
+            throw aos::usage_error(fsm::code::ArgumentsBad, why, USAGE);
         }
         const char* s = std::getenv("AOS_STACK");
         if (s == nullptr || s[0] == '\0') {
@@ -84,8 +93,8 @@ int main(int argc, char** argv) {
         }
         return b.code;   // 沒接住：透明轉交
     } catch (const aos::Error& e) {
-        return fail(e.code, e.msg);
+        return aos::fail("aos-fsm", e);
     } catch (const std::exception& e) {
-        return fail(fsm::code::Internal, e.what());
+        return aos::fail("aos-fsm", fsm::code::Internal, e.what());
     }
 }

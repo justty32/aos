@@ -15,11 +15,20 @@ namespace aos::exec {
 
 static const char* USAGE = "aos-exec [--ws WS] [--stack S] [--dotenv-override] XXX [ARGS...]";
 
-static int fail(const std::string& code, const std::string& msg) {
-    std::fprintf(stderr, "aos-exec: %s %s\n", code.c_str(), msg.c_str());
-    std::fflush(stderr);
-    return 1;
-}
+static const char* HELP = R"(usage: aos-exec [FLAGS] XXX [ARGS...]
+
+Find the entry XXX (a file, a folder with _entry, or FILE#/POINTER), set up the
+workspace (AOS_WS), stack (AOS_STACK), .env and cwd, then run it with ARGS.
+The exit code is the entry's own code once it runs.
+
+flags:
+  --ws WS              workspace to use ("-" or empty = keep the outer one)
+  --stack S            stack to use ("-" or empty = keep the outer one)
+  --dotenv-override    let .env override variables already set
+  --help               show this help
+
+exit codes: the entry's code; 1 with "aos-exec: error: CODE ..." on stderr = aos-exec's own error.
+)";
 
 static int run(const std::vector<std::string>& argv) {
     try {
@@ -27,16 +36,16 @@ static int run(const std::vector<std::string>& argv) {
         try {
             // 以後加旗標就在這裡加一列；--dotenv-override（10-22）不帶值：.env 蓋掉已有的，只管這一次 aos-exec
             // --stack S（11-03）：stack 放哪，同 --ws（"-"／空＝沿用外面的）
-            cli = parse_cli(argv, {{"--ws", "ws"}, {"--stack", "stack"}}, {{"--dotenv-override", "dotenv_override"}});
+            cli = parse_cli(argv, {{"--ws", "ws"}, {"--stack", "stack"}}, {{"--dotenv-override", "dotenv_override"}}, HELP);
         } catch (const Error& e) {
-            throw Error{e.code, std::string("usage: ") + USAGE + " (" + e.msg + ")"};   // FlagUnknown／ArgumentsBad
+            throw usage_error(e.code, e.msg, USAGE);   // FlagUnknown／ArgumentsBad
         }
         if (cli.rest.empty()) {
-            throw Error{code::ArgumentsBad, std::string("usage: ") + USAGE + " (missing XXX)"};
+            throw usage_error(code::ArgumentsBad, "missing XXX", USAGE);
         }
         std::string spec = cli.rest[0];
         if (spec.empty()) {   // "" 不當成 .：`aos-exec "$X"` 的 X 沒設時不該默默跑 cwd 的入口
-            throw Error{code::ArgumentsBad, std::string("usage: ") + USAGE + " (XXX is an empty string)"};
+            throw usage_error(code::ArgumentsBad, "XXX is an empty string", USAGE);
         }
         std::vector<std::string> args(cli.rest.begin() + 1, cli.rest.end());
         std::string ws = "-";
@@ -65,9 +74,9 @@ static int run(const std::vector<std::string>& argv) {
             dotenv_override = false;
         }
     } catch (const Error& e) {
-        return fail(e.code, e.msg);
+        return aos::fail("aos-exec", e);
     } catch (const std::exception& e) {
-        return fail(code::Internal, e.what());
+        return aos::fail("aos-exec", code::Internal, e.what());
     }
 }
 

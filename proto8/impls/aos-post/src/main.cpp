@@ -11,7 +11,8 @@
 //     aos-post regret 信箱 信件名稱                              撤不了退 1（RegretFailed）
 //
 // see、done 不給信件名稱＝cur/ 裡照處理順序第一封；cur/ 空退 10。
-// 結束碼照 N-43：0 成功、10 沒東西、1 錯。出錯 stderr 一行「aos-post: 代號 原因」（同 aos-exec、aos-json，N-60）。
+// 結束碼照 N-43：0 成功、10 沒東西、1 錯。出錯 stderr 一行「aos-post: error: 代號 原因」（11-05 stdio-unify R1）。
+// 子命令前先 parse_cli（旗標表是空的；只認 --help）：不認得的旗標＝FlagUnknown，子命令不認得才 CommandUnknown（R4）；子命令後的 --help＝那個子命令的說明。
 #include "aos/cli.hpp"
 #include "aos/post.hpp"
 
@@ -25,21 +26,54 @@ namespace {
 namespace p = aos::post;
 using Args = std::vector<std::string>;
 
-const char* USAGE = "aos-post init|send|take|take-all|see|done|regret [FLAGS...] MAILBOX [LETTER] (see README)";
+const char* USAGE = "aos-post [FLAGS] init|send|take|take-all|see|done|regret [FLAGS...] MAILBOX [LETTER]";
+
+const char* HELP = R"(usage: aos-post [FLAGS] SUBCOMMAND [FLAGS...] MAILBOX [LETTER]
+
+A maildir-style mailbox (tmp/ new/ cur/): letters are folders with letter.json.
+
+subcommands:
+  init MAILBOX                       create the mailbox
+  send [--ordered] [--reply-to BOX] [--in-reply-to LETTER] MAILBOX [LETTER] < body.json
+                                     send a letter; prints its name
+  take MAILBOX                       move the next letter new/ -> cur/; prints its name
+  take-all MAILBOX                   take every letter; one name per line
+  see MAILBOX [LETTER]               print letter.json (default: first in cur/)
+  done [--keep] [--reply] MAILBOX [LETTER] [< body.json]
+                                     finish a letter (--reply answers to its reply_to)
+  regret MAILBOX LETTER              take back a letter still in new/
+
+flags:
+  --help   show this help (aos-post SUBCOMMAND --help shows that subcommand's)
+
+exit codes: 0 ok; 10 nothing there (take, take-all, see, done); 1 error ("aos-post: error: CODE ..." on stderr).
+)";
+
+// 子命令的用法（錯誤行的 usage 與 SUBCOMMAND --help）
+const std::map<std::string, std::string> SUB_USAGE = {
+    {"init", "aos-post init MAILBOX"},
+    {"send", "aos-post send [--ordered] [--reply-to BOX] [--in-reply-to LETTER] MAILBOX [LETTER] < body.json"},
+    {"take", "aos-post take MAILBOX"},
+    {"take-all", "aos-post take-all MAILBOX"},
+    {"see", "aos-post see MAILBOX [LETTER]"},
+    {"done", "aos-post done [--keep] [--reply] MAILBOX [LETTER] [< body.json]"},
+    {"regret", "aos-post regret MAILBOX LETTER"},
+};
+
+std::string sub_cmd;   // 正在跑的子命令（main 設）
 
 int fail(const std::string& code, const std::string& msg) {
-    std::cout << std::flush;
-    std::cerr << "aos-post: " << code << " " << msg << std::endl;
-    return 1;
+    return aos::fail("aos-post", code, msg);
 }
 
 // 解旗標、數位置參數（要 lo～hi 個：信箱，加上可有可無或必給的信件名稱）。信件名稱照 check_name 驗。
 aos::Cli parse(const Args& args, size_t lo, size_t hi, const std::map<std::string, std::string>& flags,
                const std::map<std::string, std::string>& switches = {}) {
-    aos::Cli cli = aos::parse_cli(args, flags, switches);
+    const std::string& usage = SUB_USAGE.at(sub_cmd);
+    aos::Cli cli = aos::parse_cli(args, flags, switches, "usage: " + usage + "\n\nsee aos-post --help\n");
     if (cli.rest.size() < lo || cli.rest.size() > hi) {
         std::string want = hi == 1 ? "expects one mailbox" : lo == 2 ? "expects a mailbox and a letter name" : "expects a mailbox (letter name optional)";
-        throw aos::Error{p::code::ArgumentsBad, want + "; usage: " + USAGE};
+        throw aos::usage_error(p::code::ArgumentsBad, want, usage);
     }
     if (cli.rest.size() == 2) {
         p::check_name(cli.rest[1]);
@@ -152,14 +186,16 @@ int main(int argc, char** argv) {
         {"see", cmd_see},   {"done", cmd_done}, {"regret", cmd_regret},
     };
     try {
-        if (argc < 2) {
-            throw aos::Error{p::code::ArgumentsBad, std::string("usage: ") + USAGE};
+        aos::Cli cli = aos::parse_cli(Args(argv + 1, argv + argc), {}, {}, HELP);
+        if (cli.rest.empty()) {
+            throw aos::usage_error(p::code::ArgumentsBad, "missing subcommand", USAGE);
         }
-        auto it = table.find(argv[1]);
+        auto it = table.find(cli.rest[0]);
         if (it == table.end()) {
-            throw aos::Error{p::code::CommandUnknown, std::string("unknown subcommand ") + argv[1] + "; usage: " + USAGE};
+            throw aos::usage_error(p::code::CommandUnknown, "unknown subcommand " + cli.rest[0], USAGE);
         }
-        return it->second(Args(argv + 2, argv + argc));
+        sub_cmd = cli.rest[0];
+        return it->second(Args(cli.rest.begin() + 1, cli.rest.end()));
     } catch (const aos::Error& e) {
         return fail(e.code, e.msg);
     } catch (const std::exception& e) {

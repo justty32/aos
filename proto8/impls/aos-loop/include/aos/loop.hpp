@@ -37,6 +37,7 @@ namespace aos::loop {
 namespace code {
 using namespace aos::exec::code;   // ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、WriteFailed、EntryBad、DirectiveBad、LaunchFailed…
 inline constexpr const char* StackMissing = "StackMissing";   // 要 $AOS_STACK 卻沒設（開了窗、fsm、daemon）
+inline constexpr const char* RunFailed = "RunFailed";         // 身體那次退非 0（不是 10）：aos-loop 印這行、以那次的碼結束（11-05 stdio-unify D4）
 }  // namespace code
 
 // 一次的結果（欄位名同 11-03 前 fsm 的 trace.jsonl 那一行，再多一個 received；aos-loop 的 log 那一行也用 code、signal、elapsed_ms，11-02）。沒有 timed_out（10-21：loop 看不到格裡有沒有逾時，C-52；
@@ -103,9 +104,9 @@ Run run_once(const Target& t);
 // 命令列（10-21 傍晚 ideas § 9；規則同 aos-exec，aos-util 的 parse_cli）：唯一的位置參數＝設定檔（必給、只能一個；
 // 可寫 `檔#/指標`）。旗標 --max、--interval-ms、--ctl、--state（帶值）、--enable-logs（不帶值的開關，11-02 晚：給了＝opts["enable_logs"] 是 "1"，印 log；
 // 原 --no-log、預設印，使用者「應該要改成默認不印」）。設定檔之後可接 `-- 參數...`（11-02 晚，使用者「aos-XXX ... ... -- ...」）：回的 rest＝[設定檔, 參數...]
-// （那個 `--` 剝掉）；設定檔之後接的不是 `--`＝ArgumentsBad。不認得的旗標丟 FlagUnknown；旗標缺值、沒給設定檔丟 ArgumentsBad（msg＝「usage: <prog> [...] 設定檔.json [-- 參數...]（原因）」）。
-// argv 不含程式名；回旗標（opts）與設定檔（rest[0]）。
-aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog);
+// （那個 `--` 剝掉）；設定檔之後接的不是 `--`＝ArgumentsBad。不認得的旗標丟 FlagUnknown；旗標缺值、沒給設定檔丟 ArgumentsBad（msg＝「原因 (usage: <prog> [...] CONFIG.json [-- ARGS...])」，R5）。
+// argv 不含程式名；回旗標（opts）與設定檔（rest[0]）。help＝`--help` 印的說明（英文，parse_cli 印到 stdout、退 0）。
+aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog, const std::string& help);
 
 // 附加參數（loop_cli 的 rest[1:]）接到 exec 後面（11-02 晚；起跑時接一次＝每次都帶）：字串目標＝[目標, 參數...]、陣列＝接在最後、
 // 內嵌單子＝接在單子 argv 的最後（argv 要直接是陣列；是指示詞、沒寫＝CfgBad）。args 空＝不動。ctl 改不了它們。
@@ -178,7 +179,8 @@ public:
     Loop(const Loop&) = delete;
     Loop& operator=(const Loop&) = delete;
 
-    // 跑到結束，回結束碼。自己的錯（tend、單子壞、窗寫不了）stderr 一行「程式名: 代號 原因」、先 finish() 再回 1。
+    // 跑到結束，回結束碼。自己的錯（tend、單子壞、窗寫不了）stderr 一行「程式名: error: 代號 原因」、先 finish() 再回 1；
+    // 身體退非 0（不是 10）＝錯誤行 RunFailed、以那次的碼結束（11-05 stdio-unify D4）。
     int serve();
 
 protected:
@@ -195,7 +197,8 @@ protected:
     // 11-02 起它自己比有沒有變、變了才寫），me＝proc_fields()。寫不了丟 Error（當成 state 寫不了：StateError）。
     virtual void write_more(const Json& me);
 
-    void say(const std::string& msg);   // stderr 一行「程式名: msg」
+    int fail_line(const std::string& code, const std::string& msg);   // 錯誤行「程式名: error: 代號 原因」（aos::fail；回 1）
+    void warn(const std::string& msg);                                // 提醒行「程式名: warning: 句子」（不退出；11-05 stdio-unify R1）
 
     // 要寫一份 state（沒開 state 窗就不寫；跟上一份一樣也不寫，見上）再呼叫 write_more：phase＝這份的階段，code＝結束碼
     // （null＝還沒結束；非 null＝一定寫）。寫不了丟 StateError（WriteFailed）。

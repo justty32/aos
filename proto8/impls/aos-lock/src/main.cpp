@@ -6,7 +6,8 @@
 //
 // 目標換成鎖資料夾：結尾 / 或現有的資料夾＝<目標>/.lock/，否則＝<目標>.lock/（lock_dir_of）。
 // 名牌上的持有者預設是**叫 aos-lock 的那個行程**（getppid）：aos-lock 拿完就退，名牌寫它自己的 pid 等於一拿到就死了。
-// 要寫別的行程用 --pid。結束碼照 N-43：0 成功、10 沒東西（拿不到、沒有鎖）、1 錯。出錯 stderr 一行「aos-lock: 代號 原因」（N-60）。
+// 要寫別的行程用 --pid。結束碼照 N-43：0 成功、10 沒東西（拿不到、沒有鎖）、1 錯。出錯 stderr 一行「aos-lock: error: 代號 原因」（11-05 stdio-unify R1）。
+// 子命令前先 parse_cli（旗標表是空的；只認 --help）：不認得的旗標＝FlagUnknown，子命令不認得才 CommandUnknown（R4）。
 #include "aos/cli.hpp"
 #include "aos/lock.hpp"
 #include "aos/proc.hpp"
@@ -22,18 +23,42 @@ namespace {
 namespace l = aos::lock;
 using Args = std::vector<std::string>;
 
-const char* USAGE = "aos-lock acquire|release|show [FLAGS...] TARGET (see README)";
+const char* USAGE = "aos-lock [FLAGS] acquire|release|show [FLAGS...] TARGET";
+
+const char* HELP = R"(usage: aos-lock [FLAGS] SUBCOMMAND [FLAGS...] TARGET
+
+A lock folder next to TARGET (TARGET/.lock/ for a folder, TARGET.lock/ otherwise)
+with a holder.json name tag (pid, started_at_ticks, boot_id, lease, note).
+
+subcommands:
+  acquire [--lease-ms N] [--note TEXT] [--wait-ms N] [--pid N] TARGET
+                     take the lock (holder = the calling process, or --pid)
+  release TARGET     drop the lock
+  show TARGET        print the holder (one JSON line)
+
+flags:
+  --help   show this help (aos-lock SUBCOMMAND --help shows that subcommand's)
+
+exit codes: 0 ok; 10 not got / no lock (acquire, show); 1 error ("aos-lock: error: CODE ..." on stderr).
+)";
+
+const std::map<std::string, std::string> SUB_USAGE = {
+    {"acquire", "aos-lock acquire [--lease-ms N] [--note TEXT] [--wait-ms N] [--pid N] TARGET"},
+    {"release", "aos-lock release TARGET"},
+    {"show", "aos-lock show TARGET"},
+};
+
+std::string sub_cmd;   // 正在跑的子命令（main 設）
 
 int fail(const std::string& code, const std::string& msg) {
-    std::cout << std::flush;
-    std::cerr << "aos-lock: " << code << " " << msg << std::endl;
-    return 1;
+    return aos::fail("aos-lock", code, msg);
 }
 
 aos::Cli parse(const Args& args, const std::map<std::string, std::string>& flags) {
-    aos::Cli cli = aos::parse_cli(args, flags);
+    const std::string& usage = SUB_USAGE.at(sub_cmd);
+    aos::Cli cli = aos::parse_cli(args, flags, {}, "usage: " + usage + "\n\nsee aos-lock --help\n");
     if (cli.rest.size() != 1) {
-        throw aos::Error{l::code::ArgumentsBad, std::string("need exactly one TARGET; usage: ") + USAGE};
+        throw aos::usage_error(l::code::ArgumentsBad, "need exactly one TARGET", usage);
     }
     return cli;
 }
@@ -100,14 +125,16 @@ int main(int argc, char** argv) {
         {"acquire", cmd_acquire}, {"release", cmd_release}, {"show", cmd_show},
     };
     try {
-        if (argc < 2) {
-            throw aos::Error{l::code::ArgumentsBad, std::string("usage: ") + USAGE};
+        aos::Cli cli = aos::parse_cli(Args(argv + 1, argv + argc), {}, {}, HELP);
+        if (cli.rest.empty()) {
+            throw aos::usage_error(l::code::ArgumentsBad, "missing subcommand", USAGE);
         }
-        auto it = table.find(argv[1]);
+        auto it = table.find(cli.rest[0]);
         if (it == table.end()) {
-            throw aos::Error{l::code::CommandUnknown, std::string("unknown subcommand ") + argv[1] + "; usage: " + USAGE};
+            throw aos::usage_error(l::code::CommandUnknown, "unknown subcommand " + cli.rest[0], USAGE);
         }
-        return it->second(Args(argv + 2, argv + argc));
+        sub_cmd = cli.rest[0];
+        return it->second(Args(cli.rest.begin() + 1, cli.rest.end()));
     } catch (const aos::Error& e) {
         return fail(e.code, e.msg);
     } catch (const std::exception& e) {

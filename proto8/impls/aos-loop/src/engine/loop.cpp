@@ -25,9 +25,12 @@ Json Loop::info() { return Json::object(); }
 std::optional<std::string> Loop::check_ctl(Json&, const aos::Resolved&) { return std::nullopt; }
 void Loop::write_more(const Json&) {}
 
-void Loop::say(const std::string& msg) {
-    std::fprintf(stderr, "%s: %s\n", d_.prog.c_str(), msg.c_str());
-    std::fflush(stderr);
+int Loop::fail_line(const std::string& code, const std::string& msg) {
+    return aos::fail(d_.prog, code, msg);
+}
+
+void Loop::warn(const std::string& msg) {
+    aos::warn(d_.prog, msg);
 }
 
 int Loop::signal_got() {
@@ -77,7 +80,7 @@ int Loop::main_loop() {
         } catch (const StateError&) {
             throw;   // tend 裡寫狀態窗寫不了：交給 serve 印一行、收尾（不再走 end 寫 state）
         } catch (const Error& e) {
-            say(e.code + " " + e.msg);
+            fail_line(e.code, e.msg);
             return end(1, "stopped");
         }
         if (stopping_) {
@@ -110,7 +113,7 @@ int Loop::main_loop() {
             try {
                 b = run_once(exec_);
             } catch (const Error& e) {
-                say(e.code + " " + e.msg);
+                fail_line(e.code, e.msg);
                 return end(1, "done");
             }
             // log（11-02）：每跑完一次一行（欄位名同 N-39 fsm 的 trace、P-38 的 started_at），不論那次怎麼結束
@@ -128,7 +131,7 @@ int Loop::main_loop() {
                 return end(0, "done");
             }
             if (b.code != 0) {
-                say("run " + std::to_string(runs_) + ": " + exec_.label() + " failed with exit code " + std::to_string(b.code));
+                fail_line(code::RunFailed, "run " + std::to_string(runs_) + ": " + exec_.label() + " failed with exit code " + std::to_string(b.code));
                 return end(b.code, "done");
             }
         }
@@ -140,9 +143,9 @@ int Loop::serve() {
     try {
         return main_loop();
     } catch (const Error& e) {   // 含 StateError
-        say(e.code + " " + e.msg);
+        fail_line(e.code, e.msg);
     } catch (const std::exception& e) {
-        say(std::string(code::Internal) + " " + e.what());
+        fail_line(code::Internal, e.what());
     }
     try {
         finish();

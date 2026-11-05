@@ -5,10 +5,13 @@
 #include "aos/error.hpp"
 #include "aos/files.hpp"
 
+#include <cstdio>
+#include <cstdlib>
+
 namespace aos {
 
 Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
-              const std::map<std::string, std::string>& switches) {
+              const std::map<std::string, std::string>& switches, const std::string& help) {
     Cli out;
     size_t i = 0;
     while (i < argv.size()) {
@@ -32,6 +35,14 @@ Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, 
             continue;
         }
         auto it = flags.find(name);
+        if (a == "--help" && it == flags.end() && !help.empty()) {
+            std::fputs(help.c_str(), stdout);
+            if (!help.ends_with("\n")) {
+                std::fputc('\n', stdout);
+            }
+            std::fflush(stdout);
+            std::exit(0);
+        }
         if (it == flags.end()) {
             throw Error{code::FlagUnknown, "unknown flag " + name};
         }
@@ -50,6 +61,10 @@ Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, 
     }
     out.rest.assign(argv.begin() + (long)i, argv.end());
     return out;
+}
+
+Error usage_error(const std::string& code, const std::string& reason, const std::string& usage) {
+    return Error{code, reason + " (usage: " + usage + ")"};
 }
 
 Json load_cfg(const std::string& spec) {
