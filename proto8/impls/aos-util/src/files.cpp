@@ -116,7 +116,7 @@ Spec split_hash(const std::string& spec) {
     }
     std::string pointer = spec.substr(hash + 1);
     if (!pointer.starts_with('/')) {
-        throw Error{code::CfgBad, "尋址要寫成 檔#/位置（# 後面要接 /）：" + spec};
+        throw Error{code::CfgBad, "address must be FILE#/POINTER (# must be followed by /): " + spec};
     }
     return Spec{spec.substr(0, hash), pointer};
 }
@@ -140,7 +140,7 @@ Json read_json_at(const std::string& path, const std::string& pointer) {
     }
     Json doc = Json::parse(*text, nullptr, false);
     if (doc.is_discarded()) {
-        throw Error{code::CfgBad, "不是 JSON：" + path};
+        throw Error{code::CfgBad, "not JSON: " + path};
     }
     if (pointer.empty()) {
         return doc;
@@ -148,7 +148,7 @@ Json read_json_at(const std::string& path, const std::string& pointer) {
     try {
         return doc.at(Json::json_pointer(pointer));
     } catch (const nlohmann::json::exception& e) {
-        throw Error{code::CfgMissing, "指不到 " + path + "#" + pointer + "：" + e.what()};
+        throw Error{code::CfgMissing, "pointer not found: " + path + "#" + pointer + ": " + e.what()};
     }
 }
 
@@ -178,14 +178,14 @@ std::optional<std::string> write_json(const std::string& path, const Json& doc) 
         std::error_code ec;
         std::filesystem::create_directories(dir, ec);
         if (ec) {
-            return "建不了資料夾 " + dir + "：" + ec.message();
+            return "cannot create directory " + dir + ": " + ec.message();
         }
     }
     // 2. 寫暫存檔
     std::string text = doc.dump(2, ' ', false, Json::error_handler_t::replace);
     int fd = open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);
     if (fd < 0) {
-        return "開不了 " + tmp + "：" + std::strerror(errno);
+        return "cannot open " + tmp + ": " + std::strerror(errno);
     }
     bool ok = write_all(fd, text);
     int saved = errno;
@@ -201,7 +201,7 @@ std::optional<std::string> write_json(const std::string& path, const Json& doc) 
         saved = errno;
     }
     unlink(tmp.c_str());
-    return "寫不了 " + path + "：" + std::strerror(saved);
+    return "cannot write " + path + ": " + std::strerror(saved);
 }
 
 }  // namespace aos

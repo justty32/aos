@@ -47,10 +47,10 @@ Json read_stdin() {
         return Json::object();
     }
     if (docs.empty()) {
-        throw Error{code::InputBad, "stdin 沒有 JSON"};
+        throw Error{code::InputBad, "stdin has no JSON"};
     }
     if (docs.size() > 1) {
-        throw Error{code::InputExtra, "stdin 有 " + std::to_string(docs.size()) + " 份 JSON，只要一份"};
+        throw Error{code::InputExtra, "stdin has " + std::to_string(docs.size()) + " JSON documents; expected one"};
     }
     return docs[0];
 }

@@ -58,7 +58,7 @@ pid_t spawn(const std::vector<std::string>& argv, Stdio io, bool new_session) {
     posix_spawn_file_actions_destroy(&actions);
     posix_spawnattr_destroy(&attr);
     if (rc != 0) {
-        throw Error{code::LaunchFailed, "起不了 " + argv[0] + "：" + std::strerror(rc)};
+        throw Error{code::LaunchFailed, "cannot start " + argv[0] + ": " + std::strerror(rc)};
     }
     return pid;
 }
@@ -165,7 +165,7 @@ std::string identity() {
             std::vector<char> buf(4096);
             while (getcwd(buf.data(), buf.size()) == nullptr) {
                 if (errno != ERANGE) {
-                    throw Error{code::Internal, std::string("拿不到 cwd：") + std::strerror(errno)};
+                    throw Error{code::Internal, std::string("cannot get cwd: ") + std::strerror(errno)};
                 }
                 buf.resize(buf.size() * 2);
             }
@@ -212,7 +212,7 @@ std::string sibling_tool(const std::string& name) {
 int memfd_empty() {
     int fd = memfd_create("aos", MFD_CLOEXEC);
     if (fd < 0) {
-        throw Error{code::Internal, std::string("memfd_create 失敗：") + std::strerror(errno)};
+        throw Error{code::Internal, std::string("memfd_create failed: ") + std::strerror(errno)};
     }
     return fd;
 }
@@ -227,7 +227,7 @@ int memfd_with(const std::string& text) {
         }
         if (n < 0) {
             close(fd);
-            throw Error{code::Internal, std::string("寫 memfd 失敗：") + std::strerror(errno)};
+            throw Error{code::Internal, std::string("write to memfd failed: ") + std::strerror(errno)};
         }
         done += (size_t)n;
     }
