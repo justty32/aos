@@ -1,0 +1,8 @@
+{"summary": "Start, talk to and remove other agents on the same daemon (wraps aos-agent ctl add / say / listen / rm / ls)",
+ "time_ms": {"val": 5000, "max": 1730000},
+ "resource": ["cpu", "llm"],
+ "side_effect": true,
+ "idempotent": false,
+ "deterministic": false,
+ "interrupt": "unsafe",
+ "parallel": false}

@@ -1,0 +1,253 @@
+#!/usr/bin/env python3
+# agents - 生、叫、收另一隻 agent：包著 aos-agent ctl add／say／listen／rm／ls，掛在管我的那台 daemon（$AOS_DAEMON）上
+# 使用者 11-05 午：「讓agent利用aos指令產出另一個agent」。規劃：proto8/thinking/2026-11/05/feat-proto/04-spawn-agent.md（代定 1～5）。
+# 介面（lib/README 的契約）：stdin 一份 {"op": "add"|"say"|"ask"|"rm"|"ls", ...}：
+#   add {name, def, ws?, endpoint?, tools?: [{name, path}]}  aos-agent ctl add --name <name> --ws <ws> <def>；有 endpoint＝llm set endpoint=…、
+#       有 tools＝逐個 tools add（不繼承父的腦與工具：要就明寫，C-52）；後面兩步失敗＝ctl rm 收回（全有或全無，規則 6）。印 added <name> (stack …)。
+#   say {name, text}           寄一句（aos-agent say，話走 stdin）、馬上回，印信件名稱
+#   ask {name, text, timeout_s?}  say＋listen --timeout-s（預設 600、上限 1700：act 格 timeout_ms 1800000 包得住）印回答
+#   rm {name}                  ctl rm（刪子的 stack；aos-agent 的保護規則照舊）
+#   ls                         ctl ls --json 原樣印（不限自己生的）
+# 路徑：def、tools 的 path、ws 從 $AOS_WS 算、解開後要在工作區裡（PathBad）；def 與 tools 的 path 另收絕對路徑指進本 repo 的 proto8/lib/、proto8/demo/
+#   （範本與庫；從這個檔 realpath 往上三層找）。ws 沒給＝$AOS_WS（子跟父同一個工作區，04 留題 3 推薦），給了＝那個子資料夾（不在先建）。
+# 只收自己生的：add 成功就把名字記進工具小格 $AOS_STACK/children.json（一個名字陣列，P-17；規則 8）；say／ask／rm 的名字不在裡面＝ChildUnknown、不動手
+#   （不是權限，aos 不驗身分；只是不讓腦誤殺兄弟或父）。rm 成功才從裡面拿掉。
+# 上限不在這裡數：AOS_KERNEL 有設＝aos-agent 先過判官（max_running），滿了＝aos-agent 的 AddRejected … SlotMissing 原樣回（04 代定 3）。
+# 錯：stderr 與 stdout 各一行「agents: 代號 原因」、退 1（規則 3）——自己的：ArgumentsBad、NameBad、OpUnknown、DaemonMissing、StackMissing、
+#   WsMissing、PathBad、DefMissing、ChildUnknown、ReadFailed、WriteFailed、MkdirFailed、LaunchFailed（aos-agent 不在 PATH）、CommandFailed（逾時）；
+#   aos-agent 退非 0＝把它 stderr 裡最後一行 `aos-…: 代號 原因`（aos-agent 自己的，或它原樣轉的 aos-tools／aos-json 的）的代號與原因
+#   原樣接在 `agents: ` 後面（AddRejected、InstanceExists、InterfaceMissing、AnswerMissing、ToolDefMissing…）；沒那行＝CommandFailed＋結束碼。
+# 工具自己不跑 agent：全是 aos-agent 的轉手；每次叫 aos-agent 都有逾時，自己被 TERM 時先收掉那一群再走（規則 5）。
+import json, os, re, signal, subprocess, sys
+
+NAME = "agents"
+NAME_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_-]{0,63}\Z")
+ERR_RE = re.compile(r"aos-[a-z-]+: ([A-Z][A-Za-z]+) (.*)\Z")
+ASK_DEFAULT_S, ASK_MAX_S = 600, 1700
+STEP_S = 90                    # 其他每一步（ctl add 自己最多等 30 秒）的逾時
+child = None
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, str(reason).replace("\n", " "))
+    print(line, flush=True)
+    print(line, file=sys.stderr, flush=True)
+    sys.exit(1)
+
+
+def kill_group(p):
+    for sig, wait_s in ((signal.SIGTERM, 5), (signal.SIGKILL, 5)):
+        try:
+            os.killpg(p.pid, sig)
+        except OSError:
+            return
+        try:
+            p.wait(wait_s)
+            return
+        except subprocess.TimeoutExpired:
+            pass
+
+
+def on_term(signum, frame):
+    if child is not None:
+        kill_group(child)
+    sys.exit(128 + signum)
+
+
+signal.signal(signal.SIGTERM, on_term)
+
+
+def agent(argv, text=None, timeout_s=STEP_S):
+    """叫 aos-agent --daemon <AOS_DAEMON> argv…；退 0 回 stdout，退非 0 回 (代號, 原因)。"""
+    global child
+    cmd = ["aos-agent", "--daemon", daemon] + argv
+    try:
+        child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+    except OSError as e:
+        die("LaunchFailed", "cannot start aos-agent (is it on PATH?): %s" % e)
+    try:
+        out, err = child.communicate(None if text is None else text.encode("utf-8"), timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        kill_group(child)
+        die("CommandFailed", "aos-agent %s did not finish in %d s (killed)" % (" ".join(argv[:2]), timeout_s))
+    p, child = child, None
+    out, err = out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
+    if p.returncode == 0:
+        return out, None
+    lines = [x for x in err.splitlines() if x.strip()]
+    mine = [m for m in map(ERR_RE.match, lines) if m]       # aos-agent 自己的、或它原樣轉的 aos-tools／aos-json 的那行
+    if mine:
+        return out, (mine[-1].group(1), mine[-1].group(2))
+    return out, ("CommandFailed", "aos-agent %s exited %d: %s" % (" ".join(argv[:2]), p.returncode, lines[-1] if lines else "(no message)"))
+
+
+def fail(err, tail=""):
+    die(err[0], err[1] + tail)
+
+
+def need_str(args, key, optional=False):
+    v = args.get(key)
+    if v is None and optional:
+        return None
+    if not isinstance(v, str) or not v.strip():
+        die("ArgumentsBad", "%s must be a non-empty string" % key)
+    return v
+
+
+def need_name(v, what="name"):
+    if not isinstance(v, str) or not NAME_RE.match(v):
+        die("NameBad", "%s %r must be 1-64 of A-Z a-z 0-9 _ - (not starting with -)" % (what, v))
+    return v
+
+
+def inside(p, root):
+    return p == root or p.startswith(root.rstrip(os.sep) + os.sep)
+
+
+def resolve(path, what, extra_roots=()):
+    """相對路徑從工作區算；解開 .. 與捷徑後要在工作區（或 extra_roots）裡。"""
+    if not isinstance(path, str) or not path:
+        die("ArgumentsBad", "%s must be a non-empty string" % what)
+    if os.path.isabs(path):
+        real, roots = os.path.realpath(path), [ws] + list(extra_roots)
+    else:
+        real, roots = os.path.realpath(os.path.join(ws, path)), [ws]
+    if not any(inside(real, r) for r in roots):
+        die("PathBad", "%s %r is outside %s" % (what, path, " / ".join(roots)))
+    return real
+
+
+def read_children():
+    try:
+        with open(children_path, encoding="utf-8") as f:
+            v = json.load(f)
+    except FileNotFoundError:
+        return []
+    except (OSError, ValueError) as e:
+        die("ReadFailed", "cannot read %s: %s" % (children_path, e))
+    if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
+        die("ReadFailed", "%s is not a JSON array of names" % children_path)
+    return v
+
+
+def write_children(names):
+    try:
+        os.makedirs(stack, exist_ok=True)
+    except OSError as e:
+        die("MkdirFailed", "cannot create %s: %s" % (stack, e))
+    tmp = os.path.join(stack, ".children.json.%d" % os.getpid())
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(json.dumps(names) + "\n")
+        os.replace(tmp, children_path)
+    except OSError as e:
+        die("WriteFailed", "cannot write %s: %s" % (children_path, e))
+
+
+def my_child(args):
+    name = need_name(args.get("name"))
+    if name not in read_children():
+        die("ChildUnknown", "%s was not added by this agent (say / ask / rm only reach the agents you added; op ls lists the whole table)" % name)
+    return name
+
+
+# ---- 入口檢查 ----
+try:
+    args = json.loads(sys.stdin.read() or "{}")
+except ValueError as e:
+    die("ArgumentsBad", "stdin is not JSON: %s" % e)
+if not isinstance(args, dict):
+    die("ArgumentsBad", "stdin must be a JSON object")
+op = args.get("op")
+if op not in ("add", "say", "ask", "rm", "ls"):
+    die("OpUnknown", "op must be one of add, say, ask, rm, ls (got %r)" % (op,))
+daemon = os.environ.get("AOS_DAEMON")
+if not daemon:
+    die("DaemonMissing", "AOS_DAEMON is not set (this tool attaches agents to the daemon that runs you)")
+stack = os.environ.get("AOS_STACK")
+if not stack:
+    die("StackMissing", "AOS_STACK is not set")
+children_path = os.path.join(stack, "children.json")
+
+if op == "ls":
+    out, err = agent(["ctl", "ls", "--json"])
+    if err:
+        fail(err)
+    sys.stdout.write(out)
+    sys.exit(0)
+
+if op in ("say", "ask"):
+    name = my_child(args)
+    text = need_str(args, "text")
+    timeout_s = args.get("timeout_s", ASK_DEFAULT_S)
+    if op == "ask" and (isinstance(timeout_s, bool) or not isinstance(timeout_s, (int, float)) or not 0 < timeout_s <= ASK_MAX_S):
+        die("ArgumentsBad", "timeout_s must be a number in (0, %d]" % ASK_MAX_S)
+    out, err = agent(["say", "--target", name], text=text)
+    if err:
+        fail(err)
+    if op == "say":
+        sys.stdout.write(out)
+        sys.exit(0)
+    out, err = agent(["listen", "--target", name, "--timeout-s", "%g" % timeout_s], timeout_s=timeout_s + 30)
+    if err:
+        fail(err)
+    sys.stdout.write(out)
+    sys.exit(0)
+
+if op == "rm":
+    name = my_child(args)
+    out, err = agent(["ctl", "rm", name])
+    if err:
+        fail(err)
+    write_children([x for x in read_children() if x != name])
+    sys.stdout.write(out)
+    sys.exit(0)
+
+# ---- add ----
+ws = os.environ.get("AOS_WS")
+if not ws or not os.path.isdir(ws):
+    die("WsMissing", "AOS_WS is not set or not a folder")
+ws = os.path.realpath(ws)
+here = os.path.dirname(os.path.realpath(__file__))
+proto8 = os.path.dirname(os.path.dirname(os.path.dirname(here)))
+shared = [d for d in (os.path.join(proto8, "lib"), os.path.join(proto8, "demo")) if os.path.isdir(d)]
+
+name = need_name(args.get("name"))
+definition = resolve(args.get("def"), "def", shared)
+if not os.path.isdir(definition):
+    die("DefMissing", "def %r is not a folder" % args.get("def"))
+child_ws = ws if args.get("ws") is None else resolve(args.get("ws"), "ws")
+endpoint = need_str(args, "endpoint", optional=True)
+tools = args.get("tools", [])
+if not isinstance(tools, list):
+    die("ArgumentsBad", "tools must be an array of {name, path}")
+tool_list = []
+for t in tools:
+    if not isinstance(t, dict):
+        die("ArgumentsBad", "each tools item must be an object {name, path}")
+    tool_list.append((need_name(t.get("name"), "tool name"), resolve(t.get("path"), "tool path", shared)))
+if not os.path.isdir(child_ws):
+    try:
+        os.makedirs(child_ws)
+    except OSError as e:
+        die("MkdirFailed", "cannot create ws %s: %s" % (child_ws, e))
+
+out, err = agent(["ctl", "add", "--name", name, "--ws", child_ws, definition])
+if err:
+    fail(err)
+child_stack = out.strip().splitlines()[-1] if out.strip() else "?"
+names = read_children()
+write_children(names + [name] if name not in names else names)
+
+steps = ([("llm set endpoint=" + endpoint, ["llm", "--target", name, "set", "endpoint=" + endpoint])] if endpoint else []) + \
+        [("tools add " + n, ["tools", "--target", name, "add", "--override", n, p]) for n, p in tool_list]
+for what, argv in steps:
+    _, err = agent(argv)
+    if err:                    # 全有或全無：設定沒上，收回這隻
+        _, err2 = agent(["ctl", "rm", name])
+        if err2 is None:
+            write_children([x for x in read_children() if x != name])
+        fail(err, " (during %s; %s)" % (what,
+                                        "rolled back: removed %s" % name if err2 is None else "rollback failed too: %s %s" % err2))
+sys.stdout.write("added %s (stack %s)\n" % (name, child_stack))
