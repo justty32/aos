@@ -24,8 +24,8 @@ aos-agent [--daemon D] ctl who [--stack S] [--json]                        S（�
 **跟它說話、畫面、設定**（在頂層）
 
 ```
-aos-agent [--daemon D] say [--target 名字] [話...]                    stdout 印信件名稱
-aos-agent [--daemon D] listen [--target 名字] [--timeout-s 秒] | [--last N] [--follow]
+aos-agent [--daemon D] say [--target 名字] [話...|-]                  stdout 印信件名稱；沒給話或 -＝讀 stdin
+aos-agent [--daemon D] listen [--target 名字] [--timeout-s 秒] | [--last N] [--follow]   stdout 只有回答
 aos-agent [--daemon D] chat [--target 名字]                           一行一句；Ctrl-C 退出
 aos-agent [--daemon D] open [-d]|close|watch [--target 名字]          畫面（宣告了 screen 的）
 aos-agent [--daemon D] tools [--target 名字] [ls|get 名|add [--override] [--no-cache] 名 路徑|rm 名|reset]   定義疊這隻的覆蓋層（只存差異）
@@ -42,7 +42,7 @@ aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
 - **ctl sleep／wake**（11-05 [portable-flow 衝突 1](../../thinking/2026-11/05/portable-flow/05-衝突與方向題.md)，使用者選「嚴格分」）：`sleep`＝現在就睡（daemon SIGTERM、列 `sleeping`、stack 留；daemon 開門自己醒，或 `wake`）；`stop`＝等這輪做完、要 `start` 才回來。`start` 只起 `stopped`、`wake` 只醒 `sleeping`；跨著用（sleeping 的 `start`／`stop`、stopped 的 `wake`／`sleep`）＝`aos-daemon-ctl` 的 `PhaseBad` 原樣轉（`X is sleeping; use wake …` 之類）；同一狀態再叫（stopped 的 stop、running 的 start、sleeping 的 sleep、running 的 wake）＝印 `already …`、退 0。sleep 不關畫面（跟 daemon 收工一樣）。
 - **錯**：stderr 一行 `aos-agent: 代號 原因`、退 1；等 daemon 逾時＝`WaitFailed`；`ctl add` 的信被 daemon 拒收（名字像 `a/b`、`..`，或設定不合格；daemon 寫在 `procs_state.json` 的 `mailbox_warning`）＝立刻 `AddRejected`、原因原樣轉，不等滿 30 秒；判官不掛（回信 `applied: false`）＝立刻 `AddRejected`（`add`）／`CtlRejected`（其他 ctl），訊息帶判官的代號與原因（下一條）。子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉。
 - **`AOS_KERNEL`**（11-05 [edge-agent](../../thinking/2026-11/05/edge-agent/README.md)）：有設＝ctl 的信先寄判官（[demo/docs/04](../../demo/docs/04-kernel-modes.md)）。對象就是那個 kernel 本身（模式 2 的 0 號，`AOS_KERNEL` 在它的 stack 裡）＝`start`／`stop`／`sleep`／`wake`／`rm` 直接寄 daemon（不然 kernel 睡著時給它自己的 `wake` 沒人收、永遠叫不醒）；寄出之後 kernel 不是 running＝立刻 `WaitFailed`（信排在它信箱裡、它回來才判）。
-- **等回信**（11-05 [edge-agent 題 2](../../thinking/2026-11/05/edge-agent/README.md)，使用者選「加 --reply-to 等回信」）：`ctl add`／`rm`／`start`／`stop`／`sleep`／`wake` 每封信都開一個暫時回信信箱（系統暫存資料夾〔`$TMPDIR`，沒設＝`/tmp`〕底下 `aos-agent-reply-XXXX`）、經 `aos-daemon-ctl --reply-to` 寄。判官不掛＝回信 `applied: false` 一到就退：`aos-agent: AddRejected AOS_KERNEL refused the add letter: NameUnknown evil not in allowed`（滿額是 `SlotMissing`；wake／start 超過 `max_running` 是 `CtlRejected`）。放行或沒設 `AOS_KERNEL`＝daemon 回 `applied: true`，照舊等表上變成結果（表先變、回信還沒到＝最多再等 1 秒讓它落地）。暫時信箱用完一律刪（成功、錯、逾時、Ctrl-C）。判官也沒回信（卡住、寫不進暫時信箱）＝照舊等滿 30 秒 `WaitFailed`，訊息說去哪看判官的 stderr。
+- **等回信**（11-05 [edge-agent 題 2](../../thinking/2026-11/05/edge-agent/README.md)，使用者選「加 --reply-to 等回信」）：`ctl add`／`rm`／`start`／`stop`／`sleep`／`wake` 每封信都開一個暫時回信信箱（系統暫存資料夾〔`$TMPDIR`，沒設＝`/tmp`〕底下 `aos-agent-reply-XXXX`）、經 `aos-daemon-ctl --reply-to` 寄。判官不掛＝回信 `applied: false` 一到就退：`aos-agent: AddRejected AOS_KERNEL refused the add letter: NameUnknown evil not in allowed`（滿額是 `SlotMissing`；wake／start 超過 `max_running` 是 `CtlRejected`）。放行或沒設 `AOS_KERNEL`＝daemon 回 `applied: true`，照舊等表上變成結果（表先變、回信還沒到＝最多再等 1 秒讓它落地）。暫時信箱用完一律刪（成功、錯、逾時、Ctrl-C、`kill -TERM`、`kill -HUP`；被 TERM 退 143、HUP 退 129）；名字是 `aos-agent-reply-<pid>-XXXX`，`kill -9` 刪不了，**下一次跑 aos-agent（任何子命令）時清掉**——只清名字裡的 pid 已經不在、又是自己帳號的那些，別的還活著的 aos-agent 的不碰（11-05 邊緣隊回報）。判官也沒回信（卡住、寫不進暫時信箱）＝照舊等滿 30 秒 `WaitFailed`，訊息說去哪看判官的 stderr。
 
 ## 介面 `aos-agent`：ctl add 只看宣告
 
@@ -65,6 +65,7 @@ aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
 
 ## agent 對話協議（P-42；併自 extras/human）
 
+- **stdin／stdout**（使用者 11-05「aos-say,aos-listen，我希望能支援stdin/out。」）：`say` 沒給話（或只給 `-`）＝整份 stdin 是**一則**訊息（照 UTF-8 原樣讀、不看 locale，去掉尾端一個換行〔`aos_ws.put` 本來就再把結尾的換行全去掉〕）；stdin 是終端又沒給話＝`ArgumentsBad`、立刻退，不卡著等；要寄一個字的 `-` 就 `echo - | aos-agent say`。`listen` 的 stdout **只有回答本文**，提醒、狀態一律 stderr，所以 `echo 題 | aos-agent say && aos-agent listen > 答.txt`、`cat 長題.md | aos-agent say && aos-agent listen | 下一支` 都行（say 的 stdout 是信件名稱，要丟掉就 `> /dev/null`）。`--last N`／`--follow` 一則一段照現行（代定，11-05）：一行 `== #序號`、問的那幾行前面加 `> `、然後回答本文；要純回答就用不帶旗標的 `listen`（一次一則）。WSL 實測在 [docs/01](docs/01-用法例子.md#stdin-與-stdout11-05)。
 - **說**：`aos-agent say 話`＝`aos-post send --ordered <stack>/queue`，一封信的 body＝`{"role": "user", "content": 話}`（N-16 有順序的信箱；queue 還沒有就先建，可以先說、再跑）。印的信件名稱就是 `new/` 裡那封的名字（`<12 位序號>.<尾名>`）。沒人在跑時照表上的 phase 提醒：`stopped`＝`aos-agent ctl start --target 名字`（有 `reason` 一起印）；`sleeping`＝daemon 在跑就 `aos-agent ctl wake --target 名字`、沒在跑就重開 daemon 它會自己醒。
 - **聽**：`aos-agent say 話 && aos-agent listen`——等**最新那封**＝queue 的 `new/`、`cur/` 裡照處理順序排最後的（`aos_ws.letter_key`）：還在就等；不見了就印 history 最新那則沒有 `tool_calls` 的 assistant（先 say 後 listen 不會漏）。交出去還在答（eca 交給 CLI 就收信、fsm 答的途中）照等；都空、history 也沒回答＝`QuestionUnknown`；信不見了、沒回答、也沒人在跑＝`AnswerMissing`；沒人在跑＝提醒一次、繼續等。`--timeout-s` 秒數到了＝`AnswerMissing`。暫停中＝提醒一次「要 resume」照等；答到一半被 stop／sleep、或出錯結束（表上 stopped／sleeping；出錯的帶原因）＝提醒一次（附 `ctl start`／`ctl wake` 怎麼叫回）照等；等到一半那隻下了表（退 0）＝`AnswerMissing` 說它最後的輸出在哪、同名 `ctl add` 接著用；被 `ctl rm`（stack 刪了）＝`InstanceMissing`（11-05 edge-agent）。`--last N` 印最後 N 段就走、`--follow` 接著跟著看。
 - **chat**：say＋listen 的迴圈；提示符 `> ` 在 stderr、stdout 只有回答（`chat < 問題.txt > 答案.txt` 也行）；不印信件名稱。等答案時 Ctrl-C＝退 130，那封已寄出、agent 照答，之後用 `listen` 看；stdin 結束退 0；途中 `AnswerMissing` 印一行、不退出；每句寄之前重查表，聊到一半被 `ctl rm`＝`InstanceMissing` 退 1（原本照寄、把刪掉的 stack 建回來，11-05 edge-agent）。

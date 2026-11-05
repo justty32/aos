@@ -15,8 +15,10 @@
 #                                                       （11-05 feat-proto 件 1：工具 lib/agent/self_tools 靠它認出「我是哪隻」；只查表、不爬路徑）
 #     aos-agent [--daemon D] ctl start|stop|sleep|wake|pause|resume [--target 名字]
 #   跟它說話、它的畫面與設定：
-#     aos-agent [--daemon D] say [--target 名字] [話...]    寄一句進它的 queue；stdout 印信件名稱（話沒給＝讀 stdin）
+#     aos-agent [--daemon D] say [--target 名字] [話...|-]  寄一句進它的 queue；stdout 印信件名稱（話沒給或 -＝整份 stdin 一則、去尾端一個換行；
+#                                                       stdin 是終端＝ArgumentsBad，不卡著等）
 #     aos-agent [--daemon D] listen [--target 名字] [--timeout-s 秒] | [--last N] [--follow]
+#                                                       stdout 只有回答本文（提醒、狀態一律 stderr）：可以 > 答.txt、接管線
 #     aos-agent [--daemon D] chat [--target 名字]        一行一句、等回答；Ctrl-C 退出（130），stdin 結束退 0
 #     aos-agent [--daemon D] open [-d]|close|watch [--target 名字]   畫面（宣告了子介面 screen 的才有）
 #     aos-agent [--daemon D] tools [--target 名字] [ls [--json]|get 名|add [--override] [--no-cache] 名 路徑|rm 名|reset]   這隻的工具箱（定義疊這隻的覆蓋層）
@@ -36,7 +38,8 @@
 # 回信（11-05 edge-agent 題 2，使用者選「加 --reply-to 等回信」）：ctl add／rm／start／stop／sleep／wake 每封信都開一個暫時回信信箱
 #   （系統暫存資料夾底下 aos-agent-reply-XXXX、aos-post init）、經 aos-daemon-ctl --reply-to 寄；等的時候回信 applied: false（判官不掛）＝立刻
 #   AddRejected（add）／CtlRejected（其他）＋回信的 code、msg；applied: true 或表上已經是結果＝照常往下（結果先到、回信還沒到＝多等 1 秒讓它落地）。
-#   暫時信箱用完一律刪（Ctrl-C、錯也刪）。等滿 30 秒＝WaitFailed（經 AOS_KERNEL 的補一句「判官也沒回信、去哪看」）。
+#   暫時信箱用完一律刪（Ctrl-C、SIGTERM、SIGHUP、錯也刪）；名字帶 pid（aos-agent-reply-<pid>-XXXX），kill -9 留下的由下一次 aos-agent 啟動時清
+#   （那個 pid 已經不在、是自己帳號的才刪）。等滿 30 秒＝WaitFailed（經 AOS_KERNEL 的補一句「判官也沒回信、去哪看」）。
 # 介面（03）：只碰 daemon 表與那隻的 stack（queue/、history.jsonl、ctl／state 窗）；定義資料夾只讀 interfaces.json 宣告
 #   （表上那一列的 def 欄＝定義資料夾，aos-daemon-ctl add 送、daemon 記；11-04 使用者「那就b。」）。子介面 screen＝定義裡自己宣告 aos-agent/screen 的資料夾程式，
 #   用 aos-exec --ws <ws> --stack <stack> <定義>/<入口> 動作… 叫；tools＝登記檔，這隻的覆蓋層在 <stack>/tools.json（11-05 起只存差異
@@ -68,8 +71,12 @@
                                                        or above S; prints its name (--json: {"name", "stack", "ws", "def"})
     aos-agent [--daemon D] ctl start|stop|sleep|wake|pause|resume [--target NAME]
   Talk to it, its screen and settings:
-    aos-agent [--daemon D] say [--target NAME] [WORDS...]    put one message in its queue; stdout prints the letter name (no words = read stdin)
+    aos-agent [--daemon D] say [--target NAME] [WORDS...|-]  put one message in its queue; stdout prints the letter name
+                                                       (no words or - = all of stdin is one message, one trailing newline dropped;
+                                                       stdin is a terminal = ArgumentsBad)
     aos-agent [--daemon D] listen [--target NAME] [--timeout-s SECS] | [--last N] [--follow]
+                                                       stdout carries only the answer text (notes go to stderr), so > file and pipes work;
+                                                       --last / --follow print blocks: a line "== #N", the question lines prefixed "> ", the answer
     aos-agent [--daemon D] chat [--target NAME]        one line per message, waits for the answer; Ctrl-C exits (130), end of stdin exits 0
     aos-agent [--daemon D] open [-d]|close|watch [--target NAME]   its screen (only if the definition declares the screen sub-interface)
     aos-agent [--daemon D] tools [--target NAME] [ls [--json]|get NAME|add [--override] [--no-cache] NAME PATH|rm NAME|reset]
@@ -89,10 +96,11 @@ sleep / wake: sleep = sleep now (the daemon SIGTERMs it, row sleeping, stack kep
 AOS_KERNEL: if set, ctl letters go there first (through aos-daemon-ctl) for the judge. start / stop / sleep / wake / rm of that kernel itself
   (AOS_KERNEL is inside its stack) go straight to the daemon (a sleeping kernel never reads its own wake); after sending, a kernel that
   is not running = WaitFailed at once (the letter waits in its mailbox until it is back).
-Replies: ctl add / rm / start / stop / sleep / wake each open a temporary reply mailbox (aos-agent-reply-XXXX under the system temp folder,
+Replies: ctl add / rm / start / stop / sleep / wake each open a temporary reply mailbox (aos-agent-reply-PID-XXXX under the system temp folder,
   aos-post init) and send through aos-daemon-ctl --reply-to; a reply with applied: false (the judge refused) = AddRejected (add) /
   CtlRejected (others) at once, with the reply's code and msg; applied: true or the result already on the table = carry on.
-  The temporary mailbox is always deleted (also on Ctrl-C and errors). 30 s without a result = WaitFailed.
+  The temporary mailbox is always deleted (also on Ctrl-C, SIGTERM, SIGHUP and errors); one left by kill -9 is deleted the next time
+  aos-agent starts (only if that PID is gone and the folder is yours). 30 s without a result = WaitFailed.
 Interface: touches only the daemon table and the agent's stack (queue/, history.jsonl, ctl / state windows); in the definition folder (the def
   column of its row) it reads only the interfaces.json declaration. screen = a folder program in the definition that declares aos-agent/screen,
   run as aos-exec --ws <ws> --stack <stack> <definition>/<entry> ACTION...; tools = a registry file, this agent's overlay is <stack>/tools.json
@@ -105,13 +113,13 @@ Interface: touches only the daemon table and the agent's stack (queue/, history.
   value = InterfaceBad (declared) / ArgumentsBad (--limits). The daemon does not take limits yet, so they are checked but not sent (one note
   on stderr). ctl state prints a limits line when the daemon table row has one.
 stdout carries results only; notes go to stderr as one line in parentheses. Errors: one stderr line `aos-agent: CODE reason`, exit 1
-  (chat interrupted by Ctrl-C exits 130).
+  (Ctrl-C exits 130, SIGTERM 143, SIGHUP 129).
   Codes: ArgumentsBad, FlagUnknown, CommandUnknown, CommandMissing, DaemonMissing, InstanceMissing, InstanceExists, PathMissing, SessionBad,
   SendFailed, PostFailed, QuestionUnknown, AnswerMissing, WaitFailed, AddRejected, CtlRejected, TargetMissing, WsMissing, StackMissing,
   InterfaceMissing, InterfaceBad, PhaseBad, ScreenMissing, ScreenBad, ToolsMissing, LlmMissing, LlmBad. Errors of aos-daemon-ctl are renamed for this program
   (ProcMissing -> InstanceMissing); errors of the screen entry, aos-tools and aos-json pass through as they are.
 Linux only (reads /proc). Needs aos-post and aos-exec on PATH (tools also needs aos-tools in proto8/bin; llm set also needs aos-json)."""
-import json, os, re, shutil, subprocess, sys, tempfile, time
+import json, os, re, shutil, signal, stat, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", "..", ".."))           # proto8/
@@ -277,9 +285,42 @@ def wait_for(cond, what, secs=WAIT_S, via_kernel=True):
     raise Fail("WaitFailed", "waited %d s, %s%s" % (secs, what, kernel_hint() if via_kernel else ""))
 
 
+REPLY_PREFIX = "aos-agent-reply-"               # 暫時回信信箱的名字：aos-agent-reply-<pid>-<亂碼>
+REPLY_RE = re.compile(r"aos-agent-reply-([0-9]+)-[A-Za-z0-9_]+")
+
+
+def sweep_replies():
+    """清 kill -9 留下的暫時回信信箱（11-05 邊緣隊）：名字裡的 pid 已經不在（kill 0 回 ESRCH）、是自己帳號的資料夾才刪；
+    pid 還活著（不管是不是 aos-agent）、別人的、看不準的一律不碰。"""
+    tmp = tempfile.gettempdir()
+    try:
+        names = os.listdir(tmp)
+    except OSError:
+        return
+    for n in names:
+        m = REPLY_RE.fullmatch(n)
+        if not m or int(m.group(1)) == os.getpid():
+            continue
+        try:
+            os.kill(int(m.group(1)), 0)
+            continue                                  # 還活著（或 pid 被別的行程拿去用）：不碰
+        except ProcessLookupError:
+            pass
+        except (OSError, OverflowError):
+            continue
+        p = os.path.join(tmp, n)
+        try:
+            st = os.lstat(p)
+        except OSError:
+            continue
+        if stat.S_ISDIR(st.st_mode) and st.st_uid == os.getuid():
+            shutil.rmtree(p, ignore_errors=True)
+
+
 def reply_mailbox():
-    """暫時回信信箱（11-05 edge-agent 題 2）：系統暫存資料夾底下一個新資料夾＋aos-post init。用完由 ctl_wait 刪。"""
-    box = tempfile.mkdtemp(prefix="aos-agent-reply-")
+    """暫時回信信箱（11-05 edge-agent 題 2）：系統暫存資料夾底下一個新資料夾＋aos-post init。用完由 ctl_wait 刪
+    （TERM／HUP 也刪：main 把它們換成 SystemExit；kill -9 刪不了，下一次 aos-agent 啟動時 sweep_replies 清）。"""
+    box = tempfile.mkdtemp(prefix="%s%d-" % (REPLY_PREFIX, os.getpid()))
     try:
         r = subprocess.run(["aos-post", "init", box], capture_output=True, text=True)
     except OSError as e:
@@ -845,13 +886,20 @@ def cmd_where(argv):
 def cmd_say(argv):
     opts, rest = parse(argv, {"--target": "target"})
     a = target(opts)                                # 11-05 edge-agent：先找對象，沒對象不先等 stdin
+    piped = not rest or rest == ["-"]               # 11-05 使用者「aos-say,aos-listen，我希望能支援stdin/out。」：沒給話或給 -＝整份 stdin 一則
+    if piped and (sys.stdin is None or sys.stdin.isatty()):
+        raise Fail("ArgumentsBad", "no message: give WORDS or pipe it into stdin (stdin is a terminal; usage: aos-agent say [--target NAME] [WORDS...|-])")
     try:                                            # 11-04 夜邊緣實測：不是 UTF-8 的話（argv 或 stdin）原本噴 traceback
-        text = " ".join(rest) if rest else sys.stdin.read()
-        text.encode("utf-8")
+        if piped:                                   # 照原樣讀 bytes、照 UTF-8 解（不看 locale），去尾端一個換行
+            text = sys.stdin.buffer.read().decode("utf-8")
+            text = text[:-2] if text.endswith("\r\n") else text[:-1] if text.endswith("\n") else text
+        else:
+            text = " ".join(rest)
+            text.encode("utf-8")
     except UnicodeError:
         raise Fail("ArgumentsBad", "the message is not UTF-8")
     if not text.strip():
-        raise Fail("ArgumentsBad", "the message is empty (aos-agent say [--target NAME] WORDS...)")
+        raise Fail("ArgumentsBad", "the message is empty (aos-agent say [--target NAME] [WORDS...|-])")
     sig = aos_ws.put(a.stack, text)
     print(sig, flush=True)
     if not runners(a):
@@ -1278,8 +1326,16 @@ CMDS = {"ctl": cmd_ctl,
         "tools": cmd_tools, "llm": cmd_llm}
 
 
+def on_signal(sig, frame):
+    """TERM／HUP＝照 Ctrl-C 那樣收尾（finally 跑得到、暫時回信信箱刪得掉；11-05 邊緣隊），退 128＋訊號。"""
+    raise SystemExit(128 + sig)
+
+
 def main():
     global DAEMON
+    for s in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(s, on_signal)
+    sweep_replies()                                 # kill -9 留下的暫時回信信箱（pid 已不在的才刪）
     a = sys.argv[1:]
     try:
         if a and a[0] in ("-h", "--help"):

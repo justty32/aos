@@ -2,6 +2,8 @@
 #
 #   source proto8/extras/agent/using-aos-agent.sh bob   # 帶名字＝export AOS_AGENT=bob；不帶＝只定義函數
 #   say 現在幾點 && listen                             # ＝aos-agent say 現在幾點 && aos-agent listen
+#   echo 題 | say && listen > 答.txt                   # 11-05：say 沒給話＝讀 stdin（一則）；listen 的 stdout 只有回答
+#   cat 長題.md | say > /dev/null && listen | less
 #   say --target ann 你好                             # 旗標照常過
 #   chat                                              # 一直聊，Ctrl-C 退出
 #
