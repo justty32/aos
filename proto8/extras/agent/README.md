@@ -8,6 +8,7 @@
 |---|---|
 | `bin/aos-agent` | 指令本體；開頭的說明寫了全部規則與錯誤代號 |
 | `using-aos-agent.sh` | `source` 用：帶名字＝`export AOS_AGENT=名字`，定義 `say`／`listen`／`chat`／`status` 四個函數；`AOS_DAEMON` 沒設＝export 成 `$PWD/.stack`（11-05） |
+| `stack.gitignore`、`stack.gitattributes` | 搬家範本（11-05）：image（`ws/.stack/`）進 git 時用；用法見下面「搬家」 |
 
 ```
 aos-agent [--daemon D] add [--name N] [--ws WS] [--stack S] XXX     掛一隻；等上表、印 stack
@@ -57,6 +58,10 @@ aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
 - **看**：`aos-agent state`（狀態、工作區、定義、stack、queue 幾封、最新回答前 60 字、`mailbox_warning.txt` 那一行）。
 - **停**：`pause`／`resume`＝`aos-daemon-ctl pause／resume`（寫它的 ctl.json；停在哪是身體的事：eca 一批信、fsm 一格）；`stop`／`start`＝表上留成 `stopped`、stack 留著、信照收不答；`sleep`／`wake`＝現在就睡、表上留成 `sleeping`、daemon 開門自己醒（搬家前用）。
 - 直接 `aos-exec --ws W <agent>` 跑、沒掛 daemon 的，aos-agent 不管：`aos-post send --ordered W/.stack/queue` 寫信、看 `W/.stack/history.jsonl`。
+
+## 搬家
+
+整份 `ws/`（連 `.stack`）和定義保持相對位置 `cp -r` 或 git 來回，到新位置 `aos-exec ../daemon` 就接著跑（11-05）。要點：**先 Ctrl-C 讓 daemon 睡著再存**；`pid`、`boot_id` 那幾欄是上一台的、別信；eca 的 claude session 綁那台的 `~/.claude`；git 掉的空資料夾第一圈自己建回；只在 Linux 檔案系統 checkout、別在 Windows checkout 上跑；範本 `cp stack.gitignore ws/.stack/.gitignore`、`cp stack.gitattributes <repo 根>/.gitattributes`。全文與 11-05 實測在 [docs/04-搬家](docs/04-搬家.md#搬家)。
 
 ## 已知限制
 

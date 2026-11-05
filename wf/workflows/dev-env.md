@@ -27,6 +27,7 @@
 | 跑起來 | `build/bin/aos <子命令>` | 執行檔與各測試都在 `build/bin/` |
 | 關掉擴充建一次 | `cmake -S . -B /tmp/aos-nomod -DAOS_BUILD_MODULES=OFF && cmake --build /tmp/aos-nomod` | 動過 `modules/` 之後 |
 | 建 proto8 的 C++ 實作 | 照 [testing「proto8」](testing.md#proto8)的迴圈，在 `proto8/impls/` 逐專案 `cmake -B build && cmake --build build` | 10-23 起 proto8 的 aos-exec／loop／fsm／daemon 只有 C++ 版，手跑前要先建；各專案獨立、不走 repo 根的 preset |
+| 把 proto8 的指令放進 PATH | `proto8/install.sh`（WSL clone 裡跑；預設 symlink 進 `~/.local/bin`，給參數換目的地、`--dry-run` 只印）| 11-05；impls 先建好；冪等、同名的別的東西不蓋；repo 換位置要重跑。之後不用每殼 source env.sh 設 PATH |
 | 文檔檢查 | `bash wf/tools/wf-lint.sh --strict wf .claude/commands` | 可選，預設不跑；或 `/wf-lint`；從 repo 根跑 `.` 會被 `.claude/worktrees/` 的副本淹掉 |
 
 驗證與測試指令不列這裡——連同「誰跑」一起在 [testing](testing.md)。
