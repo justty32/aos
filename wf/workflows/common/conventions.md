@@ -17,6 +17,16 @@
 - **`fork` 前後的界線**（`exec` 層專屬，但任何碰行程操作的程式碼都要守）：`fork` 之後、`execve` 之前只能呼叫 async-signal-safe 的 POSIX 操作，不能有 C++ 記憶體配置、`setenv`、字串操作。所有準備工作（環境變數合併、PATH 解析、`argv`／`envp` 實體化）都要在 `fork` 之前做完；細節見 `core/inst/docs/architecture.md`。
 - **新增/改欄位或列舉值**要全域 grep 受影響處（C++ 型別、format 的 encode/decode、C ABI 的鏡像宣告與 static_assert）並同一個 commit 更新，不要分批留下不一致的中間狀態。
 
+### 三扇門與結束碼（11-05）
+
+aos 自己的程式（impls、bin、extras、lib 工具、demo 的格）的 stdio 與結束碼（使用者 11-05 裁四題，例「可以，固定格式："error:", "warning:"後面接你那個」；其餘照盤點推薦，[thinking stdio-unify](../../../proto8/thinking/2026-11/05/stdio-unify/README.md)）：
+
+- stderr 只有錯誤行 `程式: error: 代號 原因` 與提醒行 `程式: warning: 句子`；有錯誤行不准退 0；10＝查了沒有，訊號 128＋N，Ctrl-C 130：[N-43](../../../proto8/docs/NORMS/01-總則/02-N-43.md)
+- 每支都有英文 `--help`；不給參數＝`ArgumentsBad`；`FlagUnknown`／`CommandUnknown`；`(usage: …)` 放最後：[P-44](../../../proto8/docs/CONVENTION/02-題目stack停錯腦/07-P-44.md)
+- 每層只說自己一行（開頭可以是 agent 名）：[P-21](../../../proto8/docs/CONVENTION/02-題目stack停錯腦/04-六-停與錯續-P-21～P-22.md)
+- 不讀下層 stderr，三處明文例外：[C-52](../../../proto8/docs/CONCEPTS/01-設計理念/03-最高原則與兩條總原則.md)
+- 給腦用的工具兩邊印同一行、退 1，`[exit code N]` 在最後一行：[lib/docs/01](../../../proto8/lib/docs/01-分層等.md)
+
 ## 導航 index（code map）維護鏈
 
 三個面向構成維護鏈：**程式碼 → code map → 文檔**。三份真相的完整優先序（含 normative 規格）在 [code-map「真相層優先序」](code-map.md)。
