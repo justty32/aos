@@ -69,3 +69,9 @@
 昨天的題 1（`AOS_KERNEL` 打錯默默寄）你說「自擔」，今天沒改行為、只補了文件。不過變數的意思改成「llm daemon 的 stack」之後，多了兩種常見的指錯（指到 `def/`、起的時候漏了 `--stack .`），還有一種新情況：kernel 出錯讓 llm daemon 整台停了，寄信的人也看不出來。
 - (a) **只多印一行警告、照樣寄、照樣等**（推薦）：寄的時候 `$AOS_LLM_KERNEL/procs_state.json` 不在（不是一台 daemon）、或 `state.json` 顯示 daemon 已經停了，就在 stderr 印一行「這裡沒有在跑的 llm daemon，信會等到它起來」。後果：先寄、後起 kernel 照樣可以；人一看就知道指錯或 kernel 停了；多一次讀檔。
 - (b) 照現況，靠文件那一句自己對。
+
+## 別線後續（11-05 晚）
+
+- 別線 1（身體一時不能執行＝整台停）→ 使用者裁 edge-daemon 題 1「記一行、下一圈再跑 (Recommended)」，`34f17425` 落實，見 [edge-daemon 裁定落實](../edge-daemon/README.md#裁定落實11-05-晚隊長)。
+- `AOS_LLM_KERNEL` 相對路徑改照「基準點＝管我的 daemon 的 stack／人殼＝cwd」解（`59395748`，代定）。
+- 問腦 proc 出錯結束現在會被 daemon 留 `stopped`＋reason，aos-llm-kernel 當收尾處理（`d1ed1abe`）。

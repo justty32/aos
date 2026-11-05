@@ -8,14 +8,14 @@
 
 ## 要你看的題（推薦放第一）
 
-### 題 1：agent 自己出錯結束時，要不要留在 daemon 表上（stopped＋原因），不要直接下表
+### 題 1（已裁：留表）：agent 自己出錯結束時，要不要留在 daemon 表上（stopped＋原因），不要直接下表
 
 **白話**：fsm agent 腦設定寫錯代號、覆蓋層的工具不見了、kernel 回錯……身體退 1，daemon 現在把它**從表上擦掉**。擦掉之後 `aos-agent llm reset`、`tools reset`、`ctl start` 全都 `InstanceMissing` 找不到它——要修只能手動去刪 `<stack>/llm.json`、`<stack>/tools.json` 再同名 `ctl add`（試驗場教學「沒開的腦」那段就是這招）。daemon 已經有「wake／start 起不來的留 `stopped`＋原因」，這次是把同樣的待遇給「跑到一半自己出錯退的」。
 
 1. **（推薦）loop 型的子項退非 0＝留 `stopped`、`reason` 寫「退 N：stderr 最後一行」**；退 0（做完）照舊下表。後果：改 aos-daemon（B 線的 C++）；`aos-agent ctl ls` 會多出停著的列，修好 `aos-agent llm reset`／`tools reset` 再 `ctl start` 就回來；不要了 `ctl rm`。
 2. 照現況（下表），aos-agent 的訊息已改成說「錯誤在 stderr.txt、同名 ctl add 接著用」。後果：llm／tools 子命令救不了它。
 
-### 題 2：判官判「不掛」時，要不要讓 `aos-agent ctl add` 馬上知道
+### 題 2（已裁：--reply-to）：判官判「不掛」時，要不要讓 `aos-agent ctl add` 馬上知道
 
 **白話**：設了 `AOS_KERNEL`（走判官）時，`ctl add` 的信經 aos-daemon-ctl 寄出、**不帶回信地址**，判官判不掛（不在白名單、滿額）也回不了信，aos-agent 只能等滿 30 秒 `WaitFailed`。這輪已讓判官每封不掛都在 stderr 印一行、`WaitFailed` 說去哪看。
 
@@ -73,3 +73,24 @@
 ## 沒測到的
 
 真 qwen（LM Studio 沒開）；`aos-agent open` 接進畫面後的互動（只測了 `-d`、沒 tty、close）；codex 型 eca。
+
+## 使用者裁定（11-05，頂層轉達，選項原文）
+
+- 題 1 →「留表標 stopped (Recommended)」
+- 題 2 →「加 --reply-to 等回信 (Recommended)」
+
+## 裁定落實（11-05 晚，隊長）
+
+- 題 1：`c946aa72` aos-daemon——loop 型退非 0（含被訊號打掉）＝列留 `stopped`＋英文 `reason`（`failed to start: …`／`failed while running: …`），修好 `aos-agent llm reset`／`tools reset` 再 `aos-agent ctl start`；退 0 照舊下表。`d1ed1abe` aos-llm-kernel 認這種列當收尾，不卡死。文件 `1ed1913c`、`c6a332e1`（N-28 11-05 晚補 ⑤）。
+- 題 2：`0d2b1c7b` aos-daemon-ctl 六個寄信子命令收 `--reply-to BOX`（只寄不等）；`0fda0628` 判官不掛的原因改英文；`d75bb970` aos-agent ctl 的 add／rm／start／stop／sleep／wake 每封開暫時回信信箱（`$TMPDIR/aos-agent-reply-*`，用完刪），判官回 `applied: false`＝立刻 `AddRejected`／`CtlRejected`＋代號原因。aos-daemon 本來就對帶 `reply_to` 的好信回 `applied: true`，沒改。
+- 實測（/tmp/edgeD1-*、edgeD2-*）：跑 2.5 秒退 3＝`stopped`、`start` 再起；3.5 秒失敗、kill -9 也留；模式 1 白名單外 0.4 秒 `AddRejected`、滿額 `SlotMissing`、睡一隻加一隻再 wake＝`CtlRejected SlotMissing`；模式 2 同；沒設 `AOS_KERNEL` 照舊。
+- 別線五件：aos-llm 相對 `AOS_LLM_KERNEL` `59395748`（有 `AOS_DAEMON`＝相對它，人殼＝相對 cwd）；aos-eca-screen watch `6519dff2`（loop 不在了就退 0）；aos-exec 空 `.stack` `6f8dc8cd`（自己新建的、跑完還空就收回）；llm daemon 身體重建時整台停 → edge-daemon 題 1 一起解；aos-daemon-ctl 沒 `reply_to` → 題 2 解。
+
+### 落實時代定（可翻案）
+
+1. exec 型退非 0 照舊下表（start 不收 exec 型，留著只能 rm）；adopt 接回的拿不到結束碼，照舊下表。
+2. wake／start 後 3 秒內退 0 也下表（原本留 stopped）。
+3. 暫時回信信箱放 `$TMPDIR`、不放 daemon 的 stack；ctl 六個寄信子命令都等回信，不只 add；非 add 被拒新開代號 `CtlRejected`。
+4. 表上已是結果、回信還沒到：最多再等 1 秒；回信讀不懂＝當「到了、不是拒絕」。
+5. 判官／daemon 放在別的帳號（Linux 權限那級）時寫不進暫時信箱，aos-agent 退回舊的等法（寫進 extras/agent docs/02）。
+6. aos-llm：只要有 `AOS_DAEMON` 就相對它（人殼 export 了也一樣）。aos-exec：選「回來時收自己建的空資料夾」而非「要用才建」（N-58、N-59 原話「要自動建」）；argv 陣列入口 exec 後收不到，寫已知差異。watch 看定義自己宣告的 state 窗、不問 daemon 表。

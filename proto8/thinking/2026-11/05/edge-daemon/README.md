@@ -45,7 +45,7 @@
 
 ## 要你看的題
 
-### 題 1：daemon 的身體一次失敗，要不要整台停
+### 題 1（已裁：記一行、下一圈再跑）：daemon 的身體一次失敗，要不要整台停
 
 **白話**：daemon 是一個開了窗的 aos-loop，所以照 aos-loop 的規矩「身體那次退非 0＝整個 loop 結束」。daemon 的身體（判官、llm kernel）只要失敗一次——`judge.json` 打錯一個字、身體的執行檔剛好在重建（A 線遇到的 `LaunchFailed`）——整台 daemon 就收工，底下全部 proc 睡下。資料不壞，再起就醒，但「硬體」因為一支程式的一次失敗就關機，有點反直覺。
 
@@ -54,7 +54,7 @@
 2. **只有起不來（LaunchFailed）才重試，退非 0 照舊停**：後果：`judge.json` 壞照樣整台停。
 3. **不改**：身體自己吞錯退 0（寫在 [aos-daemon docs/06](../../../../impls/aos-daemon/docs/06-結束碼等.md)）。
 
-### 題 2：醒來之後過了 3 秒才失敗的，要不要也留在表上
+### 題 2（已裁：一起改成留表）：醒來之後過了 3 秒才失敗的，要不要也留在表上
 
 **白話**：你定了「定義沒搬、醒不來的留 `stopped` 並寫原因」。現在的做法是看時間：wake／start 之後 3 秒內就退＝留 `stopped`＋原因；超過 3 秒才退＝當成正常結束、從表上拿掉，原因也沒了。實測醒來 3.5 秒才失敗的（例：身體要先連網路才發現壞了），表上就不見了，`ls` 看不到它曾經存在。
 
@@ -66,3 +66,17 @@
 ## 沒測到的
 
 - 判官模式 2（procs-kernel）的收工與開門；`adopt: false`；procs_state 切檔壞掉；真跨帳號（只用另一個路徑模擬家目錄）。
+
+## 使用者裁定（11-05，頂層轉達，選項原文）
+
+- 題 1 →「記一行、下一圈再跑 (Recommended)」
+- 題 2 →「一起改成留表 (Recommended)」：不分 3 秒內外，出錯結束一律留表標 stopped＋原因；3 秒只用來區分「起不來」與「跑一半掛了」的原因字樣。
+
+上面「代定 6」被這兩題推翻。
+
+## 裁定落實（11-05 晚，隊長）
+
+- 題 1：`34f17425` aos-daemon 在建構子把 Loop 的身體收過來、自己在每拍最後跑：身體退 10 以外的非 0 或起不來＝stderr 一行 `aos-daemon: body … failed (code N), retrying next round`（碼或錯變了才印，好了印 `ok again`）、`state.json` 記 `body_code`、下一拍再跑；退 10 照舊收工。aos-loop 沒改（P-20 照舊，CONVENTION P-20 加 11-05 註）。
+- 題 2：`c946aa72` loop 型退非 0 一律留 `stopped`＋reason；3 秒內＝`failed to start: exited within 3s of wake/start (code N)`，之後＝`failed while running: exited with code N: <stderr 最後一行>`。`d1ed1abe` aos-llm-kernel：列有 reason＝當收尾（看碼、該重掛先 procs_removed、記 remount、列拔了才再掛）。NORMS N-28「11-05 晚補 ⑤⑥」。
+- 實測（/tmp/edgeD1-*）：身體 0→3→5→0 各一行、底下 proc 照顧著；llm daemon 的 kernel.json 改壞 1.5 秒照跑、修好 ask 照答；問腦 loop kill -9 一次＝重掛答對、兩次＝`EndpointFailed`，表上不留列、不卡死。
+- 落實時代定見 [edge-agent 落實時代定](../edge-agent/README.md#落實時代定可翻案)（同一批）；另：身體起不來時 `body_code` 記 1；身體退 10 時 state 的 phase＝`stopped`（原本 `done`）。
