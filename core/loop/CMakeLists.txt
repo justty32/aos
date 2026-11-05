@@ -23,19 +23,19 @@ aos_add_subcommand(
     NAME run
     ENTRY aos_run_cli_main
     LIBRARY aos_loop_cli
-    SUMMARY "推進一個資料夾 N 回合"
+    SUMMARY "advance a folder N turns"
 )
 
 aos_add_subcommand(
     NAME deliver
     ENTRY aos_deliver_cli_main
     LIBRARY aos_loop_cli
-    SUMMARY "把一條指令原子投遞進 inbox"
+    SUMMARY "atomically deliver an instruction into inbox"
 )
 
 aos_add_subcommand(
     NAME stop
     ENTRY aos_stop_cli_main
     LIBRARY aos_loop_cli
-    SUMMARY "停掉這個資料夾的背景 loop"
+    SUMMARY "stop this folder's background loop"
 )

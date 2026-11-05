@@ -42,7 +42,7 @@ class RunPidFile {
         {
             std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
             if (!output) {
-                std::fprintf(stderr, "%s: 無法寫入 %s\n", program,
+                std::fprintf(stderr, "%s: cannot write %s\n", program,
                              temporary.c_str());
                 return false;
             }
@@ -52,7 +52,7 @@ class RunPidFile {
         std::filesystem::rename(temporary, path, code);
         if (code) {
             std::filesystem::remove(temporary, code);
-            std::fprintf(stderr, "%s: 無法發佈 %s\n", program, path.c_str());
+            std::fprintf(stderr, "%s: cannot publish %s\n", program, path.c_str());
             return false;
         }
         path_ = path;
@@ -70,16 +70,16 @@ class RunPidFile {
 
 void usage(FILE *stream, const char *program) {
     std::fprintf(stream,
-                 "用法：%s [folder] [--step N] [--interval MS] [--daemon]\n"
+                 "usage: %s [folder] [--step N] [--interval MS] [--daemon]\n"
                  "\n"
-                 "  [folder]       要推進的世界資料夾；省略時從目前位置尋找\n"
-                 "  --step N       推進 N 回合；0 代表持續執行直到中斷\n"
-                 "  --interval MS  沒有新投遞時，回合之間最長等待的毫秒數；\n"
-                 "                 前景預設 100、--daemon 預設 1000。有新的\n"
-                 "                 inbox 或 say 訊息時會立刻開下一回合\n"
-                 "  --daemon       脫離終端在背景跑（隱含 --step 0），輸出寫到\n"
-                 "                 .aos/run.log；用 aos stop 停掉\n"
-                 "  -h, --help     顯示這份完整用法\n",
+                 "  [folder]       world folder to advance; default: search up from cwd\n"
+                 "  --step N       advance N turns; 0 means run until interrupted\n"
+                 "  --interval MS  max ms to wait between turns when nothing new\n"
+                 "                 arrives; default 100, or 1000 with --daemon. New\n"
+                 "                 inbox or say messages start the next turn at once\n"
+                 "  --daemon       run detached in the background (implies --step 0);\n"
+                 "                 output goes to .aos/run.log; stop it with aos stop\n"
+                 "  -h, --help     show this full usage\n",
                  program);
 }
 
@@ -119,13 +119,13 @@ class SignalHandlers {
         sigaddset(&action.sa_mask, SIGTERM);
         action.sa_flags = 0;
         if (::sigaction(SIGINT, &action, &old_int_) != 0) {
-            error = std::string("無法安裝 SIGINT 處理器：") +
+            error = std::string("cannot install SIGINT handler: ") +
                     std::strerror(errno);
             return false;
         }
         int_installed_ = true;
         if (::sigaction(SIGTERM, &action, &old_term_) != 0) {
-            error = std::string("無法安裝 SIGTERM 處理器：") +
+            error = std::string("cannot install SIGTERM handler: ") +
                     std::strerror(errno);
             ::sigaction(SIGINT, &old_int_, nullptr);
             int_installed_ = false;
@@ -156,7 +156,7 @@ class RunLock {
     bool acquire(const std::string &path, const char *program) {
         fd_ = ::open(path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0644);
         if (fd_ < 0) {
-            std::fprintf(stderr, "%s: 無法開啟鎖 %s：%s\n", program,
+            std::fprintf(stderr, "%s: cannot open lock %s: %s\n", program,
                          path.c_str(), std::strerror(errno));
             return false;
         }
@@ -166,10 +166,10 @@ class RunLock {
         if (lock_error == EWOULDBLOCK || lock_error == EAGAIN) {
             std::fprintf(
                 stderr,
-                "%s: 這個世界已經有一條 aos run 在推進（鎖：%s）；同一個世界一次只能有一條 loop\n",
+                "%s: another aos run is already advancing this world (lock: %s); only one loop per world at a time\n",
                 program, path.c_str());
         } else {
-            std::fprintf(stderr, "%s: 無法取得鎖 %s：%s\n", program,
+            std::fprintf(stderr, "%s: cannot acquire lock %s: %s\n", program,
                          path.c_str(), std::strerror(lock_error));
         }
         return false;
@@ -183,25 +183,25 @@ void print_failures(const char *program,
                     const aos::loop::TurnSummary &summary) {
     for (const auto &failure : summary.failures) {
         if (failure.signal != 0) {
-            std::fprintf(stderr, "%s: turn %llu 的 %s 被 signal %d 中止\n",
+            std::fprintf(stderr, "%s: turn %llu: %s killed by signal %d\n",
                          program,
                          static_cast<unsigned long long>(summary.turn),
                          failure.id.c_str(), failure.signal);
         } else if (failure.exit == 127) {
             std::fprintf(
                 stderr,
-                "%s: turn %llu 的 %s 失敗：找不到指令 %s（exit 127）——它不在 PATH 上\n",
+                "%s: turn %llu: %s failed: command %s not found (exit 127); it is not on PATH\n",
                 program,
                 static_cast<unsigned long long>(summary.turn),
                 failure.id.c_str(), failure.argv0.c_str());
         } else if (failure.stderr_line.empty()) {
-            std::fprintf(stderr, "%s: turn %llu 的 %s 以 exit %d 結束\n",
+            std::fprintf(stderr, "%s: turn %llu: %s exited with %d\n",
                          program,
                          static_cast<unsigned long long>(summary.turn),
                          failure.id.c_str(), failure.exit);
         } else {
             std::fprintf(stderr,
-                         "%s: turn %llu 的 %s 以 exit %d 結束；%s\n",
+                         "%s: turn %llu: %s exited with %d; %s\n",
                          program,
                          static_cast<unsigned long long>(summary.turn),
                          failure.id.c_str(), failure.exit,
@@ -218,11 +218,11 @@ int finish_interrupted(const char *program, const aos::loop::Layout &layout,
     state.agents = aos::loop::mirror_agents(layout);
     std::string error;
     if (!aos::loop::write_state(layout, state, error)) {
-        std::fprintf(stderr, "%s: 無法記錄中斷狀態：%s\n", program,
+        std::fprintf(stderr, "%s: cannot record interrupted state: %s\n", program,
                      error.c_str());
     }
     std::fprintf(stderr,
-                 "%s: 收到中斷訊號，已終止 turn %llu 的所有指令\n",
+                 "%s: interrupted; terminated all commands of turn %llu\n",
                  program, static_cast<unsigned long long>(turn));
     return 130;
 }
@@ -279,7 +279,7 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
              * ——歧義的參數要有一個可預期的答案，而不是看誰寫在後面。 */
             if (saw_step) {
                 std::fprintf(stderr,
-                             "%s: --step 重複指定；沿用第一個 %llu，忽略 %s\n",
+                             "%s: --step given more than once; keeping the first (%llu), ignoring %s\n",
                              program,
                              static_cast<unsigned long long>(steps),
                              argv[index + 1]);
@@ -295,7 +295,7 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
             }
             if (saw_interval) {
                 std::fprintf(stderr,
-                             "%s: --interval 重複指定；沿用第一個 %llu，忽略 %s\n",
+                             "%s: --interval given more than once; keeping the first (%llu), ignoring %s\n",
                              program,
                              static_cast<unsigned long long>(interval),
                              argv[index + 1]);
@@ -311,7 +311,7 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
 
     if (daemon) {
         if (saw_step && steps != 0) {
-            std::fprintf(stderr, "%s: --daemon 只能跟 --step 0 併用\n",
+            std::fprintf(stderr, "%s: --daemon can only be used with --step 0\n",
                          program);
             return 2;
         }
@@ -327,23 +327,23 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
         code.clear();
         const bool exists = std::filesystem::exists(folder, code);
         if (code) {
-            std::fprintf(stderr, "%s: 無法檢查 %s：%s\n", program,
+            std::fprintf(stderr, "%s: cannot check %s: %s\n", program,
                          folder.c_str(), code.message().c_str());
             return 1;
         }
         if (!exists) {
-            std::fprintf(stderr, "%s: %s 不存在\n", program,
+            std::fprintf(stderr, "%s: %s does not exist\n", program,
                          folder.c_str());
             return 1;
         }
         const bool is_directory = std::filesystem::is_directory(folder, code);
         if (code) {
-            std::fprintf(stderr, "%s: 無法檢查 %s：%s\n", program,
+            std::fprintf(stderr, "%s: cannot check %s: %s\n", program,
                          folder.c_str(), code.message().c_str());
             return 1;
         }
         if (!is_directory) {
-            std::fprintf(stderr, "%s: %s 不是資料夾\n", program,
+            std::fprintf(stderr, "%s: %s is not a folder\n", program,
                          folder.c_str());
             return 1;
         }
@@ -370,8 +370,8 @@ extern "C" int aos_run_cli_main(int argc, char *argv[]) {
                 std::fprintf(stderr, "%s: %s\n", program, error.c_str());
                 return 1;
             }
-            std::printf("aos run: 背景 loop 已啟動（pid %lld，log 在 "
-                        ".aos/run.log，停止用 aos stop）\n",
+            std::printf("aos run: background loop started (pid %lld, log at "
+                        ".aos/run.log; stop it with aos stop)\n",
                         static_cast<long long>(process.pid));
             return 0;
         }

@@ -14,7 +14,7 @@ DaemonProcess daemonize(const std::string &log_path, std::string &error) {
     const char *const log_path_data = log_path.c_str();
     int ready_pipe[2] = {-1, -1};
     if (::pipe(ready_pipe) != 0) {
-        error = std::string("無法建立 daemon 通知管線: ") +
+        error = std::string("cannot create daemon notify pipe: ") +
                 std::strerror(errno);
         return {};
     }
@@ -25,7 +25,7 @@ DaemonProcess daemonize(const std::string &log_path, std::string &error) {
         const int saved_errno = errno;
         ::close(ready_pipe[0]);
         ::close(ready_pipe[1]);
-        error = std::string("無法 fork 背景 loop: ") +
+        error = std::string("cannot fork background loop: ") +
                 std::strerror(saved_errno);
         return {};
     }
@@ -64,7 +64,7 @@ bool await_daemon(const DaemonProcess &process, std::string &error) {
     int status = 0;
     while (::waitpid(process.pid, &status, 0) < 0 && errno == EINTR) {
     }
-    error = "背景 loop 啟動失敗";
+    error = "background loop failed to start";
     return false;
 }
 

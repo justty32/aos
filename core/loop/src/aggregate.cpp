@@ -91,7 +91,7 @@ std::vector<wire::Inst> aggregate(const Layout &layout, std::uint64_t turn,
             fs::join(destination_dir,
                      fs::basename_sans_json(source) + ".json");
         if (std::rename(source.c_str(), destination.c_str()) != 0) {
-            error = "無法搬移 " + source + ": " + std::strerror(errno);
+            error = "cannot move " + source + ": " + std::strerror(errno);
             return insts;
         }
 
@@ -102,7 +102,7 @@ std::vector<wire::Inst> aggregate(const Layout &layout, std::uint64_t turn,
                                      fs::basename_sans_json(destination),
                                      parse_error);
         if (!inst) {
-            std::fprintf(stderr, "aos run: 跳過 %s: %s\n",
+            std::fprintf(stderr, "aos run: skipping %s: %s\n",
                          destination.c_str(), parse_error.c_str());
             continue;
         }
@@ -129,7 +129,7 @@ std::vector<wire::Inst> aggregate(const Layout &layout, std::uint64_t turn,
         std::string parse_error;
         auto inst = wire::parse_inst(text, id, parse_error);
         if (!inst) {
-            std::fprintf(stderr, "aos run: 跳過 %s: %s\n",
+            std::fprintf(stderr, "aos run: skipping %s: %s\n",
                          destination.c_str(), parse_error.c_str());
             continue;
         }

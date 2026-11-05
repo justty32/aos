@@ -13,13 +13,13 @@ namespace {
 
 void usage(FILE *stream, const char *program) {
     std::fprintf(stream,
-                 "用法：%s [folder] <inst.json>\n"
-                 "      %s [folder] -- <argv...>\n"
+                 "usage: %s [folder] <inst.json>\n"
+                 "       %s [folder] -- <argv...>\n"
                  "\n"
-                 "  [folder]    要投遞的世界資料夾；省略時從目前位置尋找\n"
-                 "  <inst.json> 讀取既有的指令 JSON 並投遞\n"
-                 "  --          把後續參數當成新指令的 argv\n"
-                 "  -h, --help  顯示這份完整用法\n",
+                 "  [folder]    world folder to deliver to; default: search up from cwd\n"
+                 "  <inst.json> read an existing instruction JSON and deliver it\n"
+                 "  --          use the remaining arguments as the argv of a new instruction\n"
+                 "  -h, --help  show this full usage\n",
                  program, program);
 }
 
@@ -102,7 +102,7 @@ extern "C" int aos_deliver_cli_main(int argc, char *argv[]) {
         }
         std::string text;
         if (!read_file(argv[argument], text)) {
-            std::fprintf(stderr, "%s: 無法讀取 %s\n", program,
+            std::fprintf(stderr, "%s: cannot read %s\n", program,
                          argv[argument]);
             return 1;
         }

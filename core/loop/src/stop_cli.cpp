@@ -71,12 +71,12 @@ extern "C" int aos_stop_cli_main(int argc, char *argv[]) {
     pid_t pid = -1;
     if (!opened || !parse_pid(text, pid) || !is_alive(pid)) {
         std::remove(pid_path.c_str());
-        std::fputs("aos stop: 沒有在跑的 loop\n", stdout);
+        std::fputs("aos stop: no loop is running\n", stdout);
         return 0;
     }
 
     if (::kill(pid, SIGTERM) != 0 && errno != ESRCH) {
-        std::fprintf(stderr, "aos stop: 無法停止 pid %lld: %s\n",
+        std::fprintf(stderr, "aos stop: cannot stop pid %lld: %s\n",
                      static_cast<long long>(pid), std::strerror(errno));
         return 1;
     }
@@ -84,7 +84,7 @@ extern "C" int aos_stop_cli_main(int argc, char *argv[]) {
         wait_100_ms();
         if (!is_alive(pid)) {
             std::remove(pid_path.c_str());
-            std::printf("已停止 loop（pid %lld）\n",
+            std::printf("stopped loop (pid %lld)\n",
                         static_cast<long long>(pid));
             return 0;
         }
@@ -92,7 +92,7 @@ extern "C" int aos_stop_cli_main(int argc, char *argv[]) {
 
     ::kill(pid, SIGKILL);
     std::remove(pid_path.c_str());
-    std::printf("已強制停止 loop（pid %lld）\n",
+    std::printf("force-stopped loop (pid %lld)\n",
                 static_cast<long long>(pid));
     return 0;
 }

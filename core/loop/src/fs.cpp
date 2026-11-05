@@ -26,13 +26,13 @@ bool read_file(const std::string &path, std::string &text,
                std::string &error) {
     std::ifstream input(path, std::ios::binary);
     if (!input) {
-        error = "無法讀取 " + path;
+        error = "cannot read " + path;
         return false;
     }
     std::ostringstream buffer;
     buffer << input.rdbuf();
     if (!input.eof() && input.fail()) {
-        error = "讀取失敗 " + path;
+        error = "read failed: " + path;
         return false;
     }
     text = buffer.str();
@@ -46,19 +46,19 @@ bool write_atomic(const std::string &path, const std::string &text,
         std::ofstream output(temporary,
                              std::ios::binary | std::ios::out | std::ios::trunc);
         if (!output) {
-            error = "無法寫入 " + temporary;
+            error = "cannot write " + temporary;
             return false;
         }
         output.write(text.data(), static_cast<std::streamsize>(text.size()));
         output.close();
         if (!output) {
-            error = "寫入失敗 " + temporary;
+            error = "write failed: " + temporary;
             std::remove(temporary.c_str());
             return false;
         }
     }
     if (std::rename(temporary.c_str(), path.c_str()) != 0) {
-        error = system_error("無法發佈", path);
+        error = system_error("cannot publish", path);
         std::remove(temporary.c_str());
         return false;
     }
@@ -71,9 +71,9 @@ bool mkdir_p(const std::string &path, std::string &error) {
     if (code) {
         const std::string reason =
             code == std::errc::no_such_file_or_directory
-                ? "路徑不存在（" + code.message() + "）"
+                ? "path does not exist (" + code.message() + ")"
                 : code.message();
-        error = "無法建立 " + path + ": " + reason;
+        error = "cannot create " + path + ": " + reason;
         return false;
     }
     return true;
@@ -85,12 +85,12 @@ std::vector<std::string> list_json_files(const std::string &dir,
     std::error_code code;
     if (!std::filesystem::exists(dir, code)) return paths;
     if (code) {
-        error = "無法檢查 " + dir + ": " + code.message();
+        error = "cannot check " + dir + ": " + code.message();
         return paths;
     }
     std::filesystem::directory_iterator entries(dir, code);
     if (code) {
-        error = "無法列出 " + dir + ": " + code.message();
+        error = "cannot list " + dir + ": " + code.message();
         return paths;
     }
     for (const auto &entry : entries) {
