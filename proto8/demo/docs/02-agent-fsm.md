@@ -9,21 +9,24 @@ agent-fsm/
   _entry       {"argv": ["aos-agent", "ctl", "add", {"$env": "AOS_CD"}], "cwd": {"$env": "AOS_WS"}}（單子，沒 +x；11-05：aos-exec 這個資料夾＝掛上 daemon）
   body.json    ["aos-loop", "loop.json"]（身體的入口；interfaces.json 的 entry 指它，aos-agent ctl add 掛的是它）
   loop.json    {"exec": "fsm.json", "interval_ms": 300, "ctl": "ctl.json", "state": "state.json"}（沒有 max：常駐，靠 ctl 的 stop 收工）
-  fsm.json     四格：idle {"0": "think", "10": "idle"}、think（brain.py --system system.txt）{"0": "wait", "10": "idle"}、
+  fsm.json     四格：idle {"0": "think", "10": "idle"}、think（brain.py --system system.txt --memory memory）{"0": "wait", "10": "idle"}、
                wait {"0": "act", "10": "wait"}、act {"0": "think", "10": "idle"}
   idle.py      收信：$AOS_STACK/queue/ 全部收進 history.jsonl（接進去就 aos-post done）；有好信退 0、沒有退 10；[--prompt FILE] 開場白
   brain.py     組請求、不碰網路：history（＋system、tools）→ $AOS_STACK/think/request.json（llm kernel 請求信的 body）；退 0；沒事做退 10
   wait.py      寄與收：沒寄＝aos-llm send --reply-to $AOS_STACK/think/reply、名字記進 think/pending.txt、退 10；
                已寄＝aos-llm recv：沒到退 10（loop 照跑）、到了那則 assistant 接進 history 退 0、kernel 回錯退 1
   act.py       跑工具：最後一則 assistant 的 tool_calls 逐個 aos-tools call，結果各接一則 tool、退 0；沒有 tool_calls（最後答案）退 10
-  system.txt   system 訊息（brain.py 的 --system 指到它；每次從檔讀、不存進 history）
-  tools.json   aos-tools 登記檔：clock、self_tools（改自己的工具）、agents（生子 agent）（"../../lib/…"；跟 eca-claude 同一份；後兩個 11-05 使用者裁「內建」）；這隻自己加減的在 $AOS_STACK/tools.json（覆蓋層，aos-agent tools）
+  system.txt   system 訊息（brain.py 的 --system 指到它；每次從檔讀、不存進 history；11-05 晚改英文）
+  tools.json   aos-tools 登記檔：clock、self_tools（改自己的工具）、agents（生子 agent）、memory（查知識庫，11-05 晚）（"../../lib/…"；跟 eca-claude 同一份；後兩個 11-05 使用者裁「內建」）；這隻自己加減的在 $AOS_STACK/tools.json（覆蓋層，aos-agent tools）
   llm.json     腦設定：{}＝用 kernel 的預設代號；只認一個鍵 endpoint（kernel 的 endpoint 包代號，例 "smart-high"；model、temperature 等屬性固定在包上，llm.json 不寫、信裡也不帶 model）
   interfaces.json  {"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json"}}（沒有 screen）
+  tools/memory/  memory 的包裝資料夾：_tooldef.json／_metainfo.json 捷徑指回 lib/agent/memory，_entry 是一行單子
+               ["../../../../lib/agent/memory/_entry"]（不能是捷徑：aos-exec 解開捷徑後 AOS_CD 會是 lib 那格，找不到這裡的設定），
+               _memory.json {"base": "../../../../knowledge/aos"}＝這隻的知識庫（換庫改這行；agent-knowledge 01）
   agents.json  工具 agents 的設定 {"max_children": 4}（這隻最多同時生幾隻；stack 裡的 agents.json 只放改過的鍵＝這隻的覆蓋）
 ```
 
-**腦＝llm kernel**：think 不自己打端點，wait 把請求寄進 `$AOS_LLM_KERNEL/mailbox/`（`AOS_LLM_KERNEL`＝[llm kernel](03-llm-kernel.md) 那台 daemon 的 stack，由人設）、之後一拍一拍收回信；寄完 loop 照跑，等回信的期間 `pause`／`stop` 每拍都生效。端點、模型、金鑰都在 kernel 的 `kernel.json`（代號表），agent 只寫代號。範本的 `llm.json` 是 `{}`＝不寫 `endpoint`、用 kernel 的預設（範本 kernel 預設是假腦 `fake`：有工具就先叫 clock〔包寫 `"tool": "clock"`；沒有 clock 就叫第一個〕、再答一句「FAKE ANSWER to: …」），本機沒開 LM Studio 也跑得動。**要真腦**：`llm.json` 寫 `{"endpoint": "stupid-fast"}`（LM Studio 開在 localhost:1234）或 `smart-high`／`luna`／`sol`（LiteLLM），代號要是 kernel 的 `endpoints` 表裡有的（`aos-llm ls` 列出來，[03](03-llm-kernel.md)）；正在跑的那隻只改它自己的就好：`aos-agent llm set endpoint=stupid-fast`（只存改過的鍵、下一題生效、`reset` 回定義）。**工具**：腦看到的名字＝登記名，act 直接 `aos-tools call`（不經 aos-mcp）；brain／act 讀的是「定義的 `tools.json` 疊這隻的覆蓋層 `$AOS_STACK/tools.json`」（`aos-tools --overlay`，aos-agent `tools add／rm` 只存差異，11-05，[aos-agent docs/03](../../extras/agent/docs/03-tools覆蓋層.md#tools-覆蓋層)），工具小格 `$AOS_STACK/tools/<名>/`；工具退非 0、沒登記、arguments 壞都接成 tool 訊息回給腦、不停（P-41）。**history 就是全貌**：user、assistant（含 tool_calls）、tool 都在 `$AOS_STACK/history.jsonl`；回答＝最新那則沒有 `tool_calls` 的 assistant。stack 裡多一格 `think/`：`request.json`（這次的請求）、`pending.txt`（寄出去還沒收的信件名稱）、`reply/`（回信信箱）。
+**腦＝llm kernel**：think 不自己打端點，wait 把請求寄進 `$AOS_LLM_KERNEL/mailbox/`（`AOS_LLM_KERNEL`＝[llm kernel](03-llm-kernel.md) 那台 daemon 的 stack，由人設）、之後一拍一拍收回信；寄完 loop 照跑，等回信的期間 `pause`／`stop` 每拍都生效。端點、模型、金鑰都在 kernel 的 `kernel.json`（代號表），agent 只寫代號。範本的 `llm.json` 是 `{}`＝不寫 `endpoint`、用 kernel 的預設（範本 kernel 預設是假腦 `fake`：有工具就先叫 clock〔包寫 `"tool": "clock"`；沒有 clock 就叫第一個〕、再答一句「FAKE ANSWER to: …」），本機沒開 LM Studio 也跑得動。**要真腦**：`llm.json` 寫 `{"endpoint": "stupid-fast"}`（LM Studio 開在 localhost:1234）或 `smart-high`／`luna`／`sol`（LiteLLM），代號要是 kernel 的 `endpoints` 表裡有的（`aos-llm ls` 列出來，[03](03-llm-kernel.md)）；正在跑的那隻只改它自己的就好：`aos-agent llm set endpoint=stupid-fast`（只存改過的鍵、下一題生效、`reset` 回定義）。**工具**：腦看到的名字＝登記名，act 直接 `aos-tools call`（不經 aos-mcp）；brain／act 讀的是「定義的 `tools.json` 疊這隻的覆蓋層 `$AOS_STACK/tools.json`」（`aos-tools --overlay`，aos-agent `tools add／rm` 只存差異，11-05，[aos-agent docs/03](../../extras/agent/docs/03-tools覆蓋層.md#tools-覆蓋層)），工具小格 `$AOS_STACK/tools/<名>/`；工具退非 0、沒登記、arguments 壞都接成 tool 訊息回給腦、不停（P-41）。**知識庫**（11-05 晚，[agent-knowledge 03](../../thinking/2026-11/05/agent-knowledge/03-接進agent與工具說明.md)）：think 格的 `--memory memory`＝每次組請求前叫一次登記名 `memory` 的工具 `{"op": "read"}`，印出來的根（aos 一頁簡介＋目錄）接在 `system.txt` 後面、同一則 system 訊息；腦要更深的自己叫 `memory`。這隻用 `aos-agent tools rm memory` 拿掉＝也不帶根；叫壞了＝`agent-fsm: error: MemoryFailed …` 停下。**history 就是全貌**：user、assistant（含 tool_calls）、tool 都在 `$AOS_STACK/history.jsonl`；回答＝最新那則沒有 `tool_calls` 的 assistant。stack 裡多一格 `think/`：`request.json`（這次的請求）、`pending.txt`（寄出去還沒收的信件名稱）、`reply/`（回信信箱）。
 
 ```sh
 # PATH 要有 impls 的 aos-exec／aos-loop／aos-fsm／aos-post／aos-llm-kernel／aos-llm、proto8/bin 的 aos-tools

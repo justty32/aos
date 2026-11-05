@@ -5,7 +5,7 @@
 aos agent 想問腦之前先 `aos-tools ls --json` 拿工具清單，腦要叫工具時 `aos-tools call 名`；
 claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的翻譯櫃台）。
 
-    aos-tools [--file F] add [--override] [--name N] [--no-cache] XXX   登記 XXX（檔或資料夾；相對路徑從 cwd 算），存絕對路徑
+    aos-tools [--file F] add [--override] [--name N] [--no-cache] [--env K=V]... XXX   登記 XXX（檔或資料夾；相對路徑從 cwd 算），存絕對路徑
     aos-tools [--file F] rm XXX                            拿掉（XXX＝工具名；不是登記過的名字就當路徑，拿掉指到那裡的）
     aos-tools [--file F] ls [--json]                       列：一行一個「名字 TAB 種類 TAB 路徑」；--json＝一行 JSON 陣列
     aos-tools [--file F] get XXX                           一個工具一行 JSON：name、kind、path、tooldef、metainfo（有才給）
@@ -31,6 +31,10 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   O 不在＝沒有覆蓋（就是 F）。疊法：F 的工具先拿掉 rm 裡的名字（F 裡沒有的＝忽略），再放上 add 的（同名蓋過 F）。
   有 --overlay 時 add／rm 只寫 O、不碰 F：add＝寫進 O 的 add（path 存相對 O 的資料夾，字串算、不 realpath）、名字從 rm 拿掉；
   rm＝從 O 的 add 拿掉、F 裡有的名字記進 O 的 rm。撞名照常（看疊好的那份）。O 不解指示詞；O 寫壞＝RegistryBad。
+登記格選填 env（11-05 晚 agent-knowledge R1）：{"名": {"path": …, "env": {"AOS_MEMORY": "/x/knowledge/aos"}}}，call 時合進那次呼叫的環境
+  （蓋過外面同名的）；值照字面用、不當路徑解（C-56；要相對就靠讀它的工具自己的規則，例 memory 的 AOS_MEMORY 相對 $AOS_DAEMON）。
+  鍵只收 [A-Za-z_][A-Za-z0-9_]*、值只收字串，別的＝RegistryBad。add --env K=V（可重複）寫進那一格；ls／get 不印 env。
+  用途：覆蓋層（aos-agent tools add 寫的）也能替這一隻換知識庫，不必在定義裡做包裝資料夾。
 工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收不管。
 工具名：--name ＞ 檔名去掉副檔名（資料夾＝資料夾名），只收 [A-Za-z0-9_-]、最多 64 字（OpenAI／MCP 的限制）。撞名＝ToolExists，--override 蓋掉。
 不符合要求一律報錯、不猜不跳過（ls／get 碰到登記了但壞掉的工具也報錯，訊息帶工具名）。
@@ -44,13 +48,14 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
 NAME = "aos-tools"
-USAGE = "aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-cache] XXX | rm XXX | ls [--json] | get XXX | call NAME"
+USAGE = "aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-cache] [--env K=V]... XXX | rm XXX | ls [--json] | get XXX | call NAME"
+ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 OVERLAY = None                                       # --overlay O（11-05）；main 裡定
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 TOOLDEF_TIMEOUT_S = 10
 aos_flags.HELP = """aos-tools - one tool registry (tools.json) per agent folder: which tools this agent can call.
 
-    aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-cache] XXX   register XXX (file or folder, relative to cwd; stored absolute)
+    aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-cache] [--env K=V]... XXX   register XXX (file or folder, relative to cwd; stored absolute)
     aos-tools [--file F] [--overlay O] rm XXX       remove it (XXX = tool name; not a registered name = a path, remove the ones pointing there)
     aos-tools [--file F] [--overlay O] ls [--json]  list: one line "NAME TAB KIND TAB PATH"; --json = one JSON array line
     aos-tools [--file F] [--overlay O] get XXX      one JSON line per tool: name, kind, path, tooldef, metainfo (if any)
@@ -60,6 +65,8 @@ Registry: --file > ./tools.json, shaped {"tools": {"NAME": {"path": "/abs/path"}
 Kinds (as aos-exec sees them): dir (a folder with _tooldef.json, optional _metainfo.json), json (a JSON file without +x that has a top-level
   _tooldef), exe (an executable: `XXX --tooldef` prints the definition within 10 s; cached by mtime and size unless add --no-cache).
   Calling: dir / json = aos-exec XXX with the arguments on stdin; exe = aos-exec XXX --tool-call $AOS_STACK/tool_call.json (needs AOS_STACK).
+Entry key env (optional): {"NAME": {"path": ..., "env": {"K": "V"}}}; call adds these variables to the tool's environment
+  (values taken literally, not as paths). add --env K=V (repeatable) writes them.
 --overlay O: use F with the overlay O on top ({"add": {NAME: entry}, "rm": [NAME]}); add / rm then write O only.
 Tool names: --name > file name without extension (folder = folder name); [A-Za-z0-9_-], at most 64 chars.
 Errors: one stderr line `aos-tools: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, CommandUnknown, RegistryBad, PathMissing,
@@ -226,6 +233,9 @@ def entries(reg, where, tools):
             raise Fail("RegistryBad", "%s: %s/%s must be {\"path\": non-empty string}" % (reg, where, name))
         if "cache" in e and e["cache"] is not False and not isinstance(e["cache"], dict):
             raise Fail("RegistryBad", "%s: %s/%s/cache must be false (no cache) or an object (cache)" % (reg, where, name))
+        env = e.get("env", {})
+        if not isinstance(env, dict) or not all(isinstance(k, str) and ENV_KEY_RE.match(k) and isinstance(v, str) for k, v in env.items()):
+            raise Fail("RegistryBad", "%s: %s/%s/env must be an object of NAME -> string (NAME like AOS_MEMORY)" % (reg, where, name))
         out[name] = {"path": os.path.normpath(os.path.join(base, e["path"])), "entry": e}
     return out
 
@@ -320,9 +330,15 @@ def write_new(reg, obj):
 
 
 def cmd_add(reg, args):
-    opts, rest = aos_flags.parse(args, {"--name": "name"}, {"--override": "override", "--no-cache": "no_cache"})
+    opts, rest = aos_flags.parse(args, {"--name": "name"}, {"--override": "override", "--no-cache": "no_cache"}, {"--env": "env"})
     if len(rest) != 1:
-        raise Fail("ArgumentsBad", "add needs one XXX (usage: aos-tools [--file F] add [--override] [--name N] [--no-cache] XXX)")
+        raise Fail("ArgumentsBad", "add needs one XXX (usage: aos-tools [--file F] add [--override] [--name N] [--no-cache] [--env K=V]... XXX)")
+    env = {}
+    for kv in opts.get("env", []):
+        k, eq, v = kv.partition("=")
+        if not eq or not ENV_KEY_RE.match(k):
+            raise Fail("ArgumentsBad", "--env needs NAME=VALUE with NAME like AOS_MEMORY, got %r" % kv)
+        env[k] = v
     path = os.path.normpath(os.path.abspath(rest[0]))
     if opts.get("no_cache") and kind_of(path) != "exe":
         raise Fail("ArgumentsBad", "--no-cache is only for executables (exe); %s is %s, which has no cache anyway" % (path, kind_of(path)))
@@ -335,6 +351,8 @@ def cmd_add(reg, args):
     if name in tools and not opts.get("override"):
         raise Fail("ToolExists", "%s is already registered (points to %s); add --override to replace it" % (name, tools[name]["path"]))
     entry = {"path": path}
+    if env:
+        entry["env"] = env
     if info["kind"] == "exe":
         entry["cache"] = False if opts.get("no_cache") else info["cache"]
     if OVERLAY is not None:                          # 只寫覆蓋層：path 存相對覆蓋層所在資料夾（跟著 stack 一起搬）
@@ -398,12 +416,13 @@ def cmd_call(reg, args):
     if rest[0] not in tools:
         raise Fail("ToolMissing", "%s is not registered (available: %s)" % (rest[0], ", ".join(sorted(tools)) or "none"))
     path = tools[rest[0]]["path"]
+    env = dict(os.environ, **tools[rest[0]]["entry"].get("env", {}))    # 登記格的 env 蓋過外面的（11-05 晚 R1）
     if kind_of(path) != "exe":
         exe = shutil.which("aos-exec")             # 自己找：execvp 失敗時只報 PATH 最後一格，會誤導
         if exe is None:
             raise Fail("CommandMissing", "no executable aos-exec on PATH")
         try:
-            os.execv(exe, ["aos-exec", path])          # 資料夾、JSON：arguments 原樣從 stdin 進（P-41）
+            os.execve(exe, ["aos-exec", path], env)          # 資料夾、JSON：arguments 原樣從 stdin 進（P-41）
         except OSError as e:
             raise Fail("CommandMissing", "%s cannot start: %s" % (exe, e.strerror or e))
     stack = os.environ.get("AOS_STACK")
@@ -421,7 +440,7 @@ def cmd_call(reg, args):
     except OSError as e:
         raise Fail("WriteFailed", "cannot write task file %s: %s" % (task, e))
     try:
-        r = subprocess.run(["aos-exec", path, "--tool-call", task], stdin=subprocess.DEVNULL)
+        r = subprocess.run(["aos-exec", path, "--tool-call", task], stdin=subprocess.DEVNULL, env=env)
     except OSError as e:
         raise Fail("CommandMissing", "aos-exec cannot start: %s" % e)
     sys.exit(r.returncode if r.returncode >= 0 else 128 - r.returncode)

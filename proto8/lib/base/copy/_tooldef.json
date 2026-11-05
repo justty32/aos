@@ -1,5 +1,5 @@
-{"description": "複製一個檔或整個資料夾（to 的上層自動建；連結照連結複製）。to 已經有東西就不複製。回 JSON {from, to, counter_files（複製了幾個檔）}。",
+{"description": "Copy a file or a whole folder inside your workspace. Parent folders of to are created; links are copied as links. Nothing is copied if to already exists (FileBad). Returns JSON {from, to, counter_files}. Errors: PathBad, FileMissing, FileBad, CopyFailed.",
  "parameters": {"type": "object",
-                "properties": {"from": {"type": "string", "description": "原本的路徑"},
-                               "to": {"type": "string", "description": "複製到的完整路徑"}},
+                "properties": {"from": {"type": "string", "description": "source path, relative to your workspace"},
+                               "to": {"type": "string", "description": "full destination path (not the folder to copy into)"}},
                 "required": ["from", "to"]}}

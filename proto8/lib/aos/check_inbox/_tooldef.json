@@ -1,2 +1,2 @@
-{"description": "看自己信箱裡還沒處理的信與題目（只看、不拿走）。每份一行：寄件人、主旨、要不要回、內容開頭。",
+{"description": "Look at the letters in your mailbox that are not handled yet (look only, nothing is taken). One line per letter: sender, subject, whether a reply is wanted, start of the text. No arguments.",
  "parameters": {"type": "object", "properties": {}}}

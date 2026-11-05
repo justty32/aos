@@ -22,6 +22,14 @@
                                       "path": {"$env": "AOS_CD", "$path": "../../lib/base/math"}}}]},
                      {"tool_calls": [{"name": "math", "arguments": {"expr": "17*23"}}]},
                      {"content": "I added math to my own tools and used it right away: 17*23 = 391."}]},
+   "fake-demo-memory": {"exec": "../../lib/base/llm_fake", "speed": "fast", "cost": "free",
+                   "summary": "scripted fake brain for demo/docs/05 part 1 with the knowledge base: reads memory node me/self_tools, then adds math and uses it",
+                   "script": [
+                     {"tool_calls": [{"name": "memory", "arguments": {"op": "read", "path": "me/self_tools"}}]},
+                     {"tool_calls": [{"name": "self_tools", "arguments": {"op": "add", "name": "math",
+                                      "path": {"$env": "AOS_CD", "$path": "../../lib/base/math"}}}]},
+                     {"tool_calls": [{"name": "math", "arguments": {"expr": "17*23"}}]},
+                     {"content": "I read memory node me/self_tools, added math to my own tools and used it: 17*23 = 391."}]},
    "fake-demo-spawn": {"exec": "../../lib/base/llm_fake", "speed": "fast", "cost": "free",
                    "summary": "scripted fake brain for demo/docs/05 part 4: starts kid, asks it, removes it; then writes defs/helper and tries four kids",
                    "script": [

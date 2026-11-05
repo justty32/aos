@@ -4,7 +4,7 @@
 # 介面（lib/README 的契約）：stdin 收 {"op": "read"|"ls"|"find", "path"?: "…", "query"?: "…", "max_bytes"?: N}。
 #   知識庫根目錄（腦不能挑）：① 工具資料夾（$AOS_CD）裡的 _memory.json 的 "base"（定義配的；相對＝從那個資料夾算）＞
 #   ② $AOS_MEMORY（相對路徑從 $AOS_DAEMON 算，沒有＝從 cwd）；都沒有＝MemoryMissing；設定檔壞＝CfgBad。再解開捷徑。
-#   要給某隻 agent 指定知識庫：定義的 tools/memory/ 不用捷徑、改成一個小資料夾——_entry／_tooldef.json／_metainfo.json 三個捷徑指回
+#   要給某隻 agent 指定知識庫：定義的 tools/memory/ 不用捷徑、改成一個小資料夾——_entry 是一行單子 ["<到 lib>/lib/agent/memory/_entry"]（不能是捷徑：aos-exec 解開捷徑後 $AOS_CD 會變成 lib 那格）、_tooldef.json／_metainfo.json 可以是捷徑，
 #   lib/agent/memory/ 的，再加一個真的 _memory.json（使用者 11-05「隨意複製，隨意修改，隨意給agent指定、隨意拆卸增添」）。
 #   節點路徑 a/b：段用 / 接、段名只能 [a-z0-9_-]+；"" 或 "/"＝根。資料夾節點＝<根>/a/b/（文在 README.md，沒有＝空），
 #   葉節點＝<根>/a/b.md 或 a/b.json（11-05 加；同名兩個都在＝.md 優先）；先找資料夾再找葉。

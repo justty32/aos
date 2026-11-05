@@ -2,7 +2,7 @@
 
 ← [thinking README](../../../README.md)｜日 [2026-11-05](../README.md)｜前情：[feat-proto](../feat-proto/README.md)（self_tools、agents、endpoint 包、排程、份額）、[kernel-daemon](../kernel-daemon/README.md)（daemon＝最基礎 kernel）、[portable-flow](../portable-flow/README.md)（image 模型、相對管我的 daemon）｜原則：[wf/STRUCTURE 分層](../../../../../wf/STRUCTURE.md#分層原則)、[C-42、C-46、C-61](../../../../docs/CONCEPTS/05-agent.md)、[C-52、C-56、C-64、C-68](../../../../docs/CONCEPTS/01-設計理念.md)、[N-63](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[lib 工具契約](../../../../lib/docs/01-分層等.md)｜程式：[lib/agent/memory](../../../../lib/agent/memory/_entry)（新）、[knowledge/aos](../../../../knowledge/aos/README.md)（新）
 
-狀態：**工具 `memory` 與第一個知識庫 `knowledge/aos` 已做並實測（Haiku 9／9、luna 9／9）；接進三種 agent 與改寫各工具 description 等新功能隊收工後再排（[03 步驟 K1～K8](03-接進agent與工具說明.md)）**；沒動 `lib/agent/self_tools`、`agents`、`extras/agent`、demo 任何既有檔。本檔只記使用者原文（逐字）、已定、代定（可翻案）、留給他的題（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
+狀態：**工具 `memory` 與第一個知識庫 `knowledge/aos` 已做並實測（Haiku 9／9、luna 9／9）；11-05 晚接進三種 agent、工具說明改寫、R1、K5、K6、K8 已做（[06 11-05 晚 代定與結果](06-11-05晚-接線.md)）；K7（增刪改、多庫、JSON 後端）等另派 fable 規劃**。本檔只記使用者原文（逐字）、已定、代定（可翻案）、留給他的題（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
 
 ## 使用者原文（11-05 下午，逐字，依先後）
 
@@ -65,3 +65,4 @@
 | [03-接進agent與工具說明](03-接進agent與工具說明.md) | 根進 system prompt、三種 agent 怎麼拿、description 五條規則＋範例、步驟 K1～K8（等新功能隊收工） |
 | [04-實測](04-實測.md) | 九題、Haiku／luna 結果、改前改後三處 |
 | [05-給使用者的說明](05-給使用者的說明.md) | ELI5 繁中說明 |
+| [06-11-05晚-接線](06-11-05晚-接線.md) | 11-05 晚 K1～K8 與 R1：代定（可翻案）、結果 |

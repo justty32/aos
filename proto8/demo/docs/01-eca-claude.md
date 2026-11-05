@@ -9,11 +9,12 @@ eca-claude/
   _entry      ["aos-loop", "loop.json"]（JSON 入口）
   loop.json   {"exec": {"argv": ["aos-eca-turn", "--on-empty", "idle", "--on-busy", "yield", {"$env": "AOS_CD"}], "timeout_ms": 900000},
                "interval_ms": 300, "ctl": "ctl.json", "state": "state.json"}（停著等版：沒有 max；queue 空就退 0、loop 隔 300 毫秒再來；兩扇窗落在 $AOS_STACK）
-  cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms），抄 lib/agent/claude 的保守旗標（--model 不寫在這，見 llm.json）
+  cli.json    怎麼叫 CLI（kind、flags、print_flags、timeout_ms），抄 lib/agent/claude 的保守旗標（--model 不寫在這，見 llm.json）；
+              tools_flags ["--memory", "memory"]＝aos-mcp 在 MCP initialize 的 instructions 給知識庫根（Claude Code 放進它的 system prompt；11-05 晚）
   llm.json    腦設定：{"model": "sonnet"}（11-04 晚；cli_session 每題讀它疊 $AOS_STACK/llm.json 副本，補成 --model）
   （開場白：範本沒有；要就放一份檔、loop.json 的 aos-eca-turn 加 "--prompt", "prompt.txt"〔11-04 起，相對路徑從這個資料夾算〕，
               history 與 queue 都空時當第一則 user 投進 queue；沒給旗標就沒有，不自己找 prompt.txt）
-  tools.json  aos-tools 的登記檔：clock、self_tools、agents（"../../lib/…"，相對路徑從這份檔的資料夾算；後兩個 11-05 使用者裁「內建」）；
+  tools.json  aos-tools 的登記檔：clock、self_tools、agents、memory（memory 指 tools/memory/ 包裝資料夾，同 agent-fsm；"../../lib/…"，相對路徑從這份檔的資料夾算；後兩個 11-05 使用者裁「內建」）；
               cli.json 沒寫 tools＝用它，cli_session 起 CLI 前接上 aos-mcp（工具名 mcp__aos__clock…）；不要工具就刪掉它
   agents.json 工具 agents 的設定：{"max_children": 4}（這隻最多同時生幾隻；這隻的 stack 裡放一份 agents.json 只寫改過的鍵＝覆蓋）
   interfaces.json  {"aos-agent": {"screen": "screen", "tools": "tools.json", "llm": "llm.json"}}（11-04；aos-agent ctl add 只看這個宣告）

@@ -1,6 +1,6 @@
-{"description": "照 JSON 指標改工作區裡一份 JSON 檔（改 JSON 優先用這個，不用整份重寫）：set 是 {指標: 新值}（值直接給 JSON，字串、數字、物件、陣列都行；中間缺的物件層自動建；陣列尾巴接用 -），del 是要刪的指標陣列。先用 json_read 一層層找到位置再改。全部先檢查，一處不合就整份不改。",
+{"description": "Change a JSON file in your workspace by JSON pointer (prefer this over rewriting the file). set = {pointer: new value} (any JSON value; missing object levels are created; - appends to an array); del = array of pointers to delete. Find the place with json_read first. Everything is checked first; if one pointer fails, nothing is written. Errors: PathBad, FileMissing, FileBad, PointerBad, PointerMissing.",
  "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "JSON 檔，從工作區算的相對路徑"},
-                               "set": {"type": "object", "description": "指標 → 新值，例：{\"/states/act/next\": \"idle\", \"/max\": 20}"},
-                               "del": {"type": "array", "items": {"type": "string"}, "description": "要刪的指標，例：[\"/old_key\"]"}},
+                "properties": {"path": {"type": "string", "description": "the JSON file, relative to your workspace"},
+                               "set": {"type": "object", "description": "pointer -> new value, e.g. {\"/states/act/next\": \"idle\", \"/max\": 20}"},
+                               "del": {"type": "array", "items": {"type": "string"}, "description": "pointers to delete, e.g. [\"/old_key\"]"}},
                 "required": ["path"]}}

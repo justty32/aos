@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+# memory_export - 把一個知識庫（或其中一棵子樹）整棵印成一份 Markdown，給人看；唯讀
+# 規劃：proto8/thinking/2026-11/05/agent-knowledge/03-接進agent與工具說明.md K6（使用者 11-05「人類想看的話，要麼直接問agent，
+#   要麼agent弄一份輕鬆轉為markdown/html的工具，把json轉過去也可以」）。另立工具、memory 保持純查詢（03 代定）。
+# 介面（lib/docs/01 契約）：stdin {"path"?: 節點路徑, "max_bytes"?: N}。知識庫根、節點、子節點的認法跟 memory 一模一樣
+#   （① 工具資料夾 $AOS_CD 的 _memory.json 的 base ＞ ② $AOS_MEMORY，相對 $AOS_DAEMON、沒有＝cwd；. 與 _ 開頭不算；同名資料夾蓋過葉、.md 蓋過 .json）。
+#   規則 9 自成一格：那幾行從 memory 抄一份，不 import 隔壁。
+# stdout：從 path（沒給＝根）開始深度優先、子節點照名字排序；每個節點先一行「<!-- node: 路徑 -->」，
+#   .md 的文原樣接上（標題層級不改），.json 的文包成 ```json 區塊（前面加「# 節點名」當標題）；節點之間空一行。
+#   超過 max_bytes（預設 50000）就截，最後一行「[truncated: N more bytes; export a child path]」。
+# 錯：「memory_export: error: 代號 原因」stderr 與 stdout 各一行、退 1：ArgumentsBad、PathBad、MemoryMissing、NodeMissing、CfgBad、ReadFailed。
+import json, os, re, sys
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py（lib/docs/01 規則 9）
+import tool_io  # noqa: E402
+
+HELP = """\
+usage: memory_export < ARGUMENTS.json   (a tool: run it with aos-exec)
+Print a whole knowledge base (or the subtree at path) as one Markdown document, for people.
+The knowledge base is found like tool memory finds it (_memory.json next to the tool, else $AOS_MEMORY).
+Arguments: one JSON object on stdin (empty stdin = {}):
+  path       string  (node path like me/self_tools; empty or / = the root)
+  max_bytes  integer (default 50000)
+Result on stdout. On error: one line "memory_export: error: CODE reason" on stderr and stdout, exit 1.
+"""
+tool_io.start("memory_export", HELP)
+die = tool_io.die
+SEGMENT = re.compile(r"^[a-z0-9_-]+$")
+LEAF_EXTS = (".md", ".json")
+CFG_NAME = "_memory.json"
+
+
+def memory_root():
+    here = os.environ.get("AOS_CD") or HERE
+    cfg = os.path.join(here, CFG_NAME)
+    if os.path.isfile(cfg):
+        try:
+            with open(cfg, encoding="utf-8") as f:
+                c = json.load(f)
+        except (OSError, ValueError) as e:
+            die("CfgBad", "%s: %s" % (cfg, e))
+        if not isinstance(c, dict) or not isinstance(c.get("base"), str) or not c["base"]:
+            die("CfgBad", "%s must be an object with a non-empty string key base" % cfg)
+        real = os.path.realpath(os.path.join(here, c["base"]))
+    else:
+        m = os.environ.get("AOS_MEMORY", "")
+        if not m:
+            die("MemoryMissing", "no %s next to the tool and AOS_MEMORY is not set or empty" % CFG_NAME)
+        real = os.path.realpath(os.path.join(os.environ.get("AOS_DAEMON") or os.getcwd(), m))
+    if not os.path.isdir(real):
+        die("MemoryMissing", "the knowledge base %s is not a directory" % real)
+    return real
+
+
+def leaf_file(base):
+    return next((base + x for x in LEAF_EXTS if os.path.isfile(base + x)), None)
+
+
+def children(d):
+    found = {}
+    try:
+        entries = os.listdir(d)
+    except OSError as e:
+        die("ReadFailed", "cannot list %s: %s" % (d, e))
+    for e in entries:
+        if e[0] in "._" or e == "README.md":
+            continue
+        full = os.path.join(d, e)
+        if os.path.isdir(full):
+            name, is_dir = e, True
+        elif e.endswith(LEAF_EXTS) and os.path.isfile(full):
+            name, is_dir = os.path.splitext(e)[0], False
+        else:
+            continue
+        if SEGMENT.match(name) and (is_dir or name not in found):
+            found[name] = is_dir
+    return sorted(found)
+
+
+def read(f):
+    try:
+        with open(f, "rb") as h:
+            return h.read().decode("utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        die("ReadFailed", "cannot read %s: %s" % (f, e))
+
+
+def export(root, segs, out):
+    d = os.path.join(root, *segs)
+    label = "/".join(segs) or "/"
+    if os.path.isdir(d):
+        f = os.path.join(d, "README.md")
+        text = read(f) if os.path.isfile(f) else ""
+    else:
+        f = leaf_file(d) if segs else None
+        if f is None:
+            die("NodeMissing", "node %s not found" % label)
+        text = read(f)
+        if f.endswith(".json"):
+            text = "# %s\n\n```json\n%s\n```" % (segs[-1], text.rstrip("\n"))
+    out.append("<!-- node: %s -->\n%s" % (label, text.rstrip("\n")))
+    if os.path.isdir(d):
+        for name in children(d):
+            export(root, segs + [name], out)
+
+
+args = tool_io.arguments()
+p = args.get("path")
+if p is not None and not isinstance(p, str):
+    die("ArgumentsBad", "path must be a string")
+p = (p or "").strip("/")
+segs = p.split("/") if p else []
+if any(not SEGMENT.match(s) for s in segs):
+    die("PathBad", "%r is not a node path (segments joined by /, each [a-z0-9_-]+; empty or / is the root)" % p)
+max_bytes = args.get("max_bytes", 50000)
+if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0:
+    die("ArgumentsBad", "max_bytes must be a positive integer")
+out = []
+export(memory_root(), segs, out)
+doc = ("\n\n".join(out) + "\n").encode("utf-8")
+if len(doc) > max_bytes:
+    sys.stdout.write(doc[:max_bytes].decode("utf-8", "ignore").rstrip("\n") +
+                     "\n[truncated: %d more bytes; export a child path]\n" % (len(doc) - max_bytes))
+else:
+    sys.stdout.write(doc.decode("utf-8"))

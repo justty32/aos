@@ -1,5 +1,5 @@
-{"description": "搬移或改名一個檔或資料夾（to 的上層自動建）。to 已經有東西就不搬——要蓋先 trash 它。從垃圾桶救回來也用它。回 JSON {from, to}。",
+{"description": "Move or rename a file or folder in your workspace; parent folders of to are created. Nothing moves if to already exists (FileBad): trash it first if you mean to replace it. Also use it to restore from the trash. Returns JSON {from, to}. Errors: PathBad, FileMissing, MoveFailed.",
  "parameters": {"type": "object",
-                "properties": {"from": {"type": "string", "description": "原本的路徑"},
-                               "to": {"type": "string", "description": "新的路徑（完整路徑，不是「搬進哪個資料夾」）"}},
+                "properties": {"from": {"type": "string", "description": "current path, relative to your workspace"},
+                               "to": {"type": "string", "description": "the new full path (not the folder to move into)"}},
                 "required": ["from", "to"]}}

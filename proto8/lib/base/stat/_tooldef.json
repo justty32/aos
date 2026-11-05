@@ -1,4 +1,4 @@
-{"description": "看單一個檔或資料夾的屬性，回 JSON：type、mtime、mode；檔多 size、exec、text（是不是文字檔）、counter_lines（幾行）、format（json／python／markdown／shell／text），JSON 檔多 top（頂層摘要）；資料夾多 counter_children（子項數）、aos；連結多 link_to。",
+{"description": "Show the attributes of one file or folder in your workspace as JSON: type, mtime, mode; files add size, exec, text, counter_lines, format (json, python, markdown, shell, text), JSON files add top (a summary of the top level); folders add counter_children and aos; links add link_to. Errors: PathBad, FileMissing.",
  "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "從工作區算的路徑"}},
+                "properties": {"path": {"type": "string", "description": "path relative to your workspace"}},
                 "required": ["path"]}}

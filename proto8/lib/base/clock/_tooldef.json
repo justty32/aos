@@ -1,2 +1,2 @@
-{"description": "查現在的 UTC 時間，回 ISO 8601 格式（例：2026-10-23T08:00:00Z）。",
+{"description": "Get the current UTC time in ISO 8601, e.g. 2026-10-23T08:00:00Z. No arguments.",
  "parameters": {"type": "object", "properties": {}}}

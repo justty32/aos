@@ -1,4 +1,4 @@
-{"description": "建資料夾（上層一起建；已經有就沒事）。回 JSON {path, created}。",
+{"description": "Create a folder in your workspace, with its parents; an existing folder is fine. Returns JSON {path, created}. Errors: PathBad, FileBad (a file is in the way), MkdirFailed.",
  "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "從工作區算的路徑"}},
+                "properties": {"path": {"type": "string", "description": "path relative to your workspace"}},
                 "required": ["path"]}}

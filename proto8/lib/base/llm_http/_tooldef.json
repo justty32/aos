@@ -1,5 +1,5 @@
-{"description": "把一份 OpenAI chat completions 請求送到某個相容端點，回剪過的 assistant message、usage、實際模型。",
+{"description": "Send one OpenAI chat completions request to a compatible endpoint; returns the assistant message, usage and the model that answered. Errors: ArgumentsBad, EndpointFailed, ReplyBad. Agents normally do not call this: their brain goes through the llm kernel (memory node brain).",
  "parameters": {"type": "object",
-  "properties": {"endpoint": {"type": "object", "description": "一組 llm 設定：url（到 /v1）、model、key（選填）、fixed（選填，釘死的欄位，蓋過 request）；model 一律用這裡的"},
-                 "request": {"type": "object", "description": "OpenAI chat completions 的 body 去掉端點：messages 必有，tools、temperature、model 選填"}},
+  "properties": {"endpoint": {"type": "object", "description": "one endpoint: url (up to /v1), model, key (optional), fixed (optional fields that override the request); model always comes from here"},
+                 "request": {"type": "object", "description": "an OpenAI chat completions body without the endpoint: messages required; tools, temperature, model optional"}},
   "required": ["endpoint", "request"]}}

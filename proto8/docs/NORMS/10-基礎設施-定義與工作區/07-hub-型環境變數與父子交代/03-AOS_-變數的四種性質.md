@@ -9,6 +9,6 @@
 | 性質 | 是什麼 | 活的變數 |
 |---|---|---|
 | ① 執行環境 | aos-exec 每層設（N-57），全體讀 | `AOS_WS`、`AOS_STACK`（同時是 hub 的實例；只有 aos-exec 給預設）、`AOS_CF`、`AOS_CD`、`AOS_CO`（現在沒人讀）；`AOS_ENTRY` 是全樹繼承的旋鈕、使用者 11-01 裁留〔11-04 晚 `AOS_KERNEL_REPORT` 退場：用量改在回信的 `usage`（N-42 (1)）〕 |
-| ② hub | 值是資料夾、沒設＝`<名字>Missing`、子 process 繼承（本條 ①～③） | `AOS_LLM_KERNEL`（11-05 起值＝llm kernel 的 stack）、`AOS_DAEMON`、`AOS_KERNEL`（11-05；沒設＝`$AOS_DAEMON` 的 ctl 信箱、不報 Missing，例外） |
+| ② hub | 值是資料夾、沒設＝`<名字>Missing`、子 process 繼承（本條 ①～③） | `AOS_LLM_KERNEL`（11-05 起值＝llm kernel 的 stack）、`AOS_DAEMON`、`AOS_KERNEL`（11-05；沒設＝`$AOS_DAEMON` 的 ctl 信箱、不報 Missing，例外）、`AOS_MEMORY`（11-05；知識庫根，相對＝相對 `$AOS_DAEMON`；沒設＝`MemoryMissing`；工具資料夾的 `_memory.json` 蓋過它，[agent-knowledge 01](../../../../thinking/2026-11/05/agent-knowledge/01-層級式記憶工具.md)） |
 | ③ 人殼預設 | 人在殼裡 export、程式之間不靠它傳（像 `EDITOR`） | `AOS_AGENT`（上面的例外） |
 | ④ 旋鈕 | 原則上不走環境變數（刪、改 argv、改檔；使用者 11-01「除非真的有必要，否則不要用」）；真要走就帶 `AOS_`、寫在定義的 `.env` | 現無。`AOS_HEAP`（`lib/aos/memory`）、`AOS_ROSTER`（`lib/aos/send_message`）11-04 已封存（使用者 11-04 晚「封存」），隨工具退場；`AOS_BRAIN_URL`／`AOS_BRAIN_MODEL`／`AOS_BRAIN_KEY` 11-04 晚退場（原本等 kernel 收、使用者 11-04「我再想想」；11-04 晚「brain url那塊我不喜歡，我希望llm呼叫，或者說思考，這本身也是用aos函數」：端點、模型、金鑰改放 `kernel.json` 的 `endpoints`，agent 只寫代號，P-23、[think-as-function](../../../../thinking/2026-11/04/think-as-function/README.md)） |

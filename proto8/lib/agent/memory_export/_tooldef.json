@@ -1,0 +1,4 @@
+{"description": "Print the whole knowledge base (or the subtree at path) as one Markdown document, for a person who wants to read it. JSON nodes become code blocks. Long output is cut at max_bytes; then export a child path. To look things up yourself use memory instead. Errors: NodeMissing, PathBad, MemoryMissing.",
+ "parameters": {"type": "object",
+                "properties": {"path": {"type": "string", "description": "node path like me/self_tools; empty or / is the root (default)"},
+                               "max_bytes": {"type": "integer", "description": "most bytes to print (default 50000)"}}}}

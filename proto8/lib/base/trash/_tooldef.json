@@ -1,4 +1,4 @@
-{"description": "刪除一個檔或資料夾：不是真的刪，是搬進工作區的 .trash/<時間>/ 底下（原路徑照留），要救就用 move 搬回來。回 JSON {path, to}。",
+{"description": "Delete a file or folder in your workspace: it is moved under .trash/<time>/ in the workspace (keeping its path), so move can bring it back. Returns JSON {path, to}. Errors: PathBad, FileMissing, MoveFailed.",
  "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "要刪的路徑"}},
+                "properties": {"path": {"type": "string", "description": "path to delete, relative to your workspace"}},
                 "required": ["path"]}}
