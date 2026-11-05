@@ -33,47 +33,47 @@ aos_add_subcommand(
     NAME agent
     ENTRY aos_agent_cli_main
     LIBRARY aos_agent_cli
-    SUMMARY "建立並推進回合制資料夾 agent"
+    SUMMARY "create and advance a turn-based folder agent"
 )
 
 aos_add_subcommand(
     NAME say
     ENTRY aos_say_cli_main
     LIBRARY aos_agent_cli
-    SUMMARY "對這個資料夾的 agent 說一句話"
+    SUMMARY "say something to this folder's agent"
 )
 
 aos_add_subcommand(
     NAME listen
     ENTRY aos_listen_cli_main
     LIBRARY aos_agent_cli
-    SUMMARY "跟讀這個資料夾 agent 的對話記錄"
+    SUMMARY "follow this folder agent's conversation log"
 )
 
 aos_add_subcommand(
     NAME inbox
     ENTRY aos_inbox_cli_main
     LIBRARY aos_agent_cli
-    SUMMARY "列出與讀取還沒被 agent 處理的訊息"
+    SUMMARY "list and read messages the agent has not handled"
 )
 
 aos_add_subcommand(
     NAME talk
     ENTRY aos_talk_cli_main
     LIBRARY aos_agent_cli
-    SUMMARY "跟這個資料夾的 agent 逐行對話"
+    SUMMARY "chat line by line with this folder's agent"
 )
 
 aos_add_subcommand(
     NAME state
     ENTRY aos_state_cli_main
     LIBRARY aos_agent_cli
-    SUMMARY "印出這個資料夾 agent 的 status.json"
+    SUMMARY "print this folder agent's status.json"
 )
 
 aos_add_subcommand(
     NAME chat
     ENTRY aos_chat_cli_main
     LIBRARY aos_agent_cli
-    SUMMARY "一個指令：建世界、說一句話、等到回覆"
+    SUMMARY "one command: create a world, say something, wait for the reply"
 )

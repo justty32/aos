@@ -32,13 +32,13 @@ int usage(const char *program, FILE *stream = stderr, int result = 2) {
         "       %s listen <folder> <name> [--once]\n"
         "       %s talk <folder> <name> [--interface pi]\n"
         "       %s state <folder> <name>\n"
-        "  init    在指定資料夾建立世界與 agent；省略 folder 時使用目前資料夾\n"
-        "  step    推進 agent 一回合\n"
-        "  say     投遞一則訊息給 agent\n"
-        "  listen  顯示對話記錄與尚未處理的訊息\n"
-        "  talk    從標準輸入逐行對話\n"
-        "  state   顯示狀態、未讀數、引擎與模型\n"
-        "  -h, --help  顯示這份用法\n",
+        "  init    create a world and an agent in the folder; default: current folder\n"
+        "  step    advance the agent one turn\n"
+        "  say     deliver a message to the agent\n"
+        "  listen  show the conversation log and unprocessed messages\n"
+        "  talk    chat line by line from stdin\n"
+        "  state   show status, unread count, engine and model\n"
+        "  -h, --help  show this usage\n",
         program, program, program, program, program, program);
     return result;
 }
@@ -65,12 +65,12 @@ bool has_help(int argc, char *argv[]) {
 bool validate_world(const std::filesystem::path &folder) {
     const std::filesystem::path absolute = aos::agent::absolute_folder(folder);
     if (!std::filesystem::is_directory(absolute)) {
-        std::fprintf(stderr, "aos say: %s 那個資料夾不存在\n",
+        std::fprintf(stderr, "aos say: folder %s does not exist\n",
                      absolute.c_str());
         return false;
     }
     if (!std::filesystem::is_directory(absolute / ".aos")) {
-        std::fprintf(stderr, "aos say: %s 不是一個 aos 世界（沒有 .aos/）\n",
+        std::fprintf(stderr, "aos say: %s is not an aos world (no .aos/)\n",
                      absolute.c_str());
         return false;
     }
@@ -86,7 +86,7 @@ bool validate_world(const std::filesystem::path &folder) {
     }
     if (!found) {
         std::fprintf(stderr,
-                     "aos say: %s 還沒有 agent；請先在那裡跑 aos agent init\n",
+                     "aos say: %s has no agent yet; run aos agent init there first\n",
                      absolute.c_str());
         return false;
     }
@@ -206,7 +206,7 @@ int run_agent_talk(int argc, char *argv[], const char *program) {
     if (argc == 6 && std::string(argv[4]) == "--interface" &&
         std::string(argv[5]) == "pi") {
         std::fprintf(stderr,
-                     "%s: pi 介面需要 extension adapter，尚未內建；見 "
+                     "%s: the pi interface needs an extension adapter, which is not built in yet; see "
                      "core/agent/docs/pi-interface.md\n",
                      program);
         return 2;
@@ -264,12 +264,12 @@ void print_unread(const std::filesystem::path &folder, std::string_view name) {
     const std::vector<std::filesystem::path> files = unread_files(folder, name);
     if (files.empty())
         return;
-    std::printf("## 未讀 (%zu)\n", files.size());
+    std::printf("## unread (%zu)\n", files.size());
     for (const std::filesystem::path &path : files) {
         const std::string line = unread_line(path);
         std::printf("- %s\n", line.c_str());
     }
-    std::fputs("（aos inbox read 可以直接讀完並標為已讀，不會叫 LLM）\n",
+    std::fputs("(aos inbox read reads them and marks them read without calling the LLM)\n",
                stdout);
     std::fflush(stdout);
 }
@@ -323,7 +323,7 @@ std::string state_text(const std::filesystem::path &folder,
     /* 停在 error 的 agent 比未讀更急：不要被 pending 蓋掉。 */
     if (unread > 0 && status != "error") {
         status = "pending";
-        detail = std::to_string(unread) + " 封未讀，等下一回合處理";
+        detail = std::to_string(unread) + " unread, waiting for the next turn";
     }
 
     std::string engine;
@@ -376,8 +376,8 @@ int run_listen(const std::filesystem::path &folder, std::string_view name,
     print_unread(folder, name);
     /* 兩邊都空的時候不要只給一個空白提示字元：說出下一步。 */
     if (log.empty() && unread_files(folder, name).empty()) {
-        std::fputs("無新訊息（還沒有任何對話；用 aos say 說一句話，"
-                   "再用 aos run 推一回合，或直接 aos chat）\n",
+        std::fputs("no new messages (no conversation yet; say something with aos say, "
+                   "then advance a turn with aos run, or just use aos chat)\n",
                    stdout);
         std::fflush(stdout);
     }
@@ -401,8 +401,8 @@ int run_talk(const std::filesystem::path &folder, std::string_view name) {
     if (!world_has_runner(absolute)) {
         std::fprintf(
             stderr,
-            "aos talk: 這個世界沒有 aos run 在推進，說出去的話不會有人處理。\n"
-            "請另開一個終端機跑：aos run %s --step 0\n",
+            "aos talk: no aos run is advancing this world, so nothing will handle what you say.\n"
+            "Run this in another terminal: aos run %s --step 0\n",
             absolute.c_str());
         return 1;
     }

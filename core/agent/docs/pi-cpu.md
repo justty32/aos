@@ -142,7 +142,7 @@ engine=pi 時，`step` 走 `src/engine_pi.cpp` 的獨立 `step_pi` 分支：讀�
 回覆寫進 `log.md` 與 `history.json`，最後寫 `status.json`。pi 失敗時會在 `log.md` 留下：
 
 ```text
-> pi 失敗（exit=N）：…
+> pi failed (exit=N): …
 ```
 
 失敗後 agent 仍靠 `.aos/every/` 活著，不會靜默死亡。這條分支不讀 `tools.json`，不呼叫 `aos llm`，也不做

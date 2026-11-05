@@ -20,7 +20,7 @@ Json parse_file(const std::filesystem::path &path) {
     try {
         return Json::parse(detail::read_text(path));
     } catch (const Json::exception &error) {
-        throw std::runtime_error(path.string() + " JSON 無法解析: " +
+        throw std::runtime_error(path.string() + ": invalid JSON: " +
                                  error.what());
     }
 }
@@ -28,7 +28,7 @@ Json parse_file(const std::filesystem::path &path) {
 std::string require_string(const Json &item, const char *key,
                            const std::filesystem::path &path) {
     if (!item.contains(key) || !item[key].is_string()) {
-        throw std::runtime_error(path.string() + " 缺少字串欄位 " + key);
+        throw std::runtime_error(path.string() + " is missing string field " + key);
     }
     return item[key].get<std::string>();
 }
@@ -52,24 +52,24 @@ std::string render_log_journal(std::string_view journal,
     while (std::getline(input, line)) {
         ++line_number;
         if (line.empty()) {
-            throw std::runtime_error(path.string() + " 第 " +
+            throw std::runtime_error(path.string() + " line " +
                                      std::to_string(line_number) +
-                                     " 行不是 JSON 物件");
+                                     " is not a JSON object");
         }
 
         Json entry;
         try {
             entry = Json::parse(line);
         } catch (const Json::exception &error) {
-            throw std::runtime_error(path.string() + " 第 " +
+            throw std::runtime_error(path.string() + " line " +
                                      std::to_string(line_number) +
-                                     " 行 JSON 無法解析: " + error.what());
+                                     ": invalid JSON: " + error.what());
         }
         if (!entry.is_object() || !entry.contains("turn") ||
             !entry["turn"].is_number_unsigned()) {
-            throw std::runtime_error(path.string() + " 第 " +
+            throw std::runtime_error(path.string() + " line " +
                                      std::to_string(line_number) +
-                                     " 行缺少 turn");
+                                     " is missing turn");
         }
         const std::string role = require_string(entry, "role", path);
         const std::string content = require_string(entry, "content", path);
@@ -81,9 +81,9 @@ std::string render_log_journal(std::string_view journal,
             continue;
         }
         if (role != "user" && role != "assistant" && role != "tool") {
-            throw std::runtime_error(path.string() + " 第 " +
+            throw std::runtime_error(path.string() + " line " +
                                      std::to_string(line_number) +
-                                     " 行的 role 無效");
+                                     " has an invalid role");
         }
         rendered += "## turn " +
                     std::to_string(entry["turn"].get<std::uint64_t>()) +
@@ -120,7 +120,7 @@ namespace detail {
 
 std::string read_text(const std::filesystem::path &path) {
     std::ifstream input(path, std::ios::binary);
-    if (!input) throw std::runtime_error("無法讀取 " + path.string());
+    if (!input) throw std::runtime_error("cannot read " + path.string());
     return {std::istreambuf_iterator<char>(input),
             std::istreambuf_iterator<char>()};
 }
@@ -130,10 +130,10 @@ void atomic_write(const std::filesystem::path &path, std::string_view text) {
     const std::filesystem::path temporary = path.string() + ".tmp";
     {
         std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
-        if (!output) throw std::runtime_error("無法寫入 " + temporary.string());
+        if (!output) throw std::runtime_error("cannot write " + temporary.string());
         output.write(text.data(), static_cast<std::streamsize>(text.size()));
         output.close();
-        if (!output) throw std::runtime_error("寫入失敗 " + temporary.string());
+        if (!output) throw std::runtime_error("write failed: " + temporary.string());
     }
     std::filesystem::rename(temporary, path);
 }
@@ -212,11 +212,11 @@ std::vector<Message> read_history(const std::filesystem::path &folder,
     const Json root = parse_file(paths.history);
     if (!root.contains("messages") || !root["messages"].is_array()) {
         throw std::runtime_error(paths.history.string() +
-                                 " 缺少 messages 陣列");
+                                 " is missing the messages array");
     }
     std::vector<Message> messages;
     for (const Json &item : root["messages"]) {
-        if (!item.is_object()) throw std::runtime_error("history 訊息必須是物件");
+        if (!item.is_object()) throw std::runtime_error("history message must be an object");
         messages.push_back({require_string(item, "role", paths.history),
                             require_string(item, "content", paths.history)});
     }
@@ -228,7 +228,7 @@ Status read_status(const std::filesystem::path &folder,
     const detail::Paths paths = detail::paths_for(folder, name);
     const Json root = parse_file(paths.status);
     if (!root.contains("turn") || !root["turn"].is_number_unsigned()) {
-        throw std::runtime_error(paths.status.string() + " 缺少 turn");
+        throw std::runtime_error(paths.status.string() + " is missing turn");
     }
     Status status;
     status.status = require_string(root, "status", paths.status);
@@ -260,14 +260,14 @@ Pending read_pending(const std::filesystem::path &folder,
     const Json root = parse_file(paths.pending);
     if (!root.contains("turn") || !root["turn"].is_number_unsigned() ||
         !root.contains("calls") || !root["calls"].is_array()) {
-        throw std::runtime_error(paths.pending.string() + " 格式錯誤");
+        throw std::runtime_error(paths.pending.string() + " is malformed");
     }
     Pending pending;
     pending.turn = root["turn"].get<std::uint64_t>();
     for (const Json &item : root["calls"]) {
-        if (!item.is_object()) throw std::runtime_error("pending call 必須是物件");
+        if (!item.is_object()) throw std::runtime_error("pending call must be an object");
         if (!item.contains("args")) {
-            throw std::runtime_error(paths.pending.string() + " 缺少欄位 args");
+            throw std::runtime_error(paths.pending.string() + " is missing field args");
         }
         pending.calls.push_back({require_string(item, "id", paths.pending),
                                  require_string(item, "tool", paths.pending),
@@ -291,8 +291,8 @@ std::string read_log(const std::filesystem::path &folder,
         log_exists ? detail::read_text(paths.log) : std::string{};
     if (!log_exists || current != rendered) {
         std::fprintf(stderr,
-                     "aos: %s 與稽核紀錄不符（有人手動改過），已從 "
-                     "log.jsonl 還原\n",
+                     "aos: %s does not match the audit log (edited by hand); restored from "
+                     "log.jsonl\n",
                      paths.log.string().c_str());
         detail::atomic_write(paths.log, rendered);
     }

@@ -94,7 +94,7 @@ std::string find_agent(const std::filesystem::path &folder) {
     while (!error && entries != end) {
         if (entries->is_directory(error) && !error) {
             if (!name.empty()) {
-                throw std::runtime_error("這個資料夾有不只一隻 agent");
+                throw std::runtime_error("this folder has more than one agent");
             }
             name = entries->path().filename().string();
         }
@@ -148,10 +148,10 @@ int check_result(const std::filesystem::path &folder, const std::string &name,
     }
     status = aos::agent::read_status(folder, name);
     if (!status.last_error.empty()) {
-        std::fprintf(stderr, "aos chat: 上一回合失敗 — %s\n",
+        std::fprintf(stderr, "aos chat: the last turn failed: %s\n",
                      status.last_error.c_str());
-        std::fputs("你的訊息還留在 say/，修好之後 aos run "
-                   "一回合就會被回答\n",
+        std::fputs("your message is still in say/; after fixing it, the next aos run "
+                   "turn will answer it\n",
                    stderr);
         return 1;
     }
@@ -161,14 +161,14 @@ int check_result(const std::filesystem::path &folder, const std::string &name,
 void warn_ignored(const Options &options, const std::string &name) {
     std::string ignored;
     const auto add = [&ignored](std::string_view option) {
-        if (!ignored.empty()) ignored += "、";
+        if (!ignored.empty()) ignored += ", ";
         ignored.append(option);
     };
     if (options.engine_given) add("--engine");
     if (options.provider_given) add("--provider");
     if (options.model_given) add("--model");
     if (!ignored.empty()) {
-        std::fprintf(stderr, "aos chat: 已沿用 agent %s，忽略 %s\n",
+        std::fprintf(stderr, "aos chat: reusing agent %s, ignoring %s\n",
                      name.c_str(), ignored.c_str());
     }
 }
@@ -185,7 +185,7 @@ int run_chat(int argc, char *argv[], const char *program) {
         aos::agent::initialize(folder, name,
                                "你是一個可靠、好奇且言簡意賅的助手。",
                                options.engine);
-        std::printf("已建立 agent %s（%s，%s）\n", name.c_str(),
+        std::printf("created agent %s (%s, %s)\n", name.c_str(),
                     folder.string().c_str(), options.engine.kind.c_str());
         std::fflush(stdout);
     } else {
@@ -214,14 +214,14 @@ int run_chat(int argc, char *argv[], const char *program) {
         if (now >= deadline) {
             const auto seconds = (options.timeout_ms + 999) / 1000;
             std::fprintf(stderr,
-                         "aos chat: 等了 %llu 秒還沒有回覆（狀態：%s）；"
-                         "用 aos state 看、用 aos listen 跟讀\n",
+                         "aos chat: no reply after %llu seconds (status: %s); "
+                         "check with aos state, follow with aos listen\n",
                          static_cast<unsigned long long>(seconds),
                          status.status.c_str());
             return 1;
         }
         if (now >= next_progress) {
-            std::fprintf(stderr, "…第 %llu 回合，%s\n",
+            std::fprintf(stderr, "... turn %llu, %s\n",
                          static_cast<unsigned long long>(status.turn),
                          status.status.c_str());
             do {

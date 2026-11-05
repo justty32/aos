@@ -87,14 +87,14 @@ std::vector<InboxItem> read_inbox(const std::filesystem::path &folder,
     std::error_code error;
     if (!std::filesystem::exists(directory, error)) {
         if (error && !is_missing(error)) {
-            throw std::filesystem::filesystem_error("無法檢查信箱", directory,
+            throw std::filesystem::filesystem_error("cannot check inbox", directory,
                                                     error);
         }
         return {};
     }
     if (!std::filesystem::is_directory(directory, error)) {
         if (error) {
-            throw std::filesystem::filesystem_error("無法檢查信箱", directory,
+            throw std::filesystem::filesystem_error("cannot check inbox", directory,
                                                     error);
         }
         return {};
@@ -112,7 +112,7 @@ std::vector<InboxItem> read_inbox(const std::filesystem::path &folder,
         entry.increment(error);
     }
     if (error) {
-        throw std::filesystem::filesystem_error("無法列出信箱", directory,
+        throw std::filesystem::filesystem_error("cannot list inbox", directory,
                                                 error);
     }
     std::sort(files.begin(), files.end(),
@@ -143,14 +143,14 @@ bool mark_inbox_read(const InboxItem &item, std::string &error) {
     std::filesystem::create_directories(destination.parent_path(),
                                         filesystem_error);
     if (filesystem_error) {
-        error = "無法建立已讀資料夾：" + filesystem_error.message();
+        error = "cannot create read folder: " + filesystem_error.message();
         return false;
     }
 
     std::filesystem::rename(item.path, destination, filesystem_error);
     if (!filesystem_error) return true;
     if (filesystem_error != std::errc::cross_device_link) {
-        error = "無法搬移訊息：" + filesystem_error.message();
+        error = "cannot move message: " + filesystem_error.message();
         return false;
     }
 
@@ -159,7 +159,7 @@ bool mark_inbox_read(const InboxItem &item, std::string &error) {
                                std::filesystem::copy_options::none,
                                filesystem_error);
     if (filesystem_error) {
-        error = "無法跨檔案系統複製訊息：" + filesystem_error.message();
+        error = "cannot copy message across file systems: " + filesystem_error.message();
         return false;
     }
     std::filesystem::remove(item.path, filesystem_error);
@@ -167,7 +167,7 @@ bool mark_inbox_read(const InboxItem &item, std::string &error) {
 
     std::error_code cleanup_error;
     std::filesystem::remove(destination, cleanup_error);
-    error = "複製後無法移除未讀訊息：" + filesystem_error.message();
+    error = "cannot remove unread message after copying: " + filesystem_error.message();
     return false;
 }
 

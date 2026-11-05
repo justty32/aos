@@ -62,7 +62,7 @@ void initialize(const std::filesystem::path &folder, std::string_view name,
                 std::string_view persona, const Engine &requested_engine) {
     const detail::Paths paths = detail::paths_for(folder, name);
     if (!std::filesystem::is_directory(paths.folder)) {
-        throw std::runtime_error("folder 不存在或不是資料夾: " +
+        throw std::runtime_error("folder does not exist or is not a folder: " +
                                  paths.folder.string());
     }
     const std::filesystem::path agents = paths.aos / "agents";
@@ -70,9 +70,9 @@ void initialize(const std::filesystem::path &folder, std::string_view name,
         for (const auto &entry : std::filesystem::directory_iterator(agents)) {
             if (entry.is_directory()) {
                 throw std::runtime_error(
-                    paths.folder.string() + " 已經住著 agent " +
+                    paths.folder.string() + " already has agent " +
                     entry.path().filename().string() +
-                    "；一個資料夾只住一隻");
+                    "; one agent per folder");
             }
         }
     }
@@ -89,7 +89,7 @@ void initialize(const std::filesystem::path &folder, std::string_view name,
     detail::write_engine(paths, engine);
     detail::atomic_write(paths.persona, persona);
     detail::write_history(paths, {});
-    detail::write_status(paths, "idle", "等待訊息", 0);
+    detail::write_status(paths, "idle", "waiting for messages", 0);
     detail::atomic_write(paths.log, "");
     detail::atomic_write(paths.log_journal(), "");
     aos::tool::install_defaults(paths.folder);
@@ -118,7 +118,7 @@ void say(const std::filesystem::path &folder, std::string_view name,
          std::string_view text, std::string_view from) {
     const detail::Paths paths = detail::paths_for(folder, name);
     if (!std::filesystem::is_directory(paths.say)) {
-        throw std::runtime_error("agent 尚未初始化: " + std::string(name));
+        throw std::runtime_error("agent not initialized: " + std::string(name));
     }
     static std::atomic<std::uint64_t> sequence{0};
     const auto stamp = std::chrono::duration_cast<std::chrono::nanoseconds>(

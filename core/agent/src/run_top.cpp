@@ -35,10 +35,10 @@ bool leading_help(int argc, char *argv[]) {
 
 int say_usage(const char *program, FILE *stream, int result) {
     std::fprintf(stream,
-                 "usage: %s [--to <名字>] <text...>\n"
-                 "  --to <名字>  從目前世界的通訊錄查找名字，跨世界投遞訊息\n"
-                 "  -h, --help   顯示這份用法（只認第一個參數；其餘位置的\n"
-                 "               --help 是訊息內容的一部分）\n",
+                 "usage: %s [--to <name>] <text...>\n"
+                 "  --to <name>  look up the name in this world's contacts and deliver across worlds\n"
+                 "  -h, --help   show this usage (only as the first argument; --help\n"
+                 "               anywhere else is part of the message)\n",
                  program);
     return result;
 }
@@ -46,17 +46,17 @@ int say_usage(const char *program, FILE *stream, int result) {
 int listen_usage(const char *program, FILE *stream, int result) {
     std::fprintf(stream,
                  "usage: %s [--once]\n"
-                 "  --once       印出目前記錄與未讀訊息後立即結束\n"
-                 "  -h, --help   顯示這份用法\n",
+                 "  --once       print the current log and unread messages, then exit\n"
+                 "  -h, --help   show this usage\n",
                  program);
     return result;
 }
 
 int talk_usage(const char *program, FILE *stream, int result) {
     std::fprintf(stream,
-                 "usage: %s [--interface <名字>]\n"
-                 "  --interface pi  使用 pi 介面（尚未內建）\n"
-                 "  -h, --help      顯示這份用法\n",
+                 "usage: %s [--interface <name>]\n"
+                 "  --interface pi  use the pi interface (not built in yet)\n"
+                 "  -h, --help      show this usage\n",
                  program);
     return result;
 }
@@ -64,7 +64,7 @@ int talk_usage(const char *program, FILE *stream, int result) {
 int state_usage(const char *program, FILE *stream, int result) {
     std::fprintf(stream,
                  "usage: %s\n"
-                 "  -h, --help  顯示這份用法\n",
+                 "  -h, --help  show this usage\n",
                  program);
     return result;
 }
@@ -75,18 +75,18 @@ bool validate_world(const std::filesystem::path &folder,
     const std::filesystem::path absolute = aos::agent::absolute_folder(folder);
     if (!std::filesystem::is_directory(absolute)) {
         if (contact_name.empty()) {
-            std::fprintf(stderr, "aos say: %s 那個資料夾不存在\n",
+            std::fprintf(stderr, "aos say: folder %s does not exist\n",
                          absolute.c_str());
         } else {
             std::fprintf(stderr,
-                         "aos say: 聯絡人 %.*s 指到 %s，那個資料夾不存在\n",
+                         "aos say: contact %.*s points to %s, which does not exist\n",
                          static_cast<int>(contact_name.size()),
                          contact_name.data(), absolute.c_str());
         }
         return false;
     }
     if (!std::filesystem::is_directory(absolute / ".aos")) {
-        std::fprintf(stderr, "aos say: %s 不是一個 aos 世界（沒有 .aos/）\n",
+        std::fprintf(stderr, "aos say: %s is not an aos world (no .aos/)\n",
                      absolute.c_str());
         return false;
     }
@@ -102,7 +102,7 @@ bool validate_world(const std::filesystem::path &folder,
     }
     if (!found) {
         std::fprintf(stderr,
-                     "aos say: %s 還沒有 agent；請先在那裡跑 aos agent init\n",
+                     "aos say: %s has no agent yet; run aos agent init there first\n",
                      absolute.c_str());
         return false;
     }
@@ -144,7 +144,7 @@ int say_dispatch(int argc, char *argv[], const char *program) {
     const std::optional<aos::tool::Contact> contact =
         aos::tool::find_contact(folder, contact_name);
     if (!contact) {
-        std::fprintf(stderr, "aos say: 通訊錄裡沒有 %s\n",
+        std::fprintf(stderr, "aos say: no contact named %s\n",
                      contact_name.c_str());
         return 1;
     }
@@ -154,7 +154,7 @@ int say_dispatch(int argc, char *argv[], const char *program) {
         aos::agent::say_to_user(joined_text(argc, argv, 3), from);
         const std::string destination =
             (aos::agent::user_folder() / ".aos" / "say").string();
-        std::printf("已送給 %s（%s）\n", contact_name.c_str(),
+        std::printf("sent to %s (%s)\n", contact_name.c_str(),
                     destination.c_str());
         return 0;
     }
@@ -167,7 +167,7 @@ int say_dispatch(int argc, char *argv[], const char *program) {
                     from);
     const std::string destination =
         (target_folder / ".aos" / "agents" / target_agent / "say").string();
-    std::printf("已送給 %s（%s）\n", contact_name.c_str(), destination.c_str());
+    std::printf("sent to %s (%s)\n", contact_name.c_str(), destination.c_str());
     return 0;
 }
 
@@ -212,13 +212,13 @@ int talk_dispatch(int argc, char *argv[], const char *program) {
         const std::string_view interface = argv[2];
         if (interface == "pi") {
             std::fprintf(stderr,
-                         "%s: pi 介面需要 extension adapter，尚未內建；見 "
+                         "%s: the pi interface needs an extension adapter, which is not built in yet; see "
                          "core/agent/docs/pi-interface.md\n",
                          program);
         } else {
             std::fprintf(stderr,
-                         "aos talk: 未知的 --interface %.*s（目前只有 "
-                         "pi，而且尚未內建）\n",
+                         "aos talk: unknown --interface %.*s (the only one is "
+                         "pi, and it is not built in yet)\n",
                          static_cast<int>(interface.size()), interface.data());
         }
         return 2;

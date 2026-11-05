@@ -47,7 +47,7 @@ std::vector<std::string> whitelist_names(const Json &root,
         items = &root["tools"];
     } else {
         throw std::runtime_error(path.string() +
-                                 " 必須是字串陣列或含 tools 陣列的物件");
+                                 " must be a string array or an object with a tools array");
     }
 
     std::vector<std::string> names;
@@ -59,7 +59,7 @@ std::vector<std::string> whitelist_names(const Json &root,
             names.push_back(item["name"].get<std::string>());
         } else {
             throw std::runtime_error(path.string() +
-                                     " 的工具白名單項目格式錯誤");
+                                     ": malformed tool whitelist item");
         }
     }
     return names;
@@ -176,7 +176,7 @@ std::vector<aos::tool::Spec> read_tools(const std::filesystem::path &folder,
         return registry;
     } catch (const Json::exception &error) {
         throw std::runtime_error(paths.tools.string() +
-                                 " JSON 無法解析: " + error.what());
+                                 ": invalid JSON: " + error.what());
     }
 }
 
@@ -189,7 +189,7 @@ std::vector<std::string> expand_argv(const aos::tool::Spec &spec,
         return expanded;
     }
     if (call.shape != "string") {
-        throw std::invalid_argument("未知的工具 args 形狀: " + call.shape);
+        throw std::invalid_argument("unknown tool args shape: " + call.shape);
     }
 
     bool replaced = false;
@@ -231,7 +231,7 @@ ToolCallResult extract_tool_call(std::string_view reply,
                                            });
             if (spec == tools.end()) {
                 result.error = ToolCallError{
-                    "unknown_tool", "沒有登記工具 " + tool_name, tool_name};
+                    "unknown_tool", "no registered tool " + tool_name, tool_name};
                 return result;
             }
 
@@ -241,21 +241,21 @@ ToolCallResult extract_tool_call(std::string_view reply,
             if (spec->args == "list") {
                 if (!value.contains("args") || !value["args"].is_array()) {
                     return invalid_args(tool_name,
-                                        "工具 " + tool_name +
-                                            " 的 args 必須是字串陣列");
+                                        "tool " + tool_name +
+                                            " args must be a string array");
                 }
                 for (const Json &argument : value["args"]) {
                     if (!argument.is_string()) {
                         return invalid_args(tool_name,
-                                            "工具 " + tool_name +
-                                                " 的 args 必須是字串陣列");
+                                            "tool " + tool_name +
+                                                " args must be a string array");
                     }
                     call.args.push_back(argument.get<std::string>());
                 }
             } else if (spec->args == "string") {
                 if (!value.contains("args") || !value["args"].is_string()) {
-                    return invalid_args(tool_name, "工具 " + tool_name +
-                                                       " 的 args 必須是字串");
+                    return invalid_args(tool_name, "tool " + tool_name +
+                                                       " args must be a string");
                 }
                 call.args_text = value["args"].get<std::string>();
             } else if (spec->args == "none") {
@@ -266,7 +266,7 @@ ToolCallResult extract_tool_call(std::string_view reply,
                      value["args"].get_ref<const std::string &>().empty());
                 if (!valid) {
                     return invalid_args(tool_name,
-                                        "工具 " + tool_name + " 不收 args");
+                                        "tool " + tool_name + " takes no args");
                 }
             }
             result.call = std::move(call);

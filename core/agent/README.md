@@ -48,7 +48,7 @@ adapter 見 [docs/pi-interface.md](docs/pi-interface.md)；目前 CLI 會清楚�
 
 `aos state`／`aos agent state` 除了既有狀態，也輸出 `unread`、`engine` 與 `model`；
 有未讀且目前不是 `error` 時，顯示狀態會是 `pending`。在 agent 世界中，`aos listen` 印完 log 後會再列
-`## 未讀 (N)`，只顯示、不刪除。`aos talk` 讀 stdin 前先以 `.aos/run.lock` 確認 runner
+`## unread (N)`，只顯示、不刪除。`aos talk` 讀 stdin 前先以 `.aos/run.lock` 確認 runner
 存在，沒有就立即指示如何啟動並回 1。跨世界 `aos say --to` 成功時印真正的收件匣路徑，
 失敗時則以解析後的絕對路徑分辨資料夾不存在、不是 aos 世界或尚無 agent。
 `say`／`listen`／`state`／`talk`／`aos agent` 的 `-h`／`--help` 都印到 stdout 並回 0；
@@ -120,7 +120,7 @@ from: /home/alice/work/report-world
 
 ```json
 {"call_id":"agent-bob-tool-11-0","tool":"ls","args":["-la"],"ok":true,"result":{"exit":0,"signal":null,"stdout":"alpha\n","stderr":""}}
-{"call_id":"agent-bob-tool-7-0","tool":"nope","args":[],"ok":false,"result":null,"error":{"type":"unknown_tool","message":"沒有登記工具 nope","retryable":false}}
+{"call_id":"agent-bob-tool-7-0","tool":"nope","args":[],"ok":false,"result":null,"error":{"type":"unknown_tool","message":"no registered tool nope","retryable":false}}
 ```
 
 ## 函式庫
@@ -132,7 +132,7 @@ from: /home/alice/work/report-world
 
 lmstudio 與 pi 都會先成功取得 LLM 回覆，之後才把這回合讀到的 `say/*.md` 寫入 history
 並刪除；LLM 或 pi 失敗時訊息會留在原處供下一回合重試。失敗會把 `status.json` 寫成
-`error`，並在 log 留下 `> 第 N 回合失敗：…` 或 pi 的 exit；連線失敗會附端點位址指引，
+`error`，並在 log 留下 `> turn N failed: …` 或 pi 的 exit；連線失敗會附端點位址指引，
 pi 的 `No API key` 會指出對應的 `<PROVIDER>_API_KEY`。pi 失敗回 1，只有等不到槽回 75。
 
 `agents/<name>/log.jsonl` 是 log 的正典稽核紀錄，每行一則

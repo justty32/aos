@@ -20,8 +20,8 @@ std::string optional_string(const Json &root, const char *key,
                             const std::filesystem::path &path) {
     if (!root.contains(key)) return {};
     if (!root[key].is_string()) {
-        throw std::runtime_error(path.string() + " 欄位 " + key +
-                                 " 必須是字串");
+        throw std::runtime_error(path.string() + " field " + key +
+                                 " must be a string");
     }
     return root[key].get<std::string>();
 }
@@ -45,8 +45,8 @@ int optional_integer(const Json &root, const char *key,
         if (valid) result = static_cast<int>(number);
     }
     if (!valid) {
-        throw std::runtime_error(path.string() + " 欄位 " + key +
-                                 " 必須是整數");
+        throw std::runtime_error(path.string() + " field " + key +
+                                 " must be an integer");
     }
     return result;
 }
@@ -62,19 +62,19 @@ Engine read_engine(const std::filesystem::path &folder,
     try {
         root = Json::parse(detail::read_text(paths.engine));
     } catch (const Json::exception &error) {
-        throw std::runtime_error(paths.engine.string() + " JSON 無法解析: " +
+        throw std::runtime_error(paths.engine.string() + ": invalid JSON: " +
                                  error.what());
     }
     if (!root.is_object() || !root.contains("engine") ||
         !root["engine"].is_string()) {
         throw std::runtime_error(paths.engine.string() +
-                                 " 缺少字串欄位 engine");
+                                 " is missing string field engine");
     }
 
     Engine engine;
     engine.kind = root["engine"].get<std::string>();
     if (engine.kind != "lmstudio" && engine.kind != "pi") {
-        throw std::runtime_error("未知的 agent engine: " + engine.kind);
+        throw std::runtime_error("unknown agent engine: " + engine.kind);
     }
     engine.provider = optional_string(root, "provider", paths.engine);
     engine.model = optional_string(root, "model", paths.engine);
@@ -95,7 +95,7 @@ void write_engine(const Paths &paths, const Engine &engine) {
         if (!engine.provider.empty()) root["provider"] = engine.provider;
         if (!engine.model.empty()) root["model"] = engine.model;
     } else {
-        throw std::runtime_error("未知的 agent engine: " + engine.kind);
+        throw std::runtime_error("unknown agent engine: " + engine.kind);
     }
     if (engine.priority != 0) root["priority"] = engine.priority;
     atomic_write(paths.engine, root.dump(2) + "\n");

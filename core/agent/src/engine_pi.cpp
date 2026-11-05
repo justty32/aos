@@ -212,7 +212,7 @@ int step_pi(const Paths &paths, std::string_view name, std::uint64_t turn,
     }
     std::sort(messages.begin(), messages.end());
     if (messages.empty()) {
-        write_status(paths, "idle", "等待訊息", turn);
+        write_status(paths, "idle", "waiting for messages", turn);
         return 0;
     }
 
@@ -222,7 +222,7 @@ int step_pi(const Paths &paths, std::string_view name, std::uint64_t turn,
         slot = aos::llm::acquire(pi_cpu_name(engine), llm_priority(engine),
                                  paths.folder);
     } catch (const aos::llm::WaitingLlm &) {
-        write_status(paths, "waiting-llm", "等 llm 槽", turn);
+        write_status(paths, "waiting-llm", "waiting for an llm slot", turn);
         return 75;
     }
 
@@ -251,24 +251,24 @@ int step_pi(const Paths &paths, std::string_view name, std::uint64_t turn,
         write_history(paths, history);
         if (!run.tool_calls.empty()) {
             append_note(paths, turn,
-                        "> pi 用了工具：" + joined(run.tool_calls));
+                        "> pi used tools: " + joined(run.tool_calls));
         }
-        write_status(paths, "idle", "等待訊息", turn);
+        write_status(paths, "idle", "waiting for messages", turn);
         return 0;
     }
 
-    std::string note = "> pi 失敗（exit=" +
-                       std::to_string(run.exit_code) + "）：" +
+    std::string note = "> pi failed (exit=" +
+                       std::to_string(run.exit_code) + "): " +
                        failure_detail(run.stderr_text);
     if (run.stderr_text.find("No API key") != std::string::npos) {
         const std::string key = api_key_name(engine);
-        note += "（pi 叫你跑 /login，但 aos 這條路走環境變數：請設定 " + key +
-                "）";
+        note += " (pi asks you to run /login, but aos passes keys via environment variables: set " + key +
+                ")";
     }
     append_note(paths, turn, note);
     write_status(paths, "error",
-                 "pi 失敗（exit=" + std::to_string(run.exit_code) +
-                     "）：" + failure_first_line(run.stderr_text),
+                 "pi failed (exit=" + std::to_string(run.exit_code) +
+                     "): " + failure_first_line(run.stderr_text),
                  turn);
     return 1;
 }

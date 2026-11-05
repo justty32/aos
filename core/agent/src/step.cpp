@@ -24,7 +24,7 @@ std::uint64_t parse_turn(std::string_view text) {
     const auto [end, error] =
         std::from_chars(text.data(), text.data() + text.size(), turn);
     if (error != std::errc{} || end != text.data() + text.size()) {
-        throw std::runtime_error("回合號格式錯誤");
+        throw std::runtime_error("malformed turn number");
     }
     return turn;
 }
@@ -71,7 +71,7 @@ ClippedText clip_utf8(std::string text) {
 
 ClippedText clipped(const Json &result, const char *key) {
     if (!result.contains(key) || !result[key].is_string()) {
-        throw std::runtime_error(std::string("工具結果缺少 ") + key);
+        throw std::runtime_error(std::string("tool result is missing ") + key);
     }
     return clip_utf8(result[key].get<std::string>());
 }
@@ -91,9 +91,9 @@ Json pending_args(const PendingCall &call) {
 }
 
 std::string execution_tool_result(const PendingCall &call, const Json &result) {
-    if (!result.contains("exit")) throw std::runtime_error("工具結果缺少 exit");
+    if (!result.contains("exit")) throw std::runtime_error("tool result is missing exit");
     if (!result.contains("signal")) {
-        throw std::runtime_error("工具結果缺少 signal");
+        throw std::runtime_error("tool result is missing signal");
     }
     const ClippedText stdout_text = clipped(result, "stdout");
     const ClippedText stderr_text = clipped(result, "stderr");
@@ -107,10 +107,10 @@ std::string execution_tool_result(const PendingCall &call, const Json &result) {
 
     const bool signaled = !result["signal"].is_null();
     if (signaled && !result["signal"].is_number_integer()) {
-        throw std::runtime_error("工具結果的 signal 必須是數字或 null");
+        throw std::runtime_error("tool result signal must be a number or null");
     }
     if (!signaled && !result["exit"].is_number_integer()) {
-        throw std::runtime_error("工具結果的 exit 必須是數字");
+        throw std::runtime_error("tool result exit must be a number");
     }
     const int signal = signaled ? result["signal"].get<int>() : 0;
     const int exit_code = !signaled ? result["exit"].get<int>() : 0;
@@ -126,20 +126,20 @@ std::string execution_tool_result(const PendingCall &call, const Json &result) {
         bool retryable = false;
         if (signal == 9) {
             type = "timeout";
-            message = "工具逾時被殺";
+            message = "tool timed out and was killed";
             retryable = true;
         } else if (signaled) {
             type = "signal";
-            message = "工具收到 signal " + std::to_string(signal);
+            message = "tool got signal " + std::to_string(signal);
         } else if (exit_code == 126) {
             type = "not_executable";
-            message = "工具不可執行";
+            message = "tool is not executable";
         } else if (exit_code == 127) {
             type = "not_found";
-            message = "找不到工具程式";
+            message = "tool program not found";
         } else {
             type = "exit_nonzero";
-            message = "工具以 exit " + std::to_string(exit_code) + " 結束";
+            message = "tool exited with " + std::to_string(exit_code);
         }
         content["error"] = {
             {"type", type}, {"message", message}, {"retryable", retryable}};
@@ -234,7 +234,7 @@ int step(const std::filesystem::path &folder, std::string_view name,
     try {
         paths = detail::paths_for(folder, name);
         turn = current_turn(*paths);
-        detail::write_status(*paths, "thinking", "處理本回合", turn);
+        detail::write_status(*paths, "thinking", "processing this turn", turn);
 
         const Engine engine = read_engine(paths->folder, name);
         if (engine.kind == "pi") {
@@ -262,7 +262,7 @@ int step(const std::filesystem::path &folder, std::string_view name,
                     return std::filesystem::exists(out / (call.id + ".json"));
                 });
             if (!ready) {
-                detail::write_status(*paths, "tool", "等工具結果", turn);
+                detail::write_status(*paths, "tool", "waiting for tool results", turn);
                 return 0;
             }
             for (const PendingCall &call : pending.calls) {
@@ -295,13 +295,13 @@ int step(const std::filesystem::path &folder, std::string_view name,
                                          detail::llm_priority(engine),
                                          paths->folder);
             } catch (const aos::llm::WaitingLlm &) {
-                detail::write_status(*paths, "waiting-llm", "等 llm 槽", turn);
+                detail::write_status(*paths, "waiting-llm", "waiting for an llm slot", turn);
                 return 75;
             }
         }
 
         std::string next_status = "idle";
-        std::string detail_text = "等待訊息";
+        std::string detail_text = "waiting for messages";
         if (received_user || received_tools) {
             const std::vector<aos::tool::Spec> tools =
                 read_tools(paths->folder, name);
@@ -340,7 +340,7 @@ int step(const std::filesystem::path &folder, std::string_view name,
                                      return item.name == extracted.call->tool;
                                  });
                 if (spec == tools.end()) {
-                    throw std::runtime_error("已驗證的工具呼叫找不到登記");
+                    throw std::runtime_error("validated tool call has no registration");
                 }
                 const std::vector<std::string> argv =
                     expand_argv(*spec, *extracted.call);
@@ -352,11 +352,11 @@ int step(const std::filesystem::path &folder, std::string_view name,
                                        {{id, extracted.call->tool,
                                          call_args_json(*extracted.call)}}});
                 detail::append_note(*paths, turn,
-                                    "> 已投遞工具 " + id + ": " +
+                                    "> delivered tool " + id + ": " +
                                         Json(argv).dump() +
-                                        "，等下下回合的結果");
+                                        "; result comes in two turns");
                 next_status = "tool";
-                detail_text = "等工具結果";
+                detail_text = "waiting for tool results";
             } else if (extracted.error) {
                 const std::string content = call_error_result(
                     id, *extracted.error, original_call_args(reply));
@@ -364,7 +364,7 @@ int step(const std::filesystem::path &folder, std::string_view name,
                 detail::write_history(*paths, history);
                 detail::append_log(*paths, turn, "tool", content);
                 detail::append_note(*paths, turn,
-                                    "> 工具呼叫錯誤：" +
+                                    "> tool call error: " +
                                         extracted.error->message);
             }
         }
@@ -381,19 +381,19 @@ int step(const std::filesystem::path &folder, std::string_view name,
             } catch (...) {
             }
             try {
-                std::string note = "> 第 " + std::to_string(turn) +
-                                   " 回合失敗：" + detail_text;
+                std::string note = "> turn " + std::to_string(turn) +
+                                   " failed: " + detail_text;
                 std::string lower = detail_text;
                 std::transform(lower.begin(), lower.end(), lower.begin(),
                                [](unsigned char character) {
                                    return static_cast<char>(
                                        std::tolower(character));
                                });
-                if (detail_text.find("連線失敗") != std::string::npos ||
+                if (detail_text.find("connection failed") != std::string::npos ||
                     lower.find("connect") != std::string::npos) {
-                    note += "（請確認 LLM 端點 " +
+                    note += " (check that the LLM endpoint " +
                             aos::llm::options_from_env().url +
-                            " 是不是活的，或用 AOS_LLM_URL 指到正確的位址）";
+                            " is up, or point AOS_LLM_URL at the right address)";
                 }
                 detail::append_note(*paths, turn, note);
             } catch (...) {

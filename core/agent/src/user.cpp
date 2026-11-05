@@ -32,7 +32,7 @@ std::string message_filename() {
 std::filesystem::path user_folder() {
     const char *home = std::getenv("HOME");
     if (home == nullptr || *home == '\0') {
-        throw std::runtime_error("HOME 沒有設定");
+        throw std::runtime_error("HOME is not set");
     }
     return absolute_folder(home);
 }

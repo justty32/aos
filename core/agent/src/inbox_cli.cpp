@@ -83,7 +83,7 @@ int list_inbox(int argc, char *argv[], const char *program) {
         return 0;
     }
     if (items.empty()) {
-        std::fputs("（信箱是空的）\n", stdout);
+        std::fputs("(inbox is empty)\n", stdout);
         return 0;
     }
     std::size_t id_width = 2;
@@ -96,7 +96,7 @@ int list_inbox(int argc, char *argv[], const char *program) {
     }
     std::printf("%-*s %-*s %-*s %s\n", static_cast<int>(id_width), "ID",
                 static_cast<int>(from_width), "FROM",
-                static_cast<int>(when_width), "WHEN", "訊息");
+                static_cast<int>(when_width), "WHEN", "MESSAGE");
     for (const aos::agent::InboxItem &item : items) {
         const std::string from = display_from(item.from);
         const std::string preview = truncate_utf8(first_line(item.text), 40);
@@ -160,13 +160,13 @@ int read_messages(int argc, char *argv[], const char *program) {
     const std::vector<aos::agent::InboxItem> inbox =
         aos::agent::read_inbox(folder, name);
     if (inbox.empty()) {
-        std::fputs("aos inbox: 信箱是空的\n", stderr);
+        std::fputs("aos inbox: inbox is empty\n", stderr);
         return 1;
     }
     const Selection selection = select_items(inbox, id, all);
     if (!selection.candidates.empty()) {
         std::fprintf(stderr,
-                     "aos inbox: %s 對到 %zu 封訊息，請給更長的 id：\n",
+                     "aos inbox: %s matches %zu messages; give a longer id:\n",
                      id->c_str(), selection.candidates.size());
         for (const aos::agent::InboxItem &item : selection.candidates) {
             const std::string from = display_from(item.from);
@@ -179,7 +179,7 @@ int read_messages(int argc, char *argv[], const char *program) {
     }
     if (selection.items.empty()) {
         std::fprintf(stderr,
-                     "aos inbox: 沒有這封訊息 %s（用 aos inbox ls 看有哪些）\n",
+                     "aos inbox: no message %s (see aos inbox ls)\n",
                      id ? id->c_str() : "");
         return 1;
     }
@@ -198,14 +198,14 @@ int read_messages(int argc, char *argv[], const char *program) {
             ++marked;
         } else {
             failed = true;
-            std::fprintf(stderr, "aos inbox: %s 無法標為已讀：%s\n",
+            std::fprintf(stderr, "aos inbox: cannot mark %s as read: %s\n",
                          item.id.c_str(), error.c_str());
         }
     }
     if (marked != 0) {
         std::fprintf(stderr,
-                     "（已標為已讀，agent 不會再回覆這 %zu 封；要保留請用 "
-                     "--keep）\n",
+                     "(marked as read; the agent will not reply to these %zu message(s); to keep them, use "
+                     "--keep)\n",
                      marked);
     }
     return failed ? 1 : 0;
