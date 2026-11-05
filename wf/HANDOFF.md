@@ -12,6 +12,12 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-05 收工（公司 Windows＋WSL；明天開新 session 接）
+
+1. **授權**：今天隨意 push；普通事 opus、簡單與雜活 sonnet、規劃 fable（fable 可再開 fable）；做事的 agent（雜活除外）先讀 wf 規矩。新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問。WSL clone 與 Windows 工作樹都對齊 origin；**一律在 WSL 改檔**（Windows 端改會掉 +x）；殺程序只用自己記的 pid，別用 `pkill -f`（B 線誤殺過別 session 的程序）。Windows 工作樹 stash 有兩筆舊副本（內容都比 origin 舊，可丟）。
+2. **今天做完並 push**：portable-flow（相對 daemon stack、sleep/wake、DaemonRunning、tools 只存差異、ctl 收進 `aos-agent ctl`）；kernel-daemon（llm kernel 一台 daemon、`AOS_LLM_KERNEL`＝它的 stack、問腦掛 daemon 下 proc、判官兩模式）；兩輪邊緣測試（edge-llm／daemon／agent／round2，約 30 處修）；feat-proto 五件（self_tools、能力包、priority 排程、agents new／add＋配額、limits）；層級式記憶 `memory`＋`proto8/knowledge/aos/`；程式輸出全英文＋三扇門與結束碼統一（stdio-unify）；say 讀 stdin；新規矩：proto8 沒有舊版、輸出格式只在共用介面改。試驗場 `~/code/playground`（WSL）與桌面 `aos-試驗場教學.html` 已更新到 317a88f9 前狀態；桌面另有 `aos-三扇門與結束碼.html`。**每日進度頁「本日進度」**：https://claude.ai/artifact/HazekvnmhUAgG8pwDr3Khd （之後每天更新這份，用 `url` 參數）；新功能說明頁 https://claude.ai/artifact/LoFTkSuuFREyGksrEzfpqy 。
+3. **明天要接**：lib 工具 die 收成共用模組（使用者已裁「收成共用模組」）→ [stdio-unify](../proto8/thinking/2026-11/05/stdio-unify/README.md#剩下的)；知識庫接三種 agent、工具說明改寫 K1～K8 → [agent-knowledge](../proto8/thinking/2026-11/05/agent-knowledge/README.md)；`thought` 工具實作 T1～T6 → [small-thought](../proto8/thinking/2026-11/05/small-thought/README.md)；之後找時段做架構大重構（先 fable 規劃）。等使用者：真腦（LM Studio）、`aos-agent open` 畫面 → WAIT_USER。
+
 ## 2026-11-04 夜收工（家機 Manjaro；明天開新 session 接）
 
 1. **授權**：今晚隨意 push；普通事 opus、簡單與雜活 sonnet、規劃 fable；做事的 agent（雜活除外）先讀 wf 規矩、可再派 agent。新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問。push 時好時壞被 GitHub 拒（publickey），重試就過。
@@ -23,13 +29,3 @@
    - kernel 的 `served.jsonl` 還留著：**11-05 使用者選「也刪」，已落實**（kernel 不再寫）。
    - `ask` 被打斷時回信殘留在 `$AOS_KERNEL/reply/new/` 的窄縫已記成已知限制（08 題 3 定案段），不追。
 4. **雜項**：桌面 `/home/lorkhan/Desktop/aos-進度-11-04晚.html` 是進度頁，已過時、可刪（repo 外，沒動）。收工時查過：沒有留著的 aos-loop／aos-daemon／aos-llm-kernel／假伺服器背景程序。
-
-## 2026-11-04 傍晚下班（公司 Windows；回家開新 session 接）
-
-1. **授權**：今天隨意 push；普通事 opus、簡單與雜活 sonnet、規劃 fable；做事的 agent（雜活除外）先讀 wf 規矩、可再派 agent。新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問。**鐵律 1 已刪**（使用者「這個鐵律刪掉，不用ctest」）：驗證＝build 得過＋手跑，見 [testing](workflows/testing.md)。多個 agent 同工作樹一律用 `GIT_INDEX_FILE` 暫存 index 建 commit；不少 agent 直接 push、不動本機 main ref，頂層要自己把本機 main 對齊 origin。
-2. **今天做完並 push**：aos-post 改版收尾與全套驗證；tidy 補對讀、round 條文 13 條照建議落；demo 只留 eca-claude、archive/topdown 刪；aos-eca-turn 開場白改 `--prompt`（沒給＝沒開場白）；thinking 改「月/日/子項」結構並拆大檔；proto8／wf 大檔拆分；舊 proto1～7 封存到根 `archive/`、活文件連結拿掉、code map 舊分冊移出；loop/fsm agent（`demo/agent-fsm`）；**aos-agent 統一介面**（`extras/agent/bin/aos-agent`、`interfaces.json` 宣告、screen／tools／llm 子介面、副本 vs 定義〔`aos-tools`／新 `aos-llm` 改定義〕、`--target`／`AOS_AGENT`、chat、`using-aos-agent.sh`、`AOS_DAEMON_STACK`→`AOS_DAEMON`、daemon 表多 `exec` 與 `def` 欄）；aos-say／aos-listen／aos-eca 刪；四元素審查（[four-elements](../proto8/thinking/2026-11/04/four-elements/README.md)）十題裁定、07 前 5 步做完；**全部測試與 ctest 刪光**（c90f8617）。說明頁 https://claude.ai/artifact/AqwFbS1gLPCwJriyjAdKNA （使用者通勤 review）。
-3. **明天要接**：
-   - 四元素 08 步 5～8（4 步：aos-tools 題 1／8、daemon 題 6／5 後半／3、daemon-ctl add 看 json 題 4、N-63 表題 2）：aos-agent 已收工、可以做，使用者「明天再說」 → [08](../proto8/thinking/2026-11/04/four-elements/08-實作步驟-等aos-agent後.md)。
-   - `AOS_BRAIN_*` 改放哪：11-04 晚已照 [think-as-function](../proto8/thinking/2026-11/04/think-as-function/README.md) 推薦實作（四題可翻案，見 [07](../proto8/thinking/2026-11/04/think-as-function/07-實作結論.md)）；剩使用者看一眼與試驗場親手試（WAIT_USER）。
-   - 使用者 review artifact（設計總覽 https://claude.ai/artifact/AqwFbS1gLPCwJriyjAdKNA 、指令參考 https://claude.ai/artifact/HLMpsX3T76ndC7E8VQ8Nit ）後的回饋；試驗場 `env.sh` 第 13 行使用者自己改成 `AOS_DAEMON`（WAIT_USER）。
-4. **雜項**：LM Studio 伺服器頂層用 `lms server start` 開在 localhost:1234（qwen3-1.7b），試驗場 `agents/fsm_ann` 用它；WSL clone 已到 f56635ab、aos-daemon 已重建。eca-claude-dir 調查使用者裁「全部都是自己要承擔的風險」。
