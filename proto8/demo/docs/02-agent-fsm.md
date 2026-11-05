@@ -18,7 +18,7 @@ agent-fsm/
   act.py       跑工具：最後一則 assistant 的 tool_calls 逐個 aos-tools call，結果各接一則 tool、退 0；沒有 tool_calls（最後答案）退 10
   system.txt   system 訊息（brain.py 的 --system 指到它；每次從檔讀、不存進 history）
   tools.json   aos-tools 登記檔，只登記 clock（"../../lib/base/clock"；跟 eca-claude 同一份寫法）；這隻自己加減的在 $AOS_STACK/tools.json（覆蓋層，aos-agent tools）
-  llm.json     腦設定：{}＝用 kernel 的預設代號；鍵 endpoint（kernel 的代號，例 "local-qwen"）、model（臨時換同一端點的模型）
+  llm.json     腦設定：{}＝用 kernel 的預設代號；只認一個鍵 endpoint（kernel 的 endpoint 包代號，例 "smart-high"；model、temperature 等屬性固定在包上，llm.json 不寫、信裡也不帶 model）
   interfaces.json  {"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json"}}（沒有 screen）
 ```
 
@@ -46,5 +46,5 @@ aos-agent ctl resume         # ctl 下也有 stop／start、sleep／wake（同�
 - **停著等 vs 射後不理**寫在表上：範本 idle 的 `next` 接住 10＝queue 空就停著等（loop 隔 `interval_ms` 再看）。射後不理＝複製一份，idle 的 `next` 改成字串 `"think"`（10 到 loop＝收工）；`loop.json` 的 `interval_ms` 要留著（11-04 晚起 wait 靠它一拍一拍看回信，拿掉＝空轉）；要開場白就在 idle 的 argv 加 `"--prompt", "prompt.txt"`（相對這個資料夾；history 空、queue 沒好信時投一次）。
 - **思考中來的信**留在 `queue/new/`，答完回 idle 才收、跟那批一起答（使用者 11-04「等答完回 idle 再收」）。
 - **暫停時改 history**：`pause` 之後改 `history.jsonl`（例：刪掉最後一則答案），要它重答就把 `stage.txt` 寫成 `think` 再 `resume`；brain 每次從頭讀，改了就生效（寫新請求時順手刪 `think/pending.txt`，wait 重寄）。最後一則已是答案時 brain 不組請求、退 10 回 idle。
-- **kernel 停著**：信留在 kernel 信箱的 `new/`，`stage.txt` 停在 `wait`、每拍退 10 一直等；kernel 起來就接著答。kernel 回錯（`EndpointFailed`、`BudgetMissing`…）＝wait 退 1、stderr 一行 `aos-llm: 代號 原因`、loop 停下等人；修好再起，wait 看到沒 pending、`request.json` 還在＝重寄；寄之前比對 `request.json` 的 endpoint／model 跟現在的 llm.json（定義疊 stack），對不上（人改了或刪了 llm.json）＝退 11 回 think、brain 重組再寄（11-05 edge-agent；原本要手動把 `stage.txt` 寫成 `think`）。
+- **kernel 停著**：信留在 kernel 信箱的 `new/`，`stage.txt` 停在 `wait`、每拍退 10 一直等；kernel 起來就接著答。kernel 回錯（`EndpointFailed`、`BudgetMissing`…）＝wait 退 1、stderr 一行 `aos-llm: 代號 原因`、loop 停下等人；修好再起，wait 看到沒 pending、`request.json` 還在＝重寄；寄之前比對 `request.json` 的 endpoint 跟現在的 llm.json（定義疊 stack），對不上（人改了或刪了 llm.json）＝退 11 回 think、brain 重組再寄（11-05 edge-agent；原本要手動把 `stage.txt` 寫成 `think`）。
 - **錯**：stderr 一行 `agent-fsm: 代號 原因`、退 1、loop 停下等人（P-20）——`SendFailed`（aos-llm send 失敗，例 `AOS_LLM_KERNEL` 沒設＝它先印 `aos-llm: LlmKernelMissing`）、`RequestMissing`、`ReplyBad`、`CfgBad`（`llm.json` 讀不懂）、`HistoryBad`、`ToolsBad`、`ToolFailed`、`PostFailed`、`StackMissing`、`WriteFailed`、`ArgumentsBad`，旗標指的檔不在＝`PromptMissing`／`SystemMissing`／`ToolsMissing`。修好再起從停的那格接著做：直接跑的＝`aos-exec` 同一個工作區；掛 daemon 的＝那隻退 1 時留在表上 `stopped`＋`reason`（11-05 使用者裁「留表標 stopped (Recommended)」）；修好後 `aos-agent llm reset`／`tools reset`（或直接改 stack 裡那份）再 `aos-agent ctl start`，同一個 stack 從停的那格接著做；不要了 `aos-agent ctl rm`（`ctl ls`／`ctl state` 看得到原因）。壞信（body 不是 `{"role": "user", "content": 非空字串}`）丟掉、`$AOS_STACK/mailbox_warning.txt` 一行。

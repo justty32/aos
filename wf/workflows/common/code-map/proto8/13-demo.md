@@ -25,10 +25,10 @@
 | `loop.json` | 停著等版：`exec` 是 `fsm.json`、`interval_ms` 300、開 `ctl`／`state` 窗 |
 | `fsm.json` | 四格表：idle `{"0": "think", "10": "idle"}`、think `{"0": "wait", "10": "idle"}`、wait `{"0": "act", "10": "wait", "11": "think"}`（11 是 11-05 edge-agent 加的）、act `{"0": "think", "10": "idle"}`；`_entry` 讓 aos-exec 也能直接跑一格 |
 | `idle.py` | idle 格：`$AOS_STACK/queue/` 全部收進 `history.jsonl`、接進去就 `aos-post done`；壞信丟掉寫 `mailbox_warning.txt`；`--prompt` 開場白 |
-| `brain.py` | think 格：history＋`--system`＋`--tools`（沒給＝定義 `tools.json` 疊 `$AOS_STACK/tools.json` 覆蓋層，`aos-tools --overlay`，11-05）＋`llm.json`（定義疊 `$AOS_STACK/llm.json` 的 `endpoint`／`model`）組成請求信 body，寫 `$AOS_STACK/think/request.json`、退 0；不碰網路；沒事做退 10 |
-| `wait.py` | wait 格：沒 `think/pending.txt`＝`aos-llm send --reply-to think/reply`、記名字、退 10；有＝`aos-llm recv`：沒到 10、到了接一則 assistant 進 history 退 0、kernel 回錯退 1；寄之前 `request.json` 的 endpoint／model 跟現在的 llm.json（定義疊 stack）對不上＝退 11 回 think 重組（11-05 edge-agent） |
+| `brain.py` | think 格：history＋`--system`＋`--tools`（沒給＝定義 `tools.json` 疊 `$AOS_STACK/tools.json` 覆蓋層，`aos-tools --overlay`，11-05）＋`llm.json`（定義疊 `$AOS_STACK/llm.json` 的 `endpoint`；不寫 `request.model`，11-05）組成請求信 body，寫 `$AOS_STACK/think/request.json`、退 0；不碰網路；沒事做退 10 |
+| `wait.py` | wait 格：沒 `think/pending.txt`＝`aos-llm send --reply-to think/reply`、記名字、退 10；有＝`aos-llm recv`：沒到 10、到了接一則 assistant 進 history 退 0、kernel 回錯退 1；寄之前 `request.json` 的 endpoint 跟現在的 llm.json（定義疊 stack）對不上＝退 11 回 think 重組（11-05 edge-agent） |
 | `act.py` | act 格：最後一則 assistant 的 `tool_calls` 逐個 `aos-tools --file … [--overlay $AOS_STACK/tools.json] call`（11-05），結果各接一則 tool、退 0；沒 `tool_calls`＝最後答案、退 10；工具的錯回給腦 |
-| `system.txt`、`tools.json`、`llm.json` | system 訊息；工具登記檔（clock）；腦設定（範本 `{}`＝kernel 預設代號；鍵 `endpoint`、`model`） |
+| `system.txt`、`tools.json`、`llm.json` | system 訊息；工具登記檔（clock）；腦設定（範本 `{}`＝kernel 預設代號；鍵 `endpoint`） |
 | `interfaces.json` | 宣告遵守 `aos-agent` 介面，`entry`＝`body.json`（11-05）、選配 `tools`、`llm`（`"llm.json"`，11-04 晚）；brain.py／act.py 疊 `$AOS_STACK/tools.json` 覆蓋層（11-05） |
 
 ## `demo/llm-kernel/`（llm kernel 範本；11-04 晚，11-05 改成一台 daemon）
