@@ -35,16 +35,16 @@ def parse(argv, flags, switches=None, multi=None):
         name, eq, val = a.partition("=")
         if name in switches:
             if eq:
-                raise Error("%s 不帶值" % name, "ArgumentsBad")
+                raise Error("%s takes no value" % name, "ArgumentsBad")
             opts[switches[name]] = True
             i += 1
             continue
         if name not in flags and name not in multi:
-            raise Error("不認得的旗標 %s" % name, "FlagUnknown")
+            raise Error("unknown flag %s" % name, "FlagUnknown")
         if not eq:
             i += 1
             if i == len(argv):
-                raise Error("%s 缺值" % name, "ArgumentsBad")
+                raise Error("%s needs a value" % name, "ArgumentsBad")
             val = argv[i]
         if name in multi:
             opts.setdefault(multi[name], []).append(val)
