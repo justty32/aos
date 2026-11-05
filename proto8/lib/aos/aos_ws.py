@@ -68,9 +68,9 @@ def post(args, stdin_text=""):
     try:
         r = subprocess.run(["aos-post"] + args, input=stdin_text, capture_output=True, text=True)
     except OSError as e:
-        raise Error("PostFailed", "aos-post 起不來（PATH 上要有 proto8/impls/aos-post/bin）：%s" % e)
+        raise Error("PostFailed", "aos-post failed to start (proto8/impls/aos-post/bin must be on PATH): %s" % e)
     if r.returncode != 0:
-        raise Error("PostFailed", "aos-post %s 退 %d：%s" % (args[0], r.returncode, r.stderr.strip()))
+        raise Error("PostFailed", "aos-post %s exited %d: %s" % (args[0], r.returncode, r.stderr.strip()))
     return r.stdout.strip()
 
 

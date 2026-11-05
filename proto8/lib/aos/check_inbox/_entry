@@ -15,16 +15,16 @@ def die(code, reason):
 try:
     args = json.loads(sys.stdin.read() or "{}")
 except ValueError as e:
-    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    die("ArgumentsBad", "stdin is not JSON: %s" % e)
 if not isinstance(args, dict):
-    die("ArgumentsBad", "arguments 要是物件")
+    die("ArgumentsBad", "arguments must be an object")
 
 new = os.path.join(os.environ.get("AOS_WS", "."), "new")
 names = sorted(n for n in os.listdir(new) if not n.startswith(".")) if os.path.isdir(new) else []
 if not names:
-    print("信箱是空的：沒有還沒處理的信。")
+    print("Inbox is empty: no unprocessed letters.")
     sys.exit(0)
-print("還沒處理的有 %d 份（照到達順序，會一份一份變成你的題目）：" % len(names))
+print("%d unprocessed (in arrival order; each becomes your task in turn):" % len(names))
 for n in names:
     try:
         with open(os.path.join(new, n), encoding="utf-8") as f:
@@ -37,7 +37,7 @@ for n in names:
         l = None
     if isinstance(l, dict) and l.get("kind") == "letter":
         body = " ".join(str(l.get("body", "")).split())
-        print("- 來自 %s｜主旨：%s｜要回：%s｜%s" % (l.get("from"), l.get("subject") or "（無）",
-                                             "是" if l.get("expect_reply") else "否", body[:200]))
+        print("- from %s | subject: %s | reply expected: %s | %s" % (l.get("from"), l.get("subject") or "(none)",
+                                             "yes" if l.get("expect_reply") else "no", body[:200]))
     else:
-        print("- 題目 %s｜%s" % (n, " ".join(text.split())[:200]))
+        print("- task %s | %s" % (n, " ".join(text.split())[:200]))
