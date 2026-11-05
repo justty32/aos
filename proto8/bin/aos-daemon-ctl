@@ -343,6 +343,17 @@ def read_state(d):
     return {n: resolve(d, r) if isinstance(r, dict) else r for n, r in procs.items()}
 
 
+def note_down(d):
+    """add／rm 不讀表，daemon 沒在跑時原本一聲不吭（信照寄、開門才套）：補一句（11-05 B 線；表讀不到就不說）。"""
+    try:
+        with open(os.path.join(d, STATE), encoding="utf-8") as fh:
+            st = json.load(fh)
+    except (OSError, ValueError):
+        return
+    if isinstance(st, dict) and not proc_alive(st.get("pid"), st.get("started_at_ticks"), st.get("boot_id")):
+        sys.stderr.write("%s: note: the daemon is not running (pid %s); the letter waits until it starts\n" % (NAME, st.get("pid")))
+
+
 def row_of(d, name):
     """表上那一列；表上沒有＝ProcMissing（不看小格資料夾在不在）。"""
     r = read_state(d).get(name)
@@ -410,12 +421,15 @@ def cmd_add(opts, args):
         spec["ws"] = ws
     if stack:
         spec["stack"] = stack
+    note_down(d)
     send(d, {"procs_added": {name: spec}})
 
 
 def cmd_rm(opts, args):
     name = name_arg("rm", args)
-    send(daemon_dir(opts), {"procs_removed": [name]})
+    d = daemon_dir(opts)
+    note_down(d)
+    send(d, {"procs_removed": [name]})
 
 
 def need_ctl(d, name, row=None):
