@@ -26,6 +26,7 @@ aos 自己的程式（impls、bin、extras、lib 工具、demo 的格）的 stdi
 - 每層只說自己一行（開頭可以是 agent 名）：[P-21](../../../proto8/docs/CONVENTION/02-題目stack停錯腦/04-六-停與錯續-P-21～P-22.md)
 - 不讀下層 stderr，三處明文例外：[C-52](../../../proto8/docs/CONCEPTS/01-設計理念/03-最高原則與兩條總原則.md)
 - 給腦用的工具兩邊印同一行、退 1，`[exit code N]` 在最後一行：[lib/docs/01](../../../proto8/lib/docs/01-分層等.md)
+- **輸出格式只在共用介面改，各程式不自己拼**（使用者 11-05：「……都會盡量把這種常見的功能，統一成單一介面，這樣只需要改介面，那就能好。」）：C++ 走 aos-util（`aos::fail`／`aos::warn`／`parse_cli`），Python 走 `proto8/bin/aos_flags.py`；例外與待收斂的見 [stdio-unify § 使用者原則](../../../proto8/thinking/2026-11/05/stdio-unify/README.md#使用者原則11-05-傍晚)
 
 ## 導航 index（code map）維護鏈
 

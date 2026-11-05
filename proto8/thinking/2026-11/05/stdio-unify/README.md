@@ -59,6 +59,35 @@
 - D5 互動提示符（aos-agent chat 的 `> `）不算一行，照舊在 stderr；其他給人看的狀態句（attaching、watching）改提醒行。
 - D6 aos-eca-screen 的 ECA_DIR 改成子命令前的旗標 `--eca`（見 R6 旁註；E 線收尾）。
 
+- D6 aos-eca-screen 的 ECA_DIR 改成子命令前的旗標 `--eca DIR`（aos-exec 把動作接在入口 argv 最後，JSON 入口沒辦法把 `..` 排到動作後面；不用 sh）。
+- D7 給腦用的工具（agents、self_tools、aos-json/tools 的 json、json_edit）把下層錯誤行的代號與原因接進自己那行（例 `self_tools: error: ToolExists …`）：腦只看 stdout，不這樣它不知道錯在哪。這算「給腦用的工具把下層錯翻成自己的錯」，寫在 lib/docs/01。
+- D8 `[exit code N]` 退 0 也寫；被訊號殺寫 128＋N。
+- D9 aos-loop 的 RunFailed 是錯誤行但碼是身體的（R8 的例外，README 與 N-43 續註明）；子命令前的 FlagUnknown 不附 `(usage: …)`。
+- D10 install.sh 加 `ImplsMissing`（impls 一支都沒建）；ln 失敗改提醒行、併進最後的 LinkFailed 數字。aos-agent chat 中途印過錯誤行，stdin 結束時退 1。
+- D11 aos-daemon 狀態窗寫不了那行也是提醒行（不退出就不寫錯誤行）。
+
+## 使用者原則（11-05 傍晚）
+
+「通常來說，改這種輸出格式，應該是很簡單的，我們人類在手寫程式的時候，都會盡量把這種常見的功能，統一成單一介面，這樣只需要改介面，那就能好。」
+
+所以：錯誤行／提醒行／`--help`／結束碼的產生，每種語言收斂到一個共用介面，各程式不自己拼字串（寫進 [conventions](../../../../../wf/workflows/common/conventions.md)）。現況：
+- C++：`aos-util` 的 `aos::fail`／`aos::warn`（`io.hpp`）、`parse_cli` 的 `--help` 與 `usage_error`（`cli.hpp`）；13 支都走它。例外：aos-daemon 子行程 fork 之後、exec 之前的 5 處 `fprintf`（`child/limits.cpp`、`child/child.cpp`；fork 後不能配記憶體，只能直接印）。
+- Python：`proto8/bin/aos_flags.py`（`die`、`warn`、`error_line`、`split_line`、`run`〔Ctrl-C 130〕、`parse(help=…)`）；bin、extras、demo 的格都走它。lib/agent 的工具走 `lib/agent/agent_tool.py`。
+- sh：install.sh、sandbox 的 setup.sh 各自 echo（獨立跑：裝之前、root 沙箱裡）。
+
 ## 做了什麼
 
-（施工後補）
+照 R1～R15 改完 56 支（commit 都在 main，11-05）：
+- C++ impls（A 線）`9b880578`、`f140b86a`：aos-util 加 `fail`／`warn`／`--help`／`usage_error`、刪 `emit_error`；13 個專案全部重建（15:17:04 起、15:30:50 完，全過）。
+- Python 命令列與 install.sh（B 線）`1a85221b`、`3485eb6b`、`aba4aec8`、`b70f44d9`。
+- lib 工具、demo、aos-json/tools（C 線）`3a91eaa2`、`988d0c6f`、`c1c1518b`、`c612c811`；demo 的格改走 aos_flags `85138f99`。
+- 條文與知識庫（D 線）NORMS `91933c81`（N-43 拆出續篇）、CONVENTION `07421d3a`、CONCEPTS `4e119588`、knowledge `6c3e2338`（errors 改資料夾）、conventions `d6a6bec8`。
+- 收尾（E 線）`3780eba5`：aos-eca-screen 照 D6、self_tools 照 D7、setup.sh、act.py 殘留。
+- 實跑（WSL `/tmp/stdio-*`）：每支 `--help`（stdout 英文、退 0）、不給參數（ArgumentsBad）、`--bogus`（FlagUnknown）、`bogussub`（CommandUnknown）、典型錯都是新格式一行；抽查 aos-loop RunFailed 照身體碼、aos-json check 退 10、aos-post take 空信箱退 10、bash 退 3 → `[exit code 3]`、fake_slow 被 TERM 143、Ctrl-C 130 無 traceback、install.sh skip → LinkFailed 退 1。
+
+## 剩下的
+
+- **lib 工具的共用介面**：lib/base 19 支、lib/aos/check_inbox、memory 各自寫 `die`（同一份格式抄在每支裡）。跟 [lib/docs/01](../../../../lib/docs/01-分層等.md) 規則 9「每個工具自成一格」衝突——要使用者裁：在 lib 放一個共用小模組（沙箱裡要看得到），還是維持每格自成一格。
+- demo 的格的 `--help`、Ctrl-C 還是各自寫（頂層腳本、沒 main 交給 `aos_flags.run`）。
+- sh 兩支（install.sh、setup.sh）沒有共用函數檔，先算例外。
+- 真腦沒跑；json_edit 給模型的 prompt 還是中文；install.sh 沒裝 aos-lua、aos-janet。
