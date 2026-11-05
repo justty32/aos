@@ -17,12 +17,12 @@
 (defn obj
   "照寫的順序建一個 JSON 物件：(obj \"argv\" [...] \"cwd\" \"x\")；值是 nil＝不寫那個 key。"
   [& kvs]
-  (when (odd? (length kvs)) (fail "ArgumentsBad" "obj 要一對一對寫 key 與值"))
+  (when (odd? (length kvs)) (fail "ArgumentsBad" "obj takes keys and values in pairs"))
   (def t @{})
   (def ks @[])
   (each [k v] (partition 2 kvs)
     (def s (jw/key-str k))
-    (when (has-key? t s) (fail "KeyTwice" (string "同一個物件寫了兩次 " s)))
+    (when (has-key? t s) (fail "KeyTwice" (string "the same object has key twice: " s)))
     (unless (nil? v) (array/push ks s) (put t s v)))
   (table/setproto t @{:aos/keys ks}))
 
@@ -35,7 +35,7 @@
 (defn fsm-table
   "fsm.json：states 是 [[名 exec 下一個] …]，start 沒給＝第一格；entry 給了就放 _entry。"
   [states &named start entry]
-  (when (empty? states) (fail "ArgumentsBad" "fsm 至少要一格"))
+  (when (empty? states) (fail "ArgumentsBad" "fsm needs at least one state"))
   (obj "_entry" entry
        "start" (or start ((first states) 0))
        "states" (obj ;(mapcat (fn [[n e nx]] [n (obj "exec" e "next" nx)]) states))))
@@ -53,7 +53,7 @@
   (def states
     (map (fn [f]
            (def f (filter |(not= $ '->) f))
-           (unless (= 3 (length f)) (error (string "ArgumentsBad fsm 的一格要寫 (名 exec -> 下一個)：" (describe f))))
+           (unless (= 3 (length f)) (error (string "ArgumentsBad an fsm state must be written (name exec -> next): " (describe f))))
            ~[,(string (f 0)) ,(f 1) ,(string (f 2))])
          (slice forms i)))
   ~(,fsm-table [,;states] ,;opts))
@@ -66,16 +66,16 @@
 
 (defn- name-ok [name]
   (unless (and (bytes? name) (not (empty? name)) (not (string/find "/" name)) (not= name ".") (not= name ".."))
-    (fail "NameBad" (string "檔名不能是空的、. 、.. 或帶 /：" (describe name))))
+    (fail "NameBad" (string "a file name cannot be empty, ., .. or contain /: " (describe name))))
   (string name))
 
 (defn dir
   "資料夾：(dir 名 內容 名 內容 …)；內容是檔案節點或 JSON 的值（寫成 JSON 檔）。"
   [& kvs]
-  (when (odd? (length kvs)) (fail "ArgumentsBad" "dir 要一對一對寫名字與內容"))
+  (when (odd? (length kvs)) (fail "ArgumentsBad" "dir takes names and contents in pairs"))
   (def items (map (fn [[n x]] [(name-ok n) x]) (partition 2 kvs)))
   (def seen @{})
-  (each [n _] items (when (seen n) (fail "NameTaken" (string "同一層有兩個 " n))) (put seen n true))
+  (each [n _] items (when (seen n) (fail "NameTaken" (string "two entries named " n " at the same level"))) (put seen n true))
   (node :kind :dir :items items))
 
 (defn text "一般文字檔" [s] (node :kind :text :text s :mode 8r644))
@@ -91,7 +91,7 @@
   "照抄一個檔（相對路徑從寫這行的 .janet 檔所在的資料夾算），權限照原檔。"
   [path]
   (def src (if (string/has-prefix? "/" path) path (string (here) "/" path)))
-  (unless (= :file (os/stat src :mode)) (fail "SourceMissing" (string "找不到要抄的檔 " src)))
+  (unless (= :file (os/stat src :mode)) (fail "SourceMissing" (string "file to copy not found: " src)))
   (node :kind :text :text (slurp src) :mode (band (os/stat src :int-permissions) 8r777)))
 
 (defn dotenv
@@ -102,7 +102,7 @@
            (map (fn [l]
                  (if (bytes? l) l
                    (let [[k v] l]
-                     (when (peg/find '(set " \t\n#'\"$\\") v) (fail "ValueBad" (string ".env 的值要加引號，這裡不支援：" k)))
+                     (when (peg/find '(set " \t\n#'\"$\\") v) (fail "ValueBad" (string "this .env value would need quotes, which are not supported: " k)))
                      (string k "=" v))))
                 lines)
            "\n")

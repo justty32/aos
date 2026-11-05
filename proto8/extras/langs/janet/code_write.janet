@@ -29,7 +29,7 @@
     :number (string/format "%j" x)
     :nil "nil"
     :boolean (if x "true" "false")
-    (error (string "FormBad 印不回原始碼的東西：" (describe x)))))
+    (error (string "FormBad cannot print this back as source: " (describe x)))))
 
 (defn top
   "頂層的 (defn …)／(def …)：頭一行放到參數為止，後面每個 form 各一行、縮兩格。"

@@ -17,7 +17,7 @@
 (defn key-str [k]
   (case (type k)
     :string k :buffer (string k) :keyword (string k) :symbol (string k)
-    (error (string "KeyBad JSON 物件的 key 只能是字串、keyword 或 symbol：" (describe k)))))
+    (error (string "KeyBad a JSON object key must be a string, keyword or symbol: " (describe k)))))
 
 (defn ordered-keys
   "物件的 key（字串）照順序：有 :aos/keys 原型就照它，否則照 key-order 再照字母。"
@@ -48,7 +48,7 @@
 
 (defn num [x]
   (cond
-    (or (nan? x) (= x math/inf) (= x (- math/inf))) (error "NumberBad JSON 不收 NaN／無限大")
+    (or (nan? x) (= x math/inf) (= x (- math/inf))) (error "NumberBad JSON has no NaN or infinity")
     (and (= x (math/floor x)) (< (math/abs x) 9007199254740992)) (string/format "%d" x)
     (string/format "%.17g" x)))
 
@@ -65,7 +65,7 @@
     (indexed? x) (string "[" (string/join (map one-line x) ", ") "]")
     (json-object? x)
     (string "{" (string/join (map |(string (esc $) ": " (one-line (obj-get x $))) (ordered-keys x)) ", ") "}")
-    (error (string "ValueBad 寫不成 JSON 的值：" (describe x)))))
+    (error (string "ValueBad cannot write this value as JSON: " (describe x)))))
 
 (defn pretty
   "indent＝這個值所在那行的縮排；col＝這個值開頭的欄位（判斷擠不擠得下一行用）。"

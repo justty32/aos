@@ -6,8 +6,8 @@
 
 (def program
   (aos-seq
-    (say "一")
-    (aos-par (say "二a") (say "二b"))
+    (say "one")
+    (aos-par (say "two a") (say "two b"))
     (aos-if (inst ["test" "-e" (env "AOS_WS" "/flag")])
-            (say "有 flag")
-            (say "沒有 flag"))))
+            (say "flag present")
+            (say "no flag"))))

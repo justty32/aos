@@ -23,7 +23,7 @@
       (and (indexed? x) (all bytes? x) (not (empty? x))) x
       (aos/node? x) (do (array/push items name x) [name])
       (or (struct? x) (table? x)) (do (array/push steps name x) [(string "steps.json#/" name)])
-      (aos/fail "StepBad" (string "這一步不是目標、單子或檔案節點：" (describe x)))))
+      (aos/fail "StepBad" (string "this step is not a target, an instruction or a file node: " (describe x)))))
   (string "step " name " " (string/join (map quote-word words) " ")))
 
 (defn- build [doc names xs body-fn]
@@ -37,14 +37,14 @@
 (defn aos-seq
   "依序跑；哪一步非 0 就以它的碼結束。"
   [& xs]
-  (build "aos-seq：依序跑，哪一步非 0 就以它的碼結束" (map |(string "s" (+ $ 1)) (range (length xs))) xs
+  (build "aos-seq: run in order; the first step that exits non-zero ends it with that code" (map |(string "s" (+ $ 1)) (range (length xs))) xs
          (fn [calls] (map |(string $ " || exit") calls))))
 
 (defn aos-par
   "同時跑、全部等完；有任何一步非 0 就以最後一個非 0 的碼結束。"
   [& xs]
   (def names (map |(string "p" (+ $ 1)) (range (length xs))))
-  (build "aos-par：同時跑、全部等完，有一步非 0 就以（最後一個）非 0 的碼結束" names xs
+  (build "aos-par: run all at once and wait for all; any non-zero step ends it with the (last) non-zero code" names xs
          (fn [calls]
            [;(map |(string $0 " & pid_" $1 "=$!") calls names)
             "rc=0"
@@ -56,6 +56,6 @@
   [cond-x then-x &opt else-x]
   (def names (if (nil? else-x) ["cond" "then"] ["cond" "then" "else"]))
   (def xs (if (nil? else-x) [cond-x then-x] [cond-x then-x else-x]))
-  (build "aos-if：cond 結束碼 0 跑 then，否則跑 else" names xs
+  (build "aos-if: cond exits 0 = run then, otherwise run else" names xs
          (fn [[c t e]]
            [(string "if " c "; then " t (if e (string "; else " e) "") "; fi")])))

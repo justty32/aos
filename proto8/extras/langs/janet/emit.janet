@@ -8,7 +8,7 @@
 
 (defn- hoist-name [path]
   (def k (if (and (= (last path) "exec") (> (length path) 1)) (path (- (length path) 2)) (last path)))
-  (unless (bytes? k) (aos/fail "HoistBad" (string "陣列裡的檔案節點不知道該叫什麼名字（位置 /" (string/join (map string path) "/") "）")))
+  (unless (bytes? k) (aos/fail "HoistBad" (string "a file node inside an array has no name to take (at /" (string/join (map string path) "/") ")")))
   k)
 
 (defn- rebuild [x f]
@@ -17,7 +17,7 @@
   (aos/obj ;(mapcat |[$ (f $ (jw/obj-get x $))] ks)))
 
 (defn- write-file [path s mode]
-  (when (= :directory (os/stat path :mode)) (aos/fail "OutBad" (string path " 是資料夾，不能寫成檔")))
+  (when (= :directory (os/stat path :mode)) (aos/fail "OutBad" (string path " is a folder, cannot write it as a file")))
   (spit path s)
   (os/chmod path mode))
 
@@ -25,7 +25,7 @@
   (case (os/stat path :mode)
     nil (os/mkdir path)
     :directory nil
-    (aos/fail "OutBad" (string path " 已經是檔，不能建成資料夾"))))
+    (aos/fail "OutBad" (string path " is already a file, cannot make it a folder"))))
 
 (var- emit-node nil)
 
@@ -37,7 +37,7 @@
     (cond
       (aos/node? x)
       (let [n (hoist-name path)]
-        (when (taken n) (aos/fail "NameTaken" (string out "/" n " 已經有東西，長不出這個子資料夾")))
+        (when (taken n) (aos/fail "NameTaken" (string out "/" n " is already taken, cannot grow this subfolder")))
         (put taken n true)
         (array/push grown [n x])
         n)
@@ -60,10 +60,10 @@
 (defn emit
   "把程式（一個 (dir …)）寫到 out。out 已經有東西＝OutExists，除非 force（只蓋這次要寫的檔，其他不刪）。"
   [prog out &opt force]
-  (unless (and (aos/node? prog) (= (prog :kind) :dir)) (aos/fail "ProgramBad" "program 要是一個 (dir …)"))
+  (unless (and (aos/node? prog) (= (prog :kind) :dir)) (aos/fail "ProgramBad" "program must be a (dir ...)"))
   (case (os/stat out :mode)
     nil nil
     :directory (when (and (not force) (not (empty? (os/dir out))))
-                 (aos/fail "OutExists" (string out " 裡面已經有東西（要蓋過去加 --force）")))
-    (aos/fail "OutBad" (string out " 不是資料夾")))
+                 (aos/fail "OutExists" (string out " is not empty (add --force to write over it)")))
+    (aos/fail "OutBad" (string out " is not a folder")))
   (emit-node prog out))
