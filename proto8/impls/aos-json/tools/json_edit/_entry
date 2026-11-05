@@ -8,25 +8,52 @@
 #   最後 aos-json batch --check --follow 一次寫進去（全部驗過才寫；拆成 $ref 的檔也改得到）。
 # 腦＝寄請求給 llm kernel、同步等回信：`aos-llm ask`（stdin＝{"request": {messages, tools, tool_choice}}；用 kernel 的預設代號，
 #   thinking 2026-11-04 think-as-function 03 § 3）；$AOS_LLM_KERNEL 沒設由 aos-llm 報 LlmKernelMissing、這裡退 1（BrainFailed）。
-# stdout：走過的位置（看過）、找到的位置、改了什麼；寫不進去（指不到、形狀不對）印「沒改：…」退 0（讓叫它的腦看了重來）。
-# 自己的錯（stdin 不對、腦連不上、回覆不對、找了 MAX_ROUNDS 輪還沒交）stderr 一行「json_edit: 代號 原因」、退 1。
-import json, os, subprocess, sys
+# stdout：走過的位置（看過）、找到的位置、改了什麼。
+# 錯照 lib 契約（stdio-unify R2，11-05 起；之前寫不進去印「not changed」退 0）：stderr 與 stdout 各一行「json_edit: error: 代號 原因」、退 1——
+#   stdin 不對（ArgumentsBad）、file 不在工作區（PathBad）、腦連不上（BrainFailed）、回覆不對（ReplyBad）、找了 MAX_ROUNDS 輪還沒交（PointerMissing）、
+#   aos-json 起不來（LaunchFailed）；aos-json 讀寫失敗＝接它錯誤行 `aos-json: error: 代號 原因` 的代號與原因（同 tools/json），沒那行＝CommandFailed。
+#   寫不進去時 seen／found 兩行照印在錯誤行前面。aos-json、aos-llm 的 stderr 原樣透到 stderr。
+# --help＝英文說明印 stdout、退 0；Ctrl-C＝退 130、不吐 traceback。
+import json, os, re, signal, subprocess, sys
+
+HELP = """\
+usage: json_edit < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace, $AOS_LLM_KERNEL the brain)
+Change a JSON file in the workspace in two small steps: the brain first walks down with peek
+and names the places (found), then gives each new value (give); written with aos-json batch --check.
+Arguments: one JSON object on stdin:
+  file  string (relative to the workspace), required
+  want  string (what to change), required
+Result on stdout: seen, found and one changed line per place.
+On error: one line "json_edit: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 MAX_ROUNDS = 12                                    # 找 key 最多問幾輪（寫死；11-01 前可用環境變數調，沒人調過、拿掉）
 WS = os.environ.get("AOS_WS") or "."
+ERR_RE = re.compile(r"aos-json: error: ([A-Z][A-Za-z]+) (.*)\Z")
 
 
 def die(code, reason):
-    print("json_edit: %s %s" % (code, reason), file=sys.stderr)
+    line = "json_edit: error: %s %s" % (code, str(reason).replace("\n", " "))
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
 
 
 def aos_json(*argv, stdin=None):
+    """回 (結束碼, stdout, (代號, 原因))；aos-json 的 stderr 原樣透出，錯誤行的代號與原因另外拆出來。"""
     try:
         r = subprocess.run(["aos-json", *argv], cwd=WS, input=stdin, capture_output=True, text=True)
     except OSError as e:
-        die("ToolFailed", "aos-json failed to start (aos-json must be on PATH): %s" % e)
-    return r.returncode, r.stdout, r.stderr.strip().removeprefix("aos-json: ")
+        die("LaunchFailed", "aos-json failed to start (aos-json must be on PATH): %s" % e)
+    if r.stderr:
+        sys.stderr.write(r.stderr if r.stderr.endswith("\n") else r.stderr + "\n")
+    m = [x for x in map(ERR_RE.match, r.stderr.strip().splitlines()) if x]
+    err = (m[-1].group(1), m[-1].group(2)) if m else ("CommandFailed", "aos-json %s exited %d" % (argv[0], r.returncode))
+    return r.returncode, r.stdout, err
 
 
 def ask(messages, tools):
@@ -66,18 +93,16 @@ def call_args(call):
 
 try:
     job = json.loads(sys.stdin.read() or "null")
-except ValueError as e:
-    die("ArgumentsBad", "stdin is not JSON: %s" % e)
+except ValueError:
+    die("ArgumentsBad", "stdin is not JSON")
 if not isinstance(job, dict) or not all(isinstance(job.get(k), str) and job[k].strip() for k in ("file", "want")):
     die("ArgumentsBad", "expects {\"file\": FILE, \"want\": what to change}")
 path, want = job["file"], job["want"].strip()
 if os.path.isabs(path) or ".." in path.split("/") or "#" in path:
-    print("not changed: file must be a relative path inside the workspace (no absolute path, .., or #): %s" % path)
-    sys.exit(0)
+    die("PathBad", "file must be a relative path inside the workspace (no absolute path, .., or #): %s" % path)
 rc, top, err = aos_json("peek", "--follow", path)
 if rc != 0:
-    print("not changed: " + err)
-    sys.exit(0)
+    die(*err)
 
 # 一、找到要修改的 key（漸進展開）
 seen = ["/"]
@@ -106,7 +131,7 @@ for _ in range(MAX_ROUNDS):
             ptr = "" if a["pointer"] == "/" else a["pointer"]
             seen.append(ptr or "/")
             rc, out, err = aos_json("peek", "--follow", path + ("#" + ptr if ptr else ""))
-            reply = out if rc == 0 else "error: " + err
+            reply = out if rc == 0 else "error: %s %s" % err
         else:
             reply = "error: peek takes {pointer: \"/...\"}, found takes {pointers: [\"/...\"]}"
         messages.append({"role": "tool", "tool_call_id": call.get("id"), "content": reply})
@@ -149,7 +174,6 @@ rc, _, err = aos_json("batch", "--check", "--follow", path, stdin=json.dumps(val
 print("seen: " + " -> ".join(seen))
 print("found: " + ", ".join(pointers))
 if rc != 0:
-    print("not changed: " + err)
-    sys.exit(0)
+    die(*err)
 for ptr, v in values.items():
     print("changed: %s#%s = %s" % (path, ptr, json.dumps(v, ensure_ascii=False)))

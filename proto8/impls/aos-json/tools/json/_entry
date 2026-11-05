@@ -2,30 +2,53 @@
 # json - 腦用的 JSON 工具：stdin 收 {"cmd", "target", "value"?, "depth"?}，在 $AOS_WS 底下叫 aos-json，stdout 是結果。
 # 讀＝peek 一層層往下（省 token）；寫＝直接收腦生成的 JSON 值，一律加 --check（改完 aos 設定形狀不對就不寫）與 --follow（拆成 $ref 的檔也改得到）。
 # target 的檔名只收工作區裡的相對路徑（不收絕對路徑、不收 ..）。
-# aos-json 的錯（指不到、形狀不對…）是腦寫錯了，印在 stdout「錯：…」、退 0，讓腦看了重來；這支自己的錯（stdin 不對、aos-json 起不來）才退 1。
-import json, os, subprocess, sys
+# 錯照 lib 契約（stdio-unify R2，11-05 起；之前 aos-json 的錯印 stdout 退 0）：stderr 與 stdout 各一行「json: error: 代號 原因」、退 1；
+#   要不要把錯回給腦是叫它的 agent 的事。aos-json 的 stderr 原樣透到 stderr；它退 1 時這行接它錯誤行的代號與原因
+#   （`aos-json: error: 代號 原因` → `json: error: 代號 原因`，腦才知道指標哪裡錯；代定，見 stdio-unify），沒那行＝CommandFailed。
+#   check 有問題（aos-json 退 10，D1）是答案不是錯：stdout「problems:」加一行一條、退 0。
+# --help＝英文說明印 stdout、退 0；Ctrl-C＝退 130、不吐 traceback。
+import json, os, re, signal, subprocess, sys
+
+HELP = """\
+usage: json < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Look at or change a JSON file in the workspace through aos-json, one command at a time.
+Arguments: one JSON object on stdin:
+  cmd     string (peek | get | where | set | batch | del | append | merge | check), required
+  target  string FILE#/POINTER (FILE relative to the workspace), required
+  value   any JSON (for set, append, merge, batch)
+  depth   integer (peek: levels to unfold, 0-5)
+Result on stdout ("ok" for writes; check with problems: "problems:" and one line each).
+On error: one line "json: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 READ = {"peek": ["--follow"], "get": ["--follow"], "where": [], "check": []}
 WRITE = {"set": ["--check", "--follow"], "batch": ["--check", "--follow"], "append": ["--check", "--follow"],
          "merge": ["--check", "--follow"], "del": ["--follow"]}
+PROBLEMS = 10                                    # aos-json check：查完了、有問題（D1）
+ERR_RE = re.compile(r"aos-json: error: ([A-Z][A-Za-z]+) (.*)\Z")
 
 
 def die(code, reason):
-    print("json: %s %s" % (code, reason), file=sys.stderr)
+    line = "json: error: %s %s" % (code, str(reason).replace("\n", " "))
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
 
 
 try:
     args = json.loads(sys.stdin.read() or "null")
-except ValueError as e:
-    die("ArgumentsBad", "stdin is not JSON: %s" % e)
+except ValueError:
+    die("ArgumentsBad", "stdin is not JSON")
 if not isinstance(args, dict) or args.get("cmd") not in {**READ, **WRITE} or not isinstance(args.get("target"), str):
     die("ArgumentsBad", "expects {\"cmd\": peek|get|where|set|batch|del|append|merge|check, \"target\": \"FILE#/POINTER\"}")
 cmd, target = args["cmd"], args["target"]
 path = target.split("#", 1)[0]
 if not path or os.path.isabs(path) or ".." in path.split("/"):
-    print("error: the file in target must be a relative path inside the workspace (no absolute path, no ..): %s" % target)
-    sys.exit(0)
+    die("PathBad", "the file in target must be a relative path inside the workspace (no absolute path, no ..): %s" % target)
 
 argv = ["aos-json", cmd] + READ.get(cmd, WRITE.get(cmd))
 if cmd == "peek" and isinstance(args.get("depth"), int) and not isinstance(args.get("depth"), bool):
@@ -33,17 +56,21 @@ if cmd == "peek" and isinstance(args.get("depth"), int) and not isinstance(args.
 stdin = None
 if cmd in ("set", "append", "merge", "batch"):
     if "value" not in args:
-        print("error: %s needs value" % cmd)
-        sys.exit(0)
+        die("ArgumentsBad", "%s needs value" % cmd)
     stdin = json.dumps(args["value"], ensure_ascii=False)
 argv.append(target)
 try:
     r = subprocess.run(argv, cwd=os.environ.get("AOS_WS") or ".", input=stdin, capture_output=True, text=True)
 except OSError as e:
-    die("ToolFailed", "aos-json failed to start (aos-json must be on PATH): %s" % e)
+    die("LaunchFailed", "aos-json failed to start (aos-json must be on PATH): %s" % e)
+if r.stderr:                                     # aos-json 自己的話原樣透出
+    sys.stderr.write(r.stderr if r.stderr.endswith("\n") else r.stderr + "\n")
 if r.returncode == 0:
     print(r.stdout if r.stdout else "ok", end="" if r.stdout else "\n")
-elif cmd == "check" and r.returncode == 1 and r.stdout:
-    print("problems:\n" + r.stdout, end="")
+elif cmd == "check" and r.returncode == PROBLEMS:
+    print("problems:\n" + r.stdout, end="" if r.stdout.endswith("\n") else "\n")
 else:
-    print("error: " + (r.stderr.strip() or "aos-json exited %d" % r.returncode).removeprefix("aos-json: "))
+    m = [x for x in map(ERR_RE.match, r.stderr.strip().splitlines()) if x]
+    if m:
+        die(m[-1].group(1), m[-1].group(2))
+    die("CommandFailed", "aos-json %s exited %d" % (cmd, r.returncode))
