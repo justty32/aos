@@ -82,7 +82,7 @@ link_one() {   # $1＝repo 裡那支的絕對路徑
   name=$(basename "$src"); dst="$dest/$name"
   if [ -L "$dst" ]; then
     cur=$(readlink "$dst")
-    if [ "$cur" = "$src" ]; then echo "already $name"; n_same=$((n_same+1)); return; fi
+    if [ "$cur" = "$src" ]; then echo "already linked $name"; n_same=$((n_same+1)); return; fi
     echo "skip $name: $dst is already a link to $cur (not $src of this repo; rm it yourself and rerun to replace)"; n_skip=$((n_skip+1)); return
   fi
   if [ -e "$dst" ]; then
@@ -105,7 +105,7 @@ for src in "$here"/impls/*/bin/* "$here"/bin/aos-* "$here"/extras/agent/bin/* "$
   found=1
   link_one "$src"
 done
-[ $found = 1 ] || { echo "install.sh: no command found ($here does not look like proto8?)" >&2; exit 1; }
+[ $found = 1 ] || { echo "install.sh: CommandMissing no command found ($here does not look like proto8?)" >&2; exit 1; }
 ls "$here"/impls/*/bin/* >/dev/null 2>&1 || { echo "note: no impls built (impls/*/bin is empty): build them first (wf/workflows/testing.md, proto8) and run again"; n_none=1; }
 
 # 目的地裡指進這份 repo、目標已不在的連結：只報不刪
