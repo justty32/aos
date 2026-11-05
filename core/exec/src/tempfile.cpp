@@ -71,7 +71,7 @@ bool unlink_file(const std::string &path, std::string &error) {
     if (unlink(path.c_str()) == 0) {
         return true;
     }
-    append_error(error, path_error("無法刪除暫存檔", path, errno));
+    append_error(error, path_error("cannot remove temp file", path, errno));
     return false;
 }
 
@@ -87,7 +87,7 @@ bool read_file_and_unlink(const std::string &path, std::string &text,
     } while (fd < 0 && errno == EINTR);
     if (fd < 0) {
         const int saved_error = errno;
-        append_error(error, path_error("無法讀取暫存檔", path, saved_error));
+        append_error(error, path_error("cannot read temp file", path, saved_error));
         if (saved_error != ENOENT) {
             unlink_file(path, error);
         }
@@ -105,7 +105,7 @@ bool read_file_and_unlink(const std::string &path, std::string &text,
             break;
         }
         if (count < 0) {
-            append_error(error, path_error("無法讀取暫存檔", path, errno));
+            append_error(error, path_error("cannot read temp file", path, errno));
             ok = false;
             break;
         }

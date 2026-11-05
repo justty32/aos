@@ -15,7 +15,7 @@ namespace {
 
 constexpr std::size_t kRunningCapacity = 256;
 static_assert(std::atomic<pid_t>::is_always_lock_free,
-              "pid_t 的原子操作必須無鎖，才能安全地在 signal handler 使用");
+              "atomic pid_t must be lock-free to be used safely in a signal handler");
 std::array<std::atomic<pid_t>, kRunningCapacity> running_pids{};
 
 }  // namespace

@@ -30,7 +30,7 @@ void append_error(std::string &error, const std::string &message) {
 }
 
 void record_wait_error(Result &result, int error) {
-    append_error(result.error, std::string("waitpid 失敗: ") + std::strerror(error));
+    append_error(result.error, std::string("waitpid failed: ") + std::strerror(error));
 }
 
 void decode_status(int raw_status, Result &result) {
@@ -41,7 +41,7 @@ void decode_status(int raw_status, Result &result) {
         result.exit = 0;
         result.signal = WTERMSIG(raw_status);
     } else {
-        append_error(result.error, "waitpid 回傳了無法解讀的狀態");
+        append_error(result.error, "waitpid returned an unrecognized status");
     }
 }
 

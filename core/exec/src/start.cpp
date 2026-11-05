@@ -59,26 +59,26 @@ std::string system_error(const std::string &action, int error) {
 bool prepare_temp_files(const Spawn &spawn, Running &item, TempFds &fds) {
     fds.input = detail::make_temp("stdin", item.stdin_path);
     if (fds.input < 0) {
-        item.error = system_error("無法建立 stdin 暫存檔", errno);
+        item.error = system_error("cannot create stdin temp file", errno);
         return false;
     }
     fds.output = detail::make_temp("stdout", item.stdout_path);
     if (fds.output < 0) {
-        item.error = system_error("無法建立 stdout 暫存檔", errno);
+        item.error = system_error("cannot create stdout temp file", errno);
         return false;
     }
     fds.error = detail::make_temp("stderr", item.stderr_path);
     if (fds.error < 0) {
-        item.error = system_error("無法建立 stderr 暫存檔", errno);
+        item.error = system_error("cannot create stderr temp file", errno);
         return false;
     }
     if (!detail::write_fully(fds.input, spawn.stdin_data.data(),
                              spawn.stdin_data.size())) {
-        item.error = system_error("無法寫入 stdin 暫存檔", errno);
+        item.error = system_error("cannot write stdin temp file", errno);
         return false;
     }
     if (lseek(fds.input, 0, SEEK_SET) < 0) {
-        item.error = system_error("無法重設 stdin 暫存檔", errno);
+        item.error = system_error("cannot rewind stdin temp file", errno);
         return false;
     }
     return true;
@@ -165,7 +165,7 @@ std::vector<Running> start_all(const std::vector<Spawn> &spawns) {
             run_child(plan);
         }
         if (pid < 0) {
-            item.error = system_error("fork 失敗", errno);
+            item.error = system_error("fork failed", errno);
             close_all(fds);
             running.push_back(std::move(item));
             continue;
@@ -177,7 +177,7 @@ std::vector<Running> start_all(const std::vector<Spawn> &spawns) {
             kill(pid, SIGKILL);
             int ignored_status = 0;
             detail::wait_retry(pid, &ignored_status, 0);
-            item.error = system_error("setpgid 失敗", saved_error);
+            item.error = system_error("setpgid failed", saved_error);
             running.push_back(std::move(item));
             continue;
         }
