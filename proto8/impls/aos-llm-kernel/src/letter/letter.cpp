@@ -25,12 +25,12 @@ int hold_sender(const std::string& letter_dir) {
     std::string path = aos::join(letter_dir, SENDER_FLOCK);
     int fd = open(path.c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0666);
     if (fd < 0) {
-        throw Error{code::WriteFailed, "開不了 " + path + "：" + std::strerror(errno)};
+        throw Error{code::WriteFailed, "cannot open " + path + ": " + std::strerror(errno)};
     }
     if (flock(fd, LOCK_EX) != 0) {
         int e = errno;
         close(fd);
-        throw Error{code::WriteFailed, "鎖不了 " + path + "：" + std::strerror(e)};
+        throw Error{code::WriteFailed, "cannot lock " + path + ": " + std::strerror(e)};
     }
     return fd;
 }
@@ -66,7 +66,7 @@ static int level_of(const Json& v) {
         if (s == "high") {
             return 1;
         }
-        throw Error{code::PriorityBad, "level 只收 \"low\"、\"normal\"、\"high\" 或數字，不是 " + aos::dumps(v)};
+        throw Error{code::PriorityBad, "level must be \"low\", \"normal\", \"high\" or a number, got " + aos::dumps(v)};
     }
     if (v.is_number()) {   // 數字看正負（10-15：<0／0／>0）
         double d = v.get<double>();
@@ -78,7 +78,7 @@ static int level_of(const Json& v) {
         }
         return 0;
     }
-    throw Error{code::PriorityBad, "level 只收 \"low\"、\"normal\"、\"high\" 或數字，不是 " + aos::dumps(v)};
+    throw Error{code::PriorityBad, "level must be \"low\", \"normal\", \"high\" or a number, got " + aos::dumps(v)};
 }
 
 // ISO 8601：YYYY-MM-DDTHH:MM:SS[.小數](Z|±HH:MM)，時區一定要寫（不猜本地時間）。
@@ -150,7 +150,7 @@ static double deadline_of(const Json& v) {
             return *t;
         }
     }
-    throw Error{code::PriorityBad, "deadline 要是帶時區的 ISO 8601（例 2026-10-24T18:00:00+08:00）或 epoch 秒，不是 " + aos::dumps(v)};
+    throw Error{code::PriorityBad, "deadline must be ISO 8601 with a time zone (e.g. 2026-10-24T18:00:00+08:00) or epoch seconds, got " + aos::dumps(v)};
 }
 
 Priority parse_priority(const Json& v) {
@@ -167,7 +167,7 @@ Priority parse_priority(const Json& v) {
         p.level = level_of(v);
         return p;
     }
-    throw Error{code::PriorityBad, "priority 要是 \"low\"／\"normal\"／\"high\"、數字或 {\"level\", \"deadline\"}，不是 " + aos::dumps(v)};
+    throw Error{code::PriorityBad, "priority must be \"low\", \"normal\", \"high\", a number or {\"level\", \"deadline\"}, got " + aos::dumps(v)};
 }
 
 Priority priority_of(const Json& letter) {

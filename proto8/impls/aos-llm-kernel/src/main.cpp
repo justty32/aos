@@ -12,7 +12,7 @@
 #include <cstdlib>
 #include <exception>
 
-static const char* USAGE = "usage: aos-llm-kernel [旗標] kernel.json";
+static const char* USAGE = "usage: aos-llm-kernel [flags] kernel.json";
 
 static int fail(const std::string& code, const std::string& msg) {
     std::fprintf(stderr, "aos-llm-kernel: %s %s\n", code.c_str(), msg.c_str());
@@ -28,18 +28,18 @@ int main(int argc, char** argv) {
         try {
             cli = aos::parse_cli(std::vector<std::string>(argv + 1, argv + argc), {});   // 目前沒有旗標
         } catch (const aos::Error& e) {
-            throw aos::Error{e.code, std::string(USAGE) + "（" + e.msg + "）"};
+            throw aos::Error{e.code, std::string(USAGE) + " (" + e.msg + ")"};
         }
         if (cli.rest.size() != 1) {
-            std::string why = "沒有設定檔";
+            std::string why = "missing config file";
             if (!cli.rest.empty()) {
-                why = "設定檔只能一個，多給了 " + cli.rest[1];
+                why = "only one config file allowed, got extra " + cli.rest[1];
             }
-            throw aos::Error{k::code::ArgumentsBad, std::string(USAGE) + "（" + why + "）"};
+            throw aos::Error{k::code::ArgumentsBad, std::string(USAGE) + " (" + why + ")"};
         }
         const char* s = std::getenv("AOS_STACK");
         if (s == nullptr || s[0] == '\0') {
-            throw aos::Error{k::code::StackMissing, "沒設定 AOS_STACK"};
+            throw aos::Error{k::code::StackMissing, "AOS_STACK is not set"};
         }
         k::Cfg cfg = k::read_cfg(cli.rest[0], s);
         return k::serve(cfg, s);

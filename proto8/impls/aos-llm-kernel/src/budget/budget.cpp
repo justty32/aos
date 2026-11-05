@@ -17,7 +17,7 @@ Budget parse_budget(const Json& v) {
         return b;
     }
     if (!v.is_object()) {
-        throw Error{code::CfgBad, "budget 要是 {\"max_calls\", \"max_tokens\", \"window\", \"spent\"}，不是 " + aos::dumps(v)};
+        throw Error{code::CfgBad, "budget must be {\"max_calls\", \"max_tokens\", \"window\", \"spent\"}, got " + aos::dumps(v)};
     }
     for (const char* k : {"max_calls", "max_tokens"}) {
         Json x = v.value(k, Json());
@@ -25,21 +25,21 @@ Budget parse_budget(const Json& v) {
             continue;
         }
         if (!aos::is_count(x)) {
-            throw Error{code::CfgBad, std::string("budget.") + k + " 要是非負整數（每窗上限），不是 " + aos::dumps(x)};
+            throw Error{code::CfgBad, std::string("budget.") + k + " must be a non-negative integer (limit per window), got " + aos::dumps(x)};
         }
         (std::string(k) == "max_calls" ? b.max_calls : b.max_tokens) = x.get<long long>();
     }
     Json w = v.value("window", Json());
     if (!w.is_null()) {
         if (!w.is_string() || (w != "hour" && w != "day" && w != "all")) {
-            throw Error{code::CfgBad, "budget.window 要是 \"hour\"／\"day\"／\"all\"，不是 " + aos::dumps(w)};
+            throw Error{code::CfgBad, "budget.window must be \"hour\", \"day\" or \"all\", got " + aos::dumps(w)};
         }
         b.window = w.get<std::string>();
     }
     Json s = v.value("spent", Json());
     if (!s.is_null()) {
         if (!s.is_string() || (s != "refuse" && s != "wait")) {
-            throw Error{code::CfgBad, "budget.spent 要是 \"refuse\"／\"wait\"，不是 " + aos::dumps(s)};
+            throw Error{code::CfgBad, "budget.spent must be \"refuse\" or \"wait\", got " + aos::dumps(s)};
         }
         b.wait = s == "wait";
     }
@@ -89,7 +89,7 @@ Used read_used(const std::string& stack, const std::string& window) {
     std::optional<std::string> text = aos::read_file(path, err);
     if (!text) {
         if (err != ENOENT) {
-            throw Error{code::UsedBad, "讀不了 " + path + "：" + std::strerror(err)};
+            throw Error{code::UsedBad, "cannot read " + path + ": " + std::strerror(err)};
         }
         u.window = "";   // 第一次：roll 會填上
     } else {
@@ -100,7 +100,7 @@ Used read_used(const std::string& stack, const std::string& window) {
             ok = ok && aos::is_count(doc->value(k, Json()));
         }
         if (!ok) {
-            throw Error{code::UsedBad, path + " 要是 {\"window\", \"since\", \"counter_calls\", \"counter_tokens\", \"counter_all_calls\", \"counter_all_tokens\"}（刪掉它就從 0 算）"};
+            throw Error{code::UsedBad, path + " must be {\"window\", \"since\", \"counter_calls\", \"counter_tokens\", \"counter_all_calls\", \"counter_all_tokens\"} (delete it to count from 0)"};
         }
         u.window = (*doc)["window"].get<std::string>();
         u.since = (*doc)["since"];

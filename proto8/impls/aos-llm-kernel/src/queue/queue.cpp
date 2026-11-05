@@ -18,12 +18,12 @@ Queue read_queue(const std::string& stack) {
         if (err == ENOENT) {
             return q;
         }
-        throw Error{code::QueueBad, "讀不了 " + path + "：" + std::strerror(err)};
+        throw Error{code::QueueBad, "cannot read " + path + ": " + std::strerror(err)};
     }
     std::optional<Json> doc = aos::read_json(path);
     if (!doc || !doc->is_object() || !aos::is_count(doc->value("counter_runs", Json())) ||
         !doc->value("seen_at_runs", Json()).is_object()) {
-        throw Error{code::QueueBad, path + " 要是 {\"counter_runs\": 非負整數, \"seen_at_runs\": {…}}（刪掉它就從頭算）"};
+        throw Error{code::QueueBad, path + " must be {\"counter_runs\": non-negative integer, \"seen_at_runs\": {...}} (delete it to start over)"};
     }
     q.runs = (*doc)["counter_runs"].get<long long>();
     q.seen_at_runs = (*doc)["seen_at_runs"];

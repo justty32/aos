@@ -44,7 +44,7 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
     aos::Resolved r = aos::loop::resolve_keys(doc, base, {"slots", "budget", "exec", "endpoint", "timeout_ms"});
     doc = r.value;
     if (!doc.is_object()) {
-        throw Error{code::CfgBad, spec + " 要是 JSON 物件"};
+        throw Error{code::CfgBad, spec + " must be a JSON object"};
     }
     Cfg c;
     c.base = base;
@@ -52,22 +52,22 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json s = doc.value("slots", Json());
     if (!s.is_null()) {
         if (!aos::is_count(s) || s.get<long long>() < 1) {
-            throw Error{code::CfgBad, "slots 要是正整數（同時跑幾封），不是 " + aos::dumps(s)};
+            throw Error{code::CfgBad, "slots must be a positive integer (letters run at once), got " + aos::dumps(s)};
         }
         c.slots = s.get<long long>();
     }
     c.budget = parse_budget(doc.value("budget", Json()));
     Json ex = doc.value("exec", Json());
     if (!ex.is_string() || ex.get<std::string>().empty()) {
-        throw Error{code::CfgBad, "exec 要是非空字串（endpoint 函數：資料夾、檔或 `檔#/指標`，相對的從 kernel.json 的資料夾算），不是 " + aos::dumps(ex)};
+        throw Error{code::CfgBad, "exec must be a non-empty string (the endpoint function: a directory, a file or `file#/pointer`, relative to kernel.json's directory), got " + aos::dumps(ex)};
     }
     c.exec = target_abs(ex.get<std::string>(), base);
     if (!doc.contains("endpoints")) {
-        throw Error{code::CfgBad, "沒寫 endpoints（代號 → 一組 llm 設定）"};
+        throw Error{code::CfgBad, "missing endpoints (name -> llm settings)"};
     }
     aos::Resolved eps = aos::resolve_shallow(doc["endpoints"], r.dir_of("endpoints"));
     if (!eps.value.is_object() || eps.value.empty()) {
-        throw Error{code::CfgBad, "endpoints 要是非空物件（代號 → 一組 llm 設定），不是 " + aos::dumps(eps.value)};
+        throw Error{code::CfgBad, "endpoints must be a non-empty object (name -> llm settings), got " + aos::dumps(eps.value)};
     }
     c.endpoints = eps.value;
     for (auto& [k, v] : c.endpoints.items()) {
@@ -76,14 +76,14 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json ep = doc.value("endpoint", Json());
     if (!ep.is_null()) {
         if (!ep.is_string() || !c.endpoints.contains(ep.get<std::string>())) {
-            throw Error{code::CfgBad, "endpoint（預設代號）要是 endpoints 表裡的一個代號，不是 " + aos::dumps(ep)};
+            throw Error{code::CfgBad, "endpoint (the default name) must be a name in endpoints, got " + aos::dumps(ep)};
         }
         c.endpoint = ep.get<std::string>();
     }
     Json t = doc.value("timeout_ms", Json());
     if (!t.is_null()) {
         if (!aos::is_count(t)) {
-            throw Error{code::CfgBad, "timeout_ms 要是非負整數（跑 endpoint 函數的上限），不是 " + aos::dumps(t)};
+            throw Error{code::CfgBad, "timeout_ms must be a non-negative integer (time limit for the endpoint function), got " + aos::dumps(t)};
         }
         c.timeout_ms = t.get<long long>();
     }
@@ -112,7 +112,7 @@ void make_dir(const std::string& dir) {
     std::error_code ec;
     fs::create_directories(dir, ec);
     if (ec || !fs::is_directory(dir)) {
-        throw Error{code::MkdirFailed, "建不了 " + dir + (ec ? "：" + ec.message() : "")};
+        throw Error{code::MkdirFailed, "cannot create " + dir + (ec ? ": " + ec.message() : "")};
     }
 }
 
@@ -165,7 +165,7 @@ Json post_reply(const std::string& root, const std::string& dir, const std::stri
         std::FILE* f = std::fopen(tmp.c_str(), "w");
         if (f == nullptr || std::fprintf(f, "%s\n", sig.c_str()) < 0 || std::fclose(f) != 0 ||
             std::rename(tmp.c_str(), aos::join(dir, "reply_letter.txt").c_str()) != 0) {
-            return std::string(code::WriteFailed) + " 回信寄出了（" + sig + "），但記不進 " + dir + "/reply_letter.txt";
+            return std::string(code::WriteFailed) + " reply sent (" + sig + ") but cannot record it in " + dir + "/reply_letter.txt";
         }
         return nullptr;
     } catch (const Error& e) {
@@ -262,10 +262,10 @@ void Server::lock() {
     std::string path = aos::join(mb_.root, ".flock");   // 10-29 改名（原 .lock；.lock/ 留給 N-15 的資料夾鎖）
     lock_fd_ = open(path.c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644);
     if (lock_fd_ < 0) {
-        throw Error{code::LockFailed, "開不了 " + path + "：" + std::strerror(errno)};
+        throw Error{code::LockFailed, "cannot open " + path + ": " + std::strerror(errno)};
     }
     if (flock(lock_fd_, LOCK_EX | LOCK_NB) != 0) {
-        throw Error{code::LockFailed, "信箱 " + mb_.root + " 被另一個 kernel 鎖著（同一個信箱同時只能一個 kernel）"};
+        throw Error{code::LockFailed, "mailbox " + mb_.root + " is locked by another kernel (one kernel per mailbox at a time)"};
     }
 }
 
@@ -276,7 +276,7 @@ void Server::finish(const std::string& id, const Json& reply) {
     bool counted = ran(dir);
     Json reply_error = post_reply(mb_.root, dir, id, reply);   // 回信走 reply_to（10-30）
     if (reply_error.is_string()) {
-        std::fprintf(stderr, "aos-llm-kernel: %s（信 %s 的回信寄不出去，信照刪）\n",
+        std::fprintf(stderr, "aos-llm-kernel: %s (cannot send the reply to letter %s; letter deleted anyway)\n",
                      reply_error.get<std::string>().c_str(), id.c_str());
         std::fflush(stderr);
     }
@@ -365,7 +365,7 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
     } else if (!st) {
         std::string letter = proc.value("mount_letter", "");
         if (!letter.empty() && table_.warning.find(letter) != std::string::npos) {
-            return error_reply(code::LaunchFailed, "daemon 不採用掛信：" + table_.warning);
+            return error_reply(code::LaunchFailed, "daemon rejected the add letter: " + table_.warning);
         }
         return std::nullopt;
     }
@@ -378,7 +378,7 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
         if (got) {
             return *got;
         }
-        return error_reply(code::ReplyBad, "endpoint 函數的 stdout 讀不懂（要是一行 {\"message\": {...}, \"usage\", \"model\"}）");
+        return error_reply(code::ReplyBad, "cannot understand the endpoint function's stdout (must be one line {\"message\": {...}, \"usage\", \"model\"})");
     }
     // 逾時：aos-exec 先 TERM（143），不理 TERM 的過了寬限再 KILL（137）——兩種都看 mounted_at＋timeout_ms 過了沒（11-05 edge-llm）
     double at = proc.value("mounted_at", 0.0);
@@ -387,20 +387,20 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
         return error_reply(code::EndpointFailed, "endpoint function timed out (" + std::to_string(*cfg_.timeout_ms) + " ms)");
     }
     if (phase == "done" && c != 143) {
-        std::string why = "endpoint 函數退 " + std::to_string(c);
+        std::string why = "endpoint function exited with code " + std::to_string(c);
         std::string line = first_line(aos::join(dir, "reply.json"));   // llm_http 失敗時 stdout 也印同一行
         if (line.empty()) {
             line = first_line(aos::join(dir, "stderr.txt"));
         }
         if (!line.empty()) {
-            why += "：" + line;
+            why += ": " + line;
         }
         return error_reply(code::EndpointFailed, why);
     }
     // 沒到時限的 143、被收掉（stopped）、死在半路（沒收尾、列也不在）＝重掛一次
     long long retries = proc.value("retries", 0LL);
     if (retries >= 1) {
-        return error_reply(code::EndpointFailed, "問腦跑了兩次都沒結果（被收掉或死在半路）");
+        return error_reply(code::EndpointFailed, "the brain call ran twice without a result (stopped or died midway)");
     }
     std::error_code ec;
     fs::remove(aos::join(dir, "state.json"), ec);
@@ -417,7 +417,7 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
     try {
         mount(id, proc.value("exec", cfg_.exec), proc);
     } catch (const Error& e) {
-        return error_reply(code::LaunchFailed, "重掛寄不出去：" + e.code + " " + e.msg);
+        return error_reply(code::LaunchFailed, "cannot send the re-add letter: " + e.code + " " + e.msg);
     }
     return std::nullopt;
 }
@@ -491,24 +491,24 @@ std::optional<Json> Server::pick(Waiting& w) {
     } else if (cfg_.endpoint) {
         w.endpoint = *cfg_.endpoint;
     } else {
-        return error_reply(code::EndpointMissing, "信沒寫 endpoint（代號），kernel.json 也沒寫預設的 endpoint");
+        return error_reply(code::EndpointMissing, "the letter has no endpoint (name) and kernel.json has no default endpoint");
     }
     if (!cfg_.endpoints.contains(w.endpoint)) {
-        return error_reply(code::EndpointUnknown, "代號 " + w.endpoint + " 不在 kernel.json 的 endpoints 表裡");
+        return error_reply(code::EndpointUnknown, "endpoint " + w.endpoint + " is not in kernel.json endpoints");
     }
     Json g;
     try {
         g = aos::resolve(cfg_.endpoints[w.endpoint], cfg_.endpoint_dirs.at(w.endpoint));
     } catch (const Error& e) {
-        return error_reply(e.code, "kernel.json 的 endpoints." + w.endpoint + "：" + e.msg);
+        return error_reply(e.code, "kernel.json endpoints." + w.endpoint + ": " + e.msg);
     }
     if (!g.is_object()) {
-        return error_reply(code::CfgBad, "kernel.json 的 endpoints." + w.endpoint + " 要是物件（一組 llm 設定），不是 " + aos::dumps(g));
+        return error_reply(code::CfgBad, "kernel.json endpoints." + w.endpoint + " must be an object (llm settings), got " + aos::dumps(g));
     }
     w.exec = cfg_.exec;
     if (g.contains("exec")) {
         if (!g["exec"].is_string() || g["exec"].get<std::string>().empty()) {
-            return error_reply(code::CfgBad, "kernel.json 的 endpoints." + w.endpoint + ".exec 要是非空字串，不是 " + aos::dumps(g["exec"]));
+            return error_reply(code::CfgBad, "kernel.json endpoints." + w.endpoint + ".exec must be a non-empty string, got " + aos::dumps(g["exec"]));
         }
         w.exec = target_abs(g["exec"].get<std::string>(), cfg_.base);
         g.erase("exec");
@@ -526,13 +526,13 @@ std::vector<Waiting> Server::scan() {
         std::optional<Json> letter = aos::read_json(path);
         if (!letter || !letter->is_object() || !letter->value("body", Json()).is_object() ||
             !(*letter)["body"].contains("request")) {
-            std::string why = "信讀不懂：letter.json 要是 N-16 的信，body＝{\"endpoint\"?: 代號, \"request\": {...}, \"priority\"?}";
+            std::string why = "cannot understand the letter: letter.json must be an N-16 letter with body = {\"endpoint\"?: name, \"request\": {...}, \"priority\"?}";
             refuse(id, error_reply(code::LetterBad, why));
             continue;
         }
         const Json& body = (*letter)["body"];
         if (body.contains("endpoint") && !body["endpoint"].is_string()) {
-            refuse(id, error_reply(code::LetterBad, "信的 body.endpoint 要是字串（代號），不是 " + aos::dumps(body["endpoint"])));
+            refuse(id, error_reply(code::LetterBad, "letter body.endpoint must be a string (name), got " + aos::dumps(body["endpoint"])));
             continue;
         }
         Waiting w;
@@ -541,16 +541,16 @@ std::vector<Waiting> Server::scan() {
         try {
             w.priority = priority_of(*letter);
         } catch (const Error& e) {
-            refuse(id, error_reply(code::LetterBad, "信的 " + e.msg));
+            refuse(id, error_reply(code::LetterBad, "letter " + e.msg));
             continue;
         }
         const Json& req = body["request"];
         if (!req.is_object() || !req.value("messages", Json()).is_array()) {
-            refuse(id, error_reply(code::RequestBad, "body.request 要是物件、messages 要是陣列"));
+            refuse(id, error_reply(code::RequestBad, "body.request must be an object and messages an array"));
             continue;
         }
         if (req.contains("stream") && !req["stream"].is_null() && req["stream"] != Json(false)) {
-            refuse(id, error_reply(code::RequestBad, "串流不做：request 不能寫 stream: true"));
+            refuse(id, error_reply(code::RequestBad, "streaming is not supported: request must not set stream: true"));
             continue;
         }
         std::optional<Json> bad = pick(w);
@@ -559,7 +559,7 @@ std::vector<Waiting> Server::scan() {
             continue;
         }
         if (w.priority.deadline && *w.priority.deadline < now) {
-            refuse(id, error_reply(code::DeadlineMissed, "輪到之前時限已過，沒跑"));
+            refuse(id, error_reply(code::DeadlineMissed, "deadline passed before its turn; not run"));
             continue;
         }
         w.seen_at_runs = q_.runs;
@@ -598,7 +598,7 @@ int Server::run() {
                     break;   // 留在 new/ 等下一窗（寄信的一直等，由它自己那邊守）
                 }
                 q_.seen_at_runs.erase(w.id);
-                refuse(w.id, error_reply(code::BudgetMissing, "這一窗（" + budget_.window + "）的額度用完了，沒跑"));
+                refuse(w.id, error_reply(code::BudgetMissing, "budget for this window (" + budget_.window + ") is used up; not run"));
                 continue;
             }
             if (n + busy_ >= slots_) {
@@ -621,7 +621,7 @@ int Server::run() {
             } catch (const Error& e) {
                 std::error_code ec;
                 fs::remove(aos::join(dir, PROC_JSON), ec);
-                finish(w.id, error_reply(code::LaunchFailed, "掛不上 daemon：" + e.code + " " + e.msg));
+                finish(w.id, error_reply(code::LaunchFailed, "cannot add the brain call to the daemon: " + e.code + " " + e.msg));
                 continue;
             }
             ++n;

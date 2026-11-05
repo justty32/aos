@@ -24,8 +24,8 @@ Host find_host() {
     std::string d = env("AOS_DAEMON");
     std::error_code ec;
     if (d.empty() || !fs::is_directory(d, ec)) {
-        throw Error{code::DaemonMissing, d.empty() ? "沒設定 AOS_DAEMON（kernel 要掛在 daemon 底下：問腦請 daemon 掛成 proc）"
-                                                   : "AOS_DAEMON 指的資料夾不在：" + d};
+        throw Error{code::DaemonMissing, d.empty() ? "AOS_DAEMON is not set (the kernel runs under a daemon: it asks the daemon to add each brain call as a proc)"
+                                                   : "AOS_DAEMON points to a missing directory: " + d};
     }
     h.daemon = aos::abspath(d);
     if (h.daemon != "/") {
@@ -42,7 +42,7 @@ Host find_host() {
         mb = (*st)["procs_ctl_mailbox"];
     }
     if (!mb.is_string() || mb.get<std::string>().empty()) {
-        throw Error{code::MailboxMissing, h.daemon + " 的 daemon 沒開 ctl 信箱（procs_state.json 的 procs_ctl_mailbox 是 null）"};
+        throw Error{code::MailboxMissing, h.daemon + ": the daemon has no ctl mailbox (procs_ctl_mailbox in procs_state.json is null)"};
     }
     h.box = aos::abspath(aos::join(h.daemon, mb.get<std::string>()));
     return h;
