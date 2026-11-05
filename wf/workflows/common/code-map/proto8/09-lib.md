@@ -15,7 +15,7 @@
 | `json_read/`、`json_edit/` | 照指標看 JSON；照指標改 JSON（經 PATH 上的 `aos-json`） |
 | `math/`、`clock/` | 四則運算、印 UTC 時間 |
 | `run_python/` | 跑一段 Python，回結束碼與輸出 |
-| `judge/` | 只有 `_entry`（不是腦的工具，11-05）：判官，一輪＝收 `$AOS_STACK/requests/` 的 `procs_*` 信，照 `judge.json`（`allowed`、`max_running`〔數 `$AOS_DAEMON/procs_state.json` 的 running 列，經 aos-directive 解〕）判 `procs_added`；掛＝body 原樣 `aos-post send --reply-to` 進 daemon 的 ctl 信箱（無序信同名）、不掛＝`done --reply` 回 `applied: false`；不自己跑東西。模式 1 的身體、模式 2 的 0 號共用（[demo/docs/04](../../../../../proto8/demo/docs/04-kernel-modes.md)） |
+| `judge/` | 只有 `_entry`（不是腦的工具，11-05）：判官，一輪＝收 `$AOS_STACK/requests/` 的 `procs_*` 信，照 `judge.json`（`allowed`、`max_running`〔數 `$AOS_DAEMON/procs_state.json` 的 running 列，經 aos-directive 解〕）判 `procs_added`（`procs_started`／`procs_woken` 也算進 `max_running`，11-05 edge-agent）；掛＝body 原樣 `aos-post send --reply-to` 進 daemon 的 ctl 信箱（無序信同名）、不掛＝stderr 一行＋`done --reply` 回 `applied: false`；不自己跑東西。模式 1 的身體、模式 2 的 0 號共用（[demo/docs/04](../../../../../proto8/demo/docs/04-kernel-modes.md)） |
 | `llm_http/`、`llm_fake/` | endpoint 函數（11-04 晚）：stdin `{endpoint, request}` → POST OpenAI 相容端點、印 `{message, usage, model}`；假腦同契約不碰網路。aos-llm-kernel 的 `kernel.json` `exec`／`endpoints.*.exec` 指它們 |
 
 ## `lib/aos/`（懂 aos 的工具）

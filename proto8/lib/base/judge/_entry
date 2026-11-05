@@ -7,10 +7,13 @@
 #   body 有 procs_added（物件）才判，其他 procs_*、不認的 key 原樣轉（C-48）：
 #   - judge.json 的 allowed（名字的陣列；null 或沒寫＝不限）：procs_added 每個名字都要在裡面，不然 NameUnknown；
 #   - max_running（非負整數；null 或沒寫＝不限）：$AOS_DAEMON/procs_state.json 裡 phase running 的列＋這一輪已放行的新名字＋這封的新名字（表上已 running 的不算新）超過就 SlotMissing；
-#   - body 不是物件、procs_added 不是物件＝BodyBad。
+#     procs_started、procs_woken（start／wake：讓 stopped／sleeping 的回來跑）的名字也算新名字、照樣判 max_running（allowed 不再判：add 時判過了）
+#     （11-05 edge-agent：原本照原樣轉，cap 2 時 sleep 一隻、add 一隻、再 wake＝3 個 running）；
+#   - body 不是物件、procs_added 不是物件、procs_started／procs_woken 不是字串陣列＝BodyBad。
 #   掛＝body 原樣 aos-post send --reply-to <原信 reply_to 拼回絕對> <ctl 信箱> <同一個信件名稱>（有序信＝--ordered＋尾名），daemon 套完直接回 {"applied": true} 給原寄件人
 #     （無序信 in_reply_to＝原信名字；有序信換了序號）；ctl 信箱已有同名（上一輪轉了沒收完）＝當轉過了。送不出去＝ForwardFailed 回給原寄件人。然後 aos-post done 收掉。
 #   不掛＝aos-post done --reply '{"applied": false, "error": {"code", "msg"}}'（沒 reply_to＝只收掉）；回信寄不出去＝stderr 一行、照樣收掉。壞信＝stderr 一行、丟掉。
+#     不掛的每封一律 stderr 一行「judge: 代號 letter <名> refused: 原因」（11-05 edge-agent：aos-daemon-ctl／aos-agent 寄的信沒 reply_to，原本一點痕跡都不留）。
 #   只判斷＋轉寄，不自己跑任何東西。一輪做完退 0（沒信也是 0：身體退 10 會讓 loop／daemon 收工）。
 # ctl 信箱＝$AOS_DAEMON/<procs_state.json 頂層的 procs_ctl_mailbox>；procs_state.json 還沒寫（daemon 第一圈）＝預設 procs_ctl_mailbox、running 0 列（同 aos-daemon-ctl）。
 #   procs_state.json 經 aos-directive 解（procs 超過 100 列會切檔）。在飛的（轉了、daemon 還沒套）不算 running：模式 2 判得比 daemon 快時可能多放幾個（已知限制）。
@@ -102,16 +105,28 @@ def verdict(body, allowed, cap, running, admitted):
     """回 (None, 新名字們)＝掛；(代號, 原因)＝不掛。"""
     if not isinstance(body, dict):
         return "BodyBad", "信的 body 要是物件"
-    if "procs_added" not in body:
+    names = []
+    if "procs_added" in body:
+        added = body["procs_added"]
+        if not isinstance(added, dict):
+            return "BodyBad", "procs_added 要是物件"
+        if allowed is not None:
+            bad = [n for n in added if n not in allowed]
+            if bad:
+                return "NameUnknown", "%s 不在 allowed 裡" % "、".join(bad)
+        names += list(added)
+    for key in ("procs_started", "procs_woken"):       # start／wake 也是「多一個 running」（11-05 edge-agent）
+        if key in body:
+            v = body[key]
+            if not isinstance(v, list) or not all(isinstance(n, str) for n in v):
+                return "BodyBad", "%s must be an array of names" % key
+            names += v
+    if not names:
         return None, []
-    added = body["procs_added"]
-    if not isinstance(added, dict):
-        return "BodyBad", "procs_added 要是物件"
-    if allowed is not None:
-        bad = [n for n in added if n not in allowed]
-        if bad:
-            return "NameUnknown", "%s 不在 allowed 裡" % "、".join(bad)
-    fresh = [n for n in added if n not in running and n not in admitted]
+    fresh = []
+    for n in names:
+        if n not in running and n not in admitted and n not in fresh:
+            fresh.append(n)
     if cap is not None and len(running) + len(admitted) + len(fresh) > cap:
         return "SlotMissing", "同時最多 %d 個 running，現在 %d 個（含這一輪已放行的），這封要再加 %d 個" % (
             cap, len(running) + len(admitted), len(fresh))
@@ -135,6 +150,7 @@ def forward(name, letter, inbox, ctl_box):
 
 
 def refuse(inbox, name, code, msg):
+    warn(code, "letter %s refused: %s" % (name, msg))
     reply = {"applied": False, "error": {"code": code, "msg": msg}}
     rc, _ = post(["done", "--reply", inbox, name], json.dumps(reply, ensure_ascii=False))
     if rc != 0:
