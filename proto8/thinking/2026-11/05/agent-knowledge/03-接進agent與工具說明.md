@@ -43,7 +43,12 @@
 | K4 | aos-mcp `initialize.instructions`＝`memory read` 根（有 `AOS_MEMORY` 才做） | `extras/ai_tools/bin/aos-mcp`、README | opus |
 | K5 | 假腦劇本跑一遍：fsm1 掛上→say「給自己加 math」→腦先 `memory read me/self_tools` 再 `self_tools add`；接進 demo/docs/05 的件 1 段 | `demo/llm-kernel/kernel.json` 劇本、`demo/docs/05-feat-proto.md` | opus |
 | K6 | 轉換工具原型（使用者：人要看就轉 markdown／html）：`lib/agent/memory_export/`（或 memory 的 `op: export`？代定另立工具，memory 保持唯讀純查詢）：把一個知識庫整棵印成一份 markdown（json 節點照印成 code block）；不強求 | 新資料夾、lib docs/03 一列、code map | sonnet |
-| K7 | 增刪改（`add`／`edit`／`rm`）、JSON 後端（`AOS_MEMORY` 指 `.json` 時走 aos-json `#/` 指標）、多知識庫——**另派 fable 規劃**後才做 | — | fable |
+| K7 | 增刪改（`add`／`edit`／`rm`，照 [01 鎖協議草稿](01-層級式記憶工具.md)）、**多庫假裝一庫**（`_memory.json` 的 `base` 收陣列，根目錄把各庫列成子節點、路徑第一段選庫；使用者裁題 3「後續可以修改這個memory工具，讓他可以接多個庫，只是假裝頂層還是一個庫」）、JSON 後端（`base` 指 `.json` 時走 aos-json `#/` 指標；使用者裁題 4「等大了再做」）——**另派 fable 規劃**後才做 | — | fable |
 | K8 | 條文：C-42 加「11-05 落實：memory（層級式記憶）」；N-63 hub 型環境變數表加 `AOS_MEMORY` 一列；CONVENTION 加一條「agent 的 system prompt 以 memory 根開頭」（草稿，使用者定） | `docs/CONCEPTS/05-agent/*`、`docs/NORMS/10-…/07-hub-型環境變數與父子交代.md`、`docs/CONVENTION/*` | opus（條文不派 sonnet） |
 
 依賴：K1～K4 互不相干可並行；K5 等 K1、K2；K8 最後。
+
+## 給新功能隊的請求（本輪沒動他們的檔）
+
+- **R1 aos-tools 登記格加選填 `env`**（`{"memory": {"path": "…/lib/agent/memory", "env": {"AOS_MEMORY": "../knowledge/aos"}}}`，`aos-tools call` 時合進那次呼叫的環境；相對路徑相對登記檔）：這樣 `aos-agent tools add` 寫進**覆蓋層**也能替這一隻換知識庫，不必在定義裡做包裝資料夾。優先序建議：工具資料夾的 `_memory.json` ＞ 登記格的 `env` ＞ 外面的 `AOS_MEMORY`（具體的蓋一般的）。動 `bin/aos-tools`、docs；aos-mcp 經 aos-tools 自然拿到。
+- **R2 agent-fsm／eca 範本**：K2、K3 接根時，`tools.json` 登記 `memory` 用 R1 的 `env` 或包裝資料夾（二選一，照 R1 做不做定）。
