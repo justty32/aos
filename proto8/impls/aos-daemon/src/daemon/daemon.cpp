@@ -17,6 +17,7 @@
 
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <csignal>
 #include <filesystem>
 #include <limits>
@@ -353,6 +354,9 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     if (dstack_ != "/") {
         dstack_ += "/";
     }
+    // 11-05（kernel-daemon 02 § 1 模式 1「繼承式」、06 步 1）：daemon 自己的身體（exec）也拿得到 AOS_DAEMON＝自己的 stack——
+    // 身體是 daemon 起的，照 N-64 ④ 同一句；判官／llm kernel 當身體時靠它找自己這台的 ctl 信箱。子項照舊在 run_child 一律蓋過去。
+    setenv("AOS_DAEMON", dstack_.c_str(), 1);
     check_running();   // 11-05（portable-flow 步 5「沒有才起、有就沿用」）
     if (a.get<bool>()) {
         adopt();
