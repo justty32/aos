@@ -28,7 +28,7 @@ proto8/thinking/2026-10/30/agent-lifecycle/README.md（實作第 7 步的補）�
   沒設＝直接寄 daemon 的 ctl 信箱（daemon 就是 kernel，模式 0）。表照樣從 D 讀（ls、where、PhaseBad 檢查）。
   AOS_KERNEL 沒有 new/＝MailboxMissing。aos-agent 經這支，跟著走。人殼裡設了別台的 AOS_KERNEL 再對另一台下指令＝寄錯台（自擔）。
 表上的路徑（11-05 portable-flow，使用者「可以用daemon作為相對路徑的一個基準點」）：procs_state 每列的 stack／ws／exec／def 之後 daemon 存成相對
-  daemon 的 stack（＝D；例 procs/bob、..、../../agents/bob/loop.json#/exec），這支讀表時一律 normpath(join(D, 值))（exec 的 # 片段照留），對外（ls、ls --json、where）印的都是絕對。字串算、不 realpath（symlink 照字面）。
+  daemon 的 stack（＝D；例 procs/bob、..、../../agents/bob/loop.json#/exec），這支讀表時一律 normpath(join(D, 值))（exec 的 # 片段照留），對外（ls、ls --json、where）印的都是絕對。D 先 realpath（daemon 的基準點是 stack 的真實路徑），值照字面。
   每列另有 reason（null 或字串：daemon 把起不來的列留成 stopped 時寫的原因），ls 印在最後一欄（null＝-）。
   add 送給 daemon 的照舊是絕對路徑（「只改存的格式，不改給的格式」；相對化是 daemon 寫表那一刻的事）。
   信箱＝<D>/<窗上的 procs_ctl_mailbox>/（11-04 起 daemon.json 沒寫也開、預設 procs_ctl_mailbox；寫 null＝沒開＝MailboxMissing）；沒有 new/＝MailboxMissing（daemon 還沒起）。
@@ -113,7 +113,7 @@ def daemon_dir(opts):
         raise Fail("DaemonMissing", "沒給 --daemon、沒設 AOS_DAEMON、cwd 也沒有 .stack 資料夾（要指到 daemon 的 $AOS_STACK 資料夾）")
     if not os.path.isdir(d):
         raise Fail("DaemonMissing", "daemon 的資料夾不在：%s" % d)
-    return os.path.abspath(d)
+    return os.path.realpath(d)   # 11-05 B 線：daemon 的表相對它 stack 的真實路徑（解開捷徑）算，這裡也解開才拼得回
 
 
 def abs_target(t, base):
@@ -303,7 +303,7 @@ def table(d, v):
 
 def resolve(d, row):
     """表上一列的 stack／ws／exec／def 拼回絕對（11-05：daemon 存相對 daemon stack）。exec 的 # 片段照留；
-    字串算、不 realpath。不是字串的（null、內嵌單子）不動。回新的一列。"""
+    值照字面（D 已 realpath）。不是字串的（null、內嵌單子）不動。回新的一列。"""
     out = dict(row)
     for k in PATHS:
         v = out.get(k)

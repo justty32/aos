@@ -16,6 +16,9 @@
 #include "aos/proc.hpp"
 
 #include <chrono>
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
 #include <cstdio>
 #include <cstdlib>
 #include <csignal>
@@ -351,6 +354,15 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     cwd_ = std::filesystem::current_path().string();
     // 給子項的 AOS_DAEMON（11-02，resident-bob 衝突 2；11-04 晚改名，舊名不認）：stack_ 轉絕對、結尾 /，跟 aos-exec 給的 AOS_STACK 同形；預設小格也從它拼（列上的 stack 一律絕對）
     dstack_ = aos::abspath(stack_);
+    // 11-05 B 線：解開捷徑。子項拼 `$AOS_DAEMON/../../定義` 時 `..` 是 OS 照實體走的；stack 是捷徑（ws/.stack -> 別處）時字面算的 `..`
+    // 會走到別處（實測：小格起不來 EntryMissing）。基準點是真實路徑，往上的 `..` 就跟字面一樣；往下穿過捷徑（定義是捷徑）本來就沒事，所以目標照字面
+    {
+        std::error_code ec;
+        std::filesystem::path real = std::filesystem::canonical(dstack_, ec);
+        if (!ec) {
+            dstack_ = real.string();
+        }
+    }
     if (dstack_ != "/") {
         dstack_ += "/";
     }
@@ -367,29 +379,31 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     }
 }
 
-void Daemon::check_running() const {
-    if (state_path_.empty()) {
+// 11-05 B 線：用 flock 鎖住 stack 資料夾本身（不多建檔；O_CLOEXEC，子項 exec 後不帶著；行程不論怎麼死鎖都跟著放）。
+// 鎖不到＝同一個 stack 已有 daemon 活著＝DaemonRunning。原本只比 state.json 的 pid＋ticks＋boot_id：兩個同時起時兩邊都還沒寫 state.json、
+// 都過關，同一個 stack 跑兩個 daemon（實測一個死在 state.json.tmp 互搶、活下來的那個 state.json 記著死掉那個的 pid，再起第三個也擋不住）。
+// pid 只拿來寫訊息。stack 打不開（不在）＝不鎖，後面寫窗時照各自的錯。
+void Daemon::check_running() {
+    int fd = ::open(stack_.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+    if (fd < 0) {
         return;
     }
-    std::optional<Json> st = aos::read_json(state_path_);
-    if (!st || !st->is_object()) {
+    if (::flock(fd, LOCK_EX | LOCK_NB) == 0) {
+        lock_fd_ = fd;   // 一直開著到行程結束
         return;
     }
-    Json pid = st->value("pid", Json());
-    Json ticks = st->value("started_at_ticks", Json());
-    Json boot = st->value("boot_id", Json());
-    if (!pid.is_number_integer() || !ticks.is_number_integer() || (pid_t)pid.get<long long>() == getpid()) {
-        return;
+    ::close(fd);
+    std::string who;
+    std::optional<Json> st = state_path_.empty() ? std::nullopt : aos::read_json(state_path_);
+    if (st && st->is_object() && st->value("pid", Json()).is_number_integer() && st->value("started_at_ticks", Json()).is_number_integer()) {
+        // 對得上活著的才印 pid：另一個剛起、還沒寫 state.json 時，檔裡是上一個（已死）daemon 的 pid
+        pid_t pid = (pid_t)(*st)["pid"].get<long long>();
+        std::optional<long long> now = aos::proc_started_at_ticks(pid);
+        if (now && *now == (*st)["started_at_ticks"].get<long long>()) {
+            who = "（pid " + std::to_string(pid) + "）";
+        }
     }
-    std::optional<std::string> now_boot = aos::boot_id();
-    if (boot.is_string() && now_boot && *now_boot != boot.get<std::string>()) {
-        return;   // 別次開機（別台搬來的、重開機過）＝沒在跑
-    }
-    std::optional<long long> now = aos::proc_started_at_ticks((pid_t)pid.get<long long>());
-    if (now && *now == ticks.get<long long>()) {
-        throw Error{code::DaemonRunning, "這個 stack（" + stack_ + "）已有 daemon 在跑（pid " + std::to_string(pid.get<long long>()) +
-                                             "）；要沿用就直接 aos-daemon-ctl add／aos-agent ctl add"};
-    }
+    throw Error{code::DaemonRunning, "這個 stack（" + stack_ + "）已有 daemon 在跑" + who + "；要沿用就直接 aos-daemon-ctl add／aos-agent ctl add"};
 }
 
 Json Daemon::unrel(const Json& v) const {

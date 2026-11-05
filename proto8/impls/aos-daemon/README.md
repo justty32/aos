@@ -25,7 +25,7 @@ cat daemon.json
 AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法是 aos-exec 它（11-04 前的例子 proto8/demo/daemon 刪了）；PATH 上要有 aos-exec、aos-loop
 ```
 
-**起 daemon 要看 log 就加 `--enable-logs`**：不加的話 daemon 什麼都不印（stdout、stderr 都安靜，只有出錯時 stderr 一行），看起來像卡住，其實照常在跑；子項起落要看就加它（見下「log」），或看 `aos-daemon-ctl ls`。
+**起 daemon 要看 log 就加 `--enable-logs`**（用 aos-exec 起的，旗標寫進定義的 `_entry`、放在設定檔前面：`["aos-daemon", "--enable-logs", "daemon.json"]`；`aos-exec 定義 --enable-logs` 會接在設定檔後面＝`ArgumentsBad`，訊息會這樣提示）：不加的話 daemon 什麼都不印（stdout、stderr 都安靜，只有出錯時 stderr 一行），看起來像卡住，其實照常在跑；子項起落要看就加它（見下「log」），或看 `aos-daemon-ctl ls`。
 **收工：在 daemon 的視窗按 Ctrl-C**（使用者 11-03 晚定）——SIGINT 走正常收工（`finish`），還在跑的 loop 型睡下（`sleeping`），下次開門自己醒（見下「收工與開門」）。
 
 ## 分檔目錄

@@ -122,6 +122,11 @@ aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog)
     // 11-02 晚（使用者「aos-XXX ... ... -- ...」）：設定檔之後接 `--`＝後面全是附加參數（rest＝[設定檔, 參數...]，`--` 剝掉）；
     // 接別的＝照舊 ArgumentsBad。設定檔之前的 `--` 是 parse_cli 的「旗標結束」，不受影響。
     if (cli.rest.size() > 1 && cli.rest[1] != "--") {
+        // 11-05 B 線：設定檔後面接旗標，多半是 `aos-exec 定義 --enable-logs`（aos-exec 把參數接在 _entry 後面）；照舊不收，但別叫人寫到 -- 後面（那是給身體的）
+        if (cli.rest[1].size() > 1 && cli.rest[1][0] == '-') {
+            throw Error{code::ArgumentsBad, usage + "（旗標 " + cli.rest[1] + " 要寫在設定檔前面；用 aos-exec 起的，旗標寫進定義的 _entry、放在設定檔前面，例 [\"" + prog +
+                                                "\", \"--enable-logs\", \"設定檔.json\"]）"};
+        }
         throw Error{code::ArgumentsBad, usage + "（設定檔只能一個，多給了 " + cli.rest[1] + "；附加參數要寫在 -- 後面）"};
     }
     if (cli.rest.size() > 1) {
