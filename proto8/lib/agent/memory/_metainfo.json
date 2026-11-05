@@ -1,0 +1,8 @@
+{"summary": "Read-only lookup in a hierarchical knowledge base folder ($AOS_MEMORY): read a node, list children, find by keyword",
+ "time_ms": {"val": 50, "max": 5000},
+ "resource": "cpu",
+ "side_effect": false,
+ "idempotent": true,
+ "deterministic": true,
+ "interrupt": "safe",
+ "parallel": true}

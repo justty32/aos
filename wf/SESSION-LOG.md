@@ -8,6 +8,7 @@
 
 ## 最新進度
 
+- **open｜agent-knowledge**：工具 `memory` 與 `knowledge/aos` 已做並實測；等新功能隊收工後排 K1～K8（description 改英文增量、agent-fsm／eca／aos-mcp 接根、轉 markdown 工具、條文）；五題待使用者 → [agent-knowledge](../proto8/thinking/2026-11/05/agent-knowledge/README.md)、[步驟](../proto8/thinking/2026-11/05/agent-knowledge/03-接進agent與工具說明.md)
 - **open｜kernel-daemon**：做完（[實作結果](../proto8/thinking/2026-11/05/kernel-daemon/08-實作結果.md)）；bob 真問 claude、`open` 畫面等使用者試（[WAIT_USER](WAIT_USER.md)）
 - **open｜tidy 收斂**：剩 C-54 摺疊（aos-post 步 9 加註 11-04 已做）、2026-11/04 thinking 未精簡 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)
 - **open｜介質**：queue 輸入、接單後放 tools（決定 32）兩題擱著 → [10-28 medium](../proto8/thinking/2026-10/28/medium/README.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10/29/medium-plan/README.md#實作時代定10-29隊長與工人照原則定的細節可翻案)

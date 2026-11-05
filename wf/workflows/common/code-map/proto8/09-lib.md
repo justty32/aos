@@ -1,4 +1,4 @@
-← [入口](../proto8.md)｜涵蓋：`proto8/lib/`（base、aos、agent）
+← [入口](../proto8.md)｜涵蓋：`proto8/lib/`（base、aos、agent）、`proto8/knowledge/`（記憶工具讀的知識庫）
 
 工具契約、分層與完整索引以 [lib/README](../../../../../proto8/lib/README.md) 為準。路徑相對於該段標題的資料夾。
 
@@ -35,4 +35,12 @@
 | `cli_session.py` | 不是工具：claude／codex CLI 接成工具（非互動續對話，或 tmux 貼字等 hook）；`call_main`、`attach_main`、`hook`；`stack_copies`＝`$AOS_STACK` 的 `tools.json` 是這隻的覆蓋層、給 aos-mcp `--overlay`（11-05）、`--model` 取 cli.json 同層 `llm.json` 疊 `$AOS_STACK/llm.json` 的 `model`（11-04 晚） |
 | `self_tools/_entry`、`self_tools/_tooldef.json`、`self_tools/_metainfo.json` | 改叫我的 agent 自己的工具覆蓋層（11-05 feat-proto 件 1）：`aos-agent ctl who` 認出是哪隻 → `aos-agent tools --target 它 add／rm／ls --json`；`tool_path`（相對從 `$AOS_WS`、絕對限 `lib/`）、`agent`（轉 aos-agent，stderr 原樣、錯取最後一行代號） |
 | `agents/_entry`、`agents/_tooldef.json`、`agents/_metainfo.json` | 生、叫、收另一隻 agent（11-05 feat-proto 件 4）：op add／say／ask／rm／ls 轉 `aos-agent --daemon $AOS_DAEMON` 的 `ctl add`（`limits` 原樣轉 `--limits`、它的提醒行接在 added 後，件 5；＋`llm set endpoint`、`tools add`，失敗 `ctl rm` 收回）／`say`／`say`＋`listen`／`ctl rm`／`ctl ls --json`；`resolve`（相對從 `$AOS_WS`、絕對限工作區或 `proto8/lib`、`proto8/demo`）、`children.json`（工具小格，只 say／ask／rm 自己生的，`ChildUnknown`）、`agent`（叫 aos-agent、逾時與被 TERM 收整群、錯取最後一行 `aos-…: 代號`） |
+| `memory/_entry`、`memory/_tooldef.json`、`memory/_metainfo.json` | 層級式記憶工具的查詢半邊（11-05 下午 agent-knowledge）：`AOS_MEMORY` 指知識庫根（`base`：相對從 `$AOS_DAEMON`）、`parse_path`（段名 `[a-z0-9_-]`、尾巴 `/` 可有）、`resolve`（資料夾 → `.md` → `.json`）、`read`／`ls`／`find`（`find` 真的叫 `grep -ril`，TERM 時先收掉它）、`title_summary`（md 第一行與其後第一個非空行／json 的 `title`／`summary`）、`NodeMissing` 附祖先的子節點名 |
+
+## `proto8/knowledge/`（知識庫：記憶工具讀的資料夾樹，不是程式）
+
+| 檔 | 負責什麼 |
+|---|---|
+| `README.md` | 知識庫是什麼、節點怎麼寫（繁中，給人） |
+| `aos/README.md`、`aos/*.md`、`aos/me/*.md`、`aos/agents/README.md` | 第一個知識庫：aos 體系知識（英文、給小模型）：根＝八個詞＋五條規則；節 `world`、`me`、`me/self_tools`、`agents`、`brain`、`status`、`errors`、`rules`、`cli`（各節教什麼見 [thinking 02](../../../../../proto8/thinking/2026-11/05/agent-knowledge/02-aos知識庫.md)） |
 | `claude/`、`codex/` | claude／codex CLI 當工具：`_entry`、`_tooldef.json`、`_metainfo.json`、`cli.json`（CLI 旗標） |

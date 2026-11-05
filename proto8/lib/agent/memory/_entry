@@ -1,0 +1,287 @@
+#!/usr/bin/env python3
+# memory - 查共用的層級式知識庫：read 一個節點（文＋子節點目錄）、ls 列子節點、find 用關鍵字找節點；唯讀
+# 規劃：proto8/thinking/2026-11/05/agent-knowledge/01-層級式記憶工具.md（使用者 11-05 下午「層級式記憶工具」）。
+# 介面（lib/README 的契約）：stdin 收 {"op": "read"|"ls"|"find", "path"?: "…", "query"?: "…", "max_bytes"?: N}。
+#   知識庫根目錄＝$AOS_MEMORY（腦不能挑）；相對路徑從 $AOS_DAEMON 算（沒有＝從 cwd），再解開捷徑。
+#   節點路徑 a/b：段用 / 接、段名只能 [a-z0-9_-]+；"" 或 "/"＝根。資料夾節點＝<根>/a/b/（文在 README.md，沒有＝空），
+#   葉節點＝<根>/a/b.md 或 a/b.json（11-05 加；同名兩個都在＝.md 優先）；先找資料夾再找葉。
+#   子節點＝子資料夾＋*.md／*.json（README.md 以外），. 與 _ 開頭的不算，照名字排序。yaml 這版不認（要認時加進 LEAF_EXTS）。
+#   .json 葉：read 印原文不轉換；標題／摘要＝頂層物件的 title／summary 字串鍵（沒有＝標題用節點名、摘要空）。
+#   節點的文：第 1 行 # 標題、標題後第一個非空行＝一句話摘要、之後本文。
+#   stdout 純文字、第一行 node: <路徑>（根＝/）：
+#     read＝文（預設最多 8000 bytes，超過附 [truncated: N more bytes]）＋children: 目錄（每行「  名  摘要」，資料夾名後加 /）；
+#     ls＝只印 children:（沒有＝children: (none)）；
+#     find＝path 底下（含自己）標題、摘要、本文含 query（不分大小寫）的節點，matches: 每行「  路徑  標題」，最多 20 個再加 … N more。
+# 錯：stderr 與 stdout 各一行「memory: 代號 原因」、退 1：ArgumentsBad（stdin 不是 JSON 物件、op 沒給、max_bytes 不是正整數、
+#   find 沒 query）、OpUnknown、PathBad、MemoryMissing（沒設、空、不是資料夾）、NodeMissing（附父節點的子節點名）、
+#   ReadFailed（檔在但讀不了、不是 UTF-8；grep 退 2）、LaunchFailed（PATH 上沒有 grep）。
+# 不寫任何檔、不碰 $AOS_WS。子行程只有 find 的 grep；被 TERM 時先收掉它再走（lib 契約規則 5）。
+# 設計（使用者 11-05「依託檔案系統、/usr/bin 的 ls/grep 包成工具，不用重複發明」）：
+#   read＝cat/head -c、ls＝ls、find＝grep -ril，全部限定在 AOS_MEMORY 根之下、唯讀、輸出截斷給小模型；不另發明儲存格式。
+#   節點路徑 a/b 跟 aos-json 的 #/a/b 指標同形，之後 AOS_MEMORY 指到一份 .json 時可以用 aos-json 當後端（這版不做）。
+import json, os, re, signal, subprocess, sys
+
+NAME = "memory"
+DEFAULT_MAX_BYTES = 8000
+FIND_LIMIT = 20
+SEGMENT = re.compile(r"^[a-z0-9_-]+$")
+LEAF_EXTS = (".md", ".json")                    # 前面的優先
+child = None
+
+
+def die(code, reason):
+    line = "%s: %s %s" % (NAME, code, str(reason).replace("\n", " "))
+    print(line, file=sys.stderr)
+    print(line)                                 # stdout 也印：stdout 是給腦看的結果
+    sys.exit(1)
+
+
+def arguments():
+    try:
+        a = json.loads(sys.stdin.read() or "{}")
+    except ValueError as e:
+        die("ArgumentsBad", "stdin is not JSON: %s" % e)
+    if not isinstance(a, dict):
+        die("ArgumentsBad", "arguments must be an object")
+    return a
+
+
+def memory_root():
+    m = os.environ.get("AOS_MEMORY", "")
+    if not m:
+        die("MemoryMissing", "AOS_MEMORY is not set or empty")
+    base = os.environ.get("AOS_DAEMON") or os.getcwd()
+    real = os.path.realpath(os.path.join(base, m))   # m 是絕對路徑時 join 直接用 m
+    if not os.path.isdir(real):
+        die("MemoryMissing", "AOS_MEMORY resolves to %s, which is not a directory" % real)
+    return real
+
+
+def parse_path(p):
+    """回段的 list（根＝[]）；不合規＝PathBad。"""
+    if p is None or p == "" or p == "/":
+        return []
+    if not isinstance(p, str):
+        die("ArgumentsBad", "path must be a string")
+    p = p.strip("/")                 # 目錄裡資料夾節點印成 `me/`，腦照抄也算對（11-05 Haiku 實測：五題裡四題先寫了尾巴的 /）
+    if p == "":
+        return []
+    segs = p.split("/")
+    for s in segs:
+        if not SEGMENT.match(s):
+            die("PathBad", "%r is not a node path (segments joined by /, each [a-z0-9_-]+; empty or / is the root)" % p)
+    return segs
+
+
+def show(segs):
+    return "/".join(segs) if segs else "/"
+
+
+def locate(root, segs):
+    """回 (kind, 磁碟路徑)：("dir", 資料夾) 或 ("leaf", .md／.json 檔)；都沒有＝None。"""
+    d = os.path.join(root, *segs) if segs else root
+    if os.path.isdir(d):
+        return ("dir", d)
+    f = leaf_file(d) if segs else None
+    return ("leaf", f) if f else None
+
+
+def leaf_file(base):
+    """<base>.md 或 <base>.json（.md 優先）；都沒有＝None。"""
+    return next((base + x for x in LEAF_EXTS if os.path.isfile(base + x)), None)
+
+
+def read_text(kind, where, strict=True):
+    f = os.path.join(where, "README.md") if kind == "dir" else where
+    if kind == "dir" and not os.path.isfile(f):
+        return ""
+    try:
+        with open(f, "rb") as h:
+            return h.read().decode("utf-8")
+    except (OSError, UnicodeDecodeError) as e:
+        if strict:
+            die("ReadFailed", "cannot read %s: %s" % (f, e))
+        return ""
+
+
+def title_summary(text, f=""):
+    """.md：第一行 # 標題、其後第一個非空行＝摘要；.json：頂層物件的 title／summary 字串鍵。"""
+    if f.endswith(".json"):
+        try:
+            obj = json.loads(text)
+        except ValueError:
+            obj = None
+        if not isinstance(obj, dict):
+            return "", ""
+        t, s = obj.get("title"), obj.get("summary")
+        return (t if isinstance(t, str) else ""), (s if isinstance(s, str) else "")
+    lines = text.splitlines()
+    title, rest = "", lines
+    if lines and lines[0].startswith("# "):
+        title, rest = lines[0][2:].strip(), lines[1:]
+    summary = next((l.strip() for l in rest if l.strip()), "")
+    return title, summary
+
+
+def children(kind, where):
+    """回 [(名, 是資料夾)]，照名字排序；同名的資料夾與 .md 只留資料夾（定址也是先找資料夾）。"""
+    if kind != "dir":
+        return []
+    try:
+        entries = os.listdir(where)
+    except OSError as e:
+        die("ReadFailed", "cannot list %s: %s" % (where, e))
+    found = {}
+    for e in entries:
+        if e.startswith(".") or e.startswith("_") or e == "README.md":
+            continue
+        full = os.path.join(where, e)
+        if os.path.isdir(full):
+            name, is_dir = e, True
+        elif e.endswith(LEAF_EXTS) and os.path.isfile(full):
+            name, is_dir = os.path.splitext(e)[0], False
+        else:
+            continue
+        if not SEGMENT.match(name):             # 定址不到的名字不列（列了腦也讀不到）
+            continue
+        if is_dir or name not in found:
+            found[name] = is_dir
+    return sorted(found.items())
+
+
+def child_lines(root, segs, kind, where):
+    out = []
+    for name, is_dir in children(kind, where):
+        ck = ("dir", os.path.join(where, name)) if is_dir else ("leaf", leaf_file(os.path.join(where, name)))
+        _, summary = title_summary(read_text(*ck, strict=False), ck[1] if not is_dir else "")
+        label = name + "/" if is_dir else name
+        out.append(("  %s  %s" % (label, summary)).rstrip())
+    return out
+
+
+def node_or_die(root, segs):
+    hit = locate(root, segs)
+    if hit is not None:
+        return hit
+    up = segs[:-1]                              # 往上找到第一個在的祖先，列它的子節點
+    while up and locate(root, up) is None:
+        up = up[:-1]
+    names = [n + "/" if d else n for n, d in children(*locate(root, up))]
+    die("NodeMissing", "node %s not found; children of %s: %s" % (show(segs), show(up), ", ".join(names) or "(none)"))
+
+
+def truncate(text, max_bytes):
+    raw = text.encode("utf-8")
+    if len(raw) <= max_bytes:
+        return text
+    head = raw[:max_bytes].decode("utf-8", "ignore").rstrip("\n")
+    return "%s\n[truncated: %d more bytes]" % (head, len(raw) - max_bytes)
+
+
+def op_read(root, segs, max_bytes):
+    kind, where = node_or_die(root, segs)
+    parts = ["node: %s" % show(segs)]
+    text = read_text(kind, where).rstrip("\n")
+    if text:
+        parts += ["", truncate(text, max_bytes)]
+    kids = child_lines(root, segs, kind, where)
+    if kids:
+        parts += ["", "children:"] + kids
+    print("\n".join(parts))
+
+
+def op_ls(root, segs):
+    kind, where = node_or_die(root, segs)
+    kids = child_lines(root, segs, kind, where)
+    print("node: %s" % show(segs))
+    print("\n".join(["children:"] + kids) if kids else "children: (none)")
+
+
+def on_term(signum, frame):
+    if child is not None and child.poll() is None:
+        try:
+            os.killpg(child.pid, signal.SIGTERM)
+        except OSError:
+            pass
+    sys.exit(128 + signum)
+
+
+def grep(query, target):
+    """grep -ril：回命中的 .md 檔（絕對路徑）；退 1＝沒命中、退 2＝ReadFailed。"""
+    global child
+    try:
+        child = subprocess.Popen(["grep", "-r", "-i", "-l", "-F", "--include=*.md", "--include=*.json", "--", query, target],
+                                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                 start_new_session=True)
+    except OSError as e:
+        die("LaunchFailed", "cannot run grep: %s" % e)
+    out, err = child.communicate()
+    if child.returncode == 1:
+        return []
+    if child.returncode != 0:
+        last = (err.decode("utf-8", "replace").strip().splitlines() or ["grep exited %d" % child.returncode])[-1]
+        die("ReadFailed", "grep failed: %s" % last)
+    return [l for l in out.decode("utf-8", "surrogateescape").splitlines() if l]
+
+
+def file_node(root, f):
+    """命中的檔 → 節點的段；定址不到的（. 與 _ 開頭、名字不合、被同名資料夾蓋掉的 .md）＝None。"""
+    rel = os.path.relpath(f, root).split(os.sep)
+    if rel[-1] == "README.md":
+        segs = rel[:-1]
+    elif rel[-1].endswith(LEAF_EXTS):
+        segs = rel[:-1] + [os.path.splitext(rel[-1])[0]]
+        base = os.path.join(root, *segs)
+        if os.path.isdir(base) or leaf_file(base) != f:   # 被同名資料夾或 .md 蓋掉
+            return None
+    else:
+        return None
+    if any(not SEGMENT.match(s) or s[0] in "._" for s in segs):
+        return None
+    return segs
+
+
+def op_find(root, segs, query):
+    kind, where = node_or_die(root, segs)
+    hits = []
+    for f in grep(query, where):
+        f = os.path.realpath(f)
+        s = file_node(root, f)
+        if s is None:
+            continue
+        title, _ = title_summary(read_text("leaf", f, strict=False), f)   # 標題從命中的檔讀
+        hits.append((show(s), title or (s[-1] if s else "/")))
+    hits.sort()
+    print("node: %s" % show(segs))
+    if not hits:
+        print("matches: (none)")
+        return
+    print("matches:")
+    for p, t in hits[:FIND_LIMIT]:
+        print("  %s  %s" % (p, t))
+    if len(hits) > FIND_LIMIT:
+        print("  … %d more" % (len(hits) - FIND_LIMIT))
+
+
+signal.signal(signal.SIGTERM, on_term)
+args = arguments()
+op = args.get("op")
+if op is None:
+    die("ArgumentsBad", "op is required (read, ls or find)")
+if op not in ("read", "ls", "find"):
+    die("OpUnknown", "%r is not an op; use read, ls or find" % (op,))
+max_bytes = args.get("max_bytes", DEFAULT_MAX_BYTES)
+if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0:
+    die("ArgumentsBad", "max_bytes must be a positive integer")
+query = args.get("query")
+if op == "find" and (not isinstance(query, str) or not query):
+    die("ArgumentsBad", "find needs query (a non-empty string)")
+segs = parse_path(args.get("path"))
+root = memory_root()
+
+if op == "read":
+    op_read(root, segs, max_bytes)
+elif op == "ls":
+    op_ls(root, segs)
+else:
+    op_find(root, segs, query)
