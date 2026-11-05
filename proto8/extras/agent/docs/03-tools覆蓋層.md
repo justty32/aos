@@ -1,0 +1,48 @@
+← [回入口 README.md](../README.md)｜段落：tools 覆蓋層（11-05）｜上一份：[02-已知限制](02-已知限制.md)｜下一份：—
+
+<a id="tools-覆蓋層"></a>
+
+## tools 覆蓋層（11-05，只存差異）
+
+使用者 11-05：「stack存定義副本...建議是不要，使用者想弄可以自己弄，但我們自己在做的時候盡量不要」、「tools只存差異那塊可以先做，我直覺上這是好方法。等實作出來後我再看看」（[portable-flow 衝突 2](../../../thinking/2026-11/05/portable-flow/05-衝突與方向題.md)、[06 步 4](../../../thinking/2026-11/05/portable-flow/06-實作步驟草稿.md)）。以下是實作時照原則定的（可翻案）。
+
+### 存什麼
+
+`aos-agent tools add／rm` 不再把定義的 `tools.json` 整份抄進 stack，只在 `<stack>/tools.json` 記**這一隻自己加的、拿掉的**：
+
+```json
+{"add": {"math": {"path": "../../../../agents/lib/math"}}, "rm": ["clock"]}
+```
+
+- `add`：名字 → 登記內容（跟 aos-tools 登記檔裡一項一樣：`path`，可執行檔另有 `cache`）。**`path` 存相對覆蓋層這份檔所在的資料夾**（就是這隻的 stack），字串算、不 realpath——整份 image（`ws/.stack/`）搬家時跟著走。選「相對覆蓋層」而不是「相對 daemon stack」：aos-tools 本來的規則就是「手寫的相對路徑從這份檔的資料夾算」，覆蓋層照同一條，aos-tools 不用知道 daemon；覆蓋層在 stack 裡，兩種基準點一起搬，效果一樣。
+- `rm`：拿掉的名字（只記定義裡有的；覆蓋層自己 add 的再 rm＝直接從 `add` 刪）。
+- 沒改過＝沒有這份檔＝就是定義那份。`tools reset`＝刪掉這份。
+- `llm` 本來就只存改過的鍵（`<stack>/llm.json`），不動。
+
+### 怎麼合併（誰讀）
+
+每次要用時現疊，不存結果：**定義的 `tools.json` → 拿掉 `rm` 裡的名字 → 放上 `add` 的（同名蓋過定義）**。疊法只寫在一處：`aos-tools --file <定義>/tools.json --overlay <stack>/tools.json …`（[aos-tools](../../../bin/docs/01-逐支說明.md)；`ls`／`get`／`call` 都看疊好的那份，`add`／`rm` 只寫覆蓋層、不碰定義）。用它的：
+
+- `aos-agent tools ls／get／add／rm`（stderr 一行說用的是「定義」還是「定義疊覆蓋層」）。
+- agent-fsm 的身體 `brain.py`（給腦看的工具清單）、`act.py`（叫工具）：沒給 `--tools` 時，`$AOS_STACK/tools.json` 在就加 `--overlay`；每格重讀＝下一題生效。
+- eca agent：`lib/agent/cli_session.py` 的 `stack_copies`（cli.json 沒明寫 `tools` 時）把它交給 `aos-mcp --overlay`，aos-mcp 原樣轉給 aos-tools；每次起 CLI 重接。
+
+### 定義後來改了怎麼辦
+
+照疊，不用 reset：
+
+- 定義**多了**工具＝這隻也看得到（除非名字在 `rm` 裡）。
+- 定義**拿掉了** `rm` 裡的名字＝那個名字疊的時候找不到，忽略（不報錯、檔裡留著也無害）。
+- 定義**多了一個跟 `add` 同名的**＝覆蓋層的 `add` 贏（這隻自己加的優先）。
+
+### 舊的整份副本怎麼遷移（11-04～11-05 建的）
+
+11-05 前 `tools add／rm` 建的是整份副本 `{"tools": {…}}`（path 是絕對）。KISS：**認得、照舊、要改就先 reset**——
+
+- `<stack>/tools.json` 裡有 `tools` 這格＝當成一份完整登記檔、**整份取代定義**（就是 11-04 的行為；正在跑的那隻不受影響）。`tools ls`／`get` 的 stderr 會提醒「這是 11-05 前的整份副本」。
+- 這時 `tools add／rm`＝`aos-tools: RegistryBad …先刪掉它（aos-agent tools reset）`，不寫。`tools reset` 刪掉副本，之後再 `add`／`rm` 就是覆蓋層。副本裡改過的會丟——reset 前先 `tools ls` 記下來、reset 後再 `add` 回去。
+- 不自動轉換（要比對定義才知道哪些是改過的，猜錯會默默改掉工具箱）。
+
+### 已知的邊
+
+- 指到 image 外面的工具（例 repo 裡的 `lib/base/clock`）存的也是相對路徑（`../../../../../../home/…`）：整份搬到另一層深度或別台、那邊沒有同樣相對位置的檔＝那個工具找不到（aos-tools 報 `PathMissing`）。照 [portable-flow 03 原則 5](../../../thinking/2026-11/05/portable-flow/03-絕對路徑盤點.md)「指到 daemon 外面自擔」；要帶著走就把工具放進定義旁的 `lib/`。

@@ -7,6 +7,7 @@
 # 只有自己這層的錯才停：stderr 一行「agent-fsm: 代號 原因」、退 1、history 不接（P-20）——沒 stack、history 壞、
 #   history 裡沒有 assistant、aos-tools 起不來。
 # --tools FILE：aos-tools 登記檔（預設範本裡的 tools.json；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
+#   沒給 --tools 時，$AOS_STACK/tools.json 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
 # 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
 import json, os, subprocess, sys
 
@@ -27,14 +28,15 @@ def flags(argv, known):
 
 
 opts = flags(sys.argv[1:], ("--tools",))
-tools_file = os.path.join(os.environ.get("AOS_CD") or ".", opts.get("--tools", "tools.json"))
-if "--tools" not in opts and os.path.isfile(os.path.join(os.environ.get("AOS_STACK") or "", "tools.json")):
-    tools_file = os.path.join(os.environ["AOS_STACK"], "tools.json")   # 子介面 tools：stack 有副本就用它（aos-agent tools，11-04）
-if "--tools" in opts and not os.path.isfile(tools_file):
-    die("ToolsMissing", "工具登記檔不在：%s" % tools_file)
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "沒設定 AOS_STACK")
+tools_file = os.path.join(os.environ.get("AOS_CD") or ".", opts.get("--tools", "tools.json"))
+if "--tools" in opts and not os.path.isfile(tools_file):
+    die("ToolsMissing", "工具登記檔不在：%s" % tools_file)
+overlay = os.path.join(stack, "tools.json")         # 子介面 tools 的覆蓋層（aos-agent tools，11-05 起只存差異）
+overlay = overlay if "--tools" not in opts and os.path.isfile(overlay) else None
+TOOLS = ["aos-tools", "--file", tools_file] + (["--overlay", overlay] if overlay else [])
 history_path = os.path.join(stack, "history.jsonl")
 history = []
 try:
@@ -71,9 +73,9 @@ def append(message):
 
 
 registered = []
-if os.path.isfile(tools_file):                   # 能叫的＝登記檔裡的（aos-tools ls --json）；失敗＝自己這層的錯
+if os.path.isfile(tools_file) or overlay:        # 能叫的＝登記檔（疊覆蓋層）裡的（aos-tools ls --json）；失敗＝自己這層的錯
     try:
-        r = subprocess.run(["aos-tools", "--file", tools_file, "ls", "--json"], stdin=subprocess.DEVNULL,
+        r = subprocess.run(TOOLS + ["ls", "--json"], stdin=subprocess.DEVNULL,
                            stdout=subprocess.PIPE, text=True)
     except OSError as e:
         die("ToolFailed", "aos-tools 起不來：%s" % e)
@@ -101,7 +103,7 @@ for call in calls:
         continue
     env = dict(os.environ, AOS_STACK=os.path.join(stack, "tools", name) + "/")
     try:
-        r = subprocess.run(["aos-tools", "--file", tools_file, "call", name], input=arguments,
+        r = subprocess.run(TOOLS + ["call", name], input=arguments,
                            stdout=subprocess.PIPE, text=True, env=env)   # stderr 不吞：工具自己的錯原樣往上
     except OSError as e:
         die("ToolFailed", "aos-tools 起不來：%s" % e)

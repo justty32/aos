@@ -1,12 +1,13 @@
 # brain.py [--system FILE] [--tools FILE] - think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。
-# 寄出去、收回信是下一格 wait（wait.py：aos-llm send／recv，經 $AOS_KERNEL 的 llm kernel；thinking 2026-11-04 think-as-function 03 § 1）。
+# 寄出去、收回信是下一格 wait（wait.py：aos-llm send／recv，經 $AOS_LLM_KERNEL 的 llm kernel〔11-05 前叫 AOS_KERNEL，舊名 aos-llm 不認、會提示〕；thinking 2026-11-04 think-as-function 03 § 1）。
 # 結束碼（fsm.json 照碼分岔，N-36）：0＝請求寫好了（→ wait）；10＝history 最後一則不是 user／tool（上一題已答完、或人改了 history）＝沒事做（→ idle）。
 # 請求＝llm kernel 請求信的 body：{"endpoint"?: 代號, "request": {"messages", "tools"?, "model"?}}。
-#   endpoint／model 來自範本的 llm.json（AOS_CD）疊 $AOS_STACK/llm.json（副本，aos-agent llm set 寫的；有的鍵蓋過定義），每格重讀＝下一題生效；
+#   endpoint／model 來自範本的 llm.json（AOS_CD）疊 $AOS_STACK/llm.json（只放改過的鍵，aos-agent llm set 寫的；有的鍵蓋過定義），每格重讀＝下一題生效；
 #   都沒寫＝不放（kernel 用它自己的預設代號）。其他鍵不看（C-48）。
 # 寫新請求時順手刪 $AOS_STACK/think/pending.txt（上一封的名字）：新請求取代舊的，wait 會重寄。
 # --system FILE：讀成一則 system 放最前面、不存進 history（P-41）；沒給＝沒有 system。
 # --tools FILE：aos-tools 登記檔（預設範本裡的 tools.json；沒有那份＝不給工具）；腦看到的工具名＝登記名。相對路徑從範本資料夾（AOS_CD）算。
+#   沒給 --tools 時，$AOS_STACK/tools.json 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
 # 錯：stderr 一行「agent-fsm: 代號 原因」、退 1（P-20）。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
 import json, os, subprocess, sys
 
@@ -35,14 +36,14 @@ opts = flags(sys.argv[1:], ("--system", "--tools"))
 system_file = here(opts["--system"]) if "--system" in opts else None
 if system_file and not os.path.isfile(system_file):
     die("SystemMissing", "system 檔不在：%s" % system_file)
-tools_file = here(opts.get("--tools", "tools.json"))
-if "--tools" not in opts and os.path.isfile(os.path.join(os.environ.get("AOS_STACK") or "", "tools.json")):
-    tools_file = os.path.join(os.environ["AOS_STACK"], "tools.json")   # 子介面 tools：stack 有副本就用它（aos-agent tools，11-04）
-if "--tools" in opts and not os.path.isfile(tools_file):
-    die("ToolsMissing", "工具登記檔不在：%s" % tools_file)
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "沒設定 AOS_STACK")
+tools_file = here(opts.get("--tools", "tools.json"))
+if "--tools" in opts and not os.path.isfile(tools_file):
+    die("ToolsMissing", "工具登記檔不在：%s" % tools_file)
+overlay = os.path.join(stack, "tools.json")         # 子介面 tools 的覆蓋層（aos-agent tools，11-05 起只存差異）
+overlay = overlay if "--tools" not in opts and os.path.isfile(overlay) else None
 
 # 對話：一行一則 OpenAI message（C-46、P-41），只附加
 history_path = os.path.join(stack, "history.jsonl")
@@ -67,9 +68,10 @@ if not history or history[-1].get("role") not in ("user", "tool"):
 
 # tools：登記檔裡的工具（aos-tools ls --json；登記檔不在＝沒有工具），說明取工具定義的 description／parameters
 tools = []
-if os.path.isfile(tools_file):
+if os.path.isfile(tools_file) or overlay:
     try:
-        r = subprocess.run(["aos-tools", "--file", tools_file, "ls", "--json"], stdin=subprocess.DEVNULL,
+        r = subprocess.run(["aos-tools", "--file", tools_file] + (["--overlay", overlay] if overlay else []) + ["ls", "--json"],
+                           stdin=subprocess.DEVNULL,
                            stdout=subprocess.PIPE, text=True)            # stderr 不吞：aos-tools 自己說哪個工具壞
     except OSError as e:
         die("ToolsBad", "aos-tools 起不來：%s" % e)
@@ -104,7 +106,7 @@ def read_cfg(path):
 
 
 cfg = read_cfg(here("llm.json"))
-cfg.update(read_cfg(os.path.join(stack, "llm.json")))   # 副本有的鍵蓋過定義（aos-agent llm set，每格重讀）
+cfg.update(read_cfg(os.path.join(stack, "llm.json")))   # stack 那份有的鍵蓋過定義（aos-agent llm set，每格重讀）
 request = {"messages": system + history}
 if tools:
     request["tools"] = tools

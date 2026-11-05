@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""aos-tools [--file F] add|rm|ls|get|call … — 一個 agent 資料夾一份工具註冊檔（tools.json），登記這隻 agent 能叫哪些工具。
+"""aos-tools [--file F] [--overlay O] add|rm|ls|get|call … — 一個 agent 資料夾一份工具註冊檔（tools.json），登記這隻 agent 能叫哪些工具。
 
 設計與代定：proto8/thinking/2026-10/28/aos-tools/README.md。白話：tools.json 是「這隻 agent 的工具通訊錄」，
 aos agent 想問腦之前先 `aos-tools ls --json` 拿工具清單，腦要叫工具時 `aos-tools call 名`；
@@ -26,6 +26,12 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
         --override 重登記時沒帶 --no-cache＝回到有快取（整項重寫）。
         叫＝aos-exec 檔 --tool-call 任務檔：arguments 先寫成 $AOS_STACK/tool_call.json，stdin 不給。沒設 AOS_STACK＝StackMissing
         （11-04 起不再偷用暫存資料夾；只有 call exe 需要 stack，add／rm／ls／get 與 call dir／json 都不需要）。
+--overlay O（11-05 portable-flow 步 4，使用者「tools只存差異那塊可以先做」）：F 疊一層覆蓋層 O 再用（aos-agent tools 的「這隻自己加減的」，
+  O＝<stack>/tools.json）。O 長這樣：{"add": {"名": {"path": 相對 O 所在資料夾的路徑, "cache"?: …}}, "rm": ["名", …]}（兩格都可省）；
+  O 不在＝沒有覆蓋（就是 F）。疊法：F 的工具先拿掉 rm 裡的名字（F 裡沒有的＝忽略），再放上 add 的（同名蓋過 F）。
+  有 --overlay 時 add／rm 只寫 O、不碰 F：add＝寫進 O 的 add（path 存相對 O 的資料夾，字串算、不 realpath）、名字從 rm 拿掉；
+  rm＝從 O 的 add 拿掉、F 裡有的名字記進 O 的 rm。撞名照常（看疊好的那份）。O 不解指示詞；O 寫壞＝RegistryBad。
+  O 是一份完整登記檔（有 "tools"：11-05 前 aos-agent 的整份副本）＝整份取代 F（舊行為照舊）；這時 add／rm＝RegistryBad（先刪掉 O 再改）。
 工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收不管。
 工具名：--name ＞ 檔名去掉副檔名（資料夾＝資料夾名），只收 [A-Za-z0-9_-]、最多 64 字（OpenAI／MCP 的限制）。撞名＝ToolExists，--override 蓋掉。
 不符合要求一律報錯、不猜不跳過（ls／get 碰到登記了但壞掉的工具也報錯，訊息帶工具名）。
@@ -37,7 +43,8 @@ sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
 NAME = "aos-tools"
-USAGE = "aos-tools [--file F] add [--override] [--name N] [--no-cache] XXX | rm XXX | ls [--json] | get XXX | call 名"
+USAGE = "aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-cache] XXX | rm XXX | ls [--json] | get XXX | call 名"
+OVERLAY = None                                       # --overlay O（11-05）；main 裡定
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 TOOLDEF_TIMEOUT_S = 10
 
@@ -188,15 +195,72 @@ def load_registry(reg):
         return {}
     if not isinstance(tools, dict):
         raise Fail("RegistryBad", "%s 的 tools 要是物件（名字 → {\"path\": …}）" % reg)
+    return entries(reg, "tools", tools)
+
+
+def entries(reg, where, tools):
+    """{名: 登記內容} → {名: {path(絕對，從 reg 所在資料夾算), entry(原樣)}}；壞的＝RegistryBad。"""
     base = os.path.dirname(os.path.abspath(reg))
     out = {}
     for name, e in tools.items():
         if not isinstance(e, dict) or not isinstance(e.get("path"), str) or not e["path"]:
-            raise Fail("RegistryBad", "%s 的 tools/%s 要是 {\"path\": 非空字串}" % (reg, name))
+            raise Fail("RegistryBad", "%s 的 %s/%s 要是 {\"path\": 非空字串}" % (reg, where, name))
         if "cache" in e and e["cache"] is not False and not isinstance(e["cache"], dict):
-            raise Fail("RegistryBad", "%s 的 tools/%s/cache 只收 false（不用快取）或物件（快取）" % (reg, name))
+            raise Fail("RegistryBad", "%s 的 %s/%s/cache 只收 false（不用快取）或物件（快取）" % (reg, where, name))
         out[name] = {"path": os.path.normpath(os.path.join(base, e["path"])), "entry": e}
     return out
+
+
+def read_overlay():
+    """--overlay 那份 → {"add": {…}, "rm": […]}（不在＝兩格空的）；是完整登記檔（有 tools）＝None。不解指示詞。"""
+    if not os.path.exists(OVERLAY):
+        return {"add": {}, "rm": []}
+    try:
+        with open(OVERLAY, encoding="utf-8") as f:
+            raw = json.load(f)
+    except (OSError, ValueError) as e:
+        raise Fail("RegistryBad", "覆蓋層 %s 讀不了或不是 JSON：%s" % (OVERLAY, e))
+    if not isinstance(raw, dict):
+        raise Fail("RegistryBad", "覆蓋層 %s 要是 JSON 物件（{\"add\": {…}, \"rm\": […]}）" % OVERLAY)
+    if "tools" in raw:
+        return None
+    add, rm = raw.get("add", {}), raw.get("rm", [])
+    if not isinstance(add, dict):
+        raise Fail("RegistryBad", "覆蓋層 %s 的 add 要是物件（名字 → {\"path\": …}）" % OVERLAY)
+    if not isinstance(rm, list) or not all(isinstance(n, str) for n in rm):
+        raise Fail("RegistryBad", "覆蓋層 %s 的 rm 要是字串陣列（名字）" % OVERLAY)
+    entries(OVERLAY, "add", add)                     # 只驗
+    return {"add": add, "rm": rm}
+
+
+def load_tools(reg):
+    """用的那份：沒 --overlay＝reg；有＝reg 疊覆蓋層（rm 先拿掉、add 再放上；覆蓋層是完整登記檔＝整份取代）。"""
+    if OVERLAY is None:
+        return load_registry(reg)
+    ov = read_overlay()
+    if ov is None:
+        return load_registry(OVERLAY)
+    tools = load_registry(reg)
+    for n in ov["rm"]:
+        tools.pop(n, None)                           # 定義裡已經沒有＝忽略
+    tools.update(entries(OVERLAY, "add", ov["add"]))
+    return tools
+
+
+def overlay_for_write():
+    ov = read_overlay()
+    if ov is None:
+        raise Fail("RegistryBad", "%s 是一份完整登記檔（有 tools，11-05 前 aos-agent 的整份副本），不是覆蓋層；要改先刪掉它"
+                   "（aos-agent tools reset；副本裡改過的會丟，先 ls 記下來）" % OVERLAY)
+    return ov
+
+
+def write_overlay(ov):
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(OVERLAY)), exist_ok=True)
+    except OSError as e:
+        raise Fail("WriteFailed", "%s 的資料夾建不了：%s" % (OVERLAY, e))
+    write_new(OVERLAY, {"add": ov["add"], "rm": ov["rm"]})
 
 
 def describe(name, t):
@@ -256,13 +320,19 @@ def cmd_add(reg, args):
                                 else os.path.splitext(os.path.basename(path))[0])
     if not NAME_RE.match(name):
         raise Fail("NameBad", "工具名 %r 不合（只收 [A-Za-z0-9_-]、最多 64 字；用 --name 另取）" % name)
-    tools = load_registry(reg)
+    tools = load_tools(reg)
     if name in tools and not opts.get("override"):
         raise Fail("ToolExists", "%s 已經登記了（指到 %s）；要蓋掉加 --override" % (name, tools[name]["path"]))
     entry = {"path": path}
     if info["kind"] == "exe":
         entry["cache"] = False if opts.get("no_cache") else info["cache"]
-    if os.path.exists(reg):
+    if OVERLAY is not None:                          # 只寫覆蓋層：path 存相對覆蓋層所在資料夾（跟著 stack 一起搬）
+        ov = overlay_for_write()
+        entry["path"] = os.path.relpath(path, os.path.dirname(os.path.abspath(OVERLAY)))
+        ov["add"][name] = entry
+        ov["rm"] = [n for n in ov["rm"] if n != name]
+        write_overlay(ov)
+    elif os.path.exists(reg):
         aos_json(["set", "--follow", "--parents", "%s#/tools/%s" % (reg, name), json.dumps(entry, ensure_ascii=False)])
     else:
         write_new(reg, {"tools": {name: entry}})
@@ -273,9 +343,17 @@ def cmd_rm(reg, args):
     opts, rest = aos_flags.parse(args, {})
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "usage: aos-tools [--file F] rm XXX")
-    names = match(load_registry(reg), rest[0])
-    for n in names:
-        aos_json(["del", "--follow", "%s#/tools/%s" % (reg, n)])
+    names = match(load_tools(reg), rest[0])
+    if OVERLAY is not None:                          # 只寫覆蓋層：覆蓋層 add 的拿掉；定義裡有的記進 rm
+        ov, base = overlay_for_write(), load_registry(reg)
+        for n in names:
+            ov["add"].pop(n, None)
+            if n in base and n not in ov["rm"]:
+                ov["rm"].append(n)
+        write_overlay(ov)
+    else:
+        for n in names:
+            aos_json(["del", "--follow", "%s#/tools/%s" % (reg, n)])
     print(json.dumps({"removed": names}, ensure_ascii=False))
 
 
@@ -283,7 +361,7 @@ def cmd_ls(reg, args):
     opts, rest = aos_flags.parse(args, {}, {"--json": "json"})
     if rest:
         raise Fail("ArgumentsBad", "usage: aos-tools [--file F] ls [--json]")
-    tools = load_registry(reg)
+    tools = load_tools(reg)
     found = [describe(n, tools[n]) for n in sorted(tools)]
     if opts.get("json"):
         print(json.dumps(found, ensure_ascii=False))
@@ -296,7 +374,7 @@ def cmd_get(reg, args):
     opts, rest = aos_flags.parse(args, {})
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "usage: aos-tools [--file F] get XXX")
-    tools = load_registry(reg)
+    tools = load_tools(reg)
     for n in match(tools, rest[0]):
         print(json.dumps(describe(n, tools[n]), ensure_ascii=False))
 
@@ -305,7 +383,7 @@ def cmd_call(reg, args):
     opts, rest = aos_flags.parse(args, {})
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "usage: aos-tools [--file F] call 名（stdin＝arguments）")
-    tools = load_registry(reg)
+    tools = load_tools(reg)
     if rest[0] not in tools:
         raise Fail("ToolMissing", "%s 沒登記（能叫的：%s）" % (rest[0], "、".join(sorted(tools)) or "沒有"))
     path = tools[rest[0]]["path"]
@@ -342,9 +420,14 @@ COMMANDS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls, "get": cmd_get, "call": 
 
 
 def main():
+    global OVERLAY
     try:
         try:
-            opts, rest = aos_flags.parse(sys.argv[1:], {"--file": "file"})
+            opts, rest = aos_flags.parse(sys.argv[1:], {"--file": "file", "--overlay": "overlay"})
+            if opts.get("overlay") is not None:
+                if not opts["overlay"]:
+                    raise Fail("ArgumentsBad", "--overlay 不能是空的（usage: %s）" % USAGE)
+                OVERLAY = opts["overlay"]
             if not rest:
                 raise Fail("ArgumentsBad", "usage: %s" % USAGE)
             if rest[0] not in COMMANDS:

@@ -4,7 +4,9 @@
 # 外面的 agent 只會講 MCP；櫃台把「有哪些工具」交給 `aos-tools ls --json`、「叫一次」交給 `aos-tools call 名`，
 # 自己不懂任何一個工具在做什麼、也不管工具是資料夾、JSON 還是可執行檔（C-52）。設計：proto8/thinking/2026-10/28/aos-tools/README.md。
 #
-# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [REGISTRY...]
+# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--overlay O] [REGISTRY...]
+#   --overlay O（11-05 portable-flow 步 4）：原樣轉給 aos-tools 的 --overlay（REGISTRY 疊這隻的覆蓋層 O；疊法歸 aos-tools）。
+#   只能配一份 REGISTRY（多給＝ArgumentsBad）；有 --overlay 時 REGISTRY 可以不在（＝只有覆蓋層），O 不在＝沒有覆蓋。
 #   每個 REGISTRY 是一份登記檔的路徑（相對路徑從啟動時的 cwd 算；不是檔＝ToolMissing）；檔名不限
 #   （11-02 使用者「改成指定檔案」，以前給的是 agent 資料夾、讀它的 tools.json）。一份都沒給＝./tools.json
 #   （11-02 使用者「不接，就是默認aos-tools.json」先改成 ./aos-tools.json；11-02 再改回 ./tools.json、跟 aos-tools 一致：
@@ -30,7 +32,8 @@ import aos_flags  # noqa: E402  proto8/bin/aos_flags.py：P-44 的解析
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
-USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [REGISTRY...]"
+USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--overlay O] [REGISTRY...]"
+OVERLAY = None                                  # --overlay O（11-05）：轉給 aos-tools
 DEFAULT_REGISTRY = "tools.json"               # 一份都沒給時讀 ./tools.json（跟 aos-tools 一致；11-02 改回）
 LOGS_NAME = "aos-mcp-logs.jsonl"         # --enable-logs 沒給 --logs-path 時記在 <stack>/ 底下的這個檔（11-02）
 LOGS_PATH = None                               # 記呼叫紀錄的檔（絕對路徑）；None＝不記（預設）
@@ -60,10 +63,10 @@ def die(code, reason):
 
 def parse_args(argv):
     """命令列 → (ws, stack, timeout_s, registries)；--enable-logs／--logs-path 設進 LOGS_PATH。"""
-    global LOGS_PATH
+    global LOGS_PATH, OVERLAY
     try:
         opts, files = aos_flags.parse(argv, {"--ws": "ws", "--stack": "stack", "--timeout-s": "timeout_s",
-                                             "--logs-path": "log"}, {"--enable-logs": "enable"})
+                                             "--logs-path": "log", "--overlay": "overlay"}, {"--enable-logs": "enable"})
     except aos_flags.Error as e:
         die(e.code, "%s（usage: %s）" % (e, USAGE))
     ws, stack = opts.get("ws", os.environ.get("AOS_WS")), opts.get("stack", os.environ.get("AOS_STACK"))
@@ -79,11 +82,17 @@ def parse_args(argv):
         die("ArgumentsBad", "--logs-path 要接檔名")
     if not files:
         files = [DEFAULT_REGISTRY]
+    if "overlay" in opts:
+        if not opts["overlay"]:
+            die("ArgumentsBad", "--overlay 要接檔名")
+        if len(files) != 1:
+            die("ArgumentsBad", "--overlay 只能配一份 REGISTRY（給了 %d 份）" % len(files))
+        OVERLAY = os.path.abspath(opts["overlay"])
     if not ws or not os.path.isdir(ws):
         die("WsMissing", "沒給 --ws、也沒設 AOS_WS，或不是資料夾")
     regs = []
     for f in files:
-        if not os.path.isfile(f):
+        if not os.path.isfile(f) and (OVERLAY is None or os.path.isdir(f)):   # 有覆蓋層時定義那份可以不在
             die("ToolMissing", "%s 不是檔（給登記檔的路徑，例 tools.json；用 aos-tools --file 它 add 登記工具）" % f)
         regs.append(os.path.abspath(f))
     ws = os.path.abspath(ws)
@@ -107,12 +116,16 @@ def annotations(meta):
     return out
 
 
+def tools_argv(reg):
+    return ["aos-tools", "--file", reg] + (["--overlay", OVERLAY] if OVERLAY else [])
+
+
 def load_tools(regs):
     """問 aos-tools 每份註冊檔登記了什麼 → {名: {reg, spec, max_s}}；失敗丟 ToolsBad。"""
     tools = {}
     for reg in regs:
         try:
-            r = subprocess.run(["aos-tools", "--file", reg, "ls", "--json"], stdin=subprocess.DEVNULL,
+            r = subprocess.run(tools_argv(reg) + ["ls", "--json"], stdin=subprocess.DEVNULL,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)   # stderr 接住、照樣轉印（tail_of）
         except OSError as e:
             raise ToolsBad("aos-tools 起不來：%s" % e)
@@ -141,7 +154,7 @@ def call(name, tool, args, ws, stack, timeout_s):
     # AOS_ENTRY 照常繼承（11-04 四元素審查：原本 pop 掉、怕外面殘留的值讓工具找錯入口；但 P-39 是一路繼承、使用者 11-01 裁留，外面設了＝要它）
     limit = tool["max_s"] or timeout_s
     t0 = time.monotonic()
-    p = subprocess.Popen(["aos-tools", "--file", tool["reg"], "call", name], stdin=subprocess.PIPE,
+    p = subprocess.Popen(tools_argv(tool["reg"]) + ["call", name], stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
                          start_new_session=True)   # 自成一群：逾時能整群收掉（P-36）
     try:
