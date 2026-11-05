@@ -34,25 +34,25 @@ end
 -- ---------- 檔案與資料夾 ----------
 
 function M.dir(t)
-  if type(t) ~= "table" then fail("aos.dir 要一個 table", 2) end
+  if type(t) ~= "table" then fail("aos.dir needs a table", 2) end
   for name, node in pairs(t) do
     if type(name) ~= "string" or name == "" or name:find("/", 1, true) or name == "." or name == ".." then
-      fail("aos.dir 的名字要是不含 / 的字串：" .. tostring(name), 2)
+      fail("aos.dir: a name must be a string without /: " .. tostring(name), 2)
     end
     if node == nil or type(node) == "boolean" or type(node) == "function" then
-      fail("aos.dir 裡 " .. name .. " 的值不能是 " .. type(node), 2)
+      fail("aos.dir: the value of " .. name .. " cannot be a " .. type(node), 2)
     end
   end
   return tag(t, "dir")
 end
 
 function M.file(text, opts)
-  if type(text) ~= "string" then fail("aos.file 要字串", 2) end
+  if type(text) ~= "string" then fail("aos.file needs a string", 2) end
   return tag({ text = text, x = opts and opts.x or false }, "file")
 end
 
 function M.script(text)
-  if type(text) ~= "string" then fail("aos.script 要字串", 2) end
+  if type(text) ~= "string" then fail("aos.script needs a string", 2) end
   return tag({ text = text, x = true }, "file")
 end
 
@@ -60,7 +60,7 @@ end
 function M.read(path)
   if path:sub(1, 1) ~= "/" and M.src_dir then path = M.src_dir .. "/" .. path end
   local f, err = io.open(path, "rb")
-  if not f then fail("讀不到 " .. path .. "：" .. tostring(err), 2) end
+  if not f then fail("cannot read " .. path .. ": " .. tostring(err), 2) end
   local s = f:read("*a")
   f:close()
   return s
@@ -75,7 +75,7 @@ function M.object(t) return tag(t or {}, "object") end
 function M.obj(pairs_list)
   local t, order = {}, {}
   for i, p in ipairs(pairs_list) do
-    if type(p) ~= "table" or type(p[1]) ~= "string" then fail("aos.obj 第 " .. i .. " 項要是 {名字, 值}", 2) end
+    if type(p) ~= "table" or type(p[1]) ~= "string" then fail("aos.obj: item " .. i .. " must be {name, value}", 2) end
     t[p[1]] = p[2]
     order[#order + 1] = p[1]
   end
@@ -84,22 +84,22 @@ end
 
 local function mods(t, m, who)
   if m == nil then return t end
-  if type(m) ~= "table" then fail(who .. " 的第二個參數要是 {path =, prefix =}", 3) end
+  if type(m) ~= "table" then fail(who .. ": the second argument must be {path =, prefix =}", 3) end
   for k, v in pairs(m) do
-    if k ~= "path" and k ~= "prefix" then fail(who .. " 不認得修飾 " .. tostring(k) .. "（只有 path、prefix）", 3) end
+    if k ~= "path" and k ~= "prefix" then fail(who .. ": unknown modifier " .. tostring(k) .. " (only path, prefix)", 3) end
     t["$" .. k] = v
   end
   return t
 end
 
 function M.env(name, m)
-  if type(name) ~= "string" or name == "" then fail("aos.env 要環境變數名", 2) end
+  if type(name) ~= "string" or name == "" then fail("aos.env needs an environment variable name", 2) end
   local t = mods(tag({ ["$env"] = name }, "object"), m, "aos.env")   -- 不寫成尾呼叫：錯誤才指得到原始檔那行
   return t
 end
 
 function M.ref(target, m)
-  if type(target) ~= "string" and type(target) ~= "table" then fail("aos.ref 要檔名（或檔名陣列）", 2) end
+  if type(target) ~= "string" and type(target) ~= "table" then fail("aos.ref needs a file name (or an array of file names)", 2) end
   local t = mods(tag({ ["$ref"] = target }, "object"), m, "aos.ref")
   return t
 end
@@ -115,13 +115,13 @@ end
 -- ---------- 單子、loop、fsm、daemon：原樣的物件＋寫的當下查形狀 ----------
 
 function M.inst(t)
-  if type(t) ~= "table" then fail("aos.inst 要一個 table", 2) end
+  if type(t) ~= "table" then fail("aos.inst needs a table", 2) end
   local argv = t.argv
   if not is_directive(argv) then
-    if type(argv) ~= "table" or #argv == 0 then fail("aos.inst 要非空的 argv", 2) end
+    if type(argv) ~= "table" or #argv == 0 then fail("aos.inst needs a non-empty argv", 2) end
     for i, a in ipairs(argv) do
       if type(a) ~= "string" and not is_directive(a) then
-        fail("aos.inst 的 argv[" .. i .. "] 要是字串或指示詞", 2)
+        fail("aos.inst: argv[" .. i .. "] must be a string or a directive", 2)
       end
     end
   end
@@ -131,64 +131,64 @@ end
 -- exec＝字串（aos-exec 的目標）、非空陣列（[目標, 參數...]）、單子、或指示詞
 local function check_exec(v, who)
   if type(v) == "string" then
-    if v == "" then fail(who .. " 的 exec 是空字串", 3) end
+    if v == "" then fail(who .. ": exec is an empty string", 3) end
     return
   end
   if is_directive(v) or kind(v) == "inst" then return end
   if type(v) == "table" and v.argv ~= nil then return end   -- 沒用 aos.inst 包的單子也收
   if type(v) == "table" and #v > 0 then
     for i, a in ipairs(v) do
-      if type(a) ~= "string" then fail(who .. " 的 exec[" .. i .. "] 要是字串", 3) end
+      if type(a) ~= "string" then fail(who .. ": exec[" .. i .. "] must be a string", 3) end
     end
     return
   end
-  fail(who .. " 的 exec 要是字串、[目標, 參數...]、單子或指示詞", 3)
+  fail(who .. ": exec must be a string, [target, args...], an instruction or a directive", 3)
 end
 
 function M.loop(t)
-  if type(t) ~= "table" then fail("aos.loop 要一個 table", 2) end
-  if t.exec == nil then fail("aos.loop 缺 exec", 2) end
+  if type(t) ~= "table" then fail("aos.loop needs a table", 2) end
+  if t.exec == nil then fail("aos.loop: exec is missing", 2) end
   check_exec(t.exec, "aos.loop")
   return tag(t, "loop")
 end
 
 -- states 兩種寫法：{idle = {exec =, next =}, ...}，或照順序的陣列 {{"idle", exec =, next =}, ...}
 function M.fsm(t)
-  if type(t) ~= "table" then fail("aos.fsm 要一個 table", 2) end
+  if type(t) ~= "table" then fail("aos.fsm needs a table", 2) end
   local states = t.states
-  if type(states) ~= "table" then fail("aos.fsm 缺 states", 2) end
+  if type(states) ~= "table" then fail("aos.fsm: states is missing", 2) end
   if #states > 0 then
     local list = {}
     for i, s in ipairs(states) do
-      if type(s) ~= "table" or type(s[1]) ~= "string" then fail("aos.fsm 的 states[" .. i .. "] 要是 {名字, exec =, next =}", 2) end
+      if type(s) ~= "table" or type(s[1]) ~= "string" then fail("aos.fsm: states[" .. i .. "] must be {name, exec =, next =}", 2) end
       list[#list + 1] = { s[1], { exec = s.exec, next = s.next } }
     end
     states = M.obj(list)
     t.states = states
   end
   if type(t.start) ~= "string" or states[t.start] == nil then
-    fail("aos.fsm 的 start（" .. tostring(t.start) .. "）不在 states 裡", 2)
+    fail("aos.fsm: start (" .. tostring(t.start) .. ") is not in states", 2)
   end
   for name, cell in pairs(states) do
-    if type(cell) ~= "table" then fail("aos.fsm 的格 " .. name .. " 要是 {exec =, next =}", 2) end
-    check_exec(cell.exec, "aos.fsm 的格 " .. name)
+    if type(cell) ~= "table" then fail("aos.fsm: state " .. name .. " must be {exec =, next =}", 2) end
+    check_exec(cell.exec, "aos.fsm: state " .. name)
     if type(cell.next) ~= "string" or states[cell.next] == nil then
-      fail("aos.fsm 的格 " .. name .. " 的 next（" .. tostring(cell.next) .. "）不在 states 裡", 2)
+      fail("aos.fsm: next of state " .. name .. " (" .. tostring(cell.next) .. ") is not in states", 2)
     end
     if cell.next:match("^%s") or cell.next:match("%s$") or cell.next:find("\n", 1, true) then
-      fail("aos.fsm 的格 " .. name .. " 的 next 頭尾不能有空白或換行", 2)
+      fail("aos.fsm: next of state " .. name .. " cannot start or end with spaces or newlines", 2)
     end
   end
   return tag(t, "fsm")
 end
 
 function M.daemon(t)
-  if type(t) ~= "table" then fail("aos.daemon 要一個 table", 2) end
+  if type(t) ~= "table" then fail("aos.daemon needs a table", 2) end
   -- 11-03 loops／execs 統稱 procs：一份名單，每項看寫法（字串、陣列、只有 exec〔＋ws、stack〕＝跑一次；其他＝loop 型）
-  if t.procs ~= nil and type(t.procs) ~= "table" then fail("aos.daemon 的 procs 要是 table", 2) end
+  if t.procs ~= nil and type(t.procs) ~= "table" then fail("aos.daemon: procs must be a table", 2) end
   for name, sub in pairs(t.procs or {}) do
     if type(sub) == "table" and kind(sub) ~= "loop" and not is_directive(sub) and sub.exec == nil and sub.argv == nil then
-      fail("aos.daemon 的子項 " .. tostring(name) .. " 要是一份 loop 設定或目標", 2)
+      fail("aos.daemon: proc " .. tostring(name) .. " must be a loop config or a target", 2)
     end
   end
   return tag(t, "daemon")
@@ -240,7 +240,7 @@ local function str(s)
 end
 
 local function num(n, where)
-  if n ~= n or n == math.huge or n == -math.huge then fail(where .. "：JSON 沒有 NaN／無限大") end
+  if n ~= n or n == math.huge or n == -math.huge then fail(where .. ": JSON has no NaN or infinity") end
   if n % 1 == 0 and n >= -2 ^ 53 and n <= 2 ^ 53 then return string.format("%d", n) end
   return string.format("%.17g", n)
 end
@@ -261,10 +261,10 @@ local function encode(v, indent, where, seen)
   if t == "number" then return num(v, where) end
   if t == "boolean" then return tostring(v) end
   if v == nil or v == M.null then return "null" end
-  if t ~= "table" then fail(where .. "：JSON 放不了 " .. t) end
+  if t ~= "table" then fail(where .. ": JSON cannot hold a " .. t) end
   local k = kind(v)
-  if k == "dir" or k == "file" then fail(where .. "：JSON 裡不能放資料夾或檔案節點") end
-  if seen[v] then fail(where .. "：table 自己套自己") end
+  if k == "dir" or k == "file" then fail(where .. ": a folder or file node cannot go inside JSON") end
+  if seen[v] then fail(where .. ": the table contains itself") end
   seen[v] = true
   local pad, pad2 = string.rep("  ", indent), string.rep("  ", indent + 1)
   local out = {}
@@ -277,7 +277,7 @@ local function encode(v, indent, where, seen)
     return "[\n" .. pad2 .. table.concat(out, ",\n" .. pad2) .. "\n" .. pad .. "]"
   end
   for _, key in ipairs(sorted_keys(v)) do
-    if type(key) ~= "string" then fail(where .. "：物件的 key 要是字串（" .. tostring(key) .. "）") end
+    if type(key) ~= "string" then fail(where .. ": object keys must be strings (" .. tostring(key) .. ")") end
     out[#out + 1] = str(key) .. ": " .. encode(v[key], indent + 1, where .. "/" .. key, seen)
   end
   seen[v] = nil
@@ -309,7 +309,7 @@ function M.render(node, prefix)
     elseif type(n) == "table" or type(n) == "number" then
       list[#list + 1] = { path = path, text = M.json(n, path .. "#"), x = false, value = n }
     else
-      fail(path .. "：不知道怎麼寫成檔案（" .. type(n) .. "）")
+      fail(path .. ": cannot write this as a file (" .. type(n) .. ")")
     end
   end
   walk(node, prefix or "")
@@ -340,7 +340,7 @@ function M.load(src)
   local ok, node = pcall(chunk)
   M.src_dir = saved
   if not ok then error({ code = "SourceBad", msg = tostring(node) }, 0) end
-  if node == nil then error({ code = "SourceBad", msg = src .. " 沒有 return 任何東西" }, 0) end
+  if node == nil then error({ code = "SourceBad", msg = src .. " returns nothing" }, 0) end
   return node
 end
 

@@ -20,7 +20,7 @@ local function die(code, msg)
   os.exit(1)
 end
 
-local USAGE = "用法：aos-lua build 原始檔 輸出 | aos-lua json 原始檔 [路徑[#/指標]] | aos-lua ls 原始檔"
+local USAGE = "usage: aos-lua build SOURCE OUT | aos-lua json SOURCE [PATH[#/POINTER]] | aos-lua ls SOURCE"
 
 local function load(src)
   local ok, node = pcall(aos.load, src)
@@ -52,10 +52,10 @@ end
 
 local function write(p, text, x)
   local f, err = io.open(p, "wb")
-  if not f then die("WriteFailed", p .. "：" .. tostring(err)) end
+  if not f then die("WriteFailed", p .. ": " .. tostring(err)) end
   f:write(text)
   f:close()
-  if not chmod(p, x) then die("WriteFailed", "改不了權限：" .. p) end
+  if not chmod(p, x) then die("WriteFailed", "cannot change permissions: " .. p) end
 end
 
 local cmd, src = arg[1], arg[2]
@@ -64,18 +64,18 @@ if cmd == "build" then
   if not src or not out or arg[4] then die("ArgumentsBad", USAGE) end
   local node, list = load(src)
   if aos.kind(node) == "dir" then
-    if not mkdir(out) then die("WriteFailed", "建不了資料夾：" .. out) end
+    if not mkdir(out) then die("WriteFailed", "cannot create folder: " .. out) end
     for _, e in ipairs(list) do
       local p = out .. "/" .. e.path
       if e.dir then
-        if not mkdir(p) then die("WriteFailed", "建不了資料夾：" .. p) end
+        if not mkdir(p) then die("WriteFailed", "cannot create folder: " .. p) end
       else
         write(p, e.text, e.x)
       end
     end
   else
     local parent = out:match("^(.*)/[^/]*$")
-    if parent and parent ~= "" and not mkdir(parent) then die("WriteFailed", "建不了資料夾：" .. parent) end
+    if parent and parent ~= "" and not mkdir(parent) then die("WriteFailed", "cannot create folder: " .. parent) end
     write(out, list[1].text, list[1].x)
   end
 elseif cmd == "json" then
@@ -94,14 +94,14 @@ elseif cmd == "json" then
   for _, e in ipairs(list) do
     if e.path == path and not e.dir then
       if not ptr then io.write(e.text) return end
-      if e.value == nil then die("PathMissing", path .. " 不是 JSON，不能接 #" .. ptr) end
+      if e.value == nil then die("PathMissing", path .. " is not JSON, cannot take #" .. ptr) end
       local v = aos.pointer(e.value, ptr)
-      if v == nil then die("PathMissing", want .. " 指不到") end
+      if v == nil then die("PathMissing", want .. " points at nothing") end
       io.write(aos.json(v))
       return
     end
   end
-  die("PathMissing", path .. " 不在 " .. src .. " 編出來的檔裡")
+  die("PathMissing", path .. " is not among the files built from " .. src)
 elseif cmd == "ls" then
   if not src or arg[3] then die("ArgumentsBad", USAGE) end
   local _, list = load(src)
