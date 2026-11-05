@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(ROOT, "lib", "agent"))
 import cli_session  # noqa: E402
 
 PROG = "aos-eca-screen"
-USAGE = "用法：aos-eca-screen <eca 資料夾> open [-d]|close|watch"
+USAGE = "usage: aos-eca-screen <eca dir> open [-d]|close|watch"
 
 
 def die(code, msg):
@@ -31,7 +31,7 @@ def die(code, msg):
 def cell_of(eca):
     stack = os.environ.get("AOS_STACK")
     if not stack:
-        die("StackMissing", "沒設定 AOS_STACK（那隻 eca 的 stack）")
+        die("StackMissing", "AOS_STACK is not set (the eca's stack)")
     cfg = cli_session.load_cfg(eca)
     return cli_session.Cell(os.path.join(stack, cfg["kind"])), stack
 
@@ -44,10 +44,10 @@ def cmd_open(eca, args):
     cli_session.note_cell(cell, eca, ws, stack)          # open_cell 照 tool.txt（定義）、ws.txt、stack.txt（給 aos-mcp）開
     opened = cli_session.open_cell(cell)                 # 正在答題就等它答完（格的 lock）、等畫面穩
     if args:
-        print("畫面%s：%s" % ("開好了（有對話就是 --resume 叫回）" if opened else "本來就開著", cell.file("tty.sock")))
+        print("screen %s: %s" % ("opened (resumed with --resume if a conversation exists)" if opened else "already open", cell.file("tty.sock")))
         return
     env = {k: v for k, v in os.environ.items() if k != "TMUX"}
-    print("接進 %s（Ctrl-] 跳出、實例不結束）" % ws, file=sys.stderr)
+    print("attaching to %s (Ctrl-] detaches; the instance keeps running)" % ws, file=sys.stderr)
     os.execvpe("tmux", ["tmux", "-S", cell.file("tty.sock"), "attach", "-t", cli_session.TMUX_SESSION], env)
 
 
@@ -56,21 +56,21 @@ def cmd_close(eca, args):
         die("ArgumentsBad", USAGE)
     cell, _ = cell_of(eca)
     if not os.path.isdir(cell.path):
-        print("本來就沒畫面（已收起）")
+        print("no screen (already closed)")
         return
     f, ok = cell.lock()
     with f:
         if not ok:
-            die("SessionBad", "正在答題，等它答完再收")
+            die("SessionBad", "busy answering; close it after the answer finishes")
         closed = cli_session.close(cell)
-    print("收起了" if closed else "本來就沒畫面（已收起）")
+    print("closed" if closed else "no screen (already closed)")
 
 
 def describe(ev):
     """live.jsonl 一行 → 給人看的短行（claude stream-json、codex --json）；不認得的＝None。"""
     t = ev.get("type")
     if t == "system" and ev.get("subtype") == "init":
-        return "── 開始（對話 %s，模型 %s）" % ((ev.get("session_id") or "")[:8], ev.get("model"))
+        return "── start (session %s, model %s)" % ((ev.get("session_id") or "")[:8], ev.get("model"))
     if t == "assistant":
         out = []
         for c in (ev.get("message") or {}).get("content") or []:
@@ -86,12 +86,12 @@ def describe(ev):
                 body = body if isinstance(body, str) else json.dumps(body, ensure_ascii=False)
                 return "  ◀ %s" % body.replace("\n", " ")[:120]
     if t == "result":
-        return "── 結束（%s，%.4f 美元）" % ("出錯" if ev.get("is_error") else "完成", ev.get("total_cost_usd") or 0)
+        return "── end (%s, $%.4f)" % ("error" if ev.get("is_error") else "done", ev.get("total_cost_usd") or 0)
     if t in ("item.completed", "item.started") and isinstance(ev.get("item"), dict):
         item = ev["item"]
         return "  %s %s" % (item.get("type") or item.get("item_type"), (item.get("text") or item.get("command") or "")[:120])
     if t == "turn.completed":
-        return "── 結束"
+        return "── end"
     return None
 
 
@@ -125,7 +125,7 @@ def cmd_watch(eca, args):
     cell, stack = cell_of(eca)
     path = cell.file("live.jsonl")
     pos = os.path.getsize(path) if os.path.exists(path) else 0
-    print("（跟著看 %s；Ctrl-C 離開）" % path, file=sys.stderr, flush=True)
+    print("(watching %s; Ctrl-C to leave)" % path, file=sys.stderr, flush=True)
     try:
         while True:
             try:
@@ -164,7 +164,7 @@ def main():
         die("ArgumentsBad", USAGE)
     eca = os.path.realpath(argv[0])
     if not os.path.isfile(os.path.join(eca, "cli.json")):
-        die("ArgumentsBad", "%s 不是 eca 資料夾（沒有 cli.json）" % argv[0])
+        die("ArgumentsBad", "%s is not an eca dir (no cli.json)" % argv[0])
     CMDS[argv[1]](eca, argv[2:])
 
 
