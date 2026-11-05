@@ -159,7 +159,7 @@ Errors: one stderr line `aos-daemon-ctl: CODE reason`, exit 1. Codes: ArgumentsB
   CommandMissing (no aos-post on PATH), SendFailed (aos-post exited non-zero; its stderr is passed on).
 Needs aos-post on PATH. -h / --help prints this text.
 """
-import json, os, subprocess, sys
+import json, os, re, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
@@ -536,13 +536,13 @@ PHASE_OK = {"stop": "running", "sleep": "running", "start": "stopped", "wake": "
 PHASE_HINT = {
     ("stop", "sleeping"): "%s is sleeping (no need to stop it); wake it first, then stop, or just rm",
     ("stop", "stopped"): "%s is already stopped",
-    ("stop", "stopping"): "%s is stopping; wait until it has stopped",
+    ("stop", "stopping"): "%s is stopping; wait until it has stopped; if it never stops (stuck, or SIGSTOP), rm it (TERM, then KILL after 10s)",
     ("sleep", "sleeping"): "%s is already sleeping",
     ("sleep", "stopped"): "%s is stopped (no need to sleep it); start brings it back",
-    ("sleep", "stopping"): "%s is stopping; wait until it has stopped",
+    ("sleep", "stopping"): "%s is stopping; wait until it has stopped; if it never stops (stuck, or SIGSTOP), rm it (TERM, then KILL after 10s)",
     ("start", "sleeping"): "%s is sleeping; use wake (start only starts stopped ones)",
     ("start", "running"): "%s is already running",
-    ("start", "stopping"): "%s is stopping; start it after it has stopped",
+    ("start", "stopping"): "%s is stopping; start it after it has stopped; if it never stops (stuck, or SIGSTOP), rm it (TERM, then KILL after 10s)",
     ("wake", "stopped"): "%s is stopped; use start (wake only wakes sleeping ones)",
     ("wake", "running"): "%s is awake (running); no need to wake it",
     ("wake", "stopping"): "%s is stopping, not sleeping",
@@ -577,7 +577,14 @@ cmd_wake = phase_cmd("wake", "procs_woken")
 
 def write_cmd(opts, args, cmd):
     name = name_arg(cmd, args)
-    _, path = need_ctl(daemon_dir(opts), name)
+    d = daemon_dir(opts)
+    row = row_of(d, name)
+    _, path = need_ctl(d, name, row)
+    # 11-05 第二輪：只收 running 的（stopped／sleeping 的列沒有行程；起來時子 loop 把讀到的第一份 ctl 當基準線、不執行＝這道 pause 默默丟了，
+    # 原本照寫、印 seq、退 0，看起來像成功）
+    if row.get("phase") != "running":
+        raise Fail("PhaseBad", "%s is %s; %s only takes running ones (a loop takes the ctl it finds when it starts as its baseline, so it would be lost)"
+                   % (name, row.get("phase"), cmd))
     try:
         with open(path, encoding="utf-8") as fh:
             old = json.load(fh)
@@ -603,6 +610,10 @@ def cmd_resume(opts, args):
     write_cmd(opts, args, "resume")
 
 
+# 11-05 第二輪：reason 裡的控制字元（TAB、換行、CR、ESC…）換成空白，印到終端不會拆行、上色、蓋字
+CTRL = re.compile("[\x00-\x1f\x7f]")
+
+
 def cmd_ls(opts, args):
     o, rest = aos_flags.parse(args, {}, {"--json": "json"})
     if rest:
@@ -615,7 +626,7 @@ def cmd_ls(opts, args):
         reason = r.get("reason")
         print("\t".join([n, str(r.get("phase")), "-" if r.get("pid") is None else str(r["pid"]),
                          "-" if r.get("code") is None else str(r["code"]), r.get("ws") or "-",
-                         "-" if reason is None else str(reason).replace("\t", " ").replace("\n", " ")]))
+                         "-" if reason is None else CTRL.sub(" ", str(reason))]))
 
 
 def cmd_where(opts, args):
