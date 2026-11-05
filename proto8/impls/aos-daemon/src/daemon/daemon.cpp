@@ -24,6 +24,7 @@
 #include <csignal>
 #include <filesystem>
 #include <limits>
+#include <regex>
 #include <sstream>
 #include <thread>
 #include <unordered_map>
@@ -623,7 +624,24 @@ std::string Daemon::fail_reason(const Child& c) const {
         while (!t.empty() && (t.back() == '\n' || t.back() == ' ')) {
             t.pop_back();
         }
-        std::string last = t.substr(t.rfind('\n') == std::string::npos ? 0 : t.rfind('\n') + 1);
+        // 跳過子 loop 自己的包裝行（「aos-loop: run N: X failed with exit code C」），取它前面那行＝身體自己說的真正原因；都是包裝行才用它
+        static const std::regex wrap(R"(^[^:]+: run [0-9]+: .* failed with exit code -?[0-9]+$)");
+        std::string last, rest = t;
+        while (!rest.empty()) {
+            size_t nl = rest.rfind('\n');
+            std::string line = rest.substr(nl == std::string::npos ? 0 : nl + 1);
+            rest = nl == std::string::npos ? "" : rest.substr(0, nl);
+            if (line.empty()) {
+                continue;
+            }
+            if (last.empty()) {
+                last = line;
+            }
+            if (!std::regex_match(line, wrap)) {
+                last = line;
+                break;
+            }
+        }
         if (last.size() > 300) {
             last = last.substr(0, 300) + "...";
         }
