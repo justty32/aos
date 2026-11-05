@@ -3,7 +3,7 @@
 //   信箱（N-16 資料夾式，Maildir）：一個資料夾，底下三格、一封信＝一個資料夾（名字＝信件名稱，下面寫 id）：
 //     tmp/<id>/、tmp/.<id>/   寄信的正在寫（aos-post 寫 tmp/<id>；aos-llm ask 寫 tmp/.<id>）；撤信、丟信先改名回這裡再刪
 //     new/<id>/    排隊中（kernel 認領＝改名進 cur/；寄信的撤信＝改名回 tmp/，兩邊只有一個改得成）
-//     cur/<id>/    kernel 正在跑（request.json、reply.json、stderr.txt）；寄出回信、寫完 served.jsonl 那行就整封刪掉
+//     cur/<id>/    kernel 正在跑（request.json、reply.json、stderr.txt）；寄出回信就整封刪掉
 //                  （11-04 夜使用者「舊信根本不用留，就是刪」：沒有 done/，舊 kernel 留下的 done/ 下一次整個刪）
 //     .flock       kernel 跑一次的期間 flock 住（同一個信箱同時只有一個 kernel）
 //   信：letter.json＝N-16 的信（aos-post 寫）：{"sender", "sent_at", "reply_to": 回信信箱（必有，沒有就沒人收得到回信）,
@@ -14,7 +14,7 @@
 //   回信：reply.json＝endpoint 函數 stdout 那份 {"message": {...}, "usage"?: {...}, "model"?: ...}，或 {"error": {"code": 代號, "msg": 原因}}
 //       （kernel 沒跑、跑不起來、endpoint 函數退非 0〔EndpointFailed〕、stdout 讀不懂〔ReplyBad〕）。
 //       kernel 把同一份當 body、照 N-16 寄一封回信進信的 reply_to（沒寫 reply_to＝回信沒人收，信照刪）（in_reply_to＝原信的信件名稱），寄出的信件名稱記在 <信>/reply_letter.txt
-//   用量：reply.json 的 usage.total_tokens（沒有就 prompt_tokens＋completion_tokens）→ served.jsonl 的 counter_tokens、used.json（11-04 起取代 AOS_KERNEL_REPORT）
+//   用量：reply.json 的 usage.total_tokens（沒有就 prompt_tokens＋completion_tokens）→ used.json（11-04 起取代 AOS_KERNEL_REPORT）
 //   寄信的人：sender.flock＝aos-llm ask（同步）建好信就 flock（LOCK_EX）住、拿到行程結束；aos-llm send（非同步）不建＝kernel 不判存活、照跑
 //
 //   信件名稱＝aos-util 的 aos::unique_id()：<UTC 奈秒 20 位>.<pid>.<started_at_ticks>——照字典序排＝照寄的先後
@@ -25,7 +25,6 @@
 //   parse_priority 信裡的 priority（10-15 LLM kernel 稿）：沒寫＝normal；"low"／"normal"／"high"；數字看正負；
 //                  物件 {"level", "deadline", 其他 key 忽略}；deadline＝ISO 8601（要帶時區）或 epoch 秒。壞了丟 PriorityBad
 //   priority_of    一封信的排隊依據＝parse_priority(letter["body"]["priority"])（11-04 起 `_metainfo` 的兩個依據拿掉：信裡沒單子）
-//   level_name     -1／0／1 → "low"／"normal"／"high"
 //   reply_of       回信的內容合不合（{"message": 物件, …} 或 {"error": {"code": 字串, "msg": 字串}}）：合＝原樣、不合＝nullopt
 //   read_reply     讀 reply.json、照 reply_of 驗；壞了回 nullopt
 //
@@ -79,7 +78,6 @@ struct Priority {
     std::optional<double> deadline;   // epoch 秒；沒寫＝nullopt
 };
 Priority parse_priority(const Json& v);
-std::string level_name(int level);
 
 // 一封信的排隊依據——kernel 只從這裡讀：parse_priority(letter["body"]["priority"])（壞了丟 PriorityBad）。
 Priority priority_of(const Json& letter);

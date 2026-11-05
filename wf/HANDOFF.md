@@ -18,9 +18,9 @@
 2. **今晚做完並 push（main）**：四元素 08 步 5～8；tidy 收斂多批（[報告](workflows/tidy/reports/2026-11-03-收斂.md) 05～08：send_message／memory 與 resident-bob 封存、整份 AI 產出的 thinking 刪、P-23／P-28／P-42／C-61／N-14／P-20 裁定落實、2026-11/03 thinking 精簡完）；aos-agent `where` 預設 `--stack`、`--ws` 另指；**思考是 aos 函數**（[think-as-function](../proto8/thinking/2026-11/04/think-as-function/README.md)：問腦＝寄信給 llm kernel、收回信，kernel.json 代號表、`aos-llm` 成基礎工具、`AOS_BRAIN_*` 退場；05 四題使用者全選推薦；換腦只留 `llm.json` 代號、`AOS_KERNEL` 只當 hub；舊信處理完就刪 `6a2e0880`）；試驗場 `~/code/playground` 照新做法備好＋桌面 `/home/lorkhan/Desktop/aos-試驗場教學.html`；邊緣狀況三條線（A llm kernel [08](../proto8/thinking/2026-11/04/think-as-function/08-邊緣狀況實測.md)、B daemon／aos-agent [four-elements 09](../proto8/thinking/2026-11/04/four-elements/09-邊緣狀況實測-11-04-夜.md)、C 基礎積木 [edge-basics](../proto8/thinking/2026-11/04/edge-basics/README.md)）共修十幾個 bug。使用者口徑「很多都是自己要承擔的風險」「風險自擔」，只有 add 被拒照推薦（`AddRejected`，`cac45dc0`）。
 3. **明天要接**：
    - **impls 還沒重建**：C 線改了 aos-exec、aos-post、aos-tools、aos-json 原始碼（`3a28f5fa`、`c193edbb`、`5183b00a`、`78822851`），aos-loop、aos-fsm、aos-daemon、aos-llm-kernel 把 aos-exec／aos-post 編在裡面；使用者在打遊戲沒跑。明天從 repo 根 build 一次、impls 全部重建（[testing](workflows/testing.md)），試驗場才吃到新版。
-   - edge-basics 題 1（aos-mcp 工具失敗時要不要把 stderr 尾巴給 Claude，牽涉 C-56 例外）等使用者 → [WAIT_USER](WAIT_USER.md)。
+   - edge-basics 題 1（aos-mcp 工具失敗時要不要把 stderr 尾巴給 Claude，牽涉 C-56 例外）：**11-05 使用者選「附 stderr 尾巴（推薦）」，已落實**（例外寫在 C-52／C-53）。
    - 使用者親手試試驗場真腦（LM Studio／LiteLLM）與 `aos-agent open` → WAIT_USER。
-   - kernel 的 `served.jsonl` 還留著：使用者說「舊信根本不用留，就是刪」，頂層解讀不含這行紀錄，待他確認 → WAIT_USER。
+   - kernel 的 `served.jsonl` 還留著：**11-05 使用者選「也刪」，已落實**（kernel 不再寫）。
    - `ask` 被打斷時回信殘留在 `$AOS_KERNEL/reply/new/` 的窄縫已記成已知限制（08 題 3 定案段），不追。
 4. **雜項**：桌面 `/home/lorkhan/Desktop/aos-進度-11-04晚.html` 是進度頁，已過時、可刪（repo 外，沒動）。收工時查過：沒有留著的 aos-loop／aos-daemon／aos-llm-kernel／假伺服器背景程序。
 

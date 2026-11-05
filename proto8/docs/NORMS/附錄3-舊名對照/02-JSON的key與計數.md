@@ -22,6 +22,6 @@
 
 | 舊名 | 現名 |
 |---|---|
-| aos-llm-kernel：queue.json `runs`；used.json `calls`／`tokens`／`all_calls`／`all_tokens`；served.jsonl `tokens`／`waited_runs`、`at`；kernel.json `budget.calls`／`budget.tokens` | `counter_runs`；`counter_calls`／`counter_tokens`／`counter_all_calls`／`counter_all_tokens`；`counter_tokens`／`counter_waited_runs`、`served_at`；`max_calls`／`max_tokens`（舊名＝`CfgBad`） |
+| aos-llm-kernel：queue.json `runs`；used.json `calls`／`tokens`／`all_calls`／`all_tokens`；served.jsonl `tokens`／`waited_runs`、`at`（served.jsonl 11-05 整個不寫了）；kernel.json `budget.calls`／`budget.tokens` | `counter_runs`；`counter_calls`／`counter_tokens`／`counter_all_calls`／`counter_all_tokens`；`counter_tokens`／`counter_waited_runs`、`served_at`；`max_calls`／`max_tokens`（舊名＝`CfgBad`） |
 | 信（send_message，已封存）的 `at`、`hops`；claude／codex 互動畫面 turns.jsonl 的 `at` | `sent_at`、`counter_hops`（現行信封沒有這欄）；`answered_at` |
 | lib 工具輸出的計數（ls、stat、view、json_read、json_edit、copy）；參數 `limit` | `counter_*`；`max_lines`（read）／`max_items`（ls）／`max_results`（memory，已封存） |

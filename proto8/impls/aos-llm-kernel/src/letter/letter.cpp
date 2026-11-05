@@ -178,16 +178,6 @@ Priority priority_of(const Json& letter) {
     return parse_priority(body.value("priority", Json()));
 }
 
-std::string level_name(int level) {
-    if (level < 0) {
-        return "low";
-    }
-    if (level > 0) {
-        return "high";
-    }
-    return "normal";
-}
-
 std::optional<Json> reply_of(const Json& r) {
     if (!r.is_object()) {
         return std::nullopt;

@@ -71,6 +71,8 @@
 2. **只在 stdout 是空的時候附**：後果：工具印了一半再失敗（#43 的 `partial`）時照舊看不到原因。
 3. **不管**：照 C-56，原因在 log。後果：外部 agent 看到失敗卻不知道為什麼，人要去翻 MCP log。
 
+> **11-05 使用者選「附 stderr 尾巴（推薦）」——定案選項 1**。已落實：aos-mcp 接住工具（含 aos-tools、aos-exec）的 stderr、照樣轉印到自己的 stderr；退非 0 或逾時時，回給外部 agent 的內容多一段 text「stderr（最後 2048 位元組以內）」；跑起來之後 `tools/list` 失敗的 JSON-RPC 錯誤訊息也附 aos-tools 那次 stderr 的最後一段（#44）。條文：「每層不偷讀下層 stderr」實際寫在 C-52（C-53 的「不轉述」也算），例外加在 [C-52](../../../../docs/CONCEPTS/01-設計理念/03-最高原則與兩條總原則.md#兩條總原則10-15-使用者定原文10-15-深夜加嚴)，只限 aos-mcp 這個對外出口。手跑：`echo partial; echo why >&2; exit 3` 回 `partial` 加 `why`；入口檔壞回「退 1、stdout 沒東西」加 `aos-exec: EntryBad …`；逾時 0.5 秒照樣整群收掉、附 stderr 尾巴（超過 2 KB 前面加「…」）；成功的不附。
+
 ## 沒測到的
 
 - aos-agent／agent-fsm 的 act 格怎麼把工具失敗交給腦（B 線範圍）；aos-mcp 的 `--enable-logs`、多份登記檔撞名。

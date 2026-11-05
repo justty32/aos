@@ -12,13 +12,16 @@
 #   清單每次 tools/list、tools/call 都重讀（登記檔變了，下次列就看得到；不主動通知 listChanged）。
 #   工作區＝--ws ＞ $AOS_WS；stack＝--stack ＞ $AOS_STACK ＞ $WS/.stack/。每次叫工具：
 #   AOS_WS=WS AOS_STACK=<stack>/tools/<名>/ aos-tools --file REGISTRY call 名（aos-tools、aos-exec 由 PATH 找，呼叫者放好），
-#   arguments 進 stdin、stdout 整段回去，退非 0＝isError；逾時＝工具 _metainfo（資料夾的 _metainfo.json 檔／JSON 檔的 _metainfo key）的 time_ms.max，沒寫用 --timeout-s（預設 60），
+#   arguments 進 stdin、stdout 整段回去，退非 0＝isError（失敗時另附工具 stderr 的最後 STDERR_TAIL 位元組，見 tail_of）；逾時＝工具 _metainfo（資料夾的 _metainfo.json 檔／JSON 檔的 _metainfo key）的 time_ms.max，沒寫用 --timeout-s（預設 60），
 #   到了整群 TERM、2 秒後 KILL。呼叫紀錄預設不記（11-02 使用者「默認不留」）：給 --enable-logs＝每次叫完在
 #   <stack>/aos-mcp-logs.jsonl 記一行（名字、arguments、結束碼、花多久），再加 --logs-path FILE＝記在 FILE（相對路徑從啟動時的 cwd 算）；
 #   只給 --logs-path、沒給 --enable-logs＝ArgumentsBad。
 # 只做 initialize、ping、tools/list、tools/call；沒有 progress、resources、prompts、HTTP。
 # 錯：自己的錯 stderr 一行「aos-mcp: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、WsMissing、ToolMissing、ToolsBad）。
-#   啟動時 aos-tools ls 失敗＝ToolsBad（aos-tools 自己那行照樣在 stderr）；跑起來之後重讀失敗＝那一則 JSON-RPC 回錯誤、不退。
+#   啟動時 aos-tools ls 失敗＝ToolsBad（aos-tools 自己那行照樣在 stderr）；跑起來之後重讀失敗＝那一則 JSON-RPC 回錯誤、不退
+#   （錯誤訊息附 aos-tools 那次 stderr 的最後一段）。
+#   工具與 aos-tools 的 stderr：aos-mcp 接住後原樣轉印到自己的 stderr（MCP 用戶端的 log）；失敗時最後一段另附給外部 agent
+#   （11-05 使用者選「附 stderr 尾巴（推薦）」，edge-basics 題 1；C-52 的例外：出口是給外部 agent 看原因）。成功時不附。
 #   命令列形狀照 CONVENTION P-44（11-04）：旗標都在 REGISTRY 前面、`--` 結束旗標、`--x V`／`--x=V`；不認得的旗標＝FlagUnknown。
 import json, os, signal, subprocess, sys, time
 
@@ -31,10 +34,23 @@ USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-
 DEFAULT_REGISTRY = "tools.json"               # 一份都沒給時讀 ./tools.json（跟 aos-tools 一致；11-02 改回）
 LOGS_NAME = "aos-mcp-logs.jsonl"         # --enable-logs 沒給 --logs-path 時記在 <stack>/ 底下的這個檔（11-02）
 LOGS_PATH = None                               # 記呼叫紀錄的檔（絕對路徑）；None＝不記（預設）
+STDERR_TAIL = 2048                             # 失敗時附給外部 agent 的 stderr 最後幾個位元組（11-05，edge-basics 題 1）
 
 
 class ToolsBad(Exception):
-    pass
+    def __init__(self, msg, tail=""):
+        super().__init__(msg)
+        self.tail = tail                         # aos-tools 那次 stderr 的最後一段（跑起來之後回給外部 agent 用）
+
+
+def tail_of(err):
+    """stderr（bytes）→ 原樣轉印到自己的 stderr，回最後 STDERR_TAIL 位元組（去頭尾空白；沒東西＝""）。"""
+    if not err:
+        return ""
+    sys.stderr.buffer.write(err)
+    sys.stderr.buffer.flush()
+    t = err[-STDERR_TAIL:].decode("utf-8", "replace").strip()
+    return ("…" + t) if len(err) > STDERR_TAIL else t
 
 
 def die(code, reason):
@@ -97,12 +113,13 @@ def load_tools(regs):
     for reg in regs:
         try:
             r = subprocess.run(["aos-tools", "--file", reg, "ls", "--json"], stdin=subprocess.DEVNULL,
-                               stdout=subprocess.PIPE, text=True)   # stderr 不吞：aos-tools 自己說哪個工具壞了
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)   # stderr 接住、照樣轉印（tail_of）
         except OSError as e:
             raise ToolsBad("aos-tools 起不來：%s" % e)
+        tail = tail_of(r.stderr)
         if r.returncode != 0:
-            raise ToolsBad("aos-tools ls %s 退 %d" % (reg, r.returncode))
-        for t in json.loads(r.stdout):
+            raise ToolsBad("aos-tools ls %s 退 %d" % (reg, r.returncode), tail)
+        for t in json.loads(r.stdout.decode("utf-8")):
             if t["name"] in tools:
                 raise ToolsBad("工具名重複：%s（%s 與 %s）" % (t["name"], tools[t["name"]]["reg"], reg))
             td, meta = t["tooldef"], t.get("metainfo") or {}
@@ -119,15 +136,16 @@ def load_tools(regs):
 
 
 def call(name, tool, args, ws, stack, timeout_s):
-    """跑一次工具 → (結束碼, stdout, 花幾毫秒, 逾時秒數)。結束碼 None＝逾時被收掉。"""
+    """跑一次工具 → (結束碼, stdout, stderr 最後一段, 花幾毫秒, 逾時秒數)。結束碼 None＝逾時被收掉。"""
     env = dict(os.environ, AOS_WS=ws, AOS_STACK=os.path.join(stack, "tools", name) + "/")
     # AOS_ENTRY 照常繼承（11-04 四元素審查：原本 pop 掉、怕外面殘留的值讓工具找錯入口；但 P-39 是一路繼承、使用者 11-01 裁留，外面設了＝要它）
     limit = tool["max_s"] or timeout_s
     t0 = time.monotonic()
     p = subprocess.Popen(["aos-tools", "--file", tool["reg"], "call", name], stdin=subprocess.PIPE,
-                         stdout=subprocess.PIPE, env=env, start_new_session=True)   # 自成一群：逾時能整群收掉（P-36）
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
+                         start_new_session=True)   # 自成一群：逾時能整群收掉（P-36）
     try:
-        out, _ = p.communicate(json.dumps(args).encode(), timeout=limit)
+        out, err = p.communicate(json.dumps(args).encode(), timeout=limit)
         code = p.returncode
     except subprocess.TimeoutExpired:
         for sig in (signal.SIGTERM, signal.SIGKILL):
@@ -140,8 +158,13 @@ def call(name, tool, args, ws, stack, timeout_s):
                 break
             except subprocess.TimeoutExpired:
                 pass
-        out, code = (p.stdout.read() if p.stdout else b""), None
-    return code, out.decode("utf-8", "replace"), int((time.monotonic() - t0) * 1000), limit
+        try:
+            out, err = p.communicate(timeout=2)  # 整群收掉了：管子另一頭多半都關了
+        except subprocess.TimeoutExpired:        # 有逃出群組的還拿著管子：不等了
+            out, err = b"", b""
+        code = None
+    tail = tail_of(err)
+    return code, out.decode("utf-8", "replace"), tail, int((time.monotonic() - t0) * 1000), limit
 
 
 def record(line):
@@ -156,7 +179,7 @@ def tools_call(params, tools, ws, stack, timeout_s):
     name, args = params.get("name"), params.get("arguments") or {}
     if name not in tools:
         return None, (-32602, "沒有這個工具：%s" % name)
-    code, out, ms, limit = call(name, tools[name], args, ws, stack, timeout_s)
+    code, out, tail, ms, limit = call(name, tools[name], args, ws, stack, timeout_s)
     record({"name": name, "arguments": args, "code": code, "elapsed_ms": ms,
                    "called_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
     if code is None:
@@ -165,7 +188,10 @@ def tools_call(params, tools, ws, stack, timeout_s):
         text = "%s: CommandFailed %s 退 %d、stdout 沒東西" % (NAME, name, code)
     else:
         text = out
-    return {"content": [{"type": "text", "text": text}], "isError": code != 0}, None
+    content = [{"type": "text", "text": text}]
+    if code != 0 and tail:                      # 失敗時附 stderr 尾巴，外部 agent 才看得到原因（11-05，edge-basics 題 1）
+        content.append({"type": "text", "text": "stderr（最後 %d 位元組以內）：\n%s" % (STDERR_TAIL, tail)})
+    return {"content": content, "isError": code != 0}, None
 
 
 def handle(msg, regs, ws, stack, timeout_s):
@@ -187,7 +213,7 @@ def handle(msg, regs, ws, stack, timeout_s):
         else:
             err = (-32601, "不支援的方法：%s" % method)
     except ToolsBad as e:                       # 跑起來之後登記檔壞了：這一則回錯，不退
-        err = (-32603, "%s: ToolsBad %s" % (NAME, e))
+        err = (-32603, "%s: ToolsBad %s" % (NAME, e) + ("\nstderr（最後一段）：\n%s" % e.tail if e.tail else ""))
     if err:
         return {"jsonrpc": "2.0", "id": mid, "error": {"code": err[0], "message": err[1]}}
     return {"jsonrpc": "2.0", "id": mid, "result": result}

@@ -22,7 +22,7 @@
 //                5. 排隊（queue.hpp 的 order），取前 slots 封：這一窗額度到頂（budget.hpp 的 spent）＝spent "refuse" 時剩下的全回 BudgetMissing、
 //                   "wait" 時留在 new/ 等下一窗；沒到頂就認領（new → cur 改名；改不成＝寄信的剛撤信，換下一封）、
 //                   每封 fork 一個子行程跑（run_runner），全部跑完才往下（一次裡不補位）
-//                6. 每封寄回信（寄信的 sender.flock 已沒人鎖＝馬上撤回）、寫一行 $AOS_STACK/served.jsonl（含 endpoint、model、counter_tokens）、
+//                6. 每封寄回信（寄信的 sender.flock 已沒人鎖＝馬上撤回）、寄不出去的 stderr 印一行（11-05 起不寫 served.jsonl）、
 //                   跑過的記進 used.json、整封刪掉（cur/<id>/；11-04 夜「舊信根本不用留，就是刪」）；寫 queue.json
 //   start_runner  先在信的資料夾寫 request.json＝{"endpoint": 那組（指示詞已解、去掉 exec）, "request": body.request}，再 fork 子行程：
 //              寫 cur/<id>/runner.json（自己的 pid＋started_at_ticks），交給 aos-exec 的 run_inst 跑

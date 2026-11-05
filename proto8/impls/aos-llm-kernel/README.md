@@ -19,7 +19,6 @@ cat loop.json
 AOS_STACK=$PWD/st/ aos-loop loop.json &                       # kernel 一直顧著信箱 st/mailbox/
 echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | AOS_KERNEL=$PWD/st/mailbox aos-llm ask
 # {"role": "assistant", "content": "FAKE ANSWER to: hi"}
-cat st/served.jsonl   # {"served_at": "...", "letter": "0179...", "level": "normal", "counter_waited_runs": 0, "endpoint": "fake", "model": "fake", "error": null, "elapsed_ms": 20, "counter_tokens": 0, "usage_bad": false, "reply_error": null}
 cat st/used.json      # {"window": "day", "since": "2026-11-04T00:00:00+08:00", "counter_calls": 3, "counter_tokens": 129, "counter_all_calls": 3, "counter_all_tokens": 129}
 ```
 
