@@ -9,7 +9,7 @@
 ## 最新進度
 
 - **open｜明天先做**：知識庫 K7（增刪改、多庫、JSON 後端，先派 fable 規劃）、CONVENTION 草稿條文待使用者定 → [agent-knowledge 06](../proto8/thinking/2026-11/05/agent-knowledge/06-11-05晚-接線.md)
-- **open｜架構大重構**（使用者 11-05「給整個程式碼庫、codemap之類，做一次架構上的大重構」）：先派 fable 規劃、挑沒別隊在改的時段
+- **open｜架構大重構**（使用者 11-05「給整個程式碼庫、codemap之類，做一次架構上的大重構」）：fable 規劃完、七題待使用者裁 → [arch-refactor](../proto8/thinking/2026-11/05/arch-refactor/README.md)；第一波 S0～S4 可先做，搬夾 S5 等 lib／thought／知識庫三隊收工
 - **open｜tidy 收斂**：剩 C-54 摺疊、2026-11/04 thinking 未精簡 → [報告](workflows/tidy/reports/2026-11-03-收斂.md)
 - **open｜介質**：queue 輸入、接單後放 tools（決定 32）兩題擱著 → [10-28 medium](../proto8/thinking/2026-10/28/medium/README.md)、[medium-plan § 實作時代定](../proto8/thinking/2026-10/29/medium-plan/README.md#實作時代定10-29隊長與工人照原則定的細節可翻案)
 - **open｜現況地圖十一點**：剩第 1、7 點，「之後有遇到再說」 → [map-review § 結論](../proto8/thinking/2026-10/30/map-review/README.md#結論10-31-補)
