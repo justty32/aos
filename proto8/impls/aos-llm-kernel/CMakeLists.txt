@@ -17,6 +17,10 @@ endif()
 if(NOT TARGET aos-post)
   add_subdirectory(../aos-post aos-post-build)
 endif()
+#   aos-directive  pack.cpp、serve.cpp include aos/directive.hpp（通常 aos-loop 已帶進來，守衛照包）
+if(NOT TARGET aos-directive)
+  add_subdirectory(../aos-directive aos-directive-build)
+endif()
 
 # src/ 底下除了 src/main.cpp 全是函式庫的程式碼。
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
@@ -27,12 +31,12 @@ add_library(aos-llm-kernel STATIC ${SOURCES})
 target_include_directories(aos-llm-kernel PUBLIC include PRIVATE src)
 target_compile_features(aos-llm-kernel PUBLIC cxx_std_20)
 target_compile_options(aos-llm-kernel PRIVATE -Wall -Wextra)
-target_link_libraries(aos-llm-kernel PUBLIC aos-loop PRIVATE aos-post)
+target_link_libraries(aos-llm-kernel PUBLIC aos-loop PRIVATE aos-post aos-directive)
 set_target_properties(aos-llm-kernel PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-# 執行檔只在這個專案自己是主角時。
-if(PROJECT_IS_TOP_LEVEL)
+# 執行檔只在這個專案自己是主角、或從 impls 頂層一次建（AOS_IMPLS_ALL）時。
+if(PROJECT_IS_TOP_LEVEL OR AOS_IMPLS_ALL)
   add_executable(aos-llm-kernel_main src/main.cpp)
   target_link_libraries(aos-llm-kernel_main PRIVATE aos-llm-kernel)
   target_include_directories(aos-llm-kernel_main PRIVATE src)

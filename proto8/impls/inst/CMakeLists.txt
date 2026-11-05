@@ -1,17 +1,12 @@
 cmake_minimum_required(VERSION 3.21)
+# 共通設定（Release、compile_commands、PIC…）跟全家一樣在 ../cmake/settings.cmake；純 C、沒有 vcpkg.json，toolchain 不裝任何東西。
+include(../cmake/settings.cmake)
 project(inst C)
 
 # 產物照慣例放在 lib/。這個專案沒有 src/main.c，所以只有函式庫、沒有執行檔：
 #   lib/libinst.so  target inst         給 FFI（Python ctypes 等）載入
 #   lib/libinst.a   target inst-static  給 aos-exec（和舊的 aos-inst）靜態連進去（啟動時少載入一個 .so）
 # 編法照 dcap 的 C 模板，加了 libaos 自己需要的幾條（嚴格 C11、-Werror、預設 hidden、兩種函式庫）。
-
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  set(CMAKE_BUILD_TYPE Release)
-endif()
-
-# 給 clangd 看的 build/compile_commands.json（clangd 會自己去 build/ 底下找）
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # src/ 底下除了 src/main.c 全是函式庫的程式碼（這裡沒有 main.c）。
 # CONFIGURE_DEPENDS：每次 build 都重看一次，新加的檔不用手動重新 configure。
@@ -47,4 +42,4 @@ foreach(t inst inst-static)
 endforeach()
 
 # 別的專案要用它：add_subdirectory(../inst inst-build) 再連 inst（.so）或 inst-static（.a），
-# 包在 if(NOT TARGET inst) 裡（寫法見 impls/README.md「建置」）。這個專案是純 C、不用 vcpkg，所以不 include ../cmake/settings.cmake。
+# 包在 if(NOT TARGET inst) 裡（寫法見 impls/README.md「建置」）。這個專案是純 C、不用 vcpkg（11-05 起照樣 include ../cmake/settings.cmake，只為共通設定）。

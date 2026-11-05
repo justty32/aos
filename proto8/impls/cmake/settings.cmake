@@ -1,11 +1,12 @@
 # settings.cmake：aos 這一家 C++ 專案共用的 CMake 設定。
 #
-# 每個 C++ 專案的 CMakeLists.txt 開頭、project() 之前：
+# 每個專案的 CMakeLists.txt 開頭、project() 之前：
 #   include(../cmake/settings.cmake)
+# impls 頂層的 CMakeLists.txt（一次建全家）也一樣 include(cmake/settings.cmake)。
 # 這裡只有 set()，沒有函數、沒有巨集——就是把每個專案都要寫的同一段收在一處。
 # 被別的專案 add_subdirectory 進去時，這些變數人家已經設好了（同一個 build），再 set 一次也無妨。
 #
-# 1. vcpkg 的 toolchain（nlohmann-json 走 vcpkg，manifest＝各專案自己的 vcpkg.json）。
+# 1. vcpkg 的 toolchain（nlohmann-json 走 vcpkg；manifest＝最上層那個專案的 vcpkg.json：單獨建＝各專案自己的，頂層建＝impls/vcpkg.json）。
 #    一定要在 project() 之前決定：呼叫者自己給的 CMAKE_TOOLCHAIN_FILE > 環境變數 VCPKG_ROOT > ~/dev/vcpkg。
 if(NOT DEFINED CMAKE_TOOLCHAIN_FILE)
   if(DEFINED ENV{VCPKG_ROOT})
@@ -36,3 +37,8 @@ if(CMAKE_CXX_FLAGS MATCHES "-fsanitize" OR "$ENV{CXXFLAGS}" MATCHES "-fsanitize"
 else()
   set(AOS_STATIC_PIE "-static-pie")
 endif()
+
+# 6. C++ 標準全家一個：C++20、不開 GNU 擴充（-std=c++20，不是 gnu++20）。各專案的 cxx_std_20 照留（給連它的人看）。
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)

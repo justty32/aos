@@ -29,8 +29,8 @@ target_link_libraries(aos-post PUBLIC aos-util PRIVATE aos-lock)
 set_target_properties(aos-post PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-# 執行檔只在這個專案自己是主角時。
-if(PROJECT_IS_TOP_LEVEL)
+# 執行檔只在這個專案自己是主角、或從 impls 頂層一次建（AOS_IMPLS_ALL）時。
+if(PROJECT_IS_TOP_LEVEL OR AOS_IMPLS_ALL)
   add_executable(aos-post_main src/main.cpp)
   target_link_libraries(aos-post_main PRIVATE aos-post)
   target_include_directories(aos-post_main PRIVATE src)

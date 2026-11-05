@@ -35,8 +35,8 @@ target_link_libraries(aos-exec PUBLIC aos-util PRIVATE inst-static aos-directive
 set_target_properties(aos-exec PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-# 執行檔只在這個專案自己是主角時。
-if(PROJECT_IS_TOP_LEVEL)
+# 執行檔只在這個專案自己是主角、或從 impls 頂層一次建（AOS_IMPLS_ALL）時。
+if(PROJECT_IS_TOP_LEVEL OR AOS_IMPLS_ALL)
   add_executable(aos-exec_main src/main.cpp)
   target_link_libraries(aos-exec_main PRIVATE aos-exec)
   target_link_options(aos-exec_main PRIVATE ${AOS_STATIC_PIE})

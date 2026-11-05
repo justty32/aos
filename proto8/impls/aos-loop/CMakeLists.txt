@@ -10,9 +10,12 @@ project(aos-loop C CXX)
 # 用到的兄弟專案（包一層 if(NOT TARGET)，全家都這樣寫）。
 #   aos-exec   公開 API（aos/exec.hpp）：字串 run 走它的 resolve_ws／find_entry／prepare_env／apply_env／launch，單子用 run_inst。
 #              它又帶進 inst、aos-util、aos-directive
-#   aos-directive  設定檔與 ctl 的指示詞（resolve_keys，10-23 晚）；aos-exec 已把它 add 進來，這裡只連（PUBLIC：loop.hpp 用到）
+#   aos-directive  設定檔與 ctl 的指示詞（resolve_keys，10-23 晚；PUBLIC：loop.hpp 用到）；通常 aos-exec 已把它 add 進來，守衛照包
 if(NOT TARGET aos-exec)
   add_subdirectory(../aos-exec aos-exec-build)
+endif()
+if(NOT TARGET aos-directive)
+  add_subdirectory(../aos-directive aos-directive-build)
 endif()
 
 # src/ 底下除了 src/main.cpp 全是函式庫的程式碼。
@@ -28,8 +31,8 @@ target_link_libraries(aos-loop PUBLIC aos-exec aos-directive)
 set_target_properties(aos-loop PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-# 執行檔只在這個專案自己是主角時。
-if(PROJECT_IS_TOP_LEVEL)
+# 執行檔只在這個專案自己是主角、或從 impls 頂層一次建（AOS_IMPLS_ALL）時。
+if(PROJECT_IS_TOP_LEVEL OR AOS_IMPLS_ALL)
   add_executable(aos-loop_main src/main.cpp)
   target_link_libraries(aos-loop_main PRIVATE aos-loop)
   target_include_directories(aos-loop_main PRIVATE src)

@@ -6,7 +6,8 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| `cmake/settings.cmake` | 全家 C++ 專案共用的 CMake 設定（只有 `set()`），各 `CMakeLists.txt` 在 `project()` 前 include |
+| `CMakeLists.txt`、`vcpkg.json` | 頂層一次建全家（照依賴序 add 每個專案、`AOS_IMPLS_ALL` 打開各專案的 bin）；vcpkg 相依合併（頂層建只看這份）|
+| `cmake/settings.cmake` | 全家共用的 CMake 設定（只有 `set()`；含 C++20、`EXTENSIONS OFF`），各 `CMakeLists.txt`（含 inst、頂層）在 `project()` 前 include |
 | `*/CMakeLists.txt`、`*/vcpkg.json` | 各專案的建置：靜態庫＋`-static-pie` 執行檔；相依（nlohmann-json 等）走 vcpkg |
 | `*/.gitignore` | 擋各專案的 `bin/`、`lib/`、`build/` |
 | `inst/.vscode/settings.json` | inst 的編輯器設定 |

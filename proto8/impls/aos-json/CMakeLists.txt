@@ -28,7 +28,7 @@ target_link_libraries(aos-json PUBLIC aos-util aos-directive)
 set_target_properties(aos-json PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-if(PROJECT_IS_TOP_LEVEL)
+if(PROJECT_IS_TOP_LEVEL OR AOS_IMPLS_ALL)
   add_executable(aos-json_main src/main.cpp)
   target_include_directories(aos-json_main PRIVATE src)
   target_link_libraries(aos-json_main PRIVATE aos-json)

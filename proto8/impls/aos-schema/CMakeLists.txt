@@ -30,8 +30,8 @@ target_link_libraries(aos-schema
 set_target_properties(aos-schema PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-# 執行檔只在這個專案自己是主角時：被別的專案 add_subdirectory 進去時，人家要的是函式庫。
-if(PROJECT_IS_TOP_LEVEL)
+# 執行檔只在這個專案自己是主角、或從 impls 頂層一次建（AOS_IMPLS_ALL）時：被別的專案 add_subdirectory 進去時，人家要的是函式庫。
+if(PROJECT_IS_TOP_LEVEL OR AOS_IMPLS_ALL)
   add_executable(aos-schema_main src/main.cpp)
   target_link_libraries(aos-schema_main PRIVATE aos-schema)
   target_link_options(aos-schema_main PRIVATE ${AOS_STATIC_PIE})

@@ -30,7 +30,7 @@ target_link_libraries(aos-daemon PUBLIC aos-loop aos-post)
 set_target_properties(aos-daemon PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-if(PROJECT_IS_TOP_LEVEL)
+if(PROJECT_IS_TOP_LEVEL OR AOS_IMPLS_ALL)
   add_executable(aos-daemon_main src/main.cpp)
   target_link_libraries(aos-daemon_main PRIVATE aos-daemon)
   target_include_directories(aos-daemon_main PRIVATE src)
