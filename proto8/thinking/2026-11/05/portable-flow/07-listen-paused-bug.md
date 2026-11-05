@@ -39,3 +39,14 @@
 
 - 上面最後一條重測（impls 18:58 的執行檔）：loop 型退 1 的四種（沒 exec、exec 不在、身體退 1、起來就退）都留表 `stopped`＋`reason`，跟 docs 一致；是舊執行檔的現象，不用改。
 - thought 的子（agent-fsm）pause→resume→stop→start→say→listen 連打：拿到答案；pause 本來就暫停的再 pause＝照印 paused、退 0。
+
+### 11-05 夜 第二輪邊緣
+
+照 [demo/docs/02](../../../../demo/docs/02-agent-fsm.md)「複製出 repo」、[03](../../../../demo/docs/03-llm-kernel.md)「起來」把 llm-kernel、agent-fsm 搬到 repo 外（scratchpad 試驗場，PATH 只放 `install.sh DEST` 裝的捷徑），假腦＋真腦（LM Studio `google/gemma-4-e4b`，試驗場那份 kernel.json 的 `stupid-fast` 改指它）都跑。
+
+- **修了**：`tools/memory/` 的 `_tooldef.json`／`_metainfo.json` 是相對捷徑，`cp -r` 出 repo 就斷 → 第一題 `ToolDefMissing`＋`ToolsBad`、留 `stopped`。文件原本只列三處，改成五處＋一段照抄就對的指令（02）。
+- **修了**：`fake_slow` 從自己的位置找 `lib/base/llm_fake`，出 repo＝`EndpointFailed … can't open file`；改成從找到的 `aos_flags.py` 旁找（03、code map 13-demo）。
+- **補了**：02 的「掛 daemon」沒寫怎麼起跑 agent 的那台 daemon，補兩行（同 05 件 1）；03 的「改絕對路徑」補 sed 一行與沒改時的錯誤行；`stupid-fast` 註明本機載別的模型就改 `model`。
+- `aos-agent` 的 `N queued letters` → `N queued letter(s)`（README 例子同步）。
+- 照常：`aos-exec ../agents/bob` 掛上、say／listen、pause→resume→stop→start→say→listen、sleep→wake、暫停中 stop→start（回來仍 paused）、思考中 pause 再 stop 的 listen 提醒、kernel Ctrl-C 重起續答、整包 `cp -a` 搬家再起（表是相對、`def` 指新位置、睡著的那隻開門自己醒、停機時寄的信照答）、直接 `aos-exec --ws W body.json`、沒設 `AOS_LLM_KERNEL`（三層各一行英文）。
+- **沒修、列給別人**：`aos-loop` 的 `RunFailed` 印 `…/.stack/../../agents/bob/fsm.json`（沒正規化，看得懂但醜；impls）；llm kernel `used.json` 的 `senders` 以寄件人絕對路徑記帳，整包搬家後新舊各一格、`budget.senders` 也是絕對路徑（搬家要人自己改；可翻案：存相對 kernel stack）；`aos-agent` 睡著提醒的 `aos-exec <daemon folder>` 對「`AOS_STACK=… aos-daemon daemon.json` 起的」不貼切。劇本假腦 `fake-demo-self`／`spawn`／`memory` 的 `$env AOS_CD`＋`../agent-fsm` 出 repo 不對（03 表上本來就寫「只在 repo 裡對」）。

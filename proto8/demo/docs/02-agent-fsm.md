@@ -4,7 +4,17 @@
 
 aos 體系自己的 agent：**一隻＝一個範本資料夾**，複製一份、改 `llm.json`／`system.txt`／`tools.json` 就是另一隻（四支格的程式也放在範本裡，每隻複製；使用者 11-04「放範本裡，每隻複製」）。`body.json` 讓 aos-loop 跑 `loop.json`，loop 每次跑 `fsm.json` 的一格；`_entry` 是「把自己掛上 daemon」（11-05，下面）；格是範本裡四支純標準庫的 Python。設計與代定：[thinking 11-04 loop-fsm-agent](../../thinking/2026-11/04/loop-fsm-agent/README.md)；問腦 11-04 晚改成寄信給 llm kernel：[think-as-function 03 § 1](../../thinking/2026-11/04/think-as-function/03-呼叫端.md)；條文 P-11、P-19、P-35 的 11-04 註。
 
-**複製出 repo**（11-05 晚試驗場回報）：四支格找 `aos_flags.py` 先找 `../../bin`、再找 PATH 上 `aos-tools` 的真位置（跑過 `install.sh` 或 PATH 放了 `proto8/bin` 就找得到）；相對 repo 的三處要自己改成絕對路徑——`tools.json` 的 `../../lib/…`、`tools/memory/_entry` 單子裡的 `../../../../lib/agent/memory/_entry`、`tools/memory/_memory.json` 的 `base`。
+**複製出 repo**（11-05 晚試驗場回報）：四支格找 `aos_flags.py` 先找 `../../bin`、再找 PATH 上 `aos-tools` 的真位置（跑過 `install.sh` 或 PATH 放了 `proto8/bin` 就找得到）；相對 repo 的五處要自己改成絕對路徑——`tools.json` 的 `../../lib/…`、`tools/memory/_entry` 單子裡的 `../../../../lib/agent/memory/_entry`、`tools/memory/_memory.json` 的 `base`，還有 `tools/memory/` 裡的兩個捷徑 `_tooldef.json`、`_metainfo.json`（`cp -r` 照原樣抄相對捷徑，出了 repo 就斷；沒改＝第一題 `aos-tools: error: ToolDefMissing tool memory (…) … needs _tooldef.json inside`、`agent-fsm: error: ToolsBad`，那隻留 `stopped`；11-05 夜第二輪邊緣）。照做一遍（`P`＝repo 的 proto8 絕對路徑）：
+
+```sh
+cp -r $P/demo/agent-fsm bob && rm -rf bob/__pycache__
+sed -i "s#\"\.\./\.\./lib/#\"$P/lib/#g" bob/tools.json
+echo "[\"$P/lib/agent/memory/_entry\"]" > bob/tools/memory/_entry
+echo "{\"base\": \"$P/knowledge/aos\"}" > bob/tools/memory/_memory.json
+for f in _tooldef.json _metainfo.json; do ln -sfn $P/lib/agent/memory/$f bob/tools/memory/$f; done
+```
+
+改完整包（定義＋工作區＋llm kernel）`cp -a` 到別處照樣起得來：daemon 表存相對路徑、上面五處是 repo 的絕對路徑（repo 沒搬就對），只要把 `AOS_LLM_KERNEL` 換成新位置。
 
 ```
 agent-fsm/
@@ -39,6 +49,9 @@ aos-exec --ws ~/proj proto8/demo/agent-fsm/body.json &    # 直接跑（不掛 d
 echo '{"cmd": "stop", "seq": 1}' > ~/proj/.stack/ctl.json  # 收工（這格跑完 loop 退 0）
 
 # 掛 daemon（AOS_DAEMON＝daemon 的 $AOS_STACK，沒設＝cwd 的 ./.stack；daemon 的環境要有上面的 PATH 與 AOS_LLM_KERNEL；PATH 再加 extras/agent/bin 的 aos-agent）
+# 先起一台跑 agent 的 daemon（同 05 件 1；它的環境帶著 AOS_LLM_KERNEL，子項才寄得到）：
+echo '{"interval_ms": 300}' > ~/daemon.json && mkdir -p ~/proj/.stack
+(cd ~ && AOS_STACK=~/proj/.stack/ aos-daemon daemon.json &) && cd ~/proj   # cwd 有 .stack＝aos-agent 找得到這台
 aos-agent ctl add --ws ~/proj --name fsm1 proto8/demo/agent-fsm
 # 或（11-05）：cd ~/proj && aos-exec <定義資料夾>  ＝跑它的 _entry＝aos-agent ctl add <定義資料夾>（ws＝~/proj、名字＝資料夾名）
 export AOS_AGENT=fsm1        # 之後不用每次 --target

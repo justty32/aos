@@ -41,7 +41,7 @@
 | `_entry` | `["aos-daemon", "daemon.json"]`（`cd ~/llm_kernel && aos-exec --stack . def`） |
 | `daemon.json` | daemon 的身體＝每 300 ms 拍一次 `aos-llm-kernel kernel.json`；表上只有問腦的 `llm_<信件名稱>` 列 |
 | `kernel.json` | `slots`、`timeout_ms`、預設 endpoint 函數 `exec`（`lib/base/llm_http`）、預設代號 `endpoint`（`fake`）、`budget.senders` 一格例子（`/tmp/aos-demo-sender` 每天 1 次）、能力包表 `endpoints`（11-05 午 feat-proto：`smart-high`／`stupid-fast`／`luna`／`sol`／`fake`，劇本假腦 `fake-demo-self`／`fake-demo-memory`（先 `memory read me/self_tools` 再加 math，11-05 晚 K5）／`fake-demo-spawn`〔`llm_fake` 的 `script`，路徑用 `$env AOS_CD`＋`$path`〕、慢假腦 `fake-demo-fast`／`fake-demo-slow`〔`fake_slow`，`slots` 1〕） |
-| `fake_slow/_entry` | demo 用的慢假腦 endpoint 函數（python3）：睡 `endpoint.delay_s` 秒（沒寫 2、0～60），再把同一份 stdin 交給 `lib/base/llm_fake`、結束碼原樣交回（llm_fake 被訊號殺＝128＋N）；錯 `fake_slow: error: ArgumentsBad`（demo/docs/05 件 3） |
+| `fake_slow/_entry` | demo 用的慢假腦 endpoint 函數（python3）：睡 `endpoint.delay_s` 秒（沒寫 2、0～60），再把同一份 stdin 交給 `lib/base/llm_fake`（從找到的 `aos_flags.py` 旁找 lib，複製出 repo 也對，11-05 夜）、結束碼原樣交回（llm_fake 被訊號殺＝128＋N）；錯 `fake_slow: error: ArgumentsBad`（demo/docs/05 件 3） |
 
 ## `demo/daemon-judge/`、`demo/procs-kernel/`（判官範本：kernel 模式 1、2；11-05）
 

@@ -22,7 +22,7 @@ if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdou
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "fake_slow"
-FAKE = os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "lib", "base", "llm_fake", "_entry")
+FAKE = os.path.join(os.path.dirname(os.path.realpath(aos_flags.__file__)), "..", "lib", "base", "llm_fake", "_entry")   # 從找到的 aos_flags.py（proto8/bin）旁找 lib：複製出 repo 也對（11-05 夜第二輪邊緣）
 
 
 def die(code, reason):

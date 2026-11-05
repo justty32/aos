@@ -20,11 +20,11 @@ llm-kernel/
 | 代號 | 是什麼 | 屬性（kernel.json 裡寫的） |
 |---|---|---|
 | `smart-high` | LiteLLM `localhost:4000` 的 `claude-haiku-5-5`（真名以 `curl localhost:4000/v1/models` 為準） | `fixed.temperature` 0.2、`slots` 4、`speed` normal、`cost` high、`context` 200000 |
-| `stupid-fast` | LM Studio `localhost:1234` 的 `qwen3-1.7b` | `fixed.temperature` 0.7、`slots` 1、`speed` fast、`cost` free、`context` 4096 |
+| `stupid-fast` | LM Studio `localhost:1234` 的 `qwen3-1.7b`（本機載的是別的就改這包的 `model`，真名看 `curl localhost:1234/v1/models`；家機試驗場指 `google/gemma-4-e4b`） | `fixed.temperature` 0.7、`slots` 1、`speed` fast、`cost` free、`context` 4096 |
 | `luna`、`sol` | LiteLLM 的 gpt-6 luna（low）、sol | `sol` 有 `fixed.temperature` 0.2；`cost` high |
 | `fake`（預設） | `lib/base/llm_fake`：有工具先叫 `tool` 寫的那個（範本 `clock`，沒有就第一個）、再答「FAKE ANSWER to: …」 | `speed` fast、`cost` free |
 | `fake-demo-self`、`fake-demo-spawn` | `llm_fake`＋`script` 劇本（[05](05-feat-proto.md) 件 1、件 4） | 劇本裡的路徑寫 `{"$env": "AOS_CD", "$path": "../agent-fsm"}`：kernel 用到那組時解，`AOS_CD`＝起 llm daemon 時 aos-exec 給的定義資料夾，所以**只在直接跑 repo 裡這份定義時對** |
-| `fake-demo-fast`、`fake-demo-slow` | `fake_slow`，每封 3 秒 | `slots` 1；`speed` fast／slow（[05](05-feat-proto.md) 件 3）；`fake_slow` 從自己的位置找 `lib/`，也只在 repo 裡對 |
+| `fake-demo-fast`、`fake-demo-slow` | `fake_slow`，每封 3 秒 | `slots` 1；`speed` fast／slow（[05](05-feat-proto.md) 件 3）；`fake_slow` 從找到的 `aos_flags.py`（`proto8/bin`）旁找 `lib/`，複製出 repo 也對（11-05 夜第二輪邊緣：原本從自己的位置找、出 repo＝`EndpointFailed … can't open file …/lib/base/llm_fake/_entry`） |
 
 **包怎麼讀**（全文在 [aos-llm-kernel docs/01](../../impls/aos-llm-kernel/docs/01-用法.md)）：信與 agent 的 `llm.json` 只寫代號；kernel 自己看 `exec`／`slots`／`budget`／`speed` 四個（拿掉後才交給 endpoint 函數），其餘（`url`、`model`、`key`、`fixed`、`script`、`delay_s`…）原樣交給函數。**`fixed` 是釘死的**：信的 `request` 寫了 `fixed` 裡的 key、或那包有 `model` 而信寫了 `model`＝那封回 `RequestBad`；換溫度、換模型＝換代號（多登記一包）。`cost`／`context`／`summary` 只給人與腦挑代號用，kernel 每拍寫進窗 `$AOS_STACK/endpoints.json`，`aos-llm ls` 印它。
 
@@ -32,7 +32,8 @@ llm-kernel/
 
 ```sh
 mkdir ~/llm_kernel && cd ~/llm_kernel
-cp -r <repo>/proto8/demo/llm-kernel def     # kernel.json 裡 ../../lib 開頭的 exec 改成絕對路徑（<repo>/proto8/lib/base/llm_http、llm_fake）
+cp -r <repo>/proto8/demo/llm-kernel def     # kernel.json 裡 ../../lib 開頭的 exec 改成絕對路徑（<repo>/proto8/lib/base/llm_http、llm_fake）：
+sed -i 's#"\.\./\.\./lib/#"<repo>/proto8/lib/#g' def/kernel.json   # 沒改＝問腦回 aos-llm: error: EndpointFailed … EntryMissing entry not found: …/lib/base/llm_fake
                                             # 格（fake_slow 等）找 aos_flags.py：先 ../../../bin、再 PATH 上 aos-tools 的真位置（11-05 晚）
 aos-exec --stack . def                      # 起 llm daemon；信箱在 ~/llm_kernel/mailbox/，Ctrl-C 收工
 # 另一個殼：

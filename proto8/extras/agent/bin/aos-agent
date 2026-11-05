@@ -1126,7 +1126,7 @@ def cmd_start(argv):
     direct = is_kernel(a)
     ctl_wait("start", ["--", a.name], lambda _: (row_named(a.name) or {}).get("phase") != "stopped",   # sleeping 的＝aos-daemon-ctl PhaseBad「要 wake」
              "the daemon has not started %s yet" % a.name, "CtlRejected", direct)
-    print("started (same stack); %d queued letters will be answered next" % n + paused_tail(a, held))
+    print("started (same stack); %d queued letter(s) will be answered next" % n + paused_tail(a, held))
 
 
 def paused_tail(a, held):
@@ -1187,7 +1187,7 @@ def cmd_wake(argv):
     direct = is_kernel(a)
     ctl_wait("wake", ["--", a.name], lambda _: (row_named(a.name) or {}).get("phase") != "sleeping",   # stopped 的＝aos-daemon-ctl PhaseBad「要 start」
              "the daemon has not woken %s yet" % a.name, "CtlRejected", direct)
-    print("awake (same stack); %d queued letters will be answered next" % n + paused_tail(a, held))
+    print("awake (same stack); %d queued letter(s) will be answered next" % n + paused_tail(a, held))
 
 
 def cmd_pause_resume(cmd):
