@@ -18,7 +18,7 @@ def die(code, reason):
 try:
     args = json.loads(sys.stdin.read() or "{}")
 except ValueError as e:
-    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    die("ArgumentsBad", "stdin is not JSON: %s" % e)
 if not isinstance(args, dict):
-    die("ArgumentsBad", "arguments 要是物件")
+    die("ArgumentsBad", "arguments must be an object")
 print(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))

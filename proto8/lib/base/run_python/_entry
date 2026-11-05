@@ -26,27 +26,27 @@ def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
     except ValueError as e:
-        die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+        die("ArgumentsBad", "stdin is not JSON: %s" % e)
     if not isinstance(a, dict):
-        die("ArgumentsBad", "arguments 要是物件")
+        die("ArgumentsBad", "arguments must be an object")
     return a
 
 
 def clip(out):
     if len(out) > OUT_MAX:
-        return out[:OUT_HEAD] + "\n……（中間省略 %d 個字）……\n" % (len(out) - 2 * OUT_HEAD) + out[-OUT_HEAD:]
+        return out[:OUT_HEAD] + "\n... (%d chars omitted) ...\n" % (len(out) - 2 * OUT_HEAD) + out[-OUT_HEAD:]
     return out
 
 
 stack = os.environ.get("AOS_STACK")
 if not stack:
-    die("StackMissing", "沒設定 AOS_STACK")
+    die("StackMissing", "AOS_STACK is not set")
 args = arguments()
 code, limit = args.get("code"), args.get("timeout_s", TIMEOUT_DEFAULT)
 if not isinstance(code, str) or not code.strip():
-    die("ArgumentsBad", "缺 code（一段 Python 程式的字串）")
+    die("ArgumentsBad", "missing code (a string of Python code)")
 if type(limit) not in (int, float) or not 0 < limit <= TIMEOUT_MAX:
-    die("ArgumentsBad", "timeout_s 要是 0 到 %d 之間的秒數" % TIMEOUT_MAX)
+    die("ArgumentsBad", "timeout_s must be seconds between 0 and %d" % TIMEOUT_MAX)
 os.makedirs(stack, exist_ok=True)
 with open(os.path.join(stack, "main.py"), "w", encoding="utf-8") as f:
     f.write(code)
@@ -54,7 +54,7 @@ try:
     p = subprocess.Popen(["python3", "-I", "main.py"], cwd=stack, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, text=True, errors="replace", start_new_session=True)
 except OSError as e:
-    die("LaunchFailed", "python3 起不來：%s" % e.strerror)
+    die("LaunchFailed", "python3 failed to start: %s" % e.strerror)
 
 
 def stop():
@@ -82,6 +82,6 @@ try:
 except subprocess.TimeoutExpired:
     stop()
     out, _ = p.communicate()
-    die("CommandFailed", "跑超過 %g 秒，整群停掉了" % limit, clip(out) + ("\n" if out and not out.endswith("\n") else ""))
-print("結束碼 %d" % p.returncode)
+    die("CommandFailed", "ran over %g s; stopped the whole process group" % limit, clip(out) + ("\n" if out and not out.endswith("\n") else ""))
+print("exit code %d" % p.returncode)
 print(clip(out), end="")
