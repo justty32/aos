@@ -26,8 +26,8 @@
 | `fsm.json` | 四格表：idle `{"0": "think", "10": "idle"}`、think `{"0": "wait", "10": "idle"}`、wait `{"0": "act", "10": "wait", "11": "think"}`（11 是 11-05 edge-agent 加的）、act `{"0": "think", "10": "idle"}`；`_entry` 讓 aos-exec 也能直接跑一格 |
 | `idle.py` | idle 格：`$AOS_STACK/queue/` 全部收進 `history.jsonl`、接進去就 `aos-post done`；壞信丟掉寫 `mailbox_warning.txt`；`--prompt` 開場白 |
 | `brain.py` | think 格：history＋`--system`＋`--tools`（沒給＝定義 `tools.json` 疊 `$AOS_STACK/tools.json` 覆蓋層，`aos-tools --overlay`，11-05）＋`llm.json`（定義疊 `$AOS_STACK/llm.json` 的 `endpoint`；不寫 `request.model`，11-05）組成請求信 body，寫 `$AOS_STACK/think/request.json`、退 0；不碰網路；沒事做退 10 |
-| `wait.py` | wait 格：沒 `think/pending.txt`＝`aos-llm send --reply-to think/reply`、記名字、退 10；有＝`aos-llm recv`：沒到 10、到了接一則 assistant 進 history 退 0、kernel 回錯退 1；寄之前 `request.json` 的 endpoint 跟現在的 llm.json（定義疊 stack）對不上＝退 11 回 think 重組（11-05 edge-agent） |
-| `act.py` | act 格：最後一則 assistant 的 `tool_calls` 逐個 `aos-tools --file … [--overlay $AOS_STACK/tools.json] call`（11-05），結果各接一則 tool、退 0；沒 `tool_calls`＝最後答案、退 10；工具的錯回給腦 |
+| `wait.py` | wait 格：沒 `think/pending.txt`＝`aos-llm send --reply-to think/reply`、記名字、退 10；有＝`aos-llm recv`：沒到 10、到了接一則 assistant 進 history 退 0、kernel 回錯＝自己一行 BrainFailed 退 1；寄之前 `request.json` 的 endpoint 跟現在的 llm.json（定義疊 stack）對不上＝退 11 回 think 重組（11-05 edge-agent） |
+| `act.py` | act 格：最後一則 assistant 的 `tool_calls` 逐個 `aos-tools --file … [--overlay $AOS_STACK/tools.json] call`（11-05），結果各接一則 tool、退 0；沒 `tool_calls`＝最後答案、退 10；工具的錯回給腦（stderr 提醒行 `agent-fsm: warning: tool …`） |
 | `system.txt`、`tools.json`、`llm.json` | system 訊息；工具登記檔（clock）；腦設定（範本 `{}`＝kernel 預設代號；鍵 `endpoint`） |
 | `interfaces.json` | 宣告遵守 `aos-agent` 介面，`entry`＝`body.json`（11-05）、選配 `tools`、`llm`（`"llm.json"`，11-04 晚）；brain.py／act.py 疊 `$AOS_STACK/tools.json` 覆蓋層（11-05） |
 
@@ -40,7 +40,7 @@
 | `_entry` | `["aos-daemon", "daemon.json"]`（`cd ~/llm_kernel && aos-exec --stack . def`） |
 | `daemon.json` | daemon 的身體＝每 300 ms 拍一次 `aos-llm-kernel kernel.json`；表上只有問腦的 `llm_<信件名稱>` 列 |
 | `kernel.json` | `slots`、`timeout_ms`、預設 endpoint 函數 `exec`（`lib/base/llm_http`）、預設代號 `endpoint`（`fake`）、`budget.senders` 一格例子（`/tmp/aos-demo-sender` 每天 1 次）、能力包表 `endpoints`（11-05 午 feat-proto：`smart-high`／`stupid-fast`／`luna`／`sol`／`fake`，劇本假腦 `fake-demo-self`／`fake-demo-spawn`〔`llm_fake` 的 `script`，路徑用 `$env AOS_CD`＋`$path`〕、慢假腦 `fake-demo-fast`／`fake-demo-slow`〔`fake_slow`，`slots` 1〕） |
-| `fake_slow/_entry` | demo 用的慢假腦 endpoint 函數（python3）：睡 `endpoint.delay_s` 秒（沒寫 2、0～60），再把同一份 stdin 交給 `lib/base/llm_fake`、結束碼原樣交回；錯 `fake_slow: ArgumentsBad`（demo/docs/05 件 3） |
+| `fake_slow/_entry` | demo 用的慢假腦 endpoint 函數（python3）：睡 `endpoint.delay_s` 秒（沒寫 2、0～60），再把同一份 stdin 交給 `lib/base/llm_fake`、結束碼原樣交回（llm_fake 被訊號殺＝128＋N）；錯 `fake_slow: error: ArgumentsBad`（demo/docs/05 件 3） |
 
 ## `demo/daemon-judge/`、`demo/procs-kernel/`（判官範本：kernel 模式 1、2；11-05）
 

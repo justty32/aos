@@ -42,7 +42,7 @@ aos-llm ls                                  # 一行一包、照代號排：代�
 # fake fast free - - fake brain: calls the first tool, then answers FAKE ANSWER to ...
 # smart-high normal high 200000 4 LiteLLM claude haiku: careful answers, costs money
 echo '{"endpoint": "smart-high", "request": {"messages": [{"role": "user", "content": "hi"}], "temperature": 1}}' | aos-llm ask
-# aos-llm: RequestBad temperature is fixed by endpoint smart-high (remove it from the request; to change it pick another endpoint name)
+# aos-llm: error: RequestBad temperature is fixed by endpoint smart-high (remove it from the request; to change it pick another endpoint name)
 aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 llm_<信件名稱>
 ```
 

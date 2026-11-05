@@ -3,15 +3,27 @@
 # 一次收全部、照處理順序（有序在前照名字＝寄的順序、無序在後照名字；同 aos_ws.letter_key）；cur/ 有上次認領了還沒接完的先接（P-12）。
 # 壞信（body 不是 {"role": "user", "content": 非空字串}）：aos-post done 丟掉、$AOS_STACK/mailbox_warning.txt 覆寫一行（N-16；同 aos-eca-turn）。
 # --prompt FILE＝開場白（相對路徑從範本資料夾＝AOS_CD 算）：history 空、queue 也沒好信時投一次進 queue 再收；沒給＝沒有開場白。
-# 錯：stderr 一行「agent-fsm: 代號 原因」、退 1、history 不接（P-20）。設計：proto8/thinking/2026-11/04/loop-fsm-agent/01-設計.md § 3。
-import json, os, re, subprocess, sys
+# 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）。aos-post 的 stderr 不攔、原樣透出（stdio-unify R10）。--help 印英文用法；Ctrl-C 退 130。設計：proto8/thinking/2026-11/04/loop-fsm-agent/01-設計.md § 3。
+import json, os, re, signal, subprocess, sys
+
+HELP = """\
+usage: idle.py [--prompt FILE]   (a cell of demo/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
+The idle cell: take every letter in $AOS_STACK/queue/ into $AOS_STACK/history.jsonl.
+Exit 0 = took at least one good letter (go think); 10 = no letter.
+--prompt FILE: an opening message put into the queue once while history is empty.
+On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NOT_FOUND = 10                                   # aos-post take-all 沒信可收
 ORDERED = re.compile(r"^[0-9]{12}\.")            # 有序信的名字：<12 位序號>.<尾名>（N-16）
 
 
 def die(code, reason):
-    print("agent-fsm: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
+    print("agent-fsm: error: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
     sys.exit(1)
 
 
@@ -20,7 +32,7 @@ def flags(argv, known):
     out, i = {}, 0
     while i < len(argv):
         if argv[i] not in known or i + 1 >= len(argv) or not argv[i + 1]:
-            die("ArgumentsBad", "usage: idle.py [--prompt FILE] (cannot parse %s)" % argv[i])
+            die("ArgumentsBad", "cannot parse %s (usage: idle.py [--prompt FILE])" % argv[i])
         out[argv[i]] = argv[i + 1]
         i += 2
     return out
@@ -43,15 +55,14 @@ history_path = os.path.join(stack, "history.jsonl")
 
 
 def post(args, stdin_text="", ok=(0,)):
-    """叫 aos-post；回 (結束碼, stdout, stderr 第一行)。碼不在 ok 裡＝PostFailed（ok=None＝不檢查）。"""
+    """叫 aos-post；回 (結束碼, stdout)。stderr 不攔：aos-post 自己的話原樣透出（R10）。碼不在 ok 裡＝PostFailed（ok=None＝不檢查）。"""
     try:
-        r = subprocess.run(["aos-post"] + args, input=stdin_text, capture_output=True, text=True)
+        r = subprocess.run(["aos-post"] + args, input=stdin_text, stdout=subprocess.PIPE, text=True)
     except OSError as e:
         die("PostFailed", "aos-post cannot start (must be on PATH): %s" % e)
-    err = (r.stderr.strip().splitlines() or ["exited %d with no reason given" % r.returncode])[0]
     if ok is not None and r.returncode not in ok:
-        die("PostFailed", "aos-post %s exited %d: %s" % (args[0], r.returncode, err))
-    return r.returncode, r.stdout, err
+        die("PostFailed", "aos-post %s exited %d" % (args[0], r.returncode))
+    return r.returncode, r.stdout
 
 
 def names(stage):
@@ -85,9 +96,9 @@ def write_atomic(path, text):
 
 def body_of(sig):
     """好信回 (body, None)；壞信回 (None, 原因)。"""
-    code, out, err = post(["see", box, sig], ok=None)
+    code, out = post(["see", box, sig], ok=None)
     if code != 0:
-        return None, err
+        return None, "aos-post see exited %d" % code
     try:
         body = json.loads(out).get("body")
     except (ValueError, AttributeError):

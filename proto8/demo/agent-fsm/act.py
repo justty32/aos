@@ -4,16 +4,29 @@
 # 工具的介面（P-41）：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的小格＝$AOS_STACK/tools/<名>/（P-17）、工作區＝$AOS_WS。
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。
 # 叫工具出的問題回給腦、不停（P-41 10-24 代定）：工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒登記的工具、arguments 不是 JSON。
-# 只有自己這層的錯才停：stderr 一行「agent-fsm: 代號 原因」、退 1、history 不接（P-20）——沒 stack、history 壞、
+# 工具退非 0 時 stderr 多一行提醒「agent-fsm: warning: tool <名> exit code N (passed back to the brain)」（stdio-unify R1：不是這格的錯，照樣退 0）。
+# 只有自己這層的錯才停：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）——沒 stack、history 壞、
 #   history 裡沒有 assistant、aos-tools 起不來。
 # --tools FILE：aos-tools 登記檔（預設範本裡的 tools.json；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/tools.json 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
 # 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
-import json, os, subprocess, sys
+import json, os, signal, subprocess, sys
+
+HELP = """\
+usage: act.py [--tools FILE]   (a cell of demo/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
+The act cell: run the tool_calls of the last assistant message in $AOS_STACK/history.jsonl
+(aos-tools call NAME), one tool message each. Exit 0 = done (go think); 10 = no tool_calls.
+--tools FILE: the aos-tools registry (default tools.json of the definition).
+On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 
 def die(code, reason):
-    print("agent-fsm: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
+    print("agent-fsm: error: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
     sys.exit(1)
 
 
@@ -21,7 +34,7 @@ def flags(argv, known):
     out, i = {}, 0
     while i < len(argv):
         if argv[i] not in known or i + 1 >= len(argv) or not argv[i + 1]:
-            die("ArgumentsBad", "usage: act.py [--tools FILE] (cannot parse %s)" % argv[i])
+            die("ArgumentsBad", "cannot parse %s (usage: act.py [--tools FILE])" % argv[i])
         out[argv[i]] = argv[i + 1]
         i += 2
     return out
@@ -109,7 +122,7 @@ for call in calls:
         die("ToolFailed", "aos-tools cannot start: %s" % e)
     content = r.stdout
     if r.returncode != 0:                        # 回給腦、不停；人在 stderr 看得到
-        print("agent-fsm: ToolFailed %s exit code %d (passed back to the brain)" % (name, r.returncode), file=sys.stderr)
+        print("agent-fsm: warning: tool %s exit code %d (passed back to the brain)" % (name, r.returncode), file=sys.stderr)   # 提醒行（R1）
         content += "%s(tool %s exit code %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
     append({"role": "tool", "tool_call_id": cid, "content": content})
 sys.exit(0)

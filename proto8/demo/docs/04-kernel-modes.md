@@ -14,7 +14,7 @@
 | 1：繼承式 | daemon 自己的身體當判官：判過了才「呼叫 base」（＝轉寄進自己的 ctl 信箱） | `<daemon 的 stack>/requests` | [`demo/daemon-judge/`](../daemon-judge/) |
 | 2：0 號 proc 式 | daemon 底下一個專門收請求的 proc（像 Linux 的 0 號），判過了替你寄進 daemon 的 ctl 信箱 | `<0 號 proc 的 stack>/requests` | [`demo/procs-kernel/`](../procs-kernel/) |
 
-- **判官怎麼判**（政策檔 `judge.json`，放在定義裡）：`allowed`＝名字的白名單（`null` 或沒寫＝不限）；`max_running`＝同時最多幾個 running（數 daemon 表上 `running` 的列，`null` 或沒寫＝不限）。判 `procs_added`；`procs_started`、`procs_woken`（start／wake 讓停著、睡著的回來跑）不看 `allowed`、但照樣算進 `max_running`（11-05 edge-agent：原本照原樣轉，sleep 一隻、add 一隻、再 wake 就超過）；`procs_removed`、`procs_stopped`、`procs_slept` 照原樣轉。不掛的每封都在判官的 stderr 印一行 `judge: 代號 letter <名> refused: …`（跟回信的 `msg` 同一句、英文）。
+- **判官怎麼判**（政策檔 `judge.json`，放在定義裡）：`allowed`＝名字的白名單（`null` 或沒寫＝不限）；`max_running`＝同時最多幾個 running（數 daemon 表上 `running` 的列，`null` 或沒寫＝不限）。判 `procs_added`；`procs_started`、`procs_woken`（start／wake 讓停著、睡著的回來跑）不看 `allowed`、但照樣算進 `max_running`（11-05 edge-agent：原本照原樣轉，sleep 一隻、add 一隻、再 wake 就超過）；`procs_removed`、`procs_stopped`、`procs_slept` 照原樣轉。不掛的每封都在判官的 stderr 印一行提醒 `judge: warning: letter <名> refused: 代號 …`（跟回信的 `code`、`msg` 同一句、英文；拒信是判官的答案、不是它的錯，照樣退 0）。
 - **判「掛」**：信原樣轉寄進 daemon 的 ctl 信箱，帶著原寄件人的 `reply_to`——daemon 套完直接回 `{"applied": true}` 給原寄件人（無序信的 `in_reply_to` 就是你寄出的那封的名字）。判官不轉手、不自己跑任何東西。
 - **判「不掛」**：判官回 `{"applied": false, "error": {"code": "…", "msg": "…"}}` 給原寄件人。代號：`NameUnknown`（不在白名單）、`SlotMissing`（running 滿了）、`BodyBad`（body 或 `procs_added` 不是物件）、`ForwardFailed`（轉不進 ctl 信箱）。信沒 `reply_to`＝只收掉、只有 stderr 那行。
 - **`aos-daemon-ctl --reply-to BOX`／`aos-agent ctl`**（11-05 [edge-agent 題 2](../../thinking/2026-11/05/edge-agent/README.md)，使用者選「加 --reply-to 等回信」）：`aos-daemon-ctl` 的寄信子命令收 `--reply-to`；`aos-agent ctl add` 等每封都開一個暫時信箱帶過去，判官不掛＝立刻 `AddRejected`（start／wake 被 `max_running` 擋＝`CtlRejected`）＋判官的代號與原因，不用等 30 秒（[extras/agent README「等回信」](../../extras/agent/README.md)）。
@@ -32,7 +32,7 @@
 aos 不驗寄件人是誰。所以「唯一」只有三種強度：
 
 1. **約定**：文件寫「這台走判官，掛東西寄 `$AOS_KERNEL`」。同一個帳號擋不住——daemon 的 ctl 信箱照樣寫得進去，`aos-daemon-ctl`（沒設 `AOS_KERNEL` 時）也照樣直達，等於繞過判官。
-2. **Linux 權限**（真的擋）：daemon 與判官用帳號 A，其他 proc 用帳號 B；daemon 的 ctl 信箱 `new/`、`tmp/` 不給 B 寫（B 寄進去當場 `aos-post: MailboxBad`），`requests/` 給 B 寫。不加任何程式。
+2. **Linux 權限**（真的擋）：daemon 與判官用帳號 A，其他 proc 用帳號 B；daemon 的 ctl 信箱 `new/`、`tmp/` 不給 B 寫（B 寄進去當場 `aos-post: error: MailboxBad …`），`requests/` 給 B 寫。不加任何程式。
 3. **daemon 認寄件人白名單**：不做（要驗身分、跟「寄信的人是誰不驗」的先例相反）。
 
 使用者 11-05 裁定：「linux權限沒設也可以(因為我知道有些人嫌麻煩，或是還處在demo狀態)，就自行承擔風險。」——第 2 級不強制；沒設權限就是第 1 級，繞過判官的風險自己承擔。

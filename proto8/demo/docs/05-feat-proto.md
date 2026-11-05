@@ -36,7 +36,7 @@ aos-exec --stack $T/k $P/demo/llm-kernel > k.log 2>&1 & K=$!
 export AOS_LLM_KERNEL=$T/k && sleep 1
 aos-llm ls                                # 一行一包；fake-demo-fast／slow 的 slots 是 1
 echo '{"endpoint": "smart-high", "request": {"messages": [{"role": "user", "content": "hi"}], "temperature": 1}}' | aos-llm ask
-# aos-llm: RequestBad temperature is fixed by endpoint smart-high (remove it from the request; to change it pick another endpoint name)
+# aos-llm: error: RequestBad temperature is fixed by endpoint smart-high (remove it from the request; to change it pick another endpoint name)
 for e in fake-demo-slow fake-demo-slow fake-demo-fast fake-demo-fast; do
   echo "{\"endpoint\": \"$e\", \"request\": {\"messages\": [{\"role\": \"user\", \"content\": \"hi $e\"}]}}" | aos-llm send --reply-to box
 done                                      # 印四個信件名稱（先寄兩封 slow、再兩封 fast）
@@ -63,11 +63,11 @@ aos-agent say --target fsm1 start a kid and ask it the time && aos-agent listen 
 aos-agent say --target fsm1 now start four kids && aos-agent listen --target fsm1
 # Only three kids fit: the judge allows 4 running at once and I count too, so kid4 was refused (SlotMissing). I removed the three again.
 aos-agent ctl ls                          # 只剩 fsm1
-tail -1 d.log                             # judge: SlotMissing letter … refused: max_running is 4, 4 running now …
+tail -1 d.log                             # judge: warning: letter … refused: SlotMissing max_running is 4, 4 running now …
 kill $K $D && unset AOS_DAEMON AOS_KERNEL
 ```
 
-第一題劇本：`agents add {"name": "kid", "def": "<repo>/proto8/demo/agent-fsm", "endpoint": "fake"}` → `ask kid "what time is it?"`（kid 的假腦先叫 clock、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`。第二題一次 add kid1～kid4：fsm1＋三隻＝4 隻 running，kid4 被判官擋，回給腦一則 `agents: AddRejected AOS_KERNEL refused the add letter: SlotMissing …`；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的），工作區跟 fsm1 同一個；`agents` 只收自己生的（`$AOS_STACK/children.json`）。
+第一題劇本：`agents add {"name": "kid", "def": "<repo>/proto8/demo/agent-fsm", "endpoint": "fake"}` → `ask kid "what time is it?"`（kid 的假腦先叫 clock、答 `FAKE ANSWER to: what time is it? (tool said: 2026-11-05T…Z)`，成了 fsm1 的 tool 結果）→ `rm kid`。第二題一次 add kid1～kid4：fsm1＋三隻＝4 隻 running，kid4 被判官擋，回給腦一則 `agents: error: AddRejected AOS_KERNEL refused the add letter: SlotMissing …`；再 rm 三隻。kid 用的是自己定義裡的腦與工具（不繼承 fsm1 的），工作區跟 fsm1 同一個；`agents` 只收自己生的（`$AOS_STACK/children.json`）。
 
 ### 件 5：資源份額（daemon 在子行程 setrlimit）
 
@@ -84,7 +84,7 @@ aos-agent ctl add ../hog && sleep 2       # 宣告的 mem_mb 256 送到 daemon�
 aos-agent ctl state --target hog          # state stopped、reason failed to start: … (code 1): MemoryError；limits  mem_mb=256
 aos-agent ctl add --name hog2 --limits '{"mem_mb": 1024}' ../hog && sleep 2   # --limits 蓋過宣告：吃完 300 MB 退 0、下表
 aos-agent ctl add --name big --limits '{"mem_mb": 4096}' ../hog-big && sleep 2
-aos-agent ctl state --target big          # reason … aos-daemon: LimitBad mem_mb 4096 exceeds the daemon's own hard limit
+aos-agent ctl state --target big          # reason … aos-daemon: error: LimitBad mem_mb 4096 exceeds the daemon's own hard limit
 aos-agent ctl add --name big2 --limits '{}' ../hog-big && sleep 2              # {}＝自己不限，但超不過 daemon 的 2 GB
 aos-agent ctl state --target big2         # reason failed to start: … (code 1): MemoryError
 aos-agent ctl ls                          # hog、big、big2 stopped＋reason；hog2 吃完已下表
@@ -102,7 +102,7 @@ aos-exec --stack $T/k $P/demo/llm-kernel > k.log 2>&1 & K=$!
 export AOS_LLM_KERNEL=$T/k && sleep 1
 echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | AOS_WS=/tmp/aos-demo-sender aos-llm ask   # FAKE ANSWER to: hi
 echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | AOS_WS=/tmp/aos-demo-sender aos-llm ask
-# aos-llm: BudgetMissing sender /tmp/aos-demo-sender: max_calls 1 reached in this window (day); not run
+# aos-llm: error: BudgetMissing sender /tmp/aos-demo-sender: max_calls 1 reached in this window (day); not run
 echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | aos-llm ask                                # 別的寄件人照答
 kill $K
 ```

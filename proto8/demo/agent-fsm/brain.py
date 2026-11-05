@@ -8,12 +8,24 @@
 # --system FILE：讀成一則 system 放最前面、不存進 history（P-41）；沒給＝沒有 system。
 # --tools FILE：aos-tools 登記檔（預設範本裡的 tools.json；沒有那份＝不給工具）；腦看到的工具名＝登記名。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/tools.json 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
-# 錯：stderr 一行「agent-fsm: 代號 原因」、退 1（P-20）。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
-import json, os, subprocess, sys
+# 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1（P-20）。--help 印英文用法；Ctrl-C 退 130。照舊的 agent-eve 的 brain.py 改（11-04 隨 proto8/tests 刪了）（拿掉工作區題目認領與 current.txt）。
+import json, os, signal, subprocess, sys
+
+HELP = """\
+usage: brain.py [--system FILE] [--tools FILE]   (a cell of demo/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
+The think cell: build the request to the brain from $AOS_STACK/history.jsonl (plus system and
+tools) and write $AOS_STACK/think/request.json. Exit 0 = written (go wait); 10 = nothing to answer.
+--system FILE: a system message in front; --tools FILE: the aos-tools registry.
+On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 
 def die(code, reason):
-    print("agent-fsm: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
+    print("agent-fsm: error: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
     sys.exit(1)
 
 
@@ -21,7 +33,7 @@ def flags(argv, known):
     out, i = {}, 0
     while i < len(argv):
         if argv[i] not in known or i + 1 >= len(argv) or not argv[i + 1]:
-            die("ArgumentsBad", "usage: brain.py [--system FILE] [--tools FILE] (cannot parse %s)" % argv[i])
+            die("ArgumentsBad", "cannot parse %s (usage: brain.py [--system FILE] [--tools FILE])" % argv[i])
         out[argv[i]] = argv[i + 1]
         i += 2
     return out

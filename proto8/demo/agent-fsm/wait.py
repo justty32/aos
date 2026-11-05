@@ -3,22 +3,35 @@
 #   think/pending.txt 不在＝還沒寄：aos-post init think/reply（沒有才建）、aos-llm send --reply-to think/reply < request.json，
 #     信件名稱寫進 pending.txt、退 10（下一拍再來看）。
 #   在＝已寄：aos-llm recv think/reply <名>：沒到（10）＝退 10；到了（0）＝那則 assistant 接進 history.jsonl、刪 pending.txt、退 0（→ act）；
-#     kernel 回錯（1）＝刪 pending.txt、aos-llm 的 stderr 原樣、退 1（P-20 停下等人；人重跑＝沒 pending、request.json 還在→重寄＝重試）。
+#     kernel 回錯（1）＝刪 pending.txt、aos-llm 的 stderr 原樣、這格再多寫自己一行 BrainFailed、退 1（P-20 停下等人；人重跑＝沒 pending、request.json 還在→重寄＝重試）。
 #   寄之前看 request.json 的 endpoint 跟現在的 llm.json（範本那份 AOS_CD/llm.json 疊這隻的 $AOS_STACK/llm.json，疊法同 brain.py）
 #     對不對得上：對不上＝退 11 回 think 重組（11-05 edge-agent：代號寫錯停下、人 aos-agent llm set／改或刪 llm.json 再起，
 #     原本照舊的 request.json 重寄、又是同一個錯，要人手動把 stage.txt 寫成 think）。llm.json 讀不懂＝當 {}（brain 重組時會報 CfgBad）。
 # 結束碼（fsm.json 照碼分岔，N-36）：0＝回信接進 history（→ act）；10＝還沒回（→ wait）；11＝腦設定改過、回 think 重組請求。
 # 不看 queue：思考中來的信等答完回 idle 再收（使用者 11-04「等答完回 idle 再收」）。沒有自己的逾時（kernel 的 timeout_ms／priority.deadline 守）。
-# 錯：stderr 一行「agent-fsm: 代號 原因」、退 1——StackMissing、RequestMissing（沒 pending 也沒 request.json：人改了 stack）、
-#   SendFailed（aos-llm send 退非 0；它自己的 stderr 原樣在上面，例 LlmKernelMissing）、ReplyBad、PostFailed、WriteFailed。kernel 回的錯（aos-llm recv 退 1）原樣轉。
-import json, os, subprocess, sys
+# 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1——StackMissing、RequestMissing（沒 pending 也沒 request.json：人改了 stack）、BrainFailed（kernel 回錯）、
+#   SendFailed（aos-llm send 退非 0；它自己的 stderr 原樣在上面，例 LlmKernelMissing）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
+# --help 印英文用法；Ctrl-C 退 130。
+import json, os, signal, subprocess, sys
+
+HELP = """\
+usage: wait.py   (a cell of demo/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
+The wait cell: send $AOS_STACK/think/request.json to the llm kernel (aos-llm send), then on
+each later run look for the reply (aos-llm recv). Exit 0 = reply appended to history (go act);
+10 = not yet; 11 = the brain settings changed, go back to think.
+On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NOT_YET = 10                                     # aos-llm recv：回信還沒到
 REBUILD = 11                                     # 腦設定跟 request.json 對不上：回 think 重組
 
 
 def die(code, reason):
-    print("agent-fsm: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
+    print("agent-fsm: error: %s %s" % (code, str(reason).replace("\n", " ")), file=sys.stderr)
     sys.exit(1)
 
 
@@ -91,8 +104,8 @@ try:                                             # 回信收掉了（或 kernel 
     os.remove(pending)
 except FileNotFoundError:
     pass
-if r.returncode != 0:                            # kernel 回錯：aos-llm 已在 stderr 說了
-    sys.exit(1)
+if r.returncode != 0:                            # kernel 回錯：aos-llm 已在 stderr 說了，這格只多寫自己一行
+    die("BrainFailed", "aos-llm recv exited %d (its reason is above)" % r.returncode)
 try:
     message = json.loads(r.stdout)
 except ValueError as e:
