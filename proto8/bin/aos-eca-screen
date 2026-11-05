@@ -3,7 +3,8 @@
 
     aos-eca-screen <eca 資料夾> open [-d]     接進畫面（沒開就開、有對話就 --resume）；-d＝只開不接
     aos-eca-screen <eca 資料夾> close         收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）
-    aos-eca-screen <eca 資料夾> watch         跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走
+    aos-eca-screen <eca 資料夾> watch         跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走；
+                                              那隻的 loop 不在了（loop.json 宣告的 state 窗：phase done／stopped 或 pid 不在）也走
 
 人不直接打它：`aos-agent open／close／watch --target 名字` ＝ `aos-exec --ws <ws> --stack <stack> <定義>/screen 動作`。
 吃 AOS_STACK（那隻的 stack）、AOS_WS（那隻的工作區）；<eca 資料夾>（有 cli.json；相對路徑從 cwd 算）給 kind 與 tools。
@@ -94,10 +95,34 @@ def describe(ev):
     return None
 
 
+def gone(eca, stack):
+    """那隻的 loop 不在了＝回一句英文說明；還在（或看不出來）＝None。11-05 edge-agent 別線：答到一半被 ctl sleep（或 rm），
+    live.jsonl 永遠等不到「一次回答結束」。只看定義的 loop.json 自己宣告的 state 窗（同一份定義，不問 daemon）：
+    沒宣告、還沒寫、讀不懂＝看不出來、照等；phase done／stopped、或 pid 不在＝不在了。"""
+    try:
+        with open(os.path.join(eca, "loop.json"), encoding="utf-8") as f:
+            name = json.load(f).get("state")
+        with open(os.path.join(stack, name), encoding="utf-8") as f:
+            st = json.load(f)
+        phase, pid = st.get("phase"), st.get("pid")
+    except (OSError, ValueError, TypeError, AttributeError):
+        return None
+    if phase in ("done", "stopped"):
+        return "its loop has ended (state.json phase %s)" % phase
+    if isinstance(pid, int) and pid > 0:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return "its loop is gone (state.json pid %d is not running: slept, stopped or removed?)" % pid
+        except PermissionError:
+            pass
+    return None
+
+
 def cmd_watch(eca, args):
     if args:
         die("ArgumentsBad", USAGE)
-    cell, _ = cell_of(eca)
+    cell, stack = cell_of(eca)
     path = cell.file("live.jsonl")
     pos = os.path.getsize(path) if os.path.exists(path) else 0
     print("（跟著看 %s；Ctrl-C 離開）" % path, file=sys.stderr, flush=True)
@@ -121,6 +146,10 @@ def cmd_watch(eca, args):
                     print(s, flush=True)
                 if isinstance(ev, dict) and ev.get("type") in ("result", "turn.completed"):
                     return
+            why = None if end else gone(eca, stack)   # 這一拍沒有新的整行才看
+            if why:
+                print("watch: stopped waiting, %s; an answer cut off there never finishes" % why, file=sys.stderr, flush=True)
+                return
             time.sleep(0.2)
     except KeyboardInterrupt:
         pass
