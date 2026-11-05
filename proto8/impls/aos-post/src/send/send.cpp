@@ -122,7 +122,7 @@ std::string send(const Mailbox& mb, const Json& body, const SendOpts& opts) {
     if (opts.reply_to) {
         Mailbox r = open(*opts.reply_to);
         check_sendable(r);
-        reply_to = r.root;
+        reply_to = reply_to_rel(mb, r.root);   // 相對這個信箱的根（11-05）
     }
     if (opts.in_reply_to) {
         check_name(*opts.in_reply_to);

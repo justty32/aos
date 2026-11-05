@@ -14,14 +14,18 @@ namespace fs = std::filesystem;
 
 namespace aos::llm {
 
+// 11-05 由 AOS_KERNEL 改名 AOS_LLM_KERNEL（使用者 11-05 題 5：AOS_KERNEL 留給通用於所有 proc 的 kernel）：
+// 舊名不認、不留別名；只設了舊名＝KernelMissing、訊息提示改設新名（同 11-04 AOS_DAEMON_STACK→AOS_DAEMON）。
 Mailbox kernel() {
-    const char* k = std::getenv("AOS_KERNEL");
+    const char* k = std::getenv("AOS_LLM_KERNEL");
     if (k == nullptr || k[0] == '\0') {
-        throw Error{code::KernelMissing, "沒設定 AOS_KERNEL（kernel 的信箱資料夾）"};
+        const char* old = std::getenv("AOS_KERNEL");
+        std::string hint = (old != nullptr && old[0] != '\0') ? "；AOS_KERNEL 11-05 起改名，請改設 AOS_LLM_KERNEL" : "";
+        throw Error{code::KernelMissing, "沒設定 AOS_LLM_KERNEL（llm kernel 的信箱資料夾）" + hint};
     }
     std::error_code ec;
     if (!fs::is_directory(k, ec)) {
-        throw Error{code::KernelMissing, std::string("AOS_KERNEL 指的信箱不在：") + k};
+        throw Error{code::KernelMissing, std::string("AOS_LLM_KERNEL 指的信箱不在：") + k};
     }
     return Mailbox{aos::abspath(k)};
 }
@@ -83,7 +87,7 @@ std::string send_held(const Mailbox& mb, const Json& body) {
     Json letter = Json::object();
     letter["sender"] = aos::identity();   // 信封（N-16），同 aos-post
     letter["sent_at"] = aos::utc_now_ms();
-    letter["reply_to"] = reply_box(mb);
+    letter["reply_to"] = aos::post::reply_to_rel(aos::post::Mailbox{mb.root}, reply_box(mb));   // 相對信箱根＝"reply"（11-05，同 aos-post send）
     letter["body"] = body;
 
     make_dir(mb.tmp());

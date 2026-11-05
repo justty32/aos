@@ -42,7 +42,7 @@ namespace aos::llm_kernel {
 // 錯誤代號：沿用 aos-loop 的（→ aos-exec → aos-util），再加信箱、信會吐的。
 namespace code {
 using namespace aos::loop::code;   // ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、StackMissing、WriteFailed、MkdirFailed…
-                                   // KernelMissing（aos-llm：沒設 AOS_KERNEL、不是資料夾；11-04 原 MailboxMissing）、LetterBad（回信：信讀不懂）、
+                                   // KernelMissing（aos-llm：沒設 AOS_LLM_KERNEL、不是資料夾；11-04 原 MailboxMissing）、LetterBad（回信：信讀不懂）、
                                    // LetterMissing（aos-llm ask：自己的信不見了）10-30 收進 aos-util
 inline constexpr const char* PriorityBad = "PriorityBad";       // priority 寫壞（aos-llm 自己擋；kernel 收到這種信回 LetterBad）
 inline constexpr const char* DeadlineMissed = "DeadlineMissed"; // 回信：輪到之前時限已過，沒跑（10-15 LLM kernel 稿定的名字）

@@ -104,7 +104,7 @@ std::optional<std::string> reply(const Mailbox& mb, const std::string& name, con
     }
     // 回信寄不出去時說清楚是「回信」、原信還在（不然只看到一個陌生信箱不在）
     try {
-        Mailbox to = open(c.letter["reply_to"].get<std::string>());
+        Mailbox to = open(reply_to_abs(mb, c.letter["reply_to"].get<std::string>()));   // 相對的從信箱根拼（11-05）
         SendOpts opts;
         opts.in_reply_to = name;
         return send(to, body, opts);

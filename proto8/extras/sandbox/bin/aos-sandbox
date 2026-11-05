@@ -13,9 +13,9 @@
 #   ro、rw   路徑陣列：唯讀／可寫看得到（相對的從 cwd 算；rw 最後綁，可蓋在 ro 裡面）
 #   net      布林：能不能連網（預設 false：只有自己的 loopback）
 #   mem_mb、cpu_s、procs、file_mb、files  正整數 → s6-softlimit 的 -a＋-d、-t、-p、-f、-o
-#   env      環境變數名陣列：只帶這幾個進去（外面有設的才帶；bwrap --clearenv＋--setenv）；沒寫＝ENV_BASE 那幾個（PATH、語系、aos 的六個、hub 型的 AOS_DAEMON／AOS_KERNEL）
+#   env      環境變數名陣列：只帶這幾個進去（外面有設的才帶；bwrap --clearenv＋--setenv）；沒寫＝ENV_BASE 那幾個（PATH、語系、aos 的六個、hub 型的 AOS_DAEMON／AOS_LLM_KERNEL）
 #   沒列到的路徑一律看不到；/proc、/dev、/tmp（空的）一定有。
-#   能不能用 LLM kernel 不另設開關（使用者 10-24「就是看他能不能存取檔案」）：信箱有綁進來（rw 列了 $AOS_KERNEL）、env 有帶 AOS_KERNEL 就能寄，
+#   能不能用 LLM kernel 不另設開關（使用者 10-24「就是看他能不能存取檔案」）：信箱有綁進來（rw 列了 $AOS_LLM_KERNEL）、env 有帶 AOS_LLM_KERNEL 就能寄，
 #   沒有就看不到；再細的由信箱的擁有者、群組、權限位管（root/setup.sh --mailbox）。
 # 錯：stderr 一行「aos-sandbox: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、PathMissing、CommandMissing、UserBad）。
 # 之後的結束碼都是 prog 的（bwrap 透明轉交；被訊號停＝128＋N）。
@@ -29,7 +29,7 @@ BASE = ["/usr", "/bin", "/sbin", "/lib", "/lib64", "/etc"]
 # 設定沒寫 env 時帶進去的環境變數（10-24 照 S12 的精神：PATH、語系、aos 自己的六個路徑；API key 一律不帶，要就在 env 明寫）
 ENV_BASE = ["PATH", "LANG", "LC_ALL", "LC_CTYPE", "TZ", "PYTHONDONTWRITEBYTECODE", "PYTHONIOENCODING",
             "AOS_ENTRY", "AOS_WS", "AOS_STACK", "AOS_CF", "AOS_CD", "AOS_CO",
-            "AOS_DAEMON", "AOS_KERNEL"]   # hub 型（N-63）也帶：子 process 預設繼承（11-04 四元素審查）
+            "AOS_DAEMON", "AOS_LLM_KERNEL"]   # hub 型（N-63）也帶：子 process 預設繼承（11-04 四元素審查）
 # mem_mb 只設 -a（位址空間）與 -d（資料），不用 -m：-m 連堆疊上限也設成同一個數，glibc 開執行緒照堆疊上限配，
 # 一開執行緒就超過位址空間上限（aos-exec 退 1「Resource temporarily unavailable」；10-24 真腦實測 self-improve 撞到）
 LIMITS = [("mem_mb", ("-a", "-d"), 1024 * 1024), ("cpu_s", ("-t",), 1), ("procs", ("-p",), 1),

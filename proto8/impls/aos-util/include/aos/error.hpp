@@ -39,7 +39,7 @@ inline constexpr const char* LaunchFailed = "LaunchFailed"; // 子程序起不�
 // 子命令、投遞（10-30 從 aos-post、aos-lock、aos-json、aos-llm-kernel 各定一份收來；medium-plan 實作時代定 12）
 inline constexpr const char* CommandUnknown = "CommandUnknown"; // 命令列：不認得的子命令（aos-json、aos-post、aos-lock）
 inline constexpr const char* MailboxMissing = "MailboxMissing"; // 信箱不在、或 tmp/ new/ cur/ 沒建好（aos-post、aos-llm）
-inline constexpr const char* KernelMissing = "KernelMissing";   // hub 型變數 AOS_KERNEL 沒設、空的、不是資料夾（aos-llm；N-63 ②「<名字>Missing」，11-04 原 MailboxMissing）
+inline constexpr const char* KernelMissing = "KernelMissing";   // hub 型變數 AOS_LLM_KERNEL（11-05 前叫 AOS_KERNEL）沒設、空的、不是資料夾（aos-llm；N-63 ②「<名字>Missing」，11-04 原 MailboxMissing）
 inline constexpr const char* LetterMissing = "LetterMissing";   // 指名的信不在該在的格（aos-post 的 check、finish；aos-llm ask 等的信不見了）
 inline constexpr const char* LetterBad = "LetterBad";           // 信壞了：letter.json 讀不懂、缺必填、型別不對（aos-post see；aos-llm-kernel 的回信）
 // 其他

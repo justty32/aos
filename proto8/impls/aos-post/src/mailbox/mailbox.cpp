@@ -1,4 +1,5 @@
-// mailbox.cpp：【mailbox】信箱的路徑、建信箱、拿信箱、信件名稱的規則（check_name、is_ordered、sort_letters），
+// mailbox.cpp：【mailbox】信箱的路徑、建信箱、拿信箱、信件名稱的規則（check_name、is_ordered、sort_letters）、
+// reply_to 的相對化與拼回（reply_to_rel、reply_to_abs），
 // 與 common.hpp 的小工具（說明見 aos/post.hpp、common/common.hpp）。
 #include "common/common.hpp"
 
@@ -88,6 +89,53 @@ Mailbox open(const std::string& root) {
         throw Error{code::MailboxMissing, "信箱不在：" + root};
     }
     return mb;
+}
+
+// 絕對路徑拆成一層一層（空的、. 不算；呼叫的人先 abspath 過，不會有 ..）。
+static std::vector<std::string> parts_of(const std::string& path) {
+    std::vector<std::string> out;
+    size_t i = 0;
+    while (i <= path.size()) {
+        size_t j = path.find('/', i);
+        if (j == std::string::npos) {
+            j = path.size();
+        }
+        std::string s = path.substr(i, j - i);
+        if (!s.empty() && s != ".") {
+            out.push_back(s);
+        }
+        i = j + 1;
+    }
+    return out;
+}
+
+// 字串算、不 realpath（捷徑當普通路徑，搬家時跟著走；portable-flow 03 原則 6）。
+std::string reply_to_rel(const Mailbox& mb, const std::string& box) {
+    std::string to = aos::abspath(box);
+    std::vector<std::string> b = parts_of(aos::abspath(mb.root));
+    std::vector<std::string> t = parts_of(to);
+    size_t n = 0;
+    while (n < b.size() && n < t.size() && b[n] == t[n]) {
+        ++n;
+    }
+    if (n == 0) {
+        return to;   // 沒有共同的第一層（/tmp/… 對 /home/…）：相對了也沒意思，存絕對
+    }
+    std::string out;
+    for (size_t i = n; i < b.size(); ++i) {
+        out += out.empty() ? ".." : "/..";
+    }
+    for (size_t i = n; i < t.size(); ++i) {
+        out += (out.empty() ? "" : "/") + t[i];
+    }
+    return out.empty() ? "." : out;
+}
+
+std::string reply_to_abs(const Mailbox& mb, const std::string& reply_to) {
+    if (!reply_to.empty() && reply_to[0] == '/') {
+        return reply_to;   // 絕對（11-05 前的舊信、或沒有共同第一層的）照用
+    }
+    return aos::abspath(aos::join(mb.root, reply_to));
 }
 
 void check_name(const std::string& name) {

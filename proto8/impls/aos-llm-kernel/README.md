@@ -17,7 +17,7 @@ cat kernel.json
 cat loop.json
 # {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300}
 AOS_STACK=$PWD/st/ aos-loop loop.json &                       # kernel 一直顧著信箱 st/mailbox/
-echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | AOS_KERNEL=$PWD/st/mailbox aos-llm ask
+echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | AOS_LLM_KERNEL=$PWD/st/mailbox aos-llm ask
 # {"role": "assistant", "content": "FAKE ANSWER to: hi"}
 cat st/used.json      # {"window": "day", "since": "2026-11-04T00:00:00+08:00", "counter_calls": 3, "counter_tokens": 129, "counter_all_calls": 3, "counter_all_tokens": 129}
 ```

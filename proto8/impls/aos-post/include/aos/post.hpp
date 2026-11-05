@@ -10,6 +10,9 @@
 //   new/、cur/ 裡 . 開頭的名字不算信（N-05）。
 //   信＝一個資料夾，名字＝信件名稱，裡面必有 letter.json：{"sender": 寄信人身分, "sent_at": ISO 8601 UTC 到毫秒,
 //     "reply_to"?: 信箱路徑, "in_reply_to"?: 原信的信件名稱, "body": 內容（形狀由收信的程式定）}。沒有 kind（11-03 拿掉；讀到也忽略）
+//   reply_to 存成相對「這封信所在信箱的根」（11-05 portable-flow 步 2：整份資料夾搬走，回信跟著落在新位置）：
+//     send 用字串算（不 realpath、不解捷徑）；兩邊沒有共同的第一層（例 /tmp/… 對 /home/…）就存絕對。
+//     讀的人一律經 reply_to_abs 拼回：相對的從信箱根拼、絕對的（11-05 前的舊信）照用
 //
 //   信件名稱兩種形狀（thinking 11-03 aos-post § 2）：
 //     有序＝<12 位序號>.<尾名>（名字匹配 ^[0-9]{12}\.），無序＝<尾名>（其他）
@@ -24,7 +27,7 @@
 //   init          建信箱（mkdir -p 信箱、tmp/ new/ cur/）；已經有＝沒事。建不了丟 MkdirFailed。archive/ 不建
 //   open          拿一個信箱：信箱不是資料夾丟 MailboxMissing（格由各函式自己驗）
 //   send          寄一封：驗信箱（tmp/、new/ 是資料夾＝不然 MailboxMissing；對自己可寫 access W_OK|X_OK＝不然 MailboxBad）、
-//                 reply_to（轉絕對、同一套驗法）、in_reply_to（check_name）、name（check_name＋不得像有序名，不合 ArgumentsBad）→
+//                 reply_to（轉絕對、同一套驗法；寫進信封時經 reply_to_rel 相對信箱根）、in_reply_to（check_name）、name（check_name＋不得像有序名，不合 ArgumentsBad）→
 //                 mkdir tmp/<名>（預設名撞名換一個；自己給的撞名 LetterExists）→ 複製 opts.files → 寫 letter.json → rename 進 new/
 //                 （自己給的撞名 LetterExists）。sender＝aos-util 的 aos::identity()。回 new/ 裡的名字
 //   take          認領一封：new/ 照處理順序，第一個 rename 進 cur/ 成功的；沒有＝nullopt。cur/ 沒有就建（MkdirFailed）
@@ -37,6 +40,8 @@
 //   done          處理完：keep＝rename cur→archive（archive/ 沒有就建），否則 rename cur→tmp 再刪；壞信一律丟掉（不管 keep）。
 //                 不在 cur/ 丟 LetterMissing
 //   regret        撤回：rename new→tmp 再刪；回 true。不在 new/（已被認領、或本來就沒有）回 false
+//   reply_to_rel  信封要存的 reply_to：回信信箱（絕對）相對 mb 的根（字串算）；沒有共同的第一層＝原樣絕對；同一個＝"."
+//   reply_to_abs  信封讀到的 reply_to → 絕對：相對的從 mb 的根拼（abspath 收掉 ..）、絕對的照用（reply、aos-llm-kernel 回信／撤回用）
 //   check_name    信件名稱是不是一個單純的名字：不空、不含 /、不以 . 開頭；不是丟 ArgumentsBad
 //   is_ordered    名字是不是有序名（^[0-9]{12}\.）
 //   sort_letters  照處理順序排
@@ -74,7 +79,7 @@ struct Mailbox {
 
 struct SendOpts {
     std::optional<std::string> name;          // 自己給的信件名稱（ordered 時是尾名）；不給＝aos::unique_id
-    std::optional<std::string> reply_to;      // 信箱路徑（存成絕對路徑；照 send 的信箱驗法驗）
+    std::optional<std::string> reply_to;      // 信箱路徑（轉絕對照 send 的信箱驗法驗；信封裡存相對信箱根，見 reply_to_rel）
     std::optional<std::string> in_reply_to;   // 原信的信件名稱（check_name；不驗那封在不在）
     bool ordered = false;                     // 有順序的投遞（order.lock/＋order.json）；拿不到鎖就一直等
     // 信裡另放的檔（N-16「其他檔隨意」）：{信裡的名字, 來源檔路徑}，在寫 letter.json 之前複製進去；複製不了丟 WriteFailed。
@@ -98,6 +103,8 @@ Seen see(const Mailbox& mb, const std::string& name);
 std::optional<std::string> reply(const Mailbox& mb, const std::string& name, const Json& body);
 void done(const Mailbox& mb, const std::string& name, bool keep);
 bool regret(const Mailbox& mb, const std::string& name);
+std::string reply_to_rel(const Mailbox& mb, const std::string& box);
+std::string reply_to_abs(const Mailbox& mb, const std::string& reply_to);
 
 void check_name(const std::string& name);
 bool is_ordered(const std::string& name);

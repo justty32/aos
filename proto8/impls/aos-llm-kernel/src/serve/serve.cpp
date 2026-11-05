@@ -156,7 +156,8 @@ struct Served {
 // 回信走 reply_to（10-30，medium 決定 3、N-16）：信裡寫了 reply_to＝照 N-16 寄一封回信進去（body＝reply.json 那份、
 // in_reply_to＝原信的信件名稱；11-04 起不附檔），寄出的信件名稱記在 <信>/reply_letter.txt（已經有＝上一次寄過了，不寄第二封）。
 // 寄不出去（信箱不在、寫不進）不是 kernel 的錯：回「代號 原因」（finish 印一行到 stderr），信照刪（11-04 夜：舊信不留）。沒寫 reply_to＝null。
-Json post_reply(const std::string& dir, const std::string& id, const Json& reply) {
+// reply_to 相對的（11-05 起 aos-post send 存相對信箱根）從 kernel 信箱的根 root 拼回（aos-post 的 reply_to_abs）；絕對的照用。
+Json post_reply(const std::string& root, const std::string& dir, const std::string& id, const Json& reply) {
     std::optional<Json> letter = aos::read_json(aos::join(dir, "letter.json"));
     if (!letter || !letter->is_object() || !letter->value("reply_to", Json()).is_string()) {
         return nullptr;
@@ -166,7 +167,8 @@ Json post_reply(const std::string& dir, const std::string& id, const Json& reply
         return nullptr;
     }
     try {
-        aos::post::Mailbox box = aos::post::open((*letter)["reply_to"].get<std::string>());
+        aos::post::Mailbox box =
+            aos::post::open(aos::post::reply_to_abs(aos::post::Mailbox{root}, (*letter)["reply_to"].get<std::string>()));
         aos::post::SendOpts opts;
         opts.in_reply_to = id;
         std::string sig = aos::post::send(box, reply, opts);
@@ -183,7 +185,7 @@ Json post_reply(const std::string& dir, const std::string& id, const Json& reply
 }
 
 // 寄完回信時寄信的人已經不在了（有 sender.flock、沒人鎖）：它寄過的回信還在 reply_to 的 new/（沒人會拿）＝撤回自己寄的那封（N-16 撤回；在 cur/ 以後的不碰）。
-void regret_reply(const std::string& dir) {
+void regret_reply(const std::string& root, const std::string& dir) {
     std::optional<Json> letter = aos::read_json(aos::join(dir, "letter.json"));
     int err = 0;
     std::optional<std::string> sig = aos::read_file(aos::join(dir, "reply_letter.txt"), err);
@@ -198,7 +200,8 @@ void regret_reply(const std::string& dir) {
         return;
     }
     try {
-        aos::post::regret(aos::post::open((*letter)["reply_to"].get<std::string>()), name);
+        aos::post::regret(
+            aos::post::open(aos::post::reply_to_abs(aos::post::Mailbox{root}, (*letter)["reply_to"].get<std::string>())), name);
     } catch (const Error&) {
     }
 }
@@ -273,14 +276,14 @@ void Server::lock() {
 void Server::finish(const Served& s) {
     std::string dir = aos::join(mb_.cur(), s.id);
     bool counted = ran(dir);
-    Json reply_error = post_reply(dir, s.id, s.reply);   // 回信走 reply_to（10-30）
+    Json reply_error = post_reply(mb_.root, dir, s.id, s.reply);   // 回信走 reply_to（10-30）
     if (reply_error.is_string()) {
         std::fprintf(stderr, "aos-llm-kernel: %s（信 %s 的回信寄不出去，信照刪）\n",
                      reply_error.get<std::string>().c_str(), s.id.c_str());
         std::fflush(stderr);
     }
     if (has_sender(dir) && !sender_alive(dir)) {
-        regret_reply(dir);   // 同步寄的人已經走了（ask 被打斷）：回信沒人拿，撤回
+        regret_reply(mb_.root, dir);   // 同步寄的人已經走了（ask 被打斷）：回信沒人拿，撤回
     }
     if (counted) {
         add_used(stack_, used_, report_of(s.reply));   // usage 從回信拿（11-04 起；沒有＝只算次數）

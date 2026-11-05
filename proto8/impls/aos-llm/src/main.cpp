@@ -5,7 +5,7 @@
 //     aos-llm ask [--priority P] < body.json                  同步：寄、等、印 body.message、0
 //     aos-llm regret 信件名稱                                 撤回還在 new/ 的信；已被認領＝RegretFailed
 //
-//   block_signals → 子命令 → 命令列（旗標在位置參數前，P-44；aos-util 的 parse_cli）→ $AOS_KERNEL（send、ask、regret）→ 做事
+//   block_signals → 子命令 → 命令列（旗標在位置參數前，P-44；aos-util 的 parse_cli）→ $AOS_LLM_KERNEL（send、ask、regret）→ 做事
 //   body＝{"endpoint"?: 代號, "request": {"messages": [...], ...}, "priority"?}（呼叫端自己組；--priority 有給就蓋 body.priority）。
 // 自己出錯、或回信是 error：stderr 一行「aos-llm: 代號 原因」、退 1（N-60）。
 #include "send/send.hpp"
