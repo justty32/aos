@@ -6,7 +6,7 @@
 # 錯：stderr 與 stdout 各一行「llm_http: 代號 原因」、退 1：ArgumentsBad（stdin 不是這形狀）、EndpointFailed（連不上、HTTP 非 2xx）、
 #   ReplyBad（不是 OpenAI 形狀）。沒有自己的逾時旗標（包它的單子守，10-15 KISS）；平常由 aos-llm-kernel 經 aos-exec 跑（kernel.json 的 exec）。
 # 來源：demo/agent-fsm/brain.py 的 ask()（11-04 晚搬過來，brain.py 改成只組請求）。
-import http.client, json, sys, urllib.error, urllib.request
+import http.client, json, sys, urllib.parse
 
 NAME = "llm_http"
 
@@ -43,15 +43,27 @@ else:
 headers = {"Content-Type": "application/json"}
 if isinstance(endpoint.get("key"), str) and endpoint["key"]:
     headers["Authorization"] = "Bearer " + endpoint["key"]
-req = urllib.request.Request(url.rstrip("/") + "/chat/completions",
-                             json.dumps(body, ensure_ascii=False).encode("utf-8"), headers)
+target = url.rstrip("/") + "/chat/completions"
+payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
+CONNECT_TIMEOUT = 10                                       # 只管連線（SYN 被丟時不必等到外層 timeout_ms）；讀回應不設限，歸包它的單子
 try:
-    with urllib.request.urlopen(req) as r:
-        raw = r.read()
-except urllib.error.HTTPError as e:
-    die("EndpointFailed", "HTTP %d: %s" % (e.code, e.read()[:200].decode("utf-8", "replace")))
-except (urllib.error.URLError, OSError) as e:
-    die("EndpointFailed", "cannot connect to %s: %s" % (url, getattr(e, "reason", e)))
+    parts = urllib.parse.urlsplit(target)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        raise ValueError("url must be http(s)://host...")
+    cls = http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
+    conn = cls(parts.hostname, parts.port, timeout=CONNECT_TIMEOUT)
+    conn.connect()
+    conn.sock.settimeout(None)
+    conn.request("POST", parts.path + ("?" + parts.query if parts.query else ""), payload, headers)
+    r = conn.getresponse()
+    raw = r.read()
+    conn.close()
+    if not 200 <= r.status < 300:
+        die("EndpointFailed", "HTTP %d: %s" % (r.status, raw[:200].decode("utf-8", "replace")))
+except ValueError as e:
+    die("EndpointFailed", "bad url %s: %s" % (url, e))
+except OSError as e:
+    die("EndpointFailed", "cannot connect to %s: %s" % (url, e))
 except http.client.HTTPException as e:                     # 回到一半斷線（IncompleteRead）、狀態列壞掉等
     die("EndpointFailed", "incomplete reply from %s: %s %s" % (url, type(e).__name__, e))
 try:
