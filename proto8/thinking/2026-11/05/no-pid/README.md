@@ -49,7 +49,7 @@
 
 ## 要使用者裁的（白話；推薦放第一）——只剩真正沒定的
 
-1. **aos-lock 的名牌（持鎖人的 pid＋ticks＋boot_id，拿不到鎖時對 /proc 判他死了沒）要不要也去 pid？** 它是基礎層的鎖、只有 aos-post `send --ordered` 在用，不是 daemon。
+1. **（11-05 晚 21:40 使用者：「aos-lock就改檔案鎖。」→ 照推薦：flock 檔、pid 三欄拿掉、`acquire --pid N` 刪）** **aos-lock 的名牌（持鎖人的 pid＋ticks＋boot_id，拿不到鎖時對 /proc 判他死了沒）要不要也去 pid？** 它是基礎層的鎖、只有 aos-post `send --ordered` 在用，不是 daemon。
    - **改成名牌旁放一個 flock 檔（學 llm-kernel 的 `sender.flock`）、持鎖期間鎖著、試鎖得到＝主人死了；pid 三欄拿掉 (Recommended)**：跟「牽涉 Linux 行程的機制都以 daemon 為界面」一致，沙箱裡也對；代價：aos-lock 改一輪、`acquire --pid N` 刪。
    - 留著：它算「Linux 原生特殊機制」那一類；代價：沙箱內外同時用有序信箱時會把外面活著的持鎖人當死的。
 
