@@ -13,7 +13,8 @@
   錯誤行  「<名>: error: <代號> <原因>」：stderr 一行；給腦用的工具（預設）stdout 也印同一行（stdout 是給腦看的結果）；退 1。
   提醒行  「<名>: warning: <句子>」：只在 stderr、不帶代號。
   --help  argv 有 --help＝英文說明印 stdout、退 0。
-  Ctrl-C  不吐 traceback、退 130（有子行程的工具自己再接 SIGINT，先收那一群）。"""
+  Ctrl-C  不吐 traceback、退 130（有子行程的工具自己再接 SIGINT，先收那一群）。
+  讀的人先關了 stdout（EPIPE，例 `| head -c0`）＝照 Unix 預設被 SIGPIPE 打掉、退 141（128＋13），不吐 traceback（11-05 晚邊緣測試）。"""
 import json, os, signal, sys
 
 NAME = "tool"
@@ -28,6 +29,7 @@ def start(name, help_text, echo=True):
         sys.stdout.write(help_text)
         sys.exit(0)
     signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))
+    signal.signal(signal.SIGPIPE, signal.SIG_DFL)   # stdout 被關＝安靜退 141；Python 預設是 BrokenPipeError traceback、退 120
 
 
 def error_line(code, reason):

@@ -34,3 +34,8 @@
 
 - `demo/agent-fsm` 複製到別處就跑不起來：四格用 `__file__/../../bin` 找 `aos_flags`，複製出去找不到（試驗場用捷徑 `bin → proto8/bin` 繞過）。
 - 試驗場第一次跑時 impls 的執行檔是 11-04 舊的：重建前 daemon 把退 1 的子項從表上拿掉，跟 docs「出錯結束一律留表」不合；重建後沒再測這條。
+
+### 11-05 晚 邊緣測試
+
+- 上面最後一條重測（impls 18:58 的執行檔）：loop 型退 1 的四種（沒 exec、exec 不在、身體退 1、起來就退）都留表 `stopped`＋`reason`，跟 docs 一致；是舊執行檔的現象，不用改。
+- thought 的子（agent-fsm）pause→resume→stop→start→say→listen 連打：拿到答案；pause 本來就暫停的再 pause＝照印 paused、退 0。

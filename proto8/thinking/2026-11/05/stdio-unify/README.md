@@ -96,3 +96,8 @@
 - 結果：`proto8/lib/tool_io.py`（`start`／`die`／`warn`／`arguments`／`workspace`）；lib/base 19 支、check_inbox、memory、self_tools、agents、pyfix、agent_tool.py 都改用它，各支不再自己拼錯誤行。lib/docs/01 規則 9 改寫成「共用開頭收在 tool_io.py；先找自己資料夾、再找 lib/」。
 - 沙箱：bash-boxed 原本只綁 `inner`，改完實跑 `ModuleNotFoundError`；`sandbox.json` 的 `ro` 加 `../../../../lib/tool_io.py` 後通過（stdout `[exit code 0]`、壞 stdin＝ArgumentsBad）。
 - 代定（可翻案）：L1 檔名 `tool_io.py`、放 lib 根（base 之下最底層，三層都能用）；L2 找的順序「自己資料夾 → lib/」，複製出 lib 的工具把它一起複製（實測：沒複製＝起不來、複製後通過）；L3 judge 也用、但 `echo=False`（不是給腦用的）；L4 cli_session.py（bin 的 aos-eca-turn 也 import）與 pyfix 子 agent 的格不收；L5 `sys.dont_write_bytecode`（不在庫留 `__pycache__`，沿 pyfix）。
+
+## 11-05 晚 邊緣測試
+
+- lib 工具的 stdout 被讀的人先關（`| head -c0`、`| true`）：BrokenPipeError traceback 進 stderr、退 120（違反 N-43 stderr 只有錯誤行／提醒行）→ `tool_io.start` 把 SIGPIPE 設回預設：安靜退 141（128＋13）。
+- 非 UTF-8 的 stdin＝ArgumentsBad（UnicodeDecodeError 是 ValueError，本來就接住）；`--help` 跟別的參數混用＝照印說明退 0：不用改。

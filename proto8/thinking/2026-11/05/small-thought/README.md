@@ -59,3 +59,9 @@
 
 **順帶看到的（不是 thought 的）**：試驗中一隻子在 18:58 掛掉，原因 `aos-exec: error: LaunchFailed cannot start: aos-fsm (Permission denied)`——當時別隊在重建 impls，binary 正被覆寫；daemon 把它留成 stopped＋reason，行為正常。
 
+
+## 11-05 晚 邊緣測試
+
+- 同一格同時叫三個 thought：三個都搶到同一個號 `t-<父>-002`、互相 rollback、全退 1（對帳先看「不在表上＝刪紀錄」，把別人剛 mkdir、還沒 ctl add 的號刪了）→ 對帳先跳過「running 且 PID 活著」與「剛建、state 還沒寫（90 秒內）」的紀錄；重測三個各拿一號、都退 0、做完都下表。
+- goal／context 含換行、非 ASCII、emoji；`max_chars: 1`（`F [truncated]`）；沒 `AOS_DAEMON`（DaemonMissing）；keep 的子被外面 `ctl rm` 後再叫（紀錄被對帳清掉、號照用）；keep 的子 pause→resume→stop→start→say→listen：都正常。
+- 沒修、列給隊長：keep 的子留在表上一直 running（佔一支 loop），要追問用 `aos-agent say --target`；不要了得人 `ctl rm`。

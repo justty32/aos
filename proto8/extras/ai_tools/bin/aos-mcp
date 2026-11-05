@@ -237,7 +237,11 @@ def knowledge_root(regs, ws, stack, timeout_s):
     """--memory NAME：叫 NAME {"op": "read"} → 給 initialize 的 instructions；不給的情況（沒 --memory、清單沒有、叫失敗）＝None。"""
     if MEMORY is None:
         return None
-    tools = load_tools(regs)
+    try:
+        tools = load_tools(regs)
+    except ToolsBad as e:                       # 登記檔壞了：照樣連得上、不給根（11-05 晚邊緣測試：原本整則 initialize 回錯）
+        aos_flags.warn(NAME, "--memory %s: cannot list the tools (%s); no instructions sent" % (MEMORY, e))
+        return None
     if MEMORY not in tools:
         aos_flags.warn(NAME, "--memory %s is not among the tools; no instructions sent" % MEMORY)
         return None

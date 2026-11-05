@@ -7,6 +7,7 @@
 #   規則 9 自成一格：那幾行從 memory 抄一份，不 import 隔壁。
 # stdout：從 path（沒給＝根）開始深度優先、子節點照名字排序；每個節點先一行「<!-- node: 路徑 -->」，
 #   .md 的文原樣接上（標題層級不改），.json 的文包成 ```json 區塊（前面加「# 節點名」當標題）；節點之間空一行。
+#   捷徑繞回這次印的上層資料夾＝那個節點只印一行「not followed」、不往下（11-05 晚）。
 #   超過 max_bytes（預設 50000）就截，最後一行「[truncated: N more bytes; export a child path]」。
 # 錯：「memory_export: error: 代號 原因」stderr 與 stdout 各一行、退 1：ArgumentsBad、PathBad、MemoryMissing、NodeMissing、CfgBad、ReadFailed。
 import json, os, re, shutil, sys
@@ -87,10 +88,15 @@ def read(f):
         die("ReadFailed", "cannot read %s: %s" % (f, e))
 
 
-def export(root, segs, out):
+def export(root, segs, out, chain=()):
     d = os.path.join(root, *segs)
     label = "/".join(segs) or "/"
     if os.path.isdir(d):
+        real = os.path.realpath(d)
+        if real in chain:                       # 捷徑繞回上層（11-05 晚邊緣測試：原本一路印到路徑太長）
+            out.append("<!-- node: %s -->\n(a link back to an outer folder of this export; not followed)" % label)
+            return
+        chain += (real,)
         f = os.path.join(d, "README.md")
         text = read(f) if os.path.isfile(f) else ""
     else:
@@ -103,7 +109,7 @@ def export(root, segs, out):
     out.append("<!-- node: %s -->\n%s" % (label, text.rstrip("\n")))
     if os.path.isdir(d):
         for name in children(d):
-            export(root, segs + [name], out)
+            export(root, segs + [name], out, chain)
 
 
 args = tool_io.arguments()

@@ -33,7 +33,7 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   rm＝從 O 的 add 拿掉、F 裡有的名字記進 O 的 rm。撞名照常（看疊好的那份）。O 不解指示詞；O 寫壞＝RegistryBad。
 登記格選填 env（11-05 晚 agent-knowledge R1）：{"名": {"path": …, "env": {"AOS_MEMORY": "/x/knowledge/aos"}}}，call 時合進那次呼叫的環境
   （蓋過外面同名的）；值照字面用、不當路徑解（C-56；要相對就靠讀它的工具自己的規則，例 memory 的 AOS_MEMORY 相對 $AOS_DAEMON）。
-  鍵只收 [A-Za-z_][A-Za-z0-9_]*、值只收字串，別的＝RegistryBad。add --env K=V（可重複）寫進那一格；ls／get 不印 env。
+  鍵只收 [A-Za-z_][A-Za-z0-9_]*、值只收字串（不含 NUL，11-05 晚邊緣測試：原本 call 時吐 traceback），別的＝RegistryBad。add --env K=V（可重複）寫進那一格；ls／get 不印 env。
   用途：覆蓋層（aos-agent tools add 寫的）也能替這一隻換知識庫，不必在定義裡做包裝資料夾。
 工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收不管。
 工具名：--name ＞ 檔名去掉副檔名（資料夾＝資料夾名），只收 [A-Za-z0-9_-]、最多 64 字（OpenAI／MCP 的限制）。撞名＝ToolExists，--override 蓋掉。
@@ -49,7 +49,7 @@ import aos_flags
 
 NAME = "aos-tools"
 USAGE = "aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-cache] [--env K=V]... XXX | rm XXX | ls [--json] | get XXX | call NAME"
-ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+ENV_KEY_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")              # \Z 不是 $：$ 會放過結尾的換行
 OVERLAY = None                                       # --overlay O（11-05）；main 裡定
 NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 TOOLDEF_TIMEOUT_S = 10
@@ -234,8 +234,9 @@ def entries(reg, where, tools):
         if "cache" in e and e["cache"] is not False and not isinstance(e["cache"], dict):
             raise Fail("RegistryBad", "%s: %s/%s/cache must be false (no cache) or an object (cache)" % (reg, where, name))
         env = e.get("env", {})
-        if not isinstance(env, dict) or not all(isinstance(k, str) and ENV_KEY_RE.match(k) and isinstance(v, str) for k, v in env.items()):
-            raise Fail("RegistryBad", "%s: %s/%s/env must be an object of NAME -> string (NAME like AOS_MEMORY)" % (reg, where, name))
+        if not isinstance(env, dict) or not all(isinstance(k, str) and ENV_KEY_RE.match(k) and isinstance(v, str) and "\0" not in v
+                                              for k, v in env.items()):
+            raise Fail("RegistryBad", "%s: %s/%s/env must be an object of NAME -> string without NUL (NAME like AOS_MEMORY)" % (reg, where, name))
         out[name] = {"path": os.path.normpath(os.path.join(base, e["path"])), "entry": e}
     return out
 

@@ -20,7 +20,7 @@
 #   CommandFailed（逾時）；aos-agent 退非 0＝取它 stderr 最後一行錯誤行的代號與原因接成自己的（AddRejected、AnswerMissing…；同 agents）。
 #   子答不出（listen 錯、逾時）＝錯誤行尾附 (details: <子的 stack>/)，子先 ctl stop、stack 一律留（不管 keep）。
 #   aos-agent 的 stderr 原樣透到 stderr（R10）。--help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉那一群，退 130）。
-import json, os, re, shutil, signal, subprocess, sys
+import json, os, re, shutil, signal, subprocess, sys, time
 HELP = """\
 usage: thought < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Hand one task to a throw-away child agent (demo/agent-fsm) on the daemon that runs you ($AOS_DAEMON)
@@ -211,6 +211,14 @@ def pid_alive(pid):
         return True
 
 
+def mtime(name):
+    """紀錄資料夾的修改時間；別的 thought 剛刪掉＝0。"""
+    try:
+        return os.path.getmtime(os.path.join(kids_dir, name))
+    except OSError:
+        return 0
+
+
 def reconcile(table):
     """children/ 對 daemon 表：不在表上的忘掉；failed（含主人已死的 running）超過 FAILED_KEEP 隻＝最舊的 ctl rm。"""
     try:
@@ -219,19 +227,21 @@ def reconcile(table):
         return
     failed = []
     for n in names:
-        if n not in table:
-            forget(n)
-            continue
         try:
             with open(os.path.join(kids_dir, n, "state"), encoding="utf-8") as f:
                 st = f.read().split()
         except OSError:
             st = []
+        if st[:1] == ["running"] and len(st) > 1 and st[1].isdigit() and pid_alive(int(st[1])):
+            continue                            # 另一個 thought 正在用（可能剛搶到號、還沒上表）：不碰（11-05 晚邊緣測試：先查表再看這條＝把別人剛搶的號刪掉、兩隻搶到同名）
+        if not st and time.time() - mtime(n) < STEP_S:
+            continue                            # 剛 mkdir、state 還沒寫的那一瞬
+        if n not in table:
+            forget(n)
+            continue
         if st[:1] == ["kept"]:
             continue
-        if st[:1] == ["running"] and len(st) > 1 and st[1].isdigit() and pid_alive(int(st[1])):
-            continue
-        failed.append((os.path.getmtime(os.path.join(kids_dir, n)), n))
+        failed.append((mtime(n), n))
     for _, n in sorted(failed)[:max(0, len(failed) - FAILED_KEEP + 1)]:   # 留 FAILED_KEEP-1 隻，加上這次最多 FAILED_KEEP
         _, err = agent(["ctl", "rm", n])
         if err is None:
