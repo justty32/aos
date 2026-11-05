@@ -18,8 +18,9 @@
 #   能不能用 LLM kernel 不另設開關（使用者 10-24「就是看他能不能存取檔案」）：信箱有綁進來（rw 列了 {"$env": "AOS_LLM_KERNEL", "$path": "/mailbox"}；
 #   AOS_LLM_KERNEL＝llm kernel 的 stack，只綁信箱、不綁整個 stack）、env 有帶 AOS_LLM_KERNEL 就能寄，
 #   沒有就看不到；再細的由信箱的擁有者、群組、權限位管（root/setup.sh --mailbox）。
-# 錯：stderr 一行「aos-sandbox: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、PathMissing、CommandMissing、UserBad）。
-# 之後的結束碼都是 prog 的（bwrap 透明轉交；被訊號停＝128＋N）。
+# 錯：stderr 一行「aos-sandbox: error: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、PathMissing、CommandMissing、UserBad；11-05 stdio-unify R1）。
+# 之後的結束碼都是 prog 的（bwrap 透明轉交；被訊號停＝128＋N）。R8：退非 0 時 stderr 有 `aos-sandbox: error:` 這行＝這支錯；沒有＝下層（s6／bwrap／prog）的碼。
+# --help＝英文說明到 stdout、退 0（R3）。
 # 命令列形狀照 CONVENTION P-44（11-04）：用 proto8/bin/aos_flags.py 解（`--dry-run=x`＝ArgumentsBad、不認得＝FlagUnknown）。
 import json, os, shutil, sys
 
@@ -37,9 +38,23 @@ LIMITS = [("mem_mb", ("-a", "-d"), 1024 * 1024), ("cpu_s", ("-t",), 1), ("procs"
           ("file_mb", ("-f",), 1024 * 1024), ("files", ("-o",), 1)]
 
 
+aos_flags.HELP = """aos-sandbox - run prog inside a sandbox built from a config: identity (s6-setuidgid), limits (s6-softlimit),
+which paths are visible and whether the network is reachable (bwrap).
+
+    aos-sandbox [--dry-run] [--] CONFIG prog [args...]
+
+CONFIG may be FILE#/pointer (e.g. _metainfo.json#/sandbox); {"$env", "$path", "$prefix"} in it are resolved first.
+It builds one chain-loading argv, [s6-softlimit LIMITS...] [s6-setuidgid USER] bwrap BINDS... -- prog args..., and execs it.
+--dry-run: do not run; print that argv as one JSON line.
+Config keys (all optional; unknown keys are ignored): user (account or uid:gid, needs root), base, commands, ro, rw (path arrays),
+  net (boolean, default false), mem_mb, cpu_s, procs, file_mb, files (positive integers), env (variable names to pass in).
+Errors: one stderr line `aos-sandbox: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, CfgMissing, CfgBad, PathMissing,
+  CommandMissing, UserBad. After the exec every exit code is prog's (killed by signal N = 128+N): exiting non-zero with an
+  `aos-sandbox: error:` line on stderr means aos-sandbox failed; without it the code comes from below."""
+
+
 def die(code, reason):
-    print("aos-sandbox: %s %s" % (code, reason), file=sys.stderr)
-    sys.exit(1)
+    aos_flags.die("aos-sandbox", code, reason)
 
 
 def usage(code, reason):

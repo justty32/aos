@@ -19,7 +19,8 @@ down：反過來縮一級：NAME/（裡面只剩 _entry）→ NAME.json；NAME.j
 {"$env": "AOS_CD", "$path": …}，一律換成相對新位置、指回原本那個地方。單子裡有 $env AOS_CF／AOS_CO＝不搬（搬了值就變了，TargetBad）。
 --dry-run：只印會做什麼（新檔全文、改的檔 unified diff、搬／刪哪些），什麼都不寫。
 假設（慣例下成立）：呼叫方跑字串目標時的 cwd＝設定檔的資料夾（aos-loop／aos-fsm 被 aos-exec 起來時就是）。
-錯：stderr 一行「aos-grow: 代號 原因」、退 1，什麼都不寫（ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、TargetBad、NameBad、WriteFailed）。"""
+錯：stderr 一行「aos-grow: error: 代號 原因」、退 1，什麼都不寫（ArgumentsBad、FlagUnknown、CommandUnknown、CfgMissing、CfgBad、TargetBad、NameBad、WriteFailed；
+11-05 stdio-unify R1、usage 在原因後面 R5；不給子命令＝ArgumentsBad、子命令不認得＝CommandUnknown）。--help＝英文說明到 stdout、退 0；Ctrl-C＝退 130。"""
 import difflib, json, os, re, shutil, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "bin"))
@@ -27,6 +28,19 @@ import aos_flags  # noqa: E402  proto8/bin/aos_flags.py：P-44 的解析
 
 USAGE = "aos-grow [--dry-run] up --to file|dir [--name NAME] [--take PATH]... CALLER | aos-grow [--dry-run] down CALLER"
 ENTRY = os.environ.get("AOS_ENTRY") or "_entry"
+aos_flags.HELP = """aos-grow - grow a function one level up (or shrink it one level down); its caller is rewritten, behaviour stays the same.
+
+    aos-grow [--dry-run] up --to file|dir [--name NAME] [--take PATH]... CALLER
+    aos-grow [--dry-run] down CALLER
+
+CALLER = CONFIG#/pointer, the cell where the caller says what to run (an fsm state's exec, loop.json's exec...).
+up: an inline single -> --to file: NAME.json next to CONFIG; --to dir: NAME/_entry. A string pointing at NAME.json -> --to dir only.
+  The cell becomes the string "NAME". --take PATH (with --to dir): move a file only it uses into NAME/.
+down: the reverse (NAME/ with only _entry -> NAME.json; NAME.json -> inline). Not done when another JSON in that folder mentions NAME.
+Location-dependent parts (cwd, relative $ref, {"$env": "AOS_CD", "$path": ...}) are rewritten to point at the same places.
+--dry-run: print what would happen (new files, unified diffs, moves and deletes); nothing is written.
+Errors: one stderr line `aos-grow: error: CODE reason`, exit 1, nothing written. Codes: ArgumentsBad, FlagUnknown, CommandUnknown,
+  CfgMissing, CfgBad, TargetBad, NameBad, WriteFailed."""
 
 
 class Fail(Exception):
@@ -341,16 +355,18 @@ def down(caller):
 def main(argv):
     try:
         top, rest = aos_flags.parse(argv, {}, {"--dry-run": "dry"})
-        if not rest or rest[0] not in ("up", "down"):
-            raise Fail("ArgumentsBad", "usage: " + USAGE)
+        if not rest:
+            raise Fail("ArgumentsBad", "missing subcommand (usage: %s)" % USAGE)
+        if rest[0] not in ("up", "down"):
+            raise Fail("CommandUnknown", "unknown subcommand %s (usage: %s)" % (rest[0], USAGE))
         sub_opts, rest2 = aos_flags.parse(rest[1:], {"--to": "to", "--name": "name"}, {}, {"--take": "take"})
     except aos_flags.Error as e:
-        raise Fail(e.code, "%s; usage: %s" % (e, USAGE))
+        raise Fail(e.code, "%s (usage: %s)" % (e, USAGE))
     dry = top.get("dry", False)
     opts = {"to": sub_opts.get("to"), "name": sub_opts.get("name"), "take": sub_opts.get("take", [])}
     rest = [rest[0]] + rest2
     if len(rest) != 2:
-        raise Fail("ArgumentsBad", "usage: " + USAGE)
+        raise Fail("ArgumentsBad", "%s (usage: %s)" % ("missing CALLER" if len(rest) < 2 else "only one CALLER allowed, extra: %s" % rest[2], USAGE))
     if rest[0] == "up":
         if opts["to"] not in ("file", "dir"):
             raise Fail("ArgumentsBad", "up needs --to file or --to dir")
@@ -365,9 +381,12 @@ def main(argv):
         plan.apply()
 
 
-if __name__ == "__main__":
+def run():
     try:
         main(sys.argv[1:])
     except Fail as e:
-        print("aos-grow: %s %s" % (e.code, e), file=sys.stderr)
-        sys.exit(1)
+        aos_flags.die("aos-grow", e.code, e)
+
+
+if __name__ == "__main__":
+    aos_flags.run(run)

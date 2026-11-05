@@ -8,19 +8,41 @@
 --
 -- 輸出已經在：清單上的檔覆寫、權限照設（+x 755、其餘 644），清單外的檔不動、不刪。
 -- 沒有 lua 也能用 nvim 跑：nvim -l aos-lua build ...
--- 錯：stderr 一行「aos-lua: 代號 原因」、退 1。代號：ArgumentsBad、SourceBad（原始檔跑不起來或形狀不對）、
--- PathMissing（json 指的檔或指標不在）、WriteFailed（寫不出去）。
+-- 錯：stderr 一行「aos-lua: error: 代號 原因」、退 1（11-05 stdio-unify R1；usage 在原因後面）。代號：ArgumentsBad、FlagUnknown、CommandUnknown、
+-- SourceBad（原始檔跑不起來或形狀不對）、PathMissing（json 指的檔或指標不在）、WriteFailed（寫不出去）。
+-- 命令列照 P-44：`aos-lua [旗標] 子命令 [旗標] 參數…`；目前沒有旗標，`--help`（子命令前後都認）＝英文說明到 stdout、退 0；`--` 結束旗標。
 
 local here = (arg and arg[0] or ""):match("^(.*)/bin/[^/]*$") or "."
 package.path = here .. "/?.lua;" .. package.path
 local aos = require("aos")
 
 local function die(code, msg)
-  io.stderr:write("aos-lua: " .. code .. " " .. msg .. "\n")
+  io.stderr:write("aos-lua: error: " .. code .. " " .. (tostring(msg):gsub("\n", " ")) .. "\n")
   os.exit(1)
 end
 
-local USAGE = "usage: aos-lua build SOURCE OUT | aos-lua json SOURCE [PATH[#/POINTER]] | aos-lua ls SOURCE"
+local USAGE = "aos-lua build SOURCE OUT | aos-lua json SOURCE [PATH[#/POINTER]] | aos-lua ls SOURCE"
+local HELP = [==[
+aos-lua - build an aos folder + JSON from a Lua source file (or only print / list it).
+
+    aos-lua build SOURCE.lua OUT          write it: a source returning a folder = OUT is a folder, otherwise OUT is one file
+    aos-lua json  SOURCE.lua [PATH[#/POINTER]]   print one file (a JSON file can take #/pointer to print only that part);
+                                          no PATH: print it if it is not a folder, otherwise every file after a line "==> PATH"
+    aos-lua ls    SOURCE.lua              list the files it would write (folders end with /, executables with *)
+
+Existing OUT: files on the list are overwritten with their modes (+x 755, others 644); files not on the list are left alone.
+Errors: one stderr line `aos-lua: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, CommandUnknown, SourceBad,
+  PathMissing, WriteFailed.
+]==]
+
+local function flags(i)            -- 旗標的位置：--help 印說明、-- 結束、別的＝FlagUnknown；回下一個位置參數的索引
+  while arg[i] and arg[i]:sub(1, 1) == "-" and arg[i] ~= "-" do
+    if arg[i] == "--" then return i + 1 end
+    if arg[i] == "--help" then io.write(HELP) os.exit(0) end
+    die("FlagUnknown", "unknown flag " .. arg[i] .. " (usage: " .. USAGE .. ")")
+  end
+  return i
+end
 
 local function load(src)
   local ok, node = pcall(aos.load, src)
@@ -58,10 +80,22 @@ local function write(p, text, x)
   if not chmod(p, x) then die("WriteFailed", "cannot change permissions: " .. p) end
 end
 
-local cmd, src = arg[1], arg[2]
+local A = {}
+do
+  local i = flags(1)
+  if arg[i] == nil then die("ArgumentsBad", "missing subcommand (usage: " .. USAGE .. ")") end
+  A[1] = arg[i]
+  if A[1] ~= "build" and A[1] ~= "json" and A[1] ~= "ls" then
+    die("CommandUnknown", "unknown subcommand " .. A[1] .. " (usage: " .. USAGE .. ")")
+  end
+  i = flags(i + 1)
+  while arg[i] ~= nil do A[#A + 1] = arg[i]; i = i + 1 end
+end
+local function bad(what) die("ArgumentsBad", what .. " (usage: " .. USAGE .. ")") end
+local cmd, src = A[1], A[2]
 if cmd == "build" then
-  local out = arg[3]
-  if not src or not out or arg[4] then die("ArgumentsBad", USAGE) end
+  local out = A[3]
+  if not src or not out or A[4] then bad(not src and "build needs SOURCE and OUT" or not out and "build needs OUT" or "build takes only SOURCE and OUT") end
   local node, list = load(src)
   if aos.kind(node) == "dir" then
     if not mkdir(out) then die("WriteFailed", "cannot create folder: " .. out) end
@@ -79,9 +113,9 @@ if cmd == "build" then
     write(out, list[1].text, list[1].x)
   end
 elseif cmd == "json" then
-  if not src or arg[4] then die("ArgumentsBad", USAGE) end
+  if not src or A[4] then bad(not src and "json needs SOURCE" or "json takes only SOURCE and PATH") end
   local _, list = load(src)
-  local want = arg[3]
+  local want = A[3]
   if not want then
     if #list == 1 and list[1].path == "" then io.write(list[1].text) return end
     for _, e in ipairs(list) do
@@ -103,11 +137,9 @@ elseif cmd == "json" then
   end
   die("PathMissing", path .. " is not among the files built from " .. src)
 elseif cmd == "ls" then
-  if not src or arg[3] then die("ArgumentsBad", USAGE) end
+  if not src or A[3] then bad(not src and "ls needs SOURCE" or "ls takes only SOURCE") end
   local _, list = load(src)
   for _, e in ipairs(list) do
     io.write((e.path == "" and "." or e.path) .. (e.dir and "/" or (e.x and "*" or "")) .. "\n")
   end
-else
-  die("ArgumentsBad", USAGE)
 end

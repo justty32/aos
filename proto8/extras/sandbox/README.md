@@ -39,7 +39,7 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 - **能不能用 LLM kernel＝看不看得到信箱**（使用者 10-24「就是看他能不能存取檔案啊」，[紀錄 S14、S17](../../thinking/2026-10/24/sandbox/README.md)）：不另設開關。預設看不到（信箱沒列進 `rw`）；要用就 `rw` 列信箱 `{"$env": "AOS_LLM_KERNEL", "$path": "/mailbox"}`（`AOS_LLM_KERNEL`＝llm kernel 的 stack、信箱固定在它的 `mailbox/`；**只綁信箱、不綁整個 stack**：stack 裡還有 kernel 的定義與 `kernel.json`）、`env` 帶 `AOS_LLM_KERNEL`（預設的 `env` 就有；自己寫 `env` 時要列）。綁了信箱的上層資料夾也等於給了信箱（寫什麼就做什麼）。換帳號（`user`／身分層）跑時，寫不寫得進由信箱的擁有者、群組、權限位決定：[root/setup.sh](root/setup.sh) `--mailbox 信箱`。
   寄得進去之後，沙箱外的 [aos-llm-kernel](../../impls/aos-llm-kernel/README.md) 用它自己的身分與環境、跑它自己定義裡的 endpoint 函數（11-04 晚起信裡只帶請求、不帶單子，`accept` 退場）——關在裡面的程式只能寄請求、挑 kernel 登記過的代號，改不了端點與金鑰（紀錄 S18 那條「寄得到任何單子」因此沒了）。
 
-錯：stderr 一行 `aos-sandbox: 代號 原因`、退 1——`ArgumentsBad`、`FlagUnknown`、`CfgMissing`（檔不在、`#/` 指不到）、`CfgBad`、`PathMissing`、`CommandMissing`（PATH 上沒有 bwrap、s6-*、`commands` 列的）、`UserBad`（要換身分卻不是 root）。
+錯：stderr 一行 `aos-sandbox: error: 代號 原因`、退 1——`ArgumentsBad`、`FlagUnknown`、`CfgMissing`（檔不在、`#/` 指不到）、`CfgBad`、`PathMissing`、`CommandMissing`（PATH 上沒有 bwrap、s6-*、`commands` 列的）、`UserBad`（要換身分卻不是 root）。exec 之後的結束碼都是 prog 的（被訊號停＝128＋N）：**退非 0 時 stderr 有 `aos-sandbox: error:` 這行＝我錯；沒有＝下層（s6／bwrap／prog）的碼**（11-05 stdio-unify R8）。`--help`＝英文說明到 stdout、退 0。
 
 ## 怎麼接
 

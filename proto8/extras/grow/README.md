@@ -26,6 +26,6 @@ NAME 沒給＝那格的名字（`…/states/think/exec` → `think`）。那格�
 
 **怎麼做到「跑起來一樣」**：只改位置相關的值，讓它們指回原來的地方——單子的 `cwd`（沒寫＝入口所在的資料夾，搬進資料夾就補 `".."`）、相對的 `$ref` 檔名（`"#/…"` 補上原檔名）、`{"$env": "AOS_CD", "$path": …}`。單子裡用了 `$env AOS_CF`／`AOS_CO` 就不搬（搬了值會變）。`--dry-run` 印出新檔全文、改的檔 diff、搬／刪哪些，什麼都不寫。真的做時先寫新檔，最後才改呼叫方（先寫 `.名字` 暫存檔再改名，N-05）。
 
-**錯**：stderr 一行 `aos-grow: 代號 原因`、退 1、什麼都不寫。代號：`ArgumentsBad`、`FlagUnknown`、`CfgMissing`（檔或指標指不到）、`CfgBad`（JSON 壞）、`TargetBad`（那格不是能搬的東西、或搬了會改行為）、`NameBad`（名字被佔、名字不合、縮回時別處還在叫）、`WriteFailed`。
+**錯**：stderr 一行 `aos-grow: error: 代號 原因`、退 1、什麼都不寫。代號：`ArgumentsBad`、`FlagUnknown`、`CfgMissing`（檔或指標指不到）、`CfgBad`（JSON 壞）、`TargetBad`（那格不是能搬的東西、或搬了會改行為）、`NameBad`（名字被佔、名字不合、縮回時別處還在叫）、`WriteFailed`。
 
 **不保證一樣的地方**（細節在 thinking）：錯誤訊息的「誰」會從 `loop.json#/exec` 變成 `NAME`；程式自己讀 `AOS_CF`／`AOS_CD`／`AOS_CO` 環境變數的話值會變（工具看不到程式碼裡面）；假設呼叫方跑字串目標時 cwd＝設定檔的資料夾（慣例下成立；daemon.json 的子項沒試過）；呼叫方那份 JSON 的排版會換成工具的排版（內容不變）。

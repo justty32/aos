@@ -19,11 +19,12 @@
 #   <stack>/aos-mcp-logs.jsonl 記一行（名字、arguments、結束碼、花多久），再加 --logs-path FILE＝記在 FILE（相對路徑從啟動時的 cwd 算）；
 #   只給 --logs-path、沒給 --enable-logs＝ArgumentsBad。
 # 只做 initialize、ping、tools/list、tools/call；沒有 progress、resources、prompts、HTTP。
-# 錯：自己的錯 stderr 一行「aos-mcp: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、WsMissing、ToolMissing、ToolsBad）。
+# 錯：自己的錯 stderr 一行「aos-mcp: error: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、WsMissing、ToolMissing、ToolsBad；11-05 stdio-unify R1）。
+#   --help＝英文說明到 stdout、退 0（R3）；不給參數照常（讀 ./tools.json）；Ctrl-C＝退 130、不吐 traceback（R12）。
 #   啟動時 aos-tools ls 失敗＝ToolsBad（aos-tools 自己那行照樣在 stderr）；跑起來之後重讀失敗＝那一則 JSON-RPC 回錯誤、不退
 #   （錯誤訊息附 aos-tools 那次 stderr 的最後一段）。
 #   工具與 aos-tools 的 stderr：aos-mcp 接住後原樣轉印到自己的 stderr（MCP 用戶端的 log）；失敗時最後一段另附給外部 agent
-#   （11-05 使用者選「附 stderr 尾巴（推薦）」，edge-basics 題 1；C-52 的例外：出口是給外部 agent 看原因）。成功時不附。
+#   （11-05 使用者選「附 stderr 尾巴（推薦）」，edge-basics 題 1；C-52 的明文例外：出口是給外部 agent 看原因，11-05 R10 照舊）。成功時不附。
 #   命令列形狀照 CONVENTION P-44（11-04）：旗標都在 REGISTRY 前面、`--` 結束旗標、`--x V`／`--x=V`；不認得的旗標＝FlagUnknown。
 import json, os, signal, subprocess, sys, time
 
@@ -38,6 +39,21 @@ DEFAULT_REGISTRY = "tools.json"               # 一份都沒給時讀 ./tools.js
 LOGS_NAME = "aos-mcp-logs.jsonl"         # --enable-logs 沒給 --logs-path 時記在 <stack>/ 底下的這個檔（11-02）
 LOGS_PATH = None                               # 記呼叫紀錄的檔（絕對路徑）；None＝不記（預設）
 STDERR_TAIL = 2048                             # 失敗時附給外部 agent 的 stderr 最後幾個位元組（11-05，edge-basics 題 1）
+aos_flags.HELP = """aos-mcp - serve the tools of aos-tools registries as MCP tools to an external agent (Claude Code, pi...); stdio JSON-RPC.
+
+    aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--overlay O] [REGISTRY...]
+
+REGISTRY: registry files (relative to the cwd at start; none = ./tools.json); several are merged, a name clash = ToolsBad.
+  --overlay O is passed on to aos-tools --overlay and goes with exactly one REGISTRY (which may then be missing).
+  The list is re-read on every tools/list and tools/call.
+Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call runs
+  AOS_WS=WS AOS_STACK=<stack>/tools/NAME/ aos-tools --file REGISTRY call NAME with the arguments on stdin; stdout goes back as the
+  result, exit non-zero = isError (the last 2048 bytes of the tool's stderr are attached). Timeout = the tool's _metainfo time_ms.max,
+  otherwise --timeout-s (default 60); then TERM to the whole group, KILL 2 s later.
+--enable-logs: log one line per call to <stack>/aos-mcp-logs.jsonl (or --logs-path FILE). Off by default.
+Supports initialize, ping, tools/list, tools/call only.
+Errors: one stderr line `aos-mcp: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, WsMissing, ToolMissing, ToolsBad.
+  stderr of the tools and of aos-tools is passed through to aos-mcp's stderr."""
 
 
 class ToolsBad(Exception):
@@ -57,8 +73,7 @@ def tail_of(err):
 
 
 def die(code, reason):
-    print("%s: %s %s" % (NAME, code, reason), file=sys.stderr)
-    sys.exit(1)
+    aos_flags.die(NAME, code, reason)
 
 
 def parse_args(argv):
@@ -226,7 +241,7 @@ def handle(msg, regs, ws, stack, timeout_s):
         else:
             err = (-32601, "method not supported: %s" % method)
     except ToolsBad as e:                       # 跑起來之後登記檔壞了：這一則回錯，不退
-        err = (-32603, "%s: ToolsBad %s" % (NAME, e) + ("\nstderr (last part):\n%s" % e.tail if e.tail else ""))
+        err = (-32603, aos_flags.error_line(NAME, "ToolsBad", e) + ("\nstderr (last part):\n%s" % e.tail if e.tail else ""))
     if err:
         return {"jsonrpc": "2.0", "id": mid, "error": {"code": err[0], "message": err[1]}}
     return {"jsonrpc": "2.0", "id": mid, "result": result}
@@ -253,4 +268,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    aos_flags.run(main)

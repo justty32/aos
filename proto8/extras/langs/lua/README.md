@@ -67,4 +67,4 @@ return aos.dir {
 - `aos.daemon { procs = {...} }`（名單照 [aos-daemon](../../../impls/aos-daemon/README.md)）：每項看寫法——字串、陣列、只有 `exec`（＋`ws`、`stack`）的 table＝aos-exec 跑一次，多了別的 key（`max`、`interval_ms`…）＝包成子 aos-loop；所以 `aos.loop { exec = … }` 只寫 exec 的放進 `procs` 會被當成跑一次，要一直跑就加一個 loop 的 key。每項可寫 `stack`（沒寫＝`$AOS_STACK/procs/<名字>/`）。
 - JSON 的 key 順序：`_entry`、`start`、`states`、`exec`、`next`、`argv`… 這些常用的在前，其餘字母序；`aos.obj{{k, v}, ...}` 或 fsm 的陣列寫法照寫的順序。空 table＝`{}`，空陣列寫 `aos.array()`，`null` 寫 `aos.null`。
 - `build` 的輸出已經在：清單上的檔覆寫、權限照設，清單外的不動不刪。
-- 錯：stderr 一行 `aos-lua: 代號 原因`、退 1；代號 `ArgumentsBad`、`SourceBad`、`PathMissing`、`WriteFailed`。
+- 錯：stderr 一行 `aos-lua: error: 代號 原因`、退 1；代號 `ArgumentsBad`、`SourceBad`、`PathMissing`、`WriteFailed`。

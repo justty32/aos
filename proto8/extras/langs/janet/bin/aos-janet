@@ -3,7 +3,8 @@
 #
 # 用法：aos-janet [--force] [--] 原始檔.janet 輸出資料夾（形狀照 CONVENTION P-44）
 # 原始檔裡 aos、combine 的東西都直接能用（不用 import），要 (def program (dir …))。
-# 錯：stderr 一行「aos-janet: 代號 原因」、退 1。
+# 錯：stderr 一行「aos-janet: error: 代號 原因」、退 1（11-05 stdio-unify R1；usage 在原因後面）。
+# --help＝英文說明到 stdout、退 0（R3）。
 
 (import ../aos :prefix "")
 (import ../combine :prefix "")
@@ -12,10 +13,21 @@
 (def- dsl-env "aos、combine、emit 都在這裡；原始檔在它的子環境裡跑" (curenv))
 
 (defn- die [msg]
-  (eprint "aos-janet: " msg)
+  (eprint "aos-janet: error: " (string/replace-all "\n" " " msg))
   (os/exit 1))
 
-(def- usage "usage: aos-janet [--force] [--] SOURCE.janet OUT_DIR")
+(def- usage "aos-janet [--force] [--] SOURCE.janet OUT_DIR")
+
+(def- help ```
+aos-janet - build an aos program written in Janet into a folder (_entry, loop.json, fsm.json...).
+
+    aos-janet [--force] [--] SOURCE.janet OUT_DIR
+
+Everything from aos, combine and emit is usable in the source without import; the source must (def program (dir ...)).
+--force: write into an OUT_DIR that already exists.
+Errors: one stderr line `aos-janet: error: CODE reason`, exit 1 (SourceMissing, ProgramMissing, SourceBad, ArgumentsBad,
+  FlagUnknown, and the codes raised while building).
+```)
 
 # 命令列形狀照 CONVENTION P-44（11-04）：旗標在位置參數前面、`--` 結束旗標、不認得＝FlagUnknown、開關帶值＝ArgumentsBad
 (defn- parse-args [argv]
@@ -28,14 +40,16 @@
       (= a "--") (do (++ i) (set done true))
       (or (not (string/has-prefix? "-" a)) (= a "-")) (set done true)
       (= a "--force") (do (set force true) (++ i))
-      (string/has-prefix? "--force=" a) (die (string "ArgumentsBad --force takes no value (" usage ")"))
-      (die (string "FlagUnknown unknown flag " a " (" usage ")"))))
+      (= a "--help") (do (print help) (os/exit 0))
+      (string/has-prefix? "--force=" a) (die (string "ArgumentsBad --force takes no value (usage: " usage ")"))
+      (die (string "FlagUnknown unknown flag " a " (usage: " usage ")"))))
   [force (slice argv i)])
 
 (defn main [_ & argv]
   (def [force args] (parse-args argv))
   (unless (= 2 (length args))
-    (die (string "ArgumentsBad " usage)))
+    (die (string "ArgumentsBad " (if (< (length args) 2) "missing SOURCE.janet and OUT_DIR" "only SOURCE.janet and OUT_DIR allowed")
+                 " (usage: " usage ")")))
   (def [src out] args)
   (unless (= :file (os/stat src :mode)) (die (string "SourceMissing source file not found: " src)))
   (def env (make-env dsl-env))
