@@ -17,7 +17,7 @@ def die(code, reason):
 
 stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
 if not stack:
-    die("StackMissing", "沒設定 AOS_STACK")
+    die("StackMissing", "AOS_STACK is not set")
 history_path = os.path.join(stack, "history.jsonl")
 history = []
 try:
@@ -27,12 +27,12 @@ try:
                 try:
                     history.append(json.loads(line))
                 except ValueError as e:
-                    die("HistoryBad", "history.jsonl 第 %d 行不是 JSON：%s" % (n, e))
+                    die("HistoryBad", "history.jsonl line %d is not JSON: %s" % (n, e))
 except FileNotFoundError:
     pass
 last = max((i for i, m in enumerate(history) if isinstance(m, dict) and m.get("role") == "assistant"), default=None)
 if last is None:
-    die("HistoryBad", "history.jsonl 裡沒有 assistant 的訊息")
+    die("HistoryBad", "no assistant message in history.jsonl")
 said = history[last]
 
 
@@ -49,43 +49,43 @@ if calls:
     except OSError:
         code_dir = ""
     if not code_dir or not os.path.isdir(code_dir):
-        die("DirMissing", "$AOS_STACK/pyfix_dir.txt 沒有或寫的不是資料夾（要改的程式在哪）")
+        die("DirMissing", "$AOS_STACK/pyfix_dir.txt is missing or does not name a directory (where the code to fix is)")
     answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
     try:                                # 能叫的＝tools.json 登記的（aos-tools ls --json）；失敗＝自己這層的錯
         r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
     except OSError as e:
-        die("ToolFailed", "aos-tools 起不來：%s" % e)
+        die("ToolFailed", "aos-tools failed to start: %s" % e)
     if r.returncode != 0:
-        die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
+        die("ToolsBad", "aos-tools ls exited %d" % r.returncode)
     tools = [t["name"] for t in json.loads(r.stdout)]
     for call in calls:
         try:
             cid, name, arguments = call["id"], call["function"]["name"], call["function"].get("arguments")
         except (KeyError, TypeError):
-            die("HistoryBad", "tool_calls 裡有一個沒有 id 或 function.name：%s" % json.dumps(call, ensure_ascii=False))
+            die("HistoryBad", "a tool call has no id or function.name: %s" % json.dumps(call, ensure_ascii=False))
         if cid in answered:
             continue
         if name not in tools:           # 名字只認 tools.json 登記過的（也擋掉 ../ 之類）
             append({"role": "tool", "tool_call_id": cid,
-                    "content": "act: ToolUnknown %s（能叫的：%s）\n" % (name, "、".join(tools))})
+                    "content": "act: ToolUnknown %s (available: %s)\n" % (name, ", ".join(tools))})
             continue
         try:
             if not isinstance(arguments, str):
-                raise ValueError("arguments 不是字串")
+                raise ValueError("arguments is not a string")
             json.loads(arguments)
         except ValueError as e:
-            append({"role": "tool", "tool_call_id": cid, "content": "act: ArgumentsBad %s：%s\n" % (name, e)})
+            append({"role": "tool", "tool_call_id": cid, "content": "act: ArgumentsBad %s: %s\n" % (name, e)})
             continue
         env = dict(os.environ, AOS_STACK=os.path.join(stack, "tools", name) + "/", AOS_WS=os.path.abspath(code_dir))   # 工作區＝pyfix_dir.txt 的資料夾（aos-exec 沒給 --ws 就用 $AOS_WS）
         try:
             r = subprocess.run(["aos-tools", "call", name], input=arguments, stdout=subprocess.PIPE,
                                text=True, env=env)      # stderr 不吞：工具自己的錯原樣往上
         except OSError as e:
-            die("ToolFailed", "%s 起不來：%s" % (name, e))
+            die("ToolFailed", "%s failed to start: %s" % (name, e))
         content = r.stdout
         if r.returncode != 0:           # 回給腦、不停；人在 stderr 看得到
-            print("pyfix-agent: ToolFailed %s 結束碼 %d（回給腦）" % (name, r.returncode), file=sys.stderr)
-            content += "%s(工具 %s 結束碼 %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
+            print("pyfix-agent: ToolFailed %s exited %d (returned to the brain)" % (name, r.returncode), file=sys.stderr)
+            content += "%s(tool %s exited %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
         append({"role": "tool", "tool_call_id": cid, "content": content})
     sys.exit(0)
 

@@ -42,11 +42,11 @@ def run_agent(name, agent, task, cell, env_extra=None, question="task.txt"):
     try:
         r = subprocess.run(["aos-exec", "--dotenv-override", "--ws", sub_ws, agent], env=env, stdout=sys.stderr)
     except OSError as e:
-        die(name, "AgentFailed", "子 agent 起不來：%s" % e)
+        die(name, "AgentFailed", "sub-agent failed to start: %s" % e)
     if r.returncode != 0:
-        die(name, "AgentFailed", "子 agent 結束碼 %d（現場在 %s）" % (r.returncode, cell))
+        die(name, "AgentFailed", "sub-agent exited %d (its state is in %s)" % (r.returncode, cell))
     try:
         with open(os.path.join(sub_ws, "out", question), encoding="utf-8") as f:
             return f.read()
     except OSError:
-        die(name, "AnswerMissing", "子 agent 跑完了但沒有答案（現場在 %s）" % cell)
+        die(name, "AnswerMissing", "sub-agent finished without an answer (its state is in %s)" % cell)

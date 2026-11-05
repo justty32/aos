@@ -25,21 +25,21 @@ def die(code, reason):
 
 stack, ws = os.environ.get("AOS_STACK"), os.path.realpath(os.environ.get("AOS_WS", "."))
 if not stack:
-    die("StackMissing", "沒設定 AOS_STACK")
+    die("StackMissing", "AOS_STACK is not set")
 try:
     args = json.loads(sys.stdin.read() or "{}")
 except ValueError as e:
-    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    die("ArgumentsBad", "stdin is not JSON: %s" % e)
 if not isinstance(args, dict) or not isinstance(args.get("task"), str) or not args["task"].strip():
-    die("ArgumentsBad", "要給 task（非空字串）")
+    die("ArgumentsBad", "missing task (a non-empty string)")
 d = args.get("dir", ".")
 if not isinstance(d, str):
-    die("ArgumentsBad", "dir 要是字串")
+    die("ArgumentsBad", "dir must be a string")
 root = os.path.realpath(os.path.join(ws, d))
 if root != ws and not root.startswith(ws + os.sep):
-    die("DirBad", "%r 跑出工作區" % d)
+    die("DirBad", "%r is outside the workspace" % d)
 if not os.path.isdir(root):
-    die("DirBad", "%r 不是資料夾" % d)
+    die("DirBad", "%r is not a directory" % d)
 
 run = agent_tool.fresh_cell(stack)
 
@@ -83,5 +83,5 @@ for rel in sorted(set(before) | set(after)):
                                      "b/" + rel if b is not None else "/dev/null")
 diff = "".join(x if x.endswith("\n") else x + "\n" for x in diff)
 if len(diff) > DIFF_MAX:
-    diff = diff[:DIFF_MAX] + "……（diff 太長，後面 %d 個字沒印；改之前的檔在 %s）\n" % (len(diff) - DIFF_MAX, run)
-sys.stdout.write(answer.rstrip("\n") + "\n\n--- 實際改動（diff）---\n" + (diff or "（沒有改任何檔）\n"))
+    diff = diff[:DIFF_MAX] + "... (diff too long; %d more chars not shown; the files before the change are in %s)\n" % (len(diff) - DIFF_MAX, run)
+sys.stdout.write(answer.rstrip("\n") + "\n\n--- actual changes (diff) ---\n" + (diff or "(no files changed)\n"))

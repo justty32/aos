@@ -12,7 +12,7 @@ def die(code, reason):
 
 stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
 if not stack:
-    die("StackMissing", "沒設定 AOS_STACK")
+    die("StackMissing", "AOS_STACK is not set")
 
 
 def ls(d):
@@ -27,7 +27,7 @@ names = ls("cur")
 if not names:
     names = ls("new")
     if not names:
-        die("QuestionMissing", "new/ 是空的")
+        die("QuestionMissing", "new/ is empty")
     os.makedirs(os.path.join(ws, "cur"), exist_ok=True)
     os.replace(os.path.join(ws, "new", names[0]), os.path.join(ws, "cur", names[0]))
 name = names[0]
@@ -48,7 +48,7 @@ try:
                 try:
                     history.append(json.loads(line))
                 except ValueError as e:
-                    die("HistoryBad", "history.jsonl 第 %d 行不是 JSON：%s" % (n, e))
+                    die("HistoryBad", "history.jsonl line %d is not JSON: %s" % (n, e))
 except FileNotFoundError:
     pass
 
@@ -68,9 +68,9 @@ if not history or history[-1].get("role") not in ("user", "tool"):
 try:
     r = subprocess.run(["aos-tools", "ls", "--json"], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
 except OSError as e:
-    die("ToolsBad", "aos-tools 起不來：%s" % e)
+    die("ToolsBad", "aos-tools failed to start: %s" % e)
 if r.returncode != 0:
-    die("ToolsBad", "aos-tools ls 退 %d" % r.returncode)
+    die("ToolsBad", "aos-tools ls exited %d" % r.returncode)
 tools = []
 for t in json.loads(r.stdout):
     function = {"name": t["name"]}
@@ -91,15 +91,15 @@ def ask():
         r = subprocess.run(["aos-llm", "ask"], input=json.dumps({"request": request}, ensure_ascii=False),
                            stdout=subprocess.PIPE, text=True)      # stderr 不吞：aos-llm 自己說原因
     except OSError as e:
-        die("BrainFailed", "aos-llm 起不來（要在 PATH 上）：%s" % e)
+        die("BrainFailed", "aos-llm failed to start (must be on PATH): %s" % e)
     if r.returncode != 0:
-        die("BrainFailed", "aos-llm ask 退 %d" % r.returncode)
+        die("BrainFailed", "aos-llm ask exited %d" % r.returncode)
     try:
         message = json.loads(r.stdout)
     except ValueError as e:
-        die("ReplyBad", "aos-llm ask 印的不是 JSON：%s" % e)
+        die("ReplyBad", "aos-llm ask did not print JSON: %s" % e)
     if not isinstance(message, dict):
-        die("ReplyBad", "回信的 message 不是物件")
+        die("ReplyBad", "message in the reply is not an object")
     return message                                   # kernel 的 endpoint 函數已只留 role、content、tool_calls（P-23）
 
 
