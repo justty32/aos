@@ -2,7 +2,7 @@
 
 `aos-llm - 寄請求信進 LLM kernel 的信箱、收回信`（NAME，C-54 R1）
 
-**一句話：`aos-llm send|recv|ask|regret`——問腦的基礎工具：把一份請求（OpenAI 形狀的 messages／tools＋代號）寫成一封信丟進 llm kernel 的信箱 `$AOS_LLM_KERNEL/mailbox/`（`AOS_LLM_KERNEL`＝llm kernel 的 stack），由 kernel（[aos-llm-kernel](../aos-llm-kernel/README.md)）排隊、請 daemon 掛去跑它自己的 endpoint 函數、照信封的 `reply_to` 寄回信；這支再把回信的 `message` 印出來。**
+**一句話：`aos-llm send|recv|ask|regret|ls`——問腦的基礎工具：把一份請求（OpenAI 形狀的 messages／tools＋代號）寫成一封信丟進 llm kernel 的信箱 `$AOS_LLM_KERNEL/mailbox/`（`AOS_LLM_KERNEL`＝llm kernel 的 stack），由 kernel（[aos-llm-kernel](../aos-llm-kernel/README.md)）排隊、請 daemon 掛去跑它自己的 endpoint 函數、照信封的 `reply_to` 寄回信；這支再把回信的 `message` 印出來。**
 定位同 [aos-post](../aos-post/README.md)：基礎工具、IPC 的語法糖，跟 aos proc 關聯不深，proc 自己拿它組（使用者 11-04 晚「aos llm,tool這兩個，我希望他們的定位是跟aos post一樣，作為基礎工具」）。aos-post 管「一封信怎麼寄、怎麼認領」，aos-llm 只多知道「請求信的 body 長怎樣、回信怎麼認、錯怎麼印」。
 11-04 由 `aos-llm-send`（寄一張單子、等回信、原樣交回）改名改寫。一個 lib（`lib/libaos-llm.a`，沒有公開標頭）加一支薄命令列（`bin/aos-llm`）。連 aos-llm-kernel 的公開標頭（信箱與信的格式）與 aos-post 的庫。全家慣例見 [impls/README.md](../README.md)。
 
@@ -15,6 +15,7 @@ N=$(echo "$B" | aos-llm send --reply-to $AOS_STACK/llm_box) # 非同步：寄完
 aos-llm recv $AOS_STACK/llm_box $N; echo $?               # 還沒到：10
 aos-llm recv $AOS_STACK/llm_box $N                        # 到了：{"role": "assistant", "content": "FAKE ANSWER to: hi"}
 echo "$B" | aos-llm ask --priority high                   # 同步：寄、等、印 message
+aos-llm ls                                                # 列 kernel 的能力包：代號 speed cost context slots summary
 ```
 
 **stdin 是整份 body**（隊長 11-04 定案：設計稿寫「stdin＝request.json」，[03 § 1](../../thinking/2026-11/04/think-as-function/03-呼叫端.md) think 寫的 `request.json` 就是 body 的形狀）：`{"endpoint"?: 代號, "request": {"messages": [...], "tools"?, ...}, "priority"?}`——代號、請求、優先度都由呼叫端自己組，aos-llm 原樣當信的 `body` 寄出（只有 `--priority` 有給時蓋掉 `priority`）。

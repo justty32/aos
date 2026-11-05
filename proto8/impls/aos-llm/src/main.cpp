@@ -4,10 +4,12 @@
 //     aos-llm recv BOX 信件名稱                               收：到了印 body.message 一行、0；沒到 10
 //     aos-llm ask [--priority P] < body.json                  同步：寄、等、印 body.message、0
 //     aos-llm regret 信件名稱                                 撤回還在 new/ 的信；已被認領＝RegretFailed
+//     aos-llm ls [--json]                                     列 kernel 的包（讀 $AOS_LLM_KERNEL 的 stack 底下 endpoints.json）：一行一包；沒窗＝EndpointsMissing
 //
 //   block_signals → 子命令 → 命令列（旗標在位置參數前，P-44；aos-util 的 parse_cli）→ $AOS_LLM_KERNEL（send、ask、regret）→ 做事
 //   body＝{"endpoint"?: 代號, "request": {"messages": [...], ...}, "priority"?}（呼叫端自己組；--priority 有給就蓋 body.priority）。
 // 自己出錯、或回信是 error：stderr 一行「aos-llm: 代號 原因」、退 1（N-60）。
+#include "ls/ls.hpp"
 #include "send/send.hpp"
 #include "wait/wait.hpp"
 
@@ -19,7 +21,7 @@
 #include <optional>
 
 static const char* USAGE =
-    "usage: aos-llm send [--priority P] --reply-to BOX | recv BOX LETTER | ask [--priority P] | regret LETTER";
+    "usage: aos-llm send [--priority P] --reply-to BOX | recv BOX LETTER | ask [--priority P] | regret LETTER | ls [--json]";
 
 static int fail(const std::string& code, const std::string& msg) {
     std::fflush(stdout);
@@ -29,11 +31,12 @@ static int fail(const std::string& code, const std::string& msg) {
 }
 
 static aos::Cli parse(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
-                      size_t want, const std::string& what) {
+                      size_t want, const std::string& what,
+                      const std::map<std::string, std::string>& switches = {}) {
     namespace g = aos::llm;
     aos::Cli cli;
     try {
-        cli = aos::parse_cli(argv, flags);
+        cli = aos::parse_cli(argv, flags, switches);
     } catch (const aos::Error& e) {
         throw aos::Error{e.code, std::string(USAGE) + " (" + e.msg + ")"};
     }
@@ -86,6 +89,11 @@ int main(int argc, char** argv) {
             aos::Json body = g::read_body(opt(cli, "priority"));
             std::string id = g::send_held(mb, body);
             return g::ask_wait(mb, id);
+        }
+        if (cmd == "ls") {
+            aos::Cli cli = parse(args, {}, 0, "ls takes no positional arguments", {{"--json", "json"}});
+            g::ls_print(g::ls_window(g::kernel()), cli.opts.count("json") > 0);
+            return 0;
         }
         if (cmd == "regret") {
             aos::Cli cli = parse(args, {}, 1, "regret needs a letter name");

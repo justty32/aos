@@ -17,6 +17,7 @@ inline std::string reply_box(const Mailbox& mb) { return mb.root + "/reply"; }
 
 namespace code {
 using namespace aos::llm_kernel::code;
+inline constexpr const char* EndpointsMissing = "EndpointsMissing";   // ls：kernel 的窗 endpoints.json 不在或讀不懂
 inline constexpr const char* RegretFailed = aos::post::code::RegretFailed;   // regret：信不在 new/（已被 kernel 認領，或本來就沒有）
 }  // namespace code
 

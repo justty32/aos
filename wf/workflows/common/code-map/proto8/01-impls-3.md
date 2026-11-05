@@ -22,8 +22,9 @@
 |---|---|
 | `src/send/send.cpp`、`src/send/send.hpp` | `kernel`（`$AOS_LLM_KERNEL`＝llm kernel 的 stack，信箱 `<stack>/mailbox`；相對的有 `AOS_DAEMON`＝相對它、沒有＝相對 cwd；沒設＝`LlmKernelMissing`）、`read_body`（stdin 整份 body、`--priority` 蓋上、驗形狀與 priority）、`send`（非同步：aos-post 的 `init`／`send`，不建 `sender.flock`）、`send_held`（同步：先鎖 `sender.flock` 再寫信、回信信箱 `<信箱>/reply/`）、`regret`（aos-post 的 `regret`） |
 | `src/wait/wait.cpp`、`src/wait/wait.hpp` | `recv`（照 `in_reply_to` 找回信、印 `body.message`；沒到 10）、`ask_wait`（20 ms 輪詢、訊號＝撤信）；內部 `find_reply`、`take`、`deliver`、`withdraw` |
-| `src/main.cpp` | 命令列 `aos-llm send [--priority P] --reply-to BOX`／`recv BOX 名`／`ask [--priority P]`／`regret 名` |
-| `src/common/common.hpp` | 內部標頭：`reply_box`、代號（加 `RegretFailed`） |
+| `src/ls/ls.cpp`、`src/ls/ls.hpp` | `ls_window`（讀 kernel 的窗 `<stack>/endpoints.json`；沒有＝`EndpointsMissing`）、`ls_print`（一行一包、`--json` 原樣） |
+| `src/main.cpp` | 命令列 `aos-llm send [--priority P] --reply-to BOX`／`recv BOX 名`／`ask [--priority P]`／`regret 名`／`ls [--json]` |
+| `src/common/common.hpp` | 內部標頭：`reply_box`、代號（加 `RegretFailed`、`EndpointsMissing`） |
 
 ## `impls/aos-json/`（讀、改 aos 的 JSON 設定；沒有公開標頭）
 
