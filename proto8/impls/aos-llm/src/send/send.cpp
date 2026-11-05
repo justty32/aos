@@ -17,16 +17,23 @@ namespace fs = std::filesystem;
 namespace aos::llm {
 
 // $AOS_LLM_KERNEL＝llm kernel 的 stack（11-05 kernel-daemon 07 § 2；合一時＝那台 llm daemon 的 stack），信箱固定在 <stack>/mailbox/。
+// 相對路徑的基準點（11-05 edge 別線，照 portable-flow「基準點＝管我的 daemon 的 stack」）：有 $AOS_DAEMON（被 daemon 管著跑）
+// ＝相對它；沒有（人直接在殼裡打）＝相對 cwd。
 Mailbox kernel() {
     const char* k = std::getenv("AOS_LLM_KERNEL");
     if (k == nullptr || *k == 0) {
-        throw Error{code::LlmKernelMissing, "沒設定 AOS_LLM_KERNEL（llm kernel 的 stack，例 ~/llm_kernel）"};
+        throw Error{code::LlmKernelMissing, "AOS_LLM_KERNEL is not set (the llm kernel stack, e.g. ~/llm_kernel)"};
+    }
+    std::string path = k;
+    const char* d = std::getenv("AOS_DAEMON");
+    if (path[0] != '/' && d != nullptr && *d != 0) {
+        path = aos::join(d, path);
     }
     std::error_code ec;
-    if (!fs::is_directory(k, ec)) {
-        throw Error{code::LlmKernelMissing, std::string("AOS_LLM_KERNEL 指的資料夾不在：") + k};
+    if (!fs::is_directory(path, ec)) {
+        throw Error{code::LlmKernelMissing, "AOS_LLM_KERNEL is not a folder: " + path};
     }
-    return Mailbox{aos::join(aos::abspath(k), "mailbox")};
+    return Mailbox{aos::join(aos::abspath(path), "mailbox")};
 }
 
 // 11-05 edge-llm 題 1（使用者「按照推薦」）：$AOS_LLM_KERNEL 那裡沒有在跑的 daemon＝stderr 提醒一行，照樣寄、照樣等。
