@@ -55,7 +55,7 @@ struct Checker {
             return;
         }
         bool ok = false;
-        std::string want = "要是非空字串、非空陣列（[目標, 參數...]）或單子物件";
+        std::string want = "must be a non-empty string, a non-empty array ([target, args...]) or an inst object";
         if (v.is_string()) {
             ok = !v.get<std::string>().empty();
         } else if (v.is_array()) {
@@ -64,7 +64,7 @@ struct Checker {
                 ok = ok && item_ok(x);
             }
         } else if (v.is_object() && k == Kind::Plain) {
-            want = "是單子，argv 要是非空陣列（元素是字串或指示詞）";
+            want = "is an inst: argv must be a non-empty array (of strings or directives)";
             if (v.contains("argv")) {
                 const Json& a = v["argv"];
                 Kind ak = kind_of(a);
@@ -77,7 +77,7 @@ struct Checker {
             }
         }
         if (!ok) {
-            report(c, code::ExecBad, "exec " + want + "，不是 " + aos::dumps(v));
+            report(c, code::ExecBad, "exec " + want + ", got " + aos::dumps(v));
         }
     }
 
@@ -86,13 +86,13 @@ struct Checker {
         const Json& v = *c.node;
         Kind k = kind_of(v);
         if (k == Kind::FormBad) {
-            report(c, code::DirectiveFormBad, "帶 $ref／$env 但寫法不合，aos 會原封不動留著：" + aos::dumps(v));
+            report(c, code::DirectiveFormBad, "has $ref/$env but is malformed, aos will leave it as is: " + aos::dumps(v));
             return;
         }
         if (k == Kind::Env) {
             std::string name = v["$env"].get<std::string>();
             if (env && std::getenv(name.c_str()) == nullptr) {
-                report(c, code::DirectiveBad, "環境變數 " + name + " 現在沒設");
+                report(c, code::DirectiveBad, "environment variable " + name + " is not set");
             }
             return;
         }
@@ -119,7 +119,7 @@ struct Checker {
             }
             for (const std::string& kd : kinds) {
                 if (kd != kinds[0] || kd == "other") {
-                    report(c, code::DirectiveBad, "$ref 的幾份合不起來（要都是物件或都是陣列）");
+                    report(c, code::DirectiveBad, "$ref parts cannot be merged (must be all objects or all arrays)");
                     break;
                 }
             }
@@ -148,7 +148,7 @@ std::vector<std::string> problems_of(Docs& docs, const std::string& spec, bool e
     ck.env = env;
     Located at = locate(docs, parse_spec(spec), Mode{});
     if (!at.rest.empty()) {
-        throw Error{code::PointerMissing, "指不到 " + spec};
+        throw Error{code::PointerMissing, "no such pointer: " + spec};
     }
     ck.visit(at.at, {}, {});
     return ck.problems;
@@ -157,7 +157,7 @@ std::vector<std::string> problems_of(Docs& docs, const std::string& spec, bool e
 int cmd_check(const Args& args) {
     Cli cli = parse_cli(args, {}, {{"--env", "env"}});
     if (cli.rest.empty()) {
-        throw Error{code::ArgumentsBad, "用法：aos-json check [--env] 檔[#/指標]..."};
+        throw Error{code::ArgumentsBad, "usage: aos-json check [--env] FILE[#/POINTER]..."};
     }
     Docs docs;
     std::vector<std::string> all;

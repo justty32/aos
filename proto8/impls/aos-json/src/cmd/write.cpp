@@ -22,7 +22,7 @@ namespace {
 // 要寫的值：參數有就用參數、沒有讀 stdin（整份）。--str＝字面字串（stdin 去掉結尾一個換行），不然當 JSON 解。
 Json read_value(const std::vector<std::string>& rest, size_t idx, bool str) {
     if (rest.size() > idx + 1) {
-        throw Error{code::ArgumentsBad, "多了參數 " + rest[idx + 1] + "（值有空白要整個加引號；負數直接寫在檔#/指標後面就行）"};
+        throw Error{code::ArgumentsBad, "extra argument " + rest[idx + 1] + " (quote a value with spaces; a negative number can follow FILE#/POINTER directly)"};
     }
     std::string text;
     if (rest.size() == idx + 1) {
@@ -30,7 +30,7 @@ Json read_value(const std::vector<std::string>& rest, size_t idx, bool str) {
     } else {
         text.assign(std::istreambuf_iterator<char>(std::cin), {});
         if (text.empty()) {
-            throw Error{code::ValueMissing, "沒給值（參數沒有、stdin 是空的）"};
+            throw Error{code::ValueMissing, "no value given (no argument, stdin is empty)"};
         }
         if (str && text.ends_with("\n")) {
             text.pop_back();
@@ -40,11 +40,11 @@ Json read_value(const std::vector<std::string>& rest, size_t idx, bool str) {
         return text;
     }
     if (text.find_first_not_of(" \t\r\n") == std::string::npos) {
-        throw Error{code::ValueMissing, "值是空的"};
+        throw Error{code::ValueMissing, "value is empty"};
     }
     Json v = Json::parse(text, nullptr, false);
     if (v.is_discarded()) {
-        throw Error{code::ValueBad, "值不是一份 JSON（要寫字串就加 --str）：" + text};
+        throw Error{code::ValueBad, "value is not JSON (add --str to write a string): " + text};
     }
     return v;
 }
@@ -85,11 +85,11 @@ struct Edit {
             std::string added;
             for (const std::string& p : problems_of(mine, check_file, false)) {
                 if (std::find(old.begin(), old.end(), p) == old.end()) {
-                    added += (added.empty() ? "" : "；") + p;
+                    added += (added.empty() ? "" : "; ") + p;
                 }
             }
             if (!added.empty()) {
-                throw Error{code::CheckFailed, "改完會多出問題，沒寫：" + added};
+                throw Error{code::CheckFailed, "the change would add problems, not written: " + added};
             }
         }
         for (const std::string& real : order) {
@@ -131,8 +131,8 @@ Json& parent_of(Json& doc, const std::vector<std::string>& toks, bool parents, c
             n = &(*cur)[toks[i]];
         }
         if (n == nullptr) {
-            throw Error{code::PointerMissing, "指不到 " + spec + "（" + pointer_of({toks.begin(), toks.begin() + (long)i}) +
-                                                  " 底下沒有 " + toks[i] + "；要建路上的物件加 --parents）"};
+            throw Error{code::PointerMissing, "no such pointer: " + spec + " (" + pointer_of({toks.begin(), toks.begin() + (long)i}) +
+                                                  " has no " + toks[i] + "; add --parents to create objects along the way)"};
         }
         cur = n;
     }
@@ -151,15 +151,15 @@ void put(Json& doc, const std::vector<std::string>& toks, const Json& v, bool pa
     } else if (par.is_array() && is_index(last, par.size())) {
         par[std::stoull(last)] = v;
     } else if (par.is_array()) {
-        throw Error{code::PointerMissing, spec + "：陣列只能改已經有的索引（要加在尾巴用 append）"};
+        throw Error{code::PointerMissing, spec + ": can only set an existing array index (use append to add at the end)"};
     } else {
-        throw Error{code::TargetBad, spec + "：上一層是 " + std::string(par.type_name()) + "，放不了東西"};
+        throw Error{code::TargetBad, spec + ": parent is " + std::string(par.type_name()) + ", cannot hold a value"};
     }
 }
 
 Json& existing(Place& p, const std::string& spec) {
     if (!p.at.rest.empty()) {
-        throw Error{code::PointerMissing, "指不到 " + spec};
+        throw Error{code::PointerMissing, "no such pointer: " + spec};
     }
     return *p.at.at.node;
 }
@@ -170,7 +170,7 @@ Json& existing(Place& p, const std::string& spec) {
 int cmd_set(const Args& args) {
     Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}, {"--str", "str"}});
     if (cli.rest.empty()) {
-        throw Error{code::ArgumentsBad, "用法：aos-json set [--check] [--follow] [--parents] [--str] 檔#/指標 [值]（沒給值讀 stdin）"};
+        throw Error{code::ArgumentsBad, "usage: aos-json set [--check] [--follow] [--parents] [--str] FILE#/POINTER [VALUE] (reads stdin without VALUE)"};
     }
     Json v = read_value(cli.rest, 1, cli.opts.count("str") > 0);
     bool follow = cli.opts.count("follow") > 0;
@@ -180,7 +180,7 @@ int cmd_set(const Args& args) {
     }
     Place p = place(ed, cli.rest[0], follow, follow, true);
     if (follow && p.at.merged && p.at.rest.empty()) {
-        throw Error{code::TargetBad, cli.rest[0] + " 是幾份 $ref 合起來的，--follow 不能整個換（不加 --follow＝換掉原地的 $ref）"};
+        throw Error{code::TargetBad, cli.rest[0] + " is merged from several $ref parts; --follow cannot replace it whole (without --follow the $ref itself is replaced)"};
     }
     put(p.file->doc, p.toks, v, cli.opts.count("parents") > 0, cli.rest[0]);
     ed.save();
@@ -192,11 +192,11 @@ int cmd_set(const Args& args) {
 int cmd_batch(const Args& args) {
     Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}});
     if (cli.rest.size() != 1) {
-        throw Error{code::ArgumentsBad, "用法：aos-json batch [--follow] [--parents] 檔 < {\"/指標\": 值, …}"};
+        throw Error{code::ArgumentsBad, "usage: aos-json batch [--follow] [--parents] FILE < {\"/POINTER\": VALUE, ...}"};
     }
     Json all = read_value({}, 0, false);
     if (!all.is_object()) {
-        throw Error{code::ValueBad, "batch 的 stdin 要是物件 {\"/指標\": 值, …}"};
+        throw Error{code::ValueBad, "batch stdin must be an object {\"/POINTER\": VALUE, ...}"};
     }
     bool follow = cli.opts.count("follow") > 0;
     Edit ed;
@@ -205,12 +205,12 @@ int cmd_batch(const Args& args) {
     }
     for (auto& [ptr, v] : all.items()) {
         if (!ptr.empty() && !ptr.starts_with("/")) {
-            throw Error{code::SpecBad, "batch 的 key 要是 JSON 指標（/ 開頭）：" + ptr};
+            throw Error{code::SpecBad, "batch keys must be JSON pointers (starting with /): " + ptr};
         }
         std::string spec = cli.rest[0] + (ptr.empty() ? "" : "#" + ptr);
         Place p = place(ed, spec, follow, follow);
         if (follow && p.at.merged && p.at.rest.empty()) {
-            throw Error{code::TargetBad, spec + " 是幾份 $ref 合起來的，--follow 不能整個換"};
+            throw Error{code::TargetBad, spec + " is merged from several $ref parts; --follow cannot replace it whole"};
         }
         put(p.file->doc, p.toks, v, cli.opts.count("parents") > 0, spec);
         ed.step();
@@ -223,7 +223,7 @@ int cmd_batch(const Args& args) {
 int cmd_del(const Args& args) {
     Cli cli = parse_cli(args, {}, {{"--follow", "follow"}});
     if (cli.rest.size() != 1) {
-        throw Error{code::ArgumentsBad, "用法：aos-json del [--follow] 檔#/指標"};
+        throw Error{code::ArgumentsBad, "usage: aos-json del [--follow] FILE#/POINTER"};
     }
     bool follow = cli.opts.count("follow") > 0;
     Edit ed;
@@ -231,12 +231,12 @@ int cmd_del(const Args& args) {
         Place p = place(ed, cli.rest[0], follow, false);
         if (!p.at.rest.empty()) {
             if (round == 0) {
-                throw Error{code::PointerMissing, "指不到 " + cli.rest[0]};
+                throw Error{code::PointerMissing, "no such pointer: " + cli.rest[0]};
             }
             break;
         }
         if (p.toks.empty()) {
-            throw Error{code::TargetBad, "不刪整份檔（要刪檔自己 rm）"};
+            throw Error{code::TargetBad, "will not delete a whole file (use rm)"};
         }
         Json& par = parent_of(p.file->doc, p.toks, false, cli.rest[0]);
         if (par.is_object()) {
@@ -257,7 +257,7 @@ int cmd_del(const Args& args) {
 int cmd_append(const Args& args) {
     Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--str", "str"}});
     if (cli.rest.empty()) {
-        throw Error{code::ArgumentsBad, "用法：aos-json append [--follow] [--str] 檔#/指標 [值]"};
+        throw Error{code::ArgumentsBad, "usage: aos-json append [--follow] [--str] FILE#/POINTER [VALUE]"};
     }
     Json v = read_value(cli.rest, 1, cli.opts.count("str") > 0);
     bool follow = cli.opts.count("follow") > 0;
@@ -268,7 +268,7 @@ int cmd_append(const Args& args) {
     Place p = place(ed, cli.rest[0], follow, follow);
     Json& t = existing(p, cli.rest[0]);
     if (!t.is_array()) {
-        throw Error{code::TargetBad, cli.rest[0] + " 不是陣列（是 " + std::string(t.type_name()) + "）"};
+        throw Error{code::TargetBad, cli.rest[0] + " is not an array (it is " + std::string(t.type_name()) + ")"};
     }
     t.push_back(v);
     ed.save();
@@ -279,11 +279,11 @@ int cmd_append(const Args& args) {
 int cmd_merge(const Args& args) {
     Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}});
     if (cli.rest.empty()) {
-        throw Error{code::ArgumentsBad, "用法：aos-json merge [--follow] 檔#/指標 [物件]"};
+        throw Error{code::ArgumentsBad, "usage: aos-json merge [--follow] FILE#/POINTER [OBJECT]"};
     }
     Json v = read_value(cli.rest, 1, false);
     if (!v.is_object()) {
-        throw Error{code::ValueBad, "merge 的值要是物件"};
+        throw Error{code::ValueBad, "merge value must be an object"};
     }
     bool follow = cli.opts.count("follow") > 0;
     Edit ed;
@@ -293,7 +293,7 @@ int cmd_merge(const Args& args) {
     Place p = place(ed, cli.rest[0], follow, follow);
     Json& t = existing(p, cli.rest[0]);
     if (!t.is_object()) {
-        throw Error{code::TargetBad, cli.rest[0] + " 不是物件（是 " + std::string(t.type_name()) + "）"};
+        throw Error{code::TargetBad, cli.rest[0] + " is not an object (it is " + std::string(t.type_name()) + ")"};
     }
     for (auto& [k, x] : v.items()) {
         t[k] = x;
@@ -306,7 +306,7 @@ int cmd_merge(const Args& args) {
 int cmd_env(const Args& args) {
     Cli cli = parse_cli(args, {{"--path", "path"}, {"--prefix", "prefix"}}, {{"--parents", "parents"}});
     if (cli.rest.size() != 2 || cli.rest[1].empty()) {
-        throw Error{code::ArgumentsBad, "用法：aos-json env [--path 子路徑] [--prefix 前綴] [--parents] 檔#/指標 名字"};
+        throw Error{code::ArgumentsBad, "usage: aos-json env [--path SUBPATH] [--prefix PREFIX] [--parents] FILE#/POINTER NAME"};
     }
     Json v = {{"$env", cli.rest[1]}};
     if (cli.opts.count("path")) {
@@ -359,13 +359,13 @@ static void rebase(Json& v, const std::string& from, const std::string& to) {
 int cmd_ref(const Args& args) {
     Cli cli = parse_cli(args, {}, {{"--move", "move"}, {"--parents", "parents"}});
     if (cli.rest.size() != 2) {
-        throw Error{code::ArgumentsBad, "用法：aos-json ref [--move] [--parents] 檔#/指標 目標"};
+        throw Error{code::ArgumentsBad, "usage: aos-json ref [--move] [--parents] FILE#/POINTER TARGET"};
     }
     const std::string& spec = cli.rest[0];
     const std::string& target = cli.rest[1];
     Json ref = {{"$ref", target}};
     if (kind_of(ref) != Kind::Ref) {
-        throw Error{code::ValueBad, "目標 " + target + " 不是 $ref 的寫法（檔[#/指標]）"};
+        throw Error{code::ValueBad, "target " + target + " is not a $ref form (FILE[#/POINTER])"};
     }
     bool parents = cli.opts.count("parents") > 0;
     Edit ed;
@@ -378,13 +378,13 @@ int cmd_ref(const Args& args) {
         std::error_code ec;
         std::string real_dir = std::filesystem::canonical(dir, ec).string();
         if (ec) {
-            throw Error{code::FileMissing, "目標的資料夾不在：" + dir};
+            throw Error{code::FileMissing, "target directory not found: " + dir};
         }
         rebase(moved, src.at.at.base, real_dir);
         if (ptr.empty()) {
             File& f = ed.docs.open(dest, true);
             if (f.exists) {
-                throw Error{code::TargetBad, "目標 " + target + " 已經有了（--move 不蓋掉現有的檔）"};
+                throw Error{code::TargetBad, "target " + target + " already exists (--move does not overwrite a file)"};
             }
             f.one_line = src.file->one_line;
             f.indent = src.file->indent;
@@ -395,11 +395,11 @@ int cmd_ref(const Args& args) {
             ed.docs.open(dest, false);
             Place d = place(ed, dest + "#" + ptr, false, false);
             if (d.at.rest.empty()) {
-                throw Error{code::TargetBad, "目標 " + target + " 那個位置已經有東西了"};
+                throw Error{code::TargetBad, "target " + target + " already has a value at that place"};
             }
             if (d.file == src.file && d.toks.size() >= src.toks.size() &&
                 std::equal(src.toks.begin(), src.toks.end(), d.toks.begin())) {
-                throw Error{code::TargetBad, "目標 " + target + " 在要搬的值裡面"};
+                throw Error{code::TargetBad, "target " + target + " is inside the value being moved"};
             }
             put(d.file->doc, d.toks, moved, parents, target);
         }

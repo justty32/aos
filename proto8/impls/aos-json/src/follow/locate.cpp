@@ -18,19 +18,19 @@ Cursor fetch(Docs& docs, const std::string& base, const std::string& path, const
     try {
         f = &docs.open(aos::join(base, path), false);
     } catch (const Error& e) {
-        throw Error{code::DirectiveBad, "$ref " + where + " 讀不到（" + e.msg + "）"};
+        throw Error{code::DirectiveBad, "$ref " + where + " cannot be read (" + e.msg + ")"};
     }
     std::pair<std::string, std::string> here{f->real, ptr};
     for (const auto& seen : chain) {
         if (seen == here) {
-            throw Error{code::DirectiveBad, "$ref 繞圈：" + shown(f->real, split_pointer(ptr))};
+            throw Error{code::DirectiveBad, "$ref cycle: " + shown(f->real, split_pointer(ptr))};
         }
     }
     Cursor c{f->real, aos::dirname(f->real), split_pointer(ptr), &f->doc};
     for (const std::string& t : c.toks) {
         c.node = child(*c.node, t);
         if (c.node == nullptr) {
-            throw Error{code::DirectiveBad, "$ref 指不到：" + shown(f->real, split_pointer(ptr))};
+            throw Error{code::DirectiveBad, "$ref points nowhere: " + shown(f->real, split_pointer(ptr))};
         }
     }
     chain.push_back(here);
@@ -42,7 +42,7 @@ Cursor settle(Docs& docs, Cursor c, Chain& chain) {
     while (kind_of(*c.node) == Kind::Ref) {
         auto parts = ref_parts(*c.node);
         if (parts.size() != 1) {
-            throw Error{code::TargetBad, shown(c.file, c.toks) + "：$ref 陣列裡又有 $ref 陣列，--follow 先不支援"};
+            throw Error{code::TargetBad, shown(c.file, c.toks) + ": $ref array inside a $ref array, not supported by --follow yet"};
         }
         c = fetch(docs, c.base, parts[0].first, parts[0].second, chain);
     }
@@ -66,7 +66,7 @@ static Cursor jump(Docs& docs, const Cursor& c, std::string* want, Chain& chain,
         arrays = arrays && cs.back().node->is_array();
     }
     if (!objects && !arrays) {
-        throw Error{code::DirectiveBad, shown(c.file, c.toks) + "：$ref 的幾份合不起來（要都是物件或都是陣列）"};
+        throw Error{code::DirectiveBad, shown(c.file, c.toks) + ": $ref parts cannot be merged (must be all objects or all arrays)"};
     }
     size_t pick = cs.size() - 1;
     if (want != nullptr && objects) {
@@ -104,13 +104,13 @@ Located locate(Docs& docs, const Spec& spec, Mode mode) {
         if (k == Kind::Ref || k == Kind::Env) {
             if (!mode.follow) {
                 if (mode.strict) {
-                    throw Error{code::FollowMissing, shown(c.file, c.toks) + " 是指示詞；要改它指到的地方加 --follow，"
-                                                     "要整個換掉就直接指著它改"};
+                    throw Error{code::FollowMissing, shown(c.file, c.toks) + " is a directive; add --follow to change what it points to, "
+                                                     "or point at it directly to replace it whole"};
                 }
                 Json* lit = child(*c.node, toks[i]);
                 if (lit == nullptr) {
-                    throw Error{code::PointerMissing, "指不到 " + shown(f.real, spec.toks) + "（路上 " +
-                                                          shown(c.file, c.toks) + " 是指示詞，要穿過去加 --follow）"};
+                    throw Error{code::PointerMissing, "no such pointer: " + shown(f.real, spec.toks) + " (on the way, " +
+                                                          shown(c.file, c.toks) + " is a directive; add --follow to go through it)"};
                 }
                 c.toks.push_back(toks[i]);
                 c.node = lit;
@@ -118,7 +118,7 @@ Located locate(Docs& docs, const Spec& spec, Mode mode) {
                 continue;
             }
             if (k == Kind::Env) {
-                throw Error{code::PointerMissing, shown(c.file, c.toks) + " 是 $env，換出來是字串，走不下去"};
+                throw Error{code::PointerMissing, shown(c.file, c.toks) + " is $env, which yields a string; cannot go further"};
             }
             out.hops.push_back(c);
             c = jump(docs, c, &toks[i], chain, out.merged);

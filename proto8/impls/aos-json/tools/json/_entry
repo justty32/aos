@@ -18,13 +18,13 @@ def die(code, reason):
 try:
     args = json.loads(sys.stdin.read() or "null")
 except ValueError as e:
-    die("ArgumentsBad", "stdin 不是 JSON：%s" % e)
+    die("ArgumentsBad", "stdin is not JSON: %s" % e)
 if not isinstance(args, dict) or args.get("cmd") not in {**READ, **WRITE} or not isinstance(args.get("target"), str):
-    die("ArgumentsBad", "要 {\"cmd\": peek|get|where|set|batch|del|append|merge|check, \"target\": \"檔#/指標\"}")
+    die("ArgumentsBad", "expects {\"cmd\": peek|get|where|set|batch|del|append|merge|check, \"target\": \"FILE#/POINTER\"}")
 cmd, target = args["cmd"], args["target"]
 path = target.split("#", 1)[0]
 if not path or os.path.isabs(path) or ".." in path.split("/"):
-    print("錯：target 的檔要是工作區裡的相對路徑（不收絕對路徑、不收 ..）：%s" % target)
+    print("error: the file in target must be a relative path inside the workspace (no absolute path, no ..): %s" % target)
     sys.exit(0)
 
 argv = ["aos-json", cmd] + READ.get(cmd, WRITE.get(cmd))
@@ -33,17 +33,17 @@ if cmd == "peek" and isinstance(args.get("depth"), int) and not isinstance(args.
 stdin = None
 if cmd in ("set", "append", "merge", "batch"):
     if "value" not in args:
-        print("錯：%s 要給 value" % cmd)
+        print("error: %s needs value" % cmd)
         sys.exit(0)
     stdin = json.dumps(args["value"], ensure_ascii=False)
 argv.append(target)
 try:
     r = subprocess.run(argv, cwd=os.environ.get("AOS_WS") or ".", input=stdin, capture_output=True, text=True)
 except OSError as e:
-    die("ToolFailed", "aos-json 起不來（要在 PATH 上）：%s" % e)
+    die("ToolFailed", "aos-json failed to start (aos-json must be on PATH): %s" % e)
 if r.returncode == 0:
     print(r.stdout if r.stdout else "ok", end="" if r.stdout else "\n")
 elif cmd == "check" and r.returncode == 1 and r.stdout:
-    print("有問題：\n" + r.stdout, end="")
+    print("problems:\n" + r.stdout, end="")
 else:
-    print("錯：" + (r.stderr.strip() or "aos-json 結束碼 %d" % r.returncode).removeprefix("aos-json: "))
+    print("error: " + (r.stderr.strip() or "aos-json exited %d" % r.returncode).removeprefix("aos-json: "))

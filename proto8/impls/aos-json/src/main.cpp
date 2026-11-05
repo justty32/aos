@@ -13,7 +13,7 @@
 
 namespace {
 
-const char* USAGE = "aos-json get|peek|where|set|batch|del|append|merge|env|ref|check [旗標...] 檔#/指標 [...]（說明見 README）";
+const char* USAGE = "aos-json get|peek|where|set|batch|del|append|merge|env|ref|check [flags...] FILE#/POINTER [...] (see README)";
 
 int fail(const aos::Error& e) {
     std::cout << std::flush;
@@ -31,11 +31,11 @@ int main(int argc, char** argv) {
     };
     try {
         if (argc < 2) {
-            throw aos::Error{code::ArgumentsBad, std::string("用法：") + USAGE};
+            throw aos::Error{code::ArgumentsBad, std::string("usage: ") + USAGE};
         }
         auto it = table.find(argv[1]);
         if (it == table.end()) {
-            throw aos::Error{code::CommandUnknown, std::string("不認得的子命令 ") + argv[1] + "；用法：" + USAGE};
+            throw aos::Error{code::CommandUnknown, std::string("unknown subcommand ") + argv[1] + "; usage: " + USAGE};
         }
         return it->second(Args(argv + 2, argv + argc));
     } catch (const aos::Error& e) {

@@ -59,12 +59,12 @@ Spec parse_spec(const std::string& s) {
     size_t hash = s.find('#');
     out.file = s.substr(0, hash);
     if (out.file.empty()) {
-        throw Error{code::SpecBad, "沒寫檔名：" + s};
+        throw Error{code::SpecBad, "missing file name: " + s};
     }
     if (hash != std::string::npos) {
         std::string ptr = s.substr(hash + 1);
         if (!ptr.starts_with("/")) {
-            throw Error{code::SpecBad, s + " 的 # 後面要接 /"};
+            throw Error{code::SpecBad, s + ": # must be followed by /"};
         }
         out.toks = split_pointer(ptr);
     }

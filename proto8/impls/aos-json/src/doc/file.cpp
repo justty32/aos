@@ -68,17 +68,17 @@ File load_file(const std::string& path, bool allow_missing) {
             return f;
         }
         if (errno == ENOENT) {
-            throw Error{code::FileMissing, "檔不在：" + path};
+            throw Error{code::FileMissing, "file not found: " + path};
         }
-        throw Error{code::FileBad, "讀不了 " + path + "：" + std::strerror(errno)};
+        throw Error{code::FileBad, "cannot read " + path + ": " + std::strerror(errno)};
     }
     if (S_ISDIR(st.st_mode)) {
-        throw Error{code::FileBad, path + " 是資料夾"};
+        throw Error{code::FileBad, path + " is a directory"};
     }
     int err = 0;
     std::optional<std::string> text = aos::read_file(f.real, err);
     if (!text) {
-        throw Error{code::FileBad, "讀不了 " + path + "：" + std::strerror(err)};
+        throw Error{code::FileBad, "cannot read " + path + ": " + std::strerror(err)};
     }
     std::string body = *text;
     if (body.starts_with("#!")) {
@@ -88,7 +88,7 @@ File load_file(const std::string& path, bool allow_missing) {
     }
     f.doc = Json::parse(body, nullptr, false);
     if (f.doc.is_discarded()) {
-        throw Error{code::FileBad, path + " 不是 JSON"};
+        throw Error{code::FileBad, path + " is not JSON"};
     }
     guess_layout(body, f);
     f.body = body;
@@ -129,11 +129,11 @@ void save_file(const File& f) {
     std::string tmp = aos::join(dir, "." + name + "." + std::to_string(::getpid()) + ".tmp");
     int fd = ::open(tmp.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
     if (fd < 0) {
-        throw Error{code::WriteFailed, "寫不了 " + tmp + "：" + std::strerror(errno)};
+        throw Error{code::WriteFailed, "cannot write " + tmp + ": " + std::strerror(errno)};
     }
     std::string why;
     if (::fchmod(fd, f.exists ? f.mode : new_file_mode()) != 0) {
-        why = std::string("設權限：") + std::strerror(errno);
+        why = std::string("chmod: ") + std::strerror(errno);
     }
     size_t done = 0;
     while (why.empty() && done < text.size()) {
@@ -158,7 +158,7 @@ void save_file(const File& f) {
     }
     if (!why.empty()) {
         ::unlink(tmp.c_str());
-        throw Error{code::WriteFailed, "寫不了 " + f.real + "：" + why};
+        throw Error{code::WriteFailed, "cannot write " + f.real + ": " + why};
     }
 }
 

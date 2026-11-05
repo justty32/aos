@@ -49,7 +49,7 @@ std::string summary(const Json& v) {
     if (v.is_string()) {
         std::string s = v.get<std::string>();
         if (s.size() > LONG) {
-            return aos::dumps(cut_utf8(s, CUT)) + "…（共 " + std::to_string(s.size()) + " 位元組）";
+            return aos::dumps(cut_utf8(s, CUT)) + "… (" + std::to_string(s.size()) + " bytes)";
         }
         return aos::dumps(v);
     }
@@ -101,13 +101,13 @@ void lines(const Json& v, int depth, const std::string& pad, std::string& out) {
 int cmd_peek(const Args& args) {
     Cli cli = parse_cli(args, {{"--depth", "depth"}}, {{"--follow", "follow"}});
     if (cli.rest.size() != 1) {
-        throw Error{code::ArgumentsBad, "用法：aos-json peek [--follow] [--depth N] 檔#/指標"};
+        throw Error{code::ArgumentsBad, "usage: aos-json peek [--follow] [--depth N] FILE#/POINTER"};
     }
     int depth = 1;
     if (cli.opts.count("depth")) {
         const std::string& d = cli.opts["depth"];
         if (d.empty() || d.size() > 3 || d.find_first_not_of("0123456789") != std::string::npos) {
-            throw Error{code::ArgumentsBad, "--depth 要是 0～999 的整數"};
+            throw Error{code::ArgumentsBad, "--depth must be an integer from 0 to 999"};
         }
         depth = std::stoi(d);
     }
@@ -117,14 +117,14 @@ int cmd_peek(const Args& args) {
     mode.follow = cli.opts.count("follow") > 0;
     Located at = locate(docs, parse_spec(s), mode);
     if (!at.rest.empty()) {
-        throw Error{code::PointerMissing, "指不到 " + s + "（" + shown(at.at.file, at.at.toks) + " 底下沒有 " +
-                                              at.rest[0] + "）"};
+        throw Error{code::PointerMissing, "no such pointer: " + s + " (" + shown(at.at.file, at.at.toks) + " has no " +
+                                              at.rest[0] + ")"};
     }
     Json v = *at.at.node;
     std::string note;
     if (mode.follow && kind_of(v) == Kind::Ref) {
         v = aos::resolve_shallow(v, at.at.base).value;
-        note = "（$ref 展開）";
+        note = " ($ref expanded)";
     }
     std::string out;
     if (kind_of(v) == Kind::Plain && !v.is_object() && !v.is_array()) {
