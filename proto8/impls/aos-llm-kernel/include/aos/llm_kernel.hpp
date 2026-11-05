@@ -4,7 +4,7 @@
 //     tmp/<id>/、tmp/.<id>/   寄信的正在寫（aos-post 寫 tmp/<id>；aos-llm ask 寫 tmp/.<id>）；撤信、丟信先改名回這裡再刪
 //     new/<id>/    排隊中（kernel 認領＝改名進 cur/；寄信的撤信＝改名回 tmp/，兩邊只有一個改得成）
 //     cur/<id>/    kernel 認領了、請 daemon 掛成問腦 proc（stack＝這個資料夾：request.json、proc.json、daemon 寫的 loop.json／state.json／stderr.txt、函數寫的 reply.json）；寄出回信就整封刪掉
-//                  （11-04 夜使用者「舊信根本不用留，就是刪」：沒有 done/，舊 kernel 留下的 done/ 下一次整個刪）
+//                  （11-04 夜使用者「舊信根本不用留，就是刪」：沒有 done/）
 //     .flock       kernel 跑一次的期間 flock 住（同一個信箱同時只有一個 kernel）
 //   信：letter.json＝N-16 的信（aos-post 寫）：{"sender", "sent_at", "reply_to": 回信信箱（必有，沒有就沒人收得到回信）,
 //                    "body": {"endpoint"?: 代號（kernel.json 的 endpoints 表；沒寫＝kernel 的預設）,

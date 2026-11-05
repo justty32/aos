@@ -322,8 +322,8 @@ void Server::mount(const std::string& id, const std::string& exec, Json proc) {
 }
 
 // 一封在飛的信現在怎樣（03 § 2、04 #13）：回 nullopt＝還在飛（佔一格）；回信＝收尾。
-//   表上有這列：running／stopping／sleeping＝在飛；stopped 而問腦 loop 收尾了（wake 後 3 秒內跑完也會留 stopped）＝收、順手寄 procs_removed 拔列；
-//              stopped 但沒收尾（有人下了 stop）＝在飛（等）
+//   表上有這列：running／stopping／sleeping＝在飛；stopped 而問腦 loop 跑完了（state.json done；wake 後 3 秒內跑完也會留 stopped）＝收、順手寄 procs_removed 拔列；
+//              stopped 但沒跑完（有人下了 stop）＝在飛（等）
 //   表上沒有：state.json 收尾了（done／stopped）＝看 code；state.json 在、沒收尾＝跑到一半死了→重掛；
 //            不在＝daemon 還沒套（暫停中、還沒輪到）＝在飛，或拒了（mailbox_warning 提到這封掛信）＝LaunchFailed
 std::optional<Json> Server::settle(const std::string& id, Json proc) {
@@ -334,7 +334,7 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
     bool ended = phase == "done" || phase == "stopped";
     if (table_.procs.contains(name)) {
         const Json& row = table_.procs[name];
-        if (!row.is_object() || row.value("phase", "") != "stopped" || !ended) {
+        if (!row.is_object() || row.value("phase", "") != "stopped" || phase != "done") {   // stopped 沒跑完＝有人下了 stop：等
             return std::nullopt;
         }
         Json rm = Json::object();
@@ -498,9 +498,6 @@ std::vector<Waiting> Server::scan() {
         if (!letter || !letter->is_object() || !letter->value("body", Json()).is_object() ||
             !(*letter)["body"].contains("request")) {
             std::string why = "信讀不懂：letter.json 要是 N-16 的信，body＝{\"endpoint\"?: 代號, \"request\": {...}, \"priority\"?}";
-            if (letter && letter->is_object() && letter->contains("inst")) {
-                why += "（頂層 inst／env 是 11-04 以前閘門的信，不再認）";
-            }
             refuse(id, error_reply(code::LetterBad, why));
             continue;
         }
@@ -549,10 +546,10 @@ std::vector<Waiting> Server::scan() {
 }
 
 int Server::run() {
+    host_ = find_host();   // 沒 AOS_DAEMON＝DaemonMissing、daemon 沒開 ctl 信箱＝MailboxMissing（kernel 自己的錯，退 1；信箱還沒建）
     for (const std::string& d : {mb_.root, mb_.tmp(), mb_.fresh(), mb_.cur()}) {
         make_dir(d);
     }
-    host_ = find_host();   // 沒 AOS_DAEMON＝DaemonMissing、daemon 沒開 ctl 信箱＝MailboxMissing（kernel 自己的錯，退 1）
     lock();
     q_ = read_queue(stack_);
     q_.runs += 1;

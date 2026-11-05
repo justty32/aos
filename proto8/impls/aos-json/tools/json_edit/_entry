@@ -7,7 +7,7 @@
 #       腦呼叫 give 交出那個位置的新值（JSON 文字，先解得開才收，解不開讓它重給，最多 3 次）。
 #   最後 aos-json batch --check --follow 一次寫進去（全部驗過才寫；拆成 $ref 的檔也改得到）。
 # 腦＝寄請求給 llm kernel、同步等回信：`aos-llm ask`（stdin＝{"request": {messages, tools, tool_choice}}；用 kernel 的預設代號，
-#   thinking 2026-11-04 think-as-function 03 § 3）；$AOS_LLM_KERNEL 沒設由 aos-llm 報 KernelMissing、這裡退 1（BrainFailed）。
+#   thinking 2026-11-04 think-as-function 03 § 3）；$AOS_LLM_KERNEL 沒設由 aos-llm 報 LlmKernelMissing、這裡退 1（BrainFailed）。
 # stdout：走過的位置（看過）、找到的位置、改了什麼；寫不進去（指不到、形狀不對）印「沒改：…」退 0（讓叫它的腦看了重來）。
 # 自己的錯（stdin 不對、腦連不上、回覆不對、找了 MAX_ROUNDS 輪還沒交）stderr 一行「json_edit: 代號 原因」、退 1。
 import json, os, subprocess, sys
@@ -33,7 +33,7 @@ def ask(messages, tools):
     request = {"request": {"messages": messages, "tools": tools, "tool_choice": "required"}}
     try:
         r = subprocess.run(["aos-llm", "ask"], input=json.dumps(request, ensure_ascii=False),
-                           stdout=subprocess.PIPE, text=True)      # stderr 不吞：aos-llm 自己說原因（KernelMissing、kernel 回的錯）
+                           stdout=subprocess.PIPE, text=True)      # stderr 不吞：aos-llm 自己說原因（LlmKernelMissing、kernel 回的錯）
     except OSError as e:
         die("BrainFailed", "aos-llm 起不來（要在 PATH 上）：%s" % e)
     if r.returncode != 0:

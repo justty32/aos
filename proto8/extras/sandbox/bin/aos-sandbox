@@ -15,7 +15,8 @@
 #   mem_mb、cpu_s、procs、file_mb、files  正整數 → s6-softlimit 的 -a＋-d、-t、-p、-f、-o
 #   env      環境變數名陣列：只帶這幾個進去（外面有設的才帶；bwrap --clearenv＋--setenv）；沒寫＝ENV_BASE 那幾個（PATH、語系、aos 的六個、hub 型的 AOS_DAEMON／AOS_LLM_KERNEL）
 #   沒列到的路徑一律看不到；/proc、/dev、/tmp（空的）一定有。
-#   能不能用 LLM kernel 不另設開關（使用者 10-24「就是看他能不能存取檔案」）：信箱有綁進來（rw 列了 $AOS_LLM_KERNEL）、env 有帶 AOS_LLM_KERNEL 就能寄，
+#   能不能用 LLM kernel 不另設開關（使用者 10-24「就是看他能不能存取檔案」）：信箱有綁進來（rw 列了 {"$env": "AOS_LLM_KERNEL", "$path": "/mailbox"}；
+#   AOS_LLM_KERNEL＝llm kernel 的 stack，只綁信箱、不綁整個 stack）、env 有帶 AOS_LLM_KERNEL 就能寄，
 #   沒有就看不到；再細的由信箱的擁有者、群組、權限位管（root/setup.sh --mailbox）。
 # 錯：stderr 一行「aos-sandbox: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、PathMissing、CommandMissing、UserBad）。
 # 之後的結束碼都是 prog 的（bwrap 透明轉交；被訊號停＝128＋N）。

@@ -31,15 +31,15 @@
 | `system.txt`、`tools.json`、`llm.json` | system 訊息；工具登記檔（clock）；腦設定（範本 `{}`＝kernel 預設代號；鍵 `endpoint`、`model`） |
 | `interfaces.json` | 宣告遵守 `aos-agent` 介面，`entry`＝`body.json`（11-05）、選配 `tools`、`llm`（`"llm.json"`，11-04 晚）；brain.py／act.py 疊 `$AOS_STACK/tools.json` 覆蓋層（11-05） |
 
-## `demo/llm-kernel/`（llm kernel 範本；11-04 晚）
+## `demo/llm-kernel/`（llm kernel 範本；11-04 晚，11-05 改成一台 daemon）
 
-設計：[thinking 11-04 think-as-function](../../../../../proto8/thinking/2026-11/04/think-as-function/README.md)；說明 [demo/docs/03-llm-kernel](../../../../../proto8/demo/docs/03-llm-kernel.md)。
+設計：[thinking 11-04 think-as-function](../../../../../proto8/thinking/2026-11/04/think-as-function/README.md)、[11-05 kernel-daemon 07](../../../../../proto8/thinking/2026-11/05/kernel-daemon/07-llm-daemon佈局.md)；說明 [demo/docs/03-llm-kernel](../../../../../proto8/demo/docs/03-llm-kernel.md)。
 
 | 檔 | 負責什麼 |
 |---|---|
-| `_entry` | `["aos-loop", "loop.json"]` |
-| `loop.json` | 每 300 ms 拍一次 `aos-llm-kernel kernel.json` |
-| `kernel.json` | 信箱、`slots`、`timeout_ms`、預設 endpoint 函數 `exec`（`lib/base/llm_http`）、預設代號 `endpoint`（`fake`）、代號表 `endpoints`（luna／sol／local-qwen／fake） |
+| `_entry` | `["aos-daemon", "daemon.json"]`（`cd ~/llm_kernel && aos-exec --stack . def`） |
+| `daemon.json` | daemon 的身體＝每 300 ms 拍一次 `aos-llm-kernel kernel.json`；表上只有問腦的 `llm_<信件名稱>` 列 |
+| `kernel.json` | `slots`、`timeout_ms`、預設 endpoint 函數 `exec`（`lib/base/llm_http`）、預設代號 `endpoint`（`fake`）、代號表 `endpoints`（luna／sol／local-qwen／fake） |
 
 ## `demo/daemon-judge/`、`demo/procs-kernel/`（判官範本：kernel 模式 1、2；11-05）
 

@@ -19,11 +19,6 @@ Budget parse_budget(const Json& v) {
     if (!v.is_object()) {
         throw Error{code::CfgBad, "budget 要是 {\"max_calls\", \"max_tokens\", \"window\", \"spent\"}，不是 " + aos::dumps(v)};
     }
-    for (const char* k : {"calls", "tokens"}) {   // 10-25 前的上限名：不認，免得寫舊名的人以為有上限
-        if (v.contains(k)) {
-            throw Error{code::CfgBad, std::string("budget.") + k + " 是舊名（10-25 改叫 budget.max_" + k + "）"};
-        }
-    }
     for (const char* k : {"max_calls", "max_tokens"}) {
         Json x = v.value(k, Json());
         if (x.is_null()) {

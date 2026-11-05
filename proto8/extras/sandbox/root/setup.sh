@@ -45,7 +45,7 @@ fi
 [ "$APPLY" = 1 ] || echo "# 乾跑：下面的指令都沒執行。用 root 加 --apply 才會真的做。"
 
 if [ -n "$MAILBOX" ]; then
-	BOXES="$MAILBOX/tmp $MAILBOX/new $MAILBOX/cur $MAILBOX/done $MAILBOX/reply $MAILBOX/reply/tmp $MAILBOX/reply/new $MAILBOX/reply/cur"
+	BOXES="$MAILBOX/tmp $MAILBOX/new $MAILBOX/cur $MAILBOX/reply $MAILBOX/reply/tmp $MAILBOX/reply/new $MAILBOX/reply/cur"
 	echo "# 讓 $RUNNER 寫得到信箱 $MAILBOX（kernel 用 $ME 跑）：擁有者 $ME、群組 $RUNNER、2770（別人進不來、看不到信）"
 	# shellcheck disable=SC2086
 	run install -d -o "$ME" -g "$RUNNER" -m 2770 "$MAILBOX" $BOXES
@@ -53,12 +53,12 @@ if [ -n "$MAILBOX" ]; then
 	echo "#    四格加預設 ACL：誰建的信（閘門建資料夾、kernel 寫回信）都讓 $ME 與群組 $RUNNER 讀寫得到，不看各自的 umask"
 	# shellcheck disable=SC2086
 	run setfacl -m "d:u:$ME:rwx,d:g:$RUNNER:rwx,d:o::---" $BOXES
-	echo "#    信箱要放在 $RUNNER 走得到的地方（例 $AREA/mailbox；在 700 的家目錄底下它走不進去）"
-	echo "#    沙箱裡要綁進來才看得到：設定的 rw 列 $MAILBOX、env 列 AOS_LLM_KERNEL（aos-sandbox 不另設開關）"
+	echo "#    信箱要叫 <llm kernel 的 stack>/mailbox（AOS_LLM_KERNEL＝那個 stack，aos-llm 寄進它的 mailbox/），放在 $RUNNER 走得到的地方（例 $AREA/mailbox；在 700 的家目錄底下它走不進去）"
+	echo "#    沙箱裡要綁進來才看得到：設定的 rw 列信箱 {\"\$env\": \"AOS_LLM_KERNEL\", \"\$path\": \"/mailbox\"}、env 列 AOS_LLM_KERNEL（aos-sandbox 不另設開關）"
 	echo "# 不讓 $RUNNER 寫：chmod 700 $MAILBOX（或 chgrp 回 $ME 自己的群組）。kernel 自己建的信箱照 umask（多半 755＝別人讀得到信、寫不進），"
 	echo "#    放在 700 的家目錄底下就連看都看不到。"
 	echo "# 驗（不用 root；aos-llm 寫絕對路徑，sudo 用自己的 PATH）：kernel 開著時"
-	echo "#    echo '{\"request\":{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}}' | sudo -n /usr/local/bin/s6-setuidgid $RUNNER env AOS_LLM_KERNEL=$MAILBOX /絕對/aos-llm ask   # 拿到回信"
+	echo "#    echo '{\"request\":{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}}' | sudo -n /usr/local/bin/s6-setuidgid $RUNNER env AOS_LLM_KERNEL=\$(dirname $MAILBOX) /絕對/aos-llm ask   # 拿到回信"
 	echo "#    chmod 700 $MAILBOX 之後同一行＝aos-llm: MkdirFailed（寫不進）；chmod 2770 改回來"
 	exit 0
 fi

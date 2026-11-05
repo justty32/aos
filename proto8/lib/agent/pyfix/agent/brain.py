@@ -1,6 +1,6 @@
 # brain.py - think 格：認領題目、把 tools.json 登記的工具（aos-tools ls --json）組成 tools、帶 $AOS_STACK/history.jsonl 問腦，回覆一行接進 history（照抄 agent-dan，只改錯誤訊息開頭的名字）
 # 問腦＝寄請求給 llm kernel、同步等回信：`aos-llm ask`（stdin＝{"request": {messages, tools}}；用 kernel 的預設代號，假腦＝kernel 的 fake；
-#   11-04 晚 think-as-function 03 § 3：pyfix 是工具形、一次跑完，同步就好）。$AOS_LLM_KERNEL 沒設＝aos-llm 報 KernelMissing。
+#   11-04 晚 think-as-function 03 § 3：pyfix 是工具形、一次跑完，同步就好）。$AOS_LLM_KERNEL（llm kernel 的 stack）沒設＝aos-llm 報 LlmKernelMissing。
 # 失敗時 history 不接任何東西、退 1（P-20）：BrainFailed（aos-llm 退非 0，它自己的 stderr 在上面）、ReplyBad。
 import json, os, subprocess, sys
 

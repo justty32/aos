@@ -1,4 +1,4 @@
-// main.cpp：aos-llm-kernel 命令列——LLM kernel 跑一次：從信箱挑最該跑的信、跑、回信（給 aos-loop／aos-daemon 一次次拍）。
+// main.cpp：aos-llm-kernel 命令列——LLM kernel 跑一次：從信箱挑最該跑的信、跑、回信（多半是 daemon.json 的身體，給 daemon 一次次拍；要在 daemon 底下）。
 //
 //     aos-llm-kernel [旗標] kernel.json
 //

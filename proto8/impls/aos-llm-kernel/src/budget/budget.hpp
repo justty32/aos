@@ -1,6 +1,6 @@
 // budget.hpp：【budget】token 回報與額度（10-24，thinking 2026-10-24-llm-kernel「token 回報與額度」）。
 //
-//   Budget        kernel.json 的 budget：max_calls、max_tokens（每窗上限，非負整數；沒寫＝不限；10-25 上限改 max_*，原 calls、tokens，舊名＝CfgBad）、window（"hour"／"day"／"all"；沒寫＝day，
+//   Budget        kernel.json 的 budget：max_calls、max_tokens（每窗上限，非負整數；沒寫＝不限）、window（"hour"／"day"／"all"；沒寫＝day，
 //                 10-15 定「一天一期歸零」）、spent（到頂時新信怎麼辦："refuse"＝回 BudgetMissing（預設，10-15「見底就擋」）、"wait"＝留在 new/ 等下一窗）
 //   parse_budget  讀 budget 那格（沒寫＝不限、window day）；壞了 CfgBad
 //   Used          $AOS_STACK/used.json＝{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens"}：這一窗用了多少、開 kernel 以來一共多少

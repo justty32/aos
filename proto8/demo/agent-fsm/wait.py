@@ -7,7 +7,7 @@
 # 結束碼（fsm.json 照碼分岔，N-36）：0＝回信接進 history（→ act）；10＝還沒回（→ wait）。
 # 不看 queue：思考中來的信等答完回 idle 再收（使用者 11-04「等答完回 idle 再收」）。沒有自己的逾時（kernel 的 timeout_ms／priority.deadline 守）。
 # 錯：stderr 一行「agent-fsm: 代號 原因」、退 1——StackMissing、RequestMissing（沒 pending 也沒 request.json：人改了 stack）、
-#   SendFailed（aos-llm send 退非 0；它自己的 stderr 原樣在上面，例 KernelMissing）、ReplyBad、PostFailed、WriteFailed。kernel 回的錯（aos-llm recv 退 1）原樣轉。
+#   SendFailed（aos-llm send 退非 0；它自己的 stderr 原樣在上面，例 LlmKernelMissing）、ReplyBad、PostFailed、WriteFailed。kernel 回的錯（aos-llm recv 退 1）原樣轉。
 import json, os, subprocess, sys
 
 NOT_YET = 10                                     # aos-llm recv：回信還沒到
