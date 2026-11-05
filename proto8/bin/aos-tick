@@ -14,7 +14,7 @@ import os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags
 
-USAGE = "aos-tick [旗標] FILE"   # 旗標表是空的也寫 [旗標]，跟 aos-loop、aos-fsm 同一個寫法（10-22）
+USAGE = "aos-tick [flags] FILE"   # 旗標表是空的也寫 [旗標]，跟 aos-loop、aos-fsm 同一個寫法（10-22）
 FLAGS = {}   # 目前沒有旗標；以後加旗標就在這裡加一列
 
 
@@ -27,9 +27,9 @@ def main():
     try:
         opts, rest = aos_flags.parse(sys.argv[1:], FLAGS)
     except aos_flags.Error as e:
-        die(e.code, f"usage: {USAGE}（{e}）")
+        die(e.code, f"usage: {USAGE} ({e})")
     if len(rest) != 1:
-        die("ArgumentsBad", f"usage: {USAGE}（%s）" % ("沒有時鐘檔" if not rest else f"時鐘檔只能一個，多給了 {rest[1]}"))
+        die("ArgumentsBad", f"usage: {USAGE} (%s)" % ("no clock file given" if not rest else f"only one clock file allowed, extra: {rest[1]}"))
     path = rest[0]
     try:
         with open(path, "rb") as f:
@@ -37,9 +37,9 @@ def main():
     except FileNotFoundError:
         raw = b"0\n"
     except OSError as e:
-        die("ClockBad", f"時鐘檔讀不到：{path}（{e.strerror or e}）")
+        die("ClockBad", f"cannot read clock file: {path} ({e.strerror or e})")
     if not re.fullmatch(rb"[0-9]+\n?", raw):
-        die("ClockBad", f"時鐘檔壞：{path}（內容不是回合數）")
+        die("ClockBad", f"clock file is bad: {path} (content is not a round number)")
     tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
     try:
         with open(tmp, "w", encoding="utf-8") as f:
@@ -50,7 +50,7 @@ def main():
             os.remove(tmp)
         except OSError:
             pass
-        die("WriteFailed", f"時鐘檔寫不了：{path}（{e.strerror or e}）")
+        die("WriteFailed", f"cannot write clock file: {path} ({e.strerror or e})")
     sys.exit(0)
 
 
