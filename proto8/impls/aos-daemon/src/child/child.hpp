@@ -58,6 +58,7 @@ struct Child {
     bool failed = false;                // 11-05：這一圈剛因出錯結束留成 stopped（reconcile 這圈不再起它）
     bool revived = false;               // 這一支是 wake／start 從 stopped／sleeping 的列再起的（11-05）：REVIVE_MS 內退非 0＝原因寫「起不來」
     std::chrono::steady_clock::time_point revived_at;
+    long long err_off = 0;              // 11-05 第二輪：起它那一刻小格 stderr.txt 的長度——reason 只看這次之後寫的（檔是附加的，前幾輩子的話不算）
     Json def;                           // null 或起它時給的定義資料夾（11-04，aos-agent，使用者「那就b。」）：Daemon 填（def_of）；接回、不變同 exec
 };
 

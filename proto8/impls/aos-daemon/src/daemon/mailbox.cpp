@@ -44,8 +44,13 @@ void Daemon::open_mailbox() {
 Daemon::Letters Daemon::take_letters() {
     std::vector<std::string> names;
     names.swap(redo_);
-    for (std::string& name : aos::post::take_all(mbox_)) {
-        names.push_back(std::move(name));
+    try {
+        for (std::string& name : aos::post::take_all(mbox_)) {
+            names.push_back(std::move(name));
+        }
+    } catch (const Error& e) {
+        // 11-05 第二輪：new/ 唯讀等認領不了＝原本整台 daemon 退 1；改成記進 mailbox_warning、下一圈再試
+        mailbox_warning_ = "cannot take letters: " + e.code + " " + e.msg;
     }
     Letters got;
     for (const std::string& id : names) {

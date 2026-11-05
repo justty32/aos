@@ -174,19 +174,31 @@ Json Daemon::write_parts(Json rows, std::set<std::string>& now) {
 
 void Daemon::clean_parts(const std::set<std::string>& now) {
     // 清舊分檔：留這次與上一次的（磁碟上的主檔現在還指著上一次的）；這個行程第一次寫時不清（上一個行程的主檔可能還指著）。
+    // 11-05 第二輪：不在這兩次裡的先「退役」，退役滿 PARTS_KEEP_MS 才刪——daemon 一秒寫好幾次表時，讀的人剛讀到的主檔可能已是兩次以前的，
+    // 原本它指的分檔已經刪了（aos-daemon-ctl ls 偶發 StateBad「No such file」）。
     if (parts_wrote_ && !parts_dir_.empty()) {
+        static const auto PARTS_KEEP = std::chrono::milliseconds(2000);
+        auto t = std::chrono::steady_clock::now();
         std::error_code ec;
         std::vector<std::filesystem::path> old;
         for (const auto& e : std::filesystem::directory_iterator(parts_dir_, ec)) {
             std::string f = e.path().filename().string();
-            if (now.count(f) == 0 && parts_prev_.count(f) == 0) {
+            if (now.count(f) > 0 || parts_prev_.count(f) > 0) {
+                retired_.erase(f);
+                continue;
+            }
+            auto at = retired_.find(f);
+            if (at == retired_.end()) {
+                retired_.emplace(f, t);
+            } else if (t - at->second >= PARTS_KEEP) {
                 old.push_back(e.path());
+                retired_.erase(at);
             }
         }
         for (const auto& f : old) {
             std::filesystem::remove(f, ec);
         }
-        if (now.empty() && parts_prev_.empty()) {
+        if (now.empty() && parts_prev_.empty() && retired_.empty()) {
             std::filesystem::remove(parts_dir_, ec);   // 空了就拿掉（不空就留著，remove 失敗不管）
         }
     }
@@ -223,7 +235,7 @@ void Daemon::write_more(const Json& me) {
         if (parts_stale_) {
             std::set<std::string> keep = parts_prev_;
             clean_parts(keep);
-            parts_stale_ = false;
+            parts_stale_ = !retired_.empty();   // 還有退役沒滿時間的：之後沒變的那幾下接著清
         }
         return;
     }

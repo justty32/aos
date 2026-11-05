@@ -49,7 +49,9 @@
 
 #include "aos/post.hpp"
 
+#include <chrono>
 #include <list>
+#include <map>
 #include <set>
 #include <unordered_map>
 #include <string>
@@ -152,6 +154,7 @@ private:
     std::string parts_dir_;                              // procs_state 分檔的資料夾（沒開 procs_state＝空）
     std::set<std::string> parts_prev_;                   // 上一次寫的 state 用到的分檔檔名（清舊分檔時留著）
     bool parts_wrote_ = false;                           // 這個行程寫過 state 了沒（第一次不清：磁碟上的主檔可能還指著舊的）
+    std::map<std::string, std::chrono::steady_clock::time_point> retired_;   // 11-05 第二輪：退役的分檔（不在這次／上一次）→ 退役那一刻；滿 PARTS_KEEP_MS 才刪
     std::string mbox_path_;                              // procs_ctl_mailbox（空＝不開）
     std::string mbox_name_;                              // daemon.json 寫的信箱名（沒寫＝procs_ctl_mailbox；procs_state 回報用）
     CellNames names_;                                    // 小格裡三個檔名（procs_loop／procs_exec／procs_stderr，11-04）
@@ -166,6 +169,7 @@ private:
     bool more_wrote_ = false;                            // 寫過 procs_state 沒（這個行程第一份一定寫）
     bool parts_stale_ = false;                           // 上一次寫完還留著「再上一次」的分檔：下一次沒變的那一下清（11-02）
     Json last_more_;                                     // 上一份寫出去的 procs_state（分檔前的表、不含 proc_fields／updated_at；比有沒有變用）
+    bool was_paused_ = false;                            // 11-05 第二輪：上一圈是暫停的（resume 那圈先寫 state 再對表）
     int lock_fd_ = -1;                                   // check_running 鎖著的 stack 資料夾（不關，行程結束自己放）
     aos::loop::Target body_;                             // 11-05：daemon 自己的身體（設定檔的 exec；Loop 的 exec_ 收過來）
     bool has_body_ = false;

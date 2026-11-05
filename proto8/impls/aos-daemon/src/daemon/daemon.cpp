@@ -24,7 +24,6 @@
 #include <csignal>
 #include <filesystem>
 #include <limits>
-#include <regex>
 #include <sstream>
 #include <thread>
 #include <unordered_map>
@@ -35,6 +34,7 @@ namespace aos::daemon {
 using Clock = std::chrono::steady_clock;
 
 static const int REVIVE_MS = 3000;  // 11-05（衝突 3）：wake／start 起來這麼久內就退＝原因寫「起不來」（11-05 晚起出錯結束一律留 stopped，3 秒只分原因字樣）
+static const int FLUSH_MS = 200;     // 11-05 第二輪：對表起一大批時 procs_state 最多多久寫一次
 static const int GRACE_MS = 10000;   // 收子項：SIGTERM 後等幾毫秒才 SIGKILL（P-36 daemon 的 grace 慣例 10000）
 
 static aos::loop::Defaults daemon_defaults() {
@@ -400,6 +400,7 @@ void Daemon::check_running() {
     }
     ::close(fd);
     std::string who;
+    bool closing = false;
     std::optional<Json> st = state_path_.empty() ? std::nullopt : aos::read_json(state_path_);
     if (st && st->is_object() && st->value("pid", Json()).is_number_integer() && st->value("started_at_ticks", Json()).is_number_integer()) {
         // 對得上活著的才印 pid：另一個剛起、還沒寫 state.json 時，檔裡是上一個（已死）daemon 的 pid
@@ -407,7 +408,11 @@ void Daemon::check_running() {
         std::optional<long long> now = aos::proc_started_at_ticks(pid);
         if (now && *now == (*st)["started_at_ticks"].get<long long>()) {
             who = " (pid " + std::to_string(pid) + ")";
+            closing = st->value("phase", Json()) == "stopping";
         }
+    }
+    if (closing) {   // 11-05 第二輪：收工途中（等子項退，最多約 10 秒）叫人「沿用」是錯的
+        throw Error{code::DaemonRunning, "the daemon on this stack (" + stack_ + ")" + who + " is shutting down; start again after it exits"};
     }
     throw Error{code::DaemonRunning, "a daemon is already running on this stack (" + stack_ + ")" + who + "; to reuse it, just aos-daemon-ctl add / aos-agent ctl add"};
 }
@@ -423,6 +428,39 @@ Json Daemon::unrel(const Json& v) const {
     size_t hash = s.find('#');
     std::string file = aos::abspath(aos::join(dstack_, s.substr(0, hash)));
     return Json(file + (hash == std::string::npos ? "" : s.substr(hash)));
+}
+
+// 11-05 第二輪：小格裡子 loop 自己的 state 窗（檔名看 daemon 寫的 loop.json 的 state，沒寫＝state.json、null＝沒開）。讀不到＝nullopt。
+static std::optional<Json> cell_state(const std::string& cell, const std::string& loop_name) {
+    std::optional<Json> cfg = aos::read_json(aos::join(cell, loop_name));
+    Json name = cfg && cfg->is_object() ? cfg->value("state", Json("state.json")) : Json("state.json");
+    if (!name.is_string() || name.get<std::string>().empty()) {
+        return std::nullopt;
+    }
+    std::optional<Json> st = aos::read_json(aos::join(cell, name.get<std::string>()));
+    if (!st || !st->is_object()) {
+        return std::nullopt;
+    }
+    return st;
+}
+
+// 11-05 第二輪：小格裡已經有一支活著的子 loop（它自己的 state 窗記的 pid＋started_at_ticks 對得上）＝回 pid、ticks。
+// daemon 在「fork 了、表還沒寫」或「列在 stopping」時被 kill -9，重開後那支不在表上（或沒被接回），原本會在同一格再起一份（兩支 aos-loop 搶一個 stack）。
+static std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell, const std::string& loop_name) {
+    std::optional<Json> st = cell_state(cell, loop_name);
+    if (!st) {
+        return std::nullopt;
+    }
+    Json pid = st->value("pid", Json());
+    Json ticks = st->value("started_at_ticks", Json());
+    if (!pid.is_number_integer() || !ticks.is_number_integer() || pid.get<long long>() <= 0) {
+        return std::nullopt;
+    }
+    std::optional<long long> now = aos::proc_started_at_ticks((pid_t)pid.get<long long>());
+    if (!now || *now != ticks.get<long long>()) {
+        return std::nullopt;
+    }
+    return std::make_pair((pid_t)pid.get<long long>(), ticks.get<long long>());
 }
 
 void Daemon::adopt() {
@@ -447,6 +485,9 @@ void Daemon::adopt() {
             return;   // 有一列壞就整份不接
         }
     }
+    // 上一個 daemon 死的時候在收工（state 窗 phase stopping）＝它正在收的那些本來要睡下（sleeping），不是被 stop
+    std::optional<Json> me = state_path_.empty() ? std::nullopt : aos::read_json(state_path_);
+    bool finishing = me && me->is_object() && me->value("phase", Json()) == "stopping";
     for (auto& [name, r] : table.items()) {
         Json phase = r.value("phase", Json());
         Json st = r.value("stack", Json());
@@ -477,22 +518,50 @@ void Daemon::adopt() {
             add(name, c);
             continue;
         }
-        if (phase != "running") {
+        if (phase != "running" && phase != "stopping") {
             continue;
         }
+        std::error_code ec;
+        c.once = !std::filesystem::exists(aos::join(c.stack, names_.loop), ec);   // 小格有 daemon 寫的 loop.json（procs_loop 的名字）＝loop 型（procs § 2 第 7 條）
         Json pid = r.value("pid", Json());
         Json ticks = r.value("started_at_ticks", Json());
-        if (!pid.is_number_integer() || !ticks.is_number_integer()) {
-            continue;
-        }
-        std::optional<long long> now = aos::proc_started_at_ticks((pid_t)pid.get<long long>());
+        std::optional<long long> now = pid.is_number_integer() && ticks.is_number_integer() ? aos::proc_started_at_ticks((pid_t)pid.get<long long>()) : std::nullopt;
         if (now && *now == ticks.get<long long>()) {
             c.pid = (pid_t)pid.get<long long>();
             c.started_at_ticks = ticks.get<long long>();
-            std::error_code ec;
-            c.once = !std::filesystem::exists(aos::join(c.stack, names_.loop), ec);   // 小格有 daemon 寫的 loop.json（procs_loop 的名字）＝loop 型（procs § 2 第 7 條）
+            if (phase == "stopping") {
+                // 11-05 第二輪：上一個 daemon 正在收它時被 kill -9（stop 在等它跑完、sleep／rm 送了 TERM、收工途中）。原本不接＝它照跑、表上看不到
+                //（信加的從此消失；daemon.json 裡的在同一格再起一份）。改成接回來接著收：送 SIGTERM、10 秒 SIGKILL；退了＝上一個 daemon 在收工（state
+                // phase stopping）的留 sleeping（下一圈 wake），其他留 stopped（看不出當初是 stop、sleep 還是 rm：一律停著、看得到，要的 start、不要的 rm）。
+                if (finishing) {
+                    c.nap = !c.once;
+                } else if (!c.once) {
+                    c.soft = true;
+                    stopped_.insert(name);
+                }
+                term(c);
+            }
             add(name, c);
+            continue;
         }
+        // 11-05 第二輪：行程不在了、上一個 daemon 沒來得及記（kill -9、斷電、wsl --shutdown、OOM）。原本整列悄悄丟掉（信加的從表上永久消失）。
+        // loop 型改成：running 的照「收工時還在跑」接成 sleeping（下一圈 wake，同一個 stack 接著做）——子 loop 自己的 state 窗寫 done（自己跑完了）才照舊不接；
+        // stopping 的（正在收）＝上一個 daemon 在收工就 sleeping，其他 stopped。exec 型（跑一次的）照舊不接。
+        if (c.once) {
+            continue;
+        }
+        if (phase == "running") {
+            std::optional<Json> cs = cell_state(c.stack, names_.loop);
+            if (cs && cs->value("phase", Json()) == "done") {
+                continue;
+            }
+        }
+        c.held = true;
+        c.phase = phase == "running" || finishing ? "sleeping" : "stopped";
+        if (c.phase == "stopped") {
+            stopped_.insert(name);
+        }
+        add(name, c);
     }
 }
 
@@ -574,7 +643,10 @@ void Daemon::halt(const std::string& name, Child& c) {
     try {
         aos::loop::write_window(path, Json::object({{"cmd", "stop"}, {"seq", stop_seq_}}));
     } catch (const Error& e) {
-        throw Error{e.code, "cannot stop " + name + ": " + e.msg};
+        // 11-05 第二輪：原本整台 daemon 退 1（一個小格唯讀就把全部 proc 收掉）；改成這一支改送 SIGTERM（同沒開 ctl 的），退了照樣留 stopped
+        say("cannot stop " + name + " through its ctl (" + e.code + " " + e.msg + "); sending SIGTERM instead");
+        term(c);
+        return;
     }
     c.phase = "stopping";
 }
@@ -607,8 +679,44 @@ bool Daemon::settle(Child& c) {
     return false;
 }
 
-// 11-05：出錯結束留成 stopped 的原因（英文，使用者 11-05「全都用英文吧」）：wake／start 後 REVIVE_MS 內退＝起不來，其他＝跑到一半掛了；
-// 加結束碼（被訊號打掉多寫訊號）與小格 stderr 最後一行（最多 300 字）。
+// 子 loop 自己的包裝行「X: run N: … failed with exit code C」（aos-loop 身體退非 0 時印的）。11-05 第二輪：原本用 std::regex_match，
+// libstdc++ 的 regex 是遞迴回溯，stderr 一行 30 KB 就把堆疊撐爆、整台 daemon SIGSEGV（139）；改手寫比對。
+static bool is_wrap(const std::string& line) {
+    size_t p = line.find(": run ");
+    if (p == std::string::npos || p == 0 || line.find(':') != p) {
+        return false;
+    }
+    size_t q = p + 6, d = q;
+    while (d < line.size() && line[d] >= '0' && line[d] <= '9') {
+        d += 1;
+    }
+    if (d == q || line.compare(d, 2, ": ") != 0) {
+        return false;
+    }
+    static const std::string tail = " failed with exit code ";
+    size_t t = line.rfind(tail);
+    if (t == std::string::npos || t < d) {
+        return false;
+    }
+    size_t n = t + tail.size();
+    if (n < line.size() && line[n] == '-') {
+        n += 1;
+    }
+    if (n >= line.size()) {
+        return false;
+    }
+    for (; n < line.size(); n += 1) {
+        if (line[n] < '0' || line[n] > '9') {
+            return false;
+        }
+    }
+    return true;
+}
+
+// 11-05：出錯結束留成 stopped 的原因（英文，使用者 11-05「全都用英文吧」）：起來（add／wake／start）後 REVIVE_MS 內退＝起不來，其他＝跑到一半掛了；
+// 加結束碼（被訊號打掉多寫訊號）與小格 stderr 最後一行（最多 300 位元組）。
+// 11-05 第二輪：只看這一支起來之後寫的（err_off 之後；stderr.txt 是附加的，原本會挖到前幾輩子的話）；控制字元（CR、ESC…）換成空白
+// （ls 印到終端不會上色、蓋字）；切 300 時不切在 UTF-8 字的中間。
 std::string Daemon::fail_reason(const Child& c) const {
     std::string code = aos::dumps(c.code);
     if (c.signal.is_number_integer()) {
@@ -620,30 +728,40 @@ std::string Daemon::fail_reason(const Child& c) const {
     int err = 0;
     std::optional<std::string> text = aos::read_file(aos::join(c.stack, names_.err), err);
     if (text) {
-        std::string t = *text;
-        while (!t.empty() && (t.back() == '\n' || t.back() == ' ')) {
-            t.pop_back();
+        // 被截短過（copytruncate）＝整份
+        std::string t = c.err_off > 0 && (size_t)c.err_off <= text->size() ? text->substr((size_t)c.err_off) : *text;
+        for (char& ch : t) {
+            unsigned char u = (unsigned char)ch;
+            if ((u < 0x20 && ch != '\n') || u == 0x7f) {
+                ch = ' ';
+            }
         }
-        // 跳過子 loop 自己的包裝行（「aos-loop: run N: X failed with exit code C」），取它前面那行＝身體自己說的真正原因；都是包裝行才用它
-        static const std::regex wrap(R"(^[^:]+: run [0-9]+: .* failed with exit code -?[0-9]+$)");
+        // 跳過子 loop 自己的包裝行，取它前面那行＝身體自己說的真正原因（只往前看這一支寫的）；都是包裝行才用它
         std::string last, rest = t;
         while (!rest.empty()) {
             size_t nl = rest.rfind('\n');
             std::string line = rest.substr(nl == std::string::npos ? 0 : nl + 1);
             rest = nl == std::string::npos ? "" : rest.substr(0, nl);
+            while (!line.empty() && line.back() == ' ') {
+                line.pop_back();
+            }
             if (line.empty()) {
                 continue;
             }
             if (last.empty()) {
                 last = line;
             }
-            if (!std::regex_match(line, wrap)) {
+            if (!is_wrap(line)) {
                 last = line;
                 break;
             }
         }
         if (last.size() > 300) {
-            last = last.substr(0, 300) + "...";
+            size_t cut = 300;
+            while (cut > 0 && ((unsigned char)last[cut] & 0xC0) == 0x80) {
+                cut -= 1;
+            }
+            last = last.substr(0, cut) + "...";
         }
         if (!last.empty()) {
             why += ": " + last;
@@ -705,7 +823,14 @@ void Daemon::tend() {
                 ++it;
             }
         }
+        was_paused_ = paused_;
         return;   // 接著 Loop 寫 paused／stopped 的 state（連 procs_state），不必另寫
+    }
+    if (was_paused_) {
+        // 11-05 第二輪：resume 那一圈先寫一份 state（paused false、新的 ctl_seq）再套信對表。原本對完表才寫：一大批信要好幾秒，
+        // 這段時間 state 還寫著暫停；這時 kill -9 再起＝照舊 state「起來先暫停」、ctl 裡那道 resume 又被當基準線＝一直停著
+        was_paused_ = false;
+        write_state("waiting", Json());
     }
     // 信箱與 procs_ctl 共存——先套信（一次性的改動，改的是底 want_／stopped_），再把 procs_ctl（宣告）疊在底上算期望表
     Letters got;
@@ -849,6 +974,22 @@ std::string Daemon::cell_of(const std::string& name, const Json& spec) const {
 Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws, const Json& kept_exec,
                     const Json& kept_def) {
     bool deep = cell != dstack_ + "procs/" + name;   // 不是預設小格＝proc 自己的 stack：不在就 mkdir -p
+    if (!is_once(spec)) {
+        if (auto live = live_in_cell(cell, names_.loop)) {   // 11-05 第二輪：小格裡已有活著的子 loop（上一個 daemon 起了、沒記進表就死）＝接回、不再起一份
+            Child c;
+            c.own = false;
+            c.pid = live->first;
+            c.started_at_ticks = live->second;
+            c.stack = cell;
+            c.ws = spec.is_object() && spec.contains("ws") ? spec["ws"] : kept_ws;
+            c.exec = spec.is_null() ? kept_exec : exec_of(spec, cwd_);
+            c.def = spec.is_null() ? kept_def : def_of(spec);
+            std::error_code ec;
+            std::uintmax_t sz = std::filesystem::file_size(aos::join(cell, names_.err), ec);
+            c.err_off = ec ? 0 : (long long)sz;
+            return c;
+        }
+    }
     Child c = is_once(spec) ? spawn_exec(name, cell, deep, spec, cwd_, dstack_, names_) : spawn(name, cell, deep, spec, cwd_, dstack_, names_, kept_ws);
     c.exec = spec.is_null() ? kept_exec : exec_of(spec, cwd_);   // 11-04 晚：列上的 exec 欄
     c.def = spec.is_null() ? kept_def : def_of(spec);              // 11-04：列上的 def 欄
@@ -895,6 +1036,15 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
     flush_table();   // 起之前先寫一份（退掉的、ctl_seq 變了的；起一大批要好一陣子），沒變就不寫
     // null＝信箱模式接回的（只留名、沒有設定），不會起（stopped 的列 start＝照小格裡的 loop.json 起）；收的途中（stopping）的同名項還在表上：等它退了、下一次才起；
     // 本次執行已自己結束的（ended_）不起
+    // 11-05 第二輪：起的途中每 FLUSH_MS 最多寫一次 procs_state（原本每一列寫一次整張表：表上千列、一批上千封信＝平方慢，21 秒、Ctrl-C 33 秒才退）；
+    // 對完再寫一次。fork 了、表還沒寫就被 kill -9 的，重開時 start 看小格裡活著的子 loop 接回（live_in_cell），不會同一格兩份
+    auto last = Clock::now();
+    auto some = [&] {
+        if (Clock::now() - last >= std::chrono::milliseconds(FLUSH_MS)) {
+            flush_table();
+            last = Clock::now();
+        }
+    };
     for (auto& [n, spec] : want.items()) {
         auto at = index_.find(n);
         if (at != index_.end()) {
@@ -909,7 +1059,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                 nc.revived_at = Clock::now();
                 c = nc;
                 log_child(n, c);
-                flush_table();
+                some();
             }
             continue;
         }
@@ -926,10 +1076,14 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
             c.def = def_of(spec);
             add(n, c);
         } else {
-            add(n, start(n, spec, cell_of(n, spec)));
+            Child nc = start(n, spec, cell_of(n, spec));
+            nc.revived = true;   // 11-05 第二輪：add 剛起的也算（REVIVE_MS 內退＝「起不來」，原本寫成「跑到一半掛了」）
+            nc.revived_at = Clock::now();
+            add(n, nc);
         }
-        flush_table();   // 每起一個表就變了：寫一次（起一大批要好一陣子，讓人看得到進度）
+        some();   // 起一大批要好一陣子：每 FLUSH_MS 寫一次，讓人看得到進度
     }
+    flush_table();
 }
 
 void Daemon::finish() {

@@ -30,6 +30,7 @@
 #include <vector>
 
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -185,6 +186,8 @@ static Child launch(const std::string& name, const std::string& cell, const std:
     if (err_fd < 0) {
         throw Error{code::LaunchFailed, "cannot start child " + name + ": cannot open " + err_path + " (" + std::strerror(errno) + ")"};
     }
+    struct stat est {};
+    long long err_off = fstat(err_fd, &est) == 0 ? (long long)est.st_size : 0;
     std::fflush(nullptr);
     pid_t pid = fork();
     if (pid < 0) {
@@ -199,6 +202,7 @@ static Child launch(const std::string& name, const std::string& cell, const std:
     Child c;
     c.pid = pid;
     c.started_at_ticks = aos::proc_started_at_ticks(pid);
+    c.err_off = err_off;
     c.ws = ws_s.empty() ? Json() : Json(ws_s);
     c.stack = cell;
     return c;
