@@ -21,10 +21,10 @@ while [ $# -gt 0 ]; do
 	case "$1" in
 	--apply) APPLY=1 ;;
 	--mailbox|--me|--s6-bin|--runner)
-		[ $# -ge 2 ] || { echo "setup.sh: ArgumentsBad $1 後面要有值" >&2; exit 1; }
+		[ $# -ge 2 ] || { echo "setup.sh: ArgumentsBad $1 needs a value" >&2; exit 1; }
 		case "$1" in --mailbox) MAILBOX="$2" ;; --me) ME="$2" ;; --s6-bin) BIN="$2" ;; --runner) RUNNER="$2" ;; esac
 		shift ;;
-	*) echo "setup.sh: FlagUnknown $1（用法：setup.sh [--mailbox 信箱] [--me 名] [--s6-bin 路徑] [--runner 名] [--apply]）" >&2; exit 1 ;;
+	*) echo "setup.sh: FlagUnknown $1 (usage: setup.sh [--mailbox MAILBOX] [--me NAME] [--s6-bin PATH] [--runner NAME] [--apply])" >&2; exit 1 ;;
 	esac
 	shift
 done
@@ -39,47 +39,47 @@ run() {
 }
 
 if [ "$APPLY" = 1 ] && [ "$(id -u)" != 0 ]; then
-	echo "setup.sh: UserBad 要用 root 跑（sudo sh $0 --apply）" >&2
+	echo "setup.sh: UserBad must run as root (sudo sh $0 --apply)" >&2
 	exit 1
 fi
-[ "$APPLY" = 1 ] || echo "# 乾跑：下面的指令都沒執行。用 root 加 --apply 才會真的做。"
+[ "$APPLY" = 1 ] || echo "# dry run: none of the commands below were run. Run as root with --apply to do them."
 
 if [ -n "$MAILBOX" ]; then
 	BOXES="$MAILBOX/tmp $MAILBOX/new $MAILBOX/cur $MAILBOX/reply $MAILBOX/reply/tmp $MAILBOX/reply/new $MAILBOX/reply/cur"
-	echo "# 讓 $RUNNER 寫得到信箱 $MAILBOX（kernel 用 $ME 跑）：擁有者 $ME、群組 $RUNNER、2770（別人進不來、看不到信）"
+	echo "# let $RUNNER write to mailbox $MAILBOX (the kernel runs as $ME): owner $ME, group $RUNNER, 2770 (others cannot enter or read letters)"
 	# shellcheck disable=SC2086
 	run install -d -o "$ME" -g "$RUNNER" -m 2770 "$MAILBOX" $BOXES
-	echo "#    reply/ 是 aos-llm ask 的回信信箱（10-30 回信走 reply_to）：kernel 寄回信進去、aos-llm 拿，兩邊都要寫得到"
-	echo "#    四格加預設 ACL：誰建的信（閘門建資料夾、kernel 寫回信）都讓 $ME 與群組 $RUNNER 讀寫得到，不看各自的 umask"
+	echo "#    reply/ is the reply mailbox of aos-llm ask (replies go by reply_to): the kernel sends replies in, aos-llm takes them; both sides must be able to write"
+	echo "#    default ACLs on the boxes: whoever creates a letter, $ME and group $RUNNER can read and write it, regardless of umask"
 	# shellcheck disable=SC2086
 	run setfacl -m "d:u:$ME:rwx,d:g:$RUNNER:rwx,d:o::---" $BOXES
-	echo "#    信箱要叫 <llm kernel 的 stack>/mailbox（AOS_LLM_KERNEL＝那個 stack，aos-llm 寄進它的 mailbox/），放在 $RUNNER 走得到的地方（例 $AREA/mailbox；在 700 的家目錄底下它走不進去）"
-	echo "#    沙箱裡要綁進來才看得到：設定的 rw 列信箱 {\"\$env\": \"AOS_LLM_KERNEL\", \"\$path\": \"/mailbox\"}、env 列 AOS_LLM_KERNEL（aos-sandbox 不另設開關）"
-	echo "# 不讓 $RUNNER 寫：chmod 700 $MAILBOX（或 chgrp 回 $ME 自己的群組）。kernel 自己建的信箱照 umask（多半 755＝別人讀得到信、寫不進），"
-	echo "#    放在 700 的家目錄底下就連看都看不到。"
-	echo "# 驗（不用 root；aos-llm 寫絕對路徑，sudo 用自己的 PATH）：kernel 開著時"
-	echo "#    echo '{\"request\":{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}}' | sudo -n /usr/local/bin/s6-setuidgid $RUNNER env AOS_LLM_KERNEL=\$(dirname $MAILBOX) /絕對/aos-llm ask   # 拿到回信"
-	echo "#    chmod 700 $MAILBOX 之後同一行＝aos-llm: MkdirFailed（寫不進）；chmod 2770 改回來"
+	echo "#    the mailbox must be <llm kernel stack>/mailbox (AOS_LLM_KERNEL = that stack, aos-llm sends into its mailbox/), somewhere $RUNNER can reach (e.g. $AREA/mailbox; not under a 700 home folder)"
+	echo "#    inside the sandbox it is visible only if bound: list the mailbox in rw as {\"\$env\": \"AOS_LLM_KERNEL\", \"\$path\": \"/mailbox\"} and AOS_LLM_KERNEL in env (aos-sandbox has no separate switch)"
+	echo "# to stop $RUNNER writing: chmod 700 $MAILBOX (or chgrp back to $ME's own group). A mailbox the kernel creates itself follows umask (usually 755 = others can read letters but not write),"
+	echo "#    and under a 700 home folder others cannot even see it."
+	echo "# check (no root needed; give aos-llm as an absolute path, sudo uses its own PATH), with the kernel running:"
+	echo "#    echo '{\"request\":{\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}}' | sudo -n /usr/local/bin/s6-setuidgid $RUNNER env AOS_LLM_KERNEL=\$(dirname $MAILBOX) /absolute/aos-llm ask   # gets a reply"
+	echo "#    after chmod 700 $MAILBOX the same line = aos-llm: MkdirFailed (cannot write); chmod 2770 to undo"
 	exit 0
 fi
 
-echo "# 1. 把要用的四支 s6 放到 /usr/local/bin——s6-setuidgid 要在 root 的 PATH 上（它照 PATH 叫 s6-applyuidgid）"
+echo "# 1. put the four s6 programs in /usr/local/bin; s6-setuidgid must be on root's PATH (it finds s6-applyuidgid by PATH)"
 run install -o root -g root -m 755 "$BIN/s6-setuidgid" "$BIN/s6-applyuidgid" "$BIN/s6-envuidgid" "$BIN/s6-softlimit" /usr/local/bin/
-echo "#    （或改用 AUR 的 s6、execline、skalibs 套件，二選一）"
+echo "#    (or use the s6, execline, skalibs packages from AUR instead)"
 
-echo "# 2. 建帳號 $RUNNER：系統帳號、沒有家目錄、不能登入"
+echo "# 2. create account $RUNNER: system account, no home folder, no login"
 if id "$RUNNER" >/dev/null 2>&1; then
-	echo "#    $RUNNER 已經有了，跳過"
+	echo "#    $RUNNER already exists, skipped"
 else
 	run useradd --system --user-group --no-create-home --home-dir /nonexistent --shell /usr/bin/nologin "$RUNNER"
 fi
 
-echo "# 3. 它工作的地方 $AREA：擁有者 $ME、群組 $RUNNER、2770（新檔跟著群組，兩邊都能讀寫；別人進不來）"
+echo "# 3. its work area $AREA: owner $ME, group $RUNNER, 2770 (new files take the group, both can read and write; others cannot enter)"
 run install -d -o "$ME" -g "$RUNNER" -m 2770 "$AREA"
 
-echo "# 4. 讓 $ME 能「換成 $RUNNER 跑任何指令」（只能換成它，換不成 root）"
+echo "# 4. let $ME run any command as $RUNNER (only as it, never as root)"
 RULE="$ME ALL=(root) NOPASSWD: /usr/local/bin/s6-setuidgid $RUNNER *"
-echo "#    /etc/sudoers.d/aos-run：$RULE"
+echo "#    /etc/sudoers.d/aos-run: $RULE"
 if [ "$APPLY" = 1 ]; then
 	printf '%s\n' "$RULE" > /etc/sudoers.d/aos-run.tmp
 	chmod 440 /etc/sudoers.d/aos-run.tmp
@@ -87,7 +87,7 @@ if [ "$APPLY" = 1 ]; then
 	mv /etc/sudoers.d/aos-run.tmp /etc/sudoers.d/aos-run
 fi
 
-echo "# 5. 驗（不用 root）："
-echo "#    sudo -n /usr/local/bin/s6-setuidgid $RUNNER id            # 應該印 uid=…($RUNNER)"
-echo "#    sudo -n /usr/local/bin/s6-setuidgid $RUNNER cat ~/.bashrc  # 應該 Permission denied（家目錄 700）"
-echo "# 拆掉：userdel $RUNNER; rm -r $AREA /etc/sudoers.d/aos-run; rm /usr/local/bin/s6-setuidgid /usr/local/bin/s6-applyuidgid /usr/local/bin/s6-envuidgid /usr/local/bin/s6-softlimit"
+echo "# 5. check (no root needed):"
+echo "#    sudo -n /usr/local/bin/s6-setuidgid $RUNNER id            # should print uid=...($RUNNER)"
+echo "#    sudo -n /usr/local/bin/s6-setuidgid $RUNNER cat ~/.bashrc  # should be Permission denied (home folder is 700)"
+echo "# to undo: userdel $RUNNER; rm -r $AREA /etc/sudoers.d/aos-run; rm /usr/local/bin/s6-setuidgid /usr/local/bin/s6-applyuidgid /usr/local/bin/s6-envuidgid /usr/local/bin/s6-softlimit"
