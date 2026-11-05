@@ -2,11 +2,18 @@
 # 問腦＝寄請求給 llm kernel、同步等回信：`aos-llm ask`（stdin＝{"request": {messages, tools}}；用 kernel 的預設代號，假腦＝kernel 的 fake；
 #   11-04 晚 think-as-function 03 § 3：pyfix 是工具形、一次跑完，同步就好）。$AOS_LLM_KERNEL（llm kernel 的 stack）沒設＝aos-llm 報 LlmKernelMissing。
 # 失敗時 history 不接任何東西、退 1（P-20）：BrainFailed（aos-llm 退非 0，它自己的 stderr 在上面）、ReplyBad。
-import json, os, subprocess, sys
+import json, os, signal, subprocess, sys
+
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    print("usage: brain.py   (the think cell of pyfix's sub-agent; run by its fsm.json)\n"
+          "Claim a task, ask the brain (aos-llm ask) with $AOS_STACK/history.jsonl and the registered tools, append the reply.\n"
+          "On error: \"pyfix-agent: error: CODE reason\" on stderr, exit 1.")
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 
 def die(code, reason):
-    print("pyfix-agent: %s %s" % (code, reason), file=sys.stderr)
+    print("pyfix-agent: error: %s %s" % (code, reason), file=sys.stderr)
     sys.exit(1)
 
 

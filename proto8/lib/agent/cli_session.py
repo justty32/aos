@@ -33,23 +33,30 @@
 #   模型（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本）的 model＝flags 的 --model（換掉或加在尾）；都沒有＝flags 原樣。
 # 開場白不歸這層（11-04 翻案，使用者「不該在json中指定檔案名稱，應該改成用旗標指定」）：是 aos-eca-turn 的 --prompt FILE；
 #   cli.json 寫了 prompt 跟其他沒認的鍵一樣不看。
-# 錯：當工具叫（call_main）時照 lib 契約 stderr 與 stdout 各一行「工具名: 代號 原因」、退 1；attach 與 hook 是 stderr 一行「cli_session: 代號 原因」、退 1。
+# 錯：當工具叫（call_main）時照 lib 契約 stderr 與 stdout 各一行「工具名: error: 代號 原因」、退 1；attach 與 hook 是 stderr 一行「cli_session: error: 代號 原因」、退 1。
+#   CLI（claude／codex）與 tmux 自己的 stderr 原樣透到 stderr、不塞進自己的錯（stdio-unify R10）；stdout 只有自己那一行（D2）。
+#   給人看的狀態句（attaching、等對話空出來）是提醒行「cli_session: warning: …」（R1、D5）。工具形認 --help（英文說明印 stdout、退 0）、Ctrl-C 退 130。
 #
 # 放哪（10-24 遷移）：proto8/lib/agent/cli_session.py，lib/agent 的 claude、codex 兩個工具共用（用 realpath 找到這層再 import）；
 # 掛它的 agent 根目錄可以放一份 cli_session.py（或捷徑）給 attach 用（原本的例子 demo/agent-fay 11-03 晚刪了）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
-import datetime, fcntl, glob, json, os, shlex, shutil, subprocess, sys, threading, time, uuid
+import datetime, fcntl, glob, json, os, shlex, shutil, signal, subprocess, sys, threading, time, uuid
 
 TMUX_SESSION = "cli"
 PROG, ECHO = "cli_session", False                    # 錯誤行開頭、要不要也印到 stdout（call_main 改成工具名、True）
 
 
 def die(code, reason):
-    line = "%s: %s %s" % (PROG, code, str(reason).replace("\n", " "))
+    line = "%s: error: %s %s" % (PROG, code, str(reason).replace("\n", " "))
     print(line, file=sys.stderr)
     if ECHO:
         print(line)                                  # 當工具叫時 stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
+
+
+def warn(sentence):
+    """提醒行（stdio-unify R1）：stderr 一句、不帶代號。"""
+    print("%s: warning: %s" % (PROG, sentence), file=sys.stderr)
 
 
 def now():
@@ -272,9 +279,10 @@ def link_transcript(cell, kind):
 # ---------------------------------------------------------------- 非互動（畫面沒開）
 
 def run_cli(argv, prompt, ws, timeout_ms, handed=None):
-    """起 CLI、題目從 stdin 給、等它做完；起來了就叫 handed（交出去了，11-03 aos-eca-turn 在這一刻收信）。"""
+    """起 CLI、題目從 stdin 給、等它做完；起來了就叫 handed（交出去了，11-03 aos-eca-turn 在這一刻收信）。
+    CLI 的 stderr 不攔、原樣透出（R10）。"""
     try:
-        p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              text=True, cwd=ws)
     except FileNotFoundError:
         die("CliMissing", "%s is not on PATH" % argv[0])
@@ -286,7 +294,7 @@ def run_cli(argv, prompt, ws, timeout_ms, handed=None):
         p.kill()
         p.communicate()
         die("CliFailed", "%s did not finish within %d s" % (argv[0], timeout_ms // 1000))
-    return subprocess.CompletedProcess(argv, p.returncode, out, err)
+    return subprocess.CompletedProcess(argv, p.returncode, out, None)
 
 
 def tail(text, n=300):
@@ -294,10 +302,10 @@ def tail(text, n=300):
 
 
 def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None):
-    """claude -p --output-format stream-json：每行一邊寫進 live.jsonl（人可以 tail 著看），一邊收起來；回 (結束碼, 全部行, stderr)。
-    題目寫進 stdin、關掉之後叫 handed（交出去了，11-03）。"""
+    """claude -p --output-format stream-json：每行一邊寫進 live.jsonl（人可以 tail 著看），一邊收起來；回 (結束碼, 全部行)。
+    題目寫進 stdin、關掉之後叫 handed（交出去了，11-03）。claude 的 stderr 不攔、原樣透出（R10）。"""
     try:
-        p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        p = subprocess.Popen(argv, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                              text=True, cwd=ws)
     except FileNotFoundError:
         die("CliMissing", "%s is not on PATH" % argv[0])
@@ -306,9 +314,6 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None):
     if handed:
         handed()
     deadline, lines = time.time() + timeout_ms / 1000, []
-    err = []
-    t = threading.Thread(target=lambda: err.append(p.stderr.read()), daemon=True)
-    t.start()
     timer = threading.Timer(timeout_ms / 1000, p.kill)
     timer.start()
     try:
@@ -320,10 +325,9 @@ def run_claude_stream(argv, prompt, ws, timeout_ms, live_path, handed=None):
         p.wait()
     finally:
         timer.cancel()
-    t.join(1)
     if time.time() > deadline:
         die("CliFailed", "%s did not finish within %d s" % (argv[0], timeout_ms // 1000))
-    return p.returncode, lines, "".join(err)
+    return p.returncode, lines
 
 
 def print_claude(cfg, cell, ws, stack, prompt, handed=None):
@@ -334,7 +338,7 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None):
     argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"] + cfg.get("flags", []) + cfg.get("print_flags", [])
     argv += mcp_argv(cfg, cell, ws, stack)
     argv += ["--resume", sid] if sid else ["--session-id", new]
-    code, lines, err = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"), handed)
+    code, lines = run_claude_stream(argv, prompt, ws, cfg.get("timeout_ms", 600000), cell.file("live.jsonl"), handed)
     out = None
     for line in lines:
         try:
@@ -345,10 +349,10 @@ def print_claude(cfg, cell, ws, stack, prompt, handed=None):
             out = ev
     stdout = "".join(lines)
     if out is None:
-        die("CliFailed", "claude exited %d with no result in its output: %s %s" % (code, tail(stdout), tail(err)))
+        die("CliFailed", "claude exited %d with no result in its output: %s" % (code, tail(stdout)))
     if code != 0 or out.get("is_error"):   # result 行自己帶原因（例 模型不存在）就印它；stdout 尾巴會切在 JSON 中間
         why = out.get("result") if isinstance(out.get("result"), str) and out.get("result") else tail(stdout)
-        die("CliFailed", "claude exited %d: %s %s" % (code, tail(why), tail(err)))
+        die("CliFailed", "claude exited %d: %s" % (code, tail(why)))
     if not sid:
         cell.write("session.txt", (out.get("session_id") or new) + "\n")
     return out.get("result") or ""
@@ -377,7 +381,7 @@ def print_codex(cfg, cell, ws, stack, prompt, handed=None):
         if isinstance(ev, dict) and ev.get("type") == "thread.started":
             thread = ev.get("thread_id") or thread
     if r.returncode != 0 or not os.path.exists(last):
-        die("CliFailed", "codex exited %d: %s" % (r.returncode, tail(r.stderr) or tail(r.stdout)))
+        die("CliFailed", "codex exited %d (its reason is on stderr)" % r.returncode)
     if not sid and thread:
         cell.write("session.txt", thread + "\n")
     with open(last, encoding="utf-8") as f:
@@ -405,7 +409,8 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None):
     seen = len(cell.turns())
     r = cell.tmux("load-buffer", "-b", "aos", "-", input=prompt)
     if r.returncode != 0:
-        die("CliFailed", "tmux load-buffer: %s" % tail(r.stderr))
+        sys.stderr.write(r.stderr)                         # tmux 自己的話原樣透出（R10）
+        die("CliFailed", "tmux load-buffer exited %d" % r.returncode)
     cell.tmux("paste-buffer", "-p", "-d", "-b", "aos", "-t", TMUX_SESSION)   # -p：程式要的話包成 bracketed paste，多行不會半路送出
     time.sleep(0.3)
     cell.tmux("send-keys", "-t", TMUX_SESSION, "Enter")
@@ -447,19 +452,35 @@ def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None):
     return text
 
 
+CALL_HELP = """\
+usage: %(name)s < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_STACK is its cell)
+Hand the prompt to the %(name)s CLI and print its answer; the conversation goes on in this
+tool's cell (session.txt), and a person can attach to its screen (aos-agent attach).
+How the CLI is called (flags, timeout_ms, tools) is in cli.json next to _entry.
+Arguments: one JSON object on stdin:
+  prompt  string, required
+Result on stdout. On error: one line "%(name)s: error: CODE reason" on stderr and stdout, exit 1
+(the CLI's own stderr is passed through to stderr).
+"""
+
+
 def call_main(tool_dir, on_busy="yield"):
     """工具入口：stdin {"prompt": "..."} → stdout 回答。tool_dir＝工具資料夾（cli.json 在裡面；名字＝資料夾名）。
     on_busy 照傳給 ask（lib/agent/claude、codex 用預設 yield；aos-eca-turn --one 照它的 --on-busy）。"""
     global PROG, ECHO
     PROG, ECHO = os.path.basename(tool_dir), True
+    if "--help" in sys.argv[1:]:                         # --help：英文說明印 stdout、退 0（stdio-unify R3）
+        sys.stdout.write(CALL_HELP % {"name": PROG})
+        sys.exit(0)
+    signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
     cfg = load_cfg(tool_dir)
     stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
     if not stack:
         die("StackMissing", "AOS_STACK is not set")
     try:
-        args = json.loads(sys.stdin.read())
-    except ValueError as e:
-        die("ArgumentsBad", "stdin is not JSON: %s" % e)
+        args = json.loads(sys.stdin.read() or "{}")
+    except ValueError:
+        die("ArgumentsBad", "stdin is not JSON")
     if not isinstance(args, dict) or not isinstance(args.get("prompt"), str) or not args["prompt"].strip():
         die("ArgumentsBad", "missing prompt (a non-empty string)")
     cell = Cell(stack)                                   # 工具形：對話在這格本身，aos-mcp 的 stack 也是它（它叫的工具再疊 tools/<名>/）
@@ -571,7 +592,8 @@ def start(cfg, cell, ws, stack):
     except FileNotFoundError:
         die("TmuxMissing", "tmux is not on PATH")
     if r.returncode != 0:
-        die("CliFailed", "tmux new-session: %s" % tail(r.stderr))
+        sys.stderr.write(r.stderr)                         # tmux 自己的話原樣透出（R10）
+        die("CliFailed", "tmux new-session exited %d" % r.returncode)
     # 等畫面穩下來（CLI 開機要幾秒；太早貼字會被吃掉）：畫面有字、連續 3 秒沒變、不是停在「Resuming session…」
     # （10-24 實跑：codex 的「Resuming session…」會停 2 秒以上不動，1.5 秒的門檻會太早放行）
     last, stable_since, deadline = None, time.time(), time.time() + 30
@@ -635,7 +657,7 @@ def attach_main(argv, agent_dir):
     if detached:
         print("%s screen %s: %s" % (names[0], "opened" if opened else "already open", cell.file("tty.sock")))
         return
-    print("attaching to %s (Ctrl-\\ detaches, the screen stays; /exit inside to end)" % names[0], file=sys.stderr)
+    warn("attaching to %s (Ctrl-\\ detaches, the screen stays; /exit inside to end)" % names[0])
     os.execvp("tmux", ["tmux", "-S", cell.file("tty.sock"), "attach", "-t", TMUX_SESSION])
 
 
@@ -650,14 +672,18 @@ def open_cell(cell):
         die("CellBad", "%s has no stack.txt (tools are attached; need the stack for aos-mcp)" % cell.path)
     f, ok = cell.lock()
     if not ok:
-        print("the agent is using this conversation; waiting for its turn to finish...", file=sys.stderr)
+        warn("the agent is using this conversation; waiting for its turn to finish...")
         fcntl.flock(f, fcntl.LOCK_EX)
     with f:
         return start(cfg, cell, ws, stack)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) >= 4 and sys.argv[1] == "hook":
+    if "--help" in sys.argv[1:2]:
+        print("usage: cli_session.py hook claude|codex CELL [PAYLOAD]\n"
+              "The hook the CLI's interactive screen calls after each turn (appends to CELL/turns.jsonl; never fails).\n"
+              "Tool entries (lib/agent/claude, codex), aos-eca-turn and aos-eca-screen import this file.")
+    elif len(sys.argv) >= 4 and sys.argv[1] == "hook":
         hook_main(sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv) > 4 else None)
     else:
-        die("ArgumentsBad", "usage: cli_session.py hook <claude|codex> <cell> [payload] (tool entries and attach import it)")
+        die("ArgumentsBad", "expected hook claude|codex CELL [PAYLOAD] (usage: cli_session.py hook claude|codex CELL [PAYLOAD]; see --help)")

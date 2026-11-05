@@ -15,14 +15,30 @@
 #     read＝文（預設最多 8000 bytes，超過附 [truncated: N more bytes]）＋children: 目錄（每行「  名  摘要」，資料夾名後加 /）；
 #     ls＝只印 children:（沒有＝children: (none)）；
 #     find＝path 底下（含自己）標題、摘要、本文含 query（不分大小寫）的節點，matches: 每行「  路徑  標題」，最多 20 個再加 … N more。
-# 錯：stderr 與 stdout 各一行「memory: 代號 原因」、退 1：ArgumentsBad（stdin 不是 JSON 物件、op 沒給、max_bytes 不是正整數、
+# 錯：stderr 與 stdout 各一行「memory: error: 代號 原因」、退 1：ArgumentsBad（stdin 不是 JSON 物件、op 沒給、max_bytes 不是正整數、
 #   find 沒 query）、OpUnknown、PathBad、MemoryMissing（沒設、空、不是資料夾）、NodeMissing（附父節點的子節點名）、
-#   ReadFailed（檔在但讀不了、不是 UTF-8；grep 退 2）、LaunchFailed（PATH 上沒有 grep）。
+#   ReadFailed（檔在但讀不了、不是 UTF-8；grep 退 2——grep 自己的 stderr 原樣透出，這裡只多寫自己一行，stdio-unify R10）、LaunchFailed（PATH 上沒有 grep）。
+#   --help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉 grep，退 130）。
 # 不寫任何檔、不碰 $AOS_WS。子行程只有 find 的 grep；被 TERM 時先收掉它再走（lib 契約規則 5）。
 # 設計（使用者 11-05「依託檔案系統、/usr/bin 的 ls/grep 包成工具，不用重複發明」）：
 #   read＝cat/head -c、ls＝ls、find＝grep -ril，全部限定在 AOS_MEMORY 根之下、唯讀、輸出截斷給小模型；不另發明儲存格式。
 #   節點路徑 a/b 跟 aos-json 的 #/a/b 指標同形，之後 AOS_MEMORY 指到一份 .json 時可以用 aos-json 當後端（這版不做）。
 import json, os, re, signal, subprocess, sys
+HELP = """\
+usage: memory < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Read a shared, hierarchical, read-only knowledge base: op read (a node's text and
+its children), ls (children only), find (nodes containing query).
+Arguments: one JSON object on stdin (empty stdin = {}):
+  op         string (read | ls | find), required
+  path       string
+  query      string
+  max_bytes  integer
+Result on stdout. On error: one line "memory: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "memory"
 DEFAULT_MAX_BYTES = 8000
@@ -33,7 +49,7 @@ child = None
 
 
 def die(code, reason):
-    line = "%s: %s %s" % (NAME, code, str(reason).replace("\n", " "))
+    line = "%s: error: %s %s" % (NAME, code, str(reason).replace("\n", " "))
     print(line, file=sys.stderr)
     print(line)                                 # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
@@ -42,8 +58,8 @@ def die(code, reason):
 def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
-    except ValueError as e:
-        die("ArgumentsBad", "stdin is not JSON: %s" % e)
+    except ValueError:
+        die("ArgumentsBad", "stdin is not JSON")
     if not isinstance(a, dict):
         die("ArgumentsBad", "arguments must be an object")
     return a
@@ -238,16 +254,15 @@ def grep(query, target):
     global child
     try:
         child = subprocess.Popen(["grep", "-r", "-i", "-l", "-F", "--include=*.md", "--include=*.json", "--", query, target],
-                                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                 start_new_session=True)
+                                 stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                 start_new_session=True)       # stderr 不攔：grep 自己的話原樣透出（R10）
     except OSError as e:
         die("LaunchFailed", "cannot run grep: %s" % e)
-    out, err = child.communicate()
+    out, _ = child.communicate()
     if child.returncode == 1:
         return []
     if child.returncode != 0:
-        last = (err.decode("utf-8", "replace").strip().splitlines() or ["grep exited %d" % child.returncode])[-1]
-        die("ReadFailed", "grep failed: %s" % last)
+        die("ReadFailed", "grep exited %d" % child.returncode)
     return [l for l in out.decode("utf-8", "surrogateescape").splitlines() if l]
 
 
@@ -291,6 +306,7 @@ def op_find(root, segs, query):
 
 
 signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
 args = arguments()
 op = args.get("op")
 if op is None:

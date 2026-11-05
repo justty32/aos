@@ -6,11 +6,27 @@
 #   再 aos-agent tools --target <那隻> add [--override] <name> <絕對路徑>／rm <name>／ls --json。下一格 brain 重讀就看到新清單。
 #   path：相對路徑從 $AOS_WS 算、解開 .. 與捷徑後要在工作區裡；絕對路徑要在 lib/（這個工具所在的庫）底下；其他＝PathBad。
 #   結果：add／rm 印一句（下一題起生效）、ls 印 aos-tools ls --json 那一行。
-#   錯：stderr 與 stdout 各一行「self_tools: 代號 原因」、退 1；aos-agent（與它轉的 aos-tools）的 stderr 原樣往上、
-#   它退非 0 時取它最後一行的代號與原因（例 PathMissing、ToolExists、ToolUnknown、DaemonMissing、InstanceMissing）。
-#   沒掛在 daemon 下跑的 agent（aos-exec body.json）不支援：ctl who 報 DaemonMissing／InstanceMissing，原樣回給腦。
+#   錯：stderr 與 stdout 各一行「self_tools: error: 代號 原因」、退 1；aos-agent（與它轉的 aos-tools）的 stderr 原樣透到 stderr，
+#   它退非 0 時這裡只多寫自己一行 CommandFailed（stdio-unify R10：不拿它的末行；原因在 stderr，給人看）。op 沒給＝ArgumentsBad、不認得＝OpUnknown（R11）。
+#   沒掛在 daemon 下跑的 agent（aos-exec body.json）不支援：ctl who 失敗＝CommandFailed（aos-agent 在 stderr 說 DaemonMissing／InstanceMissing）。
+#   --help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉 aos-agent，退 130）。
 # 需要 PATH 上有 aos-agent（proto8/install.sh）。每次叫 aos-agent 最多 60 秒；被外面 TERM 時先收掉它再走（lib 契約規則 5）。
 import json, os, signal, subprocess, sys
+HELP = """\
+usage: self_tools < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Change the tool box of the agent that calls me (its overlay, not its definition):
+op add | rm | ls. Changes apply from the next turn.
+Arguments: one JSON object on stdin (empty stdin = {}):
+  op        string (add | rm | ls), required
+  name      string
+  path      string
+  override  boolean
+Result on stdout. On error: one line "self_tools: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "self_tools"
 TIMEOUT_S = 60
@@ -19,7 +35,7 @@ child = None
 
 
 def die(code, reason):
-    line = "%s: %s %s" % (NAME, code, str(reason).replace("\n", " "))
+    line = "%s: error: %s %s" % (NAME, code, str(reason).replace("\n", " "))
     print(line, file=sys.stderr)
     print(line)                                 # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)
@@ -44,8 +60,8 @@ def workspace():
 def arguments():
     try:
         a = json.loads(sys.stdin.read() or "{}")
-    except ValueError as e:
-        die("ArgumentsBad", "stdin is not JSON: %s" % e)
+    except ValueError:
+        die("ArgumentsBad", "stdin is not JSON")
     if not isinstance(a, dict):
         die("ArgumentsBad", "arguments must be an object")
     return a
@@ -66,36 +82,32 @@ def tool_path(p):
 
 
 def agent(*args):
-    """aos-agent args…：stderr 原樣往上；退非 0＝取它最後一行的代號與原因報錯。回 stdout。"""
+    """aos-agent args…：stderr 原樣往上；退非 0＝自己一行 CommandFailed（不讀它的 stderr，R10）。回 stdout。"""
     global child
     try:
-        child = subprocess.Popen(["aos-agent"] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                 text=True, start_new_session=True)
+        child = subprocess.Popen(["aos-agent"] + list(args), stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                                 text=True, start_new_session=True)      # stderr 不攔：原樣透出（R10）
     except OSError as e:
         die("LaunchFailed", "cannot run aos-agent (put it on PATH with proto8/install.sh): %s" % e)
     try:
-        out, err = child.communicate(timeout=TIMEOUT_S)
+        out, _ = child.communicate(timeout=TIMEOUT_S)
     except subprocess.TimeoutExpired:
         os.killpg(child.pid, signal.SIGKILL)
         child.communicate()
         die("CommandFailed", "aos-agent %s took over %d s and was killed" % (" ".join(args[:2]), TIMEOUT_S))
-    if err:
-        sys.stderr.write(err if err.endswith("\n") else err + "\n")
     if child.returncode != 0:
-        last = (err.strip().splitlines() or ["aos-agent: CommandFailed exited %d" % child.returncode])[-1]
-        prog, _, rest = last.partition(": ")
-        code, _, why = rest.partition(" ")
-        if not code or not code[:1].isupper():
-            code, why = "CommandFailed", last
-        die(code, "%s (from %s)" % (why, prog or "aos-agent"))
+        die("CommandFailed", "aos-agent %s exited %d" % (" ".join(args[:2]), child.returncode))
     return out
 
 
 signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
 args = arguments()
 op = args.get("op")
+if op is None:
+    die("ArgumentsBad", "op is required (add, rm or ls)")
 if op not in ("add", "rm", "ls"):
-    die("ArgumentsBad", "op must be one of add, rm, ls")
+    die("OpUnknown", "op must be one of add, rm, ls (got %r)" % (op,))
 name = args.get("name")
 if op in ("add", "rm") and (not isinstance(name, str) or not name):
     die("ArgumentsBad", "%s needs name (a string)" % op)

@@ -6,9 +6,22 @@
 # 子 agent 的工具是庫的 ls、read、write、edit、bash（tools/ 裡的捷徑）；要改的資料夾＝$AOS_WS/<dir>（絕對路徑）寫進子 agent 的 stack 的
 # pyfix_dir.txt（一行；11-01 起取代環境變數），它的 act 讀那個檔、把工具的工作區換成那裡，所以只碰得到那個資料夾
 # （bash 的指令本身擋不住出去，同 lib/base/bash）。PYTHONDONTWRITEBYTECODE=1 往下帶：跑測試不在使用者的程式資料夾留 __pycache__。
-# 錯：stderr 與 stdout 各一行「pyfix: 代號 原因」、退 1——ArgumentsBad、StackMissing、DirBad、AgentFailed、AnswerMissing。
+# 錯：stderr 與 stdout 各一行「pyfix: error: 代號 原因」、退 1——ArgumentsBad、StackMissing、DirBad、AgentFailed、AnswerMissing。
 # 來源：demo/agent-eve/tools/pyfix（10-24；遷移時子 agent 改掛 lib/base 的工具、轉接抽成 agent_tool.py；demo 11-04 刪了）。
-import difflib, json, os, sys
+import difflib, json, os, signal, sys
+HELP = """\
+usage: pyfix < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Hand a Python fixing task to a sub-agent working on $AOS_WS/<dir>; print its
+report and the actual diff.
+Arguments: one JSON object on stdin (empty stdin = {}):
+  task  string, required
+  dir   string
+Result on stdout. On error: one line "pyfix: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.realpath(__file__))))   # lib/agent（agent_tool.py）
@@ -28,8 +41,8 @@ if not stack:
     die("StackMissing", "AOS_STACK is not set")
 try:
     args = json.loads(sys.stdin.read() or "{}")
-except ValueError as e:
-    die("ArgumentsBad", "stdin is not JSON: %s" % e)
+except ValueError:
+    die("ArgumentsBad", "stdin is not JSON")
 if not isinstance(args, dict) or not isinstance(args.get("task"), str) or not args["task"].strip():
     die("ArgumentsBad", "missing task (a non-empty string)")
 d = args.get("dir", ".")

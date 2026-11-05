@@ -2,14 +2,14 @@
 
 P-41「agent 當腦的工具，轉接寫在那個工具自己的 _entry」；10-24 遷移（tool-lib 遷移清單、agent-as-tool 選項 4）把 pyfix 裡那段通用的抽出來：
 每次呼叫開一個新的小格 $AOS_STACK/runs/<三位數>/（子 agent 的工作區 ws/ 與 stack/）→ 題目寫進 ws/new/<題名> → aos-exec 跑子 agent 到答完
-→ 從 ws/out/<題名> 拿答案。不帶上次的記憶（每次新 stack）。子 agent 的 stdout 不混進工具的結果（轉到 stderr）。
+→ 從 ws/out/<題名> 拿答案。不帶上次的記憶（每次新 stack）。子 agent 的 stdout 不混進工具的結果（轉到 stderr）；它的 stderr 原樣透出，失敗時這裡只多寫自己一行（stdio-unify R10）。
 這支不是工具（沒有 _entry），是模組；工具用 realpath 找到 lib/agent 這層再 import（同 cli_session.py）。純標準庫。
-錯：stderr 與 stdout 各一行「<工具名>: 代號 原因」、退 1（lib/README 規則 3）——AgentFailed（起不來、退非 0）、AnswerMissing（跑完沒答案）。"""
+錯：stderr 與 stdout 各一行「<工具名>: error: 代號 原因」、退 1（lib/README 規則 3）——AgentFailed（起不來、退非 0）、AnswerMissing（跑完沒答案）。"""
 import os, subprocess, sys
 
 
 def die(name, code, reason):
-    line = "%s: %s %s" % (name, code, str(reason).replace("\n", " "))
+    line = "%s: error: %s %s" % (name, code, str(reason).replace("\n", " "))
     print(line, file=sys.stderr)
     print(line)                                 # stdout 也印：stdout 是給腦看的結果
     sys.exit(1)

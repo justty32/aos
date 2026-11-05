@@ -4,8 +4,8 @@
 # 介面（lib/README 的契約）：stdin 一份 {"op": "add"|"say"|"ask"|"rm"|"ls", ...}：
 #   add {name, def, ws?, endpoint?, tools?: [{name, path}], limits?}  aos-agent ctl add --name <name> --ws <ws> [--limits <JSON>] <def>；有 endpoint＝llm set endpoint=…、
 #       有 tools＝逐個 tools add（不繼承父的腦與工具：要就明寫，C-52）；後面兩步失敗＝ctl rm 收回（全有或全無，規則 6）。印 added <name> (stack …)。
-#       limits（11-05 feat-proto 件 5）原樣 json 轉成 --limits（驗 key 與值是 aos-agent 的事）；ctl add 在 stderr 的提醒行（括號那種，
-#       例 limits 還沒生效）接在 added 那行後面印給腦。
+#       limits（11-05 feat-proto 件 5）原樣 json 轉成 --limits（驗 key 與值是 aos-agent 的事）；ctl add 在 stderr 的提醒行
+#       （`aos-agent: warning: …`，例 limits 還沒生效）原樣接在 added 那行後面印給腦。
 #   say {name, text}           寄一句（aos-agent say，話走 stdin）、馬上回，印信件名稱
 #   ask {name, text, timeout_s?}  say＋listen --timeout-s（預設 600、上限 1700：act 格 timeout_ms 1800000 包得住）印回答
 #   rm {name}                  ctl rm（刪子的 stack；aos-agent 的保護規則照舊）
@@ -15,24 +15,47 @@
 # 只收自己生的：add 成功就把名字記進工具小格 $AOS_STACK/children.json（一個名字陣列，P-17；規則 8）；say／ask／rm 的名字不在裡面＝ChildUnknown、不動手
 #   （不是權限，aos 不驗身分；只是不讓腦誤殺兄弟或父）。rm 成功才從裡面拿掉。
 # 上限不在這裡數：AOS_KERNEL 有設＝aos-agent 先過判官（max_running），滿了＝aos-agent 的 AddRejected … SlotMissing 原樣回（04 代定 3）。
-# 錯：stderr 與 stdout 各一行「agents: 代號 原因」、退 1（規則 3）——自己的：ArgumentsBad、NameBad、OpUnknown、DaemonMissing、StackMissing、
+# 錯：stderr 與 stdout 各一行「agents: error: 代號 原因」、退 1（規則 3）——自己的：ArgumentsBad、NameBad、OpUnknown、DaemonMissing、StackMissing、
 #   WsMissing、PathBad、DefMissing、ChildUnknown、ReadFailed、WriteFailed、MkdirFailed、LaunchFailed（aos-agent 不在 PATH）、CommandFailed（逾時）；
-#   aos-agent 退非 0＝把它 stderr 裡最後一行 `aos-…: 代號 原因`（aos-agent 自己的，或它原樣轉的 aos-tools／aos-json 的）的代號與原因
-#   原樣接在 `agents: ` 後面（AddRejected、InstanceExists、InterfaceMissing、AnswerMissing、ToolDefMissing…）；沒那行＝CommandFailed＋結束碼。
+#   aos-agent 的 stderr 一律原樣透到這裡的 stderr（stdio-unify R10）；它退非 0＝把它 stderr 裡最後一行錯誤行 `aos-…: error: 代號 原因`
+#   （aos-agent 自己的，或它原樣轉的 aos-tools／aos-json 的）的代號與原因接在 `agents: error: ` 後面給腦
+#   （AddRejected、InstanceExists、InterfaceMissing、AnswerMissing、ToolDefMissing…）；沒那行＝CommandFailed＋結束碼。
+#   op 沒給＝ArgumentsBad，給了不認得才 OpUnknown（R11）。--help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉那一群，退 130）。
 # 工具自己不跑 agent：全是 aos-agent 的轉手；每次叫 aos-agent 都有逾時，自己被 TERM 時先收掉那一群再走（規則 5）。
 import json, os, re, signal, subprocess, sys
+HELP = """\
+usage: agents < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Add, talk to and remove other agents on the daemon that runs you ($AOS_DAEMON),
+by wrapping aos-agent: op add | say | ask | rm | ls.
+Arguments: one JSON object on stdin (empty stdin = {}):
+  op         string (add | say | ask | rm | ls), required
+  name       string
+  def        string
+  ws         string
+  endpoint   string
+  tools      array
+  limits     object
+  text       string
+  timeout_s  number
+Result on stdout. On error: one line "agents: error: CODE reason" on stderr and stdout, exit 1.
+"""
+if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
+    sys.stdout.write(HELP)
+    sys.exit(0)
+signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "agents"
 NAME_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_-]{0,63}\Z")
-ERR_RE = re.compile(r"aos-[a-z-]+: ([A-Z][A-Za-z]+) (.*)\Z")
+ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
+WARN_RE = re.compile(r"aos-[a-z-]+: warning: ")
 ASK_DEFAULT_S, ASK_MAX_S = 600, 1700
 STEP_S = 90                    # 其他每一步（ctl add 自己最多等 30 秒）的逾時
 child = None
-last_err = ""                  # 上一次 aos-agent 的 stderr（成功時拿來轉提醒行）
+last_err = ""                  # 上一次 aos-agent 的 stderr（成功時拿來轉提醒行給腦）
 
 
 def die(code, reason):
-    line = "%s: %s %s" % (NAME, code, str(reason).replace("\n", " "))
+    line = "%s: error: %s %s" % (NAME, code, str(reason).replace("\n", " "))
     print(line, flush=True)
     print(line, file=sys.stderr, flush=True)
     sys.exit(1)
@@ -58,6 +81,7 @@ def on_term(signum, frame):
 
 
 signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
 
 
 def agent(argv, text=None, timeout_s=STEP_S):
@@ -77,6 +101,9 @@ def agent(argv, text=None, timeout_s=STEP_S):
     p, child = child, None
     out, err = out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
     last_err = err
+    if err:                                     # 下層的 stderr 原樣透出（R10）
+        sys.stderr.write(err if err.endswith("\n") else err + "\n")
+        sys.stderr.flush()
     if p.returncode == 0:
         return out, None
     lines = [x for x in err.splitlines() if x.strip()]
@@ -159,11 +186,13 @@ def my_child(args):
 # ---- 入口檢查 ----
 try:
     args = json.loads(sys.stdin.read() or "{}")
-except ValueError as e:
-    die("ArgumentsBad", "stdin is not JSON: %s" % e)
+except ValueError:
+    die("ArgumentsBad", "stdin is not JSON")
 if not isinstance(args, dict):
     die("ArgumentsBad", "stdin must be a JSON object")
 op = args.get("op")
+if op is None:
+    die("ArgumentsBad", "op is required (add, say, ask, rm or ls)")
 if op not in ("add", "say", "ask", "rm", "ls"):
     die("OpUnknown", "op must be one of add, say, ask, rm, ls (got %r)" % (op,))
 daemon = os.environ.get("AOS_DAEMON")
@@ -242,7 +271,7 @@ out, err = agent(["ctl", "add", "--name", name, "--ws", child_ws,
                   *(["--limits", json.dumps(limits, ensure_ascii=False)] if limits is not None else []), definition])
 if err:
     fail(err)
-notes = [x.strip() for x in last_err.splitlines() if x.strip().startswith("(")]
+notes = [x.strip() for x in last_err.splitlines() if WARN_RE.match(x.strip())]
 child_stack = out.strip().splitlines()[-1] if out.strip() else "?"
 names = read_children()
 write_children(names + [name] if name not in names else names)
