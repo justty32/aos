@@ -1,0 +1,354 @@
+#!/usr/bin/env python3
+# thought - 小念頭：派一件事給一隻用完即走的子 agent（範本 demo/agent-fsm），只拿回短結論；子的工具來回不進叫我的那隻的 history
+# 使用者 11-05 傍晚：「fork出去，做完之後回報，主線這邊對於這個任務的描述就會只剩短短幾句……我更推薦將其作為工具」「記憶這項，他本身也算是任務」；
+#   三題裁：子的腦「預設同父 (Recommended)」、子 stack「可選。默認刪掉。」、名字「thought (Recommended)」。
+#   規劃：proto8/thinking/2026-11/05/small-thought/（README、02-代定、03-實作步驟草稿；實作結果段在 README）。
+# 介面（lib/docs/01 的契約）：stdin 一份 {"goal", "context"?, "tools"?, "endpoint"?, "max_chars"?, "timeout_s"?, "keep"?}，沒有 op：
+#   goal 必要（要做什麼、要帶回什麼）；context＝字串或字串陣列（前幾步的結論）；tools＝[{name, path?}]（path 相對從 $AOS_WS、絕對照用；
+#   沒給 path＝照抄我自己工具箱裡同名那支〔aos-agent tools ls --json〕，沒有＝ToolMissing），沒給 tools＝子只有 clock（範本其他工具走子的覆蓋層 tools rm 拿掉）；endpoint＝子的腦，沒給＝同父（aos-agent llm show 父的 endpoint；父沒寫＝範本預設）；
+#   max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、上限 1700（act 格 1800 秒包得住）；keep 預設 false。
+# 一次叫＝aos-agent --daemon $AOS_DAEMON 的五步：ctl who（我是誰、我的深度）→ ctl add 範本（--name t-<父名>-NNN、--ws 我的 $AOS_WS）→
+#   子的覆蓋層 llm set endpoint／tools rm／tools add --override → say 開場文（固定英文段＋goal＋context）＋listen --timeout-s →
+#   預設 ctl rm 子（stack 刪掉、不印 details）；keep: true＝留著、結論後多一行 details: <子的 stack，相對 $AOS_DAEMON>/。
+#   設定那幾步失敗＝ctl rm 收回再報錯（不算子的失敗）。
+# 子名搶號：mkdir $AOS_STACK/children/<子名>/（P-17 工具小格；同時也是「我生過、還留著的」紀錄，裡面 state 檔＝running PID／kept／failed）。
+#   每次叫先對帳：表上已不在的紀錄刪掉；failed（含 running 但 PID 已不在＝我被殺掉時留的）超過 FAILED_KEEP 隻＝最舊的 ctl rm（gc）；kept 不動。
+# 深度：子的 stack 寫 thought.json {"depth": 父+1}（aos-agent ctl add 帶不了環境變數）；我讀自己那隻 stack 的 thought.json（沒有＝0），
+#   深度已是 MAX_DEPTH（2）＝DepthExceeded、不生（子能再開孫、孫不行）。
+# 錯：stderr 與 stdout 各一行「thought: error: 代號 原因」、退 1（規則 3，tool_io.die）——自己的：ArgumentsBad、GoalMissing、DepthExceeded、
+#   DaemonMissing、StackMissing、WsMissing、DefMissing（範本不在）、ToolMissing、MkdirFailed、WriteFailed、LaunchFailed（aos-agent 不在 PATH）、
+#   CommandFailed（逾時）；aos-agent 退非 0＝取它 stderr 最後一行錯誤行的代號與原因接成自己的（AddRejected、AnswerMissing…；同 agents）。
+#   子答不出（listen 錯、逾時）＝錯誤行尾附 (details: <子的 stack>/)，子先 ctl stop、stack 一律留（不管 keep）。
+#   aos-agent 的 stderr 原樣透到 stderr（R10）。--help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉那一群，退 130）。
+import json, os, re, shutil, signal, subprocess, sys
+HELP = """\
+usage: thought < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Hand one task to a throw-away child agent (demo/agent-fsm) on the daemon that runs you ($AOS_DAEMON)
+and print only its short conclusion; the child's tool calls stay out of your history.
+Arguments: one JSON object on stdin (empty stdin = {}):
+  goal       string, required: what to do and what to bring back
+  context    string or array of strings: background, e.g. conclusions of earlier steps
+  tools      [{name, path?}]: tools for the child (path relative to your workspace, or absolute;
+             no path = the same tool as yours of that name); default: only clock
+  endpoint   string: the child's brain pack; default: the same as yours
+  max_chars  integer, default 600: longer conclusions are cut and end with [truncated]
+  timeout_s  number, default 600, at most 1700
+  keep       boolean, default false: true keeps the child's stack and adds a last line "details: <stack>/"
+Result on stdout: the conclusion. The child is removed afterwards unless keep is true; if it fails, its stack
+is kept and the error line ends with (details: <stack>/). A child may start one more level of thoughts
+(depth 2 at most: DepthExceeded).
+On error: one line "thought: error: CODE reason" on stderr and stdout, exit 1.
+"""
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "lib"))   # 複製出 repo 的：PATH 上 aos-tools 所屬 proto8 的 lib/
+import tool_io  # noqa: E402
+
+NAME = "thought"
+tool_io.start(NAME, HELP)
+die = tool_io.die
+TEMPLATE = os.path.realpath(os.path.join(HERE, "..", "..", "..", "demo", "agent-fsm"))
+ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
+MAX_CHARS_DEFAULT, TIMEOUT_DEFAULT_S, TIMEOUT_MAX_S = 600, 600, 1700
+MAX_DEPTH = 2                  # 父 0 → 子 1 → 孫 2；孫再叫＝DepthExceeded（代定）
+FAILED_KEEP = 3                # 失敗留下的子 stack 最多留幾隻（gc，代定）
+STEP_S = 90                    # 其他每一步的逾時（ctl add 自己最多等 30 秒）
+KEEP_TOOLS = ("clock",)        # 沒給 tools 時子留著的
+OPENING = """You are a small thought: a helper started for this one task only.
+Do the task below (use your tools if you need them). When you are done, reply with the conclusion only:
+what the task asks you to bring back, not the steps you took. At most {n} characters.
+
+Task: {goal}"""
+child = None
+
+
+def kill_group(p):
+    for sig, wait_s in ((signal.SIGTERM, 5), (signal.SIGKILL, 5)):
+        try:
+            os.killpg(p.pid, sig)
+        except OSError:
+            return
+        try:
+            p.wait(wait_s)
+            return
+        except subprocess.TimeoutExpired:
+            pass
+
+
+def on_term(signum, frame):
+    if child is not None:
+        kill_group(child)
+    sys.exit(128 + signum)
+
+
+signal.signal(signal.SIGTERM, on_term)
+signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
+
+
+def agent(argv, text=None, timeout_s=STEP_S):
+    """叫 aos-agent --daemon <AOS_DAEMON> argv…；退 0 回 (stdout, None)，退非 0 或逾時回 (stdout, (代號, 原因))。"""
+    global child
+    cmd = ["aos-agent", "--daemon", daemon] + argv
+    try:
+        child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL,
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
+    except OSError as e:
+        die("LaunchFailed", "cannot start aos-agent (is it on PATH?): %s" % e)
+    try:
+        out, err = child.communicate(None if text is None else text.encode("utf-8"), timeout=timeout_s)
+    except subprocess.TimeoutExpired:
+        kill_group(child)
+        child = None
+        return "", ("CommandFailed", "aos-agent %s did not finish in %g s (killed)" % (" ".join(argv[:2]), timeout_s))
+    p, child = child, None
+    out, err = out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
+    if err:                                     # 下層的 stderr 原樣透出（R10）
+        sys.stderr.write(err if err.endswith("\n") else err + "\n")
+        sys.stderr.flush()
+    if p.returncode == 0:
+        return out, None
+    lines = [x for x in err.splitlines() if x.strip()]
+    mine = [m for m in map(ERR_RE.match, lines) if m]
+    if mine:
+        return out, (mine[-1].group(1), mine[-1].group(2))
+    return out, ("CommandFailed", "aos-agent %s exited %d: %s" % (" ".join(argv[:2]), p.returncode, lines[-1] if lines else "(no message)"))
+
+
+def must(argv, text=None, timeout_s=STEP_S):
+    out, err = agent(argv, text, timeout_s)
+    if err:
+        die(*err)
+    return out
+
+
+def read_json(path, missing):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return missing
+    except (OSError, ValueError):
+        return missing
+
+
+def write_text(path, text):
+    tmp = os.path.join(os.path.dirname(path), ".%s.%d" % (os.path.basename(path), os.getpid()))
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text)
+        os.replace(tmp, path)
+    except OSError as e:
+        die("WriteFailed", "cannot write %s: %s" % (path, e))
+
+
+# ---- 入口檢查（參數先、環境後）----
+args = tool_io.arguments()
+goal = args.get("goal")
+if not isinstance(goal, str) or not goal.strip():
+    die("GoalMissing", "goal is required: a non-empty string saying what to do and what to bring back")
+context = args.get("context", [])
+if isinstance(context, str):
+    context = [context]
+if not isinstance(context, list) or not all(isinstance(c, str) for c in context):
+    die("ArgumentsBad", "context must be a string or an array of strings")
+tools = args.get("tools")
+if tools is not None and (not isinstance(tools, list) or not all(
+        isinstance(t, dict) and isinstance(t.get("name"), str) and t["name"]
+        and (t.get("path") is None or isinstance(t["path"], str) and t["path"]) for t in tools)):
+    die("ArgumentsBad", "tools must be an array of {name, path?} (non-empty strings; no path = the same tool as yours)")
+endpoint = args.get("endpoint")
+if endpoint is not None and (not isinstance(endpoint, str) or not endpoint):
+    die("ArgumentsBad", "endpoint must be a non-empty string (a brain pack name of the llm kernel)")
+max_chars = args.get("max_chars", MAX_CHARS_DEFAULT)
+if isinstance(max_chars, bool) or not isinstance(max_chars, int) or max_chars < 1:
+    die("ArgumentsBad", "max_chars must be a positive integer")
+timeout_s = args.get("timeout_s", TIMEOUT_DEFAULT_S)
+if isinstance(timeout_s, bool) or not isinstance(timeout_s, (int, float)) or not 0 < timeout_s <= TIMEOUT_MAX_S:
+    die("ArgumentsBad", "timeout_s must be a number in (0, %d]" % TIMEOUT_MAX_S)
+keep = args.get("keep", False)
+if not isinstance(keep, bool):
+    die("ArgumentsBad", "keep must be true or false")
+daemon = os.environ.get("AOS_DAEMON")
+if not daemon:
+    die("DaemonMissing", "AOS_DAEMON is not set (this tool starts its child on the daemon that runs you)")
+daemon = os.path.realpath(daemon)
+stack = os.environ.get("AOS_STACK")
+if not stack:
+    die("StackMissing", "AOS_STACK is not set")
+ws = tool_io.workspace()
+if not os.path.isfile(os.path.join(TEMPLATE, "interfaces.json")):
+    die("DefMissing", "the child template %s is missing" % TEMPLATE)
+kids_dir = os.path.join(stack, "children")
+
+
+def rel(p):
+    """子的 stack 相對管我的 daemon（portable-flow 的相對路徑規矩）。"""
+    r = os.path.relpath(p, daemon)
+    return (p if r.startswith("..") else r).rstrip("/") + "/"
+
+
+def forget(name):
+    try:
+        for f in os.listdir(os.path.join(kids_dir, name)):
+            os.remove(os.path.join(kids_dir, name, f))
+        os.rmdir(os.path.join(kids_dir, name))
+    except OSError:
+        pass
+
+
+def mark(name, state):
+    write_text(os.path.join(kids_dir, name, "state"), state + "\n")
+
+
+def pid_alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+def reconcile(table):
+    """children/ 對 daemon 表：不在表上的忘掉；failed（含主人已死的 running）超過 FAILED_KEEP 隻＝最舊的 ctl rm。"""
+    try:
+        names = sorted(os.listdir(kids_dir))
+    except FileNotFoundError:
+        return
+    failed = []
+    for n in names:
+        if n not in table:
+            forget(n)
+            continue
+        try:
+            with open(os.path.join(kids_dir, n, "state"), encoding="utf-8") as f:
+                st = f.read().split()
+        except OSError:
+            st = []
+        if st[:1] == ["kept"]:
+            continue
+        if st[:1] == ["running"] and len(st) > 1 and st[1].isdigit() and pid_alive(int(st[1])):
+            continue
+        failed.append((os.path.getmtime(os.path.join(kids_dir, n)), n))
+    for _, n in sorted(failed)[:max(0, len(failed) - FAILED_KEEP + 1)]:   # 留 FAILED_KEEP-1 隻，加上這次最多 FAILED_KEEP
+        _, err = agent(["ctl", "rm", n])
+        if err is None:
+            forget(n)
+        else:
+            tool_io.warn("could not remove the old failed thought %s: %s %s" % ((n,) + err))
+
+
+# ---- 我是誰、深度 ----
+me = json.loads(must(["ctl", "who", "--json"]))
+my_stack = me.get("stack") or ""
+depth = read_json(os.path.join(my_stack, "thought.json"), {}).get("depth", 0) if my_stack else 0
+if not isinstance(depth, int) or isinstance(depth, bool):
+    depth = 0
+if depth >= MAX_DEPTH:
+    die("DepthExceeded", "you are a thought at depth %d; at most %d levels of thoughts (do this step yourself)" % (depth, MAX_DEPTH))
+if endpoint is None:                            # 預設同父：只抄 endpoint 這一鍵；父沒宣告 llm 或沒寫＝範本自己的預設
+    out, err = agent(["llm", "--target", me["name"], "show"])
+    if err is None:
+        for line in out.splitlines():
+            if line.startswith("endpoint="):
+                endpoint = line[len("endpoint="):].strip() or None
+
+mine = None                                     # tools 沒給 path＝照抄我自己工具箱裡同名那支（aos-agent tools ls --json）
+if any(t.get("path") is None for t in (tools or [])):
+    mine = {t.get("name"): t.get("path") for t in json.loads(must(["tools", "--target", me["name"], "ls", "--json"]) or "[]")
+            if isinstance(t, dict)}
+tool_list = []
+for t in tools or []:
+    if t.get("path") is None:
+        if not mine.get(t["name"]):
+            die("ToolMissing", "tools: %s has no path and you have no tool of that name (yours: %s)" % (t["name"], ", ".join(sorted(mine)) or "-"))
+        tool_list.append((t["name"], mine[t["name"]]))
+    else:
+        tool_list.append((t["name"], os.path.realpath(t["path"] if os.path.isabs(t["path"]) else os.path.join(ws, t["path"]))))
+
+# ---- 搶號、掛上 ----
+rows = json.loads(must(["ctl", "ls", "--json"]) or "[]")
+table = {r.get("name") for r in rows if isinstance(r, dict)} if isinstance(rows, list) else set()
+reconcile(table)
+try:
+    os.makedirs(kids_dir, exist_ok=True)
+except OSError as e:
+    die("MkdirFailed", "cannot create %s: %s" % (kids_dir, e))
+prefix = "t-%s-" % me["name"][:48]
+n = 1
+while True:
+    kid = "%s%03d" % (prefix, n)
+    n += 1
+    if kid in table:
+        continue
+    try:
+        os.mkdir(os.path.join(kids_dir, kid))
+        break
+    except FileExistsError:
+        continue
+    except OSError as e:
+        die("MkdirFailed", "cannot create %s: %s" % (os.path.join(kids_dir, kid), e))
+mark(kid, "running %d" % os.getpid())
+out, err = agent(["ctl", "add", "--name", kid, "--ws", ws, TEMPLATE])
+if err:
+    forget(kid)
+    die(*err)
+kid_stack = out.strip().splitlines()[-1] if out.strip() else ""
+
+
+def undo(err, what):
+    """設定沒上：收回子再報錯（不是子的失敗，不留 stack）。"""
+    _, err2 = agent(["ctl", "rm", kid])
+    if err2 is None:
+        forget(kid)
+    die(err[0], "%s (during %s; %s)" % (err[1], what, "rolled back: removed %s" % kid if err2 is None
+                                         else "rollback failed too: %s %s" % err2))
+
+
+if not os.path.isdir(kid_stack):
+    undo(("CommandFailed", "aos-agent ctl add printed no stack folder: %r" % kid_stack), "ctl add")
+try:
+    with open(os.path.join(kid_stack, "thought.json"), "w", encoding="utf-8") as f:
+        f.write(json.dumps({"depth": depth + 1}) + "\n")
+except OSError as e:
+    undo(("WriteFailed", "cannot write thought.json into %s: %s" % (kid_stack, e)), "setup")
+steps = [("llm set endpoint", ["llm", "--target", kid, "set", "endpoint=%s" % endpoint])] if endpoint else []
+listed = json.loads(must(["tools", "--target", kid, "ls", "--json"]) or "[]")
+wanted = {t for t, _ in tool_list} | (set() if tools is not None else set(KEEP_TOOLS))
+steps += [("tools rm " + t["name"], ["tools", "--target", kid, "rm", t["name"]])
+          for t in listed if isinstance(t, dict) and t.get("name") not in wanted]
+steps += [("tools add " + t, ["tools", "--target", kid, "add", "--override", t, p]) for t, p in tool_list]
+for what, argv in steps:
+    _, err = agent(argv)
+    if err:
+        undo(err, what)
+
+# ---- 問、收 ----
+text = OPENING.format(n=max_chars, goal=goal.strip())
+if context:
+    text += "\n\nContext:\n" + "\n".join("- " + c.strip() for c in context)
+_, err = agent(["say", "--target", kid], text=text)
+answer = None
+if err is None:
+    answer, err = agent(["listen", "--target", kid, "--timeout-s", "%g" % timeout_s], timeout_s=timeout_s + 30)
+if err:                                         # 子答不出：先停、stack 一律留（不管 keep）
+    agent(["ctl", "stop", "--target", kid])
+    mark(kid, "failed")
+    die(err[0], "%s (details: %s)" % (err[1], rel(kid_stack)))
+answer = answer.strip()
+if len(answer) > max_chars:
+    answer = answer[:max_chars].rstrip() + " [truncated]"
+if keep:
+    mark(kid, "kept")
+    sys.stdout.write("%s\ndetails: %s\n" % (answer, rel(kid_stack)))
+    sys.exit(0)
+_, err = agent(["ctl", "rm", kid])
+if err is None:
+    forget(kid)
+else:
+    mark(kid, "failed")
+    tool_io.warn("could not remove the finished thought %s: %s %s" % ((kid,) + err))
+sys.stdout.write(answer + "\n")
+sys.exit(0)

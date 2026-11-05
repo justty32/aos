@@ -25,3 +25,5 @@ Rules:
 - Two limits. Your own: at most `max_children` children at once (default 4); over it `add` / `new` fail with `ChildSlotMissing` and nothing is started. The daemon's: the judge counts every agent on the daemon; `AddRejected ... SlotMissing` means the daemon is full. Either way remove a child you no longer need, or report that the limit is reached. Do not retry in a loop.
 - `AnswerMissing` after `ask`: the child did not answer within `timeout_s`. Check its row with `ls`: if its phase is `stopped` with a `reason`, it crashed (see node `status`); if it is `running`, it is just slow, ask again with a longer timeout or `say` and come back later.
 - Remove children when you are done with them. Nobody removes them for you.
+
+For a one-off task where you want only the conclusion back (the helper is removed afterwards), use tool `thought` instead: see child `thought`.

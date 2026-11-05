@@ -2,7 +2,7 @@
 
 ← [thinking README](../../../README.md)｜日 [2026-11-05](../README.md)｜前情：[10-24 小念頭（agent-gus，已刪）](../../../2026-10/24/thoughts/README.md)、[10-24 intent-context（一題只帶問題＋結論）](../../../2026-10/24/intent-context/README.md)、[feat-proto 04 agents 工具](../feat-proto/04-spawn-agent.md)、[agent-knowledge memory 工具](../agent-knowledge/README.md)｜慣例：[lib 契約](../../../../lib/docs/01-分層等.md)、[C-52](../../../../docs/CONCEPTS/05-agent.md)
 
-狀態：**只規劃、沒改程式；三題使用者 11-05 傍晚已裁（見下）**。本檔記使用者原文（逐字）、以前「小念頭」怎麼定的、已定、裁過的題；代定在 [02-代定](02-代定.md)，實作步驟草稿在 [03-實作步驟草稿](03-實作步驟草稿.md)。時間到 16:35 收，沒想完的段標「未完」。
+狀態：**11-05 晚已實作**（[結果](#11-05-晚-結果)）；三題使用者 11-05 傍晚已裁（見下）。本檔記使用者原文（逐字）、以前「小念頭」怎麼定的、已定、裁過的題；代定在 [02-代定](02-代定.md)，實作步驟草稿在 [03-實作步驟草稿](03-實作步驟草稿.md)。時間到 16:35 收，沒想完的段標「未完」。
 
 ## 使用者原文（11-05 傍晚，逐字）
 
@@ -37,3 +37,25 @@
 1. **子的腦用誰**：推薦 **預設同父**（thought 讀父的 endpoint 代號，可用 `endpoint` 覆寫成 `stupid-fast` 省錢）；另一選是跟 `agents` 一樣**不繼承、一定明寫**（C-52 嚴格版，腦每次都得多寫一格）。
 2. **子的 stack 做完留不留**：推薦 **留**（才追得回細節；`keep: false` 才刪），代價是 `agents/` 底下會積一堆 `t-*`、要人定期 `aos-agent ctl rm` 或日後加 gc；另一選是**做完就刪、結論裡不留指標**（主線更乾淨、但「之後要追查能找回」做不到）。
 3. **工具名**：推薦 `thought`（呼應小念頭；操作只有一種，stdin 不帶 op）；另一選 `fork`（字面像複製父 context，但我們推薦子是乾淨的，容易誤會）。
+
+<a id="11-05-晚-結果"></a>
+## 11-05 晚 結果（實作；代定可翻案）
+
+**做了**：[lib/agent/thought](../../../../lib/agent/thought/_entry)（`_entry`、`_tooldef.json`、`_metainfo.json`），照 02、03 做，不改 agents、memory、agent-fsm 範本、extras/agent。說明：[lib/docs/03](../../../../lib/docs/03-索引-agent等.md#索引agent)、知識庫節點 [agents/thought](../../../../knowledge/aos/agents/thought.md)（給 agent：何時用 thought、何時用 agents）。
+
+**手跑（家機）**：T1 `echo '{}' | _entry`＝`thought: error: GoalMissing …` 退 1；假腦劇本父叫三次 thought（A 截 120 字帶 `[truncated]`、B `keep` 帶 `details:`、C 子配 math 答 `6*7 is 42.`），父 history 只有三則結論、預設的兩隻子已不在表上；深度：父→子→孫，孫再叫＝`DepthExceeded`；`fake-slow`（20 秒）＋`timeout_s: 5`＝`AnswerMissing … (details: procs/t-…/)` 退 1、子 stopped、stack 在；被 TERM＝退 143、`listen` 沒留孤兒。真腦（LM Studio gemma-4-e4b）：叫父「用 thought 從知識庫凝聚 endpoint pack 是什麼」，父自己叫 `thought {"goal": …, "tools": [{"name": "memory"}], "max_chars": 200}`，父 history 只有 user／一則 tool_call／結論一句／答案，子的 memory 來回全不在。
+
+**實作時代定（可翻案）**：
+
+1. **開場文放在 say 的那則訊息**，不改子的 system（用範本原樣 `ctl add`，不複製定義；子的設定全走覆蓋層）。
+2. **`tools` 的 `path` 可省**：省了＝照抄父工具箱同名那支（`aos-agent tools ls --json`；沒有＝`ToolMissing`）。凝聚記憶時腦寫 `{"name": "memory"}` 就把自己那個知識庫借給子，小模型不用知道絕對路徑（真腦就是這樣叫的）。
+3. **「同父」只抄 `endpoint` 一鍵**（`aos-agent llm show` 父的）；父沒宣告 llm 或沒寫 endpoint＝範本自己的預設。
+4. **details 路徑是 `procs/<子名>/`**（子 stack 相對 daemon 的實際位置；02 寫的 `agents/<子名>/` 不存在）。
+5. **紀錄不跟 agents 共用 children.json**：act 給每支工具各自的小格（`$AOS_STACK/tools/<名>/`），兩支工具的小格不同、共用要偷讀隔壁。thought 用自己小格的 `children/<子名>/`：mkdir＝搶號（號碼可重用，表上有的跳過），裡面 `state`＝`running PID`／`kept`／`failed`；成功刪掉就連紀錄一起刪。agents 的 `say` 追問不到 thought 的子（要長住就用 agents）。
+6. **深度不用環境變數**（查過：`aos-agent ctl add` 只能帶 `--limits`，aos-daemon-ctl 也沒有帶 env 的參數）：thought 掛上子之後在子的 stack 寫 `thought.json` `{"depth": 父+1}`，自己從 `ctl who` 找到我那隻的 stack 讀（沒有＝0）；到 2＝`DepthExceeded`、不生。
+7. **失敗的 gc**：每次叫先對帳（表上不在的紀錄刪掉），`failed`（含主人 PID 已死的 `running`＝thought 被殺時留的）只留最新 2 隻、加上這次最多 3 隻，多的 `ctl rm`；`kept` 不自動刪。子答不出時先 `ctl stop`（停在 stopped、stack 留）。
+8. **並行**：查過 act.py——一回合多個 tool_calls 是**逐個依序**跑（`subprocess.run` 一個一個），所以「一回合發多個 thought」是排隊不是並行；要並行得改 act（這次不改）。
+9. **gc 數字 3、深度 2、預設 600 字／600 秒** 寫死在 `_entry` 開頭，不開設定檔（KISS；要改再說）。
+
+**順帶看到的（不是 thought 的）**：試驗中一隻子在 18:58 掛掉，原因 `aos-exec: error: LaunchFailed cannot start: aos-fsm (Permission denied)`——當時別隊在重建 impls，binary 正被覆寫；daemon 把它留成 stopped＋reason，行為正常。
+
