@@ -1009,7 +1009,8 @@ def cmd_pause_resume(cmd):
         if rest:
             raise Fail("ArgumentsBad", "%s takes no positional arguments: %s (pick the target with --target)" % (cmd, rest[0]))
         a = target(opts)
-        sys.stdout.write(ctl(cmd, "--", a.name))
+        ctl(cmd, "--", a.name)   # aos-daemon-ctl 印的是 ctl.json 的 seq，對人沒意義、不轉
+        print("paused %s; aos-agent ctl resume --target %s to continue" % (a.name, a.name) if cmd == "pause" else "resumed %s" % a.name)
     return run
 
 
