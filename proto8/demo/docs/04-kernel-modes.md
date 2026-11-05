@@ -14,9 +14,10 @@
 | 1：繼承式 | daemon 自己的身體當判官：判過了才「呼叫 base」（＝轉寄進自己的 ctl 信箱） | `<daemon 的 stack>/requests` | [`demo/daemon-judge/`](../daemon-judge/) |
 | 2：0 號 proc 式 | daemon 底下一個專門收請求的 proc（像 Linux 的 0 號），判過了替你寄進 daemon 的 ctl 信箱 | `<0 號 proc 的 stack>/requests` | [`demo/procs-kernel/`](../procs-kernel/) |
 
-- **判官怎麼判**（政策檔 `judge.json`，放在定義裡）：`allowed`＝名字的白名單（`null` 或沒寫＝不限）；`max_running`＝同時最多幾個 running（數 daemon 表上 `running` 的列，`null` 或沒寫＝不限）。判 `procs_added`；`procs_started`、`procs_woken`（start／wake 讓停著、睡著的回來跑）不看 `allowed`、但照樣算進 `max_running`（11-05 edge-agent：原本照原樣轉，sleep 一隻、add 一隻、再 wake 就超過）；`procs_removed`、`procs_stopped`、`procs_slept` 照原樣轉。不掛的每封都在判官的 stderr 印一行 `judge: 代號 letter <名> refused: …`（aos-daemon-ctl／aos-agent 寄的信沒 `reply_to`，收不到回信，只能看這行）。
+- **判官怎麼判**（政策檔 `judge.json`，放在定義裡）：`allowed`＝名字的白名單（`null` 或沒寫＝不限）；`max_running`＝同時最多幾個 running（數 daemon 表上 `running` 的列，`null` 或沒寫＝不限）。判 `procs_added`；`procs_started`、`procs_woken`（start／wake 讓停著、睡著的回來跑）不看 `allowed`、但照樣算進 `max_running`（11-05 edge-agent：原本照原樣轉，sleep 一隻、add 一隻、再 wake 就超過）；`procs_removed`、`procs_stopped`、`procs_slept` 照原樣轉。不掛的每封都在判官的 stderr 印一行 `judge: 代號 letter <名> refused: …`（跟回信的 `msg` 同一句、英文）。
 - **判「掛」**：信原樣轉寄進 daemon 的 ctl 信箱，帶著原寄件人的 `reply_to`——daemon 套完直接回 `{"applied": true}` 給原寄件人（無序信的 `in_reply_to` 就是你寄出的那封的名字）。判官不轉手、不自己跑任何東西。
-- **判「不掛」**：判官回 `{"applied": false, "error": {"code": "…", "msg": "…"}}` 給原寄件人。代號：`NameUnknown`（不在白名單）、`SlotMissing`（running 滿了）、`BodyBad`（body 或 `procs_added` 不是物件）、`ForwardFailed`（轉不進 ctl 信箱）。
+- **判「不掛」**：判官回 `{"applied": false, "error": {"code": "…", "msg": "…"}}` 給原寄件人。代號：`NameUnknown`（不在白名單）、`SlotMissing`（running 滿了）、`BodyBad`（body 或 `procs_added` 不是物件）、`ForwardFailed`（轉不進 ctl 信箱）。信沒 `reply_to`＝只收掉、只有 stderr 那行。
+- **`aos-daemon-ctl --reply-to BOX`／`aos-agent ctl`**（11-05 [edge-agent 題 2](../../thinking/2026-11/05/edge-agent/README.md)，使用者選「加 --reply-to 等回信」）：`aos-daemon-ctl` 的寄信子命令收 `--reply-to`；`aos-agent ctl add` 等每封都開一個暫時信箱帶過去，判官不掛＝立刻 `AddRejected`（start／wake 被 `max_running` 擋＝`CtlRejected`）＋判官的代號與原因，不用等 30 秒（[extras/agent README「等回信」](../../extras/agent/README.md)）。
 - **模式 1 vs 2**：模式 1 的判官跑在 daemon 那一圈裡（阻塞），要快；要慢慢判（例：之後要問腦才能判）就用模式 2。模式 2 的 0 號自己也是表上一列 `running`，`max_running` 要把它算進去（範本寫 2）。
 
 ### `AOS_KERNEL`＝要掛 proc 往哪寄
@@ -51,7 +52,7 @@ AOS_DAEMON=/tmp/judge-try/m1/st aos-daemon-ctl ls                # clock  runnin
 cat /tmp/judge-try/me/box/new/*/letter.json                      # body {"applied": true}（daemon 回的）
 ```
 
-白名單外的（`evil`）回 `{"applied": false, "error": {"code": "NameUnknown", "msg": "evil 不在 allowed 裡"}}`；範本 `max_running` 是 1，clock 在跑時再寄 `clock2` 回 `SlotMissing`；`{"procs_stopped": ["clock"]}` 原樣轉、回 `applied: true`，之後 `clock2` 就放行。收工：在 daemon 的視窗 Ctrl-C。
+白名單外的（`evil`）回 `{"applied": false, "error": {"code": "NameUnknown", "msg": "evil not in allowed"}}`；範本 `max_running` 是 1，clock 在跑時再寄 `clock2` 回 `SlotMissing`；`{"procs_stopped": ["clock"]}` 原樣轉、回 `applied: true`，之後 `clock2` 就放行。收工：在 daemon 的視窗 Ctrl-C。
 
 模式 2：一台普通 daemon，把 procs-kernel 掛上去當 0 號，寄信進它的 `requests/`：
 
@@ -76,5 +77,5 @@ aos-daemon-ctl ls                                                # procs-kernel�
 ### 已知限制
 
 - 模式 2 的判官跟 daemon 各自打拍子：轉了、daemon 還沒套的不算 running，連著很快寄好幾封時可能多放幾個。模式 1 沒這個問題（判官跑在 daemon 那一圈裡，下一圈之前 daemon 已套完）。
-- **模式 2 的 0 號睡著或停著**：寄給它的信排在它的 `requests/` 等它回來。所以 kernel 本身的 wake／start 不能寄給它自己——`aos-agent ctl wake --target procs-kernel` 會認出「對象就是 `AOS_KERNEL` 那個」、直接寄 daemon；直接打 `aos-daemon-ctl` 的要先 `unset AOS_KERNEL`（或 `AOS_KERNEL= aos-daemon-ctl wake procs-kernel`）。`aos-agent ctl add` 等這種情形會立刻 `WaitFailed` 說 kernel 睡著（11-05 edge-agent）。
+- **模式 2 的 0 號睡著或停著**：寄給它的信排在它的 `requests/` 等它回來。所以 kernel 本身的 wake／start 不能寄給它自己——`aos-agent ctl wake --target procs-kernel` 會認出「對象就是 `AOS_KERNEL` 那個」、直接寄 daemon；直接打 `aos-daemon-ctl` 的要先 `unset AOS_KERNEL`（或 `AOS_KERNEL= aos-daemon-ctl wake procs-kernel`）。`aos-agent ctl add` 等這種情形會立刻 `WaitFailed` 說 kernel 睡著（11-05 edge-agent）；那封留在 0 號的 `requests/`、醒來才判，回信寄到已刪的暫時信箱＝判官 stderr 一行 `ReplyFailed`、照樣收掉。
 - 判官自己的錯（`judge.json` 壞、沒 `AOS_DAEMON`、daemon 沒開 ctl 信箱）退 1：模式 1 整台 daemon 停、模式 2 那個 proc 停（P-20）。

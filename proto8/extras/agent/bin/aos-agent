@@ -30,7 +30,11 @@ sleep／wake（11-05 衝突 1「嚴格分」）：sleep＝現在就睡（daemon 
   同一狀態再叫一次（stopped 的 stop、running 的 start、sleeping 的 sleep、running 的 wake）＝印「本來就…」、退 0。
 AOS_KERNEL（11-05 kernel-daemon）：有設＝ctl 的信經 aos-daemon-ctl 先寄那裡給判官。對象就是那個 kernel 本身（AOS_KERNEL 在它的 stack 裡，模式 2 的 0 號）
   的 start／stop／sleep／wake／rm 直接寄 daemon（11-05 edge-agent：kernel 睡著時寄給它自己的 wake 沒人收、永遠叫不醒）；
-  寄出之後 kernel 不是 running＝立刻 WaitFailed（信排在它的信箱、它回來才判），等滿 30 秒的 WaitFailed 補一句「判官沒放行也會這樣、原因在哪看」。
+  寄出之後 kernel 不是 running＝立刻 WaitFailed（信排在它的信箱、它回來才判）。
+回信（11-05 edge-agent 題 2，使用者選「加 --reply-to 等回信」）：ctl add／rm／start／stop／sleep／wake 每封信都開一個暫時回信信箱
+  （系統暫存資料夾底下 aos-agent-reply-XXXX、aos-post init）、經 aos-daemon-ctl --reply-to 寄；等的時候回信 applied: false（判官不掛）＝立刻
+  AddRejected（add）／CtlRejected（其他）＋回信的 code、msg；applied: true 或表上已經是結果＝照常往下（結果先到、回信還沒到＝多等 1 秒讓它落地）。
+  暫時信箱用完一律刪（Ctrl-C、錯也刪）。等滿 30 秒＝WaitFailed（經 AOS_KERNEL 的補一句「判官也沒回信、去哪看」）。
 介面（03）：只碰 daemon 表與那隻的 stack（queue/、history.jsonl、ctl／state 窗）；定義資料夾只讀 interfaces.json 宣告
   （表上那一列的 def 欄＝定義資料夾，aos-daemon-ctl add 送、daemon 記；11-04 使用者「那就b。」）。子介面 screen＝定義裡自己宣告 aos-agent/screen 的資料夾程式，
   用 aos-exec --ws <ws> --stack <stack> <定義>/<入口> 動作… 叫；tools＝登記檔，這隻的覆蓋層在 <stack>/tools.json（11-05 起只存差異
@@ -40,11 +44,11 @@ AOS_KERNEL（11-05 kernel-daemon）：有設＝ctl 的信經 aos-daemon-ctl 先�
   定義的 _entry 就空出來給「aos-exec 這個資料夾＝aos-agent ctl add 自己」（demo/agent-fsm 的寫法）；沒宣告＝掛定義資料夾本身（11-04 起的行為）。
 stdout 只有結果；提醒在 stderr（括號一行）。錯：stderr 一行 `aos-agent: 代號 原因`、退 1（chat 被 Ctrl-C 退 130）。
   代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、InstanceExists、PathMissing、SessionBad、
-  SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、AddRejected、TargetMissing、WsMissing、InterfaceMissing、InterfaceBad、PhaseBad、
+  SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、AddRejected、CtlRejected、TargetMissing、WsMissing、InterfaceMissing、InterfaceBad、PhaseBad、
   ScreenMissing、ScreenBad、ToolsMissing、LlmMissing、LlmBad。下層（aos-daemon-ctl）的錯換成這支的名字轉述（ProcMissing→InstanceMissing）；
   子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉（C-53 各層只說自己的錯）。
 只在 Linux（讀 /proc）。PATH 上要有 aos-post、aos-exec（tools 還要 aos-tools，在 proto8/bin；llm set 還要 aos-json）。"""
-import json, os, shutil, subprocess, sys, time
+import json, os, shutil, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", "..", ".."))           # proto8/
@@ -58,6 +62,7 @@ import aos_ws  # noqa: E402  放訊息、等答案、讀 stack（proto8/lib/aos/
 
 PROG = "aos-agent"
 WAIT_S = 30                                     # add／stop／rm／start 等 daemon 的上限（daemon 的 grace 是 10 秒）
+REPLY_GRACE = 1.0                               # 結果先到、回信還沒到時再等回信的秒數（暫時信箱才清得乾淨）
 POLL = 0.2                                      # listen 看一次的間隔（秒）
 RUNNERS = ("aos-loop", "aos-fsm", "aos-exec", "aos-daemon")   # 算「有人在跑」的程式名
 DECL = "interfaces.json"                        # 宣告檔（03）
@@ -185,10 +190,10 @@ def kernel_hint():
         return ""
     kr = kernel_row()
     if kr:
-        return "; the letter went to AOS_KERNEL (mailbox of %s) first: a refusal (not in allowed, running slots full) looks like this too, reason in %s/%s" % (
+        return "; the letter went to AOS_KERNEL (mailbox of %s) first and no reply came from the judge either (it may be stuck or unable to write the reply mailbox): see %s/%s" % (
             kr[0], kr[1].get("stack"), cell_name("procs_stderr", "stderr.txt"))
     if os.path.dirname(k) == os.path.realpath(daemon_dir()):
-        return "; the letter went to the judge in the daemon body first (AOS_KERNEL=%s): a refusal (not in allowed, running slots full) looks like this too, reason in the daemon's stderr" % k
+        return "; the letter went to the judge in the daemon body first (AOS_KERNEL=%s) and no reply came from it either (it may be unable to write the reply mailbox): see the daemon's stderr" % k
     return "; AOS_KERNEL=%s is neither this daemon's judge mailbox nor inside any listed proc's stack: wrong daemon or the kernel is gone, nobody reads the letter" % k
 
 
@@ -206,6 +211,62 @@ def wait_for(cond, what, secs=WAIT_S, via_kernel=True):
             return v
         time.sleep(0.1)
     raise Fail("WaitFailed", "waited %d s, %s%s" % (secs, what, kernel_hint() if via_kernel else ""))
+
+
+def reply_mailbox():
+    """暫時回信信箱（11-05 edge-agent 題 2）：系統暫存資料夾底下一個新資料夾＋aos-post init。用完由 ctl_wait 刪。"""
+    box = tempfile.mkdtemp(prefix="aos-agent-reply-")
+    try:
+        r = subprocess.run(["aos-post", "init", box], capture_output=True, text=True)
+    except OSError as e:
+        shutil.rmtree(box, ignore_errors=True)
+        raise Fail("CommandMissing", "cannot run aos-post: %s" % e)
+    if r.returncode != 0:
+        shutil.rmtree(box, ignore_errors=True)
+        raise Fail("PostFailed", "aos-post init %s exited %d: %s" % (box, r.returncode, r.stderr.strip()))
+    return box
+
+
+def reply_in(box):
+    """暫時信箱裡的回信 body（只會有一封）；還沒到＝None；到了但讀不懂＝{}（當成到了、不是 applied: false）。"""
+    r = subprocess.run(["aos-post", "take", box], capture_output=True, text=True)
+    if r.returncode != 0:                             # 10＝還沒到；其他錯也照等（逾時再說）
+        return None
+    s = subprocess.run(["aos-post", "see", box, r.stdout.strip()], capture_output=True, text=True)
+    try:
+        body = json.loads(s.stdout).get("body")
+    except (ValueError, AttributeError):
+        return {}
+    return body if isinstance(body, dict) else {}
+
+
+def ctl_wait(cmd, args, cond, what, refused, direct=False):
+    """寄一封 procs_* 信（aos-daemon-ctl <cmd> --reply-to <暫時信箱> args…）再等（11-05 edge-agent 題 2）：
+    回信 applied: false（判官不掛）＝refused 立刻退、帶回信的 code、msg；cond(信件名稱) 成立＝回它的值
+    （回信還沒到就最多再等 REPLY_GRACE 秒）。暫時信箱用完一律刪。"""
+    box = reply_mailbox()
+    try:
+        letter = ctl(cmd, "--reply-to", box, *args, direct=direct).strip()
+        got, done_at = [None], [None]
+
+        def step():
+            if got[0] is None:
+                got[0] = reply_in(box)
+            rep = got[0]
+            if isinstance(rep, dict) and rep.get("applied") is False:
+                err = rep.get("error") if isinstance(rep.get("error"), dict) else {}
+                raise Fail(refused, "AOS_KERNEL refused the %s letter: %s %s" % (cmd, err.get("code", "?"), err.get("msg", "")))
+            v = cond(letter)
+            if not v:
+                return None
+            if rep is not None:
+                return v
+            done_at[0] = done_at[0] or time.monotonic()
+            return v if time.monotonic() - done_at[0] >= REPLY_GRACE else None
+
+        return wait_for(step, what, via_kernel=not direct)
+    finally:
+        shutil.rmtree(box, ignore_errors=True)
 
 
 class Agent:
@@ -765,9 +826,10 @@ def cmd_add(argv):
         hint = {"stopped": "；它停著，要接著用就 aos-agent ctl start --target %s" % name,
                 "sleeping": "；它睡著，要接著用就 aos-agent ctl wake --target %s" % name}.get(row.get("phase"), "")
         raise Fail("InstanceExists", "daemon 上已經有 %s 了；換個名字（--name），或先 aos-agent ctl rm %s%s" % (name, name, hint))
-    letter = ctl("add", "--ws", ws, "--name", name, *(["--stack", stack] if stack else []), *body).strip()
     try:
-        row = wait_for(lambda: row_named(name) or rejected(letter), "daemon 還沒把 %s 放上表（或起來就結束、下了表；用 aos-agent ctl ls 看、看 daemon 的 log）" % name)
+        row = ctl_wait("add", ["--ws", ws, "--name", name, *(["--stack", stack] if stack else []), *body],
+                       lambda letter: row_named(name) or rejected(letter),
+                       "daemon 還沒把 %s 放上表（或起來就結束、下了表；用 aos-agent ctl ls 看、看 daemon 的 log）" % name, "AddRejected")
     except KeyboardInterrupt:                         # 11-04 夜邊緣實測：信已寄出，Ctrl-C 不撤；原本安靜退 130，人以為沒掛上
         note("add 的信已寄出，daemon 還是會把 %s 掛上；不要了就 aos-agent ctl rm %s（用 aos-agent ctl ls 看）" % (name, name))
         raise
@@ -795,8 +857,7 @@ def cmd_rm(argv):
     a = find(rest[0])
     close_screen_if_any(a)
     direct = is_kernel(a)
-    ctl("rm", "--", a.name, direct=direct)
-    wait_for(lambda: row_named(a.name) is None, "daemon 還沒收掉 %s" % a.name, via_kernel=not direct)
+    ctl_wait("rm", ["--", a.name], lambda _: row_named(a.name) is None, "daemon 還沒收掉 %s" % a.name, "CtlRejected", direct)
     others = [r.get("stack") for r in table(quiet=True).values()]   # 表上別隻還在用的 stack（add --stack 撞到別隻的）
     keep = covers(a.stack, [a.row.get("ws"), a.row.get("def"), daemon_dir(), os.getcwd(), os.path.expanduser("~")] + others)
     if keep:                                          # 11-04 夜邊緣實測：add --stack . 之後 rm 會連工作區一起刪；stack 蓋住這些的不刪
@@ -831,8 +892,8 @@ def cmd_start(argv):
         return
     n = queued(a) or 0
     direct = is_kernel(a)
-    ctl("start", "--", a.name, direct=direct)         # sleeping 的＝aos-daemon-ctl PhaseBad「要 wake」（11-05 嚴格分）
-    wait_for(lambda: (row_named(a.name) or {}).get("phase") != "stopped", "daemon 還沒把 %s 起來" % a.name, via_kernel=not direct)
+    ctl_wait("start", ["--", a.name], lambda _: (row_named(a.name) or {}).get("phase") != "stopped",   # sleeping 的＝aos-daemon-ctl PhaseBad「要 wake」
+             "daemon 還沒把 %s 起來" % a.name, "CtlRejected", direct)
     print("起來了（同一個 stack），queue 裡 %d 封接著答" % n)
 
 
@@ -849,9 +910,11 @@ def cmd_stop(argv):
     if a.phase == "sleeping":                         # 11-05 嚴格分：不關畫面、直接讓 aos-daemon-ctl 報 PhaseBad「要先 wake」
         ctl("stop", "--", a.name, direct=direct)
     close_screen_if_any(a)
+    stopped = lambda _: (row_named(a.name) or {"phase": "stopped"}).get("phase") == "stopped"
     if a.phase != "stopping":
-        ctl("stop", "--", a.name, direct=direct)
-    wait_for(lambda: (row_named(a.name) or {"phase": "stopped"}).get("phase") == "stopped", "daemon 還沒把 %s 停好" % a.name, via_kernel=not direct)
+        ctl_wait("stop", ["--", a.name], stopped, "daemon 還沒把 %s 停好" % a.name, "CtlRejected", direct)
+    else:
+        wait_for(lambda: stopped(None), "daemon 還沒把 %s 停好" % a.name, via_kernel=not direct)
     print("停了，stack 留著（%s）；這期間 say 的信照收，aos-agent ctl start --target %s 接著答" % (a.stack, a.name))
 
 
@@ -869,8 +932,8 @@ def cmd_sleep(argv):
     if rows and not aos_ws.is_answer(rows[-1]):
         note("%s has not finished answering the last message; some bodies (eca) drop the batch being answered when put to sleep: if no answer comes after wake, say it again" % a.name)
     direct = is_kernel(a)
-    ctl("sleep", "--", a.name, direct=direct)         # stopped／stopping／exec 型＝aos-daemon-ctl 的 PhaseBad／CtlMissing
-    wait_for(lambda: (row_named(a.name) or {"phase": "sleeping"}).get("phase") == "sleeping", "daemon 還沒讓 %s 睡下" % a.name, via_kernel=not direct)
+    ctl_wait("sleep", ["--", a.name], lambda _: (row_named(a.name) or {"phase": "sleeping"}).get("phase") == "sleeping",   # stopped／stopping／exec 型＝PhaseBad／CtlMissing
+             "daemon 還沒讓 %s 睡下" % a.name, "CtlRejected", direct)
     print("睡了，stack 留著（%s）；這期間 say 的信照收，aos-agent ctl wake --target %s 叫醒（daemon 重開也會自己醒）" % (a.stack, a.name))
 
 
@@ -885,8 +948,8 @@ def cmd_wake(argv):
         return
     n = queued(a) or 0
     direct = is_kernel(a)
-    ctl("wake", "--", a.name, direct=direct)          # stopped 的＝aos-daemon-ctl PhaseBad「要 start」
-    wait_for(lambda: (row_named(a.name) or {}).get("phase") != "sleeping", "daemon 還沒把 %s 叫醒" % a.name, via_kernel=not direct)
+    ctl_wait("wake", ["--", a.name], lambda _: (row_named(a.name) or {}).get("phase") != "sleeping",   # stopped 的＝aos-daemon-ctl PhaseBad「要 start」
+             "daemon 還沒把 %s 叫醒" % a.name, "CtlRejected", direct)
     print("醒了（同一個 stack），queue 裡 %d 封接著答" % n)
 
 
