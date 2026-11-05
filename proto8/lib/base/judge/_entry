@@ -42,7 +42,7 @@ def run(argv, stdin_text="", cwd=None):
     try:
         r = subprocess.run(argv, input=stdin_text, stdout=subprocess.PIPE, text=True, cwd=cwd)
     except OSError as e:
-        die("CommandMissing", "%s 起不來（要在 PATH 上）：%s" % (argv[0], e))
+        die("CommandMissing", "%s failed to start (must be on PATH): %s" % (argv[0], e))
     return r.returncode, r.stdout
 
 
@@ -55,20 +55,20 @@ def load_policy(path):
         with open(path, encoding="utf-8") as f:
             text = f.read()
     except FileNotFoundError:
-        die("CfgMissing", "judge.json 不在：%s" % path)
+        die("CfgMissing", "judge.json not found: %s" % path)
     except OSError as e:
-        die("CfgBad", "judge.json 讀不了：%s" % e)
+        die("CfgBad", "cannot read judge.json: %s" % e)
     try:
         cfg = json.loads(text)
     except ValueError as e:
-        die("CfgBad", "judge.json 不是 JSON：%s" % e)
+        die("CfgBad", "judge.json is not JSON: %s" % e)
     if not isinstance(cfg, dict):
-        die("CfgBad", "judge.json 要是物件")
+        die("CfgBad", "judge.json must be an object")
     allowed, cap = cfg.get("allowed"), cfg.get("max_running")
     if allowed is not None and not (isinstance(allowed, list) and all(isinstance(n, str) for n in allowed)):
-        die("CfgBad", "allowed 要是名字的陣列或 null")
+        die("CfgBad", "allowed must be an array of names or null")
     if cap is not None and not (isinstance(cap, int) and not isinstance(cap, bool) and cap >= 0):
-        die("CfgBad", "max_running 要是非負整數或 null")
+        die("CfgBad", "max_running must be a non-negative integer or null")
     return (set(allowed) if allowed is not None else None), cap
 
 
@@ -81,18 +81,18 @@ def daemon_view(daemon):
         with open(state, encoding="utf-8") as f:
             text = f.read()
     except OSError as e:
-        die("StateBad", "procs_state.json 讀不了：%s" % e)
+        die("StateBad", "cannot read procs_state.json: %s" % e)
     code, out = run(["aos-directive"], text, cwd=daemon)
     try:
         if code != 0:
-            raise ValueError("aos-directive 退 %d" % code)
+            raise ValueError("aos-directive exited %d" % code)
         st = json.loads(out)
         procs = st.get("procs") or {}
         running = {n for n, row in procs.items() if isinstance(row, dict) and row.get("phase") == "running"}
     except (ValueError, AttributeError) as e:
-        die("StateBad", "procs_state.json 讀不懂：%s" % e)
+        die("StateBad", "cannot parse procs_state.json: %s" % e)
     if "procs_ctl_mailbox" in st and st["procs_ctl_mailbox"] is None:
-        die("MailboxMissing", "daemon 沒開 ctl 信箱（procs_state.json 的 procs_ctl_mailbox 是 null）")
+        die("MailboxMissing", "daemon has no ctl mailbox (procs_ctl_mailbox in procs_state.json is null)")
     box = st.get("procs_ctl_mailbox") or "procs_ctl_mailbox"
     return os.path.join(daemon, box), running
 
@@ -165,15 +165,15 @@ def main():
     allowed, cap = load_policy(sys.argv[1])
     stack = os.environ.get("AOS_STACK")
     if not stack:
-        die("StackMissing", "沒設定 AOS_STACK")
+        die("StackMissing", "AOS_STACK is not set")
     daemon = os.environ.get("AOS_DAEMON")
     if not daemon or not os.path.isdir(daemon):
-        die("DaemonMissing", "AOS_DAEMON 沒設或不是資料夾：%s" % (daemon or "（空）"))
+        die("DaemonMissing", "AOS_DAEMON is not set or not a directory: %s" % (daemon or "(empty)"))
     inbox = os.path.abspath(os.path.join(stack, "requests"))
     if post(["init", inbox])[0] != 0:
-        die("PostFailed", "收件箱 %s 建不了" % inbox)
+        die("PostFailed", "cannot create inbox %s" % inbox)
     if post(["take-all", inbox])[0] not in (0, NOT_FOUND):
-        die("PostFailed", "收件箱 %s 收不了信" % inbox)
+        die("PostFailed", "cannot take letters from inbox %s" % inbox)
     names = sorted((n for n in os.listdir(os.path.join(inbox, "cur")) if not n.startswith(".")), key=letter_key)
     if not names:
         return
@@ -182,11 +182,11 @@ def main():
     for name in names:
         code, out = post(["see", inbox, name])
         if code == 1:
-            warn("LetterBad", "信 %s 壞了，丟掉" % name)
+            warn("LetterBad", "letter %s is broken; dropped" % name)
             post(["done", inbox, name])
             continue
         if code != 0:
-            die("PostFailed", "aos-post see %s 退 %d" % (name, code))
+            die("PostFailed", "aos-post see %s exited %d" % (name, code))
         letter = json.loads(out)
         bad, detail = verdict(letter.get("body"), allowed, cap, running, admitted)
         if bad:
