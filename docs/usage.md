@@ -130,7 +130,7 @@ mkdir bob && cd bob && aos agent init --engine lmstudio --model qwen/qwen3.5-9b
 ## 對 agent 說話：`say`
 
 ```text
-aos say [--to <名字>] <text...>
+aos say [--to <name>] <text...>
 ```
 
 不帶 `--to` 時，訊息投到目前世界唯一 agent 的 `say/`。`--to` 會從目前世界的通訊錄找
@@ -162,7 +162,7 @@ aos listen --once
 ## 逐行交談：`talk`
 
 ```text
-aos talk [--interface <名字>]
+aos talk [--interface <name>]
 ```
 
 `talk` 從 stdin 逐行讀取訊息，等待外部 loop 推進，並印出該次新增的記錄。它會先確認
@@ -228,7 +228,7 @@ aos inbox read --all --keep
 ## 登記世界工具：`tool`
 
 ```text
-aos tool add <name> [選項...] -- <argv...>
+aos tool add <name> [options...] -- <argv...>
 aos tool ls [--folder F] [--json]
 aos tool rm <name> [--folder F]
 ```
@@ -323,8 +323,8 @@ aos tick ./bob --dry-run
 ## 登記固定循環：`routine`
 
 ```text
-aos routine add [folder] (--every D | --slot S) [--id ID] [--note 文字]
-                (--ask 文字 | -- argv...)
+aos routine add [folder] (--every D | --slot S) [--id ID] [--note TEXT]
+                (--ask TEXT | -- argv...)
 aos routine ls [folder]
 aos routine rm [folder] <id>
 ```
@@ -344,8 +344,8 @@ aos routine rm ./bob standup
 ## 登記一次性行程：`schedule`
 
 ```text
-aos schedule add [folder] --at 時刻 [--id ID] [--note 文字]
-                 (--ask 文字 | -- argv...)
+aos schedule add [folder] --at TIME [--id ID] [--note TEXT]
+                 (--ask TEXT | -- argv...)
 aos schedule ls [folder]
 aos schedule rm [folder] <id>
 ```
