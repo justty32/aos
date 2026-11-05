@@ -1,54 +1,104 @@
 #!/usr/bin/env python3
-"""aos-agent - 統一的 agent 介面：管掛在 aos-daemon 上的一隻 agent（eca、loop／fsm agent 都一樣），每個子命令只管一隻（11-04）。
+# aos-agent - 統一的 agent 介面：管掛在 aos-daemon 上的一隻 agent（eca、loop／fsm agent 都一樣），每個子命令只管一隻（11-04）。
+#
+# 使用者 11-03「aos_ws,aos-say/listen,aos-ai這些之後都會整合進aos-agent」、11-04 晚「幫我弄個aos-agent chat指令，ctrl-c退出」
+# 「aos-agent add --name bob ../agents/bob這樣」「rm後面不用接--target」。規劃：proto8/thinking/2026-11/04/aos-agent/（01 子命令、02 找 agent、
+# 03 介面、04 邊緣）。說明與用法例子：proto8/extras/agent/README.md。
+#
+#   掛上與管理（11-05 使用者「我希望掛上和管理這塊，能夠放到aos-agent ctl這個子命令下。」）：
+#     aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] XXX   掛一隻（XXX 要在 interfaces.json 宣告遵守 aos-agent）；等上表、印 stack（daemon 拒收＝AddRejected）
+#     aos-agent [--daemon D] ctl rm 名字                 拔掉並刪它的 stack（有畫面先關；不吃 AOS_AGENT；stack 蓋住工作區／定義／daemon／cwd／家目錄／表上別隻的 stack 的不刪）
+#     aos-agent [--daemon D] ctl ls [--json]             列 daemon 表上全部的 proc：名字 狀態 工作區 queue 排幾封
+#     aos-agent [--daemon D] ctl state|status [--target 名字]   這隻的狀態幾行
+#     aos-agent [--daemon D] ctl where [--stack|--ws] [--target 名字]   印它的 stack（預設＝--stack）／工作區（--ws）
+#     aos-agent [--daemon D] ctl start|stop|sleep|wake|pause|resume [--target 名字]
+#   跟它說話、它的畫面與設定：
+#     aos-agent [--daemon D] say [--target 名字] [話...]    寄一句進它的 queue；stdout 印信件名稱（話沒給＝讀 stdin）
+#     aos-agent [--daemon D] listen [--target 名字] [--timeout-s 秒] | [--last N] [--follow]
+#     aos-agent [--daemon D] chat [--target 名字]        一行一句、等回答；Ctrl-C 退出（130），stdin 結束退 0
+#     aos-agent [--daemon D] open [-d]|close|watch [--target 名字]   畫面（宣告了子介面 screen 的才有）
+#     aos-agent [--daemon D] tools [--target 名字] [ls [--json]|get 名|add [--override] [--no-cache] 名 路徑|rm 名|reset]   這隻的工具箱（定義疊這隻的覆蓋層）
+#     aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]                         這隻的腦設定（定義疊這隻改過的鍵）
+#
+# 對象：--target 名字 ＞ $AOS_AGENT（ctl add、rm、ls 不吃）；都沒有＝TargetMissing。名字查 daemon 表（aos-daemon-ctl ls --json），
+#   表上沒有＝InstanceMissing。哪個 daemon：--daemon D ＞ $AOS_DAEMON（那個 daemon 的 $AOS_STACK）＞ cwd 的 ./.stack（11-05 portable-flow 題 3）；
+#   都沒有＝DaemonMissing。沒有用來指對象的 --stack（where 的 --stack／--ws 只選印哪個）。
+#   表上的路徑（stack／ws／def）11-05 起 daemon 存相對 daemon stack，aos-daemon-ctl ls --json 拼回絕對再給這支；印的都是絕對。
+#   列上的 reason（起不來、或出錯結束〔退非 0〕的，daemon 留成 stopped 時寫的原因；只有退 0 的才下表）ls、state 會印。
+# sleep／wake（11-05 衝突 1「嚴格分」）：sleep＝現在就睡（daemon SIGTERM、列 sleeping、stack 留，daemon 開門自己醒）；stop＝等這輪做完、要 start。
+#   start 只起 stopped、wake 只醒 sleeping；跨著用（sleeping 的 start／stop、stopped 的 wake／sleep）＝aos-daemon-ctl 的 PhaseBad 原樣轉；
+#   同一狀態再叫一次（stopped 的 stop、running 的 start、sleeping 的 sleep、running 的 wake）＝印「本來就…」、退 0。
+# AOS_KERNEL（11-05 kernel-daemon）：有設＝ctl 的信經 aos-daemon-ctl 先寄那裡給判官。對象就是那個 kernel 本身（AOS_KERNEL 在它的 stack 裡，模式 2 的 0 號）
+#   的 start／stop／sleep／wake／rm 直接寄 daemon（11-05 edge-agent：kernel 睡著時寄給它自己的 wake 沒人收、永遠叫不醒）；
+#   寄出之後 kernel 不是 running＝立刻 WaitFailed（信排在它的信箱、它回來才判）。
+# 回信（11-05 edge-agent 題 2，使用者選「加 --reply-to 等回信」）：ctl add／rm／start／stop／sleep／wake 每封信都開一個暫時回信信箱
+#   （系統暫存資料夾底下 aos-agent-reply-XXXX、aos-post init）、經 aos-daemon-ctl --reply-to 寄；等的時候回信 applied: false（判官不掛）＝立刻
+#   AddRejected（add）／CtlRejected（其他）＋回信的 code、msg；applied: true 或表上已經是結果＝照常往下（結果先到、回信還沒到＝多等 1 秒讓它落地）。
+#   暫時信箱用完一律刪（Ctrl-C、錯也刪）。等滿 30 秒＝WaitFailed（經 AOS_KERNEL 的補一句「判官也沒回信、去哪看」）。
+# 介面（03）：只碰 daemon 表與那隻的 stack（queue/、history.jsonl、ctl／state 窗）；定義資料夾只讀 interfaces.json 宣告
+#   （表上那一列的 def 欄＝定義資料夾，aos-daemon-ctl add 送、daemon 記；11-04 使用者「那就b。」）。子介面 screen＝定義裡自己宣告 aos-agent/screen 的資料夾程式，
+#   用 aos-exec --ws <ws> --stack <stack> <定義>/<入口> 動作… 叫；tools＝登記檔，這隻的覆蓋層在 <stack>/tools.json（11-05 起只存差異
+#   {"add": {名: 登記}, "rm": [名]}、身體每格讀「定義疊覆蓋層」、定義改了照疊、reset 刪；README「tools 覆蓋層」一節）；
+#   llm＝腦設定檔（例 "llm.json"），改過的鍵在 stack 的同一個相對路徑（只放改過的鍵、reset 刪；set＝aos-json set --str，11-04 晚 think-as-function）。
+#   entry（選填，11-05 portable-flow 題 4）：定義裡身體的入口（例 "body.json"）；宣告了＝add 掛的是 <定義>/<entry>（def 欄照樣是定義資料夾），
+#   定義的 _entry 就空出來給「aos-exec 這個資料夾＝aos-agent ctl add 自己」（demo/agent-fsm 的寫法）；沒宣告＝掛定義資料夾本身（11-04 起的行為）。
+# stdout 只有結果；提醒在 stderr（括號一行）。錯：stderr 一行 `aos-agent: 代號 原因`、退 1（chat 被 Ctrl-C 退 130）。
+#   代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、InstanceExists、PathMissing、SessionBad、
+#   SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、AddRejected、CtlRejected、TargetMissing、WsMissing、InterfaceMissing、InterfaceBad、PhaseBad、
+#   ScreenMissing、ScreenBad、ToolsMissing、LlmMissing、LlmBad。下層（aos-daemon-ctl）的錯換成這支的名字轉述（ProcMissing→InstanceMissing）；
+#   子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉（C-53 各層只說自己的錯）。
+# 只在 Linux（讀 /proc）。PATH 上要有 aos-post、aos-exec（tools 還要 aos-tools，在 proto8/bin；llm set 還要 aos-json）。
+"""aos-agent - one interface for an agent hosted on aos-daemon (eca, loop / fsm agents alike); each subcommand acts on one agent.
 
-使用者 11-03「aos_ws,aos-say/listen,aos-ai這些之後都會整合進aos-agent」、11-04 晚「幫我弄個aos-agent chat指令，ctrl-c退出」
-「aos-agent add --name bob ../agents/bob這樣」「rm後面不用接--target」。規劃：proto8/thinking/2026-11/04/aos-agent/（01 子命令、02 找 agent、
-03 介面、04 邊緣）。說明與用法例子：proto8/extras/agent/README.md。
+  Attach and manage (ctl):
+    aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] XXX   attach one (XXX must declare aos-agent in interfaces.json);
+                                                       waits until it is on the table, prints its stack (daemon refuses = AddRejected)
+    aos-agent [--daemon D] ctl rm NAME                 detach it and delete its stack (closes its screen first; ignores AOS_AGENT; a stack that
+                                                       covers the workspace / definition / daemon / cwd / home / another listed stack is kept)
+    aos-agent [--daemon D] ctl ls [--json]             list every proc on the daemon table: name, state, workspace, queued letters
+    aos-agent [--daemon D] ctl state|status [--target NAME]            a few lines about this one
+    aos-agent [--daemon D] ctl where [--stack|--ws] [--target NAME]    print its stack (default, = --stack) or its workspace (--ws)
+    aos-agent [--daemon D] ctl start|stop|sleep|wake|pause|resume [--target NAME]
+  Talk to it, its screen and settings:
+    aos-agent [--daemon D] say [--target NAME] [WORDS...]    put one message in its queue; stdout prints the letter name (no words = read stdin)
+    aos-agent [--daemon D] listen [--target NAME] [--timeout-s SECS] | [--last N] [--follow]
+    aos-agent [--daemon D] chat [--target NAME]        one line per message, waits for the answer; Ctrl-C exits (130), end of stdin exits 0
+    aos-agent [--daemon D] open [-d]|close|watch [--target NAME]   its screen (only if the definition declares the screen sub-interface)
+    aos-agent [--daemon D] tools [--target NAME] [ls [--json]|get NAME|add [--override] [--no-cache] NAME PATH|rm NAME|reset]
+                                                       its toolbox (the definition's registry with this agent's overlay on top)
+    aos-agent [--daemon D] llm [--target NAME] [show|set KEY=VALUE...|reset]
+                                                       its brain settings (the definition's with the keys this agent changed on top)
 
-  掛上與管理（11-05 使用者「我希望掛上和管理這塊，能夠放到aos-agent ctl這個子命令下。」）：
-    aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] XXX   掛一隻（XXX 要在 interfaces.json 宣告遵守 aos-agent）；等上表、印 stack（daemon 拒收＝AddRejected）
-    aos-agent [--daemon D] ctl rm 名字                 拔掉並刪它的 stack（有畫面先關；不吃 AOS_AGENT；stack 蓋住工作區／定義／daemon／cwd／家目錄／表上別隻的 stack 的不刪）
-    aos-agent [--daemon D] ctl ls [--json]             列 daemon 表上全部的 proc：名字 狀態 工作區 queue 排幾封
-    aos-agent [--daemon D] ctl state|status [--target 名字]   這隻的狀態幾行
-    aos-agent [--daemon D] ctl where [--stack|--ws] [--target 名字]   印它的 stack（預設＝--stack）／工作區（--ws）
-    aos-agent [--daemon D] ctl start|stop|sleep|wake|pause|resume [--target 名字]
-  跟它說話、它的畫面與設定：
-    aos-agent [--daemon D] say [--target 名字] [話...]    寄一句進它的 queue；stdout 印信件名稱（話沒給＝讀 stdin）
-    aos-agent [--daemon D] listen [--target 名字] [--timeout-s 秒] | [--last N] [--follow]
-    aos-agent [--daemon D] chat [--target 名字]        一行一句、等回答；Ctrl-C 退出（130），stdin 結束退 0
-    aos-agent [--daemon D] open [-d]|close|watch [--target 名字]   畫面（宣告了子介面 screen 的才有）
-    aos-agent [--daemon D] tools [--target 名字] [ls [--json]|get 名|add [--override] [--no-cache] 名 路徑|rm 名|reset]   這隻的工具箱（定義疊這隻的覆蓋層）
-    aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]                         這隻的腦設定（定義疊這隻改過的鍵）
-
-對象：--target 名字 ＞ $AOS_AGENT（ctl add、rm、ls 不吃）；都沒有＝TargetMissing。名字查 daemon 表（aos-daemon-ctl ls --json），
-  表上沒有＝InstanceMissing。哪個 daemon：--daemon D ＞ $AOS_DAEMON（那個 daemon 的 $AOS_STACK）＞ cwd 的 ./.stack（11-05 portable-flow 題 3）；
-  都沒有＝DaemonMissing。沒有用來指對象的 --stack（where 的 --stack／--ws 只選印哪個）。
-  表上的路徑（stack／ws／def）11-05 起 daemon 存相對 daemon stack，aos-daemon-ctl ls --json 拼回絕對再給這支；印的都是絕對。
-  列上的 reason（daemon 把起不來的列留成 stopped 時寫的原因）ls、state 會印。
-sleep／wake（11-05 衝突 1「嚴格分」）：sleep＝現在就睡（daemon SIGTERM、列 sleeping、stack 留，daemon 開門自己醒）；stop＝等這輪做完、要 start。
-  start 只起 stopped、wake 只醒 sleeping；跨著用（sleeping 的 start／stop、stopped 的 wake／sleep）＝aos-daemon-ctl 的 PhaseBad 原樣轉；
-  同一狀態再叫一次（stopped 的 stop、running 的 start、sleeping 的 sleep、running 的 wake）＝印「本來就…」、退 0。
-AOS_KERNEL（11-05 kernel-daemon）：有設＝ctl 的信經 aos-daemon-ctl 先寄那裡給判官。對象就是那個 kernel 本身（AOS_KERNEL 在它的 stack 裡，模式 2 的 0 號）
-  的 start／stop／sleep／wake／rm 直接寄 daemon（11-05 edge-agent：kernel 睡著時寄給它自己的 wake 沒人收、永遠叫不醒）；
-  寄出之後 kernel 不是 running＝立刻 WaitFailed（信排在它的信箱、它回來才判）。
-回信（11-05 edge-agent 題 2，使用者選「加 --reply-to 等回信」）：ctl add／rm／start／stop／sleep／wake 每封信都開一個暫時回信信箱
-  （系統暫存資料夾底下 aos-agent-reply-XXXX、aos-post init）、經 aos-daemon-ctl --reply-to 寄；等的時候回信 applied: false（判官不掛）＝立刻
-  AddRejected（add）／CtlRejected（其他）＋回信的 code、msg；applied: true 或表上已經是結果＝照常往下（結果先到、回信還沒到＝多等 1 秒讓它落地）。
-  暫時信箱用完一律刪（Ctrl-C、錯也刪）。等滿 30 秒＝WaitFailed（經 AOS_KERNEL 的補一句「判官也沒回信、去哪看」）。
-介面（03）：只碰 daemon 表與那隻的 stack（queue/、history.jsonl、ctl／state 窗）；定義資料夾只讀 interfaces.json 宣告
-  （表上那一列的 def 欄＝定義資料夾，aos-daemon-ctl add 送、daemon 記；11-04 使用者「那就b。」）。子介面 screen＝定義裡自己宣告 aos-agent/screen 的資料夾程式，
-  用 aos-exec --ws <ws> --stack <stack> <定義>/<入口> 動作… 叫；tools＝登記檔，這隻的覆蓋層在 <stack>/tools.json（11-05 起只存差異
-  {"add": {名: 登記}, "rm": [名]}、身體每格讀「定義疊覆蓋層」、定義改了照疊、reset 刪；README「tools 覆蓋層」一節）；
-  llm＝腦設定檔（例 "llm.json"），改過的鍵在 stack 的同一個相對路徑（只放改過的鍵、reset 刪；set＝aos-json set --str，11-04 晚 think-as-function）。
-  entry（選填，11-05 portable-flow 題 4）：定義裡身體的入口（例 "body.json"）；宣告了＝add 掛的是 <定義>/<entry>（def 欄照樣是定義資料夾），
-  定義的 _entry 就空出來給「aos-exec 這個資料夾＝aos-agent ctl add 自己」（demo/agent-fsm 的寫法）；沒宣告＝掛定義資料夾本身（11-04 起的行為）。
-stdout 只有結果；提醒在 stderr（括號一行）。錯：stderr 一行 `aos-agent: 代號 原因`、退 1（chat 被 Ctrl-C 退 130）。
-  代號：ArgumentsBad、FlagUnknown、CommandUnknown、DaemonMissing、InstanceMissing、InstanceExists、PathMissing、SessionBad、
-  SendFailed、PostFailed、QuestionUnknown、AnswerMissing、WaitFailed、AddRejected、CtlRejected、TargetMissing、WsMissing、InterfaceMissing、InterfaceBad、PhaseBad、
-  ScreenMissing、ScreenBad、ToolsMissing、LlmMissing、LlmBad。下層（aos-daemon-ctl）的錯換成這支的名字轉述（ProcMissing→InstanceMissing）；
-  子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉（C-53 各層只說自己的錯）。
-只在 Linux（讀 /proc）。PATH 上要有 aos-post、aos-exec（tools 還要 aos-tools，在 proto8/bin；llm set 還要 aos-json）。"""
-import json, os, shutil, subprocess, sys, tempfile, time
+Target: --target NAME > $AOS_AGENT (ctl add, rm, ls ignore it); neither = TargetMissing. Names are looked up on the daemon table
+  (aos-daemon-ctl ls --json); not there = InstanceMissing. Which daemon: --daemon D > $AOS_DAEMON (that daemon's $AOS_STACK) > ./.stack in cwd;
+  none = DaemonMissing. There is no --stack to pick the target (where's --stack / --ws only choose what to print). Printed paths are absolute.
+  A proc that failed to start or ended with an error (exit non-zero) stays on the table as stopped with a reason, which ls and state print;
+  only one that exited 0 leaves the table.
+sleep / wake: sleep = sleep now (the daemon SIGTERMs it, row sleeping, stack kept, it wakes by itself when the daemon starts);
+  stop = stop after this round, needs start. start only starts stopped, wake only wakes sleeping; crossing them (start / stop on sleeping,
+  wake / sleep on stopped) = aos-daemon-ctl's PhaseBad passed on; asking for the state it is already in prints "already ..." and exits 0.
+AOS_KERNEL: if set, ctl letters go there first (through aos-daemon-ctl) for the judge. start / stop / sleep / wake / rm of that kernel itself
+  (AOS_KERNEL is inside its stack) go straight to the daemon (a sleeping kernel never reads its own wake); after sending, a kernel that
+  is not running = WaitFailed at once (the letter waits in its mailbox until it is back).
+Replies: ctl add / rm / start / stop / sleep / wake each open a temporary reply mailbox (aos-agent-reply-XXXX under the system temp folder,
+  aos-post init) and send through aos-daemon-ctl --reply-to; a reply with applied: false (the judge refused) = AddRejected (add) /
+  CtlRejected (others) at once, with the reply's code and msg; applied: true or the result already on the table = carry on.
+  The temporary mailbox is always deleted (also on Ctrl-C and errors). 30 s without a result = WaitFailed.
+Interface: touches only the daemon table and the agent's stack (queue/, history.jsonl, ctl / state windows); in the definition folder (the def
+  column of its row) it reads only the interfaces.json declaration. screen = a folder program in the definition that declares aos-agent/screen,
+  run as aos-exec --ws <ws> --stack <stack> <definition>/<entry> ACTION...; tools = a registry file, this agent's overlay is <stack>/tools.json
+  (differences only: {"add": {NAME: entry}, "rm": [NAME]}; the body reads definition + overlay; reset deletes it);
+  llm = a brain settings file (e.g. "llm.json"), the keys this agent changed live at the same relative path in its stack (reset deletes it).
+  entry (optional): the body's entry in the definition (e.g. "body.json"); declared = add attaches <definition>/<entry> (def column is still
+  the definition folder); not declared = attaches the definition folder itself.
+stdout carries results only; notes go to stderr as one line in parentheses. Errors: one stderr line `aos-agent: CODE reason`, exit 1
+  (chat interrupted by Ctrl-C exits 130).
+  Codes: ArgumentsBad, FlagUnknown, CommandUnknown, CommandMissing, DaemonMissing, InstanceMissing, InstanceExists, PathMissing, SessionBad,
+  SendFailed, PostFailed, QuestionUnknown, AnswerMissing, WaitFailed, AddRejected, CtlRejected, TargetMissing, WsMissing, InterfaceMissing,
+  InterfaceBad, PhaseBad, ScreenMissing, ScreenBad, ToolsMissing, LlmMissing, LlmBad. Errors of aos-daemon-ctl are renamed for this program
+  (ProcMissing -> InstanceMissing); errors of the screen entry, aos-tools and aos-json pass through as they are.
+Linux only (reads /proc). Needs aos-post and aos-exec on PATH (tools also needs aos-tools in proto8/bin; llm set also needs aos-json)."""
+import json, os, re, shutil, subprocess, sys, tempfile, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 ROOT = os.path.normpath(os.path.join(HERE, "..", "..", ".."))           # proto8/
@@ -77,14 +127,14 @@ class Fail(Exception):
 
 def note(msg):
     """提醒（不是錯）：stderr 一行，括號包起來、不帶程式名，跟錯誤一行分得開。"""
-    print("（%s）" % msg, file=sys.stderr, flush=True)
+    print("(%s)" % msg, file=sys.stderr, flush=True)
 
 
 def parse(argv, flags=None, switches=None):
     try:
         return aos_flags.parse(argv, flags or {}, switches)
     except aos_flags.Error as e:
-        raise Fail(e.code, "%s（aos-agent --help 看用法）" % e)
+        raise Fail(e.code, "%s (see aos-agent --help)" % e)
 
 
 # ---------------------------------------------------------------- daemon（經 aos-daemon-ctl；搬自 aos-eca）
@@ -98,9 +148,9 @@ def daemon_dir():
     if not d and os.path.isdir(".stack"):
         d = ".stack"
     if not d:
-        raise Fail("DaemonMissing", "沒給 --daemon、沒設 AOS_DAEMON、cwd 也沒有 .stack 資料夾（要指到 aos-daemon 的 $AOS_STACK 資料夾）")
+        raise Fail("DaemonMissing", "no --daemon, no AOS_DAEMON and no .stack folder in cwd; point it at the aos-daemon's $AOS_STACK folder")
     if not os.path.isdir(d):
-        raise Fail("DaemonMissing", "daemon 的資料夾不在：%s" % d)
+        raise Fail("DaemonMissing", "the daemon folder does not exist: %s" % d)
     return os.path.abspath(d)
 
 
@@ -135,9 +185,9 @@ def ctl(*args, quiet=False, direct=False):
     try:
         r = subprocess.run([sys.executable, CTL, "--daemon", daemon_dir()] + list(args), capture_output=True, text=True, env=env)
     except OSError as e:
-        raise Fail("CommandMissing", "叫不了 aos-daemon-ctl：%s" % e)
+        raise Fail("CommandMissing", "cannot run aos-daemon-ctl: %s" % e)
     if r.returncode != 0:
-        line = (r.stderr.strip().splitlines() or ["aos-daemon-ctl: CtlFailed 退 %d" % r.returncode])[-1]
+        line = (r.stderr.strip().splitlines() or ["aos-daemon-ctl: CtlFailed exited %d" % r.returncode])[-1]
         code, _, why = line.partition(": ")[2].partition(" ")
         raise Fail({"ProcMissing": "InstanceMissing"}.get(code, code or "CtlFailed"), why or line)
     if r.stderr and not quiet:
@@ -288,7 +338,7 @@ def row_named(name):
 def find(name, quiet=False):
     r = table(quiet=quiet).get(name)
     if r is None or not isinstance(r.get("stack"), str) or not r.get("stack"):
-        raise Fail("InstanceMissing", "daemon 表上沒有 %s（rm 過、或自己結束下了表；stack 可能還在，要接著用就同名再 aos-agent ctl add）" % name)
+        raise Fail("InstanceMissing", "%s is not on the daemon table (removed with rm, or it exited 0 and left the table; the stack may still be there: aos-agent ctl add with the same name to pick it up again)" % name)
     return Agent(name, r)
 
 
@@ -296,7 +346,7 @@ def target(opts, quiet=False):
     """--target ＞ $AOS_AGENT；都沒有＝TargetMissing。"""
     name = opts.get("target") or os.environ.get("AOS_AGENT", "")
     if not name:
-        raise Fail("TargetMissing", "沒給對象：加 --target 名字，或 export AOS_AGENT=名字（或 source using-aos-agent.sh 名字）")
+        raise Fail("TargetMissing", "no target: add --target NAME, or export AOS_AGENT=NAME (or source using-aos-agent.sh NAME)")
     return find(name, quiet)
 
 
@@ -373,10 +423,10 @@ def daemon_held(a):
 
 
 def off_table(a):
-    """表上已經沒有這隻（身體自己結束了）＝一句怎麼救；還在＝None。"""
+    """表上已經沒有這隻（身體退 0 結束、下了表；出錯結束的 daemon 留 stopped＋reason）＝一句怎麼接著用；還在＝None。"""
     if row_named(a.name) is not None:
         return None
-    return ("it is no longer on the daemon table (its body exited; error in %s/%s); after fixing, aos-agent ctl add with the same name "
+    return ("it is no longer on the daemon table (its body exited 0 and left the table; its last output is in %s/%s); aos-agent ctl add with the same name "
             "picks it up again (the stack is kept; some bodies resume where they stopped, others drop that batch, so say it again)"
             % (a.stack, cell_name("procs_stderr", "stderr.txt")))
 
@@ -388,20 +438,20 @@ def run_hint(a):
     held = daemon_held(a)
     if held == "sleeping":   # 睡下的（收工或 aos-agent ctl sleep）：daemon 在跑＝wake；沒在跑＝重開 daemon 第一圈自己醒
         if daemon_alive(daemon_dir()):
-            return "它掛在 daemon 上睡著（%s 是 sleeping），叫醒它：aos-agent ctl wake --target %s" % (a.name, a.name)
-        return "它掛在 daemon 上睡著（%s 是 sleeping），重開 daemon 它會自己醒：aos-exec <daemon 資料夾>（那個 daemon 的 stack 是 %s）" % (a.name, daemon_dir())
+            return "it is asleep on the daemon (%s is sleeping); wake it: aos-agent ctl wake --target %s" % (a.name, a.name)
+        return "it is asleep on the daemon (%s is sleeping); restart the daemon and it wakes by itself: aos-exec <daemon folder> (that daemon's stack is %s)" % (a.name, daemon_dir())
     if held:
-        why = "；daemon 記的原因：%s" % a.reason if a.reason else ""
-        return "它在 daemon 表上停著（%s 是 stopped%s），叫它起來：aos-agent ctl start --target %s" % (a.name, why, a.name)
+        why = "; reason recorded by the daemon: %s" % a.reason if a.reason else ""
+        return "it is stopped on the daemon table (%s is stopped%s); start it: aos-agent ctl start --target %s" % (a.name, why, a.name)
     if not daemon_alive(daemon_dir()):
-        return "daemon 沒在跑（%s），重開 daemon：aos-exec <daemon 資料夾>" % daemon_dir()
-    return "看它的錯誤一行：%s/%s；或 aos-agent ctl state --target %s" % (a.stack, cell_name("procs_stderr", "stderr.txt"), a.name)
+        return "the daemon is not running (%s); restart it: aos-exec <daemon folder>" % daemon_dir()
+    return "see its error line: %s/%s, or aos-agent ctl state --target %s" % (a.stack, cell_name("procs_stderr", "stderr.txt"), a.name)
 
 
 def stuck_hint(a, sig):
     if "cur" in aos_ws.where(a.stack, sig):
-        return "%s 在 queue 的 cur/（認領了、還沒答完），但目前沒有程式在跑 %s。%s" % (sig, a.name, run_hint(a))
-    return "%s 還在 queue 的 new/，但目前沒有程式在跑 %s。%s" % (sig, a.name, run_hint(a))
+        return "%s is in queue/cur/ (taken, not answered yet), but nothing is running %s now; %s" % (sig, a.name, run_hint(a))
+    return "%s is still in queue/new/, but nothing is running %s now; %s" % (sig, a.name, run_hint(a))
 
 
 # ---------------------------------------------------------------- 等回答（搬自 extras/human/bin/aos-listen）
@@ -419,10 +469,10 @@ def print_answer(a, sig):
         sys.stdout.flush()
         return
     if sig is None:
-        raise Fail("QuestionUnknown", "queue 的 new/ cur/ 沒有信，history 也沒有回答")
+        raise Fail("QuestionUnknown", "no letter in queue/new/ or queue/cur/ and no answer in history")
     if not os.path.isdir(a.stack):                    # 11-05 edge-agent：等的途中被 ctl rm（stack 刪了），原本說「不在 queue、history 沒回答」
         raise Fail("InstanceMissing", "%s was removed (stack %s is gone); %s will never be answered" % (a.name, a.stack, sig))
-    raise Fail("AnswerMissing", "%s 已經不在 queue 了，history 卻沒有回答" % sig)
+    raise Fail("AnswerMissing", "%s has left the queue but history has no answer" % sig)
 
 
 def handed_unanswered(a, before):
@@ -439,7 +489,7 @@ def wait_latest(a, timeout, before=None):
     if sig is None and not handed_unanswered(a, before):   # 答案已經到了（或根本沒寄過）：立刻印最新那則回答
         return print_answer(a, None)
     start, warned, paused_said, next_check = time.monotonic(), False, False, 0.0
-    what = sig or "最新那封"
+    what = sig or "the latest letter"
 
     def say_paused():                                 # 11-05 edge-agent：暫停中原本一聲不吭地等
         nonlocal paused_said
@@ -467,10 +517,10 @@ def wait_latest(a, timeout, before=None):
                             note("%s was handed over and is not answered yet; %s is not running now. %s. Still waiting, Ctrl-C to leave" % (what, a.name, run_hint(a)))
                             warned = True
                     else:
-                        raise Fail("AnswerMissing", "%s 已經交出去了（不在 queue），history 卻沒有回答，也沒有程式在跑 %s"
-                                   "（中途掛掉的那批不會自動重答；要重答就再 say）" % (what, a.name))
+                        raise Fail("AnswerMissing", "%s was handed over (not in the queue) but history has no answer and nothing is running %s"
+                                   " (a batch cut off midway is not answered again by itself; say it again for a new answer)" % (what, a.name))
             if timeout is not None and time.monotonic() - start >= timeout:
-                raise Fail("AnswerMissing", "等了 %g 秒，%s 已經交出去、還沒答" % (timeout, what))
+                raise Fail("AnswerMissing", "waited %g s; %s was handed over and is not answered yet" % (timeout, what))
             time.sleep(POLL)
             continue
         now = time.monotonic()
@@ -482,10 +532,10 @@ def wait_latest(a, timeout, before=None):
             elif not os.path.isdir(a.stack):
                 raise Fail("InstanceMissing", "%s was removed (stack %s is gone); %s will never be answered" % (a.name, a.stack, sig))
             elif not warned:
-                note(stuck_hint(a, sig) + "。我繼續等，Ctrl-C 離開")
+                note(stuck_hint(a, sig) + ". Still waiting, Ctrl-C to leave")
                 warned = True
         if timeout is not None and now - start >= timeout:
-            raise Fail("AnswerMissing", "等了 %g 秒，%s 還沒答（信在 queue 的 %s/）" % (timeout, sig, "、".join(stages)))
+            raise Fail("AnswerMissing", "waited %g s; %s is not answered yet (the letter is in queue/%s/)" % (timeout, sig, ", ".join(stages)))
         time.sleep(POLL)
 
 
@@ -520,8 +570,8 @@ def follow(a, last, keep):
             if not waiting or runners(a):
                 warned = False
             elif not warned:
-                note("queue 裡還有 %d 封沒答（%s），但目前沒有程式在跑 %s。%s。我繼續等，Ctrl-C 離開"
-                     % (len(waiting), "、".join(waiting[:3]) + ("…" if len(waiting) > 3 else ""), a.name, run_hint(a)))
+                note("%d letters in the queue are not answered (%s), but nothing is running %s now; %s. Still waiting, Ctrl-C to leave"
+                     % (len(waiting), ", ".join(waiting[:3]) + ("..." if len(waiting) > 3 else ""), a.name, run_hint(a)))
                 warned = True
         time.sleep(POLL)
 
@@ -535,7 +585,7 @@ def number(opts, key, flag):
         if n < 0 or n != n:
             raise ValueError
     except ValueError:
-        raise Fail("ArgumentsBad", "%s 要給不小於 0 的數字：%s" % (flag, v))
+        raise Fail("ArgumentsBad", "%s needs a number not below 0: %s" % (flag, v))
     return n
 
 
@@ -545,18 +595,18 @@ def read_decl(folder, iface):
     """<folder>/interfaces.json 裡 iface 那個 key 的值（物件）。沒檔、沒 key＝(None, 原因)；讀不懂＝InterfaceBad。"""
     p = os.path.join(folder, DECL)
     if not os.path.isfile(p):
-        return None, "%s 沒有 %s" % (folder, DECL)
+        return None, "%s has no %s" % (folder, DECL)
     try:
         with open(p, encoding="utf-8") as f:
             d = json.load(f)
     except (OSError, ValueError) as e:
-        raise Fail("InterfaceBad", "%s 讀不懂：%s" % (p, e))
+        raise Fail("InterfaceBad", "cannot read %s: %s" % (p, e))
     if not isinstance(d, dict):
-        raise Fail("InterfaceBad", "%s 要是 JSON 物件" % p)
+        raise Fail("InterfaceBad", "%s must be a JSON object" % p)
     if iface not in d:
-        return None, "%s 沒宣告 %s" % (p, iface)
+        return None, "%s does not declare %s" % (p, iface)
     if not isinstance(d[iface], dict):
-        raise Fail("InterfaceBad", "%s 的 %s 要是物件（例 {\"%s\": {}}）" % (p, iface, iface))
+        raise Fail("InterfaceBad", "%s in %s must be an object (e.g. {\"%s\": {}})" % (iface, p, iface))
     return d[iface], None
 
 
@@ -565,7 +615,7 @@ def def_of(a):
     11-04 使用者「那就b。」：不再從 exec 欄倒推（loop.json 的 exec 是陣列或指到別的資料夾會推錯）。"""
     d = a.row.get("def")
     if not isinstance(d, str) or not d:
-        raise Fail("InterfaceMissing", "daemon 表上 %s 那一列沒有 def 欄，找不回定義（aos-agent ctl rm %s 再 ctl add 一次）" % (a.name, a.name))
+        raise Fail("InterfaceMissing", "the daemon table row of %s has no def column, so its definition cannot be found (aos-agent ctl rm %s, then ctl add again)" % (a.name, a.name))
     return d
 
 
@@ -573,7 +623,7 @@ def agent_decl(a):
     folder = def_of(a)
     decl, why = read_decl(folder, IFACE)
     if decl is None:
-        raise Fail("InterfaceMissing", "%s：定義沒宣告遵守 aos-agent 介面（%s）" % (a.name, why))
+        raise Fail("InterfaceMissing", "%s: the definition does not declare the aos-agent interface (%s)" % (a.name, why))
     return folder, decl
 
 
@@ -594,7 +644,7 @@ def same_def(a, folder):
 def warn_shared(a, folder):
     others = same_def(a, folder)
     if others:
-        note("注意 %s 也用這份定義（%s）；只改了 %s 自己的（stack 裡那份），它們不變（要一起變就改定義：aos-tools／aos-json）" % ("、".join(others), folder, a.name))
+        note("note: this definition (%s) is also used by %s; only %s's own copy (in its stack) changed, theirs did not (to change them all, edit the definition: aos-tools / aos-json)" % (folder, ", ".join(others), a.name))
 
 
 def sub_entry(a, key, iface, missing, bad):
@@ -605,10 +655,10 @@ def sub_entry(a, key, iface, missing, bad):
         raise Fail(*missing(folder))
     entry = os.path.join(folder, rel)
     if not os.path.isdir(entry):
-        raise Fail(bad, "%s 宣告的 %s 入口不是資料夾：%s" % (folder, key, entry))
+        raise Fail(bad, "the %s entry declared by %s is not a folder: %s" % (key, folder, entry))
     d, why = read_decl(entry, iface)
     if d is None:
-        raise Fail(bad, "%s 沒宣告遵守 %s（%s）" % (entry, iface, why))
+        raise Fail(bad, "%s does not declare %s (%s)" % (entry, iface, why))
     return folder, entry
 
 
@@ -618,7 +668,7 @@ def run_entry(a, entry, args, capture_err=True):
     try:
         r = subprocess.run(argv, stderr=subprocess.PIPE if capture_err else None, text=True)
     except OSError as e:
-        raise Fail("CommandMissing", "叫不了 aos-exec（PATH 上要有 proto8/impls/aos-exec/bin）：%s" % e)
+        raise Fail("CommandMissing", "cannot run aos-exec (proto8/impls/aos-exec/bin must be on PATH): %s" % e)
     return r.returncode, (r.stderr or "")
 
 
@@ -632,7 +682,7 @@ def pass_err(rc, err):
 
 def screen_entry(a):
     return sub_entry(a, "screen", "aos-agent/screen",
-                     lambda f: ("ScreenMissing", "%s 沒宣告子介面 screen（沒有畫面）；看回答用 aos-agent listen --follow --target %s" % (a.name, a.name)),
+                     lambda f: ("ScreenMissing", "%s does not declare the screen sub-interface (no screen); follow answers with aos-agent listen --follow --target %s" % (a.name, a.name)),
                      "ScreenBad")
 
 
@@ -654,7 +704,7 @@ def close_screen_if_any(a):
 def cmd_ls(argv):
     opts, rest = parse(argv, {}, {"--json": "json"})
     if rest:
-        raise Fail("ArgumentsBad", "ls 不收參數：%s" % rest[0])
+        raise Fail("ArgumentsBad", "ls takes no arguments: %s" % rest[0])
     rows = [Agent(n, r) for n, r in table().items()]
     if opts.get("json"):
         print(json.dumps([dict(name=a.name, state=label(a), phase=a.phase, ws=a.row.get("ws") or "", stack=a.stack,
@@ -663,13 +713,13 @@ def cmd_ls(argv):
     for a in rows:
         q = queued(a)
         print("%-12s %-8s %s  queue %s%s" % (a.name, label(a), a.row.get("ws") or "-", "-" if q is None else q,
-                                             "  原因 %s" % a.reason if a.reason else ""))
+                                             "  reason %s" % a.reason if a.reason else ""))
 
 
 def last_answer(a):
     got = aos_ws.answers(a.stack)
     if not got:
-        return "（還沒有）"
+        return "(none yet)"
     s = got[-1].strip().replace("\n", " ")
     return s[:60] + ("…" if len(s) > 60 else "")
 
@@ -677,20 +727,20 @@ def last_answer(a):
 def cmd_state(argv):
     opts, rest = parse(argv, {"--target": "target"})
     if rest:
-        raise Fail("ArgumentsBad", "state 不收位置參數：%s（對象用 --target）" % rest[0])
+        raise Fail("ArgumentsBad", "state takes no positional arguments: %s (pick the target with --target)" % rest[0])
     a = target(opts)
     q = queued(a)
-    lines = ["名字   %s" % a.name, "狀態   %s（daemon phase %s）" % (label(a), a.phase), "工作區 %s" % (a.row.get("ws") or "-"),
-             "stack  %s" % a.stack, "queue  %s" % ("-" if q is None else "%d 封" % q), "回答   %s" % last_answer(a)]
+    lines = ["name    %s" % a.name, "state   %s (daemon phase %s)" % (label(a), a.phase), "ws      %s" % (a.row.get("ws") or "-"),
+             "stack   %s" % a.stack, "queue   %s" % ("-" if q is None else "%d queued" % q), "answer  %s" % last_answer(a)]
     try:
-        lines.insert(4, "定義   %s" % def_of(a))
+        lines.insert(4, "def     %s" % def_of(a))
     except Fail:
         pass
     if a.reason:
-        lines.insert(2, "原因   %s" % a.reason)
+        lines.insert(2, "reason  %s" % a.reason)
     warn = aos_ws.read(os.path.join(a.stack, "mailbox_warning.txt"))
     if warn and warn.strip():
-        lines.append("壞信   %s" % warn.strip().splitlines()[-1])
+        lines.append("badmail %s" % warn.strip().splitlines()[-1])
     print("\n".join(lines))
 
 
@@ -698,9 +748,9 @@ def cmd_where(argv):
     """預設（＝--stack）印它的 stack；--ws 印它的工作區（使用者 11-04 晚「aos agent的where，我希望默認是--stack，有需要再另外指定--ws。」）。"""
     opts, rest = parse(argv, {"--target": "target"}, {"--stack": "stack", "--ws": "ws"})
     if rest:
-        raise Fail("ArgumentsBad", "where 不收位置參數：%s（對象用 --target）" % rest[0])
+        raise Fail("ArgumentsBad", "where takes no positional arguments: %s (pick the target with --target)" % rest[0])
     if opts.get("stack") and opts.get("ws"):
-        raise Fail("ArgumentsBad", "where 的 --stack、--ws 只能挑一個（不給＝--stack）")
+        raise Fail("ArgumentsBad", "where takes only one of --stack and --ws (neither = --stack)")
     name = opts.get("target") or os.environ.get("AOS_AGENT", "")
     if not name:
         target(opts)                                    # TargetMissing
@@ -709,7 +759,7 @@ def cmd_where(argv):
         return
     ws = find(name).row.get("ws")
     if not ws:
-        raise Fail("WsMissing", "表上的 %s 沒記工作區（不是用 aos-agent ctl add／aos-daemon-ctl add --ws 掛的，跑在 daemon 自己的 AOS_WS）" % name)
+        raise Fail("WsMissing", "%s has no workspace on the table (not attached with aos-agent ctl add / aos-daemon-ctl add --ws; it runs in the daemon's own AOS_WS)" % name)
     print(ws)
 
 
@@ -720,13 +770,13 @@ def cmd_say(argv):
         text = " ".join(rest) if rest else sys.stdin.read()
         text.encode("utf-8")
     except UnicodeError:
-        raise Fail("ArgumentsBad", "話不是 UTF-8")
+        raise Fail("ArgumentsBad", "the message is not UTF-8")
     if not text.strip():
-        raise Fail("ArgumentsBad", "話是空的（aos-agent say [--target 名字] 話...）")
+        raise Fail("ArgumentsBad", "the message is empty (aos-agent say [--target NAME] WORDS...)")
     sig = aos_ws.put(a.stack, text)
     print(sig, flush=True)
     if not runners(a):
-        note("已寄進 %s/queue/new/；目前沒有程式在跑 %s，%s" % (a.stack, a.name, run_hint(a)))
+        note("queued in %s/queue/new/; nothing is running %s now; %s" % (a.stack, a.name, run_hint(a)))
     elif label(a) == "paused":
         note("queued in %s/queue/new/; %s is paused and will not answer until resumed: aos-agent ctl resume --target %s" % (a.stack, a.name, a.name))
 
@@ -735,10 +785,10 @@ def cmd_listen(argv):
     opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout", "--last": "last"}, {"--follow": "follow"})
     timeout, last = number(opts, "timeout", "--timeout-s"), number(opts, "last", "--last")
     if rest:
-        raise Fail("ArgumentsBad", "listen 不收位置參數：%s（等的永遠是最新那封；要寄就 aos-agent say 話 && aos-agent listen）" % rest[0])
+        raise Fail("ArgumentsBad", "listen takes no positional arguments: %s (it always waits for the latest letter; to send, aos-agent say WORDS && aos-agent listen)" % rest[0])
     waits = last is None and not opts.get("follow")
     if not waits and timeout is not None:
-        raise Fail("ArgumentsBad", "--timeout-s 只給等最新那封用，不跟 --last／--follow 一起")
+        raise Fail("ArgumentsBad", "--timeout-s is only for waiting on the latest letter, not with --last / --follow")
     a = target(opts)
     try:
         if waits:
@@ -753,9 +803,9 @@ def cmd_chat(argv):
     """say＋listen 的迴圈（02「chat 怎麼運作」）：提示符在 stderr、stdout 只有回答；Ctrl-C 退 130、stdin 結束退 0。"""
     opts, rest = parse(argv, {"--target": "target"})
     if rest:
-        raise Fail("ArgumentsBad", "chat 不收位置參數：%s（對象用 --target）" % rest[0])
+        raise Fail("ArgumentsBad", "chat takes no positional arguments: %s (pick the target with --target)" % rest[0])
     a = target(opts)
-    print("跟 %s 聊（Ctrl-C 退出）" % a.name, file=sys.stderr, flush=True)
+    print("chatting with %s (Ctrl-C to exit)" % a.name, file=sys.stderr, flush=True)
     sent = False
     try:
         while True:
@@ -765,7 +815,7 @@ def cmd_chat(argv):
             try:
                 line = sys.stdin.buffer.readline().decode("utf-8")   # 一行一行解碼：壞一行不連累前後
             except UnicodeDecodeError:                  # 11-04 夜：這行不是 UTF-8＝印一行、不寄、回提示符
-                print("%s: ArgumentsBad 這行不是 UTF-8，沒寄" % PROG, file=sys.stderr, flush=True)
+                print("%s: ArgumentsBad this line is not UTF-8, not sent" % PROG, file=sys.stderr, flush=True)
                 continue
             if not line:
                 sys.stderr.write("\n")
@@ -784,7 +834,7 @@ def cmd_chat(argv):
                 print("%s: %s %s" % (PROG, e.code, e), file=sys.stderr, flush=True)   # 印一行、不退出，回提示符
     except KeyboardInterrupt:
         if sent:
-            print("\n（那句已寄出，回答之後用 aos-agent listen --target %s 看）" % a.name, file=sys.stderr, flush=True)
+            print("\n(that message was sent; read the answer later with aos-agent listen --target %s)" % a.name, file=sys.stderr, flush=True)
         else:
             sys.stderr.write("\n")
         sys.exit(130)
@@ -795,76 +845,76 @@ def cmd_chat(argv):
 def cmd_add(argv):
     opts, rest = parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack"})
     if len(rest) != 1:
-        raise Fail("ArgumentsBad", "add 要一個 agent 資料夾 XXX（aos-agent ctl add [--name N] [--ws WS] [--stack S] XXX）"
-                   + ("；多給了 %s（add 不收 -- 參數）" % rest[1] if len(rest) > 1 else ""))
+        raise Fail("ArgumentsBad", "add takes one agent folder XXX (aos-agent ctl add [--name N] [--ws WS] [--stack S] XXX)"
+                   + ("; extra argument %s (add takes no -- arguments)" % rest[1] if len(rest) > 1 else ""))
     xxx = os.path.abspath(rest[0])
     if not os.path.isdir(xxx):
-        raise Fail("PathMissing", "沒有 %s（add 要一個 agent 資料夾）" % rest[0])
+        raise Fail("PathMissing", "%s does not exist (add takes an agent folder)" % rest[0])
     decl, why = read_decl(xxx, IFACE)
     if decl is None:
-        raise Fail("InterfaceMissing", "%s 沒宣告遵守 aos-agent 介面（%s）；在它頂層放 interfaces.json：{\"aos-agent\": {}}" % (xxx, why))
+        raise Fail("InterfaceMissing", "%s does not declare the aos-agent interface (%s); put interfaces.json at its top: {\"aos-agent\": {}}" % (xxx, why))
     body = [xxx]                                      # 11-05 題 4：定義宣告了 entry＝掛 <定義>/<entry>，def 欄另給定義資料夾
     ent = decl.get("entry")
     if ent is not None:
         if not isinstance(ent, str) or not ent or os.path.isabs(ent) or ".." in ent.split("#")[0].split("/"):
-            raise Fail("InterfaceBad", "%s 宣告的 entry 要是定義裡一個入口的相對路徑（例 \"body.json\"），不是 %s" % (xxx, json.dumps(ent, ensure_ascii=False)))
+            raise Fail("InterfaceBad", "the entry declared by %s must be a relative path to an entry in the definition (e.g. \"body.json\"), not %s" % (xxx, json.dumps(ent, ensure_ascii=False)))
         if not os.path.exists(os.path.join(xxx, ent.partition("#")[0])):
-            raise Fail("InterfaceBad", "%s 宣告的 entry 不在：%s" % (xxx, os.path.join(xxx, ent)))
+            raise Fail("InterfaceBad", "the entry declared by %s does not exist: %s" % (xxx, os.path.join(xxx, ent)))
         body = ["--def", xxx, os.path.join(xxx, ent)]
     ws = os.path.abspath(opts.get("ws") or ".")
     if not os.path.isdir(ws):
-        raise Fail("PathMissing", "--ws 不是資料夾：%s" % ws)
+        raise Fail("PathMissing", "--ws is not a folder: %s" % ws)
     stack = opts.get("stack")
     if stack is not None:
         if not stack:
-            raise Fail("ArgumentsBad", "--stack 不能是空的")
+            raise Fail("ArgumentsBad", "--stack must not be empty")
         stack = os.path.abspath(stack)
     name = opts.get("name") or os.path.basename(xxx.rstrip("/"))
     need_daemon()
     row = row_named(name)
     if row is not None:
-        hint = {"stopped": "；它停著，要接著用就 aos-agent ctl start --target %s" % name,
-                "sleeping": "；它睡著，要接著用就 aos-agent ctl wake --target %s" % name}.get(row.get("phase"), "")
-        raise Fail("InstanceExists", "daemon 上已經有 %s 了；換個名字（--name），或先 aos-agent ctl rm %s%s" % (name, name, hint))
+        hint = {"stopped": "; it is stopped, to carry on: aos-agent ctl start --target %s" % name,
+                "sleeping": "; it is asleep, to carry on: aos-agent ctl wake --target %s" % name}.get(row.get("phase"), "")
+        raise Fail("InstanceExists", "%s is already on the daemon; pick another name (--name), or first aos-agent ctl rm %s%s" % (name, name, hint))
     try:
         row = ctl_wait("add", ["--ws", ws, "--name", name, *(["--stack", stack] if stack else []), *body],
                        lambda letter: row_named(name) or rejected(letter),
-                       "daemon 還沒把 %s 放上表（或起來就結束、下了表；用 aos-agent ctl ls 看、看 daemon 的 log）" % name, "AddRejected")
+                       "the daemon has not put %s on the table yet (see aos-agent ctl ls and the daemon's log)" % name, "AddRejected")
     except KeyboardInterrupt:                         # 11-04 夜邊緣實測：信已寄出，Ctrl-C 不撤；原本安靜退 130，人以為沒掛上
-        note("add 的信已寄出，daemon 還是會把 %s 掛上；不要了就 aos-agent ctl rm %s（用 aos-agent ctl ls 看）" % (name, name))
+        note("the add letter was sent, the daemon will still attach %s; if you do not want it, aos-agent ctl rm %s (check with aos-agent ctl ls)" % (name, name))
         raise
     print(Agent(name, row).stack)
 
 
 def rejected(letter):
     """daemon 不收這封 add 信（11-04 夜 09 題 3，使用者「add被拒絕則應該按照推薦」）：procs_state.json 的 mailbox_warning
-    是「信 <信件名稱> 不採用：原因」（只留最後一封壞信）。是這封＝AddRejected、原因原樣轉；不是或讀不到＝None（照等）。"""
+    寫的是哪封信、為什麼不採用（只留最後一封壞信）；只認裡面有沒有這封的信件名稱、不靠字樣（11-05 程式輸出改英文）。是這封＝AddRejected、原因原樣轉；不是或讀不到＝None（照等）。"""
     try:
         with open(os.path.join(daemon_dir(), "procs_state.json"), encoding="utf-8") as f:
             w = json.load(f).get("mailbox_warning")
     except (OSError, ValueError, AttributeError):
         return None
-    if letter and isinstance(w, str) and w.startswith("信 %s " % letter):
-        raise Fail("AddRejected", "daemon 不收：%s" % w)
+    if letter and isinstance(w, str) and re.search(r"(^|\s)%s(\s|:|$)" % re.escape(letter), w):   # 只認信件名稱，不靠 daemon 的字樣
+        raise Fail("AddRejected", "the daemon refused it: %s" % w)
     return None
 
 
 def cmd_rm(argv):
     _, rest = parse(argv)
     if len(rest) != 1:
-        raise Fail("ArgumentsBad", "rm 要明講名字：aos-agent ctl rm 名字（不吃 --target／AOS_AGENT：拔掉會刪 stack、不可逆）")
+        raise Fail("ArgumentsBad", "rm needs the name spelled out: aos-agent ctl rm NAME (no --target / AOS_AGENT: it deletes the stack, which cannot be undone)")
     need_daemon()
     a = find(rest[0])
     close_screen_if_any(a)
     direct = is_kernel(a)
-    ctl_wait("rm", ["--", a.name], lambda _: row_named(a.name) is None, "daemon 還沒收掉 %s" % a.name, "CtlRejected", direct)
+    ctl_wait("rm", ["--", a.name], lambda _: row_named(a.name) is None, "the daemon has not removed %s yet" % a.name, "CtlRejected", direct)
     others = [r.get("stack") for r in table(quiet=True).values()]   # 表上別隻還在用的 stack（add --stack 撞到別隻的）
     keep = covers(a.stack, [a.row.get("ws"), a.row.get("def"), daemon_dir(), os.getcwd(), os.path.expanduser("~")] + others)
     if keep:                                          # 11-04 夜邊緣實測：add --stack . 之後 rm 會連工作區一起刪；stack 蓋住這些的不刪
-        print("拔了 %s；stack %s 沒刪（它是 %s 或在它上層）" % (a.name, a.stack, keep))
+        print("removed %s; stack %s kept (it is %s or above it)" % (a.name, a.stack, keep))
         return
     shutil.rmtree(a.stack, ignore_errors=True)        # 不封存（使用者 11-02 晚）
-    print("刪了 %s（stack %s）" % (a.name, a.stack))
+    print("removed %s (deleted stack %s)" % (a.name, a.stack))
 
 
 def covers(stack, paths):
@@ -881,30 +931,30 @@ def covers(stack, paths):
 def cmd_start(argv):
     opts, rest = parse(argv, {"--target": "target"})
     if rest:
-        raise Fail("ArgumentsBad", "start 不收位置參數：%s（對象用 --target）" % rest[0])
+        raise Fail("ArgumentsBad", "start takes no positional arguments: %s (pick the target with --target)" % rest[0])
     need_daemon()
     a = target(opts)
     if a.phase == "stopping":                         # 還在停的途中：等它停好再起
-        wait_for(lambda: (row_named(a.name) or {}).get("phase") != "stopping", "daemon 還沒把 %s 停好" % a.name)
+        wait_for(lambda: (row_named(a.name) or {}).get("phase") != "stopping", "the daemon has not finished stopping %s" % a.name)
         a = find(a.name)
     if a.phase == "running":
-        print("本來就在跑（%s）" % label(a))
+        print("already running (%s)" % label(a))
         return
     n = queued(a) or 0
     direct = is_kernel(a)
     ctl_wait("start", ["--", a.name], lambda _: (row_named(a.name) or {}).get("phase") != "stopped",   # sleeping 的＝aos-daemon-ctl PhaseBad「要 wake」
-             "daemon 還沒把 %s 起來" % a.name, "CtlRejected", direct)
-    print("起來了（同一個 stack），queue 裡 %d 封接著答" % n)
+             "the daemon has not started %s yet" % a.name, "CtlRejected", direct)
+    print("started (same stack); %d queued letters will be answered next" % n)
 
 
 def cmd_stop(argv):
     opts, rest = parse(argv, {"--target": "target"})
     if rest:
-        raise Fail("ArgumentsBad", "stop 不收位置參數：%s（對象用 --target）" % rest[0])
+        raise Fail("ArgumentsBad", "stop takes no positional arguments: %s (pick the target with --target)" % rest[0])
     need_daemon()
     a = target(opts)
     if a.phase == "stopped":
-        print("本來就停著（%s）" % label(a))
+        print("already stopped (%s)" % label(a))
         return
     direct = is_kernel(a)
     if a.phase == "sleeping":                         # 11-05 嚴格分：不關畫面、直接讓 aos-daemon-ctl 報 PhaseBad「要先 wake」
@@ -912,52 +962,52 @@ def cmd_stop(argv):
     close_screen_if_any(a)
     stopped = lambda _: (row_named(a.name) or {"phase": "stopped"}).get("phase") == "stopped"
     if a.phase != "stopping":
-        ctl_wait("stop", ["--", a.name], stopped, "daemon 還沒把 %s 停好" % a.name, "CtlRejected", direct)
+        ctl_wait("stop", ["--", a.name], stopped, "the daemon has not finished stopping %s" % a.name, "CtlRejected", direct)
     else:
-        wait_for(lambda: stopped(None), "daemon 還沒把 %s 停好" % a.name, via_kernel=not direct)
-    print("停了，stack 留著（%s）；這期間 say 的信照收，aos-agent ctl start --target %s 接著答" % (a.stack, a.name))
+        wait_for(lambda: stopped(None), "the daemon has not finished stopping %s" % a.name, via_kernel=not direct)
+    print("stopped, stack kept (%s); say still queues letters meanwhile, aos-agent ctl start --target %s to carry on" % (a.stack, a.name))
 
 
 def cmd_sleep(argv):
     """sleep（11-05 衝突 1）：現在就睡——daemon 對它 SIGTERM、列 sleeping、stack 留；daemon 開門自己醒，或 wake。畫面不關（同 daemon 收工）。"""
     opts, rest = parse(argv, {"--target": "target"})
     if rest:
-        raise Fail("ArgumentsBad", "sleep 不收位置參數：%s（對象用 --target）" % rest[0])
+        raise Fail("ArgumentsBad", "sleep takes no positional arguments: %s (pick the target with --target)" % rest[0])
     need_daemon()
     a = target(opts)
     if a.phase == "sleeping":
-        print("本來就睡著（%s）" % label(a))
+        print("already asleep (%s)" % label(a))
         return
     rows = aos_ws.history(a.stack)                    # 11-05 edge-agent：eca 答到一半 sleep＝那批不重答，醒來也等不到
     if rows and not aos_ws.is_answer(rows[-1]):
         note("%s has not finished answering the last message; some bodies (eca) drop the batch being answered when put to sleep: if no answer comes after wake, say it again" % a.name)
     direct = is_kernel(a)
     ctl_wait("sleep", ["--", a.name], lambda _: (row_named(a.name) or {"phase": "sleeping"}).get("phase") == "sleeping",   # stopped／stopping／exec 型＝PhaseBad／CtlMissing
-             "daemon 還沒讓 %s 睡下" % a.name, "CtlRejected", direct)
-    print("睡了，stack 留著（%s）；這期間 say 的信照收，aos-agent ctl wake --target %s 叫醒（daemon 重開也會自己醒）" % (a.stack, a.name))
+             "the daemon has not put %s to sleep yet" % a.name, "CtlRejected", direct)
+    print("asleep, stack kept (%s); say still queues letters meanwhile, aos-agent ctl wake --target %s wakes it (it also wakes when the daemon restarts)" % (a.stack, a.name))
 
 
 def cmd_wake(argv):
     opts, rest = parse(argv, {"--target": "target"})
     if rest:
-        raise Fail("ArgumentsBad", "wake 不收位置參數：%s（對象用 --target）" % rest[0])
+        raise Fail("ArgumentsBad", "wake takes no positional arguments: %s (pick the target with --target)" % rest[0])
     need_daemon()
     a = target(opts)
     if a.phase == "running":
-        print("本來就醒著（%s）" % label(a))
+        print("already awake (%s)" % label(a))
         return
     n = queued(a) or 0
     direct = is_kernel(a)
     ctl_wait("wake", ["--", a.name], lambda _: (row_named(a.name) or {}).get("phase") != "sleeping",   # stopped 的＝aos-daemon-ctl PhaseBad「要 start」
-             "daemon 還沒把 %s 叫醒" % a.name, "CtlRejected", direct)
-    print("醒了（同一個 stack），queue 裡 %d 封接著答" % n)
+             "the daemon has not woken %s yet" % a.name, "CtlRejected", direct)
+    print("awake (same stack); %d queued letters will be answered next" % n)
 
 
 def cmd_pause_resume(cmd):
     def run(argv):
         opts, rest = parse(argv, {"--target": "target"})
         if rest:
-            raise Fail("ArgumentsBad", "%s 不收位置參數：%s（對象用 --target）" % (cmd, rest[0]))
+            raise Fail("ArgumentsBad", "%s takes no positional arguments: %s (pick the target with --target)" % (cmd, rest[0]))
         a = target(opts)
         sys.stdout.write(ctl(cmd, "--", a.name))
     return run
@@ -967,14 +1017,14 @@ def cmd_screen(action):
     def run(argv):
         opts, rest = parse(argv, {"--target": "target"}, {"-d": "d"} if action == "open" else None)
         if rest:
-            raise Fail("ArgumentsBad", "%s 不收位置參數：%s（對象用 --target）" % (action, rest[0]))
+            raise Fail("ArgumentsBad", "%s takes no positional arguments: %s (pick the target with --target)" % (action, rest[0]))
         a = target(opts)
         _, entry = screen_entry(a)
         args = [action] + (["-d"] if opts.get("d") else [])
         attach = action == "open" and not opts.get("d")
         rc, err = run_entry(a, entry, args, capture_err=not attach)
         if attach and rc != 0:
-            raise Fail("ScreenBad", "%s 的畫面入口 %s 退 %d" % (a.name, entry, rc))
+            raise Fail("ScreenBad", "the screen entry %s of %s exited %d" % (entry, a.name, rc))
         pass_err(rc, err)
     return run
 
@@ -997,23 +1047,23 @@ def cmd_tools(argv):
     folder, decl = agent_decl(a)
     rel = decl.get("tools")
     if not isinstance(rel, str) or not rel:
-        raise Fail("ToolsMissing", "%s 沒宣告子介面 tools（定義的 interfaces.json 寫 {\"aos-agent\": {\"tools\": \"tools.json\"}}）" % a.name)
+        raise Fail("ToolsMissing", "%s does not declare the tools sub-interface (write {\"aos-agent\": {\"tools\": \"tools.json\"}} in the definition's interfaces.json)" % a.name)
     orig, over = os.path.join(folder, rel), os.path.join(a.stack, "tools.json")
     act, args = (rest[0], rest[1:]) if rest else ("ls", [])
     if act in ("ls", "get"):
         if os.path.isfile(over):
-            note("定義 %s 疊這隻的覆蓋層 %s" % (orig, over))
+            note("definition %s with this agent's overlay %s on top" % (orig, over))
         else:
-            note("用的是定義的 %s（這隻沒有覆蓋層）" % orig)
+            note("using the definition's %s (this agent has no overlay)" % orig)
         return aos_tools(a, orig, over, [act] + args)
     if act == "reset":
         if args:
-            raise Fail("ArgumentsBad", "tools reset 不收參數")
+            raise Fail("ArgumentsBad", "tools reset takes no arguments")
         if os.path.isfile(over):
             os.unlink(over)
-            print("刪了覆蓋層 %s，回去只用定義的 %s" % (over, orig))
+            print("deleted overlay %s; back to the definition's %s only" % (over, orig))
         else:
-            print("本來就沒覆蓋層（用的是定義的 %s）" % orig)
+            print("there was no overlay (using the definition's %s)" % orig)
         return
     if act == "add":                                  # 11-05 edge-agent：撞名時 aos-tools 說「加 --override」，原本這裡收不了
         topts, args = parse(args, {}, {"--override": "override", "--no-cache": "no_cache"})
@@ -1023,14 +1073,14 @@ def cmd_tools(argv):
             + ["--name", args[0], os.path.abspath(args[1])]
     elif act == "rm":
         if len(args) != 1:
-            raise Fail("ArgumentsBad", "tools rm 名")
+            raise Fail("ArgumentsBad", "usage: tools rm NAME")
         targs = ["rm", args[0]]
     else:
         raise Fail("CommandUnknown", "tools: unknown action %s (ls, get, add [--override] [--no-cache], rm, reset)" % act)
     made = not os.path.isfile(over)
     aos_tools(a, orig, over, targs)                   # 失敗＝aos-tools 不寫（覆蓋層照舊）
     if made:
-        note("建了覆蓋層 %s（只記這隻加的、拿掉的；定義之後改了照疊，tools reset 刪掉回去只用定義）" % over)
+        note("created overlay %s (it records only what this agent added or removed; later changes to the definition still show through; tools reset deletes it)" % over)
     warn_shared(a, folder)
 
 
@@ -1040,10 +1090,10 @@ def llm_paths(a):
     folder, decl = agent_decl(a)
     rel = decl.get("llm")
     if not isinstance(rel, str) or not rel:
-        raise Fail("LlmMissing", "%s 沒宣告 llm（定義的 interfaces.json 寫 {\"aos-agent\": {\"llm\": \"llm.json\"}}）" % a.name)
+        raise Fail("LlmMissing", "%s does not declare llm (write {\"aos-agent\": {\"llm\": \"llm.json\"}} in the definition's interfaces.json)" % a.name)
     orig = os.path.join(folder, rel)
     if os.path.isdir(orig) or os.path.isabs(rel) or ".." in rel.split("/"):
-        raise Fail("LlmBad", "%s 宣告的 llm 要是定義裡一份設定檔的相對路徑（例 \"llm.json\"），不是 %s" % (folder, rel))
+        raise Fail("LlmBad", "the llm declared by %s must be a relative path to a settings file in the definition (e.g. \"llm.json\"), not %s" % (folder, rel))
     return folder, orig, os.path.join(a.stack, rel)
 
 
@@ -1054,9 +1104,9 @@ def read_llm(path):
     except FileNotFoundError:
         return {}
     except (OSError, ValueError) as e:
-        raise Fail("LlmBad", "%s 讀不懂：%s" % (path, e))
+        raise Fail("LlmBad", "cannot read %s: %s" % (path, e))
     if not isinstance(d, dict):
-        raise Fail("LlmBad", "%s 要是一層物件" % path)
+        raise Fail("LlmBad", "%s must be a flat JSON object" % path)
     return d
 
 
@@ -1065,9 +1115,9 @@ def show_llm(orig, copy):
     vals, over = read_llm(orig), read_llm(copy)
     vals.update(over)
     if over:
-        note("這隻改過的鍵：%s" % " ".join(over))
+        note("keys changed for this agent: %s" % " ".join(over))
     if not vals:
-        note("沒有設定（定義 %s 沒寫鍵、這隻也沒改過）：身體用自己的預設" % orig)
+        note("no settings (definition %s has no keys and none were changed here): the body uses its own defaults" % orig)
     for k, v in vals.items():
         print("%s=%s" % (k, v if isinstance(v, str) else json.dumps(v, ensure_ascii=False)))
 
@@ -1081,39 +1131,39 @@ def cmd_llm(argv):
     act, args = (rest[0], rest[1:]) if rest else ("show", [])
     if act == "show":
         if args:
-            raise Fail("ArgumentsBad", "llm show 不收參數")
+            raise Fail("ArgumentsBad", "llm show takes no arguments")
     elif act == "reset":
         if args:
-            raise Fail("ArgumentsBad", "llm reset 不收參數")
+            raise Fail("ArgumentsBad", "llm reset takes no arguments")
         if os.path.isfile(copy):
             os.unlink(copy)
-            note("刪了 %s（改過的鍵），回去用定義的 %s" % (copy, orig))
+            note("deleted %s (the changed keys); back to the definition's %s" % (copy, orig))
     elif act == "set":
         pairs = []
         for x in args:
             k, eq, v = x.partition("=")
             if not eq or not k or "/" in k or "~" in k:
-                raise Fail("ArgumentsBad", "要寫成 鍵=值：%s" % x)
+                raise Fail("ArgumentsBad", "expected KEY=VALUE: %s" % x)
             pairs.append((k, v))
         if not pairs:
-            raise Fail("ArgumentsBad", "llm set 至少一個 鍵=值")
+            raise Fail("ArgumentsBad", "llm set needs at least one KEY=VALUE")
         if not os.path.isfile(copy):
             os.makedirs(os.path.dirname(copy), exist_ok=True)
             tmp = os.path.join(os.path.dirname(copy), "." + os.path.basename(copy) + ".tmp")   # N-05
             with open(tmp, "w", encoding="utf-8") as f:
                 f.write("{}\n")
             os.replace(tmp, copy)
-            note("建了 %s（只放改過的鍵、其他照定義；llm reset 刪掉）" % copy)
+            note("created %s (only the changed keys, the rest follows the definition; llm reset deletes it)" % copy)
         for k, v in pairs:
             try:
                 r = subprocess.run(["aos-json", "set", "--str", "%s#/%s" % (copy, k), v])   # aos-json 的錯原樣（C-53）
             except OSError as e:
-                raise Fail("CommandMissing", "叫不了 aos-json（PATH 上要有 proto8/impls/aos-json/bin）：%s" % e)
+                raise Fail("CommandMissing", "cannot run aos-json (proto8/impls/aos-json/bin must be on PATH): %s" % e)
             if r.returncode != 0:
                 sys.exit(1)
         warn_shared(a, folder)
     else:
-        raise Fail("CommandUnknown", "llm 不認得 %s（show、set 鍵=值…、reset）" % act)
+        raise Fail("CommandUnknown", "llm: unknown action %s (show, set KEY=VALUE..., reset)" % act)
     show_llm(orig, copy)
 
 
@@ -1125,7 +1175,7 @@ CTL_CMDS = {"add": cmd_add, "rm": cmd_rm, "start": cmd_start, "stop": cmd_stop, 
 def cmd_ctl(argv):
     """ctl＝掛上與管理（11-05 使用者「我希望掛上和管理這塊，能夠放到aos-agent ctl這個子命令下。」）。"""
     if not argv or argv[0] not in CTL_CMDS:
-        raise Fail("CommandUnknown", "ctl 要接 %s 之一%s" % ("、".join(CTL_CMDS), "，不認得 %s" % argv[0] if argv else ""))
+        raise Fail("CommandUnknown", "ctl needs one of %s%s" % (", ".join(CTL_CMDS), "; unknown: %s" % argv[0] if argv else ""))
     CTL_CMDS[argv[0]](argv[1:])
 
 
@@ -1148,7 +1198,7 @@ def main():
             print(__doc__)
             return
         if rest[0] not in CMDS:
-            raise Fail("CommandUnknown", "不認得的子命令 %s（%s）" % (rest[0], "、".join(CMDS)))
+            raise Fail("CommandUnknown", "unknown subcommand %s (%s)" % (rest[0], ", ".join(CMDS)))
         CMDS[rest[0]](rest[1:])
     except Fail as e:
         print("%s: %s %s" % (PROG, e.code, e), file=sys.stderr)
