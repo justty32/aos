@@ -9,4 +9,5 @@
 | [2026-11-01](01/README.md) | 1 | 試驗場 bob；環境變數只在必要時用（五題已裁、格旋鈕改 argv／檔） |
 | [2026-11-02](02/README.md) | 8 | cathy、工具小格 `.stack/tools/`、daemon 掛 bob、`AOS_DAEMON_STACK`、exec 像繼承、窗有變動才寫、常駐 bob（11-04 封存）、窗名就叫 `ctl.json`／`state.json` |
 | [2026-11-03](03/README.md) | 7 | procs 合一（含 sleep／wake）、ctl 改下指令、stack 不放工作區、trace 拿掉、eca 接 aos 工具、aos-post 重新定位；aos-agent 介面細節未規劃、topdown 量測待使用者 |
+| [2026-11-05](05/README.md) | 1 | 無痛遷移旅程（portable-flow）：sleep／wake 開放、存的路徑相對管我的 daemon、image 模型、不存副本、四步啟動；WSL 實測搬家互踩；衝突 3、方向題 5 待使用者 |
 | [2026-11-04](04/README.md) | 6 | eca 開場白檔可指定、loop／fsm agent、aos-post 信箱要不要改成一個資料夾（裁不換）、測試全刪、思考是 aos 函數（問腦＝寄信給 llm kernel、非同步、aos-llm／aos-tools 當基礎工具；待使用者看）；基礎積木邊緣實測（修 6 處、工具失敗原因要不要給外部 agent 待使用者） |
