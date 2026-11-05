@@ -13,7 +13,7 @@
 
 namespace aos::exec {
 
-static const char* USAGE = "aos-exec [--ws WS] [--stack S] [--dotenv-override] XXX [args...]";
+static const char* USAGE = "aos-exec [--ws WS] [--stack S] [--dotenv-override] XXX [ARGS...]";
 
 static int fail(const std::string& code, const std::string& msg) {
     std::fprintf(stderr, "aos-exec: %s %s\n", code.c_str(), msg.c_str());

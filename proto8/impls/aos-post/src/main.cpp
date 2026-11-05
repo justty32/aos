@@ -25,7 +25,7 @@ namespace {
 namespace p = aos::post;
 using Args = std::vector<std::string>;
 
-const char* USAGE = "aos-post init|send|take|take-all|see|done|regret [flags...] MAILBOX [LETTER] (see README)";
+const char* USAGE = "aos-post init|send|take|take-all|see|done|regret [FLAGS...] MAILBOX [LETTER] (see README)";
 
 int fail(const std::string& code, const std::string& msg) {
     std::cout << std::flush;

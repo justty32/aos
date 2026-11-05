@@ -13,7 +13,7 @@
 
 namespace {
 
-const char* USAGE = "aos-json get|peek|where|set|batch|del|append|merge|env|ref|check [flags...] FILE#/POINTER [...] (see README)";
+const char* USAGE = "aos-json get|peek|where|set|batch|del|append|merge|env|ref|check [FLAGS...] FILE#/POINTER [...] (see README)";
 
 int fail(const aos::Error& e) {
     std::cout << std::flush;

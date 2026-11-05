@@ -11,6 +11,8 @@
 #include <cstring>
 #include <filesystem>
 
+#include <sys/stat.h>
+
 namespace fs = std::filesystem;
 
 namespace aos::post {
@@ -86,6 +88,10 @@ void init(const std::string& root) {
 Mailbox open(const std::string& root) {
     Mailbox mb{aos::abspath(root)};
     if (!is_dir(mb.root)) {
+        struct stat st{};
+        if (::stat(mb.root.c_str(), &st) == 0) {   // 11-05 第二輪：在、但不是資料夾（例 --reply-to 指到一般檔）：原本說「找不到」，像是路徑打錯
+            throw Error{code::MailboxMissing, "mailbox is not a directory: " + root};
+        }
         throw Error{code::MailboxMissing, "mailbox not found: " + root};
     }
     return mb;
