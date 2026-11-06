@@ -73,7 +73,7 @@ kill $K $D && unset AOS_DAEMON AOS_KERNEL
 **兩道關**：`agents` 工具自己數這隻父生了幾隻（`max_children`，範本 `agents.json` 寫 4；記在父 stack 裡工具小格的 `children.json`，每次叫先跟 daemon 表對帳），超過＝工具直接回錯、不寄信；判官 `max_running` 數的是整台 daemon 的總量（含父）。上面第二題撞的是判官（父只有三隻，工具放行）。要看工具那道，照 act 格的叫法手叫一次（接在上面 `kill` 之前；`FS` 是 fsm1 的 stack）：
 
 ```sh
-FS=$T/st/procs/fsm1 && export AOS_STACK=$FS/tools/agents/ AOS_WS=$T/ws
+FS=$T/st/procs/fsm1 && export AOS_STACK=$FS/ AOS_WS=$T/ws
 echo '{"max_children": 1}' > $FS/agents.json        # 這隻父的覆蓋層：只放改過的鍵（定義 agents.json 不動）
 echo '{"op": "add", "name": "kid1", "def": "defs/helper"}' | aos-tools --file $P/templates/agent-fsm/tools.json call agents
 # added kid1 (stack …/procs/kid1); children 1/1

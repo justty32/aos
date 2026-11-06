@@ -79,4 +79,4 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`bin/aos-tools`](../../../../../proto8/cmd/aos-tools/bin/aos-tools) | 一個 agent 資料夾一份工具註冊檔（tools.json），登記這隻 agent 能叫哪些工具。 |
+| [`bin/aos-tools`](../../../../../proto8/cmd/aos-tools/bin/aos-tools) | 管理工具登記、環境與小格，三種工具一律經 aos-exec 從 stdin 呼叫。 |

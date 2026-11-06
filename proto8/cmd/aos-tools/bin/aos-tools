@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""aos-tools [--file F] [--overlay O] add|rm|ls|get|call … — 一個 agent 資料夾一份工具註冊檔（tools.json），登記這隻 agent 能叫哪些工具。
+"""aos-tools [--file F] [--overlay O] add|rm|ls|get|call … — 管理工具登記、環境與小格，三種工具一律經 aos-exec 從 stdin 呼叫。
 
 設計與代定：proto8/thinking/2026-10/28/aos-tools/README.md。白話：tools.json 是「這隻 agent 的工具通訊錄」，
 aos agent 想問腦之前先 `aos-tools ls --json` 拿工具清單，腦要叫工具時 `aos-tools call 名`；
 claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的翻譯櫃台）。
 
-    aos-tools [--file F] add [--override] [--name N] [--no-cache] [--env K=V]... XXX   登記 XXX（檔或資料夾；相對路徑從 cwd 算），印 added NAME -> 絕對路徑
+    aos-tools [--file F] add [--override] [--name N] [--no-cache] [--env-file FILE] [--envs K=V]... XXX   登記 XXX（檔或資料夾；相對路徑從 cwd 算），印 added NAME -> 絕對路徑
     aos-tools [--file F] rm XXX                            每個拿掉的名字印 removed NAME；拿掉（XXX＝工具名；不是登記過的名字就當路徑，拿掉指到那裡的）
     aos-tools [--file F] ls [--json]                       列：一行一個「名字 TAB 種類 TAB 路徑」；--json＝一行 JSON 陣列
     aos-tools [--file F] get XXX                           一個工具一行 JSON：name、kind、path、tooldef、metainfo（有才給）
@@ -24,8 +24,7 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
         （快取有時候礙事，例如定義是工具 import 的別的檔算出來的、檔本身沒變）。手寫也行（aos-json set …#/tools/名/cache false）。
         cache 只收 false 或物件，別的＝RegistryBad；dir／json 項寫 false＝RegistryBad、add --no-cache 給 dir／json＝ArgumentsBad。
         --override 重登記時沒帶 --no-cache＝回到有快取（整項重寫）。
-        叫＝aos-exec 檔 --tool-call 任務檔：arguments 先寫成 $AOS_STACK/tool_call.json，stdin 不給。沒設 AOS_STACK＝StackMissing
-        （11-04 起不再偷用暫存資料夾；只有 call exe 需要 stack，add／rm／ls／get 與 call dir／json 都不需要）。
+        叫＝aos-exec 檔，arguments 原樣從 stdin 進；三種工具都不要求呼叫方設 AOS_STACK。
 --overlay O（11-05 portable-flow 步 4，使用者「tools只存差異那塊可以先做」）：F 疊一層覆蓋層 O 再用（aos-agent tools 的「這隻自己加減的」，
   O＝<stack>/tools.json）。O 長這樣：{"add": {"名": {"path": 相對 O 所在資料夾的路徑, "cache"?: …}}, "rm": ["名", …]}（兩格都可省）；
   O 不在＝沒有覆蓋（就是 F）。疊法：F 的工具先拿掉 rm 裡的名字（F 裡沒有的＝忽略），再放上 add 的（同名蓋過 F）。
@@ -33,13 +32,16 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
   rm＝從 O 的 add 拿掉、F 裡有的名字記進 O 的 rm。撞名照常（看疊好的那份）。O 不解指示詞；O 寫壞＝RegistryBad。
 登記格選填 env（11-05 晚 agent-knowledge R1）：{"名": {"path": …, "env": {"AOS_MEMORY": "/x/knowledge/aos"}}}，call 時合進那次呼叫的環境
   （蓋過外面同名的）；值照字面用、不當路徑解（C-56；要相對就靠讀它的工具自己的規則，例 memory 的 AOS_MEMORY 相對 $AOS_DAEMON）。
-  鍵只收 [A-Za-z_][A-Za-z0-9_]*、值只收字串（不含 NUL，11-05 晚邊緣測試：原本 call 時吐 traceback），別的＝RegistryBad。add --env K=V（可重複）寫進那一格；ls／get 不印 env。
+  鍵只收 [A-Za-z_][A-Za-z0-9_]*、值只收字串（不含 NUL，11-05 晚邊緣測試：原本 call 時吐 traceback），別的＝RegistryBad。add --env-file FILE 在登記當下讀 dotenv 基礎子集，再用 --envs K=V（可重複）蓋過，合成 env 存檔；檔相對 add 的 cwd、call 不重讀。ls／get 不印 env。
   用途：覆蓋層（aos-agent tools add 寫的）也能替這一隻換知識庫，不必在定義裡做包裝資料夾。
-工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收不管。
+call 的小格：父 AOS_STACK 非空時，子設成 <父 stack>/tools/<名>/，優先於登記 env；父沒設就不從登記 env 補 stack，交 aos-exec 給預設。
+ls --json 保留完整 tooldef；腦／MCP 對模型只取 description／parameters，不把 env 等工具側欄位送給模型。
+add 時工具定義 env 陣列列的 hub 若不在當下環境與這次 env-file／envs，印一行 warning，照樣登記退 0。
+工具定義（_tooldef）：OpenAI function 物件去掉 name（{"description": 字串, "parameters": JSON Schema 物件}，兩個都可省）；其他 key 照收，只有 add 另驗選填 env 是合法變數名陣列。
 工具名：--name ＞ 檔名去掉副檔名（資料夾＝資料夾名），只收 [A-Za-z0-9_-]、最多 64 字（OpenAI／MCP 的限制）。撞名＝ToolExists，--override 蓋掉。
 不符合要求一律報錯、不猜不跳過（ls／get 碰到登記了但壞掉的工具也報錯，訊息帶工具名）。
 錯：stderr 一行「aos-tools: error: 代號 原因」、退 1（11-05 stdio-unify R1；錯誤行的括號只指那一層，11-06 human-cli H10：缺子命令列子命令名、子命令層接那個子命令的 usage）。代號：ArgumentsBad、FlagUnknown、CommandUnknown、RegistryBad、PathMissing、
-  ToolDefMissing、ToolDefBad、NameBad、ToolExists、ToolMissing、StackMissing、DirectiveBad、CommandMissing、WriteFailed。call 自己沒錯時結束碼是工具的
+  ToolDefMissing、ToolDefBad、NameBad、ToolExists、ToolMissing、DotenvBad、DirectiveBad、CommandMissing、WriteFailed。call 自己沒錯時結束碼是工具的
   （R8：退非 0 時 stderr 有 `aos-tools: error:` 這行＝這支錯；沒有＝工具的碼；工具被訊號殺＝128＋N）。
 `--help`＝印該層 HELP／HELPS（英文）到 stdout、退 0（子命令後印該子命令的）；不給子命令＝ArgumentsBad；Ctrl-C＝退 130、不吐 traceback。
 """
@@ -80,7 +82,7 @@ HELPS = {
     "add": """aos-tools add - register a tool in the registry or overlay
 
 usage: aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-cache]
-               [--env K=V]... XXX
+               [--env-file FILE] [--envs K=V]... XXX
 
 XXX is a folder, JSON file or executable, relative to cwd. Prints added NAME -> PATH
 with an absolute path. Names default to the folder name or file name without extension;
@@ -92,10 +94,14 @@ flags:
       --override    replace an existing name
   -n, --name N      register under this name
       --no-cache    disable executable --tooldef caching (executables only)
-      --env K=V     add a tool environment variable (repeatable; value taken literally)
+      --env-file F  read a dotenv file now, relative to cwd; store its values
+      --envs K=V    override file values (repeatable; value taken literally)
   -h, --help        show this help
 
-exit codes: 0 added; 1 error (ArgumentsBad, PathMissing, ToolDefBad, ToolExists...).
+The file is read only at registration; later calls use the stored environment.
+Missing hub variables declared by the tool produce a warning, without failing add.
+
+exit codes: 0 added; 1 error (ArgumentsBad, DotenvBad, PathMissing, ToolDefBad, ToolExists...).
 """,
     "rm": """aos-tools rm - remove tool registrations by name or path
 
@@ -145,9 +151,11 @@ exit codes: 0 printed; 1 error (ArgumentsBad, ToolMissing, RegistryBad, ToolDefB
 
 usage: aos-tools [--file F] [--overlay O] call NAME
 
-Folders and JSON files run through aos-exec with stdin passed through. Executables use
---tool-call $AOS_STACK/tool_call.json and need AOS_STACK. Registered env entries override
-the calling environment. stdout and the exit code come from the tool.
+Folders, JSON files and executables all run through aos-exec with stdin passed through.
+Registered env entries override the calling environment. With a non-empty parent
+AOS_STACK, the tool gets <parent>/tools/NAME/; registered env cannot override this.
+Without a parent AOS_STACK, aos-exec supplies its default. stdout and the exit code
+come from the tool.
 
 flags:
       --file F      registry file before call (default: ./tools.json)
@@ -427,25 +435,99 @@ def write_new(reg, obj):
         raise Fail("WriteFailed", "cannot write %s: %s" % (reg, e))
 
 
+def read_env_file(path):
+    """讀 env 檔；同檔後行蓋前行，插值可見繼承環境與前行，不改 os.environ。"""
+    result = {}
+    inherited = dict(os.environ)
+
+    def bad(line):
+        raise Fail("DotenvBad", "bad env file %s at line %d" % (path, line))
+
+    def expand(value, line):
+        parts, pos = [], 0
+        while True:
+            start = value.find("${", pos)
+            if start < 0:
+                parts.append(value[pos:])
+                return "".join(parts)
+            end = value.find("}", start + 2)
+            if end < 0:
+                bad(line)
+            key = value[start + 2:end]
+            if not ENV_KEY_RE.fullmatch(key) or (key not in result and key not in inherited):
+                bad(line)
+            parts.extend((value[pos:start], result[key] if key in result else inherited[key]))
+            pos = end + 1
+
+    try:
+        with open(path, "rb") as stream:
+            for number, raw in enumerate(stream, 1):
+                try:
+                    line = raw.decode("utf-8").removesuffix("\n").removesuffix("\r")
+                except UnicodeDecodeError:
+                    bad(number)
+                line = line.lstrip(" \t\r\n\v\f")
+                if not line or line.startswith("#"):
+                    continue
+                # export 後接空格或 tab，且接下來不是 = 才算前綴。
+                if line.startswith(("export ", "export\t")):
+                    rest = line[6:].lstrip(" \t")
+                    if not rest.startswith("="):
+                        line = rest
+                key, eq, value = line.partition("=")
+                key = key.rstrip(" \t")
+                if not eq or not ENV_KEY_RE.fullmatch(key) or "\0" in value:
+                    bad(number)
+                trimmed = value.lstrip()
+                if trimmed.startswith("#") and trimmed != value:
+                    bad(number)
+                if trimmed.startswith(("'", '"')):
+                    quote = trimmed[0]
+                    end = trimmed.find(quote, 1)
+                    if end < 0:
+                        bad(number)
+                    value, tail = trimmed[1:end], trimmed[end + 1:].strip()
+                    if (tail and not tail.startswith("#")) or "\\" in value or (quote == "'" and "${" in value):
+                        bad(number)
+                    if quote == '"':
+                        value = expand(value, number)
+                else:
+                    # 只在 # 前面有空白時截掉註解，a#b 與 #fff 保留。
+                    for index, char in enumerate(value):
+                        if char == "#" and index > 0 and value[index - 1].isspace():
+                            value = value[:index]
+                            break
+                    value = expand(value.strip(), number)
+                if "\0" in value:
+                    bad(number)
+                result[key] = value
+    except OSError:
+        raise Fail("DotenvBad", "cannot read env file %s" % path)
+    return result
+
+
 def cmd_add(reg, args):
-    opts, rest = aos_flags.parse(args, {"--name": "name"},
+    opts, rest = aos_flags.parse(args, {"--name": "name", "--env-file": "env_file"},
                                  {"--override": "override", "--no-cache": "no_cache"},
-                                 {"--env": "env"}, help=HELPS["add"], short=("-n",))
+                                 {"--envs": "envs"}, help=HELPS["add"], short=("-n",))
     if len(rest) != 1:
         raise Fail("ArgumentsBad", "add needs one XXX")
-    env = {}
-    for kv in opts.get("env", []):
+    env = read_env_file(opts["env_file"]) if "env_file" in opts else {}
+    for kv in opts.get("envs", []):
         k, eq, v = kv.partition("=")
-        if not eq or not ENV_KEY_RE.match(k):
-            raise Fail("ArgumentsBad", "--env needs NAME=VALUE with NAME like AOS_MEMORY, got %r" % kv)
+        if not eq or not ENV_KEY_RE.match(k) or "\0" in v:
+            raise Fail("ArgumentsBad", "--envs needs NAME=VALUE with a valid name and no NUL")
         env[k] = v
     path = os.path.normpath(os.path.abspath(rest[0]))
     if opts.get("no_cache") and kind_of(path) != "exe":
         raise Fail("ArgumentsBad", "--no-cache is only for executables (exe); %s is %s, which has no cache anyway" % (path, kind_of(path)))
     info = inspect(path, False if opts.get("no_cache") else None)
+    hubs = info["tooldef"].get("env", [])
+    if not isinstance(hubs, list) or not all(isinstance(k, str) and ENV_KEY_RE.match(k) for k in hubs):
+        raise Fail("ToolDefBad", "%s: tool definition env must be an array of variable names" % path)
     name = opts.get("name") or (os.path.basename(path) if info["kind"] == "dir"
                                 else os.path.splitext(os.path.basename(path))[0])
-    if not NAME_RE.match(name):
+    if not NAME_RE.fullmatch(name):
         raise Fail("NameBad", "tool name %r is invalid (only [A-Za-z0-9_-], at most 64 chars; pick another with --name)" % name)
     tools = load_tools(reg)
     if name in tools and not opts.get("override"):
@@ -465,6 +547,9 @@ def cmd_add(reg, args):
         aos_json(["set", "--follow", "--parents", "%s#/tools/%s" % (reg, name), json.dumps(entry, ensure_ascii=False)])
     else:
         write_new(reg, {"tools": {name: entry}})
+    missing = [k for k in dict.fromkeys(hubs) if k not in os.environ and k not in env]
+    if missing:
+        aos_flags.warn(NAME, "tool %s has unset hub variables: %s" % (name, ", ".join(missing)))
     print("added %s -> %s" % (name, path))
 
 
@@ -510,41 +595,30 @@ def cmd_get(reg, args):
 
 
 def cmd_call(reg, args):
-    opts, rest = aos_flags.parse(args, {})
+    opts, rest = aos_flags.parse(args, {}, help=HELPS["call"])
     if len(rest) != 1:
-        raise Fail("ArgumentsBad", "call needs one NAME, stdin = arguments (usage: aos-tools [--file F] call NAME)")
+        raise Fail("ArgumentsBad", "call needs one NAME, stdin = arguments")
     tools = load_tools(reg)
-    if rest[0] not in tools:
-        raise Fail("ToolMissing", "%s is not registered (available: %s)" % (rest[0], ", ".join(sorted(tools)) or "none"))
-    path = tools[rest[0]]["path"]
-    env = dict(os.environ, **tools[rest[0]]["entry"].get("env", {}))    # 登記格的 env 蓋過外面的（11-05 晚 R1）
-    if kind_of(path) != "exe":
-        exe = shutil.which("aos-exec")             # 自己找：execvp 失敗時只報 PATH 最後一格，會誤導
-        if exe is None:
-            raise Fail("CommandMissing", "no executable aos-exec on PATH")
-        try:
-            os.execve(exe, ["aos-exec", path], env)          # 資料夾、JSON：arguments 原樣從 stdin 進（P-41）
-        except OSError as e:
-            raise Fail("CommandMissing", "%s cannot start: %s" % (exe, e.strerror or e))
+    name = rest[0]
+    if name not in tools:
+        raise Fail("ToolMissing", "%s is not registered (available: %s)" % (name, ", ".join(sorted(tools)) or "none"))
+    if not NAME_RE.fullmatch(name):
+        raise Fail("RegistryBad", "registered tool name %r is invalid (only [A-Za-z0-9_-], at most 64 chars)" % name)
+    path = tools[name]["path"]
+    kind_of(path)                                    # 只驗路徑；三種工具走同一條執行路，不擴充登記對象
+    env = dict(os.environ, **tools[name]["entry"].get("env", {}))
     stack = os.environ.get("AOS_STACK")
-    if not stack:
-        raise Fail("StackMissing", "calling an executable tool writes arguments to $AOS_STACK/tool_call.json, but AOS_STACK is not set")
-    data = sys.stdin.buffer.read()
-    d = os.path.abspath(stack)
-    task = os.path.join(d, "tool_call.json")
+    if stack:
+        env["AOS_STACK"] = os.path.join(os.path.abspath(stack), "tools", name, "")
+    else:
+        env.pop("AOS_STACK", None)                    # 登記格不能代替父 stack；沒設交 aos-exec 給預設
+    exe = shutil.which("aos-exec")                    # 自己找：避免 execvp 只報 PATH 最後一格
+    if exe is None:
+        raise Fail("CommandMissing", "no executable aos-exec on PATH")
     try:
-        os.makedirs(d, exist_ok=True)
-        tmp = os.path.join(d, ".tool_call.json.%d" % os.getpid())
-        with open(tmp, "wb") as f:
-            f.write(data)
-        os.replace(tmp, task)
+        os.execve(exe, ["aos-exec", path], env)         # 三種工具都原樣保留 stdin、stdout 與結束碼
     except OSError as e:
-        raise Fail("WriteFailed", "cannot write task file %s: %s" % (task, e))
-    try:
-        r = subprocess.run(["aos-exec", path, "--tool-call", task], stdin=subprocess.DEVNULL, env=env)
-    except OSError as e:
-        raise Fail("CommandMissing", "aos-exec cannot start: %s" % e)
-    sys.exit(r.returncode if r.returncode >= 0 else 128 - r.returncode)
+        raise Fail("CommandMissing", "%s cannot start: %s" % (exe, e.strerror or e))
 
 
 COMMANDS = {"add": cmd_add, "rm": cmd_rm, "ls": cmd_ls, "get": cmd_get, "call": cmd_call}
@@ -570,9 +644,6 @@ def main():
             raise Fail("CommandUnknown", "unknown subcommand %s (%s)" % (rest[0], choices))
         sub = rest[0]
         try:
-            # call 本體留給 J3；只在殼這層接它自己的 help 與旗標錯誤。
-            if sub == "call":
-                aos_flags.parse(rest[1:], {}, help=HELPS[sub])
             COMMANDS[sub](opts.get("file") or "tools.json", rest[1:])
         except aos_flags.Error as e:
             if e.code == "FlagUnknown":
@@ -581,9 +652,6 @@ def main():
     except Fail as e:
         reason = str(e)
         if sub is not None and e.code == "ArgumentsBad":
-            # call 的舊字串不動本體，由這層改接 help 的 usage。
-            if sub == "call":
-                reason = reason.partition(" (usage:")[0]
             if "(usage:" not in reason:
                 reason += " (usage: %s)" % usage(sub)
         aos_flags.die(NAME, e.code, reason)

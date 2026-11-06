@@ -1,7 +1,7 @@
 # act.py [--tools FILE] - act 格：照 history 最後一則 assistant 的 tool_calls 逐個（依序）aos-tools call <名>，每個結果接一則 tool 進 history。
 # 結束碼（fsm.json 照碼分岔，N-36）：全部跑完退 0（→ think：帶工具結果再問腦）；最後一則 assistant 沒有 tool_calls＝腦給了最後答案、沒事做，退 10（→ idle）。
 #   「要不要叫工具」11-04 晚從 think 搬到這裡判（think 只組請求，thinking 2026-11-04 think-as-function 03 § 1）。
-# 工具的介面（P-41）：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的小格＝$AOS_STACK/tools/<名>/（P-17）、工作區＝$AOS_WS。
+# 工具的介面（P-41）：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的小格由 aos-tools call 算成 $AOS_STACK/tools/<名>/（P-17）、工作區＝$AOS_WS。
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。
 # 叫工具出的問題回給腦、不停（P-41 10-24 代定）：工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒登記的工具、arguments 不是 JSON。
 # 工具退非 0 時 stderr 多一行提醒「agent-fsm: warning: tool <名> exit code N (passed back to the brain)」（stdio-unify R1：不是這格的錯，照樣退 0）。
@@ -116,10 +116,9 @@ for call in calls:
     except ValueError as e:
         append({"role": "tool", "tool_call_id": cid, "content": aos_flags.error_line("act", "ArgumentsBad", "%s: %s" % (name, e)) + "\n"})
         continue
-    env = dict(os.environ, AOS_STACK=os.path.join(stack, "tools", name) + "/")
     try:
         r = subprocess.run(TOOLS + ["call", name], input=arguments,
-                           stdout=subprocess.PIPE, text=True, env=env)   # stderr 不吞：工具自己的錯原樣往上
+                           stdout=subprocess.PIPE, text=True)   # 繼承自己的 stack；aos-tools call 算小格。stderr 不吞：工具自己的錯原樣往上
     except OSError as e:
         die("ToolFailed", "aos-tools cannot start: %s" % e)
     content = r.stdout

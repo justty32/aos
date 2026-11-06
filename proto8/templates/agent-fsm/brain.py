@@ -112,10 +112,9 @@ if system_file:
         die("SystemMissing", "cannot read %s: %s" % (system_file, e))
 memory = opts.get("--memory")
 if memory and any(t["function"]["name"] == memory for t in tools):   # 這隻把 memory 拿掉了＝不給根
-    env = dict(os.environ, AOS_STACK=os.path.join(stack, "tools", memory) + "/")   # 跟 act 叫工具同一格（P-17）
     try:
         p = subprocess.Popen(TOOLS + ["call", memory], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                             text=True, env=env, start_new_session=True)   # stderr 不吞：工具自己說哪裡壞
+                             text=True, start_new_session=True)   # 繼承自己的 stack；aos-tools call 算小格。stderr 不吞：工具自己說哪裡壞
     except OSError as e:
         die("MemoryFailed", "aos-tools cannot start: %s" % e)
     try:
