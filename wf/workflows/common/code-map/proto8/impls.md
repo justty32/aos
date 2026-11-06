@@ -42,15 +42,15 @@
 | [`src/daemon/adopt.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/adopt.cpp) | 接回上次的 proc 表與小格裡仍活著的子 loop（說明見 daemon.hpp）。 |
 | [`src/daemon/body.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/body.cpp) | 執行 daemon 自己的身體並記錄結果（說明見 daemon.hpp）。 |
 | [`src/daemon/ctl.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/ctl.cpp) | 由控制窗推得期望表、停止與睡眠集合（說明見 daemon.hpp）。 |
-| [`src/daemon/daemon.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.cpp) | 初始化設定、路徑、信箱與 stack 鎖（說明見 daemon.hpp）。 |
-| [`src/daemon/daemon.hpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.hpp) | Daemon＝aos-loop 的 Loop 子類別＋一張 proc 的表（10-21 傍晚；11-03 loops／execs 統稱 procs，thinking 2026-11-03-procs）。 |
+| [`src/daemon/daemon.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.cpp) | 初始化設定、展開 tick 普通子項、設定環境、路徑、信箱與 stack 鎖（說明見 daemon.hpp）。 |
+| [`src/daemon/daemon.hpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.hpp) | Daemon 管普通 proc 表、tick 設定展開、手把與狀態窗；aos-loop 的 Loop 子類別，內部標頭。 |
 | [`src/daemon/failure.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/failure.cpp) | 從子項結束碼與 stderr 整理停止原因（說明見 daemon.hpp）。 |
 | [`src/daemon/mailbox.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/mailbox.cpp) | 信箱 procs_ctl_mailbox（10-29，medium-plan § 二 4、§ 四 3；NORMS N-28 的 10-29 補、N-16；11-03 改名 procs、多 stop／start；說明見 daemon.hpp）。 |
 | [`src/daemon/procs.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/procs.cpp) | 解讀 proc 名單、辨認寫法、整理路徑與合併期望表（說明見 daemon.hpp）。 |
 | [`src/daemon/reconcile.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/reconcile.cpp) | 按期望表啟動、收回與調整子項（說明見 daemon.hpp）。 |
 | [`src/daemon/table.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/table.cpp) | 維護 proc 表、記錄子項與處理狀態窗寫入結果（說明見 daemon.hpp）。 |
 | [`src/daemon/tend.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/tend.cpp) | 停止、收回與照顧子項，並在 daemon 收工時等它們退完（說明見 daemon.hpp）。 |
-| [`src/daemon/windows.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/windows.cpp) | 管轄那一對窗——procs_ctl.json（手把）、procs_state.json（狀態窗）（10-29 拆窗，medium-plan § 四 1；11-03 loops_* 改名 procs_*；說明見 daemon.hpp）。 |
+| [`src/daemon/windows.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/windows.cpp) | 管轄手把 procs_ctl 與含樹時鐘 tick 的 procs_state 狀態窗（說明見 daemon.hpp）。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-daemon/src/main.cpp) | aos-daemon 命令列——block_signals、解命令列、讀設定、Daemon::serve（10-21 傍晚）。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-daemon/vcpkg.json) | aos-daemon：照一張名單把幾個 proc 各自起在小格裡、看著它們（C++） |
 

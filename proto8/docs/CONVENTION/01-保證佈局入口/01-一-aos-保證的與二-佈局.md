@@ -35,4 +35,4 @@ workspace/                 ＝$AOS_WS，使用者的（§ 2）
 
 stack 樹就是呼叫樹：`.stack/tools/cathy/tools/stamp/` 一眼看出「bob 叫了 cathy、cathy 叫了 stamp」（P-38、P-17）。
 
-**11-06 註（已定，未實作）**：我們自己的 `daemon.json` 範本（試驗場、templates、kernel）預設寫 `tick: true`；aos-daemon 程式預設不帶、不強制。使用者 11-06 daemon-board「兩題都按照推薦。」；實作排在 T7，範本與 daemon 的 `tick` key 展開同一個 commit（[daemon-board 04](../../../thinking/2026-11/06/daemon-board/04-凍住後要能遷移-續.md)）。
+**11-06 註（已定，未實作）**：我們自己的 `daemon.json` 範本（試驗場、templates、kernel）預設寫 `tick: true`；aos-daemon 程式預設不帶、不強制。使用者 11-06 daemon-board「兩題都按照推薦。」；實作排在 T7，範本與 daemon 的 `tick` key 展開同一個 commit（[daemon-board 04](../../../thinking/2026-11/06/daemon-board/04-凍住後要能遷移-續.md)）。**已實作（11-06 T7）**：`kernel/llm-kernel`、`kernel/daemon-judge` 的 daemon.json 已寫 `tick: true`；使用者的試驗場（repo 外）還沒改（[tick-time 04](../../../thinking/2026-11/05/tick-time/04-T線實作結果.md)）。

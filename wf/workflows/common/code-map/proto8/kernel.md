@@ -9,16 +9,16 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`_entry`](../../../../../proto8/kernel/daemon-judge/_entry) | 入口：`aos-daemon daemon.json` |
-| [`daemon.json`](../../../../../proto8/kernel/daemon-judge/daemon.json) | 設定（鍵：exec、interval_ms） |
+| [`_entry`](../../../../../proto8/kernel/daemon-judge/_entry) | 入口：`aos-daemon --enable-logs daemon.json` |
+| [`daemon.json`](../../../../../proto8/kernel/daemon-judge/daemon.json) | 設定（鍵：tick、exec、interval_ms） |
 | [`judge.json`](../../../../../proto8/kernel/daemon-judge/judge.json) | 設定（鍵：allowed、max_running） |
 
 ## `proto8/kernel/llm-kernel/`
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`_entry`](../../../../../proto8/kernel/llm-kernel/_entry) | 入口：`aos-daemon daemon.json` |
-| [`daemon.json`](../../../../../proto8/kernel/llm-kernel/daemon.json) | 設定（鍵：exec、interval_ms） |
+| [`_entry`](../../../../../proto8/kernel/llm-kernel/_entry) | 入口：`aos-daemon --enable-logs daemon.json` |
+| [`daemon.json`](../../../../../proto8/kernel/llm-kernel/daemon.json) | 設定（鍵：tick、exec、interval_ms） |
 | [`fake_slow/_entry`](../../../../../proto8/kernel/llm-kernel/fake_slow/_entry) | demo 用的慢假腦 endpoint 函數：先睡 endpoint.delay_s 秒，再把同一份 stdin 交給 lib/base/llm_fake、它的 stdout／結束碼原樣交回 |
 | [`kernel.json`](../../../../../proto8/kernel/llm-kernel/kernel.json) | 設定（鍵：slots、timeout_ms、exec、endpoint、budget、endpoints） |
 

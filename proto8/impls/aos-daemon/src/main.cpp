@@ -22,6 +22,8 @@ Look after a group of procs (daemon.json "procs"): start them, restart or stop t
 as the ctl window says, and report them in the state windows. Optional own body
 ("exec") runs like aos-loop; a failing body is retried next round (warning line).
 ARGS after -- are appended to the daemon's own exec.
+Optional "tick": true (or {file, interval_ms, name}) adds an ordinary auto-restarting
+clock loop and passes AOS_TICK to children. No tick key leaves the clock inherited.
 
 flags:
   --max N               stop after N rounds

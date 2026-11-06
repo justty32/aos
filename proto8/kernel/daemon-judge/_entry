@@ -1,1 +1,1 @@
-["aos-daemon", "daemon.json"]
+["aos-daemon", "--enable-logs", "daemon.json"]

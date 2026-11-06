@@ -12,6 +12,7 @@ daemon 管的子項不論包在 aos-loop 裡一直跑的（loop 型）還是 aos
 daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `stopped`、用同一個 stack 再起）、收工時的 **sleep／開門的 wake**（還在跑的 loop 型列留成 `sleeping`、再開自動起，[下「收工與開門」](docs/03-起-停-暫停.md#收工與開門sleepwake)）；11-05 起 **sleep／wake 也是指令**（`procs_slept`／`procs_woken`）、**表上的路徑相對 daemon 的 stack**（整份 `ws/` 搬走照樣醒）、**loop 型出錯結束（退非 0）一律留成 `stopped`＋`reason`**（11-05 晚：原本只留 wake／start 起不來的）、**身體失敗＝記一行、下一圈再跑**（11-05 晚，[docs/06](docs/06-結束碼等.md#結束碼)）、**狀態窗寫不了也是記一行、下一圈再寫**（11-05，同上）、**同一個 stack 已有 daemon 在跑＝`DaemonExists`**（[下「11-05 搬家相關」](docs/03-起-停-暫停.md#11-05-搬家相關)）；11-05 起每列可寫**份額 `limits`**（daemon 在子行程 setrlimit，等同 s6-softlimit；**份額是每個行程各自的上限，不從 daemon 總額扣**，[docs/09](docs/09-份額.md)）；手把 `procs_ctl.json`、窗 `procs_state.json`（一張表）、信箱 `procs_ctl_mailbox/`、proc 的 stack `procs/<名字>/`。
 11-06 起（no-pid P2，[thinking no-pid](../../thinking/2026-11/05/no-pid/README.md)）兩扇窗多 **`responded_at`**（最近一次有反應的時間：收信、採用新 ctl、起收子項、身體跑完；睡著不動，不是心跳）與 **`daemon`**（管這台的上一層 daemon 的 stack，`null`＝根），[docs/04](docs/04-兩個手把-兩扇狀態窗.md)；信箱認 **`{"ping": true}`**（不改名單、有 `reply_to` 就回 `{"applied": true}`；paused 時不回＝呼叫失敗），[docs/05](docs/05-信箱.md)。
 11-06（no-pid P6）：任何 proc 可寫通用布林 **`auto_restart`**（常駐：退了同一拍重起、連 3 次在 3 秒內退才留 `stopped`＋reason；可 stop／sleep、收工睡開門醒）與 **`restart_on_stuck`**（只記）；子 daemon 就是普通 proc（使用者「不要耦合」），整棵樹睡醒是每層自己做的，[docs/02](docs/02-看寫法決定怎麼起.md)、[docs/03](docs/03-起-停-暫停.md#auto_restart常駐11-06)。
+11-06 起選填 **`tick: true`** 自帶時鐘：展開普通 loop 型 proc（預設 `_tick`、`auto_restart: true`），先把 `AOS_TICK` 設給身體與子項；`procs_state.json` 頂層可看 `tick`，[docs/02](docs/02-看寫法決定怎麼起.md#自帶時鐘-tick選填)、[docs/04](docs/04-兩個手把-兩扇狀態窗.md)。程式預設不開，kernel 範本出廠開時鐘與 log。
 舊名 `loops`、`execs`、`loops_ctl`、`loops_state`、`loops_ctl_mailbox`、`loops_added`……**當沒看到**（C-48，使用者「1. 當沒看到。」）：不報錯、不提醒。
 
 像一個領班：手上一張名單（`procs`），名單上每個人各有一個小隔間（`$AOS_STACK/procs/<名字>/`，或他自己指定的 `stack`）。他每隔一會兒（`interval_ms`）看一眼兩塊佈告欄：
@@ -21,10 +22,9 @@ daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `sto
 
 ```sh
 cat daemon.json
-# {"max": 10, "interval_ms": 200, "ctl": "ctl.json", "state": "state.json",
-#  "procs": {"bob": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agents/bob"]}, "max": 1},
-#            "tick": "../tick"}}
-AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法是 aos-exec 它（11-04 前的例子 proto8/demo/daemon 刪了）；PATH 上要有 aos-exec、aos-loop
+# {"tick": true, "max": 10, "interval_ms": 200, "ctl": "ctl.json", "state": "state.json",
+#  "procs": {"bob": {"exec": {"argv": ["aos-exec", "--ws", {"$env": "AOS_WS", "$path": "bob"}, "../agents/bob"]}, "max": 1}}}
+AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法是 aos-exec 它（11-04 前的例子 proto8/demo/daemon 刪了）；PATH 上要有 aos-exec、aos-loop、aos-tick
 ```
 
 **起 daemon 要看 log 就加 `--enable-logs`**（用 aos-exec 起的，旗標寫進定義的 `_entry`、放在設定檔前面：`["aos-daemon", "--enable-logs", "daemon.json"]`；`aos-exec 定義 --enable-logs` 會接在設定檔後面＝`ArgumentsBad`，訊息 `flag --enable-logs must come before the config file…` 會這樣提示）：不加的話 daemon 什麼都不印（stdout、stderr 都安靜，只有出錯時 stderr 一行），看起來像卡住，其實照常在跑；子項起落要看就加它（見下「log」），或看 `aos-daemon-ctl ls`。

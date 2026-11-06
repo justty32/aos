@@ -1,8 +1,13 @@
-// daemon.hpp：【daemon】Daemon＝aos-loop 的 Loop 子類別＋一張 proc 的表（10-21 傍晚；11-03 loops／execs 統稱 procs，thinking 2026-11-03-procs）。內部標頭。
+// daemon.hpp：【daemon】Daemon 管普通 proc 表、tick 設定展開、手把與狀態窗；aos-loop 的 Loop 子類別，內部標頭。
 //
 // 11-06（no-pid P6）：通用布林 auto_restart 讓任何 proc 常駐（可 stop／sleep、收工睡／開門醒），退了同一拍重起；連 3 次起後 3 秒內退＝stopped＋reason、要 start。
 //   表上 auto_restart、restart_on_stuck 只在 true 時寫；restart_on_stuck P6 只記、P7 才用，不看子項型別。
-//   daemon.cpp   建構子、stack 鎖；procs.cpp 解 procs 與合併名單
+// 11-06（T7）：tick 沒寫／null／false 不管時鐘；true 或 {file?, interval_ms?, name?} 在入口展開成第一列普通 loop proc。
+//   預設 file＝daemon stack/tick、name＝_tick、interval_ms＝aos::tick_interval_ms()；exec 用內嵌單子 argv 跑 PATH 上的 aos-tick，auto_restart＝true。
+//   名字與 daemon.json 的 procs 撞到、未知 key／型別／值壞＝CfgBad；指示詞同其他設定格。後續流程不辨認哪列是時鐘。
+//   起任何子項／身體之前設 AOS_TICK＝file 絕對路徑；只有明寫 interval_ms 且不等於 1000 才設 AOS_TICK_INTERVAL，其餘繼承。
+//   改 tick 要整台 sleep 再改再 wake；兩份定義勿共用同一時鐘檔。pause 那列只停時間、工作照跑。
+//   daemon.cpp   建構子、tick 展開與環境、stack 鎖；procs.cpp 解 procs 與合併名單
 //   adopt.cpp    接回上次的表、尋找小格裡活著的子 loop
 //   table.cpp    維護表、log 與 state 寫入結果
 //   tend.cpp     term／halt／hold／settle／look／tend／finish
@@ -39,7 +44,8 @@
 //   進 stopped 集合（start 才再起）；exec 型、接回的（拿不到碼）照舊拿掉。
 //   同名改寫法：已在跑的不重起（N-54）。
 // procs_state.json＝{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox（11-04：名字回報，沒開信箱＝null）,
-//   daemon（上一層的 AOS_DAEMON，根或指自己＝null）, responded_at, procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫；
+//   daemon（上一層的 AOS_DAEMON，根或指自己＝null）, responded_at, tick?（有 AOS_TICK 才寫 now_tick；壞檔＝null）, procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫；
+// tick 變動只刷新 procs_state、不更新 responded_at 或印 log；取樣沿用 daemon 每圈節奏，值沒變不寫、分檔內容不變不重寫。
 // state.json 也有 daemon；兩扇窗的 responded_at 記最近一次有反應（收信、採用不同的 procs_ctl、起／收子項、身體跑完），睡著不刷新。
 // 每列 {pid, started_at_ticks, phase（running／stopping／stopped／sleeping）, code, signal, stack, exec, def, reason, ws?, limits?（11-05：生效的份額）}（exec 11-04 晚：起它時的目標，見 exec_of；def 11-04：見 def_of）；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
 // ctl 的 stop（這圈收工）或 pause（整圈暫停）時不調表：不收多的、不起少的、起停也等解除，但照讀兩份 ctl、照寫兩扇 state、照收已在收的、照記自己結束的。
