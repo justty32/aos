@@ -44,4 +44,5 @@
 - **在 `/mnt/c` 上跑 proto8 tests 有約 12 個假失敗**（10-22）：`/mnt/c` 底下所有檔都被當可執行（同上一條）。先把 repo 複製到 WSL 自己的檔案系統（如 `~/tmp`）再跑。
 - **Git Bash 跑 `wsl git -C /mnt/c/...` 會被 MSYS 路徑轉換改寫成 `C:/Program Files/Git/mnt/...` 而失敗**（10-22）：改用 PowerShell 跑，或加 `MSYS_NO_PATHCONV=1`。WSL 的 git 用 https 推會卡在等帳密，改加 `-c 'url.git@github.com:.insteadOf=https://github.com/'` 走 SSH。
 - **同一個 clone 裡，別人的 `git commit` 會把你已 stage 的檔一起帶走**（11-06 no-pid P3：隊長 `git add` 完、還沒 commit，同 clone 的 fable 一跑 `git commit` 就把 P3 全部程式收進它的 body-protocol commit、還推上去了，見 [no-pid 10](../../../../proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md)）：多人共用工作樹時，stage 跟 commit 寫在同一個指令裡、中間不停；自己 commit 時用 `git commit -F 訊息 -- <自己的路徑>`（只提交這些路徑，不收別人 stage 的東西）。
+- **`codex exec resume` 沒有 `-s` 旗標**（11-06 E 隊）：續跑時改用 `-c sandbox_mode="workspace-write"` 雖然是同一個沙箱，但會被安全分類器標成「Safety Bypass Flag」警告；要續跑就**開新的 `codex exec -s workspace-write`**（把上一輪的 out.md 當任務書的一段），不用 resume 帶 `-c sandbox_mode`。`resume --help` 會列出繞過沙箱的旗標，照樣不准用。
 - **多 agent 同時在同一工作樹時，不要用 `git pull --rebase --autostash`**（10-22 發生過）：它可能停在半截 rebase，把別人的未提交改動收進 autostash（有 agent 的改動一度消失）。只 `add` 自己的檔。
