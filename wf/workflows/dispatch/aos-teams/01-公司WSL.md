@@ -15,11 +15,11 @@
 
 `~/.local/bin/claude`（Claude Code 2.1.318）登入的是**另一個帳號**，跟頂層不同額度。`claude -p --model claude-opus-5-5 '…' </dev/null` 實測可用；權限照入口用 `--permission-mode acceptEdits`＋`--allowedTools`。
 
-## fable 走 WSL claude（只限公司）
+## fable 走 WSL claude：使用者說了才走
 
-使用者 11-06：「這次fable好了之後，下次開fable，請走wsl claude。額度消耗的有一點快，我稍微有點憂心...不過重點在於只要不開fable，只靠opus那其實還是很充裕」，接著補「這只是在公司這邊才這樣做。」
+使用者 11-06 先說：「這次fable好了之後，下次開fable，請走wsl claude。額度消耗的有一點快，我稍微有點憂心...不過重點在於只要不開fable，只靠opus那其實還是很充裕」「這只是在公司這邊才這樣做。」接著改口：「喔不，呃，不要"一律"，就，依據實際情況吧，我說走wsl claude 才走。因為wsl claude是公司帳號的。」
 
-所以**在公司**要 fable 時不開 Claude Code 自家的 fable subagent，改在 WSL 跑 `claude -p '<提示>' --model claude-fable-5-1 --permission-mode acceptEdits --allowedTools '<工具,逗號連>' </dev/null`（11-06 實測可用）；提示裡照樣要它先通讀 wf/ 規矩，它可用自己的 Agent 工具再派 fable 子 agent。超過 10 分鐘的在 WSL 內 `setsid nohup … > log 2>&1 &` 脫離、等 log。自家 subagent（隊長、雜活）照舊 opus／sonnet。**家機不受這條影響**，照舊用自家 fable subagent。
+所以：**預設照舊開 Claude Code 自家的 fable subagent**（盡量少開，fable 吃額度快、opus 很充裕）；**使用者明說「走 wsl claude」那次才改走 WSL**——WSL 的 claude 是公司帳號。走法：`claude -p '<提示>' --model claude-fable-5-1 --permission-mode acceptEdits --allowedTools '<工具,逗號連>' </dev/null`（11-06 實測可用），提示裡照樣要它先通讀 wf/ 規矩、可再用自己的 Agent 工具派 fable 子 agent；超過 10 分鐘的在 WSL 內 `setsid nohup … > log 2>&1 &` 脫離、等 log。
 
 ## 沙箱
 
