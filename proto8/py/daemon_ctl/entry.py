@@ -160,7 +160,7 @@ def check_limits(v, where, code):
 
 
 
-def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limits=None):
+def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limits=None, envs=None):
     """判型並組成掛子信；給定的路徑從目前目錄算起。"""
     xxx = abs_target(xxx, os.getcwd())
     path = xxx.partition("#")[0]
@@ -184,6 +184,16 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
         spec = loop_spec(found)
     else:
         spec = {"exec": [xxx] + list(extra) if extra else xxx}
+    if envs:
+        if not isinstance(envs, dict) or any(not isinstance(k, str) or not k or "=" in k or "\0" in k
+                                             or not isinstance(v, str) or "\0" in v for k, v in envs.items()):
+            raise Fail("ArgumentsBad", "envs must be an object of environment names and string values")
+        target = spec["exec"]
+        if isinstance(target, dict):
+            # 指示詞／內嵌單子透過原設定位置執行，保留其相對路徑基準。
+            target = found[1] + "#" + found[2] + "/exec"
+        argv = target if isinstance(target, list) else [target]
+        spec["exec"] = {"argv": ["aos-exec", "--"] + argv, "envs": dict(envs)}
     spec["def"] = os.path.abspath(path)   # 11-04（使用者「那就b。」）：定義資料夾，daemon 記進表的 def 欄
     if def_dir is not None:          # 11-05：aos-agent 的定義宣告了 entry（XXX＝定義裡的那個入口）時，def 另給
         if not def_dir or not os.path.isdir(def_dir):

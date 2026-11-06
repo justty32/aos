@@ -1,8 +1,15 @@
-{"summary": "Hand one task to a throw-away child agent and print only its short conclusion (wraps aos-agent ctl add / say / listen / rm)",
- "time_ms": {"val": 30000, "max": 1730000},
- "resource": ["cpu", "llm"],
- "side_effect": true,
- "idempotent": false,
- "deterministic": false,
- "interrupt": "unsafe",
- "parallel": false}
+{
+  "summary": "Hand one task to a throw-away child agent and print only its short conclusion (wraps aos-agent ctl add / say / listen / rm)",
+  "time_ms": {
+    "val": 30000
+  },
+  "resource": [
+    "cpu",
+    "llm"
+  ],
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "unsafe",
+  "parallel": false
+}

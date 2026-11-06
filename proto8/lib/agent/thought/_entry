@@ -1,33 +1,35 @@
 #!/usr/bin/env python3
-# thought - 小念頭：派一件事給一隻用完即走的子 agent（範本 templates/agent-fsm），只拿回短結論；子的工具來回不進叫我的那隻的 history
+# thought - 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定定義），只拿回短結論；子的工具來回不進叫我的那隻的 history
 # 使用者 11-05 傍晚：「fork出去，做完之後回報，主線這邊對於這個任務的描述就會只剩短短幾句……我更推薦將其作為工具」「記憶這項，他本身也算是任務」；
 #   三題裁：子的腦「預設同父 (Recommended)」、子 stack「可選。默認刪掉。」、名字「thought (Recommended)」。
 #   規劃：proto8/thinking/2026-11/05/small-thought/（README、02-代定、03-實作步驟草稿；實作結果段在 README）。
-# 介面（lib/docs/01 的契約）：stdin 一份 {"goal", "context"?, "tools"?, "endpoint"?, "max_chars"?, "timeout_s"?, "keep"?}，沒有 op：
+# 介面（lib/docs/01 的契約）：stdin 一份 {"from", "goal", "context"?, "tools"?, "endpoint"?, "max_chars"?, "timeout_s"?, "keep"?}，沒有 op：
 #   goal 必要（要做什麼、要帶回什麼）；context＝字串或字串陣列（前幾步的結論）；tools＝[{name, path?}]（path 相對從 $AOS_WS、絕對照用；
-#   沒給 path＝照抄我自己工具箱裡同名那支〔aos-agent tools ls --json〕，沒有＝ToolMissing），沒給 tools＝子只有 clock（範本其他工具走子的覆蓋層 tools rm 拿掉）；endpoint＝子的腦，沒給＝同父（aos-agent llm show 父的 endpoint；父沒寫或沒宣告 llm＝範本預設；llm show 其他錯〔看不到父的定義等〕＝接它的代號報錯，不默默換腦）；
-#   max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、上限 1700（act 格 1800 秒包得住）；keep 預設 false。
+#   沒給 path＝照抄我自己工具箱裡同名那支〔aos-agent tools ls --json〕，沒有＝ToolMissing），沒給 tools＝保留定義的工具組；[]＝清空；endpoint＝子的腦，沒給＝同父（aos-agent llm show 父的 endpoint；父沒寫或沒宣告 llm＝範本預設；llm show 其他錯〔看不到父的定義等〕＝接它的代號報錯，不默默換腦）；
+#   max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、只要求有限正數；keep 預設 false。
 # 一次叫＝aos-agent --daemon $AOS_DAEMON 的五步：ctl who（我是誰、我的深度）→ ctl add 範本（--name t-<父名前32字>-<UTC毫秒>-<4位hex>、--ws 我的 $AOS_WS）→
 #   子的覆蓋層 llm set endpoint／tools rm／tools add --override → say 開場文（固定英文段＋goal＋context）＋listen --timeout-s →
 #   預設 ctl rm 子（stack 刪掉、不印 details）；keep: true＝留著但 ctl stop（不佔 loop；要追問 ctl start 再 say）、結論後多一行 details: <子的 stack，相對 $AOS_DAEMON>/。
-#   ctl add 之後到 say 之前任一步失敗（寫 thought.json、tools ls、設定那幾步）＝當下 ctl rm 收回再報錯（不算子的失敗）；收不回＝紀錄留 running 租約，過期後下一次叫的對帳收。
+#   ctl add 之後到 say 之前任一步失敗（tools ls、設定那幾步）＝當下 ctl rm 收回再報錯（不算子的失敗）；收不回＝紀錄留 running 租約，過期後下一次叫的對帳收。
 # 子名每次唯一：mkdir $AOS_STACK/children/<子名>/，撞表或資料夾最多重試五次。
 #   state＝running <UTC到秒Z租約>／kept／failed；每步呼叫前續租至逾時＋5秒，TERM 收回租約。
 #   對帳先保護未到期租約與剛建資料夾；表上沒有就忘掉，過期 running 先 stop 再記 failed；kept 不動，failed 照 FAILED_KEEP gc。
-# 深度：子的 stack 寫 thought.json {"depth": 父+1}（aos-agent ctl add 帶不了環境變數）；我讀自己那隻 stack 的 thought.json（沒有＝0），
+# 深度：讀 AOS_THOUGHT_DEPTH（沒有＝0），ctl add --envs 在啟動時傳父+1，子 stack 不寫深度檔；
 #   深度已是 MAX_DEPTH（2）＝DepthExceeded、不生（子能再開孫、孫不行）。
 # 錯：stderr 與 stdout 各一行「thought: error: 代號 原因」、退 1（規則 3，tool_io.die）——自己的：ArgumentsBad、DepthExceeded、
 #   DaemonMissing（AOS_DAEMON 沒設或 daemon 忙、暫停、掛了而沒回信）、StackMissing、WsMissing、DefMissing（範本不在）、ToolMissing、MkdirFailed、WriteFailed、LaunchFailed（aos-agent 不在 PATH）、
 #   CommandFailed（逾時）；aos-agent 退非 0＝取它 stderr 最後一行錯誤行的代號與原因接成自己的（AddRejected、AnswerMissing…；同 agents）。
 #   子答不出（listen 錯、逾時）＝錯誤行尾附 (details: <子的 stack>/)，子先 ctl stop、stack 一律留（不管 keep）。
 #   aos-agent 的 stderr 原樣透到 stderr（R10）。--help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉那一群，退 130）。
-import json, os, re, secrets, shutil, signal, subprocess, sys, time
+import json, math, os, re, secrets, shutil, signal, subprocess, sys, time
 from datetime import datetime, timedelta, timezone
 HELP = """\
 usage: thought < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Hand one task to a throw-away child agent (templates/agent-fsm) on the daemon that runs you ($AOS_DAEMON)
+Hand one task to a throw-away child agent from the required "from" definition on your daemon ($AOS_DAEMON)
 and print only its short conclusion; the child's tool calls stay out of your history.
-A tool path may be relative to your workspace or absolute.
+The "from" definition and tool paths may be relative to your workspace or absolute.
+Omit tools to keep the definition's tools; tools: [] gives the child no tools.
+timeout_s is any finite positive number of seconds (default 600).
 Without endpoint the child uses your brain; if your brain settings cannot be read (e.g. your
 definition is not visible in a sandbox), the call fails with that error instead of guessing.
 To ask a kept child more later, use aos-agent ctl start --target <child>, then say / listen.
@@ -54,13 +56,11 @@ except ModuleNotFoundError:   # 規則 9 三處都找不到（11-05 晚）：照
 NAME = "thought"
 tool_io.start(NAME, HELP)
 die = tool_io.die
-TEMPLATE = os.path.realpath(os.path.join(HERE, "..", "..", "..", "templates", "agent-fsm"))
 ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
-MAX_CHARS_DEFAULT, TIMEOUT_DEFAULT_S, TIMEOUT_MAX_S = 600, 600, 1700
+MAX_CHARS_DEFAULT, TIMEOUT_DEFAULT_S = 600, 600
 MAX_DEPTH = 2                  # 父 0 → 子 1 → 孫 2；孫再叫＝DepthExceeded（代定）
 FAILED_KEEP = 3                # 失敗留下的子 stack 最多留幾隻（gc，代定）
 STEP_S = 90                    # 其他每一步的逾時（ctl add 自己最多等 30 秒）
-KEEP_TOOLS = ("clock",)        # 沒給 tools 時子留著的
 OPENING = """You are a small thought: a helper started for this one task only.
 Do the task below (use your tools if you need them). When you are done, reply with the conclusion only:
 what the task asks you to bring back, not the steps you took. At most {n} characters.
@@ -109,12 +109,19 @@ def agent(argv, text=None, timeout_s=STEP_S):
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
     except OSError as e:
         die("LaunchFailed", "cannot start aos-agent (is it on PATH?): %s" % e)
-    try:
-        out, err = child.communicate(None if text is None else text.encode("utf-8"), timeout=timeout_s)
-    except subprocess.TimeoutExpired:
-        kill_group(child)
-        child = None
-        return "", ("CommandFailed", "aos-agent %s did not finish in %g s (killed)" % (" ".join(argv[:2]), timeout_s))
+    end = time.monotonic() + timeout_s
+    payload = None if text is None else text.encode("utf-8")
+    while True:
+        try:
+            out, err = child.communicate(payload, timeout=min(86400, max(0, end - time.monotonic())))
+            break
+        except subprocess.TimeoutExpired:
+            payload = None
+            if time.monotonic() < end:
+                continue
+            kill_group(child)
+            child = None
+            return "", ("CommandFailed", "aos-agent %s did not finish in %g s (killed)" % (" ".join(argv[:2]), timeout_s))
     p, child = child, None
     out, err = out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
     if err:                                     # 下層的 stderr 原樣透出（R10）
@@ -136,16 +143,6 @@ def must(argv, text=None, timeout_s=STEP_S):
     return out
 
 
-def read_json(path, missing):
-    try:
-        with open(path, encoding="utf-8") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return missing
-    except (OSError, ValueError):
-        return missing
-
-
 def write_text(path, text):
     tmp = os.path.join(os.path.dirname(path), ".%s.%d" % (os.path.basename(path), os.getpid()))
     try:
@@ -158,6 +155,9 @@ def write_text(path, text):
 
 # ---- 入口檢查（參數先、環境後）----
 args = tool_io.arguments()
+source = args.get("from")
+if not isinstance(source, str) or not source.strip():
+    die("ArgumentsBad", "from must be a non-empty agent definition path")
 goal = args.get("goal")
 if not isinstance(goal, str) or not goal.strip():
     die("ArgumentsBad", "goal must be a non-empty string: what to do and what to bring back")
@@ -178,8 +178,12 @@ max_chars = args.get("max_chars", MAX_CHARS_DEFAULT)
 if isinstance(max_chars, bool) or not isinstance(max_chars, int) or max_chars < 1:
     die("ArgumentsBad", "max_chars must be a positive integer")
 timeout_s = args.get("timeout_s", TIMEOUT_DEFAULT_S)
-if isinstance(timeout_s, bool) or not isinstance(timeout_s, (int, float)) or not 0 < timeout_s <= TIMEOUT_MAX_S:
-    die("ArgumentsBad", "timeout_s must be a number in (0, %d]" % TIMEOUT_MAX_S)
+try:
+    valid_timeout = not isinstance(timeout_s, bool) and isinstance(timeout_s, (int, float)) and math.isfinite(timeout_s) and timeout_s > 0
+except OverflowError:
+    valid_timeout = False
+if not valid_timeout:
+    die("ArgumentsBad", "timeout_s must be a finite positive number")
 keep = args.get("keep", False)
 if not isinstance(keep, bool):
     die("ArgumentsBad", "keep must be true or false")
@@ -191,8 +195,9 @@ stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
 ws = tool_io.workspace()
-if not os.path.isfile(os.path.join(TEMPLATE, "interfaces.json")):
-    die("DefMissing", "the child template %s is missing" % TEMPLATE)
+definition = os.path.realpath(source if os.path.isabs(source) else os.path.join(ws, source))
+if not os.path.isdir(definition):
+    die("DefMissing", "the child definition %s is missing" % definition)
 kids_dir = os.path.join(stack, "children")
 
 
@@ -222,7 +227,9 @@ def mark(name, state):
 
 
 def renew(seconds):
-    until = datetime.now(timezone.utc) + timedelta(seconds=seconds)
+    now = datetime.now(timezone.utc)
+    ceiling = datetime.max.replace(tzinfo=timezone.utc, microsecond=0)
+    until = now + timedelta(seconds=min(seconds, (ceiling - now).total_seconds() - 1))
     mark(running_kid, "running " + until.strftime("%Y-%m-%dT%H:%M:%SZ"))
 
 
@@ -286,10 +293,12 @@ def reconcile(table):
 
 # ---- 我是誰、深度 ----
 me = json.loads(must(["ctl", "who", "--json"]))
-my_stack = me.get("stack") or ""
-depth = read_json(os.path.join(my_stack, "thought.json"), {}).get("depth", 0) if my_stack else 0
-if not isinstance(depth, int) or isinstance(depth, bool):
-    depth = 0
+try:
+    depth = int(os.environ.get("AOS_THOUGHT_DEPTH", "0"))
+except ValueError:
+    die("ArgumentsBad", "AOS_THOUGHT_DEPTH must be a non-negative integer")
+if depth < 0:
+    die("ArgumentsBad", "AOS_THOUGHT_DEPTH must be a non-negative integer")
 if depth >= MAX_DEPTH:
     die("DepthExceeded", "you are a thought at depth %d; at most %d levels of thoughts (do this step yourself)" % (depth, MAX_DEPTH))
 if endpoint is None:                            # 預設同父：只抄 endpoint 這一鍵；父沒宣告 llm 或沒寫＝範本自己的預設
@@ -339,7 +348,7 @@ for attempt in range(5):
         die("MkdirFailed", "cannot create %s: %s" % (os.path.join(kids_dir, kid), e))
 else:
     die("MkdirFailed", "could not create a unique child record after 5 attempts")
-out, err = agent(["ctl", "add", "--name", kid, "--ws", ws, TEMPLATE])
+out, err = agent(["ctl", "add", "--name", kid, "--ws", ws, "--envs", "AOS_THOUGHT_DEPTH=%d" % (depth + 1), definition])
 if err:
     if err[0] == "DaemonMissing":
         mark(kid, "failed")
@@ -361,23 +370,19 @@ def undo(err, what):
 
 if not os.path.isdir(kid_stack):
     undo(("CommandFailed", "aos-agent ctl add printed no stack folder: %r" % kid_stack), "ctl add")
-try:
-    with open(os.path.join(kid_stack, "thought.json"), "w", encoding="utf-8") as f:
-        f.write(json.dumps({"depth": depth + 1}) + "\n")
-except OSError as e:
-    undo(("WriteFailed", "cannot write thought.json into %s: %s" % (kid_stack, e)), "setup")
 steps = [("llm set endpoint", ["llm", "--target", kid, "set", "endpoint=%s" % endpoint])] if endpoint else []
-out, err = agent(["tools", "--target", kid, "ls", "--json"])   # 子已上表：這步失敗也走 undo 收回（11-06，no-pid 13 邊緣 3）
-if err:
-    undo(err, "tools ls")
-try:
-    listed = json.loads(out or "[]")
-except ValueError:
-    undo(("CommandFailed", "aos-agent tools ls --json did not print JSON"), "tools ls")
-wanted = {t for t, _ in tool_list} | (set() if tools is not None else set(KEEP_TOOLS))
-steps += [("tools rm " + t["name"], ["tools", "--target", kid, "rm", t["name"]])
-          for t in listed if isinstance(t, dict) and t.get("name") not in wanted]
-steps += [("tools add " + t, ["tools", "--target", kid, "add", "--override", t, p]) for t, p in tool_list]
+if tools is not None:                          # 沒給＝保留定義的工具；明給才改宣告過的覆蓋層
+    out, err = agent(["tools", "--target", kid, "ls", "--json"])
+    if err:
+        undo(err, "tools ls")
+    try:
+        listed = json.loads(out or "[]")
+    except ValueError:
+        undo(("CommandFailed", "aos-agent tools ls --json did not print JSON"), "tools ls")
+    wanted = {t for t, _ in tool_list}
+    steps += [("tools rm " + t["name"], ["tools", "--target", kid, "rm", t["name"]])
+              for t in listed if isinstance(t, dict) and t.get("name") not in wanted]
+    steps += [("tools add " + t, ["tools", "--target", kid, "add", "--override", t, p]) for t, p in tool_list]
 for what, argv in steps:
     _, err = agent(argv)
     if err:

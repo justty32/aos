@@ -9,19 +9,20 @@
 # 工具退非 0 時 stderr 多一行提醒「agent-fsm: warning: tool <名> exit code N (passed back to the brain)」（stdio-unify R1：不是這格的錯，照樣退 0）。
 # 只有自己這層的錯才停：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）——沒 stack、history 壞、
 #   history 裡沒有 assistant、aos-tools 起不來。
-# --tools FILE：aos-tools 登記檔（預設範本裡的 tools.json；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
-#   沒給 --tools 時，$AOS_STACK/tools.json 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
+# --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
+#   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
 # 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
 import json, os, shutil, signal, subprocess, sys, time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "py"))   # py/aos_flags.py（錯誤行、提醒行的共用介面）
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "py"))   # 複製出 repo 的：從 PATH 上 aos-tools 的真位置找 proto8/py
 import aos_flags  # noqa: E402
+from agent_files import declared_files  # noqa: E402
 
 HELP = """\
 usage: act.py [--tools FILE]   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
 The act cell: run the tool_calls of the last assistant message in $AOS_STACK/history.jsonl
 (aos-tools call NAME), one tool message each. Exit 0 = done (go think); 10 = no tool_calls.
---tools FILE: the aos-tools registry (default tools.json of the definition).
+--tools FILE: the aos-tools registry (default: tools declared in interfaces.json).
 Timeout: tool metainfo time_ms.max (ms), otherwise no limit; TERM the group, KILL 2 s later.
 On tool failure or timeout, append the last 2048 bytes of stderr to the tool message;
 the full stderr is also passed through. Tool failures are returned to the brain; exit 0.
@@ -49,12 +50,17 @@ opts = {flag: items[-1] for flag, items in values.items()}
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
-tools_file = os.path.join(os.environ.get("AOS_CD") or ".", opts.get("--tools", "tools.json"))
+try:
+    files = declared_files(os.environ.get("AOS_CD") or ".")
+except ValueError as e:
+    die("InterfaceBad", str(e))
+tools_rel = opts.get("--tools", files.get("tools"))
+tools_file = os.path.join(os.environ.get("AOS_CD") or ".", tools_rel) if tools_rel else None
 if "--tools" in opts and not os.path.isfile(tools_file):
     die("ToolsMissing", "tool registry not found: %s" % tools_file)
-overlay = os.path.join(stack, "tools.json")         # 子介面 tools 的覆蓋層（aos-agent tools，11-05 起只存差異）
-overlay = overlay if "--tools" not in opts and os.path.isfile(overlay) else None
-TOOLS = ["aos-tools", "--file", tools_file] + (["--overlay", overlay] if overlay else [])
+overlay = os.path.join(stack, tools_rel) if tools_rel and "--tools" not in opts else None
+overlay = overlay if overlay and os.path.isfile(overlay) else None
+TOOLS = ["aos-tools"] + (["--file", tools_file] if tools_file else []) + (["--overlay", overlay] if overlay else [])
 history_path = os.path.join(stack, "history.jsonl")
 history = []
 try:
@@ -104,7 +110,7 @@ def stop_group(p):
 
 
 registered = {}
-if os.path.isfile(tools_file) or overlay:        # 能叫的＝登記檔（疊覆蓋層）裡的（aos-tools ls --json）；失敗＝自己這層的錯
+if (tools_file and os.path.isfile(tools_file)) or overlay:        # 能叫的＝登記檔（疊覆蓋層）裡的（aos-tools ls --json）；失敗＝自己這層的錯
     try:
         r = subprocess.run(TOOLS + ["ls", "--json"], stdin=subprocess.DEVNULL,
                            stdout=subprocess.PIPE, text=True)

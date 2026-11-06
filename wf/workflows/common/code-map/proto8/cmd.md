@@ -67,7 +67,7 @@
 | [`examples/bash-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/inner) | → `../../../../lib/base/bash` |
 | [`examples/bash-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/sandbox.json) | 設定（鍵：commands、ro、rw、net、mem_mb、cpu_s…） |
 | [`examples/cli-tool.json`](../../../../../proto8/cmd/aos-sandbox/examples/cli-tool.json) | 設定（鍵：commands、ro、rw、env、net） |
-| [`examples/thought-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/) | Hand one task to a fresh helper agent and get back only its short conclusion; the helper's own tool calls stay out of your history. Use it for one st… |
+| [`examples/thought-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/) | Hand one task to a fresh helper from an agent definition you choose and get back only its short conclusion; its tool calls stay out of your history. … |
 | [`examples/thought-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/inner) | → `../../../../lib/agent/thought` |
 | [`examples/thought-boxed/sandbox-kernel.json`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/sandbox-kernel.json) | Sandbox (mode 2, judge in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm letters must g… |
 | [`examples/thought-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/sandbox.json) | Sandbox (mode 1, no judge) for a tool that talks to the daemon (thought; agents and self_tools the same way): rw the daemon stack AOS_DAEMON (letters… |

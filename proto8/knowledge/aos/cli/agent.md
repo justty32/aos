@@ -10,7 +10,7 @@ aos-agent ctl stop --target bob
 aos-agent ctl start --target bob
 ```
 
-The definition must declare `aos-agent` in `interfaces.json`. `add` waits for the table and prints the stack. Optional `--stack DIR` chooses its stack. `--limits '{"mem_mb":512}'` replaces the definition's limits; `'{}'` means no limits.
+The definition must declare `aos-agent` in `interfaces.json`. `add` waits for the table and prints the stack. Optional `--stack DIR` chooses its stack. `--limits '{"mem_mb":512}'` replaces the definition's limits; `'{}'` means no limits. Repeatable `--envs NAME=VALUE` supplies environment variables when the agent starts.
 
 `ls` prints NAME, STATE, WORKSPACE, QUEUED, REASON as TAB-separated columns. Empty means no rows. `state` (alias `status`) shows one agent's paths, queue, last answer, reason, limits and tool overlay.
 

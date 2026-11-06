@@ -3,6 +3,7 @@ import os
 import subprocess
 import sys
 import aos_flags
+from agent_files import declared_files
 from . import PROG
 from .common import Fail, TOOLS, actions, bad_args, note, parse, target
 from .decl import agent_decl, pass_err, warn_shared
@@ -92,13 +93,13 @@ def tools_env(a):
 
 
 def aos_tools(a, reg, over, args):
-    """aos-tools --file <定義的登記檔> --overlay <stack>/tools.json …（疊法、寫法都歸 aos-tools；覆蓋層不在＝就是定義那份）。"""
+    """aos-tools --file <定義的宣告檔> --overlay <stack>/<宣告相對路徑> …（疊法、寫法都歸 aos-tools；覆蓋層不在＝就是定義那份）。"""
     r = subprocess.run([sys.executable, TOOLS, "--file", reg, "--overlay", over] + list(args), stderr=subprocess.PIPE, text=True, env=tools_env(a))
     pass_err(r.returncode, r.stderr)
 
 
 def cmd(argv):
-    """tools（11-05 portable-flow 步 4，使用者「tools只存差異」）：<stack>/tools.json 是這隻的覆蓋層 {"add": {…}, "rm": […]}，
+    """tools（11-05 portable-flow 步 4，使用者「tools只存差異」）：<stack>/<宣告相對路徑> 是這隻的覆蓋層 {"add": {…}, "rm": […]}，
     不是定義的副本；身體每格讀「定義疊覆蓋層」。說明在 cmd/aos-agent/README.md「tools 覆蓋層」。"""
     opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",))
     act, args = (rest[0], rest[1:]) if rest else ("ls", [])
@@ -114,7 +115,11 @@ def cmd(argv):
     rel = decl.get("tools")
     if not isinstance(rel, str) or not rel:
         raise Fail("ToolsMissing", "%s does not declare the tools sub-interface (write {\"aos-agent\": {\"tools\": \"tools.json\"}} in the definition's interfaces.json)" % a.name)
-    orig, over = os.path.join(folder, rel), os.path.join(a.stack, "tools.json")
+    try:
+        rel = declared_files(folder)["tools"]
+    except ValueError as e:
+        raise Fail("ToolsBad", str(e)) from e
+    orig, over = os.path.join(folder, rel), os.path.join(a.stack, rel)
     count = {"ls": 0, "get": 1, "add": 2, "rm": 1, "reset": 0}[act]
     if len(args) != count:
         raise bad_args(HELPS[act], "%s needs %d arguments" % (act, count))

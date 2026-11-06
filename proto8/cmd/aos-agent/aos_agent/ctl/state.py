@@ -3,7 +3,8 @@ import aos_ws
 import json
 import os
 from ..common import bad_args, Fail, parse, target
-from ..decl import def_of, show_limits
+from ..decl import agent_decl, def_of, show_limits
+from agent_files import declared_files
 from ..hints import label, queued
 
 
@@ -55,8 +56,15 @@ def cmd(argv):
 
 
 def overlay_count(a):
-    """ctl state 的一行（11-05 feat-proto 件 1）：這隻的 tools 覆蓋層 <stack>/tools.json 加了幾個、拿掉幾個；沒覆蓋層＝None。"""
-    p = os.path.join(a.stack, "tools.json")
+    """ctl state 的一行（11-05 feat-proto 件 1）：這隻宣告的 tools 覆蓋層 加了幾個、拿掉幾個；沒覆蓋層＝None。"""
+    try:
+        folder, decl = agent_decl(a)
+        rel = declared_files(folder).get("tools")
+    except (Fail, ValueError):
+        return None
+    if rel is None:
+        return None
+    p = os.path.join(a.stack, rel)
     if not os.path.isfile(p):
         return None
     try:

@@ -41,6 +41,7 @@ import datetime, fcntl, glob, json, os, shlex, shutil, signal, subprocess, sys, 
 
 sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
 import aos_flags  # noqa: E402
+from agent_files import declared_files  # noqa: E402
 
 TMUX_SESSION = "cli"
 PROG, ECHO = "cli_session", False                    # 錯誤行開頭、要不要也印到 stdout（call_main 改成工具名、True）
@@ -73,8 +74,12 @@ def load_cfg(tool_dir):
     for k in ("flags", "print_flags", "tools_flags"):
         if not isinstance(cfg.get(k, []), list) or not all(isinstance(a, str) for a in cfg.get(k, [])):
             die("CfgBad", "%s: %s must be an array of strings" % (path, k))
-    cfg["registry"] = registry(cfg, tool_dir, path)
-    stack_copies(cfg, tool_dir)
+    try:
+        files = declared_files(tool_dir)
+    except ValueError as e:
+        die("CfgBad", str(e))
+    cfg["registry"] = registry(cfg, tool_dir, path, files)
+    stack_copies(cfg, tool_dir, files)
     return cfg
 
 
@@ -92,20 +97,22 @@ def read_llm(path):
     return llm
 
 
-def stack_copies(cfg, tool_dir):
-    """子介面 tools（11-05 portable-flow 步 4，使用者「tools只存差異」）：$AOS_STACK/tools.json 在、cli.json 又沒明寫 tools＝它是這隻的覆蓋層，
-    cfg["overlay"]＝它、交給 aos-mcp --overlay（疊法歸 aos-tools）；定義沒有登記檔＝registry 用同層 tools.json 的路徑（不在也行）。
-    腦設定（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本，aos-agent llm set 寫的）；
+def stack_copies(cfg, tool_dir, files):
+    """子介面 tools／llm 依 interfaces.json 宣告的相對檔名讀 stack 覆蓋；沒有宣告就不讀 stack。
+    cli.json 明寫 tools 時照它、停用 tools 覆蓋；未宣告時定義的預設登記檔仍是同層 tools.json。
+    腦設定：定義宣告的 llm（沒宣告時仍可用同層 llm.json）疊 stack 宣告那份；
     有 model＝flags 的 --model 換成它（沒有就加在尾）。每次 load_cfg（每題）重讀＝下一題生效。"""
     stack = os.environ.get("AOS_STACK")
-    llm = read_llm(os.path.join(tool_dir, "llm.json"))
+    llm = read_llm(os.path.join(tool_dir, files.get("llm", "llm.json")))
     if stack:
-        copy = os.path.join(stack, "tools.json")
-        if "tools" not in cfg and os.path.isfile(copy):
+        rel = files.get("tools")
+        copy = os.path.join(stack, rel) if rel else None
+        if "tools" not in cfg and copy and os.path.isfile(copy):
             cfg["overlay"] = copy
             if not cfg.get("registry"):
-                cfg["registry"] = os.path.join(os.path.abspath(tool_dir), "tools.json")
-        llm.update(read_llm(os.path.join(stack, "llm.json")))
+                cfg["registry"] = os.path.join(os.path.abspath(tool_dir), rel)
+        if "llm" in files:
+            llm.update(read_llm(os.path.join(stack, files["llm"])))
     model = llm.get("model")
     if "model" in llm and (not isinstance(model, str) or not model):
         die("CfgBad", "model in llm.json must be a non-empty string (same as agent-fsm's brain.py), not %s" % json.dumps(model))
@@ -118,9 +125,9 @@ def stack_copies(cfg, tool_dir):
         cfg["flags"] = flags
 
 
-def registry(cfg, tool_dir, path):
+def registry(cfg, tool_dir, path, files):
     """這份定義的 aos-tools 登記檔（絕對路徑）；沒有＝None（11-03 eca-tools）。
-    tools 有寫＝它（相對路徑從 cli.json 的資料夾算），不是檔＝ToolsMissing；沒寫＝同層 tools.json，有才用。
+    tools 有寫＝它（相對路徑從 cli.json 的資料夾算），不是檔＝ToolsMissing；沒寫＝interfaces.json 宣告的 tools，未宣告才取同層 tools.json。
     給了 tools_flags 卻沒有登記檔＝CfgBad（寫什麼就做什麼，不靜靜吞掉）。"""
     base = os.path.abspath(tool_dir)
     if "tools" in cfg:
@@ -130,11 +137,11 @@ def registry(cfg, tool_dir, path):
         if not os.path.isfile(reg):
             die("ToolsMissing", "%s: registry file named by tools not found: %s" % (path, reg))
         return reg
-    reg = os.path.join(base, "tools.json")
+    reg = os.path.join(base, files.get("tools", "tools.json"))
     if os.path.isfile(reg):
         return reg
     if "tools_flags" in cfg:
-        die("CfgBad", "%s: tools_flags given but no registry file (no tools, and no tools.json alongside)" % path)
+        die("CfgBad", "%s: tools_flags given but no registry file (no tools, and no default registry alongside)" % path)
     return None
 
 

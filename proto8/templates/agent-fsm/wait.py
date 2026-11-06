@@ -4,7 +4,7 @@
 #     信件名稱寫進 pending.txt、退 10（下一拍再來看）。
 #   在＝已寄：aos-llm recv think/reply <名>：沒到（10）＝退 10；到了（0）＝那則 assistant 接進 history.jsonl、刪 pending.txt、退 0（→ act）；
 #     kernel 回錯（1）＝刪 pending.txt、aos-llm 的 stderr 原樣、這格再多寫自己一行 BrainFailed、退 1（P-20 停下等人；人重跑＝沒 pending、request.json 還在→重寄＝重試）。
-#   寄之前看 request.json 的 endpoint 跟現在的 llm.json（範本那份 AOS_CD/llm.json 疊這隻的 $AOS_STACK/llm.json，疊法同 brain.py）
+#   寄之前看 request.json 的 endpoint 跟現在的 llm.json（interfaces.json 宣告的定義檔疊這隻的 stack 同相對路徑檔，疊法同 brain.py）
 #     對不對得上：對不上＝退 11 回 think 重組（11-05 edge-agent：代號寫錯停下、人 aos-agent llm set／改或刪 llm.json 再起，
 #     原本照舊的 request.json 重寄、又是同一個錯，要人手動把 stage.txt 寫成 think）。llm.json 讀不懂＝當 {}（brain 重組時會報 CfgBad）。
 # 結束碼（fsm.json 照碼分岔，N-36）：0＝回信接進 history（→ act）；10＝還沒回（→ wait）；11＝腦設定改過、回 think 重組請求。
@@ -16,6 +16,7 @@ import json, os, shutil, signal, subprocess, sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "py"))   # py/aos_flags.py（錯誤行、提醒行的共用介面）
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "py"))   # 複製出 repo 的：從 PATH 上 aos-tools 的真位置找 proto8/py
 import aos_flags  # noqa: E402
+from agent_files import declared_files  # noqa: E402
 
 HELP = """\
 usage: wait.py   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
@@ -83,11 +84,16 @@ except FileNotFoundError:
 except OSError as e:
     die("WriteFailed", "cannot read %s: %s" % (pending, e))
 
+try:
+    files = declared_files(os.environ.get("AOS_CD") or ".")
+except ValueError as e:
+    die("InterfaceBad", str(e))
 if not name:                                     # 還沒寄
     if not os.path.isfile(request):
         die("RequestMissing", "neither %s nor pending.txt exists (stack edited? write think into stage.txt and start again)" % request)
-    cfg = read_obj(os.path.join(os.environ.get("AOS_CD") or ".", "llm.json"))
-    cfg.update(read_obj(os.path.join(stack, "llm.json")))
+    cfg = read_obj(os.path.join(os.environ.get("AOS_CD") or ".", files["llm"])) if "llm" in files else {}
+    if "llm" in files:
+        cfg.update(read_obj(os.path.join(stack, files["llm"])))
     body = read_obj(request)
     if cfg.get("endpoint") != body.get("endpoint"):
         sys.exit(REBUILD)                        # 腦設定改過（多半是上次 kernel 回錯、人改了代號再起）：brain 重組再寄
