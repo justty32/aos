@@ -1,4 +1,4 @@
-# aos_agent/common.py - 共用分層 help、錯誤指路、旗標、daemon 協定與 agent 查找。
+# aos_agent/common.py - 共用分層 help、錯誤指路、旗標、daemon 協定與活列查找及等待。
 import os
 import math
 import textwrap
@@ -154,9 +154,9 @@ def kernel_hint():
 
 
 def wait_for(cond, what, secs=WAIT_S, via_kernel=True):
-    """等 daemon 套用。via_kernel＝信經 AOS_KERNEL 寄的：kernel（表上的 0 號）不是 running＝立刻 WaitFailed（它不會判，等也沒用）。"""
+    """等 daemon 套用。via_kernel＝信經 AOS_KERNEL 寄的：kernel（表上的 0 號）不是 running／stuck＝立刻 WaitFailed（它不會判，等也沒用）。"""
     kr = kernel_row() if via_kernel else None
-    if kr and kr[1].get("phase") != "running":
+    if kr and kr[1].get("phase") not in {"running", "stuck"}:
         ph = kr[1].get("phase")
         raise Fail("WaitFailed", "%s: the letter is in AOS_KERNEL, but kernel %s is %s and will not judge it (it waits in its mailbox until it is back); first aos-agent ctl %s --target %s" % (
             what, kr[0], ph, "wake" if ph == "sleeping" else "start", kr[0]))

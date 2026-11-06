@@ -93,7 +93,7 @@ def row_of(d, name):
     """表上那一列；表上沒有＝ProcMissing（不看小格資料夾在不在）。"""
     r = rows(d).get(name)
     if not isinstance(r, dict):
-        raise Fail("ProcMissing", "%s is not on the daemon table (only running, stopping, stopped, sleeping rows count; removed ones are gone, see aos-daemon-ctl ls)" % name)
+        raise Fail("ProcMissing", "%s is not on the daemon table (only running, stuck, stopping, stopped, sleeping rows count; removed ones are gone, see aos-daemon-ctl ls)" % name)
     return r
 
 

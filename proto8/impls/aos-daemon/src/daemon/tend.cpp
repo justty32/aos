@@ -62,6 +62,8 @@ static std::vector<pid_t> leaders_below(pid_t root) {
 }
 
 void Daemon::term(Child& c) {
+    c.stuck = false;
+    c.stuck_deadline.reset();
     c.phase = "stopping";
     c.termed = true;
     c.deadline = Clock::now() + std::chrono::milliseconds(GRACE_MS);
@@ -101,6 +103,8 @@ void Daemon::halt(const std::string& name, Child& c) {
 }
 
 void Daemon::hold(const std::string& name, Child& c, const char* phase, const char* log_phase) {
+    c.stuck = false;
+    c.stuck_deadline.reset();
     c.phase = log_phase ? log_phase : phase;   // auto_restart 自己退的 log 記 done，表留 sleeping
     log_child(name, c);   // 行程結束一行
     c.phase = phase;
@@ -133,12 +137,15 @@ bool Daemon::settle(Child& c) {
 
 // 不調表地看一眼：stopped／sleeping 的列不動；running 的退了＝done（stop＝daemon 正要停它＝留成 stopped 的列；loop 型出錯結束＝留成 stopped＋reason，11-05）；收的途中的照收，
 // 退了：daemon 下的 stop（soft）＝留成 stopped 的列、收工時收的 loop 型（nap）＝留成 sleeping 的列，其他（被收掉的）＝拿掉。回 true＝這列結束了、要拿掉。
-bool Daemon::look(const std::string& name, Child& c, bool stop) {
+bool Daemon::look(const std::string& name, Child& c, bool stop, bool watch) {
     if (c.held) {
         return false;
     }
     if (c.phase == "running") {
         if (alive(c)) {
+            if (watch) {
+                check_stuck(name, c);
+            }
             return false;
         }
         if (stop) {
@@ -173,6 +180,20 @@ bool Daemon::look(const std::string& name, Child& c, bool stop) {
         return true;
     }
     if (c.phase == "stopping" && settle(c)) {
+        if (c.stuck_restart) {
+            c.stuck_restart = false;
+            c.stuck = false;
+            c.stuck_deadline.reset();
+            if (c.stuck_restarts >= 3) {
+                c.reason = "became stuck 3 times in a row without a response; not restarting again";
+                hold(name, c);
+                c.failed = true;
+                stopped_.insert(name);
+            } else {
+                hold(name, c, "sleeping");
+            }
+            return false;
+        }
         if (c.soft) {
             hold(name, c);
             return false;
@@ -238,6 +259,10 @@ void Daemon::finish() {
     for (auto& [n, c] : table_) {
         if (c.held) {
             continue;   // stopped／sleeping 的列：照寫進最後一份 state（procs § 2c 第 9 條）
+        }
+        if (c.stuck_restart) {
+            c.nap = !c.once || c.auto_restart;   // 卡住重起收途中改為收工，常駐列仍須留 sleeping。
+            c.stuck_restart = false;
         }
         if (c.phase == "running" && alive(c)) {
             c.nap = !c.once || c.auto_restart;   // 收工時常駐的退了留 sleeping、再開自動 wake；一般 exec 型拿掉

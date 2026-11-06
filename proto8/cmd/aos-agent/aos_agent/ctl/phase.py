@@ -95,7 +95,7 @@ def cmd_start(argv):
     if a.phase == "stopping":                         # 還在停的途中：等它停好再起
         wait_for(lambda: (row_named(a.name) or {}).get("phase") != "stopping", "the daemon has not finished stopping %s" % a.name, secs)
         a = find(a.name)
-    if a.phase == "running":
+    if a.phase in {"running", "stuck"}:
         print("already running (%s)" % label(a))
         return
     n, held = queued(a) or 0, comes_back_paused(a)
@@ -159,7 +159,7 @@ def cmd_wake(argv):
         raise bad_args(HELP["wake"], "wake takes no positional arguments: %s (pick the target with --target)" % rest[0])
     need_table()
     a = target(opts)
-    if a.phase == "running":
+    if a.phase in {"running", "stuck"}:
         print("already awake (%s)" % label(a))
         return
     n, held = queued(a) or 0, comes_back_paused(a)

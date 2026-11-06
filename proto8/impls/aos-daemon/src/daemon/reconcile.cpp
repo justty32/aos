@@ -22,11 +22,12 @@ Json Daemon::limits_of(const Json& spec, const Json& kept) const {
 }
 
 Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws, const Json& kept_exec,
-                    const Json& kept_def, const Json& kept_limits, bool kept_once, bool kept_auto_restart, bool kept_ros) {
+                    const Json& kept_def, const Json& kept_limits, bool kept_once, bool kept_auto_restart, bool kept_ros, long long kept_stuck_after_ticks) {
     Json lim = limits_of(spec, kept_limits);
     bool once = spec.is_null() ? kept_once : is_once(spec);
     bool auto_restart = spec.is_null() ? kept_auto_restart : auto_restart_of(spec);
     bool ros = spec.is_null() ? kept_ros : ros_of(spec);
+    long long stuck_ticks = spec.is_null() ? kept_stuck_after_ticks : spec.is_object() ? spec.value("stuck_after_ticks", 10LL) : 10;
     bool deep = cell != dstack_ + "procs/" + name;   // 不是預設小格＝proc 自己的 stack：不在就 mkdir -p
     if (!once) {
         if (auto live = live_in_cell(cell, names_.loop)) {   // 11-05 第二輪：小格裡已有活著的子 loop（上一個 daemon 起了、沒記進表就死）＝接回、不再起一份
@@ -41,6 +42,7 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
             c.limits = lim;
             c.auto_restart = auto_restart;
             c.restart_on_stuck = ros;
+            c.stuck_after_ticks = stuck_ticks;
             std::error_code ec;
             std::uintmax_t sz = std::filesystem::file_size(aos::join(cell, names_.err), ec);
             c.err_off = ec ? 0 : (long long)sz;
@@ -59,6 +61,7 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
     c.def = spec.is_null() ? kept_def : def_of(spec);              // 11-04：列上的 def 欄
     c.auto_restart = auto_restart;
     c.restart_on_stuck = ros;
+    c.stuck_after_ticks = stuck_ticks;
     return c;
 }
 
@@ -73,7 +76,12 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
         bool in = wanted.count(n) > 0;
         bool stop = in && stopped.count(n) > 0;
         bool nap = in && !stop && slept.count(n) > 0;   // 11-05 sleep：現在就睡（SIGTERM、10 秒 KILL、列 sleeping），wake 或 daemon 重開才醒
-        if (look(n, c, stop)) {
+        if (c.stuck_restart && (!in || stop || nap)) {
+            c.stuck_restart = false;   // 人工命令優先於卡住重起。
+            c.soft = stop;
+            c.nap = nap && (!c.once || c.auto_restart);
+        }
+        if (look(n, c, stop, in && !stop && !nap)) {
             it = drop(it);   // 結束了：印 log、拿掉（小格留著；11-02 子項結束後不留名單）
             continue;
         }
@@ -120,11 +128,14 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                 continue;
             }
             if (c.held && stopped.count(n) == 0 && !(c.phase == "sleeping" && slept.count(n) > 0)) {   // 11-05：sleep 叫睡的不自己醒   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（基準線）
-                Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits, c.once, c.auto_restart, c.restart_on_stuck);   // 信箱接回只留名時照列上的值
+                Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits, c.once, c.auto_restart, c.restart_on_stuck, c.stuck_after_ticks);   // 信箱接回只留名時照列上的值
                 nc.revived = true;   // 11-05：REVIVE_MS 內退了＝留成 stopped＋原因（衝突 3）
                 nc.revived_at = Clock::now();
                 if (nc.auto_restart && c.phase == "sleeping") {
                     nc.quick_exits = c.quick_exits;   // 自動重起帶著連敗數；人 start（stopped）從零開始
+                }
+                if (c.phase == "sleeping") {
+                    nc.stuck_restarts = c.stuck_restarts;
                 }
                 c = nc;
                 log_child(n, c);
@@ -143,6 +154,7 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
             c.once = is_once(spec);
             c.auto_restart = auto_restart_of(spec);
             c.restart_on_stuck = ros_of(spec);
+            c.stuck_after_ticks = spec.is_object() ? spec.value("stuck_after_ticks", 10LL) : 10;
             c.stack = cell_of(n, spec);
             c.exec = exec_of(spec, cwd_);
             c.def = def_of(spec);

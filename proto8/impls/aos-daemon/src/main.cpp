@@ -24,13 +24,16 @@ as the ctl window says, and report them in the state windows. Optional own body
 ARGS after -- are appended to the daemon's own exec.
 Optional "tick": true (or {file, interval_ms, name}) adds an ordinary auto-restarting
 clock loop and passes AOS_TICK to children. No tick key leaves the clock inherited.
+Each proc may set stuck_after_ticks (positive integer, default 10). Unanswered
+control windows project phase stuck; restart_on_stuck: true restarts the proc
+(unless paused), stopping after 3 consecutive stuck runs without a response.
 
 flags:
   --max N               stop after N rounds
   --interval-ms N       wait N ms between rounds (default 200)
   --ctl FILE            control window
   --state FILE          state window
-  --enable-logs         print one JSON line per proc start/end (and per body run) to stdout
+  --enable-logs         print JSON lines for proc start/end/stuck restart and body runs
   -h, --help            show this help
 
 exit codes: 0 done; 1 own error ("aos-daemon: error: CODE ..." on stderr); 128+N on signal N.

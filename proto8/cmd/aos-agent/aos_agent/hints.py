@@ -1,4 +1,4 @@
-# aos_agent/hints.py - 讀 agent 狀態、queue 數量與接續操作提示。
+# aos_agent/hints.py - 讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。
 import aos_ws
 import daemon_ctl as dc
 import json
@@ -32,7 +32,7 @@ def comes_back_paused(a):
 
 
 def label(a):
-    """狀態（procs § 0 名詞表）：running／paused／stopping／stopped／sleeping。paused＝表上 running、子 loop 的 state.json 是 paused。"""
+    """狀態（procs § 0 名詞表）：running／stuck／paused／stopping／stopped／sleeping。paused＝表上 running、子 loop 的 state.json 是 paused。"""
     if a.phase == "running":
         return "paused" if loop_paused(a) else "running"
     return a.phase or "-"
@@ -59,7 +59,7 @@ def on_table(a):
     row = row_named(a.name)
     if row is not None:
         a.__init__(a.name, row)
-    return row is not None and a.phase in ("running", "stopping")
+    return row is not None and a.phase in ("running", "stuck", "stopping")
 
 
 def daemon_held(a):

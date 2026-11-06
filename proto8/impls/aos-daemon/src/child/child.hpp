@@ -1,7 +1,7 @@
-// child.hpp：【child】表上的一個 proc（11-03 起 loops／execs 統稱 procs）＝一支子 loop（loop 型），或 aos-exec 跑一次（exec 型）。內部標頭。
+// child.hpp：【child】表上的一個 proc（11-03 起 loops／execs 統稱 procs）＝一支子 loop（loop 型），或 aos-exec 跑一次（exec 型），並保存公開窗 stuck 判定資料。內部標頭。
 //
 // 11-06（no-pid P6）：兩型都可寫通用 auto_restart＝常駐、退了重起，連 3 次起後 3 秒內退才留 stopped；
-//   auto_restart、restart_on_stuck 兩欄只在 true 時寫表；restart_on_stuck P6 只記、P7 才用。
+//   auto_restart、restart_on_stuck 兩欄只在 true 時寫表；P7 依公開窗與 stuck_after_ticks 判卡住、可選重起。
 //   （下面的 loop.json、exec.json、stderr.txt 是預設名；11-04 起 daemon.json 的 procs_loop／procs_exec／procs_stderr 可改，見 CellNames）
 //   refs.cpp    rel_to／rel_spec／daemon_ref／rel_refs：相對路徑與指示詞改寫
 //   child.cpp   spawn：小格（proc 的 stack）建好、寫 loop.json（蓋 _entry、相對的 exec 轉絕對；ws、stack 不寫進去；先 .loop.json 再改名）、
@@ -21,6 +21,8 @@
 
 #include "common/common.hpp"
 
+#include "aos/util/tick.hpp"
+#include "aos/util/proc.hpp"
 #include <chrono>
 #include <optional>
 #include <string>
@@ -46,7 +48,14 @@ struct Child {
     bool own = true;                    // 自己 fork 的（false＝adopt 接回來的，不是我們的子行程）
     bool once = false;                  // exec 型（直接 aos-exec 一次、不包 aos-loop）；接回來的看小格有沒有 daemon 寫的 loop.json（沒有＝exec 型）
     bool auto_restart = false;          // 11-06（no-pid P6）：通用常駐旗標，不看 exec／loop 型
-    bool restart_on_stuck = false;      // P6 只記進表，P7 才用
+    bool restart_on_stuck = false;      // P7：公開窗刺激逾期時重起
+    long long stuck_after_ticks = 10;
+    bool stuck = false;                 // 表上的投影，不改生命週期 phase
+    bool stuck_restart = false;         // 正在收掉卡住的一支
+    int stuck_restarts = 0;             // 連續無回應而卡住的次數（起初一輪計入）
+    std::optional<aos::Deadline> stuck_deadline;
+    std::string observed_at = aos::utc_now_ms(); // 父這次起／接回的 UTC 毫秒基準
+    std::string last_response;
     int quick_exits = 0;                // 連續起後 REVIVE_MS 內退出的次數，滿 3 次留 stopped
     bool reaped = false;
     std::string phase = "running";      // running／stopping（收的途中）／done（自己結束）／stopped（行程不在了）／sleeping（daemon 收工時收的，11-03）；
@@ -77,7 +86,7 @@ struct Child {
 // 起一支子 loop。cell＝小格（proc 的 stack，絕對、結尾不帶 /；deep＝mkdir -p，不然只建 cell 與上一層）、spec＝loop 設定物件
 // （null＝不寫 loop.json、照小格裡現有的起；11-03——這時 ws 用 kept_ws＝列上記的，11-03 晚：不然 wake／start 後表上與子行程的 AOS_WS 都掉了）、
 // cwd＝daemon 的 cwd（子項 exec 的相對路徑從這裡算：字串、陣列的第一個元素轉成絕對路徑，其他不動、不驗）。
-// spec 有 ws（read_procs 已轉絕對）＝子行程設 AOS_WS＝它；ws、stack、def、limits、auto_restart、restart_on_stuck 都不寫進 loop.json（daemon 的 key，不是 loop 的）。
+// spec 有 ws（read_procs 已轉絕對）＝子行程設 AOS_WS＝它；ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_ticks 都不寫進 loop.json（daemon 的 key，不是 loop 的）。
 // 小格建不了 MkdirFailed、loop.json 寫不了 WriteFailed、stderr 開不了／fork 失敗 LaunchFailed。
 // aos-exec 自己的錯（PATH 上沒有 aos-loop…）寫在小格的 stderr.txt、子 loop 以 1 結束（phase done、code 1）。
 // dstack＝daemon 的 stack（絕對、結尾 /）：子行程設成 AOS_DAEMON（11-02；11-04 晚改名，舊名不認）。spawn_exec 同。

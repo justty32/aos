@@ -104,7 +104,7 @@ def wait_latest(a, timeout, before=None):
             time.sleep(POLL)
             continue
         now = time.monotonic()
-        if not new_warned and "new" in stages and now - start >= 10 and on_table(a) and a.phase == "running" and label(a) != "paused":   # 暫停中已另有一句
+        if not new_warned and "new" in stages and now - start >= 10 and on_table(a) and a.phase in {"running", "stuck"} and label(a) != "paused":   # 暫停中已另有一句
             note("%s has not been taken from queue/new/ after 10 s; %s may be busy, or its daemon may be down: aos-daemon-ctl --daemon %s ls (the last line shows what the daemon's supervisor sees)" % (sig, a.name, daemon_path()))
             new_warned = True
         if now >= next_check:

@@ -5,6 +5,22 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/cmd/aos-sandbox/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`bin/aos-sandbox`](../../../../../proto8/cmd/aos-sandbox/bin/aos-sandbox) | 照一份設定把 prog 關進沙箱再跑：身分（s6-setuidgid）、上限（s6-softlimit）、看得到哪些路徑與能不能連網（bwrap） |
+| [`examples/agent.json`](../../../../../proto8/cmd/aos-sandbox/examples/agent.json) | 設定（鍵：commands、ro、rw、env、net、mem_mb…） |
+| [`examples/bash-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/) | Run one bash command line in your workspace. Returns stdout and stderr merged; the last line is always [exit code N], your command's exit code (non-z… |
+| [`examples/bash-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/inner) | → `../../../../lib/base/bash` |
+| [`examples/bash-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/sandbox.json) | 設定（鍵：commands、ro、rw、net、mem_mb、cpu_s…） |
+| [`examples/cli-tool.json`](../../../../../proto8/cmd/aos-sandbox/examples/cli-tool.json) | 設定（鍵：commands、ro、rw、env、net） |
+| [`examples/thought-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/) | Hand one task to a fresh helper from an agent definition chosen by from or the tool registry entry env.AOS_THOUGHT_FROM default and get back only its… |
+| [`examples/thought-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/inner) | → `../../../../lib/agent/thought` |
+| [`examples/thought-boxed/sandbox-kernel.json`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/sandbox-kernel.json) | Sandbox (mode 2, judge in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm letters must g… |
+| [`examples/thought-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/sandbox.json) | Sandbox (mode 1, no judge) for a tool that talks to the daemon (thought; agents and self_tools the same way): rw the daemon stack AOS_DAEMON (letters… |
+| [`root/setup.sh`](../../../../../proto8/cmd/aos-sandbox/root/setup.sh) | 沙箱的「身分層」要 root 做的事：裝 s6 到 /usr/local、建帳號 aos-run、給它一個工作的地方、讓我（$SUDO_USER）能換成它 |
+
 ## `proto8/cmd/aos-tick/`
 
 | 檔 | 負責什麼 |

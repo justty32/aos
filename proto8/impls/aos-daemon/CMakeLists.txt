@@ -27,6 +27,7 @@ set(SOURCES
   src/daemon/adopt.cpp
   src/daemon/table.cpp
   src/daemon/failure.cpp
+  src/daemon/stuck.cpp
   src/daemon/tend.cpp
   src/daemon/body.cpp
   src/daemon/ctl.cpp

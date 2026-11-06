@@ -108,7 +108,7 @@ def daemon_view(daemon):
             raise ValueError("aos-directive exited %d" % code)
         st = json.loads(out)
         procs = st.get("procs") or {}
-        running = {n for n, row in procs.items() if isinstance(row, dict) and row.get("phase") == "running"}
+        running = {n for n, row in procs.items() if isinstance(row, dict) and row.get("phase") in {"running", "stuck"}}
     except (ValueError, AttributeError) as e:
         die("StateBad", "cannot parse procs_state.json: %s" % e)
     if "procs_ctl_mailbox" in st and st["procs_ctl_mailbox"] is None:

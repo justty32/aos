@@ -53,6 +53,8 @@ PHASE_HINT = {
 
 def need_phase(cmd, name, row):
     ph = row.get("phase")
+    if ph == "stuck":
+        ph = "running"
     if ph != PHASE_OK[cmd]:
         msg = PHASE_HINT.get((cmd, ph), "%%s is %s; %s only takes %s ones" % (ph, cmd, PHASE_OK[cmd]))
         raise Fail("PhaseBad", msg % name)
@@ -67,7 +69,7 @@ def write_ctl(d, name, cmd, timeout_s=APPLY_S):
     stack, path = need_ctl(d, name, row)
     # 11-05 第二輪：只收 running 的（stopped／sleeping 的列沒有行程；起來時子 loop 把讀到的第一份 ctl 當基準線、不執行＝這道 pause 默默丟了，
     # 原本照寫、印 seq、退 0，看起來像成功）
-    if row.get("phase") != "running":
+    if row.get("phase") not in {"running", "stuck"}:
         raise Fail("PhaseBad", "%s is %s; %s only takes running ones (a loop takes the ctl it finds when it starts as its baseline, so it would be lost)"
                    % (name, row.get("phase"), cmd))
     try:

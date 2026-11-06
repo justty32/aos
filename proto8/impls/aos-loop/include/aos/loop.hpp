@@ -57,6 +57,7 @@ struct StateWindow {
     static constexpr const char* default_name = "state.json";
     static constexpr const char* phase = "phase";
     static constexpr const char* done = "done";
+    static constexpr const char* responded_at = "responded_at";
     static constexpr const char* pid = "pid";
     static constexpr const char* started_at_ticks = "started_at_ticks";
     static constexpr const char* boot_id = "boot_id";

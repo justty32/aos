@@ -11,7 +11,7 @@
 |---|---|
 | [`aos_agent/__init__.py`](../../../../../proto8/cmd/aos-agent/aos_agent/__init__.py) | 保留頂層說明、命令派發與主入口。 |
 | [`aos_agent/chat.py`](../../../../../proto8/cmd/aos-agent/aos_agent/chat.py) | 逐行寄訊息並等候回答的互動迴圈。 |
-| [`aos_agent/common.py`](../../../../../proto8/cmd/aos-agent/aos_agent/common.py) | 共用分層 help、錯誤指路、旗標、daemon 協定與 agent 查找。 |
+| [`aos_agent/common.py`](../../../../../proto8/cmd/aos-agent/aos_agent/common.py) | 共用分層 help、錯誤指路、旗標、daemon 協定與活列查找及等待。 |
 | [`aos_agent/ctl/__init__.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/__init__.py) | 顯式派發 agent 的掛上與管理命令。 |
 | [`aos_agent/ctl/add.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/add.py) | 宣告檢查、掛上 agent 並等待 daemon 上表。 |
 | [`aos_agent/ctl/ls.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/ls.py) | 列出 daemon 表上的 proc 與狀態。 |
@@ -21,7 +21,7 @@
 | [`aos_agent/ctl/where.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/where.py) | 顯示 agent 的 stack 或工作區路徑。 |
 | [`aos_agent/ctl/who.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/who.py) | 由 stack 路徑查詢所屬 agent。 |
 | [`aos_agent/decl.py`](../../../../../proto8/cmd/aos-agent/aos_agent/decl.py) | 讀取介面宣告並呼叫定義中的子介面入口。 |
-| [`aos_agent/hints.py`](../../../../../proto8/cmd/aos-agent/aos_agent/hints.py) | 讀 agent 狀態、queue 數量與接續操作提示。 |
+| [`aos_agent/hints.py`](../../../../../proto8/cmd/aos-agent/aos_agent/hints.py) | 讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。 |
 | [`aos_agent/listen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/listen.py) | 等待回答或列出與追蹤歷史對話。 |
 | [`aos_agent/llm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/llm.py) | 分層解析腦設定命令並管理 agent 的覆蓋鍵與重設確認。 |
 | [`aos_agent/say.py`](../../../../../proto8/cmd/aos-agent/aos_agent/say.py) | 寄一則訊息到 agent 的 queue。 |
@@ -56,19 +56,3 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bin/aos-mcp`](../../../../../proto8/cmd/aos-mcp/bin/aos-mcp) | 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。 |
-
-## `proto8/cmd/aos-sandbox/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-sandbox`](../../../../../proto8/cmd/aos-sandbox/bin/aos-sandbox) | 照一份設定把 prog 關進沙箱再跑：身分（s6-setuidgid）、上限（s6-softlimit）、看得到哪些路徑與能不能連網（bwrap） |
-| [`examples/agent.json`](../../../../../proto8/cmd/aos-sandbox/examples/agent.json) | 設定（鍵：commands、ro、rw、env、net、mem_mb…） |
-| [`examples/bash-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/) | Run one bash command line in your workspace. Returns stdout and stderr merged; the last line is always [exit code N], your command's exit code (non-z… |
-| [`examples/bash-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/inner) | → `../../../../lib/base/bash` |
-| [`examples/bash-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/sandbox.json) | 設定（鍵：commands、ro、rw、net、mem_mb、cpu_s…） |
-| [`examples/cli-tool.json`](../../../../../proto8/cmd/aos-sandbox/examples/cli-tool.json) | 設定（鍵：commands、ro、rw、env、net） |
-| [`examples/thought-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/) | Hand one task to a fresh helper from an agent definition chosen by from or the tool registry entry env.AOS_THOUGHT_FROM default and get back only its… |
-| [`examples/thought-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/inner) | → `../../../../lib/agent/thought` |
-| [`examples/thought-boxed/sandbox-kernel.json`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/sandbox-kernel.json) | Sandbox (mode 2, judge in a procs-kernel) for the same tool: the daemon stack only ro (its ctl mailbox stays read-only, so add/stop/rm letters must g… |
-| [`examples/thought-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/sandbox.json) | Sandbox (mode 1, no judge) for a tool that talks to the daemon (thought; agents and self_tools the same way): rw the daemon stack AOS_DAEMON (letters… |
-| [`root/setup.sh`](../../../../../proto8/cmd/aos-sandbox/root/setup.sh) | 沙箱的「身分層」要 root 做的事：裝 s6 到 /usr/local、建帳號 aos-run、給它一個工作的地方、讓我（$SUDO_USER）能換成它 |

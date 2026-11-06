@@ -122,7 +122,7 @@ bool is_once(const Json& spec) {
         return false;
     }
     for (auto& [k, v] : spec.items()) {
-        if (k != "exec" && k != "ws" && k != "stack" && k != "def" && k != "limits" && k != "auto_restart" && k != "restart_on_stuck") {
+        if (k != "exec" && k != "ws" && k != "stack" && k != "def" && k != "limits" && k != "auto_restart" && k != "restart_on_stuck" && k != "stuck_after_ticks") {
             return false;   // 多了任何一個 key＝loop 設定（procs § 2 第 3 條）
         }
     }
@@ -148,7 +148,7 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             }
             vec.emplace_back(name, std::move(t));
         } else if (it.value.is_object()) {
-            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", aos::loop::CtlWindow::config_key, aos::loop::StateWindow::config_key, "ws", "stack", "def", "limits", "auto_restart", "restart_on_stuck"});
+            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", aos::loop::CtlWindow::config_key, aos::loop::StateWindow::config_key, "ws", "stack", "def", "limits", "auto_restart", "restart_on_stuck", "stuck_after_ticks"});
             if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解、相對 $ref 轉成絕對（10-24）
                 aos::Resolved ex = aos::loop::resolve_exec(r.value["exec"], r.dir_of("exec"));
                 if (ex.value.is_object()) {
@@ -158,6 +158,9 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             }
             if (!r.value.is_object()) {
                 throw Error{code::CfgBad, key + "[" + name + "]" + bad_target};
+            }
+            if (r.value.contains("stuck_after_ticks") && (!aos::is_count(r.value["stuck_after_ticks"]) || r.value["stuck_after_ticks"].get<long long>() <= 0)) {
+                throw Error{code::CfgBad, key + "[" + name + "].stuck_after_ticks must be a positive integer"};
             }
             fix_path(r.value, name, key, "ws", "workspace");
             fix_path(r.value, name, key, "stack", "stack");

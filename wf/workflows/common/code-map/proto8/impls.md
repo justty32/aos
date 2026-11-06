@@ -34,7 +34,7 @@
 |---|---|
 | [`CMakeLists.txt`](../../../../../proto8/impls/aos-daemon/CMakeLists.txt) | `aos-daemon daemon.json`——一個 aos-loop（同一個骨架 aos::loop::Loop）＋一張子 loop 的表（10-20 重寫）。 |
 | [`src/child/child.cpp`](../../../../../proto8/impls/aos-daemon/src/child/child.cpp) | 建立小格、啟動子 loop 或 exec 型子項，並回收與輸出子項狀態（說明見 child.hpp）。 |
-| [`src/child/child.hpp`](../../../../../proto8/impls/aos-daemon/src/child/child.hpp) | 表上的一個 proc（11-03 起 loops／execs 統稱 procs）＝一支子 loop（loop 型），或 aos-exec 跑一次（exec 型）。 |
+| [`src/child/child.hpp`](../../../../../proto8/impls/aos-daemon/src/child/child.hpp) | 表上的一個 proc（11-03 起 loops／execs 統稱 procs）＝一支子 loop（loop 型），或 aos-exec 跑一次（exec 型），並保存公開窗 stuck 判定資料。 |
 | [`src/child/limits.cpp`](../../../../../proto8/impls/aos-daemon/src/child/limits.cpp) | proc 的份額 limits（說明見 limits.hpp；11-05 feat-proto 件 5，等同 s6-softlimit／s6-setuidgid）。 |
 | [`src/child/limits.hpp`](../../../../../proto8/impls/aos-daemon/src/child/limits.hpp) | proc 的份額 limits（11-05 feat-proto 件 5，使用者「會想要限制特定aos proc所占用的資源。 |
 | [`src/child/refs.cpp`](../../../../../proto8/impls/aos-daemon/src/child/refs.cpp) | 把表與內嵌單子的路徑改寫成相對 daemon 或小格的參照。 |
@@ -43,11 +43,12 @@
 | [`src/daemon/body.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/body.cpp) | 執行 daemon 自己的身體並記錄結果（說明見 daemon.hpp）。 |
 | [`src/daemon/ctl.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/ctl.cpp) | 由控制窗推得期望表、停止與睡眠集合（說明見 daemon.hpp）。 |
 | [`src/daemon/daemon.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.cpp) | 初始化設定、展開 tick 普通子項、設定環境、路徑、信箱與 stack 鎖（說明見 daemon.hpp）。 |
-| [`src/daemon/daemon.hpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.hpp) | Daemon 管普通 proc 表、tick 設定展開、手把與狀態窗；aos-loop 的 Loop 子類別，內部標頭。 |
+| [`src/daemon/daemon.hpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.hpp) | Daemon 管普通 proc 表、stuck 判定、tick 設定展開、手把與狀態窗；aos-loop 的 Loop 子類別，內部標頭。 |
 | [`src/daemon/failure.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/failure.cpp) | 從子項結束碼與 stderr 整理停止原因（說明見 daemon.hpp）。 |
 | [`src/daemon/mailbox.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/mailbox.cpp) | 信箱 procs_ctl_mailbox（10-29，medium-plan § 二 4、§ 四 3；NORMS N-28 的 10-29 補、N-16；11-03 改名 procs、多 stop／start；說明見 daemon.hpp）。 |
 | [`src/daemon/procs.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/procs.cpp) | 解讀 proc 名單、辨認寫法、整理路徑與合併期望表（說明見 daemon.hpp）。 |
 | [`src/daemon/reconcile.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/reconcile.cpp) | 按期望表啟動、收回與調整子項（說明見 daemon.hpp）。 |
+| [`src/daemon/stuck.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/stuck.cpp) | 依公開 ctl/state 窗的刺激與兩鐘期限標記卡住，並選擇收回重起。 |
 | [`src/daemon/table.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/table.cpp) | 維護 proc 表、記錄子項與處理狀態窗寫入結果（說明見 daemon.hpp）。 |
 | [`src/daemon/tend.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/tend.cpp) | 停止、收回與照顧子項，並在 daemon 收工時等它們退完（說明見 daemon.hpp）。 |
 | [`src/daemon/windows.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/windows.cpp) | 管轄手把 procs_ctl 與含樹時鐘 tick 的 procs_state 狀態窗（說明見 daemon.hpp）。 |
