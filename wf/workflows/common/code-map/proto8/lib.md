@@ -25,7 +25,7 @@
 | [`memory/`](../../../../../proto8/lib/agent/memory/) | 查共用的層級式知識庫：read 一個節點（文＋子節點目錄）、ls 列子節點、find 用關鍵字找節點；唯讀 |
 | [`memory_export/`](../../../../../proto8/lib/agent/memory_export/) | 把一個知識庫（或其中一棵子樹）整棵印成一份 Markdown，給人看；唯讀 |
 | [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | 讓叫我的 agent 改自己的工具箱：加（add）、拿掉（rm）、列（ls）；改的是那隻的覆蓋層，定義不動 |
-| [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
+| [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定或工具設定預設定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
 
 ## `proto8/lib/aos/`
 

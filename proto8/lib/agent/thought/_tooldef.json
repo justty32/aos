@@ -1,10 +1,11 @@
 {
-  "description": "Hand one task to a fresh helper from an agent definition you choose and get back only its short conclusion; its tool calls stay out of your history. The helper knows only goal and context, keeps the definition's tools unless tools is given, and uses your brain unless endpoint says otherwise. If your brain settings cannot be read, the call fails: give endpoint to choose one. It is removed when done unless keep is true. Depth travels as the AOS_THOUGHT_DEPTH launch parameter; helpers may start helpers only one level deeper. Example: {\"from\": \"helpers/reviewer\", \"goal\": \"Review the result and return one sentence\"}. Details: memory node agents/thought.",
+  "description": "Hand one task to a fresh helper from an agent definition chosen by from or the tool registry entry env.AOS_THOUGHT_FROM default and get back only its short conclusion; its tool calls stay out of your history. The helper knows only goal and context, keeps the definition's tools unless tools is given, and uses your brain unless endpoint says otherwise. If your brain settings cannot be read, the call fails: give endpoint to choose one. It is removed when done unless keep is true. Depth travels as the AOS_THOUGHT_DEPTH launch parameter; helpers may start helpers only one level deeper. Example: {\"from\": \"helpers/reviewer\", \"goal\": \"Review the result and return one sentence\"}. Details: memory node agents/thought. Omit from to use the configured default; if neither is given, FromMissing. Both paths resolve relative to your workspace.",
   "env": [
     "AOS_DAEMON"
   ],
   "errors": [
     "ArgumentsBad",
+    "FromMissing",
     "LaunchFailed",
     "CommandFailed",
     "WriteFailed",
@@ -21,7 +22,7 @@
     "properties": {
       "from": {
         "type": "string",
-        "description": "required agent definition folder, relative to your workspace or absolute; it must declare aos-agent in interfaces.json"
+        "description": "optional agent definition folder; overrides the tool registry entry env.AOS_THOUGHT_FROM default (set with add --envs AOS_THOUGHT_FROM=helpers/basic). Both paths are relative to your workspace or absolute; the definition must declare aos-agent in interfaces.json. Neither given: FromMissing"
       },
       "goal": {
         "type": "string",
@@ -82,7 +83,6 @@
       }
     },
     "required": [
-      "from",
       "goal"
     ]
   }
