@@ -12,4 +12,6 @@
   - **沒有 `AOS_HUB`**（使用者 10-30「都照建議」，[thinking 10-30 eca](../../../../thinking/2026-10/30/eca/09-方向題.md#決定10-30) 衝突 2、4；[10-30 map-review](../../../../thinking/2026-10/30/map-review/01-使用者原文.md#決定10-30) 第 5 點）：aos-eca〔11-04 併進 [aos-agent](../../../../cmd/aos-agent/README.md)，同樣建在 aos-daemon 上〕 建在 aos-daemon 上、不設自己的常駐 kernel，用哪個 daemon 照 `AOS_DAEMON`（上面），不另設變數（一個 hub 一個變數，這裡的 hub 就是 daemon；另設＝同一個資料夾兩個名字，C-54 一詞一義）。`aos-hub` 這個名字保留，以後真有通用的 hub 再用（使用者 10-30）。
     - **11-05 例外 `AOS_DAEMON` 沒設＝找 cwd 的 `./.stack`**（使用者 portable-flow 題 3 選「沒設就找 ./.stack」，不是推薦項；[thinking](../../../../thinking/2026-11/05/portable-flow/README.md)）：aos-daemon-ctl、aos-agent、`using-aos-agent.sh` 在 `--daemon`、`AOS_DAEMON` 都沒給時用 `$PWD/.stack`（轉絕對、不往上層找）；有設照用。這條對 ② 「不猜位置」開一個口：猜的只有「daemon 在這個 ws 裡起」這一種位置。
 
+    - **11-06 註（no-pid P5b）**：找 daemon 收成一處 `py/daemon_ctl.py` 的 `find_daemon`；直接 import 並使用它的指令是 `aos-daemon-ctl`、`aos-agent`、`aos-eca-screen`。順序為 `--daemon`（明給形）＞ `$AOS_DAEMON` ＞ cwd 的 `./.stack`（screen 沒有 `--daemon` 旗標、從後兩者找），一律轉 realpath（解開捷徑）；只驗「是資料夾」，信箱不在到寄信時才報 `MailboxMissing`（P3 代定 2）。不掃 `/proc`、不往上層爬。見 [no-pid 10 P3](../../../../thinking/2026-11/05/no-pid/10-P3實作結果.md)。
+
 （11-05 拆檔時，原本排在「四種性質」表後面的「11-05 例外 `AOS_DAEMON` 沒設＝找 cwd 的 `./.stack`」一條搬到這裡、接在 `AOS_DAEMON` 各項後面，字沒改。）
