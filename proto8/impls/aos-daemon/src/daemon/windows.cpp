@@ -13,8 +13,8 @@
 //   write_parts     procs 表超過 PART_ROWS 列就切檔（10-23 晚）；clean_parts 寫好才清舊分檔
 #include "daemon/daemon.hpp"
 
-#include "aos/files.hpp"
-#include "aos/proc.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 
 #include <cerrno>
 #include <cstdio>

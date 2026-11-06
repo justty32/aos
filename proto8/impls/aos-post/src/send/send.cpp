@@ -16,9 +16,9 @@
 //   這裡的順序只會缺一個號（信留在 tmp/）。鎖握到 rename 完，所以到 new/ 的順序＝取號順序。
 #include "common/common.hpp"
 
-#include "aos/files.hpp"
+#include "aos/util/files.hpp"
 #include "aos/lock.hpp"
-#include "aos/proc.hpp"
+#include "aos/util/proc.hpp"
 
 #include <filesystem>
 

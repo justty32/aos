@@ -1,10 +1,10 @@
 // table.cpp：【table】read_table、check、pick、next_for（說明見 table.hpp；10-22；next 分岔 10-30）。
 #include "table/table.hpp"
 
-#include "aos/cli.hpp"
-#include "aos/files.hpp"
+#include "aos/util/cli.hpp"
+#include "aos/util/files.hpp"
 #include "aos/loop.hpp"
-#include "aos/text.hpp"
+#include "aos/util/text.hpp"
 
 namespace aos::fsm {
 

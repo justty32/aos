@@ -1,7 +1,7 @@
-// proc.cpp：【aos-util】子程序：起、看結束了沒、整群送訊號、收屍、/proc 資訊、memfd（說明見 include/aos/proc.hpp）。
-#include "aos/error.hpp"
-#include "aos/files.hpp"
-#include "aos/proc.hpp"
+// proc.cpp：【aos-util】子程序：起、看結束了沒、整群送訊號、收屍、/proc 資訊、memfd（說明見 include/aos/util/proc.hpp）。
+#include "aos/util/error.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 
 #include <cerrno>
 #include <chrono>

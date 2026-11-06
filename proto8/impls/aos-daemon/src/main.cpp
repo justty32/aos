@@ -11,7 +11,7 @@
 // 「aos-daemon: warning: …」（D4）。`--help`＝英文說明印 stdout、退 0（R3）。PATH 不動（子 loop 要的 aos-exec、aos-loop 由呼叫者放進 PATH）。
 #include "daemon/daemon.hpp"
 
-#include "aos/signals.hpp"
+#include "aos/util/signals.hpp"
 
 #include <cstdio>
 #include <exception>

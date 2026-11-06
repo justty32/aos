@@ -22,10 +22,10 @@
 //   acquire       try_acquire，拿不到每 20 毫秒再試，最多等 wait_ms（0＝只試一次、負的＝一直等）
 //   release       放鎖：回 true；鎖不在回 false。不看是誰的（約定，決定 10）
 //
-// 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/error.hpp）：鎖資料夾建不了（上一層不在、沒權限）MkdirFailed、名牌寫不了 WriteFailed。
+// 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/util/error.hpp）：鎖資料夾建不了（上一層不在、沒權限）MkdirFailed、名牌寫不了 WriteFailed。
 #pragma once
 
-#include "aos/io.hpp"
+#include "aos/util/io.hpp"
 
 #include <optional>
 #include <string>

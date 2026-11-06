@@ -1,7 +1,7 @@
 // limits.cpp：【child】proc 的份額 limits（說明見 limits.hpp；11-05 feat-proto 件 5，等同 s6-softlimit／s6-setuidgid）。
 #include "child/limits.hpp"
 
-#include "aos/files.hpp"
+#include "aos/util/files.hpp"
 
 #include <cerrno>
 #include <cstdio>

@@ -8,7 +8,7 @@
 //   - 捷徑：寫到捷徑指的那份檔，捷徑本身不動
 #include "doc/doc.hpp"
 
-#include "aos/files.hpp"
+#include "aos/util/files.hpp"
 
 #include <cerrno>
 #include <cstdlib>

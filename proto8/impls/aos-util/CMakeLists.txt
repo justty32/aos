@@ -13,7 +13,7 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
 # 函式庫 target＝專案名。STATIC（不照 dcap 的 SHARED）：執行檔把它靜態連進去，啟動時少載入 .so。
-# 公開標頭（include/aos/*.hpp）用到 nlohmann，所以 nlohmann 是 PUBLIC。
+# 公開標頭（include/aos/util/*.hpp）用到 nlohmann，所以 nlohmann 是 PUBLIC。
 add_library(aos-util STATIC ${SOURCES})
 target_include_directories(aos-util PUBLIC include)
 target_compile_features(aos-util PUBLIC cxx_std_20)

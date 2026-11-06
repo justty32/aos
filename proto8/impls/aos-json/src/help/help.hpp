@@ -1,7 +1,7 @@
 // help.hpp：【help】aos-json 子命令的 usage、旗標說明與共同旗標解析入口。
 #pragma once
 
-#include "aos/cli.hpp"
+#include "aos/util/cli.hpp"
 
 namespace aos::json {
 

@@ -19,10 +19,10 @@
 //   resolve_keys    轉交 aos-directive；設定檔、ctl 的指示詞（10-23 晚：aos 讀的 JSON 都解）：整份先換一層，再把自己讀的那幾格整個解，其他 key 不碰
 //
 // 規則見 aos-loop/README.md。
-// 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/error.hpp）。
+// 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/util/error.hpp）。
 #pragma once
 
-#include "aos/cli.hpp"
+#include "aos/util/cli.hpp"
 #include "aos/directive.hpp"
 #include "aos/exec.hpp"
 

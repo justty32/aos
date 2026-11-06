@@ -7,7 +7,7 @@ include(../cmake/settings.cmake)
 project(aos-json CXX)
 
 # 用到的兄弟專案（全家都包一層 if(NOT TARGET)）：
-#   aos-util       錯誤、三扇門、旗標（aos/cli.hpp）、路徑
+#   aos-util       錯誤、三扇門、旗標（aos/util/cli.hpp）、路徑
 #   aos-directive  --resolve 用它解指示詞（跟 aos-loop、aos-fsm、aos-exec 同一套）
 if(NOT TARGET aos-util)
   add_subdirectory(../aos-util aos-util-build)

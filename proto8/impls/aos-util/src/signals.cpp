@@ -1,5 +1,5 @@
-// signals.cpp：【aos-util】建立訊號集合、阻擋／取出與收 SIGINT／SIGTERM／SIGHUP：擋住、用 signalfd 讀（說明見 include/aos/signals.hpp）。
-#include "aos/signals.hpp"
+// signals.cpp：【aos-util】建立訊號集合、阻擋／取出與收 SIGINT／SIGTERM／SIGHUP：擋住、用 signalfd 讀（說明見 include/aos/util/signals.hpp）。
+#include "aos/util/signals.hpp"
 
 #include <cerrno>
 #include <ctime>

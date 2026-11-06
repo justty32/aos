@@ -3,8 +3,8 @@
 // 只用 Linux 的原子動作（medium-plan § 五、決定 18）：mkdir（拿）、rename（放、收）。
 #include "common/common.hpp"
 
-#include "aos/files.hpp"
-#include "aos/proc.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 
 #include <cerrno>
 #include <cstdio>

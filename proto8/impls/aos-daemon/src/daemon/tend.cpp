@@ -1,7 +1,7 @@
 // tend.cpp：【daemon】停止、收回與照顧子項，並在 daemon 收工時等它們退完（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
-#include "aos/files.hpp"
-#include "aos/proc.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 #include <csignal>
 #include <filesystem>
 #include <sstream>

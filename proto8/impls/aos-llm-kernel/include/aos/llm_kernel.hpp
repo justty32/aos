@@ -28,10 +28,10 @@
 //   reply_of       回信的內容合不合（{"message": 物件, …} 或 {"error": {"code": 字串, "msg": 字串}}）：合＝原樣、不合＝nullopt
 //   read_reply     讀 reply.json、照 reply_of 驗；壞了回 nullopt
 //
-// 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/error.hpp）。
+// 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/util/error.hpp）。
 #pragma once
 
-#include "aos/io.hpp"
+#include "aos/util/io.hpp"
 #include "aos/post.hpp"
 
 #include <optional>

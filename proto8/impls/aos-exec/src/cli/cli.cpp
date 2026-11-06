@@ -4,8 +4,8 @@
 #include "env/env.hpp"
 #include "find/find.hpp"
 #include "launch/launch.hpp"
-#include "aos/cli.hpp"
-#include "aos/files.hpp"
+#include "aos/util/cli.hpp"
+#include "aos/util/files.hpp"
 
 #include <cstdio>
 #include <exception>

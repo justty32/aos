@@ -1,9 +1,9 @@
 // pack.cpp：【pack】endpoint 能力包（說明見 pack.hpp）。
 #include "pack/pack.hpp"
 
-#include "aos/io.hpp"
+#include "aos/util/io.hpp"
 #include "aos/directive.hpp"
-#include "aos/files.hpp"
+#include "aos/util/files.hpp"
 
 namespace aos::llm_kernel {
 

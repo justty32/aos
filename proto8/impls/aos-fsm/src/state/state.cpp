@@ -1,8 +1,8 @@
 // state.cpp：【state】stage.txt（說明見 state.hpp）。
 #include "state/state.hpp"
 
-#include "aos/files.hpp"
-#include "aos/text.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/text.hpp"
 
 #include <cerrno>
 #include <cstring>

@@ -29,7 +29,7 @@
 
 | 我想找… | 去哪 |
 |---|---|
-| 錯誤行／提醒行、stdin 讀 JSON、stdout 印一行（C++） | `impls/aos-util` 的 `aos/io.hpp`；旗標 `parse_cli` 在 `aos/cli.hpp` |
+| 錯誤行／提醒行、stdin 讀 JSON、stdout 印一行（C++） | `impls/aos-util` 的 `aos/util/io.hpp`；旗標 `parse_cli` 在 `aos/util/cli.hpp` |
 | Python 命令列的旗標與錯誤行 | `py/aos_flags.py`（人打的指令共用）；lib 工具共用 `lib/tool_io.py` |
 | 某支人打的指令 | `cmd/<名>/bin/<名>`，說明在 [cmd/README](../../../proto8/cmd/README.md) |
 | agent 範本、問腦的 kernel、判官 | `templates/`、`kernel/`（判官工具本身在 `lib/aos/judge`） |

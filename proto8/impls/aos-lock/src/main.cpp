@@ -8,9 +8,9 @@
 // 名牌上的持有者預設是**叫 aos-lock 的那個行程**（getppid）：aos-lock 拿完就退，名牌寫它自己的 pid 等於一拿到就死了。
 // 要寫別的行程用 --pid。結束碼照 N-43：0 成功、10 沒東西（拿不到、沒有鎖）、1 錯。出錯 stderr 一行「aos-lock: error: 代號 原因」（11-05 stdio-unify R1）。
 // 子命令前先 parse_cli（旗標表是空的；只認 --help）：不認得的旗標＝FlagUnknown，子命令不認得才 CommandUnknown（R4）。
-#include "aos/cli.hpp"
+#include "aos/util/cli.hpp"
 #include "aos/lock.hpp"
-#include "aos/proc.hpp"
+#include "aos/util/proc.hpp"
 
 #include <exception>
 #include <iostream>

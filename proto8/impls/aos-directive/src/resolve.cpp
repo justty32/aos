@@ -7,7 +7,7 @@
 // $ref 可以是陣列（10-23 使用者）：每一份各自解完再合成一份（ref.cpp 的 merge）。
 #include "internal.hpp"
 
-#include "aos/files.hpp"
+#include "aos/util/files.hpp"
 
 namespace aos::directive {
 

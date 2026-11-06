@@ -1,7 +1,7 @@
 // table.cpp：【daemon】維護 proc 表、記錄子項與處理狀態窗寫入結果（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
-#include "aos/files.hpp"
-#include "aos/proc.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 
 namespace aos::daemon {
 

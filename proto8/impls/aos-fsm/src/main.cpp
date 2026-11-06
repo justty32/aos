@@ -14,9 +14,9 @@
 // 只看格的結束碼：不讀格的 stdout、不轉述格的 stderr（N-38）。表上沒接住的碼（字串 next 的非 0，含 10）＝state 不動、原碼往上。
 // 收到 SIGINT／SIGTERM／SIGHUP：轉給那格、等它結束，state 照表寫完（含分岔），再以 128＋N 結束（P-36、N-38）。
 // 自己出錯：stderr 一行「aos-fsm: error: 代號 原因」、退 1（11-05 stdio-unify R1）。`--help`＝英文說明印 stdout、退 0（R3）。
-#include "aos/files.hpp"
-#include "aos/proc.hpp"
-#include "aos/signals.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
+#include "aos/util/signals.hpp"
 #include "aos/loop.hpp"
 
 #include "state/state.hpp"

@@ -6,8 +6,8 @@
 // 自己出錯：stderr 一行「aos-llm-kernel: error: 代號 原因」、退 1（11-05 stdio-unify R1）。`--help`＝英文說明印 stdout、退 0（R3）。一封信的錯不是 kernel 的錯：寫進那封信的回信。
 #include "serve/serve.hpp"
 
-#include "aos/cli.hpp"
-#include "aos/signals.hpp"
+#include "aos/util/cli.hpp"
+#include "aos/util/signals.hpp"
 
 #include <cstdio>
 #include <cstdlib>

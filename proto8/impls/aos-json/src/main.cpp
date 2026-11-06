@@ -8,7 +8,7 @@
 #include "common/common.hpp"
 #include "help/help.hpp"
 
-#include "aos/cli.hpp"
+#include "aos/util/cli.hpp"
 
 #include <cstdio>
 #include <exception>

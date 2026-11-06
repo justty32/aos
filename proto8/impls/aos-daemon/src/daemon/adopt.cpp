@@ -1,7 +1,7 @@
 // adopt.cpp：【daemon】接回上次的 proc 表與小格裡仍活著的子 loop（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
-#include "aos/files.hpp"
-#include "aos/proc.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 #include <filesystem>
 
 namespace aos::daemon {

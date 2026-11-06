@@ -1,8 +1,8 @@
 // send.cpp：【send】找信箱、讀 body、寄信、撤信（說明見 send.hpp）。
 #include "send/send.hpp"
 
-#include "aos/files.hpp"
-#include "aos/proc.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 
 #include <cerrno>
 #include <cstdlib>

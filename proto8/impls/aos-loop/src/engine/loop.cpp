@@ -9,7 +9,7 @@
 
 #include "run/run.hpp"
 
-#include "aos/proc.hpp"
+#include "aos/util/proc.hpp"
 
 #include <chrono>
 #include <cstdio>

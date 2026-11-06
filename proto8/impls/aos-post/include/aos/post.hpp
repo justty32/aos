@@ -46,10 +46,10 @@
 //   is_ordered    名字是不是有序名（^[0-9]{12}\.）
 //   sort_letters  照處理順序排
 //
-// 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/error.hpp）。
+// 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/util/error.hpp）。
 #pragma once
 
-#include "aos/io.hpp"
+#include "aos/util/io.hpp"
 
 #include <optional>
 #include <string>

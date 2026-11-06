@@ -12,11 +12,11 @@
 //  aos-exec 覆寫（aos-loop 的 src/run/inline.cpp；N-57 的 10-24 註、thinking 2026-10-24-exec-relative）〕
 // 10-21 晚以前的 find_entry／resolve_ws／prepare_env／apply_env／launch 五步拆不開了（.env 要在挑入口之前讀、
 // 每走進一層都要 cd 和 setenv），收進 run_cli，不再公開。
-// 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/error.hpp）；run_cli 自己接住印出來。
+// 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/util/error.hpp）；run_cli 自己接住印出來。
 #pragma once
 
-#include "aos/error.hpp"
-#include "aos/io.hpp"
+#include "aos/util/error.hpp"
+#include "aos/util/io.hpp"
 
 #include <string>
 #include <vector>

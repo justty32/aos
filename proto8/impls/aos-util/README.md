@@ -2,7 +2,7 @@
 
 `libaos-util - aos 這一家命令列工具共用的小函式庫`（NAME，C-54 R1）
 
-**一句話：aos 這一家命令列工具共用的小函式庫——錯誤型別與通用的錯誤代號、三扇門（stdin／stdout／stderr）、旗標（`aos/cli.hpp`；較早一代沒人叫的 `aos/flags.hpp` 11-04 刪了）、設定檔、路徑與原子寫入、子程序、訊號。** 沒有執行檔，只出 `lib/libaos-util.a`。全家慣例見 [impls/README.md](../README.md)。
+**一句話：aos 這一家命令列工具共用的小函式庫——錯誤型別與通用的錯誤代號、三扇門（stdin／stdout／stderr）、旗標（`aos/util/cli.hpp`；較早一代沒人叫的 `aos/flags.hpp` 11-04 刪了）、設定檔、路徑與原子寫入、子程序、訊號。** 沒有執行檔，只出 `lib/libaos-util.a`。全家慣例見 [impls/README.md](../README.md)。
 
 像一家店的共用倉庫：每支工具自己只放自己獨有的東西，「好幾支都要」的一律放這裡，一份就好。
 
@@ -31,7 +31,7 @@ int main() {
 
 ## 公開介面：目錄、文字與訊號
 
-`aos/files.hpp` 提供目錄操作與指定暫存路徑的文字原子寫入。
+`aos/util/files.hpp` 提供目錄操作與指定暫存路徑的文字原子寫入。
 
 ```cpp
 bool is_dir(const std::string& path);
@@ -51,7 +51,7 @@ std::optional<TextWriteError> write_text(const std::string& path, const std::str
 - `move` 成功回 true；遇 ENOENT／ENOTEMPTY／EEXIST 回 false，其他丟 `WriteFailed`。`remove_tree` 遞迴刪除並忽略錯誤。
 - `write_text` 不建目錄、不修改文字；先以 open（0666 受 umask 影響，既有 tmp 保留權限）開啟指定 `tmp`，write 重試 EINTR，完整寫入並檢查 close 後 rename 至 `path`。成功回 nullopt；任一步失敗都嘗試 unlink tmp，回操作與 errno（close 失敗歸 write，write 回 0 歸 EIO），讓呼叫者決定錯誤代號與訊息。清 tmp 的錯誤忽略。
 
-`aos/signals.hpp` 另提供 `sigset_t the_signals()`、`void block_signals()`、`int take_signal()`：同一組 SIGINT／SIGTERM／SIGHUP；開執行緒前阻擋，之後非阻塞取出一個訊號，沒有就回 0。`SignalCatcher` 也使用這組訊號，另保留它的 signalfd、遮罩還原與睡眠介面。
+`aos/util/signals.hpp` 另提供 `sigset_t the_signals()`、`void block_signals()`、`int take_signal()`：同一組 SIGINT／SIGTERM／SIGHUP；開執行緒前阻擋，之後非阻塞取出一個訊號，沒有就回 0。`SignalCatcher` 也使用這組訊號，另保留它的 signalfd、遮罩還原與睡眠介面。
 
 `write_json` 維持原介面與行為。
 

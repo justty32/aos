@@ -17,8 +17,8 @@
 #include "child/child.hpp"
 #include "child/limits.hpp"
 
-#include "aos/files.hpp"
-#include "aos/proc.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 
 #include <cerrno>
 #include <csignal>

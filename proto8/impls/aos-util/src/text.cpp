@@ -1,6 +1,6 @@
-// text.cpp：【aos-util】UTF-8 字串的小工具（說明見 include/aos/text.hpp）。
+// text.cpp：【aos-util】UTF-8 字串的小工具（說明見 include/aos/util/text.hpp）。
 // is_utf8 原在 aos-exec 的 dotenv.cpp；空白那幾個 10-22 為 .env 的值照 python-dotenv 認 Unicode 空白而寫，aos-fsm 的 state 也用。
-#include "aos/text.hpp"
+#include "aos/util/text.hpp"
 
 namespace aos {
 

@@ -5,7 +5,7 @@
 // 兩次之間收到的就排在 kernel 裡，下一次開跑前用 sigtimedwait（不等）取出來。
 #include "run/run.hpp"
 
-#include "aos/signals.hpp"
+#include "aos/util/signals.hpp"
 
 namespace aos::loop {
 

@@ -9,7 +9,7 @@
 #include "find/find.hpp"
 
 #include "env/env.hpp"
-#include "aos/files.hpp"
+#include "aos/util/files.hpp"
 
 #include <cerrno>
 #include <cstring>

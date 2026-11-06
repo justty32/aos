@@ -1,5 +1,5 @@
-// io.cpp：【aos-util】三扇門——stdin 讀一份 JSON、stdout 印一行、stderr 印錯誤行／提醒行（說明見 include/aos/io.hpp）。
-#include "aos/io.hpp"
+// io.cpp：【aos-util】三扇門——stdin 讀一份 JSON、stdout 印一行、stderr 印錯誤行／提醒行（說明見 include/aos/util/io.hpp）。
+#include "aos/util/io.hpp"
 
 #include <cctype>
 #include <cstdio>

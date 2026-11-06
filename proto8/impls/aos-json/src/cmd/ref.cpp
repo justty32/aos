@@ -4,7 +4,7 @@
 #include "cmd/edit.hpp"
 
 #include "help/help.hpp"
-#include "aos/files.hpp"
+#include "aos/util/files.hpp"
 
 #include <algorithm>
 #include <filesystem>

@@ -1,10 +1,10 @@
-// files.cpp：【aos-util】路徑、讀檔與文字及 JSON 原子寫入（說明見 include/aos/files.hpp）。
+// files.cpp：【aos-util】路徑、讀檔與文字及 JSON 原子寫入（說明見 include/aos/util/files.hpp）。
 //
 // 為什麼要「原子寫入」：ctl 窗、state 窗是兩個行程透過檔案講話。如果直接打開舊檔、清空、再寫，
 // 讀的人剛好在中間讀到，就會讀到半份（壞 JSON）或空的。改成「寫到旁邊的暫存檔 → rename 蓋過去」：
 // rename 在同一個檔案系統裡是原子的，讀的人只會看到「整份舊的」或「整份新的」，不會看到一半。
 // 暫存檔放在同一個資料夾（.名字.tmp），才保證在同一個檔案系統上（跨檔案系統的 rename 會失敗）。
-#include "aos/files.hpp"
+#include "aos/util/files.hpp"
 
 #include <cstdio>
 #include <cerrno>

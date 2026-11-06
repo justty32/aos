@@ -17,8 +17,8 @@
 //   proc_fields   pid、started_at_ticks、boot_id（11-02 原 heartbeat，時間欄拿掉）
 #include "engine/engine.hpp"
 
-#include "aos/files.hpp"
-#include "aos/proc.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 
 #include <cerrno>
 #include <csignal>

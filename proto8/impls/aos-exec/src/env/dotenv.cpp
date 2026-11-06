@@ -8,8 +8,8 @@
 #include "env/env.hpp"
 
 #include "aos/directive.hpp"
-#include "aos/files.hpp"
-#include "aos/text.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/text.hpp"
 
 #include <cerrno>
 #include <cstdlib>

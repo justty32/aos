@@ -1,7 +1,7 @@
 // body.cpp：【daemon】執行 daemon 自己的身體並記錄結果（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
-#include "aos/files.hpp"
-#include "aos/proc.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 #include <csignal>
 #include <unistd.h>
 

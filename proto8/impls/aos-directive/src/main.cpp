@@ -5,9 +5,9 @@
 // stdin 一份 JSON（空的＝{}、多份＝InputExtra），以呼叫者的 cwd 為基準解開指示詞（見 aos/directive.hpp），
 // stdout 印一行解好的 JSON、退出 0；出錯 stderr 印一行「aos-directive: error: 代號 原因」、退出 1（11-05 stdio-unify R1）。
 // `--help`＝英文說明印 stdout、退 0（R3）。不收任何參數：命令列照 P-44 用 aos::parse_cli 解（旗標＝FlagUnknown、位置參數＝ArgumentsBad）。
-#include "aos/cli.hpp"
+#include "aos/util/cli.hpp"
 #include "aos/directive.hpp"
-#include "aos/io.hpp"
+#include "aos/util/io.hpp"
 
 #include <cstdio>
 #include <exception>

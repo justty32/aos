@@ -3,8 +3,8 @@
 // 判死活照 N-17：pid＋started_at_ticks＋boot_id（同 aos-daemon 的 adopt 看子 loop）；不看 flock（衝突 6：kernel 那套各管各的）。
 #include "common/common.hpp"
 
-#include "aos/files.hpp"
-#include "aos/proc.hpp"
+#include "aos/util/files.hpp"
+#include "aos/util/proc.hpp"
 
 #include <cerrno>
 #include <chrono>

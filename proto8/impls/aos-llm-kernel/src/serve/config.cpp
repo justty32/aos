@@ -1,9 +1,9 @@
 // config.cpp：【serve】讀 kernel 設定、解指示詞與 endpoint 函數路徑（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
-#include "aos/cli.hpp"
+#include "aos/util/cli.hpp"
 #include "aos/directive.hpp"
-#include "aos/files.hpp"
+#include "aos/util/files.hpp"
 
 namespace aos::llm_kernel {
 

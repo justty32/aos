@@ -5,8 +5,8 @@
 #pragma once
 
 #include "aos/directive.hpp"
-#include "aos/error.hpp"
-#include "aos/io.hpp"
+#include "aos/util/error.hpp"
+#include "aos/util/io.hpp"
 
 namespace aos::json {
 

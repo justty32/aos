@@ -15,7 +15,7 @@
 // 子命令前先 parse_cli（旗標表是空的；只認 --help）：不認得的旗標＝FlagUnknown，子命令不認得才 CommandUnknown（R4）；子命令後的 --help＝那個子命令的說明。
 #include "help/help.hpp"
 
-#include "aos/cli.hpp"
+#include "aos/util/cli.hpp"
 #include "aos/post.hpp"
 
 #include <cstdio>

@@ -14,8 +14,8 @@
 #include "send/send.hpp"
 #include "wait/wait.hpp"
 
-#include "aos/cli.hpp"
-#include "aos/signals.hpp"
+#include "aos/util/cli.hpp"
+#include "aos/util/signals.hpp"
 
 #include <cstdio>
 #include <exception>

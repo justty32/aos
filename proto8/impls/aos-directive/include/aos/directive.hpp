@@ -21,8 +21,8 @@
 // 指標取的是檔的原文（不穿過裡面的 $ref），取到的值再接著解。
 #pragma once
 
-#include "aos/error.hpp"
-#include "aos/io.hpp"
+#include "aos/util/error.hpp"
+#include "aos/util/io.hpp"
 
 #include <filesystem>
 #include <string>
