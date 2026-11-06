@@ -59,7 +59,7 @@ exit codes: 0 removed; 1 error (ToolMissing, ToolsMissing...).
 """,
     "reset": """aos-agent tools reset - delete this agent's tools overlay
 
-usage: aos-agent [--daemon D] tools [--target NAME] reset [--yes]
+usage: aos-agent [--daemon D] tools [--target NAME] reset [-y]
        aos-agent tools reset --help
 
 flags:

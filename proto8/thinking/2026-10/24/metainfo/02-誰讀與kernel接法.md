@@ -1,5 +1,7 @@
 ← [回入口](README.md)｜上一份：[01-位置與格式](01-位置與格式.md)
 
+> **11-06 註（文件核對，H 隊）**：以下保留當時規劃；現行 aos-tools 的資料夾工具只讀 `_metainfo.json`，不讀 `_metainfo`（只有舊名就當沒寫；JSON 內的 `_metainfo` key 照舊）。出處：`proto8/cmd/aos-tools/bin/aos-tools` 的 `inspect()`；11-04 已裁定資料檔加 `.json`。
+
 > 以下全部是使用者 10-24「都按建議做」之後照推薦定的（可翻案），條文還沒落。
 
 <a id="1-誰讀"></a>

@@ -36,7 +36,7 @@ exit codes: 0 changed; 1 error (ArgumentsBad, LlmBad, CommandMissing...).
 """,
     "reset": """aos-agent llm reset - delete this agent's changed brain settings
 
-usage: aos-agent [--daemon D] llm [--target NAME] reset [--yes]
+usage: aos-agent [--daemon D] llm [--target NAME] reset [-y]
        aos-agent llm reset --help
 
 flags:

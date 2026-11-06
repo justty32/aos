@@ -1,18 +1,18 @@
 # aos_agent/listen.py - 等待回答或列出與追蹤歷史對話。
 HELP = """aos-agent listen - print the agent's answer
 
-usage: aos-agent [--daemon D] listen [--target NAME] [--timeout-s SECS | --last N [--follow]]
+usage: aos-agent [--daemon D] listen [--target NAME] [--timeout-s SECS | --last N [--follow] | --follow]
 
-Without --last: wait for the answer to the latest question and print only its text (so
-> file and pipes work; notes go to stderr). --last N prints the last N exchanges as blocks:
-a line "== #N", the question lines prefixed "> ", then the answer. --follow keeps printing
-new ones; Ctrl-C leaves with exit 0.
+Without --last or --follow: wait for the latest answer and print only its text.
+--last N prints the last N exchanges as blocks: "== #N", question lines prefixed "> ",
+then the answer. --follow prints new exchanges; add --last N to show history first.
+Ctrl-C leaves follow mode with exit 0; reminders go to stderr.
 
 flags:
   -t, --target NAME   which agent (default: $AOS_AGENT)
   --timeout-s SECS    give up after SECS seconds (AnswerMissing); leave out to wait without limit
   --last N            show the last N exchanges (a whole number) instead of waiting
-  -f, --follow        with --last: keep following
+  -f, --follow        follow new exchanges (also with --last)
   -h, --help          show this help
 
 exit codes: 0 printed; 1 error (AnswerMissing, QuestionUnknown...); 130 Ctrl-C while waiting."""

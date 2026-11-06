@@ -20,7 +20,7 @@
 #   只判斷＋轉寄，不自己跑任何東西。一輪做完退 0（沒信也是 0：身體退 10 會讓 loop／daemon 收工）。
 # ctl 信箱＝$AOS_DAEMON/<procs_state.json 頂層的 procs_ctl_mailbox>；procs_state.json 還沒寫（daemon 第一圈）＝預設 procs_ctl_mailbox、running 0 列（同 aos-daemon-ctl）。
 #   procs_state.json 經 aos-directive 解（procs 超過 100 列會切檔）。在飛的（轉了、daemon 還沒套）不算 running：模式 2 判得比 daemon 快時可能多放幾個（已知限制）。
-# 錯（自己這層的，退 1，loop／daemon 會停，P-20）：ArgumentsBad、CfgMissing、CfgBad（judge.json）、StackMissing、DaemonMissing（沒設 AOS_DAEMON 或不是資料夾）、
+# 錯（自己這層的，退 1；一般 loop 會停，daemon 的身體則記一行提醒、下一圈再跑，11-05 起；P-20）：ArgumentsBad、CfgMissing、CfgBad（judge.json）、StackMissing、DaemonMissing（沒設 AOS_DAEMON 或不是資料夾）、
 #   StateBad（procs_state.json 讀不懂）、MailboxMissing（daemon 沒開 ctl 信箱）、CommandMissing（PATH 沒 aos-post／aos-directive）、PostFailed（收件箱 init／take-all／see 失敗）。
 #   stderr 一行「judge: error: 代號 原因」。--help＝英文用法印 stdout、退 0。Ctrl-C＝退 130、不吐 traceback。
 import json, os, re, shutil, subprocess, sys

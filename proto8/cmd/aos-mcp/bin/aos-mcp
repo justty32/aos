@@ -48,6 +48,7 @@ aos_flags.HELP = """aos-mcp - serve the tools of aos-tools registries as MCP too
 
     aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--overlay O] [--memory NAME] [REGISTRY...]
 
+Short flags: -w = --ws, -s = --stack, -h = --help.
 REGISTRY: registry files (relative to the cwd at start; none = ./tools.json); several are merged, a name clash = ToolsBad.
   --overlay O is passed on to aos-tools --overlay and goes with exactly one REGISTRY (which may then be missing).
   The list is re-read on every tools/list and tools/call.
@@ -89,7 +90,7 @@ def parse_args(argv):
     try:
         opts, files = aos_flags.parse(argv, {"--ws": "ws", "--stack": "stack", "--timeout-s": "timeout_s",
                                              "--logs-path": "log", "--overlay": "overlay",
-                                             "--memory": "memory"}, {"--enable-logs": "enable"})
+                                             "--memory": "memory"}, {"--enable-logs": "enable"}, short=("-w", "-s"))
     except aos_flags.Error as e:
         die(e.code, "%s (usage: %s)" % (e, USAGE))
     ws, stack = opts.get("ws", os.environ.get("AOS_WS")), opts.get("stack", os.environ.get("AOS_STACK"))

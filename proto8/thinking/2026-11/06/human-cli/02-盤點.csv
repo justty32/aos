@@ -4,7 +4,7 @@ aos-loop,,cpp,both,--max；--interval-ms；--ctl；--state；--enable-logs,-,CON
 aos-fsm,,cpp,function,-,-,CONFIG.json,own,13,silent,n.a.,none,short-sub,0；1；step's；128+N,AOS_STACK,-,../../../../impls/aos-fsm/src/main.cpp
 aos-daemon,,cpp,both,--max；--interval-ms；--ctl；--state；--enable-logs,-,daemon.json [-- ARGS...],own,16,silent (JSON lines with --enable-logs),n.a.,none,short-sub,0；1；128+N,AOS_DAEMON；AOS_STACK,H5 ARGS... passthrough,../../../../impls/aos-daemon/src/main.cpp
 aos-directive,,cpp,function,-,-,-,own,10,JSON line,n.a.,doc JSON (empty={})；tty=hang?,short-sub,0；1,($env directives),-,../../../../impls/aos-directive/src/main.cpp
-aos-schema,,cpp,both,-,-,SCHEMA_FILE,own,10,JSON line,n.a.,doc JSON (empty={})；tty=hang?,short-sub,0；1,-,-,../../../../archive/aos-schema/src/main.cpp
+aos-schema,,cpp,both,-,-,SCHEMA_FILE,own,10,JSON line,n.a.,doc JSON (empty={})；tty=hang?,short-sub,0；1,-,-；11-06 註：S10 已封存至 proto8/archive/aos-schema，現行指令不再提供（文件核對，H 隊）,../../../../archive/aos-schema/src/main.cpp
 aos-llm-kernel,,cpp,function,-,-,kernel.json,own,11,silent,n.a.,none,short-sub,0；1,AOS_STACK,-,../../../../impls/aos-llm-kernel/src/main.cpp
 aos-json,,cpp,both,-,-,SUBCOMMAND,own,16,-,-,-,full-dump (one-line sub list)；FlagUnknown none,0；1；10,($env directives),H10 FlagUnknown no usage/see-help,../../../../impls/aos-json/src/main.cpp
 aos-json,get,cpp,both,-,--follow；--resolve；--str,FILE#/POINTER,own,3,JSON value (raw string with --str),n.a.,none,short-sub；FlagUnknown none,0；1,($env directives),H6 flags inline only；H10 FlagUnknown no usage,../../../../impls/aos-json/src/cmd/read.cpp

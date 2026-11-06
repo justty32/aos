@@ -13,7 +13,7 @@ claude code 之類經 aos-mcp 吃同一份（aos-mcp 只是包在這支上面的
 
 註冊檔：--file ＞ ./tools.json。長這樣：{"tools": {"名": {"path": "/絕對/路徑"}, …}}；沒有這份檔＝沒登記任何工具。
   aos 讀的 JSON 都解指示詞（N-45）：檔裡有 $ref／$env 就交給 aos-json 解（`$ref` 陣列＝把註冊檔拆成好幾份），
-  改的時候 aos-json set／del --follow 穿過 $ref 改被參照的那份。add 一律寫絕對路徑；手寫的相對路徑從這份檔的資料夾算（範本搬家不斷）。
+  改的時候 aos-json set／del --follow 穿過 $ref 改被參照的那份。add 未用 --overlay 時寫絕對路徑；有 --overlay 時存相對覆蓋層所在資料夾的路徑（不解捷徑）；手寫的相對路徑從這份檔的資料夾算（範本搬家不斷）。
 三種登記對象（種類照 aos-exec 認法，N-61：資料夾；檔有 +x＝可執行檔；檔沒 +x＝JSON）：
   dir   資料夾裡有 _tooldef.json；_metainfo.json 有就一起給（11-04 起只認帶 .json 的：_ 開頭的資料檔一律帶副檔名，
         不帶的 _tooldef／_metainfo 不認——沒 _tooldef.json＝ToolDefMissing）。叫＝aos-exec 資料夾，arguments 進 stdin。
@@ -85,7 +85,9 @@ usage: aos-tools [--file F] [--overlay O] add [--override] [--name N] [--no-cach
                [--env-file FILE] [--envs K=V]... XXX
 
 XXX is a folder, JSON file or executable, relative to cwd. Prints added NAME -> PATH
-with an absolute path. Names default to the folder name or file name without extension;
+with an absolute path. Without --overlay, the stored path is absolute; with --overlay,
+it is relative to the overlay file's directory (symlinks are not resolved).
+Names default to the folder name or file name without extension;
 only [A-Za-z0-9_-] is accepted, at most 64 characters.
 
 flags:

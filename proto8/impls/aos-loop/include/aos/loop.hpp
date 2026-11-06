@@ -106,7 +106,9 @@ Run run_once(const Target& t);
 // 原 --no-log、預設印，使用者「應該要改成默認不印」）。設定檔之後可接 `-- 參數...`（11-02 晚，使用者「aos-XXX ... ... -- ...」）：回的 rest＝[設定檔, 參數...]
 // （那個 `--` 剝掉）；設定檔之後接的不是 `--`＝ArgumentsBad。不認得的旗標丟 FlagUnknown；旗標缺值、沒給設定檔丟 ArgumentsBad（msg＝「原因 (usage: <prog> [...] CONFIG.json [-- ARGS...])」，R5）。
 // argv 不含程式名；回旗標（opts）與設定檔（rest[0]）。help＝`--help` 印的說明（英文，parse_cli 印到 stdout、退 0）。
-aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog, const std::string& help);
+// cfg_name：錯誤行 usage 裡設定檔的寫法（跟 help 一致；aos-daemon 給 "daemon.json"）。
+aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog, const std::string& help,
+                  const std::string& cfg_name = "CONFIG.json");
 
 // 附加參數（loop_cli 的 rest[1:]）接到 exec 後面（11-02 晚；起跑時接一次＝每次都帶）：字串目標＝[目標, 參數...]、陣列＝接在最後、
 // 內嵌單子＝接在單子 argv 的最後（argv 要直接是陣列；是指示詞、沒寫＝CfgBad）。args 空＝不動。ctl 改不了它們。

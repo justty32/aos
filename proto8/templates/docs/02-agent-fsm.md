@@ -22,11 +22,11 @@ agent-fsm/
   body.json    ["aos-loop", "loop.json"]（身體的入口；interfaces.json 的 entry 指它，aos-agent ctl add 掛的是它）
   loop.json    {"exec": "fsm.json", "interval_ms": 300, "ctl": "ctl.json", "state": "state.json"}（沒有 max：常駐，靠 ctl 的 stop 收工）
   fsm.json     四格：idle {"0": "think", "10": "idle"}、think（brain.py --system system.txt --memory memory）{"0": "wait", "10": "idle"}、
-               wait {"0": "act", "10": "wait"}、act {"0": "think", "10": "idle"}
+               wait {"0": "act", "10": "wait", "11": "think"}、act（timeout_ms: 1800000）{"0": "think", "10": "idle"}；start: idle
   idle.py      收信：$AOS_STACK/queue/ 全部收進 history.jsonl（接進去就 aos-post done）；有好信退 0、沒有退 10；[--prompt FILE] 開場白
   brain.py     組請求、不碰網路：history（＋system、tools）→ $AOS_STACK/think/request.json（llm kernel 請求信的 body）；退 0；沒事做退 10
   wait.py      寄與收：沒寄＝aos-llm send --reply-to $AOS_STACK/think/reply、名字記進 think/pending.txt、退 10；
-               已寄＝aos-llm recv：沒到退 10（loop 照跑）、到了那則 assistant 接進 history 退 0、kernel 回錯退 1
+               已寄＝aos-llm recv：沒到退 10（loop 照跑）、到了那則 assistant 接進 history 退 0、kernel 回錯退 1；寄之前腦設定與請求對不上＝退 11 回 think 重組
   act.py       跑工具：逐個 aos-tools call，照 metainfo 限時；失敗附 stderr 尾，結果各接一則 tool、退 0；沒有 tool_calls（最後答案）退 10
   system.txt   system 訊息（brain.py 的 --system 指到它；每次從檔讀、不存進 history；11-05 晚改英文）
   tools.json   aos-tools 登記檔：clock、self_tools（改自己的工具）、agents（生子 agent）、memory（查知識庫，11-05 晚）（"../../lib/…"；跟 eca-claude 同一份；後兩個 11-05 使用者裁「內建」）；這隻自己加減的在 $AOS_STACK/tools.json（覆蓋層，aos-agent tools）

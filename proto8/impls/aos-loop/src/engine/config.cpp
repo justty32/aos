@@ -101,8 +101,10 @@ std::string config_file(const std::string& spec) {
     return ec ? aos::abspath(path) : real.string();
 }
 
-aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog, const std::string& help) {
-    std::string usage = prog + " [--max N] [--interval-ms N] [--ctl FILE] [--state FILE] [--enable-logs] CONFIG.json [-- ARGS...]";
+aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog, const std::string& help,
+                  const std::string& cfg_name) {
+    std::string usage = prog + " [--max N] [--interval-ms N] [--ctl FILE] [--state FILE] [--enable-logs] " + cfg_name +
+                        " [-- ARGS...]";
     aos::Cli cli;
     try {
         cli = aos::parse_cli(argv, {{"--max", "max"}, {"--interval-ms", "interval_ms"}, {"--ctl", "ctl"}, {"--state", "state"}},

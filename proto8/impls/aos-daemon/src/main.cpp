@@ -37,7 +37,7 @@ exit codes: 0 done; 1 own error ("aos-daemon: error: CODE ..." on stderr); 128+N
 int main(int argc, char** argv) {
     try {
         aos::block_signals();
-        aos::Cli cli = aos::loop::loop_cli(std::vector<std::string>(argv + 1, argv + argc), "aos-daemon", HELP);
+        aos::Cli cli = aos::loop::loop_cli(std::vector<std::string>(argv + 1, argv + argc), "aos-daemon", HELP, "daemon.json");
         aos::daemon::Daemon d(cli.opts, cli.rest[0], std::vector<std::string>(cli.rest.begin() + 1, cli.rest.end()));
         return d.serve();
     } catch (const aos::Error& e) {

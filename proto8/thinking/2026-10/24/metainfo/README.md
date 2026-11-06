@@ -1,5 +1,7 @@
 # 2026-10-24 `_metainfo`：函數的特性（跑多久、吃多少資源）
 
+> **11-06 註（文件核對，H 隊）**：以下保留當時規劃；現行 aos-tools 的資料夾工具只讀 `_metainfo.json`，不讀 `_metainfo`（只有舊名就當沒寫；JSON 內的 `_metainfo` key 照舊）。出處：`proto8/cmd/aos-tools/bin/aos-tools` 的 `inspect()`；11-04 已裁定資料檔加 `.json`。
+
 ← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜前情：[10-13 `_metainfo`](../../13/json-path/02-metainfo.md)、[10-13 kernel／agent](../../13/kernel-agent/README.md)、[10-15 kernel 截流](../../15/kernel-intercept.md)、[10-15 LLM kernel](../../15/llm-kernel.md)、[10-15 通用 kernel](../../15/general-kernel.md)｜待定：[NORMS 待定【基礎設施／inst＋kernel】`_metainfo`](../../../../docs/NORMS/08-待定.md)
 
 規矩見 [thinking/README](../../../README.md)：只留使用者原文、決定、結論。**本份只記錄，CONCEPTS／NORMS 正文沒改**（待頂層統一落條文）。相關條文：[C-13、C-09～C-11、C-47](../../../../docs/CONCEPTS/04-kernel.md)、[C-42b](../../../../docs/CONCEPTS/03-基礎設施.md)、[C-48、C-52、C-55、C-56、C-68～C-73](../../../../docs/CONCEPTS/01-設計理念.md)、[C-20](../../../../docs/CONCEPTS/05-agent.md)、[N-04](../../../../docs/NORMS/03-基礎設施-inst.md)、[N-45](../../../../docs/NORMS/06-基礎設施-命令列與指示詞.md)、[N-57～N-62](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[N-42](../../../../docs/NORMS/09-kernel.md)。
