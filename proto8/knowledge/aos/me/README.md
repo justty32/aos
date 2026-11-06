@@ -21,4 +21,4 @@ What you may change: only your own overlays, and only through tools:
 
 What you may not change: the definition folder, other agents' stacks, the daemon's files, `history.jsonl` by hand.
 
-If you need to know whether you run under a daemon at all: tools that need the daemon answer `DaemonMissing` or `InstanceMissing` when you do not. Then features like `self_tools` and `agents` are unavailable; say so.
+If you need to know whether you run under a daemon at all: tools that need the daemon answer `DaemonMissing` or `InstanceMissing` when you do not. `DaemonMissing` also comes when a daemon exists but did not reply (busy, paused or down). Then features like `self_tools`, `agents` and `thought` are unavailable for now; say so. Do not retry right away; you may try once more later.

@@ -10,7 +10,7 @@
 沙箱裡要看得到這支：綁工具資料夾時把它也綁唯讀（例 cmd/aos-sandbox/examples/bash-boxed/sandbox.json 的 ro）。
 
 旗標映射（thinking/2026-11/05/json-argv 的 03、07 與 J1 任務書）：
-_tooldef.json.parameters 同源生成旗標、說明與 type／required 檢查；旗標優先於 stdin，點路徑只換一葉。
+_tooldef.json.env 只生成 hub 環境變數說明；parameters 同源生成旗標、說明與 type／required 檢查；旗標優先於 stdin，點路徑只換一葉。
 start 不讀參數；arguments 第一次才解析並快取，stdin 是終端就不讀；額外 JSON 鍵忽略、未知旗標報錯。
 
 形狀（lib 契約，lib/docs/01 規則 3、5、5a）：
@@ -361,4 +361,7 @@ def help_from_tooldef(name, tooldef, extra=""):
         lines.append('Result on stdout. On error: one line "%s: error: CODE reason" on stderr and stdout, exit 1.' % name)
     if _strings(td.get("errors")):
         lines.append("Error codes: " + ", ".join(td["errors"]))
+    env = td.get("env")
+    if isinstance(env, list) and env and all(isinstance(x, str) for x in env):
+        lines.append("Environment: " + ", ".join(env) + " (hub variables this tool needs; not set = <Name>Missing)")
     return "\n".join(lines) + "\n"

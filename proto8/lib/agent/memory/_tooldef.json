@@ -1,4 +1,5 @@
 {"description": "Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the child you need; find searches by keyword. Errors: NodeMissing (the line lists what exists), PathBad, MemoryMissing (no knowledge base is set up for you: say so).",
+ "env": ["AOS_MEMORY"],
  "parameters": {"type": "object",
                 "properties": {"op": {"type": "string", "enum": ["read", "ls", "find"], "description": "read = show a node's text and its children; ls = list its children only; find = search nodes by keyword"},
                                "path": {"type": "string", "description": "node path like agents/spawn (lowercase segments joined by /); empty or / is the root"},

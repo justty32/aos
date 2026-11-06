@@ -7,26 +7,28 @@
 #   goal 必要（要做什麼、要帶回什麼）；context＝字串或字串陣列（前幾步的結論）；tools＝[{name, path?}]（path 相對從 $AOS_WS、絕對照用；
 #   沒給 path＝照抄我自己工具箱裡同名那支〔aos-agent tools ls --json〕，沒有＝ToolMissing），沒給 tools＝子只有 clock（範本其他工具走子的覆蓋層 tools rm 拿掉）；endpoint＝子的腦，沒給＝同父（aos-agent llm show 父的 endpoint；父沒寫＝範本預設）；
 #   max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、上限 1700（act 格 1800 秒包得住）；keep 預設 false。
-# 一次叫＝aos-agent --daemon $AOS_DAEMON 的五步：ctl who（我是誰、我的深度）→ ctl add 範本（--name t-<父名>-NNN、--ws 我的 $AOS_WS）→
+# 一次叫＝aos-agent --daemon $AOS_DAEMON 的五步：ctl who（我是誰、我的深度）→ ctl add 範本（--name t-<父名前32字>-<UTC毫秒>-<4位hex>、--ws 我的 $AOS_WS）→
 #   子的覆蓋層 llm set endpoint／tools rm／tools add --override → say 開場文（固定英文段＋goal＋context）＋listen --timeout-s →
 #   預設 ctl rm 子（stack 刪掉、不印 details）；keep: true＝留著但 ctl stop（不佔 loop；要追問 ctl start 再 say）、結論後多一行 details: <子的 stack，相對 $AOS_DAEMON>/。
 #   設定那幾步失敗＝ctl rm 收回再報錯（不算子的失敗）。
-# 子名搶號：mkdir $AOS_STACK/children/<子名>/（P-17 工具小格；同時也是「我生過、還留著的」紀錄，裡面 state 檔＝running PID／kept／failed）。
-#   每次叫先對帳：表上已不在的紀錄刪掉；failed（含 running 但 PID 已不在＝我被殺掉時留的）超過 FAILED_KEEP 隻＝最舊的 ctl rm（gc）；kept 不動。
+# 子名每次唯一：mkdir $AOS_STACK/children/<子名>/，撞表或資料夾最多重試五次。
+#   state＝running <UTC到秒Z租約>／kept／failed；每步呼叫前續租至逾時＋5秒，TERM 收回租約。
+#   對帳先保護未到期租約與剛建資料夾；表上沒有就忘掉，過期 running 先 stop 再記 failed；kept 不動，failed 照 FAILED_KEEP gc。
 # 深度：子的 stack 寫 thought.json {"depth": 父+1}（aos-agent ctl add 帶不了環境變數）；我讀自己那隻 stack 的 thought.json（沒有＝0），
 #   深度已是 MAX_DEPTH（2）＝DepthExceeded、不生（子能再開孫、孫不行）。
-# 錯：stderr 與 stdout 各一行「thought: error: 代號 原因」、退 1（規則 3，tool_io.die）——自己的：ArgumentsBad、GoalMissing、DepthExceeded、
-#   DaemonMissing、StackMissing、WsMissing、DefMissing（範本不在）、ToolMissing、MkdirFailed、WriteFailed、LaunchFailed（aos-agent 不在 PATH）、
+# 錯：stderr 與 stdout 各一行「thought: error: 代號 原因」、退 1（規則 3，tool_io.die）——自己的：ArgumentsBad、DepthExceeded、
+#   DaemonMissing（AOS_DAEMON 沒設或 daemon 忙、暫停、掛了而沒回信）、StackMissing、WsMissing、DefMissing（範本不在）、ToolMissing、MkdirFailed、WriteFailed、LaunchFailed（aos-agent 不在 PATH）、
 #   CommandFailed（逾時）；aos-agent 退非 0＝取它 stderr 最後一行錯誤行的代號與原因接成自己的（AddRejected、AnswerMissing…；同 agents）。
 #   子答不出（listen 錯、逾時）＝錯誤行尾附 (details: <子的 stack>/)，子先 ctl stop、stack 一律留（不管 keep）。
 #   aos-agent 的 stderr 原樣透到 stderr（R10）。--help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉那一群，退 130）。
-import json, os, re, shutil, signal, subprocess, sys, time
+import json, os, re, secrets, shutil, signal, subprocess, sys, time
+from datetime import datetime, timedelta, timezone
 HELP = """\
 usage: thought < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Hand one task to a throw-away child agent (templates/agent-fsm) on the daemon that runs you ($AOS_DAEMON)
 and print only its short conclusion; the child's tool calls stay out of your history.
 Arguments: one JSON object on stdin (empty stdin = {}):
-  goal       string, required: what to do and what to bring back
+  goal       non-empty string, required: what to do and what to bring back
   context    string or array of strings: background, e.g. conclusions of earlier steps
   tools      [{name, path?}]: tools for the child (path relative to your workspace, or absolute;
              no path = the same tool as yours of that name); default: only clock
@@ -38,6 +40,9 @@ Arguments: one JSON object on stdin (empty stdin = {}):
 Result on stdout: the conclusion. The child is removed afterwards unless keep is true; if it fails, its stack
 is kept and the error line ends with (details: <stack>/). A child may start one more level of thoughts
 (depth 2 at most: DepthExceeded).
+Each child has a unique name; running records use renewable UTC leases. Interrupted leases expire,
+and the next call stops expired children and keeps their stacks as failed thoughts.
+DaemonMissing means AOS_DAEMON is unset or the daemon did not reply (busy, paused, or down).
 On error: one line "thought: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -68,6 +73,7 @@ what the task asks you to bring back, not the steps you took. At most {n} charac
 
 Task: {goal}"""
 child = None
+running_kid = None
 
 
 def kill_group(p):
@@ -84,6 +90,11 @@ def kill_group(p):
 
 
 def on_term(signum, frame):
+    if running_kid is not None:
+        try:
+            renew(0)
+        except SystemExit:
+            pass                                # 寫租約失敗也要收自己的子行程、照訊號退碼
     if child is not None:
         kill_group(child)
     sys.exit(128 + signum)
@@ -96,6 +107,8 @@ signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、�
 def agent(argv, text=None, timeout_s=STEP_S):
     """叫 aos-agent --daemon <AOS_DAEMON> argv…；退 0 回 (stdout, None)，退非 0 或逾時回 (stdout, (代號, 原因))。"""
     global child
+    if running_kid is not None:
+        renew(timeout_s + 5)
     cmd = ["aos-agent", "--daemon", daemon] + argv
     try:
         child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL,
@@ -153,7 +166,7 @@ def write_text(path, text):
 args = tool_io.arguments()
 goal = args.get("goal")
 if not isinstance(goal, str) or not goal.strip():
-    die("GoalMissing", "goal is required: a non-empty string saying what to do and what to bring back")
+    die("ArgumentsBad", "goal must be a non-empty string: what to do and what to bring back")
 context = args.get("context", [])
 if isinstance(context, str):
     context = [context]
@@ -196,26 +209,37 @@ def rel(p):
 
 
 def forget(name):
+    global running_kid
     try:
         for f in os.listdir(os.path.join(kids_dir, name)):
             os.remove(os.path.join(kids_dir, name, f))
         os.rmdir(os.path.join(kids_dir, name))
+        if name == running_kid:
+            running_kid = None
     except OSError:
         pass
 
 
 def mark(name, state):
+    global running_kid
     write_text(os.path.join(kids_dir, name, "state"), state + "\n")
+    if name == running_kid and state in ("kept", "failed"):
+        running_kid = None
 
 
-def pid_alive(pid):
-    try:
-        os.kill(pid, 0)
-        return True
-    except ProcessLookupError:
+def renew(seconds):
+    until = datetime.now(timezone.utc) + timedelta(seconds=seconds)
+    mark(running_kid, "running " + until.strftime("%Y-%m-%dT%H:%M:%SZ"))
+
+
+def lease_active(state):
+    if len(state) != 2 or state[0] != "running":
         return False
-    except PermissionError:
-        return True
+    try:
+        until = datetime.strptime(state[1], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        return until > datetime.now(timezone.utc)
+    except ValueError:
+        return False
 
 
 def mtime(name):
@@ -227,28 +251,37 @@ def mtime(name):
 
 
 def reconcile(table):
-    """children/ 對 daemon 表：不在表上的忘掉；failed（含主人已死的 running）超過 FAILED_KEEP 隻＝最舊的 ctl rm。"""
+    """children/ 對 daemon 表：未到期租約不碰；不在表上的忘掉；過期 running 先停，failed 超過 FAILED_KEEP 隻＝最舊的 ctl rm。"""
     try:
         names = sorted(os.listdir(kids_dir))
     except FileNotFoundError:
         return
     failed = []
     for n in names:
+        state_missing = False
+        age = mtime(n)
         try:
             with open(os.path.join(kids_dir, n, "state"), encoding="utf-8") as f:
                 st = f.read().split()
         except OSError:
             st = []
-        if st[:1] == ["running"] and len(st) > 1 and st[1].isdigit() and pid_alive(int(st[1])):
-            continue                            # 另一個 thought 正在用（可能剛搶到號、還沒上表）：不碰（11-05 晚邊緣測試：先查表再看這條＝把別人剛搶的號刪掉、兩隻搶到同名）
-        if not st and time.time() - mtime(n) < STEP_S:
+            state_missing = not os.path.exists(os.path.join(kids_dir, n, "state"))
+        if lease_active(st):
+            continue                            # 另一個 thought 正在用，可能還沒上表
+        if state_missing and time.time() - age < STEP_S:
             continue                            # 剛 mkdir、state 還沒寫的那一瞬
         if n not in table:
             forget(n)
             continue
         if st[:1] == ["kept"]:
             continue
-        failed.append((mtime(n), n))
+        if st[:1] in (["running"], ["failed"]) and table.get(n) != "stopped":   # 已停的不再寄 stop
+            _, err = agent(["ctl", "stop", "--target", n])
+            if err:
+                tool_io.warn("could not stop the abandoned thought %s: %s %s" % ((n,) + err))
+        if st[:1] == ["running"]:                # 租約過了＝主人死在半路
+            mark(n, "failed")
+        failed.append((age, n))
     for _, n in sorted(failed)[:max(0, len(failed) - FAILED_KEEP + 1)]:   # 留 FAILED_KEEP-1 隻，加上這次最多 FAILED_KEEP
         _, err = agent(["ctl", "rm", n])
         if err is None:
@@ -285,32 +318,38 @@ for t in tools or []:
     else:
         tool_list.append((t["name"], os.path.realpath(t["path"] if os.path.isabs(t["path"]) else os.path.join(ws, t["path"]))))
 
-# ---- 搶號、掛上 ----
+# ---- 唯一子名、掛上 ----
 rows = json.loads(must(["ctl", "ls", "--json"]) or "[]")
-table = {r.get("name") for r in rows if isinstance(r, dict)} if isinstance(rows, list) else set()
+table = {r.get("name"): r.get("phase") for r in rows if isinstance(r, dict)} if isinstance(rows, list) else {}   # 名字 → phase
 reconcile(table)
 try:
     os.makedirs(kids_dir, exist_ok=True)
 except OSError as e:
     die("MkdirFailed", "cannot create %s: %s" % (kids_dir, e))
-prefix = "t-%s-" % me["name"][:48]
-n = 1
-while True:
-    kid = "%s%03d" % (prefix, n)
-    n += 1
+for attempt in range(5):
+    now = datetime.now(timezone.utc)
+    stamp = now.strftime("%Y%m%dT%H%M%S") + "%03d" % (now.microsecond // 1000)
+    kid = "t-%s-%s-%s" % (me["name"][:32], stamp, secrets.token_hex(2))
     if kid in table:
         continue
     try:
         os.mkdir(os.path.join(kids_dir, kid))
+        running_kid = kid
+        renew(STEP_S + 5)
         break
     except FileExistsError:
         continue
     except OSError as e:
         die("MkdirFailed", "cannot create %s: %s" % (os.path.join(kids_dir, kid), e))
-mark(kid, "running %d" % os.getpid())
+else:
+    die("MkdirFailed", "could not create a unique child record after 5 attempts")
 out, err = agent(["ctl", "add", "--name", kid, "--ws", ws, TEMPLATE])
 if err:
-    forget(kid)
+    if err[0] == "DaemonMissing":
+        mark(kid, "failed")
+    else:
+        forget(kid)
+        running_kid = None
     die(*err)
 kid_stack = out.strip().splitlines()[-1] if out.strip() else ""
 
@@ -358,8 +397,8 @@ answer = answer.strip()
 if len(answer) > max_chars:
     answer = answer[:max_chars].rstrip() + " [truncated]"
 if keep:                                        # 留著也不佔 loop：答完就 ctl stop（stack 在；要追問＝ctl start＋say，11-05 夜第二輪邊緣）
-    mark(kid, "kept")
     _, err = agent(["ctl", "stop", "--target", kid])
+    mark(kid, "kept")
     if err:
         tool_io.warn("could not stop the kept thought %s: %s %s" % ((kid,) + err))
     sys.stdout.write("%s\ndetails: %s\n" % (answer, rel(kid_stack)))

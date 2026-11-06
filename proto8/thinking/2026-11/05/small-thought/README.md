@@ -81,3 +81,7 @@
 
 - 登記格 `env` 借給 thought 子會掉：**`aos-agent tools add` 也能帶 `--env`**，值不給腦看到。
 - thought／agents／self_tools 在沙箱裡**先不支援**（沙箱只包葉工具）。
+
+## 11-06 改（no-pid P4）
+
+上面代定 5、7 與邊緣測試裡的「搶號」和紀錄 `running PID`，已由 no-pid P4 改成子名每次唯一＋紀錄寫租約（`running <到期時刻>`），對帳不再看 pid（[no-pid 11-P4實作結果](../no-pid/11-P4實作結果.md)）。

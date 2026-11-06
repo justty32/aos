@@ -1,4 +1,5 @@
 {"description": "Start, talk to and remove child agents on your daemon. op add starts an existing definition def; op new writes a new definition at path (copy of from plus files) and starts it. A child does not inherit your brain or tools: give llm and tools. op say sends and returns; op ask waits for the answer; op rm removes; op ls shows the daemon table. Errors: ChildSlotMissing, ChildUnknown, ChildMissing, DefMissing, AddRejected. Details: memory node agents.",
+ "env": ["AOS_DAEMON"],
  "parameters": {"type": "object",
                 "properties": {"op": {"type": "string", "enum": ["new", "add", "say", "ask", "rm", "ls"], "description": "what to do"},
                                "name": {"type": "string", "description": "the child's name (new, add, say, ask, rm); letters, digits, _ and -"},

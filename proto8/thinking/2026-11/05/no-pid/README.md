@@ -1,4 +1,4 @@
-# 2026-11-05 晚 不靠 pid 找東西：daemon 是 Linux 行程與 aos 之間唯一的橋、寄信不回＝呼叫失敗、監管樹（no-pid；使用者方向＋fable 規劃；11-06 P1～P3 已做）
+# 2026-11-05 晚 不靠 pid 找東西：daemon 是 Linux 行程與 aos 之間唯一的橋、寄信不回＝呼叫失敗、監管樹（no-pid；使用者方向＋fable 規劃；11-06 P1～P4 已做）
 
 ← [thinking README](../../../README.md)｜日 [2026-11-05](../README.md)｜相關：[arch-refactor](../arch-refactor/README.md)（S6 照本夾 P3 做、S7／S8 排在 P1～P2 之後，見 [07](07-實作步驟.md)）、[small-thought § 第二輪](../small-thought/README.md#11-05-夜-第二輪邊緣)（沙箱誤判那題本夾解）、[kernel-daemon 08](../kernel-daemon/08-實作結果.md)（llm kernel 看問腦 proc 不碰 pid＝現成範例）、[edge-daemon](../edge-daemon/README.md)（DaemonRunning 改 flock）
 
@@ -48,6 +48,7 @@
 | [07-實作步驟](07-實作步驟.md) | P1～P9、跟大重構 S6／S7／S8／S10 怎麼合、派誰、驗收 |
 | [08-P1實作結果](08-P1實作結果.md) | 11-06 P1 做了什麼、代定 4 條、修前重現與修後實測、新發現的邊緣 3 條 |
 | [10-P3實作結果](10-P3實作結果.md) | 11-06 P3（＝大重構 S6：`py/daemon_ctl.py`、aos-daemon-ctl 薄殼與 `ping`、aos-agent 不碰 pid、共用回信信箱）做了什麼、代定 11 條、實測、新發現的邊緣 6 條、P5b 要跟著改的 |
+| [11-P4實作結果](11-P4實作結果.md) | 11-06 P4（thought 子名唯一＋租約、四格對帳、`_tooldef.json` 的 `env`、lib 規則 11、knowledge 的 `DaemonMissing` 兩種意思）做了什麼、代定 10 條、真腦與假腦實測、新發現的邊緣 6 條 |
 | [09-P2實作結果](09-P2實作結果.md) | 11-06 P2（`responded_at`、`daemon` 欄、ping）做了什麼、代定 5 條、驗收實測、新發現的邊緣 5 條、P5b 要跟著改的條文 |
 
 ## 要使用者裁的（白話；推薦放第一）——只剩真正沒定的
@@ -70,4 +71,4 @@
 ## 排程
 
 - 11-05 晚只規劃、不改程式（補充 1）。S6 等本夾定案（已定）後照 P3 做；S0～S5 照 arch-refactor 原計畫。
-- 11-06：`--env-file`／`--envs` 改（aos-tools、aos-agent tools add）；P1→P2→P3（＝S6）→P4→P5／P5b；S7、S8 之後 P6～P9。
+- 11-06：`--env-file`／`--envs` 改（aos-tools、aos-agent tools add）；P1→P2→P3（＝S6）→P4（已做）→P5／P5b；S7、S8 之後 P6～P9。
