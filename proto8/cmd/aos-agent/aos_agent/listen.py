@@ -11,14 +11,15 @@ new ones; Ctrl-C leaves with exit 0.
 
 flags:
   -t, --target NAME   which agent (default: $AOS_AGENT)
-  --timeout-s SECS    give up after SECS seconds (AnswerMissing)
-  --last N            show the last N exchanges instead of waiting
+  --timeout-s SECS    give up after SECS seconds (AnswerMissing); leave out to wait without limit
+  --last N            show the last N exchanges (a whole number) instead of waiting
   -f, --follow        with --last: keep following
   -h, --help          show this help
 
 exit codes: 0 printed; 1 error (AnswerMissing, QuestionUnknown...); 130 Ctrl-C while waiting."""
 
 import aos_ws
+import math
 import os
 import sys
 import time
@@ -159,22 +160,32 @@ def follow(a, last, keep):
         time.sleep(POLL)
 
 
-def number(opts, key, flag):
-    v = opts.get(key)
-    if v is None:
-        return None
+def seconds(v):
+    """--timeout-s：有限、不小於 0 的秒數；不給旗標才是不設上限（inf／1e999／nan 都擋，E1）。"""
     try:
         n = float(v)
-        if n < 0 or n != n:
+        if not math.isfinite(n) or n < 0:
             raise ValueError
     except ValueError:
-        raise bad_args(HELP, "%s needs a number not below 0: %s" % (flag, v))
+        raise bad_args(HELP, "--timeout-s needs a finite number of seconds not below 0 (leave it out to wait without limit): %s" % v)
+    return n
+
+
+def count(v):
+    """--last：不小於 0 的整數（1.5、inf 不收，E1）。"""
+    try:
+        n = int(v)
+        if n < 0:
+            raise ValueError
+    except ValueError:
+        raise bad_args(HELP, "--last needs a whole number not below 0: %s" % v)
     return n
 
 
 def cmd(argv):
     opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout", "--last": "last"}, {"--follow": "follow"}, help=HELP, short=("-t", "-f"))
-    timeout, last = number(opts, "timeout", "--timeout-s"), number(opts, "last", "--last")
+    timeout = None if opts.get("timeout") is None else seconds(opts["timeout"])
+    last = None if opts.get("last") is None else count(opts["last"])
     if rest:
         raise bad_args(HELP, "listen takes no positional arguments: %s (it always waits for the latest letter)" % rest[0])
     waits = last is None and not opts.get("follow")
@@ -185,6 +196,6 @@ def cmd(argv):
         if waits:
             wait_latest(a, timeout)
         else:
-            follow(a, int(last or 0), bool(opts.get("follow")))
+            follow(a, last or 0, bool(opts.get("follow")))
     except KeyboardInterrupt:
         sys.exit(130 if waits else 0)
