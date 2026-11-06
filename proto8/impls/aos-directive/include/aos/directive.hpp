@@ -1,4 +1,5 @@
 // aos/directive.hpp：指示詞（語法糖：把設定拆成小檔、讀環境變數）（N-45，10-20 改版）。
+// resolve_keys：先解析單層，再完整解析呼叫者指定、自己讀的欄位，保留各欄位的相對路徑起點。
 //
 // 解 JSON 時找出所有帶 $ref 或 $env 的物件，整個物件換成它指到的值；物件裡其餘東西不管（10-20 ideas D12）：
 //   {"$ref": "檔"}                  那份 JSON 檔的整份內容（第一行 #! 跳過），換進來的值接著解
@@ -52,5 +53,8 @@ struct Resolved {
     const std::string& dir_of(size_t i) const;                 // value 第 i 個元素裡相對 $ref 的起點
 };
 Resolved resolve_shallow(const Json& v, const std::filesystem::path& base_dir);
+
+// 整份先換一層，再完整解開指定的 key；保留每個 key 原本的相對路徑起點。
+Resolved resolve_keys(const Json& doc, const std::string& base_dir, const std::vector<std::string>& keys);
 
 }  // namespace aos

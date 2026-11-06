@@ -5,8 +5,7 @@ cmake_minimum_required(VERSION 3.21)
 # CMake 的共通設定（vcpkg、Release、compile_commands、PIC、AOS_STATIC_PIE）在 ../cmake/settings.cmake。
 # 照 aos-fsm 的 CMakeLists.txt 改名。
 include(../cmake/settings.cmake)
-# 也開 C：經 aos-exec 連進來的 inst 是 C 專案
-project(aos-llm C CXX)
+project(aos-llm CXX)
 
 # 用到的兄弟專案（包一層 if(NOT TARGET)，全家都這樣寫）。
 #   aos-util        共用型別、檔案與訊號。
@@ -14,7 +13,7 @@ if(NOT TARGET aos-util)
   add_subdirectory(../aos-util aos-util-build)
 endif()
 #   aos-llm-kernel  公開 API（aos/llm_kernel.hpp）：LLM 信件協定的 parse_priority／hold_sender／reply_of；
-#                   kernel 目前仍間接帶進 aos-loop，相依由 kernel 自己管理。
+#                   kernel 只帶進 aos-util、aos-post 與 aos-directive。
 if(NOT TARGET aos-llm-kernel)
   add_subdirectory(../aos-llm-kernel aos-llm-kernel-build)
 endif()

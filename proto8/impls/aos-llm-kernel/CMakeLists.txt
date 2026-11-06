@@ -5,19 +5,18 @@ cmake_minimum_required(VERSION 3.21)
 # CMake 的共通設定（vcpkg、Release、compile_commands、PIC、AOS_STATIC_PIE）在 ../cmake/settings.cmake。
 # 照 aos-fsm 的 CMakeLists.txt 改名。
 include(../cmake/settings.cmake)
-# 也開 C：經 aos-exec 連進來的 inst 是 C 專案
-project(aos-llm-kernel C CXX)
+project(aos-llm-kernel CXX)
 
 # 用到的兄弟專案（包一層 if(NOT TARGET)，全家都這樣寫）。
-#   aos-loop   公開 API（aos/loop.hpp）：擋訊號、設定檔的指示詞（resolve_keys）；它又帶進 aos-exec（跑 endpoint 函數＝run_inst）、inst、aos-util、aos-directive
-if(NOT TARGET aos-loop)
-  add_subdirectory(../aos-loop aos-loop-build)
+#   aos-util   共用檔案、訊號、JSON 與錯誤介面。
+if(NOT TARGET aos-util)
+  add_subdirectory(../aos-util aos-util-build)
 endif()
 #   aos-post   公開 API（aos/post.hpp）：回信走信封的 reply_to＝照 N-16 寄一封回信（10-30，medium 決定 3）；它又帶進 aos-lock
 if(NOT TARGET aos-post)
   add_subdirectory(../aos-post aos-post-build)
 endif()
-#   aos-directive  pack.cpp、serve.cpp include aos/directive.hpp（通常 aos-loop 已帶進來，守衛照包）
+#   aos-directive  pack.cpp、serve.cpp 解設定檔指示詞。
 if(NOT TARGET aos-directive)
   add_subdirectory(../aos-directive aos-directive-build)
 endif()
@@ -26,12 +25,12 @@ endif()
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
-# 函式庫 target＝專案名，STATIC。公開標頭 aos/llm_kernel.hpp 用到 aos/loop.hpp，所以 aos-loop 是 PUBLIC。
+# 函式庫 target＝專案名，STATIC；公開標頭使用 aos-util 與 aos-post。
 add_library(aos-llm-kernel STATIC ${SOURCES})
 target_include_directories(aos-llm-kernel PUBLIC include PRIVATE src)
 target_compile_features(aos-llm-kernel PUBLIC cxx_std_20)
 target_compile_options(aos-llm-kernel PRIVATE -Wall -Wextra)
-target_link_libraries(aos-llm-kernel PUBLIC aos-loop aos-post PRIVATE aos-directive)
+target_link_libraries(aos-llm-kernel PUBLIC aos-util aos-post PRIVATE aos-directive)
 set_target_properties(aos-llm-kernel PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 

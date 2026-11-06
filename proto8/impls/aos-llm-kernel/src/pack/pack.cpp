@@ -2,6 +2,8 @@
 #include "pack/pack.hpp"
 
 #include "aos/io.hpp"
+#include "aos/directive.hpp"
+#include "aos/files.hpp"
 
 namespace aos::llm_kernel {
 
@@ -94,7 +96,7 @@ std::map<std::string, Pack> read_packs(const Json& endpoints, const std::map<std
     std::map<std::string, Pack> out;
     for (auto& [name, raw] : endpoints.items()) {
         try {
-            aos::Resolved r = aos::loop::resolve_keys(raw, dirs.at(name), {"slots", "budget", "speed", "cost", "context", "summary", "fixed"});
+            aos::Resolved r = aos::resolve_keys(raw, dirs.at(name), {"slots", "budget", "speed", "cost", "context", "summary", "fixed"});
             if (!r.value.is_object()) {
                 throw Error{code::CfgBad, "kernel.json endpoints." + name + " must be an object (llm settings), got " + aos::dumps(r.value)};
             }

@@ -34,10 +34,9 @@
 
 namespace aos::loop {
 
-// 錯誤代號：沿用 aos-exec 的（它又沿用 aos-util 的 aos::code），加一個 StackMissing（aos-loop、aos-fsm、aos-daemon 共用）。
+// 錯誤代號：沿用 aos-exec 與 aos-util 的通用代號，再加本層的 RunFailed。
 namespace code {
 using namespace aos::exec::code;   // ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、WriteFailed、EntryBad、DirectiveBad、LaunchFailed…
-inline constexpr const char* StackMissing = "StackMissing";   // 要 $AOS_STACK 卻沒設（開了窗、fsm、daemon）
 inline constexpr const char* RunFailed = "RunFailed";         // 身體那次退非 0（不是 10）：aos-loop 印這行、以那次的碼結束（11-05 stdio-unify D4）
 }  // namespace code
 
@@ -121,7 +120,7 @@ struct StateError : Error {};
 // 寫不了丟 WriteFailed。
 void write_window(const std::string& path, const Json& doc);
 
-// 指示詞（N-45，10-23 晚使用者「aos 讀的 JSON 全部支援」）：doc 本身是指示詞就先換掉（aos::resolve_shallow，不往裡面走），
+// aos-directive 的 aos::resolve_keys 轉接：doc 本身是指示詞就先換掉（aos::resolve_shallow，不往裡面走），
 // 換完是物件就把 keys 裡有寫的那幾格整個解（aos::resolve）；其他 key（body、_entry…）原封不動，留給讀它的人（C-52）。
 // base_dir＝doc 裡相對 $ref 的起點（設定檔、ctl＝那份檔所在的資料夾）。回解好的 doc 與它裡面各 key 的起點（dir_of(key)；
 // doc 本身換過 $ref＝那份檔的資料夾，換的是 $ref 陣列＝每個 key 來自的那份檔的）。真的解不開丟 DirectiveBad（呼叫者決定算誰的錯：設定檔＝自己的錯退 1；ctl＝整份不採用）。

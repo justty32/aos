@@ -149,16 +149,7 @@ static bool flag_nat(const std::string& s, long long& out) {
 }
 
 aos::Resolved resolve_keys(const Json& doc, const std::string& base_dir, const std::vector<std::string>& keys) {
-    aos::Resolved r = aos::resolve_shallow(doc, base_dir);
-    if (!r.value.is_object()) {
-        return r;
-    }
-    for (const std::string& k : keys) {
-        if (r.value.contains(k)) {
-            r.value[k] = aos::resolve(r.value[k], r.dir_of(k));
-        }
-    }
-    return r;
+    return aos::resolve_keys(doc, base_dir, keys);
 }
 
 void add_args(Target& t, const std::vector<std::string>& args) {

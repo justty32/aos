@@ -31,7 +31,7 @@
 // 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/error.hpp）。
 #pragma once
 
-#include "aos/loop.hpp"
+#include "aos/io.hpp"
 #include "aos/post.hpp"
 
 #include <optional>
@@ -40,9 +40,8 @@
 
 namespace aos::llm_kernel {
 
-// 錯誤代號：沿用 aos-loop 的（→ aos-exec → aos-util），再加信箱、信會吐的。
+// 錯誤代號：沿用 aos-post 的信箱與通用代號，再加 LLM 信件協定自己的。
 namespace code {
-using namespace aos::loop::code;   // 通用代號與 StackMissing
 using namespace aos::post::code;   // MailboxMissing、LetterMissing、LetterBad
 inline constexpr const char* PriorityBad = "PriorityBad";       // priority 寫壞（aos-llm 自己擋；kernel 收到這種信回 LetterBad）
 inline constexpr const char* DeadlineMissed = "DeadlineMissed"; // 回信：輪到之前時限已過，沒跑（10-15 LLM kernel 稿定的名字）

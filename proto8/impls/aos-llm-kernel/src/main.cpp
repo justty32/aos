@@ -7,6 +7,7 @@
 #include "serve/serve.hpp"
 
 #include "aos/cli.hpp"
+#include "aos/signals.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -30,7 +31,7 @@ exit codes: 0 ok; 1 own error ("aos-llm-kernel: error: CODE ..." on stderr).
 int main(int argc, char** argv) {
     namespace k = aos::llm_kernel;
     try {
-        aos::loop::block_signals();
+        aos::block_signals();
         aos::Cli cli;
         try {
             cli = aos::parse_cli(std::vector<std::string>(argv + 1, argv + argc), {}, {}, HELP);   // 目前沒有旗標

@@ -4,15 +4,16 @@
 #include "daemon/daemon.hpp"
 #include "queue/queue.hpp"
 
+#include "aos/cli.hpp"
 #include "aos/post.hpp"
+#include "aos/directive.hpp"
+#include "aos/signals.hpp"
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
 
-#include <algorithm>
 #include <cerrno>
 #include <chrono>
 #include <cmath>
-#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <filesystem>
@@ -41,7 +42,7 @@ static std::string target_abs(const std::string& t, const std::string& base) {
 Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json doc = aos::load_cfg(spec);
     std::string base = aos::dirname(aos::abspath(aos::split_hash(spec).path));
-    aos::Resolved r = aos::loop::resolve_keys(doc, base, {"slots", "budget", "exec", "endpoint", "timeout_ms"});
+    aos::Resolved r = aos::resolve_keys(doc, base, {"slots", "budget", "exec", "endpoint", "timeout_ms"});
     doc = r.value;
     if (!doc.is_object()) {
         throw Error{code::CfgBad, spec + " must be a JSON object"};
@@ -93,40 +94,6 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
 
 namespace {
 
-// 資料夾裡的信（子資料夾、不含 . 開頭的），照字典序。
-// 信＝資料夾（N-16）：混進來的一般檔不理（11-05 edge-llm：new/ 裡一個一般檔曾讓 kernel 每次 WriteFailed 退 1、daemon 停）。
-std::vector<std::string> names_in(const std::string& dir) {
-    std::vector<std::string> out;
-    std::error_code ec;
-    for (const fs::directory_entry& e : fs::directory_iterator(dir, ec)) {
-        std::string n = e.path().filename().string();
-        std::error_code ec2;
-        if (!n.empty() && n[0] != '.' && e.is_directory(ec2)) {
-            out.push_back(n);
-        }
-    }
-    std::sort(out.begin(), out.end());
-    return out;
-}
-
-void make_dir(const std::string& dir) {
-    std::error_code ec;
-    fs::create_directories(dir, ec);
-    if (ec || !fs::is_directory(dir)) {
-        throw Error{code::MkdirFailed, "cannot create " + dir + (ec ? ": " + ec.message() : "")};
-    }
-}
-
-// 改名；改不成回 false（ENOENT＝別人先改了）。
-bool move(const std::string& from, const std::string& to) {
-    return std::rename(from.c_str(), to.c_str()) == 0;
-}
-
-void remove_tree(const std::string& p) {
-    std::error_code ec;
-    fs::remove_all(p, ec);
-}
-
 void write_reply(const std::string& dir, const Json& reply) {
     std::optional<std::string> err = aos::write_json(aos::join(dir, "reply.json"), reply);
     if (err) {
@@ -163,9 +130,7 @@ Json post_reply(const std::string& root, const std::string& dir, const std::stri
         opts.in_reply_to = id;
         std::string sig = aos::post::send(box, reply, opts);
         std::string tmp = aos::join(dir, ".reply_letter.txt.tmp");   // N-05
-        std::FILE* f = std::fopen(tmp.c_str(), "w");
-        if (f == nullptr || std::fprintf(f, "%s\n", sig.c_str()) < 0 || std::fclose(f) != 0 ||
-            std::rename(tmp.c_str(), aos::join(dir, "reply_letter.txt").c_str()) != 0) {
+        if (aos::write_text(aos::join(dir, "reply_letter.txt"), sig + "\n", tmp)) {
             return std::string(code::WriteFailed) + " reply sent (" + sig + ") but cannot record it in " + dir + "/reply_letter.txt";
         }
         return nullptr;
@@ -311,7 +276,7 @@ void Server::finish(const std::string& id, const Json& reply) {
     if (counted) {
         add_used(stack_, used_, report_of(reply), endpoint, sender);   // usage 從回信拿（沒有＝只算次數）；packs.<代號>、senders.<寄件人> 也記
     }
-    remove_tree(dir);   // 刪不掉（權限）不算錯：下一次 collect 看到 reply_letter.txt 就不重寄
+    aos::remove_tree(dir);   // 刪不掉（權限）不算錯：下一次 collect 看到 reply_letter.txt 就不重寄
 }
 
 // 寄一封掛信：{"procs_added": {"llm_<id>": {"exec": 單子, "max": 1, "stack": 信資料夾}}}（03 § 1）。
@@ -450,7 +415,7 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
 // cur/ 裡的：有 proc.json＝在飛（看 settle）；有 reply.json 沒 proc.json＝回信寫好了只差寄（上一次寄到一半）；
 // 都沒有＝認領了還沒掛就死＝改名回 new/ 重排。
 void Server::collect() {
-    for (const std::string& id : names_in(mb_.cur())) {
+    for (const std::string& id : aos::names_in(mb_.cur(), true)) {
         std::string dir = aos::join(mb_.cur(), id);
         std::optional<Json> proc = aos::read_json(aos::join(dir, PROC_JSON));
         if (proc && proc->is_object()) {
@@ -471,8 +436,8 @@ void Server::collect() {
         std::optional<Json> reply = read_reply(aos::join(dir, "reply.json"));
         if (reply) {
             finish(id, *reply);
-        } else if (!move(dir, aos::join(mb_.fresh(), id))) {
-            remove_tree(dir);
+        } else if (!aos::move(dir, aos::join(mb_.fresh(), id))) {
+            aos::remove_tree(dir);
         }
     }
 }
@@ -492,15 +457,15 @@ void Server::sweep() {
             continue;   // ask 鎖好才寫 letter.json：還沒有＝可能正在建鎖檔、上鎖，不碰
         }
         if (has_sender(dir) && !sender_alive(dir)) {
-            remove_tree(dir);
+            aos::remove_tree(dir);
         }
     }
-    for (const std::string& id : names_in(mb_.fresh())) {
+    for (const std::string& id : aos::names_in(mb_.fresh(), true)) {
         std::string dir = aos::join(mb_.fresh(), id);
         if (has_sender(dir) && !sender_alive(dir)) {
             std::string t = aos::join(mb_.tmp(), id);
-            if (move(dir, t)) {
-                remove_tree(t);
+            if (aos::move(dir, t)) {
+                aos::remove_tree(t);
             }
         }
     }
@@ -508,7 +473,7 @@ void Server::sweep() {
 
 // 不跑、直接回信（LetterBad、RequestBad、Endpoint*、DeadlineMissed、BudgetMissing…）：先認領，認領不到＝寄信的剛撤信，算了。
 void Server::refuse(const std::string& id, const Json& reply) {
-    if (!move(aos::join(mb_.fresh(), id), aos::join(mb_.cur(), id))) {
+    if (!aos::move(aos::join(mb_.fresh(), id), aos::join(mb_.cur(), id))) {
         return;
     }
     finish(id, reply);
@@ -562,7 +527,7 @@ std::vector<Waiting> Server::scan() {
     std::vector<Waiting> ws;
     double now = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
     Json seen = Json::object();
-    for (const std::string& id : names_in(mb_.fresh())) {
+    for (const std::string& id : aos::names_in(mb_.fresh(), true)) {
         std::string path = aos::join(aos::join(mb_.fresh(), id), "letter.json");
         std::optional<Json> letter = aos::read_json(path);
         if (!letter || !letter->is_object() || !letter->value("body", Json()).is_object() ||
@@ -621,7 +586,7 @@ std::vector<Waiting> Server::scan() {
 int Server::run() {
     host_ = find_host();   // 沒 AOS_DAEMON＝DaemonMissing、daemon 沒開 ctl 信箱＝MailboxMissing（kernel 自己的錯，退 1；信箱還沒建）
     for (const std::string& d : {mb_.root, mb_.tmp(), mb_.fresh(), mb_.cur()}) {
-        make_dir(d);
+        aos::make_dir(d);
     }
     lock();
     q_ = read_queue(stack_);
@@ -634,7 +599,7 @@ int Server::run() {
     std::vector<Waiting> ws = scan();
     order(ws, q_.runs);
 
-    int got = aos::loop::take_signal();
+    int got = aos::take_signal();
     if (got == 0) {
         long long n = 0;   // 這次新掛的
         for (const Waiting& w : ws) {
@@ -686,7 +651,7 @@ int Server::run() {
                 continue;   // 這包的格滿了：跳過、讓下一封補位（不是停下）
             }
             std::string dir = aos::join(mb_.cur(), w.id);
-            if (!move(aos::join(mb_.fresh(), w.id), dir)) {
+            if (!aos::move(aos::join(mb_.fresh(), w.id), dir)) {
                 continue;   // 寄信的剛撤信
             }
             q_.seen_at_runs.erase(w.id);

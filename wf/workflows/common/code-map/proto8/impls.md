@@ -14,7 +14,7 @@
 | `aos-exec` | aos-util | inst-static、aos-directive、Threads::Threads |
 | `aos-fsm` | aos-loop | — |
 | `aos-json` | aos-util、aos-directive | — |
-| `aos-llm-kernel` | aos-loop、aos-post | aos-directive |
+| `aos-llm-kernel` | aos-util、aos-post | aos-directive |
 | `aos-llm` | aos-util、aos-post、aos-llm-kernel | — |
 | `aos-lock` | aos-util | — |
 | `aos-loop` | aos-exec、aos-directive | — |
@@ -55,5 +55,5 @@
 | [`src/internal.hpp`](../../../../../proto8/impls/aos-directive/src/internal.hpp) | resolve.cpp、ref.cpp、env.cpp 之間共用的內部宣告（不公開；放在 aos::directive，公開的只有 aos::resolve）。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-directive/src/main.cpp) | aos-directive 命令列——讀一份 JSON、解開所有指示詞、印出來。 |
 | [`src/ref.cpp`](../../../../../proto8/impls/aos-directive/src/ref.cpp) | {"$ref": "檔[#/指標]"}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。 |
-| [`src/resolve.cpp`](../../../../../proto8/impls/aos-directive/src/resolve.cpp) | 走遍整份 JSON，認出指示詞、分派給 $ref（ref.cpp）／$env（env.cpp），換出來是字串再接 $path、加 $prefix。 |
+| [`src/resolve.cpp`](../../../../../proto8/impls/aos-directive/src/resolve.cpp) | 解析整份、單層或指定欄位的指示詞，保留相對路徑起點，並套用字串修飾詞。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-directive/vcpkg.json) | aos-directive：解 JSON 裡的指示詞（$ref、$env）的 lib 與命令列 |

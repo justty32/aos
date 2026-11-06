@@ -38,6 +38,8 @@ inline constexpr const char* MkdirFailed = "MkdirFailed";   // 資料夾建不�
 inline constexpr const char* LaunchFailed = "LaunchFailed"; // 子程序起不來（fork／spawn 失敗、執行檔不在）
 // 子命令
 inline constexpr const char* CommandUnknown = "CommandUnknown"; // 命令列：不認得的子命令（aos-json、aos-post、aos-lock）
+// 程式環境
+inline constexpr const char* StackMissing = "StackMissing"; // 要 AOS_STACK 卻沒設
 // 其他
 inline constexpr const char* Internal = "Internal";         // 照理不會發生的例外（記憶體不夠、cwd 被刪）
 }  // namespace code

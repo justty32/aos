@@ -1,4 +1,4 @@
-// resolve.cpp：走遍整份 JSON，認出指示詞、分派給 $ref（ref.cpp）／$env（env.cpp），換出來是字串再接 $path、加 $prefix。
+// resolve.cpp：解析整份、單層或指定欄位的指示詞，保留相對路徑起點，並套用字串修飾詞。
 // 10-20 ideas D9～D15；$path 10-21 傍晚改成字串拼接（join_path）。
 //
 // 物件：有 $ref 就是 $ref（同時有 $env 也只看 $ref）；否則有 $env 就是 $env；都沒有＝普通物件，逐個 key 往下走
@@ -121,6 +121,19 @@ Json resolve(const Json& doc, const std::filesystem::path& base_dir, const std::
 Resolved resolve_shallow(const Json& v, const std::filesystem::path& base_dir) {
     directive::Chain chain;
     return directive::shallow(v, aos::abspath(base_dir.string()), chain);
+}
+
+Resolved resolve_keys(const Json& doc, const std::string& base_dir, const std::vector<std::string>& keys) {
+    aos::Resolved r = aos::resolve_shallow(doc, base_dir);
+    if (!r.value.is_object()) {
+        return r;
+    }
+    for (const std::string& k : keys) {
+        if (r.value.contains(k)) {
+            r.value[k] = aos::resolve(r.value[k], r.dir_of(k));
+        }
+    }
+    return r;
 }
 
 const std::string& Resolved::dir_of(const std::string& key) const {
