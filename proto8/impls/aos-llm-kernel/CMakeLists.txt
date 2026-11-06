@@ -16,12 +16,12 @@ endif()
 if(NOT TARGET aos-post)
   add_subdirectory(../aos-post aos-post-build)
 endif()
-#   aos-directive  pack.cpp、serve.cpp 解設定檔指示詞。
+#   aos-directive  pack.cpp、serve/config.cpp、serve/scan.cpp 解設定檔指示詞。
 if(NOT TARGET aos-directive)
   add_subdirectory(../aos-directive aos-directive-build)
 endif()
 
-# src/ 底下除了 src/main.cpp 全是函式庫的程式碼。
+# src/ 底下除了 src/main.cpp 全是函式庫的程式碼（含 serve 元素的 config／reply／proc／scan 分檔）。
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 

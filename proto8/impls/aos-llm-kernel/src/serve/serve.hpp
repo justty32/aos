@@ -1,5 +1,11 @@
 // serve.hpp：【serve】kernel 跑一次——讀設定、鎖信箱、收拾、排隊、認領、請 daemon 掛問腦 proc、收成品、回信。
 //
+//   config.cpp  讀設定、解指示詞與 endpoint 函數路徑
+//   reply.cpp   寄送／撤回回信、記用量與刪信
+//   proc.cpp    掛問腦 proc、收尾／重掛與收集在飛信件
+//   scan.cpp    掃排隊信、查代號與解析能力包
+//   serve.cpp   鎖信箱、收拾信件與每輪執行骨架
+//
 //   read_cfg   kernel.json（`檔` 或 `檔#/指標`；thinking 11-04 think-as-function 02 § 3）：
 //                slots（同時在飛幾封，正整數；沒寫＝1）、budget（額度，budget.hpp；含每寄件人的 senders，相對路徑從 kernel 定義資料夾算）、
 //                exec（必填：預設的 endpoint 函數＝aos-exec 目標，資料夾、檔、`檔#/指標`；相對的從 kernel 定義資料夾〔kernel.json 所在〕算、轉成絕對）、
@@ -40,12 +46,15 @@
 
 #include "budget/budget.hpp"
 #include "common/common.hpp"
+#include "daemon/daemon.hpp"
 #include "pack/pack.hpp"
+#include "queue/queue.hpp"
 
 #include <map>
 #include <optional>
 #include <string>
 #include <vector>
+#include <unistd.h>
 
 namespace aos::llm_kernel {
 
@@ -64,5 +73,50 @@ struct Cfg {
 
 Cfg read_cfg(const std::string& spec, const std::string& stack);
 int serve(const Cfg& cfg, const std::string& stack);
+
+// serve 元素各分檔共用的內部接縫。
+std::string target_abs(const std::string& t, const std::string& base);
+Json error_reply(const std::string& c, const std::string& msg);
+extern const char* PROC_JSON;
+
+class Server {
+public:
+    Server(const Cfg& cfg, const std::string& stack)
+        : cfg_(cfg), mb_{cfg.mailbox}, slots_(cfg.slots), budget_(cfg.budget), stack_(stack) {}
+    ~Server() {
+        if (lock_fd_ >= 0) {
+            close(lock_fd_);
+        }
+    }
+    Server(const Server&) = delete;
+    Server& operator=(const Server&) = delete;
+
+    int run();
+
+private:
+    const Cfg& cfg_;
+    Mailbox mb_;
+    long long slots_;
+    Budget budget_;
+    std::string stack_;
+    int lock_fd_ = -1;
+    Queue q_;
+    Used used_;
+    Host host_;
+    Table table_;
+    long long busy_ = 0;   // 掛上去、還沒收的（在飛）
+    std::map<std::string, long long> pack_busy_;   // 代號 → 這包在飛幾封（proc.json 的 endpoint；11-05 feat-proto）
+    std::map<std::string, long long> sender_busy_; // 寄件人 → 這人在飛幾封（proc.json 的 sender；11-05 feat-proto 件 5）
+
+    void lock();
+    void collect();
+    void sweep();
+    std::vector<Waiting> scan();
+    void refuse(const std::string& id, const Json& reply);
+    std::optional<Json> pick(Waiting& w);
+    void finish(const std::string& id, const Json& reply);
+    void mount(const std::string& id, const std::string& exec, Json proc);
+    std::optional<Json> settle(const std::string& id, Json proc);
+};
 
 }  // namespace aos::llm_kernel

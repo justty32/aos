@@ -32,6 +32,8 @@ echo '{"endpoint": "smart-high", "request": {"messages": [{"role": "user", "cont
 
 設計與決定見 [thinking 2026-11-05 kernel-daemon](../../thinking/2026-11/05/kernel-daemon/README.md)（問腦改掛 daemon 在 [03](../../thinking/2026-11/05/kernel-daemon/03-問腦改掛daemon.md)、`~/llm_kernel` 佈局在 [07](../../thinking/2026-11/05/kernel-daemon/07-llm-daemon佈局.md)）、[thinking 2026-11-04 think-as-function](../../thinking/2026-11/04/think-as-function/README.md)（信與 kernel.json 在 [02](../../thinking/2026-11/04/think-as-function/02-設計-信與kernel.md)）；排隊、額度、收拾的來由見 [thinking 2026-10-24 LLM kernel](../../thinking/2026-10/24/llm-kernel/README.md)、[10-15 LLM kernel 稿](../../thinking/2026-10/15/llm-kernel.md)；規範 [N-42](../../docs/NORMS/09-kernel.md)、信箱 [N-16](../../docs/NORMS/05-基礎設施-窗/05-N-16.md)。
 
+程式閱讀從內部標頭 [`src/serve/serve.hpp`](src/serve/serve.hpp) 開始：它列出設定、回信、問腦 proc、掃信與每輪流程的分工。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。
