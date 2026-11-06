@@ -32,6 +32,7 @@
 | [`cli/tools.md`](../../../../../proto8/knowledge/aos/cli/tools.md) | Registering and calling tools |
 | [`errors/README.md`](../../../../../proto8/knowledge/aos/errors/README.md) | Reading an error |
 | [`errors/codes.md`](../../../../../proto8/knowledge/aos/errors/codes.md) | Error codes |
+| [`errors/common.md`](../../../../../proto8/knowledge/aos/errors/common.md) | Common error codes |
 | [`me/README.md`](../../../../../proto8/knowledge/aos/me/README.md) | Who am I |
 | [`me/self_tools.md`](../../../../../proto8/knowledge/aos/me/self_tools.md) | Changing your own toolbox |
 | [`rules.md`](../../../../../proto8/knowledge/aos/rules.md) | Boundaries |

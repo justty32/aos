@@ -1,7 +1,5 @@
 // aos/util/io.hpp：【aos-util】aos 這一家命令列工具的「三扇門」——stdin 讀一份 JSON、stdout 印一行 JSON、stderr 只有兩種行。
 //
-//   read_stream(t) 一串 JSON 值（空白隔開，可單行可跨行）→ 一個個值；壞掉的尾巴丟掉（前面能解的算），不丟例外。
-//                  read_stdin 就是用它；別的工具讀「JSON 串流」的檔（例如子程式的 stdout）也用它
 //   require_stdin_body()  要 stdin 內容時拒絕終端（ArgumentsBad），不等 EOF。
 //   read_stdin()   先拒絕終端，再讀 stdin 到底：一份 JSON（空的＝{}、一份都解不出來＝InputBad、多份＝InputBad、壞尾丟掉）
 //   dumps(v)       JSON → 一行字，排版同 Python 的 json.dumps(v, ensure_ascii=False)：", "、": "、key 照原順序
@@ -19,13 +17,10 @@
 #include <nlohmann/json.hpp>
 
 #include <string>
-#include <vector>
 
 namespace aos {
 
 using Json = nlohmann::ordered_json;
-
-std::vector<Json> read_stream(const std::string& text);
 
 void require_stdin_body();
 Json read_stdin();

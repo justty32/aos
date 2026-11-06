@@ -160,36 +160,6 @@ Spec split_hash(const std::string& spec) {
     return Spec{spec.substr(0, hash), pointer};
 }
 
-Json read_json_at(const std::string& path, const std::string& pointer) {
-    int err = 0;
-    std::optional<std::string> text = read_file(path, err);
-    if (!text) {
-        // 11-05 第二輪：原本照 Python 的 OSError 寫（`[Errno 2] No such file or directory: 'x'`），C++ 程式印 Python 樣式、load_cfg 又包一層＝路徑印兩次
-        throw Error{err == ENOENT ? code::CfgMissing : code::CfgBad, "cannot read " + path + ": " + std::strerror(err)};
-    }
-    // 第一行 #!：換成空行（留著換行，JSON 錯誤訊息的行號才對得上）
-    if (text->starts_with("#!")) {
-        size_t nl = text->find('\n');
-        if (nl == std::string::npos) {
-            text->clear();
-        } else {
-            text->erase(0, nl);
-        }
-    }
-    Json doc = Json::parse(*text, nullptr, false);
-    if (doc.is_discarded()) {
-        throw Error{code::CfgBad, "not JSON: " + path};
-    }
-    if (pointer.empty()) {
-        return doc;
-    }
-    try {
-        return doc.at(Json::json_pointer(pointer));
-    } catch (const nlohmann::json::exception& e) {
-        throw Error{code::CfgMissing, "pointer not found: " + path + "#" + pointer + ": " + e.what()};
-    }
-}
-
 // 把 text 整份寫進 fd；失敗回 false（errno 留著）。
 static bool write_all(int fd, const std::string& text) {
     size_t done = 0;

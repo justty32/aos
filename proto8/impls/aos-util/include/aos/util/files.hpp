@@ -3,8 +3,7 @@
 //   abspath / dirname / join   路徑（照 Python 的 os.path.abspath、dirname、join）
 //   read_file / read_json      讀整個檔；read_json 讀不了或不是 JSON＝nullopt
 //   write_text / write_json                 先寫暫存檔、再改名蓋過去（原子寫入，見 files.cpp 的說明）
-//   split_hash / read_json_at  入口路徑的 JSON 尋址：`檔#/指標` 拆成兩半；讀檔（跳過第一行 #!）再照指標取值
-// （讀 JSON 串流用 aos/util/io.hpp 的 read_stream。）
+//   split_hash                入口路徑的 JSON 尋址：`檔#/指標` 拆成路徑與指標兩半
 #pragma once
 
 #include "aos/util/io.hpp"
@@ -61,9 +60,5 @@ struct Spec {
     std::string pointer;
 };
 Spec split_hash(const std::string& spec);
-
-// 讀一份 JSON 檔，再照 pointer 取值（pointer 空＝整份）。第一行是 `#!`（shebang）就當空行跳過。
-// 檔不在丟 Error{CfgMissing}、其他讀不到或不是 JSON 丟 Error{CfgBad}、指標寫壞或指不到丟 Error{CfgMissing}（訊息開頭「指不到 」）。
-Json read_json_at(const std::string& path, const std::string& pointer);
 
 }  // namespace aos

@@ -10,7 +10,7 @@
 //               help 是空的＝當成不認得的旗標。子命令程式：子命令前一次（全程式的說明）、子命令後各一次（那個子命令的說明）。
 //   usage_error 錯誤行的 usage 位置（R5）：「原因 (usage: …)」——Error{code, reason + " (usage: " + usage + ")"}。
 //   load_cfg    設定檔（aos-loop、aos-fsm、aos-daemon 的唯一位置參數）：`檔` 或 `檔#/指標`，回那個位置的值（不驗是不是物件）。
-//               檔不在 CfgMissing、其他讀不了或不是 JSON CfgBad、`#` 後不是 `/` CfgBad、`#/` 指不到 CfgMissing（10-23 命名統合）。第一行 `#!` 跳過（同 read_json_at）。
+//               檔不在 CfgMissing、其他讀不了或不是 JSON CfgBad、`#` 後不是 `/` CfgBad、`#/` 指不到 CfgMissing（10-23 命名統合）。第一行 `#!` 跳過。
 //
 // 對應 proto8/py/aos_flags.py 的 parse、load_cfg（10-21 ideas § 3、10-21 傍晚 § 9）。
 // 較早一代的 aos/flags.hpp（旗標＝key 原名、值當 JSON 解）11-04 已刪（沒人叫）。
@@ -24,13 +24,6 @@
 
 namespace aos {
 
-// 全 aos 共用短名表；各呼叫端只開自己有長旗標的短名，-h 隨 help 內建。
-inline const std::map<std::string, std::string> kShort = {
-    {"-h", "--help"}, {"-j", "--json"}, {"-t", "--target"},
-    {"-d", "--daemon"}, {"-n", "--name"}, {"-w", "--ws"},
-    {"-s", "--stack"}, {"-f", "--follow"}, {"-y", "--yes"},
-};
-
 struct Cli {
     std::map<std::string, std::string> opts;   // 旗標表的值 → 字串（{"ws": "/x"}）
     std::vector<std::string> rest;             // 位置參數（第一個起原樣）
@@ -38,7 +31,7 @@ struct Cli {
 
 // argv 不含程式名。flags：旗標名（"--ws"）→ 存進 opts 的名字（"ws"）；switches：不帶值的旗標名 → 存進 opts 的名字。
 // help：`--help`／`-h` 時印的說明（英文、印 stdout、退 0）。
-// short_flags：從 kShort 挑選的短名，對應長名必須在 flags／switches；不黏值、不併、不帶 =。
+// short_flags：從內建短名表挑選的短名，對應長名必須在 flags／switches；不黏值、不併、不帶 =。
 // 表不合是呼叫端寫錯（std::invalid_argument）；命令列錯誤仍用 aos::Error。
 Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
               const std::map<std::string, std::string>& switches = {}, const std::string& help = "",

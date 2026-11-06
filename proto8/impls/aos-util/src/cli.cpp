@@ -1,15 +1,24 @@
-// cli.cpp：【aos-util】10-21 起的命令列旗標與設定檔（規則見 include/aos/util/cli.hpp）。
+// cli.cpp：【aos-util】命令列旗標（含內建短名表）與設定檔讀取（規則見 include/aos/util/cli.hpp）。
 // 對應 proto8/py/aos_flags.py 的 parse、load_cfg。
 #include "aos/util/cli.hpp"
 
 #include "aos/util/error.hpp"
 #include "aos/util/files.hpp"
 
+#include <cerrno>
 #include <cstdio>
+#include <cstring>
 #include <cstdlib>
 #include <stdexcept>
 
 namespace aos {
+
+// 全 aos 共用短名表；各呼叫端只開自己有長旗標的短名，-h 隨 help 內建。
+static const std::map<std::string, std::string> kShort = {
+    {"-h", "--help"}, {"-j", "--json"}, {"-t", "--target"},
+    {"-d", "--daemon"}, {"-n", "--name"}, {"-w", "--ws"},
+    {"-s", "--stack"}, {"-f", "--follow"}, {"-y", "--yes"},
+};
 
 Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
               const std::map<std::string, std::string>& switches, const std::string& help,
@@ -92,6 +101,36 @@ Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, 
 
 Error usage_error(const std::string& code, const std::string& reason, const std::string& usage) {
     return Error{code, reason + " (usage: " + usage + ")"};
+}
+
+static Json read_json_at(const std::string& path, const std::string& pointer) {
+    int err = 0;
+    std::optional<std::string> text = read_file(path, err);
+    if (!text) {
+        // 11-05 第二輪：原本照 Python 的 OSError 寫（`[Errno 2] No such file or directory: 'x'`），C++ 程式印 Python 樣式、load_cfg 又包一層＝路徑印兩次
+        throw Error{err == ENOENT ? code::CfgMissing : code::CfgBad, "cannot read " + path + ": " + std::strerror(err)};
+    }
+    // 第一行 #!：換成空行（留著換行，JSON 錯誤訊息的行號才對得上）
+    if (text->starts_with("#!")) {
+        size_t nl = text->find('\n');
+        if (nl == std::string::npos) {
+            text->clear();
+        } else {
+            text->erase(0, nl);
+        }
+    }
+    Json doc = Json::parse(*text, nullptr, false);
+    if (doc.is_discarded()) {
+        throw Error{code::CfgBad, "not JSON: " + path};
+    }
+    if (pointer.empty()) {
+        return doc;
+    }
+    try {
+        return doc.at(Json::json_pointer(pointer));
+    } catch (const nlohmann::json::exception& e) {
+        throw Error{code::CfgMissing, "pointer not found: " + path + "#" + pointer + ": " + e.what()};
+    }
 }
 
 Json load_cfg(const std::string& spec) {

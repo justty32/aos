@@ -1,7 +1,7 @@
 // aos/util/error.hpp：【aos-util】aos 這一家命令列工具共用的錯誤型別，和通用的錯誤代號。
 //
-// 每個工具出錯都丟同一種 aos::Error{code, msg}；命令列在 stderr 印一行「程式名: 代號 原因」、退出 1
-// （11-04 起照 CONVENTION P-44，各程式自己印；aos/util/io.hpp 的 emit_error 印 {"error": {"code", "msg"}} 那種只剩 aos-util 自己的測試小程式用）。
+// 每個工具出錯都丟同一種 aos::Error{code, msg}；命令列用 aos::fail 在 stderr 印一行
+// 「程式名: error: 代號 原因」、退出 1（aos/util/io.hpp）。
 // code＝錯誤代號（看 code 分是哪種錯），
 // msg＝給人看的白話（字面不保證）。代號寫成常數，打錯字編譯就會抓到。
 //

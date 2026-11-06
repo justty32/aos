@@ -14,7 +14,7 @@ namespace aos {
 
 // 一串 JSON 值（空白隔開，可跨行）→ 一個個值；壞掉的尾巴丟掉。
 // nlohmann 的 `stream >> json` 一次讀一個值、停在那個值後面，剛好拿來一個個讀。
-std::vector<Json> read_stream(const std::string& text) {
+static std::vector<Json> read_stream(const std::string& text) {
     std::vector<Json> out;
     std::istringstream in(text);
     while (true) {

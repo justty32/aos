@@ -3,7 +3,7 @@
 
 # proto8 逐檔 code map 生成冊索引
 
-`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：378 個檔、316 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
+`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：379 個檔、317 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
 
 | 冊 | 夾 | 段 | 列／檔 |
 |---|---|---|---|
@@ -17,7 +17,7 @@
 | [impls-5](impls-5.md) | `proto8/impls/` | `aos-loop/`、`aos-post/` |  |
 | [impls-6](impls-6.md) | `proto8/impls/` | `aos-util/`、`cmake/` |  |
 | [kernel](kernel.md) | `proto8/kernel/` | `daemon-judge/`、`llm-kernel/`、`procs-kernel/` | 10／10 |
-| [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層、`aos/` | 23／23 |
+| [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層、`aos/` | 24／24 |
 | [lib](lib.md) | `proto8/lib/` | 頂層、`agent/`、`aos/`、`base/` | 32／88 |
 | [py](py.md) | `proto8/py/` | 頂層、`daemon_ctl/` | 9／9 |
 | [root](root.md) | `proto8/` 頂層單檔 | 頂層 | 1／1 |
