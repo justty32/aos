@@ -4,7 +4,7 @@
 //   inline.cpp   run_inline：行程內 aos-exec 的 run_inst，跑的期間 AOS_CF／AOS_CD／AOS_CO 設成單子的位置
 //   folder.cpp    run_folder：fork 子行程、在裡面呼叫 aos-exec 的 run_cli（等同一支 aos-exec），
 //                 等它結束、期間把訊號 kill 給它；量毫秒
-//   signals.cpp   block_signals、take_signal；the_signals()＝那三個訊號
+//   signals.cpp   block_signals、take_signal、the_signals 轉交 aos-util 的訊號介面
 #pragma once
 
 #include "common/common.hpp"

@@ -54,5 +54,5 @@
 | [`src/run/inline.cpp`](../../../../../proto8/impls/aos-loop/src/run/inline.cpp) | run_inline——exec 是物件（內嵌單子）時，行程內跑它（10-24；說明見 aos/loop.hpp 的 run_once）。 |
 | [`src/run/run.cpp`](../../../../../proto8/impls/aos-loop/src/run/run.cpp) | run_once——跑一次（說明見 aos/loop.hpp）。 |
 | [`src/run/run.hpp`](../../../../../proto8/impls/aos-loop/src/run/run.hpp) | 跑一次（公開介面 block_signals、take_signal、run_once 在 aos/loop.hpp）。 |
-| [`src/run/signals.cpp`](../../../../../proto8/impls/aos-loop/src/run/signals.cpp) | 擋訊號、兩次之間取訊號（說明見 aos/loop.hpp）。 |
+| [`src/run/signals.cpp`](../../../../../proto8/impls/aos-loop/src/run/signals.cpp) | 將訊號操作轉交 aos-util（說明見 aos/loop.hpp）。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-loop/vcpkg.json) | aos-loop：一次次跑 run（aos-exec 的目標），看結束碼決定下一步 |

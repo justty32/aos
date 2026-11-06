@@ -13,7 +13,7 @@
 //                 有變才寫（11-02）：組好的這份（不含 updated_at、counter_runs；running／waiting 互換當沒變，11-02 晚）跟上一份寫出去的一樣就不碰檔；第一份、帶 code 的一定寫；
 //                 接著呼叫 write_more（子類別的窗，自己比有沒有變；10-29）。11-02 拿掉 beat（每秒的心跳）
 //   log_line      stdout 一行 JSON（11-02；11-02 晚起 --enable-logs 才印）：一次 write；寫的那一下擋 SIGPIPE、排著的吃掉、還原遮罩；印不了＝之後不印、不退出
-//   write_window  先寫同資料夾的 .名字 再改名（N-05）
+//   write_window  透過 aos-util write_text 先寫同資料夾的 .名字 再改名（N-05）
 //   proc_fields   pid、started_at_ticks、boot_id（11-02 原 heartbeat，時間欄拿掉）
 #include "engine/engine.hpp"
 
@@ -22,7 +22,6 @@
 
 #include <cerrno>
 #include <csignal>
-#include <cstdio>
 #include <cstring>
 #include <ctime>
 
@@ -37,16 +36,13 @@ void write_window(const std::string& path, const Json& doc) {
     std::string name = path.substr(path.rfind('/') + 1);
     std::string tmp = aos::join(dir, "." + name);
     std::string text = aos::dumps(doc) + "\n";
-    FILE* f = std::fopen(tmp.c_str(), "w");
-    if (f == nullptr) {
-        throw Error{code::WriteFailed, "cannot write " + tmp + ": " + std::strerror(errno)};
-    }
-    bool ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
-    ok = std::fclose(f) == 0 && ok;
-    if (!ok || std::rename(tmp.c_str(), path.c_str()) != 0) {
-        std::string why = std::strerror(errno);
-        std::remove(tmp.c_str());
-        throw Error{code::WriteFailed, "cannot write " + path + ": " + why};
+    std::optional<aos::TextWriteError> error = aos::write_text(path, text, tmp);
+    if (error) {
+        std::string failed_path = path;
+        if (error->operation == aos::TextWriteOperation::open) {
+            failed_path = tmp;
+        }
+        throw Error{code::WriteFailed, "cannot write " + failed_path + ": " + std::strerror(error->number)};
     }
 }
 

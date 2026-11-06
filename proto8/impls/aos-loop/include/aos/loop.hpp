@@ -1,7 +1,7 @@
 // aos/loop.hpp：aos-loop 的公開介面——跑「一次」（loop.json 的 exec、fsm.json 格的 exec，同一套寫法）。
 //
-//   block_signals   擋住 SIGINT／SIGTERM／SIGHUP（整支程式的壽命；要在第一次之前、開任何執行緒之前呼叫）
-//   take_signal     兩次之間：有排著的那三個訊號之一就取出來回它（0＝沒有）
+//   block_signals   轉交 aos-util，擋住 SIGINT／SIGTERM／SIGHUP（整支程式的壽命；要在第一次之前、開任何執行緒之前呼叫）
+//   take_signal     轉交 aos-util；兩次之間：有排著的那三個訊號之一就取出來回它（0＝沒有）
 //   parse_target    loop 的 exec、fsm 格的 exec 的寫法（10-21 傍晚 ideas § 9；10-24 加物件）：字串＝aos-exec 的目標；陣列＝[目標, 參數...]；
 //                   物件＝內嵌單子（10-24 使用者「exec本來就應該要可以直接放內嵌單子吧」）
 //   resolve_exec    exec 那格的指示詞：先換一層；換完是物件（單子）就不往裡面解（留到跑的時候、AOS_CF／AOS_CO 設好才解），不然整個解
@@ -14,9 +14,9 @@
 //                   讀設定（旗標 ＞ 設定檔 ＞ 預設：exec／max／interval_ms／ctl／state）、每次讀 ctl 窗（11-03 起一道指令、新的才照做）→ tend() → 跑一次 → 寫 state 窗（＋write_more；11-02 起有變才寫）、
 //                   --enable-logs 時每跑完一次在 stdout 印一行 log（11-02；11-02 晚改預設不印）
 //                   新 ctl 處理完（含拒用壞指令）、身體跑完一次會更新 responded_at；基準線、檔不在、睡著不更新
-//   write_window    窗的寫法：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
+//   write_window    透過 aos-util write_text 寫窗：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
 //   proc_fields     state 裡「這支程式是誰」的欄位 {pid, started_at_ticks, boot_id}（11-02 原 heartbeat：心跳拿掉、recorded_at 收掉）
-//   resolve_keys    設定檔、ctl 的指示詞（10-23 晚：aos 讀的 JSON 都解）：整份先換一層，再把自己讀的那幾格整個解，其他 key 不碰
+//   resolve_keys    轉交 aos-directive；設定檔、ctl 的指示詞（10-23 晚：aos 讀的 JSON 都解）：整份先換一層，再把自己讀的那幾格整個解，其他 key 不碰
 //
 // 規則見 aos-loop/README.md。
 // 錯一律丟 aos::Error{code, msg}（aos-util 的 aos/error.hpp）。
