@@ -2,7 +2,7 @@
 //
 //   1. aos::resolve        解單子裡的指示詞（$env、$ref，$path／$prefix；aos-directive；$ref 從 ref_base 算）。要在 apply_env
 //                          之後呼叫，單子才讀得到 aos-exec 剛設的 AOS_STACK／AOS_CF／AOS_CD
-//   2. parse_inst          驗 10 個 key（fields.cpp）；argv0（帶 / 又 exec 不了＝前面插 aos-exec，launch.cpp）；
+//   2. parse_inst          驗 17 個 key（fields.cpp）；argv0（帶 / 又 exec 不了＝前面插 aos-exec，launch.cpp）；
 //                          build_lib_input 組 aos-inst 的單子（lib_input.cpp）
 //   3. 擋住三個訊號（SigMask，出去還原）、開 signalfd／eventfd
 //   4. aos_inst_start      起子程式，同步拿到 pid（失敗＝LaunchFailed，訊息帶 aos-inst 的名字）
@@ -22,6 +22,7 @@
 #include <cerrno>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <thread>
 
 #include <fcntl.h>
@@ -130,6 +131,23 @@ Result run_inst(const Json& doc, const std::string& base_dir, const std::vector<
         cwd = aos::join(base_dir, *inst.cwd);
     }
     inst.argv = argv0(inst.argv, cwd);   // 帶 / 又 exec 不了＝交給 PATH 上的 aos-exec（10-20 ideas D3）
+    std::optional<Deadline> deadline;
+    if (inst.timeout_ticks) {
+        constexpr auto high = std::numeric_limits<long long>::max();
+        if (*inst.timeout_ticks > static_cast<unsigned long long>(high)) {
+            throw Error{code::TickBad, "inst timeout_ticks is outside signed 64-bit range"};
+        }
+        long long ticks = static_cast<long long>(*inst.timeout_ticks);
+        long long interval = aos::tick_interval_ms(); // 有時鐘也先驗設定，起子前報 TickBad
+        if (aos::now_tick()) {
+            deadline = aos::deadline_after(ticks);
+        } else {
+            if (ticks > high / interval) {
+                throw Error{code::TickBad, "inst timeout_ticks duration is outside signed 64-bit range"};
+            }
+            inst.timeout_ms = static_cast<unsigned long long>(ticks * interval);
+        }
+    }
     LibInput lib;
     build_lib_input(inst, base_dir, lib);
 
@@ -151,13 +169,29 @@ Result run_inst(const Json& doc, const std::string& base_dir, const std::vector<
 
     // 5. 工人等、主執行緒轉送訊號
     aos_inst_result_t out{};
-    std::thread worker([&] {
-        rc = aos_inst_wait(&proc, &out);   // 卡到子程式結束
-        uint64_t one = 1;
-        ssize_t n = write(done_fd.fd, &one, sizeof one);   // 敲一下，叫醒主執行緒
-        (void)n;
-    });
-    int received = forward_signals_until_done(pid, inst.grace_ms, sig_fd.fd, done_fd.fd);
+    std::thread worker;
+    try {
+        worker = std::thread([&] {
+            rc = aos_inst_wait(&proc, &out);   // 卡到子程式結束
+            uint64_t one = 1;
+            ssize_t n = write(done_fd.fd, &one, sizeof one);   // 敲一下，叫醒主執行緒
+            (void)n;
+        });
+    } catch (...) {
+        killpg(pid, SIGKILL);
+        aos_inst_wait(&proc, &out);
+        throw;
+    }
+    int received = 0;
+    bool tick_timed_out = false;
+    try {
+        received = forward_signals_until_done(pid, inst.grace_ms, sig_fd.fd, done_fd.fd,
+                                             deadline, tick_timed_out);
+    } catch (...) {
+        killpg(pid, SIGKILL);
+        worker.join();
+        throw;
+    }
     worker.join();
 
     // 6. 結果
@@ -167,7 +201,7 @@ Result run_inst(const Json& doc, const std::string& base_dir, const std::vector<
     Result r;
     r.code = out.code;
     r.signal = out.signal;
-    r.timed_out = out.timed_out;
+    r.timed_out = out.timed_out || tick_timed_out;
     r.pid = out.pid;
     r.ms = out.ms;
     r.received = received;

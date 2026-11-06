@@ -7,7 +7,7 @@
 aos-inst 是 C lib、沒有命令列，inst 單子由 aos-exec 在行程內跑。[aos-loop](../aos-loop/README.md)、[aos-fsm](../aos-fsm/README.md) 的每一次、[aos-daemon](../aos-daemon/README.md) 的子 loop，都是在 fork 出來的子行程裡呼叫這個庫的 `run_cli`（等同起一支 `aos-exec -- 目標 參數...`）。
 
 像在門口換好鞋再進屋：它只負責帶路和換鞋，進屋之後做什麼是入口的事。`.env` 就是門口那張「進來先把這些設好」的紙條。入口是可執行檔或 argv 陣列時它不留在屋裡（exec，結束碼就是入口的碼）；
-入口是 inst 單子時它留在門口當監工：在行程內交給 aos-inst 起子程式（自成行程群組）、把收到的訊號轉給整群、等它結束，再以子程式的碼結束。
+入口是 inst 單子時它留在門口當監工：在行程內交給 aos-inst 起子程式（自成行程群組）、把收到的訊號轉給整群、等它結束，再以子程式的碼結束。單子的 `timeout_ticks` 與 `timeout_ms` 擇一：有樹時鐘比 tick、沒時鐘換成毫秒；到期後以牆鐘 `grace_ms` 收尾（[欄位](docs/03-環境變數.md)）。
 
 ```sh
 aos-exec --ws ws agent        # 跑 agent/_entry（或 agent/_entry.json），工作區 ws

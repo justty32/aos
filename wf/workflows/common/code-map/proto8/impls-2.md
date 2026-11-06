@@ -20,11 +20,11 @@
 | [`src/find/classify.cpp`](../../../../../proto8/impls/aos-exec/src/find/classify.cpp) | 實際的檔 → 種類（說明見 find.hpp）。 |
 | [`src/find/find.cpp`](../../../../../proto8/impls/aos-exec/src/find/find.cpp) | 一跳（hop）——說明見 find.hpp（10-21 ideas § 4～§ 7）。 |
 | [`src/find/find.hpp`](../../../../../proto8/impls/aos-exec/src/find/find.hpp) | 一跳（hop）——XXX → 走進去、讀 .env、挑入口、判種類（10-21 ideas § 4～§ 7；N-59、N-61、N-62）。 |
-| [`src/inst/fields.cpp`](../../../../../proto8/impls/aos-exec/src/inst/fields.cpp) | 單子（$env 已解）→ Inst：認得 16 個 key、驗型別。 |
+| [`src/inst/fields.cpp`](../../../../../proto8/impls/aos-exec/src/inst/fields.cpp) | 單子（$env 已解）→ Inst：認得 17 個 key、驗型別。 |
 | [`src/inst/inst.hpp`](../../../../../proto8/impls/aos-exec/src/inst/inst.hpp) | 行程內跑一張 inst 單子（公開的 run_inst 在 aos/exec.hpp）。 |
 | [`src/inst/lib_input.cpp`](../../../../../proto8/impls/aos-exec/src/inst/lib_input.cpp) | Inst → aos-inst 的單子（aos_inst_input_t）。 |
 | [`src/inst/run.cpp`](../../../../../proto8/impls/aos-exec/src/inst/run.cpp) | run_inst——行程內跑一張 inst 單子（公開介面見 aos/exec.hpp）。 |
-| [`src/inst/signals.cpp`](../../../../../proto8/impls/aos-exec/src/inst/signals.cpp) | 訊號——跑單子的期間收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式的整個行程群組。 |
+| [`src/inst/signals.cpp`](../../../../../proto8/impls/aos-exec/src/inst/signals.cpp) | 訊號與 tick 逾時監工——轉送訊號與逾時終止子程式的整個行程群組。 |
 | [`src/launch/launch.cpp`](../../../../../proto8/impls/aos-exec/src/launch/launch.cpp) | 開跑（說明見 launch.hpp）。 |
 | [`src/launch/launch.hpp`](../../../../../proto8/impls/aos-exec/src/launch/launch.hpp) | 開跑（公開介面 run_inst、argv0 在 aos/exec.hpp）。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-exec/src/main.cpp) | aos-exec 命令列——把參數交給公開 API 的 run_cli（aos/exec.hpp、src/cli/）。 |

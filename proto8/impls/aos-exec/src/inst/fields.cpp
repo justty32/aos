@@ -1,8 +1,8 @@
-// fields.cpp：【inst】單子（$env 已解）→ Inst：認得 16 個 key、驗型別。
+// fields.cpp：【inst】單子（$env 已解）→ Inst：認得 17 個 key、驗型別。
 //
-// 16 個 key 與檢查順序（10-19 版 10 個，11-04 補 6 個）：
+// 17 個 key 與檢查順序（10-19 版 10 個，11-04 補 6 個）：
 //   argv（非空字串陣列，必填）→ envs（{名: 字串}）→ cwd／stdin／stdout／stderr（字串或 null）→
-//   stdout_append／stderr_append（true／false）→ timeout_ms（正整數或 null）→ grace_ms（非負整數，沒寫 2000）→
+//   stdout_append／stderr_append（true／false）→ timeout_ms／timeout_ticks（正整數或 null，擇一）→ grace_ms（非負整數，沒寫 2000）→
 //   envs_clear／cwd_mkdir／stdout_mkdir／stderr_mkdir／stderr_merge（true／false，沒寫 false）；id 是標籤，收下不看。
 // 其他 key 一律忽略。驗不過一律 EntryBad（單子就是入口，寫壞＝入口壞）。
 #include "inst/inst.hpp"
@@ -91,6 +91,16 @@ Inst parse_inst(const Json& doc, const std::vector<std::string>& args) {
             bad("timeout_ms", "a positive integer or null", t);
         }
         inst.timeout_ms = t.get<unsigned long long>();
+    }
+    Json ticks = doc.value("timeout_ticks", Json());
+    if (!ticks.is_null()) {
+        if (!is_int_at_least(ticks, 1)) {
+            bad("timeout_ticks", "a positive integer or null", ticks);
+        }
+        inst.timeout_ticks = ticks.get<unsigned long long>();
+        if (inst.timeout_ms != 0) {
+            throw Error{code::EntryBad, "inst timeout_ticks and timeout_ms must not both be non-null"};
+        }
     }
     if (doc.contains("grace_ms")) {
         const Json& g = doc["grace_ms"];

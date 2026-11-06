@@ -1,6 +1,6 @@
 // inst.hpp：【inst】行程內跑一張 inst 單子（公開的 run_inst 在 aos/exec.hpp）。內部標頭，只給 src/ 自己用。
 //
-//   fields.cpp     單子（$env 已解）→ Inst：認 16 個 key、驗型別，其他 key 一律忽略
+//   fields.cpp     單子（$env 已解）→ Inst：認 17 個 key、驗型別，其他 key 一律忽略
 //   lib_input.cpp  Inst → aos-inst 的單子（aos_inst_input_t）：相對路徑算成絕對、*_mkdir 建資料夾、組環境（envs_clear）、
 //                  串流沒寫＝接呼叫者的（inherits）、stderr_merge→merge、一律自成行程群組（new_session）
 //   signals.cpp    訊號：run_inst 進來擋住 INT／TERM／HUP、出去還原；跑的期間收下來轉給子程式的整個群組（killpg），
@@ -15,6 +15,7 @@
 
 #include "common/common.hpp"
 
+#include "aos/util/tick.hpp"
 #include "aos/inst.h"   // impls/aos-inst 的公開標頭（C 的 aos-inst）
 
 #include <map>
@@ -35,6 +36,7 @@ struct Inst {
     std::optional<std::string> paths[3];         // stdin、stdout、stderr；沒寫＝接呼叫者的
     bool appends[3] = {false, false, false};     // [1]stdout_append、[2]stderr_append
     unsigned long long timeout_ms = 0;           // 0＝不限（單子上是 null 或沒寫）
+    std::optional<unsigned long long> timeout_ticks; // 與 timeout_ms 擇一；有時鐘由 exec 監工，否則換毫秒
     unsigned long long grace_ms = 2000;
     bool envs_clear = false;                     // 真＝不疊現有環境，只留 aos-exec 的六個 AOS_*＋envs
     bool mkdirs[3] = {false, false, false};      // [0]cwd_mkdir、[1]stdout_mkdir、[2]stderr_mkdir：先 mkdir -p
@@ -69,6 +71,7 @@ sigset_t forwarded_signals();
 int open_signal_fd();
 
 // 一直把訊號轉給 pgid 這個行程群組，直到 done_fd 有東西（工人做完了）。回轉過的第一個訊號（沒有＝0）。
-int forward_signals_until_done(pid_t pgid, unsigned long long grace_ms, int sig_fd, int done_fd);
+int forward_signals_until_done(pid_t pgid, unsigned long long grace_ms, int sig_fd, int done_fd,
+                               const std::optional<Deadline>& deadline, bool& timed_out);
 
 }  // namespace aos::exec

@@ -26,7 +26,7 @@ aos-exec 開跑那一步是 **exec**（N-59 第 5 件），而 s6／runit／daem
 
 1. **`s6-envdir secrets …`（或 `chpst -e`、daemontools `envdir`）放 API key**：一個變數一個檔、各自 `chmod 600`，正是 C-64「用檔案借 Linux 權限」；`.env` 一份檔做不到分權限。入口寫 `["s6-envdir", "secrets", "aos-loop", "loop.json"]` 就好（[01 § 1](aos-exec-s6-runit/01-直接呼叫-環境與鎖.md)）。現在就能用。
 2. **`s6-setlock -n $AOS_STACK/lock …`（或 `chpst -L`、`setlock -n`）讓同一個工作區同時只跑一隻**：aos 沒有鎖的概念（P-18 兩隻共用 stack 會互寫、aos-tick「同時 tick 不管」），鎖檔放 stack 就跟「同一個 agent 可同時被兩個工作區跑」不打架（[01 § 2](aos-exec-s6-runit/01-直接呼叫-環境與鎖.md)）。現在就能用。
-3. **`s6-softlimit -m … -t …`（或 `chpst -m`）放在 think 格的 `argv` 前面**：單子只有 `timeout_ms`（牆上時間），記憶體與 CPU 上限交給它，不加 key（[02 § 1](aos-exec-s6-runit/02-直接呼叫-資源fd使用者.md)）。現在就能用。
+3. **`s6-softlimit -m … -t …`（或 `chpst -m`）放在 think 格的 `argv` 前面**：單子的時間上限用 `timeout_ms`（牆鐘）或 `timeout_ticks`（兩鐘規則），擇一；記憶體與 CPU 上限交給它，不加 key（[02 § 1](aos-exec-s6-runit/02-直接呼叫-資源fd使用者.md)）。現在就能用。
 
 ## 最值得的三個「借形狀」
 

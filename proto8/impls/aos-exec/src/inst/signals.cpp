@@ -1,6 +1,7 @@
-// signals.cpp：【inst】訊號——跑單子的期間收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式的整個行程群組。
+// signals.cpp：【inst】訊號與 tick 逾時監工——轉送訊號與逾時終止子程式的整個行程群組。
 //
-// 規矩：轉過去之後過 grace_ms 還沒結束就 SIGKILL 整群；
+// 規矩：每 100ms 用共用 expired 判 tick 期限；到期與轉訊號共用牆鐘 grace_ms 收尾。
+// 轉過去之後過 grace_ms 還沒結束就 SIGKILL 整群；
 // 子程式還沒起來就收到的，起來再補送；群組已經沒了（ESRCH）就算了。
 //
 // 做法：
@@ -14,8 +15,10 @@
 //     回轉過的第一個訊號（Result::received，給 loop／fsm「收完這次再以 128＋N 結束」用）。
 #include "inst/inst.hpp"
 
+#include <algorithm>
 #include <cerrno>
 #include <chrono>
+#include <cstring>
 
 #include <poll.h>
 #include <sys/signalfd.h>
@@ -53,12 +56,7 @@ struct Forwarder {
         killpg(pgid, sig);   // ESRCH（群組沒了）不管
     }
 
-    // sig_fd 有東西：讀一個訊號、轉給群組；第一次的話記下 SIGKILL 期限。
-    void on_signal(int sig_fd) {
-        signalfd_siginfo info;
-        if (read(sig_fd, &info, sizeof info) != (ssize_t)sizeof info) {
-            return;
-        }
+    void start_grace() {
         if (!kill_at) {
             // grace_ms 大到離譜（幾百年）時加上去會溢位，壓在約 3 年＝實際上不會 SIGKILL
             unsigned long long grace = grace_ms;
@@ -67,6 +65,15 @@ struct Forwarder {
             }
             kill_at = Clock::now() + std::chrono::milliseconds(grace);
         }
+    }
+
+    // sig_fd 有東西：讀一個訊號、轉給群組；第一次的話記下 SIGKILL 期限。
+    void on_signal(int sig_fd) {
+        signalfd_siginfo info;
+        if (read(sig_fd, &info, sizeof info) != (ssize_t)sizeof info) {
+            return;
+        }
+        start_grace();
         if (first == 0) {
             first = (int)info.ssi_signo;
         }
@@ -98,21 +105,39 @@ struct Forwarder {
 
 }  // namespace
 
-int forward_signals_until_done(pid_t pgid, unsigned long long grace_ms, int sig_fd, int done_fd) {
+int forward_signals_until_done(pid_t pgid, unsigned long long grace_ms, int sig_fd, int done_fd,
+                               const std::optional<Deadline>& deadline, bool& timed_out) {
     Forwarder fw;
     fw.pgid = pgid;
     fw.grace_ms = grace_ms;
     while (true) {
         pollfd fds[2] = {{sig_fd, POLLIN, 0}, {done_fd, POLLIN, 0}};
-        int r = poll(fds, 2, fw.ms_until_kill());
+        int wait_ms = fw.ms_until_kill();
+        if (deadline && !timed_out) {
+            wait_ms = wait_ms < 0 ? 100 : std::min(wait_ms, 100);
+        }
+        int r = poll(fds, 2, wait_ms);
         if (r < 0 && errno == EINTR) {
             continue;
+        }
+        if (r < 0) {
+            throw Error{code::Internal, std::string("cannot poll child signals: ") + std::strerror(errno)};
         }
         if (fds[1].revents != 0) {
             return fw.first;   // 工人收完屍了：不再轉（群組號可能已經沒人用）
         }
         if (fds[0].revents != 0) {
             fw.on_signal(sig_fd);
+        }
+        if (deadline && !timed_out && aos::expired(*deadline)) {
+            timed_out = true;
+            if (grace_ms == 0) {
+                fw.send(SIGKILL); // 與 aos-inst 的零寬限逾時相同
+                fw.killed = true;
+            } else {
+                fw.send(SIGTERM);
+                fw.start_grace();
+            }
         }
         fw.kill_if_due();
     }

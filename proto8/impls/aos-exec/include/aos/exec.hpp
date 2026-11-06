@@ -48,11 +48,14 @@ struct Result {
                         // 「收完這次再以 128＋N 結束」的呼叫者用（訊號被 run_inst 的 signalfd 讀走了，呼叫者自己看不到）
 };
 
-// 行程內跑一張 inst 單子：doc＝單子（先解指示詞 $env／$ref，再驗 10 個 key，其他 key 忽略）、
+// 行程內跑一張 inst 單子：doc＝單子（先解指示詞 $env／$ref，再驗 17 個 key，其他 key 忽略）、
 // base_dir＝相對路徑的基準（CLI 給 entry.dir）、args 接在 argv 尾、ref_base＝$ref 相對檔名的起點（寫著單子的檔所在的資料夾；
 // 空＝base_dir）。argv[0] 帶 / 又 exec 不了＝前面插 aos-exec（argv0，從解出來的 cwd 看；aos-exec 照子程式的 PATH 找）。
 // 串流沒寫＝接呼叫者的 fd 0／1／2。子程式自成行程群組；跑的期間 SIGINT／SIGTERM／SIGHUP 不打斷呼叫者、
 // 轉給整個群組，轉過之後過 grace_ms 還沒結束就 SIGKILL 整群；timeout_ms 由 aos-inst 管（逾時也是整群收）。
+// timeout_ticks 與 timeout_ms 非 null 擇一；有 AOS_TICK 由共用 tick 期限判到期，沒時鐘換成毫秒交 aos-inst。
+// tick 逾時先 SIGTERM 整群、grace_ms 牆鐘後 SIGKILL（grace_ms＝0 直接 SIGKILL）；時鐘停住不逾時。
+// 壞時鐘／間隔／期限溢位 TickBad；執行中讀鐘失敗先收掉子程式、join 再丟錯。
 // 回 Result（子程式回幾號、被逾時收掉都算正常跑完；被訊號停掉 code＝128＋N；轉過訊號 received＝第一個）。
 // 單子壞 EntryBad、指示詞壞或 $env 沒設 DirectiveBad、起不來 LaunchFailed（訊息開頭是 aos-inst 的名字）、收不到結果 Internal。
 // 訊號遮罩：進來時擋住三個訊號、出去時還原（單執行緒的呼叫者什麼都不用做；多執行緒的呼叫者要在開執行緒前
