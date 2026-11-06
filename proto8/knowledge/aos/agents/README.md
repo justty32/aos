@@ -11,6 +11,8 @@ Two ways to start one:
 
 Both take `"ws": "kid_ws"` (the child's workspace: relative to yours, or absolute; default: your own workspace, shared files) and `"limits": {"mem_mb": 512}`.
 
+`new`, `add` and `rm` accept `ctl_timeout_s`: seconds to wait for the daemon to attach or remove the child (default 30, at most 1700); for example, use 120 when the daemon is busy.
+
 Other calls:
 
 - send a message and return at once: `{"op": "say", "name": "kid", "text": "..."}`

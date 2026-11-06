@@ -51,7 +51,10 @@ def need_phase(cmd, name, row):
 
 
 
-def write_ctl(d, name, cmd):
+APPLY_S = 5.0   # pause／resume 等子 loop 套用的上限（暫停中的 loop 每秒讀一次 ctl、閒著的每圈讀）
+
+
+def write_ctl(d, name, cmd, timeout_s=APPLY_S):
     row = row_of(d, name)
     stack, path = need_ctl(d, name, row)
     # 11-05 第二輪：只收 running 的（stopped／sleeping 的列沒有行程；起來時子 loop 把讀到的第一份 ctl 當基準線、不執行＝這道 pause 默默丟了，
@@ -73,15 +76,14 @@ def write_ctl(d, name, cmd):
         os.replace(tmp, path)
     except OSError as e:
         raise Fail("WriteFailed", "cannot write %s: %s" % (path, e))
-    wait_applied(d, name, stack, cmd, seq)
+    wait_applied(d, name, stack, cmd, seq, timeout_s)
     return seq
 
 
 
-APPLY_S = 5.0   # pause／resume 等子 loop 套用的上限（暫停中的 loop 每秒讀一次 ctl、閒著的每圈讀）
 
 
-def wait_applied(d, name, stack, cmd, seq):
+def wait_applied(d, name, stack, cmd, seq, timeout_s=APPLY_S):
     """等子 loop 的 state 窗 ctl_seq 追上 seq（11-05 晚 listen paused bug）；state 窗是 null＝不等；等不到＝提醒行。"""
     try:
         sname = read_loop(os.path.join(stack, names_of(d)["procs_loop"])).get("state", "state.json")
@@ -89,7 +91,7 @@ def wait_applied(d, name, stack, cmd, seq):
         return
     if not isinstance(sname, str) or not sname:
         return
-    spath, end = os.path.join(stack, sname), time.monotonic() + APPLY_S
+    spath, end = os.path.join(stack, sname), time.monotonic() + timeout_s
     while True:
         try:
             with open(spath, encoding="utf-8") as fh:
@@ -100,6 +102,6 @@ def wait_applied(d, name, stack, cmd, seq):
             return
         if time.monotonic() >= end:
             aos_flags.warn(_pkg.PROG, "%s has not applied %s (seq %d) within %g s (it reads its ctl between steps; a long step delays it); "
-                           "a stop or sleep sent before it applies overwrites or drops it" % (name, cmd, seq, APPLY_S))
+                           "a stop or sleep sent before it applies overwrites or drops it" % (name, cmd, seq, timeout_s))
             return
         time.sleep(0.05)

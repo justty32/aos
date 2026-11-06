@@ -1,5 +1,6 @@
 # aos_agent/common.py - 共用分層 help、錯誤指路、旗標、daemon 協定與 agent 查找。
 import os
+import math
 import textwrap
 from . import PROG
 import aos_flags
@@ -67,6 +68,18 @@ def parse(argv, flags=None, switches=None, *, help=None, short=None):
             raise bad_args(help, str(e)) from e
         path = help.splitlines()[0].split(" - ", 1)[0] if help else PROG
         raise Fail(e.code, "%s (see %s --help)" % (e, path)) from e
+
+
+def timeout_opt(opts, help):
+    """六個控制動詞共用有限正秒數；未指定沿用原本上限。"""
+    raw = opts.get("timeout_s", WAIT_S)
+    try:
+        secs = float(raw)
+    except (ValueError, TypeError):
+        secs = float("nan")
+    if not math.isfinite(secs) or secs <= 0:
+        raise bad_args(help, "--timeout-s must be a positive number of seconds, not %s" % raw)
+    return secs
 
 
 def call_dc(fn, *args, **kwargs):
@@ -153,10 +166,10 @@ def wait_for(cond, what, secs=WAIT_S, via_kernel=True):
         if v:
             return v
         time.sleep(0.1)
-    raise Fail("WaitFailed", "waited %d s, %s%s" % (secs, what, kernel_hint() if via_kernel else ""))
+    raise Fail("WaitFailed", "waited %g s, %s%s" % (secs, what, kernel_hint() if via_kernel else ""))
 
 
-def ctl_wait(cmd, body, cond, what, refused, direct=False):
+def ctl_wait(cmd, body, cond, what, refused, direct=False, secs=WAIT_S):
     """共用回信箱按 in_reply_to 等自己的回信，同時等 daemon 表上的結果。"""
     d = daemon_path()
     box = call_dc(dc.reply_box, d)
@@ -182,10 +195,10 @@ def ctl_wait(cmd, body, cond, what, refused, direct=False):
 
     started = time.monotonic()
     try:
-        return wait_for(step, what, via_kernel=not direct)
+        return wait_for(step, what, secs, via_kernel=not direct)
     except Fail as e:
-        if e.code == "WaitFailed" and got[0] is None and time.monotonic() - started >= WAIT_S:
-            raise Fail("DaemonMissing", "no reply from the daemon at %s within 30 s (busy, paused or not running; the letter stays in its mailbox and is applied if the daemon takes it later)%s" % (d, kernel_hint() if not direct else "")) from e
+        if e.code == "WaitFailed" and got[0] is None and time.monotonic() - started >= secs:
+            raise Fail("DaemonMissing", "no reply from the daemon at %s within %g s (busy, paused or not running; the letter stays in its mailbox and is applied if the daemon takes it later)%s" % (d, secs, kernel_hint() if not direct else "")) from e
         raise
 
 

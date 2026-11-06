@@ -4,20 +4,21 @@
 #   (可能會稍微改一些設定)。我希望兩種都有」「claude code這類常見eca的做法，通常是在呼叫工具的時候，工具自己有紀錄，會看到說超過四個，直接回error」；
 #   子 agent 工作區「不要固定，因為各有不同需求。」。規劃：proto8/thinking/2026-11/05/feat-proto/04-spawn-agent.md、06-實作結果.md。
 # 介面（lib/docs/01 的契約）：stdin 一份 {"op": "new"|"add"|"say"|"ask"|"rm"|"ls", ...}：
-#   new {name, path, from?, files?, llm?, tools?, tools_rm?, ws?, limits?}  生法 (a) 產出新定義：from（範本資料夾）整份複製到 path
+#   new {name, path, from?, files?, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?}  生法 (a) 產出新定義：from（範本資料夾）整份複製到 path
 #       （工作區裡、還不在的資料夾），再寫 files（{相對路徑: 全文}，整份自己寫＝不給 from、只給 files）、llm（鍵併進定義的 llm 檔）、
 #       tools／tools_rm（改定義的 tools 檔：加 {name, path}、拿掉名字）；寫完是普通定義資料夾、可再用 add 掛。tools 檔裡的 path 一律存
 #       相對「新定義裡那份 tools 檔的資料夾」（aos-tools 讀手寫相對路徑就從那裡算；整棵樹搬家不斷，N-67 ①、os-impl A19）：複製來的相對
 #       path 原本從範本那份算，換算成從新位置走回同一個目標（指範本裡的工具也指回範本那份，不指複本：複本裡的相對捷徑深度變了會斷）；
 #       複製來的絕對 path 照抄；tools 參數加的也存相對。只做字串換算、不 realpath，對最終位置算（暫存資料夾跟最終位置同層）。
 #       先寫進同層暫存資料夾再改名；掛不上＝把剛寫的資料夾刪掉（全有或全無，規則 6）。
-#   add {name, def, llm?, tools?, tools_rm?, ws?, limits?}  生法 (b) 用現有定義：def 直接掛（aos-agent ctl add），llm／tools／tools_rm 走
+#   add {name, def, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?}  生法 (b) 用現有定義：def 直接掛（aos-agent ctl add），llm／tools／tools_rm 走
 #       這隻子的覆蓋層（aos-agent llm set／tools add --override／tools rm，stack 只存差異、定義不動、不複製）；後面幾步失敗＝ctl rm 收回。
 #   兩種都：ws＝子的工作區，相對＝從我的 $AOS_WS 算、絕對＝照用，沒給＝我的 $AOS_WS（代定：沿用父的），不在先建；limits 原樣轉 --limits。
 #       ctl add 在 stderr 的提醒行原樣接在結果後面印給腦。印 added <name> (stack …); children N/MAX。
+#   new／add／rm：ctl_timeout_s＝等 daemon 掛上或移除的秒數，預設 30、上限 1700；子行程保險至少多 30 秒。
 #   say {name, text}           寄一句（aos-agent say，話走 stdin）、馬上回，印信件名稱
 #   ask {name, text, timeout_s?}  say＋listen --timeout-s（預設 600、上限 1700：act 格 timeout_ms 1800000 包得住）印回答
-#   rm {name}                  ctl rm（刪子的 stack；aos-agent 的保護規則照舊）
+#   rm {name, ctl_timeout_s?}                  ctl rm（刪子的 stack；aos-agent 的保護規則照舊）
 #   ls                         一行 JSON {"agents": ctl ls --json 的表, "children": [我生的名字], "max_children": N}
 # 配額（工具自己數，不寄信）：我生的記在工具小格 $AOS_STACK/children.json（[{"name", "stack"}]，P-17、規則 8；在父的 stack 底下）；
 #   stack 存相對 $AOS_DAEMON（解開捷徑後，同 daemon 表的基準；N-67 ①，搬家不忘小孩）。
@@ -36,13 +37,15 @@
 import json, os, re, shutil, signal, subprocess, sys
 HELP = """\
 usage: agents < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Start, talk to and remove other agents on the daemon that runs you ($AOS_DAEMON), by wrapping aos-agent.
+Start, talk to and remove child agents on your daemon ($AOS_DAEMON), by wrapping aos-agent.
 New copies a template and applies files, brain settings and tools before starting the child.
-Add starts an existing definition and puts changes in the child's overlay without changing the definition.
-Ask waits at most 1700 seconds. The ls result is one JSON line with agents, children and max_children.
-ws: relative to your workspace, or absolute; default = your workspace. Quota: max_children from agents.json
-(your definition, overridden by your stack's agents.json; default 4); over it = ChildSlotMissing, nothing is sent.
-Result on stdout. On error: one line "agents: error: CODE reason" on stderr and stdout, exit 1.
+Add starts an existing definition; changes go in the child's overlay.
+ctl_timeout_s: new, add, rm wait for the daemon; default 30 seconds, at most 1700.
+Ask waits at most 1700 seconds. ls returns JSON with agents, children and max_children.
+ws: relative to your workspace, or absolute; default = your workspace.
+Quota: max_children from agents.json (definition, overridden by stack; default 4).
+Over quota = ChildSlotMissing, nothing is sent.
+Result on stdout. On error: "agents: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
@@ -63,8 +66,9 @@ NAME_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_-]{0,63}\Z")
 ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
 WARN_RE = re.compile(r"aos-[a-z-]+: warning: ")
 ASK_DEFAULT_S, ASK_MAX_S = 600, 1700
+CTL_DEFAULT_S, CTL_MAX_S = 30, 1700
 MAX_CHILDREN_DEFAULT = 4       # agents.json 都沒寫時（代定，同範本）
-STEP_S = 90                    # 其他每一步（ctl add 自己最多等 30 秒）的逾時
+STEP_S = 90                    # 一般步驟的逾時；ctl add／rm 另取 max(STEP_S, ctl_timeout_s + 30)
 child = None
 last_err = ""                  # 上一次 aos-agent 的 stderr（成功時拿來轉提醒行給腦）
 
@@ -288,15 +292,15 @@ def spawn_args(args):
     return llm, tool_list, tools_rm, child_ws, args.get("limits")
 
 
-def mount(name, definition, child_ws, limits):
+def mount(name, definition, child_ws, limits, ctl_s):
     """aos-agent ctl add；回 (子的 stack, 提醒行) 或 (None, 錯)。"""
     if not os.path.isdir(child_ws):
         try:
             os.makedirs(child_ws)
         except OSError as e:
             die("MkdirFailed", "cannot create ws %s: %s" % (child_ws, e))
-    out, err = agent(["ctl", "add", "--name", name, "--ws", child_ws,
-                      *(["--limits", json.dumps(limits, ensure_ascii=False)] if limits is not None else []), definition])
+    out, err = agent(["ctl", "add", "--timeout-s", "%g" % ctl_s, "--name", name, "--ws", child_ws,
+                      *(["--limits", json.dumps(limits, ensure_ascii=False)] if limits is not None else []), definition], timeout_s=max(STEP_S, ctl_s + 30))
     if err:
         return None, err
     notes = [x.strip() for x in last_err.splitlines() if WARN_RE.match(x.strip())]
@@ -393,6 +397,10 @@ if op is None:
     die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))
 if op not in OPS:
     die("OpUnknown", "op must be one of %s (got %r)" % (", ".join(OPS), op))
+if op in ("new", "add", "rm"):
+    ctl_s = args.get("ctl_timeout_s", CTL_DEFAULT_S)
+    if isinstance(ctl_s, bool) or not isinstance(ctl_s, (int, float)) or not 0 < ctl_s <= CTL_MAX_S:
+        die("ArgumentsBad", "ctl_timeout_s must be a number in (0, 1700]")
 daemon = os.environ.get("AOS_DAEMON")
 if not daemon:
     die("DaemonMissing", "AOS_DAEMON is not set (this tool attaches agents to the daemon that runs you)")
@@ -421,7 +429,7 @@ if op in ("say", "ask"):
 
 if op == "rm":
     name = my_child(args)
-    out = must(["ctl", "rm", name])
+    out = must(["ctl", "rm", "--timeout-s", "%g" % ctl_s, name], timeout_s=max(STEP_S, ctl_s + 30))
     write_children([k for k in load_json(children_path, []) if k.get("name") != name])
     sys.stdout.write(out)
     sys.exit(0)
@@ -458,7 +466,7 @@ if op == "new":                                 # 生法 (a)：產出新定義�
     except OSError as e:
         shutil.rmtree(tmp, ignore_errors=True)
         die("WriteFailed", "cannot move the new definition into %s: %s" % (dest, e))
-    child_stack, notes = mount(name, dest, child_ws, limits)
+    child_stack, notes = mount(name, dest, child_ws, limits, ctl_s)
     if child_stack is None:                     # 全有或全無：掛不上就把剛寫的定義刪掉
         shutil.rmtree(dest, ignore_errors=True)
         die(notes[0], notes[1] + " (the new definition %s was removed again)" % dest)
@@ -469,7 +477,7 @@ definition = read_path(args.get("def"), "def")
 if not os.path.isdir(definition):
     die("DefMissing", "def %r is not a folder" % args.get("def"))
 alive, n = quota()
-child_stack, notes = mount(name, definition, child_ws, limits)
+child_stack, notes = mount(name, definition, child_ws, limits, ctl_s)
 if child_stack is None:
     die(*notes)
 steps = [("llm set %s=%s" % (k, v), ["llm", "--target", name, "set", "%s=%s" % (k, v)]) for k, v in llm.items()] + \
@@ -478,7 +486,7 @@ steps = [("llm set %s=%s" % (k, v), ["llm", "--target", name, "set", "%s=%s" % (
 for what, argv in steps:
     _, err = agent(argv)
     if err:                    # 全有或全無：設定沒上，收回這隻
-        _, err2 = agent(["ctl", "rm", name])
+        _, err2 = agent(["ctl", "rm", "--timeout-s", "%g" % ctl_s, name], timeout_s=max(STEP_S, ctl_s + 30))
         die(err[0], err[1] + " (during %s; %s)" % (what, "rolled back: removed %s" % name if err2 is None
                                                     else "rollback failed too: %s %s" % err2))
 report(name, child_stack, notes, alive, n)

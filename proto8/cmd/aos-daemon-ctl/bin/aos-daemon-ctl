@@ -36,15 +36,16 @@ more: proto8/cmd/docs/03-aos-daemon-ctl.md
 HELPS = {
     "add": """aos-daemon-ctl add - attach one proc (register + start)
 
-usage: aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--name N] [--ws WS] [--stack S]
-                      [--def DEF] [--limits JSON] XXX [-- ARGS...]
+usage: aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--timeout-s S] [--name N] [--ws WS]
+                      [--stack S] [--def DEF] [--limits JSON] XXX [-- ARGS...]
 
 XXX is followed the way aos-exec follows it: ending at a loop config = loop type (no ARGS
 allowed), anything else = exec type (runs once; ARGS after -- are appended). Prints the
-letter name, then waits up to 3 seconds for the letter to leave new/ (still there = a
+letter name, then waits up to --timeout-s seconds for the letter to leave new/ (still there = a
 warning line, exit 0; it is applied when taken).
 
 flags:
+      --timeout-s S    positive claim timeout (default: 3); excludes --reply-to
       --reply-to BOX   send only; the reply ({"applied": true|false, ...}) goes to BOX
   -n, --name N         its name on the table (default: the folder name of XXX)
   -w, --ws WS          its workspace (default: the daemon's)
@@ -58,12 +59,13 @@ exit codes: 0 sent; 1 error (ArgumentsBad, DaemonMissing, MailboxMissing, PathMi
 """,
     "rm": """aos-daemon-ctl rm - detach one proc and keep its stack
 
-usage: aos-daemon-ctl [--daemon D] rm [--reply-to BOX] NAME
+usage: aos-daemon-ctl [--daemon D] rm [--reply-to BOX] [--timeout-s S] NAME
 
 Asks the daemon to stop and remove NAME from its table. The stack is kept.
-Prints the letter name; without --reply-to, waits up to 3 seconds for it to leave new/.
+Prints the letter name; without --reply-to, waits up to --timeout-s seconds for it to leave new/.
 
 flags:
+      --timeout-s S    positive claim timeout (default: 3); excludes --reply-to
       --reply-to BOX   send only; the reply goes to BOX
   -h, --help           show this help
 
@@ -71,13 +73,14 @@ exit codes: 0 sent; 1 error.
 """,
     "stop": """aos-daemon-ctl stop - stop a running loop after its current run
 
-usage: aos-daemon-ctl [--daemon D] stop [--reply-to BOX] NAME
+usage: aos-daemon-ctl [--daemon D] stop [--reply-to BOX] [--timeout-s S] NAME
 
 Asks a running loop to stop after this run. Its row stays stopped and its stack is kept;
 use start to run it again. Prints the letter name; exec types have no stop (CtlMissing).
-Without --reply-to, waits up to 3 seconds for the letter to leave new/.
+Without --reply-to, waits up to --timeout-s seconds for the letter to leave new/.
 
 flags:
+      --timeout-s S    positive claim timeout (default: 3); excludes --reply-to
       --reply-to BOX   send only; the reply goes to BOX
   -h, --help           show this help
 
@@ -85,12 +88,13 @@ exit codes: 0 sent; 1 error (including PhaseBad or CtlMissing).
 """,
     "start": """aos-daemon-ctl start - start a stopped proc again on the same stack
 
-usage: aos-daemon-ctl [--daemon D] start [--reply-to BOX] NAME
+usage: aos-daemon-ctl [--daemon D] start [--reply-to BOX] [--timeout-s S] NAME
 
 Asks a stopped proc to start again on its recorded stack. A sleeping proc needs wake.
-Prints the letter name; without --reply-to, waits up to 3 seconds for it to leave new/.
+Prints the letter name; without --reply-to, waits up to --timeout-s seconds for it to leave new/.
 
 flags:
+      --timeout-s S    positive claim timeout (default: 3); excludes --reply-to
       --reply-to BOX   send only; the reply goes to BOX
   -h, --help           show this help
 
@@ -98,13 +102,14 @@ exit codes: 0 sent; 1 error (including PhaseBad).
 """,
     "sleep": """aos-daemon-ctl sleep - put a running loop to sleep now
 
-usage: aos-daemon-ctl [--daemon D] sleep [--reply-to BOX] NAME
+usage: aos-daemon-ctl [--daemon D] sleep [--reply-to BOX] [--timeout-s S] NAME
 
 Asks the daemon to SIGTERM a running loop now. The row stays sleeping and the stack is
 kept; wake or a daemon restart starts it again. Exec types have no sleep (CtlMissing).
-Prints the letter name; without --reply-to, waits up to 3 seconds for it to leave new/.
+Prints the letter name; without --reply-to, waits up to --timeout-s seconds for it to leave new/.
 
 flags:
+      --timeout-s S    positive claim timeout (default: 3); excludes --reply-to
       --reply-to BOX   send only; the reply goes to BOX
   -h, --help           show this help
 
@@ -112,12 +117,13 @@ exit codes: 0 sent; 1 error (including PhaseBad or CtlMissing).
 """,
     "wake": """aos-daemon-ctl wake - start a sleeping proc again on the same stack
 
-usage: aos-daemon-ctl [--daemon D] wake [--reply-to BOX] NAME
+usage: aos-daemon-ctl [--daemon D] wake [--reply-to BOX] [--timeout-s S] NAME
 
 Asks a sleeping proc to start again on its recorded stack. A stopped proc needs start.
-Prints the letter name; without --reply-to, waits up to 3 seconds for it to leave new/.
+Prints the letter name; without --reply-to, waits up to --timeout-s seconds for it to leave new/.
 
 flags:
+      --timeout-s S    positive claim timeout (default: 3); excludes --reply-to
       --reply-to BOX   send only; the reply goes to BOX
   -h, --help           show this help
 
@@ -125,27 +131,29 @@ exit codes: 0 sent; 1 error (including PhaseBad).
 """,
     "pause": """aos-daemon-ctl pause - pause a loop through its own ctl window
 
-usage: aos-daemon-ctl [--daemon D] pause NAME
+usage: aos-daemon-ctl [--daemon D] pause [--timeout-s S] NAME
 
 Writes {"cmd": "pause", "seq": N} directly to the loop's ctl window and prints N.
-Waits up to 5 seconds for its state ctl_seq to reach N; a timeout warns and exits 0.
+Waits up to --timeout-s seconds for its state ctl_seq to reach N; a timeout warns and exits 0.
 No state window means no wait. This does not route through AOS_KERNEL.
 
 flags:
-  -h, --help   show this help
+      --timeout-s S   positive apply timeout in seconds (default: 5)
+  -h, --help          show this help
 
 exit codes: 0 written; 1 error (including CtlMissing or WriteFailed).
 """,
     "resume": """aos-daemon-ctl resume - resume a loop through its own ctl window
 
-usage: aos-daemon-ctl [--daemon D] resume NAME
+usage: aos-daemon-ctl [--daemon D] resume [--timeout-s S] NAME
 
 Writes {"cmd": "resume", "seq": N} directly to the loop's ctl window and prints N.
-Waits up to 5 seconds for its state ctl_seq to reach N; a timeout warns and exits 0.
+Waits up to --timeout-s seconds for its state ctl_seq to reach N; a timeout warns and exits 0.
 No state window means no wait. This does not route through AOS_KERNEL.
 
 flags:
-  -h, --help   show this help
+      --timeout-s S   positive apply timeout in seconds (default: 5)
+  -h, --help          show this help
 
 exit codes: 0 written; 1 error (including CtlMissing or WriteFailed).
 """,
@@ -237,7 +245,8 @@ def name_arg(cmd, args, flags=None):
     return (rest[0], o) if flags else rest[0]
 
 
-REPLY = {"--reply-to": "reply_to"}   # 寄信的子命令（add／rm／stop／start／sleep／wake）都收（11-05 edge-agent 題 2）
+TIMEOUT = {"--timeout-s": "timeout"}
+REPLY = dict(TIMEOUT, **{"--reply-to": "reply_to"})   # 寄信的子命令（add／rm／stop／start／sleep／wake）都收（11-05 edge-agent 題 2）
 
 
 def reply_arg(o):
@@ -250,6 +259,19 @@ def reply_arg(o):
     return os.path.abspath(v)
 
 
+def timeout_arg(o, default):
+    """寄信認領與控制套用的期限：只收有限正數；回信模式只寄、不等待。"""
+    if "timeout" in o and "reply_to" in o:
+        raise Fail("ArgumentsBad", "--timeout-s does not go with --reply-to (send only, nothing waits)")
+    try:
+        seconds = float(o.get("timeout", default))
+    except ValueError:
+        raise Fail("ArgumentsBad", "--timeout-s must be a finite positive number")
+    if not math.isfinite(seconds) or seconds <= 0:
+        raise Fail("ArgumentsBad", "--timeout-s must be a finite positive number")
+    return seconds
+
+
 def limits_arg(v):
     try:
         value = json.loads(v)
@@ -258,19 +280,20 @@ def limits_arg(v):
     return dc.check_limits(value, "--limits", "ArgumentsBad")
 
 
-def deliver(d, body, reply_to=None):
+def deliver(d, body, reply_to=None, timeout_s=3):
     routing_warning()
     letter = dc.send(d, body, reply_to)
     print(letter, flush=True)
     if reply_to is None:
         box = dc.mailbox_of(d)
-        if not dc.wait_taken(box, letter, 3):
-            aos_flags.warn(NAME, "the letter %s is still in %s after 3 s (the daemon, or the judge at AOS_KERNEL, is busy, paused or not running); it is applied when taken" % (letter, box))
+        if not dc.wait_taken(box, letter, timeout_s):
+            aos_flags.warn(NAME, "the letter %s is still in %s after %g s (the daemon, or the judge at AOS_KERNEL, is busy, paused or not running); it is applied when taken" % (letter, box, timeout_s))
 
 
 def cmd_add(opts, args):
     o, rest = aos_flags.parse(args, dict(REPLY, **{"--name": "name", "--ws": "ws", "--stack": "stack", "--def": "def", "--limits": "limits"}),
                               help=HELPS["add"], short=("-n", "-w", "-s"))
+    seconds = timeout_arg(o, 3)
     limits = limits_arg(o["limits"]) if o.get("limits") is not None else None
     if not rest:
         raise Fail("ArgumentsBad", "add needs one XXX")
@@ -281,24 +304,26 @@ def cmd_add(opts, args):
         extra = extra[1:]
     d = dc.find_daemon(opts.get("daemon"))
     _, body = dc.add_letter(rest[0], extra, o.get("name"), o.get("ws"), o.get("stack"), o.get("def"), limits)
-    deliver(d, body, reply_arg(o))
+    deliver(d, body, reply_arg(o), seconds)
 
 
 def cmd_rm(opts, args):
     name, o = name_arg("rm", args, REPLY)
-    deliver(dc.find_daemon(opts.get("daemon")), {"procs_removed": [name]}, reply_arg(o))
+    seconds = timeout_arg(o, 3)
+    deliver(dc.find_daemon(opts.get("daemon")), {"procs_removed": [name]}, reply_arg(o), seconds)
 
 
 def phase_cmd(cmd, key):
     """stop／start／sleep／wake：照表檢查 phase（PhaseBad）；stop、sleep 另要 loop 型（CtlMissing），然後寄 {key: [名字]}。"""
     def run(opts, args):
         name, o = name_arg(cmd, args, REPLY)
+        seconds = timeout_arg(o, 3)
         d = dc.find_daemon(opts.get("daemon"))
         row = dc.row_of(d, name)
         if cmd in ("stop", "sleep"):
             dc.need_ctl(d, name, row)          # exec 型只有跑和拔：先報 CtlMissing（跟 11-05 前一樣）
         dc.need_phase(cmd, name, row)
-        deliver(d, {key: [name]}, reply_arg(o))
+        deliver(d, {key: [name]}, reply_arg(o), seconds)
     return run
 
 
@@ -309,13 +334,15 @@ cmd_wake = phase_cmd("wake", "procs_woken")
 
 
 def cmd_pause(opts, args):
-    name = name_arg("pause", args)
-    print(dc.write_ctl(dc.find_daemon(opts.get("daemon")), name, "pause"))
+    name, o = name_arg("pause", args, TIMEOUT)
+    seconds = timeout_arg(o, 5)
+    print(dc.write_ctl(dc.find_daemon(opts.get("daemon")), name, "pause", seconds))
 
 
 def cmd_resume(opts, args):
-    name = name_arg("resume", args)
-    print(dc.write_ctl(dc.find_daemon(opts.get("daemon")), name, "resume"))
+    name, o = name_arg("resume", args, TIMEOUT)
+    seconds = timeout_arg(o, 5)
+    print(dc.write_ctl(dc.find_daemon(opts.get("daemon")), name, "resume", seconds))
 
 
 CTRL = re.compile("[\x00-\x1f\x7f]")

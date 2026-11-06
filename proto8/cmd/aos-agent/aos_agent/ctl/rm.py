@@ -3,13 +3,13 @@ import os
 import aos_flags
 from .. import PROG
 import shutil
-from ..common import bad_args, Fail, ctl_wait, daemon_path, find, is_kernel, need_table, parse, row_named, table
+from ..common import bad_args, Fail, ctl_wait, daemon_path, find, is_kernel, need_table, parse, row_named, table, timeout_opt
 from ..decl import close_screen_if_any
 
 
 HELP = """aos-agent ctl rm - detach one agent and delete its stack
 
-usage: aos-agent [--daemon D] ctl rm [-y] NAME
+usage: aos-agent [--daemon D] ctl rm [-y] [--timeout-s S] NAME
 
 NAME must be spelled out ($AOS_AGENT is not used here). Closes its screen first (answering
 = SessionBad, nothing removed), detaches it from the daemon, then deletes its stack. A stack
@@ -20,15 +20,17 @@ Only y / yes goes on; anything else, an empty line or end of input = nothing don
 Not on a terminal (a pipe, a script, an agent) it does not ask.
 
 flags:
-  -y, --yes    do not ask
-  -h, --help   show this help
+  -y, --yes           do not ask
+      --timeout-s S   seconds to wait for the daemon (default 30)
+  -h, --help          show this help
 
 exit codes: 0 removed, or "aos-agent: warning: nothing done" after a no; 1 error
   (InstanceMissing, SessionBad, CtlRejected...); 130 Ctrl-C at the question.
 """
 
 def cmd(argv):
-    opts, rest = parse(argv, {}, {"--yes": "yes"}, help=HELP, short=("-y",))
+    opts, rest = parse(argv, {"--timeout-s": "timeout_s"}, {"--yes": "yes"}, help=HELP, short=("-y",))
+    secs = timeout_opt(opts, HELP)
     if len(rest) != 1:
         raise bad_args(HELP, "rm needs the name spelled out (no --target / AOS_AGENT: it deletes the stack, which cannot be undone)")
     need_table()
@@ -42,7 +44,7 @@ def cmd(argv):
         return
     close_screen_if_any(a)
     direct = is_kernel(a)
-    ctl_wait("rm", {"procs_removed": [a.name]}, lambda _: row_named(a.name) is None, "the daemon has not removed %s yet" % a.name, "CtlRejected", direct)
+    ctl_wait("rm", {"procs_removed": [a.name]}, lambda _: row_named(a.name) is None, "the daemon has not removed %s yet" % a.name, "CtlRejected", direct, secs=secs)
     if keep:                                          # 11-04 夜邊緣實測：add --stack . 之後 rm 會連工作區一起刪；stack 蓋住這些的不刪
         print("removed %s; stack %s kept (it is %s or above it)" % (a.name, a.stack, keep))
         return
