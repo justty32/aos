@@ -1,4 +1,4 @@
-// config.cpp：【serve】讀 kernel 設定、解指示詞與 endpoint 函數路徑（說明見 serve.hpp）。
+// config.cpp：【serve】讀 kernel 設定、驗 slots 與 high 保留格、解指示詞與 endpoint 函數路徑（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
 #include "aos/util/cli.hpp"
@@ -20,7 +20,7 @@ std::string target_abs(const std::string& t, const std::string& base) {
 Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json doc = aos::load_cfg(spec);
     std::string base = aos::dirname(aos::abspath(aos::split_hash(spec).path));
-    aos::Resolved r = aos::resolve_keys(doc, base, {"slots", "aging_ticks", "budget", "exec", "endpoint", "timeout_ms"});
+    aos::Resolved r = aos::resolve_keys(doc, base, {"slots", "reserved", "aging_ticks", "budget", "exec", "endpoint", "timeout_ms"});
     doc = r.value;
     if (!doc.is_object()) {
         throw Error{code::CfgBad, spec + " must be a JSON object"};
@@ -41,6 +41,21 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
             throw Error{code::CfgBad, "slots must be a positive integer (letters run at once), got " + aos::dumps(s)};
         }
         c.slots = s.get<long long>();
+    }
+    if (doc.contains("reserved")) {
+        const Json& reserved = doc["reserved"];
+        if (!reserved.is_object()) {
+            throw Error{code::CfgBad, "reserved must be an object with only an optional high count, got " + aos::dumps(reserved)};
+        }
+        for (const auto& [key, value] : reserved.items()) {
+            if (key != "high") {
+                throw Error{code::CfgBad, "reserved has an unknown key: " + key + " (only high is allowed)"};
+            }
+            if (!aos::is_count(value) || value.get<unsigned long long>() >= static_cast<unsigned long long>(c.slots)) {
+                throw Error{code::CfgBad, "reserved.high must be a non-negative integer smaller than slots, got " + aos::dumps(value)};
+            }
+            c.reserved_high = value.get<long long>();
+        }
     }
     c.budget = parse_budget(doc.value("budget", Json()), base, stack);   // senders 從設定檔算位置、以相對 kernel stack 記帳
     Json ex = doc.value("exec", Json());

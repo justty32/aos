@@ -1,4 +1,4 @@
-// serve.cpp：【serve】鎖信箱、清理寄件人已離開的信與串起每輪流程（說明見 serve.hpp）。
+// serve.cpp：【serve】鎖信箱、清理寄件人已離開的信、按宣告級數留 high 格與串起每輪流程（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
 #include "aos/util/files.hpp"
@@ -94,6 +94,7 @@ int Server::run() {
     int got = aos::take_signal();
     if (got == 0) {
         long long n = 0;   // 這次新掛的
+        const int high_level = parse_priority(Json("high")).level;
         for (const Waiting& w : ws) {
             if (spent(budget_, used_, n + busy_)) {   // 這一窗額度到頂
                 if (budget_.wait) {
@@ -106,6 +107,9 @@ int Server::run() {
             }
             if (n + busy_ >= slots_) {
                 break;   // 補位到 slots 為止；其餘下一次
+            }
+            if (w.priority.level < high_level && n + busy_ >= slots_ - cfg_.reserved_high) {
+                continue;   // 宣告級數才認保留格（不含 aging）；後面可能還有 high，不能停整列
             }
             // 包（11-05 feat-proto 件 3）：在飛＝上一次留下的＋這次新掛的
             long long inflight = pack_busy_[w.endpoint];

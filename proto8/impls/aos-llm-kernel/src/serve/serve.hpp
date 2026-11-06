@@ -7,13 +7,14 @@
 //   serve.cpp   鎖信箱、收拾信件與每輪執行骨架
 //
 //   read_cfg   kernel.json（`檔` 或 `檔#/指標`；thinking 11-04 think-as-function 02 § 3）：
-//                slots（同時在飛幾封，正整數；沒寫＝1）、aging_ticks（每幾格升一級，正整數；沒寫＝3）、budget（額度，budget.hpp；含每寄件人的 senders，相對路徑從 kernel 定義資料夾算）、
+//                slots（同時在飛幾封，正整數；沒寫＝1）、reserved（選填物件，只認 high：非負整數且小於 slots；沒寫＝{}）、
+//                aging_ticks（每幾格升一級，正整數；沒寫＝3）、budget（額度，budget.hpp；含每寄件人的 senders，相對路徑從 kernel 定義資料夾算）、
 //                exec（必填：預設的 endpoint 函數＝aos-exec 目標，資料夾、檔、`檔#/指標`；相對的從 kernel 定義資料夾〔kernel.json 所在〕算、轉成絕對）、
 //                endpoints（必填、非空物件：代號 → 一組 llm 設定＝一個能力包〔11-05 feat-proto，pack.hpp〕；一組裡 kernel 認 exec〔選填，這組改用別的
 //                  endpoint 函數，相對的同上〕、slots、budget、speed，拿掉後其他鍵〔url／model／key／fixed／cost／context／summary…〕整個原樣交給 endpoint 函數）、
 //                  endpoint（選填：預設代號，要在表裡）、timeout_ms（選填：問腦單子的上限，非負整數）；
 //                其他 key 忽略。信箱固定 $AOS_STACK/requests/（11-05 kernel-daemon 07 § 2：AOS_LLM_KERNEL＝kernel 的 stack）。
-//              指示詞：slots、aging_ticks、budget、exec、endpoint、timeout_ms 整格先解（aos-directive 的 resolve_keys）；endpoints 只換一層
+//              指示詞：slots、reserved、aging_ticks、budget、exec、endpoint、timeout_ms 整格先解（aos-directive 的 resolve_keys）；endpoints 只換一層
 //              （整張表可以 {"$ref": "endpoints.json#/"}），裡面每組到用的時候才解（解不開＝那封信回 DirectiveBad，kernel 照跑別封）。
 //              壞了 CfgMissing／CfgBad／DirectiveBad
 //   serve      跑一次（給 daemon 一次次拍，多半是 daemon.json 的身體），回結束碼（0；開始前收到訊號＝128＋N）。
@@ -34,6 +35,7 @@
 //                   那組解指示詞失敗＝DirectiveBad、不是物件或 exec 不是非空字串、slots／budget／speed／fixed 形狀不對＝CfgBad；
 //                   request 寫了包 fixed 裡的 key、或包有 model 而 request 寫 model＝RequestBad（C-56：釘死的不給蓋）；deadline 已過＝DeadlineBad（都不佔格）
 //                5. 排隊（queue.hpp 的 order：級數＋aging → deadline → 包的 speed → 等得久 → 先寄）、補位到 slots（在飛＋新掛）：
+//                   宣告級數低於 high（不含 aging）只能補到 slots − reserved.high；被擋留 new/、繼續找後面的 high；不搶占在飛的，包層不保留；
 //                   額度到頂（budget.hpp 的 spent）＝"refuse" 剩下的全回 BudgetMissing、"wait" 停整列留在 new/；
 //                   包（11-05 feat-proto 件 3）：那包的 budget 到頂（spent_pack，數那包在飛＋新掛）＝"refuse" 那封回 BudgetMissing、"wait" 那封留在 new/、
 //                   別包照跑（不降級換包）；寄件人（11-05 feat-proto 件 5）：budget.senders 列了信封 sender 而那人到頂（spent_of，數那人在飛＋新掛）＝同包的做法；
@@ -61,6 +63,7 @@ namespace aos::llm_kernel {
 struct Cfg {
     std::string requests;   // $AOS_STACK/requests（11-05 固定）
     long long slots = 1;
+    long long reserved_high = 0;
     long long aging_ticks = 3;
     Budget budget;
     std::string exec;                                   // 預設的 endpoint 函數（絕對路徑，可帶 #/指標）

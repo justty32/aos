@@ -1,4 +1,4 @@
-// daemon.cpp：【daemon】找 daemon、寄掛信、讀表（說明見 daemon.hpp）。
+// daemon.cpp：【daemon】找 daemon、提醒 AOS_KERNEL 缺信箱、寄掛信與讀表（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
 
 #include "aos/directive.hpp"
@@ -7,6 +7,10 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <set>
+#include <utility>
+
+#include <unistd.h>
 
 namespace fs = std::filesystem;
 
@@ -34,6 +38,13 @@ Host find_host() {
     std::string k = env("AOS_KERNEL");
     if (!k.empty()) {
         h.box = aos::abspath(k);
+        if (!fs::is_directory(aos::join(h.box, "new"), ec)) {
+            // 與 AOS_TICK 相同：每行程每路徑一次；fork 後仍有自己的提醒。
+            static std::set<std::pair<pid_t, std::string>> warned;
+            if (warned.emplace(::getpid(), h.box).second) {
+                aos::warn("aos-llm-kernel", "AOS_KERNEL points to a missing mailbox: " + h.box + "; letters to it fail until it exists");
+            }
+        }
         return h;
     }
     Json mb = Json("procs_ctl_mailbox");

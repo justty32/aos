@@ -50,13 +50,14 @@ echo '{"endpoint": "smart-high", "request": {"messages": [{"role": "user", "cont
 aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 llm_<信件名稱>
 ```
 
-- **跑 agent 的 daemon 另起一台**：跨樹 hub 只在 root 層的殼 `export AOS_LLM_KERNEL=~/llm_kernel`，它的子項就寄得到；若 hub 跟定義在同一棵可搬的樹，定義的 `.env` 可從 `${AOS_CD}/..` 算相對位置，不寫絕對路徑。好幾台可以共用一個 llm kernel：`slots`、`budget` 是整台電腦共用的上限。
+- **跑 agent 的 daemon 另起一台**：跨樹 hub 只在 root 層的殼 `export AOS_LLM_KERNEL=~/llm_kernel`，它的子項就寄得到；若 hub 跟定義在同一棵可搬的樹，定義的 `.env` 可從 `${AOS_CD}/..` 算相對位置，不寫絕對路徑。好幾台可以共用一個 llm kernel：頂層 `slots`、`reserved`、`budget` 是整台電腦共用的設定。
 - **收工、搬家**：Ctrl-C 時在飛的問腦列變 `sleeping`，再 `aos-exec --stack . def` 自己醒、照樣答完。整包 `cp -a` 到別處起來照樣續答。端點連不上只卡那一封。
 - **代號**：信的 body 寫 `"endpoint": "sol"` 就用那一包；沒寫用 `kernel.json` 的 `endpoint`（這裡是 `fake`）。加一包、改模型＝改 `kernel.json`；一包要獨立成檔寫 `{"$ref": "packs/smart-high.json"}`，整份檔不帶 `#/`。
 - **金鑰歸端點小 proc**：`smart-high`、`luna`、`sol` 的 `exec` 都指 `endpoints/litellm`，小定義的 `_entry` 用 `--key-env LITELLM_KEY` 指定變數名。值只在起 llm daemon 的 root 殼 export，daemon 讓子 proc 繼承；小定義的 `.env` 不放金鑰。`llm_http` 沒設那個變數＝`EndpointFailed`，stdin 的 `endpoint` 帶 `key`＝`ArgumentsBad`。搬家後 export 新機器的值，再起 daemon；LM Studio／假腦不用金鑰。
 - **排程**（[feat-proto 03](../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：信的 `priority` 級數（每 `aging_ticks` 格升一級，預設 3；有 `AOS_TICK` 數 kernel 自己樹的鐘，沒有用 `AOS_TICK_INTERVAL` 換牆鐘；凍住時鐘＝不升級）→ deadline → 包的 `speed`（fast 先）→ 等得久 → 先寄；包的 `slots` 滿了＝跳過、讓下一封別包的補位；包的 `budget` 到頂＝那封 `BudgetMissing`，不替人降級換包。跨樹信的 `priority.deadline` 留牆鐘（N-65 ③，ISO 8601 或 epoch 秒），kernel 不讀信裡任何 tick 欄。
+- **留格給 high**：在 `kernel.json` 頂層選填 `"reserved": {"high": 1}`；只認 `high`，值須為非負整數且小於頂層 `slots`（`slots: 1` 只能填 0），不合＝`CfgBad`。沒寫、`{}` 或 `high: 0`＝不保留；`reserved` 同 `slots` 整格先解指示詞。低於 high 的信只補到總在飛數 `slots-N`，看 `priority_of` 的宣告 level、不算 aging；跳過不能補的信，後面的 high 可繼續補。保留格不搶占已在飛的請求，high 要用保留範圍外的格仍可能等在飛的跑完。
 - **額度**：kernel 總的 `budget`、每包的 `budget`、每個寄件人的 `budget.senders`（寄件人＝信封 `sender`，agent 就是它的工作區；不驗身分）；用量帳在 `$AOS_STACK/used.json`（`packs`、`senders` 各一格；`senders` 的 key 是相對 kernel stack 的路徑，整包搬家相對位置相同就沿用同一格帳）。範本的 `senders` 只列了 `/tmp/aos-demo-sender`，換成你 agent 的工作區就限它。
-- **起 llm daemon 的殼別設 `AOS_KERNEL`**：問腦會掛到別台（[已知限制](../../impls/aos-llm-kernel/docs/04-已知限制.md)）。
+- **起 llm daemon 的殼別設 `AOS_KERNEL`**：問腦會掛到別台；非空路徑的 `new/` 不是資料夾時，每行程每路徑 warning 一次，仍用原路徑、不改退路、不因此報錯，後續掛 proc 失敗照舊（[已知限制](../../impls/aos-llm-kernel/docs/04-已知限制.md)）。
 - agent-fsm 問腦一定經這裡（沒設 `AOS_LLM_KERNEL`＝`LlmKernelMissing`），要先起這個。
 
 範本出廠帶時鐘與 stdout log；正式使用可在自己的副本拿掉 `_entry` 的 `--enable-logs`，或移除 `daemon.json` 的 `tick`。時鐘的路徑、間隔、繼承與 pause 手把見 [aos-daemon docs/02](../../impls/aos-daemon/docs/02-看寫法決定怎麼起.md#自帶時鐘-tick選填)。

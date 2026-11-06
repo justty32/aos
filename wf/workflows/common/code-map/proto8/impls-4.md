@@ -14,7 +14,7 @@
 | [`src/budget/budget.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/budget/budget.cpp) | token 回報與額度（說明見 budget.hpp）。 |
 | [`src/budget/budget.hpp`](../../../../../proto8/impls/aos-llm-kernel/src/budget/budget.hpp) | token 回報與額度（10-24，thinking 2026-10-24-llm-kernel「token 回報與額度」）。 |
 | [`src/common/common.hpp`](../../../../../proto8/impls/aos-llm-kernel/src/common/common.hpp) | aos-llm-kernel 好幾個元素都用到的：型別別名、錯誤代號。 |
-| [`src/daemon/daemon.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/daemon/daemon.cpp) | 找 daemon、寄掛信、讀表（說明見 daemon.hpp）。 |
+| [`src/daemon/daemon.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/daemon/daemon.cpp) | 找 daemon、提醒 AOS_KERNEL 缺信箱、寄掛信與讀表（說明見 daemon.hpp）。 |
 | [`src/daemon/daemon.hpp`](../../../../../proto8/impls/aos-llm-kernel/src/daemon/daemon.hpp) | kernel 請 daemon 掛問腦 proc——找 daemon、寄掛信／拔信、讀 daemon 的表（11-05 kernel-daemon 03）。 |
 | [`src/letter/letter.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/letter/letter.cpp) | 信箱的路徑、信件名稱、寄信的人還在不在（sender.flock）、priority、回信（說明見 aos/llm_kernel.hpp）。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/main.cpp) | aos-llm-kernel 命令列——LLM kernel 跑一次：從信箱挑最該跑的信、跑、回信（多半是 daemon.json 的身體，給 daemon 一次次拍；要在 daemon 底下）。 |
@@ -22,11 +22,11 @@
 | [`src/pack/pack.hpp`](../../../../../proto8/impls/aos-llm-kernel/src/pack/pack.hpp) | endpoint 能力包（11-05 feat-proto 件 2、件 3）——kernel.json 的 endpoints 一組＝一個包（代號就是能力名：smart-high、stupid-fast…）。 |
 | [`src/queue/queue.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/queue/queue.cpp) | queue.json 與排隊（說明見 queue.hpp）。 |
 | [`src/queue/queue.hpp`](../../../../../proto8/impls/aos-llm-kernel/src/queue/queue.hpp) | 排隊——kernel 自己記的帳（$AOS_STACK/queue.json）與「誰先跑」。 |
-| [`src/serve/config.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/config.cpp) | 讀 kernel 設定、解指示詞與 endpoint 函數路徑（說明見 serve.hpp）。 |
+| [`src/serve/config.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/config.cpp) | 讀 kernel 設定、驗 slots 與 high 保留格、解指示詞與 endpoint 函數路徑（說明見 serve.hpp）。 |
 | [`src/serve/proc.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/proc.cpp) | 掛問腦 proc、判斷收尾與重掛、收集在飛信件（說明見 serve.hpp）。 |
 | [`src/serve/reply.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/reply.cpp) | 寫回信、寄送與撤回回信、記用量並收掉信件（說明見 serve.hpp）。 |
 | [`src/serve/scan.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/scan.cpp) | 檢查排隊信件、挑選與解析 endpoint 能力包（說明見 serve.hpp）。 |
-| [`src/serve/serve.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/serve.cpp) | 鎖信箱、清理寄件人已離開的信與串起每輪流程（說明見 serve.hpp）。 |
+| [`src/serve/serve.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/serve.cpp) | 鎖信箱、清理寄件人已離開的信、按宣告級數留 high 格與串起每輪流程（說明見 serve.hpp）。 |
 | [`src/serve/serve.hpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/serve.hpp) | kernel 跑一次——讀設定、鎖信箱、收拾、排隊、認領、請 daemon 掛問腦 proc、收成品、回信。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-llm-kernel/vcpkg.json) | aos-llm-kernel：LLM kernel 跑一次——從信箱挑最該跑的信、跑、回信（信箱、信的格式也給 aos-llm 用） |
 
