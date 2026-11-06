@@ -5,6 +5,7 @@
 
 - `aos_flags.py`（在 [proto8/py](../../py/README.md)）：命令列旗標解析 `parse(argv, 旗標表)` 回 `(opts, [XXX, args...])`（`--x V`／`--x=V`、重複給最後一個算、`--` 結束旗標、第一個不是旗標的參數起原樣；不認得＝`FlagUnknown`、缺值＝`ArgumentsBad`）。cmd 的 Python 支都用。
   11-05 [stdio-unify](../../thinking/2026-11/05/stdio-unify/README.md) 加三扇門的共用小函式：`aos_flags.HELP`＝英文說明，設了 `parse` 在旗標的位置（子命令後再 parse 也算）看到 `--help` 就印到 stdout、退 0（R3）；`die(程式, 代號, 原因)`＝stderr 一行 `程式: error: 代號 原因`、退 1（`also_stdout=True` 兩邊各一行，給腦用的工具形）；`warn(程式, 句子)`＝提醒行 `程式: warning: 句子`（R1）；`error_line` 只組那一行；`run(main)`＝Ctrl-C 不吐 traceback、退 130（R12）。
+  11-06 [human-cli](../../thinking/2026-11/06/human-cli/03-慣例草案.md) 加兩樣：**短名**（H4）——全 aos 共用表 `aos_flags.SHORT`（`-h -j -t -d -n -w -s -f -y`，同名同義、沒列的不准開），各支用 `parse(…, short=("-t",))` 挑自己有的；`-h` 內建（認 `--help` 處都認，所以 `aos-tick -h` 也印說明）；不黏值、不併、不帶 `=`（`-tann`／`-jf`／`-t=x`＝`FlagUnknown`）。**確認**（[H11](../../thinking/2026-11/06/human-cli/03-慣例草案-續.md)）——`confirm(程式, 問句, yes)`：`yes` 或 stdin 不是終端＝照做不問；終端＝stderr 問 `程式: 問句 [y/N] `，只有 `y`／`yes` 算答應；答 No 呼叫者印 `warning: nothing done`、退 0。
 
 執行中狀態（`stage.txt`、`plan.txt`、`current.txt`）在 `$AOS_STACK`（預設 `$AOS_WS/.stack/`）；工作區只放交辦的東西與成果（題目 `new/` → 認領 `cur/` → `done/`，答案 `out/`）；定義資料夾不被寫，所以同一個 agent 可同時被兩個工作區跑。結果＝工作區內容；沒有別的結果通道。
 

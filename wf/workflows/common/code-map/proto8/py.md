@@ -9,7 +9,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`aos_flags.py`](../../../../../proto8/py/aos_flags.py) | 命令列旗標解析與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C）。 |
+| [`aos_flags.py`](../../../../../proto8/py/aos_flags.py) | 命令列旗標解析（含共用短名）、互動確認與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認）。 |
 | [`aos_ws.py`](../../../../../proto8/py/aos_ws.py) | 「放一則訊息、等答案、讀 stack」的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。 |
 | [`cli_session.py`](../../../../../proto8/py/cli_session.py) | 把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 attach 接進互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字 |
 | [`daemon_ctl.py`](../../../../../proto8/py/daemon_ctl.py) | daemon 的找址、名單、寄信回信與子 loop 控制共用介面。 |
