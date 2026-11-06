@@ -1,4 +1,4 @@
-// files.cpp：【aos-util】路徑、讀檔、原子寫入（說明見 include/aos/files.hpp）。
+// files.cpp：【aos-util】路徑、讀檔與文字及 JSON 原子寫入（說明見 include/aos/files.hpp）。
 //
 // 為什麼要「原子寫入」：ctl 窗、state 窗是兩個行程透過檔案講話。如果直接打開舊檔、清空、再寫，
 // 讀的人剛好在中間讀到，就會讀到半份（壞 JSON）或空的。改成「寫到旁邊的暫存檔 → rename 蓋過去」：
@@ -6,6 +6,7 @@
 // 暫存檔放在同一個資料夾（.名字.tmp），才保證在同一個檔案系統上（跨檔案系統的 rename 會失敗）。
 #include "aos/files.hpp"
 
+#include <cstdio>
 #include <cerrno>
 #include <cstring>
 #include <filesystem>
@@ -66,6 +67,44 @@ std::string join(const std::string& a, const std::string& b) {
         return a + b;
     }
     return a + "/" + b;
+}
+
+std::optional<TextWriteError> write_text(const std::string& path, const std::string& text,
+                                        const std::string& tmp) {
+    int fd = open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);
+    if (fd < 0) {
+        int saved = errno;
+        unlink(tmp.c_str());
+        return TextWriteError{TextWriteOperation::open, saved};
+    }
+    size_t done = 0;
+    while (done < text.size()) {
+        ssize_t n = write(fd, text.data() + done, text.size() - done);
+        if (n < 0 && errno == EINTR) {
+            continue;
+        }
+        if (n <= 0) {
+            int saved = EIO;
+            if (n < 0) {
+                saved = errno;
+            }
+            close(fd);
+            unlink(tmp.c_str());
+            return TextWriteError{TextWriteOperation::write, saved};
+        }
+        done += static_cast<size_t>(n);
+    }
+    if (close(fd) != 0) {
+        int saved = errno;
+        unlink(tmp.c_str());
+        return TextWriteError{TextWriteOperation::write, saved};
+    }
+    if (std::rename(tmp.c_str(), path.c_str()) != 0) {
+        int saved = errno;
+        unlink(tmp.c_str());
+        return TextWriteError{TextWriteOperation::rename, saved};
+    }
+    return std::nullopt;
 }
 
 std::optional<std::string> read_file(const std::string& path, int& errno_out) {

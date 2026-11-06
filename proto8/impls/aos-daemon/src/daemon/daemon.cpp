@@ -691,10 +691,6 @@ void Daemon::term(Child& c) {
     kill(c.pid, SIGTERM);   // 給那支子項（它自己轉給它的那次）；已經沒了就算了
 }
 
-static bool is_nat(const Json& v) {
-    return v.is_number_unsigned() || (v.is_number_integer() && v.get<long long>() >= 0);
-}
-
 void Daemon::halt(const std::string& name, Child& c) {
     // daemon 的 stop（procs § 2c 第 2 條、ctl-commands § 5）：往子 loop 的 ctl.json 寫一道 {"cmd": "stop", "seq": N}，讓它跑完這次自己退 0（不 SIGTERM）。
     // ctl 檔名看小格裡 daemon 自己寫的 loop.json（procs_loop 的名字）的 ctl（接回的也一樣）；N＝自己數的、也比 ctl 裡現有的 seq 大（內容一定跟上一道不一樣）。
@@ -708,7 +704,7 @@ void Daemon::halt(const std::string& name, Child& c) {
     }
     std::string path = aos::join(c.stack, ctl.get<std::string>());
     std::optional<Json> old = aos::read_json(path);
-    if (old && old->is_object() && is_nat(old->value("seq", Json())) && old->value("seq", Json()).get<long long>() > stop_seq_) {
+    if (old && old->is_object() && aos::is_count(old->value("seq", Json())) && old->value("seq", Json()).get<long long>() > stop_seq_) {
         stop_seq_ = (*old)["seq"].get<long long>();
     }
     stop_seq_ += 1;

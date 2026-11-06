@@ -23,10 +23,6 @@
 
 namespace aos::daemon {
 
-static bool is_nat(const Json& v) {   // 非負整數（true／false、小數不算；同 aos-loop）
-    return v.is_number_unsigned() || (v.is_number_integer() && v.get<long long>() >= 0);
-}
-
 void Daemon::read_procs_ctl() {
     if (pctl_path_.empty()) {
         return;
@@ -55,7 +51,7 @@ void Daemon::read_procs_ctl() {
         doc = std::move(r.value);
         if (!doc.is_object()) {
             bad = "must be a JSON object";
-        } else if (doc.contains("seq") && !is_nat(doc["seq"])) {
+        } else if (doc.contains("seq") && !aos::is_count(doc["seq"])) {
             bad = "seq must be a non-negative integer";
         } else {
             bad = check_lists(doc, r);

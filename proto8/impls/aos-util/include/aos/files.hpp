@@ -1,8 +1,8 @@
-// aos/files.hpp：【aos-util】檔案的小工具——路徑、讀檔、原子寫入。loop 的 ctl／state 窗、daemon 的 table 窗、回覆檔都用這組。
+// aos/files.hpp：【aos-util】檔案的小工具——路徑、目錄操作、讀檔與文字及 JSON 原子寫入。
 //
 //   abspath / dirname / join   路徑（照 Python 的 os.path.abspath、dirname、join）
 //   read_file / read_json      讀整個檔；read_json 讀不了或不是 JSON＝nullopt
-//   write_json                 先寫暫存檔、再改名蓋過去（原子寫入，見 files.cpp 的說明）
+//   write_text / write_json                 先寫暫存檔、再改名蓋過去（原子寫入，見 files.cpp 的說明）
 //   split_hash / read_json_at  入口路徑的 JSON 尋址：`檔#/指標` 拆成兩半；讀檔（跳過第一行 #!）再照指標取值
 // （讀 JSON 串流用 aos/io.hpp 的 read_stream。）
 #pragma once
@@ -23,6 +23,25 @@ std::string dirname(const std::string& path);
 
 // b 是絕對路徑就用 b，不然接在 a 後面（Python 的 os.path.join）。
 std::string join(const std::string& a, const std::string& b);
+
+// 目錄操作；建立失敗或結果不是目錄就丟 MkdirFailed。
+bool is_dir(const std::string& path);
+void make_dir(const std::string& dir);
+// 預設收所有非隱藏名字、不排序；directories_only 只收目錄並照字典序排序。
+std::vector<std::string> names_in(const std::string& dir, bool directories_only = false);
+// 只忽略 ENOENT／ENOTEMPTY／EEXIST，其餘丟 WriteFailed。
+bool move(const std::string& from, const std::string& to);
+void remove_tree(const std::string& path);
+
+// 寫入失敗的機制階段；close 失敗歸 write，number 是當時的 errno。
+enum class TextWriteOperation { open, write, rename };
+struct TextWriteError {
+    TextWriteOperation operation;
+    int number;
+};
+// tmp 由呼叫者指定，不建目錄；成功回 nullopt，任一步失敗都嘗試刪除 tmp。
+std::optional<TextWriteError> write_text(const std::string& path, const std::string& text,
+                                        const std::string& tmp);
 
 // 讀整個檔。讀不了回 nullopt，errno_out＝原因（ENOENT＝不存在）。
 std::optional<std::string> read_file(const std::string& path, int& errno_out);

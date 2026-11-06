@@ -25,6 +25,32 @@ int main() {
 
 標頭開頭都有白話說明（含「為什麼原子寫入」「為什麼不用訊號處理函數」「行程群組、收屍、memfd 是什麼」），從那裡讀。
 
+## 公開介面：目錄、文字與訊號
+
+`aos/files.hpp` 提供目錄操作與指定暫存路徑的文字原子寫入。
+
+```cpp
+bool is_dir(const std::string& path);
+void make_dir(const std::string& dir);
+std::vector<std::string> names_in(const std::string& dir, bool directories_only = false);
+bool move(const std::string& from, const std::string& to);
+void remove_tree(const std::string& path);
+
+enum class TextWriteOperation { open, write, rename };
+struct TextWriteError { TextWriteOperation operation; int number; };
+std::optional<TextWriteError> write_text(const std::string& path, const std::string& text,
+                                      const std::string& tmp);
+```
+
+- `is_dir` 用 error_code 查目錄，錯誤回 false。`make_dir` 遞迴建立；建立有錯或結果不是目錄就丟 `MkdirFailed`。
+- `names_in` 忽略隱藏名字；預設收所有類型、不排序，`directories_only=true` 只收目錄並照字典序排序。建立 iterator 失敗回空、增量失敗停止並保留已收名字。
+- `move` 成功回 true；遇 ENOENT／ENOTEMPTY／EEXIST 回 false，其他丟 `WriteFailed`。`remove_tree` 遞迴刪除並忽略錯誤。
+- `write_text` 不建目錄、不修改文字；先以 open（0666 受 umask 影響，既有 tmp 保留權限）開啟指定 `tmp`，write 重試 EINTR，完整寫入並檢查 close 後 rename 至 `path`。成功回 nullopt；任一步失敗都嘗試 unlink tmp，回操作與 errno（close 失敗歸 write，write 回 0 歸 EIO），讓呼叫者決定錯誤代號與訊息。清 tmp 的錯誤忽略。
+
+`aos/signals.hpp` 另提供 `sigset_t the_signals()`、`void block_signals()`、`int take_signal()`：同一組 SIGINT／SIGTERM／SIGHUP；開執行緒前阻擋，之後非阻塞取出一個訊號，沒有就回 0。`SignalCatcher` 也使用這組訊號，另保留它的 signalfd、遮罩還原與睡眠介面。
+
+`write_json` 維持原介面與行為。
+
 ## 建置與測試
 
 ```sh

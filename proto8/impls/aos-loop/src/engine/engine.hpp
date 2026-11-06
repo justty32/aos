@@ -10,10 +10,3 @@
 #pragma once
 
 #include "common/common.hpp"
-
-namespace aos::loop {
-
-// JSON 非負整數（true／false、小數不算）。
-bool is_nat(const Json& v);
-
-}  // namespace aos::loop

@@ -16,13 +16,6 @@
 
 namespace aos::loop {
 
-bool is_nat(const Json& v) {
-    if (v.is_number_unsigned()) {
-        return true;
-    }
-    return v.is_number_integer() && v.get<long long>() >= 0;
-}
-
 static long long as_ll(const Json& v) {
     if (v.is_number_unsigned()) {
         unsigned long long u = v.get<unsigned long long>();
@@ -244,14 +237,14 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
     }
     max_ = d_.max;
     if (cfg_.contains("max")) {
-        if (!is_nat(cfg_["max"])) {
+        if (!aos::is_count(cfg_["max"])) {
             throw Error{code::CfgBad, "max must be a non-negative integer"};
         }
         max_ = as_ll(cfg_["max"]);
     }
     interval_ms_ = d_.interval_ms;
     if (cfg_.contains("interval_ms")) {
-        if (!is_nat(cfg_["interval_ms"])) {
+        if (!aos::is_count(cfg_["interval_ms"])) {
             throw Error{code::CfgBad, "interval_ms must be a non-negative integer"};
         }
         interval_ms_ = as_ll(cfg_["interval_ms"]);

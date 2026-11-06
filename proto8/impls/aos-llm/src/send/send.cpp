@@ -93,18 +93,10 @@ Json read_body(const std::optional<std::string>& priority) {
     return body;
 }
 
-static void make_dir(const std::string& dir) {
-    std::error_code ec;
-    fs::create_directories(dir, ec);
-    if (ec || !fs::is_directory(dir)) {
-        throw Error{code::MkdirFailed, "cannot create " + dir + (ec ? ": " + ec.message() : "")};
-    }
-}
-
 std::string send(const Mailbox& mb, const Json& body, const std::string& reply_to) {
     aos::post::init(reply_to);   // 回信信箱（kernel 要寄得進去；建不了丟 MkdirFailed）
-    make_dir(mb.tmp());
-    make_dir(mb.fresh());
+    aos::make_dir(mb.tmp());
+    aos::make_dir(mb.fresh());
     aos::post::SendOpts opts;
     opts.reply_to = reply_to;
     return aos::post::send(aos::post::open(mb.root), body, opts);
@@ -118,11 +110,11 @@ std::string send_held(const Mailbox& mb, const Json& body) {
     letter["reply_to"] = aos::post::reply_to_rel(aos::post::Mailbox{mb.root}, reply_box(mb));   // 相對信箱根＝"reply"（11-05，同 aos-post send）
     letter["body"] = body;
 
-    make_dir(mb.tmp());
-    make_dir(mb.fresh());
+    aos::make_dir(mb.tmp());
+    aos::make_dir(mb.fresh());
     std::string id = aos::unique_id();
     std::string t = aos::join(mb.tmp(), "." + id);   // . 開頭＝還在寫，kernel 不碰
-    make_dir(t);
+    aos::make_dir(t);
     std::error_code ec;
     try {
         aos::llm_kernel::hold_sender(t);   // 拿到行程結束（fd 不關）

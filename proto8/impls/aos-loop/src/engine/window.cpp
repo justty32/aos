@@ -118,11 +118,11 @@ static std::optional<std::string> check_base(const Json& doc) {
     }
     const char* nats[2] = {"max", "interval_ms"};   // null＝回設定檔的值（11-03）
     for (const char* k : nats) {
-        if (doc.contains(k) && !doc[k].is_null() && !is_nat(doc[k])) {
+        if (doc.contains(k) && !doc[k].is_null() && !aos::is_count(doc[k])) {
             return std::string(k) + " must be a non-negative integer or null";
         }
     }
-    if (doc.contains("seq") && !is_nat(doc["seq"])) {
+    if (doc.contains("seq") && !aos::is_count(doc["seq"])) {
         return "seq must be a non-negative integer";
     }
     return std::nullopt;

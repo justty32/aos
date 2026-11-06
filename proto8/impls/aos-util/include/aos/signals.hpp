@@ -1,4 +1,4 @@
-// aos/signals.hpp：【aos-util】收 SIGINT／SIGTERM／SIGHUP——收到了不死，記下來，由呼叫者（loop、daemon 反覆跑的引擎）每次去看。
+// aos/signals.hpp：【aos-util】建立、阻擋與取出 SIGINT／SIGTERM／SIGHUP，並用 signalfd 收訊號——收到了不死，記下來，由呼叫者（loop、daemon 反覆跑的引擎）每次去看。
 //
 // 做法：
 //   1. start()：用 sigprocmask「擋住」這三個訊號。擋住的訊號不會打死我們，而是在 kernel 裡排隊。
@@ -15,6 +15,11 @@
 #include <signal.h>
 
 namespace aos {
+
+// 整支程式壽命的遮罩：開執行緒前呼叫 block_signals；take_signal 不等待，沒有回 0。
+sigset_t the_signals();
+void block_signals();
+int take_signal();
 
 class SignalCatcher {
 public:

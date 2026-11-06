@@ -1,7 +1,8 @@
-// signals.cpp：【aos-util】收 SIGINT／SIGTERM／SIGHUP：擋住、用 signalfd 讀（說明見 include/aos/signals.hpp）。
+// signals.cpp：【aos-util】建立訊號集合、阻擋／取出與收 SIGINT／SIGTERM／SIGHUP：擋住、用 signalfd 讀（說明見 include/aos/signals.hpp）。
 #include "aos/signals.hpp"
 
 #include <cerrno>
+#include <ctime>
 
 #include <poll.h>
 #include <sys/signalfd.h>
@@ -9,7 +10,7 @@
 
 namespace aos {
 
-static sigset_t caught_signals() {
+sigset_t the_signals() {
     sigset_t set;
     sigemptyset(&set);
     sigaddset(&set, SIGINT);
@@ -18,8 +19,23 @@ static sigset_t caught_signals() {
     return set;
 }
 
+void block_signals() {
+    sigset_t set = the_signals();
+    sigprocmask(SIG_BLOCK, &set, nullptr);
+}
+
+int take_signal() {
+    sigset_t set = the_signals();
+    timespec zero{0, 0};
+    int sig = sigtimedwait(&set, nullptr, &zero);
+    if (sig < 0) {
+        return 0;
+    }
+    return sig;
+}
+
 void SignalCatcher::start() {
-    sigset_t set = caught_signals();
+    sigset_t set = the_signals();
     sigprocmask(SIG_BLOCK, &set, &old_);       // 擋住：收到的訊號在 kernel 裡排隊，不會打死我們
     fd_ = signalfd(-1, &set, SFD_CLOEXEC | SFD_NONBLOCK);
 }
