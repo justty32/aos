@@ -9,6 +9,7 @@
 ## 最新進度
 
 - **open｜lift-to-norms（使用者 11-06「把最近幾天的thinking……拿去更新concep,normal」）**：條文已寫（N-65、N-66、N-67、C-76～C-83、P-45、P-46、板子比喻＋既有條加註），使用者 11-06 已裁三題（tick 欄名照 R6、`AOS_TICK` 歸 hub 例外、同 stack 兩台繼續擋）；剩次要兩件沒裁（wait.py 退 11 對 P-19、沙箱先不支援 vs 一個信箱就夠），等 P5 沙箱範例時看 → [lift-to-norms](../proto8/thinking/2026-11/06/lift-to-norms/README.md)
+- **open｜os-impl（11-06 fable 規劃；使用者同日裁兩題）**：排程照做（A 項併既有 T／P／J／條文日，B2 併 P8、B3 併 P9）；判官排隊＋寄信者自設逾時（`--timeout-s`、`--on-queued`、body `queue_wait_ms`、判官窗＋到期拒信）併成一步排 P9 後、約 4.5 h、要等 J3／J6；新方向題 1（判官輔助做成窗還是排隊通知信）待使用者 → [os-impl 05](../proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md)
 - **open｜apply-ideas＋tick-time（11-06 fable 規劃；使用者下午已裁 D1、Q1～Q5、body-protocol 四題、排程照推薦）**：都不插進 S 步、T4 跟 S9 同人緊接、T 排 S7 後、T7（daemon `tick` key）排 P6 後；tick 新設計＝daemon 設定自帶 `tick`、沒 tick 退牆鐘 → [tick-time 03](../proto8/thinking/2026-11/05/tick-time/03-11-06-裁定與新設計.md)；N1／N2 使用者同日「那兩題都按照推薦」已裁，方向題清空；接下來照排程做 → [apply-ideas](../proto8/thinking/2026-11/06/apply-ideas/README.md)
 - **open｜效能標準（11-06 整天收數據）**：收工前分析兩份 CSV＋使用者覺得卡的時間點，訂公司最多同時幾個 codex／claude，寫進 [aos-teams/01](workflows/dispatch/aos-teams/01-公司WSL.md#監看門檻)；收完停掉兩支記錄程式（WSL pid 198864、Windows typeperf pid 39196）；保險絲（佔用 95% 砍東西）等之後跑高佔用工作再做
 - **open｜知識庫 K7 已裁**（使用者 11-05 夜「知識庫這塊都按照推薦」；實作排在大重構後）：W1～W3 主幹可做，W7～W10 照裁定（多庫用捷徑、不做 lock op、不記 `_meta`）→ [knowledge-write](../proto8/thinking/2026-11/05/knowledge-write/README.md)；CONVENTION 草稿照推薦定稿編號 → [agent-knowledge 06](../proto8/thinking/2026-11/05/agent-knowledge/06-11-05晚-接線.md#使用者裁定11-05-夜排在大重構之後做)
