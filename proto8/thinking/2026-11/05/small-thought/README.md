@@ -81,6 +81,7 @@
 
 - 登記格 `env` 借給 thought 子會掉：**`aos-agent tools add` 也能帶 `--env`**，值不給腦看到。
 - thought／agents／self_tools 在沙箱裡**先不支援**（沙箱只包葉工具）。
+  - 註（11-06 no-pid P5 已解）：綁 `AOS_DAEMON` 即可（範例 `cmd/aos-sandbox/examples/thought-boxed/`），實測見 [no-pid 13](../no-pid/13-P5實作結果.md)；「要不要正式支援」留給使用者，推薦見 13。
 
 ## 11-06 改（no-pid P4）
 

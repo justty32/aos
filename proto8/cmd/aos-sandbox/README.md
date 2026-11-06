@@ -52,8 +52,13 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 | 例子 | 檔 | 說明 |
 |---|---|---|
 | bash 工具 | [examples/bash-boxed/](examples/bash-boxed) | 庫的 bash（[lib/base/bash](../../lib/base/bash)）原封不動（`inner` 捷徑），連它 import 的 [lib/tool_io.py](../../lib/tool_io.py) 一起綁唯讀（lib 工具共用的開頭，沒綁就起不來），外面包一層：只寫得到 `$AOS_WS` 與自己的 stack、斷網、環境照預設那幾個；`cpu_s` 120 是 CPU 時間，bash 自己的 `timeout_s`（最多 300）是牆鐘 |
+| 小念頭（要碰 daemon 的工具） | [examples/thought-boxed/](examples/thought-boxed) | 庫的 thought 原封不動（`inner` 捷徑）。`sandbox.json`（模式 1，沒有判官）：rw 綁 `$AOS_DAEMON`（寄 ctl 信、子的 stack 要寫 `thought.json` 與工具覆蓋層）、`$AOS_WS`、`$AOS_STACK`（回信信箱在這）；ro 綁整個 `lib/`（範本的工具都指到 lib）、子範本 `templates/agent-fsm`、aos-agent 的套件 `cmd/aos-agent/aos_agent`；`commands` 帶 aos-exec、aos-agent、aos-post、aos-tools、aos-json；斷網。`sandbox-kernel.json`（模式 2，判官是 procs-kernel）：daemon stack 只 ro（ctl 信箱寫不進去，信只能寄 `$AOS_KERNEL`）、rw 綁它的 `procs/`＋`$AOS_KERNEL`，`env` 多帶 `AOS_KERNEL`。沒寫上限（這台公司 WSL 沒有 s6）。實測見 [no-pid 13](../../thinking/2026-11/05/no-pid/13-P5實作結果.md) |
 | claude／codex CLI | [examples/cli-tool.json](examples/cli-tool.json) | 要連網、要寫自己的設定資料夾；擋的是「讀寫工作區以外」；環境只帶 `PATH`、`HOME`、`TERM`、語系與 aos 的六個（登入靠 `~/.claude`、`~/.codex` 裡的檔；用環境變數給 key 的話自己加進 `env`） |
 | agent 當工具 | [examples/agent.json](examples/agent.json) | 斷網、信箱綁進來（`rw` 的 `$AOS_LLM_KERNEL/mailbox`，只綁信箱；腦只能經信箱用 aos-llm 問）；`commands` 帶 aos-post、aos-tools（agent-fsm 的 wait／act 要用，11-04 晚；aos-tools 在 `cmd/aos-tools/bin/`，所以 `proto8/py` 也跟著綁）、環境另帶 `AOS_LLM_KERNEL`（端點、模型、金鑰都在 kernel 那邊的 `kernel.json`，agent 看不到）。沙箱有自己的行程編號也行：kernel 認寄信的人看信裡 `sender.flock` 的檔案鎖、不看 pid（紀錄 S15） |
+
+**要碰 daemon 的工具（thought、agents、self_tools）綁這兩樣**：`AOS_DAEMON`（rw；模式 2 改成 `AOS_KERNEL` 的 `requests/`＋daemon stack 唯讀，再加 rw 它的 `procs/`——子的 stack 要寫得進去）（11-06 [no-pid P5](../../thinking/2026-11/05/no-pid/13-P5實作結果.md)）。另外兩件要注意：
+- **叫它的那隻 agent 的定義資料夾也要 ro 綁**：self_tools、thought 會讀父的定義（父的 `interfaces.json`、`llm.json`），看不到時 self_tools 報 `InterfaceMissing`，thought 不報錯、但子的腦默默改用範本預設（不是父的）。定義放哪沒有環境變數可指，範例沒寫，自己在 `ro` 加上。
+- **daemon 的 stack 放在工作區裡（例 `ws/.stack`）時，綁 `AOS_WS` 就已經把整台 daemon 綁進去了**——連 bash-boxed 這種葉工具也寫得到 ctl 信箱。要真的關住，daemon 的 stack 別放在工作區裡。
 
 ## 要 root 的那半
 

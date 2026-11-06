@@ -3,11 +3,12 @@
 
 # proto8 逐檔 code map 生成冊索引
 
-`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：340 個檔、281 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
+`wf/tools/codemap_gen.py` 從 proto8 進版控的檔的檔頭一句話生成：347 個檔、285 列（工具夾三個契約檔併一列）。一個 proto8 頂層夾一冊，太大照第二層夾切成 `-2`、`-3`…；「列／檔」寫在每個夾的第一冊。
 
 | 冊 | 夾 | 段 | 列／檔 |
 |---|---|---|---|
-| [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/`、`aos-daemon-ctl/`、`aos-eca/`、`aos-grow/`、`aos-mcp/`、`aos-sandbox/`、`aos-tick/`、`aos-tools/` | 36／37 |
+| [cmd](cmd.md) | `proto8/cmd/` | `aos-agent/`、`aos-daemon-ctl/`、`aos-eca/`、`aos-grow/`、`aos-mcp/`、`aos-sandbox/` | 40／42 |
+| [cmd-2](cmd-2.md) | `proto8/cmd/` | `aos-tick/`、`aos-tools/` |  |
 | [extras](extras.md) | `proto8/extras/` | `langs/` | 11／11 |
 | [impls](impls.md) | `proto8/impls/` | 依賴圖、頂層、`aos-daemon/`、`aos-directive/` | 143／143 |
 | [impls-2](impls-2.md) | `proto8/impls/` | `aos-exec/`、`aos-fsm/` |  |
@@ -16,7 +17,7 @@
 | [impls-5](impls-5.md) | `proto8/impls/` | `aos-post/`、`aos-util/`、`cmake/`、`inst/` |  |
 | [kernel](kernel.md) | `proto8/kernel/` | `daemon-judge/`、`llm-kernel/`、`procs-kernel/` | 10／10 |
 | [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層、`aos/` | 13／13 |
-| [lib](lib.md) | `proto8/lib/` | 頂層、`agent/`、`aos/`、`base/` | 32／86 |
+| [lib](lib.md) | `proto8/lib/` | 頂層、`agent/`、`aos/`、`base/` | 32／88 |
 | [py](py.md) | `proto8/py/` | 頂層、`daemon_ctl/` | 9／9 |
 | [root](root.md) | `proto8/` 頂層單檔 | 頂層 | 1／1 |
 | [templates](templates.md) | `proto8/templates/` | `agent-fsm/`、`eca-claude/` | 26／30 |
