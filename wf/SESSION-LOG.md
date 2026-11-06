@@ -8,6 +8,7 @@
 
 ## 最新進度
 
+- **open｜apply-ideas（11-06 fable 規劃；昨晚想法怎麼用到現況）**：都不插進 S 步、tick 改 deadline（T4）跟 S9 同人緊接、T 全排 S7 併進後；aos-serve（body-protocol）排大重構後、P6 後；D1 硬凍／軟凍＋tick-time Q1～Q5 待使用者；J1 今天可開 → [apply-ideas](../proto8/thinking/2026-11/06/apply-ideas/README.md)
 - **open｜效能標準（11-06 整天收數據）**：收工前分析兩份 CSV＋使用者覺得卡的時間點，訂公司最多同時幾個 codex／claude，寫進 [aos-teams/01](workflows/dispatch/aos-teams/01-公司WSL.md#監看門檻)；收完停掉兩支記錄程式（WSL pid 198864、Windows typeperf pid 39196）；保險絲（佔用 95% 砍東西）等之後跑高佔用工作再做
 - **open｜知識庫 K7 已裁**（使用者 11-05 夜「知識庫這塊都按照推薦」；實作排在大重構後）：W1～W3 主幹可做，W7～W10 照裁定（多庫用捷徑、不做 lock op、不記 `_meta`）→ [knowledge-write](../proto8/thinking/2026-11/05/knowledge-write/README.md)；CONVENTION 草稿照推薦定稿編號 → [agent-knowledge 06](../proto8/thinking/2026-11/05/agent-knowledge/06-11-05晚-接線.md#使用者裁定11-05-夜排在大重構之後做)
 - **open｜架構大重構**（使用者 11-05「給整個程式碼庫、codemap之類，做一次架構上的大重構」；20:17「七題照推薦」）：S0～S5 已進 main（S5 11-06 公司重做 `b0adec7f`，家機 S5 分支 `worktree-agent-a6238359e64b1a123` 作廢、回家刪）；S7 留家機 worktree 分支待併；剩 S6（＝no-pid P3）、S8～S11；試驗場路徑待頂層派人改；**no-pid P1 11-06 在公司先做進 main（`09d38608`），家機 S7 分支 `worktree-agent-aef456b36f04f15d3` 回家要 rebase／重疊到 S5＋P1 之上**（同檔 child.cpp／daemon.cpp／common.hpp，P1 實際只動後兩個） → [arch-refactor 06 § 明天剩什麼](../proto8/thinking/2026-11/05/arch-refactor/06-工作量與排程.md#明天剩什麼11-05-收尾改成實際)
