@@ -32,6 +32,7 @@
 #pragma once
 
 #include "aos/loop.hpp"
+#include "aos/post.hpp"
 
 #include <optional>
 #include <string>
@@ -41,9 +42,8 @@ namespace aos::llm_kernel {
 
 // 錯誤代號：沿用 aos-loop 的（→ aos-exec → aos-util），再加信箱、信會吐的。
 namespace code {
-using namespace aos::loop::code;   // ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、StackMissing、WriteFailed、MkdirFailed…
-                                   // LlmKernelMissing（aos-llm：沒設 AOS_LLM_KERNEL、不是資料夾）、MailboxMissing（kernel：daemon 沒開 ctl 信箱）、LaunchFailed（回信：掛不上 daemon）、LetterBad（回信：信讀不懂）、
-                                   // LetterMissing（aos-llm ask：自己的信不見了）10-30 收進 aos-util
+using namespace aos::loop::code;   // 通用代號與 StackMissing
+using namespace aos::post::code;   // MailboxMissing、LetterMissing、LetterBad
 inline constexpr const char* PriorityBad = "PriorityBad";       // priority 寫壞（aos-llm 自己擋；kernel 收到這種信回 LetterBad）
 inline constexpr const char* DeadlineMissed = "DeadlineMissed"; // 回信：輪到之前時限已過，沒跑（10-15 LLM kernel 稿定的名字）
 inline constexpr const char* DaemonMissing = "DaemonMissing";   // kernel：沒設 AOS_DAEMON、不是資料夾（11-05：問腦請 daemon 掛，kernel 要在 daemon 底下）

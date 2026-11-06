@@ -77,7 +77,7 @@ int recv(const std::string& box, const std::string& name) {
     aos::post::Mailbox rb = aos::post::open(box);   // 不是資料夾＝MailboxMissing
     std::set<std::string> seen;
     std::optional<std::string> n = find_reply(rb, name, seen);
-    if (n && take(rb, *n)) {
+    if (n && aos::llm::take(rb, *n)) {
         return deliver(rb, *n);
     }
     return 10;
@@ -93,7 +93,7 @@ static void withdraw(const Mailbox& mb, const aos::post::Mailbox& rb, const std:
     }
     // 在 cur/：正在跑，讓它跑完；回信已經到了就收掉，沒到的 kernel 寄回信時看寄信的人不在了會撤回
     std::optional<std::string> n = find_reply(rb, id, seen);
-    if (n && take(rb, *n)) {
+    if (n && aos::llm::take(rb, *n)) {
         try {
             aos::post::done(rb, *n, false);
         } catch (const Error&) {
@@ -111,7 +111,7 @@ int ask_wait(const Mailbox& mb, const std::string& id) {
     sigaddset(&set, SIGHUP);
     while (true) {
         std::optional<std::string> n = find_reply(rb, id, seen);
-        if (n && take(rb, *n)) {
+        if (n && aos::llm::take(rb, *n)) {
             return deliver(rb, *n);
         }
         // 照信走的方向看：new → cur（kernel 先寄回信才刪 cur/ 那封，所以 cur/ 沒了回信一定已經到了）

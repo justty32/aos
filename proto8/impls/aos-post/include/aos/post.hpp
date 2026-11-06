@@ -59,9 +59,12 @@
 namespace aos::post {
 
 // 錯誤代號：全家共用的（ArgumentsBad、FlagUnknown、InputBad、InputExtra、WriteFailed、MkdirFailed、Internal；
-// 投遞的 CommandUnknown、MailboxMissing、LetterMissing、LetterBad 10-30 收進 aos-util 的 aos/error.hpp）＋只有投遞會吐的。
+// CommandUnknown 由 aos-util 定義）；MailboxMissing、LetterMissing、LetterBad 由本標頭定義，供投遞與使用者共用。
 namespace code {
 using namespace aos::code;
+inline constexpr const char* MailboxMissing = "MailboxMissing"; // 信箱或用到的格不是資料夾
+inline constexpr const char* LetterMissing = "LetterMissing";   // 信不在該在的格
+inline constexpr const char* LetterBad = "LetterBad";           // 信封讀不懂
 inline constexpr const char* RegretFailed = "RegretFailed";     // 命令列 regret：信不在 new/（已被認領，或本來就沒有）
 inline constexpr const char* OrderBad = "OrderBad";             // ordered：order.json 在但讀不懂（不是 {"counter_letters": 非負整數}）
 inline constexpr const char* LetterExists = "LetterExists";     // send 自己給的信件名稱已經有同名的（tmp/ 或 new/）
@@ -96,7 +99,13 @@ struct Seen {
 void init(const std::string& root);
 Mailbox open(const std::string& root);
 std::string send(const Mailbox& mb, const Json& body, const SendOpts& opts);
+// 低層投遞：letter 是 caller 已建好的完整信封，不驗信封或 send 的入口條件。
+// 建 tmp/、new/ 與 tmp/.<id>，呼叫非空 prepare(tmp) 準備附檔，再寫 letter.json、rename 進 new/。
+// prepare 丟 Error、寫信或 rename 失敗會清 tmp；rename 的任何失敗（含撞名）皆 WriteFailed。
+std::string send_prepared(const Mailbox& mb, const Json& letter, void (*prepare)(const std::string&));
 std::optional<std::string> take(const Mailbox& mb);
+// 指定認領：不驗名字或 new/；建 cur/ 後直接 rename。競爭錯回 false，其他錯丟 WriteFailed；建不了丟 MkdirFailed。
+bool take(const Mailbox& mb, const std::string& name);
 std::vector<std::string> take_all(const Mailbox& mb);
 std::optional<std::string> first_in_cur(const Mailbox& mb);
 Seen see(const Mailbox& mb, const std::string& name);

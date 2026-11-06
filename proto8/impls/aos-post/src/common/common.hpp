@@ -5,10 +5,11 @@
 //   make_dir    沒有就建（已經有＝沒事）；建不了丟 MkdirFailed
 //   names_in    一個資料夾裡的名字，照處理順序（sort_letters）；. 開頭的不算（N-05：讀的人不讀 . 開頭的）。讀不了＝空
 //   drop        丟掉一封已經在 tmp/ 的信（整個資料夾刪掉；刪不乾淨不算錯——殘骸留在 tmp/，處理者本來就不看）
-//   move        rename 一封信；成功 true、ENOENT／ENOTEMPTY／EEXIST（不在、被別人搶先）false、其他錯丟 WriteFailed
+//   is_dir／make_dir 直接用 aos-util；rename 操作用 explicit aos::move，避免 ADL 歧義
 #pragma once
 
 #include "aos/post.hpp"
+#include "aos/files.hpp"
 
 #include <string>
 #include <vector>
@@ -18,11 +19,10 @@ namespace aos::post {
 using aos::Error;
 using aos::Json;
 
-bool is_dir(const std::string& path);
+using aos::is_dir;
+using aos::make_dir;
 void need_dir(const std::string& path);
-void make_dir(const std::string& dir);
 std::vector<std::string> names_in(const std::string& dir);
 void drop(const std::string& path);
-bool move(const std::string& from, const std::string& to);
 
 }  // namespace aos::post

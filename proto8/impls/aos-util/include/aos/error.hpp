@@ -36,12 +36,9 @@ inline constexpr const char* CfgBad = "CfgBad";             // 設定檔讀不�
 inline constexpr const char* WriteFailed = "WriteFailed";   // 檔寫不了
 inline constexpr const char* MkdirFailed = "MkdirFailed";   // 資料夾建不了
 inline constexpr const char* LaunchFailed = "LaunchFailed"; // 子程序起不來（fork／spawn 失敗、執行檔不在）
-// 子命令、投遞（10-30 從 aos-post、aos-lock、aos-json、aos-llm-kernel 各定一份收來；medium-plan 實作時代定 12）
+// 子命令
 inline constexpr const char* CommandUnknown = "CommandUnknown"; // 命令列：不認得的子命令（aos-json、aos-post、aos-lock）
-inline constexpr const char* MailboxMissing = "MailboxMissing"; // 信箱不在、或 tmp/ new/ cur/ 沒建好（aos-post、aos-llm）
 inline constexpr const char* LlmKernelMissing = "LlmKernelMissing";   // hub 型變數 AOS_LLM_KERNEL（llm kernel 的 stack）沒設、空的、不是資料夾（aos-llm；N-63 ②「<名字>Missing」；11-05 原 KernelMissing，Kernel 留給通用 kernel）
-inline constexpr const char* LetterMissing = "LetterMissing";   // 指名的信不在該在的格（aos-post 的 check、finish；aos-llm ask 等的信不見了）
-inline constexpr const char* LetterBad = "LetterBad";           // 信壞了：letter.json 讀不懂、缺必填、型別不對（aos-post see；aos-llm-kernel 的回信）
 // 其他
 inline constexpr const char* Internal = "Internal";         // 照理不會發生的例外（記憶體不夠、cwd 被刪）
 }  // namespace code

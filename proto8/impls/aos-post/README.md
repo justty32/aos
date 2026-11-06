@@ -16,6 +16,11 @@ aos-post see box                                    # 讀 cur/ 照處理順序�
 aos-post done box                                   # 收掉那一封（--keep 進 archive/）
 ```
 
+函式庫另有兩個低層操作（公開契約見 `aos/post.hpp`）：
+
+- `send_prepared(mb, letter, prepare)`：呼叫者先建完整信封；函式建 `tmp/.<id>`、呼叫非空 `prepare(tmp)` 放附檔，再寫 `letter.json` 並原子移進 `new/`。不做一般 `send` 的信箱可寫性、信封或名字檢查；prepare 丟 `Error`、寫檔或 rename 失敗會清暫存，rename 失敗一律 `WriteFailed`。
+- `take(mb, name)`：建 `cur/` 後直接認領指定名字，不驗名字或 `new/`。信已不在或同名衝突回 `false`；其他 rename 錯丟 `WriteFailed`，建不了 `cur/` 丟 `MkdirFailed`。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。

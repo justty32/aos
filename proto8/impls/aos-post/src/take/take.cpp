@@ -22,18 +22,23 @@ static void ready_to_take(const Mailbox& mb) {
 std::optional<std::string> take(const Mailbox& mb) {
     ready_to_take(mb);
     for (const std::string& name : names_in(mb.fresh())) {
-        if (move(aos::join(mb.fresh(), name), aos::join(mb.cur(), name))) {
+        if (aos::move(aos::join(mb.fresh(), name), aos::join(mb.cur(), name))) {
             return name;
         }
     }
     return std::nullopt;
 }
 
+bool take(const Mailbox& mb, const std::string& name) {
+    aos::make_dir(mb.cur());
+    return aos::move(aos::join(mb.fresh(), name), aos::join(mb.cur(), name));
+}
+
 std::vector<std::string> take_all(const Mailbox& mb) {
     ready_to_take(mb);
     std::vector<std::string> got;
     for (const std::string& name : names_in(mb.fresh())) {
-        if (move(aos::join(mb.fresh(), name), aos::join(mb.cur(), name))) {
+        if (aos::move(aos::join(mb.fresh(), name), aos::join(mb.cur(), name))) {
             got.push_back(name);
         }
     }
@@ -119,13 +124,13 @@ void done(const Mailbox& mb, const std::string& name, bool keep) {
     std::string from = aos::join(mb.cur(), name);
     if (keep && c.ok) {
         make_dir(mb.archive());
-        if (!move(from, aos::join(mb.archive(), name))) {
+        if (!aos::move(from, aos::join(mb.archive(), name))) {
             throw Error{code::WriteFailed, "cannot move into archive/ (same name already there, or letter gone): " + from};
         }
         return;
     }
     std::string t = aos::join(mb.tmp(), name);
-    if (!move(from, t)) {
+    if (!aos::move(from, t)) {
         throw Error{code::LetterMissing, "letter not in cur/: " + from};
     }
     drop(t);
@@ -135,7 +140,7 @@ bool regret(const Mailbox& mb, const std::string& name) {
     need_dir(mb.fresh());
     need_dir(mb.tmp());
     std::string t = aos::join(mb.tmp(), name);
-    if (!move(aos::join(mb.fresh(), name), t)) {
+    if (!aos::move(aos::join(mb.fresh(), name), t)) {
         return false;
     }
     drop(t);

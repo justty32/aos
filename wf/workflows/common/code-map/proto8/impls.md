@@ -14,7 +14,7 @@
 | `aos-exec` | aos-util | inst-static、aos-directive、Threads::Threads |
 | `aos-fsm` | aos-loop | — |
 | `aos-json` | aos-util、aos-directive | — |
-| `aos-llm-kernel` | aos-loop | aos-post、aos-directive |
+| `aos-llm-kernel` | aos-loop、aos-post | aos-directive |
 | `aos-llm` | aos-llm-kernel、aos-post | — |
 | `aos-lock` | aos-util | — |
 | `aos-loop` | aos-exec、aos-directive | — |

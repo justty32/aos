@@ -199,4 +199,31 @@ std::string send(const Mailbox& mb, const Json& body, const SendOpts& opts) {
     return s.id;
 }
 
+// 信封與附檔由呼叫者準備；在 tmp/ 完成後才原子投進 new/。
+std::string send_prepared(const Mailbox& mb, const Json& letter, void (*prepare)(const std::string&)) {
+    aos::make_dir(mb.tmp());
+    aos::make_dir(mb.fresh());
+    std::string id = aos::unique_id();
+    std::string t = aos::join(mb.tmp(), "." + id);
+    aos::make_dir(t);
+    try {
+        prepare(t);
+    } catch (const Error&) {
+        aos::remove_tree(t);
+        throw;
+    }
+    std::optional<std::string> err = aos::write_json(aos::join(t, "letter.json"), letter);
+    if (err) {
+        aos::remove_tree(t);
+        throw Error{code::WriteFailed, *err};
+    }
+    std::string n = aos::join(mb.fresh(), id);
+    if (std::rename(t.c_str(), n.c_str()) != 0) {
+        int e = errno;
+        aos::remove_tree(t);
+        throw Error{code::WriteFailed, "cannot rename " + t + " -> " + n + ": " + std::strerror(e)};
+    }
+    return id;
+}
+
 }  // namespace aos::post

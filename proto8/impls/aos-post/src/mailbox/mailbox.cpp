@@ -6,14 +6,8 @@
 #include "aos/files.hpp"
 
 #include <algorithm>
-#include <cerrno>
-#include <cstdio>
-#include <cstring>
-#include <filesystem>
 
 #include <sys/stat.h>
-
-namespace fs = std::filesystem;
 
 namespace aos::post {
 
@@ -22,58 +16,19 @@ std::string Mailbox::fresh() const { return aos::join(root, "new"); }
 std::string Mailbox::cur() const { return aos::join(root, "cur"); }
 std::string Mailbox::archive() const { return aos::join(root, "archive"); }
 
-bool is_dir(const std::string& path) {
-    std::error_code ec;
-    return fs::is_directory(path, ec);
-}
-
 std::vector<std::string> names_in(const std::string& dir) {
-    std::vector<std::string> out;
-    std::error_code ec;
-    fs::directory_iterator it(dir, ec);
-    if (ec) {
-        return out;
-    }
-    for (fs::directory_iterator end; it != end; it.increment(ec)) {
-        if (ec) {
-            break;
-        }
-        std::string name = it->path().filename().string();
-        if (!name.empty() && name[0] != '.') {
-            out.push_back(name);
-        }
-    }
+    std::vector<std::string> out = aos::names_in(dir);
     sort_letters(out);
     return out;
 }
 
 void drop(const std::string& path) {
-    std::error_code ec;
-    fs::remove_all(path, ec);
-}
-
-bool move(const std::string& from, const std::string& to) {
-    if (std::rename(from.c_str(), to.c_str()) == 0) {
-        return true;
-    }
-    int e = errno;
-    if (e == ENOENT || e == ENOTEMPTY || e == EEXIST) {
-        return false;
-    }
-    throw Error{code::WriteFailed, "cannot rename " + from + " -> " + to + ": " + std::strerror(e)};
+    aos::remove_tree(path);
 }
 
 void need_dir(const std::string& path) {
     if (!is_dir(path)) {
         throw Error{code::MailboxMissing, "mailbox not set up (missing " + path + "); run aos-post init first"};
-    }
-}
-
-void make_dir(const std::string& dir) {
-    std::error_code ec;
-    fs::create_directories(dir, ec);
-    if (!is_dir(dir)) {
-        throw Error{code::MkdirFailed, "cannot create " + dir + (ec ? ": " + ec.message() : "")};
     }
 }
 
