@@ -12,4 +12,14 @@
 | [`aos_flags.py`](../../../../../proto8/py/aos_flags.py) | 命令列旗標解析（含共用短名）、互動確認與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認）。 |
 | [`aos_ws.py`](../../../../../proto8/py/aos_ws.py) | 「放一則訊息、等答案、讀 stack」的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。 |
 | [`cli_session.py`](../../../../../proto8/py/cli_session.py) | 把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 attach 接進互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字 |
-| [`daemon_ctl.py`](../../../../../proto8/py/daemon_ctl.py) | daemon 的找址、名單、寄信回信與子 loop 控制共用介面。 |
+
+## `proto8/py/daemon_ctl/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`__init__.py`](../../../../../proto8/py/daemon_ctl/__init__.py) | daemon_ctl：daemon 的找址、名單、寄信回信與子 loop 控制共用介面（套件入口，對外名字全在這裡）。 |
+| [`base.py`](../../../../../proto8/py/daemon_ctl/base.py) | daemon_ctl 基礎：共用錯誤類別、用法與 daemon 檔名常數。 |
+| [`ctl.py`](../../../../../proto8/py/daemon_ctl/ctl.py) | daemon_ctl 控制：檢查子 loop 階段、寫入控制並等待套用。 |
+| [`entry.py`](../../../../../proto8/py/daemon_ctl/entry.py) | daemon_ctl 入口：判定目標類型、讀取 loop 設定並組成掛子信。 |
+| [`post.py`](../../../../../proto8/py/daemon_ctl/post.py) | daemon_ctl 信件：寄送、認領與清理回信並等待 daemon 回應。 |
+| [`table.py`](../../../../../proto8/py/daemon_ctl/table.py) | daemon_ctl 名單：尋找 daemon、讀取狀態表並解析子項與上一層狀態。 |
