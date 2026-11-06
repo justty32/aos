@@ -118,7 +118,8 @@ std::optional<std::string> Daemon::check_once(const Json& doc, const Json& want)
             }
             auto at = index_.find(n);   // 表上有＝看那列（跑著的是哪種）；不在表上＝看寫法
             bool once = at != index_.end() ? at->second->second.once : is_once(want[n]);
-            if (once) {
+            bool auto_restart = at != index_.end() ? at->second->second.auto_restart : auto_restart_of(want[n]);
+            if (once && !auto_restart) {
                 return "exec proc " + aos::dumps(Json(n)) + " has no stop/start/sleep/wake (exec procs can only be added and removed)";
             }
         }

@@ -321,7 +321,7 @@ def phase_cmd(cmd, key):
         d = dc.find_daemon(opts.get("daemon"))
         row = dc.row_of(d, name)
         if cmd in ("stop", "sleep"):
-            dc.need_ctl(d, name, row)          # exec 型只有跑和拔：先報 CtlMissing（跟 11-05 前一樣）
+            dc.need_stoppable(d, name, row)    # exec 型只有跑和拔：先報 CtlMissing（跟 11-05 前一樣）；寫了 auto_restart 的放行（11-06 no-pid P6）
         dc.need_phase(cmd, name, row)
         deliver(d, {key: [name]}, reply_arg(o), seconds)
     return run

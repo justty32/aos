@@ -1,4 +1,4 @@
-// child.cpp：【child】建立小格、啟動 loop／exec／daemon 型子項，並回收與輸出子項狀態（說明見 child.hpp）。
+// child.cpp：【child】建立小格、啟動子 loop 或 exec 型子項，並回收與輸出子項狀態（說明見 child.hpp）。
 //
 // 10-21 傍晚起子 loop 經 aos-exec 起（使用者「5.要」，ideas § 9；`aos-exec -- 小格/loop.json#/_entry`）：
 // daemon 把子項設定寫成小格裡的 loop.json、蓋上 "_entry": ["aos-loop", {"$env": "AOS_CF"}]，fork 一個子行程呼叫 aos-exec 的
@@ -157,6 +157,8 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
     cfg.erase("stack");
     cfg.erase("def");   // def 同（11-04）：只記進表
     cfg.erase("limits");   // limits 同（11-05 feat-proto 件 5）：daemon 在子行程裡做，子 loop 不知道
+    cfg.erase("auto_restart");   // 11-06（no-pid P6）：通用重起旗標只歸 daemon 管
+    cfg.erase("restart_on_stuck");
     Json ex = cfg.value("exec", Json());   // 子 loop 經 aos-exec 起、cwd 會是小格：相對的目標照 daemon 的 cwd 轉成絕對（其他不動、不驗；單子見下）
     // 11-05（portable-flow 03 推薦 (b)）：轉絕對之後寫成 {"$env": "AOS_DAEMON", "$path": 相對 daemon 的 stack}，aos-loop 解指示詞拼回（搬家不用改檔）
     auto keep = [&](const std::string& t) {
@@ -219,16 +221,6 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
     return c;
 }
 
-// 11-06（no-pid P6）：沿用 launch，不包 aos-loop、不寫 loop.json／exec.json。
-Child spawn_daemon(const std::string& name, const std::string& cell, bool deep, const std::string& target, const std::string& cwd,
-                   const std::string& dstack, const CellNames& names, const Json& limits, const Json& ws, bool restart_on_stuck) {
-    make_cell(name, cell, deep);
-    Child c = launch(name, cell, cwd, {"--", target}, ws, dstack, names.err, limits);
-    c.daemon = true;
-    c.restart_on_stuck = restart_on_stuck;
-    return c;
-}
-
 bool alive(Child& c) {
     if (!c.own) {
         return c.started_at_ticks.has_value() && aos::proc_started_at_ticks(c.pid) == c.started_at_ticks;
@@ -274,9 +266,11 @@ Json row(const Child& c, const std::string& dstack) {
     if (!c.limits.is_null()) {
         r["limits"] = c.limits;   // 11-05（feat-proto 件 5）：生效的份額，有才寫
     }
-    if (c.daemon) {   // 11-06（no-pid P6）：其他型的列連欄位順序都維持原樣
-        r["daemon"] = true;
-        r["restart_on_stuck"] = c.restart_on_stuck;
+    if (c.auto_restart) {
+        r["auto_restart"] = true;
+    }
+    if (c.restart_on_stuck) {
+        r["restart_on_stuck"] = true;
     }
     return r;
 }

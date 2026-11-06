@@ -207,7 +207,7 @@ def phase_body(cmd, name):
     d = daemon_path()
     row = call_dc(dc.row_of, d, name)
     if cmd in ("stop", "sleep"):
-        call_dc(dc.need_ctl, d, name, row)
+        call_dc(dc.need_stoppable, d, name, row)   # 11-06 no-pid P6：寫了 auto_restart 的列放行
     call_dc(dc.need_phase, cmd, name, row)
     return {{"stop": "procs_stopped", "start": "procs_started", "sleep": "procs_slept", "wake": "procs_woken"}[cmd]: [name]}
 

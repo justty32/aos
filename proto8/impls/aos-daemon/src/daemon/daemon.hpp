@@ -1,5 +1,7 @@
 // daemon.hpp：【daemon】Daemon＝aos-loop 的 Loop 子類別＋一張 proc 的表（10-21 傍晚；11-03 loops／execs 統稱 procs，thinking 2026-11-03-procs）。內部標頭。
 //
+// 11-06（no-pid P6）：通用布林 auto_restart 讓任何 proc 常駐（可 stop／sleep、收工睡／開門醒），退了同一拍重起；連 3 次起後 3 秒內退＝stopped＋reason、要 start。
+//   表上 auto_restart、restart_on_stuck 只在 true 時寫；restart_on_stuck P6 只記、P7 才用，不看子項型別。
 //   daemon.cpp   建構子、stack 鎖；procs.cpp 解 procs 與合併名單
 //   adopt.cpp    接回上次的表、尋找小格裡活著的子 loop
 //   table.cpp    維護表、log 與 state 寫入結果
@@ -14,9 +16,7 @@
 // procs_ctl、procs_state（在 $AOS_STACK 底下的檔名；沒寫＝procs_ctl.json、procs_state.json，null＝不開）、procs_ctl_mailbox（11-04 起沒寫＝procs_ctl_mailbox、null＝不開）、
 // procs_loop、procs_exec、procs_stderr（11-04：小格裡 daemon 寫的三個檔名，沒寫＝loop.json、exec.json、stderr.txt；見 child.hpp 的 CellNames）。
 // 舊名 loops、execs、loops_ctl、loops_state、loops_ctl_mailbox 不認（C-48，使用者 11-03「當沒看到」）。命令列 `-- 參數...` 只接在 daemon 自己的 exec。
-// 每個 proc 怎麼起看寫法（沒有 kind，procs § 2）：字串、陣列、或 key 只有 exec（＋ws、stack、def、limits）的物件＝exec 型（aos-exec 一次）；非 daemon 型的其他物件＝loop 型（包成子 aos-loop）。
-// 11-06（no-pid P6）：物件有 daemon key＝daemon 型，X 是 aos-exec 入口，直接 aos-exec -- X、不包 loop；只另收 stack、ws、def、limits、restart_on_stuck。
-//   退了同一拍照表重起；連三次起後 3 秒內退才留 stopped＋reason、要 start。列多 daemon: true、restart_on_stuck（P6 只記）；收工沿用 sleep／wake，收它限 30 秒。
+// 每個 proc 怎麼起看寫法（沒有 kind，procs § 2）：字串、陣列、或 key 只有 exec（＋ws、stack、def、limits、auto_restart、restart_on_stuck）的物件＝exec 型（aos-exec 一次）；其他物件＝loop 型（包成子 aos-loop）。
 // 物件的 stack（procs § 2b）：proc 的 stack（從 daemon 的 cwd 轉絕對、不在就 mkdir -p、不查不擋）；沒寫＝$AOS_STACK/procs/<名字>/。ws＝子行程的 AOS_WS。
 // 物件的 def（11-04，aos-agent，使用者「那就b。」）：定義資料夾（從 daemon 的 cwd 轉絕對；不驗、只記進表的 def 欄，不灌進 loop.json）。
 // 物件的 limits（11-05 feat-proto 件 5）：份額（child/limits.hpp；不灌進 loop.json）；daemon.json 頂層 limits＝沒寫的列用的預設。
@@ -66,7 +66,7 @@
 
 namespace aos::daemon {
 
-inline constexpr int REVIVE_MS = 3000;   // 11-06（no-pid P6）：起來 3 秒內退出；原因字樣與 daemon 型連敗計數共用
+inline constexpr int REVIVE_MS = 3000;   // 起後 3 秒內退出：原因字樣與 auto_restart 連敗計數共用
 
 // 小格裡有活著的子 loop 時回 pid 與 ticks；adopt.cpp 與 reconcile.cpp 共用。
 std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell, const std::string& loop_name);
@@ -74,7 +74,7 @@ std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell,
 // 讀一份 procs（daemon.json 的 procs，procs_ctl 的 procs、procs_added，信的 procs_added 共用）：回 {名字: proc}（照寫的順序）。
 //   寫法：物件 {名字: proc}（拆成好幾份檔＝{"$ref": [檔, …]}，aos-directive 合物件、同名後面的蓋前面的）。
 //   指示詞（base＝v 裡相對 $ref 的起點）：procs 本身、每個 proc 本身先換一層（子項的起點＝它來自的那份檔的）；字串或陣列（aos-exec 的目標）
-//   就整個解、要是字串或非空字串陣列；物件只解 daemon 認的格（exec、max、interval_ms、ctl、state、ws、stack、def、limits、daemon、restart_on_stuck），其他 key（body…）原樣交給子 loop。
+//   就整個解、要是字串或非空字串陣列；物件只解 daemon 認的格（exec、max、interval_ms、ctl、state、ws、stack、def、limits、auto_restart、restart_on_stuck），其他 key（body…）原樣交給子 loop。
 //   exec 是單子（物件）：只換一層、裡面不解，相對的 $ref 檔名照它來自的那份檔轉成絕對（abs_refs）。
 //   名字非空、不含 /、不含 #、不以 . 開頭。物件的 ws、stack、def：要是非空字串（null＝拿掉）、從 daemon 的 cwd 轉絕對（stack 結尾不帶 /）。
 //   exec 型的物件（is_once）的 exec 要是目標或單子。
@@ -82,7 +82,7 @@ std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell,
 Json read_procs(const Json& v, const std::string& base, const std::string& key);
 
 // procs_state 列上的 exec 欄（11-04 晚，aos-agent 方向題 1，使用者「daemon表多一欄記下來」）：proc 設定裡的目標——
-//   字串、陣列（取第一個）、物件的 exec（同前兩種）、daemon 型的 daemon 字串——相對的接在 cwd 後面（`檔#/…` 只動 # 前面；只有 `#/…` 的不動），其他照原字串；
+//   字串、陣列（取第一個）、物件的 exec（同前兩種）——相對的接在 cwd 後面（`檔#/…` 只動 # 前面；只有 `#/…` 的不動），其他照原字串；
 //   內嵌單子、null（信箱接回只留名的）＝回 null。aos-daemon-ctl add 的 loop 型目標是 `<XXX>/loop.json#/exec`（或 loop.json 的 exec 轉絕對）、
 //   exec 型是 XXX（都已絕對）。
 Json exec_of(const Json& spec, const std::string& cwd);
@@ -91,10 +91,11 @@ Json exec_of(const Json& spec, const std::string& cwd);
 //   沒寫、不是物件、null（信箱接回只留名的）＝回 null。aos-daemon-ctl add 一律送（XXX 的絕對路徑）。
 Json def_of(const Json& spec);
 
-// 11-06（no-pid P6）：物件且有 daemon key；is_once 對它回 false。
-bool is_daemon(const Json& spec);
+// 通用布林：物件且值是 true 才回 true（read_procs 已驗 boolean／null）。
+bool auto_restart_of(const Json& spec);
+bool ros_of(const Json& spec);
 
-// 這個 proc 是 exec 型嗎（procs § 2）：字串、陣列，或 key 只有 exec（＋ws、stack、def、limits）的物件＝是；其他（loop 設定、null）＝不是。
+// 這個 proc 是 exec 型嗎（procs § 2）：字串、陣列，或 key 只有 exec（＋ws、stack、def、limits、auto_restart、restart_on_stuck）的物件＝是；其他（loop 設定、null）＝不是。
 bool is_once(const Json& spec);
 
 // 把 v 裡每個 $ref 指示詞的相對檔名接在 base 後面（`檔#/…` 只動 `#` 前面；$ref 陣列每個元素都轉；絕對的、只有 `#/…` 的不動）。
@@ -131,14 +132,15 @@ private:
     void state_ok();                                      // 11-05：寫成了（之前寫不了＝stderr 一行 written again）
     void term(Child& c);                  // 送 SIGTERM、phase stopping、記期限（不等）
     void halt(const std::string& name, Child& c);   // daemon 的 stop：往子 loop 的 ctl 寫 {"cmd": "stop", "seq": N}、phase stopping（沒 ctl＝term）
-    void hold(const std::string& name, Child& c, const char* phase = "stopped", const char* log_phase = nullptr);   // 要留列的退了：印 log、列留成 phase；log_phase 可另指定（11-06 no-pid P6）
+    void hold(const std::string& name, Child& c, const char* phase = "stopped", const char* log_phase = nullptr);   // 要留列的退了：印 log、列留成 phase；log_phase 可另指定
     bool settle(Child& c);                // 收的途中看一眼：退了＝phase stopped、回 true；SIGTERM 過了期限還在＝SIGKILL 整群＋底下自成一群的（只送一次）
     bool look(const std::string& name, Child& c, bool stop);   // 不調表地看一眼（見 tend.cpp）；回 true＝結束了、要拿掉
     void run_body();                      // 11-05：tend 最後跑身體一次（到時間才跑；失敗＝stderr 一行、下一圈再跑，見 body.cpp）
     std::string fail_reason(const Child& c) const;   // 11-05：出錯結束留成 stopped 的 reason（英文；起不來／跑到一半掛了＋碼＋小格 stderr 最後一行）
     Child start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws = Json(),
                 const Json& kept_exec = Json(), const Json& kept_def = Json(),
-                const Json& kept_limits = Json(), bool kept_daemon = false, bool kept_ros = false);   // 11-06（no-pid P6）：照寫法起三型；spec null 用列上的 kept_*（含 daemon／restart_on_stuck）
+                const Json& kept_limits = Json(), bool kept_once = false, bool kept_auto_restart = false,
+                bool kept_ros = false);   // 照寫法起（spawn／spawn_exec）；spec null 用列上記的 kept_*（含型別與兩個布林）
     Json limits_of(const Json& spec, const Json& kept) const;   // 11-05：生效的份額＝列的 limits，沒寫＝daemon 預設 limits_；spec null＝kept；{}＝null（不限）
     std::string cell_of(const std::string& name, const Json& spec) const;   // proc 的 stack：寫了 stack＝它，沒寫＝$AOS_STACK/procs/<名字>
     void read_procs_ctl();                // 讀 procs_ctl.json：好的進 pctl_good_、清 pctl_warning_；壞的不採用、原因進 pctl_warning_；檔不在＝不動

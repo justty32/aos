@@ -14,12 +14,8 @@ from .table import cell_of, names_of, row_of
 
 def need_ctl(d, name, row=None):
     """它的 stack 裡 daemon 寫的 loop.json（名字照窗上的 procs_loop）→ (stack, ctl 檔的路徑)；沒有那份（exec 型）或 ctl 是 null＝CtlMissing。
-    ctl 沒寫＝ctl.json（aos-loop 的預設名，11-04 起 daemon 不再替它補）。
-    11-06（no-pid P6）：daemon 型的列（表上 daemon: true）沒有 loop.json——stop／sleep 照收（上一層 daemon 送 SIGTERM、子 daemon 自己收工），
-    pause／resume 寫子 daemon 自己的 ctl 窗（daemon 的預設名 ctl.json；它的 daemon.json 改了名這裡看不到）。"""
+    ctl 沒寫＝ctl.json（aos-loop 的預設名，11-04 起 daemon 不再替它補）。"""
     stack = cell_of(d, name, row)
-    if row and row.get("daemon") is True:
-        return stack, os.path.join(stack, "ctl.json")
     lj = os.path.join(stack, names_of(d)["procs_loop"])
     if not os.path.isfile(lj):
         raise Fail("CtlMissing", "%s has no ctl (an exec type can only run and be removed)" % name)
@@ -27,6 +23,14 @@ def need_ctl(d, name, row=None):
     if not isinstance(c, str) or not c:
         raise Fail("CtlMissing", "%s has no ctl (ctl in its loop.json is %s)" % (name, json.dumps(c)))
     return stack, os.path.join(stack, c)
+
+
+def need_stoppable(d, name, row=None):
+    """stop／sleep 之前：表上那列寫了 auto_restart（常駐，11-06 no-pid P6，不看型別）＝放行（daemon 沒 ctl 可寫就送 SIGTERM）；
+    其他照 need_ctl（exec 型只有跑和拔＝CtlMissing）。"""
+    if row is not None and row.get("auto_restart") is True:
+        return
+    need_ctl(d, name, row)
 
 
 # 11-05 portable-flow 衝突 1「嚴格分」：每個動詞只收一種 phase；用錯的提示（照表上的 phase 給下一步）

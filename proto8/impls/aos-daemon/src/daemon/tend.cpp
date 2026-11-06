@@ -62,7 +62,7 @@ static std::vector<pid_t> leaders_below(pid_t root) {
 void Daemon::term(Child& c) {
     c.phase = "stopping";
     c.termed = true;
-    c.deadline = Clock::now() + std::chrono::milliseconds(c.daemon ? GRACE_MS * 3 : GRACE_MS);   // 11-06（no-pid P6）：給子 daemon 30 秒先收它的子項
+    c.deadline = Clock::now() + std::chrono::milliseconds(GRACE_MS);
     kill(c.pid, SIGTERM);   // 給那支子項（它自己轉給它的那次）；已經沒了就算了
 }
 
@@ -71,10 +71,6 @@ void Daemon::halt(const std::string& name, Child& c) {
     // ctl 檔名看小格裡 daemon 自己寫的 loop.json（procs_loop 的名字）的 ctl（接回的也一樣）；N＝自己數的、也比 ctl 裡現有的 seq 大（內容一定跟上一道不一樣）。
     // ctl 沒寫＝ctl.json（aos-loop 的預設名，11-04 起 daemon 不再替它補）；讀不到 loop.json、ctl 不是檔名（寫了 null＝子 loop 沒開 ctl）＝改送 SIGTERM（同樣退了就留成 stopped）
     c.soft = true;
-    if (c.daemon) {   // 11-06（no-pid P6）：同一小格可能留著舊 loop.json；daemon 型一律 SIGTERM，讓它自己收整棵子樹
-        term(c);
-        return;
-    }
     std::optional<Json> cfg = aos::read_json(aos::join(c.stack, names_.loop));
     Json ctl = cfg && cfg->is_object() ? cfg->value("ctl", Json("ctl.json")) : Json();
     if (!ctl.is_string() || ctl.get<std::string>().empty()) {
@@ -99,7 +95,7 @@ void Daemon::halt(const std::string& name, Child& c) {
 }
 
 void Daemon::hold(const std::string& name, Child& c, const char* phase, const char* log_phase) {
-    c.phase = log_phase ? log_phase : phase;   // 11-06（no-pid P6）：daemon 型自己退的 log 記 done，表留 sleeping
+    c.phase = log_phase ? log_phase : phase;   // auto_restart 自己退的 log 記 done，表留 sleeping
     log_child(name, c);   // 行程結束一行
     c.phase = phase;
     c.held = true;        // 列留在表上（procs § 2c 第 2 條）：pid null、stack 不碰
@@ -143,7 +139,7 @@ bool Daemon::look(const std::string& name, Child& c, bool stop) {
             hold(name, c);
             return false;
         }
-        if (c.daemon) {   // 11-06（no-pid P6）：不論結束碼（含接回拿不到碼），照表重起
+        if (c.auto_restart) {   // 11-06（no-pid P6）：不論型別與結束碼（含接回拿不到碼），照表重起
             bool quick = c.revived && Clock::now() - c.revived_at < std::chrono::milliseconds(REVIVE_MS);
             c.quick_exits = quick ? c.quick_exits + 1 : 0;
             if (c.quick_exits >= 3) {
@@ -238,7 +234,7 @@ void Daemon::finish() {
             continue;   // stopped／sleeping 的列：照寫進最後一份 state（procs § 2c 第 9 條）
         }
         if (c.phase == "running" && alive(c)) {
-            c.nap = !c.once;   // 收工時還在跑的 loop 型（11-03 sleep／wake）：退了列留成 sleeping，再開時自動 wake；exec 型照舊拿掉
+            c.nap = !c.once || c.auto_restart;   // 收工時常駐的退了留 sleeping、再開自動 wake；一般 exec 型拿掉
             term(c);
         } else if (c.phase == "stopping" && !c.termed) {
             term(c);   // 等它自己退的（soft）也改送 SIGTERM；退了照樣留成 stopped 的列

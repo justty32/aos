@@ -87,7 +87,7 @@ static bool is_target(const Json& t) {   // aos-exec 的目標：字串或 [目�
 }
 
 Json exec_of(const Json& spec, const std::string& cwd) {
-    Json t = spec.is_object() ? spec.value(is_daemon(spec) ? "daemon" : "exec", Json()) : spec;
+    Json t = spec.is_object() ? spec.value("exec", Json()) : spec;
     if (t.is_array() && !t.empty()) {
         t = Json(t[0]);
     }
@@ -106,8 +106,12 @@ Json def_of(const Json& spec) {
     return spec.is_object() ? spec.value("def", Json()) : Json();   // read_procs 已轉絕對（fix_path）；不驗在不在
 }
 
-bool is_daemon(const Json& spec) {
-    return spec.is_object() && spec.contains("daemon");
+bool auto_restart_of(const Json& spec) {
+    return spec.is_object() && spec.value("auto_restart", Json()) == Json(true);
+}
+
+bool ros_of(const Json& spec) {
+    return spec.is_object() && spec.value("restart_on_stuck", Json()) == Json(true);
 }
 
 bool is_once(const Json& spec) {
@@ -118,7 +122,7 @@ bool is_once(const Json& spec) {
         return false;
     }
     for (auto& [k, v] : spec.items()) {
-        if (k != "exec" && k != "ws" && k != "stack" && k != "def" && k != "limits") {
+        if (k != "exec" && k != "ws" && k != "stack" && k != "def" && k != "limits" && k != "auto_restart" && k != "restart_on_stuck") {
             return false;   // 多了任何一個 key＝loop 設定（procs § 2 第 3 條）
         }
     }
@@ -144,27 +148,8 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             }
             vec.emplace_back(name, std::move(t));
         } else if (it.value.is_object()) {
-            if (is_daemon(it.value)) {   // 11-06（no-pid P6）：先擋多餘 key，不去解它們的指示詞
-                for (auto& [k, v] : it.value.items()) {
-                    if (k != "daemon" && k != "stack" && k != "ws" && k != "def" && k != "limits" && k != "restart_on_stuck") {
-                        throw Error{code::CfgBad, key + "[" + name + "]: a daemon proc takes only daemon, stack, ws, def, limits, restart_on_stuck"};
-                    }
-                }
-            }
-            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", "ctl", "state", "ws", "stack", "def", "limits", "daemon", "restart_on_stuck"});
-            if (is_daemon(r.value)) {   // 11-06（no-pid P6）：第三種寫法，只驗自己的格，不驗入口在不在
-                if (!r.value["daemon"].is_string() || r.value["daemon"].get<std::string>().empty()) {
-                    throw Error{code::CfgBad, key + "[" + name + "].daemon must be an aos-exec entry (non-empty string)"};
-                }
-                r.value["daemon"] = exec_of(r.value, aos::abspath("."));
-                Json ros = r.value.value("restart_on_stuck", Json());
-                if (!ros.is_null() && !ros.is_boolean()) {
-                    throw Error{code::CfgBad, key + "[" + name + "].restart_on_stuck must be a boolean or null"};
-                }
-                if (ros.is_null()) {
-                    r.value.erase("restart_on_stuck");
-                }
-            } else if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解、相對 $ref 轉成絕對（10-24）
+            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", "ctl", "state", "ws", "stack", "def", "limits", "auto_restart", "restart_on_stuck"});
+            if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解、相對 $ref 轉成絕對（10-24）
                 aos::Resolved ex = aos::loop::resolve_exec(r.value["exec"], r.dir_of("exec"));
                 if (ex.value.is_object()) {
                     ex.value = abs_refs(ex.value, ex.base_dir);
@@ -177,6 +162,16 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             fix_path(r.value, name, key, "ws", "workspace");
             fix_path(r.value, name, key, "stack", "stack");
             fix_path(r.value, name, key, "def", "definition directory");   // 11-04（aos-agent，使用者「那就b。」）：只記、不驗在不在
+            for (const char* k : {"auto_restart", "restart_on_stuck"}) {
+                if (!r.value.contains(k)) {
+                    continue;
+                }
+                if (r.value[k].is_null()) {
+                    r.value.erase(k);
+                } else if (!r.value[k].is_boolean()) {
+                    throw Error{code::CfgBad, key + "[" + name + "]." + k + " must be a boolean or null"};
+                }
+            }
             if (r.value.contains("limits")) {   // 11-05（feat-proto 件 5）：份額；null＝當沒寫（用 daemon 的預設）、{}＝不限，壞＝同 stack
                 if (r.value["limits"].is_null()) {
                     r.value.erase("limits");
