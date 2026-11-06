@@ -92,7 +92,7 @@ int Loop::main_loop() {
             return end(0, "stopped");
         }
         if (mx && runs_ >= *mx) {
-            return end(0, "done");
+            return end(0, StateWindow::done);
         }
         double wait = std::chrono::duration<double>(next_at - Clock::now()).count();
         if (paused || wait > 0) {
@@ -120,7 +120,7 @@ int Loop::main_loop() {
                 responded();
             } catch (const Error& e) {
                 fail_line(e.code, e.msg);
-                return end(1, "done");
+                return end(1, StateWindow::done);
             }
             // log（11-02）：每跑完一次一行（欄位名同 N-39 fsm 的 trace、P-38 的 started_at），不論那次怎麼結束
             Json line = Json::object();
@@ -134,11 +134,11 @@ int Loop::main_loop() {
                 return end(128 + b.received, "stopped");
             }
             if (b.code == 10) {
-                return end(0, "done");
+                return end(0, StateWindow::done);
             }
             if (b.code != 0) {
                 fail_line(code::RunFailed, "run " + std::to_string(runs_) + ": " + exec_.label() + " failed with exit code " + std::to_string(b.code));
-                return end(b.code, "done");
+                return end(b.code, StateWindow::done);
             }
         }
         next_at = Clock::now() + std::chrono::milliseconds(iv);

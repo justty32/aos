@@ -24,6 +24,7 @@ import copy, json, math, os, signal, sys, textwrap, time
 NAME, ECHO = "tool", True
 _TOOLDEF, _ARGUMENTS = None, None
 _TYPES = {"string", "integer", "number", "boolean", "array", "object", "null"}
+_TICK_WARNED = set()
 
 
 class Error(Exception):
@@ -48,8 +49,16 @@ def _tick_decimal(text, source, positive=False):
     return value
 
 
+def warn_missing_tick(path, prog=None):
+    """缺檔提醒共用快取；命令列與工具在同一行程只印一次。"""
+    key = (os.getpid(), path)
+    if key not in _TICK_WARNED:
+        _TICK_WARNED.add(key)
+        warn("AOS_TICK points to a missing file; treating the clock as 0", prog=prog)
+
+
 def now_tick():
-    """沒設 AOS_TICK＝None；缺檔或空檔＝0；讀不了或格式壞＝TickBad。"""
+    """沒設 AOS_TICK＝None；缺檔 warning 每行程每路徑一次且當 0；空檔＝0；壞檔＝TickBad。"""
     path = os.environ.get("AOS_TICK")
     if not path:
         return None
@@ -57,6 +66,7 @@ def now_tick():
         with open(path, "rb") as f:
             text = f.read().strip(b" \t\n\r\f\v").decode("ascii")
     except FileNotFoundError:
+        warn_missing_tick(path)
         return 0
     except (OSError, UnicodeError, ValueError) as e:
         raise Error("TickBad", "cannot read AOS_TICK file %s: %s" % (path, e)) from None
@@ -175,8 +185,9 @@ def die(code, reason, before=""):
     sys.exit(1)
 
 
-def warn(sentence):
-    print("%s: warning: %s" % (NAME, str(sentence).replace("\n", " ")), file=sys.stderr, flush=True)
+def warn(sentence, prog=None):
+    name = NAME if prog is None else prog
+    print("%s: warning: %s" % (name, str(sentence).replace("\n", " ")), file=sys.stderr, flush=True)
 
 
 def workspace():

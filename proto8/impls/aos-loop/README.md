@@ -19,6 +19,7 @@ aos-loop --max 2 loop.json # 每次 `aos-exec -- idle`，旗標蓋過 loop.json 
 
 規範：窗 N-06～N-09、N-17、N-32、N-33 在 [NORMS/05 窗](../../docs/NORMS/05-基礎設施-窗.md)，結束碼 N-43 在 [NORMS/01 總則](../../docs/NORMS/01-總則.md)，loop 的定位在 [NORMS/04 loop 與 daemon](../../docs/NORMS/04-基礎設施-loop與daemon.md)；慣例 CONVENTION P-06、P-19～P-22、P-36。本頁只寫用法與實作細節。
 骨架是公開的 `aos::loop::Loop`（aos-daemon 繼承它）。
+`aos/loop.hpp` 同時公開 `CtlWindow`／`StateWindow`：`ctl`／`state` 的預設檔名與跨程式讀寫的欄位、指令值只在這裡定義，loop 本身與 daemon 引用同一份（11-06 K-2；[窗](docs/02-窗.md)）。
 `exec` 可以直接放單子物件（使用者「不過exec本來就應該要可以直接放內嵌單子吧」「好，就這樣做」，[thinking 10-24](../../thinking/2026-10/24/exec-relative/README.md#10-24-exec-直接放單子)）：物件＝每次行程內 `run_inst`（`src/run/inline.cpp`），見下面「用法」的 `exec`。
 
 **轉交的碼**（11-05 stdio-unify R8、D4）：退非 0 時 stderr 有 `aos-loop: error:` 這行＝我錯（退 1）——只有 `aos-loop: error: RunFailed …` 例外：那是身體那次的碼原樣帶回（碼不是 1）；沒有錯誤行（128＋N）＝收到訊號。`aos-loop --help`＝英文說明印 stdout、退 0。

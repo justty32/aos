@@ -48,18 +48,18 @@ void write_window(const std::string& path, const Json& doc) {
 
 Json proc_fields() {
     static Json me;   // 自己的 pid、啟動時間、開機 id 只算一次；fork 出來的分身（daemon 的子 loop）pid 不同就重算
-    if (me.is_null() || me["pid"] != (long long)getpid()) {
+    if (me.is_null() || me[StateWindow::pid] != (long long)getpid()) {
         me = Json::object();
-        me["pid"] = (long long)getpid();
-        me["started_at_ticks"] = nullptr;
+        me[StateWindow::pid] = (long long)getpid();
+        me[StateWindow::started_at_ticks] = nullptr;
         std::optional<long long> st = aos::proc_started_at_ticks(0);
         if (st) {
-            me["started_at_ticks"] = *st;
+            me[StateWindow::started_at_ticks] = *st;
         }
-        me["boot_id"] = nullptr;
+        me[StateWindow::boot_id] = nullptr;
         std::optional<std::string> b = aos::boot_id();
         if (b) {
-            me["boot_id"] = *b;
+            me[StateWindow::boot_id] = *b;
         }
     }
     return me;
@@ -106,9 +106,9 @@ static std::optional<std::string> check_base(const Json& doc) {
     if (!doc.is_object()) {
         return "must be a JSON object";
     }
-    if (doc.contains("cmd")) {
-        const Json& c = doc["cmd"];
-        if (!c.is_string() || (c != "pause" && c != "resume" && c != "stop")) {
+    if (doc.contains(CtlWindow::cmd)) {
+        const Json& c = doc[CtlWindow::cmd];
+        if (!c.is_string() || (c != CtlWindow::pause && c != CtlWindow::resume && c != CtlWindow::stop)) {
             return "cmd must be \"pause\", \"resume\" or \"stop\"";
         }
     }
@@ -118,7 +118,7 @@ static std::optional<std::string> check_base(const Json& doc) {
             return std::string(k) + " must be a non-negative integer or null";
         }
     }
-    if (doc.contains("seq") && !aos::is_count(doc["seq"])) {
+    if (doc.contains(CtlWindow::seq) && !aos::is_count(doc[CtlWindow::seq])) {
         return "seq must be a non-negative integer";
     }
     return std::nullopt;
@@ -151,7 +151,7 @@ void Loop::read_ctl() {
         bad = "cannot read or not JSON: " + ctl_path_;
     } else {
         try {   // 指示詞（10-23 晚）：相對 $ref 從 ctl 所在的資料夾算；解不開＝整份不採用（N-08）
-            aos::Resolved r = resolve_keys(doc, aos::dirname(ctl_path_), {"cmd", "max", "interval_ms", "seq"});
+            aos::Resolved r = resolve_keys(doc, aos::dirname(ctl_path_), {CtlWindow::cmd, "max", "interval_ms", CtlWindow::seq});
             doc = std::move(r.value);
             bad = check_base(doc);
             if (!bad) {
@@ -178,12 +178,12 @@ void Loop::read_ctl() {
         return;
     }
     // 照做一次。stop 壓過同一道裡的其他東西（N-07 stopped 壓過 paused，11-03 照舊）
-    std::string cmd = doc.contains("cmd") ? doc["cmd"].get<std::string>() : "";
-    if (cmd == "stop") {
+    std::string cmd = doc.contains(CtlWindow::cmd) ? doc[CtlWindow::cmd].get<std::string>() : "";
+    if (cmd == CtlWindow::stop) {
         stopping_ = true;
-    } else if (cmd == "pause") {
+    } else if (cmd == CtlWindow::pause) {
         paused_ = true;
-    } else if (cmd == "resume") {
+    } else if (cmd == CtlWindow::resume) {
         paused_ = false;
     }
     if (doc.contains("max")) {
@@ -192,7 +192,7 @@ void Loop::read_ctl() {
     if (doc.contains("interval_ms")) {
         interval_ms_ = doc["interval_ms"].is_null() ? interval_base_ : doc["interval_ms"].get<long long>();
     }
-    ctl_seq_ = doc.contains("seq") ? doc["seq"] : Json();
+    ctl_seq_ = doc.contains(CtlWindow::seq) ? doc[CtlWindow::seq] : Json();
     ctl_warning_ = ctl_note_.empty() ? Json() : Json(ctl_note_);   // 照做了但子類別要提醒的（10-29 daemon 過渡期）
     responded();
 }
@@ -228,7 +228,7 @@ void Loop::write_state(const std::string& phase, const Json& code) {
 
 void Loop::write_main(const std::string& phase, const Json& code, const Json& me) {
     Json doc = Json::object();
-    doc["phase"] = phase;
+    doc[StateWindow::phase] = phase;
     doc["counter_runs"] = runs_;
     doc["max"] = max_ ? Json(*max_) : Json();
     doc["interval_ms"] = interval_ms_;
@@ -250,7 +250,7 @@ void Loop::write_main(const std::string& phase, const Json& code, const Json& me
     Json key = doc;
     key.erase("counter_runs");
     if (phase == "running" || phase == "waiting") {
-        key["phase"] = "running|waiting";   // 11-02 晚：running ⇄ waiting 不算變動（只比進出 paused／stopping／stopped／done）
+        key[StateWindow::phase] = "running|waiting";   // 11-02 晚：running ⇄ waiting 不算變動（只比進出 paused／stopping／stopped／done）
     }
     if (wrote_ && code.is_null() && key == last_main_) {
         return;

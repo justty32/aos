@@ -20,3 +20,5 @@
 **11-06 註／改讀（④ 旋鈕；已定；實作排在 T1、T7；T1 讀的那半與 T7 daemon 設給底下都已實作，[tick-time 04](../../../../thinking/2026-11/05/tick-time/04-T線實作結果.md)）**：「現無」加上使用者特許的例外 `AOS_TICK_INTERVAL`＝一次 tick 大概多久的標稱默契（毫秒），只在退牆鐘與給人看換算時讀；使用者「我實在很不想再添加環境變數，但這太香了」（[fs-image](../../../../thinking/2026-11/05/fs-image/README.md)）。沒設＝1000 毫秒，**暫定：使用者說可再想**（[tick-time 03 原話](../../../../thinking/2026-11/05/tick-time/03-11-06-裁定與新設計.md)）；daemon 的 `tick.interval_ms` 不是 1000 時設給子樹、近的贏，使用者「設，近的贏」（[daemon-board 題 2](../../../../thinking/2026-11/06/daemon-board/README.md)）。
 
 **11-06 註（K3；使用者 11-06 選項框「統一成 K3 (Recommended)」）**：② hub 的「沒設＝`<名字>Missing`」改讀成「沒設＝`<名字>Missing`，或在本表那一列寫明唯一一條退路」；設了但指不到時照退路走、印一行 `warning:`（[env-portability](../../../../thinking/2026-11/06/env-portability/README.md) Q5 已裁）。現有三條退路照本句成立、不再各算例外：`AOS_TICK` 沒設退牆鐘、`AOS_KERNEL` 沒設＝`$AOS_DAEMON` 的 ctl 信箱、`AOS_DAEMON` 沒設找 `./.stack`（[02](02-N-63-實例-AOS_DAEMON與沒有AOS_HUB.md)）；第四個要退路的照這句在表上那一列寫就好（[special-cases](../../../../thinking/2026-11/06/special-cases/README.md#使用者裁定11-06選項框)）。
+
+**11-06 E2 tick 半已實作（R 隊）**：`AOS_TICK` 設了但缺檔時，C++ 與 Python 共用入口印英文 `warning:`（每行程每路徑一次），仍沿用缺檔＝0、不建檔的行為；空白檔＝0 不提醒。沒設仍退牆鐘。`AOS_KERNEL` 的 warning 半另排 E2。

@@ -29,7 +29,7 @@
 |---|---|---|
 | Q1 金鑰落檔 | 「endpoint 那步才解 (Recommended)」 | ~~`request.json` 照原樣存 `{"$env": X}`，交給 endpoint 函數自己解~~ **11-06 使用者更正：金鑰歸小 proc**（「金鑰應該由那個小proc自己保管，我們在定義那個小proc的時候就要跟他說讀哪個環境變數當金鑰了」）：kernel 連指示詞都不經手；每個要金鑰的端點在 llm kernel 定義裡有自己的小定義資料夾，`_entry` 寫 `llm_http --key-env LITELLM_KEY`，kernel.json 那包只指 `exec`、拿掉 `key`——細節見 [06](06-E1改-金鑰歸小proc.md)；實作排在 apply-ideas 02 序 2c 的 E1 |
 | Q4 N-67 加三項 | 「加進條文 (Recommended)」 | ⑦⑧⑨ 已寫進 [N-67](../../../../docs/NORMS/10-基礎設施-定義與工作區/09-N-67.md)（原句全留、只加項與註） |
-| Q5 指不到時 | 「印 warning (Recommended)」 | `AOS_KERNEL`／`AOS_TICK` 設了但指不到＝印 warning 行、不報錯、不改退路；實作排在 2c 的 E2 |
+| Q5 指不到時 | 「印 warning (Recommended)」 | `AOS_KERNEL`／`AOS_TICK` 設了但指不到＝印 warning 行、不報錯、不改退路；`AOS_TICK` 半已由 11-06 R 隊完成（每行程每缺檔路徑一行英文 warning、仍當 0）；`AOS_KERNEL` 半仍排在 2c 的 E2 |
 | Q2＋Q3 aos-tools 登記檔 | 「C 照現況」 | 使用者補理由（逐字見表下）：存展開後的值跟命令列語意一致、不算 bug；登記檔照舊存展開後的值、登記檔贏（K1 使用者已知、接受）；P2 是已知代價、不修，R2 不做；搬家食譜加一步「檢查各工具的登記檔、必要時重新 `aos-tools add`」 |
 
 | Q1-2（[06](06-E1改-金鑰歸小proc.md)）`url`／`model` 要不要也搬進小 proc | 「不搬，只搬金鑰 (Recommended)」 | `url`、`model` 留在 kernel.json；只有金鑰歸小 proc |
@@ -57,3 +57,5 @@
 - 實測（/tmp/envp，試驗場複本，假腦，沒設 `AOS_BRAIN_URL`；起的 daemon 記 pid、做完收掉）：X1 金鑰落檔、X2 登記檔凍值、X3 額度鍵、X4 `.env` 外層贏三種情況、X5 stack 裡掃絕對路徑。結果寫在 [02](02-評估.md)。
 - 跟 I 隊（git 暫存評估）的交集：git 當 image 存放處時，「image 裡 grep 得到舊根路徑或密鑰」就是 commit 進 git 歷史、刪不掉——[04](04-規範草稿.md) ⑧ 對 git 更要緊。I 隊的夾還沒 push，push 後再互連。
 - **11-06 N 隊完成 E1＋E4**：`llm_http --key-env` 從小 proc 自己的環境讀金鑰，範本三包改指 `endpoints/litellm` 且不帶 `key`；kernel 文件改成跨樹 hub 只在 root export、樹內可用 `${AOS_CD}/..`，記憶體假端點經新小定義驗過正常讀值（退 0）、stdin 帶 key（`ArgumentsBad`）與變數未設（`EndpointFailed`），沒有改 C++。
+
+- **11-06 R 隊完成 E2 的 `AOS_TICK` 半**：C++ `aos-util`、Python `aos_ws`／`tool_io` 缺檔時走共用 warning 格式（每行程每路徑一次），仍當 0、不建檔；未設／空 env 仍退牆鐘、空檔仍是 0、不提醒。實測 `aos-post send` 缺檔時印 `aos-post: warning: AOS_TICK points to a missing file; treating the clock as 0`、退 0，信封 `sent_at_ticks` 為 0；Python 兩入口及同一行程混用也驗過。`AOS_KERNEL` 半尚未做。

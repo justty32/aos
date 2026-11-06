@@ -148,7 +148,7 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             }
             vec.emplace_back(name, std::move(t));
         } else if (it.value.is_object()) {
-            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", "ctl", "state", "ws", "stack", "def", "limits", "auto_restart", "restart_on_stuck"});
+            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", aos::loop::CtlWindow::config_key, aos::loop::StateWindow::config_key, "ws", "stack", "def", "limits", "auto_restart", "restart_on_stuck"});
             if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解、相對 $ref 轉成絕對（10-24）
                 aos::Resolved ex = aos::loop::resolve_exec(r.value["exec"], r.dir_of("exec"));
                 if (ex.value.is_object()) {

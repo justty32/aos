@@ -9,7 +9,9 @@
   ③ ctl／state＝aos-loop 開在 <stack>/ctl.json、state.json 的窗（state 的 phase 看得出 paused）。
 舊協議（工作區的 new/ cur/ out/ done/，P-11：agent-bob／ann／dan、topdown 這些 fsm 範本；11-04 demo 刪了）這裡不再認。
 11-03 起不讀 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）：fsm、aos-eca-turn 都不寫了，last_jsonl／unit_of／failed 跟著拿掉。"""
-import json, os, re, subprocess, time
+import json, os, re, subprocess, sys, time
+
+import aos_flags
 
 STAGES = ("new", "cur", "archive")           # queue 的格（11-03 aos-post 歸檔格 done/ 改名 archive/）；tmp/ 是寄到一半的，不看
 ORDERED = re.compile(r"^[0-9]{12}\.")        # 有序信的名字：<12 位序號>.<尾名>（N-16）
@@ -37,7 +39,7 @@ def _tick_decimal(text, source, positive=False):
 
 
 def now_tick():
-    """沒設 AOS_TICK＝None；缺檔或空檔＝0；讀不了或格式壞＝TickBad。"""
+    """沒設 AOS_TICK＝None；缺檔 warning 每行程每路徑一次且當 0；空檔＝0；壞檔＝TickBad。"""
     path = os.environ.get("AOS_TICK")
     if not path:
         return None
@@ -45,6 +47,7 @@ def now_tick():
         with open(path, "rb") as f:
             text = f.read().strip(b" \t\n\r\f\v").decode("ascii")
     except FileNotFoundError:
+        aos_flags.tool_io.warn_missing_tick(path, prog=os.path.basename(sys.argv[0]))
         return 0
     except (OSError, UnicodeError, ValueError) as e:
         raise Error("TickBad", "cannot read AOS_TICK file %s: %s" % (path, e)) from None

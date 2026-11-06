@@ -107,7 +107,7 @@ aos::Cli loop_cli(const std::vector<std::string>& argv, const std::string& prog,
                         " [-- ARGS...]";
     aos::Cli cli;
     try {
-        cli = aos::parse_cli(argv, {{"--max", "max"}, {"--interval-ms", "interval_ms"}, {"--ctl", "ctl"}, {"--state", "state"}},
+        cli = aos::parse_cli(argv, {{"--max", "max"}, {"--interval-ms", "interval_ms"}, {"--ctl", CtlWindow::config_key}, {"--state", StateWindow::config_key}},
                              {{"--enable-logs", "enable_logs"}}, help);   // 11-02 晚：不帶值的開關，給了才印 log（同 aos-mcp；原 --no-log）
     } catch (const Error& e) {
         throw aos::usage_error(e.code, e.msg, usage);   // FlagUnknown／ArgumentsBad
@@ -179,7 +179,7 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
     std::string exec_base;   // exec 那格裡相對 $ref 的起點（內嵌單子用）
     try {   // 指示詞（10-23 晚）：相對 $ref 從設定檔所在的資料夾算（N-45；捷徑解開，10-24 審後，config_file）
         aos::Resolved r = resolve_keys(cfg_, aos::dirname(config_file(spec)),
-                                       {"max", "interval_ms", "ctl", "state"});
+                                       {"max", "interval_ms", CtlWindow::config_key, StateWindow::config_key});
         if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解（10-24，resolve_exec）
             aos::Resolved ex = resolve_exec(r.value["exec"], r.dir_of("exec"));
             r.value["exec"] = std::move(ex.value);
@@ -210,7 +210,7 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
         }
         cfg_[k] = n;
     }
-    const char* wins[2] = {"ctl", "state"};
+    const char* wins[2] = {CtlWindow::config_key, StateWindow::config_key};
     for (const char* k : wins) {
         auto it = opts.find(k);
         if (it != opts.end()) {
@@ -247,8 +247,8 @@ Loop::Loop(const std::map<std::string, std::string>& opts, const std::string& sp
         stack_ = s;
     }
     // 11-04（使用者題 5「留 key、沒寫時預設就是這兩個名」）：沒寫＝ctl.json／state.json；寫 null＝不開
-    const char* keys[2] = {"ctl", "state"};
-    const char* default_names[2] = {"ctl.json", "state.json"};
+    const char* keys[2] = {CtlWindow::config_key, StateWindow::config_key};
+    const char* default_names[2] = {CtlWindow::default_name, StateWindow::default_name};
     std::string* paths[2] = {&ctl_path_, &state_path_};
     for (int i = 0; i < 2; ++i) {
         Json v = cfg_.contains(keys[i]) ? cfg_[keys[i]] : Json(default_names[i]);

@@ -1,4 +1,4 @@
-// aos/loop.hpp：aos-loop 的公開介面——跑「一次」（loop.json 的 exec、fsm.json 格的 exec，同一套寫法）。
+// aos/loop.hpp：aos-loop 的公開介面——跑「一次」、反覆跑的骨架與 ctl／state 公開格式。
 //
 //   block_signals   轉交 aos-util，擋住 SIGINT／SIGTERM／SIGHUP（整支程式的壽命；要在第一次之前、開任何執行緒之前呼叫）
 //   take_signal     轉交 aos-util；兩次之間：有排著的那三個訊號之一就取出來回它（0＝沒有）
@@ -39,6 +39,28 @@ namespace code {
 using namespace aos::exec::code;   // ArgumentsBad、FlagUnknown、CfgMissing、CfgBad、WriteFailed、EntryBad、DirectiveBad、LaunchFailed…
 inline constexpr const char* RunFailed = "RunFailed";         // 身體那次退非 0（不是 10）：aos-loop 印這行、以那次的碼結束（11-05 stdio-unify D4）
 }  // namespace code
+
+// ctl／state 的公開協議（C-52）：預設檔名與跨程式讀寫用的欄位／值只在這裡定義。
+// 設定沒寫用 default_name；null＝不開。ctl 是一道指令，seq 是非負整數回音；
+// state 用 pid＋started_at_ticks＋boot_id 判行程身份，phase＝done 表示自己做完（詳見 docs/02-窗.md）。
+struct CtlWindow {
+    static constexpr const char* config_key = "ctl";
+    static constexpr const char* default_name = "ctl.json";
+    static constexpr const char* cmd = "cmd";
+    static constexpr const char* seq = "seq";
+    static constexpr const char* pause = "pause";
+    static constexpr const char* resume = "resume";
+    static constexpr const char* stop = "stop";
+};
+struct StateWindow {
+    static constexpr const char* config_key = "state";
+    static constexpr const char* default_name = "state.json";
+    static constexpr const char* phase = "phase";
+    static constexpr const char* done = "done";
+    static constexpr const char* pid = "pid";
+    static constexpr const char* started_at_ticks = "started_at_ticks";
+    static constexpr const char* boot_id = "boot_id";
+};
 
 // 一次的結果（欄位名同 11-03 前 fsm 的 trace.jsonl 那一行，再多一個 received；aos-loop 的 log 那一行也用 code、signal、elapsed_ms，11-02）。沒有 timed_out（10-21：loop 看不到格裡有沒有逾時，C-52；
 // 單子被逾時收掉＝跑它的 aos-exec 以 128＋N 正常結束：code 143、signal 0）。

@@ -2,6 +2,7 @@
 #include "aos/util/tick.hpp"
 #include "aos/util/error.hpp"
 #include "aos/util/files.hpp"
+#include "aos/util/io.hpp"
 
 #include <cerrno>
 #include <charconv>
@@ -9,11 +10,24 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <set>
 #include <string>
 #include <string_view>
+#include <utility>
+
+#include <unistd.h>
 
 namespace aos {
 namespace {
+
+void warn_missing_tick(const std::string& path) {
+    // 輪詢只提醒一次；fork 後是另一個行程，仍應有自己的提醒。
+    static std::set<std::pair<pid_t, std::string>> warned;
+    if (warned.emplace(::getpid(), path).second) {
+        // aos-util 只支援 Linux；用 glibc 的程式名，不把名稱參數加進整條期限 API。
+        warn(::program_invocation_short_name, "AOS_TICK points to a missing file; treating the clock as 0");
+    }
+}
 
 long long decimal(std::string_view text, const std::string& source, bool positive) {
     long long value = 0;
@@ -56,6 +70,7 @@ std::optional<long long> now_tick() {
     std::optional<std::string> text = read_file(path, err);
     if (!text) {
         if (err == ENOENT) {
+            warn_missing_tick(path);
             return 0;
         }
         throw Error{code::TickBad, std::string("cannot read AOS_TICK file ") + path + ": " + std::strerror(err)};

@@ -10,7 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`CMakeLists.txt`](../../../../../proto8/impls/aos-loop/CMakeLists.txt) | `aos-loop loop.json`——一次次跑 exec，看結束碼決定下一步。 |
-| [`include/aos/loop.hpp`](../../../../../proto8/impls/aos-loop/include/aos/loop.hpp) | aos-loop 的公開介面——跑「一次」（loop.json 的 exec、fsm.json 格的 exec，同一套寫法）。 |
+| [`include/aos/loop.hpp`](../../../../../proto8/impls/aos-loop/include/aos/loop.hpp) | aos-loop 的公開介面——跑「一次」、反覆跑的骨架與 ctl／state 公開格式。 |
 | [`src/common/common.hpp`](../../../../../proto8/impls/aos-loop/src/common/common.hpp) | aos-loop 好幾個元素都用到的：型別別名。 |
 | [`src/engine/config.cpp`](../../../../../proto8/impls/aos-loop/src/engine/config.cpp) | Loop 的建構子——讀設定檔（`檔` 或 `檔#/指標`）、解指示詞（resolve_keys，10-23 晚）、旗標蓋上、驗 key（說明見 aos/loop.hpp 的 Loop）； |
 | [`src/engine/engine.hpp`](../../../../../proto8/impls/aos-loop/src/engine/engine.hpp) | 反覆跑的程式的骨架 Loop（公開介面在 aos/loop.hpp）。 |

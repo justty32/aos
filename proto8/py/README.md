@@ -4,6 +4,8 @@
 
 不是指令、不進 PATH；用的程式從自己的真位置往上找這個夾（`cmd/<名>/bin/` 往上三層），或從 PATH 上 `aos-tools` 的真位置推。
 
+`aos_ws` 與 `lib/tool_io.py` 的兩鐘函式跟 `aos-util` 同義：`AOS_TICK` 沒設或空就沒有時鐘；指到缺檔時，每行程每路徑印一次英文 warning，仍當 0、不建檔；空檔照舊當 0。
+
 | 模組 | 是什麼 | 誰 import 它 |
 |---|---|---|
 | `aos_flags.py` | 命令列旗標解析 `parse` 與三扇門小函式（`die`、`warn`、`run`…），全 aos 共用短名表 `SHORT`（`parse(…, short=…)`）、不可逆動作前的確認 `confirm`；切 token 包 `lib/tool_io.py` 的 `tokenize_flags`（從自己的真位置找 `../lib/tool_io.py`，單獨複製這支出去不能用），說明在 [cmd/docs/02](../cmd/docs/02-aos-tick與已定值.md) | cmd 的每支 Python 指令、templates/agent-fsm 的格、kernel/llm-kernel 的 fake_slow |

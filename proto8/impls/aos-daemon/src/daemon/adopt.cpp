@@ -6,6 +6,8 @@
 
 namespace aos::daemon {
 
+using aos::loop::StateWindow;
+
 Json Daemon::unrel(const Json& v) const {
     if (!v.is_string() || v.get<std::string>().empty()) {
         return v;
@@ -22,7 +24,10 @@ Json Daemon::unrel(const Json& v) const {
 // 11-05 第二輪：小格裡子 loop 自己的 state 窗（檔名看 daemon 寫的 loop.json 的 state，沒寫＝state.json、null＝沒開）。讀不到＝nullopt。
 static std::optional<Json> cell_state(const std::string& cell, const std::string& loop_name) {
     std::optional<Json> cfg = aos::read_json(aos::join(cell, loop_name));
-    Json name = cfg && cfg->is_object() ? cfg->value("state", Json("state.json")) : Json("state.json");
+    Json name = StateWindow::default_name;
+    if (cfg && cfg->is_object()) {
+        name = cfg->value(StateWindow::config_key, name);
+    }
     if (!name.is_string() || name.get<std::string>().empty()) {
         return std::nullopt;
     }
@@ -40,8 +45,8 @@ std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell,
     if (!st) {
         return std::nullopt;
     }
-    Json pid = st->value("pid", Json());
-    Json ticks = st->value("started_at_ticks", Json());
+    Json pid = st->value(StateWindow::pid, Json());
+    Json ticks = st->value(StateWindow::started_at_ticks, Json());
     if (!pid.is_number_integer() || !ticks.is_number_integer() || pid.get<long long>() <= 0) {
         return std::nullopt;
     }
@@ -153,7 +158,7 @@ void Daemon::adopt() {
         }
         if (phase == "running" && !c.auto_restart) {
             std::optional<Json> cs = cell_state(c.stack, names_.loop);
-            if (cs && cs->value("phase", Json()) == "done") {
+            if (cs && cs->value(StateWindow::phase, Json()) == StateWindow::done) {
                 continue;
             }
         }

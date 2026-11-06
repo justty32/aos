@@ -11,6 +11,8 @@
 
 namespace aos::daemon {
 
+using aos::loop::CtlWindow;
+
 using Clock = std::chrono::steady_clock;
 
 static const int GRACE_MS = 10000;   // 收子項：SIGTERM 後等幾毫秒才 SIGKILL（P-36 daemon 的 grace 慣例 10000）
@@ -72,19 +74,23 @@ void Daemon::halt(const std::string& name, Child& c) {
     // ctl 沒寫＝ctl.json（aos-loop 的預設名，11-04 起 daemon 不再替它補）；讀不到 loop.json、ctl 不是檔名（寫了 null＝子 loop 沒開 ctl）＝改送 SIGTERM（同樣退了就留成 stopped）
     c.soft = true;
     std::optional<Json> cfg = aos::read_json(aos::join(c.stack, names_.loop));
-    Json ctl = cfg && cfg->is_object() ? cfg->value("ctl", Json("ctl.json")) : Json();
+    Json ctl;
+    if (cfg && cfg->is_object()) {
+        ctl = cfg->value(CtlWindow::config_key, Json(CtlWindow::default_name));
+    }
     if (!ctl.is_string() || ctl.get<std::string>().empty()) {
         term(c);
         return;
     }
     std::string path = aos::join(c.stack, ctl.get<std::string>());
     std::optional<Json> old = aos::read_json(path);
-    if (old && old->is_object() && aos::is_count(old->value("seq", Json())) && old->value("seq", Json()).get<long long>() > stop_seq_) {
-        stop_seq_ = (*old)["seq"].get<long long>();
+    Json old_seq = old && old->is_object() ? old->value(CtlWindow::seq, Json()) : Json();
+    if (aos::is_count(old_seq) && old_seq.get<long long>() > stop_seq_) {
+        stop_seq_ = old_seq.get<long long>();
     }
     stop_seq_ += 1;
     try {
-        aos::loop::write_window(path, Json::object({{"cmd", "stop"}, {"seq", stop_seq_}}));
+        aos::loop::write_window(path, Json::object({{CtlWindow::cmd, CtlWindow::stop}, {CtlWindow::seq, stop_seq_}}));
     } catch (const Error& e) {
         // 11-05 第二輪：原本整台 daemon 退 1（一個小格唯讀就把全部 proc 收掉）；改成這一支改送 SIGTERM（同沒開 ctl 的），退了照樣留 stopped
         warn("cannot stop " + name + " through its ctl (" + e.code + " " + e.msg + "); sending SIGTERM instead");
