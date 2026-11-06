@@ -56,4 +56,4 @@
 
 - 實測（/tmp/envp，試驗場複本，假腦，沒設 `AOS_BRAIN_URL`；起的 daemon 記 pid、做完收掉）：X1 金鑰落檔、X2 登記檔凍值、X3 額度鍵、X4 `.env` 外層贏三種情況、X5 stack 裡掃絕對路徑。結果寫在 [02](02-評估.md)。
 - 跟 I 隊（git 暫存評估）的交集：git 當 image 存放處時，「image 裡 grep 得到舊根路徑或密鑰」就是 commit 進 git 歷史、刪不掉——[04](04-規範草稿.md) ⑧ 對 git 更要緊。I 隊的夾還沒 push，push 後再互連。
-- **沒改程式、沒改條文**。
+- **11-06 N 隊完成 E1＋E4**：`llm_http --key-env` 從小 proc 自己的環境讀金鑰，範本三包改指 `endpoints/litellm` 且不帶 `key`；kernel 文件改成跨樹 hub 只在 root export、樹內可用 `${AOS_CD}/..`，記憶體假端點經新小定義驗過正常讀值（退 0）、stdin 帶 key（`ArgumentsBad`）與變數未設（`EndpointFailed`），沒有改 C++。

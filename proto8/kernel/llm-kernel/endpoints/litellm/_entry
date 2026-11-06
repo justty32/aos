@@ -1,0 +1,2 @@
+{"description": "Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable.",
+ "argv": ["aos-exec", "../../../../lib/base/llm_http", "--key-env", "LITELLM_KEY"]}

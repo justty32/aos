@@ -19,6 +19,7 @@
 |---|---|
 | [`_entry`](../../../../../proto8/kernel/llm-kernel/_entry) | 入口：`aos-daemon --enable-logs daemon.json` |
 | [`daemon.json`](../../../../../proto8/kernel/llm-kernel/daemon.json) | 設定（鍵：tick、exec、interval_ms） |
+| [`endpoints/litellm/_entry`](../../../../../proto8/kernel/llm-kernel/endpoints/litellm/_entry) | Call the LiteLLM endpoint with the key read from this process's LITELLM_KEY environment variable. |
 | [`fake_slow/_entry`](../../../../../proto8/kernel/llm-kernel/fake_slow/_entry) | demo 用的慢假腦 endpoint 函數：先睡 endpoint.delay_s 秒，再把同一份 stdin 交給 lib/base/llm_fake、它的 stdout／結束碼原樣交回 |
 | [`kernel.json`](../../../../../proto8/kernel/llm-kernel/kernel.json) | 設定（鍵：slots、timeout_ms、exec、endpoint、budget、endpoints） |
 

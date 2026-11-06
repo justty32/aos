@@ -15,6 +15,7 @@ llm-kernel/
                budget＝只有一格寄件人額度的例子（/tmp/aos-demo-sender 每天 1 次，03 件 5 演；別的寄件人不限）、
                endpoints＝能力包表（下表）
   fake_slow/   demo 用的慢假腦 endpoint 函數：睡 endpoint.delay_s 秒，再把同一份 stdin 交給 lib/base/llm_fake（03 件 3）
+  endpoints/litellm/_entry  ["aos-exec", "../../../../lib/base/llm_http", "--key-env", "LITELLM_KEY"]（三個 LiteLLM 包共用）
 ```
 
 | 代號 | 是什麼 | 屬性（kernel.json 裡寫的） |
@@ -26,14 +27,15 @@ llm-kernel/
 | `fake-demo-self`、`fake-demo-spawn` | `llm_fake`＋`script` 劇本（[03](03-feat-proto.md) 件 1、件 4） | 劇本裡的路徑寫 `{"$env": "AOS_CD", "$path": "../../templates/agent-fsm"}`：kernel 用到那組時解，`AOS_CD`＝起 llm daemon 時 aos-exec 給的定義資料夾，所以**只在直接跑 repo 裡這份定義時對** |
 | `fake-demo-fast`、`fake-demo-slow` | `fake_slow`，每封 3 秒 | `slots` 1；`speed` fast／slow（[03](03-feat-proto.md) 件 3）；`fake_slow` 從找到的 `aos_flags.py`（`proto8/py`）旁找 `lib/`，複製出 repo 也對（11-05 夜第二輪邊緣：原本從自己的位置找、出 repo＝`EndpointFailed … can't open file …/lib/base/llm_fake/_entry`） |
 
-**包怎麼讀**（全文在 [aos-llm-kernel docs/01](../../impls/aos-llm-kernel/docs/01-用法.md)）：信與 agent 的 `llm.json` 只寫代號；kernel 自己看 `exec`／`slots`／`budget`／`speed` 四個（拿掉後才交給 endpoint 函數），其餘（`url`、`model`、`key`、`fixed`、`script`、`delay_s`…）原樣交給函數。**`fixed` 是釘死的**：信的 `request` 寫了 `fixed` 裡的 key、或那包有 `model` 而信寫了 `model`＝那封回 `RequestBad`；換溫度、換模型＝換代號（多登記一包）。`cost`／`context`／`summary` 只給人與腦挑代號用，kernel 每拍寫進窗 `$AOS_STACK/endpoints.json`，`aos-llm ls` 印它。
+**包怎麼讀**（全文在 [aos-llm-kernel docs/01](../../impls/aos-llm-kernel/docs/01-用法.md)）：信與 agent 的 `llm.json` 只寫代號；kernel 自己看 `exec`／`slots`／`budget`／`speed` 四個（拿掉後才交給 endpoint 函數），其餘（`url`、`model`、`fixed`、`script`、`delay_s`…）原樣交給函數。金鑰由端點小 proc 自己讀環境，kernel 不讀、不寫、不轉交。**`fixed` 是釘死的**：信的 `request` 寫了 `fixed` 裡的 key、或那包有 `model` 而信寫了 `model`＝那封回 `RequestBad`；換溫度、換模型＝換代號（多登記一包）。`cost`／`context`／`summary` 只給人與腦挑代號用，kernel 每拍寫進窗 `$AOS_STACK/endpoints.json`，`aos-llm ls` 印它。
 
 **起來**（PATH 放 `proto8/impls/*/bin` 與 `proto8/cmd/*/bin`，或跑過 `proto8/install.sh`）：
 
 ```sh
 mkdir ~/llm_kernel && cd ~/llm_kernel
-cp -r <repo>/proto8/kernel/llm-kernel def   # kernel.json 裡 ../../lib 開頭的 exec 改成絕對路徑（<repo>/proto8/lib/base/llm_http、llm_fake）：
+cp -r <repo>/proto8/kernel/llm-kernel def   # 複製到 repo 外後，兩處指向 lib 的路徑都要改：
 sed -i 's#"\.\./\.\./lib/#"<repo>/proto8/lib/#g' def/kernel.json   # 沒改＝問腦回 aos-llm: error: EndpointFailed … EntryMissing entry not found: …/lib/base/llm_fake
+sed -i 's#"\.\./\.\./\.\./\.\./lib/#"<repo>/proto8/lib/#g' def/endpoints/litellm/_entry
                                             # 格（fake_slow 等）找 aos_flags.py：先 ../../../py、再 PATH 上 aos-tools 的真位置（11-05 晚）
 aos-exec --stack . def                      # 起 llm daemon；信箱在 ~/llm_kernel/requests/，Ctrl-C 收工
 # 另一個殼：
@@ -48,9 +50,10 @@ echo '{"endpoint": "smart-high", "request": {"messages": [{"role": "user", "cont
 aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 llm_<信件名稱>
 ```
 
-- **跑 agent 的 daemon 另起一台**：起之前 `export AOS_LLM_KERNEL=~/llm_kernel`（或寫進那台定義的 `.env`，絕對路徑），它的子項就寄得到。好幾台可以共用一個 llm kernel：`slots`、`budget` 是整台電腦共用的上限。
+- **跑 agent 的 daemon 另起一台**：跨樹 hub 只在 root 層的殼 `export AOS_LLM_KERNEL=~/llm_kernel`，它的子項就寄得到；若 hub 跟定義在同一棵可搬的樹，定義的 `.env` 可從 `${AOS_CD}/..` 算相對位置，不寫絕對路徑。好幾台可以共用一個 llm kernel：`slots`、`budget` 是整台電腦共用的上限。
 - **收工、搬家**：Ctrl-C 時在飛的問腦列變 `sleeping`，再 `aos-exec --stack . def` 自己醒、照樣答完。整包 `cp -a` 到別處起來照樣續答。端點連不上只卡那一封。
-- **代號**：信的 body 寫 `"endpoint": "sol"` 就用那一包；沒寫用 `kernel.json` 的 `endpoint`（這裡是 `fake`）。加一包、改模型、放金鑰＝改 `kernel.json`（金鑰寫 `{"$env": "變數名"}` 或 `{"$ref": "repo 外的檔#/key"}`；一包要獨立成檔寫 `{"$ref": "packs/smart-high.json"}`，整份檔不帶 `#/`）。
+- **代號**：信的 body 寫 `"endpoint": "sol"` 就用那一包；沒寫用 `kernel.json` 的 `endpoint`（這裡是 `fake`）。加一包、改模型＝改 `kernel.json`；一包要獨立成檔寫 `{"$ref": "packs/smart-high.json"}`，整份檔不帶 `#/`。
+- **金鑰歸端點小 proc**：`smart-high`、`luna`、`sol` 的 `exec` 都指 `endpoints/litellm`，小定義的 `_entry` 用 `--key-env LITELLM_KEY` 指定變數名。值只在起 llm daemon 的 root 殼 export，daemon 讓子 proc 繼承；小定義的 `.env` 不放金鑰。`llm_http` 沒設那個變數＝`EndpointFailed`，stdin 的 `endpoint` 帶 `key`＝`ArgumentsBad`。搬家後 export 新機器的值，再起 daemon；LM Studio／假腦不用金鑰。
 - **排程**（[feat-proto 03](../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：信的 `priority` 級數（每 `aging_ticks` 格升一級，預設 3；有 `AOS_TICK` 數 kernel 自己樹的鐘，沒有用 `AOS_TICK_INTERVAL` 換牆鐘；凍住時鐘＝不升級）→ deadline → 包的 `speed`（fast 先）→ 等得久 → 先寄；包的 `slots` 滿了＝跳過、讓下一封別包的補位；包的 `budget` 到頂＝那封 `BudgetMissing`，不替人降級換包。跨樹信的 `priority.deadline` 留牆鐘（N-65 ③，ISO 8601 或 epoch 秒），kernel 不讀信裡任何 tick 欄。
 - **額度**：kernel 總的 `budget`、每包的 `budget`、每個寄件人的 `budget.senders`（寄件人＝信封 `sender`，agent 就是它的工作區；不驗身分）；用量帳在 `$AOS_STACK/used.json`（`packs`、`senders` 各一格；`senders` 的 key 是相對 kernel stack 的路徑，整包搬家相對位置相同就沿用同一格帳）。範本的 `senders` 只列了 `/tmp/aos-demo-sender`，換成你 agent 的工作區就限它。
 - **起 llm daemon 的殼別設 `AOS_KERNEL`**：問腦會掛到別台（[已知限制](../../impls/aos-llm-kernel/docs/04-已知限制.md)）。

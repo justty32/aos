@@ -45,7 +45,7 @@
 | [`json_edit/`](../../../../../proto8/lib/base/json_edit/) | 照 JSON 指標改工作區裡一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫 |
 | [`json_read/`](../../../../../proto8/lib/base/json_read/) | 看工作區裡一份 JSON 檔的某個位置，一次只展開幾層、大的摺起來，讓腦一層層往下找 |
 | [`llm_fake/`](../../../../../proto8/lib/base/llm_fake/) | 假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4） |
-| [`llm_http/`](../../../../../proto8/lib/base/llm_http/) | endpoint 函數：把一份請求 POST 到 OpenAI 相容的 {url}/chat/completions，印剪過的回覆（think-as-function 02/01 § 4） |
+| [`llm_http/`](../../../../../proto8/lib/base/llm_http/) | endpoint 函數：從自己的環境讀金鑰，把請求 POST 到 OpenAI 相容端點，印剪過的回覆 |
 | [`ls/`](../../../../../proto8/lib/base/ls/) | 列工作區裡一個資料夾的子項，一次一頁、回 JSON |
 | [`math/`](../../../../../proto8/lib/base/math/) | 算一個算術式子：只認數字、+ - * / // % **、括號、正負號（不用 eval） |
 | [`mkdir/`](../../../../../proto8/lib/base/mkdir/) | 在工作區裡建資料夾（上層一起建；已經有＝沒事） |
