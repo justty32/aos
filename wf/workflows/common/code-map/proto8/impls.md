@@ -19,7 +19,6 @@
 | `aos-lock` | aos-util | — |
 | `aos-loop` | aos-exec、aos-directive | — |
 | `aos-post` | aos-util | aos-lock |
-| `aos-schema` | nlohmann_json::nlohmann_json、aos-util | nlohmann_json_schema_validator::validator |
 | `aos-util` | nlohmann_json::nlohmann_json | — |
 
 ## `proto8/impls/`

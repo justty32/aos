@@ -24,8 +24,6 @@
 | [`src/follow/kind.cpp`](../../../../../proto8/impls/aos-json/src/follow/kind.cpp) | 認指示詞（N-45 寬容規則，同 aos-directive 的 ref.cpp／env.cpp）。 |
 | [`src/follow/locate.cpp`](../../../../../proto8/impls/aos-json/src/follow/locate.cpp) | 從 `檔#/指標` 一格格往下走；路上遇到指示詞看 Mode 決定穿不穿。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-json/src/main.cpp) | aos-json 命令列——第一個參數挑子命令，其餘交給它（src/cmd/）。 |
-| [`tools/json/`](../../../../../proto8/impls/aos-json/tools/json/) | 腦用的 JSON 工具：stdin 收 {"cmd", "target", "value"?, "depth"?}，在 $AOS_WS 底下叫 aos-json，stdout 是結果。 |
-| [`tools/json_edit/`](../../../../../proto8/impls/aos-json/tools/json_edit/) | 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 act 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-json/vcpkg.json) | aos-json：讀、改 aos 的 JSON 設定（檔#/指標、指示詞）的 lib 與命令列 |
 
 ## `proto8/impls/aos-llm/`

@@ -13,7 +13,7 @@ option(AOS_IMPLS_ALL "build every project's bin from the impls top level" ON)
 
 # 照依賴序 add（各專案裡的 if(NOT TARGET) 守衛看到已經有了就不再 add）。
 foreach(p
-    inst aos-util aos-directive aos-schema aos-exec aos-json aos-loop
+    inst aos-util aos-directive aos-exec aos-json aos-loop
     aos-lock aos-post aos-fsm aos-daemon aos-llm-kernel aos-llm)
   if(NOT TARGET ${p})
     add_subdirectory(${p})

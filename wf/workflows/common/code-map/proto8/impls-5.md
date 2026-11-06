@@ -18,18 +18,6 @@
 | [`src/take/take.cpp`](../../../../../proto8/impls/aos-post/src/take/take.cpp) | 處理者這一半——認領、讀信、回信、處理完；加上寄信人的撤回（說明見 aos/post.hpp）。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-post/vcpkg.json) | aos-post：投遞（N-16 信箱：寄、認領、處理完、撤回）的 lib 與命令列 |
 
-## `proto8/impls/aos-schema/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`CMakeLists.txt`](../../../../../proto8/impls/aos-schema/CMakeLists.txt) | 用 JSON Schema（draft-07）驗 JSON 的函式庫＋命令列。 |
-| [`examples/inst.schema.json`](../../../../../proto8/impls/aos-schema/examples/inst.schema.json) | 一張 inst 的欄位，照 impls/aos-exec 的 src/inst/fields.cpp（11-04 起認這 16 個）。 |
-| [`include/aos/schema.hpp`](../../../../../proto8/impls/aos-schema/include/aos/schema.hpp) | 拿一份 JSON Schema（draft-07）去驗一份 JSON，回「哪裡、哪裡不對」的清單。 |
-| [`src/load_file.cpp`](../../../../../proto8/impls/aos-schema/src/load_file.cpp) | 把 SCHEMA檔 讀成 nlohmann::json。 |
-| [`src/main.cpp`](../../../../../proto8/impls/aos-schema/src/main.cpp) | aos-schema 的入口：`aos-schema SCHEMA檔 < doc.json` |
-| [`src/validate.cpp`](../../../../../proto8/impls/aos-schema/src/validate.cpp) | 整個專案唯一碰 pboettch/json-schema-validator 的檔。 |
-| [`vcpkg.json`](../../../../../proto8/impls/aos-schema/vcpkg.json) | aos-schema：用 JSON Schema（draft-07）驗 JSON 的 C++ 函式庫與命令列 |
-
 ## `proto8/impls/aos-util/`
 
 | 檔 | 負責什麼 |
