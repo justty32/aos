@@ -128,7 +128,7 @@ def tokenize_flags(argv, kind):
             return pairs, list(argv[i + 1:])
         if not arg.startswith("-") or arg == "-":
             break
-        flag, equals, value = arg.partition("=")
+        flag, equals, value = arg.partition("=") if arg.startswith("--") else (arg, "", "")  # 單槓整個是名（P-44）
         k = kind(flag)
         if k not in ("value", "switch"):
             raise Error("FlagUnknown", "unknown flag %s" % flag)

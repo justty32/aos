@@ -9,6 +9,7 @@ sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pyc
 sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, os.path.join(ROOT, "py"))
 
-from aos_agent import main
+import aos_flags  # noqa: E402
+from aos_agent import main  # noqa: E402
 
-main()
+aos_flags.run(main)                              # stdout 被對面先關（listen --follow | head -1）＝安靜退 141（J5）

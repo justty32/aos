@@ -211,12 +211,15 @@ def build(cfg, prog, dry):
         for d in dict.fromkeys([os.path.dirname(found), real_dir]):
             if d:
                 bind(opts, "--ro-bind", d, dry)
-        # cmd/*/bin/* 的命令共用同一層 proto8/py（aos-eca 的 bin 裡有兩支命令）。
+        # cmd/*/bin/* 的命令共用同一層 proto8/py（aos-eca 的 bin 裡有兩支命令）；py/aos_flags 切 token 用 lib/tool_io.py（J5），一起綁。
         commands_dir = os.path.dirname(os.path.dirname(real_dir))
         if os.path.basename(real_dir) == "bin" and os.path.basename(commands_dir) == "cmd":
             py_dir = os.path.join(os.path.dirname(commands_dir), "py")
             if os.path.isdir(py_dir):
                 bind(opts, "--ro-bind", py_dir, dry)
+            tool_io = os.path.join(os.path.dirname(commands_dir), "lib", "tool_io.py")
+            if os.path.isfile(tool_io):
+                bind(opts, "--ro-bind", tool_io, dry)
     for p in paths(cfg, "ro"):
         bind(opts, "--ro-bind", p, dry)
     for p in paths(cfg, "rw"):

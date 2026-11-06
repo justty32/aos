@@ -22,7 +22,7 @@
 aos 的程式都不動 PATH（ideas § 24）：自己跑時把 `proto8/impls/<名>/bin/` 與 `proto8/cmd/<名>/bin/` 放進 PATH。
 要一次放好：impls 建完後跑 `proto8/install.sh`（11-05），把 `impls/*/bin/*` 與 `cmd/*/bin/*` 全部 symlink 進 `~/.local/bin`（給參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉指進這份 repo 的連結；PATH 上同名的別支排在前面會印提醒行 `install.sh: warning: …`（stderr）；目的地是檔案＝`DestBad`）；Python 支靠 `realpath(__file__)` 找 `proto8/py`，所以是 symlink 不是 cp；已有同名的別的東西不蓋、印 `skip`，最後 stderr 補 `install.sh: error: LinkFailed N names already taken by something else`、退 1；repo 換位置要重跑。
 
-三扇門（11-05 [stdio-unify](../thinking/2026-11/05/stdio-unify/README.md)）：這裡每支的錯誤行是 `程式: error: 代號 原因`（退 1）、提醒行是 `程式: warning: 句子`；`--help`＝英文說明到 stdout、退 0；不給參數／子命令＝`ArgumentsBad`；Ctrl-C 退 130、不吐 traceback（共用小函式在 `aos_flags.py`，見 [docs/02](docs/02-aos-tick與已定值.md)）。
+三扇門（11-05 [stdio-unify](../thinking/2026-11/05/stdio-unify/README.md)）：這裡每支的錯誤行是 `程式: error: 代號 原因`（退 1）、提醒行是 `程式: warning: 句子`；`--help`＝英文說明到 stdout、退 0；不給參數／子命令＝`ArgumentsBad`；Ctrl-C 退 130、不吐 traceback；stdout 被對面先關（`| head -1`）退 141、不吐 traceback（用 `aos_flags.run` 包 main 的支；aos-sandbox 沒包，它除了 --dry-run 那行就直接 exec）（共用小函式在 `aos_flags.py`，見 [docs/02](docs/02-aos-tick與已定值.md)）。
 
 ## 分檔目錄
 
