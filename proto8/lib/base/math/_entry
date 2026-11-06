@@ -3,7 +3,7 @@
 # 介面（lib/README 的契約）：stdin 收 {"expr": "17*23"}；stdout 印算出來的結果。不碰檔案、不用 $AOS_WS。
 # 錯：stderr 與 stdout 各一行「math: error: 代號 原因」、退 1——stdin 不對＝ArgumentsBad，式子讀不懂、除以零、算不出來＝ExprBad。
 # 來源：demo/agent-dan/tools/math（10-23；10-24 遷移：hal、kai、talk 的複本改掛這一份，錯誤行照 lib 契約）。
-import ast, json, operator, os, shutil, sys
+import ast, operator, os, shutil, sys
 HELP = """\
 usage: math < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Evaluate an arithmetic expression (numbers, + - * / // % **, parentheses, signs).
@@ -47,10 +47,7 @@ def value(node):
     die("ExprBad", "unsupported syntax: " + type(node).__name__)
 
 
-try:
-    args = json.loads(sys.stdin.read() or "{}")
-except ValueError:
-    die("ArgumentsBad", "stdin is not JSON")
+args = tool_io.arguments()
 if not isinstance(args, dict) or not isinstance(args.get("expr"), str):
     die("ArgumentsBad", "missing expr (a string)")
 try:

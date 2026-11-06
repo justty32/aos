@@ -3,7 +3,7 @@
 # 介面（lib/README 的契約）：stdin 收 {}（沒有參數；空 stdin 也算）；不碰檔案、不用 $AOS_WS。
 # 錯：stdin 不是 JSON 物件＝stderr 與 stdout 各一行「clock: error: ArgumentsBad 原因」、退 1。
 # 來源：demo/agent-dan/tools/clock（10-23，原本是一行 sh `date -u`、不讀 stdin；10-24 遷移改 python3 才能照契約檢查 stdin，印的一樣）。
-import json, os, shutil, sys, time
+import os, shutil, sys, time
 HELP = """\
 usage: clock < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Print the current UTC time (ISO 8601 to the second, e.g. 2026-10-23T08:00:00Z).
@@ -29,10 +29,7 @@ tool_io.start(NAME, HELP)
 die = tool_io.die
 
 
-try:
-    args = json.loads(sys.stdin.read() or "{}")
-except ValueError:
-    die("ArgumentsBad", "stdin is not JSON")
+args = tool_io.arguments()
 if not isinstance(args, dict):
     die("ArgumentsBad", "arguments must be an object")
 print(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))

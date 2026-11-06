@@ -8,7 +8,7 @@
 # （bash 的指令本身擋不住出去，同 lib/base/bash）。PYTHONDONTWRITEBYTECODE=1 往下帶：跑測試不在使用者的程式資料夾留 __pycache__。
 # 錯：stderr 與 stdout 各一行「pyfix: error: 代號 原因」、退 1——ArgumentsBad、StackMissing、DirBad、AgentFailed、AnswerMissing。
 # 來源：demo/agent-eve/tools/pyfix（10-24；遷移時子 agent 改掛 lib/base 的工具、轉接抽成 agent_tool.py；demo 11-04 刪了）。
-import difflib, json, os, shutil, sys
+import difflib, os, shutil, sys
 HELP = """\
 usage: pyfix < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Hand a Python fixing task to a sub-agent working on $AOS_WS/<dir>; print its
@@ -43,10 +43,7 @@ die = tool_io.die
 stack, ws = os.environ.get("AOS_STACK"), os.path.realpath(os.environ.get("AOS_WS", "."))
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
-try:
-    args = json.loads(sys.stdin.read() or "{}")
-except ValueError:
-    die("ArgumentsBad", "stdin is not JSON")
+args = tool_io.arguments()
 if not isinstance(args, dict) or not isinstance(args.get("task"), str) or not args["task"].strip():
     die("ArgumentsBad", "missing task (a non-empty string)")
 d = args.get("dir", ".")

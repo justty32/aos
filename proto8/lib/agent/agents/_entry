@@ -368,10 +368,7 @@ def build_def(tmp, src, files, llm, tool_list, tools_rm):
 
 
 # ---- 入口檢查 ----
-try:
-    args = json.loads(sys.stdin.read() or "{}")
-except ValueError:
-    die("ArgumentsBad", "stdin is not JSON")
+args = tool_io.arguments()
 if not isinstance(args, dict):
     die("ArgumentsBad", "stdin must be a JSON object")
 op = args.get("op")

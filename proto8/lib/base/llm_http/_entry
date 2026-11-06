@@ -35,10 +35,7 @@ tool_io.start(NAME, HELP)
 die = tool_io.die
 
 
-try:
-    args = json.loads(sys.stdin.read() or "null")
-except ValueError:
-    die("ArgumentsBad", "stdin is not JSON")
+args = tool_io.arguments()
 if not isinstance(args, dict) or not isinstance(args.get("endpoint"), dict) or not isinstance(args.get("request"), dict):
     die("ArgumentsBad", "stdin must be {\"endpoint\": {...}, \"request\": {...}}")
 endpoint, request = args["endpoint"], args["request"]
