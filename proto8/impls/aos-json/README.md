@@ -17,6 +17,8 @@ aos-json ref --move daemon.json#/procs daemon_procs.json # 把一塊拆成另一
 aos-json check fsm.json                                  # $ref 指得到、寫法對、exec 形狀對
 ```
 
+寫入值與寫入指示詞的程式位置，見[元素](docs/02-給腦用的兩個工具等.md#元素)。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。

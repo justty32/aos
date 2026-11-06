@@ -2,7 +2,9 @@
 //
 //   read.cpp   get、where
 //   peek.cpp   peek（漸進展開：一次只看一層，大的值摺起來）
-//   write.cpp  set、batch、del、append、merge、env、ref（寫入共用：找位置 → 改 → 有變才原子寫回）
+//   edit.hpp   寫入共用狀態與位置；edit.cpp 讀取值、找位置與放入值
+//   write.cpp  set、batch、del、append、merge（找位置 → 改 → 有變才原子寫回）
+//   ref.cpp    env、ref（ref --move 搬值並重算相對 $ref）
 //   check.cpp  check
 #pragma once
 

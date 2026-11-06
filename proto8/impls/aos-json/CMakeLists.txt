@@ -16,6 +16,7 @@ if(NOT TARGET aos-directive)
   add_subdirectory(../aos-directive aos-directive-build)
 endif()
 
+# 遞迴收進 cmd/edit.cpp、cmd/write.cpp、cmd/ref.cpp 等元素實作；新增分檔隨 configure 自動納入。
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
