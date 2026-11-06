@@ -13,8 +13,10 @@
 
 ## 待使用者項
 
+- **no-pid P8**：公司 WSL 試驗場改三層並親驗；家機在可連 user bus 的殼驗 scope 的 `memory.max`（本次沙箱擋住） → [18-P8實作結果](../proto8/thinking/2026-11/05/no-pid/18-P8實作結果.md)
+
 - **真 Claude Code 讀不讀 aos-mcp 的 instructions**（11-05 夜邊緣測試留的，要你實跑；同批另五題 11-05 夜已裁「剩下都照推薦」，排在大重構之後做，見 SESSION-LOG）→ [small-thought](../proto8/thinking/2026-11/05/small-thought/README.md)
-- **試驗場（家機 11-05 晚重建成兩台機器版，舊的在 `~/code/playground.old-11-04`）**：假腦、真腦（家機 `stupid-fast` 代號改指 `google/gemma-4-e4b`，只改試驗場那份）、eca_bob 真 claude 都照教學（`~/Desktop/aos-試驗場教學.html`、試驗場 `README.md`）跑過；**剩要你親手試**：`aos-agent open --target eca_bob` 的畫面、領班（視窗二）Ctrl-C 後重開
+- **試驗場（家機 11-06 晚 P8 改成根→總機／領班→agent 三層，舊的在 `~/code/playground.old-11-04`）**：假腦、真腦（家機 `stupid-fast` 代號改指 `google/gemma-4-e4b`，只改試驗場那份）、eca_bob 真 claude 都照教學（`~/Desktop/aos-試驗場教學.html`、試驗場 `README.md`）跑過；**剩要你親手試**：`aos-agent open --target eca_bob` 的畫面、根（視窗一）Ctrl-C 後重開（自動驗證已過，仍可親手試）
 - 親手試 procs 與 ctl 指令（11-03 實作，[procs 步驟 12](../proto8/thinking/2026-11/03/procs/09-實作步驟表-不實作-給隊長.md#實作步驟表不實作給隊長)、[ctl-commands](../proto8/thinking/2026-11/03/ctl-commands/README.md)）：試驗場的 `daemon/daemon.json` 11-04 夜已照 procs 寫好（`procs` 裡帶 `llm`、`procs_ctl_mailbox`），照桌面 html 起 daemon 後在視窗二試（aos-daemon-ctl 指令；`ls` 沒有種類欄）。試：`aos-daemon-ctl add --stack /tmp/x --name c $R/lib/base/clock`（`$R`＝env.sh 設的 proto8）、`where --stack c`、`stop c`（`ls` 是 stopped、`/tmp/x/ctl.json` 是 `{"cmd": "stop", …}`）、`kill -9` daemon 再起它沒被起、`start c`、`pause c`／`resume c`、對 exec 型做 `stop`＝`CtlMissing`；（11-05 晚起：自己出錯結束的 loop 型留在表上 `stopped`＋英文 `reason`，修好 `aos-agent llm reset`／`tools reset` 再 `aos-agent ctl start`，見 [edge-agent 裁定落實](../proto8/thinking/2026-11/05/edge-agent/README.md#裁定落實11-05-晚隊長)）
 - 親手試 daemon 的新窗與 log（11-02，state 窗那輪；拷貝裡頂層實跑過）：照桌面 html 第 1、2 步起 daemon（`daemon/_entry.json` 已帶 `--enable-logs`，log 直接印在視窗一）；視窗二 `watch -n1 ls -l --time-style=full-iso $AOS_DAEMON/`：睡著時 `state.json`、`procs_state.json` 的時間不動，`aos-agent add` 一隻後 procs_state 動一次。代定與要你看的通則差異 → [state 窗 § 實作結論](../proto8/thinking/2026-11/02/state-window/06-實作結論-11-02.md#實作結論11-02)
 - 公司那台桌面的說明頁（11-06 大重構 S5 後）：`aos-試驗場教學.html`、`aos-三扇門與結束碼.html` 已照新路徑改好（改前備份在桌面 `aos-舊版備份-1106\`，確認沒問題可整夾刪）；`aos指令與格式參考`、`aos現況地圖`、`aos親手試指南` 三份是 10 月底的舊版、內容早已過時，不再更新，要不要刪由你決定（刪檔你自己動手）。現行說明看 claude.ai 的「新功能說明」「aos-agent 用法」「工具箱與腦設定參考」三頁（網址不變，11-06 已換新路徑）

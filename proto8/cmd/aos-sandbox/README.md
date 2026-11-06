@@ -69,3 +69,5 @@ bwrap --unshare-all …      看得到哪些路徑、能不能連網（一定接
 ## 需要
 
 `bwrap`（bubblewrap）、`python3`；設定寫了上限或 `user` 才要 s6（`s6-softlimit`、`s6-setuidgid`、`s6-applyuidgid`，都照 PATH 找）。這台 Arch 的官方庫沒有 s6，試驗場自己編了一份到 `~/code/try/sandbox/s6-root/bin`（skalibs 2.16.0.0、execline 2.10.0.0、s6 2.15.1.1，skarnet.org 原始碼）。
+
+**搬不走的那半**：帳號、sudoers、`/srv` 下的配置與 bind 的主機路徑都屬於這台機器；搬完先改 bind 路徑，再重跑 [root/setup.sh](root/setup.sh)（先乾跑，核對後 `--apply`；信箱另帶 `--mailbox`），不會因複製 image 自動重建。

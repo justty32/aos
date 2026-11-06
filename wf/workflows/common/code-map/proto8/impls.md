@@ -33,6 +33,8 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`CMakeLists.txt`](../../../../../proto8/impls/aos-daemon/CMakeLists.txt) | `aos-daemon daemon.json`——一個 aos-loop（同一個骨架 aos::loop::Loop）＋一張子 loop 的表（10-20 重寫）。 |
+| [`examples/root/aos-root.service`](../../../../../proto8/impls/aos-daemon/examples/root/aos-root.service) | Run an ordinary root daemon under an optional systemd user service. |
+| [`examples/root/s6/run`](../../../../../proto8/impls/aos-daemon/examples/root/s6/run) | Run an ordinary root daemon as an optional s6 supervised service. |
 | [`src/child/child.cpp`](../../../../../proto8/impls/aos-daemon/src/child/child.cpp) | 建立小格、啟動子 loop 或 exec 型子項，並回收與輸出子項狀態（說明見 child.hpp）。 |
 | [`src/child/child.hpp`](../../../../../proto8/impls/aos-daemon/src/child/child.hpp) | 表上的一個 proc（11-03 起 loops／execs 統稱 procs）＝一支子 loop（loop 型），或 aos-exec 跑一次（exec 型），並保存公開窗 stuck 判定資料。 |
 | [`src/child/limits.cpp`](../../../../../proto8/impls/aos-daemon/src/child/limits.cpp) | proc 的份額 limits（說明見 limits.hpp；11-05 feat-proto 件 5，等同 s6-softlimit／s6-setuidgid）。 |
@@ -54,16 +56,3 @@
 | [`src/daemon/windows.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/windows.cpp) | 管轄手把 procs_ctl 與含樹時鐘 tick 的 procs_state 狀態窗（說明見 daemon.hpp）。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-daemon/src/main.cpp) | aos-daemon 命令列——block_signals、解命令列、讀設定、Daemon::serve（10-21 傍晚）。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-daemon/vcpkg.json) | aos-daemon：照一張名單把幾個 proc 各自起在小格裡、看著它們（C++） |
-
-## `proto8/impls/aos-directive/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`CMakeLists.txt`](../../../../../proto8/impls/aos-directive/CMakeLists.txt) | 解 JSON 裡的指示詞（$ref、$env）。 |
-| [`include/aos/directive.hpp`](../../../../../proto8/impls/aos-directive/include/aos/directive.hpp) | 指示詞（語法糖：把設定拆成小檔、讀環境變數）（N-45，10-20 改版）。 |
-| [`src/env.cpp`](../../../../../proto8/impls/aos-directive/src/env.cpp) | {"$env": "NAME"}——換成環境變數 NAME 的值（字串）。 |
-| [`src/internal.hpp`](../../../../../proto8/impls/aos-directive/src/internal.hpp) | resolve.cpp、ref.cpp、env.cpp 之間共用的內部宣告（不公開；放在 aos::directive，公開的只有 aos::resolve）。 |
-| [`src/main.cpp`](../../../../../proto8/impls/aos-directive/src/main.cpp) | aos-directive 命令列——讀一份 JSON、解開所有指示詞、印出來。 |
-| [`src/ref.cpp`](../../../../../proto8/impls/aos-directive/src/ref.cpp) | {"$ref": "檔[#/指標]"}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。 |
-| [`src/resolve.cpp`](../../../../../proto8/impls/aos-directive/src/resolve.cpp) | 解析整份、單層或指定欄位的指示詞，保留相對路徑起點，並套用字串修飾詞。 |
-| [`vcpkg.json`](../../../../../proto8/impls/aos-directive/vcpkg.json) | aos-directive：解 JSON 裡的指示詞（$ref、$env）的 lib 與命令列 |

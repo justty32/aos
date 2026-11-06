@@ -5,6 +5,12 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/extras/image-move-check/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`check.py`](../../../../../proto8/extras/image-move-check/check.py) | Create a fake-brain daemon tree and verify its sleeping image survives relocation. |
+
 ## `proto8/extras/langs/`
 
 | 檔 | 負責什麼 |

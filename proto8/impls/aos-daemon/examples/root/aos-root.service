@@ -1,0 +1,19 @@
+# Run an ordinary root daemon under an optional systemd user service.
+[Unit]
+Description=aos root daemon
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+UnsetEnvironment=AOS_DAEMON
+WorkingDirectory=%h/aos
+ExecStart=%h/.local/bin/aos-exec --stack %h/aos/image %h/aos/root_definition
+Restart=always
+RestartSec=2
+KillMode=mixed
+TimeoutStopSec=60
+
+[Install]
+WantedBy=default.target

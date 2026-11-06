@@ -5,6 +5,19 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/impls/aos-directive/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`CMakeLists.txt`](../../../../../proto8/impls/aos-directive/CMakeLists.txt) | 解 JSON 裡的指示詞（$ref、$env）。 |
+| [`include/aos/directive.hpp`](../../../../../proto8/impls/aos-directive/include/aos/directive.hpp) | 指示詞（語法糖：把設定拆成小檔、讀環境變數）（N-45，10-20 改版）。 |
+| [`src/env.cpp`](../../../../../proto8/impls/aos-directive/src/env.cpp) | {"$env": "NAME"}——換成環境變數 NAME 的值（字串）。 |
+| [`src/internal.hpp`](../../../../../proto8/impls/aos-directive/src/internal.hpp) | resolve.cpp、ref.cpp、env.cpp 之間共用的內部宣告（不公開；放在 aos::directive，公開的只有 aos::resolve）。 |
+| [`src/main.cpp`](../../../../../proto8/impls/aos-directive/src/main.cpp) | aos-directive 命令列——讀一份 JSON、解開所有指示詞、印出來。 |
+| [`src/ref.cpp`](../../../../../proto8/impls/aos-directive/src/ref.cpp) | {"$ref": "檔[#/指標]"}——換成那份 JSON 檔裡那個位置的值，取回來的值接著解。 |
+| [`src/resolve.cpp`](../../../../../proto8/impls/aos-directive/src/resolve.cpp) | 解析整份、單層或指定欄位的指示詞，保留相對路徑起點，並套用字串修飾詞。 |
+| [`vcpkg.json`](../../../../../proto8/impls/aos-directive/vcpkg.json) | aos-directive：解 JSON 裡的指示詞（$ref、$env）的 lib 與命令列 |
+
 ## `proto8/impls/aos-exec/`
 
 | 檔 | 負責什麼 |

@@ -1,0 +1,7 @@
+#!/bin/sh
+# Run an ordinary root daemon as an optional s6 supervised service.
+set -eu
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin"
+unset AOS_DAEMON
+cd "$HOME/aos"
+exec "$HOME/.local/bin/aos-exec" --stack "$HOME/aos/image" "$HOME/aos/root_definition"

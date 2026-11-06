@@ -46,6 +46,7 @@ AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法�
 | [06-結束碼等](docs/06-結束碼等.md) | 用法（續）：結束碼；元素；實作注意 |
 | [07-建置與測試](docs/07-建置與測試.md) | 建置與測試 |
 | [08-當機復原與已知限制](docs/08-當機復原與已知限制.md) | 11-05 第二輪：daemon 當掉後的接回、proc 的 stack／信箱出錯不整台停、reason 細節、已知限制 |
+| [10-根daemon](docs/10-根daemon.md) | 根是普通 daemon、ready／target 食譜、選用 systemd／s6 範例 |
 | [09-份額](docs/09-份額.md) | 11-05 feat-proto 件 5：份額 `limits`（等同 s6-softlimit／s6-setuidgid） |
 
 <a id="用法"></a>
