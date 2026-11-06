@@ -12,6 +12,16 @@
 
 **板子比喻到「誰先跑」和「有幾顆核」兩處就斷了，其餘八成 aos 已經是那樣。** 補成三段式：**daemon＝板子＋BSP**（上電、起停、電源軌、看門狗）、**kernel 身體＝一顆很薄的 RTOS 核**（llm kernel 的級數＋aging＋deadline＋slots 就是教科書那幾招）、**`procs` 表＝s6-rc 那種服務目錄**（exec／loop／daemon 型＝oneshot／longrun／bundle）；「很多核」這一層 aos 是 **AMP 多核 SoC** 不是 SMP——daemon 是主核只管誰上電、每個 proc 是一顆跑自己韌體的遠端核、stack＝它的 SRAM、信箱＝RPMsg endpoint，Linux 的 SMP 分時在底下隱形，**核數不是矽定的**（`max_running` 是唯一的「幾核」）。「定義＝原始碼」在韌體語彙裡是 **XIP：原始碼就是 image、沒有編譯這一步**，所以「編譯期 vs 執行期」在 aos 變成「值住哪一層」：定義（ROM）→ `.env`／`AOS_*`（取樣腳）→ 覆蓋層（EEPROM，跟 image 走）→ ctl 窗（暫存器）。**比喻落地＝直接用 Linux 原生機制，判準是「會不會破壞可遷移性」**（上位原則，使用者確認）：設定寫在樹裡、到新機器由 daemon 重套＝好，行程身上的狀態不是真相；經 daemon 是建議手段；**root daemon 是矛盾集中點**——搬不走的全集中在它身上、由使用者保底、可以綁這台。帶得出來的新東西幾乎全是**零程式的句子**；唯一要動程式的是 **aging 改用 kernel 樹自己的鐘併進 T4**（+0.5 h）。不插大重構。
 
+## 使用者裁定（11-06，選項框）
+
+| 題 | 使用者選 | 落地 |
+|---|---|---|
+| 4 可遷移性寫成正式條文 | 「概念＋檢查單 (Recommended)」 | 照 [10](10-可遷移性原則草稿與root例外.md) 的形狀，交 lift-to-norms 寫進 CONCEPTS 一條＋NORMS 檢查單六項（含 root 例外、使用者保底） |
+| 5 no-pid 那批要不要放寬 | 「不放寬 (Recommended)」 | N-17 判活只剩 daemon、別人不碰 pid、ctl 寄信、aos-lock T2 照舊；理由寫進可遷移性條文：pid 搬不走 |
+| 3 整樹總上限 | 「systemd 食譜 (Recommended)」 | `systemd-run --user --scope -p MemoryMax= -p CPUQuota=` 包根 daemon 寫進 no-pid P8 食譜（WSL 沒 systemd 標家機才有）；`limits` 的 cgroup key 等「一個 agent 一個帳號」root 小程式 |
+| 1 通用 kernel 判官管不管排隊 | 「通用kernel，我原本預期他就是能管准入也能管排隊...或許可以做選項？」 | **做成選項**：判官照舊管准入，`judge.json` 可選開排隊（key 名、預設值、隊列存哪由實作時定；頂層代定預設不開＝跟現況一樣快）。排進 apply-ideas 排程，待排 |
+| 2 aging 改數 tick | 頂層代定（照使用者 11-06「kernel 內部計時用自己的鐘」） | 併進 T4；可翻 |
+
 ## 分檔目錄
 
 | 分檔 | 涵蓋 |
