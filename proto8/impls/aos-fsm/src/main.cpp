@@ -2,7 +2,7 @@
 //
 //     aos-fsm [旗標] 設定檔.json
 //
-//   block_signals → 命令列（目前沒有旗標；唯一的位置參數＝設定檔，可寫 `檔#/指標`；10-21 傍晚 ideas § 9）→ 要 AOS_STACK →
+//   aos-util block_signals → 命令列（目前沒有旗標；唯一的位置參數＝設定檔，可寫 `檔#/指標`；10-21 傍晚 ideas § 9）→ 要 AOS_STACK →
 //   read_table → check（開跑時查整張表，10-22）→ read_state（在但讀不了＝StateBad，10-22）→ pick → run_once（aos-loop 的公開 API：目標＝子行程 `aos-exec -- 目標 參數...`；單子＝行程內 run_inst，10-24）
 //   → next_for（照格的碼查表）→ 查到才 write_state → 查到退 0、沒查到以格的碼結束（11-03 起不寫 trace.jsonl，使用者「整個拿掉」）
 //
@@ -16,6 +16,7 @@
 // 自己出錯：stderr 一行「aos-fsm: error: 代號 原因」、退 1（11-05 stdio-unify R1）。`--help`＝英文說明印 stdout、退 0（R3）。
 #include "aos/files.hpp"
 #include "aos/proc.hpp"
+#include "aos/signals.hpp"
 #include "aos/loop.hpp"
 
 #include "state/state.hpp"
@@ -46,7 +47,7 @@ exit codes: 0 the table took the code (state written); 1 own error
 int main(int argc, char** argv) {
     namespace fsm = aos::fsm;
     try {
-        aos::loop::block_signals();
+        aos::block_signals();
         aos::Cli cli;
         try {
             cli = aos::parse_cli(std::vector<std::string>(argv + 1, argv + argc), {}, {}, HELP);   // 目前沒有旗標；以後加就在這裡加一列
@@ -70,7 +71,7 @@ int main(int argc, char** argv) {
         std::string state = fsm::read_state(stack, table.start);
         fsm::Cell cell = fsm::pick(cells, state, aos::join(stack, "stage.txt"));
 
-        int sig = aos::loop::take_signal();
+        int sig = aos::take_signal();
         if (sig != 0) {
             return 128 + sig;
         }

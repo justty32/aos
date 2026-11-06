@@ -5,7 +5,6 @@
 #include "aos/text.hpp"
 
 #include <cerrno>
-#include <cstdio>
 #include <cstring>
 
 namespace aos::fsm {
@@ -30,29 +29,18 @@ std::string read_state(const std::string& stack, const std::string& start) {
     return s;
 }
 
-// 寫整份字串；mode "w"。失敗丟 WriteFailed。
-static void write_text(const std::string& path, const std::string& text, const char* mode) {
-    std::FILE* f = std::fopen(path.c_str(), mode);
-    if (f == nullptr) {
-        throw Error{code::WriteFailed, "cannot write " + path + ": " + std::strerror(errno)};
-    }
-    bool ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
-    if (std::fclose(f) != 0) {
-        ok = false;
-    }
-    if (!ok) {
-        throw Error{code::WriteFailed, "cannot write " + path};
-    }
-}
-
 void write_state(const std::string& stack, const std::string& name) {
     std::string tmp = aos::join(stack, ".stage.txt");
     std::string dst = aos::join(stack, "stage.txt");
-    write_text(tmp, name + "\n", "w");
-    if (std::rename(tmp.c_str(), dst.c_str()) != 0) {
-        int e = errno;
-        std::remove(tmp.c_str());
-        throw Error{code::WriteFailed, "cannot rename " + tmp + " -> " + dst + ": " + std::strerror(e)};
+    std::optional<aos::TextWriteError> error = aos::write_text(dst, name + "\n", tmp);
+    if (error) {
+        if (error->operation == aos::TextWriteOperation::open) {
+            throw Error{code::WriteFailed, "cannot write " + tmp + ": " + std::strerror(error->number)};
+        }
+        if (error->operation == aos::TextWriteOperation::write) {
+            throw Error{code::WriteFailed, "cannot write " + tmp};
+        }
+        throw Error{code::WriteFailed, "cannot rename " + tmp + " -> " + dst + ": " + std::strerror(error->number)};
     }
 }
 
