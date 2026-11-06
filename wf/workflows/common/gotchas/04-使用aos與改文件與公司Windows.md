@@ -19,6 +19,10 @@
 - **`\b` 邊界在 `-Iinst/include` 這種字串上不成立**：`inst` 前面是 `I`（word 字元），
   所以 `\binst/` 匹配不到。批次替換路徑之後，`grep` 一次確認沒有漏網的。
 
+- **`fix_moved_links.py` 同一份 moves.tsv 不能跑第二次**（11-06 S5 撞到）：檔已經在新位置時，它仍把「被搬的檔」的連結當舊位置解析，
+  把對的連結改壞（`cmd/aos-agent/README.md` 的 `[cmd](../README.md)` 被改成 `../../extras/README.md`）。rebase 之後別重跑整份，
+  看 `wf-lint` 的 broken；上游新進來的檔有舊連結，就只拿那幾個檔另做一份 moves 或手改。
+
 ## 公司 Windows 這台
 
 - **git bash 的 `python3` 是 Microsoft Store 假捷徑**：`command -v python3` 找得到、一執行就失敗，
