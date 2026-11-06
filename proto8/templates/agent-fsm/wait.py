@@ -24,9 +24,6 @@ each later run look for the reply (aos-llm recv). Exit 0 = reply appended to his
 10 = not yet; 11 = the brain settings changed, go back to think.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NOT_YET = 10                                     # aos-llm recv：回信還沒到
@@ -63,6 +60,13 @@ def run(argv, **kw):
     except OSError as e:
         die("SendFailed", "%s cannot start (must be on PATH): %s" % (argv[0], e))
 
+
+try:
+    opts, rest = aos_flags.parse(sys.argv[1:], {}, help=HELP)
+except aos_flags.Error as e:
+    die(e.code, e)
+if rest:
+    die("ArgumentsBad", "unexpected argument %s (usage: wait.py)" % rest[0])
 
 stack = os.environ.get("AOS_STACK")
 if not stack:

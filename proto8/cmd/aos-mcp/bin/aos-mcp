@@ -223,9 +223,9 @@ def tools_call(params, tools, ws, stack, timeout_s):
     record({"name": name, "arguments": args, "code": code, "elapsed_ms": ms,
                    "called_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
     if code is None:
-        text = "%s: CommandFailed %s timed out (%g s); its process group was killed" % (NAME, name, limit)
+        text = aos_flags.error_line(NAME, "CommandFailed", "%s timed out (%g s); its process group was killed" % (name, limit))
     elif code != 0 and not out.strip():
-        text = "%s: CommandFailed %s exited %d with empty stdout" % (NAME, name, code)
+        text = aos_flags.error_line(NAME, "CommandFailed", "%s exited %d with empty stdout" % (name, code))
     else:
         text = out
     content = [{"type": "text", "text": text}]

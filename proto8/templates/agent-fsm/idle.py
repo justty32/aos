@@ -16,9 +16,6 @@ Exit 0 = took at least one good letter (go think); 10 = no letter.
 --prompt FILE: an opening message put into the queue once while history is empty.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NOT_FOUND = 10                                   # aos-post take-all 沒信可收
@@ -29,23 +26,22 @@ def die(code, reason):
     aos_flags.die("agent-fsm", code, reason)
 
 
-def flags(argv, known):
-    """--名 值 這種旗標；回 {名: 值}。不認得、少了值＝ArgumentsBad。"""
-    out, i = {}, 0
-    while i < len(argv):
-        if argv[i] not in known or i + 1 >= len(argv) or not argv[i + 1]:
-            die("ArgumentsBad", "cannot parse %s (usage: idle.py [--prompt FILE])" % argv[i])
-        out[argv[i]] = argv[i + 1]
-        i += 2
-    return out
-
-
 def here(path):
     """相對路徑從範本資料夾（AOS_CD；沒設＝cwd）算。"""
     return os.path.join(os.environ.get("AOS_CD") or ".", path)
 
 
-opts = flags(sys.argv[1:], ("--prompt",))
+try:
+    values, rest = aos_flags.parse(sys.argv[1:], {}, multi={'--prompt': '--prompt'}, help=HELP)
+except aos_flags.Error as e:
+    die(e.code, e)
+if rest:
+    die("ArgumentsBad", "unexpected argument %s (usage: idle.py [--prompt FILE])" % rest[0])
+# 收齊重複值再取最後一個：任一次空值都照舊報錯，不讓後面的值蓋掉錯誤。
+for flag, items in values.items():
+    if any(not value for value in items):
+        die("ArgumentsBad", "%s needs a non-empty value (usage: idle.py [--prompt FILE])" % flag)
+opts = {flag: items[-1] for flag, items in values.items()}
 prompt = here(opts["--prompt"]) if "--prompt" in opts else None
 if prompt and not os.path.isfile(prompt):
     die("PromptMissing", "prompt file not found: %s" % prompt)

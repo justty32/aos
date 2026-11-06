@@ -26,9 +26,6 @@ tools) and write $AOS_STACK/think/request.json. Exit 0 = written (go wait); 10 =
 to the system message (skipped when NAME is not among the tools).
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 MEMORY_TIMEOUT_S = 30                           # --memory 叫根的逾時（11-05 夜第二輪邊緣：原本沒逾時，memory 卡住＝think 格卡住）
 
@@ -37,22 +34,22 @@ def die(code, reason):
     aos_flags.die("agent-fsm", code, reason)
 
 
-def flags(argv, known):
-    out, i = {}, 0
-    while i < len(argv):
-        if argv[i] not in known or i + 1 >= len(argv) or not argv[i + 1]:
-            die("ArgumentsBad", "cannot parse %s (usage: brain.py [--system FILE] [--tools FILE] [--memory NAME])" % argv[i])
-        out[argv[i]] = argv[i + 1]
-        i += 2
-    return out
-
-
 def here(path):
     """相對路徑從範本資料夾（AOS_CD；沒設＝cwd）算。"""
     return os.path.join(os.environ.get("AOS_CD") or ".", path)
 
 
-opts = flags(sys.argv[1:], ("--system", "--tools", "--memory"))
+try:
+    values, rest = aos_flags.parse(sys.argv[1:], {}, multi={'--system': '--system', '--tools': '--tools', '--memory': '--memory'}, help=HELP)
+except aos_flags.Error as e:
+    die(e.code, e)
+if rest:
+    die("ArgumentsBad", "unexpected argument %s (usage: brain.py [--system FILE] [--tools FILE] [--memory NAME])" % rest[0])
+# 收齊重複值再取最後一個：任一次空值都照舊報錯，不讓後面的值蓋掉錯誤。
+for flag, items in values.items():
+    if any(not value for value in items):
+        die("ArgumentsBad", "%s needs a non-empty value (usage: brain.py [--system FILE] [--tools FILE] [--memory NAME])" % flag)
+opts = {flag: items[-1] for flag, items in values.items()}
 system_file = here(opts["--system"]) if "--system" in opts else None
 if system_file and not os.path.isfile(system_file):
     die("SystemMissing", "system file not found: %s" % system_file)

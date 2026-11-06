@@ -1,16 +1,18 @@
-# act.py [--tools FILE] - act 格：照 history 最後一則 assistant 的 tool_calls 逐個（依序）aos-tools call <名>，每個結果接一則 tool 進 history。
+# act.py [--tools FILE] - act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history。
 # 結束碼（fsm.json 照碼分岔，N-36）：全部跑完退 0（→ think：帶工具結果再問腦）；最後一則 assistant 沒有 tool_calls＝腦給了最後答案、沒事做，退 10（→ idle）。
 #   「要不要叫工具」11-04 晚從 think 搬到這裡判（think 只組請求，thinking 2026-11-04 think-as-function 03 § 1）。
 # 工具的介面（P-41）：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的小格由 aos-tools call 算成 $AOS_STACK/tools/<名>/（P-17）、工作區＝$AOS_WS。
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。
-# 叫工具出的問題回給腦、不停（P-41 10-24 代定）：工具退非 0（stdout 照收、尾巴加結束碼）、叫了沒登記的工具、arguments 不是 JSON。
+# 叫工具出的問題回給腦、不停（P-41）：工具退非 0（stdout 照收、尾巴加結束碼）、逾時、叫了沒登記的工具、arguments 不是 JSON。
+# 比照 aos-mcp 的 C-52／C-53 例外：工具退非 0 或逾時，接住 stderr、原樣轉印，最後 2 KB 另附給腦；成功時不附（J4 授權，條文 J7 再補）。
+# 逾時取 _metainfo.time_ms.max（毫秒），沒寫＝不設；自成一群，逾時或本格中斷時 TERM 整群，2 秒後 KILL。
 # 工具退非 0 時 stderr 多一行提醒「agent-fsm: warning: tool <名> exit code N (passed back to the brain)」（stdio-unify R1：不是這格的錯，照樣退 0）。
 # 只有自己這層的錯才停：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）——沒 stack、history 壞、
 #   history 裡沒有 assistant、aos-tools 起不來。
 # --tools FILE：aos-tools 登記檔（預設範本裡的 tools.json；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/tools.json 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
 # 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
-import json, os, shutil, signal, subprocess, sys
+import json, os, shutil, signal, subprocess, sys, time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "py"))   # py/aos_flags.py（錯誤行、提醒行的共用介面）
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "py"))   # 複製出 repo 的：從 PATH 上 aos-tools 的真位置找 proto8/py
 import aos_flags  # noqa: E402
@@ -20,29 +22,30 @@ usage: act.py [--tools FILE]   (a cell of templates/agent-fsm; run by its fsm.js
 The act cell: run the tool_calls of the last assistant message in $AOS_STACK/history.jsonl
 (aos-tools call NAME), one tool message each. Exit 0 = done (go think); 10 = no tool_calls.
 --tools FILE: the aos-tools registry (default tools.json of the definition).
+Timeout: tool metainfo time_ms.max (ms), otherwise no limit; TERM the group, KILL 2 s later.
+On tool failure or timeout, append the last 2048 bytes of stderr to the tool message;
+the full stderr is also passed through. Tool failures are returned to the brain; exit 0.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
+signal.signal(signal.SIGTERM, lambda signum, frame: sys.exit(143))  # 工具另成一群：自己收 TERM 也得把它收掉
 
 
 def die(code, reason):
     aos_flags.die("agent-fsm", code, reason)
 
 
-def flags(argv, known):
-    out, i = {}, 0
-    while i < len(argv):
-        if argv[i] not in known or i + 1 >= len(argv) or not argv[i + 1]:
-            die("ArgumentsBad", "cannot parse %s (usage: act.py [--tools FILE])" % argv[i])
-        out[argv[i]] = argv[i + 1]
-        i += 2
-    return out
-
-
-opts = flags(sys.argv[1:], ("--tools",))
+try:
+    values, rest = aos_flags.parse(sys.argv[1:], {}, multi={'--tools': '--tools'}, help=HELP)
+except aos_flags.Error as e:
+    die(e.code, e)
+if rest:
+    die("ArgumentsBad", "unexpected argument %s (usage: act.py [--tools FILE])" % rest[0])
+# 收齊重複值再取最後一個：任一次空值都照舊報錯，不讓後面的值蓋掉錯誤。
+for flag, items in values.items():
+    if any(not value for value in items):
+        die("ArgumentsBad", "%s needs a non-empty value (usage: act.py [--tools FILE])" % flag)
+opts = {flag: items[-1] for flag, items in values.items()}
 stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
@@ -87,7 +90,20 @@ def append(message):
         die("WriteFailed", "cannot append to history.jsonl: %s" % e)
 
 
-registered = []
+def stop_group(p):
+    """TERM 整群、寬限 2 秒後 KILL；群長先退也不能漏掉忽略 TERM 的孫行程。"""
+    try:
+        os.killpg(p.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
+    time.sleep(2)
+    try:
+        os.killpg(p.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+
+
+registered = {}
 if os.path.isfile(tools_file) or overlay:        # 能叫的＝登記檔（疊覆蓋層）裡的（aos-tools ls --json）；失敗＝自己這層的錯
     try:
         r = subprocess.run(TOOLS + ["ls", "--json"], stdin=subprocess.DEVNULL,
@@ -96,7 +112,13 @@ if os.path.isfile(tools_file) or overlay:        # 能叫的＝登記檔（疊�
         die("ToolFailed", "aos-tools cannot start: %s" % e)
     if r.returncode != 0:
         die("ToolsBad", "aos-tools ls exited %d" % r.returncode)
-    registered = [t["name"] for t in json.loads(r.stdout)]
+    for t in json.loads(r.stdout):
+        meta = t.get("metainfo") or {}
+        tm = meta.get("time_ms")
+        limit = None
+        if isinstance(tm, dict) and isinstance(tm.get("max"), (int, float)) and tm["max"] > 0:
+            limit = tm["max"] / 1000.0
+        registered[t["name"]] = limit
 answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
 for call in calls:
     try:
@@ -117,13 +139,40 @@ for call in calls:
         append({"role": "tool", "tool_call_id": cid, "content": aos_flags.error_line("act", "ArgumentsBad", "%s: %s" % (name, e)) + "\n"})
         continue
     try:
-        r = subprocess.run(TOOLS + ["call", name], input=arguments,
-                           stdout=subprocess.PIPE, text=True)   # 繼承自己的 stack；aos-tools call 算小格。stderr 不吞：工具自己的錯原樣往上
+        p = subprocess.Popen(TOOLS + ["call", name], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             start_new_session=True)   # 繼承自己的 stack；aos-tools call 算小格。自成一群，逾時整群收掉
     except OSError as e:
         die("ToolFailed", "aos-tools cannot start: %s" % e)
-    content = r.stdout
-    if r.returncode != 0:                        # 回給腦、不停；人在 stderr 看得到
-        aos_flags.warn("agent-fsm", "tool %s exit code %d (passed back to the brain)" % (name, r.returncode))   # 提醒行（R1）
-        content += "%s(tool %s exit code %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, r.returncode)
+    limit, timed_out = registered[name], False
+    try:
+        try:
+            out, err = p.communicate(arguments.encode("utf-8"), timeout=limit)
+        except subprocess.TimeoutExpired:
+            timed_out = True
+            stop_group(p)
+            try:
+                out, err = p.communicate(timeout=2)
+            except subprocess.TimeoutExpired as e:   # 逃出群組的行程仍拿著管子：保留已收的輸出，不無限等
+                out, err = e.output or b"", e.stderr or b""
+                p.stdout.close()
+                p.stderr.close()
+                p.wait()
+    except BaseException:                       # Ctrl-C／TERM／其他中斷：工具不再跟自己的群，離開前主動收掉
+        stop_group(p)
+        p.wait()
+        raise
+    if err:                                     # C-52 例外：原樣轉印，成功時不附給腦
+        sys.stderr.buffer.write(err)
+        sys.stderr.buffer.flush()
+    content = out.decode("utf-8", "replace")
+    if timed_out:
+        aos_flags.warn("agent-fsm", "tool %s timed out (passed back to the brain)" % name)
+        content += "%s(tool %s timed out (%g s); its process group was killed)\n" % ("" if content.endswith("\n") or not content else "\n", name, limit)
+    elif p.returncode != 0:                      # 回給腦、不停；人在 stderr 看得到
+        aos_flags.warn("agent-fsm", "tool %s exit code %d (passed back to the brain)" % (name, p.returncode))
+        content += "%s(tool %s exit code %d)\n" % ("" if content.endswith("\n") or not content else "\n", name, p.returncode)
+    if (timed_out or p.returncode != 0) and err:
+        content += "stderr (last 2048 bytes at most):\n%s\n" % err[-2048:].decode("utf-8", "replace").strip()
     append({"role": "tool", "tool_call_id": cid, "content": content})
 sys.exit(0)

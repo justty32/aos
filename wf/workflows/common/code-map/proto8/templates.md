@@ -10,7 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`_entry`](../../../../../proto8/templates/agent-fsm/_entry) | 入口：`aos-agent ctl add $AOS_CD` |
-| [`act.py`](../../../../../proto8/templates/agent-fsm/act.py) | act 格：照 history 最後一則 assistant 的 tool_calls 逐個（依序）aos-tools call <名>，每個結果接一則 tool 進 history。 |
+| [`act.py`](../../../../../proto8/templates/agent-fsm/act.py) | act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history。 |
 | [`agents.json`](../../../../../proto8/templates/agent-fsm/agents.json) | 設定（鍵：max_children） |
 | [`body.json`](../../../../../proto8/templates/agent-fsm/body.json) | argv：`aos-loop loop.json` |
 | [`brain.py`](../../../../../proto8/templates/agent-fsm/brain.py) | think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。 |
