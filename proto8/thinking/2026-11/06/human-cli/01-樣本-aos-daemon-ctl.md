@@ -1,4 +1,4 @@
-← [入口](README.md)｜涵蓋：照慣例後 aos-daemon-ctl 的 `--help` 全文（頂層、`add`、`ls`）；單檔不拆、只拆 help｜上一份 [01-樣本-aos-agent](01-樣本-aos-agent.md)｜下一份 [02-盤點](02-盤點.md)
+← [入口](README.md)｜涵蓋：照慣例後 aos-daemon-ctl 的 `--help` 全文（頂層、`add`、`ls`）；單檔不拆、只拆 help｜上一份 [01-樣本-aos-agent-續](01-樣本-aos-agent-續.md)｜下一份 [02-盤點](02-盤點.md)
 
 # 樣本：aos-daemon-ctl
 
@@ -18,20 +18,21 @@ asks; the daemon applies it on its next round. See the result with ls.
 
 subcommands:
   add [FLAGS] XXX [-- ARGS...]   attach (register + start); prints the letter name
-  rm NAME        detach (stop, then remove; stack kept)
+  rm NAME        detach (stop, then remove; stack kept, so it does not ask)
   stop NAME      stop after this run (row stays as stopped)
   start NAME     start a stopped one again on the same stack
   sleep NAME     SIGTERM now (row stays as sleeping; wakes when the daemon restarts)
   wake NAME      start a sleeping one again on the same stack
   pause NAME     write {"cmd": "pause", "seq": N} to its ctl window; prints N
   resume NAME    the same with "resume"
-  ls [--json]    the table: NAME  PHASE  PID  CODE  WS  REASON; last line = the supervisor's view
+  ls [-j]        the table: NAME  PHASE  PID  CODE  WS  REASON; last line = the supervisor's view
   where NAME     print its stack (one absolute path)
   ping [--timeout-s S]   wait for the daemon's ping reply; prints "replied in N ms"
 
 flags:
-  --daemon D   the daemon's stack folder (default: $AOS_DAEMON, else ./.stack)
-  --help       show this help
+  -d, --daemon D   the daemon's stack folder (default: $AOS_DAEMON, else ./.stack)
+  -h, --help       show this help
+  short names: -n --name, -w --ws, -s --stack, -j --json
 
 letters go to $AOS_KERNEL (the judge) when it is set; a warning line says so.
 add / rm / stop / start / sleep / wake also take --reply-to BOX (send only, do not wait).
@@ -55,12 +56,12 @@ warning line, exit 0; it is applied when taken).
 
 flags:
   --reply-to BOX   send only; the reply ({"applied": true|false, ...}) goes to BOX
-  --name N         its name on the table (default: the folder name of XXX)
-  --ws WS          its workspace (default: the daemon's)
-  --stack S        its stack (default: <D>/procs/<name>/)
+  -n, --name N     its name on the table (default: the folder name of XXX)
+  -w, --ws WS      its workspace (default: the daemon's)
+  -s, --stack S    its stack (default: <D>/procs/<name>/)
   --def DEF        the definition folder recorded on the table (default: XXX)
   --limits JSON    resource limits, the aos-sandbox keys ('{}' = none)
-  --help           show this help
+  -h, --help       show this help
 
 exit codes: 0 sent; 1 error (ArgumentsBad, DaemonMissing, MailboxMissing, PathMissing,
   EntryBad, SendFailed...).
@@ -71,15 +72,15 @@ exit codes: 0 sent; 1 error (ArgumentsBad, DaemonMissing, MailboxMissing, PathMi
 ```
 aos-daemon-ctl ls - list the procs on the daemon table
 
-usage: aos-daemon-ctl [--daemon D] ls [--json]
+usage: aos-daemon-ctl [--daemon D] ls [-j]
 
 One line per proc: NAME TAB PHASE TAB PID TAB CODE TAB WS TAB REASON (none = -); paths are
 absolute. The last line starts with "# " and says what the supervisor thinks of this daemon
 ("# root daemon (no supervisor)" for a root). Only reads files; it does not ping.
 
 flags:
-  --json   one line {"procs": table, "daemon": UP or null, "supervisor": {...} or null}
-  --help   show this help
+  -j, --json   one line {"procs": table, "daemon": UP or null, "supervisor": {...} or null}
+  -h, --help   show this help
 
 exit codes: 0 (an empty table prints only the last line); 1 error (DaemonMissing,
   StateMissing, StateBad).

@@ -1,8 +1,8 @@
-← [入口](README.md)｜涵蓋：照慣例後 aos-agent 的 `--help` 全文（頂層、`ctl`、`ctl add`、`say`、`listen`）與 `cmd/aos-agent/` 子資料夾結構示意——使用者「實作的時候我要看一眼」的那份｜下一份 [01-樣本-aos-daemon-ctl](01-樣本-aos-daemon-ctl.md)
+← [入口](README.md)｜涵蓋：照慣例後 aos-agent 的 `--help` 全文（頂層、`ctl`、`ctl add`、`ctl rm`）與 `cmd/aos-agent/` 子資料夾結構示意——使用者「實作的時候我要看一眼」的那份；`say`／`listen` 在續篇｜下一份 [01-樣本-aos-agent-續](01-樣本-aos-agent-續.md)
 
 # 樣本：aos-agent
 
-規則見 [03](03-慣例草案.md)。數字（秒數、代號）照現況；只改形狀。現況：`aos-agent --help` 與每個子命令的 `--help` 都印同一份 64 行 7.7 KB，第二層動作（`tools ls --help`）印不出來。
+規則見 [03](03-慣例草案.md)。數字（秒數、代號）照現況；只改形狀。短名照 [03 H4](03-慣例草案.md#h4-旗標命名) 的表、確認照 [03-續 H11](03-慣例草案-續.md)（使用者 11-06 裁）。現況：`aos-agent --help` 與每個子命令的 `--help` 都印同一份 64 行 7.7 KB，第二層動作（`tools ls --help`）印不出來。
 
 ## `aos-agent --help`（頂層，一屏）
 
@@ -24,10 +24,10 @@ subcommands:
   llm      its brain settings: show, set, reset
 
 flags:
-  --daemon D   the daemon's stack folder (default: $AOS_DAEMON, else ./.stack)
-  --help       show this help
+  -d, --daemon D   the daemon's stack folder (default: $AOS_DAEMON, else ./.stack)
+  -h, --help       show this help
 
-target: every subcommand except ctl add / rm / ls / who acts on --target NAME
+target: every subcommand except ctl add / rm / ls / who acts on -t, --target NAME
   (default: $AOS_AGENT); neither = TargetMissing.
 output: results on stdout only (one line per item, TAB-separated; --json where listed);
   reminders on stderr as "aos-agent: warning: ...".
@@ -46,19 +46,20 @@ usage: aos-agent [--daemon D] ctl ACTION [FLAGS...] [ARGS...]
 actions:
   add [--name N] [--ws WS] [--stack S] [--limits JSON] XXX
                           attach one; waits until it is on the table, prints its stack
-  rm NAME                 detach it and delete its stack (NAME must be spelled out)
-  ls [--json]             every proc on the table: NAME  STATE  WORKSPACE  QUEUED  REASON
+  rm [-y] NAME            detach it and delete its stack (asks [y/N] on a terminal; -y skips)
+  ls [-j]                 every proc on the table: NAME  STATE  WORKSPACE  QUEUED  REASON
   state [--target NAME]   a few lines about this one (status = the same)
   where [--ws] [--target NAME]
                           print its stack (default) or its workspace (--ws)
-  who [--json] [STACK]    which listed agent owns STACK (default: $AOS_STACK)
+  who [-j] [STACK]        which listed agent owns STACK (default: $AOS_STACK)
   start | stop | sleep | wake | pause | resume [--target NAME]
                           stop = after this round, start brings it back;
                           sleep = now, wake (or a daemon restart) brings it back;
                           pause / resume = the loop's own ctl window
 
 flags:
-  --help   show this help
+  -h, --help   show this help
+  short names: -t --target, -j --json, -n --name, -w --ws, -s --stack, -y --yes
 
 exit codes: 0 ok (asking for the state it is already in prints "already ..." and exits 0);
   1 error, e.g. PhaseBad (wrong state for start/stop/sleep/wake), InstanceMissing, AddRejected.
@@ -78,55 +79,36 @@ through $AOS_KERNEL when that is set (a warning line says so). Waits until the a
 the table, then prints its stack; the daemon refusing it = AddRejected.
 
 flags:
-  --name N        its name on the table (default: the folder name of XXX)
-  --ws WS         its workspace (default: the current directory)
-  --stack S       its stack (default: <daemon stack>/procs/<name>/)
+  -n, --name N    its name on the table (default: the folder name of XXX)
+  -w, --ws WS     its workspace (default: the current directory)
+  -s, --stack S   its stack (default: <daemon stack>/procs/<name>/)
   --limits JSON   resource limits, the aos-sandbox keys ('{}' = none)
-  --help          show this help
+  -h, --help      show this help
 
 exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, DaemonMissing...).
 ```
 
-## `aos-agent say --help`
+## `aos-agent ctl rm --help`（會問確認的那種）
 
 ```
-aos-agent say - put one message in the agent's queue
+aos-agent ctl rm - detach one agent and delete its stack
 
-usage: aos-agent [--daemon D] say [--target NAME] [WORDS...]
-       ... | aos-agent [--daemon D] say [--target NAME]
+usage: aos-agent [--daemon D] ctl rm [-y] NAME
 
-WORDS are joined with single spaces into one message. No WORDS (or "-") = the whole of
-stdin is the message (one trailing newline dropped); stdin being a terminal = ArgumentsBad.
-stdout prints the letter name. A paused or sleeping agent still queues it; a warning says so.
+NAME must be spelled out ($AOS_AGENT is not used here). Closes its screen first (answering
+= SessionBad, nothing removed), detaches it from the daemon, then deletes its stack. A stack
+that covers the workspace, the definition, the daemon, the cwd, home or another listed
+stack is kept. On a terminal it asks first (stderr):
+  aos-agent: remove NAME and delete its stack /path/to/stack? [y/N]
+Only y / yes goes on; anything else, an empty line or end of input = nothing done (exit 0).
+Not on a terminal (a pipe, a script, an agent) it does not ask.
 
 flags:
-  --target NAME   which agent (default: $AOS_AGENT)
-  --help          show this help
+  -y, --yes    do not ask
+  -h, --help   show this help
 
-exit codes: 0 queued; 1 error (TargetMissing, InstanceMissing, PostFailed...).
-```
-
-## `aos-agent listen --help`
-
-```
-aos-agent listen - print the agent's answer
-
-usage: aos-agent [--daemon D] listen [--target NAME] [--timeout-s SECS]
-       aos-agent [--daemon D] listen [--target NAME] --last N [--follow]
-
-Without --last: wait for the answer to the latest question and print only its text (so
-> file and pipes work; notes go to stderr). --last N prints the last N exchanges as blocks:
-a line "== #N", the question lines prefixed "> ", then the answer. --follow keeps printing
-new ones; Ctrl-C leaves with exit 0.
-
-flags:
-  --target NAME      which agent (default: $AOS_AGENT)
-  --timeout-s SECS   give up after SECS seconds (AnswerMissing)
-  --last N           show the last N exchanges instead of waiting
-  --follow           with --last: keep following
-  --help             show this help
-
-exit codes: 0 printed; 1 error (AnswerMissing, QuestionUnknown...); 130 Ctrl-C while waiting.
+exit codes: 0 removed, or "aos-agent: warning: nothing done" after a no; 1 error
+  (InstanceMissing, SessionBad, CtlRejected...); 130 Ctrl-C at the question.
 ```
 
 ## `cmd/aos-agent/` 子資料夾結構（S8 拆套件照這個；方向題 1 推薦）
