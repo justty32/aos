@@ -1,0 +1,229 @@
+id,name,kind,program,meaning,ordered,order_rule,writer,reader,after_read,multi_reader,priority,scope,files,src_path
+M01,mailbox,dir,aos-post,通用Maildir根；SendOpts::ordered預設false，呼叫者可混投,mixed,sort_letters：有序在前按12位序號；無序在後按名字；不保證完成先後,aos-post send／直接連庫者,take／take_all；指定take(name)不排序,cur-then-delete,no-by-convention,ordered-before-unordered,external,5,../../../../impls/aos-post/include/aos/post.hpp
+M02,tmp/,dir,aos-post,寄信準備、撤回和刪信中介格；處理者不讀,n.a.,n.a.,send／take／done／regret依階段,aos-post（archive只供人看）,delete,n.a.,n.a.,external,9,../../../../impls/aos-post/include/aos/post.hpp
+M03,new/,dir,aos-post,已寄出待認領；rename至cur,n.a.,n.a.,send／take／done／regret依階段,aos-post（archive只供人看）,keep,n.a.,n.a.,external,8,../../../../impls/aos-post/include/aos/post.hpp
+M04,cur/,dir,aos-post,已認領；see不消耗；done刪或歸檔,n.a.,n.a.,send／take／done／regret依階段,aos-post（archive只供人看）,keep,n.a.,n.a.,external,7,../../../../impls/aos-post/include/aos/post.hpp
+M05,archive/,dir,aos-post,done --keep歸檔；aos-post不讀,n.a.,n.a.,send／take／done／regret依階段,aos-post（archive只供人看）,archive,n.a.,n.a.,external,6,../../../../impls/aos-post/include/aos/post.hpp
+M06,order.lock/,dir,aos-post,ordered投遞的aos-lock鎖；保護取號直到rename完成,n.a.,n.a.,post_ordered,read_counter／post_ordered,keep,no-enforced,n.a.,external,4,../../../../impls/aos-post/src/send/send.cpp
+M07,order.json,file,aos-post,ordered信的counter_letters持久計數；讀者不靠它等缺號,n.a.,n.a.,post_ordered,read_counter／post_ordered,keep,no-enforced,n.a.,external,4,../../../../impls/aos-post/src/send/send.cpp
+M08,counter_letters,json_key,aos-post,order.json非負整數；先寫N+1再rename，可能缺號不重號,n.a.,n.a.,post_ordered,read_counter／post_ordered,keep,no-enforced,n.a.,external,4,../../../../impls/aos-post/src/send/send.cpp
+M09,--ordered,flag,aos-post,單封投遞取序號；不把信箱切成永久有序模式,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,6,../../../../impls/aos-post/src/main.cpp
+M10,--reply-to,flag,aos-post,回信地址；驗tmp/new可寫；存相對信箱根,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,5,../../../../impls/aos-post/src/main.cpp
+M11,--in-reply-to,flag,aos-post,指定所回原信名稱，不驗原信存在,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../impls/aos-post/src/main.cpp
+M12,BOX,arg,aos-post,公開help中--reply-to BOX的回信信箱參數,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../impls/aos-post/src/help/help.cpp
+M13,MAILBOX,arg,aos-post,init/send/take/see/done/regret的主信箱位置參數,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../impls/aos-post/src/help/help.cpp
+M14,reply_to,json_key,aos-post,letter.json信封欄；回信信箱路徑,n.a.,n.a.,send／reply,reply／各收信端,keep,n.a.,n.a.,external,9,../../../../impls/aos-post/include/aos/post.hpp
+M15,in_reply_to,json_key,aos-post,letter.json信封欄；原信名關聯值,n.a.,n.a.,send／reply,reply／各收信端,keep,n.a.,n.a.,external,5,../../../../impls/aos-post/include/aos/post.hpp
+M16,MailboxMissing,error_code,aos-post,信箱根或函式所需階段不是資料夾,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,23,../../../../impls/aos-post/include/aos/post.hpp
+M17,MailboxBad,error_code,aos-post,send所需tmp/new不可寫,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,7,../../../../impls/aos-post/include/aos/post.hpp
+M18,OrderBad,error_code,aos-post,order.json不存在以外的讀取或格式錯誤,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,5,../../../../impls/aos-post/include/aos/post.hpp
+M19,aos::post::Mailbox,identifier,aos-post,公開根路徑型別；tmp/fresh/cur/archive只拼路徑,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,19,../../../../impls/aos-post/include/aos/post.hpp
+M20,SendOpts::ordered,identifier,aos-post,bool預設false；true才進post_ordered,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,7,../../../../impls/aos-post/include/aos/post.hpp
+M21,SendOpts::reply_to,identifier,aos-post,選填回信信箱路徑,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,26,../../../../impls/aos-post/include/aos/post.hpp
+M22,SendOpts::in_reply_to,identifier,aos-post,選填原信名,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,12,../../../../impls/aos-post/include/aos/post.hpp
+M23,init,identifier,aos-post,建立根與tmp/new/cur，不建archive,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,6,../../../../impls/aos-post/include/aos/post.hpp
+M24,open,identifier,aos-post,驗根目錄後回Mailbox,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,5,../../../../impls/aos-post/include/aos/post.hpp
+M25,send,identifier,aos-post,tmp寫信後rename，ordered由opts決定,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,9,../../../../impls/aos-post/include/aos/post.hpp
+M26,send_prepared,identifier,aos-post,低層完整信封投遞；不取序號,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../impls/aos-post/include/aos/post.hpp
+M27,take,identifier,aos-post,無參數sort後認領第一個；指定name直接rename,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,7,../../../../impls/aos-post/include/aos/post.hpp
+M28,take_all,identifier,aos-post,依sort_letters嘗試全認領，回成功名單,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../impls/aos-post/include/aos/post.hpp
+M29,first_in_cur,identifier,aos-post,cur排序第一封；不認領,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../impls/aos-post/include/aos/post.hpp
+M30,see,identifier,aos-post,讀cur並驗信封，不刪信,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,7,../../../../impls/aos-post/include/aos/post.hpp
+M31,reply,identifier,aos-post,send預設無序回信並填in_reply_to,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,7,../../../../impls/aos-post/include/aos/post.hpp
+M32,done,identifier,aos-post,好信keep時歸檔，否則cur→tmp刪,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,7,../../../../impls/aos-post/include/aos/post.hpp
+M33,regret,identifier,aos-post,new→tmp刪，cur不可撤,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,7,../../../../impls/aos-post/include/aos/post.hpp
+M34,is_ordered,identifier,aos-post,檢查12位數字加點前綴,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../impls/aos-post/include/aos/post.hpp
+M35,sort_letters,identifier,aos-post,有序名優先，再各自字典序,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,5,../../../../impls/aos-post/include/aos/post.hpp
+M36,reply_to_rel,identifier,aos-post,回信地址字串相對化,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../impls/aos-post/include/aos/post.hpp
+M37,reply_to_abs,identifier,aos-post,從信箱根還原相對回信地址,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,4,../../../../impls/aos-post/include/aos/post.hpp
+M38,post_ordered,identifier,aos-post,鎖內取號、更新order.json、rename及釋鎖,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../impls/aos-post/src/send/send.cpp
+M39,read_counter,identifier,aos-post,讀order.json，缺檔從0起,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../impls/aos-post/src/send/send.cpp
+M40,check_sendable,identifier,aos-post,驗tmp/new型態與access權限,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../impls/aos-post/src/send/send.cpp
+M41,src/mailbox/,dir,aos-post,原始碼元素目錄；不是運行時信箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,0,../../../../impls/aos-post/src/mailbox/mailbox.cpp
+M42,mailbox.cpp,file,aos-post,Mailbox路徑、排序與reply_to換算實作檔,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../impls/aos-post/src/mailbox/mailbox.cpp
+M43,procs_ctl_mailbox,dir,aos-daemon,預設$AOS_STACK/procs_ctl_mailbox；可自訂或null關閉,mixed,sort_letters：有序在前按12位序號；無序在後按名字；不保證完成先後,daemon_ctl、llm-kernel send_procs無ordered；judge轉有序信才帶ordered；人可兩種,開機cur redo先；每輪take_all new；逐封套用後一次對表,cur-then-delete,no-by-convention,ordered-before-unordered,external,17,../../../../impls/aos-daemon/src/daemon/mailbox.cpp
+M44,procs_ctl_mailbox,json_key,aos-daemon,daemon.json設定收件位置；沒寫用同名預設，null關閉,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,6,../../../../impls/aos-daemon/src/daemon/daemon.cpp
+M45,procs_ctl_mailbox,state_field,aos-daemon,procs_state.json頂層回報信箱名或null；客戶端靠它找地址,n.a.,n.a.,Daemon::write_more,daemon_ctl.names_of／judge.daemon_view／llm-kernel.find_host,keep,n.a.,n.a.,external,5,../../../../impls/aos-daemon/src/daemon/windows.cpp
+M46,mailbox_warning,state_field,aos-daemon,最後壞信或認領錯誤原因；無新錯保持前值,n.a.,n.a.,Daemon::take_letters,aos-agent ctl state／llm-kernel read_table,keep,n.a.,n.a.,external,16,../../../../impls/aos-daemon/src/daemon/windows.cpp
+M47,mbox_path_,identifier,aos-daemon,實際ctl信箱絕對路徑，空代表關閉,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,6,../../../../impls/aos-daemon/src/daemon/daemon.hpp
+M48,mbox_name_,identifier,aos-daemon,設定的信箱名供state回報,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,3,../../../../impls/aos-daemon/src/daemon/daemon.hpp
+M49,mbox_,identifier,aos-daemon,aos::post::Mailbox操作物件,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../impls/aos-daemon/src/daemon/daemon.hpp
+M50,mailbox_warning_,identifier,aos-daemon,最後一則信箱警告,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,3,../../../../impls/aos-daemon/src/daemon/daemon.hpp
+M51,open_mailbox,identifier,aos-daemon,init且排序開機cur殘信,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,3,../../../../impls/aos-daemon/src/daemon/daemon.hpp
+M52,mailbox.cpp,file,aos-daemon,收信、套body、回applied與done實作,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,3,../../../../impls/aos-daemon/src/daemon/mailbox.cpp
+M53,信箱,doc_term,aos-daemon,控制信是一次改底；與宣告窗procs_ctl共存，並非嚴格FIFO,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,21,../../../../impls/aos-daemon/docs/05-信箱.md
+M54,daemon_reply/,dir,daemon_ctl,有AOS_STACK時的共用回信Maildir,no,只收自己的關聯回信；字典序掃描，不用sort_letters,daemon reply或judge refuse，均無ordered,sorted listdir(new)，比對in_reply_to，flock後指定rename認領並done,cur-then-delete,no-enforced,none,external,5,../../../../py/daemon_ctl/post.py
+M55,procs_ctl_mailbox/reply/,dir,daemon_ctl,沒有AOS_STACK時；實際跟daemon回報的自訂ctl箱路徑走,no,只收自己的關聯回信；字典序掃描，不用sort_letters,daemon reply或judge refuse，均無ordered,sorted listdir(new)，比對in_reply_to，flock後指定rename認領並done,cur-then-delete,no-enforced,none,external,9,../../../../py/daemon_ctl/post.py
+M56,.reply.lock,file,daemon_ctl,共用箱收信與十分鐘GC互斥；不是持有整個等待期間,n.a.,n.a.,_reply_lock,take_reply／reply_box GC,keep,no-enforced,n.a.,external,1,../../../../py/daemon_ctl/post.py
+M57,mailbox_of,identifier,daemon_ctl,AOS_KERNEL優先；direct則daemon實際ctl箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../py/daemon_ctl/post.py
+M58,reply_box,identifier,daemon_ctl,決定回信箱並清理sent_at早於600秒的信,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../py/daemon_ctl/post.py
+M59,_reply_lock,identifier,daemon_ctl,fcntl.flock共用收信與GC互斥,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../py/daemon_ctl/post.py
+M60,take_reply,identifier,daemon_ctl,只取in_reply_to吻合者，done後回body,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../py/daemon_ctl/post.py
+M61,_letters,identifier,daemon_ctl,普通sorted listdir，不區分有序前綴,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../py/daemon_ctl/post.py
+M62,--reply-to,flag,daemon_ctl,六個寄信動詞只寄不等；不能同時給--timeout-s,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../cmd/aos-daemon-ctl/bin/aos-daemon-ctl
+M63,BOX,arg,daemon_ctl,--reply-to的信箱位置；相對cwd轉絕對,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../cmd/aos-daemon-ctl/bin/aos-daemon-ctl
+M64,AOS_KERNEL,env,daemon_ctl,可選對外procs信收件地址，通常judge requests；不是kernel stack,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,12,../../../../py/daemon_ctl/post.py
+M65,box,identifier,daemon_ctl,mailbox_of、reply_box及收信函式中的信箱路徑,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../py/daemon_ctl/post.py
+M66,queue/,dir,aos-agent,P-11/P-42 agent輸入；標準寄件全ordered，仍允許其他人無序投遞,mixed,sort_letters：有序在前按12位序號；無序在後按名字；不保證完成先後,aos-agent say/chat→aos_ws.put與eca/fsm opening都--ordered,fsm idle或eca turn take-all，再將整個cur重排,cur-then-delete,no-by-convention,ordered-before-unordered,external,21,../../../../py/aos_ws.py
+M67,mailbox_warning.txt,file,aos-agent,最後壞信一行；不是信箱，讀state時展示，不因好信自動清空,n.a.,n.a.,eca.warn／fsm idle.write_atomic,aos-agent ctl state,keep,n.a.,n.a.,external,4,../../../../cmd/aos-eca/bin/aos-eca-turn
+M68,queued,state_field,aos-agent,ctl ls -j每列new+cur數量；不是等答案中的信數,n.a.,n.a.,ctl ls；hints.queued,人／agents工具,memory-only,n.a.,n.a.,external,6,../../../../cmd/aos-agent/aos_agent/ctl/ls.py
+M69,queued,identifier,aos-agent,函式：queue存在就回len(aos_ws.waiting)，否則None,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,6,../../../../cmd/aos-agent/aos_agent/hints.py
+M70,QUEUED,doc_term,aos-agent,ctl ls人用表頭；表示new/cur待交接信件數,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,2,../../../../cmd/aos-agent/aos_agent/ctl/ls.py
+M71,queue,doc_term,aos-agent,ctl state顯示的計數標籤，內容同queued,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,10,../../../../cmd/aos-agent/aos_agent/ctl/state.py
+M72,box_of,identifier,aos-agent,<stack>/queue路徑,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../py/aos_ws.py
+M73,letter_key,identifier,aos-agent,Python等價sort_letters,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../py/aos_ws.py
+M74,ORDERED,identifier,aos-agent,12位序號前綴regex,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../py/aos_ws.py
+M75,put,identifier,aos-agent,init後send --ordered,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../py/aos_ws.py
+M76,waiting,identifier,aos-agent,cur名單接new名單，不重新合併排序,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../py/aos_ws.py
+M77,names,identifier,aos-agent,每一格listdir後letter_key排序,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../py/aos_ws.py
+M78,box,identifier,aos-agent,eca turn與fsm idle的queue路徑變數,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,3,../../../../cmd/aos-eca/bin/aos-eca-turn
+M79,信箱,doc_term,aos-agent,agent queue與信箱警告的對外文件用詞,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,7,../../../../cmd/aos-agent/README.md
+M80,mailbox/,dir,llm-kernel,固定$AOS_STACK/mailbox；Cfg.mailbox只是內部路徑，不讀同名設定key,priority,effective(level+waited_ticks/aging_ticks)降序→deadline近→speed快→等待久→信名,aos-llm send用ordered=false；ask send_prepared無ordered；aos-post可混投,Server.scan自行names_in；order(ws)後直接rename new→cur,cur-then-delete,no-enforced,field priority＋aging_ticks＋deadline＋pack speed；全域/每包slots與budget可跳過,external,21,../../../../impls/aos-llm-kernel/src/serve/config.cpp
+M81,mailbox/reply/,dir,aos-llm,ask共用回信箱；多個ask依in_reply_to找自己的,no,比對in_reply_to，不要求讀取或回信先後,kernel.post_reply使用預設SendOpts無ordered,find_reply未排序directory_iterator；take(name)成功後deliver/done,cur-then-delete,yes,none,external,11,../../../../impls/aos-llm/src/common/common.hpp
+M82,BOX,dir,aos-llm,send --reply-to的自訂回信Maildir；send自動init，recv指定信名,no,只取指定原信回信；不排序,kernel.post_reply無ordered,recv：自行directory_iterator找關聯→take(name)→done,cur-then-delete,yes,none,external,3,../../../../impls/aos-llm/src/wait/wait.cpp
+M83,queue.json,file,llm-kernel,持久排隊帳counter_runs/seen_at_ms/seen_at_ticks；不是信件容器或純只讀窗,n.a.,n.a.,write_queue,read_queue／scan與order,keep,no-enforced,n.a.,external,7,../../../../impls/aos-llm-kernel/src/queue/queue.cpp
+M84,src/queue/,dir,llm-kernel,原始碼元素；Waiting向量在記憶體排序，信仍在mailbox/new,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../impls/aos-llm-kernel/src/queue/queue.hpp
+M85,queue.cpp,file,llm-kernel,排隊帳讀寫與priority排序實作／宣告,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../impls/aos-llm-kernel/src/queue/queue.cpp
+M86,queue.hpp,file,llm-kernel,排隊帳讀寫與priority排序實作／宣告,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,3,../../../../impls/aos-llm-kernel/src/queue/queue.hpp
+M87,Queue,identifier,llm-kernel,記憶體排隊帳結構；seen與runs由queue.json保存,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,3,../../../../impls/aos-llm-kernel/src/queue/queue.hpp
+M88,read_queue,identifier,llm-kernel,讀持久排隊帳；不存在從零起,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,3,../../../../impls/aos-llm-kernel/src/queue/queue.hpp
+M89,write_queue,identifier,llm-kernel,原子覆寫排隊帳,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,4,../../../../impls/aos-llm-kernel/src/queue/queue.hpp
+M90,order,identifier,llm-kernel,Waiting向量stable_sort；不調post::sort_letters,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,5,../../../../impls/aos-llm-kernel/src/queue/queue.hpp
+M91,effective,identifier,llm-kernel,level加等待ticks/aging_ticks,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../impls/aos-llm-kernel/src/queue/queue.hpp
+M92,Cfg::mailbox,identifier,llm-kernel,內部固定路徑，非對外JSON key,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,8,../../../../impls/aos-llm-kernel/src/serve/serve.hpp
+M93,priority,body_key,llm-kernel,信body的優先設定，預設normal,n.a.,n.a.,寄件端,parse_priority／Server.scan,keep,n.a.,n.a.,external,16,../../../../impls/aos-llm-kernel/src/letter/letter.cpp
+M94,level,body_key,llm-kernel,low/normal/high或數字正負映成-1/0/1,n.a.,n.a.,寄件端,parse_priority／Server.scan,keep,n.a.,n.a.,external,9,../../../../impls/aos-llm-kernel/src/letter/letter.cpp
+M95,deadline,body_key,llm-kernel,牆鐘epoch秒或帶時區ISO期限,n.a.,n.a.,寄件端,parse_priority／Server.scan,keep,n.a.,n.a.,external,12,../../../../impls/aos-llm-kernel/src/letter/letter.cpp
+M96,aging_ticks,json_key,llm-kernel,預設3 ticks升一級；有樹鐘用tick，否則牆鐘差/interval,n.a.,n.a.,人設定,read_cfg／parse_pack／order,keep,n.a.,n.a.,external,10,../../../../impls/aos-llm-kernel/src/serve/serve.hpp
+M97,slots,json_key,llm-kernel,全域與每能力包同時在飛上限，不代表讀者數,n.a.,n.a.,人設定,read_cfg／parse_pack／order,keep,n.a.,n.a.,external,16,../../../../impls/aos-llm-kernel/src/serve/serve.hpp
+M98,speed,json_key,llm-kernel,每能力包fast/normal/slow；同級同deadline再比,n.a.,n.a.,人設定,read_cfg／parse_pack／order,keep,n.a.,n.a.,external,14,../../../../impls/aos-llm-kernel/src/serve/serve.hpp
+M99,counter_runs,state_field,llm-kernel,queue.json排隊帳欄；每輪加一,n.a.,n.a.,scan／write_queue,read_queue／scan,keep,n.a.,n.a.,external,5,../../../../impls/aos-llm-kernel/src/queue/queue.cpp
+M100,seen_at_ms,state_field,llm-kernel,queue.json排隊帳欄；只留還在new等待的信之首次看見時間,n.a.,n.a.,scan／write_queue,read_queue／scan,keep,n.a.,n.a.,external,6,../../../../impls/aos-llm-kernel/src/queue/queue.cpp
+M101,seen_at_ticks,state_field,llm-kernel,queue.json排隊帳欄；只留還在new等待的信之首次看見時間,n.a.,n.a.,scan／write_queue,read_queue／scan,keep,n.a.,n.a.,external,6,../../../../impls/aos-llm-kernel/src/queue/queue.cpp
+M102,QueueBad,error_code,llm-kernel,queue.json讀不到或格式錯誤；不是隊列已滿,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,5,../../../../impls/aos-llm-kernel/include/aos/llm_kernel.hpp
+M103,.flock,file,llm-kernel,每輪flock LOCK_EX|LOCK_NB，防止同箱兩kernel同跑,n.a.,n.a.,Server.lock,Server.lock,keep,no-enforced,n.a.,external,4,../../../../impls/aos-llm-kernel/src/serve/serve.cpp
+M104,aos::llm_kernel::Mailbox,identifier,llm-kernel,三格根路徑型別；和post::Mailbox是兩個型別,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,5,../../../../impls/aos-llm-kernel/include/aos/llm_kernel.hpp
+M105,post_reply,identifier,llm-kernel,回信預設無序，填in_reply_to=id,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../impls/aos-llm-kernel/src/serve/reply.cpp
+M106,regret_reply,identifier,llm-kernel,ask已離開則撤回仍在new的回信,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../impls/aos-llm-kernel/src/serve/reply.cpp
+M107,error_reply,identifier,llm-kernel,"建立{error:{code,msg}}回信body",n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,5,../../../../impls/aos-llm-kernel/src/serve/reply.cpp
+M108,write_reply,identifier,llm-kernel,cur信內寫reply.json,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../impls/aos-llm-kernel/src/serve/reply.cpp
+M109,read_reply,identifier,llm-kernel,讀並驗reply.json,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../impls/aos-llm-kernel/include/aos/llm_kernel.hpp
+M110,reply_of,identifier,llm-kernel,驗message或error回信body,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,5,../../../../impls/aos-llm-kernel/include/aos/llm_kernel.hpp
+M111,reply_letter.txt,file,llm-kernel,已寄回信名稱；避免cur殘骸重寄，也供撤回；整封完成後刪,n.a.,n.a.,post_reply,post_reply／collect／regret_reply,delete,n.a.,n.a.,external,4,../../../../impls/aos-llm-kernel/src/serve/reply.cpp
+M112,AOS_LLM_KERNEL,env,aos-llm,kernel stack；收件箱再接mailbox；相對AOS_DAEMON，沒設才相對cwd,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,20,../../../../impls/aos-llm/src/send/send.cpp
+M113,--reply-to,flag,aos-llm,send必給的BOX；ask用共用mailbox/reply,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../impls/aos-llm/src/main.cpp
+M114,BOX,arg,aos-llm,recv BOX LETTER及send --reply-to BOX的信箱路徑,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../impls/aos-llm/src/main.cpp
+M115,--priority,flag,aos-llm,覆蓋body.priority，先驗parse_priority；沒有--ordered旗標,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,5,../../../../impls/aos-llm/src/main.cpp
+M116,reply_box,identifier,aos-llm,<kernel mailbox>/reply位置,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,3,../../../../impls/aos-llm/src/common/common.hpp
+M117,find_reply,identifier,aos-llm,未排序listdir；比對in_reply_to，seen避重讀,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../impls/aos-llm/src/wait/wait.cpp
+M118,box,identifier,aos-llm,recv的自訂回信箱參數,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../impls/aos-llm/src/wait/wait.cpp
+M119,Mailbox,identifier,aos-llm,using aos::post::Mailbox；不是另一型別,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,8,../../../../impls/aos-llm/src/common/common.hpp
+M120,requests/,dir,judge,兩種kernel模式的procs收件箱；容量不足立即拒，不留作隊列,mixed,sort_letters：有序在前按12位序號；無序在後按名字；不保證完成先後,daemon_ctl無ordered；人可send --ordered,take-all，cur舊新合併letter_key排序；verdict→forward/refuse→done,cur-then-delete,no-by-convention,ordered-before-unordered,external,5,../../../../lib/aos/judge/_entry
+M121,_tooldef.json,file,judge,判官執行契約文字；明示不是給腦用的工具,n.a.,n.a.,開發者,工具索引／人,keep,n.a.,n.a.,external,1,../../../../lib/aos/judge/_tooldef.json
+M122,inbox,identifier,judge,requests絕對路徑變數與forward/refuse參數,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,2,../../../../lib/aos/judge/_entry
+M123,ctl_box,identifier,judge,daemon_view讀state取得的轉寄箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../lib/aos/judge/_entry
+M124,letter_key,identifier,judge,有序先、無序後，各按信名字典序,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../lib/aos/judge/_entry
+M125,ORDERED,identifier,judge,辨認12位前綴；轉寄有序信重取號,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../lib/aos/judge/_entry
+M126,queue.json,file,judge,規劃，未實作：將列queued窗；現有_entry完全不讀寫此檔,n.a.,n.a.,規劃判官,規劃aos-agent,n.a.,n.a.,n.a.,external,7,../os-impl/05-寄信者自設逾時.md
+M127,queue,json_key,judge,規劃judge.json queue:true啟用等待；現行load_policy只讀allowed/max_running,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,9,../os-impl/03-判官排隊選項.md
+M128,queue_wait_ms,body_key,judge,規劃寄件人最長排隊毫秒；現行判官不驗不採用,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,9,../os-impl/05-寄信者自設逾時.md
+M129,queued,state_field,judge,規劃queue.json欄，尚無運行時實作,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,6,../os-impl/05-寄信者自設逾時.md
+M130,queued_at,state_field,judge,規劃queue.json欄，尚無運行時實作,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../os-impl/05-寄信者自設逾時.md
+M131,queued_at_ticks,state_field,judge,規劃queue.json欄，尚無運行時實作,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../os-impl/05-寄信者自設逾時.md
+M132,--on-queued,flag,judge,規劃呼叫者等排隊結果的旗標，現行CLI未支援,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,4,../os-impl/05-寄信者自設逾時.md
+M133,--queue-wait-s,flag,judge,規劃呼叫者等排隊結果的旗標，現行CLI未支援,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../os-impl/05-寄信者自設逾時.md
+M134,on_queued,identifier,judge,規劃agents工具欄位；尚未實作,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,3,../os-impl/05-寄信者自設逾時.md
+M135,排隊,doc_term,judge,已裁但尚未實作的FIFO等待計畫；目前SlotMissing立即拒,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,9,../os-impl/03-判官排隊選項.md
+M136,--mailbox,flag,sandbox,root/setup.sh的權限初始化旗標；aos-sandbox主命令本身沒有,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../cmd/aos-sandbox/root/setup.sh
+M137,MAILBOX,arg,sandbox,setup.sh --mailbox的LLM箱位置,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../cmd/aos-sandbox/root/setup.sh
+M138,MAILBOX,identifier,sandbox,setup.sh殼變數，僅保存要調權限的箱路徑,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../cmd/aos-sandbox/root/setup.sh
+M139,BOXES,identifier,sandbox,setup.sh的tmp/new/cur及reply各格路徑清單,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../cmd/aos-sandbox/root/setup.sh
+M140,mailbox/reply/,dir,sandbox,setup.sh建立及ACL設定；同一LLM ask共用回信箱的權限角色,no,按in_reply_to認自己的；setup不處理信,setup.sh --apply建格；kernel送信無ordered,aos-llm ask,cur-then-delete,yes,none,external,1,../../../../cmd/aos-sandbox/root/setup.sh
+M141,think/reply/,dir,templates,fsm wait非同步問腦的私有回信Maildir,no,比對pending原信名，不按寄送先後,llm-kernel無ordered回信,aos-llm recv BOX pending名→find_reply→take(name)→done,cur-then-delete,no-by-convention,none,external,2,../../../../templates/agent-fsm/wait.py
+M142,queue/,doc_term,knowledge,給腦看的your inbox與依序回答用語；實際處理同agent queue,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,4,../../../../knowledge/aos/me/README.md
+M143,mailbox,doc_term,knowledge,對腦說letter/mailbox；README將信簡稱JSON file，實際一封是資料夾,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../knowledge/aos/README.md
+M144,inbox,doc_term,knowledge,用自然語言稱agent queue；不是額外inbox資料夾,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,2,../../../../knowledge/aos/me/README.md
+M145,queue,doc_term,knowledge,status.md的queue N計數詞；不是daemon原生state欄,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,4,../../../../knowledge/aos/status.md
+M146,信箱,doc_term,kernel,daemon-judge/procs-kernel兩種requests佈局與LLM mailbox教學,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,4,../../../../kernel/docs/02-kernel-modes.md
+M147,信箱,doc_term,templates,eca/fsm用法：queue批次、mailbox_warning、think/reply,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../templates/docs/02-agent-fsm.md
+M148,信箱,doc_term,lib,庫索引與agent工具的投遞描述；judge不是腦工具,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../lib/docs/02-索引-base與索引-aos.md
+M149,$AOS_WS/new cur out done,dir,docs,P-11舊題目信箱：純文字一題一檔，無tmp無letter.json；實作已移入排除archive,name-order,P-12字典序取一題，無post序號,舊呼叫者直接放題；不經--ordered,文件：cur殘題優先，否則new檔名最小,archive,no-by-convention,none,external,4,../../../../docs/CONVENTION/02-題目stack停錯腦/01-P-11～P-14.md
+M150,queue,doc_term,docs,P-11現行agent輸入與P-42對話契約；不是舊new/cur/out/done,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,6,../../../../docs/CONVENTION/02-題目stack停錯腦/02-P-42.md
+M151,信箱,doc_term,docs,N-16標準投遞用語；一個處理者是慣例，不是post全箱讀鎖,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,32,../../../../docs/NORMS/05-基礎設施-窗/05-N-16.md
+M152,佇列,doc_term,docs,自然語言queue用語，不能僅憑詞判定FIFO,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,24,../../../2026-10/15/kiss/README.md
+M153,排隊,doc_term,docs,泛指new待處理或priority調度；須按各程式實際行為判讀,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,14,../../../../impls/aos-llm-kernel/src/queue/queue.hpp
+M154,loops_ctl_mailbox,doc_term,docs,daemon歷史設定名，現行不認,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,8,../../../../impls/aos-daemon/src/daemon/daemon.hpp
+M155,loops_mailbox,doc_term,docs,更舊的daemon信箱命名，現行不認,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,9,../../../../docs/NORMS/04-基礎設施-loop與daemon/02-N-28.md
+M156,ctl_mailbox,doc_term,docs,舊改名記錄用詞，非現行key,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,2,../../../../docs/NORMS/04-基礎設施-loop與daemon/02-N-28.md
+M157,procs_mailbox,doc_term,docs,thinking討論候選名，非現行key,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../04/aos-post-one-dir.md
+M158,inst-mailbox,doc_term,docs,body-protocol討論中的介面稱呼，非現行實作,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../body-protocol/02-三個口子.md
+M159,workqueue,doc_term,docs,OS對照表概念，不是aos具名資料夾,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../os-concepts/01-OS與kernel-對照表.md
+M160,check_inbox,doc_term,docs,已封存工具名；不讀archive實作,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,16,../../../../lib/docs/03-索引-agent等.md
+M161,expect_reply,doc_term,docs,舊agent-talk信body欄，現行post不規定,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../2026-10/24/agent-talk/01-使用者原文.md
+M162,reply_mailbox,doc_term,docs,邊緣測試記錄的回信箱標籤,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,2,../../05/edge-round2/README.md
+M163,QueueTimeout,doc_term,docs,歷史kiss討論代號；現行kernel不用,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../2026-10/15/kiss/README.md
+M164,queue.push,doc_term,docs,舊hub概念的入列稱呼,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,2,../../../2026-10/28/hub-kernel/01-使用者原文.md
+M165,queue.pop,doc_term,docs,舊hub概念的出列稱呼,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,2,../../../2026-10/28/hub-kernel/01-使用者原文.md
+M166,.aos/bob/ws/inbox/q1.txt,doc_term,docs,daemon內層archive計畫中的舊demo題目路徑；非現行實作,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../impls/aos-daemon/archive/PLAN-2026-10-19.md
+M167,tests/,doc_term,docs,本機只剩__pycache__；沒有可盤的現行source，未把.pyc當程式證據,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../README.md
+M168,demo/,doc_term,docs,本機只剩__pycache__；沒有可盤的現行source，未把.pyc當程式證據,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../README.md
+M169,wf/inbox/,dir,wf,Markdown放信處；本次只讀，不執行收發腳本,name-order,glob字典序；非Maildir認領協定,人／inbox_send.sh或inbox_mail.sh，無ordered,inbox_read只讀shell glob；poll只觀察並記seen,keep,yes,none,external,12,../../../../../wf/tools/inbox_read.sh
+M170,wf/inbox/new/,dir,wf,隊長待分派的Markdown信，與Maildir new不同,no,沒有aos-post或--ordered；觀察不消耗,wf腳本／人,wf inbox腳本／agents,keep,yes,none,external,10,../../../../../wf/tools/inbox_mail.sh
+M171,wf/inbox/mail/<member>/,dir,wf,成員私人放信處；poll掃描,no,沒有aos-post或--ordered；觀察不消耗,wf腳本／人,wf inbox腳本／agents,keep,yes,none,external,10,../../../../../wf/tools/inbox_poll.sh
+M172,wf/inbox/topics/<topic>/,dir,wf,主題廣播信；每成員自行記seen,no,沒有aos-post或--ordered；觀察不消耗,wf腳本／人,wf inbox腳本／agents,keep,yes,none,external,10,../../../../../wf/tools/inbox_poll.sh
+M173,wf/inbox/teams/<team>/,dir,wf,群組信及members名冊,no,沒有aos-post或--ordered；觀察不消耗,wf腳本／人,wf inbox腳本／agents,keep,yes,none,external,10,../../../../../wf/tools/inbox_team.sh
+M174,wf/inbox/orders/<member>.md,file,wf,追加交辦單；poll記已讀行數,no,沒有aos-post或--ordered；觀察不消耗,wf腳本／人,wf inbox腳本／agents,keep,yes,none,external,10,../../../../../wf/tools/inbox_poll.sh
+M175,wf/inbox/done/,dir,wf,人歸檔或inbox_team close移入的歷史信,no,沒有aos-post或--ordered；觀察不消耗,wf腳本／人,wf inbox腳本／agents,keep,yes,none,external,10,../../../../../wf/tools/inbox_team.sh
+M176,WF_INBOX_ROOT,env,wf,工作流信箱根,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,4,../../../../../wf/tools/inbox_mail.sh
+M177,AGENT_INBOX_ROOT,env,wf,WF_INBOX_ROOT的相容fallback,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,5,../../../../../wf/tools/inbox_mail.sh
+M178,WF_INBOX_SELF,env,wf,個人回信與讀信地址,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,2,../../../../../wf/tools/inbox_read.sh
+M179,WF_INBOX_POLL_SECONDS,env,wf,通知poll週期,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../../wf/tools/notify_watch.sh
+M180,AGENT_INBOX_POLL_SECONDS,env,wf,舊poll週期fallback,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../../wf/tools/notify_watch.sh
+M181,inbox_mail.sh,file,wf,信箱工作流腳本；只讀源碼盤點未執行,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,5,../../../../../wf/tools/inbox_mail.sh
+M182,inbox_poll.sh,file,wf,信箱工作流腳本；只讀源碼盤點未執行,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,5,../../../../../wf/tools/inbox_poll.sh
+M183,inbox_read.sh,file,wf,信箱工作流腳本；只讀源碼盤點未執行,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,4,../../../../../wf/tools/inbox_read.sh
+M184,inbox_send.sh,file,wf,信箱工作流腳本；只讀源碼盤點未執行,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,5,../../../../../wf/tools/inbox_send.sh
+M185,inbox_team.sh,file,wf,信箱工作流腳本；只讀源碼盤點未執行,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../../../wf/tools/inbox_team.sh
+M186,test_inbox.sh,file,wf,信箱工作流腳本；只讀源碼盤點未執行,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../../wf/tools/test_inbox.sh
+M187,inbox_root,identifier,wf,工作流信箱根變數,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,4,../../../../../wf/tools/inbox_mail.sh
+M188,default_inbox_root,identifier,wf,腳本相鄰inbox的預設根,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,4,../../../../../wf/tools/inbox_mail.sh
+M189,default_inbox,identifier,wf,唯讀收信腳本預設根,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../../wf/tools/inbox_read.sh
+M190,inbox,identifier,wf,唯讀收信腳本實際箱路徑,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,9,../../../../../wf/tools/inbox_read.sh
+M191,scan_mailbox,identifier,wf,poll以glob掃md並記seen，不rename信,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../../wf/tools/inbox_poll.sh
+M192,inbox_pending,identifier,wf,lint計算未處理Markdown信數,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../../wf/tools/wf-lint.sh
+M193,INBOX,identifier,wf,通知輸出標籤，非資料夾或state欄,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,3,../../../../../wf/tools/inbox_read.sh
+M194,--reply-to,flag,wf,inbox_send的回信地址；寫Markdown front matter，非post信封,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../../wf/tools/inbox_send.sh
+M195,dest_inbox,arg,wf,inbox_send的目標資料夾參數,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../../wf/tools/inbox_send.sh
+M196,信箱,doc_term,wf,repo根AGENTS與wf入口稱呼工作流收信，非aos mailbox,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,80,../../../../../AGENTS.md
+M197,playground,doc_term,playground,現行外部~/code/playground；已唯讀核對README/env及fsm_ann idle/wait；非repo根舊playground,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,194,../../../2026-10/29/agent-bob/README.md
+M198,~/code/try/,doc_term,playground,歷史試驗場根：sandbox、agent-talk、say-listen、playground等，不是單一現行箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,27,../../../2026-10/26/playground.md
+M199,queue.sh,file,playground,wf描述的外部Codex工作串列腳本；以前一log的EXIT作串行屏障，非Maildir,no,等待前一個log出現EXIT再起下一工作,外部任務腳本,shell,keep,no-by-convention,none,internal,1,../../../../../wf/workflows/dev-env/01-跨機與外部工具.md
+M200,playground-queue,doc_term,playground,thinking的試驗討論目錄名；不是執行時queue,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,14,../../../2026-10/29/playground-queue/README.md
+M201,inbox/,doc_term,playground,歷史playground/tools/inbox與$AOS_WS/inbox；現行agent輸入已走stack/queue,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../../2026-10/29/playground-queue/01-使用者原文.md
+M202,Mailbox::tmp,identifier,aos-post,Mailbox的路徑存取方法；不執行認領或排隊,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,10,../../../../impls/aos-post/include/aos/post.hpp
+M203,Mailbox::fresh,identifier,aos-post,Mailbox的路徑存取方法；不執行認領或排隊,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,4,../../../../impls/aos-post/include/aos/post.hpp
+M204,Mailbox::cur,identifier,aos-post,Mailbox的路徑存取方法；不執行認領或排隊,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,8,../../../../impls/aos-post/include/aos/post.hpp
+M205,Mailbox::archive,identifier,aos-post,Mailbox的路徑存取方法；不執行認領或排隊,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,7,../../../../impls/aos-post/include/aos/post.hpp
+M206,Mailbox::tmp,identifier,llm-kernel,Mailbox的路徑存取方法；不執行認領或排隊,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,8,../../../../impls/aos-llm-kernel/include/aos/llm_kernel.hpp
+M207,Mailbox::fresh,identifier,llm-kernel,Mailbox的路徑存取方法；不執行認領或排隊,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,6,../../../../impls/aos-llm-kernel/include/aos/llm_kernel.hpp
+M208,Mailbox::cur,identifier,llm-kernel,Mailbox的路徑存取方法；不執行認領或排隊,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,9,../../../../impls/aos-llm-kernel/include/aos/llm_kernel.hpp
+M209,Host::box,identifier,llm-kernel,daemon/判官的procs收件箱，與LLM mailbox不同,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,3,../../../../impls/aos-llm-kernel/src/daemon/daemon.hpp
+M210,box,identifier,llm-kernel,post_reply的aos::post::Mailbox回信目標,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,internal,1,../../../../impls/aos-llm-kernel/src/serve/reply.cpp
+M211,notify_queued,doc_term,judge,規劃討論的排隊通知提議；已選窗而非另寄通知信,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../os-impl/05-續-邊緣排程與方向題.md
+M212,on_queued,body_key,judge,規劃agents工具JSON參數，尚未實作,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../os-impl/05-寄信者自設逾時.md
+M213,lib/agent/queue/,doc_term,docs,已刪的agent收信格；僅歷史記錄，現行改fsm idle,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,4,../../../2026-10/28/agent-round/01-白話版.md
+M214,sum/mailbox/accepts.json,doc_term,docs,fs-image規劃的介面描述；非現行mailbox中必有檔,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../body-protocol/02-三個口子.md
+M215,AOS_KERNEL/reply/,doc_term,docs,舊規劃回信箱說法；現行reply_box不用judge箱而用direct daemon箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,3,../../04/think-as-function/02-設計-信與kernel/01-endpoint函數-aos-llm-kernel形態.md
+M216,.inbox-send.XXXXXX,file,wf,目的信箱內的mktemp檔，完成後mv成正式md,n.a.,n.a.,mktemp,同支腳本,delete,n.a.,n.a.,internal,1,../../../../../wf/tools/inbox_send.sh
+M217,.inbox-mail.XXXXXX,file,wf,inbox根下的mktemp檔，完成後mv成正式md,n.a.,n.a.,mktemp,同支腳本,delete,n.a.,n.a.,internal,1,../../../../../wf/tools/inbox_mail.sh
+M218,.inbox-team-roster.XXXXXX,file,wf,ROSTER覆寫的暫存檔,n.a.,n.a.,mktemp,同支腳本,delete,n.a.,n.a.,internal,1,../../../../../wf/tools/inbox_team.sh
+M219,inbox-test.XXXXXX,dir,wf,測試工作流收信的外部暫存目錄樣板,n.a.,n.a.,mktemp,同支腳本,delete,n.a.,n.a.,internal,1,../../../../../wf/tools/test_inbox.sh
+M220,05-信箱.md,file,docs,文件檔名；內容是命名/排隊/信箱說明或歷史記錄，非運行時箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,6,../../../../impls/aos-daemon/docs/05-信箱.md
+M221,03-判官排隊選項.md,file,docs,文件檔名；內容是命名/排隊/信箱說明或歷史記錄，非運行時箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,7,../os-impl/03-判官排隊選項.md
+M222,05-跟agent說話-say-listen與queue.md,file,wf,文件檔名；內容是命名/排隊/信箱說明或歷史記錄，非運行時箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,2,../../../../../wf/workflows/digest/2026-10-25至11-01/05-跟agent說話-say-listen與queue.md
+M223,06-程式之間怎麼傳東西-介質與信箱.md,file,wf,文件檔名；內容是命名/排隊/信箱說明或歷史記錄，非運行時箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,2,../../../../../wf/workflows/digest/2026-10-25至11-01/06-程式之間怎麼傳東西-介質與信箱.md
+M224,09b-llm-queue.md,file,wf,文件檔名；內容是命名/排隊/信箱說明或歷史記錄，非運行時箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,4,../../../../../wf/workflows/spec/archive/09b-llm-queue.md
+M225,queues-and-resources.md,file,wf,文件檔名；內容是命名/排隊/信箱說明或歷史記錄，非運行時箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,1,../../../../../wf/workflows/workshop/archive/background/queues-and-resources.md
+M226,finite-resource-queue.md,file,wf,文件檔名；內容是命名/排隊/信箱說明或歷史記錄，非運行時箱,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,7,../../../../../wf/workflows/workshop/archive/records/finite-resource-queue.md
+M227,playground-queue/,dir,docs,文件/工作流目錄的實體名字；非運行時Maildir，語義看入口,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,14,../../../2026-10/29/playground-queue/README.md
+M228,inbox/,dir,wf,文件/工作流目錄的實體名字；非運行時Maildir，語義看入口,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,n.a.,external,208,../../../../../wf/workflows/inbox/README.md

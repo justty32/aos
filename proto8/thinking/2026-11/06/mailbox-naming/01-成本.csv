@@ -1,0 +1,32 @@
+name,code_files,code_lines,doc_files,doc_lines,knowledge_files,prompt_files,test_playground_files,thinking_files,example_path
+procs_ctl_mailbox,10,27,19,35,0,0,0,30,../../../../impls/aos-daemon/src/daemon/daemon.cpp
+mailbox (llm kernel dir),14,29,18,34,3,0,0,64,../../../../impls/aos-llm-kernel/src/serve/config.cpp
+mailbox/reply/,7,9,9,10,0,0,0,7,../../../../impls/aos-llm/src/common/common.hpp
+daemon_reply,1,1,4,4,0,0,0,14,../../../../py/daemon_ctl/post.py
+queue/ (agent),9,50,27,56,4,1,0,141,../../../../templates/agent-fsm/idle.py
+queue.json (judge; planned),0,0,0,0,0,0,0,7,../os-impl/05-寄信者自設逾時.md
+queue.json (llm kernel),4,8,4,8,0,0,0,19,../../../../impls/aos-llm-kernel/src/queue/queue.cpp
+requests/,4,7,5,14,1,1,0,18,../../../../lib/aos/judge/_entry
+mailbox_warning,10,17,17,24,0,0,0,22,../../../../impls/aos-daemon/src/daemon/windows.cpp
+mailbox_warning.txt,3,8,6,6,0,0,0,11,../../../../templates/agent-fsm/idle.py
+MailboxMissing,14,23,13,17,0,0,0,19,../../../../impls/aos-post/include/aos/post.hpp
+MailboxBad,2,4,8,9,0,0,0,10,../../../../impls/aos-post/include/aos/post.hpp
+QueueBad,3,4,3,3,0,0,0,1,../../../../impls/aos-llm-kernel/src/queue/queue.cpp
+--mailbox,2,6,4,5,0,0,0,8,../../../../cmd/aos-sandbox/root/setup.sh
+aos::post::Mailbox,16,72,0,0,0,0,0,3,../../../../impls/aos-post/include/aos/post.hpp
+mbox_*,6,19,0,0,0,0,0,0,../../../../impls/aos-daemon/src/daemon/daemon.hpp
+--ordered,7,12,8,12,0,0,0,25,../../../../impls/aos-post/src/main.cpp
+信箱,43,123,70,220,0,0,1,195,../../../../impls/aos-post/include/aos/post.hpp
+佇列,0,0,0,0,0,0,0,4,../os-impl/03-判官排隊選項.md
+排隊,8,15,12,14,0,0,0,50,../../../../impls/aos-llm-kernel/src/queue/queue.hpp
+order.lock,2,4,3,4,0,0,0,14,../../../../impls/aos-post/src/send/send.cpp
+order.json,2,8,5,6,0,0,0,11,../../../../impls/aos-post/src/send/send.cpp
+BOX (mailbox arg),4,25,5,14,0,0,0,6,../../../../impls/aos-llm/src/main.cpp
+inbox,2,18,7,9,2,1,1,13,../../../../lib/aos/judge/_entry
+queue_wait_ms (planned),0,0,3,3,0,0,0,8,../os-impl/05-寄信者自設逾時.md
+queued,6,16,1,4,2,1,0,11,../../../../cmd/aos-agent/aos_agent/ctl/ls.py
+--reply-to,8,44,18,26,1,0,0,33,../../../../impls/aos-llm/src/main.cpp
+_reply identifiers,17,76,12,22,0,0,0,40,../../../../py/daemon_ctl/post.py
+reply_to,19,74,22,39,0,0,0,55,../../../../impls/aos-post/include/aos/post.hpp
+in_reply_to,11,24,10,18,0,0,0,29,../../../../impls/aos-post/include/aos/post.hpp
+think/reply/,1,3,1,1,0,0,0,7,../../../../templates/agent-fsm/wait.py
