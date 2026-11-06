@@ -20,8 +20,8 @@
 - **頂層（早期是 Fable，10-09 起多為 Opus）只當調度者**：只跟使用者交流與派隊，不親自做內容。使用者 2026-08-30 說「頂層不要做太多事」，**09-24 再講更嚴**「你不要自己做事，盡量交給 agent」，11-06 第 1 句再講一次。頂層在主 repo 親手做的**只剩 `git merge --ff-only`＋`git push`**；重跑驗證、解 rebase 衝突、改 SESSION-LOG／WAIT_USER、清 backlog、報告存檔全派出去。收線＝讀隊長附的證據逐條對，不重跑；真要獨立驗證就派一條便宜的線去跑。想「順手」做小事時先問：能不能一句話交給別人？這條不看頂層跑哪顆模型。
 - **一隊的編制（11-06 起，第 2、4 句）**：**opus 隊長**（Claude Code 自家 subagent）＋**兩名隊員**——codex `gpt-6.1-sol`、claude CLI `claude-opus-5-5`。隊長寫任務書、審 diff、跑 build、commit、push；隊員與其子 agent **不 commit**。（11-06 前：codex 工人寫碼 6.1-sol、核心難件與審查用 astra high、跑驗證 6-luna；隊長可自己再派 Opus／Sonnet、人數無上限。）
 - **隊員往下派（第 5、7 句）**：兩名隊員都可**無上限**派子 agent。codex 那邊普通工作（寫碼、審查、調查）一律 `gpt-6.1-sol`、簡單工作 `gpt-5.6-terra`；`gpt-6-astra` **只在圖像、創意類才派**（同級但價格約 sol 的 3 倍）。claude 那邊普通 opus、簡單 sonnet。**盡量把工作派給 codex**，claude 隊員補位。任務書寫「不限人數」與這套分工，頂層監看報警時才改寫上限。
-- **「簡單工作」的界線**（頂層代定、可翻案）：雜活、純文字小改、查找盤點、跑指令收結果才算簡單，給 sonnet／terra。**碰程式碼邏輯、改寫使用者的概念／規範條文不算簡單**，照舊不給 sonnet（09-30「不要 sonnet」「就 opus」；10-19 見 [common/user「子 agent 模型」](../common/user.md)），codex 那邊用同一把尺、不給 terra。
-- **讀規矩（第 1、5 句）**：派出去的 agent 做事前先通讀 wf/ 規矩（AGENTS.md、WORKFLOWS.md、common/user.md、common/conventions.md 等），**簡單工作與雜活例外**；隊員與其子 agent 同樣適用。任務書開頭寫明，並要隊員往下派時也寫進子任務書。例外對子 agent 一樣成立（雜活子 agent 可免讀）——頂層代定、可翻案。
+- **「簡單工作」的界線**（使用者 11-06 確認：「1.對。2.是。」）：雜活、純文字小改、查找盤點、跑指令收結果才算簡單，給 sonnet／terra。**碰程式碼邏輯、改寫使用者的概念／規範條文不算簡單**，照舊不給 sonnet（09-30「不要 sonnet」「就 opus」；10-19 見 [common/user「子 agent 模型」](../common/user.md)），codex 那邊用同一把尺、不給 terra。
+- **讀規矩（第 1、5 句）**：派出去的 agent 做事前先通讀 wf/ 規矩（AGENTS.md、WORKFLOWS.md、common/user.md、common/conventions.md 等），**簡單工作與雜活例外**；隊員與其子 agent 同樣適用。任務書開頭寫明，並要隊員往下派時也寫進子任務書。例外對子 agent 一樣成立（雜活子 agent 可免讀）——使用者 11-06 確認（「1.對。2.是。」）。
 - **一般 agent 再派子 agent，模型隨意**（第 1 句）；隊員那層照上面第 5 句的分工。
 - **要思考的交 Fable**（使用者 10-13、10-20：高難度思考＆規劃派 fable，盡量少用）：11-06 原話沒提 fable，照舊——頂層代定、可翻案。
 - **程序數要少（第 3、6 句）**：codex、claude CLI 都是 nodejs，跑在使用者也在用的機器上，所以**每隊同時最多兩個 CLI 程序**（一個 codex、一個 claude），子 agent 跑在隊員自己的程序裡、不另開 CLI。同時開幾隊由頂層看負載定。頂層開一個**背景監看**，定時看負載、可用記憶體、CLI 程序數，**超門檻才通知**；通知了就叫各隊收斂子 agent 或輪流跑。純改檔負擔不大，「稍微監控」即可，不逐次回報。各機門檻與指令見 [公司 WSL](aos-teams/01-公司WSL.md)。

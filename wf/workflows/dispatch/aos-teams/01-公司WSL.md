@@ -28,3 +28,10 @@ cat /proc/loadavg; grep MemAvailable /proc/meminfo; pgrep -fc '[c]odex exec|[c]l
 ```
 
 （pattern 寫成 `[c]odex` 是為了不把包這行指令的 `bash -lc` 自己算進去。）門檻是頂層 11-06 代定、可翻案。codex 現在是原生執行檔、不吃 node，但「每隊兩個 CLI 程序」照舊算它一個。
+
+**效能標準（11-06 起）**：使用者 11-06 原話「效能監看這塊我們今天測一整天看看狀況，然後訂下一個標準，設定在公司這邊能最多開幾個。」今天整天收數據、收工前依數據訂「公司這台最多同時開幾個 codex／claude」，訂了寫回本段。記錄檔在 Windows `C:\Users\WG-Guanyu\aos-perf\`（WSL `/mnt/c/Users/WG-Guanyu/aos-perf/`）：
+
+- `wsl-2026-11-06.csv`：每 30 秒一列，load、可用記憶體、codex／claude 程序數、這些 CLI 合計 CPU% 與記憶體；腳本 `wsl_perf_log.sh`，WSL 背景 pid 158626。
+- `win-2026-11-06.csv`：Windows typeperf，每 30 秒整機 CPU% 與可用 MB，pid 39196，跑 12 小時自停。
+
+**保險絲：之後跑高佔用工作時再做。**使用者 11-06 原話「除此之外你看看要不要設立一個保險絲，在佔用達到95%的時候砍掉東西。現在先不用，因為老實說單跑agent做文字處理，不太可能達到這種狀況。等之後我們有要跑高占用的東西的時候再來做」。
