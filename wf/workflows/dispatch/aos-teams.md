@@ -39,6 +39,8 @@
 
 公司那台（WSL）的 `~/.codex/config.toml` 沒設 `danger-full-access`、預設模型可能還是不能用的舊名：所以**一律明帶 `-m <slug>`**，要寫檔／開子進程時仍用單次旗標 `--dangerously-bypass-approvals-and-sandbox`（2026-09-22 驗過，codex-cli 0.155；10-09 的 slug 名單是家機測的，公司那台未測）。背景跑用 Bash `run_in_background`，log 導到 scratchpad。
 
+公司那台（WSL）11-06 實測的 slug、隊形（opus 隊長＋codex／claude 兩名隊員）、程序數上限見 [公司 WSL](aos-teams/01-公司WSL.md)。
+
 **任務書開頭一定寫「可以開自己的 subagent 平行做事」**，不管派哪種 codex（使用者 2026-09-22：「不管開哪種 codex，都要允許他開自己的 subagent」）。codex 的 `multi_agent` 已開、每個 session 最多 8 條。要限人數就在同一句寫上限，別不寫——[driving-cli-agents](driving-cli-agents.md) 說過不寫它會自己開一堆。
 
 **Claude API 不穩時改派 astra**（codex 被限流則反過來：工人改 Sonnet 做純文字、Opus 做程式）：2026-09-22 Opus 連續四次被 500／529（伺服器過載）打斷，使用者說「claude api 目前狀況不好，改派 codex astra」。這時的分工是 astra 做調查、我做精簡總結、決策、寫規範——他接受這樣切。
