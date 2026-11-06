@@ -1,13 +1,14 @@
 // child.hpp：【child】表上的一個 proc（11-03 起 loops／execs 統稱 procs）＝一支子 loop（loop 型），或 aos-exec 跑一次（exec 型）。內部標頭。
 //
 //   （下面的 loop.json、exec.json、stderr.txt 是預設名；11-04 起 daemon.json 的 procs_loop／procs_exec／procs_stderr 可改，見 CellNames）
+//   refs.cpp    rel_to／rel_spec／daemon_ref／rel_refs：相對路徑與指示詞改寫
 //   child.cpp   spawn：小格（proc 的 stack）建好、寫 loop.json（蓋 _entry、相對的 exec 轉絕對；ws、stack 不寫進去；先 .loop.json 再改名）、
 //               fork 一個子行程跑 `aos-exec -- 小格/loop.json#/_entry`（aos-exec 的 run_cli；它 cd 進小格、exec 成 PATH 上的
 //               aos-loop，pid 不變；setsid 自成一個行程群組、stdin／stdout 接 /dev/null、stderr 附加到小格的 stderr.txt、AOS_STACK＝小格/）；
 //               設定是 null（信箱接回的 stopped 列再 start，11-03）＝不重寫、照小格裡現有的 loop.json 起
 //               spawn_exec（exec 型）：小格、stderr.txt、自成 session、stdin／stdout /dev/null、AOS_STACK＝小格/、cd 到 daemon 的 cwd 都同上，
 //               但不包 aos-loop、不寫 loop.json：子行程直接 `aos-exec -- 目標 參數...` 一次（目標是單子＝寫成小格的 exec.json 再跑它）
-//               小格（11-03）：proc 寫了 stack＝它（daemon.cpp 已轉絕對；不在就 mkdir -p）；沒寫＝$AOS_STACK/procs/<名字>/（只建 procs/ 與小格兩層，
+//               小格（11-03）：proc 寫了 stack＝它（procs.cpp 已轉絕對；不在就 mkdir -p）；沒寫＝$AOS_STACK/procs/<名字>/（只建 procs/ 與小格兩層，
 //               $AOS_STACK 不在＝MkdirFailed）
 //               alive：自己生的看 waitpid（結束就記 code／signal）；接回來的看 /proc 的 started_at_ticks 還對不對
 //               row：寫進 procs_state 的那一列
@@ -25,6 +26,9 @@
 #include <sys/types.h>
 
 namespace aos::daemon {
+
+// 內嵌單子寫進小格之前：只把 $ref 的檔名改成相對小格。
+Json rel_refs(const Json& v, const std::string& cell);
 
 // 小格裡 daemon 自己寫的三個檔名（11-04，four-elements 題 6，使用者「是否能在json中設置？但默認用這些名」）：daemon.json 頂層
 // procs_loop／procs_exec／procs_stderr，沒寫＝下面的預設；daemon 在 procs_state.json 頂層回報同名欄，讀小格的人從窗拿、不寫死。暫存檔＝「.」＋名字。

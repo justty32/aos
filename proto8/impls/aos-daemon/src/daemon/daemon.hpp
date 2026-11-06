@@ -1,10 +1,11 @@
 // daemon.hpp：【daemon】Daemon＝aos-loop 的 Loop 子類別＋一張 proc 的表（10-21 傍晚；11-03 loops／execs 統稱 procs，thinking 2026-11-03-procs）。內部標頭。
 //
-//   daemon.cpp   read_procs（名單：名字規則、指示詞、看寫法分兩種、ws／stack 轉絕對）、建構子（AOS_STACK、procs、adopt、procs_ctl／procs_state／信箱的路徑）、
-//                adopt（running 的對得上 pid 才接；stopped 的列接成 stopped）、tend（對表）、reconcile、term／settle（收不等：SIGTERM 後每圈看一眼、
-//                滿 10 秒 SIGKILL 整群＋它底下自成一群的單子）、halt（daemon 的 stop：往子 loop 的 ctl.json 寫 {"cmd": "stop", "seq": N}）、
-//                hold（daemon 要停的退了：列留成 stopped；收工時收的 loop 型退了：列留成 sleeping）、finish（收掉活著的、等它們退；
-//                還在跑的 loop 型留成 sleeping、stopped 的列照寫進最後一份 state）、drop、log_child
+//   daemon.cpp   建構子、stack 鎖；procs.cpp 解 procs 與合併名單
+//   adopt.cpp    接回上次的表、尋找小格裡活著的子 loop
+//   table.cpp    維護表、log 與 state 寫入結果
+//   tend.cpp     term／halt／hold／settle／look／tend／finish
+//   failure.cpp  整理停止原因；body.cpp 跑 daemon 身體
+//   reconcile.cpp 依期望表起停子項；ctl.cpp 控制窗的名單與集合
 //   windows.cpp  管轄那一對窗：read_procs_ctl（procs_ctl.json）、check_lists、check_once、write_more（procs_state.json）、write_parts／clean_parts（切檔）
 //   mailbox.cpp  信箱（procs_ctl_mailbox）：open_mailbox、take_letters、apply_letter、done_letters
 //
@@ -62,6 +63,9 @@
 #include <vector>
 
 namespace aos::daemon {
+
+// 小格裡有活著的子 loop 時回 pid 與 ticks；adopt.cpp 與 reconcile.cpp 共用。
+std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell, const std::string& loop_name);
 
 // 讀一份 procs（daemon.json 的 procs，procs_ctl 的 procs、procs_added，信的 procs_added 共用）：回 {名字: proc}（照寫的順序）。
 //   寫法：物件 {名字: proc}（拆成好幾份檔＝{"$ref": [檔, …]}，aos-directive 合物件、同名後面的蓋前面的）。
@@ -122,8 +126,8 @@ private:
     void halt(const std::string& name, Child& c);   // daemon 的 stop：往子 loop 的 ctl 寫 {"cmd": "stop", "seq": N}、phase stopping（沒 ctl＝term）
     void hold(const std::string& name, Child& c, const char* phase = "stopped");   // 要留列的退了：印 log、列留成 phase（stopped／sleeping；pid 0、held）
     bool settle(Child& c);                // 收的途中看一眼：退了＝phase stopped、回 true；SIGTERM 過了期限還在＝SIGKILL 整群＋底下自成一群的（只送一次）
-    bool look(const std::string& name, Child& c, bool stop);   // 不調表地看一眼（見 daemon.cpp）；回 true＝結束了、要拿掉
-    void run_body();                      // 11-05：tend 最後跑身體一次（到時間才跑；失敗＝stderr 一行、下一圈再跑，見 daemon.cpp）
+    bool look(const std::string& name, Child& c, bool stop);   // 不調表地看一眼（見 tend.cpp）；回 true＝結束了、要拿掉
+    void run_body();                      // 11-05：tend 最後跑身體一次（到時間才跑；失敗＝stderr 一行、下一圈再跑，見 body.cpp）
     std::string fail_reason(const Child& c) const;   // 11-05：出錯結束留成 stopped 的 reason（英文；起不來／跑到一半掛了＋碼＋小格 stderr 最後一行）
     Child start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws = Json(),
                 const Json& kept_exec = Json(), const Json& kept_def = Json(),

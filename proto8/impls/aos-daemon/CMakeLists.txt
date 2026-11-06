@@ -18,8 +18,22 @@ if(NOT TARGET aos-post)
 endif()
 
 # src/ 底下除了 src/main.cpp 全是函式庫的程式碼（分成 daemon、child、common，見 README）。
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
-list(REMOVE_ITEM SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
+set(SOURCES
+  src/child/child.cpp
+  src/child/refs.cpp
+  src/child/limits.cpp
+  src/daemon/daemon.cpp
+  src/daemon/procs.cpp
+  src/daemon/adopt.cpp
+  src/daemon/table.cpp
+  src/daemon/failure.cpp
+  src/daemon/tend.cpp
+  src/daemon/body.cpp
+  src/daemon/ctl.cpp
+  src/daemon/reconcile.cpp
+  src/daemon/windows.cpp
+  src/daemon/mailbox.cpp
+)
 
 # 函式庫 target＝專案名，STATIC。
 add_library(aos-daemon STATIC ${SOURCES})
