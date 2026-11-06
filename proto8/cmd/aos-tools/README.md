@@ -8,4 +8,4 @@
 
 三種工具（資料夾、JSON、可執行檔）都經 `aos-exec`、arguments 原樣從 stdin 進。`call` 統一把父 `AOS_STACK` 換成 `tools/<登記名>/` 小格；呼叫者只傳自己的 stack，登記格 env 不能蓋掉小格。父沒設時交 aos-exec 給預設。
 
-`add` 可用 `--env-file FILE` 加可重複的 `--envs K=V` 補 hub 變數：檔案先、envs 後，存入登記格的 `env`。檔案相對 add 當下 cwd，存當下內容、call 不重讀；`--override` 整項重寫。工具定義 `env` 列的名稱若當下環境與這次設定都沒有，印一行 warning，仍登記、退 0。`ls --json` 保留完整 tooldef；brain／aos-mcp 給模型時只取 description／parameters，不傳 hub 值。
+`add` 可用 `--env-file FILE` 加可重複的 `--envs K=V` 補 hub 變數：檔案先、envs 後，存入登記格的 `env`。檔案相對 add 當下 cwd，存當下內容、call 不重讀；檔裡的 `${…}` 照命令列那樣，在 add 當下展開（命令列的 `--envs K=${HOME}/x` 由 shell 當場展開，檔案由 aos-tools 照同樣時點展開；檔裡沒大括號的 `$NAME` 照字面存，同 `.env` 格式；使用者 11-06「用${HOME}/...，本來就是在命令行這個階段展開」，[env-portability](../../thinking/2026-11/06/env-portability/README.md#使用者裁定11-06選項框)）；`--override` 整項重寫。工具定義 `env` 列的名稱若當下環境與這次設定都沒有，印一行 warning，仍登記、退 0。`ls --json` 保留完整 tooldef；brain／aos-mcp 給模型時只取 description／parameters，不傳 hub 值。

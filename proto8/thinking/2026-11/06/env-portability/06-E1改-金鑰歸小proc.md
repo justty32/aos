@@ -42,7 +42,7 @@
 
 ## 方向題（給頂層問；推薦放第一）
 
-**Q1-2 `url`、`model` 要不要也跟著搬進小 proc 的定義？**
+**Q1-2 `url`、`model` 要不要也跟著搬進小 proc 的定義？**（**11-06 使用者選「不搬，只搬金鑰 (Recommended)」**：`url`、`model` 留在 kernel.json）
 - **A（推薦）不搬，只搬金鑰**：`url`、`model` 不是密鑰；kernel.json 是人一眼看全部包（代號、模型、價錢、速度）的地方，`aos-llm ls` 也從那裡算；換機器改 `url`（localhost 埠不同）是外接，食譜改 kernel.json 一處。代價：kernel 仍把 `url`／`model` 原樣轉交，「kernel 不經手端點設定」只做到金鑰這一樣。
 - B 連 `url` 一起進小定義（`--url`）：kernel.json 只剩代號與排程屬性。代價：改模型要動兩處（`model` 留不留在 kernel.json 也要再分）、`aos-llm ls` 看不到端點在哪。
 
