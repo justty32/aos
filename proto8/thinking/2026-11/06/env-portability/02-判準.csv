@@ -1,0 +1,7 @@
+criterion,result
+① 值是不是絕對路徑,幾乎全是（aos-exec 的六個、hub 全部）。只要不落檔就沒關係：新機器的 aos-exec／daemon 會重算。
+② 值有沒有被寫進檔,**四處寫進去**：kernel 的 `request.json`（密鑰）、aos-tools 登記檔（env 字面＋絕對 path）、eca 小格的 ws.txt／stack.txt（叫回畫面時讀回）、定義的 `.env`（照文件建議寫絕對 hub）。另一處要注意：在飛的 `proc.json`／`loop.json` 存 endpoint 函數的絕對路徑。daemon 表、children.json、agent 的 stack 都已乾淨（X5）。
+③ 執行期才從環境來的真相會不會換意思,會，但大多是**故意的**（跨樹＝外接，daemon-board 題 1 已裁「搬後由人重設」）。危險的是「沒設不報錯」的兩個：`AOS_KERNEL`（退 daemon ctl 信箱）、`AOS_TICK`（退牆鐘，未實作）——少設一個不會有人發現。
+④ 外層蓋內層會不會讓兩台行為不同,`.env` 外層贏：搬家後新機器殼裡的值蓋過定義裡的——這對可遷移性**是好事**（這台的值由這台給）。反例是 aos-tools 登記格 env **內層贏**（登記的舊值蓋過新機器 export 的），跟 N-59 方向相反，見 05。
+⑤ 密鑰會不會進 image,"**會**：kernel.json 寫 `{""$env"": ""X""}` 本來是對的，但 kernel 解開後明文寫進 `request.json`；`aos-tools add --envs KEY=…` 也是明文。"
+⑥ 哪些只該在 root 層,跨樹的 `AOS_LLM_KERNEL`、`AOS_KERNEL`（指別棵樹時）、`AOS_MEMORY`（絕對時）、PATH、HOME、所有密鑰：只該由人在終端機 export 或 root 層的 `env.sh`，不該出現在樹裡的 `.env`、登記檔、信裡。

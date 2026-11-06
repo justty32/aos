@@ -1,0 +1,19 @@
+var,kind,setter,reader,shape,unset,persisted,verdict,note,src_path
+PATH,外部,人／install.sh 連到 ~/.local/bin,全體；工具用 which aos-tools 找 lib/tool_io.py,路徑串,—,不落檔,要注意,新機器先跑 install.sh；aos 程式不動 PATH（P-39）,../../../../install.sh
+HOME／CLAUDE_CONFIG_DIR／CODEX_HOME,外部,人／系統,py/cli_session.py 找外部 CLI 的 session 檔；cli-tool 沙箱 rw $HOME/.claude,絕對路徑,~/.claude、~/.codex,session 檔在樹外（外部 CLI 自己的）,要注意,eca-claude 類 agent 的對話續接靠樹外的 ~/.claude；搬家不帶＝續不上（外接）,../../../../py/cli_session.py
+TMUX,外部,tmux,aos-eca-screen 刪掉它再起 tmux,—,—,不落檔,安全,,../../../../cmd/aos-eca/bin/aos-eca-screen
+LANG／LC_*／TZ／PYTHON*,外部,系統,aos-sandbox 帶進去,值,—,不落檔,安全,TZ 只影響給人看的時間；期限用毫秒或 tick,../../../../cmd/aos-sandbox/bin/aos-sandbox
+CLAUDECODE 等三個,外部,Claude Code,試驗場 env.sh 把它們 unset,—,—,—,安全,root 層的殼設定（試驗場在 repo 外）,
+"kernel.json 端點 key 的 {""$env"": X}",密鑰（變數名任意）,人 export,aos-llm-kernel scan.cpp 整包解開 → serve.cpp 寫 request.json → llm_http,密鑰,新信 DirectiveBad,明文寫進 kernel stack 的 mailbox/cur/<信>/request.json（644）；睡著照留；答完才刪,有問題,X1：凍住時在飛的信把金鑰帶進 image；醒在沒設金鑰的機器照樣用舊金鑰答完,../../../../impls/aos-llm-kernel/src/serve/serve.cpp
+"任意 {""$env"": X} 指示詞",機制,—,aos-directive env.cpp（定義、沙箱、inst 都能用）,任意,DirectiveBad,解完的值通常不落檔,要注意,定義可以依賴任何變數卻不用宣告；_tooldef.json 的 env 只管工具,../../../../impls/aos-directive/src/env.cpp
+.env 檔（N-59）,機制,定義作者,aos-exec dotenv.cpp,任意,—,.env 在定義裡＝跟 image 走,要注意,外層贏：新機器殼裡的值蓋過 .env；寫 ${AOS_CD}/.. 可搬、寫絕對不可搬；repo 裡目前沒有 .env 檔,../../../../impls/aos-exec/src/env/dotenv.cpp
+_tooldef.json 的 env,宣告,工具作者,aos-tools add（缺的印 warning）,變數名陣列,—,只存名字,安全,好模型：只宣告依賴、不存值,../../../../lib/agent/memory/_tooldef.json
+aos-tools add --envs／--env-file,機制,人／agents 工具,aos-tools call：dict(os.environ， **登記 env),展開後的字面,—,字面值存進 tools.json 或覆蓋層；沒 --overlay 時 path 存絕對,有問題,X2：${HOME} 展開成 /home/guanyu/foo；MY_KEY 明文；搬後 PathMissing；登記的舊值蓋過外面 export 的新值,../../../../cmd/aos-tools/bin/aos-tools
+sandbox.json 的 env 陣列,宣告,沙箱作者,aos-sandbox（--clearenv＋--setenv）,變數名陣列,用預設清單,"只存名字；rw 用 {""$env""} 執行時才算",安全,明列＝整份取代預設（已知邊緣）,../../../../cmd/aos-sandbox/examples/thought-boxed/sandbox.json
+試驗場 env.sh,root 層殼設定,人 source,—,從自己位置算的絕對路徑,—,在 repo 外的試驗場（root 層）,安全,正是 root 例外該有的樣子：搬哪 source 哪,
+寄件人 sender（由 AOS_WS 衍生）,衍生,aos::identity()＝$AOS_WS＞$AOS_STACK＞$AOS_CF＞cwd,aos-llm-kernel budget.senders 與 used.json 的鍵,絕對路徑,—,kernel.json budget.senders 鍵、used.json senders 鍵、在飛的 letter.json／proc.json,要注意,X3（舊執行檔）：ws 搬了上限悄悄失效；b190e00c 起鍵改相對 kernel stack＝agent 跟 kernel 一起搬就對；只搬 agent 那棵（跨樹）仍失效；範本的 /tmp/aos-demo-sender 只是示範,../../../../impls/aos-llm-kernel/src/budget/budget.cpp
+kernel 端點 exec（由 AOS_CD 衍生）,衍生,kernel.json exec 寫相對 → kernel 轉絕對,daemon 醒來照 loop.json 重跑；proc.json 重掛讀回,絕對路徑,—,在飛的 proc.json exec、loop.json argv,要注意,X5 從程式判斷（沒實搬）：凍住時有信在飛＋搬家＝醒來 exec 指舊位置；併 P8 驗,../../../../impls/aos-llm-kernel/src/serve/proc.cpp
+CLI 小格 ws.txt／stack.txt（由 AOS_WS／AOS_STACK 衍生）,衍生,py/cli_session.py note_cell；aos-eca-screen,open_cell 叫回畫面時讀回、照它開 aos-mcp,絕對路徑,—,小格的 ws.txt、stack.txt（mcp.json 每次重寫、不算；transcripts symlink 指 ~/.claude 屬外接）,有問題,程式判斷、未實測：搬家後叫回畫面用舊 ws／stack 開 aos-mcp＝指舊位置或找不到,../../../../py/cli_session.py
+aos-lock holder.json 的 holder（由 AOS_WS 衍生）,衍生,aos-lock,判鎖,絕對路徑,—,鎖資料夾 holder.json,要注意,鎖本來就不是真相（N-67 ④）；T2 改檔案鎖時一併改相對,../../../../impls/aos-lock/src/holder/holder.cpp
+TERM／SUDO_USER／PWD／VCPKG_ROOT／CXXFLAGS,外部,系統／sudo／建置,cli-tool 沙箱；sandbox root/setup.sh；using-aos-agent.sh；cmake,值,各有退路,setup.sh --apply 寫 /etc/sudoers.d（root 層、樹外）,安全,root 層或建置期，不進 image,../../../../cmd/aos-sandbox/root/setup.sh
+AOS_BRAIN_*／AOS_HEAP／AOS_ROSTER／AOS_KERNEL_REPORT／AOS_DAEMON_STACK,退場,—,只剩 archive,—,—,—,安全,不用管,
