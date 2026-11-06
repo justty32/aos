@@ -23,6 +23,8 @@ aos-loop --max 2 loop.json # 每次 `aos-exec -- idle`，旗標蓋過 loop.json 
 
 **轉交的碼**（11-05 stdio-unify R8、D4）：退非 0 時 stderr 有 `aos-loop: error:` 這行＝我錯（退 1）——只有 `aos-loop: error: RunFailed …` 例外：那是身體那次的碼原樣帶回（碼不是 1）；沒有錯誤行（128＋N）＝收到訊號。`aos-loop --help`＝英文說明印 stdout、退 0。
 
+**state 窗多一欄 `responded_at`**（11-06 no-pid P2，[thinking no-pid](../../thinking/2026-11/05/no-pid/README.md)）：最近一次有反應的時間——讀到新的一道 ctl（好壞都算，基準線不算）、身體跑完一次才更新；睡著時不動，不是心跳。之後給上一層 daemon 判 `stuck` 用。細節在 [docs/02 窗](docs/02-窗.md)。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../../wf/STRUCTURE.md) 按標題拆開；本檔留前言與表，各段逐字在下列分檔。

@@ -6,6 +6,7 @@
 //   loop.cpp     serve／main_loop：每次讀 ctl → tend → 停不停 → 睡或跑一次（跑完印一行 log）→ 寫 state（有變才寫）；end、nap、signal_got、say
 //   window.cpp   窗：read_ctl（N-06～N-08：壞的不採用、維持上一份好的、原因記 ctl_warning）、write_state、
 //                write_window（先寫 .名字 再改名）、proc_fields（pid、started_at_ticks、boot_id）、log_line（stdout 一行，11-02）
+//   responded    記最近反應時間：新 ctl（含拒用壞指令）、身體跑完、子類別指定的事件；state 帶 responded_at 並算進變動比較，睡著不更新
 #pragma once
 
 #include "common/common.hpp"

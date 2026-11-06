@@ -13,6 +13,7 @@
 //   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；10-21 傍晚）：
 //                   讀設定（旗標 ＞ 設定檔 ＞ 預設：exec／max／interval_ms／ctl／state）、每次讀 ctl 窗（11-03 起一道指令、新的才照做）→ tend() → 跑一次 → 寫 state 窗（＋write_more；11-02 起有變才寫）、
 //                   --enable-logs 時每跑完一次在 stdout 印一行 log（11-02；11-02 晚改預設不印）
+//                   新 ctl 處理完（含拒用壞指令）、身體跑完一次會更新 responded_at；基準線、檔不在、睡著不更新
 //   write_window    窗的寫法：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
 //   proc_fields     state 裡「這支程式是誰」的欄位 {pid, started_at_ticks, boot_id}（11-02 原 heartbeat：心跳拿掉、recorded_at 收掉）
 //   resolve_keys    設定檔、ctl 的指示詞（10-23 晚：aos 讀的 JSON 都解）：整份先換一層，再把自己讀的那幾格整個解，其他 key 不碰
@@ -162,6 +163,7 @@ struct Defaults {
 // state 只在兩次之間寫，而且有變才寫（11-02）：每次要寫先組好一份（不含 updated_at），跟上一份寫出去的比，counter_runs 不算
 // （比的時候排除，寫出去照帶當下的快照），phase 在 running／waiting 之間換也不算（11-02 晚使用者「running/waiting確實不該算變動」；
 // 寫出去的照帶當下的 phase）；一樣就不碰檔，不一樣才加 updated_at 寫。啟動後第一份、結束那份（帶 code）一定寫。
+// state 的 proc_fields 後帶 responded_at（起來是 null、有反應才更新），算進有變才寫的比較；子類別也能呼叫 responded() 記自己的反應。
 // log（下面）預設不印，--enable-logs 才印。
 // 心跳拿掉（11-02）：睡著時窗不動，判活著看 pid＋started_at_ticks＋boot_id。每次要寫 state 都接著呼叫 write_more（子類別自己的狀態窗，
 // 有沒有變由它自己比）。
@@ -199,6 +201,7 @@ protected:
 
     int fail_line(const std::string& code, const std::string& msg);   // 錯誤行「程式名: error: 代號 原因」（aos::fail；回 1）
     void warn(const std::string& msg);                                // 提醒行「程式名: warning: 句子」（不退出；11-05 stdio-unify R1）
+    void responded();                                               // 記下這次有反應的 UTC 毫秒時間
 
     // 要寫一份 state（沒開 state 窗就不寫；跟上一份一樣也不寫，見上）再呼叫 write_more：phase＝這份的階段，code＝結束碼
     // （null＝還沒結束；非 null＝一定寫）。寫不了丟 StateError（WriteFailed）。
@@ -223,6 +226,7 @@ protected:
     bool log_ = false;            // 印 log（--enable-logs＝true；印不了變回 false）
     bool paused_ = false;         // 暫停中（ctl 的 pause／resume 改它；起來時可能從舊 state 接，11-03）
     bool stopping_ = false;       // 收到過 stop（這次跑完以 0 結束，11-03）
+    Json responded_at_;           // 最近一次有反應的時間（null＝起來後還沒有）
 
 private:
     int main_loop();

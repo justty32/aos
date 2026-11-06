@@ -1,6 +1,7 @@
 // loop.cpp：【engine】Loop 每次怎麼走（說明見 aos/loop.hpp）。
 // 10-23 壓測後：沒有身體時一輪只 tend 一次、只寫一份 state（11-02 起有變才寫，睡著的 daemon 窗不動）。
 // 11-02：有身體時每跑完一次在 stdout 印一行 log（log_line，11-02 晚起 --enable-logs 才印）；心跳（beat）拿掉。
+// 身體 run_once 跑完（不論結束碼）記 responded_at；只有反應事件更新它，沒有身體或在 interval 中不刷新。
 //
 // 訊號：block_signals 擋著的三個訊號排在 kernel 裡；signal_got 兩次之間取出第一個並記住（之後一直回它）；
 // nap 用 sigtimedwait 睡，收到就醒。跑的期間收到的由 run_once 轉給那次、放在 Run::received。
@@ -24,6 +25,10 @@ void Loop::finish() {}
 Json Loop::info() { return Json::object(); }
 std::optional<std::string> Loop::check_ctl(Json&, const aos::Resolved&) { return std::nullopt; }
 void Loop::write_more(const Json&) {}
+
+void Loop::responded() {
+    responded_at_ = aos::utc_now_ms();
+}
 
 int Loop::fail_line(const std::string& code, const std::string& msg) {
     return aos::fail(d_.prog, code, msg);
@@ -112,6 +117,7 @@ int Loop::main_loop() {
             std::string started_at = aos::utc_now_ms();
             try {
                 b = run_once(exec_);
+                responded();
             } catch (const Error& e) {
                 fail_line(e.code, e.msg);
                 return end(1, "done");

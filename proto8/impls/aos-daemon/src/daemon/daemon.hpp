@@ -22,7 +22,7 @@
 // procs_ctl.json 認（N-54）：procs＝整份名單、procs_added、procs_removed、procs_stopped（要停的名字）、procs_started（要起的名字）、seq。
 // 期望表＝（procs_ctl 的 procs，沒寫＝底 want_）＋procs_added－procs_removed；stopped 集合＝底 stopped_＋procs_stopped－procs_started（同名兩邊都寫＝起）。
 // 底（記憶體）：want_＝daemon.json 的 procs（開了信箱再加 adopt 接回、不在上面的，設定記 null）＋信改過的；stopped_＝adopt 接回的 stopped 列＋信改過的。
-// 信（procs_ctl_mailbox）body 認 procs_added、procs_removed、procs_stopped、procs_started，改的是底；壞信原因進 procs_state 的 mailbox_warning。
+// 信（procs_ctl_mailbox）body 認 procs_added、procs_removed、procs_stopped、procs_started，改的是底；ping 必須是 true，只回信、不改底；壞信原因進 procs_state 的 mailbox_warning。
 // procs_stopped／procs_started 裡有 exec 型（exec 型只有跑和拔）＝procs_ctl 整份不採用（ctl_warning）／壞信；不在期望表的名字＝不管。
 // 四態（procs § 0、§ 2c；ctl-commands § 5）：running（表上、活著）、stopping（收的途中）、stopped（表上、行程不在、stack 留著）、表上沒有；
 //   11-03 多一態 sleeping（procs § 8 sleep／wake）：daemon 收工（ctl 的 stop、SIGTERM／SIGINT）時還在跑的 loop 型＝SIGTERM 收掉、列留成 sleeping
@@ -36,7 +36,8 @@
 //   進 stopped 集合（start 才再起）；exec 型、接回的（拿不到碼）照舊拿掉。
 //   同名改寫法：已在跑的不重起（N-54）。
 // procs_state.json＝{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox（11-04：名字回報，沒開信箱＝null）,
-//   procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫；
+//   daemon（上一層的 AOS_DAEMON，根或指自己＝null）, responded_at, procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫；
+// state.json 也有 daemon；兩扇窗的 responded_at 記最近一次有反應（收信、採用不同的 procs_ctl、起／收子項、身體跑完），睡著不刷新。
 // 每列 {pid, started_at_ticks, phase（running／stopping／stopped／sleeping）, code, signal, stack, exec, def, reason, ws?, limits?（11-05：生效的份額）}（exec 11-04 晚：起它時的目標，見 exec_of；def 11-04：見 def_of）；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
 // ctl 的 stop（這圈收工）或 pause（整圈暫停）時不調表：不收多的、不起少的、起停也等解除，但照讀兩份 ctl、照寫兩扇 state、照收已在收的、照記自己結束的。
 // log（--enable-logs 才印到 stdout）：行程起來一行、結束一行 {"at", "name", "phase"（running／done／stopped／sleeping）, "pid", "code", "signal", "ws"?}。
@@ -103,7 +104,7 @@ protected:
     void tend() override;
     void finish() override;
     void write_more(const Json& me) override;   // procs_state.json（沒開＝不寫；有變才寫，11-02）
-    Json info() override;                       // 11-05：有身體＝state 多一欄 body_code（最後一次的結束碼）
+    Json info() override;                       // state 的 daemon（上一層）；有身體再加 body_code（最後一次的結束碼）
     // 11-05（edge-round2 題 1）：兩扇狀態窗寫不了＝stderr 一行（變了才印）、下一圈再寫，不收工；起來後一份都還沒寫成＝照舊退 1
     void write_state(const std::string& phase, const Json& code) override;
 
@@ -156,6 +157,7 @@ private:
     Json limits_;                                        // daemon.json 頂層的 limits（沒寫 limits 的列用的預設；null＝不限；11-05 feat-proto 件 5）
     std::string cwd_;                                    // 子項的 cwd＝daemon 起來時的 cwd
     std::string dstack_;                                 // 給子項的 AOS_DAEMON＝stack_ 轉絕對、結尾 /；預設小格也從它拼
+    Json parent_;                                        // 繼承的 AOS_DAEMON 字串；沒設、空或指自己＝null
     std::string pctl_path_;                              // procs_ctl.json（空＝不開）
     std::string pstate_path_;                            // procs_state.json（空＝不開）
     Json pctl_good_ = Json::object();                    // 最後一份好的 procs_ctl（一份都沒讀到過＝{}）

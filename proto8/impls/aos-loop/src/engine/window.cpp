@@ -6,9 +6,10 @@
 //                 max／interval_ms 寫了才改、null 回設定檔的值；ctl_seq 回音這道的 seq）。起來第一次讀到的＝基準線、不執行（殘留的 stop 不會讓新起的退）。
 //                 讀到新的壞的（讀不了、不是 JSON 物件、型別不對、cmd 不認得、指示詞解不開）整份不採用、維持原狀，原因記 ctl_warning（N-08）；
 //                 照做了一道好的清回 null（check_ctl 填了 ctl_note_＝那一句）。檔不在＝沒有新指令、維持原狀（之後再寫的一律算新的）。讀的人不刪不改 ctl
+//                 新的好壞指令處理完都算有反應（responded）；起來第一次的基準線、檔不在不算
 //   read_old_paused  起來時：開了 state 窗、舊的 state.json 是物件而且 paused 是 true＝起來先暫停（11-03 代定，使用者四態「繼續暫停」）；其他欄位不接
 //   write_state   state 一份：phase、counter_runs（跑過幾次；10-25 原 runs、同日再改 counter_runs）、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 的指令改過之後）
-//                 ＋info()＋code（結束時）＋proc_fields＋updated_at（11-02：kind、recorded_at 拿掉，updated_at 最後一欄）；沒開 state 窗就不寫；
+//                 ＋info()＋code（結束時）＋proc_fields＋responded_at＋updated_at（updated_at 最後一欄）；responded_at 算進變動比較，沒開 state 窗就不寫；
 //                 有變才寫（11-02）：組好的這份（不含 updated_at、counter_runs；running／waiting 互換當沒變，11-02 晚）跟上一份寫出去的一樣就不碰檔；第一份、帶 code 的一定寫；
 //                 接著呼叫 write_more（子類別的窗，自己比有沒有變；10-29）。11-02 拿掉 beat（每秒的心跳）
 //   log_line      stdout 一行 JSON（11-02；11-02 晚起 --enable-logs 才印）：一次 write；寫的那一下擋 SIGPIPE、排著的吃掉、還原遮罩；印不了＝之後不印、不退出
@@ -143,6 +144,7 @@ void Loop::read_ctl() {
         ctl_last_ = seen;
         if (!first && fresh && err != ENOENT) {
             ctl_warning_ = std::string("ctl: cannot read or not JSON: ") + std::strerror(err);
+            responded();
         }
         return;   // 檔不在＝沒有新指令（之後再寫的都算新的）
     }
@@ -176,6 +178,7 @@ void Loop::read_ctl() {
     }
     if (bad) {
         ctl_warning_ = (doc.is_discarded() ? "ctl: " : "ctl rejected: ") + *bad;
+        responded();
         return;
     }
     // 照做一次。stop 壓過同一道裡的其他東西（N-07 stopped 壓過 paused，11-03 照舊）
@@ -195,6 +198,7 @@ void Loop::read_ctl() {
     }
     ctl_seq_ = doc.contains("seq") ? doc["seq"] : Json();
     ctl_warning_ = ctl_note_.empty() ? Json() : Json(ctl_note_);   // 照做了但子類別要提醒的（10-29 daemon 過渡期）
+    responded();
 }
 
 void Loop::read_old_paused() {
@@ -245,6 +249,7 @@ void Loop::write_main(const std::string& phase, const Json& code, const Json& me
     for (auto& [k, v] : me.items()) {
         doc[k] = v;
     }
+    doc["responded_at"] = responded_at_;
     // 有變才寫（11-02）：counter_runs 不算變動（使用者「對」）——比的時候拿掉，寫出去照帶當下的快照
     Json key = doc;
     key.erase("counter_runs");

@@ -10,6 +10,7 @@
 // 不論為什麼結束都先 finish()（收掉活著的子項；stopped 的列留著；還在跑的 loop 型退了列留成 sleeping，11-03 sleep／wake），Loop 再寫好 state。
 // adopt：起來時讀自己上次的 procs_state，phase running、pid＋started_at_ticks 對得上的直接放回表上、不重起（N-17）；phase stopped 的列接成 stopped（不起、不判活）、名字進底的 stopped 集合；
 //   phase sleeping 的列接成 sleeping（不判活）、不進 stopped 集合＝第一次 reconcile 照 start 那條用列上的 stack 再起（wake）。
+// 起來先保存繼承的 AOS_DAEMON 作兩扇窗的 daemon（根或指自己＝null），再蓋成自己的 stack；起／收子項與身體跑完才更新 responded_at。
 #include "daemon/daemon.hpp"
 #include "child/limits.hpp"
 
@@ -384,6 +385,21 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
     if (dstack_ != "/") {
         dstack_ += "/";
     }
+    const char* inherited = std::getenv("AOS_DAEMON");
+    if (inherited != nullptr && inherited[0] != '\0') {
+        parent_ = std::string(inherited);   // 上一層照字面留；解不開也不改寫
+        std::error_code parent_ec;
+        std::error_code self_ec;
+        std::string own_stack = dstack_;
+        if (own_stack.size() > 1 && own_stack.back() == '/') {
+            own_stack.pop_back();
+        }
+        std::filesystem::path parent_real = std::filesystem::canonical(inherited, parent_ec);
+        std::filesystem::path self_real = std::filesystem::canonical(own_stack, self_ec);
+        if (!parent_ec && !self_ec && parent_real == self_real) {
+            parent_ = nullptr;   // 人殼把 AOS_DAEMON export 成自己：上一層不可能是自己
+        }
+    }
     // 11-05（kernel-daemon 02 § 1 模式 1「繼承式」、06 步 1）：daemon 自己的身體（exec）也拿得到 AOS_DAEMON＝自己的 stack——
     // 身體是 daemon 起的，照 N-64 ④ 同一句；判官／llm kernel 當身體時靠它找自己這台的 ctl 信箱。子項照舊在 run_child 一律蓋過去。
     setenv("AOS_DAEMON", dstack_.c_str(), 1);
@@ -592,6 +608,7 @@ void Daemon::add(const std::string& name, const Child& c) {
     if (!c.held) {
         log_child(name, c);   // 起來（或 adopt 接回）一行；stopped 的列沒有行程，不印
     }
+    responded();
 }
 
 void Daemon::log_child(const std::string& name, const Child& c) {
@@ -622,6 +639,7 @@ Daemon::Table::iterator Daemon::drop(Table::iterator it) {
     stopped_.erase(n);   // 表上沒有了＝對 daemon 不存在：底的 stopped／slept 集合也不留它
     slept_.erase(n);
     index_.erase(n);
+    responded();
     return table_.erase(it);   // 小格（stack）留著
 }
 
@@ -715,6 +733,7 @@ void Daemon::hold(const std::string& name, Child& c, const char* phase) {
     c.killed = false;
     c.pid = 0;
     c.started_at_ticks.reset();
+    responded();
 }
 
 bool Daemon::settle(Child& c) {
@@ -941,6 +960,7 @@ void Daemon::run_body() {
         b.code = 1;   // 起不來（LaunchFailed、單子壞……）：Loop 原本也是以 1 收工
         bad = e.code + " " + e.msg;
     }
+    responded();   // 起不來也有回應；訊號收工那條也要記下
     body_next_ = Clock::now() + std::chrono::milliseconds(interval_ms_);
     if (b.received != 0) {
         kill(getpid(), b.received);   // 三個訊號擋著：排回去，Loop 兩次之間取出
@@ -968,6 +988,7 @@ void Daemon::run_body() {
 
 Json Daemon::info() {
     Json o = Json::object();
+    o["daemon"] = parent_;
     if (has_body_) {
         o["body_code"] = body_code_;   // 11-05：身體最後一次的結束碼（null＝還沒跑過）
     }
