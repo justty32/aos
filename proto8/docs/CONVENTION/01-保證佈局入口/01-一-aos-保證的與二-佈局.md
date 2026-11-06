@@ -17,7 +17,7 @@ agent-bob/                 一個 agent＝一個資料夾程式（§ 1）
   idle/_entry               格：new/ 有題→0 往下走；沒題→10 請 loop 停（P-19）
   brain.py                 think 格的身體（單子 python3 brain.py，stdout 導到 $AOS_STACK/plan.txt、逾時 120 秒）：
                            取一題、從 new/ 搬到 cur/ 認領（P-12）、題名寫 stack 的 current.txt、問腦（假腦或 OpenAI 相容端點，P-23；11-04 晚起問腦＝寄信給 llm kernel），答案印 stdout
-  act/_entry                格：把 plan.txt 當題目交給 tools/cathy，拿她的答案寫 $AOS_WS/out/、題目從 cur/ 搬 done/（P-24、P-32）
+  act/_entry                格：把 plan.txt 當題目交給 tools/cathy，拿她的答案寫 $AOS_WS/out/、題目從 cur/ 搬 done/（P-24）
   act/tools/cathy/         act 的工具＝另一隻完整 agent，同一套範本（_entry、loop.json、fsm.json、idle/、brain.py、act/）；
                            act 裡寫 aos-exec tools/cathy（P-33）
   act/tools/cathy/act/tools/stamp/   cathy 的 act 的工具：stdin 前面加一行時間戳印出來、自己 stack 裡 runs.txt 計次
@@ -28,11 +28,13 @@ workspace/                 ＝$AOS_WS，使用者的（§ 2）
   out/<題名>               答案：跟題目同名
   done/<題名>              做完的題目從 cur/ 搬來這
   .stack/                  預設 $AOS_STACK（§ 2）＝bob 的 stack：stage.txt、current.txt、plan.txt（P-16）
-  .stack/tools/cathy/      cathy 的小格＝她的 stack（P-32）：stage.txt、current.txt、plan.txt
+  .stack/tools/cathy/      cathy 的小格＝她的 stack（P-17）：stage.txt、current.txt、plan.txt
   .stack/tools/cathy/ws/   cathy 的工作區（bob 備好題目、拿答案的地方）：new/ cur/ out/ done/
   .stack/tools/cathy/tools/stamp/runs.txt  stamp 的小格（P-17）
 ```
 
 stack 樹就是呼叫樹：`.stack/tools/cathy/tools/stamp/` 一眼看出「bob 叫了 cathy、cathy 叫了 stamp」（P-38、P-17）。
+
+**11-06 註**：樹裡 `.stack/tools/cathy/ws/` 是當時照 P-32 的擺法（bob 明給 `--ws`）；P-32 已移除（使用者 11-06「移除P-32」），現行沒給工作區就沿用呼叫方的 `AOS_WS`，要另放才明給 `--ws`。
 
 **11-06 註（已定，未實作）**：我們自己的 `daemon.json` 範本（試驗場、templates、kernel）預設寫 `tick: true`；aos-daemon 程式預設不帶、不強制。使用者 11-06 daemon-board「兩題都按照推薦。」；實作排在 T7，範本與 daemon 的 `tick` key 展開同一個 commit（[daemon-board 04](../../../thinking/2026-11/06/daemon-board/04-凍住後要能遷移-續.md)）。**已實作（11-06 T7）**：`kernel/llm-kernel`、`kernel/daemon-judge` 的 daemon.json 已寫 `tick: true`；使用者的試驗場（repo 外）還沒改（[tick-time 04](../../../thinking/2026-11/05/tick-time/04-T線實作結果.md)）。

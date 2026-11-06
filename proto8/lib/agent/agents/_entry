@@ -13,7 +13,7 @@
 #       先寫進同層暫存資料夾再改名；掛不上＝把剛寫的資料夾刪掉（全有或全無，規則 6）。
 #   add {name, def, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?}  生法 (b) 用現有定義：def 直接掛（aos-agent ctl add），llm／tools／tools_rm 走
 #       這隻子的覆蓋層（aos-agent llm set／tools add --override／tools rm，stack 只存差異、定義不動、不複製）；後面幾步失敗＝ctl rm 收回。
-#   兩種都：ws＝子的工作區，相對＝從我的 $AOS_WS 算、絕對＝照用，沒給＝我的 $AOS_WS（代定：沿用父的），不在先建；limits 原樣轉 --limits。
+#   兩種都：ws＝子的工作區，相對＝從我的 $AOS_WS 算、絕對＝照用，沒給＝我的 $AOS_WS（沿用父的；使用者 11-06 已定），不在先建；limits 原樣轉 --limits。
 #       成功只印 added <name> (stack …); children N/MAX，不把下層提醒行接進給腦的結果；下層 stderr 仍原樣透出。
 #   new／add／rm：ctl_timeout_s＝等 daemon 掛上或移除的秒數，預設 30、上限 1700；子行程保險至少多 30 秒。
 #   say {name, text}           寄一句（aos-agent say，話走 stdin）、馬上回，印信件名稱

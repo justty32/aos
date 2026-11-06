@@ -79,7 +79,7 @@ D77,G99,C-73 放寬 C-68：JSON 入口不必可執行,proto8/docs/CONCEPTS/01-�
 D78,G12,C-61 工具不用 PATH 的例外：aos 自己的指令,proto8/docs/CONCEPTS/05-agent/02-agent-的工具與agent-就是一台狀態機.md:7（C-61）,工具不走 PATH，由 tools.json 或相對路徑找,aos-exec、aos-loop、aos-fsm 在入口直接寫指令名，由呼叫者放進 PATH,使用者原話「也套用，都不動path吧」,那是 aos 的指令、不是工具,輕：入口寫死 aos 指令名,輕,輕：新機器要裝好 PATH,是,強,,
 D79,G13,C-51 固定名字可以但限縮範圍,proto8/docs/CONCEPTS/01-設計理念/02-C-51.md:4（C-51）,名字由檔或 argv 指定、不寫死,允許一個固定入口（_entry），其餘由它指定,使用者原話「固定，是可以的，但建議線限縮範圍」,要有一個起點,否,輕,否,否,弱,I17,
 D80,G15,aos-tick 例外：仍是 Python,proto8/docs/CONVENTION/05-不管落實待決.md:7（CONVENTION 十／C-51 層表）,只有 impls 的 C++ 版,aos-tick 先留 Python（cmd/）,使用者裁（頂層問、選 tick 先留 Python）,先不重寫,否,輕,否,輕,弱,,
-D81,G15,P-32 被叫者沿用呼叫方 AOS_WS 只有一種情況,proto8/docs/CONVENTION/06-巢狀/01-P-32～P-34.md:7（P-32）,被叫者的工作區在呼叫方小格裡，stack 與 ws 都明給,說明寫明要動呼叫方工作區（C-66）才沿用呼叫方 AOS_WS,不明（ideas § 10）,不弄髒使用者工作區,否,輕,否,否,強,,
+D81,G15,P-32 被叫者沿用呼叫方 AOS_WS 只有一種情況,proto8/docs/CONVENTION/06-巢狀/01-P-33～P-34.md:7（P-32）,被叫者的工作區在呼叫方小格裡，stack 與 ws 都明給,說明寫明要動呼叫方工作區（C-66）才沿用呼叫方 AOS_WS,不明（ideas § 10）,不弄髒使用者工作區,否,輕,否,否,強,,
 D82,G09,agents new／add 沒給 ws＝沿用父的 AOS_WS,proto8/docs/CONCEPTS/05-agent/01-續-C-42.md:12（C-42）,P-32 被叫者不沿用呼叫方 AOS_WS,生子 agent 沒給 ws 就沿用父的 $AOS_WS,代定（隊長代定、可翻案）,工作區「不要固定」,輕,是,否,是：與 P-32 預設相反,強,P28,
 D83,G02,N-42 兩隻 kernel 不併,proto8/docs/NORMS/09-kernel.md:5（N-42）,能併就併（KISS）、一詞一義,LLM kernel 與通用 kernel 分兩支（AOS_LLM_KERNEL、AOS_KERNEL 兩變數）,使用者原話「兩隻kernel不併成一支。」,職責不同,否,輕,否,是：問腦與掛 proc 兩條 kernel 路,弱,,
 D84,G08,N-38 fsm 收到訊號的例外,proto8/docs/NORMS/07-基礎設施-組合子/02-N-38～N-41.md:3（N-38）,出錯 state 不動、以格的碼退出,fsm 收到 SIGINT／TERM／HUP：轉給格、等格跑完照寫 state，再以 128＋N 結束,不明（ideas § 24）,收工時不丟掉這格的成果,否,輕,否,否,強,,
