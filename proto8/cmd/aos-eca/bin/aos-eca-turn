@@ -40,8 +40,9 @@
   --on-busy yield 時 SessionBad（拿不到格的 lock：另一次呼叫或 attach 正在開畫面；有人接在 tmux 畫面上；busy.txt 在＝畫面正在跑一輪）
     ＝還沒交出去：這次退 0 不動、整批信留在 cur/、history 不動，下一次再試（interval_ms）；--on-busy answer 不退讓（見上）。
   人在畫面上自己打的話不進 history（沒經 queue；eca 方向題 2）。
-  11-04 起不寫 $AOS_STACK/eca.json（名片沒人讀了：aos-eca 刪了，aos-agent 從 daemon 表的 exec 欄找定義；thinking 2026-11-04 aos-agent 05）。
---one（工具形，P-41 工具契約）：stdin {"prompt"} → stdout 回答，對話在 $AOS_STACK 這格本身（cli_session.call_main，跟 lib/agent/claude 同一條路）；
+  11-04 起不寫 $AOS_STACK/eca.json（名片沒人讀了：aos-eca 刪了，aos-agent 從 daemon 表的 def 欄找定義；thinking 2026-11-04 aos-agent 05）。
+--one（工具形，P-41 工具契約）：stdin {"prompt"} → stdout 回答，對話在 $AOS_STACK 這格本身（cli_session.call_main，需有效的 $AOS_WS）；
+  lib 的 claude／codex 走 lib/agent/agent_tool.py 的 ask_cli，與這裡共用 cli_session.ask。
   --on-busy 照認（yield 時 SessionBad 照錯退 1）；跟 --on-empty 一起給＝ArgumentsBad（工具形沒有 queue）。
   錯照 lib 契約 stderr 與 stdout 各一行「<定義資料夾名>: 代號 原因」、退 1。
 PATH 上要有 aos-post（平級形）。
@@ -294,7 +295,7 @@ def main():
         if not os.path.isfile(prompt):
             die("PromptMissing", "--prompt file not found: %s" % prompt)
     if opts.get("one"):
-        cli_session.call_main(template, busy)                      # 工具形：跟 lib/agent/claude、codex 同一條路
+        cli_session.call_main(template, busy)                      # --one 專用入口；lib 的 ask_cli 與它共用 cli_session.ask
         return
     stack = os.environ.get("AOS_STACK")
     if not stack:

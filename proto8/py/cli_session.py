@@ -16,9 +16,6 @@
 #                 agent 叫的工具格也建，方向題 3）；一直是 symlink（11-02 晚 aos-eca 不再歸檔，freeze_transcripts 拿掉；
 #                 CLI 會自己清舊對話，要留的人自己複製）
 #
-# 不再登記（10-30 eca 衝突 6）：10-28 起每用到一格就送一行 register 給 $AOS_HUB 的 aos-hub-kernel，現在刪了——
-# 沒有 kernel，「只登記的實例」這個分類消失；工具叫的格是那隻 agent 的事（C-52），要看去看那隻 agent 自己的 stack。
-#
 # 兩條路（每次呼叫自己挑）：
 #   畫面沒開 → 非互動：claude -p --resume <id>（第一次 --session-id <新 id>）、codex exec resume <id> -（第一次 codex exec -）
 #   畫面開著 → 從 pty 送字：tmux paste-buffer 貼上＋Enter，等 hook 在 turns.jsonl 接一行（有人接著看、或 claude 正在跑一輪＝SessionBad；
@@ -33,11 +30,11 @@
 #   模型（11-04 晚 think-as-function 03 § 2）：cli.json 同層的 llm.json（定義）疊 $AOS_STACK/llm.json（副本）的 model＝flags 的 --model（換掉或加在尾）；都沒有＝flags 原樣。
 # 開場白不歸這層（11-04 翻案，使用者「不該在json中指定檔案名稱，應該改成用旗標指定」）：是 aos-eca-turn 的 --prompt FILE；
 #   cli.json 寫了 prompt 跟其他沒認的鍵一樣不看。
-# 錯：當工具叫（call_main）時照 lib 契約 stderr 與 stdout 各一行「工具名: error: 代號 原因」、退 1；attach 與 hook 是 stderr 一行「cli_session: error: 代號 原因」、退 1。
+# 錯：aos-eca-turn --one（call_main）照 lib 契約 stderr 與 stdout 各一行「工具名: error: 代號 原因」、退 1；attach 與 hook 是 stderr 一行「cli_session: error: 代號 原因」、退 1。
 #   CLI（claude／codex）與 tmux 自己的 stderr 原樣透到 stderr、不塞進自己的錯（stdio-unify R10）；stdout 只有自己那一行（D2）。
 #   給人看的狀態句（attaching、等對話空出來）是提醒行「cli_session: warning: …」（R1、D5）。工具形認 --help（英文說明印 stdout、退 0）、Ctrl-C 退 130。
 #
-# 放哪：proto8/py/cli_session.py，lib/agent 的 claude、codex 兩個工具共用（用 realpath 找到這層再 import）；
+# 放哪：proto8/py/cli_session.py；lib/agent 的 claude、codex 經 agent_tool.py 的 ask_cli 共用 ask，call_main 只給 aos-eca-turn --one；
 # 掛它的 agent 根目錄可以放一份 cli_session.py（或捷徑）給 attach 用（原本的例子 demo/agent-fay 11-03 晚刪了）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
 import datetime, fcntl, glob, json, os, shlex, shutil, signal, subprocess, sys, threading, time, uuid
@@ -217,8 +214,7 @@ class Cell:
 
 
 def note_cell(cell, tool_dir, ws, stack):
-    """記下這格是哪個工具、哪個工作區、哪個 stack（tool.txt、ws.txt、stack.txt〔11-03 eca-tools〕；open_cell 叫回畫面要）。寫不成不擋正事。
-    10-30 前叫 register，還會送一行給 $AOS_HUB 的 kernel；那段刪了（eca 衝突 6）。"""
+    """記下這格是哪個工具、哪個工作區、哪個 stack（tool.txt、ws.txt、stack.txt〔11-03 eca-tools〕；open_cell 叫回畫面要）。寫不成不擋正事。"""
     try:
         for name, value in (("tool.txt", tool_dir), ("ws.txt", ws), ("stack.txt", stack)):
             if cell.read(name) != value:
@@ -429,7 +425,7 @@ def live(cfg, cell, prompt, on_busy="yield", handed=None):
 def ask(cfg, cell, tool_dir, ws, stack, prompt, on_busy="yield", handed=None):
     """問 CLI 一句 → 回答文字：記下這格（note_cell）→ 拿格的 lock（拿不到：on_busy＝yield（預設）＝SessionBad、
     answer＝等到拿到，同 open_cell）→ 畫面開著走 live（on_busy 照傳）、沒開走非互動
-    → 建 transcripts symlink。工具形（call_main）與 aos-eca-turn 共用這一段（10-30 eca 第 5 步抽出來）。
+    → 建 transcripts symlink。lib/agent/agent_tool.py 的 ask_cli 與 aos-eca-turn（含 --one 的 call_main）共用這一段。
     tool_dir＝cli.json 所在的資料夾（工具資料夾或 eca 定義）；ws＝CLI 的 cwd（絕對路徑）；stack＝給 aos-mcp 的 --stack
     （平級形＝那隻 eca 的 $AOS_STACK、工具形＝這格本身；11-03 eca-tools）。handed＝選填、不帶參數的函式：題目交給 CLI 的那一刻叫一次
     （非互動＝CLI 起來、題目寫進去；畫面＝貼上按 Enter），在等回答之前（11-03 aos-eca-turn 在這一刻收信；工具形不給）。錯一律走 die
@@ -456,6 +452,7 @@ usage: %(name)s < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_STACK is 
 Hand the prompt to the %(name)s CLI and print its answer; the conversation goes on in this
 tool's cell (session.txt), and a person can attach to its screen (aos-agent attach).
 How the CLI is called (flags, timeout_ms, tools) is in cli.json next to _entry.
+AOS_WS is required and must be a directory.
 Arguments: one JSON object on stdin:
   prompt  string, required
 Result on stdout. On error: one line "%(name)s: error: CODE reason" on stderr and stdout, exit 1
@@ -464,8 +461,8 @@ Result on stdout. On error: one line "%(name)s: error: CODE reason" on stderr an
 
 
 def call_main(tool_dir, on_busy="yield"):
-    """工具入口：stdin {"prompt": "..."} → stdout 回答。tool_dir＝工具資料夾（cli.json 在裡面；名字＝資料夾名）。
-    on_busy 照傳給 ask（lib/agent/claude、codex 用預設 yield；aos-eca-turn --one 照它的 --on-busy）。"""
+    """aos-eca-turn --one 入口：stdin {"prompt": "..."} → stdout 回答。tool_dir＝定義資料夾（cli.json 在裡面；名字＝資料夾名）。
+    on_busy 照 --on-busy 傳給 ask；lib 的 claude／codex 改由 agent_tool.py 的 ask_cli 呼叫 ask。"""
     global PROG, ECHO
     PROG, ECHO = os.path.basename(tool_dir), True
     if "--help" in sys.argv[1:]:                         # --help：英文說明印 stdout、退 0（stdio-unify R3）
@@ -473,9 +470,12 @@ def call_main(tool_dir, on_busy="yield"):
         sys.exit(0)
     signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
     cfg = load_cfg(tool_dir)
-    stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS", ".")
+    stack, ws = os.environ.get("AOS_STACK"), os.environ.get("AOS_WS")
     if not stack:
         die("StackMissing", "AOS_STACK is not set")
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "AOS_WS is not set or not a directory")
+    ws = os.path.realpath(ws)
     try:
         args = json.loads(sys.stdin.read() or "{}")
     except ValueError:
@@ -483,7 +483,7 @@ def call_main(tool_dir, on_busy="yield"):
     if not isinstance(args, dict) or not isinstance(args.get("prompt"), str) or not args["prompt"].strip():
         die("ArgumentsBad", "missing prompt (a non-empty string)")
     cell = Cell(stack)                                   # 工具形：對話在這格本身，aos-mcp 的 stack 也是它（它叫的工具再疊 tools/<名>/）
-    text = ask(cfg, cell, os.path.abspath(tool_dir), os.path.abspath(ws), cell.path, args["prompt"], on_busy)
+    text = ask(cfg, cell, os.path.abspath(tool_dir), ws, cell.path, args["prompt"], on_busy)
     sys.stdout.write(text if text.endswith("\n") else text + "\n")
 
 
