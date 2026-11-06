@@ -6,8 +6,11 @@
 # 介面（lib/docs/01 的契約）：stdin 一份 {"op": "new"|"add"|"say"|"ask"|"rm"|"ls", ...}：
 #   new {name, path, from?, files?, llm?, tools?, tools_rm?, ws?, limits?}  生法 (a) 產出新定義：from（範本資料夾）整份複製到 path
 #       （工作區裡、還不在的資料夾），再寫 files（{相對路徑: 全文}，整份自己寫＝不給 from、只給 files）、llm（鍵併進定義的 llm 檔）、
-#       tools／tools_rm（改定義的 tools 檔：加 {name, path}、拿掉名字）；寫完是普通定義資料夾、可再用 add 掛。複製時 tools 檔裡的相對 path
-#       改寫成絕對（原本從範本的位置算，搬走就斷）。先寫進同層暫存資料夾再改名；掛不上＝把剛寫的資料夾刪掉（全有或全無，規則 6）。
+#       tools／tools_rm（改定義的 tools 檔：加 {name, path}、拿掉名字）；寫完是普通定義資料夾、可再用 add 掛。tools 檔裡的 path 一律存
+#       相對「新定義裡那份 tools 檔的資料夾」（aos-tools 讀手寫相對路徑就從那裡算；整棵樹搬家不斷，N-67 ①、os-impl A19）：複製來的相對
+#       path 原本從範本那份算，換算成從新位置走回同一個目標（指範本裡的工具也指回範本那份，不指複本：複本裡的相對捷徑深度變了會斷）；
+#       複製來的絕對 path 照抄；tools 參數加的也存相對。只做字串換算、不 realpath，對最終位置算（暫存資料夾跟最終位置同層）。
+#       先寫進同層暫存資料夾再改名；掛不上＝把剛寫的資料夾刪掉（全有或全無，規則 6）。
 #   add {name, def, llm?, tools?, tools_rm?, ws?, limits?}  生法 (b) 用現有定義：def 直接掛（aos-agent ctl add），llm／tools／tools_rm 走
 #       這隻子的覆蓋層（aos-agent llm set／tools add --override／tools rm，stack 只存差異、定義不動、不複製）；後面幾步失敗＝ctl rm 收回。
 #   兩種都：ws＝子的工作區，相對＝從我的 $AOS_WS 算、絕對＝照用，沒給＝我的 $AOS_WS（代定：沿用父的），不在先建；limits 原樣轉 --limits。
@@ -17,7 +20,8 @@
 #   rm {name}                  ctl rm（刪子的 stack；aos-agent 的保護規則照舊）
 #   ls                         一行 JSON {"agents": ctl ls --json 的表, "children": [我生的名字], "max_children": N}
 # 配額（工具自己數，不寄信）：我生的記在工具小格 $AOS_STACK/children.json（[{"name", "stack"}]，P-17、規則 8；在父的 stack 底下）；
-#   每次叫先對帳（ctl ls --json：名字與 stack 都對得上表上那列才算還在，別處 rm 掉的就忘掉）。new／add 前已有 max_children 隻＝
+#   stack 存相對 $AOS_DAEMON（解開捷徑後，同 daemon 表的基準；N-67 ①，搬家不忘小孩）。
+#   每次叫先對帳（ctl ls --json：名字對得上、stack 從 $AOS_DAEMON 拼回後也對得上表上那列才算還在，別處 rm 掉的就忘掉）。new／add 前已有 max_children 隻＝
 #   ChildSlotMissing、退 1、不寄任何信。max_children 從工具設定 agents.json 讀：我的定義裡那份（ctl who --json 的 def）疊我的 stack 裡那份
 #   （只放改過的鍵，同 llm.json）；都沒有＝4（代定，同範本）。判官（AOS_KERNEL 的 max_running）照舊是整台 daemon 的第二道關。
 # 路徑：def、from、tools 的 path 相對從 $AOS_WS 算、絕對照用（定義放哪都行，portable-flow）；寫的 path 與 files 一定在工作區裡（PathBad）。
@@ -158,6 +162,13 @@ def read_path(p, what):
     return os.path.realpath(p if os.path.isabs(p) else os.path.join(workspace(), p))
 
 
+def lex_path(p, what):
+    """tools 的 path：相對從工作區算、絕對照用；只字串拼（不解開捷徑，之後要換算成相對）。"""
+    if not isinstance(p, str) or not p:
+        die("ArgumentsBad", "%s must be a non-empty string" % what)
+    return os.path.normpath(p if os.path.isabs(p) else os.path.join(workspace(), p))
+
+
 def write_path(p, what):
     """寫的路徑（new 的 path）：相對從工作區算，解開後要在工作區裡。"""
     real = read_path(p, what)
@@ -200,14 +211,24 @@ def write_children(kids):
     write_json(children_path, kids)
 
 
+def stack_rel(p):
+    """表上的（絕對）stack → 存進 children.json 的：相對 $AOS_DAEMON 的真實路徑（daemon_ctl 拼表也是從那裡）。"""
+    return os.path.relpath(os.path.normpath(p), daemon_base)
+
+
+def stack_abs(rel):
+    """children.json 的 stack → 拼回絕對，跟 ctl ls --json 表上的比。"""
+    return os.path.normpath(os.path.join(daemon_base, rel))
+
+
 def reconcile():
     """對帳：children.json 裡名字與 stack 都對得上表上那列的才算還在；不在的忘掉（寫回）。回 (還在的, 忘掉的名字, 表)。"""
     kids = load_json(children_path, [])
     if not isinstance(kids, list) or not all(isinstance(k, dict) and isinstance(k.get("name"), str) for k in kids):
         die("ReadFailed", "%s is not a JSON array of {name, stack}" % children_path)
     rows = table()
-    on_table = {(r.get("name"), r.get("stack")) for r in rows if isinstance(r, dict)}
-    alive = [k for k in kids if (k["name"], k.get("stack")) in on_table]
+    on_table = {(r.get("name"), os.path.normpath(r["stack"])) for r in rows if isinstance(r, dict) and isinstance(r.get("stack"), str)}
+    alive = [k for k in kids if isinstance(k.get("stack"), str) and (k["name"], stack_abs(k["stack"])) in on_table]
     gone = [k["name"] for k in kids if k not in alive]
     if gone:
         write_children(alive)
@@ -251,14 +272,14 @@ def my_child(args):
 
 # ---- new／add 共用的參數 ----
 def spawn_args(args):
-    """回 (llm 鍵值, tools [(名, 絕對路徑)], tools_rm [名], 子的 ws, limits)。"""
+    """回 (llm 鍵值, tools [(名, 絕對路徑；只字串拼、不解開捷徑)], tools_rm [名], 子的 ws, limits)。"""
     llm = args.get("llm", {})
     if not isinstance(llm, dict) or not all(isinstance(v, str) for v in llm.values()):
         die("ArgumentsBad", "llm must be an object of string values, e.g. {\"endpoint\": \"fake\"}")
     tools = args.get("tools", [])
     if not isinstance(tools, list) or not all(isinstance(t, dict) for t in tools):
         die("ArgumentsBad", "tools must be an array of {name, path}")
-    tool_list = [(need_name(t.get("name"), "tool name"), read_path(t.get("path"), "tool path")) for t in tools]
+    tool_list = [(need_name(t.get("name"), "tool name"), lex_path(t.get("path"), "tool path")) for t in tools]
     tools_rm = args.get("tools_rm", [])
     if not isinstance(tools_rm, list):
         die("ArgumentsBad", "tools_rm must be an array of tool names")
@@ -283,7 +304,7 @@ def mount(name, definition, child_ws, limits):
 
 
 def report(name, child_stack, notes, alive, n, head=""):
-    write_children(alive + [{"name": name, "stack": child_stack}])
+    write_children(alive + [{"name": name, "stack": stack_rel(child_stack)}])
     sys.stdout.write("%sadded %s (stack %s); children %d/%d\n" % (head, name, child_stack, len(alive) + 1, n)
                      + "".join(x + "\n" for x in notes))
     sys.exit(0)
@@ -302,19 +323,22 @@ def decl_file(defdir, key):
     return os.path.join(defdir, p)
 
 
-def absolutize_tools(tools_file, src_dir):
-    """複製來的 tools 檔：相對 path 原本從範本那份的資料夾算，改寫成絕對。"""
+def rebase_tools(tools_file, src, dest, tmp):
+    """複製來的 tools 檔：相對 path 原本從範本那份的資料夾算，改成從新定義裡那份（最終位置 dest）的資料夾走回同一個目標。
+    指範本裡的也指回範本那份（範本的 tools/memory 裡是相對捷徑，複本深度不同會斷）；絕對的照抄。只做字串換算、不 realpath。"""
     reg = load_json(tools_file, None)
     if not isinstance(reg, dict) or not isinstance(reg.get("tools"), dict):
         return
+    sub = os.path.relpath(os.path.dirname(tools_file), tmp)          # tools 檔在定義裡的哪一層
+    src_dir, dest_dir = os.path.normpath(os.path.join(src, sub)), os.path.normpath(os.path.join(dest, sub))
     for entry in reg["tools"].values():
         if isinstance(entry, dict) and isinstance(entry.get("path"), str) and not os.path.isabs(entry["path"]):
-            entry["path"] = os.path.realpath(os.path.join(src_dir, entry["path"]))
+            entry["path"] = os.path.relpath(os.path.normpath(os.path.join(src_dir, entry["path"])), dest_dir)
     write_json(tools_file, reg)
 
 
-def build_def(tmp, src, files, llm, tool_list, tools_rm):
-    """在 tmp 寫好新定義：複製 from → 寫 files → 改 llm 檔、tools 檔。"""
+def build_def(tmp, dest, src, files, llm, tool_list, tools_rm):
+    """在 tmp 寫好新定義（之後改名成 dest）：複製 from → 寫 files → 改 llm 檔、tools 檔；tools 檔的 path 對 dest 算相對。"""
     try:
         if src:
             shutil.copytree(src, tmp, symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
@@ -325,7 +349,7 @@ def build_def(tmp, src, files, llm, tool_list, tools_rm):
     if src:
         tf = decl_file(tmp, "tools")
         if tf and os.path.isfile(tf):
-            absolutize_tools(tf, os.path.dirname(os.path.join(src, os.path.relpath(tf, tmp))))
+            rebase_tools(tf, src, dest, tmp)
     for rel, text in files.items():
         dst = os.path.realpath(os.path.join(tmp, rel))
         if os.path.isabs(rel) or not inside(dst, os.path.realpath(tmp)) or dst == os.path.realpath(tmp):
@@ -356,8 +380,9 @@ def build_def(tmp, src, files, llm, tool_list, tools_rm):
             if n not in reg["tools"]:
                 die("ToolMissing", "tools_rm: %s is not in the definition's %s" % (n, os.path.relpath(tf, tmp)))
             del reg["tools"][n]
+        tf_dir = os.path.normpath(os.path.join(dest, os.path.relpath(os.path.dirname(tf), tmp)))
         for n, p in tool_list:
-            reg["tools"][n] = {"path": p}
+            reg["tools"][n] = {"path": os.path.relpath(p, tf_dir)}
         write_json(tf, reg)
 
 
@@ -375,6 +400,7 @@ stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
 children_path = os.path.join(stack, "children.json")
+daemon_base = os.path.realpath(daemon)          # children.json 的 stack 相對這裡（同 daemon_ctl 找 daemon：轉絕對、解開捷徑）
 
 if op == "ls":
     alive, _, rows = reconcile()
@@ -424,7 +450,7 @@ if op == "new":                                 # 生法 (a)：產出新定義�
     except OSError as e:
         die("MkdirFailed", "cannot create %s: %s" % (os.path.dirname(dest), e))
     try:
-        build_def(tmp, src, files, llm, tool_list, tools_rm)
+        build_def(tmp, dest, src, files, llm, tool_list, tools_rm)
         os.rename(tmp, dest)
     except SystemExit:
         shutil.rmtree(tmp, ignore_errors=True)
