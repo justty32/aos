@@ -4,10 +4,27 @@
 # 壞信（body 不是 {"role": "user", "content": 非空字串}）：aos-post done 丟掉、$AOS_STACK/mailbox_warning.txt 覆寫一行（N-16；同 aos-eca-turn）。
 # --prompt FILE＝開場白（相對路徑從範本資料夾＝AOS_CD 算）：history 空、queue 也沒好信時投一次進 queue 再收；沒給＝沒有開場白。
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）。aos-post 的 stderr 不攔、原樣透出（stdio-unify R10）。--help 印英文用法；Ctrl-C 退 130。設計：proto8/thinking/2026-11/04/loop-fsm-agent/01-設計.md § 3。
-import json, os, re, shutil, signal, subprocess, sys
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "py"))   # py/aos_flags.py（錯誤行、提醒行的共用介面）
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "py"))   # 複製出 repo 的：從 PATH 上 aos-tools 的真位置找 proto8/py
-import aos_flags  # noqa: E402
+import json, os, re, signal, subprocess, sys
+from pathlib import Path
+
+_import_paths = [str(Path(__file__).resolve().parent)]
+for _parent in Path(__file__).resolve().parents:
+    for _layer, _module in (("py", "aos_flags.py"),):
+        _root = _parent / _layer
+        if (_root / _module).is_file() and str(_root) not in _import_paths:
+            _import_paths.append(str(_root))
+sys.path[:0] = _import_paths
+try:
+    import aos_flags  # noqa: E402
+except ModuleNotFoundError as _error:
+    if _error.name not in ("aos_flags", "tool_io"):
+        raise
+    print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
+          file=sys.stderr)
+    sys.exit(1)
+finally:
+    for _path in _import_paths:
+        sys.path.remove(_path)
 
 HELP = """\
 usage: idle.py [--prompt FILE]   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)

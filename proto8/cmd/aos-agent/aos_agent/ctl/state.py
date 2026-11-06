@@ -4,7 +4,7 @@ import json
 import os
 from ..common import bad_args, Fail, parse, target
 from ..decl import agent_decl, def_of, show_limits
-from agent_files import declared_files
+from .. import declared_files
 from ..hints import label, queued
 
 

@@ -5,10 +5,21 @@
 # 錯：stderr 與 stdout 各一行「fake_slow: error: 代號 原因」、退 1——ArgumentsBad（stdin 不是 JSON、delay_s 不對）。被 TERM＝照預設結束（daemon 收整群）。
 # llm_fake 被訊號殺＝退 128＋N（stdio-unify R12，同 aos-tools）；其他碼原樣交回：退非 0 時 stderr 有「fake_slow: error:」那行＝我錯，沒有＝llm_fake 的碼（R8）。
 # --help 印英文用法；Ctrl-C 退 130。
-import json, os, shutil, signal, subprocess, sys, time
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", "py"))   # py/aos_flags.py（錯誤行、提醒行的共用介面）
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "py"))   # 複製出 repo 的：從 PATH 上 aos-tools 的真位置找 proto8/py
-import aos_flags  # noqa: E402
+import json, os, signal, subprocess, sys, time
+from pathlib import Path
+
+_import_paths = [str(Path(__file__).resolve().parent)]
+for _parent in Path(__file__).resolve().parents:
+    _py = _parent / "py"
+    if (_py / "aos_flags.py").is_file():
+        _import_paths.append(str(_py))
+        break
+sys.path[:0] = _import_paths
+try:
+    import aos_flags, tool_io  # noqa: E402
+finally:
+    for _path in _import_paths:
+        sys.path.remove(_path)
 
 HELP = """\
 usage: fake_slow < ARGUMENTS.json   (a demo endpoint function for the llm kernel)
@@ -22,7 +33,7 @@ if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdou
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NAME = "fake_slow"
-FAKE = os.path.join(os.path.dirname(os.path.realpath(aos_flags.__file__)), "..", "lib", "base", "llm_fake", "_entry")   # 從找到的 aos_flags.py（proto8/py）旁找 lib：複製出 repo 也對（11-05 夜第二輪邊緣）
+FAKE = os.path.join(os.path.dirname(os.path.realpath(tool_io.__file__)), "base", "llm_fake", "_entry")   # tool_io 與 lib 工具同層，不要求 py/ 也在旁邊。
 
 
 def die(code, reason):

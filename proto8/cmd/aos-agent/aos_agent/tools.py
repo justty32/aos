@@ -3,7 +3,7 @@ import os
 import subprocess
 import sys
 import aos_flags
-from agent_files import declared_files
+from . import declared_files
 from . import PROG
 from .common import Fail, TOOLS, actions, bad_args, note, parse, target
 from .decl import agent_decl, pass_err, warn_shared

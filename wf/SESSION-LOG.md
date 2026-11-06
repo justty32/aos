@@ -8,7 +8,7 @@
 
 ## 最新進度
 
-- **open｜special-cases（11-06 K 隊；使用者同日選項框裁六題）**：條文已寫（C-52 讀法「不認身份、可認公開介面」＋判準＋現行表、升格門檻、N-63 K3、C-81 K7；8 處矛盾修 4 處、其餘只列）；程式改法 K-1～K-6 排在 [apply-ideas 02 § special-cases](../proto8/thinking/2026-11/06/apply-ideas/02-排程.md#11-06-special-cases-排程k-隊)，P7 開工前照新讀法重設計；`_` 保留等撞名 → [special-cases](../proto8/thinking/2026-11/06/special-cases/README.md)
+- **open｜special-cases（11-06 K 隊；使用者同日選項框裁六題）**：條文已寫（C-52 讀法「不認身份、可認公開介面」＋判準＋現行表、升格門檻、N-63 K3、C-81 K7；8 處矛盾修 4 處、其餘只列）；程式改法 K-1～K-6（K-2、K-4、K-5、K-6 已做；K-5 11-06 晚家機 [06](../proto8/thinking/2026-11/06/special-cases/06-K5實作結果.md)）排在 [apply-ideas 02 § special-cases](../proto8/thinking/2026-11/06/apply-ideas/02-排程.md#11-06-special-cases-排程k-隊)，P7 開工前照新讀法重設計；`_` 保留等撞名 → [special-cases](../proto8/thinking/2026-11/06/special-cases/README.md)
 
 - **open｜lift-to-norms（使用者 11-06「把最近幾天的thinking……拿去更新concep,normal」）**：條文已寫（N-65、N-66、N-67、C-76～C-83、P-45、P-46、板子比喻＋既有條加註），使用者 11-06 已裁三題（tick 欄名照 R6、`AOS_TICK` 歸 hub 例外、同 stack 兩台繼續擋）；剩次要兩件沒裁（wait.py 退 11 對 P-19、沙箱先不支援 vs 一個信箱就夠），等 P5 沙箱範例時看 → [lift-to-norms](../proto8/thinking/2026-11/06/lift-to-norms/README.md)
 - **open｜os-impl（11-06 fable 規劃；使用者同日裁兩題）**：排程照做（A 項併既有 T／P／J／條文日，B2 併 P8、B3 併 P9）；判官排隊＋寄信者自設逾時（`--timeout-s`、`--on-queued`、body `queue_wait_ms`、判官窗＋到期拒信）併成一步排 P9 後；**第一個 commit（寄件人端 `--timeout-s`、agents `ctl_timeout_s`）11-06 公司已提前做**，剩判官 `queue`＋`queue_wait_ms`＋`--on-queued` 那半約 3 h；方向題 1 已裁（窗＋代為到期） → [os-impl 05](../proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md)

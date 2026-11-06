@@ -34,26 +34,37 @@
 #   CLI（claude／codex）與 tmux 自己的 stderr 原樣透到 stderr、不塞進自己的錯（stdio-unify R10）；stdout 只有自己那一行（D2）。
 #   給人看的狀態句（attaching、等對話空出來）是提醒行「cli_session: warning: …」（R1、D5）。工具形認 --help（英文說明印 stdout、退 0）、Ctrl-C 退 130。
 #
-# 放哪：proto8/py/cli_session.py；lib/agent 的 claude、codex 經 agent_tool.py 的 ask_cli 共用 ask，call_main 只給 aos-eca-turn --one；
+# 放哪：proto8/lib/agent/cli_session.py；claude、codex 經 agent_tool.py 的 ask_cli 共用 ask，call_main 只給 aos-eca-turn --one；
 # 掛它的 agent 根目錄可以放一份 cli_session.py（或捷徑）給 attach 用（原本的例子 demo/agent-fay 11-03 晚刪了）。工具資料夾（cli.json 在裡面）由工具入口傳進來、
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
 import datetime, fcntl, glob, json, os, shlex, shutil, signal, subprocess, sys, threading, time, uuid
 
-sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
-import aos_flags  # noqa: E402
-from agent_files import declared_files  # noqa: E402
+# hook 直接執行此檔時只補父層 lib；import 後還原，不影響呼叫者的查找順序。
+_lib = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+_added_lib = os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py"))
+if _added_lib:
+    sys.path.insert(0, _lib)
+try:
+    import tool_io
+finally:
+    if _added_lib:
+        sys.path.pop(0)
+if __package__:
+    from .agent_files import declared_files
+else:
+    from agent_files import declared_files
 
 TMUX_SESSION = "cli"
 PROG, ECHO = "cli_session", False                    # 錯誤行開頭、要不要也印到 stdout（call_main 改成工具名、True）
 
 
 def die(code, reason):
-    aos_flags.die(PROG, code, reason, also_stdout=ECHO)
+    tool_io.die(code, " ".join(str(reason).splitlines()), prog=PROG, echo=ECHO)
 
 
 def warn(sentence):
     """提醒行（stdio-unify R1）：stderr 一句、不帶代號。"""
-    aos_flags.warn(PROG, sentence)
+    tool_io.warn(" ".join(str(sentence).splitlines()), prog=PROG)
 
 
 def now():

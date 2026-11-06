@@ -3,10 +3,8 @@
 使用者 11-05 裁「收成共用模組」（thinking 2026-11-05 stdio-unify § 剩下的；原則「統一成單一介面，這樣只需要改介面」）：
 錯誤行與提醒行的格式只寫在這裡，各工具不自己拼字串。不是工具（沒有 _entry），是 lib 最底下的共用模組；純標準庫。
 
-工具怎麼找到它（lib/docs/01 規則 9）：先找工具自己的資料夾（複製出 lib 的工具，把這支一起複製進去），再找 lib/（工具資料夾往上兩層）：
-    HERE = os.path.dirname(os.path.realpath(__file__))
-    sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]
-    import tool_io
+工具怎麼找到它（lib/docs/01 規則 9）：先找工具自己的資料夾（複製出 lib 的工具，把這支一起複製進去），
+再沿自身 realpath 的祖先找含 tool_io.py 的 lib/，最後交給標準 Python 路徑（.pth／PYTHONPATH）。
 沙箱裡要看得到這支：綁工具資料夾時把它也綁唯讀（例 cmd/aos-sandbox/examples/bash-boxed/sandbox.json 的 ro）。
 
 旗標映射（thinking/2026-11/05/json-argv 的 03、07 與 J1 任務書）：
@@ -171,15 +169,15 @@ def start(name, help_text=None, echo=True, *, tooldef=None):
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # stdout 被關＝安靜退 141
 
 
-def error_line(code, reason):
-    return "%s: error: %s %s" % (NAME, code, str(reason).replace("\n", " "))
+def error_line(code, reason, *, prog=None):
+    return "%s: error: %s %s" % (NAME if prog is None else prog, code, str(reason).replace("\n", " "))
 
 
-def die(code, reason, before=""):
-    """印錯誤行、退 1。before＝錯誤行之前先印到 stdout 的東西（例 bash 截到一半的輸出）。"""
-    line = error_line(code, reason)
+def die(code, reason, before="", *, prog=None, echo=None):
+    """印錯誤行、退 1；prog／echo 可只覆寫這次輸出，before 先印到 stdout。"""
+    line = error_line(code, reason, prog=prog)
     print(line, file=sys.stderr, flush=True)
-    if ECHO:
+    if (ECHO if echo is None else echo):
         sys.stdout.write(before + line + "\n")
         sys.stdout.flush()
     sys.exit(1)

@@ -22,11 +22,26 @@ aos_flags.parse（P-44：長旗標與共用短名 -h；子命令前不認得的�
 import json, os, sys, time
 
 HERE = os.path.dirname(os.path.realpath(__file__))
-ROOT = os.path.normpath(os.path.join(HERE, "..", "..", ".."))                       # proto8/
 sys.dont_write_bytecode = True
-sys.path.insert(0, os.path.join(ROOT, "py"))
-import aos_flags, cli_session  # noqa: E402
-import daemon_ctl as dc  # noqa: E402
+from pathlib import Path
+
+_import_paths = [HERE]
+for _parent in Path(__file__).resolve().parents:
+    for _layer, _module in (("py", "aos_flags.py"), ("lib", "agent/__init__.py")):
+        _root = _parent / _layer
+        if (_root / _module).is_file() and str(_root) not in _import_paths:
+            _import_paths.append(str(_root))
+sys.path[:0] = _import_paths
+try:
+    import aos_flags  # noqa: E402
+    if os.path.isfile(os.path.join(HERE, "cli_session.py")):
+        import cli_session  # noqa: E402
+    else:
+        import agent.cli_session as cli_session  # noqa: E402
+    import daemon_ctl as dc  # noqa: E402
+finally:
+    for _path in _import_paths:
+        sys.path.remove(_path)
 
 PROG = "aos-eca-screen"
 HELP = """aos-eca-screen - open, close or watch an eca's screen

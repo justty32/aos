@@ -12,11 +12,31 @@
 # --tools FILE：aos-tools 登記檔（預設 interfaces.json 宣告的 tools；沒有那份＝沒有工具）。相對路徑從範本資料夾（AOS_CD）算。
 #   沒給 --tools 時，$AOS_STACK/<宣告相對路徑> 在＝疊上這隻的覆蓋層（aos-tools --overlay；aos-agent tools add／rm 寫的，只存差異，11-05）。
 # 照舊的 agent-eve 的 act.py 改（拿掉 out/、done/、current.txt；agent-eve 11-04 隨 proto8/tests 刪了）。
-import json, os, shutil, signal, subprocess, sys, time
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "py"))   # py/aos_flags.py（錯誤行、提醒行的共用介面）
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "py"))   # 複製出 repo 的：從 PATH 上 aos-tools 的真位置找 proto8/py
-import aos_flags  # noqa: E402
-from agent_files import declared_files  # noqa: E402
+import json, os, signal, subprocess, sys, time
+from pathlib import Path
+
+_import_paths = [str(Path(__file__).resolve().parent)]
+for _parent in Path(__file__).resolve().parents:
+    for _layer, _module in (("py", "aos_flags.py"), ("lib", "agent/agent_files.py")):
+        _root = _parent / _layer
+        if (_root / _module).is_file() and str(_root) not in _import_paths:
+            _import_paths.append(str(_root))
+sys.path[:0] = _import_paths
+try:
+    import aos_flags  # noqa: E402
+    if (Path(__file__).resolve().parent / "agent_files.py").is_file():
+        from agent_files import declared_files  # noqa: E402
+    else:
+        from agent.agent_files import declared_files  # noqa: E402
+except ModuleNotFoundError as _error:
+    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files"):
+        raise
+    print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
+          file=sys.stderr)
+    sys.exit(1)
+finally:
+    for _path in _import_paths:
+        sys.path.remove(_path)
 
 HELP = """\
 usage: act.py [--tools FILE]   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)

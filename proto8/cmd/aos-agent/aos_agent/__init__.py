@@ -1,4 +1,5 @@
 # aos_agent/__init__.py - 保留頂層說明、命令派發與主入口。
+import os
 import signal
 import sys
 
@@ -32,6 +33,13 @@ output: results on stdout only (one line per item, TAB-separated; --json where l
   reminders on stderr as "aos-agent: warning: ...".
 exit codes: 0 ok; 1 error ("aos-agent: error: CODE reason" on stderr); 130 on Ctrl-C.
 more: proto8/cmd/aos-agent/README.md (rules, codes, examples)"""
+
+# bin 入口把自己的資料夾放在最前；有跟著帶的模組就用那份。
+if os.path.isfile(os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+                               "bin", "agent_files.py")):
+    from agent_files import declared_files
+else:
+    from agent.agent_files import declared_files
 
 from . import common, ctl, say, listen, chat, screen, tools, llm
 from .common import Fail, parse

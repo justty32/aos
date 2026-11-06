@@ -12,11 +12,31 @@
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1——StackMissing、BrainFailed（kernel 回錯）、
 #   SendFailed（aos-llm send 退非 0；它自己的 stderr 原樣在上面，例 LlmKernelMissing）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
 # --help 印英文用法；Ctrl-C 退 130。
-import json, os, shutil, signal, subprocess, sys
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "py"))   # py/aos_flags.py（錯誤行、提醒行的共用介面）
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "py"))   # 複製出 repo 的：從 PATH 上 aos-tools 的真位置找 proto8/py
-import aos_flags  # noqa: E402
-from agent_files import declared_files  # noqa: E402
+import json, os, signal, subprocess, sys
+from pathlib import Path
+
+_import_paths = [str(Path(__file__).resolve().parent)]
+for _parent in Path(__file__).resolve().parents:
+    for _layer, _module in (("py", "aos_flags.py"), ("lib", "agent/agent_files.py")):
+        _root = _parent / _layer
+        if (_root / _module).is_file() and str(_root) not in _import_paths:
+            _import_paths.append(str(_root))
+sys.path[:0] = _import_paths
+try:
+    import aos_flags  # noqa: E402
+    if (Path(__file__).resolve().parent / "agent_files.py").is_file():
+        from agent_files import declared_files  # noqa: E402
+    else:
+        from agent.agent_files import declared_files  # noqa: E402
+except ModuleNotFoundError as _error:
+    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files"):
+        raise
+    print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
+          file=sys.stderr)
+    sys.exit(1)
+finally:
+    for _path in _import_paths:
+        sys.path.remove(_path)
 
 HELP = """\
 usage: wait.py   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)

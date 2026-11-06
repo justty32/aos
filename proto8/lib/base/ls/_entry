@@ -6,7 +6,7 @@
 # 資料夾在前、照名字排；. 開頭的預設不列（數目放 counter_hidden）；還有就給 next_offset。路徑從 $AOS_WS 算、不能跑出去。
 # 計數的 key 一律 counter_*（10-25，原 total、children、hidden、keys_more）。
 # 錯：stderr 與 stdout 各一行「ls: error: 代號 原因」、退 1。（10-24 遷移：併進 demo/file-tools/ls 的加料——aos 記號、children、exec、JSON 頂層 key）
-import json, os, shutil, sys, time
+import json, os, sys, time
 HELP = """\
 usage: ls < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 List the entries of a folder in the workspace, one page at a time, as JSON.
@@ -14,12 +14,19 @@ Result on stdout. On error: one line "ls: error: CODE reason" on stderr and stdo
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "lib"))   # 複製出 repo 的：從 PATH 上 aos-tools 的 cmd/aos-tools/bin 回到 proto8/lib/
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
 try:
     import tool_io  # noqa: E402
-except ModuleNotFoundError:   # 規則 9 三處都找不到（11-05 晚）：照錯誤行格式印一行、退 1，不吐 traceback
-    _line = "%s: error: ModuleMissing tool_io.py not found (not in the tool folder, not in lib/, no aos-tools on PATH)\n" % os.path.basename(HERE)
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)

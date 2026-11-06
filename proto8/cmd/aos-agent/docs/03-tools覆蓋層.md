@@ -25,7 +25,7 @@
 
 - `aos-agent tools ls／get／add／rm`（stderr 一行說用的是「定義」還是「定義疊覆蓋層」）。
 - agent-fsm 的身體 `brain.py`（給腦看的工具清單）、`act.py`（叫工具）：沒給 `--tools` 時，照 `interfaces.json` 的 tools 宣告讀定義與 stack；宣告的覆蓋檔在就加 `--overlay`；每格重讀＝下一題生效。
-- eca agent：`proto8/py/cli_session.py` 的 `stack_copies`（cli.json 沒明寫 `tools` 時）同樣依宣告找到登記檔與覆蓋檔，再把覆蓋檔交給 `aos-mcp --overlay`，aos-mcp 原樣轉給 aos-tools；每次起 CLI 重接。
+- eca agent：`proto8/lib/agent/cli_session.py` 的 `stack_copies`（cli.json 沒明寫 `tools` 時）同樣依宣告找到登記檔與覆蓋檔，再把覆蓋檔交給 `aos-mcp --overlay`，aos-mcp 原樣轉給 aos-tools；每次起 CLI 重接。
 
 ### 定義後來改了怎麼辦
 

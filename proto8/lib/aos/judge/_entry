@@ -23,7 +23,7 @@
 # 錯（自己這層的，退 1；一般 loop 會停，daemon 的身體則記一行提醒、下一圈再跑，11-05 起；P-20）：ArgumentsBad、CfgMissing、CfgBad（judge.json）、StackMissing、DaemonMissing（沒設 AOS_DAEMON 或不是資料夾）、
 #   StateBad（procs_state.json 讀不懂）、MailboxMissing（daemon 沒開 ctl 信箱）、CommandMissing（PATH 沒 aos-post／aos-directive）、PostFailed（收件箱 init／take-all／see 失敗）。
 #   stderr 一行「judge: error: 代號 原因」。--help＝英文用法印 stdout、退 0。Ctrl-C＝退 130、不吐 traceback。
-import json, os, re, shutil, subprocess, sys
+import json, os, re, subprocess, sys
 
 HELP = """\
 usage: judge JUDGE.json   (run it with aos-exec as a daemon body or a loop proc; needs $AOS_STACK and $AOS_DAEMON)
@@ -38,12 +38,19 @@ Exit 0 after a round (also with no letters). On error: "judge: error: CODE reaso
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "lib"))   # 複製出 repo 的：從 PATH 上 aos-tools 的 cmd/aos-tools/bin 回到 proto8/lib/
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
 try:
     import tool_io  # noqa: E402
-except ModuleNotFoundError:   # 規則 9 三處都找不到（11-05 晚）：照錯誤行格式印一行、退 1，不吐 traceback
-    _line = "%s: error: ModuleMissing tool_io.py not found (not in the tool folder, not in lib/, no aos-tools on PATH)\n" % os.path.basename(HERE)
+except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
+    if error.name != "tool_io":
+        raise
+    _line = "%s: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n" % os.path.basename(HERE)
     sys.stderr.write(_line)
     sys.exit(1)
 

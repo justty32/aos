@@ -9,4 +9,4 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`install.sh`](../../../../../proto8/install.sh) | symlink the aos commands into a folder on PATH (default ~/.local/bin), so every shell finds them without sourcing env.sh. |
+| [`install.sh`](../../../../../proto8/install.sh) | symlink the aos commands onto PATH (default ~/.local/bin) and register the Python import paths in the user site. |

@@ -1,0 +1,378 @@
+{
+ "description": "K-5 本隊修改的程式、文件與生成冊清單；file 是 repo 相對名稱，包含已移除的舊位置。",
+ "contract": "wf-table/1",
+ "source": "06-K5實作結果.md",
+ "extracted": "2026-11-06",
+ "columns": [
+  "file",
+  "kind",
+  "change"
+ ],
+ "rows": [
+  {
+   "file": "proto8/lib/agent/agents/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/agent/claude/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/agent/codex/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/agent/json_rewrite/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/agent/memory/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/agent/memory_export/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/agent/self_tools/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/agent/thought/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/aos/aos_json/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/aos/judge/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/bash/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/clock/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/copy/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/edit/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/json_edit/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/json_read/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/llm_fake/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/llm_http/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/ls/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/math/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/mkdir/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/move/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/read/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/run_python/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/stat/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/trash/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/view/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/base/write/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/tool_io.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/agent/agent_tool.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/agent/__init__.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/agent/cli_session.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/lib/agent/agent_files.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/py/cli_session.py",
+   "kind": "程式",
+   "change": "移除舊位置"
+  },
+  {
+   "file": "proto8/py/agent_files.py",
+   "kind": "程式",
+   "change": "移除舊位置"
+  },
+  {
+   "file": "proto8/py/aos_flags.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/py/aos_ws.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/install.sh",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/kernel/llm-kernel/fake_slow/_entry",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/templates/agent-fsm/act.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/templates/agent-fsm/brain.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/templates/agent-fsm/idle.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/templates/agent-fsm/wait.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/cmd/aos-agent/bin/aos-agent",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/cmd/aos-agent/aos_agent/__init__.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/cmd/aos-agent/aos_agent/tools.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/cmd/aos-agent/aos_agent/ctl/state.py",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/cmd/aos-eca/bin/aos-eca-turn",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/cmd/aos-eca/bin/aos-eca-screen",
+   "kind": "程式",
+   "change": "新增或修改"
+  },
+  {
+   "file": "proto8/README.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/py/README.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/lib/README.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/lib/docs/01-分層等.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/lib/docs/01-分層等/02-規則5a至11與引用.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/lib/docs/02-索引-base與索引-aos.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/lib/docs/03-索引-agent等.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/cmd/README.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/cmd/aos-mcp/README.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/cmd/docs/01-逐支說明.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/cmd/docs/05-aos-llm與eca入口.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/cmd/aos-agent/docs/03-tools覆蓋層.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/templates/docs/01-eca-claude.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/templates/docs/02-agent-fsm.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "proto8/docs/CONVENTION/02-題目stack停錯腦/05-P-23～P-26.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "wf/workflows/common/code-map.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "wf/workflows/common/conventions.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "wf/workflows/dev-env.md",
+   "kind": "文件",
+   "change": "更新位置、查找規則或安裝說明"
+  },
+  {
+   "file": "wf/workflows/common/code-map/proto8/README.md",
+   "kind": "生成冊",
+   "change": "codemap_gen.py --apply 生成"
+  },
+  {
+   "file": "wf/workflows/common/code-map/proto8/lib.md",
+   "kind": "生成冊",
+   "change": "codemap_gen.py --apply 生成"
+  },
+  {
+   "file": "wf/workflows/common/code-map/proto8/py.md",
+   "kind": "生成冊",
+   "change": "codemap_gen.py --apply 生成"
+  },
+  {
+   "file": "wf/workflows/common/code-map/proto8/root.md",
+   "kind": "生成冊",
+   "change": "codemap_gen.py --apply 生成"
+  },
+  {
+   "file": "wf/SESSION-LOG.md",
+   "kind": "活狀態",
+   "change": "記錄舊連結確認與收尾條件"
+  },
+  {
+   "file": "wf/WAIT_USER.md",
+   "kind": "活狀態",
+   "change": "記錄舊連結確認與收尾條件"
+  }
+ ]
+}

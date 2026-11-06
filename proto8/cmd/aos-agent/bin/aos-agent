@@ -4,12 +4,21 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
-ROOT = os.path.normpath(os.path.join(HERE, "..", "..", ".."))           # proto8/
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
-sys.path.insert(0, os.path.join(HERE, ".."))
-sys.path.insert(0, os.path.join(ROOT, "py"))
+from pathlib import Path
 
-import aos_flags  # noqa: E402
-from aos_agent import main  # noqa: E402
+_import_paths = [HERE, os.path.normpath(os.path.join(HERE, ".."))]
+for _parent in Path(__file__).resolve().parents:
+    for _layer, _module in (("py", "aos_flags.py"), ("lib", "agent/__init__.py")):
+        _root = _parent / _layer
+        if (_root / _module).is_file() and str(_root) not in _import_paths:
+            _import_paths.append(str(_root))
+sys.path[:0] = _import_paths
+try:
+    import aos_flags  # noqa: E402
+    from aos_agent import main  # noqa: E402
+finally:
+    for _path in _import_paths:
+        sys.path.remove(_path)
 
 aos_flags.run(main)                              # stdout 被對面先關（listen --follow | head -1）＝安靜退 141（J5）

@@ -1,26 +1,36 @@
 #!/usr/bin/env python3
 # codex - 透過 tool_io 收 JSON／旗標，再把 prompt 交給 codex CLI；對話續在工具小格（$AOS_STACK）
 # 介面（lib/README 的契約）：stdin 收 {"prompt"}；錯：stderr 與 stdout 各一行「codex: error: 代號 原因」、退 1（ArgumentsBad、CliMissing、CliFailed、SessionBad…）。
-# 怎麼叫 CLI（旗標、逾時 timeout_ms）在同資料夾的 cli.json；做法在 proto8/py/cli_session.py（claude、codex 共用）。
+# 怎麼叫 CLI（旗標、逾時 timeout_ms）在同資料夾的 cli.json；做法在 proto8/lib/agent/cli_session.py（claude、codex 共用）。
 # 工具形開頭走 agent_tool.ask_cli 的 tool_io；aos-eca-turn --one 照舊用 cli_session.call_main，兩者共用 cli_session.ask。
-# 來源：demo/agent-fay/tools/codex（10-24 遷移；agent-fay 11-03 晚刪了）。找 cli_session.py：先找工具自己、上一層與 agent 根，再找 proto8/py；
-# 複製出 repo 時，最後從 PATH 上 aos-tools 的 cmd/aos-tools/bin 回到 proto8/py。
-import os, shutil, sys
+# 共用模組先找工具自己，再找 lib/agent（標準 Python 路徑也可提供 lib）。
+import os, sys
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
-sys.path[:0] = [HERE, os.path.dirname(HERE), os.path.dirname(os.path.dirname(HERE)),
-                os.path.join(HERE, "..", "..", "..", "py")]
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "py"))
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "lib"))
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "lib", "agent"))
+# 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
+_lib = os.path.dirname(HERE)
+while _lib != os.path.dirname(_lib):
+    if os.path.basename(_lib) == "lib" and os.path.isfile(os.path.join(_lib, "tool_io.py")):
+        break
+    _lib = os.path.dirname(_lib)
+sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
 try:
     import tool_io  # noqa: E402
-except ModuleNotFoundError:   # 規則 9 三處都找不到：兩邊印錯誤行、退 1
-    _line = "%s: error: ModuleMissing tool_io.py not found (not in the tool folder, not in lib/, no aos-tools on PATH)\n" % os.path.basename(HERE)
+    try:
+        import agent_tool
+    except ModuleNotFoundError as error:
+        if error.name != "agent_tool":
+            raise
+        import agent.agent_tool as agent_tool
+except ModuleNotFoundError as error:   # 共用模組找不到：照此工具的錯誤通道退 1
+    if error.name not in {"tool_io", "agent", "agent_tool", "cli_session", "agent_files",
+                          "agent.agent_tool", "agent.cli_session", "agent.agent_files"}:
+        raise
+    _module = "agent_tool" if error.name == "agent" else (error.name or "shared module").rsplit(".", 1)[-1]
+    _line = "%s: error: ModuleMissing %s.py not in the tool folder, not in lib/, not on the Python path\n" % (os.path.basename(HERE), _module)
     sys.stderr.write(_line)
     sys.stdout.write(_line)
     sys.exit(1)
-import agent_tool  # noqa: E402
 
 NAME = "codex"
 HELP = """\

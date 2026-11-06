@@ -47,7 +47,7 @@ def now_tick():
         with open(path, "rb") as f:
             text = f.read().strip(b" \t\n\r\f\v").decode("ascii")
     except FileNotFoundError:
-        aos_flags.tool_io.warn_missing_tick(path, prog=os.path.basename(sys.argv[0]))
+        aos_flags.warn_missing_tick(path, prog=os.path.basename(sys.argv[0]))
         return 0
     except (OSError, UnicodeError, ValueError) as e:
         raise Error("TickBad", "cannot read AOS_TICK file %s: %s" % (path, e)) from None

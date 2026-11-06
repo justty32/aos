@@ -1,4 +1,4 @@
-"""aos_flags：命令列旗標解析（含共用短名）、互動確認與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 lib/tool_io.py 的 tokenize_flags、stdout 被關退 141）。純標準庫＋隔壁 lib/tool_io.py。
+"""aos_flags：命令列旗標解析（含共用短名）、互動確認與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 lib/tool_io.py 的 tokenize_flags、stdout 被關退 141）。純標準庫＋lib/tool_io.py。
 aos 自己的 Python 程式（cmd/ 的 aos-tick、aos-tools、aos-daemon-ctl、aos-agent、aos-mcp、aos-grow、aos-sandbox…）都用它，
 形狀照 CONVENTION P-44「aos 自己程式的命令列形狀」（11-04；C++ 那邊是 aos-util 的 aos::parse_cli）。
 Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 10-23 刪了，只有它們用的 load_cfg（設定檔讀取）、target（目標的寫法）跟著拿掉，在 git 歷史。
@@ -28,8 +28,8 @@ Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 10-23 刪了，只有它�
 是程式寫錯）。`-h` 內建：認 `--help` 的地方 `-h` 也認，不用列。不黏值（`-tann`）、不併（`-jf`）、不帶 `=`（`-t=x`）：單槓 token
 整個當旗標名，不是開了的短名＝FlagUnknown `unknown flag 整個token`；錯誤訊息用使用者打的名字（`-t needs a value`）。
 C++ 的 aos::parse_cli 之後加同一張表（kShort）。
-切 token（--x V／--x=V／--／開關帶值／缺值）用 lib/tool_io.py 的 tokenize_flags（json-argv J5，去重；找法＝本檔真位置的 ../lib），
-這裡只管旗標表、短名、--help；所以 aos_flags.py 單獨複製出 repo 不能用，要連 lib/tool_io.py 一起、維持 py/ 與 lib/ 同層。
+切 token（--x V／--x=V／--／開關帶值／缺值）用 lib/tool_io.py 的 tokenize_flags（json-argv J5，去重），
+這裡只管旗標表、短名、--help；依序找自身資料夾、真位置祖先的 lib/，再用 Python 標準搜尋路徑（含 .pth）。
 確認（11-06 human-cli H11，使用者裁「終端問、非終端不問」＋「幫我加上--yes跳過」）：confirm(程式, 問句, yes)——yes 或 stdin 不是終端＝True、不問；
 終端＝stderr 問 `程式: 問句 [y/N] `、只有 y／yes 算答應，其他與 EOF 都是 No。答 No 呼叫者印 `warning: nothing done`、退 0；Ctrl-C 交給 run 退 130。
 
@@ -37,12 +37,24 @@ C++ 的 aos::parse_cli 之後加同一張表（kShort）。
 parse：不認得的旗標 FlagUnknown、其他（缺值、開關帶值）ArgumentsBad。"""
 import os, select, sys
 
-_LIB = os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))), "lib")   # <py>/../lib：tokenize_flags 在 lib/tool_io.py
-sys.path.insert(0, _LIB)
+# 共用模組只在 import 時加入需要的根，避免 lib/ 的同名 namespace 留在呼叫者路徑。
+from pathlib import Path
+
+_import_paths = [str(Path(__file__).resolve().parent)]
+for _parent in Path(__file__).resolve().parents:
+    _lib = _parent / "lib"
+    if (_lib / "tool_io.py").is_file():
+        _import_paths.append(str(_lib))
+        break
+sys.path[:0] = _import_paths
 try:
     import tool_io  # noqa: E402  旗標切法只這一份（json-argv J5）
 finally:
-    sys.path.remove(_LIB)   # 不把 lib/ 留在呼叫者的 sys.path（lib/aos、lib/agent 會變成同名 namespace package）
+    for _path in _import_paths:
+        sys.path.remove(_path)
+
+# 缺鐘檔提醒與 lib 共用同一份去重狀態，呼叫者不用知道底層模組。
+warn_missing_tick = tool_io.warn_missing_tick
 
 HELP = None
 
