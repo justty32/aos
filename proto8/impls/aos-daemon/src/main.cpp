@@ -24,11 +24,11 @@ as the ctl window says, and report them in the state windows. Optional own body
 ARGS after -- are appended to the daemon's own exec.
 
 flags:
-  --max N           stop after N rounds
-  --interval-ms N   wait N ms between rounds (default 200)
-  --ctl FILE        control window
-  --state FILE      state window
-  --enable-logs     print one JSON line per proc start/end (and per body run) to stdout
+  --max N               stop after N rounds
+  --interval-ms N       wait N ms between rounds (default 200)
+  --ctl FILE            control window
+  --state FILE          state window
+  --enable-logs         print one JSON line per proc start/end (and per body run) to stdout
   -h, --help            show this help
 
 exit codes: 0 done; 1 own error ("aos-daemon: error: CODE ..." on stderr); 128+N on signal N.

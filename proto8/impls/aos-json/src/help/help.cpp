@@ -26,9 +26,9 @@ usage: aos-json get [--follow] [--resolve] [--str] FILE#/POINTER
        aos-json get --help
 
 flags:
-  --follow    follow $ref on the path to the value
-  --resolve   resolve directives inside the result
-  --str       print a string without JSON quotes
+  --follow     follow $ref on the path to the value
+  --resolve    resolve directives inside the result
+  --str        print a string without JSON quotes
   -h, --help   show this help
 
 Print the selected value as one JSON line, or as text with --str.
@@ -42,8 +42,8 @@ usage: aos-json peek [--follow] [--depth N] FILE#/POINTER
        aos-json peek --help
 
 flags:
-  --follow    follow $ref on the path and at the selected value
-  --depth N   expand N levels, from 0 to 999 (default: 1)
+  --follow     follow $ref on the path and at the selected value
+  --depth N    expand N levels, from 0 to 999 (default: 1)
   -h, --help   show this help
 
 Print the location and a text summary; expand children up to the chosen depth.
@@ -71,10 +71,10 @@ usage: aos-json set [--check] [--follow] [--parents] [--str] FILE#/POINTER [VALU
        aos-json set --help
 
 flags:
-  --check     validate before writing; reject changes that add problems
-  --follow    follow $ref to the value being replaced
-  --parents   create missing parent objects
-  --str       treat VALUE or stdin as a literal string
+  --check      validate before writing; reject changes that add problems
+  --follow     follow $ref to the value being replaced
+  --parents    create missing parent objects
+  --str        treat VALUE or stdin as a literal string
   -h, --help   show this help
 
 Read VALUE from argv, or stdin when omitted; write changed files atomically.
@@ -88,9 +88,9 @@ usage: aos-json batch [--check] [--follow] [--parents] FILE
        aos-json batch --help
 
 flags:
-  --check     validate before writing; reject changes that add problems
-  --follow    follow $ref to the values being replaced
-  --parents   create missing parent objects
+  --check      validate before writing; reject changes that add problems
+  --follow     follow $ref to the values being replaced
+  --parents    create missing parent objects
   -h, --help   show this help
 
 Read {"/POINTER": VALUE, ...} from stdin; an empty pointer replaces the file.
@@ -105,7 +105,7 @@ usage: aos-json del [--follow] FILE#/POINTER
        aos-json del --help
 
 flags:
-  --follow   follow $ref; remove matching keys from merged parts
+  --follow     follow $ref; remove matching keys from merged parts
   -h, --help   show this help
 
 Write changed files atomically; deleting a whole file is not supported.
@@ -119,9 +119,9 @@ usage: aos-json append [--check] [--follow] [--str] FILE#/POINTER [VALUE]
        aos-json append --help
 
 flags:
-  --check    validate before writing; reject changes that add problems
-  --follow   follow $ref to the target array
-  --str      treat VALUE or stdin as a literal string
+  --check      validate before writing; reject changes that add problems
+  --follow     follow $ref to the target array
+  --str        treat VALUE or stdin as a literal string
   -h, --help   show this help
 
 Read VALUE from argv, or stdin when omitted; write changed files atomically.
@@ -135,8 +135,8 @@ usage: aos-json merge [--check] [--follow] FILE#/POINTER [OBJECT]
        aos-json merge --help
 
 flags:
-  --check    validate before writing; reject changes that add problems
-  --follow   follow $ref to the target object
+  --check      validate before writing; reject changes that add problems
+  --follow     follow $ref to the target object
   -h, --help   show this help
 
 Read OBJECT from argv, or stdin when omitted. Replace matching keys at one level.
@@ -153,7 +153,7 @@ flags:
   --path SUBPATH    add the directive's $path
   --prefix PREFIX   add the directive's $prefix
   --parents         create missing parent objects
-  -h, --help   show this help
+  -h, --help        show this help
 
 Replace the selected value with {"$env": NAME, ...}; write changed files atomically.
 
@@ -166,8 +166,8 @@ usage: aos-json ref [--move] [--parents] FILE#/POINTER TARGET
        aos-json ref --help
 
 flags:
-  --move      move the current value to TARGET before replacing it
-  --parents   create missing parent objects
+  --move       move the current value to TARGET before replacing it
+  --parents    create missing parent objects
   -h, --help   show this help
 
 Replace the selected value with {"$ref": TARGET}; TARGET is relative to its file.
@@ -181,7 +181,7 @@ usage: aos-json check [--env] FILE[#/POINTER]...
        aos-json check --help
 
 flags:
-  --env   also report unset environment variables
+  --env        also report unset environment variables
   -h, --help   show this help
 
 Check references, directive forms and exec forms; print one problem per line.

@@ -41,7 +41,7 @@ flags:
   --ordered              prepend a sequence number to the letter name
   --reply-to BOX         set the mailbox for replies
   --in-reply-to LETTER   identify the letter being answered
-  -h, --help   show this help
+  -h, --help             show this help
 
 Read the body JSON from stdin and print the sent letter name.
 
@@ -93,8 +93,8 @@ usage: aos-post done [--keep] [--reply] MAILBOX [LETTER] [< body.json]
        aos-post done --help
 
 flags:
-  --keep    keep the finished letter in archive/
-  --reply   read body JSON from stdin and send it to the letter's reply_to
+  --keep       keep the finished letter in archive/
+  --reply      read body JSON from stdin and send it to the letter's reply_to
   -h, --help   show this help
 
 Without LETTER use the first in cur/. Print the reply name when a reply is sent.

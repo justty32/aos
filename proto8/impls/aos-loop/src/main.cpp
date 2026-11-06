@@ -23,11 +23,11 @@ Each run's exit code: 0 = next run, 10 = stop (exit 0), other = stop with that c
 ARGS after -- are appended to every run's exec.
 
 flags:
-  --max N           stop after N runs (exit 0)
-  --interval-ms N   wait N ms between runs
-  --ctl FILE        control window (JSON commands: pause, resume, stop, ...)
-  --state FILE      state window (aos-loop writes its phase there)
-  --enable-logs     print one JSON line per run to stdout
+  --max N               stop after N runs (exit 0)
+  --interval-ms N       wait N ms between runs
+  --ctl FILE            control window (JSON commands: pause, resume, stop, ...)
+  --state FILE          state window (aos-loop writes its phase there)
+  --enable-logs         print one JSON line per run to stdout
   -h, --help            show this help
 
 exit codes: 0 done; 1 own error ("aos-loop: error: CODE ..." on stderr);

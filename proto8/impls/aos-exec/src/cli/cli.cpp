@@ -24,7 +24,7 @@ The exit code is the entry's own code once it runs.
 flags:
   -w, --ws WS              workspace to use ("-" or empty = keep the outer one)
   -s, --stack S            stack to use ("-" or empty = keep the outer one)
-  --dotenv-override    let .env override variables already set
+  --dotenv-override        let .env override variables already set
   -h, --help               show this help
 
 exit codes: the entry's code; 1 with "aos-exec: error: CODE ..." on stderr = aos-exec's own error.

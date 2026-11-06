@@ -60,9 +60,9 @@ usage: aos-llm send [--priority P] --reply-to BOX < body.json
        aos-llm send --help
 
 flags:
-  --priority P    override body.priority
-  --reply-to BOX  set the mailbox for replies (required)
-  -h, --help   show this help
+  --priority P     override body.priority
+  --reply-to BOX   set the mailbox for replies (required)
+  -h, --help       show this help
 
 Read body JSON from stdin, send via $AOS_LLM_KERNEL, and print the letter name.
 
@@ -89,7 +89,7 @@ usage: aos-llm ask [--priority P] < body.json
 
 flags:
   --priority P   override body.priority
-  -h, --help   show this help
+  -h, --help     show this help
 
 Read body JSON from stdin, send via $AOS_LLM_KERNEL, and print body.message.
 

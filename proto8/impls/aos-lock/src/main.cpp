@@ -61,7 +61,7 @@ flags:
   --note TEXT    store a note in the holder tag
   --wait-ms N    wait up to N milliseconds (default: 0)
   --pid N        record this process as holder (default: calling process)
-  -h, --help   show this help
+  -h, --help     show this help
 
 Create the lock folder and holder.json; print nothing.
 
