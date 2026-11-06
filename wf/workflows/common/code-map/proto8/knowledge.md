@@ -19,7 +19,17 @@
 | [`agents/README.md`](../../../../../proto8/knowledge/aos/agents/README.md) | Other agents |
 | [`agents/thought.md`](../../../../../proto8/knowledge/aos/agents/thought.md) | Thoughts: one task, only the conclusion |
 | [`brain.md`](../../../../../proto8/knowledge/aos/brain.md) | Asking the brain |
-| [`cli.md`](../../../../../proto8/knowledge/aos/cli.md) | Commands for humans and external agents |
+| [`cli/README.md`](../../../../../proto8/knowledge/aos/cli/README.md) | Commands for humans and external agents |
+| [`cli/agent.md`](../../../../../proto8/knowledge/aos/cli/agent.md) | Agent lifecycle |
+| [`cli/daemon.md`](../../../../../proto8/knowledge/aos/cli/daemon.md) | Daemon procs and routing |
+| [`cli/errors.md`](../../../../../proto8/knowledge/aos/cli/errors.md) | Errors and retries |
+| [`cli/flags.md`](../../../../../proto8/knowledge/aos/cli/flags.md) | Help and flag placement |
+| [`cli/grow_screen.md`](../../../../../proto8/knowledge/aos/cli/grow_screen.md) | Function growth and ECA screens |
+| [`cli/safety.md`](../../../../../proto8/knowledge/aos/cli/safety.md) | Removal and confirmation |
+| [`cli/talk_settings.md`](../../../../../proto8/knowledge/aos/cli/talk_settings.md) | Messages, screens and agent settings |
+| [`cli/tool_env.md`](../../../../../proto8/knowledge/aos/cli/tool_env.md) | Hub variables in tool registrations |
+| [`cli/tool_flags.md`](../../../../../proto8/knowledge/aos/cli/tool_flags.md) | Flags for lib tools |
+| [`cli/tools.md`](../../../../../proto8/knowledge/aos/cli/tools.md) | Registering and calling tools |
 | [`errors/README.md`](../../../../../proto8/knowledge/aos/errors/README.md) | Reading an error |
 | [`errors/codes.md`](../../../../../proto8/knowledge/aos/errors/codes.md) | Error codes |
 | [`me/README.md`](../../../../../proto8/knowledge/aos/me/README.md) | Who am I |
