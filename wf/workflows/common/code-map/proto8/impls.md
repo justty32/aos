@@ -11,7 +11,7 @@
 |---|---|---|
 | `aos-daemon` | aos-loop、aos-post | — |
 | `aos-directive` | aos-util | — |
-| `aos-exec` | aos-util | inst-static、aos-directive、Threads::Threads |
+| `aos-exec` | aos-util | aos-inst-static、aos-directive、Threads::Threads |
 | `aos-fsm` | aos-loop | — |
 | `aos-json` | aos-util、aos-directive | — |
 | `aos-llm-kernel` | aos-util、aos-post | aos-directive |

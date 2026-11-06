@@ -31,14 +31,3 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`settings.cmake`](../../../../../proto8/impls/cmake/settings.cmake) | aos 這一家 C++ 專案共用的 CMake 設定。 |
-
-## `proto8/impls/inst/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`CMakeLists.txt`](../../../../../proto8/impls/inst/CMakeLists.txt) | 共通設定（Release、compile_commands、PIC…）跟全家一樣在 ../cmake/settings.cmake；純 C、沒有 vcpkg.json，toolchain 不裝任何東西。 |
-| [`include/aos.h`](../../../../../proto8/impls/inst/include/aos.h) | libaos 的公開介面。 |
-| [`src/inst_exec.c`](../../../../../proto8/impls/inst/src/inst_exec.c) | 四個公開函數。 |
-| [`src/inst_internal.h`](../../../../../proto8/impls/inst/src/inst_internal.h) | src/ 各檔之間共用的內部函數宣告。 |
-| [`src/inst_proc.c`](../../../../../proto8/impls/inst/src/inst_proc.c) | 起子程式、等它、收它。 |
-| [`src/inst_stream.c`](../../../../../proto8/impls/inst/src/inst_stream.c) | 子程式的三個串流。 |

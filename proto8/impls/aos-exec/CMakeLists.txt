@@ -4,15 +4,15 @@ cmake_minimum_required(VERSION 3.21)
 # CMake 的共通設定（vcpkg、Release、compile_commands、PIC、AOS_STATIC_PIE）在 ../cmake/settings.cmake。
 # 照 aos-directive 的 CMakeLists.txt 改名。
 include(../cmake/settings.cmake)
-# 也開 C：連進來的 inst 是 C 專案，C 語言要在最上層就開好（不然 CMake 不認得 c_std_11）
+# 也開 C：連進來的 aos-inst 是 C 專案，C 語言要在最上層就開好（不然 CMake 不認得 c_std_11）
 project(aos-exec C CXX)
 
 # 用到的兄弟專案。同一個 build 裡別的專案可能已經 add 過，所以包一層 if(NOT TARGET)（全家都這樣寫）。
-#   inst           C 的 libaos：跑 inst 單子（起程式、等、限時整群收掉；連它的靜態版 inst-static）
+#   aos-inst       C 函式庫：跑 inst 單子（起程式、等、限時整群收掉；連它的靜態版 aos-inst-static）
 #   aos-util       全家共用（錯誤、路徑、JSON）
 #   aos-directive  解單子裡的 $env（與 $env＋path）
-if(NOT TARGET inst)
-  add_subdirectory(../inst inst-build)
+if(NOT TARGET aos-inst)
+  add_subdirectory(../aos-inst aos-inst-build)
 endif()
 if(NOT TARGET aos-util)
   add_subdirectory(../aos-util aos-util-build)
@@ -31,7 +31,7 @@ add_library(aos-exec STATIC ${SOURCES})
 target_include_directories(aos-exec PUBLIC include PRIVATE src)
 target_compile_features(aos-exec PUBLIC cxx_std_20)
 target_compile_options(aos-exec PRIVATE -Wall -Wextra)
-target_link_libraries(aos-exec PUBLIC aos-util PRIVATE inst-static aos-directive Threads::Threads)
+target_link_libraries(aos-exec PUBLIC aos-util PRIVATE aos-inst-static aos-directive Threads::Threads)
 set_target_properties(aos-exec PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 

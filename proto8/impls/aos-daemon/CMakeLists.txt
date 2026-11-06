@@ -4,10 +4,10 @@ cmake_minimum_required(VERSION 3.21)
 # 兩個產物：lib/libaos-daemon.a、bin/aos-daemon。沒有要給別人用的公開 API，所以沒有 include/。
 # CMake 的共通設定（vcpkg、Release、compile_commands、PIC、AOS_STATIC_PIE）在 ../cmake/settings.cmake。
 include(../cmake/settings.cmake)
-# 也開 C：間接連進來的 inst（libaos）是 C 專案，C 語言要在最上層就開好
+# 也開 C：間接連進來的 aos-inst是 C 專案，C 語言要在最上層就開好
 project(aos-daemon C CXX)
 
-# 用到的兄弟專案：aos-post（信箱模式）、aos-loop（骨架 Loop、ctl／state 窗；它再帶進 aos-exec、inst、aos-util、aos-directive）。
+# 用到的兄弟專案：aos-post（信箱模式）、aos-loop（骨架 Loop、ctl／state 窗；它再帶進 aos-exec、aos-inst、aos-util、aos-directive）。
 # daemon＝一個 loop，所以直接繼承 aos-loop 的 aos::loop::Loop，不另寫一份；子 loop 也是 fork 之後在子行程裡跑同一個 Loop。
 if(NOT TARGET aos-loop)
   add_subdirectory(../aos-loop aos-loop-build)

@@ -11,7 +11,7 @@
 
 現役程式全在 `proto8/`（repo 根的 `core/`、`app/` 那代 C++ 是 08～09 月的甲代，不再維護，逐檔表已封存）。proto8 裡：
 
-- `impls/`：C／C++ 的 CMake 專案家族（`inst` 是 C 函式庫，其餘 `aos-*`）。由下往上：`inst` → `aos-exec` → `aos-loop` → `aos-fsm`／`aos-daemon`／`aos-llm-kernel` → `aos-llm`；`aos-util` 全家共用；`aos-post`（連 `aos-lock`）是信箱。誰連誰的表在生成冊 `impls` 冊開頭。
+- `impls/`：C／C++ 的 CMake 專案家族（`aos-inst` 是 C 函式庫，其餘 C++）。由下往上：`aos-inst` → `aos-exec` → `aos-loop` → `aos-fsm`／`aos-daemon`；`aos-llm` 連 `aos-llm-kernel`；`aos-util` 全家共用；`aos-post`（連 `aos-lock`）是信箱。誰連誰的表在生成冊 `impls` 冊開頭。
 - `cmd/`：人打的 Python 指令，執行檔在 `cmd/<名>/bin/<名>`；共用模組在 `py/`。`lib/`：腦叫的工具（`_entry`＋`_tooldef.json`＋`_metainfo.json`）。
 - `kernel/`：掛在 daemon 上的管理元件；`templates/`：agent 範本；`knowledge/`：知識庫；`extras/`：還沒定位的嘗試。判準看 [proto8/README](../../../proto8/README.md)「頂層一覽」。
 - `docs/`（條文）、`thinking/`、`notes/`、`archive/` 不是程式，不進 code map。

@@ -5,7 +5,7 @@
 // 沒設 PATH＝/bin:/usr/bin；某段 EACCES 換下一段），可執行檔入口給的是絕對路徑、不找 PATH。
 // argv 陣列：開跑前解指示詞（$env／$ref，$ref 從入口檔所在的資料夾算＝cwd），解完要全是字串（10-20 ideas D2、D8）；
 // argv[0] 帶 / 又 exec 不了＝前面插 aos-exec（argv0，D3）。
-// inst 單子（run_inst，src/inst/）的 argv[0] 由 libaos 的 execvp 跑，同樣會退回 sh。
+// inst 單子（run_inst，src/inst/）的 argv[0] 由 aos-inst 的 execvp 跑，同樣會退回 sh。
 #include "launch/launch.hpp"
 
 #include "aos/directive.hpp"

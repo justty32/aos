@@ -1,15 +1,15 @@
-// lib_input.cpp：【inst】Inst → libaos 的單子（aos_inst_input_t）。
+// lib_input.cpp：【inst】Inst → aos-inst 的單子（aos_inst_input_t）。
 //
-// libaos 只收絕對路徑、環境要給完整一份，所以這裡先做好：
-//   1. cwd：從 base_dir 算；沒寫＝base_dir。cwd_mkdir＝先 mkdir -p；存不存在由 libaos 檢查（CwdMissing）
+// aos-inst 只收絕對路徑、環境要給完整一份，所以這裡先做好：
+//   1. cwd：從 base_dir 算；沒寫＝base_dir。cwd_mkdir＝先 mkdir -p；存不存在由 aos-inst 檢查（CwdMissing）
 //   2. stdin／stdout／stderr：有寫＝從解出來的 cwd 算的絕對路徑；沒寫＝inherits（接呼叫者的 fd 0／1／2）；
 //      stdout_mkdir／stderr_mkdir＝先 mkdir -p 那個檔的上層資料夾。建不了＝MkdirFailed
 //   3. 環境：envs 有東西＝現有環境（被 envs 蓋掉的名字跳過）＋envs；沒有＝傳 NULL 沿用；
 //      envs_clear＝現有環境只留 aos-exec 的六個 AOS_*（有設的）＋envs（PATH 也不留）
-//   4. 填單子：appends、stderr_merge→merge（又寫 stderr＝libaos 報 PathConflict）、timeout_ms（0＝不限）、grace_ms、
+//   4. 填單子：appends、stderr_merge→merge（又寫 stderr＝aos-inst 報 PathConflict）、timeout_ms（0＝不限）、grace_ms、
 //      new_session＝true（自成行程群組，逾時整群收）
 // 路徑的接法用 aos-util 的 aos::join（照 Python 的 os.path.join）。
-// 從 impls/aos-inst 的 src/libaos/lib_input.cpp 抄來改（串流沒寫改成 inherits；*_mkdir、envs_clear、stderr_merge 11-04 補回）。
+// 串流沒寫用 inherits；*_mkdir、envs_clear、stderr_merge 11-04 補回。
 #include "inst/inst.hpp"
 
 #include "aos/files.hpp"

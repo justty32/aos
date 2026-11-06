@@ -4,12 +4,12 @@ cmake_minimum_required(VERSION 3.21)
 # CMake 的共通設定（vcpkg、Release、compile_commands、PIC、AOS_STATIC_PIE）在 ../cmake/settings.cmake。
 # 照 aos-loop 的 CMakeLists.txt 改名。
 include(../cmake/settings.cmake)
-# 也開 C：經 aos-exec 連進來的 inst 是 C 專案
+# 也開 C：經 aos-exec 連進來的 aos-inst 是 C 專案
 project(aos-fsm C CXX)
 
 # 用到的兄弟專案（包一層 if(NOT TARGET)，全家都這樣寫）。
 #   aos-loop   公開 API（aos/loop.hpp）：跑一格＝run_once（格的 exec 跟 loop.json 的 exec 同一套寫法）、擋訊號。
-#              它又帶進 aos-exec、inst、aos-util、aos-directive
+#              它又帶進 aos-exec、aos-inst、aos-util、aos-directive
 if(NOT TARGET aos-loop)
   add_subdirectory(../aos-loop aos-loop-build)
 endif()

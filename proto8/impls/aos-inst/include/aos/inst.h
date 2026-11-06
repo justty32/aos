@@ -1,4 +1,4 @@
-/* aos.h：libaos 的公開介面。
+/* aos/inst.h：aos-inst 的公開介面。
  * 主要函數 aos_inst_exec：起一個子程式、等它結束、把結果填好。
  * 要在子程式跑的期間做別的事（例如轉送訊號），改用兩步：
  *   aos_inst_start（起好就回，拿到 pid）→ aos_inst_wait（等到結束）。

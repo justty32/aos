@@ -1,7 +1,7 @@
 /* inst_internal.h：src/ 各檔之間共用的內部函數宣告。
  * 不對外安裝；這些函數在 .so 裡是 hidden（CMakeLists.txt 的 C_VISIBILITY_PRESET
- * hidden）， 只有 aos.h 標了 AOS_API 的四個函數會匯出。 名字都加 inst_
- * 前綴，免得連靜態庫 lib/libinst.a 時跟呼叫者的函數撞名。
+ * hidden）， 只有 aos/inst.h 標了 AOS_API 的四個函數會匯出。 名字都加 inst_
+ * 前綴，免得連靜態庫 lib/libaos-inst.a 時跟呼叫者的函數撞名。
  *
  * 誰定義在哪：
  *   inst_stream.c  inst_lift_fd、inst_open_stream
@@ -11,7 +11,7 @@
 #ifndef AOS_INST_INTERNAL_H
 #define AOS_INST_INTERNAL_H
 
-#include "./aos.h"
+#include "aos/inst.h"
 
 #include <stdbool.h>
 #include <sys/types.h>

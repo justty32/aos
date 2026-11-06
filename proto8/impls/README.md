@@ -1,7 +1,7 @@
 # proto8/impls：aos 的 C／C++ 實作（總入口）
 
 **一句話：這一家小工具做的是同一件事——「在工作區起一個程式、等它、看它的結束碼」——由小到大疊起來：
-`inst`（C lib，跑一次）→ `aos-exec`（在工作區執行一個資料夾程式）→ `aos-loop`（一次次跑）／`aos-fsm`（一次跑一格）→ `aos-daemon`（顧一群 proc）；
+`aos-inst`（C lib，跑一次）→ `aos-exec`（在工作區執行一個資料夾程式）→ `aos-loop`（一次次跑）／`aos-fsm`（一次跑一格）→ `aos-daemon`（顧一群 proc）；
 旁邊兩個幫手：`aos-util`（全家共用的函式庫）、`aos-directive`（解 `$ref`／`$env`）。**
 
 語意以 [NORMS](../docs/NORMS.md) 為準；各支 README 只寫用法、跟規範不同或規範沒寫的實作細節、實作注意、建置與測試。這一頁講「全家一樣的東西」。

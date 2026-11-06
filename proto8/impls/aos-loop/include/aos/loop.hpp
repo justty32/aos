@@ -93,7 +93,7 @@ std::string pointer_escape(const std::string& key);
 // 子行程裡解開那四個訊號、呼叫 aos::exec::run_cli（可執行檔／argv 陣列 exec 掉；單子在那個子行程裡跑、它當監工；
 // 它自己的錯印一行「aos-exec: 代號 原因」、碼 1）——等同起一支 PATH 上的 aos-exec，只是不必在 PATH 上找。
 // 子行程跟呼叫者同一個行程群組（不另開）；跑的期間收到的三個訊號 kill 給它（不另設 SIGKILL 期限）。fork 失敗丟 LaunchFailed。
-// 單子（10-24）＝行程內呼叫 aos-exec 的 run_inst（aos-exec 跑單子用的同一套：inst 的 libaos、timeout_ms、grace_ms、訊號轉給整群）：
+// 單子（10-24）＝行程內呼叫 aos-exec 的 run_inst（aos-exec 跑單子用的同一套：aos-inst、timeout_ms、grace_ms、訊號轉給整群）：
 // 跑的期間 AOS_CF／AOS_CD／AOS_CO 設成 t.cf、它的資料夾、t.co（跑完還原），相對路徑的基準＝t.cf 的資料夾，$ref 從 t.ref_base 算；
 // AOS_WS、AOS_STACK 是相對路徑時以呼叫者的 cwd 轉成絕對（AOS_STACK 結尾補 /；跑完還原；不驗、不建——同 aos-exec 的 N-59 第 1 件，
 // 10-24 審後補：原本原樣給，單子從設定檔的資料夾算，跟 loop 自己照 cwd 算的窗對不上）；其他環境照呼叫者現有的、不讀 .env。單子壞 EntryBad、指示詞壞 DirectiveBad、起不來 LaunchFailed

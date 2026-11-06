@@ -7,7 +7,7 @@
 //      `AOS_STACK=st aos-loop cfg/loop.json` 的單子寫到 cfg/st/，loop 自己的窗卻在 ./st/；經 aos-exec 跑時它們早被轉成絕對了，
 //      N-59 第 1 件。不驗、不建——建 stack 只在 aos-exec）。.env 不讀
 //      （loop 不是 aos-exec，不「走進」哪裡；它被 aos-exec 起來時那份 .env 已經套過了）
-//   2. aos::exec::run_inst（aos-exec 跑單子用的同一個函式：先解指示詞、驗 10 個 key、交給 inst 的 libaos；
+//   2. aos::exec::run_inst（aos-exec 跑單子用的同一個函式：先解指示詞、驗 10 個 key、交給 aos-inst；
 //      timeout_ms、grace_ms、訊號轉給整群都在裡面）。相對路徑的基準＝AOS_CD（同 aos-exec cd 進設定檔的資料夾），$ref 從 ref_base 算
 //   3. 錯（EntryBad／DirectiveBad／LaunchFailed／Internal）訊息前面加「單子跑不起來：」往上丟（同 aos-exec 的 launch），
 //      呼叫者印成自己的一行「程式名: 代號 原因」

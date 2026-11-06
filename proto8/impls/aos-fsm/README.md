@@ -3,7 +3,7 @@
 `aos-fsm - 照一張狀態表，每叫一次跑「現在狀態」那一格，成功就換到下一個`（NAME，C-54 R1）
 
 **一句話：`aos-fsm [FLAGS] CONFIG.json`——一次只跑一格：看 `$AOS_STACK/stage.txt` 記的現在狀態，跑那一格，照表上的 `next` 換狀態（字串＝格退 0 才換；物件＝照格的結束碼查），換了以 0 結束、沒換以格的碼結束。**
-一個 lib（`lib/libaos-fsm.a`，沒有公開標頭）加一支薄薄的命令列（`bin/aos-fsm`）。連 [aos-loop](../aos-loop/README.md) 的公開 API（跑一格＝`run_once`；它又帶進 aos-exec、inst、aos-util、aos-directive）。全家慣例見 [impls/README.md](../README.md)。
+一個 lib（`lib/libaos-fsm.a`，沒有公開標頭）加一支薄薄的命令列（`bin/aos-fsm`）。連 [aos-loop](../aos-loop/README.md) 的公開 API（跑一格＝`run_once`；它又帶進 aos-exec、aos-inst、aos-util、aos-directive）。全家慣例見 [impls/README.md](../README.md)。
 
 像大富翁只擲一次骰子：桌上一張地圖（`fsm.json`：每格寫著「走到這裡做什麼、做完去哪格」），棋子停在哪格記在一張小紙條上（`$AOS_STACK/stage.txt`）。
 叫它一次，它就看紙條、做那格的事、做成了（0）才把棋子移到下一格，然後下班；做不成就留在原地、帶著那個碼回去。

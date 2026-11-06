@@ -6,13 +6,13 @@
 
 ## 程式碼慣例
 
-- **程式本體在 `proto8/`**（11-05 起；08～09 月那一代的 C++23／根目錄 CMake／`AOS_API`／C ABI 規矩隨 `archive/aos-v1/` 封存，不再適用）。C／C++ 在 `proto8/impls/`：**C++20**（各專案 `target_compile_features(… cxx_std_20)`），`inst` 是 C11（`C_EXTENSIONS OFF`）；一個專案一夾、各自 CMake＋vcpkg。命名、標頭、元素、錯誤代號、三扇門、新專案照抄的清單都在 impls 自己的文件，這裡不重講：[02 從哪開始讀與慣例](../../../proto8/impls/docs/02-從哪開始讀與慣例.md)、[03 錯誤](../../../proto8/impls/docs/03-錯誤.md)、[04 命令列與新專案清單](../../../proto8/impls/docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md)；專案之間誰依賴誰在 [01](../../../proto8/impls/docs/01-現況與地圖與依賴.md)。
+- **程式本體在 `proto8/`**（11-05 起；08～09 月那一代的 C++23／根目錄 CMake／`AOS_API`／C ABI 規矩隨 `archive/aos-v1/` 封存，不再適用）。C／C++ 在 `proto8/impls/`：**C++20**（各專案 `target_compile_features(… cxx_std_20)`），`aos-inst` 是 C11（`C_EXTENSIONS OFF`）；一個專案一夾、各自 CMake＋vcpkg。命名、標頭、元素、錯誤代號、三扇門、新專案照抄的清單都在 impls 自己的文件，這裡不重講：[02 從哪開始讀與慣例](../../../proto8/impls/docs/02-從哪開始讀與慣例.md)、[03 錯誤](../../../proto8/impls/docs/03-錯誤.md)、[04 命令列與新專案清單](../../../proto8/impls/docs/04-命令列-設定-旗標-三扇門-指示詞與新專案照這張清單.md)；專案之間誰依賴誰在 [01](../../../proto8/impls/docs/01-現況與地圖與依賴.md)。
 - **單向分層**：下層不可以知道上層存在（層名照 [C-74](../../../proto8/docs/CONCEPTS/01-設計理念/02-C-51.md#分層10-22-使用者定)）；impls 之間只透過對外標頭（`include/aos/…`）與函式庫 target 相依，不 include 對方的 `src/`。
 - **KISS 是最高原則（也是最後原則：先滿足需求與其他原則，最後回頭清掉多餘的；寫什麼就做什麼——給的值照字面用，不讓特定值偷偷變成另一種行為，10-16）；巢狀只管自己這一層、錯誤只處理自己的**（使用者 10-15，proto8 起的總原則；10-15 深夜加嚴）：每一層只說自己的結果與錯誤，不替下層處理、不偷讀下層的 stderr、不替下層驗它的東西，上層不該知道下層是什麼（fsm 不知道格是 fsm、agent 不知道工具是 agent）；想看子層要另有機制，沒機制就不碰；對別人的錯明寫採「入口默認正常／入口檢查」「出口保證」「事先列出」哪一種；錯誤路徑濃縮成少數幾條。條文在 [proto8 C-56、C-52、C-53](../../../proto8/docs/CONCEPTS/01-設計理念.md)。
 - **命名**（使用者 10-15，proto8 起）：資料夾、檔名、JSON key 全小寫加底線，主題放前面；對外指令名＝同名把底線換連字號；環境變數全大寫加底線；程式照語言規範（PEP8）並跟檔名固定對應（`NodePath` ⇄ `node_path`）；裝同類的資料夾用複數（`insts/a.json`）；新縮寫先進[縮寫表](../../../proto8/docs/CONCEPTS/abbr.json)。條文在 [proto8 C-54](../../../proto8/docs/CONCEPTS/01-設計理念/04-C-54.md)。
 - **程式輸出一律英文**（使用者 11-05：「我發現我們做出來的程式，輸出的各種東西，裡面都有中文...全都用英文吧」）：程式的所有輸出——stdout／stderr 訊息、usage／help、寫進檔的文字（如 、回信的 ）、log——一律英文；錯誤代號照舊。文件（README、docs、thinking、wf）照舊繁中，文件裡貼的輸出範例跟著程式用英文；程式碼註解沿用各檔既有語言。
 - **單檔行數門檻**：與 [STRUCTURE 觸發 A](../../STRUCTURE.md) 一致，程式碼單檔超過 300 行就該考慮拆。
-- **`fork` 前後的界線**（`exec` 層專屬，但任何碰行程操作的程式碼都要守）：`fork` 之後、`execve` 之前只能呼叫 async-signal-safe 的 POSIX 操作，不能有 C++ 記憶體配置、`setenv`、字串操作。所有準備工作（環境變數合併、PATH 解析、`argv`／`envp` 實體化）都要在 `fork` 之前做完（proto8 裡是 `inst` 與 aos-util 的子程序）。
+- **`fork` 前後的界線**（`exec` 層專屬，但任何碰行程操作的程式碼都要守）：`fork` 之後、`execve` 之前只能呼叫 async-signal-safe 的 POSIX 操作，不能有 C++ 記憶體配置、`setenv`、字串操作。所有準備工作（環境變數合併、PATH 解析、`argv`／`envp` 實體化）都要在 `fork` 之前做完（proto8 裡是 `aos-inst` 與 aos-util 的子程序）。
 - **新增/改欄位或列舉值**要全域 grep 受影響處（C++ 型別、JSON 讀寫兩端、讀它的 Python／sh 與文件）並同一個 commit 更新，不要分批留下不一致的中間狀態。
 
 ### 三扇門與結束碼（11-05）

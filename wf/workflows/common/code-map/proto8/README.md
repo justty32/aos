@@ -11,11 +11,11 @@
 | [cmd-2](cmd-2.md) | `proto8/cmd/` | `aos-tick/`、`aos-tools/` |  |
 | [extras](extras.md) | `proto8/extras/` | `langs/` | 11／11 |
 | [impls](impls.md) | `proto8/impls/` | 依賴圖、頂層、`aos-daemon/`、`aos-directive/` | 164／164 |
-| [impls-2](impls-2.md) | `proto8/impls/` | `aos-exec/`、`aos-fsm/` |  |
+| [impls-2](impls-2.md) | `proto8/impls/` | `aos-exec/`、`aos-fsm/`、`aos-inst/` |  |
 | [impls-3](impls-3.md) | `proto8/impls/` | `aos-json/`、`aos-llm/` |  |
 | [impls-4](impls-4.md) | `proto8/impls/` | `aos-llm-kernel/`、`aos-lock/` |  |
 | [impls-5](impls-5.md) | `proto8/impls/` | `aos-loop/`、`aos-post/` |  |
-| [impls-6](impls-6.md) | `proto8/impls/` | `aos-util/`、`cmake/`、`inst/` |  |
+| [impls-6](impls-6.md) | `proto8/impls/` | `aos-util/`、`cmake/` |  |
 | [kernel](kernel.md) | `proto8/kernel/` | `daemon-judge/`、`llm-kernel/`、`procs-kernel/` | 10／10 |
 | [knowledge](knowledge.md) | `proto8/knowledge/` | 頂層、`aos/` | 23／23 |
 | [lib](lib.md) | `proto8/lib/` | 頂層、`agent/`、`aos/`、`base/` | 32／88 |

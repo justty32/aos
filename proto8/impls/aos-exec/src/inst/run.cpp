@@ -3,9 +3,9 @@
 //   1. aos::resolve        解單子裡的指示詞（$env、$ref，$path／$prefix；aos-directive；$ref 從 ref_base 算）。要在 apply_env
 //                          之後呼叫，單子才讀得到 aos-exec 剛設的 AOS_STACK／AOS_CF／AOS_CD
 //   2. parse_inst          驗 10 個 key（fields.cpp）；argv0（帶 / 又 exec 不了＝前面插 aos-exec，launch.cpp）；
-//                          build_lib_input 組 libaos 的單子（lib_input.cpp）
+//                          build_lib_input 組 aos-inst 的單子（lib_input.cpp）
 //   3. 擋住三個訊號（SigMask，出去還原）、開 signalfd／eventfd
-//   4. aos_inst_start      起子程式，同步拿到 pid（失敗＝LaunchFailed，訊息帶 libaos 的名字）
+//   4. aos_inst_start      起子程式，同步拿到 pid（失敗＝LaunchFailed，訊息帶 aos-inst 的名字）
 //   5. 工人執行緒          aos_inst_wait：卡到子程式結束（含 timeout／grace 整群收掉），回來敲一下 done_fd
 //      主執行緒            forward_signals_until_done：把訊號轉給整群，直到 done_fd 響（signals.cpp）
 //   6. join 之後讀結果（wait 失敗＝Internal）
@@ -13,7 +13,7 @@
 // 為什麼要兩條執行緒：aos_inst_wait 一呼叫就卡到子程式結束，卡著的時候沒辦法同時收訊號。
 // 執行緒之間沒有共用會同時讀寫的變數：pid 在開工人之前就拿到了；proc、out、rc 開工人之後只有工人碰，
 // 主執行緒 join 之後才讀。
-// 從 impls/aos-inst 的 src/libaos/run.cpp 抄來改：錯誤代號不一個個鏡射（C-53 濃縮）、遮罩在這裡擋／還原、整群送。
+// aos-inst 的錯誤代號不一個個鏡射（C-53 濃縮）；遮罩在這裡擋／還原、整群送。
 #include "inst/inst.hpp"
 
 #include "aos/directive.hpp"
@@ -59,7 +59,7 @@ struct Fd {
     Fd& operator=(const Fd&) = delete;
 };
 
-// libaos 只說「串流開不了」：這裡不動檔地再看一次是哪一個、為什麼（stdin 試開唯讀；stdout／stderr 檔在就試開寫、
+// aos-inst 只說「串流開不了」：這裡不動檔地再看一次是哪一個、為什麼（stdin 試開唯讀；stdout／stderr 檔在就試開寫、
 // 不在就看上層資料夾），說得出來就說，說不出來照舊。
 std::string open_failed_why(const LibInput& lib) {
     static const char* names[3] = {"stdin", "stdout", "stderr"};
@@ -93,11 +93,11 @@ std::string open_failed_why(const LibInput& lib) {
     return "cannot open a stream (one of stdin/stdout/stderr)";
 }
 
-// libaos 起不來的錯 → LaunchFailed（訊息開頭是 libaos 的名字，例「CommandMissing 找不到要跑的程式 x」）。
+// aos-inst 起不來的錯 → LaunchFailed（訊息開頭是 aos-inst 的名字，例「CommandMissing 找不到要跑的程式 x」）。
 Error start_error(int rc, const LibInput& lib) {
     std::string name = aos_inst_strerror(rc);
     std::string prog = lib.argv[0];
-    std::string why = "reported by libaos (" + prog + ")";
+    std::string why = "reported by aos-inst (" + prog + ")";
     if (rc == AOS_INST_ERR_CWD_MISSING) {
         why = "cwd " + lib.cwd + " is not a directory or cannot be entered";
     } else if (rc == AOS_INST_ERR_PATH_CONFLICT) {

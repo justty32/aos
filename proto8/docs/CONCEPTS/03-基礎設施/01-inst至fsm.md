@@ -2,7 +2,7 @@
 
 ## inst
 
-實作：[inst](../../../impls/inst/README.md)：C lib、不提供命令列，單子由 aos-exec 行程內跑（[ideas § 20](../../../thinking/2026-10/19/ideas/README.md)）。C-36 的層層遞進從 inst 起，條文放在下面 loop 與 daemon。
+實作：[inst](../../../impls/aos-inst/README.md)：C lib、不提供命令列，單子由 aos-exec 行程內跑（[ideas § 20](../../../thinking/2026-10/19/ideas/README.md)）。C-36 的層層遞進從 inst 起，條文放在下面 loop 與 daemon。
 
 - **C-08** 計算任務＝一個 POSIX 行程，不是 thread；不必再往下分種類。（2.7）
 - **C-34** 求值＝放開讓它算、過一段時間看狀態變化的結果；求值的定義就是空間狀態的變化。對資料夾求值＝執行這個資料夾；求值還回來的是一個正在變動的資料夾，不是一個值。（3h、3f.1、3f.3）

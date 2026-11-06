@@ -2,7 +2,7 @@
 //
 //   run_cli       等同命令列 `aos-exec [旗標...] XXX [args...]`（10-21 起；src/cli/）：可執行檔／argv 陣列＝exec（成功不回來）；
 //                 inst 單子＝行程內跑、回子程式的碼；自己的錯 stderr 一行「aos-exec: error: 代號 原因」、回 1   ← 會動行程全域狀態
-//   run_inst      行程內跑一張 inst 單子（交給 impls/inst 的 libaos；aos-exec 留在行程裡當監工）
+//   run_inst      行程內跑一張 inst 單子（交給 impls/aos-aos-inst；aos-exec 留在行程裡當監工）
 //   argv0         argv[0] 帶 / 又 exec 不了（資料夾、沒 +x 的檔、不在、帶 #/）＝前面插 aos-exec（10-20 ideas D3）
 //
 // 命令列（src/main.cpp）只叫 run_cli；aos-loop／aos-fsm 的每次、aos-daemon 的子 loop 在 fork 出來的子行程裡叫 run_cli
@@ -52,9 +52,9 @@ struct Result {
 // base_dir＝相對路徑的基準（CLI 給 entry.dir）、args 接在 argv 尾、ref_base＝$ref 相對檔名的起點（寫著單子的檔所在的資料夾；
 // 空＝base_dir）。argv[0] 帶 / 又 exec 不了＝前面插 aos-exec（argv0，從解出來的 cwd 看；aos-exec 照子程式的 PATH 找）。
 // 串流沒寫＝接呼叫者的 fd 0／1／2。子程式自成行程群組；跑的期間 SIGINT／SIGTERM／SIGHUP 不打斷呼叫者、
-// 轉給整個群組，轉過之後過 grace_ms 還沒結束就 SIGKILL 整群；timeout_ms 由 libaos 管（逾時也是整群收）。
+// 轉給整個群組，轉過之後過 grace_ms 還沒結束就 SIGKILL 整群；timeout_ms 由 aos-inst 管（逾時也是整群收）。
 // 回 Result（子程式回幾號、被逾時收掉都算正常跑完；被訊號停掉 code＝128＋N；轉過訊號 received＝第一個）。
-// 單子壞 EntryBad、指示詞壞或 $env 沒設 DirectiveBad、起不來 LaunchFailed（訊息開頭是 libaos 的名字）、收不到結果 Internal。
+// 單子壞 EntryBad、指示詞壞或 $env 沒設 DirectiveBad、起不來 LaunchFailed（訊息開頭是 aos-inst 的名字）、收不到結果 Internal。
 // 訊號遮罩：進來時擋住三個訊號、出去時還原（單執行緒的呼叫者什麼都不用做；多執行緒的呼叫者要在開執行緒前
 // 自己把三個訊號擋在每條執行緒上，不然訊號可能送到別條執行緒去）。會讀 environ（環境變數要先設好）。
 Result run_inst(const Json& doc, const std::string& base_dir, const std::vector<std::string>& args,

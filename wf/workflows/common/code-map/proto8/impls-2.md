@@ -22,7 +22,7 @@
 | [`src/find/find.hpp`](../../../../../proto8/impls/aos-exec/src/find/find.hpp) | 一跳（hop）——XXX → 走進去、讀 .env、挑入口、判種類（10-21 ideas § 4～§ 7；N-59、N-61、N-62）。 |
 | [`src/inst/fields.cpp`](../../../../../proto8/impls/aos-exec/src/inst/fields.cpp) | 單子（$env 已解）→ Inst：認得 16 個 key、驗型別。 |
 | [`src/inst/inst.hpp`](../../../../../proto8/impls/aos-exec/src/inst/inst.hpp) | 行程內跑一張 inst 單子（公開的 run_inst 在 aos/exec.hpp）。 |
-| [`src/inst/lib_input.cpp`](../../../../../proto8/impls/aos-exec/src/inst/lib_input.cpp) | Inst → libaos 的單子（aos_inst_input_t）。 |
+| [`src/inst/lib_input.cpp`](../../../../../proto8/impls/aos-exec/src/inst/lib_input.cpp) | Inst → aos-inst 的單子（aos_inst_input_t）。 |
 | [`src/inst/run.cpp`](../../../../../proto8/impls/aos-exec/src/inst/run.cpp) | run_inst——行程內跑一張 inst 單子（公開介面見 aos/exec.hpp）。 |
 | [`src/inst/signals.cpp`](../../../../../proto8/impls/aos-exec/src/inst/signals.cpp) | 訊號——跑單子的期間收到 SIGINT／SIGTERM／SIGHUP 自己不死，轉給子程式的整個行程群組。 |
 | [`src/launch/launch.cpp`](../../../../../proto8/impls/aos-exec/src/launch/launch.cpp) | 開跑（說明見 launch.hpp）。 |
@@ -42,3 +42,14 @@
 | [`src/table/table.cpp`](../../../../../proto8/impls/aos-fsm/src/table/table.cpp) | read_table、check、pick、next_for（說明見 table.hpp；10-22；next 分岔 10-30）。 |
 | [`src/table/table.hpp`](../../../../../proto8/impls/aos-fsm/src/table/table.hpp) | fsm.json——`{"start": 狀態名, "states": {名: {"exec": aos-exec 的目標或 [目標, 參數...], "next": 狀態名或 {結束碼: 狀態名}}}}`。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-fsm/vcpkg.json) | aos-fsm：一次只跑一格（fsm.json 的 start／states；狀態在 $AOS_STACK） |
+
+## `proto8/impls/aos-inst/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`CMakeLists.txt`](../../../../../proto8/impls/aos-inst/CMakeLists.txt) | 共通設定（Release、compile_commands、PIC…）跟全家一樣在 ../cmake/settings.cmake；純 C、沒有 vcpkg.json，toolchain 不裝任何東西。 |
+| [`include/aos/inst.h`](../../../../../proto8/impls/aos-inst/include/aos/inst.h) | aos-inst 的公開介面。 |
+| [`src/inst_exec.c`](../../../../../proto8/impls/aos-inst/src/inst_exec.c) | 四個公開函數。 |
+| [`src/inst_internal.h`](../../../../../proto8/impls/aos-inst/src/inst_internal.h) | src/ 各檔之間共用的內部函數宣告。 |
+| [`src/inst_proc.c`](../../../../../proto8/impls/aos-inst/src/inst_proc.c) | 起子程式、等它、收它。 |
+| [`src/inst_stream.c`](../../../../../proto8/impls/aos-inst/src/inst_stream.c) | 子程式的三個串流。 |
