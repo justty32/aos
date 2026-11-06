@@ -18,6 +18,7 @@
 
 #include <chrono>
 #include <fcntl.h>
+#include <pthread.h>
 #include <sys/file.h>
 #include <unistd.h>
 #include <cstdio>
@@ -399,7 +400,17 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
 // 11-05 B 線：用 flock 鎖住 stack 資料夾本身（不多建檔；O_CLOEXEC，子項 exec 後不帶著；行程不論怎麼死鎖都跟著放）。
 // 鎖不到＝同一個 stack 已有 daemon 活著＝DaemonRunning。原本只比 state.json 的 pid＋ticks＋boot_id：兩個同時起時兩邊都還沒寫 state.json、
 // 都過關，同一個 stack 跑兩個 daemon（實測一個死在 state.json.tmp 互搶、活下來的那個 state.json 記著死掉那個的 pid，再起第三個也擋不住）。
-// pid 只拿來寫訊息。stack 打不開（不在）＝不鎖，後面寫窗時照各自的錯。
+// stack 打不開（不在）＝不鎖，後面寫窗時照各自的錯。
+// 11-06（no-pid P1）：fork 出來的子行程一律先關掉這把鎖（pthread_atfork）。O_CLOEXEC 只管 exec：不 exec 的子（exec 型 proc 是單子、
+// 身體是單子＝子行程內 run_inst）原本一直帶著鎖，daemon 被 kill -9 後新 daemon 要等它跑完才拿得到（DaemonRunning）。
+// 身體的 fork 在 aos-loop 的 run_folder、run_child 管不到，所以掛在每次 fork 上；close 是 async-signal-safe。
+static int g_lock_fd = -1;
+static void close_lock_in_child() {
+    if (g_lock_fd >= 0) {
+        ::close(g_lock_fd);
+    }
+}
+
 void Daemon::check_running() {
     int fd = ::open(stack_.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
     if (fd < 0) {
@@ -407,25 +418,18 @@ void Daemon::check_running() {
     }
     if (::flock(fd, LOCK_EX | LOCK_NB) == 0) {
         lock_fd_ = fd;   // 一直開著到行程結束
+        g_lock_fd = fd;
+        pthread_atfork(nullptr, nullptr, close_lock_in_child);
         return;
     }
     ::close(fd);
-    std::string who;
-    bool closing = false;
+    // 11-06（no-pid P1）：鎖不到已證明對方活著，只看它 state 窗的 phase；不對 /proc、不印 pid（只有 daemon 管自己的子才碰 pid）
     std::optional<Json> st = state_path_.empty() ? std::nullopt : aos::read_json(state_path_);
-    if (st && st->is_object() && st->value("pid", Json()).is_number_integer() && st->value("started_at_ticks", Json()).is_number_integer()) {
-        // 對得上活著的才印 pid：另一個剛起、還沒寫 state.json 時，檔裡是上一個（已死）daemon 的 pid
-        pid_t pid = (pid_t)(*st)["pid"].get<long long>();
-        std::optional<long long> now = aos::proc_started_at_ticks(pid);
-        if (now && *now == (*st)["started_at_ticks"].get<long long>()) {
-            who = " (pid " + std::to_string(pid) + ")";
-            closing = st->value("phase", Json()) == "stopping";
-        }
-    }
+    bool closing = st && st->is_object() && st->value("phase", Json()) == "stopping";
     if (closing) {   // 11-05 第二輪：收工途中（等子項退，最多約 10 秒）叫人「沿用」是錯的
-        throw Error{code::DaemonRunning, "the daemon on this stack (" + stack_ + ")" + who + " is shutting down; start again after it exits"};
+        throw Error{code::DaemonRunning, "the daemon on this stack (" + stack_ + ") is shutting down; start again after it exits"};
     }
-    throw Error{code::DaemonRunning, "a daemon is already running on this stack (" + stack_ + ")" + who + "; to reuse it, just aos-daemon-ctl add / aos-agent ctl add"};
+    throw Error{code::DaemonRunning, "a daemon is already running on this stack (" + stack_ + "); to reuse it, just aos-daemon-ctl add / aos-agent ctl add"};
 }
 
 Json Daemon::unrel(const Json& v) const {
@@ -499,6 +503,9 @@ void Daemon::adopt() {
     // 上一個 daemon 死的時候在收工（state 窗 phase stopping）＝它正在收的那些本來要睡下（sleeping），不是被 stop
     std::optional<Json> me = state_path_.empty() ? std::nullopt : aos::read_json(state_path_);
     bool finishing = me && me->is_object() && me->value("phase", Json()) == "stopping";
+    // 11-06（no-pid P1）：表頂層的 boot_id 跟這次開機不同（或沒寫）＝表上的行程都不在了（重開機後 pid＋ticks 可能撞上別的行程）；這台讀不到 boot_id＝照舊只比 pid＋ticks
+    std::optional<std::string> boot = aos::boot_id();
+    bool same_boot = !boot || old->value("boot_id", Json()) == Json(*boot);
     for (auto& [name, r] : table.items()) {
         Json phase = r.value("phase", Json());
         Json st = r.value("stack", Json());
@@ -539,7 +546,7 @@ void Daemon::adopt() {
         c.once = !std::filesystem::exists(aos::join(c.stack, names_.loop), ec);   // 小格有 daemon 寫的 loop.json（procs_loop 的名字）＝loop 型（procs § 2 第 7 條）
         Json pid = r.value("pid", Json());
         Json ticks = r.value("started_at_ticks", Json());
-        std::optional<long long> now = pid.is_number_integer() && ticks.is_number_integer() ? aos::proc_started_at_ticks((pid_t)pid.get<long long>()) : std::nullopt;
+        std::optional<long long> now = same_boot && pid.is_number_integer() && ticks.is_number_integer() ? aos::proc_started_at_ticks((pid_t)pid.get<long long>()) : std::nullopt;
         if (now && *now == ticks.get<long long>()) {
             c.pid = (pid_t)pid.get<long long>();
             c.started_at_ticks = ticks.get<long long>();
