@@ -1,8 +1,7 @@
 # aos_agent/listen.py - 等待回答或列出與追蹤歷史對話。
 HELP = """aos-agent listen - print the agent's answer
 
-usage: aos-agent [--daemon D] listen [--target NAME] [--timeout-s SECS]
-       aos-agent [--daemon D] listen [--target NAME] --last N [--follow]
+usage: aos-agent [--daemon D] listen [--target NAME] [--timeout-s SECS | --last N [--follow]]
 
 Without --last: wait for the answer to the latest question and print only its text (so
 > file and pipes work; notes go to stderr). --last N prints the last N exchanges as blocks:
