@@ -2,6 +2,8 @@
 
 Use aos-agent ctl to attach agents and inspect or change their daemon state.
 
+`ctl add` 工作區：`--ws DIR` ＞ 非空的 `$AOS_WS` ＞ 呼叫當下的 cwd；轉絕對路徑。選到的路徑不是資料夾＝`WsMissing`，不送信、不退回 cwd。
+
 ```sh
 aos-agent ctl add --name bob --ws /work ../agents/bob
 aos-agent ctl ls --json

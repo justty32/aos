@@ -20,7 +20,7 @@ the table, then prints its stack; the daemon refusing it = AddRejected.
 
 flags:
   -n, --name N        its name on the table (default: the folder name of XXX)
-  -w, --ws WS         its workspace (default: the current directory)
+  -w, --ws WS         its workspace (default: non-empty $AOS_WS, else the current directory)
   -s, --stack S       its stack (default: <daemon stack>/procs/<name>/)
       --envs K=V      child environment variable (repeatable; set through an exec single)
       --limits JSON   resource limits, the aos-sandbox keys ('{}' = none)
@@ -75,9 +75,9 @@ def cmd(argv):
         limits = decl.get("limits")
         if limits is not None:
             call_dc(dc.check_limits, limits, "the limits declared by %s" % xxx, "InterfaceBad")
-    ws = os.path.abspath(opts.get("ws") or ".")
+    ws = os.path.abspath(opts.get("ws") or os.environ.get("AOS_WS") or ".")
     if not os.path.isdir(ws):
-        raise Fail("PathMissing", "--ws is not a folder: %s" % ws)
+        raise Fail("WsMissing", "workspace does not exist: %s" % ws)
     stack = opts.get("stack")
     if stack is not None:
         if not stack:
