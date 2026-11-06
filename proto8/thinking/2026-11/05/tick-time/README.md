@@ -28,7 +28,7 @@
 1. **誰讓時鐘走？** 推薦：使用者自己起一台 `aos-loop` 跑 `aos-tick FILE`（跟其他 daemon 一樣是一個 proc，照 no-pid 監管樹掛在根 daemon 底下）；aos 不內建「自動有個時鐘」。替代：根 daemon 內建一條 tick 線——但這把時鐘綁死在 daemon 上，違背「aos-tick 跑在哪不重要」。
 2. **`AOS_TICK` 沒設時，內部期限怎麼算？** 推薦：**沒時鐘＝時間不走**＝所有 tick 期限永不到（lock 租約不過期、kernel deadline 不過期、卡住不判），只印一次 warning。替代：退回牆上時鐘用 `AOS_TICK_INTERVAL` 反推——方便但偷偷把牆上時鐘混回來，凍住時又會全過期，正是今晚要解的病。
 3. **`AOS_TICK_INTERVAL` 沒設時？** 推薦：預設 1000（毫秒，一 tick≈一秒），只給「要換算成人看得懂」的地方用；內部邏輯根本不該讀它。
-4. **tick 數寫在哪些既有欄位？** 推薦：原本的秒／毫秒欄位改名帶 `_ticks`（`lease_ticks`、`deadline_tick`、`stuck_after_ticks`），不沿用舊名換語意，避免舊檔被誤讀。
+4. **tick 數寫在哪些既有欄位？** 推薦：原本的秒／毫秒欄位改名帶 `_ticks`（`lease_ticks`、`deadline_tick`、`stuck_after_ticks`），不沿用舊名換語意，避免舊檔被誤讀。（**11-06 改讀**：使用者 11-06 選「照命名法 (Recommended)」——時間點照 C-54 R6 寫 `<事件>_at_ticks`：`deadline_tick`→`deadline_at_ticks`、`sent_tick`→`sent_at_ticks`、`acquired_tick`→`acquired_at_ticks`、`responded_tick`→`responded_at_ticks`；多久的 `lease_ticks`、`stuck_after_ticks` 不變，[lift-to-norms](../../06/lift-to-norms/README.md)。）
 5. **daemon 的 3 秒／10 秒（REVIVE／GRACE）要不要動？** 推薦：不動，這兩個是跟 Linux proc 交互（SIGTERM→SIGKILL、fork 剛起就死），屬第③類。
 
 ## 明天接
