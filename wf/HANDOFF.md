@@ -19,7 +19,7 @@
 3. **今天下午到收工做完並 push**：P-32 移除（19acb13c；使用者「移除P-32」，C-42 沒給 ws＝沿用父的改成已定）；E1＋E4 金鑰歸端點小 proc（02edef8f）；E3＋K-4（c1fb18c5）；K-2＋E2 的 AOS_TICK 半（3bada8a0）；K-6 thought 不寫死範本（407ee400）＋`from` 可在工具登記格 `env.AOS_THOUGHT_FROM` 配預設（7cfdccf0，使用者「定義裡配預設」）；`aos-agent ctl add` 沒給 --ws 先讀 AOS_WS（2a0afb06，使用者「改成先讀 AOS_WS」）；git-image 評估（04185730；三題已裁：只留最新一份、**request.json 改成可重建後擋掉**、.trash 擋掉不搬）。
 4. **說明頁**：claude.ai 本日進度頁（第 7 版）與 aos-agent 用法頁 https://claude.ai/artifact/9joBCStEMXvNMXadMGXqCT 已更新；桌面 `aos-入門-ELI5.html`、`aos-詳細參考.html` 換新；**桌面新資料夾 `aos-說明/`**（431 頁：ELI5、教學〔概念＋agent 入門，使用者「拆兩塊」「盡量多」〕、案例集 16 例、參考書 6 頁、原始碼 371 頁，離線可開，重建用裡面的 `tools/build_site.py`；沒人看過畫面，要使用者看一眼）。桌面「三扇門」頁使用者說「別管」。
 5. **還沒收完的**：Z 隊（git-image 三題落地：agent-fsm wait 格找不到 request.json 退回 think 重組、stack.gitignore 照 git-image 04 加 20 條＋擋 request.json、docs/04-搬家 補「專門 repo、orphan commit＋push --force、要留的打 tag」、修 11-06 日誌壞連結）與效能隊——收工前做完就 commit，沒做完就**留在 WSL 主 clone 的工作樹沒 commit**，報告在 WSL `/tmp/teamZ/out.md`、`/tmp/teamPerf/out.md`（關機後 /tmp 可能清掉，所以明天要先 `git status` 看工作樹、審過再 commit）。
-6. **今晚家機**：刪作廢 S5／S7 分支、`git pull`、重裝（S11 最後一步）。**之後排程**：P7（照 C-52 新讀法重設計、不讀子 ctl 信箱）、P8、P9、T5／T6／T8、判官排隊＋寄信者逾時第二步（K-3、E2 的 AOS_KERNEL 半併這裡）、K-1、K-5（P8 前）、W 線、aos-serve。
+6. **家機 11-06 晚已做完**：作廢 S5／S7 兩條 worktree 分支與 build 殘渣已刪、impls 重建（nice 15、-j4）、`install.sh` 重裝（舊連結先 `--uninstall`）、`~/code/playground` 照新路徑刷新（備份 `playground.bak-1106home`）、LiteLLM 在 :4000。**之後排程**：P7（照 C-52 新讀法重設計、不讀子 ctl 信箱）、P8、P9、T5／T6／T8、判官排隊＋寄信者逾時第二步（K-3、E2 的 AOS_KERNEL 半併這裡）、K-1、K-5（P8 前）、W 線、aos-serve。
 
 提醒：設計題先讀相關 NORMS／CONCEPTS；說「已寫進」前先查。
 
