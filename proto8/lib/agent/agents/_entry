@@ -14,7 +14,7 @@
 #   add {name, def, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?}  生法 (b) 用現有定義：def 直接掛（aos-agent ctl add），llm／tools／tools_rm 走
 #       這隻子的覆蓋層（aos-agent llm set／tools add --override／tools rm，stack 只存差異、定義不動、不複製）；後面幾步失敗＝ctl rm 收回。
 #   兩種都：ws＝子的工作區，相對＝從我的 $AOS_WS 算、絕對＝照用，沒給＝我的 $AOS_WS（代定：沿用父的），不在先建；limits 原樣轉 --limits。
-#       ctl add 在 stderr 的提醒行原樣接在結果後面印給腦。印 added <name> (stack …); children N/MAX。
+#       成功只印 added <name> (stack …); children N/MAX，不把下層提醒行接進給腦的結果；下層 stderr 仍原樣透出。
 #   new／add／rm：ctl_timeout_s＝等 daemon 掛上或移除的秒數，預設 30、上限 1700；子行程保險至少多 30 秒。
 #   say {name, text}           寄一句（aos-agent say，話走 stdin）、馬上回，印信件名稱
 #   ask {name, text, timeout_s?}  say＋listen --timeout-s（預設 600、上限 1700：act 格 timeout_ms 1800000 包得住）印回答
@@ -64,13 +64,11 @@ tool_io.start(NAME, HELP)
 OPS = ("new", "add", "say", "ask", "rm", "ls")
 NAME_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_-]{0,63}\Z")
 ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
-WARN_RE = re.compile(r"aos-[a-z-]+: warning: ")
 ASK_DEFAULT_S, ASK_MAX_S = 600, 1700
 CTL_DEFAULT_S, CTL_MAX_S = 30, 1700
 MAX_CHILDREN_DEFAULT = 4       # agents.json 都沒寫時（代定，同範本）
 STEP_S = 90                    # 一般步驟的逾時；ctl add／rm 另取 max(STEP_S, ctl_timeout_s + 30)
 child = None
-last_err = ""                  # 上一次 aos-agent 的 stderr（成功時拿來轉提醒行給腦）
 
 
 die = tool_io.die
@@ -101,7 +99,7 @@ signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、�
 
 def agent(argv, text=None, timeout_s=STEP_S):
     """叫 aos-agent --daemon <AOS_DAEMON> argv…；退 0 回 (stdout, None)，退非 0 回 (stdout, (代號, 原因))。"""
-    global child, last_err
+    global child
     cmd = ["aos-agent", "--daemon", daemon] + argv
     try:
         child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL,
@@ -115,7 +113,6 @@ def agent(argv, text=None, timeout_s=STEP_S):
         die("CommandFailed", "aos-agent %s did not finish in %d s (killed)" % (" ".join(argv[:2]), timeout_s))
     p, child = child, None
     out, err = out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
-    last_err = err
     if err:                                     # 下層的 stderr 原樣透出（R10）
         sys.stderr.write(err if err.endswith("\n") else err + "\n")
         sys.stderr.flush()
@@ -293,7 +290,7 @@ def spawn_args(args):
 
 
 def mount(name, definition, child_ws, limits, ctl_s):
-    """aos-agent ctl add；回 (子的 stack, 提醒行) 或 (None, 錯)。"""
+    """aos-agent ctl add；回 (子的 stack, None) 或 (None, 錯)。"""
     if not os.path.isdir(child_ws):
         try:
             os.makedirs(child_ws)
@@ -303,14 +300,12 @@ def mount(name, definition, child_ws, limits, ctl_s):
                       *(["--limits", json.dumps(limits, ensure_ascii=False)] if limits is not None else []), definition], timeout_s=max(STEP_S, ctl_s + 30))
     if err:
         return None, err
-    notes = [x.strip() for x in last_err.splitlines() if WARN_RE.match(x.strip())]
-    return (out.strip().splitlines()[-1] if out.strip() else "?"), notes
+    return (out.strip().splitlines()[-1] if out.strip() else "?"), None
 
 
-def report(name, child_stack, notes, alive, n, head=""):
+def report(name, child_stack, alive, n, head=""):
     write_children(alive + [{"name": name, "stack": stack_rel(child_stack)}])
-    sys.stdout.write("%sadded %s (stack %s); children %d/%d\n" % (head, name, child_stack, len(alive) + 1, n)
-                     + "".join(x + "\n" for x in notes))
+    sys.stdout.write("%sadded %s (stack %s); children %d/%d\n" % (head, name, child_stack, len(alive) + 1, n))
     sys.exit(0)
 
 
@@ -466,20 +461,20 @@ if op == "new":                                 # 生法 (a)：產出新定義�
     except OSError as e:
         shutil.rmtree(tmp, ignore_errors=True)
         die("WriteFailed", "cannot move the new definition into %s: %s" % (dest, e))
-    child_stack, notes = mount(name, dest, child_ws, limits, ctl_s)
+    child_stack, err = mount(name, dest, child_ws, limits, ctl_s)
     if child_stack is None:                     # 全有或全無：掛不上就把剛寫的定義刪掉
         shutil.rmtree(dest, ignore_errors=True)
-        die(notes[0], notes[1] + " (the new definition %s was removed again)" % dest)
-    report(name, child_stack, notes, alive, n, "wrote definition %s%s\n" % (dest, " (copied from %s)" % src if src else ""))
+        die(err[0], err[1] + " (the new definition %s was removed again)" % dest)
+    report(name, child_stack, alive, n, "wrote definition %s%s\n" % (dest, " (copied from %s)" % src if src else ""))
 
 # 生法 (b)：用現有定義掛，設定走子的覆蓋層
 definition = read_path(args.get("def"), "def")
 if not os.path.isdir(definition):
     die("DefMissing", "def %r is not a folder" % args.get("def"))
 alive, n = quota()
-child_stack, notes = mount(name, definition, child_ws, limits, ctl_s)
+child_stack, err = mount(name, definition, child_ws, limits, ctl_s)
 if child_stack is None:
-    die(*notes)
+    die(*err)
 steps = [("llm set %s=%s" % (k, v), ["llm", "--target", name, "set", "%s=%s" % (k, v)]) for k, v in llm.items()] + \
         [("tools rm " + t, ["tools", "--target", name, "rm", t]) for t in tools_rm] + \
         [("tools add " + t, ["tools", "--target", name, "add", "--override", t, p]) for t, p in tool_list]
@@ -489,4 +484,4 @@ for what, argv in steps:
         _, err2 = agent(["ctl", "rm", "--timeout-s", "%g" % ctl_s, name], timeout_s=max(STEP_S, ctl_s + 30))
         die(err[0], err[1] + " (during %s; %s)" % (what, "rolled back: removed %s" % name if err2 is None
                                                     else "rollback failed too: %s %s" % err2))
-report(name, child_stack, notes, alive, n)
+report(name, child_stack, alive, n)

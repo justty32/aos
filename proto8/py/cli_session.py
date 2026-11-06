@@ -8,8 +8,8 @@
 #   busy.txt      claude 的畫面正在跑一輪（有人送出、還沒講完）
 #   lock          同一時間只有一個人用這段對話（agent 的一次呼叫、attach 開畫面）
 #   live.jsonl    非互動的即時紀錄兼副產物：claude 的 stream-json、codex 的 --json 事件，一行一事件、只接不重寫（10-28；10-27 是每次重寫）
-#   tool.txt、ws.txt  這格屬於哪個工具資料夾、哪個工作區（open_cell 叫回畫面時用）（10-27）
-#   stack.txt     給 aos-mcp 的 stack（11-03 eca-tools：平級形＝那隻 eca 的 $AOS_STACK、工具形＝這格本身；open_cell 叫回畫面時用）
+#   tool.txt、ws.txt  這格屬於哪個工具資料夾、哪個工作區（相對小格；open_cell 叫回畫面時用）
+#   stack.txt     給 aos-mcp 的 stack（相對小格；平級形＝那隻 eca 的 $AOS_STACK、工具形＝這格本身；open_cell 叫回畫面時用）
 #   mcp.json      claude 的 MCP 設定（11-03 eca-tools）：有登記檔才寫，每次起 claude 前重寫；codex 不寫檔、走 -c
 #   transcripts/<kind>-<id>.jsonl  指到 CLI 自己存的這段對話的 symlink（claude ~/.claude/projects/*/<id>.jsonl、
 #                 codex ~/.codex/sessions/**/*<id>.jsonl）：拿到 session id 就建（10-30 agent-lifecycle C-15～C-17；
@@ -214,9 +214,10 @@ class Cell:
 
 
 def note_cell(cell, tool_dir, ws, stack):
-    """記下這格是哪個工具、哪個工作區、哪個 stack（tool.txt、ws.txt、stack.txt〔11-03 eca-tools〕；open_cell 叫回畫面要）。寫不成不擋正事。"""
+    """工具、工作區、stack 都存相對小格的路徑，整樹搬遷後 open_cell 照新位置叫回。寫不成不擋正事。"""
     try:
         for name, value in (("tool.txt", tool_dir), ("ws.txt", ws), ("stack.txt", stack)):
+            value = os.path.relpath(value, cell.path)
             if cell.read(name) != value:
                 cell.write(name, value + "\n")
     except OSError:
@@ -661,11 +662,14 @@ def attach_main(argv, agent_dir):
 
 
 def open_cell(cell):
-    """畫面沒開就開（有 session.txt 就 --resume 接回那段＝叫回）；工具、工作區、stack 照格裡的 tool.txt、ws.txt、stack.txt。回 True＝這次才開的。
+    """畫面沒開就開（有 session.txt 就 --resume 接回那段＝叫回）；tool.txt、ws.txt、stack.txt 都從小格解相對路徑。回 True＝這次才開的。
     stack.txt 只在接了工具時要（沒有＝CellBad；11-03 eca-tools）。"""
     tool_dir, ws, stack = cell.read("tool.txt"), cell.read("ws.txt"), cell.read("stack.txt")
     if not tool_dir or not ws:
         die("CellBad", "%s has no tool.txt/ws.txt (not a cell cli_session has used)" % cell.path)
+    tool_dir = os.path.normpath(os.path.join(cell.path, tool_dir))
+    ws = os.path.normpath(os.path.join(cell.path, ws))
+    stack = os.path.normpath(os.path.join(cell.path, stack)) if stack else ""
     cfg = load_cfg(tool_dir)
     if cfg.get("registry") and not stack:
         die("CellBad", "%s has no stack.txt (tools are attached; need the stack for aos-mcp)" % cell.path)
