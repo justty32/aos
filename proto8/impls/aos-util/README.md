@@ -55,6 +55,15 @@ std::optional<TextWriteError> write_text(const std::string& path, const std::str
 
 `aos/util/proc.hpp` 提供 `signal_group`、`proc_started_at_ticks`、`boot_id`、`utc_now_ms`、`utc_now_ns`、`utc_ms_at`、`unique_id`（無參數或指定奈秒）與 `identity`，供行程辨識、送訊號及產生時間與名稱。
 
+## 公開介面：tick 與兩鐘期限
+
+`aos/util/tick.hpp` 提供 `now_tick()`、`tick_interval_ms()`、`utc_now_epoch_ms()`、`Deadline`、`deadline_after(ticks)` 與 `expired(d)`。
+
+- `AOS_TICK` 沒設或空＝沒有時鐘（`nullopt`）；有設而檔案不存在、空白＝0，不建檔。有時鐘的期限只數 tick，凍住不過期。
+- 沒時鐘時，用 `AOS_TICK_INTERVAL`（正整數毫秒，沒設或空＝1000）換成 UTC epoch 毫秒期限；能寫檔供跨行程比較。
+- 時鐘內容不是非負 ASCII 十進位整數、讀不了、間隔非正整數或期限超出 signed 64-bit，丟通用 `TickBad`，照一般錯誤退 1。
+- Python 的工具版 `proto8/lib/tool_io.py` 與命令列版 `proto8/py/aos_ws.py` 提供同名函數，期限回 `(on_tick, at)`。
+
 ## 建置與測試
 
 ```sh

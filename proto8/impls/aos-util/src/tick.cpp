@@ -1,0 +1,107 @@
+// tick.cpp：【aos-util】讀 tick 與標稱間隔，用樹時鐘或 UTC epoch 毫秒計算期限。
+#include "aos/util/tick.hpp"
+#include "aos/util/error.hpp"
+#include "aos/util/files.hpp"
+
+#include <cerrno>
+#include <charconv>
+#include <chrono>
+#include <cstdlib>
+#include <cstring>
+#include <limits>
+#include <string>
+#include <string_view>
+
+namespace aos {
+namespace {
+
+long long decimal(std::string_view text, const std::string& source, bool positive) {
+    long long value = 0;
+    bool digits = !text.empty();
+    for (char ch : text) {
+        if (ch < '0' || ch > '9') {
+            digits = false;
+        }
+    }
+    if (digits) {
+        std::from_chars_result result = std::from_chars(text.data(), text.data() + text.size(), value);
+        if (result.ec == std::errc{} && (!positive || value > 0)) {
+            return value;
+        }
+    }
+    std::string kind = "a non-negative decimal integer";
+    if (positive) {
+        kind = "a positive decimal integer";
+    }
+    throw Error{code::TickBad, source + " must be " + kind + " within signed 64-bit range"};
+}
+
+long long add(long long base, long long amount) {
+    constexpr long long high = std::numeric_limits<long long>::max();
+    constexpr long long low = std::numeric_limits<long long>::min();
+    if ((amount > 0 && base > high - amount) || (amount < 0 && base < low - amount)) {
+        throw Error{code::TickBad, "deadline is outside signed 64-bit range"};
+    }
+    return base + amount;
+}
+
+}  // namespace
+
+std::optional<long long> now_tick() {
+    const char* path = std::getenv("AOS_TICK");
+    if (path == nullptr || path[0] == '\0') {
+        return std::nullopt;
+    }
+    int err = 0;
+    std::optional<std::string> text = read_file(path, err);
+    if (!text) {
+        if (err == ENOENT) {
+            return 0;
+        }
+        throw Error{code::TickBad, std::string("cannot read AOS_TICK file ") + path + ": " + std::strerror(err)};
+    }
+    const char* whitespace = " \t\n\r\f\v";
+    size_t first = text->find_first_not_of(whitespace);
+    if (first == std::string::npos) {
+        return 0;
+    }
+    size_t last = text->find_last_not_of(whitespace);
+    return decimal(std::string_view(*text).substr(first, last - first + 1), "AOS_TICK file", false);
+}
+
+long long tick_interval_ms() {
+    const char* value = std::getenv("AOS_TICK_INTERVAL");
+    if (value == nullptr || value[0] == '\0') {
+        return 1000;
+    }
+    return decimal(value, "AOS_TICK_INTERVAL", true);
+}
+
+long long utc_now_epoch_ms() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+Deadline deadline_after(long long ticks) {
+    std::optional<long long> now = now_tick();
+    if (now) {
+        return {true, add(*now, ticks)};
+    }
+    long long interval = tick_interval_ms();
+    if (ticks > std::numeric_limits<long long>::max() / interval ||
+        ticks < std::numeric_limits<long long>::min() / interval) {
+        throw Error{code::TickBad, "deadline duration is outside signed 64-bit range"};
+    }
+    return {false, add(utc_now_epoch_ms(), ticks * interval)};
+}
+
+bool expired(const Deadline& deadline) {
+    if (deadline.on_tick) {
+        std::optional<long long> now = now_tick();
+        // 同一行程不應失去時鐘；若環境被改掉，不把 tick 期限當牆鐘期限。
+        return now && *now >= deadline.at;
+    }
+    return utc_now_epoch_ms() >= deadline.at;
+}
+
+}  // namespace aos

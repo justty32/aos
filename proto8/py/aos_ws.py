@@ -1,4 +1,4 @@
-"""aos_ws - 「放一則訊息、等答案、讀 stack」的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。
+"""aos_ws - 「放一則訊息、等答案、讀 stack」與兩鐘期限的共用小零件：給人用的 aos-agent say／listen／chat（proto8/cmd/aos-agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。
 
 10-24 遷移（tool-lib 遷移清單「human、aos-ai 的放題、等答案合成一份」）：兩邊各寫了一份同樣的事，收到這裡；不是工具（沒有 _entry），
 是 py/ 的共用模組，命令列用 realpath 找到這個資料夾再 import。
@@ -9,7 +9,7 @@
   ③ ctl／state＝aos-loop 開在 <stack>/ctl.json、state.json 的窗（state 的 phase 看得出 paused）。
 舊協議（工作區的 new/ cur/ out/ done/，P-11：agent-bob／ann／dan、topdown 這些 fsm 範本；11-04 demo 刪了）這裡不再認。
 11-03 起不讀 trace.jsonl（使用者「整個拿掉」，thinking 2026-11-03-trace）：fsm、aos-eca-turn 都不寫了，last_jsonl／unit_of／failed 跟著拿掉。"""
-import json, os, re, subprocess
+import json, os, re, subprocess, time
 
 STAGES = ("new", "cur", "archive")           # queue 的格（11-03 aos-post 歸檔格 done/ 改名 archive/）；tmp/ 是寄到一半的，不看
 ORDERED = re.compile(r"^[0-9]{12}\.")        # 有序信的名字：<12 位序號>.<尾名>（N-16）
@@ -19,6 +19,74 @@ class Error(Exception):
     def __init__(self, code, msg):
         super().__init__(msg)
         self.code = code
+
+
+def _tick_decimal(text, source, positive=False):
+    """只收 ASCII 十進位整數，範圍與 C++ 的 long long 相同。"""
+    if not text or any(ch < "0" or ch > "9" for ch in text):
+        value = -1
+    else:
+        try:
+            value = int(text.lstrip("0") or "0")
+        except ValueError:
+            value = -1
+    if value < (1 if positive else 0) or value > 9223372036854775807:
+        kind = "positive" if positive else "non-negative"
+        raise Error("TickBad", "%s must be a %s decimal integer within signed 64-bit range" % (source, kind))
+    return value
+
+
+def now_tick():
+    """沒設 AOS_TICK＝None；缺檔或空檔＝0；讀不了或格式壞＝TickBad。"""
+    path = os.environ.get("AOS_TICK")
+    if not path:
+        return None
+    try:
+        with open(path, "rb") as f:
+            text = f.read().strip(b" \t\n\r\f\v").decode("ascii")
+    except FileNotFoundError:
+        return 0
+    except (OSError, UnicodeError, ValueError) as e:
+        raise Error("TickBad", "cannot read AOS_TICK file %s: %s" % (path, e)) from None
+    return _tick_decimal(text, "AOS_TICK file") if text else 0
+
+
+def tick_interval_ms():
+    """AOS_TICK_INTERVAL 的正整數毫秒，沒設或空＝1000。"""
+    text = os.environ.get("AOS_TICK_INTERVAL")
+    return _tick_decimal(text, "AOS_TICK_INTERVAL", positive=True) if text else 1000
+
+
+def utc_now_epoch_ms():
+    """現在的 UTC epoch 毫秒，可寫檔跨行程比較。"""
+    return time.time_ns() // 1000000
+
+
+def deadline_after(ticks):
+    """回 (on_tick, at)；有時鐘數 tick，否則換成 UTC epoch 毫秒。"""
+    if not isinstance(ticks, int) or isinstance(ticks, bool) or not -9223372036854775808 <= ticks <= 9223372036854775807:
+        raise Error("TickBad", "deadline ticks must be an integer within signed 64-bit range")
+    now = now_tick()
+    on_tick = now is not None
+    if on_tick:
+        at = now + ticks
+    else:
+        duration = ticks * tick_interval_ms()
+        if not -9223372036854775808 <= duration <= 9223372036854775807:
+            raise Error("TickBad", "deadline duration is outside signed 64-bit range")
+        at = utc_now_epoch_ms() + duration
+    if not -9223372036854775808 <= at <= 9223372036854775807:
+        raise Error("TickBad", "deadline is outside signed 64-bit range")
+    return on_tick, at
+
+
+def expired(deadline):
+    """依期限種類判到期；同一行程不應失去時鐘，若失去就回 False。"""
+    on_tick, at = deadline
+    if on_tick:
+        now = now_tick()
+        return now is not None and now >= at
+    return utc_now_epoch_ms() >= at
 
 
 def stack_of(ws, stack=None):

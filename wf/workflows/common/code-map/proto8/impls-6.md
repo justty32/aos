@@ -17,6 +17,7 @@
 | [`include/aos/util/proc.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/proc.hpp) | 整群送訊號、/proc 身分資訊、UTC 時間與唯一名稱。 |
 | [`include/aos/util/signals.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/signals.hpp) | 建立、阻擋與非阻塞取出 SIGINT／SIGTERM／SIGHUP。 |
 | [`include/aos/util/text.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/text.hpp) | UTF-8 字串的小工具（10-22 起 aos-exec 的 .env、aos-fsm 的 state 檔用）。 |
+| [`include/aos/util/tick.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/tick.hpp) | 讀樹的 tick 時鐘，並按兩鐘規則建立與判斷期限。 |
 | [`src/cli.cpp`](../../../../../proto8/impls/aos-util/src/cli.cpp) | 命令列旗標（含內建短名表）與設定檔讀取（規則見 include/aos/util/cli.hpp）。 |
 | [`src/dirs.cpp`](../../../../../proto8/impls/aos-util/src/dirs.cpp) | 查詢、建立、列出、改名與移除目錄及檔案。 |
 | [`src/files.cpp`](../../../../../proto8/impls/aos-util/src/files.cpp) | 路徑、讀檔與文字及 JSON 原子寫入（說明見 include/aos/util/files.hpp）。 |
@@ -24,6 +25,7 @@
 | [`src/proc.cpp`](../../../../../proto8/impls/aos-util/src/proc.cpp) | 整群送訊號、/proc 身分資訊、UTC 時間與唯一名稱（說明見 include/aos/util/proc.hpp）。 |
 | [`src/signals.cpp`](../../../../../proto8/impls/aos-util/src/signals.cpp) | 建立訊號集合、阻擋與非阻塞取出 SIGINT／SIGTERM／SIGHUP（說明見 include/aos/util/signals.hpp）。 |
 | [`src/text.cpp`](../../../../../proto8/impls/aos-util/src/text.cpp) | UTF-8 字串的小工具（說明見 include/aos/util/text.hpp）。 |
+| [`src/tick.cpp`](../../../../../proto8/impls/aos-util/src/tick.cpp) | 讀 tick 與標稱間隔，用樹時鐘或 UTC epoch 毫秒計算期限。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-util/vcpkg.json) | aos-util：aos 這一家命令列工具共用的小函式庫（錯誤、stdin 讀一份 JSON、印結果與錯誤） |
 
 ## `proto8/impls/cmake/`

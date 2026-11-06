@@ -110,7 +110,7 @@ kill $D
 - **daemon 包子項**（使用者「讓daemon偷偷給底下的proc包s6」）：表那列的 `limits`（定義宣告的，或 `ctl add --limits` 蓋過的）由 daemon 在子行程裡 `setrlimit`（等同 s6-softlimit；proc 自己不知道）——hog 宣告 `mem_mb: 256`、要 300 MB＝Python `MemoryError`、退 1、表上留 `stopped`＋`reason`；`--limits '{"mem_mb": 1024}'` 的 hog2 照常吃完、下表。規則見 [aos-daemon docs/09](../../impls/aos-daemon/docs/09-份額.md)。
 - **daemon 自己被限**：起它的人包（這裡 `prlimit --as`），rlimit 繼承——big 寫 `mem_mb: 4096` 比 daemon 的 2 GB 寬＝不自動夾，那隻起不來（`LimitBad`）；big2 自己不限（`{}`），要 3 GB 照樣撞 daemon 的 2 GB＝`MemoryError`。
 - **天然差異**：份額是每個行程各自的上限、不從 daemon 總額扣（三隻各 1024 加起來可以超過 daemon 的 2 GB）。
-- **llm kernel 的份額**＝包的 `budget`＋每個寄件人的 `budget.senders`。範本限了寄件人 `/tmp/aos-demo-sender` 每天 1 次（帳記在 kernel 的 `used.json`，新起一台就從 0 算）：
+- **llm kernel 的份額**＝包的 `budget`＋每個寄件人的 `budget.senders`。範本限了寄件人 `/tmp/aos-demo-sender` 每天 1 次（帳記在 kernel 的 `used.json`，`senders` key 相對 kernel stack；新 stack 沒帳才從 0 算，整包搬家且相對位置相同就沿用）：
 
 ```sh
 T=/tmp/feat-s9-quota && rm -rf $T && mkdir -p $T /tmp/aos-demo-sender && cd $T

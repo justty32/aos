@@ -29,9 +29,9 @@ endpoint 函數的契約（stdin `{"endpoint", "request"}` → stdout 一行 `{"
 - **額度**（kernel.json 的 `budget`，都選填）：`max_calls`、`max_tokens`＝每窗上限（非負整數；沒寫＝那一種不限）；`window`＝`"hour"`／`"day"`／`"all"`（沒寫＝`day`；窗的起點用 kernel 的本地時間〔`TZ`〕的整點／午夜，`all`＝不歸零）；
   `spent`＝到頂時排著的信怎麼辦：`"refuse"`（沒寫＝這個）回 `BudgetMissing`、不跑；`"wait"` 留在 `new/` 等下一窗。
 - **每個寄件人的額度**（`budget.senders`，11-05 使用者「會想要限制特定aos proc所占用的資源。以及daemon/kernel自己本身被限制占用資源，並且會分配份額給proc」，[feat-proto 05 代定 4](../../../thinking/2026-11/05/feat-proto/05-資源份額.md)）：
-  `{"senders": {"<寄件人>": {"max_calls": 50, "max_tokens": 200000}}}`——寄件人＝信封的 `sender`（aos-post／aos-llm 寫的身分：`$AOS_WS` ＞ `$AOS_STACK` ＞ `$AOS_CF` ＞ cwd 的絕對路徑；agent 就是它的工作區）。key 寫絕對路徑照用、相對的從 kernel 定義資料夾（kernel.json 所在）算、轉成絕對（兩個 key 算出同一個人＝`CfgBad`）。每格只認 `max_calls`、`max_tokens`（非負整數）；窗與 `spent` 用 kernel 的（這裡寫別的鍵＝`CfgBad`）。**沒列的寄件人不限**（只記帳）；信封沒有 `sender` 字串的信不認人、不擋也不記。
+  `{"senders": {"<寄件人>": {"max_calls": 50, "max_tokens": 200000}}}`——寄件人＝信封的 `sender`（aos-post／aos-llm 寫的身分：`$AOS_WS` ＞ `$AOS_STACK` ＞ `$AOS_CF` ＞ cwd 的絕對路徑；agent 就是它的工作區）。key 寫相對路徑時先從 kernel 定義資料夾（kernel.json 所在）算位置，寫絕對路徑也可；兩邊都整理路徑後，轉成**相對 kernel stack** 的 key（stack 外的寄件人用 `../` 開頭，兩個 key 算出同一個人＝`CfgBad`）。信封的絕對 `sender` 也轉成同一種 key 才比對；kernel、定義與寄件人整包 `cp -a` 搬家，相對位置相同就沿用同一格帳。每格只認 `max_calls`、`max_tokens`（非負整數）；窗與 `spent` 用 kernel 的（這裡寫別的鍵＝`CfgBad`）。**沒列的寄件人不限**（只記帳）；信封沒有 `sender` 字串的信不認人、不擋也不記。
   寄件人 kernel **不驗**（10-15「濫用：先信任」）：寫得到信箱的人能冒用別人的身分，要真擋＝照 Linux 權限分帳號、分信箱（[04](04-已知限制.md)）。
-  `budget` 沒寫也照樣記 `used.json`（窗＝day）：`{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens", "packs": {代號: {"counter_calls", "counter_tokens"}}, "senders": {寄件人: {"counter_calls", "counter_tokens"}}}`（`packs`＝這一窗每個包用了多少，代號從 `proc.json` 的 `endpoint` 拿；`senders`＝這一窗每個寄件人用了多少，從 `proc.json` 的 `sender` 拿、**有沒有列在 `budget.senders` 都記**；11-05 feat-proto）。換窗＝`window` 或 `since` 跟現在算出來的不同：`counter_calls`、`counter_tokens`、`packs`、`senders` 歸零，`counter_all_*` 照留。
+  `budget` 沒寫也照樣記 `used.json`（窗＝day）：`{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens", "packs": {代號: {"counter_calls", "counter_tokens"}}, "senders": {寄件人: {"counter_calls", "counter_tokens"}}}`（`packs`＝這一窗每個包用了多少，代號從 `proc.json` 的 `endpoint` 拿；`senders`＝這一窗每個寄件人用了多少，從 `proc.json` 的 `sender` 拿、整理成相對 kernel stack 的 key，**有沒有列在 `budget.senders` 都記**；11-05 feat-proto）。換窗＝`window` 或 `since` 跟現在算出來的不同：`counter_calls`、`counter_tokens`、`packs`、`senders` 歸零，`counter_all_*` 照留。
 - **到頂怎麼判**：要掛下一封之前看——`counter_calls`＋在飛的＋這次新掛的 ≥ `max_calls`，或 `counter_tokens` ≥ `max_tokens`。token 收到回信才知道，所以最多超過「在飛那幾封的量」。包的 `budget` 同一個判法、只數那包（`packs.<代號>` 與那包在飛的），寄件人的同理（`senders.<寄件人>` 與那人在飛的），窗跟 kernel 的同一個；kernel 的先判、再包、再寄件人。
 
 ### 一次
@@ -40,7 +40,10 @@ endpoint 函數的契約（stdin `{"endpoint", "request"}` → stdout 一行 `{"
 2. **收成品**：`cur/` 裡有 `proc.json` 的照上面「跑一封」第 4 步看，收尾的寄回信、刪掉，還在飛的記一格。沒有 `proc.json` 的：有讀得懂的 `reply.json`＝上一次寄到一半，照寄；都沒有＝認領了還沒掛就停了，改名回 `new/` 重排。
 3. **收拾**（只看有 `sender.flock` 的信）：`tmp/` 裡寄信的人不在了的刪掉；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑）。沒有 `sender.flock` 的一律不碰。
 4. **看 `new/`**：`LetterBad`、`RequestBad`、`EndpointMissing`、`EndpointUnknown`、那組壞了（`DirectiveBad`、`CfgBad`）、deadline 已過（`DeadlineBad`）＝直接回信（都不佔格、不跑）。
-5. **排隊**（11-05 使用者「讓kernel能根據信件中額外附送的priority之類資訊做排程」，[feat-proto 03](../../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：`level`＋等了幾次÷10（每等 10 次升一級，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ **那封的包的 `speed`**（`fast` → `normal` → `slow`）→ 等得久的先 → 先寄的先。
+5. **排隊**（11-05 使用者「讓kernel能根據信件中額外附送的priority之類資訊做排程」，[feat-proto 03](../../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：`level`＋`waited_ticks / aging_ticks`（整數除法；每 `aging_ticks` 格升一級，預設 3，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ **那封的包的 `speed`**（`fast` → `normal` → `slow`）→ 等得久的先 → 先寄的先。
+   `waited_ticks`：kernel 有時鐘而這封信也有 `seen_at_ticks`，用現在 tick 減那一格；否則用 `(現在 UTC epoch 毫秒 − seen_at_ms) / AOS_TICK_INTERVAL`（預設 1000 毫秒），負的當 0。「等得久」也比同一個值。同一輪掃描只各讀一次 tick 與牆鐘。時鐘凍住，已有 tick 記錄的信就不升級；沒有時鐘時凍住再醒仍會計入牆鐘經過的時間。
+   跨樹信的 `priority.deadline` 仍是牆鐘（帶時區 ISO 8601 或 epoch 秒；N-65 ③），kernel 不讀信裡任何 tick 欄。
+   不搶位、不保留格；要保證 high 不等＝短 deadline 或多開一包。
    同級、同 deadline 狀態下，慢包的信會被後寄的快包信超過（今天就有 priority 超車，aging 保底不會餓死）。
 6. 掛之前看一眼訊號（有＝不認領、寫完 `queue.json` 以 128＋N 結束）。照排好的順序一封封看：
    - kernel 的額度到頂＝`refuse` 回 `BudgetMissing`、`wait` 就**停整列**；在飛＋這次新掛的到 kernel 的 `slots` 就停（其餘下一次）。

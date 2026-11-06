@@ -9,7 +9,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`tool_io.py`](../../../../../proto8/lib/tool_io.py) | lib 工具共用的開頭：schema 生成 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區。 |
+| [`tool_io.py`](../../../../../proto8/lib/tool_io.py) | lib 工具共用的開頭：schema 生成 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區、兩鐘期限。 |
 
 ## `proto8/lib/agent/`
 

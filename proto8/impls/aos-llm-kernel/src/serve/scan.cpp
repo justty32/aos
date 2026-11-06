@@ -4,9 +4,22 @@
 #include "aos/directive.hpp"
 #include "aos/util/files.hpp"
 
-#include <chrono>
+#include "aos/util/tick.hpp"
+
+#include <algorithm>
+#include <limits>
 
 namespace aos::llm_kernel {
+
+// is_count 也接受 unsigned JSON，轉 long long 前先擋超界的值。
+static bool timestamp_ok(const Json& value) {
+    if (!aos::is_count(value)) {
+        return false;
+    }
+    return !value.is_number_unsigned() ||
+           value.get<unsigned long long>() <= static_cast<unsigned long long>(std::numeric_limits<long long>::max());
+}
+
 
 // 查代號、解那組的指示詞、定 exec、讀包的 slots／budget／speed（填進 w）；查不到或那組壞了＝回那封信的 error 回信；
 // request 撞到包釘死的（fixed 裡的 key、包有 model 而 request 寫 model）＝RequestBad（11-05 feat-proto 件 2）。
@@ -52,10 +65,13 @@ std::optional<Json> Server::pick(Waiting& w) {
     return std::nullopt;
 }
 
-std::vector<Waiting> Server::scan() {
+std::vector<Waiting> Server::scan(long long now_ms, std::optional<long long> now_tick) {
     std::vector<Waiting> ws;
-    double now = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
-    Json seen = Json::object();
+    double now = static_cast<double>(now_ms) / 1000.0;
+    Json seen_ms = Json::object();
+    Json seen_ticks = Json::object();
+    std::optional<long long> interval_ms;
+    q_.on_tick = now_tick.has_value();
     for (const std::string& id : aos::names_in(mb_.fresh(), true)) {
         std::string path = aos::join(aos::join(mb_.fresh(), id), "letter.json");
         std::optional<Json> letter = aos::read_json(path);
@@ -100,15 +116,32 @@ std::vector<Waiting> Server::scan() {
             refuse(id, error_reply(code::DeadlineBad, "deadline passed before its turn; not run"));
             continue;
         }
-        w.seen_at_runs = q_.runs;
-        Json old = q_.seen_at_runs.value(id, Json());
-        if (aos::is_count(old)) {
-            w.seen_at_runs = old.get<long long>();
+        Json old_ms = q_.seen_at_ms.value(id, Json());
+        long long seen_at_ms = now_ms;
+        bool known = timestamp_ok(old_ms);
+        if (known) {
+            seen_at_ms = old_ms.get<long long>();
         }
-        seen[id] = w.seen_at_runs;
+        seen_ms[id] = seen_at_ms;
+        Json old_tick = q_.seen_at_ticks.value(id, Json());
+        if (now_tick && (!known || timestamp_ok(old_tick))) {
+            long long seen_at_ticks = *now_tick;
+            if (known) {
+                seen_at_ticks = old_tick.get<long long>();
+            }
+            seen_ticks[id] = seen_at_ticks;
+            w.waited_ticks = std::max(0LL, *now_tick - seen_at_ticks);
+        } else {
+            // 先前沒時鐘的記錄繼續用牆鐘，不能在切換時憑空補一個過去的 tick。
+            if (!interval_ms) {
+                interval_ms = aos::tick_interval_ms();
+            }
+            w.waited_ticks = std::max(0LL, now_ms - seen_at_ms) / *interval_ms;
+        }
         ws.push_back(w);
     }
-    q_.seen_at_runs = seen;   // 只留還在排的
+    q_.seen_at_ms = seen_ms;   // 只留還在排的
+    q_.seen_at_ticks = seen_ticks;
     return ws;
 }
 

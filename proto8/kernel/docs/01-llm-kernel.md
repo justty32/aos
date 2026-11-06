@@ -51,7 +51,7 @@ aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 
 - **跑 agent 的 daemon 另起一台**：起之前 `export AOS_LLM_KERNEL=~/llm_kernel`（或寫進那台定義的 `.env`，絕對路徑），它的子項就寄得到。好幾台可以共用一個 llm kernel：`slots`、`budget` 是整台電腦共用的上限。
 - **收工、搬家**：Ctrl-C 時在飛的問腦列變 `sleeping`，再 `aos-exec --stack . def` 自己醒、照樣答完。整包 `cp -a` 到別處起來照樣續答。端點連不上只卡那一封。
 - **代號**：信的 body 寫 `"endpoint": "sol"` 就用那一包；沒寫用 `kernel.json` 的 `endpoint`（這裡是 `fake`）。加一包、改模型、放金鑰＝改 `kernel.json`（金鑰寫 `{"$env": "變數名"}` 或 `{"$ref": "repo 外的檔#/key"}`；一包要獨立成檔寫 `{"$ref": "packs/smart-high.json"}`，整份檔不帶 `#/`）。
-- **排程**（[feat-proto 03](../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：信的 `priority` 級數（含等久了升級）→ deadline → 包的 `speed`（fast 先）→ 等得久 → 先寄；包的 `slots` 滿了＝跳過、讓下一封別包的補位；包的 `budget` 到頂＝那封 `BudgetMissing`，不替人降級換包。
-- **額度**：kernel 總的 `budget`、每包的 `budget`、每個寄件人的 `budget.senders`（寄件人＝信封 `sender`，agent 就是它的工作區；不驗身分）；用量帳在 `$AOS_STACK/used.json`（`packs`、`senders` 各一格）。範本的 `senders` 只列了 `/tmp/aos-demo-sender`，換成你 agent 的工作區就限它。
+- **排程**（[feat-proto 03](../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：信的 `priority` 級數（每 `aging_ticks` 格升一級，預設 3；有 `AOS_TICK` 數 kernel 自己樹的鐘，沒有用 `AOS_TICK_INTERVAL` 換牆鐘；凍住時鐘＝不升級）→ deadline → 包的 `speed`（fast 先）→ 等得久 → 先寄；包的 `slots` 滿了＝跳過、讓下一封別包的補位；包的 `budget` 到頂＝那封 `BudgetMissing`，不替人降級換包。跨樹信的 `priority.deadline` 留牆鐘（N-65 ③，ISO 8601 或 epoch 秒），kernel 不讀信裡任何 tick 欄。
+- **額度**：kernel 總的 `budget`、每包的 `budget`、每個寄件人的 `budget.senders`（寄件人＝信封 `sender`，agent 就是它的工作區；不驗身分）；用量帳在 `$AOS_STACK/used.json`（`packs`、`senders` 各一格；`senders` 的 key 是相對 kernel stack 的路徑，整包搬家相對位置相同就沿用同一格帳）。範本的 `senders` 只列了 `/tmp/aos-demo-sender`，換成你 agent 的工作區就限它。
 - **起 llm daemon 的殼別設 `AOS_KERNEL`**：問腦會掛到別台（[已知限制](../../impls/aos-llm-kernel/docs/04-已知限制.md)）。
 - agent-fsm 問腦一定經這裡（沒設 `AOS_LLM_KERNEL`＝`LlmKernelMissing`），要先起這個。

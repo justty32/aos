@@ -7,13 +7,13 @@
 //   serve.cpp   鎖信箱、收拾信件與每輪執行骨架
 //
 //   read_cfg   kernel.json（`檔` 或 `檔#/指標`；thinking 11-04 think-as-function 02 § 3）：
-//                slots（同時在飛幾封，正整數；沒寫＝1）、budget（額度，budget.hpp；含每寄件人的 senders，相對路徑從 kernel 定義資料夾算）、
+//                slots（同時在飛幾封，正整數；沒寫＝1）、aging_ticks（每幾格升一級，正整數；沒寫＝3）、budget（額度，budget.hpp；含每寄件人的 senders，相對路徑從 kernel 定義資料夾算）、
 //                exec（必填：預設的 endpoint 函數＝aos-exec 目標，資料夾、檔、`檔#/指標`；相對的從 kernel 定義資料夾〔kernel.json 所在〕算、轉成絕對）、
 //                endpoints（必填、非空物件：代號 → 一組 llm 設定＝一個能力包〔11-05 feat-proto，pack.hpp〕；一組裡 kernel 認 exec〔選填，這組改用別的
 //                  endpoint 函數，相對的同上〕、slots、budget、speed，拿掉後其他鍵〔url／model／key／fixed／cost／context／summary…〕整個原樣交給 endpoint 函數）、
 //                  endpoint（選填：預設代號，要在表裡）、timeout_ms（選填：問腦單子的上限，非負整數）；
 //                其他 key 忽略。信箱固定 $AOS_STACK/mailbox/（11-05 kernel-daemon 07 § 2：AOS_LLM_KERNEL＝kernel 的 stack）。
-//              指示詞：slots、budget、exec、endpoint、timeout_ms 整格先解（aos-directive 的 resolve_keys）；endpoints 只換一層
+//              指示詞：slots、aging_ticks、budget、exec、endpoint、timeout_ms 整格先解（aos-directive 的 resolve_keys）；endpoints 只換一層
 //              （整張表可以 {"$ref": "endpoints.json#/"}），裡面每組到用的時候才解（解不開＝那封信回 DirectiveBad，kernel 照跑別封）。
 //              壞了 CfgMissing／CfgBad／DirectiveBad
 //   serve      跑一次（給 daemon 一次次拍，多半是 daemon.json 的身體），回結束碼（0；開始前收到訊號＝128＋N）。
@@ -61,6 +61,7 @@ namespace aos::llm_kernel {
 struct Cfg {
     std::string mailbox;   // $AOS_STACK/mailbox（11-05 固定）
     long long slots = 1;
+    long long aging_ticks = 3;
     Budget budget;
     std::string exec;                                   // 預設的 endpoint 函數（絕對路徑，可帶 #/指標）
     Json endpoints = Json::object();                    // 代號 → 一組（只換過表這一層，每組裡的指示詞還沒解）
@@ -111,7 +112,7 @@ private:
     void lock();
     void collect();
     void sweep();
-    std::vector<Waiting> scan();
+    std::vector<Waiting> scan(long long now_ms, std::optional<long long> now_tick);
     void refuse(const std::string& id, const Json& reply);
     std::optional<Json> pick(Waiting& w);
     void finish(const std::string& id, const Json& reply);

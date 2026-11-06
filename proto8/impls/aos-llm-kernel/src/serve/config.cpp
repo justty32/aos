@@ -20,7 +20,7 @@ std::string target_abs(const std::string& t, const std::string& base) {
 Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json doc = aos::load_cfg(spec);
     std::string base = aos::dirname(aos::abspath(aos::split_hash(spec).path));
-    aos::Resolved r = aos::resolve_keys(doc, base, {"slots", "budget", "exec", "endpoint", "timeout_ms"});
+    aos::Resolved r = aos::resolve_keys(doc, base, {"slots", "aging_ticks", "budget", "exec", "endpoint", "timeout_ms"});
     doc = r.value;
     if (!doc.is_object()) {
         throw Error{code::CfgBad, spec + " must be a JSON object"};
@@ -28,6 +28,13 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Cfg c;
     c.base = base;
     c.mailbox = aos::join(stack, "mailbox");   // 11-05 固定（AOS_LLM_KERNEL＝kernel 的 stack，寄信的人從 stack 算信箱）
+    if (doc.contains("aging_ticks")) {
+        const Json& aging = doc["aging_ticks"];
+        if (!aos::is_count(aging) || aging.get<long long>() < 1) {
+            throw Error{code::CfgBad, "aging_ticks must be a positive integer (ticks per priority level), got " + aos::dumps(aging)};
+        }
+        c.aging_ticks = aging.get<long long>();
+    }
     Json s = doc.value("slots", Json());
     if (!s.is_null()) {
         if (!aos::is_count(s) || s.get<long long>() < 1) {
@@ -35,7 +42,7 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
         }
         c.slots = s.get<long long>();
     }
-    c.budget = parse_budget(doc.value("budget", Json()), base);   // senders 的相對路徑從 kernel.json 所在算
+    c.budget = parse_budget(doc.value("budget", Json()), base, stack);   // senders 從設定檔算位置、以相對 kernel stack 記帳
     Json ex = doc.value("exec", Json());
     if (!ex.is_string() || ex.get<std::string>().empty()) {
         throw Error{code::CfgBad, "exec must be a non-empty string (the endpoint function: a directory, a file or `file#/pointer`, relative to kernel.json's directory), got " + aos::dumps(ex)};

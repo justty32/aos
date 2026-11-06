@@ -3,12 +3,13 @@
 //   Budget        kernel.json 的 budget：max_calls、max_tokens（每窗上限，非負整數；沒寫＝不限）、window（"hour"／"day"／"all"；沒寫＝day，
 //                 10-15 定「一天一期歸零」）、spent（到頂時新信怎麼辦："refuse"＝回 BudgetMissing（預設，10-15「見底就擋」）、"wait"＝留在 new/ 等下一窗）、
 //                 senders（11-05 feat-proto 件 5：每個寄件人的額度＝{信封 sender: {"max_calls", "max_tokens"}}；窗與 spent 同 kernel 的；
-//                 key 是寄件人身分〔aos-util 的 identity()，絕對路徑〕，相對的從 base〔kernel.json 所在〕算、轉成絕對；沒列的寄件人不限）
+//                 設定的相對路徑從 base〔kernel.json 所在〕算；讀進來與記帳的 key 一律相對 kernel stack，搬家照用；沒列的寄件人不限）
+//   sender_key    寄件人與 kernel stack 先各自 abspath／lexically_normal，再 lexically_relative；stack 外面以 ../ 開頭
 //   parse_budget  讀 budget 那格（沒寫＝不限、window day）；壞了 CfgBad
 //   Used          $AOS_STACK/used.json＝{"window", "since", "counter_calls", "counter_tokens", "counter_all_calls", "counter_all_tokens"}：這一窗用了多少、開 kernel 以來一共多少
 //                 （10-25 計數改 counter_*，原 calls、tokens、all_calls、all_tokens）；
 //                 11-05 feat-proto 多一格 packs＝{代號: {"counter_calls", "counter_tokens"}}：這一窗每個包（endpoints 的一組）用了多少（換窗一起歸零）；
-//                 同一天多一格 senders＝{信封 sender: {"counter_calls", "counter_tokens"}}：這一窗每個寄件人用了多少（同上，換窗歸零）
+//                 同一天多一格 senders＝{相對 kernel stack 的寄件人路徑: {"counter_calls", "counter_tokens"}}：這一窗每個寄件人用了多少（同上，換窗歸零）
 //   window_since  這一刻所在那一窗的起點（kernel 的本地時間，帶時區的 ISO 8601；hour＝整點、day＝午夜；all＝null）
 //   read_used     讀 used.json（沒有＝全 0；在但讀不懂＝UsedBad）；換窗了（window 或 since 不同）就把 counter_calls、counter_tokens 歸零，counter_all_* 照留
 //   add_used      跑過的一封記上去（先換窗）：counter_calls＋1、counter_tokens＋回報的（沒回報＝只算次數），代號有給＝packs 那格也記、
@@ -41,7 +42,7 @@ struct Budget {
     std::optional<long long> max_tokens;
     std::string window = "day";
     bool wait = false;                       // spent: "wait"
-    std::map<std::string, Limit> senders;    // 寄件人（絕對路徑）→ 這人每窗上限（11-05 feat-proto 件 5）
+    std::map<std::string, Limit> senders;    // 寄件人（相對 kernel stack）→ 這人每窗上限
 };
 
 struct Used {
@@ -60,7 +61,8 @@ struct Report {
     bool bad = false;
 };
 
-Budget parse_budget(const Json& v, const std::string& base);
+std::string sender_key(const std::string& sender, const std::string& stack);
+Budget parse_budget(const Json& v, const std::string& base, const std::string& stack);
 Json window_since(const std::string& window, std::time_t now);
 Used read_used(const std::string& stack, const std::string& window);
 void add_used(const std::string& stack, Used& u, const Report& r, const std::string& endpoint = "", const std::string& sender = "");

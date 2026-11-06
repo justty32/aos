@@ -24,6 +24,7 @@
 //                  （flock 跟著檔走，不看 pid，所以沙箱〔別的 pid、mount namespace〕裡的寄信人也認得）
 //   parse_priority 信裡的 priority（10-15 LLM kernel 稿）：沒寫＝normal；"low"／"normal"／"high"；數字看正負；
 //                  物件 {"level", "deadline", 其他 key 忽略}；deadline＝ISO 8601（要帶時區）或 epoch 秒。壞了丟 PriorityBad
+//                  跨樹信的期限＝牆鐘（N-65 ③）；kernel 自己的 aging 才用自己樹的鐘，不讀信裡任何 tick 欄。
 //   priority_of    一封信的排隊依據＝parse_priority(letter["body"]["priority"])（11-04 起 `_metainfo` 的兩個依據拿掉：信裡沒單子）
 //   reply_of       回信的內容合不合（{"message": 物件, …} 或 {"error": {"code": 字串, "msg": 字串}}）：合＝原樣、不合＝nullopt
 //   read_reply     讀 reply.json、照 reply_of 驗；壞了回 nullopt
@@ -74,7 +75,7 @@ bool has_sender(const std::string& letter_dir);
 
 struct Priority {
     int level = 0;                    // -1 low、0 normal、1 high
-    std::optional<double> deadline;   // epoch 秒；沒寫＝nullopt
+    std::optional<double> deadline;   // 跨樹信的牆鐘 epoch 秒（N-65 ③）；沒寫＝nullopt；aging 用 kernel 自己樹的鐘
 };
 Priority parse_priority(const Json& v);
 

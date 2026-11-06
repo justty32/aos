@@ -3,6 +3,7 @@
 
 #include "aos/util/files.hpp"
 #include "aos/util/signals.hpp"
+#include "aos/util/tick.hpp"
 
 #include <cerrno>
 #include <cstring>
@@ -85,8 +86,10 @@ int Server::run() {
     write_window(stack_, window_of(cfg_.packs));
     collect();
     sweep();
-    std::vector<Waiting> ws = scan();
-    order(ws, q_.runs);
+    std::optional<long long> now_tick = aos::now_tick();
+    long long now_ms = aos::utc_now_epoch_ms();
+    std::vector<Waiting> ws = scan(now_ms, now_tick);
+    order(ws, cfg_.aging_ticks);
 
     int got = aos::take_signal();
     if (got == 0) {
@@ -96,7 +99,8 @@ int Server::run() {
                 if (budget_.wait) {
                     break;   // 留在 new/ 等下一窗（寄信的一直等，由它自己那邊守）
                 }
-                q_.seen_at_runs.erase(w.id);
+                q_.seen_at_ms.erase(w.id);
+                q_.seen_at_ticks.erase(w.id);
                 refuse(w.id, error_reply(code::BudgetMissing, "budget for this window (" + budget_.window + ") is used up; not run"));
                 continue;
             }
@@ -110,7 +114,8 @@ int Server::run() {
                     if (budget_.wait) {
                         continue;   // 這包到頂：這封留在 new/ 等下一窗，別包照跑
                     }
-                    q_.seen_at_runs.erase(w.id);
+                    q_.seen_at_ms.erase(w.id);
+                    q_.seen_at_ticks.erase(w.id);
                     bool by_calls = spent_pack(used_, w.endpoint, w.pack.max_calls, std::nullopt, inflight);
                     std::string which = by_calls ? "max_calls " + std::to_string(*w.pack.max_calls)
                                                  : "max_tokens " + std::to_string(*w.pack.max_tokens);
@@ -120,16 +125,18 @@ int Server::run() {
                 }
             }
             // 寄件人（11-05 feat-proto 件 5）：budget.senders 列了這人＝這人在飛＋這次新掛的也算；到頂同包的做法（refuse 回、wait 留著，別人照跑）
-            auto lim = budget_.senders.find(w.sender);
+            std::string who = sender_key(w.sender, stack_);
+            auto lim = budget_.senders.find(who);
             if (lim != budget_.senders.end() && !w.sender.empty()) {
-                long long mine = sender_busy_[w.sender];
+                long long mine = sender_busy_[who];
                 const Limit& l = lim->second;
-                if (spent_of(used_.senders, w.sender, l.max_calls, l.max_tokens, mine)) {
+                if (spent_of(used_.senders, who, l.max_calls, l.max_tokens, mine)) {
                     if (budget_.wait) {
                         continue;
                     }
-                    q_.seen_at_runs.erase(w.id);
-                    bool by_calls = spent_of(used_.senders, w.sender, l.max_calls, std::nullopt, mine);
+                    q_.seen_at_ms.erase(w.id);
+                    q_.seen_at_ticks.erase(w.id);
+                    bool by_calls = spent_of(used_.senders, who, l.max_calls, std::nullopt, mine);
                     std::string which = by_calls ? "max_calls " + std::to_string(*l.max_calls) : "max_tokens " + std::to_string(*l.max_tokens);
                     refuse(w.id, error_reply(code::BudgetMissing, "sender " + w.sender + ": " + which + " reached in this window (" +
                                                                        budget_.window + "); not run"));
@@ -143,7 +150,8 @@ int Server::run() {
             if (!aos::move(aos::join(mb_.fresh(), w.id), dir)) {
                 continue;   // 寄信的剛撤信
             }
-            q_.seen_at_runs.erase(w.id);
+            q_.seen_at_ms.erase(w.id);
+            q_.seen_at_ticks.erase(w.id);
             Json req = Json::object();
             req["endpoint"] = w.group;
             req["request"] = w.letter["body"]["request"];
@@ -167,7 +175,7 @@ int Server::run() {
             ++n;
             ++pack_busy_[w.endpoint];
             if (!w.sender.empty()) {
-                ++sender_busy_[w.sender];
+                ++sender_busy_[who];
             }
         }
     }

@@ -182,7 +182,7 @@ void Server::collect() {
                     ++pack_busy_[(*proc)["endpoint"].get<std::string>()];
                 }
                 if (proc->value("sender", Json()).is_string()) {
-                    ++sender_busy_[(*proc)["sender"].get<std::string>()];
+                    ++sender_busy_[sender_key((*proc)["sender"].get<std::string>(), stack_)];
                 }
             }
             continue;

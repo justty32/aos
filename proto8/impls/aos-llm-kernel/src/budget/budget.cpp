@@ -8,6 +8,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace aos::llm_kernel {
 
@@ -32,7 +35,16 @@ static Limit parse_limit(const Json& v, const std::string& at) {
     return l;
 }
 
-Budget parse_budget(const Json& v, const std::string& base) {
+std::string sender_key(const std::string& sender, const std::string& stack) {
+    if (sender.empty()) {
+        return "";
+    }
+    fs::path who = fs::path(aos::abspath(sender)).lexically_normal();
+    fs::path root = fs::path(aos::abspath(stack)).lexically_normal();
+    return who.lexically_relative(root).generic_string();
+}
+
+Budget parse_budget(const Json& v, const std::string& base, const std::string& stack) {
     Budget b;
     if (v.is_null()) {
         return b;
@@ -73,9 +85,10 @@ Budget parse_budget(const Json& v, const std::string& base) {
             if (k.empty()) {
                 throw Error{code::CfgBad, "budget.senders: a sender must be a non-empty path"};
             }
-            std::string who = aos::abspath(k[0] == '/' ? k : aos::join(base, k));   // 信封的 sender 是 identity()＝絕對路徑
+            std::string sender = aos::abspath(aos::join(base, k));
+            std::string who = sender_key(sender, stack);   // 相對設定檔解位置，再改成相對 kernel stack 的帳目 key
             if (b.senders.count(who)) {
-                throw Error{code::CfgBad, "budget.senders: " + k + " names the same sender (" + who + ") as another key"};
+                throw Error{code::CfgBad, "budget.senders: " + k + " names the same sender (" + sender + ") as another key"};
             }
             b.senders[who] = parse_limit(x, "budget.senders." + k);
         }
@@ -194,7 +207,7 @@ void add_used(const std::string& stack, Used& u, const Report& r, const std::str
         count_in(u.packs, endpoint, t);
     }
     if (!sender.empty()) {
-        count_in(u.senders, sender, t);
+        count_in(u.senders, sender_key(sender, stack), t);
     }
     Json doc = Json::object();
     doc["window"] = u.window;
