@@ -1,16 +1,16 @@
-// holder.cpp：【holder】名牌——身分、替行程填名牌、讀鎖、判能不能收；與 common.hpp 的時間、名字小工具（說明見 aos/lock.hpp）。
-//
-// 判死活照 N-17：pid＋started_at_ticks＋boot_id（同 aos-daemon 的 adopt 看子 loop）；不看 flock（衝突 6：kernel 那套各管各的）。
+// holder.cpp：【holder】名牌與 flock 存活快照、兩鐘租約判斷。
 #include "common/common.hpp"
 
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
+#include "aos/util/tick.hpp"
+#include <fcntl.h>
+#include <sys/file.h>
+#include <limits>
 
 #include <cerrno>
 #include <chrono>
-#include <csignal>
 #include <cstdio>
-#include <cstdlib>
 #include <ctime>
 
 #include <sys/stat.h>
@@ -42,25 +42,25 @@ std::optional<long long> parse_at(const std::string& at) {
     return (long long)timegm(&tm) * 1000LL + ms;
 }
 
-Holder holder_of(pid_t pid) {
+Holder holder_of(bool flock) {
     Holder h;
-    h.holder = aos::identity();   // aos-util：$AOS_WS ＞ $AOS_STACK ＞ $AOS_CF ＞ cwd（同 aos-post 的 sender）
-    h.pid = pid == 0 ? (long long)getpid() : (long long)pid;
-    h.started_at_ticks = aos::proc_started_at_ticks(pid);
-    h.boot_id = aos::boot_id();
+    h.holder = aos::identity();
+    h.flock = flock;
     h.acquired_at = aos::utc_now_ms();
+    h.acquired_at_ticks = aos::now_tick();
     return h;
 }
 
 Json to_json(const Holder& h) {
-    Json j = Json::object();
-    j["holder"] = h.holder;
-    j["pid"] = h.pid;
-    j["started_at_ticks"] = h.started_at_ticks ? Json(*h.started_at_ticks) : Json();
-    j["boot_id"] = h.boot_id ? Json(*h.boot_id) : Json();
-    j["acquired_at"] = h.acquired_at;
-    if (h.lease_ms) {
-        j["lease_ms"] = *h.lease_ms;
+    Json j = {{"holder", h.holder}, {"acquired_at", h.acquired_at}};
+    if (h.flock) {
+        j["flock"] = true;
+    }
+    if (h.acquired_at_ticks) {
+        j["acquired_at_ticks"] = *h.acquired_at_ticks;
+    }
+    if (h.lease_ticks) {
+        j["lease_ticks"] = *h.lease_ticks;
     }
     if (h.note) {
         j["note"] = *h.note;
@@ -89,67 +89,68 @@ Seen look(const std::string& lock_dir) {
         } catch (const std::exception&) {
         }
     }
+    if (s.holder && s.holder->value("flock", Json()) == Json(true)) {
+        std::string path = aos::join(lock_dir, "holder.flock");
+        int fd = open(path.c_str(), O_RDONLY | O_CLOEXEC);
+        if (fd >= 0) {
+            s.alive = true;
+            if (flock(fd, LOCK_EX | LOCK_NB) == 0) {
+                s.alive = false;
+            }
+            close(fd);
+        } else if (errno == ENOENT) {
+            s.alive = false;
+        }
+    }
     return s;
 }
 
-static bool is_int(const Json& j, const char* key) {
-    return j.contains(key) && j[key].is_number_integer();
-}
-
-// /proc/<pid>/stat 第 3 欄（狀態）是 Z（殭屍）或 X（正在消失）。讀不到＝不算（上面已經看過在不在）。
-static bool zombie(pid_t pid) {
-    int err = 0;
-    std::optional<std::string> text = aos::read_file("/proc/" + std::to_string(pid) + "/stat", err);
-    if (!text) {
-        return false;
+// 只接受可表示的非負數，避免 unsigned JSON 轉 signed 時繞回。
+static std::optional<long long> count(const Json& j, const char* key) {
+    if (!j.contains(key) || !j[key].is_number_integer()) {
+        return std::nullopt;
     }
-    size_t close_paren = text->rfind(')');
-    if (close_paren == std::string::npos || close_paren + 2 >= text->size()) {
-        return false;
+    if (j[key].is_number_unsigned() && j[key].get<unsigned long long>() >
+        static_cast<unsigned long long>(std::numeric_limits<long long>::max())) {
+        return std::nullopt;
     }
-    char state = (*text)[close_paren + 2];
-    return state == 'Z' || state == 'X';
+    long long n = j[key].get<long long>();
+    if (n < 0) {
+        return std::nullopt;
+    }
+    return n;
 }
 
 bool reapable(const Seen& s) {
     if (!s.held) {
         return false;
     }
-    if (!s.holder || !is_int(*s.holder, "pid")) {
-        // 名牌還沒寫好就死了、或讀不懂。11-05 第二輪：mtime 在未來 STALE_MS 以上（時鐘往回跳過：WSL 睡醒校時、NTP）也算過期——
-        // 原本年齡是負的永遠不到 10 秒，send --ordered 一直卡著、什麼都不說
+    if (!s.holder || !s.holder->value("holder", Json()).is_string() ||
+        !s.holder->value("acquired_at", Json()).is_string()) {
         return s.age_ms >= STALE_MS || s.age_ms <= -STALE_MS;
     }
     const Json& j = *s.holder;
-    // 1. 開機過了：舊名牌上的行程都不在了
-    std::optional<std::string> boot = aos::boot_id();
-    if (j.contains("boot_id") && j["boot_id"].is_string() && boot && j["boot_id"].get<std::string>() != *boot) {
+    std::optional<long long> at = parse_at(j["acquired_at"].get<std::string>());
+    if (!at || (j.contains("lease_ticks") && !count(j, "lease_ticks")) ||
+        (j.contains("acquired_at_ticks") && !count(j, "acquired_at_ticks")) ||
+        (j.contains("flock") && !j["flock"].is_boolean())) {
+        return s.age_ms >= STALE_MS || s.age_ms <= -STALE_MS;
+    }
+    if (s.alive && !*s.alive) {
         return true;
     }
-    // 2. pid＋started_at_ticks
-    long long pid = j["pid"].get<long long>();
-    if (pid <= 0) {
-        return true;
+    std::optional<long long> lease = count(j, "lease_ticks");
+    if (!lease) {
+        return false;
     }
-    if (is_int(j, "started_at_ticks")) {
-        std::optional<long long> now = aos::proc_started_at_ticks((pid_t)pid);
-        if (!now || *now != j["started_at_ticks"].get<long long>()) {
-            return true;
-        }
-    } else if (kill((pid_t)pid, 0) != 0 && errno == ESRCH) {
-        return true;
+    std::optional<long long> tick = aos::now_tick();
+    std::optional<long long> at_tick = count(j, "acquired_at_ticks");
+    if (tick && at_tick) {
+        return *tick >= *at_tick && *tick - *at_tick >= *lease;
     }
-    if (zombie((pid_t)pid)) {
-        return true;   // 已經結束、只是父行程還沒收屍：/proc 還在、ticks 也對得上，但它不會再放鎖了
-    }
-    // 3. 租約到期
-    if (is_int(j, "lease_ms") && j.contains("acquired_at") && j["acquired_at"].is_string()) {
-        std::optional<long long> at = parse_at(j["acquired_at"].get<std::string>());
-        if (at && now_ms() > *at + j["lease_ms"].get<long long>()) {
-            return true;
-        }
-    }
-    return false;
+    // 用寬整數比較，乘法與期限加法都不溢位。
+    return static_cast<__int128>(now_ms()) >= static_cast<__int128>(*at) +
+        static_cast<__int128>(*lease) * aos::tick_interval_ms();
 }
 
 }  // namespace aos::lock

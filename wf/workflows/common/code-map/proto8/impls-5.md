@@ -35,6 +35,6 @@
 | [`src/help/help.hpp`](../../../../../proto8/impls/aos-post/src/help/help.hpp) | aos-post 各子命令的英文說明與 usage。 |
 | [`src/mailbox/mailbox.cpp`](../../../../../proto8/impls/aos-post/src/mailbox/mailbox.cpp) | 信箱的路徑、建信箱、拿信箱、信件名稱的規則（check_name、is_ordered、sort_letters）、 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-post/src/main.cpp) | aos-post 命令列——第一個參數挑子命令，其餘照 aos-util 的 parse_cli（旗標在位置參數前面）。 |
-| [`src/send/send.cpp`](../../../../../proto8/impls/aos-post/src/send/send.cpp) | 寄信人這一半——驗信箱、信件名稱、寄一封（說明見 aos/post.hpp）。 |
-| [`src/take/take.cpp`](../../../../../proto8/impls/aos-post/src/take/take.cpp) | 處理者這一半——認領、讀信、回信、處理完；加上寄信人的撤回（說明見 aos/post.hpp）。 |
+| [`src/send/send.cpp`](../../../../../proto8/impls/aos-post/src/send/send.cpp) | 驗信箱與名稱、記牆鐘與選填 tick 寄信，並以鎖保證有序投遞。 |
+| [`src/take/take.cpp`](../../../../../proto8/impls/aos-post/src/take/take.cpp) | 認領、驗信封（含選填 tick）、回信與處理完，並提供寄信人撤回。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-post/vcpkg.json) | aos-post：投遞（N-16 信箱：寄、認領、處理完、撤回）的 lib 與命令列 |

@@ -34,10 +34,10 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`CMakeLists.txt`](../../../../../proto8/impls/aos-lock/CMakeLists.txt) | 鎖（N-15）——mkdir <目標>/.lock/ 或 <目標>.lock/、名牌 holder.json、判死活、收屍。 |
-| [`include/aos/lock.hpp`](../../../../../proto8/impls/aos-lock/include/aos/lock.hpp) | aos-lock 的公開介面——鎖（NORMS N-15）：拿、放、看、判死活、收屍。 |
+| [`CMakeLists.txt`](../../../../../proto8/impls/aos-lock/CMakeLists.txt) | 鎖（N-15）——mkdir <目標>/.lock/ 或 <目標>.lock/、名牌 holder.json、flock 判存活、兩鐘租約、收屍。 |
+| [`include/aos/lock.hpp`](../../../../../proto8/impls/aos-lock/include/aos/lock.hpp) | aos-lock 公開介面——mkdir 取鎖、flock 判存活、兩鐘租約、改名放鎖。 |
 | [`src/common/common.hpp`](../../../../../proto8/impls/aos-lock/src/common/common.hpp) | aos-lock 跨元素共用的小東西（內部標頭，不對外）。 |
-| [`src/holder/holder.cpp`](../../../../../proto8/impls/aos-lock/src/holder/holder.cpp) | 名牌——身分、替行程填名牌、讀鎖、判能不能收；與 common.hpp 的時間、名字小工具（說明見 aos/lock.hpp）。 |
-| [`src/lock/lock.cpp`](../../../../../proto8/impls/aos-lock/src/lock/lock.cpp) | 鎖本身——目標換成鎖資料夾、拿（mkdir＋寫名牌）、收屍、等、放（說明見 aos/lock.hpp）。 |
-| [`src/main.cpp`](../../../../../proto8/impls/aos-lock/src/main.cpp) | aos-lock 命令列——第一個參數挑子命令，其餘照 aos-util 的 parse_cli（旗標在位置參數前面）。 |
+| [`src/holder/holder.cpp`](../../../../../proto8/impls/aos-lock/src/holder/holder.cpp) | 名牌與 flock 存活快照、兩鐘租約判斷。 |
+| [`src/lock/lock.cpp`](../../../../../proto8/impls/aos-lock/src/lock/lock.cpp) | mkdir 取鎖、目錄 fd 原子刊登名牌、保管 flock fd、收屍與放鎖。 |
+| [`src/main.cpp`](../../../../../proto8/impls/aos-lock/src/main.cpp) | aos-lock 命令列——無存活標記的持久鎖、tick 租約、放鎖與查看。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-lock/vcpkg.json) | aos-lock：鎖（N-15：mkdir .lock/、名牌 holder.json、收屍）的 lib 與命令列 |

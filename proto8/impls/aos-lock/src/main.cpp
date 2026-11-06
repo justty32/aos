@@ -1,22 +1,11 @@
-// main.cpp：aos-lock 命令列——第一個參數挑子命令，其餘照 aos-util 的 parse_cli（旗標在位置參數前面）。
-//
-//     aos-lock acquire [--lease-ms N] [--note 字] [--wait-ms N] [--pid N] 目標    拿到退 0；拿不到退 10
-//     aos-lock release 目標                                                         鎖不在退 1（LockMissing）
-//     aos-lock show 目標                                                            印名牌一行；沒有鎖退 10
-//
-// 目標換成鎖資料夾：結尾 / 或現有的資料夾＝<目標>/.lock/，否則＝<目標>.lock/（lock_dir_of）。
-// 名牌上的持有者預設是**叫 aos-lock 的那個行程**（getppid）：aos-lock 拿完就退，名牌寫它自己的 pid 等於一拿到就死了。
-// 要寫別的行程用 --pid。結束碼照 N-43：0 成功、10 沒東西（拿不到、沒有鎖）、1 錯。出錯 stderr 一行「aos-lock: error: 代號 原因」（11-05 stdio-unify R1）。
-// 子命令前先 parse_cli（旗標表是空的；只認 --help）：不認得的旗標＝FlagUnknown，子命令不認得才 CommandUnknown（R4）。
+// main.cpp：aos-lock 命令列——無存活標記的持久鎖、tick 租約、放鎖與查看。
 #include "aos/util/cli.hpp"
 #include "aos/lock.hpp"
-#include "aos/util/proc.hpp"
 
 #include <exception>
 #include <iostream>
 #include <map>
 
-#include <unistd.h>
 
 namespace {
 
@@ -45,7 +34,7 @@ more: aos-lock/README.md
 )";
 
 const std::map<std::string, std::string> SUB_USAGE = {
-    {"acquire", "aos-lock acquire [--lease-ms N] [--note TEXT] [--wait-ms N] [--pid N] TARGET"},
+    {"acquire", "aos-lock acquire [--lease-ticks N] [--note TEXT] [--wait-ms N] TARGET"},
     {"release", "aos-lock release TARGET"},
     {"show", "aos-lock show TARGET"},
 };
@@ -53,14 +42,13 @@ const std::map<std::string, std::string> SUB_USAGE = {
 const std::map<std::string, std::string> SUB_HELP = {
     {"acquire", R"(aos-lock acquire - Acquire a lock next to TARGET.
 
-usage: aos-lock acquire [--lease-ms N] [--note TEXT] [--wait-ms N] [--pid N] TARGET
+usage: aos-lock acquire [--lease-ticks N] [--note TEXT] [--wait-ms N] TARGET
        aos-lock acquire --help
 
 flags:
-  --lease-ms N   expire the lease after N milliseconds (default: no expiry)
+  --lease-ticks N   expire the lease after N ticks (default: no expiry)
   --note TEXT    store a note in the holder tag
   --wait-ms N    wait up to N milliseconds (default: 0)
-  --pid N        record this process as holder (default: calling process)
   -h, --help     show this help
 
 Create the lock folder and holder.json; print nothing.
@@ -129,17 +117,10 @@ long long count_of(const aos::Cli& cli, const std::string& name, const std::stri
 }
 
 int cmd_acquire(const Args& args) {
-    aos::Cli cli = parse(args, {{"--lease-ms", "lease_ms"}, {"--note", "note"}, {"--wait-ms", "wait_ms"}, {"--pid", "pid"}});
-    pid_t pid = getppid();
-    if (cli.opts.count("pid")) {
-        pid = (pid_t)count_of(cli, "pid", "--pid");
-        if (pid <= 0 || !aos::proc_started_at_ticks(pid)) {
-            throw aos::usage_error(l::code::ArgumentsBad, "--pid: no such process: " + cli.opts["pid"], SUB_USAGE.at(sub_cmd));
-        }
-    }
-    l::Holder h = l::holder_of(pid);
-    if (cli.opts.count("lease_ms")) {
-        h.lease_ms = count_of(cli, "lease_ms", "--lease-ms");
+    aos::Cli cli = parse(args, {{"--lease-ticks", "lease_ticks"}, {"--note", "note"}, {"--wait-ms", "wait_ms"}});
+    l::Holder h = l::holder_of(false);
+    if (cli.opts.count("lease_ticks")) {
+        h.lease_ticks = count_of(cli, "lease_ticks", "--lease-ticks");
     }
     if (cli.opts.count("note")) {
         h.note = cli.opts["note"];

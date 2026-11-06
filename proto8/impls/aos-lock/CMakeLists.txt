@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.21)
 
-# aos-lock：鎖（N-15）——mkdir <目標>/.lock/ 或 <目標>.lock/、名牌 holder.json、判死活、收屍。兩個產物：lib/libaos-lock.a、bin/aos-lock。
+# aos-lock：鎖（N-15）——mkdir <目標>/.lock/ 或 <目標>.lock/、名牌 holder.json、flock 判存活、兩鐘租約、收屍。兩個產物：lib/libaos-lock.a、bin/aos-lock。
 # CMake 的共通設定（vcpkg、Release、compile_commands、PIC、AOS_STATIC_PIE）在 ../cmake/settings.cmake。
 # 照 aos-directive 的 CMakeLists.txt 改名。
 include(../cmake/settings.cmake)
 project(aos-lock CXX)
 
 # 用到的兄弟專案（包一層 if(NOT TARGET)，全家都這樣寫）。
-#   aos-util  錯誤、三扇門、旗標、路徑、/proc（started_at_ticks、boot_id）、utc_now_ms
+#   aos-util  錯誤、三扇門、旗標、路徑、身分、UTC 時間與 tick 兩鐘
 if(NOT TARGET aos-util)
   add_subdirectory(../aos-util aos-util-build)
 endif()

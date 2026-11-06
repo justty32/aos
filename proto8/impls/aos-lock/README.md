@@ -1,11 +1,11 @@
 # aos-lock
 
-`aos-lock - 鎖：mkdir 一個 .lock/ 資料夾，掛上名牌，持有者死了別人能收`（NAME，C-54 R1）
+`aos-lock - 鎖：mkdir 掛名牌，flock 判庫持有者死活，租約數 tick`（NAME，C-54 R1）
 
-**一句話：`aos-lock 子命令 [FLAGS...] 目標`——NORMS [N-15](../../docs/NORMS/05-基礎設施-窗/04-N-15.md)的鎖：`acquire` 用 mkdir 拿 `<資料夾>/.lock/` 或 `<檔>.lock/`、在裡面寫名牌 `holder.json`，`release` 先改名再刪，`show` 印名牌；拿不到時看名牌，持有者死了（pid＋`started_at_ticks`＋`boot_id` 對不上）或租約過了就替它收。**
+**一句話：`aos-lock 子命令 [FLAGS...] 目標`——NORMS [N-15](../../docs/NORMS/05-基礎設施-窗/04-N-15.md)的鎖：`acquire` 用 mkdir 拿 `<資料夾>/.lock/` 或 `<檔>.lock/`、在裡面寫名牌 `holder.json`，`release` 先改名再刪，`show` 印名牌；拿不到時看名牌，庫持有者的 `holder.flock` 已釋放或 tick 租約過了就替它收；命令列拿完就退出，要自行 `release` 或給租約。**
 一個 lib（`lib/libaos-lock.a`，公開標頭 `include/aos/lock.hpp`，aos-post 的有順序投遞連它）加一支薄命令列（`bin/aos-lock`）。只連 aos-util。全家慣例見 [impls/README.md](../README.md)；設計見 [thinking 10-29 medium-plan § 五](../../thinking/2026-10/29/medium-plan/README.md)。
 
-像會議室門口的牌子：先把牌子掛上門（mkdir，只有一個人掛得上）再寫上名字；用完先把牌子摘下拿走（改名）再丟。牌子上的人早就下班了（行程不在）或寫的時段過了（租約），下一個人可以自己摘掉換上自己的。這是約定，不是門鎖：從 Linux 繞過去 aos 不管（決定 10）。
+像會議室門口的牌子：先把牌子掛上門（mkdir，只有一個人掛得上）再寫上名字；用完先把牌子摘下拿走（改名）再丟。庫持有者已經離開（flock 試鎖成功）或寫的時段過了（租約），下一個人可以自己摘掉換上自己的。這是約定，不是門鎖：從 Linux 繞過去 aos 不管（決定 10）。
 
 ```sh
 aos-lock acquire --note "改 data" data.json && 改 data.json && aos-lock release data.json   # 鎖是 data.json.lock/
@@ -19,16 +19,16 @@ aos-lock show data.json                                                         
 
 | 子命令 | 做什麼 |
 |---|---|
-| `acquire [--lease-ms N] [--note 字] [--wait-ms N] [--pid N] 目標` | 拿鎖：拿到退 0（不印東西）；被活人拿著退 10。`--wait-ms`＝拿不到每 20 毫秒再試、最多等 N 毫秒（沒給＝只試一次）。`--lease-ms`、`--note` 寫進名牌 |
+| `acquire [--lease-ticks N] [--note 字] [--wait-ms N] 目標` | 拿鎖：拿到退 0（不印東西）；鎖仍有效退 10。`--wait-ms`＝拿不到每 20 毫秒再試、最多等 N 毫秒（沒給＝只試一次）。`--lease-ticks`、`--note` 寫進名牌；不給租約＝不因時間到期 |
 | `release 目標` | 放鎖：改名成 `<鎖>.releasing.<獨一無二的名字>` 再刪。不看是誰的鎖（約定）。鎖不在退 1 `LockMissing` |
 | `show 目標` | 名牌 stdout 印一行；沒有鎖退 10；鎖在但名牌不在或讀不懂退 1 `HolderBad` |
 
 - **目標 → 鎖**：結尾是 `/` 或是現有的資料夾＝`<目標>/.lock/`；其他（檔、還不存在的名字）＝`<目標>.lock/`。相對路徑從 cwd 算。鎖的上一層不在＝`MkdirFailed`（不替人建）。不檢查上下層（鎖了資料夾不等於鎖了裡面的檔）。
-- **名牌 `holder.json`**：`{"holder", "pid", "started_at_ticks", "boot_id", "acquired_at", "lease_ms"?, "note"?}`。`holder`＝aos-util 的 `aos::identity()`：`$AOS_WS` ＞ `$AOS_STACK` ＞ `$AOS_CF` ＞ cwd，空字串算沒設、轉絕對路徑（同 aos-post 的 `sender`；11-03 拿掉 `$HOME`）。**`pid` 預設是叫 aos-lock 的那個行程**（getppid）——aos-lock 拿完就退，寫它自己等於一拿到就算死了；要寫別的行程用 `--pid`（那個行程要在，不在＝`ArgumentsBad`）。`started_at_ticks`、`boot_id` 讀 `/proc`（讀不到＝null）；`acquired_at`＝ISO 8601 UTC 到毫秒。透過 aos-util `write_text` 先寫 `.holder.json.tmp` 再改名，維持縮排 2、無尾端換行；鎖路徑的目錄查詢與收尾刪除使用 util `is_dir`／`remove_tree`。
-- **收屍**（mkdir 失敗時）：讀名牌，下面任一條成立就照放鎖的步驟替它收、再 mkdir（改名只有一個人會成功，兩人同時收也沒事）——
-  ① `boot_id` 跟現在的不同；② `pid`＋`started_at_ticks` 對不上（行程不在、pid 被重用；`started_at_ticks` 是 null＝只看 pid 在不在）；③ 行程是殭屍（結束了、父行程還沒收屍）；④ 有 `lease_ms` 且 `acquired_at`＋`lease_ms` 已過（持有者活著也收）；⑤ 名牌不在或讀不懂、且鎖資料夾 10 秒沒動過（持有者 mkdir 完還沒寫好名牌就死了；10 秒不開 key）。
-  好幾個人同時判到同一把死鎖時，直接改名會搬走別人剛拿到的新鎖，所以收之前先在鎖裡 `mkdir .reaping`（收屍牌，只有一個人建得成；牌子 10 秒沒動＝收的人也死了，拔掉再來），再讀一次名牌：跟判的那份不同（牌子掛進了別人的新鎖）＝拔掉牌子、不收；名牌本來就不在的還要是同一個資料夾（inode）。
-- **牆上時鐘**（11-05 第二輪）：沒名牌的鎖與收屍牌看資料夾 mtime 的年齡、`lease_ms` 看 `acquired_at`，都是牆上時鐘。mtime 在未來 10 秒以上（時鐘往回跳過）＝也當過期（原本年齡是負的永遠不到 10 秒，`aos-post send --ordered` 一直卡著）；時鐘往前跳會讓租約提早到期、往回跳會延後（風險自擔）。
+- **名牌 `holder.json`**：`{"holder", "acquired_at", "acquired_at_ticks"?, "lease_ticks"?, "flock"?, "note"?}`。`holder`＝aos-util 的 `aos::identity()`：`$AOS_WS` ＞ `$AOS_STACK` ＞ `$AOS_CF` ＞ cwd，空字串算沒設、轉絕對路徑（同 aos-post 的 `sender`）。`acquired_at`＝ISO 8601 UTC 到毫秒，永遠寫；有 `AOS_TICK` 時才寫非負整數 `acquired_at_ticks`；給租約才寫非負整數 `lease_ticks`（0＝立即到期）。透過已開啟的鎖目錄 fd 先寫 `.holder.json.tmp`，確認寫入與關檔成功再 `renameat` 成名牌，縮排 2、無尾端換行；目錄開啟後即使被改名，也不會誤寫別人新建的鎖。
+- **持有者死活**：庫拿鎖時建立 `holder.flock`、取獨佔 flock，fd 保留到 `release` 或行程結束；名牌寫 `"flock": true`。別人只對有此標記的鎖試 `LOCK_EX | LOCK_NB`，拿得到＝庫持有者已經離開，能收；拿不到＝仍持有。行程被 SIGKILL 或重開機，kernel 都會放掉 flock，不必讀 `/proc`。命令列 `acquire` 拿完即退出，名牌不寫 `flock`，不做死亡回收：**命令列拿鎖要記得 `release`，或指定 `--lease-ticks`**。
+- **租約數 tick**（[N-65](../../docs/NORMS/02-設計理念-時空.md)）：讀的人自己有時鐘、名牌也有 `acquired_at_ticks`，以 `now_tick >= acquired_at_ticks + lease_ticks` 判到期；時鐘檔停著，等再久也不到期。其他情況以牆鐘 `acquired_at + lease_ticks × tick_interval_ms()` 判到期。`AOS_TICK_INTERVAL` 沒設＝1000 毫秒；例如設 500、租約 2 ticks，沒有時鐘時約 1 秒。租約到期可以收活持有者的鎖。
+- **收屍**（mkdir 失敗時）：flock 表示持有者已離開、租約到期、或名牌不在／讀不懂且鎖資料夾 10 秒沒動，任一成立即可收。收之前先在鎖裡 `mkdir .reaping`（收屍牌，只有一個人建得成；牌子 10 秒沒動＝收的人也死了，拔掉再來），再讀一次名牌：跟判的那份不同＝拔掉牌子、不收；也要是同一個資料夾（inode）。建立收屍牌會更新 mtime，因此重新檢查沿用判定時的年齡，避免殘缺名牌永遠收不掉。之後把鎖資料夾改名再刪、重新 mkdir。
+- **牆上時鐘**：名牌不在／讀不懂與收屍牌的 10 秒，一律看檔案 mtime，不數 tick；mtime 在未來 10 秒以上同樣當過期。有 tick 的租約只看 tick；退牆鐘的租約遇到校時，往前跳會提早到期、往回跳會延後。
 - **殘骸**：`<鎖>.releasing.*` 是別人放到一半的，名字不同、不擋人，aos-lock 不碰。
 
 ## 元素
@@ -45,11 +45,12 @@ stderr 一行 **`aos-lock: error: 代號 原因`**、退 1。
 
 | 代號 | 什麼時候 |
 |---|---|
-| `ArgumentsBad`、`FlagUnknown`（共用） | 子命令沒給、目標不是剛好一個、`--lease-ms`／`--wait-ms`／`--pid` 不是非負整數、`--pid` 的行程不在、不認得的旗標 |
+| `ArgumentsBad`、`FlagUnknown`（共用） | 子命令沒給、目標不是剛好一個、`--lease-ticks`／`--wait-ms` 不是非負整數、不認得的旗標 |
 | `CommandUnknown`（全家共用，aos-util） | 不認得的子命令 |
+| `TickBad`（aos-util） | `AOS_TICK` 讀不了或內容壞、牆鐘換算時的 `AOS_TICK_INTERVAL` 壞 |
 | `LockMissing` | `release`：鎖不在 |
 | `HolderBad` | `show`：鎖在，名牌不在或讀不懂 |
-| `MkdirFailed`、`WriteFailed`、`Internal`（共用） | 鎖資料夾建不了（上一層不在、沒權限）；名牌寫不了、改名不了；照理不會發生的 |
+| `MkdirFailed`、`WriteFailed`、`Internal`（共用） | 鎖資料夾建不了（上一層不在、沒權限）；名牌或 flock 檔開不了／鎖不了、名牌寫不了、改名不了；照理不會發生的 |
 
 ## 建置與測試
 
@@ -61,7 +62,10 @@ cmake -B build && cmake --build build
 
 ## 已知限制
 
-- 只支援 Linux（`/proc`）。持有者在別的 PID namespace（沙箱）裡時，外面看到的 pid 對不上，會被當成死了收掉——鎖要跨 namespace 用時，兩邊要看得到同一套 pid。
-- 收屍牌擋得住「判完被別人收掉又拿走」；擋不住的剩兩個角落：名牌本來就不在、新鎖剛好拿到同一個 inode 號又還沒寫名牌；租約到期的持有者自己放鎖、緊接著有人 mkdir、收的人才改名。這是約定（決定 10），不必擋得住。
+- 使用 Linux flock；跨 PID namespace 也能認同一把檔案鎖，兩邊必須看得到同一個檔案系統中的同一個鎖檔，檔案系統必須支援 flock。複製鎖資料夾不會複製活的 flock。
+- 收屍牌擋得住「判完被別人收掉又拿走」；仍有幾個角落：mkdir 後、開鎖目錄前停頓超過 10 秒，原鎖可能被收走，恢復時打開的是替代鎖；名牌本來就不在、新鎖剛好拿到同一個 inode 號又還沒寫名牌；租約到期的持有者自己放鎖、緊接著有人 mkdir、收的人才改名。這是約定（決定 10），不必擋得住。
 - 租約到期會收活人的鎖：原持有者之後 `release` 會放掉新持有者的鎖（release 不看是誰的）。要用租約的人自己守時。
-- flock 加速（N-15 ④）沒做：等鎖是每 20 毫秒輪詢。
+- flock 用來判庫持有者死活；等鎖仍每 20 毫秒輪詢，`--wait-ms` 用 steady_clock，凍住 tick 不會凍住等鎖時間。
+- fd 以絕對鎖路徑登記；`release` 會關掉本行程登記的 fd，即使鎖已被別人移走。fork 子行程會先關掉繼承的 fd，exec 也不繼承。
+- 租約比較避免加法／乘法溢位；數學期限超出可表示的 tick／毫秒時，不會繞回而提早過期。
+- 沒有時鐘或名牌沒有 tick 時，租約退牆鐘，校時風險照上面說明；不同樹的 tick 不可直接相比，共用鎖應使用同一個時鐘。

@@ -1,9 +1,10 @@
-// take.cpp：【take】處理者這一半——認領、讀信、回信、處理完；加上寄信人的撤回（說明見 aos/post.hpp）。
+// take.cpp：【take】認領、驗信封（含選填 tick）、回信與處理完，並提供寄信人撤回。
 //
 //   認領＝new/ 照處理順序（sort_letters），rename new/<名> → cur/<名>，成功的那個人才算（被撤、被別人拿走、cur/ 已有同名＝跳過）
 //   處理完＝rename cur→tmp 再刪（cur/ 裡永遠不會出現刪一半的），keep＝rename cur→archive
 //   撤回＝rename new→tmp 再刪；進了 cur/ 就撤不了（認領是界線）
-//   壞信＝letter.json 不是 JSON 物件、sender／sent_at 不是字串、沒有 body、reply_to／in_reply_to 不是字串：
+//   壞信＝letter.json 不是 JSON 物件、sender／sent_at 不是字串、沒有 body、reply_to／in_reply_to 不是字串、
+//     sent_at_ticks 有但不是非負整數：
 //     done 時丟掉，不通知寄信人（決定 27）。kind 不看（11-03 拿掉；讀到＝不認得的 key、忽略）；名字有序無序都不算壞
 #include "common/common.hpp"
 
@@ -76,6 +77,9 @@ static std::string why_bad(const std::optional<Json>& doc) {
         if (!doc->contains(k) || !(*doc)[k].is_string()) {
             return std::string("missing ") + k + " (must be a string)";
         }
+    }
+    if (doc->contains("sent_at_ticks") && !aos::is_count((*doc)["sent_at_ticks"])) {
+        return "sent_at_ticks must be a non-negative integer";
     }
     if (!doc->contains("body")) {
         return "missing body";
