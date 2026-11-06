@@ -1,4 +1,4 @@
-# 2026-11-05 晚 不靠 pid 找東西：daemon 是 Linux 行程與 aos 之間唯一的橋、寄信不回＝呼叫失敗、監管樹（no-pid；使用者方向＋fable 規劃；未實作）
+# 2026-11-05 晚 不靠 pid 找東西：daemon 是 Linux 行程與 aos 之間唯一的橋、寄信不回＝呼叫失敗、監管樹（no-pid；使用者方向＋fable 規劃；11-06 P1 已做）
 
 ← [thinking README](../../../README.md)｜日 [2026-11-05](../README.md)｜相關：[arch-refactor](../arch-refactor/README.md)（S6 照本夾 P3 做、S7／S8 排在 P1～P2 之後，見 [07](07-實作步驟.md)）、[small-thought § 第二輪](../small-thought/README.md#11-05-夜-第二輪邊緣)（沙箱誤判那題本夾解）、[kernel-daemon 08](../kernel-daemon/08-實作結果.md)（llm kernel 看問腦 proc 不碰 pid＝現成範例）、[edge-daemon](../edge-daemon/README.md)（DaemonRunning 改 flock）
 
@@ -46,6 +46,7 @@
 | [05-監管樹](05-監管樹.md) | daemon 型 proc、stuck 判法、`restart_on_stuck`、根 daemon 交系統 |
 | [06-衝突與邊緣](06-衝突與邊緣.md) | 跟 N-17／N-32／C-52／N-28／N-63／N-10 的關係、邊緣狀況三組 |
 | [07-實作步驟](07-實作步驟.md) | P1～P9、跟大重構 S6／S7／S8／S10 怎麼合、派誰、驗收 |
+| [08-P1實作結果](08-P1實作結果.md) | 11-06 P1 做了什麼、代定 4 條、修前重現與修後實測、新發現的邊緣 3 條 |
 
 ## 要使用者裁的（白話；推薦放第一）——只剩真正沒定的
 
