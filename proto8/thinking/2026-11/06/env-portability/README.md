@@ -19,6 +19,7 @@
 | [03-建議與搬家食譜](03-建議與搬家食譜.md)（資料 [03-建議.csv](03-建議.csv)） | 改的 R1～R7、維持環境變數就好的；搬家時要重設的九步（給 no-pid P8） |
 | [04-規範草稿](04-規範草稿.md) | N-67 加三項：⑦ 值不落檔、⑧ 密鑰不落檔、⑨ 只指樹內或 root 層（只草稿） |
 | [05-衝突與方向題](05-衝突與方向題.md)（資料 [05-衝突.csv](05-衝突.csv)） | 衝突 K1～K6；方向題 Q1～Q5 |
+| [06-E1改-金鑰歸小proc](06-E1改-金鑰歸小proc.md) | 使用者 11-06 更正 E1：金鑰歸小 proc 自己保管；定義在哪、kernel.json `key` 拿掉、`llm_http` 怎麼讀、沒設報 `EndpointFailed`、daemon 繼承；方向題 Q1-2（`url`／`model` 要不要也搬，推薦不搬） |
 
 ## 使用者裁定（11-06，選項框）
 
@@ -26,7 +27,7 @@
 
 | 題 | 使用者選的（逐字） | 落實 |
 |---|---|---|
-| Q1 金鑰落檔 | 「endpoint 那步才解 (Recommended)」 | `request.json` 照原樣存 `{"$env": X}`，交給 endpoint 函數自己解；實作排在 apply-ideas 02 序 2c 的 E1 |
+| Q1 金鑰落檔 | 「endpoint 那步才解 (Recommended)」 | ~~`request.json` 照原樣存 `{"$env": X}`，交給 endpoint 函數自己解~~ **11-06 使用者更正：金鑰歸小 proc**（「金鑰應該由那個小proc自己保管，我們在定義那個小proc的時候就要跟他說讀哪個環境變數當金鑰了」）：kernel 連指示詞都不經手；每個要金鑰的端點在 llm kernel 定義裡有自己的小定義資料夾，`_entry` 寫 `llm_http --key-env LITELLM_KEY`，kernel.json 那包只指 `exec`、拿掉 `key`——細節見 [06](06-E1改-金鑰歸小proc.md)；實作排在 apply-ideas 02 序 2c 的 E1 |
 | Q4 N-67 加三項 | 「加進條文 (Recommended)」 | ⑦⑧⑨ 已寫進 [N-67](../../../../docs/NORMS/10-基礎設施-定義與工作區/09-N-67.md)（原句全留、只加項與註） |
 | Q5 指不到時 | 「印 warning (Recommended)」 | `AOS_KERNEL`／`AOS_TICK` 設了但指不到＝印 warning 行、不報錯、不改退路；實作排在 2c 的 E2 |
 | Q2＋Q3 aos-tools 登記檔 | 「C 照現況」 | 登記檔照舊存展開後的值、登記檔贏（K1 使用者已知、接受）；P2 是已知代價、不修，R2 不做；搬家食譜加一步「檢查各工具的登記檔、必要時重新 `aos-tools add`」 |
