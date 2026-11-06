@@ -397,7 +397,7 @@ def cmd_ping(opts, args):
 
 
 def cmd_where(opts, args):
-    """where --stack 名字（11-03）：表上的才印 stack；表上沒有＝ProcMissing（不看小格資料夾在不在）。"""
+    """where --stack 名字（11-03）：表上的才印 stack；表上沒有＝ProcMissing（不看 proc 的 stack 資料夾在不在）。"""
     o, rest = aos_flags.parse(args, {"--stack": "stack"}, help=HELPS["where"])
     if rest or not o.get("stack"):
         raise Fail("ArgumentsBad", "where needs --stack NAME")
