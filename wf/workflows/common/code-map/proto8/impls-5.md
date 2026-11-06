@@ -24,7 +24,7 @@
 |---|---|
 | [`CMakeLists.txt`](../../../../../proto8/impls/aos-util/CMakeLists.txt) | aos 這一家命令列工具共用的函式庫。 |
 | [`include/aos/cli.hpp`](../../../../../proto8/impls/aos-util/include/aos/cli.hpp) | 10-21 起的命令列（aos-exec、aos-loop、aos-fsm、aos-daemon 共用）。 |
-| [`include/aos/error.hpp`](../../../../../proto8/impls/aos-util/include/aos/error.hpp) | aos 這一家命令列工具共用的錯誤型別，和「好幾支工具都會吐」的錯誤代號。 |
+| [`include/aos/error.hpp`](../../../../../proto8/impls/aos-util/include/aos/error.hpp) | aos 這一家命令列工具共用的錯誤型別，和通用的錯誤代號。 |
 | [`include/aos/files.hpp`](../../../../../proto8/impls/aos-util/include/aos/files.hpp) | 檔案的小工具——路徑、目錄操作、讀檔與文字及 JSON 原子寫入。 |
 | [`include/aos/io.hpp`](../../../../../proto8/impls/aos-util/include/aos/io.hpp) | aos 這一家命令列工具的「三扇門」——stdin 讀一份 JSON、stdout 印一行 JSON、stderr 只有兩種行。 |
 | [`include/aos/proc.hpp`](../../../../../proto8/impls/aos-util/include/aos/proc.hpp) | 子程序——起、看結束了沒、整群送訊號、收屍、/proc、memfd。 |

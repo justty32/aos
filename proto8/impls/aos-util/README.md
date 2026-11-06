@@ -2,7 +2,7 @@
 
 `libaos-util - aos 這一家命令列工具共用的小函式庫`（NAME，C-54 R1）
 
-**一句話：aos 這一家命令列工具共用的小函式庫——錯誤型別與全家的錯誤代號、三扇門（stdin／stdout／stderr）、旗標（`aos/cli.hpp`；較早一代沒人叫的 `aos/flags.hpp` 11-04 刪了）、設定檔、路徑與原子寫入、子程序、訊號。** 沒有執行檔，只出 `lib/libaos-util.a`。全家慣例見 [impls/README.md](../README.md)。
+**一句話：aos 這一家命令列工具共用的小函式庫——錯誤型別與通用的錯誤代號、三扇門（stdin／stdout／stderr）、旗標（`aos/cli.hpp`；較早一代沒人叫的 `aos/flags.hpp` 11-04 刪了）、設定檔、路徑與原子寫入、子程序、訊號。** 沒有執行檔，只出 `lib/libaos-util.a`。全家慣例見 [impls/README.md](../README.md)。
 
 像一家店的共用倉庫：每支工具自己只放自己獨有的東西，「好幾支都要」的一律放這裡，一份就好。
 

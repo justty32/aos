@@ -1,4 +1,4 @@
-// aos/error.hpp：【aos-util】aos 這一家命令列工具共用的錯誤型別，和「好幾支工具都會吐」的錯誤代號。
+// aos/error.hpp：【aos-util】aos 這一家命令列工具共用的錯誤型別，和通用的錯誤代號。
 //
 // 每個工具出錯都丟同一種 aos::Error{code, msg}；命令列在 stderr 印一行「程式名: 代號 原因」、退出 1
 // （11-04 起照 CONVENTION P-44，各程式自己印；aos/io.hpp 的 emit_error 印 {"error": {"code", "msg"}} 那種只剩 aos-util 自己的測試小程式用）。
@@ -6,8 +6,8 @@
 // msg＝給人看的白話（字面不保證）。代號寫成常數，打錯字編譯就會抓到。
 //
 // 規矩：一個代號只定義一次。
-//   - 兩支以上的工具都會吐的 → 放這裡（aos::code）
-//   - 只有一支工具會吐的    → 放那支工具自己的 code namespace（例如 aos::exec::code::EntryMissing）
+//   - 通用的代號 → 放這裡（aos::code）
+//   - 領域代號   → 放負責專案的公開標頭或自己的 code namespace
 // 每支工具在自己的 code namespace 裡 `using namespace aos::code;`，程式裡一律寫 code::Xxx。
 // 全家的代號總表見 impls/README.md。
 #pragma once
@@ -38,7 +38,6 @@ inline constexpr const char* MkdirFailed = "MkdirFailed";   // 資料夾建不�
 inline constexpr const char* LaunchFailed = "LaunchFailed"; // 子程序起不來（fork／spawn 失敗、執行檔不在）
 // 子命令
 inline constexpr const char* CommandUnknown = "CommandUnknown"; // 命令列：不認得的子命令（aos-json、aos-post、aos-lock）
-inline constexpr const char* LlmKernelMissing = "LlmKernelMissing";   // hub 型變數 AOS_LLM_KERNEL（llm kernel 的 stack）沒設、空的、不是資料夾（aos-llm；N-63 ②「<名字>Missing」；11-05 原 KernelMissing，Kernel 留給通用 kernel）
 // 其他
 inline constexpr const char* Internal = "Internal";         // 照理不會發生的例外（記憶體不夠、cwd 被刪）
 }  // namespace code

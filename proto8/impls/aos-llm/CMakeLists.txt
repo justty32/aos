@@ -9,12 +9,16 @@ include(../cmake/settings.cmake)
 project(aos-llm C CXX)
 
 # 用到的兄弟專案（包一層 if(NOT TARGET)，全家都這樣寫）。
-#   aos-llm-kernel  公開 API（aos/llm_kernel.hpp）：信箱與信的格式（sender.flock、priority、回信）；
-#                   它又帶進 aos-loop（擋訊號）、aos-exec、inst、aos-util、aos-directive
+#   aos-util        共用型別、檔案與訊號。
+if(NOT TARGET aos-util)
+  add_subdirectory(../aos-util aos-util-build)
+endif()
+#   aos-llm-kernel  公開 API（aos/llm_kernel.hpp）：LLM 信件協定的 parse_priority／hold_sender／reply_of；
+#                   kernel 目前仍間接帶進 aos-loop，相依由 kernel 自己管理。
 if(NOT TARGET aos-llm-kernel)
   add_subdirectory(../aos-llm-kernel aos-llm-kernel-build)
 endif()
-#   aos-post        公開 API（aos/post.hpp）：寄信（send）、回信信箱的建、收掉、撤信（regret）
+#   aos-post        公開 API（aos/post.hpp）：寄信（send／send_prepared）、認領（take）、回信信箱的建、收掉、撤信（regret）
 if(NOT TARGET aos-post)
   add_subdirectory(../aos-post aos-post-build)
 endif()
@@ -28,7 +32,7 @@ add_library(aos-llm STATIC ${SOURCES})
 target_include_directories(aos-llm PRIVATE src)
 target_compile_features(aos-llm PUBLIC cxx_std_20)
 target_compile_options(aos-llm PRIVATE -Wall -Wextra)
-target_link_libraries(aos-llm PUBLIC aos-llm-kernel aos-post)
+target_link_libraries(aos-llm PUBLIC aos-util aos-post aos-llm-kernel)
 set_target_properties(aos-llm PROPERTIES
   ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/lib)
 

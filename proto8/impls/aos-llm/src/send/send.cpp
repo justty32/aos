@@ -5,9 +5,7 @@
 #include "aos/proc.hpp"
 
 #include <cerrno>
-#include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <filesystem>
 #include <optional>
 #include <signal.h>
@@ -102,38 +100,20 @@ std::string send(const Mailbox& mb, const Json& body, const std::string& reply_t
     return aos::post::send(aos::post::open(mb.root), body, opts);
 }
 
+// sender.flock 拿到行程結束；不關閉 hold_sender 回傳的 fd。
+static void hold_sender(const std::string& tmp) {
+    aos::llm_kernel::hold_sender(tmp);
+}
+
 std::string send_held(const Mailbox& mb, const Json& body) {
     aos::post::init(reply_box(mb));   // 建不了丟 MkdirFailed
     Json letter = Json::object();
     letter["sender"] = aos::identity();   // 信封（N-16），同 aos-post
     letter["sent_at"] = aos::utc_now_ms();
-    letter["reply_to"] = aos::post::reply_to_rel(aos::post::Mailbox{mb.root}, reply_box(mb));   // 相對信箱根＝"reply"（11-05，同 aos-post send）
+    letter["reply_to"] = aos::post::reply_to_rel(mb, reply_box(mb));   // 相對信箱根＝"reply"（11-05，同 aos-post send）
     letter["body"] = body;
 
-    aos::make_dir(mb.tmp());
-    aos::make_dir(mb.fresh());
-    std::string id = aos::unique_id();
-    std::string t = aos::join(mb.tmp(), "." + id);   // . 開頭＝還在寫，kernel 不碰
-    aos::make_dir(t);
-    std::error_code ec;
-    try {
-        aos::llm_kernel::hold_sender(t);   // 拿到行程結束（fd 不關）
-    } catch (const Error&) {
-        fs::remove_all(t, ec);
-        throw;
-    }
-    std::optional<std::string> err = aos::write_json(aos::join(t, "letter.json"), letter);
-    if (err) {
-        fs::remove_all(t, ec);
-        throw Error{code::WriteFailed, *err};
-    }
-    std::string n = aos::join(mb.fresh(), id);
-    if (std::rename(t.c_str(), n.c_str()) != 0) {
-        int e = errno;
-        fs::remove_all(t, ec);
-        throw Error{code::WriteFailed, "cannot rename " + t + " -> " + n + ": " + std::strerror(e)};
-    }
-    return id;
+    return aos::post::send_prepared(mb, letter, hold_sender);
 }
 
 void regret(const Mailbox& mb, const std::string& name) {

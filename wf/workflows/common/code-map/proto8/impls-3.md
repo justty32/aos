@@ -31,7 +31,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`CMakeLists.txt`](../../../../../proto8/impls/aos-llm/CMakeLists.txt) | `aos-llm send\|recv\|ask\|regret`——寄請求信進 LLM kernel 的信箱（$AOS_LLM_KERNEL）、收回信的基礎工具（11-04 由 aos-llm-send 改名）。 |
-| [`src/common/common.hpp`](../../../../../proto8/impls/aos-llm/src/common/common.hpp) | aos-llm 好幾個元素都用到的：型別別名、錯誤代號（信箱與信的代號在 aos-llm-kernel 的 aos/llm_kernel.hpp）。 |
+| [`src/common/common.hpp`](../../../../../proto8/impls/aos-llm/src/common/common.hpp) | aos-llm 好幾個元素都用到的：型別別名、錯誤代號（信箱型別用 aos-post、LLM 信件協定用 aos-llm-kernel）。 |
 | [`src/ls/ls.cpp`](../../../../../proto8/impls/aos-llm/src/ls/ls.cpp) | 讀窗、印表（說明見 ls.hpp）。 |
 | [`src/ls/ls.hpp`](../../../../../proto8/impls/aos-llm/src/ls/ls.hpp) | aos-llm ls——讀 kernel 的窗 <stack>/endpoints.json（包的屬性表，11-05 feat-proto），一行一包印出。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-llm/src/main.cpp) | aos-llm 命令列——寄請求信進 LLM kernel 的信箱、收回信的基礎工具（定位同 aos-post；thinking 11-04 think-as-function 02/01 § 5）。 |

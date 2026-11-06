@@ -15,6 +15,7 @@
 #include "wait/wait.hpp"
 
 #include "aos/cli.hpp"
+#include "aos/signals.hpp"
 
 #include <cstdio>
 #include <exception>
@@ -74,7 +75,7 @@ static std::optional<std::string> opt(const aos::Cli& cli, const std::string& k)
 int main(int argc, char** argv) {
     namespace g = aos::llm;
     try {
-        aos::loop::block_signals();
+        aos::block_signals();
         aos::Cli top = aos::parse_cli(std::vector<std::string>(argv + 1, argv + argc), {}, {}, HELP);
         std::vector<std::string> args = top.rest;
         if (args.empty()) {

@@ -4,7 +4,7 @@
 
 **一句話：`aos-llm send|recv|ask|regret|ls`——問腦的基礎工具：把一份請求（OpenAI 形狀的 messages／tools＋代號）寫成一封信丟進 llm kernel 的信箱 `$AOS_LLM_KERNEL/mailbox/`（`AOS_LLM_KERNEL`＝llm kernel 的 stack），由 kernel（[aos-llm-kernel](../aos-llm-kernel/README.md)）排隊、請 daemon 掛去跑它自己的 endpoint 函數、照信封的 `reply_to` 寄回信；這支再把回信的 `message` 印出來。**
 定位同 [aos-post](../aos-post/README.md)：基礎工具、IPC 的語法糖，跟 aos proc 關聯不深，proc 自己拿它組（使用者 11-04 晚「aos llm,tool這兩個，我希望他們的定位是跟aos post一樣，作為基礎工具」）。aos-post 管「一封信怎麼寄、怎麼認領」，aos-llm 只多知道「請求信的 body 長怎樣、回信怎麼認、錯怎麼印」。
-11-04 由 `aos-llm-send`（寄一張單子、等回信、原樣交回）改名改寫。一個 lib（`lib/libaos-llm.a`，沒有公開標頭）加一支薄命令列（`bin/aos-llm`）。連 aos-llm-kernel 的公開標頭（信箱與信的格式）與 aos-post 的庫。全家慣例見 [impls/README.md](../README.md)。
+11-04 由 `aos-llm-send`（寄一張單子、等回信、原樣交回）改名改寫。一個 lib（`lib/libaos-llm.a`，沒有公開標頭）加一支薄命令列（`bin/aos-llm`）。連 aos-util（共用工具與訊號）、aos-post（信箱型別、寄送與認領 API）及 aos-llm-kernel（`parse_priority`／`hold_sender`／`reply_of` 三個 LLM 信件協定函式）的庫；kernel 目前仍間接帶進 aos-loop。全家慣例見 [impls/README.md](../README.md)。
 
 像寄信問醫生：`send` 是把問題寫好丟進郵筒、留個回郵地址就走（之後再來看信箱）；`recv` 是去信箱看回信到了沒；`ask` 是站在郵筒旁邊等回條；`regret` 是信還在郵筒裡就抽回來。找哪位醫生只寫代號，醫生的地址、電話只有櫃台（kernel）知道。
 
