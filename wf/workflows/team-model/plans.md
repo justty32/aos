@@ -18,3 +18,4 @@
 
 - **2026-09-24／09-30 現況**：GPT 沒有照原計畫退掉，但 codex 上 gpt-sol／terra／luna 都已不支援，只剩 `gpt-6-astra`；那段期間 aos 碰程式碼一律派 Opus、Sonnet 只做文字小事（**10-09 起**家機實測 9 個 slug 恢復可用，工人層改回 codex，見 aos-teams），細節見 [dispatch/aos-teams](../dispatch/aos-teams.md)。
 - **2026-10-09 現況**：codex 又有新 slug（`gpt-6.1-sol` 等 9 個實測可用，舊 sol／terra／luna 改名 `gpt-5.6-*`）；隊形改為 Opus 隊長＋codex 工人（寫碼 6.1-sol、審查 astra），見 [dispatch/aos-teams](../dispatch/aos-teams.md) 與 [probe-2026-10-09](probe-2026-10-09.json)。
+- **2026-11-06 現況**：隊形改為 opus 隊長（自家 subagent）＋兩名隊員（codex `gpt-6.1-sol`、claude CLI opus），隊員各自無上限派子 agent、盡量派 codex，見 [dispatch/aos-teams](../dispatch/aos-teams.md)。
