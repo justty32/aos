@@ -10,12 +10,13 @@
 照「資料夾＝程式」的做法寫（使用者「daemon也用新做法重寫吧」、「照預設」，[ideas § 25](../../thinking/2026-10/19/ideas/README.md)）。名詞見 [thinking procs](../../thinking/2026-11/03/procs/README.md)：
 daemon 管的子項不論包在 aos-loop 裡一直跑的（loop 型）還是 aos-exec 跑一次的（exec 型）都叫 **proc**；**一份名單 `procs`**、**看寫法決定怎麼起**（沒有 `kind`）、**每項可寫自己的 `stack`**、
 daemon 的 **stop／start**（`procs_stopped`／`procs_started`：列留成 `stopped`、用同一個 stack 再起）、收工時的 **sleep／開門的 wake**（還在跑的 loop 型列留成 `sleeping`、再開自動起，[下「收工與開門」](docs/03-起-停-暫停.md#收工與開門sleepwake)）；11-05 起 **sleep／wake 也是指令**（`procs_slept`／`procs_woken`）、**表上的路徑相對 daemon 的 stack**（整份 `ws/` 搬走照樣醒）、**loop 型出錯結束（退非 0）一律留成 `stopped`＋`reason`**（11-05 晚：原本只留 wake／start 起不來的）、**身體失敗＝記一行、下一圈再跑**（11-05 晚，[docs/06](docs/06-結束碼等.md#結束碼)）、**狀態窗寫不了也是記一行、下一圈再寫**（11-05，同上）、**同一個 stack 已有 daemon 在跑＝`DaemonExists`**（[下「11-05 搬家相關」](docs/03-起-停-暫停.md#11-05-搬家相關)）；11-05 起每列可寫**份額 `limits`**（daemon 在子行程 setrlimit，等同 s6-softlimit；**份額是每個行程各自的上限，不從 daemon 總額扣**，[docs/09](docs/09-份額.md)）；手把 `procs_ctl.json`、窗 `procs_state.json`（一張表）、信箱 `procs_ctl_mailbox/`、proc 的 stack `procs/<名字>/`。
+11-06（no-pid P6）：第三種 **daemon 型 `{"daemon": X}`** 經 aos-exec 直接起整棵子樹，不包 aos-loop；退出同一拍重起，連 3 次各在 3 秒內退出才留 `stopped`＋reason、要人 start，stop／sleep／rm 不重起。收工沿用 sleep／wake（父收子 daemon 等 30 秒）；只有這型的表列多 `daemon: true`、`restart_on_stuck`（P6 只記），`exec` 記 X 入口。寫法與例子見 [docs/02](docs/02-看寫法決定怎麼起.md)，起停見 [docs/03](docs/03-起-停-暫停.md)。
 11-06 起（no-pid P2，[thinking no-pid](../../thinking/2026-11/05/no-pid/README.md)）兩扇窗多 **`responded_at`**（最近一次有反應的時間：收信、採用新 ctl、起收子項、身體跑完；睡著不動，不是心跳）與 **`daemon`**（管這台的上一層 daemon 的 stack，`null`＝根），[docs/04](docs/04-兩個手把-兩扇狀態窗.md)；信箱認 **`{"ping": true}`**（不改名單、有 `reply_to` 就回 `{"applied": true}`；paused 時不回＝呼叫失敗），[docs/05](docs/05-信箱.md)。
 舊名 `loops`、`execs`、`loops_ctl`、`loops_state`、`loops_ctl_mailbox`、`loops_added`……**當沒看到**（C-48，使用者「1. 當沒看到。」）：不報錯、不提醒。
 
 像一個領班：手上一張名單（`procs`），名單上每個人各有一個小隔間（`$AOS_STACK/procs/<名字>/`，或他自己指定的 `stack`）。他每隔一會兒（`interval_ms`）看一眼兩塊佈告欄：
 一塊管他自己（ctl 窗：暫停、收工、節奏），一塊管名單（procs_ctl 窗）。名單改了就把多的請走、少的叫來、要停的請他做完手上這件就下班（**留在名單上**，叫得回來）；
-誰自己下班了（`done`）或被他請走了（`stopped`）就在工作日誌（stdout 的 log）記一行「誰、結束碼幾」、從名單白板（procs_state 窗）上擦掉，**這一班不會再叫他回來**（做到一半出了錯走的不擦，標「停著」並寫上原因，修好叫得回來，11-05 晚）；
+loop／exec 型自己下班了（`done`）就在工作日誌（stdout 的 log）記一行「誰、結束碼幾」、從名單白板（procs_state 窗）上擦掉，**這一班不會再叫他回來**（loop 型做到一半出了錯走的不擦，標「停著」並寫上原因，修好叫得回來，11-05 晚）；被他 stop 的留「停著」，daemon 型自己退出則照上面的規則再叫回來（11-06（no-pid P6））；
 他自己的狀況寫在另一塊白板（state 窗）。他自己收工時（不論為什麼）先把每個人都請走、寫好白板，才走人——還在做事的不擦名字，白板上改寫「休息中」（`sleeping`），他下次開門就把這些人叫回同一個隔間接著做（被他請下班的 `stopped` 不叫）。
 
 ```sh
@@ -27,7 +28,7 @@ AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法�
 ```
 
 **起 daemon 要看 log 就加 `--enable-logs`**（用 aos-exec 起的，旗標寫進定義的 `_entry`、放在設定檔前面：`["aos-daemon", "--enable-logs", "daemon.json"]`；`aos-exec 定義 --enable-logs` 會接在設定檔後面＝`ArgumentsBad`，訊息 `flag --enable-logs must come before the config file…` 會這樣提示）：不加的話 daemon 什麼都不印（stdout、stderr 都安靜，只有出錯時 stderr 一行），看起來像卡住，其實照常在跑；子項起落要看就加它（見下「log」），或看 `aos-daemon-ctl ls`。
-**收工：在 daemon 的視窗按 Ctrl-C**（使用者 11-03 晚定）——SIGINT 走正常收工（`finish`），還在跑的 loop 型睡下（`sleeping`），下次開門自己醒（見下「收工與開門」）。
+**收工：在 daemon 的視窗按 Ctrl-C**（使用者 11-03 晚定）——SIGINT 走正常收工（`finish`），還在跑的 loop 型與 daemon 型睡下（`sleeping`），下次開門自己醒（11-06（no-pid P6）；見下「收工與開門」）。
 
 ## 分檔目錄
 

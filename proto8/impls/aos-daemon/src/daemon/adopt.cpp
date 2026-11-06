@@ -85,6 +85,8 @@ void Daemon::adopt() {
         Json st = r.value("stack", Json());
         Child c;
         c.own = false;
+        c.daemon = r.value("daemon", Json()) == Json(true);   // 11-06（no-pid P6）：daemon 型照表辨認，不看 loop.json
+        c.restart_on_stuck = c.daemon && r.value("restart_on_stuck", Json()) == Json(true);
         // 11-05（portable-flow）：表上的路徑相對 daemon 的 stack（dstack_）拼回；絕對的（舊表）照用
         c.stack = st.is_string() && !st.get<std::string>().empty() ? unrel(st).get<std::string>() : cell_of(name, Json());
         if (r.value("ws", Json()).is_string()) {
@@ -117,7 +119,7 @@ void Daemon::adopt() {
             continue;
         }
         std::error_code ec;
-        c.once = !std::filesystem::exists(aos::join(c.stack, names_.loop), ec);   // 小格有 daemon 寫的 loop.json（procs_loop 的名字）＝loop 型（procs § 2 第 7 條）
+        c.once = !c.daemon && !std::filesystem::exists(aos::join(c.stack, names_.loop), ec);   // 11-06（no-pid P6）：daemon 型一定不是 once；其他照小格判
         Json pid = r.value("pid", Json());
         Json ticks = r.value("started_at_ticks", Json());
         std::optional<long long> now = same_boot && pid.is_number_integer() && ticks.is_number_integer() ? aos::proc_started_at_ticks((pid_t)pid.get<long long>()) : std::nullopt;
@@ -145,7 +147,7 @@ void Daemon::adopt() {
         if (c.once) {
             continue;
         }
-        if (phase == "running") {
+        if (phase == "running" && !c.daemon) {   // 11-06（no-pid P6）：daemon 型就是要一直在，自己的窗 done 也要 wake
             std::optional<Json> cs = cell_state(c.stack, names_.loop);
             if (cs && cs->value("phase", Json()) == "done") {
                 continue;

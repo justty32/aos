@@ -33,8 +33,8 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`CMakeLists.txt`](../../../../../proto8/impls/aos-daemon/CMakeLists.txt) | `aos-daemon daemon.json`——一個 aos-loop（同一個骨架 aos::loop::Loop）＋一張子 loop 的表（10-20 重寫）。 |
-| [`src/child/child.cpp`](../../../../../proto8/impls/aos-daemon/src/child/child.cpp) | 建立小格、啟動子 loop 或 exec 型子項，並回收與輸出子項狀態（說明見 child.hpp）。 |
-| [`src/child/child.hpp`](../../../../../proto8/impls/aos-daemon/src/child/child.hpp) | 表上的一個 proc（11-03 起 loops／execs 統稱 procs）＝一支子 loop（loop 型），或 aos-exec 跑一次（exec 型）。 |
+| [`src/child/child.cpp`](../../../../../proto8/impls/aos-daemon/src/child/child.cpp) | 建立小格、啟動 loop／exec／daemon 型子項，並回收與輸出子項狀態（說明見 child.hpp）。 |
+| [`src/child/child.hpp`](../../../../../proto8/impls/aos-daemon/src/child/child.hpp) | 表上的一個 proc＝子 loop、aos-exec 跑一次，或照表重起的子 daemon；內部標頭。 |
 | [`src/child/limits.cpp`](../../../../../proto8/impls/aos-daemon/src/child/limits.cpp) | proc 的份額 limits（說明見 limits.hpp；11-05 feat-proto 件 5，等同 s6-softlimit／s6-setuidgid）。 |
 | [`src/child/limits.hpp`](../../../../../proto8/impls/aos-daemon/src/child/limits.hpp) | proc 的份額 limits（11-05 feat-proto 件 5，使用者「會想要限制特定aos proc所占用的資源。 |
 | [`src/child/refs.cpp`](../../../../../proto8/impls/aos-daemon/src/child/refs.cpp) | 把表與內嵌單子的路徑改寫成相對 daemon 或小格的參照。 |

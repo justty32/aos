@@ -87,7 +87,7 @@ static bool is_target(const Json& t) {   // aos-exec 的目標：字串或 [目�
 }
 
 Json exec_of(const Json& spec, const std::string& cwd) {
-    Json t = spec.is_object() ? spec.value("exec", Json()) : spec;
+    Json t = spec.is_object() ? spec.value(is_daemon(spec) ? "daemon" : "exec", Json()) : spec;
     if (t.is_array() && !t.empty()) {
         t = Json(t[0]);
     }
@@ -104,6 +104,10 @@ Json exec_of(const Json& spec, const std::string& cwd) {
 
 Json def_of(const Json& spec) {
     return spec.is_object() ? spec.value("def", Json()) : Json();   // read_procs 已轉絕對（fix_path）；不驗在不在
+}
+
+bool is_daemon(const Json& spec) {
+    return spec.is_object() && spec.contains("daemon");
 }
 
 bool is_once(const Json& spec) {
@@ -140,8 +144,27 @@ Json read_procs(const Json& v, const std::string& base, const std::string& key) 
             }
             vec.emplace_back(name, std::move(t));
         } else if (it.value.is_object()) {
-            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", "ctl", "state", "ws", "stack", "def", "limits"});
-            if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解、相對 $ref 轉成絕對（10-24）
+            if (is_daemon(it.value)) {   // 11-06（no-pid P6）：先擋多餘 key，不去解它們的指示詞
+                for (auto& [k, v] : it.value.items()) {
+                    if (k != "daemon" && k != "stack" && k != "ws" && k != "def" && k != "limits" && k != "restart_on_stuck") {
+                        throw Error{code::CfgBad, key + "[" + name + "]: a daemon proc takes only daemon, stack, ws, def, limits, restart_on_stuck"};
+                    }
+                }
+            }
+            aos::Resolved r = aos::loop::resolve_keys(it.value, it.base_dir, {"max", "interval_ms", "ctl", "state", "ws", "stack", "def", "limits", "daemon", "restart_on_stuck"});
+            if (is_daemon(r.value)) {   // 11-06（no-pid P6）：第三種寫法，只驗自己的格，不驗入口在不在
+                if (!r.value["daemon"].is_string() || r.value["daemon"].get<std::string>().empty()) {
+                    throw Error{code::CfgBad, key + "[" + name + "].daemon must be an aos-exec entry (non-empty string)"};
+                }
+                r.value["daemon"] = exec_of(r.value, aos::abspath("."));
+                Json ros = r.value.value("restart_on_stuck", Json());
+                if (!ros.is_null() && !ros.is_boolean()) {
+                    throw Error{code::CfgBad, key + "[" + name + "].restart_on_stuck must be a boolean or null"};
+                }
+                if (ros.is_null()) {
+                    r.value.erase("restart_on_stuck");
+                }
+            } else if (r.value.is_object() && r.value.contains("exec")) {   // exec 是單子時裡面不解、相對 $ref 轉成絕對（10-24）
                 aos::Resolved ex = aos::loop::resolve_exec(r.value["exec"], r.dir_of("exec"));
                 if (ex.value.is_object()) {
                     ex.value = abs_refs(ex.value, ex.base_dir);

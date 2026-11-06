@@ -14,8 +14,12 @@ from .table import cell_of, names_of, row_of
 
 def need_ctl(d, name, row=None):
     """它的 stack 裡 daemon 寫的 loop.json（名字照窗上的 procs_loop）→ (stack, ctl 檔的路徑)；沒有那份（exec 型）或 ctl 是 null＝CtlMissing。
-    ctl 沒寫＝ctl.json（aos-loop 的預設名，11-04 起 daemon 不再替它補）。"""
+    ctl 沒寫＝ctl.json（aos-loop 的預設名，11-04 起 daemon 不再替它補）。
+    11-06（no-pid P6）：daemon 型的列（表上 daemon: true）沒有 loop.json——stop／sleep 照收（上一層 daemon 送 SIGTERM、子 daemon 自己收工），
+    pause／resume 寫子 daemon 自己的 ctl 窗（daemon 的預設名 ctl.json；它的 daemon.json 改了名這裡看不到）。"""
     stack = cell_of(d, name, row)
+    if row and row.get("daemon") is True:
+        return stack, os.path.join(stack, "ctl.json")
     lj = os.path.join(stack, names_of(d)["procs_loop"])
     if not os.path.isfile(lj):
         raise Fail("CtlMissing", "%s has no ctl (an exec type can only run and be removed)" % name)

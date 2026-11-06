@@ -22,8 +22,10 @@ Json Daemon::limits_of(const Json& spec, const Json& kept) const {
 }
 
 Child Daemon::start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws, const Json& kept_exec,
-                    const Json& kept_def, const Json& kept_limits) {
+                    const Json& kept_def, const Json& kept_limits, bool kept_daemon, bool kept_ros) {
     Json lim = limits_of(spec, kept_limits);
+    bool daemon = spec.is_null() ? kept_daemon : is_daemon(spec);
+    bool ros = spec.is_null() ? kept_ros : daemon && spec.value("restart_on_stuck", false);
     bool deep = cell != dstack_ + "procs/" + name;   // 不是預設小格＝proc 自己的 stack：不在就 mkdir -p
     if (!is_once(spec)) {
         if (auto live = live_in_cell(cell, names_.loop)) {   // 11-05 第二輪：小格裡已有活著的子 loop（上一個 daemon 起了、沒記進表就死）＝接回、不再起一份
@@ -36,14 +38,23 @@ Child Daemon::start(const std::string& name, const Json& spec, const std::string
             c.exec = spec.is_null() ? kept_exec : exec_of(spec, cwd_);
             c.def = spec.is_null() ? kept_def : def_of(spec);
             c.limits = lim;
+            c.daemon = daemon;
+            c.restart_on_stuck = ros;
             std::error_code ec;
             std::uintmax_t sz = std::filesystem::file_size(aos::join(cell, names_.err), ec);
             c.err_off = ec ? 0 : (long long)sz;
             return c;
         }
     }
-    Child c = is_once(spec) ? spawn_exec(name, cell, deep, spec, cwd_, dstack_, names_, lim)
-                            : spawn(name, cell, deep, spec, cwd_, dstack_, names_, lim, kept_ws);
+    Child c;
+    if (daemon) {
+        Json target = spec.is_null() ? kept_exec : exec_of(spec, cwd_);
+        Json ws = spec.is_null() ? kept_ws : spec.value("ws", Json());
+        c = spawn_daemon(name, cell, deep, target.get<std::string>(), cwd_, dstack_, names_, lim, ws, ros);
+    } else {
+        c = is_once(spec) ? spawn_exec(name, cell, deep, spec, cwd_, dstack_, names_, lim)
+                          : spawn(name, cell, deep, spec, cwd_, dstack_, names_, lim, kept_ws);
+    }
     c.exec = spec.is_null() ? kept_exec : exec_of(spec, cwd_);   // 11-04 晚：列上的 exec 欄
     c.def = spec.is_null() ? kept_def : def_of(spec);              // 11-04：列上的 def 欄
     return c;
@@ -107,9 +118,12 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                 continue;
             }
             if (c.held && stopped.count(n) == 0 && !(c.phase == "sleeping" && slept.count(n) > 0)) {   // 11-05：sleep 叫睡的不自己醒   // start（procs § 2c 第 3 條）／wake（sleeping 的列，11-03）：用列上的 stack 再起，ctl 不清（基準線）
-                Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits);   // 信箱接回只留名的（spec null）：ws 照列上的（11-03 晚：不然 wake 後表上 ws 變空）
+                Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits, c.daemon, c.restart_on_stuck);   // 11-06（no-pid P6）：只留名時也帶 daemon 型與 restart_on_stuck
                 nc.revived = true;   // 11-05：REVIVE_MS 內退了＝留成 stopped＋原因（衝突 3）
                 nc.revived_at = Clock::now();
+                if (nc.daemon && c.phase == "sleeping") {
+                    nc.quick_exits = c.quick_exits;   // 11-06（no-pid P6）：自動重起帶著連敗數；人 start（stopped）從零開始
+                }
                 c = nc;
                 log_child(n, c);
                 some();
@@ -128,6 +142,8 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
             c.exec = exec_of(spec, cwd_);
             c.def = def_of(spec);
             c.limits = limits_of(spec, Json());
+            c.daemon = is_daemon(spec);
+            c.restart_on_stuck = c.daemon && spec.value("restart_on_stuck", false);
             add(n, c);
         } else {
             Child nc = start(n, spec, cell_of(n, spec));

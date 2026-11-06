@@ -6,7 +6,6 @@ namespace aos::daemon {
 
 using Clock = std::chrono::steady_clock;
 
-static const int REVIVE_MS = 3000;  // 11-05（衝突 3）：wake／start 起來這麼久內就退＝原因寫「起不來」（11-05 晚起出錯結束一律留 stopped，3 秒只分原因字樣）
 // 子 loop 自己的包裝行「X: run N: … failed with exit code C」（aos-loop 身體退非 0 時印的）。11-05 第二輪：原本用 std::regex_match，
 // libstdc++ 的 regex 是遞迴回溯，stderr 一行 30 KB 就把堆疊撐爆、整台 daemon SIGSEGV（139）；改手寫比對。
 static bool is_wrap(const std::string& line) {

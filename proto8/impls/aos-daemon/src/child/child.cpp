@@ -1,4 +1,4 @@
-// child.cpp：【child】建立小格、啟動子 loop 或 exec 型子項，並回收與輸出子項狀態（說明見 child.hpp）。
+// child.cpp：【child】建立小格、啟動 loop／exec／daemon 型子項，並回收與輸出子項狀態（說明見 child.hpp）。
 //
 // 10-21 傍晚起子 loop 經 aos-exec 起（使用者「5.要」，ideas § 9；`aos-exec -- 小格/loop.json#/_entry`）：
 // daemon 把子項設定寫成小格裡的 loop.json、蓋上 "_entry": ["aos-loop", {"$env": "AOS_CF"}]，fork 一個子行程呼叫 aos-exec 的
@@ -219,6 +219,16 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
     return c;
 }
 
+// 11-06（no-pid P6）：沿用 launch，不包 aos-loop、不寫 loop.json／exec.json。
+Child spawn_daemon(const std::string& name, const std::string& cell, bool deep, const std::string& target, const std::string& cwd,
+                   const std::string& dstack, const CellNames& names, const Json& limits, const Json& ws, bool restart_on_stuck) {
+    make_cell(name, cell, deep);
+    Child c = launch(name, cell, cwd, {"--", target}, ws, dstack, names.err, limits);
+    c.daemon = true;
+    c.restart_on_stuck = restart_on_stuck;
+    return c;
+}
+
 bool alive(Child& c) {
     if (!c.own) {
         return c.started_at_ticks.has_value() && aos::proc_started_at_ticks(c.pid) == c.started_at_ticks;
@@ -263,6 +273,10 @@ Json row(const Child& c, const std::string& dstack) {
     r["reason"] = c.reason;    // 11-05（portable-flow 衝突 3）：null 或 daemon 把它留成 stopped 的原因
     if (!c.limits.is_null()) {
         r["limits"] = c.limits;   // 11-05（feat-proto 件 5）：生效的份額，有才寫
+    }
+    if (c.daemon) {   // 11-06（no-pid P6）：其他型的列連欄位順序都維持原樣
+        r["daemon"] = true;
+        r["restart_on_stuck"] = c.restart_on_stuck;
     }
     return r;
 }

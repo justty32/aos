@@ -62,7 +62,7 @@ static std::vector<pid_t> leaders_below(pid_t root) {
 void Daemon::term(Child& c) {
     c.phase = "stopping";
     c.termed = true;
-    c.deadline = Clock::now() + std::chrono::milliseconds(GRACE_MS);
+    c.deadline = Clock::now() + std::chrono::milliseconds(c.daemon ? GRACE_MS * 3 : GRACE_MS);   // 11-06（no-pid P6）：給子 daemon 30 秒先收它的子項
     kill(c.pid, SIGTERM);   // 給那支子項（它自己轉給它的那次）；已經沒了就算了
 }
 
@@ -71,6 +71,10 @@ void Daemon::halt(const std::string& name, Child& c) {
     // ctl 檔名看小格裡 daemon 自己寫的 loop.json（procs_loop 的名字）的 ctl（接回的也一樣）；N＝自己數的、也比 ctl 裡現有的 seq 大（內容一定跟上一道不一樣）。
     // ctl 沒寫＝ctl.json（aos-loop 的預設名，11-04 起 daemon 不再替它補）；讀不到 loop.json、ctl 不是檔名（寫了 null＝子 loop 沒開 ctl）＝改送 SIGTERM（同樣退了就留成 stopped）
     c.soft = true;
+    if (c.daemon) {   // 11-06（no-pid P6）：同一小格可能留著舊 loop.json；daemon 型一律 SIGTERM，讓它自己收整棵子樹
+        term(c);
+        return;
+    }
     std::optional<Json> cfg = aos::read_json(aos::join(c.stack, names_.loop));
     Json ctl = cfg && cfg->is_object() ? cfg->value("ctl", Json("ctl.json")) : Json();
     if (!ctl.is_string() || ctl.get<std::string>().empty()) {
@@ -94,9 +98,10 @@ void Daemon::halt(const std::string& name, Child& c) {
     c.phase = "stopping";
 }
 
-void Daemon::hold(const std::string& name, Child& c, const char* phase) {
-    c.phase = phase;      // stopped（daemon 下的 stop）或 sleeping（daemon 收工時收的 loop 型，11-03 sleep／wake）
+void Daemon::hold(const std::string& name, Child& c, const char* phase, const char* log_phase) {
+    c.phase = log_phase ? log_phase : phase;   // 11-06（no-pid P6）：daemon 型自己退的 log 記 done，表留 sleeping
     log_child(name, c);   // 行程結束一行
+    c.phase = phase;
     c.held = true;        // 列留在表上（procs § 2c 第 2 條）：pid null、stack 不碰
     c.soft = false;
     c.nap = false;
@@ -136,6 +141,19 @@ bool Daemon::look(const std::string& name, Child& c, bool stop) {
         }
         if (stop) {
             hold(name, c);
+            return false;
+        }
+        if (c.daemon) {   // 11-06（no-pid P6）：不論結束碼（含接回拿不到碼），照表重起
+            bool quick = c.revived && Clock::now() - c.revived_at < std::chrono::milliseconds(REVIVE_MS);
+            c.quick_exits = quick ? c.quick_exits + 1 : 0;
+            if (c.quick_exits >= 3) {
+                c.reason = fail_reason(c) + "; restarted 3 times in a row, each exited within 3s; not restarting again";
+                hold(name, c);
+                c.failed = true;
+                stopped_.insert(name);
+            } else {
+                hold(name, c, "sleeping", "done");
+            }
             return false;
         }
         // 11-05（edge-agent 題 1「留表標 stopped (Recommended)」、edge-daemon 題 2「一起改成留表 (Recommended)」）：
