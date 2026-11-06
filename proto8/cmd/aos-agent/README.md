@@ -2,11 +2,11 @@
 
 ← [cmd](../README.md)｜規劃：[thinking 11-04 aos-agent](../../thinking/2026-11/04/aos-agent/README.md)（[01 子命令](../../thinking/2026-11/04/aos-agent/01-子命令.md)、[02 找 agent](../../thinking/2026-11/04/aos-agent/02-找-agent.md)、[03 介面](../../thinking/2026-11/04/aos-agent/03-種類與契約.md)、[04 邊緣](../../thinking/2026-11/04/aos-agent/04-過渡與邊緣.md)）
 
-使用者 11-03「aos_ws,aos-say/listen,aos-ai這些之後都會整合進aos-agent」、11-04 晚「幫我弄個aos-agent chat指令，ctrl-c退出」「aos-agent add --name bob ../agents/bob這樣」。**一支給人用的指令，每個子命令只管一隻 agent**；agent＝aos-daemon 管的一支 proc。底下只做兩件事：經 daemon（掛、拔、起、停、暫停、找 stack；import aos-daemon-ctl 的本體 [`py/daemon_ctl.py`](../../py/README.md)，不另叫行程），與動那隻 stack 裡 P-42 的三樣（`queue/`、`history.jsonl`、ctl／state 窗）。eca（claude／codex）、aos 自己的 loop／fsm agent 都一樣，aos-agent 不看、不猜裡面是什麼。Python 單檔、純標準庫。**不碰 pid、不讀 `/proc`**（11-06 [no-pid](../../thinking/2026-11/05/no-pid/README.md) P3）：誰在跑看 daemon 表上那列的 `phase`，daemon 有沒有在聽看寄信有沒有回。
+使用者 11-03「aos_ws,aos-say/listen,aos-ai這些之後都會整合進aos-agent」、11-04 晚「幫我弄個aos-agent chat指令，ctrl-c退出」「aos-agent add --name bob ../agents/bob這樣」。**一支給人用的指令，每個子命令只管一隻 agent**；agent＝aos-daemon 管的一支 proc。底下只做兩件事：經 daemon（掛、拔、起、停、暫停、找 stack；import aos-daemon-ctl 的本體 [`py/daemon_ctl.py`](../../py/README.md)，不另叫行程），與動那隻 stack 裡 P-42 的三樣（`queue/`、`history.jsonl`、ctl／state 窗）。eca（claude／codex）、aos 自己的 loop／fsm agent 都一樣，aos-agent 不看、不猜裡面是什麼。Python 入口與套件、純標準庫。**不碰 pid、不讀 `/proc`**（11-06 [no-pid](../../thinking/2026-11/05/no-pid/README.md) P3）：誰在跑看 daemon 表上那列的 `phase`，daemon 有沒有在聽看寄信有沒有回。
 
 | 檔 | 是什麼 |
 |---|---|
-| `bin/aos-agent` | 指令本體；開頭的說明寫了全部規則與錯誤代號 |
+| `bin/aos-agent` | 指令入口；規則、錯誤代號與用法見本 README 及下列 docs |
 | `using-aos-agent.sh` | `source` 用：帶名字＝`export AOS_AGENT=名字`，定義 `say`／`listen`／`chat`／`status` 四個函數；`AOS_DAEMON` 沒設＝export 成 `$PWD/.stack`（11-05） |
 | `stack.gitignore`、`stack.gitattributes` | 搬家範本（11-05）：image（`ws/.stack/`）進 git 時用；用法見下面「搬家」 |
 
@@ -28,7 +28,7 @@ aos-agent [--daemon D] say [--target 名字] [話...|-]                  stdout 
 aos-agent [--daemon D] listen [--target 名字] [--timeout-s 秒] | [--last N] [--follow]   stdout 只有回答
 aos-agent [--daemon D] chat [--target 名字]                           一行一句；Ctrl-C 退出
 aos-agent [--daemon D] open [--detach]|close|watch [--target 名字]    畫面（宣告了 screen 的；入口照收 動作 [--detach]）
-aos-agent [--daemon D] tools [--target 名字] [ls|get 名|add [--override] [--no-cache] 名 路徑|rm 名|reset]   定義疊這隻的覆蓋層（只存差異）
+aos-agent [--daemon D] tools [--target 名字] [ls [--json]|get 名|add [--override] [--no-cache] 名 路徑|rm 名|reset]   定義疊這隻的覆蓋層（只存差異）
 aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
 ```
 
@@ -43,6 +43,7 @@ aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
 - **三扇門**（11-05 [stdio-unify](../../thinking/2026-11/05/stdio-unify/README.md) R1、R3、R15）：stdout 只放結果；提醒是 stderr 一行 `aos-agent: warning: 句子`（原本是括號一行）；`chat` 的提示符 `> ` 照舊在 stderr（D5）。`ctl ls` 一行 `名字 TAB 狀態 TAB 工作區 TAB queue 幾封 TAB reason`（沒有＝`-`）。`--help`＝英文說明到 stdout、退 0；不給子命令＝`ArgumentsBad` 退 1（原本印說明退 0）；子命令前不認得的旗標＝`FlagUnknown`、子命令不認得＝`CommandUnknown`。Ctrl-C 退 130（`listen --follow` 用 Ctrl-C 離開是正常離開、退 0）。
 - **daemon_ctl 模組的錯**：`ctl` 系列 import `daemon_ctl`（不叫 aos-daemon-ctl 行程、不讀誰的 stderr），模組報的錯換成這支的名字與代號再印（`ProcMissing`→`InstanceMissing`，其他代號照用）。
 - **錯**：stderr 一行 `aos-agent: error: 代號 原因`、退 1；30 秒一封回信都沒有＝`DaemonMissing`；回了 `applied: true` 但表上 30 秒還沒變成結果＝`WaitFailed`；`ctl add` 的信被 daemon 拒收（名字像 `a/b`、`..`，或設定不合格；daemon 寫在 `procs_state.json` 的 `mailbox_warning`）＝立刻 `AddRejected`、原因原樣轉，不等滿 30 秒；判官不掛（回信 `applied: false`）＝立刻 `AddRejected`（`add`）／`CtlRejected`（其他 ctl），訊息帶判官的代號與原因（下一條）。子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉。
+- **錯誤代號一覽**：`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`DaemonMissing`、`InstanceMissing`、`InstanceExists`、`PathMissing`、`SessionBad`、`SendFailed`、`PostFailed`、`QuestionUnknown`、`AnswerMissing`、`WaitFailed`、`AddRejected`、`CtlRejected`、`TargetMissing`、`WsMissing`、`StackMissing`、`InterfaceMissing`、`InterfaceBad`、`PhaseBad`、`ScreenMissing`、`ScreenBad`、`ToolsMissing`、`LlmMissing`、`LlmBad`；子介面與共用工具另有自己的代號（見上一條）。
 - **`AOS_KERNEL`**（11-05 [edge-agent](../../thinking/2026-11/05/edge-agent/README.md)）：有設＝ctl 的信先寄判官（[kernel/docs/02](../../kernel/docs/02-kernel-modes.md)）。對象就是那個 kernel 本身（模式 2 的 0 號，`AOS_KERNEL` 在它的 stack 裡）＝`start`／`stop`／`sleep`／`wake`／`rm` 直接寄 daemon（不然 kernel 睡著時給它自己的 `wake` 沒人收、永遠叫不醒）；寄出之後 kernel 不是 running＝立刻 `WaitFailed`（信排在它信箱裡、它回來才判）。
 - **等回信**（11-05 [edge-agent 題 2](../../thinking/2026-11/05/edge-agent/README.md)，使用者選「加 --reply-to 等回信」）：`ctl add`／`rm`／`start`／`stop`／`sleep`／`wake` 每封信都帶回信信箱（`reply_to`）寄，最多等 30 秒。回信信箱是**共用的**（11-06 [no-pid](../../thinking/2026-11/05/no-pid/README.md) P3）：有 `$AOS_STACK`＝`$AOS_STACK/daemon_reply/`；沒有（人殼）＝`<daemon stack>/procs_ctl_mailbox/reply/`；大家共用、靠回信的 `in_reply_to` 認自己那封，沒人領的 10 分鐘後由下一個來拿信箱的人收掉（垃圾回收，不是判死活）。判官不掛＝回信 `applied: false` 一到就退：`aos-agent: error: AddRejected AOS_KERNEL refused the add letter: NameUnknown evil not in allowed`（滿額是 `SlotMissing`；wake／start 超過 `max_running` 是 `CtlRejected`）。放行或沒設 `AOS_KERNEL`＝daemon 回 `applied: true`，照舊等表上變成結果（表先變、回信還沒到＝最多再等 1 秒讓它落地）；回了但表 30 秒沒變＝`WaitFailed`。**30 秒一封回信都沒有**＝`aos-agent: error: DaemonMissing no reply from the daemon at D within 30 s (…; the letter stays in its mailbox and is applied if the daemon takes it later)`——不去分 daemon 是忙、暫停、判官卡住還是掛了（寄信不回＝呼叫失敗）；信留在信箱，對方之後認領照套。被 TERM 退 143、HUP 退 129。
 
