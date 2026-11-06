@@ -15,6 +15,16 @@
 - claude 隊員＝WSL 另一帳號：`claude -p --model claude-opus-5-5 '…' </dev/null`（實測可用，Claude Code 2.1.318，`~/.local/bin/claude`）。
 - 兩名隊員可在自己程序裡再派子 agent。
 
+## 子 agent 規則（使用者 11-06 新規則）
+
+原話：「隊員仍然遵循我們的要通讀wf/規矩的規定，包括其子agent。然後codex那邊，允許他跑無上限個子agent，普通工作交給sol，簡單工作交給terra。claude這邊也是無上限，普通工作交給opus，簡單工作交給sonnet。盡量把工作都派給codex。」
+
+頂層的落實：
+- sol＝`gpt-5.6-sol`（gpt-6.1-sol 公司帳號不支援）、terra＝`gpt-5.6-terra`。
+- 隊員與其子 agent 的任務書開頭都要求先通讀 wf/ 規矩。
+- 子 agent 在隊員自己的程序裡跑，所以「每隊同時最多兩個 nodejs 程序」照舊。
+- 盡量派 codex，claude 隊員補位。
+
 ## 程序數要少
 
 使用者原話：「因為他們都是用nodejs做的，所以建議總數不要太多。因為一方面這是在WSL上，另一方面這台電腦我還要做其他工作，效能上要注意。」每隊同時最多這兩個 nodejs 程序（取代先前頂層定的「每隊最多 1 個」）。
