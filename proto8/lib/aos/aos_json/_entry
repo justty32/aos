@@ -1,54 +1,55 @@
 #!/usr/bin/env python3
-# json - 腦用的 JSON 工具：stdin 收 {"cmd", "target", "value"?, "depth"?}，在 $AOS_WS 底下叫 aos-json，stdout 是結果。
-# 讀＝peek 一層層往下（省 token）；寫＝直接收腦生成的 JSON 值，一律加 --check（改完 aos 設定形狀不對就不寫）與 --follow（拆成 $ref 的檔也改得到）。
+# aos_json - 腦用的 JSON 工具：stdin 收 {"cmd", "target", "value"?, "depth"?}，在 $AOS_WS 底下叫 aos-json，stdout 是結果。
+# 讀＝peek 一層層往下（省 token）；寫＝直接收腦生成的 JSON 值，一律加 --check（改完 aos 設定形狀不對就不寫；del 例外，aos-json del 不收 --check）與 --follow（拆成 $ref 的檔也改得到）。
 # target 的檔名只收工作區裡的相對路徑（不收絕對路徑、不收 ..）。
-# 錯照 lib 契約（stdio-unify R2，11-05 起；之前 aos-json 的錯印 stdout 退 0）：stderr 與 stdout 各一行「json: error: 代號 原因」、退 1；
+# 錯照 lib 契約（stdio-unify R2，11-05 起；之前 aos-json 的錯印 stdout 退 0）：stderr 與 stdout 各一行「aos_json: error: 代號 原因」、退 1；
 #   要不要把錯回給腦是叫它的 agent 的事。aos-json 的 stderr 原樣透到 stderr；它退 1 時這行接它錯誤行的代號與原因
-#   （`aos-json: error: 代號 原因` → `json: error: 代號 原因`，腦才知道指標哪裡錯；代定，見 stdio-unify），沒那行＝CommandFailed。
+#   （`aos-json: error: 代號 原因` → `aos_json: error: 代號 原因`，腦才知道指標哪裡錯；代定，見 stdio-unify），沒那行＝CommandFailed。
 #   check 有問題（aos-json 退 10，D1）是答案不是錯：stdout「problems:」加一行一條、退 0。
 # --help＝英文說明印 stdout、退 0；Ctrl-C＝退 130、不吐 traceback。
-import json, os, re, signal, subprocess, sys
+import json, os, re, shutil, subprocess, sys, tempfile
 
 HELP = """\
-usage: json < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+usage: aos_json [FLAGS] < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Look at or change a JSON file in the workspace through aos-json, one command at a time.
-Arguments: one JSON object on stdin:
-  cmd     string (peek | get | where | set | batch | del | append | merge | check), required
-  target  string FILE#/POINTER (FILE relative to the workspace), required
-  value   any JSON (for set, append, merge, batch)
-  depth   integer (peek: levels to unfold, 0-5)
+Writes use --check --follow (del only --follow); target must name a relative file inside the workspace.
 Result on stdout ("ok" for writes; check with problems: "problems:" and one line each).
-On error: one line "json: error: CODE reason" on stderr and stdout, exit 1.
+On error: one line "aos_json: error: CODE reason" on stderr and stdout, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
-signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "lib"))   # 複製出 repo 的：從 PATH 上 aos-tools 的 cmd/aos-tools/bin 回到 proto8/lib/
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError:   # 規則 9 三處都找不到（11-05 晚）：照錯誤行格式印一行、退 1，不吐 traceback
+    _line = "%s: error: ModuleMissing tool_io.py not found (not in the tool folder, not in lib/, no aos-tools on PATH)\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "aos_json"
+tool_io.start(NAME, HELP)
+die = tool_io.die
 
 READ = {"peek": ["--follow"], "get": ["--follow"], "where": [], "check": []}
 WRITE = {"set": ["--check", "--follow"], "batch": ["--check", "--follow"], "append": ["--check", "--follow"],
-         "merge": ["--check", "--follow"], "del": ["--follow"]}
+         "merge": ["--check", "--follow"], "del": ["--follow"]}   # aos-json del 不收 --check（照搬來前的行為；要驗形狀得先改 C++）
 PROBLEMS = 10                                    # aos-json check：查完了、有問題（D1）
 ERR_RE = re.compile(r"aos-json: error: ([A-Z][A-Za-z]+) (.*)\Z")
 
 
-def die(code, reason):
-    line = "json: error: %s %s" % (code, str(reason).replace("\n", " "))
-    print(line, file=sys.stderr)
-    print(line)                                 # stdout 也印：stdout 是給腦看的結果
-    sys.exit(1)
-
-
-try:
-    args = json.loads(sys.stdin.read() or "null")
-except ValueError:
-    die("ArgumentsBad", "stdin is not JSON")
-if not isinstance(args, dict) or args.get("cmd") not in {**READ, **WRITE} or not isinstance(args.get("target"), str):
-    die("ArgumentsBad", "expects {\"cmd\": peek|get|where|set|batch|del|append|merge|check, \"target\": \"FILE#/POINTER\"}")
+args = tool_io.arguments("cmd", "target")
+WS = tool_io.workspace()
+if args["cmd"] not in {**READ, **WRITE}:
+    die("OpUnknown", "unknown command: %s" % args["cmd"])
 cmd, target = args["cmd"], args["target"]
 path = target.split("#", 1)[0]
 if not path or os.path.isabs(path) or ".." in path.split("/"):
     die("PathBad", "the file in target must be a relative path inside the workspace (no absolute path, no ..): %s" % target)
+
+if os.path.commonpath([WS, os.path.realpath(os.path.join(WS, path))]) != WS:
+    die("PathBad", "the file in target is outside the workspace: %s" % target)
 
 argv = ["aos-json", cmd] + READ.get(cmd, WRITE.get(cmd))
 if cmd == "peek" and isinstance(args.get("depth"), int) and not isinstance(args.get("depth"), bool):
@@ -60,7 +61,11 @@ if cmd in ("set", "append", "merge", "batch"):
     stdin = json.dumps(args["value"], ensure_ascii=False)
 argv.append(target)
 try:
-    r = subprocess.run(argv, cwd=os.environ.get("AOS_WS") or ".", input=stdin, capture_output=True, text=True)
+    # 下層提早退掉時不向已關閉的 pipe 寫入，保留原本的錯誤轉接。
+    with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as command_input:
+        command_input.write(stdin or "")
+        command_input.seek(0)
+        r = subprocess.run(argv, cwd=WS, stdin=command_input, capture_output=True, text=True)
 except OSError as e:
     die("LaunchFailed", "aos-json failed to start (aos-json must be on PATH): %s" % e)
 if r.stderr:                                     # aos-json 自己的話原樣透出
@@ -70,7 +75,7 @@ if r.returncode == 0:
 elif cmd == "check" and r.returncode == PROBLEMS:
     print("problems:\n" + r.stdout, end="" if r.stdout.endswith("\n") else "\n")
 else:
-    m = [x for x in map(ERR_RE.match, r.stderr.strip().splitlines()) if x]
+    m = [x for x in map(ERR_RE.match, r.stderr.strip().splitlines()) if x] if r.returncode == 1 else []
     if m:
         die(m[-1].group(1), m[-1].group(2))
     die("CommandFailed", "aos-json %s exited %d" % (cmd, r.returncode))

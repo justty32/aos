@@ -1,9 +1,47 @@
-{"description": "看或改工作區裡的 JSON 檔。target 寫「檔#/指標」（JSON pointer，例 fsm.json#/states/think；只寫檔名＝整份）。先用 peek 從頂層一層層往下看（大的值會摺起來，想看哪個 key 再 peek 那個指標），找到位置再改。寫入一律先驗：值要是 JSON、改完 aos 設定的形狀要對，不對就不寫、回錯誤讓你重來。",
- "parameters": {"type": "object",
-                "properties": {"cmd": {"type": "string",
-                                       "enum": ["peek", "get", "where", "set", "batch", "del", "append", "merge", "check"],
-                                       "description": "peek＝看一層（摘要）；get＝整個值；where＝這個值實際寫在哪份檔；set＝把 target 換成 value（一個值或整棵子樹）；batch＝一次改很多個：target 寫檔名，value 是 {\"/指標\": 值, …}；del＝刪；append＝陣列尾巴加 value；merge＝物件合進 value 的 key；check＝驗整份"},
-                               "target": {"type": "string", "description": "檔#/指標，例 fsm.json#/states/think/exec"},
-                               "value": {"description": "set／append／merge／batch 要寫的值（直接給 JSON：字串、數字、物件、陣列都行）"},
-                               "depth": {"type": "integer", "description": "peek 往下展開幾層，預設 1"}},
-                "required": ["cmd", "target"]}}
+{
+  "description": "Inspect or change a JSON file in the workspace through aos-json. Use target FILE#/POINTER (a JSON pointer, for example fsm.json#/states/think; a file alone means the whole document). Start with peek and unfold one level at a time to find the place to change. Writes (except del) validate the JSON value and the resulting aos configuration before saving; invalid changes are rejected so you can retry.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "cmd": {
+        "type": "string",
+        "enum": [
+          "peek",
+          "get",
+          "where",
+          "set",
+          "batch",
+          "del",
+          "append",
+          "merge",
+          "check"
+        ],
+        "description": "peek: inspect a level as a summary; get: read a complete value; where: locate the file storing the value; set: replace target with value; batch: change several pointers at once (target is a file, value is {\"/pointer\": value, ...}); del: delete; append: add value to an array; merge: merge the keys of value into an object; check: validate the document."
+      },
+      "target": {
+        "type": "string",
+        "description": "FILE#/POINTER, for example fsm.json#/states/think/exec. The file must be relative to and remain inside the workspace, including after resolving symlinks; absolute paths and .. components are rejected."
+      },
+      "value": {
+        "description": "Value to write for set, append, merge or batch; supply JSON directly (a string, number, object, array or other JSON value)."
+      },
+      "depth": {
+        "type": "integer",
+        "description": "Number of levels for peek to unfold (0-5; default 1).",
+        "default": 1
+      }
+    },
+    "required": [
+      "cmd",
+      "target"
+    ]
+  },
+  "errors": [
+    "ArgumentsBad",
+    "WsMissing",
+    "OpUnknown",
+    "PathBad",
+    "LaunchFailed",
+    "CommandFailed"
+  ]
+}

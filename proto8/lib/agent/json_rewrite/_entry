@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# json_edit - 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 act 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。
+# json_rewrite - 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 act 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。
 # 使用者 10-24：「修改的時候也是，AI可以一次生成一大堆函數，也可以一次生成一個值。這就需要用到小念頭概念，
 # 也就是拆成"找到要修改的key"->"提供值"」。
 #   一、找到要修改的 key：腦一開始只看到頂層（aos-json peek），用 peek 一層層往下，找到後呼叫 found 交出一個或多個 JSON 指標。
@@ -9,44 +9,48 @@
 # 腦＝寄請求給 llm kernel、同步等回信：`aos-llm ask`（stdin＝{"request": {messages, tools, tool_choice}}；用 kernel 的預設代號，
 #   thinking 2026-11-04 think-as-function 03 § 3）；$AOS_LLM_KERNEL 沒設由 aos-llm 報 LlmKernelMissing、這裡退 1（BrainFailed）。
 # stdout：走過的位置（看過）、找到的位置、改了什麼。
-# 錯照 lib 契約（stdio-unify R2，11-05 起；之前寫不進去印「not changed」退 0）：stderr 與 stdout 各一行「json_edit: error: 代號 原因」、退 1——
+# 錯照 lib 契約（stdio-unify R2，11-05 起；之前寫不進去印「not changed」退 0）：stderr 與 stdout 各一行「json_rewrite: error: 代號 原因」、退 1——
 #   stdin 不對（ArgumentsBad）、file 不在工作區（PathBad）、腦連不上（BrainFailed）、回覆不對（ReplyBad）、找了 MAX_ROUNDS 輪還沒交（PointerMissing）、
-#   aos-json 起不來（LaunchFailed）；aos-json 讀寫失敗＝接它錯誤行 `aos-json: error: 代號 原因` 的代號與原因（同 tools/json），沒那行＝CommandFailed。
+#   aos-json 起不來（LaunchFailed）；aos-json 讀寫失敗＝接它錯誤行 `aos-json: error: 代號 原因` 的代號與原因（同 aos_json），沒那行＝CommandFailed。
 #   寫不進去時 seen／found 兩行照印在錯誤行前面。aos-json、aos-llm 的 stderr 原樣透到 stderr。
 # --help＝英文說明印 stdout、退 0；Ctrl-C＝退 130、不吐 traceback。
-import json, os, re, signal, subprocess, sys
+import json, os, re, shutil, subprocess, sys, tempfile
 
 HELP = """\
-usage: json_edit < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace, $AOS_LLM_KERNEL the brain)
-Change a JSON file in the workspace in two small steps: the brain first walks down with peek
-and names the places (found), then gives each new value (give); written with aos-json batch --check.
-Arguments: one JSON object on stdin:
-  file  string (relative to the workspace), required
-  want  string (what to change), required
+usage: json_rewrite [FLAGS] < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
+Change a JSON file in two small steps: the brain first walks down with peek and names the
+places (found), then gives each new value (give); written with aos-json batch --check --follow.
 Result on stdout: seen, found and one changed line per place.
-On error: one line "json_edit: error: CODE reason" on stderr and stdout, exit 1.
+On error: one line "json_rewrite: error: CODE reason" on stderr and stdout, exit 1.
 """
-if "--help" in sys.argv[1:]:                    # --help：英文說明印 stdout、退 0（stdio-unify R3）
-    sys.stdout.write(HELP)
-    sys.exit(0)
-signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
+sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "lib"))   # 複製出 repo 的：從 PATH 上 aos-tools 的 cmd/aos-tools/bin 回到 proto8/lib/
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError:   # 規則 9 三處都找不到（11-05 晚）：照錯誤行格式印一行、退 1，不吐 traceback
+    _line = "%s: error: ModuleMissing tool_io.py not found (not in the tool folder, not in lib/, no aos-tools on PATH)\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+NAME = "json_rewrite"
+tool_io.start(NAME, HELP)
+die = tool_io.die
 
 MAX_ROUNDS = 12                                    # 找 key 最多問幾輪（寫死；11-01 前可用環境變數調，沒人調過、拿掉）
-WS = os.environ.get("AOS_WS") or "."
 ERR_RE = re.compile(r"aos-json: error: ([A-Z][A-Za-z]+) (.*)\Z")
-
-
-def die(code, reason):
-    line = "json_edit: error: %s %s" % (code, str(reason).replace("\n", " "))
-    print(line, file=sys.stderr)
-    print(line)                                 # stdout 也印：stdout 是給腦看的結果
-    sys.exit(1)
 
 
 def aos_json(*argv, stdin=None):
     """回 (結束碼, stdout, (代號, 原因))；aos-json 的 stderr 原樣透出，錯誤行的代號與原因另外拆出來。"""
     try:
-        r = subprocess.run(["aos-json", *argv], cwd=WS, input=stdin, capture_output=True, text=True)
+        # 寫入值經檔案傳入，避免下層提早關 stdin 時被 SIGPIPE 打斷。
+        with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as command_input:
+            command_input.write(stdin or "")
+            command_input.seek(0)
+            r = subprocess.run(["aos-json", *argv], cwd=WS, stdin=command_input, capture_output=True, text=True)
     except OSError as e:
         die("LaunchFailed", "aos-json failed to start (aos-json must be on PATH): %s" % e)
     if r.stderr:
@@ -59,8 +63,12 @@ def aos_json(*argv, stdin=None):
 def ask(messages, tools):
     request = {"request": {"messages": messages, "tools": tools, "tool_choice": "required"}}
     try:
-        r = subprocess.run(["aos-llm", "ask"], input=json.dumps(request, ensure_ascii=False),
-                           stdout=subprocess.PIPE, text=True)      # stderr 不吞：aos-llm 自己說原因（LlmKernelMissing、kernel 回的錯）
+        # 下層提早退掉時不向已關閉的 pipe 寫入，避免 tool_io 的 SIGPIPE 預設蓋過 BrainFailed。
+        with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as request_input:
+            json.dump(request, request_input, ensure_ascii=False)
+            request_input.seek(0)
+            r = subprocess.run(["aos-llm", "ask"], stdin=request_input,
+                               stdout=subprocess.PIPE, text=True)  # stderr 不吞：aos-llm 自己說原因（LlmKernelMissing、kernel 回的錯）
     except OSError as e:
         die("BrainFailed", "aos-llm failed to start (aos-llm must be on PATH): %s" % e)
     if r.returncode != 0:
@@ -91,15 +99,15 @@ def call_args(call):
         return {}
 
 
-try:
-    job = json.loads(sys.stdin.read() or "null")
-except ValueError:
-    die("ArgumentsBad", "stdin is not JSON")
-if not isinstance(job, dict) or not all(isinstance(job.get(k), str) and job[k].strip() for k in ("file", "want")):
-    die("ArgumentsBad", "expects {\"file\": FILE, \"want\": what to change}")
+job = tool_io.arguments("file", "want")
+if not all(job[k].strip() for k in ("file", "want")):
+    die("ArgumentsBad", "file and want must be non-empty strings")
+WS = tool_io.workspace()
 path, want = job["file"], job["want"].strip()
 if os.path.isabs(path) or ".." in path.split("/") or "#" in path:
     die("PathBad", "file must be a relative path inside the workspace (no absolute path, .., or #): %s" % path)
+if os.path.commonpath([WS, os.path.realpath(os.path.join(WS, path))]) != WS:
+    die("PathBad", "file is outside the workspace: %s" % path)
 rc, top, err = aos_json("peek", "--follow", path)
 if rc != 0:
     die(*err)
@@ -107,19 +115,19 @@ if rc != 0:
 # 一、找到要修改的 key（漸進展開）
 seen = ["/"]
 messages = [
-    {"role": "system", "content": "你在一份 JSON 檔裡找出要改的位置。你一開始只看得到頂層；大的值摺成摘要（{N} 是物件、[N] 是陣列）。"
-                                  "想看哪個 key 就呼叫 peek（指標用 JSON pointer，/ 開頭，例 /states/think），一次看一層。"
-                                  "找到要改（或要新加）的位置就呼叫 found，交出它們的指標；不要自己寫值。"},
-    {"role": "user", "content": "要做的事：%s\n檔：%s\n頂層：\n%s" % (want, path, top)}]
-tools = [fn("peek", "看某個位置的下一層", {"pointer": {"type": "string", "description": "JSON pointer，/ 開頭"}}, ["pointer"]),
-         fn("found", "交出要改的位置", {"pointers": {"type": "array", "items": {"type": "string"},
-                                              "description": "JSON pointer 清單，/ 開頭"}}, ["pointers"])]
+    {"role": "system", "content": "Find the places to change in a JSON file. Initially you see only the top level; large values are folded into summaries ({N} for objects, [N] for arrays). "
+                                  "Call peek to inspect a key, one level at a time, using a JSON pointer starting with / (for example /states/think). "
+                                  "When you find the places to change or add, call found with their pointers; do not write values yourself."},
+    {"role": "user", "content": "Task: %s\nFile: %s\nTop level:\n%s" % (want, path, top)}]
+tools = [fn("peek", "Inspect the next level at a location", {"pointer": {"type": "string", "description": "JSON pointer starting with /"}}, ["pointer"]),
+         fn("found", "Return the places to change", {"pointers": {"type": "array", "items": {"type": "string"},
+                                              "description": "List of JSON pointers starting with /"}}, ["pointers"])]
 pointers = None
 for _ in range(MAX_ROUNDS):
     message, calls = ask(messages, tools)
     messages.append(message)
     if not calls:
-        messages.append({"role": "user", "content": "請呼叫 peek 或 found。"})
+        messages.append({"role": "user", "content": "Please call peek or found."})
         continue
     for call in calls:
         name, a = (call.get("function") or {}).get("name"), call_args(call)
@@ -141,22 +149,22 @@ if not pointers:
     die("PointerMissing", "asked %d rounds, the brain has not given the places to change" % MAX_ROUNDS)
 
 # 二、提供值：每個位置一個小念頭，只看那一處
-give = [fn("give", "交出這個位置的新值", {"json": {"type": "string", "description": "新值的 JSON 文字，例 30000、\"abc\"、{\"a\": 1}"}},
+give = [fn("give", "Return the new value for this location", {"json": {"type": "string", "description": "New value as JSON text, for example 30000, \"abc\", or {\"a\": 1}"}},
            ["json"])]
 values = {}
 for ptr in pointers:
     rc, cur, _ = aos_json("get", "--follow", path + "#" + ptr)
-    cur = cur.strip() if rc == 0 else "（還沒有這個位置，會新加）"
+    cur = cur.strip() if rc == 0 else "(This location does not exist yet; it will be added.)"
     parent = ptr.rsplit("/", 1)[0]
     rc, around, _ = aos_json("peek", "--follow", path + ("#" + parent if parent else ""))
-    messages = [{"role": "system", "content": "你是一個小念頭：只負責一個 JSON 位置的新值。呼叫 give，把新值寫成 JSON 文字交出來。"},
-                {"role": "user", "content": "要做的事：%s\n位置：%s#%s\n現在的值：%s\n上一層：\n%s" %
-                                            (want, path, ptr, cur, around if rc == 0 else "（看不到）")}]
+    messages = [{"role": "system", "content": "You are a small thought responsible only for the new value at one JSON location. Call give with the new value as JSON text."},
+                {"role": "user", "content": "Task: %s\nLocation: %s#%s\nCurrent value: %s\nParent level:\n%s" %
+                                            (want, path, ptr, cur, around if rc == 0 else "(unavailable)")}]
     for _ in range(3):
         message, calls = ask(messages, give)
         messages.append(message)
         if not calls:
-            messages.append({"role": "user", "content": "請呼叫 give，json 參數放新值的 JSON 文字。"})
+            messages.append({"role": "user", "content": "Please call give with the new value as JSON text in the json argument."})
             continue
         text = call_args(calls[0]).get("json")
         try:

@@ -32,7 +32,7 @@
 
 | 工具 | 一句話 | 參數 | 回什麼 |
 |---|---|---|---|
-| [check_inbox](../aos/check_inbox/) | 看自己信箱還沒處理的（只看不拿） | （無） | 一封一行摘要 |
+| [aos_json](../aos/aos_json/) | 看或改工作區裡的 JSON 檔，一次一個 aos-json 子命令（11-06 從 impls/aos-json/tools 搬來）：`target` 的檔只收工作區裡的相對路徑（`PathBad`）；讀帶 `--follow`、寫帶 `--check --follow`（del 只 `--follow`：aos-json del 不收 `--check`）；`cmd` 不認得＝`OpUnknown`；aos-json 的 stderr 原樣透到 stderr，它退 1 時接它錯誤行的代號與原因（`aos_json: error: PointerMissing …`），沒那行＝`CommandFailed`；aos-json 起不來＝`LaunchFailed`。PATH 要有 aos-json | `cmd`（peek／get／where／set／batch／del／append／merge／check）、`target`（`檔#/指標`）、`value`、`depth` | 讀的回 aos-json 的輸出；寫的回 `ok`；check 有問題＝`problems:` 加一行一條、退 0 |
 | [judge](../aos/judge) | 判官（11-05；不是腦的工具）：收 `$AOS_STACK/requests/` 的 `procs_*` 信，照 `judge.json` 判掛不掛；掛＝轉寄進 `$AOS_DAEMON` 的 ctl 信箱、不掛＝回 `applied: false`；`{"ping": true}` 不判、原樣轉寄（11-06 [no-pid](../../thinking/2026-11/05/no-pid/README.md) P3）。daemon 的身體（[kernel/daemon-judge](../../kernel/daemon-judge)）或 daemon 底下的 0 號 proc（[kernel/procs-kernel](../../kernel/procs-kernel)）每次跑一輪；說明 [kernel/docs/02](../../kernel/docs/02-kernel-modes.md) | 命令列一個參數：`judge.json` 的絕對路徑；`judge.json` 的 `allowed`（名字陣列／null）、`max_running`（非負整數／null） | 轉寄（照帶原信 `reply_to`）或回信、退 0；不掛的代號 `NameUnknown`、`SlotMissing`、`BodyBad`、`ForwardFailed`（`msg` 英文，同 stderr 那行提醒 `judge: warning: letter <名> refused: 代號 原因`；aos-agent ctl 收到就報 `AddRejected`／`CtlRejected`，11-05 edge-agent 題 2） |
 
 它的「模型的錯」也照規則 3 退 1；回不回給腦由用它們的 agent 的 act 決定（11-04 前的例子 agent-meg、talk 的 member 都回給腦、不停，同 agent-pip；隨 demo 刪了）。

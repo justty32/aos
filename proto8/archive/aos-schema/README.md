@@ -1,3 +1,5 @@
+> 2026-11-06 封存：原 `proto8/impls/aos-schema`，沒人連；之後驗 LLM 回話可能用到，所以留著不刪。見 [archive/README](../README.md)。
+
 # aos-schema
 
 `aos-schema - 拿一份 JSON Schema（draft-07）檢查一份 JSON，說出哪一格、哪裡不對`（NAME，C-54 R1）

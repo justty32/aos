@@ -1,0 +1,17 @@
+{
+  "summary": "Find JSON pointers with a brain, generate one new value per location, and validate before writing",
+  "time_ms": {
+    "val": 30000,
+    "max": 1800000
+  },
+  "resource": [
+    "cpu",
+    "disk",
+    "llm"
+  ],
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false
+}

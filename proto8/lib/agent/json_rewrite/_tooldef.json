@@ -1,5 +1,33 @@
-{"description": "照一句話改一份 JSON 檔（aos 的設定、單子…）。分兩步：先一層層看檔找出要改的位置，再對每個位置只產出那一個新值；寫之前驗過格式與形狀。回走過的位置與改了什麼。",
- "parameters": {"type": "object",
-                "properties": {"file": {"type": "string", "description": "工作區裡的 JSON 檔（相對路徑），例 agent/fsm.json"},
-                               "want": {"type": "string", "description": "要怎麼改，一句話，例：把 think 那格的逾時改成 30 秒"}},
-                "required": ["file", "want"]}}
+{
+  "description": "Change a JSON file (such as an aos configuration or job) from a short instruction. First inspect the file one level at a time to find the places to change, then generate only the new value for each place. Validate format and shape before writing. Return the places visited and the changes made.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "file": {
+        "type": "string",
+        "description": "JSON file relative to the workspace, for example agent/fsm.json. It must remain inside the workspace after resolving symlinks; absolute paths, .. components and # are rejected."
+      },
+      "want": {
+        "type": "string",
+        "description": "One short instruction describing the change, for example: set the think state timeout to 30 seconds."
+      }
+    },
+    "required": [
+      "file",
+      "want"
+    ]
+  },
+  "errors": [
+    "ArgumentsBad",
+    "LaunchFailed",
+    "CommandFailed",
+    "BrainFailed",
+    "ReplyBad",
+    "WsMissing",
+    "PathBad",
+    "PointerMissing"
+  ],
+  "env": [
+    "AOS_LLM_KERNEL"
+  ]
+}
