@@ -18,13 +18,10 @@
 
 #include "aos/files.hpp"
 
-#include <filesystem>
-
 namespace aos::daemon {
 
 void Daemon::open_mailbox() {
-    std::error_code ec;
-    if (!std::filesystem::is_directory(stack_, ec)) {   // 建 stack 只在 aos-exec 做（N-59 第 1 件）；init 是 mkdir -p，不能讓它順手建出來
+    if (!aos::is_dir(stack_)) {   // 建 stack 只在 aos-exec 做（N-59 第 1 件）；init 是 mkdir -p，不能讓它順手建出來
         throw Error{code::MkdirFailed, "cannot create mailbox " + mbox_path_ + " ($AOS_STACK is missing: " + stack_ + ")"};
     }
     aos::post::init(mbox_path_);
@@ -34,11 +31,8 @@ void Daemon::open_mailbox() {
             want_[n] = nullptr;
         }
     }
-    for (const auto& e : std::filesystem::directory_iterator(mbox_.cur(), ec)) {
-        std::string name = e.path().filename().string();
-        if (!name.empty() && name[0] != '.') {   // . 開頭不算信（N-05，同 aos-post）
-            redo_.push_back(name);
-        }
+    for (const std::string& name : aos::names_in(mbox_.cur())) {
+        redo_.push_back(name);   // 非隱藏名字，同 aos-post 的信件規則（N-05）
     }
     aos::post::sort_letters(redo_);   // 處理順序同 aos-post 的 take（有序在前）
 }

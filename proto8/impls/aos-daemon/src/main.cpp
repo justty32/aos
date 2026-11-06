@@ -11,6 +11,8 @@
 // 「aos-daemon: warning: …」（D4）。`--help`＝英文說明印 stdout、退 0（R3）。PATH 不動（子 loop 要的 aos-exec、aos-loop 由呼叫者放進 PATH）。
 #include "daemon/daemon.hpp"
 
+#include "aos/signals.hpp"
+
 #include <cstdio>
 #include <exception>
 
@@ -34,7 +36,7 @@ exit codes: 0 done; 1 own error ("aos-daemon: error: CODE ..." on stderr); 128+N
 
 int main(int argc, char** argv) {
     try {
-        aos::loop::block_signals();
+        aos::block_signals();
         aos::Cli cli = aos::loop::loop_cli(std::vector<std::string>(argv + 1, argv + argc), "aos-daemon", HELP);
         aos::daemon::Daemon d(cli.opts, cli.rest[0], std::vector<std::string>(cli.rest.begin() + 1, cli.rest.end()));
         return d.serve();
