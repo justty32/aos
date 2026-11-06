@@ -4,36 +4,13 @@
 
 ## 使用者原文（11-05 晚，整理版；只分段加小標題，字句照原話）
 
-### 為何要 JSON
+**11-06 註**：原文逐字搬到[使用者原文續檔](README-parts/01-使用者原文.md)，實作與文件結果見 [10](10-J3到J7實作結果.md)。
 
-> json這塊，是這樣的，爲何要json？我看重他的好處在於幾個點：
-> 1. 就算不憑藉任何工具，人類也能理解...大段文字這塊可能比較麻煩，畢竟他沒換行，但也沒關係。
-> 2. 大語言模型生成起來幾乎不會出錯，就算是笨模型也是。
-> 3. tool呼叫就是用json格式。
-> 4. 與檔案系統的同像性。
-> 5. 大部份程式語言都原生支援。
-
-### aos 函數與 tool 呼叫
-
-> 那，其中一個很重要的東西，就是tool呼叫，你知道的，我們aos函數他也是透過json去定義的，並且aos函數是aos體系的基石，和tool呼叫，兩者之間應該要是可以無痛轉換。除此之外，aos體系也大量使用json來做訊息傳遞，乃至於函數的input/output，config格式之類，甚至可以說，aos體系下，唯一與json無關的，就是環境變數。
-
-> 總而言之，用了json，就是可以跟agent的工具呼叫，也就是agent的手腳輕鬆相連。也正是因爲如此，我才說不要濫用環境變數。
-
-### argv 的兩面
-
-> 至於argv，這東西我的看法是兩面的，一面是一連串argv[]組合起來，等同於一個method，至於這個method的實際input，在aos體系下通常都來自於stdin，output也是stdout/err。另一面則是這東西可以給人使用，畢竟你讓人去寫json，其實不太方面。
-
-### 應對方式的兩面
-
-> 所以其應對方式我覺得同樣也可以有兩面，一面是以其用途做區分，若是要給人操作的(或是agent使用shell工具操作的)，那就是用法要遵循unix/linux習慣，man/--help要有，設計要符合人體工學(以人爲主)。若是單純的aos函數，不需要給人操作的，那就是argv的旗標盡量不要濫用，大多東西都走要給stdin的json，要包成工具的也通常是這類(另一類就是走shell工具)。
-
-> 另一面，就是在設計argv旗標時，其實可以用python的argparse爲參照，將其映射到json，比如--xxx yyy，就可以映射到stdin json中的"xxx":"yyy"這樣，至於具體型別那自然會有所限制，但就是提供一個方法，讓那些不是設計用來給人操作的函數，也有一個讓人勉強可用的界面。
-
-### 兩題的回答
-
-> （題 1：JSON 是不是 aos 的通用介質、要不要寫成規範）看起來是的，但我沒有定死，就只是把優點擺出來，之後實際工程上大家就依據需求斟酌使用。
-
-> （題 2：JSON 手改設定很痛——不能註解、尾逗號）是的，但我們也有各種工具，不管是jq，或是寫一個小程式將其抽象化/自動轉換，或是把一些重要的東西抽出來成簡單json，讓人簡單改。
+<a id="為何要-json"></a>
+<a id="aos-函數與-tool-呼叫"></a>
+<a id="argv-的兩面"></a>
+<a id="應對方式的兩面"></a>
+<a id="兩題的回答"></a>
 
 ## 結論（11-05 晚，只寫上面能直接推出的）
 
@@ -60,6 +37,9 @@
 | [08-J1實作結果](08-J1實作結果.md) | 11-06 J1：tool_io 從 `_tooldef.json` 生旗標映射與 `--help` 旗標段；代定 9 條、實測、隊員分工、邊緣 5 條 |
 | [09-J2實作結果](09-J2實作結果.md) | 11-06 J2：27 支 lib 工具刪手寫參數段、`_tooldef.json` 補 `default`／`errors`、claude／codex 改走 tool_io、`AOS_WS` 不再預設 `.`；代定 7 條、245 組新舊對照、邊緣 5 條 |
 | [10-J3到J7實作結果](10-J3到J7實作結果.md) | 11-06 公司 D 隊 J3～J7：一步一節（做了什麼、代定、實測、新邊緣） |
+| [11-J6實作結果](11-J6實作結果.md) | 11-06 註：J6 env 核對與 agents 相對路徑、代定、實測、新邊緣（從 10 逐字搬出） |
+| [12-J5實作結果](12-J5實作結果.md) | 11-06 註：J5 tokenizer 去重與 SIGPIPE、代定、實測、新邊緣（從 10 逐字搬出） |
+| [13-J4實作結果](13-J4實作結果.md) | 11-06 註：J4 四格共用解析、act 限時與 stderr 尾、代定、實測、新邊緣（從 10 逐字搬出） |
 
 ## fable 規劃一句話結論
 
@@ -67,27 +47,17 @@
 
 ## 要使用者裁的（白話；推薦放第一）
 
-> **11-05 晚 21:35 已回**：題 1 照需要權衡、題 2 子資料夾（實作時要先看）、題 3 旗標＞stdin＞環境變數；另定巢狀可、只吃想吃的 → [07](07-使用者回覆-11-05晚.md)。
-
-1. **給人用的程式（aos-post、aos-daemon-ctl、aos-agent…）要不要也改成「一份 JSON 定義生旗標表＋`--help`」？**
-   - **不做，旗標表留程式碼裡 (Recommended)**：給人的介面要子命令、位置參數、散文 help，JSON Schema 表達不了；它們也不需要 tool schema（agent 走 `bash` 叫）。
-   - 做：`cmd/<名>/_cli.json` 生 C++／Python 表——多一個 codegen 步驟，只換到「一致感」。
-2. **一個工具資料夾要不要有多個 method（memory 的 add／get／ls）？**
-   - **子資料夾＝子 method (Recommended)**：`memory/add/_entry` 各有自己的 `_tooldef.json`，`aos-exec memory/add`，登記名 `memory_add`——每個 method 一份乾淨 schema；資料夾變多。
-   - 維持 stdin 鍵 `op` 分支（現況）：schema 鬆、`--help` 一長串，但檔少。
-   - 工具內解子命令 `aos-exec memory add`：工具要自己做子命令解析，跟「純函數少用旗標」背道。
-3. **旗標跟 stdin 同一個鍵：蓋掉還是報錯？**
-   - **旗標蓋 stdin、不報錯 (Recommended)**：同 N-58「旗標 ＞ 環境 ＞ `.env`」、同 argparse；可以 `cat base.json | aos-exec tool --limit 5`。
-   - 報 `ArgumentsBad`：安全但失去管線覆蓋用法。
+**11-06 註**：三題已於 11-05 裁定，原選項與回覆連結逐字搬到[方向題續檔](README-parts/02-方向題.md)；已實作項見 [10](10-J3到J7實作結果.md)，子資料夾＝子動作仍待使用者先看。
 
 ## fable 代定（可翻案）
 
-- 映射只取 argparse 子集：連字號↔底線；`integer`／`number` 轉型；`boolean`＝`--flag`／`--no-flag`；`array`＝重複旗標；`object`＝整段 JSON 字串；不做短旗標、nargs、點路徑、子命令。
-- 錯誤代號沿用：schema 沒的旗標＝`FlagUnknown`；型別轉不了、required 缺、開關帶值、位置參數不對＝`ArgumentsBad`；一行 `工具名: error: 代號 原因 (usage: …)` 退 1。
-- stdin 是 tty＝`{}`、不讀（解 P-39「會卡」）。
-- 型別檢查只做 `type`／`required`／`enum`（aos-schema 隨 S10 封存）。
-- `_tooldef.json` 選填 key：`positional`（預設不宣告）、`errors`、`env`（no-pid P4）；aos-tools／aos-mcp 給模型只取 `description`、`parameters`（現況已如此）。
+- **11-06 註（J1 已實作，`9b97aeb3`，[08](08-J1實作結果.md)）**：映射取 argparse 子集：連字號↔底線；`integer`／`number` 轉型；`boolean`＝`--flag`／`--no-flag`；`array`＝重複旗標；`object`＝整段 JSON 字串，也可用 `--a.b` 只換一葉（使用者 [07](07-使用者回覆-11-05晚.md) 已裁）；純函數不做短旗標、nargs、子命令。
+- **11-06 註（J1 已實作，[08](08-J1實作結果.md)）**：schema 沒的旗標＝`FlagUnknown`；型別轉不了、required 缺、開關帶值、位置參數不對＝`ArgumentsBad`；工具錯誤行兩邊各印一行、退 1，旗標錯誤另附 `(see NAME --help)`。
+- **11-06 註（J1 已實作，[08](08-J1實作結果.md)）**：stdin 是 tty＝`{}`、不讀（解 P-39「會卡」）。
+- **11-06 註（J1 已實作，[08](08-J1實作結果.md)）**：只查 `type`／`required`；`enum` 只供 help 顯示，未知 op 交工具報 `OpUnknown`（aos-schema 隨 S10 封存）。
+- **11-06 註（J1／J2 已實作，J2 `85f22b2a`，[08](08-J1實作結果.md)、[09](09-J2實作結果.md)；J3 核對見 [10](10-J3到J7實作結果.md)）**：工具側選填 `positional`／`errors`／`env`，property 可帶 `default`；模型只取 `description`／`parameters`，所以 property 的 `default` 也看得到。
 - C++ 現在不做 schema 映射；`aos::parse_cli` 不動；aos-exec 不參與映射（C-52）。
-- aos-tools `call` 砍 exe 的 `--tool-call FILE` 路，三種工具都吃 stdin；`--env` 改名 `--envs`＋加 `--env-file`。
-- `AOS_KERNEL` 改信去向時印 warning 行（或 `--kernel` 明給）；小格 `AOS_STACK=…/tools/<名>/` 只在 `aos-tools call` 算。
-- 條文改動（P-44 末句、P-41 加註、lib 規則 1／5a）排在 J7、照實作寫。
+- **11-06 註（J3 已實作，`a6d8cd9a`，[10](10-J3到J7實作結果.md)）**：aos-tools `call` 三種工具都吃 stdin；add 用 `--envs`＋`--env-file`，當下讀檔存內容；`--envs` ＞檔案合成登記格 `env`，call 時登記值＞繼承；`AOS_STACK` 另由 call 一處算小格，登記值不得覆蓋。
+- **11-06 註（J6 已核對，`1ab16a8a`，[10](10-J3到J7實作結果.md)）**：`AOS_KERNEL` 改信去向時已有 warning，沒加 `--kernel`；C++ 的兩處舊註解仍等 S7。
+- **11-06 註（J5／J4 已實作，`92717ee3`／`2eb02ea4`，[10](10-J3到J7實作結果.md)）**：aos_flags 包 tool_io 的 tokenizer；stdout 被關安靜退 141；四格改共用解析，act 按工具 metainfo 限時、非 0／逾時附 stderr 尾。
+- **11-06 註（J7 文件已同步，[10](10-J3到J7實作結果.md#j7-條文與文件)）**：P-44、P-41、C-52、N-43、lib 規則與英文知識書照實作；P-45 核對相符，N-57／N-63 不改。

@@ -20,3 +20,5 @@ Codes you will meet most:
 - `AnswerMissing`: the agent you asked did not answer in time. Check its row with `agents` `{"op": "ls"}`: phase `stopped` with a `reason` means it crashed (fix or report); `running` means it is slow, ask again with a longer `timeout_s`. Phases: node `status`.
 - `ToolExists`: use `override: true` only if you mean to replace.
 - `LlmKernelMissing`: the brain service is not configured; a human must start it.
+
+11-06 note（11-06 註）: `ArgumentsBad` covers malformed or non-object stdin JSON, missing required keys, and schema type mismatches. `FlagUnknown` means an unrecognized flag; extra stdin keys are ignored. `enum` values are shown in help but checked by the tool itself (an unknown operation remains `OpUnknown`). `WsMissing` means the workspace is absent or invalid; lib tools do not default it to the current directory. `StackMissing` means a tool that needs execution state has no stack; `ModuleMissing` means its shared Python module could not be found. See [J1 implementation](../../../thinking/2026-11/05/json-argv/08-J1實作結果.md) and [J2 implementation](../../../thinking/2026-11/05/json-argv/09-J2實作結果.md).

@@ -22,3 +22,5 @@ What you may change: only your own overlays, and only through tools:
 What you may not change: the definition folder, other agents' stacks, the daemon's files, `history.jsonl` by hand.
 
 If you need to know whether you run under a daemon at all: tools that need the daemon answer `DaemonMissing` or `InstanceMissing` when you do not. `DaemonMissing` also comes when a daemon exists but did not reply (busy, paused or down). Then features like `self_tools`, `agents` and `thought` are unavailable for now; say so. Do not retry right away; you may try once more later.
+
+11-06 note（11-06 註）: The tool scratch folder is assigned by `aos-tools call`, using your stack as the parent. Brain, act and MCP callers pass their own `$AOS_STACK`; they do not append another `tools/<name>/`. Executable tools use the same stdin JSON route as folder and JSON tools. See [J3 implementation](../../../thinking/2026-11/05/json-argv/10-J3到J7實作結果.md#j3-aos-tools-收口).
