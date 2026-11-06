@@ -14,7 +14,7 @@
 //   回信：reply.json＝endpoint 函數 stdout 那份 {"message": {...}, "usage"?: {...}, "model"?: ...}，或 {"error": {"code": 代號, "msg": 原因}}
 //       （kernel 沒跑、掛不上 daemon〔LaunchFailed〕、endpoint 函數退非 0 或逾時〔EndpointFailed〕、stdout 讀不懂〔ReplyBad〕）。
 //       kernel 把同一份當 body、照 N-16 寄一封回信進信的 reply_to（沒寫 reply_to＝回信沒人收，信照刪）（in_reply_to＝原信的信件名稱），寄出的信件名稱記在 <信>/reply_letter.txt
-//   用量：reply.json 的 usage.total_tokens（沒有就 prompt_tokens＋completion_tokens）→ used.json（11-04 起取代 AOS_KERNEL_REPORT）
+//   用量：reply.json 的 usage.total_tokens（沒有就 prompt_tokens＋completion_tokens）→ used.json
 //   寄信的人：sender.flock＝aos-llm ask（同步）建好信就 flock（LOCK_EX）住、拿到行程結束；aos-llm send（非同步）不建＝kernel 不判存活、照跑
 //
 //   信件名稱＝aos-util 的 aos::unique_id()：<UTC 奈秒 20 位>.<pid>.<started_at_ticks>——照字典序排＝照寄的先後
@@ -44,7 +44,7 @@ namespace aos::llm_kernel {
 namespace code {
 using namespace aos::post::code;   // MailboxMissing、LetterMissing、LetterBad
 inline constexpr const char* PriorityBad = "PriorityBad";       // priority 寫壞（aos-llm 自己擋；kernel 收到這種信回 LetterBad）
-inline constexpr const char* DeadlineMissed = "DeadlineMissed"; // 回信：輪到之前時限已過，沒跑（10-15 LLM kernel 稿定的名字）
+inline constexpr const char* DeadlineBad = "DeadlineBad"; // 回信：輪到之前時限已過，沒跑（10-15 LLM kernel 稿定的名字）
 inline constexpr const char* DaemonMissing = "DaemonMissing";   // kernel：沒設 AOS_DAEMON、不是資料夾（11-05：問腦請 daemon 掛，kernel 要在 daemon 底下）
 inline constexpr const char* ReplyBad = "ReplyBad";             // 回信：endpoint 函數的 stdout 讀不懂；aos-llm：回信讀不懂
 inline constexpr const char* LockFailed = "LockFailed";         // kernel：信箱被另一個 kernel 鎖著

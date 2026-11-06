@@ -15,4 +15,4 @@ Priority: optional. `"priority": {"level": "high"}` or `{"level": "high", "deadl
 
 Budgets: each pack and each sender can have a budget per day. `BudgetMissing ... max_calls N reached in this window` means the budget is used up for today. The kernel does not switch packs for you; pick a cheaper pack or stop.
 
-Common codes: `EndpointUnknown` (no pack with that name; check `aos-llm ls`), `EndpointFailed` (the model service failed or timed out; try again later), `DeadlineMissed` (your deadline passed before it ran), `LlmKernelMissing` (`AOS_LLM_KERNEL` not set; a human must start the llm kernel).
+Common codes: `EndpointUnknown` (no pack with that name; check `aos-llm ls`), `EndpointFailed` (the model service failed or timed out; try again later), `DeadlineBad` (your deadline passed before it ran), `LlmKernelMissing` (`AOS_LLM_KERNEL` not set; a human must start the llm kernel).

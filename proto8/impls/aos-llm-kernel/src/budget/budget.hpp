@@ -17,7 +17,7 @@
 //   spent_pack    同 spent、看一個包（11-05 feat-proto）：packs.<代號> 的 counter_calls＋started（這包在飛＋這次新掛）≥ 包的 max_calls、
 //                 或 counter_tokens ≥ max_tokens（窗＝kernel 的 budget.window）
 //   spent_of      spent_pack 的通用版：在 used.json 的一格（packs 或 senders）裡看 name 那人／那包（11-05 feat-proto 件 5；spent_pack＝spent_of(u.packs, …)）
-//   report_of     回信（reply.json，endpoint 函數的 stdout）的 usage 物件（11-04 起取代 AOS_KERNEL_REPORT 指的 report.json）：
+//   report_of     回信（reply.json，endpoint 函數的 stdout）的 usage 物件：
 //                 tokens＝total_tokens；沒有就 prompt_tokens＋completion_tokens（非負整數才算）。沒有 usage（含 error 回信）＝沒回報（tokens null）；
 //                 有但不是物件、形狀不對＝bad（tokens null，只算次數）
 #pragma once

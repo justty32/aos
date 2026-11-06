@@ -44,7 +44,7 @@
 // log（--enable-logs 才印到 stdout）：行程起來一行、結束一行 {"at", "name", "phase"（running／done／stopped／sleeping）, "pid", "code", "signal", "ws"?}。
 // 11-05（portable-flow，見 docs/03「11-05 搬家相關」）：信／procs_ctl 多認 procs_slept、procs_woken（sleep＝現在就睡、列 sleeping，這一班 wake 才醒；daemon 重開 slept 集合空＝自己醒）；
 //   表上 stack／ws／exec／def 存相對 daemon 的 stack（adopt 用 unrel 拼回）；wake／start 起來 REVIVE_MS 內就退＝列留 stopped＋reason（11-05 晚起凡 loop 型退非 0 都留，REVIVE_MS 只分原因字樣）；
-//   起來先 check_running：flock 鎖住 stack 資料夾（鎖到行程結束）；鎖不到＝同一個 stack 已有 daemon 活著＝DaemonRunning。
+//   起來先 check_running：flock 鎖住 stack 資料夾（鎖到行程結束）；鎖不到＝同一個 stack 已有 daemon 活著＝DaemonExists。
 // 11-05（edge-daemon 題 1，使用者「記一行、下一圈再跑 (Recommended)」）：身體（exec）由 daemon 自己在 tend 最後跑（run_body；Loop 當沒有身體），
 //   退非 0、起不來＝不收工：stderr 一行（變了才印）、state 的 body_code、下一圈再跑；退 10＝收工（同 ctl stop）。aos-loop 本身照舊（P-20）。
 #pragma once
@@ -146,7 +146,7 @@ private:
     Names ctl_stopped(const Json& ctl) const;
     Names ctl_slept(const Json& ctl) const;     // 11-05 slept 集合＝底 slept_＋ctl 的 procs_slept－procs_woken
     Json unrel(const Json& v) const;            // 11-05：表上相對 daemon stack 的路徑拼回絕對（絕對的＝舊表，照用；# 片段照留）
-    void check_running();                       // 11-05：flock 鎖 stack 資料夾；鎖不到＝已有 daemon 在跑＝丟 DaemonRunning   // stopped 集合＝底 stopped_＋ctl 的 procs_stopped－procs_started
+    void check_running();                       // 11-05：flock 鎖 stack 資料夾；鎖不到＝已有 daemon 在跑＝丟 DaemonExists   // stopped 集合＝底 stopped_＋ctl 的 procs_stopped－procs_started
     bool from_ctl(const std::string& name) const;   // 名字是 procs_ctl 疊上去的（它的 procs 或 procs_added 裡有；沒開 procs_ctl＝false）
     void reconcile(const Json& want, const Names& stopped, const Names& slept);   // 對表：收多的、停要停的、看誰結束、起少的與要 start 的
 

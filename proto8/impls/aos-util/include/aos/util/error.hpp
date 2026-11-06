@@ -27,8 +27,7 @@ namespace code {
 // 命令列、stdin
 inline constexpr const char* ArgumentsBad = "ArgumentsBad"; // 命令列用錯（給了不收的參數、旗標少了值、開關帶值、沒給或多給位置參數）
 inline constexpr const char* FlagUnknown = "FlagUnknown";   // 不認得的旗標
-inline constexpr const char* InputBad = "InputBad";         // stdin 有東西但一份 JSON 都解不出來
-inline constexpr const char* InputExtra = "InputExtra";     // stdin 有好幾份 JSON（設定只要一份）
+inline constexpr const char* InputBad = "InputBad";         // stdin 不是 JSON 或有好幾份 JSON（設定只要一份）
 // 設定檔（loop.json、fsm.json、daemon.json；load_cfg）
 inline constexpr const char* CfgMissing = "CfgMissing";     // 設定檔不在、`#/` 指不到
 inline constexpr const char* CfgBad = "CfgBad";             // 設定檔讀不了、不是 JSON、`#` 後不是 `/`、某個 key 型別不對、必填的沒寫

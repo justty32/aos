@@ -97,7 +97,7 @@ std::vector<Waiting> Server::scan() {
             continue;
         }
         if (w.priority.deadline && *w.priority.deadline < now) {
-            refuse(id, error_reply(code::DeadlineMissed, "deadline passed before its turn; not run"));
+            refuse(id, error_reply(code::DeadlineBad, "deadline passed before its turn; not run"));
             continue;
         }
         w.seen_at_runs = q_.runs;

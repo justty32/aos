@@ -3,7 +3,7 @@
 `aos-loop - 以指定設定，定期執行一個 aos-exec 目標`（NAME，C-54 R1）
 
 **一句話：`aos-loop [FLAGS] loop.json`——一次次跑 `exec`（目標＝`aos-exec -- 目標 參數...`；單子物件＝行程內跑），看它的結束碼決定下一步：0＝下一次、10＝正常停、其他非 0＝失敗。**
-一個 lib（`lib/libaos-loop.a`，公開標頭 `aos/loop.hpp`）加一支薄薄的命令列（`bin/aos-loop`）。連 [aos-exec](../aos-exec/README.md) 的公開 API（它又帶進 inst、aos-util、aos-directive）；目標每次在 fork 出來的子行程裡呼叫 aos-exec 的 `run_cli`，單子每次在自己行程內呼叫 aos-exec 的 `run_inst`。全家慣例見 [impls/README.md](../README.md)。
+一個 lib（`lib/libaos-loop.a`，公開標頭 `aos/loop.hpp`）加一支薄薄的命令列（`bin/aos-loop`）。連 [aos-exec](../aos-exec/README.md) 的公開 API（它又帶進 aos-inst、aos-util、aos-directive）；目標每次在 fork 出來的子行程裡呼叫 aos-exec 的 `run_cli`，單子每次在自己行程內呼叫 aos-exec 的 `run_inst`。全家慣例見 [impls/README.md](../README.md)。
 
 像一個只會看紅綠燈的工讀生：老闆給他一張紙「這件事最多做 20 次」。他每做一次就看結果的燈號——綠（0）就再做一次、
 「收工」牌（10）就下班、紅（其他）就停手，在 stderr 留一句「第幾次、做什麼、燈號幾」，帶著那個燈號回去。

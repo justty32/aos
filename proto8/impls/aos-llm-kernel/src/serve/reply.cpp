@@ -79,7 +79,7 @@ void regret_reply(const std::string& root, const std::string& dir) {
     }
 }
 
-// 跑過的（掛上去過＝cur/<id>/proc.json 在）才算一次、才看 usage；沒跑的（LetterBad、EndpointUnknown、DeadlineMissed、BudgetMissing…）不算。
+// 跑過的（掛上去過＝cur/<id>/proc.json 在）才算一次、才看 usage；沒跑的（LetterBad、EndpointUnknown、DeadlineBad、BudgetMissing…）不算。
 bool ran(const std::string& dir) {
     std::error_code ec;
     return fs::exists(aos::join(dir, PROC_JSON), ec);
@@ -116,7 +116,7 @@ void Server::finish(const std::string& id, const Json& reply) {
     aos::remove_tree(dir);   // 刪不掉（權限）不算錯：下一次 collect 看到 reply_letter.txt 就不重寄
 }
 
-// 不跑、直接回信（LetterBad、RequestBad、Endpoint*、DeadlineMissed、BudgetMissing…）：先認領，認領不到＝寄信的剛撤信，算了。
+// 不跑、直接回信（LetterBad、RequestBad、Endpoint*、DeadlineBad、BudgetMissing…）：先認領，認領不到＝寄信的剛撤信，算了。
 void Server::refuse(const std::string& id, const Json& reply) {
     if (!aos::move(aos::join(mb_.fresh(), id), aos::join(mb_.cur(), id))) {
         return;

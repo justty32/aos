@@ -58,7 +58,7 @@
 
 namespace aos::post {
 
-// 錯誤代號：全家共用的（ArgumentsBad、FlagUnknown、InputBad、InputExtra、WriteFailed、MkdirFailed、Internal；
+// 錯誤代號：全家共用的（ArgumentsBad、FlagUnknown、InputBad、WriteFailed、MkdirFailed、Internal；
 // CommandUnknown 由 aos-util 定義）；MailboxMissing、LetterMissing、LetterBad 由本標頭定義，供投遞與使用者共用。
 namespace code {
 using namespace aos::code;

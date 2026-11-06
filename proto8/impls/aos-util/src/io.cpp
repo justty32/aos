@@ -59,7 +59,7 @@ Json read_stdin() {
         throw Error{code::InputBad, "stdin is not JSON"};   // 11-05 第二輪：原本說「has no JSON」，其實是有東西但不是 JSON（空的＝{}）
     }
     if (docs.size() > 1) {
-        throw Error{code::InputExtra, "stdin has " + std::to_string(docs.size()) + " JSON documents; expected one"};
+        throw Error{code::InputBad, "stdin has " + std::to_string(docs.size()) + " JSON documents; expected one"};
     }
     return docs[0];
 }

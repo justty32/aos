@@ -138,11 +138,11 @@ Daemon::Daemon(const std::map<std::string, std::string>& opts, const std::string
 }
 
 // 11-05 B 線：用 flock 鎖住 stack 資料夾本身（不多建檔；O_CLOEXEC，子項 exec 後不帶著；行程不論怎麼死鎖都跟著放）。
-// 鎖不到＝同一個 stack 已有 daemon 活著＝DaemonRunning。原本只比 state.json 的 pid＋ticks＋boot_id：兩個同時起時兩邊都還沒寫 state.json、
+// 鎖不到＝同一個 stack 已有 daemon 活著＝DaemonExists。原本只比 state.json 的 pid＋ticks＋boot_id：兩個同時起時兩邊都還沒寫 state.json、
 // 都過關，同一個 stack 跑兩個 daemon（實測一個死在 state.json.tmp 互搶、活下來的那個 state.json 記著死掉那個的 pid，再起第三個也擋不住）。
 // stack 打不開（不在）＝不鎖，後面寫窗時照各自的錯。
 // 11-06（no-pid P1）：fork 出來的子行程一律先關掉這把鎖（pthread_atfork）。O_CLOEXEC 只管 exec：不 exec 的子（exec 型 proc 是單子、
-// 身體是單子＝子行程內 run_inst）原本一直帶著鎖，daemon 被 kill -9 後新 daemon 要等它跑完才拿得到（DaemonRunning）。
+// 身體是單子＝子行程內 run_inst）原本一直帶著鎖，daemon 被 kill -9 後新 daemon 要等它跑完才拿得到（DaemonExists）。
 // 身體的 fork 在 aos-loop 的 run_folder、run_child 管不到，所以掛在每次 fork 上；close 是 async-signal-safe。
 static int g_lock_fd = -1;
 static void close_lock_in_child() {
@@ -167,9 +167,9 @@ void Daemon::check_running() {
     std::optional<Json> st = state_path_.empty() ? std::nullopt : aos::read_json(state_path_);
     bool closing = st && st->is_object() && st->value("phase", Json()) == "stopping";
     if (closing) {   // 11-05 第二輪：收工途中（等子項退，最多約 10 秒）叫人「沿用」是錯的
-        throw Error{code::DaemonRunning, "the daemon on this stack (" + stack_ + ") is shutting down; start again after it exits"};
+        throw Error{code::DaemonExists, "the daemon on this stack (" + stack_ + ") is shutting down; start again after it exits"};
     }
-    throw Error{code::DaemonRunning, "a daemon is already running on this stack (" + stack_ + "); to reuse it, just aos-daemon-ctl add / aos-agent ctl add"};
+    throw Error{code::DaemonExists, "a daemon is already running on this stack (" + stack_ + "); to reuse it, just aos-daemon-ctl add / aos-agent ctl add"};
 }
 
 
