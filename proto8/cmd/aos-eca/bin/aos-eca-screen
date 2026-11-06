@@ -6,8 +6,8 @@
     aos-eca-screen --eca ECA_DIR watch             跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走；
                                                    daemon 表上那隻不再 running 或列已移除也走；找不到 daemon／讀不到表照等
 
-命令列（11-05 stdio-unify R6；11-05 隊長代定 D6 把 ECA_DIR 改成子命令前的旗標）：`aos-eca-screen [--eca ECA_DIR] 子命令 [--detach]`，
-aos_flags.parse（P-44：只有長旗標；子命令前不認得的旗標＝FlagUnknown、子命令不認得＝CommandUnknown、沒給 --eca 或多給位置參數＝ArgumentsBad）。
+命令列（11-05 stdio-unify R6；11-05 隊長代定 D6 把 ECA_DIR 改成子命令前的旗標）：`aos-eca-screen --eca ECA_DIR 子命令 [--detach]`（--eca 必給），
+aos_flags.parse（P-44：長旗標與共用短名 -h；子命令前不認得的旗標＝FlagUnknown、子命令不認得＝CommandUnknown、沒給 --eca 或多給位置參數＝ArgumentsBad）。
 為什麼是旗標：aos-exec 把呼叫者的參數接在入口 argv 的最後面（`aos-exec 資料夾 參數…`），screen 的入口寫死的部分只能在前面——
 `["aos-eca-screen", "--eca", ".."]` ＋ 動作 `open --detach` ＝ `aos-eca-screen --eca .. open --detach`。不用 sh 拼字串（少用 sh）。
 
@@ -29,23 +29,90 @@ import aos_flags, cli_session  # noqa: E402
 import daemon_ctl as dc  # noqa: E402
 
 PROG = "aos-eca-screen"
-USAGE = "aos-eca-screen --eca ECA_DIR open [--detach] | close | watch"
-aos_flags.HELP = """aos-eca-screen - the screen of an eca (the body of the aos-agent/screen sub-interface).
+HELP = """aos-eca-screen - open, close or watch an eca's screen
 
-    aos-eca-screen --eca ECA_DIR open [--detach]   attach to the screen (opened if needed, --resume when a conversation exists);
-                                                   --detach = only open it, do not attach
-    aos-eca-screen --eca ECA_DIR close             close the screen; the conversation is kept (aos-eca-turn still answers with --resume)
-    aos-eca-screen --eca ECA_DIR watch             follow what the non-interactive run is doing (live.jsonl in the cell) until one
-                                                   answer ends, or its daemon table row is no longer running or has been removed; Ctrl-C leaves (exit 0)
-                                                   keep waiting if the daemon cannot be found or its table cannot be read
+usage: aos-eca-screen --eca ECA_DIR SUBCOMMAND [FLAGS...]
+       aos-eca-screen SUBCOMMAND --help
 
---eca comes before the subcommand because aos-exec appends the caller's arguments at the end of the entry's argv:
-the screen entry ["aos-eca-screen", "--eca", ".."] plus "open --detach" runs aos-eca-screen --eca .. open --detach.
-People do not run it directly: aos-agent open / close / watch --target NAME runs the screen entry of the definition.
-Reads AOS_STACK (the agent's stack) and AOS_WS (its workspace); ECA_DIR (with cli.json; relative to cwd) gives kind and tools.
-Inside the screen, Ctrl-] (or Ctrl-\\) detaches; the instance keeps running.
-Errors: one stderr line `aos-eca-screen: error: CODE reason`, exit 1. Codes: ArgumentsBad (no --eca, extra arguments), FlagUnknown, CommandUnknown, StackMissing,
-  SessionBad (close while answering), and those of cli_session (CfgMissing, CfgBad...). Status sentences are warning lines."""
+subcommands:
+  open    open the screen and attach, or only open with --detach
+  close   close the screen while keeping the conversation
+  watch   follow the non-interactive run until one answer ends
+
+The screen entry supplies --eca before the action; people normally use aos-agent
+open / close / watch. Reads AOS_STACK for the agent's stack and AOS_WS for its workspace.
+Screen output goes to the terminal; watch reads live.jsonl from the cell.
+
+flags:
+      --eca ECA_DIR   definition folder containing cli.json (required)
+  -h, --help          show this help
+
+exit codes: 0 done; 1 error; 130 interrupted (watch leaves with 0 on Ctrl-C).
+more: proto8/cmd/aos-eca/README.md
+"""
+HELPS = {
+    "open": """aos-eca-screen open - open and attach to an eca's screen
+
+usage: aos-eca-screen --eca ECA_DIR open [--detach]
+
+Opens the screen if needed, resuming an existing conversation, then attaches to it.
+Reads AOS_STACK and AOS_WS. Ctrl-] (or Ctrl-\\) detaches; the instance keeps running.
+With --detach, prints the screen status and socket path without attaching.
+
+flags:
+      --eca ECA_DIR   definition folder containing cli.json (before open; required)
+      --detach        only open the screen; do not attach
+  -h, --help          show this help
+
+exit codes: 0 done; 1 error; 130 interrupted.
+""",
+    "close": """aos-eca-screen close - close the screen and keep the conversation
+
+usage: aos-eca-screen --eca ECA_DIR close
+
+Closes the screen in AOS_STACK; aos-eca-turn can still resume the conversation.
+Prints "closed" or "no screen (already closed)". Refuses while the cell is answering.
+
+flags:
+      --eca ECA_DIR   definition folder containing cli.json (before close; required)
+  -h, --help          show this help
+
+exit codes: 0 closed / already closed; 1 error; 130 interrupted.
+""",
+    "watch": """aos-eca-screen watch - follow the current non-interactive answer
+
+usage: aos-eca-screen --eca ECA_DIR watch
+
+Prints new live.jsonl events from the cell in AOS_STACK until one answer ends or its
+daemon row stops running or is removed. Keeps waiting if the daemon or its table is
+unavailable. Ctrl-C leaves normally.
+
+flags:
+      --eca ECA_DIR   definition folder containing cli.json (before watch; required)
+  -h, --help          show this help
+
+exit codes: 0 finished / stopped waiting / Ctrl-C; 1 error.
+""",
+}
+aos_flags.HELP = HELP
+
+
+def usage(sub):
+    """從子命令 help 取第一種 usage，續行合成一行。"""
+    lines = HELPS[sub].split("usage:", 1)[1].split("\n\n", 1)[0].splitlines()
+    first = []
+    for line in lines:
+        if line.lstrip().startswith("|"):
+            break
+        first.append(line)
+    return " ".join(" ".join(first).split())
+
+
+def sub_reason(sub, code, reason):
+    if code == "ArgumentsBad" and "(usage:" not in str(reason):
+        return "%s (usage: %s)" % (reason, usage(sub))
+    return str(reason)
+
 
 
 def die(code, msg):
@@ -178,21 +245,30 @@ SWITCHES = {"open": {"--detach": "detach"}}
 def main():
     try:
         top, rest = aos_flags.parse(sys.argv[1:], {"--eca": "eca"})
-        if not rest:
-            die("ArgumentsBad", "missing subcommand (usage: %s)" % USAGE)
-        if rest[0] not in CMDS:
-            die("CommandUnknown", "unknown subcommand %s (usage: %s)" % (rest[0], USAGE))
-        opts, args = aos_flags.parse(rest[1:], {}, SWITCHES.get(rest[0]))
     except aos_flags.Error as e:
-        die(e.code, "%s (usage: %s)" % (e, USAGE))
+        reason = str(e) if e.code == "FlagUnknown" else "%s (see %s --help)" % (e, PROG)
+        die(e.code, reason)
+    choices = "%s; see %s --help" % (", ".join(HELPS), PROG)
+    if not rest:
+        die("ArgumentsBad", "missing subcommand (%s)" % choices)
+    sub = rest[0]
+    if sub not in CMDS:
+        die("CommandUnknown", "unknown subcommand %s (%s)" % (sub, choices))
+    try:
+        opts, args = aos_flags.parse(rest[1:], {}, SWITCHES.get(sub), help=HELPS[sub])
+    except aos_flags.Error as e:
+        reason = ("%s (see %s %s --help)" % (e, PROG, sub) if e.code == "FlagUnknown"
+                  else sub_reason(sub, e.code, e))
+        die(e.code, reason)
     if args:
-        die("ArgumentsBad", "unexpected argument %s (usage: %s)" % (args[0], USAGE))
+        die("ArgumentsBad", sub_reason(sub, "ArgumentsBad", "unexpected argument %s" % args[0]))
     if not top.get("eca"):
-        die("ArgumentsBad", "missing --eca ECA_DIR (usage: %s)" % USAGE)
+        die("ArgumentsBad", sub_reason(sub, "ArgumentsBad", "missing --eca ECA_DIR"))
     eca = os.path.realpath(top["eca"])
     if not os.path.isfile(os.path.join(eca, "cli.json")):
-        die("ArgumentsBad", "%s is not an eca dir (no cli.json)" % top["eca"])
-    CMDS[rest[0]](eca, opts)
+        die("ArgumentsBad", sub_reason(sub, "ArgumentsBad",
+                                       "%s is not an eca dir (no cli.json)" % top["eca"]))
+    CMDS[sub](eca, opts)
 
 
 if __name__ == "__main__":

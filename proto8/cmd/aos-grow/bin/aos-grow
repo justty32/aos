@@ -20,28 +20,87 @@ down：反過來縮一級：NAME/（裡面只剩 _entry）→ NAME.json；NAME.j
 --dry-run：只印會做什麼（新檔全文、改的檔 unified diff、搬／刪哪些），什麼都不寫。
 假設（慣例下成立）：呼叫方跑字串目標時的 cwd＝設定檔的資料夾（aos-loop／aos-fsm 被 aos-exec 起來時就是）。
 錯：stderr 一行「aos-grow: error: 代號 原因」、退 1，什麼都不寫（ArgumentsBad、FlagUnknown、CommandUnknown、CfgMissing、CfgBad、TargetBad、NameBad、WriteFailed；
-11-05 stdio-unify R1、usage 在原因後面 R5；不給子命令＝ArgumentsBad、子命令不認得＝CommandUnknown）。--help＝英文說明到 stdout、退 0；Ctrl-C＝退 130。"""
+11-05 stdio-unify R1、錯誤行的括號只指那一層（11-06 human-cli H10：缺子命令列子命令名、子命令層接那個子命令的 usage）；不給子命令＝ArgumentsBad、子命令不認得＝CommandUnknown）。--help＝英文說明到 stdout、退 0；Ctrl-C＝退 130。"""
 import difflib, json, os, re, shutil, sys
 
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
 import aos_flags  # noqa: E402  proto8/py/aos_flags.py：P-44 的解析
 
-USAGE = "aos-grow [--dry-run] up --to file|dir [--name NAME] [--take PATH]... CALLER | aos-grow [--dry-run] down CALLER"
+PROG = "aos-grow"
 ENTRY = os.environ.get("AOS_ENTRY") or "_entry"
-aos_flags.HELP = """aos-grow - grow a function one level up (or shrink it one level down); its caller is rewritten, behaviour stays the same.
+HELP = """aos-grow - grow or shrink a function one level, rewriting its caller
 
-    aos-grow [--dry-run] up --to file|dir [--name NAME] [--take PATH]... CALLER
-    aos-grow [--dry-run] down CALLER
+usage: aos-grow [--dry-run] SUBCOMMAND [FLAGS...] CALLER
+       aos-grow SUBCOMMAND --help
 
-CALLER = CONFIG#/pointer, the cell where the caller says what to run (an fsm state's exec, loop.json's exec...).
-up: an inline single -> --to file: NAME.json next to CONFIG; --to dir: NAME/_entry. A string pointing at NAME.json -> --to dir only.
-  The cell becomes the string "NAME". --take PATH (with --to dir): move a file only it uses into NAME/.
-down: the reverse (NAME/ with only _entry -> NAME.json; NAME.json -> inline). Not done when another JSON in that folder mentions NAME.
-Location-dependent parts (cwd, relative $ref, {"$env": "AOS_CD", "$path": ...}) are rewritten to point at the same places.
---dry-run: print what would happen (new files, unified diffs, moves and deletes); nothing is written.
-Errors: one stderr line `aos-grow: error: CODE reason`, exit 1, nothing written. Codes: ArgumentsBad, FlagUnknown, CommandUnknown,
-  CfgMissing, CfgBad, TargetBad, NameBad, WriteFailed."""
+subcommands:
+  up     move an inline instruction to a file or folder
+  down   shrink a folder to a file, or a file to an inline instruction
+
+CALLER is CONFIG#/pointer, the slot where a caller says what to run. Location-dependent
+parts are rewritten to point at the same places. Changes are written to the config and
+nearby files; --dry-run prints the plan instead.
+
+flags:
+      --dry-run   print new files, diffs, moves and deletes; write nothing
+  -h, --help      show this help
+
+exit codes: 0 done / plan printed; 1 error; 130 interrupted.
+more: proto8/cmd/aos-grow/README.md
+"""
+HELPS = {
+    "up": """aos-grow up - move an instruction into a file or folder
+
+usage: aos-grow [--dry-run] up --to file|dir [--name NAME] [--take PATH]... CALLER
+
+CALLER is CONFIG#/pointer. An inline instruction becomes NAME.json or NAME/_entry;
+a string pointing at NAME.json can only grow to a folder. The caller's slot becomes
+"NAME". Relative paths are rewritten to keep pointing at the same places.
+
+flags:
+      --dry-run     print the plan without writing (before up)
+      --to file|dir choose the next level (required)
+  -n, --name NAME   name of the new file or folder (default: slot name or existing target)
+      --take PATH   move a file from CONFIG's folder into NAME/ (repeatable; --to dir only)
+  -h, --help        show this help
+
+exit codes: 0 done / plan printed; 1 error; 130 interrupted.
+""",
+    "down": """aos-grow down - shrink a folder to a file, or a file to an inline instruction
+
+usage: aos-grow [--dry-run] down CALLER
+
+CALLER is CONFIG#/pointer. NAME/ containing only _entry becomes NAME.json; NAME.json
+becomes inline in the caller. Shrinking to inline is refused when another config in
+that folder or another slot in the caller also uses NAME. Relative paths are rewritten.
+
+flags:
+      --dry-run   print the plan without writing (before down)
+  -h, --help      show this help
+
+exit codes: 0 done / plan printed; 1 error; 130 interrupted.
+""",
+}
+aos_flags.HELP = HELP
+
+
+def usage(sub):
+    """從子命令 help 取第一種 usage，續行合成一行。"""
+    lines = HELPS[sub].split("usage:", 1)[1].split("\n\n", 1)[0].splitlines()
+    first = []
+    for line in lines:
+        if line.lstrip().startswith("|"):
+            break
+        first.append(line)
+    return " ".join(" ".join(first).split())
+
+
+def sub_reason(sub, code, reason):
+    if code == "ArgumentsBad" and "(usage:" not in str(reason):
+        return "%s (usage: %s)" % (reason, usage(sub))
+    return str(reason)
+
 
 
 class Fail(Exception):
@@ -356,30 +415,43 @@ def down(caller):
 def main(argv):
     try:
         top, rest = aos_flags.parse(argv, {}, {"--dry-run": "dry"})
-        if not rest:
-            raise Fail("ArgumentsBad", "missing subcommand (usage: %s)" % USAGE)
-        if rest[0] not in ("up", "down"):
-            raise Fail("CommandUnknown", "unknown subcommand %s (usage: %s)" % (rest[0], USAGE))
-        sub_opts, rest2 = aos_flags.parse(rest[1:], {"--to": "to", "--name": "name"}, {}, {"--take": "take"})
     except aos_flags.Error as e:
-        raise Fail(e.code, "%s (usage: %s)" % (e, USAGE))
-    dry = top.get("dry", False)
-    opts = {"to": sub_opts.get("to"), "name": sub_opts.get("name"), "take": sub_opts.get("take", [])}
-    rest = [rest[0]] + rest2
-    if len(rest) != 2:
-        raise Fail("ArgumentsBad", "%s (usage: %s)" % ("missing CALLER" if len(rest) < 2 else "only one CALLER allowed, extra: %s" % rest[2], USAGE))
-    if rest[0] == "up":
-        if opts["to"] not in ("file", "dir"):
-            raise Fail("ArgumentsBad", "up needs --to file or --to dir")
-        plan = up(rest[1], opts["to"], opts["name"], opts["take"])
-    else:
-        if opts["to"] or opts["name"] or opts["take"]:
-            raise Fail("ArgumentsBad", "down takes no --to / --name / --take")
-        plan = down(rest[1])
-    if dry:
-        plan.show(sys.stdout)
-    else:
-        plan.apply()
+        reason = str(e) if e.code == "FlagUnknown" else "%s (see %s --help)" % (e, PROG)
+        raise Fail(e.code, reason)
+    choices = "%s; see %s --help" % (", ".join(HELPS), PROG)
+    if not rest:
+        raise Fail("ArgumentsBad", "missing subcommand (%s)" % choices)
+    sub = rest[0]
+    if sub not in HELPS:
+        raise Fail("CommandUnknown", "unknown subcommand %s (%s)" % (sub, choices))
+    try:
+        sub_opts, args = aos_flags.parse(
+            rest[1:], {"--to": "to", "--name": "name"}, {}, {"--take": "take"},
+            help=HELPS[sub], short=("-n",) if sub == "up" else ())
+    except aos_flags.Error as e:
+        reason = ("%s (see %s %s --help)" % (e, PROG, sub) if e.code == "FlagUnknown"
+                  else sub_reason(sub, e.code, e))
+        raise Fail(e.code, reason)
+    try:
+        dry = top.get("dry", False)
+        opts = {"to": sub_opts.get("to"), "name": sub_opts.get("name"), "take": sub_opts.get("take", [])}
+        if len(args) != 1:
+            raise Fail("ArgumentsBad", "missing CALLER" if not args else
+                       "only one CALLER allowed, extra: %s" % args[1])
+        if sub == "up":
+            if opts["to"] not in ("file", "dir"):
+                raise Fail("ArgumentsBad", "up needs --to file or --to dir")
+            plan = up(args[0], opts["to"], opts["name"], opts["take"])
+        else:
+            if opts["to"] or opts["name"] or opts["take"]:
+                raise Fail("ArgumentsBad", "down takes no --to / --name / --take")
+            plan = down(args[0])
+        if dry:
+            plan.show(sys.stdout)
+        else:
+            plan.apply()
+    except Fail as e:
+        raise Fail(e.code, sub_reason(sub, e.code, e))
 
 
 def run():

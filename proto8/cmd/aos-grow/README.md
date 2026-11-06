@@ -7,9 +7,11 @@
 嘗試性質（使用者 10-24「我隨便說，你隨便做，反正只是嘗試」）。Python、只用標準庫，不進 impls。
 
 ```
-aos-grow [--dry-run] up --to file|dir [--name NAME] [--take PATH]... CALLER
+aos-grow [--dry-run] up --to file|dir [-n NAME] [--take PATH]... CALLER
 aos-grow [--dry-run] down CALLER
 ```
+
+`-n` 是 `--name` 的短名、`-h` 是 `--help`（共用表 [human-cli H4](../../thinking/2026-11/06/human-cli/03-慣例草案.md#h4-旗標命名)）。`aos-grow --help` 印頂層一份、`aos-grow up --help`／`aos-grow down --help` 各印那個子命令的一份（英文）。
 
 11-04 起旗標寫在 `設定檔#/指標` 前面（命令列形狀照 [CONVENTION P-44](../../docs/CONVENTION/02-題目stack停錯腦/07-P-44.md)；原本 `up 設定檔#/指標 --to …` 旗標在後，現在 `--to` 放後面＝`ArgumentsBad`）。
 
@@ -26,6 +28,6 @@ NAME 沒給＝那格的名字（`…/states/think/exec` → `think`）。那格�
 
 **怎麼做到「跑起來一樣」**：只改位置相關的值，讓它們指回原來的地方——單子的 `cwd`（沒寫＝入口所在的資料夾，搬進資料夾就補 `".."`）、相對的 `$ref` 檔名（`"#/…"` 補上原檔名）、`{"$env": "AOS_CD", "$path": …}`。單子裡用了 `$env AOS_CF`／`AOS_CO` 就不搬（搬了值會變）。`--dry-run` 印出新檔全文、改的檔 diff、搬／刪哪些，什麼都不寫。真的做時先寫新檔，最後才改呼叫方（先寫 `.名字` 暫存檔再改名，N-05）。
 
-**錯**：stderr 一行 `aos-grow: error: 代號 原因`、退 1、什麼都不寫。代號：`ArgumentsBad`、`FlagUnknown`、`CfgMissing`（檔或指標指不到）、`CfgBad`（JSON 壞）、`TargetBad`（那格不是能搬的東西、或搬了會改行為）、`NameBad`（名字被佔、名字不合、縮回時別處還在叫）、`WriteFailed`。
+**錯**：stderr 一行 `aos-grow: error: 代號 原因`、退 1、什麼都不寫。代號：`ArgumentsBad`、`FlagUnknown`、`CfgMissing`（檔或指標指不到）、`CfgBad`（JSON 壞）、`TargetBad`（那格不是能搬的東西、或搬了會改行為）、`NameBad`（名字被佔、名字不合、縮回時別處還在叫）、`WriteFailed`，加 `CommandUnknown`。原因後面的括號只指那一層的路（human-cli [H10](../../thinking/2026-11/06/human-cli/03-慣例草案-續.md#h10-錯誤訊息與結束碼接三扇門)）：不給子命令＝`ArgumentsBad missing subcommand (up, down; see aos-grow --help)`、不認得的子命令＝`CommandUnknown` 同一個括號；子命令層缺 CALLER、多給、`--to` 不對＝括號是那個子命令的 usage（例 `missing CALLER (usage: aos-grow [--dry-run] down CALLER)`）；子命令前不認得的旗標＝`FlagUnknown` 不附括號；子命令後的＝`(see aos-grow 子命令 --help)`。
 
 **不保證一樣的地方**（細節在 thinking）：錯誤訊息的「誰」會從 `loop.json#/exec` 變成 `NAME`；程式自己讀 `AOS_CF`／`AOS_CD`／`AOS_CO` 環境變數的話值會變（工具看不到程式碼裡面）；假設呼叫方跑字串目標時 cwd＝設定檔的資料夾（慣例下成立；daemon.json 的子項沒試過）；呼叫方那份 JSON 的排版會換成工具的排版（內容不變）。
