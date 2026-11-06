@@ -33,7 +33,7 @@
 | 工具 | 一句話 | 參數 | 回什麼 |
 |---|---|---|---|
 | [check_inbox](../aos/check_inbox/) | 看自己信箱還沒處理的（只看不拿） | （無） | 一封一行摘要 |
-| [judge](../aos/judge) | 判官（11-05；不是腦的工具）：收 `$AOS_STACK/requests/` 的 `procs_*` 信，照 `judge.json` 判掛不掛；掛＝轉寄進 `$AOS_DAEMON` 的 ctl 信箱、不掛＝回 `applied: false`。daemon 的身體（[kernel/daemon-judge](../../kernel/daemon-judge)）或 daemon 底下的 0 號 proc（[kernel/procs-kernel](../../kernel/procs-kernel)）每次跑一輪；說明 [kernel/docs/02](../../kernel/docs/02-kernel-modes.md) | 命令列一個參數：`judge.json` 的絕對路徑；`judge.json` 的 `allowed`（名字陣列／null）、`max_running`（非負整數／null） | 轉寄（照帶原信 `reply_to`）或回信、退 0；不掛的代號 `NameUnknown`、`SlotMissing`、`BodyBad`、`ForwardFailed`（`msg` 英文，同 stderr 那行提醒 `judge: warning: letter <名> refused: 代號 原因`；aos-agent ctl 收到就報 `AddRejected`／`CtlRejected`，11-05 edge-agent 題 2） |
+| [judge](../aos/judge) | 判官（11-05；不是腦的工具）：收 `$AOS_STACK/requests/` 的 `procs_*` 信，照 `judge.json` 判掛不掛；掛＝轉寄進 `$AOS_DAEMON` 的 ctl 信箱、不掛＝回 `applied: false`；`{"ping": true}` 不判、原樣轉寄（11-06 [no-pid](../../thinking/2026-11/05/no-pid/README.md) P3）。daemon 的身體（[kernel/daemon-judge](../../kernel/daemon-judge)）或 daemon 底下的 0 號 proc（[kernel/procs-kernel](../../kernel/procs-kernel)）每次跑一輪；說明 [kernel/docs/02](../../kernel/docs/02-kernel-modes.md) | 命令列一個參數：`judge.json` 的絕對路徑；`judge.json` 的 `allowed`（名字陣列／null）、`max_running`（非負整數／null） | 轉寄（照帶原信 `reply_to`）或回信、退 0；不掛的代號 `NameUnknown`、`SlotMissing`、`BodyBad`、`ForwardFailed`（`msg` 英文，同 stderr 那行提醒 `judge: warning: letter <名> refused: 代號 原因`；aos-agent ctl 收到就報 `AddRejected`／`CtlRejected`，11-05 edge-agent 題 2） |
 
 它的「模型的錯」也照規則 3 退 1；回不回給腦由用它們的 agent 的 act 決定（11-04 前的例子 agent-meg、talk 的 member 都回給腦、不停，同 agent-pip；隨 demo 刪了）。
 

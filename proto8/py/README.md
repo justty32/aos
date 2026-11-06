@@ -7,5 +7,6 @@
 | 模組 | 是什麼 | 誰 import 它 |
 |---|---|---|
 | `aos_flags.py` | 命令列旗標解析 `parse` 與三扇門小函式（`die`、`warn`、`run`…），說明在 [cmd/docs/02](../cmd/docs/02-aos-tick與已定值.md) | cmd 的每支 Python 指令、templates/agent-fsm 的格、kernel/llm-kernel 的 fake_slow |
-| `aos_ws.py` | 放一則訊息、等答案、讀 stack 的共用小零件 | aos-agent、aos-eca-turn |
+| `aos_ws.py` | 放一則訊息、等答案、讀 stack 的共用小零件；叫 aos-post 的包裝只有這一份（`run_post`） | aos-agent、aos-eca-turn、daemon_ctl |
+| `daemon_ctl.py` | 找 daemon、讀 daemon 表、寄信等回信的共用模組（aos-daemon-ctl 的本體；除了 daemon 自己沒人碰 pid／`/proc`，11-06 [no-pid](../thinking/2026-11/05/no-pid/README.md) P3），說明在 [cmd/docs/03](../cmd/docs/03-aos-daemon-ctl.md) | aos-daemon-ctl、aos-agent、aos-eca-screen |
 | `cli_session.py` | 把 claude／codex 的一段對話接成工具（非互動續對話、tmux 畫面、接 aos-mcp） | aos-eca-turn、aos-eca-screen、lib/agent 的 claude、codex |

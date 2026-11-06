@@ -4,7 +4,7 @@
     aos-eca-screen --eca ECA_DIR open [--detach]   接進畫面（沒開就開、有對話就 --resume）；--detach＝只開不接
     aos-eca-screen --eca ECA_DIR close             收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）
     aos-eca-screen --eca ECA_DIR watch             跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走；
-                                                   那隻的 loop 不在了（loop.json 宣告的 state 窗：phase done／stopped 或 pid 不在）也走
+                                                   daemon 表上那隻不再 running 或列已移除也走；找不到 daemon／讀不到表照等
 
 命令列（11-05 stdio-unify R6；11-05 隊長代定 D6 把 ECA_DIR 改成子命令前的旗標）：`aos-eca-screen [--eca ECA_DIR] 子命令 [--detach]`，
 aos_flags.parse（P-44：只有長旗標；子命令前不認得的旗標＝FlagUnknown、子命令不認得＝CommandUnknown、沒給 --eca 或多給位置參數＝ArgumentsBad）。
@@ -26,6 +26,7 @@ ROOT = os.path.normpath(os.path.join(HERE, "..", "..", ".."))                   
 sys.dont_write_bytecode = True
 sys.path.insert(0, os.path.join(ROOT, "py"))
 import aos_flags, cli_session  # noqa: E402
+import daemon_ctl as dc  # noqa: E402
 
 PROG = "aos-eca-screen"
 USAGE = "aos-eca-screen --eca ECA_DIR open [--detach] | close | watch"
@@ -35,7 +36,8 @@ aos_flags.HELP = """aos-eca-screen - the screen of an eca (the body of the aos-a
                                                    --detach = only open it, do not attach
     aos-eca-screen --eca ECA_DIR close             close the screen; the conversation is kept (aos-eca-turn still answers with --resume)
     aos-eca-screen --eca ECA_DIR watch             follow what the non-interactive run is doing (live.jsonl in the cell) until one
-                                                   answer ends, or until that agent's loop is gone; Ctrl-C leaves (exit 0)
+                                                   answer ends, or its daemon table row is no longer running or has been removed; Ctrl-C leaves (exit 0)
+                                                   keep waiting if the daemon cannot be found or its table cannot be read
 
 --eca comes before the subcommand because aos-exec appends the caller's arguments at the end of the entry's argv:
 the screen entry ["aos-eca-screen", "--eca", ".."] plus "open --detach" runs aos-eca-screen --eca .. open --detach.
@@ -114,27 +116,25 @@ def describe(ev):
 
 
 def gone(eca, stack):
-    """那隻的 loop 不在了＝回一句英文說明；還在（或看不出來）＝None。11-05 edge-agent 別線：答到一半被 ctl sleep（或 rm），
-    live.jsonl 永遠等不到「一次回答結束」。只看定義的 loop.json 自己宣告的 state 窗（同一份定義，不問 daemon）：
-    沒宣告、還沒寫、讀不懂＝看不出來、照等；phase done／stopped、或 pid 不在＝不在了。"""
+    """只問 daemon 表上這隻 proc 的狀態；查不到 daemon＝看不出來、照等。"""
     try:
-        with open(os.path.join(eca, "loop.json"), encoding="utf-8") as f:
-            name = json.load(f).get("state")
-        with open(os.path.join(stack, name), encoding="utf-8") as f:
-            st = json.load(f)
-        phase, pid = st.get("phase"), st.get("pid")
-    except (OSError, ValueError, TypeError, AttributeError):
+        daemon = dc.find_daemon()
+        rows = dc.rows(daemon)
+    except dc.Fail:
         return None
-    if phase in ("done", "stopped"):
-        return "its loop has ended (state.json phase %s)" % phase
-    if isinstance(pid, int) and pid > 0:
-        try:
-            os.kill(pid, 0)
-        except ProcessLookupError:
-            return "its loop is gone (state.json pid %d is not running: slept, stopped or removed?)" % pid
-        except PermissionError:
-            pass
-    return None
+    target = os.path.realpath(stack)
+    for row in rows.values():
+        if not isinstance(row, dict):
+            continue
+        row_stack = row.get("stack")
+        if not isinstance(row_stack, str) or not row_stack:
+            continue
+        if os.path.realpath(row_stack) == target:
+            phase = row.get("phase")
+            if phase != "running":
+                return "its proc is %s on the daemon table" % phase
+            return None
+    return "its proc is no longer on the daemon table (slept, stopped or removed?)"
 
 
 def cmd_watch(eca, opts):

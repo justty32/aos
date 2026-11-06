@@ -5,6 +5,7 @@
 #   兩種都靠 AOS_DAEMON 找 daemon（11-05 起 daemon 的身體也拿得到）。設計：proto8/thinking/2026-11/05/kernel-daemon/02-兩種模式.md § 1、§ 2；說明 proto8/kernel/docs/02-kernel-modes.md。
 # 一輪：aos-post init＋take-all $AOS_STACK/requests（對外收件箱，沒有就建）→ requests/cur/ 照處理順序逐封（含上次認領了沒收完的）：
 #   body 有 procs_added（物件）才判，其他 procs_*、不認的 key 原樣轉（C-48）：
+#   {"ping": true}（問 daemon 在不在，11-06 no-pid P3）不判、原樣轉寄，daemon 直接回給原寄件人；判官不在＝沒人轉＝呼叫者逾時。
 #   - judge.json 的 allowed（名字的陣列；null 或沒寫＝不限）：procs_added 每個名字都要在裡面，不然 NameUnknown；
 #   - max_running（非負整數；null 或沒寫＝不限）：$AOS_DAEMON/procs_state.json 裡 phase running 的列＋這一輪已放行的新名字＋這封的新名字（表上已 running 的不算新）超過就 SlotMissing；
 #     procs_started、procs_woken（start／wake：讓 stopped／sleeping 的回來跑）的名字也算新名字、照樣判 max_running（allowed 不再判：add 時判過了）
@@ -29,6 +30,8 @@ usage: judge JUDGE.json   (run it with aos-exec as a daemon body or a loop proc;
 One round of the judge: take the procs_* letters in $AOS_STACK/requests/, decide each by
 JUDGE.json ({"allowed": [names] | null, "max_running": N | null}); forward the admitted ones
 to the daemon's ctl mailbox, answer the others {"applied": false, "error": {code, msg}}.
+A {"ping": true} body asks whether the daemon is there: forward it without judging; the daemon replies directly to the original sender.
+If the judge is absent, nobody forwards it and the caller times out.
 Each refused letter: one line "judge: warning: letter NAME refused: CODE reason" on stderr.
 Exit 0 after a round (also with no letters). On error: "judge: error: CODE reason" on stderr, exit 1.
 """

@@ -42,21 +42,20 @@
 # agent 資料夾（attach 列 tools/）由 attach 傳進來——這支不再假設自己放在哪隻 agent 底下。
 import datetime, fcntl, glob, json, os, shlex, shutil, signal, subprocess, sys, threading, time, uuid
 
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+import aos_flags  # noqa: E402
+
 TMUX_SESSION = "cli"
 PROG, ECHO = "cli_session", False                    # 錯誤行開頭、要不要也印到 stdout（call_main 改成工具名、True）
 
 
 def die(code, reason):
-    line = "%s: error: %s %s" % (PROG, code, str(reason).replace("\n", " "))
-    print(line, file=sys.stderr)
-    if ECHO:
-        print(line)                                  # 當工具叫時 stdout 也印：stdout 是給腦看的結果
-    sys.exit(1)
+    aos_flags.die(PROG, code, reason, also_stdout=ECHO)
 
 
 def warn(sentence):
     """提醒行（stdio-unify R1）：stderr 一句、不帶代號。"""
-    print("%s: warning: %s" % (PROG, sentence), file=sys.stderr)
+    aos_flags.warn(PROG, sentence)
 
 
 def now():

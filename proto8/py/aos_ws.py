@@ -64,15 +64,21 @@ def read(path, default=None):
         return default
 
 
-def post(args, stdin_text=""):
-    """叫 aos-post；回 stdout。aos-post 的 stderr 不攔、原樣透出（stdio-unify R10），退非 0＝Error("PostFailed")，原因不帶它的話。"""
+def run_post(args, stdin_text=""):
+    """叫 aos-post；回 (結束碼, stdout)，stderr 原樣透出；起不來＝PostFailed。"""
     try:
         r = subprocess.run(["aos-post"] + args, input=stdin_text, stdout=subprocess.PIPE, text=True)
     except OSError as e:
         raise Error("PostFailed", "aos-post failed to start (proto8/impls/aos-post/bin must be on PATH): %s" % e)
-    if r.returncode != 0:
-        raise Error("PostFailed", "aos-post %s exited %d" % (args[0], r.returncode))
-    return r.stdout.strip()
+    return r.returncode, r.stdout
+
+
+def post(args, stdin_text=""):
+    """叫 aos-post；回去掉頭尾空白的 stdout；退非 0＝PostFailed，原因不帶下層的話。"""
+    code, out = run_post(args, stdin_text)
+    if code != 0:
+        raise Error("PostFailed", "aos-post %s exited %d" % (args[0], code))
+    return out.strip()
 
 
 def put(stack, text):

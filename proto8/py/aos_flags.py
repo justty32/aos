@@ -7,7 +7,7 @@ Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 10-23 刪了，只有它�
     aos_flags.HELP = HELP                                # 英文說明全文（11-05 R3）；設了 parse 才認 --help
     opts, rest = aos_flags.parse(argv, {"--ws": "ws"})   # 錯丟 aos_flags.Error(原因)；e.code＝錯誤代號
     aos_flags.die(PROG, "ArgumentsBad", "missing FILE (usage: ...)")   # stderr 一行 `PROG: error: 代號 原因`、退 1
-    aos_flags.warn(PROG, "daemon is not running")                       # stderr 一行 `PROG: warning: 句子`，不退出
+    aos_flags.warn(PROG, "the letter is still in the mailbox")           # stderr 一行 `PROG: warning: 句子`，不退出
     aos_flags.run(main)                                  # 跑 main；Ctrl-C＝不吐 traceback、退 130
 
 規則（10-21 ideas § 3）：`[旗標...] XXX [args...]`——第一個不是旗標的參數（不以 - 開頭，或就是 -）起全部是 rest
@@ -19,7 +19,7 @@ Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 10-23 刪了，只有它�
 （或 parse 的 help 參數）印到 stdout、退 0；兩個都沒設＝跟別的不認得的旗標一樣 FlagUnknown。`--help=x`＝ArgumentsBad。
 錯誤行與提醒行（R1，使用者「可以，固定格式："error:", "warning:"後面接你那個」）：stderr 只有兩種行——
 `程式: error: 代號 原因`（有它就不准退 0）、`程式: warning: 句子`（不帶代號，可以退 0）。usage 放原因後面：`原因 (usage: …)`（R5）。
-原因裡的換行換成空白（一行就是一行）。split_line 是反過來拆這一行（只給明文例外用：aos-agent 讀 aos-daemon-ctl 的錯，C-52）。
+原因裡的換行換成空白（一行就是一行）。
 
 錯誤代號（代號照 10-23 命名統合（thinking/2026-10/23/naming）；使用者 10-22「錯誤訊息多代號也遵循」）：Error 帶 code——
 parse：不認得的旗標 FlagUnknown、其他（缺值、開關帶值）ArgumentsBad。"""
@@ -55,15 +55,6 @@ def die(prog, code, reason, also_stdout=False):
 def warn(prog, sentence):
     """提醒行 `程式: warning: 句子` 到 stderr（不退出）。"""
     print("%s: warning: %s" % (prog, _one(sentence)), file=sys.stderr, flush=True)
-
-
-def split_line(line):
-    """`程式: error: 代號 原因` → (程式, 代號, 原因)；不是這個形狀＝None。"""
-    prog, sep, rest = line.partition(": error: ")
-    if not sep or not prog or " " in prog:
-        return None
-    code, _, why = rest.partition(" ")
-    return (prog, code, why) if code else None
 
 
 def run(main):
