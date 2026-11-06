@@ -2,7 +2,6 @@
 PROG = "aos-daemon-ctl"
 
 from .base import (
-    USAGE,
     STATE,
     PATHS,
     NAMES,

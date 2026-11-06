@@ -18,7 +18,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`__init__.py`](../../../../../proto8/py/daemon_ctl/__init__.py) | daemon_ctl：daemon 的找址、名單、寄信回信與子 loop 控制共用介面（套件入口，對外名字全在這裡）。 |
-| [`base.py`](../../../../../proto8/py/daemon_ctl/base.py) | daemon_ctl 基礎：共用錯誤類別、用法與 daemon 檔名常數。 |
+| [`base.py`](../../../../../proto8/py/daemon_ctl/base.py) | daemon_ctl 基礎：共用錯誤類別與 daemon 檔名常數。 |
 | [`ctl.py`](../../../../../proto8/py/daemon_ctl/ctl.py) | daemon_ctl 控制：檢查子 loop 階段、寫入控制並等待套用。 |
 | [`entry.py`](../../../../../proto8/py/daemon_ctl/entry.py) | daemon_ctl 入口：判定目標類型、讀取 loop 設定並組成掛子信。 |
 | [`post.py`](../../../../../proto8/py/daemon_ctl/post.py) | daemon_ctl 信件：寄送、認領與清理回信並等待 daemon 回應。 |

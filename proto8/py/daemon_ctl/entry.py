@@ -2,7 +2,7 @@
 import json
 import os
 
-from .base import Fail, USAGE
+from .base import Fail
 
 
 def abs_target(t, base):
@@ -171,13 +171,13 @@ def add_letter(xxx, extra=(), name=None, ws=None, stack=None, def_dir=None, limi
         raise Fail("ArgumentsBad", "loop type (the entry of %s leads to loop config %s) takes no arguments; put them in that config's exec" % (path, found[1]))
     if ws is not None:
         if not ws:
-            raise Fail("ArgumentsBad", "--ws must not be empty (usage: %s)" % USAGE)
+            raise Fail("ArgumentsBad", "--ws must not be empty")
         ws = os.path.abspath(ws)   # 從呼叫當下的 cwd 算（daemon 會從它自己的 cwd 算，所以這裡先轉）
         if not os.path.isdir(ws):
             raise Fail("PathMissing", "--ws is not a folder: %s" % ws)
     if stack is not None:
         if not stack:
-            raise Fail("ArgumentsBad", "--stack must not be empty (usage: %s)" % USAGE)
+            raise Fail("ArgumentsBad", "--stack must not be empty")
         stack = os.path.abspath(stack)   # 同 --ws 從呼叫當下的 cwd 算；在不在不驗（daemon 起它時建）
     name = name or os.path.basename(path.rstrip("/"))
     if found:
