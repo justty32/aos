@@ -19,7 +19,7 @@ cat def/kernel.json
 #  "endpoints": {"smart-high": {"url": "http://localhost:4000/v1", "model": "claude-haiku-5-5", "key": {"$env": "LITELLM_KEY"},
 #                               "fixed": {"temperature": 0.2}, "slots": 4, "speed": "normal", "cost": "high", "summary": "..."},
 #                "fake": {"exec": "/絕對/proto8/lib/base/llm_fake", "speed": "fast", "cost": "free"}}}
-aos-exec --stack . def &                          # 起 llm 的 daemon（身體＝kernel）；信箱在 ~/llm_kernel/mailbox/
+aos-exec --stack . def &                          # 起 llm 的 daemon（身體＝kernel）；信箱在 ~/llm_kernel/requests/
 echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | AOS_LLM_KERNEL=~/llm_kernel aos-llm ask
 # {"role": "assistant", "content": "FAKE ANSWER to: hi"}
 aos-daemon-ctl --daemon ~/llm_kernel ls           # 正在飛的問腦：llm_<信件名稱> 一封一列

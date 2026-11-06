@@ -15,7 +15,7 @@ Phases:
 
 A row that disappeared: the proc finished (exit 0) or was removed (`rm`). Its stack is gone after `rm`; after `ask` this shows as `InstanceMissing`.
 
-`queue N`: how many letters wait in its inbox. `queue 0` with phase `running` means idle.
+`queue N`: how many letters wait in its queue. `queue 0` with phase `running` means idle.
 
 Reading a `reason`: it is the last error line of the thing that died, in the usual form `program: error: Code reason`. Example: `agent-fsm: error: LlmKernelMissing AOS_LLM_KERNEL is not set` means the agent could not reach the llm kernel; a human must set it up. See node `errors` for codes.
 

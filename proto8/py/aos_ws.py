@@ -4,7 +4,7 @@
 是 py/ 的共用模組，命令列用 realpath 找到這個資料夾再 import。
 11-03 aos-ai 刪了（使用者「一起刪」），只服務它的 loop_state、tail_jsonl 跟著拿掉。純標準庫（寄信叫 PATH 上的 aos-post）。
 10-30 改走 agent 對話協議（CONVENTION P-42；thinking 2026-10-30-agent-lifecycle 結論 A-7、A-8、第 4 步）：只碰 agent 的 stack——
-  ① queue＝<stack>/queue/（N-16 有順序的信箱；寄＝aos-post send --ordered，一封信的 body＝一則 OpenAI message）；
+  ① queue＝<stack>/queue/（當 queue 用的信箱：寄的都帶 --ordered（C-54 R14）；寄＝aos-post send --ordered，一封信的 body＝一則 OpenAI message）；
   ② history＝<stack>/history.jsonl（回答＝最新那則沒有 tool_calls 的 assistant，沒有 out/）；
   ③ ctl／state＝aos-loop 開在 <stack>/ctl.json、state.json 的窗（state 的 phase 看得出 paused）。
 舊協議（工作區的 new/ cur/ out/ done/，P-11：agent-bob／ann／dan、topdown 這些 fsm 範本；11-04 demo 刪了）這裡不再認。

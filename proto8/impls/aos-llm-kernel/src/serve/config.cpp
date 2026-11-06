@@ -27,7 +27,7 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
     }
     Cfg c;
     c.base = base;
-    c.mailbox = aos::join(stack, "mailbox");   // 11-05 固定（AOS_LLM_KERNEL＝kernel 的 stack，寄信的人從 stack 算信箱）
+    c.requests = aos::join(stack, "requests");   // 11-05 固定（AOS_LLM_KERNEL＝kernel 的 stack，寄信的人從 stack 算信箱）
     if (doc.contains("aging_ticks")) {
         const Json& aging = doc["aging_ticks"];
         if (!aos::is_count(aging) || aging.get<long long>() < 1) {

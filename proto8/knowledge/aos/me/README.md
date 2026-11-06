@@ -9,7 +9,7 @@ Your name: you do not know it from the inside. The command `aos-agent ctl who` l
 What is in your stack (`$AOS_STACK`):
 
 - `history.jsonl`: your conversation, one JSON message per line. Append only; never rewrite it.
-- `queue/`: your inbox. Humans and other agents drop letters here; you answer them in order.
+- `queue/`: your queue. Humans and other agents drop letters here; you answer them in order.
 - `tools.json`: your tool overlay (what you added to or removed from the definition's tools). Written by tools, not by hand.
 - `llm.json`: your brain overlay (for example which endpoint pack you use).
 - `tools/<name>/`: a scratch folder for each tool you call.

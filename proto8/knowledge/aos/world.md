@@ -11,7 +11,7 @@ Think of a small computer:
 | workspace (ws) | the disk you work on; shared with other agents when they are given the same ws | `$AOS_WS` |
 | definition | the program's source code; running it makes an instance (a stack under a daemon) | the folder an agent was started from |
 | kernel | the gatekeeper: decides if a proc may run; the daemon is the simplest one (it says yes to everything) | `$AOS_KERNEL` when a judge is in front of the daemon |
-| llm kernel | a separate daemon that answers brain requests sent as letters | `$AOS_LLM_KERNEL` (its stack; letters go to `$AOS_LLM_KERNEL/mailbox/`) |
+| llm kernel | a separate daemon that answers brain requests sent as letters | `$AOS_LLM_KERNEL` (its stack; letters go to `$AOS_LLM_KERNEL/requests/`) |
 | knowledge base | a read-only folder tree you look things up in with the `memory` tool | `$AOS_MEMORY` |
 
 Facts that follow from the model:

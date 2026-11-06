@@ -12,7 +12,7 @@
 //                endpoints（必填、非空物件：代號 → 一組 llm 設定＝一個能力包〔11-05 feat-proto，pack.hpp〕；一組裡 kernel 認 exec〔選填，這組改用別的
 //                  endpoint 函數，相對的同上〕、slots、budget、speed，拿掉後其他鍵〔url／model／key／fixed／cost／context／summary…〕整個原樣交給 endpoint 函數）、
 //                  endpoint（選填：預設代號，要在表裡）、timeout_ms（選填：問腦單子的上限，非負整數）；
-//                其他 key 忽略。信箱固定 $AOS_STACK/mailbox/（11-05 kernel-daemon 07 § 2：AOS_LLM_KERNEL＝kernel 的 stack）。
+//                其他 key 忽略。信箱固定 $AOS_STACK/requests/（11-05 kernel-daemon 07 § 2：AOS_LLM_KERNEL＝kernel 的 stack）。
 //              指示詞：slots、aging_ticks、budget、exec、endpoint、timeout_ms 整格先解（aos-directive 的 resolve_keys）；endpoints 只換一層
 //              （整張表可以 {"$ref": "endpoints.json#/"}），裡面每組到用的時候才解（解不開＝那封信回 DirectiveBad，kernel 照跑別封）。
 //              壞了 CfgMissing／CfgBad／DirectiveBad
@@ -59,7 +59,7 @@
 namespace aos::llm_kernel {
 
 struct Cfg {
-    std::string mailbox;   // $AOS_STACK/mailbox（11-05 固定）
+    std::string requests;   // $AOS_STACK/requests（11-05 固定）
     long long slots = 1;
     long long aging_ticks = 3;
     Budget budget;
@@ -83,7 +83,7 @@ extern const char* PROC_JSON;
 class Server {
 public:
     Server(const Cfg& cfg, const std::string& stack)
-        : cfg_(cfg), mb_{cfg.mailbox}, slots_(cfg.slots), budget_(cfg.budget), stack_(stack) {}
+        : cfg_(cfg), mb_{cfg.requests}, slots_(cfg.slots), budget_(cfg.budget), stack_(stack) {}
     ~Server() {
         if (lock_fd_ >= 0) {
             close(lock_fd_);

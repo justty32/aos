@@ -19,7 +19,7 @@ static const char* HELP = R"(usage: aos-llm-kernel [FLAGS] kernel.json
 
 One round of the LLM kernel (usually the body of an aos-daemon; needs $AOS_STACK):
 collect finished brain calls and reply to their letters, then pick the best waiting
-request letters from the mailbox and ask the daemon to run them on an endpoint pack.
+request letters from $AOS_STACK/requests/ and ask the daemon to run them on an endpoint pack.
 A bad letter is answered with an error reply; it is not the kernel's error.
 
 flags:

@@ -4,7 +4,7 @@ How a brain request travels, what an endpoint pack is, and how priority works.
 
 Your own thinking is already wired: your body sends your conversation as a letter to the llm kernel and waits for the reply. You do not call the brain as a tool. This node matters when you choose a brain for a child agent, or when a human asks you about brain settings.
 
-The letter: `{"endpoint": "<pack name>", "request": {"messages": [...], "tools": [...]}, "priority": {...}}`, sent with the command `aos-llm ask` (wait for the answer) or `aos-llm send` + `aos-llm recv` (come back later) into `$AOS_LLM_KERNEL/mailbox/`.
+The letter: `{"endpoint": "<pack name>", "request": {"messages": [...], "tools": [...]}, "priority": {...}}`, sent with the command `aos-llm ask` (wait for the answer) or `aos-llm send` + `aos-llm recv` (come back later) into `$AOS_LLM_KERNEL/requests/`.
 
 Endpoint packs: the llm kernel owns a table of named packs, for example `smart-high` (strong, slower, costly), `stupid-fast` (weak, fast, cheap), `fake` (no real model, for tests). A pack fixes the model and sampling settings such as temperature. You pick a pack by name only.
 

@@ -1,9 +1,16 @@
-mailbox 命名調查：名字帶 mailbox 的東西如果是有序的，要不要改叫 queue（L 隊，opus 隊長＋codex 隊員；只寫結論，沒改程式、沒改條文）。
+mailbox 命名調查：名字帶 mailbox 的東西如果是有序的，要不要改叫 queue（L 隊，opus 隊長＋codex 隊員）；四題 11-06 已裁、照裁定做完（見「使用者裁定」）。
 ← [2026-11-06](../README.md)｜[thinking](../../../README.md)
 
 ## 使用者原文（11-06）
 
 > 再派一個隊伍，去調查一下，關於現在的_mailbox命名，如果那個mailbox是有序的話，是否應該都改名為_queue？
+
+## 使用者裁定（11-06，選項框）
+
+1. 命名規則草稿：「寫進 C-54 (Recommended)」→ 已寫成 [C-54 R14](../../../../docs/CONCEPTS/01-設計理念/C-54-命名方法/03-R14.md)。
+2. `queue.json` 算不算一詞兩義：「不算、檔頭寫明 (Recommended)」→ llm kernel 的 `queue.hpp` 註解與 docs/01 各加一句「排法＝優先序」；判官的還沒實作，在 [os-impl 05](../os-impl/05-寄信者自設逾時.md) 窗那列加註「實作時寫明先來先掛」。
+3. 板子比喻「信箱＝mailbox FIFO」：「加註 (Recommended)」→ [名詞表板子比喻](../../../../docs/CONCEPTS/附錄1-續-板子比喻.md)加 11-06 註，原句全留。
+4. 兩個 kernel 的收件箱名字不一：「現在統一 requests/」（沒選推薦）→ llm kernel 的 `$AOS_STACK/mailbox/` 改名 `$AOS_STACK/requests/`、`ask` 的回信信箱跟著是 `requests/reply/`；錯誤代號 `MailboxMissing`、`MailboxBad` 與 aos-sandbox 的 `--mailbox` 旗標照 R14 第 1 點是機制名、不改；N-16、N-42、N-63、P-23 加註，舊名對照加一列；舊名不認、不寫遷移。實作結果見 [05](05-requests改名結果.md)。
 
 ## 一句話結論
 
@@ -16,7 +23,8 @@ mailbox 命名調查：名字帶 mailbox 的東西如果是有序的，要不要
 | [01-盤點](01-盤點.md) | 盤點說明與統計；資料在 [01-盤點.csv](01-盤點.csv)（228 列）、[01-成本.csv](01-成本.csv)（31 列） |
 | [02-有序是什麼](02-有序是什麼.md) | 「有序」實際保證了什麼（FIFO＋兩級優先，不是優先序、不擋多讀者），各箱實際怎麼用 |
 | [03-建議表](03-建議表.md) | 判準、現名 → 推薦 → 理由（17 列）、影響範圍與工時 |
-| [04-規則草稿](04-規則草稿.md) | 什麼時候叫 mailbox、什麼時候叫 queue（暫稱 C-54 R14）＋跟 N-14、N-16、N-66、C-54 對不對得上 |
+| [04-規則草稿](04-規則草稿.md) | 什麼時候叫 mailbox、什麼時候叫 queue（11-06 已寫進 C-54 R14）＋跟 N-14、N-16、N-66、C-54 對不對得上 |
+| [05-requests改名結果](05-requests改名結果.md) | 裁定 4 的實作：改了哪些、哪些照 R14 不改、驗收 |
 
 ## 方向題（推薦放第一）
 

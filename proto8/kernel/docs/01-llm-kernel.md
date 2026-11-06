@@ -4,13 +4,13 @@
 
 使用者 11-04 晚：「llm呼叫這塊，我希望是把請求丟到llm kernel(一個loop)，處理好後收回信」「也可以是一個daemon，實際endpoint呼叫就是aos exec」「包起來的」「我是希望走2」「各種llm設定也可以包裝，這樣寄信的時候只要寫簡單的代號就可以」。11-05：「問腦，他本身也可以包裝成一個aos函數，掛成proc去跑。我也建議這樣」「cd ~/llm_kernel && aos-exec --stack . def，把llm的daemon+kernel叫起來」。11-05 午：「把endpoint打包成smart-high, stupid-fast, ...這類，並且附上各種屬性(各種temperature也固定)」。設計：[thinking 11-04 think-as-function](../../thinking/2026-11/04/think-as-function/README.md)、[11-05 kernel-daemon 03、07](../../thinking/2026-11/05/kernel-daemon/07-llm-daemon佈局.md)、[feat-proto 02 能力包](../../thinking/2026-11/05/feat-proto/02-endpoint-packs.md)。
 
-**問腦＝寄一封請求信進 `$AOS_LLM_KERNEL/mailbox/`、之後收回信**。這個資料夾是一台 **llm daemon** 的定義：daemon 的身體就是 [aos-llm-kernel](../../impls/aos-llm-kernel/README.md)，每 300 ms 拍一次；每封請求，kernel 請這台 daemon 掛成一個問腦 proc（`llm_<信件名稱>`），跑完收結果寄回信。呼叫端只看到信箱＋[`aos-llm`](../../impls/aos-llm/README.md)（`send`／`recv`／`ask`／`regret`／`ls`），裡面怎麼跑不用知道。
+**問腦＝寄一封請求信進 `$AOS_LLM_KERNEL/requests/`、之後收回信**。這個資料夾是一台 **llm daemon** 的定義：daemon 的身體就是 [aos-llm-kernel](../../impls/aos-llm-kernel/README.md)，每 300 ms 拍一次；每封請求，kernel 請這台 daemon 掛成一個問腦 proc（`llm_<信件名稱>`），跑完收結果寄回信。呼叫端只看到信箱＋[`aos-llm`](../../impls/aos-llm/README.md)（`send`／`recv`／`ask`／`regret`／`ls`），裡面怎麼跑不用知道。
 像一台專門打電話的總機：各部門（agent daemon）把要問的事丟進總機的收件匣，總機自己排隊、撥號、把答案送回各部門；整棟樓的電話費（`slots`、`budget`）都記在總機這裡。
 
 ```
 llm-kernel/
-  _entry       ["aos-daemon", "daemon.json"]
-  daemon.json  {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300}（身體＝kernel；procs 不寫，表上只會有問腦的列）
+  _entry       ["aos-daemon", "--enable-logs", "daemon.json"]
+  daemon.json  {"tick": true, "exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300}（身體＝kernel；procs 不寫，表上另有普通時鐘 proc `_tick`）
   kernel.json  slots 2、timeout_ms 120000、exec＝預設 endpoint 函數 ../../lib/base/llm_http、endpoint＝預設代號 fake、
                budget＝只有一格寄件人額度的例子（/tmp/aos-demo-sender 每天 1 次，03 件 5 演；別的寄件人不限）、
                endpoints＝能力包表（下表）
@@ -35,7 +35,7 @@ mkdir ~/llm_kernel && cd ~/llm_kernel
 cp -r <repo>/proto8/kernel/llm-kernel def   # kernel.json 裡 ../../lib 開頭的 exec 改成絕對路徑（<repo>/proto8/lib/base/llm_http、llm_fake）：
 sed -i 's#"\.\./\.\./lib/#"<repo>/proto8/lib/#g' def/kernel.json   # 沒改＝問腦回 aos-llm: error: EndpointFailed … EntryMissing entry not found: …/lib/base/llm_fake
                                             # 格（fake_slow 等）找 aos_flags.py：先 ../../../py、再 PATH 上 aos-tools 的真位置（11-05 晚）
-aos-exec --stack . def                      # 起 llm daemon；信箱在 ~/llm_kernel/mailbox/，Ctrl-C 收工
+aos-exec --stack . def                      # 起 llm daemon；信箱在 ~/llm_kernel/requests/，Ctrl-C 收工
 # 另一個殼：
 export AOS_LLM_KERNEL=~/llm_kernel
 echo '{"request": {"messages": [{"role": "user", "content": "hi"}]}}' | aos-llm ask
@@ -55,3 +55,5 @@ aos-daemon-ctl --daemon ~/llm_kernel ls     # 正在飛的問腦，一封一列 
 - **額度**：kernel 總的 `budget`、每包的 `budget`、每個寄件人的 `budget.senders`（寄件人＝信封 `sender`，agent 就是它的工作區；不驗身分）；用量帳在 `$AOS_STACK/used.json`（`packs`、`senders` 各一格；`senders` 的 key 是相對 kernel stack 的路徑，整包搬家相對位置相同就沿用同一格帳）。範本的 `senders` 只列了 `/tmp/aos-demo-sender`，換成你 agent 的工作區就限它。
 - **起 llm daemon 的殼別設 `AOS_KERNEL`**：問腦會掛到別台（[已知限制](../../impls/aos-llm-kernel/docs/04-已知限制.md)）。
 - agent-fsm 問腦一定經這裡（沒設 `AOS_LLM_KERNEL`＝`LlmKernelMissing`），要先起這個。
+
+範本出廠帶時鐘與 stdout log；正式使用可在自己的副本拿掉 `_entry` 的 `--enable-logs`，或移除 `daemon.json` 的 `tick`。時鐘的路徑、間隔、繼承與 pause 手把見 [aos-daemon docs/02](../../impls/aos-daemon/docs/02-看寫法決定怎麼起.md#自帶時鐘-tick選填)。

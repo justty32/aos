@@ -69,8 +69,8 @@ if [ -n "$MAILBOX" ]; then
 	echo "#    default ACLs on the boxes: whoever creates a letter, $ME and group $RUNNER can read and write it, regardless of umask"
 	# shellcheck disable=SC2086
 	run setfacl -m "d:u:$ME:rwx,d:g:$RUNNER:rwx,d:o::---" $BOXES
-	echo "#    the mailbox must be <llm kernel stack>/mailbox (AOS_LLM_KERNEL = that stack, aos-llm sends into its mailbox/), somewhere $RUNNER can reach (e.g. $AREA/mailbox; not under a 700 home folder)"
-	echo "#    inside the sandbox it is visible only if bound: list the mailbox in rw as {\"\$env\": \"AOS_LLM_KERNEL\", \"\$path\": \"/mailbox\"} and AOS_LLM_KERNEL in env (aos-sandbox has no separate switch)"
+	echo "#    the mailbox must be <llm kernel stack>/requests (AOS_LLM_KERNEL = that stack, aos-llm sends into its requests/), somewhere $RUNNER can reach (e.g. $AREA/requests; not under a 700 home folder)"
+	echo "#    inside the sandbox it is visible only if bound: list the mailbox in rw as {\"\$env\": \"AOS_LLM_KERNEL\", \"\$path\": \"/requests\"} and AOS_LLM_KERNEL in env (aos-sandbox has no separate switch)"
 	echo "# to stop $RUNNER writing: chmod 700 $MAILBOX (or chgrp back to $ME's own group). A mailbox the kernel creates itself follows umask (usually 755 = others can read letters but not write),"
 	echo "#    and under a 700 home folder others cannot even see it."
 	echo "# check (no root needed; give aos-llm as an absolute path, sudo uses its own PATH), with the kernel running:"

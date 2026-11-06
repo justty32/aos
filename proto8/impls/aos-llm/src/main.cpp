@@ -104,7 +104,7 @@ usage: aos-llm regret LETTER
 flags:
   -h, --help   show this help
 
-Remove LETTER from $AOS_LLM_KERNEL/mailbox/new/; print nothing.
+Remove LETTER from $AOS_LLM_KERNEL/requests/new/; print nothing.
 
 exit codes: 0 withdrawn; 1 error.
 more: aos-llm/README.md

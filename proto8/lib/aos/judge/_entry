@@ -154,12 +154,12 @@ def verdict(body, allowed, cap, running, admitted):
     return None, fresh
 
 
-def forward(name, letter, inbox, ctl_box):
+def forward(name, letter, requests, ctl_box):
     """轉寄；回 None＝成功（或上一輪已轉過）、字串＝失敗原因。"""
     args = ["send"]
     reply_to = letter.get("reply_to")
     if reply_to:
-        args += ["--reply-to", os.path.normpath(os.path.join(inbox, reply_to))]   # 相對收件箱的根（11-05 起）；絕對的 join 照用
+        args += ["--reply-to", os.path.normpath(os.path.join(requests, reply_to))]   # 相對收件箱的根（11-05 起）；絕對的 join 照用
     if ORDERED.match(name):
         args += ["--ordered", ctl_box, name.split(".", 1)[1]]
     else:
@@ -170,13 +170,13 @@ def forward(name, letter, inbox, ctl_box):
     return None if code == 0 else "aos-post send to the daemon's ctl mailbox exited %d (reason in its stderr)" % code
 
 
-def refuse(inbox, name, code, msg):
+def refuse(requests, name, code, msg):
     warn("letter %s refused: %s %s" % (name, code, msg))
     reply = {"applied": False, "error": {"code": code, "msg": msg}}
-    rc, _ = post(["done", "--reply", inbox, name], json.dumps(reply, ensure_ascii=False))
+    rc, _ = post(["done", "--reply", requests, name], json.dumps(reply, ensure_ascii=False))
     if rc != 0:
         warn("letter %s: could not send the reply, letter dropped" % name)
-        post(["done", inbox, name])
+        post(["done", requests, name])
 
 
 def main():
@@ -189,35 +189,35 @@ def main():
     daemon = os.environ.get("AOS_DAEMON")
     if not daemon or not os.path.isdir(daemon):
         die("DaemonMissing", "AOS_DAEMON is not set or not a directory: %s" % (daemon or "(empty)"))
-    inbox = os.path.abspath(os.path.join(stack, "requests"))
-    if post(["init", inbox])[0] != 0:
-        die("PostFailed", "cannot create inbox %s" % inbox)
-    if post(["take-all", inbox])[0] not in (0, NOT_FOUND):
-        die("PostFailed", "cannot take letters from inbox %s" % inbox)
-    names = sorted((n for n in os.listdir(os.path.join(inbox, "cur")) if not n.startswith(".")), key=letter_key)
+    requests = os.path.abspath(os.path.join(stack, "requests"))
+    if post(["init", requests])[0] != 0:
+        die("PostFailed", "cannot create mailbox %s" % requests)
+    if post(["take-all", requests])[0] not in (0, NOT_FOUND):
+        die("PostFailed", "cannot take letters from mailbox %s" % requests)
+    names = sorted((n for n in os.listdir(os.path.join(requests, "cur")) if not n.startswith(".")), key=letter_key)
     if not names:
         return
     ctl_box, running = daemon_view(daemon)
     admitted = set()
     for name in names:
-        code, out = post(["see", inbox, name])
+        code, out = post(["see", requests, name])
         if code == 1:
             warn("letter %s is broken; dropped" % name)
-            post(["done", inbox, name])
+            post(["done", requests, name])
             continue
         if code != 0:
             die("PostFailed", "aos-post see %s exited %d" % (name, code))
         letter = json.loads(out)
         bad, detail = verdict(letter.get("body"), allowed, cap, running, admitted)
         if bad:
-            refuse(inbox, name, bad, detail)
+            refuse(requests, name, bad, detail)
             continue
-        failed = forward(name, letter, inbox, ctl_box)
+        failed = forward(name, letter, requests, ctl_box)
         if failed:
-            refuse(inbox, name, "ForwardFailed", failed)
+            refuse(requests, name, "ForwardFailed", failed)
             continue
         admitted.update(detail)
-        post(["done", inbox, name])
+        post(["done", requests, name])
 
 
 main()

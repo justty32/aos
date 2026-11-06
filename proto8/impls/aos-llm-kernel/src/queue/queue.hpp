@@ -2,6 +2,7 @@
 //
 //   read_queue / write_queue   queue.json＝counter_runs、seen_at_ms，及有時鐘才寫的 seen_at_ticks；兩份 seen 表都只留排隊信。
 //                              （沒有＝從 0 起；在但讀不懂＝QueueBad；寫：先寫暫存再改名，N-05）
+//                              queue.json 的排法是優先序（見 order），不是先來先處理（C-54 R14，11-06）。
 //   effective                  這封信現在算幾級：level＋waited_ticks÷aging_ticks（預設 3 格；不封頂）。
 //                              有時鐘數格，沒有時鐘或首次記錄沒 tick 則用牆鐘差÷AOS_TICK_INTERVAL；凍住時鐘不升級。
 //   order                      排隊：級數大的先 → deadline 近的先（有寫的排在沒寫的前面）→ 包的 speed（fast → normal → slow，11-05 feat-proto）

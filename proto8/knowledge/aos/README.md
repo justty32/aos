@@ -12,7 +12,7 @@ The eight words:
 - **daemon**: the machine. It runs agents and keeps a table of them (name, phase, reason). Yours is `$AOS_DAEMON`.
 - **proc**: one running thing under a daemon. A running agent is a proc.
 - **kernel**: the gatekeeper that decides whether a proc may run. The daemon itself is the simplest kernel; a "judge" can sit in front of it and refuse.
-- **letter / mailbox**: how procs talk. A letter is a JSON file dropped into a mailbox folder. Asking the brain is a letter to the llm kernel.
+- **letter / mailbox**: how procs talk. A letter is a folder with a letter.json, dropped into a mailbox folder. Asking the brain is a letter to the llm kernel.
 - **tool**: a folder you can call. You call it with a JSON object; it answers on stdout. On failure it prints one line `toolname: error: Code reason`.
 
 Five rules:

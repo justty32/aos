@@ -1,6 +1,6 @@
 // send.hpp：【send】寄信——找 kernel 的信箱、讀請求信的 body、寄進 new/、撤信。
 //
-//   kernel     信箱＝$AOS_LLM_KERNEL/mailbox/（N-63 ②；值＝llm kernel 的 stack，11-05）；沒設、不是資料夾＝LlmKernelMissing
+//   kernel     信箱＝$AOS_LLM_KERNEL/requests/（N-63 ②；值＝llm kernel 的 stack，11-05）；沒設、不是資料夾＝LlmKernelMissing
 //              相對的：有 $AOS_DAEMON＝相對它、沒有＝相對 cwd（11-05）
 //   read_body  stdin 讀整份 body（一份 JSON）：{"endpoint"?: 代號字串, "request": {"messages": [...], ...}, "priority"?}
 //              ——呼叫端自己組（thinking 11-04 think-as-function 03 § 1 think 寫的 request.json 就是這個形狀）；
