@@ -35,3 +35,7 @@ cat /proc/loadavg; grep MemAvailable /proc/meminfo; pgrep -fc '[c]odex exec|[c]l
 - `win-2026-11-06.csv`：Windows typeperf，每 30 秒整機 CPU% 與可用 MB，pid 39196，跑 12 小時自停。
 
 **保險絲：之後跑高佔用工作時再做。**使用者 11-06 原話「除此之外你看看要不要設立一個保險絲，在佔用達到95%的時候砍掉東西。現在先不用，因為老實說單跑agent做文字處理，不太可能達到這種狀況。等之後我們有要跑高占用的東西的時候再來做」。
+
+**兩個坑（11-06 實測）**：
+- `claude -p` 的 `--allowedTools` 會吃掉後面所有參數：提示要放在 `-p` 後第一個，工具清單用逗號串成一個參數。
+- codex 的 `-s workspace-write` 沙箱寫不了 `~/dev/vcpkg` 的鎖，`cmake -B build` 會失敗：讓 codex 只改檔，configure／build 由隊長在沙箱外跑（P2 時 codex 自己帶了 `-DVCPKG_MANIFEST_INSTALL=OFF`，隊長之後已改回 `=ON` 重新 configure）。
