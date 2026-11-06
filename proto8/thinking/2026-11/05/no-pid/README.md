@@ -25,6 +25,7 @@
 1. **只有 daemon 碰 pid**：fork、waitpid、kill、`/proc`、flock 防重起——daemon 本身的全留；**其他人**要找東西、判死活、控制，一律經 daemon：讀它寫的檔（`state.json`、`procs_state.json`）、往它的 ctl 信箱寄信。daemon 是橋，**盡量把東西暴露為檔案**。
 2. **寄信不回＝呼叫失敗**：呼叫者只管寄信、等回信，逾時就當失敗，不去分是忙、不認得還是掛了；想知道原因，讀對方**上一層 daemon** 的 `procs_state.json`。
 3. **state.json 分 `phase` 和「最近一次有反應的時間」**（`responded_at`，欄名代定）；**只在應該要有反應時才判**（ctl 信箱有信放超過 N 秒沒人收、ctl 有新指令沒採用）→ `stuck`。睡著的不會被誤判、睡著時檔案照樣不動。
+   - **11-06 晚改讀**：括號裡「ctl 信箱有信放超過 N 秒沒人收」那一半作廢，只剩「ctl 有新指令沒採用」；使用者 11-06 晚：「子daemon管好自己，父daemon只看他有沒有活着，子daemon的其他東西父daemon別碰。盡量解耦合。」（[17](17-P7實作結果.md#使用者裁定11-06-晚家機)）
 4. **監管樹**：每台 daemon 都是某台 daemon 底下的 proc；問誰的死活問它的上一層；使用者只顧**根 daemon**。crash＝上一層 waitpid 到、照表重起，孩子從 stack 續跑；卡住＝預設只標 `stuck` 等人處理，列上 `restart_on_stuck: true` 才自動殺掉重起。**只有上一層動 pid。**
    - **根 daemon 不做特殊規定**：就是普通 daemon，只是頭上沒人，由使用者保證它正常跑（自己交 systemd／s6，或就是普通使用者行程、壞了就壞了）。**以後**：**一個 agent 一個 Linux 帳號**、用它設 Linux 權限（使用者 11-05 晚「喔不是，應該說一個agent一個賬號。」，取代前一句的「一個daemon就有一個賬號」）；根掛在沙箱下、用一支有 root 權限的小程式切換帳號（跟 sandbox 的 `s6-setuidgid` 同一條線）；這次不做。
 5. **環境變數是預設管道、不是唯一**：aos 函數默認吃得到 aos-exec 的六個；找 daemon `--daemon` ＞ `AOS_DAEMON` ＞ `./.stack`，別的傳法也可以；脫鉤是「沒給」不是「不准用別的方法給」；沒給＝`<名字>Missing`，不掃 `/proc` 猜。
