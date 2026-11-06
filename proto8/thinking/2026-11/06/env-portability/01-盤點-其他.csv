@@ -8,7 +8,7 @@ CLAUDECODE 等三個,外部,Claude Code,試驗場 env.sh 把它們 unset,—,—
 "任意 {""$env"": X} 指示詞",機制,—,aos-directive env.cpp（定義、沙箱、inst 都能用）,任意,DirectiveBad,解完的值通常不落檔,要注意,定義可以依賴任何變數卻不用宣告；_tooldef.json 的 env 只管工具,../../../../impls/aos-directive/src/env.cpp
 .env 檔（N-59）,機制,定義作者,aos-exec dotenv.cpp,任意,—,.env 在定義裡＝跟 image 走,要注意,外層贏：新機器殼裡的值蓋過 .env；寫 ${AOS_CD}/.. 可搬、寫絕對不可搬；repo 裡目前沒有 .env 檔,../../../../impls/aos-exec/src/env/dotenv.cpp
 _tooldef.json 的 env,宣告,工具作者,aos-tools add（缺的印 warning）,變數名陣列,—,只存名字,安全,好模型：只宣告依賴、不存值,../../../../lib/agent/memory/_tooldef.json
-aos-tools add --envs／--env-file,機制,人／agents 工具,aos-tools call：dict(os.environ， **登記 env),展開後的字面,—,字面值存進 tools.json 或覆蓋層；沒 --overlay 時 path 存絕對,有問題,X2：${HOME} 展開成 /home/guanyu/foo；MY_KEY 明文；搬後 PathMissing；登記的舊值蓋過外面 export 的新值,../../../../cmd/aos-tools/bin/aos-tools
+aos-tools add --envs／--env-file,機制,人／agents 工具,aos-tools call：dict(os.environ， **登記 env),展開後的字面,—,字面值存進 tools.json 或覆蓋層；沒 --overlay 時 path 存絕對,有問題（使用者選照現況）,X2：${HOME} 展開成 /home/guanyu/foo；MY_KEY 明文；搬後 PathMissing；登記的舊值蓋過外面 export 的新值,../../../../cmd/aos-tools/bin/aos-tools
 sandbox.json 的 env 陣列,宣告,沙箱作者,aos-sandbox（--clearenv＋--setenv）,變數名陣列,用預設清單,"只存名字；rw 用 {""$env""} 執行時才算",安全,明列＝整份取代預設（已知邊緣）,../../../../cmd/aos-sandbox/examples/thought-boxed/sandbox.json
 試驗場 env.sh,root 層殼設定,人 source,—,從自己位置算的絕對路徑,—,在 repo 外的試驗場（root 層）,安全,正是 root 例外該有的樣子：搬哪 source 哪,
 寄件人 sender（由 AOS_WS 衍生）,衍生,aos::identity()＝$AOS_WS＞$AOS_STACK＞$AOS_CF＞cwd,aos-llm-kernel budget.senders 與 used.json 的鍵,絕對路徑,—,kernel.json budget.senders 鍵、used.json senders 鍵、在飛的 letter.json／proc.json,要注意,X3（舊執行檔）：ws 搬了上限悄悄失效；b190e00c 起鍵改相對 kernel stack＝agent 跟 kernel 一起搬就對；只搬 agent 那棵（跨樹）仍失效；範本的 /tmp/aos-demo-sender 只是示範,../../../../impls/aos-llm-kernel/src/budget/budget.cpp

@@ -1,6 +1,6 @@
 id,now,change,touches
 R1（P1 金鑰）,kernel 整包解開、明文寫 `request.json`,"kernel 對 `key`（以及包裡其他 `$env`）**不解、原樣**寫進 `request.json`；endpoint 函數（`llm_http`）那一跳自己解 `{""$env"": X}`。效果：image 裡只有變數名；醒在新機器用新機器的金鑰、沒設＝那封回錯（不是偷用舊的）",aos-llm-kernel scan、llm_http（或 tool_io 共用解法）
-R2（P2 登記檔）,`--envs`／`--env-file` 存展開後字面；無 overlay 時 path 絕對；登記 env 蓋過外面,① path 一律存相對登記檔所在夾（同 overlay 現況）；② env 存**原字串、不展開 `${}`**，call 時才展開；③ call 時**外面有設的贏**（登記格只補沒設的，跟 N-59 同向）；④ help 與 README 一句：密鑰別用 `--envs`，用 export,aos-tools add／call
+R2（P2 登記檔）,`--envs`／`--env-file` 存展開後字面；無 overlay 時 path 絕對；登記 env 蓋過外面,不改（使用者 11-06 選「C 照現況」：照舊存展開後的值、登記檔贏；已知代價）；只在搬家食譜加一步檢查登記檔,不動程式；P8 食譜一步
 R3（額度鍵，已降級）,`budget.senders`、`used.json` 鍵＝寄件人絕對路徑,b190e00c 已改相對 kernel stack；跨樹（只搬 agent）那半寫進 kernel docs 已知限制，食譜加一句「只搬 agent 要改 budget.senders」,已做一半；文件一句
 R4（P4 `.env` 絕對）,kernel docs/01 建議「寫進定義的 `.env`，絕對路徑」,改建議：跨樹的 hub 只在 root 層 export（或 `env.sh`）；真要寫進定義就寫 `${AOS_CD}/../llm_kernel` 這種從定義位置算的（X4 實測可搬）,kernel/docs/01 一句
 R5（預防）,`AOS_KERNEL`／`AOS_TICK` 設了但指不到＝悄悄退路,設了但資料夾或檔不在＝印 warning 行（不改退路、不報錯）,daemon_ctl post、T7 實作時

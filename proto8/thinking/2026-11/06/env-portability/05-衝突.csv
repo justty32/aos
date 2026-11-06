@@ -1,5 +1,5 @@
 id,principle,conflict,effect
-K1,N-59「`.env` 外層贏」,aos-tools call 是**登記格贏**（`dict(os.environ， **登記 env)`；json-argv 04 代定順序 `--envs`＞`--env-file`＞登記格＞繼承）。同一件事「定義裡寫的值 vs 外面環境」兩套方向,搬家後新機器 export 的新值被登記的舊值蓋掉（X2）。方向題 Q2
+K1,N-59「`.env` 外層贏」,aos-tools call 是**登記格贏**（`dict(os.environ， **登記 env)`；json-argv 04 代定順序 `--envs`＞`--env-file`＞登記格＞繼承）。同一件事「定義裡寫的值 vs 外面環境」兩套方向,搬家後新機器 export 的新值被登記的舊值蓋掉（X2）。**使用者 11-06 已知、接受**（選「C 照現況」）：不改，搬家食譜檢查登記檔
 K2,N-59「外層贏」,`AOS_TICK_INTERVAL` 已裁「設，近的贏」（daemon-board 題 2）：daemon 設給子樹、蓋掉外面的,不影響可遷移性（值是數字、跟樹走），但讀的人要記兩個方向；寫條文時標明「daemon 設的是 hub 型、不走 `.env` 規則」即可，不另開題
 K3,C-83 ①、N-67 ①「image 裡的位址一律相對」,[kernel docs/01](../../../../kernel/docs/01-llm-kernel.md) 建議把 `AOS_LLM_KERNEL` 絕對路徑寫進定義的 `.env`,搬家後沒 export 就悄悄指舊樹（X4）。文件改一句就合（R4），不用問
 K4,json-argv 04「金鑰走 JSON、不走 env 是現成範例」,定義層對，但 kernel 中途把解開的金鑰寫進 `request.json`,金鑰進 image（X1）。方向題 Q1
