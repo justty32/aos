@@ -19,7 +19,6 @@
 | [`agents/`](../../../../../proto8/lib/agent/agents/) | 生、叫、收另一隻 agent：包著 aos-agent ctl add／say／listen／rm／ls，掛在管我的那台 daemon（$AOS_DAEMON）上 |
 | [`claude/`](../../../../../proto8/lib/agent/claude/) | 把 stdin 的 {"prompt": "..."} 交給 claude CLI 做，stdout 印它的回答；對話續在這個工具的小格（$AOS_STACK），人可以用 agent 的 attach 接進去 |
 | [`claude/cli.json`](../../../../../proto8/lib/agent/claude/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
-| [`cli_session.py`](../../../../../proto8/lib/agent/cli_session.py) | 把 claude／codex 的一段對話接成工具：平常 agent 用非互動模式續同一個對話；人用 attach 接進互動畫面（tmux），跳出後畫面留著，agent 改從畫面送字 |
 | [`codex/`](../../../../../proto8/lib/agent/codex/) | 把 stdin 的 {"prompt": "..."} 交給 codex CLI 做，stdout 印它的回答；對話續在這個工具的小格（$AOS_STACK），人可以用 agent 的 attach 接進去 |
 | [`codex/cli.json`](../../../../../proto8/lib/agent/codex/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
 | [`memory/`](../../../../../proto8/lib/agent/memory/) | 查共用的層級式知識庫：read 一個節點（文＋子節點目錄）、ls 列子節點、find 用關鍵字找節點；唯讀 |
@@ -39,11 +38,11 @@
 | [`pyfix/agent/tools/read`](../../../../../proto8/lib/agent/pyfix/agent/tools/read) | → `../../../../base/read` |
 | [`pyfix/agent/tools/write`](../../../../../proto8/lib/agent/pyfix/agent/tools/write) | → `../../../../base/write` |
 | [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | 讓叫我的 agent 改自己的工具箱：加（add）、拿掉（rm）、列（ls）；改的是那隻的覆蓋層，定義不動 |
-| [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（範本 demo/agent-fsm），只拿回短結論；子的工具來回不進叫我的那隻的 history |
+| [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（範本 templates/agent-fsm），只拿回短結論；子的工具來回不進叫我的那隻的 history |
 
 ## `proto8/lib/aos/`
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`aos_ws.py`](../../../../../proto8/lib/aos/aos_ws.py) | 「放一則訊息、等答案、讀 stack」的共用小零件：給人用的 aos-agent say／listen／chat（proto8/extras/agent；11-04 前是 extras/human 的 aos-say／aos-listen）用。 |
 | [`check_inbox/`](../../../../../proto8/lib/aos/check_inbox/) | 看自己信箱裡還沒處理的信（$AOS_WS/new/），只看不認領；stdout 一封一行摘要。 |
+| [`judge/`](../../../../../proto8/lib/aos/judge/) | 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false |

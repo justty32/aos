@@ -5,27 +5,6 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
-## `proto8/extras/agent/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-agent`](../../../../../proto8/extras/agent/bin/aos-agent) | 統一的 agent 介面：管掛在 aos-daemon 上的一隻 agent（eca、loop／fsm agent 都一樣），每個子命令只管一隻（11-04）。 |
-| [`stack.gitattributes`](../../../../../proto8/extras/agent/stack.gitattributes) | 把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件） |
-| [`stack.gitignore`](../../../../../proto8/extras/agent/stack.gitignore) | 把 daemon 的 image（ws/.stack/）進 git 時用的 .gitignore 範本（11-05 portable-flow 04 第 9 件） |
-| [`using-aos-agent.sh`](../../../../../proto8/extras/agent/using-aos-agent.sh) | 給人的殼 source 用（不是跑）：之後直接打 say／listen／chat／status，像命名空間（11-04 aos-agent 02）。 |
-
-## `proto8/extras/ai_tools/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-mcp`](../../../../../proto8/extras/ai_tools/bin/aos-mcp) | 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。 |
-
-## `proto8/extras/grow/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`aos-grow`](../../../../../proto8/extras/grow/aos-grow) | 把一個函數往上長一級（或縮回一級），呼叫方跟著改、行為不變。 |
-
 ## `proto8/extras/langs/`
 
 | 檔 | 負責什麼 |
@@ -41,15 +20,3 @@
 | [`lua/aos.lua`](../../../../../proto8/extras/langs/lua/aos.lua) | 用 Lua table 寫 aos 的資料夾程式，編成資料夾＋JSON（嘗試，2026-10-24） |
 | [`lua/bin/aos-lua`](../../../../../proto8/extras/langs/lua/bin/aos-lua) | 把一份 Lua 原始檔編成 aos 的資料夾＋JSON（也能只印、只列） |
 | [`lua/examples/clocks.lua`](../../../../../proto8/extras/langs/lua/examples/clocks.lua) | 一個 daemon 顧幾個時鐘 loop（for 迴圈產生子項） |
-
-## `proto8/extras/sandbox/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bin/aos-sandbox`](../../../../../proto8/extras/sandbox/bin/aos-sandbox) | 照一份設定把 prog 關進沙箱再跑：身分（s6-setuidgid）、上限（s6-softlimit）、看得到哪些路徑與能不能連網（bwrap） |
-| [`examples/agent.json`](../../../../../proto8/extras/sandbox/examples/agent.json) | 設定（鍵：commands、ro、rw、env、net、mem_mb…） |
-| [`examples/bash-boxed/`](../../../../../proto8/extras/sandbox/examples/bash-boxed/) | Run one bash command line in your workspace. Returns stdout and stderr merged; the last line is always [exit code N], your command's exit code (non-z… |
-| [`examples/bash-boxed/inner`](../../../../../proto8/extras/sandbox/examples/bash-boxed/inner) | → `../../../../lib/base/bash` |
-| [`examples/bash-boxed/sandbox.json`](../../../../../proto8/extras/sandbox/examples/bash-boxed/sandbox.json) | 設定（鍵：commands、ro、rw、net、mem_mb、cpu_s…） |
-| [`examples/cli-tool.json`](../../../../../proto8/extras/sandbox/examples/cli-tool.json) | 設定（鍵：commands、ro、rw、env、net） |
-| [`root/setup.sh`](../../../../../proto8/extras/sandbox/root/setup.sh) | 沙箱的「身分層」要 root 做的事：裝 s6 到 /usr/local、建帳號 aos-run、給它一個工作的地方、讓我（$SUDO_USER）能換成它 |

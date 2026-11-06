@@ -12,7 +12,8 @@
 現役程式全在 `proto8/`（repo 根的 `core/`、`app/` 那代 C++ 是 08～09 月的甲代，不再維護，逐檔表已封存）。proto8 裡：
 
 - `impls/`：C／C++ 的 CMake 專案家族（`inst` 是 C 函式庫，其餘 `aos-*`）。由下往上：`inst` → `aos-exec` → `aos-loop` → `aos-fsm`／`aos-daemon`／`aos-llm-kernel` → `aos-llm`；`aos-util` 全家共用；`aos-post`（連 `aos-lock`）是信箱。誰連誰的表在生成冊 `impls` 冊開頭。
-- 人打的指令（Python 命令列、aos-agent 等）、腦叫的工具 `lib/`（一個工具一個夾：`_entry`＋`_tooldef.json`＋`_metainfo.json`）、kernel 元件與 agent 範本、知識庫 `knowledge/`：各一個頂層夾，夾名與判準看 [proto8/README](../../../proto8/README.md)「頂層一覽」。
+- `cmd/`：人打的 Python 指令，執行檔在 `cmd/<名>/bin/<名>`；共用模組在 `py/`。`lib/`：腦叫的工具（`_entry`＋`_tooldef.json`＋`_metainfo.json`）。
+- `kernel/`：掛在 daemon 上的管理元件；`templates/`：agent 範本；`knowledge/`：知識庫；`extras/`：還沒定位的嘗試。判準看 [proto8/README](../../../proto8/README.md)「頂層一覽」。
 - `docs/`（條文）、`thinking/`、`notes/`、`archive/` 不是程式，不進 code map。
 
 ## 逐檔表：生成冊
@@ -29,7 +30,9 @@
 | 我想找… | 去哪 |
 |---|---|
 | 錯誤行／提醒行、stdin 讀 JSON、stdout 印一行（C++） | `impls/aos-util` 的 `aos/io.hpp`；旗標 `parse_cli` 在 `aos/cli.hpp` |
-| Python 命令列的旗標與錯誤行 | `aos_flags.py`（人打的指令共用）；lib 工具共用 `lib/tool_io.py` |
+| Python 命令列的旗標與錯誤行 | `py/aos_flags.py`（人打的指令共用）；lib 工具共用 `lib/tool_io.py` |
+| 某支人打的指令 | `cmd/<名>/bin/<名>`，說明在 [cmd/README](../../../proto8/cmd/README.md) |
+| agent 範本、問腦的 kernel、判官 | `templates/`、`kernel/`（判官工具本身在 `lib/aos/judge`） |
 | 誰連誰（C++） | 生成冊 `impls` 冊開頭的依賴表 |
 | 一個資料夾程式怎麼被找到、怎麼起 | `impls/aos-exec`（條文在 proto8 NORMS N-57～N-62） |
 | 信箱（寄、認領、處理完、撤回）與鎖 | `impls/aos-post`、`impls/aos-lock` |

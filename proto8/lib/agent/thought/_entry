@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# thought - 小念頭：派一件事給一隻用完即走的子 agent（範本 demo/agent-fsm），只拿回短結論；子的工具來回不進叫我的那隻的 history
+# thought - 小念頭：派一件事給一隻用完即走的子 agent（範本 templates/agent-fsm），只拿回短結論；子的工具來回不進叫我的那隻的 history
 # 使用者 11-05 傍晚：「fork出去，做完之後回報，主線這邊對於這個任務的描述就會只剩短短幾句……我更推薦將其作為工具」「記憶這項，他本身也算是任務」；
 #   三題裁：子的腦「預設同父 (Recommended)」、子 stack「可選。默認刪掉。」、名字「thought (Recommended)」。
 #   規劃：proto8/thinking/2026-11/05/small-thought/（README、02-代定、03-實作步驟草稿；實作結果段在 README）。
@@ -23,7 +23,7 @@
 import json, os, re, shutil, signal, subprocess, sys, time
 HELP = """\
 usage: thought < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
-Hand one task to a throw-away child agent (demo/agent-fsm) on the daemon that runs you ($AOS_DAEMON)
+Hand one task to a throw-away child agent (templates/agent-fsm) on the daemon that runs you ($AOS_DAEMON)
 and print only its short conclusion; the child's tool calls stay out of your history.
 Arguments: one JSON object on stdin (empty stdin = {}):
   goal       string, required: what to do and what to bring back
@@ -43,7 +43,7 @@ On error: one line "thought: error: CODE reason" on stderr and stdout, exit 1.
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]   # tool_io.py：先找自己資料夾、再找 lib/（lib/docs/01 規則 9）
-sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "lib"))   # 複製出 repo 的：PATH 上 aos-tools 所屬 proto8 的 lib/
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "lib"))   # 複製出 repo 的：從 PATH 上 aos-tools 的 cmd/aos-tools/bin 回到 proto8/lib/
 try:
     import tool_io  # noqa: E402
 except ModuleNotFoundError:   # 規則 9 三處都找不到（11-05 晚）：照錯誤行格式印一行、退 1，不吐 traceback
@@ -55,7 +55,7 @@ except ModuleNotFoundError:   # 規則 9 三處都找不到（11-05 晚）：照
 NAME = "thought"
 tool_io.start(NAME, HELP)
 die = tool_io.die
-TEMPLATE = os.path.realpath(os.path.join(HERE, "..", "..", "..", "demo", "agent-fsm"))
+TEMPLATE = os.path.realpath(os.path.join(HERE, "..", "..", "..", "templates", "agent-fsm"))
 ERR_RE = re.compile(r"aos-[a-z-]+: error: ([A-Z][A-Za-z]+) (.*)\Z")
 MAX_CHARS_DEFAULT, TIMEOUT_DEFAULT_S, TIMEOUT_MAX_S = 600, 600, 1700
 MAX_DEPTH = 2                  # 父 0 → 子 1 → 孫 2；孫再叫＝DepthExceeded（代定）

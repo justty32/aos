@@ -1,0 +1,199 @@
+#!/usr/bin/env python3
+"""aos-eca-screen - eca 的畫面（介面 aos-agent/screen 的身體；templates/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。
+
+    aos-eca-screen --eca ECA_DIR open [--detach]   接進畫面（沒開就開、有對話就 --resume）；--detach＝只開不接
+    aos-eca-screen --eca ECA_DIR close             收起：關畫面、對話留著（aos-eca-turn 照樣用 --resume 答）
+    aos-eca-screen --eca ECA_DIR watch             跟著看非互動那次在做什麼（小格的 live.jsonl），到一次回答結束就走；
+                                                   那隻的 loop 不在了（loop.json 宣告的 state 窗：phase done／stopped 或 pid 不在）也走
+
+命令列（11-05 stdio-unify R6；11-05 隊長代定 D6 把 ECA_DIR 改成子命令前的旗標）：`aos-eca-screen [--eca ECA_DIR] 子命令 [--detach]`，
+aos_flags.parse（P-44：只有長旗標；子命令前不認得的旗標＝FlagUnknown、子命令不認得＝CommandUnknown、沒給 --eca 或多給位置參數＝ArgumentsBad）。
+為什麼是旗標：aos-exec 把呼叫者的參數接在入口 argv 的最後面（`aos-exec 資料夾 參數…`），screen 的入口寫死的部分只能在前面——
+`["aos-eca-screen", "--eca", ".."]` ＋ 動作 `open --detach` ＝ `aos-eca-screen --eca .. open --detach`。不用 sh 拼字串（少用 sh）。
+
+人不直接打它：`aos-agent open／close／watch --target 名字` ＝ `aos-exec --ws <ws> --stack <stack> <定義>/screen 動作 [--detach]`
+（ECA_DIR 由 screen 的入口寫在前面的 `--eca ..`，見 cmd/docs/05）。
+吃 AOS_STACK（那隻的 stack）、AOS_WS（那隻的工作區）；<eca 資料夾>（有 cli.json；相對路徑從 cwd 算）給 kind 與 tools。
+身體 11-04 從 aos-eca 的 open／close／watch 原樣搬來（it["cell"]→$AOS_STACK、it["ws"]→$AOS_WS、template→位置參數）。
+畫面裡按 Ctrl-]（或 Ctrl-\\）＝跳出、實例不結束。
+錯：stderr 一行 `aos-eca-screen: error: 代號 原因`、退 1：ArgumentsBad（沒給 --eca、多給參數、不是 eca 資料夾）、FlagUnknown、CommandUnknown、StackMissing、SessionBad（正在答題時 close）、
+加 cli_session 的（CfgBad…）。給人看的狀態句（attaching、watching、watch 不等了）是提醒行 `aos-eca-screen: warning: 句子`（R1、D5）。
+`--help`＝英文說明到 stdout、退 0；Ctrl-C＝退 130、不吐 traceback（watch 用 Ctrl-C 離開是正常離開，照舊退 0）。"""
+import json, os, sys, time
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+ROOT = os.path.normpath(os.path.join(HERE, "..", "..", ".."))                       # proto8/
+sys.dont_write_bytecode = True
+sys.path.insert(0, os.path.join(ROOT, "py"))
+import aos_flags, cli_session  # noqa: E402
+
+PROG = "aos-eca-screen"
+USAGE = "aos-eca-screen --eca ECA_DIR open [--detach] | close | watch"
+aos_flags.HELP = """aos-eca-screen - the screen of an eca (the body of the aos-agent/screen sub-interface).
+
+    aos-eca-screen --eca ECA_DIR open [--detach]   attach to the screen (opened if needed, --resume when a conversation exists);
+                                                   --detach = only open it, do not attach
+    aos-eca-screen --eca ECA_DIR close             close the screen; the conversation is kept (aos-eca-turn still answers with --resume)
+    aos-eca-screen --eca ECA_DIR watch             follow what the non-interactive run is doing (live.jsonl in the cell) until one
+                                                   answer ends, or until that agent's loop is gone; Ctrl-C leaves (exit 0)
+
+--eca comes before the subcommand because aos-exec appends the caller's arguments at the end of the entry's argv:
+the screen entry ["aos-eca-screen", "--eca", ".."] plus "open --detach" runs aos-eca-screen --eca .. open --detach.
+People do not run it directly: aos-agent open / close / watch --target NAME runs the screen entry of the definition.
+Reads AOS_STACK (the agent's stack) and AOS_WS (its workspace); ECA_DIR (with cli.json; relative to cwd) gives kind and tools.
+Inside the screen, Ctrl-] (or Ctrl-\\) detaches; the instance keeps running.
+Errors: one stderr line `aos-eca-screen: error: CODE reason`, exit 1. Codes: ArgumentsBad (no --eca, extra arguments), FlagUnknown, CommandUnknown, StackMissing,
+  SessionBad (close while answering), and those of cli_session (CfgMissing, CfgBad...). Status sentences are warning lines."""
+
+
+def die(code, msg):
+    aos_flags.die(PROG, code, msg)
+
+
+def cell_of(eca):
+    stack = os.environ.get("AOS_STACK")
+    if not stack:
+        die("StackMissing", "AOS_STACK is not set (the eca's stack)")
+    cfg = cli_session.load_cfg(eca)
+    return cli_session.Cell(os.path.join(stack, cfg["kind"])), stack
+
+
+def cmd_open(eca, opts):
+    cell, stack = cell_of(eca)
+    ws = os.path.abspath(os.environ.get("AOS_WS") or ".")
+    cli_session.note_cell(cell, eca, ws, stack)          # open_cell 照 tool.txt（定義）、ws.txt、stack.txt（給 aos-mcp）開
+    opened = cli_session.open_cell(cell)                 # 正在答題就等它答完（格的 lock）、等畫面穩
+    if opts.get("detach"):
+        print("screen %s: %s" % ("opened (resumed with --resume if a conversation exists)" if opened else "already open", cell.file("tty.sock")))
+        return
+    env = {k: v for k, v in os.environ.items() if k != "TMUX"}
+    aos_flags.warn(PROG, "attaching to %s (Ctrl-] detaches; the instance keeps running)" % ws)
+    os.execvpe("tmux", ["tmux", "-S", cell.file("tty.sock"), "attach", "-t", cli_session.TMUX_SESSION], env)
+
+
+def cmd_close(eca, opts):
+    cell, _ = cell_of(eca)
+    if not os.path.isdir(cell.path):
+        print("no screen (already closed)")
+        return
+    f, ok = cell.lock()
+    with f:
+        if not ok:
+            die("SessionBad", "busy answering; close it after the answer finishes")
+        closed = cli_session.close(cell)
+    print("closed" if closed else "no screen (already closed)")
+
+
+def describe(ev):
+    """live.jsonl 一行 → 給人看的短行（claude stream-json、codex --json）；不認得的＝None。"""
+    t = ev.get("type")
+    if t == "system" and ev.get("subtype") == "init":
+        return "── start (session %s, model %s)" % ((ev.get("session_id") or "")[:8], ev.get("model"))
+    if t == "assistant":
+        out = []
+        for c in (ev.get("message") or {}).get("content") or []:
+            if c.get("type") == "text" and c.get("text", "").strip():
+                out.append(c["text"].strip())
+            elif c.get("type") == "tool_use":
+                out.append("  ▶ %s %s" % (c.get("name"), json.dumps(c.get("input"), ensure_ascii=False)[:120]))
+        return "\n".join(out) or None
+    if t == "user":
+        for c in (ev.get("message") or {}).get("content") or []:
+            if isinstance(c, dict) and c.get("type") == "tool_result":
+                body = c.get("content")
+                body = body if isinstance(body, str) else json.dumps(body, ensure_ascii=False)
+                return "  ◀ %s" % body.replace("\n", " ")[:120]
+    if t == "result":
+        return "── end (%s, $%.4f)" % ("error" if ev.get("is_error") else "done", ev.get("total_cost_usd") or 0)
+    if t in ("item.completed", "item.started") and isinstance(ev.get("item"), dict):
+        item = ev["item"]
+        return "  %s %s" % (item.get("type") or item.get("item_type"), (item.get("text") or item.get("command") or "")[:120])
+    if t == "turn.completed":
+        return "── end"
+    return None
+
+
+def gone(eca, stack):
+    """那隻的 loop 不在了＝回一句英文說明；還在（或看不出來）＝None。11-05 edge-agent 別線：答到一半被 ctl sleep（或 rm），
+    live.jsonl 永遠等不到「一次回答結束」。只看定義的 loop.json 自己宣告的 state 窗（同一份定義，不問 daemon）：
+    沒宣告、還沒寫、讀不懂＝看不出來、照等；phase done／stopped、或 pid 不在＝不在了。"""
+    try:
+        with open(os.path.join(eca, "loop.json"), encoding="utf-8") as f:
+            name = json.load(f).get("state")
+        with open(os.path.join(stack, name), encoding="utf-8") as f:
+            st = json.load(f)
+        phase, pid = st.get("phase"), st.get("pid")
+    except (OSError, ValueError, TypeError, AttributeError):
+        return None
+    if phase in ("done", "stopped"):
+        return "its loop has ended (state.json phase %s)" % phase
+    if isinstance(pid, int) and pid > 0:
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            return "its loop is gone (state.json pid %d is not running: slept, stopped or removed?)" % pid
+        except PermissionError:
+            pass
+    return None
+
+
+def cmd_watch(eca, opts):
+    cell, stack = cell_of(eca)
+    path = cell.file("live.jsonl")
+    pos = os.path.getsize(path) if os.path.exists(path) else 0
+    aos_flags.warn(PROG, "watching %s; Ctrl-C to leave" % path)
+    try:
+        while True:
+            try:
+                with open(path, "rb") as f:
+                    f.seek(pos)
+                    data = f.read()
+            except OSError:
+                data = b""
+            end = data.rfind(b"\n") + 1
+            pos += end
+            for line in data[:end].decode("utf-8", "replace").splitlines():
+                try:
+                    ev = json.loads(line)
+                except ValueError:
+                    continue
+                s = describe(ev) if isinstance(ev, dict) else None
+                if s:
+                    print(s, flush=True)
+                if isinstance(ev, dict) and ev.get("type") in ("result", "turn.completed"):
+                    return
+            why = None if end else gone(eca, stack)   # 這一拍沒有新的整行才看
+            if why:
+                aos_flags.warn(PROG, "watch stopped waiting, %s; an answer cut off there never finishes" % why)
+                return
+            time.sleep(0.2)
+    except KeyboardInterrupt:
+        pass
+
+
+CMDS = {"open": cmd_open, "close": cmd_close, "watch": cmd_watch}
+SWITCHES = {"open": {"--detach": "detach"}}
+
+
+def main():
+    try:
+        top, rest = aos_flags.parse(sys.argv[1:], {"--eca": "eca"})
+        if not rest:
+            die("ArgumentsBad", "missing subcommand (usage: %s)" % USAGE)
+        if rest[0] not in CMDS:
+            die("CommandUnknown", "unknown subcommand %s (usage: %s)" % (rest[0], USAGE))
+        opts, args = aos_flags.parse(rest[1:], {}, SWITCHES.get(rest[0]))
+    except aos_flags.Error as e:
+        die(e.code, "%s (usage: %s)" % (e, USAGE))
+    if args:
+        die("ArgumentsBad", "unexpected argument %s (usage: %s)" % (args[0], USAGE))
+    if not top.get("eca"):
+        die("ArgumentsBad", "missing --eca ECA_DIR (usage: %s)" % USAGE)
+    eca = os.path.realpath(top["eca"])
+    if not os.path.isfile(os.path.join(eca, "cli.json")):
+        die("ArgumentsBad", "%s is not an eca dir (no cli.json)" % top["eca"])
+    CMDS[rest[0]](eca, opts)
+
+
+if __name__ == "__main__":
+    aos_flags.run(main)

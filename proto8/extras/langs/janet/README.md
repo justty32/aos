@@ -9,7 +9,7 @@
 
 ```sh
 proto8/extras/langs/janet/bin/aos-janet proto8/extras/langs/janet/examples/count.janet /tmp/count   # 編
-aos-exec --ws 工作區 /tmp/count                                                          # 跑（PATH 照 demo/README 放好 aos-*）
+aos-exec --ws 工作區 /tmp/count                                                          # 跑（PATH 照 cmd/README 放好 aos-*）
 ```
 
 要裝 Janet（這台在 `~/.local/bin/janet`，1.41.2）；不用 spork、不用 jpm。

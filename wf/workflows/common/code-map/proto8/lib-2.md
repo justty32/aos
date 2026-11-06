@@ -15,7 +15,6 @@
 | [`edit/`](../../../../../proto8/lib/base/edit/) | 在工作區裡一個檔做一處或幾處「整段原文照字面換掉」，一處不合就整個不改 |
 | [`json_edit/`](../../../../../proto8/lib/base/json_edit/) | 照 JSON 指標改工作區裡一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫 |
 | [`json_read/`](../../../../../proto8/lib/base/json_read/) | 看工作區裡一份 JSON 檔的某個位置，一次只展開幾層、大的摺起來，讓腦一層層往下找 |
-| [`judge/_entry`](../../../../../proto8/lib/base/judge/_entry) | 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false |
 | [`llm_fake/`](../../../../../proto8/lib/base/llm_fake/) | 假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4） |
 | [`llm_http/`](../../../../../proto8/lib/base/llm_http/) | endpoint 函數：把一份請求 POST 到 OpenAI 相容的 {url}/chat/completions，印剪過的回覆（think-as-function 02/01 § 4） |
 | [`ls/`](../../../../../proto8/lib/base/ls/) | 列工作區裡一個資料夾的子項，一次一頁、回 JSON |

@@ -3,11 +3,7 @@
 #
 # What gets linked (scanned by folder; only executables):
 #   impls/*/bin/*            the C++ ones (aos-exec, aos-loop, aos-fsm, aos-daemon, aos-post, aos-json, aos-llm, aos-llm-kernel...; build them first)
-#   bin/aos-*                the Python ones (aos-daemon-ctl, aos-tools, aos-tick, aos-eca-turn, aos-eca-screen; aos_flags.py is not a command)
-#   extras/agent/bin/*       aos-agent
-#   extras/ai_tools/bin/*    aos-mcp
-#   extras/sandbox/bin/*     aos-sandbox
-#   extras/grow/aos-grow     aos-grow
+#   cmd/*/bin/*              the Python commands (aos-daemon-ctl, aos-tools, aos-tick, aos-eca-turn, aos-eca-screen, aos-agent, aos-mcp, aos-sandbox, aos-grow)
 # Symlinks, not copies: the Python commands find their neighbour files through realpath(__file__). If the repo moves, run this again
 #   (old links are reported as pointing elsewhere; rm them and rerun).
 # Idempotent: a link to the same file = "already", left alone; something else with the same name in DEST = "skip" (not overwritten).
@@ -25,12 +21,8 @@
 #
 # 裝哪些（照資料夾掃，有就裝、執行檔才算）：
 #   impls/*/bin/*            C++ 的（aos-exec、aos-loop、aos-fsm、aos-daemon、aos-post、aos-json、aos-llm、aos-llm-kernel…；要先建，見 wf/workflows/testing.md「proto8」）
-#   bin/aos-*                Python 的（aos-daemon-ctl、aos-tools、aos-tick、aos-eca-turn、aos-eca-screen；aos_flags.py 不是指令、不裝）
-#   extras/agent/bin/*       aos-agent
-#   extras/ai_tools/bin/*    aos-mcp
-#   extras/sandbox/bin/*     aos-sandbox
-#   extras/grow/aos-grow     aos-grow
-# 為什麼 symlink 不 cp：Python 那幾支靠 realpath(__file__) 找旁邊的檔（aos_flags.py、using-aos-agent.sh、lib/aos/aos_ws.py…），
+#   cmd/*/bin/*              Python 的指令（aos-daemon-ctl、aos-tools、aos-tick、aos-eca-turn、aos-eca-screen、aos-agent、aos-mcp、aos-sandbox、aos-grow）
+# 為什麼 symlink 不 cp：Python 那幾支靠 realpath(__file__) 找旁邊的檔（aos_flags.py、using-aos-agent.sh、py/aos_ws.py…），
 #   單檔 cp 過去會斷；symlink 解得回 repo 裡的原位。所以 repo 搬了位置要重跑一次（舊的連結會被報「指向別處」，自己 rm 再跑）。
 #
 # 冪等：已經是指向同一支的連結＝「已裝」、不動；目的地已有同名的別的東西（指向別處的連結、一般檔）＝印一行「跳過」、不蓋，
@@ -54,7 +46,7 @@ for a in "$@"; do
   case "$a" in
     --dry-run) dry=1 ;;
     --uninstall) un=1 ;;
-    --help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --help) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*) die "FlagUnknown unknown flag $a $usage" ;;
     *) if [ -n "$dest" ]; then die "ArgumentsBad only one DEST allowed, extra: $a $usage"; fi; dest=$a ;;
   esac
@@ -105,8 +97,7 @@ link_one() {   # $1＝repo 裡那支的絕對路徑
 }
 
 found=0
-for src in "$here"/impls/*/bin/* "$here"/bin/aos-* "$here"/extras/agent/bin/* "$here"/extras/ai_tools/bin/* \
-           "$here"/extras/sandbox/bin/* "$here"/extras/grow/aos-grow; do
+for src in "$here"/impls/*/bin/* "$here"/cmd/*/bin/*; do
   [ -f "$src" ] && [ -x "$src" ] || continue
   case "$src" in "$here"/impls/*/bin/*)   # 只裝現役的 impls（有 CMakeLists.txt 的）；改名前留下的舊 build 產物（aos-llm-send 之類）不裝
     [ -f "${src%/bin/*}/CMakeLists.txt" ] || continue ;;

@@ -2,7 +2,7 @@
 
 # 件 1：agent 給自己改 tool（fable 照原則定，可翻案）
 
-使用者原文（11-05 午，逐字）：「讓agent給自己改tool」。前情：11-05 早起 `aos-agent tools add／rm` 改的是**這一隻的覆蓋層** `<stack>/tools.json`、只存差異、定義不動（[aos-agent docs/03](../../../../extras/agent/docs/03-tools覆蓋層.md#tools-覆蓋層)）；agent-fsm 的 brain／act 每格重讀「定義疊覆蓋層」。
+使用者原文（11-05 午，逐字）：「讓agent給自己改tool」。前情：11-05 早起 `aos-agent tools add／rm` 改的是**這一隻的覆蓋層** `<stack>/tools.json`、只存差異、定義不動（[aos-agent docs/03](../../../../cmd/aos-agent/docs/03-tools覆蓋層.md#tools-覆蓋層)）；agent-fsm 的 brain／act 每格重讀「定義疊覆蓋層」。
 
 ## 已定（照原則推得出）
 

@@ -1,6 +1,6 @@
 # 2026-10-26 playground：先弄一個呼叫 claude code cli 的節點
 
-← [thinking](../../README.md)｜月份表 [2026-10](../README.md)｜出發點：[user-advice](../../../user-advice/README.md)（使用者的初步想法，「第一回合」）｜claude 當工具的先例：[demo agent-fay](../../../demo/README.md)
+← [thinking](../../README.md)｜月份表 [2026-10](../README.md)｜出發點：[user-advice](../../../user-advice/README.md)（使用者的初步想法，「第一回合」）｜claude 當工具的先例：[demo agent-fay](../../../templates/README.md)
 
 ## 使用者原文（10-26，逐字）
 
@@ -32,7 +32,7 @@
 
 結論：
 
-- **`aos-mcp`**（`proto8/extras/ai_tools/bin/`）：一個有 `tool.json` 的資料夾程式＝一個 MCP tool；外面叫一次＝`aos-exec --ws WS 該資料夾`，arguments 進 stdin、stdout 回去、退非 0＝錯。說明在 [ai_tools/README](../../../extras/ai_tools/README.md#aos-mcp10-2710-28-改成包在-aos-tools-上)。[10-24 ai-tools](../24/ai-tools/README.md) 的未決題「要不要另做 MCP server」定成「做」。
+- **`aos-mcp`**（`proto8/extras/ai_tools/bin/`）：一個有 `tool.json` 的資料夾程式＝一個 MCP tool；外面叫一次＝`aos-exec --ws WS 該資料夾`，arguments 進 stdin、stdout 回去、退非 0＝錯。說明在 [ai_tools/README](../../../cmd/aos-mcp/README.md#aos-mcp10-2710-28-改成包在-aos-tools-上)。[10-24 ai-tools](../24/ai-tools/README.md) 的未決題「要不要另做 MCP server」定成「做」。
 - **試驗場**：`agent/mcp.json` 掛 aos-mcp，args 給 `agent/` 本身（照 [10-28 aos-tools](../28/aos-tools/README.md) 結論第 10 點），clock、math、read 三個工具登記在 `agent/tools.json`，PATH 寫在 mcp.json 的 `env`；`main.py` 加 `--mcp-config`、`--allowedTools` 放行 `mcp__aos__*` 三個，其餘安全鎖不拆（`--strict-mcp-config` 留著）；aos-mcp 的小格是 `$AOS_STACK/mcp/`（main.py 給，C-70）。
 
 代定（可翻案）：

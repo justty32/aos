@@ -2,7 +2,7 @@
 
 # 件 4：agent 用 aos 指令產出另一個 agent（fable 照原則定，可翻案）
 
-使用者原文（11-05 午，逐字）：「讓agent利用aos指令產出另一個agent」。現況：人用 `aos-agent ctl add [--name N] [--ws WS] <定義>` 掛一隻到 `AOS_DAEMON` 那台（[aos-agent](../../../../extras/agent/README.md)）、`say`／`listen` 對話、`ctl rm` 收掉；`AOS_KERNEL` 有設就先過判官（`max_running`、`allowed`，[demo/docs/04](../../../../demo/docs/04-kernel-modes.md)）；daemon 給子項 `AOS_DAEMON`，一路繼承到工具（N-63 ③）。
+使用者原文（11-05 午，逐字）：「讓agent利用aos指令產出另一個agent」。現況：人用 `aos-agent ctl add [--name N] [--ws WS] <定義>` 掛一隻到 `AOS_DAEMON` 那台（[aos-agent](../../../../cmd/aos-agent/README.md)）、`say`／`listen` 對話、`ctl rm` 收掉；`AOS_KERNEL` 有設就先過判官（`max_running`、`allowed`，[demo/docs/04](../../../../kernel/docs/02-kernel-modes.md)）；daemon 給子項 `AOS_DAEMON`，一路繼承到工具（N-63 ③）。
 
 ## 已定（照原則推得出）
 

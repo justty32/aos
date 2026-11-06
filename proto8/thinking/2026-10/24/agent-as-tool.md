@@ -2,7 +2,7 @@
 
 ← [thinking](../../README.md)｜月份表 [2026-10](../README.md)｜前情：[2026-10-23 腦的工具呼叫](../23/tool-calls/README.md)（文末「agent 當腦的工具時題目怎麼交」）
 
-規矩見 [thinking/README](../../README.md)：只留使用者原文、決定、結論。這份是**嘗試性質**（使用者「反正只是嘗試」），結論全是頂層代定、可翻案。範本與現行佈局在 [demo/agent-eve](../../../demo/README.md#agent-eveagent-當工具10-24)。相關條文：[P-25、P-26、P-41](../../../docs/CONVENTION/02-題目stack停錯腦.md)、[P-32、P-33](../../../docs/CONVENTION/06-巢狀.md)、[C-52、C-54、C-56](../../../docs/CONCEPTS/01-設計理念.md)、[N-59](../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[NORMS 待定 方向問題甲](../../../docs/NORMS/08-待定.md)。
+規矩見 [thinking/README](../../README.md)：只留使用者原文、決定、結論。這份是**嘗試性質**（使用者「反正只是嘗試」），結論全是頂層代定、可翻案。範本與現行佈局在 [demo/agent-eve](../../../templates/README.md#agent-eveagent-當工具10-24)。相關條文：[P-25、P-26、P-41](../../../docs/CONVENTION/02-題目stack停錯腦.md)、[P-32、P-33](../../../docs/CONVENTION/06-巢狀.md)、[C-52、C-54、C-56](../../../docs/CONCEPTS/01-設計理念.md)、[N-59](../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[NORMS 待定 方向問題甲](../../../docs/NORMS/08-待定.md)。
 
 ## 使用者原文（整理版，10-24）
 
@@ -21,7 +21,7 @@
 7. **子 agent 失敗＝pyfix 失敗**：子 agent 退非 0 → `pyfix: AgentFailed …（現場在 runs/NNN）`、退 1；跑完沒答案 → `AnswerMissing`。eve 的 act 把那行回給腦、不停（[tool-calls 文末](../23/tool-calls/02-結論.md#10-24-定叫工具與小念頭的失敗回給腦)）；腦再叫 pyfix 就**開新的小格**從頭做。
 8. **模型**：子 agent 用自己 `.env` 的模型（`_entry` 用 `aos-exec --dotenv-override` 叫；不加的話外層的 `AOS_BRAIN_MODEL` 一路傳下來、子 agent 的 `.env` 不蓋，N-59 第 4 件）。子 agent 要換模型就改它 `.env` 那一行。腦的位置（`AOS_BRAIN_URL`、`AOS_BRAIN_KEY`）兩層共用外層給的；要分開就在子 agent 的 `.env` 也寫 URL。
 9. **逾時**：eve 的 act 放寬到 30 分鐘；子 agent 的 `loop.json` `max` 60。
-10. **名字**：主 agent `agent-eve`（demo 慣例取人名）；工具 `pyfix`（白話：修 Python 的）；錯誤代號 `AgentFailed`、`AnswerMissing`、`DirBad`、`DirMissing`。eve、子 agent 的 `brain.py`／`act.py` 照抄 agent-dan，只改錯誤訊息開頭（P-25 每隻一份、不跨 agent 互指）。子工具現行名字見 [demo/agent-eve](../../../demo/README.md#agent-eveagent-當工具10-24)。
+10. **名字**：主 agent `agent-eve`（demo 慣例取人名）；工具 `pyfix`（白話：修 Python 的）；錯誤代號 `AgentFailed`、`AnswerMissing`、`DirBad`、`DirMissing`。eve、子 agent 的 `brain.py`／`act.py` 照抄 agent-dan，只改錯誤訊息開頭（P-25 每隻一份、不跨 agent 互指）。子工具現行名字見 [demo/agent-eve](../../../templates/README.md#agent-eveagent-當工具10-24)。
 
 ## 已知限制（用的時候注意）
 

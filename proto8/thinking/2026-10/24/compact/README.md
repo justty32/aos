@@ -2,7 +2,7 @@
 
 ← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜相關：[按意圖組 context（agent-kai）](../intent-context/README.md)、[腦的工具呼叫 第 6 點「對話太長」](../../23/tool-calls/02-結論.md#6-錯逾時對話太長)、[小念頭](../thoughts/README.md)
 
-規矩見 [thinking/README](../../../README.md)：只留使用者原文、決定、結論。程式與佈局在 [demo/agent-hal](../../../../demo/README.md)（agent-hal 一節）。相關條文：[C-46、C-65](../../../../docs/CONCEPTS/05-agent.md)、[P-08、P-20、P-23、P-41](../../../../docs/CONVENTION.md)、C-54（命名）。
+規矩見 [thinking/README](../../../README.md)：只留使用者原文、決定、結論。程式與佈局在 [demo/agent-hal](../../../../templates/README.md)（agent-hal 一節）。相關條文：[C-46、C-65](../../../../docs/CONCEPTS/05-agent.md)、[P-08、P-20、P-23、P-41](../../../../docs/CONVENTION.md)、C-54（命名）。
 
 ## 分檔目錄
 

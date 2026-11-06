@@ -1,6 +1,6 @@
 # 2026-10-28 aos-tools：一份工具註冊檔，aos agent 直接吃、外部 agent 經 aos-mcp 吃
 
-← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜前情：[10-28 aos-hub 常駐 kernel](../hub-kernel/README.md)（未決裡的「aos-tools 長什麼樣」）、[10-26 playground](../../26/playground.md)（aos-mcp 怎麼來的）、[10-24 工具＝函式庫](../../24/tool-lib/README.md)｜使用者筆記：[user-advice/20261027](../../../../user-advice/20261027.md)（使用者的資料夾，不改）｜實作：[proto8/bin/aos-tools](../../../../bin/README.md)、[extras/ai_tools § aos-mcp](../../../../extras/ai_tools/README.md)
+← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜前情：[10-28 aos-hub 常駐 kernel](../hub-kernel/README.md)（未決裡的「aos-tools 長什麼樣」）、[10-26 playground](../../26/playground.md)（aos-mcp 怎麼來的）、[10-24 工具＝函式庫](../../24/tool-lib/README.md)｜使用者筆記：[user-advice/20261027](../../../../user-advice/20261027.md)（使用者的資料夾，不改）｜實作：[proto8/bin/aos-tools](../../../../cmd/README.md)、[extras/ai_tools § aos-mcp](../../../../cmd/aos-mcp/README.md)
 
 規矩見 [thinking/README](../../../README.md)：只留使用者原文、決定、結論。
 

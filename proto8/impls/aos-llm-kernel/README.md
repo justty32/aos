@@ -11,7 +11,7 @@
 
 ```sh
 mkdir ~/llm_kernel && cd ~/llm_kernel
-cp -r <repo>/proto8/demo/llm-kernel def          # 定義放 def/（放哪都行）；kernel.json 的 exec 改成絕對路徑
+cp -r <repo>/proto8/kernel/llm-kernel def          # 定義放 def/（放哪都行）；kernel.json 的 exec 改成絕對路徑
 cat def/daemon.json
 # {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300}
 cat def/kernel.json

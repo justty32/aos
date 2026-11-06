@@ -1,6 +1,6 @@
 # 2026-10-24 Linux 權限與沙箱：藉 s6 那套，把函數關起來跑
 
-← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜程式 [sandbox/](../../../../extras/sandbox/README.md)（`aos-sandbox`）｜測試 `proto8/tests/test_sandbox.py`｜試驗場 `~/code/try/sandbox/`
+← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜程式 [sandbox/](../../../../cmd/aos-sandbox/README.md)（`aos-sandbox`）｜測試 `proto8/tests/test_sandbox.py`｜試驗場 `~/code/try/sandbox/`
 
 規矩見 [thinking/README](../../../README.md)：只留使用者原文、決定、結論。這份是**嘗試性質**，決定全是頂層照推薦定的（使用者 10-24「都按建議做」），可翻案。**CONCEPTS／NORMS 正文沒改**。相關條文：[C-04、C-64](../../../../docs/CONCEPTS/01-設計理念.md#檔案權限10-16-使用者定)（權限是 Linux 那邊的事、用檔案是為了借權限）、[C-52、C-53、C-56](../../../../docs/CONCEPTS/01-設計理念.md)、[C-66、C-67](../../../../docs/CONCEPTS/03-基礎設施.md#資料夾程式工作區與-stack10-19)（工作區是指標、stack 放哪由呼叫方決定）、[N-41](../../../../docs/NORMS/07-基礎設施-組合子.md)（格自己不 setsid）、[N-58](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[N-45](../../../../docs/NORMS/06-基礎設施-命令列與指示詞.md)。
 

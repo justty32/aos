@@ -42,7 +42,7 @@
 
 ### 11-05 夜 第二輪邊緣
 
-照 [demo/docs/02](../../../../demo/docs/02-agent-fsm.md)「複製出 repo」、[03](../../../../demo/docs/03-llm-kernel.md)「起來」把 llm-kernel、agent-fsm 搬到 repo 外（scratchpad 試驗場，PATH 只放 `install.sh DEST` 裝的捷徑），假腦＋真腦（LM Studio `google/gemma-4-e4b`，試驗場那份 kernel.json 的 `stupid-fast` 改指它）都跑。
+照 [demo/docs/02](../../../../templates/docs/02-agent-fsm.md)「複製出 repo」、[03](../../../../kernel/docs/01-llm-kernel.md)「起來」把 llm-kernel、agent-fsm 搬到 repo 外（scratchpad 試驗場，PATH 只放 `install.sh DEST` 裝的捷徑），假腦＋真腦（LM Studio `google/gemma-4-e4b`，試驗場那份 kernel.json 的 `stupid-fast` 改指它）都跑。
 
 - **修了**：`tools/memory/` 的 `_tooldef.json`／`_metainfo.json` 是相對捷徑，`cp -r` 出 repo 就斷 → 第一題 `ToolDefMissing`＋`ToolsBad`、留 `stopped`。文件原本只列三處，改成五處＋一段照抄就對的指令（02）。
 - **修了**：`fake_slow` 從自己的位置找 `lib/base/llm_fake`，出 repo＝`EndpointFailed … can't open file`；改成從找到的 `aos_flags.py` 旁找（03、code map 13-demo）。

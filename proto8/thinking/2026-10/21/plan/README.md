@@ -1,6 +1,6 @@
 # 2026-10-21 計畫：loop、daemon、fsm、agent 搬到新 aos-exec 上
 
-← [討論紀錄](../../../README.md)｜原則：[CONCEPTS](../../../../docs/CONCEPTS.md)、[NORMS](../../../../docs/NORMS.md)、[CONVENTION](../../../../docs/CONVENTION.md)｜今天的 aos-exec：[ideas 10-21](../ideas/README.md)｜上一份順序稿：[rewrite-order 10-19](../../19/rewrite-order.md)｜程式：[bin](../../../../bin/README.md)、[demo](../../../../demo/README.md)
+← [討論紀錄](../../../README.md)｜原則：[CONCEPTS](../../../../docs/CONCEPTS.md)、[NORMS](../../../../docs/NORMS.md)、[CONVENTION](../../../../docs/CONVENTION.md)｜今天的 aos-exec：[ideas 10-21](../ideas/README.md)｜上一份順序稿：[rewrite-order 10-19](../../19/rewrite-order.md)｜程式：[bin](../../../../cmd/README.md)、[demo](../../../../templates/README.md)
 
 使用者 10-21 下午出門前：「aos-daemon和aos-fsm，乃至於agent也可以開始做了」「總之先做，可以先讓fable幫我規畫和考慮，然後按照他的建議先做。等一下我兩點有事情。等我回來後再來看看狀況」。
 

@@ -2,7 +2,7 @@
 
 ## 資料夾程式、工作區與 stack（10-19）
 
-規範：[NORMS 資料夾程式與執行](../../NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62、N-53、N-55）；慣例：[CONVENTION](../../CONVENTION.md)；實作：[aos-exec](../../../impls/aos-exec/README.md)、[demo](../../../demo/README.md)。資料夾＝程式、入口、環境變數是 [C-68～C-70](../01-設計理念/06-C-68～C-72.md#資料夾程式與環境變數10-19-使用者定)。
+規範：[NORMS 資料夾程式與執行](../../NORMS/10-基礎設施-定義與工作區.md)（N-57～N-62、N-53、N-55）；慣例：[CONVENTION](../../CONVENTION.md)；實作：[aos-exec](../../../impls/aos-exec/README.md)、[templates](../../../templates/README.md)。資料夾＝程式、入口、環境變數是 [C-68～C-70](../01-設計理念/06-C-68～C-72.md#資料夾程式與環境變數10-19-使用者定)。
 
 > 用詞（C-54）：**定義**＝一個資料夾（程式）；**入口**＝`$AOS_ENTRY` 指的檔（四種：可執行檔、inst 單子、argv 陣列、`js[$AOS_ENTRY]`，C-73）；**stack**＝被叫的那個程式自己的 `$AOS_STACK`（執行中狀態）；**小格**＝叫別的資料夾程式時給它的 stack（`$AOS_STACK/tools/<名>/`，見 [P-17](../../CONVENTION/02-題目stack停錯腦.md)）；**工作區**＝使用者的檔與成品所在的資料夾（`$AOS_WS`，C-65）；**heap** 保留給以後跨呼叫共用的記憶，目前沒有機制。見[名詞表](../附錄1-名詞.md)。
 

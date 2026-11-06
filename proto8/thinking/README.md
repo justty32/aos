@@ -7,6 +7,7 @@
 > **10-12 夜使用者定**：thinking 只留「使用者原文整理、決策結果、跟 AI 討論後的結論、未決」，其餘 AI 產出拿掉（「今天 10/12 產出的那些 thinking 也是，留結論」）；整份都是 AI 產出的檔整份刪。
 
 > **改名**：舊名 → 現名見 [NORMS 附錄3 舊名對照](../docs/NORMS/附錄3-舊名對照.md)。舊紀錄照舊名，連到資料夾的連結改指新路徑。
+> 11-06 proto8 按角色重劃夾（[arch-refactor](2026-11/05/arch-refactor/README.md) S5），舊紀錄的路徑照這張換：`bin/<指令>` → `cmd/<指令>/bin/<指令>`（`aos-eca-turn`、`aos-eca-screen` 在 `cmd/aos-eca/bin/`）、`bin/aos_flags.py`、`lib/aos/aos_ws.py`、`lib/agent/cli_session.py` → `py/`、`bin/docs/` → `cmd/docs/`、`extras/agent` → `cmd/aos-agent`、`extras/ai_tools` → `cmd/aos-mcp`、`extras/sandbox` → `cmd/aos-sandbox`、`extras/grow` → `cmd/aos-grow`、`lib/base/judge` → `lib/aos/judge`、`demo/{llm-kernel,daemon-judge,procs-kernel}` → `kernel/`、`demo/{agent-fsm,eca-claude}` → `templates/`、`demo/docs/01、02` → `templates/docs/01、02`、`demo/docs/03～05` → `kernel/docs/01～03`。
 
 | 月份 | 份數 | 範圍 |
 |---|---|---|

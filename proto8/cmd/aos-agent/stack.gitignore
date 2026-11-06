@@ -1,0 +1,19 @@
+# stack.gitignore - 把 daemon 的 image（ws/.stack/）進 git 時用的 .gitignore 範本（11-05 portable-flow 04 第 9 件）
+# 用法：cp proto8/cmd/aos-agent/stack.gitignore ws/.stack/.gitignore（放 .stack 裡＝只管 image、不碰你 ws 裡自己的檔）。
+# 一定先 Ctrl-C 讓 daemon 睡著再 commit：跑著時存＝一張撕一半的照片。
+# 擋的是「只在這台、這一刻有意義」的東西；state.json、procs_state.json、history.jsonl、queue/、stage.txt、think/、used.json、
+#   llm.json、tools.json（覆蓋層）、session.txt 都要留（醒來要接著用；paused 也要帶著醒）。
+
+# 信箱的半封信（maildir 的 tmp/；git 不收空資料夾，第一圈 daemon／aos-post 會自己建回）
+**/tmp/
+# 點開頭的暫存：.名.tmp（寫到一半的檔）、.flock（鎖本身不跟檔走）
+**/.*
+# …但不擋 .stack 本身（這份放在 ws 根時才用得到）與這兩份設定
+!**/.stack/
+!/.gitignore
+!/.gitattributes
+# 小格的 stderr（每次重開就重寫，只對這台有意義）
+**/stderr.txt
+# eca 的畫面 socket 與鎖（到別台是死的；醒來 aos-agent open 重開畫面）
+**/*.sock
+**/lock

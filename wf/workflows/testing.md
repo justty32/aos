@@ -32,7 +32,7 @@ repo 根沒有 CMake（08～09 月那一代 11-05 封存到 `archive/aos-v1/`、
 (cd proto8/impls && cmake -B build && cmake --build build)
 ```
 
-`proto8/bin/`、`proto8/extras/`、`proto8/lib/` 是 Python／sh，沒有建置步驟；要確認就手跑（用法在各自的 README）。aos 的程式都不動 PATH，手跑時把 `proto8/impls/<名>/bin/`、`proto8/bin/` 放進 PATH。
+`proto8/cmd/`（指令）、`proto8/py/`（共用模組）、`proto8/lib/`、`proto8/kernel/`、`proto8/templates/` 是 Python／sh，沒有建置步驟；要確認就手跑（用法在各自的 README）。aos 的程式都不動 PATH，手跑時把 `proto8/impls/<名>/bin/`、`proto8/cmd/<名>/bin/` 放進 PATH（`proto8/install.sh` 一次放進 `~/.local/bin`）。
 
 ## 綠燈不等於有檢查
 

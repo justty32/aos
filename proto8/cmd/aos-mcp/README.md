@@ -1,0 +1,26 @@
+# proto8/cmd/aos-mcp — aos-mcp
+
+**aos-mcp - 把 aos-tools 登記的工具當 MCP tools，給外部 agent（Claude Code、codex…；eca 經 cli_session 自動接上）叫。**
+
+← [cmd](../README.md)｜用到的程式：[aos-tools](../aos-tools/README.md)、[impls](../../impls/README.md)（aos-exec、aos-json）｜接它的：eca 範本 [templates/eca-claude](../../templates/docs/01-eca-claude.md)（`proto8/py/cli_session.py` 的 `mcp_argv`；原本的 extras/eca 11-04 併進 [aos-agent](../aos-agent/README.md)）
+
+```
+aos-mcp/
+  bin/aos-mcp                MCP server（stdio，Python 只用標準庫）：包在 aos-tools 上，給的登記檔（例 tools.json）登記的工具＝MCP tools
+```
+
+原本這裡還有 aos-ai（起 agent、丟題、跑、看狀態、生成 JSON 與骨架、查概念）、給 agent 掛的六個 lib/aos 工具與 Claude Code skill：11-03 連程式刪了（使用者 11-03 晚「一起刪……只需要留下他們的概念就好，也就是不用留程式碼，留文檔就好。我沒有要用他們」），概念收在 proto8/archive/agent-round-concepts/。
+
+<a id="aos-mcp10-2710-28-改成包在-aos-tools-上"></a>
+## aos-mcp
+
+`bin/aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--overlay O] [--memory NAME] [REGISTRY...]`：把**給的登記檔**（[aos-tools](../aos-tools/README.md) 的工具註冊檔，檔名不限，例 `aos-tools.json`）登記的工具當 MCP tools 給外部 agent（Claude Code、pi coding agent 等）叫，stdio JSON-RPC、只用標準庫。決定 [thinking 10-28 aos-tools](../../thinking/2026-10/28/aos-tools/README.md)（使用者「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。
+
+- **位置參數＝登記檔的路徑**（使用者 11-02「我希望能改成aos-mcp tools.json，也就是改成指定檔案，這樣我們可以改名為aos-mcp aos-tools.json，這樣能解放一些名稱」，[thinking 11-02 試驗場 cathy](../../thinking/2026-11/02/playground-cathy/README.md)）：相對路徑從啟動時的 cwd 算；給資料夾或不存在的檔＝`ToolMissing`。登記用 `aos-tools --file aos-tools.json add …`。一份都沒給＝讀啟動時 cwd 的 `./tools.json`（不存在＝`ToolMissing`），跟 aos-tools 沒給 `--file` 時一致，兩邊都不帶檔名就用同一份（使用者 11-02「兩邊的json格式是一樣的嗎？是同一份嗎？是的話，那就全部改回預設tools.json。」，[thinking 11-02 stack-tools](../../thinking/2026-11/02/stack-tools/README.md)）。
+- **清單**：每份 REGISTRY 跑 `aos-tools --file REGISTRY ls --json`；名字＝登記名、`description`／`inputSchema`＝工具定義的 `description`／`parameters`（沒寫 parameters 給空物件 schema）。`_metainfo`（資料夾的 `_metainfo.json` 檔、JSON 檔的 `_metainfo` key；可執行檔沒有）搬成 annotations：`side_effect`→`readOnlyHint`（反）、`idempotent`→`idempotentHint`、`resource` 含 llm／net→`openWorldHint`。好幾份登記檔的工具合在一起，撞名＝`ToolsBad`。**每次 `tools/list`、`tools/call` 都重讀**：登記檔改了，下次列就看得到（不主動送 listChanged 通知；代定）。
+- **叫一次**：`AOS_WS=WS AOS_STACK=<stack>/tools/<名>/ aos-tools --file REGISTRY call 名`（aos-tools、aos-exec、有指示詞時 aos-json 都從 PATH 找），arguments 進 stdin、stdout 整段回 text、退非 0＝`isError`（stdout 空就回一行 `aos-mcp: error: CommandFailed …`）；**失敗時（退非 0 或逾時）另附第二段 text：那次 stderr 的最後 2 KB**（工具自己寫的、aos-tools／aos-exec 說的「入口壞」等都在裡面；成功時不附），stderr 也照樣轉印到 aos-mcp 自己的 stderr（MCP 用戶端的 log）——使用者 11-05 選「附 stderr 尾巴（推薦）」（[edge-basics 題 1](../../thinking/2026-11/04/edge-basics/README.md#題-1工具失敗時外部-agentclaude-code-等看不到原因)；C-52「不偷讀下層 stderr」的例外，見 [CONCEPTS C-52](../../docs/CONCEPTS/01-設計理念/03-最高原則與兩條總原則.md#兩條總原則10-15-使用者定原文10-15-深夜加嚴)）；每個工具的小格是 `<stack>/tools/<名>/`（使用者選 B「tools/<name>」）；逾時＝`_metainfo` 的 `time_ms.max`，沒寫用 `--timeout-s`（預設 60），整群 TERM、2 秒後 KILL。呼叫紀錄預設不記（使用者 11-02「aos-mcp留下的calls.jsonl，這好像也是固定的。我希望能改一下，改成可以透過aos-mcp的argv來切換是否要留紀錄，默認不留」）；給 `--enable-logs`＝每次叫完在 `<stack>/aos-mcp-logs.jsonl` 記一行（`name`、`arguments`、`code`、`elapsed_ms`、`called_at`），再加 `--logs-path FILE`＝記在 FILE（相對路徑從啟動時的 cwd 算）；只給 `--logs-path` 沒給 `--enable-logs`＝`ArgumentsBad`（使用者 11-02「所以要兩個旗標」「還是logs好」，旗標名照他 11-02 的「--enable-logs」「--logs-path」）。
+- **`--overlay O`**（11-05 [portable-flow 步 4](../../thinking/2026-11/05/portable-flow/06-實作步驟草稿.md)）：原樣轉給 aos-tools 的 `--overlay`（REGISTRY 疊這隻的覆蓋層 O，疊法見 [aos-agent docs/03](../aos-agent/docs/03-tools覆蓋層.md#tools-覆蓋層)）；只能配一份 REGISTRY（多給＝`ArgumentsBad`）、這時 REGISTRY 可以不在（只有覆蓋層）。eca 經 cli_session 自動帶 `$AOS_STACK/tools.json`。
+- **`--memory NAME`**（11-05 晚 [agent-knowledge K4](../../thinking/2026-11/05/agent-knowledge/03-接進agent與工具說明.md)）：`initialize` 時叫一次登記名 NAME 的工具 `{"op": "read"}`，印出來的知識庫根放進回應的 `instructions`（MCP 用戶端放進自己的 system prompt）。叫的是 `tools/list` 給出去的同一支，外部 agent 看到的根跟它自己查的一樣；清單沒有 NAME 或叫失敗＝不給 `instructions`、stderr 一行 `aos-mcp: warning: …`（不讓連線起不來）。eca 用 `cli.json` 的 `tools_flags` 帶（templates/eca-claude）。
+- 工作區＝`--ws` ＞ `$AOS_WS`；stack＝`--stack` ＞ `$AOS_STACK` ＞ `$WS/.stack/`。旗標都寫在 REGISTRY 前面（11-04 起照 [CONVENTION P-44](../../docs/CONVENTION/02-題目stack停錯腦/07-P-44.md)，用 `proto8/py/aos_flags.py`）。自己的錯 stderr 一行 `aos-mcp: error: 代號 原因` 退 1（`ArgumentsBad`、`FlagUnknown`〔不認得的旗標，11-04 前是 `ArgumentsBad`〕、`WsMissing`、`ToolMissing`〔REGISTRY 不是檔〕、`ToolsBad`〔啟動時 aos-tools ls 失敗，aos-tools 自己那行在前面〕）；跑起來之後登記檔壞了＝那一則回 JSON-RPC 錯誤（-32603）、不退，錯誤訊息附 aos-tools 那次 stderr 的最後一段（11-05，同上）。
+- 只做 `initialize`、`ping`、`tools/list`、`tools/call`；沒有 progress、resources、prompts、HTTP。
+- 掛法（Claude Code，WSL 裡）：`--mcp-config` 一份 `{"mcpServers": {"aos": {"command": ".../proto8/cmd/aos-mcp/bin/aos-mcp", "args": ["--ws", WS, "<登記檔>"], "env": {"PATH": "proto8/cmd/aos-tools/bin、impls 的 aos-exec／aos-json 的 bin:…"}}}}`，`--allowedTools mcp__aos__<名>`（**eca 不用手寫**：eca 資料夾放一份 `tools.json`，cli_session 自己接上 aos-mcp、工作區與 stack 跟著那隻實例，見 [templates/eca-claude](../../templates/docs/01-eca-claude.md)）；例子在試驗場 `~/code/playground/agents/bob-cathy/mcp.json`（不在 git；`"args": ["--enable-logs"]`——不帶登記檔＝cwd 的 `./tools.json`、`--enable-logs` 記呼叫紀錄到 `<stack>/aos-mcp-logs.jsonl`；cwd＝那隻 agent 的資料夾，工作區與 stack 從 aos-exec 給的 `AOS_WS`／`AOS_STACK` 繼承）。

@@ -1,7 +1,7 @@
 {
   "name": "aos-daemon",
   "version": "0.1.0",
-  "description": "aos-daemon：proto8/bin/aos-daemon 的 C++ 版",
+  "description": "aos-daemon：照一張名單把幾個 proc 各自起在小格裡、看著它們（C++）",
   "builtin-baseline": "b781af668027bbf77f2f827f47b5c6cd8d825c08",
   "dependencies": [
     "nlohmann-json"

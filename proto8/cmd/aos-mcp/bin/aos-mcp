@@ -1,0 +1,306 @@
+#!/usr/bin/env python3
+# aos-mcp - 把 aos-tools 的工具註冊檔（登記檔，例 tools.json）登記的工具當 MCP tools 給外部 agent（Claude Code、pi coding agent 等）叫；stdio JSON-RPC
+# 白話版：這支是「翻譯櫃台」，包在 aos-tools 上面（使用者 10-27「aos-mcp 是一個小包裝，跑在 aos-tools 上」）。
+# 外面的 agent 只會講 MCP；櫃台把「有哪些工具」交給 `aos-tools ls --json`、「叫一次」交給 `aos-tools call 名`，
+# 自己不懂任何一個工具在做什麼、也不管工具是資料夾、JSON 還是可執行檔（C-52）。設計：proto8/thinking/2026-10/28/aos-tools/README.md。
+#
+# 用法：aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--overlay O] [--memory NAME] [REGISTRY...]
+#   --memory NAME（11-05 晚 agent-knowledge K4）：initialize 時叫一次登記名 NAME 的工具（memory）{"op": "read"}，它印的知識庫根放進回應的
+#   instructions（MCP 用戶端把它放進自己的 system prompt；Claude Code 會）。叫的是 tools/list 給出去的同一個工具＝外部 agent 看到的根跟它自己查的一樣。
+#   清單裡沒有 NAME、或叫了失敗＝不給 instructions、stderr 一行 warning（不讓整個 MCP 連線起不來）；沒給 --memory＝照舊不給。
+#   --overlay O（11-05 portable-flow 步 4）：原樣轉給 aos-tools 的 --overlay（REGISTRY 疊這隻的覆蓋層 O；疊法歸 aos-tools）。
+#   只能配一份 REGISTRY（多給＝ArgumentsBad）；有 --overlay 時 REGISTRY 可以不在（＝只有覆蓋層），O 不在＝沒有覆蓋。
+#   每個 REGISTRY 是一份登記檔的路徑（相對路徑從啟動時的 cwd 算；不是檔＝ToolMissing）；檔名不限
+#   （11-02 使用者「改成指定檔案」，以前給的是 agent 資料夾、讀它的 tools.json）。一份都沒給＝./tools.json
+#   （11-02 使用者「不接，就是默認aos-tools.json」先改成 ./aos-tools.json；11-02 再改回 ./tools.json、跟 aos-tools 一致：
+#   使用者「兩邊的json格式是一樣的嗎？是同一份嗎？是的話，那就全部改回預設tools.json。」；不存在＝ToolMissing）。好幾份的工具合在一起，撞名＝ToolsBad。
+#   清單每次 tools/list、tools/call 都重讀（登記檔變了，下次列就看得到；不主動通知 listChanged）。
+#   工作區＝--ws ＞ $AOS_WS；stack＝--stack ＞ $AOS_STACK ＞ $WS/.stack/。每次叫工具：
+#   AOS_WS=WS AOS_STACK=<stack>/tools/<名>/ aos-tools --file REGISTRY call 名（aos-tools、aos-exec 由 PATH 找，呼叫者放好），
+#   arguments 進 stdin、stdout 整段回去，退非 0＝isError（失敗時另附工具 stderr 的最後 STDERR_TAIL 位元組，見 tail_of）；逾時＝工具 _metainfo（資料夾的 _metainfo.json 檔／JSON 檔的 _metainfo key）的 time_ms.max，沒寫用 --timeout-s（預設 60），
+#   到了整群 TERM、2 秒後 KILL。呼叫紀錄預設不記（11-02 使用者「默認不留」）：給 --enable-logs＝每次叫完在
+#   <stack>/aos-mcp-logs.jsonl 記一行（名字、arguments、結束碼、花多久），再加 --logs-path FILE＝記在 FILE（相對路徑從啟動時的 cwd 算）；
+#   只給 --logs-path、沒給 --enable-logs＝ArgumentsBad。
+# 只做 initialize、ping、tools/list、tools/call；沒有 progress、resources、prompts、HTTP。
+# 錯：自己的錯 stderr 一行「aos-mcp: error: 代號 原因」、退 1（ArgumentsBad、FlagUnknown、WsMissing、ToolMissing、ToolsBad；11-05 stdio-unify R1）。
+#   --help＝英文說明到 stdout、退 0（R3）；不給參數照常（讀 ./tools.json）；Ctrl-C＝退 130、不吐 traceback（R12）。
+#   啟動時 aos-tools ls 失敗＝ToolsBad（aos-tools 自己那行照樣在 stderr）；跑起來之後重讀失敗＝那一則 JSON-RPC 回錯誤、不退
+#   （錯誤訊息附 aos-tools 那次 stderr 的最後一段）。
+#   工具與 aos-tools 的 stderr：aos-mcp 接住後原樣轉印到自己的 stderr（MCP 用戶端的 log）；失敗時最後一段另附給外部 agent
+#   （11-05 使用者選「附 stderr 尾巴（推薦）」，edge-basics 題 1；C-52 的明文例外：出口是給外部 agent 看原因，11-05 R10 照舊）。成功時不附。
+#   命令列形狀照 CONVENTION P-44（11-04）：旗標都在 REGISTRY 前面、`--` 結束旗標、`--x V`／`--x=V`；不認得的旗標＝FlagUnknown。
+import json, os, signal, subprocess, sys, time
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
+import aos_flags  # noqa: E402  proto8/py/aos_flags.py：P-44 的解析
+
+NAME = "aos-mcp"
+PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
+USAGE = "aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--overlay O] [--memory NAME] [REGISTRY...]"
+MEMORY = None                                   # --memory NAME（11-05 晚 K4）：initialize 時給的知識庫根從這個工具來
+OVERLAY = None                                  # --overlay O（11-05）：轉給 aos-tools
+DEFAULT_REGISTRY = "tools.json"               # 一份都沒給時讀 ./tools.json（跟 aos-tools 一致；11-02 改回）
+LOGS_NAME = "aos-mcp-logs.jsonl"         # --enable-logs 沒給 --logs-path 時記在 <stack>/ 底下的這個檔（11-02）
+LOGS_PATH = None                               # 記呼叫紀錄的檔（絕對路徑）；None＝不記（預設）
+STDERR_TAIL = 2048                             # 失敗時附給外部 agent 的 stderr 最後幾個位元組（11-05，edge-basics 題 1）
+aos_flags.HELP = """aos-mcp - serve the tools of aos-tools registries as MCP tools to an external agent (Claude Code, pi...); stdio JSON-RPC.
+
+    aos-mcp [--ws WS] [--stack DIR] [--timeout-s N] [--enable-logs [--logs-path FILE]] [--overlay O] [--memory NAME] [REGISTRY...]
+
+REGISTRY: registry files (relative to the cwd at start; none = ./tools.json); several are merged, a name clash = ToolsBad.
+  --overlay O is passed on to aos-tools --overlay and goes with exactly one REGISTRY (which may then be missing).
+  The list is re-read on every tools/list and tools/call.
+Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call runs
+  AOS_WS=WS AOS_STACK=<stack>/tools/NAME/ aos-tools --file REGISTRY call NAME with the arguments on stdin; stdout goes back as the
+  result, exit non-zero = isError (the last 2048 bytes of the tool's stderr are attached). Timeout = the tool's _metainfo time_ms.max,
+  otherwise --timeout-s (default 60); then TERM to the whole group, KILL 2 s later.
+--memory NAME: on initialize, call tool NAME with {"op": "read"} and send what it prints (the knowledge base root) as the
+  instructions of the reply; NAME not listed or the call failing = no instructions and a warning line on stderr.
+--enable-logs: log one line per call to <stack>/aos-mcp-logs.jsonl (or --logs-path FILE). Off by default.
+Supports initialize, ping, tools/list, tools/call only.
+Errors: one stderr line `aos-mcp: error: CODE reason`, exit 1. Codes: ArgumentsBad, FlagUnknown, WsMissing, ToolMissing, ToolsBad.
+  stderr of the tools and of aos-tools is passed through to aos-mcp's stderr."""
+
+
+class ToolsBad(Exception):
+    def __init__(self, msg, tail=""):
+        super().__init__(msg)
+        self.tail = tail                         # aos-tools 那次 stderr 的最後一段（跑起來之後回給外部 agent 用）
+
+
+def tail_of(err):
+    """stderr（bytes）→ 原樣轉印到自己的 stderr，回最後 STDERR_TAIL 位元組（去頭尾空白；沒東西＝""）。"""
+    if not err:
+        return ""
+    sys.stderr.buffer.write(err)
+    sys.stderr.buffer.flush()
+    t = err[-STDERR_TAIL:].decode("utf-8", "replace").strip()
+    return ("..." + t) if len(err) > STDERR_TAIL else t
+
+
+def die(code, reason):
+    aos_flags.die(NAME, code, reason)
+
+
+def parse_args(argv):
+    """命令列 → (ws, stack, timeout_s, registries)；--enable-logs／--logs-path 設進 LOGS_PATH。"""
+    global LOGS_PATH, OVERLAY, MEMORY
+    try:
+        opts, files = aos_flags.parse(argv, {"--ws": "ws", "--stack": "stack", "--timeout-s": "timeout_s",
+                                             "--logs-path": "log", "--overlay": "overlay",
+                                             "--memory": "memory"}, {"--enable-logs": "enable"})
+    except aos_flags.Error as e:
+        die(e.code, "%s (usage: %s)" % (e, USAGE))
+    ws, stack = opts.get("ws", os.environ.get("AOS_WS")), opts.get("stack", os.environ.get("AOS_STACK"))
+    enable, log, timeout_s = opts.get("enable", False), opts.get("log"), 60.0
+    if "timeout_s" in opts:
+        try:
+            timeout_s = float(opts["timeout_s"])
+        except ValueError:
+            die("ArgumentsBad", "--timeout-s must be a number")
+    if log is not None and not enable:
+        die("ArgumentsBad", "--logs-path given without --enable-logs (give both to log; nothing is logged by default)")
+    if log == "":
+        die("ArgumentsBad", "--logs-path needs a file name")
+    if "memory" in opts:
+        if not opts["memory"]:
+            die("ArgumentsBad", "--memory needs a tool name")
+        MEMORY = opts["memory"]
+    if not files:
+        files = [DEFAULT_REGISTRY]
+    if "overlay" in opts:
+        if not opts["overlay"]:
+            die("ArgumentsBad", "--overlay needs a file name")
+        if len(files) != 1:
+            die("ArgumentsBad", "--overlay goes with exactly one REGISTRY (got %d)" % len(files))
+        OVERLAY = os.path.abspath(opts["overlay"])
+    if not ws or not os.path.isdir(ws):
+        die("WsMissing", "no --ws and no AOS_WS, or it is not a folder")
+    regs = []
+    for f in files:
+        if not os.path.isfile(f) and (OVERLAY is None or os.path.isdir(f)):   # 有覆蓋層時定義那份可以不在
+            die("ToolMissing", "%s is not a file (give the path of a registry, e.g. tools.json; register tools with aos-tools --file it add)" % f)
+        regs.append(os.path.abspath(f))
+    ws = os.path.abspath(ws)
+    stack = os.path.abspath(stack) if stack else os.path.join(ws, ".stack")
+    if enable:
+        LOGS_PATH = os.path.abspath(log) if log else os.path.join(stack, LOGS_NAME)
+    return ws, stack, timeout_s, regs
+
+
+def annotations(meta):
+    """_metainfo → MCP 的提示（只搬幾個布林，數字不搬：M10 模型看不到）。沒寫的 key 就不給。"""
+    out = {}
+    if isinstance(meta.get("side_effect"), bool):
+        out["readOnlyHint"] = not meta["side_effect"]
+    if isinstance(meta.get("idempotent"), bool):
+        out["idempotentHint"] = meta["idempotent"]
+    res = meta.get("resource")
+    if res is not None:
+        res = res if isinstance(res, list) else [res]
+        out["openWorldHint"] = any(r in ("llm", "net") for r in res)
+    return out
+
+
+def tools_argv(reg):
+    return ["aos-tools", "--file", reg] + (["--overlay", OVERLAY] if OVERLAY else [])
+
+
+def load_tools(regs):
+    """問 aos-tools 每份註冊檔登記了什麼 → {名: {reg, spec, max_s}}；失敗丟 ToolsBad。"""
+    tools = {}
+    for reg in regs:
+        try:
+            r = subprocess.run(tools_argv(reg) + ["ls", "--json"], stdin=subprocess.DEVNULL,
+                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)   # stderr 接住、照樣轉印（tail_of）
+        except OSError as e:
+            raise ToolsBad("cannot run aos-tools: %s" % e)
+        tail = tail_of(r.stderr)
+        if r.returncode != 0:
+            raise ToolsBad("aos-tools ls %s exited %d" % (reg, r.returncode), tail)
+        for t in json.loads(r.stdout.decode("utf-8")):
+            if t["name"] in tools:
+                raise ToolsBad("duplicate tool name: %s (%s and %s)" % (t["name"], tools[t["name"]]["reg"], reg))
+            td, meta = t["tooldef"], t.get("metainfo") or {}
+            spec = {"name": t["name"], "description": td.get("description", ""),
+                    "inputSchema": td.get("parameters", {"type": "object", "properties": {}})}
+            hints = annotations(meta)
+            if hints:
+                spec["annotations"] = hints
+            max_s, tm = None, meta.get("time_ms")
+            if isinstance(tm, dict) and isinstance(tm.get("max"), (int, float)) and tm["max"] > 0:
+                max_s = tm["max"] / 1000.0
+            tools[t["name"]] = {"reg": reg, "spec": spec, "max_s": max_s}
+    return tools
+
+
+def call(name, tool, args, ws, stack, timeout_s):
+    """跑一次工具 → (結束碼, stdout, stderr 最後一段, 花幾毫秒, 逾時秒數)。結束碼 None＝逾時被收掉。"""
+    env = dict(os.environ, AOS_WS=ws, AOS_STACK=os.path.join(stack, "tools", name) + "/")
+    # AOS_ENTRY 照常繼承（11-04 四元素審查：原本 pop 掉、怕外面殘留的值讓工具找錯入口；但 P-39 是一路繼承、使用者 11-01 裁留，外面設了＝要它）
+    limit = tool["max_s"] or timeout_s
+    t0 = time.monotonic()
+    p = subprocess.Popen(tools_argv(tool["reg"]) + ["call", name], stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,
+                         start_new_session=True)   # 自成一群：逾時能整群收掉（P-36）
+    try:
+        out, err = p.communicate(json.dumps(args).encode(), timeout=limit)
+        code = p.returncode
+    except subprocess.TimeoutExpired:
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(p.pid, sig)
+            except ProcessLookupError:
+                break
+            try:
+                p.wait(timeout=2)
+                break
+            except subprocess.TimeoutExpired:
+                pass
+        try:
+            out, err = p.communicate(timeout=2)  # 整群收掉了：管子另一頭多半都關了
+        except subprocess.TimeoutExpired:        # 有逃出群組的還拿著管子：不等了
+            out, err = b"", b""
+        code = None
+    tail = tail_of(err)
+    return code, out.decode("utf-8", "replace"), tail, int((time.monotonic() - t0) * 1000), limit
+
+
+def record(line):
+    if LOGS_PATH is None:                       # 預設不記
+        return
+    os.makedirs(os.path.dirname(LOGS_PATH), exist_ok=True)
+    with open(LOGS_PATH, "a", encoding="utf-8") as f:
+        f.write(json.dumps(line, ensure_ascii=False) + "\n")
+
+
+def tools_call(params, tools, ws, stack, timeout_s):
+    name, args = params.get("name"), params.get("arguments") or {}
+    if name not in tools:
+        return None, (-32602, "no such tool: %s" % name)
+    code, out, tail, ms, limit = call(name, tools[name], args, ws, stack, timeout_s)
+    record({"name": name, "arguments": args, "code": code, "elapsed_ms": ms,
+                   "called_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
+    if code is None:
+        text = "%s: CommandFailed %s timed out (%g s); its process group was killed" % (NAME, name, limit)
+    elif code != 0 and not out.strip():
+        text = "%s: CommandFailed %s exited %d with empty stdout" % (NAME, name, code)
+    else:
+        text = out
+    content = [{"type": "text", "text": text}]
+    if code != 0 and tail:                      # 失敗時附 stderr 尾巴，外部 agent 才看得到原因（11-05，edge-basics 題 1）
+        content.append({"type": "text", "text": "stderr (last %d bytes at most):\n%s" % (STDERR_TAIL, tail)})
+    return {"content": content, "isError": code != 0}, None
+
+
+def knowledge_root(regs, ws, stack, timeout_s):
+    """--memory NAME：叫 NAME {"op": "read"} → 給 initialize 的 instructions；不給的情況（沒 --memory、清單沒有、叫失敗）＝None。"""
+    if MEMORY is None:
+        return None
+    try:
+        tools = load_tools(regs)
+    except ToolsBad as e:                       # 登記檔壞了：照樣連得上、不給根（11-05 晚邊緣測試：原本整則 initialize 回錯）
+        aos_flags.warn(NAME, "--memory %s: cannot list the tools (%s); no instructions sent" % (MEMORY, e))
+        return None
+    if MEMORY not in tools:
+        aos_flags.warn(NAME, "--memory %s is not among the tools; no instructions sent" % MEMORY)
+        return None
+    code, out, _, _, _ = call(MEMORY, tools[MEMORY], {"op": "read"}, ws, stack, timeout_s)
+    if code != 0 or not out.strip():
+        aos_flags.warn(NAME, "--memory %s (op read of the root) %s; no instructions sent" %
+                       (MEMORY, "timed out" if code is None else "exited %d" % code))
+        return None
+    return "Knowledge base root (from tool %s; call it for more):\n\n%s" % (MEMORY, out.strip())
+
+
+def handle(msg, regs, ws, stack, timeout_s):
+    """一則 JSON-RPC → 回覆（通知不回，傳回 None）。"""
+    method, params, mid = msg.get("method"), msg.get("params") or {}, msg.get("id")
+    if mid is None:                             # 通知（notifications/initialized 等）：不用回
+        return None
+    result, err = None, None
+    try:
+        if method == "initialize":
+            result = {"protocolVersion": params.get("protocolVersion", PROTOCOL),
+                      "capabilities": {"tools": {}}, "serverInfo": {"name": NAME, "version": "0.2"}}
+            root = knowledge_root(regs, ws, stack, timeout_s)
+            if root:
+                result["instructions"] = root
+        elif method == "ping":
+            result = {}
+        elif method == "tools/list":
+            result = {"tools": [t["spec"] for t in load_tools(regs).values()]}
+        elif method == "tools/call":
+            result, err = tools_call(params, load_tools(regs), ws, stack, timeout_s)
+        else:
+            err = (-32601, "method not supported: %s" % method)
+    except ToolsBad as e:                       # 跑起來之後登記檔壞了：這一則回錯，不退
+        err = (-32603, aos_flags.error_line(NAME, "ToolsBad", e) + ("\nstderr (last part):\n%s" % e.tail if e.tail else ""))
+    if err:
+        return {"jsonrpc": "2.0", "id": mid, "error": {"code": err[0], "message": err[1]}}
+    return {"jsonrpc": "2.0", "id": mid, "result": result}
+
+
+def main():
+    ws, stack, timeout_s, regs = parse_args(sys.argv[1:])
+    try:
+        load_tools(regs)                        # 啟動時先讀一次：壞了就別開櫃台
+    except ToolsBad as e:
+        die("ToolsBad", str(e))
+    for line in sys.stdin:                      # 一行一則（MCP stdio 傳輸）
+        if not line.strip():
+            continue
+        try:
+            msg = json.loads(line)
+            reply = handle(msg, regs, ws, stack, timeout_s) if isinstance(msg, dict) else \
+                {"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "must be a JSON object"}}
+        except ValueError as e:
+            reply = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "not JSON: %s" % e}}
+        if reply is not None:
+            sys.stdout.write(json.dumps(reply, ensure_ascii=False) + "\n")
+            sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    aos_flags.run(main)

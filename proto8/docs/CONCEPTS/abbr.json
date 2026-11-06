@@ -200,7 +200,7 @@
    "abbr": "bin",
    "full": "binary",
    "meaning": "可執行檔資料夾（Unix 慣例）",
-   "example": "proto8/bin（10-23 起只剩 aos-tick）、impls 各專案的 bin/"
+   "example": "proto8/cmd/<名>/bin/、impls 各專案的 bin/"
   },
   {
    "abbr": "demo",

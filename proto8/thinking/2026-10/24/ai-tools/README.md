@@ -1,6 +1,6 @@
 # 2026-10-24 給 AI 用的 aos 工具集（aos-ai）
 
-← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜程式 [proto8/ai_tools](../../../../extras/ai_tools/README.md)
+← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜程式 [proto8/ai_tools](../../../../cmd/aos-mcp/README.md)
 
 ## 分檔目錄
 

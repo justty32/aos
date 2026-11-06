@@ -1,6 +1,6 @@
 # 2026-11-05 無痛遷移的使用者旅程：裝好→複製 agents→起 daemon→掛 agent→sleep→整份搬走續跑（fable 規劃，沒改程式）
 
-← [thinking README](../../../README.md)｜日 [2026-11-05](../README.md)｜前情：[11-04 aos-agent](../../04/aos-agent/README.md)、[11-04 four-elements](../../04/four-elements/README.md)、[11-04 think-as-function](../../04/think-as-function/README.md)、[11-03 procs](../../03/procs/README.md)（sleep／wake）、[11-03 stack-where](../../03/stack-where.md)、[11-02 daemon-env](../../02/daemon-env/README.md)｜程式（只翻、WSL `/tmp` 拷貝實測、沒改）：[aos-daemon](../../../../impls/aos-daemon/README.md)、[aos-daemon-ctl](../../../../bin/docs/03-aos-daemon-ctl.md)、[aos-agent](../../../../extras/agent/README.md)、[aos-exec](../../../../impls/aos-exec/README.md)｜條文：[N-57～N-64](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[N-28](../../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[C-56、C-65、C-69](../../../../docs/CONCEPTS/01-設計理念.md)、[P-42](../../../../docs/CONVENTION/02-題目stack停錯腦.md)
+← [thinking README](../../../README.md)｜日 [2026-11-05](../README.md)｜前情：[11-04 aos-agent](../../04/aos-agent/README.md)、[11-04 four-elements](../../04/four-elements/README.md)、[11-04 think-as-function](../../04/think-as-function/README.md)、[11-03 procs](../../03/procs/README.md)（sleep／wake）、[11-03 stack-where](../../03/stack-where.md)、[11-02 daemon-env](../../02/daemon-env/README.md)｜程式（只翻、WSL `/tmp` 拷貝實測、沒改）：[aos-daemon](../../../../impls/aos-daemon/README.md)、[aos-daemon-ctl](../../../../cmd/docs/03-aos-daemon-ctl.md)、[aos-agent](../../../../cmd/aos-agent/README.md)、[aos-exec](../../../../impls/aos-exec/README.md)｜條文：[N-57～N-64](../../../../docs/NORMS/10-基礎設施-定義與工作區.md)、[N-28](../../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[C-56、C-65、C-69](../../../../docs/CONCEPTS/01-設計理念.md)、[P-42](../../../../docs/CONVENTION/02-題目stack停錯腦.md)
 
 狀態：**11-05 使用者裁完八題、已實作**（見下「決定（使用者，11-05 裁八題）」與 [實作結果](#實作結果11-05-隊長)）；以下原規劃段照留。原狀態：**規劃、沒改程式、沒改條文**。使用者 11-05 早一路補了七段話（下），把大半的題都裁了；剩 [05](05-衝突與方向題.md) 五題。實作步驟草稿在 [06](06-實作步驟草稿.md)。本檔只記使用者原文（逐字）、決定、fable 照原則定的結論（可翻案）、要使用者看的題（[user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
 
@@ -38,7 +38,7 @@
 ## 決定（使用者，11-05 裁八題；原文見上）
 
 1. **sleep／wake 與 stop／start 嚴格分**：sleep＝現在就睡、daemon 開門（或 wake）時醒；stop＝等這輪做完、要手動 start；用錯回 `PhaseBad`。
-2. **tools 只存差異**（覆蓋層），使用者要看實作 → [WAIT_USER](../../../../../wf/WAIT_USER.md)；說明在 [aos-agent docs/03](../../../../extras/agent/docs/03-tools覆蓋層.md)。
+2. **tools 只存差異**（覆蓋層），使用者要看實作 → [WAIT_USER](../../../../../wf/WAIT_USER.md)；說明在 [aos-agent docs/03](../../../../cmd/aos-agent/docs/03-tools覆蓋層.md)。
 3. **定義沒搬、醒不來的留 `stopped` 並寫原因**（表上 `reason` 欄）。
 4. 基準點＝**daemon 的 stack**；daemon 的 stack **留在 `ws/.stack`**。
 5. **`AOS_DAEMON` 沒設就找 `./.stack`**（不是推薦項）。
@@ -51,7 +51,7 @@
 - **daemon**（[aos-daemon 11-05 搬家相關](../../../../impls/aos-daemon/docs/03-起-停-暫停.md#11-05-搬家相關)）：表的 `stack`／`ws`／`exec`／`def` 存相對 daemon stack、adopt 從新位置拼回；小格 `loop.json` 的 `exec` 寫 `{"$env": "AOS_DAEMON", "$path": …}`、內嵌單子 `cwd` 同、`$ref` 相對小格；`procs_slept`／`procs_woken`；wake／start 3 秒內退＝`stopped`＋`reason`；`DaemonRunning`。
 - **信封**：aos-post `reply_to` 存相對信箱根（kernel、aos-llm 同）。
 - **ctl／aos-agent**：讀相對表、`sleep`／`wake`、`PhaseBad` 照表擋、`./.stack`；tools 覆蓋層（aos-tools `--overlay`，aos-mcp／cli_session 跟著疊）；demo/agent-fsm `_entry` 呼叫 `aos-agent add`（身體 `body.json`）。
-- **安裝與搬家說明**：[`proto8/install.sh`](../../../../install.sh)（symlink 進 `~/.local/bin`）、[aos-agent 搬家](../../../../extras/agent/docs/04-搬家.md)與 `stack.gitignore`／`stack.gitattributes` 範本；試驗場與桌面教學更新、真腦（LM Studio qwen3-1.7b）跑通一題。
+- **安裝與搬家說明**：[`proto8/install.sh`](../../../../install.sh)（symlink 進 `~/.local/bin`）、[aos-agent 搬家](../../../../cmd/aos-agent/docs/04-搬家.md)與 `stack.gitignore`／`stack.gitattributes` 範本；試驗場與桌面教學更新、真腦（LM Studio qwen3-1.7b）跑通一題。
 - **實測**（WSL /tmp）：起 daemon、add、問答 → Ctrl-C → `cp -a` 到別處起，表不改就在新位置醒、子行程 `AOS_STACK`／`AOS_WS` 全是新位置、續答，舊位置沒被碰；git init＋clone 到第三處照樣醒、續答；只搬 daemon／kernel／ws 不搬定義 → 那隻留 `stopped`、`reason` 帶 stderr 最後一行，定義放回 `start` 就回來；sleep／wake、第二個 daemon `DaemonRunning` 都過。
 - **代定（可翻案）**：REVIVE 視窗 3 秒；內嵌單子的 `$ref` 相對小格（不是相對 daemon stack；`$ref` 本來就從所在檔算）；daemon 對錯的組合不報錯、只 ctl 擋；add＋sleep 同時＝一列 sleeping；`DaemonRunning` 看 state.json 的 pid＋ticks＋boot_id；tools 覆蓋層的 path 相對覆蓋層檔、舊整份副本當整份取代且 add／rm 要先 reset；`_entry`／`body.json`／interfaces `entry` 的拆法；試驗場 lib 用副本不用 symlink；`.gitignore` 範本放 `ws/.stack/`；`KernelMissing` 代號沒改名；install.sh 只裝有 CMakeLists 的 impls。
 

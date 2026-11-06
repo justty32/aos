@@ -44,7 +44,7 @@
 | [`src/daemon/mailbox.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/mailbox.cpp) | 信箱 procs_ctl_mailbox（10-29，medium-plan § 二 4、§ 四 3；NORMS N-28 的 10-29 補、N-16；11-03 改名 procs、多 stop／start；說明見 daemon.hpp）。 |
 | [`src/daemon/windows.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/windows.cpp) | 管轄那一對窗——procs_ctl.json（手把）、procs_state.json（狀態窗）（10-29 拆窗，medium-plan § 四 1；11-03 loops_* 改名 procs_*；說明見 daemon.hpp）。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-daemon/src/main.cpp) | aos-daemon 命令列——block_signals、解命令列、讀設定、Daemon::serve（10-21 傍晚）。 |
-| [`vcpkg.json`](../../../../../proto8/impls/aos-daemon/vcpkg.json) | aos-daemon：proto8/bin/aos-daemon 的 C++ 版 |
+| [`vcpkg.json`](../../../../../proto8/impls/aos-daemon/vcpkg.json) | aos-daemon：照一張名單把幾個 proc 各自起在小格裡、看著它們（C++） |
 
 ## `proto8/impls/aos-directive/`
 

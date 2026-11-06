@@ -2,7 +2,7 @@
 
 ← [thinking](../../README.md)｜月份表 [2026-10](../README.md)｜前情：[腦的工具呼叫](../23/tool-calls/README.md)（範本 agent-dan）、[agent 當工具](agent-as-tool.md)
 
-規矩見 [thinking/README](../../README.md)：只留使用者原文、決定、結論。相關條文：[C-19、C-46、C-61](../../../docs/CONCEPTS/05-agent.md)、[C-65、C-67](../../../docs/CONCEPTS/03-基礎設施.md)、名詞表的 [heap](../../../docs/CONCEPTS/附錄1-名詞.md)、[P-41](../../../docs/CONVENTION/02-題目stack停錯腦.md)。範本 [demo/agent-meg](../../../demo/README.md#agent-meg記憶庫10-24)。
+規矩見 [thinking/README](../../README.md)：只留使用者原文、決定、結論。相關條文：[C-19、C-46、C-61](../../../docs/CONCEPTS/05-agent.md)、[C-65、C-67](../../../docs/CONCEPTS/03-基礎設施.md)、名詞表的 [heap](../../../docs/CONCEPTS/附錄1-名詞.md)、[P-41](../../../docs/CONVENTION/02-題目stack停錯腦.md)。範本 [demo/agent-meg](../../../templates/README.md#agent-meg記憶庫10-24)。
 
 ## 使用者原文（整理版，10-24）
 

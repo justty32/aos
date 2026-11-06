@@ -1,6 +1,6 @@
 # 2026-10-24 函數成長：太大或特性到了，就長成資料夾、底下是子函數
 
-← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜相關：[C-55 布局成長](../../../../docs/CONCEPTS/01-設計理念.md#布局成長10-15-使用者說原文)、[wf/STRUCTURE.md](../../../../../wf/STRUCTURE.md)（膨脹即拆、四級成長）、[C-46 函數](../../../../docs/CONCEPTS/05-agent.md#agent函數binding)、[C-72 JSON＝單檔的檔案系統](../../../../docs/CONCEPTS/01-設計理念.md)、[10-24 exec 放內嵌單子](../exec-relative/01-使用者原文.md#10-24-exec-直接放單子)、[10-24 `_metainfo`](../metainfo/README.md)｜原型：[grow/](../../../../extras/grow/README.md)
+← [thinking](../../../README.md)｜月份表 [2026-10](../../README.md)｜相關：[C-55 布局成長](../../../../docs/CONCEPTS/01-設計理念.md#布局成長10-15-使用者說原文)、[wf/STRUCTURE.md](../../../../../wf/STRUCTURE.md)（膨脹即拆、四級成長）、[C-46 函數](../../../../docs/CONCEPTS/05-agent.md#agent函數binding)、[C-72 JSON＝單檔的檔案系統](../../../../docs/CONCEPTS/01-設計理念.md)、[10-24 exec 放內嵌單子](../exec-relative/01-使用者原文.md#10-24-exec-直接放單子)、[10-24 `_metainfo`](../metainfo/README.md)｜原型：[grow/](../../../../cmd/aos-grow/README.md)
 
 ## 分檔目錄
 

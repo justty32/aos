@@ -7,7 +7,7 @@
     HERE = os.path.dirname(os.path.realpath(__file__))
     sys.path[:0] = [HERE, os.path.dirname(os.path.dirname(HERE))]
     import tool_io
-沙箱裡要看得到這支：綁工具資料夾時把它也綁唯讀（例 extras/sandbox/examples/bash-boxed/sandbox.json 的 ro）。
+沙箱裡要看得到這支：綁工具資料夾時把它也綁唯讀（例 cmd/aos-sandbox/examples/bash-boxed/sandbox.json 的 ro）。
 
 形狀（lib 契約，lib/docs/01 規則 3、5、5a）：
   錯誤行  「<名>: error: <代號> <原因>」：stderr 一行；給腦用的工具（預設）stdout 也印同一行（stdout 是給腦看的結果）；退 1。

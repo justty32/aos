@@ -15,9 +15,9 @@ sudo -n /usr/local/bin/s6-setuidgid aos-run id      # 驗：uid 是 aos-run
 | 用例 | 怎麼關 | 擋什麼、不擋什麼 |
 |---|---|---|
 | 自我改進 | 預設就關（S11）；工作區放 `sandbox.json` 換設定或寫 `false` 不關 | 擋：讀判準、碰家目錄、連網、吃爆記憶體／CPU。不擋：判準是檢查程式時，檢查程式自己跑函數（要關得檢查程式作者自己接） |
-| pi-tools／工具庫的 bash | 工具資料夾 `_entry` 寫 `["aos-sandbox", "sandbox.json", "aos-exec", "inner"]`，`inner` 指原本的工具（[examples/bash-boxed](../../../../extras/sandbox/examples/bash-boxed)） | 擋：出工作區、連網。原本工具一行不改 |
-| claude／codex CLI 工具 | [examples/cli-tool.json](../../../../extras/sandbox/examples/cli-tool.json)：要網、要寫 `~/.claude`、`~/.codex` | 只擋「讀寫工作區以外」；CLI 自己的沙盒（`--tools`、`sandbox_mode`）照舊 |
-| agent 當工具 | [examples/agent.json](../../../../extras/sandbox/examples/agent.json)：斷網、信箱綁進來（`rw`＋`env` 的 `AOS_KERNEL`）、kernel 那邊要寫 `accept` | 擋：任意單子（S18）。換帳號跑時信箱照 `setup.sh --mailbox` 設 |
+| pi-tools／工具庫的 bash | 工具資料夾 `_entry` 寫 `["aos-sandbox", "sandbox.json", "aos-exec", "inner"]`，`inner` 指原本的工具（[examples/bash-boxed](../../../../cmd/aos-sandbox/examples/bash-boxed)） | 擋：出工作區、連網。原本工具一行不改 |
+| claude／codex CLI 工具 | [examples/cli-tool.json](../../../../cmd/aos-sandbox/examples/cli-tool.json)：要網、要寫 `~/.claude`、`~/.codex` | 只擋「讀寫工作區以外」；CLI 自己的沙盒（`--tools`、`sandbox_mode`）照舊 |
+| agent 當工具 | [examples/agent.json](../../../../cmd/aos-sandbox/examples/agent.json)：斷網、信箱綁進來（`rw`＋`env` 的 `AOS_KERNEL`）、kernel 那邊要寫 `accept` | 擋：任意單子（S18）。換帳號跑時信箱照 `setup.sh --mailbox` 設 |
 
 ## 邊緣狀況（還沒問使用者）
 

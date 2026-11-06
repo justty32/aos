@@ -1,6 +1,6 @@
 # 2026-11-03 stack 不放工作區：拿掉 `.stack` 捷徑、`aos-daemon-ctl where --stack`、`aos-exec --stack`
 
-← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜同批：[eca 18](../../2026-10/30/eca/18-11-03-單隻-add-rm.md)（aos-eca 單隻、add XXX、rm）｜接著的：[11-03 procs](procs/README.md)（每項自己的 `stack`、`where` 改讀列上的 `stack`，在本批之後）｜被改的：[10-30 eca 衝突 3](../../2026-10/30/eca/08-衝突.md)（工作區 `.stack` 捷徑）、[N-54 10-30 夜補](../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-58](../../../docs/NORMS/10-基礎設施-定義與工作區.md)｜程式：[aos-daemon-ctl](../../../bin/README.md)、[aos-exec](../../../impls/aos-exec/README.md)、aos-say、aos-eca
+← [thinking README](../../README.md)｜月份表 [2026-11](../README.md)｜同批：[eca 18](../../2026-10/30/eca/18-11-03-單隻-add-rm.md)（aos-eca 單隻、add XXX、rm）｜接著的：[11-03 procs](procs/README.md)（每項自己的 `stack`、`where` 改讀列上的 `stack`，在本批之後）｜被改的：[10-30 eca 衝突 3](../../2026-10/30/eca/08-衝突.md)（工作區 `.stack` 捷徑）、[N-54 10-30 夜補](../../../docs/NORMS/04-基礎設施-loop與daemon.md)、[N-58](../../../docs/NORMS/10-基礎設施-定義與工作區.md)｜程式：[aos-daemon-ctl](../../../cmd/README.md)、[aos-exec](../../../impls/aos-exec/README.md)、aos-say、aos-eca
 
 本檔只記使用者原文、決定、頂層照原則定的細節（可翻案）（[user/03](../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)）。
 

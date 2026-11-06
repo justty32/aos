@@ -12,7 +12,7 @@
 //   load_cfg    設定檔（aos-loop、aos-fsm、aos-daemon 的唯一位置參數）：`檔` 或 `檔#/指標`，回那個位置的值（不驗是不是物件）。
 //               檔不在 CfgMissing、其他讀不了或不是 JSON CfgBad、`#` 後不是 `/` CfgBad、`#/` 指不到 CfgMissing（10-23 命名統合）。第一行 `#!` 跳過（同 read_json_at）。
 //
-// 對應 proto8/bin/aos_flags.py 的 parse、load_cfg（10-21 ideas § 3、10-21 傍晚 § 9）。
+// 對應 proto8/py/aos_flags.py 的 parse、load_cfg（10-21 ideas § 3、10-21 傍晚 § 9）。
 // 較早一代的 aos/flags.hpp（旗標＝key 原名、值當 JSON 解）11-04 已刪（沒人叫）。
 #pragma once
 

@@ -1,5 +1,0 @@
-# stack.gitattributes - 把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件）
-# 用法：cp proto8/extras/agent/stack.gitattributes <git repo 根>/.gitattributes（放根＝定義裡的 _entry 也管到）；只管 image 就放 ws/.stack/.gitattributes。
-# 為什麼：Windows 端 core.autocrlf=true 的 checkout 會在 stage.txt（aos-fsm 讀狀態名）、pending.txt、_entry 殼檔尾巴多一個 \r，讀出來就不對。
-# 一律原樣存、原樣取（不轉換行）。只在 Linux 檔案系統 checkout 的話這份可有可無。
-* -text
