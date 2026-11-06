@@ -13,6 +13,8 @@
 
 ## 待使用者項
 
+- **家機 C++ 重建**（使用者玩完試驗場才建；留格與 `AOS_KERNEL` 提醒要重建才生效）：`(cd proto8/impls && nice -n 15 cmake --build build -j4)` → [os-impl 07](../proto8/thinking/2026-11/06/os-impl/07-C5留格與AOS_KERNEL提醒實作結果.md)
+- **對判官本身下指令改寫法**：要寫 `AOS_KERNEL= aos-agent ctl wake --target 名字`（以前自動直寄 daemon，os-impl 06 起改）；試驗場若這樣用要留意 → [os-impl 06](../proto8/thinking/2026-11/06/os-impl/06-判官排隊第二步實作結果.md)
 - **no-pid P8**：公司 WSL 試驗場改三層並親驗；家機在可連 user bus 的殼驗 scope 的 `memory.max`（本次沙箱擋住） → [18-P8實作結果](../proto8/thinking/2026-11/05/no-pid/18-P8實作結果.md)
 
 - **真 Claude Code 讀不讀 aos-mcp 的 instructions**（11-05 夜邊緣測試留的，要你實跑；同批另五題 11-05 夜已裁「剩下都照推薦」，排在大重構之後做，見 SESSION-LOG）→ [small-thought](../proto8/thinking/2026-11/05/small-thought/README.md)

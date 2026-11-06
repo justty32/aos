@@ -12,6 +12,12 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-06 夜 收工 家機（明早接）
+
+1. **授權**：本 session 隨意 push；普通工作 opus、雜活 sonnet；本週 Claude 額度緊（公司時剩約 7%），隊長 opus＋寫碼盡量派 codex `gpt-6.1-sol`；在家機。新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問 push。
+2. **今晚做完並 push**：家機清作廢 S5／S7 分支與殘渣、重裝、試驗場刷新（`9241be909`）；kernel `smart-high` 模型名改 `claude-haiku`（`79d736b4c`）；代號自由取名＝現況已支援、不改程式（[alias-names](../proto8/thinking/2026-11/06/alias-names/README.md)）；no-pid P7（`e588b8c69`，父只看子活著；使用者「子daemon管好自己…盡量解耦合」）、K-5、P8（根 daemon、試驗場三層）、P9（`30c3d5ee8`…`98518bd44`）；tick 線 T5／T6／T8 全做完（`2f4e2dc3`、`a858fe1a`；三個時鐘使用者選「留著」`5ae47106e`）；判官排隊＋寄信者逾時第二步＋K-3＋C5 留格＋E2 kernel 半（`3e8ac15d4`、`b19f844cb`、`5ffa76567`，結果 [os-impl 06](../proto8/thinking/2026-11/06/os-impl/06-判官排隊第二步實作結果.md)、[07](../proto8/thinking/2026-11/06/os-impl/07-C5留格與AOS_KERNEL提醒實作結果.md)）；桌面 `~/Desktop/aos-試驗場教學.html` 換三層新版（舊的 `.bak-1105.html`，沒人看過畫面）。
+3. **明天要接**：① 家機 C++ 重建（使用者玩完才建：`(cd proto8/impls && nice -n 15 cmake --build build -j4)`），留格與 AOS_KERNEL 提醒才生效；② 試驗場 README 小瑕疵（範例輸出是 11-05 的、第 6 節順序、crash 沒給 kill 指令）與 repo 文件不符（`proto8/cmd/aos-agent/docs/04-搬家/01-六段食譜.md` 建議只根開 tick vs 使用者選三層各留；04-搬家.md 目錄序 01、03、02；03-重建root 範例路徑名跟試驗場不同）；③ 判官隊長說有一個假腦 fixture 接法本來就壞（改前就失敗），要派人修；④ 排程剩：K-1、知識庫 W 線（W1～W3）、aos-serve、CONVENTION 草稿定稿、`--env-file`＋`--envs`。另：頂層轉題前要先對過使用者以前的裁定（今晚 T 隊把已定的「近的贏」又當方向題丟上來）。
+
 ## 2026-11-06 收工 16:45 公司（17:05 關機；家機接）
 
 1. **隊形改了（11-06 傍晚）**：使用者「我們的本週額度剩7%了」「盡量用codex」「或是單派codex也可以」——**本週剩下的工作直接派 codex 當隊長**（`codex exec -m gpt-6.1-sol -s workspace-write -C <dir> -o out.md '/goal …' < task.md`，在非 git 資料夾要加 `--skip-git-repo-check`，這不算繞沙箱），不配 Claude 隊長；codex 不 commit，頂層看報告＋diff 後 `git commit -- <路徑>`、push。WSL claude 是公司帳號，不吃這個額度，可當審稿。fable 照舊：使用者說才走 WSL。其餘授權（隨意 push、WSL 主 clone、不碰使用者程序、不繞沙箱）同上一條。
