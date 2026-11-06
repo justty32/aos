@@ -31,7 +31,7 @@ def mailbox_of(d, direct=False):
     if kernel and not direct:
         box = os.path.abspath(kernel)
         if not os.path.isdir(os.path.join(box, "new")):
-            raise Fail("MailboxMissing", "%s (AOS_KERNEL) is not a mailbox (judge not started yet?)" % box)
+            raise Fail("MailboxMissing", "%s (AOS_KERNEL) is not a mailbox (check the declared AOS_KERNEL path)" % box)
         return box
     mb = names_of(d)["procs_ctl_mailbox"]
     if not mb:
@@ -48,6 +48,15 @@ def send(d, body, reply_to=None, direct=False):
         raise Fail("CommandMissing", "no aos-post on PATH")
     args = ["send"] + (["--reply-to", reply_to] if reply_to else []) + [mailbox_of(d, direct)]
     return _post(args, json.dumps(body, ensure_ascii=False), "SendFailed")
+
+
+def regret(box, letter):
+    """嘗試撤回尚未領取的信；已領取或撤回失敗只回 False。"""
+    try:
+        _post(["regret", box, letter], code="RegretFailed")
+        return True
+    except Fail:
+        return False
 
 
 def _letter(path):

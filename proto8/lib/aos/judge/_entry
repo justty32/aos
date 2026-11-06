@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# judge - 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false
+# judge - 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false；選填排隊窗 queue.json 先來先掛
 # 用法：aos-exec <這個資料夾> <judge.json 的絕對路徑>（每跑一次＝一輪；定義裡寫 {"$env": "AOS_CD", "$path": "judge.json"}，因為 aos-exec 會 cd 進這裡）。
 #   模式 1（繼承式）：daemon.json 的 exec 身體＝它，AOS_STACK＝daemon 自己的 stack；模式 2（0 號 proc 式）：daemon 底下一個 loop 型 proc 每次跑它，AOS_STACK＝它的 proc 的 stack。
 #   兩種都靠 AOS_DAEMON 找 daemon（11-05 起 daemon 的身體也拿得到）。設計：proto8/thinking/2026-11/05/kernel-daemon/02-兩種模式.md § 1、§ 2；說明 proto8/kernel/docs/02-kernel-modes.md。
@@ -18,20 +18,27 @@
 #     回信的 code、msg 與這行的代號、原因同一句（英文）。回信寄不出去、壞信也是提醒行。
 #     aos-daemon-ctl --reply-to（11-05 edge-agent 題 2）帶 reply_to：aos-agent ctl 收這封 applied: false 立刻報錯，不等逾時。
 #   只判斷＋轉寄，不自己跑任何東西。一輪做完退 0（沒信也是 0：身體退 10 會讓 loop／daemon 收工）。
+# 選填 queue: true：滿格信留 requests/cur/、queue.json 的 queued 陣列先來先掛；既有隊序優先，新信照 sent_at／信名排序。
+#   隊首所需新格不足時後方要新格者不能插隊；stop／ping 等不加新格的信照轉。窗 names 是新名字陣列、queued_at／expires_at 是 ISO UTC 毫秒。
+#   queued_at_ticks 透過 tool_io.now_tick 讀，有 AOS_TICK 才加。只有進隊時讀；每輪重用原時間。預設 queue: false＝滿格立即拒信。
+#   每輪所有 cur（含首次、關排隊）先驗 queue_wait_ms：非負整數；正數由 sent_at 起算、到期不轉；0 有格照轉、沒格不排。
+#   壞 sent_at＝BodyBad；到期＝SlotMissing。極大期限用 ISO 擴展年份表示。排隊不寄中間回信，轉寄保留原 body。
 # ctl 信箱＝$AOS_DAEMON/<procs_state.json 頂層的 procs_ctl_mailbox>；procs_state.json 還沒寫（daemon 第一圈）＝預設 procs_ctl_mailbox、running 0 列（同 aos-daemon-ctl）。
 #   procs_state.json 經 aos-directive 解（procs 超過 100 列會切檔）。在飛的（轉了、daemon 還沒套）不算 running：模式 2 判得比 daemon 快時可能多放幾個（已知限制）。
 # 錯（自己這層的，退 1；一般 loop 會停，daemon 的身體則記一行提醒、下一圈再跑，11-05 起；P-20）：ArgumentsBad、CfgMissing、CfgBad（judge.json）、StackMissing、DaemonMissing（沒設 AOS_DAEMON 或不是資料夾）、
 #   StateBad（procs_state.json 讀不懂）、MailboxMissing（daemon 沒開 ctl 信箱）、CommandMissing（PATH 沒 aos-post／aos-directive）、PostFailed（收件箱 init／take-all／see 失敗）。
 #   stderr 一行「judge: error: 代號 原因」。--help＝英文用法印 stdout、退 0。Ctrl-C＝退 130、不吐 traceback。
-import json, os, re, subprocess, sys
+import datetime, json, os, re, subprocess, sys
 
 HELP = """\
 usage: judge JUDGE.json   (run it with aos-exec as a daemon body or a loop proc; needs $AOS_STACK and $AOS_DAEMON)
 One round of the judge: take the procs_* letters in $AOS_STACK/requests/, decide each by
-JUDGE.json ({"allowed": [names] | null, "max_running": N | null}); forward the admitted ones
+JUDGE.json ({"allowed": [names] | null, "max_running": N | null, "queue": false}); forward the admitted ones
 to the daemon's ctl mailbox, answer the others {"applied": false, "error": {code, msg}}.
 A {"ping": true} body asks whether the daemon is there: forward it without judging; the daemon replies directly to the original sender.
 If the judge is absent, nobody forwards it and the caller times out.
+With queue=true, slot requests wait FIFO in requests/cur/; queue.json lists their positions.
+queue_wait_ms is a non-negative integer wall-clock limit from sent_at; 0 means do not queue.
 Each refused letter: one line "judge: warning: letter NAME refused: CODE reason" on stderr.
 Exit 0 after a round (also with no letters). On error: "judge: error: CODE reason" on stderr, exit 1.
 """
@@ -96,7 +103,10 @@ def load_policy(path):
         die("CfgBad", "allowed must be an array of names or null")
     if cap is not None and not (isinstance(cap, int) and not isinstance(cap, bool) and cap >= 0):
         die("CfgBad", "max_running must be a non-negative integer or null")
-    return (set(allowed) if allowed is not None else None), cap
+    queue = cfg.get("queue", False)
+    if not isinstance(queue, bool):
+        die("CfgBad", "queue must be a boolean")
+    return (set(allowed) if allowed is not None else None), cap, queue
 
 
 def daemon_view(daemon):
@@ -186,10 +196,68 @@ def refuse(requests, name, code, msg):
         post(["done", requests, name])
 
 
+def utc_ms(text):
+    """信封 UTC 時間轉成整數毫秒，不用浮點數比較期限。"""
+    value = datetime.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    if value.tzinfo is None:
+        raise ValueError("sent_at must include a timezone")
+    delta = value - datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc)
+    return (delta.days * 86400 + delta.seconds) * 1000 + delta.microseconds // 1000
+
+
+def utc_text(milliseconds):
+    """Gregorian 每 400 年重複；極大期限用 ISO 擴展年份，不限制合法整數。"""
+    cycles, remainder = divmod(milliseconds, 146097 * 86400000)
+    value = datetime.datetime(1970, 1, 1, tzinfo=datetime.timezone.utc) + datetime.timedelta(milliseconds=remainder)
+    year = value.year + cycles * 400
+    prefix = "%04d" % year if year <= 9999 else "+%06d" % year
+    return prefix + value.isoformat(timespec="milliseconds")[4:].replace("+00:00", "Z")
+
+
+def queue_view(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            rows = json.load(f)["queued"]
+        if not isinstance(rows, list) or any(
+                not isinstance(row, dict) or not isinstance(row.get("letter"), str)
+                or not isinstance(row.get("queued_at"), str) for row in rows):
+            raise ValueError("queued must contain letter and queued_at objects")
+        return {row["letter"]: row for row in rows}
+    except FileNotFoundError:
+        return {}
+    except (OSError, ValueError, KeyError, TypeError) as e:
+        die("StateBad", "cannot read queue.json: %s" % e)
+
+
+def write_queue(path, rows):
+    """原子換窗；空隊也寫出，移掉已撤信或已放行的舊列。"""
+    try:
+        temporary = path + ".tmp"
+        with open(temporary, "w", encoding="utf-8") as f:
+            json.dump({"queued": rows}, f, ensure_ascii=False)
+            f.write("\n")
+        os.replace(temporary, path)
+    except OSError as e:
+        die("StateBad", "cannot write queue.json: %s" % e)
+
+
+def expiry_message(letter, was_queued):
+    body = letter.get("body")
+    wait = body.get("queue_wait_ms") if isinstance(body, dict) else None
+    if not wait:
+        return None
+    elapsed = tool_io.utc_now_epoch_ms() - utc_ms(letter["sent_at"])
+    if elapsed < wait:
+        return None
+    return ("queued %d ms, no slot freed (queue_wait_ms %d)" % (elapsed, wait)
+            if was_queued else
+            "already expired when the judge received it (queue_wait_ms %d)" % wait)
+
+
 def main():
     if len(sys.argv) != 2 or not sys.argv[1]:
         die("ArgumentsBad", "need exactly one argument, the path of judge.json (usage: judge JUDGE.json)")
-    allowed, cap = load_policy(sys.argv[1])
+    allowed, cap, queue = load_policy(sys.argv[1])
     stack = os.environ.get("AOS_STACK")
     if not stack:
         die("StackMissing", "AOS_STACK is not set")
@@ -197,15 +265,15 @@ def main():
     if not daemon or not os.path.isdir(daemon):
         die("DaemonMissing", "AOS_DAEMON is not set or not a directory: %s" % (daemon or "(empty)"))
     requests = os.path.abspath(os.path.join(stack, "requests"))
+    window = os.path.join(stack, "queue.json")
+    previous = queue_view(window) if queue else {}
     if post(["init", requests])[0] != 0:
         die("PostFailed", "cannot create mailbox %s" % requests)
     if post(["take-all", requests])[0] not in (0, NOT_FOUND):
         die("PostFailed", "cannot take letters from mailbox %s" % requests)
     names = sorted((n for n in os.listdir(os.path.join(requests, "cur")) if not n.startswith(".")), key=letter_key)
-    if not names:
-        return
-    ctl_box, running = daemon_view(daemon)
-    admitted = set()
+    letters = {}
+    # 先驗所有 cur 的期限，首次看見、關排隊、格仍滿時都不能漏掉。
     for name in names:
         code, out = post(["see", requests, name])
         if code == 1:
@@ -215,9 +283,67 @@ def main():
         if code != 0:
             die("PostFailed", "aos-post see %s exited %d" % (name, code))
         letter = json.loads(out)
-        bad, detail = verdict(letter.get("body"), allowed, cap, running, admitted)
+        body = letter.get("body")
+        if isinstance(body, dict) and "queue_wait_ms" in body:
+            wait = body["queue_wait_ms"]
+            if not isinstance(wait, int) or isinstance(wait, bool) or wait < 0:
+                refuse(requests, name, "BodyBad", "queue_wait_ms must be a non-negative integer")
+                continue
+            try:
+                utc_ms(letter["sent_at"])
+            except (ValueError, TypeError, KeyError, OverflowError):
+                refuse(requests, name, "BodyBad", "sent_at must be an ISO 8601 timestamp with a timezone")
+                continue
+            message = expiry_message(letter, name in previous)
+            if message:
+                refuse(requests, name, "SlotMissing", message)
+                continue
+        letters[name] = letter
+    if queue:
+        # 已進隊的優先；同輪新信按寄出時間、再依 aos-post 名字序。
+        old_order = {name: i for i, name in enumerate(previous)}
+        names = sorted(letters, key=lambda n: (0, old_order[n]) if n in old_order else
+                       (1, letters[n].get("sent_at", ""), letter_key(n)))
+    else:
+        names = [name for name in names if name in letters]
+    if not names:
+        if queue or os.path.exists(window):
+            write_queue(window, [])
+        return
+    ctl_box, running = daemon_view(daemon)
+    admitted, queued = set(), []
+    for name in names:
+        letter = letters[name]
+        body = letter.get("body")
+        bad, detail = verdict(body, allowed, cap, running, admitted)
+        # 不夠格的隊首阻擋後方要新格的信；stop/ping 與不增加格者照轉。
+        if queue and queued and bad is None and detail:
+            bad, detail = "SlotMissing", "an earlier letter is waiting for a slot"
+        if bad == "SlotMissing" and queue and body.get("queue_wait_ms") != 0:
+            _, fresh = verdict(body, allowed, None, running, admitted)
+            row = {"letter": name, "names": fresh,
+                   "queued_at": previous.get(name, {}).get("queued_at") or
+                   datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")}
+            if name in previous and "queued_at_ticks" in previous[name]:
+                row["queued_at_ticks"] = previous[name]["queued_at_ticks"]
+            elif name not in previous:
+                try:
+                    tick = tool_io.now_tick()
+                except tool_io.Error as e:
+                    die(e.code, str(e))
+                if tick is not None:
+                    row["queued_at_ticks"] = tick
+            if "queue_wait_ms" in body:
+                row["expires_at"] = utc_text(utc_ms(letter["sent_at"]) + body["queue_wait_ms"])
+            queued.append(row)
+            continue
         if bad:
             refuse(requests, name, bad, detail)
+            continue
+        # 讀信和前面的轉寄也花時間；臨轉寄再驗，避免本輪中途到期仍被掛上。
+        message = expiry_message(letter, name in previous)
+        if message:
+            refuse(requests, name, "SlotMissing", message)
             continue
         failed = forward(name, letter, requests, ctl_box)
         if failed:
@@ -225,6 +351,8 @@ def main():
             continue
         admitted.update(detail)
         post(["done", requests, name])
+    if queue or os.path.exists(window):
+        write_queue(window, queued)
 
 
 main()

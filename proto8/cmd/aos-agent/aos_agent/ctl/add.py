@@ -4,7 +4,7 @@ import daemon_ctl as dc
 import json
 import os
 import re
-from ..common import bad_args, Agent, Fail, IFACE, call_dc, ctl_wait, daemon_path, need_table, note, row_named, timeout_opt
+from ..common import bad_args, Agent, Fail, IFACE, call_dc, ctl_wait, daemon_path, need_table, note, row_named, timeout_opt, queued_opt
 from ..decl import read_decl
 
 
@@ -12,7 +12,7 @@ from ..decl import read_decl
 
 HELP = """aos-agent ctl add - attach one agent to the daemon
 
-usage: aos-agent [--daemon D] ctl add [-n N] [-w WS] [-s S] [--limits JSON] [--envs K=V ...] [--timeout-s S] XXX
+usage: aos-agent [--daemon D] ctl add [-n N] [-w WS] [-s S] [--limits JSON] [--envs K=V ...] [--timeout-s S] [--on-queued fail|ok] XXX
 
 XXX is the agent folder; it must declare aos-agent in interfaces.json. The letter goes
 through $AOS_KERNEL when that is set (a warning line says so). Waits until the agent is on
@@ -25,6 +25,7 @@ flags:
       --envs K=V      child environment variable (repeatable; set through an exec single)
       --limits JSON   resource limits, the aos-sandbox keys ('{}' = none)
       --timeout-s S   seconds to wait for the daemon (default 30)
+      --on-queued MODE  fail or ok when still queued (default fail)
   -h, --help          show this help
 
 exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, DaemonMissing...).
@@ -32,7 +33,7 @@ exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, 
 
 def cmd(argv):
     try:
-        opts, rest = aos_flags.parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits", "--timeout-s": "timeout_s"},
+        opts, rest = aos_flags.parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits", "--timeout-s": "timeout_s", "--on-queued": "on_queued"},
                                      help=HELP, short=("-n", "-w", "-s"), multi={"--envs": "envs"})
     except aos_flags.Error as e:
         raise bad_args(HELP, str(e)) if e.code == "ArgumentsBad" else Fail(e.code, str(e))
@@ -43,6 +44,7 @@ def cmd(argv):
             raise bad_args(HELP, "--envs needs NAME=VALUE, not %s" % value)
         envs[key] = val
     secs = timeout_opt(opts, HELP)
+    on_queued = queued_opt(opts, HELP)
     if len(rest) != 1:
         raise bad_args(HELP, "add takes one agent folder XXX"
                        + ("; extra argument %s (add takes no -- arguments)" % rest[1] if len(rest) > 1 else ""))
@@ -95,11 +97,12 @@ def cmd(argv):
                                   def_dir=def_dir, limits=limits, envs=envs)
         row = ctl_wait("add", request,
                        lambda letter: row_named(name) or rejected(letter),
-                       "the daemon has not put %s on the table yet (see aos-agent ctl ls and the daemon's log)" % name, "AddRejected", secs=secs)
+                       "the daemon has not put %s on the table yet (see aos-agent ctl ls and the daemon's log)" % name, "AddRejected", secs=secs, on_queued=on_queued, name=name)
     except KeyboardInterrupt:                         # 11-04 夜邊緣實測：信已寄出，Ctrl-C 不撤；原本安靜退 130，人以為沒掛上
         note("the add letter was sent, the daemon will still attach %s; if you do not want it, aos-agent ctl rm %s (check with aos-agent ctl ls)" % (name, name))
         raise
-    print(Agent(name, row).stack)
+    if row is not None:
+        print(Agent(name, row).stack)
 
 
 def rejected(letter):

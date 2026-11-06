@@ -43,6 +43,7 @@ from .post import (
     _post,
     mailbox_of,
     send,
+    regret,
     _letter,
     _letters,
     _claim,

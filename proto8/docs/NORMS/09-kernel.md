@@ -5,5 +5,6 @@
 - **N-42**（10-15 定，草稿）先做兩種 kernel，都基於 daemon：(1) 管 LLM 呼叫的 kernel；(2) 通用管理的 kernel（以 agent 作判斷）。兩支不併成一支（使用者 10-16：「兩隻kernel不併成一支。」，[KISS 重審拍板 5](../../thinking/2026-10/16/kiss-recheck.md#使用者拍板10-16)）。出自 C-47。
   - **(1) LLM kernel**：全文逐字在分檔 [09-kernel/01-N-42-1-LLM-kernel](09-kernel/01-N-42-1-LLM-kernel.md)、11-05 午加的在 [02-N-42-1-能力包與份額](09-kernel/02-N-42-1-能力包與份額.md)（10-24 起、11-04 晚、11-05 各次改與 11-05 午能力包、排程、每寄件人額度；11-05 午拆，本檔超過 8 KB）。
   - **(2) 通用 kernel**：具體機制再規劃，現無實作。**11-05 加**：形狀照 [kernel-daemon 模式 2](../../thinking/2026-11/05/kernel-daemon/02-兩種模式.md)（0 號 proc 式，範本 `kernel/procs-kernel`、判官 `lib/aos/judge`；模式 1 繼承式範本 `kernel/daemon-judge`），判官腦（10-15 以 agent 作判斷）仍未做。
+    - （11-06 晚已實作：判官的隊列只有先來先掛；要優先序、期限、額度＝寫一個 kernel 身體（llm kernel 是範例）。）
     - **規劃中（no-pid 遠期，還沒實作；11-06 no-pid P5b 記）**：判官往後從「能不能掛」長成「誰能對誰做什麼」（stop、rm、sleep 也要過判官）；daemon 成了權限閘門，沙箱裡的東西只要一個信箱就夠（使用者 11-05 晚對這個方向說「是的，你真聰明！」）。這次不改程式；見 [no-pid README「定下的」7](../../thinking/2026-11/05/no-pid/README.md)、[06 衝突 7](../../thinking/2026-11/05/no-pid/06-衝突與邊緣.md)。
     - **11-06 註（no-pid P5b）**：現況是判官對 `{"ping": true}` 照 C-48 原樣轉寄，沒有替 ping 另加判斷；見 [no-pid 10 P3](../../thinking/2026-11/05/no-pid/10-P3實作結果.md)。

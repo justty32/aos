@@ -4,17 +4,18 @@
 #   (可能會稍微改一些設定)。我希望兩種都有」「claude code這類常見eca的做法，通常是在呼叫工具的時候，工具自己有紀錄，會看到說超過四個，直接回error」；
 #   子 agent 工作區「不要固定，因為各有不同需求。」。規劃：proto8/thinking/2026-11/05/feat-proto/04-spawn-agent.md、06-實作結果.md。
 # 介面（lib/docs/01 的契約）：stdin 一份 {"op": "new"|"add"|"say"|"ask"|"rm"|"ls", ...}：
-#   new {name, path, from?, files?, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?}  生法 (a) 產出新定義：from（範本資料夾）整份複製到 path
+#   new {name, path, from?, files?, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?, on_queued?}  生法 (a) 產出新定義：from（範本資料夾）整份複製到 path
 #       （工作區裡、還不在的資料夾），再寫 files（{相對路徑: 全文}，整份自己寫＝不給 from、只給 files）、llm（鍵併進定義的 llm 檔）、
 #       tools／tools_rm（改定義的 tools 檔：加 {name, path}、拿掉名字）；寫完是普通定義資料夾、可再用 add 掛。tools 檔裡的 path 一律存
 #       相對「新定義裡那份 tools 檔的資料夾」（aos-tools 讀手寫相對路徑就從那裡算；整棵樹搬家不斷，N-67 ①、os-impl A19）：複製來的相對
 #       path 原本從範本那份算，換算成從新位置走回同一個目標（指範本裡的工具也指回範本那份，不指複本：複本裡的相對捷徑深度變了會斷）；
 #       複製來的絕對 path 照抄；tools 參數加的也存相對。只做字串換算、不 realpath，對最終位置算（暫存資料夾跟最終位置同層）。
 #       先寫進同層暫存資料夾再改名；掛不上＝把剛寫的資料夾刪掉（全有或全無，規則 6）。
-#   add {name, def, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?}  生法 (b) 用現有定義：def 直接掛（aos-agent ctl add），llm／tools／tools_rm 走
+#   add {name, def, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?, on_queued?}  生法 (b) 用現有定義：def 直接掛（aos-agent ctl add），llm／tools／tools_rm 走
 #       這隻子的覆蓋層（aos-agent llm set／tools add --override／tools rm，stack 只存差異、定義不動、不複製）；後面幾步失敗＝ctl rm 收回。
 #   兩種都：ws＝子的工作區，相對＝從我的 $AOS_WS 算、絕對＝照用，沒給＝我的 $AOS_WS（沿用父的；使用者 11-06 已定），不在先建；limits 原樣轉 --limits。
-#       成功只印 added <name> (stack …); children N/MAX，不把下層提醒行接進給腦的結果；下層 stderr 仍原樣透出。
+#       成功印 added <name> (stack …); children N/MAX；on_queued ok 尚在隊裡則印 queued 位置與信名、格空後起；仍記 children。
+#       不把下層提醒行接進給腦的結果；下層 stderr 仍原樣透出。
 #   new／add／rm：ctl_timeout_s＝等 daemon 掛上或移除的秒數，預設 30、上限 1700；子行程保險至少多 30 秒。
 #   say {name, text}           寄一句（aos-agent say，話走 stdin）、馬上回，印信件名稱
 #   ask {name, text, timeout_s?}  say＋listen --timeout-s（預設 600、上限 1700：act 格 timeout_ms 1800000 包得住）印回答
@@ -22,6 +23,7 @@
 #   ls                         一行 JSON {"agents": ctl ls --json 的表, "children": [我生的名字], "max_children": N}
 # 配額（工具自己數，不寄信）：我生的記在工具小格 $AOS_STACK/children.json（[{"name", "stack"}]，P-17、規則 8；在父的 stack 底下）；
 #   stack 存相對 $AOS_DAEMON（解開捷徑後，同 daemon 表的基準；N-67 ①，搬家不忘小孩）。
+#   on_queued ok 排隊中的記成 {"name", "queued_letter"}（還不知道 stack），上表後改記表上的 stack；add 帶 llm／tools／tools_rm 時不能用 ok（覆蓋層要上表後才寫）。
 #   每次叫先對帳（ctl ls --json：名字對得上、stack 從 $AOS_DAEMON 拼回後也對得上表上那列才算還在，別處 rm 掉的就忘掉）。new／add 前已有 max_children 隻＝
 #   ChildSlotMissing、退 1、不寄任何信。max_children 從工具設定 agents.json 讀：我的定義裡那份（ctl who --json 的 def）疊我的 stack 裡那份
 #   （只放改過的鍵，同 llm.json）；都沒有＝4（代定，同範本）。判官（AOS_KERNEL 的 max_running）照舊是整台 daemon 的第二道關。
@@ -40,6 +42,7 @@ usage: agents < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the w
 Start, talk to and remove child agents on your daemon ($AOS_DAEMON), by wrapping aos-agent.
 New copies a template and applies files, brain settings and tools before starting the child.
 Add starts an existing definition; changes go in the child's overlay.
+on_queued: new, add choose fail (default) or ok (return queue position; starts when a slot frees).
 ctl_timeout_s: new, add, rm wait for the daemon; default 30 seconds, at most 1700.
 Ask waits at most 1700 seconds. ls returns JSON with agents, children and max_children.
 ws: relative to your workspace, or absolute; default = your workspace.
@@ -116,7 +119,7 @@ def agent(argv, text=None, timeout_s=STEP_S, timeout_ticks=None):
         child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL,
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True)
     except OSError as e:
-        die("LaunchFailed", "cannot start aos-agent (is it on PATH?): %s" % e)
+        die("LaunchFailed", "cannot start %s (is it on PATH?): %s" % (cmd[0], e))
     try:
         payload = None if text is None else text.encode("utf-8")
         while True:
@@ -129,8 +132,8 @@ def agent(argv, text=None, timeout_s=STEP_S, timeout_ticks=None):
                     continue
                 kill_group(child)
                 child = None
-                die("CommandFailed", "aos-agent %s did not finish in %s (killed)" %
-                    (" ".join(argv[:2]), "%d ticks" % timeout_ticks if deadline is not None else "%d s" % timeout_s))
+                die("CommandFailed", "%s %s did not finish in %s (killed)" %
+                    (cmd[0], " ".join(argv[:2]), "%d ticks" % timeout_ticks if deadline is not None else "%d s" % timeout_s))
     except tool_io.Error as e:
         kill_group(child)
         child = None
@@ -146,7 +149,7 @@ def agent(argv, text=None, timeout_s=STEP_S, timeout_ticks=None):
     mine = [m for m in map(ERR_RE.match, lines) if m]       # aos-agent 自己的、或它原樣轉的 aos-tools／aos-json 的那行
     if mine:
         return out, (mine[-1].group(1), mine[-1].group(2))
-    return out, ("CommandFailed", "aos-agent %s exited %d: %s" % (" ".join(argv[:2]), p.returncode, lines[-1] if lines else "(no message)"))
+    return out, ("CommandFailed", "%s %s exited %d: %s" % (cmd[0], " ".join(argv[:2]), p.returncode, lines[-1] if lines else "(no message)"))
 
 
 def must(argv, text=None, timeout_s=STEP_S, timeout_ticks=None):
@@ -253,9 +256,17 @@ def reconcile():
         die("ReadFailed", "%s is not a JSON array of {name, stack}" % children_path)
     rows = table()
     on_table = {(r.get("name"), os.path.normpath(r["stack"])) for r in rows if isinstance(r, dict) and isinstance(r.get("stack"), str)}
-    alive = [k for k in kids if isinstance(k.get("stack"), str) and (k["name"], stack_abs(k["stack"])) in on_table]
-    gone = [k["name"] for k in kids if k not in alive]
-    if gone:
+    by_name = {r.get("name"): r for r in rows if isinstance(r, dict) and isinstance(r.get("stack"), str)}
+    alive = []
+    for kid in kids:
+        if kid.get("queued_letter") and not isinstance(kid.get("stack"), str):
+            # 排隊中（on_queued ok）：還沒上表就照記；上表後改記表上的 stack。
+            row = by_name.get(kid.get("name"))
+            alive.append({"name": kid["name"], "stack": stack_rel(row["stack"])} if row else kid)
+        elif isinstance(kid.get("stack"), str) and (kid["name"], stack_abs(kid["stack"])) in on_table:
+            alive.append(kid)
+    gone = [k["name"] for k in kids if k["name"] not in {child["name"] for child in alive}]
+    if alive != kids:
         write_children(alive)
     return alive, gone, rows
 
@@ -313,23 +324,30 @@ def spawn_args(args):
     return llm, tool_list, tools_rm, child_ws, args.get("limits")
 
 
-def mount(name, definition, child_ws, limits, ctl_s):
+def mount(name, definition, child_ws, limits, ctl_s, on_queued="fail"):
     """aos-agent ctl add；回 (子的 stack, None) 或 (None, 錯)。"""
     if not os.path.isdir(child_ws):
         try:
             os.makedirs(child_ws)
         except OSError as e:
             die("MkdirFailed", "cannot create ws %s: %s" % (child_ws, e))
-    out, err = agent(["ctl", "add", "--timeout-s", "%g" % ctl_s, "--name", name, "--ws", child_ws,
+    out, err = agent(["ctl", "add", "--timeout-s", "%g" % ctl_s, "--on-queued", on_queued, "--name", name, "--ws", child_ws,
                       *(["--limits", json.dumps(limits, ensure_ascii=False)] if limits is not None else []), definition], timeout_s=max(STEP_S, ctl_s + 30))
     if err:
         return None, err
-    return (out.strip().splitlines()[-1] if out.strip() else "?"), None
+    line = out.strip().splitlines()[-1] if out.strip() else "?"
+    queued = re.fullmatch(r"queued .+ at position [0-9]+ \(letter ([^;]+); applied when a slot frees\)", line)
+    if queued:
+        return {"stack": None, "queued_letter": queued.group(1), "message": line}, None
+    return {"stack": line}, None
 
 
-def report(name, child_stack, alive, n, head=""):
-    write_children(alive + [{"name": name, "stack": stack_rel(child_stack)}])
-    sys.stdout.write("%sadded %s (stack %s); children %d/%d\n" % (head, name, child_stack, len(alive) + 1, n))
+def report(name, result, alive, n, head=""):
+    child_stack = result["stack"]
+    record = {"name": name, "queued_letter": result["queued_letter"]} if result.get("queued_letter") else {"name": name, "stack": stack_rel(child_stack)}
+    write_children(alive + [record])
+    message = result.get("message") or "added %s (stack %s)" % (name, child_stack)
+    sys.stdout.write("%s%s; children %d/%d\n" % (head, message, len(alive) + 1, n))
     sys.exit(0)
 
 
@@ -420,6 +438,10 @@ if op in ("new", "add", "rm"):
     ctl_s = args.get("ctl_timeout_s", CTL_DEFAULT_S)
     if isinstance(ctl_s, bool) or not isinstance(ctl_s, (int, float)) or not 0 < ctl_s <= CTL_MAX_S:
         die("ArgumentsBad", "ctl_timeout_s must be a number in (0, 1700]")
+if op in ("new", "add"):
+    on_queued = args.get("on_queued", "fail")
+    if on_queued not in ("fail", "ok"):
+        die("ArgumentsBad", "on_queued must be fail or ok")
 if op == "ask":
     if "timeout_s" in args and "timeout_ticks" in args:
         die("ArgumentsBad", "timeout_s and timeout_ticks are mutually exclusive")
@@ -494,7 +516,7 @@ if op == "new":                                 # 生法 (a)：產出新定義�
     except OSError as e:
         shutil.rmtree(tmp, ignore_errors=True)
         die("WriteFailed", "cannot move the new definition into %s: %s" % (dest, e))
-    child_stack, err = mount(name, dest, child_ws, limits, ctl_s)
+    child_stack, err = mount(name, dest, child_ws, limits, ctl_s, on_queued)
     if child_stack is None:                     # 全有或全無：掛不上就把剛寫的定義刪掉
         shutil.rmtree(dest, ignore_errors=True)
         die(err[0], err[1] + " (the new definition %s was removed again)" % dest)
@@ -505,9 +527,13 @@ definition = read_path(args.get("def"), "def")
 if not os.path.isdir(definition):
     die("DefMissing", "def %r is not a folder" % args.get("def"))
 alive, n = quota()
-child_stack, err = mount(name, definition, child_ws, limits, ctl_s)
+if on_queued == "ok" and (llm or tool_list or tools_rm):
+    die("ArgumentsBad", "op add with on_queued ok cannot take llm, tools or tools_rm (they go into the child's overlay after it is on the table); use op new, or on_queued fail")
+child_stack, err = mount(name, definition, child_ws, limits, ctl_s, on_queued)
 if child_stack is None:
     die(*err)
+if on_queued == "ok":
+    report(name, child_stack, alive, n)
 steps = [("llm set %s=%s" % (k, v), ["llm", "--target", name, "set", "%s=%s" % (k, v)]) for k, v in llm.items()] + \
         [("tools rm " + t, ["tools", "--target", name, "rm", t]) for t in tools_rm] + \
         [("tools add " + t, ["tools", "--target", name, "add", "--override", t, p]) for t, p in tool_list]

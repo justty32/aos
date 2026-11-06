@@ -3,7 +3,7 @@ import os
 import aos_flags
 from .. import PROG
 import shutil
-from ..common import bad_args, Fail, ctl_wait, daemon_path, find, is_kernel, need_table, parse, row_named, table, timeout_opt
+from ..common import bad_args, Fail, ctl_wait, daemon_path, find, need_table, parse, row_named, table, timeout_opt
 from ..decl import close_screen_if_any
 
 
@@ -43,8 +43,7 @@ def cmd(argv):
         aos_flags.warn(PROG, "nothing done")
         return
     close_screen_if_any(a)
-    direct = is_kernel(a)
-    ctl_wait("rm", {"procs_removed": [a.name]}, lambda _: row_named(a.name) is None, "the daemon has not removed %s yet" % a.name, "CtlRejected", direct, secs=secs)
+    ctl_wait("rm", {"procs_removed": [a.name]}, lambda _: row_named(a.name) is None, "the daemon has not removed %s yet" % a.name, "CtlRejected", secs=secs)
     if keep:                                          # 11-04 夜邊緣實測：add --stack . 之後 rm 會連工作區一起刪；stack 蓋住這些的不刪
         print("removed %s; stack %s kept (it is %s or above it)" % (a.name, a.stack, keep))
         return

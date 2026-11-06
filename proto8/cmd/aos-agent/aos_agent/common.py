@@ -1,6 +1,7 @@
 # aos_agent/common.py - 共用分層 help、錯誤指路、旗標、daemon 協定與活列查找及等待。
 import os
 import math
+import json
 import textwrap
 from . import PROG
 import aos_flags
@@ -118,88 +119,100 @@ def kernel_box():
     return os.path.realpath(k) if k else None
 
 
-def kernel_row():
-    """AOS_KERNEL 落在表上哪一隻的 stack 裡（模式 2 的 0 號 proc）：(名字, 列)；沒設或不在誰的 stack 裡＝None。"""
+def kernel_hint():
+    """只指向 AOS_KERNEL 公開介面，不辨識收件者身份。"""
+    k = kernel_box()
+    return "; letter was sent first to AOS_KERNEL=%s; no reply from there; inspect adjacent %s" % (k, os.path.join(os.path.dirname(k), "queue.json")) if k else ""
+
+
+def queued_opt(opts, help):
+    value = opts.get("on_queued", "fail")
+    if value not in {"fail", "ok"}:
+        raise bad_args(help, "--on-queued must be fail or ok")
+    return value
+
+
+def queue_position(letter):
     k = kernel_box()
     if not k:
         return None
-    for n, r in table(quiet=True).items():
-        st = r.get("stack")
-        if isinstance(st, str) and st and under(k, st):
-            return n, r
-    return None
+    try:
+        with open(os.path.join(os.path.dirname(k), "queue.json"), encoding="utf-8") as fh:
+            rows = json.load(fh).get("queued", [])
+        return next((i for i, row in enumerate(rows, 1) if isinstance(row, dict) and row.get("letter") == letter), None)
+    except (OSError, ValueError, AttributeError, TypeError):
+        return None
 
 
-def is_kernel(a):
-    """a 就是 AOS_KERNEL 那個 kernel（信箱在它的 stack 裡）：管它的信直接寄 daemon（它睡著時收不到給自己的 wake）。"""
-    k = kernel_box()
-    if k and under(k, a.stack):
-        note("%s is the AOS_KERNEL kernel itself; sending this one straight to the daemon" % a.name)
-        return True
-    return False
-
-
-def kernel_hint():
-    """等滿逾時時補一句（沒設 AOS_KERNEL＝""）：信先給判官，沒放行也會等不到。"""
-    k = kernel_box()
-    if not k:
-        return ""
-    kr = kernel_row()
-    if kr:
-        return "; the letter went to AOS_KERNEL (mailbox of %s) first and no reply came from the judge either (it may be stuck or unable to write the reply mailbox): see %s/%s" % (
-            kr[0], kr[1].get("stack"), call_dc(dc.names_of, daemon_path())["procs_stderr"])
-    if os.path.dirname(k) == os.path.realpath(daemon_path()):
-        return "; the letter went to the judge in the daemon body first (AOS_KERNEL=%s) and no reply came from it either (it may be unable to write the reply mailbox): see the daemon's stderr" % k
-    return "; AOS_KERNEL=%s is neither this daemon's judge mailbox nor inside any listed proc's stack: wrong daemon or the kernel is gone, nobody reads the letter" % k
-
-
-def wait_for(cond, what, secs=WAIT_S, via_kernel=True):
-    """等 daemon 套用。via_kernel＝信經 AOS_KERNEL 寄的：kernel（表上的 0 號）不是 running／stuck＝立刻 WaitFailed（它不會判，等也沒用）。"""
-    kr = kernel_row() if via_kernel else None
-    if kr and kr[1].get("phase") not in {"running", "stuck"}:
-        ph = kr[1].get("phase")
-        raise Fail("WaitFailed", "%s: the letter is in AOS_KERNEL, but kernel %s is %s and will not judge it (it waits in its mailbox until it is back); first aos-agent ctl %s --target %s" % (
-            what, kr[0], ph, "wake" if ph == "sleeping" else "start", kr[0]))
+def wait_for(cond, what, secs=WAIT_S):
+    """等公開表上的結果，不讀收件者身份或內部狀態。"""
     end = time.monotonic() + secs
     while time.monotonic() < end:
         v = cond()
         if v:
             return v
-        time.sleep(0.1)
-    raise Fail("WaitFailed", "waited %g s, %s%s" % (secs, what, kernel_hint() if via_kernel else ""))
+        time.sleep(min(0.1, max(0, end - time.monotonic())))
+    raise Fail("WaitFailed", "waited %g s, %s%s" % (secs, what, kernel_hint()))
 
 
-def ctl_wait(cmd, body, cond, what, refused, direct=False, secs=WAIT_S):
-    """共用回信箱按 in_reply_to 等自己的回信，同時等 daemon 表上的結果。"""
+def ctl_wait(cmd, body, cond, what, refused, secs=WAIT_S, on_queued="fail", name=None):
+    """等自己的回信與公開表；排隊可成功返回，逾時先撤未領取的信。"""
     d = daemon_path()
     box = call_dc(dc.reply_box, d)
-    if not direct and kernel_box():
+    recipient = call_dc(dc.mailbox_of, d)
+    if kernel_box():
         note("routing via AOS_KERNEL=%s" % kernel_box())
-    letter = call_dc(dc.send, d, body, reply_to=box, direct=direct)
-    got, done_at = [None], [None]
+    if cmd in {"add", "start", "wake"} and on_queued == "fail":
+        millis = secs * 1000
+        body = dict(body, queue_wait_ms=int(millis) if math.isfinite(millis) else int(secs) * 1000)
+    letter = call_dc(dc.send, d, body, reply_to=box)
+    got, done_at = None, None
+    end = time.monotonic() + secs
 
-    def step():
-        if got[0] is None:
-            got[0] = call_dc(dc.take_reply, box, letter)
-        rep = got[0]
-        if isinstance(rep, dict) and rep.get("applied") is False:
-            err = rep.get("error") if isinstance(rep.get("error"), dict) else {}
-            raise Fail(refused, "AOS_KERNEL refused the %s letter: %s %s" % (cmd, err.get("code", "?"), err.get("msg", "")))
+    def step(expiration=False):
+        nonlocal got, done_at
+        if got is None:
+            got = call_dc(dc.take_reply, box, letter)
+        if isinstance(got, dict) and got.get("applied") is False:
+            err = got.get("error") if isinstance(got.get("error"), dict) else {}
+            if expiration:
+                raise Fail(err.get("code", refused), err.get("msg", "request refused"))
+            raise Fail(refused, "the %s letter was refused: %s %s" % (cmd, err.get("code", "?"), err.get("msg", "")))
         v = cond(letter)
         if not v:
             return None
-        if rep is not None:
+        if got is not None:
             return v
-        done_at[0] = done_at[0] or time.monotonic()
-        return v if time.monotonic() - done_at[0] >= REPLY_GRACE else None
+        done_at = done_at or time.monotonic()
+        return v if time.monotonic() - done_at >= REPLY_GRACE else None
 
-    started = time.monotonic()
-    try:
-        return wait_for(step, what, secs, via_kernel=not direct)
-    except Fail as e:
-        if e.code == "WaitFailed" and got[0] is None and time.monotonic() - started >= secs:
-            raise Fail("DaemonMissing", "no reply from the daemon at %s within %g s (busy, paused or not running; the letter stays in its mailbox and is applied if the daemon takes it later)%s" % (d, secs, kernel_hint() if not direct else "")) from e
-        raise
+    while time.monotonic() < end:
+        value = step()
+        if value:
+            return value
+        time.sleep(min(0.1, max(0, end - time.monotonic())))
+    value = step()
+    if value:
+        return value
+    if got is not None:
+        raise Fail("WaitFailed", "waited %g s, %s" % (secs, what))
+    position = queue_position(letter)
+    if position is not None and cmd in {"add", "start", "wake"}:
+        if on_queued == "ok":
+            print("queued %s at position %d (letter %s; applied when a slot frees)" % (name, position, letter))
+            return None
+        grace_end = time.monotonic() + REPLY_GRACE
+        while time.monotonic() < grace_end:
+            value = step(expiration=True)
+            if value:
+                return value
+            time.sleep(min(0.05, max(0, grace_end - time.monotonic())))
+        value = step(expiration=True)
+        if value:
+            return value
+    withdrawn = call_dc(dc.regret, recipient, letter)
+    outcome = "letter withdrawn, it will not be applied" if withdrawn else "could not withdraw it; it may still be applied"
+    raise Fail("DaemonMissing", "no result from the daemon at %s within %g s; %s%s" % (d, secs, outcome, kernel_hint()))
 
 
 def phase_body(cmd, name):
