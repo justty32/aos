@@ -22,7 +22,7 @@
 | [`aos_agent/ctl/who.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/who.py) | 由 stack 路徑查詢所屬 agent。 |
 | [`aos_agent/decl.py`](../../../../../proto8/cmd/aos-agent/aos_agent/decl.py) | 讀取介面宣告並呼叫定義中的子介面入口。 |
 | [`aos_agent/hints.py`](../../../../../proto8/cmd/aos-agent/aos_agent/hints.py) | 讀 agent 狀態（含仍活著的 stuck）、queue 數量與接續操作提示。 |
-| [`aos_agent/listen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/listen.py) | 等待回答或列出與追蹤歷史對話。 |
+| [`aos_agent/listen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/listen.py) | 以秒或 tick 等待回答，或列出與追蹤歷史對話。 |
 | [`aos_agent/llm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/llm.py) | 分層解析腦設定命令並管理 agent 的覆蓋鍵與重設確認。 |
 | [`aos_agent/say.py`](../../../../../proto8/cmd/aos-agent/aos_agent/say.py) | 寄一則訊息到 agent 的 queue。 |
 | [`aos_agent/screen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/screen.py) | 開啟、關閉與追蹤 agent 的畫面子介面。 |

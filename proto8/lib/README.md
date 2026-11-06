@@ -27,3 +27,5 @@
 <a id="外部-agent-的一輪eca"></a>
 <a id="範例demoagent-liv-11-04-刪了"></a>
 <a id="測試"></a>
+
+`thought` 與 `agents` 的 `ask` 支援 `timeout_ticks`（與 `timeout_s` 擇一）；沒設 `AOS_TICK` 時，1 tick＝`AOS_TICK_INTERVAL` 毫秒，預設 1000。有時鐘時停鐘不會讓 tick 期限到期；詳見 [agent 工具索引](docs/03-索引-agent等.md)。

@@ -3,13 +3,13 @@
 # 使用者 11-05 傍晚：「fork出去，做完之後回報，主線這邊對於這個任務的描述就會只剩短短幾句……我更推薦將其作為工具」「記憶這項，他本身也算是任務」；
 #   三題裁：子的腦「預設同父 (Recommended)」、子 stack「可選。默認刪掉。」、名字「thought (Recommended)」。
 #   規劃：proto8/thinking/2026-11/05/small-thought/（README、02-代定、03-實作步驟草稿；實作結果段在 README）。
-# 介面（lib/docs/01 的契約）：stdin 一份 {"from"?, "goal", "context"?, "tools"?, "endpoint"?, "max_chars"?, "timeout_s"?, "keep"?}，沒有 op：
+# 介面（lib/docs/01 的契約）：stdin 一份 {"from"?, "goal", "context"?, "tools"?, "endpoint"?, "max_chars"?, "timeout_s"?, "timeout_ticks"?, "keep"?}，沒有 op：
 #   from 沒給＝工具登記格 env.AOS_THOUGHT_FROM；兩邊都沒給＝FromMissing，兩種來源都相對 $AOS_WS 解析。
 #   goal 必要（要做什麼、要帶回什麼）；context＝字串或字串陣列（前幾步的結論）；tools＝[{name, path?}]（path 相對從 $AOS_WS、絕對照用；
 #   沒給 path＝照抄我自己工具箱裡同名那支〔aos-agent tools ls --json〕，沒有＝ToolMissing），沒給 tools＝保留定義的工具組；[]＝清空；endpoint＝子的腦，沒給＝同父（aos-agent llm show 父的 endpoint；父沒寫或沒宣告 llm＝範本預設；llm show 其他錯〔看不到父的定義等〕＝接它的代號報錯，不默默換腦）；
 #   max_chars 預設 600（結論超過就截、尾加 [truncated]）；timeout_s 預設 600、只要求有限正數；keep 預設 false。
 # 一次叫＝aos-agent --daemon $AOS_DAEMON 的五步：ctl who（我是誰、我的深度）→ ctl add 範本（--name t-<父名前32字>-<UTC毫秒>-<4位hex>、--ws 我的 $AOS_WS）→
-#   子的覆蓋層 llm set endpoint／tools rm／tools add --override → say 開場文（固定英文段＋goal＋context）＋listen --timeout-s →
+#   子的覆蓋層 llm set endpoint／tools rm／tools add --override → say 開場文（固定英文段＋goal＋context）＋listen --timeout-s／--timeout-ticks →
 #   預設 ctl rm 子（stack 刪掉、不印 details）；keep: true＝留著但 ctl stop（不佔 loop；要追問 ctl start 再 say）、結論後多一行 details: <子的 stack，相對 $AOS_DAEMON>/。
 #   ctl add 之後到 say 之前任一步失敗（tools ls、設定那幾步）＝當下 ctl rm 收回再報錯（不算子的失敗）；收不回＝紀錄留 running 租約，過期後下一次叫的對帳收。
 # 子名每次唯一：mkdir $AOS_STACK/children/<子名>/，撞表或資料夾最多重試五次。
@@ -33,6 +33,8 @@ Omit "from" to use AOS_THOUGHT_FROM, set in this tool's registry entry env (or a
 Its relative path also starts at your workspace. Neither given: FromMissing.
 Omit tools to keep the definition's tools; tools: [] gives the child no tools.
 timeout_s is any finite positive number of seconds (default 600).
+Use timeout_ticks (a positive integer) instead to count ticks; giving both is ArgumentsBad.
+Without AOS_TICK, one tick is AOS_TICK_INTERVAL milliseconds (default 1000).
 Without endpoint the child uses your brain; if your brain settings cannot be read (e.g. your
 definition is not visible in a sandbox), the call fails with that error instead of guessing.
 To ask a kept child more later, use aos-agent ctl start --target <child>, then say / listen.
@@ -108,11 +110,15 @@ signal.signal(signal.SIGTERM, on_term)
 signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
 
 
-def agent(argv, text=None, timeout_s=STEP_S):
+def agent(argv, text=None, timeout_s=STEP_S, timeout_ticks=None):
     """叫 aos-agent --daemon <AOS_DAEMON> argv…；退 0 回 (stdout, None)，退非 0 或逾時回 (stdout, (代號, 原因))。"""
     global child
     if running_kid is not None:
         renew(timeout_s + 5)
+    try:
+        deadline = tool_io.deadline_after(timeout_ticks) if timeout_ticks is not None else None
+    except tool_io.Error as e:
+        return "", (e.code, str(e))
     cmd = ["aos-agent", "--daemon", daemon] + argv
     try:
         child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL,
@@ -123,15 +129,28 @@ def agent(argv, text=None, timeout_s=STEP_S):
     payload = None if text is None else text.encode("utf-8")
     while True:
         try:
-            out, err = child.communicate(payload, timeout=min(86400, max(0, end - time.monotonic())))
+            out, err = child.communicate(payload, timeout=0.2 if deadline is not None else min(86400, max(0, end - time.monotonic())))
             break
         except subprocess.TimeoutExpired:
             payload = None
-            if time.monotonic() < end:
+            try:
+                waiting = not tool_io.expired(deadline) if deadline is not None else time.monotonic() < end
+            except tool_io.Error as e:
+                kill_group(child)
+                child = None
+                return "", (e.code, str(e))
+            if waiting:
+                if deadline is not None and running_kid is not None:
+                    try:
+                        renew(STEP_S + 5)
+                    except SystemExit:
+                        kill_group(child)
+                        child = None
+                        raise
                 continue
             kill_group(child)
             child = None
-            return "", ("CommandFailed", "aos-agent %s did not finish in %g s (killed)" % (" ".join(argv[:2]), timeout_s))
+            return "", ("CommandFailed", "aos-agent %s did not finish in %s (killed)" % (" ".join(argv[:2]), "%d ticks" % timeout_ticks if deadline is not None else "%g s" % timeout_s))
     p, child = child, None
     out, err = out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
     if err:                                     # 下層的 stderr 原樣透出（R10）
@@ -192,6 +211,11 @@ if endpoint is not None and (not isinstance(endpoint, str) or not endpoint):
 max_chars = args.get("max_chars", MAX_CHARS_DEFAULT)
 if isinstance(max_chars, bool) or not isinstance(max_chars, int) or max_chars < 1:
     die("ArgumentsBad", "max_chars must be a positive integer")
+if "timeout_s" in args and "timeout_ticks" in args:
+    die("ArgumentsBad", "timeout_s and timeout_ticks are mutually exclusive")
+timeout_ticks = args.get("timeout_ticks")
+if "timeout_ticks" in args and (isinstance(timeout_ticks, bool) or not isinstance(timeout_ticks, int) or timeout_ticks <= 0):
+    die("ArgumentsBad", "timeout_ticks must be a positive integer")
 timeout_s = args.get("timeout_s", TIMEOUT_DEFAULT_S)
 try:
     valid_timeout = not isinstance(timeout_s, bool) and isinstance(timeout_s, (int, float)) and math.isfinite(timeout_s) and timeout_s > 0
@@ -410,7 +434,10 @@ if context:
 _, err = agent(["say", "--target", kid], text=text)
 answer = None
 if err is None:
-    answer, err = agent(["listen", "--target", kid, "--timeout-s", "%g" % timeout_s], timeout_s=timeout_s + 30)
+    if timeout_ticks is not None:
+        answer, err = agent(["listen", "--target", kid, "--timeout-ticks", str(timeout_ticks)], timeout_ticks=timeout_ticks + 30)
+    else:
+        answer, err = agent(["listen", "--target", kid, "--timeout-s", "%g" % timeout_s], timeout_s=timeout_s + 30)
 if err:                                         # 子答不出：先停、stack 一律留（不管 keep）
     agent(["ctl", "stop", "--target", kid])
     mark(kid, "failed")

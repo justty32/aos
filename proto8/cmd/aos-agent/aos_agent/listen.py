@@ -1,7 +1,7 @@
-# aos_agent/listen.py - 等待回答或列出與追蹤歷史對話。
+# aos_agent/listen.py - 以秒或 tick 等待回答，或列出與追蹤歷史對話。
 HELP = """aos-agent listen - print the agent's answer
 
-usage: aos-agent [--daemon D] listen [--target NAME] [--timeout-s SECS | --last N [--follow] | --follow]
+usage: aos-agent [--daemon D] listen [--target NAME] [--timeout-s SECS | --timeout-ticks N | --last N [--follow] | --follow]
 
 Without --last or --follow: wait for the latest answer and print only its text.
 --last N prints the last N exchanges as blocks: "== #N", question lines prefixed "> ",
@@ -11,6 +11,7 @@ Ctrl-C leaves follow mode with exit 0; reminders go to stderr.
 flags:
   -t, --target NAME   which agent (default: $AOS_AGENT)
   --timeout-s SECS    give up after SECS seconds (AnswerMissing); leave out to wait without limit
+  --timeout-ticks N   give up after N ticks (positive integer); exclusive with --timeout-s
   --last N            show the last N exchanges (a whole number) instead of waiting
   -f, --follow        follow new exchanges (also with --last)
   -h, --help          show this help
@@ -60,8 +61,14 @@ def handed_unanswered(a, before):
     return last_user > last_answer
 
 
-def wait_latest(a, timeout, before=None):
+def wait_latest(a, timeout, before=None, *, timeout_ticks=None):
     """等最新那封的回答（before＝寄之前的回答數；chat 給，listen 開始時才數）。"""
+    deadline = aos_ws.deadline_after(timeout_ticks) if timeout_ticks is not None else None
+    duration = "%d ticks" % timeout_ticks if deadline is not None else "%g s" % timeout if timeout is not None else ""
+
+    def timed_out():
+        return aos_ws.expired(deadline) if deadline is not None else timeout is not None and time.monotonic() - start >= timeout
+
     sig = latest(a)
     if before is None:
         before = len(aos_ws.answers(a.stack))
@@ -99,8 +106,8 @@ def wait_latest(a, timeout, before=None):
                     else:
                         raise Fail("AnswerMissing", "%s was handed over (not in the queue) but history has no answer and nothing is running %s"
                                    " (a batch cut off midway is not answered again by itself; say it again for a new answer)" % (what, a.name))
-            if timeout is not None and time.monotonic() - start >= timeout:
-                raise Fail("AnswerMissing", "waited %g s; %s was handed over and is not answered yet" % (timeout, what))
+            if timed_out():
+                raise Fail("AnswerMissing", "waited %s; %s was handed over and is not answered yet" % (duration, what))
             time.sleep(POLL)
             continue
         now = time.monotonic()
@@ -117,8 +124,8 @@ def wait_latest(a, timeout, before=None):
             elif not warned:
                 note(stuck_hint(a, sig) + ". Still waiting, Ctrl-C to leave")
                 warned = True
-        if timeout is not None and now - start >= timeout:
-            raise Fail("AnswerMissing", "waited %g s; %s is not answered yet (the letter is in queue/%s/)" % (timeout, sig, ", ".join(stages)))
+        if timed_out():
+            raise Fail("AnswerMissing", "waited %s; %s is not answered yet (the letter is in queue/%s/)" % (duration, sig, ", ".join(stages)))
         time.sleep(POLL)
 
 
@@ -182,18 +189,28 @@ def count(v):
 
 
 def cmd(argv):
-    opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout", "--last": "last"}, {"--follow": "follow"}, help=HELP, short=("-t", "-f"))
+    opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout", "--timeout-ticks": "timeout_ticks", "--last": "last"}, {"--follow": "follow"}, help=HELP, short=("-t", "-f"))
+    if "timeout" in opts and "timeout_ticks" in opts:
+        raise bad_args(HELP, "--timeout-s and --timeout-ticks are mutually exclusive")
+    timeout_ticks = None
+    if "timeout_ticks" in opts:
+        raw = opts["timeout_ticks"]
+        if not raw or any(c < "0" or c > "9" for c in raw) or len(raw.lstrip("0")) > 19:
+            raise bad_args(HELP, "--timeout-ticks needs a positive decimal integer within signed 64-bit range: %s" % raw)
+        timeout_ticks = int(raw.lstrip("0") or "0")
+        if not 0 < timeout_ticks <= 9223372036854775807:
+            raise bad_args(HELP, "--timeout-ticks needs a positive decimal integer within signed 64-bit range: %s" % raw)
     timeout = None if opts.get("timeout") is None else seconds(opts["timeout"])
     last = None if opts.get("last") is None else count(opts["last"])
     if rest:
         raise bad_args(HELP, "listen takes no positional arguments: %s (it always waits for the latest letter)" % rest[0])
     waits = last is None and not opts.get("follow")
-    if not waits and timeout is not None:
-        raise bad_args(HELP, "--timeout-s is only for waiting on the latest letter, not with --last / --follow")
+    if not waits and (timeout is not None or timeout_ticks is not None):
+        raise bad_args(HELP, "--timeout-s / --timeout-ticks are only for waiting on the latest letter, not with --last / --follow")
     a = target(opts)
     try:
         if waits:
-            wait_latest(a, timeout)
+            wait_latest(a, timeout, timeout_ticks=timeout_ticks)
         else:
             follow(a, last or 0, bool(opts.get("follow")))
     except KeyboardInterrupt:

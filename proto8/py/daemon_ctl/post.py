@@ -1,4 +1,4 @@
-"""daemon_ctl 信件：寄送、認領與清理回信並等待 daemon 回應。"""
+"""daemon_ctl 信件：寄送、認領與清理回信，並以秒或 tick 等待 daemon 回應。"""
 import datetime
 import fcntl
 import json
@@ -124,21 +124,32 @@ def take_reply(box, letter):
     return None
 
 
-def ask(d, body, timeout_s=3, direct=False):
-    box = reply_box(d)
-    letter = send(d, body, reply_to=box, direct=direct)
-    end = time.monotonic() + timeout_s
-    while True:
-        got = take_reply(box, letter)
-        if got is not None:
-            return got
-        if time.monotonic() >= end:
-            return None
-        time.sleep(min(0.05, max(0, end - time.monotonic())))
+def ask(d, body, timeout_s=None, direct=False, *, timeout_ticks=None):
+    """等回信：未指定期限沿用 3 秒；秒與正整數 tick 擇一。"""
+    if timeout_ticks is not None:
+        if timeout_s is not None:
+            raise Fail("ArgumentsBad", "timeout_s and timeout_ticks are mutually exclusive")
+        if isinstance(timeout_ticks, bool) or not isinstance(timeout_ticks, int) or not 0 < timeout_ticks <= 9223372036854775807:
+            raise Fail("ArgumentsBad", "timeout_ticks must be a positive integer within signed 64-bit range")
+    try:
+        deadline = aos_ws.deadline_after(timeout_ticks) if timeout_ticks is not None else None
+        box = reply_box(d)
+        letter = send(d, body, reply_to=box, direct=direct)
+        end = time.monotonic() + (3 if timeout_s is None else timeout_s) if deadline is None else None
+        while True:
+            got = take_reply(box, letter)
+            if got is not None:
+                return got
+            timed_out = aos_ws.expired(deadline) if deadline is not None else time.monotonic() >= end
+            if timed_out:
+                return None
+            time.sleep(0.05 if deadline is not None else min(0.05, max(0, end - time.monotonic())))
+    except aos_ws.Error as exc:
+        raise Fail(exc.code, str(exc)) from exc
 
 
-def ping(d, timeout_s=3, direct=False):
-    return ask(d, {"ping": True}, timeout_s, direct)
+def ping(d, timeout_s=None, direct=False, *, timeout_ticks=None):
+    return ask(d, {"ping": True}, timeout_s, direct, timeout_ticks=timeout_ticks)
 
 
 def wait_taken(box, letter, secs=3):

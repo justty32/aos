@@ -1,6 +1,6 @@
 {"description": "Start, talk to and remove child agents on your daemon. op add starts an existing definition def; op new writes a new definition at path (copy of from plus files) and starts it. A child does not inherit your brain or tools: give llm and tools. op say sends and returns; op ask waits for the answer; op rm removes; op ls shows the daemon table. Errors: ChildSlotMissing, ChildUnknown, ChildMissing, DefMissing, AddRejected. Details: memory node agents.",
  "env": ["AOS_DAEMON"],
- "errors": ["ArgumentsBad", "LaunchFailed", "CommandFailed", "NameBad", "WsMissing", "PathBad", "ReadFailed", "WriteFailed", "MkdirFailed", "CfgBad", "ChildSlotMissing", "ChildMissing", "ChildUnknown", "DefBad", "ToolMissing", "OpUnknown", "DaemonMissing", "StackMissing", "DefExists", "DefMissing"],
+ "errors": ["TickBad", "ArgumentsBad", "LaunchFailed", "CommandFailed", "NameBad", "WsMissing", "PathBad", "ReadFailed", "WriteFailed", "MkdirFailed", "CfgBad", "ChildSlotMissing", "ChildMissing", "ChildUnknown", "DefBad", "ToolMissing", "OpUnknown", "DaemonMissing", "StackMissing", "DefExists", "DefMissing"],
  "parameters": {"type": "object",
                 "properties": {"op": {"type": "string", "enum": ["new", "add", "say", "ask", "rm", "ls"], "description": "what to do"},
                                "name": {"type": "string", "description": "the child's name (new, add, say, ask, rm); letters, digits, _ and -"},
@@ -18,5 +18,6 @@
                                "limits": {"type": "object", "description": "new, add: resource limits for it, e.g. {\"mem_mb\": 512, \"cpu_s\": 600}; keys mem_mb, cpu_s, procs, file_mb, files (positive integers), user (string); default is what its definition declares"},
                                "text": {"type": "string", "description": "say, ask: the message"},
                                "ctl_timeout_s": {"default": 30, "type": "number", "description": "new, add, rm: seconds to wait for the daemon to attach or remove the child; default 30, at most 1700"},
-                               "timeout_s": {"default": 600, "type": "number", "description": "ask: seconds to wait for the answer; default 600, at most 1700"}},
+                               "timeout_ticks": {"type": "integer", "description": "ask: positive integer ticks to wait; mutually exclusive with timeout_s; without AOS_TICK, one tick is AOS_TICK_INTERVAL milliseconds (default 1000); at most 1700"},
+                               "timeout_s": {"default": 600, "type": "number", "description": "ask: seconds to wait for the answer; default 600, at most 1700; mutually exclusive with timeout_ticks"}},
                 "required": ["op"]}}

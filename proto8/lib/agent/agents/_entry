@@ -104,9 +104,13 @@ signal.signal(signal.SIGTERM, on_term)
 signal.signal(signal.SIGINT, on_term)          # Ctrl-C：同 TERM，退 130、不吐 traceback（R12）
 
 
-def agent(argv, text=None, timeout_s=STEP_S):
+def agent(argv, text=None, timeout_s=STEP_S, timeout_ticks=None):
     """叫 aos-agent --daemon <AOS_DAEMON> argv…；退 0 回 (stdout, None)，退非 0 回 (stdout, (代號, 原因))。"""
     global child
+    try:
+        deadline = tool_io.deadline_after(timeout_ticks) if timeout_ticks is not None else None
+    except tool_io.Error as e:
+        die(e.code, str(e))
     cmd = ["aos-agent", "--daemon", daemon] + argv
     try:
         child = subprocess.Popen(cmd, stdin=subprocess.PIPE if text is not None else subprocess.DEVNULL,
@@ -114,10 +118,23 @@ def agent(argv, text=None, timeout_s=STEP_S):
     except OSError as e:
         die("LaunchFailed", "cannot start aos-agent (is it on PATH?): %s" % e)
     try:
-        out, err = child.communicate(None if text is None else text.encode("utf-8"), timeout=timeout_s)
-    except subprocess.TimeoutExpired:
+        payload = None if text is None else text.encode("utf-8")
+        while True:
+            try:
+                out, err = child.communicate(payload, timeout=0.2 if deadline is not None else timeout_s)
+                break
+            except subprocess.TimeoutExpired:
+                payload = None
+                if deadline is not None and not tool_io.expired(deadline):
+                    continue
+                kill_group(child)
+                child = None
+                die("CommandFailed", "aos-agent %s did not finish in %s (killed)" %
+                    (" ".join(argv[:2]), "%d ticks" % timeout_ticks if deadline is not None else "%d s" % timeout_s))
+    except tool_io.Error as e:
         kill_group(child)
-        die("CommandFailed", "aos-agent %s did not finish in %d s (killed)" % (" ".join(argv[:2]), timeout_s))
+        child = None
+        die(e.code, str(e))
     p, child = child, None
     out, err = out.decode("utf-8", "replace"), err.decode("utf-8", "replace")
     if err:                                     # 下層的 stderr 原樣透出（R10）
@@ -132,8 +149,8 @@ def agent(argv, text=None, timeout_s=STEP_S):
     return out, ("CommandFailed", "aos-agent %s exited %d: %s" % (" ".join(argv[:2]), p.returncode, lines[-1] if lines else "(no message)"))
 
 
-def must(argv, text=None, timeout_s=STEP_S):
-    out, err = agent(argv, text, timeout_s)
+def must(argv, text=None, timeout_s=STEP_S, timeout_ticks=None):
+    out, err = agent(argv, text, timeout_s, timeout_ticks)
     if err:
         die(*err)
     return out
@@ -403,6 +420,12 @@ if op in ("new", "add", "rm"):
     ctl_s = args.get("ctl_timeout_s", CTL_DEFAULT_S)
     if isinstance(ctl_s, bool) or not isinstance(ctl_s, (int, float)) or not 0 < ctl_s <= CTL_MAX_S:
         die("ArgumentsBad", "ctl_timeout_s must be a number in (0, 1700]")
+if op == "ask":
+    if "timeout_s" in args and "timeout_ticks" in args:
+        die("ArgumentsBad", "timeout_s and timeout_ticks are mutually exclusive")
+    timeout_ticks = args.get("timeout_ticks")
+    if "timeout_ticks" in args and (isinstance(timeout_ticks, bool) or not isinstance(timeout_ticks, int) or not 0 < timeout_ticks <= ASK_MAX_S):
+        die("ArgumentsBad", "timeout_ticks must be an integer in (0, %d]" % ASK_MAX_S)
 daemon = os.environ.get("AOS_DAEMON")
 if not daemon:
     die("DaemonMissing", "AOS_DAEMON is not set (this tool attaches agents to the daemon that runs you)")
@@ -425,7 +448,10 @@ if op in ("say", "ask"):
         die("ArgumentsBad", "timeout_s must be a number in (0, %d]" % ASK_MAX_S)
     out = must(["say", "--target", name], text=text)
     if op == "ask":
-        out = must(["listen", "--target", name, "--timeout-s", "%g" % timeout_s], timeout_s=timeout_s + 30)
+        if timeout_ticks is not None:
+            out = must(["listen", "--target", name, "--timeout-ticks", str(timeout_ticks)], timeout_ticks=timeout_ticks + 30)
+        else:
+            out = must(["listen", "--target", name, "--timeout-s", "%g" % timeout_s], timeout_s=timeout_s + 30)
     sys.stdout.write(out)
     sys.exit(0)
 
