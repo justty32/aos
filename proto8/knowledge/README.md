@@ -16,6 +16,6 @@
 
 | 資料夾 | 內容 | 給誰 |
 |---|---|---|
-| [aos/](aos/README.md) | aos 體系知識：一頁簡介＋八個詞＋五條規則（根）；`world`（心智模型與環境變數）、`me`（我是誰、`self_tools` 改自己的工具）、`agents`（生子 agent）、`brain`（問腦、endpoint 包、priority）、`status`（daemon 表與 phase）、`errors`（錯誤行 `程式: error: 代號 原因`、`warning:`、結束碼 10 與 `[exit code N]` 怎麼讀；子節點 `codes` 是代號結尾表）、`rules`（禁忌）、`cli`（給人與外部 agent 的指令：aos-agent、aos-daemon-ctl、aos-tools、aos-grow、aos-eca-screen；11-06 拆成資料夾，旗標位置、短名、`-y` 與確認、錯誤與重試各一節） | 跑在 aos 裡的 agent（Haiku／luna 級小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
+| [aos/](aos/README.md) | aos 體系知識：一頁簡介＋八個詞＋五條規則（根）；`world`（心智模型與環境變數）、`me`（我是誰、`self_tools` 改自己的工具）、`agents`（生子 agent）、`brain`（問腦、endpoint 包、priority）、`status`（daemon 表與 phase）、`errors`（錯誤行 `程式: error: 代號 原因`、`warning:`、結束碼 10 與 `[exit code N]` 怎麼讀；子節點 `codes` 是代號結尾表（C-54 六種結尾＋`Internal`）、`common` 是最常碰到的代號）、`rules`（禁忌）、`cli`（給人與外部 agent 的指令：aos-agent、aos-daemon-ctl、aos-tools、aos-grow、aos-eca-screen；11-06 拆成資料夾，旗標位置、短名、`-y` 與確認、錯誤與重試各一節） | 跑在 aos 裡的 agent（Haiku／luna 級小模型也要讀得懂）、經 aos-mcp 進來的外部 agent、人 |
 
 試一下：`cd proto8 && echo '{"op":"read"}' | AOS_MEMORY=knowledge/aos python3 lib/agent/memory/_entry`。

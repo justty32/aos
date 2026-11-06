@@ -7,7 +7,7 @@ A failed aos program prints one error line: `program: error: Code reason`.
 `self_tools: error: PathBad /etc/x is an absolute path outside the tool library`
 
 - First word = who failed (a program, a tool, or an agent name).
-- The word right after `error: ` = the Code. Its ending tells the kind of problem: see child `codes`.
+- The word right after `error: ` = the Code. Its ending tells the kind of problem: see child `codes`; the most common Codes: child `common`.
 - The rest = the reason, for humans. A usage hint comes last: `(usage: ...)`.
 
 A tool you call prints the error line on stdout too, and exits 1.
