@@ -22,10 +22,10 @@ workspace (AOS_WS), stack (AOS_STACK), .env and cwd, then run it with ARGS.
 The exit code is the entry's own code once it runs.
 
 flags:
-  --ws WS              workspace to use ("-" or empty = keep the outer one)
-  --stack S            stack to use ("-" or empty = keep the outer one)
+  -w, --ws WS              workspace to use ("-" or empty = keep the outer one)
+  -s, --stack S            stack to use ("-" or empty = keep the outer one)
   --dotenv-override    let .env override variables already set
-  --help               show this help
+  -h, --help               show this help
 
 exit codes: the entry's code; 1 with "aos-exec: error: CODE ..." on stderr = aos-exec's own error.
 )";
@@ -36,7 +36,7 @@ static int run(const std::vector<std::string>& argv) {
         try {
             // 以後加旗標就在這裡加一列；--dotenv-override（10-22）不帶值：.env 蓋掉已有的，只管這一次 aos-exec
             // --stack S（11-03）：stack 放哪，同 --ws（"-"／空＝沿用外面的）
-            cli = parse_cli(argv, {{"--ws", "ws"}, {"--stack", "stack"}}, {{"--dotenv-override", "dotenv_override"}}, HELP);
+            cli = parse_cli(argv, {{"--ws", "ws"}, {"--stack", "stack"}}, {{"--dotenv-override", "dotenv_override"}}, HELP, {"-w", "-s"});
         } catch (const Error& e) {
             throw usage_error(e.code, e.msg, USAGE);   // FlagUnknown／ArgumentsBad
         }

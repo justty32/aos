@@ -26,6 +26,8 @@
 | [`src/follow/follow.hpp`](../../../../../proto8/impls/aos-json/src/follow/follow.hpp) | 順著指標往下走，遇到指示詞要不要穿過去（--follow）；追 $ref 鏈記下走過哪些檔的哪些位置。 |
 | [`src/follow/kind.cpp`](../../../../../proto8/impls/aos-json/src/follow/kind.cpp) | 認指示詞（N-45 寬容規則，同 aos-directive 的 ref.cpp／env.cpp）。 |
 | [`src/follow/locate.cpp`](../../../../../proto8/impls/aos-json/src/follow/locate.cpp) | 從 `檔#/指標` 一格格往下走；路上遇到指示詞看 Mode 決定穿不穿。 |
+| [`src/help/help.cpp`](../../../../../proto8/impls/aos-json/src/help/help.cpp) | aos-json 各子命令的英文說明與旗標解析。 |
+| [`src/help/help.hpp`](../../../../../proto8/impls/aos-json/src/help/help.hpp) | aos-json 子命令的 usage、旗標說明與共同旗標解析入口。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-json/src/main.cpp) | aos-json 命令列——第一個參數挑子命令，其餘交給它（src/cmd/）。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-json/vcpkg.json) | aos-json：讀、改 aos 的 JSON 設定（檔#/指標、指示詞）的 lib 與命令列 |
 

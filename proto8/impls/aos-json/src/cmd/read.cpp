@@ -3,7 +3,7 @@
 
 #include "follow/follow.hpp"
 
-#include "aos/cli.hpp"
+#include "help/help.hpp"
 
 #include <cstdio>
 #include <cstdlib>
@@ -23,8 +23,8 @@ static std::string one_spec(const Args& args, const Cli& cli, const std::string&
 //   沒旗標＝原文（指示詞原樣印出來）；--follow＝路上遇到 $ref 穿過去（aos 自己的程式不會這樣讀，給人看拆檔後的值）；
 //   --resolve＝把拿到的值裡的指示詞解開（交給 aos-directive，跟 aos-loop、aos-fsm 讀設定檔同一套）；--str＝值是字串就印字面（不帶引號）。
 int cmd_get(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--follow", "follow"}, {"--resolve", "resolve"}, {"--str", "str"}}, "usage: aos-json get [--follow] [--resolve] [--str] FILE#/POINTER\n\nPrint the value at FILE#/POINTER (raw; --follow goes through $ref, --resolve resolves directives, --str prints a string without quotes).\n");
-    std::string s = one_spec(args, cli, "aos-json get [--follow] [--resolve] [--str] FILE#/POINTER");
+    Cli cli = parse_args(args, {}, {{"--follow", "follow"}, {"--resolve", "resolve"}, {"--str", "str"}}, "get");
+    std::string s = one_spec(args, cli, cli_usage("get"));
     Docs docs;
     Mode mode;
     mode.follow = cli.opts.count("follow") > 0;
@@ -50,8 +50,8 @@ int cmd_get(const Args& args) {
 // where 檔#/指標：一路穿過 $ref，每一站印一行（`檔#/指標`；檔在 cwd 底下印相對路徑）；最後一站就是值實際寫的地方。
 // 最後是 $env＝多印一行 `$env 名字`（值是跑的時候的環境變數，沒有檔）。
 int cmd_where(const Args& args) {
-    Cli cli = parse_cli(args, {}, {}, "usage: aos-json where FILE#/POINTER\n\nPrint where the value really lives: one FILE#/POINTER line per $ref hop (last line = the place; $env NAME when it is an environment variable).\n");
-    std::string s = one_spec(args, cli, "aos-json where FILE#/POINTER");
+    Cli cli = parse_args(args, {}, {}, "where");
+    std::string s = one_spec(args, cli, cli_usage("where"));
     Docs docs;
     Mode mode;
     mode.follow = true;

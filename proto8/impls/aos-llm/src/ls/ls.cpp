@@ -32,17 +32,17 @@ static std::string cell(const Json& pack, const char* k) {
 
 void ls_print(const Json& window, bool json) {
     if (json) {
-        std::printf("%s\n", window.dump(2).c_str());
+        std::printf("%s\n", aos::dumps(window).c_str());
         std::fflush(stdout);
         return;
     }
     for (auto it = window.begin(); it != window.end(); ++it) {
         const Json& p = it.value();
         if (p.is_object() && p.contains("error")) {
-            std::printf("%s error: %s\n", it.key().c_str(), cell(p, "error").c_str());
+            std::printf("%s\terror:\t%s\n", it.key().c_str(), cell(p, "error").c_str());
             continue;
         }
-        std::printf("%s %s %s %s %s %s\n", it.key().c_str(), cell(p, "speed").c_str(), cell(p, "cost").c_str(),
+        std::printf("%s\t%s\t%s\t%s\t%s\t%s\n", it.key().c_str(), cell(p, "speed").c_str(), cell(p, "cost").c_str(),
                     cell(p, "context").c_str(), cell(p, "slots").c_str(), cell(p, "summary").c_str());
     }
     std::fflush(stdout);

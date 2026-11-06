@@ -11,7 +11,7 @@
 
 #include "follow/follow.hpp"
 
-#include "aos/cli.hpp"
+#include "help/help.hpp"
 
 #include <cstdlib>
 #include <iostream>
@@ -155,9 +155,9 @@ std::vector<std::string> problems_of(Docs& docs, const std::string& spec, bool e
 }
 
 int cmd_check(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--env", "env"}}, "usage: aos-json check [--env] FILE[#/POINTER]...\n\nCheck aos JSON files: one problem per line on stdout; exit 0 = no problem, 10 = problems found.\n");
+    Cli cli = parse_args(args, {}, {{"--env", "env"}}, "check");
     if (cli.rest.empty()) {
-        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json check [--env] FILE[#/POINTER]...");
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("check"));
     }
     Docs docs;
     std::vector<std::string> all;

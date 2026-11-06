@@ -37,7 +37,7 @@ look up the next state by its exit code ("next": a name = only on 0;
 {"CODE": name, "*": name}).
 
 flags:
-  --help   show this help
+  -h, --help   show this help
 
 exit codes: 0 the table took the code (state written); 1 own error
 ("aos-fsm: error: CODE ..." on stderr); otherwise the step's own code (state unchanged);

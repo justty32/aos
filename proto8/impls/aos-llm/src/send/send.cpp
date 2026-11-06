@@ -70,6 +70,9 @@ Json read_body(const std::optional<std::string>& priority) {
     try {
         body = aos::read_stdin();
     } catch (const Error& e) {
+        if (e.code == code::ArgumentsBad) {
+            throw;
+        }
         throw Error{code::RequestBad, "stdin must be one JSON document (the body): " + e.msg};
     }
     const std::string shape = "stdin must be {\"endpoint\"?: name, \"request\": {\"messages\": [...], ...}, \"priority\"?}";

@@ -15,6 +15,7 @@ Json read_value(const std::vector<std::string>& rest, size_t idx, bool str) {
     if (rest.size() == idx + 1) {
         text = rest[idx];
     } else {
+        aos::require_stdin_body();
         text.assign(std::istreambuf_iterator<char>(std::cin), {});
         if (text.empty()) {
             throw Error{code::ValueMissing, "no value given (no argument, stdin is empty)"};

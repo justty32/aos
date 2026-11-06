@@ -19,6 +19,10 @@ int main() {
 }
 ```
 
+共用短名表 `aos::kShort` 與 Python 的 `aos_flags.SHORT` 同義；`parse_cli` 第五參數只開選中的短名，`-h` 隨 help 內建。短名不黏值、不併、不帶 `=`；aos-exec 開 `-w`／`-s`，aos-llm ls 開 `-j`。
+
+`read_stdin` 先用 `require_stdin_body()` 拒絕終端 stdin（`ArgumentsBad`），請從管線或檔案給內容；讀原始文字的命令也可先呼叫這個檢查。非終端的空輸入仍是 `{}`。
+
 ## 元素（一個標頭一個元素）
 
 逐檔「哪個檔負責什麼」從檔頭一句話生成，在 code map 的 [proto8 生成冊](../../../wf/workflows/common/code-map/proto8/README.md)（`impls` 冊的 `aos-util/` 段）；改說明去改檔頭。

@@ -22,40 +22,127 @@
 #include <map>
 #include <optional>
 
-static const char* USAGE =
-    "aos-llm [FLAGS] send [--priority P] --reply-to BOX | recv BOX LETTER | ask [--priority P] | regret LETTER | ls [--json]";
+static const char* USAGE = "aos-llm [FLAGS] SUBCOMMAND [ARGS...]";
 
-static const char* HELP = R"(usage: aos-llm [FLAGS] SUBCOMMAND [FLAGS...] [ARGS...]
+static const char* HELP = R"(aos-llm - Send requests to the LLM kernel and receive replies.
 
-Send request letters to the LLM kernel's mailbox ($AOS_LLM_KERNEL) and get replies.
-body.json = {"endpoint"?: PACK, "request": {"messages": [...], ...}, "priority"?}
+usage: aos-llm [FLAGS] SUBCOMMAND [ARGS...]
+       aos-llm SUBCOMMAND --help
 
 subcommands:
-  send [--priority P] --reply-to BOX < body.json   send; prints the letter name
-  recv BOX LETTER                                  print the reply's message (exit 10 = not yet)
-  ask [--priority P] < body.json                   send, wait, print the reply's message
-  regret LETTER                                    take back a letter still in new/
-  ls [--json]                                      list the kernel's endpoint packs
+  send     send a request from stdin
+  recv     receive a reply
+  ask      send a request and wait
+  regret   withdraw a waiting request
+  ls       list endpoint packs
 
 flags:
-  --help   show this help (aos-llm SUBCOMMAND --help shows that subcommand's)
+  -h, --help   show this help
 
-exit codes: 0 ok; 10 no reply yet (recv); 1 error, or the reply is an error
-("aos-llm: error: CODE ..." on stderr).
+Requests use $AOS_LLM_KERNEL. Body JSON has request; endpoint and priority are optional.
+
+exit codes: 0 success; 10 no reply yet; 1 error.
+more: aos-llm/README.md
 )";
+
+static const std::map<std::string, std::string> SUB_USAGE = {
+    {"send", "aos-llm send [--priority P] --reply-to BOX < body.json"},
+    {"recv", "aos-llm recv BOX LETTER"},
+    {"ask", "aos-llm ask [--priority P] < body.json"},
+    {"regret", "aos-llm regret LETTER"},
+    {"ls", "aos-llm ls [--json]"},
+};
+
+static const std::map<std::string, std::string> SUB_HELP = {
+    {"send", R"(aos-llm send - Send a request to the LLM kernel.
+
+usage: aos-llm send [--priority P] --reply-to BOX < body.json
+       aos-llm send --help
+
+flags:
+  --priority P    override body.priority
+  --reply-to BOX  set the mailbox for replies (required)
+  -h, --help   show this help
+
+Read body JSON from stdin, send via $AOS_LLM_KERNEL, and print the letter name.
+
+exit codes: 0 sent; 1 error.
+more: aos-llm/README.md
+)"},
+    {"recv", R"(aos-llm recv - Receive a reply.
+
+usage: aos-llm recv BOX LETTER
+       aos-llm recv --help
+
+flags:
+  -h, --help   show this help
+
+Print the reply's body.message as one JSON line and finish the reply letter.
+
+exit codes: 0 received; 10 no reply yet; 1 error.
+more: aos-llm/README.md
+)"},
+    {"ask", R"(aos-llm ask - Send a request and wait for its reply.
+
+usage: aos-llm ask [--priority P] < body.json
+       aos-llm ask --help
+
+flags:
+  --priority P   override body.priority
+  -h, --help   show this help
+
+Read body JSON from stdin, send via $AOS_LLM_KERNEL, and print body.message.
+
+exit codes: 0 received; 1 error.
+more: aos-llm/README.md
+)"},
+    {"regret", R"(aos-llm regret - Withdraw a waiting LLM request.
+
+usage: aos-llm regret LETTER
+       aos-llm regret --help
+
+flags:
+  -h, --help   show this help
+
+Remove LETTER from $AOS_LLM_KERNEL/mailbox/new/; print nothing.
+
+exit codes: 0 withdrawn; 1 error.
+more: aos-llm/README.md
+)"},
+    {"ls", R"(aos-llm ls - List the LLM kernel endpoint packs.
+
+usage: aos-llm ls [--json]
+       aos-llm ls --help
+
+flags:
+  -j, --json   print the endpoint window as one JSON line
+  -h, --help   show this help
+
+Read $AOS_LLM_KERNEL/endpoints.json and print one pack per line.
+Columns (TAB): name, speed, cost, context, slots, summary.
+
+exit codes: 0 listed; 1 error.
+more: aos-llm/README.md
+)"},
+};
 
 static int fail(const std::string& code, const std::string& msg) {
     return aos::fail("aos-llm", code, msg);
 }
 
 static aos::Cli parse(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
-                      size_t want, const std::string& what, const std::string& usage,
-                      const std::map<std::string, std::string>& switches = {}) {
+                      size_t want, const std::string& what, const std::string& command,
+                      const std::map<std::string, std::string>& switches = {},
+                      const std::vector<std::string>& short_flags = {}) {
     namespace g = aos::llm;
+    const std::string& usage = SUB_USAGE.at(command);
     aos::Cli cli;
     try {
-        cli = aos::parse_cli(argv, flags, switches, "usage: " + usage + "\n\nsee aos-llm --help\n");
+        cli = aos::parse_cli(argv, flags, switches, SUB_HELP.at(command), short_flags);
     } catch (const aos::Error& e) {
+        if (e.code == g::code::FlagUnknown) {
+            throw aos::Error{e.code, e.msg + " (see aos-llm " + command + " --help)"};
+        }
         throw aos::usage_error(e.code, e.msg, usage);
     }
     if (cli.rest.size() != want) {
@@ -74,6 +161,7 @@ static std::optional<std::string> opt(const aos::Cli& cli, const std::string& k)
 
 int main(int argc, char** argv) {
     namespace g = aos::llm;
+    std::string sub_cmd;
     try {
         aos::block_signals();
         aos::Cli top = aos::parse_cli(std::vector<std::string>(argv + 1, argv + argc), {}, {}, HELP);
@@ -82,10 +170,11 @@ int main(int argc, char** argv) {
             throw aos::usage_error(g::code::ArgumentsBad, "no subcommand given", USAGE);
         }
         std::string cmd = args[0];
+        sub_cmd = cmd;
         args.erase(args.begin());
         if (cmd == "send") {
-            const char* u = "aos-llm send [--priority P] --reply-to BOX < body.json";
-            aos::Cli cli = parse(args, {{"--priority", "priority"}, {"--reply-to", "reply_to"}}, 0, "send takes no positional arguments", u);
+            const std::string& u = SUB_USAGE.at("send");
+            aos::Cli cli = parse(args, {{"--priority", "priority"}, {"--reply-to", "reply_to"}}, 0, "send takes no positional arguments", "send");
             std::optional<std::string> rt = opt(cli, "reply_to");
             if (!rt || rt->empty()) {
                 throw aos::usage_error(g::code::ArgumentsBad, "send needs --reply-to BOX", u);
@@ -99,11 +188,11 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (cmd == "recv") {
-            aos::Cli cli = parse(args, {}, 2, "recv needs BOX and a letter name", "aos-llm recv BOX LETTER");
+            aos::Cli cli = parse(args, {}, 2, "recv needs BOX and a letter name", "recv");
             return g::recv(cli.rest[0], cli.rest[1]);
         }
         if (cmd == "ask") {
-            aos::Cli cli = parse(args, {{"--priority", "priority"}}, 0, "ask takes no positional arguments", "aos-llm ask [--priority P] < body.json");
+            aos::Cli cli = parse(args, {{"--priority", "priority"}}, 0, "ask takes no positional arguments", "ask");
             g::Mailbox mb = g::kernel();
             g::warn_idle(mb);
             aos::Json body = g::read_body(opt(cli, "priority"));
@@ -111,17 +200,21 @@ int main(int argc, char** argv) {
             return g::ask_wait(mb, id);
         }
         if (cmd == "ls") {
-            aos::Cli cli = parse(args, {}, 0, "ls takes no positional arguments", "aos-llm ls [--json]", {{"--json", "json"}});
+            aos::Cli cli = parse(args, {}, 0, "ls takes no positional arguments", "ls", {{"--json", "json"}}, {"-j"});
             g::ls_print(g::ls_window(g::kernel()), cli.opts.count("json") > 0);
             return 0;
         }
         if (cmd == "regret") {
-            aos::Cli cli = parse(args, {}, 1, "regret needs a letter name", "aos-llm regret LETTER");
+            aos::Cli cli = parse(args, {}, 1, "regret needs a letter name", "regret");
             g::regret(g::kernel(), cli.rest[0]);
             return 0;
         }
         throw aos::usage_error(g::code::CommandUnknown, "unknown subcommand " + cmd, USAGE);
     } catch (const aos::Error& e) {
+        if (SUB_USAGE.count(sub_cmd) && e.code == g::code::ArgumentsBad &&
+            e.msg.find(" (usage: ") == std::string::npos) {
+            return aos::fail("aos-llm", aos::usage_error(e.code, e.msg, SUB_USAGE.at(sub_cmd)));
+        }
         return fail(e.code, e.msg);
     } catch (const std::exception& e) {
         return fail(aos::llm::code::Internal, e.what());

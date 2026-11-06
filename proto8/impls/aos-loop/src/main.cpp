@@ -28,7 +28,7 @@ flags:
   --ctl FILE        control window (JSON commands: pause, resume, stop, ...)
   --state FILE      state window (aos-loop writes its phase there)
   --enable-logs     print one JSON line per run to stdout
-  --help            show this help
+  -h, --help            show this help
 
 exit codes: 0 done; 1 own error ("aos-loop: error: CODE ..." on stderr);
 the body's code when it fails ("aos-loop: error: RunFailed ..."); 128+N on signal N.

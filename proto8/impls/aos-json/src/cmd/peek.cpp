@@ -11,7 +11,7 @@
 
 #include "follow/follow.hpp"
 
-#include "aos/cli.hpp"
+#include "help/help.hpp"
 
 #include <iostream>
 
@@ -99,9 +99,9 @@ void lines(const Json& v, int depth, const std::string& pad, std::string& out) {
 }  // namespace
 
 int cmd_peek(const Args& args) {
-    Cli cli = parse_cli(args, {{"--depth", "depth"}}, {{"--follow", "follow"}}, "usage: aos-json peek [--follow] [--depth N] FILE#/POINTER\n\nShow one level of the value at FILE#/POINTER; big values are folded into a short summary (--depth N levels).\n");
+    Cli cli = parse_args(args, {{"--depth", "depth"}}, {{"--follow", "follow"}}, "peek");
     if (cli.rest.size() != 1) {
-        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json peek [--follow] [--depth N] FILE#/POINTER");
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("peek"));
     }
     int depth = 1;
     if (cli.opts.count("depth")) {

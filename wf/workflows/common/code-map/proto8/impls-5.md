@@ -31,29 +31,10 @@
 | [`CMakeLists.txt`](../../../../../proto8/impls/aos-post/CMakeLists.txt) | 投遞（N-16 信箱）——寄信、認領、處理完、撤回。 |
 | [`include/aos/post.hpp`](../../../../../proto8/impls/aos-post/include/aos/post.hpp) | aos-post 的公開介面——投遞（NORMS N-16）：寄信、認領、讀信、處理完、撤回。 |
 | [`src/common/common.hpp`](../../../../../proto8/impls/aos-post/src/common/common.hpp) | aos-post 跨元素共用的小東西（內部標頭，不對外）。 |
+| [`src/help/help.cpp`](../../../../../proto8/impls/aos-post/src/help/help.cpp) | aos-post 各子命令的旗標說明與用法字串。 |
+| [`src/help/help.hpp`](../../../../../proto8/impls/aos-post/src/help/help.hpp) | aos-post 各子命令的英文說明與 usage。 |
 | [`src/mailbox/mailbox.cpp`](../../../../../proto8/impls/aos-post/src/mailbox/mailbox.cpp) | 信箱的路徑、建信箱、拿信箱、信件名稱的規則（check_name、is_ordered、sort_letters）、 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-post/src/main.cpp) | aos-post 命令列——第一個參數挑子命令，其餘照 aos-util 的 parse_cli（旗標在位置參數前面）。 |
 | [`src/send/send.cpp`](../../../../../proto8/impls/aos-post/src/send/send.cpp) | 寄信人這一半——驗信箱、信件名稱、寄一封（說明見 aos/post.hpp）。 |
 | [`src/take/take.cpp`](../../../../../proto8/impls/aos-post/src/take/take.cpp) | 處理者這一半——認領、讀信、回信、處理完；加上寄信人的撤回（說明見 aos/post.hpp）。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-post/vcpkg.json) | aos-post：投遞（N-16 信箱：寄、認領、處理完、撤回）的 lib 與命令列 |
-
-## `proto8/impls/aos-util/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`CMakeLists.txt`](../../../../../proto8/impls/aos-util/CMakeLists.txt) | aos 這一家命令列工具共用的函式庫。 |
-| [`include/aos/cli.hpp`](../../../../../proto8/impls/aos-util/include/aos/cli.hpp) | 10-21 起的命令列（aos-exec、aos-loop、aos-fsm、aos-daemon 共用）。 |
-| [`include/aos/error.hpp`](../../../../../proto8/impls/aos-util/include/aos/error.hpp) | aos 這一家命令列工具共用的錯誤型別，和通用的錯誤代號。 |
-| [`include/aos/files.hpp`](../../../../../proto8/impls/aos-util/include/aos/files.hpp) | 檔案的小工具——路徑、目錄操作、讀檔與文字及 JSON 原子寫入。 |
-| [`include/aos/io.hpp`](../../../../../proto8/impls/aos-util/include/aos/io.hpp) | aos 這一家命令列工具的「三扇門」——stdin 讀一份 JSON、stdout 印一行 JSON、stderr 只有兩種行。 |
-| [`include/aos/proc.hpp`](../../../../../proto8/impls/aos-util/include/aos/proc.hpp) | 子程序——起、看結束了沒、整群送訊號、收屍、/proc、memfd。 |
-| [`include/aos/signals.hpp`](../../../../../proto8/impls/aos-util/include/aos/signals.hpp) | 建立、阻擋與取出 SIGINT／SIGTERM／SIGHUP，並用 signalfd 收訊號——收到了不死，記下來，由呼叫者（loop、daemon 反覆跑的引擎）每次去看。 |
-| [`include/aos/text.hpp`](../../../../../proto8/impls/aos-util/include/aos/text.hpp) | UTF-8 字串的小工具（10-22 起 aos-exec 的 .env、aos-fsm 的 state 檔用）。 |
-| [`src/cli.cpp`](../../../../../proto8/impls/aos-util/src/cli.cpp) | 10-21 起的命令列旗標與設定檔（規則見 include/aos/cli.hpp）。 |
-| [`src/dirs.cpp`](../../../../../proto8/impls/aos-util/src/dirs.cpp) | 查詢、建立、列出、改名與移除目錄及檔案。 |
-| [`src/files.cpp`](../../../../../proto8/impls/aos-util/src/files.cpp) | 路徑、讀檔與文字及 JSON 原子寫入（說明見 include/aos/files.hpp）。 |
-| [`src/io.cpp`](../../../../../proto8/impls/aos-util/src/io.cpp) | 三扇門——stdin 讀一份 JSON、stdout 印一行、stderr 印錯誤行／提醒行（說明見 include/aos/io.hpp）。 |
-| [`src/proc.cpp`](../../../../../proto8/impls/aos-util/src/proc.cpp) | 子程序：起、看結束了沒、整群送訊號、收屍、/proc 資訊、memfd（說明見 include/aos/proc.hpp）。 |
-| [`src/signals.cpp`](../../../../../proto8/impls/aos-util/src/signals.cpp) | 建立訊號集合、阻擋／取出與收 SIGINT／SIGTERM／SIGHUP：擋住、用 signalfd 讀（說明見 include/aos/signals.hpp）。 |
-| [`src/text.cpp`](../../../../../proto8/impls/aos-util/src/text.cpp) | UTF-8 字串的小工具（說明見 include/aos/text.hpp）。 |
-| [`vcpkg.json`](../../../../../proto8/impls/aos-util/vcpkg.json) | aos-util：aos 這一家命令列工具共用的小函式庫（錯誤、stdin 讀一份 JSON、印結果與錯誤） |

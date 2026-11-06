@@ -22,7 +22,7 @@ Read one JSON document from stdin (empty = {}), resolve every directive in it
 result as one line.
 
 flags:
-  --help   show this help
+  -h, --help   show this help
 
 exit codes: 0 ok; 1 error ("aos-directive: error: CODE ..." on stderr).
 )";

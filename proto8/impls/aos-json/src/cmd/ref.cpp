@@ -3,7 +3,7 @@
 // 動到兩份檔（ref --move）時先寫新的那份、再改原本那份：中途失敗頂多多一份沒人參照的檔，原本那份不會指到不存在的地方。
 #include "cmd/edit.hpp"
 
-#include "aos/cli.hpp"
+#include "help/help.hpp"
 #include "aos/files.hpp"
 
 #include <algorithm>
@@ -13,9 +13,9 @@ namespace aos::json {
 
 // env [--path 子路徑] [--prefix 前綴] [--parents] 檔#/指標 名字：那個位置換成 {"$env": 名字, …}。
 int cmd_env(const Args& args) {
-    Cli cli = parse_cli(args, {{"--path", "path"}, {"--prefix", "prefix"}}, {{"--parents", "parents"}}, "usage: aos-json env [--path SUBPATH] [--prefix PREFIX] [--parents] FILE#/POINTER NAME\n\nReplace the value at FILE#/POINTER with {\"$env\": NAME, ...}.\n");
+    Cli cli = parse_args(args, {{"--path", "path"}, {"--prefix", "prefix"}}, {{"--parents", "parents"}}, "env");
     if (cli.rest.size() != 2 || cli.rest[1].empty()) {
-        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json env [--path SUBPATH] [--prefix PREFIX] [--parents] FILE#/POINTER NAME");
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("env"));
     }
     Json v = {{"$env", cli.rest[1]}};
     if (cli.opts.count("path")) {
@@ -66,9 +66,9 @@ static void rebase(Json& v, const std::string& from, const std::string& to) {
 // ref [--move] [--parents] 檔#/指標 目標：那個位置換成 {"$ref": 目標}（目標照 $ref 的寫法，從這份檔所在的資料夾算）。
 // --move＝先把原本的值搬到目標（目標是整份檔＝檔不能已經在；是 檔#/指標＝檔要在、那個位置要還沒有），裡面的相對 $ref 跟著改。
 int cmd_ref(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--move", "move"}, {"--parents", "parents"}}, "usage: aos-json ref [--move] [--parents] FILE#/POINTER TARGET\n\nReplace the value at FILE#/POINTER with {\"$ref\": TARGET} (--move moves the old value into TARGET).\n");
+    Cli cli = parse_args(args, {}, {{"--move", "move"}, {"--parents", "parents"}}, "ref");
     if (cli.rest.size() != 2) {
-        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json ref [--move] [--parents] FILE#/POINTER TARGET");
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("ref"));
     }
     const std::string& spec = cli.rest[0];
     const std::string& target = cli.rest[1];

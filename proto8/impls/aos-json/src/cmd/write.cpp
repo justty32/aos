@@ -3,15 +3,15 @@
 // 共用流程：找位置（locate；沒 --follow 時路上經過指示詞＝FollowMissing）→ 在記憶體裡改 → 有變的檔才寫回（save_file，原子）。
 #include "cmd/edit.hpp"
 
-#include "aos/cli.hpp"
+#include "help/help.hpp"
 
 namespace aos::json {
 
 // set [--follow] [--parents] [--str] 檔#/指標 [值]
 int cmd_set(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}, {"--str", "str"}}, "usage: aos-json set [--check] [--follow] [--parents] [--str] FILE#/POINTER [VALUE] (reads stdin without VALUE)\n\nSet the value at FILE#/POINTER (VALUE is JSON, or a string with --str; without VALUE reads stdin). --check validates before writing.\n");
+    Cli cli = parse_args(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}, {"--str", "str"}}, "set");
     if (cli.rest.empty()) {
-        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json set [--check] [--follow] [--parents] [--str] FILE#/POINTER [VALUE] (reads stdin without VALUE)");
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("set"));
     }
     Json v = read_value(cli.rest, 1, cli.opts.count("str") > 0);
     bool follow = cli.opts.count("follow") > 0;
@@ -31,9 +31,9 @@ int cmd_set(const Args& args) {
 // batch [--follow] [--parents] 檔：stdin 一個物件 {"/指標": 值, …}（"" ＝整份），照順序一個個 set（規則同 set），
 // 全部成功才寫回（每份檔一次原子寫入；有一個失敗＝一個都不寫）。一次給很多個值用這個。
 int cmd_batch(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}}, "usage: aos-json batch [--check] [--follow] [--parents] FILE < {\"/POINTER\": VALUE, ...}\n\nApply {\"/POINTER\": VALUE, ...} from stdin to FILE, one set at a time (\"\" = the whole file).\n");
+    Cli cli = parse_args(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--parents", "parents"}}, "batch");
     if (cli.rest.size() != 1) {
-        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json batch [--check] [--follow] [--parents] FILE < {\"/POINTER\": VALUE, ...}");
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("batch"));
     }
     Json all = read_value({}, 0, false);
     if (!all.is_object()) {
@@ -62,9 +62,9 @@ int cmd_batch(const Args& args) {
 
 // del [--follow] 檔#/指標：刪掉那個 key／元素。--follow＝路上穿過 $ref；$ref 陣列合起來的 key 每一份有的都刪（刪到指不到為止）。
 int cmd_del(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--follow", "follow"}}, "usage: aos-json del [--follow] FILE#/POINTER\n\nDelete the key or element at FILE#/POINTER.\n");
+    Cli cli = parse_args(args, {}, {{"--follow", "follow"}}, "del");
     if (cli.rest.size() != 1) {
-        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json del [--follow] FILE#/POINTER");
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("del"));
     }
     bool follow = cli.opts.count("follow") > 0;
     Edit ed;
@@ -96,9 +96,9 @@ int cmd_del(const Args& args) {
 
 // append [--follow] [--str] 檔#/指標 [值]：那個位置要是陣列，接在尾巴。
 int cmd_append(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--str", "str"}}, "usage: aos-json append [--check] [--follow] [--str] FILE#/POINTER [VALUE]\n\nAppend VALUE (or stdin) to the array at FILE#/POINTER.\n");
+    Cli cli = parse_args(args, {}, {{"--check", "check"}, {"--follow", "follow"}, {"--str", "str"}}, "append");
     if (cli.rest.empty()) {
-        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json append [--check] [--follow] [--str] FILE#/POINTER [VALUE]");
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("append"));
     }
     Json v = read_value(cli.rest, 1, cli.opts.count("str") > 0);
     bool follow = cli.opts.count("follow") > 0;
@@ -118,9 +118,9 @@ int cmd_append(const Args& args) {
 
 // merge [--follow] 檔#/指標 [物件]：淺層合 key，同名的換掉（同 $ref 陣列的合法：後蓋前、不往下層合；null 照字面放 null）。
 int cmd_merge(const Args& args) {
-    Cli cli = parse_cli(args, {}, {{"--check", "check"}, {"--follow", "follow"}}, "usage: aos-json merge [--check] [--follow] FILE#/POINTER [OBJECT]\n\nShallow-merge OBJECT (or stdin) into the object at FILE#/POINTER.\n");
+    Cli cli = parse_args(args, {}, {{"--check", "check"}, {"--follow", "follow"}}, "merge");
     if (cli.rest.empty()) {
-        throw usage_error(code::ArgumentsBad, "wrong number of arguments", "aos-json merge [--check] [--follow] FILE#/POINTER [OBJECT]");
+        throw usage_error(code::ArgumentsBad, "wrong number of arguments", cli_usage("merge"));
     }
     Json v = read_value(cli.rest, 1, false);
     if (!v.is_object()) {

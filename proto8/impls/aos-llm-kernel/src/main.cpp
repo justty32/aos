@@ -23,7 +23,7 @@ request letters from the mailbox and ask the daemon to run them on an endpoint p
 A bad letter is answered with an error reply; it is not the kernel's error.
 
 flags:
-  --help   show this help
+  -h, --help   show this help
 
 exit codes: 0 ok; 1 own error ("aos-llm-kernel: error: CODE ..." on stderr).
 )";

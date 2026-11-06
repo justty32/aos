@@ -24,15 +24,25 @@
 
 namespace aos {
 
+// 全 aos 共用短名表；各呼叫端只開自己有長旗標的短名，-h 隨 help 內建。
+inline const std::map<std::string, std::string> kShort = {
+    {"-h", "--help"}, {"-j", "--json"}, {"-t", "--target"},
+    {"-d", "--daemon"}, {"-n", "--name"}, {"-w", "--ws"},
+    {"-s", "--stack"}, {"-f", "--follow"}, {"-y", "--yes"},
+};
+
 struct Cli {
     std::map<std::string, std::string> opts;   // 旗標表的值 → 字串（{"ws": "/x"}）
     std::vector<std::string> rest;             // 位置參數（第一個起原樣）
 };
 
 // argv 不含程式名。flags：旗標名（"--ws"）→ 存進 opts 的名字（"ws"）；switches：不帶值的旗標名 → 存進 opts 的名字。
-// help：`--help` 時印的說明（英文、印 stdout、退 0）。
+// help：`--help`／`-h` 時印的說明（英文、印 stdout、退 0）。
+// short_flags：從 kShort 挑選的短名，對應長名必須在 flags／switches；不黏值、不併、不帶 =。
+// 表不合是呼叫端寫錯（std::invalid_argument）；命令列錯誤仍用 aos::Error。
 Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
-              const std::map<std::string, std::string>& switches = {}, const std::string& help = "");
+              const std::map<std::string, std::string>& switches = {}, const std::string& help = "",
+              const std::vector<std::string>& short_flags = {});
 
 Error usage_error(const std::string& code, const std::string& reason, const std::string& usage);
 

@@ -23,29 +23,77 @@ namespace {
 namespace l = aos::lock;
 using Args = std::vector<std::string>;
 
-const char* USAGE = "aos-lock [FLAGS] acquire|release|show [FLAGS...] TARGET";
+const char* USAGE = "aos-lock [FLAGS] SUBCOMMAND [ARGS...]";
 
-const char* HELP = R"(usage: aos-lock [FLAGS] SUBCOMMAND [FLAGS...] TARGET
+const char* HELP = R"(aos-lock - Acquire, release and inspect locks.
 
-A lock folder next to TARGET (TARGET/.lock/ for a folder, TARGET.lock/ otherwise)
-with a holder.json name tag (pid, started_at_ticks, boot_id, lease, note).
+usage: aos-lock [FLAGS] SUBCOMMAND [ARGS...]
+       aos-lock SUBCOMMAND --help
 
 subcommands:
-  acquire [--lease-ms N] [--note TEXT] [--wait-ms N] [--pid N] TARGET
-                     take the lock (holder = the calling process, or --pid)
-  release TARGET     drop the lock
-  show TARGET        print the holder (one JSON line)
+  acquire   take a lock
+  release   drop a lock
+  show      print the holder as JSON
 
 flags:
-  --help   show this help (aos-lock SUBCOMMAND --help shows that subcommand's)
+  -h, --help   show this help
 
-exit codes: 0 ok; 10 not got / no lock (acquire, show); 1 error ("aos-lock: error: CODE ..." on stderr).
+A folder or trailing / uses TARGET/.lock/; other targets use TARGET.lock/.
+
+exit codes: 0 success; 10 unavailable or no lock; 1 error.
+more: aos-lock/README.md
 )";
 
 const std::map<std::string, std::string> SUB_USAGE = {
     {"acquire", "aos-lock acquire [--lease-ms N] [--note TEXT] [--wait-ms N] [--pid N] TARGET"},
     {"release", "aos-lock release TARGET"},
     {"show", "aos-lock show TARGET"},
+};
+
+const std::map<std::string, std::string> SUB_HELP = {
+    {"acquire", R"(aos-lock acquire - Acquire a lock next to TARGET.
+
+usage: aos-lock acquire [--lease-ms N] [--note TEXT] [--wait-ms N] [--pid N] TARGET
+       aos-lock acquire --help
+
+flags:
+  --lease-ms N   expire the lease after N milliseconds (default: no expiry)
+  --note TEXT    store a note in the holder tag
+  --wait-ms N    wait up to N milliseconds (default: 0)
+  --pid N        record this process as holder (default: calling process)
+  -h, --help   show this help
+
+Create the lock folder and holder.json; print nothing.
+
+exit codes: 0 acquired; 10 unavailable; 1 error.
+more: aos-lock/README.md
+)"},
+    {"release", R"(aos-lock release - Release a lock.
+
+usage: aos-lock release TARGET
+       aos-lock release --help
+
+flags:
+  -h, --help   show this help
+
+Remove the lock folder next to TARGET; print nothing.
+
+exit codes: 0 released; 1 error (including a missing lock).
+more: aos-lock/README.md
+)"},
+    {"show", R"(aos-lock show - Read the lock holder.
+
+usage: aos-lock show TARGET
+       aos-lock show --help
+
+flags:
+  -h, --help   show this help
+
+Print holder.json as one JSON line for the lock next to TARGET.
+
+exit codes: 0 found; 10 no lock; 1 error.
+more: aos-lock/README.md
+)"},
 };
 
 std::string sub_cmd;   // 正在跑的子命令（main 設）
@@ -56,7 +104,15 @@ int fail(const std::string& code, const std::string& msg) {
 
 aos::Cli parse(const Args& args, const std::map<std::string, std::string>& flags) {
     const std::string& usage = SUB_USAGE.at(sub_cmd);
-    aos::Cli cli = aos::parse_cli(args, flags, {}, "usage: " + usage + "\n\nsee aos-lock --help\n");
+    aos::Cli cli;
+    try {
+        cli = aos::parse_cli(args, flags, {}, SUB_HELP.at(sub_cmd));
+    } catch (const aos::Error& e) {
+        if (e.code == l::code::FlagUnknown) {
+            throw aos::Error{e.code, e.msg + " (see aos-lock " + sub_cmd + " --help)"};
+        }
+        throw aos::usage_error(e.code, e.msg, usage);
+    }
     if (cli.rest.size() != 1) {
         throw aos::usage_error(l::code::ArgumentsBad, "need exactly one TARGET", usage);
     }
@@ -67,7 +123,7 @@ aos::Cli parse(const Args& args, const std::map<std::string, std::string>& flags
 long long count_of(const aos::Cli& cli, const std::string& name, const std::string& flag) {
     const std::string& v = cli.opts.at(name);
     if (v.empty() || v.find_first_not_of("0123456789") != std::string::npos || v.size() > 15) {
-        throw aos::Error{l::code::ArgumentsBad, flag + " must be a non-negative integer: " + v};
+        throw aos::usage_error(l::code::ArgumentsBad, flag + " must be a non-negative integer: " + v, SUB_USAGE.at(sub_cmd));
     }
     return std::stoll(v);
 }
@@ -78,7 +134,7 @@ int cmd_acquire(const Args& args) {
     if (cli.opts.count("pid")) {
         pid = (pid_t)count_of(cli, "pid", "--pid");
         if (pid <= 0 || !aos::proc_started_at_ticks(pid)) {
-            throw aos::Error{l::code::ArgumentsBad, "--pid: no such process: " + cli.opts["pid"]};
+            throw aos::usage_error(l::code::ArgumentsBad, "--pid: no such process: " + cli.opts["pid"], SUB_USAGE.at(sub_cmd));
         }
     }
     l::Holder h = l::holder_of(pid);

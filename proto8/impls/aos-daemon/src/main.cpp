@@ -29,7 +29,7 @@ flags:
   --ctl FILE        control window
   --state FILE      state window
   --enable-logs     print one JSON line per proc start/end (and per body run) to stdout
-  --help            show this help
+  -h, --help            show this help
 
 exit codes: 0 done; 1 own error ("aos-daemon: error: CODE ..." on stderr); 128+N on signal N.
 )";

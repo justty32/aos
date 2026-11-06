@@ -7,11 +7,27 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include <stdexcept>
 
 namespace aos {
 
 Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
-              const std::map<std::string, std::string>& switches, const std::string& help) {
+              const std::map<std::string, std::string>& switches, const std::string& help,
+              const std::vector<std::string>& short_flags) {
+    std::map<std::string, std::string> aliases;
+    for (const std::string& short_flag : short_flags) {
+        auto it = kShort.find(short_flag);
+        if (it == kShort.end()) {
+            throw std::invalid_argument("short flag " + short_flag + " is not in kShort");
+        }
+        if (short_flag != "-h" && !flags.count(it->second) && !switches.count(it->second)) {
+            throw std::invalid_argument("short flag " + short_flag + " needs " + it->second);
+        }
+        aliases[short_flag] = it->second;
+    }
+    if (!help.empty()) {
+        aliases["-h"] = kShort.at("-h");
+    }
     Cli out;
     size_t i = 0;
     while (i < argv.size()) {
@@ -23,9 +39,17 @@ Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, 
         if (!a.starts_with("-") || a == "-") {
             break;
         }
-        size_t eq = a.find('=');
+        size_t eq = std::string::npos;
+        if (a.starts_with("--")) {
+            eq = a.find('=');
+        }
         std::string name = a.substr(0, eq);
-        auto sw = switches.find(name);
+        std::string long_name = name;
+        auto alias = aliases.find(name);
+        if (alias != aliases.end()) {
+            long_name = alias->second;
+        }
+        auto sw = switches.find(long_name);
         if (sw != switches.end()) {
             if (eq != std::string::npos) {
                 throw Error{code::ArgumentsBad, name + " takes no value"};
@@ -34,8 +58,11 @@ Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, 
             i += 1;
             continue;
         }
-        auto it = flags.find(name);
-        if (a == "--help" && it == flags.end() && !help.empty()) {
+        auto it = flags.find(long_name);
+        if (long_name == "--help" && it == flags.end() && !help.empty()) {
+            if (eq != std::string::npos) {
+                throw Error{code::ArgumentsBad, name + " takes no value"};
+            }
             std::fputs(help.c_str(), stdout);
             if (!help.ends_with("\n")) {
                 std::fputc('\n', stdout);

@@ -8,6 +8,8 @@
 #include <sstream>
 #include <vector>
 
+#include <unistd.h>
+
 namespace aos {
 
 // 一串 JSON 值（空白隔開，可跨行）→ 一個個值；壞掉的尾巴丟掉。
@@ -40,7 +42,14 @@ static bool is_blank(const std::string& text) {
     return true;
 }
 
+void require_stdin_body() {
+    if (::isatty(STDIN_FILENO)) {
+        throw Error{code::ArgumentsBad, "stdin is a terminal; provide the body through a pipe or file"};
+    }
+}
+
 Json read_stdin() {
+    require_stdin_body();
     std::string text(std::istreambuf_iterator<char>(std::cin), {});
     std::vector<Json> docs = read_stream(text);
     if (docs.empty() && is_blank(text)) {

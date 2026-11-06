@@ -6,6 +6,7 @@
 // 出錯 stderr 一行「aos-json: error: 代號 原因」、退 1（R1）。check 有問題退 10（R7）。
 #include "cmd/cmd.hpp"
 #include "common/common.hpp"
+#include "help/help.hpp"
 
 #include "aos/cli.hpp"
 
@@ -16,24 +17,33 @@
 
 namespace {
 
-const char* USAGE = "aos-json [FLAGS] get|peek|where|set|batch|del|append|merge|env|ref|check [FLAGS...] FILE#/POINTER [...]";
+const char* USAGE = "aos-json [FLAGS] SUBCOMMAND [ARGS...]";
 
-const char* HELP = R"(usage: aos-json [FLAGS] SUBCOMMAND [FLAGS...] FILE#/POINTER [...]
+const char* HELP = R"(aos-json - Read and edit aos JSON files.
 
-Read and edit aos JSON files by JSON pointer, following $ref when asked.
+usage: aos-json [FLAGS] SUBCOMMAND [ARGS...]
+       aos-json SUBCOMMAND --help
 
 subcommands:
-  get      print a value               where    show where a value really lives
-  peek     show one level, folded      set      set a value
-  batch    set many values from stdin  del      delete a key or element
-  append   append to an array          merge    shallow-merge into an object
-  env      replace with {"$env": ...}  ref      replace with {"$ref": ...}
-  check    check files (exit 10 when problems are found)
+  get      print a value
+  peek     inspect one level of a value
+  where    locate the source of a value
+  set      set a value
+  batch    set several values from stdin
+  del      delete a key or array element
+  append   append to an array
+  merge    merge keys into an object
+  env      write an environment directive
+  ref      write a reference directive
+  check    check files
 
 flags:
-  --help   show this help (aos-json SUBCOMMAND --help shows that subcommand's)
+  -h, --help   show this help
 
-exit codes: 0 ok; 10 check found problems; 1 error ("aos-json: error: CODE ..." on stderr).
+Address values with FILE#/POINTER; follow $ref when requested.
+
+exit codes: 0 success; 10 check found problems; 1 error.
+more: aos-json/README.md
 )";
 
 int fail(const aos::Error& e) {
@@ -48,6 +58,7 @@ int main(int argc, char** argv) {
         {"get", cmd_get},       {"peek", cmd_peek},   {"where", cmd_where}, {"set", cmd_set}, {"batch", cmd_batch}, {"del", cmd_del}, {"append", cmd_append},
         {"merge", cmd_merge},   {"env", cmd_env},     {"ref", cmd_ref}, {"check", cmd_check},
     };
+    std::string sub_cmd;
     try {
         aos::Cli cli = aos::parse_cli(Args(argv + 1, argv + argc), {}, {}, HELP);
         if (cli.rest.empty()) {
@@ -57,8 +68,15 @@ int main(int argc, char** argv) {
         if (it == table.end()) {
             throw aos::usage_error(code::CommandUnknown, "unknown subcommand " + cli.rest[0], USAGE);
         }
+        sub_cmd = cli.rest[0];
         return it->second(Args(cli.rest.begin() + 1, cli.rest.end()));
     } catch (const aos::Error& e) {
+        if (!sub_cmd.empty() && e.code == code::FlagUnknown) {
+            return fail(aos::Error{e.code, e.msg + " (see aos-json " + sub_cmd + " --help)"});
+        }
+        if (!sub_cmd.empty() && e.code == code::ArgumentsBad && e.msg.find(" (usage: ") == std::string::npos) {
+            return fail(aos::usage_error(e.code, e.msg, cli_usage(sub_cmd)));
+        }
         return fail(e);
     } catch (const std::exception& e) {
         return fail(aos::Error{code::Internal, e.what()});
