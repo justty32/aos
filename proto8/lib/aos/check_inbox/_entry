@@ -6,7 +6,6 @@ import json, os, shutil, sys
 HELP = """\
 usage: check_inbox < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 List the unprocessed letters in $AOS_WS/new/, one line each (looks only, does not take).
-Arguments: none (stdin is {} or empty).
 Result on stdout. On error: one line "check_inbox: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -26,7 +25,7 @@ die = tool_io.die
 
 args = tool_io.arguments()
 
-new = os.path.join(os.environ.get("AOS_WS", "."), "new")
+new = os.path.join(tool_io.workspace(), "new")
 names = sorted(n for n in os.listdir(new) if not n.startswith(".")) if os.path.isdir(new) else []
 if not names:
     print("Inbox is empty: no unprocessed letters.")

@@ -28,11 +28,6 @@ HELP = """\
 usage: memory < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Read a shared, hierarchical, read-only knowledge base: op read (a node's text and
 its children), ls (children only), find (nodes containing query).
-Arguments: one JSON object on stdin (empty stdin = {}):
-  op         string (read | ls | find), required
-  path       string
-  query      string
-  max_bytes  integer
 Result on stdout. On error: one line "memory: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -99,8 +94,6 @@ def parse_path(p):
     """回段的 list（根＝[]）；不合規＝PathBad。"""
     if p is None or p == "" or p == "/":
         return []
-    if not isinstance(p, str):
-        die("ArgumentsBad", "path must be a string")
     p = p.strip("/")                 # 目錄裡資料夾節點印成 `me/`，腦照抄也算對（11-05 Haiku 實測：五題裡四題先寫了尾巴的 /）
     if p == "":
         return []

@@ -8,9 +8,6 @@ HELP = """\
 usage: copy < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Copy a file or folder inside the workspace (symlinks are copied as links; parent
 folders of to are created). Prints {"from", "to", "counter_files"}.
-Arguments: one JSON object on stdin (empty stdin = {}):
-  from  string, required
-  to    string, required
 Result on stdout. On error: one line "copy: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))

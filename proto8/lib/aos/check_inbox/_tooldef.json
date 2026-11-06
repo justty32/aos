@@ -1,2 +1,3 @@
 {"description": "Look at the letters in your mailbox that are not handled yet (look only, nothing is taken). One line per letter: sender, subject, whether a reply is wanted, start of the text. No arguments.",
+ "errors": ["ArgumentsBad", "WsMissing"],
  "parameters": {"type": "object", "properties": {}}}

@@ -27,16 +27,8 @@ HELP = """\
 usage: thought < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Hand one task to a throw-away child agent (templates/agent-fsm) on the daemon that runs you ($AOS_DAEMON)
 and print only its short conclusion; the child's tool calls stay out of your history.
-Arguments: one JSON object on stdin (empty stdin = {}):
-  goal       non-empty string, required: what to do and what to bring back
-  context    string or array of strings: background, e.g. conclusions of earlier steps
-  tools      [{name, path?}]: tools for the child (path relative to your workspace, or absolute;
-             no path = the same tool as yours of that name); default: only clock
-  endpoint   string: the child's brain pack; default: the same as yours
-  max_chars  integer, default 600: longer conclusions are cut and end with [truncated]
-  timeout_s  number, default 600, at most 1700
-  keep       boolean, default false: true keeps the child (stopped, stack kept) and adds a last line "details: <stack>/";
-             to ask it more later: aos-agent ctl start --target <child>, then say / listen
+A tool path may be relative to your workspace or absolute.
+To ask a kept child more later, use aos-agent ctl start --target <child>, then say / listen.
 Result on stdout: the conclusion. The child is removed afterwards unless keep is true; if it fails, its stack
 is kept and the error line ends with (details: <stack>/). A child may start one more level of thoughts
 (depth 2 at most: DepthExceeded).

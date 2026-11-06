@@ -1,5 +1,6 @@
 {"description": "Run one bash command line in your workspace. Returns stdout and stderr merged; the last line is always [exit code N], your command's exit code (non-zero there is a result, not a tool error). Keeps the last 2000 lines or 50KB. Timeout 30 s by default, at most 300; then the process group is stopped (CommandFailed). Use it to search (grep, find) and run programs; use ls to list a folder. It cannot keep a command inside the workspace.",
  "parameters": {"type": "object",
                 "properties": {"command": {"type": "string", "description": "the bash command line"},
-                               "timeout_s": {"type": "number", "description": "timeout in seconds (default 30, at most 300)"}},
-                "required": ["command"]}}
+                               "timeout_s": {"type": "number", "default": 30, "description": "timeout in seconds (default 30, at most 300)"}},
+                "required": ["command"]},
+ "errors": ["ArgumentsBad", "LaunchFailed", "CommandFailed", "WsMissing"]}

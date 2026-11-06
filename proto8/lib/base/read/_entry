@@ -8,10 +8,6 @@ HELP = """\
 usage: read < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Read a text file in the workspace (at most 2000 lines or 50KB per call; the end
 of the output says which offset to continue from).
-Arguments: one JSON object on stdin (empty stdin = {}):
-  path       string, required
-  offset     integer
-  max_lines  integer
 Result on stdout. On error: one line "read: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -45,9 +41,7 @@ def inside(root, rel):
 
 
 root = workspace()
-args = arguments()
-if not isinstance(args.get("path"), str) or not args["path"]:
-    die("ArgumentsBad", "missing path (a string)")
+args = arguments("path")
 offset, max_lines = args.get("offset"), args.get("max_lines")   # 上限一律 max_*（10-25 前叫 limit）
 for k, v in (("offset", offset), ("max_lines", max_lines)):
     if v is not None and (type(v) is not int or v < 1):

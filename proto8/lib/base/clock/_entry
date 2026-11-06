@@ -7,7 +7,6 @@ import os, shutil, sys, time
 HELP = """\
 usage: clock < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Print the current UTC time (ISO 8601 to the second, e.g. 2026-10-23T08:00:00Z).
-Arguments: none (stdin is {} or empty).
 Result on stdout. On error: one line "clock: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -30,6 +29,4 @@ die = tool_io.die
 
 
 args = tool_io.arguments()
-if not isinstance(args, dict):
-    die("ArgumentsBad", "arguments must be an object")
 print(time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))

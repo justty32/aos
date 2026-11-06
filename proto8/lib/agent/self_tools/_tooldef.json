@@ -1,8 +1,9 @@
 {"description": "Add, remove or list your own tools. It changes only your overlay (your definition and other agents stay as they are) and takes effect from your next turn. op add: path is a tool folder, relative to your workspace or absolute under lib/; override: true replaces a tool with the same name. op ls: one JSON line. Errors: PathBad, PathMissing, ToolExists, ToolUnknown, DaemonMissing (daemon is missing or did not reply). Details: memory node me/self_tools.",
  "env": ["AOS_DAEMON"],
+ "errors": ["ArgumentsBad", "PathBad", "WsMissing", "LaunchFailed", "CommandFailed", "OpUnknown"],
  "parameters": {"type": "object",
                 "properties": {"op": {"type": "string", "enum": ["add", "rm", "ls"], "description": "add = add a tool, rm = remove one, ls = list them"},
                                "name": {"type": "string", "description": "the tool name (add, rm); the name you will call it by afterwards"},
                                "path": {"type": "string", "description": "add: the tool folder, relative to the workspace or an absolute path under lib/"},
-                               "override": {"type": "boolean", "description": "add: true replaces a tool you already have with the same name (default false)"}},
+                               "override": {"default": false, "type": "boolean", "description": "add: true replaces a tool you already have with the same name (default false)"}},
                 "required": ["op"]}}

@@ -11,9 +11,6 @@ Run one bash command in the workspace ($AOS_WS); print its stdout+stderr combine
 (last 2000 lines or 50KB). The last line is always [exit code N]; the command exiting
 non-zero is a result, not an error of this tool. Over timeout_s the whole process group
 is stopped (CommandFailed).
-Arguments: one JSON object on stdin (empty stdin = {}):
-  command    string, required
-  timeout_s  number
 Result on stdout. On error: one line "bash: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))

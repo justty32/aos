@@ -17,9 +17,6 @@ Fake brain endpoint function (same stdin/stdout as llm_http, no network): answer
 "FAKE ANSWER to: ..." or calls a tool first (endpoint.tool if offered, else the first one);
 endpoint.script gives scripted replies.
 Prints {"message", "usage", "model"}.
-Arguments: one JSON object on stdin (empty stdin = {}):
-  endpoint  object
-  request   object, required
 Result on stdout. On error: one line "llm_fake: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -42,8 +39,8 @@ die = tool_io.die
 
 
 args = tool_io.arguments()
-request = args.get("request") if isinstance(args, dict) else None
-if not isinstance(request, dict) or not isinstance(request.get("messages"), list) or not request["messages"]:
+request = args.get("request")
+if not isinstance(request.get("messages"), list) or not request["messages"]:
     die("ArgumentsBad", "stdin must be {\"endpoint\": {...}, \"request\": {\"messages\": [at least one]}}")
 messages, tools = request["messages"], request.get("tools") or []
 if not isinstance(tools, list):

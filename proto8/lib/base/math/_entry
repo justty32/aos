@@ -7,8 +7,6 @@ import ast, operator, os, shutil, sys
 HELP = """\
 usage: math < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Evaluate an arithmetic expression (numbers, + - * / // % **, parentheses, signs).
-Arguments: one JSON object on stdin (empty stdin = {}):
-  expr  string, required
 Result on stdout. On error: one line "math: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -48,8 +46,6 @@ def value(node):
 
 
 args = tool_io.arguments()
-if not isinstance(args, dict) or not isinstance(args.get("expr"), str):
-    die("ArgumentsBad", "missing expr (a string)")
 try:
     tree = ast.parse(args["expr"], mode="eval")
 except SyntaxError as e:

@@ -1,4 +1,5 @@
 {"description": "Delete a file or folder in your workspace: it is moved under .trash/<time>/ in the workspace (keeping its path), so move can bring it back. Returns JSON {path, to}. Errors: PathBad, FileMissing, MoveFailed.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "path to delete, relative to your workspace"}},
-                "required": ["path"]}}
+                "required": ["path"]},
+ "errors": ["ArgumentsBad", "PathBad", "FileMissing", "MoveFailed", "WsMissing"]}

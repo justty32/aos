@@ -2,4 +2,5 @@
  "parameters": {"type": "object",
                 "properties": {"from": {"type": "string", "description": "current path, relative to your workspace"},
                                "to": {"type": "string", "description": "the new full path (not the folder to move into)"}},
-                "required": ["from", "to"]}}
+                "required": ["from", "to"]},
+ "errors": ["ArgumentsBad", "PathBad", "FileMissing", "FileBad", "MoveFailed", "WsMissing"]}

@@ -13,11 +13,6 @@ HELP = """\
 usage: view < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 View a file in the workspace step by step: JSON one level at a time, big text files
 as an outline first, or the lines start..end.
-Arguments: one JSON object on stdin (empty stdin = {}):
-  path     string, required
-  pointer  string
-  start    integer
-  end      integer
 Result on stdout. On error: one line "view: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -76,8 +71,6 @@ ROOT = workspace()
 a = arguments("path")
 p, shown = inside(a["path"])
 pointer, start, end = a.get("pointer"), a.get("start"), a.get("end")
-if pointer is not None and not isinstance(pointer, str):
-    die("ArgumentsBad", "pointer must be a string (e.g. /states/think)")
 for k, v in (("start", start), ("end", end)):
     if v is not None and (type(v) is not int or v < 1):
         die("ArgumentsBad", "%s must be a positive integer" % k)

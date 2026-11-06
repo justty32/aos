@@ -1,4 +1,5 @@
 {"description": "Compute one arithmetic expression and return the result. Only numbers, + - * / // % **, parentheses and signs. Anything else is ExprBad.",
  "parameters": {"type": "object",
                 "properties": {"expr": {"type": "string", "description": "the expression, e.g. 17*23"}},
-                "required": ["expr"]}}
+                "required": ["expr"]},
+ "errors": ["ArgumentsBad", "ExprBad"]}

@@ -8,9 +8,6 @@ HELP = """\
 usage: write < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Write the whole content into a file in the workspace (created or replaced; parent
 folders are created).
-Arguments: one JSON object on stdin (empty stdin = {}):
-  path     string, required
-  content  string, required
 Result on stdout. On error: one line "write: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -42,11 +39,7 @@ def inside(root, rel):
 
 
 root = workspace()
-args = arguments()
-if not isinstance(args.get("path"), str) or not args["path"]:
-    die("ArgumentsBad", "missing path (a string)")
-if not isinstance(args.get("content"), str):
-    die("ArgumentsBad", "missing content (a string)")
+args = arguments("path")
 
 path = inside(root, args["path"])
 if os.path.isdir(path):

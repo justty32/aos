@@ -2,4 +2,5 @@
  "parameters": {"type": "object",
   "properties": {"endpoint": {"type": "object", "description": "one endpoint: url (up to /v1), model, key (optional), fixed (optional fields that override the request); model always comes from here"},
                  "request": {"type": "object", "description": "an OpenAI chat completions body without the endpoint: messages required; tools, temperature, model optional"}},
-  "required": ["endpoint", "request"]}}
+  "required": ["endpoint", "request"]},
+ "errors": ["ArgumentsBad", "EndpointFailed", "ReplyBad"]}

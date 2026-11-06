@@ -9,10 +9,6 @@ HELP = """\
 usage: json_read < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Look at one place in a JSON file in the workspace, unfolding only depth levels
 (bigger values are folded into summaries). Prints {"path", "pointer", "value"}.
-Arguments: one JSON object on stdin (empty stdin = {}):
-  path     string, required
-  pointer  string
-  depth    integer
 Result on stdout. On error: one line "json_read: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -86,9 +82,7 @@ def fold(v, depth):
 
 
 root = workspace()
-args = arguments()
-if not isinstance(args.get("path"), str) or not args["path"]:
-    die("ArgumentsBad", "missing path (a string)")
+args = arguments("path")
 pointer, depth = args.get("pointer", ""), args.get("depth", 1)
 if not isinstance(pointer, str):
     die("ArgumentsBad", "pointer must be a string")

@@ -1,6 +1,7 @@
 {"description": "Look at one place in a JSON file in your workspace, depth levels at a time; bigger parts are folded: objects as {type: object, keys: [...]}, arrays as {type: array, counter_items: N}, long strings cut. Start at the top (pointer empty), then append the key you want to the pointer and call again, level by level. pointer is a JSON pointer, e.g. /states/think. Errors: PathBad, FileMissing, FileBad, PointerBad, PointerMissing.",
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "the JSON file, relative to your workspace"},
-                               "pointer": {"type": "string", "description": "where to look, a JSON pointer; empty string = the whole file (default)"},
-                               "depth": {"type": "integer", "description": "how many levels to expand (default 1, at most 10)"}},
-                "required": ["path"]}}
+                               "pointer": {"type": "string", "default": "", "description": "where to look, a JSON pointer; empty string = the whole file (default)"},
+                               "depth": {"type": "integer", "default": 1, "description": "how many levels to expand (default 1, at most 10)"}},
+                "required": ["path"]},
+ "errors": ["ArgumentsBad", "PathBad", "PointerBad", "PointerMissing", "FileMissing", "FileBad", "ReadFailed", "WsMissing"]}

@@ -1,6 +1,7 @@
 {"description": "List a folder in your workspace. Returns JSON: items with name, type (file, dir, link), size, mtime; folders add counter_children and aos (aos files inside such as _entry, _tooldef.json, loop.json: then it is a tool or agent); .json files add keys. Folders first; names starting with . are hidden unless hidden is true. At most max_items per call; next_offset means more, call again with offset. Then use stat, view or read on one item. Errors: PathBad, FileMissing, FileBad.",
  "parameters": {"type": "object",
-                "properties": {"path": {"type": "string", "description": "the folder, relative to your workspace (default .)"},
-                               "offset": {"type": "integer", "description": "first item to show (default 0)"},
-                               "max_items": {"type": "integer", "description": "most items to show (default 100, at most 500)"},
-                               "hidden": {"type": "boolean", "description": "true = also list names starting with ."}}}}
+                "properties": {"path": {"type": "string", "default": ".", "description": "the folder, relative to your workspace (default .)"},
+                               "offset": {"type": "integer", "default": 0, "description": "first item to show (default 0)"},
+                               "max_items": {"type": "integer", "default": 100, "description": "most items to show (default 100, at most 500)"},
+                               "hidden": {"type": "boolean", "default": false, "description": "true = also list names starting with ."}}},
+ "errors": ["ArgumentsBad", "PathBad", "FileMissing", "FileBad", "ReadFailed", "WsMissing"]}

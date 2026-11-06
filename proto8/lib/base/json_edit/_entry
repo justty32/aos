@@ -12,10 +12,6 @@ HELP = """\
 usage: json_edit < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Change a JSON file in the workspace at JSON pointers: set first, then del; if any
 place does not fit, the file is not written. Prints a one-line JSON summary.
-Arguments: one JSON object on stdin (empty stdin = {}):
-  path  string, required
-  set   object
-  del   array
 Result on stdout. On error: one line "json_edit: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -106,9 +102,7 @@ def do_del(doc, pointer):
 
 
 root = workspace()
-args = arguments()
-if not isinstance(args.get("path"), str) or not args["path"]:
-    die("ArgumentsBad", "missing path (a string)")
+args = arguments("path")
 sets, dels = args.get("set", {}), args.get("del", [])
 if not isinstance(sets, dict) or not all(isinstance(k, str) for k in sets):
     die("ArgumentsBad", "set must be an object of {pointer: new value}")

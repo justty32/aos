@@ -2,4 +2,5 @@
  "parameters": {"type": "object",
   "properties": {"endpoint": {"type": "object", "description": "ignored"},
                  "request": {"type": "object", "description": "messages required, tools optional"}},
-  "required": ["request"]}}
+  "required": ["request"]},
+ "errors": ["ArgumentsBad"]}

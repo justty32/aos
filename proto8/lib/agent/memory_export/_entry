@@ -27,9 +27,6 @@ HELP = """\
 usage: memory_export < ARGUMENTS.json   (a tool: run it with aos-exec)
 Print a whole knowledge base (or the subtree at path) as one Markdown document, for people.
 The knowledge base is found like tool memory finds it (_memory.json next to the tool, else $AOS_MEMORY).
-Arguments: one JSON object on stdin (empty stdin = {}):
-  path       string  (node path like me/self_tools; empty or / = the root)
-  max_bytes  integer (default 50000)
 Result on stdout. On error: one line "memory_export: error: CODE reason" on stderr and stdout, exit 1.
 """
 tool_io.start("memory_export", HELP)
@@ -120,8 +117,6 @@ def export(root, segs, out, chain=()):
 
 args = tool_io.arguments()
 p = args.get("path")
-if p is not None and not isinstance(p, str):
-    die("ArgumentsBad", "path must be a string")
 p = (p or "").strip("/")
 segs = p.split("/") if p else []
 if any(not SEGMENT.match(s) for s in segs):

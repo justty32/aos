@@ -8,9 +8,6 @@ HELP = """\
 usage: move < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Move or rename a file, folder or symlink inside the workspace (parents of to are
 created; to must not exist).
-Arguments: one JSON object on stdin (empty stdin = {}):
-  from  string, required
-  to    string, required
 Result on stdout. On error: one line "move: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))

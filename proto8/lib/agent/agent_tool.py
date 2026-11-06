@@ -1,4 +1,4 @@
-"""agent_tool - 「把一隻 agent 包成工具」的轉接，共用一支（lib/agent 的工具 import 它）。
+"""agent_tool - 「把一隻 agent 包成工具」的轉接與 claude、codex 的工具形入口，共用一支。
 
 P-41「agent 當腦的工具，轉接寫在那個工具自己的 _entry」；10-24 遷移（tool-lib 遷移清單、agent-as-tool 選項 4）把 pyfix 裡那段通用的抽出來：
 每次呼叫開一個新的小格 $AOS_STACK/runs/<三位數>/（子 agent 的工作區 ws/ 與 stack/）→ 題目寫進 ws/new/<題名> → aos-exec 跑子 agent 到答完
@@ -49,3 +49,22 @@ def run_agent(agent, task, cell, env_extra=None, question="task.txt"):
             return f.read()
     except OSError:
         die("AnswerMissing", "sub-agent finished without an answer (its state is in %s)" % cell)
+
+
+def ask_cli(tool_dir, name, help_text):
+    """claude、codex 工具形：tool_io 收參數與工作區，cli_session 問一輪並續存對話。"""
+    import cli_session
+
+    tool_io.start(name, help_text)
+    cli_session.PROG, cli_session.ECHO = name, True
+    cfg = cli_session.load_cfg(tool_dir)
+    stack = os.environ.get("AOS_STACK")
+    if not stack:
+        die("StackMissing", "AOS_STACK is not set")
+    ws = tool_io.workspace()
+    args = tool_io.arguments()
+    if not isinstance(args.get("prompt"), str) or not args["prompt"].strip():
+        die("ArgumentsBad", "missing prompt (a non-empty string)")
+    cell = cli_session.Cell(stack)
+    text = cli_session.ask(cfg, cell, os.path.abspath(tool_dir), ws, cell.path, args["prompt"], "yield")
+    sys.stdout.write(text if text.endswith("\n") else text + "\n")

@@ -12,9 +12,6 @@ usage: run_python < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is t
 Run a piece of Python with python3 -I in this tool's stack cell; print its
 stdout+stderr combined. The last line is always [exit code N]; the program exiting
 non-zero is a result, not an error of this tool. Over timeout_s: CommandFailed.
-Arguments: one JSON object on stdin (empty stdin = {}):
-  code       string, required
-  timeout_s  number
 Result on stdout. On error: one line "run_python: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))

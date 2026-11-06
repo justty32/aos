@@ -33,15 +33,9 @@ import json, os, re, shutil, signal, subprocess, sys
 HELP = """\
 usage: agents < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Start, talk to and remove other agents on the daemon that runs you ($AOS_DAEMON), by wrapping aos-agent.
-Arguments: one JSON object on stdin (empty stdin = {}), op is required:
-  new  {name, path, from?, files?, llm?, tools?, tools_rm?, ws?, limits?}   write a new definition folder at path
-       (copy of from, then files / llm / tools / tools_rm applied to it) and start it
-  add  {name, def, llm?, tools?, tools_rm?, ws?, limits?}   start an existing definition; llm / tools / tools_rm go to
-       the child's overlay (its stack), the definition is not copied or changed
-  say  {name, text}            send a message, return at once
-  ask  {name, text, timeout_s?}   send a message and wait for the answer (default 600 s, at most 1700)
-  rm   {name}                  remove a child you started
-  ls                           one JSON line: {"agents": the daemon table, "children": [...], "max_children": N}
+New copies a template and applies files, brain settings and tools before starting the child.
+Add starts an existing definition and puts changes in the child's overlay without changing the definition.
+Ask waits at most 1700 seconds. The ls result is one JSON line with agents, children and max_children.
 ws: relative to your workspace, or absolute; default = your workspace. Quota: max_children from agents.json
 (your definition, overridden by your stack's agents.json; default 4); over it = ChildSlotMissing, nothing is sent.
 Result on stdout. On error: one line "agents: error: CODE reason" on stderr and stdout, exit 1.
@@ -369,8 +363,6 @@ def build_def(tmp, src, files, llm, tool_list, tools_rm):
 
 # ---- 入口檢查 ----
 args = tool_io.arguments()
-if not isinstance(args, dict):
-    die("ArgumentsBad", "stdin must be a JSON object")
 op = args.get("op")
 if op is None:
     die("ArgumentsBad", "op is required (%s)" % ", ".join(OPS))

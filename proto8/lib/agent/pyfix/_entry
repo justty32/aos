@@ -13,9 +13,6 @@ HELP = """\
 usage: pyfix < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Hand a Python fixing task to a sub-agent working on $AOS_WS/<dir>; print its
 report and the actual diff.
-Arguments: one JSON object on stdin (empty stdin = {}):
-  task  string, required
-  dir   string
 Result on stdout. On error: one line "pyfix: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -40,11 +37,12 @@ DIFF_MAX = 8000                # 回給外層的 diff 最多幾個字
 die = tool_io.die
 
 
-stack, ws = os.environ.get("AOS_STACK"), os.path.realpath(os.environ.get("AOS_WS", "."))
+stack = os.environ.get("AOS_STACK")
 if not stack:
     die("StackMissing", "AOS_STACK is not set")
+ws = tool_io.workspace()
 args = tool_io.arguments()
-if not isinstance(args, dict) or not isinstance(args.get("task"), str) or not args["task"].strip():
+if not isinstance(args.get("task"), str) or not args["task"].strip():
     die("ArgumentsBad", "missing task (a non-empty string)")
 d = args.get("dir", ".")
 if not isinstance(d, str):

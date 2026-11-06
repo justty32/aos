@@ -7,4 +7,5 @@
                                                    "properties": {"old_text": {"type": "string", "description": "the exact text to replace; must occur once"},
                                                                   "new_text": {"type": "string", "description": "the new text"}},
                                                    "required": ["old_text", "new_text"]}}},
-                "required": ["path", "edits"]}}
+                "required": ["path", "edits"]},
+ "errors": ["ArgumentsBad", "PathBad", "TextBad", "FileMissing", "ReadFailed", "FileBad", "TextMissing", "WriteFailed", "WsMissing"]}

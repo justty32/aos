@@ -1,2 +1,3 @@
 {"description": "Get the current UTC time in ISO 8601, e.g. 2026-10-23T08:00:00Z. No arguments.",
- "parameters": {"type": "object", "properties": {}}}
+ "parameters": {"type": "object", "properties": {}},
+ "errors": ["ArgumentsBad"]}

@@ -11,9 +11,6 @@ HELP = """\
 usage: llm_http < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Endpoint function: POST the request to an OpenAI-compatible {url}/chat/completions
 and print {"message", "usage", "model"} trimmed from the reply.
-Arguments: one JSON object on stdin (empty stdin = {}):
-  endpoint  object, required
-  request   object, required
 Result on stdout. On error: one line "llm_http: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -36,8 +33,6 @@ die = tool_io.die
 
 
 args = tool_io.arguments()
-if not isinstance(args, dict) or not isinstance(args.get("endpoint"), dict) or not isinstance(args.get("request"), dict):
-    die("ArgumentsBad", "stdin must be {\"endpoint\": {...}, \"request\": {...}}")
 endpoint, request = args["endpoint"], args["request"]
 url = endpoint.get("url")
 if not isinstance(url, str) or not url:

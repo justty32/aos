@@ -9,9 +9,6 @@ HELP = """\
 usage: edit < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Replace exact text in one file in the workspace, at one or more places; every
 old_text must appear exactly once, otherwise nothing is changed.
-Arguments: one JSON object on stdin (empty stdin = {}):
-  path   string, required
-  edits  array, required
 Result on stdout. On error: one line "edit: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -43,9 +40,7 @@ def inside(root, rel):
 
 
 root = workspace()
-args = arguments()
-if not isinstance(args.get("path"), str) or not args["path"]:
-    die("ArgumentsBad", "missing path (a string)")
+args = arguments("path")
 edits = args.get("edits")
 if not isinstance(edits, list) or not edits:
     die("ArgumentsBad", "edits must be an array with at least one item")

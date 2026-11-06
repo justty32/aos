@@ -9,8 +9,6 @@ import json, os, shutil, sys, time
 HELP = """\
 usage: stat < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Show the attributes of one file or folder in the workspace, as JSON.
-Arguments: one JSON object on stdin (empty stdin = {}):
-  path  string, required
 Result on stdout. On error: one line "stat: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))

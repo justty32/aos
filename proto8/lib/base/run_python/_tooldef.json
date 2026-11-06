@@ -1,5 +1,6 @@
 {"description": "Run a Python 3 program (standard library only) in your workspace and return what it prints; the last line is always [exit code N], your program's exit code (non-zero there is your program's result, not a tool error). To measure time, print time.perf_counter yourself. Timeout: CommandFailed. See memory node errors.",
  "parameters": {"type": "object",
                 "properties": {"code": {"type": "string", "description": "the whole Python program"},
-                               "timeout_s": {"type": "number", "description": "most seconds to run (default 60, at most 300); past it the process group is stopped and the call fails"}},
-                "required": ["code"]}}
+                               "timeout_s": {"type": "number", "default": 60, "description": "most seconds to run (default 60, at most 300); past it the process group is stopped and the call fails"}},
+                "required": ["code"]},
+ "errors": ["ArgumentsBad", "StackMissing", "LaunchFailed", "CommandFailed"]}

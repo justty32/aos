@@ -10,11 +10,6 @@ import json, os, shutil, sys, time
 HELP = """\
 usage: ls < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 List the entries of a folder in the workspace, one page at a time, as JSON.
-Arguments: one JSON object on stdin (empty stdin = {}):
-  path       string
-  offset     integer
-  max_items  integer
-  hidden     boolean
 Result on stdout. On error: one line "ls: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))

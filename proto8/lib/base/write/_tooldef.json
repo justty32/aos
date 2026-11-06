@@ -2,4 +2,5 @@
  "parameters": {"type": "object",
                 "properties": {"path": {"type": "string", "description": "the file, relative to your workspace"},
                                "content": {"type": "string", "description": "the whole content of the file"}},
-                "required": ["path", "content"]}}
+                "required": ["path", "content"]},
+ "errors": ["ArgumentsBad", "PathBad", "FileBad", "MkdirFailed", "WriteFailed", "WsMissing"]}

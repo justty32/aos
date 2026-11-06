@@ -1,6 +1,7 @@
 {"description": "Hand a Python task (read, change and test code) to an assistant that specializes in Python; it reads and edits files and runs tests itself, then returns its report and a diff of changed files. It cannot see your conversation, so write the task in full. Errors: ArgumentsBad, DirBad.",
  "env": ["AOS_LLM_KERNEL"],
+ "errors": ["ArgumentsBad", "StackMissing", "WsMissing", "DirBad", "AgentFailed", "AnswerMissing"],
  "parameters": {"type": "object",
                 "properties": {"task": {"type": "string", "description": "the task: which files, what to change, how to tell it is done (e.g. which test must pass)"},
-                               "dir": {"type": "string", "description": "the folder it may touch, relative to your workspace (default . = the whole workspace)"}},
+                               "dir": {"default": ".", "type": "string", "description": "the folder it may touch, relative to your workspace (default . = the whole workspace)"}},
                 "required": ["task"]}}

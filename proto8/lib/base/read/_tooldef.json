@@ -3,4 +3,5 @@
                 "properties": {"path": {"type": "string", "description": "the file, relative to your workspace"},
                                "offset": {"type": "integer", "description": "first line to read (the first line is 1)"},
                                "max_lines": {"type": "integer", "description": "most lines to read"}},
-                "required": ["path"]}}
+                "required": ["path"]},
+ "errors": ["ArgumentsBad", "PathBad", "FileMissing", "FileBad", "ReadFailed", "WsMissing"]}

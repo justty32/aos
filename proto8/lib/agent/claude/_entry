@@ -1,16 +1,34 @@
 #!/usr/bin/env python3
-# claude - 把 stdin 的 {"prompt": "..."} 交給 claude CLI 做，stdout 印它的回答；對話續在這個工具的小格（$AOS_STACK），人可以用 agent 的 attach 接進去
+# claude - 透過 tool_io 收 JSON／旗標，再把 prompt 交給 claude CLI；對話續在工具小格（$AOS_STACK）
 # 介面（lib/README 的契約）：stdin 收 {"prompt"}；錯：stderr 與 stdout 各一行「claude: error: 代號 原因」、退 1（ArgumentsBad、CliMissing、CliFailed、SessionBad…）。
 # 怎麼叫 CLI（旗標、逾時 timeout_ms）在同資料夾的 cli.json；做法在 proto8/py/cli_session.py（claude、codex 共用）。
-# 10-30 eca 第 5 步：這就是 eca 的「工具形」——跟 aos-eca-turn --one（proto8/cmd/aos-eca/bin）走同一支 cli_session.call_main
-# （問 CLI 那段是 cli_session.ask，平級形的 aos-eca-turn 也叫它；這裡用 on_busy 預設 yield）；不改成 exec aos-eca-turn：多一層行程。
+# 工具形開頭走 agent_tool.ask_cli 的 tool_io；aos-eca-turn --one 照舊用 cli_session.call_main，兩者共用 cli_session.ask。
 # 來源：demo/agent-fay/tools/claude（10-24 遷移；agent-fay 11-03 晚刪了）。找 cli_session.py：先找工具自己、上一層與 agent 根，再找 proto8/py；
 # 複製出 repo 時，最後從 PATH 上 aos-tools 的 cmd/aos-tools/bin 回到 proto8/py。
 import os, shutil, sys
-here = os.path.dirname(os.path.realpath(__file__))
+HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True
-sys.path[:0] = [here, os.path.dirname(here), os.path.dirname(os.path.dirname(here)),
-                os.path.join(here, "..", "..", "..", "py")]
+sys.path[:0] = [HERE, os.path.dirname(HERE), os.path.dirname(os.path.dirname(HERE)),
+                os.path.join(HERE, "..", "..", "..", "py")]
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "py"))
-import cli_session  # noqa: E402
-cli_session.call_main(here)
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "lib"))
+sys.path.append(os.path.join(os.path.dirname(os.path.realpath(shutil.which("aos-tools") or "/")), "..", "..", "..", "lib", "agent"))
+try:
+    import tool_io  # noqa: E402
+except ModuleNotFoundError:   # 規則 9 三處都找不到：兩邊印錯誤行、退 1
+    _line = "%s: error: ModuleMissing tool_io.py not found (not in the tool folder, not in lib/, no aos-tools on PATH)\n" % os.path.basename(HERE)
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+import agent_tool  # noqa: E402
+
+NAME = "claude"
+HELP = """\
+usage: %(name)s < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_STACK is its cell)
+Hand the prompt to the %(name)s CLI and print its answer; the conversation goes on in this
+tool's cell (session.txt), and a person can attach to its screen (aos-agent attach).
+How the CLI is called (flags, timeout_ms, tools) is in cli.json next to _entry.
+Result on stdout. On error: one line "%(name)s: error: CODE reason" on stderr and stdout, exit 1
+(the CLI's own stderr is passed through to stderr).
+""" % {"name": NAME}
+agent_tool.ask_cli(HERE, NAME, HELP)

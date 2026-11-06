@@ -15,11 +15,11 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`agent_tool.py`](../../../../../proto8/lib/agent/agent_tool.py) | 「把一隻 agent 包成工具」的轉接，共用一支（lib/agent 的工具 import 它）。 |
+| [`agent_tool.py`](../../../../../proto8/lib/agent/agent_tool.py) | 「把一隻 agent 包成工具」的轉接與 claude、codex 的工具形入口，共用一支。 |
 | [`agents/`](../../../../../proto8/lib/agent/agents/) | 生、叫、收另一隻 agent：包著 aos-agent ctl add／say／listen／rm／ls，掛在管我的那台 daemon（$AOS_DAEMON）上 |
-| [`claude/`](../../../../../proto8/lib/agent/claude/) | 把 stdin 的 {"prompt": "..."} 交給 claude CLI 做，stdout 印它的回答；對話續在這個工具的小格（$AOS_STACK），人可以用 agent 的 attach 接進去 |
+| [`claude/`](../../../../../proto8/lib/agent/claude/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 claude CLI；對話續在工具小格（$AOS_STACK） |
 | [`claude/cli.json`](../../../../../proto8/lib/agent/claude/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
-| [`codex/`](../../../../../proto8/lib/agent/codex/) | 把 stdin 的 {"prompt": "..."} 交給 codex CLI 做，stdout 印它的回答；對話續在這個工具的小格（$AOS_STACK），人可以用 agent 的 attach 接進去 |
+| [`codex/`](../../../../../proto8/lib/agent/codex/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 codex CLI；對話續在工具小格（$AOS_STACK） |
 | [`codex/cli.json`](../../../../../proto8/lib/agent/codex/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
 | [`memory/`](../../../../../proto8/lib/agent/memory/) | 查共用的層級式知識庫：read 一個節點（文＋子節點目錄）、ls 列子節點、find 用關鍵字找節點；唯讀 |
 | [`memory_export/`](../../../../../proto8/lib/agent/memory_export/) | 把一個知識庫（或其中一棵子樹）整棵印成一份 Markdown，給人看；唯讀 |

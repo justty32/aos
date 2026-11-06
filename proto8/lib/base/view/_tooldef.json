@@ -4,4 +4,5 @@
                                "pointer": {"type": "string", "description": "JSON pointer; JSON files only"},
                                "start": {"type": "integer", "description": "first line (text; the first line is 1)"},
                                "end": {"type": "integer", "description": "last line (inclusive)"}},
-                "required": ["path"]}}
+                "required": ["path"]},
+ "errors": ["ArgumentsBad", "PathBad", "FileMissing", "FileBad", "ReadFailed", "PointerMissing", "WsMissing"]}

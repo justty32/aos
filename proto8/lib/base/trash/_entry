@@ -8,8 +8,6 @@ HELP = """\
 usage: trash < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Delete a file or folder in the workspace by moving it into $AOS_WS/.trash/<time>/
 (use move to get it back).
-Arguments: one JSON object on stdin (empty stdin = {}):
-  path  string, required
 Result on stdout. On error: one line "trash: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
