@@ -10,14 +10,10 @@
 #include <cstdio>
 #include <cstring>
 #include <chrono>
-#include <filesystem>
 #include <thread>
 
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-namespace fs = std::filesystem;
 
 namespace aos::lock {
 
@@ -28,8 +24,7 @@ std::string lock_dir_of(const std::string& target) {
         t.pop_back();
         slash = true;
     }
-    std::error_code ec;
-    if (slash || fs::is_directory(t, ec)) {
+    if (slash || aos::is_dir(t)) {
         return aos::join(aos::abspath(t), ".lock");
     }
     return aos::abspath(t) + ".lock";
@@ -40,29 +35,15 @@ static bool write_holder(const std::string& lock_dir, const Json& doc, std::stri
     std::string tmp = aos::join(lock_dir, ".holder.json.tmp");
     std::string path = aos::join(lock_dir, "holder.json");
     std::string text = doc.dump(2, ' ', false, Json::error_handler_t::replace);
-    int fd = ::open(tmp.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0666);
-    if (fd < 0) {
-        why = "cannot open " + tmp + ": " + std::strerror(errno);
-        return false;
-    }
-    size_t done = 0;
-    while (done < text.size()) {
-        ssize_t n = ::write(fd, text.data() + done, text.size() - done);
-        if (n < 0 && errno == EINTR) {
-            continue;
+    std::optional<aos::TextWriteError> error = aos::write_text(path, text, tmp);
+    if (error) {
+        std::string operation = "write";
+        if (error->operation == aos::TextWriteOperation::open) {
+            operation = "open";
+        } else if (error->operation == aos::TextWriteOperation::rename) {
+            operation = "rename";
         }
-        if (n <= 0) {
-            why = "cannot write " + tmp + ": " + std::strerror(errno);
-            ::close(fd);
-            ::unlink(tmp.c_str());
-            return false;
-        }
-        done += (size_t)n;
-    }
-    ::close(fd);
-    if (std::rename(tmp.c_str(), path.c_str()) != 0) {
-        why = "cannot rename " + tmp + ": " + std::strerror(errno);
-        ::unlink(tmp.c_str());
+        why = "cannot " + operation + " " + tmp + ": " + std::strerror(error->number);
         return false;
     }
     return true;
@@ -105,9 +86,8 @@ static void reap(const std::string& lock_dir, const Seen& judged) {
         return;
     }
     std::string gone = move_away(lock_dir);
-    std::error_code ec;
     if (!gone.empty()) {
-        fs::remove_all(gone, ec);
+        aos::remove_tree(gone);
     }
 }
 
@@ -156,8 +136,7 @@ bool release(const std::string& lock_dir) {
     if (gone.empty()) {
         return false;
     }
-    std::error_code ec;
-    fs::remove_all(gone, ec);
+    aos::remove_tree(gone);
     return true;
 }
 

@@ -24,7 +24,7 @@ aos-lock show data.json                                                         
 | `show 目標` | 名牌 stdout 印一行；沒有鎖退 10；鎖在但名牌不在或讀不懂退 1 `HolderBad` |
 
 - **目標 → 鎖**：結尾是 `/` 或是現有的資料夾＝`<目標>/.lock/`；其他（檔、還不存在的名字）＝`<目標>.lock/`。相對路徑從 cwd 算。鎖的上一層不在＝`MkdirFailed`（不替人建）。不檢查上下層（鎖了資料夾不等於鎖了裡面的檔）。
-- **名牌 `holder.json`**：`{"holder", "pid", "started_at_ticks", "boot_id", "acquired_at", "lease_ms"?, "note"?}`。`holder`＝aos-util 的 `aos::identity()`：`$AOS_WS` ＞ `$AOS_STACK` ＞ `$AOS_CF` ＞ cwd，空字串算沒設、轉絕對路徑（同 aos-post 的 `sender`；11-03 拿掉 `$HOME`）。**`pid` 預設是叫 aos-lock 的那個行程**（getppid）——aos-lock 拿完就退，寫它自己等於一拿到就算死了；要寫別的行程用 `--pid`（那個行程要在，不在＝`ArgumentsBad`）。`started_at_ticks`、`boot_id` 讀 `/proc`（讀不到＝null）；`acquired_at`＝ISO 8601 UTC 到毫秒。先寫 `.holder.json.tmp` 再改名。
+- **名牌 `holder.json`**：`{"holder", "pid", "started_at_ticks", "boot_id", "acquired_at", "lease_ms"?, "note"?}`。`holder`＝aos-util 的 `aos::identity()`：`$AOS_WS` ＞ `$AOS_STACK` ＞ `$AOS_CF` ＞ cwd，空字串算沒設、轉絕對路徑（同 aos-post 的 `sender`；11-03 拿掉 `$HOME`）。**`pid` 預設是叫 aos-lock 的那個行程**（getppid）——aos-lock 拿完就退，寫它自己等於一拿到就算死了；要寫別的行程用 `--pid`（那個行程要在，不在＝`ArgumentsBad`）。`started_at_ticks`、`boot_id` 讀 `/proc`（讀不到＝null）；`acquired_at`＝ISO 8601 UTC 到毫秒。透過 aos-util `write_text` 先寫 `.holder.json.tmp` 再改名，維持縮排 2、無尾端換行；鎖路徑的目錄查詢與收尾刪除使用 util `is_dir`／`remove_tree`。
 - **收屍**（mkdir 失敗時）：讀名牌，下面任一條成立就照放鎖的步驟替它收、再 mkdir（改名只有一個人會成功，兩人同時收也沒事）——
   ① `boot_id` 跟現在的不同；② `pid`＋`started_at_ticks` 對不上（行程不在、pid 被重用；`started_at_ticks` 是 null＝只看 pid 在不在）；③ 行程是殭屍（結束了、父行程還沒收屍）；④ 有 `lease_ms` 且 `acquired_at`＋`lease_ms` 已過（持有者活著也收）；⑤ 名牌不在或讀不懂、且鎖資料夾 10 秒沒動過（持有者 mkdir 完還沒寫好名牌就死了；10 秒不開 key）。
   好幾個人同時判到同一把死鎖時，直接改名會搬走別人剛拿到的新鎖，所以收之前先在鎖裡 `mkdir .reaping`（收屍牌，只有一個人建得成；牌子 10 秒沒動＝收的人也死了，拔掉再來），再讀一次名牌：跟判的那份不同（牌子掛進了別人的新鎖）＝拔掉牌子、不收；名牌本來就不在的還要是同一個資料夾（inode）。

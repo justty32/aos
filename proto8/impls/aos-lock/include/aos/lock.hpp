@@ -4,7 +4,7 @@
 //   鎖＝一個資料夾，mkdir 成功＝拿到（只有一種獨佔鎖、不分讀寫、不檢查上下層）：
 //     資料夾的鎖 <資料夾>/.lock/、檔的鎖 <檔>.lock/（lock_dir_of 照目標算；也可以直接給鎖資料夾的路徑，例 <信箱>/order.lock）
 //   名牌 <鎖>/holder.json：{"holder": 身分路徑（aos-util 的 aos::identity）， "pid", "started_at_ticks", "boot_id",
-//                          "acquired_at": ISO 8601 UTC 到毫秒, "lease_ms"?, "note"?}——先寫 .holder.json.tmp 再改名（N-05）
+//                          "acquired_at": ISO 8601 UTC 到毫秒, "lease_ms"?, "note"?}——透過 aos-util write_text 先寫 .holder.json.tmp 再改名（N-05）
 //   放鎖＝先把鎖資料夾改名成 <鎖>.releasing.<獨一無二的名字> 再刪：別人不會 mkdir 到一個正在被刪的資料夾；殘骸名字不同，不擋人
 //   收屍：mkdir 失敗就讀名牌——
 //     boot_id 跟現在的不同、或 pid＋started_at_ticks 對不上（行程不在、pid 被重用）＝持有者死了；
