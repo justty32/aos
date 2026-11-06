@@ -9,7 +9,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`check.py`](../../../../../proto8/extras/image-move-check/check.py) | Create a fake-brain daemon tree and verify its sleeping image survives relocation. |
+| [`check.py`](../../../../../proto8/extras/image-move-check/check.py) | Verify a sleeping fake-brain daemon tree survives copying and a local git clone. |
 
 ## `proto8/extras/langs/`
 

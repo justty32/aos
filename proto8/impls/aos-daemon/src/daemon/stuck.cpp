@@ -53,7 +53,8 @@ void Daemon::check_stuck(const std::string& name, Child& c) {
         c.stuck_restarts = 0;   // 重起之後有過任何回應，連敗重新起算。
     }
     c.last_response = answered;
-    if (modified <= c.observed_at || modified <= answered) {
+    // 11-06 晚（no-pid P9 06-06）：ctl 修改時間在未來（時鐘倒退、搬家時鐘差、手改 mtime）＝不當刺激，等牆鐘追上再看（no-pid 06「刺激在未來→不判」）。
+    if (modified <= c.observed_at || modified <= answered || modified > aos::utc_now_ms()) {
         clear();
         return;
     }

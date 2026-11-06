@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a fake-brain daemon tree and verify its sleeping image survives relocation."""
+"""Verify a sleeping fake-brain daemon tree survives copying and a local git clone."""
 import argparse
 import json
 import os
@@ -12,9 +12,9 @@ import time
 
 
 class Check:
-    def __init__(self, timeout):
+    def __init__(self, timeout, work_prefix="aos-image-move-"):
         self.timeout = timeout
-        self.work = Path(tempfile.mkdtemp(prefix="aos-image-move-"))
+        self.work = Path(tempfile.mkdtemp(prefix=work_prefix))
         self.repo = Path(__file__).resolve().parents[2]
         self.env = {k: v for k, v in os.environ.items()
                     if not k.startswith("AOS_")}
@@ -174,6 +174,42 @@ class Check:
                 raise RuntimeError(f"{name} did not put every child to sleep")
         return snapshot
 
+    def clone_image(self):
+        # Apply the documented per-stack filters only after the whole tree sleeps.
+        source = self.image
+        for stack in (self.root, self.kernel, self.foreman):
+            self.run(["cp", str(self.repo / "cmd/aos-agent/stack.gitignore"),
+                      str(stack / ".gitignore")])
+        self.run(["cp", str(self.repo / "cmd/aos-agent/stack.gitattributes"),
+                  str(source / ".gitattributes")])
+        (source / ".gitignore").write_text("ws/.trash/\n")
+        self.run(["git", "init", "-b", "main", str(source)])
+        self.run(["git", "-C", str(source), "config", "gc.auto", "0"])
+        self.run(["git", "-C", str(source), "add", "-A"])
+        tree = self.run(["git", "-C", str(source), "write-tree"]).strip()
+        commit = self.run(["git", "-C", str(source), "-c", "user.name=Image Check",
+                           "-c", "user.email=image-check@example.invalid",
+                           "commit-tree", tree, "-m", "Frozen image"]).strip()
+        self.run(["git", "-C", str(source), "update-ref", "refs/heads/main", commit])
+        parents = self.run(["git", "-C", str(source), "rev-list", "--parents", "-n", "1", "main"]).split()[1:]
+        tracked = self.run(["git", "-C", str(source), "ls-files"]).splitlines()
+        queue_relative = str((self.kernel / "queue.json").relative_to(source))
+        if queue_relative in tracked:
+            raise RuntimeError("documented stack filter unexpectedly retained queue.json")
+        empty = [str(p.relative_to(source)) for p in source.rglob("*")
+                 if p.is_dir() and ".git" not in p.parts and not any(p.iterdir())]
+        destination = self.work / "cloned"
+        self.run(["git", "-c", "protocol.file.allow=always", "clone", "--local",
+                  "--no-hardlinks", str(source), str(destination)])
+        missing_empty = [p for p in empty if not (destination / p).exists()]
+        (self.work / "clone-evidence.json").write_text(json.dumps({
+            "commit": commit, "commit_parent_count": len(parents), "tracked_files": len(tracked),
+            "queue_excluded": queue_relative not in tracked,
+            "empty_directories_omitted": missing_empty,
+            "note": "The documented filter drops queue.json; its counter restarts on clone."},
+            indent=2) + "\n")
+        self.layout(destination)
+
     def check(self):
         self.make()
         self.start("original")
@@ -200,7 +236,22 @@ class Check:
             "kernel_queue_before": before_queue, "kernel_queue_after": after_queue,
             "note": "Loop state counters restart at zero; queue counter is persistent."}, indent=2) + "\n")
         print(f"PASS persistent kernel counter: {before_queue} -> {after_queue}", flush=True)
-        print("PASS image relocation: sleeping phases, running phases, fake replies", flush=True)
+        print("PASS copy relocation: sleeping phases, running phases, fake replies", flush=True)
+        self.clone_image()
+        self.start("cloned")
+        self.ask("after local git clone")
+        cloned = self.snapshot("awake-cloned")
+        for name, item in cloned.items():
+            if any(row["phase"] != "running" for row in item["table"]["procs"].values()):
+                raise RuntimeError(f"{name} has a child that did not wake after clone")
+        clone_queue = self.read(self.kernel / "queue.json")["counter_runs"]
+        self.stop()
+        (self.work / "clone-result.json").write_text(json.dumps({
+            "queue_before_clone": after_queue, "queue_after_clone": clone_queue,
+            "all_children_running": True, "fake_reply_received": True,
+            "note": "queue.json is intentionally excluded by the documented git recipe."},
+            indent=2) + "\n")
+        print("PASS local git clone: third location, running phases, fake reply", flush=True)
 
     def cleanup(self):
         self.remember()
@@ -222,10 +273,11 @@ class Check:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--timeout-s", type=float, default=40, help="deadline for each readiness/command/shutdown step")
+    parser.add_argument("--work-prefix", default="aos-image-move-", help="temporary evidence directory prefix")
     args = parser.parse_args()
     if args.timeout_s <= 0:
         parser.error("--timeout-s must be positive")
-    check = Check(args.timeout_s)
+    check = Check(args.timeout_s, args.work_prefix)
     started = time.monotonic()
     status = 0
     try:

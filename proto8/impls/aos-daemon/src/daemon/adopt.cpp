@@ -47,6 +47,12 @@ std::optional<std::pair<pid_t, long long>> live_in_cell(const std::string& cell,
     }
     Json pid = st->value(StateWindow::pid, Json());
     Json ticks = st->value(StateWindow::started_at_ticks, Json());
+    // 11-06 晚（no-pid P9 06-13）：子 state 的 boot_id 跟這次開機不同＝那支已不在（重開機後 pid＋ticks 可能撞號）；這台讀不到 boot_id 或子沒寫＝照舊只比 pid＋ticks。
+    std::optional<std::string> boot = aos::boot_id();
+    Json sboot = st->value(StateWindow::boot_id, Json());
+    if (boot && sboot.is_string() && sboot.get<std::string>() != *boot) {
+        return std::nullopt;
+    }
     if (!pid.is_number_integer() || !ticks.is_number_integer() || pid.get<long long>() <= 0) {
         return std::nullopt;
     }
