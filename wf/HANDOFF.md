@@ -12,19 +12,14 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
-## 2026-11-06 下午 15:05 公司（compact 前；同一 session 接著做）
+## 2026-11-06 收工 16:45 公司（17:05 關機；家機接）
 
-1. **授權與隊形**（11-06 使用者）：今天隨意 push；公司 Windows＋WSL，一律在 WSL 主 clone `~/repo/simple_tools/aos` 改（Windows 工作樹只 pull）。頂層只交流派隊；每隊 opus 自家 subagent 隊長＋兩隊員（codex `gpt-6.1-sol` 帶 `/goal`、WSL claude `--model claude-opus-5-5` 另一帳號＝公司帳號），隊員可無上限派子 agent（codex 普通 sol／簡單 terra；claude 普通 opus／簡單 sonnet）；**盡量派 CLI**——使用者 14:30「我現在沒在處理別的事。都用cli吧。而且我們自己的token額度也...」，Claude 子 agent 少開。**fable**：預設照舊自家 fable subagent、盡量少開；使用者說「走 wsl claude」才走 WSL（[01-公司WSL](workflows/dispatch/aos-teams/01-公司WSL.md#fable-走-wsl-claude使用者說了才走)）。**不准繞沙箱**：`codex exec resume` 沒 `-s`，帶 `-c sandbox_mode` 會被標警告，要續跑就開新 exec（[gotchas 04](workflows/common/gotchas/04-使用aos與改文件與公司Windows.md)）。WSL pts 終端的互動 claude／codex（`--dangerously-skip-permissions`，早上 8:46～9:43 開）是**使用者自己的，絕不碰**。共用 index：`git commit -- <路徑>`。建置：`flock /tmp/aos-build.lock nice -n 15 cmake --build … -j2`，同時只一個建置。有方向題用選項框問。
-2. **效能上限**：使用者有在做事＝全機 CLI ≤3（有 C++ 建置 ≤2）；**使用者閒著（14:30 起）放寬到 ≤6、load 警報 8**——他回去做事時要調回 3。初步分析在 scratchpad `perf-report.md`（`C:\Users\WG-GUA~1\AppData\Local\Temp\claude\a5755c4eb10ca875\f74999ae-9c2a-4581-87e0-39959b509b43\scratchpad\perf-report.md`）：瓶頸是 CPU、每程序約 300 MiB；使用者 13:40「分不乾淨沒關係，我在公司就是一邊做我的事情，你這邊就是附帶」——上限前提＝他的工作優先。**收工時**補下午資料、寫進 [01-公司WSL](workflows/dispatch/aos-teams/01-公司WSL.md)（附原話），停兩支記錄器（WSL pid 198864、Windows typeperf pid 39196）。Monitor 每 30 分重開。
-3. **今天全做完並 push**：
-   - **大重構 S1～S11 全部完成**（S5、S7 公司重做，家機兩條分支作廢；只剩**家機重裝**）。S9 改名 inst→aos-inst、util 標頭進 `aos/util/`、`InputExtra→InputBad`、`DaemonRunning→DaemonExists`、`DeadlineMissed→DeadlineBad`；C-54 補第六種結尾 `…Rejected`。
-   - no-pid P1～P6（P6 照使用者「子daemon對他來說就只是一個普通的proc。不要耦合」改成通用 `auto_restart`，[no-pid 15](../proto8/thinking/2026-11/05/no-pid/15-P6去耦合.md)；`restart_on_stuck` 名不改）；P5 沙箱正式支援、預設帶 `AOS_KERNEL`／`AOS_MEMORY`／`AOS_TICK`。
-   - json-argv J1～J8；S8 help 分層、九短名、`-y`；寄信者自設 `--timeout-s`（第一個 commit）；T 線 T1～T4（[tick-time 04](../proto8/thinking/2026-11/05/tick-time/04-T線實作結果.md)）。
-   - 條文：lift-to-norms 兩輪（C-76～C-83、N-65～N-67 等）；可遷移性 C-83＋N-67（加⑦⑧⑨）；C-52 例外 ⑤。
-   - 規劃已裁：os-concepts、os-impl（判官排隊做選項、寄信者自設逾時＋判官「窗＋代為到期」）、env-portability（金鑰歸小 proc：端點小定義 `_entry` 寫 `--key-env`，kernel 不經手；url／model 不搬；aos-tools 登記檔照現況，使用者理由「用${HOME}/...，本來就是在命令行這個階段展開」）、mailbox-naming（不改名，但 llm kernel `mailbox/` 現在改 `requests/`；C-54 R14）、special-cases（C-52 讀成「不認身份、可認公開介面」、K1 判準＋現行表、K3、K7、第 3 次升格；`_` 開頭等撞名）。
-   - 桌面新說明頁兩份：`aos-入門-ELI5.html`、`aos-詳細參考.html`（午間快照）。試驗場已刷新（備份 `~/code/playground.bak-1106h`）。
-4. **還在跑（compact 後等回報、核對、轉告）**：T 隊 T7（daemon.json `tick` 展開成普通 proc＋`auto_restart`，照 no-pid 15）；I 隊 git 當 image 的膨脹評估＋.gitignore 建議（`proto8/thinking/2026-11/06/git-image/`）；K 隊把六題裁定寫進條文＋修 8 處條文矛盾＋改程式項排進 apply-ideas 02；L 隊 llm kernel `mailbox/`→`requests/`＋C-54 R14＋用語；J 隊補記 url／model 裁定與 aos-tools 理由。各隊 16:15 前停在建得過的 commit、寫交棒檔。
-5. **收工前（約 16:30）**：效能標準寫進 01-公司WSL＋停記錄器；更新 claude.ai 本日進度頁 https://claude.ai/artifact/HazekvnmhUAgG8pwDr3Khd 與說明頁（aos-agent 用法頁跟 S8／timeout 改）；收工交接；問桌面「三扇門」頁加「已修」註或標過時。**今晚家機**：刪作廢 S5／S7 分支、`git pull`、重裝（S11 最後一步）。**之後排程**：P7（要照 C-52 新讀法重設計、不讀子 ctl 信箱）、P8、P9、T5／T6／T8、判官排隊＋寄信者逾時第二步、env 修補 E1～E4（apply-ideas 02 序 2c）、W 線、aos-serve。
+1. **隊形改了（11-06 傍晚）**：使用者「我們的本週額度剩7%了」「盡量用codex」「或是單派codex也可以」——**本週剩下的工作直接派 codex 當隊長**（`codex exec -m gpt-6.1-sol -s workspace-write -C <dir> -o out.md '/goal …' < task.md`，在非 git 資料夾要加 `--skip-git-repo-check`，這不算繞沙箱），不配 Claude 隊長；codex 不 commit，頂層看報告＋diff 後 `git commit -- <路徑>`、push。WSL claude 是公司帳號，不吃這個額度，可當審稿。fable 照舊：使用者說才走 WSL。其餘授權（隨意 push、WSL 主 clone、不碰使用者程序、不繞沙箱）同上一條。
+2. **效能**：使用者閒著時同時 7～8 個 codex、load 只有 2～2.5（codex 多在等 API）；使用者 15:55「沒關係的，可以加開，我現在沒在幹嘛。」。兩支記錄器 16:25 已停；效能隊把標準寫進 [01-公司WSL](workflows/dispatch/aos-teams/01-公司WSL.md)（若收工前沒 commit，見第 5 點）。
+3. **今天下午到收工做完並 push**：P-32 移除（19acb13c；使用者「移除P-32」，C-42 沒給 ws＝沿用父的改成已定）；E1＋E4 金鑰歸端點小 proc（02edef8f）；E3＋K-4（c1fb18c5）；K-2＋E2 的 AOS_TICK 半（3bada8a0）；K-6 thought 不寫死範本（407ee400）＋`from` 可在工具登記格 `env.AOS_THOUGHT_FROM` 配預設（7cfdccf0，使用者「定義裡配預設」）；`aos-agent ctl add` 沒給 --ws 先讀 AOS_WS（2a0afb06，使用者「改成先讀 AOS_WS」）；git-image 評估（04185730；三題已裁：只留最新一份、**request.json 改成可重建後擋掉**、.trash 擋掉不搬）。
+4. **說明頁**：claude.ai 本日進度頁（第 7 版）與 aos-agent 用法頁 https://claude.ai/artifact/9joBCStEMXvNMXadMGXqCT 已更新；桌面 `aos-入門-ELI5.html`、`aos-詳細參考.html` 換新；**桌面新資料夾 `aos-說明/`**（431 頁：ELI5、教學〔概念＋agent 入門，使用者「拆兩塊」「盡量多」〕、案例集 16 例、參考書 6 頁、原始碼 371 頁，離線可開，重建用裡面的 `tools/build_site.py`；沒人看過畫面，要使用者看一眼）。桌面「三扇門」頁使用者說「別管」。
+5. **還沒收完的**：Z 隊（git-image 三題落地：agent-fsm wait 格找不到 request.json 退回 think 重組、stack.gitignore 照 git-image 04 加 20 條＋擋 request.json、docs/04-搬家 補「專門 repo、orphan commit＋push --force、要留的打 tag」、修 11-06 日誌壞連結）與效能隊——收工前做完就 commit，沒做完就**留在 WSL 主 clone 的工作樹沒 commit**，報告在 WSL `/tmp/teamZ/out.md`、`/tmp/teamPerf/out.md`（關機後 /tmp 可能清掉，所以明天要先 `git status` 看工作樹、審過再 commit）。
+6. **今晚家機**：刪作廢 S5／S7 分支、`git pull`、重裝（S11 最後一步）。**之後排程**：P7（照 C-52 新讀法重設計、不讀子 ctl 信箱）、P8、P9、T5／T6／T8、判官排隊＋寄信者逾時第二步（K-3、E2 的 AOS_KERNEL 半併這裡）、K-1、K-5（P8 前）、W 線、aos-serve。
 
 提醒：設計題先讀相關 NORMS／CONCEPTS；說「已寫進」前先查。
 
