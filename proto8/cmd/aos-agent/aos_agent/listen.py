@@ -1,9 +1,28 @@
 # aos_agent/listen.py - 等待回答或列出與追蹤歷史對話。
+HELP = """aos-agent listen - print the agent's answer
+
+usage: aos-agent [--daemon D] listen [--target NAME] [--timeout-s SECS]
+       aos-agent [--daemon D] listen [--target NAME] --last N [--follow]
+
+Without --last: wait for the answer to the latest question and print only its text (so
+> file and pipes work; notes go to stderr). --last N prints the last N exchanges as blocks:
+a line "== #N", the question lines prefixed "> ", then the answer. --follow keeps printing
+new ones; Ctrl-C leaves with exit 0.
+
+flags:
+  -t, --target NAME   which agent (default: $AOS_AGENT)
+  --timeout-s SECS    give up after SECS seconds (AnswerMissing)
+  --last N            show the last N exchanges instead of waiting
+  -f, --follow        with --last: keep following
+  -h, --help          show this help
+
+exit codes: 0 printed; 1 error (AnswerMissing, QuestionUnknown...); 130 Ctrl-C while waiting."""
+
 import aos_ws
 import os
 import sys
 import time
-from .common import Fail, POLL, daemon_path, note, parse, target
+from .common import Fail, bad_args, POLL, daemon_path, note, parse, target
 from .hints import daemon_held, label, off_table, on_table, run_hint, stuck_hint
 
 
@@ -149,18 +168,18 @@ def number(opts, key, flag):
         if n < 0 or n != n:
             raise ValueError
     except ValueError:
-        raise Fail("ArgumentsBad", "%s needs a number not below 0: %s" % (flag, v))
+        raise bad_args(HELP, "%s needs a number not below 0: %s" % (flag, v))
     return n
 
 
 def cmd(argv):
-    opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout", "--last": "last"}, {"--follow": "follow"})
+    opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout", "--last": "last"}, {"--follow": "follow"}, help=HELP, short=("-t", "-f"))
     timeout, last = number(opts, "timeout", "--timeout-s"), number(opts, "last", "--last")
     if rest:
-        raise Fail("ArgumentsBad", "listen takes no positional arguments: %s (it always waits for the latest letter; to send, aos-agent say WORDS && aos-agent listen)" % rest[0])
+        raise bad_args(HELP, "listen takes no positional arguments: %s (it always waits for the latest letter)" % rest[0])
     waits = last is None and not opts.get("follow")
     if not waits and timeout is not None:
-        raise Fail("ArgumentsBad", "--timeout-s is only for waiting on the latest letter, not with --last / --follow")
+        raise bad_args(HELP, "--timeout-s is only for waiting on the latest letter, not with --last / --follow")
     a = target(opts)
     try:
         if waits:

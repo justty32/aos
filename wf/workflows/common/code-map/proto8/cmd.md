@@ -11,22 +11,22 @@
 |---|---|
 | [`aos_agent/__init__.py`](../../../../../proto8/cmd/aos-agent/aos_agent/__init__.py) | 保留頂層說明、命令派發與主入口。 |
 | [`aos_agent/chat.py`](../../../../../proto8/cmd/aos-agent/aos_agent/chat.py) | 逐行寄訊息並等候回答的互動迴圈。 |
-| [`aos_agent/common.py`](../../../../../proto8/cmd/aos-agent/aos_agent/common.py) | 共用錯誤、旗標、daemon 協定與 agent 查找。 |
+| [`aos_agent/common.py`](../../../../../proto8/cmd/aos-agent/aos_agent/common.py) | 共用分層 help、錯誤指路、旗標、daemon 協定與 agent 查找。 |
 | [`aos_agent/ctl/__init__.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/__init__.py) | 顯式派發 agent 的掛上與管理命令。 |
 | [`aos_agent/ctl/add.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/add.py) | 宣告檢查、掛上 agent 並等待 daemon 上表。 |
 | [`aos_agent/ctl/ls.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/ls.py) | 列出 daemon 表上的 proc 與狀態。 |
 | [`aos_agent/ctl/phase.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/phase.py) | 起停、睡醒與暫停恢復 agent。 |
-| [`aos_agent/ctl/rm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/rm.py) | 拔掉 agent 並保護不能刪除的 stack 路徑。 |
+| [`aos_agent/ctl/rm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/rm.py) | 確認後拔掉 agent 並保護不能刪除的 stack 路徑。 |
 | [`aos_agent/ctl/state.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/state.py) | 顯示單隻 agent 的狀態、回答與工具覆蓋層。 |
 | [`aos_agent/ctl/where.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/where.py) | 顯示 agent 的 stack 或工作區路徑。 |
 | [`aos_agent/ctl/who.py`](../../../../../proto8/cmd/aos-agent/aos_agent/ctl/who.py) | 由 stack 路徑查詢所屬 agent。 |
 | [`aos_agent/decl.py`](../../../../../proto8/cmd/aos-agent/aos_agent/decl.py) | 讀取介面宣告並呼叫定義中的子介面入口。 |
 | [`aos_agent/hints.py`](../../../../../proto8/cmd/aos-agent/aos_agent/hints.py) | 讀 agent 狀態、queue 數量與接續操作提示。 |
 | [`aos_agent/listen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/listen.py) | 等待回答或列出與追蹤歷史對話。 |
-| [`aos_agent/llm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/llm.py) | 顯示與修改 agent 的腦設定覆蓋鍵。 |
+| [`aos_agent/llm.py`](../../../../../proto8/cmd/aos-agent/aos_agent/llm.py) | 分層解析腦設定命令並管理 agent 的覆蓋鍵與重設確認。 |
 | [`aos_agent/say.py`](../../../../../proto8/cmd/aos-agent/aos_agent/say.py) | 寄一則訊息到 agent 的 queue。 |
 | [`aos_agent/screen.py`](../../../../../proto8/cmd/aos-agent/aos_agent/screen.py) | 開啟、關閉與追蹤 agent 的畫面子介面。 |
-| [`aos_agent/tools.py`](../../../../../proto8/cmd/aos-agent/aos_agent/tools.py) | 透過 aos-tools 管理 agent 的工具覆蓋層。 |
+| [`aos_agent/tools.py`](../../../../../proto8/cmd/aos-agent/aos_agent/tools.py) | 分層解析工具命令並管理 agent 的工具覆蓋層與重設確認。 |
 | [`bin/aos-agent`](../../../../../proto8/cmd/aos-agent/bin/aos-agent) | 統一的 agent 介面：管掛在 aos-daemon 上的一隻 agent（eca、loop／fsm agent 都一樣），每個子命令只管一隻（11-04）。 |
 | [`stack.gitattributes`](../../../../../proto8/cmd/aos-agent/stack.gitattributes) | 把 image（ws/.stack/）與定義資料夾進 git 時用的 .gitattributes 範本（11-05 portable-flow 04 第 12 件） |
 | [`stack.gitignore`](../../../../../proto8/cmd/aos-agent/stack.gitignore) | 把 daemon 的 image（ws/.stack/）進 git 時用的 .gitignore 範本（11-05 portable-flow 04 第 9 件） |

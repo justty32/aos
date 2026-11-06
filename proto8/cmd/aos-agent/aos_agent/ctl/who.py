@@ -1,15 +1,30 @@
 # aos_agent/ctl/who.py - 由 stack 路徑查詢所屬 agent。
 import json
 import os
-from ..common import Fail, daemon_path, parse, table, under
+from ..common import bad_args, Fail, daemon_path, parse, table, under
 
+
+HELP = """aos-agent ctl who - find which listed agent owns a stack
+
+usage: aos-agent [--daemon D] ctl who [-j] [--stack S]
+
+flags:
+  --stack S    stack path to look up (default: $AOS_STACK)
+  -j, --json   print name, stack, workspace and definition as one JSON object
+  -h, --help   show this help
+
+Prints its name; nested tool stacks match their owning agent.
+If several stacks contain S, the deepest listed stack wins.
+exit codes: 0 found; 1 error (StackMissing, InstanceMissing...).
+more: proto8/cmd/aos-agent/README.md
+"""
 
 def cmd(argv):
     """ctl who（11-05 feat-proto 件 1 代定 1）：S（--stack ＞ $AOS_STACK）落在表上哪一隻的 stack 裡——那列的 stack 是 S 本身或 S 的上層
     （工具的小格 <agent stack>/tools/<名>/ 也認得）；好幾列都包住 S＝取最深的那列。只查 daemon 表（C-52 經機制看上層），不從 S 往上爬猜。"""
-    opts, rest = parse(argv, {"--stack": "stack"}, {"--json": "json"})
+    opts, rest = parse(argv, {"--stack": "stack"}, {"--json": "json"}, help=HELP, short=("-j",))
     if rest:
-        raise Fail("ArgumentsBad", "who takes no positional arguments: %s (give the path with --stack S)" % rest[0])
+        raise bad_args(HELP, "who takes no positional arguments: %s (give the path with --stack S)" % rest[0])
     s = opts.get("stack") or os.environ.get("AOS_STACK", "")
     if not s:
         raise Fail("StackMissing", "no --stack and no AOS_STACK; give the stack path to look up")

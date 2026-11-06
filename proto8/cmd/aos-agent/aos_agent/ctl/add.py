@@ -3,17 +3,35 @@ import daemon_ctl as dc
 import json
 import os
 import re
-from ..common import Agent, Fail, IFACE, call_dc, ctl_wait, daemon_path, need_table, note, parse, row_named
+from ..common import bad_args, Agent, Fail, IFACE, call_dc, ctl_wait, daemon_path, need_table, note, parse, row_named
 from ..decl import read_decl
 
 
 # ---------------------------------------------------------------- 子命令：動它的（步 5）
 
+HELP = """aos-agent ctl add - attach one agent to the daemon
+
+usage: aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] [--limits JSON] XXX
+
+XXX is the agent folder; it must declare aos-agent in interfaces.json. The letter goes
+through $AOS_KERNEL when that is set (a warning line says so). Waits until the agent is on
+the table, then prints its stack; the daemon refusing it = AddRejected.
+
+flags:
+  -n, --name N    its name on the table (default: the folder name of XXX)
+  -w, --ws WS     its workspace (default: the current directory)
+  -s, --stack S   its stack (default: <daemon stack>/procs/<name>/)
+  --limits JSON   resource limits, the aos-sandbox keys ('{}' = none)
+  -h, --help      show this help
+
+exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, DaemonMissing...).
+"""
+
 def cmd(argv):
-    opts, rest = parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits"})
+    opts, rest = parse(argv, {"--name": "name", "--ws": "ws", "--stack": "stack", "--limits": "limits"}, help=HELP, short=("-n", "-w", "-s"))
     if len(rest) != 1:
-        raise Fail("ArgumentsBad", "add takes one agent folder XXX (aos-agent ctl add [--name N] [--ws WS] [--stack S] [--limits JSON] XXX)"
-                   + ("; extra argument %s (add takes no -- arguments)" % rest[1] if len(rest) > 1 else ""))
+        raise bad_args(HELP, "add takes one agent folder XXX"
+                       + ("; extra argument %s (add takes no -- arguments)" % rest[1] if len(rest) > 1 else ""))
     xxx = os.path.abspath(rest[0])
     if not os.path.isdir(xxx):
         raise Fail("PathMissing", "%s does not exist (add takes an agent folder)" % rest[0])
@@ -32,8 +50,13 @@ def cmd(argv):
         try:
             limits = json.loads(opts["limits"])
         except ValueError as e:
-            raise Fail("ArgumentsBad", "--limits is not JSON: %s" % e)
-        call_dc(dc.check_limits, limits, "--limits", "ArgumentsBad")
+            raise bad_args(HELP, "--limits is not JSON: %s" % e)
+        try:
+            call_dc(dc.check_limits, limits, "--limits", "ArgumentsBad")
+        except Fail as e:
+            if e.code == "ArgumentsBad":
+                raise bad_args(HELP, str(e)) from e
+            raise
     else:
         limits = decl.get("limits")
         if limits is not None:
@@ -44,7 +67,7 @@ def cmd(argv):
     stack = opts.get("stack")
     if stack is not None:
         if not stack:
-            raise Fail("ArgumentsBad", "--stack must not be empty")
+            raise bad_args(HELP, "--stack must not be empty")
         stack = os.path.abspath(stack)
     name = opts.get("name") or os.path.basename(xxx.rstrip("/"))
     need_table()

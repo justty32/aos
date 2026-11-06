@@ -1,16 +1,31 @@
 # aos_agent/say.py - 寄一則訊息到 agent 的 queue。
+HELP = """aos-agent say - put one message in the agent's queue
+
+usage: aos-agent [--daemon D] say [--target NAME] [WORDS...]
+       ... | aos-agent [--daemon D] say [--target NAME]
+
+WORDS are joined with single spaces into one message. No WORDS (or "-") = the whole of
+stdin is the message (one trailing newline dropped); stdin being a terminal = ArgumentsBad.
+stdout prints the letter name. A paused or sleeping agent still queues it; a warning says so.
+
+flags:
+  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -h, --help          show this help
+
+exit codes: 0 queued; 1 error (TargetMissing, InstanceMissing, PostFailed...)."""
+
 import aos_ws
 import sys
-from .common import Fail, note, parse, target
+from .common import bad_args, note, parse, target
 from .hints import label, on_table, run_hint
 
 
 def cmd(argv):
-    opts, rest = parse(argv, {"--target": "target"})
+    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",))
     a = target(opts)                                # 11-05 edge-agent：先找對象，沒對象不先等 stdin
     piped = not rest or rest == ["-"]               # 11-05 使用者「aos-say,aos-listen，我希望能支援stdin/out。」：沒給話或給 -＝整份 stdin 一則
     if piped and (sys.stdin is None or sys.stdin.isatty()):
-        raise Fail("ArgumentsBad", "no message: give WORDS or pipe it into stdin (stdin is a terminal; usage: aos-agent say [--target NAME] [WORDS...|-])")
+        raise bad_args(HELP, "no message: give WORDS or pipe it into stdin (stdin is a terminal)")
     try:                                            # 11-04 夜邊緣實測：不是 UTF-8 的話（argv 或 stdin）原本噴 traceback
         if piped:                                   # 照原樣讀 bytes、照 UTF-8 解（不看 locale），去尾端一個換行
             text = sys.stdin.buffer.read().decode("utf-8")
@@ -19,9 +34,9 @@ def cmd(argv):
             text = " ".join(rest)
             text.encode("utf-8")
     except UnicodeError:
-        raise Fail("ArgumentsBad", "the message is not UTF-8")
+        raise bad_args(HELP, "the message is not UTF-8")
     if not text.strip():
-        raise Fail("ArgumentsBad", "the message is empty (aos-agent say [--target NAME] [WORDS...|-])")
+        raise bad_args(HELP, "the message is empty")
     sig = aos_ws.put(a.stack, text)
     print(sig, flush=True)
     if not on_table(a):

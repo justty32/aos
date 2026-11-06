@@ -4,9 +4,12 @@
 
 使用者 11-03「aos_ws,aos-say/listen,aos-ai這些之後都會整合進aos-agent」、11-04 晚「幫我弄個aos-agent chat指令，ctrl-c退出」「aos-agent add --name bob ../agents/bob這樣」。**一支給人用的指令，每個子命令只管一隻 agent**；agent＝aos-daemon 管的一支 proc。底下只做兩件事：經 daemon（掛、拔、起、停、暫停、找 stack；import aos-daemon-ctl 的本體 [`py/daemon_ctl.py`](../../py/README.md)，不另叫行程），與動那隻 stack 裡 P-42 的三樣（`queue/`、`history.jsonl`、ctl／state 窗）。eca（claude／codex）、aos 自己的 loop／fsm agent 都一樣，aos-agent 不看、不猜裡面是什麼。Python 入口與套件、純標準庫。**不碰 pid、不讀 `/proc`**（11-06 [no-pid](../../thinking/2026-11/05/no-pid/README.md) P3）：誰在跑看 daemon 表上那列的 `phase`，daemon 有沒有在聽看寄信有沒有回。
 
+**說明在哪**（11-06 [human-cli](../../thinking/2026-11/06/human-cli/README.md) H6）：`aos-agent --help` 是一屏總覽；每個子命令、每個動作各一屏英文 help——`aos-agent ctl --help`、`aos-agent ctl rm --help`、`aos-agent tools ls --help`……（`-h` 同義）。**長規則**（對象與 daemon 怎麼找、sleep／wake、`AOS_KERNEL`、等回信、介面、錯誤行、代號全表、PATH 上要有誰）不在任何 `--help` 裡，在本檔與下列 docs。
+
 | 檔 | 是什麼 |
 |---|---|
-| `bin/aos-agent` | 指令入口；規則、錯誤代號與用法見本 README 及下列 docs |
+| `bin/aos-agent` | 指令入口（薄殼，交給 `aos_agent/`） |
+| `aos_agent/` | 本體套件：一個子命令一個模組（`ctl/` 子資料夾放 ctl 的動作），模組頂端的 `HELP` 就是它那一屏 `--help` |
 | `using-aos-agent.sh` | `source` 用：帶名字＝`export AOS_AGENT=名字`，定義 `say`／`listen`／`chat`／`status` 四個函數；`AOS_DAEMON` 沒設＝export 成 `$PWD/.stack`（11-05） |
 | `stack.gitignore`、`stack.gitattributes` | 搬家範本（11-05）：image（`ws/.stack/`）進 git 時用；用法見下面「搬家」 |
 
@@ -14,7 +17,7 @@
 
 ```
 aos-agent [--daemon D] ctl add [--name N] [--ws WS] [--stack S] [--limits JSON] XXX     掛一隻；等上表、印 stack
-aos-agent [--daemon D] ctl rm 名字                                        拔掉並刪它的 stack（名字要明講；stack 是工作區、定義、daemon 資料夾、目前資料夾、家目錄、表上別隻的 stack 或在它們上層的不刪，11-04 夜）
+aos-agent [--daemon D] ctl rm [--yes] 名字                                拔掉並刪它的 stack（名字要明講；先關畫面，正在答＝SessionBad、什麼都不動；stack 是工作區、定義、daemon 資料夾、目前資料夾、家目錄、表上別隻的 stack 或在它們上層的不刪，11-04 夜；終端裡先問 [y/N]）
 aos-agent [--daemon D] ctl ls [--json]                                    列 daemon 表上全部：名字 狀態 工作區 queue 幾封
 aos-agent [--daemon D] ctl state|status|start|stop|sleep|wake|pause|resume [--target 名字]
 aos-agent [--daemon D] ctl where [--stack|--ws] [--target 名字]            印 stack（預設）／工作區（--ws）
@@ -28,9 +31,11 @@ aos-agent [--daemon D] say [--target 名字] [話...|-]                  stdout 
 aos-agent [--daemon D] listen [--target 名字] [--timeout-s 秒] | [--last N] [--follow]   stdout 只有回答
 aos-agent [--daemon D] chat [--target 名字]                           一行一句；Ctrl-C 退出
 aos-agent [--daemon D] open [--detach]|close|watch [--target 名字]    畫面（宣告了 screen 的；入口照收 動作 [--detach]）
-aos-agent [--daemon D] tools [--target 名字] [ls [--json]|get 名|add [--override] [--no-cache] 名 路徑|rm 名|reset]   定義疊這隻的覆蓋層（只存差異）
-aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
+aos-agent [--daemon D] tools [--target 名字] [ls [--json]|get 名|add [--override] [--no-cache] 名 路徑|rm 名|reset [--yes]]   定義疊這隻的覆蓋層（只存差異）
+aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset [--yes]]
 ```
+
+- **短名與確認**（11-06 human-cli H4、H11，使用者裁「開幾個常用短名」「終端問、非終端不問」「幫我加上--yes跳過」）：長旗標照樣能用；短名是全 aos 共用一張表裡的，同名同義——這支用到 `-h`（`--help`，全部）、`-d`（`--daemon`）、`-t`（`--target`）、`-j`（`--json`：`ctl ls`、`ctl who`、`tools ls`）、`-n -w -s`（`--name --ws --stack`：只在 `ctl add`）、`-f`（`listen --follow`）、`-y`（`--yes`：`ctl rm`、`tools reset`、`llm reset`）。一個槓一個名字，不黏值、不併：`-tann`、`-jf` 都是 `FlagUnknown`。刪了別處沒副本的三個子命令（`ctl rm`、`tools reset`、`llm reset`）**stdin 是終端**時先在 stderr 問一句 `[y/N]`，只有 `y`／`yes` 才做；其他字、空行、Ctrl-D＝印 `aos-agent: warning: nothing done`、退 0（問的時候按 Ctrl-C＝退 130）；`-y` 不問；stdin 不是終端（管線、腳本、agent、`</dev/null`）不問、照做。`tools reset`／`llm reset` 沒東西可刪就不問。例子在 [docs/01](docs/01-用法例子.md#短名與確認11-06)。
 
 - **對象**：`--target 名字` ＞ `$AOS_AGENT`；都沒有＝`TargetMissing`。名字查 daemon 表，沒有＝`InstanceMissing`。`ctl add`（名字＝`--name`，沒給＝資料夾名）、`ctl rm`（位置參數）、`ctl ls` 不吃 `AOS_AGENT`。不再比工作區、沒有用來指對象的 `--stack`。
 - **ctl where**：不帶旗標＝`--stack`，印那隻的 stack 一行（同 `aos-daemon-ctl where --stack 名字`）；`--ws` 印它的工作區（表上那列的 `ws`；沒記＝`WsMissing`，那隻是沒給 `--ws` 直接用 aos-daemon-ctl 掛的）；兩個一起給＝`ArgumentsBad`（使用者 11-04 晚「aos agent的where，我希望默認是--stack，有需要再另外指定--ws。」）。
@@ -39,12 +44,12 @@ aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
 - **ctl state 的 tools 那行**（11-05 feat-proto 件 1）：這隻有覆蓋層時多一行 `tools   overlay: N added, M removed (+名, -名…)`——同一份定義跑久了被這隻自己改過多少，一眼看得到（C-46 定義不變、stack 漂移）；沒覆蓋層不印。
 - **哪個 daemon**：`--daemon D` ＞ `$AOS_DAEMON`（那個 daemon 的 `$AOS_STACK`，絕對路徑）＞ **cwd 的 `./.stack`**（11-05 [portable-flow 題 3](../../thinking/2026-11/05/portable-flow/05-衝突與方向題.md)：daemon 在 ws 裡起，`cd ws` 就找得到，不用設變數；轉絕對、不往上找）；都沒有＝`DaemonMissing`。D 一律轉真實路徑（realpath）。D 不是 daemon stack（沒有 `procs_state.json`）＝立刻 `DaemonMissing`。不預判 daemon 活不活：`ctl ls`／`state`／`where` 照表印；`ctl add`／`rm`／`start`／`stop`／`sleep`／`wake` 照寄、等回信，30 秒一封都沒有＝`DaemonMissing`（下面「等回信」）；`say` 照寄。
 - **表上的路徑**（11-05）：daemon 把每列的 `stack`／`ws`／`def` 存成相對 daemon stack（整份搬家照樣對得上），`aos-daemon-ctl ls --json` 拼回絕對再給這支；`ctl ls`／`state`／`where` 印的都是絕對。列上的 `reason`（出錯結束〔loop 型退非 0〕留成 `stopped` 的列，daemon 寫的原因；修好後 `llm reset`／`tools reset` 再 `ctl start`，不要了 `ctl rm`）`ctl ls` 印在最後一欄、`ctl state` 多一行 `reason`。
-- **ctl sleep／wake**（11-05 [portable-flow 衝突 1](../../thinking/2026-11/05/portable-flow/05-衝突與方向題.md)，使用者選「嚴格分」）：`sleep`＝現在就睡（daemon SIGTERM、列 `sleeping`、stack 留；daemon 開門自己醒，或 `wake`）；`stop`＝等這輪做完、要 `start` 才回來。`start` 只起 `stopped`、`wake` 只醒 `sleeping`；跨著用（sleeping 的 `start`／`stop`、stopped 的 `wake`／`sleep`）＝`aos-daemon-ctl` 的 `PhaseBad` 原樣轉（`X is sleeping; use wake …` 之類）；同一狀態再叫（stopped 的 stop、running 的 start、sleeping 的 sleep、running 的 wake）＝印 `already …`、退 0。sleep 不關畫面（跟 daemon 收工一樣）。
-- **三扇門**（11-05 [stdio-unify](../../thinking/2026-11/05/stdio-unify/README.md) R1、R3、R15）：stdout 只放結果；提醒是 stderr 一行 `aos-agent: warning: 句子`（原本是括號一行）；`chat` 的提示符 `> ` 照舊在 stderr（D5）。`ctl ls` 一行 `名字 TAB 狀態 TAB 工作區 TAB queue 幾封 TAB reason`（沒有＝`-`）。`--help`＝英文說明到 stdout、退 0；不給子命令＝`ArgumentsBad` 退 1（原本印說明退 0）；子命令前不認得的旗標＝`FlagUnknown`、子命令不認得＝`CommandUnknown`。Ctrl-C 退 130（`listen --follow` 用 Ctrl-C 離開是正常離開、退 0）。
+- **ctl sleep／wake**（11-05 [portable-flow 衝突 1](../../thinking/2026-11/05/portable-flow/05-衝突與方向題.md)，使用者選「嚴格分」）：`sleep`＝現在就睡（daemon SIGTERM、列 `sleeping`、stack 留；daemon 開門自己醒，或 `wake`）；`stop`＝等這輪做完、要 `start` 才回來。`start` 只起 `stopped`、`wake` 只醒 `sleeping`；跨著用（sleeping 的 `start`／`stop`、stopped 的 `wake`／`sleep`）＝`aos-daemon-ctl` 的 `PhaseBad` 原樣轉（`X is sleeping; use wake …` 之類）；同一狀態再叫（stopped 的 stop、running 的 start、sleeping 的 sleep、running 的 wake）＝印 `already …`、退 0。sleep 不關畫面（跟 daemon 收工一樣）；`stop`、`ctl rm` 先關畫面（正在答＝`SessionBad`、不往下做）。
+- **三扇門**（11-05 [stdio-unify](../../thinking/2026-11/05/stdio-unify/README.md) R1、R3、R15）：stdout 只放結果；提醒是 stderr 一行 `aos-agent: warning: 句子`（原本是括號一行）；`chat` 的提示符 `> ` 照舊在 stderr（D5）。`ctl ls` 一行 `名字 TAB 狀態 TAB 工作區 TAB queue 幾封 TAB reason`（沒有＝`-`）。`--help`／`-h`＝**那一層**的英文 help 到 stdout、退 0（頂層一屏總覽、`ctl --help` 列動作、`ctl rm --help` 只講 rm；`tools ls --help` 這種不用先有 target；11-06 起不再每層都印同一份長說明）；不給子命令＝`ArgumentsBad` 退 1（原本印說明退 0）；子命令前不認得的旗標＝`FlagUnknown`、子命令不認得＝`CommandUnknown`。錯誤行括號裡只指**那個子命令**（11-06 H10）：缺參數、參數不對＝`(usage: 那個子命令的 usage 行)`；子命令後不認得的旗標＝`(see aos-agent ctl rm --help)` 這樣指回它自己那份；子命令前的 `FlagUnknown` 指回頂層 `(see aos-agent --help)`。Ctrl-C 退 130（`listen --follow` 用 Ctrl-C 離開是正常離開、退 0）。
 - **daemon_ctl 模組的錯**：`ctl` 系列 import `daemon_ctl`（不叫 aos-daemon-ctl 行程、不讀誰的 stderr），模組報的錯換成這支的名字與代號再印（`ProcMissing`→`InstanceMissing`，其他代號照用）。
 - **錯**：stderr 一行 `aos-agent: error: 代號 原因`、退 1；30 秒一封回信都沒有＝`DaemonMissing`；回了 `applied: true` 但表上 30 秒還沒變成結果＝`WaitFailed`；`ctl add` 的信被 daemon 拒收（名字像 `a/b`、`..`，或設定不合格；daemon 寫在 `procs_state.json` 的 `mailbox_warning`）＝立刻 `AddRejected`、原因原樣轉，不等滿 30 秒；判官不掛（回信 `applied: false`）＝立刻 `AddRejected`（`add`）／`CtlRejected`（其他 ctl），訊息帶判官的代號與原因（下一條）。子介面入口（screen）與 aos-tools、aos-json 自己報的錯原樣轉。
-- **錯誤代號一覽**：`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`DaemonMissing`、`InstanceMissing`、`InstanceExists`、`PathMissing`、`SessionBad`、`SendFailed`、`PostFailed`、`QuestionUnknown`、`AnswerMissing`、`WaitFailed`、`AddRejected`、`CtlRejected`、`TargetMissing`、`WsMissing`、`StackMissing`、`InterfaceMissing`、`InterfaceBad`、`PhaseBad`、`ScreenMissing`、`ScreenBad`、`ToolsMissing`、`LlmMissing`、`LlmBad`；子介面與共用工具另有自己的代號（見上一條）。
-- **`AOS_KERNEL`**（11-05 [edge-agent](../../thinking/2026-11/05/edge-agent/README.md)）：有設＝ctl 的信先寄判官（[kernel/docs/02](../../kernel/docs/02-kernel-modes.md)）。對象就是那個 kernel 本身（模式 2 的 0 號，`AOS_KERNEL` 在它的 stack 裡）＝`start`／`stop`／`sleep`／`wake`／`rm` 直接寄 daemon（不然 kernel 睡著時給它自己的 `wake` 沒人收、永遠叫不醒）；寄出之後 kernel 不是 running＝立刻 `WaitFailed`（信排在它信箱裡、它回來才判）。
+- **錯誤代號一覽**：`ArgumentsBad`、`FlagUnknown`、`CommandUnknown`、`CommandMissing`（叫不到要的指令，例 `aos-exec`／`aos-json` 不在 PATH）、`DaemonMissing`、`InstanceMissing`、`InstanceExists`、`PathMissing`、`SessionBad`、`SendFailed`、`PostFailed`、`QuestionUnknown`、`AnswerMissing`、`WaitFailed`、`AddRejected`、`CtlRejected`、`TargetMissing`、`WsMissing`、`StackMissing`、`InterfaceMissing`、`InterfaceBad`、`PhaseBad`、`ScreenMissing`、`ScreenBad`、`ToolsMissing`、`LlmMissing`、`LlmBad`；子介面與共用工具另有自己的代號（見上一條）。
+- **`AOS_KERNEL`**（11-05 [edge-agent](../../thinking/2026-11/05/edge-agent/README.md)）：有設＝ctl 的信先寄判官（[kernel/docs/02](../../kernel/docs/02-kernel-modes.md)），寄出時 stderr 多一行 `aos-agent: warning: routing via AOS_KERNEL=<路徑>`（11-06 H13：env 一設就改行為的要說一聲）。對象就是那個 kernel 本身（模式 2 的 0 號，`AOS_KERNEL` 在它的 stack 裡）＝`start`／`stop`／`sleep`／`wake`／`rm` 直接寄 daemon（不然 kernel 睡著時給它自己的 `wake` 沒人收、永遠叫不醒）；寄出之後 kernel 不是 running＝立刻 `WaitFailed`（信排在它信箱裡、它回來才判）。
 - **等回信**（11-05 [edge-agent 題 2](../../thinking/2026-11/05/edge-agent/README.md)，使用者選「加 --reply-to 等回信」）：`ctl add`／`rm`／`start`／`stop`／`sleep`／`wake` 每封信都帶回信信箱（`reply_to`）寄，最多等 30 秒。回信信箱是**共用的**（11-06 [no-pid](../../thinking/2026-11/05/no-pid/README.md) P3）：有 `$AOS_STACK`＝`$AOS_STACK/daemon_reply/`；沒有（人殼）＝`<daemon stack>/procs_ctl_mailbox/reply/`；大家共用、靠回信的 `in_reply_to` 認自己那封，沒人領的 10 分鐘後由下一個來拿信箱的人收掉（垃圾回收，不是判死活）。判官不掛＝回信 `applied: false` 一到就退：`aos-agent: error: AddRejected AOS_KERNEL refused the add letter: NameUnknown evil not in allowed`（滿額是 `SlotMissing`；wake／start 超過 `max_running` 是 `CtlRejected`）。放行或沒設 `AOS_KERNEL`＝daemon 回 `applied: true`，照舊等表上變成結果（表先變、回信還沒到＝最多再等 1 秒讓它落地）；回了但表 30 秒沒變＝`WaitFailed`。**30 秒一封回信都沒有**＝`aos-agent: error: DaemonMissing no reply from the daemon at D within 30 s (…; the letter stays in its mailbox and is applied if the daemon takes it later)`——不去分 daemon 是忙、暫停、判官卡住還是掛了（寄信不回＝呼叫失敗）；信留在信箱，對方之後認領照套。被 TERM 退 143、HUP 退 129。
 
 ## 介面 `aos-agent`：ctl add 只看宣告
@@ -64,7 +69,7 @@ aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset]
 
 ## 用法例子
 
-11-04 在 WSL 逐條跑過的一整串（ctl add 兩隻、ctl ls、say／listen、ctl state、chat、tools、open、ctl stop／start、ctl rm；11-05 改成 ctl 寫法；tools 那段 11-05 改成覆蓋層的輸出）在 [docs/01-用法例子](docs/01-用法例子.md)。
+11-04 在 WSL 逐條跑過的一整串（ctl add 兩隻、ctl ls、say／listen、ctl state、chat、tools、open、ctl stop／start、ctl rm；11-05 改成 ctl 寫法；tools 那段 11-05 改成覆蓋層的輸出；11-06 加短名與確認）在 [docs/01-用法例子](docs/01-用法例子.md)。
 
 ## agent 對話協議（P-42；併自 extras/human）
 

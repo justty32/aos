@@ -1,5 +1,6 @@
-# aos_agent/common.py - 共用錯誤、旗標、daemon 協定與 agent 查找。
+# aos_agent/common.py - 共用分層 help、錯誤指路、旗標、daemon 協定與 agent 查找。
 import os
+import textwrap
 from . import PROG
 import aos_flags
 import daemon_ctl as dc
@@ -32,11 +33,40 @@ def note(msg):
     aos_flags.warn(PROG, msg)
 
 
-def parse(argv, flags=None, switches=None):
+def usage_of(help):
+    """HELP 的第一個 usage 是錯誤行與群組導航的唯一來源。"""
+    return next(line.removeprefix("usage: ") for line in help.splitlines()
+                if line.startswith("usage: "))
+
+
+def bad_args(help, reason):
+    return Fail("ArgumentsBad", "%s (usage: %s)" % (reason, usage_of(help)))
+
+
+def actions(helps, prefix):
+    """由動作的 usage 與 NAME 生群組導航，不重抄命令語法或摘要。"""
+    out = []
+    for help in helps:
+        usage = usage_of(help).removeprefix(prefix)
+        name = help.splitlines()[0].split(" - ", 1)[1]
+        entry = "  %s%s" % (usage.ljust(max(24, len(usage) + 2)), name)
+        if len(entry) <= 100:
+            out.append(entry)
+        else:
+            out.append("  " + usage)
+            out.extend(textwrap.wrap(name, width=100, initial_indent="                          ",
+                                     subsequent_indent="                          "))
+    return "\n".join(out)
+
+
+def parse(argv, flags=None, switches=None, *, help=None, short=None):
     try:
-        return aos_flags.parse(argv, flags or {}, switches)
+        return aos_flags.parse(argv, flags or {}, switches, help=help, short=short)
     except aos_flags.Error as e:
-        raise Fail(e.code, "%s (see aos-agent --help)" % e)
+        if e.code == "ArgumentsBad" and help:
+            raise bad_args(help, str(e)) from e
+        path = help.splitlines()[0].split(" - ", 1)[0] if help else PROG
+        raise Fail(e.code, "%s (see %s --help)" % (e, path)) from e
 
 
 def call_dc(fn, *args, **kwargs):
@@ -130,6 +160,8 @@ def ctl_wait(cmd, body, cond, what, refused, direct=False):
     """共用回信箱按 in_reply_to 等自己的回信，同時等 daemon 表上的結果。"""
     d = daemon_path()
     box = call_dc(dc.reply_box, d)
+    if not direct and kernel_box():
+        note("routing via AOS_KERNEL=%s" % kernel_box())
     letter = call_dc(dc.send, d, body, reply_to=box, direct=direct)
     got, done_at = [None], [None]
 

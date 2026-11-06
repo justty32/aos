@@ -2,10 +2,23 @@
 import aos_ws
 import json
 import os
-from ..common import Fail, parse, target
+from ..common import bad_args, Fail, parse, target
 from ..decl import def_of, show_limits
 from ..hints import label, queued
 
+
+HELP = """aos-agent ctl state - show one agent's state (status = the same)
+
+usage: aos-agent [--daemon D] ctl state [--target NAME]
+
+flags:
+  -t, --target NAME   which agent (default: $AOS_AGENT)
+  -h, --help          show this help
+
+Prints its state, paths, queue, latest answer and tool overlay on stdout.
+exit codes: 0 shown; 1 error (TargetMissing, InstanceMissing...).
+more: proto8/cmd/aos-agent/README.md
+"""
 
 def last_answer(a):
     got = aos_ws.answers(a.stack)
@@ -16,9 +29,9 @@ def last_answer(a):
 
 
 def cmd(argv):
-    opts, rest = parse(argv, {"--target": "target"})
+    opts, rest = parse(argv, {"--target": "target"}, help=HELP, short=("-t",))
     if rest:
-        raise Fail("ArgumentsBad", "state takes no positional arguments: %s (pick the target with --target)" % rest[0])
+        raise bad_args(HELP, "state takes no positional arguments: %s (pick the target with --target)" % rest[0])
     a = target(opts)
     q = queued(a)
     lines = ["name    %s" % a.name, "state   %s (daemon phase %s)" % (label(a), a.phase), "ws      %s" % (a.row.get("ws") or "-"),
