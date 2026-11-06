@@ -1,15 +1,15 @@
-# wait.py - wait 格：把 think 寫好的 $AOS_STACK/think/request.json 寄給 llm kernel、之後一拍一拍看回信到了沒（thinking 2026-11-04 think-as-function 03 § 1）。
+# wait.py - wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建。
 # loop 照跑、不卡著等：每拍一下就退，ctl 的 pause／stop 每拍都看得到。
 #   think/pending.txt 不在＝還沒寄：aos-post init think/reply（沒有才建）、aos-llm send --reply-to think/reply < request.json，
-#     信件名稱寫進 pending.txt、退 10（下一拍再來看）。
+#     request.json 不在＝退 11 回 think，從 history＋定義重組；在才寄、信件名稱寫進 pending.txt、退 10（下一拍再來看）。
 #   在＝已寄：aos-llm recv think/reply <名>：沒到（10）＝退 10；到了（0）＝那則 assistant 接進 history.jsonl、刪 pending.txt、退 0（→ act）；
 #     kernel 回錯（1）＝刪 pending.txt、aos-llm 的 stderr 原樣、這格再多寫自己一行 BrainFailed、退 1（P-20 停下等人；人重跑＝沒 pending、request.json 還在→重寄＝重試）。
 #   寄之前看 request.json 的 endpoint 跟現在的 llm.json（interfaces.json 宣告的定義檔疊這隻的 stack 同相對路徑檔，疊法同 brain.py）
 #     對不對得上：對不上＝退 11 回 think 重組（11-05 edge-agent：代號寫錯停下、人 aos-agent llm set／改或刪 llm.json 再起，
 #     原本照舊的 request.json 重寄、又是同一個錯，要人手動把 stage.txt 寫成 think）。llm.json 讀不懂＝當 {}（brain 重組時會報 CfgBad）。
-# 結束碼（fsm.json 照碼分岔，N-36）：0＝回信接進 history（→ act）；10＝還沒回（→ wait）；11＝腦設定改過、回 think 重組請求。
+# 結束碼（fsm.json 照碼分岔，N-36）：0＝回信接進 history（→ act）；10＝還沒回（→ wait）；11＝請求不在或腦設定改過、回 think 重組請求。
 # 不看 queue：思考中來的信等答完回 idle 再收（使用者 11-04「等答完回 idle 再收」）。沒有自己的逾時（kernel 的 timeout_ms／priority.deadline 守）。
-# 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1——StackMissing、RequestMissing（沒 pending 也沒 request.json：人改了 stack）、BrainFailed（kernel 回錯）、
+# 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1——StackMissing、BrainFailed（kernel 回錯）、
 #   SendFailed（aos-llm send 退非 0；它自己的 stderr 原樣在上面，例 LlmKernelMissing）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
 # --help 印英文用法；Ctrl-C 退 130。
 import json, os, shutil, signal, subprocess, sys
@@ -22,13 +22,14 @@ HELP = """\
 usage: wait.py   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
 The wait cell: send $AOS_STACK/think/request.json to the llm kernel (aos-llm send), then on
 each later run look for the reply (aos-llm recv). Exit 0 = reply appended to history (go act);
-10 = not yet; 11 = the brain settings changed, go back to think.
+10 = not yet; 11 = no pending request and request.json is missing, or brain settings changed;
+go back to think to rebuild. A pending request is received even without request.json.
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 
 NOT_YET = 10                                     # aos-llm recv：回信還沒到
-REBUILD = 11                                     # 腦設定跟 request.json 對不上：回 think 重組
+REBUILD = 11                                     # 請求不在或腦設定對不上：回 think 重組
 
 
 def die(code, reason):
@@ -90,7 +91,7 @@ except ValueError as e:
     die("InterfaceBad", str(e))
 if not name:                                     # 還沒寄
     if not os.path.isfile(request):
-        die("RequestMissing", "neither %s nor pending.txt exists (stack edited? write think into stage.txt and start again)" % request)
+        sys.exit(REBUILD)                        # image 不存可重建的請求；有 pending 時仍先收原回信，不能重寄
     cfg = read_obj(os.path.join(os.environ.get("AOS_CD") or ".", files["llm"])) if "llm" in files else {}
     if "llm" in files:
         cfg.update(read_obj(os.path.join(stack, files["llm"])))

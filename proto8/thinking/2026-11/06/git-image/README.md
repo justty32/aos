@@ -1,4 +1,4 @@
-# 2026-11-06 用 git 暫存 image 會不會膨脹失控、會不會慢、.gitignore 怎麼寫（git-image，I 隊：opus 隊長＋codex 隊員；沒改程式、沒改條文、沒新增任何 .gitignore）
+# 2026-11-06 用 git 暫存 image 會不會膨脹失控、會不會慢、.gitignore 怎麼寫（git-image，I 隊調查；11-06 使用者裁定見下）
 
 ← [2026-11-06](../README.md)｜[thinking](../../../README.md)｜背景：[portable-flow 02 image 模型](../../05/portable-flow/02-image-模型.md)、[04 跨電腦與 git](../../05/portable-flow/04-跨電腦與git.md)、[daemon-board](../daemon-board/README.md)、[os-concepts 10](../os-concepts/10-可遷移性原則草稿與root例外.md)、[os-impl](../os-impl/README.md)、[C-83](../../../../docs/CONCEPTS/01-設計理念/09-C-83.md)、[N-67](../../../../docs/NORMS/10-基礎設施-定義與工作區/09-N-67.md)、[apply-ideas 01 § C](../apply-ideas/01-逐項落點.md)
 
@@ -43,23 +43,14 @@ image 本身還是會線性長。長的是 agent 的記憶 `history.jsonl`，這
 
 **實測腳本放在 repo 裡**：[scripts/](scripts/)（`gitimage_bench.py`、`summarize.py`、`run_all.sh`；照 `/tmp/i-team/sim/` 的路徑寫的，要重跑先複製過去）。原始量測結果 `results*.jsonl`（約 1 MB）留在 `/tmp/i-team/sim/`，重開機就沒了；結論都在 03。
 
-## 方向題（推薦放第一）
+## 使用者裁定（11-06，三題原文選項）
 
-1. **image 的 git 要不要留歷史？**
-   - **推薦：只留最新一份。**image 用專門的 repo，每次凍住做一個沒有上一版的新 commit，再 `push --force`；想留的版本打 tag。
-     - 好處：git 大小等於一份 image，不用改程式，也幾乎不用 gc。
-     - 代價：不能 `git log` 看 image 怎麼一路變過來，舊版只剩打了 tag 的那幾份。
-   - 另一個選擇：留完整歷史。
-     - 要一起改：history 分段、request.json 改成可以重建，打包時還要調大視窗。
-     - 代價：要改程式，gc 會慢好幾倍；一週約 1 GiB，跑越久越大。
-2. **`think/request.json` 要不要改成可以重建？**改法是 wait 格找不到這個檔，就退回 think 重組；這樣 `.gitignore` 才能把它擋掉。
-   - **推薦：先不改。**題 1 選「只留最新」的話，它只多佔一份 image 的大小（一週約 0.4 GiB），不值得為此動程式。
-   - 改的話：image 小一半，也順便解掉跟 C-79「實例不存 source 的副本」的小衝突（[05](05-其他手段與衝突.md)）。
-3. **ws 的 `.trash/` 要不要跟著 image 搬？**
-   - **推薦：擋掉不搬**，由人定期清。
-   - 代價：搬過去之後就不能還原上一台丟進垃圾桶的檔。
+1. image 的 git 歷史：**「只留最新一份 (Recommended)」**。image 用專用 repo，每次凍住建立沒有父 commit 的 orphan commit，再 `push --force`；要保留的版本打 tag。這是 image repo 的食譜，不授權對原始碼 repo 改寫歷史。
+2. `think/request.json`：**「改成可重建、擋掉」**。wait 沒有 pending 且 `request.json` 不在時，退 11 回 think 重組；有 pending 時優先收原回信。stack 的 `.gitignore` 擋 `**/think/request.json`，`pending.txt` 與回信仍須帶走。
+3. ws 的垃圾桶：**「擋掉不搬 (Recommended)」**。image repo 根擋 `ws/.trash/`，由人定期清；搬過去後不能還原上一台垃圾桶的檔。
 
-**後續（等使用者點頭才做，這次沒做）**：
-- 照 04 更新範本 `cmd/aos-agent/stack.gitignore`。
-- `cmd/aos-agent/docs/04-搬家.md` 補一段「image 用專門 repo、只留最新」。
-- 推薦跟 no-pid P8 的搬家食譜同一個 commit。
+**落地 commit**：依本次指示未 commit，沒有 commit hash。程式、範本與搬家食譜已落地（`wait.py`、`stack.gitignore`、`docs/04-搬家.md`）；本段記錄使用者裁定，不代表已執行 push、改寫歷史或清垃圾桶。
+
+## 調查數據的適用範圍
+
+上面的 0.8 GiB 與 [03](03-實測數據.md) 的 E 模式，是當時保留 `think/request.json` 的量測／外推。裁定擋掉它後可少帶這份 history 副本；原始數據保留，不當成新版實測。

@@ -2,9 +2,11 @@
 
 How a brain request travels, what an endpoint pack is, and how priority works.
 
-Your own thinking is already wired: your body sends your conversation as a letter to the llm kernel and waits for the reply. You do not call the brain as a tool. This node matters when you choose a brain for a child agent, or when a human asks you about brain settings.
+Your body asks the llm kernel; do not call your brain as a tool. Use this node to choose a child's brain or explain its settings.
 
 The letter: `{"endpoint": "<pack name>", "request": {"messages": [...], "tools": [...]}, "priority": {...}}`, sent with the command `aos-llm ask` (wait for the answer) or `aos-llm send` + `aos-llm recv` (come back later) into `$AOS_LLM_KERNEL/requests/`.
+
+agent-fsm: missing `think/request.json` without pending makes wait exit 11 to think and rebuild. With pending, receive the original reply. Images omit request but keep history, `think/pending.txt` and `think/reply/`.
 
 Endpoint packs: the llm kernel owns a table of named packs, for example `smart-high` (strong, slower, costly), `stupid-fast` (weak, fast, cheap), `fake` (no real model, for tests). A pack fixes the model and sampling settings such as temperature. You pick a pack by name only.
 
@@ -13,6 +15,6 @@ Endpoint packs: the llm kernel owns a table of named packs, for example `smart-h
 
 Priority: optional. `"priority": {"level": "high"}` or `{"level": "high", "deadline": "2026-11-05T10:00:00Z"}`. Higher level and nearer deadline are served first; faster packs go before slower ones at equal level. A letter that waits long is promoted automatically, so nothing starves.
 
-Budgets: each pack and each sender can have a budget per day. `BudgetMissing ... max_calls N reached in this window` means the budget is used up for today. The kernel does not switch packs for you; pick a cheaper pack or stop.
+Budgets: daily, per pack and per sender. `BudgetMissing ... max_calls N reached in this window` means the budget is used up for today. The kernel does not switch packs for you; pick a cheaper pack or stop.
 
 Common codes: `EndpointUnknown` (no pack with that name; check `aos-llm ls`), `EndpointFailed` (the model service failed or timed out; try again later), `DeadlineBad` (your deadline passed before it ran), `LlmKernelMissing` (`AOS_LLM_KERNEL` not set; a human must start the llm kernel).
