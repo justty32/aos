@@ -17,7 +17,7 @@ cat def/daemon.json
 # {"exec": {"argv": ["aos-llm-kernel", "kernel.json"]}, "interval_ms": 300}
 cat def/kernel.json
 # {"slots": 4, "timeout_ms": 120000, "exec": "/絕對/proto8/lib/base/llm_http", "endpoint": "fake",
-#  "endpoints": {"smart-high": {"exec": "endpoints/litellm", "url": "http://localhost:4000/v1", "model": "claude-haiku-5-5",
+#  "endpoints": {"smart-high": {"exec": "endpoints/litellm", "url": "http://localhost:4000/v1", "model": "claude-haiku",
 #                               "fixed": {"temperature": 0.2}, "slots": 4, "speed": "normal", "cost": "high", "summary": "..."},
 #                "fake": {"exec": "/絕對/proto8/lib/base/llm_fake", "speed": "fast", "cost": "free"}}}
 cat def/endpoints/litellm/_entry

@@ -26,7 +26,7 @@
 3. **信裡寫了被釘死的 key**（`request.temperature` 而包有 `fixed.temperature`、或 `request.model`）＝kernel 回 **`RequestBad`**：`temperature is fixed by endpoint smart-high`（留題 1；見衝突）。`fake` 這類沒 `fixed` 的包照舊全收。
 4. **agent-fsm 的 `llm.json` 拿掉 `model` 鍵**（只剩 `endpoint`）：包就是能力，臨時換同端點的模型＝換代號。eca 的 `model` 不經 kernel、不動。wait.py 比對 request 與 llm.json 的那段只比 `endpoint`。
 5. **包的屬性表當一扇窗**：kernel 每次把 `{代號: {speed, cost, context, slots, summary}}`（不含 url／key／fixed／exec）寫成 `$AOS_STACK/endpoints.json`（有變才寫，N-05 暫存改名）；**`aos-llm ls`** 讀 `$AOS_LLM_KERNEL/endpoints.json` 印一行一包。給人挑代號、也給件 4 的父 agent 替子挑便宜的腦；腦自己要看就加一個工具叫 `aos-llm ls`（不在這輪做）。
-6. **範本 `demo/llm-kernel/kernel.json`** 的表改成：`smart-high`（LiteLLM `localhost:4000`，`claude-haiku-5-5`〔便宜：每百萬 token 輸入 0.1／輸出 0.5 美金，整輪 demo 遠低於 0.5 美金；真名以 `curl localhost:4000/v1/models` 為準〕，`fixed.temperature` 0.2、`cost: high`、`speed: normal`、`slots: 4`）、`stupid-fast`（LM Studio `local-qwen`，`fixed.temperature` 0.7、`cost: free`、`speed: fast`、`slots: 1`）、`fake`、`fake-demo-*`（劇本假腦，給 steps 的 demo；見件 1、4）。`luna`／`sol` 照留。
+6. **範本 `demo/llm-kernel/kernel.json`** 的表改成：`smart-high`（LiteLLM `localhost:4000`，`claude-haiku`〔便宜：每百萬 token 輸入 0.1／輸出 0.5 美金，整輪 demo 遠低於 0.5 美金；真名以 `curl localhost:4000/v1/models` 為準〕，`fixed.temperature` 0.2、`cost: high`、`speed: normal`、`slots: 4`）、`stupid-fast`（LM Studio `local-qwen`，`fixed.temperature` 0.7、`cost: free`、`speed: fast`、`slots: 1`）、`fake`、`fake-demo-*`（劇本假腦，給 steps 的 demo；見件 1、4）。`luna`／`sol` 照留。
 7. **劇本假腦**：`llm_fake` 多認包裡一個 `script` 鍵（陣列；第 n 則 assistant 回答＝`script[n]`，n＝request.messages 裡已有的 assistant 數；超過＝原本 FAKE ANSWER）；一則＝`{"content": "..."}` 或 `{"tool_calls": [{"name": "self_tools", "arguments": {...}}]}`（llm_fake 補 id／type）。這是包「其他 key 原樣交給函數」的第一個正式用法。
 
 ## 衝突（哪條、在哪、各自後果）

@@ -20,7 +20,7 @@ llm-kernel/
 
 | 代號 | 是什麼 | 屬性（kernel.json 裡寫的） |
 |---|---|---|
-| `smart-high` | LiteLLM `localhost:4000` 的 `claude-haiku-5-5`（真名以 `curl localhost:4000/v1/models` 為準） | `fixed.temperature` 0.2、`slots` 4、`speed` normal、`cost` high、`context` 200000 |
+| `smart-high` | LiteLLM `localhost:4000` 的 `claude-haiku`（真名以 `curl localhost:4000/v1/models` 為準） | `fixed.temperature` 0.2、`slots` 4、`speed` normal、`cost` high、`context` 200000 |
 | `stupid-fast` | LM Studio `localhost:1234` 的 `qwen3-1.7b`（本機載的是別的就改這包的 `model`，真名看 `curl localhost:1234/v1/models`；家機試驗場指 `google/gemma-4-e4b`） | `fixed.temperature` 0.7、`slots` 1、`speed` fast、`cost` free、`context` 4096 |
 | `luna`、`sol` | LiteLLM 的 gpt-6 luna（low）、sol | `sol` 有 `fixed.temperature` 0.2；`cost` high |
 | `fake`（預設） | `lib/base/llm_fake`：有工具先叫 `tool` 寫的那個（範本 `clock`，沒有就第一個）、再答「FAKE ANSWER to: …」 | `speed` fast、`cost` free |
