@@ -1,4 +1,4 @@
-← [回入口 05-agent.md](../05-agent.md)｜段落：腦、工具、可預測性、agent＝函數＋binding｜上一份：—｜下一份：[02-agent-的工具與agent-就是一台狀態機](02-agent-的工具與agent-就是一台狀態機.md)
+← [回入口 05-agent.md](../05-agent.md)｜段落：腦、工具、可預測性、agent＝函數＋binding｜上一份：—｜下一份：[01-續-C-42](01-續-C-42.md)
 
 ## 腦、工具、可預測性
 
@@ -9,7 +9,8 @@
 - **C-22b** 可預測性不只是函式本身的：同一函式在不同狀況、不同（例如老舊）硬體上跑，可預測性不一樣。節點＝函式內部＋它所在的執行環境，合起來才是執行節點。（3g.13c）
 - **C-23** agent 內部怎麼設計是後面的事，先把底打好。（2.20）
 - **C-40** agent 要能當拋棄式函式用：引用一個設好的資料夾（標頭檔）、填幾個引數、讓它跑起來，執行環境在引用者這邊。library 做 binding 讓這件事簡單。（3g.9、3g.10）
-- **C-42** 工具＝被引用的標頭檔；agent 也可以是工具；aos 體系的每一樣（daemon、tick、task、inst、kernel）都基於 inst、都是 shell 指令，所以都是 agent 的工具——自我迴圈改進的閉環。（3g.12、3g.13）**11-05 午落實**（使用者 11-05 午「讓agent給自己改tool」「讓agent利用aos指令產出另一個agent」，[feat-proto 01、04](../../../thinking/2026-11/05/feat-proto/README.md)）：兩個腦可以叫的工具——`lib/agent/self_tools`（改**自己這隻的**工具覆蓋層：add／rm／ls，定義不動、下一格起生效）、`lib/agent/agents`（在管我的那台 daemon 上生、叫、收別隻 agent：add／say／ask／rm／ls，不繼承腦與工具、上限交給判官 `max_running`）；兩個都只轉手 `aos-agent`，沒有新協定。**11-05 晚落實**（[agent-knowledge](../../../thinking/2026-11/05/agent-knowledge/README.md)，使用者 11-05「層級式記憶工具」）：`lib/agent/memory`（層級式記憶：知識庫＝資料夾樹，`read`／`ls`／`find` 唯讀查）；三種 agent 的 system prompt 都帶它的根（agent-fsm `brain.py --memory`、eca 與外部 agent 經 `aos-mcp --memory` 的 `instructions`），工具說明只寫增量、細節指節點。
+<a id="c-42"></a>
+- **C-42**（工具＝被引用的標頭檔、agent 也可以是工具）11-06 起逐字搬到 [01-續-C-42](01-續-C-42.md)。
 
 ## agent＝函數＋binding
 
