@@ -1,0 +1,401 @@
+id,出處檔行,哪隊,代定內容,判定,理由,使用者原話,建議,選項與推薦
+JA-01,proto8/thinking/2026-11/05/json-argv/08-J1實作結果.md:18,sol,tool_io 的 start() 只管 --help 與訊號，argv/stdin 等工具叫 arguments() 才解,細節,API 形狀，判官一字不用改；純實作,—,維持,—
+JA-02,proto8/thinking/2026-11/05/json-argv/08-J1實作結果.md:19,sol,六支自己讀 stdin 的工具改叫 arguments(),細節,純實作順序（J2 提前做一小塊）,—,維持,—
+JA-03,proto8/thinking/2026-11/05/json-argv/08-J1實作結果.md:20,sol,共用層不查 enum，未知 op 交工具報 OpUnknown,細節,照 lib 規則 3（op 不認得＝工具自己的錯碼）推得出,—,維持,—
+JA-04,proto8/thinking/2026-11/05/json-argv/08-J1實作結果.md:21,sol,stdin 值是 null 當沒給,細節,照腦的常見寫法定；但 A 區查到 tool_io 其實沒照做（from: null 會蓋掉預設）,—,維持（程式要修，A 區第 3 條）,—
+JA-05,proto8/thinking/2026-11/05/json-argv/08-J1實作結果.md:22,sol,--help 在 -- 之前任何位置都認（不照 P-44「旗標位置才認」）,方向性-未裁,跟 CONVENTION P-44 字面打架，只在檔內標偏離、沒攤給使用者；`--content --help` 會印說明,使用者裁的是另一句：「P-44改吧」指末句改成「aos_flags 包 tool_io」（json-argv/07:27）,攤給使用者,A 維持現況（少一種舊呼叫變行為；要寫字面 --help 走 stdin）｜B 照 P-44 只認旗標位置。推薦 A，一行加註進 P-44
+JA-06,proto8/thinking/2026-11/05/json-argv/08-J1實作結果.md:23,sol,自由物件的點路徑值一律字串、不猜型別,細節,照 C-56 不猜；巢狀本身使用者已裁可,「巢狀那塊我覺得不錯，即使面對key有.，這也是可以接受的。」（json-argv/07:9）,維持,—
+JA-07,proto8/thinking/2026-11/05/json-argv/08-J1實作結果.md:24,sol,_tooldef.json 缺或壞時的退路（全當字串、提醒行）,細節,錯誤路徑的實作,—,維持,—
+JA-08,proto8/thinking/2026-11/05/json-argv/08-J1實作結果.md:25,sol,旗標錯誤原因後加 (see NAME --help)，stdin 錯不加,細節,錯誤文案,—,維持,—
+JA-09,proto8/thinking/2026-11/05/json-argv/08-J1實作結果.md:26,sol,tool_io.py 364 行不拆（要能單檔複製釘版）,細節,conventions 300 行是「該考慮拆」，有理由不拆,—,維持,—
+JA-10,proto8/thinking/2026-11/05/json-argv/09-J2實作結果.md:18,sol,"API 照 J1 實際的 start(NAME, HELP)＋arguments()",細節,純實作,—,維持,—
+JA-11,proto8/thinking/2026-11/05/json-argv/09-J2實作結果.md:19,sol,HELP 留手寫用法與說明、只刪參數段,細節,文案擺哪,—,維持,—
+JA-12,proto8/thinking/2026-11/05/json-argv/09-J2實作結果.md:20,sol,手寫段語意寫進 HELP prose、不改 description,細節,不動模型看到的字，保守,—,維持,—
+JA-13,proto8/thinking/2026-11/05/json-argv/09-J2實作結果.md:21,sol,_tooldef 的 default 只寫有實值的,細節,純實作,—,維持,—
+JA-14,proto8/thinking/2026-11/05/json-argv/09-J2實作結果.md:22,sol,_tooldef 新增 errors 欄的寫法與排序,細節,登記檔欄位細則；A 區已逐支比過一致,—,維持,—
+JA-15,proto8/thinking/2026-11/05/json-argv/09-J2實作結果.md:23,sol,claude/codex 轉接放 agent_tool.py 共用,細節,檔案擺哪,—,維持,—
+JA-16,proto8/thinking/2026-11/05/json-argv/09-J2實作結果.md:24,sol,空 prompt 原因字串照舊、型別錯換 tool_io 的字,細節,錯誤文案,—,維持,—
+JA-17,proto8/thinking/2026-11/05/json-argv/10-J3到J7實作結果.md:21,claude（檔內寫 codex 定、隊長審）,--env-file 在 add 當下讀、存內容不存路徑,方向性-已裁,存展開後的值這題使用者後來在 env-portability Q2＋Q3 選「C 照現況」,「我們在命令行使用指令的時候，用${HOME}/...，本來就是在命令行這個階段展開。」（env-portability/README.md:39）,維持,—
+JA-18,proto8/thinking/2026-11/05/json-argv/10-J3到J7實作結果.md:22,claude（codex 定）,env 優先序：add 時 --envs＞--env-file；call 時登記格＞繼承,細節,順著使用者「旗標＞stdin＞環境變數」的方向推,「關於優先級，就是旗標>stdin>環境變數」（json-argv/07:9）,維持,—
+JA-19,proto8/thinking/2026-11/05/json-argv/10-J3到J7實作結果.md:23,claude（codex 定）,登記格 env 不能蓋 AOS_STACK,細節,小格由 aos-exec 給是既有規則,—,維持,—
+JA-20,proto8/thinking/2026-11/05/json-argv/10-J3到J7實作結果.md:24,claude（codex 定）,不合法工具名＝新錯碼 RegistryBad,細節,錯誤代號命名照 C-54,—,維持,—
+JA-21,proto8/thinking/2026-11/05/json-argv/10-J3到J7實作結果.md:25,claude（codex 定）,env 不是變數名陣列＝ToolDefBad,細節,錯誤代號,—,維持,—
+JA-22,proto8/thinking/2026-11/05/json-argv/10-J3到J7實作結果.md:59,claude,aos-agent listen --timeout-s inf 擋掉（不設上限＝不給旗標）,細節,等價寫法還在，用法沒變,—,維持,—
+JA-23,proto8/thinking/2026-11/05/json-argv/10-J3到J7實作結果.md:59,claude,--last 1.5 由悄悄截成 1 改成報錯,細節,寫什麼做什麼（C-56）,—,維持,—
+JA-24,proto8/thinking/2026-11/05/json-argv/11-J6實作結果.md:17,claude,範本裡的工具仍指回範本、不指複本,細節,照 N-67 樹內相對推得出；代價已寫明,A19 整體使用者「照做，順手給 D 隊」（os-impl/README.md:17）,維持,—
+JA-25,proto8/thinking/2026-11/05/json-argv/12-J5實作結果.md:15,claude,不把 SIGPIPE 設回預設，改接例外,細節,純實作,—,維持,—
+JA-26,proto8/thinking/2026-11/05/json-argv/12-J5實作結果.md:16,claude,只有 stdout 真的沒人讀才退 141,細節,純實作,—,維持,—
+JA-27,proto8/thinking/2026-11/05/json-argv/12-J5實作結果.md:17,claude,import 完 tool_io 把 lib/ 從 sys.path 拿掉,細節,純實作,—,維持,—
+JA-28,proto8/thinking/2026-11/05/json-argv/13-J4實作結果.md:10,claude,不替 --one 加 --prompt TEXT 映射（同名兩義違 C-54）,細節,照 C-54 推得出,—,維持,—
+JA-29,proto8/thinking/2026-11/05/json-argv/13-J4實作結果.md:15,claude（codex 定）,四格 -- 後不收位置參數＝ArgumentsBad,細節,照 P-44,—,維持,—
+JA-30,proto8/thinking/2026-11/05/json-argv/13-J4實作結果.md:15,claude（codex 定）,重複旗標最後一個算、空值報錯,細節,純實作,—,維持,—
+JA-31,proto8/thinking/2026-11/05/json-argv/13-J4實作結果.md:15,claude（codex 定）,act 被 INT/TERM 先收工具群（130/143）,細節,照 N-43 訊號結束碼,—,維持,—
+JA-32,proto8/thinking/2026-11/05/json-argv/README.md:54,claude,映射取 argparse 子集；純函數不做短旗標、nargs、子命令,方向性-已裁,「不做點路徑」被使用者翻掉，其餘順著「旗標只是補充手段」,「旗標我覺得只是一種補充手段，用來簡單修改一些設定，而不是把所有東西都完全映射過去。」（json-argv/07:9）,維持,—
+JA-33,proto8/thinking/2026-11/05/json-argv/README.md:55,claude,schema 沒的旗標＝FlagUnknown；其他＝ArgumentsBad,細節,照使用者 11-05 裁的 P-44（FlagUnknown）；「只吃想吃的」是講 stdin 鍵,「我們只吃json裏面我們想吃的」（json-argv/07:11，講 stdin）,維持,—
+JA-34,proto8/thinking/2026-11/05/json-argv/README.md:56,claude,stdin 是 tty＝{} 不讀,細節,解 P-39 會卡；純實作,—,維持,—
+JA-35,proto8/thinking/2026-11/05/json-argv/README.md:57,claude,只查 type/required，enum 只供 help,細節,同 JA-03,—,維持,—
+JA-36,proto8/thinking/2026-11/05/json-argv/README.md:58,claude,_tooldef 工具側選填 positional/errors/env、property 可帶 default,細節,登記檔欄位,—,維持,—
+JA-37,proto8/thinking/2026-11/05/json-argv/README.md:59,claude（fable）,C++ 現在不做 schema 映射、aos-exec 不參與,細節,範圍／排程；題目本來就只講 lib 工具,—,維持,—
+JA-38,proto8/thinking/2026-11/05/json-argv/README.md:60,claude,aos-tools call 三種工具都吃 stdin；add 用 --envs＋--env-file,細節,同 JA-17～19；--env-file＋--envs 並存是原話,「改成--env-file xxx搭配--envs K=V...也不錯，兩者並存吧。」（no-pid/README.md:11）,維持,—
+JA-39,proto8/thinking/2026-11/05/json-argv/README.md:61,claude,AOS_KERNEL 改信去向靠 warning、不加 --kernel,方向性-已裁,11-07 使用者選項框改成 aos-daemon-ctl 永遠直寄、不印提醒,「aos-daemon-ctl 永遠直寄（使用者 11-07 選項框）」（os-impl/08:11；commit 55bf74e55）,維持,—
+JA-40,proto8/thinking/2026-11/05/json-argv/README.md:62,claude,aos_flags 包 tool_io；stdout 關閉退 141；act 限時、失敗附 stderr 尾,方向性-已裁,P-44 與 act 附 stderr 尾兩項使用者裁了；141 與限時是細節,「P-44改吧」（json-argv/07:27）；act 附 stderr 尾「保留 (Recommended)」（json-argv/10:53）,維持,—
+JA-41,proto8/thinking/2026-11/05/json-argv/README.md:63,claude,P-44、P-41、C-52、N-43 等條文照實作改,方向性-已裁,C-52 ⑤ 使用者選「條文列進例外 (Recommended)」,（json-argv/10:53）,維持,—
+JA-42,proto8/thinking/2026-11/05/json-argv/07-使用者回覆-11-05晚.md:13；README.md:50,claude,「子資料夾＝子動作」照做了，使用者說實作時要先看一眼、還沒給他看,方向性-未裁,使用者明說要看，沒人拿實作給他看就算定案,「2.子資料夾就是子動作，我覺得這個最好，但這個之後實作的時候我要看一眼，怕有些問題。」（json-argv/07:13）,攤給使用者,拿 J3 之後 aos-tools 子資料夾＝子動作的實際長相（一個例子）給他看一眼；他點頭才把「仍待使用者先看」拿掉
+TT-01,proto8/thinking/2026-11/05/tick-time/04-T線實作結果.md:19,sol（隊長代定）,有設 AOS_TICK 但檔不在或空＝第 0 格、不退牆鐘,方向性-已裁,使用者 11-06 選項框選了,「當第 0 格 (Recommended)」（tick-time/04:19）,維持,—
+TT-02,proto8/thinking/2026-11/05/tick-time/04-T線實作結果.md:20,sol（隊長代定）,TickBad 退 1 不退 10,方向性-已裁,使用者選項框選了,「退 1 (Recommended)」（tick-time/04:20）,維持,—
+TT-03,proto8/thinking/2026-11/05/tick-time/04-T線實作結果.md:21,sol,退牆鐘時用 UTC epoch 毫秒，不用單調鐘,細節,期限要寫進檔跨行程比，純實作,—,維持,—
+TT-04,proto8/thinking/2026-11/05/tick-time/04-T線實作結果.md:22,sol,T4 不改 priority.deadline 格式（ISO 8601 或 epoch 秒照舊）；把「信裡用毫秒」讀成「用牆鐘」,方向性-未裁,改了使用者原話的意思：他選的選項字面是「毫秒」，實作留的是 ISO/epoch 秒；條文 N-65 ③ 也寫「毫秒」,使用者 11-06 逐題：1「信裡用毫秒」（daemon-board/README.md:30）；選項原文「信裡跨樹的期限一律毫秒（第②類「對外」）」（daemon-board/02-續:24）,攤給使用者,A 維持 ISO/epoch 秒、條文加一句「毫秒指牆鐘語意」｜B 照字面改成 epoch 毫秒數字（多一次格式變動，aos-llm 與 kernel 兩邊同改）。推薦 A，但要他點頭
+TT-05,proto8/thinking/2026-11/05/tick-time/04-T線實作結果.md:23,sol,歷史 thinking 不改,細節,文件整理原則,—,維持,—
+TT-06,proto8/thinking/2026-11/05/tick-time/04-T線實作結果.md:24,sol（隊長代定）,命令列拿的鎖不寫 flock 標記、靠 release 或租約收,方向性-已裁,使用者選項框選了,「release 或租約收 (Recommended)」（tick-time/04:24）,維持,—
+TT-07,proto8/thinking/2026-11/05/tick-time/04-T線實作結果.md:25,sol,N-15 原句全留只加已實作註,細節,條文加註方式,—,維持,—
+TT-08,proto8/thinking/2026-11/05/tick-time/04-T線實作結果.md:26,sol,_tick 展開成內嵌單子 exec:{argv:[aos-tick…]},細節,純實作（陣列寫法會找 cwd）,—,維持,—
+TT-09,proto8/thinking/2026-11/05/tick-time/04-T線實作結果.md:27,sol,表頂層 tick 欄只要 daemon 有 AOS_TICK 就寫,細節,窗格式,—,維持,—
+TT-10,proto8/thinking/2026-11/05/tick-time/05-T5T6T8與試驗場.md:25,claude,T5 timeout_ticks 由 aos-exec 判，不由 loop/daemon 判（翻 fable 03 的傾向）,細節,C-74 一處判全都有；使用者沒講哪層；行為對使用者一樣,—,維持,—
+TT-11,proto8/thinking/2026-11/05/tick-time/05-T5T6T8與試驗場.md:26,claude,tick 到期後的 grace_ms 看牆鐘,細節,照 N-01 改讀「Linux proc 用牆鐘」,「精確時間只給人類體驗／外部交互／Linux proc」（11-05 日誌:68）,維持,—
+TT-12,proto8/thinking/2026-11/05/tick-time/05-T5T6T8與試驗場.md:27,sol,人打的等待照舊是秒、內部才多 tick 寫法,細節,照原話「人類體驗用精確時間」,同上,維持,—
+TT-13,proto8/thinking/2026-11/05/tick-time/05-T5T6T8與試驗場.md:28,sol,agents ask 的 timeout_ticks 上限沿用 1700,細節,沿用既有數字,—,維持,—
+TT-14,proto8/thinking/2026-11/05/tick-time/05-T5T6T8與試驗場.md:35,sol（codex 代定）,thought 在 tick 等待時每輪續 UTC 租約,細節,純實作,—,維持,—
+TT-15,proto8/thinking/2026-11/05/tick-time/05-T5T6T8與試驗場.md:37,claude,推薦拿掉領班的 tick；使用者選「留著」,方向性-已裁,使用者裁了而且跟推薦不同；程式照使用者,「三個時鐘」：領班的鐘＝留著、總機的鐘＝留著（tick-time/05:39）,維持,—
+TT-16,proto8/thinking/2026-11/05/tick-time/03-11-06-裁定與新設計.md:5,claude（fable）,Q5 使用者「隨意」→ 代定照推薦,方向性-已裁,使用者授權隨意,「Q5就隨意。」（tick-time/03:7）,維持,—
+NP-01,proto8/thinking/2026-11/05/no-pid/README.md:27,claude（fable）,state.json 新欄名 responded_at,細節,欄名；判法是使用者方向,—,維持,—
+NP-02,proto8/thinking/2026-11/05/no-pid/README.md:71,claude（fable）,stuck 門檻 10 秒寫死、ping 3 秒、add 等回信 30 秒,方向性-已裁,30 秒那半使用者裁「不該是固定值」→ 改 --timeout-s；stuck 改成 stuck_after_ticks 可設、預設 10；判法使用者「照原設計」,「由寄信者自己設定。然後30秒？這不該是固定值，同樣該由寄信者自己設定。判官會輔助。」（os-impl/README.md:14）；判法「照原設計」（no-pid/12:46）,維持,—
+NP-03,proto8/thinking/2026-11/05/no-pid/README.md:72,claude（fable）,"ping body {""ping"": true}、回信沿用 applied、paused 不回",細節,信格式；paused 不回順著「寄信不回＝失敗」,—,維持,—
+NP-04,proto8/thinking/2026-11/05/no-pid/README.md:73,claude（fable）,共用回信信箱 daemon_reply/；沒人領 10 分鐘後收掉,細節,信箱擺哪、清理門檻,—,維持,—
+NP-05,proto8/thinking/2026-11/05/no-pid/README.md:74,claude（fable）,thought 子名形狀；_tooldef 加選填 env,細節,命名與登記欄,—,維持,—
+NP-06,proto8/thinking/2026-11/05/no-pid/README.md:75,claude（fable）,"子 daemon 用第三種 proc 寫法 {""daemon"": …}、退了照表重起、連 3 次留 stopped",方向性-已裁,使用者 11-06 翻掉，改成通用布林 auto_restart,「對於daemon來說，子daemon對他來說就只是一個普通的proc。不要耦合」（no-pid/15:7）；選項框「通用 restart: true (Recommended)」、名字「不用改。因為單restart，你不知道他想表達的意思。」（no-pid/15:26-27）,維持（已改）,—
+NP-07,proto8/thinking/2026-11/05/no-pid/README.md:76,claude（fable）,ls/listen 讀檔不寄信；pause/resume 照 N-10 直接寫子 ctl,細節,照 N-10 推得出,—,維持,—
+NP-08,proto8/thinking/2026-11/05/no-pid/README.md:77,claude（fable）,不加新錯誤代號，DaemonMissing 兼「沒等到回信」,細節,代號命名；知識庫已寫兩種意思（品質）,—,維持,—
+NP-09,proto8/thinking/2026-11/05/no-pid/README.md:78,claude（fable）,P1～P5b 第一波、P6～P9 第二波、S6＝P3,細節,排程,—,維持,—
+NP-10,proto8/thinking/2026-11/05/no-pid/08-P1實作結果.md:16,claude,關鎖掛在 pthread_atfork 一處,細節,純實作,—,維持,—
+NP-11,proto8/thinking/2026-11/05/no-pid/08-P1實作結果.md:17,claude,鎖不到時看到 stopping 就說收工途中,細節,純實作,—,維持,—
+NP-12,proto8/thinking/2026-11/05/no-pid/08-P1實作結果.md:18,claude,表沒 boot_id＝別次開機；讀不到 boot_id＝不比,細節,照 proto8 無舊版,—,維持,—
+NP-13,proto8/thinking/2026-11/05/no-pid/08-P1實作結果.md:19,claude,live_in_cell 沒補 boot_id（後在 P9 自己修掉）,細節,純實作,—,維持,—
+NP-14,proto8/thinking/2026-11/05/no-pid/09-P2實作結果.md:16,claude,讀到壞 ctl 也算有反應,細節,判法細節；後果（同內容重寫誤判）使用者答「好」改文件,—,維持,—
+NP-15,proto8/thinking/2026-11/05/no-pid/09-P2實作結果.md:17,claude,daemon 欄照字面記繼承字串，空＝null,細節,純實作,—,維持,—
+NP-16,proto8/thinking/2026-11/05/no-pid/09-P2實作結果.md:18,claude,ping 必須是 JSON true,細節,純實作,—,維持,—
+NP-17,proto8/thinking/2026-11/05/no-pid/09-P2實作結果.md:19,claude,daemon 哪些事件算有反應,細節,純實作,—,維持,—
+NP-18,proto8/thinking/2026-11/05/no-pid/09-P2實作結果.md:20,claude,state.json 欄位順序,細節,純實作,—,維持,—
+NP-19,proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md:24,claude（codex 寫碼）,daemon_ctl 模組放 proto8/py/,細節,檔案擺哪,—,維持,—
+NP-20,proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md:25,claude,find_daemon 只驗資料夾＋realpath,細節,純實作,—,維持,—
+NP-21,proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md:26,claude,aos-daemon-ctl 沒給 --reply-to 看 3 秒信有沒有被認領,細節,後改成 --timeout-s 預設 3；11-07 永遠直寄,—,維持,—
+NP-22,proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md:27,claude,加 aos-daemon-ctl ping 子命令,細節,順著「詢問daemon也是一個正統管道」,「詢問daemon也是一個正統管道。」（no-pid/README.md:13）,維持,—
+NP-23,proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md:28,claude,ls 上一層看法放 stdout 最後一行 # 開頭,細節,輸出格式,—,維持,—
+NP-24,proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md:29,claude,daemon 欄是相對路徑就不猜、印一句,細節,純實作,—,維持,—
+NP-25,proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md:30,claude,aos-agent ctl 30 秒沒回信＝DaemonMissing,方向性-已裁,30 秒固定值使用者裁掉，改 --timeout-s,「由寄信者自己設定。然後30秒？這不該是固定值，同樣該由寄信者自己設定。判官會輔助。」（os-impl/README.md:14）,維持（已改）,—
+NP-26,proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md:31,claude,「有人在跑」＝表上 phase running/stopping；listen 等 10 秒提醒,細節,純實作,—,維持,—
+NP-27,proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md:32,claude,共用回信信箱加 .reply.lock,細節,純實作,—,維持,—
+NP-28,proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md:33,claude,aos-agent 叫 screen 時把 AOS_DAEMON 傳下去,細節,純實作,—,維持,—
+NP-29,proto8/thinking/2026-11/05/no-pid/10-P3實作結果.md:34,claude,check_limits 只留一份,細節,純實作,—,維持,—
+NP-30,proto8/thinking/2026-11/05/no-pid/11-P4實作結果.md:12,claude,GoalMissing 拿掉改 ArgumentsBad（照 J1 推薦）,細節,錯誤代號,—,維持,—
+NP-31,proto8/thinking/2026-11/05/no-pid/11-P4實作結果.md:21,claude,thought 子名改 t-<父名>-<UTC 毫秒>-<4 hex>,細節,命名,—,維持,—
+NP-32,proto8/thinking/2026-11/05/no-pid/11-P4實作結果.md:22,claude,判主人在不在用租約、不用 pid,細節,照 no-pid 方向推得出,—,維持,—
+NP-33,proto8/thinking/2026-11/05/no-pid/11-P4實作結果.md:23,claude,租約用 UTC ISO 8601 到秒,細節,照 C-54 R6,—,維持,—
+NP-34,proto8/thinking/2026-11/05/no-pid/11-P4實作結果.md:24,claude,TERM 時只改檔不寄信,細節,純實作,—,維持,—
+NP-35,proto8/thinking/2026-11/05/no-pid/11-P4實作結果.md:25,claude,租約過了先 ctl stop 再記 failed,細節,純實作,—,維持,—
+NP-36,proto8/thinking/2026-11/05/no-pid/11-P4實作結果.md:26,claude,掛子的信沒回＝記 failed 不刪,細節,純實作,—,維持,—
+NP-37,proto8/thinking/2026-11/05/no-pid/11-P4實作結果.md:27,claude,_tooldef env 欄只列必須靠它的 hub,細節,純實作,—,維持,—
+NP-38,proto8/thinking/2026-11/05/no-pid/11-P4實作結果.md:28,claude,--help 印 Environment: 一行放 tool_io,細節,純實作,—,維持,—
+NP-39,proto8/thinking/2026-11/05/no-pid/11-P4實作結果.md:29,claude,keep 時先 ctl stop 再記 kept,細節,純實作,—,維持,—
+NP-40,proto8/thinking/2026-11/05/no-pid/11-P4實作結果.md:30,claude,thought HELP 只改受影響句、Arguments 段留給 J2,細節,範圍切分,—,維持,—
+NP-41,proto8/thinking/2026-11/05/no-pid/12-P5b條文結果.md:25,claude,N-09 不改,細節,條文加註範圍,—,維持,—
+NP-42,proto8/thinking/2026-11/05/no-pid/12-P5b條文結果.md:26,claude,本來超 8 KB 的條文檔不拆,細節,wf 規矩的例外，lint 會提醒,—,維持,—
+NP-43,proto8/thinking/2026-11/05/no-pid/12-P5b條文結果.md:27,claude,未實作一律標規劃中,細節,加註寫法,—,維持,—
+NP-44,proto8/thinking/2026-11/05/no-pid/12-P5b條文結果.md:28,claude,N-63 不寫「唯一的路」，明給都算給,細節,有原話,「誰也限制不了你透過其他方式傳遞daemon位置」（no-pid/README.md:13）,維持,—
+NP-45,proto8/thinking/2026-11/05/no-pid/12-P5b條文結果.md:29,claude,DaemonMissing 兩種意思只加註,細節,同 NP-08,—,維持,—
+NP-46,proto8/thinking/2026-11/05/no-pid/12-P5b條文結果.md:30,claude,N-15 窗與鎖看 pid 先不動、等 T2,細節,排程；aos-lock 方向使用者已裁,「aos-lock就改檔案鎖。」（no-pid/README.md:65）,維持,—
+NP-47,proto8/thinking/2026-11/05/no-pid/12-P5b條文結果.md:31,claude,附錄2 各批原話沒新增 11-05 批,細節,文件維護範圍,—,維持,—
+NP-48,proto8/thinking/2026-11/05/no-pid/12-P5b條文結果.md:32,claude,lib 規則 11 跟 N-17/N-63 不一致時改條文那邊,細節,照原話與實作改,—,維持,—
+NP-49,proto8/thinking/2026-11/05/no-pid/12-P5b條文結果.md:33,claude,C-52 例外 ② 作廢只加改讀註,細節,例外表是 agent 開的清單；後使用者裁改判準＋現行表,—,維持,—
+NP-50,proto8/thinking/2026-11/05/no-pid/12-P5b條文結果.md:34,claude,加註用三種標記,細節,格式,—,維持,—
+NP-51,proto8/thinking/2026-11/05/no-pid/13-P5實作結果.md:29,claude,沙箱範例沒寫 mem_mb/cpu_s 上限,細節,這台沒 s6,—,維持,—
+NP-52,proto8/thinking/2026-11/05/no-pid/13-P5實作結果.md:30,claude,沙箱 ro 綁整個 lib/,細節,實測需要,—,維持,—
+NP-53,proto8/thinking/2026-11/05/no-pid/13-P5實作結果.md:31,claude,沙箱模式 1 綁整個 $AOS_DAEMON rw，不用「只 rw 綁 ctl 信箱」,方向性-已裁,跟原話「沙箱裡只要一個信箱就夠」有張力，檔內攤了，使用者選「現在正式支援：照範例綁 daemon、程式不改」，「只要一個信箱」列遠期,「現在正式支援 (Recommended)」（no-pid/13:65）；原話「沙箱裡的東西只要一個信箱就夠」（no-pid/13:57）,維持,—
+NP-54,proto8/thinking/2026-11/05/no-pid/13-P5實作結果.md:32,claude,沙箱模式 2 加 rw 綁 procs/,細節,同 NP-53，給得比需要多已標邊緣,—,維持,—
+NP-55,proto8/thinking/2026-11/05/no-pid/13-P5實作結果.md:33,claude,範例 _entry 照 bash-boxed 用 JSON argv,細節,格式,—,維持,—
+NP-56,proto8/thinking/2026-11/05/no-pid/13-P5實作結果.md:73,claude,沙箱裡讀不到父的腦設定改成報錯、不印 warning,方向性-已裁,G 隊先修，之後使用者選項框選同一案,「報錯 (Recommended)」（no-pid/13:74）,維持,—
+NP-57,proto8/thinking/2026-11/05/no-pid/14-P6實作結果.md:24,sol,子 daemon X 寫 aos-exec 入口、不是一份 daemon.json,方向性-已裁,"整個 {""daemon"": X} 寫法被使用者翻掉",「對於daemon來說，子daemon對他來說就只是一個普通的proc。不要耦合」（no-pid/15:7）,維持（已拿掉）,—
+NP-58,proto8/thinking/2026-11/05/no-pid/14-P6實作結果.md:25,sol,退了先記 sleeping 再同一拍起,細節,隨 P6 作廢,—,維持,—
+NP-59,proto8/thinking/2026-11/05/no-pid/14-P6實作結果.md:26,sol,連 3 次失敗＝連 3 次在 3 秒內退；計數只在記憶體,方向性-已裁,使用者選的 auto_restart 選項原文含「連 3 次都在起來 3 秒內退＝留 stopped＋reason」,「通用 restart: true (Recommended)」（no-pid/15:26）,維持,—
+NP-60,proto8/thinking/2026-11/05/no-pid/14-P6實作結果.md:27,sol,父收子 daemon 等 30 秒才 SIGKILL,方向性-已裁,隨「不要耦合」拿掉、改回 10 秒,「對於daemon來說，子daemon對他來說就只是一個普通的proc。不要耦合」（no-pid/15:7）,維持（已拿掉）,—
+NP-61,proto8/thinking/2026-11/05/no-pid/14-P6實作結果.md:28,sol,stop 子 daemon＝SIGTERM 不寫 ctl,細節,隨 P6 作廢；exec 型本來就 SIGTERM,—,維持,—
+NP-62,proto8/thinking/2026-11/05/no-pid/14-P6實作結果.md:29,sol,父寫子 daemon 的 ctl.json 做 pause/resume,方向性-已裁,隨「不要耦合」拿掉,「對於daemon來說，子daemon對他來說就只是一個普通的proc。不要耦合」（no-pid/15:7）,維持（已拿掉）,—
+NP-63,proto8/thinking/2026-11/05/no-pid/14-P6實作結果.md:30,claude,aos-daemon-ctl add 沒有 daemon 型寫法，要不要加留使用者,方向性-已裁,使用者選先不加,「先不加 (Recommended)」（no-pid/14:30）,維持,—
+NP-64,proto8/thinking/2026-11/05/no-pid/15-P6去耦合.md:17,claude,父收子照舊 10 秒、不加通用 key,細節,照既有 GRACE_MS,—,維持,—
+NP-65,proto8/thinking/2026-11/05/no-pid/15-P6去耦合.md:20,claude,stop/sleep 對寫了 auto_restart 的列放行,方向性-已裁,選項原文含「寫了它的算常駐、可以 stop/sleep」,「通用 restart: true (Recommended)」（no-pid/15:26）,維持,—
+NP-66,proto8/thinking/2026-11/05/no-pid/15-P6去耦合.md:31,claude,_tick 直接展開成 auto_restart: true 的 proc,細節,順著去耦合,—,維持,—
+NP-67,proto8/thinking/2026-11/05/no-pid/15-P6去耦合.md:36,claude,restart_on_stuck 也改成通用布林、名字照 11-05,方向性-已裁,名字使用者說不用改,「不用改。因為單restart，你不知道他想表達的意思。」（no-pid/15:27）,維持,—
+NP-68,proto8/thinking/2026-11/05/no-pid/16-P7重設計.md:33,sol,stuck 刺激只看 ctl.json mtime，不看 seq,細節,判法細節；後果使用者答「好」改文件,「好」（no-pid/17:59）,維持,—
+NP-69,proto8/thinking/2026-11/05/no-pid/16-P7重設計.md:34,sol,期限從父第一次看到起算,細節,純實作,—,維持,—
+NP-70,proto8/thinking/2026-11/05/no-pid/16-P7重設計.md:35,sol,每列選填 stuck_after_ticks，沒寫＝10,細節,把寫死的 10 秒改成可設，順著「不該是固定值」,「由寄信者自己設定。然後30秒？這不該是固定值，同樣該由寄信者自己設定。判官會輔助。」（os-impl/README.md:14）,維持,—
+NP-71,proto8/thinking/2026-11/05/no-pid/16-P7重設計.md:36,sol,不加 responded_at_ticks（翻 apply-ideas 代定 3）,細節,純實作,—,維持,—
+NP-72,proto8/thinking/2026-11/05/no-pid/16-P7重設計.md:37,sol,身體跑很久寫 ctl 會被標 stuck，自己調門檻,細節,邊緣已列；P9 量過,—,維持,—
+NP-73,proto8/thinking/2026-11/05/no-pid/16-P7重設計.md:38,sol,restart_on_stuck 連 3 次上限沿用 3,細節,純實作,—,維持,—
+NP-74,proto8/thinking/2026-11/05/no-pid/16-P7重設計.md:39,sol,人直接寫子 ctl stop 而子卡住時 stop 會被吃掉（已知限制）,細節,純實作,—,維持,—
+NP-75,proto8/thinking/2026-11/05/no-pid/16-P7重設計.md:45,sol,子 daemon「信箱有信沒人收」不算刺激、只看 ctl,方向性-已裁,使用者裁父只看活著,「子daemon管好自己，父daemon只看他有沒有活着，子daemon的其他東西父daemon別碰。盡量解耦合。」（no-pid/17:58）,維持,—
+NP-77,proto8/thinking/2026-11/05/no-pid/17-P7實作結果.md:17,sol,三次上限第一次也計入、實際重起兩次,細節,純實作,—,維持,—
+NP-78,proto8/thinking/2026-11/05/no-pid/17-P7實作結果.md:18,sol,responded_at 晚於基準才清連敗,細節,純實作,—,維持,—
+NP-79,proto8/thinking/2026-11/05/no-pid/17-P7實作結果.md:19,sol,人工 stop/sleep/rm 優先於自動重起,細節,純實作,—,維持,—
+NP-80,proto8/thinking/2026-11/05/no-pid/17-P7實作結果.md:20,sol,表上只在非預設時寫 stuck_after_ticks,細節,純實作,—,維持,—
+NP-81,proto8/thinking/2026-11/05/no-pid/17-P7實作結果.md:21,sol,父重開不保存期限與連敗,細節,純實作,—,維持,—
+NP-82,proto8/thinking/2026-11/05/no-pid/17-P7實作結果.md:79,claude,loop 型接回時看子 state 的 phase==done 照舊保留（邊界）,方向性-未裁,跟「父只看活著」有邊界，隊長自己判「屬生死」，19:57 寫「照舊保留」但沒有使用者引語,「子daemon管好自己，父daemon只看他有沒有活着，子daemon的其他東西父daemon別碰。盡量解耦合。」（no-pid/17:58）,攤給使用者（一句話）,A 維持（讀 done 屬「是否已結束」）｜B 只看 pid（kill -9 父後重開會把跑完的 loop 型再起一次）。推薦 A
+NP-83,proto8/thinking/2026-11/05/no-pid/18-P8實作結果.md:19,sol,試驗場三層的 stack/ws 佈置,細節,試驗場細節,—,維持,—
+NP-84,proto8/thinking/2026-11/05/no-pid/18-P8實作結果.md:19,sol,領班短 sh 用 cd＋exec,細節,入口可是 shell 檔（使用者 10-19）,—,維持,—
+NP-85,proto8/thinking/2026-11/05/no-pid/18-P8實作結果.md:19,sol,根一拍 100ms,細節,純實作,—,維持,—
+NP-86,proto8/thinking/2026-11/05/no-pid/18-P8實作結果.md:21,sol,systemd/s6 不預設、不安裝,細節,順著「root 就是普通 daemon」,「他就是一個普通daemon…使用者要保証他能正常運行」（no-pid/README.md:17）,維持,—
+NP-87,proto8/thinking/2026-11/05/no-pid/18-P8實作結果.md:21,sol,systemd unit 範例參數（KillMode=mixed 等）,細節,範例設定；KillMode A 區已判錯誤行為,—,維持,—
+NP-88,proto8/thinking/2026-11/05/no-pid/18-P8實作結果.md:23,sol,根、領班、總機各自 tick: true,方向性-已裁,使用者選留著,「三個時鐘」領班留著、總機留著（tick-time/05:39）,維持,—
+NP-89,proto8/thinking/2026-11/05/no-pid/18-P8實作結果.md:25,sol,B2 驗法改驗 queue.json.counter_runs,細節,驗收方法,—,維持,—
+OI-01,proto8/thinking/2026-11/06/os-impl/README.md:57,claude（fable）,代定的句子不進 NORMS/CONCEPTS、落程式 docs,細節,跟 user/03「thinking 只留原文、決定、結論」同向,—,維持,—
+OI-02,proto8/thinking/2026-11/06/os-impl/README.md:58,claude,判官排隊 v1 形狀（布林 queue、先來先掛、不回 queued 信、不加上限）,方向性-已裁,上限/過期與回不回信使用者裁了；其餘細節,「由寄信者自己設定。然後30秒？這不該是固定值，同樣該由寄信者自己設定。判官會輔助。」（os-impl/README.md:14）；「窗＋代為到期 (Recommended)」（os-impl/README.md:19）,維持,—
+OI-03,proto8/thinking/2026-11/06/os-impl/README.md:59,claude（fable）,aging 改數 tick：aging_ticks 預設 3、seen_at_ticks,方向性-已裁,改不改是頂層代定，但使用者選的 daemon-board 題 1 選項原文含「kernel 內部計時用自己樹的鐘」；預設 3 是細節,「信裡用毫秒」（daemon-board/README.md:30）；選項原文（daemon-board/02-續:24）,維持,—
+OI-04,proto8/thinking/2026-11/06/os-impl/README.md:60,claude（fable）,範本與試驗場的 daemon 預設帶 --enable-logs（出廠 debug on）,細節,預設值，不改用法；正式用刪一個字,—,維持,—
+OI-05,proto8/thinking/2026-11/06/os-impl/README.md:61,claude（fable）,名詞表板子欄 AOS_TICK_INTERVAL 併進 tick 行,細節,文案擺法,—,維持,—
+OI-06,proto8/thinking/2026-11/06/os-impl/README.md:44,claude（fable）,判「跟既有原則沒有衝突」,細節,兩處細看過；A1 翻的是 fable 自己的代定,—,維持,—
+OI-07,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:5,claude（fable）,A/B/C 三類分類尺,細節,排程方法；使用者裁排程「照做」,「照做，順手給 D 隊 (Recommended)」（os-impl/README.md:17）,維持,—
+OI-08,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:11,claude（fable）,A1 aging 改 tick 的程式改法,細節,同 OI-03,—,維持,—
+OI-09,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:12,claude（fable）,A2 docs 寫「不搶位、不保留格」,方向性-已裁,後被 P9 裁定 1 翻成做留格 C5,「好，都按照推薦」（no-pid/19:51）,維持,—
+OI-10,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:13,claude（fable）,A3 排隊是選填 queue、預設不開,方向性-未裁,同 OC-31（主列）,「通用kernel，我原本預期他就是能管准入也能管排隊...或許可以做選項？」（os-concepts/README.md:22）,攤給使用者,見 OC-31
+OI-11,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:14,claude（fable）,A4 daemon 不排依賴、要等誰 ready 讀 counter_runs 或 ping,細節,使用者沒要過依賴；避免再開 C-52 例外,—,維持,—
+OI-12,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:15,claude（fable）,A5 target＝一份 procs 檔、切 target＝換 $ref,細節,文件一句,—,維持,—
+OI-13,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:16,claude（fable）,A6 stack 總量 aos 不量,細節,照 C-52 不替下層量,—,維持,—
+OI-14,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:17,claude（fable）,A7 exec＝oneshot、loop＝longrun、daemon＝bundle 一句,細節,文件比喻；daemon 型後已拿掉,—,維持,—
+OI-15,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:18,claude（fable）,A8 名詞表板子欄補三行,細節,使用者裁了寫進名詞表、≤12 行,「寫進名詞表」（daemon-board/README.md:30）,維持,—
+OI-16,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:19,claude（fable）,A9 P8 食譜六段,細節,食譜內容,—,維持,—
+OI-17,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:20,claude（fable）,A10 出廠 debug on,細節,同 OI-04,—,維持,—
+OI-18,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:21,claude（fable）,A11 aos-fsm docs 一句（entry/exit/guard/history）,細節,文件一句,—,維持,—
+OI-19,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:22,claude（fable）,A12 釘核/降權在 exec 自己包 taskset/nice，明寫偏離「建議經 daemon」,方向性-未裁,跟使用者 11-06 補的原則「建議經 daemon」字面打架；檔內標了偏離，README 方向題沒帶給他；C3 limits.nice 排在 B3 門檻後,使用者 11-06 稍後補的四段：「建議」經 daemon（os-concepts/README.md:9；原文 os-concepts/09）,攤給使用者（一句話）,A 維持：先不做 limits.nice，exec 自己包，等 B3 壓測被餓再加（1 h）｜B 照原話現在就加 limits.nice/sched 經 daemon（兩行系統呼叫）。推薦 A，但原話是他定的，要他點頭
+OI-20,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:23,claude（fable）,A13 systemd-run scope 包根 daemon 食譜,方向性-已裁,使用者選了,「systemd 食譜 (Recommended)」（os-concepts/README.md:21）,維持,—
+OI-21,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:24,claude（fable）,A14 共用 stack 自己用 aos-lock、aos 不擋,細節,照 C-67,—,維持,—
+OI-22,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:25,claude（fable）,A15 省電模式表：葉先根後,細節,文件,—,維持,—
+OI-23,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:26,claude（fable）,A16 kernel 不跨樹搬 proc,細節,C12 不做的配套,—,維持,—
+OI-24,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:27,claude（fable）,A17 一致性只到單檔暫存改名,細節,文件一句,—,維持,—
+OI-25,proto8/thinking/2026-11/06/os-impl/01-逐項分類.md:28,claude（fable）,A18 .env 跟樹走、這台的值用 export,細節,照 N-67 推得出,—,維持,—
+OI-26,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:9,claude（fable）,A19 agents 工具存相對路徑,方向性-已裁,使用者裁排程,「照做，順手給 D 隊 (Recommended)」（os-impl/README.md:17）,維持,—
+OI-27,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:10,claude（fable）,A20 三處 README 寫「搬不走什麼」,細節,文件,—,維持,—
+OI-28,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:16,claude（fable）,B1 判官排隊獨立一步,方向性-已裁,排程使用者裁,「照做，順手給 D 隊 (Recommended)」（os-impl/README.md:17）,維持,—
+OI-29,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:17,claude（fable）,B2 P8 最短路驗法腳本,方向性-已裁,排程使用者裁,「照做，順手給 D 隊 (Recommended)」（os-impl/README.md:17）,維持,—
+OI-30,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:18,claude（fable）,B3 五條量測門檻（3 次、2×、100 MB、×50、100 個）,細節,量測觸發門檻，不改行為,—,維持,—
+OI-31,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:24,claude（fable）,C1 limits 加 cgroup key 等 root 小程式,方向性-已裁,使用者選 systemd 食譜,「systemd 食譜 (Recommended)」（os-concepts/README.md:21）,維持,—
+OI-32,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:25,claude（fable）,C2 一個 agent 一個帳號等使用者開題,細節,遠期；使用者說「更往後」,「喔不是，應該說一個agent一個賬號。」（no-pid/README.md:21）,維持,—
+OI-33,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:26,claude（fable）,C3 limits.nice/sched 等 B3 門檻,細節,同 OI-19 的排程半,—,維持,—
+OI-34,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:27,claude（fable）,C4 daemon 認 sandbox key 先不做,細節,條件觸發,—,維持,—
+OI-35,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:28,claude（fable）,C5 留格 reserved high 等 B3,方向性-已裁,P9 裁定 1 改成現在做,「好，都按照推薦」（no-pid/19:51）,維持,—
+OI-36,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:29,claude（fable）,C6 slots/max_running 跑中改先不開,細節,條件觸發,—,維持,—
+OI-37,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:30,claude（fable）,C7 procs 列 after 先不做,細節,同 OI-11,—,維持,—
+OI-38,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:31,claude（fable）,C8 表寫入 fsync 先不做,細節,條件觸發,—,維持,—
+OI-39,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:32,claude（fable）,C9 endpoints 拆檔先不做,細節,使用者 Q1-2 不搬 url/model 同向,「不搬，只搬金鑰 (Recommended)」（env-portability/README.md:35）,維持,—
+OI-40,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:33,claude（fable）,C10 ctl state 印值來源先不做,細節,條件觸發,—,維持,—
+OI-41,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:34,claude（fable）,C11 判官 max_wait_ticks 放 judge.json,方向性-已裁,使用者裁由寄信者設 → 改 queue_wait_ms,「由寄信者自己設定。然後30秒？這不該是固定值，同樣該由寄信者自己設定。判官會輔助。」（os-impl/README.md:14）,維持,—
+OI-42,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:35,claude（fable）,C12 跨樹 placement 不做,細節,使用者沒要過,—,維持,—
+OI-43,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:39,claude（fable）,N-67 ②④ 已被既有排程蓋到、不另開,細節,排程,—,維持,—
+OI-44,proto8/thinking/2026-11/06/os-impl/01-逐項分類-續.md:40,claude（fable）,不放寬、SIGSTOP/CRIU/affinity/oom 不碰、軟凍照 D1,細節,不放寬與 D1 使用者裁了，其餘是天然差異,「不放寬 (Recommended)」（os-concepts/README.md:20）,維持,—
+OI-45,proto8/thinking/2026-11/06/os-impl/02-插大重構表.md:11,claude（fable）,0 處必插大重構,細節,排程結論，使用者裁「照做」,「照做，順手給 D 隊 (Recommended)」（os-impl/README.md:17）,維持,—
+OI-46,proto8/thinking/2026-11/06/os-impl/02-插大重構表.md:17-22,claude（fable）,六項不插的理由,細節,排程,—,維持,—
+OI-47,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:5,claude（fable 子）,預設不開＝沒寫 false＝現況,方向性-未裁,同 OC-31（主列）,「通用kernel，我原本預期他就是能管准入也能管排隊...或許可以做選項？」（os-concepts/README.md:22）,攤給使用者,見 OC-31
+OI-48,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:11,claude（fable 子）,judge.json 加選填布林 queue,細節,key 名照 C-54,—,維持,—
+OI-49,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:13,claude（fable 子）,只有要格的信排隊,細節,純實作,—,維持,—
+OI-50,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:14,claude（fable 子）,信留 requests/cur、判官寫窗 queue.json,方向性-已裁,使用者選窗,「窗＋代為到期 (Recommended)」（os-impl/README.md:19）,維持,—
+OI-51,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:15,claude（fable 子）,先來先掛、不認 priority、不 aging,細節,判官只管一種資源（N-42 界線）；排法寫檔頭使用者裁了,「不算、檔頭寫明 (Recommended)」（mailbox-naming/README.md:11）,維持,—
+OI-52,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:16,claude（fable 子）,每輪只看 queue.json 名字與格數,細節,純實作,—,維持,—
+OI-53,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:17,claude（fable 子）,有格時照現有 forward,細節,照 C-47,—,維持,—
+OI-54,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:18,claude（fable 子）,排隊時不回 queued 信,方向性-已裁,使用者選窗、不做通知信,「窗＋代為到期 (Recommended)」（os-impl/README.md:19）,維持,—
+OI-55,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:19,claude（fable 子）,寄件人照舊等 30 秒＝DaemonMissing,方向性-已裁,被使用者翻掉,「由寄信者自己設定。然後30秒？這不該是固定值，同樣該由寄信者自己設定。判官會輔助。」（os-impl/README.md:14）,維持,—
+OI-56,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:20,claude（fable 子）,撤隊用 aos-post done,細節,純實作,—,維持,—
+OI-57,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:21,claude（fable 子）,v1 不加上限/過期,方向性-已裁,被使用者翻掉,「由寄信者自己設定。然後30秒？這不該是固定值，同樣該由寄信者自己設定。判官會輔助。」（os-impl/README.md:14）,維持,—
+OI-58,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:22,claude（fable 子）,排隊中不算 running,細節,純實作,—,維持,—
+OI-59,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:23,claude（fable 子）,判官睡著時信留 cur、醒來接著排,方向性-已裁,使用者 11-07 說判官睡著是使用者自己管的風險,「判官睡着，這是使用者在設計系統時要承擔與管理的風險。」（os-impl/08:17）,維持,—
+OI-60,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:24,claude（fable 子）,有序 add 再有序 stop 可能反序＝自擔,細節,邊緣,—,維持,—
+OI-61,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:28,claude（fable 子）,判無衝突、N-42 (2) 旁加一句,細節,條文加註,—,維持,—
+OI-62,proto8/thinking/2026-11/06/os-impl/03-判官排隊選項.md:32,claude（fable 子）,改哪些檔、不另開條號,細節,純實作,—,維持,—
+OI-63,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:13,claude,把原話讀成「等多久」「等滿算什麼」兩層都由寄信者設,方向性-已裁,原話答的題目就是「算什麼」，解讀合理；窗那半使用者再裁了,「由寄信者自己設定。然後30秒？這不該是固定值，同樣該由寄信者自己設定。判官會輔助。」（os-impl/README.md:14）；「窗＋代為到期 (Recommended)」（os-impl/README.md:19）,維持,—
+OI-64,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:14,claude,「判官會輔助」＝窗＋代為到期,方向性-已裁,使用者選了,「窗＋代為到期 (Recommended)」（os-impl/README.md:19）,維持,—
+OI-65,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:21,claude,ctl 子命令加 --timeout-s 預設 30,細節,把固定值改可設，預設＝現值,—,維持,—
+OI-66,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:22,claude,--on-queued fail|ok 預設 fail,細節,預設＝現況,—,維持,—
+OI-67,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:23,claude,fail 時 body 帶 queue_wait_ms,細節,照 N-66 一箱一函數,—,維持,—
+OI-68,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:24,claude,queue_wait_ms 非負整數、0＝不排,細節,純實作,—,維持,—
+OI-69,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:25,claude（行尾 sol）,queue.json 欄位、陣列順序＝排第幾,細節,窗格式；檔頭寫明排法使用者裁了,—,維持,—
+OI-70,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:26,claude,到期回 SlotMissing 拒信,細節,代號沿用,—,維持,—
+OI-71,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:27,claude,daemon 忽略轉來的 queue_wait_ms,細節,照 C-48,—,維持,—
+OI-72,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:28,claude,排隊期限全用牆鐘、不開 --timeout-ticks；後果：凍住 8 小時醒來排隊信全部到期被拒,方向性-未裁,使用者的 tick 方向是「aos 內部約時間用 tick」，等判官回信是內部；照 N-65 ③「信裡毫秒」選了牆鐘，但凍住後全到期這個後果沒帶給他,「推薦大家用tick回合數來算」「精確時間只給人類體驗／外部交互／Linux proc」（11-05 日誌:68）,攤給使用者（一句話）,A 維持牆鐘：要跨凍住排隊就 --on-queued ok 不帶期限（已寫 kernel docs/02）｜B 加 --timeout-ticks/queue_wait_ticks 走兩鐘規則（T6 已有 tick 等待的寫法，約 1 h）。推薦 A，告知後果
+OI-73,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:29,claude,aos-daemon-ctl 加 --queue-wait-s、看 3 秒改 --timeout-s,方向性-已裁,11-07 使用者裁永遠直寄，--queue-wait-s 拿掉,「aos-daemon-ctl 永遠直寄（使用者 11-07 選項框）」（os-impl/08:11）,維持,—
+OI-74,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:30,claude,agents 工具加 ctl_timeout_s（預設 30、上限 1700）、on_queued,細節,參數化，預設＝現值,—,維持,—
+OI-75,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:31,claude,thought 不開 on_queued,細節,一次性呼叫；判準已寫,—,維持,—
+OI-76,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:32,claude,不加新錯誤代號,細節,同 NP-08,—,維持,—
+OI-77,proto8/thinking/2026-11/06/os-impl/05-寄信者自設逾時.md:36-42,claude,等滿時 fail/ok 各怎麼算、REPLY_GRACE 1 秒,細節,由寄信者選，守「不回＝失敗」,—,維持,—
+OI-78,proto8/thinking/2026-11/06/os-impl/05-續-邊緣排程與方向題.md:7,claude,ok 之後的回信不清、超 100 封才加清理,細節,門檻,—,維持,—
+OI-79,proto8/thinking/2026-11/06/os-impl/05-續-邊緣排程與方向題.md:8,claude,凍住醒來排隊信全到期＝寫進 docs,細節,是 OI-72 的後果，列在那條,—,維持,—
+OI-80,proto8/thinking/2026-11/06/os-impl/05-續-邊緣排程與方向題.md:14-15,claude,跟 B1 合成一步排 P9 後、約 4.5 h,細節,排程,—,維持,—
+OI-81,proto8/thinking/2026-11/06/os-impl/05-續-邊緣排程與方向題.md:16,claude,ctl_timeout_s 只開在 new/add/rm,細節,修正 op 範圍,—,維持,—
+OI-82,proto8/thinking/2026-11/06/os-impl/05-續-邊緣排程與方向題.md:16,claude,aos-agent pause/resume 不開 --timeout-s,細節,沿用 5 秒,—,維持,—
+OI-83,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:5,claude,判準：寄信者等的改可設、收信者/輪詢/寬限不改,細節,把原話延伸成全程式的尺，方向一致,「由寄信者自己設定。然後30秒？這不該是固定值，同樣該由寄信者自己設定。判官會輔助。」（os-impl/README.md:14）,維持,—
+OI-84,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:11-15,claude,要改五項（WAIT_S 30、wait_taken 3、APPLY_S 5、agents、--queue-wait-s）,細節,照上一條；--queue-wait-s 後拿掉,—,維持,—
+OI-85,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:21,claude,REPLY_GRACE 1 秒不改,細節,純實作,—,維持,—
+OI-86,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:22,claude,ping --timeout-s 已可設不改,細節,純實作,—,維持,—
+OI-87,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:23,claude,listen/ask/thought timeout 已可設不改,細節,純實作,—,維持,—
+OI-88,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:24,claude,listen 10 秒提醒門檻不改,細節,純實作,—,維持,—
+OI-89,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:25,claude,thought 掛子照 aos-agent 預設,細節,純實作,—,維持,—
+OI-90,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:26,claude,STEP_S 90、TERM→KILL 5 秒不改,細節,等自己子行程的寬限,—,維持,—
+OI-91,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:27,claude,self_tools 60/aos-tools 10/memory 30 秒不改,細節,本機子行程保險,—,維持,—
+OI-92,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:28,claude,aos-mcp --timeout-s、time_ms 已可設,細節,純實作,—,維持,—
+OI-93,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:29,claude,aos-llm 等回信已由寄信者設,細節,純實作,—,維持,—
+OI-94,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:30,claude,kernel timeout_ms 120/600 秒是收信者自己的,細節,純實作,—,維持,—
+OI-95,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:31,claude,GRACE_MS 10 秒、REVIVE_MS 3 秒等不改,細節,寬限與分類字樣；tick Q5 使用者「隨意」,—,維持,—
+OI-96,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:32,claude,P7 stuck 10 秒已排 stuck_after_ticks,細節,純實作,—,維持,—
+OI-97,proto8/thinking/2026-11/06/os-impl/05-續2-寫死的等待盤點.md:33,claude,輪詢 sleep 0.05～0.2 不改,細節,純實作,—,維持,—
+OI-98,proto8/thinking/2026-11/06/os-impl/06-判官排隊第二步實作結果.md:24,claude,到期一律回 SlotMissing、含拿到時已過期不轉,細節,純實作,—,維持,—
+OI-99,proto8/thinking/2026-11/06/os-impl/06-判官排隊第二步實作結果.md:25,claude,逾時撤信現在就做,方向性-已裁,P9 裁定 2 使用者照推薦併這步,「好，都按照推薦」（no-pid/19:51）,維持,—
+OI-100,proto8/thinking/2026-11/06/os-impl/06-判官排隊第二步實作結果.md:26,claude,agents op add 帶 llm/tools 時不能用 on_queued ok,細節,照 C-52 不猜子 stack,—,維持,—
+OI-101,proto8/thinking/2026-11/06/os-impl/06-判官排隊第二步實作結果.md:27,claude,ok 排隊的孩子被拒不收拒信（已知限制）,細節,等撞到再加,—,維持,—
+OI-102,proto8/thinking/2026-11/06/os-impl/06-判官排隊第二步實作結果.md:28,claude,E2 的 Python 半（AOS_KERNEL 設了指不到）維持報錯 MailboxMissing，不照 Q5 改 warning,方向性-未裁,使用者 Q5 選的是「印 warning、不報錯」，agent 判 Python 半不照字面做；理由寫了但沒回頭問他,「印 warning (Recommended)」（env-portability/README.md:32）,攤給使用者（一句話）,A 維持：aos-agent 經判官時指不到＝MailboxMissing 報錯（比 warning 更看得見；退回 daemon 信箱會悄悄繞過判官）｜B 照 Q5 字面改 warning＋退路。推薦 A，請他確認 Q5 只管 C++/aos-llm-kernel 那半
+OI-103,proto8/thinking/2026-11/06/os-impl/07-C5留格與AOS_KERNEL提醒實作結果.md:19,claude,C5 只做 kernel 頂層 slots、不做包層,細節,P9 量到的是頂層,—,維持,—
+OI-104,proto8/thinking/2026-11/06/os-impl/07-C5留格與AOS_KERNEL提醒實作結果.md:20,claude,留格只認宣告級數不含 aging,細節,純實作,—,維持,—
+OI-105,proto8/thinking/2026-11/06/os-impl/07-C5留格與AOS_KERNEL提醒實作結果.md:21,claude,不加 reserved 窗,細節,純實作,—,維持,—
+OI-106,proto8/thinking/2026-11/06/os-impl/07-C5留格與AOS_KERNEL提醒實作結果.md:22,claude,E2 Python 半維持報錯（重述）,方向性-未裁,同 OI-102（主列）,同 OI-102,攤給使用者,見 OI-102
+OI-107,proto8/thinking/2026-11/06/os-impl/08-aos-daemon-ctl永遠直寄實作結果.md:39,claude,--queue-wait-s 整個拿掉、不留舊名,細節,順著 11-07 裁定與「proto8 沒有舊版」,「aos-daemon-ctl 永遠直寄」（os-impl/08:11）,維持,—
+OI-108,proto8/thinking/2026-11/06/os-impl/08-aos-daemon-ctl永遠直寄實作結果.md:40,claude,不提醒「設了 AOS_KERNEL 但這支不看」,細節,裁定原文就是不管 AOS_KERNEL,—,維持,—
+OI-109,proto8/thinking/2026-11/06/os-impl/08-aos-daemon-ctl永遠直寄實作結果.md:41,claude,共用套件 direct 預設 False、aos-daemon-ctl 明帶 True,細節,純實作,—,維持,—
+OI-110,proto8/thinking/2026-11/06/os-impl/08-aos-daemon-ctl永遠直寄實作結果.md:42,claude,歷史 thinking 不改,細節,純實作,—,維持,—
+OC-01,proto8/thinking/2026-11/06/os-concepts/08-天然差異.md:7,claude（fable）,三段式比喻寫進名詞表仍守 ≤12 行,細節,寫進名詞表使用者裁了,「寫進名詞表」（daemon-board/README.md:30）,維持,—
+OC-02,proto8/thinking/2026-11/06/os-concepts/08-天然差異.md:8,claude（fable）,依賴順序 after 不加,細節,使用者沒要過；避免再開 C-52 例外,—,維持,—
+OC-03,proto8/thinking/2026-11/06/os-concepts/08-天然差異.md:9,claude（fable）,nice/affinity 不進 limits、exec 自己包 taskset（偏離「建議經 daemon」）,方向性-未裁,同 OI-19（主列）,同 OI-19,攤給使用者,見 OI-19
+OC-04,proto8/thinking/2026-11/06/os-concepts/08-天然差異.md:10,claude（fable）,多台 daemon 不做自動 placement,細節,照原則推得出,—,維持,—
+OC-05,proto8/thinking/2026-11/06/os-concepts/08-天然差異.md:11,claude（fable）,範本 daemon 預設 --enable-logs,細節,同 OI-04,—,維持,—
+OC-06,proto8/thinking/2026-11/06/os-concepts/08-天然差異.md:12,claude（fable）,不加 fsync/CRC，靠食譜 sync,細節,照原則推得出,—,維持,—
+OC-07,proto8/thinking/2026-11/06/os-concepts/08-天然差異.md:13,claude（fable）,slots/max_running 不開 ctl,細節,條件觸發,—,維持,—
+OC-08,proto8/thinking/2026-11/06/os-concepts/08-天然差異.md:14,claude（fable）,改定義生效時機不統一,細節,照 C-56 一件事一個地方,—,維持,—
+OC-09,proto8/thinking/2026-11/06/os-concepts/08-天然差異.md:15,claude（fable）,daemon 先不認 sandbox key,細節,同 OI-34,—,維持,—
+OC-10,proto8/thinking/2026-11/06/os-concepts/09-續-偏離建議的地方與方向題.md:28,claude（fable）,limits 新 key 只在兩行系統呼叫做得完時加,細節,順著使用者選 systemd 食譜,「systemd 食譜 (Recommended)」（os-concepts/README.md:21）,維持,—
+OC-11,proto8/thinking/2026-11/06/os-concepts/09-續-偏離建議的地方與方向題.md:29,claude（fable）,flock 是此刻這台的語意、不經 daemon,細節,鎖不是 Linux 行程機制；10 的形狀使用者裁了,「概念＋檢查單 (Recommended)」（os-concepts/README.md:19）,維持,—
+OC-12,proto8/thinking/2026-11/06/os-concepts/09-續-偏離建議的地方與方向題.md:30,claude（fable）,不另開 board.json，走環境變數＋食譜,細節,照原則推得出,—,維持,—
+OC-13,proto8/thinking/2026-11/06/os-concepts/09-續-偏離建議的地方與方向題.md:9-18,claude（fable）,8 處偏離「建議經 daemon」判成「不當衝突」、不帶給使用者,方向性-未裁,user/03 要求跟原則的衝突要帶給他；這 8 處（setsid/killpg 殺自己的子、flock、ctl…）多數合理，但判定本身沒讓他看,「建議」經 daemon（使用者 11-06 補的四段，os-concepts/README.md:9）,攤給使用者（一行）,列一行「這 8 處我判不算衝突，理由是父殺自己的子是 inst 基本功能」給他掃一眼；推薦維持
+OC-14,proto8/thinking/2026-11/06/os-concepts/09-Linux原生機制與可遷移性.md:25,claude（fable）,不加 mode key、食譜搬完重設擁有者,細節,照 C-64 權限是使用者的事,—,維持,—
+OC-15,proto8/thinking/2026-11/06/os-concepts/09-Linux原生機制與可遷移性.md:27,claude（fable）,affinity/oom 不做、標天然差異,細節,照原則推得出,—,維持,—
+OC-16,proto8/thinking/2026-11/06/os-concepts/09-Linux原生機制與可遷移性.md:28,claude（fable）,cgroup 等 root 小程式、daemon 不讀 memory.current,方向性-已裁,整樹總額使用者選 systemd 食譜,「systemd 食譜 (Recommended)」（os-concepts/README.md:21）,維持,—
+OC-17,proto8/thinking/2026-11/06/os-concepts/02-OS與kernel-能借鑒.md:24-25,claude（fable）,runlevel＝一份 procs 檔切 $ref，不加 targets key,細節,照原則推得出,—,維持,—
+OC-18,proto8/thinking/2026-11/06/os-concepts/02-OS與kernel-能借鑒.md:31-33,claude（fable）,優先序反轉：推薦不保留格,方向性-已裁,P9 裁定 1 翻成做留格,「好，都按照推薦」（no-pid/19:51）,維持,—
+OC-19,proto8/thinking/2026-11/06/os-concepts/02-OS與kernel-能借鑒.md:45-46,claude（fable）,stack 總量 aos 不量,細節,同 OI-13,—,維持,—
+OC-20,proto8/thinking/2026-11/06/os-concepts/02-OS與kernel-能借鑒.md:51,claude（fable）,oneshot/longrun/bundle 一句寫 N-28 旁不進名詞表,細節,文案擺哪,—,維持,—
+OC-21,proto8/thinking/2026-11/06/os-concepts/04-韌體與定義-能借鑒.md:10-11,claude（fable）,值住哪四層寫進板子欄,細節,比喻說明,—,維持,—
+OC-22,proto8/thinking/2026-11/06/os-concepts/04-韌體與定義-能借鑒.md:16-17,claude（fable）,回滾靠 git 食譜、不做雙份定義,細節,照原則推得出,—,維持,—
+OC-23,proto8/thinking/2026-11/06/os-concepts/04-韌體與定義-能借鑒.md:28-29,claude（fable）,fsm.json 不加 on_enter/on_exit,細節,照 C-49,—,維持,—
+OC-24,proto8/thinking/2026-11/06/os-concepts/04-韌體與定義-能借鑒.md:37-41,claude（fable）,endpoints 不拆檔、標天然差異,方向性-已裁,使用者 Q1-2 不搬 url/model,「不搬，只搬金鑰 (Recommended)」（env-portability/README.md:35）,維持,—
+OC-25,proto8/thinking/2026-11/06/os-concepts/04-韌體與定義-能借鑒.md:60,claude（fable）,.env 每一跳讀、名詞表補半句不改 N-59,細節,照 N-59 現況,—,維持,—
+OC-26,proto8/thinking/2026-11/06/os-concepts/07-很多核-能借鑒.md:28-29,claude（fable）,共用 stack 提醒用 aos-lock、不拒絕,細節,照 C-67,—,維持,—
+OC-27,proto8/thinking/2026-11/06/os-concepts/07-很多核-能借鑒.md:34-35,claude（fable）,sleep 葉先根後寫 docs/03,細節,文件,—,維持,—
+OC-28,proto8/thinking/2026-11/06/os-concepts/07-很多核-能借鑒.md:46-47,claude（fable）,一致性只到單檔寫 N-14 旁,細節,條文加註,—,維持,—
+OC-29,proto8/thinking/2026-11/06/os-concepts/10-可遷移性原則草稿與root例外.md:36-42,claude（fable）,root daemon 可放寬表,方向性-已裁,使用者選概念＋檢查單照 10 的形狀,「概念＋檢查單 (Recommended)」（os-concepts/README.md:19）；原話「在使用者作為保底的情況下，實作上可以稍微拉扯一下」,維持,—
+OC-30,proto8/thinking/2026-11/06/os-concepts/10-可遷移性原則草稿與root例外.md:46-49,claude（fable）,子 daemon 不放寬、root 重建四步,細節,順著可遷移性與「不放寬」,—,維持,—
+OC-31,proto8/thinking/2026-11/06/os-concepts/README.md:22,claude（頂層）,判官排隊做成選項、頂層代定預設不開,方向性-未裁,預設值走哪邊會改使用者用法：他原話「我原本預期他就是能管准入也能管排隊」偏向排隊是常態，頂層卻選預設關（＝跟現況一樣快）、標可翻，之後沒再問,「通用kernel，我原本預期他就是能管准入也能管排隊...或許可以做選項？」（os-concepts/README.md:22）,攤給使用者,A 維持預設關：格滿立刻 SlotMissing、要排的自己在 judge.json 開 queue: true｜B 預設開（範本 daemon-judge 帶 queue: true）：格滿時 ctl add 會等到 --timeout-s 到期，符合他「本來就該能管排隊」的預期。推薦 B 範本帶 true、程式預設仍 false（跟 tick: true 同一做法）
+OC-32,proto8/thinking/2026-11/06/os-concepts/README.md:23,claude（頂層）,aging 改數 tick、預設 aging_ticks 3（頂層代定）,方向性-已裁,daemon-board 題 1 使用者選的選項原文含「kernel 內部計時用自己樹的鐘」；預設 3 是細節,「信裡用毫秒」（daemon-board/README.md:30）；選項原文（daemon-board/02-續:24）,維持,—
+OC-33,proto8/thinking/2026-11/06/os-concepts/README.md:46,claude（fable）,no-pid 那批要不要放寬：本夾不判,方向性-已裁,使用者選不放寬,「不放寬 (Recommended)」（os-concepts/README.md:20）,維持,—
+OC-34,proto8/thinking/2026-11/06/os-concepts/README.md:42-45,claude（fable）,方向題 1/3/4 的推薦,方向性-已裁,三題都問過、都裁了,「通用kernel，我原本預期他就是能管准入也能管排隊...或許可以做選項？」（os-concepts/README.md:22）；「systemd 食譜」；「概念＋檢查單 (Recommended)」（os-concepts/README.md:19）,維持,—
+DB-01,proto8/thinking/2026-11/06/daemon-board/README.md:43,claude（fable）,看門狗不加餵狗,細節,照 N-09/N-32 不翻,—,維持,—
+DB-02,proto8/thinking/2026-11/06/daemon-board/README.md:44,claude（fable）,冷啟/熱啟不加 boot 欄,細節,照 C-56,—,維持,—
+DB-03,proto8/thinking/2026-11/06/daemon-board/README.md:45,claude（fable）,中斷優先序不加信封欄位、多開信箱,細節,順著「不與 aos-post 耦合太深」,「四題都按照推薦。……所以不要去與aos-post耦合太深。」（body-protocol/README.md:9）,維持,—
+DB-04,proto8/thinking/2026-11/06/daemon-board/README.md:46,claude（fable）,省電模式表寫 docs/03 不進 CONCEPTS,細節,文案擺哪,—,維持,—
+DB-05,proto8/thinking/2026-11/06/daemon-board/README.md:47,claude（fable）,SIGSTOP 記成軟凍候選,方向性-已裁,使用者翻掉,「我知道linux有原生暫停，但我想要的是暫停後能遷移。」（daemon-board/README.md:13）,維持,—
+DB-06,proto8/thinking/2026-11/06/daemon-board/README.md:34-37,claude（fable）,四題推薦（毫秒、近的贏、名詞表、先不補）,方向性-已裁,四題使用者逐題裁,使用者 11-06 逐題：1「信裡用毫秒」、2「設，近的贏」、3「寫進名詞表」、4「先不補」（daemon-board/README.md:30）,維持,—
+DB-07,proto8/thinking/2026-11/06/daemon-board/04-凍住後要能遷移-續.md:21-24,claude,一棵樹一個 image；範本帶 tick: true 程式預設不帶,方向性-已裁,使用者裁,「兩題都按照推薦。」（daemon-board/04-續:19）,維持,—
+DB-08,proto8/thinking/2026-11/06/daemon-board/04-凍住後要能遷移-續.md:9,claude,醒來第一圈 stuck 誤判先列未解,細節,P7 期限從父第一次看到起算已解（NP-69）,—,維持,—
+DB-09,proto8/thinking/2026-11/06/daemon-board/04-凍住後要能遷移-續.md:10,claude,睡了多久沒人記、不急,細節,照原則推得出,—,維持,—
+DB-10,proto8/thinking/2026-11/06/daemon-board/04-凍住後要能遷移.md:24-30,claude,工具版本、session、捷徑等搬家問題判自擔,細節,proto8 不做遷移是原話,「一律當成沒有舊版」（user.md 舊版遷移列）,維持,—
+BP-01,proto8/thinking/2026-11/06/body-protocol/04-方向題與aos-post可改.md:5-18,claude,五題推薦（一箱一函數、錯誤回信、stdout 原樣、讀窗、aos-serve 後做）,方向性-已裁,四題使用者裁、題 5 照排程同意,「四題都按照推薦。……所以不要去與aos-post耦合太深。」（body-protocol/README.md:9）,維持,—
+BP-02,proto8/thinking/2026-11/06/body-protocol/README.md:18,claude,原稿三處字眼改成不塞進 aos-post,細節,照使用者提點改稿,「四題都按照推薦。……所以不要去與aos-post耦合太深。」（body-protocol/README.md:9）,維持,—
+BP-03,proto8/thinking/2026-11/06/body-protocol/04-方向題與aos-post可改.md:20-27,claude,aos-post 不必改、列可選與不改清單,細節,使用者說可改但沒要求改,—,維持,—
+BP-04,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突-續.md:8,claude,N-16 不改、錯誤回信另開 N-66,細節,題 2 照推薦；條文由 lift-to-norms 寫,—,維持,—
+BP-05,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突-續.md:9,claude,通用 runner 列 C-52 例外 ④（未實作）,細節,例外表後改成判準＋現行表（使用者裁）,—,維持,—
+BP-06,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突-續.md:10,claude,ping 是 runner 層保留字、aos-post 不認,細節,照原則推得出,—,維持,—
+BP-07,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突-續.md:11,claude,回信不分退 10 與 0,細節,題 3 照推薦,—,維持,—
+BP-08,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突-續.md:12,claude,進度信先不做,細節,題 4 照推薦,—,維持,—
+BP-09,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突-續.md:13,claude,等回信逾時屬內部約定走 tick（盤點加列）,細節,方向跟使用者 tick 原話一致；實際落地見 OI-72,—,維持,—
+BP-10,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突-續.md:14,claude,runner 不開 body 帶 args 的口,細節,照原則推得出,—,維持,—
+BP-11,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突-續.md:15,claude,一次一封同步跑＝loop 身體，不自己 fork,細節,照 C-47,—,維持,—
+BP-12,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突-續.md:16,claude,預設不留信、serve.json 寫 keep 才留,細節,照 N-16,—,維持,—
+BP-13,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突-續.md:7,claude,採選項 A（inst 只在 inst 信箱特例）,方向性-已裁,題 1 照推薦,「四題都按照推薦。……所以不要去與aos-post耦合太深。」（body-protocol/README.md:9）,維持,—
+BP-14,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突.md:5,claude,邊緣檔以推薦為底、沒回的當天然差異,細節,照 user.md 通則,—,維持,—
+BP-15,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突.md:9-10,claude,重寄冪等由函數自負；reply_to 指自己不特判,細節,照 C-56,—,維持,—
+BP-16,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突.md:16-18,claude,至少一次語意、空 stdout＝{},細節,照原則推得出,—,維持,—
+BP-17,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突.md:25-26,claude,inst 信箱不解指示詞、必配沙箱,細節,照原則推得出,—,維持,—
+BP-18,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突.md:30-32,claude,body 不設上限,細節,照 C-56 不開旋鈕,—,維持,—
+BP-19,proto8/thinking/2026-11/06/body-protocol/03-邊緣與衝突.md:35,claude,aos 不另做存取控制,細節,照 S18/判官,—,維持,—
+BP-20,proto8/thinking/2026-11/06/body-protocol/02-三個口子.md:50 等,claude,方向題 1/3/4 分檔推薦,方向性-已裁,使用者四題照推薦,「四題都按照推薦。……所以不要去與aos-post耦合太深。」（body-protocol/README.md:9）,維持,—
+EP-01,proto8/thinking/2026-11/06/env-portability/README.md:53,claude,五項判不用問、照原則做,細節,都是把絕對改相對（N-67 ①）,—,維持,—
+EP-02,proto8/thinking/2026-11/06/env-portability/03-建議.csv:5,claude,R4 kernel docs 改建議 hub 只在 root 層 export,細節,照原則推得出,—,維持,—
+EP-03,proto8/thinking/2026-11/06/env-portability/03-建議.csv:7,claude,R6 在飛 exec 存相對 kernel stack,細節,照原則推得出,—,維持,—
+EP-04,proto8/thinking/2026-11/06/env-portability/03-建議.csv:8,claude,R7 eca 小格存相對,細節,照原則推得出,—,維持,—
+EP-05,proto8/thinking/2026-11/06/env-portability/03-建議.csv:4,claude,R3 額度鍵跨樹那半只寫已知限制,細節,照原則推得出,—,維持,—
+EP-06,proto8/thinking/2026-11/06/env-portability/05-衝突.csv:3,claude,AOS_TICK_INTERVAL 近的贏 vs N-59 外層贏，條文標明不另開題,細節,近的贏使用者裁了,「設，近的贏」（daemon-board/README.md:30）,維持,—
+EP-07,proto8/thinking/2026-11/06/env-portability/05-衝突.csv:6,claude,沒設退路不翻裁定、只加 warning,方向性-已裁,Q5 使用者選印 warning,「印 warning (Recommended)」（env-portability/README.md:32）,維持,—
+EP-08,proto8/thinking/2026-11/06/env-portability/05-衝突.csv:7,claude,子 process 繼承錯 AOS_KERNEL 靠食譜第 6 步,細節,照原則推得出,—,維持,—
+EP-09,proto8/thinking/2026-11/06/env-portability/05-衝突與方向題.md:15-35,claude,五題推薦,方向性-已裁,五題都裁（Q1 後更正金鑰歸小 proc；Q2＋Q3 選 C 照現況）,「金鑰應該由那個小proc自己保管…」（env-portability/README.md:30）；「C 照現況」（:33）,維持,—
+EP-10,proto8/thinking/2026-11/06/env-portability/README.md:26,claude（頂層）,Q2＋Q3 併成一題問,細節,使用者有回答,—,維持,—
+EP-11,proto8/thinking/2026-11/06/env-portability/README.md:41,claude（頂層）,--env-file 檔裡 ${…} 在 add 當下展開、$NAME 不展開不另開題,細節,延伸使用者 Q2＋Q3 的理由，同向,「用${HOME}/...，本來就是在命令行這個階段展開。」（env-portability/README.md:39）,維持,—
+EP-12,proto8/thinking/2026-11/06/env-portability/06-E1改-金鑰歸小proc.md:17-22,claude,小 proc 定義放 endpoints/<名>/、不加 key_env 到 kernel.json,細節,落實使用者更正，照 C-52,「我們在定義那個小proc的時候就要跟他說讀哪個環境變數當金鑰了」（env-portability/06:5）,維持,—
+EP-13,proto8/thinking/2026-11/06/env-portability/06-E1改-金鑰歸小proc.md:23,claude,kernel.json 的 key 欄拿掉、kernel 不改,細節,照「沒有舊版」,—,維持,—
+EP-14,proto8/thinking/2026-11/06/env-portability/06-E1改-金鑰歸小proc.md:24-28,claude,llm_http 加 --key-env；stdin 帶 key＝ArgumentsBad,細節,照原則推得出,—,維持,—
+EP-15,proto8/thinking/2026-11/06/env-portability/06-E1改-金鑰歸小proc.md:29,claude,沒設金鑰變數報 EndpointFailed,細節,代號；A 區查到沒人設 LITELLM_KEY＝必失敗（錯誤行為）,—,維持,—
+EP-16,proto8/thinking/2026-11/06/env-portability/06-E1改-金鑰歸小proc.md:30-35,claude,LITELLM_KEY 在起 llm daemon 的殼 export,細節,照 N-67 ⑨；A 區指出 env.sh 等都沒設,—,維持,—
+EP-17,proto8/thinking/2026-11/06/env-portability/06-E1改-金鑰歸小proc.md:39,claude,舊寫法 key 短暫明文落檔接受,細節,邊緣,—,維持,—
+EP-18,proto8/thinking/2026-11/06/env-portability/06-E1改-金鑰歸小proc.md:45-47,claude,url/model 不搬只搬金鑰,方向性-已裁,使用者選了,「不搬，只搬金鑰 (Recommended)」（env-portability/README.md:35）,維持,—
+EP-19,proto8/thinking/2026-11/06/env-portability/04-規範草稿.md:29-32,claude,不另加「樹裡不准絕對路徑」禁令、不把環境變數改成寫檔,細節,照 C-54 一詞一義,—,維持,—
+EP-20,proto8/thinking/2026-11/06/env-portability/04-規範草稿.md:13,claude,N-67 ⑦ 的回顯欄例外,方向性-已裁,Q4 整份草稿使用者選加進條文,「加進條文 (Recommended)」（env-portability/README.md:31）,維持,—
+EP-21,proto8/thinking/2026-11/06/env-portability/03-建議與搬家食譜.md:20-26,claude,維持環境變數就好的清單,細節,⑨ 隨 Q4 進條文,—,維持,—
+GI-01,proto8/thinking/2026-11/06/git-image/05-其他手段與衝突.md:9,claude,image 用專門 repo,方向性-已裁,使用者題 1 選只留最新一份（專用 repo＋orphan）,「只留最新一份 (Recommended)」（git-image/README.md:48）,維持,—
+GI-02,proto8/thinking/2026-11/06/git-image/05-其他手段與衝突.md:11,claude,clone --depth 1、門檻 3 倍,細節,門檻,—,維持,—
+GI-03,proto8/thinking/2026-11/06/git-image/05-其他手段與衝突.md:12,claude,image repo 關自動 gc,細節,食譜,—,維持,—
+GI-04,proto8/thinking/2026-11/06/git-image/05-其他手段與衝突.md:13,claude,history 分段標方向題但沒問,細節,題 1 選只留最新後用不到,—,維持,—
+GI-05,proto8/thinking/2026-11/06/git-image/05-其他手段與衝突.md:15-20,claude,delta 視窗、LFS、filter-repo 不推薦,細節,照原則推得出,—,維持,—
+GI-06,proto8/thinking/2026-11/06/git-image/05-其他手段與衝突.md:16,claude,log 上限 1 MB/10 MB 輪替（建議）,細節,門檻；跟 git 無關、沒實作,—,維持,—
+GI-07,proto8/thinking/2026-11/06/git-image/05-其他手段與衝突.md:17,claude,archive 超 1 萬封/100 MB 輪替,細節,門檻,—,維持,—
+GI-08,proto8/thinking/2026-11/06/git-image/05-其他手段與衝突.md:18,sol,.trash 擋掉、超 100 MB/30 天人清,方向性-已裁,擋掉使用者裁；門檻是細節,「擋掉不搬 (Recommended)」（git-image/README.md:50）,維持,—
+GI-09,proto8/thinking/2026-11/06/git-image/05-其他手段與衝突.md:28,claude,擋 **/archive/ 現在不衝突 N-16,細節,照原則推得出,—,維持,—
+GI-10,proto8/thinking/2026-11/06/git-image/05-其他手段與衝突.md:31,claude,N-67 不改條文,細節,照原則推得出,—,維持,—
+GI-11,proto8/thinking/2026-11/06/git-image/04-gitignore建議.md:20-30,claude,可擋（醒來自己重寫）清單：queue.json、endpoints.json、mcp.json…,細節,request.json 那行使用者裁；其餘是會重建的檔,「改成可重建、擋掉」（git-image/README.md:49）,維持,—
+GI-12,proto8/thinking/2026-11/06/git-image/04-gitignore建議.md:31-38,claude,只附加的 log 不進 image：stderr.txt、live.jsonl、turns.jsonl、transcripts/、archive/,方向性-未裁,搬家後會丟掉對話紀錄（transcripts、turns）與歸檔信；使用者只裁了 request.json 與 .trash，沒看過這張「會失去紀錄」清單,使用者裁定只有三題（git-image/README.md:48-50）；「我想要的是暫停後能遷移」（daemon-board/README.md:13）,攤給使用者（一句話）,A 維持擋（image 小、紀錄留原機）｜B transcripts/turns.jsonl 不擋（對話紀錄跟著走，image 會隨時間長）。推薦 A 但給他看清單
+GI-13,proto8/thinking/2026-11/06/git-image/04-gitignore建議.md:5,claude,.gitignore 放每個 stack 根、image 根另一份,細節,擺哪,—,維持,—
+GI-14,proto8/thinking/2026-11/06/git-image/README.md:52,sol,落地未 commit 的說明,細節,紀錄,—,維持,—
+GI-15,proto8/thinking/2026-11/06/git-image/README.md:48-49,sol,orphan＋push --force＋tag 食譜；wait 退 11 回 think、pending 優先,細節,裁定的落地細則,—,維持,—
+AI-01,proto8/thinking/2026-11/06/apply-ideas/README.md:46,claude（fable）,新行為不混進 S 步、T4 緊接 S9,方向性-已裁,排程使用者裁照推薦,「排程：照推薦走，頂層當場開 J1」（apply-ideas/03:9）,維持,—
+AI-02,proto8/thinking/2026-11/06/apply-ideas/README.md:47,claude（fable）,凍住＝硬凍、軟凍等 tick,方向性-已裁,D1 使用者裁,「D1：先只有硬凍（推薦）」（apply-ideas/03:9）,維持,—
+AI-03,proto8/thinking/2026-11/06/apply-ideas/README.md:48,claude（fable）,responded_at 留牆鐘、P7 另加 responded_tick,細節,照 N-01 給人看用牆鐘；P7 後來沒加 ticks（NP-71）,—,維持,—
+AI-04,proto8/thinking/2026-11/06/apply-ideas/README.md:49,claude（fable）,aos-serve 排大重構後、P6 之後（代答 body-protocol 題 5）,方向性-已裁,使用者照排程同意,「題 5（通用 runner 何時做）apply-ideas 代答…使用者照排程同意」（body-protocol/README.md:11）,維持,—
+AI-05,proto8/thinking/2026-11/06/apply-ideas/README.md:50,claude（fable）,AOS_TICK 沒設印 warning（已作廢）,方向性-已裁,使用者裁沒 tick 退牆鐘,「都按照推薦。……tick我希望能夠在daemon的設定中自帶(當然，不強制，不與daemon耦合)。……不用訂那麼死的，bruh。」（apply-ideas/03:7）,維持,—
+AI-06,proto8/thinking/2026-11/06/apply-ideas/README.md:51,claude（fable）,巢狀旗標只換一葉、鍵含 . 只能 stdin 給,細節,順著使用者「巢狀可以」,「巢狀那塊我覺得不錯，即使面對key有.，這也是可以接受的。」（json-argv/07:9）,維持,—
+AI-07,proto8/thinking/2026-11/06/apply-ideas/README.md:52,claude（fable）,aos-lock 改檔案鎖跟 T2 一起做,細節,排程；方向使用者裁,「aos-lock就改檔案鎖。」（no-pid/README.md:65）,維持,—
+HC-01,proto8/thinking/2026-11/06/human-cli/README.md:44,claude（fable）,help 行數上限與固定段序,細節,格式,—,維持,—
+HC-02,proto8/thinking/2026-11/06/human-cli/README.md:45,claude（fable）,錯誤行指路規則,細節,錯誤文案；R3 不給參數＝ArgumentsBad 使用者 11-05 裁,—,維持,—
+HC-03,proto8/thinking/2026-11/06/human-cli/README.md:46,claude（fable）,表無表頭 TAB、# 註解行、空清單退 0,細節,照 R15；# 註解行是對 stdio-unify D5 的補充,—,維持,—
+HC-04,proto8/thinking/2026-11/06/human-cli/README.md:47,claude（fable）,全域旗標只放選容器；aos-grow --dry-run 例外,細節,純實作,—,維持,—
+HC-05,proto8/thinking/2026-11/06/human-cli/README.md:48,claude（fable）,不做 --version、--quiet/--verbose、顏色、進度條,方向性-未裁,決定「不做某功能」，是使用者自己會打的指令；沒問過,沒找到原話，這是推論,攤給使用者（一句話）,A 維持都不做（KISS）｜B 至少 --version（裝兩台機器對版本用得到）。推薦 A，一句話問
+HC-06,proto8/thinking/2026-11/06/human-cli/README.md:49,claude（fable）,短名表九個、不開 -q/-v/大寫,方向性-已裁,使用者選開幾個常用短名＋共用表；新題 2 先不給,「開幾個常用短名」（human-cli/README.md:16）；「先不給」（:54）,維持,—
+HC-07,proto8/thinking/2026-11/06/human-cli/README.md:49,claude（fable）,不可逆清單只三個子命令,方向性-已裁,使用者新題 1「不加」、「幫我加上--yes跳過」,「不可逆動作那塊，幫我加上--yes跳過」（human-cli/README.md:18）；「不加」（:53）,維持,—
+HC-08,proto8/thinking/2026-11/06/human-cli/05-邊緣與衝突.md:23,claude（fable）,長篇英文規則搬 knowledge、README 給人,細節,文案擺哪；G 隊已核對,—,維持,—
+MN-01,proto8/thinking/2026-11/06/mailbox-naming/README.md:11,claude,判官 queue.json 實作時檔頭寫明先來先掛,細節,使用者裁檔頭寫明,「不算、檔頭寫明 (Recommended)」（mailbox-naming/README.md:11）,維持,—
+MN-02,proto8/thinking/2026-11/06/mailbox-naming/05-requests改名結果.md:1,claude（codex 改名）,MailboxMissing、--mailbox 照 R14 是機制名不改；舊名不認,細節,R14 使用者裁寫進 C-54；舊版不管是原話,「現在統一 requests/」（mailbox-naming/README.md:13）,維持,—
+SC-01,proto8/thinking/2026-11/06/special-cases/06-K5實作結果.md:17,sol（隊長審）,.pth 精確兩行、lib/agent/__init__.py,細節,純實作,—,維持,—
+SC-02,proto8/thinking/2026-11/06/special-cases/06-K5實作結果.md:18,sol（隊長審）,自身資料夾的平鋪模組優先、缺模組才 ModuleMissing,細節,純實作,—,維持,—
+SC-03,proto8/thinking/2026-11/06/special-cases/05-衝突與方向題.md:26,claude,8 處矛盾的 5（…Rejected vs ChildSlotMissing）、7、8 拿不準只列不動,細節,代號命名類；已列在檔內待處理，沒丟掉,—,維持,—
+SC-04,proto8/thinking/2026-11/06/special-cases/01-盤點.csv（誰定的＝代定 約 30 列）,claude（盤點員）,盤點表把 11-02～11-06 的舊代定逐列標出（D02、D20、T02、T15…）,細節,是盤點不是新決定；多數已被本表別列或 11-06 裁定蓋到（如 T49 作廢、T52 P7 已裁）,—,維持,—
+SC-05,proto8/thinking/2026-11/06/special-cases/05-衝突與方向題.md:28-41,claude,方向題 1～4 的推薦,細節,四題使用者選項框都裁了（題 4「等撞名再說」）,（special-cases/README.md:57-63）,維持,—
+LN-01,proto8/thinking/2026-11/06/lift-to-norms/01-盤點.md:7,claude（隊長）,只收使用者原話與已裁，代定/未裁/排程不收條文,細節,跟 user/03 同向,「只留下我的原文整理後的版本，還有一些決策後的結果，或是跟 AI 討論後的結論。」（user/03）,維持,—
+LN-02,wf/session_logs/2026-11/2026-11-06.md:22,claude（隊長）,本來就超 8 KB 的條文檔不拆,細節,wf 規矩例外，lint 會提醒,—,維持,—
+LN-03,wf/session_logs/2026-11/2026-11-06.md:22,claude（隊長）,AOS_TICK 先記在四種性質表外,方向性-已裁,後使用者裁跟 AOS_KERNEL 同類、歸 hub 當例外,「跟 AOS_KERNEL 同類 (Recommended)」（lift-to-norms/README.md:19）,維持,—
+LN-04,wf/session_logs/2026-11/2026-11-06.md:22,claude（隊長）,A115 四元素句、C18 C-66 加註不收,細節,判定已攤在 README 給使用者（「你要收的話一句話開一條」）,（lift-to-norms/README.md:48）,維持,—
+LN-05,proto8/thinking/2026-11/06/lift-to-norms/README.md:20,claude（隊長）,同一資料夾起兩個 daemon 擋不擋,方向性-已裁,使用者選繼續擋,「繼續擋 (Recommended)」（lift-to-norms/README.md:20）,維持,—
+SL-01,wf/session_logs/2026-11/2026-11-05.md:27,claude,exec 型/adopt 出錯結束下表；wake/start 後 3 秒退 0 也下表；退 10 phase＝stopped,細節,照使用者 11-05 四項裁定（留 stopped＋reason）落實的細則,「留成stopped，並寫原因」（special-cases/01-盤點.csv）,維持,—
+SL-02,wf/session_logs/2026-11/2026-11-05.md:28,claude,ctl 六子命令等回信、暫時信箱 $TMPDIR、CtlRejected,細節,後 P3 改共用回信信箱,—,維持,—
+SL-03,wf/session_logs/2026-11/2026-11-05.md:29,claude,aos-llm 相對 AOS_LLM_KERNEL 的解法；aos-exec 收自己建的空 stack,細節,純實作,—,維持,—
+SL-04,wf/session_logs/2026-11/2026-11-05.md:30,claude,reason 取身體自己那行,細節,純實作,—,維持,—
+SL-05,wf/session_logs/2026-11/2026-11-05.md:31,claude,英文化不改給 LLM 的內容（prompt、persona、tool description）、vcpkg、範例資料,方向性-未裁,使用者原話「全都用英文吧」沒講範圍，agent 自己劃了「給 LLM 的內容不算程式輸出」；conventions 也沒寫這個例外,「我發現我們做出來的程式，輸出的各種東西，裡面都有中文...全都用英文吧」（conventions.md 程式輸出一律英文列）,攤給使用者（一句話）,A 維持（prompt/persona 是內容不是輸出；真腦讀中文沒問題）｜B 連 prompt/persona 也英文（省 token、對小模型友善）。推薦 A，寫進 conventions 當例外
+SL-06,wf/session_logs/2026-11/2026-11-05.md:32,claude（fable）,thought 工具：記憶＝一類 goal、深度 2、最多 3 隻、失敗一行回腦,細節,三題使用者裁（預設同父、默認刪、名字 thought）；深度與隻數是門檻,「三題使用者裁了（預設同父、默認刪掉可選保留、名字 thought）」（11-05 日誌:32）,維持,—
+SL-07,wf/session_logs/2026-11/2026-11-05.md:58,claude（隊長）,S0 連根 build/、.cache/、tests 殘夾一起刪,細節,未追蹤殘渣；大重構七題使用者照推薦,「大重構七題都照推薦吧」（11-05 日誌:50）,維持,—
+SL-08,wf/session_logs/2026-11/2026-11-05.md:59,claude（隊長）,甲代 wf 文件封存在 common/archive/,細節,擺哪,—,維持,—
+SL-09,wf/session_logs/2026-11/2026-11-05.md:60,claude（隊長）,S3 13 專案出 11 支 bin、vcpkg.json 留兩份,細節,建置細節,—,維持,—
+SL-10,wf/session_logs/2026-11/2026-11-05.md:61,claude（隊長）,S4 生成冊超 7.5 KB 切 -2/-3,細節,格式,—,維持,—
+SL-11,wf/session_logs/2026-11/2026-11-05.md:62,claude（隊長）,S1/S2/S4 只驗建置不跑試驗場,細節,驗收範圍,—,維持,—
+SL-12,wf/session_logs/2026-11/2026-11-05.md:63,claude（隊長）,S5、S7 不併 main 留本機分支,方向性-已裁,使用者「以規劃為主」；11-06 兩分支作廢,「今天的工作不用趕着做……以規劃爲主」（11-05 日誌:50）,維持,—
+SL-13,wf/session_logs/2026-11/2026-11-05.md:49,claude,重起提示兩種起法都印；找不到 tool_io＝ModuleMissing,細節,文案與代號,—,維持,—
+SL-14,wf/session_logs/2026-11/2026-11-06.md:9,claude（隊長）,S5：cmd/docs 整組留、demo/docs 重編、路徑直接改不加改名註,細節,擺哪；不加註是原話,「proto8 沒有舊版」（11-06 日誌:9）,維持,—
+SL-15,wf/session_logs/2026-11/2026-11-06.md:21,claude（隊長）,S8 ①～⑦（不留轉址檔、刪 USAGE、子命令 ArgumentsBad 接子 usage、rm 一名一行、help 列全域旗標）,細節,help/錯誤文案與檔案結構,—,維持,—
+SL-16,wf/session_logs/2026-11/2026-11-06.md:25,claude（隊長）,S10：工具名 aos_json、json_rewrite 放 agent 層、del 不加 --check、archive 夾名、沙箱 ro 綁整個 lib,細節,命名與擺哪,—,維持,—
+SL-17,wf/session_logs/2026-11/2026-11-06.md:31,claude（隊長）,H 隊：knowledge errors/common 拆、「proc 的 stack」名詞註、aos-directive 留 install.sh、loop_cli cfg_name,細節,「proc 的 stack」有原話支持（daemon 的 stack 是各程序的記憶體空間）,「各stack就是各程序所佔據的記憶體空間」（daemon-board/README.md:11）,維持,—
