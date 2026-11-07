@@ -30,6 +30,7 @@
 - **權限邊界（11-06）**：codex 隊員用 `-s workspace-write`（它自己的沙箱），claude 隊員用 `--permission-mode acceptEdits`＋`--allowedTools` 列需要的工具。**agent 不加全繞過沙箱／權限的旗標**——11-06 頂層試著這樣交代時被 Claude Code 的安全檢查擋下：這是使用者的權限邊界，要開由使用者親自開（例：家機 `~/.codex/config.toml` 的 `danger-full-access` 是使用者自己設的，照用）。
 - **codex 可用 slug（10-09 家機實測 9 個都可用，codex-cli 0.161.0；公司 11-06 實測見 [公司 WSL](aos-teams/01-公司WSL.md)）**：`gpt-6.1-sol`（一般工作主力）、`gpt-6-astra`、`gpt-6-sol`、`gpt-6-luna`、`gpt-5.6-sol`／`-terra`／`-luna`、`gpt-reserve`、`gpt-5.5`。級別見 [team-model](../team-model.md)，試水溫結果見 [probe](../team-model/probe-2026-10-09.json)。slug 寫錯（如 `gpt-sol-6.1`、裸 `gpt-sol`）會回「not supported」——使用者口頭的「gpt-sol-6.1」就是 `gpt-6.1-sol`；他點名的型號先試，不行再問。
 - 開隊前**先把打算怎麼做講給他聽**，等他回應或糾正再派；他可能在手機上、回得慢，問題與選項照發、附預設建議。
+- **今天（11-07）隊形**：使用者原話「今天就不要用codex了」（codex 週額度下午四點重置，且「gpt-sol的程式能力實在太差」）。11-07 不派 codex：普通工作 opus、雜活 sonnet、審查與高難度 fable。額度到 99% 時各線暫停不結束、寫 HANDOFF，詳見 [user/01 額度緊時](../common/user/01-說話授權與記憶.md#額度緊時2026-11-07-定)。
 
 ## 分檔目錄
 

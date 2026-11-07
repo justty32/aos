@@ -13,7 +13,6 @@
 
 ## 待使用者項
 
-- **家機 C++ 重建**（使用者玩完試驗場才建；留格與 `AOS_KERNEL` 提醒要重建才生效）：`(cd proto8/impls && nice -n 15 cmake --build build -j4)` → [os-impl 07](../proto8/thinking/2026-11/06/os-impl/07-C5留格與AOS_KERNEL提醒實作結果.md)
 - **對判官本身下指令改寫法**（11-07 起）：叫醒判官寫 `aos-daemon-ctl wake 名字`——aos-daemon-ctl 一律直寄 daemon、不看 `AOS_KERNEL`，`--queue-wait-s` 拿掉；要判官管控用 `aos-agent ctl`。試驗場若有用到舊寫法或 `aos-daemon-ctl` 經判官，要留意 → [os-impl 08](../proto8/thinking/2026-11/06/os-impl/08-aos-daemon-ctl永遠直寄實作結果.md)
 - **no-pid P8**：公司 WSL 試驗場改三層並親驗；家機在可連 user bus 的殼驗 scope 的 `memory.max`（本次沙箱擋住） → [18-P8實作結果](../proto8/thinking/2026-11/05/no-pid/18-P8實作結果.md)
 
