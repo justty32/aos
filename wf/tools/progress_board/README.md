@@ -1,4 +1,4 @@
-<!-- 說明 aos 進度看板的開關、回報、待裁題、回答、匯總與檔案位置。 -->
+<!-- 說明 aos 進度看板的開關、回報、待裁題、回答、匯總、細節頁與檔案位置。 -->
 # 這是什麼
 
 把各線回報、交棒、commit 與機器負載放在同一頁，細節點開才看。
@@ -59,13 +59,22 @@
 手動跑：`python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py summarize --force`，強制時會略過開關與間隔。
 總結在 `summary/latest.md`，每次耗時與 tokens 記在 `summary/cost.jsonl`。
 
+## 細節頁
+
+看板頂端或各線卡片按「看細節」：可看完整時間線、即時交棒檔、相關 commit 的改檔清單、正在跑的 codex 與試驗場報告，每五秒更新。匯總的「看全文」與「歷史匯總」也會開啟渲染後的細節頁。
+細節頁與 `/api/line`、`/api/commit`、`/api/codex`、`/api/reports`、`/api/file` 都是唯讀；要開本機伺服器才看得到。
+
+檔案只能讀 `config.json` 的 `read_roots` 底下，且限 `.md`、`.txt`、`.log`、`.json`、`.jsonl`；會解析符號連結，不能跨出允許的根目錄。
+要加試驗場報告，在 `report_globs` 加一個 glob；要加可讀位置，在 `read_roots` 加根目錄（可用 `~`）。若用 `AOS_PROGRESS_DIR` 換看板位置，也要把該位置加進 `read_roots`，才能看匯總全文。
+要加某線的 commit，在該線 `commit_filters` 加 `{"repo":"aos","path":"wf/tools/progress_board/","grep":"fix"}`；`repo` 對應 `repos` 的名稱，`path` 與 `grep` 可省略，同一條 filter 兩者都有時須同時符合，多條 filter 合併去重。沒有 `commit_filters` 的線不列 commit。
+
 ## 檔案在哪
 
 預設在 `~/Desktop/aos-進度`；可用環境變數 `AOS_PROGRESS_DIR` 換位置。開機或收集會覆蓋頁面與這份說明。
 
 | 路徑 | 內容 |
 | --- | --- |
-| `index.html`、`app.js`、`asks.js`、`style.css`、`README.md` | 頁面與說明 |
+| `index.html`、`app.js`、`asks.js`、`detail.html`、`detail.js`、`md.js`、`style.css`、`README.md` | 頁面與說明 |
 | `data/progress.jsonl` | 各線回報 |
 | `data/answers.jsonl` | 使用者逐次送出的回答，保留重答紀錄 |
 | `data/state.json`、`data/state.js` | 最新快照 |

@@ -53,7 +53,7 @@ def atomic_write(path, text):
 def copy_assets(board_dir):
     board = Path(board_dir)
     board.mkdir(parents=True, exist_ok=True)
-    for name in ("index.html", "app.js", "asks.js", "style.css"):
+    for name in ("index.html", "app.js", "asks.js", "md.js", "detail.html", "detail.js", "style.css"):
         shutil.copyfile(ROOT / "web" / name, board / name)
     shutil.copyfile(ROOT / "README.md", board / "README.md")
 
@@ -187,7 +187,7 @@ def summary_state(board, cfg, now, warnings):
         pass
     for path in (folder / "history").glob("*.md"):
         try:
-            history.append({"ts": summary_stamp(path), "file": str(path.relative_to(board))})
+            history.append({"ts": summary_stamp(path), "file": str(path.resolve())})
         except OSError:
             continue
     history.sort(key=lambda item: parse_ts(item["ts"]) or now, reverse=True)
@@ -203,6 +203,7 @@ def summary_state(board, cfg, now, warnings):
     except (OSError, ValueError, TypeError, AttributeError):
         pass
     return {"enabled": bool(options.get("enabled", False)), "latest_md": latest,
+            "latest_file": str((folder / "latest.md").resolve()),
             "latest_ts": stamp, "history": history[:30],
             "cost": {"runs_today": len(today),
                      "tokens_today": sum(item.get("total_tokens", 0) for item in today

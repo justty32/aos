@@ -49,31 +49,19 @@
       list.append(item);
     }); parent.append(list);
   }
-  function markdown(value) {
-    const escaped = String(value || "").replace(/^<!-- summary[^\n]*-->\s*\n?/, "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-    const inline = text => text.replace(/`([^`]+)`|\*\*([^*]+)\*\*/g, (_, code, bold) => code != null ? `<code>${code}</code>` : `<strong>${bold}</strong>`);
-    let out = "", list = false, paragraph = [];
-    const closeParagraph = () => { if (paragraph.length) { out += `<p>${inline(paragraph.join(" "))}</p>`; paragraph = []; } };
-    escaped.split(/\r?\n/).forEach(line => {
-      const h = line.match(/^(#{1,6})\s+(.+)$/), bullet = line.match(/^\s*[-*]\s+(.+)$/);
-      if (bullet) { closeParagraph(); if (!list) { out += "<ul>"; list = true; } out += `<li>${inline(bullet[1])}</li>`; return; }
-      if (list) { out += "</ul>"; list = false; }
-      if (h) { closeParagraph(); out += `<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`; }
-      else if (!line.trim()) closeParagraph(); else paragraph.push(line);
-    });
-    closeParagraph(); return out + (list ? "</ul>" : "");
-  }
   function summaryPanel(data) {
     const box = el("section", "panel"); heading(box, "匯總", "summary");
-    const body = el("div", "summary-body"); body.innerHTML = markdown(data.latest_md || "尚未產生匯總。"); box.append(body);
+    const body = el("div", "summary-body"); body.append(window.AosMd.render(data.latest_md || "尚未產生匯總。")); box.append(body);
     const cost = data.cost || {}, parts = [`上次匯總 ${hhmm(data.latest_ts)}`, `今天 ${num(cost.runs_today || 0)} 次、共 ${num(cost.tokens_today || 0)} tokens、${num(cost.seconds_today || 0, 1)} 秒`, `下次最早 ${hhmm(data.next_eligible_ts)}`];
     if (!data.enabled) parts.push("匯總已關"); if (data.running) parts.push("匯總中…"); box.append(el("p", "subtle", parts.join("｜")));
+    if (data.latest_file) box.append(link(`detail.html?file=${encodeURIComponent(data.latest_file)}`, "看全文"));
     const history = details(box, "歷史匯總"), list = el("ul", "history-list");
-    (data.history || []).forEach(entry => { const item = el("li"); item.append(link(entry.file, String(entry.ts || entry.file), true)); list.append(item); });
+    (data.history || []).forEach(entry => { const item = el("li"); item.append(link(`detail.html?file=${encodeURIComponent(entry.file)}`, String(entry.ts || entry.file))); list.append(item); });
     history.append(list.children.length ? list : el("p", "subtle", "無")); return box;
   }
   function lineCard(line) {
     const card = el("article", "line-card"); heading(card, line.title || line.id, "line");
+    const more = link(`detail.html?line=${encodeURIComponent(line.id)}`, "看細節"); more.className = "button"; card.append(more);
     const chips = el("div", "chips"); chips.append(chip(labels[line.status] || line.status, colors[line.status] || "grey"));
     if (line.stale) chips.append(chip(`安靜 ${age(line.last_ts)} 分鐘`, "grey")); card.append(chips, timeline(line.timeline));
     card.append(el("p", "doing", `在做：${line.doing || "尚未回報"}`));
@@ -125,6 +113,7 @@
   function render(data) {
     const root = el("div"); const header = el("header"), top = el("div", "title-row"), title = el("div", "heading"); title.append(icon("board"), el("h1", "", "aos 進度")); top.append(title);
     if (location.protocol.startsWith("http")) { const live = el("span", "live"); live.id = "connection"; top.append(live); }
+    const more = link("detail.html", "看細節"); more.className = "button"; top.append(more);
     header.append(top);
     if (!data) { header.append(el("p", "overview", "尚無快照；請依 README 產生資料。")); root.append(header); publish(root, data); return; }
     const lines = data.lines || [], host = data.host || {}, active = lines.filter(line => ["start", "progress", "handoff"].includes(line.status)).length, blocked = lines.filter(line => line.status === "blocked").length;

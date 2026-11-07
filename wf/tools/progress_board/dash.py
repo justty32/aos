@@ -1,4 +1,4 @@
-"""Run the local progress board server, answer endpoint, snapshots, and summary commands."""
+"""Run the local progress board server, detail and answer endpoints, snapshots, and summaries."""
 import functools
 import datetime as dt
 import http.server
@@ -14,6 +14,7 @@ import time
 
 sys.dont_write_bytecode = True
 from answers import AnswerHandlerMixin
+from details_api import DetailHandlerMixin
 from collect import board_path, collect, copy_assets, load_config, summary_state, write_state
 from summarize import maybe_summarize
 
@@ -103,7 +104,7 @@ def serve(board, port):
     state_lock = threading.Lock()
     summary_thread = None
 
-    class Handler(AnswerHandlerMixin, http.server.SimpleHTTPRequestHandler):
+    class Handler(DetailHandlerMixin, AnswerHandlerMixin, http.server.SimpleHTTPRequestHandler):
         def refresh_answers(self):
             with state_lock:
                 busy = summary_thread is not None and summary_thread.is_alive()
