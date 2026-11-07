@@ -362,6 +362,21 @@ def _validate(value, node, path=""):
             _validate(item, node["items"], "%s[%d]" % (path, i))
 
 
+def _drop_nulls(value, node):
+    """schema 有寫 type（且不含 null）的鍵，值是 null＝沒給，拿掉（lib/docs/01 規則 9；11-07 sol 審查 #13）。"""
+    if not isinstance(value, dict):
+        return
+    for key, child in _properties(node).items():
+        if key not in value:
+            continue
+        types = _object(child).get("type")
+        types = [types] if isinstance(types, str) else types if isinstance(types, list) else []
+        if value[key] is None and types and "null" not in types:
+            del value[key]
+        else:
+            _drop_nulls(value[key], child)
+
+
 def arguments(*required):
     """第一次合併 argv 與 stdin 並驗型別；其後回同一份快取。"""
     global _ARGUMENTS
@@ -383,6 +398,7 @@ def arguments(*required):
             _validate(a, schema)
         except Error as e:
             die(e.code, str(e))
+        _drop_nulls(a, schema)
         _ARGUMENTS = a
     for k in required:
         if not isinstance(_ARGUMENTS.get(k), str) or not _ARGUMENTS[k]:

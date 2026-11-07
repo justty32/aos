@@ -1,7 +1,7 @@
 # stack.gitignore - daemon stack 的 image 排除範本：暫存、鎖、可重建請求與紀錄（11-06 git-image 裁定）。
 # 用法：cp proto8/cmd/aos-agent/stack.gitignore ws/.stack/.gitignore（放 .stack 裡＝只管 image、不碰你 ws 裡自己的檔）。
 # 一定先 Ctrl-C 讓 daemon 睡著再 commit：跑著時存＝一張撕一半的照片。
-# 擋的是「只在這台、這一刻有意義」的東西；state.json、procs_state.json、history.jsonl、queue/、stage.txt、think/、used.json、
+# 擋的是「只在這台、這一刻有意義」的東西；state.json、procs_state.json、queue.json、history.jsonl、queue/、stage.txt、think/、used.json、
 #   llm.json、tools.json（覆蓋層）、session.txt 都要留（醒來要接著用；paused 也要帶著醒）。
 
 # 信箱的半封信（maildir 的 tmp/；git 不收空資料夾，第一圈 daemon／aos-post 會自己建回）
@@ -22,8 +22,8 @@
 **/order.lock/
 **/order.lock.releasing.*
 
-# 醒來／第一次使用前會重建；根規則只管這台 kernel 的帳與端點
-/queue.json
+# 醒來／第一次使用前會重建；根規則只管這台 kernel 的端點
+# （/queue.json 不擋：llm kernel 的等待時間 seen_at、判官的隊序與 queued_at 都記在裡面，擋了搬家後歸零重排；11-07 sol 審查 #18）
 /endpoints.json
 **/claude/mcp.json
 **/codex/mcp.json

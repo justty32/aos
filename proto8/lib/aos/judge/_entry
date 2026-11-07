@@ -18,7 +18,8 @@
 #     回信的 code、msg 與這行的代號、原因同一句（英文）。回信寄不出去、壞信也是提醒行。
 #     aos-agent ctl（11-05 edge-agent 題 2；11-07 起 aos-daemon-ctl 一律直寄 daemon、不寄判官）帶 reply_to：aos-agent ctl 收這封 applied: false 立刻報錯，不等逾時。
 #   只判斷＋轉寄，不自己跑任何東西。一輪做完退 0（沒信也是 0：身體退 10 會讓 loop／daemon 收工）。
-# 選填 queue: true：滿格信留 requests/cur/、queue.json 的 queued 陣列先來先掛；既有隊序優先，新信照 sent_at／信名排序。
+# 選填 queue: true：滿格信留 requests/cur/、queue.json 的 queued 陣列先來先掛；既有隊序優先，新信照 aos-post 處理順序（有序先、再名字）。
+#   queue.json 讀不懂＝提醒行、當空窗，隊序從 requests/cur/ 重排（11-07 sol 審查 #2、#5）。
 #   隊首所需新格不足時後方要新格者不能插隊；stop／ping 等不加新格的信照轉。窗 names 是新名字陣列、queued_at／expires_at 是 ISO UTC 毫秒。
 #   queued_at_ticks 透過 tool_io.now_tick 讀，有 AOS_TICK 才加。只有進隊時讀；每輪重用原時間。預設 queue: false＝滿格立即拒信。
 #   每輪所有 cur（含首次、關排隊）先驗 queue_wait_ms：非負整數；正數由 sent_at 起算、到期不轉；0 有格照轉、沒格不排。
@@ -226,7 +227,9 @@ def queue_view(path):
     except FileNotFoundError:
         return {}
     except (OSError, ValueError, KeyError, TypeError) as e:
-        die("StateBad", "cannot read queue.json: %s" % e)
+        # 11-07 sol 審查 #5：壞窗不整輪退 1（模式 1 會每拍退、隊列卡死），當空窗、隊序從 cur/ 照處理順序重排。
+        warn("cannot read queue.json (%s); starting with an empty queue rebuilt from requests/cur/" % e)
+        return {}
 
 
 def write_queue(path, rows):
@@ -300,10 +303,9 @@ def main():
                 continue
         letters[name] = letter
     if queue:
-        # 已進隊的優先；同輪新信按寄出時間、再依 aos-post 名字序。
+        # 已進隊的優先；同輪新信照 aos-post 處理順序（有序先、再名字；11-07 sol 審查 #2，原本照 sent_at）。
         old_order = {name: i for i, name in enumerate(previous)}
-        names = sorted(letters, key=lambda n: (0, old_order[n]) if n in old_order else
-                       (1, letters[n].get("sent_at", ""), letter_key(n)))
+        names = sorted(letters, key=lambda n: (0, old_order[n]) if n in old_order else (1, letter_key(n)))
     else:
         names = [name for name in names if name in letters]
     if not names:

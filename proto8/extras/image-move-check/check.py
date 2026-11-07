@@ -194,8 +194,8 @@ class Check:
         parents = self.run(["git", "-C", str(source), "rev-list", "--parents", "-n", "1", "main"]).split()[1:]
         tracked = self.run(["git", "-C", str(source), "ls-files"]).splitlines()
         queue_relative = str((self.kernel / "queue.json").relative_to(source))
-        if queue_relative in tracked:
-            raise RuntimeError("documented stack filter unexpectedly retained queue.json")
+        if queue_relative not in tracked:
+            raise RuntimeError("documented stack filter unexpectedly dropped queue.json")
         empty = [str(p.relative_to(source)) for p in source.rglob("*")
                  if p.is_dir() and ".git" not in p.parts and not any(p.iterdir())]
         destination = self.work / "cloned"
@@ -204,9 +204,9 @@ class Check:
         missing_empty = [p for p in empty if not (destination / p).exists()]
         (self.work / "clone-evidence.json").write_text(json.dumps({
             "commit": commit, "commit_parent_count": len(parents), "tracked_files": len(tracked),
-            "queue_excluded": queue_relative not in tracked,
+            "queue_retained": queue_relative in tracked,
             "empty_directories_omitted": missing_empty,
-            "note": "The documented filter drops queue.json; its counter restarts on clone."},
+            "note": "The documented filter keeps queue.json; its counter continues after clone."},
             indent=2) + "\n")
         self.layout(destination)
 
@@ -246,10 +246,12 @@ class Check:
                 raise RuntimeError(f"{name} has a child that did not wake after clone")
         clone_queue = self.read(self.kernel / "queue.json")["counter_runs"]
         self.stop()
+        if clone_queue <= after_queue:
+            raise RuntimeError("kernel queue counter did not continue after git clone")
         (self.work / "clone-result.json").write_text(json.dumps({
             "queue_before_clone": after_queue, "queue_after_clone": clone_queue,
             "all_children_running": True, "fake_reply_received": True,
-            "note": "queue.json is intentionally excluded by the documented git recipe."},
+            "note": "queue.json travels with the image; its counter continues after clone."},
             indent=2) + "\n")
         print("PASS local git clone: third location, running phases, fake reply", flush=True)
 
