@@ -25,7 +25,7 @@ endpoint 函數的契約（stdin `{"endpoint", "request"}` → stdout 一行 `{"
 ### token 與額度
 
 - **用量從回信拿**：回信的 `usage.total_tokens`（非負整數）就是這封的 token 數；沒有就 `prompt_tokens`＋`completion_tokens`；沒有 `usage`（含 error 回信）＝token 增量記 0、只算次數；`usage` 不是物件、數字不對＝token 增量也記 0（只算次數，照樣回信）。
-- **逐封帳**：跑過的信在 `Server::finish` 收尾時，往自己 stack 的 `ledger.jsonl` 追加一行 JSON：`id`（信名）、`endpoint`（代號）、`sender`（`proc.json` 原值，不改成用量帳的相對路徑）、`model`（回信原值）、`mounted_at`／`finished_at`（UTC epoch 秒）、`elapsed_ms`（非負整數毫秒）、`usage`（回信原樣，缺就 null）。缺少的其他欄也記 null；重掛過的 `mounted_at` 是最後一次掛上時間，耗時包含那次掛上到 kernel 收尾的等待。牆鐘倒退時耗時記 0。錯誤回信也記；沒掛過的不記。寫入失敗只印英文 warning，回信、記總帳與刪信照常。這是追加的觀測帳，kernel 不輪替；收尾途中行程中斷或刪信失敗後重收，可能缺行或重複行，可用 `id` 辨識。
+- **逐封帳**：跑過的信在 `Server::finish` 收尾時，往自己 stack 的 `ledger.jsonl` 追加一行 JSON：`id`（信名）、`endpoint`（代號）、`sender`（`proc.json` 原值，不改成用量帳的相對路徑）、`model`（回信原值）、`mounted_at`／`finished_at`（UTC epoch 秒）、`elapsed_ms`（非負整數毫秒）、`usage`（回信原樣，缺就 null）。缺少的其他欄也記 null；重掛過的 `mounted_at` 是最後一次掛上時間，耗時包含那次掛上到 kernel 收尾的等待。牆鐘倒退時耗時記 0。錯誤回信也記；沒掛過的不記。寫入失敗只印英文 warning，回信、記總帳與刪信照常。這是追加的觀測帳，kernel 不輪替；收尾途中行程中斷或刪信失敗後重收，可能缺行或重複行，可用 `id` 辨識。（11-07 使用者裁定：翻 11-05 的 served.jsonl「也刪」，ledger 留；各層都記 usage、加總只加一層。見 [kernel-nest](../../../thinking/2026-11/07/kernel-nest/README.md)）
 - **算什麼**：掛出去過（`proc.json` 在）的信才算一次——`LetterBad`、`RequestBad`、`Endpoint{Missing,Unknown}`、`DeadlineBad`、`BudgetMissing`、第一次就寄不出掛信的 `LaunchFailed` 不算；`EndpointFailed`、`ReplyBad` 算（函數跑過、可能已經花了錢）。
 - **額度**（kernel.json 的 `budget`，都選填）：`max_calls`、`max_tokens`＝每窗上限（非負整數；沒寫＝那一種不限）；`window`＝`"hour"`／`"day"`／`"all"`（沒寫＝`day`；窗的起點用 kernel 的本地時間〔`TZ`〕的整點／午夜，`all`＝不歸零）；
   `spent`＝到頂時排著的信怎麼辦：`"refuse"`（沒寫＝這個）回 `BudgetMissing`、不跑；`"wait"` 留在 `new/` 等下一窗。
