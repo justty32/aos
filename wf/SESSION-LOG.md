@@ -10,8 +10,6 @@
 
 - **open｜沙盒（使用者 11-07 檢討點 5）**：等使用者在看板裁（`codex-sandbox` 線 ask）——11-08 實測家機 codex 帶 `-s workspace-write -c sandbox_workspace_write.network_access=true` 就能開著沙箱連 LiteLLM、不用改他的 config，推薦 A；裁完再照草稿改 aos-teams/02 的家機 codex 指令 → [codex-sandbox](../proto8/thinking/2026-11/08/codex-sandbox/README.md)
 
-- **open｜待裁題互動頁→工作流（使用者 11-07「好，就這樣做」）**：等使用者回完桌面 `aos-sol審查-待你裁.html` 這頁、看用起來哪裡不順，再抽成工作流：opus 定工作流與題目資料格式（資料檔進 wf-table 契約），codex 照著寫『資料檔→互動網頁』產生程式；之後各批要使用者裁的題都走這條 → 素材 [sol 審查](workflows/refactor/reports/2026-11-07-sol審查/README.md)
-
 - **open｜special-cases（11-06 K 隊；使用者同日選項框裁六題）**：條文已寫（C-52 讀法「不認身份、可認公開介面」＋判準＋現行表、升格門檻、N-63 K3、C-81 K7；8 處矛盾修 4 處、其餘只列）；程式改法 K-1～K-6（K-2、K-4、K-5、K-6 已做；K-5 11-06 晚家機 [06](../proto8/thinking/2026-11/06/special-cases/06-K5實作結果.md)）排在 [apply-ideas 02 § special-cases](../proto8/thinking/2026-11/06/apply-ideas/02-排程.md#11-06-special-cases-排程k-隊)，P7 開工前照新讀法重設計；`_` 保留等撞名 → [special-cases](../proto8/thinking/2026-11/06/special-cases/README.md)
 
 - **open｜lift-to-norms（使用者 11-06「把最近幾天的thinking……拿去更新concep,normal」）**：條文已寫（N-65、N-66、N-67、C-76～C-83、P-45、P-46、板子比喻＋既有條加註），使用者 11-06 已裁三題（tick 欄名照 R6、`AOS_TICK` 歸 hub 例外、同 stack 兩台繼續擋）；剩次要兩件沒裁（wait.py 退 11 對 P-19、沙箱先不支援 vs 一個信箱就夠），等 P5 沙箱範例時看 → [lift-to-norms](../proto8/thinking/2026-11/06/lift-to-norms/README.md)

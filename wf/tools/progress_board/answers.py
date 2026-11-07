@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 import re
 
-MAX_BODY = 8192
+MAX_BODY = 65536
 
 
 def timestamp(value):
@@ -106,8 +106,8 @@ def validate_headers(headers, port):
     if not re.fullmatch(r"[0-9]+", raw_length):
         raise AnswerError(400, "LengthBad", "Content-Length must be a nonnegative integer")
     normalized = raw_length.lstrip("0") or "0"
-    if len(normalized) > 4 or int(normalized) > MAX_BODY:
-        raise AnswerError(413, "BodyTooLarge", "Body must not exceed 8192 bytes")
+    if len(normalized) > 5 or int(normalized) > MAX_BODY:
+        raise AnswerError(413, "BodyTooLarge", "Body must not exceed 65536 bytes")
     return int(normalized)
 
 
@@ -123,8 +123,8 @@ def append_answer(board, body):
     if choice is not None and (not isinstance(choice, str)
                                or choice not in [option["key"] for option in ask["options"]]):
         raise AnswerError(400, "ChoiceBad", "choice must be null or an option key")
-    if not isinstance(comment, str) or len(comment) > 4000:
-        raise AnswerError(400, "CommentBad", "comment must be a string of at most 4000 characters")
+    if not isinstance(comment, str) or len(comment) > 20000:
+        raise AnswerError(400, "CommentBad", "comment must be a string of at most 20000 characters")
     if choice is None and not comment.strip():
         raise AnswerError(400, "AnswerEmpty", "Choose an option or enter a nonblank comment")
     answer = {"ts": dt.datetime.now().astimezone().isoformat(timespec="seconds"),

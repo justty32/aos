@@ -47,6 +47,7 @@
 | 「記個想法」「以後要做」「排進 roadmap」「幫我規劃」 | **planning** → 本專案落點是 [proto8/docs/CONCEPTS](../proto8/docs/CONCEPTS.md)／[proto8/thinking](../proto8/thinking/README.md)／[SESSION-LOG](SESSION-LOG.md)（舊的 ideas／roadmap 已封存） | [workflows/planning.md](workflows/planning.md) |
 | 「記個決定」「為什麼選 A 不選 B」 | **decisions** → 本專案落點是 [proto8/thinking](../proto8/thinking/README.md) 的決定與結論（舊的 ideas「待決定」表已封存） | [workflows/decisions.md](workflows/decisions.md) |
 | 「我的偏好是…」「以後直接做 / 先問」 | **user** | [workflows/common/user.md](workflows/common/user.md) |
+| 「**這批題要我裁**」「做成待你裁的頁」「我回好了（貼一串 `id:代號`）」 | **decide-page** | [workflows/decide-page.md](workflows/decide-page.md) |
 
 ### multi-agent flavor
 

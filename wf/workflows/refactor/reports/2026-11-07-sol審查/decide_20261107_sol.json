@@ -1,0 +1,1355 @@
+{
+ "description": "Decision questions converted from the original batch for offline review.",
+ "contract": "wf-table/1",
+ "source": "11-使用者裁定.md",
+ "extracted": "2026-11-08",
+ "kind": "decide-page/1",
+ "batch": "sol-review-1107",
+ "line": "refactor",
+ "title": "sol 這兩天替你做的設計決定：24 題等你一句話",
+ "lead": [
+  "**大方向沒有被偷換。**消耦合、根 daemon 是普通 daemon、等多久由寄信者設、image 只留最新一份、時鐘都留著——這些都有你的原話撐著，程式也照做了。",
+  "**問題分三種：**真的會出錯的（大多在邊上）、你裁了但沒生效或寫反的，還有最多的第三種。",
+  "**最多的是「推薦被寫成已定」：**你點了「推薦」，agent 就把推薦旁邊的判準、自己補的理由、沒給你看過的例外，一起當成你裁過的寫進條文。"
+ ],
+ "sections": [
+  {
+   "id": "t1",
+   "title": "一、判官與信箱",
+   "intro": "「判官」可以想成 daemon 門口的掛號櫃台：格子有空就放信進去，格子滿了就看要不要讓信排隊。",
+   "figure_svg": "<svg viewBox=\"0 0 680 280\" role=\"img\" aria-label=\"信經過判官的路線，標出各題出問題的位置\">\n  <defs>\n    <marker id=\"ar\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0,0 L10,5 L0,10 z\" class=\"s-muted\"/></marker>\n  </defs>\n  <path d=\"M575,62 V20 H75 V100\" class=\"s-line\" marker-end=\"url(#ar)\"/>\n  <text x=\"325\" y=\"15\" text-anchor=\"middle\" class=\"t12 s-muted\">回信：照「原信的名字」對回去</text>\n\n  <rect x=\"20\" y=\"102\" width=\"110\" height=\"50\" rx=\"8\" class=\"s-box\"/>\n  <text x=\"75\" y=\"132\" text-anchor=\"middle\" class=\"t14 s-ink\">寄信者</text>\n  <line x1=\"130\" y1=\"127\" x2=\"186\" y2=\"127\" class=\"s-line\" marker-end=\"url(#ar)\"/>\n  <rect x=\"190\" y=\"102\" width=\"110\" height=\"50\" rx=\"8\" class=\"s-box\"/>\n  <text x=\"245\" y=\"125\" text-anchor=\"middle\" class=\"t14 s-ink\">判官</text>\n  <text x=\"245\" y=\"142\" text-anchor=\"middle\" class=\"t12 s-muted\">（掛號櫃台）</text>\n  <line x1=\"300\" y1=\"127\" x2=\"336\" y2=\"127\" class=\"s-line\" marker-end=\"url(#ar)\"/>\n  <polygon points=\"390,92 445,127 390,162 335,127\" class=\"s-box\"/>\n  <text x=\"390\" y=\"132\" text-anchor=\"middle\" class=\"t13 s-ink\">有空格？</text>\n  <path d=\"M420,108 L500,70\" class=\"s-line\" marker-end=\"url(#ar)\"/>\n  <text x=\"440\" y=\"80\" class=\"t12 s-muted\">有</text>\n  <path d=\"M420,146 L500,184\" class=\"s-line\" marker-end=\"url(#ar)\"/>\n  <text x=\"440\" y=\"186\" class=\"t12 s-muted\">滿了</text>\n  <rect x=\"502\" y=\"40\" width=\"150\" height=\"50\" rx=\"8\" class=\"s-box\"/>\n  <text x=\"577\" y=\"62\" text-anchor=\"middle\" class=\"t14 s-ink\">daemon 信箱</text>\n  <text x=\"577\" y=\"80\" text-anchor=\"middle\" class=\"t12 s-muted\">真正去做事</text>\n  <rect x=\"502\" y=\"164\" width=\"150\" height=\"50\" rx=\"8\" class=\"s-askbox\"/>\n  <text x=\"577\" y=\"186\" text-anchor=\"middle\" class=\"t14 s-ink\">排隊窗</text>\n  <text x=\"577\" y=\"204\" text-anchor=\"middle\" class=\"t12 s-muted\">queue.json</text>\n\n  <g class=\"t12\">\n    <circle cx=\"158\" cy=\"108\" r=\"11\" class=\"s-ask\"/><text x=\"158\" y=\"112\" text-anchor=\"middle\" class=\"s-on\">8</text>\n    <circle cx=\"468\" cy=\"70\" r=\"11\" class=\"s-ask\"/><text x=\"468\" y=\"74\" text-anchor=\"middle\" class=\"s-on\">3</text>\n    <circle cx=\"505\" cy=\"232\" r=\"11\" class=\"s-ask\"/><text x=\"505\" y=\"236\" text-anchor=\"middle\" class=\"s-on\">1</text>\n    <circle cx=\"560\" cy=\"232\" r=\"11\" class=\"s-ask\"/><text x=\"560\" y=\"236\" text-anchor=\"middle\" class=\"s-on\">4</text>\n    <circle cx=\"615\" cy=\"232\" r=\"11\" class=\"s-ask\"/><text x=\"615\" y=\"236\" text-anchor=\"middle\" class=\"s-on\">6</text>\n  </g>\n  <g class=\"t12 s-muted\">\n    <text x=\"20\" y=\"190\">8 地址（AOS_KERNEL）指不到時</text>\n    <text x=\"20\" y=\"207\">  要報錯還是只印警告</text>\n    <text x=\"250\" y=\"230\">3 有序信轉一手換了號碼，</text>\n    <text x=\"250\" y=\"247\">  回信對不上</text>\n    <text x=\"470\" y=\"262\">1 預設開不開 · 4 能不能永遠排 · 6 期限用哪種鐘</text>\n  </g>\n</svg>",
+   "caption": "判官「能排隊」做好了，但出廠預設是關的、期限用的是牆鐘、有序信過一手會對不上回信——這幾個邊都是 agent 代你定的。 第 7 題不在圖上：它是 LLM 總機的「留一格給高優先」，做好了但範本沒開。"
+  },
+  {
+   "id": "t2",
+   "title": "二、tick 與時間",
+   "intro": "比喻：看門狗被拔了電源就不會咬人。不會誤判，是「永遠判不出來」。",
+   "figure_svg": "<svg viewBox=\"0 0 680 250\" role=\"img\" aria-label=\"牆鐘與 tick 鐘在凍住期間的差別\">\n  <rect x=\"250\" y=\"30\" width=\"190\" height=\"180\" rx=\"6\" class=\"s-freeze\"/>\n  <text x=\"345\" y=\"50\" text-anchor=\"middle\" class=\"t13 s-ink\">凍住／搬家 8 小時</text>\n  <text x=\"40\" y=\"88\" class=\"t13 s-ink\">牆鐘</text>\n  <text x=\"40\" y=\"104\" class=\"t12 s-muted\">（真時間，一直走）</text>\n  <line x1=\"160\" y1=\"95\" x2=\"640\" y2=\"95\" class=\"s-line\"/>\n  <g class=\"s-muted\"><circle cx=\"190\" cy=\"95\" r=\"3\"/><circle cx=\"230\" cy=\"95\" r=\"3\"/><circle cx=\"270\" cy=\"95\" r=\"3\"/><circle cx=\"310\" cy=\"95\" r=\"3\"/><circle cx=\"350\" cy=\"95\" r=\"3\"/><circle cx=\"390\" cy=\"95\" r=\"3\"/><circle cx=\"430\" cy=\"95\" r=\"3\"/><circle cx=\"470\" cy=\"95\" r=\"3\"/><circle cx=\"510\" cy=\"95\" r=\"3\"/><circle cx=\"550\" cy=\"95\" r=\"3\"/><circle cx=\"590\" cy=\"95\" r=\"3\"/></g>\n  <line x1=\"330\" y1=\"70\" x2=\"330\" y2=\"120\" class=\"s-badl\"/>\n  <text x=\"330\" y=\"66\" text-anchor=\"middle\" class=\"t12 s-bad\">期限在睡著時就過了</text>\n  <text x=\"470\" y=\"125\" class=\"t12 s-bad\">醒來第一輪：全部到期</text>\n\n  <text x=\"40\" y=\"168\" class=\"t13 s-ink\">tick 鐘</text>\n  <text x=\"40\" y=\"184\" class=\"t12 s-muted\">（樹醒著才走）</text>\n  <line x1=\"160\" y1=\"175\" x2=\"250\" y2=\"175\" class=\"s-line\"/>\n  <line x1=\"250\" y1=\"175\" x2=\"440\" y2=\"175\" class=\"s-line\" stroke-dasharray=\"3 5\"/>\n  <line x1=\"440\" y1=\"175\" x2=\"640\" y2=\"175\" class=\"s-line\"/>\n  <g class=\"s-muted\"><circle cx=\"190\" cy=\"175\" r=\"3\"/><circle cx=\"230\" cy=\"175\" r=\"3\"/><circle cx=\"470\" cy=\"175\" r=\"3\"/><circle cx=\"510\" cy=\"175\" r=\"3\"/><circle cx=\"550\" cy=\"175\" r=\"3\"/></g>\n  <text x=\"345\" y=\"168\" text-anchor=\"middle\" class=\"t12 s-muted\">停在同一格</text>\n  <line x1=\"530\" y1=\"155\" x2=\"530\" y2=\"195\" class=\"s-goodl\"/>\n  <text x=\"530\" y=\"212\" text-anchor=\"middle\" class=\"t12 s-good\">醒來接著數，期限照舊</text>\n\n  <g class=\"t12\">\n    <circle cx=\"620\" cy=\"75\" r=\"11\" class=\"s-ask\"/><text x=\"620\" y=\"79\" text-anchor=\"middle\" class=\"s-on\">6</text>\n    <circle cx=\"645\" cy=\"75\" r=\"11\" class=\"s-ask\"/><text x=\"645\" y=\"79\" text-anchor=\"middle\" class=\"s-on\">11</text>\n    <circle cx=\"420\" cy=\"195\" r=\"11\" class=\"s-ask\"/><text x=\"420\" y=\"199\" text-anchor=\"middle\" class=\"s-on\">12</text>\n  </g>\n  <text x=\"40\" y=\"240\" class=\"t12 s-muted\">12：時鐘停住時，「判卡住」、鎖的租約、tick 逾時也一起停——永遠不會到期。</text>\n</svg>",
+   "caption": "機器有兩種鐘：牆鐘睡著也走，tick 鐘睡著就停。用牆鐘算的期限，凍住醒來會一起到期；用 tick 算的，時鐘停多久它就等多久。 這節三題都在問「這件事該看哪個鐘、停了要不要寫明」。"
+  },
+  {
+   "id": "t3",
+   "title": "三、搬家與 image",
+   "intro": "image 可以想成整棵樹睡著時拍的一張快照；搬家就是把快照帶到新機器，叫醒接著跑。",
+   "figure_svg": "<svg viewBox=\"0 0 680 290\" role=\"img\" aria-label=\"搬家時哪些東西進快照、哪些留在原機器\">\n  <defs>\n    <marker id=\"ar2\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto\"><path d=\"M0,0 L10,5 L0,10 z\" class=\"s-muted\"/></marker>\n  </defs>\n  <rect x=\"15\" y=\"20\" width=\"250\" height=\"215\" rx=\"10\" class=\"s-panel\"/>\n  <text x=\"140\" y=\"42\" text-anchor=\"middle\" class=\"t14 s-ink\">原機器</text>\n  <rect x=\"415\" y=\"20\" width=\"250\" height=\"215\" rx=\"10\" class=\"s-panel\"/>\n  <text x=\"540\" y=\"42\" text-anchor=\"middle\" class=\"t14 s-ink\">新機器</text>\n  <line x1=\"270\" y1=\"110\" x2=\"408\" y2=\"110\" class=\"s-line\" marker-end=\"url(#ar2)\"/>\n  <text x=\"340\" y=\"100\" text-anchor=\"middle\" class=\"t13 s-ink\">快照（image）</text>\n\n  <g class=\"t13\">\n    <rect x=\"30\" y=\"55\" width=\"220\" height=\"26\" rx=\"5\" class=\"s-box\"/><text x=\"42\" y=\"73\" class=\"s-ink\">stack（記憶體）  ✓ 帶走</text>\n    <rect x=\"30\" y=\"86\" width=\"220\" height=\"26\" rx=\"5\" class=\"s-box\"/><text x=\"42\" y=\"104\" class=\"s-ink\">ws（做事的資料夾） ✓ 帶走</text>\n    <rect x=\"30\" y=\"117\" width=\"220\" height=\"26\" rx=\"5\" class=\"s-dash\"/><text x=\"42\" y=\"135\" class=\"s-ink\">定義資料夾  算不算？</text>\n    <rect x=\"30\" y=\"148\" width=\"220\" height=\"26\" rx=\"5\" class=\"s-dash\"/><text x=\"42\" y=\"166\" class=\"s-ink\">log／對話紀錄  留原機？</text>\n    <rect x=\"30\" y=\"179\" width=\"220\" height=\"26\" rx=\"5\" class=\"s-dash\"/><text x=\"42\" y=\"197\" class=\"s-ink\">歸檔信 archive  擋不擋？</text>\n    <text x=\"42\" y=\"225\" class=\"s-muted\">request.json ✗ 不帶，醒來重組</text>\n\n    <rect x=\"430\" y=\"55\" width=\"220\" height=\"26\" rx=\"5\" class=\"s-box\"/><text x=\"442\" y=\"73\" class=\"s-ink\">stack ✓</text>\n    <rect x=\"430\" y=\"86\" width=\"220\" height=\"26\" rx=\"5\" class=\"s-box\"/><text x=\"442\" y=\"104\" class=\"s-ink\">ws ✓</text>\n    <rect x=\"430\" y=\"117\" width=\"220\" height=\"26\" rx=\"5\" class=\"s-dash\"/><text x=\"442\" y=\"135\" class=\"s-ink\">定義：靠路徑指，或一起帶</text>\n    <rect x=\"430\" y=\"148\" width=\"220\" height=\"26\" rx=\"5\" class=\"s-dash\"/><text x=\"442\" y=\"166\" class=\"s-ink\">清檔時會不會刪這台的紀錄</text>\n  </g>\n  <g class=\"t12\">\n    <circle cx=\"258\" cy=\"130\" r=\"11\" class=\"s-ask\"/><text x=\"258\" y=\"134\" text-anchor=\"middle\" class=\"s-on\">19</text>\n    <circle cx=\"258\" cy=\"161\" r=\"11\" class=\"s-ask\"/><text x=\"258\" y=\"165\" text-anchor=\"middle\" class=\"s-on\">20</text>\n    <circle cx=\"258\" cy=\"192\" r=\"11\" class=\"s-ask\"/><text x=\"258\" y=\"196\" text-anchor=\"middle\" class=\"s-on\">20</text>\n  </g>\n  <rect x=\"15\" y=\"248\" width=\"650\" height=\"34\" rx=\"8\" class=\"s-askbox\"/>\n  <circle cx=\"36\" cy=\"265\" r=\"11\" class=\"s-ask\"/><text x=\"36\" y=\"269\" text-anchor=\"middle\" class=\"t12 s-on\">21</text>\n  <text x=\"56\" y=\"270\" class=\"t13 s-ink\">另一件：systemd 範例裡，根 daemon 一當掉，子程序被一起殺掉 → 接不回來</text>\n</svg>",
+   "caption": "stack 和 ws 一起帶走是你說的；定義資料夾、紀錄、歸檔信算不算在快照裡，是 agent 代你劃的線。 另外 systemd 範例的設定會讓「根當掉後接回孩子」落空。"
+  },
+  {
+   "id": "t4",
+   "title": "四、條文把推薦寫成已定",
+   "intro": "比喻：你說「每家店自己決定賣不賣便當」，條文寫成「全市只准賣這九種」。",
+   "figure_svg": "<svg viewBox=\"0 0 680 250\" role=\"img\" aria-label=\"你點的選項，和條文最後寫成的樣子\">\n  <defs>\n    <marker id=\"ar3\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto\"><path d=\"M0,0 L10,5 L0,10 z\" class=\"s-muted\"/></marker>\n  </defs>\n  <text x=\"105\" y=\"40\" text-anchor=\"middle\" class=\"t14 s-ink\">你點的</text>\n  <rect x=\"30\" y=\"90\" width=\"150\" height=\"56\" rx=\"8\" class=\"s-askbox\"/>\n  <text x=\"105\" y=\"114\" text-anchor=\"middle\" class=\"t14 s-ink\">★ 推薦選項</text>\n  <text x=\"105\" y=\"134\" text-anchor=\"middle\" class=\"t12 s-muted\">一句話</text>\n  <line x1=\"185\" y1=\"118\" x2=\"245\" y2=\"118\" class=\"s-line\" marker-end=\"url(#ar3)\"/>\n  <text x=\"215\" y=\"108\" text-anchor=\"middle\" class=\"t12 s-muted\">寫進條文</text>\n\n  <text x=\"455\" y=\"40\" text-anchor=\"middle\" class=\"t14 s-ink\">條文寫成的</text>\n  <rect x=\"250\" y=\"50\" width=\"415\" height=\"190\" rx=\"10\" class=\"s-panel\"/>\n  <rect x=\"265\" y=\"90\" width=\"150\" height=\"56\" rx=\"8\" class=\"s-askbox\"/>\n  <text x=\"340\" y=\"114\" text-anchor=\"middle\" class=\"t14 s-ink\">★ 推薦選項</text>\n  <text x=\"340\" y=\"134\" text-anchor=\"middle\" class=\"t12 s-muted\">你真的裁了</text>\n  <g class=\"t12\">\n    <rect x=\"430\" y=\"62\" width=\"222\" height=\"30\" rx=\"6\" class=\"s-dash\"/><text x=\"443\" y=\"82\" class=\"s-ink\">＋ 全體系禁令（表外不准開）</text>\n    <rect x=\"430\" y=\"98\" width=\"222\" height=\"30\" rx=\"6\" class=\"s-dash\"/><text x=\"443\" y=\"118\" class=\"s-ink\">＋ 判準數字（第 3 次、5 項…）</text>\n    <rect x=\"430\" y=\"134\" width=\"222\" height=\"30\" rx=\"6\" class=\"s-dash\"/><text x=\"443\" y=\"154\" class=\"s-ink\">＋ 多開一扇門（README 也算）</text>\n    <rect x=\"430\" y=\"170\" width=\"222\" height=\"30\" rx=\"6\" class=\"s-dash\"/><text x=\"443\" y=\"190\" class=\"s-ink\">＋ 代號兼差、退出碼例外</text>\n    <rect x=\"265\" y=\"170\" width=\"150\" height=\"56\" rx=\"8\" class=\"s-dash\"/><text x=\"340\" y=\"194\" text-anchor=\"middle\" class=\"s-ink\">＋ 自己補的理由</text>\n    <text x=\"340\" y=\"212\" text-anchor=\"middle\" class=\"s-muted\">標成「已定」</text>\n  </g>\n  <g class=\"t12\">\n    <circle cx=\"652\" cy=\"62\" r=\"11\" class=\"s-ask\"/><text x=\"652\" y=\"66\" text-anchor=\"middle\" class=\"s-on\">22</text>\n    <circle cx=\"652\" cy=\"98\" r=\"11\" class=\"s-ask\"/><text x=\"652\" y=\"102\" text-anchor=\"middle\" class=\"s-on\">23</text>\n    <circle cx=\"652\" cy=\"134\" r=\"11\" class=\"s-ask\"/><text x=\"652\" y=\"138\" text-anchor=\"middle\" class=\"s-on\">25</text>\n    <circle cx=\"640\" cy=\"215\" r=\"11\" class=\"s-ask\"/><text x=\"640\" y=\"219\" text-anchor=\"middle\" class=\"s-on\">28</text>\n    <circle cx=\"616\" cy=\"215\" r=\"11\" class=\"s-ask\"/><text x=\"616\" y=\"219\" text-anchor=\"middle\" class=\"s-on\">29</text>\n    <circle cx=\"592\" cy=\"215\" r=\"11\" class=\"s-ask\"/><text x=\"592\" y=\"219\" text-anchor=\"middle\" class=\"s-on\">30</text>\n  </g>\n</svg>",
+   "caption": "你點了一句推薦，條文卻多長出一圈東西：禁令、數字門檻、多開的門、自己補的理由，全都掛在「使用者已定」名下。 方向都沒做錯，只是跳過了「給你看」這一步——每題問的是：追認，還是收回到你點的那一句。"
+  },
+  {
+   "id": "t5",
+   "title": "五、其他",
+   "intro": "這五件都是 agent 自己定的「做或不做」，沒問過你；推薦都是維持現況。",
+   "figure_svg": "<svg viewBox=\"0 0 680 200\" role=\"img\" aria-label=\"公司機最多開幾個 agent：現在兩級，推薦合成一級\">\n  <text x=\"20\" y=\"24\" class=\"t13 s-ink\">公司機最多同時開幾個 agent（第 32 題）</text>\n  <line x1=\"150\" y1=\"170\" x2=\"650\" y2=\"170\" class=\"s-line\"/>\n  <g class=\"t12 s-muted\" text-anchor=\"middle\">\n    <text x=\"150\" y=\"188\">0</text><text x=\"250\" y=\"188\">2</text><text x=\"350\" y=\"188\">4</text><text x=\"450\" y=\"188\">6</text><text x=\"550\" y=\"188\">8</text><text x=\"650\" y=\"188\">10</text>\n  </g>\n  <text x=\"20\" y=\"66\" class=\"t13 s-ink\">你在做事</text>\n  <rect x=\"150\" y=\"50\" width=\"150\" height=\"24\" rx=\"4\" class=\"s-fix\"/><text x=\"292\" y=\"67\" text-anchor=\"end\" class=\"t12 s-onfix\">3</text>\n\n  <text x=\"20\" y=\"106\" class=\"t13 s-ink\">閒著（現在）</text>\n  <rect x=\"150\" y=\"90\" width=\"300\" height=\"24\" rx=\"4\" class=\"s-fix\"/><text x=\"442\" y=\"107\" text-anchor=\"end\" class=\"t12 s-onfix\">常態 6</text>\n  <rect x=\"450\" y=\"90\" width=\"100\" height=\"24\" rx=\"4\" class=\"s-dash\"/><text x=\"500\" y=\"107\" text-anchor=\"middle\" class=\"t12 s-ink\">暫定 8</text>\n  <text x=\"560\" y=\"107\" class=\"t12 s-muted\">← 證據是同一份</text>\n\n  <text x=\"20\" y=\"146\" class=\"t13 s-ink\">閒著（★推薦）</text>\n  <rect x=\"150\" y=\"130\" width=\"400\" height=\"24\" rx=\"4\" class=\"s-ask\"/><text x=\"542\" y=\"147\" text-anchor=\"end\" class=\"t12 s-on\">8</text>\n</svg>",
+   "caption": "你說「閒著可以加開」，被拆成「常態 6、暫定 8」兩級，但兩級的依據是同一段十分鐘的量測；推薦合成一級。 這節另外五題是命名、要不要給你看實作、五件小事的確認，以及修正時新挖出的兩件（金鑰放哪、agents 的 tick 上限）。"
+  }
+ ],
+ "columns": [
+  "id",
+  "section",
+  "question",
+  "eli5",
+  "options",
+  "recommend",
+  "why",
+  "quotes",
+  "details",
+  "source_path",
+  "source_lines",
+  "source_excerpt",
+  "answer",
+  "answer_state",
+  "answer_note",
+  "answered_at"
+ ],
+ "link_columns": [
+  "source_path"
+ ],
+ "rows": [
+  {
+   "id": "1",
+   "section": "t1",
+   "question": "判官格子滿了，要不要預設就讓信排隊？",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "維持預設關：格滿立刻回「沒位子」，想排隊的 agent 自己去改設定。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "判官範本預設開排隊（程式本身預設仍關，跟「範本開時鐘」同一種做法）。",
+     "consequence": "合你「本來就該能管排隊」的預期；代價是格滿時加列指令會等到逾時才報錯。"
+    }
+   ],
+   "recommend": "B",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「通用kernel，我原本預期他就是能管准入也能管排隊...或許可以做選項？」",
+     "cite": "proto8/thinking/2026-11/06/os-concepts/README.md:22"
+    }
+   ],
+   "details": [
+    "頂層把排隊做成 `judge.json` 的選填 `queue`，自己定「預設關」，理由是「跟現況一樣快」；標了「可翻」之後就沒再問你。",
+    "commit `ac796b3d6`（頂層 claude）、實作 `b19f844cb`。程式：`proto8/lib/aos/judge/_entry`（沒寫 queue＝false）。"
+   ],
+   "source_path": "05-代定盤點/01a-未裁逐條-1～6.md",
+   "source_lines": "§1",
+   "source_excerpt": "",
+   "answer": "B",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "3",
+   "section": "t1",
+   "question": "「有序信」經判官轉一手就換了號碼，回信永遠對不上——要怎麼修？",
+   "eli5": "有序信像抽號碼牌排隊的信。判官轉寄時重新抽了一張號碼牌，回信寫的是新號碼，原寄件人拿著舊號碼等，等到逾時。",
+   "options": [
+    {
+     "key": "A",
+     "label": "經判官的信不帶「有序」；",
+     "consequence": "判官收到有序信就照轉成一般信。改動小、回信對得上；代價是「有序」只保證到判官門口。"
+    },
+    {
+     "key": "B",
+     "label": "判官記一張「新號碼→原號碼」對照表，由判官代回信。",
+     "consequence": "保住有序，但判官要多讀回信、變重。"
+    },
+    {
+     "key": "C",
+     "label": "維持現況，只在文件寫一句「已知限制」。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話。相關的是信的規矩：「`in_reply_to`（回信時寫原信的信件名稱）」",
+     "cite": "proto8/docs/NORMS/05-基礎設施-窗/05-N-16.md:6"
+    }
+   ],
+   "details": [
+    "實測：寄到判官的信名 `000000000003.…`，轉進 daemon 信箱變 `000000000002.…`，回信的 `in_reply_to` 寫的是後者。",
+    "同一個原因，判官「上輪轉過沒」的防重檢查對有序信永遠不成立，判官在轉寄和收信之間當掉的話會轉兩次。",
+    "目前沒有程式會寄有序信給判官，只有人手寄才會撞到。這是 claude 寫的（`6d6428011`），不是 sol。",
+    "程式 proto8/lib/aos/judge/_entry:174-187"
+   ],
+   "source_path": "08-信箱取件順序/02-發現.md",
+   "source_lines": "§2",
+   "source_excerpt": "",
+   "answer": "B",
+   "answer_state": "changed",
+   "answer_note": "我希望這是可選的。默認是不帶有序。",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "4",
+   "section": "t1",
+   "question": "寄信時選「排進隊也算成功」，這封信要不要也有期限？",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "不帶期限（現況），文件寫明「選這個＝信可能永遠排著」。",
+     "consequence": "簡單，凍住再醒來也不會被拒。"
+    },
+    {
+     "key": "B",
+     "label": "帶同一個秒數期限：排太久自動拒，不會有永遠排著的信。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「由寄信者自己設定。然後30秒？這不該是固定值，同樣該由寄信者自己設定。判官會輔助。」",
+     "cite": "proto8/thinking/2026-11/06/os-impl/README.md:14"
+    }
+   ],
+   "details": [
+    "你裁的主線（等多久、等滿算什麼由寄信者設）落地成 `--timeout-s`＋`--on-queued`，這部分對。",
+    "但 `--on-queued ok` 時信不帶期限，等於「無限」，跟設計稿自己寫的「不給無限」對不上；這一邊是代定的。",
+    "同一段發現的另一半（`queue.json` 壞檔讓判官每輪退出、隊列卡死）是第 5 件，已列直接修。"
+   ],
+   "source_path": "04-設計規劃/05-續-no-pid-os-impl發現3到4.md",
+   "source_lines": "§4",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "6",
+   "section": "t1",
+   "question": "排隊期限全用「牆鐘」，凍住再醒來，排著的信會一口氣全部到期——可以嗎？",
+   "eli5": "牆鐘是牆上真的時鐘，機器睡著它照樣走；tick 鐘是只有樹醒著才走的節拍器（見下一節的圖）。",
+   "options": [
+    {
+     "key": "A",
+     "label": "維持牆鐘，把後果寫清楚；",
+     "consequence": "想跨過凍住還能排著，就用第 4 題的「排進隊也算成功」。"
+    },
+    {
+     "key": "B",
+     "label": "加一種用 tick 算的排隊期限（約 1 小時工）。",
+     "consequence": "凍住時期限也跟著停，醒來接著數。"
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「好，關於暫停這塊我有話說：我知道linux有原生暫停，但我想要的是暫停後能遷移。」",
+     "cite": "proto8/thinking/2026-11/06/daemon-board/README.md:13"
+    }
+   ],
+   "details": [
+    "排隊期限從信封的寄出時間起算、全用牆鐘、沒開 `--timeout-ticks`。agent 自己寫了後果：「凍 8 小時醒來第一輪全部到期被拒」。",
+    "選牆鐘有條文依據（N-65 ③「信裡毫秒」），但「凍住後全到期」這個跟「暫停後能遷移」直接相關的後果沒帶給你。"
+   ],
+   "source_path": "05-代定盤點/01a-未裁逐條-1～6.md",
+   "source_lines": "§4",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "7",
+   "section": "t1",
+   "question": "「留一格給高優先」做好了，但出廠範本沒打開——要不要開？",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "LLM 總機範本和試驗場都加「留 1 格給高優先」。",
+     "consequence": "高優先不再乾等 3 秒；代價是總共 2 格時，低優先只剩 1 格、會慢一拍。"
+    },
+    {
+     "key": "B",
+     "label": "不寫，文件標「要留格自己寫」。",
+     "consequence": "你裁的事就只是「可以做」，不是「已解決」。"
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「好，都按照推薦」（推薦第 1 條是「做 os-impl C5『留一格給高優先』，跟判官排隊同一步排」）",
+     "cite": "proto8/thinking/2026-11/05/no-pid/19-P9邊緣實測.md:51、:53"
+    }
+   ],
+   "details": [
+    "程式做了（`reserved: {\"high\": N}`），驗收 17.5 ms 對 3065 ms；但沒寫就是 0，範本 `proto8/kernel/llm-kernel/kernel.json` 與試驗場都沒寫。",
+    "另外三處代定沒問：原規劃「包加」改成 kernel 頂層；N 沒有預設；等久升上來的不算高優先。C++ 也還沒重建。",
+    "commit `5ffa76567`（codex sol 實跑、claude 隊長）。"
+   ],
+   "source_path": "04-設計規劃/05-no-pid-os-impl.md",
+   "source_lines": "§1",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "8",
+   "section": "t1",
+   "question": "aos-agent 經判官寄信、但判官地址指不到時，要報錯還是只印警告？",
+   "eli5": "`AOS_KERNEL` 就是寫在信封上的「判官地址」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "這一路維持報錯：沒有退路可退，退回 daemon 信箱會悄悄繞過判官；",
+     "consequence": "報錯比較看得見。"
+    },
+    {
+     "key": "B",
+     "label": "照你選的字面：只印警告，繼續走。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「印 warning (Recommended)」（選項說明：設了但指不到＝印 warning 行、不報錯、不改退路）",
+     "cite": "proto8/thinking/2026-11/06/env-portability/README.md:32"
+    }
+   ],
+   "details": [
+    "C++ 和 LLM 總機照你選的做了「印警告」；只有 Python 的 aos-agent 經判官這一路，隊長代定維持報錯 `MailboxMissing`，沒回頭問。11-07 你裁了 aos-daemon-ctl 永遠直寄後，只剩這一路。",
+    "「翻」那半已修完：條文的四種性質表把「設了但指不到」寫成「照退路走」，是寫反的。",
+    "…/03-條文-no-pid-tick-json-argv-special-cases/02-tick-time.md §1"
+   ],
+   "source_path": "05-代定盤點/01a-未裁逐條-1～6.md",
+   "source_lines": "§3",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "11",
+   "section": "t2",
+   "question": "你說「信裡用毫秒」，agent 讀成「用牆鐘」、格式沒改——要照哪個意思？",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "你的意思就是「跨樹用牆鐘、不用 tick」：期限格式照舊（ISO 時間或秒），條文加一句「毫秒指牆鐘的意思、格式不限」。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "照字面改成毫秒整數：寄信端和 LLM 總機兩邊都要改，多一次格式變動。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「1「信裡用毫秒」」",
+     "cite": "proto8/thinking/2026-11/06/daemon-board/README.md:30"
+    }
+   ],
+   "details": [
+    "T 隊隊長代定「T4 不改 `priority.deadline` 格式」，理由是你說的毫秒指的是牆鐘語意。可能就是你的意思，但字面被翻掉了。",
+    "條文 N-67 ② 還標「已實作」，讀的人會以為信裡已經是毫秒。",
+    "…/03-條文-no-pid-tick-json-argv-special-cases/02-tick-time.md §2"
+   ],
+   "source_path": "05-代定盤點/01a-未裁逐條-1～6.md",
+   "source_lines": "§2",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "12",
+   "section": "t2",
+   "question": "時鐘停住時，「判卡住」、鎖的租約、tick 逾時全都一起停，這樣對嗎？",
+   "eli5": "比喻：看門狗被拔了電源就不會咬人。不會誤判，是「永遠判不出來」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照現況：凍住時本來就該全停。",
+     "consequence": "條文寫明一句「時鐘停，這三樣一起停；要它們走就讓時鐘走」。不改程式。"
+    },
+    {
+     "key": "B",
+     "label": "判卡住改成永遠看牆鐘：時鐘停了也判得出卡住，但凍住醒來可能被誤判成卡住。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「那兩題都按照推薦。」、「當第 0 格 (Recommended)」——你沒有直接講過「判卡住要不要跟著時鐘停」。",
+     "cite": "proto8/thinking/2026-11/05/tick-time/03-11-06-裁定與新設計.md:76、:40"
+    }
+   ],
+   "details": [
+    "時鐘會停的情況：人手 pause 時鐘；手寫的時鐘程式死掉；`AOS_TICK` 設了但檔不在（你選「當第 0 格」，就永遠停在 0）。",
+    "P7 驗收第 7 案「pause 時鐘 12 秒不判」就是這個行為。tick-time 03 有寫「忘了 resume→期限永不到」，但條文 N-65、N-17、N-15 三處都沒寫。"
+   ],
+   "source_path": "02-條文-lift-to-norms/01b-要使用者裁的-4～7.md",
+   "source_lines": "§5",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "15-1",
+   "section": "t2",
+   "question": "判「卡住」時，父看子 `ctl.json` 的檔案修改時間——這算不算你說過「不要從檔案判斷」？：15-1 用修改時間算不算「從檔案判斷」？",
+   "eli5": "`ctl.json` 是給 daemon 下指令的便條。父判斷「有人叫它、它卻沒反應」時，拿這張便條的修改時間當「被叫的時間」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "可以接受：條文寫明「被叫的時間＝ctl.json 的修改時間，你確認過」。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "不行：改成比便條上的流水號，不看時間。",
+     "consequence": "缺點是便條壞掉時會被當成卡住。"
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「心跳這塊就直接看pid就好，從檔案判斷...檔案的更新本來就會受到多方面因素影響，這其實不太好…我們的aos-daemon-ctl問詢也是一個方式，兩者並存。」",
+     "cite": "proto8/thinking/2026-11/02/state-window/01-使用者原文-11-02-逐字.md:11"
+    }
+   ],
+   "details": [
+    "「照原設計」只有三個字，條文 N-17:4 卻把頂層推的理由（「與不從檔案判活不衝突」）寫成「已定」；N-32:9「不看 mtime」也直接當結論，沒標誰判的。",
+    "P9 真的量到「未來的修改時間被誤標卡住」，已修掉。",
+    "10 拍、連 3 次這些數字也是代定，但報告判不用你裁（可翻）。",
+    "…/02-條文-lift-to-norms/01b-要使用者裁的-4～7.md §6；…/04-設計規劃/05-續2-no-pid-os-impl發現5到7.md §6"
+   ],
+   "source_path": "03-條文-no-pid-tick-json-argv-special-cases/01-no-pid-P5b.md",
+   "source_lines": "§1",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "15-2",
+   "section": "t2",
+   "question": "判「卡住」時，父看子 `ctl.json` 的檔案修改時間——這算不算你說過「不要從檔案判斷」？：15-2 凍住時你寫的「停」，醒來會被當舊指令吃掉——可以嗎？",
+   "eli5": "`ctl.json` 是給 daemon 下指令的便條。父判斷「有人叫它、它卻沒反應」時，拿這張便條的修改時間當「被叫的時間」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "現況：起來前就在的指令當「基準線」不算數。",
+     "consequence": "重開不會被舊的「暫停」卡住；代價是凍住時寫的「停」要醒後換號再寫一次。"
+    },
+    {
+     "key": "B",
+     "label": "起來後第一拍就照做：舊的「暫停／停」會讓剛醒的子馬上停。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「心跳這塊就直接看pid就好，從檔案判斷...檔案的更新本來就會受到多方面因素影響，這其實不太好…我們的aos-daemon-ctl問詢也是一個方式，兩者並存。」",
+     "cite": "proto8/thinking/2026-11/02/state-window/01-使用者原文-11-02-逐字.md:11"
+    }
+   ],
+   "details": [
+    "「照原設計」只有三個字，條文 N-17:4 卻把頂層推的理由（「與不從檔案判活不衝突」）寫成「已定」；N-32:9「不看 mtime」也直接當結論，沒標誰判的。",
+    "P9 真的量到「未來的修改時間被誤標卡住」，已修掉。",
+    "10 拍、連 3 次這些數字也是代定，但報告判不用你裁（可翻）。",
+    "…/02-條文-lift-to-norms/01b-要使用者裁的-4～7.md §6；…/04-設計規劃/05-續2-no-pid-os-impl發現5到7.md §6"
+   ],
+   "source_path": "03-條文-no-pid-tick-json-argv-special-cases/01-no-pid-P5b.md",
+   "source_lines": "§1",
+   "source_excerpt": "",
+   "answer": "B",
+   "answer_state": "changed",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "19",
+   "section": "t3",
+   "question": "快照裡到底有什麼？定義資料夾算不算在裡面？",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "快照＝stack＋ws。",
+     "consequence": "定義是「原始碼」不算，靠相對路徑指；沒一起搬的就停在 stopped（現況）。"
+    },
+    {
+     "key": "B",
+     "label": "快照＝定義＋stack＋ws，三樣一起帶。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「接著把daemon的stack、我做事的資料夾(ws)，一起直接複製到另一個地方。實現無痛遷移。」",
+     "cite": "proto8/thinking/2026-11/05/portable-flow/README.md:11"
+    }
+   ],
+   "details": [
+    "五處各講一半：C-83 ① 把定義算進去，板子比喻和 portable-flow 02 說定義在外面。ws 算不算 C-83 沒講——現在能動是因為 stack 剛好放在 `ws/.stack` 裡，是佈局上的巧合。",
+    "「一棵樹凍住能搬」在 C-16 註、C-79、C-83 ①、N-67、板子比喻各寫一次；建議只留 C-79 一處，其餘指過去（這部分不用你裁）。"
+   ],
+   "source_path": "02-條文-lift-to-norms/01a-要使用者裁的-1～3.md",
+   "source_lines": "§2",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "20-1",
+   "section": "t3",
+   "question": "log、對話紀錄、歸檔信要不要跟著搬？新機器清檔時要清多少？：20-1 log 類（stderr、live、turns、transcripts）",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "不搬、留在原機器（快照小）。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "全帶走：對話紀錄跟著走，但快照會隨時間長大。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「daemon就像是硬體，各stack就是各程序所佔據的記憶體空間」",
+     "cite": "proto8/docs/CONCEPTS/02-設計理念-時空.md:13（C-79）"
+    }
+   ],
+   "details": [
+    "`proto8/cmd/aos-agent/stack.gitignore:39-45` 擋了 `**/stderr.txt`、`**/live.jsonl`、`**/turns.jsonl`、`**/transcripts/`、`**/archive/`；段名自己叫「可擋（會失去紀錄）」。",
+    "擋 archive 跟 N-16（信箱可選擇留歸檔）衝突，調查只寫「今天沒人用 `--keep`」。",
+    "食譜在新機器跑 `clean -fdX -- ws/.stack/`，會把新機器上原有的被擋檔一起刪。",
+    "commit `04185730c` 建議、`cf5799221` 落地（都是 sol）。",
+    "…/04-設計規劃/02-續2-git-image決策表.md；…/05-代定盤點/01b-未裁逐條-7～12.md §10"
+   ],
+   "source_path": "04-設計規劃/02-git-image.md",
+   "source_lines": "§3",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "20-2",
+   "section": "t3",
+   "question": "log、對話紀錄、歸檔信要不要跟著搬？新機器清檔時要清多少？：20-2 歸檔信 `archive/`（信箱選了「要留」的舊信）",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "不擋，跟著走：選了留就是要留。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "維持擋，歸檔只留原機器。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「daemon就像是硬體，各stack就是各程序所佔據的記憶體空間」",
+     "cite": "proto8/docs/CONCEPTS/02-設計理念-時空.md:13（C-79）"
+    }
+   ],
+   "details": [
+    "`proto8/cmd/aos-agent/stack.gitignore:39-45` 擋了 `**/stderr.txt`、`**/live.jsonl`、`**/turns.jsonl`、`**/transcripts/`、`**/archive/`；段名自己叫「可擋（會失去紀錄）」。",
+    "擋 archive 跟 N-16（信箱可選擇留歸檔）衝突，調查只寫「今天沒人用 `--keep`」。",
+    "食譜在新機器跑 `clean -fdX -- ws/.stack/`，會把新機器上原有的被擋檔一起刪。",
+    "commit `04185730c` 建議、`cf5799221` 落地（都是 sol）。",
+    "…/04-設計規劃/02-續2-git-image決策表.md；…/05-代定盤點/01b-未裁逐條-7～12.md §10"
+   ],
+   "source_path": "04-設計規劃/02-git-image.md",
+   "source_lines": "§3",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "20-3",
+   "section": "t3",
+   "question": "log、對話紀錄、歸檔信要不要跟著搬？新機器清檔時要清多少？：20-3 新機器清掉「被擋的檔」",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "只清 request.json，這台原有的紀錄不動。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "維持全清：來回搬兩次，兩邊的紀錄都沒了。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「daemon就像是硬體，各stack就是各程序所佔據的記憶體空間」",
+     "cite": "proto8/docs/CONCEPTS/02-設計理念-時空.md:13（C-79）"
+    }
+   ],
+   "details": [
+    "`proto8/cmd/aos-agent/stack.gitignore:39-45` 擋了 `**/stderr.txt`、`**/live.jsonl`、`**/turns.jsonl`、`**/transcripts/`、`**/archive/`；段名自己叫「可擋（會失去紀錄）」。",
+    "擋 archive 跟 N-16（信箱可選擇留歸檔）衝突，調查只寫「今天沒人用 `--keep`」。",
+    "食譜在新機器跑 `clean -fdX -- ws/.stack/`，會把新機器上原有的被擋檔一起刪。",
+    "commit `04185730c` 建議、`cf5799221` 落地（都是 sol）。",
+    "…/04-設計規劃/02-續2-git-image決策表.md；…/05-代定盤點/01b-未裁逐條-7～12.md §10"
+   ],
+   "source_path": "04-設計規劃/02-git-image.md",
+   "source_lines": "§3",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "21",
+   "section": "t3",
+   "question": "systemd 範例裡，根 daemon 一當掉就把所有子程序一起殺掉——要改嗎？",
+   "eli5": "systemd 會把一個服務的程序圈成一組（cgroup）。現在的設定是：主程序一死，整組清掉才重起。",
+   "options": [
+    {
+     "key": "A",
+     "label": "改成 `KillMode=process`：根當掉時子程序留著、可以接回。",
+     "consequence": "代價是 `systemctl stop` 期限到了，systemd 也不會替你收掉沒走的子。"
+    },
+    {
+     "key": "B",
+     "label": "維持現狀，說明寫清楚「在 systemd 底下，根當掉＝整棵樹重跑」。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「我們一大堆daemon在跑，總會有幾個daemon可能卡住，或是crash，那怎麼辦...你有啥好想法嗎。」",
+     "cite": "proto8/thinking/2026-11/05/no-pid/README.md:13"
+    }
+   ],
+   "details": [
+    "`proto8/impls/aos-daemon/examples/root/aos-root.service:15` 是 `KillMode=mixed`；README:29 只說「與 daemon crash 後接回不同，按需要調整」。",
+    "沒實測（沙箱連不上 user bus），推論照 systemd 手冊。不論選哪個，家機都可以 `kill -9` 根實測一次。commit `57e55e650`（sol）。"
+   ],
+   "source_path": "01-設定檔.md",
+   "source_lines": "§1",
+   "source_excerpt": "",
+   "answer": "B",
+   "answer_state": "changed",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "22",
+   "section": "t4",
+   "question": "短旗標：條文寫成「全體系只准九個短名、表外不准開」——追認嗎？",
+   "eli5": "比喻：你說「每家店自己決定賣不賣便當」，條文寫成「全市只准賣這九種」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "追認共用表：九個照舊，條文註明「共用表與表外禁開是頂層補的，你間接默認過」。",
+     "consequence": "程式不動。"
+    },
+    {
+     "key": "B",
+     "label": "回到「每支各自定」：拿掉表外禁開。",
+     "consequence": "同一個短名可能在不同指令意思不同。"
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "你選「開幾個常用短名」，選項說明是「例如 -h、-q、-j（--json），每支指令各自定」",
+     "cite": "proto8/thinking/2026-11/06/human-cli/README.md:16"
+    }
+   ],
+   "details": [
+    "頂層落 human-cli 裁定時在 README 自己註明「頂層補：全 aos 共用一張表、同名同義、沒列在表上的不准開」；sol 在 `76297cae1` 寫進 P-44 標「已定」。",
+    "盤點 csv 看到了落差、自己判「以共用表為準」；lift-to-norms 的「要使用者看」沒列這題。",
+    "條文 proto8/docs/CONVENTION/02-題目stack停錯腦/07-P-44.md:7"
+   ],
+   "source_path": "02-條文-lift-to-norms/01a-要使用者裁的-1～3.md",
+   "source_lines": "§1",
+   "source_excerpt": "",
+   "answer": "B",
+   "answer_state": "changed",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "23",
+   "section": "t4",
+   "question": "「特例什麼時候升格成慣例」——用數字門檻，還是照你原本的問法？",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "同型再出現時，問一次「往後會更多嗎、好處遠大於壞處嗎」，是就升格；",
+     "consequence": "數字只當提醒，不當開關。"
+    },
+    {
+     "key": "B",
+     "label": "留數字（第 3 次；",
+     "consequence": "清單到 5 項或 3 天加 2 項），但只管 C-52 那張例外表，不當全 repo 通則。"
+    },
+    {
+     "key": "C",
+     "label": "維持原狀：數字＋全 repo 通則。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「去調查現在有哪些是\"特例\"……某項特例往後可能還會有更多(其好處超過壞處很多)，是否值得成為慣例」",
+     "cite": "proto8/thinking/2026-11/06/special-cases/README.md:7"
+    }
+   ],
+   "details": [
+    "「第 3 次」「5 項或 3 天 2 項」找不到你的原話；「3 天 2 項」看起來是照 C-54 剛好 11-04、11-06 各加一次量出來的。你給的尺是往前看的，門檻卻改成數過去幾次。",
+    "第 6 題只給 A（第 3 次）、B（第 2 次），少了「不設次數、逐案判斷」。",
+    "條文還加一句「不只 C-52，條文與程式裡所有『一般規則＋例外』都照這幾條」，範圍沒問過；規矩 4「先不做要寫等什麼」也沒問過。",
+    "…/03-條文-no-pid-tick-json-argv-special-cases/04-special-cases.md §1"
+   ],
+   "source_path": "04-設計規劃/01-special-cases.md",
+   "source_lines": "§2",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "25",
+   "section": "t4",
+   "question": "「公開介面」和幾條判準，條文寫得比你選的寬——要收回嗎？",
+   "eli5": "比喻：原本說「只能走正門」，條文改成「門牌上寫過的側門也算正門」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "全部收回到你點的原件：公開介面只有標頭、schema、`interfaces.json` 三種；",
+     "consequence": "「終端問、非終端不問」只寫那一件；「近的贏」只限 tick；「程式預設照現況、新行為範本開」不收成通則。"
+    },
+    {
+     "key": "B",
+     "label": "照條文現況保留：README 寫明的檔名也算公開；",
+     "consequence": "上面三條都推成全體系通則。"
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「1. C-52 讀法 →「不認身份、可認公開介面 (Recommended)」」；選項正文：「上層可以依賴下層公開宣告的介面（標頭、schema、`interfaces.json`）」",
+     "cite": "proto8/thinking/2026-11/06/special-cases/README.md；05-衝突與方向題.md 題 1"
+    }
+   ],
+   "details": [
+    "條文 `03-續-C-52-例外.md:13` 多了「README 寫明的檔名與格式」——任何程式在 README 提到自己的檔名就算公開，等於一句 README 就把耦合洗白。若選 B，至少補「README 寫明的要同時在 interfaces.json 宣告才算」。",
+    "K2（只看 stdin 是不是終端）、K4（近的贏）、K5（預設照現況、範本開新行為）都沒排成方向題就推成通則；K5 跟你「一律當成沒有舊版」的精神相反。",
+    "想分開回也可以，例如「25A，但 K4 推廣」。",
+    "…/04-設計規劃/01-續2-special-cases決策表.md"
+   ],
+   "source_path": "03-條文-no-pid-tick-json-argv-special-cases/04-special-cases.md",
+   "source_lines": "§2",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "28",
+   "section": "t4",
+   "question": "daemon 明明在、只是沒回信，錯誤代號卻跟「找不到 daemon」同一個——要分開嗎？",
+   "eli5": "錯誤代號的結尾是你定的：「…Missing」＝沒有這東西，「…Failed」＝失敗、可以再試。",
+   "options": [
+    {
+     "key": "A",
+     "label": "沒回信改報 `DaemonFailed`（或 `ReplyMissing`）；",
+     "consequence": "`DaemonMissing` 只留給「沒設、資料夾不在」。改三處字。"
+    },
+    {
+     "key": "B",
+     "label": "維持共用，條文和教腦的說明寫清楚「這個代號有兩種意思」。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「寄信不回，等同於呼叫失敗，想想看，假如你平常打API呼叫某個saas服務，他沒回代表啥？有可能他在忙，有可能你的要求他不認得，也可能他掛了。」",
+     "cite": "proto8/thinking/2026-11/05/no-pid/README.md:13"
+    }
+   ],
+   "details": [
+    "fable 規劃時代定、P5b 寫進 N-63 和 knowledge 當現況。腦看到 `DaemonMissing` 會往「沒設環境變數」去修，修錯方向。",
+    "程式：`proto8/cmd/aos-daemon-ctl/bin/aos-daemon-ctl:384`、`proto8/cmd/aos-agent/aos_agent/common.py:15-16`。"
+   ],
+   "source_path": "03-條文-no-pid-tick-json-argv-special-cases/01-no-pid-P5b.md",
+   "source_lines": "§2",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "29",
+   "section": "t4",
+   "question": "wait 用退出碼 11 表示「回去重想」，跟「非 0＝失敗」的規矩打架——怎麼寫？",
+   "eli5": "退出碼就是程式結束時舉的牌子。規矩 P-19 說只有三種牌子，其他非 0 都算失敗。",
+   "options": [
+    {
+     "key": "A",
+     "label": "P-19 加一句：「表上明寫接住的碼（像 wait 的 11）是分岔，不是失敗；",
+     "consequence": "沒寫在表上的非 0 才是失敗」。不改程式。另外請你點頭「腦設定改過、對不上時也退 11」這一半——這半沒裁過。"
+    },
+    {
+     "key": "B",
+     "label": "守住三種碼：wait 改用 0／10＋狀態檔表達「回去重想」，要改範本和流程表。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「2. `think/request.json`：「改成可重建、擋掉」。wait 沒有 pending 且 `request.json` 不在時，退 11 回 think 重組」（你選的是引號內那句，後半是選項說明）",
+     "cite": "proto8/thinking/2026-11/06/git-image/README.md:49"
+    }
+   ],
+   "details": [
+    "「request.json 不在」那種退 11 算你裁過；「腦設定改過、對不上」是 11-05 edge-agent 的修法，沒裁過。",
+    "Z 隊（`cf5799221`，sol）直接把退 11 寫進 P-41 原句；P-19 沒任何註，兩條互相矛盾。"
+   ],
+   "source_path": "02-條文-lift-to-norms/01a-要使用者裁的-1～3.md",
+   "source_lines": "§3",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "30",
+   "section": "t4",
+   "question": "登記工具時給 `--env-file`，要存「檔案內容」還是「檔案路徑」？",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "存內容（現況）：登記檔自己就夠用，搬家不會斷；",
+     "consequence": "代價是改了 .env 要重新登記一次。"
+    },
+    {
+     "key": "B",
+     "label": "存路徑：改檔馬上生效，但搬家就斷。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「或者改成--env-file xxx搭配--envs K=V...也不錯，兩者並存吧。」",
+     "cite": "proto8/thinking/2026-11/05/no-pid/03-找daemon與脫鉤.md"
+    }
+   ],
+   "details": [
+    "J3 codex 代定三條細節（存內容、`--envs` 蓋過 `--env-file`、`AOS_STACK` 不得覆蓋），條文用「不得」這種規範句寫，讀起來像你定的。",
+    "「翻」那半已修完：P-44 說 `aos-agent tools add` 也收 `--envs`，其實只有 `aos-tools add` 做了。"
+   ],
+   "source_path": "03-條文-no-pid-tick-json-argv-special-cases/03-json-argv-J7.md",
+   "source_lines": "§1、§2",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "31-1",
+   "section": "t5",
+   "question": "「信箱」和「queue」怎麼叫：規則寫得比你說的嚴，以及你原本那題的答案：31-1 規則 R14 說「四條都成立才准叫 queue」，等於不准把請求箱叫 queue",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "保留嚴的讀法，加註說明「你 10-30 說過請求也可以叫 queue，這裡選了嚴的」。",
+     "consequence": "改一行。"
+    },
+    {
+     "key": "B",
+     "label": "放寬：請求箱叫 queue 或 mailbox 都可以。",
+     "consequence": "代價是「一詞一義」變弱。"
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「這一層更接近訊息的queue概念，請求的投遞倒是可以用信箱概念，但也可以用queue概念」",
+     "cite": "proto8/thinking/2026-10/29/agent-bob/04-頂層對八題的再想.md:17"
+    }
+   ],
+   "details": [
+    "「有序是信的屬性、不是箱子的屬性」是 claude 隊長推的，對過原始碼站得住；改名 `requests/` 落地乾淨。",
+    "對照表引 N-16 時漏了你那半句「也可以用queue概念」，就判「對上」。硬改的成本只放在 03 的表裡，沒變成可勾的選項。"
+   ],
+   "source_path": "04-設計規劃/03-mailbox-naming.md",
+   "source_lines": "§1、§2",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "31-2",
+   "section": "t5",
+   "question": "「信箱」和「queue」怎麼叫：規則寫得比你說的嚴，以及你原本那題的答案：31-2 你原本問「有序的 mailbox 要不要改名 _queue」，agent 直接答「不用改」",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "確認不改（理由：箱子本身沒有有序／無序之分，有序是信的屬性）。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "要改，約 1.5～2 小時。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「這一層更接近訊息的queue概念，請求的投遞倒是可以用信箱概念，但也可以用queue概念」",
+     "cite": "proto8/thinking/2026-10/29/agent-bob/04-頂層對八題的再想.md:17"
+    }
+   ],
+   "details": [
+    "「有序是信的屬性、不是箱子的屬性」是 claude 隊長推的，對過原始碼站得住；改名 `requests/` 落地乾淨。",
+    "對照表引 N-16 時漏了你那半句「也可以用queue概念」，就判「對上」。硬改的成本只放在 03 的表裡，沒變成可勾的選項。"
+   ],
+   "source_path": "04-設計規劃/03-mailbox-naming.md",
+   "source_lines": "§1、§2",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "32",
+   "section": "t5",
+   "question": "公司機：你說「閒著可以加開」，要一級（8）還是兩級（6／8）？",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "合成一級：你明說閒著＝最多 8，超過不訂。",
+     "consequence": "少一條沒依據的線。"
+    },
+    {
+     "key": "B",
+     "label": "留兩級，在 6 旁註明「6 跟 8 證據相同，只是保守取值」。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「沒關係的，可以加開，我現在沒在幹嘛。」",
+     "cite": "wf/workflows/dispatch/aos-teams/01-公司WSL.md:46"
+    }
+   ],
+   "details": [
+    "6 的證據是 7 筆（6 分鐘）、8 的證據是 14 筆（9 分鐘），同一個十分鐘樣本，分不出哪個比較安全。",
+    "「翻」那兩半已修完：你早上授權「訂一個標準」的那句原話被刪了，要放回；恢復條件寫得太重，刪成「回門檻內再逐個開」。",
+    "commit `5ddf03d81`（sol 分析、opus 寫入）。",
+    "…/04-設計規劃/04-續2-效能標準決策表.md"
+   ],
+   "source_path": "04-設計規劃/04-效能標準.md",
+   "source_lines": "§4.2",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "33",
+   "section": "t5",
+   "question": "「子資料夾＝子動作」你說實作時要看一眼，做完沒給你看",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "拿 `aos-tools` 一個現成例子給你看（資料夾長什麼樣＋一個 `--help` 畫面），你點頭後才定稿。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "不用看了，直接定稿。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「2.子資料夾就是子動作，我覺得這個最好，但這個之後實作的時候我要看一眼，怕有些問題。」",
+     "cite": "proto8/thinking/2026-11/05/json-argv/07-使用者回覆-11-05晚.md:13"
+    }
+   ],
+   "details": [
+    "J3 做完（`a6d8cd9ac`）、J7 條文也照實作改了，沒有紀錄顯示拿給你看過。不是 agent 擅自定，是你要的確認步驟被跳過。",
+    "條文 P-41 一句裡同時寫「已定」和「要先看實作再定稿」（已列直接修，改成「方向已選、定稿等你看」）。"
+   ],
+   "source_path": "05-代定盤點/01a-未裁逐條-1～6.md",
+   "source_lines": "§5",
+   "source_excerpt": "",
+   "answer": "B",
+   "answer_state": "changed",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "34-1",
+   "section": "t5",
+   "question": "五件小事，各一句確認就好：34-1 `--help` 寫在任何位置都認（條文說只認旗標位置）",
+   "eli5": "這五件都是 agent 自己定的「做或不做」，沒問過你；推薦都是維持現況。",
+   "options": [
+    {
+     "key": "A",
+     "label": "維持，條文加一行「--help 例外」。",
+     "consequence": "後果：想把字面 `--help` 寫進檔要走 stdin。"
+    },
+    {
+     "key": "B",
+     "label": "照條文，只認旗標位置。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話。34-1：P-44 原句是「旗標位置才認」；你說的「P-44改吧」指的是另一句（末句改成 aos_flags 包 tool_io），不是這一處。（proto8/thinking/2026-11/05/json-argv/07-使用者回覆-11-05晚.md:27）",
+     "cite": "背景說明，非使用者原話；05-代定盤點/01a-未裁逐條-1～6.md §6"
+    }
+   ],
+   "details": [
+    "34-1：P-44 原句是「旗標位置才認」；你說的「P-44改吧」指的是另一句（末句改成 aos_flags 包 tool_io），不是這一處。（proto8/thinking/2026-11/05/json-argv/07-使用者回覆-11-05晚.md:27）",
+    "34-2：「我發現我們做出來的程式，輸出的各種東西，裡面都有中文...全都用英文吧」（wf/workflows/common/conventions.md 引）",
+    "34-3：沒找到原話，fable 自己定的不做清單。（proto8/thinking/2026-11/06/human-cli/README.md:48）",
+    "34-4：「『建議』經 daemon」（proto8/thinking/2026-11/06/os-concepts/README.md:9）；fable 在檔內自己標了「偏離」，但方向題沒帶給你。",
+    "34-5：「子daemon管好自己，父daemon只看他有沒有活着，子daemon的其他東西父daemon別碰。盡量解耦合。」（proto8/thinking/2026-11/05/no-pid/17-P7實作結果.md:58）；「照舊保留」被寫在「使用者裁定」段裡，沒有引語。",
+    "順帶一提：fable 盤出 8 處程式直接碰 Linux 行程、沒經 daemon（父殺自己起的子、鎖），判「不算衝突」，理由是父管自己的子是基本功能、鎖不是行程機制。不用回，掃一眼就好。",
+    "…/05-代定盤點/01b-未裁逐條-7～12.md §7～§12"
+   ],
+   "source_path": "05-代定盤點/01a-未裁逐條-1～6.md",
+   "source_lines": "§6",
+   "source_excerpt": "",
+   "answer": "B",
+   "answer_state": "changed",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "34-2",
+   "section": "t5",
+   "question": "五件小事，各一句確認就好：34-2 「全都用英文」不包括給 LLM 看的 prompt、persona、工具說明",
+   "eli5": "這五件都是 agent 自己定的「做或不做」，沒問過你；推薦都是維持現況。",
+   "options": [
+    {
+     "key": "A",
+     "label": "維持，慣例那一列補一句這個例外。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "連 prompt、persona 也改英文（省 token、對小模型友善）。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話。34-2：「我發現我們做出來的程式，輸出的各種東西，裡面都有中文...全都用英文吧」（wf/workflows/common/conventions.md 引）",
+     "cite": "背景說明，非使用者原話；05-代定盤點/01a-未裁逐條-1～6.md §6"
+    }
+   ],
+   "details": [
+    "34-1：P-44 原句是「旗標位置才認」；你說的「P-44改吧」指的是另一句（末句改成 aos_flags 包 tool_io），不是這一處。（proto8/thinking/2026-11/05/json-argv/07-使用者回覆-11-05晚.md:27）",
+    "34-2：「我發現我們做出來的程式，輸出的各種東西，裡面都有中文...全都用英文吧」（wf/workflows/common/conventions.md 引）",
+    "34-3：沒找到原話，fable 自己定的不做清單。（proto8/thinking/2026-11/06/human-cli/README.md:48）",
+    "34-4：「『建議』經 daemon」（proto8/thinking/2026-11/06/os-concepts/README.md:9）；fable 在檔內自己標了「偏離」，但方向題沒帶給你。",
+    "34-5：「子daemon管好自己，父daemon只看他有沒有活着，子daemon的其他東西父daemon別碰。盡量解耦合。」（proto8/thinking/2026-11/05/no-pid/17-P7實作結果.md:58）；「照舊保留」被寫在「使用者裁定」段裡，沒有引語。",
+    "順帶一提：fable 盤出 8 處程式直接碰 Linux 行程、沒經 daemon（父殺自己起的子、鎖），判「不算衝突」，理由是父管自己的子是基本功能、鎖不是行程機制。不用回，掃一眼就好。",
+    "…/05-代定盤點/01b-未裁逐條-7～12.md §7～§12"
+   ],
+   "source_path": "05-代定盤點/01a-未裁逐條-1～6.md",
+   "source_lines": "§6",
+   "source_excerpt": "",
+   "answer": "B",
+   "answer_state": "changed",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "34-3",
+   "section": "t5",
+   "question": "五件小事，各一句確認就好：34-3 不做 `--version`、安靜／囉嗦模式、顏色、進度條",
+   "eli5": "這五件都是 agent 自己定的「做或不做」，沒問過你；推薦都是維持現況。",
+   "options": [
+    {
+     "key": "A",
+     "label": "都不做。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "至少做 `--version`（兩台機器對版本時用得到）。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話。34-3：沒找到原話，fable 自己定的不做清單。（proto8/thinking/2026-11/06/human-cli/README.md:48）",
+     "cite": "背景說明，非使用者原話；05-代定盤點/01a-未裁逐條-1～6.md §6"
+    }
+   ],
+   "details": [
+    "34-1：P-44 原句是「旗標位置才認」；你說的「P-44改吧」指的是另一句（末句改成 aos_flags 包 tool_io），不是這一處。（proto8/thinking/2026-11/05/json-argv/07-使用者回覆-11-05晚.md:27）",
+    "34-2：「我發現我們做出來的程式，輸出的各種東西，裡面都有中文...全都用英文吧」（wf/workflows/common/conventions.md 引）",
+    "34-3：沒找到原話，fable 自己定的不做清單。（proto8/thinking/2026-11/06/human-cli/README.md:48）",
+    "34-4：「『建議』經 daemon」（proto8/thinking/2026-11/06/os-concepts/README.md:9）；fable 在檔內自己標了「偏離」，但方向題沒帶給你。",
+    "34-5：「子daemon管好自己，父daemon只看他有沒有活着，子daemon的其他東西父daemon別碰。盡量解耦合。」（proto8/thinking/2026-11/05/no-pid/17-P7實作結果.md:58）；「照舊保留」被寫在「使用者裁定」段裡，沒有引語。",
+    "順帶一提：fable 盤出 8 處程式直接碰 Linux 行程、沒經 daemon（父殺自己起的子、鎖），判「不算衝突」，理由是父管自己的子是基本功能、鎖不是行程機制。不用回，掃一眼就好。",
+    "…/05-代定盤點/01b-未裁逐條-7～12.md §7～§12"
+   ],
+   "source_path": "05-代定盤點/01a-未裁逐條-1～6.md",
+   "source_lines": "§6",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "34-4",
+   "section": "t5",
+   "question": "五件小事，各一句確認就好：34-4 降優先權、綁 CPU 核，在指令裡自己包，沒經 daemon",
+   "eli5": "這五件都是 agent 自己定的「做或不做」，沒問過你；推薦都是維持現況。",
+   "options": [
+    {
+     "key": "A",
+     "label": "先不做經 daemon 的版本，等壓測真的被餓再加（約 1 小時）。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "照「建議經 daemon」，現在就加。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話。34-4：「『建議』經 daemon」（proto8/thinking/2026-11/06/os-concepts/README.md:9）；fable 在檔內自己標了「偏離」，但方向題沒帶給你。",
+     "cite": "背景說明，非使用者原話；05-代定盤點/01a-未裁逐條-1～6.md §6"
+    }
+   ],
+   "details": [
+    "34-1：P-44 原句是「旗標位置才認」；你說的「P-44改吧」指的是另一句（末句改成 aos_flags 包 tool_io），不是這一處。（proto8/thinking/2026-11/05/json-argv/07-使用者回覆-11-05晚.md:27）",
+    "34-2：「我發現我們做出來的程式，輸出的各種東西，裡面都有中文...全都用英文吧」（wf/workflows/common/conventions.md 引）",
+    "34-3：沒找到原話，fable 自己定的不做清單。（proto8/thinking/2026-11/06/human-cli/README.md:48）",
+    "34-4：「『建議』經 daemon」（proto8/thinking/2026-11/06/os-concepts/README.md:9）；fable 在檔內自己標了「偏離」，但方向題沒帶給你。",
+    "34-5：「子daemon管好自己，父daemon只看他有沒有活着，子daemon的其他東西父daemon別碰。盡量解耦合。」（proto8/thinking/2026-11/05/no-pid/17-P7實作結果.md:58）；「照舊保留」被寫在「使用者裁定」段裡，沒有引語。",
+    "順帶一提：fable 盤出 8 處程式直接碰 Linux 行程、沒經 daemon（父殺自己起的子、鎖），判「不算衝突」，理由是父管自己的子是基本功能、鎖不是行程機制。不用回，掃一眼就好。",
+    "…/05-代定盤點/01b-未裁逐條-7～12.md §7～§12"
+   ],
+   "source_path": "05-代定盤點/01a-未裁逐條-1～6.md",
+   "source_lines": "§6",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "34-5",
+   "section": "t5",
+   "question": "五件小事，各一句確認就好：34-5 接回子 daemon 時，父會讀子的「已跑完」狀態",
+   "eli5": "這五件都是 agent 自己定的「做或不做」，沒問過你；推薦都是維持現況。",
+   "options": [
+    {
+     "key": "A",
+     "label": "維持：讀「是否已結束」算看死活，不算越界。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "只看 pid：父被 kill -9 後重開，會把已跑完的再起一次。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話。34-5：「子daemon管好自己，父daemon只看他有沒有活着，子daemon的其他東西父daemon別碰。盡量解耦合。」（proto8/thinking/2026-11/05/no-pid/17-P7實作結果.md:58）；「照舊保留」被寫在「使用者裁定」段裡，沒有引語。",
+     "cite": "背景說明，非使用者原話；05-代定盤點/01a-未裁逐條-1～6.md §6"
+    }
+   ],
+   "details": [
+    "34-1：P-44 原句是「旗標位置才認」；你說的「P-44改吧」指的是另一句（末句改成 aos_flags 包 tool_io），不是這一處。（proto8/thinking/2026-11/05/json-argv/07-使用者回覆-11-05晚.md:27）",
+    "34-2：「我發現我們做出來的程式，輸出的各種東西，裡面都有中文...全都用英文吧」（wf/workflows/common/conventions.md 引）",
+    "34-3：沒找到原話，fable 自己定的不做清單。（proto8/thinking/2026-11/06/human-cli/README.md:48）",
+    "34-4：「『建議』經 daemon」（proto8/thinking/2026-11/06/os-concepts/README.md:9）；fable 在檔內自己標了「偏離」，但方向題沒帶給你。",
+    "34-5：「子daemon管好自己，父daemon只看他有沒有活着，子daemon的其他東西父daemon別碰。盡量解耦合。」（proto8/thinking/2026-11/05/no-pid/17-P7實作結果.md:58）；「照舊保留」被寫在「使用者裁定」段裡，沒有引語。",
+    "順帶一提：fable 盤出 8 處程式直接碰 Linux 行程、沒經 daemon（父殺自己起的子、鎖），判「不算衝突」，理由是父管自己的子是基本功能、鎖不是行程機制。不用回，掃一眼就好。",
+    "…/05-代定盤點/01b-未裁逐條-7～12.md §7～§12"
+   ],
+   "source_path": "05-代定盤點/01a-未裁逐條-1～6.md",
+   "source_lines": "§6",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "35",
+   "section": "t5",
+   "question": "連 LiteLLM 的金鑰 `LITELLM_KEY` 要設在哪？現在沒有任何地方設，真腦一定失敗",
+   "eli5": "金鑰照你說的歸「端點小程序」自己讀，這部分做對了；但沒人告訴它金鑰放哪，開真腦就報「沒設金鑰」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "兩處都補：試驗場 env.sh／README 寫一行「用真腦前先 export LITELLM_KEY」；",
+     "consequence": "systemd 範例加一份環境檔（EnvironmentFile，金鑰和 hub 變數都放那份）。手動跑、開機自動跑都有著落。"
+    },
+    {
+     "key": "B",
+     "label": "只補試驗場 env.sh／README：手動跑沒問題，用 systemd 開機跑時還是會缺。",
+     "consequence": ""
+    },
+    {
+     "key": "C",
+     "label": "你自己放進 shell 設定檔，範本只寫說明：最簡單，但 systemd 底下讀不到 shell 設定檔，一樣會缺。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「金鑰應該由那個小proc自己保管，我們在定義那個小proc的時候就要跟他說讀哪個環境變數當金鑰了」",
+     "cite": "引自 wf/workflows/refactor/reports/2026-11-07-sol審查/01-設定檔.md §2"
+    }
+   ],
+   "details": [
+    "E1（`02edef8f5`，sol）之前 smart-high 根本不帶金鑰；改成歸端點小程序後，沒設這個變數就報 `EndpointFailed`。實測：fake 端點退 0；smart-high 回「environment variable LITELLM_KEY (--key-env) is not set」。",
+    "家機 shell 設定檔、試驗場 env.sh、試驗場 README、systemd 範例都沒提這個變數。kernel docs/01:56 說「值只在起 llm daemon 的 root 殼 export」，可是 systemd 底下沒有那個殼。",
+    "LiteLLM 那邊沒設金鑰的話，這裡隨便給一個值也行。",
+    "修正隊判這題修法要選方向，沒修。",
+    "程式 proto8/kernel/llm-kernel/endpoints/litellm/_entry:2；proto8/impls/aos-daemon/examples/root/aos-root.service:9"
+   ],
+   "source_path": "01-設定檔.md",
+   "source_lines": "§2",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  },
+  {
+   "id": "36",
+   "section": "t5",
+   "question": "叫別的 agent 做事（agents ask）時，tick 逾時上限卡在 1700——要怎麼改？",
+   "eli5": "這個上限是拿「秒數上限」直接套到 tick 上。可是一格 tick 不一定是一秒；一格超過 1 秒、或時鐘停住時，外層會先在約 29 分鐘把工具砍掉，腦拿到的是錯的那個錯誤。",
+   "options": [
+    {
+     "key": "A",
+     "label": "比照 thought，拿掉 tick 上限：兩支工具一致，跟 K-6 同一個方向。",
+     "consequence": ""
+    },
+    {
+     "key": "B",
+     "label": "先把 tick 換算成毫秒再卡上限：保留上限，但時鐘停住時換算不準。",
+     "consequence": ""
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "沒有針對這題的原話。同類的上限，thought 工具在 K-6 已經拿掉（「不照範本算上限」），agents 這支漏了。",
+     "cite": "…/01-設定檔.md §6；…/06-special-cases抽核/01-發現.md"
+    }
+   ],
+   "details": [
+    "`proto8/lib/agent/agents/_tooldef.json:22`、`_entry:449`（`ASK_MAX_S, CTL_MAX_S = 1700`）、`_metainfo.json`（`time_ms.max` 1730000）。來自 T6 `a858fe1a0`。",
+    "排程表把 P09 列為 K-6 依據、整列標「已做」，其實只改了 thought（06 抽核第 3 條）。",
+    "修正隊判這題報告給了兩個修法、要你選，沒修。",
+    "…/06-special-cases抽核/01-發現.md 第 3 條"
+   ],
+   "source_path": "01-設定檔.md",
+   "source_lines": "§6",
+   "source_excerpt": "",
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "",
+   "answered_at": "2026-11-08"
+  }
+ ],
+ "kicker": "11-07 sol 審查 · 給你本人看的 · 只放要你裁的題",
+ "overview_svg": "<svg viewBox=\"0 0 680 320\" role=\"img\" aria-label=\"34 件設計決定的分類：直接修 12、要你裁 19、兩者都有 3，按五個主題排開\">\n  <text x=\"40\" y=\"22\" class=\"t14 s-ink\">34 件設計決定</text>\n  <rect x=\"40\" y=\"32\" width=\"212\" height=\"30\" class=\"s-fix\" rx=\"4\"/>\n  <rect x=\"252\" y=\"32\" width=\"335\" height=\"30\" class=\"s-ask\"/>\n  <rect x=\"587\" y=\"32\" width=\"53\" height=\"30\" class=\"s-ask\" rx=\"4\"/>\n  <rect x=\"613\" y=\"32\" width=\"27\" height=\"30\" class=\"s-fix\" rx=\"0\"/>\n  <text x=\"146\" y=\"52\" text-anchor=\"middle\" class=\"t14 s-onfix\">直接修 12</text>\n  <text x=\"420\" y=\"52\" text-anchor=\"middle\" class=\"t14 s-on\">要你裁 19</text>\n  <text x=\"613\" y=\"80\" text-anchor=\"middle\" class=\"t12 s-muted\">兩者 3</text>\n  <text x=\"40\" y=\"80\" class=\"t12 s-muted\">已修完，這頁不展開</text>\n  <text x=\"420\" y=\"80\" text-anchor=\"middle\" class=\"t12 s-muted\">＋兩者的「問」那半 ＝ 本頁 22 題</text>\n\n  <g class=\"t13\">\n    <text x=\"40\" y=\"128\" class=\"s-ink\">判官與信箱</text>\n    <text x=\"40\" y=\"168\" class=\"s-ink\">tick 與時間</text>\n    <text x=\"40\" y=\"208\" class=\"s-ink\">搬家與 image</text>\n    <text x=\"40\" y=\"248\" class=\"s-ink\">推薦寫成已定</text>\n    <text x=\"40\" y=\"288\" class=\"s-ink\">其他</text>\n  </g>\n  <!-- row 1: 1q 2f 3q 4q 5f 6q 7q 8b -->\n  <g class=\"t12\" text-anchor=\"middle\">\n    <rect x=\"170\" y=\"110\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"184\" y=\"129\" class=\"s-on\">1</text>\n    <rect x=\"202\" y=\"110\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-fix\"/><text x=\"216\" y=\"129\" class=\"s-onfix\">2</text>\n    <rect x=\"234\" y=\"110\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"248\" y=\"129\" class=\"s-on\">3</text>\n    <rect x=\"266\" y=\"110\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"280\" y=\"129\" class=\"s-on\">4</text>\n    <rect x=\"298\" y=\"110\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-fix\"/><text x=\"312\" y=\"129\" class=\"s-onfix\">5</text>\n    <rect x=\"330\" y=\"110\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"344\" y=\"129\" class=\"s-on\">6</text>\n    <rect x=\"362\" y=\"110\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"376\" y=\"129\" class=\"s-on\">7</text>\n    <rect x=\"394\" y=\"110\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><rect x=\"408\" y=\"110\" width=\"14\" height=\"28\" class=\"s-fix\"/><text x=\"408\" y=\"129\" class=\"s-on\">8</text>\n  <!-- row 2: 9f 10f 11q 12q 13f 14f 15q -->\n    <rect x=\"170\" y=\"150\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-fix\"/><text x=\"184\" y=\"169\" class=\"s-onfix\">9</text>\n    <rect x=\"202\" y=\"150\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-fix\"/><text x=\"216\" y=\"169\" class=\"s-onfix\">10</text>\n    <rect x=\"234\" y=\"150\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"248\" y=\"169\" class=\"s-on\">11</text>\n    <rect x=\"266\" y=\"150\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"280\" y=\"169\" class=\"s-on\">12</text>\n    <rect x=\"298\" y=\"150\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-fix\"/><text x=\"312\" y=\"169\" class=\"s-onfix\">13</text>\n    <rect x=\"330\" y=\"150\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-fix\"/><text x=\"344\" y=\"169\" class=\"s-onfix\">14</text>\n    <rect x=\"362\" y=\"150\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"376\" y=\"169\" class=\"s-on\">15</text>\n  <!-- row 3: 16f 17f 18f 19q 20q 21q -->\n    <rect x=\"170\" y=\"190\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-fix\"/><text x=\"184\" y=\"209\" class=\"s-onfix\">16</text>\n    <rect x=\"202\" y=\"190\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-fix\"/><text x=\"216\" y=\"209\" class=\"s-onfix\">17</text>\n    <rect x=\"234\" y=\"190\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-fix\"/><text x=\"248\" y=\"209\" class=\"s-onfix\">18</text>\n    <rect x=\"266\" y=\"190\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"280\" y=\"209\" class=\"s-on\">19</text>\n    <rect x=\"298\" y=\"190\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"312\" y=\"209\" class=\"s-on\">20</text>\n    <rect x=\"330\" y=\"190\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"344\" y=\"209\" class=\"s-on\">21</text>\n  <!-- row 4: 22q 23q 24f 25q 26f 27f 28q 29q 30b -->\n    <rect x=\"170\" y=\"230\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"184\" y=\"249\" class=\"s-on\">22</text>\n    <rect x=\"202\" y=\"230\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"216\" y=\"249\" class=\"s-on\">23</text>\n    <rect x=\"234\" y=\"230\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-fix\"/><text x=\"248\" y=\"249\" class=\"s-onfix\">24</text>\n    <rect x=\"266\" y=\"230\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"280\" y=\"249\" class=\"s-on\">25</text>\n    <rect x=\"298\" y=\"230\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-fix\"/><text x=\"312\" y=\"249\" class=\"s-onfix\">26</text>\n    <rect x=\"330\" y=\"230\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-fix\"/><text x=\"344\" y=\"249\" class=\"s-onfix\">27</text>\n    <rect x=\"362\" y=\"230\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"376\" y=\"249\" class=\"s-on\">28</text>\n    <rect x=\"394\" y=\"230\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"408\" y=\"249\" class=\"s-on\">29</text>\n    <rect x=\"426\" y=\"230\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><rect x=\"440\" y=\"230\" width=\"14\" height=\"28\" class=\"s-fix\"/><text x=\"440\" y=\"249\" class=\"s-on\">30</text>\n  <!-- row 5: 31q 32b 33q 34q -->\n    <rect x=\"170\" y=\"270\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"184\" y=\"289\" class=\"s-on\">31</text>\n    <rect x=\"202\" y=\"270\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><rect x=\"216\" y=\"270\" width=\"14\" height=\"28\" class=\"s-fix\"/><text x=\"216\" y=\"289\" class=\"s-on\">32</text>\n    <rect x=\"234\" y=\"270\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"248\" y=\"289\" class=\"s-on\">33</text>\n    <rect x=\"266\" y=\"270\" width=\"28\" height=\"28\" rx=\"5\" class=\"s-ask\"/><text x=\"280\" y=\"289\" class=\"s-on\">34</text>\n  </g>\n  <g class=\"t12 s-muted\">\n    <text x=\"480\" y=\"129\">要你裁 6 題</text>\n    <text x=\"480\" y=\"169\">要你裁 3 題</text>\n    <text x=\"480\" y=\"209\">要你裁 3 題</text>\n    <text x=\"480\" y=\"249\">要你裁 6 題</text>\n    <text x=\"480\" y=\"289\">要你裁 4 題</text>\n  </g>\n</svg>",
+ "overview_caption": "34 件裡，12 件是 agent 自己做錯、直接修就好；要你拍板的是 19 件，加上 3 件「兩者都有」的問那半，共 22 題。 直接修的已經修完了（見頁尾），這頁只放要你裁的；每題都附推薦（★），不想細看就全照推薦。另外修正時又挖出兩件要你選的（#35、#36），放在最後一節。",
+ "appendix": [
+  {
+   "title": "直接修的 12＋3 件：已修完（不用你回）",
+   "items": [
+    "#2 判官開排隊時，信的先後改回跟一般信箱一樣：有序信先，再照信名，不再照寄出時間。 已修完",
+    "#5 判官的排隊檔壞掉時，改成印一行警告、從信箱重排，不再整輪退出、卡死隊列。 已修完",
+    "#9 寫時鐘的 aos-tick 遇到空檔當第 0 格，不再報錯；時鐘不會再卡在 0。 已修完",
+    "#10 時鐘間隔只要明寫就往下傳，寫 1000 也傳；「近的贏」不再破。 已修完",
+    "#13 腦把選填欄位送成 null 時，共用模組統一當成「沒給」，預設值不再被蓋掉。 已修完",
+    "#14 搬家食譜改成照你選的「三層各帶鐘」，凍整棵樹讓根睡；範例和目錄順序一起修好。 已修完",
+    "#16 快照推上去後清一次舊紀錄：實測凍 10 次，.git 從 3.3 MB 降到 404 KB。 已修完",
+    "#17 強推改成帶保險的版本：別台沒先同步就推會被擋下，不會蓋掉最新的快照。 已修完",
+    "#18 排隊檔 queue.json 跟著快照走了，搬家後等待時間和判官的隊序不再歸零。 已修完",
+    "#24 條文拿掉你沒選過的「起它的人開跑前也可寫」例外；沒有程式靠這條。 已修完",
+    "#26 你 11-06 翻掉的兩條（同資料夾兩 daemon、body 不合），老實標成「11-06 翻掉」。 已修完",
+    "#27 一條跟定義相反的註改正；「對外介面」標成「原話三類、列四樣」，「限於」改回你原話的「沒問題」。 已修完",
+    "#8 條文半 條文改成「設了但指不到＝不改原本行為、只多印警告」；aos-agent 那一路報錯是現況例外，等你裁第 8 題。 已修完",
+    "#30 文件半 條文改標「只有 aos-tools add 做了，aos-agent tools add 還沒」，跟實跑結果一致。 已修完",
+    "#32 翻半 補回你「訂下一個標準」的授權原話，標明數字是效能隊代定；恢復條件刪成「回門檻內再逐個開」。6／8 兩級沒動，等你裁第 32 題。 已修完"
+   ]
+  }
+ ]
+}
