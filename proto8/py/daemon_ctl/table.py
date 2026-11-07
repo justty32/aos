@@ -1,4 +1,4 @@
-"""daemon_ctl 名單：尋找 daemon、解析狀態表、自檢子項與篩選久未修改的列。"""
+"""daemon_ctl 名單：尋找 daemon、解析狀態表、自檢子項與篩選已有 stack 的久未修改列。"""
 import datetime
 import json
 import os
@@ -164,12 +164,14 @@ def process_problem(row):
 
 
 def inspect_row(d, name, row):
-    """只檢查 stack、公開 ctl 的 JSON 形狀、行程身分與既有 reason，不讀子項私有語意。"""
+    """檢查 stack、公開 ctl、行程身分與 reason；待起列不要求 stack，不讀子項私有語意。"""
     from .ctl import need_ctl
 
     stack, ctl = need_ctl(d, name, row)
     problems = []
-    if not os.path.isdir(stack):
+    pending = (row.get("phase") in {"stopped", "sleeping"} and
+               row.get("pid") is None and row.get("code") is None)
+    if not os.path.isdir(stack) and not pending:
         problems.append("stack missing")
     try:
         with open(ctl, encoding="utf-8") as fh:
@@ -213,15 +215,16 @@ def last_change(stack):
 
 
 def prune_candidates(d, procs, seconds, now):
-    """只選 stopped／sleeping 且最新修改嚴格早於門檻的列；不修改表或檔案。"""
+    """只選 stack 存在、stopped／sleeping 且最新修改嚴格早於門檻的列；不修改表或檔案。"""
     for name, row in procs.items():
         if row.get("phase") not in {"stopped", "sleeping"}:
             continue
         changed = last_change(cell_of(d, name, row))
-        if changed is None or now - changed > seconds:
+        if changed is None:
+            continue
+        if now - changed > seconds:
             try:
-                stamp = ("stack missing" if changed is None else
-                         datetime.datetime.fromtimestamp(changed, datetime.timezone.utc).isoformat())
+                stamp = datetime.datetime.fromtimestamp(changed, datetime.timezone.utc).isoformat()
             except (OverflowError, OSError, ValueError) as exc:
                 raise Fail("StateBad", "cannot format last change for %s: %s" % (name, exc))
             yield name, stamp

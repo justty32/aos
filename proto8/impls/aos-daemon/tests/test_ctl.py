@@ -117,7 +117,7 @@ class Prune(unittest.TestCase):
             self.assertEqual(got.exception.code, 'ArgumentsBad')
 
     def test_check_reports_each_suspicious_row_once_and_exits_zero(self):
-        missing = self.row('missing')
+        missing = self.row('missing', code=0)
         missing.rmdir()
         bad = self.row('bad', reason='failed\nwith\ttabs')
         write(bad / 'ctl.json', [])
@@ -141,6 +141,18 @@ class Prune(unittest.TestCase):
         self.assertIn('different started_at_ticks', result.stdout)
         self.assertNotIn('live:', result.stdout)
         self.assertNotIn('healthy:', result.stdout)
+
+    def test_pending_rows_without_stacks_are_healthy(self):
+        for phase in ('stopped', 'sleeping'):
+            self.row(phase, phase, pid=None, code=None).rmdir()
+        result = self.ctl('prune')
+        self.assertEqual((result.returncode, result.stdout, result.stderr), (0, '', ''))
+        for name, fields in (('exited', {'code': 0}), ('recorded', {'pid': 123}),
+                             ('running', {'phase': 'running'})):
+            row = dict(phase='stopped', stack=str(self.root / name), pid=None, code=None)
+            row.update(fields)
+            with self.subTest(name=name):
+                self.assertIn('stack missing', dc.inspect_row(str(self.root), name, row))
 
     def test_ctl_json_shapes_and_parent_filename_fallback(self):
         stack = self.row('job')
@@ -183,12 +195,10 @@ class Prune(unittest.TestCase):
         self.row('missing').rmdir()
         rows = dc.rows(str(self.root))
         selected = dict(dc.prune_candidates(str(self.root), rows, 50, 151))
-        self.assertEqual(set(selected), {'stopped', 'sleeping', 'missing'})
+        self.assertEqual(set(selected), {'stopped', 'sleeping'})
         self.assertEqual(selected['stopped'], '1970-01-01T00:01:40+00:00')
-        self.assertEqual(selected['missing'], 'stack missing')
-        self.assertEqual(dict(dc.prune_candidates(str(self.root), rows, 50, 150)), {'missing': 'stack missing'})
-        self.assertEqual(dict(dc.prune_candidates(str(self.root), rows, 10 ** 400, 151)),
-                         {'missing': 'stack missing'})
+        self.assertEqual(dict(dc.prune_candidates(str(self.root), rows, 50, 150)), {})
+        self.assertEqual(dict(dc.prune_candidates(str(self.root), rows, 10 ** 400, 151)), {})
 
     def test_apply_uses_rm_send_wait_and_error_paths_and_keeps_files(self):
         stack = self.row('job')
@@ -251,10 +261,11 @@ class Prune(unittest.TestCase):
     def test_dry_run_never_sends_and_bad_flags_have_usage(self):
         self.row('missing').rmdir()
         cli = runpy.run_path(str(self.cli))
-        with patch.object(dc, 'send') as send, contextlib.redirect_stdout(io.StringIO()) as out:
-            cli['cmd_prune']({'daemon': str(self.root)}, ['--older-than', '1d'])
-        send.assert_not_called()
-        self.assertIn('missing: would remove (last change stack missing)', out.getvalue())
+        for flags in ([], ['--apply']):
+            with patch.object(dc, 'send') as send, contextlib.redirect_stdout(io.StringIO()) as out:
+                cli['cmd_prune']({'daemon': str(self.root)}, ['--older-than', '1d', *flags])
+            send.assert_not_called()
+            self.assertEqual(out.getvalue(), '')
         for args in (['--apply'], ['--older-than', '3x'], ['--older-than', '0s'],
                      ['--older-than'], ['--apply=yes'], ['unexpected'], ['--reply-to', ''],
                      ['--timeout-s', 'nan'], ['--timeout-s', '1', '--reply-to', 'box']):

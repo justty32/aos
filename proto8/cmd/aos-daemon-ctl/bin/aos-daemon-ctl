@@ -41,14 +41,15 @@ HELPS = {
 usage: aos-daemon-ctl [--daemon D] prune [--older-than DUR] [--apply]
                       [--reply-to BOX] [--timeout-s S]
 
-Always checks missing stacks, existing ctl files that are not JSON objects, stale
+Checks missing stacks (except pending stopped / sleeping rows with no pid or exit
+code), existing ctl files that are not JSON objects, stale
 running / stopping process identities, and stopped reasons. Reports one line per
 suspicious row: NAME: PHASE: PROBLEM. Findings alone exit 0.
 
 Without --older-than, only checks. With it, previews old stopped / sleeping rows:
-NAME: would remove (last change ISO_TIME or stack missing). Last change is the newest
+NAME: would remove (last change ISO_TIME). Last change is the newest
 mtime of the stack folder itself and its direct files; subfolders are not scanned.
-Running / stopping rows are never selected. A missing stack counts as infinitely old.
+Running / stopping rows and rows with a missing stack are never selected.
 
 flags:
       --older-than DUR   positive integer plus s, m, h or d (30s, 15m, 12h, 7d)
