@@ -12,6 +12,13 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-07 晚 家機 alt 帳號頂層（使用者收工，明天續）
+
+1. **授權與隊形**同下一條；另加：gpt 測試預設不寫、指定才寫（[aos-teams/03](workflows/dispatch/aos-teams/03-使用者原話.md) 末段）；各線進度交給桌面看板 http://127.0.0.1:8765/（`wf/tools/progress_board/`，啟動 `dash.py start`），要使用者裁的事用 `progress_post.sh <線> ask`，頂層仍為看板與匯總者負責（[user/03](workflows/common/user/03-討論紀錄與規劃.md) 末段）；「喘口氣」＝barrier 同步；美國尖峰容量錯誤的處理見 [user/01](workflows/common/user/01-說話授權與記憶.md) 末段。
+2. **今天晚上做完**：arknights 第三輪 C1～C5 全跑完並收輪（交棒：`proto8/thinking/2026-11/07/arknights-kb/交棒.md`；試驗場測試清理由第六任隊長收尾）；impl-plan 九批全完成、新 kernel 已裝（`proto8/thinking/2026-11/07/impl-plan/14-完成總結.md`）；看板含待你裁、細節頁、ELI5、輪次頁。
+3. **使用者定的明天方向**（[kb-ideas](../proto8/thinking/2026-11/07/kb-ideas/README.md) 末段）：第四輪＝蒸餾（想法 17）＋零人工吞吐＋提速（多 agent 同時存取資料庫）；兩個舊待辦（互動頁抽成工作流、codex 連 LiteLLM 的沙箱）同時進行；下一個語料是 ARC-AGI-1 加初音未來兩者合一（方向題 G 結案）。想法 18（AI 工學舒適度）已實作、19（gpt 過度測試）已成規矩。
+4. **明天開工順序**：讀第三輪總結簡報 → opus 匯總 → fable 規劃第四輪 → opus 設計 → 施工；舊待辦另開隊。負載監看要重開。
+
 ## 2026-11-07 傍晚 家機 alt 帳號頂層（使用者要 compact；第二輪收完就停）
 
 1. **授權與隊形**：本 session 隨意 push。opus 隊長＋subagent＋最多一個 codex；gpt 只施工／文件／網頁／雜活、不做設計，「能交給gpt的就交給gpt」；fable 只做頂層規劃、只讀 opus 備的簡報，輪間輪中皆可、次數不限（[aos-teams](workflows/dispatch/aos-teams.md)）。本機 LM Studio 一次只載一個模型；模型下限 10B；LiteLLM 有 `chatgpt-gpt-terra*`。家機 codex 連 LiteLLM 時不帶 `-s`（沙盒待辦見 SESSION-LOG）。另一帳號 aos-b0 已關，不要再寄信給它。
