@@ -1,0 +1,162 @@
+# Verify task context, tool limits, and best-effort observations with local fake commands.
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+
+CELLS = Path(__file__).resolve().parents[1]
+CALL = {'id': 'one', 'type': 'function',
+        'function': {'name': 'echo', 'arguments': '{"text":"雪"}'}}
+
+
+class Cells(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        self.stack = self.root / 'stack'
+        self.stack.mkdir()
+        self.definition = self.root / 'def'
+        self.definition.mkdir()
+        (self.definition / 'interfaces.json').write_text(json.dumps(
+            {'aos-agent': {'tools': 'tools.json', 'llm': 'llm.json'}}))
+        (self.definition / 'tools.json').write_text('{}')
+        (self.definition / 'llm.json').write_text('{"endpoint":"local"}')
+        self.env = dict(os.environ, AOS_STACK=str(self.stack), AOS_CD=str(self.definition),
+                        PATH=str(self.root) + os.pathsep + os.environ['PATH'])
+        self.command('aos-tools', '''import json, sys
+if 'ls' in sys.argv:
+    print(json.dumps([{'name':'echo','tooldef':{'parameters':{'type':'object'}}}]))
+else:
+    sys.stdout.buffer.write(sys.stdin.buffer.read())
+''')
+        self.command('aos-llm', '''import json, sys
+if sys.argv[1] == 'send':
+    print('local-request')
+else:
+    assert '--full' in sys.argv
+    print(json.dumps({'message':{'role':'assistant','content':'unchanged','extra':4},
+                      'model':'fake','usage':{'prompt_tokens':9},'endpoint':'local'}))
+''')
+        self.command('aos-post', 'pass\n')
+
+    def command(self, name, body):
+        path = self.root / name
+        path.write_text('#!' + sys.executable + '\n' + body)
+        path.chmod(0o755)
+
+    def history(self, messages):
+        (self.stack / 'history.jsonl').write_text(''.join(json.dumps(m) + '\n' for m in messages))
+
+    def run_cell(self, name, *args, code=0):
+        result = subprocess.run([sys.executable, str(CELLS / (name + '.py')), *args],
+                                env=self.env, capture_output=True, text=True, timeout=5)
+        self.assertEqual(result.returncode, code, result.stderr)
+        return result
+
+    def request(self):
+        return json.loads((self.stack / 'think/request.json').read_text())['request']
+
+    def test_context_and_tool_limits(self):
+        old = [{'role':'user','content':'old'}, {'role':'assistant','tool_calls':[CALL]},
+               {'role':'tool','tool_call_id':'one','content':'old result'}]
+        task = [{'role':'user','content':'new'}, {'role':'assistant','tool_calls':[CALL, CALL]},
+                {'role':'tool','tool_call_id':'one','content':'new result'}]
+        self.history(old + task)
+        self.run_cell('brain')
+        self.assertEqual(self.request()['messages'], old + task)
+        self.assertIn('tools', self.request())
+        self.run_cell('brain', '--history=task', '--max-tool-calls=3')
+        self.assertEqual(self.request()['messages'], task)
+        self.assertIn('tools', self.request())
+        self.run_cell('brain', '--max-tool-calls', '2')
+        self.assertNotIn('tools', self.request())
+        self.run_cell('brain', '--max-tool-calls', '0')
+        self.assertNotIn('tools', self.request())
+        self.history([{'role':'tool','content':'without user'}])
+        self.run_cell('brain', '--history', 'task')
+        self.assertEqual(len(self.request()['messages']), 1)
+        for args in [('--history','bad'), ('--max-tool-calls','-1'), ('--max-tool-calls','1.5')]:
+            self.run_cell('brain', *args, code=1)
+
+    def test_wait_observation_preserves_message(self):
+        self.history([{'role':'user','content':'hello'}])
+        self.run_cell('brain')
+        self.run_cell('wait', code=10)
+        self.run_cell('wait')
+        message = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
+        self.assertEqual(message, {'role':'assistant','content':'unchanged','extra':4})
+        record = json.loads((self.stack / 'observed.jsonl').read_text())
+        self.assertEqual((record['kind'], record['endpoint'], record['model']), ('think','local','fake'))
+        self.assertEqual(record['usage'], {'prompt_tokens':9})
+        self.assertGreaterEqual(record['elapsed_ms'], 0)
+
+    def test_missing_or_bad_timing_only_warns(self):
+        for timing in (None, 'broken', '[]', '{}', '{"started_ns":"bad"}'):
+            with self.subTest(timing=timing):
+                self.history([{'role':'user','content':'hello'}])
+                self.run_cell('brain')
+                self.run_cell('wait', code=10)
+                path = self.stack / 'think/sent.json'
+                if timing is None:
+                    path.unlink()
+                else:
+                    path.write_text(timing)
+                result = self.run_cell('wait')
+                self.assertIn('warning: cannot read think timing:', result.stderr)
+                record = json.loads((self.stack / 'observed.jsonl').read_text().splitlines()[-1])
+                self.assertIsNone(record['elapsed_ms'])
+
+    def test_pending_without_request_keeps_endpoint(self):
+        self.command('aos-llm', "import json,sys\nprint('request' if sys.argv[1]=='send' else json.dumps({'message':{'role':'assistant','content':'ok'}}))\n")
+        self.history([{'role':'user','content':'hello'}])
+        self.run_cell('brain')
+        self.run_cell('wait', code=10)
+        (self.stack / 'think/request.json').unlink()
+        self.run_cell('wait')
+        record = json.loads((self.stack / 'observed.jsonl').read_text())
+        self.assertEqual(record['endpoint'], 'local')
+
+    def test_tool_bytes_and_no_replay(self):
+        self.history([{'role':'assistant','tool_calls':[CALL]}])
+        self.run_cell('act')
+        record = json.loads((self.stack / 'observed.jsonl').read_text())
+        size = len(CALL['function']['arguments'].encode('utf-8'))
+        self.assertEqual((record['kind'], record['name'], record['code']), ('tool','echo',0))
+        self.assertEqual((record['in_bytes'], record['out_bytes']), (size,size))
+        self.run_cell('act')
+        self.assertEqual(len((self.stack / 'observed.jsonl').read_text().splitlines()), 1)
+
+    def test_failed_calls_are_observed(self):
+        self.command('aos-tools', "import json,sys\nif 'ls' in sys.argv: print(json.dumps([{'name':'echo','tooldef':{}}]))\nelse: print('failed output'); sys.exit(7)\n")
+        self.history([{'role':'assistant','tool_calls':[CALL]}])
+        self.run_cell('act')
+        record = json.loads((self.stack / 'observed.jsonl').read_text())
+        self.assertEqual(record['code'], 7)
+        self.command('aos-llm', "import sys\nif sys.argv[1]=='send': print('request')\nelse: sys.exit(1)\n")
+        self.history([{'role':'user','content':'hello'}])
+        self.run_cell('brain')
+        self.run_cell('wait', code=10)
+        self.run_cell('wait', code=1)
+        record = json.loads((self.stack / 'observed.jsonl').read_text().splitlines()[-1])
+        self.assertEqual(record['kind'], 'think')
+        self.assertEqual(record['endpoint'], 'local')
+        self.assertIsNone(record['usage'])
+
+    def test_observation_write_failure_only_warns(self):
+        (self.stack / 'observed.jsonl').mkdir()
+        self.history([{'role':'assistant','tool_calls':[CALL]}])
+        result = self.run_cell('act')
+        self.assertIn('agent-fsm: warning: cannot append to observed.jsonl:', result.stderr)
+        self.history([{'role':'user','content':'hello'}])
+        self.run_cell('brain')
+        self.run_cell('wait', code=10)
+        result = self.run_cell('wait')
+        self.assertIn('agent-fsm: warning: cannot append to observed.jsonl:', result.stderr)
+
+
+if __name__ == '__main__':
+    unittest.main()

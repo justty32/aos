@@ -10,7 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`_entry`](../../../../../proto8/templates/agent-fsm/_entry) | 入口：`aos-agent ctl add $AOS_CD` |
-| [`act.py`](../../../../../proto8/templates/agent-fsm/act.py) | act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history。 |
+| [`act.py`](../../../../../proto8/templates/agent-fsm/act.py) | act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。 |
 | [`agents.json`](../../../../../proto8/templates/agent-fsm/agents.json) | 設定（鍵：max_children） |
 | [`body.json`](../../../../../proto8/templates/agent-fsm/body.json) | argv：`aos-loop loop.json` |
 | [`brain.py`](../../../../../proto8/templates/agent-fsm/brain.py) | think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。 |
@@ -23,7 +23,7 @@
 | [`tools.json`](../../../../../proto8/templates/agent-fsm/tools.json) | 設定（鍵：tools） |
 | [`tools/memory/`](../../../../../proto8/templates/agent-fsm/tools/memory/) | Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the chil… |
 | [`tools/memory/_memory.json`](../../../../../proto8/templates/agent-fsm/tools/memory/_memory.json) | 設定（鍵：base） |
-| [`wait.py`](../../../../../proto8/templates/agent-fsm/wait.py) | wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建。 |
+| [`wait.py`](../../../../../proto8/templates/agent-fsm/wait.py) | wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。 |
 
 ## `proto8/templates/eca-claude/`
 

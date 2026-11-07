@@ -1,9 +1,49 @@
-{"description": "Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the child you need; find searches by keyword. Errors: NodeMissing (the line lists what exists), PathBad, MemoryMissing (no knowledge base is set up for you: say so).",
- "env": ["AOS_MEMORY"],
- "errors": ["ArgumentsBad", "CfgBad", "MemoryMissing", "PathBad", "ReadFailed", "NodeMissing", "LaunchFailed", "OpUnknown"],
- "parameters": {"type": "object",
-                "properties": {"op": {"type": "string", "enum": ["read", "ls", "find"], "description": "read = show a node's text and its children; ls = list its children only; find = search nodes by keyword"},
-                               "path": {"type": "string", "description": "node path like agents/spawn (lowercase segments joined by /); empty or / is the root"},
-                               "query": {"type": "string", "description": "keyword for find (case-insensitive)"},
-                               "max_bytes": {"default": 8000, "type": "integer", "description": "read: most bytes of node text to show (default 8000)"}},
-                "required": ["op"]}}
+{
+  "description": "Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the child you need; find searches by keyword. Errors: NodeMissing (the line lists what exists), PathBad, MemoryMissing (no knowledge base is set up for you: say so).",
+  "env": [
+    "AOS_MEMORY"
+  ],
+  "errors": [
+    "ArgumentsBad",
+    "CfgBad",
+    "MemoryMissing",
+    "PathBad",
+    "ReadFailed",
+    "NodeMissing",
+    "LaunchFailed",
+    "OpUnknown",
+    "TargetBad",
+    "PointerMissing",
+    "FileBad"
+  ],
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "op": {
+        "type": "string",
+        "enum": [
+          "read",
+          "ls",
+          "find"
+        ],
+        "description": "read = show a node's text and its children; ls = list its children only; find = search nodes by keyword"
+      },
+      "path": {
+        "type": "string",
+        "description": "node path like agents/spawn (lowercase segments joined by /); empty or / is the root; read also accepts node#/JSON/Pointer (RFC6901 ~0/~1 escapes), only on .json leaves; ls/find reject #"
+      },
+      "query": {
+        "type": "string",
+        "description": "keyword for find (case-insensitive)"
+      },
+      "max_bytes": {
+        "default": 8000,
+        "type": "integer",
+        "description": "read: most bytes of node text to show (default 8000)"
+      }
+    },
+    "required": [
+      "op"
+    ]
+  }
+}

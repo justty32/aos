@@ -1,7 +1,7 @@
 // serve.hpp：【serve】kernel 跑一次——讀設定、鎖信箱、收拾、排隊、認領、請 daemon 掛問腦 proc、收成品、回信。
 //
 //   config.cpp  讀設定、解指示詞與 endpoint 函數路徑
-//   reply.cpp   寄送／撤回回信、記用量與刪信
+//   reply.cpp   寄送／撤回回信、記用量、逐封帳與刪信
 //   proc.cpp    掛問腦 proc、收尾／重掛與收集在飛信件
 //   scan.cpp    掃排隊信、查代號與解析能力包
 //   serve.cpp   鎖信箱、收拾信件與每輪執行骨架
@@ -42,7 +42,7 @@
 //                   那包在飛＋新掛已到它的 slots＝跳過、看下一封（不是停下）；都沒擋就認領（new → cur 改名；改不成＝寄信的剛撤信）、寫 request.json＝{"endpoint": 那組（指示詞已解、去掉 exec）,
 //                   "request": body.request}、寄掛信（proc.json 記 endpoint＝代號、sender＝信封 sender） {"procs_added": {"llm_<id>": {"exec": {"argv": ["aos-exec", 函數], "cwd": 信資料夾,
 //                   "stdin": "request.json", "stdout": "reply.json", "timeout_ms"?}, "max": 1, "stack": 信資料夾}}}、寫 proc.json；寄不進＝LaunchFailed
-//                6. 回信（寄信的 sender.flock 已沒人鎖＝馬上撤回）、寄不出去 stderr 印一行；掛過的記進 used.json（含 packs.<代號>、senders.<寄件人>）；整封刪掉；寫 queue.json
+//                6. 回信（寄信的 sender.flock 已沒人鎖＝馬上撤回）、寄不出去 stderr 印一行；掛過的追加 ledger.jsonl、記進 used.json（含 packs.<代號>、senders.<寄件人>）；整封刪掉；寫 queue.json
 //              endpoint 函數的環境＝daemon 給子項的（AOS_STACK＝信資料夾、AOS_DAEMON、daemon 的 AOS_WS），不是 kernel 的。
 #pragma once
 

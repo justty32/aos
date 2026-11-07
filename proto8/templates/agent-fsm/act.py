@@ -1,4 +1,4 @@
-# act.py [--tools FILE] - act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history。
+# act.py [--tools FILE] - act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。
 # 結束碼（fsm.json 照碼分岔，N-36）：全部跑完退 0（→ think：帶工具結果再問腦）；最後一則 assistant 沒有 tool_calls＝腦給了最後答案、沒事做，退 10（→ idle）。
 #   「要不要叫工具」11-04 晚從 think 搬到這裡判（think 只組請求，thinking 2026-11-04 think-as-function 03 § 1）。
 # 工具的介面（P-41）：arguments（JSON 字串）原樣從 stdin 進、stdout 整段是結果；工具的小格由 aos-tools call 算成 $AOS_STACK/tools/<名>/（P-17）、工作區＝$AOS_WS。
@@ -38,6 +38,8 @@ finally:
     for _path in _import_paths:
         sys.path.remove(_path)
 
+from observed import append_observed
+
 HELP = """\
 usage: act.py [--tools FILE]   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
 The act cell: run the tool_calls of the last assistant message in $AOS_STACK/history.jsonl
@@ -46,6 +48,7 @@ The act cell: run the tool_calls of the last assistant message in $AOS_STACK/his
 Timeout: tool metainfo time_ms.max (ms), otherwise no limit; TERM the group, KILL 2 s later.
 On tool failure or timeout, append the last 2048 bytes of stderr to the tool message;
 the full stderr is also passed through. Tool failures are returned to the brain; exit 0.
+Append tool name, code, elapsed_ms, in_bytes and out_bytes to observed.jsonl (best effort).
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
@@ -164,6 +167,7 @@ for call in calls:
     except ValueError as e:
         append({"role": "tool", "tool_call_id": cid, "content": aos_flags.error_line("act", "ArgumentsBad", "%s: %s" % (name, e)) + "\n"})
         continue
+    started_ns = time.monotonic_ns()
     try:
         p = subprocess.Popen(TOOLS + ["call", name], stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -188,6 +192,9 @@ for call in calls:
         stop_group(p)
         p.wait()
         raise
+    append_observed(stack, {"kind": "tool", "name": name, "code": p.returncode,
+                            "elapsed_ms": (time.monotonic_ns() - started_ns) / 1_000_000,
+                            "in_bytes": len(arguments.encode("utf-8")), "out_bytes": len(out)})
     if err:                                     # C-52 例外：原樣轉印，成功時不附給腦
         sys.stderr.buffer.write(err)
         sys.stderr.buffer.flush()

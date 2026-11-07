@@ -1,4 +1,4 @@
-"""知識庫共用的找根、節點定址、讀取、摘要與子節點列舉。"""
+"""知識庫共用的找根、節點與 JSON Pointer 定址、讀取、摘要與子節點列舉。"""
 import json
 import os
 import re
@@ -40,6 +40,8 @@ def memory_root(tool_folder=None):
 
 def parse_path(p):
     """回段的 list（根＝[]）；不合規＝PathBad。"""
+    if p is not None and not isinstance(p, str):
+        die("PathBad", "node path must be a string")
     if p is None or p == "" or p == "/":
         return []
     p = p.strip("/")                 # 目錄裡資料夾節點印成 `me/`，腦照抄也算對（11-05 Haiku 實測：五題裡四題先寫了尾巴的 /）
@@ -50,6 +52,36 @@ def parse_path(p):
         if not SEGMENT.match(s):
             die("PathBad", "%r is not a node path (segments joined by /, each [a-z0-9_-]+; empty or / is the root)" % p)
     return segs
+
+
+def parse_read_path(path):
+    """read 可附 #/RFC6901 指標；其他工具仍使用純節點 parse_path。"""
+    if not isinstance(path, str) or "#" not in path:
+        return parse_path(path), None
+    node, pointer = path.split("#", 1)
+    if not pointer.startswith("/") or re.search(r"~(?![01])", pointer):
+        die("PathBad", "JSON pointer must start with / and use only ~0 or ~1 escapes")
+    return parse_path(node), pointer
+
+
+def read_pointer(kind, where, pointer):
+    """只對 JSON 葉解 RFC6901 指標，回該位置的 JSON 值。"""
+    if kind != "leaf" or not where.endswith(".json"):
+        die("TargetBad", "JSON pointers require a .json leaf node")
+    try:
+        value = json.loads(read_text(kind, where))
+    except ValueError as error:
+        die("FileBad", "invalid JSON in %s: %s" % (where, error))
+    for token in pointer[1:].split("/"):
+        token = token.replace("~1", "/").replace("~0", "~")
+        if isinstance(value, dict) and token in value:
+            value = value[token]
+        elif (isinstance(value, list) and re.fullmatch(r"0|[1-9][0-9]*", token)
+              and len(token) <= len(str(len(value))) and int(token) < len(value)):
+            value = value[int(token)]
+        else:
+            die("PointerMissing", "JSON pointer %s not found" % pointer)
+    return value
 
 
 def show(segs):

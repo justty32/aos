@@ -43,5 +43,5 @@
 | [`src/send/send.cpp`](../../../../../proto8/impls/aos-llm/src/send/send.cpp) | 找信箱、讀 body、寄信、撤信（說明見 send.hpp）。 |
 | [`src/send/send.hpp`](../../../../../proto8/impls/aos-llm/src/send/send.hpp) | 寄信——找 kernel 的信箱、讀請求信的 body、寄進 new/、撤信。 |
 | [`src/wait/wait.cpp`](../../../../../proto8/impls/aos-llm/src/wait/wait.cpp) | 收回信、等回信、撤信（說明見 wait.hpp）。 |
-| [`src/wait/wait.hpp`](../../../../../proto8/impls/aos-llm/src/wait/wait.hpp) | 收回信——在回信信箱裡找回某封信的那封、印 body.message、收掉；ask 的等待與撤信。 |
+| [`src/wait/wait.hpp`](../../../../../proto8/impls/aos-llm/src/wait/wait.hpp) | 收回信——在回信信箱裡找回某封信的那封、印 body.message 或完整 body、收掉；ask 的等待與撤信。 |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-llm/vcpkg.json) | aos-llm：寄請求信進 LLM kernel 的信箱、收回信（send／recv／ask／regret） |

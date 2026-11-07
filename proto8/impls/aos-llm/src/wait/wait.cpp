@@ -41,7 +41,7 @@ static std::optional<std::string> find_reply(const aos::post::Mailbox& rb, const
     return std::nullopt;
 }
 
-static int deliver(const aos::post::Mailbox& rb, const std::string& n) {
+static int deliver(const aos::post::Mailbox& rb, const std::string& n, bool full) {
     std::string dir = aos::join(rb.cur(), n);
     std::optional<Json> l = aos::read_json(aos::join(dir, "letter.json"));
     std::optional<Json> reply;
@@ -59,19 +59,23 @@ static int deliver(const aos::post::Mailbox& rb, const std::string& n) {
         const Json& e = (*reply)["error"];
         throw Error{e["code"].get<std::string>(), e["msg"].get<std::string>()};
     }
-    std::string line = aos::dumps((*reply)["message"]) + "\n";
+    Json output = (*reply)["message"];
+    if (full) {
+        output = *reply;
+    }
+    std::string line = aos::dumps(output) + "\n";
     std::fwrite(line.data(), 1, line.size(), stdout);
     std::fflush(stdout);
     return 0;
 }
 
-int recv(const std::string& box, const std::string& name) {
+int recv(const std::string& box, const std::string& name, bool full) {
     aos::post::check_name(name);   // 不合 ArgumentsBad
     aos::post::Mailbox rb = aos::post::open(box);   // 不是資料夾＝MailboxMissing
     std::set<std::string> seen;
     std::optional<std::string> n = find_reply(rb, name, seen);
     if (n && aos::post::take(rb, *n)) {
-        return deliver(rb, *n);
+        return deliver(rb, *n, full);
     }
     return 10;
 }
@@ -94,7 +98,7 @@ static void withdraw(const Mailbox& mb, const aos::post::Mailbox& rb, const std:
     }
 }
 
-int ask_wait(const Mailbox& mb, const std::string& id) {
+int ask_wait(const Mailbox& mb, const std::string& id, bool full) {
     aos::post::Mailbox rb = aos::post::open(reply_box(mb));
     std::set<std::string> seen;
     sigset_t set;
@@ -105,7 +109,7 @@ int ask_wait(const Mailbox& mb, const std::string& id) {
     while (true) {
         std::optional<std::string> n = find_reply(rb, id, seen);
         if (n && aos::post::take(rb, *n)) {
-            return deliver(rb, *n);
+            return deliver(rb, *n, full);
         }
         // 照信走的方向看：new → cur（kernel 先寄回信才刪 cur/ 那封，所以 cur/ 沒了回信一定已經到了）
         if (!exists(aos::join(mb.fresh(), id)) && !exists(aos::join(mb.cur(), id)) && !find_reply(rb, id, seen)) {

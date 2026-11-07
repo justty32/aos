@@ -25,9 +25,9 @@
 | [`codex/`](../../../../../proto8/lib/agent/codex/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 codex CLI；對話續在工具小格（$AOS_STACK） |
 | [`codex/cli.json`](../../../../../proto8/lib/agent/codex/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
 | [`json_rewrite/`](../../../../../proto8/lib/agent/json_rewrite/) | 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 act 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。 |
-| [`memory/`](../../../../../proto8/lib/agent/memory/) | 查共用的層級式知識庫：read 一個節點（文＋子節點目錄）、ls 列子節點、find 用關鍵字找節點；唯讀 |
+| [`memory/`](../../../../../proto8/lib/agent/memory/) | 唯讀查詢共用知識庫：read 節點或 JSON Pointer、ls 列子節點、find 關鍵字搜尋。 |
 | [`memory_export/`](../../../../../proto8/lib/agent/memory_export/) | 把一個知識庫（或其中一棵子樹）整棵印成一份 Markdown，給人看；唯讀 |
-| [`memory_fs.py`](../../../../../proto8/lib/agent/memory_fs.py) | 知識庫共用的找根、節點定址、讀取、摘要與子節點列舉。 |
+| [`memory_fs.py`](../../../../../proto8/lib/agent/memory_fs.py) | 知識庫共用的找根、節點與 JSON Pointer 定址、讀取、摘要與子節點列舉。 |
 | [`memory_write/`](../../../../../proto8/lib/agent/memory_write/) | Add, replace or remove shared knowledge nodes with atomic writes and directory locks. |
 | [`memory_write/locking.py`](../../../../../proto8/lib/agent/memory_write/locking.py) | Acquire knowledge directory locks and inspect descendant locks through aos-lock. |
 | [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | Write, promote and remove knowledge nodes atomically under directory locks. |

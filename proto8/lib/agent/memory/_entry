@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# memory - 查共用的層級式知識庫：read 一個節點（文＋子節點目錄）、ls 列子節點、find 用關鍵字找節點；唯讀
+# memory - 唯讀查詢共用知識庫：read 節點或 JSON Pointer、ls 列子節點、find 關鍵字搜尋。
 # 規劃：proto8/thinking/2026-11/05/agent-knowledge/01-層級式記憶工具.md（使用者 11-05 下午「層級式記憶工具」）。
 # 介面（lib/README 的契約）：stdin 收 {"op": "read"|"ls"|"find", "path"?: "…", "query"?: "…", "max_bytes"?: N}。
 #   知識庫根目錄（腦不能挑）：① 工具資料夾（$AOS_CD）裡的 _memory.json 的 "base"（定義配的；相對＝從那個資料夾算）＞
@@ -9,7 +9,7 @@
 #   節點路徑 a/b：段用 / 接、段名只能 [a-z0-9_-]+；"" 或 "/"＝根。資料夾節點＝<根>/a/b/（文在 README.md，沒有＝空），
 #   葉節點＝<根>/a/b.md 或 a/b.json（11-05 加；同名兩個都在＝.md 優先）；先找資料夾再找葉。
 #   子節點＝子資料夾＋*.md／*.json（README.md 以外），. 與 _ 開頭的不算，照名字排序。yaml 這版不認（要認時加進 LEAF_EXTS）。
-#   .json 葉：read 印原文不轉換；標題／摘要＝頂層物件的 title／summary 字串鍵（沒有＝標題用節點名、摘要空）。
+#   .json 葉：read 未帶指標時印原文不轉換；帶 #/RFC6901 指標時回該位置 JSON 值；標題／摘要＝頂層物件的 title／summary 字串鍵（沒有＝標題用節點名、摘要空）。
 #   節點的文：第 1 行 # 標題、標題後第一個非空行＝一句話摘要、之後本文。
 #   stdout 純文字、第一行 node: <路徑>（根＝/）：
 #     read＝文（預設最多 8000 bytes，超過附 [truncated: N more bytes]）＋children: 目錄（每行「  名  摘要」，資料夾名後加 /）；
@@ -22,12 +22,16 @@
 # 不寫任何檔、不碰 $AOS_WS。子行程只有 find 的 grep；被 TERM 時先收掉它再走（lib 契約規則 5）。
 # 設計（使用者 11-05「依託檔案系統、/usr/bin 的 ls/grep 包成工具，不用重複發明」）：
 #   read＝cat/head -c、ls＝ls、find＝grep -ril，全部限定在 AOS_MEMORY 根之下、唯讀、輸出截斷給小模型；不另發明儲存格式。
-#   節點路徑 a/b 跟 aos-json 的 #/a/b 指標同形，之後 AOS_MEMORY 指到一份 .json 時可以用 aos-json 當後端（這版不做）。
+#   read 的節點路徑可帶 #/RFC6901 指標；ls/find 不接受 #。僅 JSON 葉接受指標。
 import json, os, re, signal, subprocess, sys
 HELP = """\
 usage: memory < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Read a shared, hierarchical, read-only knowledge base: op read (a node's text and
 its children), ls (children only), find (nodes containing query).
+read path may append #/JSON/Pointer (RFC6901, ~0 = ~, ~1 = /); only .json
+leaf nodes support pointers. Returns the selected value as JSON, within max_bytes.
+ls/find reject #. Errors: PathBad (invalid path/pointer), TargetBad (not a JSON
+leaf), PointerMissing (value absent), FileBad (invalid JSON).
 Result on stdout. On error: one line "memory: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -107,8 +111,13 @@ def truncate(text, max_bytes):
     return "%s\n[truncated: %d more bytes]" % (head, len(raw) - max_bytes)
 
 
-def op_read(root, segs, max_bytes):
+def op_read(root, segs, max_bytes, pointer=None):
     kind, where = node_or_die(root, segs)
+    if pointer is not None:
+        value = memory_fs.read_pointer(kind, where, pointer)
+        print("node: %s#%s\n\n%s" % (show(segs), pointer,
+              truncate(json.dumps(value, ensure_ascii=False), max_bytes)))
+        return
     parts = ["node: %s" % show(segs)]
     text = read_text(kind, where).rstrip("\n")
     if text:
@@ -204,11 +213,15 @@ if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <=
 query = args.get("query")
 if op == "find" and (not isinstance(query, str) or not query):
     die("ArgumentsBad", "find needs query (a non-empty string)")
-segs = parse_path(args.get("path"))
+if op == "read":
+    segs, pointer = memory_fs.parse_read_path(args.get("path"))
+else:
+    segs = parse_path(args.get("path"))
+    pointer = None
 root = memory_root(HERE)
 
 if op == "read":
-    op_read(root, segs, max_bytes)
+    op_read(root, segs, max_bytes, pointer)
 elif op == "ls":
     op_ls(root, segs)
 else:

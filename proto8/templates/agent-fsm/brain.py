@@ -1,4 +1,4 @@
-# brain.py [--system FILE] [--tools FILE] [--memory NAME] - think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。
+# brain.py [--system FILE] [--tools FILE] [--memory NAME] [--history full|task] [--max-tool-calls N] - think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。
 # 寄出去、收回信是下一格 wait（wait.py：aos-llm send／recv，經 $AOS_LLM_KERNEL〔llm kernel 的 stack〕的 llm kernel；thinking 2026-11-04 think-as-function 03 § 1）。
 # 結束碼（fsm.json 照碼分岔，N-36）：0＝請求寫好了（→ wait）；10＝history 最後一則不是 user／tool（上一題已答完、或人改了 history）＝沒事做（→ idle）。
 # 請求＝llm kernel 請求信的 body：{"endpoint"?: 代號, "request": {"messages", "tools"?}}（不寫 model：model 綁在 kernel 的 endpoint 包上）。
@@ -39,10 +39,12 @@ finally:
         sys.path.remove(_path)
 
 HELP = """\
-usage: brain.py [--system FILE] [--tools FILE] [--memory NAME]   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
+usage: brain.py [--system FILE] [--tools FILE] [--memory NAME] [--history full|task] [--max-tool-calls N]   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
 The think cell: build the request to the brain from $AOS_STACK/history.jsonl (plus system and
 tools) and write $AOS_STACK/think/request.json. Exit 0 = written (go wait); 10 = nothing to answer.
 --system FILE: a system message in front; --tools FILE: the aos-tools registry;
+--history full|task: include all history (default), or only messages from the last user.
+--max-tool-calls N: omit tools after N calls in the current task (non-negative integer).
 --memory NAME: call tool NAME with {"op": "read"} and append the knowledge base root it prints
 to the system message (skipped when NAME is not among the tools).
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
@@ -61,7 +63,7 @@ def here(path):
 
 
 try:
-    values, rest = aos_flags.parse(sys.argv[1:], {}, multi={'--system': '--system', '--tools': '--tools', '--memory': '--memory'}, help=HELP)
+    values, rest = aos_flags.parse(sys.argv[1:], {}, multi={'--system': '--system', '--tools': '--tools', '--memory': '--memory', '--history': '--history', '--max-tool-calls': '--max-tool-calls'}, help=HELP)
 except aos_flags.Error as e:
     die(e.code, e)
 if rest:
@@ -71,6 +73,14 @@ for flag, items in values.items():
     if any(not value for value in items):
         die("ArgumentsBad", "%s needs a non-empty value (usage: brain.py [--system FILE] [--tools FILE] [--memory NAME])" % flag)
 opts = {flag: items[-1] for flag, items in values.items()}
+history_mode = opts.get("--history", "full")
+if history_mode not in ("full", "task"):
+    die("ArgumentsBad", "--history must be full or task")
+max_tool_calls = opts.get("--max-tool-calls")
+if max_tool_calls is not None:
+    if not max_tool_calls.isascii() or not max_tool_calls.isdecimal():
+        die("ArgumentsBad", "--max-tool-calls must be a non-negative integer")
+    max_tool_calls = int(max_tool_calls)
 system_file = here(opts["--system"]) if "--system" in opts else None
 if system_file and not os.path.isfile(system_file):
     die("SystemMissing", "system file not found: %s" % system_file)
@@ -108,6 +118,13 @@ except OSError as e:
     die("HistoryBad", "cannot read history.jsonl: %s" % e)
 if not history or history[-1].get("role") not in ("user", "tool"):
     sys.exit(10)                                 # 沒有要答的：回 idle 等信
+
+task_start = max((i for i, m in enumerate(history) if m.get("role") == "user"), default=0)
+task_history = history[task_start:]
+tool_call_count = sum(len(m.get("tool_calls") or []) for m in task_history
+                      if m.get("role") == "assistant")
+if history_mode == "task":
+    history = task_history
 
 # tools：登記檔裡的工具（aos-tools ls --json；登記檔不在＝沒有工具），說明取工具定義的 description／parameters
 tools = []
@@ -180,7 +197,7 @@ cfg = read_cfg(here(files["llm"])) if "llm" in files else {}
 if "llm" in files:
     cfg.update(read_cfg(os.path.join(stack, files["llm"])))   # stack 那份有的鍵蓋過定義（aos-agent llm set，每格重讀）
 request = {"messages": system + history}
-if tools:
+if tools and (max_tool_calls is None or tool_call_count < max_tool_calls):
     request["tools"] = tools
 body = {"request": request}
 if "endpoint" in cfg:

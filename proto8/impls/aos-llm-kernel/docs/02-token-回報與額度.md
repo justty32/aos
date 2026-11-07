@@ -18,13 +18,14 @@
    - 表上還有這列（`running`／`stopping`／`sleeping`）＝還在飛，佔一格。表上沒列、`state.json` 也沒有＝daemon 還沒套（暫停中、還沒輪到），照樣佔一格；daemon 的 `mailbox_warning` 提到這封掛信＝daemon 不收＝`LaunchFailed`。
    - 表上列著 `stopped` 而 `state.json` 收尾了＝照上面收，順手寄一封 `procs_removed` 把列拔掉。
    - 表上列著 `stopped` 而列上有 `reason`（11-05 晚：問腦 loop 退非 0——endpoint 退非 0、整個 loop 被打掉——daemon 不再下表、留 `stopped`＋原因；配合使用者裁 edge-agent 題 1「留表標 stopped (Recommended)」、edge-daemon 題 2「一起改成留表 (Recommended)」）＝**當收尾**：照上面看 `state.json` 的碼回信、寄 `procs_removed` 拔列；要重掛的（沒收尾、沒到時限的 143）先寄 `procs_removed`、`proc.json` 記 `"remount": true`，**等列拔了下一次才寄掛信**（同名 add 不會把 `stopped` 的拉起來；直接 `procs_started` 的話 daemon 還沒套信前，下一次會把舊列的 `reason` 當成第二次失敗）。`stopped` 而沒 `reason`、沒收尾＝有人下了 stop，照舊等（[04](04-已知限制.md)）。
-5. 收到的寄回信、整封（`cur/<信>/`）刪掉，不留紀錄（11-04 夜使用者「舊信根本不用留，就是刪」）。金鑰只活在端點小 proc 的環境與記憶體裡，信資料夾不存金鑰。
+5. 收到的寄回信、跑過的信追加逐封帳 `ledger.jsonl`，整封（`cur/<信>/`）刪掉，不留請求原文（11-04 夜使用者「舊信根本不用留，就是刪」）。金鑰只活在端點小 proc 的環境與記憶體裡，信資料夾不存金鑰。
 
 endpoint 函數的契約（stdin `{"endpoint", "request"}` → stdout 一行 `{"message", "usage", "model"}`、退 0；錯退非 0、stderr 一行）是 [lib/base/llm_http、llm_fake](../../../lib/README.md) 定的，kernel 只看結束碼與 stdout 的形狀，不看內容（`message` 剪不剪是函數的事）。
 
 ### token 與額度
 
-- **用量從回信拿**：回信的 `usage.total_tokens`（非負整數）就是這封的 token 數；沒有就 `prompt_tokens`＋`completion_tokens`；沒有 `usage`（含 error 回信）＝`counter_tokens` null、只算次數；`usage` 不是物件、數字不對＝`usage_bad: true`（也只算次數，照樣回信）。
+- **用量從回信拿**：回信的 `usage.total_tokens`（非負整數）就是這封的 token 數；沒有就 `prompt_tokens`＋`completion_tokens`；沒有 `usage`（含 error 回信）＝token 增量記 0、只算次數；`usage` 不是物件、數字不對＝token 增量也記 0（只算次數，照樣回信）。
+- **逐封帳**：跑過的信在 `Server::finish` 收尾時，往自己 stack 的 `ledger.jsonl` 追加一行 JSON：`id`（信名）、`endpoint`（代號）、`sender`（`proc.json` 原值，不改成用量帳的相對路徑）、`model`（回信原值）、`mounted_at`／`finished_at`（UTC epoch 秒）、`elapsed_ms`（非負整數毫秒）、`usage`（回信原樣，缺就 null）。缺少的其他欄也記 null；重掛過的 `mounted_at` 是最後一次掛上時間，耗時包含那次掛上到 kernel 收尾的等待。牆鐘倒退時耗時記 0。錯誤回信也記；沒掛過的不記。寫入失敗只印英文 warning，回信、記總帳與刪信照常。這是追加的觀測帳，kernel 不輪替；收尾途中行程中斷或刪信失敗後重收，可能缺行或重複行，可用 `id` 辨識。
 - **算什麼**：掛出去過（`proc.json` 在）的信才算一次——`LetterBad`、`RequestBad`、`Endpoint{Missing,Unknown}`、`DeadlineBad`、`BudgetMissing`、第一次就寄不出掛信的 `LaunchFailed` 不算；`EndpointFailed`、`ReplyBad` 算（函數跑過、可能已經花了錢）。
 - **額度**（kernel.json 的 `budget`，都選填）：`max_calls`、`max_tokens`＝每窗上限（非負整數；沒寫＝那一種不限）；`window`＝`"hour"`／`"day"`／`"all"`（沒寫＝`day`；窗的起點用 kernel 的本地時間〔`TZ`〕的整點／午夜，`all`＝不歸零）；
   `spent`＝到頂時排著的信怎麼辦：`"refuse"`（沒寫＝這個）回 `BudgetMissing`、不跑；`"wait"` 留在 `new/` 等下一窗。

@@ -1,4 +1,4 @@
-# wait.py - wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建。
+# wait.py - wait 格：寄請求、逐拍收 llm kernel 回信；未寄且 request.json 不在時回 think 重建，另記思考成本觀測。
 # loop 照跑、不卡著等：每拍一下就退，ctl 的 pause／stop 每拍都看得到。
 #   think/pending.txt 不在＝還沒寄：aos-post init think/reply（沒有才建）、aos-llm send --reply-to think/reply < request.json，
 #     request.json 不在＝退 11 回 think，從 history＋定義重組；在才寄、信件名稱寫進 pending.txt、退 10（下一拍再來看）。
@@ -12,7 +12,7 @@
 # 錯：stderr 一行「agent-fsm: error: 代號 原因」、退 1——StackMissing、BrainFailed（kernel 回錯）、
 #   SendFailed（aos-llm send 退非 0；它自己的 stderr 原樣在上面，例 LlmKernelMissing）、ReplyBad、PostFailed、WriteFailed。下層的 stderr 一律不攔（stdio-unify R10）。
 # --help 印英文用法；Ctrl-C 退 130。
-import json, os, signal, subprocess, sys
+import json, os, signal, subprocess, sys, time
 from pathlib import Path
 
 _import_paths = [str(Path(__file__).resolve().parent)]
@@ -38,12 +38,15 @@ finally:
     for _path in _import_paths:
         sys.path.remove(_path)
 
+from observed import append_observed
+
 HELP = """\
 usage: wait.py   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
 The wait cell: send $AOS_STACK/think/request.json to the llm kernel (aos-llm send), then on
 each later run look for the reply (aos-llm recv). Exit 0 = reply appended to history (go act);
 10 = not yet; 11 = no pending request and request.json is missing, or brain settings changed;
 go back to think to rebuild. A pending request is received even without request.json.
+Append think endpoint, model, usage and elapsed_ms to observed.jsonl (best effort).
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
@@ -96,6 +99,7 @@ if not stack:
 think = os.path.join(stack, "think")
 request, pending, box = (os.path.join(think, n) for n in ("request.json", "pending.txt", "reply"))
 history_path = os.path.join(stack, "history.jsonl")
+sent_path = os.path.join(think, "sent.json")
 
 try:
     with open(pending, encoding="utf-8") as f:
@@ -122,6 +126,11 @@ if not name:                                     # 還沒寄
         r = run(["aos-post", "init", box])
         if r.returncode != 0:
             die("PostFailed", "aos-post init %s exited %d" % (box, r.returncode))
+    try:
+        with open(sent_path, "w", encoding="utf-8") as f:
+            f.write(json.dumps({"started_ns": time.time_ns(), "endpoint": body.get("endpoint")}) + "\n")
+    except OSError as e:
+        aos_flags.warn("agent-fsm", "cannot write think timing: %s" % e)
     with open(request, encoding="utf-8") as f:
         r = run(["aos-llm", "send", "--reply-to", box], stdin=f)
     name = r.stdout.strip()
@@ -130,21 +139,46 @@ if not name:                                     # 還沒寄
     write_atomic(pending, name + "\n")
     sys.exit(NOT_YET)
 
-r = run(["aos-llm", "recv", box, name], stdin=subprocess.DEVNULL)
+r = run(["aos-llm", "recv", "--full", box, name], stdin=subprocess.DEVNULL)
 if r.returncode == NOT_YET:
     sys.exit(NOT_YET)
 try:                                             # 回信收掉了（或 kernel 回錯）：這封了結，之後停下的話人重跑＝重寄
     os.remove(pending)
 except FileNotFoundError:
     pass
+received_ns = time.time_ns()
+elapsed_ms = None
+sent_endpoint = None
+try:
+    with open(sent_path, encoding="utf-8") as f:
+        sent = json.load(f)
+        sent_endpoint = sent.get("endpoint")
+        started_ns = sent["started_ns"]
+        if not isinstance(started_ns, int) or isinstance(started_ns, bool):
+            raise ValueError("started_ns must be an integer")
+        elapsed_ms = max(0, (received_ns - started_ns) / 1_000_000)
+except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
+    aos_flags.warn("agent-fsm", "cannot read think timing: %s" % e)
+
+
+def observe(reply):
+    append_observed(stack, {"kind": "think",
+                            "endpoint": reply.get("endpoint", sent_endpoint),
+                            "model": reply.get("model"), "usage": reply.get("usage"),
+                            "elapsed_ms": elapsed_ms})
+
+
 if r.returncode != 0:                            # kernel 回錯：aos-llm 已在 stderr 說了，這格只多寫自己一行
+    observe({})
     die("BrainFailed", "aos-llm recv exited %d (its reason is above)" % r.returncode)
 try:
-    message = json.loads(r.stdout)
+    reply = json.loads(r.stdout)
+    message = reply.get("message") if isinstance(reply, dict) else None
 except ValueError as e:
     die("ReplyBad", "aos-llm recv did not print JSON: %s" % e)
 if not isinstance(message, dict) or message.get("role") != "assistant":
     die("ReplyBad", "message in the reply is not an assistant message: %s" % r.stdout.strip()[:200])
+observe(reply)
 try:
     with open(history_path, "a", encoding="utf-8") as f:   # 一次寫一整行，只附加（P-41）
         f.write(json.dumps(message, ensure_ascii=False) + "\n")

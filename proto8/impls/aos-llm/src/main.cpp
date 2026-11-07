@@ -1,8 +1,8 @@
 // main.cpp：aos-llm 命令列——寄請求信進 LLM kernel 的信箱、收回信的基礎工具（定位同 aos-post；thinking 11-04 think-as-function 02/01 § 5）。
 //
 //     aos-llm send [--priority P] --reply-to BOX < body.json   寄（非同步、不建 sender.flock）；stdout 印信件名稱、退 0
-//     aos-llm recv BOX 信件名稱                               收：到了印 body.message 一行、0；沒到 10
-//     aos-llm ask [--priority P] < body.json                  同步：寄、等、印 body.message、0
+//     aos-llm recv [--full] BOX 信件名稱                               收：到了印 body.message 一行、0；沒到 10
+//     aos-llm ask [--priority P] [--full] < body.json                  同步：寄、等、印 body.message、0
 //     aos-llm regret 信件名稱                                 撤回還在 new/ 的信；已被認領＝RegretFailed
 //     aos-llm ls [--json]                                     列 kernel 的包（讀 $AOS_LLM_KERNEL 的 stack 底下 endpoints.json）：一行一包；沒窗＝EndpointsMissing
 //
@@ -47,8 +47,8 @@ more: aos-llm/README.md
 
 static const std::map<std::string, std::string> SUB_USAGE = {
     {"send", "aos-llm send [--priority P] --reply-to BOX < body.json"},
-    {"recv", "aos-llm recv BOX LETTER"},
-    {"ask", "aos-llm ask [--priority P] < body.json"},
+    {"recv", "aos-llm recv [--full] BOX LETTER"},
+    {"ask", "aos-llm ask [--priority P] [--full] < body.json"},
     {"regret", "aos-llm regret LETTER"},
     {"ls", "aos-llm ls [--json]"},
 };
@@ -71,27 +71,31 @@ more: aos-llm/README.md
 )"},
     {"recv", R"(aos-llm recv - Receive a reply.
 
-usage: aos-llm recv BOX LETTER
+usage: aos-llm recv [--full] BOX LETTER
        aos-llm recv --help
 
 flags:
+  --full      print the entire reply body
   -h, --help   show this help
 
-Print the reply's body.message as one JSON line and finish the reply letter.
+Print body.message as one JSON line and finish the reply letter.
+With --full, print the entire reply body, including usage and model when present.
 
 exit codes: 0 received; 10 no reply yet; 1 error.
 more: aos-llm/README.md
 )"},
     {"ask", R"(aos-llm ask - Send a request and wait for its reply.
 
-usage: aos-llm ask [--priority P] < body.json
+usage: aos-llm ask [--priority P] [--full] < body.json
        aos-llm ask --help
 
 flags:
   --priority P   override body.priority
+  --full         print the entire reply body
   -h, --help     show this help
 
 Read body JSON from stdin, send via $AOS_LLM_KERNEL, and print body.message.
+With --full, print the entire reply body (message, usage, model) as one JSON line.
 
 exit codes: 0 received; 1 error.
 more: aos-llm/README.md
@@ -188,16 +192,16 @@ int main(int argc, char** argv) {
             return 0;
         }
         if (cmd == "recv") {
-            aos::Cli cli = parse(args, {}, 2, "recv needs BOX and a letter name", "recv");
-            return g::recv(cli.rest[0], cli.rest[1]);
+            aos::Cli cli = parse(args, {}, 2, "recv needs BOX and a letter name", "recv", {{"--full", "full"}});
+            return g::recv(cli.rest[0], cli.rest[1], cli.opts.count("full") > 0);
         }
         if (cmd == "ask") {
-            aos::Cli cli = parse(args, {{"--priority", "priority"}}, 0, "ask takes no positional arguments", "ask");
+            aos::Cli cli = parse(args, {{"--priority", "priority"}}, 0, "ask takes no positional arguments", "ask", {{"--full", "full"}});
             g::Mailbox mb = g::kernel();
             g::warn_idle(mb);
             aos::Json body = g::read_body(opt(cli, "priority"));
             std::string id = g::send_held(mb, body);
-            return g::ask_wait(mb, id);
+            return g::ask_wait(mb, id, cli.opts.count("full") > 0);
         }
         if (cmd == "ls") {
             aos::Cli cli = parse(args, {}, 0, "ls takes no positional arguments", "ls", {{"--json", "json"}}, {"-j"});

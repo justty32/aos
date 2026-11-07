@@ -1,10 +1,12 @@
-// reply.cpp：【serve】寫回信、寄送與撤回回信、記用量並收掉信件（說明見 serve.hpp）。
+// reply.cpp：【serve】寫回信、寄送與撤回回信、記用量與逐封帳並收掉信件（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
 #include "aos/util/files.hpp"
 #include "aos/post.hpp"
 
+#include <chrono>
 #include <filesystem>
+#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -94,6 +96,40 @@ std::string proc_str(const std::string& dir, const char* key) {
     return (*proc)[key].get<std::string>();
 }
 
+// 逐封帳只留成本與時間，不存請求內容；寫不了只提醒，不影響回信與收信。
+void append_ledger(const std::string& stack, const std::string& dir, const std::string& id, const Json& reply) {
+    std::string path = aos::join(stack, "ledger.jsonl");
+    try {
+        std::optional<Json> proc = aos::read_json(aos::join(dir, PROC_JSON));
+        Json entry = Json::object();
+        entry["id"] = id;
+        for (const char* key : {"endpoint", "sender"}) {
+            entry[key] = proc && proc->is_object() ? proc->value(key, Json()) : Json();
+        }
+        entry["model"] = reply.value("model", Json());
+        entry["mounted_at"] = proc && proc->is_object() ? proc->value("mounted_at", Json()) : Json();
+        double finished = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
+        entry["finished_at"] = finished;
+        entry["elapsed_ms"] = nullptr;
+        if (entry["mounted_at"].is_number()) {
+            double elapsed = (finished - entry["mounted_at"].get<double>()) * 1000.0;
+            if (elapsed < 0) {
+                elapsed = 0;
+            }
+            entry["elapsed_ms"] = static_cast<long long>(elapsed);
+        }
+        entry["usage"] = reply.value("usage", Json());
+        std::ofstream out(path, std::ios::app);
+        out << aos::dumps(entry) << '\n';
+        out.close();
+        if (!out) {
+            aos::warn("aos-llm-kernel", "cannot append ledger: " + path);
+        }
+    } catch (const std::exception& e) {
+        aos::warn("aos-llm-kernel", "cannot append ledger: " + path + " (" + e.what() + ")");
+    }
+}
+
 }  // namespace
 
 // 寫好 reply.json、寄回信，然後整封刪掉（cur/<id>/；11-04 夜使用者「舊信根本不用留，就是刪」）。回信寄不出去＝stderr 提醒行（不退出，11-05 R1）、照刪、不退。
@@ -111,6 +147,7 @@ void Server::finish(const std::string& id, const Json& reply) {
         regret_reply(mb_.root, dir);   // 同步寄的人已經走了（ask 被打斷）：回信沒人拿，撤回
     }
     if (counted) {
+        append_ledger(stack_, dir, id, reply);
         add_used(stack_, used_, report_of(reply), endpoint, sender);   // usage 從回信拿（沒有＝只算次數）；packs.<代號>、senders.<寄件人> 也記
     }
     aos::remove_tree(dir);   // 刪不掉（權限）不算錯：下一次 collect 看到 reply_letter.txt 就不重寄
