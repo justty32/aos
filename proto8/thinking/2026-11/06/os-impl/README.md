@@ -38,6 +38,7 @@
 | [06-判官排隊第二步實作結果](06-判官排隊第二步實作結果.md)（11-06 晚家機） | 判官 `queue`＋窗、到期拒信、`--on-queued`、逾時撤信、K-3、`--queue-wait-s`、agents `on_queued`；代定 5 條、驗收表 |
 | [07-C5留格與AOS_KERNEL提醒實作結果](07-C5留格與AOS_KERNEL提醒實作結果.md)（11-06 晚家機） | llm kernel `reserved: {"high": N}`（P9 裁定 1）、AOS_KERNEL 指不到印 warning（E2 C++ 半）；high 17.5 ms vs 對照 3065 ms |
 | [08-aos-daemon-ctl永遠直寄實作結果](08-aos-daemon-ctl永遠直寄實作結果.md)（11-07 早家機） | 使用者裁「aos-daemon-ctl 永遠直寄」＋「判官睡着…風險」原文；直寄、拿掉 `--queue-wait-s`、文件與 N-63 註；代定 4 條、實測、改後 help |
+| [09-直掛agent不上表](09-直掛agent不上表.md)（11-07 調查，只讀） | `aos-daemon-ctl add` 直掛 agent 定義資料夾回 `applied: true` 卻不上表：重現、根因（`_entry` 掛自己＋exec 型撞名 `InstanceExists`、退了下表）、判斷（照設計的組合、靜悄悄失敗）、補文件推薦＋方向題 1 |
 
 ## 要帶給使用者的
 
