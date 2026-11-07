@@ -2,10 +2,9 @@
 //
 //   read_procs_ctl  每圈讀一次（tend 開頭）。同 aos-loop 的 read_ctl 的不採用規則（N-06～N-08）：認 procs、procs_added、procs_removed、procs_stopped、procs_started、seq，
 //                   其他 key 忽略（舊名 loops*／execs* 也是，C-48）；讀到壞的（讀不了、不是 JSON 物件、seq 不是非負整數、名單壞、指示詞解不開、
-//                   procs_stopped／procs_started 有 exec 型）整份不採用、維持上一份好的，原因記 pctl_warning_（procs_state 的 ctl_warning）；
+//                   ）整份不採用、維持上一份好的，原因記 pctl_warning_（procs_state 的 ctl_warning）；
 //                   讀到好的清回 null，跟上一份好的不同才更新 responded_at；檔不在＝回初始值、不算問題
 //   check_lists     procs、procs_added（read_procs）、procs_removed／procs_stopped／procs_started（名字的陣列）；信也用
-//   check_once      procs_stopped／procs_started 的名字是 exec 型（exec 型只有跑和拔，procs § 2c 第 5 條）＝回原因；信也用
 //   write_more      procs_state 一份：{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox,
 //                   daemon, responded_at, tick?（有 AOS_TICK 才寫，壞檔＝null）, procs, pid, started_at_ticks, boot_id, updated_at}；
 //                   tick 變動會刷新這扇窗；responded_at 只記回應，不跟時鐘前進。
@@ -59,10 +58,6 @@ void Daemon::read_procs_ctl() {
         } else {
             bad = check_lists(doc, r);
         }
-        if (!bad) {   // exec 型只有跑和拔：procs_stopped／procs_started 裡有 exec 型＝整份不採用（procs § 2c 第 5 條）
-            Json merged;
-            bad = check_once(doc, ctl_want(doc, merged));
-        }
     } catch (const Error& e) {
         bad = "cannot resolve directives: " + e.msg;
     }
@@ -108,28 +103,6 @@ std::optional<std::string> Daemon::check_lists(Json& doc, const aos::Resolved& w
     }
     return std::nullopt;
 }
-
-std::optional<std::string> Daemon::check_once(const Json& doc, const Json& want) const {
-    for (const char* k : {"procs_stopped", "procs_started", "procs_slept", "procs_woken"}) {
-        if (!doc.contains(k)) {
-            continue;
-        }
-        for (const Json& j : doc[k]) {
-            const std::string& n = j.get_ref<const std::string&>();
-            if (!want.contains(n)) {
-                continue;   // 不在期望表的名字＝不管（procs § 2c 第 6 條）
-            }
-            auto at = index_.find(n);   // 表上有＝看那列（跑著的是哪種）；不在表上＝看寫法
-            bool once = at != index_.end() ? at->second->second.once : is_once(want[n]);
-            bool auto_restart = at != index_.end() ? at->second->second.auto_restart : auto_restart_of(want[n]);
-            if (once && !auto_restart) {
-                return "exec proc " + aos::dumps(Json(n)) + " has no stop/start/sleep/wake (exec procs can only be added and removed)";
-            }
-        }
-    }
-    return std::nullopt;
-}
-
 
 static const size_t PART_ROWS = 100;   // procs_state 的 procs 表一份最多幾列（使用者 10-23「每個檔案一百個」；不開 key，C-56）
 

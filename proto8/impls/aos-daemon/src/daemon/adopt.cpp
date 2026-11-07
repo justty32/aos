@@ -1,8 +1,7 @@
-// adopt.cpp：【daemon】接回上次的 proc 表與小格裡仍活著的子 loop（說明見 daemon.hpp）。
+// adopt.cpp：【daemon】按保存的入口與控制意圖接回 proc 表，不以小格檔案分類（說明見 daemon.hpp）。
 #include "daemon/daemon.hpp"
 #include "aos/util/files.hpp"
 #include "aos/util/proc.hpp"
-#include <filesystem>
 
 namespace aos::daemon {
 
@@ -98,6 +97,21 @@ void Daemon::adopt() {
         }
         Json st = r.value("stack", Json());
         Child c;
+        c.launch = r.value("launch", Json());
+        if (c.launch.is_object()) {
+            Json target = c.launch.value("exec", Json());
+            if (target.is_string()) {
+                c.launch["exec"] = unrel(target);
+            } else if (target.is_array() && !target.empty()) {
+                c.launch["exec"][0] = unrel(target[0]);
+            }
+            for (const char* key : {"ws", "stack", "def"}) {
+                if (c.launch.contains(key)) {
+                    c.launch[key] = unrel(c.launch[key]);
+                }
+            }
+            c.launch = abs_refs(c.launch, dstack_);
+        }
         c.own = false;
         c.auto_restart = auto_restart_of(r);
         c.restart_on_stuck = ros_of(r);
@@ -123,10 +137,6 @@ void Daemon::adopt() {
             c.limits = r["limits"];   // 11-05（feat-proto 件 5）：起它時生效的份額照帶（信箱接回只留名的列再起時用它）
         }
         if (phase == "stopped" || phase == "sleeping") {   // stopped 的列（11-03 procs § 2c 第 7 條）：接成 stopped、不起、不判活；名字進底的 stopped 集合
-            if (c.auto_restart) {
-                std::error_code ec;
-                c.once = !std::filesystem::exists(aos::join(c.stack, names_.loop), ec);   // 常駐列也照小格有沒有 loop.json 判 exec／loop 型
-            }
             c.phase = phase.get<std::string>();            // sleeping 的列（11-03 sleep／wake）：同樣接成列、不判活，但不進 stopped 集合＝reconcile 第一圈就 wake
             c.held = true;
             c.code = r.value("code", Json());
@@ -140,8 +150,6 @@ void Daemon::adopt() {
         if (phase != "running" && phase != "stopping") {
             continue;
         }
-        std::error_code ec;
-        c.once = !std::filesystem::exists(aos::join(c.stack, names_.loop), ec);   // 小格有 daemon 寫的 loop.json（procs_loop 的名字）＝loop 型（procs § 2 第 7 條）
         Json pid = r.value("pid", Json());
         Json ticks = r.value("started_at_ticks", Json());
         std::optional<long long> now = same_boot && pid.is_number_integer() && ticks.is_number_integer() ? aos::proc_started_at_ticks((pid_t)pid.get<long long>()) : std::nullopt;
@@ -149,34 +157,32 @@ void Daemon::adopt() {
             c.pid = (pid_t)pid.get<long long>();
             c.started_at_ticks = ticks.get<long long>();
             if (phase == "stopping") {
-                // 11-05 第二輪：上一個 daemon 正在收它時被 kill -9（stop 在等它跑完、sleep／rm 送了 TERM、收工途中）。原本不接＝它照跑、表上看不到
-                //（信加的從此消失；daemon.json 裡的在同一格再起一份）。改成接回來接著收：送 SIGTERM、10 秒 SIGKILL；退了＝上一個 daemon 在收工（state
-                // phase stopping）的留 sleeping（下一圈 wake），其他留 stopped（看不出當初是 stop、sleep 還是 rm：一律停著、看得到，要的 start、不要的 rm）。
-                if (finishing) {
-                    c.nap = !c.once || c.auto_restart;
-                } else if (!c.once || c.auto_restart) {
+                // 接回收的途中仍照公開 stop_mode；stop 不會因 daemon 重開而改送訊號。
+                std::string mode = r.value("stop_mode", std::string("stop"));
+                if (finishing || mode == "sleep") {
+                    c.nap = true;
+                    term(c);
+                } else if (mode == "stop") {
                     c.soft = true;
                     stopped_.insert(name);
+                    halt(name, c);
+                } else {
+                    term(c);
                 }
-                term(c);
             }
             add(name, c);
             continue;
         }
-        // 11-05 第二輪：行程不在了、上一個 daemon 沒來得及記（kill -9、斷電、wsl --shutdown、OOM）。原本整列悄悄丟掉（信加的從表上永久消失）。
-        // loop 型改成：running 的照「收工時還在跑」接成 sleeping（下一圈 wake，同一個 stack 接著做）——子 loop 自己的 state 窗寫 done（自己跑完了）才照舊不接；
-        // stopping 的（正在收）＝上一個 daemon 在收工就 sleeping，其他 stopped。exec 型（跑一次的）照舊不接。
-        if (c.once && !c.auto_restart) {
+        // 拿不到結束碼的自然結束照舊下表；auto_restart 仍重起，收途中保留原意。
+        if (phase == "running" && !c.auto_restart && !finishing) {
             continue;
         }
-        if (phase == "running" && !c.auto_restart) {
-            std::optional<Json> cs = cell_state(c.stack, names_.loop);
-            if (cs && cs->value(StateWindow::phase, Json()) == StateWindow::done) {
-                continue;
-            }
+        std::string mode = r.value("stop_mode", std::string("stop"));
+        if (phase == "stopping" && mode == "remove" && !finishing) {
+            continue;
         }
         c.held = true;
-        c.phase = phase == "running" || finishing ? "sleeping" : "stopped";
+        c.phase = phase == "running" || finishing || mode == "sleep" ? "sleeping" : "stopped";
         if (c.phase == "stopped") {
             stopped_.insert(name);
         }

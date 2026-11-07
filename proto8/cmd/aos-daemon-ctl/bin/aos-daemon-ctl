@@ -8,7 +8,7 @@ usage: aos-daemon-ctl [--daemon D] SUBCOMMAND [FLAGS...] [ARGS...]
 subcommands:
   add [FLAGS] XXX [-- ARGS...]   attach (register + start); prints the letter name
   rm NAME        detach (stop, then remove; stack kept, so it does not ask)
-  stop NAME      stop after this run (row stays as stopped)
+  stop NAME      write its public ctl and wait for exit (row stays as stopped)
   start NAME     start a stopped one again on the same stack
   sleep NAME     SIGTERM now (row stays as sleeping; wakes when the daemon restarts)
   wake NAME      start a sleeping one again on the same stack
@@ -40,13 +40,14 @@ HELPS = {
 usage: aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--timeout-s S] [--name N] [--ws WS]
                       [--stack S] [--def DEF] [--limits JSON] XXX [-- ARGS...]
 
-XXX is followed the way aos-exec follows it: ending at a loop config = loop type (no ARGS
-allowed), anything else = exec type (runs once; ARGS after -- are appended). Prints the
+XXX follows the aos-exec entry chain: an object with exec and no argv supplies a loop
+config (no ARGS allowed); arrays and argv objects stay unchanged as aos-exec targets.
+Launch syntax only selects how to start a proc; all procs share lifecycle rules. Prints the
 letter name, then waits up to --timeout-s seconds for the letter to leave new/ (still there = a
 warning line, exit 0; it is applied when taken).
 
 A definition folder runs its _entry, as aos-exec would. An agent folder's _entry attaches the
-agent itself, so this proc ends at once and is not left on the table; to attach an agent, use
+agent itself and can fail with a name collision (left stopped with a reason); to attach an agent, use
 aos-agent ctl add, or give its body: add -n bob --def bob bob/body.json.
 "applied": true only means the letter was applied to the table, not that the proc still runs.
 
@@ -77,12 +78,15 @@ flags:
 
 exit codes: 0 sent; 1 error.
 """,
-    "stop": """aos-daemon-ctl stop - stop a running loop after its current run
+    "stop": """aos-daemon-ctl stop - write stop to a running proc control window
 
 usage: aos-daemon-ctl [--daemon D] stop [--reply-to BOX] [--timeout-s S] NAME
 
-Asks a running loop to stop after this run. Its row stays stopped and its stack is kept;
-use start to run it again. Prints the letter name; exec types have no stop (CtlMissing).
+Writes {"cmd": "stop", "seq": N} through the daemon to the proc control window.
+The daemon waits for it to exit, then keeps the row stopped; use start to run it again.
+The file is the parent-written loop config's nonempty ctl, or ctl.json in the proc stack.
+A proc that does not read ctl keeps running until it exits itself. A write failure warns
+and keeps waiting; stop never falls back to SIGTERM. Prints the letter name.
 Without --reply-to, waits up to --timeout-s seconds for the letter to leave new/.
 
 flags:
@@ -90,7 +94,7 @@ flags:
       --reply-to BOX   send only; the reply goes to BOX
   -h, --help           show this help
 
-exit codes: 0 sent; 1 error (including PhaseBad or CtlMissing).
+exit codes: 0 sent; 1 error (including PhaseBad).
 """,
     "start": """aos-daemon-ctl start - start a stopped proc again on the same stack
 
@@ -106,12 +110,13 @@ flags:
 
 exit codes: 0 sent; 1 error (including PhaseBad).
 """,
-    "sleep": """aos-daemon-ctl sleep - put a running loop to sleep now
+    "sleep": """aos-daemon-ctl sleep - put a running proc to sleep now
 
 usage: aos-daemon-ctl [--daemon D] sleep [--reply-to BOX] [--timeout-s S] NAME
 
-Asks the daemon to SIGTERM a running loop now. The row stays sleeping and the stack is
-kept; wake or a daemon restart starts it again. Exec types have no sleep (CtlMissing).
+Asks the daemon to SIGTERM any running proc now (SIGKILL after 10s if needed).
+The row stays sleeping and the stack is kept; wake or a daemon restart starts it again.
+Sleep does not write ctl: the public control protocol has no sleep command.
 Prints the letter name; without --reply-to, waits up to --timeout-s seconds for it to leave new/.
 
 flags:
@@ -119,7 +124,7 @@ flags:
       --reply-to BOX   send only; the reply goes to BOX
   -h, --help           show this help
 
-exit codes: 0 sent; 1 error (including PhaseBad or CtlMissing).
+exit codes: 0 sent; 1 error (including PhaseBad).
 """,
     "wake": """aos-daemon-ctl wake - start a sleeping proc again on the same stack
 
@@ -135,33 +140,35 @@ flags:
 
 exit codes: 0 sent; 1 error (including PhaseBad).
 """,
-    "pause": """aos-daemon-ctl pause - pause a loop through its own ctl window
+    "pause": """aos-daemon-ctl pause - pause a proc through its own ctl window
 
 usage: aos-daemon-ctl [--daemon D] pause [--timeout-s S] NAME
 
-Writes {"cmd": "pause", "seq": N} directly to the loop's ctl window and prints N.
+Writes {"cmd": "pause", "seq": N} directly to the proc's ctl window (same filename rule as stop) and prints N.
 Waits up to --timeout-s seconds for its state ctl_seq to reach N; a timeout warns and exits 0.
-No state window means no wait.
+Explicit state: null in the parent-written loop config disables the wait; otherwise
+the state filename comes from that config or defaults to state.json.
 
 flags:
       --timeout-s S   positive apply timeout in seconds (default: 5)
   -h, --help          show this help
 
-exit codes: 0 written; 1 error (including CtlMissing or WriteFailed).
+exit codes: 0 written; 1 error (including PhaseBad or WriteFailed).
 """,
-    "resume": """aos-daemon-ctl resume - resume a loop through its own ctl window
+    "resume": """aos-daemon-ctl resume - resume a proc through its own ctl window
 
 usage: aos-daemon-ctl [--daemon D] resume [--timeout-s S] NAME
 
-Writes {"cmd": "resume", "seq": N} directly to the loop's ctl window and prints N.
+Writes {"cmd": "resume", "seq": N} directly to the proc's ctl window (same filename rule as stop) and prints N.
 Waits up to --timeout-s seconds for its state ctl_seq to reach N; a timeout warns and exits 0.
-No state window means no wait.
+Explicit state: null in the parent-written loop config disables the wait; otherwise
+the state filename comes from that config or defaults to state.json.
 
 flags:
       --timeout-s S   positive apply timeout in seconds (default: 5)
   -h, --help          show this help
 
-exit codes: 0 written; 1 error (including CtlMissing or WriteFailed).
+exit codes: 0 written; 1 error (including PhaseBad or WriteFailed).
 """,
     "ls": """aos-daemon-ctl ls - list the procs on the daemon table
 
@@ -312,14 +319,12 @@ def cmd_rm(opts, args):
 
 
 def phase_cmd(cmd, key):
-    """stop／start／sleep／wake：照表檢查 phase（PhaseBad）；stop、sleep 另要 loop 型（CtlMissing），然後寄 {key: [名字]}。"""
+    """stop／start／sleep／wake：只照表檢查 phase（PhaseBad），然後寄 {key: [名字]}。"""
     def run(opts, args):
         name, o = name_arg(cmd, args, REPLY)
         seconds = timeout_arg(o, 3)
         d = dc.find_daemon(opts.get("daemon"))
         row = dc.row_of(d, name)
-        if cmd in ("stop", "sleep"):
-            dc.need_stoppable(d, name, row)    # exec 型只有跑和拔：先報 CtlMissing（跟 11-05 前一樣）；寫了 auto_restart 的放行（11-06 no-pid P6）
         dc.need_phase(cmd, name, row)
         deliver(d, {key: [name]}, reply_arg(o), seconds)
     return run

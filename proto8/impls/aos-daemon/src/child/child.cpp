@@ -122,6 +122,9 @@ static Child launch(const std::string& name, const std::string& cell, const std:
     }
     close(err_fd);
     Child c;
+    Json target = std::vector<std::string>(argv.begin() + 1, argv.end());
+    target[0] = aos::abspath(aos::join(cwd, target[0].get<std::string>()));
+    c.launch = Json::object({{"exec", target}});
     c.pid = pid;
     c.started_at_ticks = aos::proc_started_at_ticks(pid);
     c.err_off = err_off;
@@ -206,7 +209,6 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
             throw Error{e.code, "cannot start child " + name + ": " + e.msg};
         }
         Child c = launch(name, cell, cwd, {"--", aos::join(cell, names.exec) + "#/exec"}, ws, dstack, names.err, limits);
-        c.once = true;
         return c;
     }
     if (target.is_string()) {
@@ -218,8 +220,13 @@ Child spawn_exec(const std::string& name, const std::string& cell, bool deep, co
     }
     make_cell(name, cell, deep);
     Child c = launch(name, cell, cwd, argv, ws, dstack, names.err, limits);
-    c.once = true;
     return c;
+}
+
+std::string ctl_name(const std::string& cell, const CellNames& names) {
+    auto cfg = aos::read_json(aos::join(cell, names.loop));
+    Json ctl = cfg && cfg->is_object() ? cfg->value(aos::loop::CtlWindow::config_key, Json()) : Json();
+    return ctl.is_string() && !ctl.get<std::string>().empty() ? ctl.get<std::string>() : aos::loop::CtlWindow::default_name;
 }
 
 bool alive(Child& c) {
@@ -260,6 +267,24 @@ Json row(const Child& c, const std::string& dstack) {
     r["stack"] = rel_spec(c.stack, dstack);   // 11-05：相對 daemon 的 stack（portable-flow）   // 11-03 procs § 2b：一律寫（adopt、start、aos-daemon-ctl where 靠它）
     if (!c.ws.is_null()) {
         r["ws"] = rel(c.ws);   // eca 10-30：有給才寫
+    }
+    r["launch"] = c.launch;
+    if (c.launch.is_object()) {
+        Json target = c.launch.value("exec", Json());
+        if (target.is_string()) {
+            r["launch"]["exec"] = rel(target);
+        } else if (target.is_array() && !target.empty()) {
+            r["launch"]["exec"][0] = rel(target[0]);
+        }
+        for (const char* key : {"ws", "stack", "def"}) {
+            if (c.launch.contains(key)) {
+                r["launch"][key] = rel(c.launch[key]);
+            }
+        }
+        r["launch"] = rel_refs(r["launch"], dstack);
+    }
+    if (c.phase == "stopping") {
+        r["stop_mode"] = c.soft ? "stop" : c.nap ? "sleep" : "remove";
     }
     r["exec"] = rel(c.exec);   // 11-04 晚（aos-agent 方向題 1）：一律寫，目標（絕對）或 null
     r["def"] = rel(c.def);     // 11-04（使用者「那就b。」）：一律寫，定義資料夾或 null（11-05 起相對 daemon 的 stack）

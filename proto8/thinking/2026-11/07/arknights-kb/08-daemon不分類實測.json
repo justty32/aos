@@ -1,0 +1,737 @@
+{
+ "description": "三種身體（loop 分陣列與物件）四種情況與寫 ctl 失敗的實測證據。",
+ "contract": "wf-table/1",
+ "source": "08-daemon不分類實作結果.md",
+ "extracted": "2026-11-07",
+ "link_columns": [],
+ "columns": [
+  "body",
+  "case",
+  "commands",
+  "phase",
+  "reason",
+  "code",
+  "off_table",
+  "last_log",
+  "fixture",
+  "after_wake"
+ ],
+ "rows": [
+  {
+   "body": "script",
+   "case": "stop",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/script_stop/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028041934896962.67.2119392",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "stop",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028042020753062.70.2119400",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "stop",
+      "job"
+     ],
+     "code": 1,
+     "stdout": "",
+     "stderr": "aos-daemon-ctl: error: PhaseBad job is already stopped"
+    }
+   ],
+   "phase": "stopped",
+   "reason": null,
+   "code": 0,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:23.475+00:00",
+    "name": "job",
+    "phase": "stopped",
+    "pid": 68,
+    "code": 0,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/script_stop",
+   "after_wake": ""
+  },
+  {
+   "body": "script",
+   "case": "sleep",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/script_sleep/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028043731020150.77.2119571",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "sleep",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028043816315914.80.2119580",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "start",
+      "job"
+     ],
+     "code": 1,
+     "stdout": "",
+     "stderr": "aos-daemon-ctl: error: PhaseBad job is sleeping; use wake (start only starts stopped ones)"
+    },
+    {
+     "argv": [
+      "wake",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028043935900188.83.2119592",
+     "stderr": ""
+    }
+   ],
+   "phase": "sleeping",
+   "reason": null,
+   "code": 143,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:23.856+00:00",
+    "name": "job",
+    "phase": "sleeping",
+    "pid": 78,
+    "code": 143,
+    "signal": 15
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/script_sleep",
+   "after_wake": "running"
+  },
+  {
+   "body": "script",
+   "case": "zero",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/script_zero/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028044110192934.87.2119609",
+     "stderr": ""
+    }
+   ],
+   "phase": "off_table",
+   "reason": null,
+   "code": 0,
+   "off_table": true,
+   "last_log": {
+    "at": "2026-11-07T05:07:25.649+00:00",
+    "name": "job",
+    "phase": "done",
+    "pid": 88,
+    "code": 0,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/script_zero",
+   "after_wake": ""
+  },
+  {
+   "body": "script",
+   "case": "fail",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/script_fail/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028045712022685.91.2119770",
+     "stderr": ""
+    }
+   ],
+   "phase": "stopped",
+   "reason": "failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed",
+   "code": 7,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:27.250+00:00",
+    "name": "job",
+    "phase": "stopped",
+    "pid": 92,
+    "code": 7,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/script_fail",
+   "after_wake": ""
+  },
+  {
+   "body": "loop_array",
+   "case": "stop",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/loop_array_stop/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028047313361266.95.2119930",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "stop",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028047398346372.99.2119938",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "stop",
+      "job"
+     ],
+     "code": 1,
+     "stdout": "",
+     "stderr": "aos-daemon-ctl: error: PhaseBad job is already stopped"
+    }
+   ],
+   "phase": "stopped",
+   "reason": null,
+   "code": 0,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:27.700+00:00",
+    "name": "job",
+    "phase": "stopped",
+    "pid": 96,
+    "code": 0,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/loop_array_stop",
+   "after_wake": ""
+  },
+  {
+   "body": "loop_array",
+   "case": "sleep",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/loop_array_sleep/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028047945377861.107.2119993",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "sleep",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028048030787058.111.2120001",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "start",
+      "job"
+     ],
+     "code": 1,
+     "stdout": "",
+     "stderr": "aos-daemon-ctl: error: PhaseBad job is sleeping; use wake (start only starts stopped ones)"
+    },
+    {
+     "argv": [
+      "wake",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028048149346571.114.2120013",
+     "stderr": ""
+    }
+   ],
+   "phase": "sleeping",
+   "reason": null,
+   "code": 143,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:28.071+00:00",
+    "name": "job",
+    "phase": "sleeping",
+    "pid": 108,
+    "code": 143,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/loop_array_sleep",
+   "after_wake": "running"
+  },
+  {
+   "body": "loop_array",
+   "case": "zero",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/loop_array_zero/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028048323716182.119.2120031",
+     "stderr": ""
+    }
+   ],
+   "phase": "off_table",
+   "reason": null,
+   "code": 0,
+   "off_table": true,
+   "last_log": {
+    "at": "2026-11-07T05:07:28.711+00:00",
+    "name": "job",
+    "phase": "done",
+    "pid": 120,
+    "code": 0,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/loop_array_zero",
+   "after_wake": ""
+  },
+  {
+   "body": "loop_array",
+   "case": "fail",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/loop_array_fail/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028048789688632.124.2120077",
+     "stderr": ""
+    }
+   ],
+   "phase": "stopped",
+   "reason": "failed to start: exited within 3s of wake/start (code 7): aos-loop: error: RunFailed run 1: /tmp/aos-daemon-b.rV6SXE/loop_array_fail/body.py failed with exit code 7",
+   "code": 7,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:29.176+00:00",
+    "name": "job",
+    "phase": "stopped",
+    "pid": 125,
+    "code": 7,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/loop_array_fail",
+   "after_wake": ""
+  },
+  {
+   "body": "loop_object",
+   "case": "stop",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/loop_object_stop/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028049255218707.129.2120124",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "stop",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028049340431939.135.2120132",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "stop",
+      "job"
+     ],
+     "code": 1,
+     "stdout": "",
+     "stderr": "aos-daemon-ctl: error: PhaseBad job is already stopped"
+    }
+   ],
+   "phase": "stopped",
+   "reason": null,
+   "code": 0,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:29.641+00:00",
+    "name": "job",
+    "phase": "stopped",
+    "pid": 130,
+    "code": 0,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/loop_object_stop",
+   "after_wake": ""
+  },
+  {
+   "body": "loop_object",
+   "case": "sleep",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/loop_object_sleep/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028049887421552.145.2120187",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "sleep",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028049972414242.151.2120196",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "start",
+      "job"
+     ],
+     "code": 1,
+     "stdout": "",
+     "stderr": "aos-daemon-ctl: error: PhaseBad job is sleeping; use wake (start only starts stopped ones)"
+    },
+    {
+     "argv": [
+      "wake",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028050091634689.154.2120208",
+     "stderr": ""
+    }
+   ],
+   "phase": "sleeping",
+   "reason": null,
+   "code": 143,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:29.992+00:00",
+    "name": "job",
+    "phase": "sleeping",
+    "pid": 146,
+    "code": 143,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/loop_object_sleep",
+   "after_wake": "running"
+  },
+  {
+   "body": "loop_object",
+   "case": "zero",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/loop_object_zero/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028050268472817.161.2120225",
+     "stderr": ""
+    }
+   ],
+   "phase": "off_table",
+   "reason": null,
+   "code": 0,
+   "off_table": true,
+   "last_log": {
+    "at": "2026-11-07T05:07:30.655+00:00",
+    "name": "job",
+    "phase": "done",
+    "pid": 162,
+    "code": 0,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/loop_object_zero",
+   "after_wake": ""
+  },
+  {
+   "body": "loop_object",
+   "case": "fail",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/loop_object_fail/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028050733948462.168.2120272",
+     "stderr": ""
+    }
+   ],
+   "phase": "stopped",
+   "reason": "failed to start: exited within 3s of wake/start (code 7): aos-loop: error: RunFailed run 1: /tmp/aos-daemon-b.rV6SXE/loop_object_fail/body.py failed with exit code 7",
+   "code": 7,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:31.121+00:00",
+    "name": "job",
+    "phase": "stopped",
+    "pid": 169,
+    "code": 7,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/loop_object_fail",
+   "after_wake": ""
+  },
+  {
+   "body": "fsm",
+   "case": "stop",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/fsm_stop/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028051199694132.175.2120318",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "stop",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028051285080858.180.2120327",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "stop",
+      "job"
+     ],
+     "code": 1,
+     "stdout": "",
+     "stderr": "aos-daemon-ctl: error: PhaseBad job is already stopped"
+    }
+   ],
+   "phase": "stopped",
+   "reason": null,
+   "code": 0,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:31.586+00:00",
+    "name": "job",
+    "phase": "stopped",
+    "pid": 176,
+    "code": 0,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/fsm_stop",
+   "after_wake": ""
+  },
+  {
+   "body": "fsm",
+   "case": "sleep",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/fsm_sleep/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028051832186600.189.2120382",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "sleep",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028051917323520.194.2120390",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "start",
+      "job"
+     ],
+     "code": 1,
+     "stdout": "",
+     "stderr": "aos-daemon-ctl: error: PhaseBad job is sleeping; use wake (start only starts stopped ones)"
+    },
+    {
+     "argv": [
+      "wake",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028052036240541.197.2120402",
+     "stderr": ""
+    }
+   ],
+   "phase": "sleeping",
+   "reason": null,
+   "code": 143,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:31.938+00:00",
+    "name": "job",
+    "phase": "sleeping",
+    "pid": 190,
+    "code": 143,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/fsm_sleep",
+   "after_wake": "running"
+  },
+  {
+   "body": "fsm",
+   "case": "zero",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/fsm_zero/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028052210450816.203.2120419",
+     "stderr": ""
+    }
+   ],
+   "phase": "off_table",
+   "reason": null,
+   "code": 0,
+   "off_table": true,
+   "last_log": {
+    "at": "2026-11-07T05:07:32.599+00:00",
+    "name": "job",
+    "phase": "done",
+    "pid": 204,
+    "code": 0,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/fsm_zero",
+   "after_wake": ""
+  },
+  {
+   "body": "fsm",
+   "case": "fail",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/fsm_fail/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028052677572786.209.2120466",
+     "stderr": ""
+    }
+   ],
+   "phase": "stopped",
+   "reason": "failed to start: exited within 3s of wake/start (code 7): aos-loop: error: RunFailed run 1: /tmp/aos-daemon-b.rV6SXE/fsm_fail/fsm.json failed with exit code 7",
+   "code": 7,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:33.064+00:00",
+    "name": "job",
+    "phase": "stopped",
+    "pid": 210,
+    "code": 7,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/fsm_fail",
+   "after_wake": ""
+  },
+  {
+   "body": "script",
+   "case": "write_failed",
+   "commands": [
+    {
+     "argv": [
+      "add",
+      "--name",
+      "job",
+      "/tmp/aos-daemon-b.rV6SXE/write_failed/body.json"
+     ],
+     "code": 0,
+     "stdout": "01794028060754601741.278.2121274",
+     "stderr": ""
+    },
+    {
+     "argv": [
+      "stop",
+      "job"
+     ],
+     "code": 0,
+     "stdout": "01794028060839420870.281.2121282",
+     "stderr": ""
+    }
+   ],
+   "phase": "stopped",
+   "reason": null,
+   "code": 0,
+   "off_table": false,
+   "last_log": {
+    "at": "2026-11-07T05:07:42.291+00:00",
+    "name": "job",
+    "phase": "stopped",
+    "pid": 279,
+    "code": 0,
+    "signal": null
+   },
+   "fixture": "/tmp/aos-daemon-b.rV6SXE/write_failed",
+   "after_wake": ""
+  }
+ ]
+}

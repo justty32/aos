@@ -102,6 +102,21 @@ Json exec_of(const Json& spec, const std::string& cwd) {
     return Json(aos::abspath(aos::join(cwd, v.substr(0, hash))) + (hash == std::string::npos ? "" : v.substr(hash)));
 }
 
+// 保存再起所需的設定；入口路徑先照 daemon cwd 固定，參數不改。
+Json launch_of(const Json& spec, const std::string& cwd) {
+    if (spec.is_null()) {
+        return Json();
+    }
+    Json out = spec.is_object() ? spec : Json::object({{"exec", spec}});
+    Json target = out.value("exec", Json());
+    if (target.is_string()) {
+        out["exec"] = exec_of(spec, cwd);
+    } else if (target.is_array() && !target.empty()) {
+        out["exec"][0] = exec_of(spec, cwd);
+    }
+    return out;
+}
+
 Json def_of(const Json& spec) {
     return spec.is_object() ? spec.value("def", Json()) : Json();   // read_procs 已轉絕對（fix_path）；不驗在不在
 }

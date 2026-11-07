@@ -8,7 +8,7 @@
 //                  apply_letter 驗 body 並套進底；壞信的原因記進 mailbox_warning_（最後一封壞信；沒有壞信的圈維持原值）
 //                  這圈拿到信（好壞都算）就更新 responded_at；pause／stop 那圈照舊不認領。
 //   apply_letter   body 要是物件，只認 procs_added（物件，寫法同 procs_ctl）、procs_removed、procs_stopped、procs_started、procs_slept、procs_woken（11-05，名字的陣列），其他 key 忽略；
-//                  檢查照 procs_ctl（check_lists；相對 $ref 從 daemon 的 cwd 算——信收完就刪了，不能從信的資料夾算）、procs_stopped／procs_started 有 exec 型＝壞信（check_once）。
+//                  檢查照 procs_ctl（check_lists；相對 $ref 從 daemon 的 cwd 算——信收完就刪了，不能從信的資料夾算）；不按起法拒信。
 //                  另認 ping：有寫就必須是 true，只回 applied、不改底；跟其他 key 一起寫時其他 key 照常套。
 //                  好的才套：procs_added（已在名單上的換設定、不在的接在尾巴）→procs_removed（名單與 stopped 集合都拿掉）→procs_stopped 加進 stopped 集合→
 //                  procs_started 從 stopped 集合拿掉（同名兩邊都寫＝起）；後面的信蓋前面的
@@ -93,7 +93,7 @@ std::optional<std::string> Daemon::apply_letter(const Json& body) {
     if (bad) {
         return bad;
     }
-    // 先在副本上套，procs_stopped／procs_started 有 exec 型＝壞信、底不動
+    // 在副本上套：結構驗過後，各種起法一視同仁
     Json w = want_;
     Names s = stopped_;
     Names z = slept_;   // 11-05 sleep／wake：procs_slept 加進 slept 集合、procs_woken 拿掉（同名兩邊都寫＝醒）
@@ -128,10 +128,6 @@ std::optional<std::string> Daemon::apply_letter(const Json& body) {
         for (const Json& n : doc["procs_woken"]) {
             z.erase(n.get<std::string>());
         }
-    }
-    bad = check_once(doc, w);
-    if (bad) {
-        return bad;
     }
     want_ = std::move(w);
     stopped_ = std::move(s);

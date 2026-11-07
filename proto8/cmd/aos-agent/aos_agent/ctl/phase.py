@@ -149,7 +149,7 @@ def cmd_sleep(argv):
     rows = aos_ws.history(a.stack)                    # 11-05 edge-agent：eca 答到一半 sleep＝那批不重答，醒來也等不到
     if rows and not aos_ws.is_answer(rows[-1]):
         note("%s has not finished answering the last message; some bodies (eca) drop the batch being answered when put to sleep: if no answer comes after wake, say it again" % a.name)
-    ctl_wait("sleep", phase_body("sleep", a.name), lambda _: (row_named(a.name) or {"phase": "sleeping"}).get("phase") == "sleeping",   # stopped／stopping／exec 型＝PhaseBad／CtlMissing
+    ctl_wait("sleep", phase_body("sleep", a.name), lambda _: (row_named(a.name) or {"phase": "sleeping"}).get("phase") == "sleeping",   # stopped／stopping＝PhaseBad；起法不影響 sleep
              "the daemon has not put %s to sleep yet" % a.name, "CtlRejected", secs=secs)
     print("asleep, stack kept (%s); say still queues letters meanwhile, aos-agent ctl wake --target %s wakes it (it also wakes when the daemon restarts)" % (a.stack, a.name))
 

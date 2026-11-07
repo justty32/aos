@@ -1,4 +1,4 @@
-// child.hpp：【child】表上的一個 proc（11-03 起 loops／execs 統稱 procs）＝一支子 loop（loop 型），或 aos-exec 跑一次（exec 型），並保存公開窗 stuck 判定資料。內部標頭。
+// child.hpp：【child】保存 proc 的共同生命週期、可重放入口、公開窗與 stuck 判定資料。內部標頭。
 //
 // 11-06（no-pid P6）：兩型都可寫通用 auto_restart＝常駐、退了重起，連 3 次起後 3 秒內退才留 stopped；
 //   auto_restart、restart_on_stuck 兩欄只在 true 時寫表；P7 依公開窗與 stuck_after_ticks 判卡住、可選重起。
@@ -46,7 +46,7 @@ struct Child {
     pid_t pid = 0;
     std::optional<long long> started_at_ticks;   // /proc/<pid>/stat 第 22 欄
     bool own = true;                    // 自己 fork 的（false＝adopt 接回來的，不是我們的子行程）
-    bool once = false;                  // exec 型（直接 aos-exec 一次、不包 aos-loop）；接回來的看小格有沒有 daemon 寫的 loop.json（沒有＝exec 型）
+    Json launch;                        // 可重放的 proc 設定（通常 {exec: [目標, 參數...]}）；只供同 stack 再起，不拿起法判生命週期
     bool auto_restart = false;          // 11-06（no-pid P6）：通用常駐旗標，不看 exec／loop 型
     bool restart_on_stuck = false;      // P7：公開窗刺激逾期時重起
     long long stuck_after_ticks = 10;
@@ -59,12 +59,12 @@ struct Child {
     int quick_exits = 0;                // 連續起後 REVIVE_MS 內退出的次數，滿 3 次留 stopped
     bool reaped = false;
     std::string phase = "running";      // running／stopping（收的途中）／done（自己結束）／stopped（行程不在了）／sleeping（daemon 收工時收的，11-03）；
-                                        // done 與沒 held 的 stopped 只是印 log 那一刻的值，印完就從表上拿掉（11-02 子項結束後不留名單）
+                                        // done 印完 log 下表；已知非 0 留 held stopped＋reason
     bool held = false;                  // stopped／sleeping 的列（11-03）：行程不在、列留在表上（pid 0、stack 留著）；stopped 要 start 才再起，
-                                        // sleeping（daemon 收工時還在跑的 loop 型）daemon 再開時自動 wake（不在 stopped 集合＝下一圈用列上的 stack 再起）
-    bool soft = false;                  // daemon 下的 stop（往它的 ctl.json 寫了 {"cmd": "stop"}，或沒 ctl 時 SIGTERM）：退了就變 held
+                                        // sleeping（daemon 收工時還活著的 proc）daemon 再開時自動 wake（不在 stopped 集合＝下一圈用列上的 stack 再起）
+    bool soft = false;                  // daemon 下的 stop（往它的公開 ctl 寫了 {"cmd": "stop"}，寫不了也等自行退）：退了就變 held
     bool termed = false;                // 送過 SIGTERM（有 deadline；soft 的寫 ctl 那種沒有時間上限）
-    bool nap = false;                   // daemon 收工時收的 loop 型（11-03 sleep／wake）：退了列留成 sleeping，daemon 再開時用同一個 stack 自動 wake
+    bool nap = false;                   // daemon 收工時收的 proc（11-03 sleep／wake）：退了列留成 sleeping，daemon 再開時用同一個 stack 自動 wake
     std::string stack;                  // 小格＝它的 stack（絕對路徑、結尾不帶 /；子行程的 AOS_STACK＝它＋/）
     Json code;                          // null 或結束碼（被訊號停掉＝128＋N）
     Json signal;                        // null 或停掉它的訊號
@@ -74,7 +74,7 @@ struct Child {
     Json ws;                            // null 或起它時給的工作區（絕對路徑；子行程的 AOS_WS）——起的那一刻的值，名單後來改了 ws 也不變（已在跑的不重起，N-54）
     Json exec;                          // null 或起它時的目標（11-04 晚，aos-agent 方向題 1「daemon表多一欄記下來」）：Daemon 填（exec_of）；
                                         // adopt 接回的照舊表帶過來；名單後來改了也不變（同 ws）
-    Json reason;                        // null 或字串（11-05 portable-flow 衝突 3「留成stopped，並寫原因」）：loop 型出錯結束（退非 0）的，列留成 stopped、記原因（11-05 晚：edge-agent 題 1、edge-daemon 題 2）
+    Json reason;                        // null 或字串（11-05 portable-flow 衝突 3「留成stopped，並寫原因」）：所有 proc 出錯結束（退非 0）的，列留成 stopped、記原因（11-05 晚：edge-agent 題 1、edge-daemon 題 2）
     bool failed = false;                // 11-05：這一圈剛因出錯結束留成 stopped（reconcile 這圈不再起它）
     bool revived = false;               // 這一支是 wake／start 從 stopped／sleeping 的列再起的（11-05）：REVIVE_MS 內退非 0＝原因寫「起不來」
     std::chrono::steady_clock::time_point revived_at;
@@ -98,10 +98,13 @@ Child spawn(const std::string& name, const std::string& cell, bool deep, const J
 // 起一個 exec 型 proc。spec＝aos-exec 的目標：字串或 [目標, 參數...]（read_procs 驗過），
 // 或 {"exec": 上面兩種或單子, "ws"?, "stack"?, "def"?}（子行程設 AOS_WS＝ws；def 只記進表）；cell、deep 同 spawn；相對路徑從 cwd（daemon 的 cwd）算——
 // 子行程 cd 到 cwd 才叫 aos-exec，所以不轉。小格建不了 MkdirFailed、stderr 開不了／fork 失敗 LaunchFailed；aos-exec 自己的錯寫在小格的
-// stderr.txt、子項以 1 結束（phase done、code 1）。它退了＝done、從表上拿掉、本次執行不再起（同子 loop，11-02）。
+// stderr.txt、子項以 1 結束（phase done、code 1）。自然退 0 才下表；已知非 0 一律留 stopped＋reason。
 // 11-02 晚：spec 的 exec 是內嵌單子（物件）＝寫成小格的 exec.json {"exec": 單子}（cwd 定成 daemon 的 cwd，pin_cwd），子行程跑 `aos-exec -- 小格/exec.json#/exec`。
 Child spawn_exec(const std::string& name, const std::string& cell, bool deep, const Json& spec, const std::string& cwd,
                  const std::string& dstack, const CellNames& names, const Json& limits);
+
+// 公開 ctl：父寫的 loop 設定有非空 ctl 才用它，其他一律 ctl.json。
+std::string ctl_name(const std::string& cell, const CellNames& names);
 
 // 還活著嗎（自己生的：結束了就收屍、記 code／signal）。
 bool alive(Child& c);

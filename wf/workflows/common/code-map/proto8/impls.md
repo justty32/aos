@@ -37,12 +37,12 @@
 | [`examples/root/root.env.example`](../../../../../proto8/impls/aos-daemon/examples/root/root.env.example) | Configure credentials and cross-tree hubs inherited by the root service and its children. |
 | [`examples/root/s6/run`](../../../../../proto8/impls/aos-daemon/examples/root/s6/run) | Run an ordinary root daemon as an optional s6 supervised service. |
 | [`src/child/child.cpp`](../../../../../proto8/impls/aos-daemon/src/child/child.cpp) | 建立小格、啟動子 loop 或 exec 型子項，並回收與輸出子項狀態（說明見 child.hpp）。 |
-| [`src/child/child.hpp`](../../../../../proto8/impls/aos-daemon/src/child/child.hpp) | 表上的一個 proc（11-03 起 loops／execs 統稱 procs）＝一支子 loop（loop 型），或 aos-exec 跑一次（exec 型），並保存公開窗 stuck 判定資料。 |
+| [`src/child/child.hpp`](../../../../../proto8/impls/aos-daemon/src/child/child.hpp) | 保存 proc 的共同生命週期、可重放入口、公開窗與 stuck 判定資料。 |
 | [`src/child/limits.cpp`](../../../../../proto8/impls/aos-daemon/src/child/limits.cpp) | proc 的份額 limits（說明見 limits.hpp；11-05 feat-proto 件 5，等同 s6-softlimit／s6-setuidgid）。 |
 | [`src/child/limits.hpp`](../../../../../proto8/impls/aos-daemon/src/child/limits.hpp) | proc 的份額 limits（11-05 feat-proto 件 5，使用者「會想要限制特定aos proc所占用的資源。 |
 | [`src/child/refs.cpp`](../../../../../proto8/impls/aos-daemon/src/child/refs.cpp) | 把表與內嵌單子的路徑改寫成相對 daemon 或小格的參照。 |
 | [`src/common/common.hpp`](../../../../../proto8/impls/aos-daemon/src/common/common.hpp) | aos-daemon 好幾個元素都用到的：型別別名、錯誤代號。 |
-| [`src/daemon/adopt.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/adopt.cpp) | 接回上次的 proc 表與小格裡仍活著的子 loop（說明見 daemon.hpp）。 |
+| [`src/daemon/adopt.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/adopt.cpp) | 按保存的入口與控制意圖接回 proc 表，不以小格檔案分類（說明見 daemon.hpp）。 |
 | [`src/daemon/body.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/body.cpp) | 執行 daemon 自己的身體並記錄結果（說明見 daemon.hpp）。 |
 | [`src/daemon/ctl.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/ctl.cpp) | 由控制窗推得期望表、停止與睡眠集合（說明見 daemon.hpp）。 |
 | [`src/daemon/daemon.cpp`](../../../../../proto8/impls/aos-daemon/src/daemon/daemon.cpp) | 初始化設定、展開 tick 普通子項、設定環境、路徑、信箱與 stack 鎖（說明見 daemon.hpp）。 |

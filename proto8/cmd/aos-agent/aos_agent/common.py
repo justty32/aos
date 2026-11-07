@@ -219,8 +219,6 @@ def phase_body(cmd, name):
     """控制動詞的檢查順序與共用介面一致。"""
     d = daemon_path()
     row = call_dc(dc.row_of, d, name)
-    if cmd in ("stop", "sleep"):
-        call_dc(dc.need_stoppable, d, name, row)   # 11-06 no-pid P6：寫了 auto_restart 的列放行
     call_dc(dc.need_phase, cmd, name, row)
     return {{"stop": "procs_stopped", "start": "procs_started", "sleep": "procs_slept", "wake": "procs_woken"}[cmd]: [name]}
 
@@ -244,7 +242,7 @@ def row_named(name):
 def find(name, quiet=False):
     r = table(quiet=quiet).get(name)
     if r is None or not isinstance(r.get("stack"), str) or not r.get("stack"):
-        raise Fail("InstanceMissing", "%s is not on the daemon table (removed with rm, or a one-shot body ended and left the table; the stack may still be there: aos-agent ctl add with the same name to pick it up again)" % name)
+        raise Fail("InstanceMissing", "%s is not on the daemon table (removed with rm, exited 0, or an adopted body ended with unknown status; known nonzero exits stay stopped with a reason; the stack may still be there: aos-agent ctl add with the same name to pick it up again)" % name)
     return Agent(name, r)
 
 

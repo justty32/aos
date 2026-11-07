@@ -71,20 +71,10 @@ void Daemon::term(Child& c) {
 }
 
 void Daemon::halt(const std::string& name, Child& c) {
-    // daemon 的 stop（procs § 2c 第 2 條、ctl-commands § 5）：往子 loop 的 ctl.json 寫一道 {"cmd": "stop", "seq": N}，讓它跑完這次自己退 0（不 SIGTERM）。
-    // ctl 檔名看小格裡 daemon 自己寫的 loop.json（procs_loop 的名字）的 ctl（接回的也一樣）；N＝自己數的、也比 ctl 裡現有的 seq 大（內容一定跟上一道不一樣）。
-    // ctl 沒寫＝ctl.json（aos-loop 的預設名，11-04 起 daemon 不再替它補）；讀不到 loop.json、ctl 不是檔名（寫了 null＝子 loop 沒開 ctl）＝改送 SIGTERM（同樣退了就留成 stopped）
+    // 11-07 裁定 B：任何 proc 都寫公開 ctl；沒人讀或寫不了也只等它自己退。
     c.soft = true;
-    std::optional<Json> cfg = aos::read_json(aos::join(c.stack, names_.loop));
-    Json ctl;
-    if (cfg && cfg->is_object()) {
-        ctl = cfg->value(CtlWindow::config_key, Json(CtlWindow::default_name));
-    }
-    if (!ctl.is_string() || ctl.get<std::string>().empty()) {
-        term(c);
-        return;
-    }
-    std::string path = aos::join(c.stack, ctl.get<std::string>());
+    c.phase = "stopping";
+    std::string path = aos::join(c.stack, ctl_name(c.stack, names_));
     std::optional<Json> old = aos::read_json(path);
     Json old_seq = old && old->is_object() ? old->value(CtlWindow::seq, Json()) : Json();
     if (aos::is_count(old_seq) && old_seq.get<long long>() > stop_seq_) {
@@ -94,10 +84,7 @@ void Daemon::halt(const std::string& name, Child& c) {
     try {
         aos::loop::write_window(path, Json::object({{CtlWindow::cmd, CtlWindow::stop}, {CtlWindow::seq, stop_seq_}}));
     } catch (const Error& e) {
-        // 11-05 第二輪：原本整台 daemon 退 1（一個小格唯讀就把全部 proc 收掉）；改成這一支改送 SIGTERM（同沒開 ctl 的），退了照樣留 stopped
-        warn("cannot stop " + name + " through its ctl (" + e.code + " " + e.msg + "); sending SIGTERM instead");
-        term(c);
-        return;
+        warn("cannot stop " + name + " through its ctl (" + e.code + " " + e.msg + "); waiting for it to exit");
     }
     c.phase = "stopping";
 }
@@ -135,8 +122,8 @@ bool Daemon::settle(Child& c) {
 }
 
 
-// 不調表地看一眼：stopped／sleeping 的列不動；running 的退了＝done（stop＝daemon 正要停它＝留成 stopped 的列；loop 型出錯結束＝留成 stopped＋reason，11-05）；收的途中的照收，
-// 退了：daemon 下的 stop（soft）＝留成 stopped 的列、收工時收的 loop 型（nap）＝留成 sleeping 的列，其他（被收掉的）＝拿掉。回 true＝這列結束了、要拿掉。
+// 不調表地看一眼：stopped／sleeping 的列不動；running 的退了＝done（stop＝daemon 正要停它＝留成 stopped 的列；所有 proc 出錯結束＝留成 stopped＋reason，11-05）；收的途中的照收，
+// 退了：daemon 下的 stop（soft）＝留成 stopped 的列、收工時收的 proc（nap）＝留成 sleeping 的列，其他（被收掉的）＝拿掉。回 true＝這列結束了、要拿掉。
 bool Daemon::look(const std::string& name, Child& c, bool stop, bool watch) {
     if (c.held) {
         return false;
@@ -166,10 +153,10 @@ bool Daemon::look(const std::string& name, Child& c, bool stop, bool watch) {
             return false;
         }
         // 11-05（edge-agent 題 1「留表標 stopped (Recommended)」、edge-daemon 題 2「一起改成留表 (Recommended)」）：
-        // loop 型出錯結束（結束碼非 0，含被訊號打掉的 128＋N）＝不下表，留成 stopped（要 start 才再起）＋reason（見 fail_reason）。
+        // 所有 proc 出錯結束（結束碼非 0，含被訊號打掉的 128＋N）＝不下表，留成 stopped（要 start 才再起）＋reason（見 fail_reason）。
         // 3 秒（REVIVE_MS）只分原因字樣（起不來／跑到一半掛了）。退 0（做完：跑滿、身體退 10、別人往它的 ctl 寫 stop）照舊下表；
-        // exec 型（只有跑和拔，start 不收它）、接回來的（不是自己生的、拿不到結束碼）也照舊下表。
-        if (!c.once && c.code.is_number_integer() && c.code.get<long long>() != 0) {
+        // 接回來的（不是自己生的、拿不到結束碼）也照舊下表。
+        if (c.code.is_number_integer() && c.code.get<long long>() != 0) {
             c.reason = fail_reason(c);
             hold(name, c);
             c.failed = true;   // 這一圈的起少的不再起它（stopped 參數是這圈開頭算的）
@@ -260,15 +247,12 @@ void Daemon::finish() {
         if (c.held) {
             continue;   // stopped／sleeping 的列：照寫進最後一份 state（procs § 2c 第 9 條）
         }
-        if (c.stuck_restart) {
-            c.nap = !c.once || c.auto_restart;   // 卡住重起收途中改為收工，常駐列仍須留 sleeping。
+        if (alive(c)) {
+            c.nap = !c.soft;   // 11-07 B：收工時仍活著的 proc 都睡下、下次開門再起；stop 途中的照 stop 留 stopped（不把使用者的 stop 變成 sleep）
             c.stuck_restart = false;
-        }
-        if (c.phase == "running" && alive(c)) {
-            c.nap = !c.once || c.auto_restart;   // 收工時常駐的退了留 sleeping、再開自動 wake；一般 exec 型拿掉
-            term(c);
-        } else if (c.phase == "stopping" && !c.termed) {
-            term(c);   // 等它自己退的（soft）也改送 SIGTERM；退了照樣留成 stopped 的列
+            if (!c.termed) {
+                term(c);
+            }
         }
         any = any || c.phase == "stopping";
     }

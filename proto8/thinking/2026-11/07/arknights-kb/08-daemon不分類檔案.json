@@ -1,0 +1,227 @@
+{
+ "description": "本次未提交改動的完整檔案清單與責任範圍。",
+ "contract": "wf-table/1",
+ "source": "08-daemon不分類實作結果.md",
+ "extracted": "2026-11-07",
+ "link_columns": [
+  "file_path"
+ ],
+ "columns": [
+  "file_path",
+  "change"
+ ],
+ "rows": [
+  {
+   "file_path": "../../../../cmd/README.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../cmd/aos-agent/README.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../cmd/aos-agent/aos_agent/common.py",
+   "change": "控制路徑、英文 help 或正確的下表提示。"
+  },
+  {
+   "file_path": "../../../../cmd/aos-agent/aos_agent/ctl/phase.py",
+   "change": "控制路徑、英文 help 或正確的下表提示。"
+  },
+  {
+   "file_path": "../../../../cmd/aos-agent/aos_agent/hints.py",
+   "change": "控制路徑、英文 help 或正確的下表提示。"
+  },
+  {
+   "file_path": "../../../../cmd/aos-agent/docs/01-用法例子.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../cmd/aos-agent/docs/02-已知限制.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../cmd/aos-daemon-ctl/bin/aos-daemon-ctl",
+   "change": "控制路徑、英文 help 或正確的下表提示。"
+  },
+  {
+   "file_path": "../../../../cmd/docs/03-aos-daemon-ctl.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../cmd/docs/04-aos-daemon-ctl續.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../docs/NORMS/04-基礎設施-loop與daemon/02-N-28.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../docs/NORMS/04-基礎設施-loop與daemon/03-N-54.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../docs/NORMS/05-基礎設施-窗/06-N-17.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/README.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/docs/01-用法.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/docs/02-看寫法決定怎麼起.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/docs/03-起-停-暫停.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/docs/04-兩個手把-兩扇狀態窗.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/docs/06-結束碼等.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/docs/07-建置與測試.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/docs/08-當機復原與已知限制.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/docs/09-份額.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/child/child.cpp",
+   "change": "C++ 啟動資料、共同生命週期、公開控制、adopt 或相關註解。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/child/child.hpp",
+   "change": "C++ 啟動資料、共同生命週期、公開控制、adopt 或相關註解。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/adopt.cpp",
+   "change": "C++ 啟動資料、共同生命週期、公開控制、adopt 或相關註解。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/daemon.hpp",
+   "change": "C++ 啟動資料、共同生命週期、公開控制、adopt 或相關註解。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/mailbox.cpp",
+   "change": "C++ 啟動資料、共同生命週期、公開控制、adopt 或相關註解。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/procs.cpp",
+   "change": "C++ 啟動資料、共同生命週期、公開控制、adopt 或相關註解。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/reconcile.cpp",
+   "change": "C++ 啟動資料、共同生命週期、公開控制、adopt 或相關註解。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/stuck.cpp",
+   "change": "C++ 啟動資料、共同生命週期、公開控制、adopt 或相關註解。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/tend.cpp",
+   "change": "C++ 啟動資料、共同生命週期、公開控制、adopt 或相關註解。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/windows.cpp",
+   "change": "C++ 啟動資料、共同生命週期、公開控制、adopt 或相關註解。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/main.cpp",
+   "change": "C++ 啟動資料、共同生命週期、公開控制、adopt 或相關註解。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/tests/support.py",
+   "change": "本次裁定專用回歸／真程式實測（不接 LLM、不加 ctest）。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/tests/test_ctl.py",
+   "change": "本次裁定專用回歸／真程式實測（不接 LLM、不加 ctest）。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/tests/test_lifecycle.py",
+   "change": "本次裁定專用回歸／真程式實測（不接 LLM、不加 ctest）。"
+  },
+  {
+   "file_path": "../../../../impls/aos-loop/docs/02-窗.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../knowledge/aos/cli/daemon.md",
+   "change": "同步現行規則、help、規範沿革或知識庫說明。"
+  },
+  {
+   "file_path": "../../../../py/daemon_ctl/__init__.py",
+   "change": "入口保留原寫法、移除型別阻擋、公開 ctl 路徑與等待。"
+  },
+  {
+   "file_path": "../../../../py/daemon_ctl/ctl.py",
+   "change": "入口保留原寫法、移除型別阻擋、公開 ctl 路徑與等待。"
+  },
+  {
+   "file_path": "../../../../py/daemon_ctl/entry.py",
+   "change": "入口保留原寫法、移除型別阻擋、公開 ctl 路徑與等待。"
+  },
+  {
+   "file_path": "../../06/os-impl/09-直掛agent不上表.md",
+   "change": "保留原裁定沿革、連到 B 結果或實測證據。"
+  },
+  {
+   "file_path": "07-停不下與消失.md",
+   "change": "保留原裁定沿革、連到 B 結果或實測證據。"
+  },
+  {
+   "file_path": "08-daemon不分類once盤點.json",
+   "change": "保留原裁定沿革、連到 B 結果或實測證據。"
+  },
+  {
+   "file_path": "08-daemon不分類實作結果.md",
+   "change": "保留原裁定沿革、連到 B 結果或實測證據。"
+  },
+  {
+   "file_path": "08-daemon不分類實測.json",
+   "change": "保留原裁定沿革、連到 B 結果或實測證據。"
+  },
+  {
+   "file_path": "08-daemon不分類檔案.json",
+   "change": "保留原裁定沿革、連到 B 結果或實測證據。"
+  },
+  {
+   "file_path": "README.md",
+   "change": "保留原裁定沿革、連到 B 結果或實測證據。"
+  },
+  {
+   "file_path": "../../../../../wf/WAIT_USER.md",
+   "change": "同步待使用者提示與日誌。"
+  },
+  {
+   "file_path": "../../../../../wf/session_logs/2026-11/2026-11-07.md",
+   "change": "同步待使用者提示與日誌。"
+  },
+  {
+   "file_path": "../../../../../wf/session_logs/README.md",
+   "change": "同步待使用者提示與日誌。"
+  },
+  {
+   "file_path": "../../../../../wf/workflows/common/code-map/proto8/impls.md",
+   "change": "依檔頭自動重生的程式碼地圖。"
+  },
+  {
+   "file_path": "../../../../../wf/workflows/common/code-map/proto8/py.md",
+   "change": "依檔頭自動重生的程式碼地圖。"
+  }
+ ]
+}

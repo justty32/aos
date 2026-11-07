@@ -1,4 +1,4 @@
-"""daemon_ctl 入口：判定目標類型、讀取 loop 設定並組成掛子信。"""
+"""daemon_ctl 入口：保留目標與 argv 寫法，讀取直接 loop 設定並組成掛子信。"""
 import json
 import os
 
@@ -65,7 +65,7 @@ def find_loop(xxx):
     照 aos-exec 的找法（N-61／N-62 的子集）走到入口，看最後指到的 JSON 長怎樣。回 (loop 設定物件, 它所在的檔, 它在檔裡的指標, 相對路徑的起點)，
     exec 型回 None。不看檔名（loop.json 這個名字不出現在這裡）；.env 不讀（只判型、不是真的跑），$ref／$env 不解。
       資料夾＝XXX/$AOS_ENTRY（預設 _entry；沒有再找 .json）；可執行檔（+x）＝exec 型；
-      JSON：陣列且 [0] 是 aos-loop＝[1] 是 loop 設定檔（從這份檔的資料夾算）、讀它；其他陣列＝exec 型；字串＝轉向（從這份檔的資料夾算）再來一遍；
+      JSON：所有陣列原樣交 aos-exec，不認程式名；字串＝轉向（從這份檔的資料夾算）再來一遍；
       物件有 argv＝單子＝exec 型；物件沒 argv、有 exec＝它就是 loop 設定；沒 argv 沒 exec＝取 js[$AOS_ENTRY] 再來（同一份檔、指標往下）。
     繞圈＝EntryBad；路徑不在＝PathMissing。"""
     ent = os.environ.get("AOS_ENTRY") or "_entry"
@@ -102,16 +102,7 @@ def find_loop(xxx):
                 return None   # 單子
             return v, path, ptr, base   # 有 exec：loop 設定
         if isinstance(v, list):
-            if len(v) >= 2 and v[0] == "aos-loop" and isinstance(v[1], str) and not v[1].startswith("-"):
-                lp, _, lptr = abs_target(v[1], base).partition("#")   # loop 設定檔（可以帶 #/指標）
-                try:
-                    cfg = pointer(read_entry_json(lp), lptr, "%s#%s" % (lp, lptr))
-                except Fail as e:
-                    raise Fail("LoopBad", str(e))
-                if not isinstance(cfg, dict):
-                    raise Fail("LoopBad", "%s#%s must be a JSON object" % (lp, lptr))
-                return cfg, lp, lptr, os.path.dirname(lp)
-            return None   # 別的 argv 陣列
+            return None   # argv 陣列原樣交 aos-exec，不辨認程式名
         if isinstance(v, str):
             path, _, ptr = abs_target(v, base).partition("#")   # 轉向
             continue

@@ -1,4 +1,4 @@
-"""daemon_ctl 控制：檢查子 loop 階段、寫入控制並等待套用。"""
+"""daemon_ctl 控制：檢查 proc 階段、依公開窗名寫入控制並等待套用。"""
 import json
 import os
 import time
@@ -13,24 +13,13 @@ from .table import cell_of, names_of, row_of
 
 
 def need_ctl(d, name, row=None):
-    """它的 stack 裡 daemon 寫的 loop.json（名字照窗上的 procs_loop）→ (stack, ctl 檔的路徑)；沒有那份（exec 型）或 ctl 是 null＝CtlMissing。
-    ctl 沒寫＝ctl.json（aos-loop 的預設名，11-04 起 daemon 不再替它補）。"""
+    """公開 ctl 路徑：父寫的 loop 設定有非空 ctl 才用它，其他一律 ctl.json。"""
     stack = cell_of(d, name, row)
-    lj = os.path.join(stack, names_of(d)["procs_loop"])
-    if not os.path.isfile(lj):
-        raise Fail("CtlMissing", "%s has no ctl (an exec type can only run and be removed)" % name)
-    c = read_loop(lj).get("ctl", "ctl.json")
-    if not isinstance(c, str) or not c:
-        raise Fail("CtlMissing", "%s has no ctl (ctl in its loop.json is %s)" % (name, json.dumps(c)))
-    return stack, os.path.join(stack, c)
-
-
-def need_stoppable(d, name, row=None):
-    """stop／sleep 之前：表上那列寫了 auto_restart（常駐，11-06 no-pid P6，不看型別）＝放行（daemon 沒 ctl 可寫就送 SIGTERM）；
-    其他照 need_ctl（exec 型只有跑和拔＝CtlMissing）。"""
-    if row is not None and row.get("auto_restart") is True:
-        return
-    need_ctl(d, name, row)
+    try:
+        c = read_loop(os.path.join(stack, names_of(d)["procs_loop"])).get("ctl")
+    except Fail:
+        c = None
+    return stack, os.path.join(stack, c if isinstance(c, str) and c else "ctl.json")
 
 
 # 11-05 portable-flow 衝突 1「嚴格分」：每個動詞只收一種 phase；用錯的提示（照表上的 phase 給下一步）
@@ -67,10 +56,9 @@ APPLY_S = 5.0   # pause／resume 等子 loop 套用的上限（暫停中的 loop
 def write_ctl(d, name, cmd, timeout_s=APPLY_S):
     row = row_of(d, name)
     stack, path = need_ctl(d, name, row)
-    # 11-05 第二輪：只收 running 的（stopped／sleeping 的列沒有行程；起來時子 loop 把讀到的第一份 ctl 當基準線、不執行＝這道 pause 默默丟了，
-    # 原本照寫、印 seq、退 0，看起來像成功）
+    # 只收 running 的；stopped／sleeping 沒有正在讀 ctl 的行程，應先 start／wake。
     if row.get("phase") not in {"running", "stuck"}:
-        raise Fail("PhaseBad", "%s is %s; %s only takes running ones (a loop takes the ctl it finds when it starts as its baseline, so it would be lost)"
+        raise Fail("PhaseBad", "%s is %s; %s only takes running ones (start or wake it first; no process is reading ctl now)"
                    % (name, row.get("phase"), cmd))
     try:
         with open(path, encoding="utf-8") as fh:
@@ -98,7 +86,7 @@ def wait_applied(d, name, stack, cmd, seq, timeout_s=APPLY_S):
     try:
         sname = read_loop(os.path.join(stack, names_of(d)["procs_loop"])).get("state", "state.json")
     except Fail:
-        return
+        sname = "state.json"
     if not isinstance(sname, str) or not sname:
         return
     spath, end = os.path.join(stack, sname), time.monotonic() + timeout_s

@@ -22,6 +22,10 @@ Look after a group of procs (daemon.json "procs"): start them, restart or stop t
 as the ctl window says, and report them in the state windows. Optional own body
 ("exec") runs like aos-loop; a failing body is retried next round (warning line).
 ARGS after -- are appended to the daemon's own exec.
+All procs share lifecycle rules regardless of launch syntax: stop writes their public
+ctl and waits (no SIGTERM fallback); sleep sends SIGTERM and keeps a sleeping row.
+Natural exit 0 removes the row; known nonzero exits keep stopped with a reason
+(unless auto_restart requests a restart). Shutdown sleeps all live procs for next startup.
 Optional "tick": true (or {file, interval_ms, name}) adds an ordinary auto-restarting
 clock loop and passes AOS_TICK to children. No tick key leaves the clock inherited.
 Each proc may set stuck_after_ticks (positive integer, default 10). Unanswered

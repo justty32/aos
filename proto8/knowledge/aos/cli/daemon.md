@@ -8,7 +8,7 @@ aos-daemon-ctl --daemon /srv/d where --stack clock
 aos-daemon-ctl --daemon /srv/d ping --timeout-s 3
 ```
 
-add detects a loop config by its final structure. Other targets run once as exec procs. Extra argv are allowed only for exec types, after `XXX -- ARGS...`. exec types cannot stop, sleep, pause or resume (`CtlMissing`). stop/start and sleep/wake keep stacks; rm detaches and also keeps the stack.
+add detects a loop config by its final structure. Other targets run once as exec procs. Extra argv are allowed only for exec types, after `XXX -- ARGS...`. All procs can stop, start, sleep and wake regardless of launch syntax. Stop writes the public ctl window and waits for exit without SIGTERM fallback; sleep uses SIGTERM and keeps a sleeping row. The ctl filename comes from a nonempty ctl in the parent-written loop config, otherwise ctl.json. Pause/resume use the same path; the program decides whether to read it. Known nonzero exits stay stopped with a reason; exit 0 leaves the table (auto_restart still governs restarts). All live procs sleep on daemon shutdown and wake next startup. stop/start and sleep/wake keep stacks; rm detaches and also keeps the stack.
 
 add/rm/stop/start/sleep/wake print a letter name and wait up to `--timeout-s` (default 3) for claim. A still-queued letter gives a warning and exit 0. Claim does not prove application. `--reply-to BOX` sends only; you must read the reply (`applied: true|false`). It excludes `--timeout-s`.
 

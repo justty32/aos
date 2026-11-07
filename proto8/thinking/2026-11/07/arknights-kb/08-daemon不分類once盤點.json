@@ -1,0 +1,203 @@
+{
+ "description": "逐一記錄 HEAD 中與啟動分類有關的 once 與 check_once 程式使用處及其處理。",
+ "contract": "wf-table/1",
+ "source": "08-daemon不分類實作結果.md",
+ "extracted": "2026-11-07",
+ "link_columns": [
+  "file_path"
+ ],
+ "columns": [
+  "file_path",
+  "head_line",
+  "before",
+  "after"
+ ],
+ "rows": [
+  {
+   "file_path": "../../../../impls/aos-daemon/src/child/child.cpp",
+   "head_line": 209,
+   "before": "c.once = true;",
+   "after": "刪除 spawn_exec 對 once 的賦值；launch 共用路徑保存入口與完整參數。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/child/child.cpp",
+   "head_line": 221,
+   "before": "c.once = true;",
+   "after": "刪除 spawn_exec 對 once 的賦值；launch 共用路徑保存入口與完整參數。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/child/child.hpp",
+   "head_line": 49,
+   "before": "bool once = false;                  // exec 型（直接 aos-exec 一次、不包 aos-loop）；接回來的看小格有沒有 daemon 寫的 loop.json（沒有＝exec 型）",
+   "after": "刪除 Child::once，改存可重放的 launch；生命週期沒有型別旗標。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/adopt.cpp",
+   "head_line": 128,
+   "before": "c.once = !std::filesystem::exists(aos::join(c.stack, names_.loop), ec);   // 常駐列也照小格有沒有 loop.json 判 exec／loop 型",
+   "after": "不看 loop.json 是否存在來分類；從表的 launch、phase、stop_mode 接回。已知停止意圖照做，未知自然結束碼下表；auto_restart 照舊。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/adopt.cpp",
+   "head_line": 144,
+   "before": "c.once = !std::filesystem::exists(aos::join(c.stack, names_.loop), ec);   // 小格有 daemon 寫的 loop.json（procs_loop 的名字）＝loop 型（procs § 2 第 7 條）",
+   "after": "不看 loop.json 是否存在來分類；從表的 launch、phase、stop_mode 接回。已知停止意圖照做，未知自然結束碼下表；auto_restart 照舊。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/adopt.cpp",
+   "head_line": 156,
+   "before": "c.nap = !c.once || c.auto_restart;",
+   "after": "不看 loop.json 是否存在來分類；從表的 launch、phase、stop_mode 接回。已知停止意圖照做，未知自然結束碼下表；auto_restart 照舊。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/adopt.cpp",
+   "head_line": 157,
+   "before": "} else if (!c.once || c.auto_restart) {",
+   "after": "不看 loop.json 是否存在來分類；從表的 launch、phase、stop_mode 接回。已知停止意圖照做，未知自然結束碼下表；auto_restart 照舊。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/adopt.cpp",
+   "head_line": 169,
+   "before": "if (c.once && !c.auto_restart) {",
+   "after": "不看 loop.json 是否存在來分類；從表的 launch、phase、stop_mode 接回。已知停止意圖照做，未知自然結束碼下表；auto_restart 照舊。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/daemon.hpp",
+   "head_line": 113,
+   "before": "bool is_once(const Json& spec);",
+   "after": "刪除 check_once 宣告；啟動介面改用 launch，不保留 Child 的型別欄。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/daemon.hpp",
+   "head_line": 158,
+   "before": "const Json& kept_limits = Json(), bool kept_once = false, bool kept_auto_restart = false,",
+   "after": "刪除 check_once 宣告；啟動介面改用 launch，不保留 Child 的型別欄。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/daemon.hpp",
+   "head_line": 165,
+   "before": "std::optional<std::string> check_once(const Json& doc, const Json& want) const;",
+   "after": "刪除 check_once 宣告；啟動介面改用 launch，不保留 Child 的型別欄。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/mailbox.cpp",
+   "head_line": 132,
+   "before": "bad = check_once(doc, w);",
+   "after": "刪除 check_once 呼叫，信箱不再因起法當壞信。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/procs.cpp",
+   "head_line": 117,
+   "before": "bool is_once(const Json& spec) {",
+   "after": "保留 is_once；僅識別啟動方式與對應目標格式，不決定 stop／sleep／結束／收工。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/procs.cpp",
+   "head_line": 185,
+   "before": "if (is_once(r.value) && !is_target(r.value[\"exec\"]) && !r.value[\"exec\"].is_object()) {   // exec 型的物件（procs § 2 第 2 條）",
+   "after": "保留 is_once；僅識別啟動方式與對應目標格式，不決定 stop／sleep／結束／收工。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/reconcile.cpp",
+   "head_line": 25,
+   "before": "const Json& kept_def, const Json& kept_limits, bool kept_once, bool kept_auto_restart, bool kept_ros, long long kept_stuck_after_ticks) {",
+   "after": "啟動參數改傳 kept_launch／c.launch，保留完整入口與參數，不用型別旗標。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/reconcile.cpp",
+   "head_line": 27,
+   "before": "bool once = spec.is_null() ? kept_once : is_once(spec);",
+   "after": "保留為啟動用的局部判斷；null 設定改從保存的 launch 重放。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/reconcile.cpp",
+   "head_line": 32,
+   "before": "if (!once) {",
+   "after": "接回小格公開 state 顯示仍活著的行程改為適用所有 proc，避免同格兩份。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/reconcile.cpp",
+   "head_line": 53,
+   "before": "if (once) {",
+   "after": "保留為啟動用的局部判斷；null 設定改從保存的 launch 重放。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/reconcile.cpp",
+   "head_line": 82,
+   "before": "c.nap = nap && (!c.once || c.auto_restart);",
+   "after": "sleep、卡住重起轉人工命令、add＋sleep 均拿掉型別門檻；尚未起的列保存 launch 供重開後起。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/reconcile.cpp",
+   "head_line": 101,
+   "before": "} else if (nap && (!c.once || c.auto_restart)) {",
+   "after": "sleep、卡住重起轉人工命令、add＋sleep 均拿掉型別門檻；尚未起的列保存 launch 供重開後起。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/reconcile.cpp",
+   "head_line": 131,
+   "before": "Child nc = start(n, spec, c.stack, c.ws, c.exec, c.def, c.limits, c.once, c.auto_restart, c.restart_on_stuck, c.stuck_after_ticks);   // 信箱接回只留名時照列上的值",
+   "after": "啟動參數改傳 kept_launch／c.launch，保留完整入口與參數，不用型別旗標。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/reconcile.cpp",
+   "head_line": 149,
+   "before": "if (stopped.count(n) > 0 || (slept.count(n) > 0 && (!is_once(spec) || auto_restart_of(spec)))) {   // add＋stop 同時（procs § 2c 第 2 條）：直接一列 stopped、不起、stack 不建",
+   "after": "sleep、卡住重起轉人工命令、add＋sleep 均拿掉型別門檻；尚未起的列保存 launch 供重開後起。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/reconcile.cpp",
+   "head_line": 154,
+   "before": "c.once = is_once(spec);",
+   "after": "sleep、卡住重起轉人工命令、add＋sleep 均拿掉型別門檻；尚未起的列保存 launch 供重開後起。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/stuck.cpp",
+   "head_line": 22,
+   "before": "if (!c.once) {",
+   "after": "拿掉 once 門檻，所有 proc 讀公開 ctl/state 名稱或預設窗；restart_on_stuck 不分類。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/tend.cpp",
+   "head_line": 172,
+   "before": "if (!c.once && c.code.is_number_integer() && c.code.get<long long>() != 0) {",
+   "after": "非 0 留 stopped＋reason 與 finish 留 sleeping 均不分類；stop ctl 寫不了只 warning、照等，不送 SIGTERM。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/tend.cpp",
+   "head_line": 264,
+   "before": "c.nap = !c.once || c.auto_restart;   // 卡住重起收途中改為收工，常駐列仍須留 sleeping。",
+   "after": "非 0 留 stopped＋reason 與 finish 留 sleeping 均不分類；stop ctl 寫不了只 warning、照等，不送 SIGTERM。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/tend.cpp",
+   "head_line": 268,
+   "before": "c.nap = !c.once || c.auto_restart;   // 收工時常駐的退了留 sleeping、再開自動 wake；一般 exec 型拿掉",
+   "after": "非 0 留 stopped＋reason 與 finish 留 sleeping 均不分類；stop ctl 寫不了只 warning、照等，不送 SIGTERM。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/windows.cpp",
+   "head_line": 64,
+   "before": "bad = check_once(doc, ctl_want(doc, merged));",
+   "after": "整個 check_once 刪除，procs_ctl 不再因起法拒絕；JSON、seq、名字陣列與指示詞驗證照舊。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/windows.cpp",
+   "head_line": 112,
+   "before": "std::optional<std::string> Daemon::check_once(const Json& doc, const Json& want) const {",
+   "after": "整個 check_once 刪除，procs_ctl 不再因起法拒絕；JSON、seq、名字陣列與指示詞驗證照舊。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/windows.cpp",
+   "head_line": 123,
+   "before": "bool once = at != index_.end() ? at->second->second.once : is_once(want[n]);",
+   "after": "整個 check_once 刪除，procs_ctl 不再因起法拒絕；JSON、seq、名字陣列與指示詞驗證照舊。"
+  },
+  {
+   "file_path": "../../../../impls/aos-daemon/src/daemon/windows.cpp",
+   "head_line": 125,
+   "before": "if (once && !auto_restart) {",
+   "after": "整個 check_once 刪除，procs_ctl 不再因起法拒絕；JSON、seq、名字陣列與指示詞驗證照舊。"
+  }
+ ]
+}

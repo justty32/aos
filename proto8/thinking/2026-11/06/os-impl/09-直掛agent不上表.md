@@ -119,3 +119,7 @@ $ aos-daemon-ctl ls
 方向題「要不要讓 `ls` 看得到這種失敗？」使用者選 **A：維持現狀，只補文件**。原話：「A。」
 
 已落實（與本段同一個 commit，訊息開頭「os-impl 09 裁定 A」）：`aos-daemon-ctl add --help` 補兩句（定義資料夾＝跑它的 `_entry`、agent 的 `_entry` 掛自己所以不留表、改用 `aos-agent ctl add` 或給身體；`applied` 只表示信已套進名單）；[cmd/docs/03](../../../../cmd/docs/03-aos-daemon-ctl.md) 補同一段，並把 eca 時代的舊例子 `add ../../agents/bob -- …` 換成 `add ./hello.sh -- world`。另兩個邊緣狀況（`--name` 被吃掉、這條路上 `AOS_KERNEL` 會經判官）使用者沒回應，照通則不處理。
+
+## 11-07 使用者裁定 B（11-07 使用者確認翻案（B 落實時）） 後續
+
+上段 A「維持現狀，只補文件」、使用者原話「A。」保留作沿革；其中「一次性 proc 失敗仍下表」已被後續 **選 B：daemon 不分類** 翻案。現在已知非 0 一律留 stopped＋reason，退 0 下表（auto_restart 照舊）；直掛定義仍跑其 _entry，撞名會留下 stopped 列。見 [實作與衝突回報](../../07/arknights-kb/08-daemon不分類實作結果.md)。

@@ -31,7 +31,6 @@ from .table import (
 )
 from .ctl import (
     need_ctl,
-    need_stoppable,
     PHASE_OK,
     PHASE_HINT,
     need_phase,

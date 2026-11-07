@@ -3,13 +3,13 @@
 // 11-06（no-pid P6）：通用布林 auto_restart 讓任何 proc 常駐（可 stop／sleep、收工睡／開門醒），退了同一拍重起；連 3 次起後 3 秒內退＝stopped＋reason、要 start。
 //   表上 auto_restart、restart_on_stuck 只在 true 時寫，不看子項型別。
 // 11-06（no-pid P7）：stuck_after_ticks 每列選填正整數、預設 10，寫壞＝CfgBad；有效值寫回表供 adopt 保留。
-//   loop 型讀父寫的 loop.json 所設 ctl／state 窗；exec 型讀列的 stack 下公開預設 ctl.json／state.json，不認子程式身分。
+//   任何 proc 都讀父設定的公開窗名或預設 ctl.json／state.json，不認子程式身分。
 //   只判內部 running 列；任一窗缺、state 非物件、窗 null＝清 stuck 與期限、不判。
 //   ctl mtime（UTC 截到毫秒）> responded_at（null 最舊），且 > 父這次起／接回基準＝刺激；首見記 deadline_after(ticks)，expired 後標 stuck。
 //   stuck 是 bool，表上投影 phase／reason，不改內部生命週期；刺激消失清期限與標記，回 running；adopt 將 stuck 當 running 接回、重設基準。
 //   restart_on_stuck=true 時同拍 SIGTERM，10 秒後 SIGKILL 整群，settle 後照表重起；父 paused 只標、不起停。
 //   連 3 次卡住（起初一輪計入，最多實際重起 2 次）沒任何新回應＝收完留 stopped＋英文 reason、要人 start；起／接回後的新回應清連敗。
-//   人工 stop／sleep／rm 優先於卡住重起；重起收途中父收工，loop／常駐列改留 sleeping。
+//   人工 stop／sleep／rm 優先於卡住重起；重起收途中父收工，所有仍活著的列改留 sleeping。
 // 11-06（T7）：tick 沒寫／null／false 不管時鐘；true 或 {file?, interval_ms?, name?} 在入口展開成第一列普通 loop proc。
 //   預設 file＝daemon stack/tick、name＝_tick、interval_ms＝aos::tick_interval_ms()；exec 用內嵌單子 argv 跑 PATH 上的 aos-tick，auto_restart＝true。
 //   名字與 daemon.json 的 procs 撞到、未知 key／型別／值壞＝CfgBad；指示詞同其他設定格。後續流程不辨認哪列是時鐘。
@@ -21,7 +21,7 @@
 //   tend.cpp     term／halt／hold／settle／look／tend／finish；stuck.cpp 公開窗刺激、期限與重起
 //   failure.cpp  整理停止原因；body.cpp 跑 daemon 身體
 //   reconcile.cpp 依期望表起停子項；ctl.cpp 控制窗的名單與集合
-//   windows.cpp  管轄那一對窗：read_procs_ctl（procs_ctl.json）、check_lists、check_once、write_more（procs_state.json）、write_parts／clean_parts（切檔）
+//   windows.cpp  管轄那一對窗：read_procs_ctl（procs_ctl.json）、check_lists、write_more（procs_state.json）、write_parts／clean_parts（切檔）
 //   mailbox.cpp  信箱（procs_ctl_mailbox）：open_mailbox、take_letters、apply_letter、done_letters
 //
 // daemon.json＝loop.json 的超集：exec、max、interval_ms、ctl、state 同 aos-loop，但 exec 選填、max 沒寫＝不限、interval_ms 沒寫＝200
@@ -39,27 +39,27 @@
 // 期望表＝（procs_ctl 的 procs，沒寫＝底 want_）＋procs_added－procs_removed；stopped 集合＝底 stopped_＋procs_stopped－procs_started（同名兩邊都寫＝起）。
 // 底（記憶體）：want_＝daemon.json 的 procs（開了信箱再加 adopt 接回、不在上面的，設定記 null）＋信改過的；stopped_＝adopt 接回的 stopped 列＋信改過的。
 // 信（procs_ctl_mailbox）body 認 procs_added、procs_removed、procs_stopped、procs_started，改的是底；ping 必須是 true，只回信、不改底；壞信原因進 procs_state 的 mailbox_warning。
-// procs_stopped／procs_started 裡有 exec 型（exec 型只有跑和拔）＝procs_ctl 整份不採用（ctl_warning）／壞信；不在期望表的名字＝不管。
+// procs_stopped／procs_started／procs_slept／procs_woken 適用所有 proc；不在期望表的名字＝不管。
 // 四態（procs § 0、§ 2c；ctl-commands § 5）：running（表上、活著）、stopping（收的途中）、stopped（表上、行程不在、stack 留著）、表上沒有；
-//   11-03 多一態 sleeping（procs § 8 sleep／wake）：daemon 收工（ctl 的 stop、SIGTERM／SIGINT）時還在跑的 loop 型＝SIGTERM 收掉、列留成 sleeping
+//   11-03 多一態 sleeping（procs § 8 sleep／wake）：daemon 收工（ctl 的 stop、SIGTERM／SIGINT）時所有還活著的 proc＝SIGTERM 收掉、列留成 sleeping
 //   （pid null、stack 留著）；daemon 再開 adopt 接回、不進 stopped 集合＝第一圈用列上的 stack 再起（wake；暫停中的照它自己 state.json 的 paused 接著暫停）。
-//   收工時 stopped 的照舊 stopped、exec 型照舊拿掉；睡著時收到 stop（procs_stopped）＝改成 stopped、不 wake。kill -9 的 daemon 沒走收工，不在此列。
+//   收工時 held 的照舊保留；其餘仍活著的列一律 sleeping；睡著時收到 stop（procs_stopped）＝改成 stopped、不 wake。kill -9 的 daemon 沒走收工，不在此列。
 //   stop（名字在期望表又在 stopped 集合）＝往子 loop 的 ctl.json 寫 {"cmd": "stop", "seq": N}，等它跑完這次自己退（沒有時間上限）→列留成 stopped
 //   （pid null）；add＋stop 同時＝直接一列 stopped、不起、stack 不建。start（拿出 stopped 集合）＝下一圈用列上的 stack 再起（不清 ctl：子 loop 比舊 state 的 ctl_seq，已套用過的 stop 不重做）。
 //   只有指令叫起：信來、procs_added 同名都不會把 stopped 的拉起來（同名 add＝設定換掉、停照停）。
 //   其他退 0 的（跑滿、身體退 10、別人直接往子 loop 的 ctl 寫 stop）照 11-02 從表上拿掉（使用者 11-03「照舊拿掉」）；自己結束（done）的本次執行不再起（ended_）。
-//   11-05（edge-agent 題 1、edge-daemon 題 2，使用者選「留表標 stopped」「一起改成留表」）：loop 型退非 0（含被訊號打掉）＝列留成 stopped＋reason、
-//   進 stopped 集合（start 才再起）；exec 型、接回的（拿不到碼）照舊拿掉。
+//   11-05（edge-agent 題 1、edge-daemon 題 2，使用者選「留表標 stopped」「一起改成留表」）：任何 proc 退非 0（含被訊號打掉）＝列留成 stopped＋reason、
+//   進 stopped 集合（start 才再起）；退 0、接回的（拿不到碼）照舊拿掉。
 //   同名改寫法：已在跑的不重起（N-54）。
 // procs_state.json＝{ctl_seq, ctl_warning, mailbox_warning（開了信箱才有）, procs_loop, procs_exec, procs_stderr, procs_ctl_mailbox（11-04：名字回報，沒開信箱＝null）,
 //   daemon（上一層的 AOS_DAEMON，根或指自己＝null）, responded_at, tick?（有 AOS_TICK 才寫 now_tick；壞檔＝null）, procs 表, pid, started_at_ticks, boot_id, updated_at}，有變才寫；
 // tick 變動只刷新 procs_state、不更新 responded_at 或印 log；取樣沿用 daemon 每圈節奏，值沒變不寫、分檔內容不變不重寫。
 // state.json 也有 daemon；兩扇窗的 responded_at 記最近一次有反應（收信、採用不同的 procs_ctl、起／收子項、身體跑完），睡著不刷新。
-// 每列 {pid, started_at_ticks, phase（running／stuck／stopping／stopped／sleeping）, code, signal, stack, exec, def, reason, ws?, limits?（11-05：生效的份額）}（exec 11-04 晚：起它時的目標，見 exec_of；def 11-04：見 def_of）；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
+// 每列 {pid, started_at_ticks, phase（running／stuck／stopping／stopped／sleeping）, code, signal, stack, exec, def, reason, launch, stop_mode?（stopping 時）, ws?, limits?（11-05：生效的份額）}（exec 11-04 晚：起它時的目標，見 exec_of；def 11-04：見 def_of）；表超過 PART_ROWS（100）列就切檔到 procs_state_procs/。
 // ctl 的 stop（這圈收工）或 pause（整圈暫停）時不調表：不收多的、不起少的、起停也等解除，但照讀兩份 ctl、照寫兩扇 state、照收已在收的、照記自己結束的。
 // log（--enable-logs 才印到 stdout）：行程起來一行、結束一行 {"at", "name", "phase"（running／done／stopped／sleeping）, "pid", "code", "signal", "ws"?}。
 // 11-05（portable-flow，見 docs/03「11-05 搬家相關」）：信／procs_ctl 多認 procs_slept、procs_woken（sleep＝現在就睡、列 sleeping，這一班 wake 才醒；daemon 重開 slept 集合空＝自己醒）；
-//   表上 stack／ws／exec／def 存相對 daemon 的 stack（adopt 用 unrel 拼回）；wake／start 起來 REVIVE_MS 內就退＝列留 stopped＋reason（11-05 晚起凡 loop 型退非 0 都留，REVIVE_MS 只分原因字樣）；
+//   表上 stack／ws／exec／def 存相對 daemon 的 stack（adopt 用 unrel 拼回）；wake／start 起來 REVIVE_MS 內就退＝列留 stopped＋reason（11-07 B 起任何 proc 退非 0 都留，REVIVE_MS 只分原因字樣）；
 //   起來先 check_running：flock 鎖住 stack 資料夾（鎖到行程結束）；鎖不到＝同一個 stack 已有 daemon 活著＝DaemonExists。
 // 11-05（edge-daemon 題 1，使用者「記一行、下一圈再跑 (Recommended)」）：身體（exec）由 daemon 自己在 tend 最後跑（run_body；Loop 當沒有身體），
 //   退非 0、起不來＝不收工：stderr 一行（變了才印）、state 的 body_code、下一圈再跑；退 10＝收工（同 ctl stop）。aos-loop 本身照舊（P-20）。
@@ -109,8 +109,9 @@ Json def_of(const Json& spec);
 bool auto_restart_of(const Json& spec);
 bool ros_of(const Json& spec);
 
-// 這個 proc 是 exec 型嗎（procs § 2）：字串、陣列，或 key 只有 exec（＋ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_ticks）的物件＝是；其他（loop 設定、null）＝不是。
+// 只供起法與目標格式檢查：這個 proc 直接交 aos-exec 嗎（procs § 2）：字串、陣列，或 key 只有 exec（＋ws、stack、def、limits、auto_restart、restart_on_stuck、stuck_after_ticks）的物件＝是；其他（loop 設定、null）＝不是。
 bool is_once(const Json& spec);
+Json launch_of(const Json& spec, const std::string& cwd);   // 可重放設定：固定入口路徑、保留完整參數
 
 // 把 v 裡每個 $ref 指示詞的相對檔名接在 base 後面（`檔#/…` 只動 `#` 前面；$ref 陣列每個元素都轉；絕對的、只有 `#/…` 的不動）。
 // 不解任何指示詞。給 read_procs 處理內嵌單子用（10-24）。
@@ -145,7 +146,7 @@ private:
     void state_failed(const Error& e);                    // 11-05：狀態窗寫不了（寫成過＝stderr 一行、下一圈再寫；沒寫成過＝丟 StateError）
     void state_ok();                                      // 11-05：寫成了（之前寫不了＝stderr 一行 written again）
     void term(Child& c);                  // 送 SIGTERM、phase stopping、記期限（不等）
-    void halt(const std::string& name, Child& c);   // daemon 的 stop：往子 loop 的 ctl 寫 {"cmd": "stop", "seq": N}、phase stopping（沒 ctl＝term）
+    void halt(const std::string& name, Child& c);   // daemon 的 stop：往子 loop 的 ctl 寫 {"cmd": "stop", "seq": N}、phase stopping（寫不了也等自行退）
     void hold(const std::string& name, Child& c, const char* phase = "stopped", const char* log_phase = nullptr);   // 要留列的退了：印 log、列留成 phase；log_phase 可另指定
     bool settle(Child& c);                // 收的途中看一眼：退了＝phase stopped、回 true；SIGTERM 過了期限還在＝SIGKILL 整群＋底下自成一群的（只送一次）
     bool look(const std::string& name, Child& c, bool stop, bool watch = true);   // 不調表地看一眼（見 tend.cpp）；回 true＝結束了、要拿掉
@@ -155,14 +156,12 @@ private:
     std::string fail_reason(const Child& c) const;   // 11-05：出錯結束留成 stopped 的 reason（英文；起不來／跑到一半掛了＋碼＋小格 stderr 最後一行）
     Child start(const std::string& name, const Json& spec, const std::string& cell, const Json& kept_ws = Json(),
                 const Json& kept_exec = Json(), const Json& kept_def = Json(),
-                const Json& kept_limits = Json(), bool kept_once = false, bool kept_auto_restart = false,
-                bool kept_ros = false, long long kept_stuck_after_ticks = 10);   // 照寫法起（spawn／spawn_exec）；spec null 用列上記的 kept_*（含型別與兩個布林）
+                const Json& kept_limits = Json(), const Json& kept_launch = Json(), bool kept_auto_restart = false,
+                bool kept_ros = false, long long kept_stuck_after_ticks = 10);   // 照寫法起（spawn／spawn_exec）；spec null 用列上記的 kept_*（含入口與兩個布林）
     Json limits_of(const Json& spec, const Json& kept) const;   // 11-05：生效的份額＝列的 limits，沒寫＝daemon 預設 limits_；spec null＝kept；{}＝null（不限）
     std::string cell_of(const std::string& name, const Json& spec) const;   // proc 的 stack：寫了 stack＝它，沒寫＝$AOS_STACK/procs/<名字>
     void read_procs_ctl();                // 讀 procs_ctl.json：好的進 pctl_good_、清 pctl_warning_；壞的不採用、原因進 pctl_warning_；檔不在＝不動
     std::optional<std::string> check_lists(Json& doc, const aos::Resolved& where);   // procs、procs_added、三個名字陣列
-    // procs_stopped／procs_started（doc 裡的）有 exec 型（want＝合好的期望表；在表上的看那列、不在的看寫法）＝回原因
-    std::optional<std::string> check_once(const Json& doc, const Json& want) const;
     // procs_state 的 procs 欄：≤ PART_ROWS 列原樣；多了就寫分檔、回 {"$ref": [分檔, …]}；用到的分檔名記進 now
     Json write_parts(Json rows, std::set<std::string>& now);
     void clean_parts(const std::set<std::string>& now);   // 寫好之後：清掉這次與上一次都沒用到的分檔

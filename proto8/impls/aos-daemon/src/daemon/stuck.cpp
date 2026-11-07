@@ -17,16 +17,11 @@ void Daemon::check_stuck(const std::string& name, Child& c) {
     }
     using aos::loop::CtlWindow;
     using aos::loop::StateWindow;
-    Json ctl = CtlWindow::default_name;
+    Json ctl = ctl_name(c.stack, names_);
     Json state = StateWindow::default_name;
-    if (!c.once) {
-        // loop.json 是父自己寫的設定；不辨認子程式的身分。
-        auto cfg = aos::read_json(aos::join(c.stack, names_.loop));
-        if (!cfg || !cfg->is_object()) {
-            clear();
-            return;
-        }
-        ctl = cfg->value(CtlWindow::config_key, ctl);
+    // 父寫的設定只提供公開窗名，不據此分類。
+    auto cfg = aos::read_json(aos::join(c.stack, names_.loop));
+    if (cfg && cfg->is_object()) {
         state = cfg->value(StateWindow::config_key, state);
     }
     if (!ctl.is_string() || !state.is_string()) {
