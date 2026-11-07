@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+# watch - Track promoted definitions and roll back failed quality or cost windows.
+import json
+from pathlib import Path
+import sys
+
+sys.dont_write_bytecode = True
+HERE = Path(__file__).resolve().parent
+LIB = next((p for p in HERE.parents if p.name == 'lib' and (p / 'tool_io.py').is_file()), None)
+sys.path[:0] = [str(HERE)] + ([str(LIB)] if LIB else [])
+import tool_io
+from watch_state import run
+
+tool_io.start('watch')
+try:
+    print(json.dumps(run(tool_io.arguments('op', 'watch')), allow_nan=False))
+except tool_io.Error as error:
+    tool_io.die(error.code, str(error))

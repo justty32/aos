@@ -1,0 +1,1 @@
+{"description": "Declare reviewer agent configuration and its public observation ledger.", "aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json"}, "aos-observed": {"file": "observed.jsonl"}}

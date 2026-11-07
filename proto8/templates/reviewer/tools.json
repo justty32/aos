@@ -1,0 +1,11 @@
+{"description": "Offer review scripts and workspace readers without arbitrary execution tools.",
+ "tools": {
+   "review_round": {"path": "../../lib/aos/review_round"},
+   "watch": {"path": "../../lib/aos/watch"},
+   "promote": {"path": "../../lib/aos/promote"},
+   "rollback": {"path": "../../lib/aos/rollback"},
+   "measure": {"path": "../../lib/aos/measure"},
+   "json_read": {"path": "../../lib/base/json_read"},
+   "json_edit": {"path": "../../lib/base/json_edit"},
+   "read": {"path": "../../lib/base/read"},
+   "ls": {"path": "../../lib/base/ls"}}}

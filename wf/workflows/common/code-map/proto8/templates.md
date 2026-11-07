@@ -11,6 +11,7 @@
 |---|---|
 | [`agent-fsm/`](../../../../../proto8/templates/agent-fsm/) | Run an aos agent with loop and FSM cells. |
 | [`judge-llm/`](../../../../../proto8/templates/judge-llm/) | Compare artifacts with one LLM request and public think accounting. |
+| [`reviewer/`](../../../../../proto8/templates/reviewer/) | Review measured definition costs and prescribe a fix or split when model downgrades fail. |
 
 ## `proto8/templates/agent-fsm/`
 
@@ -58,3 +59,18 @@
 | [`prompt.txt`](../../../../../proto8/templates/judge-llm/prompt.txt) | （檔頭沒有一句話） |
 | [`tests/endpoint.py`](../../../../../proto8/templates/judge-llm/tests/endpoint.py) | Return deterministic semantic-comparison replies with nonzero fake token usage. |
 | [`tests/test_judge.py`](../../../../../proto8/templates/judge-llm/tests/test_judge.py) | Verify judge reply normalization, truncation, kernel failures, and measured check costs. |
+
+## `proto8/templates/reviewer/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`body.json`](../../../../../proto8/templates/reviewer/body.json) | Run the reviewer loop with shared agent FSM cells. |
+| [`fsm.json`](../../../../../proto8/templates/reviewer/fsm.json) | Reuse agent-fsm cells while reading configuration from the reviewer definition. |
+| [`interfaces.json`](../../../../../proto8/templates/reviewer/interfaces.json) | Declare reviewer agent configuration and its public observation ledger. |
+| [`ladder.json`](../../../../../proto8/templates/reviewer/ladder.json) | Configure model downgrade trials, quality gates, and post-promotion watching. |
+| [`llm.json`](../../../../../proto8/templates/reviewer/llm.json) | Use the caller's default kernel endpoint unless an endpoint is explicitly configured. |
+| [`loop.json`](../../../../../proto8/templates/reviewer/loop.json) | Schedule the reviewer FSM and expose public control and state files. |
+| [`system.txt`](../../../../../proto8/templates/reviewer/system.txt) | （檔頭沒有一句話） |
+| [`tests/endpoint.py`](../../../../../proto8/templates/reviewer/tests/endpoint.py) | Return fake reviewer tool calls using the actual previous review_round result. |
+| [`tests/test_reviewer.py`](../../../../../proto8/templates/reviewer/tests/test_reviewer.py) | Verify real reviewer, review scripts and shared FSM cells through local fake endpoints. |
+| [`tools.json`](../../../../../proto8/templates/reviewer/tools.json) | Offer review scripts and workspace readers without arbitrary execution tools. |

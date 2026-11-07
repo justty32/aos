@@ -1,0 +1,16 @@
+{
+  "description": "Run one scripted review round: measure, watch, select an agent, test cheaper endpoints, promote, record and suggest retirement.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "case": {"type": "string", "description": "Case directory or suite."},
+      "defs": {"type": "string", "description": "Definition root; case targets are relative to this root."},
+      "ladder": {"type": "string", "description": "Absolute path to ladder.json."},
+      "ws": {"type": "string", "description": "Review workspace; defaults to AOS_WS."},
+      "daemons": {"type": "array", "items": {"type": "string"}, "description": "Daemon directories checked before promotion."}
+    },
+    "required": ["case", "defs", "ladder"]
+  },
+  "env": ["AOS_STACK", "AOS_WS"],
+  "errors": ["ArgumentsBad", "StackMissing", "WsMissing", "PathBad", "MeasureBad", "ToolFailed", "ReviewFailed"]
+}

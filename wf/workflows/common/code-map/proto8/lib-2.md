@@ -28,30 +28,14 @@
 | [`promote/swap.py`](../../../../../proto8/lib/aos/promote/swap.py) | Swap stopped definitions with retained versions after checking public daemon listings. |
 | [`promote/tests/test_recovery.py`](../../../../../proto8/lib/aos/promote/tests/test_recovery.py) | Verify swap failures restore the live definition and never consume retained history. |
 | [`promote/tests/test_swap.py`](../../../../../proto8/lib/aos/promote/tests/test_swap.py) | Verify definition swaps, byte recovery, and busy guards through real aos tools. |
+| [`review_round/`](../../../../../proto8/lib/aos/review_round/) | Measure a case, try cheaper endpoints, and record one review round. |
+| [`review_round/review_data.py`](../../../../../proto8/lib/aos/review_round/review_data.py) | Read review settings, traverse definition trees, and account for measured costs. |
+| [`review_round/round_runner.py`](../../../../../proto8/lib/aos/review_round/round_runner.py) | Execute the scripted review steps and promote only cheaper passing candidates. |
+| [`review_round/tests/fake_endpoint.py`](../../../../../proto8/lib/aos/review_round/tests/fake_endpoint.py) | Run the real fake endpoint and report the endpoint's configured token usage. |
+| [`review_round/tests/test_policy.py`](../../../../../proto8/lib/aos/review_round/tests/test_policy.py) | Verify watch exclusions, tree selection, history baselines and retirement decisions. |
+| [`review_round/tests/test_round.py`](../../../../../proto8/lib/aos/review_round/tests/test_round.py) | Verify complete review rounds against isolated daemons and real fake endpoints. |
 | [`rollback/`](../../../../../proto8/lib/aos/rollback/) | Restore the newest retained version of an idle definition. |
 | [`rollback/tests/test_rollback.py`](../../../../../proto8/lib/aos/rollback/tests/test_rollback.py) | Verify rollback without a previous version leaves the definition unchanged. |
-
-## `proto8/lib/base/`
-
-| 檔 | 負責什麼 |
-|---|---|
-| [`bash/`](../../../../../proto8/lib/base/bash/) | 在工作區裡用 bash 跑一行指令，回 stdout＋stderr 合在一起的輸出 |
-| [`bash/tests/test_observed.py`](../../../../../proto8/lib/base/bash/tests/test_observed.py) | Verify command ledgers preserve inner outcomes and block unwritable execution. |
-| [`clock/`](../../../../../proto8/lib/base/clock/) | 在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z） |
-| [`copy/`](../../../../../proto8/lib/base/copy/) | 在工作區裡複製一個檔或整個資料夾（捷徑照捷徑複製、不跟進去；to 的上層自動建） |
-| [`edit/`](../../../../../proto8/lib/base/edit/) | 在工作區裡一個檔做一處或幾處「整段原文照字面換掉」，一處不合就整個不改 |
-| [`json_edit/`](../../../../../proto8/lib/base/json_edit/) | 照 JSON 指標改工作區裡一份 JSON 檔的幾個位置：先全部試過、一處不合就整份不寫 |
-| [`json_read/`](../../../../../proto8/lib/base/json_read/) | 看工作區裡一份 JSON 檔的某個位置，一次只展開幾層、大的摺起來，讓腦一層層往下找 |
-| [`llm_fake/`](../../../../../proto8/lib/base/llm_fake/) | 假腦 endpoint 函數：跟 llm_http 同一個 stdin／stdout 契約，不碰網路（think-as-function 02/01 § 4） |
-| [`llm_http/`](../../../../../proto8/lib/base/llm_http/) | endpoint 函數：從自己的環境讀金鑰，把請求 POST 到 OpenAI 相容端點，印剪過的回覆 |
-| [`ls/`](../../../../../proto8/lib/base/ls/) | 列工作區裡一個資料夾的子項，一次一頁、回 JSON |
-| [`math/`](../../../../../proto8/lib/base/math/) | 算一個算術式子：只認數字、+ - * / // % **、括號、正負號（不用 eval） |
-| [`mkdir/`](../../../../../proto8/lib/base/mkdir/) | 在工作區裡建資料夾（上層一起建；已經有＝沒事） |
-| [`move/`](../../../../../proto8/lib/base/move/) | 在工作區裡搬移或改名一個檔、資料夾或捷徑本身（to 的上層自動建） |
-| [`read/`](../../../../../proto8/lib/base/read/) | 讀工作區裡一個文字檔，太長從頭截、告訴你從第幾行接著讀 |
-| [`run_python/`](../../../../../proto8/lib/base/run_python/) | 用 python3 跑一段程式，回結束碼與輸出（stdout＋stderr 合在一起） |
-| [`run_python/tests/test_observed.py`](../../../../../proto8/lib/base/run_python/tests/test_observed.py) | Verify command ledgers preserve inner outcomes and block unwritable execution. |
-| [`stat/`](../../../../../proto8/lib/base/stat/) | 看工作區裡單一個檔或資料夾的屬性，回 JSON |
-| [`trash/`](../../../../../proto8/lib/base/trash/) | 刪除工作區裡一個檔或資料夾：不真的刪，搬進 $AOS_WS/.trash/<時間>/<原路徑> |
-| [`view/`](../../../../../proto8/lib/base/view/) | 漸進看工作區裡一個檔：JSON 一次看一層、大的文字檔先給大綱 |
-| [`write/`](../../../../../proto8/lib/base/write/) | 把整份內容寫進工作區裡一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建 |
+| [`watch/`](../../../../../proto8/lib/aos/watch/) | Track promoted definitions and roll back failed quality or cost windows. |
+| [`watch/tests/test_watch.py`](../../../../../proto8/lib/aos/watch/tests/test_watch.py) | Verify watch acceptance, persistent retry decisions, public rollback calls and atomic writes. |
+| [`watch/watch_state.py`](../../../../../proto8/lib/aos/watch/watch_state.py) | Maintain promotion windows and invoke rollback through observed tool calls. |

@@ -13,6 +13,8 @@
 
 [`judge-llm`](judge-llm/README.md) 是同步呼叫 llm kernel 的裁判比對器，供 measure 的 `compare` 使用；複製後改 `judge.json` 與 `prompt.txt` 就能換模型與規則。
 
+[`reviewer`](reviewer/README.md) 重用 agent-fsm 的格，讓 review_round 試降級，agent 讀結果並開 fix／split 處方。
+
 ## 分檔目錄
 
 > 超過 8 KB，依 [STRUCTURE](../../wf/STRUCTURE.md) 按 `##` 標題拆開；本檔留前言與表，各段逐字在下列分檔。

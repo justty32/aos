@@ -1,0 +1,1 @@
+{"summary":"Track promoted definitions and roll back failed quality or cost windows","resource":["disk","process"],"side_effect":true,"idempotent":false,"deterministic":false,"interrupt":"unsafe","parallel":false}

@@ -1,0 +1,1 @@
+{"description": "Register the reviewer agent with the current daemon.", "argv": ["aos-agent", "ctl", "add", {"$env": "AOS_CD"}], "cwd": {"$env": "AOS_WS"}}

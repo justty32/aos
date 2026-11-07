@@ -1,0 +1,1 @@
+{"summary":"Run one scripted review round and retain a review with candidate definitions","cost":{"time_ms":60000},"resource":["disk","process"],"side_effect":true,"idempotent":false,"deterministic":false,"interrupt":"unsafe","parallel":false}

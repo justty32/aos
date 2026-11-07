@@ -1,0 +1,12 @@
+{"description": "Reuse agent-fsm cells while reading configuration from the reviewer definition.",
+ "_entry": ["aos-fsm", {"$env": "AOS_CF"}],
+ "start": "idle",
+ "states": {
+   "idle": {"exec": {"argv": ["python3", {"$env": "AOS_CD", "$path": "../agent-fsm/idle.py"}]},
+            "next": {"0": "think", "10": "idle"}},
+   "think": {"exec": {"argv": ["python3", {"$env": "AOS_CD", "$path": "../agent-fsm/brain.py"}, "--system", "system.txt"]},
+             "next": {"0": "wait", "10": "idle"}},
+   "wait": {"exec": {"argv": ["python3", {"$env": "AOS_CD", "$path": "../agent-fsm/wait.py"}]},
+            "next": {"0": "act", "10": "wait", "11": "think"}},
+   "act": {"exec": {"argv": ["python3", {"$env": "AOS_CD", "$path": "../agent-fsm/act.py"}], "timeout_ms": 1800000},
+           "next": {"0": "think", "10": "idle"}}}}
