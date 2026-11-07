@@ -34,6 +34,7 @@
 |---|---|
 | [`CMakeLists.txt`](../../../../../proto8/impls/aos-daemon/CMakeLists.txt) | `aos-daemon daemon.json`——一個 aos-loop（同一個骨架 aos::loop::Loop）＋一張子 loop 的表（10-20 重寫）。 |
 | [`examples/root/aos-root.service`](../../../../../proto8/impls/aos-daemon/examples/root/aos-root.service) | Run an ordinary root daemon under an optional systemd user service. |
+| [`examples/root/root.env.example`](../../../../../proto8/impls/aos-daemon/examples/root/root.env.example) | Configure credentials and cross-tree hubs inherited by the root service and its children. |
 | [`examples/root/s6/run`](../../../../../proto8/impls/aos-daemon/examples/root/s6/run) | Run an ordinary root daemon as an optional s6 supervised service. |
 | [`src/child/child.cpp`](../../../../../proto8/impls/aos-daemon/src/child/child.cpp) | 建立小格、啟動子 loop 或 exec 型子項，並回收與輸出子項狀態（說明見 child.hpp）。 |
 | [`src/child/child.hpp`](../../../../../proto8/impls/aos-daemon/src/child/child.hpp) | 表上的一個 proc（11-03 起 loops／execs 統稱 procs）＝一支子 loop（loop 型），或 aos-exec 跑一次（exec 型），並保存公開窗 stuck 判定資料。 |

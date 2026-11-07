@@ -1,4 +1,4 @@
-"""tool_io - lib 工具共用的開頭：schema 生成 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區、兩鐘期限。
+"""tool_io - lib 工具共用的開頭：schema 生成旗標位置的 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區、兩鐘期限。
 
 使用者 11-05 裁「收成共用模組」（thinking 2026-11-05 stdio-unify § 剩下的；原則「統一成單一介面，這樣只需要改介面」）：
 錯誤行與提醒行的格式只寫在這裡，各工具不自己拼字串。不是工具（沒有 _entry），是 lib 最底下的共用模組；純標準庫。
@@ -9,12 +9,12 @@
 
 旗標映射（thinking/2026-11/05/json-argv 的 03、07 與 J1 任務書）：
 _tooldef.json.env 只生成 hub 環境變數說明；parameters 同源生成旗標、說明與 type／required 檢查；旗標優先於 stdin，點路徑只換一葉。
-start 不讀參數；arguments 第一次才解析並快取，stdin 是終端就不讀；額外 JSON 鍵忽略、未知旗標報錯。
+start 只掃旗標位置的說明，不讀 stdin；arguments 第一次才解析並快取，stdin 是終端就不讀；額外 JSON 鍵忽略、未知旗標報錯。
 
 形狀（lib 契約，lib/docs/01 規則 3、5、5a）：
   錯誤行  「<名>: error: <代號> <原因>」：stderr 一行；給腦用的工具（預設）stdout 也印同一行（stdout 是給腦看的結果）；退 1。
   提醒行  「<名>: warning: <句子>」：只在 stderr、不帶代號。
-  --help  argv 在 -- 前有 --help＝手寫說明加上 schema 生成的旗標段，印 stdout、退 0。
+  --help  argv 在旗標位置有 --help（不含旗標值、首個位置參數後與 -- 後）＝手寫說明加上 schema 生成的旗標段，印 stdout、退 0。
   Ctrl-C  不吐 traceback、退 130（有子行程的工具自己再接 SIGINT，先收那一群）。
   讀的人先關了 stdout（EPIPE，例 `| head -c0`）＝照 Unix 預設被 SIGPIPE 打掉、退 141（128＋13），不吐 traceback（11-05 晚邊緣測試）。"""
 import copy, json, math, os, signal, sys, textwrap, time
@@ -150,7 +150,7 @@ def load_tooldef(folder):
 
 
 def start(name, help_text=None, echo=True, *, tooldef=None):
-    """記名字、讀定義、處理說明與訊號；不解析其餘 argv，也不讀 stdin。"""
+    """記名字、讀定義、辨識旗標位置的說明與處理訊號；不讀 stdin。"""
     global NAME, ECHO, _TOOLDEF, _ARGUMENTS
     NAME, ECHO, _ARGUMENTS = name, echo, None
     _TOOLDEF = tooldef
@@ -159,12 +159,30 @@ def start(name, help_text=None, echo=True, *, tooldef=None):
     elif tooldef is not None and _parameters(tooldef) is None:
         warn("cannot use _tooldef.json (parameters must be an object); flags are passed as strings")
         _TOOLDEF = None
-    for arg in sys.argv[1:]:
-        if arg == "--":
-            break
-        if arg == "--help":
-            print(help_from_tooldef(name, _TOOLDEF, help_text or ""), end="")
-            sys.exit(0)
+    schema, seen_help = _parameters(_TOOLDEF), []
+
+    def show_help():
+        print(help_from_tooldef(name, _TOOLDEF, help_text or ""), end="")
+        sys.exit(0)
+
+    def kind(flag):
+        if seen_help:
+            show_help()
+        if flag == "--help":
+            seen_help.append(flag)
+            return "switch"
+        _, node, _ = _flag(schema, flag)
+        return "switch" if _type(node) == "boolean" else "value"
+
+    try:
+        tokenize_flags(sys.argv[1:], kind)
+    except Error as e:
+        if seen_help:
+            die(e.code, str(e))
+        # arguments() reports other invalid arguments; start() only handles help.
+    else:
+        if seen_help:
+            show_help()
     signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)  # stdout 被關＝安靜退 141
 

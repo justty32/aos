@@ -1,4 +1,4 @@
-{"summary": "看工作區裡單一個檔或資料夾的屬性",
+{"summary": "Inspect the attributes of one workspace file or folder",
  "time_ms": {"val": 20, "max": 2000},
  "resource": "disk",
  "side_effect": false,

@@ -1,4 +1,4 @@
-// aos/util/cli.hpp：【aos-util】10-21 起的命令列（aos-exec、aos-loop、aos-fsm、aos-daemon 共用）。
+// aos/util/cli.hpp：【aos-util】各支可自定短名、只在旗標位置認 help 的命令列（aos-exec、aos-loop、aos-fsm、aos-daemon 共用）。
 //
 //     程式 [旗標...] 位置參數...
 //
@@ -31,11 +31,13 @@ struct Cli {
 
 // argv 不含程式名。flags：旗標名（"--ws"）→ 存進 opts 的名字（"ws"）；switches：不帶值的旗標名 → 存進 opts 的名字。
 // help：`--help`／`-h` 時印的說明（英文、印 stdout、退 0）。
-// short_flags：從內建短名表挑選的短名，對應長名必須在 flags／switches；不黏值、不併、不帶 =。
+// short_flags：從常用預設表挑短名；custom_short：各支自己的短名對照，可覆蓋預設。
+// 對應長名必須在 flags／switches；不黏值、不併、不帶 =。help 作為旗標值或位置參數不觸發說明。
 // 表不合是呼叫端寫錯（std::invalid_argument）；命令列錯誤仍用 aos::Error。
 Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
               const std::map<std::string, std::string>& switches = {}, const std::string& help = "",
-              const std::vector<std::string>& short_flags = {});
+              const std::vector<std::string>& short_flags = {},
+              const std::map<std::string, std::string>& custom_short = {});
 
 Error usage_error(const std::string& code, const std::string& reason, const std::string& usage);
 

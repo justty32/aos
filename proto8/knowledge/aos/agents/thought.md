@@ -1,25 +1,25 @@
-# 小念頭：一件事，只拿結論
+# Small thought: one task, just the conclusion
 
-工具 `thought` 起一隻用完即走的子 agent，交給它一件事，只帶回短結論；子的工具來回不進你的 history。子定義取呼叫參數 `from`，沒填才用工具登記格 `env.AOS_THOUGHT_FROM` 的預設。
+The `thought` tool starts a disposable child agent, gives it one task and returns only a short conclusion; the child's tool exchanges do not enter your history. The child definition comes from the call parameter `from`; only when omitted does it use the default in the tool registration's `env.AOS_THOUGHT_FROM`.
 
-怎麼選：
+Choosing a tool:
 
-- `thought`：計畫的一步、查完回一句話。答完預設收掉，不用命名、追問或自己移除。
-- `agents`：要持續對話的助手。自己命名、問它，也要自己 `rm`。
+- `thought`: one step in a plan, returning one sentence after checking. By default it is removed after answering; no naming, follow-up or manual removal is needed.
+- `agents`: an assistant for an ongoing conversation. Name it, ask it questions, and `rm` it yourself.
 
-呼叫：
+Calls:
 
-- 已配預設：`{"goal": "Find what time it is and say whether it is morning"}`。
-- 換定義：`{"from": "helpers/reviewer", "goal": "Review the result and return one sentence"}`。
-- 借自己的工具：`{"goal": "Read the knowledge base and summarize endpoint packs", "tools": [{"name": "memory"}], "max_chars": 200}`。
-- A → B → C：每步叫一次，把前一步結論放 `context`，例如 `"context": ["Step A concluded: the config is in cfg/"]`。
+- With a configured default: `{"goal": "Find what time it is and say whether it is morning"}`.
+- Choose another definition: `{"from": "helpers/reviewer", "goal": "Review the result and return one sentence"}`.
+- Borrow your own tools: `{"goal": "Read the knowledge base and summarize endpoint packs", "tools": [{"name": "memory"}], "max_chars": 200}`.
+- A → B → C: call once per step, passing the previous conclusion in `context`, for example `"context": ["Step A concluded: the config is in cfg/"]`.
 
-規則：
+Rules:
 
-- 預設放這隻 agent 工具設定的 thought 登記格，例如 `{"path": "../../lib/agent/thought", "env": {"AOS_THOUGHT_FROM": "helpers/basic"}}`。也可在登記工具時用 `--envs AOS_THOUGHT_FROM=helpers/basic`。env 值照字面傳入，不相對登記檔解析；`from` 與這個預設都相對你的工作區 `$AOS_WS` 解析，絕對路徑照用；要能搬家請存相對路徑。定義必須宣告 `aos-agent` 公開介面。兩邊都沒給＝`FromMissing`，不猜範本。明填空白／錯型別＝`ArgumentsBad`，不退回預設。
-- 子在定義原有設定之上收到 `goal` 與 `context`。在 `goal` 說清楚要帶回什麼。
-- 工具：沒給 `tools`＝保留定義的工具組；`[]`＝清空；列出來＝只留這些。`{"name": "memory"}` 沒給 `path`＝借你自己的同名工具；給了 `path` 就用該路徑。覆蓋層依定義的 `interfaces.json` 宣告。
-- 腦：預設同你，`endpoint` 可指定另一包。讀不到你的腦設定（例如沙箱看不到定義）＝報錯，常見 `InterfaceMissing`；可明給 `endpoint`。
-- 深度讀啟動環境 `AOS_THOUGHT_DEPTH`（沒設＝0），起子帶父深度＋1。到 2 再叫＝`DepthExceeded`。
-- `keep: true`＝答完停住並保留，結論尾加 `details: procs/<name>/`（相對 daemon）。要追問先 `aos-agent ctl start --target <name>`，再 `say`／`listen`。
-- `AnswerMissing`＝`timeout_s` 內沒答（預設 600，任何有限正數），錯誤行尾有 `(details: ...)`，stack 留給人查。`DepthExceeded`＝到深度上限，這步自己做。`ToolMissing`＝你沒有要借的同名工具。`ArgumentsBad`＝`goal` 沒給／空白，或參數無效。`DaemonMissing`＝沒 daemon，或它忙、暫停、掛了而沒回；這步自己做或說明暫時不可用，之後最多再試一次，不要迴圈重試。
+- Put the default in this agent's thought tool registration, for example `{"path": "../../lib/agent/thought", "env": {"AOS_THOUGHT_FROM": "helpers/basic"}}`. You can also use `--envs AOS_THOUGHT_FROM=helpers/basic` when registering the tool. The env value is passed literally, not resolved relative to the registry file; both `from` and this default resolve relative to your workspace `$AOS_WS`, while absolute paths are used as given. Store relative paths for portability. The definition must declare the `aos-agent` public interface. If neither is supplied, the result is `FromMissing`; no template is guessed. An explicitly blank value or wrong type gives `ArgumentsBad`, without falling back to the default.
+- The child receives `goal` and `context` on top of its definition's existing settings. State clearly in `goal` what it should return.
+- Tools: omitted `tools` keeps the definition's tool set; `[]` clears it; a list keeps only those tools. `{"name": "memory"}` without `path` borrows your own tool of that name; with `path`, that path is used. Overlays follow the definition's `interfaces.json` declarations.
+- Brain: defaults to yours; `endpoint` can select another pack. If your brain settings cannot be read (for example, a sandbox cannot see the definition), an error is returned, commonly `InterfaceMissing`; you can supply `endpoint` explicitly.
+- Depth is read from the startup environment's `AOS_THOUGHT_DEPTH` (unset means 0); the child starts with the parent's depth plus 1. Calling again at depth 2 gives `DepthExceeded`.
+- `keep: true` stops and keeps the child after answering, appending `details: procs/<name>/` (relative to the daemon) to the conclusion. For a follow-up, first run `aos-agent ctl start --target <name>`, then `say`/`listen`.
+- `AnswerMissing`: no answer within `timeout_s` (default 600; any finite positive number); the error line ends with `(details: ...)`, and the stack is kept for human inspection. `DepthExceeded`: the depth limit was reached; do this step yourself. `ToolMissing`: you do not have the same-named tool to borrow. `ArgumentsBad`: `goal` is missing or blank, or a parameter is invalid. `DaemonMissing`: `AOS_DAEMON` is unset or its directory does not exist. `DaemonFailed`: the daemon is configured and its directory exists, but no reply arrived within the timeout (it may be busy, paused or down). Do this step yourself or explain that it is temporarily unavailable; try at most once more later, without a retry loop.

@@ -1,4 +1,4 @@
-{"summary": "用 python3 跑一段程式，回結束碼與輸出",
+{"summary": "Run a piece of code with python3 and return its exit code and output",
  "time_ms": {"val": 500, "max": 300000},
  "resource": "cpu",
  "side_effect": true,

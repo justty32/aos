@@ -98,7 +98,7 @@ def daemon_path():
 def need_table():
     d = daemon_path()
     if not os.path.isfile(os.path.join(d, "procs_state.json")):
-        raise Fail("DaemonMissing", "%s is not an aos-daemon stack (no procs_state.json); run this in the workspace the daemon was started in (./.stack), "
+        raise Fail("StateMissing", "%s is not an aos-daemon stack (no procs_state.json); run this in the workspace the daemon was started in (./.stack), "
                    "or point --daemon / AOS_DAEMON at the daemon's $AOS_STACK" % d)
     return d
 
@@ -212,7 +212,7 @@ def ctl_wait(cmd, body, cond, what, refused, secs=WAIT_S, on_queued="fail", name
             return value
     withdrawn = call_dc(dc.regret, recipient, letter)
     outcome = "letter withdrawn, it will not be applied" if withdrawn else "could not withdraw it; it may still be applied"
-    raise Fail("DaemonMissing", "no result from the daemon at %s within %g s; %s%s" % (d, secs, outcome, kernel_hint()))
+    raise Fail("DaemonFailed", "no result from the daemon at %s within %g s; %s%s" % (d, secs, outcome, kernel_hint()))
 
 
 def phase_body(cmd, name):

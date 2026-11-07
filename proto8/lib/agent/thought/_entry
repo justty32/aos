@@ -18,7 +18,7 @@
 # 深度：讀 AOS_THOUGHT_DEPTH（沒有＝0），ctl add --envs 在啟動時傳父+1，子 stack 不寫深度檔；
 #   深度已是 MAX_DEPTH（2）＝DepthExceeded、不生（子能再開孫、孫不行）。
 # 錯：stderr 與 stdout 各一行「thought: error: 代號 原因」、退 1（規則 3，tool_io.die）——自己的：ArgumentsBad、FromMissing、DepthExceeded、
-#   DaemonMissing（AOS_DAEMON 沒設或 daemon 忙、暫停、掛了而沒回信）、StackMissing、WsMissing、DefMissing（範本不在）、ToolMissing、MkdirFailed、WriteFailed、LaunchFailed（aos-agent 不在 PATH）、
+#   DaemonMissing（AOS_DAEMON 沒設或目錄不存在）、DaemonFailed（目錄存在但逾時沒回信：忙、暫停、掛了）、StackMissing、WsMissing、DefMissing（範本不在）、ToolMissing、MkdirFailed、WriteFailed、LaunchFailed（aos-agent 不在 PATH）、
 #   CommandFailed（逾時）；aos-agent 退非 0＝取它 stderr 最後一行錯誤行的代號與原因接成自己的（AddRejected、AnswerMissing…；同 agents）。
 #   子答不出（listen 錯、逾時）＝錯誤行尾附 (details: <子的 stack>/)，子先 ctl stop、stack 一律留（不管 keep）。
 #   aos-agent 的 stderr 原樣透到 stderr（R10）。--help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉那一群，退 130）。
@@ -43,7 +43,8 @@ is kept and the error line ends with (details: <stack>/). A child may start one 
 (depth 2 at most: DepthExceeded).
 Each child has a unique name; running records use renewable UTC leases. Interrupted leases expire,
 and the next call stops expired children and keeps their stacks as failed thoughts.
-DaemonMissing means AOS_DAEMON is unset or the daemon did not reply (busy, paused, or down).
+DaemonMissing means AOS_DAEMON is unset or its directory does not exist.
+DaemonFailed means its directory exists but no reply arrived within the timeout (busy, paused, or down).
 On error: one line "thought: error: CODE reason" on stderr and stdout, exit 1.
 """
 HERE = os.path.dirname(os.path.realpath(__file__))
@@ -389,7 +390,7 @@ else:
     die("MkdirFailed", "could not create a unique child record after 5 attempts")
 out, err = agent(["ctl", "add", "--name", kid, "--ws", ws, "--envs", "AOS_THOUGHT_DEPTH=%d" % (depth + 1), definition])
 if err:
-    if err[0] == "DaemonMissing":
+    if err[0] in ("DaemonMissing", "DaemonFailed"):
         mark(kid, "failed")
     else:
         forget(kid)

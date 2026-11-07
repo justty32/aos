@@ -1,4 +1,4 @@
-{"summary": "漸進看工作區裡一個檔：JSON 一次一層、大的文字檔先給大綱",
+{"summary": "Inspect a workspace file progressively: one level at a time for JSON, an outline first for large text files",
  "time_ms": {"val": 30, "max": 3000},
  "resource": "disk",
  "side_effect": false,

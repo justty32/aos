@@ -1,4 +1,4 @@
-{"summary": "讀工作區裡一個文字檔，太長從頭截",
+{"summary": "Read a workspace text file; if it is too long, return only the beginning",
  "time_ms": {"val": 30, "max": 2000},
  "resource": "disk",
  "side_effect": false,

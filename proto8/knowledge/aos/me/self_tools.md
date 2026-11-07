@@ -15,6 +15,6 @@ Rules:
 - The change takes effect from your next turn. You will see the new tool in your tool list then, not in this turn.
 - Adding a tool does not create it. The folder must already exist (`PathMissing` otherwise). Ask a human or write the tool files in your workspace first.
 - `ToolExists`: a tool with that name is already there. Use `override: true` only if you mean to replace it.
-- `DaemonMissing`: no daemon was found (you are not running under one), or the daemon did not reply (busy, paused or down). `InstanceMissing`: the daemon has no table row for you. Either way the feature is unavailable for now; say so. Do not retry right away; you may try once more later.
+- `DaemonMissing`: `AOS_DAEMON` is unset or its directory does not exist. `DaemonFailed`: the daemon is configured and its directory exists, but no reply arrived within the timeout (busy, paused or down). `InstanceMissing`: the daemon has no table row for you. Either way the feature is unavailable for now; say so. Do not retry right away; you may try once more later.
 
 Why it is safe: other agents started from the same definition do not see your change. A human can see what you changed with `aos-agent ctl state --target <you>` (line `tools overlay: N added, M removed`) and undo it with `aos-agent tools reset`.

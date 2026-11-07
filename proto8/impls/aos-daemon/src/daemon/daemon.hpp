@@ -45,7 +45,7 @@
 //   （pid null、stack 留著）；daemon 再開 adopt 接回、不進 stopped 集合＝第一圈用列上的 stack 再起（wake；暫停中的照它自己 state.json 的 paused 接著暫停）。
 //   收工時 stopped 的照舊 stopped、exec 型照舊拿掉；睡著時收到 stop（procs_stopped）＝改成 stopped、不 wake。kill -9 的 daemon 沒走收工，不在此列。
 //   stop（名字在期望表又在 stopped 集合）＝往子 loop 的 ctl.json 寫 {"cmd": "stop", "seq": N}，等它跑完這次自己退（沒有時間上限）→列留成 stopped
-//   （pid null）；add＋stop 同時＝直接一列 stopped、不起、stack 不建。start（拿出 stopped 集合）＝下一圈用列上的 stack 再起（不清 ctl：子 loop 起來第一次讀的當基準線）。
+//   （pid null）；add＋stop 同時＝直接一列 stopped、不起、stack 不建。start（拿出 stopped 集合）＝下一圈用列上的 stack 再起（不清 ctl：子 loop 比舊 state 的 ctl_seq，已套用過的 stop 不重做）。
 //   只有指令叫起：信來、procs_added 同名都不會把 stopped 的拉起來（同名 add＝設定換掉、停照停）。
 //   其他退 0 的（跑滿、身體退 10、別人直接往子 loop 的 ctl 寫 stop）照 11-02 從表上拿掉（使用者 11-03「照舊拿掉」）；自己結束（done）的本次執行不再起（ended_）。
 //   11-05（edge-agent 題 1、edge-daemon 題 2，使用者選「留表標 stopped」「一起改成留表」）：loop 型退非 0（含被訊號打掉）＝列留成 stopped＋reason、

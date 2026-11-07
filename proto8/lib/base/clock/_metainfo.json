@@ -1,4 +1,4 @@
-{"summary": "印現在的 UTC 時間",
+{"summary": "Print the current UTC time",
  "time_ms": {"val": 20, "max": 1000},
  "resource": "cpu",
  "side_effect": false,

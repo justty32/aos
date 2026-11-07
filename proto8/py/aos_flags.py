@@ -1,4 +1,4 @@
-"""aos_flags：命令列旗標解析（含共用短名）、互動確認與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 lib/tool_io.py 的 tokenize_flags、stdout 被關退 141）。純標準庫＋lib/tool_io.py。
+"""aos_flags：命令列旗標解析（含各支自定短名）、互動確認與三扇門的共用小函式（10-21 plan L1；11-05 stdio-unify 加錯誤行、提醒行、--help、Ctrl-C；11-06 human-cli 加短名、確認；11-06 json-argv J5 切 token 改包 lib/tool_io.py 的 tokenize_flags、stdout 被關退 141）。純標準庫＋lib/tool_io.py。
 aos 自己的 Python 程式（cmd/ 的 aos-tick、aos-tools、aos-daemon-ctl、aos-agent、aos-mcp、aos-grow、aos-sandbox…）都用它，
 形狀照 CONVENTION P-44「aos 自己程式的命令列形狀」（11-04；C++ 那邊是 aos-util 的 aos::parse_cli）。
 Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 10-23 刪了，只有它們用的 load_cfg（設定檔讀取）、target（目標的寫法）跟著拿掉，在 git 歷史。
@@ -19,15 +19,13 @@ Python 版 aos-exec、aos-loop、aos-daemon、aos-fsm 10-23 刪了，只有它�
 不帶值的旗標（開關，10-22 `--dotenv-override`）另給一張表 switches：給了＝opts[值] 是 True，重複給＝一樣，寫 `--x=V`＝Error。
 可以重複給、每次都收的旗標（11-04，aos-grow 的 `--take`）另給一張表 multi：opts[值]＝照給的順序的字串串列（沒給＝沒這個 key）。不認得的旗標、旗標缺值＝Error；有沒有 XXX 由呼叫者自己判斷（rest 可能是空的）。
 `--help`（11-05 stdio-unify R3，使用者「全都有」「--help要輸出英文」）：旗標的位置（子命令後再 parse 一次也算）看到 `--help`＝把 HELP
-（或 parse 的 help 參數）印到 stdout、退 0；兩個都沒設＝跟別的不認得的旗標一樣 FlagUnknown。`--help=x`＝ArgumentsBad。
+（或 parse 的 help 參數）印到 stdout、退 0；前個帶值旗標的值、第一個位置參數後與 `--` 後都不觸發；兩個都沒設＝跟別的不認得的旗標一樣 FlagUnknown。`--help=x`＝ArgumentsBad。
 錯誤行與提醒行（R1，使用者「可以，固定格式："error:", "warning:"後面接你那個」）：stderr 只有兩種行——
 `程式: error: 代號 原因`（有它就不准退 0）、`程式: warning: 句子`（不帶代號，可以退 0）。usage 放原因後面：`原因 (usage: …)`（R5）。
 原因裡的換行換成空白（一行就是一行）。
-短名（11-06 human-cli H4，使用者裁「開幾個常用短名」）：全 aos 共用一張表 SHORT（九個），同一短名在所有指令同義、沒列在表上的不准開；
-每支用 parse 的 short 參數從表裡挑自己有的長旗標對應的短名（不在表上、或對應的長旗標不在這次的 flags／switches／multi＝ValueError，
-是程式寫錯）。`-h` 內建：認 `--help` 的地方 `-h` 也認，不用列。不黏值（`-tann`）、不併（`-jf`）、不帶 `=`（`-t=x`）：單槓 token
-整個當旗標名，不是開了的短名＝FlagUnknown `unknown flag 整個token`；錯誤訊息用使用者打的名字（`-t needs a value`）。
-C++ 的 aos::parse_cli 之後加同一張表（kShort）。
+短名（11-07 使用者裁定 sol 審查 #22）：每支指令各自定，可不同義；SHORT 是常用預設。
+short 傳短名字串序列時從 SHORT 挑，傳 {短名: 長旗標} 時用自己的表；長旗標須在這次的 flags／switches／multi。
+`-h` 隨內建 help 開啟；短名不黏值、不併、不帶 `=`，整個 token 是旗標名。
 切 token（--x V／--x=V／--／開關帶值／缺值）用 lib/tool_io.py 的 tokenize_flags（json-argv J5，去重），
 這裡只管旗標表、短名、--help；依序找自身資料夾、真位置祖先的 lib/，再用 Python 標準搜尋路徑（含 .pth）。
 確認（11-06 human-cli H11，使用者裁「終端問、非終端不問」＋「幫我加上--yes跳過」）：confirm(程式, 問句, yes)——yes 或 stdin 不是終端＝True、不問；
@@ -58,7 +56,7 @@ warn_missing_tick = tool_io.warn_missing_tick
 
 HELP = None
 
-# 全 aos 共用短名表（human-cli H4，使用者 11-06「開幾個常用短名」）：同名同義，沒列的不准開。
+# 常用短名預設；呼叫端可傳自己的對照表（11-07 使用者裁定 sol 審查 #22）。
 SHORT = {"-h": "--help", "-j": "--json", "-t": "--target", "-d": "--daemon", "-n": "--name",
          "-w": "--ws", "-s": "--stack", "-f": "--follow", "-y": "--yes"}
 
@@ -138,12 +136,16 @@ def parse(argv, flags, switches=None, multi=None, help=None, short=None):
     text = help if help is not None else HELP
     builtin_help = text is not None and "--help" not in flags and "--help" not in switches
     alias = {}  # 這次開的短名 → 長旗標（呼叫者寫錯＝ValueError，不是使用者的錯）
-    for s in short or ():
-        if s not in SHORT:
-            raise ValueError("short flag %r is not in aos_flags.SHORT" % (s,))
-        if s != "-h" and SHORT[s] not in flags and SHORT[s] not in switches and SHORT[s] not in multi:
-            raise ValueError("short flag %s needs %s in flags, switches or multi" % (s, SHORT[s]))
-        alias[s] = SHORT[s]
+    try:
+        selected = short if isinstance(short, dict) else {s: SHORT[s] for s in short or ()}
+    except KeyError as e:
+        raise ValueError("short flag %r has no default; pass a mapping" % e.args[0]) from None
+    for s, long_flag in selected.items():
+        if not s.startswith("-") or s.startswith("--") or len(s) != 2:
+            raise ValueError("invalid short flag %r" % s)
+        if long_flag != "--help" and long_flag not in flags and long_flag not in switches and long_flag not in multi:
+            raise ValueError("short flag %s needs %s in flags, switches or multi" % (s, long_flag))
+        alias[s] = long_flag
     if builtin_help:
         alias["-h"] = "--help"
     seen_help = []

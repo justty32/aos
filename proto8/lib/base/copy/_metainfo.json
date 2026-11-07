@@ -1,4 +1,4 @@
-{"summary": "在工作區裡複製一個檔或整個資料夾",
+{"summary": "Copy a file or a whole folder in the workspace",
  "time_ms": {"val": 50, "max": 60000},
  "resource": "disk",
  "side_effect": true,

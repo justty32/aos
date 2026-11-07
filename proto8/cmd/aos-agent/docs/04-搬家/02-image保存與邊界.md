@@ -61,9 +61,9 @@ git reflog expire --expire=now --all && git gc --prune=now
 ```sh
 git fetch origin main
 git reset --hard origin/main
-git clean -fdX -- ws/.stack/
+find ws/.stack/ -type f -path '*/think/request.json' -delete
 ```
 
-`clean -fdX` 只清指定 stack 中被忽略的暫存、快取與紀錄，避免沿用上一份 image 的 request；其他 daemon stack 也各清一次，不要在 repo 根整份清（`ws/.trash/` 留給人定期清）。
+只刪指定 stack 裡各個 `think/request.json`，避免沿用上一份 image 的 request；其他被忽略的 log、快取與暫存都留著，其他 daemon stack 也各做一次（11-07 使用者裁定 sol 審查 #20-3）。歸檔信 `archive/` 跟著 image 走；stderr、live、turns、transcripts 等紀錄仍只留原機（11-07 使用者裁定 sol 審查 #20-1、#20-2）。
 
 因為每版都沒有上一版，不能用一般 `git pull` 合併。醒在 wait 的 agent 若沒 pending、也沒 request，會先回 think 重組再寄；同樹已寄出的可靠 pending＋回信繼續收；跨樹在飛請求照搬家食譜作廢重寄，不沿用舊回信地址。

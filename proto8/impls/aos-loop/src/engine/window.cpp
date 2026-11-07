@@ -3,11 +3,11 @@
 //   read_ctl      ctl＝一道指令（11-03，thinking 2026-11-03-ctl-commands）：認 cmd（"pause"／"resume"／"stop"）、max、interval_ms（非負整數或 null）、
 //                 seq（非負整數），加上子類別的 check_ctl；其他 key 忽略。指示詞先解（resolve_keys；10-23 晚）。
 //                 新舊比內容：這次讀到的跟上一次讀到的一樣＝同一道、不再做；不一樣才照做一次（pause／resume 改 paused_、stop 設 stopping_、
-//                 max／interval_ms 寫了才改、null 回設定檔的值；ctl_seq 回音這道的 seq）。起來第一次讀到的＝基準線、不執行（殘留的 stop 不會讓新起的退）。
+//                 max／interval_ms 寫了才改、null 回設定檔的值；ctl_seq 回音這道的 seq）。起來第一次只略過 seq 與舊 state 的 ctl_seq 相同的已套用指令，其餘照做。
 //                 讀到新的壞的（讀不了、不是 JSON 物件、型別不對、cmd 不認得、指示詞解不開）整份不採用、維持原狀，原因記 ctl_warning（N-08）；
 //                 照做了一道好的清回 null（check_ctl 填了 ctl_note_＝那一句）。檔不在＝沒有新指令、維持原狀（之後再寫的一律算新的）。讀的人不刪不改 ctl
-//                 新的好壞指令處理完都算有反應（responded）；起來第一次的基準線、檔不在不算
-//   read_old_paused  起來時：開了 state 窗、舊的 state.json 是物件而且 paused 是 true＝起來先暫停（11-03 代定，使用者四態「繼續暫停」）；其他欄位不接
+//                 新的好壞指令處理完都算有反應（responded）；已套用過的第一道、檔不在不算
+//   read_old_state  起來時：開了 state 窗、舊的 state.json 是物件而且 paused 是 true＝起來先暫停（11-03 代定，使用者四態「繼續暫停」）；並接回有效 ctl_seq，供第一道指令去重
 //   write_state   state 一份：phase、counter_runs（跑過幾次；10-25 原 runs、同日再改 counter_runs）、max、interval_ms、paused、ctl_seq、ctl_warning（生效中的值，ctl 的指令改過之後）
 //                 ＋info()＋code（結束時）＋proc_fields＋responded_at＋updated_at（updated_at 最後一欄）；responded_at 算進變動比較，沒開 state 窗就不寫；
 //                 有變才寫（11-02）：組好的這份（不含 updated_at、counter_runs；running／waiting 互換當沒變，11-02 晚）跟上一份寫出去的一樣就不碰檔；第一份、帶 code 的一定寫；
@@ -129,7 +129,7 @@ void Loop::read_ctl() {
         return;
     }
     // 新舊比內容（11-03）：seen＝這次讀到的（好的＝解完那份的字串；壞的＝"!"＋原文；檔不在＝空）。
-    // 第一次讀＝基準線：記下來、不執行、不提醒。
+    // 第一次讀也照一般指令處理；只有 seq 與舊 state 的 ctl_seq 相同才略過。
     bool first = !ctl_seen_;
     ctl_seen_ = true;
     int err = 0;
@@ -138,7 +138,7 @@ void Loop::read_ctl() {
         std::string seen = err == ENOENT ? std::string() : "!" + std::to_string(err);
         bool fresh = seen != ctl_last_;
         ctl_last_ = seen;
-        if (!first && fresh && err != ENOENT) {
+        if ((first || fresh) && err != ENOENT) {
             ctl_warning_ = std::string("ctl: cannot read or not JSON: ") + std::strerror(err);
             responded();
         }
@@ -169,8 +169,8 @@ void Loop::read_ctl() {
         return;   // 同一道（或同一份壞的）：不再做
     }
     ctl_last_ = seen;
-    if (first) {
-        return;   // 基準線：起來前就在的那份當已經看過
+    if (first && !bad && doc.contains(CtlWindow::seq) && !ctl_seq_.is_null() && doc[CtlWindow::seq] == ctl_seq_) {
+        return;   // 舊 state 已回音這道指令；保留 ctl_seq，不再執行（stop 後 start 也能繼續）
     }
     if (bad) {
         ctl_warning_ = (doc.is_discarded() ? "ctl: " : "ctl rejected: ") + *bad;
@@ -197,7 +197,7 @@ void Loop::read_ctl() {
     responded();
 }
 
-void Loop::read_old_paused() {
+void Loop::read_old_state() {
     if (state_path_.empty()) {
         return;
     }
@@ -207,8 +207,14 @@ void Loop::read_old_paused() {
         return;
     }
     Json old = Json::parse(*text, nullptr, false);
-    if (old.is_object() && old.contains("paused") && old["paused"] == true) {
+    if (!old.is_object()) {
+        return;
+    }
+    if (old.contains("paused") && old["paused"] == true) {
         paused_ = true;
+    }
+    if (old.contains("ctl_seq") && aos::is_count(old["ctl_seq"])) {
+        ctl_seq_ = old["ctl_seq"];
     }
 }
 

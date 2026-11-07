@@ -10,7 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`CMakeLists.txt`](../../../../../proto8/impls/aos-util/CMakeLists.txt) | aos 這一家命令列工具共用的函式庫。 |
-| [`include/aos/util/cli.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/cli.hpp) | 10-21 起的命令列（aos-exec、aos-loop、aos-fsm、aos-daemon 共用）。 |
+| [`include/aos/util/cli.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/cli.hpp) | 各支可自定短名、只在旗標位置認 help 的命令列（aos-exec、aos-loop、aos-fsm、aos-daemon 共用）。 |
 | [`include/aos/util/error.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/error.hpp) | aos 這一家命令列工具共用的錯誤型別，和通用的錯誤代號。 |
 | [`include/aos/util/files.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/files.hpp) | 檔案的小工具——路徑、目錄操作、讀檔與文字及 JSON 原子寫入。 |
 | [`include/aos/util/io.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/io.hpp) | aos 這一家命令列工具的「三扇門」——stdin 讀一份 JSON、stdout 印一行 JSON、stderr 只有兩種行。 |
@@ -18,7 +18,7 @@
 | [`include/aos/util/signals.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/signals.hpp) | 建立、阻擋與非阻塞取出 SIGINT／SIGTERM／SIGHUP。 |
 | [`include/aos/util/text.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/text.hpp) | UTF-8 字串的小工具（10-22 起 aos-exec 的 .env、aos-fsm 的 state 檔用）。 |
 | [`include/aos/util/tick.hpp`](../../../../../proto8/impls/aos-util/include/aos/util/tick.hpp) | 讀樹的 tick 時鐘，並按兩鐘規則建立與判斷期限。 |
-| [`src/cli.cpp`](../../../../../proto8/impls/aos-util/src/cli.cpp) | 命令列旗標（含內建短名表）與設定檔讀取（規則見 include/aos/util/cli.hpp）。 |
+| [`src/cli.cpp`](../../../../../proto8/impls/aos-util/src/cli.cpp) | 命令列旗標（含各支自定短名）與設定檔讀取（規則見 include/aos/util/cli.hpp）。 |
 | [`src/dirs.cpp`](../../../../../proto8/impls/aos-util/src/dirs.cpp) | 查詢、建立、列出、改名與移除目錄及檔案。 |
 | [`src/files.cpp`](../../../../../proto8/impls/aos-util/src/files.cpp) | 路徑、讀檔與文字及 JSON 原子寫入（說明見 include/aos/util/files.hpp）。 |
 | [`src/io.cpp`](../../../../../proto8/impls/aos-util/src/io.cpp) | 三扇門——stdin 讀一份 JSON、stdout 印一行、stderr 印錯誤行／提醒行（說明見 include/aos/util/io.hpp）。 |

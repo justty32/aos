@@ -6,6 +6,7 @@ StartLimitBurst=5
 
 [Service]
 Type=simple
+EnvironmentFile=%h/.config/aos/root.env
 Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 UnsetEnvironment=AOS_DAEMON
 WorkingDirectory=%h/aos

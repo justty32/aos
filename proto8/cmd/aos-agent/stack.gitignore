@@ -12,7 +12,7 @@
 !**/.stack/
 !/.gitignore
 !/.gitattributes
-# 小格的 stderr（每次重開就重寫，只對這台有意義）
+# 小格的 stderr（每次重開就重寫，只留原機；11-07 使用者裁定 sol 審查 #20-1）
 **/stderr.txt
 # eca 的畫面 socket 與鎖（到別台是死的；醒來 aos-agent open 重開畫面）
 **/*.sock
@@ -36,10 +36,10 @@
 # 未寄且請求不在時，wait 退 11 回 think，從 history＋定義重組
 **/think/request.json
 
-# 只給人看的紀錄（只留原機器；image 不帶）
+# 只給人看的紀錄（只留原機器；image 不帶；11-07 使用者裁定 sol 審查 #20-1）
+# 歸檔信 archive/ 跟著 image 走（11-07 使用者裁定 sol 審查 #20-2）
 **/live.jsonl
 **/turns.jsonl
 **/aos-mcp-logs.jsonl
 **/mailbox_warning.txt
 **/transcripts/
-**/archive/

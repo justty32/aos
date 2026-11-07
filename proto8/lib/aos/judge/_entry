@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# judge - 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false；選填排隊窗 queue.json 先來先掛
+# judge - 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false；選填排隊窗 queue.json 先來先掛、keep_ordered 對照代回有序信
 # 用法：aos-exec <這個資料夾> <judge.json 的絕對路徑>（每跑一次＝一輪；定義裡寫 {"$env": "AOS_CD", "$path": "judge.json"}，因為 aos-exec 會 cd 進這裡）。
 #   模式 1（繼承式）：daemon.json 的 exec 身體＝它，AOS_STACK＝daemon 自己的 stack；模式 2（0 號 proc 式）：daemon 底下一個 loop 型 proc 每次跑它，AOS_STACK＝它的 proc 的 stack。
 #   兩種都靠 AOS_DAEMON 找 daemon（11-05 起 daemon 的身體也拿得到）。設計：proto8/thinking/2026-11/05/kernel-daemon/02-兩種模式.md § 1、§ 2；說明 proto8/kernel/docs/02-kernel-modes.md。
@@ -11,8 +11,9 @@
 #     procs_started、procs_woken（start／wake：讓 stopped／sleeping 的回來跑）的名字也算新名字、照樣判 max_running（allowed 不再判：add 時判過了）
 #     （11-05 edge-agent：原本照原樣轉，cap 2 時 sleep 一隻、add 一隻、再 wake＝3 個 running）；
 #   - body 不是物件、procs_added 不是物件、procs_started／procs_woken 不是字串陣列＝BodyBad。
-#   掛＝body 原樣 aos-post send --reply-to <原信 reply_to 拼回絕對> <ctl 信箱> <同一個信件名稱>（有序信＝--ordered＋尾名），daemon 套完直接回 {"applied": true} 給原寄件人
-#     （無序信 in_reply_to＝原信名字；有序信換了序號）；ctl 信箱已有同名（上一輪轉了沒收完）＝當轉過了。送不出去＝ForwardFailed 回給原寄件人。然後 aos-post done 收掉。
+#   keep_ordered missing/null/false：有序信以尾名一般轉寄，原 reply_to 保留；true：--ordered 轉寄，
+#   有 reply_to 者由 judge_replies 收回信、judge_ordered.json 記新名→原名與原回信箱，每輪先代回再判新信。
+#   掛＝body 原樣轉寄；keep_ordered 關時防重看 ctl/new/尾名，開時看對照表的原信名；送不出回 ForwardFailed。
 #   不掛＝aos-post done --reply '{"applied": false, "error": {"code", "msg"}}'（沒 reply_to＝只收掉）；回信寄不出去＝stderr 一行、照樣收掉。壞信＝stderr 一行、丟掉。
 #     不掛的每封一律 stderr 一行提醒「judge: warning: letter <名> refused: 代號 原因」（11-05 edge-agent；stdio-unify R1 起是提醒行：拒信是判官的答案、不是它的錯）；
 #     回信的 code、msg 與這行的代號、原因同一句（英文）。回信寄不出去、壞信也是提醒行。
@@ -34,12 +35,17 @@ import datetime, json, os, re, subprocess, sys
 HELP = """\
 usage: judge JUDGE.json   (run it with aos-exec as a daemon body or a loop proc; needs $AOS_STACK and $AOS_DAEMON)
 One round of the judge: take the procs_* letters in $AOS_STACK/requests/, decide each by
-JUDGE.json ({"allowed": [names] | null, "max_running": N | null, "queue": false}); forward the admitted ones
+JUDGE.json ({"allowed": [names] | null, "max_running": N | null, "queue": false, "keep_ordered": false}); forward the admitted ones
 to the daemon's ctl mailbox, answer the others {"applied": false, "error": {code, msg}}.
-A {"ping": true} body asks whether the daemon is there: forward it without judging; the daemon replies directly to the original sender.
+A {"ping": true} body asks whether the daemon is there: forward it without judging.
+Replies go directly to the original sender, or through the ordered reply relay when enabled.
 If the judge is absent, nobody forwards it and the caller times out.
 With queue=true, slot requests wait FIFO in requests/cur/; queue.json lists their positions.
 queue_wait_ms is a non-negative integer wall-clock limit from sent_at; 0 means do not queue.
+With keep_ordered=true, preserve ordered forwarding and relay replies using judge_ordered.json.
+Missing/null keep_ordered means false: ordered requests become ordinary letters using their suffix.
+With --on-queued ok no limit is attached: a request may remain queued forever.
+Wall-clock limits expire during freezing; use --on-queued ok to queue across a freeze.
 Each refused letter: one line "judge: warning: letter NAME refused: CODE reason" on stderr.
 Exit 0 after a round (also with no letters). On error: "judge: error: CODE reason" on stderr, exit 1.
 """
@@ -107,7 +113,12 @@ def load_policy(path):
     queue = cfg.get("queue", False)
     if not isinstance(queue, bool):
         die("CfgBad", "queue must be a boolean")
-    return (set(allowed) if allowed is not None else None), cap, queue
+    keep_ordered = cfg.get("keep_ordered")
+    if keep_ordered is None:
+        keep_ordered = False
+    if not isinstance(keep_ordered, bool):
+        die("CfgBad", "keep_ordered must be a boolean or null")
+    return (set(allowed) if allowed is not None else None), cap, queue, keep_ordered
 
 
 def daemon_view(daemon):
@@ -172,20 +183,68 @@ def verdict(body, allowed, cap, running, admitted):
     return None, fresh
 
 
-def forward(name, letter, requests, ctl_box):
-    """轉寄；回 None＝成功（或上一輪已轉過）、字串＝失敗原因。"""
+def write_ordered(path, rows):
+    """原子寫入有序轉寄對照表。"""
+    try:
+        with open(path + ".tmp", "w", encoding="utf-8") as f:
+            json.dump(rows, f, ensure_ascii=False)
+            f.write("\n")
+        os.replace(path + ".tmp", path)
+    except OSError as e:
+        die("StateBad", "cannot write judge_ordered.json: %s" % e)
+
+
+def relay_replies(box, path, rows):
+    """每輪先代回 daemon 的回信；轉回成功才移除對照與收信。"""
+    if post(["init", box])[0] != 0 or post(["take-all", box])[0] not in (0, NOT_FOUND):
+        die("PostFailed", "cannot take judge replies from %s" % box)
+    for name in sorted(os.listdir(os.path.join(box, "cur")), key=letter_key):
+        if name.startswith("."):
+            continue
+        code, out = post(["see", box, name])
+        if code != 0:
+            die("PostFailed", "cannot read judge reply %s" % name)
+        letter = json.loads(out)
+        original = rows.get(letter.get("in_reply_to"))
+        if original is None:
+            warn("reply %s has no ordered forwarding record; dropped" % name)
+        else:
+            if original["reply_to"]:
+                code, _ = post(["send", "--in-reply-to", original["letter"], original["reply_to"]],
+                               json.dumps(letter["body"], ensure_ascii=False))
+                if code != 0:
+                    warn("reply %s could not be relayed; retained for the next round" % name)
+                    continue
+            del rows[letter["in_reply_to"]]
+            write_ordered(path, rows)
+        if post(["done", box, name])[0] != 0:
+            die("PostFailed", "cannot finish judge reply %s" % name)
+
+
+def forward(name, letter, requests, ctl_box, keep_ordered, replies, ordered_path, ordered):
+    """轉寄；選填保有序與代回，關閉時用尾名一般寄出。"""
+    is_ordered = bool(ORDERED.match(name))
+    tail = name.split(".", 1)[1] if is_ordered else name
+    preserve = is_ordered and keep_ordered
+    if preserve and any(row["letter"] == name for row in ordered.values()):
+        return None
+    if not preserve and os.path.exists(os.path.join(ctl_box, "new", tail)):
+        return None
     args = ["send"]
     reply_to = letter.get("reply_to")
+    original_reply = os.path.abspath(os.path.join(requests, reply_to)) if reply_to else None
     if reply_to:
-        args += ["--reply-to", os.path.normpath(os.path.join(requests, reply_to))]   # 相對收件箱的根（11-05 起）；絕對的 join 照用
-    if ORDERED.match(name):
-        args += ["--ordered", ctl_box, name.split(".", 1)[1]]
-    else:
-        args += [ctl_box, name]
-    if os.path.exists(os.path.join(ctl_box, "new", name)):
-        return None                                           # 上一輪轉了、還沒收掉就停了
-    code, _ = post(args, json.dumps(letter["body"], ensure_ascii=False))
-    return None if code == 0 else "aos-post send to the daemon's ctl mailbox exited %d (reason in its stderr)" % code
+        args += ["--reply-to", replies if preserve else original_reply]
+    if preserve:
+        args += ["--ordered"]
+    args += [ctl_box, tail]
+    code, out = post(args, json.dumps(letter["body"], ensure_ascii=False))
+    if code != 0:
+        return "aos-post send to the daemon's ctl mailbox exited %d (reason in its stderr)" % code
+    if preserve and reply_to:
+        ordered[out.strip()] = {"letter": name, "reply_to": original_reply}
+        write_ordered(ordered_path, ordered)
+    return None
 
 
 def refuse(requests, name, code, msg):
@@ -260,7 +319,7 @@ def expiry_message(letter, was_queued):
 def main():
     if len(sys.argv) != 2 or not sys.argv[1]:
         die("ArgumentsBad", "need exactly one argument, the path of judge.json (usage: judge JUDGE.json)")
-    allowed, cap, queue = load_policy(sys.argv[1])
+    allowed, cap, queue, keep_ordered = load_policy(sys.argv[1])
     stack = os.environ.get("AOS_STACK")
     if not stack:
         die("StackMissing", "AOS_STACK is not set")
@@ -268,6 +327,23 @@ def main():
     if not daemon or not os.path.isdir(daemon):
         die("DaemonMissing", "AOS_DAEMON is not set or not a directory: %s" % (daemon or "(empty)"))
     requests = os.path.abspath(os.path.join(stack, "requests"))
+    ordered_path = os.path.join(stack, "judge_ordered.json")
+    replies = os.path.abspath(os.path.join(stack, "judge_replies"))
+    try:
+        with open(ordered_path, encoding="utf-8") as f:
+            ordered = json.load(f)
+        if not isinstance(ordered, dict) or any(
+                not isinstance(row, dict) or not isinstance(row.get("letter"), str)
+                or "reply_to" not in row
+                or (row.get("reply_to") is not None and not isinstance(row["reply_to"], str))
+                for row in ordered.values()):
+            raise ValueError("invalid ordered forwarding records")
+    except FileNotFoundError:
+        ordered = {}
+    except (OSError, ValueError) as e:
+        die("StateBad", "cannot read judge_ordered.json: %s" % e)
+    if keep_ordered or ordered or os.path.isdir(replies):
+        relay_replies(replies, ordered_path, ordered)
     window = os.path.join(stack, "queue.json")
     previous = queue_view(window) if queue else {}
     if post(["init", requests])[0] != 0:
@@ -347,7 +423,7 @@ def main():
         if message:
             refuse(requests, name, "SlotMissing", message)
             continue
-        failed = forward(name, letter, requests, ctl_box)
+        failed = forward(name, letter, requests, ctl_box, keep_ordered, replies, ordered_path, ordered)
         if failed:
             refuse(requests, name, "ForwardFailed", failed)
             continue

@@ -28,7 +28,7 @@ flags:
       --on-queued MODE  fail or ok when still queued (default fail)
   -h, --help          show this help
 
-exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, DaemonMissing...).
+exit codes: 0 attached; 1 error (InterfaceMissing, InstanceExists, AddRejected, DaemonMissing, DaemonFailed...).
 """
 
 def cmd(argv):

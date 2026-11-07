@@ -1,4 +1,4 @@
-{"summary": "假腦，回固定形狀的答案",
+{"summary": "A fake brain that returns a fixed-shape answer",
  "time_ms": {"val": 30, "max": 1000},
  "resource": "cpu",
  "side_effect": false,

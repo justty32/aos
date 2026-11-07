@@ -1,4 +1,4 @@
-// cli.cpp：【aos-util】命令列旗標（含內建短名表）與設定檔讀取（規則見 include/aos/util/cli.hpp）。
+// cli.cpp：【aos-util】命令列旗標（含各支自定短名）與設定檔讀取（規則見 include/aos/util/cli.hpp）。
 // 對應 proto8/py/aos_flags.py 的 parse、load_cfg。
 #include "aos/util/cli.hpp"
 
@@ -13,7 +13,7 @@
 
 namespace aos {
 
-// 全 aos 共用短名表；各呼叫端只開自己有長旗標的短名，-h 隨 help 內建。
+// 常用短名預設；各呼叫端可另給自己的短名表，-h 隨 help 內建。
 static const std::map<std::string, std::string> kShort = {
     {"-h", "--help"}, {"-j", "--json"}, {"-t", "--target"},
     {"-d", "--daemon"}, {"-n", "--name"}, {"-w", "--ws"},
@@ -22,7 +22,8 @@ static const std::map<std::string, std::string> kShort = {
 
 Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, std::string>& flags,
               const std::map<std::string, std::string>& switches, const std::string& help,
-              const std::vector<std::string>& short_flags) {
+              const std::vector<std::string>& short_flags,
+              const std::map<std::string, std::string>& custom_short) {
     std::map<std::string, std::string> aliases;
     for (const std::string& short_flag : short_flags) {
         auto it = kShort.find(short_flag);
@@ -33,6 +34,15 @@ Cli parse_cli(const std::vector<std::string>& argv, const std::map<std::string, 
             throw std::invalid_argument("short flag " + short_flag + " needs " + it->second);
         }
         aliases[short_flag] = it->second;
+    }
+    for (const auto& [name, long_name] : custom_short) {
+        if (name.size() != 2 || name[0] != '-' || name[1] == '-') {
+            throw std::invalid_argument("invalid short flag " + name);
+        }
+        if (long_name != "--help" && !flags.count(long_name) && !switches.count(long_name)) {
+            throw std::invalid_argument("short flag " + name + " needs " + long_name);
+        }
+        aliases[name] = long_name;
     }
     if (!help.empty()) {
         aliases["-h"] = kShort.at("-h");

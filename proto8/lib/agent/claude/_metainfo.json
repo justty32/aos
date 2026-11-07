@@ -1,4 +1,4 @@
-{"summary": "把一句話交給 claude CLI 做、回它的回答（同一段對話續著講）",
+{"summary": "Hand one message to the claude CLI and return its answer (continuing the same conversation)",
  "time_ms": {"val": 30000, "max": 600000},
  "resource": ["cpu", "llm"],
  "side_effect": true,

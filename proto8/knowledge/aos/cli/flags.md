@@ -17,6 +17,6 @@ aos-eca-screen --eca ../eca open --detach
 
 `aos-agent tools ls --target bob` gives `FlagUnknown`. `--daemon` belongs before the top-level subcommand; tools/llm `--target` belongs before their action. ctl target flags belong after the action.
 
-The nine shared short names have fixed meanings: `-h --help`, `-d --daemon`, `-t --target`, `-j --json`, `-n --name`, `-w --ws`, `-s --stack`, `-f --follow`, `-y --yes`. Only use a short name where that help lists it. `--file`, `--detach` and `--timeout-s` have no short name. `-s`/`-w` are not aliases for the switches in `ctl where`, or the path in `ctl who`.
+Common default short names are: `-h --help`, `-d --daemon`, `-t --target`, `-j --json`, `-n --name`, `-w --ws`, `-s --stack`, `-f --follow`, `-y --yes`. Each command defines its own short names and may give them different meanings. Only use a short name where that help lists it. `--file`, `--detach` and `--timeout-s` have no short name. `-s`/`-w` are not aliases for the switches in `ctl where`, or the path in `ctl who`.
 
 Use separate tokens: `-t bob`. `-tbob` and `-jf` are unknown flags. Use `--` to end flags where supported: `aos-agent say -t bob -- -hello`. No subcommand gives `ArgumentsBad`; an unknown subcommand gives `CommandUnknown`.

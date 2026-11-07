@@ -9,7 +9,7 @@
     "LaunchFailed",
     "CommandFailed",
     "WriteFailed",
-    "DaemonMissing",
+    "DaemonMissing", "DaemonFailed",
     "StackMissing",
     "WsMissing",
     "DefMissing",

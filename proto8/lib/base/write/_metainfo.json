@@ -1,4 +1,4 @@
-{"summary": "把整份內容寫進工作區裡一個檔（建或整份蓋掉）",
+{"summary": "Write the full contents of a workspace file (create or overwrite the whole file)",
  "time_ms": {"val": 30, "max": 2000},
  "resource": "disk",
  "side_effect": true,

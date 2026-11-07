@@ -196,7 +196,7 @@ exit codes: 0 printed; 1 error (including ProcMissing).
 usage: aos-daemon-ctl [--daemon D] ping [--timeout-s S]
 
 Sends through the same mailbox as proc letters and waits for a correlated reply.
-Prints "replied in N ms". No reply within the timeout means DaemonMissing.
+Prints "replied in N ms". No reply within the timeout means DaemonFailed.
 
 flags:
       --timeout-s S   positive reply timeout in seconds (default: 3)
@@ -386,7 +386,7 @@ def cmd_ping(opts, args):
     started = time.monotonic()
     reply = dc.ping(d, seconds, direct=True)
     if reply is None:
-        raise Fail("DaemonMissing", "no reply from the daemon at %s within %g s (busy, paused or not running; what its supervisor sees: aos-daemon-ctl ls, last line)" % (d, seconds))
+        raise Fail("DaemonFailed", "no reply from the daemon at %s within %g s (busy, paused or not running; what its supervisor sees: aos-daemon-ctl ls, last line)" % (d, seconds))
     print("replied in %d ms" % round((time.monotonic() - started) * 1000))
 
 

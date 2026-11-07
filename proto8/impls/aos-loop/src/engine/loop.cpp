@@ -71,7 +71,7 @@ int Loop::main_loop() {
     Clock::time_point next_at = Clock::now();
     max_base_ = max_;               // ctl 寫 null 回這兩個（11-03）
     interval_base_ = interval_ms_;
-    read_old_paused();              // 起來先暫停？（11-03 代定：舊 state 的 paused 是 true）
+    read_old_state();              // 先接回 paused 與 ctl_seq；第一輪讀 ctl 前不得覆寫舊 state
     while (true) {
         if (signal_got() != 0) {
             return end(128 + signal_got(), "stopped");

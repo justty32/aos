@@ -1,4 +1,4 @@
-{"summary": "問一次 OpenAI 相容端點",
+{"summary": "Ask an OpenAI-compatible endpoint once",
  "time_ms": {"val": 5000, "max": 120000},
  "resource": ["llm"],
  "side_effect": false,

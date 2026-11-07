@@ -19,7 +19,7 @@ int main() {
 }
 ```
 
-`parse_cli` 的內建短名表與 Python 的 `aos_flags.SHORT` 同義；`parse_cli` 第五參數只開選中的短名，`-h` 隨 help 內建。短名不黏值、不併、不帶 `=`；aos-exec 開 `-w`／`-s`，aos-llm ls 開 `-j`。
+`parse_cli` 第五參數從常用預設表選短名，第六參數可傳各支自己的短名對照；各支可不同義，`-h` 隨 help 內建。`--help` 只在旗標位置觸發，作為前個旗標的值、第一個位置參數後或 `--` 後都照字面傳入。短名不黏值、不併、不帶 `=`；aos-exec 開 `-w`／`-s`，aos-llm ls 開 `-j`。
 
 `read_stdin` 先用 `require_stdin_body()` 拒絕終端 stdin（`ArgumentsBad`），請從管線或檔案給內容；讀原始文字的命令也可先呼叫這個檢查。非終端的空輸入仍是 `{}`。
 

@@ -1,4 +1,4 @@
-{"summary": "在工作區裡搬移或改名一個檔或資料夾",
+{"summary": "Move or rename a file or folder in the workspace",
  "time_ms": {"val": 10, "max": 2000},
  "resource": "disk",
  "side_effect": true,

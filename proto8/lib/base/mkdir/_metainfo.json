@@ -1,4 +1,4 @@
-{"summary": "在工作區裡建資料夾（上層一起建）",
+{"summary": "Create a workspace folder, including its parents",
  "time_ms": {"val": 10, "max": 1000},
  "resource": "disk",
  "side_effect": true,

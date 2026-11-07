@@ -13,7 +13,7 @@ Errors use stderr: `PROGRAM: error: Code reason`, usually exit 1. `PROGRAM: warn
 - `SessionBad`: the screen is answering; wait before close, stop or rm.
 - `AddRejected`/`CtlRejected`: read the daemon or judge's code and reason. Fix that cause before sending again.
 
-ctl add/rm/start/stop/sleep/wake wait for replies; `--timeout-s S` defaults to 30. `DaemonMissing` can mean no daemon was found OR no reply arrived. `WaitFailed` means the expected result did not arrive; a kernel may be non-running, or a reply arrived but the table did not reach the result.
+ctl add/rm/start/stop/sleep/wake wait for replies; `--timeout-s S` defaults to 30. `DaemonMissing` means `AOS_DAEMON` is unset or its directory does not exist. `DaemonFailed` means the daemon is configured and its directory exists, but no reply arrived within the timeout. `WaitFailed` means the expected result did not arrive; a kernel may be non-running, or a reply arrived but the table did not reach the result.
 
 A timed-out letter stays queued and may still be applied later. Do not send duplicates in a row. Check `aos-daemon-ctl ping`, `ctl ls` and `ctl state`; retry later only after checking the result.
 

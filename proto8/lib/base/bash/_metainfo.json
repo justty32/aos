@@ -1,4 +1,4 @@
-{"summary": "在工作區裡用 bash 跑一行指令，回合在一起的輸出",
+{"summary": "Run one command with bash in the workspace and return the combined output",
  "time_ms": {"val": 500, "max": 300000},
  "resource": "cpu",
  "side_effect": true,

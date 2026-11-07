@@ -17,7 +17,7 @@ flowchart LR
 
 <details><summary>systemd user unit：安裝、啟停</summary>
 
-改好 [aos-root.service](aos-root.service)，複製到 `~/.config/systemd/user/aos-root.service`：
+改好 [aos-root.service](aos-root.service)，複製到 `~/.config/systemd/user/aos-root.service`。把同夾 [root.env.example](root.env.example) 複製成 `~/.config/aos/root.env`，填入 `LITELLM_KEY` 與 service 使用的跨樹 hub 路徑 `AOS_LLM_KERNEL`、`AOS_KERNEL`；未使用的 hub 行刪掉。unit 用 `EnvironmentFile=%h/.config/aos/root.env` 讀入，子 proc 繼承這些值；LiteLLM 沒設金鑰驗證時，`LITELLM_KEY` 填任意非空值亦可（11-07 使用者裁定 sol 審查 #35）。
 
 ```sh
 systemctl --user daemon-reload
@@ -26,7 +26,7 @@ journalctl --user -u aos-root.service -f
 systemctl --user stop aos-root.service
 ```
 
-`Restart=always` 包含正常退出；要停必須用 systemctl stop。範例 `KillMode=mixed` 先只向根送 TERM，讓它逐層收工；60 秒還未收完，systemd 可收整個 unit。這種外部強制收尾與 daemon crash 後接回不同，按需要調整期限。公司 WSL 若無 systemd，此例標「家機才有」。
+`Restart=always` 包含正常退出；要停必須用 systemctl stop。範例 `KillMode=mixed` 先只向根送 TERM，讓它逐層收工；60 秒還未收完，systemd 可收整個 unit。在 systemd 底下，根當掉＝systemd 把整個 unit 的子行程一起收掉，再重跑整棵樹；子從 stack 續跑，不是接回原本活著的行程。維持 `KillMode=mixed`（11-07 使用者裁定 sol 審查 #21）。公司 WSL 若無 systemd，此例標「家機才有」。
 
 </details>
 

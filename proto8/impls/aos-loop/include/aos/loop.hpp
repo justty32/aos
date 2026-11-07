@@ -13,7 +13,7 @@
 //   Loop            反覆跑的程式的骨架（aos-loop 直接用、aos-daemon 繼承；10-21 傍晚）：
 //                   讀設定（旗標 ＞ 設定檔 ＞ 預設：exec／max／interval_ms／ctl／state）、每次讀 ctl 窗（11-03 起一道指令、新的才照做）→ tend() → 跑一次 → 寫 state 窗（＋write_more；11-02 起有變才寫）、
 //                   --enable-logs 時每跑完一次在 stdout 印一行 log（11-02；11-02 晚改預設不印）
-//                   新 ctl 處理完（含拒用壞指令）、身體跑完一次會更新 responded_at；基準線、檔不在、睡著不更新
+//                   新 ctl 處理完（含拒用壞指令）、身體跑完一次會更新 responded_at；已套用過的第一道、檔不在、睡著不更新
 //   write_window    透過 aos-util write_text 寫窗：先寫同資料夾的 .名字 再改名（N-05），一行 JSON
 //   proc_fields     state 裡「這支程式是誰」的欄位 {pid, started_at_ticks, boot_id}（11-02 原 heartbeat：心跳拿掉、recorded_at 收掉）
 //   resolve_keys    轉交 aos-directive；設定檔、ctl 的指示詞（10-23 晚：aos 讀的 JSON 都解）：整份先換一層，再把自己讀的那幾格整個解，其他 key 不碰
@@ -177,7 +177,7 @@ struct Defaults {
 // cmd／max／interval_ms／seq 整個解（起點＝ctl 的資料夾），子類別多認的 key 在 check_ctl 裡自己解；ctl 解不開＝整份不採用。
 // ctl＝一道指令（11-03 使用者「還是用指令吧」，thinking 2026-11-03-ctl-commands）：{"cmd": "pause"／"resume"／"stop", "max", "interval_ms", "seq"}，
 // 都選填；max／interval_ms 寫了＝從現在起用它、null＝回設定檔（旗標）的值、沒寫＝不動；seq 只回音（state 的 ctl_seq）。
-// 新舊比內容：解完的那份跟上一次讀到的不一樣才照做一次；起來第一次讀到的（含檔不在）當基準線、不執行；檔不見了＝之後寫的都算新的。
+// 新舊比內容：解完的那份跟上一次讀到的不一樣才照做一次；起來第一次僅在 seq 與舊 state 的 ctl_seq 相同時略過，其餘照做；檔不見了＝之後寫的都算新的。
 // 暫停中記在 paused_（state 的 paused）；起來時開了 state 窗、舊的 state.json 的 paused 是 true＝起來先暫停（11-03 代定「繼續暫停」）。
 // 每次：有排著的訊號 → 結束 128＋N；讀 ctl（新的指令才照做）→ tend() →
 // stop 過就結束（0）、跑滿就結束（0）→ 暫停中或還沒到時間就睡一下（最多 1 秒，收到訊號就醒）回頭再看 →
@@ -256,7 +256,7 @@ private:
     int main_loop();
     int end(int code, const std::string& phase);
     void read_ctl();              // 讀 ctl：新的指令才照做（改 paused_、stopping_、max_、interval_ms_、ctl_seq_）
-    void read_old_paused();       // 起來時：舊 state.json 的 paused 是 true＝先暫停（11-03 代定）
+    void read_old_state();       // 起來時：接回舊 state.json 的 paused 與有效 ctl_seq（第一道去重用）
     void write_main(const std::string& phase, const Json& code, const Json& me);   // write_state 的 state 窗那份（有變才寫）
     int signal_got();             // 第一個收到的訊號（記住；0＝沒有）
     void nap(double secs);        // 睡 secs 秒（最多 1 秒），收到訊號就提早醒
@@ -264,7 +264,7 @@ private:
     long long runs_ = 0;
     std::optional<long long> max_base_;   // 設定檔（旗標）的 max：ctl 寫 null 回這個
     long long interval_base_ = 0;         // 設定檔（旗標）的 interval_ms：ctl 寫 null 回這個
-    bool ctl_seen_ = false;       // 讀過第一次 ctl 沒（第一次＝基準線、不執行）
+    bool ctl_seen_ = false;       // 讀過第一次 ctl 沒（第一次比舊 state 的 ctl_seq 去重）
     std::string ctl_last_;        // 上一次讀到的 ctl（比新舊用：好的＝解完那份的字串、壞的＝"!"＋原文、檔不在＝空）
     Json ctl_seq_;                // 最後一道照做的指令的 seq（null＝沒帶或還沒有）
     Json ctl_warning_;           // null 或字串

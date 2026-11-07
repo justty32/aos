@@ -1,4 +1,4 @@
-{"summary": "在工作區裡一個檔做幾處照字面的替換，一處不合整個不改",
+{"summary": "Make several literal replacements in a workspace file; if any replacement does not match, leave the whole file unchanged",
  "time_ms": {"val": 30, "max": 2000},
  "resource": "disk",
  "side_effect": true,

@@ -17,7 +17,7 @@
 |---|---|
 | [`README.md`](../../../../../proto8/knowledge/aos/README.md) | aos in one page |
 | [`agents/README.md`](../../../../../proto8/knowledge/aos/agents/README.md) | Other agents |
-| [`agents/thought.md`](../../../../../proto8/knowledge/aos/agents/thought.md) | 小念頭：一件事，只拿結論 |
+| [`agents/thought.md`](../../../../../proto8/knowledge/aos/agents/thought.md) | Small thought: one task, just the conclusion |
 | [`brain.md`](../../../../../proto8/knowledge/aos/brain.md) | Asking the brain |
 | [`cli/README.md`](../../../../../proto8/knowledge/aos/cli/README.md) | Commands for humans and external agents |
 | [`cli/agent.md`](../../../../../proto8/knowledge/aos/cli/agent.md) | Agent lifecycle |
