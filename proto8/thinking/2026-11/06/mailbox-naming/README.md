@@ -49,3 +49,9 @@ mailbox 命名調查：名字帶 mailbox 的東西如果是有序的，要不要
 
 - 任務背景寫「llm kernel 的 `requests/`」：程式裡 llm kernel 的收件箱是 `$AOS_STACK/mailbox/`，`requests/` 是判官的收件箱；llm kernel 另有每封信資料夾裡的 `request.json`（問腦 proc 的 stdin）。
 - 讀碼順手看到的邊緣（判官轉寄有序信換號後回信對不上舊名等）記在 [01 末段](01-盤點.md)，跟命名無關。
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #31-1：「31-1A」——R14 保留嚴讀法，並明記 10-30 使用者曾說請求也可叫 queue。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #31-2：「31-2A」——確認 mailbox 不因支援有序信就改名 _queue。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

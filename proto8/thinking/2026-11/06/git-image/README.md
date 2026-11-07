@@ -54,3 +54,15 @@ image 本身還是會線性長。長的是 agent 的記憶 `history.jsonl`，這
 ## 調查數據的適用範圍
 
 上面的 0.8 GiB 與 [03](03-實測數據.md) 的 E 模式，是當時保留 `think/request.json` 的量測／外推。裁定擋掉它後可少帶這份 history 副本；原始數據保留，不當成新版實測。
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #19：「19A」——image＝stack＋ws，定義是外部原始碼；完整搬家說明集中在 C-79。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #20-1：「20-1A」——stderr、live、turns、transcripts 等 log 維持擋在 image 外，留原機。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #20-2：「20-2A」——歸檔信 archive/ 跟著 image 走，不再忽略。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #20-3：「20-3A」——新機只清 think/request.json，不清其他被 gitignore 擋住的檔。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #29：「29A」——表上明接的 wait 11 是分岔；腦設定改過對不上也退 11，一併認可。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

@@ -74,10 +74,26 @@
 4. thought 子名 `<UTC 奈秒>.<4 位亂數>`；`_tooldef.json` 加選填 `env`（變數名陣列）。
 5. 子 daemon 用第三種 proc 寫法 `{"daemon": …}`；退了照表重起、連 3 次失敗留 `stopped`；`restart_on_stuck` 連環同上限。
 6. `ls`／`listen` 讀檔不寄信；`ctl` 的 pause／resume 照 N-10 直接寫子 ctl 不改。
-7. 不加新錯誤代號（`DaemonMissing` 沿用）；aos-llm `warn_idle` 只印「沒回」不下判斷。
+7. 原代定不加新錯誤代號已由 11-07 使用者裁定 sol 審查 #28 取代：沒設／目錄不在報 `DaemonMissing`，時限內沒回信報 `DaemonFailed`；aos-llm `warn_idle` 只印「沒回」不下判斷。
 8. 第一波（P1～P5b）去 pid、第二波（P6～P9）監管樹；S6＝P3；P1、P2 排在 S7 之前。
 
 ## 排程
 
 - 11-05 晚只規劃、不改程式（補充 1）。S6 等本夾定案（已定）後照 P3 做；S0～S5 照 arch-refactor 原計畫。
 - 11-06：`--env-file`／`--envs` 改（aos-tools、aos-agent tools add）；P1→P2→P3（＝S6）→P4（已做）→P5／P5b；S7、S8 之後 P6～P9。
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #15-1：「15-1A」——被叫時間採子 ctl.json 修改時間，使用者確認可接受。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #15-2：「15-2B*」——首次讀 ctl 只略過與舊 state.ctl_seq 相同的已套用指令，其餘照做並回音；PhaseBad 限制照舊。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #21：「21B*」——systemd 維持 KillMode=mixed；根當掉整組含子收掉重跑，子靠 stack 續跑。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #28：「28A」——daemon 有回應機制但時限內沒回信報 DaemonFailed；DaemonMissing 留給沒設或目錄不在。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #30：「30A」——--env-file 維持登記當下讀檔存內容，使用者已裁。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #34-5：「34-5A」——父讀 loop 子 state 的 phase==done 算看是否已結束，使用者裁定維持。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #35：「35A」——真腦前明示 LITELLM_KEY；systemd 以 EnvironmentFile 載入 root.env。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

@@ -61,3 +61,11 @@
 - **11-06 R 隊完成 E2 的 `AOS_TICK` 半**：C++ `aos-util`、Python `aos_ws`／`tool_io` 缺檔時走共用 warning 格式（每行程每路徑一次），仍當 0、不建檔；未設／空 env 仍退牆鐘、空檔仍是 0、不提醒。實測 `aos-post send` 缺檔時印 `aos-post: warning: AOS_TICK points to a missing file; treating the clock as 0`、退 0，信封 `sent_at_ticks` 為 0；Python 兩入口及同一行程混用也驗過。`AOS_KERNEL` 半 11-06 晚 B 隊完成（見下）。
 
 - **11-06 晚 B 隊完成 E2 的 `AOS_KERNEL` 半**：C++ `find_host` 檢查非空覆寫信箱的 `new/`，不是資料夾就走 `aos::warn`（每行程每絕對路徑一次）；仍照原路徑寄掛信、不改退路，失敗仍回 `LaunchFailed`。缺路徑、同行程重複、不同路徑、fork 子行程及有效信箱都已實跑。
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #8：「8A」——aos-agent 經判官地址指不到仍報 MailboxMissing，退回 daemon 信箱會繞過判官。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #30：「30A」——--env-file 維持登記當下讀檔存內容，使用者已裁。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #35：「35A」——真腦前明示 LITELLM_KEY；systemd 以 EnvironmentFile 載入 root.env。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

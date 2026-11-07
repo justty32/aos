@@ -108,3 +108,9 @@
 - 工具 `cp -r` 出 repo、`tool_io.py` 一起複製、資料夾唯讀：照跑；工具資料夾是捷徑、或只有三個檔是捷徑、掛在 repo 外 agent 的 `tools/`：realpath 找得到 lib，照跑。
 - 複製出 repo、沒帶 `tool_io.py`、PATH 上也沒有 aos-tools：原本 `ModuleNotFoundError` traceback → 11-05 晚修：26 支 `_entry` 的 import 包一層 try，印 `工具名: error: ModuleMissing tool_io.py not found (…)`（名字取工具資料夾名；給腦用的 stdout 也印、judge 只 stderr）、退 1。代定（可翻案）：代號用 `ModuleMissing`（不新增縮寫；要更具體可改 `ToolIoMissing`，得先把 io 進縮寫表）。
 - bash-boxed（沙箱綁 `tool_io.py` 唯讀）照跑、逾時照收。
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #34-1：「34-1B*」——--help 只認旗標位置；作旗標值、首個位置參數後與 -- 後都不印說明。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #34-2：「34-2B*」——給 LLM 看的 prompt、persona、工具說明也用英文，文件與程式註解維持原語言。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

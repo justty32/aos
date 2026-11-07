@@ -84,3 +84,15 @@
 ## 使用者看過 tools 覆蓋層（11-05）
 
 「tool差異我看了，我覺得OK。然後其實不用管舊版本遷移這件事，我們在proto8內，就是一律當成沒有舊版。畢竟是prototype-8」——覆蓋層照現狀定案；「舊的整份副本當整份取代」這類舊版處理不需要，規矩記在 [user.md 舊版遷移](../../../../../wf/workflows/common/user.md)。
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #15-2：「15-2B*」——首次讀 ctl 只略過與舊 state.ctl_seq 相同的已套用指令，其餘照做並回音；PhaseBad 限制照舊。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #19：「19A」——image＝stack＋ws，定義是外部原始碼；完整搬家說明集中在 C-79。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #20-1：「20-1A」——stderr、live、turns、transcripts 等 log 維持擋在 image 外，留原機。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #20-2：「20-2A」——歸檔信 archive/ 跟著 image 走，不再忽略。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #20-3：「20-3A」——新機只清 think/request.json，不清其他被 gitignore 擋住的檔。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

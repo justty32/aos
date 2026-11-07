@@ -46,3 +46,13 @@
 5. **no-pid 已落地的那批（N-17 判活只剩 daemon、別人不碰 pid、ctl 改寄信、aos-lock T2）要不要跟著「降成建議」放寬？**（[10 方向題 C](10-可遷移性原則草稿與root例外.md)）**本夾不判、兩邊後果列在那裡**；頂層傾向不放寬（沙箱一個信箱、判官能管權限、用可遷移性判準看 no-pid 每一條都通過，放寬只剩便利）。
 
 另兩題候選不上榜、照 09 推薦代定（可翻）：sandbox 命名空間先不改成 daemon 認 `sandbox` key（[09-續 方向題 B](09-續-偏離建議的地方與方向題.md)）；改定義「什麼時候生效」不統一（[04](04-韌體與定義-能借鑒.md)）。代定全文在 [08](08-天然差異.md)。
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #1：「1B」——判官範本開排隊，程式沒寫 queue 時仍預設關。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #19：「19A」——image＝stack＋ws，定義是外部原始碼；完整搬家說明集中在 C-79。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #21：「21B*」——systemd 維持 KillMode=mixed；根當掉整組含子收掉重跑，子靠 stack 續跑。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #34-4：「34-4A」——降優先權與釘核先由 exec 包 nice／taskset，不新增 daemon 的 limits.nice。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

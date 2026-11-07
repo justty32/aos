@@ -87,3 +87,7 @@
 ## 沒測到的
 
 真的改系統時間、真的磁碟滿（ENOSPC 時 rename／mkdir 也會失敗）、NFS 上的 flock；判官模式 2 與 llm kernel 在壓力下；procs_ctl.json 整份宣告做風暴；子項每拍 MB 級 stderr。
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #15-2：「15-2B*」——第一拍尚未套用的 resume 也生效；舊 state 同 seq 才不重做。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

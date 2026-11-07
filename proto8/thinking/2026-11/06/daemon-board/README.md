@@ -45,3 +45,11 @@
 3. 中斷優先序不加信封欄位：「要分優先＝多開信箱，一箱一函數」（body-protocol 已裁「分權多開信箱」順勢延伸；aos-post 明寫不改）。
 4. 省電模式表寫在 aos-daemon docs/03、不進 CONCEPTS；P6 做完（整樹睡成立）再寫。
 5. ~~「真 halt」（SIGSTOP／SIGCONT）記成軟凍候選~~ 11-06 使用者：「我想要的是暫停後能遷移」——SIGSTOP 行程與記憶體搬不走、**不符合目標、不採**；D1「先只有硬凍」不動。
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #11：「11A」——信裡的毫秒指跨樹牆鐘語意而非 tick，ISO／秒格式照舊，不宣稱已改成毫秒格式。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #12：「12A」——時鐘停住時，判卡住、鎖租約、tick 逾時一起停；要它們走就 resume 時鐘。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #19：「19A」——image＝stack＋ws，定義是外部原始碼；完整搬家說明集中在 C-79。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

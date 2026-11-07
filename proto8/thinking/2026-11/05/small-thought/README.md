@@ -88,3 +88,9 @@
 ## 11-06 改（no-pid P4）
 
 上面代定 5、7 與邊緣測試裡的「搶號」和紀錄 `running PID`，已由 no-pid P4 改成子名每次唯一＋紀錄寫租約（`running <到期時刻>`），對帳不再看 pid（[no-pid 11-P4實作結果](../no-pid/11-P4實作結果.md)）。
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #34-2：「34-2B*」——prompt、persona 與工具說明英文，文件與註解保持原語言。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #36：「36A」——agents ask 比照 thought 不設 tick 固定上限，秒數亦照 thought 的有限正數規則。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

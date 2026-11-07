@@ -60,3 +60,21 @@
 3. aging 改 tick 的形狀：`kernel.json` 選填 `aging_ticks`（預設 3）、`queue.json` 記 `seen_at_ms`＋`seen_at_ticks`（有 `AOS_TICK` 才寫）、沒 tick 退牆鐘（兩鐘規則）。
 4. 出廠 debug on 落在 `kernel/llm-kernel`、`kernel/daemon-judge` 兩個範本與試驗場（`templates/` 裡沒有 daemon 範本）。
 5. 名詞表板子欄已滿 12 行，補三行時把 `AOS_TICK_INTERVAL` 併進 tick 那一行。
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #1：「1B」——判官範本開排隊，程式沒寫 queue 時仍預設關。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #3：「3B*」——keep_ordered 可選保有序且預設關；關時以尾名一般轉寄，開時記對照並代回原信名。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #4：「4A」——--on-queued ok 不帶排隊期限，可能永遠排著。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #6：「6A」——排隊期限維持牆鐘；凍住醒來首輪一起拒絕已過期信，要跨凍住用 --on-queued ok。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #7：「7A」——LLM 總機範本保留一格給 high，reserved 設為 {"high": 1}。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #8：「8A」——aos-agent 經判官地址指不到仍報 MailboxMissing，退回 daemon 信箱會繞過判官。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #34-4：「34-4A」——降優先權與釘核先由 exec 包 nice／taskset，不新增 daemon 的 limits.nice。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #35：「35A」——真腦前明示 LITELLM_KEY；systemd 以 EnvironmentFile 載入 root.env。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

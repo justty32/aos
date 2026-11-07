@@ -64,3 +64,11 @@
 | [06-實作步驟草稿](06-實作步驟草稿.md) | 步 0～6（小步、每步 build 得過），標哪幾步跟 portable-flow 無衝突可以先做 |
 | [08-實作結果](08-實作結果.md) | 11-05 隊長實作結果：做了什麼、實作時代定（可翻案）、刪的舊版相容、實測、已知限制 |
 | [07-llm-daemon佈局](07-llm-daemon佈局.md) | llm kernel 自己一台 daemon（合一）：`~/llm_kernel` 長什麼樣、`AOS_LLM_KERNEL` 的值＝stack、信箱固定 `mailbox/`、多台 agent daemon 共用；「設 daemon 都是指其 stack」三個選項（推薦放第一）；要轉給改名隊的語意改動 |
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #3：「3B*」——keep_ordered 可選保有序且預設關；關時以尾名一般轉寄，開時記對照並代回原信名。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #7：「7A」——LLM 總機範本保留一格給 high，reserved 設為 {"high": 1}。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #35：「35A」——真腦前明示 LITELLM_KEY；systemd 以 EnvironmentFile 載入 root.env。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

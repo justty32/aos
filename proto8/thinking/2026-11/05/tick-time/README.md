@@ -39,3 +39,9 @@
 - 01 盤點只掃了 proto8/impls 與 bin 的 grep 結果；`lib/` 11-06 補掃在 [apply-ideas 01 § D](../../06/apply-ideas/01-逐項落點.md)。
 - 02 的時鐘檔格式只定最小（一個整數），要不要帶 `interval_ms` 旁檔、`started_at` 給 sleep 邊緣用，列在 02 末，未定。
 - 沒改程式、沒改 CONCEPTS／NORMS；衝突見 02 末段，要使用者點頭才改條文。
+
+## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
+
+11-07 使用者裁定 sol 審查 #11：「11A」——信裡的毫秒指跨樹牆鐘語意而非 tick，ISO／秒格式照舊，不宣稱已改成毫秒格式。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+
+11-07 使用者裁定 sol 審查 #12：「12A」——時鐘停住時，判卡住、鎖租約、tick 逾時一起停；要它們走就 resume 時鐘。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
