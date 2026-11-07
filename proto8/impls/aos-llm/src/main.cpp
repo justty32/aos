@@ -1,8 +1,8 @@
 // main.cpp：aos-llm 命令列——寄請求信進 LLM kernel 的信箱、收回信的基礎工具（定位同 aos-post；thinking 11-04 think-as-function 02/01 § 5）。
 //
 //     aos-llm send [--priority P] --reply-to BOX < body.json   寄（非同步、不建 sender.flock）；stdout 印信件名稱、退 0
-//     aos-llm recv [--full] BOX 信件名稱                               收：到了印 body.message 一行、0；沒到 10
-//     aos-llm ask [--priority P] [--full] < body.json                  同步：寄、等、印 body.message、0
+//     aos-llm recv [--full] BOX 信件名稱                               收：到了印 body.message 一行、0；--full 印完整 body（含 usage、model）；沒到 10
+//     aos-llm ask [--priority P] [--full] < body.json                  同步：寄、等、印 body.message、0；--full 印完整 body（含 usage、model）
 //     aos-llm regret 信件名稱                                 撤回還在 new/ 的信；已被認領＝RegretFailed
 //     aos-llm ls [--json]                                     列 kernel 的包（讀 $AOS_LLM_KERNEL 的 stack 底下 endpoints.json）：一行一包；沒窗＝EndpointsMissing
 //

@@ -49,11 +49,14 @@ tools) and write $AOS_STACK/think/request.json. Exit 0 = written (go wait); 10 =
 to the system message (skipped when NAME is not among the tools).
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
+USAGE = HELP.splitlines()[0].removeprefix("usage: ")
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
 MEMORY_TIMEOUT_S = 30                           # --memory 叫根的逾時（11-05 夜第二輪邊緣：原本沒逾時，memory 卡住＝think 格卡住）
 
 
 def die(code, reason):
+    if code == "ArgumentsBad":
+        reason = "%s (usage: %s)" % (reason, USAGE)
     aos_flags.die("agent-fsm", code, reason)
 
 
@@ -67,11 +70,11 @@ try:
 except aos_flags.Error as e:
     die(e.code, e)
 if rest:
-    die("ArgumentsBad", "unexpected argument %s (usage: brain.py [--system FILE] [--tools FILE] [--memory NAME])" % rest[0])
+    die("ArgumentsBad", "unexpected argument %s" % rest[0])
 # 收齊重複值再取最後一個：任一次空值都照舊報錯，不讓後面的值蓋掉錯誤。
 for flag, items in values.items():
     if any(not value for value in items):
-        die("ArgumentsBad", "%s needs a non-empty value (usage: brain.py [--system FILE] [--tools FILE] [--memory NAME])" % flag)
+        die("ArgumentsBad", "%s needs a non-empty value" % flag)
 opts = {flag: items[-1] for flag, items in values.items()}
 history_mode = opts.get("--history", "full")
 if history_mode not in ("full", "task"):
