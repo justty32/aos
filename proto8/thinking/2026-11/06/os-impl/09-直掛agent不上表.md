@@ -113,3 +113,9 @@ $ aos-daemon-ctl ls
 - **exec 型退非 0 也留表**（例：`phase` 標 `failed` 或沿用 `stopped`，帶 `reason`＝stderr 最後一行，要 `rm` 才清）：`ls` 一眼看到 `InstanceExists`。代價：翻 N-28 的「不留名單」與「exec 型只有跑和拔」兩句使用者原話；`start` 收不收它要另定；短命的一次性工作失敗會在表上堆著要人清。
 - **aos-daemon-ctl add 認出 aos-agent 介面就拒或自動改掛身體**：一步到位。代價：下層（aos-daemon-ctl）要認上層（aos-agent 的 `interfaces.json`），違反單向分層（conventions「下層不可以知道上層存在」）；不推薦。
 - （不列為選項）改 agent 範本 `_entry` 不再掛自己＝翻 11-05 題 4 裁定；aos-agent 在撞到「自己」時換代號＝認名型特例，照 C-52 續第一次就消，也不推薦。
+
+## 使用者裁定（11-07）
+
+方向題「要不要讓 `ls` 看得到這種失敗？」使用者選 **A：維持現狀，只補文件**。原話：「A。」
+
+已落實（與本段同一個 commit，訊息開頭「os-impl 09 裁定 A」）：`aos-daemon-ctl add --help` 補兩句（定義資料夾＝跑它的 `_entry`、agent 的 `_entry` 掛自己所以不留表、改用 `aos-agent ctl add` 或給身體；`applied` 只表示信已套進名單）；[cmd/docs/03](../../../../cmd/docs/03-aos-daemon-ctl.md) 補同一段，並把 eca 時代的舊例子 `add ../../agents/bob -- …` 換成 `add ./hello.sh -- world`。另兩個邊緣狀況（`--name` 被吃掉、這條路上 `AOS_KERNEL` 會經判官）使用者沒回應，照通則不處理。

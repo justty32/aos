@@ -45,6 +45,11 @@ allowed), anything else = exec type (runs once; ARGS after -- are appended). Pri
 letter name, then waits up to --timeout-s seconds for the letter to leave new/ (still there = a
 warning line, exit 0; it is applied when taken).
 
+A definition folder runs its _entry, as aos-exec would. An agent folder's _entry attaches the
+agent itself, so this proc ends at once and is not left on the table; to attach an agent, use
+aos-agent ctl add, or give its body: add -n bob --def bob bob/body.json.
+"applied": true only means the letter was applied to the table, not that the proc still runs.
+
 flags:
       --timeout-s S    positive claim timeout (default: 3); excludes --reply-to
       --reply-to BOX   send only; the reply ({"applied": true|false, ...}) goes to BOX
