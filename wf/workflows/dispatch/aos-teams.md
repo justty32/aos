@@ -13,8 +13,7 @@
 - **「簡單工作」的界線**（使用者 11-06 確認：「1.對。2.是。」）：雜活、純文字小改、查找盤點、跑指令收結果才算簡單，給 sonnet／terra。**碰程式碼邏輯、改寫使用者的概念／規範條文不算簡單**，照舊不給 sonnet（09-30「不要 sonnet」「就 opus」；10-19 見 [common/user「子 agent 模型」](../common/user.md)），codex 那邊用同一把尺、不給 terra。
 - **讀規矩（第 1、5 句）**：派出去的 agent 做事前先通讀 wf/ 規矩（AGENTS.md、WORKFLOWS.md、common/user.md、common/conventions.md 等），**簡單工作與雜活例外**；隊員與其子 agent 同樣適用。任務書開頭寫明，並要隊員往下派時也寫進子任務書。例外對子 agent 一樣成立（雜活子 agent 可免讀）——使用者 11-06 確認（「1.對。2.是。」）。
 - **一般 agent 再派子 agent，模型隨意**（第 1 句）；隊員那層照上面第 5 句的分工。
-- **要思考的交 Fable**（使用者 10-13、10-20：高難度思考＆規劃派 fable，盡量少用）：11-06 原話沒提 fable，照舊——頂層代定、可翻案。使用者 11-06：「我們自己的fable subagent規劃者，他也可以派fable子agent」，又說：「不然把整個大架構都堆在一個fable身上，壓力太大」。
-  - **公司那台**：fable 預設照舊開自家 subagent（盡量少開），使用者說「走 wsl claude」那次才走 WSL（公司帳號），見 [01-公司WSL](aos-teams/01-公司WSL.md#fable-走-wsl-claude使用者說了才走)。
+- **fable→opus→gpt（11-07 午起）**：fable 只做頂層規劃／設計，只讀備好的資材（opus 計劃→gpt 收集→opus 匯總成簡報），不自行廣讀 repo；只在輪與輪之間總覽與總建議，gpt 嘗試途中不參加。opus 據 fable 規劃設計進一步架構，輪內負責架構、權衡決策、審 gpt、主導流程；gpt 照 opus 設計施工／嘗試。舊「要思考的交 Fable」11-07 起改為上述；[原話與舊註](aos-teams/03-使用者原話.md#11-07-午fable-分工)。
 - **程序數要少（第 3、6 句）**：codex、claude CLI 都是 nodejs，跑在使用者也在用的機器上，所以**每隊同時最多兩個 CLI 程序**（一個 codex、一個 claude），子 agent 跑在隊員自己的程序裡、不另開 CLI。同時開幾隊由頂層看負載定。頂層開一個**背景監看**，定時看負載、可用記憶體、CLI 程序數，**超門檻才通知**；通知了就叫各隊收斂子 agent 或輪流跑。純改檔負擔不大，「稍微監控」即可，不逐次回報。各機門檻與指令見 [公司 WSL](aos-teams/01-公司WSL.md)。
 - **codex 要設 goal（11-06）**：codex 愛做到一半就說做完，提示參數要以 `/goal <完成條件>` 開頭，指令與核對見 [02](aos-teams/02-指令沙箱與試玩.md#codex-呼叫與沙箱)。
 - **權限邊界（11-06）**：codex 隊員用 `-s workspace-write`（它自己的沙箱），claude 隊員用 `--permission-mode acceptEdits`＋`--allowedTools` 列需要的工具。**agent 不加全繞過沙箱／權限的旗標**——11-06 頂層試著這樣交代時被 Claude Code 的安全檢查擋下：這是使用者的權限邊界，要開由使用者親自開（例：家機 `~/.codex/config.toml` 的 `danger-full-access` 是使用者自己設的，照用）。

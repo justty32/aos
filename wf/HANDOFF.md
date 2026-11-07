@@ -16,7 +16,7 @@
 
 1. **授權**同下一條（隨意 push；11-07 隊形：opus 隊長＋subagent＋最多一個 codex，gpt 只施工／文件／網頁／雜活，能交 gpt 就交 gpt）。家機 codex 要連 LiteLLM 得拿掉 `-s`（照用使用者 `~/.codex/config.toml`），見 [arknights-kb 交棒](../proto8/thinking/2026-11/07/arknights-kb/交棒.md)。額度約 13:30 重置。
 2. **上午做完並 push**：sol 審查 34 列——「翻」項全修（[10](workflows/refactor/reports/2026-11-07-sol審查/10-修正結果.md)）、使用者網頁裁定 32 題全落實（[11](workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)；第 7、35 題試驗場那半等刷新 `~/code/playground` 時補）；arknights 第一輪跑通（[04](../proto8/thinking/2026-11/07/arknights-kb/04-第一輪實跑.md)；4.7 萬 token／條、重跑一致 0%、14 個 aos 不足；`memory_write` W1～W4 進 main）；使用者對隊長六題已裁（arknights-kb README 末段：節點英文、內文照語料原文、給人看走白話附屬庫或問答 agent）。
-3. **接手先做**：開新 opus 隊長跑 arknights 第二輪，照 [交棒](../proto8/thinking/2026-11/07/arknights-kb/交棒.md)＋使用者六題裁定（內文照原文 → LLM 只做切分／對位，不改寫）；先修 aos 不足：agent 歷史越長越貴、kernel 轉交 token 計數歸零。互動頁抽工作流（SESSION-LOG 第一行）等使用者說。頂層負載監看（80%）要重開。
+3. **接手先做**：第二輪起照 aos-teams 11-07 午的 fable 分工：fable 只做頂層規劃且只讀備好的資材（opus 計劃→gpt 收集→opus 匯總），opus 據此設計架構並主導、審 gpt，gpt 施工；fable 只在輪與輪之間總覽與總建議。開新 opus 隊長跑 arknights 第二輪，照 [交棒](../proto8/thinking/2026-11/07/arknights-kb/交棒.md)＋使用者六題裁定（內文照原文 → LLM 只做切分／對位，不改寫）；先修 aos 不足：agent 歷史越長越貴、kernel 轉交 token 計數歸零。互動頁抽工作流（SESSION-LOG 第一行）等使用者說。頂層負載監看（80%）要重開。
 4. 桌面：`aos-sol審查-待你裁.html`（已回）、`aos-arknights第一輪總結.html`（codex 做，頂層沒細驗）。
 
 ## 2026-11-07 上午 家機 alt 帳號頂層（額度剩約 17%）
