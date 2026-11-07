@@ -1,4 +1,4 @@
-# prune 已完成自檢、舊列預覽與共用 rm 下表，測試和 scratch 實測通過，檔案保留、未 commit。
+# prune 已完成自檢、舊列預覽與共用 rm 下表，測試和 scratch 實測通過，檔案保留，已進 `9edcf15d5`。
 
 ← [11-07](../README.md)
 
@@ -6,7 +6,7 @@
 
 > 給aos-daemon-ctl添加一個子指令，用於自檢與清理上次修改是很久以前的
 
-本次依指定設計施工，不動 `~/code/playground*`，不 commit。
+本次依指定設計施工，已進 `9edcf15d5`。
 
 ## 設計與結果
 
@@ -14,7 +14,7 @@
 
 每次先讀 procs_state（含切檔），自檢 stack 不在、既有 ctl 非 JSON 物件、running／stopping 的 pid＋started_at_ticks 與 /proc 不符、stopped 的 reason。ctl 沿用 B：daemon 寫的 loop 設定裡非空 ctl，否則 ctl.json。不解讀子項私有檔案。正常列不印；可疑列一行 `NAME: PHASE: PROBLEM`，仍退 0。
 
-只對 stopped／sleeping 算 stack 資料夾本身與直接底下檔案的最新 mtime，不遞迴；stack 不在算無限久。門檻只收正整數加 s／m／h／d；嚴格早於門檻才入選。沒門檻只自檢；`--apply` 沒門檻與錯時長均 ArgumentsBad、退 1。running／stopping 永不入選。
+只對 stopped／sleeping 算 stack 資料夾本身與直接底下檔案的最新 mtime，不遞迴；stack 不在算無限久。（11-07 晚審註：這句已修正；目前缺 stack 的列不入選，只列自檢問題。）門檻只收正整數加 s／m／h／d；嚴格早於門檻才入選。沒門檻只自檢；`--apply` 沒門檻與錯時長均 ArgumentsBad、退 1。running／stopping 永不入選。
 
 乾跑印 `NAME: would remove (last change TIME)`；apply 與 rm 共用 remove → deliver → send 的完整路徑，直寄 procs_removed，stack／ws 不刪檔；印 `NAME: removed`。rm 原有信名輸出不變，prune 隱去信名。寄信錯誤同 rm。
 
@@ -23,7 +23,7 @@
 - 同列多個問題以 `; ` 接起，控制字元換空白，維持一列一行。ISO 時間使用 UTC、`+00:00`。
 - prune 收 rm 同款 `--timeout-s`／`--reply-to`，互斥及錯誤照舊。`removed` 表示移除請求已寄出；預設等信被認領，給 reply-to 只寄不等。這是 rm 的既有語意，實際下表看 ls。
 - 每封移除信寄出前重讀該列及 mtime，已 start／wake 或最近有改的略過；仍是檔案快照與非同步 rm，沒有跨程序鎖住 start／wake 的原子保證。
-- ctl 讀不了列為自檢問題；mtime 查不了則 StateBad、退 1，不把權限錯誤當很舊。缺 ctl 正常；缺 stack 才算無限久。
+- ctl 讀不了列為自檢問題；mtime 查不了則 StateBad、退 1，不把權限錯誤當很舊。缺 ctl 正常；缺 stack 才算無限久。（11-07 晚審註：這句已修正；目前缺 stack 不入選。）
 - Python 沒有現成 pid 比對介面，因此照 aos-util 的 proc_started_at_ticks 算法：從 /proc/PID/stat 最後右括號後數到第 20 欄。只有 prune 自檢讀 /proc，ls 等原有指令仍不判活。
 - 03 原已超標，新增說明放 04（改後 7955 bytes），未擴大整理範圍。
 
@@ -60,67 +60,6 @@ PYTHONDONTWRITEBYTECODE=1 python3 proto8/impls/aos-daemon/tests/test_lifecycle.p
 
 ## scratch 五種列實測
 
-目錄：`/tmp/aos-daemon-prune.qv2H7L/five-cases`；由 `mktemp -d /tmp/aos-daemon-prune.XXXXXX` 建立，起真 aos-daemon、用真 ctl add。原始命令、前後完整表及核對旗標保留在 `/tmp/aos-daemon-prune.qv2H7L/five-cases/prune-evidence.json`。
+以獨立工作區與真 daemon 驗過兩列舊 stopped、一列缺 stack、一列新 stopped 及一列 running。當時自檢、預覽、apply 與錯誤參數均符合實作；apply 後舊列與缺 stack 列下表，新列與 running 保留，既有 stack／workspace 的檔案與 SHA-256 不變，scratch daemon 已收工。這是 `9edcf15d5` 當時的結果；缺 stack 列當時會入選。
 
-old_a／old_b／missing／new 均實際執行後退 7、留 stopped＋reason；running 執行 300 秒。兩個舊 stack 的每個直接檔案及資料夾本身用 `touch -d '2000-01-01 00:00:00 UTC'` 改舊；missing 的 stack 在停止後刪除。五列共用獨立 workspace，放 keep.txt 驗證不刪。
-
-以下命令皆帶 `--daemon <scratch>/stack`。前三項 stderr 均空；後兩項 stdout 均空。
-
-### `prune`：exit 0
-
-```text
-old_a: stopped: failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed
-old_b: stopped: failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed
-missing: stopped: stack missing; failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed
-new: stopped: failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed
-```
-
-### `prune --older-than 1d`：exit 0
-
-```text
-old_a: stopped: failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed
-old_b: stopped: failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed
-missing: stopped: stack missing; failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed
-new: stopped: failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed
-old_a: would remove (last change 2000-01-01T00:00:00+00:00)
-old_b: would remove (last change 2000-01-01T00:00:00+00:00)
-missing: would remove (last change stack missing)
-```
-
-### `prune --older-than 1d --apply`：exit 0
-
-```text
-old_a: stopped: failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed
-old_b: stopped: failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed
-missing: stopped: stack missing; failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed
-new: stopped: failed to start: exited within 3s of wake/start (code 7): fixture: error: Failed body failed
-old_a: removed
-old_b: removed
-missing: removed
-```
-
-### `prune --apply`：exit 1
-
-```text
-aos-daemon-ctl: error: ArgumentsBad --apply requires --older-than (usage: aos-daemon-ctl [--daemon D] prune [--older-than DUR] [--apply] [--reply-to BOX] [--timeout-s S])
-```
-
-### `prune --older-than 3x`：exit 1
-
-```text
-aos-daemon-ctl: error: ArgumentsBad --older-than needs a positive integer followed by s, m, h or d (for example 7d) (usage: aos-daemon-ctl [--daemon D] prune [--older-than DUR] [--apply] [--reply-to BOX] [--timeout-s S])
-```
-
-### apply 後的表與檔案
-
-apply 後再跑 ls --json，exit 0、stderr 空。當時只剩以下兩列（完整 JSON 在原始 evidence）：
-
-```text
-NAME     PHASE    PID  CODE
-new      stopped  -    7
-running  running  19   -
-```
-
-old_a／old_b／missing 已下表；old_a／old_b 的 stack 及直接檔案全在，前後遞迴檔案清單與 SHA-256 相同；workspace 的 keep.txt 及所有檔案前後相同；missing 的 stack 仍不存在。新 stopped 未刪，running 未受干擾。
-
-核對完成才 SIGTERM 收工 scratch daemon，退 143（訊號結束慣例）；它隨後把 running 留成 sleeping，所以收工後再看檔案不會仍是 running。scratch 證據留著，沒有殘留運行中的 daemon。
+原始輸出見 git 歷史 `9edcf15d5`。
