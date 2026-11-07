@@ -8,6 +8,8 @@
 
 ## 最新進度
 
+- **open｜沙盒（使用者 11-07 檢討點 5）**：家機 codex 要連 LiteLLM 目前不帶 `-s`（照用使用者 config 全權限），使用者「未來還是要找時間做沙盒」——待排：讓 codex workspace-write 沙箱能連 localhost:4000，或其他做法
+
 - **open｜待裁題互動頁→工作流（使用者 11-07「好，就這樣做」）**：等使用者回完桌面 `aos-sol審查-待你裁.html` 這頁、看用起來哪裡不順，再抽成工作流：opus 定工作流與題目資料格式（資料檔進 wf-table 契約），codex 照著寫『資料檔→互動網頁』產生程式；之後各批要使用者裁的題都走這條 → 素材 [sol 審查](workflows/refactor/reports/2026-11-07-sol審查/README.md)
 
 - **open｜special-cases（11-06 K 隊；使用者同日選項框裁六題）**：條文已寫（C-52 讀法「不認身份、可認公開介面」＋判準＋現行表、升格門檻、N-63 K3、C-81 K7；8 處矛盾修 4 處、其餘只列）；程式改法 K-1～K-6（K-2、K-4、K-5、K-6 已做；K-5 11-06 晚家機 [06](../proto8/thinking/2026-11/06/special-cases/06-K5實作結果.md)）排在 [apply-ideas 02 § special-cases](../proto8/thinking/2026-11/06/apply-ideas/02-排程.md#11-06-special-cases-排程k-隊)，P7 開工前照新讀法重設計；`_` 保留等撞名 → [special-cases](../proto8/thinking/2026-11/06/special-cases/README.md)
