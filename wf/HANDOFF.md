@@ -12,6 +12,13 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-07 上午 家機 alt 帳號頂層（額度剩約 17%）
+
+1. **授權**：本 session 隨意 push；使用者出門吃早午餐（約 10:30 起一兩小時），大小決策頂層先做、記代定清單。隊形照 [aos-teams](workflows/dispatch/aos-teams.md) 11-07 版：opus 隊長＋subagent＋最多一個 codex；gpt 系只施工／寫文件／網頁／雜活、不做設計；「能交給gpt的就交給gpt」。本帳號（`CLAUDE_CONFIG_DIR=~/.claude-alt`）五小時額度剩約 17%：到 99% 時各線暫停不結束、寫本檔。
+2. **今早做完並 push**：aos-95 交接信辦完歸檔；C++ 家機重建；sol 審查報告（[README](workflows/refactor/reports/2026-11-07-sol審查/README.md)、09 總表 34 列）＋「翻」項全修（[10-修正結果](workflows/refactor/reports/2026-11-07-sol審查/10-修正結果.md)）；os-impl 09 直掛 agent 不上表（使用者選 A、已落實）；user-advice 20261106 入庫。桌面互動頁 `~/Desktop/aos-sol審查-待你裁.html`，使用者已回（原話在 11-使用者裁定.md）。
+3. **還在跑的兩條線**：① opus 隊長落實使用者裁定 → `wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md`（逐題結果記檔末）；② arknights 歸納進 aos 知識庫（opus 隊長＋fable 規劃＋opus 審＋codex；playground 另開 `~/code/playground-ak/`，`~/repo/narratives/arknights` 唯讀）→ `proto8/thinking/2026-11/07/arknights-kb/`（交棒.md、代定清單、得失、不足清單）。接手者先看這兩個檔再決定續跑。
+4. **待辦**：互動頁抽成工作流（SESSION-LOG 第一行）；第 35 題 LITELLM_KEY 等裁定落實結果看 11 檔；頂層負載監看（超 80% 才通知）是本 session 的 Monitor，換 session 要重開。
+
 ## 2026-11-06 夜 收工 家機（明早接）
 
 1. **授權**：本 session 隨意 push；普通工作 opus、雜活 sonnet；本週 Claude 額度緊（公司時剩約 7%），隊長 opus＋寫碼盡量派 codex `gpt-6.1-sol`；在家機。新 session 照 [user/01](workflows/common/user/01-說話授權與記憶.md#push-授權) 重問 push。
