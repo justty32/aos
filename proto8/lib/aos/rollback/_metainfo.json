@@ -1,0 +1,1 @@
+{"summary":"Restore the newest retained version of an idle definition","resource":["disk","process"],"side_effect":true,"idempotent":false,"deterministic":false,"interrupt":"unsafe","parallel":false}

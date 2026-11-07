@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+# judge-llm - Compare artifacts with one LLM request and public think accounting.
+import json
+import math
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+sys.dont_write_bytecode = True
+HERE = Path(__file__).resolve().parent
+for parent in HERE.parents:
+    if (parent / 'lib/tool_io.py').is_file():
+        sys.path.insert(0, str(parent / 'lib'))
+        break
+import tool_io
+import observed
+
+
+def truncate(data, limit):
+    if len(data) <= limit:
+        return data.decode('utf-8', errors='replace')
+    return data[:limit].decode('utf-8', errors='ignore') + '\n[truncated]'
+
+
+def folder_text(folder, limit):
+    root = Path(folder)
+    if not root.is_dir():
+        raise ValueError('%s is not a directory' % root)
+    pieces = []
+    for path in sorted(p for p in root.rglob('*') if p.is_file()):
+        pieces.append(('== %s ==\n' % path.relative_to(root).as_posix()).encode())
+        pieces.append(path.read_bytes())
+        pieces.append(b'\n')
+    return truncate(b''.join(pieces), limit)
+
+
+def input_text(folder, limit):
+    pieces = []
+    for name in ('stdin.json', 'say.txt'):
+        path = Path(folder) / name
+        if path.is_file():
+            pieces.extend([('== %s ==\n' % name).encode(), path.read_bytes(), b'\n'])
+    return truncate(b''.join(pieces), limit)
+
+
+def parse_content(content):
+    if not isinstance(content, str) or '{' not in content:
+        raise ValueError('content has no JSON object')
+    value, _ = json.JSONDecoder().raw_decode(content[content.index('{'):])
+    score = value.get('score')
+    if isinstance(score, bool) or not isinstance(score, (int, float)) or not math.isfinite(score):
+        raise ValueError('score must be a finite number')
+    diff = value.get('diff')
+    return {'score': max(0, min(1, score)),
+            'diff': diff if isinstance(diff, list) and all(isinstance(x, str) for x in diff) else [],
+            'why': value.get('why') if isinstance(value.get('why'), str) else ''}
+
+
+def main():
+    tool_io.start('judge-llm')
+    args = tool_io.arguments('expect', 'got', 'input')
+    if not os.environ.get('AOS_LLM_KERNEL'):
+        tool_io.die('LlmKernelMissing', 'AOS_LLM_KERNEL is not set')
+    try:
+        config = json.loads((HERE / 'judge.json').read_text())
+        endpoint, limit = config['endpoint'], config['max_bytes']
+        if not isinstance(endpoint, str) or not endpoint or isinstance(limit, bool) or not isinstance(limit, int) or limit < 0:
+            raise ValueError('judge.json needs endpoint and nonnegative integer max_bytes')
+        sections = {name: folder_text(args[name], limit) for name in ('expect', 'got')}
+        sections['input'] = input_text(args['input'], limit)
+        request = {'endpoint': endpoint, 'request': {'messages': [
+            {'role': 'system', 'content': (HERE / 'prompt.txt').read_text()},
+            {'role': 'user', 'content': json.dumps(sections, ensure_ascii=False)}]}}
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        tool_io.die('FileBad', str(error))
+    started = time.monotonic_ns()
+    try:
+        result = subprocess.run(['aos-llm', 'ask', '--full'], input=json.dumps(request),
+                                capture_output=True, text=True)
+    except OSError as error:
+        tool_io.die('BrainFailed', str(error))
+    sys.stderr.write(result.stderr)
+    sys.stderr.flush()
+    elapsed_ms = (time.monotonic_ns() - started) / 1_000_000
+    try:
+        reply = json.loads(result.stdout) if not result.returncode else {}
+        if not isinstance(reply, dict):
+            raise ValueError('reply must be an object')
+    except ValueError:
+        reply = {}
+    if os.environ.get('AOS_STACK'):
+        record = {'kind': 'think',
+                  'endpoint': reply.get('endpoint', endpoint), 'model': reply.get('model'),
+                  'usage': reply.get('usage'), 'elapsed_ms': elapsed_ms}
+        if reply.get('letter') is not None:
+            record['letter'] = reply['letter']
+        observed.append(os.environ['AOS_STACK'], record)
+    if result.returncode:
+        # Tool adapters may forward the final lower-layer error line.
+        tail = result.stderr.strip().splitlines()
+        if tail and ': error: ' in tail[-1]:
+            code, _, reason = tail[-1].split(': error: ', 1)[1].partition(' ')
+            tool_io.die(code, reason)
+        tool_io.die('BrainFailed', 'aos-llm ask exited %d' % result.returncode)
+    try:
+        output = parse_content(reply.get('message', {}).get('content'))
+    except (ValueError, AttributeError, TypeError) as error:
+        tool_io.die('ReplyBad', str(error))
+    print(json.dumps(output, ensure_ascii=False))
+
+
+if __name__ == '__main__':
+    main()

@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+# rollback - Restore the newest retained version of an idle definition.
+import json
+from pathlib import Path
+import sys
+
+sys.dont_write_bytecode = True
+HERE = Path(__file__).resolve().parent
+LIB = next((p for p in HERE.parents if p.name == 'lib' and (p / 'tool_io.py').is_file()), None)
+sys.path[:0] = [str(HERE), str(HERE.parent / 'promote')] + ([str(LIB)] if LIB else [])
+import tool_io
+from swap import rollback
+
+tool_io.start('rollback')
+args = tool_io.arguments('defs', 'target')
+try:
+    print(json.dumps(rollback(args)))
+except tool_io.Error as error:
+    tool_io.die(error.code, str(error))
+except (OSError, ValueError, RuntimeError) as error:
+    tool_io.die('SwapFailed', str(error))

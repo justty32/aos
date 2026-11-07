@@ -1,0 +1,1 @@
+{"description":"Configure the comparator endpoint and per-section byte limit","endpoint":"judge","max_bytes":60000}

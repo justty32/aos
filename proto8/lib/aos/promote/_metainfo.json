@@ -1,0 +1,1 @@
+{"summary":"Replace an idle definition with a candidate while retaining its previous version","resource":["disk","process"],"side_effect":true,"idempotent":false,"deterministic":false,"interrupt":"unsafe","parallel":false}

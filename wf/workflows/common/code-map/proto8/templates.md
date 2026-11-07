@@ -10,6 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`agent-fsm/`](../../../../../proto8/templates/agent-fsm/) | Run an aos agent with loop and FSM cells. |
+| [`judge-llm/`](../../../../../proto8/templates/judge-llm/) | Compare artifacts with one LLM request and public think accounting. |
 
 ## `proto8/templates/agent-fsm/`
 
@@ -48,3 +49,12 @@
 | [`tools.json`](../../../../../proto8/templates/eca-claude/tools.json) | 設定（鍵：tools） |
 | [`tools/memory/`](../../../../../proto8/templates/eca-claude/tools/memory/) | Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the chil… |
 | [`tools/memory/_memory.json`](../../../../../proto8/templates/eca-claude/tools/memory/_memory.json) | 設定（鍵：base） |
+
+## `proto8/templates/judge-llm/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`judge.json`](../../../../../proto8/templates/judge-llm/judge.json) | Configure the comparator endpoint and per-section byte limit |
+| [`prompt.txt`](../../../../../proto8/templates/judge-llm/prompt.txt) | （檔頭沒有一句話） |
+| [`tests/endpoint.py`](../../../../../proto8/templates/judge-llm/tests/endpoint.py) | Return deterministic semantic-comparison replies with nonzero fake token usage. |
+| [`tests/test_judge.py`](../../../../../proto8/templates/judge-llm/tests/test_judge.py) | Verify judge reply normalization, truncation, kernel failures, and measured check costs. |

@@ -1,0 +1,1 @@
+{"summary":"Compare artifacts with one LLM request and public think accounting","resource":["llm"],"deterministic":false,"side_effect":true,"interrupt":"safe","parallel":true}

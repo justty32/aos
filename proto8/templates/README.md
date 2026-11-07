@@ -1,4 +1,4 @@
-# templates — 兩個 agent 範本：eca-claude（外部 coding agent）與 agent-fsm（aos 自己的 loop／fsm agent）
+# templates — agent 範本與同步裁判比對器。
 
 ← [proto8](../README.md)｜程式：[impls](../impls/README.md)（aos-exec、aos-loop…，C++）、[cmd](../cmd/README.md)（aos-eca-turn、aos-tools…）、[aos-agent](../cmd/aos-agent/README.md)｜掛在 daemon 上的管理元件：[kernel](../kernel/README.md)｜慣例：[CONVENTION](../docs/CONVENTION.md)
 
@@ -10,6 +10,8 @@
 複製出去用的 agent 範本，都用 `aos-agent ctl add` 掛（不給預設、要明寫資料夾）：`eca-claude`（外部 coding agent，11-04 前是 aos-eca `add` 的預設範本）、[`agent-fsm`](#agent-fsm)（aos 自己的 loop／fsm agent，11-04；問腦＝寄信給 [llm-kernel](../kernel/docs/01-llm-kernel.md)）。兩個範本對外同形（`_entry`＝aos-loop、queue／history／ctl／state、同一份 `tools.json`、`--prompt` 開場白），對照表在 [thinking 11-04 loop-fsm-agent 02](../thinking/2026-11/04/loop-fsm-agent/02-跟-eca-對照.md)。使用者 11-04：「demo中的，用不到的全部刪掉，也不用封存了。」其餘範例（agent-ann、agent-bob、agent-eve 等）與 `run.sh` 當天都刪了。
 
 **PATH 由呼叫的人放**：aos 的程式都不動 PATH（ideas § 24，使用者「也套用，都不動path吧」），定義裡寫的 `aos-loop`、`aos-exec`、`aos-eca-turn` 要呼叫端事先放進 PATH：C++ 的 `proto8/impls/<名>/bin/`（要先建，見 [testing](../../wf/workflows/testing.md#proto8)）與 Python 的 `proto8/cmd/<名>/bin/`（`proto8/install.sh` 一次放好）。
+
+[`judge-llm`](judge-llm/README.md) 是同步呼叫 llm kernel 的裁判比對器，供 measure 的 `compare` 使用；複製後改 `judge.json` 與 `prompt.txt` 就能換模型與規則。
 
 ## 分檔目錄
 

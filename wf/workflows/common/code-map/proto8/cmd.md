@@ -45,6 +45,17 @@
 | [`bin/aos-eca-screen`](../../../../../proto8/cmd/aos-eca/bin/aos-eca-screen) | eca 的畫面（介面 aos-agent/screen 的身體；templates/eca-claude/screen/_entry 叫它，thinking 2026-11-04 aos-agent 03/02）。 |
 | [`bin/aos-eca-turn`](../../../../../proto8/cmd/aos-eca/bin/aos-eca-turn) | 外部 coding agent（claude／codex，eca）的一輪：把 stack 的 queue 裡的信照順序全部一起交給 CLI——交出去就收信——等它答完、回答接進 history。 |
 
+## `proto8/cmd/aos-feedback/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`aos_feedback/__init__.py`](../../../../../proto8/cmd/aos-feedback/aos_feedback/__init__.py) | Parse feedback commands through aos_flags and present records and comfort reports. |
+| [`aos_feedback/comfort.py`](../../../../../proto8/cmd/aos-feedback/aos_feedback/comfort.py) | Calculate AI comfort from scored feedback and consecutive observed tool calls. |
+| [`aos_feedback/storage.py`](../../../../../proto8/cmd/aos-feedback/aos_feedback/storage.py) | Append command feedback and read its local model classification rules. |
+| [`bin/aos-feedback`](../../../../../proto8/cmd/aos-feedback/bin/aos-feedback) | Collect command feedback and report observed AI comfort scores. |
+| [`tests/test_boundaries.py`](../../../../../proto8/cmd/aos-feedback/tests/test_boundaries.py) | Verify concurrent feedback writes, CLI argument boundaries and damaged input handling. |
+| [`tests/test_feedback.py`](../../../../../proto8/cmd/aos-feedback/tests/test_feedback.py) | Verify feedback CLI storage, comfort calculations and the real aos-exec tool boundary. |
+
 ## `proto8/cmd/aos-grow/`
 
 | 檔 | 負責什麼 |
