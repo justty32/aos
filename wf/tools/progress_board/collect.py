@@ -214,7 +214,7 @@ def summary_state(board, cfg, now, warnings):
             "next_eligible_ts": next_ts, "running": False}
 
 
-def collect(board_dir, cfg):
+def collect(board_dir, cfg, eli5_inputs=None):
     from eli5 import eli5_state
 
     board, warnings = Path(board_dir), []
@@ -240,10 +240,11 @@ def collect(board_dir, cfg):
     asks = asks_state([event for events in grouped.values() for event in events
                        if event["status"] == "ask"], read_answers(board, warnings), now,
                       {line["id"]: line.get("title", line["id"]) for line in configured})
-    eli5 = eli5_state(board, cfg)
+    eli5 = eli5_state(board, cfg, inputs=eli5_inputs)
     explanations = (eli5["main"] or {}).get("asks", {})
     for ask in asks:
-        ask["eli5"] = ask["eli5"] if ask["eli5"] is not None else explanations.get(ask["id"])
+        ask["eli5"] = ({"text": ask["eli5"], "provided": True, "stale": False, "updated_at": ask.get("ts")}
+                       if ask["eli5"] else explanations.get(ask["id"]))
     host = host_state()
     history_path = board / "data/load_history.jsonl"
     history = [sample for sample in read_jsonl(history_path, warnings)

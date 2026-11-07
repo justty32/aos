@@ -31,7 +31,7 @@ def _git(path, args):
         raise ApiError(400, "GitFailed", "Git command could not complete") from None
 
 
-def line_commits(cfg, line):
+def line_commits(cfg, line, cache=None):
     commits = {}
     for rule in line.get("commit_filters", []):
         try:
@@ -39,7 +39,13 @@ def line_commits(cfg, line):
             args = ["log", "-n", "30", "--format=%h%x09%cI%x09%s"]
             if rule.get("path"):
                 args += ["--", rule["path"]]
-            rows = _git(path, args).splitlines()
+            key = (path, tuple(args))
+            if cache is None:
+                rows = _git(path, args).splitlines()
+            else:
+                if key not in cache:
+                    cache[key] = _git(path, args).splitlines()
+                rows = cache[key]
         except ApiError:
             continue
         for row in rows:

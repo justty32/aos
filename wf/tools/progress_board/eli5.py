@@ -2,6 +2,7 @@
 
 import datetime as dt
 import json
+import hashlib
 from pathlib import Path
 import re
 import sys
@@ -51,15 +52,11 @@ def _parse(content):
     return value
 
 
-def _text_map(value, keys):
-    return (isinstance(value, dict) and set(value) == set(keys)
-            and all(isinstance(item, str) and item.strip() for item in value.values()))
-
-
-def _request(board, cfg, kind, payload, instructions, validate, force):
+def _request(board, cfg, kind, payload, instructions, expected, force):
     settings = cfg.get("summary", {})
     messages = [{"role": "system", "content": SYSTEM + "\n" + instructions},
                 {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}]
+    accepted = {}
     for attempt in range(2):
         started = time.monotonic()
         record = {"ts": iso_now(), "kind": kind, "trigger": "force" if force else "auto",
@@ -80,12 +77,19 @@ def _request(board, cfg, kind, payload, instructions, validate, force):
                 record[key] = usage.get(key)
             content = reply["choices"][0]["message"]["content"]
             output = _parse(content)
-            if not validate(output):
-                raise ValueError("Explanation has an invalid output shape")
+            items = output.get("items", {})
+            output = {key: value.strip() for key, value in items.items()
+                      if key in expected and isinstance(value, str) and value.strip()} if isinstance(items, dict) else {}
+            accepted.update(output)
+            missing = sorted(set(expected) - set(output))
+            if missing:
+                record["error"] = "missing: " + ", ".join(missing)
+            if not output:
+                raise ValueError(record["error"] or "No valid explanation items")
             snippets = _snippets(output)
             record["ok"] = True
             if not snippets or attempt:
-                return output
+                return accepted
             messages += [{"role": "assistant", "content": content},
                          {"role": "user", "content": "Rewrite these offending text snippets using only "
                           "everyday Traditional Chinese. Keep exactly the same JSON structure and facts:\n"
@@ -93,9 +97,9 @@ def _request(board, cfg, kind, payload, instructions, validate, force):
         except Exception as exc:
             record["error"] = (f"HTTPError: endpoint returned status {exc.code}"
                                if isinstance(exc, urllib.error.HTTPError)
-                               else f"{type(exc).__name__}: explanation request or output failed")
+                               else record["error"] or f"{type(exc).__name__}: explanation request or output failed")
             print(f"eli5: error: RequestFailed {record['error']}", file=sys.stderr)
-            return None
+            return accepted or None
         finally:
             record["seconds"] = round(time.monotonic() - started, 3)
             _append_cost(Path(board) / "summary/cost.jsonl", record)
@@ -106,106 +110,178 @@ def _save(board, name, value):
                  json.dumps(value, ensure_ascii=False) + "\n")
 
 
-def eli5_state(board, cfg, running=False):
-    """Return persisted explanations without generating or calling an endpoint."""
-    return {"enabled": bool(cfg.get("summary", {}).get("eli5_enabled", True)),
-            "main": json_file(Path(board) / "eli5/main.json") or None,
-            "detail": json_file(Path(board) / "eli5/detail.json") or None,
-            "running": bool(running)}
+def _digest(value):
+    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True,
+                                    separators=(",", ":")).encode()).hexdigest()
 
 
-def maybe_main(board, cfg, force=False):
-    """Generate a changed main explanation, returning ok, skipped, or error."""
+def fingerprint_summary(value):
+    return _digest(value)
+
+
+def fingerprint_line(value):
+    return _digest(value)
+
+
+def fingerprint_ask(value):
+    return _digest(value)
+
+
+def fingerprint_timeline(value):
+    return _digest(value)
+
+
+def fingerprint_handoff(value):
+    return _digest(value)
+
+
+def fingerprint_codex(value):
+    return _digest(sorted(value))
+
+
+def fingerprint_reports(value):
+    return _digest(sorted(value))
+
+
+def fingerprint_main(sources):
+    return {key: (fingerprint_summary(value) if key == "summary" else
+                  fingerprint_line(value) if key.startswith("lines.") else fingerprint_ask(value))
+            for key, value in sources.items()}
+
+
+def fingerprint_detail(sources):
+    return {key: (fingerprint_codex(value) if key == "codex" else
+                  fingerprint_reports(value) if key == "reports" else
+                  fingerprint_timeline(value) if key.endswith(".timeline") else fingerprint_handoff(value))
+            for key, value in sources.items()}
+
+
+def _flatten(value, kind):
+    result = {}
+    if not isinstance(value, dict):
+        return result
+    def accept(key, item):
+        if (isinstance(item, dict) and isinstance(item.get("text"), str)
+                and item["text"].strip() and isinstance(item.get("fingerprint"), str)
+                and parse_ts(item.get("updated_at"))):
+            result[key] = dict(item)
+    if kind == "main":
+        accept("summary", value.get("summary"))
+        for section in ("lines", "asks"):
+            mapping = value.get(section)
+            for key, item in (mapping.items() if isinstance(mapping, dict) else []):
+                accept(section + "." + key, item)
+    else:
+        mapping = value.get("lines")
+        for line, sections in (mapping.items() if isinstance(mapping, dict) else []):
+            if isinstance(sections, dict):
+                for section in ("timeline", "handoff"):
+                    accept(f"lines.{line}.{section}", sections.get(section))
+        for key in ("codex", "reports"):
+            accept(key, value.get(key))
+    return result
+
+
+def _nested(items, kind):
+    result = {"lines": {}}
+    if kind == "main":
+        result["asks"] = {}
+    for key, value in items.items():
+        if key.startswith("lines."):
+            if kind == "main":
+                result["lines"][key[6:]] = value
+            else:
+                line, section = key[6:].rsplit(".", 1)
+                result["lines"].setdefault(line, {})[section] = value
+        elif key.startswith("asks."):
+            result["asks"][key[5:]] = value
+        else:
+            result[key] = value
+    return result
+
+
+def _read(board, kind, fingerprints):
+    old = json_file(Path(board) / "eli5" / f"{kind}.json")
+    if "fingerprint" in old or "fingerprints" in old:
+        old = {}
+    items = {key: value for key, value in _flatten(old, kind).items() if key in fingerprints}
+    cleaned = {**_nested(items, kind), "generated_at": old.get("generated_at")}
+    if old and cleaned != old:
+        _save(board, kind, cleaned)
+    return cleaned, items
+
+
+def _next(old, cfg):
+    stamp = parse_ts(old.get("generated_at"))
+    return (stamp + dt.timedelta(minutes=cfg.get("summary", {}).get("eli5_min_interval_min", 4))
+            if stamp else None)
+
+
+def input_snapshot(board, cfg):
+    from eli5_inputs import events_by_line
+    context = {"events": events_by_line(board)}
+    configured = list(cfg.get("lines", []))
+    known = {line["id"] for line in configured}
+    configured += [{"id": key, "title": key} for key in context["events"] if key not in known]
+    cfg = {**cfg, "lines": configured}
+    return {"main": main_input(board, cfg, context),
+            "detail": detail_input(board, cfg, context)}
+
+
+def eli5_state(board, cfg, running=False, inputs=None):
+    """Expose only accepted items with current staleness and per-file eligibility."""
+    inputs = inputs if inputs is not None else input_snapshot(board, cfg)
+    state = {"enabled": bool(cfg.get("summary", {}).get("eli5_enabled", True)),
+             "running": bool(running)}
+    next_times = []
+    for kind in ("main", "detail"):
+        fingerprints, _ = inputs[kind]
+        old, items = _read(board, kind, fingerprints)
+        values = {key: {"text": item["text"], "updated_at": item["updated_at"],
+                        "stale": item["fingerprint"] != fingerprints[key]}
+                  for key, item in items.items()}
+        state[kind] = _nested(values, kind)
+        eligible = _next(old, cfg)
+        if any(key not in items or items[key]["fingerprint"] != fp for key, fp in fingerprints.items()):
+            next_times.append(eligible or dt.datetime.now().astimezone())
+        state[kind].update(generated_at=old.get("generated_at"),
+                           next_eligible_ts=eligible.isoformat(timespec="seconds") if eligible else None)
+    state["next_eligible_ts"] = min(next_times).isoformat(timespec="seconds") if next_times else None
+    return state
+
+
+def _maybe(board, cfg, kind, force=False, all_items=False, inputs=None):
+    """Request changed items once; retain omitted items for a later retry."""
     try:
+        fingerprints, blocks = (inputs or input_snapshot(board, cfg))[kind]
+        old, items = _read(board, kind, fingerprints)
         if not force and not cfg.get("summary", {}).get("eli5_enabled", True):
             return "skipped"
-        old = json_file(Path(board) / "eli5/main.json")
-        fingerprint, payload = main_input(board, cfg)
-        if not force and old.get("fingerprint") == fingerprint:
+        eligible = _next(old, cfg)
+        if not force and eligible and dt.datetime.now().astimezone() < eligible:
             return "skipped"
-        line_ids = [line["id"] for line in payload["lines"]]
-        ask_ids = [ask["id"] for ask in payload["open_asks"] if not isinstance(ask.get("eli5"), str)]
-        instructions = ("Return {summary: string, lines: {line_id: string}, asks: {ask_id: string}}. "
-                        "Include every input line. Explain only open questions without supplied eli5; "
-                        "for questions explain what is being asked, options and their consequences. "
-                        "Use these exact question keys: " + json.dumps(ask_ids))
-        def valid(value):
-            return (set(value) == {"summary", "lines", "asks"}
-                    and isinstance(value.get("summary"), str) and bool(value["summary"].strip())
-                    and _text_map(value.get("lines"), line_ids)
-                    and _text_map(value.get("asks"), ask_ids))
-        output = _request(board, cfg, "eli5-main", payload, instructions, valid, force)
-        if output is None:
-            return "error"
-        _save(board, "main", {**output, "fingerprint": fingerprint, "generated_at": iso_now()})
-        return "ok"
-    except Exception as exc:
-        print(f"eli5: error: MainFailed {type(exc).__name__} while processing explanations", file=sys.stderr)
-        return "error"
-
-
-def _nested_detail(output):
-    result = {"lines": {}}
-    for key, text in output.items():
-        if key.startswith("lines."):
-            line_id, section = key[6:].rsplit(".", 1)
-            result["lines"].setdefault(line_id, {})[section] = text
-        else:
-            result[key] = text
-    return result
-
-
-def _detail_valid(output, changed):
-    shape = _nested_detail({key: "" for key in changed})
-    if set(output) != set(shape) or not isinstance(output.get("lines"), dict):
-        return False
-    if set(output["lines"]) != set(shape["lines"]):
-        return False
-    for line_id, sections in shape["lines"].items():
-        if not _text_map(output["lines"][line_id], sections):
-            return False
-    return all(isinstance(output[key], str) and output[key].strip()
-               for key in shape if key != "lines")
-
-
-def _merge_detail(old, output):
-    result = {**old, **output, "lines": {key: dict(value) for key, value in old.get("lines", {}).items()}}
-    for line_id, sections in output.get("lines", {}).items():
-        result["lines"].setdefault(line_id, {}).update(sections)
-    return result
-
-
-def maybe_detail(board, cfg, force=False):
-    """Generate changed detail blocks together, respecting the minimum interval."""
-    try:
-        settings = cfg.get("summary", {})
-        if not force and not settings.get("eli5_enabled", True):
-            return "skipped"
-        old = json_file(Path(board) / "eli5/detail.json")
-        last = parse_ts(old.get("generated_at"))
-        if (not force and last and (dt.datetime.now().astimezone() - last).total_seconds()
-                < settings.get("eli5_detail_min_interval_min", 15) * 60):
-            return "skipped"
-        fingerprints, blocks = detail_input(board, cfg)
         changed = {key: value for key, value in blocks.items()
-                   if force or fingerprints[key] != old.get("fingerprints", {}).get(key)}
+                   if all_items or fingerprints[key] != items.get(key, {}).get("fingerprint")}
         if not changed:
             return "skipped"
-        instructions = ("For this detail request, use 1-2 short sentences each: what this block is, "
-                        "what matters right now. This overrides the general sentence count. "
-                        "Return nested JSON {lines: {line_id: {timeline: string, handoff: string}}, "
-                        "codex: string, reports: string}. Include only changed sections from the input; "
-                        "always include lines, even if empty. Exact required shape: "
-                        + json.dumps(_nested_detail({key: "string" for key in changed})))
-        output = _request(board, cfg, "eli5-detail", changed, instructions,
-                          lambda value: _detail_valid(value, changed), force)
-        if output is None:
-            return "error"
-        result = _merge_detail(old, output)
-        result.update(generated_at=iso_now(), fingerprints={**old.get("fingerprints", {}),
-                      **{key: fingerprints[key] for key in changed}})
-        _save(board, "detail", result)
-        return "ok"
+        instructions = ("Return {items: {exact_key: string}} using only these exact keys: "
+                        + json.dumps(list(changed)) + ". Explain questions and option consequences. "
+                        + ("For detail items use 1-2 short sentences." if kind == "detail" else ""))
+        output = _request(board, cfg, "eli5-" + kind, {"items": changed}, instructions, changed, force)
+        stamp = iso_now()
+        if output:
+            for key, value in output.items():
+                items[key] = {"text": value, "updated_at": stamp, "fingerprint": fingerprints[key]}
+        _save(board, kind, {**_nested(items, kind), "generated_at": stamp})
+        return "ok" if output else "error"
     except Exception as exc:
-        print(f"eli5: error: DetailFailed {type(exc).__name__} while processing explanations", file=sys.stderr)
+        print(f"eli5: error: GenerateFailed {type(exc).__name__} while processing explanations", file=sys.stderr)
         return "error"
+
+
+def maybe_main(board, cfg, force=False, all_items=False, inputs=None):
+    return _maybe(board, cfg, "main", force, all_items, inputs)
+
+
+def maybe_detail(board, cfg, force=False, all_items=False, inputs=None):
+    return _maybe(board, cfg, "detail", force, all_items, inputs)

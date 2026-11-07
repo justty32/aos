@@ -15,13 +15,13 @@ sys.dont_write_bytecode = True
 from answers import AnswerHandlerMixin
 from details_api import DetailHandlerMixin
 from collect import board_path, collect, copy_assets, load_config, write_state
-from eli5 import maybe_main, maybe_detail
+from eli5 import maybe_main, maybe_detail, input_snapshot, fingerprint_main
 from summarize import maybe_summarize
 
 TEXT_TYPES = {".md": "text/markdown", ".json": "application/json", ".jsonl": "application/x-ndjson",
               ".txt": "text/plain", ".log": "text/plain", ".html": "text/html", ".css": "text/css",
               ".js": "text/javascript"}
-USAGE = "python3 dash.py <serve|start|stop|status|collect|summarize|eli5> [--port N] [--force]"
+USAGE = "python3 dash.py <serve|start|stop|status|collect|summarize|eli5> [--port N] [--force] [--all]"
 
 
 def fail(code, reason):
@@ -41,14 +41,14 @@ def arguments(args):
         print(f"Usage: {USAGE}\nserve: run in foreground; start/stop/status: manage the server\n"
               "collect: refresh the static snapshot; summarize: summarize once\n"
               "eli5: generate main and detail plain-language explanations once\n"
-              "--port N: override the configured port; --force: force a summary or ELI5 generation")
+              "--port N: override the configured port; --force: bypass enabled/interval checks; --all: regenerate all ELI5 items")
         return None
     command, *rest = args
     if command.startswith("-"):
         raise ValueError(f"FlagUnknown {command}")
     if command not in ("serve", "start", "stop", "status", "collect", "summarize", "eli5"):
         raise ValueError(f"CommandUnknown {command}")
-    port, force = None, False
+    port, force, all_items = None, False, False
     while rest:
         flag = rest.pop(0)
         if flag == "--port":
@@ -62,11 +62,13 @@ def arguments(args):
                 raise ValueError("ArgumentsBad port must be between 1 and 65535") from None
         elif flag == "--force" and command in ("summarize", "eli5"):
             force = True
+        elif flag == "--all" and command == "eli5":
+            all_items = force = True
         elif flag.startswith("-"):
             raise ValueError(f"FlagUnknown {flag}")
         else:
             raise ValueError(f"ArgumentsBad unexpected argument {flag}")
-    return command, port, force
+    return command, port, force, all_items
 
 
 def live(pid):
@@ -89,8 +91,8 @@ def read_pid(path):
         return None
 
 
-def snapshot(board, cfg, running=False, summarizing=False):
-    state = collect(board, cfg)
+def snapshot(board, cfg, running=False, summarizing=False, inputs=None):
+    state = collect(board, cfg, eli5_inputs=inputs)
     state["server"] = running
     state["summary"]["running"] = summarizing
     state["eli5"]["running"] = summarizing and state["eli5"]["enabled"]
@@ -132,11 +134,17 @@ def serve(board, port):
     server = Server(("127.0.0.1", port), functools.partial(Handler, directory=str(board)))
     server.timeout = 0.25
 
-    def summarize(cfg):
+    def summarize(cfg, inputs):
         try:
-            for generate in (maybe_summarize, maybe_detail):
+            for generate in (maybe_summarize, maybe_main, maybe_detail):
                 try:
-                    generate(board, cfg)
+                    if generate is maybe_summarize:
+                        if generate(board, cfg) == "ok":
+                            latest = (board / "summary/latest.md").read_text(encoding="utf-8")
+                            inputs["main"][0].update(fingerprint_main({"summary": latest}))
+                            inputs["main"][1]["summary"] = latest
+                    else:
+                        generate(board, cfg, inputs=inputs)
                 except Exception as exc:
                     warning(f"Summary worker failed: {exc}")
         finally:
@@ -156,9 +164,10 @@ def serve(board, port):
                 interval = max(0.1, float(cfg["collect_interval_sec"]))
                 busy = summary_thread is not None and summary_thread.is_alive()
                 with state_lock:
-                    state = snapshot(board, cfg, True, busy)
+                    inputs = input_snapshot(board, cfg)
+                    state = snapshot(board, cfg, True, busy, inputs)
                     if not busy and not stopped.is_set():
-                        summary_thread = threading.Thread(target=summarize, args=(cfg,), daemon=True)
+                        summary_thread = threading.Thread(target=summarize, args=(cfg, inputs), daemon=True)
                         state["summary"]["running"] = True
                         state["eli5"]["running"] = state["eli5"]["enabled"]
                         write_state(board, state)
@@ -246,7 +255,7 @@ def main():
         code, reason = str(exc).split(" ", 1)
         return fail(code, reason)
     try:
-        command, requested_port, force = parsed
+        command, requested_port, force, all_items = parsed
         board, cfg = board_path(), load_config()
         port = requested_port if requested_port is not None else int(cfg["port"])
         if command == "serve":
@@ -273,8 +282,9 @@ def main():
             print(result)
             return int(result == "error")
         elif command == "eli5":
-            main_result = maybe_main(board, cfg, force)
-            detail_result = maybe_detail(board, cfg, force)
+            inputs = input_snapshot(board, cfg)
+            main_result = maybe_main(board, cfg, force, all_items, inputs)
+            detail_result = maybe_detail(board, cfg, force, all_items, inputs)
             snapshot(board, cfg)
             print(f"dash: eli5 main={main_result} detail={detail_result}")
             return int("error" in (main_result, detail_result))

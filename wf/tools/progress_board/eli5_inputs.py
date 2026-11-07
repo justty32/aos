@@ -2,7 +2,6 @@
 
 import datetime as dt
 import glob
-import hashlib
 import json
 from pathlib import Path
 
@@ -10,10 +9,6 @@ from answers import asks_state, read_answers, read_asks
 from codex_api import codex_processes
 from collect import handoff_path, parse_ts, read_jsonl
 from safe_files import ApiError, safe_read
-
-
-def digest(value):
-    return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 
 def text(path, limit=None):
@@ -48,40 +43,59 @@ def _handoff(cfg, line, limit):
         return None, ""
     try:
         result = safe_read(cfg, handoff_path(cfg, line["handoff"]), limit * 4)
-        return result["mtime"], result["text"][:limit]
+        return {"mtime": result["mtime"], "size": result["size"]}, result["text"][:limit]
     except ApiError:
         return None, ""
 
 
-def main_input(board, cfg):
-    grouped = events_by_line(board)
+def main_input(board, cfg, context=None):
+    from eli5 import fingerprint_main
+    from details_api import line_commits
+    context = context if context is not None else {}
+    if "events" not in context:
+        context["events"] = events_by_line(board)
+    grouped = context["events"]
     raw = read_asks(board)
     asks = asks_state(raw, read_answers(board), dt.datetime.now().astimezone())
-    provided = {ask["id"]: ask.get("eli5") for ask in raw}
     opened = [{key: ask[key] for key in ("id", "line", "text", "options", "recommend")}
-              | {"eli5": provided.get(ask["id"])}
-              for ask in asks if ask["answer"] is None]
-    lines = [{"id": line["id"], "title": line.get("title", line["id"]),
-              "events": grouped.get(line["id"], [])[-10:],
-              "handoff": _handoff(cfg, line, 3000)[1]}
-             for line in cfg.get("lines", [])]
+              for ask in asks if ask["answer"] is None and not ask.get("eli5")]
+    blocks, sources = {}, {}
     latest = text(Path(board) / "summary/latest.md")
-    latest_events = {key: events[-1]["ts"] for key, events in grouped.items()}
-    fingerprint = digest([latest, sorted(ask["id"] for ask in opened), latest_events])
-    return fingerprint, {"summary": latest, "lines": lines, "open_asks": opened}
+    blocks["summary"], sources["summary"] = latest, latest
+    cache = context.setdefault("git", {})
+    for line in cfg.get("lines", []):
+        metadata, handoff = _handoff(cfg, line, 3000)
+        commits = line_commits(cfg, line, cache)
+        events = grouped.get(line["id"], [])[-10:]
+        key = "lines." + line["id"]
+        blocks[key] = {"title": line.get("title", line["id"]), "events": events,
+                       "handoff": handoff, "newest_commit": commits[:1]}
+        sources[key] = [events, metadata["mtime"] if metadata else None,
+                        commits[0]["hash"] if commits else None]
+    for ask in opened:
+        key = "asks." + ask["id"]
+        blocks[key] = ask
+        sources[key] = {name: ask[name] for name in ("text", "options", "recommend")}
+    return fingerprint_main(sources), blocks
 
 
-def detail_input(board, cfg):
-    grouped, blocks, fingerprints = events_by_line(board), {}, {}
+def detail_input(board, cfg, context=None):
+    from eli5 import fingerprint_detail
+    grouped = (context or {}).get("events")
+    if grouped is None:
+        grouped = events_by_line(board)
+    blocks, sources = {}, {}
     for line in cfg.get("lines", []):
         events = grouped.get(line["id"], [])
         key = f"lines.{line['id']}.timeline"
         blocks[key] = {"title": line.get("title", line["id"]), "events": events[-30:]}
-        fingerprints[key] = digest(events[-1]["ts"] if events else None)
+        sources[key] = events[-30:]
         key = f"lines.{line['id']}.handoff"
-        mtime, content = _handoff(cfg, line, 6000)
+        metadata, content = _handoff(cfg, line, 6000)
+        if metadata is None:
+            continue
         blocks[key] = {"title": line.get("title", line["id"]), "handoff": content}
-        fingerprints[key] = digest(mtime)
+        sources[key] = metadata
     processes, process_keys = [], []
     for process in codex_processes(cfg):
         size = 0
@@ -93,9 +107,9 @@ def detail_input(board, cfg):
                 size, tail = value["size"], value["text"]
             except ApiError:
                 tail = ""
-        process_keys.append((process["pid"], process.get("goal") or "", size // 65536))
+        process_keys.append((process["pid"], process.get("goal") or "", size // 16384))
         processes.append({"goal": process.get("goal"), "log": "\n".join(tail.splitlines()[-40:])})
-    blocks["codex"], fingerprints["codex"] = processes, digest(sorted(process_keys))
+    blocks["codex"], sources["codex"] = processes, sorted(process_keys)
     found = {}
     for pattern in cfg.get("report_globs", []):
         for path in glob.iglob(str(Path(pattern).expanduser())):
@@ -107,5 +121,5 @@ def detail_input(board, cfg):
     reports = sorted(found.values(), key=lambda value: value["mtime"], reverse=True)
     blocks["reports"] = [{"name": Path(value["path"]).name, "text": value["text"][:1500]}
                          for value in reports[:5]]
-    fingerprints["reports"] = digest(sorted((value["path"], value["mtime"]) for value in reports))
-    return fingerprints, blocks
+    sources["reports"] = sorted((value["path"], value["mtime"]) for value in reports)
+    return fingerprint_detail(sources), blocks

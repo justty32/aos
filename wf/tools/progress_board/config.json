@@ -19,7 +19,7 @@
   "summary": {
     "enabled": true,
     "eli5_enabled": true,
-    "eli5_detail_min_interval_min": 15,
+    "eli5_min_interval_min": 4,
     "eli5_max_tokens": 2500,
     "min_interval_min": 15,
     "base_url": "http://localhost:4000/v1",

@@ -117,3 +117,7 @@ pre { max-width: 100%; overflow: auto; padding: 12px; border-radius: 9px; backgr
 .eli5-label { display: inline-flex; align-items: center; gap: 4px; color: var(--amber); font-size: 12px; font-weight: 600; margin-bottom: 4px; }
 .eli5-label svg { width: 16px; height: 16px; }
 .eli5-box p { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.eli5-meta { display: flex; align-items: center; gap: 8px; margin-top: 6px; color: var(--muted); font-size: 11px; }
+.eli5-stale { border-radius: 999px; padding: 1px 7px; background: color-mix(in srgb, var(--amber) 12%, var(--surface)); color: var(--amber); }
+.eli5-stale[hidden] { display: none; }

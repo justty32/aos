@@ -74,7 +74,7 @@
 
 | 路徑 | 內容 |
 | --- | --- |
-| `index.html`、`app.js`、`asks.js`、`detail.html`、`detail.js`、`md.js`、`style.css`、`README.md` | 頁面與說明 |
+| `index.html`、`app.js`、`asks.js`、`eli5.js`、`detail.html`、`detail.js`、`md.js`、`style.css`、`README.md` | 頁面與說明 |
 | `data/progress.jsonl` | 各線回報 |
 | `data/answers.jsonl` | 使用者逐次送出的回答，保留重答紀錄 |
 | `data/state.json`、`data/state.js` | 最新快照 |
@@ -86,8 +86,9 @@
 ## 白話（ELI5）
 
 「白話」框用日常說法補充總覽、各線、待裁題與細節區塊，原有內容照常保留；沒有說明就不顯示框。
-每次匯總成功後會接著產生總覽白話，輸入沒變就沿用；細節白話每輪檢查，只更新有變的區塊，兩次至少隔 `summary.eli5_detail_min_interval_min` 分鐘（預設 15）。
+總覽、各線、每道待裁題與細節區塊各自用輸入的 SHA256 判斷變動；只重寫有變的項目，其餘沿用原文字與更新時間。總覽與細節都用 `summary.eli5_min_interval_min` 設最短間隔（預設 4 分鐘），不必等匯總成功才檢查。
+每個框末顯示「白話更新於 HH:MM」；原始資料已變、白話還沒跟上時，旁邊顯示「白話更新中」。各線直接提供的待裁題說明改標「各線自己寫的白話」，不顯示更新中。
 `summary.eli5_enabled` 控制白話開關，`summary.eli5_max_tokens` 控制每次上限（預設 2500）；連線、模型與逾時沿用匯總設定。
-手動強制重產：`python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py eli5 --force`，略過開關、快取與間隔。
-結果放在 `eli5/main.json`、`eli5/detail.json`，頁面共用 `eli5.js` 顯示；每次請求（包含重寫）都記進 `summary/cost.jsonl`，`kind` 分為 `summary`、`eli5-main`、`eli5-detail`。
+手動更新：`python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py eli5 --force`，略過開關與間隔，仍只重寫有變的項目；加 `--all` 才重寫全部。模型只回一部分時，已成功的項目先存下，缺漏的項目保留舊說明與更新中標記，下輪再試，不把整批誤當成功。
+結果放在 `eli5/main.json`、`eli5/detail.json`，每個項目各存文字、更新時間與輸入雜湊，頁面共用 `eli5.js` 顯示；每次請求（包含重寫）都記進 `summary/cost.jsonl`，`kind` 分為 `summary`、`eli5-main`、`eli5-detail`。
 發待裁題的人請加 `--eli5 '<plain text>'`，直接說清楚在問什麼、每個選項會怎樣；這份說明優先使用，沒有才自動產生。例如：`~/repo/simple_tools/aos/wf/tools/progress_post.sh progress-board ask 'How much detail?' --eli5 'Choose how much explanation you want.'`。
