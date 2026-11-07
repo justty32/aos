@@ -1,0 +1,13 @@
+# 11-07 五份設計的程式實作計畫（impl-plan）
+
+← [2026-11-07](../README.md)｜[thinking](../../../README.md)
+
+把 11-07 evolve-design、tool-evolve、kb-scale、kernel-nest、agent-diversity 與晚審 06 末段的程式待辦排成實作計畫並施工。走「opus 收集匯總 → fable 一次性規劃 → opus 補全架構 → codex 照圖施工」。只動 aos 本體；試驗場的步驟交 arknights 線。
+
+| 檔 | 內容 |
+|---|---|
+| [01-簡報](01-簡報.md) | opus 匯總：各設計要做的步、依賴、動到哪、使用者原話與裁定 |
+| [02-規劃-fable](02-規劃-fable.md) | fable：順序、分批、完成判準、風險 |
+| [03-設計](03-設計.md) | opus：每批的架構細節（給 codex 的圖） |
+| [代定](代定.md) | 本線替使用者做的小決定，可翻案 |
+| [交棒](交棒.md) | 做到哪、下一步、還開著的程序 |
