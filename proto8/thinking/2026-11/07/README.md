@@ -6,4 +6,5 @@
 
 | 日期 | 一句話 |
 |---|---|
+| [daemon-prune](daemon-prune/README.md) | prune 自檢與久未修改列清理完成；apply 共用 rm、檔案保留，測試與 scratch 實測通過，未 commit |
 | [2026-11-07 把 arknights 敘事庫歸納進 aos 知識庫體系（arknights-kb，長線）](arknights-kb/README.md) | 使用者「~/repo/narratives/arknights那塊，幫我歸納進我們的aos資料庫體系。慢慢做，一邊做一邊看有沒有不足的，就再規劃與優化」：優化目標＝確定性（shell 先開放→謹慎→全專屬工具、git、窄領域 agent、kernel 嵌套）；進行中 |

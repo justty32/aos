@@ -36,7 +36,7 @@
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`bin/aos-daemon-ctl`](../../../../../proto8/cmd/aos-daemon-ctl/bin/aos-daemon-ctl) | 把 proc 掛到一個 aos-daemon 上、起停、睡醒、暫停；說明在 cmd/docs/03、04（本體在 py/daemon_ctl/）。 |
+| [`bin/aos-daemon-ctl`](../../../../../proto8/cmd/aos-daemon-ctl/bin/aos-daemon-ctl) | 把 proc 掛到 daemon、起停睡醒暫停、自檢與清理舊列；說明在 cmd/docs/03、04。 |
 
 ## `proto8/cmd/aos-eca/`
 

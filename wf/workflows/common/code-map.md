@@ -37,7 +37,7 @@
 | agent 範本、問腦的 kernel、判官 | `templates/`、`kernel/`（判官工具本身在 `lib/aos/judge`） |
 | 誰連誰（C++） | 生成冊 `impls` 冊開頭的依賴表 |
 | 一個資料夾程式怎麼被找到、怎麼起 | `impls/aos-exec`（條文在 proto8 NORMS N-57～N-62） |
-| Python 找 daemon、讀 daemon 表、寄信等回信（ping）、共用回信信箱 | `py/daemon_ctl.py`（aos-daemon-ctl 是它的薄殼；aos-agent、aos-eca-screen import 它；除了 daemon 自己，沒人碰 pid） |
+| Python 找 daemon、讀表／prune 自檢、寄信等回信（ping）、共用回信信箱 | `py/daemon_ctl/`（aos-daemon-ctl 是薄殼；aos-agent、aos-eca-screen import 它；只有 prune 自檢明確讀 pid／`/proc`） |
 | 信箱（寄、認領、處理完、撤回）與鎖 | `impls/aos-post`、`impls/aos-lock` |
 | 腦的工具長怎樣、契約 | [lib/README](../../../proto8/lib/README.md)；逐支一句話在生成冊 `lib` 冊 |
 

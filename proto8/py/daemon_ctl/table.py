@@ -1,6 +1,9 @@
-"""daemon_ctl 名單：尋找 daemon、讀取狀態表並解析子項與上一層狀態。"""
+"""daemon_ctl 名單：尋找 daemon、解析狀態表、自檢子項與篩選久未修改的列。"""
+import datetime
 import json
 import os
+import re
+import stat
 import time
 
 from .base import Fail, NAMES, PATHS, STATE
@@ -124,3 +127,101 @@ def supervisor(d, st):
         if isinstance(stack, str) and os.path.realpath(stack) == os.path.realpath(d):
             return up, row.get("phase"), row.get("reason")
     return up, None, "this daemon is not on its table"
+
+
+def duration(value):
+    """prune 的門檻只收正整數加 s／m／h／d，不設隱含清空值。"""
+    match = re.fullmatch(r"([0-9]+)([smhd])", value)
+    try:
+        number = int(match[1]) if match else 0
+    except ValueError:
+        number = 0
+    if number <= 0:
+        raise Fail("ArgumentsBad", "--older-than needs a positive integer followed by s, m, h or d (for example 7d)")
+    return number * {"s": 1, "m": 60, "h": 3600, "d": 86400}[match[2]]
+
+
+def process_problem(row):
+    """與 aos-util proc_started_at_ticks 同算法：從 stat 最後的右括號後數第 20 欄。"""
+    pid, ticks = row.get("pid"), row.get("started_at_ticks")
+    if type(pid) is not int or pid <= 0 or type(ticks) is not int or ticks < 0:
+        return "invalid recorded pid or started_at_ticks"
+    path = "/proc/%d/stat" % pid
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            text = fh.read()
+    except FileNotFoundError:
+        return "recorded pid %d is not alive" % pid
+    except OSError as exc:
+        return "cannot read %s: %s" % (path, exc)
+    try:
+        current = int(text[text.rindex(")") + 1:].split()[19])
+    except (ValueError, IndexError):
+        return "cannot parse %s" % path
+    if current != ticks:
+        return "recorded pid %d has different started_at_ticks" % pid
+    return None
+
+
+def inspect_row(d, name, row):
+    """只檢查 stack、公開 ctl 的 JSON 形狀、行程身分與既有 reason，不讀子項私有語意。"""
+    from .ctl import need_ctl
+
+    stack, ctl = need_ctl(d, name, row)
+    problems = []
+    if not os.path.isdir(stack):
+        problems.append("stack missing")
+    try:
+        with open(ctl, encoding="utf-8") as fh:
+            value = json.load(fh)
+        if not isinstance(value, dict):
+            problems.append("ctl is not a JSON object: %s" % ctl)
+    except FileNotFoundError:
+        pass  # ctl 尚未寫過不算問題。
+    except ValueError:
+        problems.append("ctl is not a JSON object: %s" % ctl)
+    except OSError as exc:
+        problems.append("cannot read ctl %s: %s" % (ctl, exc))
+    if row.get("phase") in {"running", "stopping"}:
+        problem = process_problem(row)
+        if problem:
+            problems.append(problem)
+    if row.get("phase") == "stopped" and row.get("reason") is not None:
+        problems.append(str(row["reason"]))
+    return "; ".join(problems)
+
+
+def last_change(stack):
+    """stack 本身及直接底下檔案的最新 mtime；不進子目錄，缺 stack 回 None。"""
+    try:
+        info = os.stat(stack)
+        if not stat.S_ISDIR(info.st_mode):
+            return None
+        latest = info.st_mtime
+        with os.scandir(stack) as entries:
+            for entry in entries:
+                try:
+                    if entry.is_file():
+                        latest = max(latest, entry.stat().st_mtime)
+                except FileNotFoundError:
+                    continue  # 巡查途中被移走的檔案已不在直接底下。
+        return latest
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise Fail("StateBad", "cannot inspect stack %s: %s" % (stack, exc))
+
+
+def prune_candidates(d, procs, seconds, now):
+    """只選 stopped／sleeping 且最新修改嚴格早於門檻的列；不修改表或檔案。"""
+    for name, row in procs.items():
+        if row.get("phase") not in {"stopped", "sleeping"}:
+            continue
+        changed = last_change(cell_of(d, name, row))
+        if changed is None or now - changed > seconds:
+            try:
+                stamp = ("stack missing" if changed is None else
+                         datetime.datetime.fromtimestamp(changed, datetime.timezone.utc).isoformat())
+            except (OverflowError, OSError, ValueError) as exc:
+                raise Fail("StateBad", "cannot format last change for %s: %s" % (name, exc))
+            yield name, stamp

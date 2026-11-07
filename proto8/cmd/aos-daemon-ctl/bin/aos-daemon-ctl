@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# aos-daemon-ctl - 把 proc 掛到一個 aos-daemon 上、起停、睡醒、暫停；說明在 cmd/docs/03、04（本體在 py/daemon_ctl/）。
+# aos-daemon-ctl - 把 proc 掛到 daemon、起停睡醒暫停、自檢與清理舊列；說明在 cmd/docs/03、04。
 HELP = """aos-daemon-ctl - attach procs to an aos-daemon and start / stop / sleep / wake / pause them
 
 usage: aos-daemon-ctl [--daemon D] SUBCOMMAND [FLAGS...] [ARGS...]
@@ -8,6 +8,7 @@ usage: aos-daemon-ctl [--daemon D] SUBCOMMAND [FLAGS...] [ARGS...]
 subcommands:
   add [FLAGS] XXX [-- ARGS...]   attach (register + start); prints the letter name
   rm NAME        detach (stop, then remove; stack kept, so it does not ask)
+  prune [--older-than DUR] [--apply]   check rows; preview or detach old stopped / sleeping rows
   stop NAME      write its public ctl and wait for exit (row stays as stopped)
   start NAME     start a stopped one again on the same stack
   sleep NAME     SIGTERM now (row stays as sleeping; wakes when the daemon restarts)
@@ -18,8 +19,8 @@ subcommands:
   where --stack NAME   print its stack (one absolute path)
   ping [--timeout-s S]   wait for the daemon's ping reply; prints "replied in N ms"
 
-Each subcommand drops one letter into the daemon's ctl mailbox (procs_added, procs_removed,
-procs_stopped, ...) or writes the proc's own ctl window (pause / resume). A letter only
+Mutation commands drop letters into the daemon's ctl mailbox (procs_added, procs_removed,
+procs_stopped, ...) or write the proc's own ctl window (pause / resume). A letter only
 asks; the daemon applies it on its next round. See the result with ls.
 Letters always go straight to this daemon's ctl mailbox; AOS_KERNEL is not read.
 To go through the judge (AOS_KERNEL), use aos-agent ctl instead.
@@ -35,6 +36,32 @@ more: proto8/cmd/docs/03-aos-daemon-ctl.md
 """
 
 HELPS = {
+    "prune": """aos-daemon-ctl prune - check rows and detach old stopped or sleeping procs
+
+usage: aos-daemon-ctl [--daemon D] prune [--older-than DUR] [--apply]
+                      [--reply-to BOX] [--timeout-s S]
+
+Always checks missing stacks, existing ctl files that are not JSON objects, stale
+running / stopping process identities, and stopped reasons. Reports one line per
+suspicious row: NAME: PHASE: PROBLEM. Findings alone exit 0.
+
+Without --older-than, only checks. With it, previews old stopped / sleeping rows:
+NAME: would remove (last change ISO_TIME or stack missing). Last change is the newest
+mtime of the stack folder itself and its direct files; subfolders are not scanned.
+Running / stopping rows are never selected. A missing stack counts as infinitely old.
+
+flags:
+      --older-than DUR   positive integer plus s, m, h or d (30s, 15m, 12h, 7d)
+      --apply            requires --older-than; uses rm's letter path, prints NAME: removed
+      --timeout-s S      positive claim timeout per removal (default: 3); excludes --reply-to
+      --reply-to BOX     send only; the reply goes to BOX, as with rm
+  -h, --help             show this help
+
+Removal keeps every stack / workspace file. Like rm, it asks the daemon to detach;
+without --reply-to it waits for the letter to leave new/, not for an applied reply.
+Letters go straight to this daemon; AOS_KERNEL is not read.
+exit codes: 0 checked / previewed / sent; 1 error (ArgumentsBad, StateBad, rm errors...).
+""",
     "add": """aos-daemon-ctl add - attach one proc (register + start)
 
 usage: aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--timeout-s S] [--name N] [--ws WS]
@@ -285,10 +312,11 @@ def limits_arg(v):
     return dc.check_limits(value, "--limits", "ArgumentsBad")
 
 
-def deliver(d, body, reply_to=None, timeout_s=3):
+def deliver(d, body, reply_to=None, timeout_s=3, *, print_letter=True):
     """人直接敲板子：一律寄這個 daemon 自己的 ctl 信箱，不看 AOS_KERNEL（使用者 11-07 選項框「aos-daemon-ctl 永遠直寄」）。"""
     letter = dc.send(d, body, reply_to, direct=True)
-    print(letter, flush=True)
+    if print_letter:
+        print(letter, flush=True)
     if reply_to is None:
         box = dc.mailbox_of(d, direct=True)
         if not dc.wait_taken(box, letter, timeout_s):
@@ -315,7 +343,44 @@ def cmd_add(opts, args):
 def cmd_rm(opts, args):
     name, o = name_arg("rm", args, REPLY)
     seconds = timeout_arg(o, 3)
-    deliver(dc.find_daemon(opts.get("daemon")), {"procs_removed": [name]}, reply_arg(o), seconds)
+    remove(dc.find_daemon(opts.get("daemon")), name, reply_arg(o), seconds)
+
+
+def remove(d, name, reply_to=None, timeout_s=3, *, print_letter=True):
+    """rm 與 prune --apply 共用同一條寄信、認領等待與錯誤路徑。"""
+    deliver(d, {"procs_removed": [name]}, reply_to, timeout_s, print_letter=print_letter)
+
+
+def cmd_prune(opts, args):
+    o, rest = aos_flags.parse(args, dict(REPLY, **{"--older-than": "older_than"}),
+                              {"--apply": "apply"}, help=HELPS["prune"])
+    seconds = timeout_arg(o, 3)
+    reply_to = reply_arg(o)
+    if rest:
+        raise Fail("ArgumentsBad", "prune takes no arguments")
+    if o.get("apply") and "older_than" not in o:
+        raise Fail("ArgumentsBad", "--apply requires --older-than")
+    age = dc.duration(o["older_than"]) if "older_than" in o else None
+    d = dc.find_daemon(opts.get("daemon"))
+    procs = dc.rows(d)
+    for name, row in procs.items():
+        if not isinstance(row, dict):
+            raise Fail("StateBad", "the row of %s is not an object" % name)
+        problem = dc.inspect_row(d, name, row)
+        if problem:
+            print(CTRL.sub(" ", "%s: %s: %s" % (name, row.get("phase"), problem)), flush=True)
+    if age is None:
+        return
+    for name, stamp in dc.prune_candidates(d, procs, age, time.time()):
+        if o.get("apply"):
+            # 前一封 rm 等待期間可能有人 start／wake；寄出下一封前重讀該列與 mtime。
+            current = dc.rows(d).get(name)
+            if not isinstance(current, dict) or not list(dc.prune_candidates(d, {name: current}, age, time.time())):
+                continue
+            remove(d, name, reply_to, seconds, print_letter=False)
+            print(CTRL.sub(" ", "%s: removed" % name), flush=True)
+        else:
+            print(CTRL.sub(" ", "%s: would remove (last change %s)" % (name, stamp)))
 
 
 def phase_cmd(cmd, key):
@@ -403,7 +468,7 @@ def cmd_where(opts, args):
     print(dc.cell_of(dc.find_daemon(opts.get("daemon")), o["stack"]))
 
 
-COMMANDS = {"add": cmd_add, "rm": cmd_rm, "stop": cmd_stop, "start": cmd_start, "sleep": cmd_sleep, "wake": cmd_wake,
+COMMANDS = {"add": cmd_add, "rm": cmd_rm, "prune": cmd_prune, "stop": cmd_stop, "start": cmd_start, "sleep": cmd_sleep, "wake": cmd_wake,
             "pause": cmd_pause, "resume": cmd_resume,
             "ls": cmd_ls, "where": cmd_where, "ping": cmd_ping}
 
@@ -417,7 +482,7 @@ def main():
         except aos_flags.Error as e:
             hint = "" if e.code == "FlagUnknown" else " (see %s --help)" % NAME
             raise Fail(e.code, str(e) + hint)
-        choices = ", ".join(HELPS)
+        choices = ", ".join(COMMANDS)
         if not rest:
             raise Fail("ArgumentsBad", "missing subcommand (%s; see %s --help)" % (choices, NAME))
         if rest[0] not in COMMANDS:

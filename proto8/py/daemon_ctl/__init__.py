@@ -1,4 +1,4 @@
-"""daemon_ctl：daemon 的找址、名單、寄信回信與子 loop 控制共用介面（套件入口，對外名字全在這裡）。"""
+"""daemon_ctl：daemon 的找址、名單自檢清理、寄信回信與子 loop 控制共用介面。"""
 PROG = "aos-daemon-ctl"
 
 from .base import (
@@ -28,6 +28,10 @@ from .table import (
     row_of,
     cell_of,
     supervisor,
+    duration,
+    inspect_row,
+    last_change,
+    prune_candidates,
 )
 from .ctl import (
     need_ctl,
