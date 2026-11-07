@@ -2,6 +2,7 @@
 import json
 import os
 import shutil
+import signal
 import stat
 import tempfile
 import time
@@ -82,10 +83,14 @@ def ensure_absent(root, segs):
 def add(root, segs, text):
     raw = text_bytes(text)
     kind, parent = fs.node_or_die(root, segs[:-1])
+    if kind == "leaf" and parent.endswith(".json"):
+        tool_io.die("PathBad", "node %s is a JSON leaf; it cannot have child nodes" % fs.show(segs[:-1]))
     lock_folder = parent if kind == "dir" else os.path.dirname(parent)
     with with_lock(lock_folder, "memory_write add " + fs.show(segs)) as locked:
-        clean_old(locked)
+        clean_old(locked.folder)
         kind, parent = fs.node_or_die(root, segs[:-1])
+        if kind == "leaf" and parent.endswith(".json"):
+            tool_io.die("PathBad", "node %s is a JSON leaf; it cannot have child nodes" % fs.show(segs[:-1]))
         ensure_absent(root, segs)
         if kind == "dir":
             write_text(os.path.join(parent, segs[-1] + ".md"), raw, exclusive=True)
@@ -112,7 +117,7 @@ def edit(root, segs, text):
         tool_io.die("PathBad", "root is read-only; a human edits it")
     raw = text_bytes(text, where if kind == "leaf" else "")
     with with_lock(os.path.dirname(target), "memory_write edit " + fs.show(segs)) as locked:
-        clean_old(locked)
+        clean_old(locked.folder)
         kind, where = fs.node_or_die(root, segs)
         target = os.path.realpath(os.path.join(where, "README.md") if kind == "dir" else where)
         if target == os.path.realpath(os.path.join(root, "README.md")):
@@ -127,17 +132,25 @@ def remove(root, segs, recursive):
     # Unlinking a link changes its containing directory, never its target.
     folder = os.path.dirname(where)
     with with_lock(folder, "memory_write rm " + fs.show(segs)) as locked:
-        clean_old(locked)
+        clean_old(locked.folder)
         kind, where = fs.node_or_die(root, segs)
         if os.path.islink(where):
             os.unlink(where)
         elif kind == "leaf":
             os.unlink(where)
         else:
-            if fs.children(kind, where) and not recursive:
-                tool_io.die("ChildrenExist", "node %s has children; use recursive: true" % fs.show(segs))
-            if recursive:
-                check_descendants(where)
-            renamed = os.path.join(folder, ".rm." + uuid.uuid4().hex)
-            os.rename(where, renamed)
+            with with_lock(where, "memory_write rm " + fs.show(segs)) as node_lock:
+                kind, where = fs.node_or_die(root, segs)
+                if fs.children(kind, where) and not recursive:
+                    tool_io.die("ChildrenExist", "node %s has children; use recursive: true" % fs.show(segs))
+                if recursive:
+                    check_descendants(where)
+                renamed = os.path.join(folder, ".rm." + uuid.uuid4().hex)
+                # Register release at the renamed path before handling termination.
+                old = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT})
+                try:
+                    os.rename(where, renamed)
+                    node_lock.release(renamed)
+                finally:
+                    signal.pthread_sigmask(signal.SIG_SETMASK, old)
             shutil.rmtree(renamed)

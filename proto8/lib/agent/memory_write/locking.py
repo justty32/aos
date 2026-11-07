@@ -83,7 +83,8 @@ def check_descendants(folder):
     def failed(error):
         tool_io.die("ReadFailed", "cannot scan subtree: %s" % error)
     for current, dirs, _ in os.walk(folder, followlinks=False, onerror=failed):
-        if ".lock" in dirs:
+        # The caller holds this node's lock; only deeper locks can conflict.
+        if current != folder and ".lock" in dirs:
             value = holder(current)
             if value is not None and live(current, value):
                 tool_io.die("LockFailed", "%s held by %s (%s); try again later" %
@@ -91,9 +92,23 @@ def check_descendants(folder):
         dirs[:] = [d for d in dirs if not d.startswith(".") and not os.path.islink(os.path.join(current, d))]
 
 
+class HeldLock:
+    def __init__(self, folder):
+        self.folder = folder
+        self.released = False
+
+    def release(self, folder):
+        self.released = True
+        code, _ = run_lock(["release", folder + "/"], release=True)
+        if code:
+            tool_io.warn("aos-lock release exited %d for %s" % (code, folder))
+
+
 @contextlib.contextmanager
 def with_lock(folder, note):
     folder = os.path.realpath(folder)
+    if not os.path.isdir(folder):
+        tool_io.die("NodeMissing", "node was removed while waiting for its lock")
     if not os.access(folder, os.W_OK | os.X_OK):
         tool_io.die("WriteFailed", "%s: permission denied (this folder is read-only for you; write elsewhere or report)" % folder)
     interval = tool_io.tick_interval_ms()
@@ -101,23 +116,24 @@ def with_lock(folder, note):
     # Keep signals blocked through acquired-state registration so finally can release.
     old = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT})
     acquired = False
+    held = HeldLock(folder)
     try:
         code, _ = run_lock(["acquire", "--wait-ms", "3000", "--lease-ticks", str(lease),
                             "--note", note, folder + "/"])
         acquired = code == 0
         signal.pthread_sigmask(signal.SIG_SETMASK, old)
         if code:
+            if not os.path.isdir(folder):
+                tool_io.die("NodeMissing", "node was removed while waiting for its lock")
             value = holder(folder) if code == 10 else None
             tool_io.die("LockFailed", "%s held by %s (%s); try again later (aos-lock acquire exited %d)" %
                         (folder, (value or {}).get("holder", "unknown"),
                          (value or {}).get("note", "no note"), code))
-        yield folder
+        yield held
     finally:
         signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT})
         try:
-            if acquired:
-                code, _ = run_lock(["release", folder + "/"], release=True)
-                if code:
-                    tool_io.warn("aos-lock release exited %d for %s" % (code, folder))
+            if acquired and not held.released:
+                held.release(folder)
         finally:
             signal.pthread_sigmask(signal.SIG_SETMASK, old)
