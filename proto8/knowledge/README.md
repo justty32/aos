@@ -1,6 +1,6 @@
 # proto8/knowledge — 知識庫（層級式記憶工具 `memory` 讀的資料夾）
 
-← [proto8](../README.md)｜工具：[lib/agent/memory](../lib/agent/memory/_entry)（`read`／`ls`／`find`）｜規劃：[thinking 11-05 agent-knowledge](../thinking/2026-11/05/agent-knowledge/README.md)（[01 工具](../thinking/2026-11/05/agent-knowledge/01-層級式記憶工具.md)、[02 aos 知識庫](../thinking/2026-11/05/agent-knowledge/02-aos知識庫.md)）
+← [proto8](../README.md)｜工具：[lib/agent/memory](../lib/agent/memory/_entry)（`read`／`ls`／`find`）、[lib/agent/memory_write](../lib/agent/memory_write/_entry)（`add`／`edit`／`rm`）｜規劃：[thinking 11-05 agent-knowledge](../thinking/2026-11/05/agent-knowledge/README.md)（[01 工具](../thinking/2026-11/05/agent-knowledge/01-層級式記憶工具.md)、[02 aos 知識庫](../thinking/2026-11/05/agent-knowledge/02-aos知識庫.md)）
 
 使用者 11-05：「頂層可以是簡介、index目錄之類，並且盡量講簡單……agent有需要的話，再去透過工具……抽取更深一層的知識……層級式記憶工具……這套知識庫還可以給多個agent共享！」
 
@@ -26,8 +26,9 @@
 
 ## 節點怎麼寫（給人改內容時看）
 
-- 資料夾節點 `<路徑>/`：文在 `README.md`，子節點＝裡面的子資料夾與 `*.md`；葉節點 `<路徑>.md`。名字只用 `[a-z0-9_-]`；`.`、`_` 開頭的檔不算節點。
-- 文是 Markdown：第 1 行 `# 標題`，標題後第一個非空行是**一句話摘要**（`ls`／`read` 的目錄印這句），再往下才是本文。
+- 資料夾節點 `<路徑>/`：文在 `README.md`，子節點＝裡面的子資料夾、`*.md` 與 `*.json`；葉節點是 `<路徑>.md` 或 `<路徑>.json`。名字只用 `[a-z0-9_-]`；`.`、`_` 開頭的檔不算節點。
+- `.json` 葉可用 `memory` 的 `read` 讀 `節點#/json/pointer`（RFC6901，`~0` 表示 `~`、`~1` 表示 `/`），例如 `{"op":"read","path":"data#/items/0"}`；回傳該位置的 JSON 值。節點路徑不帶 `.json`；`ls`／`find` 不接受 `#`。
+- `.md` 的文是 Markdown：第 1 行 `# 標題`，標題後第一個非空行是**一句話摘要**（`ls`／`read` 的目錄印這句），再往下才是本文。
 - 寫給小模型：短句、具體的呼叫例子、一致用詞、一個節點 ≤ 2 KB；撐大就拆成子節點、上層只留摘要。內容語言英文（AI 讀）；本 README 與各知識庫的人用說明繁中。
 
 ## 有哪些知識庫
