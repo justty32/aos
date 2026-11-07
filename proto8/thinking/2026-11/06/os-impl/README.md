@@ -38,7 +38,7 @@
 | [06-判官排隊第二步實作結果](06-判官排隊第二步實作結果.md)（11-06 晚家機） | 判官 `queue`＋窗、到期拒信、`--on-queued`、逾時撤信、K-3、`--queue-wait-s`、agents `on_queued`；代定 5 條、驗收表 |
 | [07-C5留格與AOS_KERNEL提醒實作結果](07-C5留格與AOS_KERNEL提醒實作結果.md)（11-06 晚家機） | llm kernel `reserved: {"high": N}`（P9 裁定 1）、AOS_KERNEL 指不到印 warning（E2 C++ 半）；high 17.5 ms vs 對照 3065 ms |
 | [08-aos-daemon-ctl永遠直寄實作結果](08-aos-daemon-ctl永遠直寄實作結果.md)（11-07 早家機） | 使用者裁「aos-daemon-ctl 永遠直寄」＋「判官睡着…風險」原文；直寄、拿掉 `--queue-wait-s`、文件與 N-63 註；代定 4 條、實測、改後 help |
-| [09-直掛agent不上表](09-直掛agent不上表.md)（11-07 調查，只讀） | `aos-daemon-ctl add` 直掛 agent 定義資料夾回 `applied: true` 卻不上表：重現、根因（`_entry` 掛自己＋exec 型撞名 `InstanceExists`、退了下表）、判斷（照設計的組合、靜悄悄失敗）、補文件推薦＋方向題 1；使用者 11-07 選 A（只補文件），已落實 help 與 cmd/docs/03 |
+| [09-直掛agent不上表](09-直掛agent不上表.md)（11-07 調查，只讀） | `aos-daemon-ctl add` 直掛 agent 定義資料夾回 `applied: true` 卻不上表：重現、根因（`_entry` 掛自己＋exec 型撞名 `InstanceExists`、退了下表）、判斷（照設計的組合、靜悄悄失敗）、補文件推薦＋方向題 1；使用者 11-07 選 A（只補文件），已落實 help 與 cmd/docs/03（已被 11-07 B 翻，見 [07](../../07/arknights-kb/07-停不下與消失.md)） |
 
 ## 要帶給使用者的
 
@@ -65,7 +65,7 @@
 
 11-07 使用者裁定 sol 審查 #1：「1B」——判官範本開排隊，程式沒寫 queue 時仍預設關。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
 
-11-07 使用者裁定 sol 審查 #3：「3B*」——keep_ordered 可選保有序且預設關；關時以尾名一般轉寄，開時記對照並代回原信名。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+11-07 使用者裁定 sol 審查 #3：「3B*（備註：我希望這是可選的。默認是不帶有序。）」——keep_ordered 可選保有序且預設關。關時以尾名一般轉寄，開時記對照並代回原信名。（代定（11-07 落實時，可翻案））（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
 
 11-07 使用者裁定 sol 審查 #4：「4A」——--on-queued ok 不帶排隊期限，可能永遠排著。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
 

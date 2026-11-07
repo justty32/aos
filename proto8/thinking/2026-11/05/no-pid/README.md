@@ -86,7 +86,7 @@
 
 11-07 使用者裁定 sol 審查 #15-1：「15-1A」——被叫時間採子 ctl.json 修改時間，使用者確認可接受。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
 
-11-07 使用者裁定 sol 審查 #15-2：「15-2B*」——首次讀 ctl 只略過與舊 state.ctl_seq 相同的已套用指令，其餘照做並回音；PhaseBad 限制照舊。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+11-07 使用者裁定 sol 審查 #15-2：「15-2B*」——起來後第一拍就照做 ctl.json 裡已有的指令。代定（11-07 落實時，可翻案）：首次讀 ctl 只略過與舊 state.ctl_seq 相同的已套用指令，其餘照做並回音；PhaseBad 限制照舊。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
 
 11-07 使用者裁定 sol 審查 #21：「21B*」——systemd 維持 KillMode=mixed；根當掉整組含子收掉重跑，子靠 stack 續跑。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
 

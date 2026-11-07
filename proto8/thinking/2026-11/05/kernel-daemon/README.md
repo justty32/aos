@@ -67,7 +67,7 @@
 
 ## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
 
-11-07 使用者裁定 sol 審查 #3：「3B*」——keep_ordered 可選保有序且預設關；關時以尾名一般轉寄，開時記對照並代回原信名。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+11-07 使用者裁定 sol 審查 #3：「3B*（備註：我希望這是可選的。默認是不帶有序。）」——keep_ordered 可選保有序且預設關。關時以尾名一般轉寄，開時記對照並代回原信名。（代定（11-07 落實時，可翻案））（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
 
 11-07 使用者裁定 sol 審查 #7：「7A」——LLM 總機範本保留一格給 high，reserved 設為 {"high": 1}。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
 

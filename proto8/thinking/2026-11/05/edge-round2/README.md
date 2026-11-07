@@ -90,4 +90,4 @@
 
 ## 使用者裁定（11-07，sol 審查；以下取代同題舊代定）
 
-11-07 使用者裁定 sol 審查 #15-2：「15-2B*」——第一拍尚未套用的 resume 也生效；舊 state 同 seq 才不重做。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+11-07 使用者裁定 sol 審查 #15-2：「15-2B*」——起來後第一拍就照做 ctl.json 裡已有的指令。代定（11-07 落實時，可翻案）：第一拍尚未套用的 resume 也生效；舊 state 同 seq 才不重做。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）

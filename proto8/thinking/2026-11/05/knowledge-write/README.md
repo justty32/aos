@@ -1,8 +1,8 @@
-# 2026-11-05 夜 知識庫的增刪改與多庫（knowledge-write，K7，fable 規劃、未實作）
+# 2026-11-05 夜 知識庫的增刪改與多庫（knowledge-write，K7，fable 規劃；W1～W4 已實作）
 
 ← [thinking README](../../../README.md)｜日 [2026-11-05](../README.md)｜前情：[agent-knowledge](../agent-knowledge/README.md)（memory 工具、`knowledge/aos`、五題裁定、[01 鎖協議草稿](../agent-knowledge/01-層級式記憶工具.md#預留給增刪改這輪不做另派-fable)、[03 K7](../agent-knowledge/03-接進agent與工具說明.md)）、[arch-refactor](../arch-refactor/README.md)（搬夾後的新路徑，本夾一律用新路徑寫）、[no-pid](../no-pid/README.md)（除 daemon 外不靠 pid）｜原則：[C-52、C-56、C-64、C-66、C-68](../../../../docs/CONCEPTS/01-設計理念.md)、[N-05](../../../../docs/NORMS/01-總則/01-N-05.md)、[N-15](../../../../docs/NORMS/05-基礎設施-窗/04-N-15.md)、[lib 契約](../../../../lib/docs/01-分層等.md)、[wf/STRUCTURE 四級成長](../../../../../wf/STRUCTURE.md#一個工作流的成長軌跡四級)
 
-狀態：**只規劃、沒改程式、沒 commit**（搬夾那隊代收）。本檔照 [user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)：原文（逐字）、已定、代定（可翻案）、留給他的題。
+狀態：**W1～W4 已於 11-07 實作（`f95cffb2f`，含 `memory_write`）；同日 `fbf75b026` 補修 JSON 葉與資料夾並發寫入，W5～W6 待做。**本檔照 [user/03](../../../../../wf/workflows/common/user/03-討論紀錄與規劃.md)：原文（逐字）、已定、代定（可翻案）、留給他的題。
 
 ## 使用者原文（逐字；11-05 下午～夜）
 

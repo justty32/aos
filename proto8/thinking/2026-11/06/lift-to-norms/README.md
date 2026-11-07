@@ -17,7 +17,7 @@
 
 1. **tick 欄位名**：Q4 照推薦的範例名 `deadline_tick`、`sent_tick` 跟 10-23 選的 C-54 R6「時間點 `<事件>_at_<單位>`」不合。使用者選「照命名法 (Recommended)」→ `sent_at_ticks`、`deadline_at_ticks`、`acquired_at_ticks`；多久的 `lease_ticks`、`stuck_after_ticks` 不變。已寫進 C-54 R6 的 11-06 註，tick-time README Q4 與 03 的記錄欄加改讀註。
 2. **`AOS_TICK` 歸哪一格**：① 寫「aos-exec 每層設」、② 寫「值是資料夾、沒設＝Missing」，字面都不合。使用者選「跟 AOS_KERNEL 同類 (Recommended)」→ 歸 ② hub、當例外：值是時鐘檔路徑、沒設退回牆鐘、不報 Missing。四種性質表已照改。
-3. **同一個資料夾起兩個 daemon**：11-03「這是使用者自己要承擔的風險」（不擋）對上 N-28 11-05 補④ `DaemonRunning` 退 1（代定）。使用者選「繼續擋 (Recommended)」→ N-28 加註確認擋；11-03 那句改讀成同一工作區、不同 stack 的情況（本來就不擋），procs 11 也加同樣的改讀註。
+3. **同一個資料夾起兩個 daemon**：11-03「這是使用者自己要承擔的風險」（不擋）對上 N-28 11-05 補④ `DaemonRunning` 退 1（代定）。使用者選「繼續擋 (Recommended)」→ N-28 加註確認擋；11-03 那句改讀成同一工作區、不同 stack 的情況（本來就不擋），procs 11 也加同樣的改讀註。（11-07 晚審註：11-06 是翻案，不是改讀；見 [N-28](../../../../docs/NORMS/04-基礎設施-loop與daemon/02-N-28.md)。）
 4. **範本 `wait.py` 退 11** 已由 11-07 使用者裁定 sol 審查 #29 認可：表上接住是分岔，腦設定改過對不上也可退 11；原先跟 P-19「結束碼三種」的字面落差已加註；small-thought「thought／agents 在沙箱先不支援」跟 no-pid「沙箱裡的東西只要一個信箱就夠」方向有點張力。兩件都沒動條文，等 P5 沙箱範例時再看。
    - 改讀（11-06）：沙箱那件使用者已裁「正式支援」，張力已解，見 [no-pid 13 § 使用者裁定](../../05/no-pid/13-P5實作結果.md#使用者裁定11-06)。
 
@@ -61,7 +61,7 @@
 
 11-07 使用者裁定 sol 審查 #15-1：「15-1A」——被叫時間採子 ctl.json 修改時間，使用者確認可接受。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
 
-11-07 使用者裁定 sol 審查 #15-2：「15-2B*」——首次讀 ctl 只略過與舊 state.ctl_seq 相同的已套用指令，其餘照做並回音；PhaseBad 限制照舊。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
+11-07 使用者裁定 sol 審查 #15-2：「15-2B*」——起來後第一拍就照做 ctl.json 裡已有的指令。代定（11-07 落實時，可翻案）：首次讀 ctl 只略過與舊 state.ctl_seq 相同的已套用指令，其餘照做並回音；PhaseBad 限制照舊。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
 
 11-07 使用者裁定 sol 審查 #19：「19A」——image＝stack＋ws，定義是外部原始碼；完整搬家說明集中在 C-79。（原話全文見 [wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md](../../../../../wf/workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）
 
