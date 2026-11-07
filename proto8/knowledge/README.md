@@ -20,7 +20,7 @@
 
 `memory read /` 會列出兩部分；`find` 跨捷徑查，命中保留 `aos/rules` 這種掛載路徑；`memory_export` 也跟捷徑，遇到繞回上層就停止。
 
-要讓 agent 寫自己的庫，另配 [memory_write](../lib/agent/memory_write/)；它沿用同一套找根，`add` 建葉、`edit` 整段換文、`rm` 刪節點（子樹要 `recursive: true`）。根本身唯讀，`rm` 遇捷徑只拆捷徑；出廠 `knowledge/aos` 仍由人寫，範本接線屬 W5。寫前自動拿資料夾鎖、寫後釋放；Linux 權限決定能不能寫，PATH 需有 `aos-lock`。既有檔用暫存後原子替換並保留權限。
+要讓 agent 寫自己的庫，另配 [memory_write](../lib/agent/memory_write/)；它沿用同一套找根，`add` 建葉、`edit` 整段換文、`rm` 刪節點（子樹要 `recursive: true`）。根本身唯讀，`rm` 遇捷徑只拆捷徑；出廠 `knowledge/aos` 仍由人寫，範本接線屬 W5。**掛出廠庫要由人設成唯讀**（11-07 晚審裁定 7 選推薦，[晚審 04](../../wf/workflows/refactor/reports/2026-11-07-晚審/04b-要使用者裁定-續.md)）：跑 agent 的通常就是 repo 主人，「沒權限＝唯讀」不成立，經捷徑 `edit aos/rules` 會真的改到 repo、污染每隻 agent 的 system prompt；所以把 `knowledge/aos` 掛進別的記憶根時，由人先設唯讀（`chmod -R a-w` 那份，或掛一份唯讀副本）。另定「`rm` 根層捷徑報 `PathBad`」，程式待改（見晚審 06 待辦）。寫前自動拿資料夾鎖、寫後釋放；Linux 權限決定能不能寫，PATH 需有 `aos-lock`。既有檔用暫存後原子替換並保留權限。
 
 庫在 git 下時，`.gitignore` 加 `.lock/`、`.tmp.*`、`.rm.*`；葉升級的暫存資料夾另加 `.new.*`。不要把鎖與暫存檔當知識提交。
 
@@ -29,7 +29,7 @@
 - 資料夾節點 `<路徑>/`：文在 `README.md`，子節點＝裡面的子資料夾、`*.md` 與 `*.json`；葉節點是 `<路徑>.md` 或 `<路徑>.json`。名字只用 `[a-z0-9_-]`；`.`、`_` 開頭的檔不算節點。
 - `.json` 葉可用 `memory` 的 `read` 讀 `節點#/json/pointer`（RFC6901，`~0` 表示 `~`、`~1` 表示 `/`），例如 `{"op":"read","path":"data#/items/0"}`；回傳該位置的 JSON 值。節點路徑不帶 `.json`；`ls`／`find` 不接受 `#`。
 - `.md` 的文是 Markdown：第 1 行 `# 標題`，標題後第一個非空行是**一句話摘要**（`ls`／`read` 的目錄印這句），再往下才是本文。
-- 寫給小模型：短句、具體的呼叫例子、一致用詞、一個節點 ≤ 2 KB；撐大就拆成子節點、上層只留摘要。內容語言英文（AI 讀）；本 README 與各知識庫的人用說明繁中。
+- 寫給小模型：短句、具體的呼叫例子、一致用詞、一個節點 ≤ 2 KB；撐大就拆成子節點、上層只留摘要。內容語言英文（AI 讀）；本 README 與各知識庫的人用說明繁中。**11-07 改讀**：「內容語言英文」管的是出廠的 `knowledge/aos`；從外部語料收進來的庫，節點名英文、內文照語料原文存（見 [CONCEPTS C-42 續「知識庫存什麼、給人看什麼」](../docs/CONCEPTS/05-agent/01-續-C-42.md)）。（11-07 使用者裁定，傍晚選項框 ltn-7 選推薦，[lift-to-norms](../thinking/2026-11/07/lift-to-norms/README.md)）
 
 ## 有哪些知識庫
 
