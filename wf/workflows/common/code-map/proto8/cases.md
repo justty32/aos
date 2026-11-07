@@ -5,6 +5,14 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/cases/box-probe/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`check.json`](../../../../../proto8/cases/box-probe/check.json) | Require every sandbox boundary check to pass. |
+| [`run.json`](../../../../../proto8/cases/box-probe/run.json) | Probe the declared bash sandbox boundary. |
+| [`stdin.json`](../../../../../proto8/cases/box-probe/stdin.json) | Try writes, network and host visibility using bash builtins. |
+
 ## `proto8/cases/smoke/`
 
 | 檔 | 負責什麼 |

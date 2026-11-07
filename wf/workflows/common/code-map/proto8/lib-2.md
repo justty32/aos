@@ -10,6 +10,11 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`aos_json/`](../../../../../proto8/lib/aos/aos_json/) | 腦用的 JSON 工具：stdin 收 {"cmd", "target", "value"?, "depth"?}，在 $AOS_WS 底下叫 aos-json，stdout 是結果。 |
+| [`box_check/`](../../../../../proto8/lib/aos/box_check/) | Verify probe markers, executable visibility and host probe paths. |
+| [`box_check/tests/test_acceptance.py`](../../../../../proto8/lib/aos/box_check/tests/test_acceptance.py) | Verify boxed and open definitions through actual sandbox and measure boundaries. |
+| [`defs/`](../../../../../proto8/lib/aos/defs/) | List, group, trace references and check public definition declarations. |
+| [`defs/catalog.py`](../../../../../proto8/lib/aos/defs/catalog.py) | Inspect public definition declarations and group agents by tools, endpoint and memory. |
+| [`defs/tests/test_defs.py`](../../../../../proto8/lib/aos/defs/tests/test_defs.py) | Verify public definition discovery, three-axis identity, references and check failures. |
 | [`feedback/`](../../../../../proto8/lib/aos/feedback/) | Submit command usability feedback through aos-feedback without guessing the caller. |
 | [`judge/`](../../../../../proto8/lib/aos/judge/) | 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false；選填排隊窗 queue.json 先來先掛、keep_ordered 對照代回有序信 |
 | [`judge/tests/test_judge.py`](../../../../../proto8/lib/aos/judge/tests/test_judge.py) | Verify broken reply recovery and restart deduplication with real aos-post mailboxes. |
@@ -34,8 +39,12 @@
 | [`review_round/tests/fake_endpoint.py`](../../../../../proto8/lib/aos/review_round/tests/fake_endpoint.py) | Run the real fake endpoint and report the endpoint's configured token usage. |
 | [`review_round/tests/test_policy.py`](../../../../../proto8/lib/aos/review_round/tests/test_policy.py) | Verify watch exclusions, tree selection, history baselines and retirement decisions. |
 | [`review_round/tests/test_round.py`](../../../../../proto8/lib/aos/review_round/tests/test_round.py) | Verify complete review rounds against isolated daemons and real fake endpoints. |
+| [`review_round/tests/test_suggestions.py`](../../../../../proto8/lib/aos/review_round/tests/test_suggestions.py) | Verify growth evidence, static references and measured per-node context medians. |
 | [`rollback/`](../../../../../proto8/lib/aos/rollback/) | Restore the newest retained version of an idle definition. |
 | [`rollback/tests/test_rollback.py`](../../../../../proto8/lib/aos/rollback/tests/test_rollback.py) | Verify rollback without a previous version leaves the definition unchanged. |
+| [`shell_report/`](../../../../../proto8/lib/aos/shell_report/) | Read public shell accounts and report execution stages and command shapes. |
+| [`shell_report/report.py`](../../../../../proto8/lib/aos/shell_report/report.py) | Summarize declared shell accounts and effective arbitrary execution tools. |
+| [`shell_report/tests/test_report.py`](../../../../../proto8/lib/aos/shell_report/tests/test_report.py) | Verify shell stages, public account ownership, shape normalization and tool overrides. |
 | [`watch/`](../../../../../proto8/lib/aos/watch/) | Track promoted definitions and roll back failed quality or cost windows. |
 | [`watch/tests/test_watch.py`](../../../../../proto8/lib/aos/watch/tests/test_watch.py) | Verify watch acceptance, persistent retry decisions, public rollback calls and atomic writes. |
 | [`watch/watch_state.py`](../../../../../proto8/lib/aos/watch/watch_state.py) | Maintain promotion windows and invoke rollback through observed tool calls. |
