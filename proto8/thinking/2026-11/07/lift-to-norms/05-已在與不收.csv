@@ -1,0 +1,88 @@
+id,類別,主題,落點或原因
+A01,已在條文,#8 aos-agent 經判官、地址指不到維持報 MailboxMissing、不退 daemon 信箱,NORMS/10-基礎設施-定義與工作區/07-hub-型環境變數與父子交代/03-AOS_-變數的四種性質.md「11-06 註（K3）」段
+A02,已在條文,#11 信裡的毫秒＝跨樹牆鐘語意、格式不改,NORMS/10-…/09-N-67.md ②（**只進了 N-67；N-65 ③ 字面「跨樹的信裡期限用毫秒」沒加註**，補註草稿見 A20）
+A03,已在條文,#12 時鐘停住時判卡住、鎖租約、tick 逾時一起停,NORMS/02-設計理念-時空.md N-65 後一行粗體；NORMS/05-基礎設施-窗/06-N-17.md 末；NORMS/05-基礎設施-窗/04-N-15.md 末
+A04,已在條文,#15-1 被叫的時間＝子 ctl.json 的 mtime,NORMS/05-基礎設施-窗/06-N-17.md「11-06 註」；NORMS/05-基礎設施-窗/07-細則.md N-32「11-06 註（no-pid P5b）」
+A05,已在條文,#15-2 daemon 起來後第一拍照做 ctl.json 已有的指令（比舊 state 的 ctl_seq 去重）,NORMS/05-基礎設施-窗/01-N-06～N-08.md「11-03 改口」與「首次讀取的去重限制」；NORMS/04-基礎設施-loop與daemon/03-N-54.md start 項與「pause／resume 的 PhaseBad」；07-細則.md；NORMS/主題.md 窗列（舊「基準線」句被刪，見打架 X3）
+A06,已在條文,#19 image＝stack＋ws、定義是原始碼；整樹凍住搬家只留 C-79,CONCEPTS/02-設計理念-時空.md C-16 註與 C-79；CONCEPTS/01-設計理念/09-C-83.md ①；NORMS/10-…/09-N-67.md 開頭；CONCEPTS/附錄1-續-板子比喻.md 兩處（原句被刪，見 X3）
+A07,已在條文,#22 短旗標每支各自定、常用表只作預設,CONVENTION/02-題目stack停錯腦/07-P-44.md 第 3 列與「給人用的指令」首項（11-06 共用九個短名表被整句刪掉，見 X3）
+A08,已在條文,#23 升格判準：同型再出現問「往後會更多嗎、好處遠大於壞處嗎」，數字只提醒,CONCEPTS/01-設計理念/03-續-C-52-例外.md 升格段第 2、3 條（舊「第 3 次升格」「5 項或 3 天 2 項就改寫」原句被刪，見 X3）
+A09,已在條文,#25 公開介面限標頭／schema／interfaces.json；K2 原件、K4 只限 tick、K5 不成通則,CONCEPTS/01-設計理念/03-續-C-52-例外.md「讀法：不認身份、可認公開介面」（原句裡的「README 寫明的檔名與格式」被刪，見 X3）
+A10,已在條文,#28 有 daemon 但沒回信報 DaemonFailed，DaemonMissing 只留給沒設／資料夾不在,NORMS/04-基礎設施-loop與daemon/02-N-28.md「11-06 註（no-pid P5b）」ping 句；NORMS/05-基礎設施-窗/06-N-17.md「11-06 改讀」；NORMS/10-…/07-…/01-N-63-三件事與跟實作對不上的.md「11-06 註」
+A11,已在條文,#29 表上明寫接住的碼（wait 的 11）是分岔、不是失敗,CONVENTION/02-題目stack停錯腦/04-五-stack與六-停與錯.md P-19；CONVENTION/02-…/06-P-41.md「11-07 確認」
+A12,已在條文,#30 --env-file 存內容,CONVENTION/02-…/07-P-44.md「11-06 註（aos-tools add…）」
+A13,已在條文,#31-1 R14 保留嚴讀法，加註 10-30 請求也可叫 queue,CONCEPTS/01-設計理念/C-54-命名方法/03-R14.md「11-07 確認」
+A14,已在條文,#33 子資料夾＝子動作直接定稿,CONVENTION/02-…/06-P-41.md「11-06 註：子資料夾＝子動作」
+A15,已在條文,#34-1 --help 只在旗標位置才認,CONVENTION/02-…/07-P-44.md `--help` 項
+A27,不收,"#7 LLM 總機範本留一格給 high（`reserved: {""high"": 1}`）",實作細節：範本設定值（前例「kernel.json 設定值」不收）；條文本來就沒提 `reserved`，N-42 (1) 的份額規則不變。
+A28,不收,#20-3 新機器只清 think/request.json,實作細節：搬家食譜（proto8/cmd/aos-agent/docs/04-搬家/02-image保存與邊界.md 已改）。「request.json 可重建」那條本體是 11-06 git-image 裁定 2，要收也是收那條（見 A21 衝突）。
+A29,不收,#21 systemd 範例維持 KillMode=mixed，根當掉＝整棵樹重跑,範例 README（proto8/impls/aos-daemon/examples/root/README.md 已寫）；屬 N-67 ⑤／C-83 ③ 的 root 例外（根由使用者保底），條文不用動。09 總表的背景原話「根 crash 後重起…接回」是方向，使用者選了 B 等於接受這個代價，不算打架。
+A30,不收,#32 公司機閒著合成一級：最多 8,wf 規矩（wf/workflows/dispatch/aos-teams/01-公司WSL.md）。
+A31,不收,#34-2 給 LLM 看的 prompt、persona、工具說明也改英文,wf 規矩：「程式輸出一律英文」那列在 wf/workflows/common/conventions.md:13，已標 #34-2；proto8/docs/CONVENTION 沒有這條（只有 P-44 的英文 `--help`），照前例留在 wf。
+A32,不收,#35 LITELLM_KEY 兩處都補,範本／範例（systemd `EnvironmentFile`、`root.env.example`、kernel docs/01）；密鑰走環境的原則 N-67 ⑧ 已有。
+A33,不收,#36 agents 工具拿掉 tick 上限，比照 thought,實作細節：lib/agent/agents 三檔的參數驗證；條文沒寫上限。
+B01,已在條文,選 B「daemon 不分類」＋兩句原話（「hmmm，果然不可以用陣列形或物件形來分…」「等等，不過有個問題：argv:[aos-loop loop.json]…我確實就是一次性程式沒錯」）、看 interval_ms 未採用,N-28 第 31 行（子項結束那段的 B 註）、N-54 第 20 行（「exec 型只有跑和拔」下的 B 註）
+B02,已在條文,寫法只決定起法，起來之後一視同仁、不用 interval_ms 決定管理動作,N-28 ④ 型別怎麼判 的 B 註（第 62 行）
+B03,已在條文,"daemon_ctl 不再認 `[""aos-loop"", 設定]`，陣列與 argv 物件原樣交 aos-exec；直接 loop 設定仍補 `interval_ms: 0`",N-28 ⑤ 的 B 註（第 64 行）
+B04,已在條文,任何 proc 都能 stop／start／sleep／wake；stop＝寫公開 ctl、等它自己退、不送 SIGTERM；ctl 名＝小格父寫的 loop 設定的非空 `ctl`，否則 `ctl.json`；寫不了只 warning,N-54 第 16 行（stop 範圍已翻）、第 20 行、第 22 行（auto_restart 放行已翻）、第 12 行（「寫到 exec 型」整份不採用已刪）
+B05,已在條文,下表規則：自然退 0 下表；已知非 0（含訊號、起不來）留 `stopped`＋`reason`；stop／sleep 途中退留 stopped／sleeping；adopt 拿不到碼下表；auto_restart 照舊,N-28 第 30 行、11-05 晚補 ⑤ 的 B 註（第 75 行）、N-17 第 10 行
+B06,已在條文,收工時所有仍活著的列都睡下、留 sleeping，下次開門自動 wake,N-28「收工時 sleep、開門時 wake」的 B 註（第 41 行）、N-17 第 10 行
+B07,已在條文,任何 running 可 sleep、sleeping 可 wake；sleep 送 SIGTERM（PhaseBad 照舊）,N-28 11-05 補 ① 的 B 註（第 68 行）。註：「sleep 不寫 ctl」是代定，條文已照寫，不另收
+B08,已在條文,使用者確認翻 N-54「exec就是只有執行中和拔掉」「他停下來就是沒了」與 N-28「子項結束後不留名單」「exec 型照舊下表」；原句全留、旁邊加註,N-54 第 20 行、N-28 第 30、41、75 行（都標「11-07 使用者確認翻案（B 落實時）」）
+B09,已在條文,os-impl 09 A 裡「一次性 proc 失敗仍下表」被 B 翻掉,09 的 A 本來只動程式文件，沒進條文；翻案後的規則已在 N-28（同 B05）；thinking 09 自己也加了「後續」註
+B10,已在條文,aos-daemon-ctl 永遠直寄、不看 `AOS_KERNEL`；aos-agent 照舊經判官；判官睡著＝設計系統的人要管的風險，手動 `aos-daemon-ctl wake 名字`（55bf74e55）,N-63「實例 `AOS_KERNEL`」的 11-07 註／改讀（第 15 行）。CONCEPTS／CONVENTION 沒有「aos-daemon-ctl 走判官」的句子，不用改（os-impl 08 的條文欄也這樣寫）
+B11,已在條文,「aos-agent＝經作業系統（判官），aos-daemon-ctl＝人直接敲板子」的分工、對應 C-83 使用者保底,N-63 第 15 行（同 B10）；名詞表沒有，見草稿 B16
+B12,已在條文,edge E1「state.json 壞掉＋ctl.json 留舊 stop＝重起就停」維持現狀,行為已在 N-54 start 那句（第 17 行：「舊 state 不存在或缺欄＝照一般指令做…未做過的 stop 會立即生效」，sol 審查 #15-2）；「先手動清 ctl.json」那句在 `proto8/impls/aos-daemon/docs/08-當機復原與已知限制.md`，屬程式文件
+B19,不收,os-impl 09 A「維持現狀，只補文件」（原話「A。」）,已翻案（「一次性失敗仍下表」那半被 B 翻）；補文件那半落點是程式文件（cmd/docs/03、`aos-daemon-ctl add --help`），已做
+B20,不收,os-impl 09「`--name` 被吃掉」與「內層 aos-agent 在 daemon 環境有 `AOS_KERNEL` 時會經判官，等於這條路沒直寄」,使用者沒回應，照 user.md 通則不處理（第二項還沒實測）
+B21,不收,直掛定義資料夾仍跑 `_entry`，撞名現在留 stopped 列,B 的實作後果，屬程式文件
+B22,不收,07「還是得去看關鍵的interval_ms，看有沒有這個key」,中途想法、未採用（N-28／N-54 已記「未採用」）
+B23,不收,07 舊待裁表 A（物件形也認 loop）／B（只加 warning）／C（只補文件）,已被「B：daemon 不分類」取代
+B24,不收,08 代定：sleep 不寫 ctl、表上加 `launch` 與 `stop_mode`、保留補 `interval_ms: 0`、收工時正在 stop 的留 stopped、起不來只留單列 stopped,代定、實作細節（sleep 不寫 ctl 那句條文已照寫）
+B25,不收,07 #16 提示寫死「exited 0」改掉,bug 修、實作
+B26,不收,edge E8 `timeout_s`／`timeout_ticks` 超過平台上限報 ArgumentsBad、出錯收子程序,已裁，但屬 `lib/agent/agents` 工具的實作細節；上限數字是隊長定的
+B27,不收,edge E1「文件寫明先清 ctl.json」,程式文件（aos-daemon docs/08），已做；行為見 B12
+B28,不收,edge E2「原信先標完成，再寫對照」,已裁，但是判官內部順序，實作細節；實際改法（在 relay_replies 補收）是隊長代定
+B29,不收,edge E4 aos-tick「暫存檔名加 pid，不加鎖」,實作細節；「不支援同時 tick」寫在程式頭，不在條文
+B30,不收,edge E2 對照表壞掉要不要改用空表、不整輪退 1,未裁
+B31,不收,edge E8 ticks 太大報 ArgumentsBad、時鐘或間隔壞了報 TickBad,代定
+B32,不收,edge E3、E5、E6、E7,實驗結果符合既有裁定，沒有新裁定
+B33,不收,daemon-prune 原話「給aos-daemon-ctl添加一個子指令，用於自檢與清理上次修改是很久以前的」,叫人做事（加一個子命令），不是定一件事；做法全是代定，落點是程式文件（cmd/docs/04）。跟 P-14「清理是人的事」、C-56「不為清理加機制」不衝突：prune 是人下的指令，daemon 自己不清。B 之後失敗列會堆在表上，prune 正好是人清它的工具；隊長要的話可以在 N-28 的 B 註後加一句指過去
+B34,不收,daemon-prune 代定段（`; ` 接多個問題、UTC、`--timeout-s`／`--reply-to`、apply 前重查、讀 /proc 自檢）,代定（任務書指定不收）
+B35,不收,55bf74e55 代定：整個拿掉 `--queue-wait-s`、不提醒「設了 AOS_KERNEL 但這支不看」,代定、程式
+C01,已在條文,工具可以是「開一個 agent 做事」（A「已定」：「工具可以是開一個agent做事」）,`proto8/docs/CONCEPTS/05-agent/01-續-C-42.md` C-42「agent 也可以是工具」＋同檔 11-06 註 thought／agents 兩支工具
+C02,已在條文,把請求轉交給另一台 kernel 的也算 kernel（A「已定」：llm kernel 轉交）,`proto8/docs/CONCEPTS/04-kernel.md` C-47 的 11-05 加嚴（使用者原話「…把請求轉交給另一個真正有權限的kernel，那他也算kernel嗎？我覺得是算的」）。「一切都可以嵌套」這半沒寫進去，見草稿 C07
+C03,已在條文,daemon 不加「有信就醒」（E 使用者裁定：選推薦「不加」）,實質已在 `proto8/docs/NORMS/04-基礎設施-loop與daemon/03-N-54.md` 開頭的使用者 11-03 原話「只有指令叫醒」。要留痕跡的話在那句後面加一行：「**11-07 使用者裁定再確認**：daemon 不加『有信就醒』；專精 agent 是躺在磁碟上的定義，叫到才起（出處 proto8/thinking/2026-11/07/evolve-design/README.md）」。後半句「叫到才起」是 E 的讀法（衝突 7 推薦），不是使用者原話，要不要寫見 T08
+C14,不收,收 `~/repo/narratives/arknights` 進知識庫、慢慢做邊做邊找不足（A 已定）,排程（這條線的任務）
+C15,不收,系統設計與架構由 Claude 系做、fable 規劃 opus 審、gpt 施工（A 已定）,wf 規矩（隊形，屬 wf/workflows/dispatch）
+C16,不收,試驗場給 gpt 亂試、LiteLLM proxy、盡量用 gpt 系（A 原文）,該線環境與操作
+C17,不收,開監控、80% 以內都可以（A 已定）,該線操作
+C18,不收,留紀錄與得失、放手擴充工具與 agent 定義、每批附說明文件（A 追加）,該線的工作方式（wf／thinking 怎麼寫）；定義先放試驗場是代定 3
+C19,不收,`lore/evidence` 不搬進知識樹（A 裁定 2）,這個庫自己的細節
+C20,不收,格式檢查過就 commit、事後抽查（A 裁定 3）,試驗場流程；要升成「agent 寫知識庫的通則」得使用者另外說
+C21,不收,重跑一致率只記錄、不當門檻（A 裁定 4）,該線第一輪的驗收法；跟 E 的門打架，見 T11
+C22,不收,gpt 呼叫不設每日上限（A 裁定 5）,操作
+C23,不收,不特地安排上千 agent 測試輪、自然膨脹（A 裁定 6）,排程
+C24,不收,代定清單 1～15（試驗場另開、arknights 唯讀、切法照換行、spans 連結形狀、降級選級 3 次 90%、時間正式一維、本機一次一模型等）,代定（使用者不在時隊長定，可翻案）；7、8、9 已由使用者裁定蓋過，裁的部分收在 C05、C08
+C25,不收,K 想法 1（關聯寫成 `a/b#/c/1`）,想法，沒裁；E 的 N-62 鬆綁推薦以它為根，見 T06
+C26,不收,K 想法 2、3（一個地點一個地點做、sol 降 terra 找錯、難的先用聰明模型）,想法，也是該線的做法
+C27,不收,K 想法 4、5（目標是過程的成本、metainfo 用任意 JSON、自我宣稱＋他者觀測、公式）,想法，沒裁；裁了的部分（單位、公式 key）已收在 C08、C10；兩本帳見 T05
+C28,不收,K 想法 6（加 tag、別濫用連結）,想法，沒裁；E 的 memory tag／連結約定是推薦
+C29,不收,K 想法 7、8（少給上下文、嵌套分派、善用 thought、長出專精 agent、本輪一百個不同質 agent）,想法；「一百個」已裁成「方向，不湊數」（C31）
+C30,不收,K 想法 9 前半（本機 LM Studio 一次只能載一個模型）,環境事實＋實作（E 寫成 kernel 範本 `slots: 1`）；後半（輪次中間也可開 fable 規劃、次數不限）是 wf 規矩
+C31,不收,K fable 四題第 1 題「方向，不湊數」,這一輪的目標、排程
+C32,不收,K fable 四題第 4 題（去加 terra、使用者重啟 LiteLLM）,操作，已做
+C33,不收,K 想法 10（時間成本也要算）,想法；同一件事由裁定「秒」與 C09 帶進 C08，不單獨收
+C34,不收,K 想法 11、12（metainfo 評估機制；改進本身當函數成長，「以及優化」）,未裁（E 方向題 A、B、C 暫照推薦）；想法 12 跟 C12 引的裁定原話重疊，見 T13
+C35,不收,E 概念一「兩本帳：自稱與他見」,fable／opus 推薦，使用者沒選；跟「實測不回寫」的關係見 T05
+C36,不收,E 概念二的「aos 只定三個通用 key」這個框架,推薦；單位是裁的（C08），key 名見 T10
+C37,不收,E 概念三「帳沿呼叫樹走、帳裡寫明下一本在哪、`aos-observed` 公開介面」,推薦；跟 trace、thought 默認刪的衝突見 T07、T04
+C38,不收,E 概念四的 `promote`、`DefBusy`、`.prev/`、「登記在誰工具箱誰能按」,推薦＋實作細節；使用者裁的只有「自動換、自動退」（C11）
+C39,不收,E 概念五「門與目標分開」,推薦（根在想法 4「格式檢查不是目標」，沒裁）
+C40,不收,E 資料格式：`observed.jsonl` 四種行、case 夾、比對器契約、`measure.json`、`review.json`、`ladder.json`、`watch.json`,實作細節（條文由 opus 照落地順序最後寫，等格式定稿）
+C41,不收,E watch 的 3 個 case、10% 容忍、品質一次不合格就退,代定（E 自己寫「起步值 3 與 10% 是代定」）
+C42,不收,E 方向題 A（自稱不準要不要扣分）、B（何時審視審視者）、C（審視題好答案從哪來）,未裁（暫照推薦）
+C43,不收,E memory 連結與 tag 約定、`memory find` 認 tag,推薦（根在想法 1、6，沒裁）
+C44,不收,E 嵌套 kernel 只用一層、`llm_forward` 放 `lib/aos/`、`kernel/llm-team/` 範本,推薦＋實作；使用者原話「一切都可以嵌套」收在 C07
+C45,不收,E 落地順序 1～17、同批交給 kernel-nest／kb-scale／tool-evolve,排程
+C46,不收,E「審視者經 `promote` 換別人的定義不算 self-improve」,推薦（E 衝突 6 的讀法），見 T01
