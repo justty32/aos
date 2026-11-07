@@ -9,7 +9,7 @@
 //   stuck 是 bool，表上投影 phase／reason，不改內部生命週期；刺激消失清期限與標記，回 running；adopt 將 stuck 當 running 接回、重設基準。
 //   restart_on_stuck=true 時同拍 SIGTERM，10 秒後 SIGKILL 整群，settle 後照表重起；父 paused 只標、不起停。
 //   連 3 次卡住（起初一輪計入，最多實際重起 2 次）沒任何新回應＝收完留 stopped＋英文 reason、要人 start；起／接回後的新回應清連敗。
-//   人工 stop／sleep／rm 優先於卡住重起；重起收途中父收工，所有仍活著的列改留 sleeping。
+//   人工 stop／sleep／rm 優先於卡住重起；卡住重起收途中父收工，該列改留 sleeping。
 // 11-06（T7）：tick 沒寫／null／false 不管時鐘；true 或 {file?, interval_ms?, name?} 在入口展開成第一列普通 loop proc。
 //   預設 file＝daemon stack/tick、name＝_tick、interval_ms＝aos::tick_interval_ms()；exec 用內嵌單子 argv 跑 PATH 上的 aos-tick，auto_restart＝true。
 //   名字與 daemon.json 的 procs 撞到、未知 key／型別／值壞＝CfgBad；指示詞同其他設定格。後續流程不辨認哪列是時鐘。
@@ -41,9 +41,11 @@
 // 信（procs_ctl_mailbox）body 認 procs_added、procs_removed、procs_stopped、procs_started，改的是底；ping 必須是 true，只回信、不改底；壞信原因進 procs_state 的 mailbox_warning。
 // procs_stopped／procs_started／procs_slept／procs_woken 適用所有 proc；不在期望表的名字＝不管。
 // 四態（procs § 0、§ 2c；ctl-commands § 5）：running（表上、活著）、stopping（收的途中）、stopped（表上、行程不在、stack 留著）、表上沒有；
-//   11-03 多一態 sleeping（procs § 8 sleep／wake）：daemon 收工（ctl 的 stop、SIGTERM／SIGINT）時所有還活著的 proc＝SIGTERM 收掉、列留成 sleeping
+//   11-03 多一態 sleeping（procs § 8 sleep／wake）：daemon 收工（ctl 的 stop、SIGTERM／SIGINT）時 running 的 proc＝SIGTERM 收掉、列留成 sleeping
 //   （pid null、stack 留著）；daemon 再開 adopt 接回、不進 stopped 集合＝第一圈用列上的 stack 再起（wake；暫停中的照它自己 state.json 的 paused 接著暫停）。
-//   收工時 held 的照舊保留；其餘仍活著的列一律 sleeping；睡著時收到 stop（procs_stopped）＝改成 stopped、不 wake。kill -9 的 daemon 沒走收工，不在此列。
+//   收工時 held 的照舊保留；stop 途中的留 stopped、sleep 繼續睡、rm 途中的移除；卡住重起收途中改留 sleeping。
+//   收工途中 kill -9 再開也照 stopping 列的 stop_mode 接回；finishing 只用來補回仍記為 running 的列。
+//   睡著時收到 stop（procs_stopped）＝改成 stopped、不 wake。kill -9 的 daemon 沒走收工，不在此列。
 //   stop（名字在期望表又在 stopped 集合）＝往子 loop 的 ctl.json 寫 {"cmd": "stop", "seq": N}，等它跑完這次自己退（沒有時間上限）→列留成 stopped
 //   （pid null）；add＋stop 同時＝直接一列 stopped、不起、stack 不建。start（拿出 stopped 集合）＝下一圈用列上的 stack 再起（不清 ctl：子 loop 比舊 state 的 ctl_seq，已套用過的 stop 不重做）。
 //   只有指令叫起：信來、procs_added 同名都不會把 stopped 的拉起來（同名 add＝設定換掉、停照停）。

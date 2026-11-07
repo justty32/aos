@@ -84,7 +84,7 @@ void Daemon::adopt() {
             return;   // 有一列壞就整份不接
         }
     }
-    // 上一個 daemon 死的時候在收工（state 窗 phase stopping）＝它正在收的那些本來要睡下（sleeping），不是被 stop
+    // 上一個 daemon 收工時還記為 running 的列要睡下；stopping 的列只看自己的 stop_mode。
     std::optional<Json> me = state_path_.empty() ? std::nullopt : aos::read_json(state_path_);
     bool finishing = me && me->is_object() && me->value("phase", Json()) == "stopping";
     // 11-06（no-pid P1）：表頂層的 boot_id 跟這次開機不同（或沒寫）＝表上的行程都不在了（重開機後 pid＋ticks 可能撞上別的行程）；這台讀不到 boot_id＝照舊只比 pid＋ticks
@@ -159,7 +159,7 @@ void Daemon::adopt() {
             if (phase == "stopping") {
                 // 接回收的途中仍照公開 stop_mode；stop 不會因 daemon 重開而改送訊號。
                 std::string mode = r.value("stop_mode", std::string("stop"));
-                if (finishing || mode == "sleep") {
+                if (mode == "sleep") {
                     c.nap = true;
                     term(c);
                 } else if (mode == "stop") {
@@ -178,11 +178,11 @@ void Daemon::adopt() {
             continue;
         }
         std::string mode = r.value("stop_mode", std::string("stop"));
-        if (phase == "stopping" && mode == "remove" && !finishing) {
+        if (phase == "stopping" && mode == "remove") {
             continue;
         }
         c.held = true;
-        c.phase = phase == "running" || finishing || mode == "sleep" ? "sleeping" : "stopped";
+        c.phase = phase == "running" || mode == "sleep" ? "sleeping" : "stopped";
         if (c.phase == "stopped") {
             stopped_.insert(name);
         }

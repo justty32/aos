@@ -144,6 +144,91 @@ class Lifecycle(unittest.TestCase):
         self.assertEqual(f.phase('stopped')['signal'], None)
         self.assertEqual(f.row()['stop_mode'] if 'stop_mode' in f.row() else 'held', 'held')
 
+    def slow_term_fixture(self, name):
+        f = self.fixture(name).start()
+        f.script.write_text('''#!/usr/bin/env python3
+# Keep SIGTERM pending long enough to observe daemon shutdown and recovery.
+import os, pathlib, signal, sys, time
+s = pathlib.Path(os.environ['AOS_STACK'])
+def term(signum, frame):
+    (s / 'termed').write_text('termed')
+    time.sleep(1.5)
+    (s / 'exited').write_text('exited')
+    sys.exit(0)
+signal.signal(signal.SIGTERM, term)
+(s / 'ready').write_text('ready')
+time.sleep(12)
+''')
+        f.add(f.body('script', 'stop'))
+        return f
+
+    def start_after_finish(self, f):
+        f.start()
+        until(lambda: read(f.stack / 'procs_state.json', {}).get('pid') == f.proc.pid)
+
+    def assert_finish_result(self, f, mode):
+        if mode == 'rm':
+            self.assertIsNone(f.row(), f.row())
+        else:
+            self.assertEqual(f.row()['phase'], 'stopped' if mode == 'stop' else 'sleeping')
+
+    def wait_child_gone(self, pid):
+        stat = Path('/proc', str(pid), 'stat')
+        def gone():
+            try:
+                return stat.read_text().rsplit(')', 1)[1].split()[0] == 'Z'
+            except FileNotFoundError:
+                return True
+        until(gone)
+
+    def test_finish_preserves_pending_remove_stop_and_sleep(self):
+        for mode in ('rm', 'stop', 'sleep'):
+            with self.subTest(mode=mode):
+                f = self.slow_term_fixture('finish_pending_' + mode)
+                f.ctl(mode, 'job')
+                f.phase('stopping')
+                f.close()
+                self.assert_finish_result(f, mode)
+                self.start_after_finish(f)
+                if mode == 'sleep':
+                    f.phase('running')
+                else:
+                    self.assert_finish_result(f, mode)
+                f.close()
+
+    def test_adopt_finish_preserves_stop_mode_alive_and_dead(self):
+        for child_alive in (True, False):
+            for mode in ('stop', 'rm', 'sleep'):
+                with self.subTest(mode=mode, child_alive=child_alive):
+                    f = self.slow_term_fixture('crash_finish_' + mode + '_' + str(child_alive))
+                    pid = f.row()['pid']
+                    f.ctl(mode, 'job')
+                    f.phase('stopping')
+                    f.proc.send_signal(signal.SIGTERM)
+                    until(lambda: read(f.stack / 'state.json', {}).get('phase') == 'stopping')
+                    write(f.root / 'crash_procs_state.json', read(f.stack / 'procs_state.json'))
+                    self.assertEqual(read(f.root / 'crash_procs_state.json')['procs']['job']['stop_mode'],
+                                     'remove' if mode == 'rm' else mode)
+                    f.proc.kill()
+                    f.proc.wait()
+                    f.close()
+                    if not child_alive:
+                        until(lambda: (f.cell / 'exited').exists())
+                        self.wait_child_gone(pid)
+                    else:
+                        self.assertFalse((f.cell / 'exited').exists())
+                    self.start_after_finish(f)
+                    if mode == 'rm':
+                        until(lambda: not f.rows())
+                        self.assertIsNone(f.row())
+                    elif mode == 'stop':
+                        f.phase('stopped')
+                    else:
+                        until(lambda: f.row() and f.row()['phase'] == 'running' and f.row()['pid'] != pid)
+                    until(lambda: (f.cell / 'exited').exists())
+                    self.wait_child_gone(pid)
+                    f.close()
+
 
     def test_pending_loop_can_wake_after_daemon_restart(self):
         f = self.fixture('pending_loop').start()

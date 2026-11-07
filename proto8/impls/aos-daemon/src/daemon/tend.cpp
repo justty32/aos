@@ -248,7 +248,10 @@ void Daemon::finish() {
             continue;   // stopped／sleeping 的列：照寫進最後一份 state（procs § 2c 第 9 條）
         }
         if (alive(c)) {
-            c.nap = !c.soft;   // 11-07 B：收工時仍活著的 proc 都睡下、下次開門再起；stop 途中的照 stop 留 stopped（不把使用者的 stop 變成 sleep）
+            // 收工：running／卡住重起的睡下；stop 途中留 stopped、sleep 繼續睡、rm 照移除。
+            if (c.phase == "running" || c.stuck_restart) {
+                c.nap = true;
+            }
             c.stuck_restart = false;
             if (!c.termed) {
                 term(c);
