@@ -1,9 +1,13 @@
-{"summary": "Write shared knowledge nodes atomically under directory locks",
-  "time_ms": {"val": 100, "max": 5000},
+{
+  "summary": "Write shared knowledge nodes atomically under directory locks",
   "resource": "io",
   "side_effect": true,
   "idempotent": false,
   "deterministic": false,
   "interrupt": "safe",
-  "parallel": false
+  "parallel": false,
+  "cost": {
+    "time_ms": 100
+  },
+  "timeout_ms": 5000
 }

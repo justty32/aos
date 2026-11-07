@@ -1,8 +1,13 @@
-{"summary": "Inspect a workspace file progressively: one level at a time for JSON, an outline first for large text files",
- "time_ms": {"val": 30, "max": 3000},
- "resource": "disk",
- "side_effect": false,
- "idempotent": true,
- "deterministic": true,
- "interrupt": "safe",
- "parallel": true}
+{
+  "summary": "Inspect a workspace file progressively: one level at a time for JSON, an outline first for large text files",
+  "resource": "disk",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 30
+  },
+  "timeout_ms": 3000
+}

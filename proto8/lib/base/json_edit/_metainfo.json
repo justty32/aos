@@ -1,8 +1,13 @@
-{"summary": "Change several locations in a workspace JSON file by JSON Pointer; if any change does not match, do not write the file",
- "time_ms": {"val": 30, "max": 3000},
- "resource": "disk",
- "side_effect": true,
- "idempotent": true,
- "deterministic": true,
- "interrupt": "safe",
- "parallel": false}
+{
+  "summary": "Change several locations in a workspace JSON file by JSON Pointer; if any change does not match, do not write the file",
+  "resource": "disk",
+  "side_effect": true,
+  "idempotent": true,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": false,
+  "cost": {
+    "time_ms": 30
+  },
+  "timeout_ms": 3000
+}

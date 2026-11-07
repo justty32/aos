@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 CELLS = Path(__file__).resolve().parents[1]
@@ -134,6 +135,37 @@ else:
         self.assertEqual((record['in_bytes'], record['out_bytes']), (size,size))
         self.run_cell('act')
         self.assertEqual(len((self.stack / 'observed.jsonl').read_text().splitlines()), 1)
+
+    def test_timeout_uses_shared_metainfo(self):
+        self.command('aos-tools', "import json,sys,time\nif 'ls' in sys.argv: print(json.dumps([{'name':'echo','tooldef':{},'metainfo':{'cost':{'time_ms':1},'timeout_ms':{'val':1000}}}]))\nelse: print('started',flush=True); time.sleep(5)\n")
+        self.history([{'role':'assistant','tool_calls':[CALL]}])
+        started = time.monotonic()
+        result = self.run_cell('act')
+        self.assertLess(time.monotonic() - started, 2.5)
+        message = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
+        self.assertIn('timed out (1 s)', message['content'])
+        self.assertIn('started', message['content'])
+        self.assertIn('timed out', result.stderr)
+
+    def test_timeout_kills_grandchild_after_leader_exits(self):
+        self.command('aos-tools', """import json,os,signal,sys,time
+if 'ls' in sys.argv:
+    print(json.dumps([{'name':'echo','tooldef':{},'metainfo':{'timeout_ms':100}}]))
+else:
+    if os.fork() == 0:
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        print('grandchild ready', flush=True)
+        time.sleep(30)
+    else:
+        time.sleep(30)
+""")
+        self.history([{'role':'assistant','tool_calls':[CALL]}])
+        started = time.monotonic()
+        self.run_cell('act')
+        self.assertGreater(time.monotonic() - started, 2)
+        message = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
+        self.assertIn('grandchild ready', message['content'])
+        self.assertIn('timed out', message['content'])
 
     def test_failed_calls_are_observed(self):
         self.command('aos-tools', "import json,sys\nif 'ls' in sys.argv: print(json.dumps([{'name':'echo','tooldef':{}}]))\nelse: print('failed output'); sys.exit(7)\n")

@@ -17,7 +17,7 @@
 #   清單每次 tools/list、tools/call 都重讀（登記檔變了，下次列就看得到；不主動通知 listChanged）。
 #   工作區＝--ws ＞ $AOS_WS；stack＝--stack ＞ $AOS_STACK ＞ $WS/.stack/。每次叫工具：
 #   AOS_WS=WS AOS_STACK=<stack> aos-tools --file REGISTRY call 名（aos-tools 算 tools/<名>/ 小格；兩支指令由 PATH 找，呼叫者放好），
-#   arguments 進 stdin、stdout 整段回去，退非 0＝isError（失敗時另附工具 stderr 的最後 STDERR_TAIL 位元組，見 tail_of）；逾時＝工具 _metainfo（資料夾的 _metainfo.json 檔／JSON 檔的 _metainfo key）的 time_ms.max，沒寫用 --timeout-s（預設 60），
+#   arguments 進 stdin、stdout 整段回去，退非 0＝isError（失敗時另附工具 stderr 的最後 STDERR_TAIL 位元組，見 tail_of）；逾時＝工具 _metainfo（資料夾的 _metainfo.json 檔／JSON 檔的 _metainfo key）的 timeout_ms，沒寫用 --timeout-s（預設 60），
 #   到了整群 TERM、2 秒後 KILL。呼叫紀錄預設不記（11-02 使用者「默認不留」）：給 --enable-logs＝每次叫完在
 #   <stack>/aos-mcp-logs.jsonl 記一行（名字、arguments、結束碼、花多久），再加 --logs-path FILE＝記在 FILE（相對路徑從啟動時的 cwd 算）；
 #   只給 --logs-path、沒給 --enable-logs＝ArgumentsBad。
@@ -34,6 +34,8 @@ import json, os, signal, subprocess, sys, time
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "py"))
 import aos_flags  # noqa: E402  proto8/py/aos_flags.py：P-44 的解析
+sys.path.insert(0, os.path.join(HERE, "..", "..", "..", "lib"))
+import metainfo  # noqa: E402
 
 NAME = "aos-mcp"
 PROTOCOL = "2025-06-18"                         # 對方沒講版本時回這個
@@ -54,7 +56,7 @@ REGISTRY: registry files (relative to the cwd at start; none = ./tools.json); se
   The list is re-read on every tools/list and tools/call.
 Workspace = --ws > $AOS_WS; stack = --stack > $AOS_STACK > WS/.stack/. Each call runs
   AOS_WS=WS AOS_STACK=<stack> aos-tools --file REGISTRY call NAME (aos-tools selects tools/NAME/); arguments go to stdin, stdout goes back as the
-  result, exit non-zero = isError (the last 2048 bytes of the tool's stderr are attached). Timeout = the tool's _metainfo time_ms.max,
+  result, exit non-zero = isError (the last 2048 bytes of the tool's stderr are attached). Timeout = the tool's _metainfo timeout_ms,
   otherwise --timeout-s (default 60); then TERM to the whole group, KILL 2 s later.
 --memory NAME: on initialize, call tool NAME with {"op": "read"} and send what it prints (the knowledge base root) as the
   instructions of the reply; NAME not listed or the call failing = no instructions and a warning line on stderr.
@@ -169,9 +171,11 @@ def load_tools(regs):
             hints = annotations(meta)
             if hints:
                 spec["annotations"] = hints
-            max_s, tm = None, meta.get("time_ms")
-            if isinstance(tm, dict) and isinstance(tm.get("max"), (int, float)) and tm["max"] > 0:
-                max_s = tm["max"] / 1000.0
+            try:
+                milliseconds = metainfo.timeout_ms(meta)
+            except metainfo.MetainfoError as e:
+                raise ToolsBad("%s: %s" % (e.code, e))
+            max_s = milliseconds / 1000.0 if milliseconds is not None else None
             tools[t["name"]] = {"reg": reg, "spec": spec, "max_s": max_s}
     return tools
 
@@ -180,7 +184,7 @@ def call(name, tool, args, ws, stack, timeout_s):
     """跑一次工具 → (結束碼, stdout, stderr 最後一段, 花幾毫秒, 逾時秒數)。結束碼 None＝逾時被收掉。"""
     env = dict(os.environ, AOS_WS=ws, AOS_STACK=stack)   # 工具小格統一由 aos-tools call 算（P-17）
     # AOS_ENTRY 照常繼承（11-04 四元素審查：原本 pop 掉、怕外面殘留的值讓工具找錯入口；但 P-39 是一路繼承、使用者 11-01 裁留，外面設了＝要它）
-    limit = tool["max_s"] or timeout_s
+    limit = tool["max_s"] if tool["max_s"] is not None else timeout_s
     t0 = time.monotonic()
     p = subprocess.Popen(tools_argv(tool["reg"]) + ["call", name], stdin=subprocess.PIPE,
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,

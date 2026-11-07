@@ -1,8 +1,13 @@
-{"summary": "Export a knowledge base folder (or a subtree) as one Markdown document for people",
- "time_ms": {"val": 100, "max": 5000},
- "resource": "cpu",
- "side_effect": false,
- "idempotent": true,
- "deterministic": true,
- "interrupt": "safe",
- "parallel": true}
+{
+  "summary": "Export a knowledge base folder (or a subtree) as one Markdown document for people",
+  "resource": "cpu",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 100
+  },
+  "timeout_ms": 5000
+}

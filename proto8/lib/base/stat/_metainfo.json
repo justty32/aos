@@ -1,8 +1,13 @@
-{"summary": "Inspect the attributes of one workspace file or folder",
- "time_ms": {"val": 20, "max": 2000},
- "resource": "disk",
- "side_effect": false,
- "idempotent": true,
- "deterministic": true,
- "interrupt": "safe",
- "parallel": true}
+{
+  "summary": "Inspect the attributes of one workspace file or folder",
+  "resource": "disk",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 20
+  },
+  "timeout_ms": 2000
+}

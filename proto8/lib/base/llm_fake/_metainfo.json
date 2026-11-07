@@ -1,8 +1,13 @@
-{"summary": "A fake brain that returns a fixed-shape answer",
- "time_ms": {"val": 30, "max": 1000},
- "resource": "cpu",
- "side_effect": false,
- "idempotent": true,
- "deterministic": true,
- "interrupt": "safe",
- "parallel": true}
+{
+  "summary": "A fake brain that returns a fixed-shape answer",
+  "resource": "cpu",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 30
+  },
+  "timeout_ms": 1000
+}

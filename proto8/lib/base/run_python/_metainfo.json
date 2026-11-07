@@ -1,8 +1,14 @@
-{"summary": "Run a piece of code with python3 and return its exit code and output",
- "time_ms": {"val": 500, "max": 300000},
- "resource": "cpu",
- "side_effect": true,
- "idempotent": false,
- "deterministic": false,
- "interrupt": "unsafe",
- "parallel": true}
+{
+  "summary": "Run a piece of code with python3 and return its exit code and output",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "unsafe",
+  "parallel": true,
+  "arbitrary_exec": true,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 300000
+}

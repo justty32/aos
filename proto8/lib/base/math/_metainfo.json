@@ -1,8 +1,13 @@
-{"summary": "Evaluate an arithmetic expression and return the result",
- "time_ms": {"val": 30, "max": 1000},
- "resource": "cpu",
- "side_effect": false,
- "idempotent": true,
- "deterministic": true,
- "interrupt": "safe",
- "parallel": true}
+{
+  "summary": "Evaluate an arithmetic expression and return the result",
+  "resource": "cpu",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 30
+  },
+  "timeout_ms": 1000
+}

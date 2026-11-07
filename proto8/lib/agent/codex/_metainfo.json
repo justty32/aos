@@ -1,8 +1,16 @@
-{"summary": "Hand one message to the codex CLI and return its answer (continuing the same conversation)",
- "time_ms": {"val": 30000, "max": 600000},
- "resource": ["cpu", "llm"],
- "side_effect": true,
- "idempotent": false,
- "deterministic": false,
- "interrupt": "unsafe",
- "parallel": false}
+{
+  "summary": "Hand one message to the codex CLI and return its answer (continuing the same conversation)",
+  "resource": [
+    "cpu",
+    "llm"
+  ],
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "unsafe",
+  "parallel": false,
+  "cost": {
+    "time_ms": 30000
+  },
+  "timeout_ms": 600000
+}

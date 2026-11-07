@@ -1,13 +1,13 @@
 {
   "summary": "Inspect or change workspace JSON through aos-json with validation and reference following",
-  "time_ms": {
-    "val": 30,
-    "max": 3000
-  },
   "resource": "disk",
   "side_effect": true,
   "idempotent": false,
   "deterministic": true,
   "interrupt": "safe",
-  "parallel": false
+  "parallel": false,
+  "cost": {
+    "time_ms": 30
+  },
+  "timeout_ms": 3000
 }

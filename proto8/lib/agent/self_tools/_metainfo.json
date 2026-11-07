@@ -1,8 +1,14 @@
-{"summary": "Change the tool overrides of the agent calling me (aos-agent ctl who + tools add / rm / ls)",
- "time_ms": {"val": 500, "max": 60000},
- "resource": "cpu",
- "side_effect": true,
- "idempotent": false,
- "deterministic": false,
- "interrupt": "safe",
- "parallel": false}
+{
+  "summary": "Change the tool overrides of the agent calling me (aos-agent ctl who + tools add / rm / ls)",
+  "resource": "cpu",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false,
+  "arbitrary_exec": true,
+  "cost": {
+    "time_ms": 500
+  },
+  "timeout_ms": 60000
+}

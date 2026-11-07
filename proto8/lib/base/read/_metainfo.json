@@ -1,8 +1,13 @@
-{"summary": "Read a workspace text file; if it is too long, return only the beginning",
- "time_ms": {"val": 30, "max": 2000},
- "resource": "disk",
- "side_effect": false,
- "idempotent": true,
- "deterministic": true,
- "interrupt": "safe",
- "parallel": true}
+{
+  "summary": "Read a workspace text file; if it is too long, return only the beginning",
+  "resource": "disk",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 30
+  },
+  "timeout_ms": 2000
+}

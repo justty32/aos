@@ -1,8 +1,13 @@
-{"summary": "Copy a file or a whole folder in the workspace",
- "time_ms": {"val": 50, "max": 60000},
- "resource": "disk",
- "side_effect": true,
- "idempotent": false,
- "deterministic": true,
- "interrupt": "safe",
- "parallel": false}
+{
+  "summary": "Copy a file or a whole folder in the workspace",
+  "resource": "disk",
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": false,
+  "cost": {
+    "time_ms": 50
+  },
+  "timeout_ms": 60000
+}

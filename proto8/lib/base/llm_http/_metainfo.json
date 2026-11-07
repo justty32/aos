@@ -1,8 +1,15 @@
-{"summary": "Ask an OpenAI-compatible endpoint once",
- "time_ms": {"val": 5000, "max": 120000},
- "resource": ["llm"],
- "side_effect": false,
- "idempotent": false,
- "deterministic": false,
- "interrupt": "safe",
- "parallel": true}
+{
+  "summary": "Ask an OpenAI-compatible endpoint once",
+  "resource": [
+    "llm"
+  ],
+  "side_effect": false,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 5000
+  },
+  "timeout_ms": 120000
+}

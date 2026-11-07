@@ -1,8 +1,13 @@
-{"summary": "Write the full contents of a workspace file (create or overwrite the whole file)",
- "time_ms": {"val": 30, "max": 2000},
- "resource": "disk",
- "side_effect": true,
- "idempotent": true,
- "deterministic": true,
- "interrupt": "safe",
- "parallel": true}
+{
+  "summary": "Write the full contents of a workspace file (create or overwrite the whole file)",
+  "resource": "disk",
+  "side_effect": true,
+  "idempotent": true,
+  "deterministic": true,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 30
+  },
+  "timeout_ms": 2000
+}

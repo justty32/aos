@@ -1,1 +1,1 @@
-{"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json"}}
+{"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json", "memory": "tools/memory/_memory.json"}}

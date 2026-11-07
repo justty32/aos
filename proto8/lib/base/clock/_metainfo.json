@@ -1,8 +1,13 @@
-{"summary": "Print the current UTC time",
- "time_ms": {"val": 20, "max": 1000},
- "resource": "cpu",
- "side_effect": false,
- "idempotent": true,
- "deterministic": false,
- "interrupt": "safe",
- "parallel": true}
+{
+  "summary": "Print the current UTC time",
+  "resource": "cpu",
+  "side_effect": false,
+  "idempotent": true,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": true,
+  "cost": {
+    "time_ms": 20
+  },
+  "timeout_ms": 1000
+}

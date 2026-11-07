@@ -5,7 +5,7 @@
 # 中途失敗重跑時，已經有 tool 訊息的 id 不再跑（只補沒回的）。
 # 叫工具出的問題回給腦、不停（P-41）：工具退非 0（stdout 照收、尾巴加結束碼）、逾時、叫了沒登記的工具、arguments 不是 JSON。
 # 比照 aos-mcp 的 C-52／C-53 例外：工具退非 0 或逾時，接住 stderr、原樣轉印，最後 2 KB 另附給腦；成功時不附（J4 授權，條文 J7 再補）。
-# 逾時取 _metainfo.time_ms.max（毫秒），沒寫＝不設；自成一群，逾時或本格中斷時 TERM 整群，2 秒後 KILL。
+# 逾時取 _metainfo.timeout_ms（毫秒），沒寫＝不設；自成一群，逾時或本格中斷時 TERM 整群，2 秒後 KILL。
 # 工具退非 0 時 stderr 多一行提醒「agent-fsm: warning: tool <名> exit code N (passed back to the brain)」（stdio-unify R1：不是這格的錯，照樣退 0）。
 # 只有自己這層的錯才停：stderr 一行「agent-fsm: error: 代號 原因」、退 1、history 不接（P-20）——沒 stack、history 壞、
 #   history 裡沒有 assistant、aos-tools 起不來。
@@ -24,12 +24,13 @@ for _parent in Path(__file__).resolve().parents:
 sys.path[:0] = _import_paths
 try:
     import aos_flags  # noqa: E402
+    import metainfo  # noqa: E402
     if (Path(__file__).resolve().parent / "agent_files.py").is_file():
         from agent_files import declared_files  # noqa: E402
     else:
         from agent.agent_files import declared_files  # noqa: E402
 except ModuleNotFoundError as _error:
-    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files"):
+    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "metainfo"):
         raise
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
           file=sys.stderr)
@@ -45,7 +46,7 @@ usage: act.py [--tools FILE]   (a cell of templates/agent-fsm; run by its fsm.js
 The act cell: run the tool_calls of the last assistant message in $AOS_STACK/history.jsonl
 (aos-tools call NAME), one tool message each. Exit 0 = done (go think); 10 = no tool_calls.
 --tools FILE: the aos-tools registry (default: tools declared in interfaces.json).
-Timeout: tool metainfo time_ms.max (ms), otherwise no limit; TERM the group, KILL 2 s later.
+Timeout: tool metainfo timeout_ms (ms), otherwise no limit; TERM the group, KILL 2 s later.
 On tool failure or timeout, append the last 2048 bytes of stderr to the tool message;
 the full stderr is also passed through. Tool failures are returned to the brain; exit 0.
 Append tool name, code, elapsed_ms, in_bytes and out_bytes to observed.jsonl (best effort).
@@ -125,7 +126,14 @@ def stop_group(p):
         os.killpg(p.pid, signal.SIGTERM)
     except ProcessLookupError:
         pass
-    time.sleep(2)
+    deadline = time.monotonic() + 2
+    while time.monotonic() < deadline:
+        p.poll()  # Reap the group leader before checking for remaining members.
+        try:
+            os.killpg(p.pid, 0)
+        except ProcessLookupError:
+            return
+        time.sleep(min(0.02, max(0, deadline - time.monotonic())))
     try:
         os.killpg(p.pid, signal.SIGKILL)
     except ProcessLookupError:
@@ -143,10 +151,11 @@ if (tools_file and os.path.isfile(tools_file)) or overlay:        # 能叫的＝
         die("ToolsBad", "aos-tools ls exited %d" % r.returncode)
     for t in json.loads(r.stdout):
         meta = t.get("metainfo") or {}
-        tm = meta.get("time_ms")
-        limit = None
-        if isinstance(tm, dict) and isinstance(tm.get("max"), (int, float)) and tm["max"] > 0:
-            limit = tm["max"] / 1000.0
+        try:
+            milliseconds = metainfo.timeout_ms(meta)
+        except metainfo.MetainfoError as e:
+            die(e.code, str(e))
+        limit = milliseconds / 1000.0 if milliseconds is not None else None
         registered[t["name"]] = limit
 answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
 for call in calls:
