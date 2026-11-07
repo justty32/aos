@@ -174,7 +174,7 @@ def maybe_summarize(board_dir, cfg, force=False):
     if not force and not changed:
         return "skipped-nochange"
     timestamp, started = iso_now(), time.monotonic()
-    record = {"ts": timestamp, "trigger": "force" if force else "auto",
+    record = {"ts": timestamp, "kind": "summary", "trigger": "force" if force else "auto",
               "model": settings.get("model"), "ok": False, "seconds": 0,
               "prompt_tokens": None, "completion_tokens": None,
               "total_tokens": None, "error": None}
@@ -211,6 +211,12 @@ def maybe_summarize(board_dir, cfg, force=False):
         cursor["last_run"] = timestamp
         atomic_write(summary / "cursor.json", json.dumps(cursor, ensure_ascii=False) + "\n")
         _append_cost(summary / "cost.jsonl", record)
+    if result == "ok" and settings.get("eli5_enabled", True):
+        try:
+            from eli5 import maybe_main
+            maybe_main(board, cfg, force=force)
+        except Exception as exc:
+            print(f"summarize: warning: Explanation failed ({type(exc).__name__})", file=sys.stderr)
     return result
 
 

@@ -79,6 +79,7 @@ def asks_state(asks, answers, now, titles=None):
     result = [{"id": ask["id"], "line": ask["line"],
                "line_title": titles.get(ask["line"], ask["line"]), "ts": ask["ts"],
                "text": ask["text"], "links": ask["links"], "options": ask["options"],
+               "eli5": ask.get("eli5") if isinstance(ask.get("eli5"), str) else None,
                "recommend": ask.get("recommend"), "answer": latest.get(ask["id"])}
               for ask in asks if now - dt.timedelta(days=7) <= timestamp(ask["ts"]) <= now]
     result.sort(key=lambda ask: (ask["answer"] is None,

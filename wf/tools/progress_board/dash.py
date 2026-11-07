@@ -1,6 +1,5 @@
-"""Run the local progress board server, detail and answer endpoints, snapshots, and summaries."""
+"""Run the local progress board server, detail and answer endpoints, snapshots, summaries, and ELI5 explanations."""
 import functools
-import datetime as dt
 import http.server
 import json
 import os
@@ -15,13 +14,14 @@ import time
 sys.dont_write_bytecode = True
 from answers import AnswerHandlerMixin
 from details_api import DetailHandlerMixin
-from collect import board_path, collect, copy_assets, load_config, summary_state, write_state
+from collect import board_path, collect, copy_assets, load_config, write_state
+from eli5 import maybe_main, maybe_detail
 from summarize import maybe_summarize
 
 TEXT_TYPES = {".md": "text/markdown", ".json": "application/json", ".jsonl": "application/x-ndjson",
               ".txt": "text/plain", ".log": "text/plain", ".html": "text/html", ".css": "text/css",
               ".js": "text/javascript"}
-USAGE = "python3 dash.py <serve|start|stop|status|collect|summarize> [--port N] [--force]"
+USAGE = "python3 dash.py <serve|start|stop|status|collect|summarize|eli5> [--port N] [--force]"
 
 
 def fail(code, reason):
@@ -40,12 +40,13 @@ def arguments(args):
     if "--help" in args or "-h" in args:
         print(f"Usage: {USAGE}\nserve: run in foreground; start/stop/status: manage the server\n"
               "collect: refresh the static snapshot; summarize: summarize once\n"
-              "--port N: override the configured port; --force: force a summary")
+              "eli5: generate main and detail plain-language explanations once\n"
+              "--port N: override the configured port; --force: force a summary or ELI5 generation")
         return None
     command, *rest = args
     if command.startswith("-"):
         raise ValueError(f"FlagUnknown {command}")
-    if command not in ("serve", "start", "stop", "status", "collect", "summarize"):
+    if command not in ("serve", "start", "stop", "status", "collect", "summarize", "eli5"):
         raise ValueError(f"CommandUnknown {command}")
     port, force = None, False
     while rest:
@@ -59,7 +60,7 @@ def arguments(args):
                     raise ValueError
             except ValueError:
                 raise ValueError("ArgumentsBad port must be between 1 and 65535") from None
-        elif flag == "--force" and command == "summarize":
+        elif flag == "--force" and command in ("summarize", "eli5"):
             force = True
         elif flag.startswith("-"):
             raise ValueError(f"FlagUnknown {flag}")
@@ -92,6 +93,7 @@ def snapshot(board, cfg, running=False, summarizing=False):
     state = collect(board, cfg)
     state["server"] = running
     state["summary"]["running"] = summarizing
+    state["eli5"]["running"] = summarizing and state["eli5"]["enabled"]
     write_state(board, state)
     return state
 
@@ -132,18 +134,16 @@ def serve(board, port):
 
     def summarize(cfg):
         try:
-            maybe_summarize(board, cfg)
-        except Exception as exc:
-            warning(f"Summary worker failed: {exc}")
+            for generate in (maybe_summarize, maybe_detail):
+                try:
+                    generate(board, cfg)
+                except Exception as exc:
+                    warning(f"Summary worker failed: {exc}")
         finally:
             with state_lock:
                 if not stopped.is_set():
                     try:
-                        state = json.loads((data / "state.json").read_text(encoding="utf-8"))
-                        now = dt.datetime.now().astimezone()
-                        state["summary"] = summary_state(board, cfg, now, state["warnings"])
-                        state["generated_at"] = now.isoformat()
-                        write_state(board, state)
+                        snapshot(board, cfg, True)
                     except Exception as exc:
                         warning(f"Summary state refresh failed: {exc}")
 
@@ -160,6 +160,7 @@ def serve(board, port):
                     if not busy and not stopped.is_set():
                         summary_thread = threading.Thread(target=summarize, args=(cfg,), daemon=True)
                         state["summary"]["running"] = True
+                        state["eli5"]["running"] = state["eli5"]["enabled"]
                         write_state(board, state)
                         summary_thread.start()
             except Exception as exc:
@@ -271,6 +272,12 @@ def main():
             result = maybe_summarize(board, cfg, force)
             print(result)
             return int(result == "error")
+        elif command == "eli5":
+            main_result = maybe_main(board, cfg, force)
+            detail_result = maybe_detail(board, cfg, force)
+            snapshot(board, cfg)
+            print(f"dash: eli5 main={main_result} detail={detail_result}")
+            return int("error" in (main_result, detail_result))
         return 0
     except Exception as exc:
         return fail("OperationFailed", exc)

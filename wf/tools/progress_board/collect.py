@@ -1,4 +1,4 @@
-"""Collect local progress, questions, answers, handoffs, commits, and host samples into board state."""
+"""Collect local progress, questions, answers, ELI5 explanations, handoffs, commits, and host samples into board state."""
 
 import datetime as dt
 import json
@@ -53,7 +53,7 @@ def atomic_write(path, text):
 def copy_assets(board_dir):
     board = Path(board_dir)
     board.mkdir(parents=True, exist_ok=True)
-    for name in ("index.html", "app.js", "asks.js", "md.js", "detail.html", "detail.js", "style.css"):
+    for name in ("index.html", "app.js", "asks.js", "eli5.js", "md.js", "detail.html", "detail.js", "style.css"):
         shutil.copyfile(ROOT / "web" / name, board / name)
     shutil.copyfile(ROOT / "README.md", board / "README.md")
 
@@ -215,6 +215,8 @@ def summary_state(board, cfg, now, warnings):
 
 
 def collect(board_dir, cfg):
+    from eli5 import eli5_state
+
     board, warnings = Path(board_dir), []
     copy_assets(board)
     now = dt.datetime.now().astimezone()
@@ -238,6 +240,10 @@ def collect(board_dir, cfg):
     asks = asks_state([event for events in grouped.values() for event in events
                        if event["status"] == "ask"], read_answers(board, warnings), now,
                       {line["id"]: line.get("title", line["id"]) for line in configured})
+    eli5 = eli5_state(board, cfg)
+    explanations = (eli5["main"] or {}).get("asks", {})
+    for ask in asks:
+        ask["eli5"] = ask["eli5"] if ask["eli5"] is not None else explanations.get(ask["id"])
     host = host_state()
     history_path = board / "data/load_history.jsonl"
     history = [sample for sample in read_jsonl(history_path, warnings)
@@ -247,6 +253,7 @@ def collect(board_dir, cfg):
     atomic_write(history_path, "".join(json.dumps(sample, ensure_ascii=False) + "\n"
                                       for sample in history))
     return {"generated_at": now.isoformat(), "server": False,
+            "eli5": eli5,
             "asks": asks, "asks_open": sum(ask["answer"] is None for ask in asks),
             "host": host, "load_history": history[-240:],
             "lines": [line_state(line, grouped.get(line["id"], []), cfg, now)

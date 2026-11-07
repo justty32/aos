@@ -132,6 +132,14 @@
     else hosts.lines = section("lines", "各條工作線");
     hosts.codex = section("codex", "正在跑的 codex"); hosts.reports = section("reports", "試驗場報告");
   }
+  function renderEli5(data) {
+    const plain = data.eli5 || {}, main = plain.main || {}, detail = plain.detail || {};
+    window.AosEli5.set(board, "overview", lineId != null ? (main.lines || {})[lineId] : main.summary, header.nextSibling);
+    const line = (detail.lines || {})[lineId] || {};
+    [[hosts.events, "timeline", line.timeline], [hosts.handoff, "handoff", line.handoff], [hosts.codex, "codex", detail.codex], [hosts.reports, "reports", detail.reports]].forEach(([host, key, text]) => {
+      if (host) window.AosEli5.set(host.parentNode, key, text, host);
+    });
+  }
   function initialError(host, error) { if (!signatures.has(host)) host.replaceChildren(el("p", "subtle", `無法讀取：${error.message}`)); }
   async function refresh(path, host, consume) {
     try { const data = await request(path); consume(data); return true; }
@@ -142,10 +150,14 @@
     const jobs = [];
     if (hosts.file) jobs.push(refresh(`api/file?path=${encodeURIComponent(filePath)}`, hosts.file, data => update(hosts.file, data, renderFile)));
     else {
-      if (hosts.lines) jobs.push(refresh("data/state.json", hosts.lines, data => update(hosts.lines, data.lines || [], (host, lines) => {
-        const buttons = el("nav", "buttons line-buttons"); lines.forEach(line => buttons.append(link(`detail.html?line=${encodeURIComponent(line.id)}`, line.title || line.id, "button"))); host.append(buttons);
-      })));
-      else jobs.push(refresh(`api/line?id=${encodeURIComponent(lineId)}`, hosts.events, data => {
+      jobs.push(request("data/state.json").then(data => {
+        renderEli5(data);
+        if (hosts.lines) update(hosts.lines, data.lines || [], (host, lines) => {
+          const buttons = el("nav", "buttons line-buttons"); lines.forEach(line => buttons.append(link(`detail.html?line=${encodeURIComponent(line.id)}`, line.title || line.id, "button"))); host.append(buttons);
+        });
+        return true;
+      }).catch(error => { if (hosts.lines) initialError(hosts.lines, error); return false; }));
+      if (!hosts.lines) jobs.push(refresh(`api/line?id=${encodeURIComponent(lineId)}`, hosts.events, data => {
         preserveScroll(() => { title.textContent = data.line.title || data.line.id; document.title = `${title.textContent}｜aos 進度細節`; });
         update(hosts.events, data.events || [], renderEvents); update(hosts.handoff, data.handoff, renderHandoff); update(hosts.commits, data.commits || [], renderCommits);
       }));

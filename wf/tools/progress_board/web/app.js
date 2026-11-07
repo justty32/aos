@@ -4,7 +4,7 @@
   const board = document.getElementById("board"), ns = "http://www.w3.org/2000/svg";
   const labels = {start: "開線", progress: "進度", done: "完成", blocked: "卡住", decision: "代定", handoff: "交棒", ask: "待你裁", none: "尚未回報"};
   const colors = {start: "blue", progress: "blue", done: "green", blocked: "red", decision: "amber", handoff: "purple", ask: "amber", none: "grey"};
-  let state = window.AOS_STATE || null, lastPoll = 0;
+  let state = window.AOS_STATE || null, lastPoll = 0, contentSignature = null;
   const el = (tag, cls, value) => { const n = document.createElement(tag); if (cls) n.className = cls; if (value != null) n.textContent = String(value); return n; };
   const sv = (tag, attrs = {}) => { const n = document.createElementNS(ns, tag); Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, v)); return n; };
   const hhmm = value => { const d = new Date(value); return value && !Number.isNaN(+d) ? d.toLocaleTimeString("zh-TW", {hour: "2-digit", minute: "2-digit", hour12: false}) : "—"; };
@@ -27,7 +27,7 @@
     return s;
   }
   function heading(parent, title, kind, level = "h2") { const row = el("div", "heading"); row.append(icon(kind), el(level, "", title)); parent.append(row); return row; }
-  function details(parent, title) { const d = el("details"); d.append(el("summary", "", title)); parent.append(d); return d; }
+  function details(parent, title, key = title) { const d = el("details"); d.dataset.fold = `${parent.dataset.line || ""}:${key}`; d.append(el("summary", "", title)); parent.append(d); return d; }
   function chip(text, color) { return el("span", `chip ${color}`, text); }
   function timeline(events) {
     const s = sv("svg", {viewBox: "0 0 300 48", class: "timeline", role: "img", "aria-label": "最近二十四小時回報時間軸"});
@@ -50,7 +50,7 @@
     }); parent.append(list);
   }
   function summaryPanel(data) {
-    const box = el("section", "panel"); heading(box, "匯總", "summary");
+    const box = el("section", "panel"); box.dataset.summary = "true"; heading(box, "匯總", "summary");
     const body = el("div", "summary-body"); body.append(window.AosMd.render(data.latest_md || "尚未產生匯總。")); box.append(body);
     const cost = data.cost || {}, parts = [`上次匯總 ${hhmm(data.latest_ts)}`, `今天 ${num(cost.runs_today || 0)} 次、共 ${num(cost.tokens_today || 0)} tokens、${num(cost.seconds_today || 0, 1)} 秒`, `下次最早 ${hhmm(data.next_eligible_ts)}`];
     if (!data.enabled) parts.push("匯總已關"); if (data.running) parts.push("匯總中…"); box.append(el("p", "subtle", parts.join("｜")));
@@ -60,7 +60,7 @@
     history.append(list.children.length ? list : el("p", "subtle", "無")); return box;
   }
   function lineCard(line) {
-    const card = el("article", "line-card"); heading(card, line.title || line.id, "line");
+    const card = el("article", "line-card"); card.dataset.line = line.id; heading(card, line.title || line.id, "line");
     const more = link(`detail.html?line=${encodeURIComponent(line.id)}`, "看細節"); more.className = "button"; card.append(more);
     const chips = el("div", "chips"); chips.append(chip(labels[line.status] || line.status, colors[line.status] || "grey"));
     if (line.stale) chips.append(chip(`安靜 ${age(line.last_ts)} 分鐘`, "grey")); card.append(chips, timeline(line.timeline));
@@ -68,7 +68,7 @@
     if (line.blocked) card.append(el("p", "blocked", `卡住：${line.blocked.text}`));
     const decisions = details(card, "代定"), badge = el("span", "badge", (line.decisions || []).length); decisions.firstChild.append(badge); eventList(decisions, line.decisions || []);
     eventList(details(card, "最近"), line.events || []);
-    if (line.handoff) { const handoff = line.handoff, d = details(card, handoff.exists ? `交棒檔 ${hhmm(handoff.mtime)} 更新` : "交棒檔尚未建立"); d.append(el("p", "handoff", handoff.updated_line || "無更新說明"), el("p", "subtle", handoff.path)); }
+    if (line.handoff) { const handoff = line.handoff, d = details(card, handoff.exists ? `交棒檔 ${hhmm(handoff.mtime)} 更新` : "交棒檔尚未建立", "handoff"); d.append(el("p", "handoff", handoff.updated_line || "無更新說明"), el("p", "subtle", handoff.path)); }
     return card;
   }
   function gauge(label, ratio, value) {
@@ -106,11 +106,27 @@
   const headerHost = el("div"), bodyHost = el("div");
   const asks = window.AOSAsks({el, heading, details, chip, link, poll});
   board.replaceChildren(headerHost, asks.panel, bodyHost);
+  function renderEli5(data) {
+    const main = (data && data.eli5 && data.eli5.main) || {};
+    const summary = bodyHost.querySelector("[data-summary]");
+    if (summary) window.AosEli5.set(summary, "summary", main.summary, summary.children[1] || null);
+    bodyHost.querySelectorAll(".line-card").forEach(card => window.AosEli5.set(card, "line", (main.lines || {})[card.dataset.line], card.children[1] || null));
+  }
   function publish(root, data) {
+    const x = window.scrollX, y = window.scrollY;
+    const folds = new Map([...bodyHost.querySelectorAll("details[data-fold]")].map(d => [d.dataset.fold, d.open]));
     headerHost.replaceChildren(root.firstChild); bodyHost.replaceChildren(...root.childNodes);
-    asks.update(data || {}); connection();
+    bodyHost.querySelectorAll("details[data-fold]").forEach(d => { if (folds.has(d.dataset.fold)) d.open = folds.get(d.dataset.fold); });
+    renderEli5(data); asks.update(data || {}); connection(); window.scrollTo(x, y);
   }
   function render(data) {
+    const next = JSON.stringify(data, (key, value) => key === "eli5" || key === "generated_at" ? undefined : value);
+    if (next === contentSignature) {
+      renderEli5(data); asks.update(data || {});
+      const time = headerHost.querySelector(".data-time"); if (time && data) time.textContent = `資料時間 ${data.generated_at}`;
+      return;
+    }
+    contentSignature = next;
     const root = el("div"); const header = el("header"), top = el("div", "title-row"), title = el("div", "heading"); title.append(icon("board"), el("h1", "", "aos 進度")); top.append(title);
     if (location.protocol.startsWith("http")) { const live = el("span", "live"); live.id = "connection"; top.append(live); }
     const more = link("detail.html", "看細節"); more.className = "button"; top.append(more);
@@ -122,11 +138,11 @@
     header.append(links, el("p", "data-time", `資料時間 ${data.generated_at}`)); root.append(header);
     if (location.protocol === "file:") root.append(el("p", "banner", `快照模式：這是 ${data.generated_at} 的快照；要即時更新請開伺服器（看 README）`));
     root.append(summaryPanel(data.summary || {})); const grid = el("section", "lines"); lines.forEach(line => grid.append(lineCard(line))); root.append(grid, machinePanel(host, data.load_history), commitsPanel(data.commits || []));
-    if ((data.warnings || []).length) { const footer = el("footer"), d = details(footer, `提醒（${data.warnings.length}）`), list = el("ul"); data.warnings.forEach(warning => list.append(el("li", "", warning))); d.append(list); root.append(footer); }
+    if ((data.warnings || []).length) { const footer = el("footer"), d = details(footer, `提醒（${data.warnings.length}）`, "warnings"), list = el("ul"); data.warnings.forEach(warning => list.append(el("li", "", warning))); d.append(list); root.append(footer); }
     publish(root, data);
   }
   async function poll() {
-    try { const response = await fetch(`data/state.json?t=${Date.now()}`, {cache: "no-store"}); if (!response.ok) throw new Error("Request failed"); const next = await response.json(); lastPoll = Date.now(); if (!state || next.generated_at !== state.generated_at) { state = next; render(state); } }
+    try { const response = await fetch(`data/state.json?t=${Date.now()}`, {cache: "no-store"}); if (!response.ok) throw new Error("Request failed"); const next = await response.json(); lastPoll = Date.now(); if (!state || next.generated_at !== state.generated_at || JSON.stringify(next.eli5) !== JSON.stringify(state.eli5) || JSON.stringify(next.asks) !== JSON.stringify(state.asks)) { state = next; render(state); } }
     catch (_) { /* The connection indicator retains the last successful poll time. */ }
     connection();
   }

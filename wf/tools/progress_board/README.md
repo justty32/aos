@@ -82,3 +82,12 @@
 | `data/server.pid`、`data/server.log` | 伺服器行程與紀錄 |
 | `summary/latest.md`、`summary/history/` | 最新與歷次匯總 |
 | `summary/cost.jsonl`、`summary/cursor.json` | 成本與上次涵蓋範圍 |
+
+## 白話（ELI5）
+
+「白話」框用日常說法補充總覽、各線、待裁題與細節區塊，原有內容照常保留；沒有說明就不顯示框。
+每次匯總成功後會接著產生總覽白話，輸入沒變就沿用；細節白話每輪檢查，只更新有變的區塊，兩次至少隔 `summary.eli5_detail_min_interval_min` 分鐘（預設 15）。
+`summary.eli5_enabled` 控制白話開關，`summary.eli5_max_tokens` 控制每次上限（預設 2500）；連線、模型與逾時沿用匯總設定。
+手動強制重產：`python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py eli5 --force`，略過開關、快取與間隔。
+結果放在 `eli5/main.json`、`eli5/detail.json`，頁面共用 `eli5.js` 顯示；每次請求（包含重寫）都記進 `summary/cost.jsonl`，`kind` 分為 `summary`、`eli5-main`、`eli5-detail`。
+發待裁題的人請加 `--eli5 '<plain text>'`，直接說清楚在問什麼、每個選項會怎樣；這份說明優先使用，沒有才自動產生。例如：`~/repo/simple_tools/aos/wf/tools/progress_post.sh progress-board ask 'How much detail?' --eli5 'Choose how much explanation you want.'`。

@@ -1,7 +1,7 @@
 // This script renders decision questions while retaining drafts and focused controls across polls.
 "use strict";
 window.AOSAsks = ({el, heading, details, chip, link, poll}) => {
-  const panel = el("section", "panel asks-panel"), drafts = new Map();
+  const panel = el("section", "panel asks-panel"), drafts = new Map(), cards = new Map();
   const offline = location.protocol === "file:";
   let signature = null;
   const stamp = value => {
@@ -11,6 +11,7 @@ window.AOSAsks = ({el, heading, details, chip, link, poll}) => {
   function base(ask) {
     const card = el("article", "ask-card");
     card.append(el("h3", "", ask.line_title || ask.line), el("p", "meta", stamp(ask.ts)), el("p", "ask-question", ask.text));
+    cards.set(ask.id, card); window.AosEli5.set(card, "ask", ask.eli5);
     if ((ask.links || []).length) {
       const links = el("div", "event-links");
       ask.links.forEach(path => links.append(link(path)));
@@ -67,16 +68,21 @@ window.AOSAsks = ({el, heading, details, chip, link, poll}) => {
   return {
     panel,
     update(data) {
-      const asks = data.asks || [], next = JSON.stringify(asks);
-      if (next === signature) return;
-      signature = next; panel.replaceChildren(); heading(panel, "待你裁", "ask");
+      const asks = data.asks || [], next = JSON.stringify(asks, (key, value) => key === "eli5" ? undefined : value);
+      if (next === signature) {
+        asks.forEach(ask => { const card = cards.get(ask.id); if (card) window.AosEli5.set(card, "ask", ask.eli5, card.querySelector(".ask-question").nextSibling); });
+        return;
+      }
+      const x = window.scrollX, y = window.scrollY, historyOpen = panel.querySelector("details")?.open;
+      signature = next; cards.clear(); panel.replaceChildren(); heading(panel, "待你裁", "ask");
       const open = asks.filter(ask => !ask.answer), answered = asks.filter(ask => ask.answer);
       panel.append(el("p", "ask-lead", open.length ? `${open.length} 題等你裁（各線已先照推薦往下走，答了再修正）` : "目前沒有要你裁的事"));
       if (offline) panel.append(el("p", "banner", "快照模式不能作答；開伺服器後到 http://127.0.0.1:8765/ 作答"));
       open.forEach(ask => panel.append(openCard(ask)));
-      if (answered.length) { const history = details(panel, `已答 ${answered.length} 題`); answered.forEach(ask => history.append(answeredCard(ask))); }
+      if (answered.length) { const history = details(panel, `已答 ${answered.length} 題`); if (historyOpen != null) history.open = historyOpen; answered.forEach(ask => history.append(answeredCard(ask))); }
       const ids = new Set(open.map(ask => ask.id));
       for (const id of drafts.keys()) if (!ids.has(id)) drafts.delete(id);
+      window.scrollTo(x, y);
     }
   };
 };
