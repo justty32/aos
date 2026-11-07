@@ -32,6 +32,7 @@
 
 | 工具 | 一句話 | 參數 | 回什麼 |
 |---|---|---|---|
+| [llm_forward](../aos/llm_forward/README.md) | 把一封問腦請求交給包指定的下一層 kernel | `endpoint{to,kernel}`、`request`、選填 `priority` | 成功把 `letter` 換成 `child{kernel,letter}`；下層失敗原樣轉 stdout／stderr 與退碼 |
 | [measure](../aos/measure/README.md) | 重跑 case，翻公開帳並分開量門、自洽與比對成本 | `case`、`defs`、`repeat`，選填 `check` | JSON：`check`、`size_bytes`、`cost`、`tree`、`samples`、`measured_at`；重跑時另有 `consistency` |
 | [promote](../aos/promote/README.md) | 查公開 daemon 表後換上副本，前版留在定義根 `.prev/` | `defs`、`target`、`from`，選填 `daemons` | JSON：`target`、`promoted_at`、`prev` |
 | [rollback](../aos/rollback/README.md) | 查公開 daemon 表後退回最新前版，消耗該份歷史 | `defs`、`target`，選填 `daemons` | JSON：`target`、`restored` |

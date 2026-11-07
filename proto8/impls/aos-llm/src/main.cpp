@@ -125,7 +125,7 @@ flags:
   -h, --help   show this help
 
 Read $AOS_LLM_KERNEL/endpoints.json and print one pack per line.
-Columns (TAB): name, speed, cost, context, slots, summary.
+Columns (TAB): name, speed, cost, context, slots, backend, summary.
 
 exit codes: 0 listed; 1 error.
 more: aos-llm/README.md

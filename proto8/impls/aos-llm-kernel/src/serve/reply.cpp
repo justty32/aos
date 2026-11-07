@@ -1,4 +1,4 @@
-// reply.cpp：【serve】寫回信、寄送與撤回回信、記用量與逐封帳並收掉信件（說明見 serve.hpp）。
+// reply.cpp：【serve】寫回信、寄送與撤回回信、記用量與含換包旗標的逐封帳並收掉信件（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
 #include "aos/util/files.hpp"
@@ -125,7 +125,7 @@ void append_ledger(const std::string& stack, const std::string& dir, const std::
             entry["code"] = reply["error"]["code"];
         }
         entry["child"] = reply.value("child", Json());
-        entry["switched"] = false;
+        entry["switched"] = proc && proc->is_object() ? proc->value("switched", Json(false)) : Json(false);
         std::ofstream out(path, std::ios::app);
         out << aos::dumps(entry) << '\n';
         out.close();

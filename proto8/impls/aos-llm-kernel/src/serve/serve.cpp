@@ -1,4 +1,4 @@
-// serve.cpp：【serve】鎖信箱、清理寄件人已離開的信、按宣告級數留 high 格與串起每輪流程（說明見 serve.hpp）。
+// serve.cpp：【serve】鎖信箱、清理寄件人已離開的信、按宣告級數留 high 格、檢查後端限制與記換包，再串起每輪流程（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
 #include "aos/util/files.hpp"
@@ -90,7 +90,7 @@ int Server::run() {
     std::optional<long long> now_tick = aos::now_tick();
     long long now_ms = aos::utc_now_epoch_ms();
     std::vector<Waiting> ws = scan(now_ms, now_tick);
-    order(ws, cfg_.aging_ticks);
+    order(ws, cfg_.aging_ticks, q_);
 
     int got = aos::take_signal();
     if (got == 0) {
@@ -151,6 +151,16 @@ int Server::run() {
             if (w.pack.slots && inflight >= *w.pack.slots) {
                 continue;   // 這包的格滿了：跳過、讓下一封補位（不是停下）
             }
+            if (w.pack.backend) {
+                const auto& backend = *w.pack.backend;
+                const Backend& limits = cfg_.backends.at(backend);
+                const auto& packs = backend_packs_[backend];
+                if (backend_busy_[backend] >= limits.slots ||
+                    (limits.max_packs && !packs.contains(w.endpoint) &&
+                     packs.size() >= static_cast<size_t>(*limits.max_packs))) {
+                    continue;
+                }
+            }
             std::string dir = aos::join(mb_.cur(), w.id);
             if (!aos::move(aos::join(mb_.fresh(), w.id), dir)) {
                 continue;   // 寄信的剛撤信
@@ -193,6 +203,11 @@ int Server::run() {
                     throw Error{code::WriteFailed, *werr};
                 }
                 Json proc = Json::object();
+                proc["switched"] = w.pack.backend &&
+                    (!q_.backends.contains(*w.pack.backend) || q_.backends[*w.pack.backend]["pack"] != w.endpoint);
+                if (w.pack.backend) {
+                    proc["backend"] = *w.pack.backend;
+                }
                 proc["seen_at"] = seen_at;
                 proc["mounted_at"] = mounted_at;
                 proc["endpoint"] = w.endpoint;   // 代號（在飛幾封、packs 的帳照它算；request.json 裡是解好的那組、沒代號）
@@ -205,6 +220,17 @@ int Server::run() {
                 fs::remove(aos::join(dir, PROC_JSON), ec);
                 finish(w.id, error_reply(code::LaunchFailed, "cannot add the brain call to the daemon: " + e.code + " " + e.msg));
                 continue;
+            }
+            if (w.pack.backend) {
+                const auto& backend = *w.pack.backend;
+                if (!q_.backends.contains(backend) || q_.backends[backend]["pack"] != w.endpoint) {
+                    long long switches = q_.backends.contains(backend)
+                        ? q_.backends[backend]["counter_switches"].get<long long>() : 0;
+                    q_.backends[backend] = Json{{"pack", w.endpoint}, {"switched_at", mounted_at},
+                                              {"counter_switches", switches + 1}};
+                }
+                ++backend_busy_[backend];
+                backend_packs_[backend].insert(w.endpoint);
             }
             ++n;
             ++pack_busy_[w.endpoint];

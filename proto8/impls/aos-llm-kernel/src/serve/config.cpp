@@ -1,4 +1,4 @@
-// config.cpp：【serve】讀 kernel 設定、驗 slots 與 high 保留格、解指示詞與 endpoint 函數路徑（說明見 serve.hpp）。
+// config.cpp：【serve】讀 kernel 設定、驗 slots、high 保留格與後端格數、解指示詞與 endpoint 函數路徑（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
 #include "aos/util/cli.hpp"
@@ -20,7 +20,7 @@ std::string target_abs(const std::string& t, const std::string& base) {
 Cfg read_cfg(const std::string& spec, const std::string& stack) {
     Json doc = aos::load_cfg(spec);
     std::string base = aos::dirname(aos::abspath(aos::split_hash(spec).path));
-    aos::Resolved r = aos::resolve_keys(doc, base, {"slots", "reserved", "aging_ticks", "budget", "exec", "endpoint", "timeout_ms"});
+    aos::Resolved r = aos::resolve_keys(doc, base, {"slots", "reserved", "aging_ticks", "budget", "exec", "endpoint", "timeout_ms", "backends"});
     doc = r.value;
     if (!doc.is_object()) {
         throw Error{code::CfgBad, spec + " must be a JSON object"};
@@ -57,6 +57,29 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
             c.reserved_high = value.get<long long>();
         }
     }
+    if (doc.contains("backends")) {
+        const Json& backends = doc["backends"];
+        if (!backends.is_object()) {
+            throw Error{code::CfgBad, "backends must be an object of backend limits"};
+        }
+        for (const auto& [name, limits] : backends.items()) {
+            if (!limits.is_object() || !aos::is_count(limits.value("slots", Json())) ||
+                limits["slots"].get<unsigned long long>() < 1 ||
+                limits["slots"].get<unsigned long long>() > 9223372036854775807ULL) {
+                throw Error{code::CfgBad, "backends." + name + ".slots must be a positive integer"};
+            }
+            Backend b{limits["slots"].get<long long>(), std::nullopt};
+            if (limits.contains("max_packs")) {
+                const Json& max = limits["max_packs"];
+                if (!aos::is_count(max) || max.get<unsigned long long>() < 1 ||
+                    max.get<unsigned long long>() > 9223372036854775807ULL) {
+                    throw Error{code::CfgBad, "backends." + name + ".max_packs must be a positive integer"};
+                }
+                b.max_packs = max.get<long long>();
+            }
+            c.backends[name] = b;
+        }
+    }
     c.budget = parse_budget(doc.value("budget", Json()), base, stack);   // senders 從設定檔算位置、以相對 kernel stack 記帳
     Json ex = doc.value("exec", Json());
     if (!ex.is_string() || ex.get<std::string>().empty()) {
@@ -74,7 +97,7 @@ Cfg read_cfg(const std::string& spec, const std::string& stack) {
     for (auto& [k, v] : c.endpoints.items()) {
         c.endpoint_dirs[k] = eps.dir_of(k);
     }
-    c.packs = read_packs(c.endpoints, c.endpoint_dirs);
+    c.packs = read_packs(c.endpoints, c.endpoint_dirs, c.backends);
     Json ep = doc.value("endpoint", Json());
     if (!ep.is_null()) {
         if (!ep.is_string() || !c.endpoints.contains(ep.get<std::string>())) {

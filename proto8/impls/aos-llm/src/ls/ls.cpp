@@ -1,4 +1,4 @@
-// ls.cpp：【ls】讀窗、印表（說明見 ls.hpp）。
+// ls.cpp：【ls】讀含 backend 的能力包窗、印表（說明見 ls.hpp）。
 #include "ls/ls.hpp"
 
 #include "aos/util/files.hpp"
@@ -42,8 +42,8 @@ void ls_print(const Json& window, bool json) {
             std::printf("%s\terror:\t%s\n", it.key().c_str(), cell(p, "error").c_str());
             continue;
         }
-        std::printf("%s\t%s\t%s\t%s\t%s\t%s\n", it.key().c_str(), cell(p, "speed").c_str(), cell(p, "cost").c_str(),
-                    cell(p, "context").c_str(), cell(p, "slots").c_str(), cell(p, "summary").c_str());
+        std::printf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", it.key().c_str(), cell(p, "speed").c_str(), cell(p, "cost").c_str(),
+                    cell(p, "context").c_str(), cell(p, "slots").c_str(), cell(p, "backend").c_str(), cell(p, "summary").c_str());
     }
     std::fflush(stdout);
 }

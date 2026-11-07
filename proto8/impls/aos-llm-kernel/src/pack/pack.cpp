@@ -1,4 +1,4 @@
-// pack.cpp：【pack】endpoint 能力包（說明見 pack.hpp）。
+// pack.cpp：【pack】endpoint 能力包、後端歸屬驗證與屬性窗（說明見 pack.hpp）。
 #include "pack/pack.hpp"
 
 #include "aos/util/io.hpp"
@@ -7,11 +7,19 @@
 
 namespace aos::llm_kernel {
 
-static const char* const PACK_KEYS[] = {"exec", "slots", "budget", "speed"};
+static const char* const PACK_KEYS[] = {"exec", "slots", "budget", "speed", "backend"};
 
-Pack parse_pack(const Json& g, const std::string& name) {
+Pack parse_pack(const Json& g, const std::string& name, const Backends& backends) {
     Pack p;
     std::string at = "kernel.json endpoints." + name;
+    if (g.contains("backend")) {
+        const Json& b = g["backend"];
+        if (!b.is_string() || !backends.contains(b.get<std::string>())) {
+            throw Error{code::CfgBad, at + ".backend must name a declared backend, got " + aos::dumps(b)};
+        }
+        p.backend = b.get<std::string>();
+        p.attrs["backend"] = b;
+    }
     Json s = g.value("slots", Json());
     if (!s.is_null()) {
         if (!aos::is_count(s) || s.get<long long>() < 1) {
@@ -92,15 +100,15 @@ std::optional<std::string> fixed_clash(const Json& g, const Json& request, const
            " from the request; to change " + (n == 1 ? "it" : "them") + " pick another endpoint name)";
 }
 
-std::map<std::string, Pack> read_packs(const Json& endpoints, const std::map<std::string, std::string>& dirs) {
+std::map<std::string, Pack> read_packs(const Json& endpoints, const std::map<std::string, std::string>& dirs, const Backends& backends) {
     std::map<std::string, Pack> out;
     for (auto& [name, raw] : endpoints.items()) {
         try {
-            aos::Resolved r = aos::resolve_keys(raw, dirs.at(name), {"slots", "budget", "speed", "cost", "context", "summary", "fixed"});
+            aos::Resolved r = aos::resolve_keys(raw, dirs.at(name), {"slots", "budget", "speed", "cost", "context", "summary", "fixed", "backend"});
             if (!r.value.is_object()) {
                 throw Error{code::CfgBad, "kernel.json endpoints." + name + " must be an object (llm settings), got " + aos::dumps(r.value)};
             }
-            out[name] = parse_pack(r.value, name);
+            out[name] = parse_pack(r.value, name, backends);
         } catch (const Error& e) {
             Pack p;
             p.error = e.code + " " + e.msg;

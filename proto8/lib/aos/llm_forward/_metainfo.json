@@ -1,0 +1,1 @@
+{"summary":"Forward one request to another llm kernel and return its reply unchanged","timeout_ms":180000,"resource":["llm"],"side_effect":false,"idempotent":false,"deterministic":false,"cost":{"token":{"in":0,"out":0,"cached":0},"counter_calls":1,"time_ms":700}}

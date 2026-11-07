@@ -1,4 +1,4 @@
-// proc.cpp：【serve】掛問腦 proc、判斷收尾與透明錯誤、重掛並收集在飛信件（說明見 serve.hpp）。
+// proc.cpp：【serve】掛問腦 proc、判斷收尾與透明錯誤、沿用換包旗標重掛並收集各後端在飛信件（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
 #include "aos/util/files.hpp"
@@ -211,7 +211,18 @@ void Server::collect() {
             } else {
                 ++busy_;
                 if (proc->value("endpoint", Json()).is_string()) {
-                    ++pack_busy_[(*proc)["endpoint"].get<std::string>()];
+                    const std::string endpoint = (*proc)["endpoint"].get<std::string>();
+                    ++pack_busy_[endpoint];
+                    std::optional<std::string> backend;
+                    if (proc->value("backend", Json()).is_string()) {
+                        backend = (*proc)["backend"].get<std::string>();
+                    } else if (cfg_.packs.contains(endpoint)) {
+                        backend = cfg_.packs.at(endpoint).backend;
+                    }
+                    if (backend) {
+                        ++backend_busy_[*backend];
+                        backend_packs_[*backend].insert(endpoint);
+                    }
                 }
                 if (proc->value("sender", Json()).is_string()) {
                     ++sender_busy_[sender_key((*proc)["sender"].get<std::string>(), stack_)];

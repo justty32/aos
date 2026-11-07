@@ -37,7 +37,7 @@
 |---|---|
 | [`CMakeLists.txt`](../../../../../proto8/impls/aos-llm/CMakeLists.txt) | `aos-llm send\|recv\|ask\|regret`——寄請求信進 LLM kernel 的信箱（$AOS_LLM_KERNEL）、收回信的基礎工具（11-04 由 aos-llm-send 改名）。 |
 | [`src/common/common.hpp`](../../../../../proto8/impls/aos-llm/src/common/common.hpp) | aos-llm 好幾個元素都用到的：型別別名、錯誤代號（信箱型別用 aos-post、LLM 信件協定用 aos-llm-kernel）。 |
-| [`src/ls/ls.cpp`](../../../../../proto8/impls/aos-llm/src/ls/ls.cpp) | 讀窗、印表（說明見 ls.hpp）。 |
+| [`src/ls/ls.cpp`](../../../../../proto8/impls/aos-llm/src/ls/ls.cpp) | 讀含 backend 的能力包窗、印表（說明見 ls.hpp）。 |
 | [`src/ls/ls.hpp`](../../../../../proto8/impls/aos-llm/src/ls/ls.hpp) | aos-llm ls——讀 kernel 的窗 <stack>/endpoints.json（包的屬性表，11-05 feat-proto），一行一包印出。 |
 | [`src/main.cpp`](../../../../../proto8/impls/aos-llm/src/main.cpp) | aos-llm 命令列——寄請求信進 LLM kernel 的信箱、收回信的基礎工具（定位同 aos-post；thinking 11-04 think-as-function 02/01 § 5）。 |
 | [`src/send/send.cpp`](../../../../../proto8/impls/aos-llm/src/send/send.cpp) | 找信箱、讀 body、寄信、撤信（說明見 send.hpp）。 |
@@ -45,4 +45,5 @@
 | [`src/wait/wait.cpp`](../../../../../proto8/impls/aos-llm/src/wait/wait.cpp) | 收回信、等回信、撤信（說明見 wait.hpp）。 |
 | [`src/wait/wait.hpp`](../../../../../proto8/impls/aos-llm/src/wait/wait.hpp) | 收回信——在回信信箱裡找回某封信的那封、印 body.message 或帶信名的完整 body、錯誤 body、收掉；ask 的等待與撤信。 |
 | [`tests/test_full.py`](../../../../../proto8/impls/aos-llm/tests/test_full.py) | Verify ask/recv full replies, request names, error bodies, and unchanged default output. |
+| [`tests/test_ls_backend.py`](../../../../../proto8/impls/aos-llm/tests/test_ls_backend.py) | Verify ls exposes backend names in both the JSON window and the text columns. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-llm/vcpkg.json) | aos-llm：寄請求信進 LLM kernel 的信箱、收回信（send／recv／ask／regret） |

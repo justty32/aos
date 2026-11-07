@@ -7,14 +7,14 @@
 //   serve.cpp   鎖信箱、收拾信件與每輪執行骨架
 //
 //   read_cfg   kernel.json（`檔` 或 `檔#/指標`；thinking 11-04 think-as-function 02 § 3）：
-//                slots（同時在飛幾封，正整數；沒寫＝1）、reserved（選填物件，只認 high：非負整數且小於 slots；沒寫＝{}）、
+//                backends（後端名 → slots 正整數、max_packs 選填正整數）、slots（同時在飛幾封，正整數；沒寫＝1）、reserved（選填物件，只認 high：非負整數且小於 slots；沒寫＝{}）、
 //                aging_ticks（每幾格升一級，正整數；沒寫＝3）、budget（額度，budget.hpp；含每寄件人的 senders，相對路徑從 kernel 定義資料夾算）、
 //                exec（必填：預設的 endpoint 函數＝aos-exec 目標，資料夾、檔、`檔#/指標`；相對的從 kernel 定義資料夾〔kernel.json 所在〕算、轉成絕對）、
 //                endpoints（必填、非空物件：代號 → 一組 llm 設定＝一個能力包〔11-05 feat-proto，pack.hpp〕；一組裡 kernel 認 exec〔選填，這組改用別的
-//                  endpoint 函數，相對的同上〕、slots、budget、speed，拿掉後其他鍵〔url／model／key／fixed／cost／context／summary…〕整個原樣交給 endpoint 函數）、
+//                  endpoint 函數，相對的同上〕、slots、budget、speed、backend，拿掉後其他鍵〔url／model／key／fixed／cost／context／summary…〕整個原樣交給 endpoint 函數）、
 //                  endpoint（選填：預設代號，要在表裡）、timeout_ms（選填：問腦單子的上限，非負整數）；
 //                其他 key 忽略。信箱固定 $AOS_STACK/requests/（11-05 kernel-daemon 07 § 2：AOS_LLM_KERNEL＝kernel 的 stack）。
-//              指示詞：slots、reserved、aging_ticks、budget、exec、endpoint、timeout_ms 整格先解（aos-directive 的 resolve_keys）；endpoints 只換一層
+//              指示詞：slots、reserved、aging_ticks、budget、exec、endpoint、timeout_ms、backends 整格先解（aos-directive 的 resolve_keys）；endpoints 只換一層
 //              （整張表可以 {"$ref": "endpoints.json#/"}），裡面每組到用的時候才解（解不開＝那封信回 DirectiveBad，kernel 照跑別封）。
 //              壞了 CfgMissing／CfgBad／DirectiveBad
 //   serve      跑一次（給 daemon 一次次拍，多半是 daemon.json 的身體），回結束碼（0；開始前收到訊號＝128＋N）。
@@ -32,13 +32,14 @@
 //                   new/、cur/ 只看子資料夾（信＝資料夾，N-16；混進來的一般檔不理）
 //                4. 看 new/：letter.json 讀不懂、body 不是物件、沒有 body.request、endpoint 不是字串、priority 壞＝回 LetterBad；
 //                   request 不是物件、messages 不是陣列、stream 真＝RequestBad；代號：沒寫又沒預設＝EndpointMissing、表裡沒有＝EndpointUnknown；
-//                   那組解指示詞失敗＝DirectiveBad、不是物件或 exec 不是非空字串、slots／budget／speed／fixed 形狀不對＝CfgBad；
+//                   那組解指示詞失敗＝DirectiveBad、不是物件或 exec 不是非空字串、slots／budget／speed／backend／fixed 形狀不對＝CfgBad；
 //                   request 寫了包 fixed 裡的 key、或包有 model 而 request 寫 model＝RequestBad（C-56：釘死的不給蓋）；deadline 已過＝DeadlineBad（都不佔格）
-//                5. 排隊（queue.hpp 的 order：級數＋aging → deadline → 包的 speed → 等得久 → 先寄）、補位到 slots（在飛＋新掛）：
+//                5. 排隊（queue.hpp 的 order：級數＋aging → deadline → 同後端黏著 → 包的 speed → 等得久 → 先寄）、補位到 slots（在飛＋新掛）：
 //                   宣告級數低於 high（不含 aging）只能補到 slots − reserved.high；被擋留 new/、繼續找後面的 high；不搶占在飛的，包層不保留；
 //                   額度到頂（budget.hpp 的 spent）＝"refuse" 剩下的全回 BudgetMissing、"wait" 停整列留在 new/；
 //                   包（11-05 feat-proto 件 3）：那包的 budget 到頂（spent_pack，數那包在飛＋新掛）＝"refuse" 那封回 BudgetMissing、"wait" 那封留在 new/、
 //                   別包照跑（不降級換包）；寄件人（11-05 feat-proto 件 5）：budget.senders 列了信封 sender 而那人到頂（spent_of，數那人在飛＋新掛）＝同包的做法；
+//                   後端 slots 與 max_packs 同時計在飛＋新掛，擋到就跳過；成功首次掛記 backend 與 switched，queue 更新最後掛的包；
 //                   那包在飛＋新掛已到它的 slots＝跳過、看下一封（不是停下）；都沒擋就認領（new → cur 改名；改不成＝寄信的剛撤信）、寫 request.json＝{"endpoint": 那組（指示詞已解、去掉 exec）,
 //                   "request": body.request, "priority": 宣告級數＋推得期限}、寄掛信（proc.json 記 endpoint＝代號、sender＝信封 sender、seen_at＝首次看到的 epoch 秒） {"procs_added": {"llm_<id>": {"exec": {"argv": ["aos-exec", 函數], "cwd": 信資料夾,
 //                   "stdin": "request.json", "stdout": "reply.json", "timeout_ms"?}, "max": 1, "stack": 信資料夾}}}、寫 proc.json；寄不進＝LaunchFailed
@@ -54,6 +55,7 @@
 
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 #include <unistd.h>
@@ -66,10 +68,11 @@ struct Cfg {
     long long reserved_high = 0;
     long long aging_ticks = 3;
     Budget budget;
+    Backends backends;
     std::string exec;                                   // 預設的 endpoint 函數（絕對路徑，可帶 #/指標）
     Json endpoints = Json::object();                    // 代號 → 一組（只換過表這一層，每組裡的指示詞還沒解）
     std::map<std::string, std::string> endpoint_dirs;   // 代號 → 那組裡相對 $ref 的起點
-    std::map<std::string, Pack> packs;                  // 代號 → 包的 slots／budget／speed（只解這幾格；pack.hpp 的 read_packs）
+    std::map<std::string, Pack> packs;                  // 代號 → 包的 slots／budget／speed／backend（只解這幾格；pack.hpp 的 read_packs）
     std::optional<std::string> endpoint;                // 預設代號
     std::optional<long long> timeout_ms;
     std::string base;                                   // kernel 定義資料夾（相對的 exec 從這裡算）
@@ -111,6 +114,9 @@ private:
     long long busy_ = 0;   // 掛上去、還沒收的（在飛）
     std::map<std::string, long long> pack_busy_;   // 代號 → 這包在飛幾封（proc.json 的 endpoint；11-05 feat-proto）
     std::map<std::string, long long> sender_busy_; // 寄件人 → 這人在飛幾封（proc.json 的 sender；11-05 feat-proto 件 5）
+
+    std::map<std::string, long long> backend_busy_;
+    std::map<std::string, std::set<std::string>> backend_packs_;
 
     void lock();
     void collect();

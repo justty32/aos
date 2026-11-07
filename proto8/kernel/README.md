@@ -5,6 +5,7 @@
 | 元件 | 是什麼 |
 |---|---|
 | `llm-kernel/` | 問腦的那台：agent 寄請求信、它挑能力包（`smart-high`、`stupid-fast`…）問模型、寄回信；自己一台 daemon |
+| [`llm-team/`](llm-team/) | 隊 kernel：能力包寫下一層 stack 與代號，經 llm_forward 轉交；自己一台 daemon |
 | `daemon-judge/` | 繼承式 kernel：判官先判過 ctl 請求、才轉寄進 daemon 的 ctl 信箱 |
 | `procs-kernel/` | 0 號 proc 式 kernel：daemon 的 0 號 proc 收請求、判完才轉寄 |
 

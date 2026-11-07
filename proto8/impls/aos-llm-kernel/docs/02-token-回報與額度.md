@@ -4,8 +4,8 @@
 
 （[thinking 11-05 kernel-daemon 03](../../../thinking/2026-11/05/kernel-daemon/03-問腦改掛daemon.md)：kernel 不自己跑，每封請 daemon 掛成一個問腦 proc、下一次收）
 
-1. 查代號（信的 `body.endpoint`，沒寫用預設）→ 解那組的指示詞 → 那組有 `exec` 就用它、沒有用 kernel.json 的 `exec`；讀那組的 `slots`／`budget`／`speed`（壞了 `CfgBad`）；`request` 撞到釘死的（`fixed` 的 key、那組有 `model` 時的 `model`）＝`RequestBad`；kernel 看的四個鍵（`exec`、`slots`、`budget`、`speed`）拿掉。
-2. 認領（`new/` → `cur/` 改名），在信的資料夾（`cur/<信件名稱>/`）寫 `request.json`＝`{"endpoint": 那組（指示詞已解、去掉那四個鍵）, "request": body.request, "priority": {"level", "deadline"?}}`（級數與推得期限見 [01 契約](01-用法.md)）。
+1. 查代號（信的 `body.endpoint`，沒寫用預設）→ 解那組的指示詞 → 那組有 `exec` 就用它、沒有用 kernel.json 的 `exec`；讀那組的 `slots`／`budget`／`speed`（壞了 `CfgBad`）；`request` 撞到釘死的（`fixed` 的 key、那組有 `model` 時的 `model`）＝`RequestBad`；kernel 看的五個鍵（`exec`、`slots`、`budget`、`speed`、`backend`）拿掉。
+2. 認領（`new/` → `cur/` 改名），在信的資料夾（`cur/<信件名稱>/`）寫 `request.json`＝`{"endpoint": 那組（指示詞已解、去掉那五個鍵）, "request": body.request, "priority": {"level", "deadline"?}}`（級數與推得期限見 [01 契約](01-用法.md)）。
 3. 寄一封**掛信**進 daemon（`$AOS_KERNEL`，沒設＝`$AOS_DAEMON` 的 ctl 信箱）：
    `{"procs_added": {"llm_<信件名稱>": {"exec": {"argv": ["aos-exec", <exec 絕對路徑>], "cwd": "<信>", "stdin": "request.json", "stdout": "reply.json", "timeout_ms"?: kernel.json 的}, "max": 1, "stack": "<信>"}}}`。
    `max: 1` 的 loop 型 proc：跑一次就停、`state.json` 留下 `phase` 與結束碼；stderr 由 daemon 接到 `<信>/stderr.txt`。寄出後寫 `<信>/proc.json`＝`{"endpoint": 代號, "sender"?: 信封的 sender, "name", "exec", "mount_letter": 掛信的信件名稱, "seen_at": queue.seen_at_ms / 1000（抄不到＝null）, "mounted_at": epoch 秒, "retries": 重掛過幾次}`（`endpoint` 給「這包在飛幾封」與 `used.json` 的 `packs` 用，`sender` 同理給 `senders`；`request.json` 裡是解好的那組、沒有代號）；寄不進＝那封回 `LaunchFailed`。
@@ -40,7 +40,7 @@ endpoint 函數的契約（stdin `{"endpoint", "request", "priority"}` → stdou
   | `usage` | 回覆原樣，缺＝null |
   | `code` | 成功＝null；失敗＝回給寄件人的 error.code 字串 |
   | `child` | 成功 stdout 的 child 原樣，缺＝null；回信拿掉此鍵 |
-  | `switched` | 本批一律 false |
+  | `switched` | 從 proc 抄；有 backend 時首次掛上或換包的第一封為 true，其餘 false；重掛沿用第一次 |
 
   這是追加的觀測帳，kernel 不輪替；人或審視者清理。中斷或重收可能留下半行、缺行或重複行；讀者跳過壞行，用 `id` 去重。各層都記 usage，加總只加一層；全鏈只加沒有 `child` 的葉子行，避免重算。（11-07 使用者裁定：翻 11-05 的 served.jsonl「也刪」，ledger 留；見 [kernel-nest](../../../thinking/2026-11/07/kernel-nest/README.md)）
 - **算什麼**：掛出去過（`proc.json` 在）的信才算一次——`LetterBad`、`RequestBad`、`Endpoint{Missing,Unknown}`、`DeadlineBad`、`BudgetMissing`、第一次就寄不出掛信的 `LaunchFailed` 不算；`EndpointFailed`、`ReplyBad` 算（函數跑過、可能已經花了錢）。
@@ -58,7 +58,7 @@ endpoint 函數的契約（stdin `{"endpoint", "request", "priority"}` → stdou
 2. **收成品**：`cur/` 裡有 `proc.json` 的照上面「跑一封」第 4 步看，收尾的寄回信、刪掉，還在飛的記一格。沒有 `proc.json` 的：有讀得懂的 `reply.json`＝上一次寄到一半，照寄；都沒有＝認領了還沒掛就停了，改名回 `new/` 重排。
 3. **收拾**（只看有 `sender.flock` 的信）：`tmp/` 裡寄信的人不在了的刪掉；`new/` 裡寄信的不在了的先改名回 `tmp/` 再刪（不白跑）。沒有 `sender.flock` 的一律不碰。
 4. **看 `new/`**：`LetterBad`、`RequestBad`、`EndpointMissing`、`EndpointUnknown`、那組壞了（`DirectiveBad`、`CfgBad`）、deadline 已過（`DeadlineBad`）＝直接回信（都不佔格、不跑）。
-5. **排隊**（11-05 使用者「讓kernel能根據信件中額外附送的priority之類資訊做排程」，[feat-proto 03](../../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：`level`＋`waited_ticks / aging_ticks`（整數除法；每 `aging_ticks` 格升一級，預設 3，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ **那封的包的 `speed`**（`fast` → `normal` → `slow`）→ 等得久的先 → 先寄的先。
+5. **排隊**（11-05 使用者「讓kernel能根據信件中額外附送的priority之類資訊做排程」，[feat-proto 03](../../../thinking/2026-11/05/feat-proto/03-scheduling.md)）：`level`＋`waited_ticks / aging_ticks`（整數除法；每 `aging_ticks` 格升一級，預設 3，不封頂）大的先 → deadline 近的先（有寫的在沒寫的前面）→ 同一 backend 的信黏著最後掛的包 → **那封的包的 `speed`**（`fast` → `normal` → `slow`）→ 等得久的先 → 先寄的先。
    `waited_ticks`：kernel 有時鐘而這封信也有 `seen_at_ticks`，用現在 tick 減那一格；否則用 `(現在 UTC epoch 毫秒 − seen_at_ms) / AOS_TICK_INTERVAL`（預設 1000 毫秒），負的當 0。「等得久」也比同一個值。同一輪掃描只各讀一次 tick 與牆鐘。時鐘凍住，已有 tick 記錄的信就不升級；沒有時鐘時凍住再醒仍會計入牆鐘經過的時間。
    跨樹信的 `priority.deadline` 仍是牆鐘（帶時區 ISO 8601 或 epoch 秒；N-65 ③），kernel 不讀信裡任何 tick 欄。
    不搶位、不保留格；要保證 high 不等＝短 deadline 或多開一包。

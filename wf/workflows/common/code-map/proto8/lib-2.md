@@ -18,6 +18,8 @@
 | [`feedback/`](../../../../../proto8/lib/aos/feedback/) | Submit command usability feedback through aos-feedback without guessing the caller. |
 | [`judge/`](../../../../../proto8/lib/aos/judge/) | 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false；選填排隊窗 queue.json 先來先掛、keep_ordered 對照代回有序信 |
 | [`judge/tests/test_judge.py`](../../../../../proto8/lib/aos/judge/tests/test_judge.py) | Verify broken reply recovery and restart deduplication with real aos-post mailboxes. |
+| [`llm_forward/`](../../../../../proto8/lib/aos/llm_forward/) | Forward one endpoint request to the kernel named by its pack. |
+| [`llm_forward/tests/test_forward.py`](../../../../../proto8/lib/aos/llm_forward/tests/test_forward.py) | Verify exact forwarding of subprocess streams and status, pack errors, and child accounting. |
 | [`measure/`](../../../../../proto8/lib/aos/measure/) | Measure isolated cases, costs and repeat consistency as JSON. |
 | [`measure/compare.py`](../../../../../proto8/lib/aos/measure/compare.py) | Compare workspace artifacts using bytes or an observed custom comparator. |
 | [`measure/ledger.py`](../../../../../proto8/lib/aos/measure/ledger.py) | Fold publicly declared observation ledgers into call trees and aggregate costs. |

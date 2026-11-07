@@ -15,7 +15,7 @@ N=$(echo "$B" | aos-llm send --reply-to $AOS_STACK/llm_box) # 非同步：寄完
 aos-llm recv $AOS_STACK/llm_box $N; echo $?               # 還沒到：10
 aos-llm recv $AOS_STACK/llm_box $N                        # 到了：{"role": "assistant", "content": "FAKE ANSWER to: hi"}
 echo "$B" | aos-llm ask --priority high                   # 同步：寄、等、印 message
-aos-llm ls                                                # 列 kernel 的能力包：代號 speed cost context slots summary
+aos-llm ls                                                # 列 kernel 的能力包：代號 speed cost context slots backend summary
 ```
 
 **stdin 是整份 body**（隊長 11-04 定案：設計稿寫「stdin＝request.json」，[03 § 1](../../thinking/2026-11/04/think-as-function/03-呼叫端.md) think 寫的 `request.json` 就是 body 的形狀）：`{"endpoint"?: 代號, "request": {"messages": [...], "tools"?, ...}, "priority"?}`——代號、請求、優先度都由呼叫端自己組，aos-llm 原樣當信的 `body` 寄出（只有 `--priority` 有給時蓋掉 `priority`）。

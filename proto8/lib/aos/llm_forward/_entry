@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+# llm_forward - Forward one endpoint request to the kernel named by its pack.
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+sys.dont_write_bytecode = True
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[1]))
+import tool_io
+
+
+def main():
+    tool_io.start('llm_forward', echo=False, help_text='''llm_forward - Forward one request to another llm kernel.
+usage: llm_forward [FLAGS] < REQUEST.json   (run with aos-exec)
+Input: {"endpoint":{"to":"PACK","kernel":"STACK"},"request":{...},"priority"?:...}
+Success: replace letter with child {kernel, letter}; keep all other fields.
+Downstream failure: preserve stdout, stderr, and exit status.
+Own failure: one error line on stderr, exit 1.
+''')
+    try:
+        args = json.loads(sys.stdin.read())
+        if not isinstance(args, dict):
+            raise ValueError('stdin must be an object')
+        flags = tool_io.argv_to_json(sys.argv[1:], tool_io.load_tooldef(HERE)['parameters'])
+        args.update(flags)
+        pack = args.get('endpoint')
+        if not isinstance(pack, dict):
+            raise ValueError('endpoint pack must be an object')
+        for key in ('to', 'kernel'):
+            if key not in pack:
+                raise ValueError('endpoint pack has no "' + key + '"')
+            if not isinstance(pack[key], str) or not pack[key]:
+                raise ValueError('endpoint pack "' + key + '" must be a non-empty string')
+        if not isinstance(args.get('request'), dict):
+            raise ValueError('request must be an object')
+    except tool_io.Error as error:
+        tool_io.die(error.code, str(error))
+    except (ValueError, TypeError) as error:
+        tool_io.die('CfgBad', str(error))
+    body = {'endpoint': pack['to'], 'request': args['request']}
+    if 'priority' in args:
+        body['priority'] = args['priority']
+    try:
+        result = subprocess.run(['aos-llm', 'ask', '--full'], input=json.dumps(body).encode(),
+                                capture_output=True,
+                                env={**os.environ, 'AOS_LLM_KERNEL': pack['kernel']})
+    except OSError as error:
+        tool_io.die('LaunchFailed', str(error))
+    if result.returncode:
+        sys.stdout.buffer.write(result.stdout)
+        sys.stderr.buffer.write(result.stderr)
+        return result.returncode if result.returncode > 0 else 128 - result.returncode
+    try:
+        reply = json.loads(result.stdout)
+        if (len(result.stdout.splitlines()) != 1 or not isinstance(reply, dict) or
+                not isinstance(reply.get('letter'), str) or not reply['letter']):
+            raise ValueError('expected one reply object with a letter string')
+        letter = reply.pop('letter')
+        reply['child'] = {'kernel': pack['kernel'], 'letter': letter}
+    except (ValueError, UnicodeError) as error:
+        tool_io.die('ReplyBad', str(error))
+    print(json.dumps(reply, ensure_ascii=False))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

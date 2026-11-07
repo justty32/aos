@@ -1,0 +1,1 @@
+{"description":"Start the team llm daemon with stdout logs", "argv":["aos-daemon","--enable-logs","daemon.json"]}

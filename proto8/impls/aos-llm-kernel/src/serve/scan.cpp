@@ -1,4 +1,4 @@
-// scan.cpp：【serve】檢查排隊信件、挑選與解析 endpoint 能力包（說明見 serve.hpp）。
+// scan.cpp：【serve】檢查排隊信件、挑選與解析含後端歸屬的 endpoint 能力包（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
 #include "aos/directive.hpp"
@@ -21,7 +21,7 @@ static bool timestamp_ok(const Json& value) {
 }
 
 
-// 查代號、解那組的指示詞、定 exec、讀包的 slots／budget／speed（填進 w）；查不到或那組壞了＝回那封信的 error 回信；
+// 查代號、解那組的指示詞、定 exec、讀包的 slots／budget／speed／backend（填進 w）；查不到或那組壞了＝回那封信的 error 回信；
 // request 撞到包釘死的（fixed 裡的 key、包有 model 而 request 寫 model）＝RequestBad（11-05 feat-proto 件 2）。
 // pick 在 scan 驗過 request 是物件之後才叫。
 std::optional<Json> Server::pick(Waiting& w) {
@@ -53,7 +53,7 @@ std::optional<Json> Server::pick(Waiting& w) {
         w.exec = target_abs(g["exec"].get<std::string>(), cfg_.base);
     }
     try {
-        w.pack = parse_pack(g, w.endpoint);
+        w.pack = parse_pack(g, w.endpoint, cfg_.backends);
     } catch (const Error& e) {
         return error_reply(e.code, e.msg);
     }
@@ -61,7 +61,7 @@ std::optional<Json> Server::pick(Waiting& w) {
     if (clash) {
         return error_reply(code::RequestBad, *clash);
     }
-    w.group = strip_pack(g);   // kernel 看的 exec／slots／budget／speed 拿掉，其他原樣交給 endpoint 函數
+    w.group = strip_pack(g);   // kernel 看的 exec／slots／budget／speed／backend 拿掉，其他原樣交給 endpoint 函數
     return std::nullopt;
 }
 
