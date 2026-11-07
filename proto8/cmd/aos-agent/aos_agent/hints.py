@@ -68,10 +68,10 @@ def daemon_held(a):
 
 
 def off_table(a):
-    """表上已經沒有這隻（身體退 0 結束、下了表；出錯結束的 daemon 留 stopped＋reason）＝一句怎麼接著用；還在＝None。"""
+    """表上沒這隻＝一次性身體結束下了表（不論結束碼）或被 rm；loop 身體出錯會留 stopped＋reason。回一句怎麼接著用；還在＝None。"""
     if row_named(a.name) is not None:
         return None
-    return ("it is no longer on the daemon table (its body exited 0 and left the table; its last output is in %s/%s); aos-agent ctl add with the same name "
+    return ("it is no longer on the daemon table (a one-shot body leaves the table when it ends, whatever its exit code; its last output is in %s/%s); aos-agent ctl add with the same name "
             "picks it up again (the stack is kept; some bodies resume where they stopped, others drop that batch, so say it again)"
             % (a.stack, call_dc(dc.names_of, daemon_path())["procs_stderr"]))
 

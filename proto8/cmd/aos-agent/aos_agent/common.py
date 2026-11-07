@@ -244,7 +244,7 @@ def row_named(name):
 def find(name, quiet=False):
     r = table(quiet=quiet).get(name)
     if r is None or not isinstance(r.get("stack"), str) or not r.get("stack"):
-        raise Fail("InstanceMissing", "%s is not on the daemon table (removed with rm, or it exited 0 and left the table; the stack may still be there: aos-agent ctl add with the same name to pick it up again)" % name)
+        raise Fail("InstanceMissing", "%s is not on the daemon table (removed with rm, or a one-shot body ended and left the table; the stack may still be there: aos-agent ctl add with the same name to pick it up again)" % name)
     return Agent(name, r)
 
 
