@@ -56,8 +56,9 @@ class Judge(unittest.TestCase):
             shim = root / 'aos-llm'
             shim.write_text('#!/usr/bin/env python3\n'
                 '# Return a controlled downstream failure.\n'
-                'import sys\n'
+                'import json, sys\n'
                 'sys.stdin.read()\n'
+                'print(json.dumps({"error":{"code":"EndpointMissing","msg":"no endpoint"}}))\n'
                 'sys.stderr.write("aos-llm: warning: detail before failure\\n")\n'
                 'sys.stderr.write("aos-llm: error: EndpointMissing no endpoint\\n")\n'
                 'sys.exit(1)\n')
@@ -139,7 +140,13 @@ class Judge(unittest.TestCase):
                     self.assertEqual(bad.stdout, bad.stderr)
                     rows = [json.loads(s) for s in (root / 'bad/observed.jsonl').read_text().splitlines()]
                     self.assertEqual(rows[-1]['kind'], 'think')
-                    self.assertNotIn('letter', rows[-1])
+                    deadline = time.monotonic() + 5
+                    while True:
+                        ledger = [json.loads(s) for s in (kernel / 'ledger.jsonl').read_text().splitlines()]
+                        if rows[-1]['letter'] in [row['id'] for row in ledger] or time.monotonic() >= deadline:
+                            break
+                        time.sleep(.01)
+                    self.assertIn(rows[-1]['letter'], [row['id'] for row in ledger])
                 finally:
                     process.terminate()
                     try:

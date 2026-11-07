@@ -107,6 +107,7 @@ void append_ledger(const std::string& stack, const std::string& dir, const std::
             entry[key] = proc && proc->is_object() ? proc->value(key, Json()) : Json();
         }
         entry["model"] = reply.value("model", Json());
+        entry["seen_at"] = proc && proc->is_object() ? proc->value("seen_at", Json()) : Json();
         entry["mounted_at"] = proc && proc->is_object() ? proc->value("mounted_at", Json()) : Json();
         double finished = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
         entry["finished_at"] = finished;
@@ -119,6 +120,12 @@ void append_ledger(const std::string& stack, const std::string& dir, const std::
             entry["elapsed_ms"] = static_cast<long long>(elapsed);
         }
         entry["usage"] = reply.value("usage", Json());
+        entry["code"] = nullptr;
+        if (reply.contains("error")) {
+            entry["code"] = reply["error"]["code"];
+        }
+        entry["child"] = reply.value("child", Json());
+        entry["switched"] = false;
         std::ofstream out(path, std::ios::app);
         out << aos::dumps(entry) << '\n';
         out.close();
@@ -136,10 +143,12 @@ void append_ledger(const std::string& stack, const std::string& dir, const std::
 void Server::finish(const std::string& id, const Json& reply) {
     std::string dir = aos::join(mb_.cur(), id);
     write_reply(dir, reply);
+    Json body = reply;
+    body.erase("child");
     bool counted = ran(dir);
     std::string endpoint = proc_str(dir, "endpoint");
     std::string sender = proc_str(dir, "sender");
-    Json reply_error = post_reply(mb_.root, dir, id, reply);   // 回信走 reply_to（10-30）
+    Json reply_error = post_reply(mb_.root, dir, id, body);   // child 只進本層帳，不往上傳
     if (reply_error.is_string()) {
         aos::warn("aos-llm-kernel", "cannot send the reply to letter " + id + " (" + reply_error.get<std::string>() + "); letter deleted anyway");
     }

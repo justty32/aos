@@ -2,7 +2,7 @@
 
 `aos-llm - 寄請求信進 LLM kernel 的信箱、收回信`（NAME，C-54 R1）
 
-**一句話：`aos-llm send|recv|ask|regret|ls`——問腦的基礎工具：把一份請求（OpenAI 形狀的 messages／tools＋代號）寫成一封信丟進 llm kernel 的信箱 `$AOS_LLM_KERNEL/requests/`（`AOS_LLM_KERNEL`＝llm kernel 的 stack），由 kernel（[aos-llm-kernel](../aos-llm-kernel/README.md)）排隊、請 daemon 掛去跑它自己的 endpoint 函數、照信封的 `reply_to` 寄回信；這支預設把回信的 `message` 印出來，`ask`／`recv` 加 `--full` 則印整個回覆物件（含原有的 `usage`、`model`）。**
+**一句話：`aos-llm send|recv|ask|regret|ls`——問腦的基礎工具：把一份請求（OpenAI 形狀的 messages／tools＋代號）寫成一封信丟進 llm kernel 的信箱 `$AOS_LLM_KERNEL/requests/`（`AOS_LLM_KERNEL`＝llm kernel 的 stack），由 kernel（[aos-llm-kernel](../aos-llm-kernel/README.md)）排隊、請 daemon 掛去跑它自己的 endpoint 函數、照信封的 `reply_to` 寄回信；這支預設把回信的 `message` 印出來，`ask`／`recv` 加 `--full` 則印整個回覆物件（含原有的 `usage`、`model`，並加 `letter`＝原請求信名）；錯誤回信也印一行完整 body，stderr 與退出碼維持原樣。**
 定位同 [aos-post](../aos-post/README.md)：基礎工具、IPC 的語法糖，跟 aos proc 關聯不深，proc 自己拿它組（使用者 11-04 晚「aos llm,tool這兩個，我希望他們的定位是跟aos post一樣，作為基礎工具」）。aos-post 管「一封信怎麼寄、怎麼認領」，aos-llm 只多知道「請求信的 body 長怎樣、回信怎麼認、錯怎麼印」。
 11-04 由 `aos-llm-send`（寄一張單子、等回信、原樣交回）改名改寫。一個 lib（`lib/libaos-llm.a`，沒有公開標頭）加一支薄命令列（`bin/aos-llm`）。連 aos-util（共用工具與訊號）、aos-post（信箱型別、寄送與認領 API）及 aos-llm-kernel（`parse_priority`／`hold_sender`／`reply_of` 三個 LLM 信件協定函式）的庫；kernel 連 aos-util、aos-post 與 aos-directive。全家慣例見 [impls/README.md](../README.md)。
 

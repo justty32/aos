@@ -11,9 +11,9 @@
 //                             "request": OpenAI chat completions 的 body 去掉端點（messages 必有；stream 真＝RequestBad）,
 //                             "priority"?: 原樣（parse_priority）}}
 //       （thinking 11-04 think-as-function 02 § 1；頂層 inst／env 的舊閘門信不再認＝LetterBad）；其他不認得的 key 一律忽略（C-48）
-//   回信：reply.json＝endpoint 函數 stdout 那份 {"message": {...}, "usage"?: {...}, "model"?: ...}，或 {"error": {"code": 代號, "msg": 原因}}
-//       （kernel 沒跑、掛不上 daemon〔LaunchFailed〕、endpoint 函數退非 0 或逾時〔EndpointFailed〕、stdout 讀不懂〔ReplyBad〕）。
-//       kernel 把同一份當 body、照 N-16 寄一封回信進信的 reply_to（沒寫 reply_to＝回信沒人收，信照刪）（in_reply_to＝原信的信件名稱），寄出的信件名稱記在 <信>/reply_letter.txt
+//   回信：reply.json＝endpoint 函數 stdout 那份 {"message": {...}, "usage"?: {...}, "model"?: ..., "child"?: {...}}，或 {"error": {"code": 代號, "msg": 原因}}
+//       （kernel 沒跑、掛不上 daemon〔LaunchFailed〕、endpoint 函數退非 0〔合格單行 error 原樣回，否則 EndpointFailed〕或逾時〔EndpointFailed〕、stdout 讀不懂〔ReplyBad〕）。
+//       kernel 把 child 只記本層 ledger，拿掉 child 後當 body、照 N-16 寄一封回信進信的 reply_to（沒寫 reply_to＝回信沒人收，信照刪）（in_reply_to＝原信的信件名稱），寄出的信件名稱記在 <信>/reply_letter.txt
 //   用量：reply.json 的 usage.total_tokens（沒有就 prompt_tokens＋completion_tokens）→ used.json
 //   寄信的人：sender.flock＝aos-llm ask（同步）建好信就 flock（LOCK_EX）住、拿到行程結束；aos-llm send（非同步）不建＝kernel 不判存活、照跑
 //
@@ -55,7 +55,7 @@ inline constexpr const char* BudgetMissing = "BudgetMissing";   // 回信：這�
 // 11-04 think-as-function（02 § 1～§ 3）：
 inline constexpr const char* EndpointMissing = "EndpointMissing"; // 回信：信沒寫 endpoint、kernel.json 也沒寫預設的 endpoint
 inline constexpr const char* EndpointUnknown = "EndpointUnknown"; // 回信：信寫的代號不在 kernel.json 的 endpoints 表裡
-inline constexpr const char* EndpointFailed = "EndpointFailed";   // 回信：endpoint 函數退非 0（msg 帶它 stderr 的第一行）、或起不來
+inline constexpr const char* EndpointFailed = "EndpointFailed";   // 回信：endpoint 函數退非 0 且沒有合格錯誤物件，或逾時（msg 帶 stdout 或 stderr 第一行）
 inline constexpr const char* RequestBad = "RequestBad";           // 回信／aos-llm：request 不是物件、messages 不是陣列、stream 真（串流不做）
 }  // namespace code
 

@@ -9,7 +9,7 @@
 像醫院掛號櫃台：候診室（`new/`）每張掛號單寫著要問什麼、找哪位醫生（代號）、急不急；櫃台每隔一下看一眼，先把看完的病人的結果寄回他留的地址（`reply_to`），再照「急的先、時限近的先、等很久的先、其餘先來先看」叫號，診間（`slots`）空幾間就叫幾個。叫到的人交給院方（daemon）排進一間診間（問腦 proc），櫃台不站在門口等，下一輪再來看結果。醫生是誰、怎麼聯絡只有櫃台知道（`endpoints` 表）。
 醫院打烊（daemon 收工）時，看到一半的診間先關燈（`sleeping`）；隔天開門自己再看一次，櫃台照樣收結果。
 
-跑過的信收尾時，kernel 在自己的 stack 追加 `ledger.jsonl`，保留逐封 usage 與時間；總用量仍看 `used.json`。欄位、缺值與寫入失敗行為見 [token 回報與額度](docs/02-token-回報與額度.md)。
+跑過的信收尾時，kernel 在自己的 stack 追加 `ledger.jsonl`，保留逐封 usage 與時間，另記 `seen_at`、錯誤 `code`、下一層帳的 `child` 與 `switched`（本批固定 false）；`child` 不進回信。總用量仍看 `used.json`。欄位、缺值與寫入失敗行為見 [token 回報與額度](docs/02-token-回報與額度.md)。
 
 頂層可選填 `reserved: {"high": N}` 留格給宣告優先序達 high 的信（N 為非負整數且小於 `slots`）；aging 只改排序、不取得保留格資格。沒寫＝不保留，細節見 [01-用法](docs/01-用法.md)；這個安排不搶占已在飛的請求。
 

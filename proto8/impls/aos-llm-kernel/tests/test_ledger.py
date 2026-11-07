@@ -55,10 +55,14 @@ class LedgerTests(unittest.TestCase):
         self.run_kernel()
         first = self.ledger()[0]
         self.assertEqual(set(first), {'id', 'endpoint', 'sender', 'model', 'mounted_at',
-                                     'finished_at', 'elapsed_ms', 'usage'})
+                                     'finished_at', 'elapsed_ms', 'usage', 'seen_at', 'code', 'child', 'switched'})
         self.assertEqual((first['id'], first['endpoint'], first['sender'], first['model']),
                          ('first', 'fake', '/sender', 'fake'))
         self.assertEqual(first['usage'], self.reply['usage'])
+        self.assertIsNone(first['seen_at'])
+        self.assertIsNone(first['code'])
+        self.assertIsNone(first['child'])
+        self.assertIs(first['switched'], False)
         self.assertGreaterEqual(first['elapsed_ms'], 1000)
         self.assertGreaterEqual(first['finished_at'], first['mounted_at'])
         raw = dict(self.reply, usage={'prompt_tokens': 2, 'completion_tokens': 3,
@@ -83,6 +87,7 @@ class LedgerTests(unittest.TestCase):
         self.run_kernel()
         row = self.ledger()[0]
         self.assertEqual(row['id'], 'failed')
+        self.assertEqual(row['code'], 'EndpointFailed')
         self.assertIsNone(row['usage'])
         self.assertIsNone(row['model'])
 

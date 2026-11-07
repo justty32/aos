@@ -5,27 +5,44 @@
 （[thinking 11-05 kernel-daemon 03](../../../thinking/2026-11/05/kernel-daemon/03-問腦改掛daemon.md)：kernel 不自己跑，每封請 daemon 掛成一個問腦 proc、下一次收）
 
 1. 查代號（信的 `body.endpoint`，沒寫用預設）→ 解那組的指示詞 → 那組有 `exec` 就用它、沒有用 kernel.json 的 `exec`；讀那組的 `slots`／`budget`／`speed`（壞了 `CfgBad`）；`request` 撞到釘死的（`fixed` 的 key、那組有 `model` 時的 `model`）＝`RequestBad`；kernel 看的四個鍵（`exec`、`slots`、`budget`、`speed`）拿掉。
-2. 認領（`new/` → `cur/` 改名），在信的資料夾（`cur/<信件名稱>/`）寫 `request.json`＝`{"endpoint": 那組（指示詞已解、去掉那四個鍵）, "request": body.request}`。
+2. 認領（`new/` → `cur/` 改名），在信的資料夾（`cur/<信件名稱>/`）寫 `request.json`＝`{"endpoint": 那組（指示詞已解、去掉那四個鍵）, "request": body.request, "priority": {"level", "deadline"?}}`（級數與推得期限見 [01 契約](01-用法.md)）。
 3. 寄一封**掛信**進 daemon（`$AOS_KERNEL`，沒設＝`$AOS_DAEMON` 的 ctl 信箱）：
    `{"procs_added": {"llm_<信件名稱>": {"exec": {"argv": ["aos-exec", <exec 絕對路徑>], "cwd": "<信>", "stdin": "request.json", "stdout": "reply.json", "timeout_ms"?: kernel.json 的}, "max": 1, "stack": "<信>"}}}`。
-   `max: 1` 的 loop 型 proc：跑一次就停、`state.json` 留下 `phase` 與結束碼；stderr 由 daemon 接到 `<信>/stderr.txt`。寄出後寫 `<信>/proc.json`＝`{"endpoint": 代號, "sender"?: 信封的 sender, "name", "exec", "mount_letter": 掛信的信件名稱, "mounted_at": epoch 秒, "retries": 重掛過幾次}`（`endpoint` 給「這包在飛幾封」與 `used.json` 的 `packs` 用，`sender` 同理給 `senders`；`request.json` 裡是解好的那組、沒有代號）；寄不進＝那封回 `LaunchFailed`。
+   `max: 1` 的 loop 型 proc：跑一次就停、`state.json` 留下 `phase` 與結束碼；stderr 由 daemon 接到 `<信>/stderr.txt`。寄出後寫 `<信>/proc.json`＝`{"endpoint": 代號, "sender"?: 信封的 sender, "name", "exec", "mount_letter": 掛信的信件名稱, "seen_at": queue.seen_at_ms / 1000（抄不到＝null）, "mounted_at": epoch 秒, "retries": 重掛過幾次}`（`endpoint` 給「這包在飛幾封」與 `used.json` 的 `packs` 用，`sender` 同理給 `senders`；`request.json` 裡是解好的那組、沒有代號）；寄不進＝那封回 `LaunchFailed`。
    **endpoint 函數的環境＝daemon 給子項的**（`AOS_STACK`＝那封信的資料夾、`AOS_DAEMON`、daemon 的 `AOS_WS`、daemon 殼裡的其他變數），不是 kernel 轉交的；金鑰由端點小定義的 `--key-env NAME` 指定，小 proc 自己讀環境，不進 `request.json`。金鑰與跨樹 hub 由 root 殼 export，不寫定義的 `.env`；其他環境設定照 [N-67](../../../docs/NORMS/10-基礎設施-定義與工作區/09-N-67.md) ⑦⑧⑨。
 4. **下一次收成品**（看 daemon 的表 `$AOS_DAEMON/procs_state.json` 與 `<信>/state.json`）：
-   - 收尾、結束碼 0＝`reply.json` 讀得懂就原樣當回信；讀不懂＝`ReplyBad`。
-   - 收尾、其他碼＝`EndpointFailed`，msg 帶 `reply.json` 的第一行（llm_http 失敗時 stdout 也印同一行），沒有就帶 `stderr.txt` 的第一行——**原樣**（C-52 明文例外：出口是給人看的回信原因；11-05 stdio-unify R10 代定：下層錯誤行的 `程式: error: ` 前綴不去掉，原因裡看得出是誰錯，例 `endpoint function exited with code 1: llm_http: error: 代號 原因`）。
+   - 收尾、結束碼 0＝`reply.json` 成功物件拿掉 `child` 後當回信，`child` 原值進 ledger；讀不懂或是錯誤物件＝`ReplyBad`。
+   - 先判逾時；收尾、非零且 stdout 整份為單行 JSON、頂層只有 `error`、`error.code` 與 `error.msg` 都為字串＝整份原樣回（error 內多的鍵保留）。其餘其他碼＝`EndpointFailed`，msg 帶 `reply.json` 的第一行（llm_http 失敗時 stdout 也印同一行），沒有就帶 `stderr.txt` 的第一行——**原樣**（C-52 明文例外：出口是給人看的回信原因；11-05 stdio-unify R10 代定：下層錯誤行的 `程式: error: ` 前綴不去掉，原因裡看得出是誰錯，例 `endpoint function exited with code 1: llm_http: error: 代號 原因`）。
    - 143（aos-exec 的 TERM）或 137（不理 TERM、寬限後 KILL）而且掛出去已經超過 `timeout_ms`＝`EndpointFailed` 逾時（11-05 edge-llm 補 137）。
-   - 被收掉（沒逾時的 143、`stopped`）、死在半路（`state.json` 沒收尾、表上也沒這列）＝**重掛一次**（同名、新掛信、`retries` 變 1）；第二次還是這樣＝`EndpointFailed the brain call ran twice without a result (stopped or died midway)`。
+   - 被收掉（沒逾時且沒有合格 error 的 143、`stopped`）、死在半路（`state.json` 沒收尾、表上也沒這列）＝**重掛一次**（同名、新掛信、`retries` 變 1；沿用首次 `request.json` 與 `seen_at`，期限不重算）；第二次還是這樣＝`EndpointFailed the brain call ran twice without a result (stopped or died midway)`。
    - 表上還有這列（`running`／`stopping`／`sleeping`）＝還在飛，佔一格。表上沒列、`state.json` 也沒有＝daemon 還沒套（暫停中、還沒輪到），照樣佔一格；daemon 的 `mailbox_warning` 提到這封掛信＝daemon 不收＝`LaunchFailed`。
    - 表上列著 `stopped` 而 `state.json` 收尾了＝照上面收，順手寄一封 `procs_removed` 把列拔掉。
    - 表上列著 `stopped` 而列上有 `reason`（11-05 晚：問腦 loop 退非 0——endpoint 退非 0、整個 loop 被打掉——daemon 不再下表、留 `stopped`＋原因；配合使用者裁 edge-agent 題 1「留表標 stopped (Recommended)」、edge-daemon 題 2「一起改成留表 (Recommended)」）＝**當收尾**：照上面看 `state.json` 的碼回信、寄 `procs_removed` 拔列；要重掛的（沒收尾、沒到時限的 143）先寄 `procs_removed`、`proc.json` 記 `"remount": true`，**等列拔了下一次才寄掛信**（同名 add 不會把 `stopped` 的拉起來；直接 `procs_started` 的話 daemon 還沒套信前，下一次會把舊列的 `reason` 當成第二次失敗）。`stopped` 而沒 `reason`、沒收尾＝有人下了 stop，照舊等（[04](04-已知限制.md)）。
 5. 收到的寄回信、跑過的信追加逐封帳 `ledger.jsonl`，整封（`cur/<信>/`）刪掉，不留請求原文（11-04 夜使用者「舊信根本不用留，就是刪」）。金鑰只活在端點小 proc 的環境與記憶體裡，信資料夾不存金鑰。
 
-endpoint 函數的契約（stdin `{"endpoint", "request"}` → stdout 一行 `{"message", "usage", "model"}`、退 0；錯退非 0、stderr 一行）是 [lib/base/llm_http、llm_fake](../../../lib/README.md) 定的，kernel 只看結束碼與 stdout 的形狀，不看內容（`message` 剪不剪是函數的事）。
+endpoint 函數的契約（stdin `{"endpoint", "request", "priority"}` → stdout 一行 `{"message", "usage"?, "model"?, "child"?}`、退 0；錯退非 0、stderr 一行）是 [lib/base/llm_http、llm_fake](../../../lib/README.md) 定的，kernel 只看結束碼與 stdout 的形狀，不看內容（`message` 剪不剪是函數的事）。
 
 ### token 與額度
 
 - **用量從回信拿**：回信的 `usage.total_tokens`（非負整數）就是這封的 token 數；沒有就 `prompt_tokens`＋`completion_tokens`；沒有 `usage`（含 error 回信）＝token 增量記 0、只算次數；`usage` 不是物件、數字不對＝token 增量也記 0（只算次數，照樣回信）。
-- **逐封帳**：跑過的信在 `Server::finish` 收尾時，往自己 stack 的 `ledger.jsonl` 追加一行 JSON：`id`（信名）、`endpoint`（代號）、`sender`（`proc.json` 原值，不改成用量帳的相對路徑）、`model`（回信原值）、`mounted_at`／`finished_at`（UTC epoch 秒）、`elapsed_ms`（非負整數毫秒）、`usage`（回信原樣，缺就 null）。缺少的其他欄也記 null；重掛過的 `mounted_at` 是最後一次掛上時間，耗時包含那次掛上到 kernel 收尾的等待。牆鐘倒退時耗時記 0。錯誤回信也記；沒掛過的不記。寫入失敗只印英文 warning，回信、記總帳與刪信照常。這是追加的觀測帳，kernel 不輪替；收尾途中行程中斷或刪信失敗後重收，可能缺行或重複行，可用 `id` 辨識。（11-07 使用者裁定：翻 11-05 的 served.jsonl「也刪」，ledger 留；各層都記 usage、加總只加一層。見 [kernel-nest](../../../thinking/2026-11/07/kernel-nest/README.md)）
+- **逐封帳**：只有掛過的信才在 `Server::finish` 往本層 stack 的 `ledger.jsonl` 追加一行 JSON，欄位順序如下。錯誤也記；沒掛過的不記。重掛的 `mounted_at` 是最後一次掛上時間，`seen_at` 保留第一次；耗時包含最後一次掛上到 kernel 收尾的等待，牆鐘倒退記 0。寫入失敗只印英文 warning，回信、總帳與刪信照常。
+
+  | 欄位（照寫入順序） | 內容 |
+  |---|---|
+  | `id` | 原請求信名 |
+  | `endpoint` | proc 記的能力包代號，缺＝null |
+  | `sender` | proc 原值，不改成用量帳的相對路徑，缺＝null |
+  | `model` | 回覆原值，缺＝null |
+  | `seen_at` | proc 抄下的首次看到時間，UTC epoch 秒，缺＝null |
+  | `mounted_at` | 最後一次掛上時間，UTC epoch 秒，缺＝null |
+  | `finished_at` | 收尾時間，UTC epoch 秒 |
+  | `elapsed_ms` | 非負整數毫秒，沒有 mounted_at＝null |
+  | `usage` | 回覆原樣，缺＝null |
+  | `code` | 成功＝null；失敗＝回給寄件人的 error.code 字串 |
+  | `child` | 成功 stdout 的 child 原樣，缺＝null；回信拿掉此鍵 |
+  | `switched` | 本批一律 false |
+
+  這是追加的觀測帳，kernel 不輪替；人或審視者清理。中斷或重收可能留下半行、缺行或重複行；讀者跳過壞行，用 `id` 去重。各層都記 usage，加總只加一層；全鏈只加沒有 `child` 的葉子行，避免重算。（11-07 使用者裁定：翻 11-05 的 served.jsonl「也刪」，ledger 留；見 [kernel-nest](../../../thinking/2026-11/07/kernel-nest/README.md)）
 - **算什麼**：掛出去過（`proc.json` 在）的信才算一次——`LetterBad`、`RequestBad`、`Endpoint{Missing,Unknown}`、`DeadlineBad`、`BudgetMissing`、第一次就寄不出掛信的 `LaunchFailed` 不算；`EndpointFailed`、`ReplyBad` 算（函數跑過、可能已經花了錢）。
 - **額度**（kernel.json 的 `budget`，都選填）：`max_calls`、`max_tokens`＝每窗上限（非負整數；沒寫＝那一種不限）；`window`＝`"hour"`／`"day"`／`"all"`（沒寫＝`day`；窗的起點用 kernel 的本地時間〔`TZ`〕的整點／午夜，`all`＝不歸零）；
   `spent`＝到頂時排著的信怎麼辦：`"refuse"`（沒寫＝這個）回 `BudgetMissing`、不跑；`"wait"` 留在 `new/` 等下一窗。

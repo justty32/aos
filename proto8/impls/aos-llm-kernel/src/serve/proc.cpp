@@ -1,4 +1,4 @@
-// proc.cpp：【serve】掛問腦 proc、判斷收尾與重掛、收集在飛信件（說明見 serve.hpp）。
+// proc.cpp：【serve】掛問腦 proc、判斷收尾與透明錯誤、重掛並收集在飛信件（說明見 serve.hpp）。
 #include "serve/serve.hpp"
 
 #include "aos/util/files.hpp"
@@ -31,6 +31,29 @@ std::string first_line(const std::string& path) {
     return n == std::string::npos ? *t : t->substr(0, n);
 }
 
+// 非零退出的透明錯誤只接受整份單行 JSON，頂層只能有 error；內層的其他鍵照留。
+std::optional<Json> read_error(const std::string& path) {
+    int err = 0;
+    std::optional<std::string> text = aos::read_file(path, err);
+    if (!text) {
+        return std::nullopt;
+    }
+    if (!text->empty() && text->back() == '\n') {
+        text->pop_back();
+        if (!text->empty() && text->back() == '\r') {
+            text->pop_back();
+        }
+    }
+    if (text->find_first_of("\r\n") != std::string::npos) {
+        return std::nullopt;
+    }
+    Json reply = Json::parse(*text, nullptr, false);
+    if (!reply.is_object() || reply.size() != 1 || !reply.contains("error")) {
+        return std::nullopt;
+    }
+    return reply_of(reply);
+}
+
 }  // namespace
 
 // 寄一封掛信：{"procs_added": {"llm_<id>": {"exec": 單子, "max": 1, "stack": 信資料夾}}}（03 § 1）。
@@ -57,7 +80,10 @@ void Server::mount(const std::string& id, const std::string& exec, Json proc) {
     proc["name"] = name;
     proc["exec"] = exec;
     proc["mount_letter"] = send_procs(host_, body);   // 寄不進丟錯（呼叫的人回那封信 LaunchFailed）
-    proc["mounted_at"] = now_s();
+    // 首次掛上沿用建 request 的同一個時間；重掛只更新本次計時，request 與 seen_at 不動。
+    if (!proc.contains("mounted_at") || proc.value("retries", 0LL) > 0) {
+        proc["mounted_at"] = now_s();
+    }
     if (!proc.contains("retries")) {
         proc["retries"] = 0;
     }
@@ -119,7 +145,7 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
     }
     if (phase == "done" && c == 0) {
         std::optional<Json> got = read_reply(aos::join(dir, "reply.json"));
-        if (got) {
+        if (got && !got->contains("error")) {
             return *got;
         }
         return error_reply(code::ReplyBad, "cannot understand the endpoint function's stdout (must be one line {\"message\": {...}, \"usage\", \"model\"})");
@@ -129,6 +155,12 @@ std::optional<Json> Server::settle(const std::string& id, Json proc) {
     bool late = cfg_.timeout_ms && now_s() - at >= (double)*cfg_.timeout_ms / 1000.0;
     if (phase == "done" && (c == 143 || c == 137) && late) {
         return error_reply(code::EndpointFailed, "endpoint function timed out (" + std::to_string(*cfg_.timeout_ms) + " ms)");
+    }
+    if (phase == "done" && c != 0) {
+        std::optional<Json> error = read_error(aos::join(dir, "reply.json"));
+        if (error) {
+            return *error;
+        }
     }
     if (phase == "done" && c != 143) {
         std::string why = "endpoint function exited with code " + std::to_string(c);

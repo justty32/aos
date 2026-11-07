@@ -41,7 +41,7 @@ static std::optional<std::string> find_reply(const aos::post::Mailbox& rb, const
     return std::nullopt;
 }
 
-static int deliver(const aos::post::Mailbox& rb, const std::string& n, bool full) {
+static int deliver(const aos::post::Mailbox& rb, const std::string& n, const std::string& id, bool full) {
     std::string dir = aos::join(rb.cur(), n);
     std::optional<Json> l = aos::read_json(aos::join(dir, "letter.json"));
     std::optional<Json> reply;
@@ -56,12 +56,18 @@ static int deliver(const aos::post::Mailbox& rb, const std::string& n, bool full
         throw Error{code::ReplyBad, "cannot understand the reply: body of " + aos::join(dir, "letter.json")};
     }
     if (reply->contains("error")) {
+        if (full) {
+            std::string line = aos::dumps(*reply) + "\n";
+            std::fwrite(line.data(), 1, line.size(), stdout);
+            std::fflush(stdout);
+        }
         const Json& e = (*reply)["error"];
         throw Error{e["code"].get<std::string>(), e["msg"].get<std::string>()};
     }
     Json output = (*reply)["message"];
     if (full) {
         output = *reply;
+        output["letter"] = id;
     }
     std::string line = aos::dumps(output) + "\n";
     std::fwrite(line.data(), 1, line.size(), stdout);
@@ -75,7 +81,7 @@ int recv(const std::string& box, const std::string& name, bool full) {
     std::set<std::string> seen;
     std::optional<std::string> n = find_reply(rb, name, seen);
     if (n && aos::post::take(rb, *n)) {
-        return deliver(rb, *n, full);
+        return deliver(rb, *n, name, full);
     }
     return 10;
 }
@@ -109,7 +115,7 @@ int ask_wait(const Mailbox& mb, const std::string& id, bool full) {
     while (true) {
         std::optional<std::string> n = find_reply(rb, id, seen);
         if (n && aos::post::take(rb, *n)) {
-            return deliver(rb, *n, full);
+            return deliver(rb, *n, id, full);
         }
         // 照信走的方向看：new → cur（kernel 先寄回信才刪 cur/ 那封，所以 cur/ 沒了回信一定已經到了）
         if (!exists(aos::join(mb.fresh(), id)) && !exists(aos::join(mb.cur(), id)) && !find_reply(rb, id, seen)) {

@@ -6,6 +6,7 @@
 #include "aos/util/tick.hpp"
 
 #include <cerrno>
+#include <chrono>
 #include <cstring>
 #include <filesystem>
 
@@ -154,17 +155,46 @@ int Server::run() {
             if (!aos::move(aos::join(mb_.fresh(), w.id), dir)) {
                 continue;   // 寄信的剛撤信
             }
+            Json seen_at = q_.seen_at_ms.value(w.id, Json());
+            if (seen_at.is_number()) {
+                seen_at = seen_at.get<double>() / 1000.0;
+            } else {
+                seen_at = nullptr;
+            }
             q_.seen_at_ms.erase(w.id);
             q_.seen_at_ticks.erase(w.id);
+            double mounted_at = std::chrono::duration<double>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
             Json req = Json::object();
             req["endpoint"] = w.group;
             req["request"] = w.letter["body"]["request"];
+            Json declared = w.letter["body"].value("priority", Json());
+            Json priority = Json::object();
+            priority["level"] = "normal";
+            if (declared.is_object()) {
+                priority["level"] = declared.value("level", Json("normal"));
+            } else if (!declared.is_null()) {
+                priority["level"] = declared;
+            }
+            std::optional<double> deadline = w.priority.deadline;
+            if (cfg_.timeout_ms) {
+                double timeout_at = mounted_at + static_cast<double>(*cfg_.timeout_ms) / 1000.0;
+                if (!deadline || timeout_at < *deadline) {
+                    deadline = timeout_at;
+                }
+            }
+            if (deadline) {
+                priority["deadline"] = *deadline;
+            }
+            req["priority"] = priority;
             std::optional<std::string> werr = aos::write_json(aos::join(dir, "request.json"), req);
             try {
                 if (werr) {
                     throw Error{code::WriteFailed, *werr};
                 }
                 Json proc = Json::object();
+                proc["seen_at"] = seen_at;
+                proc["mounted_at"] = mounted_at;
                 proc["endpoint"] = w.endpoint;   // 代號（在飛幾封、packs 的帳照它算；request.json 裡是解好的那組、沒代號）
                 if (!w.sender.empty()) {
                     proc["sender"] = w.sender;   // 寄件人（這人在飛幾封、senders 的帳照它算）

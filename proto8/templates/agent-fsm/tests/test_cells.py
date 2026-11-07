@@ -173,7 +173,7 @@ else:
         self.run_cell('act')
         record = json.loads((self.stack / 'observed.jsonl').read_text().splitlines()[-1])
         self.assertEqual(record['code'], 7)
-        self.command('aos-llm', "import sys\nif sys.argv[1]=='send': print('request')\nelse: sys.exit(1)\n")
+        self.command('aos-llm', "import sys\nif sys.argv[1]=='send': print('request')\nelse: print('{\"error\":{\"code\":\"X\",\"msg\":\"y\"}}'); sys.exit(1)\n")
         self.history([{'role':'user','content':'hello'}])
         self.run_cell('brain')
         self.run_cell('wait', code=10)
