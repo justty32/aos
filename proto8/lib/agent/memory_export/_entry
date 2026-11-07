@@ -4,7 +4,7 @@
 #   要麼agent弄一份輕鬆轉為markdown/html的工具，把json轉過去也可以」）。另立工具、memory 保持純查詢（03 代定）。
 # 介面（lib/docs/01 契約）：stdin {"path"?: 節點路徑, "max_bytes"?: N}。知識庫根、節點、子節點的認法跟 memory 一模一樣
 #   （① 工具資料夾 $AOS_CD 的 _memory.json 的 base ＞ ② $AOS_MEMORY，相對 $AOS_DAEMON、沒有＝cwd；. 與 _ 開頭不算；同名資料夾蓋過葉、.md 蓋過 .json）。
-#   規則 9 自成一格：那幾行從 memory 抄一份，不 import 隔壁。
+#   節點介面共用 lib/agent/memory_fs.py，不 import 隔壁工具。
 # stdout：從 path（沒給＝根）開始深度優先、子節點照名字排序；每個節點先一行「<!-- node: 路徑 -->」，
 #   .md 的文原樣接上（標題層級不改），.json 的文包成 ```json 區塊（前面加「# 節點名」當標題）；節點之間空一行。
 #   捷徑繞回這次印的上層資料夾＝那個節點只印一行「not followed」、不往下（11-05 晚）。
@@ -38,64 +38,31 @@ Result on stdout. On error: one line "memory_export: error: CODE reason" on stde
 """
 tool_io.start("memory_export", HELP)
 die = tool_io.die
-SEGMENT = re.compile(r"^[a-z0-9_-]+$")
-LEAF_EXTS = (".md", ".json")
-CFG_NAME = "_memory.json"
-
-
-def memory_root():
-    here = os.environ.get("AOS_CD") or HERE
-    cfg = os.path.join(here, CFG_NAME)
-    if os.path.lexists(cfg):                    # 在但不是檔（資料夾、斷捷徑）＝CfgBad，不默默改用 AOS_MEMORY（11-05 夜第二輪邊緣）
-        try:
-            with open(cfg, encoding="utf-8") as f:
-                c = json.load(f)
-        except (OSError, ValueError) as e:
-            die("CfgBad", "%s: %s" % (cfg, e))
-        if not isinstance(c, dict) or not isinstance(c.get("base"), str) or not c["base"]:
-            die("CfgBad", "%s must be an object with a non-empty string key base" % cfg)
-        real = os.path.realpath(os.path.join(here, c["base"]))
-    else:
-        m = os.environ.get("AOS_MEMORY", "")
-        if not m:
-            die("MemoryMissing", "no %s next to the tool and AOS_MEMORY is not set or empty" % CFG_NAME)
-        real = os.path.realpath(os.path.join(os.environ.get("AOS_DAEMON") or os.getcwd(), m))
-    if not os.path.isdir(real):
-        die("MemoryMissing", "the knowledge base %s is not a directory" % real)
-    return real
-
-
-def leaf_file(base):
-    return next((base + x for x in LEAF_EXTS if os.path.isfile(base + x)), None)
-
-
-def children(d):
-    found = {}
+# 共用節點介面：工具本地優先，再找 lib/agent，最後標準 Python 路徑。
+if os.path.basename(_lib) == "lib":
+    sys.path.insert(1, os.path.join(_lib, "agent"))
+try:
     try:
-        entries = os.listdir(d)
-    except OSError as e:
-        die("ReadFailed", "cannot list %s: %s" % (d, e))
-    for e in entries:
-        if e[0] in "._" or e == "README.md":
-            continue
-        full = os.path.join(d, e)
-        if os.path.isdir(full):
-            name, is_dir = e, True
-        elif e.endswith(LEAF_EXTS) and os.path.isfile(full):
-            name, is_dir = os.path.splitext(e)[0], False
-        else:
-            continue
-        if SEGMENT.match(name) and (is_dir or name not in found):
-            found[name] = is_dir
-    return sorted(found)
-
-
-def read(f):
-    try:
-        with open(f, "rb") as h:
-            return h.read().decode("utf-8")
-    except (OSError, UnicodeDecodeError) as e:
-        die("ReadFailed", "cannot read %s: %s" % (f, e))
+        import memory_fs
+    except ModuleNotFoundError as error:
+        if error.name != "memory_fs":
+            raise
+        import agent.memory_fs as memory_fs
+except ModuleNotFoundError as error:
+    if error.name not in ("memory_fs", "agent", "agent.memory_fs"):
+        raise
+    die("ModuleMissing", "memory_fs.py not in the tool folder, not in lib/agent/, not on the Python path")
+SEGMENT = memory_fs.SEGMENT
+LEAF_EXTS = memory_fs.LEAF_EXTS
+memory_root = memory_fs.memory_root
+parse_path = memory_fs.parse_path
+show = memory_fs.show
+locate = memory_fs.locate
+leaf_file = memory_fs.leaf_file
+children = memory_fs.children
+title_summary = memory_fs.title_summary
+read_text = memory_fs.read_text
+node_or_die = memory_fs.node_or_die
 
 
 def export(root, segs, out, chain=()):
@@ -108,31 +75,28 @@ def export(root, segs, out, chain=()):
             return
         chain += (real,)
         f = os.path.join(d, "README.md")
-        text = read(f) if os.path.isfile(f) else ""
+        text = read_text("dir", d)
     else:
-        f = leaf_file(d) if segs else None
-        if f is None:
+        hit = locate(root, segs)
+        if hit is None:
             die("NodeMissing", "node %s not found" % label)
-        text = read(f)
+        _, f = hit
+        text = read_text("leaf", f)
         if f.endswith(".json"):
             text = "# %s\n\n```json\n%s\n```" % (segs[-1], text.rstrip("\n"))
     out.append("<!-- node: %s -->\n%s" % (label, text.rstrip("\n")))
     if os.path.isdir(d):
-        for name in children(d):
+        for name, _ in children("dir", d):
             export(root, segs + [name], out, chain)
 
 
 args = tool_io.arguments()
-p = args.get("path")
-p = (p or "").strip("/")
-segs = p.split("/") if p else []
-if any(not SEGMENT.match(s) for s in segs):
-    die("PathBad", "%r is not a node path (segments joined by /, each [a-z0-9_-]+; empty or / is the root)" % p)
+segs = parse_path(args.get("path"))
 max_bytes = args.get("max_bytes", 50000)
 if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0:
     die("ArgumentsBad", "max_bytes must be a positive integer")
 out = []
-export(memory_root(), segs, out)
+export(memory_root(HERE), segs, out)
 doc = ("\n\n".join(out) + "\n").encode("utf-8")
 if len(doc) > max_bytes:
     sys.stdout.write(doc[:max_bytes].decode("utf-8", "ignore").rstrip("\n") +

@@ -27,6 +27,10 @@
 | [`json_rewrite/`](../../../../../proto8/lib/agent/json_rewrite/) | 「小念頭」式兩步改 JSON：stdin {"file": "fsm.json", "want": "把 act 那格的逾時改成 30 秒"}，在 $AOS_WS 底下改。 |
 | [`memory/`](../../../../../proto8/lib/agent/memory/) | 查共用的層級式知識庫：read 一個節點（文＋子節點目錄）、ls 列子節點、find 用關鍵字找節點；唯讀 |
 | [`memory_export/`](../../../../../proto8/lib/agent/memory_export/) | 把一個知識庫（或其中一棵子樹）整棵印成一份 Markdown，給人看；唯讀 |
+| [`memory_fs.py`](../../../../../proto8/lib/agent/memory_fs.py) | 知識庫共用的找根、節點定址、讀取、摘要與子節點列舉。 |
+| [`memory_write/`](../../../../../proto8/lib/agent/memory_write/) | Add, replace or remove shared knowledge nodes with atomic writes and directory locks. |
+| [`memory_write/locking.py`](../../../../../proto8/lib/agent/memory_write/locking.py) | Acquire knowledge directory locks and inspect descendant locks through aos-lock. |
+| [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | Write, promote and remove knowledge nodes atomically under directory locks. |
 | [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | 讓叫我的 agent 改自己的工具箱：加（add）、拿掉（rm）、列（ls）；改的是那隻的覆蓋層，定義不動 |
 | [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定或工具設定預設定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
 
