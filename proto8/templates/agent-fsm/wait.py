@@ -46,7 +46,7 @@ The wait cell: send $AOS_STACK/think/request.json to the llm kernel (aos-llm sen
 each later run look for the reply (aos-llm recv). Exit 0 = reply appended to history (go act);
 10 = not yet; 11 = no pending request and request.json is missing, or brain settings changed;
 go back to think to rebuild. A pending request is received even without request.json.
-Append think endpoint, model, usage and elapsed_ms to observed.jsonl (best effort).
+Append think letter, endpoint, model, usage and elapsed_ms to observed.jsonl (best effort).
 On error: one line "agent-fsm: error: CODE reason" on stderr, exit 1.
 """
 signal.signal(signal.SIGINT, lambda signum, frame: sys.exit(130))   # Ctrl-C：不吐 traceback、退 130（R12）
@@ -163,6 +163,7 @@ except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
 
 def observe(reply):
     append_observed(stack, {"kind": "think",
+                            "letter": name,
                             "endpoint": reply.get("endpoint", sent_endpoint),
                             "model": reply.get("model"), "usage": reply.get("usage"),
                             "elapsed_ms": elapsed_ms})

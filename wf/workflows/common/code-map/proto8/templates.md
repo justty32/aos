@@ -19,7 +19,10 @@
 | [`interfaces.json`](../../../../../proto8/templates/agent-fsm/interfaces.json) | 設定（鍵：aos-agent） |
 | [`llm.json`](../../../../../proto8/templates/agent-fsm/llm.json) | （檔頭沒有一句話） |
 | [`loop.json`](../../../../../proto8/templates/agent-fsm/loop.json) | 設定（鍵：exec、interval_ms、ctl、state） |
+| [`observed.py`](../../../../../proto8/templates/agent-fsm/observed.py) | Append best-effort agent observations without changing cell results. |
 | [`system.txt`](../../../../../proto8/templates/agent-fsm/system.txt) | （檔頭沒有一句話） |
+| [`tests/test_cells.py`](../../../../../proto8/templates/agent-fsm/tests/test_cells.py) | Verify task context, tool limits, and best-effort observations with local fake commands. |
+| [`tests/test_integration.py`](../../../../../proto8/templates/agent-fsm/tests/test_integration.py) | Verify agent cells through the real local kernel, llm_fake endpoint, and clock tool. |
 | [`tools.json`](../../../../../proto8/templates/agent-fsm/tools.json) | 設定（鍵：tools） |
 | [`tools/memory/`](../../../../../proto8/templates/agent-fsm/tools/memory/) | Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the chil… |
 | [`tools/memory/_memory.json`](../../../../../proto8/templates/agent-fsm/tools/memory/_memory.json) | 設定（鍵：base） |

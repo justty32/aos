@@ -69,6 +69,17 @@ class KernelIntegration(unittest.TestCase):
                     self.assertEqual(records[0]['endpoint'], 'fake')
                     self.assertEqual(records[1]['code'], 0)
                     self.assertEqual(records[0]['usage']['total_tokens'], 0)
+                    deadline = time.monotonic() + 2
+                    while True:
+                        ledger_path = kernel_stack / 'ledger.jsonl'
+                        ledger = [json.loads(line) for line in ledger_path.read_text().splitlines()] if ledger_path.exists() else []
+                        if len(ledger) == 2 or time.monotonic() >= deadline:
+                            break
+                        time.sleep(0.02)
+                    thoughts = [r for r in records if r['kind'] == 'think']
+                    self.assertEqual(len(ledger), 2)
+                    self.assertEqual([r['letter'] for r in thoughts], [r['id'] for r in ledger])
+                    self.assertEqual(len({r['letter'] for r in thoughts}), 2)
                 finally:
                     (kernel_stack / 'ctl.json').write_text('{"cmd":"stop","seq":1}')
                     try:

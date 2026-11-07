@@ -28,6 +28,7 @@
 | [`src/serve/scan.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/scan.cpp) | 檢查排隊信件、挑選與解析 endpoint 能力包（說明見 serve.hpp）。 |
 | [`src/serve/serve.cpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/serve.cpp) | 鎖信箱、清理寄件人已離開的信、按宣告級數留 high 格與串起每輪流程（說明見 serve.hpp）。 |
 | [`src/serve/serve.hpp`](../../../../../proto8/impls/aos-llm-kernel/src/serve/serve.hpp) | kernel 跑一次——讀設定、鎖信箱、收拾、排隊、認領、請 daemon 掛問腦 proc、收成品、回信。 |
+| [`tests/test_ledger.py`](../../../../../proto8/impls/aos-llm-kernel/tests/test_ledger.py) | Verify kernel finish records fake-brain costs and tolerates ledger write failures. |
 | [`vcpkg.json`](../../../../../proto8/impls/aos-llm-kernel/vcpkg.json) | aos-llm-kernel：LLM kernel 跑一次——從信箱挑最該跑的信、跑、回信（信箱、信的格式也給 aos-llm 用） |
 
 ## `proto8/impls/aos-lock/`

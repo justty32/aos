@@ -86,11 +86,14 @@ else:
         self.history([{'role':'user','content':'hello'}])
         self.run_cell('brain')
         self.run_cell('wait', code=10)
+        letter = (self.stack / 'think/pending.txt').read_text().strip()
         self.run_cell('wait')
         message = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
         self.assertEqual(message, {'role':'assistant','content':'unchanged','extra':4})
         record = json.loads((self.stack / 'observed.jsonl').read_text())
         self.assertEqual((record['kind'], record['endpoint'], record['model']), ('think','local','fake'))
+        self.assertEqual(record['letter'], letter)
+        self.assertEqual(record['letter'], 'local-request')
         self.assertEqual(record['usage'], {'prompt_tokens':9})
         self.assertGreaterEqual(record['elapsed_ms'], 0)
 
@@ -109,6 +112,7 @@ else:
                 self.assertIn('warning: cannot read think timing:', result.stderr)
                 record = json.loads((self.stack / 'observed.jsonl').read_text().splitlines()[-1])
                 self.assertIsNone(record['elapsed_ms'])
+                self.assertEqual(record['letter'], 'local-request')
 
     def test_pending_without_request_keeps_endpoint(self):
         self.command('aos-llm', "import json,sys\nprint('request' if sys.argv[1]=='send' else json.dumps({'message':{'role':'assistant','content':'ok'}}))\n")
@@ -119,6 +123,7 @@ else:
         self.run_cell('wait')
         record = json.loads((self.stack / 'observed.jsonl').read_text())
         self.assertEqual(record['endpoint'], 'local')
+        self.assertEqual(record['letter'], 'request')
 
     def test_tool_bytes_and_no_replay(self):
         self.history([{'role':'assistant','tool_calls':[CALL]}])
@@ -143,6 +148,7 @@ else:
         self.run_cell('wait', code=1)
         record = json.loads((self.stack / 'observed.jsonl').read_text().splitlines()[-1])
         self.assertEqual(record['kind'], 'think')
+        self.assertEqual(record['letter'], 'request')
         self.assertEqual(record['endpoint'], 'local')
         self.assertIsNone(record['usage'])
 
