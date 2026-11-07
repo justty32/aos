@@ -59,3 +59,18 @@
 ## 附記
 - 原始報告（命令、輸出、檔案快照）在 codex 的 scratch 資料夾，沒進 repo；本檔是唯一留存。
 - 跑的期間 repo 裡 `arknights-kb/` 有別的 session 在改檔，跟本實驗無關。
+
+## 使用者裁定與修正（11-07）
+
+使用者 11-07 午用選項框裁定四題；隊長定修法、codex（gpt-6.1-sol）施工，並在 mktemp scratch 重跑對應實驗。
+
+| 題 | 原裁定 | 修了什麼 | 驗證 |
+|---|---|---|---|
+| E8 agents 極大值 | 直接報錯：超過平台上限報 ArgumentsBad、不執行；出錯時收掉子程序；ticks 對齊 | `agents` ask 在起子程序前檢查：`timeout_s` 最多 2,147,453 秒（poll 最多 2^31−1 毫秒，扣掉 30 秒保險）；`timeout_ticks` 最多 int64−30，並依當下時鐘／間隔再縮小，超過一律 ArgumentsBad；`agent()` 改成 finally 收子程序（kill＋wait） | 1e9、2^53、2^63−1、2^64、1e308、上限＋1 全 ArgumentsBad、0 子程序、0 殘留 listener；1.5 秒照舊 AnswerMissing；ticks 2^63−1、2^64 → ArgumentsBad，1e9 照舊接受；注入例外三種都收乾淨 |
+| E1 state.json 壞掉 | 維持現狀、文件寫明 | [aos-daemon 08](../../../../impls/aos-daemon/docs/08-當機復原與已知限制.md) 補一句：先手動清掉 ctl.json 再起，否則照舊 stop 馬上停，systemd 底下會起停迴圈 | 只改文件 |
+| E2 判官重送 | 原信先標完成，再寫對照（若會丟信或回信對不上，選代價最小的順序並記下） | 見下方代定：不改 forward 的順序，改成 `relay_replies` 刪對照前，原信還在 requests 的 cur 就先 done | 正常、對照已寫但原信沒 done 時被殺、轉寄後回信前被殺、回信前重起，4 條路線都是 ctl 收 1 封、寄件人收 1 封、in_reply_to 正確；原信 done 失敗時 PostFailed，原信與對照都保留 |
+| E4 aos-tick 互踩 | 暫存檔名加 pid，不加鎖 | 暫存檔改 `.<檔名>.<pid>`；檔頭、help、cmd/docs/02 同步 | 2×500 次：0 次 WriteFailed；讀 200 萬次：0 次空檔、0 次倒退；最後是 987（沒加鎖，同時 tick 照舊會掉數，規格本來就不支援） |
+
+代定（隊長）：
+- **E2 順序**：如果照字面改成「先標完成，再寫對照」，判官死在兩步之間會留下沒有對照的轉寄，daemon 的回信會被當成「沒有對照」丟掉，寄件人就收不到回信。所以不改轉寄端，改在轉回回信時補收：刪對照前，原信還在 cur 就先標完成。效果符合「原信先標完成」，也不會丟回信。剩下兩個窗口本來就有，這次沒動：一是 send 進 ctl 後、寫對照前死掉（會重送）；二是轉回回信後、標完成前死掉（回信會重轉一次）。
+- **E8 代號**：ticks 太大改報 ArgumentsBad；時鐘或間隔本身壞了仍報 TickBad。上限檢查用的是入口當下的時鐘。

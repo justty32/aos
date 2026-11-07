@@ -194,7 +194,7 @@ def write_ordered(path, rows):
         die("StateBad", "cannot write judge_ordered.json: %s" % e)
 
 
-def relay_replies(box, path, rows):
+def relay_replies(box, path, rows, requests):
     """每輪先代回 daemon 的回信；轉回成功才移除對照與收信。"""
     if post(["init", box])[0] != 0 or post(["take-all", box])[0] not in (0, NOT_FOUND):
         die("PostFailed", "cannot take judge replies from %s" % box)
@@ -215,6 +215,10 @@ def relay_replies(box, path, rows):
                 if code != 0:
                     warn("reply %s could not be relayed; retained for the next round" % name)
                     continue
+            # forward 已寫對照、主迴圈還沒 done 就死：原信仍在 cur，先收掉才移除防重依據。
+            if os.path.exists(os.path.join(requests, "cur", original["letter"])):
+                if post(["done", requests, original["letter"]])[0] != 0:
+                    die("PostFailed", "cannot finish forwarded request %s" % original["letter"])
             del rows[letter["in_reply_to"]]
             write_ordered(path, rows)
         if post(["done", box, name])[0] != 0:
@@ -343,7 +347,7 @@ def main():
     except (OSError, ValueError) as e:
         die("StateBad", "cannot read judge_ordered.json: %s" % e)
     if keep_ordered or ordered or os.path.isdir(replies):
-        relay_replies(replies, ordered_path, ordered)
+        relay_replies(replies, ordered_path, ordered, requests)
     window = os.path.join(stack, "queue.json")
     previous = queue_view(window) if queue else {}
     if post(["init", requests])[0] != 0:
