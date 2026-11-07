@@ -40,12 +40,12 @@ image/
 `foreman_def/daemon.json`：
 
 ```json
-{"procs_ctl_mailbox":"procs_ctl_mailbox","procs":{
+{"tick":true,"procs_ctl_mailbox":"procs_ctl_mailbox","procs":{
   "ann":{"exec":"../agent_def/fsm.json","interval_ms":0,"stack":"../agent_image","ws":"../ws","def":"../agent_def"}
 }}
 ```
 
-定義中的相對 exec／stack／ws 從各 daemon 的 cwd（此例是其定義資料夾）算。父只把 switchboard／foreman 當普通 exec，`auto_restart: true` 才有常駐 sleep／wake 與退了重起。
+三層（根、領班、總機）各帶 `tick: true`、各自一個鐘，照使用者 11-06 選的「都留著」（11-07 sol 審查 #14）。定義中的相對 exec／stack／ws 從各 daemon 的 cwd（此例是其定義資料夾）算。父只把 switchboard／foreman 當普通 exec，`auto_restart: true` 才有常駐 sleep／wake 與退了重起。
 
 1. 建帳號可略；若用了 `limits.user`，先由人把帳號、stack／信箱寫入權限配好。
 2. 包 root 可略；家機有 systemd 委派時可用下方 scope。

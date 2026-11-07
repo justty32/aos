@@ -24,7 +24,7 @@
 
 ## git image：專門 repo、只留最新一份（11-06 使用者裁定）
 
-image 放**專門的 repo**；每次整棵 daemon 睡著後，建立沒有父 commit 的 **orphan commit**，用 `push --force` 更新 `main`。要留下的版本先打 tag；定義與 ws 成果照樣一起帶，原始碼 repo 的歷史不跟著改。三題裁定見 [git-image](../../../../thinking/2026-11/06/git-image/README.md)。
+image 放**專門的 repo**；每次整棵 daemon 睡著後，建立沒有父 commit 的 **orphan commit**，用 `push --force-with-lease` 更新 `main`。要留下的版本先打 tag；定義與 ws 成果照樣一起帶，原始碼 repo 的歷史不跟著改。三題裁定見 [git-image](../../../../thinking/2026-11/06/git-image/README.md)。
 
 第一次在 image 根設定（以下 `P` 是 proto8 的絕對路徑；根下有 `ws/`、定義資料夾；遠端用專門的 image repo，將 `IMAGE_REPO_URL` 換成其網址）：
 
@@ -46,10 +46,15 @@ printf 'ws/.trash/\n' >> .gitignore
 git rm -r --cached --ignore-unmatch .
 git add -A
 git update-ref refs/heads/main "$(printf 'Frozen image\n' | git commit-tree "$(git write-tree)")"
-git push --force origin main
+git push --force-with-lease origin main
+git reflog expire --expire=now --all && git gc --prune=now
 ```
 
-`rm --cached` 只清索引、檔案留在原地，讓已追蹤但現在該擋的 request／log 也退出 image。`commit-tree` 不帶 `-p` 就是 orphan commit，不產生其他分支。tag 仍指向要保留的版本；本機失去參照的舊物件與 reflog，要等 git 清理才真正釋放磁碟空間。
+`rm --cached` 只清索引、檔案留在原地，讓已追蹤但現在該擋的 request／log 也退出 image。`commit-tree` 不帶 `-p` 就是 orphan commit，不產生其他分支。tag 仍指向要保留的版本。
+
+- **`--force-with-lease`**（11-07 sol 審查 #17，原本 `--force`）：遠端 `main` 不是你上次 fetch／push 看到的那份就拒絕（`! [rejected] main -> main (stale info)`）。兩台搞混時——例如 B 機忘了先 fetch 就在舊工作樹醒來、凍住再推——不會無聲蓋掉 A 機剛推的新 image（只留最新一份＝蓋掉就救不回）。被拒時先停下來弄清楚哪台的才是最新的；確定要用這台的，`git fetch origin main` 後再推。
+- **push 後清掉舊版**（11-07 sol 審查 #16）：`gc.auto 0` 關了自動清理，舊版本又被 reflog 抓著，不手動清的話本機 `.git` 會一版一版疊上去（實測 20 次凍住 72 MB，清後 4.8 MB）。`reflog expire`＋`gc --prune=now` 只丟沒有參照的舊版，tag 指著的照留。自建的遠端（bare repo）也要定期在那邊跑 `git gc --prune=now`。
+- image repo 會把整個 ws 推上去（agent 寫的成果，可能有金鑰或私人檔），遠端用私有的。
 
 另一台已有這份 image clone 時，先 Ctrl-C 睡整棵，再取最新版本（這會捨棄該 clone 的本機改動，應先凍住並存好要留的成果）：
 
