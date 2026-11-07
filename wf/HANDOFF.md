@@ -17,7 +17,7 @@
 1. **授權與隊形**：本 session 隨意 push。opus 隊長＋subagent＋最多一個 codex；gpt 只施工／文件／網頁／雜活、不做設計，「能交給gpt的就交給gpt」；fable 只做頂層規劃、只讀 opus 備的簡報，輪間輪中皆可、次數不限（[aos-teams](workflows/dispatch/aos-teams.md)）。本機 LM Studio 一次只載一個模型；模型下限 10B；LiteLLM 有 `chatgpt-gpt-terra*`。家機 codex 連 LiteLLM 時不帶 `-s`（沙盒待辦見 SESSION-LOG）。另一帳號 aos-b0 已關，不要再寄信給它。
 2. **使用者規矩（今天新定，都已進 wf）**：改條文時舊句可直接刪、靠 git 找回（user/03「11-07 檢討」）；「很多東西都可以靈活改進」——判準、門檻、階段、審視標準本身都可被改進（kb-ideas 想法 15）；單任務指標＝(token in＋out)÷(原文 bytes×2)，只套在一個地點／人物／事件那級（想法 14）。
 3. **今天做完並 push**：sol 審查全收（[10](workflows/refactor/reports/2026-11-07-sol審查/10-修正結果.md)、[11](workflows/refactor/reports/2026-11-07-sol審查/11-使用者裁定.md)）；daemon 不分類 B＋失敗留表＋`aos-daemon-ctl prune`；edge-1107 四項；晚審必修全修（[06](workflows/refactor/reports/2026-11-07-晚審/06-修正結果.md)）；aos-b0 交回 7 份設計（`proto8/thinking/2026-11/07/` 的 evolve-design、tool-evolve、kb-scale、kernel-nest、agent-diversity、lift-to-norms、arknights-kb-audit）；使用者 40 題已裁（桌面 `aos-1107傍晚-待你裁.json`）。
-4. **還在跑／停點**：① 40 題裁定收進各 README＋lift-to-norms 草稿貼進條文（opus 線，完成會回報）；② arknights 第二輪（第四任隊長）：收完 B8 就收輪、**準備好第二輪總結簡報但不開 fable、不開第三輪**，停在 [交棒](../proto8/thinking/2026-11/07/arknights-kb/交棒.md)「等使用者第三輪建議」。使用者說第三輪 fable 規劃前他有建議，且第二輪後要「稍微停下來，讓大家喘口氣」。
+4. **還在跑／停點**：① 40 題裁定已收進各 README、草稿已貼進條文（新 N-68、C-84；`5b4d553c1`、`88b2aae4d`、`e7dd796b1`），程式待實作清單在晚審 06 末段；② arknights 第二輪（第四任隊長）：收完 B8 就收輪、**準備好第二輪總結簡報但不開 fable、不開第三輪**，停在 [交棒](../proto8/thinking/2026-11/07/arknights-kb/交棒.md)「等使用者第三輪建議」。使用者說第三輪 fable 規劃前他有建議，且第二輪後要「稍微停下來，讓大家喘口氣」。
 5. **待辦**：互動頁抽成工作流（SESSION-LOG 第一行；已試用兩次：sol 審查頁、傍晚 40 題頁，資料格式見 json）；晚審剩一個判官「墓碑」設計題待問使用者；5 份設計的程式實作待排；桌面 `~/Desktop/aos-arknights/` 每地點更新（交棒固定步驟）；負載監看是 session 內 Monitor，換 session 要重開。
 
 ## 2026-11-07 午 家機 alt 帳號頂層（額度剩約 8%，等重置或 compact）
