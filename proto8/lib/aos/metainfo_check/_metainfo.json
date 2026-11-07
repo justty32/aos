@@ -1,0 +1,1 @@
+{"summary":"Compare declared costs with measured median ratios without modifying files.","resource":["cpu","disk"],"side_effect":false,"idempotent":false,"deterministic":false,"interrupt":"restartable","parallel":true}

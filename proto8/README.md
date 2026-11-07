@@ -24,6 +24,7 @@
 | [py/](py/README.md) | cmd 共用模組：`aos_flags.py`、`aos_ws.py`、`daemon_ctl/`（CLI 對話與介面宣告共用模組在 `lib/agent/`） |
 | [install.sh](install.sh) | 把 `impls/*/bin/*` 與 `cmd/*/bin/*` symlink 進 `~/.local/bin`，並在 Python user site 寫兩行 repo `py`／`lib` 絕對路徑的 `aos-proto8.pth`（11-06 晚 K-5；參數換目的地、`--dry-run` 只印、`--uninstall` 拿掉；用法在 [cmd/README](cmd/README.md)） |
 | [lib/](lib/README.md) | 工具庫：agent 用的工具（底層原語 → 動 aos 的 → 整隻 agent），templates 用相對捷徑引用 |
+| [cases/](cases/README.md) | measure 的共用考題、固定答案與比對器契約；smoke 用 math 的兩題驗門與自洽 |
 | [kernel/](kernel/README.md) | llm-kernel（問腦的那台）、daemon-judge、procs-kernel（判官的兩種掛法） |
 | [templates/](templates/README.md) | 兩個 agent 範本：`eca-claude`（外部 coding agent）、`agent-fsm`（aos 自己的 loop／fsm agent，11-04） |
 | [knowledge/](knowledge/README.md) | 知識庫：層級式記憶工具 `lib/agent/memory` 讀的資料夾樹（`AOS_MEMORY` 指它、多隻 agent 共用）；第一本是 `aos/`——給小模型的 aos 體系知識（根＋九節，英文；11-05） |

@@ -10,6 +10,7 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`bash/`](../../../../../proto8/lib/base/bash/) | 在工作區裡用 bash 跑一行指令，回 stdout＋stderr 合在一起的輸出 |
+| [`bash/tests/test_observed.py`](../../../../../proto8/lib/base/bash/tests/test_observed.py) | Verify command ledgers preserve inner outcomes and block unwritable execution. |
 | [`clock/`](../../../../../proto8/lib/base/clock/) | 在 stdout 印現在的 UTC 時間（ISO 8601 到秒，例：2026-10-23T08:00:00Z） |
 | [`copy/`](../../../../../proto8/lib/base/copy/) | 在工作區裡複製一個檔或整個資料夾（捷徑照捷徑複製、不跟進去；to 的上層自動建） |
 | [`edit/`](../../../../../proto8/lib/base/edit/) | 在工作區裡一個檔做一處或幾處「整段原文照字面換掉」，一處不合就整個不改 |
@@ -23,6 +24,7 @@
 | [`move/`](../../../../../proto8/lib/base/move/) | 在工作區裡搬移或改名一個檔、資料夾或捷徑本身（to 的上層自動建） |
 | [`read/`](../../../../../proto8/lib/base/read/) | 讀工作區裡一個文字檔，太長從頭截、告訴你從第幾行接著讀 |
 | [`run_python/`](../../../../../proto8/lib/base/run_python/) | 用 python3 跑一段程式，回結束碼與輸出（stdout＋stderr 合在一起） |
+| [`run_python/tests/test_observed.py`](../../../../../proto8/lib/base/run_python/tests/test_observed.py) | Verify command ledgers preserve inner outcomes and block unwritable execution. |
 | [`stat/`](../../../../../proto8/lib/base/stat/) | 看工作區裡單一個檔或資料夾的屬性，回 JSON |
 | [`trash/`](../../../../../proto8/lib/base/trash/) | 刪除工作區裡一個檔或資料夾：不真的刪，搬進 $AOS_WS/.trash/<時間>/<原路徑> |
 | [`view/`](../../../../../proto8/lib/base/view/) | 漸進看工作區裡一個檔：JSON 一次看一層、大的文字檔先給大綱 |
@@ -33,3 +35,4 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`test_metainfo.py`](../../../../../proto8/lib/tests/test_metainfo.py) | Verify optional metadata reading, timeout declarations, and safe cost formulas. |
+| [`test_observed.py`](../../../../../proto8/lib/tests/test_observed.py) | Verify shared observation initialization, strict failures and measured call cells. |

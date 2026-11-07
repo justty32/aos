@@ -1,0 +1,1 @@
+{"summary":"Measure cases and compare workspace outputs with independent comparator accounting","resource":["disk","process"],"side_effect":true,"idempotent":false,"deterministic":false,"interrupt":"safe","parallel":false}

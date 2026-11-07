@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+# Compare declared definition costs with observed median cost ratios without writing files.
+import datetime
+import json
+import math
+from pathlib import Path
+import statistics
+import sys
+
+sys.dont_write_bytecode = True
+HERE = Path(__file__).resolve().parent
+_lib = next((p for p in HERE.parents if p.name == 'lib' and (p / 'tool_io.py').is_file()), None)
+sys.path[:0] = [str(HERE)] + ([str(_lib)] if _lib else [])
+import metainfo
+import tool_io
+
+
+def number(value):
+    if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+        raise tool_io.Error('ArgumentsBad', 'Observed costs and input sizes must be finite non-negative numbers')
+    return value
+
+
+def matching(value, target, root=None):
+    if not isinstance(value, str):
+        return False
+    return (Path(root or '.') / value).resolve() == target
+
+
+def observations(records, target):
+    """Extract one cost per sample, or ledger call, without counting summaries twice."""
+    result = []
+    owner = target
+    think_cost = {}
+
+    def visit(record, root=None, inherited=None):
+        if not isinstance(record, dict):
+            raise tool_io.Error('ArgumentsBad', 'Each observation must be an object')
+        root = record.get('defs', root)
+        if root is not None and not isinstance(root, str):
+            raise tool_io.Error('ArgumentsBad', 'defs must be a path string')
+        variables = dict(inherited or {})
+        if 'in_bytes' in record:
+            variables['in_bytes'] = number(record['in_bytes'])
+        if 'samples' in record:
+            samples = record['samples']
+            if not isinstance(samples, list) or not samples:
+                raise tool_io.Error('ArgumentsBad', 'samples must be a non-empty array')
+            for sample in samples:
+                visit(sample, root, variables)
+            return
+        if 'tree' in record:
+            visit(record['tree'], root, variables)
+            return
+        if 'cost' in record:
+            if 'def' not in record or matching(record['def'], target, root):
+                cost = record['cost']
+                if not isinstance(cost, dict) or not isinstance(cost.get('token', {}), dict):
+                    raise tool_io.Error('ArgumentsBad', 'cost and cost.token must be objects')
+                values = {'/time_ms': cost.get('time_ms'), '/token/in': cost.get('token', {}).get('in')}
+                result.append(({k: number(v) for k, v in values.items() if v is not None}, variables))
+            children = record.get('children', [])
+            if not isinstance(children, list):
+                raise tool_io.Error('ArgumentsBad', 'children must be an array')
+            for child in children:
+                visit(child, root, variables)
+            return
+        kind = record.get('kind')
+        nonlocal owner
+        if kind == 'self':
+            if think_cost:
+                result.append((dict(think_cost), {}))
+                think_cost.clear()
+            owner = Path(record.get('def') or target).resolve()
+        elif kind == 'tool':
+            if matching(record.get('def'), target):
+                result.append(({'/time_ms': number(record['elapsed_ms'])}, variables))
+        elif kind == 'think':
+            if owner == target:
+                usage = record.get('usage')
+                if usage is not None:
+                    if not isinstance(usage, dict):
+                        raise tool_io.Error('ArgumentsBad', 'usage must be an object or null')
+                    think_cost['/token/in'] = think_cost.get('/token/in', 0) + number(usage.get('prompt_tokens', 0))
+                if 'elapsed_ms' in record:
+                    think_cost['/time_ms'] = think_cost.get('/time_ms', 0) + number(record['elapsed_ms'])
+        elif kind not in ('self', 'cmd'):
+            raise tool_io.Error('ArgumentsBad', 'Observation must be a measure result or observed ledger row')
+
+    for record in records:
+        visit(record)
+    if think_cost:
+        result.append((think_cost, {}))
+    return result
+
+
+def check(args):
+    target = args.get('def')
+    records = args.get('observed')
+    if not isinstance(target, str) or not target or not isinstance(records, list):
+        raise tool_io.Error('ArgumentsBad', 'def must be a non-empty path and observed must be an array')
+    target = Path(target).resolve()
+    samples = observations(records, target)
+    if not samples or not any(cost for cost, _ in samples):
+        raise tool_io.Error('ArgumentsBad', 'No matching measured costs')
+    meta = metainfo.read(target) or {}
+    cost = meta.get('cost', {})
+    if not isinstance(cost, dict) or not isinstance(cost.get('token', {}), dict):
+        raise metainfo.MetainfoError('FileBad', 'cost and cost.token must be objects')
+    claims = {'/time_ms': cost.get('time_ms'), '/token/in': cost.get('token', {}).get('in')}
+    rows = []
+    for key, claim in claims.items():
+        measured, estimates, ratios = [], [], []
+        for values, variables in samples:
+            if key not in values:
+                continue
+            value = values[key]
+            estimate = metainfo.eval_cost(claim, variables)
+            measured.append(value)
+            if estimate is not None:
+                if estimate < 0:
+                    raise metainfo.MetainfoError('FileBad', 'Cost estimates must be non-negative')
+                estimates.append(estimate)
+                ratios.append(value / estimate if estimate else (1 if value == 0 else math.inf))
+        if not measured:
+            continue
+        row = {'def': args['def'], 'key': key, 'claimed': statistics.median(estimates) if estimates else None,
+               'observed': statistics.median(measured)}
+        if ratios:
+            ratio = statistics.median(ratios)
+            row.update(ratio=ratio if math.isfinite(ratio) else None,
+                       verdict='close' if 0.8 <= ratio <= 1.25 else 'off')
+        else:
+            row['verdict'] = 'unclaimed'
+        rows.append(row)
+    return {'checked_at': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z'), 'defs': rows}
+
+
+def main():
+    tool_io.start('metainfo-check')
+    try:
+        print(json.dumps(check(tool_io.arguments()), allow_nan=False))
+    except (tool_io.Error, metainfo.MetainfoError) as error:
+        tool_io.die(error.code, str(error))
+    except (OSError, ValueError, TypeError, KeyError, OverflowError) as error:
+        tool_io.die('ArgumentsBad', str(error))
+
+
+if __name__ == '__main__':
+    main()

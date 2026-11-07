@@ -10,6 +10,9 @@
 | 檔 | 負責什麼 |
 |---|---|
 | [`metainfo.py`](../../../../../proto8/lib/metainfo.py) | Read optional definition metadata and evaluate numeric cost declarations safely. |
+| [`observed.py`](../../../../../proto8/lib/observed.py) | Record public stack observations and measured downstream calls. |
+| [`observed_children.py`](../../../../../proto8/lib/observed_children.py) | Preserve declared child observation trees and hand their location to the caller. |
+| [`shell_observed.py`](../../../../../proto8/lib/shell_observed.py) | Reserve a writable shell ledger before execution and record the completed command. |
 | [`tool_io.py`](../../../../../proto8/lib/tool_io.py) | lib 工具共用的開頭：schema 生成旗標位置的 --help、旗標映射 stdin JSON 與最小型別檢查、Ctrl-C、錯誤行／提醒行、查工作區、兩鐘期限。 |
 
 ## `proto8/lib/agent/`
@@ -20,6 +23,7 @@
 | [`agent_files.py`](../../../../../proto8/lib/agent/agent_files.py) | 依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。 |
 | [`agent_tool.py`](../../../../../proto8/lib/agent/agent_tool.py) | claude、codex 共用的工具形入口 ask_cli。 |
 | [`agents/`](../../../../../proto8/lib/agent/agents/) | 生、叫、收另一隻 agent：包著 aos-agent ctl add／say／listen／rm／ls，掛在管我的那台 daemon（$AOS_DAEMON）上 |
+| [`agents/tests/test_observed.py`](../../../../../proto8/lib/agent/agents/tests/test_observed.py) | Verify agent account synchronization resolves only registered child stacks. |
 | [`agents/tests/test_wait.py`](../../../../../proto8/lib/agent/agents/tests/test_wait.py) | Verify segmented agent waits, argument checks and cleanup. |
 | [`claude/`](../../../../../proto8/lib/agent/claude/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 claude CLI；對話續在工具小格（$AOS_STACK） |
 | [`claude/cli.json`](../../../../../proto8/lib/agent/claude/cli.json) | 設定（鍵：kind、flags、print_flags、timeout_ms） |
@@ -39,6 +43,7 @@
 | [`memory_write/writing.py`](../../../../../proto8/lib/agent/memory_write/writing.py) | Write, promote and remove knowledge nodes atomically under directory locks. |
 | [`self_tools/`](../../../../../proto8/lib/agent/self_tools/) | 讓叫我的 agent 改自己的工具箱：加（add）、拿掉（rm）、列（ls）；改的是那隻的覆蓋層，定義不動 |
 | [`thought/`](../../../../../proto8/lib/agent/thought/) | 小念頭：派一件事給一隻用完即走的子 agent（呼叫方指定或工具設定預設定義），只拿回短結論；子的工具來回不進叫我的那隻的 history |
+| [`thought/tests/test_observed_children.py`](../../../../../proto8/lib/agent/thought/tests/test_observed_children.py) | Verify child account preservation and thought cleanup ordering. |
 
 ## `proto8/lib/aos/`
 
