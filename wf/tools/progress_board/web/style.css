@@ -73,3 +73,20 @@ svg text { fill: var(--muted); font-family: system-ui, sans-serif; font-size: 10
   .overview { font-size: 15px; }
   .machine-visuals { gap: 10px; }
 }
+.ask-lead { margin-bottom: 14px; }
+.ask-card { border-top: 1px solid var(--border); padding: 16px 0 4px; min-width: 0; }
+.ask-question { white-space: pre-wrap; margin: 7px 0; overflow-wrap: anywhere; }
+.ask-options { border: 0; padding: 0; margin: 12px 0; min-width: 0; }
+.ask-options legend { color: var(--muted); font-size: 13px; margin-bottom: 5px; }
+.ask-option { display: flex; align-items: flex-start; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 9px; margin: 7px 0; cursor: pointer; }
+.ask-option input { margin-top: 6px; flex: 0 0 auto; accent-color: var(--blue); }
+.ask-option > span:first-of-type { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ask-option .chip { flex: 0 0 auto; }
+.ask-comment { display: block; color: var(--muted); font-size: 13px; }
+.ask-comment textarea { display: block; width: 100%; margin: 5px 0 10px; padding: 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--ink); font: inherit; font-size: 15px; resize: vertical; }
+.ask-submit { color: var(--ink); font: inherit; cursor: pointer; min-height: 42px; min-width: 85px; }
+.ask-submit:disabled, .ask-comment textarea:disabled { opacity: .65; cursor: default; }
+.ask-status { display: inline-block; margin: 0 0 0 12px; white-space: pre-wrap; }
+.ask-status.green { color: var(--green); }
+.ask-status.error { color: var(--red); }
+.ask-form :focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }

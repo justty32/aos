@@ -1,9 +1,9 @@
 // This script safely renders progress snapshots and polls the local board when served over HTTP.
 "use strict";
 (() => {
-  const root = document.getElementById("board"), ns = "http://www.w3.org/2000/svg";
-  const labels = {start: "開線", progress: "進度", done: "完成", blocked: "卡住", decision: "代定", handoff: "交棒", none: "尚未回報"};
-  const colors = {start: "blue", progress: "blue", done: "green", blocked: "red", decision: "amber", handoff: "purple", none: "grey"};
+  const board = document.getElementById("board"), ns = "http://www.w3.org/2000/svg";
+  const labels = {start: "開線", progress: "進度", done: "完成", blocked: "卡住", decision: "代定", handoff: "交棒", ask: "待你裁", none: "尚未回報"};
+  const colors = {start: "blue", progress: "blue", done: "green", blocked: "red", decision: "amber", handoff: "purple", ask: "amber", none: "grey"};
   let state = window.AOS_STATE || null, lastPoll = 0;
   const el = (tag, cls, value) => { const n = document.createElement(tag); if (cls) n.className = cls; if (value != null) n.textContent = String(value); return n; };
   const sv = (tag, attrs = {}) => { const n = document.createElementNS(ns, tag); Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, v)); return n; };
@@ -20,7 +20,7 @@
     return n;
   }
   function icon(kind) {
-    const paths = {board: "M5 5h22v22H5z M5 12h22 M12 12v15", summary: "M8 4h16v24H8z M12 11h8 M12 16h8 M12 21h5", line: "M5 24l7-9 7 4 8-12 M23 7h4v4", machine: "M5 6h22v17H5z M11 28h10 M16 23v5", commit: "M16 5v7 M16 20v7 M12 16H5 M20 16h7"};
+    const paths = {ask: "M7 15h18v13H7z M12 5h11v13H12z M15 9h5 M15 13h3 M4 15l3-5 M25 10l3 5", board: "M5 5h22v22H5z M5 12h22 M12 12v15", summary: "M8 4h16v24H8z M12 11h8 M12 16h8 M12 21h5", line: "M5 24l7-9 7 4 8-12 M23 7h4v4", machine: "M5 6h22v17H5z M11 28h10 M16 23v5", commit: "M16 5v7 M16 20v7 M12 16H5 M20 16h7"};
     const s = sv("svg", {viewBox: "0 0 32 32", class: "icon", "aria-hidden": "true"});
     s.append(sv("path", {d: paths[kind] || paths.line, fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round"}));
     if (kind === "commit") s.append(sv("circle", {cx: 16, cy: 16, r: 4, fill: "none", stroke: "currentColor", "stroke-width": 2}));
@@ -115,19 +115,26 @@
     const n = document.getElementById("connection"); if (!n) return;
     const ok = lastPoll && Date.now() - lastPoll <= 15000; n.className = `live${ok ? "" : " offline"}`; n.replaceChildren(el("span", "dot"), el("span", "", ok ? "即時" : "伺服器沒回應"));
   }
+  const headerHost = el("div"), bodyHost = el("div");
+  const asks = window.AOSAsks({el, heading, details, chip, link, poll});
+  board.replaceChildren(headerHost, asks.panel, bodyHost);
+  function publish(root, data) {
+    headerHost.replaceChildren(root.firstChild); bodyHost.replaceChildren(...root.childNodes);
+    asks.update(data || {}); connection();
+  }
   function render(data) {
-    root.replaceChildren(); const header = el("header"), top = el("div", "title-row"), title = el("div", "heading"); title.append(icon("board"), el("h1", "", "aos 進度")); top.append(title);
+    const root = el("div"); const header = el("header"), top = el("div", "title-row"), title = el("div", "heading"); title.append(icon("board"), el("h1", "", "aos 進度")); top.append(title);
     if (location.protocol.startsWith("http")) { const live = el("span", "live"); live.id = "connection"; top.append(live); }
     header.append(top);
-    if (!data) { header.append(el("p", "overview", "尚無快照；請依 README 產生資料。")); root.append(header); connection(); return; }
+    if (!data) { header.append(el("p", "overview", "尚無快照；請依 README 產生資料。")); root.append(header); publish(root, data); return; }
     const lines = data.lines || [], host = data.host || {}, active = lines.filter(line => ["start", "progress", "handoff"].includes(line.status)).length, blocked = lines.filter(line => line.status === "blocked").length;
-    header.append(el("p", "overview", `${lines.length} 條線：${active} 條在動、${blocked} 條卡住｜codex ${num(host.codex_procs)} 個｜負載 ${num(host.load1, 1)}/${num(host.ncpu)}｜可用記憶體 ${num(host.mem_avail_mb / 1024, 1)} GB`));
+    header.append(el("p", "overview", `${lines.length} 條線：${active} 條在動、${blocked} 條卡住｜待你裁 ${num(data.asks_open || 0)} 題｜codex ${num(host.codex_procs)} 個｜負載 ${num(host.load1, 1)}/${num(host.ncpu)}｜可用記憶體 ${num(host.mem_avail_mb / 1024, 1)} GB`));
     const links = el("nav", "buttons"); (data.links || []).forEach(entry => { if (relative(entry.href)) { const a = link(entry.href, entry.title); a.className = "button"; links.append(a); } });
     header.append(links, el("p", "data-time", `資料時間 ${data.generated_at}`)); root.append(header);
     if (location.protocol === "file:") root.append(el("p", "banner", `快照模式：這是 ${data.generated_at} 的快照；要即時更新請開伺服器（看 README）`));
     root.append(summaryPanel(data.summary || {})); const grid = el("section", "lines"); lines.forEach(line => grid.append(lineCard(line))); root.append(grid, machinePanel(host, data.load_history), commitsPanel(data.commits || []));
     if ((data.warnings || []).length) { const footer = el("footer"), d = details(footer, `提醒（${data.warnings.length}）`), list = el("ul"); data.warnings.forEach(warning => list.append(el("li", "", warning))); d.append(list); root.append(footer); }
-    connection();
+    publish(root, data);
   }
   async function poll() {
     try { const response = await fetch(`data/state.json?t=${Date.now()}`, {cache: "no-store"}); if (!response.ok) throw new Error("Request failed"); const next = await response.json(); lastPoll = Date.now(); if (!state || next.generated_at !== state.generated_at) { state = next; render(state); } }

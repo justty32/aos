@@ -1,4 +1,4 @@
-"""Collect local progress, handoffs, commits, and host samples into the progress board state."""
+"""Collect local progress, questions, answers, handoffs, commits, and host samples into board state."""
 
 import datetime as dt
 import json
@@ -10,8 +10,10 @@ import subprocess
 import sys
 import tempfile
 
+from answers import asks_state, read_answers, valid_ask
+
 ROOT = Path(__file__).resolve().parent
-STATUSES = {"start", "progress", "done", "blocked", "decision", "handoff"}
+STATUSES = {"start", "progress", "done", "blocked", "decision", "handoff", "ask"}
 
 
 def board_path():
@@ -51,7 +53,7 @@ def atomic_write(path, text):
 def copy_assets(board_dir):
     board = Path(board_dir)
     board.mkdir(parents=True, exist_ok=True)
-    for name in ("index.html", "app.js", "style.css"):
+    for name in ("index.html", "app.js", "asks.js", "style.css"):
         shutil.copyfile(ROOT / "web" / name, board / name)
     shutil.copyfile(ROOT / "README.md", board / "README.md")
 
@@ -222,7 +224,8 @@ def collect(board_dir, cfg):
                 or not parse_ts(event.get("ts"))
                 or not isinstance(event.get("text"), str)
                 or not isinstance(event.get("links"), list)
-                or not all(isinstance(link, str) for link in event["links"])):
+                or not all(isinstance(link, str) for link in event["links"])
+                or (event["status"] == "ask" and not valid_ask(event))):
             bad += 1
             continue
         grouped.setdefault(event["line"], []).append(event)
@@ -231,6 +234,9 @@ def collect(board_dir, cfg):
     configured = list(cfg.get("lines", []))
     ids = {line["id"] for line in configured}
     configured += [{"id": name, "title": name} for name in grouped if name not in ids]
+    asks = asks_state([event for events in grouped.values() for event in events
+                       if event["status"] == "ask"], read_answers(board, warnings), now,
+                      {line["id"]: line.get("title", line["id"]) for line in configured})
     host = host_state()
     history_path = board / "data/load_history.jsonl"
     history = [sample for sample in read_jsonl(history_path, warnings)
@@ -240,6 +246,7 @@ def collect(board_dir, cfg):
     atomic_write(history_path, "".join(json.dumps(sample, ensure_ascii=False) + "\n"
                                       for sample in history))
     return {"generated_at": now.isoformat(), "server": False,
+            "asks": asks, "asks_open": sum(ask["answer"] is None for ask in asks),
             "host": host, "load_history": history[-240:],
             "lines": [line_state(line, grouped.get(line["id"], []), cfg, now)
                       for line in configured],

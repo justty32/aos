@@ -1,4 +1,4 @@
-"""Run the local progress board server and its snapshot and summary commands."""
+"""Run the local progress board server, answer endpoint, snapshots, and summary commands."""
 import functools
 import datetime as dt
 import http.server
@@ -13,9 +13,13 @@ import threading
 import time
 
 sys.dont_write_bytecode = True
+from answers import AnswerHandlerMixin
 from collect import board_path, collect, copy_assets, load_config, summary_state, write_state
 from summarize import maybe_summarize
 
+TEXT_TYPES = {".md": "text/markdown", ".json": "application/json", ".jsonl": "application/x-ndjson",
+              ".txt": "text/plain", ".log": "text/plain", ".html": "text/html", ".css": "text/css",
+              ".js": "text/javascript"}
 USAGE = "python3 dash.py <serve|start|stop|status|collect|summarize> [--port N] [--force]"
 
 
@@ -99,7 +103,15 @@ def serve(board, port):
     state_lock = threading.Lock()
     summary_thread = None
 
-    class Handler(http.server.SimpleHTTPRequestHandler):
+    class Handler(AnswerHandlerMixin, http.server.SimpleHTTPRequestHandler):
+        def refresh_answers(self):
+            with state_lock:
+                busy = summary_thread is not None and summary_thread.is_alive()
+                snapshot(board, load_config(), True, busy)
+
+        extensions_map = {**http.server.SimpleHTTPRequestHandler.extensions_map,
+                          **{ext: f"{kind}; charset=utf-8" for ext, kind in TEXT_TYPES.items()}}
+
         def end_headers(self):
             self.send_header("Cache-Control", "no-store")
             super().end_headers()
@@ -107,6 +119,8 @@ def serve(board, port):
         def log_message(self, fmt, *values):
             with (data / "server.log").open("a", encoding="utf-8") as log:
                 log.write(f"dash: request {self.log_date_time_string()} {fmt % values}\n")
+
+    Handler.board = board
 
     class Server(http.server.ThreadingHTTPServer):
         def handle_error(self, request, client_address):
