@@ -43,3 +43,7 @@
 **/aos-mcp-logs.jsonl
 **/mailbox_warning.txt
 **/transcripts/
+
+# Public observation ledgers and retained child ledgers
+**/observed.jsonl
+**/observed/

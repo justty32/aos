@@ -3,4 +3,4 @@
                 "properties": {"command": {"type": "string", "description": "the bash command line"},
                                "timeout_s": {"type": "number", "default": 30, "description": "timeout in seconds (default 30, at most 300)"}},
                 "required": ["command"]},
- "errors": ["ArgumentsBad", "LaunchFailed", "CommandFailed", "WsMissing"]}
+ "errors": ["ArgumentsBad", "LaunchFailed", "CommandFailed", "LogFailed", "WsMissing"]}

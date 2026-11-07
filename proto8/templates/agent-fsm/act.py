@@ -24,13 +24,15 @@ for _parent in Path(__file__).resolve().parents:
 sys.path[:0] = _import_paths
 try:
     import aos_flags  # noqa: E402
+    from observed import append as append_observed  # noqa: E402
+    from observed_children import clear_child, take_child  # noqa: E402
     import metainfo  # noqa: E402
     if (Path(__file__).resolve().parent / "agent_files.py").is_file():
         from agent_files import declared_files  # noqa: E402
     else:
         from agent.agent_files import declared_files  # noqa: E402
 except ModuleNotFoundError as _error:
-    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "metainfo"):
+    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "metainfo", "observed", "observed_children"):
         raise
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
           file=sys.stderr)
@@ -39,7 +41,6 @@ finally:
     for _path in _import_paths:
         sys.path.remove(_path)
 
-from observed import append_observed
 
 HELP = """\
 usage: act.py [--tools FILE]   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)
@@ -141,6 +142,7 @@ def stop_group(p):
 
 
 registered = {}
+registered_paths = {}
 if (tools_file and os.path.isfile(tools_file)) or overlay:        # 能叫的＝登記檔（疊覆蓋層）裡的（aos-tools ls --json）；失敗＝自己這層的錯
     try:
         r = subprocess.run(TOOLS + ["ls", "--json"], stdin=subprocess.DEVNULL,
@@ -157,6 +159,7 @@ if (tools_file and os.path.isfile(tools_file)) or overlay:        # 能叫的＝
             die(e.code, str(e))
         limit = milliseconds / 1000.0 if milliseconds is not None else None
         registered[t["name"]] = limit
+        registered_paths[t["name"]] = os.path.abspath(t["path"])
 answered = {m.get("tool_call_id") for m in history[last + 1:] if m.get("role") == "tool"}
 for call in calls:
     try:
@@ -176,6 +179,9 @@ for call in calls:
     except ValueError as e:
         append({"role": "tool", "tool_call_id": cid, "content": aos_flags.error_line("act", "ArgumentsBad", "%s: %s" % (name, e)) + "\n"})
         continue
+    tool_stack = Path(stack) / "tools" / name
+    tool_stack.mkdir(parents=True, exist_ok=True)
+    clear_child(tool_stack)
     started_ns = time.monotonic_ns()
     try:
         p = subprocess.Popen(TOOLS + ["call", name], stdin=subprocess.PIPE,
@@ -201,9 +207,14 @@ for call in calls:
         stop_group(p)
         p.wait()
         raise
-    append_observed(stack, {"kind": "tool", "name": name, "code": p.returncode,
+    record = {"kind": "tool", "name": name, "def": registered_paths[name],
+              "stack": "tools/" + name, "code": p.returncode,
                             "elapsed_ms": (time.monotonic_ns() - started_ns) / 1_000_000,
-                            "in_bytes": len(arguments.encode("utf-8")), "out_bytes": len(out)})
+                            "in_bytes": len(arguments.encode("utf-8")), "out_bytes": len(out)}
+    child = take_child(tool_stack)
+    if child:
+        record["child"] = "tools/" + name + "/" + child
+    append_observed(stack, record)
     if err:                                     # C-52 例外：原樣轉印，成功時不附給腦
         sys.stderr.buffer.write(err)
         sys.stderr.buffer.flush()

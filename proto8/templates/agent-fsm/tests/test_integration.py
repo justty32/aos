@@ -64,7 +64,8 @@ class KernelIntegration(unittest.TestCase):
                     history = [json.loads(line) for line in (agent_stack / 'history.jsonl').read_text().splitlines()]
                     self.assertIn('FAKE ANSWER', history[-1]['content'])
                     records = [json.loads(line) for line in (agent_stack / 'observed.jsonl').read_text().splitlines()]
-                    self.assertEqual([r['kind'] for r in records], ['think','tool','think'])
+                    self.assertEqual([r['kind'] for r in records], ['self','think','tool','think'])
+                    self.assertEqual(records.pop(0)['kind'], 'self')
                     self.assertEqual(records[0]['model'], 'fake')
                     self.assertEqual(records[0]['endpoint'], 'fake')
                     self.assertEqual(records[1]['code'], 0)

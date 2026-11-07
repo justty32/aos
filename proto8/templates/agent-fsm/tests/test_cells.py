@@ -30,7 +30,7 @@ class Cells(unittest.TestCase):
                         PATH=str(self.root) + os.pathsep + os.environ['PATH'])
         self.command('aos-tools', '''import json, sys
 if 'ls' in sys.argv:
-    print(json.dumps([{'name':'echo','tooldef':{'parameters':{'type':'object'}}}]))
+    print(json.dumps([{'name':'echo','path':'/fake/echo','tooldef':{'parameters':{'type':'object'}}}]))
 else:
     sys.stdout.buffer.write(sys.stdin.buffer.read())
 ''')
@@ -91,7 +91,7 @@ else:
         self.run_cell('wait')
         message = json.loads((self.stack / 'history.jsonl').read_text().splitlines()[-1])
         self.assertEqual(message, {'role':'assistant','content':'unchanged','extra':4})
-        record = json.loads((self.stack / 'observed.jsonl').read_text())
+        record = json.loads((self.stack / 'observed.jsonl').read_text().splitlines()[-1])
         self.assertEqual((record['kind'], record['endpoint'], record['model']), ('think','local','fake'))
         self.assertEqual(record['letter'], letter)
         self.assertEqual(record['letter'], 'local-request')
@@ -122,22 +122,22 @@ else:
         self.run_cell('wait', code=10)
         (self.stack / 'think/request.json').unlink()
         self.run_cell('wait')
-        record = json.loads((self.stack / 'observed.jsonl').read_text())
+        record = json.loads((self.stack / 'observed.jsonl').read_text().splitlines()[-1])
         self.assertEqual(record['endpoint'], 'local')
         self.assertEqual(record['letter'], 'request')
 
     def test_tool_bytes_and_no_replay(self):
         self.history([{'role':'assistant','tool_calls':[CALL]}])
         self.run_cell('act')
-        record = json.loads((self.stack / 'observed.jsonl').read_text())
+        record = json.loads((self.stack / 'observed.jsonl').read_text().splitlines()[-1])
         size = len(CALL['function']['arguments'].encode('utf-8'))
         self.assertEqual((record['kind'], record['name'], record['code']), ('tool','echo',0))
         self.assertEqual((record['in_bytes'], record['out_bytes']), (size,size))
         self.run_cell('act')
-        self.assertEqual(len((self.stack / 'observed.jsonl').read_text().splitlines()), 1)
+        self.assertEqual(len((self.stack / 'observed.jsonl').read_text().splitlines()), 2)
 
     def test_timeout_uses_shared_metainfo(self):
-        self.command('aos-tools', "import json,sys,time\nif 'ls' in sys.argv: print(json.dumps([{'name':'echo','tooldef':{},'metainfo':{'cost':{'time_ms':1},'timeout_ms':{'val':1000}}}]))\nelse: print('started',flush=True); time.sleep(5)\n")
+        self.command('aos-tools', "import json,sys,time\nif 'ls' in sys.argv: print(json.dumps([{'name':'echo','path':'/fake/echo','tooldef':{},'metainfo':{'cost':{'time_ms':1},'timeout_ms':{'val':1000}}}]))\nelse: print('started',flush=True); time.sleep(5)\n")
         self.history([{'role':'assistant','tool_calls':[CALL]}])
         started = time.monotonic()
         result = self.run_cell('act')
@@ -150,7 +150,7 @@ else:
     def test_timeout_kills_grandchild_after_leader_exits(self):
         self.command('aos-tools', """import json,os,signal,sys,time
 if 'ls' in sys.argv:
-    print(json.dumps([{'name':'echo','tooldef':{},'metainfo':{'timeout_ms':100}}]))
+    print(json.dumps([{'name':'echo','path':'/fake/echo','tooldef':{},'metainfo':{'timeout_ms':100}}]))
 else:
     if os.fork() == 0:
         signal.signal(signal.SIGTERM, signal.SIG_IGN)
@@ -168,10 +168,10 @@ else:
         self.assertIn('timed out', message['content'])
 
     def test_failed_calls_are_observed(self):
-        self.command('aos-tools', "import json,sys\nif 'ls' in sys.argv: print(json.dumps([{'name':'echo','tooldef':{}}]))\nelse: print('failed output'); sys.exit(7)\n")
+        self.command('aos-tools', "import json,sys\nif 'ls' in sys.argv: print(json.dumps([{'name':'echo','path':'/fake/echo','tooldef':{}}]))\nelse: print('failed output'); sys.exit(7)\n")
         self.history([{'role':'assistant','tool_calls':[CALL]}])
         self.run_cell('act')
-        record = json.loads((self.stack / 'observed.jsonl').read_text())
+        record = json.loads((self.stack / 'observed.jsonl').read_text().splitlines()[-1])
         self.assertEqual(record['code'], 7)
         self.command('aos-llm', "import sys\nif sys.argv[1]=='send': print('request')\nelse: sys.exit(1)\n")
         self.history([{'role':'user','content':'hello'}])

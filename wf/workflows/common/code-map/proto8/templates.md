@@ -5,21 +5,25 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/templates/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`agent-fsm/`](../../../../../proto8/templates/agent-fsm/) | Run an aos agent with loop and FSM cells. |
+
 ## `proto8/templates/agent-fsm/`
 
 | 檔 | 負責什麼 |
 |---|---|
-| [`_entry`](../../../../../proto8/templates/agent-fsm/_entry) | 入口：`aos-agent ctl add $AOS_CD` |
 | [`act.py`](../../../../../proto8/templates/agent-fsm/act.py) | act 格：依序 aos-tools call，照 metainfo 限時，失敗附 stderr 尾給腦（比照 aos-mcp 的 C-52 例外），結果接進 history，另記工具成本觀測。 |
 | [`agents.json`](../../../../../proto8/templates/agent-fsm/agents.json) | 設定（鍵：max_children） |
 | [`body.json`](../../../../../proto8/templates/agent-fsm/body.json) | argv：`aos-loop loop.json` |
 | [`brain.py`](../../../../../proto8/templates/agent-fsm/brain.py) | think 格：帶 $AOS_STACK/history.jsonl（加 system、tools）組一份問腦的請求，寫 $AOS_STACK/think/request.json；不碰網路。 |
 | [`fsm.json`](../../../../../proto8/templates/agent-fsm/fsm.json) | 入口 `aos-fsm $AOS_CF`；鍵：start、states |
 | [`idle.py`](../../../../../proto8/templates/agent-fsm/idle.py) | idle 格（收信）：$AOS_STACK/queue/ 的信全部收進 $AOS_STACK/history.jsonl，接進去就收掉（aos-post done）。 |
-| [`interfaces.json`](../../../../../proto8/templates/agent-fsm/interfaces.json) | 設定（鍵：aos-agent） |
+| [`interfaces.json`](../../../../../proto8/templates/agent-fsm/interfaces.json) | 設定（鍵：aos-agent、aos-observed） |
 | [`llm.json`](../../../../../proto8/templates/agent-fsm/llm.json) | （檔頭沒有一句話） |
 | [`loop.json`](../../../../../proto8/templates/agent-fsm/loop.json) | 設定（鍵：exec、interval_ms、ctl、state） |
-| [`observed.py`](../../../../../proto8/templates/agent-fsm/observed.py) | Append best-effort agent observations without changing cell results. |
 | [`system.txt`](../../../../../proto8/templates/agent-fsm/system.txt) | （檔頭沒有一句話） |
 | [`tests/test_cells.py`](../../../../../proto8/templates/agent-fsm/tests/test_cells.py) | Verify task context, tool limits, and best-effort observations with local fake commands. |
 | [`tests/test_integration.py`](../../../../../proto8/templates/agent-fsm/tests/test_integration.py) | Verify agent cells through the real local kernel, llm_fake endpoint, and clock tool. |

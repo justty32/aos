@@ -1,0 +1,1155 @@
+{
+ "description": "Read-only grep results for Python files containing observed in playground-ak.",
+ "contract": "wf-table/1",
+ "source": "06-批3施工結果.md",
+ "extracted": "2026-11-07",
+ "command": "grep -rln observed ~/code/playground-ak --include='*.py'",
+ "columns": [
+  "file"
+ ],
+ "rows": [
+  {
+   "file": "/home/lorkhan/code/playground-ak/.venv/lib/python3.14/site-packages/pip/_vendor/distro/distro.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/exp/r2-brief/measure_B.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/exp/sol-1107/e3/runtime/ws/corpus/arknights/scripts/audit_character_candidates_tertiary.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/reviewer/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/reviewer/seed_calibration.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/reviewer/tool.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/judge/judge.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/alias_learner/judge_sample.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/alias_learner/alias_learner.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/alias_learner/full_audit.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/alias_learner/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/alias_learner/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/alias_judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/alias_judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/measure/call_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/measure/measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/measure/task_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/runtime/defs/kb_link/semantic_gates.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/reviewer/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/reviewer/seed_calibration.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/reviewer/tool.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/judge/judge.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/alias_learner/judge_sample.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/alias_learner/alias_learner.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/alias_learner/full_audit.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/alias_learner/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/alias_learner/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/alias_judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/alias_judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/measure/call_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/measure/measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/measure/task_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-selfhost-dev/source/defs/kb_link/semantic_gates.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/reviewer/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/reviewer/seed_calibration.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/reviewer/tool.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/judge/judge.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/alias_learner/judge_sample.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/alias_learner/alias_learner.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/alias_learner/full_audit.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/alias_learner/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/alias_learner/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/alias_judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/alias_judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/measure/call_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/measure/measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/measure/task_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev6/defs/kb_link/semantic_gates.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/reviewer/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/reviewer/tool.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/judge/judge.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/alias_learner/judge_sample.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/alias_learner/alias_learner.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/alias_learner/full_audit.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/alias_learner/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/alias_learner/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/alias_judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/alias_judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/measure/call_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/measure/measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/measure/task_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev2/defs/kb_link/semantic_gates.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/reviewer/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/reviewer/tool.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/judge/judge.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/alias_learner/judge_sample.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/alias_learner/alias_learner.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/alias_learner/full_audit.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/alias_learner/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/alias_learner/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/alias_judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/alias_judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/measure/call_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/measure/measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/measure/task_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev4/defs/kb_link/semantic_gates.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev/defs/judge/judge.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev/defs/judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev/defs/judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev/defs/alias_learner/judge_sample.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev/defs/alias_learner/alias_learner.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev/defs/alias_learner/full_audit.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev/defs/alias_learner/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev/defs/alias_learner/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev/defs/alias_judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev/defs/alias_judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/reviewer/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/reviewer/tool.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/judge/judge.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/alias_learner/judge_sample.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/alias_learner/alias_learner.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/alias_learner/full_audit.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/alias_learner/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/alias_learner/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/alias_judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/alias_judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/measure/call_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/measure/measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/measure/task_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/place_run/place_run.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev5/defs/kb_link/semantic_gates.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/judge/judge.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/alias_learner/judge_sample.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/alias_learner/alias_learner.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/alias_learner/full_audit.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/alias_learner/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/alias_learner/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/alias_judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/alias_judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/run/kit-dev3/defs/kb_link/semantic_gates.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/agent_diversity/agent_diversity.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/meta_observe/meta_observe.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/meta_observe/test_observations.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/place_run/tests/test_retry.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/place_run/tests/runtime_paths.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/linker/tests/test_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/songxinshangu-b5/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/agent_diversity/agent_diversity.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/meta_observe/meta_observe.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/meta_observe/test_observations.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/place_run/tests/runtime_paths.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/qieernuoboge-b3/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/agent_diversity/agent_diversity.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/measure/measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/measure/tests/test_measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/meta_observe/meta_observe.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/meta_observe/test_observations.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/place_run/tests/test_retry.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/place_run/tests/runtime_paths.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/linker/tests/test_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/yibiliyazhiyan-b6/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/cases/build_h4.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/reviewer/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/reviewer/tool.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/judge/judge.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/alias_learner/judge_sample.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/alias_learner/alias_learner.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/alias_learner/full_audit.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/alias_learner/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/alias_learner/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/alias_judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/alias_judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/measure/measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/measure/task_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/export/kb-kit/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b6/write_report.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b6/audit_evidence.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b6/observations.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b8/report.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b8/verification/account.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b8/verification/refresh_meta.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b8/verification/test_evidence.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b5/trials.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b5/observe.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b5/write_report.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b5/audit_evidence.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b5/prepare_reports.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b3/generate_reviews.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b3/write_report.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b3/update_costs.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/verification/refresh_meta.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/audit/account.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/audit/report.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/place_accounting.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/agent_diversity/agent_diversity.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/meta_observe/meta_observe.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/meta_observe/test_observations.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/place_run/tests/test_retry.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/place_run/tests/runtime_paths.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/linker/tests/test_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/songxinshangu-b5/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/agent_diversity/agent_diversity.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/meta_observe/meta_observe.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/meta_observe/test_observations.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/place_run/tests/runtime_paths.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/qieernuoboge-b3/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/agent_diversity/agent_diversity.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/measure/measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/measure/tests/test_measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/meta_observe/meta_observe.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/meta_observe/test_observations.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/place_run/tests/test_retry.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/place_run/tests/runtime_paths.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/linker/tests/test_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b7/h4_inputs/yibiliyazhiyan-b6/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b4/prepare_observation_sources.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b4/audit_evidence.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b4/update_costs.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/b4/prepare_reports.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/close/refresh_meta.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/2/places/poshan-baseline/measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/runs/3/tools/refresh_metadata.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/tools/kit_extract/extract.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/corpus/arknights/scripts/audit_character_candidates_tertiary.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/tool_stats/tool_stats.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/reviewer/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/reviewer/seed_calibration.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/reviewer/tool.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/judge/tests/test_judge.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/judge/judge.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/alias_learner/judge_sample.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/alias_learner/alias_learner.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/alias_learner/full_audit.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/alias_learner/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/alias_learner/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/place_lead/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/place_lead/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/place_lead/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/alias_judge/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/alias_judge/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/agent_diversity/test_agent_diversity.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/measure/call_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/measure/measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/measure/tests/test_measure.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/measure/tests/test_call_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/measure/task_metrics.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/meta_observe/meta_observe.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/meta_observe/test_observations.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/namer/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/namer/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/namer/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/place_run/tests/test_retry.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/place_run/tests/runtime_paths.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/place_run/runtime.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/linker/token_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/linker/tests/test_budget.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/linker/act.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/linker/observed.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/linker/wait.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/kb_link/semantic_gates.py"
+  },
+  {
+   "file": "/home/lorkhan/code/playground-ak/ws/defs/review_pack/tests/test_pack.py"
+  }
+ ]
+}

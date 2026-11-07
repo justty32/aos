@@ -31,7 +31,7 @@ agent-fsm/
   system.txt   system 訊息（brain.py 的 --system 指到它；每次從檔讀、不存進 history；11-05 晚改英文）
   tools.json   aos-tools 登記檔：clock、self_tools（改自己的工具）、agents（生子 agent）、memory（查知識庫，11-05 晚）（"../../lib/…"；跟 eca-claude 同一份；後兩個 11-05 使用者裁「內建」）；這隻自己加減的在 $AOS_STACK/ 下同一宣告路徑（此範本宣告 tools.json；覆蓋層，aos-agent tools）
   llm.json     腦設定：{}＝用 kernel 的預設代號；只認一個鍵 endpoint（kernel 的 endpoint 包代號，例 "smart-high"；model、temperature 等屬性固定在包上，llm.json 不寫、信裡也不帶 model）
-  interfaces.json  {"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json", "memory": "tools/memory/_memory.json"}}（沒有 screen）
+  interfaces.json  {"aos-agent": {"entry": "body.json", "tools": "tools.json", "llm": "llm.json", "memory": "tools/memory/_memory.json"}, "aos-observed": {"file": "observed.jsonl"}}（沒有 screen）
   tools/memory/  memory 的包裝資料夾：_tooldef.json／_metainfo.json 捷徑指回 lib/agent/memory，_entry 是一行單子
                ["../../../../lib/agent/memory/_entry"]（不能是捷徑：aos-exec 解開捷徑後 AOS_CD 會是 lib 那格，找不到這裡的設定），
                _memory.json {"base": "../../../../knowledge/aos"}＝這隻的知識庫（換庫改這行；agent-knowledge 01）
@@ -75,4 +75,6 @@ aos-agent ctl resume         # ctl 下也有 stop／start、sleep／wake（同�
 
 **任務上下文與工具煞車**（11-07 P4）：brain 的 `--history full|task` 預設 `full`，照舊帶完整 history；`task` 只帶最後一封 user 起的訊息，system 照常放最前面，磁碟 history 不裁切。沒有 user 時帶目前全部訊息。`--max-tool-calls N` 接非負整數，按最後一封 user 起的 assistant `tool_calls` 條目總數計算；滿 N 次後，下一次 request 不提供 tools。`0` 從第一個 request 就不提供 tools；未給不限制；同一批多個呼叫照常執行，這個選項只控制下一次請求。兩個旗標互相獨立，在 `fsm.json` 的 brain argv 加上即可。
 
-**實際成本觀測**（11-07 P5）：wait 用 `aos-llm recv --full` 收完整回信，只把原有 `message` 接入 history，額外欄位不混進對話。每次收到成功或失敗回覆，往 `$AOS_STACK/observed.jsonl` 追加 `{kind: "think", letter, endpoint, model, usage, elapsed_ms}`；`letter` 是寄出時 `aos-llm send` 回的信件名（保存在 `think/pending.txt`），與接收該請求的 kernel `ledger.jsonl` 的 `id` 為同一個字串，可直接對帳。`think/sent.json` 記寄出前的時間與 endpoint，耗時包含排隊與逐拍收信等待。endpoint 優先用回信欄位、否則用寄出時保存的請求代號；請求未指定且回信沒帶時為 null，不猜 kernel 預設。失敗回覆或未提供的 model／usage 為 null。舊 pending 沒有時間檔時耗時為 null 並提醒。act 每次實際啟動工具追加 `{kind: "tool", name, code, elapsed_ms, in_bytes, out_bytes}`，bytes 是原始 UTF-8 stdin 與 stdout，不含 stderr／附加錯誤說明；code 是子程序原始結束碼（訊號為負數）。重跑時已回覆的工具不重記，未啟動的錯誤（未登記／arguments 壞）沒有實際呼叫觀測。這些觀測寫失敗只印英文 warning，不改格的結果。
+**實際成本觀測**（11-07 P5）：wait 用 `aos-llm recv --full` 收完整回信，只把原有 `message` 接入 history，額外欄位不混進對話。每次收到成功或失敗回覆，往 `$AOS_STACK/observed.jsonl` 追加 `{kind: "think", letter, endpoint, model, usage, elapsed_ms}`；`letter` 是寄出時 `aos-llm send` 回的信件名（保存在 `think/pending.txt`），與接收該請求的 kernel `ledger.jsonl` 的 `id` 為同一個字串，可直接對帳。`think/sent.json` 記寄出前的時間與 endpoint，耗時包含排隊與逐拍收信等待。endpoint 優先用回信欄位、否則用寄出時保存的請求代號；請求未指定且回信沒帶時為 null，不猜 kernel 預設。失敗回覆或未提供的 model／usage 為 null。舊 pending 沒有時間檔時耗時為 null 並提醒。act 每次實際啟動工具追加 `{kind: "tool", name, def, stack, child?, code, elapsed_ms, in_bytes, out_bytes}`，bytes 是原始 UTF-8 stdin 與 stdout，不含 stderr／附加錯誤說明；code 是子程序原始結束碼（訊號為負數）。重跑時已回覆的工具不重記，未啟動的錯誤（未登記／arguments 壞）沒有實際呼叫觀測。這些觀測寫失敗只印英文 warning，不改格的結果。
+
+共用記帳由 `lib/observed.py` 處理：首寫先補 `self` 行，含 `def`（`AOS_CD`）、`ws`（`AOS_WS`）、UTC 毫秒 `started_at`，設了 `AOS_LLM_KERNEL` 才帶 `llm_kernel`；同時合併 stack 的 `aos-observed` 宣告。工具行的 `def` 是登記路徑的絕對值、`stack` 是相對本 stack 的小格；有子帳時 `child` 指向收子前保存的帳本，相對本 stack。thought／agents 只照子 stack 的公開介面抄整棵帳，不猜帳名。

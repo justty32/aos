@@ -64,6 +64,7 @@ while _lib != os.path.dirname(_lib):
     _lib = os.path.dirname(_lib)
 sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
 try:
+    from observed_children import copy_child
     import tool_io  # noqa: E402
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
     if error.name != "tool_io":
@@ -310,6 +311,13 @@ def my_child(args):
     return name
 
 
+def preserve_child(name):
+    for record in load_json(children_path, []):
+        if record.get("name") == name and isinstance(record.get("stack"), str):
+            copy_child(stack, name, stack_abs(record["stack"]))
+            break
+
+
 # ---- new／add 共用的參數 ----
 def spawn_args(args):
     """回 (llm 鍵值, tools [(名, 絕對路徑；只字串拼、不解開捷徑)], tools_rm [名], 子的 ws, limits)。"""
@@ -484,15 +492,19 @@ if op in ("say", "ask"):
     text = need_str(args, "text")
     out = must(["say", "--target", name], text=text)
     if op == "ask":
-        if timeout_ticks is not None:
-            out = must(["listen", "--target", name, "--timeout-ticks", str(timeout_ticks)], timeout_ticks=timeout_ticks + 30)
-        else:
-            out = must(["listen", "--target", name, "--timeout-s", "%g" % timeout_s], timeout_s=timeout_s + 30)
+        try:
+            if timeout_ticks is not None:
+                out = must(["listen", "--target", name, "--timeout-ticks", str(timeout_ticks)], timeout_ticks=timeout_ticks + 30)
+            else:
+                out = must(["listen", "--target", name, "--timeout-s", "%g" % timeout_s], timeout_s=timeout_s + 30)
+        finally:
+            preserve_child(name)
     sys.stdout.write(out)
     sys.exit(0)
 
 if op == "rm":
     name = my_child(args)
+    preserve_child(name)
     out = must(["ctl", "rm", "--timeout-s", "%g" % ctl_s, name], timeout_s=max(STEP_S, ctl_s + 30))
     write_children([k for k in load_json(children_path, []) if k.get("name") != name])
     sys.stdout.write(out)

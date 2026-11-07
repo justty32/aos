@@ -58,6 +58,7 @@ while _lib != os.path.dirname(_lib):
 sys.path[:0] = [HERE] + ([_lib] if os.path.basename(_lib) == "lib" else [])
 try:
     import tool_io  # noqa: E402
+    from observed_children import copy_child
 except ModuleNotFoundError as error:   # 只處理共用模組缺少，不掩蓋其內部錯誤
     if error.name != "tool_io":
         raise
@@ -324,6 +325,9 @@ def reconcile(table):
             mark(n, "failed")
         failed.append((age, n))
     for _, n in sorted(failed)[:max(0, len(failed) - FAILED_KEEP + 1)]:   # 留 FAILED_KEEP-1 隻，加上這次最多 FAILED_KEEP
+        child_path = child_stacks.get(n)
+        if child_path:
+            copy_child(stack, n, os.path.join(daemon, child_path), publish=False)
         _, err = agent(["ctl", "rm", n])
         if err is None:
             forget(n)
@@ -365,6 +369,7 @@ for t in tools or []:
 
 # ---- 唯一子名、掛上 ----
 rows = json.loads(must(["ctl", "ls", "--json"]) or "[]")
+child_stacks = {r.get("name"): r.get("stack") for r in rows if isinstance(r, dict) and isinstance(r.get("stack"), str)}
 table = {r.get("name"): r.get("phase") for r in rows if isinstance(r, dict)} if isinstance(rows, list) else {}   # 名字 → phase
 reconcile(table)
 try:
@@ -401,6 +406,8 @@ kid_stack = out.strip().splitlines()[-1] if out.strip() else ""
 
 def undo(err, what):
     """設定沒上：收回子再報錯（不是子的失敗，不留 stack）。"""
+    if os.path.isdir(kid_stack):
+        copy_child(stack, kid, kid_stack)
     _, err2 = agent(["ctl", "rm", kid])
     if err2 is None:
         forget(kid)
@@ -441,8 +448,10 @@ if err is None:
         answer, err = agent(["listen", "--target", kid, "--timeout-s", "%g" % timeout_s], timeout_s=timeout_s + 30)
 if err:                                         # 子答不出：先停、stack 一律留（不管 keep）
     agent(["ctl", "stop", "--target", kid])
+    copy_child(stack, kid, kid_stack)
     mark(kid, "failed")
     die(err[0], "%s (details: %s)" % (err[1], rel(kid_stack)))
+copy_child(stack, kid, kid_stack)
 answer = answer.strip()
 if len(answer) > max_chars:
     answer = answer[:max_chars].rstrip() + " [truncated]"

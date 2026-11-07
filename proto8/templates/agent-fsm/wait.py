@@ -24,12 +24,13 @@ for _parent in Path(__file__).resolve().parents:
 sys.path[:0] = _import_paths
 try:
     import aos_flags  # noqa: E402
+    from observed import append as append_observed  # noqa: E402
     if (Path(__file__).resolve().parent / "agent_files.py").is_file():
         from agent_files import declared_files  # noqa: E402
     else:
         from agent.agent_files import declared_files  # noqa: E402
 except ModuleNotFoundError as _error:
-    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files"):
+    if _error.name not in ("aos_flags", "tool_io", "agent_files", "agent", "agent.agent_files", "observed", "observed_children"):
         raise
     print("agent-fsm: error: ModuleMissing required Python module %s is unavailable" % _error.name,
           file=sys.stderr)
@@ -38,7 +39,6 @@ finally:
     for _path in _import_paths:
         sys.path.remove(_path)
 
-from observed import append_observed
 
 HELP = """\
 usage: wait.py   (a cell of templates/agent-fsm; run by its fsm.json under aos-fsm, needs $AOS_STACK)

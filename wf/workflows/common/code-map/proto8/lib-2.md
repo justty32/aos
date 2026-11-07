@@ -27,3 +27,9 @@
 | [`trash/`](../../../../../proto8/lib/base/trash/) | 刪除工作區裡一個檔或資料夾：不真的刪，搬進 $AOS_WS/.trash/<時間>/<原路徑> |
 | [`view/`](../../../../../proto8/lib/base/view/) | 漸進看工作區裡一個檔：JSON 一次看一層、大的文字檔先給大綱 |
 | [`write/`](../../../../../proto8/lib/base/write/) | 把整份內容寫進工作區裡一個檔：沒有就建、有就整份蓋掉，上層資料夾自動建 |
+
+## `proto8/lib/tests/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`test_metainfo.py`](../../../../../proto8/lib/tests/test_metainfo.py) | Verify optional metadata reading, timeout declarations, and safe cost formulas. |
