@@ -1,0 +1,17 @@
+<!-- This page displays the local aos progress board online or as an offline snapshot. -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>aos 進度</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="board" aria-live="polite"></main>
+  <noscript>請開啟 JavaScript 查看進度。</noscript>
+  <script src="data/state.js" onerror="window.AOS_STATE = null"></script>
+  <script src="app.js"></script>
+</body>
+</html>
