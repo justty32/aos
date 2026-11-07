@@ -21,7 +21,8 @@ subcommands:
 Each subcommand drops one letter into the daemon's ctl mailbox (procs_added, procs_removed,
 procs_stopped, ...) or writes the proc's own ctl window (pause / resume). A letter only
 asks; the daemon applies it on its next round. See the result with ls.
-Letters go to $AOS_KERNEL (the judge) when it is set; a warning line says so.
+Letters always go straight to this daemon's ctl mailbox; AOS_KERNEL is not read.
+To go through the judge (AOS_KERNEL), use aos-agent ctl instead.
 add / rm / stop / start / sleep / wake also take --reply-to BOX (send only, do not wait).
 
 flags:
@@ -36,7 +37,7 @@ more: proto8/cmd/docs/03-aos-daemon-ctl.md
 HELPS = {
     "add": """aos-daemon-ctl add - attach one proc (register + start)
 
-usage: aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--timeout-s S] [--queue-wait-s S] [--name N] [--ws WS]
+usage: aos-daemon-ctl [--daemon D] add [--reply-to BOX] [--timeout-s S] [--name N] [--ws WS]
                       [--stack S] [--def DEF] [--limits JSON] XXX [-- ARGS...]
 
 XXX is followed the way aos-exec follows it: ending at a loop config = loop type (no ARGS
@@ -45,7 +46,6 @@ letter name, then waits up to --timeout-s seconds for the letter to leave new/ (
 warning line, exit 0; it is applied when taken).
 
 flags:
-      --queue-wait-s S  maximum judge queue wait (non-negative; omitted = no expiry)
       --timeout-s S    positive claim timeout (default: 3); excludes --reply-to
       --reply-to BOX   send only; the reply ({"applied": true|false, ...}) goes to BOX
   -n, --name N         its name on the table (default: the folder name of XXX)
@@ -89,13 +89,12 @@ exit codes: 0 sent; 1 error (including PhaseBad or CtlMissing).
 """,
     "start": """aos-daemon-ctl start - start a stopped proc again on the same stack
 
-usage: aos-daemon-ctl [--daemon D] start [--reply-to BOX] [--timeout-s S] [--queue-wait-s S] NAME
+usage: aos-daemon-ctl [--daemon D] start [--reply-to BOX] [--timeout-s S] NAME
 
 Asks a stopped proc to start again on its recorded stack. A sleeping proc needs wake.
 Prints the letter name; without --reply-to, waits up to --timeout-s seconds for it to leave new/.
 
 flags:
-      --queue-wait-s S  maximum judge queue wait (non-negative; omitted = no expiry)
       --timeout-s S    positive claim timeout (default: 3); excludes --reply-to
       --reply-to BOX   send only; the reply goes to BOX
   -h, --help           show this help
@@ -119,13 +118,12 @@ exit codes: 0 sent; 1 error (including PhaseBad or CtlMissing).
 """,
     "wake": """aos-daemon-ctl wake - start a sleeping proc again on the same stack
 
-usage: aos-daemon-ctl [--daemon D] wake [--reply-to BOX] [--timeout-s S] [--queue-wait-s S] NAME
+usage: aos-daemon-ctl [--daemon D] wake [--reply-to BOX] [--timeout-s S] NAME
 
 Asks a sleeping proc to start again on its recorded stack. A stopped proc needs start.
 Prints the letter name; without --reply-to, waits up to --timeout-s seconds for it to leave new/.
 
 flags:
-      --queue-wait-s S  maximum judge queue wait (non-negative; omitted = no expiry)
       --timeout-s S    positive claim timeout (default: 3); excludes --reply-to
       --reply-to BOX   send only; the reply goes to BOX
   -h, --help           show this help
@@ -138,7 +136,7 @@ usage: aos-daemon-ctl [--daemon D] pause [--timeout-s S] NAME
 
 Writes {"cmd": "pause", "seq": N} directly to the loop's ctl window and prints N.
 Waits up to --timeout-s seconds for its state ctl_seq to reach N; a timeout warns and exits 0.
-No state window means no wait. This does not route through AOS_KERNEL.
+No state window means no wait.
 
 flags:
       --timeout-s S   positive apply timeout in seconds (default: 5)
@@ -152,7 +150,7 @@ usage: aos-daemon-ctl [--daemon D] resume [--timeout-s S] NAME
 
 Writes {"cmd": "resume", "seq": N} directly to the loop's ctl window and prints N.
 Waits up to --timeout-s seconds for its state ctl_seq to reach N; a timeout warns and exits 0.
-No state window means no wait. This does not route through AOS_KERNEL.
+No state window means no wait.
 
 flags:
       --timeout-s S   positive apply timeout in seconds (default: 5)
@@ -193,7 +191,7 @@ exit codes: 0 printed; 1 error (including ProcMissing).
 usage: aos-daemon-ctl [--daemon D] ping [--timeout-s S]
 
 Sends through the same mailbox as proc letters and waits for a correlated reply.
-Prints "replied in N ms". A timeout or refusal by the judge means DaemonMissing.
+Prints "replied in N ms". No reply within the timeout means DaemonMissing.
 
 flags:
       --timeout-s S   positive reply timeout in seconds (default: 3)
@@ -233,14 +231,6 @@ def usage(cmd):
     return " ".join(" ".join(parts).split())
 
 
-def routing_warning():
-    """寄信前提醒人殼的 AOS_KERNEL 轉寄位置；共用模組不印。"""
-    kernel = os.environ.get("AOS_KERNEL")
-    if kernel:
-        aos_flags.warn(NAME, "routing via AOS_KERNEL=%s (the judge decides and forwards)" %
-                       os.path.abspath(kernel))
-
-
 def name_arg(cmd, args, flags=None):
     o, rest = aos_flags.parse(args, flags or {}, help=HELPS[cmd])
     if len(rest) != 1:
@@ -250,23 +240,6 @@ def name_arg(cmd, args, flags=None):
 
 TIMEOUT = {"--timeout-s": "timeout"}
 REPLY = dict(TIMEOUT, **{"--reply-to": "reply_to"})   # 寄信的子命令（add／rm／stop／start／sleep／wake）都收（11-05 edge-agent 題 2）
-
-QUEUE_REPLY = dict(REPLY, **{"--queue-wait-s": "queue_wait"})
-
-
-def queue_arg(o, body):
-    """選填判官排隊期限；沒有旗標就不寫欄位。"""
-    if "queue_wait" not in o:
-        return body
-    try:
-        seconds = float(o["queue_wait"])
-    except ValueError:
-        raise Fail("ArgumentsBad", "--queue-wait-s must be a finite non-negative number")
-    if not math.isfinite(seconds) or seconds < 0:
-        raise Fail("ArgumentsBad", "--queue-wait-s must be a finite non-negative number")
-    milliseconds = seconds * 1000
-    body["queue_wait_ms"] = int(milliseconds) if math.isfinite(milliseconds) else int(seconds) * 1000
-    return body
 
 
 def reply_arg(o):
@@ -301,20 +274,19 @@ def limits_arg(v):
 
 
 def deliver(d, body, reply_to=None, timeout_s=3):
-    routing_warning()
-    letter = dc.send(d, body, reply_to)
+    """人直接敲板子：一律寄這個 daemon 自己的 ctl 信箱，不看 AOS_KERNEL（使用者 11-07 選項框「aos-daemon-ctl 永遠直寄」）。"""
+    letter = dc.send(d, body, reply_to, direct=True)
     print(letter, flush=True)
     if reply_to is None:
-        box = dc.mailbox_of(d)
+        box = dc.mailbox_of(d, direct=True)
         if not dc.wait_taken(box, letter, timeout_s):
-            aos_flags.warn(NAME, "the letter %s is still in %s after %g s (the daemon, or the judge at AOS_KERNEL, is busy, paused or not running); it is applied when taken" % (letter, box, timeout_s))
+            aos_flags.warn(NAME, "the letter %s is still in %s after %g s (the daemon is busy, paused or not running); it is applied when taken" % (letter, box, timeout_s))
 
 
 def cmd_add(opts, args):
-    o, rest = aos_flags.parse(args, dict(QUEUE_REPLY, **{"--name": "name", "--ws": "ws", "--stack": "stack", "--def": "def", "--limits": "limits"}),
+    o, rest = aos_flags.parse(args, dict(REPLY, **{"--name": "name", "--ws": "ws", "--stack": "stack", "--def": "def", "--limits": "limits"}),
                               help=HELPS["add"], short=("-n", "-w", "-s"))
     seconds = timeout_arg(o, 3)
-    queue_arg(o, {})
     limits = limits_arg(o["limits"]) if o.get("limits") is not None else None
     if not rest:
         raise Fail("ArgumentsBad", "add needs one XXX")
@@ -325,7 +297,7 @@ def cmd_add(opts, args):
         extra = extra[1:]
     d = dc.find_daemon(opts.get("daemon"))
     _, body = dc.add_letter(rest[0], extra, o.get("name"), o.get("ws"), o.get("stack"), o.get("def"), limits)
-    deliver(d, queue_arg(o, body), reply_arg(o), seconds)
+    deliver(d, body, reply_arg(o), seconds)
 
 
 def cmd_rm(opts, args):
@@ -337,15 +309,14 @@ def cmd_rm(opts, args):
 def phase_cmd(cmd, key):
     """stop／start／sleep／wake：照表檢查 phase（PhaseBad）；stop、sleep 另要 loop 型（CtlMissing），然後寄 {key: [名字]}。"""
     def run(opts, args):
-        name, o = name_arg(cmd, args, QUEUE_REPLY if cmd in ("start", "wake") else REPLY)
+        name, o = name_arg(cmd, args, REPLY)
         seconds = timeout_arg(o, 3)
-        queue_arg(o, {})
         d = dc.find_daemon(opts.get("daemon"))
         row = dc.row_of(d, name)
         if cmd in ("stop", "sleep"):
             dc.need_stoppable(d, name, row)    # exec 型只有跑和拔：先報 CtlMissing（跟 11-05 前一樣）；寫了 auto_restart 的放行（11-06 no-pid P6）
         dc.need_phase(cmd, name, row)
-        deliver(d, queue_arg(o, {key: [name]}), reply_arg(o), seconds)
+        deliver(d, {key: [name]}, reply_arg(o), seconds)
     return run
 
 
@@ -408,13 +379,9 @@ def cmd_ping(opts, args):
         raise Fail("ArgumentsBad", "ping needs a positive --timeout-s value and no arguments")
     d = dc.find_daemon(opts.get("daemon"))
     started = time.monotonic()
-    routing_warning()
-    reply = dc.ping(d, seconds)
+    reply = dc.ping(d, seconds, direct=True)
     if reply is None:
         raise Fail("DaemonMissing", "no reply from the daemon at %s within %g s (busy, paused or not running; what its supervisor sees: aos-daemon-ctl ls, last line)" % (d, seconds))
-    if reply.get("applied") is False:
-        error = reply.get("error") if isinstance(reply.get("error"), dict) else {}
-        raise Fail("DaemonMissing", "the judge at AOS_KERNEL refused the ping: %s %s" % (error.get("code", "?"), error.get("msg", "")))
     print("replied in %d ms" % round((time.monotonic() - started) * 1000))
 
 

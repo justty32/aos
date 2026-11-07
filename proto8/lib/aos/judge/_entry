@@ -16,7 +16,7 @@
 #   不掛＝aos-post done --reply '{"applied": false, "error": {"code", "msg"}}'（沒 reply_to＝只收掉）；回信寄不出去＝stderr 一行、照樣收掉。壞信＝stderr 一行、丟掉。
 #     不掛的每封一律 stderr 一行提醒「judge: warning: letter <名> refused: 代號 原因」（11-05 edge-agent；stdio-unify R1 起是提醒行：拒信是判官的答案、不是它的錯）；
 #     回信的 code、msg 與這行的代號、原因同一句（英文）。回信寄不出去、壞信也是提醒行。
-#     aos-daemon-ctl --reply-to（11-05 edge-agent 題 2）帶 reply_to：aos-agent ctl 收這封 applied: false 立刻報錯，不等逾時。
+#     aos-agent ctl（11-05 edge-agent 題 2；11-07 起 aos-daemon-ctl 一律直寄 daemon、不寄判官）帶 reply_to：aos-agent ctl 收這封 applied: false 立刻報錯，不等逾時。
 #   只判斷＋轉寄，不自己跑任何東西。一輪做完退 0（沒信也是 0：身體退 10 會讓 loop／daemon 收工）。
 # 選填 queue: true：滿格信留 requests/cur/、queue.json 的 queued 陣列先來先掛；既有隊序優先，新信照 sent_at／信名排序。
 #   隊首所需新格不足時後方要新格者不能插隊；stop／ping 等不加新格的信照轉。窗 names 是新名字陣列、queued_at／expires_at 是 ISO UTC 毫秒。

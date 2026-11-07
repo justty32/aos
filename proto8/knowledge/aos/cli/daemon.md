@@ -1,4 +1,4 @@
-# Daemon procs and routing
+# Daemon procs: direct control, bypassing the judge
 
 Use aos-daemon-ctl for arbitrary procs; a sent letter is not proof that the requested change finished.
 
@@ -12,10 +12,8 @@ add detects a loop config by its final structure. Other targets run once as exec
 
 add/rm/stop/start/sleep/wake print a letter name and wait up to `--timeout-s` (default 3) for claim. A still-queued letter gives a warning and exit 0. Claim does not prove application. `--reply-to BOX` sends only; you must read the reply (`applied: true|false`). It excludes `--timeout-s`.
 
-With `$AOS_KERNEL`, these six actions and ping route through the judge. Before sending, stderr says `aos-daemon-ctl: warning: routing via AOS_KERNEL=PATH (the judge decides and forwards)`. The table still comes from the chosen daemon. Check both locations before sending.
-
-`aos-agent` also warns when routing via AOS_KERNEL. Actions on the kernel itself (start/stop/sleep/wake/rm) go directly to the daemon so a sleeping kernel can be woken.
+aos-daemon-ctl always sends straight to the chosen daemon's ctl mailbox; it never reads `$AOS_KERNEL` and bypasses any judge. To go through the judge, use `aos-agent ctl`, which routes via `$AOS_KERNEL` and warns `routing via AOS_KERNEL=PATH`. A sleeping or stopped judge is the system designer's risk: wake it by hand with `aos-daemon-ctl wake NAME` (stopped: `start`).
 
 ls/where only read files. `ls --json` prints one object. Text ls ends with a `# ` supervisor comment; skip that line in parsers. It does not prove liveness; ping asks for a reply.
 
-pause/resume write the proc's ctl window directly, bypassing AOS_KERNEL. They wait for application (default 5 s); timeout warns and exits 0. No state window means no wait.
+pause/resume write the proc's ctl window directly. They wait for application (default 5 s); timeout warns and exits 0. No state window means no wait.

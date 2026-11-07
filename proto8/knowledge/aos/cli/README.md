@@ -15,7 +15,7 @@ Read the node you need:
 - [talk_settings](talk_settings.md): messages, screens and per-agent settings.
 - [safety](safety.md): deletion, confirmation and non-terminal input.
 - [errors](errors.md): error codes, timeouts and retry decisions.
-- [daemon](daemon.md): lower-level proc control and kernel routing.
+- [daemon](daemon.md): direct proc control on one daemon (never through the judge); judge routing is aos-agent ctl.
 - [tools](tools.md): register and call tools; scratch stacks.
 - [tool_env](tool_env.md): save hub variables in registrations.
 - [tool_flags](tool_flags.md): schema-derived flags for lib tools.

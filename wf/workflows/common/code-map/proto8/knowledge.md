@@ -21,7 +21,7 @@
 | [`brain.md`](../../../../../proto8/knowledge/aos/brain.md) | Asking the brain |
 | [`cli/README.md`](../../../../../proto8/knowledge/aos/cli/README.md) | Commands for humans and external agents |
 | [`cli/agent.md`](../../../../../proto8/knowledge/aos/cli/agent.md) | Agent lifecycle |
-| [`cli/daemon.md`](../../../../../proto8/knowledge/aos/cli/daemon.md) | Daemon procs and routing |
+| [`cli/daemon.md`](../../../../../proto8/knowledge/aos/cli/daemon.md) | Daemon procs: direct control, bypassing the judge |
 | [`cli/errors.md`](../../../../../proto8/knowledge/aos/cli/errors.md) | Errors and retries |
 | [`cli/flags.md`](../../../../../proto8/knowledge/aos/cli/flags.md) | Help and flag placement |
 | [`cli/grow_screen.md`](../../../../../proto8/knowledge/aos/cli/grow_screen.md) | Function growth and ECA screens |
