@@ -13,7 +13,7 @@
 // 11-06（T7）：tick 沒寫／null／false 不管時鐘；true 或 {file?, interval_ms?, name?} 在入口展開成第一列普通 loop proc。
 //   預設 file＝daemon stack/tick、name＝_tick、interval_ms＝aos::tick_interval_ms()；exec 用內嵌單子 argv 跑 PATH 上的 aos-tick，auto_restart＝true。
 //   名字與 daemon.json 的 procs 撞到、未知 key／型別／值壞＝CfgBad；指示詞同其他設定格。後續流程不辨認哪列是時鐘。
-//   起任何子項／身體之前設 AOS_TICK＝file 絕對路徑；只有明寫 interval_ms 且不等於 1000 才設 AOS_TICK_INTERVAL，其餘繼承。
+//   起任何子項／身體之前設 AOS_TICK＝file 絕對路徑；明寫 interval_ms 就設 AOS_TICK_INTERVAL（寫 1000 也設），沒寫就繼承。
 //   改 tick 要整台 sleep 再改再 wake；兩份定義勿共用同一時鐘檔。pause 那列只停時間、工作照跑。
 //   daemon.cpp   建構子、tick 展開與環境、stack 鎖；procs.cpp 解 procs 與合併名單
 //   adopt.cpp    接回上次的表、尋找小格裡活著的子 loop

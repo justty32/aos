@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """aos-tick [旗標] FILE — 時鐘往前走一格（CONCEPTS C-44、NORMS N-01；規格 10-12「做吧」，計畫 10-21 第 4 段）。
 FILE 裡是回合數（十進位＋換行）：讀出 n、寫回 n＋1 就結束，退 0；FILE 不在＝0，所以第一次寫 1。
+讀法跟讀時鐘的人（aos-util tick.cpp、lib/tool_io.py、py/aos_ws.py）同一套：去掉前後空白、空檔＝0、十進位、不超過 signed 64-bit
+（11-07 sol 審查 #9：原本空檔報 ClockBad，daemon 的 _tick 重起三次就停、時鐘卡在 0）。
 寫進 n＋1 就代表第 n 回合結束、第 n＋1 回合開始（tock 不另外做）；mtime＝這回合從什麼時候開始。
 先寫同資料夾的 `.名字` 再改名蓋過去，讀的人不會讀到半份（N-05）；不 fsync。stdout 不吐東西。
 命令列：唯一的位置參數就是 FILE（必給、只能一個；相對路徑從 cwd 算；照字面用，`#` 不是指標——它是時鐘檔，不是設定檔）；
@@ -23,6 +25,7 @@ aos_flags.HELP = """aos-tick - move a clock file one round forward.
     aos-tick [FLAGS] FILE
 
 FILE holds the round number (decimal + newline): read n, write n+1, exit 0. A missing FILE counts as 0, so the first tick writes 1.
+Reading follows the same rule as the clock readers: surrounding whitespace is ignored, an empty FILE counts as 0, the value must fit in signed 64-bit.
 The new content goes to .FILE in the same folder first and is then renamed over FILE (readers never see half a file). stdout stays empty.
 No flags yet; -- ends the flags (FILE may start with -). Pacing, stopping and "only N rounds" belong to the loop that runs it.
 Errors: one stderr line `aos-tick: error: CODE reason`, exit 1, FILE untouched. Codes: ArgumentsBad, FlagUnknown, ClockBad, WriteFailed."""
@@ -47,12 +50,15 @@ def main():
         raw = b"0\n"
     except OSError as e:
         die("ClockBad", f"cannot read clock file {path}: {e.strerror or e}")
-    if not re.fullmatch(rb"[0-9]+\n?", raw):
-        die("ClockBad", f"clock file {path} is bad: its content is not a round number")
+    text = raw.strip(b" \t\n\r\f\v")
+    if not text:
+        text = b"0"
+    if not re.fullmatch(rb"[0-9]+", text) or int(text) >= 9223372036854775807:
+        die("ClockBad", f"clock file {path} is bad: its content is not a round number below 9223372036854775807")
     tmp = os.path.join(os.path.dirname(path), "." + os.path.basename(path))
     try:
         with open(tmp, "w", encoding="utf-8") as f:
-            f.write("%d\n" % (int(raw) + 1))
+            f.write("%d\n" % (int(text) + 1))
         os.replace(tmp, path)
     except OSError as e:
         try:

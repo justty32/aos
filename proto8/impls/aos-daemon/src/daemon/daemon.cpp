@@ -66,9 +66,9 @@ static void expand_tick(const Json& tick, const std::string& stack, Json& procs)
         expanded[n] = spec;
     }
     procs = std::move(expanded);
-    // 在任何子項（含身體）開始前設好；沒明寫或明寫 1000 都不動繼承的 interval。
+    // 在任何子項（含身體）開始前設好；明寫 interval_ms 就設（寫 1000 也設，近的贏；11-07 sol 審查 #10），沒寫不動繼承的。
     setenv("AOS_TICK", file.c_str(), 1);
-    if (opts.contains("interval_ms") && interval != 1000) {
+    if (opts.contains("interval_ms")) {
         std::string value = std::to_string(interval);
         setenv("AOS_TICK_INTERVAL", value.c_str(), 1);
     }
