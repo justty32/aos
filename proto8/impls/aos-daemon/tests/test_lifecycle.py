@@ -53,6 +53,46 @@ class Lifecycle(unittest.TestCase):
                         f.record(kind, case, row)
                     f.close()
 
+    def test_sleep_escalates_cooperative_stop_and_keeps_stopped(self):
+        f = self.fixture('sleep_stopping').start()
+        f.add(f.body('script', 'stop', seconds=30))
+        launch = f.row()['launch']
+        f.ctl('stop', 'job')
+        f.phase('stopping')
+        f.ctl('sleep', 'job')
+        row = f.phase('stopped')
+        self.assertEqual(row['code'], 143)
+        self.assertEqual(row['signal'], 15)
+        self.assertEqual(row['launch'], launch)
+        self.assertTrue(f.cell.exists())
+        f.ctl('start', 'job')
+        f.phase('running')
+        time.sleep(.2)
+        self.assertEqual(f.row()['phase'], 'running')
+        f.ctl('stop', 'job')
+        f.phase('stopping')
+        f.ctl('sleep', 'job')
+        f.phase('stopped')
+        f.close()
+        self.start_after_finish(f)
+        self.assertEqual(f.row()['phase'], 'stopped')
+        f.ctl('start', 'job')
+        f.phase('running')
+
+    def test_declared_sleep_escalates_stop_and_start_stays_running(self):
+        f = self.fixture('declared_sleep_stopping').start()
+        target = f.body('script', 'stop', seconds=30)
+        spec = {'procs_added': {'job': str(target)}, 'procs_stopped': ['job']}
+        f.add(target)
+        write(f.stack / 'procs_ctl.json', spec)
+        f.phase('stopping')
+        write(f.stack / 'procs_ctl.json', dict(spec, procs_slept=['job']))
+        self.assertEqual(f.phase('stopped')['signal'], 15)
+        write(f.stack / 'procs_ctl.json', {'procs_added': {'job': str(target)}, 'procs_started': ['job']})
+        f.phase('running')
+        time.sleep(.2)
+        self.assertEqual(f.row()['phase'], 'running')
+
     def test_finish_wakes_mailbox_targets_with_arguments(self):
         for kind in ('script', 'loop_array', 'loop_object', 'fsm'):
             with self.subTest(body=kind):

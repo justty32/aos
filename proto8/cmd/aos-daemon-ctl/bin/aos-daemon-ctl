@@ -11,7 +11,7 @@ subcommands:
   prune [--older-than DUR] [--apply]   check rows; preview or detach old stopped / sleeping rows
   stop NAME      write its public ctl and wait for exit (row stays as stopped)
   start NAME     start a stopped one again on the same stack
-  sleep NAME     SIGTERM now (row stays as sleeping; wakes when the daemon restarts)
+  sleep NAME     SIGTERM now (running stays sleeping; stopping stays stopped)
   wake NAME      start a sleeping one again on the same stack
   pause NAME     write {"cmd": "pause", "seq": N} to its ctl window; prints N
   resume NAME    the same with "resume"
@@ -42,8 +42,7 @@ usage: aos-daemon-ctl [--daemon D] prune [--older-than DUR] [--apply]
                       [--reply-to BOX] [--timeout-s S]
 
 Checks missing stacks (except pending stopped / sleeping rows with no pid or exit
-code), existing ctl files that are not JSON objects, stale
-running / stopping process identities, and stopped reasons. Reports one line per
+code), existing ctl files that are not JSON objects, and stopped reasons. Reports one line per
 suspicious row: NAME: PHASE: PROBLEM. Findings alone exit 0.
 
 Without --older-than, only checks. With it, previews old stopped / sleeping rows:
@@ -114,7 +113,8 @@ Writes {"cmd": "stop", "seq": N} through the daemon to the proc control window.
 The daemon waits for it to exit, then keeps the row stopped; use start to run it again.
 The file is the parent-written loop config's nonempty ctl, or ctl.json in the proc stack.
 A proc that does not read ctl keeps running until it exits itself. A write failure warns
-and keeps waiting; stop never falls back to SIGTERM. Prints the letter name.
+and keeps waiting; stop never falls back to SIGTERM. Use sleep while stopping to send SIGTERM
+and keep the row stopped, or rm to detach it. Prints the letter name.
 Without --reply-to, waits up to --timeout-s seconds for the letter to leave new/.
 
 flags:
@@ -138,12 +138,14 @@ flags:
 
 exit codes: 0 sent; 1 error (including PhaseBad).
 """,
-    "sleep": """aos-daemon-ctl sleep - put a running proc to sleep now
+    "sleep": """aos-daemon-ctl sleep - send SIGTERM to a running or stopping proc now
 
 usage: aos-daemon-ctl [--daemon D] sleep [--reply-to BOX] [--timeout-s S] NAME
 
 Asks the daemon to SIGTERM any running proc now (SIGKILL after 10s if needed).
-The row stays sleeping and the stack is kept; wake or a daemon restart starts it again.
+A running row stays sleeping; wake or a daemon restart starts it again.
+A row already stopping after stop stays stopped; use start to run it again.
+The stack and recorded launch entry are kept.
 Sleep does not write ctl: the public control protocol has no sleep command.
 Prints the letter name; without --reply-to, waits up to --timeout-s seconds for it to leave new/.
 

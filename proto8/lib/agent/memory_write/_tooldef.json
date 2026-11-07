@@ -5,10 +5,10 @@
       "op": {"type": "string", "enum": ["add", "edit", "rm"]},
       "path": {"type": "string", "description": "Node path without extension; root is read-only."},
       "text": {"type": "string", "description": "Required for add/edit; full UTF-8 text, at most 8000 bytes. JSON leaves require valid JSON."},
-      "recursive": {"type": "boolean", "default": false, "description": "Allow rm to delete a whole subtree; symlinks are only unlinked."}
+      "recursive": {"type": "boolean", "default": false, "description": "Allow rm to delete a whole subtree; root-level symlinks return PathBad; deeper symlinks are only unlinked."}
     },
     "required": ["op", "path"]
   },
-  "errors": ["ArgumentsBad", "OpUnknown", "PathBad", "MemoryMissing", "CfgBad", "NodeMissing", "NodeExists", "ChildrenExist", "TextBad", "LockFailed", "WriteFailed", "ReadFailed", "LaunchFailed", "TickBad"],
+  "errors": ["ArgumentsBad", "OpUnknown", "PathBad", "MemoryMissing", "CfgBad", "NodeMissing", "NodeExists", "ChildrenExist", "TextBad", "LockFailed", "WriteFailed", "ReadFailed", "LaunchFailed"],
   "env": ["AOS_MEMORY"]
 }

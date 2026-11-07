@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# memory - 唯讀查詢共用知識庫：read 節點或 JSON Pointer、ls 列子節點、find 關鍵字搜尋。
+# memory - 唯讀查詢共用知識庫：read 節點或 JSON Pointer、ls 列子節點、find 關鍵字與單一標籤搜尋。
 # 規劃：proto8/thinking/2026-11/05/agent-knowledge/01-層級式記憶工具.md（使用者 11-05 下午「層級式記憶工具」）。
-# 介面（lib/README 的契約）：stdin 收 {"op": "read"|"ls"|"find", "path"?: "…", "query"?: "…", "max_bytes"?: N}。
+# 介面（lib/README 的契約）：stdin 收 {"op": "read"|"ls"|"find", "path"?: "…", "query"?: "…", "tag"?: "…", "max_bytes"?: N}。
 #   知識庫根目錄（腦不能挑）：① 工具資料夾（$AOS_CD）裡的 _memory.json 的 "base"（定義配的；相對＝從那個資料夾算）＞
 #   ② $AOS_MEMORY（相對路徑從 $AOS_DAEMON 算，沒有＝從 cwd）；都沒有＝MemoryMissing；設定檔壞＝CfgBad。再解開捷徑。
 #   要給某隻 agent 指定知識庫：定義的 tools/memory/ 不用捷徑、改成一個小資料夾——_entry 是一行單子 ["<到 lib>/lib/agent/memory/_entry"]（不能是捷徑：aos-exec 解開捷徑後 $AOS_CD 會變成 lib 那格）、_tooldef.json／_metainfo.json 可以是捷徑，
@@ -14,9 +14,9 @@
 #   stdout 純文字、第一行 node: <路徑>（根＝/）：
 #     read＝文（預設最多 8000 bytes，超過附 [truncated: N more bytes]）＋children: 目錄（每行「  名  摘要」，資料夾名後加 /）；
 #     ls＝只印 children:（沒有＝children: (none)）；
-#     find＝path 底下（含自己）標題、摘要、本文含 query（不分大小寫）的節點，matches: 每行「  路徑  標題」，最多 20 個再加 … N more。
+#     find＝path 子樹（含自己）內含 query（不分大小寫）且符合單一 tag（逐字）的節點；至少給一個條件，matches 最多 20 個。
 # 錯：stderr 與 stdout 各一行「memory: error: 代號 原因」、退 1：ArgumentsBad（stdin 不是 JSON 物件、op 沒給、max_bytes 不是正整數、
-#   find 沒 query）、OpUnknown、PathBad、MemoryMissing（沒設、空、不是資料夾）、NodeMissing（附父節點的子節點名）、
+#   find 沒 query 或 tag）、OpUnknown、PathBad、MemoryMissing（沒設、空、不是資料夾）、NodeMissing（附父節點的子節點名）、
 #   ReadFailed（檔在但讀不了、不是 UTF-8；grep 退 2——grep 自己的 stderr 原樣透出，這裡只多寫自己一行，stdio-unify R10）、LaunchFailed（PATH 上沒有 grep）。
 #   --help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉 grep，退 130）。
 # 不寫任何檔、不碰 $AOS_WS。子行程只有 find 的 grep；被 TERM 時先收掉它再走（lib 契約規則 5）。
@@ -27,7 +27,9 @@ import json, os, re, signal, subprocess, sys
 HELP = """\
 usage: memory < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Read a shared, hierarchical, read-only knowledge base: op read (a node's text and
-its children), ls (children only), find (nodes containing query).
+its children), ls (children only), find (nodes containing query and/or an exact tag).
+find needs a non-empty query or a string tag; when both are given, both must match.
+Tags come from JSON leaves or a directory's _tags.json (top-level tags string array).
 read path may append #/JSON/Pointer (RFC6901, ~0 = ~, ~1 = /); only .json
 leaf nodes support pointers. Returns the selected value as JSON, within max_bytes.
 ls/find reject #. Errors: PathBad (invalid path/pointer), TargetBad (not a JSON
@@ -178,14 +180,48 @@ def file_node(root, f):
     return segs
 
 
-def op_find(root, segs, query):
+def node_tags(kind, where):
+    """讀節點自己的字串標籤；壞資料視為沒有標籤。"""
+    source = os.path.join(where, "_tags.json") if kind == "dir" else where
+    if not source.endswith(".json"):
+        return []
+    try:
+        with open(source, encoding="utf-8") as handle:
+            value = json.load(handle)
+    except (OSError, ValueError):
+        return []
+    tags = value.get("tags") if isinstance(value, dict) else None
+    return tags if isinstance(tags, list) and all(isinstance(t, str) for t in tags) else []
+
+
+def walk_nodes(segs, kind, where, ancestors=frozenset()):
+    """循既有節點優先序列出子樹，包含沒有 README 的資料夾。"""
+    yield segs, kind, where
+    real = os.path.realpath(where)
+    if kind != "dir" or real in ancestors:
+        return
+    ancestors = ancestors | {real}
+    for name, is_dir in children(kind, where):
+        ck, cw = ("dir", os.path.join(where, name)) if is_dir else ("leaf", leaf_file(os.path.join(where, name)))
+        yield from walk_nodes(segs + [name], ck, cw, ancestors)
+
+
+def op_find(root, segs, query, tag):
     kind, where = node_or_die(root, segs)
     hits = []
-    for f in grep(query, where):
-        s = file_node(root, f)
-        if s is None:
+    if query is not None:
+        candidates = []
+        for f in grep(query, where):
+            s = file_node(root, f)
+            if s is not None:
+                ck, cw = locate(root, s)
+                candidates.append((s, ck, cw))
+    else:
+        candidates = walk_nodes(segs, kind, where)
+    for s, ck, cw in candidates:
+        if tag is not None and tag not in node_tags(ck, cw):
             continue
-        title, _ = title_summary(read_text("leaf", f, strict=False), f)   # 標題從命中的檔讀
+        title, _ = title_summary(read_text(ck, cw, strict=False), cw if ck == "leaf" else "")
         hits.append((show(s), title or (s[-1] if s else "/")))
     hits.sort()
     print("node: %s" % show(segs))
@@ -211,8 +247,14 @@ max_bytes = args.get("max_bytes", DEFAULT_MAX_BYTES)
 if isinstance(max_bytes, bool) or not isinstance(max_bytes, int) or max_bytes <= 0:
     die("ArgumentsBad", "max_bytes must be a positive integer")
 query = args.get("query")
-if op == "find" and (not isinstance(query, str) or not query):
-    die("ArgumentsBad", "find needs query (a non-empty string)")
+tag = args.get("tag")
+if op == "find":
+    if "query" in args and (not isinstance(query, str) or not query):
+        die("ArgumentsBad", "query must be a non-empty string")
+    if "tag" in args and not isinstance(tag, str):
+        die("ArgumentsBad", "tag must be a string")
+    if query is None and tag is None:
+        die("ArgumentsBad", "find needs query or tag")
 if op == "read":
     segs, pointer = memory_fs.parse_read_path(args.get("path"))
 else:
@@ -225,4 +267,4 @@ if op == "read":
 elif op == "ls":
     op_ls(root, segs)
 else:
-    op_find(root, segs, query)
+    op_find(root, segs, query, tag)

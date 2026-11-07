@@ -1,5 +1,5 @@
 {
-  "description": "Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the child you need; find searches by keyword. Errors: NodeMissing (the line lists what exists), PathBad, MemoryMissing (no knowledge base is set up for you: say so).",
+  "description": "Look things up in the shared, read-only knowledge base. Start with op read and no path (the root); the root tells you what exists. Then read the child you need; find searches by keyword and/or a single exact tag (both conditions must match when supplied). Errors: NodeMissing (the line lists what exists), PathBad, MemoryMissing (no knowledge base is set up for you: say so).",
   "env": [
     "AOS_MEMORY"
   ],
@@ -26,20 +26,24 @@
           "ls",
           "find"
         ],
-        "description": "read = show a node's text and its children; ls = list its children only; find = search nodes by keyword"
+        "description": "read = show a node's text and its children; ls = list its children only; find = search nodes by keyword and/or a single exact tag"
       },
       "path": {
         "type": "string",
-        "description": "node path like agents/spawn (lowercase segments joined by /); empty or / is the root; read also accepts node#/JSON/Pointer (RFC6901 ~0/~1 escapes), only on .json leaves; ls/find reject #"
+        "description": "node path like agents/spawn (lowercase segments joined by /); empty or / is the root; read also accepts node#/JSON/Pointer (RFC6901 ~0/~1 escapes), only on .json leaves; ls/find reject #; a link value is a string `node/path#/json/pointer`; follow it with read"
       },
       "query": {
         "type": "string",
-        "description": "keyword for find (case-insensitive)"
+        "description": "Non-empty keyword for find (case-insensitive); query or tag is required, and both must match when supplied."
       },
       "max_bytes": {
         "default": 8000,
         "type": "integer",
         "description": "read: most bytes of node text to show (default 8000)"
+      },
+      "tag": {
+        "type": "string",
+        "description": "Single exact, case-sensitive tag for find. Read from top-level tags string arrays in JSON leaves or directory _tags.json; malformed tags are ignored. Query or tag is required."
       }
     },
     "required": [

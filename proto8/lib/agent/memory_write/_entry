@@ -26,6 +26,7 @@ HELP = """\
 usage: memory_write [FLAGS] < ARGUMENTS.json   (a tool: run it with aos-exec)
 Add, replace or remove shared knowledge nodes. The root is configured by
 _memory.json next to the tool, otherwise AOS_MEMORY; the root itself is read-only.
+rm rejects root-level symlinks with PathBad; deeper symlinks are only unlinked.
 Result on stdout: node: PATH, then written N bytes or removed.
 On error: one line "memory_write: error: CODE reason" on stderr and stdout, exit 1.
 """

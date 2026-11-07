@@ -22,18 +22,17 @@ def need_ctl(d, name, row=None):
     return stack, os.path.join(stack, c if isinstance(c, str) and c else "ctl.json")
 
 
-# 11-05 portable-flow 衝突 1「嚴格分」：每個動詞只收一種 phase；用錯的提示（照表上的 phase 給下一步）
+# 11-05 portable-flow 衝突 1「嚴格分」：sleep 另收 stopping，其餘動詞只收一種 phase；用錯的提示（照表上的 phase 給下一步）
 PHASE_OK = {"stop": "running", "sleep": "running", "start": "stopped", "wake": "sleeping"}
 PHASE_HINT = {
     ("stop", "sleeping"): "%s is sleeping (no need to stop it); wake it first, then stop, or just rm",
     ("stop", "stopped"): "%s is already stopped",
-    ("stop", "stopping"): "%s is stopping; wait until it has stopped; if it never stops (stuck, or SIGSTOP), rm it (TERM, then KILL after 10s)",
+    ("stop", "stopping"): "%s is stopping; wait until it has stopped; if it never stops (stuck, or SIGSTOP), use sleep to keep it stopped, or rm to detach it (TERM, then KILL after 10s)",
     ("sleep", "sleeping"): "%s is already sleeping",
     ("sleep", "stopped"): "%s is stopped (no need to sleep it); start brings it back",
-    ("sleep", "stopping"): "%s is stopping; wait until it has stopped; if it never stops (stuck, or SIGSTOP), rm it (TERM, then KILL after 10s)",
     ("start", "sleeping"): "%s is sleeping; use wake (start only starts stopped ones)",
     ("start", "running"): "%s is already running",
-    ("start", "stopping"): "%s is stopping; start it after it has stopped; if it never stops (stuck, or SIGSTOP), rm it (TERM, then KILL after 10s)",
+    ("start", "stopping"): "%s is stopping; start it after it has stopped; if it never stops (stuck, or SIGSTOP), use sleep to keep it stopped, or rm to detach it (TERM, then KILL after 10s)",
     ("wake", "stopped"): "%s is stopped; use start (wake only wakes sleeping ones)",
     ("wake", "running"): "%s is awake (running); no need to wake it",
     ("wake", "stopping"): "%s is stopping, not sleeping",
@@ -44,6 +43,8 @@ def need_phase(cmd, name, row):
     ph = row.get("phase")
     if ph == "stuck":
         ph = "running"
+    if cmd == "sleep" and ph == "stopping":
+        return
     if ph != PHASE_OK[cmd]:
         msg = PHASE_HINT.get((cmd, ph), "%%s is %s; %s only takes %s ones" % (ph, cmd, PHASE_OK[cmd]))
         raise Fail("PhaseBad", msg % name)

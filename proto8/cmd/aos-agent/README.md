@@ -93,4 +93,4 @@ aos-agent [--daemon D] llm [--target 名字] [show|set 鍵=值...|reset [--yes]]
 
 併自 extras/eca 的那段，在 [docs/02-已知限制](docs/02-已知限制.md)；tools 覆蓋層的邊在 [docs/03](docs/03-tools覆蓋層.md#已知的邊)。
 
-**11-07 裁定 B**：body.json 是陣列或 argv 物件都原樣經 aos-exec 起，不再辨認 aos-loop 來改掛法。任何 body 都可 stop／sleep；stop 寫公開 ctl 並等自行退（不讀 ctl 的就等它自己結束），sleep 送 SIGTERM。非 0 留 stopped＋reason、修好 ctl start；退 0 才下表（adopt 拿不到碼另算），收工時 running 的睡下（sleeping），stop 途中的留 stopped，sleep 途中的睡下，rm 途中的拿掉；收工途中被 kill -9，重開時照表上的 `stop_mode` 做，結果一樣。睡下的開門自動 wake。
+**11-07 裁定 B**：body.json 是陣列或 argv 物件都原樣經 aos-exec 起，不再辨認 aos-loop 來改掛法。任何 body 都可 stop／sleep；stop 寫公開 ctl 並等自行退（不讀 ctl 的就等它自己結束），sleep 送 SIGTERM；stop 中的 stopping 列也能 sleep，退後保留 stopped 與 launch，用 ctl start 再起。非 0 留 stopped＋reason、修好 ctl start；退 0 才下表（adopt 拿不到碼另算），收工時 running 的睡下（sleeping），stop 途中的留 stopped，sleep 途中的睡下，rm 途中的拿掉；收工途中被 kill -9，重開時照表上的 `stop_mode` 做，結果一樣。睡下的開門自動 wake。

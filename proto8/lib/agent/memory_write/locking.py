@@ -16,8 +16,11 @@ def run_lock(args, release=False):
         # Defer termination until the short-lived command has a known result.
         old = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT})
         try:
+            env = dict(os.environ)
+            env.pop("AOS_TICK", None)
+            env.pop("AOS_TICK_INTERVAL", None)
             child = subprocess.Popen(["aos-lock"] + args, stdin=subprocess.DEVNULL,
-                                     stdout=subprocess.PIPE)
+                                     stdout=subprocess.PIPE, env=env)
             out, _ = child.communicate(timeout=5)
             return child.returncode, out
         except subprocess.TimeoutExpired:
@@ -54,18 +57,12 @@ def holder(folder):
 def live(folder, value):
     lease = value.get("lease_ticks")
     if lease is not None:
-        tick = tool_io.now_tick()
-        acquired = value.get("acquired_at_ticks")
-        if tick is not None and acquired is not None:
-            if tick >= acquired + lease:
+        try:
+            at = datetime.datetime.fromisoformat(value["acquired_at"].replace("Z", "+00:00"))
+            if time.time() >= at.timestamp() + lease:
                 return False
-        else:
-            try:
-                at = datetime.datetime.fromisoformat(value["acquired_at"].replace("Z", "+00:00"))
-                if time.time() >= at.timestamp() + lease * tool_io.tick_interval_ms() / 1000:
-                    return False
-            except (KeyError, TypeError, ValueError):
-                tool_io.die("LockFailed", "invalid lease in aos-lock show result")
+        except (KeyError, TypeError, ValueError):
+            tool_io.die("LockFailed", "invalid lease in aos-lock show result")
     if value.get("flock") is True:
         try:
             with open(os.path.join(folder, ".lock", "holder.flock"), "rb") as stream:
@@ -111,14 +108,12 @@ def with_lock(folder, note):
         tool_io.die("NodeMissing", "node was removed while waiting for its lock")
     if not os.access(folder, os.W_OK | os.X_OK):
         tool_io.die("WriteFailed", "%s: permission denied (this folder is read-only for you; write elsewhere or report)" % folder)
-    interval = tool_io.tick_interval_ms()
-    lease = (10000 + interval - 1) // interval
     # Keep signals blocked through acquired-state registration so finally can release.
     old = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT})
     acquired = False
     held = HeldLock(folder)
     try:
-        code, _ = run_lock(["acquire", "--wait-ms", "3000", "--lease-ticks", str(lease),
+        code, _ = run_lock(["acquire", "--wait-ms", "3000", "--lease-ticks", "10",
                             "--note", note, folder + "/"])
         acquired = code == 0
         signal.pthread_sigmask(signal.SIG_SETMASK, old)

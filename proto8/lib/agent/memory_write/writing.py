@@ -129,11 +129,15 @@ def edit(root, segs, text):
 
 def remove(root, segs, recursive):
     kind, where = fs.node_or_die(root, segs)
+    if len(segs) == 1 and os.path.islink(where):
+        tool_io.die("PathBad", "root-level symlinks are read-only; a human manages them")
     # Unlinking a link changes its containing directory, never its target.
     folder = os.path.dirname(where)
     with with_lock(folder, "memory_write rm " + fs.show(segs)) as locked:
         clean_old(locked.folder)
         kind, where = fs.node_or_die(root, segs)
+        if len(segs) == 1 and os.path.islink(where):
+            tool_io.die("PathBad", "root-level symlinks are read-only; a human manages them")
         if os.path.islink(where):
             os.unlink(where)
         elif kind == "leaf":

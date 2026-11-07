@@ -18,7 +18,7 @@
 #       不把下層提醒行接進給腦的結果；下層 stderr 仍原樣透出。
 #   new／add／rm：ctl_timeout_s＝等 daemon 掛上或移除的秒數，預設 30、上限 1700；子行程保險至少多 30 秒。
 #   say {name, text}           寄一句（aos-agent say，話走 stdin）、馬上回，印信件名稱
-#   ask {name, text, timeout_s?}  say＋listen --timeout-s（預設 600、有限正數最多 ASK_MAX_S＝2147453 秒；timeout_ticks 正整數最多
+#   ask {name, text, timeout_s?}  say＋listen --timeout-s（預設 600、有限正數不設上限；timeout_ticks 正整數最多
 #       ASK_MAX_TICKS＝9223372036854775777，且目前時鐘／間隔要容得下加 30 ticks 的期限；超過在起子程序前報 ArgumentsBad）印回答
 #   rm {name, ctl_timeout_s?}                  ctl rm（刪子的 stack；aos-agent 的保護規則照舊）
 #   ls                         一行 JSON {"agents": ctl ls --json 的表, "children": [我生的名字], "max_children": N}
@@ -37,9 +37,8 @@
 #   （給腦用的工具把下層錯翻成自己的錯；AddRejected、InstanceExists、InterfaceMissing、AnswerMissing、ToolExists…）；沒那行＝CommandFailed。
 #   op 沒給＝ArgumentsBad，給了不認得才 OpUnknown（R11）。--help＝英文說明印 stdout、退 0；Ctrl-C 同 TERM（先收掉那一群，退 130）。
 # 工具自己不跑 agent：全是 aos-agent 的轉手；每次叫 aos-agent 都有逾時，自己被 TERM 時先收掉那一群再走（規則 5）。
-import json, os, re, shutil, signal, subprocess, sys
+import json, os, re, shutil, signal, subprocess, sys, math, time
 ASK_DEFAULT_S = 600
-ASK_MAX_S = 2147453            # poll／epoll 最多 2^31-1 毫秒；扣掉子步保險 30 秒，再向下取整
 ASK_MAX_TICKS = 9223372036854775807 - 30  # 目前 tick／UTC 毫秒與間隔還會再縮小可接受範圍
 HELP = """\
 usage: agents < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
@@ -48,13 +47,13 @@ New copies a template and applies files, brain settings and tools before startin
 Add starts an existing definition; changes go in the child's overlay.
 on_queued: new, add choose fail (default) or ok (return queue position; starts when a slot frees).
 ctl_timeout_s: new, add, rm wait for the daemon; default 30 seconds, at most 1700.
-Ask waits for finite positive timeout_s (default 600 seconds, at most %d), or positive timeout_ticks
+Ask waits for finite positive timeout_s (default 600 seconds, no upper limit), or positive timeout_ticks
 (at most %d; the current clock/interval must also fit 30 extra ticks). ls returns JSON with agents, children and max_children.
 ws: relative to your workspace, or absolute; default = your workspace.
 Quota: max_children from agents.json (definition, overridden by stack; default 4).
 Over quota = ChildSlotMissing, nothing is sent.
 Result on stdout. On error: "agents: error: CODE reason" on stderr and stdout, exit 1.
-""" % (ASK_MAX_S, ASK_MAX_TICKS)
+""" % ASK_MAX_TICKS
 HERE = os.path.dirname(os.path.realpath(__file__))
 sys.dont_write_bytecode = True                  # 不在庫的資料夾留 __pycache__
 # 只找自己的工具夾、realpath 祖先的 lib，再交給標準 Python 路徑。
@@ -125,14 +124,15 @@ def agent(argv, text=None, timeout_s=STEP_S, timeout_ticks=None):
     except OSError as e:
         die("LaunchFailed", "cannot start %s (is it on PATH?): %s" % (cmd[0], e))
     try:
+        end = time.monotonic() + timeout_s
         payload = None if text is None else text.encode("utf-8")
         while True:
             try:
-                out, err = child.communicate(payload, timeout=0.2 if deadline is not None else timeout_s)
+                out, err = child.communicate(payload, timeout=0.2 if deadline is not None else min(86400, max(0, end - time.monotonic())))
                 break
             except subprocess.TimeoutExpired:
                 payload = None
-                if deadline is not None and not tool_io.expired(deadline):
+                if (not tool_io.expired(deadline) if deadline is not None else time.monotonic() < end):
                     continue
                 die("CommandFailed", "%s %s did not finish in %s (killed)" %
                     (cmd[0], " ".join(argv[:2]), "%d ticks" % timeout_ticks if deadline is not None else "%d s" % timeout_s))
@@ -463,8 +463,8 @@ if op == "ask":
         if timeout_ticks > max_ticks:
             die("ArgumentsBad", "timeout_ticks plus 30 extra ticks exceeds the current clock/interval range")
     timeout_s = args.get("timeout_s", ASK_DEFAULT_S)
-    if isinstance(timeout_s, bool) or not isinstance(timeout_s, (int, float)) or not 0 < timeout_s <= ASK_MAX_S:
-        die("ArgumentsBad", "timeout_s must be a finite positive number at most %d" % ASK_MAX_S)
+    if isinstance(timeout_s, bool) or not isinstance(timeout_s, (int, float)) or not timeout_s > 0 or not math.isfinite(timeout_s):
+        die("ArgumentsBad", "timeout_s must be a finite positive number")
 daemon = os.environ.get("AOS_DAEMON")
 if not daemon:
     die("DaemonMissing", "AOS_DAEMON is not set (this tool attaches agents to the daemon that runs you)")

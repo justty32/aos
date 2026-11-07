@@ -125,8 +125,9 @@ void Daemon::reconcile(const Json& want, const Names& stopped, const Names& slep
                 c.nap = true;    // 11-05 sleep：同收工那套，退了列留成 sleeping
                 term(c);
             }
-        } else if (c.phase == "stopping" && c.soft && !c.termed && !in) {
-            term(c);             // 等它自己退的途中被 rm：改送 SIGTERM
+        } else if (c.phase == "stopping" && c.soft && !c.termed && (!in || slept.count(n) > 0)) {
+            slept_.erase(n);     // stop 中的 sleep 只升級停止，不留下之後 start 又睡下的意圖
+            term(c);             // 等它自己退的途中收到 sleep／rm：改送 SIGTERM；soft 保留，sleep 退後仍 stopped
         }
         ++it;
     }

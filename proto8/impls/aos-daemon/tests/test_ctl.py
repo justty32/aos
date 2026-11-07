@@ -42,7 +42,10 @@ class Control(unittest.TestCase):
     def test_all_stopped_and_sleeping_rows_reject_wrong_phase(self):
         for cmd, valid in (('stop', 'running'), ('sleep', 'running'), ('start', 'stopped'), ('wake', 'sleeping')):
             dc.need_phase(cmd, 'job', {'phase': valid})
-            for invalid in {'running', 'stopping', 'stopped', 'sleeping'} - {valid}:
+            valid_phases = {valid, 'stopping'} if cmd == 'sleep' else {valid}
+            for phase in valid_phases:
+                dc.need_phase(cmd, 'job', {'phase': phase})
+            for invalid in {'running', 'stopping', 'stopped', 'sleeping'} - valid_phases:
                 with self.assertRaises(dc.Fail) as got:
                     dc.need_phase(cmd, 'job', {'phase': invalid})
                 self.assertEqual(got.exception.code, 'PhaseBad')
@@ -66,6 +69,41 @@ class Control(unittest.TestCase):
             with patch.object(common, 'daemon_path', return_value=str(self.root)), \
                  patch.object(dc, 'row_of', return_value={'phase': phase}):
                 self.assertEqual(common.phase_body(cmd, 'job'), {'procs_' + key: ['job']})
+
+    def test_agent_sleep_waits_for_stopped_when_escalating(self):
+        from aos_agent.ctl import phase
+        agent = SimpleNamespace(name='job', phase='stopping', stack=str(self.root))
+        def wait(cmd, body, reached, *args, **kwargs):
+            self.assertEqual(cmd, 'sleep')
+            self.assertEqual(body, {'procs_slept': ['job']})
+            self.assertTrue(reached(None))
+        with patch.object(phase, 'need_table'), patch.object(phase, 'target', return_value=agent), \
+             patch.object(phase, 'phase_body', return_value={'procs_slept': ['job']}), \
+             patch.object(phase, 'row_named', side_effect=[{'phase': 'stopping', 'stop_mode': 'stop'}, {'phase': 'stopped'}]), \
+             patch.object(phase.aos_ws, 'history', return_value=[]), \
+             patch.object(phase, 'ctl_wait', side_effect=wait), \
+             contextlib.redirect_stdout(io.StringIO()) as out:
+            phase.cmd_sleep([])
+        self.assertIn('stopped, stack kept', out.getvalue())
+        self.assertIn('ctl start', out.getvalue())
+
+    def test_agent_sleep_keeps_sleep_and_remove_pending_modes(self):
+        from aos_agent.ctl import phase
+        for mode in ('sleep', 'remove', None):
+            with self.subTest(mode=mode):
+                agent = SimpleNamespace(name='job', phase='stopping' if mode else 'running', stack=str(self.root))
+                first = {'phase': agent.phase, 'stop_mode': mode}
+                last = None if mode == 'remove' else {'phase': 'sleeping'}
+                def wait(cmd, body, reached, *args, **kwargs):
+                    self.assertTrue(reached(None))
+                with patch.object(phase, 'need_table'), patch.object(phase, 'target', return_value=agent), \
+                     patch.object(phase, 'phase_body', return_value={'procs_slept': ['job']}), \
+                     patch.object(phase, 'row_named', side_effect=[first, last]), \
+                     patch.object(phase.aos_ws, 'history', return_value=[]), \
+                     patch.object(phase, 'ctl_wait', side_effect=wait), \
+                     contextlib.redirect_stdout(io.StringIO()) as out:
+                    phase.cmd_sleep([])
+                self.assertIn('asleep, stack kept', out.getvalue())
 
     def test_agent_off_table_does_not_claim_a_known_failure_disappears(self):
         a = SimpleNamespace(name='job', stack=str(self.root))
@@ -125,20 +163,19 @@ class Prune(unittest.TestCase):
         write(custom / 'loop.json', {'ctl': 'control.json'})
         (custom / 'control.json').write_text('{broken')
         self.row('gone', 'running', pid=2147483647, started_at_ticks=1)
-        ticks = int(Path('/proc/self/stat').read_text().rsplit(')', 1)[1].split()[19])
-        self.row('reused', 'stopping', pid=os.getpid(), started_at_ticks=ticks + 1)
-        self.row('live', 'running', pid=os.getpid(), started_at_ticks=ticks)
+        self.row('reused', 'stopping', pid=os.getpid(), started_at_ticks=-1)
+        self.row('live', 'running')
         self.row('healthy')
         result = self.ctl('prune')
         self.assertEqual((result.returncode, result.stderr), (0, ''))
         lines = result.stdout.splitlines()
-        self.assertEqual(len(lines), 5, result.stdout)
+        self.assertEqual(len(lines), 3, result.stdout)
         self.assertIn('missing: stopped: stack missing', lines)
         self.assertIn('bad: stopped: ctl is not a JSON object:', result.stdout)
         self.assertIn('failed with tabs', result.stdout)
         self.assertIn('control.json', result.stdout)
-        self.assertIn('gone: running: recorded pid 2147483647 is not alive', lines)
-        self.assertIn('different started_at_ticks', result.stdout)
+        self.assertNotIn('gone:', result.stdout)
+        self.assertNotIn('reused:', result.stdout)
         self.assertNotIn('live:', result.stdout)
         self.assertNotIn('healthy:', result.stdout)
 

@@ -141,30 +141,8 @@ def duration(value):
     return number * {"s": 1, "m": 60, "h": 3600, "d": 86400}[match[2]]
 
 
-def process_problem(row):
-    """與 aos-util proc_started_at_ticks 同算法：從 stat 最後的右括號後數第 20 欄。"""
-    pid, ticks = row.get("pid"), row.get("started_at_ticks")
-    if type(pid) is not int or pid <= 0 or type(ticks) is not int or ticks < 0:
-        return "invalid recorded pid or started_at_ticks"
-    path = "/proc/%d/stat" % pid
-    try:
-        with open(path, encoding="utf-8", errors="replace") as fh:
-            text = fh.read()
-    except FileNotFoundError:
-        return "recorded pid %d is not alive" % pid
-    except OSError as exc:
-        return "cannot read %s: %s" % (path, exc)
-    try:
-        current = int(text[text.rindex(")") + 1:].split()[19])
-    except (ValueError, IndexError):
-        return "cannot parse %s" % path
-    if current != ticks:
-        return "recorded pid %d has different started_at_ticks" % pid
-    return None
-
-
 def inspect_row(d, name, row):
-    """檢查 stack、公開 ctl、行程身分與 reason；待起列不要求 stack，不讀子項私有語意。"""
+    """檢查 stack、公開 ctl 與 reason；待起列不要求 stack，不讀子項私有語意。"""
     from .ctl import need_ctl
 
     stack, ctl = need_ctl(d, name, row)
@@ -184,10 +162,6 @@ def inspect_row(d, name, row):
         problems.append("ctl is not a JSON object: %s" % ctl)
     except OSError as exc:
         problems.append("cannot read ctl %s: %s" % (ctl, exc))
-    if row.get("phase") in {"running", "stopping"}:
-        problem = process_problem(row)
-        if problem:
-            problems.append(problem)
     if row.get("phase") == "stopped" and row.get("reason") is not None:
         problems.append(str(row["reason"]))
     return "; ".join(problems)

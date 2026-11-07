@@ -16,7 +16,7 @@
 
 ## prune：自檢與清理舊列
 
-`aos-daemon-ctl [--daemon D] prune [--older-than DUR] [--apply]`：每次先自檢，一列一行 `NAME: PHASE: PROBLEM`。檢查 stack 不在、存在的公開 ctl 不是 JSON 物件、running／stopping 的 pid 與 `/proc` 啟動 ticks 對不上，以及 stopped 的 reason；同列問題用分號接，正常列不印，發現問題仍退 0。ctl 沿用 stop 的選法，不解讀子項私有檔案。
+`aos-daemon-ctl [--daemon D] prune [--older-than DUR] [--apply]`：每次先自檢，一列一行 `NAME: PHASE: PROBLEM`。檢查 stack 不在、存在的公開 ctl 不是 JSON 物件、以及 stopped 的 reason；不讀 `/proc` 或自行比對行程身分；同列問題用分號接，正常列不印，發現問題仍退 0。ctl 沿用 stop 的選法，不解讀子項私有檔案。
 
 `--older-than` 只收正整數加 `s/m/h/d`（如 `30s`、`15m`、`12h`、`7d`）。只選 stopped／sleeping：stack 本身及直接底下檔案最新 mtime 嚴格早於門檻才印 `NAME: would remove (last change ISO_TIME)`；不遞迴。stack 不在算無限久、時間印 `stack missing`。running／stopping 不清。
 

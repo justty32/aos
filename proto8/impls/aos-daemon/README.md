@@ -67,4 +67,4 @@ AOS_STACK=$PWD/.stack/ aos-daemon --enable-logs daemon.json     # 慣例用法�
 <a id="實作注意"></a>
 <a id="建置與測試"></a>
 
-**11-07 使用者裁定 B：daemon 不分類。** 起法照舊，之後 stop 一律寫公開 ctl（父寫的 loop 設定有非空 ctl 才用它，否則 ctl.json）；沒人讀或寫不了就等自行退，不改送 SIGTERM。sleep／收工才送 SIGTERM、留 sleeping；已知非 0 留 stopped＋reason，退 0 下表，auto_restart 照舊。adopt 以 launch 保留完整入口與參數，不看小格有沒有 loop.json 猜型別。
+**11-07 使用者裁定 B：daemon 不分類。** 起法照舊，之後 stop 一律寫公開 ctl（父寫的 loop 設定有非空 ctl 才用它，否則 ctl.json）；沒人讀或寫不了就等自行退，不改送 SIGTERM。sleep／收工才送 SIGTERM；running 留 sleeping，stop 中收到 sleep 則保留 stopped 與 launch，用 start 再起；已知非 0 留 stopped＋reason，退 0 下表，auto_restart 照舊。adopt 以 launch 保留完整入口與參數，不看小格有沒有 loop.json 猜型別。

@@ -77,6 +77,48 @@ class WritingTest(unittest.TestCase):
         self.assertEqual(leftovers, [])
         self.assertEqual(self.lock("show", self.root).returncode, 10)
 
+    def test_remove_root_and_root_mount_preserves_shared_data(self):
+        shared = self.base / "shared"
+        shared.mkdir()
+        (shared / "x.md").write_text("# Shared\n")
+        (self.root / "mounted").symlink_to(shared, target_is_directory=True)
+        for path in ("/", "mounted"):
+            for recursive in (False, True):
+                with self.subTest(path=path, recursive=recursive):
+                    result = self.run_tool("rm", path, recursive=recursive)
+                    self.assertEqual(result.returncode, 1, result.stderr)
+                    self.assertIn("error: PathBad ", result.stderr)
+                    self.assertTrue((self.root / "mounted").is_symlink())
+                    self.assertEqual((shared / "x.md").read_text(), "# Shared\n")
+        self.assert_clean()
+
+    def test_shared_mount_children_remain_writable(self):
+        shared = self.base / "shared"
+        shared.mkdir()
+        (shared / "x.md").write_text("# Original\n")
+        (self.root / "mounted").symlink_to(shared, target_is_directory=True)
+        for op, path, args in (("add", "mounted/new", {"text": "# New\n"}),
+                               ("edit", "mounted/x", {"text": "# Edited\n"}),
+                               ("rm", "mounted/new", {})):
+            result = self.run_tool(op, path, **args)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((shared / "x.md").read_text(), "# Edited\n")
+        self.assertFalse((shared / "new.md").exists())
+        self.assertTrue((self.root / "mounted").is_symlink())
+        self.assert_clean()
+
+    def test_remove_nested_symlink_preserves_target(self):
+        shared = self.base / "shared"
+        shared.mkdir()
+        (shared / "x.md").write_text("# Shared\n")
+        (self.root / "nested").mkdir()
+        (self.root / "nested/link").symlink_to(shared, target_is_directory=True)
+        result = self.run_tool("rm", "nested/link", recursive=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertFalse((self.root / "nested/link").is_symlink())
+        self.assertEqual((shared / "x.md").read_text(), "# Shared\n")
+        self.assert_clean()
+
     def test_json_leaf_rejects_children_without_changing_data(self):
         raw = b'{"x": {"answer": 42}}\n'
         (self.root / "j.json").write_bytes(raw)

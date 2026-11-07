@@ -34,7 +34,7 @@ Prints one result line on stdout; state already reached is a successful no-op.
 exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, PhaseBad, CtlRejected...).
 more: proto8/cmd/aos-agent/README.md
 """,
-    "sleep": """aos-agent ctl sleep - put it to sleep now and keep its stack
+    "sleep": """aos-agent ctl sleep - SIGTERM a running or stopping proc and keep its stack
 
 usage: aos-agent [--daemon D] ctl sleep [--target NAME] [--timeout-s S]
 
@@ -43,6 +43,8 @@ flags:
       --timeout-s S   seconds to wait for the daemon (default 30)
   -h, --help          show this help
 
+Running becomes sleeping (wake or daemon restart brings it back).
+Stopping after stop becomes stopped (use start to run it again).
 Prints one result line on stdout; state already reached is a successful no-op.
 exit codes: 0 done; 1 error (TargetMissing, InstanceMissing, PhaseBad, CtlRejected...).
 more: proto8/cmd/aos-agent/README.md
@@ -136,7 +138,7 @@ def cmd_stop(argv):
 
 
 def cmd_sleep(argv):
-    """sleep（11-05 衝突 1）：現在就睡——daemon 對它 SIGTERM、列 sleeping、stack 留；daemon 開門自己醒，或 wake。畫面不關（同 daemon 收工）。"""
+    """sleep：送 SIGTERM，running 留 sleeping、stop 中留 stopped；stack 與 launch 保留。"""
     opts, rest = parse(argv, {"--target": "target", "--timeout-s": "timeout_s"}, help=HELP["sleep"], short=("-t",))
     secs = timeout_opt(opts, HELP["sleep"])
     if rest:
@@ -149,9 +151,14 @@ def cmd_sleep(argv):
     rows = aos_ws.history(a.stack)                    # 11-05 edge-agent：eca 答到一半 sleep＝那批不重答，醒來也等不到
     if rows and not aos_ws.is_answer(rows[-1]):
         note("%s has not finished answering the last message; some bodies (eca) drop the batch being answered when put to sleep: if no answer comes after wake, say it again" % a.name)
-    ctl_wait("sleep", phase_body("sleep", a.name), lambda _: (row_named(a.name) or {"phase": "sleeping"}).get("phase") == "sleeping",   # stopped／stopping＝PhaseBad；起法不影響 sleep
+    row = row_named(a.name) or {}
+    final_phase = "stopped" if row.get("stop_mode") == "stop" else "sleeping"
+    ctl_wait("sleep", phase_body("sleep", a.name), lambda _: (row_named(a.name) or {"phase": final_phase}).get("phase") == final_phase,
              "the daemon has not put %s to sleep yet" % a.name, "CtlRejected", secs=secs)
-    print("asleep, stack kept (%s); say still queues letters meanwhile, aos-agent ctl wake --target %s wakes it (it also wakes when the daemon restarts)" % (a.stack, a.name))
+    if final_phase == "stopped":
+        print("stopped, stack kept (%s); aos-agent ctl start --target %s starts it again" % (a.stack, a.name))
+    else:
+        print("asleep, stack kept (%s); say still queues letters meanwhile, aos-agent ctl wake --target %s wakes it (it also wakes when the daemon restarts)" % (a.stack, a.name))
 
 
 def cmd_wake(argv):
