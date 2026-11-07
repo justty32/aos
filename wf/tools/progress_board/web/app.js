@@ -62,6 +62,7 @@
   function lineCard(line) {
     const card = el("article", "line-card"); card.dataset.line = line.id; heading(card, line.title || line.id, "line");
     const more = link(`detail.html?line=${encodeURIComponent(line.id)}`, "看細節"); more.className = "button"; card.append(more);
+    const rounds = link(`rounds.html?line=${encodeURIComponent(line.id)}`, "輪次"); rounds.className = "button"; card.append(rounds);
     const chips = el("div", "chips"); chips.append(chip(labels[line.status] || line.status, colors[line.status] || "grey"));
     if (line.stale) chips.append(chip(`安靜 ${age(line.last_ts)} 分鐘`, "grey")); card.append(chips, timeline(line.timeline));
     card.append(el("p", "doing", `在做：${line.doing || "尚未回報"}`));
@@ -134,7 +135,7 @@
     if (!data) { header.append(el("p", "overview", "尚無快照；請依 README 產生資料。")); root.append(header); publish(root, data); return; }
     const lines = data.lines || [], host = data.host || {}, active = lines.filter(line => ["start", "progress", "handoff"].includes(line.status)).length, blocked = lines.filter(line => line.status === "blocked").length;
     header.append(el("p", "overview", `${lines.length} 條線：${active} 條在動、${blocked} 條卡住｜待你裁 ${num(data.asks_open || 0)} 題｜codex ${num(host.codex_procs)} 個｜負載 ${num(host.load1, 1)}/${num(host.ncpu)}｜可用記憶體 ${num(host.mem_avail_mb / 1024, 1)} GB`));
-    const links = el("nav", "buttons"); (data.links || []).forEach(entry => { if (relative(entry.href)) { const a = link(entry.href, entry.title); a.className = "button"; links.append(a); } });
+    const links = el("nav", "buttons"); (data.links || []).forEach(entry => { const href = location.protocol.startsWith("http") ? entry.http_href || entry.href : entry.href; if (relative(href)) { const a = link(href, entry.title); a.className = "button"; links.append(a); } });
     header.append(links, el("p", "data-time", `資料時間 ${data.generated_at}`)); root.append(header);
     if (location.protocol === "file:") root.append(el("p", "banner", `快照模式：這是 ${data.generated_at} 的快照；要即時更新請開伺服器（看 README）`));
     root.append(summaryPanel(data.summary || {})); const grid = el("section", "lines"); lines.forEach(line => grid.append(lineCard(line))); root.append(grid, machinePanel(host, data.load_history), commitsPanel(data.commits || []));

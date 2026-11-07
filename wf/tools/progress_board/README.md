@@ -68,6 +68,24 @@
 要加試驗場報告，在 `report_globs` 加一個 glob；要加可讀位置，在 `read_roots` 加根目錄（可用 `~`）。若用 `AOS_PROGRESS_DIR` 換看板位置，也要把該位置加進 `read_roots`，才能看匯總全文。
 要加某線的 commit，在該線 `commit_filters` 加 `{"repo":"aos","path":"wf/tools/progress_board/","grep":"fix"}`；`repo` 對應 `repos` 的名稱，`path` 與 `grep` 可省略，同一條 filter 兩者都有時須同時符合，多條 filter 合併去重。沒有 `commit_filters` 的線不列 commit。
 
+## 輪次頁
+
+各線卡片或細節頁按「輪次」，開啟 `rounds.html?line=<id>`。由新到舊列出各輪里程碑、狀態數字、全部事件、代定與卡住；頁首顯示目前輪次與白話說明。每五秒更新有變動的輪次，保留展開狀態、捲動位置與章節連結；直接開檔案則讀最後快照、不輪詢。
+
+任何狀態都可加 `--round '<name>'`，例如：
+
+```sh
+~/repo/simple_tools/aos/wf/tools/progress_post.sh arknights-kb progress 'Reviewing the next batch' --round '第三輪'
+```
+
+未指定時，依文字中首次出現的 `第[一二三四五六七八九十0-9]+輪` 或 `批\s*[0-9]+[a-z]?` 推斷；「批5」「批 5」統一為「批 5」。仍找不到就沿用同線上一筆的輪次，第一筆沒有輪次則歸「未分輪」。`state.json` 的各線含 `rounds` 統計與 `current_round`；輪次內保留完整事件。
+
+在 `config.json` 的各線設定 `"round_pages": {"第一輪": "arknights/round1.html", "第二輪": "arknights/round2.html", "第三輪": "arknights/round3.html"}`。對應檔案確實存在時，該輪才顯示「看完整的本輪報告」。
+
+`"sites": [{"mount": "arknights", "dir": "~/Desktop/aos-arknights"}]` 讓本機伺服器以 `/arknights/` 唯讀提供靜態檔案，只允許 GET／HEAD；不列目錄，解析真實路徑後仍須留在根目錄內。看板的網站連結在 HTTP 使用 `arknights/index.html`，檔案快照保留 `../aos-arknights/index.html`。
+
+每次啟動／收集都從該網站複製 `assets/style.css` 到看板的 `assets/ak-style.css`；來源缺少時使用程式隨附的 `web/ak-style.fallback.css`。額外樣式只放 `rounds.css`，原網站始終不寫入。
+
 ## 檔案在哪
 
 預設在 `~/Desktop/aos-進度`；可用環境變數 `AOS_PROGRESS_DIR` 換位置。開機或收集會覆蓋頁面與這份說明。
@@ -75,11 +93,13 @@
 | 路徑 | 內容 |
 | --- | --- |
 | `index.html`、`app.js`、`asks.js`、`eli5.js`、`detail.html`、`detail.js`、`md.js`、`style.css`、`README.md` | 頁面與說明 |
+| `rounds.html`、`rounds.js`、`rounds.css`、`assets/ak-style.css` | 輪次頁與共用網站樣式 |
 | `data/progress.jsonl` | 各線回報 |
 | `data/answers.jsonl` | 使用者逐次送出的回答，保留重答紀錄 |
 | `data/state.json`、`data/state.js` | 最新快照 |
 | `data/load_history.jsonl` | 最近 720 筆機器取樣 |
 | `data/server.pid`、`data/server.log` | 伺服器行程與紀錄 |
+| `data/llm.lock` | 匯總與白話模型呼叫共用的跨行程檔案鎖 |
 | `summary/latest.md`、`summary/history/` | 最新與歷次匯總 |
 | `summary/cost.jsonl`、`summary/cursor.json` | 成本與上次涵蓋範圍 |
 
@@ -92,3 +112,5 @@
 手動更新：`python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py eli5 --force`，略過開關與間隔，仍只重寫有變的項目；加 `--all` 才重寫全部。模型只回一部分時，已成功的項目先存下，缺漏的項目保留舊說明與更新中標記，下輪再試，不把整批誤當成功。
 結果放在 `eli5/main.json`、`eli5/detail.json`，每個項目各存文字、更新時間與輸入雜湊，頁面共用 `eli5.js` 顯示；每次請求（包含重寫）都記進 `summary/cost.jsonl`，`kind` 分為 `summary`、`eli5-main`、`eli5-detail`。
 發待裁題的人請加 `--eli5 '<plain text>'`，直接說清楚在問什麼、每個選項會怎樣；這份說明優先使用，沒有才自動產生。例如：`~/repo/simple_tools/aos/wf/tools/progress_post.sh progress-board ask 'How much detail?' --eli5 'Choose how much explanation you want.'`。
+
+匯總、總覽白話與細節白話共用 `data/llm.lock`。伺服器碰到鎖已被占用就略過這輪；手動指令最多等 120 秒，仍忙則印 `dash: warning: busy, skipped`。拿到鎖後重新檢查輸入與間隔，避免同時啟動時重複呼叫模型。

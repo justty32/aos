@@ -13,6 +13,7 @@ import urllib.request
 from collect import atomic_write, iso_now, parse_ts
 from eli5_inputs import detail_input, json_file, main_input
 from summarize import _append_cost
+from llm_lock import llm_lock
 
 STYLE = '''Write like you are explaining to a 10-year-old: everyday words only, 2-3 short sentences per item.
 Never use: technical terms, tool or model names (codex, LLM, fable, sol, terra, git, commit, token, repo), numbering or codes (C1, B8, N-68, decision 40), file names or paths, hashes, English words.
@@ -250,10 +251,18 @@ def eli5_state(board, cfg, running=False, inputs=None):
     return state
 
 
-def _maybe(board, cfg, kind, force=False, all_items=False, inputs=None):
+def _maybe(board, cfg, kind, force=False, all_items=False, inputs=None, wait_timeout=0):
+    """Re-read evidence and eligibility while holding the shared model lock."""
+    with llm_lock(board, wait_timeout) as acquired:
+        if not acquired:
+            return "skipped-busy"
+        return _maybe_locked(board, cfg, kind, force, all_items)
+
+
+def _maybe_locked(board, cfg, kind, force=False, all_items=False):
     """Request changed items once; retain omitted items for a later retry."""
     try:
-        fingerprints, blocks = (inputs or input_snapshot(board, cfg))[kind]
+        fingerprints, blocks = input_snapshot(board, cfg)[kind]
         old, items = _read(board, kind, fingerprints)
         if not force and not cfg.get("summary", {}).get("eli5_enabled", True):
             return "skipped"
@@ -279,9 +288,9 @@ def _maybe(board, cfg, kind, force=False, all_items=False, inputs=None):
         return "error"
 
 
-def maybe_main(board, cfg, force=False, all_items=False, inputs=None):
-    return _maybe(board, cfg, "main", force, all_items, inputs)
+def maybe_main(board, cfg, force=False, all_items=False, inputs=None, wait_timeout=0):
+    return _maybe(board, cfg, "main", force, all_items, inputs, wait_timeout)
 
 
-def maybe_detail(board, cfg, force=False, all_items=False, inputs=None):
-    return _maybe(board, cfg, "detail", force, all_items, inputs)
+def maybe_detail(board, cfg, force=False, all_items=False, inputs=None, wait_timeout=0):
+    return _maybe(board, cfg, "detail", force, all_items, inputs, wait_timeout)

@@ -5,12 +5,13 @@ import json
 import os
 from pathlib import Path
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
 
 from answers import asks_state, read_answers, valid_ask
+from assets import copy_assets
+from rounds import rounds_state, tag_events
 
 ROOT = Path(__file__).resolve().parent
 STATUSES = {"start", "progress", "done", "blocked", "decision", "handoff", "ask"}
@@ -49,13 +50,6 @@ def atomic_write(path, text):
         if name and os.path.exists(name):
             os.unlink(name)
 
-
-def copy_assets(board_dir):
-    board = Path(board_dir)
-    board.mkdir(parents=True, exist_ok=True)
-    for name in ("index.html", "app.js", "asks.js", "eli5.js", "md.js", "detail.html", "detail.js", "style.css"):
-        shutil.copyfile(ROOT / "web" / name, board / name)
-    shutil.copyfile(ROOT / "README.md", board / "README.md")
 
 
 def read_jsonl(path, warnings=None):
@@ -131,8 +125,8 @@ def handoff_state(cfg, line):
     return result
 
 
-def line_state(line, events, cfg, now):
-    ordered = sorted(events, key=lambda event: parse_ts(event["ts"]))
+def line_state(line, events, cfg, now, answers=()):
+    ordered = tag_events(sorted(events, key=lambda event: parse_ts(event["ts"])))
     latest = ordered[-1] if ordered else None
     handoff = handoff_state(cfg, line)
     timestamps = [event["ts"] for event in ordered[-1:]]
@@ -151,7 +145,8 @@ def line_state(line, events, cfg, now):
             "decisions": [event for event in reversed(ordered) if event["status"] == "decision"
                           and now - dt.timedelta(hours=48) <= parse_ts(event["ts"]) <= now],
             "blocked": latest if latest and latest["status"] == "blocked" else None,
-            "handoff": handoff}
+            "handoff": handoff, "rounds": rounds_state(line, ordered, cfg, answers),
+            "current_round": latest["round"] if latest else None}
 
 
 def git_commits(cfg, warnings):
@@ -237,8 +232,9 @@ def collect(board_dir, cfg, eli5_inputs=None):
     configured = list(cfg.get("lines", []))
     ids = {line["id"] for line in configured}
     configured += [{"id": name, "title": name} for name in grouped if name not in ids]
+    answers = read_answers(board, warnings)
     asks = asks_state([event for events in grouped.values() for event in events
-                       if event["status"] == "ask"], read_answers(board, warnings), now,
+                       if event["status"] == "ask"], answers, now,
                       {line["id"]: line.get("title", line["id"]) for line in configured})
     eli5 = eli5_state(board, cfg, inputs=eli5_inputs)
     explanations = (eli5["main"] or {}).get("asks", {})
@@ -257,7 +253,7 @@ def collect(board_dir, cfg, eli5_inputs=None):
             "eli5": eli5,
             "asks": asks, "asks_open": sum(ask["answer"] is None for ask in asks),
             "host": host, "load_history": history[-240:],
-            "lines": [line_state(line, grouped.get(line["id"], []), cfg, now)
+            "lines": [line_state(line, grouped.get(line["id"], []), cfg, now, answers)
                       for line in configured],
             "commits": git_commits(cfg, warnings), "links": cfg.get("links", []),
             "summary": summary_state(board, cfg, now, warnings), "warnings": warnings}

@@ -17,6 +17,7 @@ from details_api import DetailHandlerMixin
 from collect import board_path, collect, copy_assets, load_config, write_state
 from eli5 import maybe_main, maybe_detail, input_snapshot, fingerprint_main
 from summarize import maybe_summarize
+from static_sites import StaticSiteHandlerMixin
 
 TEXT_TYPES = {".md": "text/markdown", ".json": "application/json", ".jsonl": "application/x-ndjson",
               ".txt": "text/plain", ".log": "text/plain", ".html": "text/html", ".css": "text/css",
@@ -108,7 +109,8 @@ def serve(board, port):
     state_lock = threading.Lock()
     summary_thread = None
 
-    class Handler(DetailHandlerMixin, AnswerHandlerMixin, http.server.SimpleHTTPRequestHandler):
+    class Handler(StaticSiteHandlerMixin, DetailHandlerMixin, AnswerHandlerMixin,
+                  http.server.SimpleHTTPRequestHandler):
         def refresh_answers(self):
             with state_lock:
                 busy = summary_thread is not None and summary_thread.is_alive()
@@ -138,13 +140,14 @@ def serve(board, port):
         try:
             for generate in (maybe_summarize, maybe_main, maybe_detail):
                 try:
-                    if generate is maybe_summarize:
-                        if generate(board, cfg) == "ok":
-                            latest = (board / "summary/latest.md").read_text(encoding="utf-8")
-                            inputs["main"][0].update(fingerprint_main({"summary": latest}))
-                            inputs["main"][1]["summary"] = latest
-                    else:
-                        generate(board, cfg, inputs=inputs)
+                    result = (generate(board, cfg) if generate is maybe_summarize
+                              else generate(board, cfg, inputs=inputs))
+                    if result == "skipped-busy":
+                        break
+                    if generate is maybe_summarize and result == "ok":
+                        latest = (board / "summary/latest.md").read_text(encoding="utf-8")
+                        inputs["main"][0].update(fingerprint_main({"summary": latest}))
+                        inputs["main"][1]["summary"] = latest
                 except Exception as exc:
                     warning(f"Summary worker failed: {exc}")
         finally:
@@ -245,7 +248,6 @@ def stop(board):
     print("dash: stopped")
     return 0
 
-
 def main():
     try:
         parsed = arguments(sys.argv[1:])
@@ -278,20 +280,21 @@ def main():
             snapshot(board, cfg)
             print(board / "index.html")
         elif command == "summarize":
-            result = maybe_summarize(board, cfg, force)
+            result = maybe_summarize(board, cfg, force, wait_timeout=120)
             print(result)
             return int(result == "error")
         elif command == "eli5":
             inputs = input_snapshot(board, cfg)
-            main_result = maybe_main(board, cfg, force, all_items, inputs)
-            detail_result = maybe_detail(board, cfg, force, all_items, inputs)
+            deadline = time.monotonic() + 120
+            main_result = maybe_main(board, cfg, force, all_items, inputs, wait_timeout=120)
+            detail_result = ("skipped-busy" if main_result == "skipped-busy" else maybe_detail(
+                board, cfg, force, all_items, inputs, wait_timeout=max(0, deadline-time.monotonic())))
             snapshot(board, cfg)
             print(f"dash: eli5 main={main_result} detail={detail_result}")
             return int("error" in (main_result, detail_result))
         return 0
     except Exception as exc:
         return fail("OperationFailed", exc)
-
 
 if __name__ == "__main__":
     sys.exit(main())

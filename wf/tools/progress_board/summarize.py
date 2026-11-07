@@ -13,6 +13,7 @@ import urllib.request
 sys.dont_write_bytecode = True
 from collect import atomic_write, board_path, handoff_path, iso_now, load_config, parse_ts
 from answers import asks_state, read_answers, read_asks
+from llm_lock import llm_lock
 
 USAGE = "python3 summarize.py [--force] [--dry-run]"
 SYSTEM = """You summarize the aos progress board using only facts in the supplied input.
@@ -159,7 +160,15 @@ def _append_cost(path, record):
         stream.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-def maybe_summarize(board_dir, cfg, force=False):
+def maybe_summarize(board_dir, cfg, force=False, wait_timeout=0):
+    """Acquire the board lock before reading eligibility or calling the model."""
+    with llm_lock(board_dir, wait_timeout) as acquired:
+        if not acquired:
+            return "skipped-busy"
+        return _summarize_locked(board_dir, cfg, force)
+
+
+def _summarize_locked(board_dir, cfg, force=False):
     """Run an eligible summary and return its outcome word."""
     board = Path(board_dir).expanduser()
     settings = cfg.get("summary", {})
@@ -237,7 +246,7 @@ def main(argv=None):
             cursor = _json_file(board / "summary/cursor.json")
             print(json.dumps(_snapshot(board, cfg, cursor)[2], ensure_ascii=False, indent=2))
             return 0
-        result = maybe_summarize(board, cfg, force)
+        result = maybe_summarize(board, cfg, force, wait_timeout=120)
         print(result)
         return 1 if result == "error" else 0
     except Exception as exc:

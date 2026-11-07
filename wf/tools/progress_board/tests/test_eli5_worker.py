@@ -9,7 +9,7 @@ import dash
 
 class WorkerTests(OfflineBoard):
     def test_sequential_worker_with_disabled_and_enabled_regular_summary(self):
-        for enabled in (False, True):
+        for enabled in (False, True, "busy"):
             with self.subTest(summary_enabled=enabled):
                 self.cfg['summary']['enabled'] = enabled
                 self.cfg['collect_interval_sec'] = 10
@@ -31,6 +31,9 @@ class WorkerTests(OfflineBoard):
 
                 def summary(board, cfg):
                     order.append('summary')
+                    if enabled == 'busy':
+                        finished.set()
+                        return 'skipped-busy'
                     if enabled:
                         self.write('summary/latest.md', 'Fresh summary.')
                     return 'ok' if enabled else 'skipped'
@@ -61,6 +64,9 @@ class WorkerTests(OfflineBoard):
                      patch('dash.maybe_main', side_effect=generator('main')), \
                      patch('dash.maybe_detail', side_effect=generator('detail')):
                     self.assertEqual(dash.serve(self.board, 8765), 0)
+                if enabled == 'busy':
+                    self.assertEqual(order, ['summary'])
+                    continue
                 self.assertEqual(order, ['summary', 'main', 'detail'])
                 self.assertEqual(max_active, 1)
                 self.assertIs(inputs_seen[0], inputs_seen[1])

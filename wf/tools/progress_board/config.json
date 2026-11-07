@@ -1,5 +1,6 @@
 {
   "description": "Config for the aos progress board: lines, repos, polling and the LLM summarizer.",
+  "sites": [{"mount": "arknights", "dir": "~/Desktop/aos-arknights"}],
   "port": 8765,
   "collect_interval_sec": 15,
   "aos_repo": "~/repo/simple_tools/aos",
@@ -10,11 +11,11 @@
     {"name": "playground-ak", "path": "~/code/playground-ak"}
   ],
   "lines": [
-    {"id": "arknights-kb", "title": "明日方舟知識庫（第三輪）", "handoff": "proto8/thinking/2026-11/07/arknights-kb/交棒.md", "commit_filters": [{"repo": "aos", "grep": "arknights"}, {"repo": "aos", "path": "proto8/thinking/2026-11/07/arknights-kb/"}, {"repo": "playground-ak"}]},
+    {"id": "arknights-kb", "title": "明日方舟知識庫（第三輪）", "round_pages": {"第一輪": "arknights/round1.html", "第二輪": "arknights/round2.html", "第三輪": "arknights/round3.html"}, "handoff": "proto8/thinking/2026-11/07/arknights-kb/交棒.md", "commit_filters": [{"repo": "aos", "grep": "arknights"}, {"repo": "aos", "path": "proto8/thinking/2026-11/07/arknights-kb/"}, {"repo": "playground-ak"}]},
     {"id": "impl-plan", "title": "五份設計實作", "handoff": "proto8/thinking/2026-11/07/impl-plan/交棒.md", "commit_filters": [{"repo": "aos", "grep": "impl-plan"}, {"repo": "aos", "path": "proto8/thinking/2026-11/07/impl-plan/"}]},
     {"id": "progress-board", "title": "進度看板", "handoff": null, "commit_filters": [{"repo": "aos", "path": "wf/tools/progress_board/"}, {"repo": "aos", "path": "wf/tools/progress_post.sh"}]}
   ],
-  "links": [{"title": "明日方舟網站", "href": "../aos-arknights/index.html"}],
+  "links": [{"title": "明日方舟網站", "href": "../aos-arknights/index.html", "http_href": "arknights/index.html"}],
   "stale_after_min": 120,
   "summary": {
     "enabled": true,

@@ -10,7 +10,7 @@ class Node {
 }
 const document = {createElement: tag => new Node(tag), createTextNode: s => new Node("#text", s), createDocumentFragment: () => new Node("#fragment")};
 const context = {window: {}, document};
-vm.runInNewContext(fs.readFileSync(path.join(__dirname, "web/md.js"), "utf8"), context);
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", "web/md.js"), "utf8"), context);
 const render = context.window.AosMd.render;
 function all(n) { return [n, ...n.children.flatMap(all)]; }
 function count(n, tag) { return all(n).filter(n => n.tagName === tag).length; }

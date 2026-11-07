@@ -3,10 +3,12 @@
 (() => {
   const board = document.getElementById("board");
   const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = String(text); return n; };
-  if (location.protocol === "file:") {
-    board.replaceChildren(el("p", "banner", "細節頁要開伺服器才看得到：python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py start，然後開 http://127.0.0.1:8765/detail.html")); return;
-  }
   const params = new URLSearchParams(location.search), lineId = params.get("line"), filePath = params.get("file");
+  const roundsLink = () => { const a = el("a", "button", "輪次"); a.href = `rounds.html?line=${encodeURIComponent(lineId)}`; return a; };
+  if (location.protocol === "file:") {
+    const header = el("header"); if (lineId != null) header.append(roundsLink());
+    board.replaceChildren(header, el("p", "banner", "細節頁要開伺服器才看得到：python3 ~/repo/simple_tools/aos/wf/tools/progress_board/dash.py start，然後開 http://127.0.0.1:8765/detail.html")); return;
+  }
   const labels = {start: "開線", progress: "進度", done: "完成", blocked: "卡住", decision: "代定", handoff: "交棒", ask: "待你裁"};
   const colors = {start: "blue", progress: "blue", done: "green", blocked: "red", decision: "amber", handoff: "purple", ask: "amber"};
   const selected = new Set(Object.keys(labels)), folds = new Map(), signatures = new Map(), commitCache = new Map();
@@ -17,6 +19,7 @@
   const preserveScroll = work => { const x = window.scrollX, y = window.scrollY; work(); window.scrollTo(x, y); };
   const header = el("header"), top = el("div", "title-row"), title = el("h1", "", "aos 進度細節"), live = el("span", "live offline");
   header.append(link("index.html", "← 回看板")); top.append(title, live); header.append(top); board.append(header);
+  if (lineId != null) top.append(roundsLink());
   let lastPoll = 0, polling = false;
   function connection() {
     const good = lastPoll > 0 && Date.now() - lastPoll <= 15000;

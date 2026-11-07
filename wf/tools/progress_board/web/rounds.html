@@ -1,0 +1,30 @@
+<!-- This page presents each work line as an offline-capable chronological round report. -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>aos｜輪次進度</title>
+  <link rel="stylesheet" href="assets/ak-style.css">
+  <link rel="stylesheet" href="rounds.css">
+</head>
+<body id="top">
+  <a class="skip-link" href="#main">跳到內容</a>
+  <div class="site-bar"><div class="shell site-bar-inner">
+    <nav class="page-nav" aria-label="工作線導覽" id="line-nav"><a href="index.html">看板</a></nav>
+    <div class="detail-controls" aria-label="細節開關">
+      <button type="button" data-details="expand">全部展開</button>
+      <button type="button" data-details="collapse">全部收合</button>
+    </div>
+  </div></div>
+  <p id="detail-status" class="visually-hidden" role="status" aria-live="polite"></p>
+  <header class="masthead"><div class="shell" id="masthead"></div></header>
+  <div class="nav-band"><nav class="shell section-nav" aria-label="跳至輪次" id="round-nav"></nav></div>
+  <main class="shell" id="main"><p id="connection" role="status"></p><div id="rounds"></div></main>
+  <footer class="shell footer"><span id="source">aos・本機進度紀錄</span><a href="#top">回到頁首 ↑</a></footer>
+  <noscript>請開啟 JavaScript 查看輪次進度。</noscript>
+  <script src="data/state.js" onerror="window.AOS_STATE = null"></script>
+  <script src="rounds.js"></script>
+</body>
+</html>

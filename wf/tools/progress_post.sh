@@ -10,7 +10,7 @@ import secrets
 import sys
 from pathlib import Path
 
-USAGE = "progress_post.sh <line> <status> '<text>' [link-or-path ...] [--option 'A: text'] [--recommend A] [--eli5 '<plain text>']"
+USAGE = "progress_post.sh <line> <status> '<text>' [link-or-path ...] [--option 'A: text'] [--recommend A] [--eli5 '<plain text>'] [--round '<name>']"
 STATUSES = "start|progress|done|blocked|decision|handoff|ask"
 
 
@@ -22,6 +22,7 @@ def fail(code, reason):
 args = sys.argv[1:]
 if args and args[0] in ("--help", "-h"):
     print(f"Usage: {USAGE}\nStatuses: {STATUSES}\n"
+          "For any status: --round NAME tags the event with a round.\n"
           "For ask: repeat --option KEY:TEXT; --recommend KEY selects a suggested option; --eli5 adds a plain-language explanation.\n"
           "Example: progress_post.sh progress-board ask 'Which approach?' "
           "--option 'A: Keep it simple' --option 'B: Add detail' --recommend A "
@@ -32,10 +33,14 @@ if args and args[0].startswith("-"):
 if len(args) < 3:
     fail("ArgumentsBad", "at least three arguments are required")
 line, status, text, *rest = args
-links, options, recommend, eli5 = [], [], None, None
+links, options, recommend, eli5, round_name = [], [], None, None, None
 while rest:
     item = rest.pop(0)
-    if item in ("--option", "--recommend", "--eli5"):
+    if item == "--round":
+        if not rest or rest[0].startswith("--") or not rest[0].strip():
+            fail("ArgumentsBad", "--round requires a nonblank name")
+        round_name = rest.pop(0)
+    elif item in ("--option", "--recommend", "--eli5"):
         if status != "ask":
             fail("FlagBad", f"{item} is only for ask")
         if not rest or rest[0].startswith("--"):
@@ -66,6 +71,8 @@ if not text:
     fail("TextBad", "text must be non-empty")
 event = {"ts": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
          "line": line, "status": status, "text": text, "links": links}
+if round_name is not None:
+    event["round"] = round_name
 if status == "ask":
     event.update(id=f"{line}-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}-{secrets.token_hex(2)}",
                  options=options, recommend=recommend, eli5=eli5)
