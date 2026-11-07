@@ -13,7 +13,8 @@
 #   - body 不是物件、procs_added 不是物件、procs_started／procs_woken 不是字串陣列＝BodyBad。
 #   keep_ordered missing/null/false：有序信以尾名一般轉寄，原 reply_to 保留；true：--ordered 轉寄，
 #   有 reply_to 者由 judge_replies 收回信、judge_ordered.json 記新名→原名與原回信箱，每輪先代回再判新信。
-#   掛＝body 原樣轉寄；keep_ordered 關時防重看 ctl/new/尾名，開時看對照表的原信名；送不出回 ForwardFailed。
+#   掛＝body 原樣轉寄；keep_ordered 關時防重看 ctl/new/尾名與 ctl/cur/尾名，開時看對照表的原信名；期限與政策重判前先收掉已轉寄的原信；送不出回 ForwardFailed。
+#   daemon 已做完且移除轉寄信、判官才重啟的窗口，無序信沒有留下防重依據，仍可能被重判或重寄。
 #   不掛＝aos-post done --reply '{"applied": false, "error": {"code", "msg"}}'（沒 reply_to＝只收掉）；回信寄不出去＝stderr 一行、照樣收掉。壞信＝stderr 一行、丟掉。
 #     不掛的每封一律 stderr 一行提醒「judge: warning: letter <名> refused: 代號 原因」（11-05 edge-agent；stdio-unify R1 起是提醒行：拒信是判官的答案、不是它的錯）；
 #     回信的 code、msg 與這行的代號、原因同一句（英文）。回信寄不出去、壞信也是提醒行。
@@ -202,9 +203,17 @@ def relay_replies(box, path, rows, requests):
         if name.startswith("."):
             continue
         code, out = post(["see", box, name])
-        if code != 0:
+        if code not in (0, 1):
             die("PostFailed", "cannot read judge reply %s" % name)
-        letter = json.loads(out)
+        try:
+            letter = json.loads(out) if code == 0 else None
+            if not isinstance(letter, dict) or "body" not in letter:
+                raise ValueError("missing reply body")
+        except ValueError:
+            warn("reply %s is broken; dropped" % name)
+            if post(["done", box, name])[0] != 0:
+                die("PostFailed", "cannot finish judge reply %s" % name)
+            continue
         original = rows.get(letter.get("in_reply_to"))
         if original is None:
             warn("reply %s has no ordered forwarding record; dropped" % name)
@@ -225,14 +234,21 @@ def relay_replies(box, path, rows, requests):
             die("PostFailed", "cannot finish judge reply %s" % name)
 
 
+def already_forwarded(name, ctl_box, keep_ordered, ordered):
+    """重判前檢查已轉寄的有序對照或 ctl 信箱 new／cur 的尾名。"""
+    is_ordered = bool(ORDERED.match(name))
+    if is_ordered and keep_ordered:
+        return any(row["letter"] == name for row in ordered.values())
+    tail = name.split(".", 1)[1] if is_ordered else name
+    return any(os.path.exists(os.path.join(ctl_box, slot, tail)) for slot in ("new", "cur"))
+
+
 def forward(name, letter, requests, ctl_box, keep_ordered, replies, ordered_path, ordered):
     """轉寄；選填保有序與代回，關閉時用尾名一般寄出。"""
     is_ordered = bool(ORDERED.match(name))
     tail = name.split(".", 1)[1] if is_ordered else name
     preserve = is_ordered and keep_ordered
-    if preserve and any(row["letter"] == name for row in ordered.values()):
-        return None
-    if not preserve and os.path.exists(os.path.join(ctl_box, "new", tail)):
+    if already_forwarded(name, ctl_box, keep_ordered, ordered):
         return None
     args = ["send"]
     reply_to = letter.get("reply_to")
@@ -355,9 +371,15 @@ def main():
     if post(["take-all", requests])[0] not in (0, NOT_FOUND):
         die("PostFailed", "cannot take letters from mailbox %s" % requests)
     names = sorted((n for n in os.listdir(os.path.join(requests, "cur")) if not n.startswith(".")), key=letter_key)
+    if names:
+        ctl_box, running = daemon_view(daemon)
     letters = {}
     # 先驗所有 cur 的期限，首次看見、關排隊、格仍滿時都不能漏掉。
     for name in names:
+        if already_forwarded(name, ctl_box, keep_ordered, ordered):
+            if post(["done", requests, name])[0] != 0:
+                die("PostFailed", "cannot finish forwarded request %s" % name)
+            continue
         code, out = post(["see", requests, name])
         if code == 1:
             warn("letter %s is broken; dropped" % name)
@@ -392,7 +414,6 @@ def main():
         if queue or os.path.exists(window):
             write_queue(window, [])
         return
-    ctl_box, running = daemon_view(daemon)
     admitted, queued = set(), []
     for name in names:
         letter = letters[name]
