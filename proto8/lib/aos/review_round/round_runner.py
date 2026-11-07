@@ -1,4 +1,4 @@
-"""Execute the scripted review steps and promote only cheaper passing candidates."""
+"""Execute review steps, promote cheaper passing candidates and record growth signals."""
 import os
 from pathlib import Path
 import shutil
@@ -10,19 +10,84 @@ from review_data import (add_cost, call, dirty, history, local, new_round, nodes
 HERE = Path(__file__).resolve().parent
 
 
-def retire(defs, reviews):
-    if len(reviews) < 3:
+def retire(defs, reviews, count=3, refs=None):
+    if len(reviews) < count:
         return []
-    seen = {name for review in reviews[-3:] for node in nodes(review['tree'])
+    seen = {name for review in reviews[-count:] for node in nodes(review['tree'])
             if (name := local(node.get('def'), defs))}
-    candidates = []
+    agents = []
     for path in sorted(defs.rglob('interfaces.json')):
-        relative = path.parent.relative_to(defs).as_posix()
-        if any(part.startswith('.') for part in path.relative_to(defs).parts):
+        name = path.parent.relative_to(defs).as_posix()
+        if not any(part.startswith('.') for part in path.relative_to(defs).parts) and 'aos-agent' in read(path):
+            agents.append(name)
+    result = []
+    for name in agents:
+        siblings = sorted(x for x in agents if x != name and Path(x).parent == Path(name).parent and x in seen)
+        if name in seen or not siblings:
             continue
-        if 'aos-agent' in read(path) and relative not in seen:
-            candidates.append(relative)
-    return candidates
+        callers = set()
+        for review in reviews:
+            def find_callers(node, owner=None):
+                current = local(node.get('def'), defs)
+                if current == name and owner:
+                    callers.add(owner)
+                if node.get('kind') == 'agent' and current:
+                    owner = current
+                for child in node.get('children', []):
+                    find_callers(child, owner)
+            find_callers(review['tree'])
+        result.append({'def': name, 'signal': 'unused_%d_cases' % count,
+                       'siblings_called': siblings, 'callers': sorted(callers),
+                       'refs': refs(name) if refs else [], 'merge_into': None})
+    return result
+
+
+def suggestions(defs, reviews, config):
+    listing = call('defs_ls', HERE.parent / 'defs', {'op': 'ls', 'root': str(defs)})
+    groups = call('defs_dup', HERE.parent / 'defs', {'op': 'dup', 'root': str(defs)})['groups']
+    retired = retire(defs, reviews, config.get('retire_after_cases', 3),
+                     lambda name: call('defs_refs', HERE.parent / 'defs',
+                                       {'op': 'refs', 'root': str(defs), 'def': name})['refs'])
+    definitions = {row['path']: row for row in listing['defs']}
+    reviews[-1]['definition_signatures'] = {name: signature for name, signature in
+        ((row['path'], {key: row.get(key) for key in ('tools', 'endpoint', 'memory')})
+         for row in listing['defs'] if row.get('brain'))}
+    specialized = []
+    def signature(row):
+        return {key: row.get(key) for key in ('tools', 'endpoint', 'memory')}
+    def child_pairs(tree):
+        pairs = set()
+        def walk(node, owner=None, bridge=False):
+            name = local(node.get('def'), defs)
+            if node.get('kind') == 'agent':
+                if owner and bridge and name in definitions:
+                    pairs.add((owner, name))
+                owner, bridge = name, False
+            elif Path(str(node.get('def', ''))).name in ('thought', 'agents'):
+                bridge = True
+            for child in node.get('children', []):
+                walk(child, owner, bridge)
+        walk(tree)
+        return pairs
+    if len(reviews) >= 2 and reviews[-2].get('case') != reviews[-1].get('case'):
+        for source, target in sorted(child_pairs(reviews[-2]['tree']) & child_pairs(reviews[-1]['tree'])):
+            proposal = signature(definitions[target])
+            if reviews[-2].get('definition_signatures', {}).get(target, {}).get('tools') != proposal['tools']:
+                continue
+            specialized.append({'from': source, 'signal': 'repeated_child',
+                'evidence': {'child': target, 'cases': [r.get('case') for r in reviews[-2:]]},
+                'proposal': proposal, 'existing': [name for name, row in definitions.items()
+                    if row.get('brain') and signature(row) == proposal] or None})
+    threshold = config.get('max_prompt_tokens_median', 10000)
+    for node in nodes(reviews[-1]['tree']):
+        name = local(node.get('def'), defs)
+        median = node.get('prompt_tokens_median')
+        if name and type(median) in (int, float) and median > threshold:
+            specialized.append({'from': name, 'signal': 'context_too_big',
+                'evidence': {'prompt_tokens_median': median, 'max_prompt_tokens_median': threshold},
+                'proposal': None, 'existing': None})
+    return {'retire': retired, 'specialize': specialized,
+            'differentiate': [dict(group, same_duty=None) for group in groups]}
 
 
 def run(args):
@@ -77,7 +142,7 @@ def run(args):
             'propagate': {'reason': 'Every candidate measurement covers the complete case.'},
             'record': {'reason': 'Recorded the review without replacing a definition.'},
             'watch': {'changes': feed['changes'], 'reason': 'Fed the new case before selecting a target.'},
-            'grow': {'reason': 'Suggest retirement after three absent rounds; specialization is deferred.'}}}
+            'grow': {'reason': 'Record growth suggestions without applying them.'}}}
     if 'consistency' in before:
         review['consistency'] = before['consistency']
     if choices:
@@ -145,7 +210,7 @@ def run(args):
                                                 'reason': 'Promoted the cheaper passing candidate and opened a watch window.'}
     review['spent'] = add_cost(cost for result in measured for cost in [
         result['check']['cost'], *(sample['cost'] for sample in result['samples'])])
-    review['suggest'] = {'retire': retire(defs, past + [review]), 'specialize': []}
+    review['suggest'] = suggestions(defs, past + [review], config)
     path = folder / 'review.json'
     write(path, review)
     return {'round': folder.name, 'review': str(path), 'action': review['action']}

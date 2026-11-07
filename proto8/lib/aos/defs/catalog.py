@@ -1,0 +1,164 @@
+"""Inspect public definition declarations and group agents by tools, endpoint and memory."""
+import json
+import os
+from pathlib import Path
+import re
+
+from tool_io import Error
+
+
+def read(path):
+    value = json.loads(path.read_text(encoding='utf-8'))
+    if not isinstance(value, dict):
+        raise ValueError('%s must contain an object' % path)
+    return value
+
+
+def definitions(root):
+    """Stop at definition boundaries and never enter hidden trees."""
+    for base, dirs, files in os.walk(root, followlinks=False):
+        dirs[:] = sorted(d for d in dirs if not d.startswith('.'))
+        if 'interfaces.json' in files or '_metainfo.json' in files:
+            yield Path(base)
+            dirs[:] = []
+
+
+def relative(path, root):
+    return os.path.relpath(path.resolve(), root).replace(os.sep, '/')
+
+
+def declared(path):
+    if not (path / 'interfaces.json').exists():
+        return None
+    interfaces = read(path / 'interfaces.json')
+    agent = interfaces.get('aos-agent')
+    if agent is not None and not isinstance(agent, dict):
+        raise ValueError('aos-agent must be an object')
+    return agent
+
+
+def tools(path, agent):
+    if agent is None:
+        return {}
+    filename = agent.get('tools')
+    if not isinstance(filename, str) or not filename:
+        raise ValueError('aos-agent.tools must name a file')
+    entries = read(path / filename).get('tools')
+    if not isinstance(entries, dict):
+        raise ValueError('tools must contain an object')
+    for entry in entries.values():
+        if not isinstance(entry, dict) or not isinstance(entry.get('path'), str) or not entry['path']:
+            raise ValueError('each tool must declare a path')
+        if not isinstance(entry.get('env', {}), dict):
+            raise ValueError('tool env must be an object')
+    return entries
+
+
+def describe(path, root):
+    meta = read(path / '_metainfo.json') if (path / '_metainfo.json').exists() else {}
+    agent = declared(path)
+    row = {'path': relative(path, root), 'summary': meta.get('summary', ''), 'brain': agent is not None}
+    if 'lineage' in meta:
+        row['lineage'] = meta['lineage']
+    if agent is None:
+        return row
+    entries = tools(path, agent)
+    llm_file = agent.get('llm')
+    if not isinstance(llm_file, str) or not llm_file:
+        raise ValueError('aos-agent.llm must name a file')
+    endpoint = read(path / llm_file).get('endpoint', 'default')
+    if not isinstance(endpoint, str):
+        raise ValueError('endpoint must be a string')
+    memory = None
+    if agent.get('memory') is not None:
+        filename = agent['memory']
+        if not isinstance(filename, str) or not filename:
+            raise ValueError('aos-agent.memory must name a file')
+        memory_file = path / filename
+        memory = read(memory_file).get('base')
+        if isinstance(memory, str):
+            memory = relative(memory_file.parent / memory, root)
+        elif memory is not None and not isinstance(memory, dict):
+            raise ValueError('memory base must be a path or environment object')
+    table_dir = (path / agent['tools']).parent
+    row.update(tools=sorted({relative(table_dir / t['path'], root) for t in entries.values()}),
+               endpoint=endpoint, memory=memory)
+    return row
+
+
+def signature(row):
+    return json.dumps({k: row[k] for k in ('tools', 'endpoint', 'memory')},
+                      sort_keys=True, separators=(',', ':'))
+
+
+def check(path, root):
+    problems = []
+    def problem(reason):
+        problems.append({'path': relative(path, root), 'reason': reason})
+    if any(not re.fullmatch('[a-z0-9_-]+', part) for part in path.relative_to(root).parts):
+        problem('definition path segments must match [a-z0-9_-]+')
+    try:
+        first = (path / 'README.md').read_text(encoding='utf-8').splitlines()
+        if not first or not first[0].strip():
+            problem('README.md first line must be nonempty')
+    except (OSError, UnicodeError) as error:
+        problem(str(error))
+    try:
+        meta = read(path / '_metainfo.json')
+        if not isinstance(meta.get('summary'), str) or not meta['summary'].strip():
+            problem('_metainfo.json must contain a nonempty summary')
+    except (OSError, ValueError, UnicodeError) as error:
+        problem(str(error))
+    try:
+        read(path / 'interfaces.json')
+        describe(path, root)
+    except (OSError, ValueError, TypeError, UnicodeError) as error:
+        problem(str(error))
+    return problems
+
+
+def run(args):
+    root = Path(args['root']).resolve()
+    if not root.is_dir():
+        raise Error('RootMissing', 'definition root is not a directory: %s' % root)
+    paths = list(definitions(root))
+    op = args['op']
+    if op == 'check':
+        return {'problems': [p for path in paths for p in check(path, root)]}
+    if op == 'refs':
+        target = args.get('def')
+        if not isinstance(target, str) or not target:
+            raise Error('ArgumentsBad', 'refs requires def')
+        target = (root / target).resolve()
+        if not target.is_dir():
+            raise Error('DefBad', 'reference target is not a directory')
+        refs = []
+        for path in paths:
+            if path.resolve() == target:
+                continue
+            agent = declared(path)
+            for entry in tools(path, agent).values():
+                source = ((path / agent['tools']).parent / entry['path']).resolve()
+                thought = entry.get('env', {}).get('AOS_THOUGHT_FROM')
+                thought_path = None
+                if isinstance(thought, str) and thought:
+                    candidate = Path(thought)
+                    if candidate.is_absolute():
+                        thought_path = candidate.resolve()
+                    elif os.environ.get('AOS_WS'):
+                        thought_path = (Path(os.environ['AOS_WS']) / candidate).resolve()
+                if source == target or thought_path == target:
+                    refs.append(relative(path, root))
+                    break
+        return {'refs': sorted(set(refs))}
+    if op not in ('ls', 'dup'):
+        raise Error('CommandUnknown', 'unknown operation: %s' % op)
+    rows = [describe(path, root) for path in paths]
+    if op == 'ls':
+        match = args.get('match', '').casefold()
+        return {'defs': [r for r in rows if match in (r['path'] + '\n' + r['summary']).casefold()]}
+    groups = {}
+    for row in rows:
+        if row['brain']:
+            groups.setdefault(signature(row), []).append(row['path'])
+    return {'groups': [{'key': key, 'members': sorted(members)} for key, members in sorted(groups.items()) if len(members) >= 2]}

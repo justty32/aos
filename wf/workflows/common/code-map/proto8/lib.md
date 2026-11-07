@@ -22,7 +22,7 @@
 | [`__init__.py`](../../../../../proto8/lib/agent/__init__.py) | agent - 外部 agent CLI 與 agent 工具共用的 lib 模組。 |
 | [`agent_files.py`](../../../../../proto8/lib/agent/agent_files.py) | 依 aos-agent 公開宣告取得定義檔與 stack 覆蓋檔的相對位置。 |
 | [`agent_tool.py`](../../../../../proto8/lib/agent/agent_tool.py) | claude、codex 共用的工具形入口 ask_cli。 |
-| [`agents/`](../../../../../proto8/lib/agent/agents/) | 生、叫、收另一隻 agent：包著 aos-agent ctl add／say／listen／rm／ls，掛在管我的那台 daemon（$AOS_DAEMON）上 |
+| [`agents/`](../../../../../proto8/lib/agent/agents/) | 生、叫、收另一隻 agent，記錄新定義的 lineage 並同步公開子帳。 |
 | [`agents/tests/test_observed.py`](../../../../../proto8/lib/agent/agents/tests/test_observed.py) | Verify agent account synchronization resolves only registered child stacks. |
 | [`agents/tests/test_wait.py`](../../../../../proto8/lib/agent/agents/tests/test_wait.py) | Verify segmented agent waits, argument checks and cleanup. |
 | [`claude/`](../../../../../proto8/lib/agent/claude/) | 透過 tool_io 收 JSON／旗標，再把 prompt 交給 claude CLI；對話續在工具小格（$AOS_STACK） |

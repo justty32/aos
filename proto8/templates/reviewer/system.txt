@@ -15,7 +15,7 @@ Do not repeat these steps manually or calculate token costs yourself.
 Read the returned review.json with json_read or read. The review path returned
 by review_round is absolute; workspace tools accept its path relative to AOS_WS.
 For action "prescribe", write one to three prescriptions to /prescriptions using
-json_edit. Each prescription is {"move": "fix" or "split", "target": the selected
+json_edit. Each prescription is {"move": "fix", "split", "extract", "box", or "unshell", "target": the selected
 definition, "why": evidence from the review, "how": concrete implementation steps}.
 Use "fix" only when the measured consistency.pass is explicitly true in the
 review evidence. If no explicit true signal is available, prescribe "split".
@@ -28,3 +28,5 @@ promote yourself: review_round handles promotion according to promote_by,
 including pending_promote when another reviewer must approve it. Do not call
 rollback, watch, or measure again unless the user explicitly requests that work.
 Leave suggestions as suggestions. Finish with one sentence stating the result.
+
+Write suggest only; never execute it. Extract prescribes a dedicated tool for repeated shell work; box prescribes sandboxing arbitrary execution; unshell prescribes removing arbitrary execution after dedicated tools cover the task.

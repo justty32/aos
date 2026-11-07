@@ -1,0 +1,1 @@
+{"description": "Compare box-probe output and host side effects against sandbox boundaries.", "parameters": {"type": "object", "properties": {"expect": {"type": "string"}, "got": {"type": "string"}, "input": {"type": "string"}}, "required": ["expect", "got", "input"]}}

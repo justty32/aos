@@ -1,6 +1,7 @@
 # Fold publicly declared observation ledgers into call trees and aggregate costs.
 import json
 from pathlib import Path
+from statistics import median
 
 
 def empty_cost():
@@ -61,9 +62,14 @@ def fold(stack, defs, target=None, elapsed_ms=None):
         own = next((r for r in records if r.get('kind') == 'self'), {})
         node = {'def': display(definition or own.get('def')), 'kind': 'script',
                 'counter_calls': calls, 'in_bytes': 0,
-                'cost': empty_cost(), 'children': []}
+                'cost': empty_cost(), 'children': [], 'prompt_tokens_median': None}
         cost = node['cost']
         thinks = [r for r in records if r.get('kind') == 'think']
+        prompts = [usage['prompt_tokens'] for r in thinks
+                   if isinstance(usage := r.get('usage'), dict)
+                   and type(usage.get('prompt_tokens')) in (int, float)]
+        if prompts:
+            node['prompt_tokens_median'] = median(prompts)
         if thinks:
             node['kind'] = 'agent'
             endpoints = list(dict.fromkeys(r['endpoint'] for r in thinks if 'endpoint' in r))
@@ -89,7 +95,8 @@ def fold(stack, defs, target=None, elapsed_ms=None):
             child = walk(location / relative, definition, duration, len(group)) if relative else None
             if child is None:
                 child = {'def': display(definition), 'kind': 'script',
-                         'counter_calls': len(group), 'cost': empty_cost(), 'children': []}
+                         'counter_calls': len(group), 'cost': empty_cost(), 'children': [],
+                         'prompt_tokens_median': None}
                 child['cost']['time_ms'] = duration
             child['in_bytes'] = sum(r.get('in_bytes', 0) for r in group)
             for record in group:

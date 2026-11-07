@@ -63,6 +63,10 @@ class MeasureTest(unittest.TestCase):
         with patch.object(runner.observed, 'call', return_value=(0, b'2\n', b'')):
             result = runner.measure({'case': str(suite), 'defs': str(self.root), 'repeat': 2}, self.root / 'stack')
         self.assertEqual(len(result['samples']), 2)
+        self.assertIsNone(result['tree']['prompt_tokens_median'])
+        for sample in result['samples']:
+            self.assertIsNone(sample['tree']['prompt_tokens_median'])
+            self.assertIsNone(sample['tree']['children'][0]['prompt_tokens_median'])
         self.assertEqual(result['consistency']['scores'], [1])
         self.assertEqual(result['tree']['cost']['time_ms'], sum(c['cost']['time_ms'] for c in result['tree']['children']))
 

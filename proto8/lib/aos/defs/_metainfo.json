@@ -1,0 +1,1 @@
+{"summary":"Inspect public definition declarations and identify duplicate agent signatures","resource":["disk"],"side_effect":false,"idempotent":true,"deterministic":true,"interrupt":"safe","parallel":true}

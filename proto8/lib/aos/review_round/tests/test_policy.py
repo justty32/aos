@@ -58,6 +58,12 @@ class ReviewPolicy(unittest.TestCase):
         self.calls.append((name, copy.deepcopy(args)))
         if name.startswith('measure_'):
             return copy.deepcopy(self.measures.pop(0))
+        if name == 'defs_ls':
+            return {'defs': []}
+        if name == 'defs_dup':
+            return {'groups': []}
+        if name == 'defs_refs':
+            return {'refs': []}
         if name == 'watch_feed':
             return self.feed
         if name == 'promote':
@@ -92,7 +98,7 @@ class ReviewPolicy(unittest.TestCase):
         self.assertEqual(review['action'], 'prescribe')
         self.assertEqual(review['tried'], [])
         self.assertEqual(review['consistency']['pass'], True)
-        self.assertEqual([call[0] for call in self.calls], ['measure_0', 'watch_feed'])
+        self.assertEqual([call[0] for call in self.calls], ['measure_0', 'watch_feed', 'defs_ls', 'defs_dup'])
 
     def test_no_agent_still_records_seven_steps_and_only_retires_after_three_rounds(self):
         self.definition('unused')
@@ -103,7 +109,7 @@ class ReviewPolicy(unittest.TestCase):
             self.assertEqual(review['action'], 'none')
             self.assertEqual(len(review['steps']), 7)
             self.assertIsNone(review['proposed'])
-            self.assertEqual(review['suggest']['retire'], ['unused'] if index == 2 else [])
+            self.assertEqual([row['def'] for row in review['suggest']['retire']], ['unused'] if index == 2 else [])
         self.assertEqual(review['suggest']['specialize'], [])
 
     def test_baseline_uses_recent_three_before_unit_costs_and_spent_counts_every_repeat(self):

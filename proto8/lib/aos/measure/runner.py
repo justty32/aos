@@ -152,7 +152,7 @@ def measure(arguments, stack):
         cost = add_costs(r['samples'][index]['cost'] for r in results)
         tree_cost = add_costs([{'time_ms': sum(c['cost']['time_ms'] for c in children)}])
         tree = {'def': str(case), 'kind': 'script', 'counter_calls': 1,
-                'cost': tree_cost, 'children': children}
+                'cost': tree_cost, 'children': children, 'prompt_tokens_median': None}
         samples.append({'cost': cost, 'tree': tree, 'in_bytes': sum(r['samples'][index]['in_bytes'] for r in results),
                         'code': next((r['samples'][index]['code'] for r in results if r['samples'][index]['code']), 0),
                         'check': {'pass': all(r['samples'][index]['check']['pass'] for r in results),

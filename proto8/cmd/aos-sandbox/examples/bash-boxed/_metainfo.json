@@ -1,0 +1,43 @@
+{
+  "summary": "Run bash with workspace-only writes and no network.",
+  "arbitrary_exec": true,
+  "sandbox": {
+    "base": [
+      "/usr/lib",
+      "/lib",
+      "/lib64",
+      "/etc"
+    ],
+    "commands": [
+      "aos-exec"
+    ],
+    "ro": [
+      "inner",
+      "../../../../lib/tool_io.py",
+      "../../../../lib/shell_observed.py",
+      "../../../../lib/observed.py",
+      "/usr/bin/env",
+      "/usr/bin/bash",
+      "/usr/bin/python3",
+      "/usr/bin/rg",
+      "/usr/bin/jq"
+    ],
+    "rw": [
+      {
+        "$env": "AOS_WS"
+      },
+      {
+        "$env": "AOS_STACK"
+      }
+    ],
+    "net": false,
+    "mem_mb": 1024,
+    "cpu_s": 120,
+    "file_mb": 100
+  },
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "unsafe",
+  "parallel": true
+}

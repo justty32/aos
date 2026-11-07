@@ -143,6 +143,21 @@ class ReviewRound(unittest.TestCase):
         self.assertEqual(json.loads(listing.stdout), [], 'Measured agents must be removed')
         return review
 
+    def test_large_context_produces_specialization_from_real_agent_usage(self):
+        self.start([('high', 14000, 'correct')], repeat=2)
+        config = read(self.ladder)
+        config['max_prompt_tokens_median'] = 10000
+        write(self.ladder, config)
+        review = self.run_round([14000], 2)
+        ledger = [json.loads(line) for line in (self.kernel / 'ledger.jsonl').read_text().splitlines()]
+        self.assertEqual([row['usage']['prompt_tokens'] for row in ledger], [14000] * 4)
+        self.assertEqual(review['before']['token']['in'], 28000)
+        signals = [row for row in review['suggest']['specialize']
+                   if row['signal'] == 'context_too_big' and row['from'] == 'worker']
+        self.assertTrue(signals, 'Four measured think calls each used 14000 prompt tokens, '
+                        'above threshold 10000; suggest is ' + repr(review['suggest']))
+        self.assertEqual(signals[0]['evidence']['prompt_tokens_median'], 14000)
+
     def test_self_promotes_cheaper_passing_endpoint(self):
         self.start([('high', 120, 'correct'), ('low', 40, 'correct')], repeat=3)
         original = snapshot(self.target)

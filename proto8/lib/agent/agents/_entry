@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# agents - 生、叫、收另一隻 agent：包著 aos-agent ctl add／say／listen／rm／ls，掛在管我的那台 daemon（$AOS_DAEMON）上
+# agents - 生、叫、收另一隻 agent，記錄新定義的 lineage 並同步公開子帳。
 # 使用者 11-05 午：「讓agent利用aos指令產出另一個agent」；11-05 晚：「生子agent有分兩種，一種是產出新agent定義，另一種是用現有定義生
 #   (可能會稍微改一些設定)。我希望兩種都有」「claude code這類常見eca的做法，通常是在呼叫工具的時候，工具自己有紀錄，會看到說超過四個，直接回error」；
 #   子 agent 工作區「不要固定，因為各有不同需求。」。規劃：proto8/thinking/2026-11/05/feat-proto/04-spawn-agent.md、06-實作結果.md。
 # 介面（lib/docs/01 的契約）：stdin 一份 {"op": "new"|"add"|"say"|"ask"|"rm"|"ls", ...}：
-#   new {name, path, from?, files?, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?, on_queued?}  生法 (a) 產出新定義：from（範本資料夾）整份複製到 path
+#   new {name, path, from?, reason?, review?, files?, llm?, tools?, tools_rm?, ws?, limits?, ctl_timeout_s?, on_queued?}  生法 (a) 產出新定義：from（範本資料夾）整份複製到 path
 #       （工作區裡、還不在的資料夾），再寫 files（{相對路徑: 全文}，整份自己寫＝不給 from、只給 files）、llm（鍵併進定義的 llm 檔）、
 #       tools／tools_rm（改定義的 tools 檔：加 {name, path}、拿掉名字）；寫完是普通定義資料夾、可再用 add 掛。tools 檔裡的 path 一律存
 #       相對「新定義裡那份 tools 檔的資料夾」（aos-tools 讀手寫相對路徑就從那裡算；整棵樹搬家不斷，N-67 ①、os-impl A19）：複製來的相對
@@ -44,6 +44,8 @@ HELP = """\
 usage: agents < ARGUMENTS.json   (a tool: run it with aos-exec; $AOS_WS is the workspace)
 Start, talk to and remove child agents on your daemon ($AOS_DAEMON), by wrapping aos-agent.
 New copies a template and applies files, brain settings and tools before starting the child.
+new reason: specialize, split, fix or manual (default); review: optional review path.
+New records lineage in _metainfo.json; from and review keep the exact supplied strings.
 Add starts an existing definition; changes go in the child's overlay.
 on_queued: new, add choose fail (default) or ok (return queue position; starts when a slot frees).
 ctl_timeout_s: new, add, rm wait for the daemon; default 30 seconds, at most 1700.
@@ -390,8 +392,8 @@ def rebase_tools(tools_file, src, dest, tmp):
     write_json(tools_file, reg)
 
 
-def build_def(tmp, dest, src, files, llm, tool_list, tools_rm):
-    """在 tmp 寫好新定義（之後改名成 dest）：複製 from → 寫 files → 改 llm 檔、tools 檔；tools 檔的 path 對 dest 算相對。"""
+def build_def(tmp, dest, src, files, llm, tool_list, tools_rm, lineage):
+    """在 tmp 寫好新定義（之後改名成 dest）：複製 from → 寫 files → 記 lineage → 改 llm 檔、tools 檔；tools 檔的 path 對 dest 算相對。"""
     try:
         if src:
             shutil.copytree(src, tmp, symlinks=True, ignore=shutil.ignore_patterns("__pycache__"))
@@ -413,6 +415,12 @@ def build_def(tmp, dest, src, files, llm, tool_list, tools_rm):
                 f.write(text)
         except OSError as e:
             die("WriteFailed", "cannot write %s: %s" % (rel, e))
+    meta_path = os.path.join(tmp, "_metainfo.json")
+    meta = load_json(meta_path, {})
+    if not isinstance(meta, dict):
+        die("DefBad", "_metainfo.json must be a JSON object")
+    meta["lineage"] = lineage
+    write_json(meta_path, meta)
     if llm:
         lf = decl_file(tmp, "llm")
         if not lf:
@@ -454,6 +462,15 @@ if op in ("new", "add"):
     on_queued = args.get("on_queued", "fail")
     if on_queued not in ("fail", "ok"):
         die("ArgumentsBad", "on_queued must be fail or ok")
+if op == "new":
+    reason = args.get("reason", "manual")
+    if reason not in ("specialize", "split", "fix", "manual"):
+        die("ArgumentsBad", "reason must be specialize, split, fix or manual")
+    if "review" in args and not isinstance(args["review"], str):
+        die("ArgumentsBad", "review must be a string")
+    lineage = {"from": args.get("from"), "reason": reason}
+    if "review" in args:
+        lineage["review"] = args["review"]
 if op == "ask":
     if "timeout_s" in args and "timeout_ticks" in args:
         die("ArgumentsBad", "timeout_s and timeout_ticks are mutually exclusive")
@@ -534,7 +551,7 @@ if op == "new":                                 # 生法 (a)：產出新定義�
     except OSError as e:
         die("MkdirFailed", "cannot create %s: %s" % (os.path.dirname(dest), e))
     try:
-        build_def(tmp, dest, src, files, llm, tool_list, tools_rm)
+        build_def(tmp, dest, src, files, llm, tool_list, tools_rm, lineage)
         os.rename(tmp, dest)
     except SystemExit:
         shutil.rmtree(tmp, ignore_errors=True)

@@ -1,0 +1,1 @@
+{"summary":"Read declared shell observations and effective execution stages without modifying stacks or definitions","resource":["disk","process"],"side_effect":false,"idempotent":true,"deterministic":false,"interrupt":"safe","parallel":true}

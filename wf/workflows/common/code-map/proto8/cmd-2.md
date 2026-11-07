@@ -13,7 +13,6 @@
 | [`examples/agent.json`](../../../../../proto8/cmd/aos-sandbox/examples/agent.json) | 設定（鍵：commands、ro、rw、env、net、mem_mb…） |
 | [`examples/bash-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/) | Run one bash command line in your workspace. Returns stdout and stderr merged; the last line is always [exit code N], your command's exit code (non-z… |
 | [`examples/bash-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/inner) | → `../../../../lib/base/bash` |
-| [`examples/bash-boxed/sandbox.json`](../../../../../proto8/cmd/aos-sandbox/examples/bash-boxed/sandbox.json) | 設定（鍵：commands、ro、rw、net、mem_mb、cpu_s…） |
 | [`examples/cli-tool.json`](../../../../../proto8/cmd/aos-sandbox/examples/cli-tool.json) | 設定（鍵：commands、ro、rw、env、net） |
 | [`examples/thought-boxed/`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/) | Hand one task to a fresh helper from an agent definition chosen by from or the tool registry entry env.AOS_THOUGHT_FROM default and get back only its… |
 | [`examples/thought-boxed/inner`](../../../../../proto8/cmd/aos-sandbox/examples/thought-boxed/inner) | → `../../../../lib/agent/thought` |

@@ -1,4 +1,4 @@
-# reviewer — 讓腳本量成本、試降級，agent 只讀結果與開處方。
+reviewer 根據量測審視定義並開立後續實作處方。
 
 ```mermaid
 flowchart LR
@@ -25,3 +25,5 @@ python3 -m unittest discover -s proto8/templates/reviewer/tests -p 'test_*.py'
 複製範本時保留 `../agent-fsm/` 與 `../../lib/` 的相對位置，或明確調整定義的路徑；格讀取設定時依 `AOS_CD`，自身檔案位置只用於找共用模組。測試在 `/tmp` 建暫存定義與工作區，使用真 daemon、kernel、review_round、measure 和 json_edit，只替換腦的端點，不叫真 LLM。
 
 </details>
+
+ladder 的 max_prompt_tokens_median 預設 10000、retire_after_cases 預設 3。suggest 只寫不做；extract、box、unshell 是交給後續實作者的處方，不會自動執行。

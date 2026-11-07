@@ -66,6 +66,32 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(cost['token']['in'], 0)
         self.assertEqual(cost['time_ms'], 19)
         self.assertEqual(tree['kind'], 'script')
+        self.assertIsNone(tree['prompt_tokens_median'])
+
+    def test_prompt_median_odd_even_and_missing(self):
+        for values, expected in (([9, 1, 4], 4), ([9, 2], 5.5), ([], None)):
+            with self.subTest(values=values):
+                records = [self.think(value) for value in values]
+                records += [self.think(usage=False), {'kind': 'think'},
+                            {'kind': 'think', 'usage': {}}]
+                self.account(self.stack, records)
+                tree, _ = ledger.fold(self.stack, self.defs, 'root')
+                self.assertEqual(tree['prompt_tokens_median'], expected)
+
+    def test_prompt_median_is_local_and_script_fallback_is_null(self):
+        self.account(self.stack, [self.think(2), self.think(8), self.tool(),
+                                  self.tool('missing')])
+        self.account(self.stack / 'tools/worker', [self.think(100)])
+        tree, total = ledger.fold(self.stack, self.defs, 'root')
+        self.assertEqual(tree['prompt_tokens_median'], 5)
+        self.assertEqual(tree['children'][0]['prompt_tokens_median'], 100)
+        self.assertIsNone(tree['children'][1]['prompt_tokens_median'])
+        self.assertEqual(total['token']['in'], 110)
+        self.account(self.stack, [self.tool()])
+        tree, _ = ledger.fold(self.stack, self.defs, 'root')
+        self.assertEqual(tree['kind'], 'script')
+        self.assertIsNone(tree['prompt_tokens_median'])
+        self.assertEqual(tree['children'][0]['prompt_tokens_median'], 100)
 
     def test_root_time_is_sum_and_definition_paths(self):
         self.account(self.stack, [self.tool('a', elapsed_ms=8), self.tool('b', elapsed_ms=13)])

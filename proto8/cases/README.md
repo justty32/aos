@@ -1,6 +1,6 @@
 # cases — measure 共用的考題格式與比對器契約。
 
-← [proto8](../README.md)｜量測工具 [measure](../lib/aos/measure/README.md)｜現成考題 [smoke](smoke/README.md)
+← [proto8](../README.md)｜量測工具 [measure](../lib/aos/measure/README.md)｜現成考題 [smoke](smoke/README.md)、[box-probe](box-probe/README.md)
 
 ```mermaid
 flowchart LR

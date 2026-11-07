@@ -1,4 +1,20 @@
-{"description": "Configure model downgrade trials, quality gates, and post-promotion watching.",
- "ladder": ["sol", "terra", "luna", "local"], "repeat": 3, "min_score": 0.9,
- "watch": {"window": 3, "tolerance": 0.10, "metric": "/token/in", "baseline_cases": 3},
- "promote_by": "self"}
+{
+  "description": "Configure model downgrade trials, quality gates, and post-promotion watching.",
+  "ladder": [
+    "sol",
+    "terra",
+    "luna",
+    "local"
+  ],
+  "repeat": 3,
+  "min_score": 0.9,
+  "watch": {
+    "window": 3,
+    "tolerance": 0.1,
+    "metric": "/token/in",
+    "baseline_cases": 3
+  },
+  "promote_by": "self",
+  "max_prompt_tokens_median": 10000,
+  "retire_after_cases": 3
+}

@@ -30,7 +30,7 @@
 | [`promote/tests/test_swap.py`](../../../../../proto8/lib/aos/promote/tests/test_swap.py) | Verify definition swaps, byte recovery, and busy guards through real aos tools. |
 | [`review_round/`](../../../../../proto8/lib/aos/review_round/) | Measure a case, try cheaper endpoints, and record one review round. |
 | [`review_round/review_data.py`](../../../../../proto8/lib/aos/review_round/review_data.py) | Read review settings, traverse definition trees, and account for measured costs. |
-| [`review_round/round_runner.py`](../../../../../proto8/lib/aos/review_round/round_runner.py) | Execute the scripted review steps and promote only cheaper passing candidates. |
+| [`review_round/round_runner.py`](../../../../../proto8/lib/aos/review_round/round_runner.py) | Execute review steps, promote cheaper passing candidates and record growth signals. |
 | [`review_round/tests/fake_endpoint.py`](../../../../../proto8/lib/aos/review_round/tests/fake_endpoint.py) | Run the real fake endpoint and report the endpoint's configured token usage. |
 | [`review_round/tests/test_policy.py`](../../../../../proto8/lib/aos/review_round/tests/test_policy.py) | Verify watch exclusions, tree selection, history baselines and retirement decisions. |
 | [`review_round/tests/test_round.py`](../../../../../proto8/lib/aos/review_round/tests/test_round.py) | Verify complete review rounds against isolated daemons and real fake endpoints. |

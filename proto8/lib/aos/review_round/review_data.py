@@ -44,6 +44,10 @@ def settings(path):
         raise Error('ArgumentsBad', 'watch.tolerance must be finite and nonnegative')
     if not isinstance(watch.get('metric'), str) or not watch['metric'].startswith('/'):
         raise Error('ArgumentsBad', 'watch.metric must be a JSON pointer')
+    for key, default in (('max_prompt_tokens_median', 10000), ('retire_after_cases', 3)):
+        value.setdefault(key, default)
+        if type(value[key]) is not int or value[key] < 1:
+            raise Error('ArgumentsBad', key + ' must be a positive integer')
     return value
 
 

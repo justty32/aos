@@ -15,7 +15,7 @@
 | 分檔 | 涵蓋的段 |
 |---|---|
 | [01-分層等](docs/01-分層等.md) | 分層（每層只依賴下層）；一個工具長什麼樣（契約）；怎麼引用（不複製） |
-| [02-索引-base與索引-aos](docs/02-索引-base與索引-aos.md) | 索引：base；索引：aos（aos_json、判官 judge、measure、promote／rollback、watch／review_round） |
+| [02-索引-base與索引-aos](docs/02-索引-base與索引-aos.md) | 索引：base；索引：aos（量測、換版、審視、shell 帳與關箱比對、定義樹） |
 | [03-索引-agent等](docs/03-索引-agent等.md) | 索引：agent（11-05 加 self_tools：agent 改自己的工具；agents：agent 生、叫、收另一隻 agent）；agent 自己的格（11-03 刪了）；外部 agent 的一輪（eca）；範例（demo/agent-liv 11-04 刪了） |
 
 <a id="分層每層只依賴下層"></a>

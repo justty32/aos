@@ -22,6 +22,8 @@ stdin 收一份物件，包含 `case`、`defs`、`repeat`（正整數，預設 1
 
 頂層 `cost` 是各 sample 成本逐欄取中位數，`tree` 使用第一次執行的呼叫樹。`size_bytes` 是輸入檔加初始工作區檔案的位元組數。`repeat >= 2` 時，用同一個比對器與門檻，將後續每次工作區與第一次比對，產生 `consistency`。`check.scores` 表示對照期望產出的分數；`consistency.scores` 表示重跑之間的分數。
 
+`tree` 每個節點的 `prompt_tokens_median` 是該節點自己公開帳中，`think` 行 `usage.prompt_tokens` 數值的中位數；偶數筆取中間兩值的算術平均，不聚合子節點。沒有數值時為 `null`，`kind: script` 節點（含套題根）也為 `null`。各 sample 的樹同樣保留此欄位。
+
 單一考題的暫存位置是本工具 stack 內的 `runs/<未使用整數>/ws` 與同層 `stack`；既有執行資料夾會保留。套題使用 `cases/<考題名>/runs/<未使用整數>/`。沒有 `run.json` 的資料夾視為套題，執行直接下一層含 `run.json` 的子考題，各題完整結果保留在 `cases`。套題每份 sample 加總各題成本，保留比對結果與結束碼；第一份 sample 的呼叫樹建立 script 根節點，本地 token 為零、時間為子節點時間總和。套題每輪的 consistency 分數是各子題分數的算術平均，各題等權（含自訂比對器）；各題原始分數仍可分開查看。
 
 套題的一致性總分只適用於同一粒度的考題。腳本單步、LLM 單步（按 endpoint 分開）、整體執行三層必須分開量測，不跨三層合成確定性結論。
