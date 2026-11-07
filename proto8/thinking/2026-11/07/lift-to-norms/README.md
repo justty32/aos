@@ -76,3 +76,5 @@
 - 本夾不改條文、不 commit、不寄信；貼草稿進條文要另派一條線（照前例 opus＋拆檔），條號 N-68、C-84 貼前再對一次有沒有被 kernel-nest／tool-evolve／kb-scale 先用掉。
 - 範圍外但順手發現：11-06 git-image 三題裁定（image 只留最新一份、`think/request.json` 擋掉可重建、`ws/.trash/` 不搬）不在 proto8/docs，可併進 A21 的 N-67 新 ⑩。
 - 不需要 fable：衝突都是「加一句改讀」級，原則推得出來。
+
+11-07 頂層：第 1 題照推薦還原，commit `95a9e8dd1`（使用者出門中，頂層暫照推薦，可翻案）。
