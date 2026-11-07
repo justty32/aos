@@ -8,7 +8,7 @@
 
 ## 最新進度
 
-- **open｜沙盒（使用者 11-07 檢討點 5）**：家機 codex 要連 LiteLLM 目前不帶 `-s`（照用使用者 config 全權限），使用者「未來還是要找時間做沙盒」——待排：讓 codex workspace-write 沙箱能連 localhost:4000，或其他做法
+- **open｜沙盒（使用者 11-07 檢討點 5）**：等使用者在看板裁（`codex-sandbox` 線 ask）——11-08 實測家機 codex 帶 `-s workspace-write -c sandbox_workspace_write.network_access=true` 就能開著沙箱連 LiteLLM、不用改他的 config，推薦 A；裁完再照草稿改 aos-teams/02 的家機 codex 指令 → [codex-sandbox](../proto8/thinking/2026-11/08/codex-sandbox/README.md)
 
 - **open｜待裁題互動頁→工作流（使用者 11-07「好，就這樣做」）**：等使用者回完桌面 `aos-sol審查-待你裁.html` 這頁、看用起來哪裡不順，再抽成工作流：opus 定工作流與題目資料格式（資料檔進 wf-table 契約），codex 照著寫『資料檔→互動網頁』產生程式；之後各批要使用者裁的題都走這條 → 素材 [sol 審查](workflows/refactor/reports/2026-11-07-sol審查/README.md)
 
