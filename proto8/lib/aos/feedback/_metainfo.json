@@ -1,0 +1,9 @@
+{
+  "summary": "Submit command usability feedback through aos-feedback without guessing the caller",
+  "resource": ["disk", "process"],
+  "side_effect": true,
+  "idempotent": false,
+  "deterministic": false,
+  "interrupt": "safe",
+  "parallel": false
+}

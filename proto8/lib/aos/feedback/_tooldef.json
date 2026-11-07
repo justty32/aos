@@ -1,0 +1,16 @@
+{
+  "description": "Submit usability feedback about an aos command or function through aos-feedback. Feedback is collected for later improvement; it does not change the target. The default author is aos-agent; supply by explicitly to identify a different author.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "command": {"type": "string", "description": "Command or function being reviewed, preserved literally, for example aos-agent ctl add or lib/agent/memory."},
+      "pain": {"type": "string", "description": "What was confusing or difficult."},
+      "suggest": {"type": "string", "description": "Optional suggested improvement."},
+      "kind": {"type": "string", "enum": ["usage", "help", "errors", "args", "other"], "default": "other", "description": "Aspect being reviewed."},
+      "score": {"type": "number", "minimum": 0, "maximum": 1, "description": "Optional comfort score from 0 to 1; 1 means comfortable."},
+      "by": {"type": "string", "default": "aos-agent", "description": "Feedback author; the tool does not infer who called it."}
+    },
+    "required": ["command", "pain"]
+  },
+  "errors": ["ArgumentsBad", "LaunchFailed", "CommandFailed"]
+}

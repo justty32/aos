@@ -5,6 +5,25 @@
 
 一句話取自各檔檔頭；要改說明去改檔頭，再跑 `python3 wf/tools/codemap_gen.py --apply`。工具夾（`_entry`＋`_tooldef.json`＋`_metainfo.json`）併成一列。
 
+## `proto8/lib/aos/`
+
+| 檔 | 負責什麼 |
+|---|---|
+| [`aos_json/`](../../../../../proto8/lib/aos/aos_json/) | 腦用的 JSON 工具：stdin 收 {"cmd", "target", "value"?, "depth"?}，在 $AOS_WS 底下叫 aos-json，stdout 是結果。 |
+| [`judge/`](../../../../../proto8/lib/aos/judge/) | 判官：收 $AOS_STACK/requests/ 的 procs_* 信，照 judge.json 判「掛不掛」；掛＝轉寄進 $AOS_DAEMON 的 ctl 信箱，不掛＝回 applied: false；選填排隊窗 queue.json 先來先掛、keep_ordered 對照代回有序信 |
+| [`judge/tests/test_judge.py`](../../../../../proto8/lib/aos/judge/tests/test_judge.py) | Verify broken reply recovery and restart deduplication with real aos-post mailboxes. |
+| [`measure/`](../../../../../proto8/lib/aos/measure/) | Measure isolated cases, costs and repeat consistency as JSON. |
+| [`measure/compare.py`](../../../../../proto8/lib/aos/measure/compare.py) | Compare workspace artifacts using bytes or an observed custom comparator. |
+| [`measure/ledger.py`](../../../../../proto8/lib/aos/measure/ledger.py) | Fold publicly declared observation ledgers into call trees and aggregate costs. |
+| [`measure/runner.py`](../../../../../proto8/lib/aos/measure/runner.py) | Run isolated function or agent cases and summarize repeated measurements. |
+| [`measure/tests/test_acceptance.py`](../../../../../proto8/lib/aos/measure/tests/test_acceptance.py) | Verify batch four acceptance cases through the real measure and metadata tools. |
+| [`measure/tests/test_compare.py`](../../../../../proto8/lib/aos/measure/tests/test_compare.py) | Verify byte scoring and independent custom comparator costs. |
+| [`measure/tests/test_fake_agent.py`](../../../../../proto8/lib/aos/measure/tests/test_fake_agent.py) | Verify measured fake agents, descendant token totals, and real control cleanup. |
+| [`measure/tests/test_ledger.py`](../../../../../proto8/lib/aos/measure/tests/test_ledger.py) | Verify public ledger traversal, local token accounting, and call aggregation. |
+| [`measure/tests/test_runner.py`](../../../../../proto8/lib/aos/measure/tests/test_runner.py) | Verify isolated runs, comparator accounting, failure gates and suites. |
+| [`metainfo_check/`](../../../../../proto8/lib/aos/metainfo_check/) | Compare declared definition costs with observed median cost ratios without writing files. |
+| [`metainfo_check/tests/test_metainfo_check.py`](../../../../../proto8/lib/aos/metainfo_check/tests/test_metainfo_check.py) | Verify cost verdicts, formula ratios, ledger extraction, and read-only tool errors. |
+
 ## `proto8/lib/base/`
 
 | 檔 | 負責什麼 |

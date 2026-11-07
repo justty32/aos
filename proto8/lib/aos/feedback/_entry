@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+# feedback - Submit command usability feedback through aos-feedback without guessing the caller.
+from pathlib import Path
+import subprocess
+import sys
+
+sys.dont_write_bytecode = True
+HERE = Path(__file__).resolve().parent
+_lib = next((p for p in HERE.parents if p.name == 'lib' and (p / 'tool_io.py').is_file()), None)
+sys.path[:0] = [str(HERE)] + ([str(_lib)] if _lib else [])
+try:
+    import tool_io
+except ModuleNotFoundError as error:
+    if error.name != 'tool_io':
+        raise
+    _line = 'feedback: error: ModuleMissing tool_io.py not in the tool folder, not in lib/, not on the Python path\n'
+    sys.stderr.write(_line)
+    sys.stdout.write(_line)
+    sys.exit(1)
+
+
+def main():
+    tool_io.start('feedback')
+    args = tool_io.arguments()
+    argv = ['aos-feedback', 'add', '--by=' + args.get('by', 'aos-agent')]
+    for key in ('kind', 'score'):
+        if key in args:
+            argv.append('--' + key + '=' + str(args[key]))
+    argv += ['--', args['command'], args['pain']]
+    if 'suggest' in args:
+        argv.append(args['suggest'])
+    try:
+        result = subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, text=True)
+    except OSError as error:
+        tool_io.die('LaunchFailed', 'aos-feedback failed to start (aos-feedback must be on PATH): %s' % error)
+    except ValueError:
+        tool_io.die('ArgumentsBad', 'Arguments must not contain null characters')
+    if result.returncode != 0:
+        tool_io.die('CommandFailed', 'aos-feedback add exited %d' % result.returncode)
+    sys.stdout.write(result.stdout)
+
+
+if __name__ == '__main__':
+    main()

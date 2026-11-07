@@ -1,0 +1,7 @@
+{"description": "Classify feedback raters by the first matching model name substring.", "rules": [
+  {"match": "opus", "family": "claude", "tier": "high"},
+  {"match": "sonnet", "family": "claude", "tier": "mid"},
+  {"match": "sol", "family": "gpt", "tier": "high"},
+  {"match": "terra", "family": "gpt", "tier": "mid"},
+  {"match": "12b", "family": "local", "tier": "low"}
+]}

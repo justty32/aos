@@ -8,6 +8,7 @@
 |---|---|
 | [aos-agent](aos-agent/README.md) | 給人用的 agent 介面：add、say／listen／chat、畫面、tools 覆蓋層、搬家範本 |
 | [aos-daemon-ctl](aos-daemon-ctl/README.md) | 掛上 proc、起停、暫停；prune 自檢與清理舊列 |
+| [aos-feedback](aos-feedback/README.md) | 收集指令／函數意見；從 AI 評分與工具帳計算舒適度 |
 | [aos-tools](aos-tools/README.md) | 一個 agent 資料夾一份工具註冊檔（tools.json） |
 | [aos-tick](aos-tick/README.md) | 把時鐘檔的回合數往前走一格 |
 | [aos-eca](aos-eca/README.md) | 外部 coding agent（claude／codex）：`aos-eca-turn` 答一輪、`aos-eca-screen` 開畫面 |

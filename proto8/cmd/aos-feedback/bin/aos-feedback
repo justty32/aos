@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+# Collect command feedback and report observed AI comfort scores.
+from pathlib import Path
+import sys
+
+sys.dont_write_bytecode = True
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))
+for parent in HERE.parents:
+    if (parent / 'py' / 'aos_flags.py').is_file():
+        sys.path.insert(0, str(parent / 'py'))
+        break
+import aos_flags
+from aos_feedback import main
+
+aos_flags.run(main)
