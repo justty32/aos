@@ -8,7 +8,7 @@
 
 ## 最新進度
 
-- **open｜node-pool（11-08，想法 20 節點池與錢財制度）**：fable 規劃＋隊長圖紙寫好、第 0 epoch 試算做完；7 題（4 衝突、3 方向）在桌面決定頁等使用者裁、照推薦代定；第五輪開工照 03 §7 派 N1～N5（N1、N2 可在第四輪途中做） → [node-pool](../proto8/thinking/2026-11/08/node-pool/README.md)
+- **open｜node-pool（11-08，想法 20 節點池＋想法 21 蒸餾後壓縮）**：想法 20 決定頁使用者已裁（q1 改抽象分數，03 已改）；想法 21 簡報 04→fable 05→圖紙 06 寫好，5 題在桌面決定頁 `aos-np21-1108-待你裁.html` 等裁、照推薦代定；第五輪開工照 03 §7 N2～N5、06 §6 N6～N10（N1 第四輪已修）；真庫兩條錯連（傑克／傑克遜、耶拉／耶拉岡德像）已知會 arknights-kb → [node-pool](../proto8/thinking/2026-11/08/node-pool/README.md)
 
 - **open｜special-cases（11-06 K 隊；使用者同日選項框裁六題）**：條文已寫（C-52 讀法「不認身份、可認公開介面」＋判準＋現行表、升格門檻、N-63 K3、C-81 K7；8 處矛盾修 4 處、其餘只列）；程式改法 K-1～K-6（K-2、K-4、K-5、K-6 已做；K-5 11-06 晚家機 [06](../proto8/thinking/2026-11/06/special-cases/06-K5實作結果.md)）排在 [apply-ideas 02 § special-cases](../proto8/thinking/2026-11/06/apply-ideas/02-排程.md#11-06-special-cases-排程k-隊)，P7 開工前照新讀法重設計；`_` 保留等撞名 → [special-cases](../proto8/thinking/2026-11/06/special-cases/README.md)
 

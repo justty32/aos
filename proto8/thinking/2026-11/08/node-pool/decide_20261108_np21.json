@@ -1,0 +1,257 @@
+{
+ "description": "Decision questions for node-pool idea 21 (compression after distillation).",
+ "contract": "wf-table/1",
+ "source": "README.md",
+ "extracted": "2026-11-08",
+ "kind": "decide-page/1",
+ "batch": "np21-1108",
+ "line": "node-pool",
+ "title": "想法 21 蒸餾後壓縮：5 題等你一句話",
+ "kicker": "11-08 node-pool · 1 條跟既有規矩衝突、4 題方向",
+ "lead": [
+  "**做法：**第五輪全零 LLM。規則池裡被更短、同判決規則蓋住的標「被蓋」、不刪：試算 186 條剩 95 條有效、作答結果不變。",
+  "**短名嵌長名：**不逐筆死記長名，改看「這個短名在語料裡大多是不是同一個長字串的一部分」；真庫試算擋到 2 條真錯連、0 條誤擋。",
+  "**不知道的：**LLM 要不要幫忙歸納本質、本質能寫成什麼樣、被蓋的規則最後去哪。"
+ ],
+ "sections": [
+  {
+   "id": "conf",
+   "title": "一、跟既有規矩衝突的",
+   "intro": "新想法和已定的規矩說法不同，要你選哪邊。"
+  },
+  {
+   "id": "dir",
+   "title": "二、規矩推不出來的方向",
+   "intro": ""
+  }
+ ],
+ "columns": [
+  "id",
+  "section",
+  "question",
+  "eli5",
+  "options",
+  "recommend",
+  "why",
+  "quotes",
+  "details",
+  "source_path",
+  "source_lines",
+  "source_excerpt",
+  "answer",
+  "answer_state",
+  "answer_note",
+  "answered_at"
+ ],
+ "link_columns": [
+  "source_path"
+ ],
+ "rows": [
+  {
+   "id": "c4",
+   "section": "conf",
+   "question": "一條更一般的規則「蓋住」一條已上線的規則，算不算讓它退休、要不要你／隊長按？",
+   "eli5": "例：已上線的「〈…〉 之間要連」被同樣已上線、更短的「〈 後面要連」蓋住，前者其實用不到了。",
+   "options": [
+    {
+     "key": "A",
+     "label": "只有被蓋的是已上線規則時要隊長按（現在 3 條），其他自動標",
+     "consequence": "守住「退休永遠隊長按」，按的量很小"
+    },
+    {
+     "key": "B",
+     "label": "全部自動標，因為只標不刪、隨時能退回",
+     "consequence": "省事；但已上線規則在沒人點頭下停用，跟退休規矩說法不一"
+    }
+   ],
+   "recommend": "A",
+   "why": "被蓋只是標記、不刪，但已上線規則停用跟退休很像，照既有規矩讓隊長點頭；只有 3 條",
+   "quotes": [
+    {
+     "text": "「我們現在的蒸餾，就是全部記錄下來，這在我們做這種小demo的時候還可以，但在大專案的時候效率很差」",
+     "cite": "proto8/thinking/2026-11/07/kb-ideas/README.md 想法 21"
+    }
+   ],
+   "details": [
+    "試算：186 條裡 91 條被蓋，其中 3 條是已上線被已上線蓋（06 §1）",
+    "衝突出處：05 §7 衝突 4（ad-3 退休永遠隊長按）"
+   ],
+   "source_path": "05-規劃-fable-想法21.md",
+   "source_lines": "§7 衝突 4",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "q1",
+   "section": "dir",
+   "question": "第五輪要不要讓 LLM 幫忙歸納「本質」（從零散的死記規則裡找共同點）？",
+   "eli5": "機械去重能壓掉一半，但剩下的「孤兒規則」之間的共同點，腳本看不出來，只有 LLM 能猜。",
+   "options": [
+    {
+     "key": "A",
+     "label": "不開，第五輪全零 LLM，孤兒照舊死記",
+     "consequence": "符合「逐步削減 LLM」；壓縮率只到機械看得見的程度"
+    },
+    {
+     "key": "B",
+     "label": "開一點：每批收輪最多 1 次呼叫、2k token，歸納出的只當候選",
+     "consequence": "能看到 LLM 歸納出的本質長怎樣；多一個變數"
+    },
+    {
+     "key": "C",
+     "label": "全開，讓 LLM 直接重寫規則池",
+     "consequence": "最像「啟發式」；但主要判斷又回到 LLM，也沒法對照"
+    }
+   ],
+   "recommend": "A",
+   "why": "先看零 LLM 能壓多少（試算 186→95）再決定；孤兒超過一半才開 B",
+   "quotes": [
+    {
+     "text": "「我也擔心，是否變成腳本的，都是一些無關痛癢的子功能，而主要功能仍需大量依賴LLM，而不是我設想的，逐步削減LLM的級別與使用。」",
+     "cite": "wf/workflows/common/user/03-討論紀錄與規劃.md 11-07 檢討第 3 點"
+    },
+    {
+     "text": "「我們現在的蒸餾，就是全部記錄下來，這在我們做這種小demo的時候還可以，但在大專案的時候效率很差」",
+     "cite": "proto8/thinking/2026-11/07/kb-ideas/README.md 想法 21"
+    }
+   ],
+   "details": [
+    "這題也是 05 衝突 2（記本質 vs 削減 LLM）"
+   ],
+   "source_path": "05-規劃-fable-想法21.md",
+   "source_lines": "§8 Q1、§7 衝突 2",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "q2",
+   "section": "dir",
+   "question": "「本質」允許寫成什麼樣子？",
+   "eli5": "例：嵌詞表裡「其後、前後、幕後、戰後…」8 個詞，可以收成一條「某字＋後」的模板。",
+   "options": [
+    {
+     "key": "A",
+     "label": "只准字面＋幾種固定模板（某字＋後、後＋某字）",
+     "consequence": "腳本能寫死、誤判好量；表達力有限"
+    },
+    {
+     "key": "B",
+     "label": "任意正則表達式",
+     "consequence": "表達力強；LLM 寫的正則難審、誤判難量"
+    },
+    {
+     "key": "C",
+     "label": "用自然語言寫本質、每次交給 LLM 判斷",
+     "consequence": "最像人的「啟發式」；每次比對都花 LLM"
+    }
+   ],
+   "recommend": "A",
+   "why": "能寫死的用程式；目前看到的本質全落在固定模板裡",
+   "quotes": [
+    {
+     "text": "「我們現在的蒸餾，就是全部記錄下來，這在我們做這種小demo的時候還可以，但在大專案的時候效率很差」",
+     "cite": "proto8/thinking/2026-11/07/kb-ideas/README.md 想法 21"
+    }
+   ],
+   "details": [
+    "嵌詞表模板試算：23 筆裡 8 筆可收成兩條模板（06 §3-2）"
+   ],
+   "source_path": "05-規劃-fable-想法21.md",
+   "source_lines": "§8 Q2",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "q3",
+   "section": "dir",
+   "question": "被蓋住的規則最後要怎樣？",
+   "eli5": "被蓋的規則不再作答，但還在檔案裡佔位子。",
+   "options": [
+    {
+     "key": "A",
+     "label": "永遠留在原檔",
+     "consequence": "最安全；檔案只增不減"
+    },
+    {
+     "key": "B",
+     "label": "連續 3 批被蓋、上面那條沒出錯 → 列建議，隊長按了才搬到封存檔",
+     "consequence": "檔案能縮；跟節點池「只建議、按了才封存」同一套"
+    },
+    {
+     "key": "C",
+     "label": "壓縮時當場刪",
+     "consequence": "最省；違反「刪要授權」"
+    }
+   ],
+   "recommend": "B",
+   "why": "你已經在節點池裁過同一套（c1:A），規則池照抄",
+   "quotes": [
+    {
+     "text": "「我們現在的蒸餾，就是全部記錄下來，這在我們做這種小demo的時候還可以，但在大專案的時候效率很差」",
+     "cite": "proto8/thinking/2026-11/07/kb-ideas/README.md 想法 21"
+    }
+   ],
+   "details": [
+    "節點池裁定：錢扣到 0 只建議退休，隊長按了才封存（決定頁 c1:A）"
+   ],
+   "source_path": "05-規劃-fable-想法21.md",
+   "source_lines": "§8 Q3",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "q4",
+   "section": "dir",
+   "question": "「短名嵌在長名裡」這個判斷要放哪？",
+   "eli5": "例：「耶拉」在「耶拉岡德像」裡、「傑克」在「傑克遜」裡，不該連到耶拉、傑克。試算：「短名在語料裡 70% 以上都是同一個長字串的一部分」這條，在真庫 619 個連結裡擋到 2 條，兩條都是真的錯連、沒誤擋。",
+   "options": [
+    {
+     "key": "A",
+     "label": "當規則池裡的一條規則",
+     "consequence": "全在一個池；規則格式得加「語料比例」這種新欄"
+    },
+    {
+     "key": "B",
+     "label": "連結工具裡一個檢查＋一份例外清單",
+     "consequence": "最直接；規則池格式不變"
+    },
+    {
+     "key": "C",
+     "label": "把長名一個個抄進嵌詞表",
+     "consequence": "百科式死記，正是想法 21 要避的"
+    }
+   ],
+   "recommend": "B",
+   "why": "它判的是語料統計、不是字面，塞進規則格式會撐歪",
+   "quotes": [
+    {
+     "text": "「我們現在的蒸餾，就是全部記錄下來，這在我們做這種小demo的時候還可以，但在大專案的時候效率很差」",
+     "cite": "proto8/thinking/2026-11/07/kb-ideas/README.md 想法 21"
+    }
+   ],
+   "details": [
+    "fable 原版「鄰字是漢字就不連」試算會擋掉 74% 的對連結，已改成語料比例（06 §2-1）",
+    "「斯特／開斯特」「大帝／伊戈爾大帝」這型擋不到（短名分散在很多長名裡），照舊靠代定 73 兜底"
+   ],
+   "source_path": "05-規劃-fable-想法21.md",
+   "source_lines": "§8 Q4",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  }
+ ]
+}
