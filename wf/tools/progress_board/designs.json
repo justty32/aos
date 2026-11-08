@@ -292,6 +292,51 @@
    "outcome": "使用者五題全選推薦。程式在「五份設計實作」第 9 批做完：定義樹工具 `defs`（找、查重複、查誰引用誰、檢查）、新 agent 出生時記下「從誰分出來、為什麼」。明日方舟第二輪收輪照這個規則重算：有腦的定義 9 份、8 組不同鑰匙，36 對裡 35 對不同；審視者和別名裁判被如實標成同種。審視者自動生新 agent 那步，因審視者一直停在最低級，還沒發生。",
    "outcome_tag": "採用",
    "details_md": "**fable 的答案**\n\n- **同不同種**：只比工具（解析後的路徑）、腦（`llm.json` 的端點）、記憶（記憶根路徑）；開場白、誰叫它、成本都不算。三樣拼成一把鑰匙，一次掃完就知道哪幾個重複（舊做法兩兩比，一千隻要比五十萬對）。\n- **重複了不自動合併**：只標「太像了」，建議給其中一隻配自己的記憶或工具；真要合併要先證明兩隻做同一件事（同考題同門都過）。\n- **新專員從哪生**：好幾個地點都有人臨時開同樣的小幫手；某隻每次塞給 AI 的字太多；審視者把一步拆小時拆出來的那塊。生之前先查有沒有現成的。\n- **目錄**：定義資料夾本身排成樹，每個 README 第一行一句話；出生時記 `lineage`（從誰來、為什麼）。\n- **退休**：沒人在用、沒人引用才 `git mv` 進 `retired/`；連三輪沒被叫、而且同類兄弟有被叫過，才算冷掉。\n\n**使用者裁定 ad-1～5（全選推薦）**\n\n| 題 | 裁定 |\n|---|---|\n| ad-1 算不算腳本和總機 | 只算有腦的 |\n| ad-2 差幾樣算不同 | 差一樣就算 |\n| ad-3 專員誰建誰退 | 前三個地點隊長建，之後審視者可自動建；退休永遠隊長按 |\n| ad-4 「字太多」門檻 | 固定 10,000 |\n| ad-5 定義樹放哪 | 工作區 `$AOS_WS/defs/`；備註：要能定期提取出來給別的遊戲用 |\n\n**opus 補全時改的**：搜尋改用 `defs ls --match`（memory 的全文搜會被上千份設定檔塞滿）；判官那條衝突的歸屬改正；補三條衝突（lineage 不是執行時的上層鏈等）。\n\n**後來怎樣**\n\n- impl-plan 批 9 `f33595cf9`：`lib/aos/defs`（ls／dup／refs／check）、`agents new` 記血緣。\n- arknights 代定 36、14b §1：有腦 9 份、8 組簽名、36 對中 35 對不同。\n- 「可重用定義包」kb-kit 就是 ad-5 備註的落實（見第三輪 15-C）。\n"
+  },
+  {
+   "id": "ak-25",
+   "order": 77,
+   "doc": "proto8/thinking/2026-11/07/arknights-kb/25-第五輪規劃-fable.md",
+   "title": "第五輪第一版：元優化骨架",
+   "topic": "明日方舟知識庫",
+   "date": "2026-11-08",
+   "conclusion": "第五輪不擴範圍：從不帶明日方舟知識的基準出發，在謝拉格 22 題上反覆跑，量長到第四輪效率要花多少；改進者改一次再跑一次比。",
+   "eli5": "像比較兩位教練：同一個新手、同一套題，看誰帶得快。",
+   "figure_svg": "",
+   "figures": [],
+   "outcome": "被兩次反芻修正：把四條手寫規則認錯、以為拿掉知識後第一輪會全送 AI（其實幾乎不變）；以 25c 為準。",
+   "outcome_tag": "部分採用",
+   "details_md": "兩題原帶給使用者（想法 20 拆不拆、跑幾條），25b 判原則推得出、自己定了（代定 92）。"
+  },
+  {
+   "id": "ak-25b",
+   "order": 78,
+   "doc": "proto8/thinking/2026-11/07/arknights-kb/25b-第五輪規劃-fable-反芻1.md",
+   "title": "第五輪反芻 1：修事實錯、補元審視",
+   "topic": "明日方舟知識庫",
+   "date": "2026-11-08",
+   "conclusion": "拿掉知識後第一輪仍約第四輪水準；達標門檻改緊、成本補上審視者（一條約 370 萬 token）；加「元審視」讓審視者也去看改進者。",
+   "eli5": "第一版以為新手什麼都不會，其實他本來就會七成，所以要看的是剩下三成怎麼補。",
+   "figure_svg": "",
+   "figures": [],
+   "outcome": "再被反芻 2 修正：prod ≤1.25 的門檻對「規則接走題」不敏感，改看送 AI 的題數。",
+   "outcome_tag": "部分採用",
+   "details_md": "改動表在檔頭 §0。"
+  },
+  {
+   "id": "ak-25c",
+   "order": 79,
+   "doc": "proto8/thinking/2026-11/07/arknights-kb/25c-第五輪規劃-fable-反芻2.md",
+   "title": "第五輪定稿：看「要問 AI 的題」變少多少",
+   "topic": "明日方舟知識庫",
+   "date": "2026-11-08",
+   "conclusion": "每個任務只要還有一題要問 AI 就得付一整次費用，所以主曲線改成「送 AI 的題數」與「整個任務不用問 AI 的數量」；升降同一題只算一次；元審視必須寫出可核對的預測。",
+   "eli5": "省錢不是少問一題，是整張考卷都不用問老師；所以先數題目，再看哪天整張卷不用問。",
+   "figure_svg": "<svg viewBox=\"0 0 690 200\" xmlns=\"http://www.w3.org/2000/svg\" role=\"img\" aria-label=\"元優化：基準重跑 v0 兩次、元層改改進者、v1 再跑比曲線\"><defs><marker id=\"arr\" viewBox=\"0 0 10 10\" refX=\"9\" refY=\"5\" markerWidth=\"7\" markerHeight=\"7\" orient=\"auto-start-reverse\"><path d=\"M0 0L10 5L0 10z\" class=\"f-head\"/></marker></defs><rect x=\"20\" y=\"40\" width=\"140\" height=\"56\" rx=\"10\" class=\"f-box f-muted\"/><text x=\"90.0\" y=\"62.0\" text-anchor=\"middle\" class=\"f-t f-b\">基準 base-v0</text><text x=\"90.0\" y=\"81.0\" text-anchor=\"middle\" class=\"f-t f-s\">只有通用工具</text><path d=\"M162 68L186 68\" class=\"f-line \" marker-end=\"url(#arr)\"/><rect x=\"188\" y=\"40\" width=\"150\" height=\"56\" rx=\"10\" class=\"f-box f-acc\"/><text x=\"263.0\" y=\"62.0\" text-anchor=\"middle\" class=\"f-t f-b\">v0 跑兩條</text><text x=\"263.0\" y=\"81.0\" text-anchor=\"middle\" class=\"f-t f-s\">謝拉格 22 題反覆跑</text><path d=\"M340 68L364 68\" class=\"f-line \" marker-end=\"url(#arr)\"/><rect x=\"366\" y=\"40\" width=\"150\" height=\"56\" rx=\"10\" class=\"f-box f-warn\"/><text x=\"441.0\" y=\"62.0\" text-anchor=\"middle\" class=\"f-t f-b\">元層</text><text x=\"441.0\" y=\"81.0\" text-anchor=\"middle\" class=\"f-t f-s\">改「改進者」</text><path d=\"M518 68L542 68\" class=\"f-line \" marker-end=\"url(#arr)\"/><rect x=\"544\" y=\"40\" width=\"130\" height=\"56\" rx=\"10\" class=\"f-box f-ok\"/><text x=\"609.0\" y=\"62.0\" text-anchor=\"middle\" class=\"f-t f-b\">v1 跑一條</text><text x=\"609.0\" y=\"81.0\" text-anchor=\"middle\" class=\"f-t f-s\">比兩條曲線</text><text x=\"345\" y=\"140\" text-anchor=\"middle\" class=\"f-t\">量的是：要問 AI 的題，每輪少多少、花多少分數</text><text x=\"345\" y=\"165\" text-anchor=\"middle\" class=\"f-t f-s\">錢（想法 20）與壓縮（想法 21）是改進者的一部分，v1 才上場</text></svg>",
+   "figures": [],
+   "outcome": "隊長照它寫了施工設計 26（P0 建基準與量具 → v0 兩條 → 元層 → v1 一條 → 收輪）；起跑線一題在看板等使用者，照推薦 A。",
+   "outcome_tag": "進行中",
+   "details_md": "設計：`proto8/thinking/2026-11/07/arknights-kb/26-第五輪設計.md`；代定 85～92。"
   }
  ]
 }
