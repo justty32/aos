@@ -1,0 +1,370 @@
+<!-- This page explains the arcagi aos workflow in more detail: rounds, passes, commands, file formats, env vars and layout. -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>aos 詳解｜arcagi</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-head" d="M0,0 L10,5 L0,10 z"/></marker></defs></svg>
+<nav class="topnav" aria-label="看板導覽"><div class="topnav-inner">
+  <div class="group"><a href="index.html">看板</a><a href="index.html#asks">待你裁</a><a href="forum.html">論壇</a><a href="designs.html">fable 的設計</a><a href="../aos-arknights/index.html" data-http-href="arknights/index.html">明日方舟網站</a></div>
+  <div class="group"><span class="group-label">arcagi 教學</span><a href="guide.html">① 入門</a><span class="arrow">→</span><a href="guide-detail.html" aria-current="page">② 詳解</a><span class="arrow">→</span><a href="guide-play.html">③ 帶玩</a></div>
+</div></nav>
+<main class="guide">
+  <header class="sec">
+    <h1>aos × arcagi 詳解</h1>
+    <p class="lead">流程、指令、檔案格式、環境變數、資料夾。全部從 <code>~/repo/arcagi</code> 原始碼核對過（11-08）；底下虛線字（例如 <a class="term" href="#g-pass">pass</a>）點了跳到名詞表。</p>
+    <p class="steps"><span>① 入門</span><span>→ <b>② 詳解（本頁）</b></span><span>→ ③ 帶玩</span></p>
+    <p>標記：<span class="tag ok">已實作</span> 現在就能用；<span class="tag wip">r09 施工中</span> 只是規劃稿，以施工結果為準；<span class="tag tbd">待確認</span> 原始碼看不出來。</p>
+    <nav class="toc" aria-label="本頁章節"><a href="#d1">1 一輪的流程</a><a href="#d2">2 一個 pass</a><a href="#d3">3 命令列</a><a href="#d4">4 檔案格式</a><a href="#d5">5 環境變數</a><a href="#d6">6 資料夾</a><a href="#d7">7 活樹與干預</a><a href="#gloss">名詞表</a></nav>
+  </header>
+
+  <section class="sec" id="d1"><h2><span class="no">1</span>一輪 r0x 的流程</h2>
+    <figure class="fig"><svg viewBox="0 0 640 210" role="img" aria-label="一輪的人與檔">
+      <text x="10" y="18" class="f-s">誰做 → 產出哪個檔（都在 notes/rounds/r0x/）</text>
+      <rect x="10" y="30" width="140" height="44" rx="9" class="f-box"/><text x="80" y="57" text-anchor="middle">隊長：01-簡報.md</text>
+      <rect x="170" y="30" width="140" height="44" rx="9" class="f-box f-pur"/><text x="240" y="57" text-anchor="middle">fable：02-規劃</text>
+      <rect x="330" y="30" width="140" height="44" rx="9" class="f-box f-warn"/><text x="400" y="57" text-anchor="middle">Argon：02b-審</text>
+      <rect x="490" y="30" width="140" height="44" rx="9" class="f-box"/><text x="560" y="57" text-anchor="middle">隊長：03-設計.md</text>
+      <line x1="150" y1="52" x2="166" y2="52" class="f-line" marker-end="url(#arr)"/><line x1="310" y1="52" x2="326" y2="52" class="f-line" marker-end="url(#arr)"/><line x1="470" y1="52" x2="486" y2="52" class="f-line" marker-end="url(#arr)"/>
+      <line x1="560" y1="74" x2="560" y2="104" class="f-line" marker-end="url(#arr)"/>
+      <rect x="490" y="108" width="140" height="44" rx="9" class="f-box f-acc"/><text x="560" y="135" text-anchor="middle">施工線 A／B／C</text>
+      <rect x="330" y="108" width="140" height="44" rx="9" class="f-box f-acc"/><text x="400" y="135" text-anchor="middle">曲線＋gated 評測</text>
+      <rect x="170" y="108" width="140" height="44" rx="9" class="f-box f-ok"/><text x="240" y="135" text-anchor="middle">04-總結簡報.md</text>
+      <rect x="10" y="108" width="140" height="44" rx="9" class="f-box f-ok"/><text x="80" y="135" text-anchor="middle">代定清單.md</text>
+      <line x1="490" y1="130" x2="474" y2="130" class="f-line" marker-end="url(#arr)"/><line x1="330" y1="130" x2="314" y2="130" class="f-line" marker-end="url(#arr)"/><line x1="170" y1="130" x2="154" y2="130" class="f-line" marker-end="url(#arr)"/>
+      <text x="10" y="180" class="f-s">報告：reports/curve-r0x/、reports/gate-r0x/；論壇：開輪／規劃（精華）／總結（精華）</text>
+      <text x="10" y="198" class="f-s">收輪：寄 PROGRESS 信到 aos 的 wf/inbox/（wf/tools/inbox_send.sh）</text>
+    </svg></figure>
+    <p class="big">一輪 = 簡報 → <a class="term" href="#g-fable">fable</a> 規劃 → <a class="term" href="#g-argon">Argon</a> 審 → 設計定稿 → 施工 → 評測 → 總結＋<a class="term" href="#g-daiding">代定清單</a>。</p>
+    <div class="tablewrap"><table>
+      <tr><th>步</th><th>誰</th><th>做什麼（大白話）</th><th>檔</th></tr>
+      <tr><td>01 簡報</td><td>隊長（opus）</td><td>把上一輪結果、你的新想法、硬限制整理成給 fable 的考卷，最後一節是「請 fable 回答」</td><td><code>01-簡報.md</code></td></tr>
+      <tr><td>02 規劃</td><td>fable</td><td>逐題回答：做哪幾步、每步怎麼驗收、判準先寫死</td><td><code>02-規劃-fable.md</code></td></tr>
+      <tr><td>02b 審</td><td>Argon（經 aos 轉）</td><td>唯讀挑錯＋提案；不用等它回才開工，採不採由隊長記代定</td><td><code>02b-Argon審.md</code></td></tr>
+      <tr><td>03 設計</td><td>隊長</td><td>定稿：模組契約、分線（同時 ≤3 條，opus／sonnet）</td><td><code>03-設計.md</code></td></tr>
+      <tr><td>施工</td><td>子 agent</td><td>寫程式、跑小測；共用檔只有隊長碰</td><td><code>src/</code>、<code>scripts/</code></td></tr>
+      <tr><td>評測</td><td>隊長</td><td>跑學習曲線；收輪前跑一次 400 題 <a class="term" href="#g-gated">gated</a></td><td><code>reports/</code>、<code>artifacts/</code></td></tr>
+      <tr><td>04 總結</td><td>隊長</td><td>數字、判準過沒過、下一輪方向（§6）</td><td><code>04-總結簡報.md</code>、<code>代定清單.md</code></td></tr>
+    </table></div>
+    <details><summary>收輪義務與硬限制</summary>
+      <ul><li>論壇發帖：<code>~/repo/simple_tools/aos/wf/tools/forum_post.sh arcagi '&lt;標題&gt;' &lt;檔&gt; --tag arcagi</code>；精華 <code>forum_admin.sh feature &lt;id&gt; --as arcagi</code>。</li>
+      <li>交棒總表：<code>~/repo/arcagi/notes/rounds/README.md</code>（冷啟動先讀它）。</li>
+      <li>資源：子 agent ≤3；CPU 批次 <code>nice -n 19</code>；單批記憶體 ≤16G（<code>systemd-run --user --scope -p MemoryMax=16G</code>）；swap 只有 512MB；全機同時只跑一個全量評測。</li></ul>
+    </details>
+  </section>
+
+  <section class="sec" id="d2"><h2><span class="no">2</span>節點樹與一個 pass 怎麼跑</h2>
+    <figure class="fig"><svg viewBox="0 0 640 250" role="img" aria-label="run_curve 每個 pass 的步驟">
+      <text x="10" y="18" class="f-s">src/arcagi/grow/curve.py 的 run_curve（r07／r08，已實作）</text>
+      <rect x="10" y="32" width="190" height="64" rx="10" class="f-box"/><text x="105" y="54" text-anchor="middle" class="f-b">題組</text><text x="105" y="72" text-anchor="middle" class="f-s">L16 計分｜H8、H24 只量</text><text x="105" y="88" text-anchor="middle" class="f-s">P 練習池只練</text>
+      <rect x="225" y="32" width="190" height="64" rx="10" class="f-box f-acc"/><text x="320" y="54" text-anchor="middle" class="f-b">solve_task（並行）</text><text x="320" y="72" text-anchor="middle" class="f-s">枚舉（預算 10 萬節點）</text><text x="320" y="88" text-anchor="middle" class="f-s">驗 train → 驗 test</text>
+      <rect x="440" y="32" width="190" height="64" rx="10" class="f-box f-warn"/><text x="535" y="54" text-anchor="middle" class="f-b">門（gate）</text><text x="535" y="72" text-anchor="middle" class="f-s">r07：test 對才餵</text><text x="535" y="88" text-anchor="middle" class="f-s">r08：MDL＋留一（只看 train）</text>
+      <line x1="200" y1="64" x2="221" y2="64" class="f-line" marker-end="url(#arr)"/><line x1="415" y1="64" x2="436" y2="64" class="f-line" marker-end="url(#arr)"/>
+      <line x1="535" y1="96" x2="535" y2="126" class="f-line" marker-end="url(#arr)"/>
+      <rect x="440" y="130" width="190" height="64" rx="10" class="f-box f-ok"/><text x="535" y="152" text-anchor="middle" class="f-b">G1 壓縮</text><text x="535" y="170" text-anchor="middle" class="f-s">反合一＋MDL → 新積木</text><text x="535" y="186" text-anchor="middle" class="f-s">最多 m 個／pass，上限 lib_cap</text>
+      <rect x="225" y="130" width="190" height="64" rx="10" class="f-box f-pur"/><text x="320" y="152" text-anchor="middle" class="f-b">記一列</text><text x="320" y="170" text-anchor="middle" class="f-s">curve.csv、solutions.jsonl</text><text x="320" y="186" text-anchor="middle" class="f-s">solved_L、logcost_L…</text>
+      <line x1="440" y1="162" x2="419" y2="162" class="f-line" marker-end="url(#arr)"/>
+      <path d="M225,162 C120,162 105,140 105,100" class="f-line f-acc" marker-end="url(#arr)"/>
+      <text x="10" y="222" class="f-s">pass 0＝空庫起點；pass 1～8 每次全部題目重搜；AUC_L＝pass 1～8 的 solved_L 加總</text>
+      <text x="10" y="240" class="f-s">冷啟動：餵料 ≤2 支時改拿「差一點」的程式（near）試著壓縮</text>
+    </svg></figure>
+    <p class="big">一個 <a class="term" href="#g-pass">pass</a>：所有題目用目前的<a class="term" href="#g-block">積木</a>庫重搜一遍 → 過<a class="term" href="#g-gate">門</a>的程式拿去 <a class="term" href="#g-g1">G1 壓縮</a> → 下個 pass 庫變大。</p>
+    <h3>每個 pass 印一行（實際 log 格式）</h3>
+    <pre><code>[pool s0] pass 2: L=4 H=0 H24=2 P=15/13 lib=3 logcost=246.331 wall=5.0s</code></pre>
+    <p>L＝L16 解出數、H＝H8 解出、H24＝H24 解出、P＝練習池「過 train 數／過門數」、lib＝這個 pass 用的積木數、<a class="term" href="#g-logcost">logcost</a>、wall＝秒。</p>
+    <details><summary>樹有哪幾種（r08 的 <code>--tree</code>）</summary>
+      <div class="tablewrap"><table>
+      <tr><th>tree</th><th>意思</th></tr>
+      <tr><td><code>dec-g1</code></td><td>r07 對照：<a class="term" href="#g-decomp">演繹分解</a>＋G1、r07 規則</td></tr>
+      <tr><td><code>pool</code></td><td>r08 主樹：分解＋G1＋主題練習池 P32＋留一門</td></tr>
+      <tr><td><code>pool-noG1</code></td><td>同樣預算但不學（對照）</td></tr>
+      <tr><td><code>pool-rand32</code>／<code>pool-foot32</code></td><td>練習池換成隨機 32 題／立足點主題 32 題</td></tr>
+      <tr><td><code>pool-halves</code></td><td>多開 halves 拆法</td></tr>
+      <tr><td><code>pool-g4</code></td><td>再加 <a class="term" href="#g-g4">G4</a> 演化，每個 <code>--seed</code> 一條</td></tr>
+      <tr><td><code>meta</code>／<code>action</code></td><td><a class="term" href="#g-meta">元優化</a>：改一個旋鈕或加一個拆法，用 <a class="term" href="#g-crn">CRN</a> 判準決定留不留</td></tr>
+      </table></div>
+    </details>
+    <details><summary>r09 的 epoch（<span class="tag wip">r09 施工中</span>）</summary>
+      <p>規劃稿 <code>notes/rounds/r09/02-規劃-fable.md</code> §5：① 主跑（只用 live 列）→ ② gate 節點 → ③ grow 造 comb（孵化中）→ ④ 影子跑（live＋孵化中）→ ⑤ stall／route（停滯判斷、UCB 選臂）→ ⑥ 判準決定誰升級 → ⑦ 寫 <code>epochs/&lt;n&gt;/</code>、<code>live/</code>。</p>
+      <p>H24 底線：升級在 epoch 邊界整批提交；下個 epoch H24 退步就整批回休眠、重跑。後端改 C++ <a class="term" href="#g-arcbatch">arcbatch</a>（目前 r08 曲線仍是 Python 後端）。</p>
+    </details>
+  </section>
+
+  <section class="sec" id="d3"><h2><span class="no">3</span>命令列用法 <span class="tag ok">已實作</span></h2>
+    <figure class="fig"><svg viewBox="0 0 640 150" role="img" aria-label="三類入口">
+      <rect x="10" y="20" width="195" height="80" rx="10" class="f-box f-acc"/><text x="107" y="46" text-anchor="middle" class="f-b">arcagi 主指令</text><text x="107" y="66" text-anchor="middle" class="f-s">eval、solve、validate</text><text x="107" y="84" text-anchor="middle" class="f-s">compare、visualize…</text>
+      <rect x="222" y="20" width="195" height="80" rx="10" class="f-box f-ok"/><text x="320" y="46" text-anchor="middle" class="f-b">scripts/r0x_*.py</text><text x="320" y="66" text-anchor="middle" class="f-s">學習曲線、題組、報告</text><text x="320" y="84" text-anchor="middle" class="f-s">每輪一套</text>
+      <rect x="435" y="20" width="195" height="80" rx="10" class="f-box f-warn"/><text x="532" y="46" text-anchor="middle" class="f-b">native/bin/*</text><text x="532" y="66" text-anchor="middle" class="f-s">solve（混合）、arcbatch</text><text x="532" y="84" text-anchor="middle" class="f-s">C++ 快 12～22 倍</text>
+      <text x="10" y="130" class="f-s">都在 ~/repo/arcagi 下跑；前面加 uv run（或直接用 .venv/bin/python）</text>
+    </svg></figure>
+    <p class="big">最常用三條：跑曲線 <code>scripts/r08_curve.py --tree …</code>、量 400 題 <code>arcagi eval --external …gated…</code>、比報告 <code>arcagi compare</code>。</p>
+    <h3>跑一條學習曲線（r08）</h3>
+    <div class="cmd"><pre><code>cd ~/repo/arcagi
+nice -n 19 systemd-run --user --scope -q -p MemoryMax=16G \
+  uv run python -u scripts/r08_curve.py --workers 8 --tree pool</code></pre></div>
+    <p>輸出到 <code>reports/curve-r08/&lt;tree&gt;/</code>，積木庫到 <code>aos/seedlib/r08-&lt;tree&gt;/</code>，最後印一行 JSON（<code>AUC_L</code>、<code>delta</code>…）。會覆蓋舊報告，練習請用遊樂場。</p>
+    <details><summary>r08_curve.py 旗標</summary>
+      <div class="tablewrap"><table>
+      <tr><th>旗標</th><th>預設</th><th>意思</th></tr>
+      <tr><td><code>--tree</code></td><td>必填</td><td>dec-g1、pool、pool-noG1、pool-rand32、pool-foot32、pool-halves、pool-g4、meta、action</td></tr>
+      <tr><td><code>--passes</code></td><td>9</td><td>pass 0 加 8 個學習 pass</td></tr>
+      <tr><td><code>--workers</code></td><td>8</td><td>並行數，超過 8 直接退出</td></tr>
+      <tr><td><code>--seed</code>／<code>--seeds</code></td><td>0／1,2,3,4,5</td><td>單條曲線的種子／meta 的 CRN 種子</td></tr>
+      <tr><td><code>--rounds</code></td><td>5</td><td>meta 回合數</td></tr>
+      <tr><td><code>--action</code></td><td>—</td><td><code>decomp:&lt;split&gt;</code>，配 <code>--tree action</code></td></tr>
+      <tr><td><code>--out</code>、<code>--commit</code>、<code>--fresh</code>、<code>--agent-min</code></td><td>—</td><td>換輸出夾、寫進帳的 commit、重量基準、記 agent 花的分鐘</td></tr>
+      </table></div>
+      <p>r07 版 <code>scripts/r07_curve.py</code> 類似（<code>--tree empty|empty-g1|…|dec-g1|old|meta</code>、<code>--budget 100000</code>、<code>--workers</code> ≤6）。題組產生 <code>scripts/r08_taskset.py</code>，彙總 <code>scripts/r08_report.py reports/curve-r08/pool</code>。</p>
+    </details>
+    <h3>量 400 題（守門入口 gated）</h3>
+    <div class="cmd"><pre><code>systemd-run --user --scope -q -p MemoryMax=16G nice -n 19 \
+  uv run arcagi eval --split evaluation --name gated-r08 \
+  --external '.venv/bin/python -m arcagi.solvers.gated {input} {output} {trace}' \
+  --timeout 45 --workers 6 \
+  --output artifacts/gated-r08/evaluation.json --traces artifacts/gated-r08/evaluation-traces.jsonl</code></pre></div>
+    <div class="warn">全量評測：全機同時只能跑一個，平常不要手動跑。這條是 r08 收輪實際用的（<code>reports/gate-r08/README.md</code>）。</div>
+    <details><summary>arcagi 子命令一覽</summary>
+      <div class="tablewrap"><table>
+      <tr><th>子命令</th><th>用途</th><th>常用旗標</th></tr>
+      <tr><td><code>validate</code></td><td>檢查題目 JSON</td><td><code>--split</code>、<code>--require-test-outputs</code></td></tr>
+      <tr><td><code>solve TASK</code></td><td>單題跑求解器</td><td><code>--solver</code>／<code>--external</code>、<code>--output</code></td></tr>
+      <tr><td><code>eval</code></td><td>量 top-1 正確率（主入口）</td><td><code>--split training|evaluation</code>、<code>--limit N</code>、<code>--external 'ARGV'</code>、<code>--timeout</code>、<code>--workers</code>（&gt;1 要有 timeout 或 external）、<code>--traces</code>、<code>--output</code></td></tr>
+      <tr><td><code>score</code></td><td>給外部預測打分</td><td><code>--predictions</code></td></tr>
+      <tr><td><code>generate</code></td><td>RE-ARC 練習題</td><td><code>--task ID</code>、<code>--seed</code>、<code>--count</code></td></tr>
+      <tr><td><code>visualize</code></td><td>畫成離線 HTML</td><td><code>--output</code></td></tr>
+      <tr><td><code>experiment CONFIG</code></td><td>跑實驗矩陣</td><td><code>--output</code></td></tr>
+      <tr><td><code>compare A=報告 B=報告</code></td><td>逐題比較，第一份當基準</td><td><code>--format json|markdown</code>、<code>--output</code></td></tr>
+      </table></div>
+      <p>共用：<code>--data-root data/ARC-AGI</code>、<code>--split</code>（預設 training）；<code>--external</code> 裡的 <code>{input}</code>／<code>{output}</code>／<code>{trace}</code> 會換成檔案路徑。</p>
+    </details>
+    <details><summary>其他 python -m 入口</summary>
+      <div class="tablewrap"><table>
+      <tr><th>入口</th><th>用途</th></tr>
+      <tr><td><code>python -m arcagi.solvers.gated IN OUT TRACE</code></td><td>gated 守門：先跑 <code>native/bin/solve</code>，再重驗候選、可棄答</td></tr>
+      <tr><td><code>python -m arcagi.shadow &lt;積木夾&gt;…</code></td><td>影子跑：只量不寫 <code>aos/blocks</code>（<code>--synth</code>、<code>--out</code>）</td></tr>
+      <tr><td><code>python -m arcagi.srcspace emit|parse|roundtrip|mine</code></td><td>程式 JSON ⇄ janet 原始碼</td></tr>
+      <tr><td><code>python -m arcagi.blocks.run NAME &lt; req.json</code></td><td>跑一個舊樹積木（stdin <code>{"grid","params"}</code>）</td></tr>
+      <tr><td><code>python -m arcagi.blocks.sync</code></td><td>補齊 <code>aos/blocks/&lt;name&gt;/</code></td></tr>
+      <tr><td><code>python -m arcagi.blocks.pool --report R --epoch N --split S</code></td><td>node-pool 記一個 epoch 的帳</td></tr>
+      <tr><td><code>python -m arcagi.llm prompts|check|record|summary|distill</code></td><td>S2 的 LLM 對照線</td></tr>
+      <tr><td><code>bash scripts/r07_purity.sh</code></td><td>空樹純度檢查（無參數，過＝退 0；慣用呼叫 <span class="tag tbd">待確認</span>）</td></tr>
+      </table></div>
+    </details>
+    <details><summary>native：arcbatch 與 solve</summary>
+      <ul><li>建置：<code>make -C native</code>（產生 <code>bin/arcsearch</code>、<code>spec.json</code>、<code>bin/solve</code>、<code>bin/arcbatch</code>）。</li>
+      <li><code>native/bin/solve IN OUT [TRACE]</code>：r06 混合入口（Python search＋C++ arcsearch，總時限 19 秒）。</li>
+      <li><code>native/bin/arcbatch --mode seed --taskset data/r07/taskset.json --configs C.jsonl --threads 6 --out OUT.jsonl</code>：空樹整題枚舉。</li>
+      <li><code>--mode seed-sub --subproblems SUBS.jsonl --out GOT.jsonl</code>：子目標（Python 拆、C++ 搜）；<code>--mode seed-run --programs jobs.jsonl</code>：差分測試。</li>
+      <li>目前只有對拍工具在呼叫 seed 模式；r09 才當曲線後端（<span class="tag wip">r09 施工中</span>）。</li></ul>
+    </details>
+  </section>
+
+  <section class="sec" id="d4"><h2><span class="no">4</span>重要檔案格式</h2>
+    <figure class="fig"><svg viewBox="0 0 640 170" role="img" aria-label="檔案之間的關係">
+      <rect x="10" y="20" width="140" height="48" rx="9" class="f-box"/><text x="80" y="42" text-anchor="middle" class="f-b">題目 .json</text><text x="80" y="58" text-anchor="middle" class="f-s">train／test</text>
+      <rect x="10" y="100" width="140" height="48" rx="9" class="f-box"/><text x="80" y="122" text-anchor="middle" class="f-b">taskset.json</text><text x="80" y="138" text-anchor="middle" class="f-s">哪些題、哪一組</text>
+      <rect x="190" y="60" width="150" height="48" rx="9" class="f-box f-acc"/><text x="265" y="82" text-anchor="middle" class="f-b">run_curve</text><text x="265" y="98" text-anchor="middle" class="f-s">＋knobs.json 旋鈕</text>
+      <line x1="150" y1="44" x2="186" y2="76" class="f-line" marker-end="url(#arr)"/><line x1="150" y1="124" x2="186" y2="94" class="f-line" marker-end="url(#arr)"/>
+      <rect x="380" y="10" width="250" height="40" rx="9" class="f-box f-ok"/><text x="505" y="35" text-anchor="middle">solutions.jsonl（每題每 pass 一行）</text>
+      <rect x="380" y="64" width="250" height="40" rx="9" class="f-box f-ok"/><text x="505" y="89" text-anchor="middle">curve.csv（每 pass 一列）</text>
+      <rect x="380" y="118" width="250" height="40" rx="9" class="f-box f-ok"/><text x="505" y="143" text-anchor="middle">blocks.json（學到的積木）</text>
+      <line x1="340" y1="78" x2="376" y2="32" class="f-line" marker-end="url(#arr)"/><line x1="340" y1="84" x2="376" y2="84" class="f-line" marker-end="url(#arr)"/><line x1="340" y1="90" x2="376" y2="136" class="f-line" marker-end="url(#arr)"/>
+    </svg></figure>
+    <p class="big">看學習迴圈只要懂三個輸出：<code>solutions.jsonl</code>（每題答得怎樣）、<code>curve.csv</code>（每 pass 的分數）、<code>blocks.json</code>（學到什麼）。</p>
+    <h3>程式長怎樣（program JSON）</h3>
+    <pre><code>["sort", ["blk", "g1_f72643d574", ["$in"]]]
+#  原語呼叫 ["prim", 參數…]；["$in"]＝輸入格子；["$0"]／["$1"]＝lambda 參數
+#  ["lam", n, body]＝lambda；["blk", 名字, 洞…]＝引用積木；整數＝常數</code></pre>
+    <h3>blocks.json（積木庫，一個 list）</h3>
+    <pre><code>[{"name": "g1_f72643d574", "body": ["map", ["lam", 1, ["sort", ["$0"]]], ["$h0"]],
+  "sig": "…型別…", "src_tasks": ["1e0a9b12", "beb8660c"], "saving": …, "uses": 8,
+  "born": 1, "holes": 1, "idle": 0}]</code></pre>
+    <p><code>$h0</code>＝洞（呼叫時填）；<code>src_tasks</code>＝從哪幾題抽出；<code>born</code>／<code>holes</code>／<code>idle</code> 是 grow 加的，讀取時忽略。上例取自遊樂場實跑。</p>
+    <details><summary>solutions.jsonl 欄位</summary>
+      <pre><code>{"pass": 0, "set": "L", "task_id": "68b16354", "program": ["reverse", ["$in"]],
+ "source": "enum", "train_ok": true, "test_ok": true, "nodes": 23, "nodes_to_first": 23,
+ "near_top": ["$in"], "seconds": 0.001, "gate_ok": true, "mdl_ok": true, "gate_nodes": 69}</code></pre>
+      <ul><li><code>set</code>：L、H、H24、P。<code>source</code>：enum（枚舉）或 g4（演化）。</li>
+      <li><code>nodes_to_first</code>：試到第幾個節點才找到；沒找到是 null。</li>
+      <li><code>near_top</code>：最接近的失敗程式（冷啟動用）。<code>gate_*</code> 只有開留一門才有；練習池另有 <code>synth_n</code>／<code>synth_ok</code>。</li></ul>
+    </details>
+    <details><summary>curve.csv 欄位</summary>
+      <p><code>pass, solved_L, solved_H, wall_s, nodes, llm_calls, lib_size, lib_bits, mean_prog_nodes, nodes_solved, solved_P, clean_P, budget_P, lib_from_P, logcost_L, solved_H24, nodes_total, false_pos, synth_ok</code></p>
+      <ul><li>AUC_L 不存欄位，現算：pass 1～8 的 solved_L 加總；Δ＝最後 pass − pass 0。</li>
+      <li><code>curve_sha</code>＝清掉 wall_s 後整檔 sha1，用來證明重跑逐位相同。</li>
+      <li><code>false_pos</code>：過門但 test 錯的題數（要是 0）。</li></ul>
+    </details>
+    <details><summary>題目 JSON 與 taskset.json</summary>
+      <pre><code>{"train": [{"input": [[0,1],[1,0]], "output": [[1,0],[0,1]]}, …],
+ "test":  [{"input": […], "output": […]}]}      # 格子是 0～9 的整數；求解器拿不到 test output</code></pre>
+      <p><code>data/r08/taskset.json</code>：鍵 <code>learn</code>（L16）、<code>holdout</code>（H8）、<code>holdout24</code>、<code>practice</code>（P32）、<code>rand32</code>、<code>pool_foot32</code>，每題 <code>{"task_id", "sha1", …}</code>；另有 <code>rule</code> 寫產生規則。</p>
+    </details>
+    <details><summary>eval 報告與 trace</summary>
+      <ul><li>報告（<code>arcagi-evaluation/1</code>）：<code>tasks_total</code>、<code>tasks_correct</code>、<code>task_accuracy</code>、<code>tests_*</code>、<code>tasks[]</code>（每題 <code>task_id</code>、<code>correct</code>、<code>tests[{prediction, expected}]</code>、<code>trace</code>）。</li>
+      <li><code>--traces</code> 每行一筆 <code>arcagi-trace-record/1</code>：<code>task_id</code>、<code>correct</code>、<code>elapsed_seconds</code>、<code>trace</code>（<code>attempts[]</code>、<code>selected</code>、<code>metadata</code>）。</li>
+      <li>外部求解器協定：讀 request <code>{"schema_version":"arcagi-solver-input/1","task_id","task":{train,test}}</code>，寫 <code>{"&lt;task_id&gt;": [每個 test 一張格子]}</code>。說明在 <code>docs/solvers.md</code>、<code>docs/traces.md</code>。</li></ul>
+    </details>
+    <details><summary>帳本：aos/meta/ledger.jsonl、aos/pool/</summary>
+      <ul><li><code>aos/meta/ledger.jsonl</code>：r06 產生器帳（<code>run_id</code>、<code>layer</code>、<code>score_main</code>、<code>accepted</code>…）與 r07／r08 元優化回合（<code>kind</code>、<code>knob</code>、<code>before</code>、<code>after</code>、<code>auc_*_seeds</code>、<code>accepted</code>、<code>mean_drop</code>、<code>se</code>）。路徑可用 <code>ARCAGI_META</code> 換。</li>
+      <li><code>aos/pool/</code>：r01～r06 舊樹的 node-pool 帳（<code>config.json</code>、<code>wallets.json</code>、<code>ledger.jsonl</code>、<code>epochs/&lt;n&gt;.json</code>）；r07 起的空樹沒有記這本。</li>
+      <li>arcbatch configs 每行：<code>{"name","lib":"blocks.json","budget":100000,"decomp":false,"lam_depth":2,"exclude":[…],"order":{…}}</code>。</li></ul>
+    </details>
+    <details><summary>r09 的五檔（<span class="tag wip">r09 施工中</span>）</summary>
+      <ul><li><code>ops.jsonl</code>：一列一招：<code>id</code>、<code>kind</code>（comb／decomp／rewrite／route／gate／sieve）、<code>status</code>（incubating／live／dormant）、<code>payload</code>、<code>evidence</code>、<code>ttl</code>、<code>env_hash</code>、<code>by</code>、<code>born</code>、<code>blamed_by</code>。</li>
+      <li><code>ledger.jsonl</code>：<code>kind</code>（epoch／promote／rollback／layer2／say／foundry／stall）、<code>before</code>、<code>after</code>、<code>judge</code>、<code>evals</code>。</li>
+      <li><code>frozen.json</code>（判準與盲測題號，寫死不搜）、每節點 <code>_metainfo.json</code>、<code>_witness.jsonl</code>。</li>
+      <li><code>live/_status.json</code>、<code>events.jsonl</code> 的欄位規劃稿沒寫（<span class="tag tbd">待確認</span>）。</li></ul>
+      <pre><code>{"id": "…", "kind": "gate", "status": "live", "payload": {"params": {"mdl_div": 1.0, "loo_frac": 0.25,
+ "loo_min_pairs": 3, "lib_cap": 16, "retire_after": 2, "m": 3, "k": 2.0, "max_holes": 2}}, "by": "agent-r09", …}</code></pre>
+    </details>
+  </section>
+
+  <section class="sec" id="d5"><h2><span class="no">5</span>吃的環境變數</h2>
+    <figure class="fig"><svg viewBox="0 0 640 120" role="img" aria-label="環境變數換掉預設位置">
+      <rect x="10" y="30" width="170" height="50" rx="9" class="f-box f-warn"/><text x="95" y="60" text-anchor="middle" class="f-b">ARCAGI_*</text>
+      <line x1="180" y1="55" x2="236" y2="55" class="f-line" marker-end="url(#arr)"/>
+      <rect x="240" y="30" width="390" height="50" rx="9" class="f-box"/><text x="435" y="52" text-anchor="middle">換掉預設路徑或開關</text><text x="435" y="70" text-anchor="middle" class="f-s">沒設就用 repo 內的 aos/blocks、aos/pool、aos/meta…</text>
+    </svg></figure>
+    <p class="big">平常一個都不用設；要把實驗隔離到別處時才用 <code>ARCAGI_BLOCKS</code>／<code>ARCAGI_POOL</code>／<code>ARCAGI_META</code>。</p>
+    <div class="tablewrap"><table>
+      <tr><th>變數</th><th>作用</th><th>預設</th><th>在哪</th></tr>
+      <tr><td><code>ARCAGI_BLOCKS</code></td><td>舊樹積木根目錄</td><td><code>aos/blocks</code></td><td><code>src/arcagi/blocks/__init__.py</code></td></tr>
+      <tr><td><code>ARCAGI_POOL</code></td><td>node-pool 帳目錄</td><td><code>aos/pool</code></td><td><code>blocks/pool/budget.py</code></td></tr>
+      <tr><td><code>ARCAGI_META</code></td><td>meta 帳目錄（裡面的 ledger.jsonl）</td><td><code>aos/meta</code></td><td><code>blocks/meta/ledger.py</code></td></tr>
+      <tr><td><code>ARCAGI_SOLVER</code></td><td><code>arcagi.blocks.solver</code> 載入的求解器</td><td><code>arcagi.solvers.search:solve</code></td><td><code>blocks/solver.py</code></td></tr>
+      <tr><td><code>ARCAGI_SYNTH</code></td><td>gated 用的合成例子根目錄</td><td><code>data_synth</code></td><td><code>solvers/gated.py</code></td></tr>
+      <tr><td><code>ARCAGI_REWRITE</code></td><td>不是 <code>0</code> 就開改寫搜尋</td><td><code>0</code>（關）</td><td><code>solvers/search.py</code></td></tr>
+      <tr><td><code>ARCAGI_REWRITE_GATE</code></td><td>改寫的 IoU 門檻</td><td><code>0</code></td><td><code>solvers/rewrite.py</code></td></tr>
+      <tr><td><code>ARCAGI_ROOT</code></td><td>產生題目時的 repo 根</td><td>原始碼往上三層</td><td><code>generation/sources.py</code></td></tr>
+      <tr><td><code>ARCAGI_JANET</code></td><td>janet 執行檔（<code>roundtrip --janet</code>）</td><td><code>which janet</code></td><td><code>srcspace/janet_bridge.py</code></td></tr>
+      <tr><td><code>ARCAGI_MEM</code>、<code>ARCAGI_FORCE</code></td><td>eval_r06.sh 的記憶體上限、略過「已有 eval 在跑」檢查</td><td><code>16G</code>、<code>0</code></td><td><code>scripts/eval_r06.sh</code></td></tr>
+      <tr><td><code>ARCSEARCH_EXT</code></td><td>有設就等於 <code>--ext</code>（擴充原語）</td><td>未設</td><td><code>native/src/main.cpp</code></td></tr>
+      <tr><td><code>ARC_SEED_TRACE</code></td><td>把每個枚舉候選寫進這個檔（除錯、單執行緒）</td><td>未設</td><td><code>native/src/seed_enum.cpp</code></td></tr>
+    </table></div>
+    <details><summary>遊樂場自己的變數</summary>
+      <p><code>source env.sh</code> 會設 <code>PLAY</code>（遊樂場根）、<code>ARCAGI_REPO</code>（預設 <code>~/repo/arcagi</code>）、<code>ARCAGI_PY</code>（該 repo 的 <code>.venv/bin/python</code>）、<code>PYTHONDONTWRITEBYTECODE=1</code>，並把 <code>bin/</code> 加進 PATH。</p>
+    </details>
+  </section>
+
+  <section class="sec" id="d6"><h2><span class="no">6</span>資料夾佈局</h2>
+    <figure class="fig"><svg viewBox="0 0 640 190" role="img" aria-label="三個地方">
+      <rect x="10" y="20" width="200" height="150" rx="12" class="f-box f-acc"/><text x="110" y="44" text-anchor="middle" class="f-b">~/repo/arcagi</text><text x="110" y="70" text-anchor="middle" class="f-s">src/ 程式</text><text x="110" y="90" text-anchor="middle" class="f-s">notes/rounds/ 每輪文件</text><text x="110" y="110" text-anchor="middle" class="f-s">reports/ 報告（進 git）</text><text x="110" y="130" text-anchor="middle" class="f-s">aos/ 舊樹＋帳＋seedlib</text><text x="110" y="150" text-anchor="middle" class="f-s">native/ C++</text>
+      <rect x="225" y="20" width="200" height="150" rx="12" class="f-box f-muted"/><text x="325" y="44" text-anchor="middle" class="f-b">~/code/playground-arc1</text><text x="325" y="70" text-anchor="middle" class="f-s">ws/hammer/ 活樹</text><text x="325" y="90" text-anchor="middle" class="f-s">r09 建立</text><text x="325" y="130" text-anchor="middle" class="f-s f-warn">施工中、別動</text>
+      <rect x="440" y="20" width="190" height="150" rx="12" class="f-box f-ok"/><text x="535" y="44" text-anchor="middle" class="f-b">~/code/playground-arc-play</text><text x="535" y="70" text-anchor="middle" class="f-s">你的遊樂場</text><text x="535" y="90" text-anchor="middle" class="f-s">tree/ 活的小樹</text><text x="535" y="110" text-anchor="middle" class="f-s">seed/ 初始狀態</text><text x="535" y="130" text-anchor="middle" class="f-s">玩壞了 play reset</text>
+    </svg></figure>
+    <p class="big">程式與紀錄在 repo；r09 的活樹在 playground-arc1（施工中）；你自己玩在 playground-arc-play。</p>
+    <details><summary>~/repo/arcagi 頂層</summary>
+      <div class="tablewrap"><table>
+      <tr><th>路徑</th><th>是什麼</th></tr>
+      <tr><td><code>src/arcagi/seed/</code></td><td>空樹：32 原語、型別導向枚舉、演繹分解、見證</td></tr>
+      <tr><td><code>src/arcagi/grow/</code></td><td>學習迴圈：curve、compress（G1）、evolve（G4）、meta、pool、knobs</td></tr>
+      <tr><td><code>src/arcagi/solvers/</code></td><td>search、gated、guard、external…（舊樹入口）</td></tr>
+      <tr><td><code>src/arcagi/blocks/</code>、<code>dsl/</code>、<code>objrule/</code></td><td>r01～r06 舊手寫樹</td></tr>
+      <tr><td><code>scripts/</code></td><td>每輪腳本（r07_curve、r08_curve、r08_taskset、r08_report…）</td></tr>
+      <tr><td><code>data/ARC-AGI/</code>、<code>data/r07/</code>、<code>data/r08/</code></td><td>官方題庫；每輪題組 taskset.json 與 knobs.json</td></tr>
+      <tr><td><code>aos/</code></td><td><code>blocks/</code>（舊樹 474 個積木夾）、<code>pool/</code>、<code>meta/</code>、<code>seedlib/&lt;樹&gt;/blocks.json</code>、<code>llm/</code>、<code>solver/_entry</code></td></tr>
+      <tr><td><code>reports/</code></td><td><code>curve-r07</code>、<code>curve-r08/&lt;tree&gt;/</code>（curve.csv、solutions.jsonl、blocks.json、blocks_born.json）、<code>gate-r0x</code>、<code>native-s1*</code></td></tr>
+      <tr><td><code>artifacts/</code></td><td>大型評測輸出（例 <code>gated-r08/evaluation.json</code>）</td></tr>
+      <tr><td><code>native/</code></td><td>C++ arcsearch／arcbatch、<code>spec.json</code>、<code>tools/</code></td></tr>
+      <tr><td><code>notes/rounds/</code></td><td>r01～r09 每輪文件；<code>README.md</code> 是交棒總表</td></tr>
+      </table></div>
+    </details>
+    <details><summary>r09 活樹 ws/hammer/（<span class="tag wip">r09 施工中</span>）</summary>
+      <pre><code>~/code/playground-arc1/ws/hammer/
+  README.md  RUN  ctl  _view.sh
+  _metainfo.json  frozen.json  ops.jsonl  ledger.jsonl
+  truth/train/taskset.json   truth/cal/ids.json
+  nodes/{solve,gate,grow,stall,route,judge,foundry}/  _metainfo.json inbox/ outbox/ _witness.jsonl
+  foundry/requests/{pending,done}/   foundry/wax/
+  epochs/&lt;n&gt;/{curve.csv,solutions.jsonl,blocks.json,status.json}
+  live/{_status.json,events.jsonl,daemon.pid}</code></pre>
+      <p>程式在 <code>src/arcagi/hammer/</code>，收輪時 <code>epochs/</code> 拷到 <code>reports/curve-r09/hammer/</code>。</p>
+    </details>
+  </section>
+
+  <section class="sec" id="d7"><h2><span class="no">7</span>活樹：怎麼進去看、怎麼干預</h2>
+    <figure class="fig"><svg viewBox="0 0 640 180" role="img" aria-label="干預都在 pass 邊界生效">
+      <rect x="10" y="60" width="110" height="44" rx="9" class="f-box f-acc"/><text x="65" y="87" text-anchor="middle">pass n</text>
+      <rect x="170" y="60" width="110" height="44" rx="9" class="f-box f-warn"/><text x="225" y="80" text-anchor="middle" class="f-b">邊界</text><text x="225" y="96" text-anchor="middle" class="f-s">讀信箱、旗標</text>
+      <rect x="330" y="60" width="110" height="44" rx="9" class="f-box f-acc"/><text x="385" y="87" text-anchor="middle">pass n+1</text>
+      <line x1="120" y1="82" x2="166" y2="82" class="f-line" marker-end="url(#arr)"/><line x1="280" y1="82" x2="326" y2="82" class="f-line" marker-end="url(#arr)"/>
+      <rect x="480" y="14" width="150" height="34" rx="8" class="f-box"/><text x="555" y="36" text-anchor="middle">stop：刪 RUN</text>
+      <rect x="480" y="56" width="150" height="34" rx="8" class="f-box"/><text x="555" y="78" text-anchor="middle">pause：等你</text>
+      <rect x="480" y="98" width="150" height="34" rx="8" class="f-box"/><text x="555" y="120" text-anchor="middle">say：信進 inbox</text>
+      <rect x="480" y="140" width="150" height="34" rx="8" class="f-box"/><text x="555" y="162" text-anchor="middle">weight／add-op</text>
+      <line x1="476" y1="31" x2="284" y2="70" class="f-line f-dash"/><line x1="476" y1="73" x2="284" y2="78" class="f-line f-dash"/><line x1="476" y1="115" x2="284" y2="88" class="f-line f-dash"/><line x1="476" y1="157" x2="284" y2="96" class="f-line f-dash"/>
+    </svg></figure>
+    <p class="big">干預都在 pass／epoch 的邊界生效：引擎跑完一遍才看信箱與旗標，所以最慢一遍內有反應。</p>
+    <h3>現在就能玩：遊樂場的 play <span class="tag ok">已實作</span></h3>
+    <div class="cmd"><pre><code>cd ~/code/playground-arc-play &amp;&amp; source env.sh
+play run --bg        # 背景跑
+play status          # 看狀態
+play say judge "how is it going?"
+play pause ; play resume ; play stop</code></pre></div>
+    <p>逐步帶你玩、附實跑輸出：<a href="guide-play.html">③ 帶玩</a>。</p>
+    <h3>r09 hammer 的 ctl <span class="tag wip">r09 施工中</span></h3>
+    <div class="tablewrap"><table>
+      <tr><th>指令（規劃稿）</th><th>做什麼</th></tr>
+      <tr><td><code>ctl run --epochs N [--daemon]</code></td><td>建 RUN、跑 N 個 epoch；--daemon 背景跑，log 到 <code>live/daemon.log</code></td></tr>
+      <tr><td><code>ctl stop</code>（<code>--now</code>）</td><td>刪 RUN，≤1 epoch 內乾淨退出；--now 另送 SIGTERM</td></tr>
+      <tr><td><code>ctl status</code></td><td>epoch、各節點狀態、孵化／上線／休眠數、最近 5 條事件</td></tr>
+      <tr><td><code>ctl say &lt;node&gt; "文字"</code></td><td>寫進 <code>nodes/&lt;node&gt;/inbox/</code>，下個邊界讀，回 <code>outbox/&lt;ts&gt;.reply.md</code>、記帳</td></tr>
+      <tr><td><code>ctl pause|resume &lt;node&gt;</code></td><td>暫停某節點（solve 不能停）</td></tr>
+      <tr><td><code>ctl weight &lt;route_id&gt; &lt;w&gt;</code></td><td>改路由權重，UCB 下個 epoch 生效</td></tr>
+      <tr><td><code>ctl add-op '&lt;json&gt;' [--live]</code></td><td>插一列招式（預設走孵化判準；--live 直上但記 <code>by:user</code>，不算樹自長）</td></tr>
+      <tr><td><code>ctl ops</code>、<code>ctl ledger --tail N</code>、<code>ctl view</code>、<code>_view.sh</code></td><td>查表、看殘差色塊</td></tr>
+    </table></div>
+    <p>進去看：<code>cd ~/code/playground-arc1/ws/hammer &amp;&amp; ls &amp;&amp; ./_view.sh</code>（沒在跑時讀最後一個 <code>epochs/&lt;n&gt;/</code>）。r09 交付後以它的 README 為準。</p>
+  </section>
+
+  <section class="sec" id="gloss"><h2>名詞表</h2>
+    <p>頁內虛線字會跳到這裡；帶玩頁的名詞也連回這裡。</p>
+    <dl class="gloss">
+      <dt id="g-aos">aos</dt><dd>「資料夾＝程式」的 AI agent 體系；arcagi 借它的樹、節點、帳本的想法來組解題器。</dd>
+      <dt id="g-tree">樹</dt><dd>一套解題設定加它長出的積木，例如 <code>pool</code>、<code>dec-g1</code>；r09 起是真的一棵資料夾樹（hammer）。</dd>
+      <dt id="g-node">節點</dt><dd>樹裡負責一件事的單位（解題、審查、改進…）；r09 每個節點一個資料夾，有 <code>_metainfo.json</code> 與信箱。</dd>
+      <dt id="g-prim">原語</dt><dd>最小的指令，空樹固定 32 個：add、map、sort、reverse、transpose、zipwith…（<code>play prims</code> 可列）。</dd>
+      <dt id="g-block">積木</dt><dd>從解過的程式抽出來的共同片段，存進 <code>blocks.json</code>，之後當一個指令用（<code>["blk", 名字, …]</code>）。</dd>
+      <dt id="g-enum">枚舉</dt><dd>從小到大把原語與積木拼成程式、一支支試；型別不合的直接跳過。</dd>
+      <dt id="g-budget">預算</dt><dd>每題最多試幾個節點（程式）；r07／r08 預設 100,000。</dd>
+      <dt id="g-pass">pass／epoch</dt><dd>把所有題目用目前的庫重搜一遍算一個 pass；pass 0 是空庫起點。r09 改叫 epoch。</dd>
+      <dt id="g-taskset">L16／H8／H24／P32</dt><dd>題組：L16 要學、計分；H8、H24 盲測只量不學；P32（r09 P48）練習池，只練不計分。全部出自 training。</dd>
+      <dt id="g-trainok">過 train 答錯</dt><dd>程式把 train 例子全答對、test 卻錯——背了例子沒學到規則；守門就是要擋這種。</dd>
+      <dt id="g-auc">AUC_L</dt><dd>pass 1～8 的 L16 解題數加總；越大＝學得越快越多。r08 主樹 32。</dd>
+      <dt id="g-logcost">logcost_L</dt><dd>每題找到答案花的節點數取 log2 加總（沒解記上限）；越小越省。</dd>
+      <dt id="g-g1">G1 壓縮</dt><dd>把已解程式的共同子樹挖出來做成積木；夠省位元才收。</dd>
+      <dt id="g-au">反合一</dt><dd>兩支程式對齊，不同的地方挖成洞（<code>$h0</code>），留下共同骨架。</dd>
+      <dt id="g-mdl">MDL</dt><dd>最短描述長度：積木要讓「庫＋所有程式」總長變短才划算。</dd>
+      <dt id="g-gate">門／留一門（LOO）</dt><dd>決定哪支程式能拿去學。r08：拿掉一個 train 例子重搜，還能找到同類程式才算數，不看 test 答案。</dd>
+      <dt id="g-g4">G4</dt><dd>演化：把差一點的程式突變、交配；r08 主樹預設關。</dd>
+      <dt id="g-decomp">演繹分解</dt><dd>先猜大結構（例如「每列各自做一件事」），把整題拆成小題再搜；r07 起 C++ 有七個拆法。</dd>
+      <dt id="g-cold">冷啟動</dt><dd>一開始解不出題 → 沒料可壓縮 → 庫不長 → 還是解不出；r08 的主要卡點。</dd>
+      <dt id="g-meta">元優化（meta）</dt><dd>優化「學習迴圈本身」：改旋鈕、加拆法，再看曲線有沒有真的變好。</dd>
+      <dt id="g-knobs">旋鈕（knobs）</dt><dd><code>m</code>（每 pass 收幾個積木）、<code>k</code>（洞的懲罰）、<code>max_holes</code>、<code>order</code>（size 或 prior：照使用次數排序）、<code>lib_cap</code>、<code>decomp</code>…；存 <code>data/r0x/knobs.json</code>。</dd>
+      <dt id="g-crn">CRN</dt><dd>共同亂數：比較前後兩版時用同一批 seed，雜訊才不會蓋過差異。</dd>
+      <dt id="g-gated">gated（守門入口）</dt><dd><code>python -m arcagi.solvers.gated</code>：跑完 C++ 混合求解，再用重驗與合成例子決定要不要交答案（不確定就棄答）。r07 起的正式 400 題入口。</dd>
+      <dt id="g-shadow">影子跑</dt><dd>新東西先「只答不算」跑一陣，數據夠好才上線。</dd>
+      <dt id="g-arcbatch">arcbatch</dt><dd>C++ 批次枚舉器（<code>native/bin/arcbatch</code>），跟 Python 逐題 0 差異、快 12～22 倍。</dd>
+      <dt id="g-purity">純度（purity）</dt><dd>空樹不准帶 ARC 專用字眼或 import 舊樹；<code>scripts/r07_purity.sh</code> 檢查。</dd>
+      <dt id="g-fable">fable</dt><dd>頂層規劃模型，每輪寫 02 規劃稿；它寫過的設計在看板「fable 的設計」。</dd>
+      <dt id="g-argon">Argon</dt><dd>Gemini 第二意見，經 aos 轉，唯讀審規劃稿（02b）。</dd>
+      <dt id="g-daiding">代定</dt><dd>隊長替你先做的方向決定（編號 D-r9-3 這種），記在每輪 <code>代定清單.md</code>，你可翻案。</dd>
+      <dt id="g-hammer">錘子（hammer）</dt><dd>r09 的新樹：使用者說「先造 lv1 錘子去打造 lv2 錘子」；錘子＝節點樹本身。</dd>
+      <dt id="g-ops">ops.jsonl／孵化三態</dt><dd>r09 的招式表，每列一招；狀態 incubating（孵化）→ live（上線）→ dormant（休眠），由樹的判準升降。</dd>
+      <dt id="g-foundry">鑄模廠／蠟模</dt><dd>r09：卡死（stall=stop）時才讓 LLM 解一題，只留每步的輸入輸出軌跡（蠟模），程式銷毀；枚舉器再逐段擬合成招式。</dd>
+      <dt id="g-stall">stall／UCB</dt><dd>停滯判斷（餓死／飽和／stop）與多臂選擇法：卡住時決定下一步往哪種改進投資源。</dd>
+      <dt id="g-h24floor">H24 底線</dt><dd>r09 硬規則：每個 epoch 的 H24 盲測不准退步，退了整批升級回滾。</dd>
+    </dl>
+  </section>
+  <div class="next"><a href="guide.html">← ① 入門</a><a href="guide-play.html">下一步：③ 帶玩 →</a></div>
+  <p class="foot">還沒講的：舊樹 aos/blocks 各種產生器（pred／formula／extract）、node-pool 錢包規則、gated 的 guard 判準細節、S1～S5 支線、srcspace 與 janet、LLM 蒸餾（S2）、r09 的 LTO-SCF 與 ΔAUC_total、鍛造爐（r10）。要哪個跟我說。</p>
+</main>
+<script src="guide.js"></script>
+</body>
+</html>

@@ -94,6 +94,7 @@
 | --- | --- |
 | `index.html`、`app.js`、`asks.js`、`eli5.js`、`detail.html`、`detail.js`、`md.js`、`style.css`、`README.md` | 頁面與說明 |
 | `rounds.html`、`rounds.js`、`rounds.css`、`assets/ak-style.css` | 輪次頁與共用網站樣式 |
+| `guide.html`、`guide-detail.html`、`guide-play.html`、`guide.css`、`guide.js` | arcagi 教學三頁（入門 → 詳解 → 帶玩） |
 | `data/progress.jsonl` | 各線回報 |
 | `data/answers.jsonl` | 使用者逐次送出的回答，保留重答紀錄 |
 | `data/state.json`、`data/state.js` | 最新快照 |
@@ -132,6 +133,10 @@
 
 - 發文：`wf/tools/forum_post.sh progress-board 'Board update' README.md`
 - 管理：`wf/tools/forum_admin.sh feature <post-id> --as top`
+
+## arcagi 教學（guide*.html）
+
+看板頂欄「arcagi 教學」三顆按鈕依序是：`guide.html`（ELI5 入門：每節一張圖、結論、細節收合）→ `guide-detail.html`（流程、命令列、json 格式、環境變數、資料夾、活樹干預，附名詞表 `#gloss`）→ `guide-play.html`（帶你在 `~/code/playground-arc-play` 逐步玩，貼實跑輸出）。三頁是靜態 HTML，共用 `guide.css`（圖用 `f-*` class、亮暗主題吃 `style.css` 色票）與 `guide.js`（命令區塊的複製鈕、HTTP 下改正明日方舟連結）；按鈕來自 `config.json` 的 `links`，`href` 以 `guide` 開頭的會排進教學組。內容以 11-08 的 arcagi 原始碼為準，r09 hammer 的部分標「r09 施工中」，交付後要改頁。
 
 ## 手機遠端看板
 

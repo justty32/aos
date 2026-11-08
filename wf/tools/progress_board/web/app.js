@@ -60,12 +60,12 @@
     history.append(list.children.length ? list : el("p", "subtle", "無")); return box;
   }
   function lineCard(line) {
-    const card = el("article", "line-card"); card.dataset.line = line.id; heading(card, line.title || line.id, "line");
+    const card = el("article", "line-card"); card.dataset.line = line.id; card.id = `line-${line.id}`; heading(card, line.title || line.id, "line");
     const more = link(`detail.html?line=${encodeURIComponent(line.id)}`, "看細節"); more.className = "button"; card.append(more);
     const rounds = link(`rounds.html?line=${encodeURIComponent(line.id)}`, "輪次"); rounds.className = "button"; card.append(rounds);
     const chips = el("div", "chips"); chips.append(chip(labels[line.status] || line.status, colors[line.status] || "grey"));
     if (line.stale) chips.append(chip(`安靜 ${age(line.last_ts)} 分鐘`, "grey")); card.append(chips, timeline(line.timeline));
-    card.append(el("p", "doing", `在做：${line.doing || "尚未回報"}`));
+    const doing = el("p", "doing clamp", `在做：${line.doing || "尚未回報"}`); doing.title = "點一下展開／收起"; doing.addEventListener("click", () => doing.classList.toggle("clamp")); card.append(doing);
     if (line.blocked) card.append(el("p", "blocked", `卡住：${line.blocked.text}`));
     const decisions = details(card, "代定"), badge = el("span", "badge", (line.decisions || []).length); decisions.firstChild.append(badge); eventList(decisions, line.decisions || []);
     eventList(details(card, "最近"), line.events || []);
@@ -104,9 +104,23 @@
     const n = document.getElementById("connection"); if (!n) return;
     const ok = lastPoll && Date.now() - lastPoll <= 15000; n.className = `live${ok ? "" : " offline"}`; n.replaceChildren(el("span", "dot"), el("span", "", ok ? "即時" : "伺服器沒回應"));
   }
-  const headerHost = el("div"), bodyHost = el("div");
+  const headerHost = el("div"), bodyHost = el("div"), navHost = el("nav", "topnav");
+  navHost.setAttribute("aria-label", "看板導覽"); board.before(navHost);
   const asks = window.AOSAsks({el, heading, details, chip, link, poll});
+  asks.panel.id = "asks";
   board.replaceChildren(headerHost, asks.panel, bodyHost);
+  function navLink(href, title, current = false) { const a = link(href, title); if (current) a.setAttribute("aria-current", "page"); return a; }
+  function renderNav(data) {
+    const http = location.protocol.startsWith("http"), inner = el("div", "topnav-inner"), pages = el("div", "group"), guides = el("div", "group");
+    pages.append(navLink("index.html", "看板", true), navLink("#asks", `待你裁${data && data.asks_open ? `（${num(data.asks_open)}）` : ""}`), navLink("detail.html", "看細節"));
+    (data && data.links || []).forEach(entry => {
+      const href = relative(http ? entry.http_href || entry.href : entry.href); if (!href) return;
+      if (/^guide/.test(href)) { if (guides.children.length) guides.append(el("span", "arrow", "→")); else guides.append(el("span", "group-label", "arcagi 教學")); guides.append(navLink(href, entry.title)); }
+      else pages.append(navLink(href, entry.title));
+    });
+    inner.append(pages); if (guides.children.length) inner.append(guides); navHost.replaceChildren(inner);
+  }
+  function markAsks(data) { asks.panel.classList.toggle("has-open", !!(data && data.asks_open)); }
   function renderEli5(data) {
     const main = (data && data.eli5 && data.eli5.main) || {};
     const summary = bodyHost.querySelector("[data-summary]");
@@ -118,12 +132,12 @@
     const folds = new Map([...bodyHost.querySelectorAll("details[data-fold]")].map(d => [d.dataset.fold, d.open]));
     headerHost.replaceChildren(root.firstChild); bodyHost.replaceChildren(...root.childNodes);
     bodyHost.querySelectorAll("details[data-fold]").forEach(d => { if (folds.has(d.dataset.fold)) d.open = folds.get(d.dataset.fold); });
-    renderEli5(data); asks.update(data || {}); connection(); window.scrollTo(x, y);
+    renderEli5(data); asks.update(data || {}); markAsks(data); renderNav(data); connection(); window.scrollTo(x, y);
   }
   function render(data) {
     const next = JSON.stringify(data, (key, value) => key === "eli5" || key === "generated_at" ? undefined : value);
     if (next === contentSignature) {
-      renderEli5(data); asks.update(data || {});
+      renderEli5(data); asks.update(data || {}); markAsks(data); renderNav(data);
       const time = headerHost.querySelector(".data-time"); if (time && data) time.textContent = `資料時間 ${data.generated_at}`;
       return;
     }
@@ -135,10 +149,14 @@
     if (!data) { header.append(el("p", "overview", "尚無快照；請依 README 產生資料。")); root.append(header); publish(root, data); return; }
     const lines = data.lines || [], host = data.host || {}, active = lines.filter(line => ["start", "progress", "handoff"].includes(line.status)).length, blocked = lines.filter(line => line.status === "blocked").length;
     header.append(el("p", "overview", `${lines.length} 條線：${active} 條在動、${blocked} 條卡住｜待你裁 ${num(data.asks_open || 0)} 題｜codex ${num(host.codex_procs)} 個｜負載 ${num(host.load1, 1)}/${num(host.ncpu)}｜可用記憶體 ${num(host.mem_avail_mb / 1024, 1)} GB`));
-    const links = el("nav", "buttons"); (data.links || []).forEach(entry => { const href = location.protocol.startsWith("http") ? entry.http_href || entry.href : entry.href; if (relative(href)) { const a = link(href, entry.title); a.className = "button"; links.append(a); } });
-    header.append(links, el("p", "data-time", `資料時間 ${data.generated_at}`)); root.append(header);
+    const strip = el("ul", "line-strip"); strip.setAttribute("aria-label", "各線一句話");
+    lines.forEach(line => { const item = el("li"), a = link(`#line-${line.id}`, line.title || line.id); a.className = "strip-title";
+      item.append(chip(labels[line.status] || line.status, colors[line.status] || "grey"), a, el("span", "strip-doing", (line.blocked ? `卡住：${line.blocked.text}` : line.doing || "尚未回報").split("\n")[0])); strip.append(item); });
+    if (lines.length) header.append(strip);
+    header.append(el("p", "data-time", `資料時間 ${data.generated_at}`)); root.append(header);
     if (location.protocol === "file:") root.append(el("p", "banner", `快照模式：這是 ${data.generated_at} 的快照；要即時更新請開伺服器（看 README）`));
-    root.append(summaryPanel(data.summary || {})); const grid = el("section", "lines"); lines.forEach(line => grid.append(lineCard(line))); root.append(grid, machinePanel(host, data.load_history), commitsPanel(data.commits || []));
+    const grid = el("section", "lines"); grid.setAttribute("aria-label", "各線狀態"); lines.forEach(line => grid.append(lineCard(line)));
+    root.append(grid, summaryPanel(data.summary || {}), machinePanel(host, data.load_history), commitsPanel(data.commits || []));
     if ((data.warnings || []).length) { const footer = el("footer"), d = details(footer, `提醒（${data.warnings.length}）`, "warnings"), list = el("ul"); data.warnings.forEach(warning => list.append(el("li", "", warning))); d.append(list); root.append(footer); }
     publish(root, data);
   }

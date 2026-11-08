@@ -1,0 +1,70 @@
+/* This stylesheet lays out the three arcagi guide pages (intro, detail, play) on top of style.css. */
+.guide { max-width: 980px; margin: auto; padding: 22px 24px 60px; }
+.guide header { margin-bottom: 18px; }
+.guide .lead { margin-top: 10px; font-size: 17px; }
+.steps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; font-size: 13px; color: var(--muted); }
+.steps b { color: var(--ink); }
+.toc { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.toc a { font-size: 13px; padding: 2px 9px; border-radius: 99px; background: var(--tint); }
+.sec { margin-bottom: 18px; padding: 22px; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); scroll-margin-top: 64px; }
+.sec h2 { font-size: 20px; margin-bottom: 4px; }
+.sec h2 .no { color: var(--blue); margin-right: 8px; font-variant-numeric: tabular-nums; }
+.sec h3 { font-size: 16px; margin: 16px 0 6px; }
+.sec p { margin: 8px 0; }
+.big { font-size: 17px; font-weight: 600; margin: 12px 0 6px; }
+.fig { margin: 12px 0; padding: 10px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); overflow-x: auto; }
+.fig svg { display: block; width: 100%; height: auto; min-width: 460px; max-height: 460px; }
+.fig figcaption { color: var(--muted); font-size: 13px; margin-top: 4px; }
+pre, code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+code { background: var(--tint); padding: 1px 5px; border-radius: 5px; font-size: .9em; overflow-wrap: anywhere; }
+pre { margin: 8px 0; padding: 12px 14px; border-radius: 12px; background: var(--tint); border: 1px solid var(--border); overflow-x: auto; font-size: 13px; line-height: 1.5; white-space: pre; }
+pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+.cmd { position: relative; }
+.cmd pre { padding-right: 64px; border-left: 4px solid var(--blue); }
+.copy { position: absolute; top: 7px; right: 7px; font-size: 12px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--muted); cursor: pointer; }
+.out pre { border-left: 4px solid var(--green); }
+.out-label, .cmd-label { display: block; color: var(--muted); font-size: 12px; margin-top: 10px; }
+.means { margin: 10px 0; padding: 10px 14px; border-radius: 12px; background: var(--tint); border-left: 4px solid var(--purple); }
+.warn { margin: 10px 0; padding: 10px 14px; border-radius: 12px; background: color-mix(in srgb, var(--amber) 12%, var(--surface)); border-left: 4px solid var(--amber); }
+.tag { display: inline-block; padding: 0 8px; border-radius: 99px; font-size: 12px; border: 1px solid currentColor; white-space: nowrap; vertical-align: 2px; }
+.tag.wip { color: var(--amber); } .tag.ok { color: var(--green); } .tag.tbd { color: var(--red); }
+.tablewrap { overflow-x: auto; margin: 8px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+td code { white-space: nowrap; }
+dl.gloss { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 8px 0; }
+dl.gloss dt { font-weight: 700; scroll-margin-top: 70px; }
+dl.gloss dd { margin: 0; }
+dl.gloss dt:target, dl.gloss dt:target + dd { background: color-mix(in srgb, var(--amber) 22%, transparent); border-radius: 6px; }
+a.term { border-bottom: 1px dotted var(--blue); }
+.next { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.next a { padding: 8px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.foot { color: var(--muted); font-size: 14px; }
+/* Figure palette (same class names as designs.css; colors come from style.css tokens). */
+.f-box { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; }
+.f-box.f-ok { fill: color-mix(in srgb, var(--green) 16%, var(--surface)); stroke: var(--green); }
+.f-box.f-bad { fill: color-mix(in srgb, var(--red) 14%, var(--surface)); stroke: var(--red); }
+.f-box.f-warn { fill: color-mix(in srgb, var(--amber) 16%, var(--surface)); stroke: var(--amber); }
+.f-box.f-acc { fill: color-mix(in srgb, var(--blue) 14%, var(--surface)); stroke: var(--blue); }
+.f-box.f-pur { fill: color-mix(in srgb, var(--purple) 14%, var(--surface)); stroke: var(--purple); }
+.f-box.f-muted { fill: var(--tint); stroke: var(--grey); stroke-dasharray: 5 4; }
+.f-line { fill: none; stroke: var(--muted); stroke-width: 1.6; }
+.f-line.f-ok { stroke: var(--green); } .f-line.f-bad { stroke: var(--red); } .f-line.f-acc { stroke: var(--blue); }
+.f-line.f-dash { stroke-dasharray: 5 4; }
+.f-head { fill: var(--muted); }
+.fig svg text, .f-t { fill: var(--ink); font: 14px system-ui, sans-serif; }
+.fig svg text.f-s { font-size: 12px; fill: var(--muted); }
+.fig svg text.f-b { font-weight: 700; }
+.fig svg text.f-ok { fill: var(--green); } .fig svg text.f-bad { fill: var(--red); } .fig svg text.f-acc { fill: var(--blue); } .fig svg text.f-warn { fill: var(--amber); }
+.f-c0 { fill: #000; } .f-c1 { fill: #0074d9; } .f-c2 { fill: #ff4136; } .f-c3 { fill: #2ecc40; } .f-c4 { fill: #ffdc00; }
+.f-c5 { fill: #aaaaaa; } .f-c6 { fill: #f012be; } .f-c7 { fill: #ff851b; } .f-c8 { fill: #7fdbff; } .f-c9 { fill: #870c25; }
+.f-grid { stroke: var(--bg); stroke-width: 1; }
+@media (max-width: 640px) {
+  .guide { padding: 14px 14px 40px; }
+  .sec { padding: 16px; border-radius: 14px; }
+  .fig svg { min-width: 520px; }
+  dl.gloss { grid-template-columns: 1fr; gap: 2px; }
+  dl.gloss dd { margin-bottom: 8px; }
+  h1 { font-size: 23px; }
+}

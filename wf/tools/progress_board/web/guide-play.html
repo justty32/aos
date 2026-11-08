@@ -1,0 +1,223 @@
+<!-- This page walks the user step by step through the arcagi play tree in ~/code/playground-arc-play with real outputs. -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>aos 帶玩｜arcagi</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="guide.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="f-head" d="M0,0 L10,5 L0,10 z"/></marker></defs></svg>
+<nav class="topnav" aria-label="看板導覽"><div class="topnav-inner">
+  <div class="group"><a href="index.html">看板</a><a href="index.html#asks">待你裁</a><a href="forum.html">論壇</a><a href="designs.html">fable 的設計</a><a href="../aos-arknights/index.html" data-http-href="arknights/index.html">明日方舟網站</a></div>
+  <div class="group"><span class="group-label">arcagi 教學</span><a href="guide.html">① 入門</a><span class="arrow">→</span><a href="guide-detail.html">② 詳解</a><span class="arrow">→</span><a href="guide-play.html" aria-current="page">③ 帶玩</a></div>
+</div></nav>
+<main class="guide">
+  <header class="sec">
+    <h1>aos × arcagi 帶玩</h1>
+    <p class="lead">在 <code>~/code/playground-arc-play</code> 跑一棵 11 題的小樹：幾秒跑完、能停能暫停、能改旋鈕。下面每一步的輸出都是 11-08 實跑貼上的。</p>
+    <p class="steps"><span>① 入門</span><span>→ ② 詳解</span><span>→ <b>③ 帶玩（本頁）</b></span></p>
+    <p>這棵小樹的引擎就是 arcagi 的 <code>run_curve</code>（r07／r08 的學習迴圈）；跟 r09 正在蓋的活樹 <code>~/code/playground-arc1/</code> 完全分開，玩壞了一鍵 reset。不用 LLM、<code>nice -n 19</code>、4 個 worker。</p>
+    <nav class="toc" aria-label="本頁章節"><a href="#p0">0 長怎樣</a><a href="#p1">1 進場</a><a href="#p2">2 看一題</a><a href="#p3">3 跑一輪</a><a href="#p4">4 看結果</a><a href="#p5">5 學到什麼</a><a href="#p6">6 背景跑</a><a href="#p7">7 說話</a><a href="#p8">8 暫停與停</a><a href="#p9">9 事件流</a><a href="#p10">10 reset</a><a href="#x1">練習 1～4</a></nav>
+  </header>
+
+  <section class="sec" id="p0"><h2><span class="no">0</span>遊樂場長怎樣</h2>
+    <figure class="fig"><svg viewBox="0 0 640 200" role="img" aria-label="遊樂場資料夾">
+      <rect x="10" y="20" width="160" height="44" rx="9" class="f-box"/><text x="90" y="47" text-anchor="middle">seed/ 初始狀態</text>
+      <line x1="170" y1="42" x2="226" y2="42" class="f-line" marker-end="url(#arr)"/><text x="198" y="34" text-anchor="middle" class="f-s">reset</text>
+      <rect x="230" y="10" width="400" height="180" rx="12" class="f-box f-ok"/><text x="430" y="32" text-anchor="middle" class="f-b">tree/ 活的小樹（cd 進去看）</text>
+      <rect x="248" y="46" width="170" height="30" rx="7" class="f-box"/><text x="333" y="66" text-anchor="middle">settings.json 旋鈕</text>
+      <rect x="440" y="46" width="170" height="30" rx="7" class="f-box"/><text x="525" y="66" text-anchor="middle">taskset.json 11 題</text>
+      <rect x="248" y="88" width="362" height="30" rx="7" class="f-box f-acc"/><text x="429" y="108" text-anchor="middle">nodes/solve｜grow｜judge：各有 inbox/ outbox/</text>
+      <rect x="248" y="130" width="170" height="44" rx="7" class="f-box f-pur"/><text x="333" y="150" text-anchor="middle">runs/001/ …</text><text x="333" y="166" text-anchor="middle" class="f-s">每次 run 一夾</text>
+      <rect x="440" y="130" width="170" height="44" rx="7" class="f-box f-warn"/><text x="525" y="150" text-anchor="middle">live/</text><text x="525" y="166" text-anchor="middle" class="f-s">status、events、RUN、PAUSE</text>
+      <text x="10" y="110" class="f-s">bin/play＝指令</text><text x="10" y="128" class="f-s">env.sh、reset.sh</text>
+    </svg></figure>
+    <p class="big">只有一個指令 <code>play</code>；你動的是 <code>tree/</code>，<code>seed/</code> 是還原用的原版。</p>
+    <details><summary>題組是哪 11 題</summary>
+      <p>要學的 L（計分）8 題：68b16354、d10ecb37、1e0a9b12、beb8660c、a740d043、6f8cd79b、ce4f8723、995c5fa3（前四題在 r08 的 <code>dec-g1</code> 曲線解得出、後四題解不出）。只量不學的 H 3 題：44f52bb0、5bd6f4ac、ea32f347。全部出自 training。名詞見 <a class="term" href="guide-detail.html#g-taskset">題組</a>。</p>
+    </details>
+  </section>
+
+  <section class="sec" id="p1"><h2><span class="no">1</span>進場、還原成初始</h2>
+    <span class="cmd-label">打這個</span>
+    <div class="cmd"><pre><code>cd ~/code/playground-arc-play &amp;&amp; source env.sh
+play reset</code></pre></div>
+    <span class="out-label">會看到</span>
+    <div class="out"><pre><code>tree/ restored from seed/ (all runs, messages and settings changes removed)</code></pre></div>
+    <p class="means">代表：<code>tree/</code> 從 <code>seed/</code> 複製了一份新的。<code>env.sh</code> 把 <code>play</code> 放進 PATH、指好 arcagi 的 Python。之後每開一個新終端機都要先 <code>source env.sh</code>。</p>
+  </section>
+
+  <section class="sec" id="p2"><h2><span class="no">2</span>先看一題長怎樣</h2>
+    <div class="cmd"><pre><code>play task beb8660c</code></pre></div>
+    <div class="out"><pre><code>beb8660c train pair: input 10x7 -> output 10x7
+0 2 2 0 0 0 0    0 0 0 0 0 0 0
+0 0 0 0 3 0 0    0 0 0 0 0 0 0
+1 1 1 0 0 0 0    0 0 0 0 0 0 0
+0 0 0 0 0 0 0    0 0 0 0 0 0 3
+0 5 5 5 5 5 5    0 0 0 0 0 2 2
+0 0 0 0 0 0 0    0 0 0 0 1 1 1
+6 6 6 6 6 0 0    0 0 0 4 4 4 4
+0 0 0 4 4 4 4    0 0 6 6 6 6 6
+0 0 0 0 0 0 0    0 5 5 5 5 5 5
+8 8 8 8 8 8 8    8 8 8 8 8 8 8</code></pre></div>
+    <p class="means">代表：左邊輸入、右邊輸出（終端機裡有顏色）。規則是「每條色帶靠右、再由短到長往下堆」。等一下樹會自己找到它的程式。<code>play task &lt;題號&gt; 1</code> 看第二個例子。</p>
+  </section>
+
+  <section class="sec" id="p3"><h2><span class="no">3</span>跑一輪</h2>
+    <div class="cmd"><pre><code>play run</code></pre></div>
+    <div class="out"><pre><code>[play r001 s0] pass 0: L=3 H=1 H24=None P=None/None lib=0 logcost=102.966 wall=0.2s
+[play r001 s0] pass 1: L=4 H=1 H24=None P=None/None lib=0 logcost=101.551 wall=0.2s
+[play r001 s0] pass 2: L=4 H=1 H24=None P=None/None lib=2 logcost=92.91 wall=0.2s
+[play r001 s0] pass 3: L=4 H=1 H24=None P=None/None lib=2 logcost=92.976 wall=0.2s
+[play r001 s0] pass 4: L=4 H=1 H24=None P=None/None lib=2 logcost=91.037 wall=0.2s
+[play r001 s0] pass 5: L=4 H=1 H24=None P=None/None lib=1 logcost=91.124 wall=0.2s
+done: AUC_L=20 (sum of solved_L over passes 1..5), delta=1; files in tree/runs/001/</code></pre></div>
+    <p class="means">代表：每行一個 <a class="term" href="guide-detail.html#g-pass">pass</a>（全部題目重試一遍，pass 之間故意等 3 秒）。L＝8 題學的題解出幾題：pass 0 解 3 題 → pass 1 變 4 題；lib＝這個 pass 能用的<a class="term" href="guide-detail.html#g-block">積木</a>數；<a class="term" href="guide-detail.html#g-logcost">logcost</a> 從 103 降到 91＝同樣的題找得更快。<a class="term" href="guide-detail.html#g-auc">AUC_L</a>＝pass 1～5 的 L 加總＝20。H24、P 是 r08 的欄位，這裡沒用，印 None。</p>
+    <details><summary>為什麼 pass 1 就多解一題、lib 卻還是 0？</summary>
+      <p>pass 0 解出的程式會更新「哪些原語常用」的排序（旋鈕 <code>order=prior</code>），pass 1 的枚舉先試常用的，beb8660c 就在預算 3 萬內找到了。pass 1 結束後 G1 才把 1e0a9b12 和 beb8660c 共有的片段收成積木，所以 pass 2 的 lib 才變 2。練習 4 會把這個排序關掉驗證。</p>
+    </details>
+  </section>
+
+  <section class="sec" id="p4"><h2><span class="no">4</span>看每題的結果</h2>
+    <div class="cmd"><pre><code>play show</code></pre></div>
+    <div class="out"><pre><code>last pass, per task:
+  L  68b16354  solved     nodes_to_first=14  ["reverse", ["$in"]]
+  L  d10ecb37  solved     nodes_to_first=1750  ["map", ["lam", 1, ["take", 2, ["$0"]]], ["take", 2, ["$in"]]]
+  L  1e0a9b12  solved     nodes_to_first=1238  ["transpose", ["blk", "g1_f72643d574", ["transpose", ["$in"]]]]
+  L  beb8660c  solved     nodes_to_first=73  ["sort", ["blk", "g1_f72643d574", ["$in"]]]
+  L  a740d043  -          nodes_to_first=None
+  …
+  H  44f52bb0  train only nodes_to_first=2852  ["map", ["lam", 1, ["if", ["eq", ["$0"], ["reverse", ["$0"]]], ["repea
+  H  5bd6f4ac  solved     nodes_to_first=2555  ["map", ["lam", 1, ["drop", 6, ["$0"]]], ["take", 3, ["$in"]]]
+  H  ea32f347  -          nodes_to_first=None</code></pre></div>
+    <p class="means">代表：beb8660c 的程式是「先用積木 g1_f72643d574（每列排序）、再整體排序」，只試 73 個就找到（pass 0 時要 8.9 萬個）。44f52bb0 是「train only」＝<a class="term" href="guide-detail.html#g-trainok">過 train 答錯</a>：例子全對、test 錯。<code>play show 001</code> 指定看哪次。</p>
+  </section>
+
+  <section class="sec" id="p5"><h2><span class="no">5</span>看樹學到什麼</h2>
+    <div class="cmd"><pre><code>play blocks</code></pre></div>
+    <div class="out"><pre><code>run 001: 1 learned blocks
+  g1_f72643d574 born pass 1 uses=8 from 1e0a9b12,beb8660c
+    body: ["map", ["lam", 1, ["sort", ["$0"]]], ["$h0"]]</code></pre></div>
+    <p class="means">代表：<a class="term" href="guide-detail.html#g-g1">G1 壓縮</a>從兩題的程式挖出共同骨架「對每一列排序」，<code>$h0</code> 是洞（要排的東西）。這就是「學」：下次遇到要排序每一列的題，一步就到。原檔在 <code>tree/runs/001/blocks.json</code>。</p>
+  </section>
+
+  <section class="sec" id="p6"><h2><span class="no">6</span>背景跑，邊跑邊看</h2>
+    <div class="cmd"><pre><code>play run --bg
+play status</code></pre></div>
+    <div class="out"><pre><code>started in background, pid 1405033; log: tree/live/run.log
+state: running (pid 1405033)
+run: 002  pass: 0 of 0..5  updated: 2026-11-08T19:02:32
+last pass: solved_L=3 solved_H=1 lib=0 logcost=102.966 wall=0.2s
+settings: passes=6 budget=30000 workers=4 pace_s=3 learn=True g4=False exclude=[]
+node solve active inbox=0 replies=0
+node grow  active inbox=0 replies=0
+node judge active inbox=0 replies=0</code></pre></div>
+    <p class="means">代表：樹在背景跑（每 pass 約 3 秒），你可以繼續打指令。<code>status</code> 讀的是 <code>tree/live/status.json</code>；也可以 <code>cat tree/live/status.json</code> 或 <code>tail -f tree/live/run.log</code>。</p>
+  </section>
+
+  <section class="sec" id="p7"><h2><span class="no">7</span>對節點說話</h2>
+    <div class="cmd"><pre><code>play say judge "how is it going?"
+# 等一個 pass（約 3 秒）
+cat tree/nodes/judge/outbox/*</code></pre></div>
+    <div class="out"><pre><code>queued for judge; read at the next pass boundary, reply in tree/nodes/judge/outbox/
+[2026-11-08T19:02:35] judge got your message at run 002 pass 1: 'how is it going?'
+current numbers: solved_L=4 solved_H=1 lib=0 logcost=101.551</code></pre></div>
+    <p class="means">代表：訊息先變成 <code>tree/nodes/judge/inbox/</code> 裡的一個檔，樹在 pass 邊界讀走、回一封信到 outbox。遊樂場的節點只會「收到＋報數字」，不會照你的話改學習；真的會聽話的是 r09 的 <code>ctl say</code>（<span class="tag wip">r09 施工中</span>）。</p>
+  </section>
+
+  <section class="sec" id="p8"><h2><span class="no">8</span>暫停、繼續、停</h2>
+    <figure class="fig"><svg viewBox="0 0 640 110" role="img" aria-label="旗標檔控制">
+      <rect x="10" y="30" width="190" height="44" rx="9" class="f-box f-warn"/><text x="105" y="57" text-anchor="middle">pause：建 live/PAUSE</text>
+      <rect x="225" y="30" width="190" height="44" rx="9" class="f-box f-ok"/><text x="320" y="57" text-anchor="middle">resume：刪 PAUSE</text>
+      <rect x="440" y="30" width="190" height="44" rx="9" class="f-box f-bad"/><text x="535" y="57" text-anchor="middle">stop：刪 live/RUN</text>
+      <text x="320" y="100" text-anchor="middle" class="f-s">樹每個 pass 結束時看一次這兩個檔</text>
+    </svg></figure>
+    <div class="cmd"><pre><code>play pause ; play status
+play resume
+play stop ; play status</code></pre></div>
+    <div class="out"><pre><code>pause requested; the run waits after the current pass
+state: paused (pid 1405033)
+run: 002  pass: 2 of 0..5  updated: 2026-11-08T19:02:39
+…
+resumed
+stop requested; the run exits at the next pass boundary
+state: stopped
+run: 002  pass: 2 of 0..5  updated: 2026-11-08T19:02:42</code></pre></div>
+    <p class="means">代表：干預都在 pass 邊界生效，最慢一個 pass。停下來的那次 run 只有半條曲線，在 <code>tree/runs/002/live_curve.jsonl</code>。</p>
+  </section>
+
+  <section class="sec" id="p9"><h2><span class="no">9</span>看事件流</h2>
+    <div class="cmd"><pre><code>play log 4</code></pre></div>
+    <div class="out"><pre><code>{"time": "2026-11-08T19:02:39", "kind": "pass", "run": "002", "pass": 2, "L": "4", "H": "1", …}
+{"time": "2026-11-08T19:02:39", "kind": "paused", "run": "002", "pass_no": 2}
+{"time": "2026-11-08T19:02:41", "kind": "resumed", "run": "002"}
+{"time": "2026-11-08T19:02:42", "kind": "stopped", "run": "002"}</code></pre></div>
+    <p class="means">代表：樹發生的每件事都 append 一行到 <code>tree/live/events.jsonl</code>（start、pass、say、paused、resumed、stopped、done、set…）。r09 的活樹也規劃了同名的 <code>events.jsonl</code>。</p>
+  </section>
+
+  <section class="sec" id="p10"><h2><span class="no">10</span>玩壞了：一鍵還原</h2>
+    <div class="cmd"><pre><code>play stop      # 有在跑的話先停
+play reset     # 或 ./reset.sh</code></pre></div>
+    <div class="out"><pre><code>tree/ restored from seed/ (all runs, messages and settings changes removed)</code></pre></div>
+    <p class="means">代表：所有 runs、訊息、改過的旋鈕全部清掉。還在跑時 reset 會拒絕（<code>play: error: Busy stop the run first</code>）。</p>
+  </section>
+
+  <section class="sec" id="x1"><h2><span class="no">練1</span>把學習關掉，看差多少</h2>
+    <div class="cmd"><pre><code>play set pace_s 0      # 全速，不等 3 秒
+play set learn false
+play run</code></pre></div>
+    <div class="out"><pre><code>learn: True -> False (takes effect on the next play run)
+[play r003 s0] pass 0: L=3 H=1 H24=None P=None/None lib=0 logcost=102.966 wall=0.2s
+[play r003 s0] pass 1: L=3 H=1 H24=None P=None/None lib=0 logcost=102.966 wall=0.2s
+…（pass 2～5 一模一樣）
+done: AUC_L=15 (sum of solved_L over passes 1..5), delta=0; files in tree/runs/003/</code></pre></div>
+    <p class="means">代表：不學就原地踏步：AUC_L 15（開學習是 20）、logcost 一直 103。這就是「不學對照」，r08 的 <code>pool-noG1</code> 同一個意思。做完 <code>play set learn true</code> 改回來。</p>
+  </section>
+
+  <section class="sec" id="x2"><h2><span class="no">練2</span>拿掉一個原語</h2>
+    <div class="cmd"><pre><code>play exclude sort
+play run
+play include sort      # 放回去</code></pre></div>
+    <div class="out"><pre><code>exclude = ['sort'] (takes effect on the next play run)
+[play r004 s0] pass 0: L=2 H=1 H24=None P=None/None lib=0 logcost=104.974 wall=0.2s
+[play r004 s0] pass 1: L=2 H=0 H24=None P=None/None lib=2 logcost=103.486 wall=0.2s
+…
+done: AUC_L=10 (sum of solved_L over passes 1..5), delta=0; files in tree/runs/004/</code></pre></div>
+    <p class="means">代表：沒有 sort，靠排序的 1e0a9b12、beb8660c 都解不出，L 掉到 2。這種「留一個原語看掉幾題」就是 r09 規劃的 <code>sieve/exclude</code> 掃描。全部原語 <code>play prims</code>。</p>
+  </section>
+
+  <section class="sec" id="x3"><h2><span class="no">練3</span>預算加大</h2>
+    <div class="cmd"><pre><code>play set budget 100000
+play run</code></pre></div>
+    <div class="out"><pre><code>budget: 30000 -> 100000 (takes effect on the next play run)
+[play r007 s0] pass 0: L=4 H=1 H24=None P=None/None lib=0 logcost=114.635 wall=0.5s
+[play r007 s0] pass 1: L=4 H=1 H24=None P=None/None lib=2 logcost=109.668 wall=1.0s
+…
+done: AUC_L=20 (sum of solved_L over passes 1..5), delta=0; files in tree/runs/007/</code></pre></div>
+    <p class="means">代表：預算 10 萬時 pass 0 就硬搜到 beb8660c（要 8.9 萬個），所以 delta 0；學習的好處變成「更快」（logcost 115→110），不是「多解」。預算小一點（例如 5000：L 只剩 2）就連起點都變差。改回 <code>play set budget 30000</code>。</p>
+  </section>
+
+  <section class="sec" id="x4"><h2><span class="no">練4</span>關掉「常用先試」排序</h2>
+    <div class="cmd"><pre><code>play set knobs.order size
+play run
+play set knobs.order prior   # 改回來</code></pre></div>
+    <div class="out"><pre><code>knobs.order: prior -> size (takes effect on the next play run)
+[play r005 s0] pass 0: L=3 H=1 H24=None P=None/None lib=0 logcost=102.966 wall=0.2s
+[play r005 s0] pass 1: L=3 H=1 H24=None P=None/None lib=0 logcost=102.966 wall=0.2s
+…（pass 2～5 一模一樣）
+done: AUC_L=15 (sum of solved_L over passes 1..5), delta=0; files in tree/runs/005/</code></pre></div>
+    <p class="means">代表：只照大小排序時 beb8660c 一直找不到，第二支含「每列排序」的程式沒出現，G1 也就湊不出積木——小型的<a class="term" href="guide-detail.html#g-cold">冷啟動</a>。<a class="term" href="guide-detail.html#g-knobs">旋鈕</a>一個個改、看曲線變不變，就是<a class="term" href="guide-detail.html#g-meta">元優化</a>在做的事。</p>
+    <details><summary>還能改哪些旋鈕</summary>
+      <p><code>play set</code> 不帶參數會列出可改的鍵：<code>passes</code>（1～12）、<code>budget</code>（1000～200000）、<code>workers</code>（1～6）、<code>pace_s</code>（0～30）、<code>learn</code>、<code>g4</code>、<code>knobs.decomp</code>、<code>knobs.m</code>、<code>knobs.k</code>、<code>knobs.max_holes</code>、<code>knobs.lib_cap</code>、<code>knobs.order</code>、<code>knobs.lam_depth</code>。上面四個練習以外的組合沒實跑過，結果自己看。</p>
+    </details>
+  </section>
+  <div class="next"><a href="guide-detail.html">← ② 詳解</a><a href="index.html">回看板</a></div>
+  <p class="foot">還沒講的：自己改 <code>tree/taskset.json</code> 換題、開 G4、多種子比較（CRN）、怎麼把遊樂場的發現搬回 arcagi 輪次。要哪個跟我說。</p>
+</main>
+<script src="guide.js"></script>
+</body>
+</html>
