@@ -10,3 +10,24 @@
 .round-event .event-links{font-size:11px;color:var(--muted);margin-top:7px}
 .round-empty{padding:40px 0;color:var(--muted)}
 @media(max-width:760px){.report-section{scroll-margin-top:125px}}
+@media (max-width: 600px) {
+  .shell { width: calc(100% - 28px); min-width: 0; }
+  .site-bar-inner { flex-wrap: wrap; min-width: 0; }
+  .page-nav, .section-nav, .detail-controls { display: flex; flex-wrap: wrap; width: 100%; min-width: 0; }
+  .page-nav a { white-space: normal; }
+  .report-section, .stats, .pair, .round-cards { grid-template-columns: minmax(0, 1fr); }
+  .report-section > *, .section-copy, .fold-body, .round-card { min-width: 0; max-width: 100%; }
+  .diagram { position: static; max-width: 100%; }
+  #connection, .eyebrow, .chapter, .meta, .meta span, .stat-label, .stat-note,
+  .round-event time, .event-state, .round-event .event-links, .source, .footer,
+  .fold-body p, .item p, .item summary, .tag, .note, .pair p, .decision p,
+  .card-state, .card-link, .round-card p, .status-pill, .focus-link,
+  ul, ol, code, pre, table, .report-button, .detail-controls button { font-size: 15px !important; }
+  a, button, summary { min-height: 40px; font-size: 15px; }
+  a { display: inline-block; padding-top: 7px; padding-bottom: 7px; }
+  nav a { font-size: 15px !important; }
+  table { display: block; max-width: 100%; overflow-x: auto; table-layout: auto; }
+  th, td { min-width: 110px; }
+  pre { max-width: 100%; overflow-x: auto; white-space: pre; overflow-wrap: normal; }
+  p, li, a, h1, h2, h3, .event-links { overflow-wrap: anywhere; }
+}

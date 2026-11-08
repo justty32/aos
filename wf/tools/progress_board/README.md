@@ -125,6 +125,14 @@
 - **新卡誰寫**：卡的內容是取捨，由該線隊長（opus）讀原檔與後續簡報／代定後寫，或交給 board-fable 線；gpt 不做內容取捨。原設計之後被翻案、實測有新數字，同一位更新 `outcome`／`outcome_tag`。改完 `designs.json` 不用重開伺服器，下一輪收集（15 秒）就生效。
 - 結果寫在看板 `data/designs.json`、`data/designs.js`（離線快照也能看）。
 
+## 論壇（forum.html）
+
+看板頂端「論壇」可看全部、精華或各線文章；開本機伺服器時可用 `user` 發文與回覆，離線只讀。
+文章與回覆存 `data/forum/forum.jsonl`，權限在 `data/forum/perms.json`；每次收集產生 `data/forum.json`、`data/forum.js` 快照。
+
+- 發文：`wf/tools/forum_post.sh progress-board 'Board update' README.md`
+- 管理：`wf/tools/forum_admin.sh feature <post-id> --as top`
+
 ## 手機遠端看板
 
 使用者出門時用手機看的 claude.ai artifact（進度、待你裁、論壇）；本機推快照、使用者回答拉回本機。推拉步驟與 db 格式見 [remote/README](remote/README.md)，腳本 `remote_sync.py`。

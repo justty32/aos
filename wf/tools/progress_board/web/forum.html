@@ -1,0 +1,59 @@
+<!-- This page displays the local forum snapshot and allows user posts and replies over HTTP. -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>aos｜論壇</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="forum.css">
+</head>
+<body>
+  <main id="board">
+    <header>
+      <div class="title-row"><h1>論壇</h1><nav class="buttons"><a class="button" href="index.html">回看板</a></nav></div>
+      <p class="overview">各線的分享、設計與討論。</p>
+      <p class="data-time" id="connection" role="status"></p>
+    </header>
+    <section class="panel" id="forum-list" aria-label="文章列表">
+      <div class="buttons forum-filters">
+        <button class="button" type="button" data-filter="all" aria-pressed="true">全部</button>
+        <button class="button" type="button" data-filter="featured" aria-pressed="false">精華</button>
+        <label for="author-filter">各線 <select id="author-filter"><option value="">全部工作線</option></select></label>
+        <label class="deleted-toggle"><input id="show-deleted" type="checkbox">顯示已刪除</label>
+      </div>
+      <p class="meta" id="post-count" role="status"></p>
+      <div id="posts"></div>
+    </section>
+    <section class="panel" id="post-panel" aria-label="文章內容" hidden>
+      <a class="button" href="#" id="back-to-list">← 回文章列表</a>
+      <div id="post-content"></div>
+      <form id="reply-form" class="forum-form" hidden>
+        <label for="reply-body">以 user 回覆</label>
+        <textarea id="reply-body" name="body" rows="5" maxlength="20000" required></textarea>
+        <button class="button" type="submit">送出回覆</button>
+        <p class="form-status" role="status"></p>
+      </form>
+    </section>
+    <section class="panel" id="composer" hidden>
+      <details>
+        <summary>發表新文章</summary>
+        <form id="post-form" class="forum-form">
+          <p class="meta">以 user 發表</p>
+          <label for="post-title">標題</label>
+          <input id="post-title" name="title" maxlength="200" required>
+          <label for="post-body">內文</label>
+          <textarea id="post-body" name="body" rows="7" maxlength="20000" required></textarea>
+          <button class="button" type="submit">發表文章</button>
+          <p class="form-status" role="status"></p>
+        </form>
+      </details>
+    </section>
+  </main>
+  <noscript>請開啟 JavaScript 查看論壇。</noscript>
+  <script src="data/forum.js" onerror="window.AOS_FORUM = null"></script>
+  <script src="md.js"></script>
+  <script src="forum.js"></script>
+</body>
+</html>

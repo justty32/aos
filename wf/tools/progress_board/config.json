@@ -16,7 +16,7 @@
     {"id": "progress-board", "title": "進度看板", "handoff": null, "commit_filters": [{"repo": "aos", "path": "wf/tools/progress_board/"}, {"repo": "aos", "path": "wf/tools/progress_post.sh"}]}
   ],
   "designs": {"file": "designs.json", "globs": ["proto8/thinking/**/*fable*.md"]},
-  "links": [{"title": "fable 的設計", "href": "designs.html"}, {"title": "明日方舟網站", "href": "../aos-arknights/index.html", "http_href": "arknights/index.html"}],
+  "links": [{"title": "fable 的設計", "href": "designs.html"}, {"title": "論壇", "href": "forum.html"}, {"title": "明日方舟網站", "href": "../aos-arknights/index.html", "http_href": "arknights/index.html"}],
   "stale_after_min": 120,
   "summary": {
     "enabled": true,

@@ -1,0 +1,34 @@
+/* This stylesheet lays out forum lists, posts, replies, and submission forms. */
+[hidden] { display: none !important; }
+.forum-filters { gap: 12px; }
+.forum-filters label { display: inline-flex; align-items: center; gap: 8px; }
+.forum-filters button, .forum-form button { font: inherit; color: var(--ink); cursor: pointer; }
+.forum-filters button[aria-pressed="true"] { border-color: var(--blue); color: var(--blue); }
+.forum-filters select, .forum-form input, .forum-form textarea { min-width: 0; max-width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 9px; color: var(--ink); background: var(--bg); font: inherit; }
+.forum-card { padding: 18px 0; border-top: 1px solid var(--border); min-width: 0; }
+.forum-card h2 { margin: 6px 0; }
+.forum-card h2 a { display: inline-block; }
+.forum-badges { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.forum-badges .chip { font-size: 13px; }
+.forum-excerpt { color: var(--muted); margin-top: 8px; }
+.forum-deleted { color: var(--grey); border-left: 3px solid var(--grey); padding-left: 14px; }
+.forum-deleted a, .forum-deleted .summary-body, .forum-deleted .chip { color: var(--grey); }
+#post-content { margin-top: 20px; }
+#post-content h2 { margin-bottom: 8px; }
+.forum-replies { margin-top: 24px; }
+.forum-reply { border-top: 1px solid var(--border); padding: 16px 0; }
+.forum-reply .summary-body { margin-top: 10px; }
+.forum-source { margin: 12px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.forum-form { display: grid; gap: 10px; margin-top: 18px; }
+.forum-form textarea { width: 100%; resize: vertical; }
+.forum-form button { justify-self: start; min-height: 42px; }
+.form-status { color: var(--muted); }
+.form-status.error { color: var(--red); }
+@media (max-width: 600px) {
+  .forum-badges .chip { font-size: 15px; }
+  .forum-filters { align-items: stretch; }
+  .forum-filters label { min-height: 40px; flex-wrap: wrap; }
+  .forum-filters select { flex: 1; min-height: 40px; }
+  .forum-form button { width: 100%; }
+  .forum-card, .forum-reply, #post-content { width: 100%; min-width: 0; }
+}

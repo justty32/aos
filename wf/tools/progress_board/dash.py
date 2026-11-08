@@ -1,4 +1,4 @@
-"""Run the local progress board server, detail and answer endpoints, snapshots, summaries, and ELI5 explanations."""
+"""Run the local progress board server, detail, answer and forum endpoints, snapshots, summaries, and ELI5 explanations."""
 import functools
 import http.server
 import json
@@ -14,7 +14,8 @@ import time
 sys.dont_write_bytecode = True
 from answers import AnswerHandlerMixin
 from details_api import DetailHandlerMixin
-from collect import board_path, collect, copy_assets, load_config, write_state
+from collect import atomic_write, board_path, collect, copy_assets, load_config, write_state
+from forum_board import ForumHandlerMixin, write_forum
 from eli5 import maybe_main, maybe_detail, input_snapshot, fingerprint_main
 from summarize import maybe_summarize
 from static_sites import StaticSiteHandlerMixin
@@ -109,8 +110,12 @@ def serve(board, port):
     state_lock = threading.Lock()
     summary_thread = None
 
-    class Handler(StaticSiteHandlerMixin, DetailHandlerMixin, AnswerHandlerMixin,
+    class Handler(StaticSiteHandlerMixin, DetailHandlerMixin, ForumHandlerMixin, AnswerHandlerMixin,
                   http.server.SimpleHTTPRequestHandler):
+        def refresh_forum(self):
+            with state_lock:
+                write_forum(board, atomic_write)
+
         def refresh_answers(self):
             with state_lock:
                 busy = summary_thread is not None and summary_thread.is_alive()

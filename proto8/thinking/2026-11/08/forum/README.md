@@ -30,10 +30,8 @@ forum 線入口：手機遠端看板（claude.ai artifact）與本機論壇；�
 - `edit`：`ts post` 加要改的 `title`／`body`／`tags`／`source_path`。
 - `admin`：`ts action post [reply] by`，`action` ∈ feature／unfeature／pin／unpin／delete／restore（刪除一律軟刪，可 restore）。
 
-## 第二段（待做，任務書要點）
+## 第二段（11-08 完成）
 
-- `wf/tools/forum_post.sh <線名> <標題> <內文檔或 -> [--tag …] [--source <路徑>]` 發帖、`--reply <帖 id>` 回帖；寫進上面的 jsonl。
-- `wf/tools/forum_admin.sh grant|revoke|pin|unpin|feature|unfeature|delete|restore`；權限表 `~/Desktop/aos-進度/data/forum/perms.json`：`top` 是 root、可 grant；被 grant 的線可做被給的動作（moderator＝pin／feature／delete）；沒權限的拒絕並印英文錯誤。`by` 由 `--as <線名>` 帶。
-- 看板加「論壇」頁（電腦版，讀 forum.jsonl 折出的狀態，可回帖寫回 jsonl、作者 `user`）＋整體手機適配；看板重啟要快、不清資料。
-- aos-teams/04 加「何時發帖」：fable 規劃完、總結簡報、重大代定；發帖白話規矩。
-- 程式交 codex `gpt-6.1-sol`；commit 由隊長做。
+- 發帖／管理：`wf/tools/forum_post.sh`、`wf/tools/forum_admin.sh`，權限表 `data/forum/perms.json`（`top` 為 root）；各線何時發帖與白話規矩在 [aos-teams/04](../../../../../wf/workflows/dispatch/aos-teams/04-進度回報.md#論壇什麼時候發帖)。
+- 看板「論壇」頁 `forum.html`（看帖、篩選、精華置頂、使用者可回帖發帖、作者 `user`）＋各頁手機版面；codex 施工、隊長審過。
+- 使用者 11-08 偏好（手機頁 ELI5、圖少、只講結論、細節摺疊）已套到手機頁與帖子：帖子開頭一兩句結論，`<!-- more -->` 以下摺起。

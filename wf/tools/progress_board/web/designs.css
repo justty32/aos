@@ -34,3 +34,12 @@
   header, .panel { padding: 16px; }
   .figure svg { min-width: 620px; }
 }
+@media (max-width: 600px) {
+  #cards { grid-template-columns: minmax(0, 1fr); }
+  .design-card, #toc { min-width: 0; width: 100%; }
+  #toc .button, .tag, .md table { font-size: 15px; }
+  #toc { flex-wrap: wrap; }
+  .figure { min-width: 0; max-width: 100%; margin-left: 0; margin-right: 0; overflow-x: auto; }
+  .md table { display: block; width: 100%; overflow-x: auto; }
+  .md th, .md td { min-width: 100px; }
+}

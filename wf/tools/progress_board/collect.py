@@ -1,4 +1,4 @@
-"""Collect local progress, questions, answers, ELI5 explanations, handoffs, commits, and host samples into board state."""
+"""Collect board state, design and forum snapshots, ELI5 explanations, handoffs, commits, and host samples."""
 
 import datetime as dt
 import json
@@ -12,6 +12,7 @@ import tempfile
 from answers import asks_state, read_answers, valid_ask
 from assets import copy_assets
 from designs import write_designs
+from forum_board import write_forum
 from rounds import rounds_state, tag_events
 
 ROOT = Path(__file__).resolve().parent
@@ -219,6 +220,10 @@ def collect(board_dir, cfg, eli5_inputs=None):
         write_designs(board, cfg, atomic_write)
     except OSError as error:
         warnings.append(f"Design page data not written: {error}")
+    try:
+        write_forum(board, atomic_write)
+    except OSError as error:
+        warnings.append(f"Forum page data not written: {error}")
     now = dt.datetime.now().astimezone()
     grouped, bad = {}, 0
     for event in read_jsonl(board / "data/progress.jsonl", warnings):
