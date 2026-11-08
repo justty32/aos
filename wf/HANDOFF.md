@@ -27,6 +27,8 @@
 
 8. **compact 前還在跑的（15:08）**：本 session 的背景 agent——arcagi S3 隊長（每物件規則族，已被主線要求 commit families 快照）、aos 自我優化規劃隊長（opus→fable，只規劃）；完成會通知。監看（每 30 分鐘要重開）：家機負載（load>24、mem<10G、swap>200M、顯存>14G、codex>3、claude>30）、aos inbox 新信、arcagi 對話紀錄 context（`~/.claude-alt/projects/-home-lorkhan-repo-arcagi/*.jsonl` 最後一筆 usage，用 `command ls`，視窗按 1M）、arcagi 額度用完字樣。headless `/usage` 不可靠（快取舊數字）。等待中：arcagi 主線 r06 收輪 PROGRESS（含 S1 驗收 ≥45）→ 收到後照第 7 點換主 session、派 S1 第三任（速度）。看板加精華：`forum_admin.sh feature <id> --as top`；手機頁推送照第 1 點。
 
+9. **15:15 換手完成**：arcagi r06 收輪（evaluation 38→56/400、同大小 14→23、training 138、退步 0；論壇 p-20261108-150706-491f 已加精華）。舊 alt session（465837）已正常結束；新主 session 用本帳號跑在 tmux `arcagi`（`tmux capture-pane -pt arcagi`、`tmux send-keys -t arcagi …`），開場提示已送，它在開 r07。權限詢問會卡在 pane 上：頂層監看 bktc91d2y 會報，判斷無害後 `tmux send-keys -t arcagi Enter` 放行。舊 alt 對話紀錄的 context／額度監看已停，改看 `~/.claude/projects/-home-lorkhan-repo-arcagi/`。S1 第三任（速度：native 當小集快評測引擎＋投票收「過 train 卻答錯」）已派；S3 收到主線回信（加最小支持度）。aos-self-opt 規劃完成（a9a23614b，看板 4 個 ask）。
+
 ## 2026-11-07 晚 家機 alt 帳號頂層（使用者收工，明天續）
 
 1. **授權與隊形**同下一條；另加：gpt 測試預設不寫、指定才寫（[aos-teams/03](workflows/dispatch/aos-teams/03-使用者原話.md) 末段）；各線進度交給桌面看板 http://127.0.0.1:8765/（`wf/tools/progress_board/`，啟動 `dash.py start`），要使用者裁的事用 `progress_post.sh <線> ask`，頂層仍為看板與匯總者負責（[user/03](workflows/common/user/03-討論紀錄與規劃.md) 末段）；「喘口氣」＝barrier 同步；美國尖峰容量錯誤的處理見 [user/01](workflows/common/user/01-說話授權與記憶.md) 末段。
