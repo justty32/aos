@@ -11,7 +11,7 @@ def copy_assets(board_dir):
     board.mkdir(parents=True, exist_ok=True)
     for name in ("index.html", "app.js", "asks.js", "eli5.js", "md.js", "detail.html", "detail.js", "style.css"):
         shutil.copyfile(ROOT / "web" / name, board / name)
-    for name in ("rounds.html", "rounds.js", "rounds.css"):
+    for name in ("rounds.html", "rounds.js", "rounds.css", "designs.html", "designs.js", "designs.css"):
         if (ROOT / "web" / name).is_file():
             shutil.copyfile(ROOT / "web" / name, board / name)
     (board / "assets").mkdir(exist_ok=True)

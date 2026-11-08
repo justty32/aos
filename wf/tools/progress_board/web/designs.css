@@ -1,0 +1,36 @@
+/* This stylesheet styles fable design cards and gives their inline figures theme-aware colors. */
+#cards { display: grid; gap: 18px; }
+.design-card { margin-bottom: 0; }
+.design-card h2 { font-size: 21px; margin-top: 2px; }
+.conclusion { margin: 12px 0; font-size: 17px; font-weight: 600; }
+.figure { margin: 14px 0; padding: 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); overflow-x: auto; }
+.figure svg { display: block; width: 100%; min-width: 520px; height: auto; max-height: 520px; }
+.figure figcaption { margin-top: 6px; }
+.eli5-box, .outcome { margin: 12px 0; padding: 12px 16px; border-radius: 12px; background: var(--tint); }
+.outcome { border-left: 4px solid var(--purple); }
+.eli5-box { border-left: 4px solid var(--blue); }
+.eli5-box p, .outcome p { margin-top: 4px; }
+.tag { padding: 2px 10px; border-radius: 99px; font-size: 13px; border: 1px solid currentColor; white-space: nowrap; }
+.tag-ok { color: var(--green); } .tag-warn { color: var(--amber); } .tag-bad { color: var(--red); }
+.tag-acc { color: var(--blue); } .tag-muted { color: var(--grey); }
+#toc .button { font-size: 13px; }
+.md table { font-size: 14px; }
+/* Figure palette: cards only use these classes, never literal colors. */
+.f-box { fill: var(--surface); stroke: var(--border); stroke-width: 1.5; }
+.f-box.f-ok { fill: color-mix(in srgb, var(--green) 16%, var(--surface)); stroke: var(--green); }
+.f-box.f-bad { fill: color-mix(in srgb, var(--red) 14%, var(--surface)); stroke: var(--red); }
+.f-box.f-warn { fill: color-mix(in srgb, var(--amber) 16%, var(--surface)); stroke: var(--amber); }
+.f-box.f-acc { fill: color-mix(in srgb, var(--blue) 14%, var(--surface)); stroke: var(--blue); }
+.f-box.f-muted { fill: var(--tint); stroke: var(--grey); stroke-dasharray: 5 4; }
+.f-line { fill: none; stroke: var(--muted); stroke-width: 1.6; }
+.f-line.f-ok { stroke: var(--green); } .f-line.f-bad { stroke: var(--red); } .f-line.f-acc { stroke: var(--blue); }
+.f-head { fill: var(--muted); }
+.f-t { fill: var(--ink); font: 14px system-ui, sans-serif; }
+.f-s { font-size: 12px; fill: var(--muted); }
+.f-b { font-weight: 700; }
+.f-t.f-ok { fill: var(--green); } .f-t.f-bad { fill: var(--red); } .f-t.f-acc { fill: var(--blue); } .f-t.f-warn { fill: var(--amber); }
+@media (max-width: 640px) {
+  #board { padding: 16px 12px 40px; }
+  header, .panel { padding: 16px; }
+  .figure svg { min-width: 620px; }
+}

@@ -1,0 +1,27 @@
+<!-- This page shows each fable design as a card with a one-line conclusion, a figure, a plain explanation and what happened next. -->
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>aos｜fable 的設計</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="designs.css">
+</head>
+<body>
+  <main id="board">
+    <header>
+      <div class="title-row"><h1>fable 的設計</h1><nav class="buttons"><a class="button" href="index.html">回看板</a></nav></div>
+      <p class="overview">fable 是頂層設計者：每輪開工前由它一次想好怎麼做。這頁把它寫過的每份設計攤成一張卡——一句話結論、一張圖、白話說明、後來怎樣了；數字與原檔收在摺疊裡。</p>
+      <nav class="buttons" id="toc"></nav>
+      <p class="data-time" id="stamp"></p>
+    </header>
+    <div id="cards"></div>
+  </main>
+  <noscript>請開啟 JavaScript 查看設計卡。</noscript>
+  <script src="data/designs.js" onerror="window.AOS_DESIGNS = null"></script>
+  <script src="md.js"></script>
+  <script src="designs.js"></script>
+</body>
+</html>

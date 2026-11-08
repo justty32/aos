@@ -114,3 +114,13 @@
 發待裁題的人請加 `--eli5 '<plain text>'`，直接說清楚在問什麼、每個選項會怎樣；這份說明優先使用，沒有才自動產生。例如：`~/repo/simple_tools/aos/wf/tools/progress_post.sh progress-board ask 'How much detail?' --eli5 'Choose how much explanation you want.'`。
 
 匯總、總覽白話與細節白話共用 `data/llm.lock`。伺服器碰到鎖已被占用就略過這輪；手動指令最多等 120 秒，仍忙則印 `dash: warning: busy, skipped`。拿到鎖後重新檢查輸入與間隔，避免同時啟動時重複呼叫模型。
+
+## fable 的設計（designs.html）
+
+看板頂端「fable 的設計」按鈕開 `designs.html`：fable（頂層設計者）寫過的每份設計一張卡——一句話結論、一張圖、白話比喻、後來怎樣了，原檔與數字收在「細節」摺疊裡。蒸餾放第一張。
+
+- **卡的內容**在程式旁 `designs.json`（`wf-table/1`，一列一張卡；欄位：`id`、`order` 排序、`doc` repo 相對路徑、`title`、`topic`、`date`、`conclusion`、`eli5`、`figure_svg`、`figures`（多張圖，`[{svg, caption}]`）、`outcome`、`outcome_tag`（採用／部分採用／被翻案／實測沒過／進行中）、`details_md`）。
+- **自動發現**：每輪收集照 `config.json` 的 `designs.globs`（預設 `proto8/thinking/**/*fable*.md`）掃 repo；沒寫卡的檔排在最後、標「還沒寫卡」，只顯示檔頭第一句。fable 的規劃檔檔名請帶 `fable`，不然要把 glob 加進 config。
+- **圖**：inline SVG，不寫顏色值，只用 class（框 `f-box`＋`f-ok`／`f-bad`／`f-warn`／`f-acc`／`f-muted`，線 `f-line`、箭頭 `marker-end="url(#arr)"`，字 `f-t`、`f-s` 小字、`f-b` 粗），亮暗主題由 `designs.css` 上色。
+- **新卡誰寫**：卡的內容是取捨，由該線隊長（opus）讀原檔與後續簡報／代定後寫，或交給 board-fable 線；gpt 不做內容取捨。原設計之後被翻案、實測有新數字，同一位更新 `outcome`／`outcome_tag`。改完 `designs.json` 不用重開伺服器，下一輪收集（15 秒）就生效。
+- 結果寫在看板 `data/designs.json`、`data/designs.js`（離線快照也能看）。
