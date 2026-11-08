@@ -8,10 +8,12 @@ import os
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from forum import EVENTS as FORUM, fold as fold_forum  # noqa: E402
+
 REPO = Path(__file__).resolve().parents[3]
 BOARD = Path(os.environ.get("AOS_PROGRESS_DIR", "~/Desktop/aos-進度")).expanduser()
 DATA = BOARD / "data"
-FORUM = DATA / "forum" / "forum.jsonl"
 SEEN = DATA / "remote_seen.json"
 DECIDE_GLOBS = ["proto8/thinking/**/decide_*.json", "wf/**/decide_*.json"]
 OPEN_STATES = ("", "missing", "pending")
@@ -56,38 +58,6 @@ def append_jsonl(path, records):
             stream.write(json.dumps(record, ensure_ascii=False) + "\n")
         stream.flush()
         fcntl.flock(stream, fcntl.LOCK_UN)
-
-
-def fold_forum(events):
-    """Fold forum.jsonl events into posts with replies and flags."""
-    posts = {}
-    for ev in events:
-        kind = ev.get("type")
-        if kind == "post" and ev.get("id"):
-            posts[ev["id"]] = {"id": ev["id"], "title": ev.get("title", ""), "author": ev.get("author", ""),
-                               "ts": ev.get("ts", ""), "tags": ev.get("tags", []), "body": ev.get("body", ""),
-                               "source_path": ev.get("source_path", ""), "featured": False, "pinned": False,
-                               "deleted": False, "replies": [], "last_ts": ev.get("ts", "")}
-        elif kind == "reply" and ev.get("post") in posts:
-            post = posts[ev["post"]]
-            post["replies"].append({"id": ev.get("id", ""), "author": ev.get("author", ""), "ts": ev.get("ts", ""),
-                                    "body": ev.get("body", ""), "deleted": False})
-            post["last_ts"] = ev.get("ts", post["last_ts"])
-        elif kind == "edit" and ev.get("post") in posts:
-            for key in ("title", "body", "tags", "source_path"):
-                if key in ev:
-                    posts[ev["post"]][key] = ev[key]
-        elif kind == "admin" and ev.get("post") in posts:
-            action, post = ev.get("action"), posts[ev["post"]]
-            flags = {"feature": ("featured", True), "unfeature": ("featured", False), "pin": ("pinned", True),
-                     "unpin": ("pinned", False), "delete": ("deleted", True), "restore": ("deleted", False)}
-            if action in flags and not ev.get("reply"):
-                post[flags[action][0]] = flags[action][1]
-            elif action in ("delete", "restore") and ev.get("reply"):
-                for reply in post["replies"]:
-                    if reply["id"] == ev["reply"]:
-                        reply["deleted"] = action == "delete"
-    return posts
 
 
 def open_decide_rows():
