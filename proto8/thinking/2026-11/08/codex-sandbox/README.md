@@ -1,4 +1,4 @@
-家機 codex 開著 workspace-write 沙箱也能連 LiteLLM（localhost:4000）：多帶一個 `-c sandbox_workspace_write.network_access=true` 就行，不用改使用者的 config；推薦 A，待使用者在看板裁。
+家機 codex 開著 workspace-write 沙箱也能連 LiteLLM（localhost:4000）：多帶一個 `-c sandbox_workspace_write.network_access=true` 就行，不用改使用者的 config；使用者 11-08 裁 A，已落進派工指令。
 
 ← [2026-11-08](../README.md)｜派工指令現況 [aos-teams/02「codex 呼叫與沙箱」](../../../../../wf/workflows/dispatch/aos-teams/02-指令沙箱與試玩.md#codex-呼叫與沙箱)
 
@@ -27,11 +27,11 @@
 
 **推薦 A**：今天就能用、不必改使用者 config、不必改程式，從「全開」降到「只能寫工作目錄」，連 LiteLLM 的路一條都沒斷。要連網路也圍起來（B）得先讓 `llm_http` 認代理環境變數（改一個 aos 基礎函數），而且是實驗性功能，等需要再說。
 
-## 待使用者裁
+## 使用者裁定
 
-看板 `codex-sandbox` 線的 ask（11-08）：A＝派工指令改帶 `-s workspace-write -c sandbox_workspace_write.network_access=true`（推薦）；B＝連網路也只放行本機，先改 `llm_http` 認代理；C＝照現況不帶 `-s`。裁完才改 aos-teams/02。
+11-08（經頂層轉述）：「codex可以改用沙箱，準備好就可以用」——選 A。已改 [aos-teams/02](../../../../../wf/workflows/dispatch/aos-teams/02-指令沙箱與試玩.md#codex-呼叫與沙箱) 的家機 codex 指令。vcpkg 寫不進的事遇到再說（頂層 11-08）。
 
-## 派工指令改寫草稿（選 A 時）
+## 派工指令改寫（已落）
 
 改 [aos-teams/02「codex 呼叫與沙箱」](../../../../../wf/workflows/dispatch/aos-teams/02-指令沙箱與試玩.md#codex-呼叫與沙箱)的「家機」那段，改成：
 

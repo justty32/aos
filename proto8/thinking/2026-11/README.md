@@ -13,4 +13,4 @@
 | [2026-11-04](04/README.md) | 6 | eca 開場白檔可指定、loop／fsm agent、aos-post 信箱要不要改成一個資料夾（裁不換）、測試全刪、思考是 aos 函數（問腦＝寄信給 llm kernel、非同步、aos-llm／aos-tools 當基礎工具；待使用者看）；基礎積木邊緣實測（修 6 處、工具失敗原因要不要給外部 agent 待使用者） |
 | [2026-11-06](06/README.md) | 2 | 信件 body 與可選的非同步呼叫協議（body-protocol，fable 規劃）：一箱一函數、body＝那函數的 stdin JSON、回信＝stdout 或 `{"error"}`、「body＝inst」只留沙箱特例、看不懂 body 有 `reply_to` 就回錯誤信、進度先讀信資料夾的窗；衝突 10 條；11-06 使用者裁四題照推薦、題 5 照 apply-ideas 排程、提點「不要與 aos-post 耦合太深」；昨晚想法怎麼用到現況（apply-ideas，fable 規劃）：六樣都不插進 S 步、只有 tick 改 deadline 跟 S9 同人緊接、信封／body 與暫停時間只差條文＋P6、aos-serve 排大重構後；D1 與 tick 五題下午已裁（tick 改成 daemon 自帶 `tick`、沒 tick 退牆鐘），新題 N1、N2 也照推薦裁了 |
 | [2026-11-07](07/README.md) | 11 | 把 arknights 敘事庫歸納進 aos 知識庫體系（arknights-kb，長線，進行中）：確定性為優化目標、gpt 腦實跑、挖不足再優化 |
-| [2026-11-08](08/README.md) | 1 | 家機 codex 開著沙箱連 LiteLLM（codex-sandbox）：帶 `network_access=true` 即可，推薦 A、待使用者裁 |
+| [2026-11-08](08/README.md) | 1 | 家機 codex 開著沙箱連 LiteLLM（codex-sandbox）：帶 `network_access=true` 即可，使用者裁 A、派工指令已改 |

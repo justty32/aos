@@ -6,4 +6,4 @@
 
 | 日期 | 一句話 |
 |---|---|
-| [codex-sandbox](codex-sandbox/README.md) | 家機 codex 帶 `-s workspace-write -c sandbox_workspace_write.network_access=true` 就能開著沙箱連 LiteLLM；推薦 A，待使用者裁 |
+| [codex-sandbox](codex-sandbox/README.md) | 家機 codex 帶 `-s workspace-write -c sandbox_workspace_write.network_access=true` 就能開著沙箱連 LiteLLM；使用者裁 A、派工指令已改 |
