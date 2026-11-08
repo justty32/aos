@@ -62,9 +62,6 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
 .body code{font-family:var(--f-mono);font-size:13px}
 .reply{border-top:1px solid var(--line);padding-top:8px}
 .empty{padding:20px 14px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
-.flow{width:100%;height:auto;max-width:100%}
-.flow rect{fill:var(--surface);stroke:var(--line)} .flow .a{fill:var(--accent-soft);stroke:var(--accent)}
-.flow text{fill:var(--ink);font-size:12px;font-family:var(--f-body)} .flow path{stroke:var(--muted);fill:none;stroke-width:1.5}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
@@ -84,15 +81,7 @@ details summary{cursor:pointer;color:var(--muted);font-size:13px}
     <div id="progress-body" hidden></div>
     <details>
       <summary>這頁怎麼運作</summary>
-      <svg class="flow" viewBox="0 0 340 120" role="img" aria-label="本機看板推快照到這頁，你的回答存在這頁，頂層再拉回本機">
-        <rect x="4" y="40" width="96" height="40" rx="8"/><text x="52" y="64" text-anchor="middle">本機看板／論壇</text>
-        <rect class="a" x="122" y="40" width="96" height="40" rx="8"/><text x="170" y="64" text-anchor="middle">這頁的資料庫</text>
-        <rect x="240" y="40" width="96" height="40" rx="8"/><text x="288" y="64" text-anchor="middle">你（手機）</text>
-        <path d="M100 52 H120"/><text x="110" y="30" text-anchor="middle">推快照</text>
-        <path d="M218 52 H238"/><path d="M238 70 H218"/><text x="228" y="100" text-anchor="middle">回答、回帖</text>
-        <path d="M120 70 H100"/><text x="110" y="100" text-anchor="middle">頂層拉回</text>
-      </svg>
-      <p class="muted">這頁不能直接連你的電腦，只靠資料庫中轉：本機推快照上來，你在這裡選、寫，頂層收到你的通知後再拉回本機。所以你按了送出以後，跟對話裡的頂層說一聲就好。</p>
+      <p class="muted">這頁像一塊留言板：電腦把最新進度貼上來，你在這裡選、寫，按送出後跟對話裡的頂層說一聲，他就會把你的答案搬回電腦。</p>
     </details>
   </section>
 
@@ -154,8 +143,8 @@ function renderBoard(){
   let h="";
   if(b.overview) h+=`<div class="lead">${inline(b.overview)}</div>`;
   if((b.blocked||[]).length) h+=`<h2>卡住</h2>`+b.blocked.map(x=>`<div class="card"><div class="row"><span class="chip st-blocked">卡住</span><span class="title">${esc(x.line_title||x.line)}</span></div><div>${inline(x.text)}</div></div>`).join("");
-  h+=`<h2>各線現況</h2>`+(b.lines||[]).map(l=>`<div class="card"><div class="row"><span class="title">${esc(l.title||l.id)}</span><span class="chip st-${esc(l.status)}">${esc(STATUS[l.status]||l.status||"")}</span><span class="meta">${fmt(l.last_ts)}</span></div><div>${inline(l.doing||"（沒有回報）")}</div></div>`).join("");
-  if((b.decisions||[]).length) h+=`<h2>代定（替你先做的決定）</h2><div class="card"><ul class="plain">`+b.decisions.map(d=>`<li><b>${esc(d.line_title||d.line)}</b>：${inline(d.text)} <span class="meta">${fmt(d.ts)}</span></li>`).join("")+`</ul></div>`;
+  h+=`<h2>各線現況</h2>`+(b.lines||[]).map(l=>`<div class="card"><div class="row"><span class="title">${esc(l.title||l.id)}</span><span class="chip st-${esc(l.status)}">${esc(STATUS[l.status]||l.status||"")}</span><span class="meta">${fmt(l.last_ts)}</span></div><div>${inline(l.eli5||l.doing||"（沒有回報）")}</div>${l.eli5&&l.doing?`<details><summary>原話</summary><div class="muted">${inline(l.doing)}</div></details>`:""}</div>`).join("");
+  if((b.decisions||[]).length) h+=`<details class="card"><summary>替你先做的決定（${b.decisions.length} 條，可翻案）</summary><ul class="plain">`+b.decisions.map(d=>`<li><b>${esc(d.line_title||d.line)}</b>：${inline(d.text)} <span class="meta">${fmt(d.ts)}</span></li>`).join("")+`</ul></details>`;
   if(b.summary_md) h+=`<details class="card"><summary>看匯總全文</summary><div class="body">${md(b.summary_md)}</div></details>`;
   el.innerHTML=h;
 }
@@ -170,12 +159,11 @@ function renderAsks(){
   const keep={}; document.querySelectorAll("#asks-body textarea").forEach(t=>keep[t.id]=t.value);
   $("#asks-body").innerHTML=items.map(a=>{
     const s=sentFor("answer",a.id), qid=a.id.replace(/[^A-Za-z0-9_-]/g,"_");
-    const opts=(a.options||[]).map(o=>`<label class="opt${o.key===a.recommend?" rec":""}"><input type="radio" name="o-${qid}" value="${esc(o.key)}"${(s?s.choice===o.key:o.key===a.recommend)?" checked":""}><span><span class="k">${esc(o.key)}</span> ${inline(o.text.replace(/^[^:：]+[:：]\s*/,""))}${o.key===a.recommend?' <span class="chip st-done">推薦</span>':""}</span></label>`).join("");
+    const opts=(a.options||[]).map(o=>`<label class="opt${o.key===a.recommend?" rec":""}"><input type="radio" name="o-${qid}" value="${esc(o.key)}"${(s?s.choice===o.key:o.key===a.recommend)?" checked":""}><span><span class="k">${esc(o.key)}</span> ${inline(o.text.replace(/^[^:：]+[:：]\s*/,""))}${o.key===a.recommend?' <span class="chip st-done">推薦</span>':""}${o.consequence?`<br><span class="muted">→ ${inline(o.consequence)}</span>`:""}</span></label>`).join("");
     return `<div class="card" data-ask="${esc(a.id)}"><div class="row"><span class="chip st-ask">${esc(a.line)}</span>${a.batch?`<span class="chip">${esc(a.batch)}</span>`:""}<span class="meta">${fmt(a.ts)}</span></div>
       <div class="title">${inline(a.question)}</div>${a.eli5?`<div class="muted">${inline(a.eli5)}</div>`:""}
       ${opts?`<div class="opts">${opts}</div>`:""}
-      ${a.why?`<div class="muted">推薦理由：${inline(a.why)}</div>`:""}
-      ${(a.details||[]).length?`<details><summary>細節</summary><ul class="plain">${a.details.map(d=>`<li>${inline(d)}</li>`).join("")}</ul></details>`:""}
+      ${a.why||(a.details||[]).length?`<details><summary>為什麼推薦、細節</summary>${a.why?`<div class="muted">推薦理由：${inline(a.why)}</div>`:""}<ul class="plain">${(a.details||[]).map(d=>`<li>${inline(d)}</li>`).join("")}</ul></details>`:""}
       <textarea id="c-${qid}" placeholder="備註（可空）">${esc(s?s.comment:"")}</textarea>
       <div class="row"><button class="btn" data-send="${esc(a.id)}"${canWrite?"":" disabled"}>${s?"改答案":"送出"}</button><span class="sent">${s?"已送出 "+fmt(s.ts)+"（等頂層拉回）":""}</span></div></div>`;
   }).join("");
@@ -212,6 +200,9 @@ function renderForum(){
     + mine.map(m=>`<div class="card"><div class="row"><span class="chip">你發的（等頂層拉回）</span><span class="title">${inline(m.title)}</span></div><div class="muted">${inline((m.body||"").slice(0,80))}</div></div>`).join("");
 }
 
+// a "<!-- more -->" line splits the plain-language lead from folded details
+function bodyHtml(src){ const parts=String(src||"").split(/^\s*<!--\s*more\s*-->\s*$/m);
+  return `<div class="body">${md(parts[0])}</div>`+(parts.length>1?`<details><summary>展開細節</summary><div class="body">${md(parts.slice(1).join("\n"))}</div></details>`:""); }
 let postUnsub=null;
 function openPost(id){
   show("forum"); $("#forum-list").hidden=true; const el=$("#forum-post"); el.hidden=false;
@@ -230,8 +221,8 @@ function renderPost(){
   el.innerHTML=`<button class="btn ghost" id="back">← 回列表</button>
     <div class="card"><div class="row">${p.pinned?'<span class="chip pin">置頂</span>':""}${p.featured?'<span class="chip feat">精華</span>':""}<span class="title">${inline(p.title)}</span></div>
     <div class="row meta"><span>${esc(p.author)}</span><span>${fmt(p.ts)}</span>${(p.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>
-    <div class="body">${md(p.body)}</div>${p.source_path?`<div class="muted">原檔：<code>${esc(p.source_path)}</code></div>`:""}</div>
-    ${(p.replies||[]).map(r=>`<div class="card reply"><div class="row meta"><span>${esc(r.author)}</span><span>${fmt(r.ts)}</span></div><div class="body">${md(r.body)}</div></div>`).join("")}
+    ${bodyHtml(p.body)}${p.source_path?`<div class="muted">原檔：<code>${esc(p.source_path)}</code></div>`:""}</div>
+    ${(p.replies||[]).map(r=>`<div class="card reply"><div class="row meta"><span>${esc(r.author)}</span><span>${fmt(r.ts)}</span></div>${bodyHtml(r.body)}</div>`).join("")}
     ${mine.map(r=>`<div class="card reply"><div class="row meta"><span>你（等頂層拉回）</span><span>${fmt(r.ts)}</span></div><div class="body">${md(r.body)}</div></div>`).join("")}
     <div class="card"><textarea id="rp-body" placeholder="回這帖"></textarea><div class="row"><button class="btn" id="rp-send"${canWrite?"":" disabled"}>回帖</button><span class="sent" id="rp-msg"></span></div></div>`;
   if(keep) $("#rp-body").value=keep;

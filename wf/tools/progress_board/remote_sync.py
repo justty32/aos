@@ -73,8 +73,8 @@ def open_decide_rows():
             for row in table.get("rows", []):
                 if row.get("answer_state", "") not in OPEN_STATES:
                     continue
-                options = [{"key": o.get("key", ""), "text": f"{o.get('key', '')}：{o.get('label', '')}"
-                            + (f"（{o['consequence']}）" if o.get("consequence") else "")} for o in row.get("options", [])]
+                options = [{"key": o.get("key", ""), "text": f"{o.get('key', '')}：{o.get('label', '')}",
+                            "consequence": o.get("consequence", "")} for o in row.get("options", [])]
                 rows.append({"id": f"decide:{table.get('batch')}:{row.get('id')}", "line": table.get("line", ""),
                              "batch": table.get("batch", ""), "question": row.get("question", ""),
                              "eli5": row.get("eli5", ""), "options": options, "recommend": row.get("recommend") or None,
@@ -92,11 +92,17 @@ def export(out):
     except (OSError, ValueError) as error:
         fail("StateBad", f"cannot read state.json: {error}")
     cutoff = dt.datetime.now().astimezone() - dt.timedelta(hours=DECISION_HOURS)
+    try:
+        eli5 = json.loads((BOARD / "eli5" / "main.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        eli5 = {}
+    line_eli5 = {k: v.get("text", "") for k, v in (eli5.get("lines") or {}).items() if isinstance(v, dict)}
     lines, decisions, blocked = [], [], []
     for line in state.get("lines", []):
         title = line.get("title") or line.get("id")
         lines.append({"id": line.get("id"), "title": title, "status": line.get("status"),
-                      "doing": line.get("doing", ""), "last_ts": line.get("last_ts", "")})
+                      "doing": line.get("doing", ""), "eli5": line_eli5.get(line.get("id"), ""),
+                      "last_ts": line.get("last_ts", "")})
         for ev in line.get("events", []):
             ts = parse_ts(ev.get("ts"))
             if ev.get("status") == "decision" and ts and ts >= cutoff:
@@ -113,6 +119,8 @@ def export(out):
             overview = parts[1].strip().split("\n\n", 1)[0].strip()
     except OSError:
         pass
+    summary_eli5 = (eli5.get("summary") or {}).get("text", "") if isinstance(eli5.get("summary"), dict) else ""
+    overview = summary_eli5 or overview
     summary = state.get("summary") or {}
     board = {"generated_at": now_iso(), "summary_at": summary.get("latest_ts", ""), "overview": overview,
              "lines": lines, "decisions": decisions[:30], "blocked": blocked, "summary_md": summary_md[:60000]}
@@ -130,7 +138,8 @@ def export(out):
     listing = []
     for post in posts.values():
         replies = [r for r in post["replies"] if not r["deleted"]]
-        excerpt = " ".join(post["body"].replace("#", "").split())[:90]
+        lead = post["body"].split("<!-- more -->", 1)[0]
+        excerpt = " ".join(lead.replace("#", "").replace("**", "").split())[:90]
         listing.append({"id": post["id"], "title": post["title"], "author": post["author"], "ts": post["ts"],
                         "last_ts": post["last_ts"], "tags": post["tags"], "featured": post["featured"],
                         "pinned": post["pinned"], "deleted": post["deleted"], "replies": len(replies), "excerpt": excerpt})
@@ -177,6 +186,15 @@ def pull(src, dry):
         body = body.get("data", body) if isinstance(body.get("data"), dict) else body
         docs.append((path.stem, body))
     docs.sort(key=lambda item: str(item[1].get("ts", "")))
+    recommends = {}
+    for pattern in DECIDE_GLOBS:
+        for found in REPO.glob(pattern):
+            try:
+                table = json.loads(found.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            for row in table.get("rows", []) if isinstance(table, dict) else []:
+                recommends[(table.get("batch"), row.get("id"))] = row.get("recommend") or ""
     answers, forum, decide, report = [], [], {}, []
     local_ts = now_iso()
     for doc_id, body in docs:
@@ -188,7 +206,9 @@ def pull(src, dry):
             _, batch, row = target.split(":", 2)
             choice = body.get("choice") or "-"
             note = body.get("comment", "").replace("\n", " / ")
-            decide.setdefault(batch, {})[row] = f"{row}:{choice}" + (f"（備註：{note}）" if note else "")
+            rec = recommends.get((batch, row), "")
+            star = "*" if rec and choice != "-" and choice != rec else ""
+            decide.setdefault(batch, {})[row] = f"{row}:{choice}{star}" + (f"（備註：{note}）" if note else "")
             report.append(f"decide {batch} {row} -> {choice}")
         elif kind == "answer":
             answers.append({"ts": local_ts, "id": target, "line": body.get("line", ""), "choice": body.get("choice"),
@@ -207,7 +227,9 @@ def pull(src, dry):
         seen.add(doc_id)
     decide_files = {}
     for batch, rows in decide.items():
-        line = f"[{batch}] " + "、".join(rows.values())
+        # rows not answered in this pull go in as "?" (pending) so apply keeps any earlier answer
+        others = [f"{row}:{rec or '-'}?" for (b, row), rec in recommends.items() if b == batch and row not in rows]
+        line = f"[{batch}] " + "、".join(list(rows.values()) + others)
         path = Path(src) / f"decide_{batch}.txt"
         path.write_text(line + "\n", encoding="utf-8")
         decide_files[batch] = str(path)
