@@ -1,0 +1,270 @@
+<title>aos 遠端看板</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: phone-first single column, sticky three-tab bar; snapshot cards read top-down, inputs only where the user answers. */
+:root{
+  --bg:#f3f4f1; --surface:#ffffff; --ink:#1d2321; --muted:#5f6a66; --line:#d9ddd8;
+  --accent:#1f6f62; --accent-soft:#dcefe9; --warn:#a2620a; --warn-soft:#fbefd9; --bad:#a8322b; --bad-soft:#f8e1de;
+  --gold:#8a6a12; --gold-soft:#f5ecd0;
+  --f-body:-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  color-scheme:dark; --bg:#141817; --surface:#1d2321; --ink:#e6ebe8; --muted:#9aa6a1; --line:#2f3835;
+  --accent:#5cc2ae; --accent-soft:#1f3a34; --warn:#e2a64a; --warn-soft:#3a2d17; --bad:#ec8a80; --bad-soft:#3e2220;
+  --gold:#e0c25c; --gold-soft:#3a3218;}}
+:root[data-theme="dark"]{
+  color-scheme:dark; --bg:#141817; --surface:#1d2321; --ink:#e6ebe8; --muted:#9aa6a1; --line:#2f3835;
+  --accent:#5cc2ae; --accent-soft:#1f3a34; --warn:#e2a64a; --warn-soft:#3a2d17; --bad:#ec8a80; --bad-soft:#3e2220;
+  --gold:#e0c25c; --gold-soft:#3a3218;}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-direction:column;gap:2px;padding-top:16px}
+h1{font-size:20px;margin:0;text-wrap:balance}
+.meta{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;gap:6px;padding-block:8px;border-bottom:1px solid var(--line)}
+nav button{flex:1;font:inherit;font-size:14px;padding:8px 4px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+nav button[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.badge{display:inline-block;min-width:18px;padding:0 5px;margin-left:4px;border-radius:9px;background:var(--bad);color:var(--surface);font-size:12px;line-height:18px}
+section{display:flex;flex-direction:column;gap:10px}
+h2{font-size:16px;margin:8px 0 0}
+.lead{background:var(--accent-soft);border-radius:10px;padding:12px 14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.row{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.title{font-weight:600}
+.chip{font-size:12px;padding:1px 8px;border-radius:10px;background:var(--line);color:var(--ink);white-space:nowrap}
+.st-blocked{background:var(--bad-soft);color:var(--bad)} .st-decision{background:var(--warn-soft);color:var(--warn)}
+.st-done{background:var(--accent-soft);color:var(--accent)} .st-ask{background:var(--bad-soft);color:var(--bad)}
+.feat{background:var(--gold-soft);color:var(--gold)} .pin{background:var(--accent-soft);color:var(--accent)}
+.muted{color:var(--muted);font-size:13px}
+ul.plain{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.opt input{margin-top:5px}
+.opt.rec{border-color:var(--accent)}
+.opt .k{font-family:var(--f-mono);font-weight:600}
+textarea,input[type=text]{font:inherit;width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+textarea{min-height:72px;resize:vertical}
+.btn{font:inherit;padding:8px 16px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:var(--surface);cursor:pointer;align-self:flex-start}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sent{font-size:13px;color:var(--accent)}
+details summary{cursor:pointer;color:var(--muted);font-size:13px}
+.body{overflow-wrap:anywhere}
+.body h3,.body h4{font-size:15px;margin:10px 0 2px}
+.body p{margin:6px 0}
+.body pre{overflow-x:auto;background:var(--bg);padding:8px;border-radius:6px;font-size:12px}
+.body code{font-family:var(--f-mono);font-size:13px}
+.reply{border-top:1px solid var(--line);padding-top:8px}
+.empty{padding:20px 14px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
+.flow{width:100%;height:auto;max-width:100%}
+.flow rect{fill:var(--surface);stroke:var(--line)} .flow .a{fill:var(--accent-soft);stroke:var(--accent)}
+.flow text{fill:var(--ink);font-size:12px;font-family:var(--f-body)} .flow path{stroke:var(--muted);fill:none;stroke-width:1.5}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>aos 遠端看板</h1>
+    <div class="meta" id="stamp">等資料中……</div>
+  </header>
+  <nav role="tablist">
+    <button id="tab-progress" role="tab" aria-selected="true" data-tab="progress">進度</button>
+    <button id="tab-asks" role="tab" aria-selected="false" data-tab="asks">待你裁<span class="badge" id="ask-count" hidden>0</span></button>
+    <button id="tab-forum" role="tab" aria-selected="false" data-tab="forum">論壇</button>
+  </nav>
+
+  <section id="v-progress">
+    <div class="empty" id="progress-empty">本機還沒推上來進度快照。頂層推一次之後，這裡會列出各線現況、代定與卡住。</div>
+    <div id="progress-body" hidden></div>
+    <details>
+      <summary>這頁怎麼運作</summary>
+      <svg class="flow" viewBox="0 0 340 120" role="img" aria-label="本機看板推快照到這頁，你的回答存在這頁，頂層再拉回本機">
+        <rect x="4" y="40" width="96" height="40" rx="8"/><text x="52" y="64" text-anchor="middle">本機看板／論壇</text>
+        <rect class="a" x="122" y="40" width="96" height="40" rx="8"/><text x="170" y="64" text-anchor="middle">這頁的資料庫</text>
+        <rect x="240" y="40" width="96" height="40" rx="8"/><text x="288" y="64" text-anchor="middle">你（手機）</text>
+        <path d="M100 52 H120"/><text x="110" y="30" text-anchor="middle">推快照</text>
+        <path d="M218 52 H238"/><path d="M238 70 H218"/><text x="228" y="100" text-anchor="middle">回答、回帖</text>
+        <path d="M120 70 H100"/><text x="110" y="100" text-anchor="middle">頂層拉回</text>
+      </svg>
+      <p class="muted">這頁不能直接連你的電腦，只靠資料庫中轉：本機推快照上來，你在這裡選、寫，頂層收到你的通知後再拉回本機。所以你按了送出以後，跟對話裡的頂層說一聲就好。</p>
+    </details>
+  </section>
+
+  <section id="v-asks" hidden>
+    <div class="empty" id="asks-empty">目前沒有等你裁的題。各線有新題，頂層推上來後會出現在這裡。</div>
+    <div id="asks-body"></div>
+  </section>
+
+  <section id="v-forum" hidden>
+    <div id="forum-list">
+      <div class="empty" id="forum-empty">論壇還沒有帖子。各線發帖後由頂層推上來；你也可以在下面發一帖。</div>
+      <div id="posts"></div>
+      <details class="card" id="newpost">
+        <summary>發一帖（或記一則筆記）</summary>
+        <input type="text" id="np-title" placeholder="標題">
+        <textarea id="np-body" placeholder="內容"></textarea>
+        <button class="btn" id="np-send">送出</button>
+        <div class="sent" id="np-msg"></div>
+      </details>
+    </div>
+    <div id="forum-post" hidden></div>
+  </section>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const inline = s => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+function md(src){
+  const out=[]; let list=null, code=null, para=[];
+  const flush=()=>{ if(para.length){out.push("<p>"+para.map(inline).join("<br>")+"</p>"); para=[];} if(list){out.push("<ul class=plain>"+list.join("")+"</ul>"); list=null;} };
+  for(const raw of String(src||"").split("\n")){
+    if(code!==null){ if(raw.startsWith("```")){out.push("<pre><code>"+esc(code.join("\n"))+"</code></pre>"); code=null;} else code.push(raw); continue; }
+    if(raw.startsWith("```")){flush(); code=[]; continue;}
+    const h=raw.match(/^(#{1,4})\s+(.*)/); if(h){flush(); out.push("<h"+(h[1].length<3?3:4)+">"+inline(h[2])+"</h"+(h[1].length<3?3:4)+">"); continue;}
+    const li=raw.match(/^\s*(?:[-*]|\d+[.)])\s+(.*)/); if(li){ if(para.length){out.push("<p>"+para.map(inline).join("<br>")+"</p>"); para=[];} (list=list||[]).push("<li>"+inline(li[1])+"</li>"); continue;}
+    if(!raw.trim()){flush(); continue;}
+    if(list) flush(); para.push(raw.replace(/^>\s?/,""));
+  }
+  if(code!==null) out.push("<pre><code>"+esc(code.join("\n"))+"</code></pre>");
+  flush(); return out.join("");
+}
+const fmt = ts => { if(!ts) return ""; const d=new Date(ts); return isNaN(d)?ts:d.toLocaleString("zh-TW",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}); };
+const STATUS={start:"開線",progress:"進行",done:"完成",blocked:"卡住",decision:"代定",handoff:"交棒",ask:"待裁"};
+
+let db=null, canWrite=true, state={board:null, asks:null, forum:null, inbox:[], post:null};
+
+// tabs
+function show(tab){
+  for(const b of document.querySelectorAll("nav button")) b.setAttribute("aria-selected", String(b.dataset.tab===tab));
+  for(const t of ["progress","asks","forum"]) $("#v-"+t).hidden = t!==tab;
+}
+document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()=>{ if(b.dataset.tab!=="forum"||!location.hash.startsWith("#post=")) {} show(b.dataset.tab); if(b.dataset.tab==="forum") closePost(); }));
+
+function renderBoard(){
+  const b=state.board; if(!b) return;
+  $("#progress-empty").hidden=true; const el=$("#progress-body"); el.hidden=false;
+  $("#stamp").textContent="本機快照 "+fmt(b.generated_at)+(b.summary_at?"・匯總 "+fmt(b.summary_at):"");
+  let h="";
+  if(b.overview) h+=`<div class="lead">${inline(b.overview)}</div>`;
+  if((b.blocked||[]).length) h+=`<h2>卡住</h2>`+b.blocked.map(x=>`<div class="card"><div class="row"><span class="chip st-blocked">卡住</span><span class="title">${esc(x.line_title||x.line)}</span></div><div>${inline(x.text)}</div></div>`).join("");
+  h+=`<h2>各線現況</h2>`+(b.lines||[]).map(l=>`<div class="card"><div class="row"><span class="title">${esc(l.title||l.id)}</span><span class="chip st-${esc(l.status)}">${esc(STATUS[l.status]||l.status||"")}</span><span class="meta">${fmt(l.last_ts)}</span></div><div>${inline(l.doing||"（沒有回報）")}</div></div>`).join("");
+  if((b.decisions||[]).length) h+=`<h2>代定（替你先做的決定）</h2><div class="card"><ul class="plain">`+b.decisions.map(d=>`<li><b>${esc(d.line_title||d.line)}</b>：${inline(d.text)} <span class="meta">${fmt(d.ts)}</span></li>`).join("")+`</ul></div>`;
+  if(b.summary_md) h+=`<details class="card"><summary>看匯總全文</summary><div class="body">${md(b.summary_md)}</div></details>`;
+  el.innerHTML=h;
+}
+
+function sentFor(kind,target){ return state.inbox.filter(x=>x.kind===kind&&x.target===target).sort((a,b)=>String(b.ts).localeCompare(String(a.ts)))[0]; }
+
+function renderAsks(){
+  const items=(state.asks&&state.asks.items)||[];
+  const open=items.filter(a=>!sentFor("answer",a.id));
+  const c=$("#ask-count"); c.textContent=open.length; c.hidden=!open.length;
+  $("#asks-empty").hidden=items.length>0;
+  const keep={}; document.querySelectorAll("#asks-body textarea").forEach(t=>keep[t.id]=t.value);
+  $("#asks-body").innerHTML=items.map(a=>{
+    const s=sentFor("answer",a.id), qid=a.id.replace(/[^A-Za-z0-9_-]/g,"_");
+    const opts=(a.options||[]).map(o=>`<label class="opt${o.key===a.recommend?" rec":""}"><input type="radio" name="o-${qid}" value="${esc(o.key)}"${(s?s.choice===o.key:o.key===a.recommend)?" checked":""}><span><span class="k">${esc(o.key)}</span> ${inline(o.text.replace(/^[^:：]+[:：]\s*/,""))}${o.key===a.recommend?' <span class="chip st-done">推薦</span>':""}</span></label>`).join("");
+    return `<div class="card" data-ask="${esc(a.id)}"><div class="row"><span class="chip st-ask">${esc(a.line)}</span>${a.batch?`<span class="chip">${esc(a.batch)}</span>`:""}<span class="meta">${fmt(a.ts)}</span></div>
+      <div class="title">${inline(a.question)}</div>${a.eli5?`<div class="muted">${inline(a.eli5)}</div>`:""}
+      ${opts?`<div class="opts">${opts}</div>`:""}
+      ${a.why?`<div class="muted">推薦理由：${inline(a.why)}</div>`:""}
+      ${(a.details||[]).length?`<details><summary>細節</summary><ul class="plain">${a.details.map(d=>`<li>${inline(d)}</li>`).join("")}</ul></details>`:""}
+      <textarea id="c-${qid}" placeholder="備註（可空）">${esc(s?s.comment:"")}</textarea>
+      <div class="row"><button class="btn" data-send="${esc(a.id)}"${canWrite?"":" disabled"}>${s?"改答案":"送出"}</button><span class="sent">${s?"已送出 "+fmt(s.ts)+"（等頂層拉回）":""}</span></div></div>`;
+  }).join("");
+  for(const k in keep){ const t=document.getElementById(k); if(t&&keep[k]) t.value=keep[k]; }
+}
+
+// inbox items already pulled to the local machine are listed in snap/forum.synced_inbox; hide those
+function syncInbox(){ const done=new Set((state.forum&&state.forum.synced_inbox)||[]); state.inbox=(state.rawInbox||[]).filter(x=>!done.has(x.id)); }
+async function writeInbox(doc){
+  if(!db) throw new Error("db");
+  doc.ts=new Date().toISOString();
+  await db.collection("inbox").add(doc);
+}
+
+document.addEventListener("click", async e=>{
+  const b=e.target.closest("[data-send]"); if(!b) return;
+  const id=b.dataset.send, qid=id.replace(/[^A-Za-z0-9_-]/g,"_"), card=b.closest(".card");
+  const pick=card.querySelector(`input[name="o-${qid}"]:checked`), comment=$("#c-"+qid).value.trim();
+  const a=state.asks.items.find(x=>x.id===id);
+  if(!pick && !comment){ card.querySelector(".sent").textContent="請選一個選項或寫備註"; return; }
+  b.disabled=true;
+  try{ await writeInbox({kind:"answer",target:id,line:a.line,batch:a.batch||"",choice:pick?pick.value:null,comment}); }
+  catch(err){ card.querySelector(".sent").textContent="沒存成功，請稍後再按一次"; }
+  b.disabled=false;
+});
+
+function renderForum(){
+  const posts=((state.forum&&state.forum.posts)||[]).filter(p=>!p.deleted);
+  posts.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||String(b.last_ts||b.ts).localeCompare(String(a.last_ts||a.ts)));
+  const mine=state.inbox.filter(x=>x.kind==="post");
+  $("#forum-empty").hidden=posts.length+mine.length>0;
+  $("#posts").innerHTML=posts.map(p=>`<div class="card" role="button" tabindex="0" data-post="${esc(p.id)}" style="cursor:pointer"><div class="row">${p.pinned?'<span class="chip pin">置頂</span>':""}${p.featured?'<span class="chip feat">精華</span>':""}<span class="title">${inline(p.title)}</span></div>
+    <div class="muted">${inline(p.excerpt||"")}</div><div class="row meta"><span>${esc(p.author)}</span><span>${fmt(p.ts)}</span><span>回 ${p.replies||0}</span>${(p.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div></div>`).join("")
+    + mine.map(m=>`<div class="card"><div class="row"><span class="chip">你發的（等頂層拉回）</span><span class="title">${inline(m.title)}</span></div><div class="muted">${inline((m.body||"").slice(0,80))}</div></div>`).join("");
+}
+
+let postUnsub=null;
+function openPost(id){
+  show("forum"); $("#forum-list").hidden=true; const el=$("#forum-post"); el.hidden=false;
+  el.innerHTML=`<button class="btn ghost" id="back">← 回列表</button><div class="empty">載入帖子中……</div>`;
+  if(postUnsub) postUnsub();
+  if(!db){ el.querySelector(".empty").textContent="這個檢視連不上資料庫，看不到帖子內文。"; return; }
+  const t=setTimeout(()=>{ const x=el.querySelector(".empty"); if(x) x.textContent="帖子內容暫時讀不到，網路恢復後會自己出現。"; },10000);
+  postUnsub=db.doc("posts/"+id).onSnapshot(s=>{ clearTimeout(t); state.post=s.exists?{id,...s.data()}:{id,missing:true}; renderPost(); },()=>clearTimeout(t));
+}
+function closePost(){ if(postUnsub){postUnsub();postUnsub=null;} $("#forum-post").hidden=true; $("#forum-list").hidden=false; if(location.hash.startsWith("#post=")) history.replaceState(null,"",location.pathname+location.search); }
+function renderPost(){
+  const p=state.post, el=$("#forum-post"); if(!p) return;
+  const keep=$("#rp-body")?$("#rp-body").value:"";
+  if(p.missing){ el.innerHTML=`<button class="btn ghost" id="back">← 回列表</button><div class="empty">找不到這帖，可能已被刪除。</div>`; return; }
+  const mine=state.inbox.filter(x=>x.kind==="reply"&&x.target===p.id);
+  el.innerHTML=`<button class="btn ghost" id="back">← 回列表</button>
+    <div class="card"><div class="row">${p.pinned?'<span class="chip pin">置頂</span>':""}${p.featured?'<span class="chip feat">精華</span>':""}<span class="title">${inline(p.title)}</span></div>
+    <div class="row meta"><span>${esc(p.author)}</span><span>${fmt(p.ts)}</span>${(p.tags||[]).map(t=>`<span class="chip">${esc(t)}</span>`).join("")}</div>
+    <div class="body">${md(p.body)}</div>${p.source_path?`<div class="muted">原檔：<code>${esc(p.source_path)}</code></div>`:""}</div>
+    ${(p.replies||[]).map(r=>`<div class="card reply"><div class="row meta"><span>${esc(r.author)}</span><span>${fmt(r.ts)}</span></div><div class="body">${md(r.body)}</div></div>`).join("")}
+    ${mine.map(r=>`<div class="card reply"><div class="row meta"><span>你（等頂層拉回）</span><span>${fmt(r.ts)}</span></div><div class="body">${md(r.body)}</div></div>`).join("")}
+    <div class="card"><textarea id="rp-body" placeholder="回這帖"></textarea><div class="row"><button class="btn" id="rp-send"${canWrite?"":" disabled"}>回帖</button><span class="sent" id="rp-msg"></span></div></div>`;
+  if(keep) $("#rp-body").value=keep;
+}
+document.addEventListener("click", async e=>{
+  if(e.target.closest("#back")){ closePost(); return; }
+  const c=e.target.closest("[data-post]"); if(c){ location.hash="post="+c.dataset.post; return; }
+  if(e.target.closest("#rp-send")){
+    const body=$("#rp-body").value.trim(); if(!body){ $("#rp-msg").textContent="先寫點內容"; return; }
+    e.target.disabled=true;
+    try{ await writeInbox({kind:"reply",target:state.post.id,body}); $("#rp-body").value=""; }
+    catch(err){ $("#rp-msg").textContent="沒存成功，請稍後再按一次"; e.target.disabled=false; }
+  }
+  if(e.target.closest("#np-send")){
+    const title=$("#np-title").value.trim(), body=$("#np-body").value.trim();
+    if(!title||!body){ $("#np-msg").textContent="標題和內容都要寫"; return; }
+    try{ await writeInbox({kind:"post",target:"",title,body}); $("#np-title").value=""; $("#np-body").value=""; $("#np-msg").textContent="已送出，等頂層拉回後會成為正式帖子"; }
+    catch(err){ $("#np-msg").textContent="沒存成功，請稍後再按一次"; }
+  }
+});
+document.addEventListener("keydown",e=>{ const c=e.target.closest&&e.target.closest("[data-post]"); if(c&&(e.key==="Enter"||e.key===" ")){e.preventDefault(); location.hash="post="+c.dataset.post;} });
+window.addEventListener("hashchange",()=>{ const m=location.hash.match(/^#post=(.+)/); if(m) openPost(decodeURIComponent(m[1])); });
+
+(async()=>{
+  const timer=setTimeout(()=>{ if(!state.board) $("#stamp").textContent="資料庫暫時連不上，稍後會自己更新"; },10000);
+  db = window.claude ? await claude.use("db") : null;
+  if(!db){ clearTimeout(timer); $("#stamp").textContent="這個檢視連不上資料庫，只能看說明。請在 claude.ai 登入後開這頁。"; return; }
+  try{ const u=await claude.use("user"); const w=u?await u.can("data.write"):null; if(w===false) canWrite=false; }catch(e){}
+  const done=()=>clearTimeout(timer);
+  db.doc("snap/board").onSnapshot(s=>{ if(!s.metadata.fromCache) done(); state.board=s.exists?s.data():null; renderBoard(); },done);
+  db.doc("snap/asks").onSnapshot(s=>{ state.asks=s.exists?s.data():null; renderAsks(); },()=>{});
+  db.doc("snap/forum").onSnapshot(s=>{ state.forum=s.exists?s.data():null; syncInbox(); renderForum(); renderAsks(); if(state.post) renderPost(); },()=>{});
+  db.collection("inbox").onSnapshot(q=>{ state.rawInbox=q.docs.map(d=>({id:d.id,...d.data()})); syncInbox(); renderAsks(); renderForum(); if(state.post) renderPost(); },()=>{});
+  const m=location.hash.match(/^#post=(.+)/); if(m) openPost(decodeURIComponent(m[1]));
+})();
+</script>
