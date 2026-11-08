@@ -87,10 +87,10 @@
    "source_path": "02-規劃-fable.md",
    "source_lines": "衝突 1",
    "source_excerpt": "",
-   "answer": "",
-   "answer_state": "",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-08"
   },
   {
    "id": "c2",
@@ -123,10 +123,10 @@
    "source_path": "02-規劃-fable.md",
    "source_lines": "衝突 2",
    "source_excerpt": "",
-   "answer": "",
-   "answer_state": "",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-08"
   },
   {
    "id": "c3",
@@ -159,10 +159,10 @@
    "source_path": "02-規劃-fable.md",
    "source_lines": "衝突 3",
    "source_excerpt": "",
-   "answer": "",
-   "answer_state": "",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-08"
   },
   {
    "id": "c4",
@@ -195,10 +195,10 @@
    "source_path": "02-規劃-fable.md",
    "source_lines": "衝突 4",
    "source_excerpt": "",
-   "answer": "",
-   "answer_state": "",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-08"
   },
   {
    "id": "q1",
@@ -236,10 +236,10 @@
    "source_path": "02-規劃-fable.md",
    "source_lines": "Q1",
    "source_excerpt": "",
-   "answer": "",
-   "answer_state": "",
-   "answer_note": "",
-   "answered_at": ""
+   "answer": "C",
+   "answer_state": "changed",
+   "answer_note": "抽象分數可以由多種東西綜合，目前可以是token+時間，公式也可以隨意。",
+   "answered_at": "2026-11-08"
   },
   {
    "id": "q2",
@@ -272,10 +272,10 @@
    "source_path": "02-規劃-fable.md",
    "source_lines": "Q2",
    "source_excerpt": "",
-   "answer": "",
-   "answer_state": "",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-08"
   },
   {
    "id": "q3",
@@ -313,10 +313,10 @@
    "source_path": "02-規劃-fable.md",
    "source_lines": "Q3",
    "source_excerpt": "",
-   "answer": "",
-   "answer_state": "",
+   "answer": "B",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-08"
   }
  ]
 }
