@@ -79,10 +79,10 @@
    "source_path": "05-規劃-fable-想法21.md",
    "source_lines": "§7 衝突 4",
    "source_excerpt": "",
-   "answer": "",
-   "answer_state": "",
+   "answer": "A",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-08"
   },
   {
    "id": "q1",
@@ -124,10 +124,10 @@
    "source_path": "05-規劃-fable-想法21.md",
    "source_lines": "§8 Q1、§7 衝突 2",
    "source_excerpt": "",
-   "answer": "",
-   "answer_state": "",
+   "answer": "B",
+   "answer_state": "changed",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-08"
   },
   {
    "id": "q2",
@@ -165,10 +165,10 @@
    "source_path": "05-規劃-fable-想法21.md",
    "source_lines": "§8 Q2",
    "source_excerpt": "",
-   "answer": "",
-   "answer_state": "",
-   "answer_note": "",
-   "answered_at": ""
+   "answer": "A",
+   "answer_state": "picked",
+   "answer_note": "可以混合使用，反正agent都看得懂。但最終最好還是要有格式，格式隨意。",
+   "answered_at": "2026-11-08"
   },
   {
    "id": "q3",
@@ -206,10 +206,10 @@
    "source_path": "05-規劃-fable-想法21.md",
    "source_lines": "§8 Q3",
    "source_excerpt": "",
-   "answer": "",
-   "answer_state": "",
+   "answer": "B",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-08"
   },
   {
    "id": "q4",
@@ -248,10 +248,10 @@
    "source_path": "05-規劃-fable-想法21.md",
    "source_lines": "§8 Q4",
    "source_excerpt": "",
-   "answer": "",
-   "answer_state": "",
+   "answer": "B",
+   "answer_state": "picked",
    "answer_note": "",
-   "answered_at": ""
+   "answered_at": "2026-11-08"
   }
  ]
 }
