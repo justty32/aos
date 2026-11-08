@@ -12,6 +12,13 @@
 
 本檔沒有條目時，hook 改印 [SESSION-LOG](SESSION-LOG.md) 的「最新進度」段。
 
+## 2026-11-08 中午 家機頂層（使用者出門玩，用手機遠端）
+
+1. **授權與狀態**：今天隨意 push。使用者在外面、只用手機、偶爾看對話——**不要在對話跳選項**；要裁的放手機 artifact「aos 遠端看板」https://claude.ai/artifact/8F7Snk7hXkavpFuCjfTboE 的待你裁區。使用者說「artifact 我寫了東西」時：`Artifact read_db`（list、collection `inbox`、out_dir 暫存夾）→ `python3 wf/tools/progress_board/remote_sync.py pull <夾>` → 照它印的 `decide_page.py parse/apply` 落地 → 轉給對應線；各線有新進度就 `remote_sync.py export <夾>` 再把 `writes.json` 每組 `write_db batch` 推上去（[remote README](tools/progress_board/remote/README.md)）。給使用者看的一律 ELI5、只講結論、圖少、細節摺疊（user.md 已記）。codex 開沙箱 `-s workspace-write -c sandbox_workspace_write.network_access=true`、只寫碼；會 commit 的生產批由 Claude 隊長跑（使用者裁 A，aos-teams/02）。本機論壇：`wf/tools/forum_post.sh`／`forum_admin.sh`（top＝root），規矩在 aos-teams/04。
+2. **今天做完**：codex 沙箱；decide-page 工作流（沒看的題＝待定）；看板「fable 的設計」頁 designs.html；桌面入門頁 `aos-arknights-入門.html`；第四輪收輪（主題批「雪山降臨」22 任務，總結 `proto8/thinking/2026-11/07/arknights-kb/23-第四輪總結簡報.md`，代定到 84）；node-pool 設計（想法 20＋21，`proto8/thinking/2026-11/08/node-pool/`，使用者兩批題都裁了：np21 q1 改 B＝每批收輪最多 1 次 LLM、2k token 歸納本質當候選）。
+3. **使用者新想法**（kb-ideas 末段）：20 節點池／梯度／抽象分數（token＋時間，公式可改）；21 蒸餾後壓縮（百科式→啟發式）；22 **元優化**：範圍不擴大、留謝拉格；基準＝與 arknights 無關的基礎 agent／工具（優化工具可多），元優化改進「初始優化工具＋初始節點佈局」＝改進改進過程。
+4. **還在跑**：第十任 arknights 隊長在做第五輪規劃（簡報 24 → fable 25 並「反芻」25b/25c → 設計 26），**寫完 26 就停、不施工**，等使用者回來看；它會發帖、做待裁題。頂層開著負載監看（30 分鐘要重開）。看板 http://127.0.0.1:8765/ 開著。
+
 ## 2026-11-07 晚 家機 alt 帳號頂層（使用者收工，明天續）
 
 1. **授權與隊形**同下一條；另加：gpt 測試預設不寫、指定才寫（[aos-teams/03](workflows/dispatch/aos-teams/03-使用者原話.md) 末段）；各線進度交給桌面看板 http://127.0.0.1:8765/（`wf/tools/progress_board/`，啟動 `dash.py start`），要使用者裁的事用 `progress_post.sh <線> ask`，頂層仍為看板與匯總者負責（[user/03](workflows/common/user/03-討論紀錄與規劃.md) 末段）；「喘口氣」＝barrier 同步；美國尖峰容量錯誤的處理見 [user/01](workflows/common/user/01-說話授權與記憶.md) 末段。
