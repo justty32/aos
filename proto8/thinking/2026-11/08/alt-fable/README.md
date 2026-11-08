@@ -37,3 +37,13 @@ alt-fable：使用者 11-08 晚的「錘子」意見 6 條，以及 19:00～20:0
 - **P1**：從 paper_readings 找他山之石。S1 整理架構與設計體系（對照 NORMS／CONCEPTS）；S2 寫 ML 類比與數學骨架（參考 machine_learning）。
 - 以上每篇都由 Argon 以共同設計者身分再寫一份（`-Argon.md`，含審查與提案）。接著整合成 **v4**，之後進入**自主反芻 R1、R2…**：每輪由 fable 自己挑題，Argon 參與。跑到 alt 額度用完，或 23:50 為止。
 - paper_readings：`git pull` 合併時在 `wf/WAIT_USER.md` 起衝突（本機有 1 個 commit 還沒 push，落後 origin 142 個），頂層已 `git merge --abort` 退回原狀，沒有替使用者解衝突。fable 讀的是 `git archive origin/main` 匯出的唯讀快照。
+
+## 使用者裁 v4 方向題（11-08 19:44，看板，五題全 A＝全照推薦）
+
+v4 由 Argon 整合（alt 額度 18:58 用完）：[out2/v4-Argon整合.md](out2/v4-Argon整合.md) §六。
+
+1. A：H24 改純盲測，canary 折配 3-epoch 棘輪守門（取代 v3 裁定 5「H24 逐輪不退」）。
+2. A：無菌鎖允許繳清全額 MDL 先驗稅、過雙折的純 seed AST 進孵化（仍禁 Python 與題目常數）。
+3. A：園區前置夾具 gate(pre)/jig 用「同預算淨解題 ≥+1」；純等價 sieve 仍 0 掉題。
+4. A：`_gradients.jsonl` 改名 `_grad_log.jsonl`；干預全走 `inbox/`，人類提示記 `human_prior_bits`（不分紅），lv2 考核時 `inbox_lock=true`。
+5. A：r09 只插 M1～M7 就收輪，`kind:xform` 留 r10 第一步。
