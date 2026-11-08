@@ -56,7 +56,7 @@
     document.querySelector('.reply-compact').textContent = '已看過 ' + count + '／' + data.rows.length + ' 題';
     document.querySelector('.reply-progress progress').value = count;
     document.querySelector('.reply-changes').textContent = '* ＝跟推薦不同（' + changed +
-      ' 題）；? ＝還沒看過（' + (data.rows.length - count) + ' 題，會記成代定）';
+      ' 題）；? ＝還沒看過（' + (data.rows.length - count) + ' 題，仍算待定、之後再問）';
   }
   function update(row) {
     seen[row.id] = true;

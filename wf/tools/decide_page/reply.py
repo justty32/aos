@@ -49,7 +49,7 @@ def parse(data, text):
         changed = bool(row['recommend'] and choice != row['recommend'])
         if bool(star) != changed:
             warn(f'Row {rid} star flag disagrees with its choice.')
-        state = ('default' if unseen else 'changed' if changed else
+        state = ('pending' if unseen else 'changed' if changed else
                  'note-only' if not keys else 'picked')
         if rid in parsed:
             warn(f'Row {rid} occurs more than once; using its last reply.')
@@ -73,19 +73,33 @@ def _unknown(text):
 def apply(data, path, results):
     today = datetime.date.today().isoformat()
     for row, answer in zip(data['rows'], results):
-        row.update(answer=answer['choice'], answer_state=answer['state'],
-                   answer_note=answer['note'], answered_at=today)
+        if answer['state'] == 'pending':
+            if row['answer_state'] in ('picked', 'changed', 'note-only'):
+                continue
+            row.update(answer='', answer_state='pending',
+                       answer_note=answer['note'], answered_at='')
+        else:
+            row.update(answer=answer['choice'], answer_state=answer['state'],
+                       answer_note=answer['note'], answered_at=today)
     Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=1) + '\n', encoding='utf-8')
     counts = {name: sum(item['state'] == name for item in results)
-              for name in ('changed', 'default', 'missing')}
+              for name in ('changed', 'pending', 'missing')}
     return (f'decide_page: applied {len(results)} answers '
-            f'({counts["changed"]} changed, {counts["default"]} unseen, {counts["missing"]} missing)')
+            f'({counts["changed"]} changed, {counts["pending"]} pending, {counts["missing"]} missing)')
 
 
 def land(data, path):
     groups = {}
+    pending = []
     missing = []
     for row in data['rows']:
+        if row['answer_state'] == 'pending':
+            line = (f'- {row["id"]}（{row["question"]}）：沒點開，仍待定'
+                    f'（推薦 {row["recommend"]}）')
+            if row['answer_note']:
+                line += f' 備註原話：「{row["answer_note"]}」'
+            pending.append(line)
+            continue
         if not row['answer_state'] or row['answer_state'] == 'missing' or not row['answer']:
             missing.append(row['id'])
             continue
@@ -97,16 +111,15 @@ def land(data, path):
         else:
             key = row['answer']
             label = next((o['label'] for o in row['options'] if o['key'] == key), '')
-            if row['answer_state'] == 'default':
-                line = prefix + f'沒點開，照推薦 {key}「{label}」記代定。'
-            else:
-                line = prefix + f'選 {key}「{label}」。'
-                if row['answer_state'] == 'changed':
-                    line += f' 跟推薦不同（推薦 {row["recommend"]}）。'
+            line = prefix + f'選 {key}「{label}」。'
+            if row['answer_state'] == 'changed':
+                line += f' 跟推薦不同（推薦 {row["recommend"]}）。'
             if note:
                 line += f' 備註原話：「{note}」'
         groups.setdefault(source, []).append(line)
     blocks = ['### ' + source + '\n\n' + '\n'.join(lines) for source, lines in groups.items()]
+    if pending:
+        blocks.append('### pending\n\n' + '\n'.join(pending))
     if missing:
         blocks.append('### missing\n\n' + '\n'.join('- ' + rid for rid in missing))
     return '\n\n'.join(blocks)

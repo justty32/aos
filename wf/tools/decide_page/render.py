@@ -129,7 +129,7 @@ def render(data, data_path):
         out.append(f'<a href="#sec-{esc(section["id"])}">{inline(section["title"])} {count}</a>')
     out.append('<a href="#reply">怎麼回覆</a></nav><details><summary>怎麼用</summary><p>'
                '每題點一個選項，想補充就寫備註。點選項、寫備註、打開細節或按「看過」都算看過；'
-               '沒看過的題在回覆裡會帶「?」，代表照推薦先代定、不算你裁過。右下「我的回覆」會組好一行字，'
+               '沒看過的題在回覆裡會帶「?」，那題仍算待定、不算你裁過，之後會再問你。右下「我的回覆」會組好一行字，'
                '按「複製」後貼回對話，或貼到看板「待你裁」裡這批那題的意見框送出。選擇會存在這個瀏覽器。</p></details>')
     for section in data['sections']:
         out.append(f'<section><h2 id="sec-{esc(section["id"])}">{inline(section["title"])}</h2>')
@@ -148,7 +148,7 @@ def render(data, data_path):
                f'<strong>我的回覆</strong><span class="reply-compact">已看過 0／{n} 題</span><span class="reply-toggle-action">收合</span>'
                '</button><div class="reply-body" id="reply-body"><div class="reply-progress">'
                f'<progress value="0" max="{max(1, n)}" aria-label="已看過題數"></progress></div>'
-               f'<p class="reply-changes">* ＝跟推薦不同（0 題）；? ＝還沒看過（{n} 題，會記成代定）</p>'
+               f'<p class="reply-changes">* ＝跟推薦不同（0 題）；? ＝還沒看過（{n} 題，仍算待定、之後再問）</p>'
                '<textarea class="reply-output" readonly aria-label="我的回覆">' + esc(initial) + '</textarea>'
                '<div class="reply-actions"><button class="reply-copy" type="button">複製</button>'
                '<button class="reply-reset" type="button">全部重設為推薦</button></div>'
