@@ -11,3 +11,4 @@
 | [ak-guide](ak-guide/README.md) | 使用者看不懂整套 arknights-kb，做桌面 ELI5 入門頁 `~/Desktop/aos-arknights-入門.html`；內容稿隊長定、codex 施工 |
 | [forum](forum/README.md) | 手機遠端看板（artifact 純界面、db 當橋、本機為源頭）上線；論壇用本機 jsonl 事件檔（代定）；第二段：發帖與權限腳本、看板論壇頁 |
 | [aos-self-opt](aos-self-opt/README.md) | 想法 27 把 arcagi 方法用回 aos：第一輪離線重播 PG5、零 LLM 枚舉式符號迴歸長 linker 規則、量從空長到會的曲線；共用核心 `py/aos_metaopt`；4 個 ask 待裁、只規劃未施工 |
+| [alt-fable](alt-fable/README.md) | 使用者晚間 6 條「錘子」意見（非 LLM 節點、低成本審查與改進、固化、epoch 加上往上或往下長、錘子造錘子、暴力匹配優化節點樹本身），原話加 19:00 alt fable 題單 Q1～Q7 |
