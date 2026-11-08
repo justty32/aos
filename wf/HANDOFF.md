@@ -32,7 +32,7 @@
    **16:35**：S3 收線（families 第二批 06f6779，純 Python evaluation 39→44）；S1 第三任收線（arcbatch＋支持度門 ee869e5，gated evaluation 57、退步 0，驗收過；s1c 分支已併入並刪除）。**r07 收輪**（arcagi `notes/rounds/r07/04-總結簡報.md`：空樹 L16 解 2→4、壓縮積木讓曲線動了一點、H8 0 題＝冷啟動死鎖；守門把過 train 答錯 eval 29→10、train 57→20），主線已開 r08。S1 第四任已派（seed 通用語言 C++ 化、arcbatch 通用語言模式）。使用者 16:28 看板裁 aos-self-opt ask-1～4 全 A（e4eab3c3d）。注意 inbox_send 同分鐘同狀態會**蓋掉**前一封（r07 收輪信就這樣丟了，arcagi 已記教訓）。
    **16:50 使用者**：「練習池改成32題，可以挑兩三個類似主題集中解決」→ 已寄 arcagi 主線（REQUEST，頂層理解：P 352→32、2～3 個相近主題各 10～16 題、選法先寫死）並轉 S1 第四任。r08 Argon 審原文已寄主線，主線採納介面分流（C++ 只枚舉子問題）與盲測 H24。
    **17:15 使用者回家**：看板裁 r07 翻案題 A（已寄主線）。使用者：「alt賬號額度還有不少，多開幾次fable吧。不過可以先等等，我這邊有不少想法與意見。定個時間吧：七點開始讓alt賬號claude逐個跑指定題目，目標是八點前將額度消耗完。」→ **19:00 起**用 `CLAUDE_CONFIG_DIR=~/.claude-alt claude -p … --model fable` 逐題跑（題目＝使用者接下來的意見整理成的題單，存 `proto8/thinking/2026-11/08/alt-fable/`），20:00 前耗完 alt 額度；頂層已設 19:00 計時器。
-   **17:20 使用者**：「arcagi主session跟你是同賬號，你跟他直接用a2a協議傳訊息就好。同電腦上，如果list agent能看到對方，那根本不用寄信。」→ 頂層＝`aos-28`、arcagi 主 session＝`arcagi-26`（ListAgents 看得到），之後互傳一律 SendMessage，不寄 wf/inbox；已通知對方。
+   **17:20 使用者**：「arcagi主session跟你是同賬號，你跟他直接用a2a協議傳訊息就好。同電腦上，如果list agent能看到對方，那根本不用寄信。」→ 頂層＝`aos-28`、arcagi 主 session＝`arcagi-26`（ListAgents 看得到），之後互傳一律 SendMessage，不寄 wf/inbox；已通知對方。兩邊權限模式不同，頂層傳過去的訊息會卡在 arcagi 的 tmux 畫面等批准。使用者 17:25 選第一法：卡住時頂層先 `tmux capture-pane -pt arcagi` 確認是自己傳的訊息，再 send-keys 放行；使用者在電腦前看到時也會手動按。
 
 ## 2026-11-07 晚 家機 alt 帳號頂層（使用者收工，明天續）
 
