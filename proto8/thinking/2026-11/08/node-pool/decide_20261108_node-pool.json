@@ -1,0 +1,322 @@
+{
+ "description": "Decision questions for node-pool (idea 20) design.",
+ "contract": "wf-table/1",
+ "source": "README.md",
+ "extracted": "2026-11-08",
+ "kind": "decide-page/1",
+ "batch": "node-pool-1108",
+ "line": "node-pool",
+ "title": "想法 20 節點池：7 題等你一句話",
+ "kicker": "11-08 node-pool · 4 條跟既有規矩衝突、3 題方向",
+ "lead": [
+  "**骨架：**每個定義資料夾是一個節點，上級把「梯度」寫成一行信投進它的信箱；一支腳本每批算一次錢：先報銷實際花費、剩下的利潤照被引用次數分紅、每節點每批扣房租。",
+  "**扣到 0 不刪：**連續 3 批 0 只列「建議退休」，按了才搬進封存區、還能復活。",
+  "**試算過：**用第四輪 A 批資料照最初規則算，最貴的 kb_link 會先餓死、腳本永遠不退，所以改成報銷＋房租。"
+ ],
+ "sections": [
+  {
+   "id": "conf",
+   "title": "一、跟既有規矩衝突的",
+   "intro": "新想法和已定的規矩說法不同，要你選哪邊。"
+  },
+  {
+   "id": "dir",
+   "title": "二、規矩推不出來的方向",
+   "intro": ""
+  }
+ ],
+ "columns": [
+  "id",
+  "section",
+  "question",
+  "eli5",
+  "options",
+  "recommend",
+  "why",
+  "quotes",
+  "details",
+  "source_path",
+  "source_lines",
+  "source_excerpt",
+  "answer",
+  "answer_state",
+  "answer_note",
+  "answered_at"
+ ],
+ "link_columns": [
+  "source_path"
+ ],
+ "rows": [
+  {
+   "id": "c1",
+   "section": "conf",
+   "question": "錢扣到 0，是自動刪掉，還是只「建議退休」、隊長按了才封存？",
+   "eli5": "你原話是「扣到0就刪掉」；但既有規矩 ad-3 說退休永遠由隊長按，刪檔也要授權。",
+   "options": [
+    {
+     "key": "A",
+     "label": "照 ad-3：錢只產生「建議退休」，隊長按了才搬進封存區（不刪，還能復活）",
+     "consequence": "池瘦得慢一輪，但少用的關鍵節點不會被誤殺"
+    },
+    {
+     "key": "B",
+     "label": "照原話：連續幾輪 0 就自動封存（不刪）",
+     "consequence": "池自動瘦身；誤殺時要靠復活救回"
+    },
+    {
+     "key": "C",
+     "label": "照原話：自動刪，靠 git 找回",
+     "consequence": "最省事；誤殺不易察覺"
+    }
+   ],
+   "recommend": "A",
+   "why": "先看錢這個訊號準不準，再決定要不要放手自動",
+   "quotes": [
+    {
+     "text": "「…節點池會累積，所以要有機制去限制膨脹，我有個想法，那就是錢財制度…所有節點依據其消耗的資源去扣錢，扣到0就刪掉。這比較複雜。」",
+     "cite": "proto8/thinking/2026-11/07/kb-ideas/README.md 想法 20"
+    },
+    {
+     "text": "ad-3：「前三個地點由隊長執行，之後審視者可以自動 agents new…退休永遠由隊長按」",
+     "cite": "agent-diversity"
+    }
+   ],
+   "details": [
+    "fable 02「衝突 1」；圖紙 03 §3 第 5 步照 A 寫"
+   ],
+   "source_path": "02-規劃-fable.md",
+   "source_lines": "衝突 1",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "c2",
+   "section": "conf",
+   "question": "審視者（負責改別人的 agent）也要扣錢、也會被扣死嗎？",
+   "eli5": "代定 45 你翻過案：改善側只記錄、不設上限。審視者若因為貴被扣死，就碰到這條。",
+   "options": [
+    {
+     "key": "A",
+     "label": "記帳但免死：有錢包、看得到花多少，餘額 0 也不列退休",
+     "consequence": "守住「改善側不設上限」；它貴不貴仍看得見"
+    },
+    {
+     "key": "B",
+     "label": "跟一般節點一樣扣、一樣會被建議退休",
+     "consequence": "最一致；可能把正在學的審視者餓掉"
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「對了，目前的改進流程，我覺得現在還在初期階段，可以先不用限制其用量」",
+     "cite": "kb-ideas 想法 17 段"
+    }
+   ],
+   "details": [
+    "fable 02「衝突 2」"
+   ],
+   "source_path": "02-規劃-fable.md",
+   "source_lines": "衝突 2",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "c3",
+   "section": "conf",
+   "question": "分梯度、分錢給子節點，由 agent 自己做，還是由腳本做？",
+   "eli5": "既有原則 C-52：上層不該知道下層是什麼（agent 不知道工具是 agent 還是腳本）。讓 agent 自己分錢就得懂子結構。",
+   "options": [
+    {
+     "key": "A",
+     "label": "腳本分錢、審視者寫梯度；一般 agent 完全不知道有錢和梯度",
+     "consequence": "守住 C-52、可重現；「單個神經元自己分梯度」的味道淡一點"
+    },
+    {
+     "key": "B",
+     "label": "每個 agent 自己判斷要分多少錢、給什麼梯度",
+     "consequence": "最像你說的神經元；agent 要多學一套，分數不一致"
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「對於單個神經元而言，他不知道後面神經元在幹嘛，他只知道自己要處理的梯度，還有要分配給後面神經元的梯度」",
+     "cite": "proto8/thinking/2026-11/07/kb-ideas/README.md 想法 20"
+    }
+   ],
+   "details": [
+    "fable 02「衝突 3」"
+   ],
+   "source_path": "02-規劃-fable.md",
+   "source_lines": "衝突 3",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "c4",
+   "section": "conf",
+   "question": "第五輪要不要只先做一部分（KISS），還是全套一起上？",
+   "eli5": "你自己說「這比較複雜」；一輪驗很多新機制，壞了分不清是哪個。詳細範圍見方向題 q3。",
+   "options": [
+    {
+     "key": "A",
+     "label": "分段上：第五輪先做帳＋封存（見 q3）",
+     "consequence": "壞了看得出是誰；離你的完整構想還差複製自動化"
+    },
+    {
+     "key": "B",
+     "label": "全套一起上",
+     "consequence": "最接近原話；結果難判讀"
+    }
+   ],
+   "recommend": "A",
+   "why": "",
+   "quotes": [
+    {
+     "text": "「…節點池會累積，所以要有機制去限制膨脹，我有個想法，那就是錢財制度…所有節點依據其消耗的資源去扣錢，扣到0就刪掉。這比較複雜。」",
+     "cite": "proto8/thinking/2026-11/07/kb-ideas/README.md 想法 20"
+    }
+   ],
+   "details": [
+    "fable 02「衝突 4」"
+   ],
+   "source_path": "02-規劃-fable.md",
+   "source_lines": "衝突 4",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "q1",
+   "section": "dir",
+   "question": "錢用什麼當單位？",
+   "eli5": "錢就是生活費的計價方式。",
+   "options": [
+    {
+     "key": "A",
+     "label": "純 token（1 元＝1k token）",
+     "consequence": "最簡單、跟現有帳一對一；看不見時間"
+    },
+    {
+     "key": "B",
+     "label": "token＋時間各折一元",
+     "consequence": "獎勵「快」；匯率本身又要定"
+    },
+    {
+     "key": "C",
+     "label": "抽象分數（像想法 16 的複雜性）",
+     "consequence": "最靈活；第五輪沒資料可黏"
+    }
+   ],
+   "recommend": "A",
+   "why": "先等於一個現成數字；另外圖紙加了每節點固定「房租」，不然 0 token 的腳本永遠不會被扣（試算發現）",
+   "quotes": [
+    {
+     "text": "「也就是每次的最上層改進epoch…都會給最上層一筆錢」",
+     "cite": "proto8/thinking/2026-11/07/kb-ideas/README.md 想法 20"
+    }
+   ],
+   "details": [
+    "試算：只有 kb_link 花 token，其他五步 0 token；03 §1"
+   ],
+   "source_path": "02-規劃-fable.md",
+   "source_lines": "Q1",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "q2",
+   "section": "dir",
+   "question": "梯度（改進方向）誰能寫？",
+   "eli5": "梯度＝上級寫給子節點的一行「我希望你怎麼改＋打幾分」。",
+   "options": [
+    {
+     "key": "A",
+     "label": "只有審視者與隊長／你寫",
+     "consequence": "守 C-52、品質一致；訊號少"
+    },
+    {
+     "key": "B",
+     "label": "任何 agent 叫完子工具都能順手寫",
+     "consequence": "訊號多；每個 agent 要加一段、分數不一致"
+    }
+   ],
+   "recommend": "A",
+   "why": "B 是純加法，隨時可以再開",
+   "quotes": [
+    {
+     "text": "「然後agent或函數也可以自己宣稱，在他自己的視角來看，某個工具或函數，其metainfo是啥樣的」",
+     "cite": "kb-ideas 想法 5"
+    }
+   ],
+   "details": [
+    "fable 02 Q2"
+   ],
+   "source_path": "02-規劃-fable.md",
+   "source_lines": "Q2",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  },
+  {
+   "id": "q3",
+   "section": "dir",
+   "question": "第五輪做到哪？",
+   "eli5": "",
+   "options": [
+    {
+     "key": "A",
+     "label": "只做帳（分錢、信箱、退休建議）",
+     "consequence": "最小；量不到池膨脹有沒有被控住"
+    },
+    {
+     "key": "B",
+     "label": "帳＋封存＋復活；複製仍由隊長按",
+     "consequence": "量得到池大小與退休訊號準不準；複製不自動"
+    },
+    {
+     "key": "C",
+     "label": "全套含「不合意就自動複製」",
+     "consequence": "最接近原話；一輪驗太多"
+    }
+   ],
+   "recommend": "B",
+   "why": "新造的只有一支 pool 腳本，其餘用現成工具",
+   "quotes": [
+    {
+     "text": "「這只是初步想法，後續可以慢慢討論改進，然後這可以在第四輪途中並行做設計，第五輪正式加入看效果。」",
+     "cite": "使用者 11-08"
+    }
+   ],
+   "details": [
+    "fable 02 Q3；圖紙 03 §6～§7"
+   ],
+   "source_path": "02-規劃-fable.md",
+   "source_lines": "Q3",
+   "source_excerpt": "",
+   "answer": "",
+   "answer_state": "",
+   "answer_note": "",
+   "answered_at": ""
+  }
+ ]
+}
