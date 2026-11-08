@@ -28,3 +28,12 @@ alt-fable：使用者 11-08 晚的「錘子」意見 6 條，以及 19:00～20:0
 5. H24 每個 epoch 都不准退步，仍是硬底線；震盪只在孵化狀態與 ΔAUC 面積上容許。
 
 **定稿**：`out/v3-設計圖.md`（錘子設計圖 v3），交 arcagi 當 r09 規劃的依據。
+
+## 第二段：深挖、體系、持續反芻（18:38 起，`out2/`）
+
+使用者說：「讓fable針對那四個問題再深挖一輪...他那邊真的還有不少額度，可以不止深挖，也可以開始做架構和體系設計。argon那邊額度也一堆。開始吧，持續做，直到alt賬號徹底沒額度。有其他啥想讓他參考或思考的也可以一並丟給他，搞不好他山之石可以攻玉。~/repo/paper_readings那塊也一堆東西(記得先git pull)」
+
+- **D1～D3**：針對 Argon 審 v3 挑出的問題深挖。D1 鑄模廠空轉與黑盒程式拆不開；D2 延遲獎勵、信用分配與 bisect；D3 審查節點也要能被暴力搜尋。
+- **P1**：從 paper_readings 找他山之石。S1 整理架構與設計體系（對照 NORMS／CONCEPTS）；S2 寫 ML 類比與數學骨架（參考 machine_learning）。
+- 以上每篇都由 Argon 以共同設計者身分再寫一份（`-Argon.md`，含審查與提案）。接著整合成 **v4**，之後進入**自主反芻 R1、R2…**：每輪由 fable 自己挑題，Argon 參與。跑到 alt 額度用完，或 23:50 為止。
+- paper_readings：`git pull` 合併時在 `wf/WAIT_USER.md` 起衝突（本機有 1 個 commit 還沒 push，落後 origin 142 個），頂層已 `git merge --abort` 退回原狀，沒有替使用者解衝突。fable 讀的是 `git archive origin/main` 匯出的唯讀快照。
