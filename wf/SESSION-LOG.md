@@ -8,7 +8,7 @@
 
 ## 最新進度
 
-- **open｜clock-decouple（使用者 11-09「_clock是與daemon耦合很深...我希望別那麼深」）**：耦合點全表＋四方案寫好（推薦 B：拿掉 `clock` key、鐘＝範本裡一列普通 proc、`AOS_CLOCK` 由定義 `.env` 給），方向題 3 題等裁（key 留不留、近的贏或遠的贏、判卡住還讀不讀鐘）；沒改程式與條文 → [clock-decouple](../proto8/thinking/2026-11/09/clock-decouple/README.md)
+- **open｜clock-decouple（使用者 11-09「_clock是與daemon耦合很深...我希望別那麼深」）**：耦合點全表＋四方案寫好（推薦 B：拿掉 `clock` key、鐘＝範本裡一列普通 proc、`AOS_CLOCK` 由定義 `.env` 給），三題已裁（B、預設聽外層＋範本預設不帶鐘只根帶、照用鐘＋鐘列牆鐘）；施工排在 poke 之後；沒改程式與條文 → [clock-decouple](../proto8/thinking/2026-11/09/clock-decouple/README.md)
 
 - **open｜daemon-interrupt（使用者 11-09「如果要做真正的interrupt，那有幾條路」＋補充「這套希望是可選的」）**：只規劃（opus 實測＋fable 規劃＋opus 補邊緣），三條路做成可選門鈴；方向題 4 題等使用者裁，裁完等 state 拆分做完再照 04 順序施工 → [daemon-interrupt](../proto8/thinking/2026-11/09/daemon-interrupt/README.md)
 
