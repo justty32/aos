@@ -13,7 +13,6 @@
 
 ## 待使用者項
 
-- **公司 WSL 的 `~/dev/vcpkg` 不見了**（11-09 08:57 前就沒了，不是 clock-and-hot-writes 線刪的）：`proto8/impls/build` 的 configure 現在會失敗；這次是拿舊 build 裡的 nlohmann-json 當 `CMAKE_PREFIX_PATH` 另開 `/tmp/clockhw/build` 建的。要你決定：是你移走的就告訴我新位置，否則照 [dev-env 流程 1](workflows/dev-env.md) 重裝 → [04 施工結果](../proto8/thinking/2026-11/09/clock-and-hot-writes/04-施工結果.md)
 - **家機試驗場跟著改名**（11-09 tick→clock）：公司那份已改，家機 `~/code/playground` 在 repo 外、agent 碰不到——三份 daemon.json 的 `"tick": true` 改 `"clock": true`、`llm_kernel/def/kernel.json` 假腦 `"tool": "clock"` 改 `"wall_clock"`、各 agent `tools.json` 的 `clock`（`lib/base/clock`）改 `wall_clock`（`lib/base/wall_clock`）、`env.sh` 的 `AOS_TICK` 改 `AOS_CLOCK`，`lib/`、`knowledge/` 照 repo 重新複製，重跑 `proto8/install.sh` 後刪掉斷掉的 `~/.local/bin/aos-tick`；執行中的 `.stack/procs/_tick/` 直接重建（不做遷移）→ [04 施工結果](../proto8/thinking/2026-11/09/clock-and-hot-writes/04-施工結果.md)
 - **對判官本身下指令改寫法**（11-07 起）：叫醒判官寫 `aos-daemon-ctl wake 名字`——aos-daemon-ctl 一律直寄 daemon、不看 `AOS_KERNEL`，`--queue-wait-s` 拿掉；要判官管控用 `aos-agent ctl`。試驗場若有用到舊寫法或 `aos-daemon-ctl` 經判官，要留意 → [os-impl 08](../proto8/thinking/2026-11/06/os-impl/08-aos-daemon-ctl永遠直寄實作結果.md)
 - **no-pid P8**：家機在可連 user bus 的殼驗 scope 的 `memory.max`（本次沙箱擋住）；公司 WSL 試驗場 11-09 已改三層、假腦自動驗過，親手試併入下面「試驗場」那條 → [18-P8實作結果](../proto8/thinking/2026-11/05/no-pid/18-P8實作結果.md)
